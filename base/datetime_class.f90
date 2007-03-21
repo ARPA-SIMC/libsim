@@ -12,8 +12,14 @@ END TYPE  datetime
 
 
 TYPE(datetime), PARAMETER :: datetime_miss=datetime(imiss, .FALSE.)
+INTEGER,PARAMETER :: unmim=1035614880 ! differenza tra 01/01/1970 e 01/01/0001
 
-PRIVATE jeladata5, ndays
+PRIVATE
+PUBLIC datetime, datetime_miss, init, delete, getval, &
+ datetime_eq, datetime_eqsv, datetime_ne, datetime_nesv, &
+ datetime_gt, datetime_gtsv, datetime_lt, datetime_ltsv, &
+ datetime_ge, datetime_gesv, datetime_le, datetime_lesv, &
+ datetime_add, datetime_sub
 
 INTERFACE init
   MODULE PROCEDURE datetime_init
@@ -55,6 +61,10 @@ INTERFACE OPERATOR (+)
   MODULE PROCEDURE datetime_add
 END INTERFACE
 
+INTERFACE OPERATOR (-)
+  MODULE PROCEDURE datetime_sub
+END INTERFACE
+
 CONTAINS
 
 SUBROUTINE datetime_init(this, iminuti, year, month, day, hour, minute, &
@@ -67,7 +77,7 @@ CHARACTER(len=12),INTENT(IN),OPTIONAL :: oraclesimdate
 
 INTEGER :: lyear, lmonth, lday, lhour, lminute, ier
 
-IF (PRESENT(iminuti)) THEN ! minuti dal 01/01/1900 (libmega)
+IF (PRESENT(iminuti)) THEN ! minuti dal 01/01/0001 (libmega)
   this%iminuti = iminuti
   this%interval = .TRUE.
 ELSE IF (PRESENT(year)) THEN ! anno/mese/giorno, ecc.
@@ -116,7 +126,7 @@ ELSE IF (PRESENT(isodate)) THEN ! formato iso YYYY-MM-DD hh:mm
   CALL jeladata5(lday,lmonth,lyear,lhour,lminute,this%iminuti)
   this%interval = .FALSE.
 ELSE IF (PRESENT(oraclesimdate)) THEN ! formato YYYYMMDDhhmm
-  READ(isodate,'(I4,4I2)', iostat=ier) lyear, lmonth, lday, lhour, lminute
+  READ(oraclesimdate,'(I4,4I2)', iostat=ier) lyear, lmonth, lday, lhour, lminute
   IF (ier /= 0) THEN
     CALL delete(this)
     CALL raise_error('oraclesimdate '//TRIM(oraclesimdate)//' non valida')
@@ -125,8 +135,7 @@ ELSE IF (PRESENT(oraclesimdate)) THEN ! formato YYYYMMDDhhmm
   CALL jeladata5(lday,lmonth,lyear,lhour,lminute,this%iminuti)
   this%interval = .FALSE.
 ELSE IF (PRESENT(unixtime)) THEN ! secondi dal 01/01/1970 (unix)
-  CALL jeladata5(1, 1, 1970, 0, 0, this%iminuti)
-  this%iminuti = this%iminuti + unixtime/60_int_ll
+  this%iminuti = unixtime/60_int_ll + unmim
   this%interval = .FALSE.
 ENDIF
 
@@ -160,7 +169,7 @@ IF (PRESENT(year) .OR. PRESENT(month) .OR. PRESENT(day) .OR. PRESENT(hour) &
  .OR. PRESENT(oraclesimdate)) THEN
   IF (this%interval) THEN
     lminute = MOD(this%iminuti,60)
-    lhour = MOD((this%iminuti-lminute)/60,24)
+    lhour = MOD(this%iminuti,1440)/60
     lday = this%iminuti/1440
     IF (PRESENT(minute)) THEN 
       minute = lminute
@@ -170,6 +179,18 @@ IF (PRESENT(year) .OR. PRESENT(month) .OR. PRESENT(day) .OR. PRESENT(hour) &
     ENDIF
     IF (PRESENT(day)) THEN
       day = lday
+    ENDIF
+    IF (PRESENT(month)) THEN
+      month = 0
+    ENDIF
+    IF (PRESENT(year)) THEN
+      year = 0
+    ENDIF
+    IF (PRESENT(isodate)) THEN ! Non standard, inventato!
+      WRITE(isodate, '(I10.10,1X,I2.2,A1,I2.2)') lday, lhour, ':', lminute
+    ENDIF
+    IF (PRESENT(oraclesimdate)) THEN
+      WRITE(oraclesimdate, '(I8.8,2I2.2)') lday, lhour, lminute
     ENDIF
     IF (PRESENT(unixtime)) THEN
       unixtime = this%iminuti*60_int_ll
@@ -196,11 +217,12 @@ IF (PRESENT(year) .OR. PRESENT(month) .OR. PRESENT(day) .OR. PRESENT(hour) &
        lyear, '-', lmonth, '-', lday, lhour, ':', lminute
     ENDIF
     IF (PRESENT(oraclesimdate)) THEN
-      WRITE(oraclesimdate, '(I4,4I2)') lyear, lmonth, lday, lhour, lminute
+      WRITE(oraclesimdate, '(I4.4,4I2.2)') lyear, lmonth, lday, lhour, lminute
     ENDIF
-!    unixtime = this%iminuti*60_int_ll
+    IF (PRESENT(unixtime)) THEN
+      unixtime = (this%iminuti-unmim)*60_int_ll
+    ENDIF
   ENDIF
-
 ENDIF
 
 END SUBROUTINE datetime_getval
@@ -368,7 +390,7 @@ FUNCTION datetime_add(this, that) RESULT(res)
 TYPE(datetime),INTENT(IN) :: this, that
 TYPE(datetime) :: res
 
-IF (.NOT. that%interval) THEN
+IF (.NOT.that%interval) THEN
   CALL raise_error('tentativo di sommare 2 datetime assoluti')
   CALL delete(res)
 ELSE
@@ -381,6 +403,25 @@ ELSE
 ENDIF
 
 END FUNCTION datetime_add
+
+
+FUNCTION datetime_sub(this, that) RESULT(res)
+TYPE(datetime),INTENT(IN) :: this, that
+TYPE(datetime) :: res
+
+IF (this%interval .AND. .NOT.that%interval) THEN
+  CALL raise_error('tentativo di sottrarre un datetime assoluto da uno relativo')
+  CALL delete(res)
+ELSE
+  IF (this == datetime_miss .OR. that == datetime_miss) THEN
+    CALL delete(res)
+  ELSE
+    CALL init(res, iminuti=this%iminuti-that%iminuti)
+    res%interval = this%interval .EQV. that%interval
+  ENDIF
+ENDIF
+
+END FUNCTION datetime_sub
 
 
 SUBROUTINE datetime_print(this)
@@ -417,7 +458,7 @@ SUBROUTINE jeladata5(iday,imonth,iyear,ihour,imin,iminuti)
 
 INTEGER :: iday, imonth, iyear, ihour, imin, iminuti
 
-iminuti = ndays(iday,imonth,iyear)*24*60+(ihour*60)+imin
+iminuti = ndays(iday,imonth,iyear)*1440+(ihour*60)+imin
 
 END SUBROUTINE jeladata5
 
@@ -448,11 +489,9 @@ INTEGER :: iday, imonth, iyear, ihour, imin, iminuti, igiorno
 !     IMIN=IMINUTI-IGIORNO*(60*24)-IHOUR*60
 
 imin = MOD(iminuti,60)
-ihour = MOD(iminuti,(60*24))/60
-!     iminu=iminuti-998779680
-!     iminu=iminuti
-igiorno=iminuti/(60*24)
-IF (MOD(iminuti,(60*24)) < 0) igiorno=igiorno-1
+ihour = MOD(iminuti,1440)/60
+igiorno=iminuti/1440
+IF (MOD(iminuti,1440) < 0) igiorno=igiorno-1
 
 CALL ndyin(igiorno,iday,imonth,iyear)
 
@@ -543,18 +582,18 @@ FUNCTION ndays(igg,imm,iaa)
 !     NDAYS     I*4     numero giorni dal 1/1/1
 !omend
 
-INTEGER :: ndays, igg, imm, iaa, ibis, nday
+INTEGER :: ndays, igg, imm, iaa, nday
 INTEGER,PARAMETER :: ianno(12) =(/0,31,59,90,120,151,181,212,243,273,304,334/), &
  ianno_b(12)=(/0,31,60,91,121,152,182,213,244,274,305,335/)
 
-nday = 0
-ibis = MOD(iaa,4)
-IF (ibis.EQ.0) THEN
+!IF (MOD(iaa,4) == 0 .AND. (MOD(iaa,400) == 0 .EQV. MOD(iaa,100) == 0)) THEN
+IF (MOD(iaa,4) == 0) THEN
   nday=igg+ianno_b(imm)
 ELSE
   nday=igg+ianno(imm)
 ENDIF
 
+!ndays =nday-1 + 365*(iaa-1) + (iaa-1)/4 - (iaa-1)/100 + (iaa-1)/400
 ndays=(nday-1)+(365*(iaa-1))+((iaa-1)/4) ! -((iaa-1)/100) vero ogni 100
 
 END FUNCTION ndays
