@@ -10,9 +10,16 @@ TYPE datetime
   LOGICAL :: interval
 END TYPE  datetime
 
-
 TYPE(datetime), PARAMETER :: datetime_miss=datetime(imiss, .FALSE.)
-INTEGER,PARAMETER :: unmim=1035614880 ! differenza tra 01/01/1970 e 01/01/0001
+INTEGER,PARAMETER :: &
+ year0=1, & ! anno di origine per iminuti
+ d400=365*400+366*100-3, & ! giorni/400 anni nel calendario gregoriano
+ d100=365*100+366*25-1, & ! giorni/100 anni nel calendario gregoriano
+ d4=365*4+366, & ! giorni/4 anni nel calendario gregoriano
+ unmim=1035593280, & ! differenza tra 01/01/1970 e 01/01/0001 (per unixtime)
+ ianno(13,2)=RESHAPE((/ &
+ 0,31,59,90,120,151,181,212,243,273,304,334,365, &
+ 0,31,60,91,121,152,182,213,244,274,305,335,366/),(/13,2/))
 
 PRIVATE
 PUBLIC datetime, datetime_miss, init, delete, getval, &
@@ -490,8 +497,8 @@ INTEGER :: iday, imonth, iyear, ihour, imin, iminuti, igiorno
 
 imin = MOD(iminuti,60)
 ihour = MOD(iminuti,1440)/60
-igiorno=iminuti/1440
-IF (MOD(iminuti,1440) < 0) igiorno=igiorno-1
+igiorno = iminuti/1440
+IF (MOD(iminuti,1440) < 0) igiorno = igiorno-1
 
 CALL ndyin(igiorno,iday,imonth,iyear)
 
@@ -504,52 +511,25 @@ SUBROUTINE ndyin(ndays,igg,imm,iaa)
 !     SUBROUTINE NDYIN(NDAYS,IGG,IMM,IAA)
 !     restituisce la data fornendo in input il numero di
 !     giorni dal 1/1/1
-!     ATTENZIONE
-!     non tiene conto del riaggiustamento dell'anno non
-!     bisestile ogni 100 anni
 !
-!
-!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-!     nota bene                   E' SICURO !!!
-!     un anno e' bisestile se divisibile per 4
-!     un anno rimane bisestile se divisibile per 400
-!     un anno NON e' bisestile se divisibile per 100
-!
-!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-!
-!
-!     INPUT:
-!     NDAYS     I*4     numero giorni dal 1/1/1
-!
-!     OUTPUT:
-!     IGG       I*4     giorno
-!     IMM       I*4     mese
-!     IAA       I*4     anno
 !omend
 
-INTEGER :: ndays, igg, imm, iaa, ndayy, nday, ires, j
-INTEGER,PARAMETER :: &
- ianno(13)=(/0,31,59,90,120,151,181,212,243,273,304,334,365/), &
- ianno_b(13)=(/0,31,60,91,121,152,182,213,244,274,305,335,366/)
+INTEGER :: ndays, igg, imm, iaa, n
 
-ndayy=MOD(ndays,(366+365*3)) !    resto di gruppi di 4 anni
-iaa=(ndays/(366+365*3))*4+(ndayy/365)+1
-IF (ndayy/365 == 4) iaa=iaa-1
-nday=MOD(ndayy,365)+1
-IF (ndayy/365 == 4) nday=nday+365
-
-ires=MOD(iaa,4)
-IF (ires == 0) THEN
-  DO j=1,12
-    IF (nday > ianno_b(j) .AND. nday <= ianno_b(j+1)) imm=j
-  ENDDO
-  igg=nday-ianno_b(imm)
-ELSE
-  DO j=1,12
-    IF (nday > ianno(j) .AND. nday <= ianno(j+1)) imm=j
-  ENDDO
-  igg=nday-ianno(imm)
-ENDIF
+n = MOD(ndays, d400)
+ndays = ndays - n*d400
+iaa = n*400
+n = MOD(ndays, d100)
+ndays = ndays - n*d100
+iaa = iaa + n*100
+n = MOD(ndays, d4)
+ndays = ndays - n*d4
+iaa = iaa + n*4
+n = bisextilis(iaa)
+DO imm = 1, 12
+  IF (ndays <= ianno(imm+1,n)) EXIT
+ENDDO
+igg = ndays-ianno(imm,n)
 
 END SUBROUTINE ndyin
 
@@ -560,9 +540,6 @@ FUNCTION ndays(igg,imm,iaa)
 !     FUNCTION NDAYS(IGG,IMM,IAA)
 !     restituisce  il numero di giorni dal 1/1/1
 !     fornendo in input la data
-!     ATTENZIONE
-!     non tiene conto del riaggiustamento dell'anno non
-!     bisestile ogni 100 anni
 !
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 !     nota bene                   E' SICURO !!!
@@ -572,32 +549,28 @@ FUNCTION ndays(igg,imm,iaa)
 !
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 !
-!
-!     INPUT:
-!     IGG       I*4     giorno
-!     IMM       I*4     mese
-!     IAA       I*4     anno
-!
-!     OUTPUT:
-!     NDAYS     I*4     numero giorni dal 1/1/1
 !omend
 
-INTEGER :: ndays, igg, imm, iaa, nday
-INTEGER,PARAMETER :: ianno(12) =(/0,31,59,90,120,151,181,212,243,273,304,334/), &
- ianno_b(12)=(/0,31,60,91,121,152,182,213,244,274,305,335/)
+INTEGER :: ndays, igg, imm, iaa
 
-!IF (MOD(iaa,4) == 0 .AND. (MOD(iaa,400) == 0 .EQV. MOD(iaa,100) == 0)) THEN
-IF (MOD(iaa,4) == 0) THEN
-  nday=igg+ianno_b(imm)
-ELSE
-  nday=igg+ianno(imm)
-ENDIF
 
-!ndays =nday-1 + 365*(iaa-1) + (iaa-1)/4 - (iaa-1)/100 + (iaa-1)/400
-ndays=(nday-1)+(365*(iaa-1))+((iaa-1)/4) ! -((iaa-1)/100) vero ogni 100
+ndays = igg+ianno(imm,bisextilis(iaa))
+ndays = ndays-1 + 365*(iaa-year0) + (iaa-year0)/4 - (iaa-year0)/100 + &
+ (iaa-year0)/400
 
 END FUNCTION ndays
 
+
+FUNCTION bisextilis(annum)
+INTEGER,intent(in) :: annum
+INTEGER :: bisextilis
+
+IF (MOD(annum,4) == 0 .AND. (MOD(annum,400) == 0 .EQV. MOD(annum,100) == 0)) THEN
+  bisextilis = 2
+ELSE
+ bisextilis = 1
+ENDIF
+END FUNCTION bisextilis
 
 END MODULE datetime_class
 
