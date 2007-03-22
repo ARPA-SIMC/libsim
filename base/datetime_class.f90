@@ -13,9 +13,10 @@ END TYPE  datetime
 TYPE(datetime), PARAMETER :: datetime_miss=datetime(imiss, .FALSE.)
 INTEGER,PARAMETER :: &
  year0=1, & ! anno di origine per iminuti
- d400=365*400+366*100-3, & ! giorni/400 anni nel calendario gregoriano
- d100=365*100+366*25-1, & ! giorni/100 anni nel calendario gregoriano
- d4=365*4+366, & ! giorni/4 anni nel calendario gregoriano
+ d1=365, & ! giorni/1 anno nel calendario gregoriano
+ d4=d1*4+1, & ! giorni/4 anni nel calendario gregoriano
+ d100=d1*100+25-1, & ! giorni/100 anni nel calendario gregoriano
+ d400=d1*400+100-3, & ! giorni/400 anni nel calendario gregoriano
  unmim=1035593280, & ! differenza tra 01/01/1970 e 01/01/0001 (per unixtime)
  ianno(13,2)=RESHAPE((/ &
  0,31,59,90,120,151,181,212,243,273,304,334,365, &
@@ -86,7 +87,7 @@ INTEGER :: lyear, lmonth, lday, lhour, lminute, ier
 
 IF (PRESENT(iminuti)) THEN ! minuti dal 01/01/0001 (libmega)
   this%iminuti = iminuti
-  this%interval = .TRUE.
+  this%interval = .FALSE.
 ELSE IF (PRESENT(year)) THEN ! anno/mese/giorno, ecc.
   lyear = year
   IF (PRESENT(month)) THEN
@@ -114,7 +115,7 @@ ELSE IF (PRESENT(year)) THEN ! anno/mese/giorno, ecc.
 ELSE IF (PRESENT(day) .OR. PRESENT(hour) .OR. PRESENT(minute)) THEN ! intervallo
   this%iminuti = 0
   IF (PRESENT(day)) THEN
-    this%iminuti = this%iminuti + 1440
+    this%iminuti = this%iminuti + 1440*day
   ENDIF
   IF (PRESENT(hour)) THEN
     this%iminuti = this%iminuti + 60*hour
@@ -122,6 +123,7 @@ ELSE IF (PRESENT(day) .OR. PRESENT(hour) .OR. PRESENT(minute)) THEN ! intervallo
   IF (PRESENT(minute)) THEN
     this%iminuti = this%iminuti + minute
   ENDIF
+  this%interval = .TRUE.
 ELSE IF (PRESENT(isodate)) THEN ! formato iso YYYY-MM-DD hh:mm
   READ(isodate,'(I4,1X,I2,1X,I2,1X,I2,1X,I2)', iostat=ier) &
    lyear, lmonth, lday, lhour, lminute
@@ -202,7 +204,7 @@ IF (PRESENT(year) .OR. PRESENT(month) .OR. PRESENT(day) .OR. PRESENT(hour) &
     IF (PRESENT(unixtime)) THEN
       unixtime = this%iminuti*60_int_ll
     ENDIF
-  ELSE 
+  ELSE
     CALL jeladata6(lday, lmonth, lyear, lhour, lminute, this%iminuti)
     IF (PRESENT(minute)) THEN 
       minute = lminute
@@ -431,18 +433,6 @@ ENDIF
 END FUNCTION datetime_sub
 
 
-SUBROUTINE datetime_print(this)
-TYPE(datetime),INTENT(IN) :: this
-
-INTEGER :: lday, lmonth, lyear, lhour, lminute
-
-PRINT*,this%iminuti
-CALL jeladata6(lday, lmonth, lyear, lhour, lminute, this%iminuti)
-PRINT*,lday, lmonth, lyear, lhour, lminute
-
-END SUBROUTINE datetime_print
-
-
 SUBROUTINE jeladata5(iday,imonth,iyear,ihour,imin,iminuti)
 
 !omstart JELADATA5
@@ -491,15 +481,10 @@ SUBROUTINE jeladata6(iday, imonth, iyear, ihour, imin, iminuti)
 
 INTEGER :: iday, imonth, iyear, ihour, imin, iminuti, igiorno
 
-!     IGIORNO=IMINUTI/(60*24)
-!     IHOUR=(IMINUTI-IGIORNO*(60*24))/60
-!     IMIN=IMINUTI-IGIORNO*(60*24)-IHOUR*60
-
 imin = MOD(iminuti,60)
 ihour = MOD(iminuti,1440)/60
 igiorno = iminuti/1440
 IF (MOD(iminuti,1440) < 0) igiorno = igiorno-1
-
 CALL ndyin(igiorno,iday,imonth,iyear)
 
 END SUBROUTINE jeladata6
@@ -516,15 +501,19 @@ SUBROUTINE ndyin(ndays,igg,imm,iaa)
 
 INTEGER :: ndays, igg, imm, iaa, n
 
-n = MOD(ndays, d400)
+ndays = ndays + 1 ! + day0 ?! brutto
+n = ndays/d400
 ndays = ndays - n*d400
-iaa = n*400
-n = MOD(ndays, d100)
+iaa = year0 + n*400
+n = MIN(ndays/d100, 3)
 ndays = ndays - n*d100
 iaa = iaa + n*100
-n = MOD(ndays, d4)
+n = ndays/d4
 ndays = ndays - n*d4
 iaa = iaa + n*4
+n = MIN(ndays/d1, 3)
+ndays = ndays - n*d1
+iaa = iaa + n
 n = bisextilis(iaa)
 DO imm = 1, 12
   IF (ndays <= ianno(imm+1,n)) EXIT
@@ -553,7 +542,6 @@ FUNCTION ndays(igg,imm,iaa)
 
 INTEGER :: ndays, igg, imm, iaa
 
-
 ndays = igg+ianno(imm,bisextilis(iaa))
 ndays = ndays-1 + 365*(iaa-year0) + (iaa-year0)/4 - (iaa-year0)/100 + &
  (iaa-year0)/400
@@ -573,5 +561,4 @@ ENDIF
 END FUNCTION bisextilis
 
 END MODULE datetime_class
-
 
