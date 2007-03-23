@@ -1,4 +1,5 @@
 MODULE vol7d_oraclesim_class
+USE char_utilities
 USE vol7d_class
 USE vol7d_utilities
 IMPLICIT NONE
@@ -42,24 +43,6 @@ TYPE(ora_var_conv),ALLOCATABLE :: vartable(:)
 !http://spino.metarpa/~patruno/accesso_db_meteo/accesso_db_per_programmatori/node55.html
 ! aggiunta 12-FIDUTO
 TYPE(ora_network_conv) :: networktable(netmax)
-!!$TYPE(ora_network_conv) :: networktable(33) = (/ &
-!!$ ora_network_conv(01, 'SYNOP', NULL()), ora_network_conv(02, 'TEMPA', NULL()), &
-!!$ ora_network_conv(03, 'TEMPB', NULL()), ora_network_conv(04, 'TEMPC', NULL()), &
-!!$ ora_network_conv(05, 'TEMPD', NULL()), ora_network_conv(10, 'METAR', NULL()), &
-!!$ ora_network_conv(11, 'LOCALI', NULL()), ora_network_conv(12, 'FIDUTO', NULL()), &
-!!$ ora_network_conv(13, 'AGRMET', NULL()), &
-!!$ ora_network_conv(14, 'POLLINI', NULL()), ora_network_conv(15, 'URBANE', NULL()), &
-!!$ ora_network_conv(17, 'FIDUMA', NULL()), ora_network_conv(18, 'FIDUPO', NULL()), &
-!!$ ora_network_conv(19, 'ICIRFE', NULL()), ora_network_conv(20, 'SIMNBO', NULL()), &
-!!$ ora_network_conv(21, 'SIMNPR', NULL()), ora_network_conv(22, 'SPDSRA', NULL()), &
-!!$ ora_network_conv(23, 'EMLOKM', NULL()), ora_network_conv(24, 'LILOKM', NULL()), &
-!!$ ora_network_conv(25, 'PILOKM', NULL()), ora_network_conv(26, 'TRLOKM', NULL()), &
-!!$ ora_network_conv(27, 'VELOKM', NULL()), ora_network_conv(28, 'SALOKM', NULL()), &
-!!$ ora_network_conv(29, 'LOLOKM', NULL()), ora_network_conv(30, 'MALOKM', NULL()), &
-!!$ ora_network_conv(31, 'FRLOKM', NULL()), ora_network_conv(35, 'CLIMAT', NULL()), &
-!!$ ora_network_conv(36, 'GIAS', NULL()), ora_network_conv(37, 'IDROST', NULL()), &
-!!$ ora_network_conv(38, 'VMSTAT', NULL()), ora_network_conv(39, 'IDRMEC', NULL()), &
-!!$ ora_network_conv(40, 'CLINUR', NULL()), ora_network_conv(41, 'IDRSTA', NULL()) /)
 
 PRIVATE
 PUBLIC vol7d_oraclesim, vol7d_oraclesim_init, vol7d_oraclesim_delete, &
@@ -88,6 +71,7 @@ CALL vol7d_oraclesim_alloc(nmaxmin)
 IF (.NOT. ALLOCATED(vartable)) CALL vol7d_oraclesim_setup_conv()
 nact = nact + 1 ! Tengo il conto delle istanze attive
 this%ounit = -1
+CALL init(this%vol7d)
 
 END SUBROUTINE vol7d_oraclesim_init
 
@@ -99,7 +83,7 @@ IF (this%ounit >= 0) CALL n_close(this%ounit)
 nact = MAX(nact - 1, 0) ! Tengo il conto delle istanze attive
 IF (nact == 0) THEN
   CALL vol7d_oraclesim_dealloc()
-  DEALLOCATE(vartable) ! eliminare?
+  DEALLOCATE(vartable)
 ENDIF
 
 END SUBROUTINE vol7d_oraclesim_delete
@@ -111,27 +95,28 @@ CHARACTER(len=*),INTENT(in) :: var
 INTEGER,INTENT(in) :: network
 TYPE(vol7d_time),INTENT(in) :: timei, timef
 
-INTEGER :: i, j, nvar, nstaz, ntime, nana, nnet, nvout, &
+INTEGER :: i, j, nvar, nobs, ntime, nana, nvout, &
  datai(3), orai(2), dataf(3), oraf(2)
-CHARACTER(len=20) :: cnetwork, cvar
-INTEGER,ALLOCATABLE :: remapa(:), remapt(:)
-TYPE(vol7d_time),ALLOCATABLE :: tmptime(:)
+CHARACTER(len=8) :: cnetwork, cvar
+INTEGER,ALLOCATABLE :: remapa(:), remapai(:), remapt(:), remapti(:)
+!TYPE(vol7d_time),ALLOCATABLE :: tmptime(:)
+LOGICAL :: verbose
 
 CALL getval(timei, year=datai(3), month=datai(2), day=datai(1), &
  hour=orai(1), minute=orai(2))
 CALL getval(timef, year=dataf(3), month=dataf(2), day=dataf(1), &
  hour=oraf(1), minute=oraf(2))
-!!$CALL vol7d_datetime_get(timei, year=datai(3), month=datai(2), day=datai(1), &
-!!$ hour=orai(1), minute=orai(2))
-!!$CALL vol7d_datetime_get(timef, year=dataf(3), month=dataf(2), day=dataf(1), &
-!!$ hour=oraf(1), minute=oraf(2))
 
-WRITE(cnetwork,'(I8)')network
+cnetwork = TRIM(to_char(network))
 
 ! Cerco la rete nella tabella
 IF (network <= 0 .OR. network >= netmax ) THEN
   CALL raise_error('rete '//TRIM(cnetwork)//' non valida')
   STOP
+ENDIF
+! Leggo l'anagrafica per la rete se necessario
+IF (.NOT. ASSOCIATED(networktable(network)%ana)) THEN
+  CALL vol7d_oraclesim_ora_ana(network)
 ENDIF
 ! Cerco la variabile per la rete nella tabella
 nvar = 0
@@ -146,35 +131,37 @@ IF (nvar == 0) THEN
    TRIM(cnetwork))
   STOP
 ENDIF
+cvar = TRIM(to_char(vartable(nvar)%varora))
 
-WRITE(cvar,'(I8)')vartable(nvar)%varora
-
-nvout = 1 ! n. di valori in uscita
-CALL n_set_select_mode(-1) ! <0 prolisso, >0 sintetico
-nstaz = n_getgsta(this%ounit, TRIM(cnetwork), TRIM(cvar), datai, orai, &
- dataf, oraf, nvout, &
- nmax, cdatao, stazo, varo, valore1, valore2, valore3, valid)
-DO WHILE(nstaz > 0 .AND. nstaz == nmax .AND. nmax < nmaxmax)
-  CALL vol7d_oraclesim_alloc(MIN(nmax*2, nmaxmax))
-  nstaz = n_getgsta(this%ounit, TRIM(cnetwork), TRIM(cvar), datai, orai, &
+nvout = 1 ! n. di valori in uscita, raffinare
+CALL getval(verbose=verbose)
+IF (verbose) THEN ! <0 prolisso, >0 sintetico
+  CALL n_set_select_mode(-1)
+ELSE
+  CALL n_set_select_mode(1)
+ENDIF
+! Ripeto l'estrazione oracle fino ad essere sicuro di avere
+! estratto tutto (nobs < nmax)
+DO WHILE(.TRUE.)
+  nobs = n_getgsta(this%ounit, TRIM(cnetwork), TRIM(cvar), datai, orai, &
    dataf, oraf, nvout, &
    nmax, cdatao, stazo, varo, valore1, valore2, valore3, valid)
+  IF (nobs < nmax .OR. nmax >= nmaxmax) EXIT
+  CALL print_info('Troppe osservazioni, rialloco ' &
+   //TRIM(to_char(MIN(nmax*2, nmaxmax)))//' elementi')
+  CALL vol7d_oraclesim_alloc(MIN(nmax*2, nmaxmax))
 ENDDO
-
-IF (nstaz < 0) THEN
-  CALL raise_error('in estrazione oracle')
+IF (nobs < 0) THEN
+  CALL raise_error('in estrazione oracle', nobs)
   STOP
 ENDIF
-
-IF (.NOT. ASSOCIATED(networktable(network)%ana)) THEN
-  CALL vol7d_oraclesim_ora_ana(network)
+IF (nmax >= nmaxmax) THEN
+  CALL raise_warning('troppi dati richiesti, estrazione incompleta')
 ENDIF
 
-! Alloco lo spazio
-CALL init(this%vol7d)
-! Per level, timerange, network e var e` facile
+! Alloco lo spazio: per level, timerange, network e var e` facile
 CALL vol7d_alloc(this%vol7d, nlevel=1, ntimerange=1, nnetwork=1, ndativarr=1)
-
+! inizializzo i descrittori
 CALL init(this%vol7d%level(1), vartable(nvar)%level(1), vartable(nvar)%level(2), &
  vartable(nvar)%level(3))
 CALL init(this%vol7d%timerange(1), vartable(nvar)%timerange(1), &
@@ -182,78 +169,80 @@ CALL init(this%vol7d%timerange(1), vartable(nvar)%timerange(1), &
 CALL init(this%vol7d%network(1), network)
 CALL init(this%vol7d%dativar%r(1), var)
 
-! Per ana e time devo contare, ordinare e mappare
-ALLOCATE(remapa(nstaz), remapt(nstaz))
+! per ana e time devo contare, ordinare e mappare
+ALLOCATE(remapa(nobs), remapai(nobs), remapt(nobs), remapti(nobs))
 
+nana = 0
 ntime = 0
-time_ora: DO i = 1, nstaz
-  DO j = 1, i-1
-    IF (cdatao(i) == cdatao(j)) THEN
-      remapt(i) = j ! occhio
-      CYCLE time_ora
+remap: DO i = 1, nobs ! ciclo sulle osservazioni ottenute
+  DO j = i-1, 1, -1 ! ottimizzo scorrendo all'indietro
+    IF (stazo(i) == stazo(j)) THEN ! ho gia` incontrato la stazione?
+      remapa(i) = remapa(j) ! si`
+      GOTO 20
     ENDIF
   ENDDO
-  ntime = ntime + 1
-  remapt(i) = ntime
-ENDDO time_ora
-ALLOCATE(tmptime(ntime))
+  IF (.NOT. ANY(stazo(i) == networktable(network)%ana(:)%ora_cod)) THEN
+    CALL raise_warning('stazione '//TRIM(to_char(stazo(i)))// &
+     ' non trovata nell''anagrafica della rete '//TRIM(cnetwork)//', la salto')
+    remapa(i) = -1
+    remapt(i) = -1
+    CYCLE remap
+  ENDIF
+  nana = nana + 1 ! no
+  remapa(i) = nana ! mappatura diretta
+  remapai(nana) = i ! mappatura inversa
+
+20 CONTINUE
+  DO j = i-1, 1, -1 ! ottimizzo scorrendo all'indietro
+    IF (cdatao(i) == cdatao(j)) THEN ! ho gia` incontrato la data?
+      remapt(i) = remapt(j) ! si`
+      CYCLE remap
+    ENDIF
+  ENDDO
+  ntime = ntime + 1 ! no
+  remapt(i) = ntime ! mappatura diretta
+  remapti(ntime) = i ! mappatura inversa
+ENDDO remap
+
+! Alloco e riempio il descrittore dell'anagrafica
+CALL vol7d_alloc(this%vol7d, nana=nana)
+DO i = 1, nana
+  j = firsttrue(stazo(remapai(i)) == networktable(network)%ana(:)%ora_cod) ! ottimizzare
+  IF (j > 0) THEN
+    CALL init(this%vol7d%ana(i), &
+     lon=REAL(networktable(network)%ana(j)%lon,geoprec), &
+     lat=REAL(networktable(network)%ana(j)%lat,geoprec))
+  ELSE ! Non dovrebbe mai succedere, eliminare?
+    CALL raise_error('errore interno in vol7d_oraclesiom_class')
+    STOP
+  ENDIF
+ENDDO
+! Alloco e riempio riordinando il descrittore del tempo
+! Oracle ordina gia', per ora mi risparmio di farlo io
 CALL vol7d_alloc(this%vol7d, ntime=ntime)
 DO i = 1, ntime
-  CALL init(tmptime(i), oraclesimdate=cdatao(remapt(i)))
+  CALL init(this%vol7d%time(i), oraclesimdate=cdatao(remapti(i)))
 ENDDO
-DO i = 1, ntime
-  remapt(i) = COUNT(tmptime(i) > tmptime(:)) + 1
-ENDDO
-this%vol7d%time(:) = tmptime(remapt(1:ntime))
-DEALLOCATE(tmptime)
-
-! = orig =
-!!$ntime = 0
-!!$time_orao: DO i = 1, nstaz
-!!$  DO j = 1, i-1
-!!$    IF (cdatao(i) == cdatao(j)) CYCLE time_orao
-!!$  ENDDO
-!!$  ntime = ntime + 1
-!!$  remapt(ntime) = i
-!!$ENDDO time_orao
 !!$ALLOCATE(tmptime(ntime))
-!!$CALL vol7d_alloc(this%vol7d, ntime=ntime)
 !!$DO i = 1, ntime
-!!$  CALL init(tmptime(i), time_oraclesim=cdatao(remapt(i)))
+!!$  CALL init(tmptime(i), oraclesimdate=cdatao(remapti(i)))
 !!$ENDDO
 !!$DO i = 1, ntime
 !!$  remapt(i) = COUNT(tmptime(i) > tmptime(:)) + 1
 !!$ENDDO
-!!$this%time(:) = tmptime(remapt(1:ntime))
+!!$this%vol7d%time(:) = tmptime(remapt(1:ntime))
+!!$this%vol7d%time(:) = tmptime(:)
 !!$DEALLOCATE(tmptime)
-! = orig =
-
-nana = 0
-ana_ora: DO i = 1, nstaz
-  DO j = 1, i-1
-    IF (stazo(i) == stazo(j)) CYCLE ana_ora
-  ENDDO
-  IF (.NOT. ANY(stazo(i) == networktable(nnet)%ana(:)%ora_cod)) CYCLE ana_ora
-  nana = nana + 1
-  remapt(nana) = i
-ENDDO ana_ora
-CALL vol7d_alloc(this%vol7d, nana=nana)
-DO i = 1, nana
-  j = firsttrue(stazo(i) == networktable(nnet)%ana(:)%ora_cod) ! ottimizzare
-  CALL init(this%vol7d%ana(i), lon=REAL(networktable(nnet)%ana(j)%lon,geoprec), &
-   lat=REAL(networktable(nnet)%ana(j)%lat,geoprec))
-ENDDO
 
 CALL vol7d_alloc_vol(this%vol7d)
-DO i = 1, nstaz
+this%vol7d%voldatir(:,:,:,:,:,:) = rmiss
+DO i = 1, nobs
+  IF (remapa(i) == -1) CYCLE
   this%vol7d%voldatir(remapa(i),remapt(i),1,1,1,1) = &
    valore1(i)*vartable(nvar)%afact+vartable(nvar)%bfact 
 ENDDO
-!!$DO j = 1, ntime
-!!$  DO i = 1, nana
-!!$    this%vol7d%voldatir(i,j,1,1,1,1) = valore !*afact+bfact 
-!!$  ENDDO
-!!$ENDDO
+
+DEALLOCATE (remapa, remapai, remapt, remapti)
 
 END SUBROUTINE vol7d_oraclesim_import
 
@@ -267,7 +256,9 @@ INTEGER,INTENT(in) :: n
 
 IF (nmax >= n) RETURN ! c'e' gia' posto sufficiente
 CALL vol7d_oraclesim_dealloc
-ALLOCATE(stazo(n), varo(n), valid(n), valore1(n), valore2(n), valore3(n), cdatao(n))
+ALLOCATE(stazo(n), varo(n), valid(n), valore1(n), valore2(n), valore3(n), &
+ cdatao(n))
+
 nmax = n
 
 END SUBROUTINE vol7d_oraclesim_alloc
@@ -294,7 +285,6 @@ SUBROUTINE vol7d_oraclesim_setup_conv()
 INTEGER,PARAMETER :: nf=15 ! formato file
 INTEGER :: i, sep(nf), n1, n2, un
 CHARACTER(len=512) :: line
-CHARACTER(len=40) :: net
 TYPE(ora_ana),POINTER :: dummy => null() ! temporaneo
 
 un = open_package_file('varmap.csv', filetype_data)
@@ -331,8 +321,9 @@ IF (i > 0) THEN
     READ(line(sep(14)+1:sep(15)-1),'(I8)')vartable(i)%network
   ENDDO readline
 120 CONTINUE
-ENDIF
 
+  CALL print_info('Ho letto '//TRIM(to_char(i))//' variabili dalla tabella')
+ENDIF
 
 END SUBROUTINE vol7d_oraclesim_setup_conv
 
@@ -344,7 +335,7 @@ INTEGER,INTENT(in) :: network
 INTEGER :: i, j, un
 CHARACTER(len=2) :: cnet
 
-WRITE (cnet,"(i2.2)") network
+cnet = to_char(network,'(I2.2)')
 un = open_package_file(cnet//'.ana', filetype_data)
 IF (un < 0) STOP
 
@@ -354,13 +345,18 @@ DO WHILE(.TRUE.)
   i = i + 1
 ENDDO
 100 CONTINUE
-
+REWIND(un)
 ALLOCATE(networktable(network)%ana(i))
-DO j = 1, SIZE(networktable(network)%ana)
-  READ(un,*)networktable(network)%ana(j)%ora_cod, networktable(network)%ana(j)%lat,&
-       networktable(network)%ana(j)%lon, networktable(network)%ana(j)%alt
+
+DO j = 1, i
+  READ(un,*)networktable(network)%ana(j)%ora_cod, &
+   networktable(network)%ana(j)%lat, networktable(network)%ana(j)%lon, &
+   networktable(network)%ana(j)%alt
 ENDDO
 CLOSE(un)
+
+CALL print_info('Ho letto l''anagrafica di '//TRIM(to_char(i))// &
+ ' stazioni per la rete '//cnet)
 
 END SUBROUTINE vol7d_oraclesim_ora_ana
 
