@@ -89,24 +89,35 @@ ENDIF
 END SUBROUTINE vol7d_oraclesim_delete
 
 
-SUBROUTINE vol7d_oraclesim_import(this, var, network, timei, timef)
+SUBROUTINE vol7d_oraclesim_import(this, var, network, timei, timef, degnet)
 TYPE(vol7d_oraclesim),INTENT(out) :: this
 CHARACTER(len=*),INTENT(in) :: var
 INTEGER,INTENT(in) :: network
 TYPE(vol7d_time),INTENT(in) :: timei, timef
+LOGICAL,INTENT(in),OPTIONAL :: degnet
 
+TYPE(vol7d) :: v7dtmp
 INTEGER :: i, j, nvar, nobs, ntime, nana, nvout, &
  datai(3), orai(2), dataf(3), oraf(2)
 CHARACTER(len=8) :: cnetwork, cvar
 INTEGER,ALLOCATABLE :: remapa(:), remapai(:), remapt(:), remapti(:)
-!TYPE(vol7d_time),ALLOCATABLE :: tmptime(:)
-LOGICAL :: verbose
+LOGICAL :: verbose, trovato, ldegnet
 
+IF (PRESENT(degnet)) THEN
+  ldegnet = degnet
+ELSE
+  degnet = .FALSE.
+ENDIF
 CALL getval(timei, year=datai(3), month=datai(2), day=datai(1), &
  hour=orai(1), minute=orai(2))
 CALL getval(timef, year=dataf(3), month=dataf(2), day=dataf(1), &
  hour=oraf(1), minute=oraf(2))
-
+CALL getval(verbose=verbose)
+IF (verbose) THEN ! <0 prolisso, >0 sintetico
+  CALL n_set_select_mode(-1)
+ELSE
+  CALL n_set_select_mode(1)
+ENDIF
 cnetwork = TRIM(to_char(network))
 
 ! Cerco la rete nella tabella
@@ -118,131 +129,128 @@ ENDIF
 IF (.NOT. ASSOCIATED(networktable(network)%ana)) THEN
   CALL vol7d_oraclesim_ora_ana(network)
 ENDIF
+trovato = .FALSE.
 ! Cerco la variabile per la rete nella tabella
-nvar = 0
-DO i = 1, SIZE(vartable)
-  IF (vartable(i)%varbt == var .AND. vartable(i)%network == network) THEN
-    nvar = i
-    EXIT
+nvar: DO nvar = 1, SIZE(vartable)
+  IF (vartable(nvar)%varbt == var .AND. vartable(nvar)%network == network) THEN
+    cvar = TRIM(to_char(vartable(nvar)%varora))
+    trovato = .TRUE.
+
+    nvout = 1 ! n. di valori in uscita, raffinare
+! Ripeto l'estrazione oracle fino ad essere sicuro di avere
+! estratto tutto (nobs < nmax)
+    DO WHILE(.TRUE.)
+      nobs = n_getgsta(this%ounit, TRIM(cnetwork), TRIM(cvar), datai, orai, &
+       dataf, oraf, nvout, &
+       nmax, cdatao, stazo, varo, valore1, valore2, valore3, valid)
+      IF (verbose) PRINT* ! Termina la riga
+      IF (nobs < nmax .OR. nmax >= nmaxmax) EXIT
+      CALL print_info('Troppe osservazioni, rialloco ' &
+       //TRIM(to_char(MIN(nmax*2, nmaxmax)))//' elementi')
+      CALL vol7d_oraclesim_alloc(MIN(nmax*2, nmaxmax))
+    ENDDO
+    IF (nobs < 0) THEN
+      CALL raise_error('in estrazione oracle', nobs)
+      STOP
+    ENDIF
+    IF (nmax >= nmaxmax) THEN
+      CALL raise_warning('troppi dati richiesti, estrazione incompleta')
+    ENDIF
+
+! Alloco lo spazio: per level, timerange, network e var e` facile
+    call init(v7dtmp)
+    CALL vol7d_alloc(v7dtmp, nlevel=1, ntimerange=1, nnetwork=1, ndativarr=1)
+! inizializzo i descrittori
+    CALL init(v7dtmp%level(1), vartable(nvar)%level(1), &
+     vartable(nvar)%level(2), vartable(nvar)%level(3))
+    CALL init(v7dtmp%timerange(1), vartable(nvar)%timerange(1), &
+     vartable(nvar)%timerange(2), vartable(nvar)%timerange(3))
+    IF (ldegnet) THEN
+      CALL init(v7dtmp%network(1), 0)
+    ELSE
+      CALL init(v7dtmp%network(1), network)
+    ENDIF
+    CALL init(v7dtmp%dativar%r(1), var)
+
+! per ana e time devo contare, ordinare e mappare
+    ALLOCATE(remapa(nobs), remapai(nobs), remapt(nobs), remapti(nobs))
+
+    nana = 0
+    ntime = 0
+    remap: DO i = 1, nobs ! ciclo sulle osservazioni ottenute
+      DO j = i-1, 1, -1 ! ottimizzo scorrendo all'indietro
+        IF (stazo(i) == stazo(j)) THEN ! ho gia` incontrato la stazione?
+          remapa(i) = remapa(j) ! si`
+          GOTO 20
+        ENDIF
+      ENDDO
+      IF (.NOT. ANY(stazo(i) == networktable(network)%ana(:)%ora_cod)) THEN
+        CALL raise_warning('stazione '//TRIM(to_char(stazo(i)))// &
+         ' non trovata nell''anagrafica della rete '//TRIM(cnetwork)//', la salto')
+        remapa(i) = -1
+        remapt(i) = -1
+        CYCLE remap
+      ENDIF
+      nana = nana + 1 ! no
+      remapa(i) = nana ! mappatura diretta
+      remapai(nana) = i ! mappatura inversa
+
+20    CONTINUE
+      DO j = i-1, 1, -1 ! ottimizzo scorrendo all'indietro
+        IF (cdatao(i) == cdatao(j)) THEN ! ho gia` incontrato la data?
+          remapt(i) = remapt(j) ! si`
+          CYCLE remap
+        ENDIF
+      ENDDO
+      ntime = ntime + 1 ! no
+      remapt(i) = ntime ! mappatura diretta
+      remapti(ntime) = i ! mappatura inversa
+    ENDDO remap
+
+! Alloco e riempio il descrittore dell'anagrafica
+    CALL vol7d_alloc(v7dtmp, nana=nana)
+    DO i = 1, nana
+      j = firsttrue(stazo(remapai(i)) == networktable(network)%ana(:)%ora_cod) ! ottimizzare
+      IF (j > 0) THEN
+        CALL init(v7dtmp%ana(i), &
+         lon=REAL(networktable(network)%ana(j)%lon,geoprec), &
+         lat=REAL(networktable(network)%ana(j)%lat,geoprec))
+      ELSE ! Non dovrebbe mai succedere, eliminare?
+        CALL raise_error('errore interno in vol7d_oraclesiom_class')
+        STOP
+      ENDIF
+    ENDDO
+! Alloco e riempio riordinando il descrittore del tempo
+! Oracle ordina gia', per ora mi risparmio di farlo io
+    CALL vol7d_alloc(v7dtmp, ntime=ntime)
+    DO i = 1, ntime
+      CALL init(v7dtmp%time(i), oraclesimdate=cdatao(remapti(i)))
+    ENDDO
+! Alloco e riempio il volume di dati
+    CALL vol7d_alloc_vol(v7dtmp)
+    v7dtmp%voldatir(:,:,:,:,:,:) = rmiss
+    DO i = 1, nobs
+      IF (remapa(i) == -1) CYCLE
+      v7dtmp%voldatir(remapa(i),remapt(i),1,1,1,1) = &
+       valore1(i)*vartable(nvar)%afact+vartable(nvar)%bfact 
+    ENDDO
+
+    DEALLOCATE (remapa, remapai, remapt, remapti)
+! Se l'oggetto ha gia` un volume allocato lo fondo con quello estratto
+    IF (ASSOCIATED(this%vol7d%ana) .AND. ASSOCIATED(this%vol7d%time) .AND. &
+     ASSOCIATED(this%vol7d%voldatir)) THEN
+      CALL vol7d_merge(this%vol7d, v7dtmp, sort=.TRUE.)
+    ELSE
+      this%vol7d = v7dtmp
+    ENDIF
+
   ENDIF
-ENDDO
-IF (nvar == 0) THEN
+ENDDO nvar
+IF (.NOT.trovato) THEN
   CALL raise_error('variabile '//TRIM(var)//' non valida per la rete '// &
    TRIM(cnetwork))
   STOP
 ENDIF
-cvar = TRIM(to_char(vartable(nvar)%varora))
-
-nvout = 1 ! n. di valori in uscita, raffinare
-CALL getval(verbose=verbose)
-IF (verbose) THEN ! <0 prolisso, >0 sintetico
-  CALL n_set_select_mode(-1)
-ELSE
-  CALL n_set_select_mode(1)
-ENDIF
-! Ripeto l'estrazione oracle fino ad essere sicuro di avere
-! estratto tutto (nobs < nmax)
-DO WHILE(.TRUE.)
-  nobs = n_getgsta(this%ounit, TRIM(cnetwork), TRIM(cvar), datai, orai, &
-   dataf, oraf, nvout, &
-   nmax, cdatao, stazo, varo, valore1, valore2, valore3, valid)
-  IF (nobs < nmax .OR. nmax >= nmaxmax) EXIT
-  CALL print_info('Troppe osservazioni, rialloco ' &
-   //TRIM(to_char(MIN(nmax*2, nmaxmax)))//' elementi')
-  CALL vol7d_oraclesim_alloc(MIN(nmax*2, nmaxmax))
-ENDDO
-IF (nobs < 0) THEN
-  CALL raise_error('in estrazione oracle', nobs)
-  STOP
-ENDIF
-IF (nmax >= nmaxmax) THEN
-  CALL raise_warning('troppi dati richiesti, estrazione incompleta')
-ENDIF
-
-! Alloco lo spazio: per level, timerange, network e var e` facile
-CALL vol7d_alloc(this%vol7d, nlevel=1, ntimerange=1, nnetwork=1, ndativarr=1)
-! inizializzo i descrittori
-CALL init(this%vol7d%level(1), vartable(nvar)%level(1), vartable(nvar)%level(2), &
- vartable(nvar)%level(3))
-CALL init(this%vol7d%timerange(1), vartable(nvar)%timerange(1), &
- vartable(nvar)%timerange(2), vartable(nvar)%timerange(3))
-CALL init(this%vol7d%network(1), network)
-CALL init(this%vol7d%dativar%r(1), var)
-
-! per ana e time devo contare, ordinare e mappare
-ALLOCATE(remapa(nobs), remapai(nobs), remapt(nobs), remapti(nobs))
-
-nana = 0
-ntime = 0
-remap: DO i = 1, nobs ! ciclo sulle osservazioni ottenute
-  DO j = i-1, 1, -1 ! ottimizzo scorrendo all'indietro
-    IF (stazo(i) == stazo(j)) THEN ! ho gia` incontrato la stazione?
-      remapa(i) = remapa(j) ! si`
-      GOTO 20
-    ENDIF
-  ENDDO
-  IF (.NOT. ANY(stazo(i) == networktable(network)%ana(:)%ora_cod)) THEN
-    CALL raise_warning('stazione '//TRIM(to_char(stazo(i)))// &
-     ' non trovata nell''anagrafica della rete '//TRIM(cnetwork)//', la salto')
-    remapa(i) = -1
-    remapt(i) = -1
-    CYCLE remap
-  ENDIF
-  nana = nana + 1 ! no
-  remapa(i) = nana ! mappatura diretta
-  remapai(nana) = i ! mappatura inversa
-
-20 CONTINUE
-  DO j = i-1, 1, -1 ! ottimizzo scorrendo all'indietro
-    IF (cdatao(i) == cdatao(j)) THEN ! ho gia` incontrato la data?
-      remapt(i) = remapt(j) ! si`
-      CYCLE remap
-    ENDIF
-  ENDDO
-  ntime = ntime + 1 ! no
-  remapt(i) = ntime ! mappatura diretta
-  remapti(ntime) = i ! mappatura inversa
-ENDDO remap
-
-! Alloco e riempio il descrittore dell'anagrafica
-CALL vol7d_alloc(this%vol7d, nana=nana)
-DO i = 1, nana
-  j = firsttrue(stazo(remapai(i)) == networktable(network)%ana(:)%ora_cod) ! ottimizzare
-  IF (j > 0) THEN
-    CALL init(this%vol7d%ana(i), &
-     lon=REAL(networktable(network)%ana(j)%lon,geoprec), &
-     lat=REAL(networktable(network)%ana(j)%lat,geoprec))
-  ELSE ! Non dovrebbe mai succedere, eliminare?
-    CALL raise_error('errore interno in vol7d_oraclesiom_class')
-    STOP
-  ENDIF
-ENDDO
-! Alloco e riempio riordinando il descrittore del tempo
-! Oracle ordina gia', per ora mi risparmio di farlo io
-CALL vol7d_alloc(this%vol7d, ntime=ntime)
-DO i = 1, ntime
-  CALL init(this%vol7d%time(i), oraclesimdate=cdatao(remapti(i)))
-ENDDO
-!!$ALLOCATE(tmptime(ntime))
-!!$DO i = 1, ntime
-!!$  CALL init(tmptime(i), oraclesimdate=cdatao(remapti(i)))
-!!$ENDDO
-!!$DO i = 1, ntime
-!!$  remapt(i) = COUNT(tmptime(i) > tmptime(:)) + 1
-!!$ENDDO
-!!$this%vol7d%time(:) = tmptime(remapt(1:ntime))
-!!$this%vol7d%time(:) = tmptime(:)
-!!$DEALLOCATE(tmptime)
-
-CALL vol7d_alloc_vol(this%vol7d)
-this%vol7d%voldatir(:,:,:,:,:,:) = rmiss
-DO i = 1, nobs
-  IF (remapa(i) == -1) CYCLE
-  this%vol7d%voldatir(remapa(i),remapt(i),1,1,1,1) = &
-   valore1(i)*vartable(nvar)%afact+vartable(nvar)%bfact 
-ENDDO
-
-DEALLOCATE (remapa, remapai, remapt, remapti)
 
 END SUBROUTINE vol7d_oraclesim_import
 
