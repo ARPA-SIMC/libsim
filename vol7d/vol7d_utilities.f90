@@ -43,14 +43,21 @@ unit = getunit()
 CALL getenv(TRIM(program_name_env)//'_'//TRIM(filetypename(filetype)), path)
 IF (path /= ' ') THEN
   OPEN(unit, file=TRIM(path)//'/'//filename, status='old', iostat = i)
-  IF (i == 0) RETURN
+  IF (i == 0) THEN
+    CALL print_info('Ho trovato il file '//TRIM(path)//'/'//filename)
+    RETURN
+  ENDIF
 ENDIF
 ! try with pathlist
 DO j = 1, SIZE(pathlist,1)
   IF (pathlist(j,filetype) == ' ') EXIT
   OPEN(unit, file=TRIM(pathlist(j,filetype))//'/'//TRIM(program_name)//'/' &
    //filename, status='old', iostat = i)
-  IF (i == 0) RETURN
+  IF (i == 0) THEN
+    CALL print_info('Ho trovato il file '//TRIM(pathlist(j,filetype))//'/' &
+     //TRIM(program_name)//'/'//filename)
+    RETURN
+  ENDIF
 ENDDO
 CALL raise_error('File '//TRIM(filename)//' not found')
 unit = -1

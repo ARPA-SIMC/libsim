@@ -50,11 +50,19 @@ IMPLICIT NONE
 !
 !omend
 
-LOGICAL :: eh_fatal = .TRUE., eh_to_stderr = .TRUE.
+LOGICAL :: eh_fatal = .TRUE., eh_to_stderr = .TRUE., eh_verbose = .TRUE.
 INTEGER :: eh_unit = stderr_unit
 
 PRIVATE
-PUBLIC raise_error, raise_warning, errhandling_set
+PUBLIC raise_error, raise_warning, print_info, errhandling_setval
+
+INTERFACE setval
+  MODULE PROCEDURE errhandling_setval
+END INTERFACE
+
+INTERFACE getval
+  MODULE PROCEDURE errhandling_getval
+END INTERFACE
 
 CONTAINS
 
@@ -84,11 +92,20 @@ IF (PRESENT(ier) .AND. PRESENT(ierval)) ier = ierval
 END SUBROUTINE raise_warning
 
 
-SUBROUTINE errhandling_set(fatal, to_stderr, to_stdout, to_unit)
-LOGICAL, OPTIONAL, INTENT(in) :: fatal, to_stderr, to_stdout
+SUBROUTINE print_info(msg)
+CHARACTER (len=*), INTENT(in) :: msg
+
+IF (eh_verbose) CALL output_message('Info', msg)
+
+END SUBROUTINE print_info
+
+
+SUBROUTINE errhandling_setval(fatal, verbose, to_stderr, to_stdout, to_unit)
+LOGICAL, OPTIONAL, INTENT(in) :: fatal, verbose, to_stderr, to_stdout
 INTEGER, OPTIONAL, INTENT(in) :: to_unit
 
 IF (PRESENT(fatal)) eh_fatal = fatal
+IF (PRESENT(verbose)) eh_verbose = verbose
 IF (PRESENT(to_stderr)) THEN
   IF (to_stderr) THEN
     eh_unit = stderr_unit
@@ -105,7 +122,18 @@ IF (PRESENT(to_stdout)) THEN
 ENDIF
 IF (PRESENT(to_unit)) eh_unit = to_unit
 
-END SUBROUTINE errhandling_set
+END SUBROUTINE errhandling_setval
+
+
+SUBROUTINE errhandling_getval(fatal, verbose, to_unit)
+LOGICAL, OPTIONAL, INTENT(out) :: fatal, verbose
+INTEGER, OPTIONAL, INTENT(out) :: to_unit
+
+IF (PRESENT(fatal)) fatal = eh_fatal
+IF (PRESENT(verbose)) verbose = eh_verbose
+IF (PRESENT(to_unit)) to_unit = eh_unit
+
+END SUBROUTINE errhandling_getval
 
 
 SUBROUTINE output_message(head, msg, ierval)
