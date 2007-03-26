@@ -17,14 +17,19 @@ dnl AC_LANG_PUSH([Fortran 77])dnl Do the following checks in Fortran
 AC_LANG_PUSH(Fortran)dnl Do the following checks in Fortran
 AC_FC_SRCEXT(f90)dnl and use .f90 extension
 
-
-dnl  -L/usr/local/oracle/10.1.0/db_1/lib  -lclntsh \
-dnl /usr/lib/librouMW.a  /usr/lib/librouGW.a /usr/lib/libix.a \
-dnl  /usr/lib/libsupport.a
-
 dnl AC_SEARCH_LIBS([gribex], [picogrib emos], ,
 dnl                          AC_MSG_RESULT([grib decoding library not found]), )
 
+AC_ARG_ENABLE(oraclesim, AC_HELP_STRING([--disable-oraclesim],
+  [disable oraclesim support]),,[enableval=yes])dnl default enable
+if test "x$enableval" = "xyes"; then
+AC_MSG_RESULT([oraclesim code included])
+liboraclesim=' -L/usr/local/oracle/10.1.0/db_1/lib -lclntsh -lrouMW -lsupport -lrouGW -lix -lemos'
+AC_SUBST(liboraclesim)
+else
+AC_MSG_RESULT([oraclesim code not included])
+fi
+AM_CONDITIONAL(ORSIM, test "x$enableval" = "xyes")
 
 AC_LANG_POP()dnl back to C
 AC_PROG_LIBTOOL
