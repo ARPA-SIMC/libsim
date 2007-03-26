@@ -106,7 +106,7 @@ LOGICAL :: verbose, trovato, ldegnet
 IF (PRESENT(degnet)) THEN
   ldegnet = degnet
 ELSE
-  degnet = .FALSE.
+  ldegnet = .FALSE.
 ENDIF
 CALL getval(timei, year=datai(3), month=datai(2), day=datai(1), &
  hour=orai(1), minute=orai(2))
@@ -152,13 +152,16 @@ nvar: DO nvar = 1, SIZE(vartable)
     IF (nobs < 0) THEN
       CALL raise_error('in estrazione oracle', nobs)
       STOP
+    ELSE
+      CALL print_info('Estratte dall''archivio '//TRIM(to_char(nobs)) &
+       //' osservazioni')
     ENDIF
-    IF (nmax >= nmaxmax) THEN
+    IF (nobs >= nmax) THEN
       CALL raise_warning('troppi dati richiesti, estrazione incompleta')
     ENDIF
 
 ! Alloco lo spazio: per level, timerange, network e var e` facile
-    call init(v7dtmp)
+    CALL init(v7dtmp)
     CALL vol7d_alloc(v7dtmp, nlevel=1, ntimerange=1, nnetwork=1, ndativarr=1)
 ! inizializzo i descrittori
     CALL init(v7dtmp%level(1), vartable(nvar)%level(1), &
