@@ -316,7 +316,7 @@ elemental FUNCTION datetime_lt(this, that) RESULT(res)
 TYPE(datetime),INTENT(IN) :: this, that
 LOGICAL :: res
 
-IF ((this%iminuti < that%iminuti .AND. this%interval .EQV. that%interval) .OR. &
+IF ((this%iminuti < that%iminuti .AND. (this%interval .EQV. that%interval)) .OR. &
  (this%interval .AND. .NOT.that%interval)) THEN
   res = .TRUE.
 ELSE
