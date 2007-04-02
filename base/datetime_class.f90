@@ -435,7 +435,7 @@ END FUNCTION datetime_sub
 
 SUBROUTINE jeladata5(iday,imonth,iyear,ihour,imin,iminuti)
 
-!omstart JELADATA5
+!!omstart JELADATA5
 !     SUBROUTINE JELADATA5(IDAY,IMONTH,IYEAR,IHOUR,IMIN,
 !     1                 IMINUTI)
 !
@@ -448,10 +448,7 @@ SUBROUTINE jeladata5(iday,imonth,iyear,ihour,imin,iminuti)
 !
 !     OUT:
 !     IMINUTI           I*4     MINUTI AD INIZIARE DALLE ORE 00 DEL 1/1/1
-!OMEND
-
-!     IMINUTI=NDAYS(IDAY,IMONTH,IYEAR)*24*60+(IHOUR*60)+IMIN+
-!     1 998779680
+!!OMEND
 
 INTEGER :: iday, imonth, iyear, ihour, imin, iminuti
 
@@ -462,7 +459,7 @@ END SUBROUTINE jeladata5
 
 SUBROUTINE jeladata6(iday, imonth, iyear, ihour, imin, iminuti)
 
-!omstart JELADATA6
+!!omstart JELADATA6
 !     SUBROUTINE JELADATA6(IDAY,IMONTH,IYEAR,IHOUR,IMIN,
 !     1                 IMINUTI)
 !
@@ -476,7 +473,7 @@ SUBROUTINE jeladata6(iday, imonth, iyear, ihour, imin, iminuti)
 !     OUT:
 !     IDAY,IMONTH,IYEAR,  I*4
 !     IHOUR,IMIN                GIORNO MESE ANNO ORE MINUTI
-!OMEND
+!!OMEND
 
 
 INTEGER :: iday, imonth, iyear, ihour, imin, iminuti, igiorno
@@ -492,12 +489,12 @@ END SUBROUTINE jeladata6
 
 SUBROUTINE ndyin(ndays,igg,imm,iaa)
 
-!OMSTART NDYIN
+!!OMSTART NDYIN
 !     SUBROUTINE NDYIN(NDAYS,IGG,IMM,IAA)
 !     restituisce la data fornendo in input il numero di
 !     giorni dal 1/1/1
 !
-!omend
+!!omend
 
 INTEGER :: ndays, igg, imm, iaa, n
 
@@ -525,7 +522,7 @@ END SUBROUTINE ndyin
 
 FUNCTION ndays(igg,imm,iaa)
 
-!OMSTART NDAYS
+!!OMSTART NDAYS
 !     FUNCTION NDAYS(IGG,IMM,IAA)
 !     restituisce  il numero di giorni dal 1/1/1
 !     fornendo in input la data
@@ -538,7 +535,7 @@ FUNCTION ndays(igg,imm,iaa)
 !
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 !
-!omend
+!!omend
 
 INTEGER :: ndays, igg, imm, iaa
 

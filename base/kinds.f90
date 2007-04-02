@@ -2,13 +2,14 @@ MODULE kinds
 IMPLICIT NONE
 
 !omstart kinds
+!idx Costanti fortran per dichiarare interi o reali a dimensione prestabilita
 !Questo modulo definisce le seguenti costanti da usare
-!nelle definizioni di variabili e nella conversione di costanti
+!nelle dichiarazioni di variabili e nella conversione di costanti
 !per essere sicuri di usare i tipi desiderati:
 !
 !fp_s   => reale a singola precisione (4 byte IEEE)
 !fp_d   => reale a doppia precisione (8 byte IEEE)
-!fp_d   => reale a quadrupla precisione (8 byte IEEE, se esiste)
+!fp_q   => reale a quadrupla precisione (16 byte IEEE, se esiste)
 !int_b  => intero a 1 byte (byte)
 !int_s  => intero a 2 byte (short)
 !int_l  => intero a 4 byte (long)

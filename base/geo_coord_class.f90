@@ -4,6 +4,55 @@ USE missing_values
 USE phys_const
 IMPLICIT NONE
 
+!omstart geo_coord_class
+!idx classe per la gestione di dati puntuali georeferenziati
+!Questo modulo definisce gli oggetti e i metodi per gestire
+!dati puntuali georeferenziati con coordinate geografiche o UTM.
+!Quando sar&agrave; completo dovr&agrave; gestire indifferentemente,
+!anche mescolandoli tra loro, dati in coordinate geografiche e UTM,
+!eseguendo le conversioni solo quando necessario.
+!
+!La classe definisce le seguenti costanti:
+!
+!geoprec => intero che definisce il KIND dei reali associati a coordinate geografiche
+!utmprec => intero che definisce il KIND dei reali associati a coordinate UTM
+!
+!L'oggetto principale definito dalla classe &egrave;:
+!
+!geo_coord
+!l'oggetto &egrave; "opaco", cio&egrave; le sue componenti sono invisibili
+!all'utente che pu&ograve; accedervi solo attraverso i metodi pubblici
+!
+!I metodi definiti sono i seguenti:
+!
+!Costruttore (obbligatorio per ogni oggetto)
+!SUBROUTINE init(this, lon, lat, utme, utmn, fuso, elliss)
+!TYPE(geo_coord) :: this
+!REAL(kind=geoprec), INTENT(IN), OPTIONAL :: lon, lat
+!REAL(kind=utmprec), INTENT(IN), OPTIONAL  :: utme, utmn
+!INTEGER, INTENT(IN), OPTIONAL  :: fuso
+!CHARACTER(LEN=20), INTENT(IN), OPTIONAL  :: elliss
+!
+!Definisce un oggetto geo_coord inizializzando le coordinate ai valori
+!geografici (lon, lat) o UTM (utme, utmn, fuso, elliss) forniti
+!
+!Distruttore (obbligatorio per ogni oggetto)
+!SUBROUTINE delete(this)
+!TYPE(geo_coord) :: this
+!
+!Operatori ==, /=
+!
+!Confrontano oggetti del tipo geo_coord, esiste anche la versione vettoriale
+!in cui il secondo membro &egrave; un array
+!
+!FUNCTION geo_coord_dist(this, that)
+!TYPE(geo_coord), INTENT (IN) :: this, that
+!REAL :: dist
+!
+!Restituisce la distanza tra i due punti in m
+!
+!omend
+
 INTEGER, PARAMETER :: geoprec=fp_s, utmprec=fp_d
 
 TYPE geo_coord
@@ -94,6 +143,7 @@ this%utmce = .FALSE.
 
 
 END SUBROUTINE geo_coord_delete
+
 
 elemental FUNCTION geo_coord_eq(this, that) RESULT(res)
 TYPE(geo_coord),INTENT(IN) :: this, that
@@ -197,7 +247,6 @@ END FUNCTION geo_coord_dentro
 FUNCTION geo_dist_latlon(lat1, lon1, lat2, lon2) RESULT(dist)
 REAL (kind=geoprec), INTENT(IN) :: lat1, lat2, lon1, lon2
 REAL :: dist
-REAL,PARAMETER :: rpi = 3.1415927
 REAL :: x,y
 
 !dubbi matematici:

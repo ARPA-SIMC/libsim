@@ -1,6 +1,26 @@
 MODULE char_utilities
 IMPLICIT NONE
 
+!omstart char_utilities
+!idx Modulo di utiit&agrave; per la gestione di variabili carattere
+!vedi err_handling
+!Questo modulo definisce le seguenti routine/funzioni:
+!
+!FUNCTION int_to_char(i, form)
+!INTEGER,INTENT(in) :: i
+!CHARACTER(len=*),INTENT(in),OPTIONAL :: form
+!
+!Restituisce la variabile intera i convertita in stringa
+!con un formato di default ('I0' la pi&ugrave; breve rappresentazione
+!in base 10) oppure con il formato opzionale richiesto form.
+!
+!Esempio di utilizzo:
+!INTEGER :: j
+!...
+!CALL raise_error('Valore inserito '//TRIM(to_char(j))//' troppo grande')
+!
+!omend
+
 PRIVATE int_to_char
 
 INTERFACE to_char
