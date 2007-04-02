@@ -15,6 +15,17 @@ INTEGER, PARAMETER :: filetype_data = 1, filetype_config = 2
 
 CHARACTER(len=20) :: program_name='vol7d', program_name_env='VOL7D'
 
+INTERFACE count_distinct
+  MODULE PROCEDURE count_distincti, count_distinctc
+END INTERFACE
+
+INTERFACE pack_distinct
+  MODULE PROCEDURE pack_distincti, pack_distinctc
+END INTERFACE
+
+INTERFACE map_distinct
+  MODULE PROCEDURE map_distincti, map_distinctc
+END INTERFACE
 
 CONTAINS
 
@@ -113,5 +124,383 @@ ENDDO
 i = 0
 
 END FUNCTION firsttrue
+
+
+! conta gli elementi distinti in vect
+FUNCTION count_distincti(vect, mask, back) RESULT(count_distinct)
+INTEGER,INTENT(in) :: vect(:)
+LOGICAL,INTENT(in),OPTIONAL :: mask(:), back
+INTEGER :: count_distinct
+
+INTEGER :: i, j
+LOGICAL :: lback
+
+IF (PRESENT(back)) THEN
+  lback = back
+ELSE
+  lback = .FALSE.
+ENDIF
+count_distinct = 0
+
+IF (PRESENT (mask)) THEN
+  IF (back) THEN
+    vectm1: DO i = 1, SIZE(vect)
+      IF (.NOT.mask(i)) CYCLE vectm1
+      DO j = i-1, 1, -1
+        IF (vect(j) == vect(i)) CYCLE vectm1
+      ENDDO
+      count_distinct = count_distinct + 1
+    ENDDO vectm1
+  ELSE
+    vectm2: DO i = 1, SIZE(vect)
+      IF (.NOT.mask(i)) CYCLE vectm2
+      DO j = 1, i-1
+        IF (vect(j) == vect(i)) CYCLE vectm2
+      ENDDO
+      count_distinct = count_distinct + 1
+    ENDDO vectm2
+  ENDIF
+ELSE
+  IF (back) THEN
+    vect1: DO i = 1, SIZE(vect)
+      DO j = i-1, 1, -1
+        IF (vect(j) == vect(i)) CYCLE vect1
+      ENDDO
+      count_distinct = count_distinct + 1
+    ENDDO vect1
+  ELSE
+    vect2: DO i = 1, SIZE(vect)
+      DO j = 1, i-1
+        IF (vect(j) == vect(i)) CYCLE vect2
+      ENDDO
+      count_distinct = count_distinct + 1
+    ENDDO vect2
+  ENDIF
+ENDIF
+
+END FUNCTION count_distincti
+
+
+FUNCTION count_distinctc(vect, mask, back) RESULT(count_distinct)
+CHARACTER(len=*),INTENT(in) :: vect(:)
+LOGICAL,INTENT(in),OPTIONAL :: mask(:), back
+INTEGER :: count_distinct
+
+INTEGER :: i, j
+LOGICAL :: lback
+
+IF (PRESENT(back)) THEN
+  lback = back
+ELSE
+  lback = .FALSE.
+ENDIF
+count_distinct = 0
+
+IF (PRESENT (mask)) THEN
+  IF (back) THEN
+    vectm1: DO i = 1, SIZE(vect)
+      IF (.NOT.mask(i)) CYCLE vectm1
+      DO j = i-1, 1, -1
+        IF (vect(j) == vect(i)) CYCLE vectm1
+      ENDDO
+      count_distinct = count_distinct + 1
+    ENDDO vectm1
+  ELSE
+    vectm2: DO i = 1, SIZE(vect)
+      IF (.NOT.mask(i)) CYCLE vectm2
+      DO j = 1, i-1
+        IF (vect(j) == vect(i)) CYCLE vectm2
+      ENDDO
+      count_distinct = count_distinct + 1
+    ENDDO vectm2
+  ENDIF
+ELSE
+  IF (back) THEN
+    vect1: DO i = 1, SIZE(vect)
+      DO j = i-1, 1, -1
+        IF (vect(j) == vect(i)) CYCLE vect1
+      ENDDO
+      count_distinct = count_distinct + 1
+    ENDDO vect1
+  ELSE
+    vect2: DO i = 1, SIZE(vect)
+      DO j = 1, i-1
+        IF (vect(j) == vect(i)) CYCLE vect2
+      ENDDO
+      count_distinct = count_distinct + 1
+    ENDDO vect2
+  ENDIF
+ENDIF
+
+END FUNCTION count_distinctc
+
+
+! compatta gli elementi distinti di vect in un array
+FUNCTION pack_distincti(vect, mask, back) RESULT(pack_distinct)
+INTEGER,INTENT(in) :: vect(:)
+LOGICAL,INTENT(in),OPTIONAL :: mask(:), back
+INTEGER :: pack_distinct(SIZE(vect))
+
+INTEGER :: count_distinct
+INTEGER :: i, j
+LOGICAL :: lback
+
+IF (PRESENT(back)) THEN
+  lback = back
+ELSE
+  lback = .FALSE.
+ENDIF
+count_distinct = 0
+
+IF (PRESENT (mask)) THEN
+  IF (back) THEN
+    vectm1: DO i = 1, SIZE(vect)
+      IF (.NOT.mask(i)) CYCLE vectm1
+      DO j = i-1, 1, -1
+        IF (vect(j) == vect(i)) CYCLE vectm1
+      ENDDO
+      count_distinct = count_distinct + 1
+      pack_distinct(count_distinct) = vect(i)
+    ENDDO vectm1
+  ELSE
+    vectm2: DO i = 1, SIZE(vect)
+      IF (.NOT.mask(i)) CYCLE vectm2
+      DO j = 1, i-1
+        IF (vect(j) == vect(i)) CYCLE vectm2
+      ENDDO
+      count_distinct = count_distinct + 1
+      pack_distinct(count_distinct) = vect(i)
+    ENDDO vectm2
+  ENDIF
+ELSE
+  IF (back) THEN
+    vect1: DO i = 1, SIZE(vect)
+      DO j = i-1, 1, -1
+        IF (vect(j) == vect(i)) CYCLE vect1
+      ENDDO
+      count_distinct = count_distinct + 1
+      pack_distinct(count_distinct) = vect(i)
+    ENDDO vect1
+  ELSE
+    vect2: DO i = 1, SIZE(vect)
+      DO j = 1, i-1
+        IF (vect(j) == vect(i)) CYCLE vect2
+      ENDDO
+      count_distinct = count_distinct + 1
+      pack_distinct(count_distinct) = vect(i)
+    ENDDO vect2
+  ENDIF
+ENDIF
+
+END FUNCTION pack_distincti
+
+
+! vlen provvisorio, altrimenti internal compiler error con pgf90!!!
+FUNCTION pack_distinctc(vect, vlen, mask, back) RESULT(pack_distinct)
+CHARACTER(len=*),INTENT(in) :: vect(:)
+INTEGER :: vlen
+LOGICAL,INTENT(in),OPTIONAL :: mask(:), back
+CHARACTER(len=vlen) :: pack_distinct(SIZE(vect))
+!CHARACTER(len=len(vect(1))) :: pack_distinct(SIZE(vect))
+
+INTEGER :: count_distinct
+INTEGER :: i, j
+LOGICAL :: lback
+
+IF (PRESENT(back)) THEN
+  lback = back
+ELSE
+  lback = .FALSE.
+ENDIF
+count_distinct = 0
+
+IF (PRESENT (mask)) THEN
+  IF (back) THEN
+    vectm1: DO i = 1, SIZE(vect)
+      IF (.NOT.mask(i)) CYCLE vectm1
+      DO j = i-1, 1, -1
+        IF (vect(j) == vect(i)) CYCLE vectm1
+      ENDDO
+      count_distinct = count_distinct + 1
+      pack_distinct(count_distinct) = vect(i)
+    ENDDO vectm1
+  ELSE
+    vectm2: DO i = 1, SIZE(vect)
+      IF (.NOT.mask(i)) CYCLE vectm2
+      DO j = 1, i-1
+        IF (vect(j) == vect(i)) CYCLE vectm2
+      ENDDO
+      count_distinct = count_distinct + 1
+      pack_distinct(count_distinct) = vect(i)
+    ENDDO vectm2
+  ENDIF
+ELSE
+  IF (back) THEN
+    vect1: DO i = 1, SIZE(vect)
+      DO j = i-1, 1, -1
+        IF (vect(j) == vect(i)) CYCLE vect1
+      ENDDO
+      count_distinct = count_distinct + 1
+      pack_distinct(count_distinct) = vect(i)
+    ENDDO vect1
+  ELSE
+    vect2: DO i = 1, SIZE(vect)
+      DO j = 1, i-1
+        IF (vect(j) == vect(i)) CYCLE vect2
+      ENDDO
+      count_distinct = count_distinct + 1
+      pack_distinct(count_distinct) = vect(i)
+    ENDDO vect2
+  ENDIF
+ENDIF
+
+END FUNCTION pack_distinctc
+
+
+! restituisce gli indici degli elementi distinti di vect impacchettati
+! con la pack_distinct
+FUNCTION map_distincti(vect, mask, back) RESULT(map_distinct)
+INTEGER,INTENT(in) :: vect(:)
+LOGICAL,INTENT(in),OPTIONAL :: mask(:), back
+INTEGER :: map_distinct(SIZE(vect))
+
+INTEGER :: count_distinct
+INTEGER :: i, j
+LOGICAL :: lback
+
+IF (PRESENT(back)) THEN
+  lback = back
+ELSE
+  lback = .FALSE.
+ENDIF
+count_distinct = 0
+map_distinct(:) = 0
+
+IF (PRESENT (mask)) THEN
+  IF (back) THEN
+    vectm1: DO i = 1, SIZE(vect)
+      IF (.NOT.mask(i)) CYCLE vectm1
+      DO j = i-1, 1, -1
+        IF (vect(j) == vect(i)) THEN
+          map_distinct(i) = map_distinct(j)
+          CYCLE vectm1
+        ENDIF
+      ENDDO
+      count_distinct = count_distinct + 1
+      map_distinct(i) = count_distinct
+    ENDDO vectm1
+  ELSE
+    vectm2: DO i = 1, SIZE(vect)
+      IF (.NOT.mask(i)) CYCLE vectm2
+      DO j = 1, i-1
+        IF (vect(j) == vect(i)) THEN
+          map_distinct(i) = map_distinct(j)
+          CYCLE vectm2
+        ENDIF
+      ENDDO
+      count_distinct = count_distinct + 1
+      map_distinct(i) = count_distinct
+    ENDDO vectm2
+  ENDIF
+ELSE
+  IF (back) THEN
+    vect1: DO i = 1, SIZE(vect)
+      DO j = i-1, 1, -1
+        IF (vect(j) == vect(i)) THEN
+          map_distinct(i) = map_distinct(j)
+          CYCLE vect1
+        ENDIF
+      ENDDO
+      count_distinct = count_distinct + 1
+      map_distinct(i) = count_distinct
+    ENDDO vect1
+  ELSE
+    vect2: DO i = 1, SIZE(vect)
+      DO j = 1, i-1
+        IF (vect(j) == vect(i)) THEN
+          map_distinct(i) = map_distinct(j)
+          CYCLE vect2
+        ENDIF
+      ENDDO
+      count_distinct = count_distinct + 1
+      map_distinct(i) = count_distinct
+    ENDDO vect2
+  ENDIF
+ENDIF
+
+END FUNCTION map_distincti
+
+
+FUNCTION map_distinctc(vect, mask, back) RESULT(map_distinct)
+CHARACTER(len=*),INTENT(in) :: vect(:)
+LOGICAL,INTENT(in),OPTIONAL :: mask(:), back
+INTEGER :: map_distinct(SIZE(vect))
+
+INTEGER :: count_distinct
+INTEGER :: i, j
+LOGICAL :: lback
+
+IF (PRESENT(back)) THEN
+  lback = back
+ELSE
+  lback = .FALSE.
+ENDIF
+count_distinct = 0
+map_distinct(:) = 0
+
+IF (PRESENT (mask)) THEN
+  IF (back) THEN
+    vectm1: DO i = 1, SIZE(vect)
+      IF (.NOT.mask(i)) CYCLE vectm1
+      DO j = i-1, 1, -1
+        IF (vect(j) == vect(i)) THEN
+          map_distinct(i) = map_distinct(j)
+          CYCLE vectm1
+        ENDIF
+      ENDDO
+      count_distinct = count_distinct + 1
+      map_distinct(i) = count_distinct
+    ENDDO vectm1
+  ELSE
+    vectm2: DO i = 1, SIZE(vect)
+      IF (.NOT.mask(i)) CYCLE vectm2
+      DO j = 1, i-1
+        IF (vect(j) == vect(i)) THEN
+          map_distinct(i) = map_distinct(j)
+          CYCLE vectm2
+        ENDIF
+      ENDDO
+      count_distinct = count_distinct + 1
+      map_distinct(i) = count_distinct
+    ENDDO vectm2
+  ENDIF
+ELSE
+  IF (back) THEN
+    vect1: DO i = 1, SIZE(vect)
+      DO j = i-1, 1, -1
+        IF (vect(j) == vect(i)) THEN
+          map_distinct(i) = map_distinct(j)
+          CYCLE vect1
+        ENDIF
+      ENDDO
+      count_distinct = count_distinct + 1
+      map_distinct(i) = count_distinct
+    ENDDO vect1
+  ELSE
+    vect2: DO i = 1, SIZE(vect)
+      DO j = 1, i-1
+        IF (vect(j) == vect(i)) THEN
+          map_distinct(i) = map_distinct(j)
+          CYCLE vect2
+        ENDIF
+      ENDDO
+      count_distinct = count_distinct + 1
+      map_distinct(i) = count_distinct
+    ENDDO vect2
+  ENDIF
+ENDIF
+
+END FUNCTION map_distinctc
+
 
 END MODULE vol7d_utilities
