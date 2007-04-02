@@ -13,17 +13,15 @@ INTEGER :: i, n
 REAL, POINTER :: vol2d(:,:)
 
 ! Definisco le date iniziale e finale
-CALL init(ti, year=2007, month=3, day=18, hour=12)
+CALL init(ti, year=2007, month=3, day=19, hour=12)
 CALL init(tf, year=2007, month=3, day=21, hour=00)
 ! Chiamo il costruttore della classe vol7d_oraclesim per il mio oggetto
 CALL init(v7d)
 ! Importo i dati, variabile 'B13011' della btable (precipitazione),
 ! rete 18 (FIDUPO), 20 (SIMNBO), 21 (SIMNPR)
-CALL vol7d_oraclesim_import(v7d, 'B13011', 18, ti, tf, degnet=.TRUE.)
+CALL import(v7d, 'B13011', 18, ti, tf, degnet=.TRUE.)
 PRINT*,SHAPE(v7d%vol7d%voldatir)
-CALL vol7d_oraclesim_import(v7d, 'B13011', 20, ti, tf, degnet=.TRUE.)
-PRINT*,SHAPE(v7d%vol7d%voldatir)
-CALL vol7d_oraclesim_import(v7d, 'B13011', 21, ti, tf, degnet=.TRUE.)
+CALL import(v7d, 'B13011', (/20,21/), ti, tf, degnet=.TRUE.)
 PRINT*,SHAPE(v7d%vol7d%voldatir)
 ! Creo una vista su un array bidimensionale che scorre le dimensioni
 ! dell'anagrafica e del tempo (vol7d_ana_d, vol7d_time_d)
@@ -36,5 +34,6 @@ DO i = 1, SIZE(v7d%vol7d%time)
     PRINT*, c, ' prec. media:', SUM(vol2d(:,i), mask=(vol2d(:,i) /= rmiss))/n
   ENDIF
 ENDDO
+
 
 END PROGRAM v7doracle

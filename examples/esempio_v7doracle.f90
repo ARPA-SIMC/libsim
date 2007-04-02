@@ -19,7 +19,7 @@ CALL init(tf, year=2007, month=3, day=21, hour=00)
 CALL init(v7d)
 ! Importo i dati, variabile 'B13011' della btable (precipitazione),
 ! rete 18 (FIDUPO)
-CALL vol7d_oraclesim_import(v7d, 'B13011', 18, ti, tf)
+CALL import(v7d, 'B13011', 18, ti, tf)
 ! Creo una vista su un array bidimensionale che scorre le dimensioni
 ! dell'anagrafica e del tempo (vol7d_ana_d, vol7d_time_d)
 CALL vol7d_get_voldatir(v7d%vol7d, (/vol7d_ana_d,vol7d_time_d/), vol2dp=vol2d)
