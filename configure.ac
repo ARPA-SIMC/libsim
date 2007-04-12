@@ -42,6 +42,7 @@ Makefile
 base/Makefile
 vol7d/Makefile
 examples/Makefile
+data/Makefile
 ])
 
 AC_OUTPUT
