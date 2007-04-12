@@ -24,7 +24,7 @@ AC_ARG_ENABLE(oraclesim, AC_HELP_STRING([--disable-oraclesim],
   [disable oraclesim support]),,[enableval=yes])dnl default enable
 if test "x$enableval" = "xyes"; then
 AC_MSG_RESULT([oraclesim code included])
-liboraclesim=' -L/usr/local/oracle/10.1.0/db_1/lib -lclntsh -lrouMW -lsupport -lrouGW -lix -lemos'
+liboraclesim=' -L/usr/local/oracle/10.2.01/db_1/lib -lclntsh -lrouMW -lsupport -lrouGW -lix -lemos'
 AC_SUBST(liboraclesim)
 else
 AC_MSG_RESULT([oraclesim code not included])
