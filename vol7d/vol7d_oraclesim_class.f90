@@ -455,10 +455,10 @@ SUBROUTINE vol7d_oraclesim_ora_ana(network)
 INTEGER,INTENT(in) :: network
 
 INTEGER :: i, j, un
-CHARACTER(len=2) :: cnet
+CHARACTER(len=3) :: cnet
 
-cnet = to_char(network,'(I2.2)')
-un = open_package_file(cnet//'.ana', filetype_data)
+cnet = to_char(network,'(I3.3)')
+un = open_package_file('simana_'//cnet//'.txt', filetype_data)
 IF (un < 0) STOP
 
 i = 0
