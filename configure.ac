@@ -17,6 +17,16 @@ dnl AC_LANG_PUSH([Fortran 77])dnl Do the following checks in Fortran
 AC_LANG_PUSH(Fortran)dnl Do the following checks in Fortran
 AC_FC_SRCEXT(f90)dnl and use .f90 extension
 
+AC_ARG_ENABLE(shapelib, AC_HELP_STRING([--disable-shapelib],
+  [disable shapelib support]),,[enableval=yes])dnl default enable
+if test "x$enableval" = "xyes"; then
+AC_MSG_RESULT([shapelib code included])
+AC_CHECK_LIB([shp-fortran], [shpopen], , AC_MSG_ERROR([fortran bindings to shp library not found]), [-l shp] )
+else
+AC_MSG_RESULT([shapelib code not included])
+fi
+AM_CONDITIONAL(SHP, test "x$enableval" = "xyes")
+
 dnl AC_SEARCH_LIBS([gribex], [picogrib emos], ,
 dnl                          AC_MSG_RESULT([grib decoding library not found]), )
 
