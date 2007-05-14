@@ -34,7 +34,7 @@ CONTAINS
 
 SUBROUTINE vol7d_ana_init(this, lon, lat, ident)
 TYPE(vol7d_ana),INTENT(INOUT) :: this
-REAL(kind=geoprec),INTENT(in),OPTIONAL :: lon, lat
+REAL(kind=fp_geo),INTENT(in),OPTIONAL :: lon, lat
 CHARACTER(len=vol7d_ana_lenident),INTENT(in),OPTIONAL :: ident
 
 CALL init(this%coord, lon=lon, lat=lat)

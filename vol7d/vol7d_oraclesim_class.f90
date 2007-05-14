@@ -319,8 +319,8 @@ DO i = 1, nvar
     DO j = 1, nana
       k = firsttrue(anatmp(j) == networktable(network)%ana(:)%ora_cod) ! ottimizzar
       CALL init(v7dtmp%ana(j), &
-       lon=REAL(networktable(network)%ana(k)%lon,geoprec), &
-       lat=REAL(networktable(network)%ana(k)%lat,geoprec))
+       lon=REAL(networktable(network)%ana(k)%lon,fp_geo), &
+       lat=REAL(networktable(network)%ana(k)%lat,fp_geo))
     ENDDO
     IF (ldegnet) THEN
       CALL init(v7dtmp%network(1), 0) ! dummy network

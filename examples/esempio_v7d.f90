@@ -22,8 +22,8 @@ v7d%dativar%r(1)%btable="B22070"
 v7d2%dativar%r(1)%btable="B22070"
 
 ! anagrafica
-CALL init(v7d%ana(1), lon=11.5_geoprec, lat=44.5_geoprec)
-CALL init(v7d2%ana(1), lon=11.5_geoprec, lat=44.5_geoprec)
+CALL init(v7d%ana(1), lon=11.5_fp_geo, lat=44.5_fp_geo)
+CALL init(v7d2%ana(1), lon=11.5_fp_geo, lat=44.5_fp_geo)
 
 ! livello
 CALL init(v7d%level(1), level=105, l1=10)
