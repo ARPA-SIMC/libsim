@@ -28,7 +28,7 @@ IMPLICIT NONE
 REAL, PARAMETER :: &
 ! pi = 4.*ATAN(1.), &
  pi = 3.14159, &
- rearth = 6371000., &
+ rearth = 6370997., &
  gearth = 9.81, &
  omearth = 2*pi/86164., &
  degrad = pi/180., &
