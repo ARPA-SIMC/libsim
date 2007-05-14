@@ -50,6 +50,7 @@ AC_SUBST(pkgdocdir)
 AC_CONFIG_FILES([
 Makefile
 base/Makefile
+grib/Makefile
 vol7d/Makefile
 examples/Makefile
 data/Makefile
