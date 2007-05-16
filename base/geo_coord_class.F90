@@ -620,6 +620,9 @@ REAL(kind=fp_utm),INTENT(OUT) :: utme, utmn
 
 REAL(kind=fp_utm) :: n, m
 
+REAL :: deltalon, p
+REAL :: N, T, T2, C, M, A1, A2, A3, A4, A5, A6
+
 IF (fuso == 0) THEN
 ! ---   Locate natural zone
   fuso = INT((180.0+lon)/6.0) + 1
@@ -627,18 +630,16 @@ IF (fuso == 0) THEN
 ENDIF
 
 ! --- Compute delta longitude in radians
-dl = dtr*(lon - (6.0_fp_geo*ABS(fuso)-183.0_fp_geo))
+deltalon = dtr*(lon - (6.0_fp_geo*ABS(fuso)-183.0_fp_geo))
 
 ! --- Convert phi (latitude) to radians
 p = dtr*lat
 
-sinp = SIN(p)
-N = a(elliss)/SQRT(1.0-e2(elliss)*sinp*sinp)
-tanp = TAN(p)
-T = tanp*tanp
-cosp = COS(p)
-C = ep2(elliss)*cosp*cosp
-A1 = dl*cosp
+
+N = a(elliss)/SQRT(1.0-e2(elliss)*SIN(p)*SIN(p))
+T = TAN(p)*TAN(p)
+C = ep2(elliss)*COS(p)*COS(p)
+A1 = deltalon*COS(p)
 M = 111132.0894*lat - 16216.94*SIN(2.0*p) + 17.21*SIN(4.0*p) &
  - 0.02*SIN(6.0*p)
 
@@ -653,7 +654,7 @@ T2 = T**2
 utme = (k0*N*(A1+(1.0-T+C)*A3/6.0 &
  + (5.0-18.0*T+T2+72.0*C-58.0*ep2(elliss))*A5/120.0) &
  + false_e)
-utmn = k0*(M+N*tanp * (A2/2.0 + (5.0-T+9.0*C+4.0*C*C)*A4/24.0 &
+utmn = k0*(M+N*TAN(p) * (A2/2.0 + (5.0-T+9.0*C+4.0*C*C)*A4/24.0 &
  + (61.0-58.0*T+T2+600.0*C-330.0*ep2(elliss))*A6/720.0))
 IF (fuso < 0) utmn = utmn + false_n
 
