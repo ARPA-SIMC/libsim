@@ -23,8 +23,8 @@ IMPLICIT NONE
 !
 !La classe definisce le seguenti costanti:
 !
-!geoprec => intero che definisce il KIND dei reali associati a coordinate geografiche
-!utmprec => intero che definisce il KIND dei reali associati a coordinate UTM
+!fp_geo => intero che definisce il KIND dei reali associati a coordinate geografiche
+!fp_utm => intero che definisce il KIND dei reali associati a coordinate UTM
 !
 !L'oggetto principale definito dalla classe &egrave;:
 !
@@ -37,8 +37,8 @@ IMPLICIT NONE
 !Costruttore (obbligatorio per ogni oggetto)
 !SUBROUTINE init(this, lon, lat, utme, utmn, fuso, elliss)
 !TYPE(geo_coord) :: this
-!REAL(kind=geoprec), INTENT(IN), OPTIONAL :: lon, lat
-!REAL(kind=utmprec), INTENT(IN), OPTIONAL  :: utme, utmn
+!REAL(kind=fp_geo), INTENT(IN), OPTIONAL :: lon, lat
+!REAL(kind=fp_utm), INTENT(IN), OPTIONAL  :: utme, utmn
 !INTEGER, INTENT(IN), OPTIONAL  :: fuso
 !CHARACTER(LEN=20), INTENT(IN), OPTIONAL  :: elliss
 !
@@ -62,29 +62,31 @@ IMPLICIT NONE
 !
 !omend
 
-INTEGER, PARAMETER :: geoprec=fp_s, utmprec=fp_d
+INTEGER, PARAMETER :: fp_geo=fp_d, fp_utm=fp_d
+
+TYPE geo_coorddesc
+  PRIVATE
+  LOGICAL :: geoce, utmce
+  INTEGER :: fuso, elliss
+END TYPE geo_coorddesc
 
 TYPE geo_coord
   PRIVATE
-  REAL(kind=geoprec) :: lon, lat
-  REAL(kind=utmprec) :: utme, utmn
-  LOGICAL :: geoce, utmce
-  INTEGER :: fuso
-  CHARACTER(LEN=20) :: elliss
+  REAL(kind=fp_geo) :: lon, lat
+  REAL(kind=fp_utm) :: utme, utmn
+  TYPE(geo_coorddesc) :: desc
 END TYPE geo_coord
 
 TYPE geo_coordvect
   PRIVATE
-  REAL(kind=geoprec),POINTER :: ll(:,:) = null()
-  REAL(kind=utmprec),POINTER :: utm(:,:) = null()
-  LOGICAL :: geoce, utmce
-  INTEGER :: fuso
-  CHARACTER(LEN=20) :: elliss
+  REAL(kind=fp_geo),POINTER :: ll(:,:) = null()
+  REAL(kind=fp_utm),POINTER :: utm(:,:) = null()
+  TYPE(geo_coorddesc) :: desc
   INTEGER :: vsize, vtype
 END TYPE geo_coordvect
 
 TYPE(geo_coord),PARAMETER :: geo_coord_miss= &
- geo_coord(rmiss,rmiss,dmiss,dmiss,.FALSE.,.FALSE.,imiss,cmiss)
+ geo_coord(rmiss,rmiss,dmiss,dmiss,geo_coorddesc(.FALSE.,.FALSE.,imiss,imiss))
 
 INTEGER, PARAMETER :: & ! Tipi di coordvect (da shapelib)
  geo_coordvect_point = 1, & ! Points
@@ -94,31 +96,190 @@ INTEGER, PARAMETER :: & ! Tipi di coordvect (da shapelib)
 
 REAL :: overalloc = 2.0 ! fattore di sovrallocazione
 
-PRIVATE geo_dist_latlon
+! ===========================
+! == dichiarazioni per UTM ==
+! ===========================
+! Ellissoidi presi da 'proj -le' (http://proj.sf.net/)
+
+INTEGER, PARAMETER :: &
+ nelliss = 41
+
+INTEGER, PARAMETER :: &
+elliss_merit =    1,  & ! MERIT 1983                       
+elliss_sgs85 =    2,  & ! Soviet Geodetic System 85        
+elliss_grs80 =    3,  & ! GRS 1980(IUGG, 1980)             
+elliss_iau76 =    4,  & ! IAU 1976                         
+elliss_airy =     5,  & ! Airy 1830                        
+elliss_apl4_9 =   6,  & ! Appl. Physics. 1965              
+elliss_nwl9d =    7,  & ! Naval Weapons Lab., 1965         
+elliss_mod_airy = 8,  & ! Modified Airy                    
+elliss_andrae =   9,  & ! Andrae 1876 (Den., Iclnd.)       
+elliss_aust_sa =  10, & ! Australian Natl & S. Amer. 1969  
+elliss_grs67 =    11, & ! GRS 67(IUGG 1967)                
+elliss_bessel =   12, & ! Bessel 1841                      
+elliss_bess_nam = 13, & ! Bessel 1841 (Namibia)            
+elliss_clrk66 =   14, & ! Clarke 1866                      
+elliss_clrk80 =   15, & ! Clarke 1880 mod.                 
+elliss_cpm =      16, & ! Comm. des Poids et Mesures 1799  
+elliss_delmbr =   17, & ! Delambre 1810 (Belgium)          
+elliss_engelis =  18, & ! Engelis 1985                     
+elliss_evrst30 =  19, & ! Everest 1830                     
+elliss_evrst48 =  20, & ! Everest 1948                     
+elliss_evrst56 =  21, & ! Everest 1956                     
+elliss_evrst69 =  22, & ! Everest 1969                     
+elliss_evrstss =  23, & ! Everest (Sabah & Sarawak)        
+elliss_fschr60 =  24, & ! Fischer (Mercury Datum) 1960     
+elliss_fschr60m = 25, & ! Modified Fischer 1960            
+elliss_fschr68 =  26, & ! Fischer 1968                     
+elliss_helmert =  27, & ! Helmert 1906                     
+elliss_hough =    28, & ! Hough                            
+elliss_intl =     29, & ! International 1909 (Hayford)     
+elliss_krass =    30, & ! Krassovsky, 1942                 
+elliss_kaula =    31, & ! Kaula 1961                       
+elliss_lerch =    32, & ! Lerch 1979                       
+elliss_mprts =    33, & ! Maupertius 1738                  
+elliss_new_intl = 34, & ! New International 1967           
+elliss_plessis =  35, & ! Plessis 1817 (France)            
+elliss_seasia =   36, & ! Southeast Asia                   
+elliss_walbeck =  37, & ! Walbeck                          
+elliss_wgs60 =    38, & ! WGS 60                           
+elliss_wgs66 =    39, & ! WGS 66                           
+elliss_wgs72 =    40, & ! WGS 72                           
+elliss_wgs84 =    41    ! WGS 84                           
+
+REAL(kind=fp_utm), PARAMETER, PRIVATE :: &
+ rf(nelliss)=(/ &
+ 298.257, &
+ 298.257, &
+ 298.257222101, &
+ 298.257, &
+ 299.325, &
+ 298.25, &
+ 298.25, &
+ 299.328, &
+ 300.0, &
+ 298.25, &
+ 298.2471674270, &
+ 299.1528128, &
+ 299.1528128, &
+ 294.98, &
+ 293.4663, &
+ 334.29, &
+ 311.5, &
+ 298.2566, &
+ 300.8017, &
+ 300.8017, &
+ 300.8017, &
+ 300.8017, &
+ 300.8017, &
+ 298.3, &
+ 298.3, &
+ 298.3, &
+ 298.3, &
+ 297., &
+ 297., &
+ 298.3, &
+ 298.24, &
+ 298.257, &
+ 191., &
+ 298.247, &
+ 308.641, &
+ 298.302, &
+ 302.782, &
+ 298.3, &
+ 298.25, &
+ 298.26, &
+ 298.257223563 /), &
+ a(nelliss)=(/ &
+ 6378137.0, &
+ 6378136.0, &
+ 6378137.0, &
+ 6378140.0, &
+ 6377563.396, &
+ 6378137.0, &
+ 6378145.0, &
+ 6377340.189, &
+ 6377104.43, &
+ 6378160.0, &
+ 6378160.0, &
+ 6377397.155, &
+ 6377483.865, &
+ 6378206.4, &
+ 6378249.145, &
+ 6375738.7, &
+ 6376428., &
+ 6378136.05, &
+ 6377276.345, &
+ 6377304.063, &
+ 6377301.243, &
+ 6377295.664, &
+ 6377298.556, &
+ 6378166., &
+ 6378155., &
+ 6378150., &
+ 6378200., &
+ 6378270.0, &
+ 6378388.0, &
+ 6378245.0, &
+ 6378163., &
+ 6378139., &
+ 6397300., &
+ 6378157.5, &
+ 6376523., &
+ 6378155.0, &
+ 6376896.0, &
+ 6378165.0, &
+ 6378145.0, &
+ 6378135.0, &
+ 6378137.0 /)
+
+! Costanti per UTM basate sull'ellissoide
+REAL(kind=fp_utm), PARAMETER, PRIVATE :: &
+ f(nelliss)=1.0_fp_utm/rf, e2(nelliss)=2.0_fp_utm*f-f*f, &
+ e1(nelliss)=f/(2.0_fp_utm-f), ep2(nelliss)=e2/(1.0_fp_utm-e2), &
+ e11(nelliss)=3.0_fp_utm*e1/2.0_fp_utm - 27.0_fp_utm*e1*e1*e1/32.0_fp_utm, &
+ e12(nelliss)=21.0_fp_utm*e1*e1/16.0_fp_utm - &
+ 55.0_fp_utm*e1*e1*e1*e1/32.0_fp_utm, &
+ e13(nelliss)=151.0_fp_utm*e1*e1*e1/96.0_fp_utm, &
+ e14(nelliss)=1097.0_fp_utm*e1*e1*e1*e1/512.0_fp_utm, &
+ e4(nelliss)=e2*e2, &
+ e6(nelliss)=e2*e4
+! rf(nelliss) = er/(er-pr) = a/(a-b)
+
+REAL(kind=fp_utm), PARAMETER, PRIVATE :: &
+ k0=0.9996_fp_utm, &         ! Fattore di scala al meridiano centrale
+ false_e=500000.0_fp_utm, &  ! False easting (m)
+ false_n=10000000._fp_utm, & ! False northing per l'Emisfero Sud (m)
+ dtr=3.141592654_fp_utm/180.0_fp_utm, &
+ rtd=1.0_fp_utm/dtr
+
+PRIVATE ll2utm, utm2ll
+
+!PRIVATE geo_dist_latlon
 
 INTERFACE init
-  MODULE PROCEDURE geo_coord_init, geo_coordvect_init
+  MODULE PROCEDURE geo_coorddesc_init, geo_coord_init, geo_coordvect_init
 END INTERFACE
 
 INTERFACE delete
-  MODULE PROCEDURE geo_coord_delete, geo_coordvect_delete
+  MODULE PROCEDURE geo_coorddesc_delete, geo_coord_delete, geo_coordvect_delete
 END INTERFACE
 
 INTERFACE OPERATOR (==)
-  MODULE PROCEDURE geo_coord_eq, geo_coord_eqsv
+  MODULE PROCEDURE geo_coorddesc_eq, geo_coord_eq, geo_coord_eqsv
 END INTERFACE
 
 INTERFACE OPERATOR (/=)
   MODULE PROCEDURE geo_coord_ne, geo_coord_nesv
 END INTERFACE
 
-INTERFACE getlat
-  MODULE PROCEDURE geo_coord_getlat
-END INTERFACE
-
-INTERFACE getlon
-  MODULE PROCEDURE geo_coord_getlon
-END INTERFACE
+!!$INTERFACE getlat
+!!$  MODULE PROCEDURE geo_coord_getlat
+!!$END INTERFACE
+!!$
+!!$INTERFACE getlon
+!!$  MODULE PROCEDURE geo_coord_getlon
+!!$END INTERFACE
 
 INTERFACE import
   MODULE PROCEDURE geo_coordvect_import, geo_coordvect_importvect
@@ -130,35 +291,106 @@ END INTERFACE
 
 CONTAINS
 
+! ===================
+! == geo_coorddesc ==
+! ===================
+SUBROUTINE geo_coorddesc_init(this, fuso, elliss, geoce, utmce)
+TYPE(geo_coorddesc) :: this
+INTEGER, INTENT(IN), OPTIONAL  :: fuso, elliss
+LOGICAL, INTENT(in), OPTIONAL :: geoce, utmce
+
+IF (PRESENT(fuso)) THEN
+  this%fuso = fuso
+ELSE
+  this%fuso = imiss
+ENDIF
+IF (PRESENT(elliss)) THEN
+  this%elliss = elliss
+ELSE
+  this%elliss = imiss
+ENDIF
+IF (PRESENT(geoce)) THEN
+  this%geoce = geoce
+ELSE
+  this%geoce = .FALSE.
+ENDIF
+IF (PRESENT(utmce)) THEN
+  this%utmce = utmce
+  IF (this%utmce) THEN ! Inizializza fuso ed ellissoide a default
+    IF (this%fuso == imiss) THEN
+      CALL raise_error('fuso UTM non specificato')
+      STOP
+    ENDIF
+    IF (this%elliss == imiss) THEN
+      this%elliss = elliss_wgs84
+    ELSE
+      this%elliss = MIN(MAX(this%elliss,1), nelliss)
+    ENDIF
+  ENDIF
+ELSE
+  this%utmce = .FALSE.
+ENDIF
+
+END SUBROUTINE geo_coorddesc_init
+
+
+SUBROUTINE geo_coorddesc_delete(this)
+TYPE(geo_coorddesc) :: this
+
+this%fuso = imiss
+this%elliss = imiss
+this%geoce = .FALSE.
+this%utmce = .FALSE.
+
+END SUBROUTINE geo_coorddesc_delete
+
+
+elemental FUNCTION geo_coorddesc_eq(this, that) RESULT(res)
+TYPE(geo_coorddesc),INTENT(IN) :: this, that
+LOGICAL :: res
+
+! I descrittori di coordinate sono == se indicano lo stesso
+! sistema di riferimento o se sono entrambi nulli
+IF ((this%geoce .AND. that%geoce) .OR. & ! geo
+ (this%utmce .AND. that%utmce .AND. & ! utm
+ this%fuso == that%fuso .AND. this%elliss == that%elliss) .OR. &
+ (.NOT.this%geoce .AND. .NOT.that%geoce .AND. & ! tutto mancante
+ .NOT.this%utmce .AND. .NOT.that%utmce)) THEN
+  res = .TRUE.
+ELSE
+  res = .FALSE.
+ENDIF
+
+END FUNCTION geo_coorddesc_eq
+
+
+! ===================
+! ==   geo_coord   ==
+! ===================
 SUBROUTINE geo_coord_init(this, lon, lat, utme, utmn, fuso, elliss)
 TYPE(geo_coord) :: this
-REAL(kind=geoprec), INTENT(IN), OPTIONAL :: lon, lat
-REAL(kind=utmprec), INTENT(IN), OPTIONAL  :: utme, utmn
-INTEGER, INTENT(IN), OPTIONAL  :: fuso
-CHARACTER(LEN=20), INTENT(IN), OPTIONAL  :: elliss
+REAL(kind=fp_geo), INTENT(IN), OPTIONAL :: lon, lat
+REAL(kind=fp_utm), INTENT(IN), OPTIONAL  :: utme, utmn
+INTEGER, INTENT(IN), OPTIONAL  :: fuso, elliss
 
 IF (PRESENT(lon) .AND. PRESENT(lat)) THEN
+  CALL init(this%desc, fuso, elliss, geoce=.TRUE.)
   this%lon = lon
   this%lat = lat
-  this%utme = rmiss
-  this%utmn = rmiss
-  this%fuso = imiss
-  this%elliss = cmiss
-  this%geoce = .TRUE.
-  this%utmce = .FALSE.
-ELSE IF (PRESENT(utme) .AND. PRESENT(utmn) .AND. &
- PRESENT(fuso) .AND. PRESENT(elliss)) THEN
+  this%utme = dmiss
+  this%utmn = dmiss
+ELSE IF (PRESENT(utme) .AND. PRESENT(utmn)) THEN
+  CALL init(this%desc, fuso, elliss, utmce=.TRUE.)
   this%lon = rmiss
   this%lat = rmiss
   this%utme = utme
   this%utmn = utmn
-  this%fuso = fuso
-  this%elliss = elliss
-  this%geoce = .FALSE.
-  this%utmce = .TRUE.
 ELSE
-  this%geoce = .FALSE.
-  this%utmce = .FALSE.
+  CALL init(this%desc)
+  this%lon = rmiss
+  this%lat = rmiss
+  this%utme = dmiss
+  this%utmn = dmiss
 ENDIF
 
 END SUBROUTINE geo_coord_init
@@ -167,14 +399,11 @@ END SUBROUTINE geo_coord_init
 SUBROUTINE geo_coord_delete(this)
 TYPE(geo_coord) :: this
 
+CALL delete(this%desc)
 this%lon = rmiss
 this%lat = rmiss
-this%utme = rmiss
-this%utmn = rmiss
-this%fuso = imiss
-this%elliss = cmiss
-this%geoce = .FALSE.
-this%utmce = .FALSE.
+this%utme = dmiss
+this%utmn = dmiss
 
 END SUBROUTINE geo_coord_delete
 
@@ -183,21 +412,24 @@ elemental FUNCTION geo_coord_eq(this, that) RESULT(res)
 TYPE(geo_coord),INTENT(IN) :: this, that
 LOGICAL :: res
 
-IF (this%geoce .AND. that%geoce) THEN
-  IF (this%lon == that%lon .AND. this%lat == that%lat) THEN
+IF (geo_coord_equalize(this, that)) THEN ! Se non sono confrontabili trasformo
+  IF (this%desc%geoce) THEN
+    IF (this%lon == that%lon .AND. this%lat == that%lat) THEN
+      res = .TRUE.
+    ELSE
+      res = .FALSE.
+    ENDIF
+  ELSE IF (this%desc%utmce) THEN
+    IF (this%utme == that%utme .AND. this%utmn == that%utmn) THEN
+      res = .TRUE.
+    ELSE
+      res = .FALSE.
+    ENDIF
+  ELSE ! entrambi mancanti, e` giusto che siano uguali?
     res = .TRUE.
-  ELSE
-    res = .FALSE.
   ENDIF
-ELSE IF (this%utmce .AND. that%utmce) THEN
-  IF (this%utme == that%utme .AND. this%utmn == that%utmn &
-   .AND. this%fuso == that%fuso .AND. this%elliss == that%elliss) THEN
-    res = .TRUE.
-  ELSE
-    res = .FALSE.
-  ENDIF
-ELSE
-! conversione...
+ELSE ! Non sono confrontabili (errore di conversione UTM?)
+  res = .FALSE.
 ENDIF
 
 END FUNCTION geo_coord_eq
@@ -238,65 +470,94 @@ ENDDO
 END FUNCTION geo_coord_nesv
 
 
-FUNCTION geo_coord_getlat(this) RESULT(lat)
-TYPE(geo_coord) :: this
-REAL(kind=geoprec) :: lat
-
-lat = this%lat
-
-END FUNCTION geo_coord_getlat
-
-
-FUNCTION geo_coord_getlon(this) RESULT(lon)
-TYPE(geo_coord) :: this
-REAL(kind=geoprec) :: lon
-
-lon = this%lon
-
-END FUNCTION geo_coord_getlon
+!!$FUNCTION geo_coord_getlat(this) RESULT(lat)
+!!$TYPE(geo_coord) :: this
+!!$REAL(kind=fp_geo) :: lat
+!!$
+!!$lat = this%lat
+!!$
+!!$END FUNCTION geo_coord_getlat
+!!$
+!!$
+!!$FUNCTION geo_coord_getlon(this) RESULT(lon)
+!!$TYPE(geo_coord) :: this
+!!$REAL(kind=fp_geo) :: lon
+!!$
+!!$lon = this%lon
+!!$
+!!$END FUNCTION geo_coord_getlon
 
 
 FUNCTION geo_coord_dist(this, that) RESULT(dist)
 TYPE(geo_coord), INTENT (IN) :: this, that
 REAL :: dist
 
-IF (this%geoce .AND. that%geoce) THEN
-  dist = geo_dist_latlon(lat1=this%lat, lon1=this%lon, lat2=that%lat, lon2=that%lon)
-ELSE IF (this%utmce .AND. that%utmce) THEN
-  !dist = geo_dist_utm(..)
+REAL :: x,y
+! Distanza approssimata, valida per piccoli angoli
+
+IF (geo_coord_equalize(this, that)) THEN
+  IF (this%desc%geoce) THEN
+    x = (this%lon-that%lon)*COS(((this%lat+this%lat)/2.)*degrad)
+    y = (this%lat-that%lat)
+    dist = SQRT(x**2 + y**2)*degrad*rearth
+  ELSE IF (this%desc%utmce) THEN
+    dist = SQRT((this%utme - that%utme)**2 + (this%utmn - that%utmn)**2)
+  ELSE
+    dist = rmiss
+  ENDIF
 ELSE
-  ! conversione...
-END IF
+  dist = rmiss
+ENDIF
 
 END FUNCTION geo_coord_dist
 
 
-FUNCTION geo_dist_latlon(lat1, lon1, lat2, lon2) RESULT(dist)
-REAL (kind=geoprec), INTENT(IN) :: lat1, lat2, lon1, lon2
-REAL :: dist
-REAL :: x,y
+FUNCTION geo_coord_equalize(this, that) RESULT(res)
+TYPE(geo_coord), INTENT (IN) :: this, that
+LOGICAL :: res
+! Tenta di rendere confrontabili due oggetti geo_coord convertendo
+! opportunamente le coordinate se necessario
+! Restituisce true in caso di successo o in caso di dati gia` confrontabili o nulli
 
-y = (lat1-lat2)*degrad*rearth
-x = (lon1-lon2)*degrad*rearth*COS(((lat1+lat2)/2.)*degrad)
-dist=SQRT(x**2+y**2)
-
-END FUNCTION geo_dist_latlon
-
-
-SUBROUTINE geo_coord_to_utm(this)
-TYPE(geo_coord), INTENT (INOUT) :: this
-
-INTEGER :: ierr
-
-IF (this%utmce) RETURN ! gia` fatto
-IF (.NOT.this%geoce .AND. .NOT.this%utmce) RETURN ! oggetto vuoto
-!!$CALL geo2utm(this%lon, this%lat, this%utme, this%utmn, this%fuso, this%elliss, &
-!!$ ierr)
-IF (ierr /= 0) THEN
-  CALL raise_error('in conversione a utm') ! chiamo delete?
-ELSE
-  this%utmce = .TRUE.
+IF (this%desc == that%desc) THEN
+  res = .TRUE.
+  RETURN
 ENDIF
+IF (this%desc%geoce .AND. that%desc%utmce) THEN
+  CALL geo_coord_to_geo(that)
+ELSE IF (this%desc%utmce .AND. that%desc%geoce) THEN
+  CALL geo_coord_to_geo(this)
+ELSE IF (this%desc%utmce .AND. that%desc%utmce) THEN ! diversi fusi/ellissoidi? siamo fusi!
+  CALL geo_coord_to_geo(this)
+  CALL geo_coord_to_utm(this, fuso=that%desc%fuso, elliss=that%desc%elliss)
+ENDIF
+! controllo se ho avuto successo
+res = this%desc == that%desc
+
+END FUNCTION geo_coord_equalize
+
+
+SUBROUTINE geo_coord_to_utm(this, fuso, elliss)
+TYPE(geo_coord), INTENT (INOUT) :: this
+INTEGER, INTENT(IN), OPTIONAL  :: fuso, elliss
+
+IF (.NOT.this%desc%geoce .OR. this%desc%utmce) RETURN
+this%desc%utmce=.TRUE.
+this%desc%elliss = 1
+IF (PRESENT(elliss)) THEN
+  this%desc%elliss = MIN(MAX(elliss,1), nelliss)
+ENDIF
+this%desc%fuso = 0
+IF (PRESENT(fuso)) THEN
+  this%desc%fuso = fuso
+ENDIF
+
+CALL ll2utm(this%lon, this%lat, this%desc%fuso, this%desc%elliss, &
+ this%utme, this%utmn)
+!!$IF (ierr /= 0) THEN
+!!$  CALL raise_error('in conversione a utm') ! chiamo delete?
+!!$  this%desc%utmce = .FALSE.
+!!$ENDIF
 
 END SUBROUTINE geo_coord_to_utm
 
@@ -304,19 +565,189 @@ END SUBROUTINE geo_coord_to_utm
 SUBROUTINE geo_coord_to_geo(this)
 TYPE(geo_coord), INTENT (INOUT) :: this
 
-INTEGER :: ierr
+IF (.NOT.this%desc%utmce .OR. this%desc%geoce) RETURN
+this%desc%geoce = .TRUE.
 
-IF (this%geoce) RETURN ! gia` fatto
-IF (.NOT.this%geoce .AND. .NOT.this%utmce) RETURN ! oggetto vuoto
-!!$CALL utm2geo(this%utme, this%utmn, this%fuso, this%elliss, this%lon, this%lat, &
-!!$ ierr)
-IF (ierr /= 0) THEN
-  CALL raise_error('in conversione a geo') ! chiamo delete?
-ELSE
-  this%geoce = .TRUE.
-ENDIF
+CALL utm2ll(this%utme, this%utmn, this%desc%fuso, this%desc%elliss, &
+ this%lon, this%lat)
 
 END SUBROUTINE geo_coord_to_geo
+
+
+
+SUBROUTINE ll2utm(lon, lat, fuso, elliss, utme, utmn)
+!----------------------------------------------------------------------
+! VERSIONE CON SINTASSI F90 DELLA ROUTINE DI CALMET
+!
+! --- CALMET   Version: 5.0       Level: 970825                  LL2UTM
+!
+! --- PURPOSE:  Converts latitude/longitude to UTM coordinates
+!
+!           *** Universal Transverse Mercator (UTM) grid system divides
+!           *** the world into 60 north-south zones, covering a 6 deg.
+!           *** strip of longitude. Zone 1 begins between 180 and 174
+!           *** degrees West longitude and progresses eastward to
+!           *** zone 60.
+!           *** This routine works in both No. & So. Hemispheres
+!               Reference --
+!                 "Map Projections--A Working Manual", p61,
+!                  U.S. Geological Survey Professional Paper 1395,
+!                    Note: assumes the Clarke 1866 ellipsoid
+!               Adapted from --
+!                  EPS version 2.0; subr. MAPGTU
+!
+! --- INPUTS:
+!               this%lat (era RLAT) - Real        - N Latitude in decimal degrees
+!                                    (use negative for southern hemisphere)
+!               this%lon (era RLON) - Real        - E Longitude in decimal degrees
+!                                    (use negative for western hemisphere)
+!                IZ0 - Integer     - UTM zone override (used only if
+!                                    IZ0 .ne. zero).
+!
+! --- OUTPUT:
+!                  this%utme (era X) - Real        - UTM easting in km
+!                  this%utmn (era Y) - Real        - UTM northing in km
+!                 this%fuso (era IZ) - Integer     - UTM zone
+!
+! --- LL2UTM called by:  READCF
+! --- LL2UTM calls:      none
+!----------------------------------------------------------------------
+IMPLICIT REAL(kind=fp_utm) (a-h,o-z) ! temporaneo
+
+REAL(kind=fp_geo),INTENT(IN) :: lon, lat
+INTEGER,INTENT(INOUT) :: fuso, elliss
+REAL(kind=fp_utm),INTENT(OUT) :: utme, utmn
+
+REAL(kind=fp_utm) :: n, m
+
+IF (fuso == 0) THEN
+! ---   Locate natural zone
+  fuso = INT((180.0+lon)/6.0) + 1
+  IF (lat < 0.0_fp_geo) fuso = -fuso
+ENDIF
+
+! --- Compute delta longitude in radians
+dl = dtr*(lon - (6.0_fp_geo*ABS(fuso)-183.0_fp_geo))
+
+! --- Convert phi (latitude) to radians
+p = dtr*lat
+
+sinp = SIN(p)
+N = a(elliss)/SQRT(1.0-e2(elliss)*sinp*sinp)
+tanp = TAN(p)
+T = tanp*tanp
+cosp = COS(p)
+C = ep2(elliss)*cosp*cosp
+A1 = dl*cosp
+M = 111132.0894*lat - 16216.94*SIN(2.0*p) + 17.21*SIN(4.0*p) &
+ - 0.02*SIN(6.0*p)
+
+A2 = A1**2
+A3 = A2*A1
+A4 = A2**2
+A5 = A4*A1
+A6 = A4*A2
+T2 = T**2
+
+! --- Compute UTM x and y (km)
+utme = (k0*N*(A1+(1.0-T+C)*A3/6.0 &
+ + (5.0-18.0*T+T2+72.0*C-58.0*ep2(elliss))*A5/120.0) &
+ + false_e)
+utmn = k0*(M+N*tanp * (A2/2.0 + (5.0-T+9.0*C+4.0*C*C)*A4/24.0 &
+ + (61.0-58.0*T+T2+600.0*C-330.0*ep2(elliss))*A6/720.0))
+IF (fuso < 0) utmn = utmn + false_n
+
+END SUBROUTINE ll2utm
+
+
+SUBROUTINE utm2ll(utme, utmn, fuso, elliss, lon, lat)
+!----------------------------------------------------------------------
+! VERSIONE CON SINTASSI F90 DELLA ROUTINE DI CALMET
+!
+! --- CALMET   Version: 5.0       Level: 970825                  UTM2LL
+!
+! --- PURPOSE:  Converts UTM coordinates to latitude/longitude
+!               Works in both Northern & Southern Hemispheres
+!               Reference--
+!                 "Map Projections--A Working Manual", p61,
+!                  U.S. Geological Survey Professional Paper 1395,
+!                    Note: assumes the Clarke 1866 ellipsoid
+!               Adapted from --
+!                  EPS version 2.0; subr. MAPUTG
+!
+! --- INPUTS:
+!                  this%utme (era X) - real    - UTM easting in km
+!                  this%utmn (era Y) - real    - UTM northing in km
+!                 this%fuso (era IZ) - integer - UTM zone (6 deg N-S strip, range=1,60)
+!             LSOHEM - logical - TRUE = southern hemisphere
+!                                FALSE = northern hemisphere
+!
+! --- OUTPUT:
+!               this%lat (era RLAT) - real    - N Latitude in decimal degrees
+!               this%lon (era RLON) - real    - E Longitude in decimal degrees
+!
+! --- UTM2LL called by:  READCF
+! --- UTM2LL calls:      none
+!----------------------------------------------------------------------
+IMPLICIT REAL(kind=fp_utm) (a-h,o-z) ! temporaneo
+
+REAL(kind=fp_utm),INTENT(IN) :: utme, utmn
+INTEGER,INTENT(IN) :: fuso, elliss
+REAL(kind=fp_utm),INTENT(OUT) :: lon, lat
+
+REAL(kind=fp_utm) :: m, n1, l
+
+! --- Parameter definitions
+!      k0        -  scale on central meridian
+!      a         -  Clarke 1866 equatorial radius
+!      e2        -  squared Clarke 1866 eccentricity
+!      ep2       -  (e2/(1.0-e2)
+!      false_e   -  false easting
+!      rtd       -  radians to degrees conversion
+
+! --- Central meridian
+rlon0 = ABS(fuso)*6.0 - 183.0
+
+! --- Correct for false easting, southern hemisphere and change to meters
+xm = utme - false_e
+IF (fuso < 0) THEN
+  ym = utmn - false_n
+ELSE
+  ym = utmn
+ENDIF
+
+M = ym/k0
+u = M/(a(elliss)*(1.0-e2(elliss)/4.0 - 3.0*e4(elliss)/64.0 - 5.0*e6(elliss)/256.0))
+p1 = u + e11(elliss)*SIN(2.0*u) + e12(elliss)*SIN(4.0*u) + &
+ e13(elliss)*SIN(6.0*u) + e14(elliss)*SIN(8.0*u)
+cosp1 = COS(p1)
+C1 = ep2(elliss)*cosp1**2
+C2 = C1**2
+tanp1 = TAN(p1)
+T1 = tanp1**2
+T2 = T1**2
+sinp1 = SIN(p1)
+sin2p1 = sinp1**2
+N1 = a(elliss)/SQRT(1.0-e2(elliss)*sin2p1)
+R0 = 1.0-e2(elliss)*sin2p1
+R1 = a(elliss)*(1.0-e2(elliss))/SQRT(R0**3)
+
+D = xm/(N1*k0)
+D2=D**2
+D3=D*D2
+D4=D*D3
+D5=D*D4
+D6=D*D5
+
+p = p1 - (N1*tanp1/R1) * (D2/2.0                                  &
+ - (5.0+3.0*T1+10.0*C1-4.0*C2-9.0*ep2(elliss))*D4/24.0              &
+ + (61.0+90.0*T1+298.0*C1+45.0*T2-252*ep2(elliss)-3.0*C2)*D6/720.0)
+lat = rtd*p
+l = (D - (1.0+2.0*T1+C1)*D3/6.0                                   &
+ + (5.0-2.0*C1+28*T1-3.0*C2+8.0*ep2(elliss)+24.0*T2)*D5/120.0)/cosp1
+lon = rtd*l + rlon0
+
+END SUBROUTINE utm2ll
 
 
 ! ===================
@@ -325,31 +756,26 @@ END SUBROUTINE geo_coord_to_geo
 RECURSIVE SUBROUTINE geo_coordvect_init(this, lon, lat, &
  utme, utmn, fuso, elliss)
 TYPE(geo_coordvect), INTENT(OUT) :: this
-REAL(kind=geoprec), INTENT(IN), OPTIONAL :: lon(:), lat(:)
-REAL(kind=utmprec), INTENT(IN), OPTIONAL  :: utme(:), utmn(:)
-INTEGER, INTENT(IN), OPTIONAL  :: fuso
-CHARACTER(LEN=20), INTENT(IN), OPTIONAL  :: elliss
+REAL(kind=fp_geo), INTENT(IN), OPTIONAL :: lon(:), lat(:)
+REAL(kind=fp_utm), INTENT(IN), OPTIONAL  :: utme(:), utmn(:)
+INTEGER, INTENT(IN), OPTIONAL  :: fuso, elliss
 
 CALL delete(this)
 ! Inizializza l'oggetto geo_coordvect da un file di poligoni formato SIM
 IF (PRESENT(lon) .AND. PRESENT(lat)) THEN
+  CALL init(this%desc, fuso, elliss, geoce=.TRUE.)
   this%vsize = MIN(SIZE(lon), SIZE(lat))
   ALLOCATE(this%ll(this%vsize,2))
   this%ll(1:this%vsize,1) = lon(1:this%vsize)
   this%ll(1:this%vsize,2) = lat(1:this%vsize)
-  this%geoce = .TRUE.
-  this%utmce = .FALSE.
-ELSE IF (PRESENT(utme) .AND. PRESENT(utmn) .AND. &
- PRESENT(fuso) .AND. PRESENT(elliss)) THEN
+ELSE IF (PRESENT(utme) .AND. PRESENT(utmn)) THEN
+  CALL init(this%desc, fuso, elliss, utmce=.TRUE.)
   this%vsize = MIN(SIZE(utme), SIZE(utmn))
   ALLOCATE(this%utm(this%vsize,2))
   this%utm(1:this%vsize,1) = utme(1:this%vsize)
   this%utm(1:this%vsize,2) = utmn(1:this%vsize)
-  this%fuso = fuso
-  this%elliss = elliss
-  this%geoce = .FALSE.
-  this%utmce = .TRUE.
 ELSE
+  CALL init(this%desc)
   this%vsize = 0
 ENDIF
 
@@ -362,8 +788,8 @@ INTEGER,OPTIONAL,INTENT(IN) :: unitsim
 INTEGER(kind=ptr_c),OPTIONAL,INTENT(IN) :: shphandle
 INTEGER,OPTIONAL,INTENT(IN) :: nshp
 
-REAL(kind=geoprec),ALLOCATABLE :: llon(:), llat(:)
-REAL(kind=geoprec) :: lv1,lv2,lv3,lv4
+REAL(kind=fp_geo),ALLOCATABLE :: llon(:), llat(:)
+REAL(kind=fp_geo) :: lv1,lv2,lv3,lv4
 INTEGER :: i, lvsize
 CHARACTER(len=40) :: lname
 #ifdef HAVE_LIBSHP_FORTRAN
@@ -383,7 +809,7 @@ IF (PRESENT(unitsim)) THEN
     llat(lvsize) = llat(1)
   ENDIF
   ! Lo inserisco nel mio oggetto
-  CALL init(this, lon=llon, lat=llat)
+  CALL init(this, lon=llon(1:lvsize), lat=llat(1:lvsize))
   this%vtype = geo_coordvect_polygon ! Sempre un poligono
   
   DEALLOCATE(llon, llat)
@@ -397,8 +823,8 @@ ELSE IF (PRESENT(shphandle) .AND. PRESENT(nshp)) THEN
   shpobj => shpreadobject(shphandle, nshp)
   IF (ASSOCIATED(shpobj)) THEN
     ! Lo inserisco nel mio oggetto
-    CALL init(this, lon=REAL(shpobj%padfx,kind=geoprec), &
-     lat=REAL(shpobj%padfy,kind=geoprec))
+    CALL init(this, lon=REAL(shpobj%padfx,kind=fp_geo), &
+     lat=REAL(shpobj%padfy,kind=fp_geo))
     this%vtype = shpobj%nshptype
     CALL shpdestroyobject(shpobj)
   ELSE
@@ -445,7 +871,7 @@ ELSE IF (PRESENT(shphandle)) THEN
    REAL(this%ll(1:this%vsize,1),kind=fp_d), &
    REAL(this%ll(1:this%vsize,2),kind=fp_d))
   IF (ASSOCIATED(shpobj)) THEN
-    ! Lo scrifo nello shapefile
+    ! Lo scrivo nello shapefile
     i=shpwriteobject(shphandle, lnshp, shpobj)
     CALL shpdestroyobject(shpobj)
   ENDIF
@@ -459,8 +885,8 @@ SUBROUTINE geo_coordvect_importvect(this, shpfilesim, shpfile)
 TYPE(geo_coordvect),POINTER :: this(:)
 CHARACTER(len=*),INTENT(in),OPTIONAL :: shpfilesim, shpfile
 
-REAL(kind=geoprec),ALLOCATABLE :: llon(:), llat(:)
-REAL(kind=geoprec) :: inu
+REAL(kind=fp_geo),ALLOCATABLE :: llon(:), llat(:)
+REAL(kind=fp_geo) :: inu
 REAL(kind=fp_d) :: minb(4), maxb(4)
 INTEGER :: i, u, ns, lvsize, shptype
 CHARACTER(len=40) :: lname
@@ -525,8 +951,8 @@ TYPE(geo_coordvect) :: this(:)
 CHARACTER(len=*),INTENT(in),OPTIONAL :: shpfilesim, shpfile
 LOGICAL,INTENT(in),OPTIONAL :: append
 
-REAL(kind=geoprec),ALLOCATABLE :: llon(:), llat(:)
-REAL(kind=geoprec) :: lv1,lv2,lv3,lv4
+REAL(kind=fp_geo),ALLOCATABLE :: llon(:), llat(:)
+REAL(kind=fp_geo) :: lv1,lv2,lv3,lv4
 REAL(kind=fp_d) :: minb(4), maxb(4)
 INTEGER :: i, u, ns, shptype
 CHARACTER(len=40) :: lname
@@ -557,7 +983,14 @@ IF (PRESENT(shpfilesim)) THEN
   RETURN
 ELSE IF (PRESENT(shpfile)) THEN
 #ifdef HAVE_LIBSHP_FORTRAN
-  shphandle = shpopen(TRIM(shpfile), 'r+b')
+  IF (lappend) THEN
+    shphandle = shpopen(TRIM(shpfile), 'r+b')
+    IF (shphandle == 0) THEN ! shpopen funziona solo su file esistenti
+      shphandle = shpcreate(TRIM(shpfile), geo_coordvect_polygon)
+    ENDIF
+  ELSE
+    shphandle = shpcreate(TRIM(shpfile), geo_coordvect_polygon)
+  ENDIF
   IF (shphandle == 0) THEN
     CALL raise_error('Impossibile aprire lo shapefile '//TRIM(shpfile))
     RETURN
@@ -581,12 +1014,9 @@ END SUBROUTINE geo_coordvect_exportvect
 SUBROUTINE geo_coordvect_delete(this)
 TYPE(geo_coordvect), INTENT(INOUT) :: this
 
+CALL delete(this%desc)
 IF (ASSOCIATED(this%ll)) DEALLOCATE(this%ll)
 IF (ASSOCIATED(this%utm)) DEALLOCATE(this%utm)
-this%fuso = imiss
-this%elliss = cmiss
-this%geoce = .FALSE.
-this%utmce = .FALSE.
 this%vsize = 0
 this%vtype = 0
 
@@ -595,8 +1025,8 @@ END SUBROUTINE geo_coordvect_delete
 
 !!$SUBROUTINE geo_coordvect_add(this, lon, lat, utme, utmn)
 !!$TYPE(geo_coordvect), INTENT(INOUT) :: this
-!!$REAL(kind=geoprec), INTENT(IN), OPTIONAL :: lon(:), lat(:)
-!!$REAL(kind=utmprec), INTENT(IN), OPTIONAL  :: utme(:), utmn(:)
+!!$REAL(kind=fp_geo), INTENT(IN), OPTIONAL :: lon(:), lat(:)
+!!$REAL(kind=fp_utm), INTENT(IN), OPTIONAL  :: utme(:), utmn(:)
 !!$
 !!$TYPE(geo_coordvect) :: tmp
 !!$INTEGER :: newsize
@@ -641,7 +1071,7 @@ LOGICAL :: dentro
 INTEGER :: i, j
 
 dentro = .FALSE.
-IF (this%geoce .AND. point%geoce) THEN
+IF (this%desc%geoce .AND. point%desc%geoce) THEN
   j = this%vsize
   DO i = 1, this%vsize
     IF ((this%ll(i,2) <= point%lat .AND. &
@@ -656,7 +1086,7 @@ IF (this%geoce .AND. point%geoce) THEN
     ENDIF
     j = i - 1
   ENDDO
-ELSE IF (this%geoce .AND. point%utmce) THEN
+ELSE IF (this%desc%utmce .AND. point%desc%utmce) THEN
 ! ripetere per UTM
 ENDIF
 
