@@ -589,12 +589,6 @@ SUBROUTINE ll2utm(lon, lat, fuso, elliss, utme, utmn)
 !           *** degrees West longitude and progresses eastward to
 !           *** zone 60.
 !           *** This routine works in both No. & So. Hemispheres
-!               Reference --
-!                 "Map Projections--A Working Manual", p61,
-!                  U.S. Geological Survey Professional Paper 1395,
-!                    Note: assumes the Clarke 1866 ellipsoid
-!               Adapted from --
-!                  EPS version 2.0; subr. MAPGTU
 !
 ! --- INPUTS:
 !               this%lat (era RLAT) - Real        - N Latitude in decimal degrees
@@ -609,19 +603,14 @@ SUBROUTINE ll2utm(lon, lat, fuso, elliss, utme, utmn)
 !                  this%utmn (era Y) - Real        - UTM northing in km
 !                 this%fuso (era IZ) - Integer     - UTM zone
 !
-! --- LL2UTM called by:  READCF
-! --- LL2UTM calls:      none
 !----------------------------------------------------------------------
-IMPLICIT REAL(kind=fp_utm) (a-h,o-z) ! temporaneo
+!IMPLICIT REAL(kind=fp_utm) (a-h,o-z) ! temporaneo
 
 REAL(kind=fp_geo),INTENT(IN) :: lon, lat
 INTEGER,INTENT(INOUT) :: fuso, elliss
 REAL(kind=fp_utm),INTENT(OUT) :: utme, utmn
-
-REAL(kind=fp_utm) :: n, m
-
-REAL :: deltalon, p
-REAL :: N, T, T2, C, M, A1, A2, A3, A4, A5, A6
+REAL(kind=fp_utm) :: deltalon, p
+REAL(kind=fp_utm) :: N, T, T2, C, M, A1, A2, A3, A4, A5, A6
 
 IF (fuso == 0) THEN
 ! ---   Locate natural zone
@@ -634,7 +623,6 @@ deltalon = dtr*(lon - (6.0_fp_geo*ABS(fuso)-183.0_fp_geo))
 
 ! --- Convert phi (latitude) to radians
 p = dtr*lat
-
 
 N = a(elliss)/SQRT(1.0-e2(elliss)*SIN(p)*SIN(p))
 T = TAN(p)*TAN(p)
@@ -669,12 +657,6 @@ SUBROUTINE utm2ll(utme, utmn, fuso, elliss, lon, lat)
 !
 ! --- PURPOSE:  Converts UTM coordinates to latitude/longitude
 !               Works in both Northern & Southern Hemispheres
-!               Reference--
-!                 "Map Projections--A Working Manual", p61,
-!                  U.S. Geological Survey Professional Paper 1395,
-!                    Note: assumes the Clarke 1866 ellipsoid
-!               Adapted from --
-!                  EPS version 2.0; subr. MAPUTG
 !
 ! --- INPUTS:
 !                  this%utme (era X) - real    - UTM easting in km
@@ -687,24 +669,14 @@ SUBROUTINE utm2ll(utme, utmn, fuso, elliss, lon, lat)
 !               this%lat (era RLAT) - real    - N Latitude in decimal degrees
 !               this%lon (era RLON) - real    - E Longitude in decimal degrees
 !
-! --- UTM2LL called by:  READCF
-! --- UTM2LL calls:      none
 !----------------------------------------------------------------------
-IMPLICIT REAL(kind=fp_utm) (a-h,o-z) ! temporaneo
+!IMPLICIT REAL(kind=fp_utm) (a-h,o-z) ! temporaneo
 
 REAL(kind=fp_utm),INTENT(IN) :: utme, utmn
 INTEGER,INTENT(IN) :: fuso, elliss
 REAL(kind=fp_utm),INTENT(OUT) :: lon, lat
-
-REAL(kind=fp_utm) :: m, n1, l
-
-! --- Parameter definitions
-!      k0        -  scale on central meridian
-!      a         -  Clarke 1866 equatorial radius
-!      e2        -  squared Clarke 1866 eccentricity
-!      ep2       -  (e2/(1.0-e2)
-!      false_e   -  false easting
-!      rtd       -  radians to degrees conversion
+REAL(kind=fp_utm) :: rlon0, xm, ym, M, u, p1, C1, C2, T1, T2, sin2p1, N1
+REAL(kind=fp_utm) :: R0, R1, D, D2, D3, D4, D5, D6, p, l
 
 ! --- Central meridian
 rlon0 = ABS(fuso)*6.0 - 183.0
@@ -721,14 +693,11 @@ M = ym/k0
 u = M/(a(elliss)*(1.0-e2(elliss)/4.0 - 3.0*e4(elliss)/64.0 - 5.0*e6(elliss)/256.0))
 p1 = u + e11(elliss)*SIN(2.0*u) + e12(elliss)*SIN(4.0*u) + &
  e13(elliss)*SIN(6.0*u) + e14(elliss)*SIN(8.0*u)
-cosp1 = COS(p1)
-C1 = ep2(elliss)*cosp1**2
+C1 = ep2(elliss)*COS(p1)**2
 C2 = C1**2
-tanp1 = TAN(p1)
-T1 = tanp1**2
+T1 = TAN(p1)**2
 T2 = T1**2
-sinp1 = SIN(p1)
-sin2p1 = sinp1**2
+sin2p1 = SIN(p1)**2
 N1 = a(elliss)/SQRT(1.0-e2(elliss)*sin2p1)
 R0 = 1.0-e2(elliss)*sin2p1
 R1 = a(elliss)*(1.0-e2(elliss))/SQRT(R0**3)
@@ -740,12 +709,12 @@ D4=D*D3
 D5=D*D4
 D6=D*D5
 
-p = p1 - (N1*tanp1/R1) * (D2/2.0                                  &
+p = p1 - (N1*TAN(p1)/R1) * (D2/2.0                                  &
  - (5.0+3.0*T1+10.0*C1-4.0*C2-9.0*ep2(elliss))*D4/24.0              &
  + (61.0+90.0*T1+298.0*C1+45.0*T2-252*ep2(elliss)-3.0*C2)*D6/720.0)
 lat = rtd*p
 l = (D - (1.0+2.0*T1+C1)*D3/6.0                                   &
- + (5.0-2.0*C1+28*T1-3.0*C2+8.0*ep2(elliss)+24.0*T2)*D5/120.0)/cosp1
+ + (5.0-2.0*C1+28*T1-3.0*C2+8.0*ep2(elliss)+24.0*T2)*D5/120.0)/COS(p1)
 lon = rtd*l + rlon0
 
 END SUBROUTINE utm2ll
