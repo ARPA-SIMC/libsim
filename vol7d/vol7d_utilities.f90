@@ -20,7 +20,7 @@ INTERFACE count_distinct
 END INTERFACE
 
 INTERFACE pack_distinct
-  MODULE PROCEDURE pack_distincti, pack_distinctc
+  MODULE PROCEDURE pack_distincti !, pack_distinctc
 END INTERFACE
 
 INTERFACE map_distinct
@@ -296,12 +296,10 @@ END FUNCTION pack_distincti
 
 
 ! vlen provvisorio, altrimenti internal compiler error con pgf90!!!
-FUNCTION pack_distinctc(vect, vlen, mask, back) RESULT(pack_distinct)
-CHARACTER(len=vlen),INTENT(in) :: vect(:)
-INTEGER :: vlen
+SUBROUTINE pack_distinctc(vect, pack_distinct, mask, back) !RESULT(pack_distinct)
+CHARACTER(len=*),INTENT(in) :: vect(:)
 LOGICAL,INTENT(in),OPTIONAL :: mask(:), back
-CHARACTER(len=vlen) :: pack_distinct(SIZE(vect))
-!CHARACTER(len=len(vect(1))) :: pack_distinct(SIZE(vect))
+CHARACTER(len=LEN(vect)) :: pack_distinct(SIZE(vect))
 
 INTEGER :: count_distinct
 INTEGER :: i, j
@@ -354,7 +352,7 @@ ELSE
   ENDIF
 ENDIF
 
-END FUNCTION pack_distinctc
+END SUBROUTINE pack_distinctc
 
 
 ! restituisce gli indici degli elementi distinti di vect impacchettati
