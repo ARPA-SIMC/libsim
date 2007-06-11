@@ -89,56 +89,56 @@ ENDIF
 END SUBROUTINE vol7d_oraclesim_delete
 
 
-SUBROUTINE vol7d_oraclesim_importvsns(this, var, network, timei, timef, degnet)
+SUBROUTINE vol7d_oraclesim_importvsns(this, var, network, timei, timef, set_network)
 TYPE(vol7d_oraclesim),INTENT(out) :: this
 CHARACTER(len=*),INTENT(in) :: var
 INTEGER,INTENT(in) :: network
 TYPE(vol7d_time),INTENT(in) :: timei, timef
-LOGICAL,INTENT(in),OPTIONAL :: degnet
+TYPE(vol7d_network),INTENT(in),OPTIONAL :: set_network
 
-CALL import(this, (/var/), network, timei, timef, degnet)
+CALL import(this, (/var/), network, timei, timef, set_network)
 
 END SUBROUTINE vol7d_oraclesim_importvsns
 
 
-SUBROUTINE vol7d_oraclesim_importvsnv(this, var, network, timei, timef, degnet)
+SUBROUTINE vol7d_oraclesim_importvsnv(this, var, network, timei, timef, set_network)
 TYPE(vol7d_oraclesim),INTENT(out) :: this
 CHARACTER(len=*),INTENT(in) :: var
 INTEGER,INTENT(in) :: network(:)
 TYPE(vol7d_time),INTENT(in) :: timei, timef
-LOGICAL,INTENT(in),OPTIONAL :: degnet
+TYPE(vol7d_network),INTENT(in),OPTIONAL :: set_network
 
 INTEGER :: i
 
 DO i = 1, SIZE(network)
-  CALL import(this, (/var/), network(i), timei, timef, degnet)
+  CALL import(this, (/var/), network(i), timei, timef, set_network)
 ENDDO
 
 END SUBROUTINE vol7d_oraclesim_importvsnv
 
 
-SUBROUTINE vol7d_oraclesim_importvvnv(this, var, network, timei, timef, degnet)
+SUBROUTINE vol7d_oraclesim_importvvnv(this, var, network, timei, timef, set_network)
 TYPE(vol7d_oraclesim),INTENT(out) :: this
 CHARACTER(len=*),INTENT(in) :: var(:)
 INTEGER,INTENT(in) :: network(:)
 TYPE(vol7d_time),INTENT(in) :: timei, timef
-LOGICAL,INTENT(in),OPTIONAL :: degnet
+TYPE(vol7d_network),INTENT(in),OPTIONAL :: set_network
 
 INTEGER :: i
 
 DO i = 1, SIZE(network)
-  CALL import(this, var, network(i), timei, timef, degnet)
+  CALL import(this, var, network(i), timei, timef, set_network)
 ENDDO
 
 END SUBROUTINE vol7d_oraclesim_importvvnv
 
 
-SUBROUTINE vol7d_oraclesim_importvvns(this, var, network, timei, timef, degnet)
+SUBROUTINE vol7d_oraclesim_importvvns(this, var, network, timei, timef, set_network)
 TYPE(vol7d_oraclesim),INTENT(out) :: this
 CHARACTER(len=*),INTENT(in) :: var(:)
 INTEGER,INTENT(in) :: network
 TYPE(vol7d_time),INTENT(in) :: timei, timef
-LOGICAL,INTENT(in),OPTIONAL :: degnet
+TYPE(vol7d_network),INTENT(in),OPTIONAL :: set_network
 
 TYPE(vol7d) :: v7dtmp, v7dtmp2
 TYPE(vol7d_time) :: odatetime
@@ -148,13 +148,8 @@ CHARACTER(len=8) :: cnetwork
 CHARACTER(len=SIZE(var)*16) :: cvar
 CHARACTER(len=12),ALLOCATABLE :: tmtmp(:)
 INTEGER,ALLOCATABLE :: anatmp(:), vartmp(:), mapdatao(:)
-LOGICAL :: verbose, found, non_valid, ldegnet, varbt_req(SIZE(vartable))
+LOGICAL :: verbose, found, non_valid, varbt_req(SIZE(vartable))
 
-IF (PRESENT(degnet)) THEN
-  ldegnet = degnet
-ELSE
-  ldegnet = .FALSE.
-ENDIF
 CALL getval(timei, year=datai(3), month=datai(2), day=datai(1), &
  hour=orai(1), minute=orai(2))
 CALL getval(timef, year=dataf(3), month=dataf(2), day=dataf(1), &
@@ -322,8 +317,8 @@ DO i = 1, nvar
        lon=REAL(networktable(network)%ana(k)%lon,fp_geo), &
        lat=REAL(networktable(network)%ana(k)%lat,fp_geo))
     ENDDO
-    IF (ldegnet) THEN
-      CALL init(v7dtmp%network(1), 0) ! dummy network
+    IF (PRESENT(set_network)) THEN
+      v7dtmp%network(1) = set_network ! dummy network
     ELSE
       CALL init(v7dtmp%network(1), network)
     ENDIF
