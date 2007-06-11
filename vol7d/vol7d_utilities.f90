@@ -143,7 +143,7 @@ ENDIF
 count_distinct = 0
 
 IF (PRESENT (mask)) THEN
-  IF (back) THEN
+  IF (lback) THEN
     vectm1: DO i = 1, SIZE(vect)
       IF (.NOT.mask(i)) CYCLE vectm1
       DO j = i-1, 1, -1
@@ -161,7 +161,7 @@ IF (PRESENT (mask)) THEN
     ENDDO vectm2
   ENDIF
 ELSE
-  IF (back) THEN
+  IF (lback) THEN
     vect1: DO i = 1, SIZE(vect)
       DO j = i-1, 1, -1
         IF (vect(j) == vect(i)) CYCLE vect1
@@ -197,7 +197,7 @@ ENDIF
 count_distinct = 0
 
 IF (PRESENT (mask)) THEN
-  IF (back) THEN
+  IF (lback) THEN
     vectm1: DO i = 1, SIZE(vect)
       IF (.NOT.mask(i)) CYCLE vectm1
       DO j = i-1, 1, -1
@@ -215,7 +215,7 @@ IF (PRESENT (mask)) THEN
     ENDDO vectm2
   ENDIF
 ELSE
-  IF (back) THEN
+  IF (lback) THEN
     vect1: DO i = 1, SIZE(vect)
       DO j = i-1, 1, -1
         IF (vect(j) == vect(i)) CYCLE vect1
@@ -253,7 +253,7 @@ ENDIF
 count_distinct = 0
 
 IF (PRESENT (mask)) THEN
-  IF (back) THEN
+  IF (lback) THEN
     vectm1: DO i = 1, SIZE(vect)
       IF (.NOT.mask(i)) CYCLE vectm1
       DO j = i-1, 1, -1
@@ -273,7 +273,7 @@ IF (PRESENT (mask)) THEN
     ENDDO vectm2
   ENDIF
 ELSE
-  IF (back) THEN
+  IF (lback) THEN
     vect1: DO i = 1, SIZE(vect)
       DO j = i-1, 1, -1
         IF (vect(j) == vect(i)) CYCLE vect1
@@ -297,7 +297,7 @@ END FUNCTION pack_distincti
 
 ! vlen provvisorio, altrimenti internal compiler error con pgf90!!!
 FUNCTION pack_distinctc(vect, vlen, mask, back) RESULT(pack_distinct)
-CHARACTER(len=*),INTENT(in) :: vect(:)
+CHARACTER(len=vlen),INTENT(in) :: vect(:)
 INTEGER :: vlen
 LOGICAL,INTENT(in),OPTIONAL :: mask(:), back
 CHARACTER(len=vlen) :: pack_distinct(SIZE(vect))
@@ -315,7 +315,7 @@ ENDIF
 count_distinct = 0
 
 IF (PRESENT (mask)) THEN
-  IF (back) THEN
+  IF (lback) THEN
     vectm1: DO i = 1, SIZE(vect)
       IF (.NOT.mask(i)) CYCLE vectm1
       DO j = i-1, 1, -1
@@ -335,7 +335,7 @@ IF (PRESENT (mask)) THEN
     ENDDO vectm2
   ENDIF
 ELSE
-  IF (back) THEN
+  IF (lback) THEN
     vect1: DO i = 1, SIZE(vect)
       DO j = i-1, 1, -1
         IF (vect(j) == vect(i)) CYCLE vect1
@@ -377,7 +377,7 @@ count_distinct = 0
 map_distinct(:) = 0
 
 IF (PRESENT (mask)) THEN
-  IF (back) THEN
+  IF (lback) THEN
     vectm1: DO i = 1, SIZE(vect)
       IF (.NOT.mask(i)) CYCLE vectm1
       DO j = i-1, 1, -1
@@ -403,7 +403,7 @@ IF (PRESENT (mask)) THEN
     ENDDO vectm2
   ENDIF
 ELSE
-  IF (back) THEN
+  IF (lback) THEN
     vect1: DO i = 1, SIZE(vect)
       DO j = i-1, 1, -1
         IF (vect(j) == vect(i)) THEN
@@ -449,7 +449,7 @@ count_distinct = 0
 map_distinct(:) = 0
 
 IF (PRESENT (mask)) THEN
-  IF (back) THEN
+  IF (lback) THEN
     vectm1: DO i = 1, SIZE(vect)
       IF (.NOT.mask(i)) CYCLE vectm1
       DO j = i-1, 1, -1
@@ -475,7 +475,7 @@ IF (PRESENT (mask)) THEN
     ENDDO vectm2
   ENDIF
 ELSE
-  IF (back) THEN
+  IF (lback) THEN
     vect1: DO i = 1, SIZE(vect)
       DO j = i-1, 1, -1
         IF (vect(j) == vect(i)) THEN
