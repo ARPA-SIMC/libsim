@@ -7,10 +7,16 @@ IMPLICIT NONE
 TYPE datetime
   PRIVATE
   INTEGER :: iminuti
-  LOGICAL :: interval
 END TYPE  datetime
 
-TYPE(datetime), PARAMETER :: datetime_miss=datetime(imiss, .FALSE.)
+TYPE timedelta
+  PRIVATE
+  INTEGER :: iminuti, month, year
+END TYPE timedelta
+
+
+TYPE(datetime), PARAMETER :: datetime_miss=datetime(imiss)
+TYPE(timedelta), PARAMETER :: timedelta_miss=timedelta(imiss, 0, 0)
 INTEGER,PARAMETER :: &
  year0=1, & ! anno di origine per iminuti
  d1=365, & ! giorni/1 anno nel calendario gregoriano
@@ -27,54 +33,74 @@ PUBLIC datetime, datetime_miss, init, delete, getval, &
  datetime_eq, datetime_eqsv, datetime_ne, datetime_nesv, &
  datetime_gt, datetime_gtsv, datetime_lt, datetime_ltsv, &
  datetime_ge, datetime_gesv, datetime_le, datetime_lesv, &
- datetime_add, datetime_sub
+ datetime_add, datetime_sub, &
+ timedelta, timedelta_miss, &
+ timedelta_eq, timedelta_eqsv, timedelta_ne, timedelta_nesv, &
+ timedelta_gt, timedelta_gtsv, timedelta_lt, timedelta_ltsv, &
+ timedelta_ge, timedelta_gesv, timedelta_le, timedelta_lesv, &
+ timedelta_add, timedelta_sub
 
 INTERFACE init
-  MODULE PROCEDURE datetime_init
+  MODULE PROCEDURE datetime_init, timedelta_init
 END INTERFACE
 
 INTERFACE delete
-  MODULE PROCEDURE datetime_delete
+  MODULE PROCEDURE datetime_delete, timedelta_delete
 END INTERFACE
 
 INTERFACE getval
-  MODULE PROCEDURE datetime_getval
+  MODULE PROCEDURE datetime_getval, timedelta_getval
 END INTERFACE
 
 INTERFACE OPERATOR (==)
-  MODULE PROCEDURE datetime_eq, datetime_eqsv
+  MODULE PROCEDURE datetime_eq, datetime_eqsv, timedelta_eq, timedelta_eqsv
 END INTERFACE
 
 INTERFACE OPERATOR (/=)
-  MODULE PROCEDURE datetime_ne, datetime_nesv
+  MODULE PROCEDURE datetime_ne, datetime_nesv, timedelta_ne, timedelta_nesv
 END INTERFACE
 
 INTERFACE OPERATOR (>)
-  MODULE PROCEDURE datetime_gt, datetime_gtsv
+  MODULE PROCEDURE datetime_gt, datetime_gtsv, timedelta_gt, timedelta_gtsv
 END INTERFACE
 
 INTERFACE OPERATOR (<)
-  MODULE PROCEDURE datetime_lt, datetime_ltsv
+  MODULE PROCEDURE datetime_lt, datetime_ltsv, timedelta_lt, timedelta_ltsv
 END INTERFACE
 
 INTERFACE OPERATOR (>=)
-  MODULE PROCEDURE datetime_ge, datetime_gesv
+  MODULE PROCEDURE datetime_ge, datetime_gesv, timedelta_ge, timedelta_gesv
 END INTERFACE
 
 INTERFACE OPERATOR (<=)
-  MODULE PROCEDURE datetime_le, datetime_lesv
+  MODULE PROCEDURE datetime_le, datetime_lesv, timedelta_le, timedelta_lesv
 END INTERFACE
 
 INTERFACE OPERATOR (+)
-  MODULE PROCEDURE datetime_add
+  MODULE PROCEDURE datetime_add, timedelta_add
 END INTERFACE
 
 INTERFACE OPERATOR (-)
-  MODULE PROCEDURE datetime_sub
+  MODULE PROCEDURE datetime_sub, timedelta_sub
+END INTERFACE
+
+INTERFACE OPERATOR (*)
+  MODULE PROCEDURE timedelta_mult
+END INTERFACE
+
+INTERFACE OPERATOR (/)
+  MODULE PROCEDURE timedelta_div
+END INTERFACE
+
+INTERFACE mod
+  MODULE PROCEDURE timedelta_mod
 END INTERFACE
 
 CONTAINS
 
+! ==============
+! == datetime ==
+! ==============
 SUBROUTINE datetime_init(this, iminuti, year, month, day, hour, minute, &
  unixtime, isodate, oraclesimdate)
 TYPE(datetime),INTENT(INOUT) :: this
@@ -87,7 +113,6 @@ INTEGER :: lyear, lmonth, lday, lhour, lminute, ier
 
 IF (PRESENT(iminuti)) THEN ! minuti dal 01/01/0001 (libmega)
   this%iminuti = iminuti
-  this%interval = .FALSE.
 ELSE IF (PRESENT(year)) THEN ! anno/mese/giorno, ecc.
   lyear = year
   IF (PRESENT(month)) THEN
@@ -110,20 +135,7 @@ ELSE IF (PRESENT(year)) THEN ! anno/mese/giorno, ecc.
   ELSE
     lminute = 0
   ENDIF
-  this%interval = .FALSE.
   CALL jeladata5(lday, lmonth, lyear, lhour, lminute, this%iminuti)
-ELSE IF (PRESENT(day) .OR. PRESENT(hour) .OR. PRESENT(minute)) THEN ! intervallo
-  this%iminuti = 0
-  IF (PRESENT(day)) THEN
-    this%iminuti = this%iminuti + 1440*day
-  ENDIF
-  IF (PRESENT(hour)) THEN
-    this%iminuti = this%iminuti + 60*hour
-  ENDIF
-  IF (PRESENT(minute)) THEN
-    this%iminuti = this%iminuti + minute
-  ENDIF
-  this%interval = .TRUE.
 ELSE IF (PRESENT(isodate)) THEN ! formato iso YYYY-MM-DD hh:mm
   READ(isodate,'(I4,1X,I2,1X,I2,1X,I2,1X,I2)', iostat=ier) &
    lyear, lmonth, lday, lhour, lminute
@@ -133,7 +145,6 @@ ELSE IF (PRESENT(isodate)) THEN ! formato iso YYYY-MM-DD hh:mm
     RETURN
   ENDIF
   CALL jeladata5(lday,lmonth,lyear,lhour,lminute,this%iminuti)
-  this%interval = .FALSE.
 ELSE IF (PRESENT(oraclesimdate)) THEN ! formato YYYYMMDDhhmm
   READ(oraclesimdate,'(I4,4I2)', iostat=ier) lyear, lmonth, lday, lhour, lminute
   IF (ier /= 0) THEN
@@ -142,10 +153,8 @@ ELSE IF (PRESENT(oraclesimdate)) THEN ! formato YYYYMMDDhhmm
     RETURN
   ENDIF
   CALL jeladata5(lday,lmonth,lyear,lhour,lminute,this%iminuti)
-  this%interval = .FALSE.
 ELSE IF (PRESENT(unixtime)) THEN ! secondi dal 01/01/1970 (unix)
   this%iminuti = unixtime/60_int_ll + unmim
-  this%interval = .FALSE.
 ENDIF
 
 END SUBROUTINE datetime_init
@@ -155,7 +164,6 @@ SUBROUTINE datetime_delete(this)
 TYPE(datetime),INTENT(INOUT) :: this
 
 this%iminuti = imiss
-this%interval = .FALSE.
 
 END SUBROUTINE datetime_delete
 
@@ -176,61 +184,31 @@ ENDIF
 IF (PRESENT(year) .OR. PRESENT(month) .OR. PRESENT(day) .OR. PRESENT(hour) &
  .OR. PRESENT(minute) .OR. PRESENT(unixtime) .OR. PRESENT(isodate) &
  .OR. PRESENT(oraclesimdate)) THEN
-  IF (this%interval) THEN
-    lminute = MOD(this%iminuti,60)
-    lhour = MOD(this%iminuti,1440)/60
-    lday = this%iminuti/1440
-    IF (PRESENT(minute)) THEN 
-      minute = lminute
-    ENDIF
-    IF (PRESENT(hour)) THEN
-      hour = lhour
-    ENDIF
-    IF (PRESENT(day)) THEN
-      day = lday
-    ENDIF
-    IF (PRESENT(month)) THEN
-      month = 0
-    ENDIF
-    IF (PRESENT(year)) THEN
-      year = 0
-    ENDIF
-    IF (PRESENT(isodate)) THEN ! Non standard, inventato!
-      WRITE(isodate, '(I10.10,1X,I2.2,A1,I2.2)') lday, lhour, ':', lminute
-    ENDIF
-    IF (PRESENT(oraclesimdate)) THEN
-      WRITE(oraclesimdate, '(I8.8,2I2.2)') lday, lhour, lminute
-    ENDIF
-    IF (PRESENT(unixtime)) THEN
-      unixtime = this%iminuti*60_int_ll
-    ENDIF
-  ELSE
-    CALL jeladata6(lday, lmonth, lyear, lhour, lminute, this%iminuti)
-    IF (PRESENT(minute)) THEN 
-      minute = lminute
-    ENDIF
-    IF (PRESENT(hour)) THEN
-      hour = lhour
-    ENDIF
-    IF (PRESENT(day)) THEN
-      day = lday
-    ENDIF
-    IF (PRESENT(month)) THEN
-      month = lmonth
-    ENDIF
-    IF (PRESENT(year)) THEN
-      year = lyear
-    ENDIF
-    IF (PRESENT(isodate)) THEN
-      WRITE(isodate, '(I4.4,A1,I2.2,A1,I2.2,1X,I2.2,A1,I2.2)') &
-       lyear, '-', lmonth, '-', lday, lhour, ':', lminute
-    ENDIF
-    IF (PRESENT(oraclesimdate)) THEN
-      WRITE(oraclesimdate, '(I4.4,4I2.2)') lyear, lmonth, lday, lhour, lminute
-    ENDIF
-    IF (PRESENT(unixtime)) THEN
-      unixtime = (this%iminuti-unmim)*60_int_ll
-    ENDIF
+  CALL jeladata6(lday, lmonth, lyear, lhour, lminute, this%iminuti)
+  IF (PRESENT(minute)) THEN 
+    minute = lminute
+  ENDIF
+  IF (PRESENT(hour)) THEN
+    hour = lhour
+  ENDIF
+  IF (PRESENT(day)) THEN
+    day = lday
+  ENDIF
+  IF (PRESENT(month)) THEN
+    month = lmonth
+  ENDIF
+  IF (PRESENT(year)) THEN
+    year = lyear
+  ENDIF
+  IF (PRESENT(isodate)) THEN
+    WRITE(isodate, '(I4.4,A1,I2.2,A1,I2.2,1X,I2.2,A1,I2.2)') &
+     lyear, '-', lmonth, '-', lday, lhour, ':', lminute
+  ENDIF
+  IF (PRESENT(oraclesimdate)) THEN
+    WRITE(oraclesimdate, '(I4.4,4I2.2)') lyear, lmonth, lday, lhour, lminute
+  ENDIF
+  IF (PRESENT(unixtime)) THEN
+    unixtime = (this%iminuti-unmim)*60_int_ll
   ENDIF
 ENDIF
 
@@ -241,11 +219,7 @@ elemental FUNCTION datetime_eq(this, that) RESULT(res)
 TYPE(datetime),INTENT(IN) :: this, that
 LOGICAL :: res
 
-IF (this%iminuti == that%iminuti .AND. (this%interval .EQV. that%interval)) THEN
-  res = .TRUE.
-ELSE
-  res = .FALSE.
-ENDIF
+res = this%iminuti == that%iminuti
 
 END FUNCTION datetime_eq
 
@@ -289,12 +263,7 @@ elemental FUNCTION datetime_gt(this, that) RESULT(res)
 TYPE(datetime),INTENT(IN) :: this, that
 LOGICAL :: res
 
-IF ((this%iminuti > that%iminuti .AND. (this%interval .EQV. that%interval)) .OR. &
- (.NOT.this%interval .AND. that%interval)) THEN
-  res = .TRUE.
-ELSE
-  res = .FALSE.
-ENDIF
+res = this%iminuti > that%iminuti
 
 END FUNCTION datetime_gt
 
@@ -316,12 +285,7 @@ elemental FUNCTION datetime_lt(this, that) RESULT(res)
 TYPE(datetime),INTENT(IN) :: this, that
 LOGICAL :: res
 
-IF ((this%iminuti < that%iminuti .AND. (this%interval .EQV. that%interval)) .OR. &
- (this%interval .AND. .NOT.that%interval)) THEN
-  res = .TRUE.
-ELSE
-  res = .FALSE.
-ENDIF
+res = this%iminuti < that%iminuti
 
 END FUNCTION datetime_lt
 
@@ -396,18 +360,23 @@ END FUNCTION datetime_lesv
 
 
 FUNCTION datetime_add(this, that) RESULT(res)
-TYPE(datetime),INTENT(IN) :: this, that
+TYPE(datetime),INTENT(IN) :: this
+TYPE(timedelta),INTENT(IN) :: that
 TYPE(datetime) :: res
 
-IF (.NOT.that%interval) THEN
-  CALL raise_error('tentativo di sommare 2 datetime assoluti')
+INTEGER :: lyear, lmonth, lday, lhour, lminute
+
+IF (this%iminuti == imiss .OR. that%iminuti == imiss) THEN
   CALL delete(res)
 ELSE
-  IF (this == datetime_miss .OR. that == datetime_miss) THEN
-    CALL delete(res)
-  ELSE
+  IF (that%month == 0 .AND. that%year == 0) THEN
     CALL init(res, iminuti=this%iminuti+that%iminuti)
-    res%interval = this%interval .AND. that%interval
+  ELSE
+    CALL init(res, iminuti=this%iminuti + that%iminuti)
+    CALL getval(res, year=lyear, month=lmonth, day=lday, hour=lhour, &
+     minute=lminute)
+    CALL init(res, year=lyear+that%year, month=lmonth+that%month, day=lday, &
+     hour=lhour, minute=lminute)
   ENDIF
 ENDIF
 
@@ -416,21 +385,305 @@ END FUNCTION datetime_add
 
 FUNCTION datetime_sub(this, that) RESULT(res)
 TYPE(datetime),INTENT(IN) :: this, that
-TYPE(datetime) :: res
+TYPE(timedelta) :: res
 
-IF (this%interval .AND. .NOT.that%interval) THEN
-  CALL raise_error('tentativo di sottrarre un datetime assoluto da uno relativo')
+IF (this == datetime_miss .OR. that == datetime_miss) THEN
   CALL delete(res)
 ELSE
-  IF (this == datetime_miss .OR. that == datetime_miss) THEN
-    CALL delete(res)
-  ELSE
-    CALL init(res, iminuti=this%iminuti-that%iminuti)
-    res%interval = this%interval .EQV. that%interval
-  ENDIF
+  CALL init(res, iminuti=this%iminuti-that%iminuti)
 ENDIF
 
 END FUNCTION datetime_sub
+
+
+! ===============
+! == timedelta ==
+! ===============
+SUBROUTINE timedelta_init(this, iminuti, year, month, day, hour, minute, unixtime)
+TYPE(timedelta),INTENT(INOUT) :: this
+INTEGER,INTENT(IN),OPTIONAL :: iminuti, year, month, day, hour, minute
+INTEGER(kind=int_ll),INTENT(IN),OPTIONAL ::  unixtime
+!!$CHARACTER(len=*),INTENT(IN),OPTIONAL :: isodate
+!!$CHARACTER(len=12),INTENT(IN),OPTIONAL :: oraclesimdate
+
+IF (PRESENT(iminuti)) THEN ! minuti dal 01/01/0001 (libmega)
+  this%iminuti = iminuti
+ELSE
+  this%iminuti = 0
+  IF (PRESENT(year)) THEN
+    this%year = year
+  ELSE
+    this%year = 0
+  ENDIF
+  IF (PRESENT(month)) THEN
+    this%month = month
+  ELSE
+    this%month = 0
+  ENDIF
+  IF (PRESENT(day)) THEN
+    this%iminuti = this%iminuti + 1440*day
+  ENDIF
+  IF (PRESENT(hour)) THEN
+    this%iminuti = this%iminuti + 60*hour
+  ENDIF
+  IF (PRESENT(minute)) THEN
+    this%iminuti = this%iminuti + minute
+  ENDIF
+  IF (PRESENT(unixtime)) THEN
+    this%iminuti = this%iminuti + unixtime*60
+  ENDIF
+ENDIF
+
+END SUBROUTINE timedelta_init
+
+
+SUBROUTINE timedelta_delete(this)
+TYPE(timedelta),INTENT(INOUT) :: this
+
+this%iminuti = imiss
+this%year = 0
+this%month = 0
+
+END SUBROUTINE timedelta_delete
+
+
+SUBROUTINE timedelta_getval(this, iminuti, year, month, day, hour, minute, &
+ unixtime, isodate, oraclesimdate)
+TYPE(timedelta),INTENT(IN) :: this
+INTEGER,INTENT(OUT),OPTIONAL :: iminuti, year, month, day, hour, minute
+INTEGER(kind=int_ll),INTENT(OUT),OPTIONAL ::  unixtime
+CHARACTER(len=16),INTENT(OUT),OPTIONAL :: isodate
+CHARACTER(len=12),INTENT(OUT),OPTIONAL :: oraclesimdate
+
+INTEGER :: lyear, lmonth, lday, lhour, lminute, ier
+
+IF (PRESENT(iminuti)) THEN
+  iminuti = this%iminuti
+ENDIF
+IF (PRESENT(minute)) THEN 
+  minute = MOD(this%iminuti,60)
+ENDIF
+IF (PRESENT(hour)) THEN
+  hour = MOD(this%iminuti,1440)/60
+ENDIF
+IF (PRESENT(day)) THEN
+  day = this%iminuti/1440
+ENDIF
+IF (PRESENT(month)) THEN
+  month = this%month
+ENDIF
+IF (PRESENT(year)) THEN
+  year = this%year
+ENDIF
+IF (PRESENT(isodate)) THEN ! Non standard, inventato!
+  WRITE(isodate, '(I10.10,1X,I2.2,A1,I2.2)') this%iminuti/1440, &
+   MOD(this%iminuti,1440)/60, ':', MOD(this%iminuti,60)
+ENDIF
+IF (PRESENT(oraclesimdate)) THEN
+  WRITE(oraclesimdate, '(I8.8,2I2.2)') this%iminuti/1440, &
+   MOD(this%iminuti,1440)/60, MOD(this%iminuti,60)
+ENDIF
+IF (PRESENT(unixtime)) THEN
+  unixtime = this%iminuti*60_int_ll
+ENDIF
+
+END SUBROUTINE timedelta_getval
+
+
+elemental FUNCTION timedelta_eq(this, that) RESULT(res)
+TYPE(timedelta),INTENT(IN) :: this, that
+LOGICAL :: res
+
+res = (this%iminuti == that%iminuti &
+ .AND. this%month == that%month .AND. this%year == that%year)
+
+END FUNCTION timedelta_eq
+
+
+FUNCTION timedelta_eqsv(this, that) RESULT(res)
+TYPE(timedelta),INTENT(IN) :: this, that(:)
+LOGICAL :: res(SIZE(that))
+
+INTEGER :: i
+
+DO i = 1, SIZE(that)
+  res(i) = this == that(i)
+ENDDO
+
+END FUNCTION timedelta_eqsv
+
+
+elemental FUNCTION timedelta_ne(this, that) RESULT(res)
+TYPE(timedelta),INTENT(IN) :: this, that
+LOGICAL :: res
+
+res = .NOT.(this == that)
+
+END FUNCTION timedelta_ne
+
+
+FUNCTION timedelta_nesv(this, that) RESULT(res)
+TYPE(timedelta),INTENT(IN) :: this, that(:)
+LOGICAL :: res(SIZE(that))
+
+INTEGER :: i
+
+DO i = 1, SIZE(that)
+  res(i) = .NOT.(this == that(i))
+ENDDO
+
+END FUNCTION timedelta_nesv
+
+
+elemental FUNCTION timedelta_gt(this, that) RESULT(res)
+TYPE(timedelta),INTENT(IN) :: this, that
+LOGICAL :: res
+
+res = this%iminuti > that%iminuti
+
+END FUNCTION timedelta_gt
+
+
+FUNCTION timedelta_gtsv(this, that) RESULT(res)
+TYPE(timedelta),INTENT(IN) :: this, that(:)
+LOGICAL :: res(SIZE(that))
+
+INTEGER :: i
+
+DO i = 1, SIZE(that)
+  res(i) = this > that(i)
+ENDDO
+
+END FUNCTION timedelta_gtsv
+
+
+elemental FUNCTION timedelta_lt(this, that) RESULT(res)
+TYPE(timedelta),INTENT(IN) :: this, that
+LOGICAL :: res
+
+res = this%iminuti < that%iminuti
+
+END FUNCTION timedelta_lt
+
+
+FUNCTION timedelta_ltsv(this, that) RESULT(res)
+TYPE(timedelta),INTENT(IN) :: this, that(:)
+LOGICAL :: res(SIZE(that))
+
+INTEGER :: i
+
+DO i = 1, SIZE(that)
+  res(i) = this < that(i)
+ENDDO
+
+END FUNCTION timedelta_ltsv
+
+
+elemental FUNCTION timedelta_ge(this, that) RESULT(res)
+TYPE(timedelta),INTENT(IN) :: this, that
+LOGICAL :: res
+
+IF (this == that) THEN
+  res = .TRUE.
+ELSE IF (this > that) THEN
+  res = .TRUE.
+ELSE
+  res = .FALSE.
+ENDIF
+
+END FUNCTION timedelta_ge
+
+
+FUNCTION timedelta_gesv(this, that) RESULT(res)
+TYPE(timedelta),INTENT(IN) :: this, that(:)
+LOGICAL :: res(SIZE(that))
+
+INTEGER :: i
+
+DO i = 1, SIZE(that)
+  res(i) = this >= that(i)
+ENDDO
+
+END FUNCTION timedelta_gesv
+
+
+elemental FUNCTION timedelta_le(this, that) RESULT(res)
+TYPE(timedelta),INTENT(IN) :: this, that
+LOGICAL :: res
+
+IF (this == that) THEN
+  res = .TRUE.
+ELSE IF (this < that) THEN
+  res = .TRUE.
+ELSE
+  res = .FALSE.
+ENDIF
+
+END FUNCTION timedelta_le
+
+
+FUNCTION timedelta_lesv(this, that) RESULT(res)
+TYPE(timedelta),INTENT(IN) :: this, that(:)
+LOGICAL :: res(SIZE(that))
+
+INTEGER :: i
+
+DO i = 1, SIZE(that)
+  res(i) = this <= that(i)
+ENDDO
+
+END FUNCTION timedelta_lesv
+
+
+FUNCTION timedelta_add(this, that) RESULT(res)
+TYPE(timedelta),INTENT(IN) :: this, that
+TYPE(timedelta) :: res
+
+CALL init(res, iminuti=this%iminuti+that%iminuti, &
+ month=this%month+that%month, year=this%year+that%year)
+
+END FUNCTION timedelta_add
+
+
+FUNCTION timedelta_sub(this, that) RESULT(res)
+TYPE(timedelta),INTENT(IN) :: this, that
+TYPE(timedelta) :: res
+
+CALL init(res, iminuti=this%iminuti-that%iminuti, &
+ month=this%month-that%month, year=this%year-that%year)
+
+END FUNCTION timedelta_sub
+
+
+FUNCTION timedelta_mult(this, n) RESULT(res)
+TYPE(timedelta),INTENT(IN) :: this
+INTEGER :: n
+TYPE(timedelta) :: res
+
+CALL init(res, iminuti=this%iminuti*n, month=this%month*n, year=this%year*n)
+
+END FUNCTION timedelta_mult
+
+
+FUNCTION timedelta_div(this, n) RESULT(res)
+TYPE(timedelta),INTENT(IN) :: this
+INTEGER :: n
+TYPE(timedelta) :: res
+
+CALL init(res, iminuti=this%iminuti/n, month=this%month/n, year=this%year/n)
+
+END FUNCTION timedelta_div
+
+
+FUNCTION timedelta_mod(this, that) RESULT(res)
+TYPE(timedelta),INTENT(IN) :: this, that
+INTEGER :: n
+INTEGER :: res
+
+res = MOD(this%iminuti, that%iminuti)
+
+END FUNCTION timedelta_mod
+
 
 
 SUBROUTINE jeladata5(iday,imonth,iyear,ihour,imin,iminuti)
@@ -498,7 +751,6 @@ SUBROUTINE ndyin(ndays,igg,imm,iaa)
 
 INTEGER :: ndays, igg, imm, iaa, n
 
-ndays = ndays + 1 ! + day0 ?! brutto
 n = ndays/d400
 ndays = ndays - n*d400
 iaa = year0 + n*400
@@ -513,9 +765,9 @@ ndays = ndays - n*d1
 iaa = iaa + n
 n = bisextilis(iaa)
 DO imm = 1, 12
-  IF (ndays <= ianno(imm+1,n)) EXIT
+  IF (ndays < ianno(imm+1,n)) EXIT
 ENDDO
-igg = ndays-ianno(imm,n)
+igg = ndays+1-ianno(imm,n) ! +1 perche' il mese parte da 1
 
 END SUBROUTINE ndyin
 
@@ -539,15 +791,20 @@ FUNCTION ndays(igg,imm,iaa)
 
 INTEGER :: ndays, igg, imm, iaa
 
-ndays = igg+ianno(imm,bisextilis(iaa))
-ndays = ndays-1 + 365*(iaa-year0) + (iaa-year0)/4 - (iaa-year0)/100 + &
- (iaa-year0)/400
+INTEGER :: lmonth, lyear
+
+! Limito il mese a [1-12] e correggo l'anno coerentemente
+lmonth = MOD(MOD(imm-1, 12)+12, 12) + 1 ! Problema con mod(1,12) per i < 0
+lyear = iaa + (imm - lmonth)/12
+ndays = igg+ianno(lmonth, bisextilis(lyear))
+ndays = ndays-1 + 365*(lyear-year0) + (lyear-year0)/4 - (lyear-year0)/100 + &
+ (lyear-year0)/400
 
 END FUNCTION ndays
 
 
 FUNCTION bisextilis(annum)
-INTEGER,intent(in) :: annum
+INTEGER,INTENT(in) :: annum
 INTEGER :: bisextilis
 
 IF (MOD(annum,4) == 0 .AND. (MOD(annum,400) == 0 .EQV. MOD(annum,100) == 0)) THEN
