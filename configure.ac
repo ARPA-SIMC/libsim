@@ -29,13 +29,17 @@ AM_CONDITIONAL(SHP, test "x$enableval" = "xyes")
 
 dnl AC_SEARCH_LIBS([gribex], [picogrib emos], ,
 dnl                          AC_MSG_RESULT([grib decoding library not found]), )
-
 AC_ARG_ENABLE(oraclesim, AC_HELP_STRING([--disable-oraclesim],
   [disable oraclesim support]),,[enableval=yes])dnl default enable
 if test "x$enableval" = "xyes"; then
+if test -n "$ORACLE_HOME"; then
 AC_MSG_RESULT([oraclesim code included])
-liboraclesim=' -L/usr/local/oracle/10.2.01/db_1/lib -lclntsh -lrouMW -lsupport -lrouGW -lix -lemos'
+liboraclesim="-L$ORACLE_HOME/lib -lclntsh -lrouMW -lsupport -lrouGW -lix -lemos"
 AC_SUBST(liboraclesim)
+else
+AC_MSG_RESULT([oraclesim code not included because \$ORACLE_HOME not set])
+enableval=no
+fi
 else
 AC_MSG_RESULT([oraclesim code not included])
 fi
