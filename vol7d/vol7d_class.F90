@@ -1,6 +1,6 @@
 MODULE vol7d_class
 USE kinds
-USE datetime_class, vol7d_time => datetime
+USE datetime_class
 USE vol7d_utilities
 USE vol7d_ana_class
 USE vol7d_timerange_class
@@ -24,10 +24,6 @@ INTEGER, PARAMETER :: vol7d_maxdim_a = 3, vol7d_maxdim_aa = 4, &
  vol7d_attr_d = 7, &
  vol7d_cdatalen=20
 
-!!$TYPE vol7d_time
-!!$  INTEGER :: iminuti
-!!$END TYPE vol7d_time
-
 TYPE vol7d_varmap
   INTEGER :: r, d, i, b, c
 END TYPE vol7d_varmap
@@ -35,8 +31,7 @@ END TYPE vol7d_varmap
 TYPE vol7d
   !! prime 5 dimensioni
   TYPE(vol7d_ana),POINTER :: ana(:)
-!  INTEGER,POINTER :: time(:) ! TYPE(vol7d_time),POINTER :: time(:)
-  TYPE(vol7d_time),POINTER :: time(:)
+  TYPE(datetime),POINTER :: time(:)
   TYPE(vol7d_level),POINTER :: level(:)
   TYPE(vol7d_timerange),POINTER :: timerange(:)
   TYPE(vol7d_network),POINTER :: network(:)
@@ -436,13 +431,13 @@ CALL init(v7dtmp)
 lsort = .FALSE.
 IF (PRESENT(sort)) lsort = sort
 
-CALL vol7d_remap_time(this%time, that%time, v7dtmp%time, lsort, remapt1, remapt2)
-CALL vol7d_remap_timerange(this%timerange, that%timerange, v7dtmp%timerange, &
+CALL vol7d_remap_datetime(this%time, that%time, v7dtmp%time, lsort, remapt1, remapt2)
+CALL vol7d_remap_vol7d_timerange(this%timerange, that%timerange, v7dtmp%timerange, &
  lsort, remaptr1, remaptr2)
-CALL vol7d_remap_level(this%level, that%level, v7dtmp%level, &
+CALL vol7d_remap_vol7d_level(this%level, that%level, v7dtmp%level, &
  lsort, remapl1, remapl2)
-CALL vol7d_remap_ana(this%ana, that%ana, v7dtmp%ana, .FALSE., remapa1, remapa2)
-CALL vol7d_remap_network(this%network, that%network, v7dtmp%network, .FALSE., &
+CALL vol7d_remap_vol7d_ana(this%ana, that%ana, v7dtmp%ana, .FALSE., remapa1, remapa2)
+CALL vol7d_remap_vol7d_network(this%network, that%network, v7dtmp%network, .FALSE., &
  remapn1, remapn2)
 
 CALL vol7d_merge_finalr(this, that, v7dtmp, &
@@ -465,22 +460,6 @@ CALL delete(that)
 CALL delete(this)
 this = v7dtmp
 
-!!$INTEGER :: dimana1(vol7d_maxdim_ad), dimana2(vol7d_maxdim_ad), &
-!!$ dimanat(vol7d_maxdim_ad), dimdati1(vol7d_maxdim_ad), dimdati2(vol7d_maxdim_ad), &
-!!$ dimdatit(vol7d_maxdim_ad)
-!!$INTEGER :: i, nt
-
-!!$dimana1 = (/SIZE(this%ana), 1, SIZE(this%network), 1, 1, 1, 1/)
-!!$dimana2 = (/SIZE(that%ana), 1, SIZE(that%network), 1, 1, 1, 1/)
-!!$dimanat = (/SIZE(v7dtmp%ana), 1, SIZE(v7dtmp%network), 1, 1, 1, 1/)
-!!$
-!!$dimdati1 = (/SIZE(this%ana), SIZE(this%time), SIZE(this%level), &
-!!$ SIZE(this%timerange), 1, SIZE(this%network), 1/)
-!!$dimdati2 = (/SIZE(that%ana), SIZE(that%time), SIZE(that%level), &
-!!$ SIZE(that%timerange), 1, SIZE(that%network), 1/)
-!!$dimdatit = (/SIZE(v7dtmp%ana), SIZE(v7dtmp%time), SIZE(v7dtmp%level), &
-!!$ SIZE(v7dtmp%timerange), 1, SIZE(v7dtmp%network), 1/)
-
 END SUBROUTINE vol7d_merge_stage1
 
 
@@ -488,15 +467,12 @@ SUBROUTINE vol7d_pre_remap_var(thisvar, thatvar, tmpvar, remapv1, remapv2)
 TYPE(vol7d_var),POINTER :: thisvar(:), thatvar(:)
 TYPE(vol7d_var),POINTER :: tmpvar(:)
 INTEGER,POINTER :: remapv1(:), remapv2(:)
-!!$TYPE(vol7d_var),INTENT(in),POINTER :: thisvar, thatvar
-!!$TYPE(vol7d_var),INTENT(out),POINTER :: tmpvar
-!!$INTEGER,INTENT(out),POINTER :: remapv1(:), remapv2(:)
 
 NULLIFY(tmpvar)
 IF (ASSOCIATED(thisvar) .OR. ASSOCIATED(thatvar)) THEN
   IF (ASSOCIATED(thisvar)) ALLOCATE(remapv1(SIZE(thisvar)))
   IF (ASSOCIATED(thatvar)) ALLOCATE(remapv2(SIZE(thatvar)))
-  CALL vol7d_remap_var(thisvar, thatvar, tmpvar, .FALSE., &
+  CALL vol7d_remap_vol7d_var(thisvar, thatvar, tmpvar, .FALSE., &
    remapv1, remapv2)
 ENDIF
 
@@ -539,72 +515,29 @@ END SUBROUTINE vol7d_pre_remap_var
 ! di dimensioni v7d con un template e il preprocessore
 #define VOL7D_SORT
 #undef VOL7D_POLY_TYPE
-#define VOL7D_POLY_TYPE time
-#include "vol7d_class_remap.F90"
-#undef VOL7D_POLY_TYPE
-#define VOL7D_POLY_TYPE timerange
-#include "vol7d_class_remap.F90"
-#undef VOL7D_POLY_TYPE
-#define VOL7D_POLY_TYPE level
-#include "vol7d_class_remap.F90"
-#undef VOL7D_SORT
-#undef VOL7D_POLY_TYPE
-#define VOL7D_POLY_TYPE network
-#include "vol7d_class_remap.F90"
-#undef VOL7D_POLY_TYPE
-#define VOL7D_POLY_TYPE ana
-#include "vol7d_class_remap.F90"
-#undef VOL7D_POLY_TYPE
-#define VOL7D_POLY_TYPE var
+#define VOL7D_POLY_TYPE datetime
 #include "vol7d_class_remap.F90"
 
-! Temporanea, finche non esiste la classe vol7d_time
-!!$SUBROUTINE vol7d_remap_time(varin1, varin2, varout, sort, remap1, remap2)
-!!$INTEGER,INTENT(in) :: varin1(:), varin2(:)
-!!$INTEGER,POINTER :: varout(:)
-!!$!TYPE(vol7d_time),INTENT(in) :: varin1(:), varin2(:)
-!!$!TYPE(vol7d_time),POINTER :: varout(:)
-!!$LOGICAL,INTENT(in) :: sort
-!!$INTEGER,INTENT(out) :: remap1(:), remap2(:)
-!!$
-!!$INTEGER :: i, n
-!!$
-!!$! Count different elements
-!!$n = SIZE(varin1)
-!!$DO i = 1, SIZE(varin2)
-!!$  IF (ALL(varin1 /= varin2(i))) THEN
-!!$    n = n + 1
-!!$  ENDIF
-!!$ENDDO
-!!$! Allocate new array
-!!$ALLOCATE(varout(n))
-!!$! Fill it
-!!$varout(1:SIZE(varin1)) = varin1(:)
-!!$n = SIZE(varin1)
-!!$DO i = 1, SIZE(varin2)
-!!$  IF (ALL(varin1 /= varin2(i))) THEN
-!!$    n = n + 1
-!!$    varout(n) = varin2(i)
-!!$  ENDIF
-!!$ENDDO
-!!$
-!!$IF (sort) THEN ! sort
-!!$  DO i = 1, SIZE(varin1)
-!!$    remap1(i) = COUNT(varin1(i) > varout(:)) + 1
-!!$  ENDDO
-!!$  DO i = 1, SIZE(varin2)
-!!$    remap2(i) = COUNT(varin2(i) > varout(:)) + 1
-!!$  ENDDO
-!!$  varout(remap1) = varin1(:)
-!!$  varout(remap2) = varin2(:)
-!!$ELSE ! compute simple remapping
-!!$  remap1(:) = (/(i,i=1,SIZE(varin1))/)
-!!$  DO i = 1, SIZE(varin2)
-!!$    remap2(i) = firsttrue(varin2(i) == varout(:))
-!!$  ENDDO
-!!$ENDIF
-!!$
-!!$END SUBROUTINE vol7d_remap_time
+#undef VOL7D_POLY_TYPE
+#define VOL7D_POLY_TYPE vol7d_timerange
+#include "vol7d_class_remap.F90"
+
+#undef VOL7D_POLY_TYPE
+#define VOL7D_POLY_TYPE vol7d_level
+#include "vol7d_class_remap.F90"
+
+#undef VOL7D_SORT
+#undef VOL7D_POLY_TYPE
+#define VOL7D_POLY_TYPE vol7d_network
+#include "vol7d_class_remap.F90"
+
+#undef VOL7D_POLY_TYPE
+#define VOL7D_POLY_TYPE vol7d_ana
+#include "vol7d_class_remap.F90"
+
+#undef VOL7D_POLY_TYPE
+#define VOL7D_POLY_TYPE vol7d_var
+#include "vol7d_class_remap.F90"
 
 
 END MODULE vol7d_class

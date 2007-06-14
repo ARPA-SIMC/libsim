@@ -93,7 +93,7 @@ SUBROUTINE vol7d_oraclesim_importvsns(this, var, network, timei, timef, set_netw
 TYPE(vol7d_oraclesim),INTENT(out) :: this
 CHARACTER(len=*),INTENT(in) :: var
 INTEGER,INTENT(in) :: network
-TYPE(vol7d_time),INTENT(in) :: timei, timef
+TYPE(datetime),INTENT(in) :: timei, timef
 TYPE(vol7d_network),INTENT(in),OPTIONAL :: set_network
 
 CALL import(this, (/var/), network, timei, timef, set_network)
@@ -105,7 +105,7 @@ SUBROUTINE vol7d_oraclesim_importvsnv(this, var, network, timei, timef, set_netw
 TYPE(vol7d_oraclesim),INTENT(out) :: this
 CHARACTER(len=*),INTENT(in) :: var
 INTEGER,INTENT(in) :: network(:)
-TYPE(vol7d_time),INTENT(in) :: timei, timef
+TYPE(datetime),INTENT(in) :: timei, timef
 TYPE(vol7d_network),INTENT(in),OPTIONAL :: set_network
 
 INTEGER :: i
@@ -121,7 +121,7 @@ SUBROUTINE vol7d_oraclesim_importvvnv(this, var, network, timei, timef, set_netw
 TYPE(vol7d_oraclesim),INTENT(out) :: this
 CHARACTER(len=*),INTENT(in) :: var(:)
 INTEGER,INTENT(in) :: network(:)
-TYPE(vol7d_time),INTENT(in) :: timei, timef
+TYPE(datetime),INTENT(in) :: timei, timef
 TYPE(vol7d_network),INTENT(in),OPTIONAL :: set_network
 
 INTEGER :: i
@@ -137,11 +137,11 @@ SUBROUTINE vol7d_oraclesim_importvvns(this, var, network, timei, timef, set_netw
 TYPE(vol7d_oraclesim),INTENT(out) :: this
 CHARACTER(len=*),INTENT(in) :: var(:)
 INTEGER,INTENT(in) :: network
-TYPE(vol7d_time),INTENT(in) :: timei, timef
+TYPE(datetime),INTENT(in) :: timei, timef
 TYPE(vol7d_network),INTENT(in),OPTIONAL :: set_network
 
 TYPE(vol7d) :: v7dtmp, v7dtmp2
-TYPE(vol7d_time) :: odatetime
+TYPE(datetime) :: odatetime
 INTEGER :: i, j, k, nvar, nobs, ntime, nana, nvout, nvin, nvbt, &
  datai(3), orai(2), dataf(3), oraf(2)
 CHARACTER(len=8) :: cnetwork
