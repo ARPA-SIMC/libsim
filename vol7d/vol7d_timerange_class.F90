@@ -42,6 +42,18 @@ INTERFACE OPERATOR (<=)
   MODULE PROCEDURE vol7d_timerange_le, vol7d_timerange_lesv
 END INTERFACE
 
+INTERFACE count_distinct
+  MODULE PROCEDURE count_distinct_timerange
+END INTERFACE
+
+INTERFACE pack_distinct
+  MODULE PROCEDURE pack_distinct_timerange
+END INTERFACE
+
+INTERFACE map_distinct
+  MODULE PROCEDURE map_distinct_timerange
+END INTERFACE
+
 CONTAINS
 
 SUBROUTINE vol7d_timerange_init(this, timerange, p1, p2)
@@ -253,6 +265,14 @@ DO i = 1, SIZE(that)
 ENDDO
 
 END FUNCTION vol7d_timerange_lesv
+
+
+! Definisce le funzioni count_distinct e pack_distinct
+#define VOL7D_POLY_TYPE TYPE(vol7d_timerange)
+#define VOL7D_POLY_TYPES _timerange
+#include "vol7d_distinct.F90"
+#undef VOL7D_POLY_TYPE
+#undef VOL7D_POLY_TYPES
 
 
 END MODULE vol7d_timerange_class

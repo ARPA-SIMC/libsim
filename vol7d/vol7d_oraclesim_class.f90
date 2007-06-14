@@ -238,7 +238,7 @@ ntime = count_distinct(cdatao(1:nobs), back=.TRUE.)
 nvar = count_distinct(varo(1:nobs), back=.TRUE.)
 ALLOCATE(anatmp(nana), tmtmp(ntime), vartmp(nvar))
 anatmp(:) = pack_distinct(stazo(1:nobs), back=.TRUE.)
-CALL pack_distinctc(cdatao(1:nobs), tmtmp, back=.TRUE.)
+CALL pack_distinct_c(cdatao(1:nobs), tmtmp, back=.TRUE.)
 vartmp(:) = pack_distinct(varo(1:nobs), back=.TRUE.)
 
 DO i = 1, nana
@@ -286,7 +286,7 @@ IF (non_valid) THEN
   nvar = count_distinct(varo(1:nobs), back=.TRUE., mask=(varo(1:nobs) /= 0))
   ALLOCATE(anatmp(nana), tmtmp(ntime), vartmp(nvar))
   anatmp(:) = pack_distinct(stazo(1:nobs), back=.TRUE., mask=(stazo(1:nobs) /= 0))
-  CALL pack_distinctc(cdatao(1:nobs), tmtmp, back=.TRUE., mask=(cdatao(1:nobs) /= ''))
+  CALL pack_distinct_c(cdatao(1:nobs), tmtmp, back=.TRUE., mask=(cdatao(1:nobs) /= ''))
   vartmp(:) = pack_distinct(varo(1:nobs), back=.TRUE., mask=(varo(1:nobs) /= 0))
 ENDIF
 ! creo la mappatura, riciclo stazo che e` intero, con cdatao non posso

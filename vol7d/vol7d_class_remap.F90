@@ -1,6 +1,6 @@
 SUBROUTINE vol7d_remap_/**/VOL7D_POLY_TYPE(varin1, varin2, varout, sort, remap1, remap2)
-TYPE(vol7d_/**/VOL7D_POLY_TYPE),POINTER :: varin1(:), varin2(:)
-TYPE(vol7d_/**/VOL7D_POLY_TYPE),POINTER :: varout(:)
+TYPE(/**/VOL7D_POLY_TYPE),POINTER :: varin1(:), varin2(:)
+TYPE(/**/VOL7D_POLY_TYPE),POINTER :: varout(:)
 LOGICAL,INTENT(in) :: sort
 INTEGER,INTENT(out) :: remap1(:), remap2(:)
 

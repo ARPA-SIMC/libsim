@@ -1,7 +1,7 @@
 lib_LTLIBRARIES = libsim_vol7d.la
-libsim_vol7d_la_SOURCES = vol7d_ana_class.f90 vol7d_class.F90 \
- vol7d_level_class.f90 vol7d_network_class.f90 \
- vol7d_timerange_class.f90 vol7d_utilities.f90 \
+libsim_vol7d_la_SOURCES = vol7d_ana_class.F90 vol7d_class.F90 \
+ vol7d_level_class.F90 vol7d_network_class.F90 \
+ vol7d_timerange_class.F90 vol7d_utilities.F90 \
  vol7d_var_class.f90 vol7d_varvect_class.f90
 if ORSIM
 libsim_vol7d_la_SOURCES += vol7d_oraclesim_class.f90
@@ -11,7 +11,7 @@ endif
 AM_FCFLAGS = -I../base
 libsim_vol7d_la_LIBADD = ../base/libsim_base.la
 noinst_HEADERS = vol7d_class_get_vol.F90 vol7d_class_remap.F90 \
- vol7d_class_merge_final.F90
+ vol7d_class_merge_final.F90 vol7d_distinct.F90
 nodist_include_HEADERS = $(libsim_vol7d_la_SOURCES:.f90=.mod)
 
 #vol7d_ana_class.$(OBJEXT):

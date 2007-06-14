@@ -25,6 +25,18 @@ INTERFACE OPERATOR (/=)
   MODULE PROCEDURE vol7d_network_ne, vol7d_network_nesv
 END INTERFACE
 
+INTERFACE count_distinct
+  MODULE PROCEDURE count_distinct_network
+END INTERFACE
+
+INTERFACE pack_distinct
+  MODULE PROCEDURE pack_distinct_network
+END INTERFACE
+
+INTERFACE map_distinct
+  MODULE PROCEDURE map_distinct_network
+END INTERFACE
+
 CONTAINS
 
 SUBROUTINE vol7d_network_init(this, id)
@@ -94,6 +106,14 @@ DO i = 1, SIZE(that)
 ENDDO
 
 END FUNCTION vol7d_network_nesv
+
+
+! Definisce le funzioni count_distinct e pack_distinct
+#define VOL7D_POLY_TYPE TYPE(vol7d_network)
+#define VOL7D_POLY_TYPES _network
+#include "vol7d_distinct.F90"
+#undef VOL7D_POLY_TYPE
+#undef VOL7D_POLY_TYPES
 
 
 END MODULE vol7d_network_class

@@ -41,6 +41,18 @@ INTERFACE OPERATOR (<=)
   MODULE PROCEDURE vol7d_level_le, vol7d_level_lesv
 END INTERFACE
 
+INTERFACE count_distinct
+  MODULE PROCEDURE count_distinct_level
+END INTERFACE
+
+INTERFACE pack_distinct
+  MODULE PROCEDURE pack_distinct_level
+END INTERFACE
+
+INTERFACE map_distinct
+  MODULE PROCEDURE map_distinct_level
+END INTERFACE
+
 CONTAINS
 
 SUBROUTINE vol7d_level_init(this, level, l1, l2)
@@ -255,6 +267,14 @@ DO i = 1, SIZE(that)
 ENDDO
 
 END FUNCTION vol7d_level_lesv
+
+
+! Definisce le funzioni count_distinct e pack_distinct
+#define VOL7D_POLY_TYPE TYPE(vol7d_level)
+#define VOL7D_POLY_TYPES _level
+#include "vol7d_distinct.F90"
+#undef VOL7D_POLY_TYPE
+#undef VOL7D_POLY_TYPES
 
 
 END MODULE vol7d_level_class
