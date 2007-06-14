@@ -30,7 +30,7 @@ CONTAINS
 SUBROUTINE vol7d_var_init(this, btable, description, unit)
 TYPE(vol7d_var),INTENT(INOUT) :: this
 !INTEGER,INTENT(in),OPTIONAL :: btable
-CHARACTER(len=10),INTENT(in),OPTIONAL :: btable
+CHARACTER(len=*),INTENT(in),OPTIONAL :: btable
 CHARACTER(len=20),INTENT(in),OPTIONAL :: description, unit
 
 IF (PRESENT(btable)) THEN
