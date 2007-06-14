@@ -365,7 +365,7 @@ IF (ASSOCIATED(this%field2d) .AND. ltimes > 0) THEN
       DO i = 1, sh(1)
         im1=MAX(i-1,1)
         ip1=MIN(i+1,sh(1))
-        tmpbuff(i,j) = 0.2*(this%field5d(i,j) + &
+        tmpbuff(i,j) = 0.2*(this%field2d(i,j) + &
          this%field2d(im1,j) + &
          this%field2d(ip1,j) + &
          this%field2d(i,jm1) + &
