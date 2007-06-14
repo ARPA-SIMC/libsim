@@ -18,6 +18,13 @@ IMPLICIT NONE
 !
 !Fa uso dei tipi definiti dal modulo kinds
 !
+!Definisce le seguenti procedure:
+!
+!LOGICAL FUNCTION c_e(var)
+!
+!Restitiusce .TRUE. se var e` valida e .FALSE. se e` mancante;
+!e` richiamabile per tutti i tipi definiti sopra
+!
 !vedi kinds
 !omend
 
@@ -28,6 +35,67 @@ INTEGER, PARAMETER :: imiss = HUGE(0)
 INTEGER(kind=int_b), PARAMETER :: ibmiss = HUGE(0_int_b)
 INTEGER(kind=int_s), PARAMETER :: ismiss = HUGE(0_int_s)
 INTEGER(kind=int_l), PARAMETER :: ilmiss = HUGE(0_int_l)
-CHARACTER(len=1), PARAMETER :: cmiss = ' '
+CHARACTER(len=1), PARAMETER :: cmiss = char(0)
+
+INTERFACE c_e
+  MODULE PROCEDURE c_e_b, c_e_s, c_e_l, c_e_r, c_e_d, c_e_c
+END INTERFACE
+
+CONTAINS
+
+LOGICAL FUNCTION c_e_b(var)
+INTEGER(kind=int_b)  :: var
+
+c_e_b=.TRUE.
+IF (var == ibmiss)c_e_b= .FALSE.
+RETURN
+END FUNCTION c_e_b
+
+
+LOGICAL FUNCTION c_e_s(var)
+INTEGER (kind=int_s) ::  var
+
+c_e_s=.TRUE.
+IF (var == ismiss)c_e_s= .FALSE.
+RETURN
+END FUNCTION c_e_s
+
+
+LOGICAL FUNCTION c_e_l(var)
+INTEGER (kind=int_l) :: var
+
+c_e_l=.TRUE.
+IF (var == ilmiss)c_e_l= .FALSE.
+RETURN
+END FUNCTION c_e_l
+
+
+LOGICAL FUNCTION c_e_r(var)
+REAL :: var
+
+c_e_r=.TRUE.
+IF (var == rmiss)c_e_r= .FALSE.
+RETURN
+END FUNCTION c_e_r
+
+
+LOGICAL FUNCTION c_e_d(var)
+REAL (kind=fp_d) ::  var
+
+c_e_d=.TRUE.
+IF (var == dmiss)c_e_d= .FALSE.
+RETURN
+END FUNCTION c_e_d
+
+
+LOGICAL FUNCTION c_e_c(var)
+CHARACTER (len=*) var
+
+c_e_c=.TRUE.
+IF (var == cmiss)c_e_c=.FALSE.
+RETURN
+
+END FUNCTION c_e_c
+
 
 END MODULE missing_values
