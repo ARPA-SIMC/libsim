@@ -657,7 +657,7 @@ END FUNCTION timedelta_sub
 
 FUNCTION timedelta_mult(this, n) RESULT(res)
 TYPE(timedelta),INTENT(IN) :: this
-INTEGER :: n
+INTEGER,INTENT(IN) :: n
 TYPE(timedelta) :: res
 
 CALL init(res, iminuti=this%iminuti*n, month=this%month*n, year=this%year*n)
@@ -667,7 +667,7 @@ END FUNCTION timedelta_mult
 
 FUNCTION timedelta_div(this, n) RESULT(res)
 TYPE(timedelta),INTENT(IN) :: this
-INTEGER :: n
+INTEGER,INTENT(IN) :: n
 TYPE(timedelta) :: res
 
 CALL init(res, iminuti=this%iminuti/n, month=this%month/n, year=this%year/n)
