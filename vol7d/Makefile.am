@@ -12,7 +12,9 @@ AM_FCFLAGS = -I../base
 libsim_vol7d_la_LIBADD = ../base/libsim_base.la
 noinst_HEADERS = vol7d_class_get_vol.F90 vol7d_class_remap.F90 \
  vol7d_class_merge_final.F90 vol7d_distinct.F90
-nodist_include_HEADERS = $(libsim_vol7d_la_SOURCES:.f90=.mod)
+# c'e` una maniera migliore?
+tmpvar = $(libsim_vol7d_la_SOURCES:.f90=.mod)
+nodist_include_HEADERS = $(tmpvar:.F90=.mod)
 
 #vol7d_ana_class.$(OBJEXT):
 vol7d_class.$(OBJEXT): vol7d_utilities.$(OBJEXT) vol7d_ana_class.$(OBJEXT) \

@@ -3,7 +3,9 @@ libsim_base_la_SOURCES = char_utilities.f90 datetime_class.f90 err_handling.f90 
  file_utilities.f90 geo_coord_class.F90 \
  io_units.f90 kinds.f90 missing_values.f90 phys_const.f90
 
-nodist_include_HEADERS = $(libsim_base_la_SOURCES:.o=.mod)
+# c'e` una maniera migliore?
+tmpvar = $(libsim_base_la_SOURCES:.f90=.mod)
+nodist_include_HEADERS = $(tmpvar:.F90=.mod)
 
 datetime_class.$(OBJEXT): err_handling.$(OBJEXT) missing_values.$(OBJEXT)
 datetime_class.lo: err_handling.$(OBJEXT) missing_values.$(OBJEXT)
