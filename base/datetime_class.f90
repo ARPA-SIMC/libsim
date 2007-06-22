@@ -33,12 +33,12 @@ PUBLIC datetime, datetime_miss, init, delete, getval, &
  datetime_eq, datetime_eqsv, datetime_ne, datetime_nesv, &
  datetime_gt, datetime_gtsv, datetime_lt, datetime_ltsv, &
  datetime_ge, datetime_gesv, datetime_le, datetime_lesv, &
- datetime_add, datetime_sub, &
+ datetime_add, datetime_subdt, datetime_subtd, &
  timedelta, timedelta_miss, &
  timedelta_eq, timedelta_eqsv, timedelta_ne, timedelta_nesv, &
  timedelta_gt, timedelta_gtsv, timedelta_lt, timedelta_ltsv, &
  timedelta_ge, timedelta_gesv, timedelta_le, timedelta_lesv, &
- timedelta_add, timedelta_sub
+ timedelta_add, timedelta_sub, timedelta_mod, mod
 
 INTERFACE init
   MODULE PROCEDURE datetime_init, timedelta_init
@@ -81,15 +81,15 @@ INTERFACE OPERATOR (+)
 END INTERFACE
 
 INTERFACE OPERATOR (-)
-  MODULE PROCEDURE datetime_sub, timedelta_sub
+  MODULE PROCEDURE datetime_subdt, datetime_subtd, timedelta_sub
 END INTERFACE
 
 INTERFACE OPERATOR (*)
-  MODULE PROCEDURE timedelta_mult
+  MODULE PROCEDURE timedelta_mult, timedelta_tlum
 END INTERFACE
 
 INTERFACE OPERATOR (/)
-  MODULE PROCEDURE timedelta_div
+  MODULE PROCEDURE timedelta_divint, timedelta_divtd
 END INTERFACE
 
 INTERFACE mod
@@ -366,13 +366,13 @@ TYPE(datetime) :: res
 
 INTEGER :: lyear, lmonth, lday, lhour, lminute
 
-IF (this%iminuti == imiss .OR. that%iminuti == imiss) THEN
+IF (this == datetime_miss .OR. that == timedelta_miss) THEN
   CALL delete(res)
 ELSE
   IF (that%month == 0 .AND. that%year == 0) THEN
     CALL init(res, iminuti=this%iminuti+that%iminuti)
   ELSE
-    CALL init(res, iminuti=this%iminuti + that%iminuti)
+    CALL init(res, iminuti=this%iminuti+that%iminuti)
     CALL getval(res, year=lyear, month=lmonth, day=lday, hour=lhour, &
      minute=lminute)
     CALL init(res, year=lyear+that%year, month=lmonth+that%month, day=lday, &
@@ -383,7 +383,7 @@ ENDIF
 END FUNCTION datetime_add
 
 
-FUNCTION datetime_sub(this, that) RESULT(res)
+FUNCTION datetime_subdt(this, that) RESULT(res)
 TYPE(datetime),INTENT(IN) :: this, that
 TYPE(timedelta) :: res
 
@@ -393,7 +393,31 @@ ELSE
   CALL init(res, iminuti=this%iminuti-that%iminuti)
 ENDIF
 
-END FUNCTION datetime_sub
+END FUNCTION datetime_subdt
+
+
+FUNCTION datetime_subtd(this, that) RESULT(res)
+TYPE(datetime),INTENT(IN) :: this
+TYPE(timedelta),INTENT(IN) :: that
+TYPE(datetime) :: res
+
+INTEGER :: lyear, lmonth, lday, lhour, lminute
+
+IF (this == datetime_miss .OR. that == timedelta_miss) THEN
+  CALL delete(res)
+ELSE
+  IF (that%month == 0 .AND. that%year == 0) THEN
+    CALL init(res, iminuti=this%iminuti-that%iminuti)
+  ELSE
+    CALL init(res, iminuti=this%iminuti-that%iminuti)
+    CALL getval(res, year=lyear, month=lmonth, day=lday, hour=lhour, &
+     minute=lminute)
+    CALL init(res, year=lyear-that%year, month=lmonth-that%month, day=lday, &
+     hour=lhour, minute=lminute)
+  ENDIF
+ENDIF
+
+END FUNCTION datetime_subtd
 
 
 ! ===============
@@ -408,6 +432,8 @@ INTEGER(kind=int_ll),INTENT(IN),OPTIONAL ::  unixtime
 
 IF (PRESENT(iminuti)) THEN ! minuti dal 01/01/0001 (libmega)
   this%iminuti = iminuti
+  this%year = 0
+  this%month = 0
 ELSE
   this%iminuti = 0
   IF (PRESENT(year)) THEN
@@ -665,22 +691,40 @@ CALL init(res, iminuti=this%iminuti*n, month=this%month*n, year=this%year*n)
 END FUNCTION timedelta_mult
 
 
-FUNCTION timedelta_div(this, n) RESULT(res)
+FUNCTION timedelta_tlum(n, this) RESULT(res)
+INTEGER,INTENT(IN) :: n
+TYPE(timedelta),INTENT(IN) :: this
+TYPE(timedelta) :: res
+
+CALL init(res, iminuti=this%iminuti*n, month=this%month*n, year=this%year*n)
+
+END FUNCTION timedelta_tlum
+
+
+FUNCTION timedelta_divint(this, n) RESULT(res)
 TYPE(timedelta),INTENT(IN) :: this
 INTEGER,INTENT(IN) :: n
 TYPE(timedelta) :: res
 
 CALL init(res, iminuti=this%iminuti/n, month=this%month/n, year=this%year/n)
 
-END FUNCTION timedelta_div
+END FUNCTION timedelta_divint
+
+
+FUNCTION timedelta_divtd(this, that) RESULT(res)
+TYPE(timedelta),INTENT(IN) :: this, that
+INTEGER :: res
+
+res = this%iminuti/that%iminuti
+
+END FUNCTION timedelta_divtd
 
 
 FUNCTION timedelta_mod(this, that) RESULT(res)
 TYPE(timedelta),INTENT(IN) :: this, that
-INTEGER :: n
-INTEGER :: res
+TYPE(timedelta) :: res
 
-res = MOD(this%iminuti, that%iminuti)
+CALL init(res, iminuti=MOD(this%iminuti, that%iminuti))
 
 END FUNCTION timedelta_mod
 
