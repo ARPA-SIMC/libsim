@@ -287,7 +287,7 @@ INTERFACE OPERATOR (/=)
 END INTERFACE
 
 INTERFACE getval
-  MODULE PROCEDURE geo_coorddesc_getval, geo_coord_getval !, geo_coordvect_getval
+  MODULE PROCEDURE geo_coorddesc_getval, geo_coord_getval, geo_coordvect_getval
 END INTERFACE
 
 INTERFACE to_geo
@@ -659,6 +659,41 @@ this%vtype = 0
 END SUBROUTINE geo_coordvect_delete
 
 
+SUBROUTINE geo_coordvect_getval(this, lon, lat, utme, utmn, fuso, elliss)
+TYPE(geo_coordvect),INTENT(IN) :: this
+REAL(kind=fp_geo), OPTIONAL, POINTER :: lon(:), lat(:)
+REAL(kind=fp_utm), OPTIONAL, POINTER  :: utme(:), utmn(:)
+INTEGER, INTENT(OUT), OPTIONAL  :: fuso, elliss
+
+IF (PRESENT(lon)) THEN
+  IF (ASSOCIATED(this%ll)) THEN
+    ALLOCATE(lon(this%vsize))
+    lon(:) = this%ll(1:this%vsize,1)
+  ENDIF
+ENDIF
+IF (PRESENT(lat)) THEN
+  IF (ASSOCIATED(this%ll)) THEN
+    ALLOCATE(lat(this%vsize))
+    lat(:) = this%ll(1:this%vsize,2)
+  ENDIF
+ENDIF
+IF (PRESENT(utme)) THEN
+  IF (ASSOCIATED(this%utm)) THEN
+    ALLOCATE(utme(this%vsize))
+    utme(:) = this%utm(1:this%vsize,1)
+  ENDIF
+ENDIF 
+IF (PRESENT(utmn)) THEN
+  IF (ASSOCIATED(this%utm)) THEN
+    ALLOCATE(utmn(this%vsize))
+    utmn(:) = this%utm(1:this%vsize,2)
+  ENDIF
+ENDIF 
+CALL getval(this%desc, fuso, elliss)
+
+END SUBROUTINE geo_coordvect_getval
+
+
 FUNCTION geo_coordvect_equalize(this, that) RESULT(res)
 TYPE(geo_coordvect), INTENT (INOUT) :: this, that
 LOGICAL :: res
@@ -1023,10 +1058,12 @@ LOGICAL :: dentro
 
 INTEGER :: i, j
 
-dentro = .FALSE.
+! presuppongo che il poligono sia chiuso, altrimenti:
+! j = this%vsize; DO i = 1, this%vsize
+dentro = .FALSE. 
 IF (this%desc%geoce .AND. point%desc%geoce) THEN
-  j = this%vsize
-  DO i = 1, this%vsize
+  j = 1
+  DO i = 2, this%vsize
     IF ((this%ll(i,2) <= point%lat .AND. &
      point%lat < this%ll(j,2)) .OR. &
      (this%ll(j,2) <= point%lat .AND. &
@@ -1037,10 +1074,23 @@ IF (this%desc%geoce .AND. point%desc%geoce) THEN
         dentro = .NOT. dentro
       ENDIF
     ENDIF
-    j = i - 1
+    j = i
   ENDDO
 ELSE IF (this%desc%utmce .AND. point%desc%utmce) THEN
-! ripetere per UTM
+  j = 1
+  DO i = 2, this%vsize
+    IF ((this%utm(i,2) <= point%utmn .AND. &
+     point%utmn < this%utm(j,2)) .OR. &
+     (this%utm(j,2) <= point%utmn .AND. &
+     point%utmn < this%utm(i,2))) THEN
+      IF (point%utme < (this%utm(j,1) - this%utm(i,1)) * &
+       (point%utmn - this%utm(i,2)) / &
+       (this%utm(j,2) - this%utm(i,2)) + this%utm(i,1)) THEN
+        dentro = .NOT. dentro
+      ENDIF
+    ENDIF
+    j = i
+  ENDDO
 ENDIF
 
 END FUNCTION geo_coordvect_dentro
