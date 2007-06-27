@@ -17,6 +17,8 @@ END TYPE timedelta
 
 TYPE(datetime), PARAMETER :: datetime_miss=datetime(imiss)
 TYPE(timedelta), PARAMETER :: timedelta_miss=timedelta(imiss, 0, 0)
+TYPE(timedelta), PARAMETER :: timedelta_0=timedelta(0, 0, 0)
+
 INTEGER,PARAMETER :: &
  year0=1, & ! anno di origine per iminuti
  d1=365, & ! giorni/1 anno nel calendario gregoriano
@@ -34,7 +36,7 @@ PUBLIC datetime, datetime_miss, init, delete, getval, &
  datetime_gt, datetime_gtsv, datetime_lt, datetime_ltsv, &
  datetime_ge, datetime_gesv, datetime_le, datetime_lesv, &
  datetime_add, datetime_subdt, datetime_subtd, &
- timedelta, timedelta_miss, &
+ timedelta, timedelta_miss, timedelta_0, &
  timedelta_eq, timedelta_eqsv, timedelta_ne, timedelta_nesv, &
  timedelta_gt, timedelta_gtsv, timedelta_lt, timedelta_ltsv, &
  timedelta_ge, timedelta_gesv, timedelta_le, timedelta_lesv, &
