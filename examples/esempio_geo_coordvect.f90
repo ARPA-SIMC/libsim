@@ -8,7 +8,7 @@ INTEGER :: un, i
 INTEGER(kind=ptr_c) :: shphandle
 CHARACTER(len=512) :: filesim
 
-un = open_package_file('polipciv4rozzi.dat', filetype_data)
+un = open_package_file('polipciv4.dat', filetype_data)
 IF (un < 0) STOP 1
 INQUIRE(unit=un, name=filesim)
 PRINT'(A)',TRIM(filesim)
