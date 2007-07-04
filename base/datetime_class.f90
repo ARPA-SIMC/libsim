@@ -392,7 +392,7 @@ TYPE(timedelta) :: res
 IF (this == datetime_miss .OR. that == datetime_miss) THEN
   CALL delete(res)
 ELSE
-  CALL init(res, iminuti=this%iminuti-that%iminuti)
+  CALL init(res, minute=this%iminuti-that%iminuti)
 ENDIF
 
 END FUNCTION datetime_subdt
@@ -425,41 +425,29 @@ END FUNCTION datetime_subtd
 ! ===============
 ! == timedelta ==
 ! ===============
-SUBROUTINE timedelta_init(this, iminuti, year, month, day, hour, minute, unixtime)
+SUBROUTINE timedelta_init(this, year, month, day, hour, minute)
 TYPE(timedelta),INTENT(INOUT) :: this
-INTEGER,INTENT(IN),OPTIONAL :: iminuti, year, month, day, hour, minute
-INTEGER(kind=int_ll),INTENT(IN),OPTIONAL ::  unixtime
-!!$CHARACTER(len=*),INTENT(IN),OPTIONAL :: isodate
-!!$CHARACTER(len=12),INTENT(IN),OPTIONAL :: oraclesimdate
+INTEGER,INTENT(IN),OPTIONAL :: year, month, day, hour, minute
 
-IF (PRESENT(iminuti)) THEN ! minuti dal 01/01/0001 (libmega)
-  this%iminuti = iminuti
-  this%year = 0
-  this%month = 0
+this%iminuti = 0
+IF (PRESENT(year)) THEN
+  this%year = year
 ELSE
-  this%iminuti = 0
-  IF (PRESENT(year)) THEN
-    this%year = year
-  ELSE
-    this%year = 0
-  ENDIF
-  IF (PRESENT(month)) THEN
-    this%month = month
-  ELSE
-    this%month = 0
-  ENDIF
-  IF (PRESENT(day)) THEN
-    this%iminuti = this%iminuti + 1440*day
-  ENDIF
-  IF (PRESENT(hour)) THEN
-    this%iminuti = this%iminuti + 60*hour
-  ENDIF
-  IF (PRESENT(minute)) THEN
-    this%iminuti = this%iminuti + minute
-  ENDIF
-  IF (PRESENT(unixtime)) THEN
-    this%iminuti = this%iminuti + unixtime*60
-  ENDIF
+  this%year = 0
+ENDIF
+IF (PRESENT(month)) THEN
+  this%month = month
+ELSE
+  this%month = 0
+ENDIF
+IF (PRESENT(day)) THEN
+  this%iminuti = this%iminuti + 1440*day
+ENDIF
+IF (PRESENT(hour)) THEN
+  this%iminuti = this%iminuti + 60*hour
+ENDIF
+IF (PRESENT(minute)) THEN
+  this%iminuti = this%iminuti + minute
 ENDIF
 
 END SUBROUTINE timedelta_init
@@ -475,18 +463,21 @@ this%month = 0
 END SUBROUTINE timedelta_delete
 
 
-SUBROUTINE timedelta_getval(this, iminuti, year, month, day, hour, minute, &
- unixtime, isodate, oraclesimdate)
+SUBROUTINE timedelta_getval(this, year, month, day, hour, minute, &
+ ahour, aminute, isodate, oraclesimdate)
 TYPE(timedelta),INTENT(IN) :: this
-INTEGER,INTENT(OUT),OPTIONAL :: iminuti, year, month, day, hour, minute
-INTEGER(kind=int_ll),INTENT(OUT),OPTIONAL ::  unixtime
+INTEGER,INTENT(OUT),OPTIONAL :: year, month, day, hour, minute, &
+ ahour, aminute
 CHARACTER(len=16),INTENT(OUT),OPTIONAL :: isodate
 CHARACTER(len=12),INTENT(OUT),OPTIONAL :: oraclesimdate
 
 INTEGER :: lyear, lmonth, lday, lhour, lminute, ier
 
-IF (PRESENT(iminuti)) THEN
-  iminuti = this%iminuti
+IF (PRESENT(aminute)) THEN 
+  aminute = this%iminuti
+ENDIF
+IF (PRESENT(ahour)) THEN
+  ahour = this%iminuti/60
 ENDIF
 IF (PRESENT(minute)) THEN 
   minute = MOD(this%iminuti,60)
@@ -510,9 +501,6 @@ ENDIF
 IF (PRESENT(oraclesimdate)) THEN
   WRITE(oraclesimdate, '(I8.8,2I2.2)') this%iminuti/1440, &
    MOD(this%iminuti,1440)/60, MOD(this%iminuti,60)
-ENDIF
-IF (PRESENT(unixtime)) THEN
-  unixtime = this%iminuti*60_int_ll
 ENDIF
 
 END SUBROUTINE timedelta_getval
@@ -667,7 +655,7 @@ FUNCTION timedelta_add(this, that) RESULT(res)
 TYPE(timedelta),INTENT(IN) :: this, that
 TYPE(timedelta) :: res
 
-CALL init(res, iminuti=this%iminuti+that%iminuti, &
+CALL init(res, minute=this%iminuti+that%iminuti, &
  month=this%month+that%month, year=this%year+that%year)
 
 END FUNCTION timedelta_add
@@ -677,7 +665,7 @@ FUNCTION timedelta_sub(this, that) RESULT(res)
 TYPE(timedelta),INTENT(IN) :: this, that
 TYPE(timedelta) :: res
 
-CALL init(res, iminuti=this%iminuti-that%iminuti, &
+CALL init(res, minute=this%iminuti-that%iminuti, &
  month=this%month-that%month, year=this%year-that%year)
 
 END FUNCTION timedelta_sub
@@ -688,7 +676,7 @@ TYPE(timedelta),INTENT(IN) :: this
 INTEGER,INTENT(IN) :: n
 TYPE(timedelta) :: res
 
-CALL init(res, iminuti=this%iminuti*n, month=this%month*n, year=this%year*n)
+CALL init(res, minute=this%iminuti*n, month=this%month*n, year=this%year*n)
 
 END FUNCTION timedelta_mult
 
@@ -698,7 +686,7 @@ INTEGER,INTENT(IN) :: n
 TYPE(timedelta),INTENT(IN) :: this
 TYPE(timedelta) :: res
 
-CALL init(res, iminuti=this%iminuti*n, month=this%month*n, year=this%year*n)
+CALL init(res, minute=this%iminuti*n, month=this%month*n, year=this%year*n)
 
 END FUNCTION timedelta_tlum
 
@@ -708,7 +696,7 @@ TYPE(timedelta),INTENT(IN) :: this
 INTEGER,INTENT(IN) :: n
 TYPE(timedelta) :: res
 
-CALL init(res, iminuti=this%iminuti/n, month=this%month/n, year=this%year/n)
+CALL init(res, minute=this%iminuti/n, month=this%month/n, year=this%year/n)
 
 END FUNCTION timedelta_divint
 
@@ -726,7 +714,7 @@ FUNCTION timedelta_mod(this, that) RESULT(res)
 TYPE(timedelta),INTENT(IN) :: this, that
 TYPE(timedelta) :: res
 
-CALL init(res, iminuti=MOD(this%iminuti, that%iminuti))
+CALL init(res, minute=MOD(this%iminuti, that%iminuti))
 
 END FUNCTION timedelta_mod
 
