@@ -44,8 +44,7 @@ END TYPE record
 
 
 PRIVATE
-PUBLIC vol7d_dballe, vol7d_dballe_init, vol7d_dballe_delete, &
- import,export
+PUBLIC vol7d_dballe, init, delete, import, export
 
 INTERFACE init
   MODULE PROCEDURE vol7d_dballe_init
@@ -60,9 +59,9 @@ INTERFACE import
    vol7d_dballe_importvsnv, vol7d_dballe_importvvnv
 END INTERFACE
 
-INTERFACE export
-  MODULE PROCEDURE vol7d_dballe_export 
-END INTERFACE
+!!$INTERFACE export
+!!$  MODULE PROCEDURE vol7d_dballe_export 
+!!$END INTERFACE
 
 CONTAINS
 
