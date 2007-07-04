@@ -19,7 +19,7 @@ CALL init(tf, year=2007, month=3, day=21, hour=00)
 CALL init(v7d)
 ! Importo i dati, variabile 'B13011' della btable (precipitazione),
 ! rete 18 (FIDUPO)
-CALL import(v7d, 'B13011', 18, ti, tf)
+CALL import(v7d, 'B13011', 18, ti, tf , timerange=vol7d_timerange(4,-1800,0))
 ! Creo una vista su un array bidimensionale che scorre le dimensioni
 ! dell'anagrafica e del tempo (vol7d_ana_d, vol7d_time_d)
 CALL vol7d_get_voldatir(v7d%vol7d, (/vol7d_ana_d,vol7d_time_d/), vol2dp=vol2d)
@@ -28,7 +28,7 @@ DO i = 1, SIZE(v7d%vol7d%time)
   CALL getval(v7d%vol7d%time(i), oraclesimdate=c)
   n = COUNT (vol2d(:,i) /= rmiss)
   IF (n > 0) THEN
-    PRINT*, c, ' prec. media:', SUM(vol2d(:,i), mask=(vol2d(:,i) /= rmiss))/n
+    PRINT*, c, ' prec. media:', SUM(vol2d(:,i), mask=(vol2d(:,i) /= rmiss))/n,n
   ENDIF
 ENDDO
 
