@@ -503,23 +503,8 @@ CALL delete(that)
 CALL delete(this)
 this = v7dtmp
 
-END SUBROUTINE vol7d_merge_stage1
+END SUBROUTINE vol7d_merge
 
-
-SUBROUTINE vol7d_pre_remap_var(thisvar, thatvar, tmpvar, remapv1, remapv2)
-TYPE(vol7d_var),POINTER :: thisvar(:), thatvar(:)
-TYPE(vol7d_var),POINTER :: tmpvar(:)
-INTEGER,POINTER :: remapv1(:), remapv2(:)
-
-NULLIFY(tmpvar)
-IF (ASSOCIATED(thisvar) .OR. ASSOCIATED(thatvar)) THEN
-  IF (ASSOCIATED(thisvar)) ALLOCATE(remapv1(SIZE(thisvar)))
-  IF (ASSOCIATED(thatvar)) ALLOCATE(remapv2(SIZE(thatvar)))
-  CALL vol7d_remap_vol7d_var(thisvar, thatvar, tmpvar, .FALSE., &
-   remapv1, remapv2)
-ENDIF
-
-END SUBROUTINE vol7d_pre_remap_var
 
 ! Ripeto le routine del gruppo get_vol e merge_final per ogni tipo
 ! di dati v7d con un template e il preprocessore
