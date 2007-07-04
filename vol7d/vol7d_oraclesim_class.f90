@@ -89,55 +89,63 @@ ENDIF
 END SUBROUTINE vol7d_oraclesim_delete
 
 
-SUBROUTINE vol7d_oraclesim_importvsns(this, var, network, timei, timef, set_network)
+SUBROUTINE vol7d_oraclesim_importvsns(this, var, network, timei, timef,level,timerange, set_network)
 TYPE(vol7d_oraclesim),INTENT(out) :: this
 CHARACTER(len=*),INTENT(in) :: var
 INTEGER,INTENT(in) :: network
 TYPE(datetime),INTENT(in) :: timei, timef
 TYPE(vol7d_network),INTENT(in),OPTIONAL :: set_network
+TYPE(vol7d_level),INTENT(in),optional :: level
+TYPE(vol7d_timerange),INTENT(in),optional :: timerange
 
-CALL import(this, (/var/), network, timei, timef, set_network)
+CALL import(this, (/var/), network, timei, timef, level,timerange,set_network)
 
 END SUBROUTINE vol7d_oraclesim_importvsns
 
 
-SUBROUTINE vol7d_oraclesim_importvsnv(this, var, network, timei, timef, set_network)
+SUBROUTINE vol7d_oraclesim_importvsnv(this, var, network, timei, timef,level,timerange, set_network)
 TYPE(vol7d_oraclesim),INTENT(out) :: this
 CHARACTER(len=*),INTENT(in) :: var
 INTEGER,INTENT(in) :: network(:)
 TYPE(datetime),INTENT(in) :: timei, timef
 TYPE(vol7d_network),INTENT(in),OPTIONAL :: set_network
+TYPE(vol7d_level),INTENT(in),optional :: level
+TYPE(vol7d_timerange),INTENT(in),optional :: timerange
 
 INTEGER :: i
 
 DO i = 1, SIZE(network)
-  CALL import(this, (/var/), network(i), timei, timef, set_network)
+  CALL import(this, (/var/), network(i), timei, timef, level,timerange,set_network)
 ENDDO
 
 END SUBROUTINE vol7d_oraclesim_importvsnv
 
 
-SUBROUTINE vol7d_oraclesim_importvvnv(this, var, network, timei, timef, set_network)
+SUBROUTINE vol7d_oraclesim_importvvnv(this, var, network, timei, timef,level,timerange, set_network)
 TYPE(vol7d_oraclesim),INTENT(out) :: this
 CHARACTER(len=*),INTENT(in) :: var(:)
 INTEGER,INTENT(in) :: network(:)
 TYPE(datetime),INTENT(in) :: timei, timef
 TYPE(vol7d_network),INTENT(in),OPTIONAL :: set_network
+TYPE(vol7d_level),INTENT(in),optional :: level
+TYPE(vol7d_timerange),INTENT(in),optional :: timerange
 
 INTEGER :: i
 
 DO i = 1, SIZE(network)
-  CALL import(this, var, network(i), timei, timef, set_network)
+  CALL import(this, var, network(i), timei, timef, level,timerange,set_network)
 ENDDO
 
 END SUBROUTINE vol7d_oraclesim_importvvnv
 
 
-SUBROUTINE vol7d_oraclesim_importvvns(this, var, network, timei, timef, set_network)
+SUBROUTINE vol7d_oraclesim_importvvns(this, var, network, timei, timef, level,timerange,set_network)
 TYPE(vol7d_oraclesim),INTENT(out) :: this
 CHARACTER(len=*),INTENT(in) :: var(:)
 INTEGER,INTENT(in) :: network
 TYPE(datetime),INTENT(in) :: timei, timef
+TYPE(vol7d_level),INTENT(in),optional :: level
+TYPE(vol7d_timerange),INTENT(in),optional :: timerange
 TYPE(vol7d_network),INTENT(in),OPTIONAL :: set_network
 
 TYPE(vol7d) :: v7dtmp, v7dtmp2
@@ -179,6 +187,15 @@ DO nvin = 1, SIZE(var)
   DO nvbt = 1, SIZE(vartable)
     IF (vartable(nvbt)%varbt == var(nvin) .AND. &
      vartable(nvbt)%network == network) THEN
+
+       if (present(level))then
+          if (vartable(nvbt)%level /= level )cycle
+       end if
+
+       if (present(timerange))then
+          if (vartable(nvbt)%timerange /= timerange )cycle
+       end if
+
       found = .TRUE.
       nvar = nvar + 1
       varbt_req(nvbt) = .TRUE.
@@ -200,6 +217,15 @@ DO nvin = 1, SIZE(var)
     IF (vartable(nvbt)%varbt == var(nvin) .AND. &
      vartable(nvbt)%network == network) THEN
       nvar = nvar + 1
+
+       if (present(level))then
+          if (vartable(nvbt)%level /= level )cycle
+       end if
+
+       if (present(timerange))then
+          if (vartable(nvbt)%timerange /= timerange )cycle
+       end if
+
 ! Controllare di non eccedere cvar????
       IF (nvar > 1) cvar(LEN_TRIM(cvar)+1:) = ',' ! Finezza per la ','
       cvar(LEN_TRIM(cvar)+1:) = TRIM(to_char(vartable(nvbt)%varora))
