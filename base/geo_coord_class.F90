@@ -378,7 +378,7 @@ END SUBROUTINE geo_coorddesc_init
 
 
 SUBROUTINE geo_coorddesc_delete(this)
-TYPE(geo_coorddesc) :: this
+TYPE(geo_coorddesc), INTENT(INOUT) :: this
 
 this%fuso = imiss
 this%elliss = imiss
@@ -450,7 +450,7 @@ END SUBROUTINE geo_coord_init
 
 
 SUBROUTINE geo_coord_delete(this)
-TYPE(geo_coord) :: this
+TYPE(geo_coord), INTENT(INOUT) :: this
 
 CALL delete(this%desc)
 this%lon = rmiss
@@ -480,25 +480,16 @@ elemental FUNCTION geo_coord_eq(this, that) RESULT(res)
 TYPE(geo_coord),INTENT(IN) :: this, that
 LOGICAL :: res
 
-!IF (geo_coord_equalize(this, that)) THEN ! Se non sono confrontabili trasformo
-  IF (this%desc%geoce) THEN
-    IF (this%lon == that%lon .AND. this%lat == that%lat) THEN
-      res = .TRUE.
-    ELSE
-      res = .FALSE.
-    ENDIF
-  ELSE IF (this%desc%utmce) THEN
-    IF (this%utme == that%utme .AND. this%utmn == that%utmn) THEN
-      res = .TRUE.
-    ELSE
-      res = .FALSE.
-    ENDIF
-  ELSE ! entrambi mancanti, e` giusto che siano uguali?
-    res = .TRUE.
-  ENDIF
-!ELSE ! Non sono confrontabili (errore di conversione UTM?)
-!  res = .FALSE.
-!ENDIF
+IF (this%desc%geoce .AND. that%desc%geoce) THEN
+  res = (this%lon == that%lon .AND. this%lat == that%lat)
+ELSE IF (this%desc%utmce .AND. that%desc%utmce) THEN
+  res = (this%utme == that%utme .AND. this%utmn == that%utmn)
+ELSE IF (.NOT.this%desc%geoce .AND. .NOT.this%desc%utmce &
+ .AND. .NOT.that%desc%geoce .AND. .NOT.that%desc%utmce) THEN ! tutti mancanti
+  res = .TRUE.
+ELSE ! non confrontabili
+  res = .FALSE.
+ENDIF
 
 END FUNCTION geo_coord_eq
 
@@ -545,34 +536,25 @@ REAL(kind=fp_geo) :: dist
 REAL(kind=fp_geo) :: x,y
 ! Distanza approssimata, valida per piccoli angoli
 
-!IF (geo_coord_equalize(this, that)) THEN
-  IF (this%desc%geoce) THEN
-    x = (this%lon-that%lon)*COS(((this%lat+this%lat)/2.)*degrad)
-    y = (this%lat-that%lat)
-    dist = SQRT(x**2 + y**2)*degrad*rearth
-  ELSE IF (this%desc%utmce) THEN
-    dist = SQRT((this%utme - that%utme)**2 + (this%utmn - that%utmn)**2)
-  ELSE
-    dist = rmiss
-  ENDIF
-!ELSE
-!  dist = rmiss
-!ENDIF
+IF (this%desc%geoce .AND. that%desc%geoce) THEN
+  x = (this%lon-that%lon)*COS(((this%lat+this%lat)/2.)*degrad)
+  y = (this%lat-that%lat)
+  dist = SQRT(x**2 + y**2)*degrad*rearth
+ELSE IF (this%desc%utmce .AND. that%desc%utmce .AND. this%desc == that%desc) THEN
+  dist = SQRT((this%utme - that%utme)**2 + (this%utmn - that%utmn)**2)
+ELSE
+  dist = rmiss
+ENDIF
 
 END FUNCTION geo_coord_dist
 
 
-FUNCTION geo_coord_equalize(this, that) RESULT(res)
+SUBROUTINE geo_coord_equalize(this, that)
 TYPE(geo_coord), INTENT (INOUT) :: this, that
-LOGICAL :: res
 ! Tenta di rendere confrontabili due oggetti geo_coord convertendo
 ! opportunamente le coordinate se necessario
-! Restituisce true in caso di successo o in caso di dati gia` confrontabili o nulli
 
-IF (this%desc == that%desc) THEN
-  res = .TRUE.
-  RETURN
-ENDIF
+IF (this%desc == that%desc) RETURN
 IF (this%desc%geoce .AND. that%desc%utmce) THEN
   CALL geo_coord_to_geo(that)
 ELSE IF (this%desc%utmce .AND. that%desc%geoce) THEN
@@ -581,10 +563,8 @@ ELSE IF (this%desc%utmce .AND. that%desc%utmce) THEN ! diversi fusi/ellissoidi? 
   CALL geo_coord_to_geo(this)
   CALL geo_coord_to_utm(this, fuso=that%desc%fuso, elliss=that%desc%elliss)
 ENDIF
-! controllo se ho avuto successo
-res = this%desc == that%desc
 
-END FUNCTION geo_coord_equalize
+END SUBROUTINE geo_coord_equalize
 
 
 SUBROUTINE geo_coord_to_utm(this, fuso, elliss)
@@ -694,17 +674,12 @@ CALL getval(this%desc, fuso, elliss)
 END SUBROUTINE geo_coordvect_getval
 
 
-FUNCTION geo_coordvect_equalize(this, that) RESULT(res)
+SUBROUTINE geo_coordvect_equalize(this, that)
 TYPE(geo_coordvect), INTENT (INOUT) :: this, that
-LOGICAL :: res
 ! Tenta di rendere confrontabili due oggetti geo_coordvect convertendo
 ! opportunamente le coordinate se necessario
-! Restituisce true in caso di successo o in caso di dati gia` confrontabili o nulli
 
-IF (this%desc == that%desc) THEN
-  res = .TRUE.
-  RETURN
-ENDIF
+IF (this%desc == that%desc) RETURN
 IF (this%desc%geoce .AND. that%desc%utmce) THEN
   CALL geo_coordvect_to_geo(that)
 ELSE IF (this%desc%utmce .AND. that%desc%geoce) THEN
@@ -713,10 +688,8 @@ ELSE IF (this%desc%utmce .AND. that%desc%utmce) THEN ! diversi fusi/ellissoidi? 
   CALL geo_coordvect_to_geo(this)
   CALL geo_coordvect_to_utm(this, fuso=that%desc%fuso, elliss=that%desc%elliss)
 ENDIF
-! controllo se ho avuto successo
-res = this%desc == that%desc
 
-END FUNCTION geo_coordvect_equalize
+END SUBROUTINE geo_coordvect_equalize
 
 
 SUBROUTINE geo_coordvect_import(this, unitsim, shphandle, nshp, proj, fuso, elliss)
@@ -736,7 +709,7 @@ TYPE(shpobject),POINTER :: shpobj
 IF (PRESENT(proj)) THEN
   lproj = proj
 ELSE
-  lproj = 1
+  lproj = proj_geo
 ENDIF
 IF (PRESENT(unitsim)) THEN
   ! Leggo l'intestazione
@@ -1051,16 +1024,16 @@ END SUBROUTINE geo_coordvect_to_geo
 ! Determina se un punto sta dentro o fuori il poligono, rif.:
 ! http://www.faqs.org/faqs/graphics/algorithms-faq/
 ! http://www.ecse.rpi.edu/Homepages/wrf/Research/Short_Notes/pnpoly.html
-FUNCTION geo_coordvect_dentro(this, point) RESULT(dentro)
+FUNCTION geo_coordvect_inside(this, point) RESULT(inside)
 TYPE(geo_coordvect), INTENT(IN) :: this
 TYPE(geo_coord), INTENT(IN) :: point
-LOGICAL :: dentro
+LOGICAL :: inside
 
 INTEGER :: i, j
 
 ! presuppongo che il poligono sia chiuso, altrimenti:
 ! j = this%vsize; DO i = 1, this%vsize
-dentro = .FALSE. 
+inside = .FALSE. 
 IF (this%desc%geoce .AND. point%desc%geoce) THEN
   j = 1
   DO i = 2, this%vsize
@@ -1071,7 +1044,7 @@ IF (this%desc%geoce .AND. point%desc%geoce) THEN
       IF (point%lon < (this%ll(j,1) - this%ll(i,1)) * &
        (point%lat - this%ll(i,2)) / &
        (this%ll(j,2) - this%ll(i,2)) + this%ll(i,1)) THEN
-        dentro = .NOT. dentro
+        inside = .NOT. inside
       ENDIF
     ENDIF
     j = i
@@ -1086,14 +1059,14 @@ ELSE IF (this%desc%utmce .AND. point%desc%utmce) THEN
       IF (point%utme < (this%utm(j,1) - this%utm(i,1)) * &
        (point%utmn - this%utm(i,2)) / &
        (this%utm(j,2) - this%utm(i,2)) + this%utm(i,1)) THEN
-        dentro = .NOT. dentro
+        inside = .NOT. inside
       ENDIF
     ENDIF
     j = i
   ENDDO
 ENDIF
 
-END FUNCTION geo_coordvect_dentro
+END FUNCTION geo_coordvect_inside
 
 
 ! =================
