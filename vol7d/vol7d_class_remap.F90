@@ -2,13 +2,18 @@ SUBROUTINE vol7d_remap_/**/VOL7D_POLY_TYPE(varin1, varin2, varout, sort, remap1,
 TYPE(/**/VOL7D_POLY_TYPE),POINTER :: varin1(:), varin2(:)
 TYPE(/**/VOL7D_POLY_TYPE),POINTER :: varout(:)
 LOGICAL,INTENT(in) :: sort
-INTEGER,INTENT(out) :: remap1(:), remap2(:)
+INTEGER,POINTER :: remap1(:), remap2(:)
 
 INTEGER :: i, n
 
+IF (.NOT.ASSOCIATED(varin1) .AND. .NOT.ASSOCIATED(varin2)) THEN
+  NULLIFY(remap1, remap2)
+  RETURN
+ENDIF
 ! Complete allocations
 IF (.NOT.ASSOCIATED(varin1)) ALLOCATE(varin1(0))
 IF (.NOT.ASSOCIATED(varin2)) ALLOCATE(varin2(0))
+ALLOCATE(remap1(SIZE(varin1)), remap2(SIZE(varin2)))
 
 ! Count different elements
 n = SIZE(varin1)

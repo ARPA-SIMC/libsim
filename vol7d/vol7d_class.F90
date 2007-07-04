@@ -274,90 +274,123 @@ CALL vol7d_varvect_alloc(this%dativarattr, ndativarattrr, ndativarattrd, &
 END SUBROUTINE vol7d_alloc
 
 
-SUBROUTINE vol7d_alloc_vol(this, ini)
+SUBROUTINE vol7d_check_alloc_ana(this, ini)
 TYPE(vol7d),INTENT(inout) :: this
 LOGICAL,INTENT(in),OPTIONAL :: ini
 
+! Alloco i descrittori minimi per avere un volume di anagrafica
 IF (.NOT. ASSOCIATED(this%ana)) CALL vol7d_alloc(this, nana=1, ini=ini)
 IF (.NOT. ASSOCIATED(this%network)) CALL vol7d_alloc(this, nnetwork=1, ini=ini)
+
+END SUBROUTINE vol7d_check_alloc_ana
+
+
+SUBROUTINE vol7d_check_alloc_dati(this, ini)
+TYPE(vol7d),INTENT(inout) :: this
+LOGICAL,INTENT(in),OPTIONAL :: ini
+
+! Alloco i descrittori minimi per avere un volume di dati
+CALL vol7d_check_alloc_ana(this, ini)
 IF (.NOT. ASSOCIATED(this%time)) CALL vol7d_alloc(this, ntime=1, ini=ini)
 IF (.NOT. ASSOCIATED(this%level)) CALL vol7d_alloc(this, nlevel=1, ini=ini)
 IF (.NOT. ASSOCIATED(this%timerange)) CALL vol7d_alloc(this, ntimerange=1, ini=ini)
 
+END SUBROUTINE vol7d_check_alloc_dati
+
+
+SUBROUTINE vol7d_alloc_vol(this, ini)
+TYPE(vol7d),INTENT(inout) :: this
+LOGICAL,INTENT(in),OPTIONAL :: ini
+
 ! Anagrafica
 IF (ASSOCIATED(this%anavar%r) .AND. .NOT.ASSOCIATED(this%volanar)) THEN
+  CALL vol7d_check_alloc_ana(this, ini)
   ALLOCATE(this%volanar(SIZE(this%ana), SIZE(this%anavar%r), SIZE(this%network)))
 ENDIF
 
 IF (ASSOCIATED(this%anavar%d) .AND. .NOT.ASSOCIATED(this%volanad)) THEN
+  CALL vol7d_check_alloc_ana(this, ini)
   ALLOCATE(this%volanad(SIZE(this%ana), SIZE(this%anavar%d), SIZE(this%network)))
 ENDIF
 
 IF (ASSOCIATED(this%anavar%i) .AND. .NOT.ASSOCIATED(this%volanai)) THEN
+  CALL vol7d_check_alloc_ana(this, ini)
   ALLOCATE(this%volanai(SIZE(this%ana), SIZE(this%anavar%i), SIZE(this%network)))
 ENDIF
 
 IF (ASSOCIATED(this%anavar%b) .AND. .NOT.ASSOCIATED(this%volanab)) THEN
+  CALL vol7d_check_alloc_ana(this, ini)
   ALLOCATE(this%volanab(SIZE(this%ana), SIZE(this%anavar%b), SIZE(this%network)))
 ENDIF
 
 IF (ASSOCIATED(this%anavar%c) .AND. .NOT.ASSOCIATED(this%volanac)) THEN
+  CALL vol7d_check_alloc_ana(this, ini)
   ALLOCATE(this%volanac(SIZE(this%ana), SIZE(this%anavar%c), SIZE(this%network)))
 ENDIF
 
 ! Attributi dell'anagrafica
 IF (ASSOCIATED(this%anaattr%r) .AND. ASSOCIATED(this%anavarattr%r) .AND. &
  .NOT.ASSOCIATED(this%volanaattrr)) THEN
+  CALL vol7d_check_alloc_ana(this, ini)
   ALLOCATE(this%volanaattrr(SIZE(this%ana), SIZE(this%anavarattr%r), &
    SIZE(this%network), SIZE(this%anaattr%r)))
 ENDIF
 
 IF (ASSOCIATED(this%anaattr%d) .AND. ASSOCIATED(this%anavarattr%d) .AND. &
  .NOT.ASSOCIATED(this%volanaattrd)) THEN
+  CALL vol7d_check_alloc_ana(this, ini)
   ALLOCATE(this%volanaattrd(SIZE(this%ana), SIZE(this%anavarattr%d), &
    SIZE(this%network), SIZE(this%anaattr%d)))
 ENDIF
 
 IF (ASSOCIATED(this%anaattr%i) .AND. ASSOCIATED(this%anavarattr%i) .AND. &
  .NOT.ASSOCIATED(this%volanaattri)) THEN
+  CALL vol7d_check_alloc_ana(this, ini)
   ALLOCATE(this%volanaattri(SIZE(this%ana), SIZE(this%anavarattr%i), &
    SIZE(this%network), SIZE(this%anaattr%i)))
 ENDIF
 
 IF (ASSOCIATED(this%anaattr%b) .AND. ASSOCIATED(this%anavarattr%b) .AND. &
  .NOT.ASSOCIATED(this%volanaattrb)) THEN
+  CALL vol7d_check_alloc_ana(this, ini)
   ALLOCATE(this%volanaattri(SIZE(this%ana), SIZE(this%anavarattr%i), &
    SIZE(this%network), SIZE(this%anaattr%i)))
 ENDIF
 
 IF (ASSOCIATED(this%anaattr%c) .AND. ASSOCIATED(this%anavarattr%c) .AND. &
  .NOT.ASSOCIATED(this%volanaattrc)) THEN
+  CALL vol7d_check_alloc_ana(this, ini)
   ALLOCATE(this%volanaattrc(SIZE(this%ana), SIZE(this%anavarattr%c), &
    SIZE(this%network), SIZE(this%anaattr%c)))
 ENDIF
 
 ! Dati
 IF (ASSOCIATED(this%dativar%r) .AND. .NOT.ASSOCIATED(this%voldatir)) THEN
+  CALL vol7d_check_alloc_dati(this, ini)
   ALLOCATE(this%voldatir(SIZE(this%ana), SIZE(this%time), SIZE(this%level), &
    SIZE(this%timerange), SIZE(this%dativar%r), SIZE(this%network)))
 ENDIF
 
 IF (ASSOCIATED(this%dativar%d) .AND. .NOT.ASSOCIATED(this%voldatid)) THEN
+  CALL vol7d_check_alloc_dati(this, ini)
   ALLOCATE(this%voldatid(SIZE(this%ana), SIZE(this%time), SIZE(this%level), &
    SIZE(this%timerange), SIZE(this%dativar%d), SIZE(this%network)))
 ENDIF
 
 IF (ASSOCIATED(this%dativar%i) .AND. .NOT.ASSOCIATED(this%voldatii)) THEN
+  CALL vol7d_check_alloc_dati(this, ini)
   ALLOCATE(this%voldatii(SIZE(this%ana), SIZE(this%time), SIZE(this%level), &
    SIZE(this%timerange), SIZE(this%dativar%i), SIZE(this%network)))
 ENDIF
 
 IF (ASSOCIATED(this%dativar%b) .AND. .NOT.ASSOCIATED(this%voldatib)) THEN
+  CALL vol7d_check_alloc_dati(this, ini)
   ALLOCATE(this%voldatib(SIZE(this%ana), SIZE(this%time), SIZE(this%level), &
    SIZE(this%timerange), SIZE(this%dativar%b), SIZE(this%network)))
 ENDIF
 
 IF (ASSOCIATED(this%dativar%c) .AND. .NOT.ASSOCIATED(this%voldatic)) THEN
+  CALL vol7d_check_alloc_dati(this, ini)
   ALLOCATE(this%voldatic(SIZE(this%ana), SIZE(this%time), SIZE(this%level), &
    SIZE(this%timerange), SIZE(this%dativar%c), SIZE(this%network)))
 ENDIF
@@ -365,6 +398,7 @@ ENDIF
 ! Attributi dei dati
 IF (ASSOCIATED(this%datiattr%r) .AND. ASSOCIATED(this%dativarattr%r) .AND. &
  .NOT.ASSOCIATED(this%voldatiattrr)) THEN
+  CALL vol7d_check_alloc_dati(this, ini)
   ALLOCATE(this%voldatiattrr(SIZE(this%ana), SIZE(this%time), SIZE(this%level), &
    SIZE(this%timerange), SIZE(this%dativarattr%r), SIZE(this%network), &
    SIZE(this%datiattr%r)))
@@ -372,6 +406,7 @@ ENDIF
 
 IF (ASSOCIATED(this%datiattr%d) .AND. ASSOCIATED(this%dativarattr%d) .AND. &
  .NOT.ASSOCIATED(this%voldatiattrd)) THEN
+  CALL vol7d_check_alloc_dati(this, ini)
   ALLOCATE(this%voldatiattrd(SIZE(this%ana), SIZE(this%time), SIZE(this%level), &
    SIZE(this%timerange), SIZE(this%dativarattr%d), SIZE(this%network), &
    SIZE(this%datiattr%d)))
@@ -379,6 +414,7 @@ ENDIF
 
 IF (ASSOCIATED(this%datiattr%i) .AND. ASSOCIATED(this%dativarattr%i) .AND. &
  .NOT.ASSOCIATED(this%voldatiattri)) THEN
+  CALL vol7d_check_alloc_dati(this, ini)
   ALLOCATE(this%voldatiattri(SIZE(this%ana), SIZE(this%time), SIZE(this%level), &
    SIZE(this%timerange), SIZE(this%dativarattr%i), SIZE(this%network), &
    SIZE(this%datiattr%i)))
@@ -386,6 +422,7 @@ ENDIF
 
 IF (ASSOCIATED(this%datiattr%b) .AND. ASSOCIATED(this%dativarattr%b) .AND. &
  .NOT.ASSOCIATED(this%voldatiattrb)) THEN
+  CALL vol7d_check_alloc_dati(this, ini)
   ALLOCATE(this%voldatiattrb(SIZE(this%ana), SIZE(this%time), SIZE(this%level), &
    SIZE(this%timerange), SIZE(this%dativarattr%b), SIZE(this%network), &
    SIZE(this%datiattr%b)))
@@ -393,6 +430,7 @@ ENDIF
 
 IF (ASSOCIATED(this%datiattr%c) .AND. ASSOCIATED(this%dativarattr%c) .AND. &
  .NOT.ASSOCIATED(this%voldatiattrc)) THEN
+  CALL vol7d_check_alloc_dati(this, ini)
   ALLOCATE(this%voldatiattrc(SIZE(this%ana), SIZE(this%time), SIZE(this%level), &
    SIZE(this%timerange), SIZE(this%dativarattr%c), SIZE(this%network), &
    SIZE(this%datiattr%c)))
@@ -405,41 +443,33 @@ SUBROUTINE vol7d_merge(this, that, sort)
 TYPE(vol7d),INTENT(INOUT) :: this, that
 LOGICAL,INTENT(IN),OPTIONAL :: sort
 
-! Completa l'allocazione per non mandare in crisi il dimensionamento
-! degli array automatici in vol7d_merge_stage1
-CALL vol7d_alloc_vol(this)
-CALL vol7d_alloc_vol(that)
-
-CALL vol7d_merge_stage1(this, that, sort)
-
-END SUBROUTINE vol7d_merge
-
-
-SUBROUTINE vol7d_merge_stage1(this, that, sort)
-TYPE(vol7d),INTENT(INOUT) :: this, that
-LOGICAL,INTENT(IN),OPTIONAL :: sort
-
 TYPE(vol7d) :: v7dtmp
 LOGICAL :: lsort
-INTEGER :: remapt1(SIZE(this%time)), remapt2(SIZE(that%time)), &
- remaptr1(SIZE(this%timerange)), remaptr2(SIZE(that%timerange)), &
- remapl1(SIZE(this%level)), remapl2(SIZE(that%level)), &
- remapa1(SIZE(this%ana)), remapa2(SIZE(that%ana)), &
- remapn1(SIZE(this%network)), remapn2(SIZE(that%network))
+INTEGER,POINTER :: remapt1(:), remapt2(:), remaptr1(:), remaptr2(:), &
+ remapl1(:), remapl2(:), remapa1(:), remapa2(:), remapn1(:), remapn2(:)
+
+! Completo l'allocazione per avere un volume a norma
+CALL vol7d_alloc_vol(this)
+CALL vol7d_alloc_vol(that)
 
 CALL init(v7dtmp)
 lsort = .FALSE.
 IF (PRESENT(sort)) lsort = sort
 
-CALL vol7d_remap_datetime(this%time, that%time, v7dtmp%time, lsort, remapt1, remapt2)
-CALL vol7d_remap_vol7d_timerange(this%timerange, that%timerange, v7dtmp%timerange, &
- lsort, remaptr1, remaptr2)
+! Calcolo le mappature tra volumi vecchi e volume nuovo
+! I puntatori remap* vengono tutti o allocati o nullificati
+CALL vol7d_remap_datetime(this%time, that%time, v7dtmp%time, &
+ lsort, remapt1, remapt2)
+CALL vol7d_remap_vol7d_timerange(this%timerange, that%timerange, &
+ v7dtmp%timerange, lsort, remaptr1, remaptr2)
 CALL vol7d_remap_vol7d_level(this%level, that%level, v7dtmp%level, &
  lsort, remapl1, remapl2)
-CALL vol7d_remap_vol7d_ana(this%ana, that%ana, v7dtmp%ana, .FALSE., remapa1, remapa2)
-CALL vol7d_remap_vol7d_network(this%network, that%network, v7dtmp%network, .FALSE., &
- remapn1, remapn2)
+CALL vol7d_remap_vol7d_ana(this%ana, that%ana, v7dtmp%ana, &
+ .FALSE., remapa1, remapa2)
+CALL vol7d_remap_vol7d_network(this%network, that%network, v7dtmp%network, &
+ .FALSE., remapn1, remapn2)
 
+! Faccio la fusione fisica dei volumi
 CALL vol7d_merge_finalr(this, that, v7dtmp, &
  remapa1, remapa2, remapt1, remapt2, remapl1, remapl2, &
  remaptr1, remaptr2, remapn1, remapn2)
@@ -456,6 +486,19 @@ CALL vol7d_merge_finalc(this, that, v7dtmp, &
  remapa1, remapa2, remapt1, remapt2, remapl1, remapl2, &
  remaptr1, remaptr2, remapn1, remapn2)
 
+! Dealloco i vettori di rimappatura
+IF (ASSOCIATED(remapt1)) DEALLOCATE(remapt1)
+IF (ASSOCIATED(remapt2)) DEALLOCATE(remapt2)
+IF (ASSOCIATED(remaptr1)) DEALLOCATE(remaptr1)
+IF (ASSOCIATED(remaptr2)) DEALLOCATE(remaptr2)
+IF (ASSOCIATED(remapl1)) DEALLOCATE(remapl1)
+IF (ASSOCIATED(remapl2)) DEALLOCATE(remapl2)
+IF (ASSOCIATED(remapa1)) DEALLOCATE(remapa1)
+IF (ASSOCIATED(remapa2)) DEALLOCATE(remapa2)
+IF (ASSOCIATED(remapn1)) DEALLOCATE(remapn1)
+IF (ASSOCIATED(remapn2)) DEALLOCATE(remapn2)
+
+! Distruggo i vecchi volumi e assegno il nuovo a this
 CALL delete(that)
 CALL delete(this)
 this = v7dtmp
