@@ -1,3 +1,20 @@
+! Copyright (C) 2007
+
+! Questo programma è software libero; è lecito ridistribuirlo e/o
+! modificarlo secondo i termini della Licenza Pubblica Generica SMR come
+! pubblicata da ARPA SMR ; o la versione 1 della licenza o (a scelta)
+! una versione successiva.
+
+! Questo programma è distribuito nella speranza che sia utile, ma SENZA
+! ALCUNA GARANZIA; senza neppure la garanzia implicita di
+! COMMERCIABILITÀ o di APPLICABILITÀ PER UN PARTICOLARE SCOPO. Si veda
+! la Licenza Pubblica Generica SMR per avere maggiori dettagli.
+
+! Ognuno dovrebbe avere ricevuto una copia della Licenza Pubblica
+! Generica SMR insieme a questo programma; in caso contrario, la si può
+! ottenere da Agenzia Regionale Prevenzione e Ambiente (ARPA) Servizio
+! Idro Meteorologico  (SIM), Viale Silvani 6, 40122 Bologna, Italia
+
 MODULE missing_values
 USE kinds
 IMPLICIT NONE
@@ -37,65 +54,151 @@ INTEGER(kind=int_s), PARAMETER :: ismiss = HUGE(0_int_s)
 INTEGER(kind=int_l), PARAMETER :: ilmiss = HUGE(0_int_l)
 CHARACTER(len=1), PARAMETER :: cmiss = char(0)
 
-INTERFACE c_e
-  MODULE PROCEDURE c_e_b, c_e_s, c_e_l, c_e_r, c_e_d, c_e_c
-END INTERFACE
 
-CONTAINS
-
-LOGICAL FUNCTION c_e_b(var)
-INTEGER(kind=int_b)  :: var
-
-c_e_b=.TRUE.
-IF (var == ibmiss)c_e_b= .FALSE.
-RETURN
-END FUNCTION c_e_b
+interface c_e
+   module procedure c_e_b, c_e_s, c_e_l, c_e_r, c_e_d, c_e_c
+   
+end interface
 
 
-LOGICAL FUNCTION c_e_s(var)
-INTEGER (kind=int_s) ::  var
-
-c_e_s=.TRUE.
-IF (var == ismiss)c_e_s= .FALSE.
-RETURN
-END FUNCTION c_e_s
+public
 
 
-LOGICAL FUNCTION c_e_l(var)
-INTEGER (kind=int_l) :: var
+contains
 
-c_e_l=.TRUE.
-IF (var == ilmiss)c_e_l= .FALSE.
-RETURN
-END FUNCTION c_e_l
+  
+  logical function c_e_b(var)
 
+!OMSTART c_e_b
+!	function c_e_b(var)
+!	Verifica la condizione di presenza o assenza del dato secondo
+!	le specifiche dballe restituendo una variabile logical .true.
+!	se c'e` il dato 
+!
+!	INPUT:
+!	VAR	byte	dato di cui verificare la presenza
+!	OUTPUT:
+!	C_E_B	LOGICAL	.TRUE.se il dato e` presente
+!OMEND
 
-LOGICAL FUNCTION c_e_r(var)
-REAL :: var
+    integer(kind=int_b)  :: var
 
-c_e_r=.TRUE.
-IF (var == rmiss)c_e_r= .FALSE.
-RETURN
-END FUNCTION c_e_r
-
-
-LOGICAL FUNCTION c_e_d(var)
-REAL (kind=fp_d) ::  var
-
-c_e_d=.TRUE.
-IF (var == dmiss)c_e_d= .FALSE.
-RETURN
-END FUNCTION c_e_d
+    c_e_b=.true.
+    if (var == ibmiss)c_e_b= .FALSE. 
+    return
+    end function c_e_b
 
 
-LOGICAL FUNCTION c_e_c(var)
-CHARACTER (len=*) var
+    logical function c_e_s(var)
 
-c_e_c=.TRUE.
-IF (var == cmiss)c_e_c=.FALSE.
-RETURN
+!OMSTART c_e_i
+!	function c_e_i(var)
+!	Verifica la condizione di presenza o assenza del dato secondo
+!	le specifiche dballe restituendo una variabile logical .true.
+!	se c'e` il dato
+!
+!	INPUT:
+!	VAR	Integer	short dato di cui verificare la presenza
+!	OUTPUT:
+!	C_E_i	LOGICAL	.TRUE.se il dato e` presente
+!OMEND
 
-END FUNCTION c_e_c
+    integer (kind=int_s) ::  var
+
+    c_e_s=.true.
+    if (var == ismiss)c_e_s= .FALSE. 
+    return
+    end function c_e_s
+
+
+    logical function c_e_l(var)
+
+!OMSTART c_e_l
+!	function c_e_i(var)
+!	Verifica la condizione di presenza o assenza del dato secondo
+!	le specifiche dballe restituendo una variabile logical .true.
+!	se c'e` il dato
+!
+!	INPUT:
+!	VAR	Integer	long dato di cui verificare la presenza
+!	OUTPUT:
+!	C_E_l	LOGICAL	.TRUE.se il dato e` presente
+!OMEND
+
+    integer (kind=int_l) ::  var
+
+    c_e_l=.true.
+    if (var == ilmiss)c_e_l= .FALSE. 
+    return
+    end function c_e_l
+
+
+
+
+    logical function c_e_r(var)
+
+!OMSTART c_e_r
+!	function c_e_r(var)
+!	Verifica la condizione di presenza o assenza del dato secondo
+!	le specifiche dballe restituendo una variabile logical .true.
+!	se c'e` il dato
+!
+!	INPUT:
+!	VAR	Real	dato di cui verificare la presenza
+!	OUTPUT:
+!	C_E_R	LOGICAL	.TRUE.se il dato e` presente
+!OMEND
+
+    real :: var
+
+    c_e_r=.true.
+    if (var == rmiss)c_e_r= .FALSE. 
+    return
+    end function c_e_r
+
+    logical function c_e_d(var)
+
+!OMSTART c_e_d
+!	function c_e_d(var)
+!	Verifica la condizione di presenza o assenza del dato secondo
+!	le specifiche dballe restituendo una variabile logical .true.
+!	se c'e` il dato
+!
+!	INPUT:
+!	VAR	double	dato di cui verificare la presenza
+!	OUTPUT:
+!	C_E_D	LOGICAL	.TRUE.se il dato e` presente
+!OMEND
+
+    real (kind=fp_d) ::  var
+
+    c_e_d=.true.
+    if (var == dmiss)c_e_d= .FALSE. 
+    return
+    end function c_e_d
+
+
+
+    logical function c_e_c(var)
+!OMSTART C_E_C
+!	function c_e_c(var)
+!	Verifica la condizione di presenza o assenza del dato secondo
+!	le specifiche dballe restituendo una variabile logical .true.
+!	se c'e` il dato
+
+!	INPUT:
+!	VAR	CHAR*(*)  	dato di cui verificare la presenza
+!	OUTPUT:
+!	C_E_C	LOGICAL		.TRUE.se il dato e` presente
+!OMEND
+
+      character (len=*) var
+
+      c_e_c=.true.
+      if (var == cmiss)c_e_c=.false.
+      return
+
+    end function c_e_c
 
 
 END MODULE missing_values

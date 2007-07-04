@@ -45,6 +45,23 @@ AC_MSG_RESULT([oraclesim code not included])
 fi
 AM_CONDITIONAL(ORSIM, test "x$enableval" = "xyes")
 
+AC_ARG_ENABLE(dballe, AC_HELP_STRING([--disable-dballe],
+  [disable dballe support]),,[enableval=yes])dnl default enable
+if test "x$enableval" = "xyes"; then
+
+AC_MSG_RESULT([dballe code included])
+libdballe="-ldballef -ldballe-core -lcnf -lodbc -lgdbm -lpopt -lm"
+
+AC_SUBST(libdballe)
+
+else
+
+AC_MSG_RESULT([dballe code not included])
+
+fi
+AM_CONDITIONAL(DBALLE, test "x$enableval" = "xyes")
+
+
 AC_LANG_POP()dnl back to C
 AC_PROG_LIBTOOL
 
@@ -58,6 +75,7 @@ grib/Makefile
 vol7d/Makefile
 examples/Makefile
 data/Makefile
+qc/Makefile
 ])
 
 AC_OUTPUT

@@ -4,6 +4,10 @@ if ORSIM
 bin_PROGRAMS += esempio_v7doracle esempio_v7doracle_multi
 endif
 
+if DBALLE
+bin_PROGRAMS += esempio_v7ddballe esempio_v7ddballe_multi
+endif
+
 if SHP
 bin_PROGRAMS += esempio_geo_coordvect
 endif
@@ -13,21 +17,29 @@ endif
 AM_FCFLAGS = -I../base -I../grib -I../vol7d
 
 esempio_v7d_SOURCES = esempio_v7d.f90
-esempio_v7d_LDADD = ../base/libsim_base.la ../vol7d/libsim_vol7d.la $(liboraclesim)
+esempio_v7d_LDADD = ../base/libsim_base.la ../vol7d/libsim_vol7d.la $(liboraclesim) $(libdballe)
 
 esempio_regrib_SOURCES = esempio_regrib.f90
-#esempio_regrib_LDADD = $(LDADD) -lemos  $(liboraclesim)
+#esempio_regrib_LDADD = $(LDADD) -lemos  $(liboraclesim) $(libdballe)
 esempio_regrib_LDADD = ../base/libsim_base.la ../grib/libsim_grib.la -lemos
 
 if ORSIM
 esempio_v7doracle_SOURCES = esempio_v7doracle.f90
-esempio_v7doracle_LDADD = ../base/libsim_base.la ../vol7d/libsim_vol7d.la $(liboraclesim)
+esempio_v7doracle_LDADD = ../base/libsim_base.la ../vol7d/libsim_vol7d.la $(liboraclesim) $(libdballe)
 
 esempio_v7doracle_multi_SOURCES = esempio_v7doracle_multi.f90
-esempio_v7doracle_multi_LDADD = ../base/libsim_base.la ../vol7d/libsim_vol7d.la $(liboraclesim)
+esempio_v7doracle_multi_LDADD = ../base/libsim_base.la ../vol7d/libsim_vol7d.la $(liboraclesim) $(libdballe)
+endif
+
+if DBALLE
+esempio_v7ddballe_SOURCES = esempio_v7ddballe.f90
+esempio_v7ddballe_LDADD = ../base/libsim_base.la ../vol7d/libsim_vol7d.la $(liboraclesim) $(libdballe)
+
+esempio_v7ddballe_multi_SOURCES = esempio_v7ddballe_multi.f90
+esempio_v7ddballe_multi_LDADD = ../base/libsim_base.la ../vol7d/libsim_vol7d.la $(liboraclesim) $(libdballe)
 endif
 
 if SHP
 esempio_geo_coordvect_SOURCES = esempio_geo_coordvect.f90
-esempio_geo_coordvect_LDADD =  ../base/libsim_base.la ../vol7d/libsim_vol7d.la $(liboraclesim)
+esempio_geo_coordvect_LDADD =  ../base/libsim_base.la ../vol7d/libsim_vol7d.la $(liboraclesim) $(libdballe)
 endif
