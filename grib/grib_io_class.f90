@@ -1,12 +1,12 @@
 MODULE grib_io_class
-
+USE missing_values
 USE err_handling
 USE char_utilities
 USE matchgrib_class
 IMPLICIT NONE
 
-INTEGER, PARAMETER :: grio_imd = -32767
-REAL, PARAMETER :: grio_rmd=-1.E15, grio_rmdc=grio_rmd/10.
+INTEGER, PARAMETER :: grio_imiss = imiss
+REAL, PARAMETER :: grio_rmiss = rmiss
 INTEGER, PARAMETER :: lev_n_dbl(9)=(/100,103,105,107,109,111,113,115,119/)
 INTEGER, PARAMETER, PRIVATE :: &
  nb=4, & ! Integer word size, to be improved
@@ -507,8 +507,7 @@ INTEGER, INTENT(out) :: ier
 
 INTEGER :: actsize, fstart
 REAL, POINTER :: pzsec4(:)
-REAL, TARGET :: &
- zzsec4(1)
+REAL, TARGET :: zzsec4(1)
 
 IF (unit >= 0) THEN ! Read the grib, otherwise use the last one read
   ier = 1
@@ -552,8 +551,8 @@ ELSE
   pzsec4 => this%zsec4
 ENDIF
 
-this%isec3(2) = grio_imd
-this%zsec3(2) = grio_rmd
+this%isec3(2) = grio_imiss
+this%zsec3(2) = grio_rmiss
 ier = 1 ! Do not abort in case of error
 CALL gribex(this%isec0, this%isec1, this%isec2, this%zsec2, &
  this%isec3, this%zsec3, this%isec4, pzsec4, SIZE(pzsec4), &
