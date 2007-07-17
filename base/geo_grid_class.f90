@@ -8,10 +8,12 @@ IMPLICIT NONE
 
 INTEGER, PARAMETER :: fp_gg = fp_s
 REAL(kind=fp_gg), PARAMETER :: gg_miss = smiss
+INTEGER, PARAMETER :: gg_proj_gen=-1, gg_proj_geo=0, gg_proj_utm=1, &
+ gg_proj_georot=2
 
 TYPE geo_grid
   PRIVATE
-  INTEGER :: drt, nx, ny
+  INTEGER :: proj, nx, ny
   REAL :: x1, x2, y1, y2, dx, dy, &
    xrot, yrot, rot
   INTEGER :: nlev, nvar, ntim, curlev, curvar, curtim
@@ -52,9 +54,13 @@ CONTAINS
 SUBROUTINE gg_init(this)
 TYPE(geo_grid) :: this
 
-this%drt = -1
+this%proj = -1
 this%nx = 0
 this%ny = 0
+this%x1 = rmiss
+this%x2 = rmiss
+this%y1 = rmiss
+this%y2 = rmiss
 this%nlev = 1
 this%nvar = 1
 this%ntim = 1
@@ -67,10 +73,10 @@ END SUBROUTINE gg_init
 
 
 SUBROUTINE gg_delete(this)
-TYPE (geo_grid) :: this
+TYPE(geo_grid),INTENT(INOUT) :: this
 
 CALL gg_dealloc(this)
-call gg_init(this)
+CALL gg_init(this)
 
 END SUBROUTINE gg_delete
 
@@ -112,13 +118,17 @@ ELSE
   ENDIF
   IF (this%dx == 0. .AND. this%nx > 1) THEN
     this%dx = (this%x2 - this%x1)/(this%nx - 1)
-  ELSE IF (this%x2 == this%x1 .AND. this%nx > 1) THEN
+  ELSE IF (this%x2 == rmiss .AND. this%x1 /= rmiss) THEN
     this%x2 = this%x1 + (this%nx - 1)*this%dx
+  ELSE IF (this%x1 == rmiss .AND. this%x2 /= rmiss) THEN
+    this%x1 = this%x2 - (this%nx - 1)*this%dx
   ENDIF
   IF (this%dy == 0. .AND. this%ny > 1) THEN
     this%dy = (this%y2 - this%y1)/(this%ny - 1)
-  ELSE IF (this%y2 == this%y1 .AND. this%ny > 1) THEN
+  ELSE IF (this%y2 == rmiss .AND. this%y1 /= rmiss) THEN
     this%y2 = this%y1 + (this%ny - 1)*this%dy
+  ELSE IF (this%y1 == rmiss .AND. this%y2 /= rmiss) THEN
+    this%y1 = this%y2 - (this%ny - 1)*this%dy
   ENDIF
 ENDIF
 CALL set_2d_slice(this) ! Assign field2d
@@ -127,7 +137,7 @@ END SUBROUTINE gg_alloc
 
 
 SUBROUTINE gg_dealloc(this)
-TYPE (geo_grid) :: this
+TYPE(geo_grid),INTENT(INOUT) :: this
 
 IF (ASSOCIATED(this%field5d)) DEALLOCATE(this%field5d)
 NULLIFY(this%field2d)
@@ -136,76 +146,48 @@ IF (ASSOCIATED(this%vcp)) DEALLOCATE(this%vcp)
 END SUBROUTINE gg_dealloc
 
 
-SUBROUTINE gg_setval(this, nlev, nvar, ntim, nx, ny, drt, x1, x2, &
+SUBROUTINE gg_setval(this, nx, ny, nlev, nvar, ntim, proj, x1, x2, &
  y1, y2, dx, dy, xrot, yrot, rot)
 TYPE (geo_grid) :: this
-INTEGER, INTENT(IN), OPTIONAL :: nlev, nvar, ntim, nx, ny, drt
+INTEGER, INTENT(IN), OPTIONAL :: nx, ny, nlev, nvar, ntim, proj
 REAL, INTENT(IN), OPTIONAL :: x1, x2, &
  y1, y2, dx, dy, xrot, yrot, rot
 
-! Following members can only be extended
-IF (PRESENT(nlev)) THEN
-  this%nlev = MAX(this%nlev, nlev)
-ENDIF
-IF (PRESENT(nvar)) THEN
-  this%nvar = MAX(this%nvar, nvar)
-ENDIF
-IF (PRESENT(ntim)) THEN
+IF (ASSOCIATED(this%field5d)) THEN ! Following members can only be extended
+  IF (PRESENT(nlev)) THEN
+    this%nlev = MAX(this%nlev, nlev)
+  ENDIF
+  IF (PRESENT(nvar)) THEN
+    this%nvar = MAX(this%nvar, nvar)
+  ENDIF
+  IF (PRESENT(ntim)) THEN
     this%ntim = MAX(this%ntim, ntim)
-ENDIF
-
-IF (ASSOCIATED(this%field5d)) RETURN
-! Following members can be changed only in deallocated state
-IF (PRESENT(nx)) THEN
-  IF (nx > 0) THEN
-    this%nx = nx
   ENDIF
-ENDIF
-IF (PRESENT(ny)) THEN
-  IF (ny > 0) THEN
-    this%ny = ny
-  ENDIF
-ENDIF
-IF (PRESENT(drt)) THEN
-  IF (drt > 0) THEN
-    this%drt = drt
-  ENDIF
-ENDIF
-IF (PRESENT(x1)) THEN
-  this%x1 = x1
-ENDIF
-IF (PRESENT(x2)) THEN
-  this%x2 = x2
-ENDIF
-IF (PRESENT(y1)) THEN
-  this%y1 = y1
-ENDIF
-IF (PRESENT(y2)) THEN
-  this%y2 = y2
-ENDIF
-IF (PRESENT(dx)) THEN
-  this%dx = dx
-ENDIF
-IF (PRESENT(dy)) THEN
-  this%dy = dy
-ENDIF
-IF (PRESENT(xrot)) THEN
-  this%xrot = xrot
-ENDIF
-IF (PRESENT(yrot)) THEN
-  this%yrot = yrot
-ENDIF
-IF (PRESENT(rot)) THEN
-  this%rot = rot
+ELSE ! In deallocated state everything can be changed
+  IF (PRESENT(nlev)) this%nlev = MAX(nlev, 1)
+  IF (PRESENT(nvar)) this%nvar = MAX(nvar, 1)
+  IF (PRESENT(ntim)) this%ntim = MAX(ntim, 1)
+  IF (PRESENT(nx)) this%nx = MAX(nx, 0)
+  IF (PRESENT(ny)) this%ny = MAX(ny, 0)
+  IF (PRESENT(proj)) this%proj = proj
+  IF (PRESENT(x1)) this%x1 = x1
+  IF (PRESENT(x2)) this%x2 = x2
+  IF (PRESENT(y1)) this%y1 = y1
+  IF (PRESENT(y2)) this%y2 = y2
+  IF (PRESENT(dx)) this%dx = dx
+  IF (PRESENT(dy)) this%dy = dy
+  IF (PRESENT(xrot)) this%xrot = xrot
+  IF (PRESENT(yrot)) this%yrot = yrot
+  IF (PRESENT(rot)) this%rot = rot
 ENDIF
 
 END SUBROUTINE gg_setval
 
 
-SUBROUTINE gg_getval(this, nlev, nvar, ntim, nx, ny, drt, x1, x2, &
+SUBROUTINE gg_getval(this, nx, ny, nlev, nvar, ntim, proj, x1, x2, &
  y1, y2, dx, dy, xrot, yrot, rot, field2d, field5d)
 TYPE (geo_grid) :: this
-INTEGER, INTENT(OUT), OPTIONAL :: nlev, nvar, ntim, nx, ny, drt
+INTEGER, INTENT(OUT), OPTIONAL :: nx, ny, nlev, nvar, ntim, proj
 REAL, INTENT(OUT), OPTIONAL :: x1, x2, &
  y1, y2, dx, dy, xrot, yrot, rot
 REAL(kind=fp_gg), POINTER, OPTIONAL :: field2d(:,:), field5d(:,:,:,:,:)
@@ -215,7 +197,7 @@ IF (PRESENT(nvar)) nvar = this%nvar
 IF (PRESENT(ntim)) ntim = this%ntim
 IF (PRESENT(nx)) nx = this%nx
 IF (PRESENT(ny)) ny = this%ny
-IF (PRESENT(drt)) drt = this%drt
+IF (PRESENT(proj)) proj = this%proj
 IF (PRESENT(x1)) x1 = this%x1
 IF (PRESENT(x2)) x2 = this%x2
 IF (PRESENT(y1)) y1 = this%y1
@@ -404,6 +386,5 @@ this%y2 = this%y1+(this%ny-1)*this%dy
 CALL set_2d_slice(this) ! Assign field2d
 
 END SUBROUTINE gg_regrid
-
 
 END MODULE geo_grid_class

@@ -22,11 +22,24 @@ TYPE(geo_grid), INTENT(OUT) :: this
 TYPE(grib_io), INTENT(IN) :: grib
 INTEGER, INTENT(OUT) :: ier
 
-INTEGER :: x1, x2, xs, y1, y2, ys, ord(2)
+INTEGER :: proj, x1, x2, xs, y1, y2, ys, ord(2)
 REAL :: s2_4, s2_5, s2_7, s2_8, s2_9, s2_10
 REAL(kind=fp_gg), POINTER :: field(:,:)
 
-CALL setval(this, drt=grib%isec2(1))
+SELECT CASE(grib%isec2(1))
+CASE(0)
+  proj = gg_proj_geo
+CASE(10)
+  proj = gg_proj_georot
+!CASE(??)
+!  proj = gg_proj_utm
+CASE default
+  proj = gg_proj_gen
+  CALL raise_warning('proiezione (drt) grib '//to_char(grib%isec4(1)) &
+   //' non supportata, procedo lo stesso')
+END SELECT
+CALL setval(this, proj=proj)
+
 SELECT CASE(grib%isec2(1))
 CASE(0, 10, 20, 30) ! Lat/lon
   IF (IAND(grib%isec2(11), 128) == 0) THEN
@@ -54,13 +67,17 @@ CASE(0, 10, 20, 30) ! Lat/lon
   ENDIF
 
 CASE default ! Add other projections!!
+  CALL raise_warning('proiezione (drt) grib '//to_char(grib%isec2(1)) &
+   //' non supportata, procedo lo stesso')
   CALL setval(this, nx=grib%isec4(1), ny=1)
 END SELECT
 
 SELECT CASE(grib%isec2(1))
 CASE(10, 14, 30, 34) ! Rotated lat/lon or Gaussian
-  CALL setval(this, xrot=grib%isec2(14)/1000., yrot=grib%isec2(13)/1000., &
-   rot=grib%zsec2(1))
+!!$  s2_13 = grib%isec2(13)/1000.
+!!$  s2_14 = grib%isec2(14)/1000.
+  CALL setval(this, xrot=grib%isec2(14)/1000., &
+   yrot=acosd(-sind(grib%isec2(13)/1000.)), rot=grib%zsec2(1))
 CASE default
   CALL setval(this, xrot=0., yrot=-90., rot=0.)
 END SELECT
@@ -124,11 +141,24 @@ TYPE(geo_grid), INTENT(IN) :: this
 TYPE(grib_io), INTENT(OUT) :: grib
 INTEGER, INTENT(OUT) :: ier
 
-INTEGER :: x1, x2, xs, y1, y2, ys
+INTEGER :: proj, x1, x2, xs, y1, y2, ys
 REAL :: s2_4, s2_5, s2_7, s2_8, s2_9, s2_10, s2_13, s2_14
 REAL(kind=fp_gg), POINTER :: field(:,:)
 
-CALL getval(this, drt=grib%isec2(1))
+CALL getval(this, proj=proj)
+SELECT CASE(proj)
+CASE(gg_proj_geo)
+  grib%isec2(1) = 0
+CASE(gg_proj_georot)
+  grib%isec2(1) = 10
+!CASE(gg_proj_utm)
+!  grib%isec2(1) = ??
+CASE default
+  CALL raise_error('invalid projection code '//to_char(proj) &
+   //' in geo_grid object', 1, ier)
+  RETURN
+END SELECT
+
 SELECT CASE(grib%isec2(1))
 CASE(0, 10, 20, 30) ! Lat/lon
   CALL getval(this, nx=grib%isec2(2), ny=grib%isec2(3), x1=s2_5, &
@@ -169,7 +199,7 @@ SELECT CASE(grib%isec2(1))
 CASE(10, 14, 30, 34) ! Rotated lat/lon or Gaussian
   CALL getval(this, xrot=s2_14, yrot=s2_13, rot=grib%zsec2(1))
   grib%isec2(14) = s2_14*1000.
-  grib%isec2(13) = s2_13*1000.
+  grib%isec2(13) = asind(-cosd(s2_13))*1000.
 END SELECT
 
 !!$IF (grib%isec2(1) == 20 .OR. grib%isec2(1) == 24 .OR. &
