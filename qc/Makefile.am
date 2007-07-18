@@ -10,8 +10,8 @@ tmpvar = $(libsim_qc_la_SOURCES:.f90=.mod)
 nodist_include_HEADERS = $(tmpvar:.F90=.mod)
 
 
-modqc.$(OBJEXT): modqc.$(OBJEXT) 
-modqc.lo: modqc.$(OBJEXT) 
+#modqc.$(OBJEXT): modqc.$(OBJEXT) 
+#modqc.lo: modqc.$(OBJEXT) 
 
 
 

@@ -215,6 +215,7 @@ INTEGER(kind=int_b)::attrdatib
 !INTEGER,ALLOCATABLE :: anatmp(:), vartmp(:), mapdatao(:)
 !LOGICAL :: found, non_valid, varbt_req(SIZE(vartable))
 
+TYPE(vol7d) :: vol7dtmp
 
 type(record),ALLOCATABLE :: buffer(:)
 
@@ -402,42 +403,43 @@ else
    ndativarattrb=0
 end if
 
-call vol7d_alloc (this%vol7d, &
+call vol7d_alloc (vol7dtmp, &
 nana=nana, ntime=ntime, ntimerange=ntimerange, &
 nlevel=nlevel, nnetwork=nnetwork, ndativarr=nvar, ndatiattrb=ndatiattrb,ndativarattrb=ndativarattrb )
 
-this%vol7d%ana=pack_distinct(buffer%ana, back=.TRUE.)
-this%vol7d%time=pack_distinct(buffer%time, back=.TRUE.)
-this%vol7d%timerange=pack_distinct(buffer%timerange, back=.TRUE.)
-this%vol7d%level=pack_distinct(buffer%level, back=.TRUE.)
-this%vol7d%network=pack_distinct(buffer%network, back=.TRUE.)
+vol7dtmp%ana=pack_distinct(buffer%ana, back=.TRUE.)
+vol7dtmp%time=pack_distinct(buffer%time, back=.TRUE.)
+vol7dtmp%timerange=pack_distinct(buffer%timerange, back=.TRUE.)
+vol7dtmp%level=pack_distinct(buffer%level, back=.TRUE.)
+vol7dtmp%network=pack_distinct(buffer%network, back=.TRUE.)
 
 ! qui sarebbe meglio usare la pack
 do ii=1,ndativarr
-   call init (this%vol7d%dativar%r(ii), btable=var(ii))
+   call init (vol7dtmp%dativar%r(ii), btable=var(ii))
 end do
-this%vol7d%dativarattr%b=this%vol7d%dativar%r
+vol7dtmp%dativarattr%b=vol7dtmp%dativar%r
 
 do ii=1,ndatiattrb
-   call init (this%vol7d%datiattr%b(ii), btable=attr(ii))
+   call init (vol7dtmp%datiattr%b(ii), btable=attr(ii))
 end do
 
-call vol7d_alloc_vol (this%vol7d)
 
-this%vol7d%voldatir=rmiss
+call vol7d_alloc_vol (vol7dtmp)
+
+vol7dtmp%voldatir=rmiss
 
 do i =1, N
 
-   indana = firsttrue(buffer(i)%ana == this%vol7d%ana)
-   indtime = firsttrue(buffer(i)%time == this%vol7d%time)
-   indtimerange = firsttrue(buffer(i)%timerange == this%vol7d%timerange)
-   indlevel = firsttrue(buffer(i)%level == this%vol7d%level)
-   indnetwork = firsttrue(buffer(i)%network == this%vol7d%network)
-   inddativar = firsttrue(buffer(i)%dativar == this%vol7d%dativar%r)
+   indana = firsttrue(buffer(i)%ana == vol7dtmp%ana)
+   indtime = firsttrue(buffer(i)%time == vol7dtmp%time)
+   indtimerange = firsttrue(buffer(i)%timerange == vol7dtmp%timerange)
+   indlevel = firsttrue(buffer(i)%level == vol7dtmp%level)
+   indnetwork = firsttrue(buffer(i)%network == vol7dtmp%network)
+   inddativar = firsttrue(buffer(i)%dativar == vol7dtmp%dativar%r)
 
    !print *, indana,indtime,indlevel,indtimerange,inddativar,indnetwork
 
-   this%vol7d%voldatir( &
+   vol7dtmp%voldatir( &
    indana,indtime,indlevel,indtimerange,inddativar,indnetwork &
    ) = buffer(i)%datir
 
@@ -445,8 +447,8 @@ do i =1, N
 
       call init (var_tmp, btable=attr(ii))
 
-      inddatiattr = firsttrue(var_tmp == this%vol7d%datiattr%b)
-      this%vol7d%voldatiattrb(indana,indtime,indlevel,indtimerange,&
+      inddatiattr = firsttrue(var_tmp == vol7dtmp%datiattr%b)
+      vol7dtmp%voldatiattrb(indana,indtime,indlevel,indtimerange,&
            inddativar,indnetwork,inddatiattr)=buffer(i)%datiattrb(ii)
 
    end do
@@ -456,6 +458,15 @@ do i =1, N
 !  voldatiattr*(nana,ntime,nlevel,ntimerange,ndativarattr*,network,ndatiattr*) )
 
 end do
+
+! Se l'oggetto ha gia` un volume allocato lo fondo con quello estratto
+IF (ASSOCIATED(this%vol7d%ana) .AND. ASSOCIATED(this%vol7d%time) .AND. &
+ ASSOCIATED(this%vol7d%voldatir)) THEN
+  CALL vol7d_merge(this%vol7d, vol7dtmp, sort=.TRUE.)
+ELSE ! altrimenti lo assegno
+  this%vol7d = vol7dtmp
+ENDIF
+
 
 
 END SUBROUTINE vol7d_dballe_importvvns
