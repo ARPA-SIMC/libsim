@@ -15,3 +15,6 @@ geo_grid_grib.lo: grib_io_class.$(OBJEXT)
 grib_io_class.$(OBJEXT): matchgrib_class.$(OBJEXT)
 grib_io_class.lo: matchgrib_class.$(OBJEXT)
 
+mostlyclean-compile:
+	-rm -f *.$(OBJEXT) *.mod
+
