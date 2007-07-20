@@ -1024,9 +1024,9 @@ END SUBROUTINE geo_coordvect_to_geo
 ! Determina se un punto sta dentro o fuori il poligono, rif.:
 ! http://www.faqs.org/faqs/graphics/algorithms-faq/
 ! http://www.ecse.rpi.edu/Homepages/wrf/Research/Short_Notes/pnpoly.html
-FUNCTION geo_coordvect_inside(this, point) RESULT(inside)
-TYPE(geo_coordvect), INTENT(IN) :: this
-TYPE(geo_coord), INTENT(IN) :: point
+FUNCTION geo_coord_inside(this, poly) RESULT(inside)
+TYPE(geo_coord), INTENT(IN) :: this
+TYPE(geo_coordvect), INTENT(IN) :: poly
 LOGICAL :: inside
 
 INTEGER :: i, j
@@ -1034,31 +1034,31 @@ INTEGER :: i, j
 ! presuppongo che il poligono sia chiuso, altrimenti:
 ! j = this%vsize; DO i = 1, this%vsize
 inside = .FALSE. 
-IF (this%desc%geoce .AND. point%desc%geoce) THEN
+IF (this%desc%geoce .AND. poly%desc%geoce) THEN
   j = 1
-  DO i = 2, this%vsize
-    IF ((this%ll(i,2) <= point%lat .AND. &
-     point%lat < this%ll(j,2)) .OR. &
-     (this%ll(j,2) <= point%lat .AND. &
-     point%lat < this%ll(i,2))) THEN
-      IF (point%lon < (this%ll(j,1) - this%ll(i,1)) * &
-       (point%lat - this%ll(i,2)) / &
-       (this%ll(j,2) - this%ll(i,2)) + this%ll(i,1)) THEN
+  DO i = 2, poly%vsize
+    IF ((poly%ll(i,2) <= this%lat .AND. &
+     this%lat < poly%ll(j,2)) .OR. &
+     (poly%ll(j,2) <= this%lat .AND. &
+     this%lat < poly%ll(i,2))) THEN
+      IF (this%lon < (poly%ll(j,1) - poly%ll(i,1)) * &
+       (this%lat - poly%ll(i,2)) / &
+       (poly%ll(j,2) - poly%ll(i,2)) + poly%ll(i,1)) THEN
         inside = .NOT. inside
       ENDIF
     ENDIF
     j = i
   ENDDO
-ELSE IF (this%desc%utmce .AND. point%desc%utmce) THEN
+ELSE IF (this%desc%utmce .AND. poly%desc%utmce) THEN
   j = 1
-  DO i = 2, this%vsize
-    IF ((this%utm(i,2) <= point%utmn .AND. &
-     point%utmn < this%utm(j,2)) .OR. &
-     (this%utm(j,2) <= point%utmn .AND. &
-     point%utmn < this%utm(i,2))) THEN
-      IF (point%utme < (this%utm(j,1) - this%utm(i,1)) * &
-       (point%utmn - this%utm(i,2)) / &
-       (this%utm(j,2) - this%utm(i,2)) + this%utm(i,1)) THEN
+  DO i = 2, poly%vsize
+    IF ((poly%utm(i,2) <= this%utmn .AND. &
+     this%utmn < poly%utm(j,2)) .OR. &
+     (poly%utm(j,2) <= this%utmn .AND. &
+     this%utmn < poly%utm(i,2))) THEN
+      IF (this%utme < (poly%utm(j,1) - poly%utm(i,1)) * &
+       (this%utmn - poly%utm(i,2)) / &
+       (poly%utm(j,2) - poly%utm(i,2)) + poly%utm(i,1)) THEN
         inside = .NOT. inside
       ENDIF
     ENDIF
@@ -1066,7 +1066,7 @@ ELSE IF (this%desc%utmce .AND. point%desc%utmce) THEN
   ENDDO
 ENDIF
 
-END FUNCTION geo_coordvect_inside
+END FUNCTION geo_coord_inside
 
 
 ! =================

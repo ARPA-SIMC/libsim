@@ -65,7 +65,7 @@ in_macroa = 0
 ! Determino l'appartenenza delle stazioni alle macroaree
 DO i = 1, SIZE(vol_cumd%ana)
   DO j = 1, SIZE(macroa)
-    IF (geo_coordvect_inside(macroa(j), vol_cumd%ana(i)%coord)) THEN
+    IF (geo_coord_inside(vol_cumd%ana(i)%coord, macroa(j))) THEN
       in_macroa(i) = j
       CYCLE
     ENDIF
