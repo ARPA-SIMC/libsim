@@ -50,19 +50,21 @@ IMPLICIT NONE
 !
 !omend
 
-LOGICAL :: eh_fatal = .TRUE., eh_to_stderr = .TRUE., eh_verbose = .TRUE.
-INTEGER :: eh_unit = stderr_unit
+INTEGER, PARAMETER :: eh_verbose_err=1, eh_verbose_warn=2, eh_verbose_info=3
+LOGICAL :: eh_fatal = .TRUE., eh_to_stderr = .TRUE.
+INTEGER :: eh_unit = stderr_unit, eh_verbose = eh_verbose_info
 
 PRIVATE
-PUBLIC raise_error, raise_warning, print_info, errhandling_setval
+PUBLIC eh_verbose_err, eh_verbose_warn, eh_verbose_info, &
+ raise_error, raise_warning, print_info, eh_setval, eh_getval
 
-INTERFACE setval
-  MODULE PROCEDURE errhandling_setval
-END INTERFACE
-
-INTERFACE getval
-  MODULE PROCEDURE errhandling_getval
-END INTERFACE
+!!$INTERFACE setval
+!!$  MODULE PROCEDURE errhandling_setval
+!!$END INTERFACE
+!!$
+!!$INTERFACE getval
+!!$  MODULE PROCEDURE errhandling_getval
+!!$END INTERFACE
 
 CONTAINS
 
@@ -71,7 +73,7 @@ CHARACTER (len=*), INTENT(in) :: msg
 INTEGER, OPTIONAL, INTENT(in) :: ierval
 INTEGER, OPTIONAL, INTENT(out) :: ier
 
-CALL output_message('Error', msg, ierval)
+CALL output_message('Error', msg, eh_verbose_err, ierval)
 IF (eh_fatal) THEN
   IF (PRESENT(ierval)) CALL EXIT(ABS(ierval))
   STOP 1
@@ -86,23 +88,32 @@ CHARACTER (len=*), INTENT(in) :: msg
 INTEGER, OPTIONAL, INTENT(in) :: ierval
 INTEGER, OPTIONAL, INTENT(out) :: ier
 
-CALL output_message('Warning', msg, ierval)
+CALL output_message('Warning', msg, eh_verbose_warn, ierval)
 IF (PRESENT(ier) .AND. PRESENT(ierval)) ier = ierval
 
 END SUBROUTINE raise_warning
 
 
-SUBROUTINE print_info(msg)
+SUBROUTINE print_info(msg, verblev)
 CHARACTER (len=*), INTENT(in) :: msg
+INTEGER, OPTIONAL, INTENT(in) :: verblev
 
-IF (eh_verbose) CALL output_message('Info', msg)
+INTEGER :: lverblev
+
+IF (PRESENT(verblev)) THEN
+  lverblev = verblev
+ELSE
+  lverblev = eh_verbose_info
+ENDIF
+
+IF (eh_verbose) CALL output_message('Info', msg, lverblev)
 
 END SUBROUTINE print_info
 
 
-SUBROUTINE errhandling_setval(fatal, verbose, to_stderr, to_stdout, to_unit)
-LOGICAL, OPTIONAL, INTENT(in) :: fatal, verbose, to_stderr, to_stdout
-INTEGER, OPTIONAL, INTENT(in) :: to_unit
+SUBROUTINE eh_setval(fatal, verbose, to_stderr, to_stdout, to_unit)
+LOGICAL, OPTIONAL, INTENT(in) :: fatal, to_stderr, to_stdout
+INTEGER, OPTIONAL, INTENT(in) :: verbose, to_unit
 
 IF (PRESENT(fatal)) eh_fatal = fatal
 IF (PRESENT(verbose)) eh_verbose = verbose
@@ -122,26 +133,29 @@ IF (PRESENT(to_stdout)) THEN
 ENDIF
 IF (PRESENT(to_unit)) eh_unit = to_unit
 
-END SUBROUTINE errhandling_setval
+END SUBROUTINE eh_setval
 
 
-SUBROUTINE errhandling_getval(fatal, verbose, to_unit)
-LOGICAL, OPTIONAL, INTENT(out) :: fatal, verbose
-INTEGER, OPTIONAL, INTENT(out) :: to_unit
+SUBROUTINE eh_getval(fatal, verbose, to_unit)
+LOGICAL, OPTIONAL, INTENT(out) :: fatal
+INTEGER, OPTIONAL, INTENT(out) :: verbose, to_unit
 
 IF (PRESENT(fatal)) fatal = eh_fatal
 IF (PRESENT(verbose)) verbose = eh_verbose
 IF (PRESENT(to_unit)) to_unit = eh_unit
 
-END SUBROUTINE errhandling_getval
+END SUBROUTINE eh_getval
 
 
-SUBROUTINE output_message(head, msg, ierval)
+SUBROUTINE output_message(head, msg, verblev, ierval)
 CHARACTER (len=*), INTENT(in) :: head, msg
+INTEGER, INTENT(in) :: verblev
 INTEGER, OPTIONAL, INTENT(in) :: ierval
 
-WRITE(eh_unit, '(3A)') head, ': ', TRIM(msg)
-IF (PRESENT(ierval)) WRITE(eh_unit, '(2A,I6)') head,' code: ',ierval
+IF (eh_verbose >= verblev) THEN
+  WRITE(eh_unit, '(3A)') head, ': ', TRIM(msg)
+  IF (PRESENT(ierval)) WRITE(eh_unit, '(2A,I6)') head,' code: ',ierval
+ENDIF
 
 END SUBROUTINE output_message
 

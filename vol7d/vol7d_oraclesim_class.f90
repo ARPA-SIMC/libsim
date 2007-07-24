@@ -151,19 +151,19 @@ TYPE(vol7d_network),INTENT(in),OPTIONAL :: set_network
 TYPE(vol7d) :: v7dtmp, v7dtmp2
 TYPE(datetime) :: odatetime
 INTEGER :: i, j, k, nvar, nobs, ntime, nana, nvout, nvin, nvbt, &
- datai(3), orai(2), dataf(3), oraf(2)
+ datai(3), orai(2), dataf(3), oraf(2), verbose
 CHARACTER(len=8) :: cnetwork
 CHARACTER(len=SIZE(var)*16) :: cvar
 CHARACTER(len=12),ALLOCATABLE :: tmtmp(:)
 INTEGER,ALLOCATABLE :: anatmp(:), vartmp(:), mapdatao(:)
-LOGICAL :: verbose, found, non_valid, varbt_req(SIZE(vartable))
+LOGICAL :: found, non_valid, varbt_req(SIZE(vartable))
 
 CALL getval(timei, year=datai(3), month=datai(2), day=datai(1), &
  hour=orai(1), minute=orai(2))
 CALL getval(timef, year=dataf(3), month=dataf(2), day=dataf(1), &
  hour=oraf(1), minute=oraf(2))
-CALL getval(verbose=verbose)
-IF (verbose) THEN ! <0 prolisso, >0 sintetico
+CALL eh_getval(verbose=verbose)
+IF (verbose >= eh_verbose_info) THEN ! <0 prolisso, >0 sintetico
   CALL n_set_select_mode(-1)
 ELSE
   CALL n_set_select_mode(1)
@@ -240,7 +240,8 @@ DO WHILE(.TRUE.)
   nobs = n_getgsta(this%ounit, cnetwork, cvar, datai, orai, &
    dataf, oraf, nvout, &
    nmax, cdatao, stazo, varo, valore1, valore2, valore3, valid)
-  IF (verbose) PRINT* ! Termina la riga per estetica, manca un \n
+!  IF (verbose) 
+  PRINT* ! Termina la riga per estetica, manca un \n
   IF (nobs < nmax .OR. nmax >= nmaxmax) EXIT ! tutto estratto o errore
   CALL print_info('Troppe osservazioni, rialloco ' &
    //TRIM(to_char(MIN(nmax*2, nmaxmax)))//' elementi')
