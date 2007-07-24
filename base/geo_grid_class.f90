@@ -3,6 +3,7 @@ USE kinds
 USE missing_values
 USE char_utilities
 USE err_handling
+USE geo_coord_class
 
 IMPLICIT NONE
 
@@ -14,11 +15,13 @@ INTEGER, PARAMETER :: gg_proj_gen=-1, gg_proj_geo=0, gg_proj_utm=1, &
 TYPE geo_grid
   PRIVATE
   INTEGER :: proj, nx, ny
+  INTEGER :: fuso, elliss
   REAL :: x1, x2, y1, y2, dx, dy, &
    xrot, yrot, rot
   INTEGER :: nlev, nvar, ntim, curlev, curvar, curtim
   REAL, POINTER :: vcp(:)
   REAL(kind=fp_gg),POINTER :: field2d(:,:), field5d(:,:,:,:,:)
+  REAL,POINTER :: coord(:,:,:)
 END TYPE geo_grid
 
 INTERFACE init
@@ -49,25 +52,31 @@ INTERFACE setval
   MODULE PROCEDURE gg_setval
 END INTERFACE
 
+PRIVATE gg_adjust_coord, rtlld
+
 CONTAINS
 
 SUBROUTINE gg_init(this)
 TYPE(geo_grid) :: this
 
-this%proj = -1
+this%proj = gg_proj_gen
+this%fuso = imiss
+this%elliss = imiss
 this%nx = 0
 this%ny = 0
 this%x1 = rmiss
 this%x2 = rmiss
 this%y1 = rmiss
 this%y2 = rmiss
+this%dx = 1.0
+this%dy = 1.0
 this%nlev = 1
 this%nvar = 1
 this%ntim = 1
 this%curlev = 1
 this%curvar = 1
 this%curtim = 1
-NULLIFY(this%vcp, this%field2d, this%field5d)
+NULLIFY(this%vcp, this%field2d, this%field5d, this%coord)
 
 END SUBROUTINE gg_init
 
@@ -116,20 +125,7 @@ ELSE
      to_char(this%nx*this%ny*this%nlev*this%nvar*this%ntim)//' words')
     RETURN
   ENDIF
-  IF (this%dx == 0. .AND. this%nx > 1) THEN
-    this%dx = (this%x2 - this%x1)/(this%nx - 1)
-  ELSE IF (this%x2 == rmiss .AND. this%x1 /= rmiss) THEN
-    this%x2 = this%x1 + (this%nx - 1)*this%dx
-  ELSE IF (this%x1 == rmiss .AND. this%x2 /= rmiss) THEN
-    this%x1 = this%x2 - (this%nx - 1)*this%dx
-  ENDIF
-  IF (this%dy == 0. .AND. this%ny > 1) THEN
-    this%dy = (this%y2 - this%y1)/(this%ny - 1)
-  ELSE IF (this%y2 == rmiss .AND. this%y1 /= rmiss) THEN
-    this%y2 = this%y1 + (this%ny - 1)*this%dy
-  ELSE IF (this%y1 == rmiss .AND. this%y2 /= rmiss) THEN
-    this%y1 = this%y2 - (this%ny - 1)*this%dy
-  ENDIF
+  CALL gg_adjust_coord(this)
 ENDIF
 CALL set_2d_slice(this) ! Assign field2d
 
@@ -142,14 +138,15 @@ TYPE(geo_grid),INTENT(INOUT) :: this
 IF (ASSOCIATED(this%field5d)) DEALLOCATE(this%field5d)
 NULLIFY(this%field2d)
 IF (ASSOCIATED(this%vcp)) DEALLOCATE(this%vcp)
+IF (ASSOCIATED(this%coord)) DEALLOCATE(this%coord)
 
 END SUBROUTINE gg_dealloc
 
 
-SUBROUTINE gg_setval(this, nx, ny, nlev, nvar, ntim, proj, x1, x2, &
+SUBROUTINE gg_setval(this, nx, ny, nlev, nvar, ntim, proj, fuso, elliss, x1, x2, &
  y1, y2, dx, dy, xrot, yrot, rot)
 TYPE (geo_grid) :: this
-INTEGER, INTENT(IN), OPTIONAL :: nx, ny, nlev, nvar, ntim, proj
+INTEGER, INTENT(IN), OPTIONAL :: nx, ny, nlev, nvar, ntim, proj, fuso, elliss
 REAL, INTENT(IN), OPTIONAL :: x1, x2, &
  y1, y2, dx, dy, xrot, yrot, rot
 
@@ -170,6 +167,8 @@ ELSE ! In deallocated state everything can be changed
   IF (PRESENT(nx)) this%nx = MAX(nx, 0)
   IF (PRESENT(ny)) this%ny = MAX(ny, 0)
   IF (PRESENT(proj)) this%proj = proj
+  IF (PRESENT(fuso)) this%fuso = fuso
+  IF (PRESENT(elliss)) this%elliss = elliss
   IF (PRESENT(x1)) this%x1 = x1
   IF (PRESENT(x2)) this%x2 = x2
   IF (PRESENT(y1)) this%y1 = y1
@@ -185,12 +184,14 @@ END SUBROUTINE gg_setval
 
 
 SUBROUTINE gg_getval(this, nx, ny, nlev, nvar, ntim, proj, x1, x2, &
- y1, y2, dx, dy, xrot, yrot, rot, field2d, field5d)
+ y1, y2, dx, dy, xrot, yrot, rot, field2d, field5d, coord)
 TYPE (geo_grid) :: this
 INTEGER, INTENT(OUT), OPTIONAL :: nx, ny, nlev, nvar, ntim, proj
 REAL, INTENT(OUT), OPTIONAL :: x1, x2, &
  y1, y2, dx, dy, xrot, yrot, rot
 REAL(kind=fp_gg), POINTER, OPTIONAL :: field2d(:,:), field5d(:,:,:,:,:)
+REAL, POINTER, OPTIONAL :: coord(:,:,:)
+
 
 IF (PRESENT(nlev)) nlev = this%nlev
 IF (PRESENT(nvar)) nvar = this%nvar
@@ -210,6 +211,7 @@ IF (PRESENT(rot)) rot = this%rot
 
 IF (PRESENT(field2d)) field2d => this%field2d
 IF (PRESENT(field5d)) field5d => this%field5d
+IF (PRESENT(coord)) coord => this%coord
 
 END SUBROUTINE gg_getval
 
@@ -225,6 +227,153 @@ IF (ASSOCIATED(this%field5d)) &
  this%field2d => this%field5d(:,:,this%curlev,this%curvar,this%curtim)
 
 END SUBROUTINE gg_set_2d_slice
+
+
+SUBROUTINE gg_adjust_coord(this)
+TYPE (geo_grid) :: this
+
+IF (this%proj == gg_proj_gen) THEN
+  this%x1 = 1.0
+  this%x2 = REAL(this%nx)
+  this%dx = 1.0
+  this%y1 = 1.0
+  this%y2 = REAL(this%ny)
+  this%dy = 1.0
+ELSE
+  IF (this%x1 == rmiss .AND. this%x2 == rmiss) THEN
+    this%x1 = 1.0
+    this%x2 = this%x1 + (this%nx - 1)*this%dx
+  ELSE IF (this%x1 /= rmiss .AND. this%x2 /= rmiss .AND. this%nx > 1) THEN
+    this%dx = (this%x2 - this%x1)/(this%nx - 1)
+  ELSE IF (this%x2 == rmiss .AND. this%x1 /= rmiss) THEN
+    this%x2 = this%x1 + (this%nx - 1)*this%dx
+  ELSE IF (this%x1 == rmiss .AND. this%x2 /= rmiss) THEN
+    this%x1 = this%x2 - (this%nx - 1)*this%dx
+  ENDIF
+  IF (this%y1 == rmiss .AND. this%y2 == rmiss) THEN
+    this%y1 = 1.0
+    this%y2 = this%y1 + (this%ny - 1)*this%dy
+  ELSE IF (this%y1 /= rmiss .AND. this%y2 /= rmiss .AND. this%ny > 1) THEN
+    this%dy = (this%y2 - this%y1)/(this%ny - 1)
+  ELSE IF (this%y2 == rmiss .AND. this%y1 /= rmiss) THEN
+    this%y2 = this%y1 + (this%ny - 1)*this%dy
+  ELSE IF (this%y1 == rmiss .AND. this%y2 /= rmiss) THEN
+    this%y1 = this%y2 - (this%ny - 1)*this%dy
+  ENDIF
+ENDIF
+
+END SUBROUTINE gg_adjust_coord
+
+
+SUBROUTINE gg_compute_coord(this)
+TYPE (geo_grid) :: this
+
+INTEGER :: i, j
+REAL :: cosy, siny
+
+IF (.NOT. ASSOCIATED(this%field5d)) CALL gg_adjust_coord(this)
+IF (ASSOCIATED(this%coord)) DEALLOCATE(this%coord)
+ALLOCATE(this%coord(this%nx,this%ny,2))
+IF (this%proj == gg_proj_gen) THEN
+  DO i = 1, this%nx
+    this%coord(i,:,1) = REAL(i)
+  ENDDO
+  DO j = 1, this%ny
+    this%coord(:,j,2) = REAL(j)
+  ENDDO
+ELSE
+  DO i = 1, this%nx
+    this%coord(i,:,1) = this%x1+(i-1)*this%dx ! make sure at this%nx = this%x2 ?
+  ENDDO
+  DO j = 1, this%ny
+    this%coord(:,j,2) = this%y1+(j-1)*this%dy
+  ENDDO
+  IF (this%proj == gg_proj_georot) THEN
+    cosy = COSD(this%yrot)
+    siny = SIND(this%yrot)
+    DO j = 1, this%ny
+      DO i = 1, this%nx
+        CALL rtlld(this%coord(i, j, 1), this%coord(i, j, 2), this%xrot, cosy, siny)
+      ENDDO
+    ENDDO
+  ENDIF
+ENDIF
+
+END SUBROUTINE gg_compute_coord
+
+
+SUBROUTINE rtlld(x, y, x0, cy0, sy0)
+REAL, INTENT(inout) :: x, y
+REAL, INTENT(in) :: x0, cy0, sy0
+
+REAL :: sx, sy, cx, cy
+
+sx = SIND(x)
+cx = COSD(x)
+sy = SIND(y)
+cy = COSD(y)
+
+y = ASIND(sy0*cy*cx+cy0*sy)
+x = x0 + ASIND(sx*cy/COSD(y))
+
+END SUBROUTINE rtlld
+
+
+SUBROUTINE gg_inside(this, poly, spoly, mpoly)
+TYPE(geo_grid) :: this
+TYPE(geo_coordvect), INTENT(IN) :: poly(:)
+INTEGER, POINTER, OPTIONAL :: spoly(:,:)
+LOGICAL, POINTER, OPTIONAL :: mpoly(:,:,:)
+
+INTEGER :: i, j, p
+TYPE(geo_coord) :: point
+
+IF (PRESENT(spoly)) NULLIFY(spoly)
+IF (PRESENT(mpoly)) NULLIFY(mpoly)
+CALL gg_compute_coord(this)
+IF (.NOT. ASSOCIATED(this%coord)) RETURN
+IF (PRESENT(spoly)) THEN
+  ALLOCATE(spoly(this%nx, this%ny))
+  spoly(:,:) = 0
+  DO j = 1, this%ny
+    DO i = 1, this%nx
+      IF (this%proj == gg_proj_utm) THEN
+        CALL init(point, utme=REAL(this%coord(i,j,1),kind=fp_utm), &
+         utmn=REAL(this%coord(i,j,2),kind=fp_utm), &
+         fuso=this%fuso, elliss=this%elliss)
+      ELSE
+        CALL init(point, lon=REAL(this%coord(i,j,1),kind=fp_geo), &
+         lat=REAL(this%coord(i,j,2),kind=fp_geo))
+      ENDIF
+      DO p = 1, SIZE(poly)
+        IF (geo_coord_inside(point, poly(p))) THEN
+          spoly(i,j) = p
+          CYCLE
+        ENDIF
+      ENDDO
+    ENDDO
+  ENDDO
+ELSE IF (PRESENT(mpoly)) THEN
+  ALLOCATE(mpoly(this%nx, this%ny, SIZE(poly)))
+  mpoly(:,:,:) = .FALSE.
+  DO j = 1, this%ny
+    DO i = 1, this%nx
+      IF (this%proj == gg_proj_utm) THEN
+        CALL init(point, utme=REAL(this%coord(i,j,1),kind=fp_utm), &
+         utmn=REAL(this%coord(i,j,2),kind=fp_utm), &
+         fuso=this%fuso, elliss=this%elliss)
+      ELSE
+        CALL init(point, lon=REAL(this%coord(i,j,1),kind=fp_geo), &
+         lat=REAL(this%coord(i,j,2),kind=fp_geo))
+      ENDIF
+      DO p = 1, SIZE(poly)
+        mpoly(i,j,p) = geo_coord_inside(point, poly(p))
+      ENDDO
+    ENDDO
+  ENDDO
+ENDIF
+
+END SUBROUTINE gg_inside
 
 
 ! Transformation methods acting only on one field at a time
