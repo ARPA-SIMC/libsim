@@ -762,26 +762,47 @@ ENDIF
 END SUBROUTINE geo_coordvect_import
 
 
-SUBROUTINE geo_coordvect_export(this, unitsim, shphandle, nshp)
+SUBROUTINE geo_coordvect_export(this, unitsim, shphandle, nshp, proj)
 TYPE(geo_coordvect), INTENT(INOUT) :: this
 INTEGER,OPTIONAL,INTENT(IN) :: unitsim
 INTEGER(kind=ptr_c),OPTIONAL,INTENT(IN) :: shphandle
 INTEGER,OPTIONAL,INTENT(IN) :: nshp
+INTEGER,INTENT(in),OPTIONAL :: proj
 
-INTEGER :: i, lnshp
+INTEGER :: i, lnshp, lproj
 CHARACTER(len=40) :: lname
 #ifdef HAVE_LIBSHP_FORTRAN
 TYPE(shpobject),POINTER :: shpobj
 #endif
+
+IF (PRESENT(proj)) THEN
+  IF ((proj == proj_geo .AND. this%desc%geoce) .OR. &
+   (proj == proj_utm .AND. this%desc%utmce)) THEN
+    lproj = proj
+  ELSE
+    CALL raise_error('in geo_coordvect_export, proiezione richiesta ' &
+     //TRIM(to_char(proj))//' non disponibile')
+    RETURN
+  ENDIF
+ELSE
+  IF (this%desc%geoce) THEN
+    lproj = proj_geo
+  ELSE IF (this%desc%utmce) THEN
+    lproj = proj_utm
+  ELSE
+    CALL raise_error('in geo_coordvect_export, oggetto non inizializzato')
+    RETURN
+  ENDIF
+ENDIF
 
 IF (PRESENT(unitsim)) THEN
   IF (this%vsize > 0) THEN
     ! Scrivo l'intestazione
     WRITE(unitsim,*)SIZE(this%ll,1),-1.,5000.,-0.1,1.1,'Area'
     ! Scrivo il poligono
-    IF (this%desc%geoce) THEN
+    IF (lproj == proj_geo) THEN
       WRITE(unitsim,*)(this%ll(i,1:2), i=1,this%vsize)
-    ELSE IF (this%desc%utmce) THEN
+    ELSE IF (lproj == proj_utm) THEN
       WRITE(unitsim,*)(this%utm(i,1:2), i=1,this%vsize)
     ENDIF
   ELSE
@@ -797,15 +818,15 @@ ELSE IF (PRESENT(shphandle)) THEN
   ENDIF
   NULLIFY(shpobj)
   ! Creo l'oggetto shape inizializzandolo con il mio oggetto
-  IF (this%desc%geoce) THEN
+  IF (lproj == proj_geo) THEN
     shpobj => shpcreatesimpleobject(this%vtype, this%vsize, &
      REAL(this%ll(1:this%vsize,1),kind=fp_d), &
      REAL(this%ll(1:this%vsize,2),kind=fp_d))
-    ELSE IF (this%desc%utmce) THEN
+  ELSE IF (lproj == proj_utm) THEN
     shpobj => shpcreatesimpleobject(this%vtype, this%vsize, &
      REAL(this%utm(1:this%vsize,1),kind=fp_d), &
      REAL(this%utm(1:this%vsize,2),kind=fp_d))
-    ENDIF
+  ENDIF
   IF (ASSOCIATED(shpobj)) THEN
     ! Lo scrivo nello shapefile
     i=shpwriteobject(shphandle, lnshp, shpobj)
@@ -884,9 +905,10 @@ ENDIF
 END SUBROUTINE geo_coordvect_importvect
 
 
-SUBROUTINE geo_coordvect_exportvect(this, shpfilesim, shpfile, append)
+SUBROUTINE geo_coordvect_exportvect(this, shpfilesim, shpfile, proj, append)
 TYPE(geo_coordvect) :: this(:)
 CHARACTER(len=*),INTENT(in),OPTIONAL :: shpfilesim, shpfile
+INTEGER,INTENT(in),OPTIONAL :: proj
 LOGICAL,INTENT(in),OPTIONAL :: append
 
 REAL(kind=fp_geo),ALLOCATABLE :: llon(:), llat(:)
@@ -912,7 +934,7 @@ IF (PRESENT(shpfilesim)) THEN
     OPEN(u, file=shpfilesim, status='unknown', ERR=30)
   ENDIF
   DO i = 1, SIZE(this)
-    CALL export(this(i), unitsim=u)
+    CALL export(this(i), unitsim=u, proj=proj)
   ENDDO
   CLOSE(u)
   RETURN
@@ -936,9 +958,9 @@ ELSE IF (PRESENT(shpfile)) THEN
   CALL shpgetinfo(shphandle, ns, shptype, minb, maxb) ! Ottengo le info sul file
   DO i = 1, SIZE(this)
     IF (i > ns .OR. lappend) THEN ! Append shape
-      CALL export(this(i), shphandle=shphandle)
+      CALL export(this(i), shphandle=shphandle, proj=proj)
     ELSE ! Overwrite shape
-      CALL export(this(i), shphandle=shphandle, nshp=i-1)
+      CALL export(this(i), shphandle=shphandle, nshp=i-1, proj=proj)
     ENDIF
   ENDDO
   CALL shpclose(shphandle)
@@ -951,12 +973,15 @@ END SUBROUTINE geo_coordvect_exportvect
 
 SUBROUTINE geo_coordvect_to_utm(this, fuso, elliss)
 TYPE(geo_coordvect), INTENT (INOUT) :: this
-INTEGER, INTENT(IN), OPTIONAL  :: fuso, elliss
+INTEGER, INTENT(IN)  :: fuso, elliss
 
 INTEGER :: i
 
 IF (.NOT.this%desc%geoce .OR. this%desc%utmce) RETURN ! Niente da fare
-CALL init(this%desc, fuso, elliss, utmce=.TRUE.)
+!CALL init(this%desc, fuso, elliss, utmce=.TRUE.)
+this%desc%fuso = fuso
+this%desc%elliss = elliss
+this%desc%utmce = .TRUE.
 ALLOCATE(this%utm(this%vsize,2))
 
 DO i = 1, this%vsize
@@ -973,7 +998,7 @@ TYPE(geo_coordvect), INTENT (INOUT) :: this
 INTEGER :: i
 
 IF (.NOT.this%desc%utmce .OR. this%desc%geoce) RETURN ! Niente da fare
-CALL init(this%desc, geoce=.TRUE.)
+this%desc%geoce=.TRUE.
 ALLOCATE(this%ll(this%vsize,2))
 
 DO i = 1, this%vsize
@@ -1064,6 +1089,8 @@ ELSE IF (this%desc%utmce .AND. poly%desc%utmce) THEN
     ENDIF
     j = i
   ENDDO
+ELSE
+  CALL raise_error('in geo_coord_inside, sistemi di coordinate incompatibili')
 ENDIF
 
 END FUNCTION geo_coord_inside
