@@ -203,7 +203,7 @@ ENDIF
 
 ! Dimensioni principali
 IF (PRESENT(nana)) THEN
-  IF (nana > 0) THEN
+  IF (nana >= 0) THEN
     IF (ASSOCIATED(this%ana)) DEALLOCATE(this%ana)
     ALLOCATE(this%ana(nana))
     IF (linit) THEN
@@ -214,7 +214,7 @@ IF (PRESENT(nana)) THEN
   ENDIF
 ENDIF
 IF (PRESENT(ntime)) THEN
-  IF (ntime > 0) THEN
+  IF (ntime >= 0) THEN
     IF (ASSOCIATED(this%time)) DEALLOCATE(this%time)
     ALLOCATE(this%time(ntime))
     IF (linit) THEN
@@ -225,7 +225,7 @@ IF (PRESENT(ntime)) THEN
   ENDIF
 ENDIF
 IF (PRESENT(nlevel)) THEN
-  IF (nlevel > 0) THEN
+  IF (nlevel >= 0) THEN
     IF (ASSOCIATED(this%level)) DEALLOCATE(this%level)
     ALLOCATE(this%level(nlevel))
     IF (linit) THEN
@@ -236,7 +236,7 @@ IF (PRESENT(nlevel)) THEN
   ENDIF
 ENDIF
 IF (PRESENT(ntimerange)) THEN
-  IF (ntimerange > 0) THEN
+  IF (ntimerange >= 0) THEN
     IF (ASSOCIATED(this%timerange)) DEALLOCATE(this%timerange)
     ALLOCATE(this%timerange(ntimerange))
     IF (linit) THEN
@@ -247,7 +247,7 @@ IF (PRESENT(ntimerange)) THEN
   ENDIF
 ENDIF
 IF (PRESENT(nnetwork)) THEN
-  IF (nnetwork > 0) THEN
+  IF (nnetwork >= 0) THEN
     IF (ASSOCIATED(this%network)) DEALLOCATE(this%network)
     ALLOCATE(this%network(nnetwork))
     IF (linit) THEN
@@ -443,12 +443,36 @@ SUBROUTINE vol7d_merge(this, that, sort)
 TYPE(vol7d),INTENT(INOUT) :: this, that
 LOGICAL,INTENT(IN),OPTIONAL :: sort
 
+! Accodo that a this e distruggo that
+CALL vol7d_append(this, that, sort)
+CALL delete(that)
+
+END SUBROUTINE vol7d_merge
+
+
+SUBROUTINE vol7d_copy(this, that, sort)
+TYPE(vol7d),INTENT(INOUT) :: this, that
+LOGICAL,INTENT(IN),OPTIONAL :: sort
+
+! Creo un volume vuoto e gli accodo this
+CALL init(that)
+CALL vol7d_alloc(that, nana=0, ntime=0, nlevel=0, ntimerange=0, nnetwork=0)
+CALL vol7d_alloc_vol(that)
+CALL vol7d_append(that, this, sort)
+
+END SUBROUTINE vol7d_copy
+
+
+SUBROUTINE vol7d_append(this, that, sort)
+TYPE(vol7d),INTENT(INOUT) :: this, that
+LOGICAL,INTENT(IN),OPTIONAL :: sort
+
 TYPE(vol7d) :: v7dtmp
 LOGICAL :: lsort
 INTEGER,POINTER :: remapt1(:), remapt2(:), remaptr1(:), remaptr2(:), &
  remapl1(:), remapl2(:), remapa1(:), remapa2(:), remapn1(:), remapn2(:)
 
-! Completo l'allocazione per avere un volume a norma
+! Completo l'allocazione per avere volumi a norma
 CALL vol7d_alloc_vol(this)
 CALL vol7d_alloc_vol(that)
 
@@ -498,12 +522,11 @@ IF (ASSOCIATED(remapa2)) DEALLOCATE(remapa2)
 IF (ASSOCIATED(remapn1)) DEALLOCATE(remapn1)
 IF (ASSOCIATED(remapn2)) DEALLOCATE(remapn2)
 
-! Distruggo i vecchi volumi e assegno il nuovo a this
-CALL delete(that)
+! Distruggo il vecchio volume e assegno il nuovo a this
 CALL delete(this)
 this = v7dtmp
 
-END SUBROUTINE vol7d_merge
+END SUBROUTINE vol7d_append
 
 
 ! Ripeto le routine del gruppo get_vol e merge_final per ogni tipo
