@@ -59,6 +59,10 @@ INTERFACE import
    vol7d_dballe_importvsnv, vol7d_dballe_importvvnv
 END INTERFACE
 
+INTERFACE export
+  MODULE PROCEDURE vol7d_dballe_export
+END INTERFACE
+
 !!$INTERFACE export
 !!$  MODULE PROCEDURE vol7d_dballe_export 
 !!$END INTERFACE
@@ -73,7 +77,7 @@ integer,INTENT(in),OPTIONAL :: debug
 integer :: ldebug
 character(len=50) :: quidsn,quiuser,quipassword
 logical,INTENT(in),OPTIONAL :: wipe,write
-logical :: quiwrite
+logical :: quiwrite,quiwipe
 
 
 IF (PRESENT(debug)) THEN
@@ -102,6 +106,13 @@ if (present(write))then
    quiwrite=write
 endif
 
+quiwipe=.false.
+if (present(wipe))then
+   quiwipe=wipe
+endif
+
+!print*,"write=",quiwrite,"wipe=",wipe,"dsn=",quidsn
+
 if(quiwrite)then
    call idba_presentati(this%idbhandle,quidsn,quiuser,quipassword)
    call idba_preparati (this%idbhandle,this%handle,"write","write","write")
@@ -112,10 +123,7 @@ else
    call idba_preparati (this%idbhandle,this%handle_staz,"read","read","read")
 end if
 
-if (present(wipe))then
-   if (wipe)call idba_preparati (this%idbhandle,this%handle,"read","read","read")
-end if
-
+if (quiwipe)call idba_scopa (this%handle,"")
 
 END SUBROUTINE vol7d_dballe_init
 
@@ -194,7 +202,7 @@ CHARACTER(len=7) ::starbtable
 
 LOGICAL ::  ldegnet, lattr
 integer :: year,month,day,hour,minute,sec
-integer :: rlevel, l1, l2
+integer :: rlevel, rl1, rl2
 integer :: rtimerange, p1, p2
 integer :: indana,indtime,indlevel,indtimerange,inddativar,indnetwork
 
@@ -299,7 +307,7 @@ do i=1,N
    call idba_dammelo (this%handle,btable)
 
    call idba_enqdate (this%handle,year,month,day,hour,minute,sec)
-   call idba_enqlevel(this%handle, rlevel, l1, l2)
+   call idba_enqlevel(this%handle, rlevel, rl1, rl2)
    call idba_enqtimerange(this%handle, rtimerange, p1, p2)
 
    !nbtable=btable_numerico(btable)
@@ -373,7 +381,7 @@ do i=1,N
    !buffer(i)%ana_id=ana_id
    call init(buffer(i)%ana,lat=lat,lon=lon)
    call init(buffer(i)%time, year=year, month=month, day=day, hour=hour, minute=minute)
-   call init(buffer(i)%level, rlevel,l1,l2)
+   call init(buffer(i)%level, rlevel,rl1,rl2)
    call init(buffer(i)%timerange, rtimerange, p1, p2)
    call init(buffer(i)%network, network)
    call init(buffer(i)%dativar, btable)
@@ -402,6 +410,8 @@ else
    ndatiattrb=0
    ndativarattrb=0
 end if
+
+CALL init(vol7dtmp)
 
 call vol7d_alloc (vol7dtmp, &
 nana=nana, ntime=ntime, ntimerange=ntimerange, &
@@ -460,8 +470,8 @@ do i =1, N
 end do
 
 ! Se l'oggetto ha gia` un volume allocato lo fondo con quello estratto
-IF (ASSOCIATED(this%vol7d%ana) .AND. ASSOCIATED(this%vol7d%time) .AND. &
- ASSOCIATED(this%vol7d%voldatir)) THEN
+!TODO manca test su associated dei vol*
+IF (ASSOCIATED(this%vol7d%ana) .AND. ASSOCIATED(this%vol7d%time)) THEN
   CALL vol7d_merge(this%vol7d, vol7dtmp, sort=.TRUE.)
 ELSE ! altrimenti lo assegno
   this%vol7d = vol7dtmp
@@ -472,190 +482,290 @@ ENDIF
 END SUBROUTINE vol7d_dballe_importvvns
 
 
-!!$SUBROUTINE vol7d_dballe_export(this, network, latmin,latmax,ana_id,ident,timei, timef,level,timerange,var,attr)
-!!$
-!!$TYPE(vol7d_dballe),INTENT(in) :: this
-!!$CHARACTER(len=*),INTENT(in),optional :: var(:)
-!!$INTEGER,INTENT(in),optional :: network
-!!$TYPE(datetime),INTENT(in),optional :: timei, timef
-!!$TYPE(vol7d_level),INTENT(in),optional :: level
-!!$TYPE(vol7d_timerange),INTENT(in),optional :: timerange
-!!$CHARACTER(len=*),INTENT(in),OPTIONAL :: attr(:)
-!!$logical, allocatable :: lvar(:), lnetwork(:),llevel(:),ltimerange(:),lattr(:)
-!!$integer,allocatable :: ana_id(:,:)
-!!$
-!!$!CHARACTER(len=6) :: btable
-!!$!CHARACTER(len=7) ::starbtable
-!!$
-!!$integer :: year,month,day,hour,minute,sec
-!!$integer :: nana,ntime,ntimerange,nlevel,nnetwork
-!!$
-!!$INTEGER :: i,ii,iii,iiii,iiiii,iiiiii,j
-!!$
-!!$REAL(kind=fp_geo) :: lat,lon 
-!!$!INTEGER(kind=int_b)::attrdatib
-!!$
-!!$
-!!$nstaz=size(this%vol7d%ana(:))
-!!$
-!!$CALL getval(timei, year=year, month=month, day=day, hour=hour, minute=minute)
-!!$!print *,"datemin",year,month,day,hour,minute,0
-!!$
-!!$CALL getval(timef, year=year, month=month, day=day, hour=hour, minute=minute)
-!!$!print *,"datemax",year,month,day,hour,minute,0
-!!$
-!!$
-!!$ndativar=size(this%vol7d%dativar%r(:))
-!!$allocate (lvar(ndativar))
-!!$
-!!$if (present(var))then
-!!$   do  i=1,size(var)
-!!$      where (var(i) == this%vol7d%dativar%r(:)%btable)
-!!$         lvar(:)=.true.
-!!$      end where
-!!$   end do
-!!$else
-!!$   lvar(:)=.true.
-!!$end if
-!!$
-!!$ndatiattr=size(this%vol7d%datiattr%b(:))
-!!$allocate (lattr(ndatiattr))
-!!$
-!!$if (present(attr))then
-!!$   do  i=1,size(attr)
-!!$      where (attr(i) == this%vol7d%datiattr%b(:)%btable)
-!!$         lattr(:)=.true.
-!!$      end where
-!!$   end do
-!!$else
-!!$   lattr(:)=.true.
-!!$end if
-!!$
-!!$
-!!$ntimerange=size(this%vol7d%timerange(:))
-!!$allocate (ltimerange(ntimerange))
-!!$
-!!$if (present(timerange))then
-!!$      where (timerange == this%vol7d%timerange(:))
-!!$         ltimerange(:)=.true.
-!!$      end where
-!!$else
-!!$   ltimerange(:)=.true.
-!!$end if
-!!$
-!!$nlevel=size(this%vol7d%level(:))
-!!$allocate (llevel(nlevel))
-!!$
-!!$if (present(level))then
-!!$      where (level == this%vol7d%level(:))
-!!$         llevel(:)=.true.
-!!$      end where
-!!$else
-!!$   llevel(:)=.true.
-!!$end if
-!!$
-!!$nnetwork=size(this%vol7d%network(:))
-!!$allocate (lnetwork(nnetwork))
-!!$allocate (ana_id(nstaz,nnetwork))
-!!$
-!!$if (present(network))then
-!!$      where (network == this%vol7d%network(:))
-!!$         lnetwork(:)=.true.
-!!$      end where
-!!$else
-!!$   lnetwork(:)=.true.
-!!$end if
-!!$
-!!$
-!!$call idba_unsetall (this%handle)
-!!$     
-!!$! vital statistics data
-!!$call idba_setcontextana (this%handle)
-!!$
-!!$do iii=1, nnetwork
-!!$   if (.not.lnetwork(iii))cycle
-!!$
-!!$   do i=1, nstaz
-!!$
-!!$      CALL getval(this%vol7d%ana(i)%coord, lat=lat,lon=lon)
-!!$      
-!!$      call idba_set (this%handle,"lat",lat)
-!!$      call idba_set (this%handle,"lon",lon)
-!!$      
-!!$      !TODO gestire ident
-!!$      call idba_set (this%handle,"mobile",0)
-!!$      
-!!$      do ii=1,size(this%vol7d%anavar%r(:))
-!!$         call idba_set (this%handle,this%vol7d%anavar%r(ii) , this%vol7d%volanar(i,ii,iii))
-!!$      end do
-!!$      do ii=1,size(this%vol7d%anavar%i(:))
-!!$         call idba_set (this%handle,this%vol7d%anavar%i(ii) , this%vol7d%volanai(i,ii,iii))
-!!$      end do
-!!$      do ii=1,size(this%vol7d%anavar%c(:))
-!!$         call idba_set (this%handle,this%vol7d%anavar%c(ii) , this%vol7d%volanac(i,ii,iii))
-!!$      end do
-!!$      
-!!$      call idba_prendilo ((this%handle))
-!!$      call idba_enqi (this%handle,"ana_id",ana_id(i,iii))
-!!$   end do
-!!$end do
-!!$
-!!$! data
-!!$
-!!$call idba_unsetall (this%handle)
-!!$
-!!$do i=1, nstaz
-!!$   !TODO test su coordinate
-!!$   do ii=1,ntime
-!!$      !TODO test su time
-!!$      !if (time < timei .or. time > timef)cycle
-!!$      do iii=1,nlevel
-!!$         if (.not.llevel(iii))cycle
-!!$         do iiii=1,ntimerange
-!!$            if (.not.ltimerange(iiii))cycle
-!!$            do iiiiii=1, nnetwork
-!!$               if (.not.lnetwork(iiiiii))cycle
-!!$               call idba_set (this%handle,"ana_id",ana_id(i,iiiiii))
-!!$
-!!$               call idba_set (this%handle,"rep_code",this%vol7d%network(iiiiii))
-!!$               call idba_setlevel(this%handle, this%level(iii)%level, this%level(iii)%l1, this%level(iii)%l2)
-!!$               call idba_settimerange(this%handle, this%timerange(iiii)%timerange, &
-!!$                    this%timerange(iiii)%p1, this%timerange(iiii)%p2)
-!!$
-!!$               CALL getval(this%time(ii), year=year, month=month, day=day, hour=hour, minute=minute)
-!!$               call idba_setdate (this%handle,year,month,day,hour,minute,0)
-!!$
-!!$               ! add or rewrite new data
-!!$               !voldati*(nana,ntime,nlevel,ntimerange,ndativar*,nnetwork)
-!!$
-!!$               do iiiii=1,size(this%vol7d%dativar%r(:))
-!!$                  call idba_set (this%handle,this%vol7d%dativar%r(iiiii) , &
-!!$                       this%vol7d%voldatir(i,ii,iii,iiii,iiiii,iiiiii)) 
-!!$               end do
-!!$
-!!$               do iiiii=1,size(this%vol7d%dativar%i(:))
-!!$                  call idba_set (this%handle,this%vol7d%dativar%i(iiiii) , &
-!!$                       this%vol7d%voldatii(i,ii,iii,iiii,iiiii,iiiiii)) 
-!!$               end do
-!!$
-!!$               do iiiii=1,size(this%vol7d%dativar%c(:))
-!!$                  call idba_set (this%handle,this%vol7d%dativar%c(iiiii) , &
-!!$                       this%vol7d%voldatic(i,ii,iii,iiii,iiiii,iiiiii)) 
-!!$               end do
-!!$
-!!$               call idba_prendilo (this%handle)
-!!$
-!!$               !TODO gestire attributi
-!!$               !call idba_seti(this%handle,"*B33007",iconf)
-!!$               !call idba_critica(this%handle)
-!!$
-!!$            end do
-!!$         end do
-!!$      end do
-!!$   end do
-!!$end do
-!!$
-!!$END SUBROUTINE vol7d_dballe_export
+SUBROUTINE vol7d_dballe_export(this, network, latmin,latmax,lonmin,lonmax,staz_id,ident,timei, timef,level,timerange,var,attr)
+
+! TODO: gestire staz_id la qual cosa vuol dire aggiungere un id nel type ana
+
+TYPE(vol7d_dballe),INTENT(in) :: this
+INTEGER,INTENT(in),optional :: network,staz_id
+CHARACTER(len=vol7d_ana_lenident),optional :: ident
+TYPE(datetime),INTENT(in),optional :: timei, timef
+REAL(kind=fp_geo),INTENT(in),optional :: latmin,latmax,lonmin,lonmax
+TYPE(vol7d_level),INTENT(in),optional :: level
+TYPE(vol7d_timerange),INTENT(in),optional :: timerange
+CHARACTER(len=*),INTENT(in),OPTIONAL :: var(:),attr(:)
+logical, allocatable :: lvarr(:), lnetwork(:),llevel(:),ltimerange(:),lattrb(:)
+integer,allocatable :: ana_id(:,:)
+logical :: write
+
+!CHARACTER(len=6) :: btable
+!CHARACTER(len=7) ::starbtable
+
+integer :: year,month,day,hour,minute,sec
+integer :: nstaz,ntime,ntimerange,nlevel,nnetwork,ndativarr,ndatiattrb
+
+INTEGER :: i,ii,iii,iiii,iiiii,iiiiii,j
+
+REAL(kind=fp_geo) :: lat,lon 
+!INTEGER(kind=int_b)::attrdatib
+
+
+nstaz=size(this%vol7d%ana(:))
+
+ndativarr=size(this%vol7d%dativar%r(:))
+allocate (lvarr(ndativarr))
+if (present(var))then
+   do  i=1,size(var)
+      where (var(i) == this%vol7d%dativar%r(:)%btable)
+         lvarr(:)=.true.
+      end where
+   end do
+else
+   lvar(:)=.true.
+end if
+!TODO : questo qui sopra è fatto solo per i reali !
+
+ndatiattrb=size(this%vol7d%datiattr%b(:))
+allocate (lattrb(ndatiattrb))
+if (present(attr))then
+   do  i=1,size(attr)
+      where (attr(i) == this%vol7d%datiattr%b(:)%btable)
+         lattrb(:)=.true.
+      end where
+   end do
+else
+   lattrb(:)=.true.
+end if
+!TODO : questo qui sopra è fatto solo per i byte !
+
+
+ntimerange=size(this%vol7d%timerange(:))
+allocate (ltimerange(ntimerange))
+
+if (present(timerange))then
+      where (timerange == this%vol7d%timerange(:))
+         ltimerange(:)=.true.
+      end where
+else
+   ltimerange(:)=.true.
+end if
+
+nlevel=size(this%vol7d%level(:))
+allocate (llevel(nlevel))
+
+if (present(level))then
+      where (level == this%vol7d%level(:))
+         llevel(:)=.true.
+      end where
+else
+   llevel(:)=.true.
+end if
+
+nnetwork=size(this%vol7d%network(:))
+ntime=size(this%vol7d%time(:))
+
+allocate (lnetwork(nnetwork))
+allocate (ana_id(nstaz,nnetwork))
+
+if (present(network))then
+      where (network == this%vol7d%network(:)%id)
+         lnetwork(:)=.true.
+      end where
+else
+   lnetwork(:)=.true.
+end if
+
+
+call idba_unsetall (this%handle)
+     
+! vital statistics data
+call idba_setcontextana (this%handle)
+
+do iii=1, nnetwork
+   if (.not.lnetwork(iii))cycle
+
+   do i=1, nstaz
+
+      ana_id(i,iii)=DBA_MVI
+
+      CALL getval(this%vol7d%ana(i)%coord, lat=lat,lon=lon)
+
+      if (present(latmin).and.present(latmax).and.present(lonmin).and.present(lonmax))then
+         if (c_e(latmin) .and. c_e(latmax) .and. c_e(lonmin) .and. c_e(lonmax))then
+            if (lat > latmax .or. lat < latmin .or. lon > lonmax .or. lon < lonmin) cycle
+         end if
+      end if
+
+
+      call idba_set (this%handle,"lat",lat)
+      call idba_set (this%handle,"lon",lon)
+
+      if (present(ident))then
+         if (c_e(ident) .and. ident /= this%vol7d%ana(i)%ident ) cycle
+      end if
+
+      if ( c_e(this%vol7d%ana(i)%ident)) then
+         call idba_set (this%handle,"ident",ident)
+         call idba_set (this%handle,"mobile",1)
+      else
+         call idba_set (this%handle,"mobile",0)
+      end if
+
+      call idba_set(this%handle,"rep_cod",this%vol7d%network(iii)%id)
+      call idba_set(this%handle,"name","test")
+
+      do ii=1,size(this%vol7d%anavar%r(:))
+         
+         print*,this%vol7d%anavar%r(ii)%btable , this%vol7d%volanar(i,ii,iii)
+
+         call idba_set (this%handle,this%vol7d%anavar%r(ii)%btable , this%vol7d%volanar(i,ii,iii))
+      end do
+      do ii=1,size(this%vol7d%anavar%i(:))
+         print *,this%vol7d%anavar%i(ii)%btable , this%vol7d%volanai(i,ii,iii)
+         call idba_set (this%handle,this%vol7d%anavar%i(ii)%btable , this%vol7d%volanai(i,ii,iii))
+      end do
+      do ii=1,size(this%vol7d%anavar%c(:))
+         print *,this%vol7d%anavar%c(ii)%btable , this%vol7d%volanac(i,ii,iii)
+         call idba_set (this%handle,this%vol7d%anavar%c(ii)%btable , this%vol7d%volanac(i,ii,iii))
+      end do
+      
+      call idba_prendilo ((this%handle))
+      call idba_enq (this%handle,"ana_id",ana_id(i,iii))
+   end do
+end do
+
+! data
+
+call idba_unsetall (this%handle)
+
+print *,"nstaz,ntime,nlevel,ntimerange,nnetwork",nstaz,ntime,nlevel,ntimerange,nnetwork
+
+do i=1, nstaz
+   do ii=1,ntime
+      if (present(timei) .and. present(timef))then
+         if (this%vol7d%time(ii) < timei .or. this%vol7d%time(ii) > timef ) cycle
+      endif
+      do iii=1,nlevel
+         if (.not.llevel(iii))cycle
+         do iiii=1,ntimerange
+            if (.not.ltimerange(iiii))cycle
+            do iiiiii=1, nnetwork
+               if (.not.lnetwork(iiiiii))cycle
+
+               write=.false.
+
+               if (.not. c_e(ana_id(i,iiiiii))) cycle
+               call idba_set (this%handle,"ana_id",ana_id(i,iiiiii))
+
+               call idba_set (this%handle,"rep_cod",this%vol7d%network(iiiiii)%id)
+               call idba_setlevel(this%handle, this%vol7d%level(iii)%level, this%vol7d%level(iii)%l1, this%vol7d%level(iii)%l2)
+               call idba_settimerange(this%handle, this%vol7d%timerange(iiii)%timerange, &
+                    this%vol7d%timerange(iiii)%p1, this%vol7d%timerange(iiii)%p2)
+
+               CALL getval(this%vol7d%time(ii), year=year, month=month, day=day, hour=hour, minute=minute)
+               call idba_setdate (this%handle,year,month,day,hour,minute,0)
+
+               ! add or rewrite new data
+               !voldati*(nana,ntime,nlevel,ntimerange,ndativar*,nnetwork)
+
+
+---------------
+
+               do iiiii=1,ndativarr
+                  if (.not.lvarr(iiiii))cycle
+                  if (c_e(this%vol7d%voldatir(i,ii,iii,iiii,iiiii,iiiiii)))then
+                     call idba_set (this%handle,this%vol7d%dativar%r(iiiii)%btable , &
+                          this%vol7d%voldatir(i,ii,iii,iiii,iiiii,iiiiii))
+                     if call idba_prendilo (this%handle)
+
+                     
+                     ndatiattrb=size(this%vol7d%datiattr%b(:))
+                     allocate (lattrb(ndatiattrb))
+                     if (present(attr))then
+                        do  i=1,size(attr)
+                           where (attr(i) == this%vol7d%datiattr%b(:)%btable)
+                              lattrb(:)=.true.
+                           end where
+                        end do
+                     else
+                        lattrb(:)=.true.
+                     end if
+                     !TODO : questo qui sopra è fatto solo per i byte !
+
+                     ind = this%vol7d%dativar%r(iiiii)%b
+                     if (ind > 0) then
+                     if (ndatiattrb > 0 )then 
+                        do inddatiattr=1,ndatiattrb
+                           if (c_e(vol7dtmp%voldatiattrb(i,ii,iii,iiii,ind,iiiiii,inddatiattr)))then
+                              call idba_set (this%handle, vol7dtmp%datiattr%b(inddatiattr)%btable,&
+                                   vol7dtmp%voldatiattrb(i,ii,iii,iiii,ind,iiiiii,inddatiattr)) 
+                              writeattr=.true.
+                           end if
+                        end do
+                        if (writeattr) call idba_critica (this%handle)
+                     else
+                        write=.true.
+                     end if
+                  end if
+               end do
+
+
+
+--------------------
+
+
+               do iiiii=1,ndativarr
+                  if (.not.lvarr(iiiii))cycle
+                  if (c_e(this%vol7d%voldatir(i,ii,iii,iiii,iiiii,iiiiii)))then
+                     call idba_set (this%handle,this%vol7d%dativar%r(iiiii)%btable , &
+                          this%vol7d%voldatir(i,ii,iii,iiii,iiiii,iiiiii)) 
+                     if (ndatiattrb > 0 )then 
+                        if call idba_prendilo (this%handle)
+                        do inddatiattr=1,ndatiattrb
+                           call idba_set (this%handle, vol7dtmp%datiattr%b(inddatiattr)%btable,&
+                                vol7dtmp%voldatiattrb((i,ii,iii,iiii,iiiii,iiiiii,inddatiattr)) 
+                           eriteattr=.true.
+                        end do
+                        if (writeattr) call idba_critica (this%handle)
+                     else
+                        write=.true.
+                     end if
+                  end if
+               end do
+
+               do iiiii=1,size(this%vol7d%dativar%i(:))
+                  if (c_e(this%vol7d%voldatii(i,ii,iii,iiii,iiiii,iiiiii)))then
+                     call idba_set (this%handle,this%vol7d%dativar%i(iiiii)%btable , &
+                          this%vol7d%voldatii(i,ii,iii,iiii,iiiii,iiiiii)) 
+                     write=.true.
+                  end if
+               end do
+
+               do iiiii=1,size(this%vol7d%dativar%c(:))
+                  if (c_e(this%vol7d%voldatic(i,ii,iii,iiii,iiiii,iiiiii)))then 
+                     call idba_set (this%handle,this%vol7d%dativar%c(iiiii)%btable , &
+                          this%vol7d%voldatic(i,ii,iii,iiii,iiiii,iiiiii)) 
+                     write=.true.
+                  end if
+               end do
+
+               if (write) call idba_prendilo (this%handle)
+
+
+               do inddatiattr=1,ndatiattrb
+
+                  call idba_set (this%handle, vol7dtmp%datiattr%b(inddatiattr)%btable,&
+                       vol7dtmp%voldatiattrb((i,ii,iii,iiii,iiiii,iiiiii,inddatiattr)) 
+               end do
+               if (write) call idba_critica (this%handle)
+
+            end do
+         end do
+      end do
+   end do
+end do
+
+END SUBROUTINE vol7d_dballe_export
 
 !!$SUBROUTINE vol7d_dballe_filter(this, var, network, latmin,latmax,ident,timei, timef,level,timerange,attr)
 !!$

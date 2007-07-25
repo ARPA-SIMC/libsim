@@ -5,7 +5,7 @@ bin_PROGRAMS += esempio_v7doracle esempio_v7doracle_multi
 endif
 
 if DBALLE
-bin_PROGRAMS += esempio_v7ddballe esempio_v7ddballe_multi
+bin_PROGRAMS += esempio_v7ddballe esempio_v7ddballe_multi esempio_v7ddballe_import_export
 endif
 
 if SHP
@@ -37,6 +37,9 @@ esempio_v7ddballe_LDADD = ../base/libsim_base.la ../vol7d/libsim_vol7d.la $(libo
 
 esempio_v7ddballe_multi_SOURCES = esempio_v7ddballe_multi.f90
 esempio_v7ddballe_multi_LDADD = ../base/libsim_base.la ../vol7d/libsim_vol7d.la $(liboraclesim) $(libdballe)
+
+esempio_v7ddballe_import_export_SOURCES = esempio_v7ddballe_import_export.f90
+esempio_v7ddballe_import_export_LDADD = ../base/libsim_base.la ../vol7d/libsim_vol7d.la $(liboraclesim) $(libdballe)
 endif
 
 if SHP
