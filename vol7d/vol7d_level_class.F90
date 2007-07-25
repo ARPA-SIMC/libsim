@@ -59,39 +59,21 @@ SUBROUTINE vol7d_level_init(this, level, l1, l2)
 TYPE(vol7d_level),INTENT(INOUT) :: this
 INTEGER,INTENT(IN),OPTIONAL :: level, l1, l2
 
+this%level = imiss
+this%l1 = imiss
+this%l2 = imiss
+
+
 IF (PRESENT(level)) THEN
   this%level = level
 ELSE
-  this%level = imiss
-  this%l1 = imiss
-  this%l2 = imiss
   RETURN
-ENDIF
-
-IF (level > 0 .AND. level < 10) THEN ! nessun l1/l2
-  this%l1 = imiss
-  this%l2 = imiss
-ELSE IF (level == 20 .OR. level == 100 .OR. level == 103 .OR. level == 105 &
- .OR. level == 107 .OR. level == 109 .OR. level == 111 .OR. level == 113 &
- .OR. level == 115 .OR. level == 119 .OR. level == 125 .OR. level == 160) THEN ! solo l1
-  IF (PRESENT(l1)) THEN
-    this%l1 = l1
-  ELSE
-    this%l1 = 0
-  ENDIF
-  this%l2 = imiss
-ELSE ! Tutti gli altri
-  IF (PRESENT(l1)) THEN
-    this%l1 = l1
-  ELSE
-    this%l1 = imiss
-  ENDIF
-  IF (PRESENT(l2)) THEN
-    this%l2 = l2
-  ELSE
-    this%l2 = imiss
-  ENDIF
 END IF
+
+IF (PRESENT(l1))  this%l1 = l1
+IF (PRESENT(l2))  this%l2 = l2
+
+RETURN
 
 END SUBROUTINE vol7d_level_init
 
