@@ -20,7 +20,7 @@ END TYPE vol7d_dballe
 type record
 
   !! prime 5 dimensioni
-  !integer :: ana_id
+  integer :: data_id
   TYPE(vol7d_ana) :: ana
   TYPE(datetime) :: time
   TYPE(vol7d_level) :: level
@@ -29,18 +29,31 @@ type record
   TYPE(vol7d_var) ::  dativar
 
   !! Volumi di valori e attributi per  dati
-  REAL :: datir
-!  REAL(kind=fp_d),POINTER :: voldatid(:,:,:,:,:,:)
-!  INTEGER,POINTER :: voldatii(:,:,:,:,:,:)
-!  INTEGER(kind=int_b),POINTER :: voldatib(:,:,:,:,:,:)
-!  CHARACTER(len=vol7d_cdatalen),POINTER :: voldatic(:,:,:,:,:,:)
-  INTEGER(kind=int_b)   :: datiattrb(3)
+  REAL :: dator
+  REAL(kind=fp_d) :: datod
+  INTEGER :: datoi
+  INTEGER(kind=int_b) :: datob 
+  CHARACTER(len=vol7d_cdatalen) :: datoc 
+
+!  INTEGER(kind=int_b)   :: datiattrb(3)
 !  REAL(kind=fp_d),POINTER :: voldatiattrd(:,:,:,:,:,:,:)
 !  INTEGER,POINTER :: voldatiattri(:,:,:,:,:,:,:)
 !  INTEGER(kind=int_b),POINTER :: voldatiattrb(:,:,:,:,:,:,:)
 !  CHARACTER(len=vol7d_cdatalen),POINTER :: voldatiattrc(:,:,:,:,:,:,:)
 
 END TYPE record
+
+
+!!$type record_attr
+!!$
+!!$  integer :: data_id
+!!$  REAL :: attrr
+!!$  REAL(kind=fp_d) :: attrd
+!!$  INTEGER :: attri
+!!$  INTEGER(kind=int_b) :: attrb 
+!!$  CHARACTER(len=vol7d_cdatalen) :: attrc 
+!!$
+!!$END TYPE record
 
 
 PRIVATE
@@ -183,7 +196,7 @@ ENDDO
 END SUBROUTINE vol7d_dballe_importvvnv
 
 
-SUBROUTINE vol7d_dballe_importvvns(this, var, network, timei, timef,level,timerange, set_network,attr)
+SUBROUTINE vol7d_dballe_importvvns(this, var, network, timei, timef,level,timerange, set_network,attr, varkind,attrkind)
 
 TYPE(vol7d_dballe),INTENT(inout) :: this
 CHARACTER(len=*),INTENT(in) :: var(:)
@@ -193,6 +206,7 @@ TYPE(vol7d_network),INTENT(in),OPTIONAL :: set_network
 TYPE(vol7d_level),INTENT(in),optional :: level
 TYPE(vol7d_timerange),INTENT(in),optional :: timerange
 CHARACTER(len=*),INTENT(in),OPTIONAL :: attr(:)
+CHARACTER(len=*),INTENT(in),OPTIONAL :: varkind(:),attrkind(:)
 
 TYPE(vol7d) :: v7d
 CHARACTER(len=SIZE(var)*7) :: varlist
@@ -213,8 +227,15 @@ TYPE(vol7d_var) :: var_tmp
 INTEGER :: i,ii, iii,j, k,n,nn, nvar,nvarattr,istat,ana_id,ana_id_staz,nstaz,ist,indattr
 integer :: ndativarr,ndatiattrb,ndativarattrb,inddatiattr
 
-REAL(kind=fp_geo) :: lat,lon ,dato 
+REAL(kind=fp_geo) :: lat,lon  
 INTEGER(kind=int_b)::attrdatib
+
+
+integer :: ndativari,     ndativarb,     ndativard,     ndativarc
+integer :: ndatiattrr,    ndatiattri,    ndatiattrd,    ndatiattrc 
+integer :: ndativarattrr, ndativarattri, ndativarattrd, ndativarattrc
+
+
 
 !TYPE(datetime) :: odatetime
 ! nobs, ntime, nana, nvout, nvin, nvbt, &
@@ -241,7 +262,6 @@ ELSE
    lattr = .FALSE.
 ENDIF
 
-
 call idba_set (this%handle,"rep_cod",network)
 call idba_set (this%handle,"mobile",0)
 !print*,"network,mobile",network,0
@@ -250,11 +270,9 @@ CALL getval(timei, year=year, month=month, day=day, hour=hour, minute=minute)
 call idba_setdatemin(this%handle,year,month,day,hour,minute,0)
 !print *,"datemin",year,month,day,hour,minute,0
 
-
 CALL getval(timef, year=year, month=month, day=day, hour=hour, minute=minute)
 call idba_setdatemax(this%handle,year,month,day,hour,minute,0)
 !print *,"datemax",year,month,day,hour,minute,0
-
 
 ! creo la stringa con l'elenco
 varlist = ''
@@ -265,23 +283,6 @@ DO i = 1, SIZE(var)
    varlist(LEN_TRIM(varlist)+1:) = TRIM(var(i))
 ENDDO
 !print *,"varlist",varlist
-
-
-
-if (lattr)then
-   ! creo la stringa con l'elenco
-   starvarlist = ''
-   nvarattr=0
-   DO i = 1, SIZE(attr)
-      nvarattr = nvarattr + 1
-      IF (nvarattr > 1) starvarlist(LEN_TRIM(starvarlist)+1:) = ',' 
-      starvarlist(LEN_TRIM(starvarlist)+1:) = TRIM(attr(i))
-   ENDDO
-   !print *,"starvarlist",starvarlist
-
-end if
-
-!print *,"attr",attr
 
 call idba_set(this%handle, "varlist",varlist )
 
@@ -313,32 +314,31 @@ do i=1,N
    !nbtable=btable_numerico(btable)
    ! ind = firsttrue(qccli%v7d%dativar%r(:)%btable == nbtable)
    ! IF (ind<1) cycle ! non c'e'
-   call idba_enq (this%handle,btable,dato)
-   
-   !metto in memoria l'identificatore numerico dei dati
-   !call idba_enq (this%handle,"context_id",data_id)
+ 
+   buffer(i)%dator=DBA_MVR
+   buffer(i)%datoi=DBA_MVI
+   buffer(i)%datob=DBA_MVB
+   buffer(i)%datod=DBA_MVD
+   buffer(i)%datoc=DBA_MVC
 
-
-   buffer(i)%datiattrb=DBA_MVB
-   if (lattr)then        
-      !print *,"starvarlist=",starvarlist
-      !per ogni dato ora lavoro sugli attributi
-      call idba_set(this%handle, "*varlist",starvarlist )
-      call idba_voglioancora (this%handle,nn)
-      !print*,"numero attributi",nn
-      
-      do ii=1,nn ! Se ho piu` di 1 attributo devo forse trovare l'indice (ii)
-         call idba_ancora (this%handle,starbtable)
-         !print *, starbtable
-         indattr = firsttrue(attr == starbtable)
-         IF (indattr<1) cycle ! non c'e'
-         call idba_enq(this%handle,starbtable,attrdatib)
-         !bufferizzo
-         buffer(i)%datiattrb(indattr)=attrdatib
-         !print *,"attributo",attrdatib
-         
-      end do
+   if (present(varkind))then
+     ii=( firsttrue(var == btable))
+     if (ii > 0)then
+       !print*, "indici",ii, btable,(varkind(ii))
+       if(varkind(ii) == "r") call idba_enq (this%handle,btable,buffer(i)%dator)
+       if(varkind(ii) == "i") call idba_enq (this%handle,btable,buffer(i)%datoi)
+       if(varkind(ii) == "b") call idba_enq (this%handle,btable,buffer(i)%datob)
+       if(varkind(ii) == "d") call idba_enq (this%handle,btable,buffer(i)%datod)
+       if(varkind(ii) == "c") call idba_enq (this%handle,btable,buffer(i)%datoc)
+     end if
+   else
+     call idba_enq (this%handle,btable,buffer(i)%dator) !real is default
    end if
+
+   !metto in memoria l'identificatore numerico dei dati
+   call idba_enq (this%handle,"context_id",buffer(i)%data_id)
+
+   !print*,buffer(i)%data_id
 
    !tramite ana_id imposto la stazione letta 
    !nella lettura dei dati in anagrafica 
@@ -360,9 +360,11 @@ do i=1,N
       do  iii=1,nstaz
          call idba_elencamele(this%handle_staz)
          
+
          !recupero i dati di anagrafica
          call idba_enq (this%handle_staz,"lat",   lat)
          call idba_enq (this%handle_staz,"lon",   lon)
+
          !call idba_enq (this%handle_staz,"height",alt)
          !call idba_enq (this%handle_staz,"name",  name)
          
@@ -372,7 +374,7 @@ do i=1,N
    
    end if
 
-!bufferizzo
+!bufferizzo il contesto
 
    !print *,"lat,lon",lat,lon
    !print*,year,month,day,hour,minute,sec
@@ -385,7 +387,6 @@ do i=1,N
    call init(buffer(i)%timerange, rtimerange, p1, p2)
    call init(buffer(i)%network, network)
    call init(buffer(i)%dativar, btable)
-   buffer(i)%datir=dato
 
 end do
 
@@ -396,26 +397,59 @@ ntimerange = count_distinct(buffer%timerange, back=.TRUE.)
 nlevel = count_distinct(buffer%level, back=.TRUE.)
 nnetwork = count_distinct(buffer%network, back=.TRUE.)
 
-!da fare
-!ndativarr= count_distinct(buffer%dativar, back=.TRUE.)
-ndativarr= nvar
+if (present(varkind))then
+  ndativarr= count(varkind == "r")
+  ndativari= count(varkind == "i")
+  ndativarb= count(varkind == "b")
+  ndativard= count(varkind == "d")
+  ndativarc= count(varkind == "c")
+  
+else
+  ndativarr= nvar
+end if
 
-!print *, "nana=",nana," ntime=",ntime," ntimerange=",ntimerange, &
-!" nlevel=",nlevel," nnetwork=",nnetwork," ndativarr=",ndativarr
+print *, "nana=",nana," ntime=",ntime," ntimerange=",ntimerange, &
+" nlevel=",nlevel," nnetwork=",nnetwork," ndativarr=",ndativarr
 
 if (lattr)then
-   ndatiattrb=nvarattr
-   ndativarattrb=ndativarr
+
+  if (present(attrkind))then
+    ndatiattrr= count(attrkind == "r")
+    ndatiattri= count(attrkind == "i")
+    ndatiattrb= count(attrkind == "b")
+    ndatiattrd= count(attrkind == "d")
+    ndatiattrc= count(attrkind == "c")
+    
+  else
+    ndatiattrb=size(attr)
+    ndativarattrb=ndativarr
+  end if
+ 
 else
-   ndatiattrb=0
-   ndativarattrb=0
+  ndatiattrb=0
+  ndativarattrb=0
 end if
 
 CALL init(vol7dtmp)
 
+print*,"ho fatto init"
+
 call vol7d_alloc (vol7dtmp, &
-nana=nana, ntime=ntime, ntimerange=ntimerange, &
-nlevel=nlevel, nnetwork=nnetwork, ndativarr=nvar, ndatiattrb=ndatiattrb,ndativarattrb=ndativarattrb )
+ nana=nana, ntime=ntime, ntimerange=ntimerange, &
+ nlevel=nlevel, nnetwork=nnetwork, &
+ ndativarr=ndativarr, ndativari=ndativari, ndativarb=ndativarb, ndativard=ndativard, ndativarc=ndativarc,&
+ ndatiattrr=ndatiattrr, ndatiattri=ndatiattri, ndatiattrb=ndatiattrb, ndatiattrd=ndatiattrd, ndatiattrc=ndatiattrc,&
+ ndativarattrr=ndativarattrr, ndativarattri=ndativarattri, ndativarattrb=ndativarattrb, ndativarattrd=ndativarattrd, ndativarattrc=ndativarattrc)
+
+ print *, "nana=",nana, "ntime=",ntime, "ntimerange=",ntimerange, &
+ "nlevel=",nlevel, "nnetwork=",nnetwork, &
+ "ndativarr=",ndativarr, "ndativari=",ndativari, "ndativarb=",ndativarb, "ndativard=",ndativard, "ndativarc=",ndativarc,&
+ "ndatiattrr=",ndatiattrr, "ndatiattri=",ndatiattri, "ndatiattrb=",ndatiattrb, "ndatiattrd=",ndatiattrd, "ndatiattrc=",ndatiattrc,&
+ "ndativarattrr=",ndativarattrr, "ndativarattri=",ndativarattri, "ndativarattrb=",ndativarattrb, "ndativarattrd=",ndativarattrd, "ndativarattrc=",ndativarattrc
+
+
+
+print*,"ho fatto alloc"
 
 vol7dtmp%ana=pack_distinct(buffer%ana, back=.TRUE.)
 vol7dtmp%time=pack_distinct(buffer%time, back=.TRUE.)
@@ -423,20 +457,64 @@ vol7dtmp%timerange=pack_distinct(buffer%timerange, back=.TRUE.)
 vol7dtmp%level=pack_distinct(buffer%level, back=.TRUE.)
 vol7dtmp%network=pack_distinct(buffer%network, back=.TRUE.)
 
-! qui sarebbe meglio usare la pack
-do ii=1,ndativarr
-   call init (vol7dtmp%dativar%r(ii), btable=var(ii))
-end do
-vol7dtmp%dativarattr%b=vol7dtmp%dativar%r
 
-do ii=1,ndatiattrb
-   call init (vol7dtmp%datiattr%b(ii), btable=attr(ii))
-end do
+if (present(varkind))then
+  do i=1,size(varkind)
+    if (varkind(i) == "r") call init (vol7dtmp%dativar%r(i), btable=var(i))
+    if (varkind(i) == "i") call init (vol7dtmp%dativar%i(i), btable=var(i))
+    if (varkind(i) == "b") call init (vol7dtmp%dativar%b(i), btable=var(i))
+    if (varkind(i) == "d") call init (vol7dtmp%dativar%d(i), btable=var(i))
+    if (varkind(i) == "c") call init (vol7dtmp%dativar%c(i), btable=var(i))  
+  end do
+else
+  do i=1, size(var)
+    call init (vol7dtmp%dativar%r(i), btable=var(i))
+  end do
+end if
 
+if (.not. present(varkind).or. .not. present(attrkind))then
+  vol7dtmp%dativarattr%b=vol7dtmp%dativar%r
+  print *,"fatta cosa strana"
+else
+  do i=1,size(var)
+    call init (var_tmp, btable=var(i))
+    vol7dtmp%dativarattr%b(i)=var_tmp
+  end do
+end if
+
+if (present(attrkind))then
+  do i=1,size(attrkind)
+    if (attrkind(i) == "r") call init (vol7dtmp%datiattr%r(i), btable=attr(i))
+    if (attrkind(i) == "i") call init (vol7dtmp%datiattr%i(i), btable=attr(i))
+    if (attrkind(i) == "b") call init (vol7dtmp%datiattr%b(i), btable=attr(i))
+    if (attrkind(i) == "d") call init (vol7dtmp%datiattr%d(i), btable=attr(i))
+    if (attrkind(i) == "c") call init (vol7dtmp%datiattr%c(i), btable=attr(i))  
+  end do
+else
+  if (present(attr))then
+    do i=1, size(attr)
+      print*,i
+      call init (vol7dtmp%datiattr%b(i), btable=attr(i))
+    end do
+  end if
+end if
+
+print*,"prima di alloc"
 
 call vol7d_alloc_vol (vol7dtmp)
 
-vol7dtmp%voldatir=rmiss
+vol7dtmp%voldatir=DBA_MVR
+vol7dtmp%voldatii=DBA_MVI
+vol7dtmp%voldatib=DBA_MVB
+vol7dtmp%voldatid=DBA_MVD
+vol7dtmp%voldatic=DBA_MVC
+vol7dtmp%voldatiattrr=DBA_MVR
+vol7dtmp%voldatiattri=DBA_MVI
+vol7dtmp%voldatiattrb=DBA_MVB
+vol7dtmp%voldatiattrd=DBA_MVD
+vol7dtmp%voldatiattrc=DBA_MVC
+
+print*,"ho fatto un volume vuoto"
 
 do i =1, N
 
@@ -445,29 +523,126 @@ do i =1, N
    indtimerange = firsttrue(buffer(i)%timerange == vol7dtmp%timerange)
    indlevel = firsttrue(buffer(i)%level == vol7dtmp%level)
    indnetwork = firsttrue(buffer(i)%network == vol7dtmp%network)
-   inddativar = firsttrue(buffer(i)%dativar == vol7dtmp%dativar%r)
 
-   !print *, indana,indtime,indlevel,indtimerange,inddativar,indnetwork
+   print *, indana,indtime,indlevel,indtimerange,indnetwork
 
-   vol7dtmp%voldatir( &
-   indana,indtime,indlevel,indtimerange,inddativar,indnetwork &
-   ) = buffer(i)%datir
+   if(c_e(buffer(i)%dator))then
+     inddativar = firsttrue(buffer(i)%dativar == vol7dtmp%dativar%r)
+     vol7dtmp%voldatir( &
+      indana,indtime,indlevel,indtimerange,inddativar,indnetwork &
+      ) = buffer(i)%dator
+   end if
 
-   do ii=1,ndatiattrb
+   if(c_e(buffer(i)%datoi)) then
+     inddativar = firsttrue(buffer(i)%dativar == vol7dtmp%dativar%i)
+     vol7dtmp%voldatii( &
+      indana,indtime,indlevel,indtimerange,inddativar,indnetwork &
+      ) = buffer(i)%datoi
+   end if
 
-      call init (var_tmp, btable=attr(ii))
+   if(c_e(buffer(i)%datob)) then
+     inddativar = firsttrue(buffer(i)%dativar == vol7dtmp%dativar%b)
+     vol7dtmp%voldatib( &
+      indana,indtime,indlevel,indtimerange,inddativar,indnetwork &
+      ) = buffer(i)%datob
+   end if
 
-      inddatiattr = firsttrue(var_tmp == vol7dtmp%datiattr%b)
-      vol7dtmp%voldatiattrb(indana,indtime,indlevel,indtimerange,&
-           inddativar,indnetwork,inddatiattr)=buffer(i)%datiattrb(ii)
+   if(c_e(buffer(i)%datod)) then
+     inddativar = firsttrue(buffer(i)%dativar == vol7dtmp%dativar%d)
+     vol7dtmp%voldatid( &
+      indana,indtime,indlevel,indtimerange,inddativar,indnetwork &
+      ) = buffer(i)%datod
+   end if
 
-   end do
+   if(c_e(buffer(i)%datoc)) then
+     inddativar = firsttrue(buffer(i)%dativar == vol7dtmp%dativar%c)
+     vol7dtmp%voldatic( &
+      indana,indtime,indlevel,indtimerange,inddativar,indnetwork &
+      ) = buffer(i)%datoc
+   end if
+
+   if (lattr)then
+   ! creo la stringa con l'elenco
+     starvarlist = ''
+     nvarattr=0
+     DO ii = 1, SIZE(attr)
+       nvarattr = nvarattr + 1
+       IF (nvarattr > 1) starvarlist(LEN_TRIM(starvarlist)+1:) = ',' 
+       starvarlist(LEN_TRIM(starvarlist)+1:) = TRIM(attr(ii))
+     ENDDO
+     print *,"starvarlist",starvarlist
+     
+   end if
+   
+   if (lattr)then        
+     call idba_set (this%handle,"context_id",buffer(i)%data_id)
+      !print *,"starvarlist=",starvarlist
+      !per ogni dato ora lavoro sugli attributi
+     call idba_set(this%handle, "*varlist",starvarlist )
+     call idba_voglioancora (this%handle,nn)
+     print*,"numero attributi",nn
+     
+     do ii=1,nn ! Se ho piu` di 1 attributo devo forse trovare l'indice (ii)
+       call idba_ancora (this%handle,starbtable)
+         !print *, starbtable
+       indattr = firsttrue(attr == starbtable)
+       IF (indattr<1) cycle ! non c'e'
+
+
+       call init (var_tmp, btable=starbtable)
+
+
+       if (present(attrkind))then
+         iii=( firsttrue(attr == starbtable))
+         if (iii > 0)then
+           if(attrkind(iii) == "r") then
+             inddatiattr = firsttrue(var_tmp == vol7dtmp%datiattr%r)
+             call idba_enq (this%handle,starbtable,&
+              vol7dtmp%voldatiattrr(indana,indtime,indlevel,indtimerange,&
+              inddativar,indnetwork,inddatiattr))
+           end if
+           if(attrkind(iii) == "i") then
+             inddatiattr = firsttrue(var_tmp == vol7dtmp%datiattr%i)
+             call idba_enq (this%handle,starbtable,&
+              vol7dtmp%voldatiattri(indana,indtime,indlevel,indtimerange,&
+              inddativar,indnetwork,inddatiattr))
+           end if
+           if(attrkind(iii) == "b") then
+             inddatiattr = firsttrue(var_tmp == vol7dtmp%datiattr%b)
+             call idba_enq (this%handle,starbtable,&
+              vol7dtmp%voldatiattrb(indana,indtime,indlevel,indtimerange,&
+              inddativar,indnetwork,inddatiattr))
+           end if
+           if(attrkind(iii) == "d") then
+             inddatiattr = firsttrue(var_tmp == vol7dtmp%datiattr%d)
+             call idba_enq (this%handle,starbtable,&
+              vol7dtmp%voldatiattrd(indana,indtime,indlevel,indtimerange,&
+              inddativar,indnetwork,inddatiattr))
+           end if
+           if(attrkind(iii) == "c") then
+             inddatiattr = firsttrue(var_tmp == vol7dtmp%datiattr%c)
+             call idba_enq (this%handle,starbtable,&
+              vol7dtmp%voldatiattrc(indana,indtime,indlevel,indtimerange,&
+              inddativar,indnetwork,inddatiattr))
+           end if
+         end if
+       else
+         
+         call idba_enq (this%handle,btable,vol7dtmp%voldatiattrb&
+          (indana,indtime,indlevel,indtimerange,&
+          inddativar,indnetwork,inddatiattr)) !byte is default
+       end if
+
+     end do
+   end if
 
 
 !( voldati*(nana,ntime,nlevel,ntimerange,ndativar*,nnetwork)
 !  voldatiattr*(nana,ntime,nlevel,ntimerange,ndativarattr*,network,ndatiattr*) )
 
-end do
+ end do
+
+deallocate (buffer)
 
 ! Se l'oggetto ha gia` un volume allocato lo fondo con quello estratto
 !TODO manca test su associated dei vol*
