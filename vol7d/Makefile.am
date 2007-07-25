@@ -13,8 +13,8 @@ endif
 #libsim_vol7d_la_FFLAGS = -I../base
 AM_FCFLAGS = -I../base
 libsim_vol7d_la_LIBADD = ../base/libsim_base.la
-noinst_HEADERS = vol7d_class_get_vol.F90 vol7d_class_remap.F90 \
- vol7d_class_merge_final.F90 vol7d_distinct.F90
+noinst_HEADERS = vol7d_class_type_templ.F90 vol7d_class_desc_templ.F90 \
+ vol7d_distinct.F90
 # c'e` una maniera migliore?
 tmpvar = $(libsim_vol7d_la_SOURCES:.f90=.mod)
 nodist_include_HEADERS = $(tmpvar:.F90=.mod)
@@ -26,11 +26,11 @@ vol7d_class_compute.lo: vol7d_class.$(OBJEXT)
 vol7d_class.$(OBJEXT): vol7d_utilities.$(OBJEXT) vol7d_ana_class.$(OBJEXT) \
  vol7d_timerange_class.$(OBJEXT) vol7d_level_class.$(OBJEXT) \
  vol7d_network_class.$(OBJEXT) vol7d_varvect_class.$(OBJEXT) \
- vol7d_class_get_vol.F90 vol7d_class_remap.F90 vol7d_class_merge_final.F90
+ vol7d_class_type_templ.F90 vol7d_class_desc_templ.F90
 vol7d_class.lo: vol7d_utilities.$(OBJEXT) vol7d_ana_class.$(OBJEXT) \
  vol7d_timerange_class.$(OBJEXT) vol7d_level_class.$(OBJEXT) \
  vol7d_network_class.$(OBJEXT) vol7d_varvect_class.$(OBJEXT) \
- vol7d_class_get_vol.F90 vol7d_class_remap.F90 vol7d_class_merge_final.F90
+ vol7d_class_type_templ.F90 vol7d_class_desc_templ.F90
 #vol7d_level_class.$(OBJEXT):
 #vol7d_network_class.$(OBJEXT):
 if ORSIM

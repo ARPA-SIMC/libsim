@@ -528,67 +528,55 @@ this = v7dtmp
 
 END SUBROUTINE vol7d_append
 
-
-! Ripeto le routine del gruppo get_vol e merge_final per ogni tipo
-! di dati v7d con un template e il preprocessore
+! Creo le routine da ripetere per i vari tipi di dati vi v7d
+! tramite un template e il preprocessore
 #undef VOL7D_POLY_TYPE
 #undef VOL7D_POLY_TYPES
 #define VOL7D_POLY_TYPE REAL
 #define VOL7D_POLY_TYPES r
-#include "vol7d_class_get_vol.F90"
-#include "vol7d_class_merge_final.F90"
+#include "vol7d_class_type_templ.F90"
 #undef VOL7D_POLY_TYPE
 #undef VOL7D_POLY_TYPES
 #define VOL7D_POLY_TYPE REAL(kind=fp_d)
 #define VOL7D_POLY_TYPES d
-#include "vol7d_class_get_vol.F90"
-#include "vol7d_class_merge_final.F90"
+#include "vol7d_class_type_templ.F90"
 #undef VOL7D_POLY_TYPE
 #undef VOL7D_POLY_TYPES
 #define VOL7D_POLY_TYPE INTEGER
 #define VOL7D_POLY_TYPES i
-#include "vol7d_class_get_vol.F90"
-#include "vol7d_class_merge_final.F90"
+#include "vol7d_class_type_templ.F90"
 #undef VOL7D_POLY_TYPE
 #undef VOL7D_POLY_TYPES
 #define VOL7D_POLY_TYPE INTEGER(kind=int_b)
 #define VOL7D_POLY_TYPES b
-#include "vol7d_class_get_vol.F90"
-#include "vol7d_class_merge_final.F90"
+#include "vol7d_class_type_templ.F90"
 #undef VOL7D_POLY_TYPE
 #undef VOL7D_POLY_TYPES
 #define VOL7D_POLY_TYPE CHARACTER(len=vol7d_cdatalen)
 #define VOL7D_POLY_TYPES c
-#include "vol7d_class_get_vol.F90"
-#include "vol7d_class_merge_final.F90"
+#include "vol7d_class_type_templ.F90"
 
-! Ripeto le routine di rimappatura dei descrittori per ogni tipo
-! di dimensioni v7d con un template e il preprocessore
+! Creo le routine da ripetere per i vari descrittori di dimensioni di v7d
+! tramite un template e il preprocessore
 #define VOL7D_SORT
 #undef VOL7D_POLY_TYPE
 #define VOL7D_POLY_TYPE datetime
-#include "vol7d_class_remap.F90"
-
+#include "vol7d_class_desc_templ.F90"
 #undef VOL7D_POLY_TYPE
 #define VOL7D_POLY_TYPE vol7d_timerange
-#include "vol7d_class_remap.F90"
-
+#include "vol7d_class_desc_templ.F90"
 #undef VOL7D_POLY_TYPE
 #define VOL7D_POLY_TYPE vol7d_level
-#include "vol7d_class_remap.F90"
-
+#include "vol7d_class_desc_templ.F90"
 #undef VOL7D_SORT
 #undef VOL7D_POLY_TYPE
 #define VOL7D_POLY_TYPE vol7d_network
-#include "vol7d_class_remap.F90"
-
+#include "vol7d_class_desc_templ.F90"
 #undef VOL7D_POLY_TYPE
 #define VOL7D_POLY_TYPE vol7d_ana
-#include "vol7d_class_remap.F90"
-
+#include "vol7d_class_desc_templ.F90"
 #undef VOL7D_POLY_TYPE
 #define VOL7D_POLY_TYPE vol7d_var
-#include "vol7d_class_remap.F90"
-
+#include "vol7d_class_desc_templ.F90"
 
 END MODULE vol7d_class
