@@ -7,7 +7,7 @@ if ORSIM
 libsim_vol7d_la_SOURCES += vol7d_oraclesim_class.f90
 endif
 if DBALLE
-libsim_vol7d_la_SOURCES += vol7d_dballe_class.f90
+libsim_vol7d_la_SOURCES += vol7d_dballe_class.F90
 endif
 
 #libsim_vol7d_la_FFLAGS = -I../base
@@ -41,6 +41,7 @@ endif
 if DBALLE
 vol7d_dballe_class.$(OBJEXT): vol7d_class.$(OBJEXT) vol7d_utilities.$(OBJEXT)
 vol7d_dballe_class.lo: vol7d_class.$(OBJEXT) vol7d_utilities.$(OBJEXT)
+AM_FCFLAGS += -I /usr/include/dballe
 endif
 
 #vol7d_timerange_class.$(OBJEXT):

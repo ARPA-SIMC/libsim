@@ -439,6 +439,31 @@ ENDIF
 END SUBROUTINE vol7d_alloc_vol
 
 
+SUBROUTINE vol7d_set_attr_ind(this)
+TYPE(vol7d),INTENT(inout) :: this
+
+integer :: i
+
+IF (associated(this%dativar%r)) THEN
+   IF (associated(this%dativarattr%r)) then
+      DO i = 1, size(this%dativar%r)
+         this%dativar%r(i)%r = firsttrue(this%dativar%r(i)%btable == this%dativarattr%r(:)%btable)
+      enddo
+   endif
+endif
+
+
+IF (associated(this%dativar%r)) THEN
+   IF (associated(this%dativarattr%b)) then
+      DO i = 1, size(this%dativar%r)
+         this%dativar%r(i)%b = firsttrue(this%dativar%r(i)%btable == this%dativarattr%b(:)%btable)
+      enddo
+   endif
+endif
+
+END SUBROUTINE vol7d_set_attr_ind
+
+
 SUBROUTINE vol7d_merge(this, that, sort)
 TYPE(vol7d),INTENT(INOUT) :: this, that
 LOGICAL,INTENT(IN),OPTIONAL :: sort

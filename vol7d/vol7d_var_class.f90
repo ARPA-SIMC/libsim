@@ -52,6 +52,12 @@ ELSE
   this%unit = cmiss
 ENDIF
 
+this%r = -1
+this%d = -1
+this%i = -1
+this%b = -1
+this%c = -1
+
 END SUBROUTINE vol7d_var_init
 
 

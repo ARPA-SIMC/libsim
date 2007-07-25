@@ -6,7 +6,7 @@ USE vol7d_utilities
 
 IMPLICIT NONE
 
-include "/home/patruno/svn/dballe/fortran/dballef.h"
+include "dballef.h"
 
 TYPE vol7d_dballe
   TYPE(vol7d) :: vol7d
@@ -477,7 +477,7 @@ ELSE ! altrimenti lo assegno
   this%vol7d = vol7dtmp
 ENDIF
 
-
+call vol7d_set_attr_ind(this%vol7d)
 
 END SUBROUTINE vol7d_dballe_importvvns
 
@@ -494,50 +494,37 @@ REAL(kind=fp_geo),INTENT(in),optional :: latmin,latmax,lonmin,lonmax
 TYPE(vol7d_level),INTENT(in),optional :: level
 TYPE(vol7d_timerange),INTENT(in),optional :: timerange
 CHARACTER(len=*),INTENT(in),OPTIONAL :: var(:),attr(:)
-logical, allocatable :: lvarr(:), lnetwork(:),llevel(:),ltimerange(:),lattrb(:)
+logical, allocatable :: lnetwork(:),llevel(:),ltimerange(:)
 integer,allocatable :: ana_id(:,:)
-logical :: write
+logical :: write,writeattr
 
 !CHARACTER(len=6) :: btable
 !CHARACTER(len=7) ::starbtable
 
 integer :: year,month,day,hour,minute,sec
-integer :: nstaz,ntime,ntimerange,nlevel,nnetwork,ndativarr,ndatiattrb
+integer :: nstaz,ntime,ntimerange,nlevel,nnetwork
 
-INTEGER :: i,ii,iii,iiii,iiiii,iiiiii,j
+
+INTEGER :: i,ii,iii,iiii,iiiii,iiiiii,j,ind,inddatiattr
 
 REAL(kind=fp_geo) :: lat,lon 
 !INTEGER(kind=int_b)::attrdatib
 
 
+integer :: ndativarr,ndatiattrr
+integer :: ndativari,ndatiattri
+integer :: ndativarb,ndatiattrb
+integer :: ndativard,ndatiattrd
+integer :: ndativarc,ndatiattrc
+
+logical, allocatable :: lvarr(:),lattrr(:)
+logical, allocatable :: lvari(:),lattri(:)
+logical, allocatable :: lvarb(:),lattrb(:)
+logical, allocatable :: lvard(:),lattrd(:)
+logical, allocatable :: lvarc(:),lattrc(:)
+
+
 nstaz=size(this%vol7d%ana(:))
-
-ndativarr=size(this%vol7d%dativar%r(:))
-allocate (lvarr(ndativarr))
-if (present(var))then
-   do  i=1,size(var)
-      where (var(i) == this%vol7d%dativar%r(:)%btable)
-         lvarr(:)=.true.
-      end where
-   end do
-else
-   lvar(:)=.true.
-end if
-!TODO : questo qui sopra è fatto solo per i reali !
-
-ndatiattrb=size(this%vol7d%datiattr%b(:))
-allocate (lattrb(ndatiattrb))
-if (present(attr))then
-   do  i=1,size(attr)
-      where (attr(i) == this%vol7d%datiattr%b(:)%btable)
-         lattrb(:)=.true.
-      end where
-   end do
-else
-   lattrb(:)=.true.
-end if
-!TODO : questo qui sopra è fatto solo per i byte !
-
 
 ntimerange=size(this%vol7d%timerange(:))
 allocate (ltimerange(ntimerange))
@@ -574,6 +561,216 @@ if (present(network))then
 else
    lnetwork(:)=.true.
 end if
+
+!!$
+!!$!type $$
+!!$
+!!$if (associated(this%vol7d%dativar%$$))then
+!!$   ndativar$$=size(this%vol7d%dativar%$$(:))
+!!$   allocate (lvar$$(ndativar$$))
+!!$   if (present(var))then
+!!$      lvar$$(:)=.false.
+!!$      do  i=1,size(var)
+!!$         where (var(i) == this%vol7d%dativar%$$(:)%btable)
+!!$            lvar$$(:)=.true.
+!!$         end where
+!!$      end do
+!!$   else
+!!$      lvar$$(:)=.true.
+!!$   end if
+!!$end if
+!!$
+!!$if (associated(this%vol7d%dativarattr%$$))then
+!!$   ndatiattr$$=size(this%vol7d%datiattr%$$(:))
+!!$   allocate (lattr$$(ndatiattr$$))
+!!$   if (present(attr))then
+!!$      lattr$$(:)=.false.
+!!$      do  i=1,size(attr)
+!!$         where (attr(i) == this%vol7d%datiattr%$$(:)%btable)
+!!$            lattr$$(:)=.true.
+!!$         end where
+!!$      end do
+!!$   else
+!!$      lattr$$(:)=.true.
+!!$   end if
+!!$end if
+!!$
+!!$!# end type  $$
+
+
+!type r
+
+if (associated(this%vol7d%dativar%r))then
+   ndativarr=size(this%vol7d%dativar%r(:))
+   allocate (lvarr(ndativarr))
+   if (present(var))then
+      lvarr(:)=.false.
+      do  i=1,size(var)
+         where (var(i) == this%vol7d%dativar%r(:)%btable)
+            lvarr(:)=.true.
+         end where
+      end do
+   else
+      lvarr(:)=.true.
+   end if
+end if
+
+if (associated(this%vol7d%dativarattr%r))then
+   ndatiattrr=size(this%vol7d%datiattr%r(:))
+   allocate (lattrr(ndatiattrr))
+   if (present(attr))then
+      lattrr(:)=.false.
+      do  i=1,size(attr)
+         where (attr(i) == this%vol7d%datiattr%r(:)%btable)
+            lattrr(:)=.true.
+         end where
+      end do
+   else
+      lattrr(:)=.true.
+   end if
+end if
+
+!# end type  r
+
+
+
+!type c
+
+if (associated(this%vol7d%dativar%c))then
+   ndativarc=size(this%vol7d%dativar%c(:))
+   allocate (lvarc(ndativarc))
+   if (present(var))then
+      lvarc(:)=.false.
+      do  i=1,size(var)
+         where (var(i) == this%vol7d%dativar%c(:)%btable)
+            lvarc(:)=.true.
+         end where
+      end do
+   else
+      lvarc(:)=.true.
+   end if
+end if
+
+if (associated(this%vol7d%dativarattr%c))then
+   ndatiattrc=size(this%vol7d%datiattr%c(:))
+   allocate (lattrc(ndatiattrc))
+   if (present(attr))then
+      lattrc(:)=.false.
+      do  i=1,size(attr)
+         where (attr(i) == this%vol7d%datiattr%c(:)%btable)
+            lattrc(:)=.true.
+         end where
+      end do
+   else
+      lattrc(:)=.true.
+   end if
+end if
+
+!# end type  c
+
+!type i
+
+if (associated(this%vol7d%dativar%i))then
+   ndativari=size(this%vol7d%dativar%i(:))
+   allocate (lvari(ndativari))
+   if (present(var))then
+      lvari(:)=.false.
+      do  i=1,size(var)
+         where (var(i) == this%vol7d%dativar%i(:)%btable)
+            lvari(:)=.true.
+         end where
+      end do
+   else
+      lvari(:)=.true.
+   end if
+end if
+
+if (associated(this%vol7d%dativarattr%i))then
+   ndatiattri=size(this%vol7d%datiattr%i(:))
+   allocate (lattri(ndatiattri))
+   if (present(attr))then
+      lattri(:)=.false.
+      do  i=1,size(attr)
+         where (attr(i) == this%vol7d%datiattr%i(:)%btable)
+            lattri(:)=.true.
+         end where
+      end do
+   else
+      lattri(:)=.true.
+   end if
+end if
+
+!# end type  i
+
+!type b
+
+if (associated(this%vol7d%dativar%b))then
+   ndativarb=size(this%vol7d%dativar%b(:))
+   allocate (lvarb(ndativarb))
+   if (present(var))then
+      lvarb(:)=.false.
+      do  i=1,size(var)
+         where (var(i) == this%vol7d%dativar%b(:)%btable)
+            lvarb(:)=.true.
+         end where
+      end do
+   else
+      lvarb(:)=.true.
+   end if
+end if
+
+if (associated(this%vol7d%dativarattr%b))then
+   ndatiattrb=size(this%vol7d%datiattr%b(:))
+   allocate (lattrb(ndatiattrb))
+   if (present(attr))then
+      lattrb(:)=.false.
+      do  i=1,size(attr)
+         where (attr(i) == this%vol7d%datiattr%b(:)%btable)
+            lattrb(:)=.true.
+         end where
+      end do
+   else
+      lattrb(:)=.true.
+   end if
+end if
+
+!# end type  b
+
+!type d
+
+if (associated(this%vol7d%dativar%d))then
+   ndativard=size(this%vol7d%dativar%d(:))
+   allocate (lvard(ndativard))
+   if (present(var))then
+      lvard(:)=.false.
+      do  i=1,size(var)
+         where (var(i) == this%vol7d%dativar%d(:)%btable)
+            lvard(:)=.true.
+         end where
+      end do
+   else
+      lvard(:)=.true.
+   end if
+end if
+
+if (associated(this%vol7d%dativarattr%d))then
+   ndatiattrd=size(this%vol7d%datiattr%d(:))
+   allocate (lattrd(ndatiattrd))
+   if (present(attr))then
+      lattrd(:)=.false.
+      do  i=1,size(attr)
+         where (attr(i) == this%vol7d%datiattr%d(:)%btable)
+            lattrd(:)=.true.
+         end where
+      end do
+   else
+      lattrd(:)=.true.
+   end if
+end if
+
+!# end type  d 
+
+
 
 
 call idba_unsetall (this%handle)
@@ -669,95 +866,68 @@ do i=1, nstaz
                !voldati*(nana,ntime,nlevel,ntimerange,ndativar*,nnetwork)
 
 
----------------
-
-               do iiiii=1,ndativarr
-                  if (.not.lvarr(iiiii))cycle
-                  if (c_e(this%vol7d%voldatir(i,ii,iii,iiii,iiiii,iiiiii)))then
-                     call idba_set (this%handle,this%vol7d%dativar%r(iiiii)%btable , &
-                          this%vol7d%voldatir(i,ii,iii,iiii,iiiii,iiiiii))
-                     if call idba_prendilo (this%handle)
-
-                     
-                     ndatiattrb=size(this%vol7d%datiattr%b(:))
-                     allocate (lattrb(ndatiattrb))
-                     if (present(attr))then
-                        do  i=1,size(attr)
-                           where (attr(i) == this%vol7d%datiattr%b(:)%btable)
-                              lattrb(:)=.true.
-                           end where
-                        end do
-                     else
-                        lattrb(:)=.true.
-                     end if
-                     !TODO : questo qui sopra è fatto solo per i byte !
-
-                     ind = this%vol7d%dativar%r(iiiii)%b
-                     if (ind > 0) then
-                     if (ndatiattrb > 0 )then 
-                        do inddatiattr=1,ndatiattrb
-                           if (c_e(vol7dtmp%voldatiattrb(i,ii,iii,iiii,ind,iiiiii,inddatiattr)))then
-                              call idba_set (this%handle, vol7dtmp%datiattr%b(inddatiattr)%btable,&
-                                   vol7dtmp%voldatiattrb(i,ii,iii,iiii,ind,iiiiii,inddatiattr)) 
-                              writeattr=.true.
-                           end if
-                        end do
-                        if (writeattr) call idba_critica (this%handle)
-                     else
-                        write=.true.
-                     end if
-                  end if
-               end do
+#undef VOL7D_POLY_TYPES_V
+#define VOL7D_POLY_TYPES_V r
+#include "vol7d_dballe_class_var.F90"
+#undef VOL7D_POLY_TYPES_V
+#define VOL7D_POLY_TYPES_V i
+#include "vol7d_dballe_class_var.F90"
+#undef VOL7D_POLY_TYPES_V
+#define VOL7D_POLY_TYPES_V b
+#include "vol7d_dballe_class_var.F90"
+#undef VOL7D_POLY_TYPES_V
+#define VOL7D_POLY_TYPES_V d
+#include "vol7d_dballe_class_var.F90"
+#undef VOL7D_POLY_TYPES_V
+#define VOL7D_POLY_TYPES_V c
+#include "vol7d_dballe_class_var.F90"
+#undef VOL7D_POLY_TYPES_V
 
 
-
---------------------
-
-
-               do iiiii=1,ndativarr
-                  if (.not.lvarr(iiiii))cycle
-                  if (c_e(this%vol7d%voldatir(i,ii,iii,iiii,iiiii,iiiiii)))then
-                     call idba_set (this%handle,this%vol7d%dativar%r(iiiii)%btable , &
-                          this%vol7d%voldatir(i,ii,iii,iiii,iiiii,iiiiii)) 
-                     if (ndatiattrb > 0 )then 
-                        if call idba_prendilo (this%handle)
-                        do inddatiattr=1,ndatiattrb
-                           call idba_set (this%handle, vol7dtmp%datiattr%b(inddatiattr)%btable,&
-                                vol7dtmp%voldatiattrb((i,ii,iii,iiii,iiiii,iiiiii,inddatiattr)) 
-                           eriteattr=.true.
-                        end do
-                        if (writeattr) call idba_critica (this%handle)
-                     else
-                        write=.true.
-                     end if
-                  end if
-               end do
-
-               do iiiii=1,size(this%vol7d%dativar%i(:))
-                  if (c_e(this%vol7d%voldatii(i,ii,iii,iiii,iiiii,iiiiii)))then
-                     call idba_set (this%handle,this%vol7d%dativar%i(iiiii)%btable , &
-                          this%vol7d%voldatii(i,ii,iii,iiii,iiiii,iiiiii)) 
-                     write=.true.
-                  end if
-               end do
-
-               do iiiii=1,size(this%vol7d%dativar%c(:))
-                  if (c_e(this%vol7d%voldatic(i,ii,iii,iiii,iiiii,iiiiii)))then 
-                     call idba_set (this%handle,this%vol7d%dativar%c(iiiii)%btable , &
-                          this%vol7d%voldatic(i,ii,iii,iiii,iiiii,iiiiii)) 
-                     write=.true.
-                  end if
-               end do
-
-               if (write) call idba_prendilo (this%handle)
-
-
-               do inddatiattr=1,ndatiattrb
-
-                  call idba_set (this%handle, vol7dtmp%datiattr%b(inddatiattr)%btable,&
-                       vol7dtmp%voldatiattrb((i,ii,iii,iiii,iiiii,iiiiii,inddatiattr)) 
-               end do
-               if (write) call idba_critica (this%handle)
+!!$               do iiiii=1,ndativarr
+!!$                  if (.not.lvarr(iiiii))cycle
+!!$                  if (c_e(this%vol7d%voldatir(i,ii,iii,iiii,iiiii,iiiiii)))then
+!!$                     call idba_set (this%handle,this%vol7d%dativar%r(iiiii)%btable , &
+!!$                          this%vol7d%voldatir(i,ii,iii,iiii,iiiii,iiiiii)) 
+!!$                     if (ndatiattrb > 0 )then 
+!!$                        if call idba_prendilo (this%handle)
+!!$                        do inddatiattr=1,ndatiattrb
+!!$                           call idba_set (this%handle, vol7dtmp%datiattr%b(inddatiattr)%btable,&
+!!$                                vol7dtmp%voldatiattrb((i,ii,iii,iiii,iiiii,iiiiii,inddatiattr)) 
+!!$                           eriteattr=.true.
+!!$                        end do
+!!$                        if (writeattr) call idba_critica (this%handle)
+!!$                     else
+!!$                        write=.true.
+!!$                     end if
+!!$                  end if
+!!$               end do
+!!$
+!!$               do iiiii=1,size(this%vol7d%dativar%i(:))
+!!$                  if (c_e(this%vol7d%voldatii(i,ii,iii,iiii,iiiii,iiiiii)))then
+!!$                     call idba_set (this%handle,this%vol7d%dativar%i(iiiii)%btable , &
+!!$                          this%vol7d%voldatii(i,ii,iii,iiii,iiiii,iiiiii)) 
+!!$                     write=.true.
+!!$                  end if
+!!$               end do
+!!$
+!!$               do iiiii=1,size(this%vol7d%dativar%c(:))
+!!$                  if (c_e(this%vol7d%voldatic(i,ii,iii,iiii,iiiii,iiiiii)))then 
+!!$                     call idba_set (this%handle,this%vol7d%dativar%c(iiiii)%btable , &
+!!$                          this%vol7d%voldatic(i,ii,iii,iiii,iiiii,iiiiii)) 
+!!$                     write=.true.
+!!$                  end if
+!!$               end do
+!!$
+!!$               if (write) call idba_prendilo (this%handle)
+!!$
+!!$
+!!$               do inddatiattr=1,ndatiattrb
+!!$
+!!$                  call idba_set (this%handle, vol7dtmp%datiattr%b(inddatiattr)%btable,&
+!!$                       vol7dtmp%voldatiattrb((i,ii,iii,iiii,iiiii,iiiiii,inddatiattr)) 
+!!$               end do
+!!$               if (write) call idba_critica (this%handle)
 
             end do
          end do
