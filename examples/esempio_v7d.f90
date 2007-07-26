@@ -91,13 +91,24 @@ PRINT*,vol1d
 PRINT*,'Volume 1+2+3, attributi:'
 PRINT*,v7d1%volanai
 
+! copio il volumo in un altro e distruggo l'originale
 CALL vol7d_copy(v7d1, v7dc)
 CALL delete (v7d1)
 
 CALL vol7d_get_voldatir(v7dc, (/vol7d_time_d/), vol1d)
-PRINT*,'Volume copia, dati:'
+PRINT*,'Volume copiato, dati:'
 PRINT*,vol1d
-PRINT*,'Volume copia, attributi:'
+PRINT*,'Volume copiato, attributi:'
+PRINT*,v7dc%volanai
+
+! riformo il volume togliendo il penultimo livello temporale
+v7dc%time(SIZE(v7dc%time)-1) = datetime_miss
+CALL vol7d_reform(v7dc, miss=.TRUE.)
+
+CALL vol7d_get_voldatir(v7dc, (/vol7d_time_d/), vol1d)
+PRINT*,'Volume riformato, dati:'
+PRINT*,vol1d
+PRINT*,'Volume riformato, attributi:'
 PRINT*,v7dc%volanai
 
 
