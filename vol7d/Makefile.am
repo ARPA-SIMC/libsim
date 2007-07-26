@@ -14,7 +14,7 @@ endif
 AM_FCFLAGS = -I../base
 libsim_vol7d_la_LIBADD = ../base/libsim_base.la
 noinst_HEADERS = vol7d_class_type_templ.F90 vol7d_class_desc_templ.F90 \
- vol7d_distinct.F90
+ vol7d_distinct.F90 vol7d_dballe_class_var.F90 vol7d_dballe_class_attr.F90
 # c'e` una maniera migliore?
 tmpvar = $(libsim_vol7d_la_SOURCES:.f90=.mod)
 nodist_include_HEADERS = $(tmpvar:.F90=.mod)
@@ -39,8 +39,8 @@ vol7d_oraclesim_class.lo: vol7d_class.$(OBJEXT) vol7d_utilities.$(OBJEXT)
 endif
 
 if DBALLE
-vol7d_dballe_class.$(OBJEXT): vol7d_class.$(OBJEXT) vol7d_utilities.$(OBJEXT)
-vol7d_dballe_class.lo: vol7d_class.$(OBJEXT) vol7d_utilities.$(OBJEXT)
+vol7d_dballe_class.$(OBJEXT): vol7d_class.$(OBJEXT) vol7d_utilities.$(OBJEXT) vol7d_dballe_class_var.F90 vol7d_dballe_class_attr.F90
+vol7d_dballe_class.lo: vol7d_class.$(OBJEXT) vol7d_utilities.$(OBJEXT) vol7d_dballe_class_var.F90 vol7d_dballe_class_attr.F90
 AM_FCFLAGS += -I /usr/include/dballe
 endif
 
