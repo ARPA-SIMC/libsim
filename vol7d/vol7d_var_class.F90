@@ -9,6 +9,9 @@ TYPE vol7d_var
   INTEGER :: r, d, i, b, c
 END TYPE  vol7d_var
 
+TYPE(vol7d_var),PARAMETER :: vol7d_var_miss= &
+ vol7d_var(cmiss,cmiss,cmiss,imiss,imiss,imiss,imiss,imiss)
+
 INTERFACE init
   MODULE PROCEDURE vol7d_var_init
 END INTERFACE
@@ -23,6 +26,22 @@ END INTERFACE
 
 INTERFACE OPERATOR (/=)
   MODULE PROCEDURE vol7d_var_ne, vol7d_var_nesv
+END INTERFACE
+
+INTERFACE count_distinct
+  MODULE PROCEDURE count_distinct_var
+END INTERFACE
+
+INTERFACE pack_distinct
+  MODULE PROCEDURE pack_distinct_var
+END INTERFACE
+
+INTERFACE map_distinct
+  MODULE PROCEDURE map_distinct_var
+END INTERFACE
+
+INTERFACE map_inv_distinct
+  MODULE PROCEDURE map_inv_distinct_var
 END INTERFACE
 
 CONTAINS
@@ -113,6 +132,14 @@ DO i = 1, SIZE(that)
 ENDDO
 
 END FUNCTION vol7d_var_nesv
+
+
+! Definisce le funzioni count_distinct e pack_distinct
+#define VOL7D_POLY_TYPE TYPE(vol7d_var)
+#define VOL7D_POLY_TYPES _var
+#include "vol7d_distinct.F90"
+#undef VOL7D_POLY_TYPE
+#undef VOL7D_POLY_TYPES
 
 
 END MODULE vol7d_var_class
