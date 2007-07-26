@@ -9,7 +9,7 @@ INTEGER,INTENT(in) :: remapa1(:), remapa2(:), remapt1(:), remapt2(:), &
 INTEGER,POINTER :: remapv1(:), remapv2(:), remapva1(:), remapva2(:)
 
 ! 3d
-CALL vol7d_remap_vol7d_var(this%anavar%/**/VOL7D_POLY_TYPES, &
+CALL vol7d_remap2_vol7d_var(this%anavar%/**/VOL7D_POLY_TYPES, &
  that%anavar%/**/VOL7D_POLY_TYPES, v7dtmp%anavar%/**/VOL7D_POLY_TYPES, &
  .FALSE., remapv1, remapv2)
 IF (ASSOCIATED(v7dtmp%anavar%/**/VOL7D_POLY_TYPES)) THEN
@@ -27,10 +27,10 @@ IF (ASSOCIATED(v7dtmp%anavar%/**/VOL7D_POLY_TYPES)) THEN
 ENDIF
 
 ! 4d
-CALL vol7d_remap_vol7d_var(this%anaattr%/**/VOL7D_POLY_TYPES, &
+CALL vol7d_remap2_vol7d_var(this%anaattr%/**/VOL7D_POLY_TYPES, &
  that%anaattr%/**/VOL7D_POLY_TYPES, v7dtmp%anaattr%/**/VOL7D_POLY_TYPES, &
  .FALSE., remapv1, remapv2)
-CALL vol7d_remap_vol7d_var(this%anavarattr%/**/VOL7D_POLY_TYPES, &
+CALL vol7d_remap2_vol7d_var(this%anavarattr%/**/VOL7D_POLY_TYPES, &
  that%anavarattr%/**/VOL7D_POLY_TYPES, v7dtmp%anavarattr%/**/VOL7D_POLY_TYPES, &
  .FALSE., remapva1, remapva2)
 IF (ASSOCIATED(v7dtmp%anaattr%/**/VOL7D_POLY_TYPES) .AND. &
@@ -59,7 +59,7 @@ IF (ASSOCIATED(v7dtmp%anaattr%/**/VOL7D_POLY_TYPES) .AND. &
 ENDIF
 
 ! 6d
-CALL vol7d_remap_vol7d_var(this%dativar%/**/VOL7D_POLY_TYPES, &
+CALL vol7d_remap2_vol7d_var(this%dativar%/**/VOL7D_POLY_TYPES, &
  that%dativar%/**/VOL7D_POLY_TYPES, v7dtmp%dativar%/**/VOL7D_POLY_TYPES, &
  .FALSE., remapv1, remapv2)
 IF (ASSOCIATED(v7dtmp%dativar%/**/VOL7D_POLY_TYPES)) THEN
@@ -79,10 +79,10 @@ IF (ASSOCIATED(v7dtmp%dativar%/**/VOL7D_POLY_TYPES)) THEN
 ENDIF
 
 ! 7d
-CALL vol7d_remap_vol7d_var(this%datiattr%/**/VOL7D_POLY_TYPES, &
+CALL vol7d_remap2_vol7d_var(this%datiattr%/**/VOL7D_POLY_TYPES, &
  that%datiattr%/**/VOL7D_POLY_TYPES, v7dtmp%datiattr%/**/VOL7D_POLY_TYPES, &
  .FALSE., remapv1, remapv2)
-CALL vol7d_remap_vol7d_var(this%dativarattr%/**/VOL7D_POLY_TYPES, &
+CALL vol7d_remap2_vol7d_var(this%dativarattr%/**/VOL7D_POLY_TYPES, &
  that%dativarattr%/**/VOL7D_POLY_TYPES, v7dtmp%dativarattr%/**/VOL7D_POLY_TYPES, &
  .FALSE., remapva1, remapva2)
 IF (ASSOCIATED(v7dtmp%datiattr%/**/VOL7D_POLY_TYPES) .AND. &
@@ -114,21 +114,72 @@ ENDIF
 END SUBROUTINE vol7d_merge_final/**/VOL7D_POLY_TYPES
 
 
-!! datiana(ana,anavar,network)
-!! attrdatiana(ana,attranavar,network,attr)
-!! dati(ana,time,level,timerange,dativar,network)
-!! attrdati(ana,time,level,timerange,attrdativar,network,attr)
-!!$  DO i3 = 1, SIZE(v7dtmp%network)
-!!$    DO i2 = 1, SIZE(v7dtmp%var?)
-!!$      DO i1 = 1, SIZE(v7dtmp%ana)
-!!$        v7dtmp%voldatiana(remapa1(i1),remapv1?(i2),remapn1(i3)) = &
-!!$         this%voldatiana(i1,i2,i3)
-!!$        v7dtmp%voldatiana(remapa2(i1),remapv2?(i2),remapn2(i3)) = &
-!!$         that%voldatiana(i1,i2,i3)
-!!$      ENDDO
-!!$    ENDDO
-!!$  ENDDO
+SUBROUTINE vol7d_reform_final/**/VOL7D_POLY_TYPES(this, v7dtmp, &
+ remapa, remapt, remapl, remaptr, remapn, miss)
+TYPE(vol7d),INTENT(inout) :: this, v7dtmp
+INTEGER,INTENT(in) :: remapa(:), remapt(:), remapl(:), remaptr(:), remapn(:)
+LOGICAL,INTENT(in) :: miss
 
+INTEGER,POINTER :: remapv(:), remapva(:)
+
+! 3d
+CALL vol7d_remap1_vol7d_var(this%anavar%/**/VOL7D_POLY_TYPES, &
+ v7dtmp%anavar%/**/VOL7D_POLY_TYPES, .FALSE., miss, remapv)
+IF (ASSOCIATED(v7dtmp%anavar%/**/VOL7D_POLY_TYPES)) THEN
+  CALL vol7d_alloc_vol(v7dtmp)
+  v7dtmp%volana/**/VOL7D_POLY_TYPES(:,:,:) = &
+   this%volana/**/VOL7D_POLY_TYPES(remapa(:),remapv(:),remapn(:))
+  DEALLOCATE(remapv)
+ENDIF
+
+! 4d
+CALL vol7d_remap1_vol7d_var(this%anaattr%/**/VOL7D_POLY_TYPES, &
+ v7dtmp%anaattr%/**/VOL7D_POLY_TYPES, .FALSE., miss, remapv)
+CALL vol7d_remap1_vol7d_var(this%anavarattr%/**/VOL7D_POLY_TYPES, &
+ v7dtmp%anavarattr%/**/VOL7D_POLY_TYPES, .FALSE., miss, remapva)
+IF (ASSOCIATED(v7dtmp%anaattr%/**/VOL7D_POLY_TYPES) .AND. &
+ ASSOCIATED(v7dtmp%anavarattr%/**/VOL7D_POLY_TYPES)) THEN
+  CALL vol7d_alloc_vol(v7dtmp)
+  v7dtmp%volanaattr/**/VOL7D_POLY_TYPES(:,:,:,:) = &
+   this%volanaattr/**/VOL7D_POLY_TYPES &
+   (remapa(:),remapva(:),remapn(:),remapv(:))
+  DEALLOCATE(remapv, remapva)
+ELSE IF (ASSOCIATED(remapv)) THEN
+  DEALLOCATE(remapv)
+ELSE IF (ASSOCIATED(remapva)) THEN
+  DEALLOCATE(remapva)
+ENDIF
+
+! 6d
+CALL vol7d_remap1_vol7d_var(this%dativar%/**/VOL7D_POLY_TYPES, &
+ v7dtmp%dativar%/**/VOL7D_POLY_TYPES, .FALSE., miss, remapv)
+IF (ASSOCIATED(v7dtmp%dativar%/**/VOL7D_POLY_TYPES)) THEN
+  CALL vol7d_alloc_vol(v7dtmp)
+  v7dtmp%voldati/**/VOL7D_POLY_TYPES(:,:,:,:,:,:) =  &
+   this%voldati/**/VOL7D_POLY_TYPES &
+   (remapa(:),remapt(:),remapl(:),remaptr(:),remapv(:),remapn(:))
+  DEALLOCATE(remapv)
+ENDIF
+
+! 7d
+CALL vol7d_remap1_vol7d_var(this%datiattr%/**/VOL7D_POLY_TYPES, &
+ v7dtmp%datiattr%/**/VOL7D_POLY_TYPES, .FALSE., miss, remapv)
+CALL vol7d_remap1_vol7d_var(this%dativarattr%/**/VOL7D_POLY_TYPES, &
+ v7dtmp%dativarattr%/**/VOL7D_POLY_TYPES, .FALSE., miss, remapva)
+IF (ASSOCIATED(v7dtmp%datiattr%/**/VOL7D_POLY_TYPES) .AND. &
+ ASSOCIATED(v7dtmp%dativarattr%/**/VOL7D_POLY_TYPES)) THEN
+  CALL vol7d_alloc_vol(v7dtmp)
+  v7dtmp%voldatiattr/**/VOL7D_POLY_TYPES(:,:,:,:,:,:,:) = &
+     this%voldatiattr/**/VOL7D_POLY_TYPES &
+     (remapa(:),remapt(:),remapl(:),remaptr(:),remapva(:),remapn(:),remapv(:))
+  DEALLOCATE(remapv, remapva)
+ELSE IF (ASSOCIATED(remapv)) THEN
+  DEALLOCATE(remapv)
+ELSE IF (ASSOCIATED(remapva)) THEN
+  DEALLOCATE(remapva)
+ENDIF
+
+END SUBROUTINE vol7d_reform_final/**/VOL7D_POLY_TYPES
 
 
 SUBROUTINE vol7d_get_volana/**/VOL7D_POLY_TYPES(this, dimlist, vol1dp, &
@@ -261,8 +312,8 @@ LOGICAL :: qualidim(vol7d_maxdim_ad)
 
 IF (MAXVAL(dimlist) > vol7d_maxdim_ad .OR. MINVAL(dimlist) < 1 &
  .OR. SIZE(dimlist) > vol7d_maxdim_ad) THEN
-  PRINT*,'Errore, dimensioni non valide:', dimlist
-  STOP
+  CALL raise_error('dimensioni non valide '//TRIM(to_char(dimlist)))
+  RETURN
 ENDIF
 qualidim = .FALSE.
 qualidim(dimlist) = .TRUE.
@@ -271,9 +322,9 @@ ndimr = SIZE(dimlist)
 !shp = SHAPE(this%voldatir)
 
 IF (ANY(.NOT.qualidim .AND. volshp > 1) ) THEN
-  PRINT*,'Errore, dimensioni non degeneri non richieste:', &
-   PACK(volshp, mask=(.NOT.qualidim .AND. volshp > 1))
-  STOP
+  CALL raise_error('dimensioni non degeneri non richieste '// &
+   TRIM(to_char(PACK(volshp, mask=(.NOT.qualidim .AND. volshp > 1)))))
+  RETURN
 ENDIF
 
 shpr(1:ndimr) = PACK(volshp, MASK = qualidim)
@@ -283,50 +334,50 @@ CASE(1)
   IF (PRESENT(vol1dp)) THEN
     CALL volptr1d/**/VOL7D_POLY_TYPES(shpr, vol1dp, vol)
   ELSE
-    PRINT*,'Errore, puntatore 1d, mancante'
-    STOP
+    CALL raise_error('puntatore 1d mancante')
+    RETURN
   ENDIF
 CASE(2)
   IF (PRESENT(vol2dp)) THEN
     CALL volptr2d/**/VOL7D_POLY_TYPES(shpr, vol2dp, vol)
   ELSE
-    PRINT*,'Errore, puntatore 2d, mancante'
-    STOP
+    CALL raise_error('puntatore 2d mancante')
+    RETURN
   ENDIF
 CASE(3)
   IF (PRESENT(vol3dp)) THEN
     CALL volptr3d/**/VOL7D_POLY_TYPES(shpr, vol3dp, vol)
   ELSE
-    PRINT*,'Errore, puntatore 3d, mancante'
-    STOP
+    CALL raise_error('puntatore 3d mancante')
+    RETURN
   ENDIF
 CASE(4)
   IF (PRESENT(vol4dp)) THEN
     CALL volptr4d/**/VOL7D_POLY_TYPES(shpr, vol4dp, vol)
   ELSE
-    PRINT*,'Errore, puntatore 4d, mancante'
-    STOP
+    CALL raise_error('puntatore 4d mancante')
+    RETURN
   ENDIF
 CASE(5)
   IF (PRESENT(vol5dp)) THEN
     CALL volptr5d/**/VOL7D_POLY_TYPES(shpr, vol5dp, vol)
   ELSE
-    PRINT*,'Errore, puntatore 5d, mancante'
-    STOP
+    CALL raise_error('puntatore 5d mancante')
+    RETURN
   ENDIF
 CASE(6)
   IF (PRESENT(vol6dp)) THEN
     CALL volptr6d/**/VOL7D_POLY_TYPES(shpr, vol6dp, vol)
   ELSE
-    PRINT*,'Errore, puntatore 6d, mancante'
-    STOP
+    CALL raise_error('puntatore 6d mancante')
+    RETURN
   ENDIF
 CASE(7)
   IF (PRESENT(vol7dp)) THEN
     CALL volptr7d/**/VOL7D_POLY_TYPES(shpr, vol7dp, vol)
   ELSE
-    PRINT*,'Errore, puntatore 7d, mancante'
-    STOP
+    CALL raise_error('puntatore 7d mancante')
+    RETURN
   ENDIF
 END SELECT
 

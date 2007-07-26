@@ -1,4 +1,4 @@
-SUBROUTINE vol7d_remap_/**/VOL7D_POLY_TYPE(varin1, varin2, varout, sort, remap1, remap2)
+SUBROUTINE vol7d_remap2_/**/VOL7D_POLY_TYPE(varin1, varin2, varout, sort, remap1, remap2)
 TYPE(/**/VOL7D_POLY_TYPE),POINTER :: varin1(:), varin2(:), varout(:)
 LOGICAL,INTENT(in) :: sort
 INTEGER,POINTER :: remap1(:), remap2(:)
@@ -53,4 +53,34 @@ ELSE ! compute simple remapping
 ENDIF
 #endif
 
-END SUBROUTINE vol7d_remap_/**/VOL7D_POLY_TYPE
+END SUBROUTINE vol7d_remap2_/**/VOL7D_POLY_TYPE
+
+
+SUBROUTINE vol7d_remap1_/**/VOL7D_POLY_TYPE(varin, varout, sort, miss, remap)
+TYPE(/**/VOL7D_POLY_TYPE),POINTER :: varin(:), varout(:)
+LOGICAL,INTENT(in) :: sort, miss
+INTEGER,POINTER :: remap(:)
+
+INTEGER :: n
+
+IF (.NOT.ASSOCIATED(varin)) THEN
+  NULLIFY(remap, varout)
+  RETURN
+ENDIF
+
+IF (miss) THEN
+  n = count_distinct(varin, back=.TRUE., mask=(varin /= VOL7D_POLY_TYPE/**/_miss))
+ELSE
+  n = count_distinct(varin, back=.TRUE.)
+ENDIF
+! Complete allocations
+ALLOCATE(remap(n), varout(n))
+IF (miss) THEN
+  remap = map_inv_distinct(varin, back=.TRUE., mask=(varin /= VOL7D_POLY_TYPE/**/_miss))
+  varout = pack_distinct(varin, back=.TRUE., mask=(varin /= VOL7D_POLY_TYPE/**/_miss))
+ELSE
+  remap = map_distinct(varin, back=.TRUE.)
+  varout = pack_distinct(varin, back=.TRUE.)
+ENDIF
+
+END SUBROUTINE vol7d_remap1_/**/VOL7D_POLY_TYPE

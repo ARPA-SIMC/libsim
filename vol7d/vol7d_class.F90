@@ -475,17 +475,17 @@ CALL delete(that)
 END SUBROUTINE vol7d_merge
 
 
-SUBROUTINE vol7d_copy(this, that, sort)
-TYPE(vol7d),INTENT(INOUT) :: this, that
-LOGICAL,INTENT(IN),OPTIONAL :: sort
-
-! Creo un volume vuoto e gli accodo this
-CALL init(that)
-CALL vol7d_alloc(that, nana=0, ntime=0, nlevel=0, ntimerange=0, nnetwork=0)
-CALL vol7d_alloc_vol(that)
-CALL vol7d_append(that, this, sort)
-
-END SUBROUTINE vol7d_copy
+!!$SUBROUTINE vol7d_duplicate(this, that, sort)
+!!$TYPE(vol7d),INTENT(INOUT) :: this, that
+!!$LOGICAL,INTENT(IN),OPTIONAL :: sort
+!!$
+!!$! Creo un volume vuoto e gli accodo this
+!!$CALL init(that)
+!!$CALL vol7d_alloc(that, nana=0, ntime=0, nlevel=0, ntimerange=0, nnetwork=0)
+!!$CALL vol7d_alloc_vol(that)
+!!$CALL vol7d_append(that, this, sort)
+!!$
+!!$END SUBROUTINE vol7d_duplicate
 
 
 SUBROUTINE vol7d_append(this, that, sort)
@@ -507,15 +507,15 @@ IF (PRESENT(sort)) lsort = sort
 
 ! Calcolo le mappature tra volumi vecchi e volume nuovo
 ! I puntatori remap* vengono tutti o allocati o nullificati
-CALL vol7d_remap_datetime(this%time, that%time, v7dtmp%time, &
+CALL vol7d_remap2_datetime(this%time, that%time, v7dtmp%time, &
  lsort, remapt1, remapt2)
-CALL vol7d_remap_vol7d_timerange(this%timerange, that%timerange, &
+CALL vol7d_remap2_vol7d_timerange(this%timerange, that%timerange, &
  v7dtmp%timerange, lsort, remaptr1, remaptr2)
-CALL vol7d_remap_vol7d_level(this%level, that%level, v7dtmp%level, &
+CALL vol7d_remap2_vol7d_level(this%level, that%level, v7dtmp%level, &
  lsort, remapl1, remapl2)
-CALL vol7d_remap_vol7d_ana(this%ana, that%ana, v7dtmp%ana, &
+CALL vol7d_remap2_vol7d_ana(this%ana, that%ana, v7dtmp%ana, &
  .FALSE., remapa1, remapa2)
-CALL vol7d_remap_vol7d_network(this%network, that%network, v7dtmp%network, &
+CALL vol7d_remap2_vol7d_network(this%network, that%network, v7dtmp%network, &
  .FALSE., remapn1, remapn2)
 
 ! Faccio la fusione fisica dei volumi
@@ -552,6 +552,76 @@ CALL delete(this)
 this = v7dtmp
 
 END SUBROUTINE vol7d_append
+
+
+SUBROUTINE vol7d_reform(this, sort, miss)
+TYPE(vol7d),INTENT(INOUT) :: this
+LOGICAL,INTENT(IN),OPTIONAL :: sort, miss
+
+TYPE(vol7d) :: v7dtmp
+
+CALL vol7d_copy(this, v7dtmp, sort, miss)
+! Distruggo il vecchio volume e assegno il nuovo a this
+CALL delete(this)
+this = v7dtmp
+
+END SUBROUTINE vol7d_reform
+
+
+SUBROUTINE vol7d_copy(this, that, sort, miss)
+TYPE(vol7d),INTENT(INOUT) :: this, that
+LOGICAL,INTENT(IN),OPTIONAL :: sort, miss
+
+LOGICAL :: lsort, lmiss
+INTEGER,POINTER :: remapt(:), remaptr(:), remapl(:), remapa(:), remapn(:)
+
+! Completo l'allocazione per avere un volume a norma
+CALL vol7d_alloc_vol(this)
+CALL init(that)
+IF (PRESENT(sort)) THEN
+  lsort = sort
+ELSE
+  lsort = .FALSE.
+ENDIF
+IF (PRESENT(miss)) THEN
+  lmiss = miss
+ELSE
+  lmiss = .FALSE.
+ENDIF
+
+! Calcolo le mappature tra volume vecchio e volume nuovo
+! I puntatori remap* vengono tutti o allocati o nullificati
+CALL vol7d_remap1_datetime(this%time, that%time, lsort, lmiss, &
+ remapt)
+CALL vol7d_remap1_vol7d_timerange(this%timerange, that%timerange, lsort, lmiss, &
+ remaptr)
+CALL vol7d_remap1_vol7d_level(this%level, that%level, lsort, lmiss, &
+ remapl)
+CALL vol7d_remap1_vol7d_ana(this%ana, that%ana, lsort, lmiss, &
+ remapa)
+CALL vol7d_remap1_vol7d_network(this%network, that%network, lsort, lmiss, &
+ remapn)
+
+! Faccio la riforma fisica dei volumi
+CALL vol7d_reform_finalr(this, that, &
+ remapa, remapt, remapl, remaptr, remapn, lmiss)
+CALL vol7d_reform_finald(this, that, &
+ remapa, remapt, remapl, remaptr, remapn, lmiss)
+CALL vol7d_reform_finali(this, that, &
+ remapa, remapt, remapl, remaptr, remapn, lmiss)
+CALL vol7d_reform_finalb(this, that, &
+ remapa, remapt, remapl, remaptr, remapn, lmiss)
+CALL vol7d_reform_finalc(this, that, &
+ remapa, remapt, remapl, remaptr, remapn, lmiss)
+
+! Dealloco i vettori di rimappatura
+IF (ASSOCIATED(remapt)) DEALLOCATE(remapt)
+IF (ASSOCIATED(remaptr)) DEALLOCATE(remaptr)
+IF (ASSOCIATED(remapl)) DEALLOCATE(remapl)
+IF (ASSOCIATED(remapa)) DEALLOCATE(remapa)
+IF (ASSOCIATED(remapn)) DEALLOCATE(remapn)
+
+END SUBROUTINE vol7d_copy
 
 ! Creo le routine da ripetere per i vari tipi di dati vi v7d
 ! tramite un template e il preprocessore
