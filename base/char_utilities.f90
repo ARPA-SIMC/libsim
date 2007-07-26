@@ -29,7 +29,7 @@ END INTERFACE
 
 CONTAINS
 
-FUNCTION int_to_char(i, form)
+elemental FUNCTION int_to_char(i, form)
 INTEGER,INTENT(in) :: i
 CHARACTER(len=*),INTENT(in),OPTIONAL :: form
 

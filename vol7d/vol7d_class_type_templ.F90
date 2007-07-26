@@ -312,7 +312,7 @@ LOGICAL :: qualidim(vol7d_maxdim_ad)
 
 IF (MAXVAL(dimlist) > vol7d_maxdim_ad .OR. MINVAL(dimlist) < 1 &
  .OR. SIZE(dimlist) > vol7d_maxdim_ad) THEN
-  CALL raise_error('dimensioni non valide '//TRIM(to_char(dimlist)))
+  CALL raise_error('dimensioni non valide '//to_char(dimlist))
   RETURN
 ENDIF
 qualidim = .FALSE.
@@ -323,7 +323,7 @@ ndimr = SIZE(dimlist)
 
 IF (ANY(.NOT.qualidim .AND. volshp > 1) ) THEN
   CALL raise_error('dimensioni non degeneri non richieste '// &
-   TRIM(to_char(PACK(volshp, mask=(.NOT.qualidim .AND. volshp > 1)))))
+   to_char(PACK(volshp, mask=(.NOT.qualidim .AND. volshp > 1))))
   RETURN
 ENDIF
 
