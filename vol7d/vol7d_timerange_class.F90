@@ -54,6 +54,10 @@ INTERFACE map_distinct
   MODULE PROCEDURE map_distinct_timerange
 END INTERFACE
 
+INTERFACE map_inv_distinct
+  MODULE PROCEDURE map_inv_distinct_timerange
+END INTERFACE
+
 CONTAINS
 
 SUBROUTINE vol7d_timerange_init(this, timerange, p1, p2)

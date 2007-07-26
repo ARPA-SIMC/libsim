@@ -42,6 +42,10 @@ INTERFACE map_distinct
   MODULE PROCEDURE map_distinct_ana
 END INTERFACE
 
+INTERFACE map_inv_distinct
+  MODULE PROCEDURE map_inv_distinct_ana
+END INTERFACE
+
 CONTAINS
 
 SUBROUTINE vol7d_ana_init(this, lon, lat, ident)

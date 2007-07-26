@@ -37,6 +37,11 @@ INTERFACE map_distinct
    map_distinct_datetime, map_distinct_c
 END INTERFACE
 
+INTERFACE map_inv_distinct
+  MODULE PROCEDURE map_inv_distinct_i, map_inv_distinct_r, map_inv_distinct_d, &
+   map_inv_distinct_datetime, map_inv_distinct_c
+END INTERFACE
+
 CONTAINS
 
 

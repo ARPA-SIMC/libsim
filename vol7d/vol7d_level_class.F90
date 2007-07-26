@@ -53,6 +53,10 @@ INTERFACE map_distinct
   MODULE PROCEDURE map_distinct_level
 END INTERFACE
 
+INTERFACE map_inv_distinct
+  MODULE PROCEDURE map_inv_distinct_level
+END INTERFACE
+
 CONTAINS
 
 SUBROUTINE vol7d_level_init(this, level, l1, l2)

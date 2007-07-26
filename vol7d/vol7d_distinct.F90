@@ -19,6 +19,7 @@ IF (PRESENT (mask)) THEN
     vectm1: DO i = 1, SIZE(vect)
       IF (.NOT.mask(i)) CYCLE vectm1
       DO j = i-1, 1, -1
+        IF (.NOT.mask(j)) CYCLE
         IF (vect(j) == vect(i)) CYCLE vectm1
       ENDDO
       count_distinct = count_distinct + 1
@@ -27,6 +28,7 @@ IF (PRESENT (mask)) THEN
     vectm2: DO i = 1, SIZE(vect)
       IF (.NOT.mask(i)) CYCLE vectm2
       DO j = 1, i-1
+        IF (.NOT.mask(j)) CYCLE
         IF (vect(j) == vect(i)) CYCLE vectm2
       ENDDO
       count_distinct = count_distinct + 1
@@ -76,6 +78,7 @@ IF (PRESENT (mask)) THEN
     vectm1: DO i = 1, SIZE(vect)
       IF (.NOT.mask(i)) CYCLE vectm1
       DO j = i-1, 1, -1
+        IF (.NOT.mask(j)) CYCLE
         IF (vect(j) == vect(i)) CYCLE vectm1
       ENDDO
       count_distinct = count_distinct + 1
@@ -85,6 +88,7 @@ IF (PRESENT (mask)) THEN
     vectm2: DO i = 1, SIZE(vect)
       IF (.NOT.mask(i)) CYCLE vectm2
       DO j = 1, i-1
+        IF (.NOT.mask(j)) CYCLE
         IF (vect(j) == vect(i)) CYCLE vectm2
       ENDDO
       count_distinct = count_distinct + 1
@@ -137,6 +141,7 @@ IF (PRESENT (mask)) THEN
     vectm1: DO i = 1, SIZE(vect)
       IF (.NOT.mask(i)) CYCLE vectm1
       DO j = i-1, 1, -1
+        IF (.NOT.mask(j)) CYCLE
         IF (vect(j) == vect(i)) THEN
           map_distinct(i) = map_distinct(j)
           CYCLE vectm1
@@ -149,6 +154,7 @@ IF (PRESENT (mask)) THEN
     vectm2: DO i = 1, SIZE(vect)
       IF (.NOT.mask(i)) CYCLE vectm2
       DO j = 1, i-1
+        IF (.NOT.mask(j)) CYCLE
         IF (vect(j) == vect(i)) THEN
           map_distinct(i) = map_distinct(j)
           CYCLE vectm2
@@ -185,3 +191,66 @@ ELSE
 ENDIF
 
 END FUNCTION map_distinct/**/VOL7D_POLY_TYPES
+
+
+FUNCTION map_inv_distinct/**/VOL7D_POLY_TYPES(vect, mask, back) &
+ RESULT(map_inv_distinct)
+VOL7D_POLY_TYPE,INTENT(in) :: vect(:)
+LOGICAL,INTENT(in),OPTIONAL :: mask(:), back
+INTEGER :: map_inv_distinct(SIZE(vect))
+
+INTEGER :: count_distinct
+INTEGER :: i, j
+LOGICAL :: lback
+
+IF (PRESENT(back)) THEN
+  lback = back
+ELSE
+  lback = .FALSE.
+ENDIF
+count_distinct = 0
+map_inv_distinct(:) = 0
+
+IF (PRESENT (mask)) THEN
+  IF (lback) THEN
+    vectm1: DO i = 1, SIZE(vect)
+      IF (.NOT.mask(i)) CYCLE vectm1
+      DO j = i-1, 1, -1
+        IF (.NOT.mask(j)) CYCLE
+        IF (vect(j) == vect(i)) CYCLE vectm1
+      ENDDO
+      count_distinct = count_distinct + 1
+      map_inv_distinct(count_distinct) = i
+    ENDDO vectm1
+  ELSE
+    vectm2: DO i = 1, SIZE(vect)
+      IF (.NOT.mask(i)) CYCLE vectm2
+      DO j = 1, i-1
+        IF (.NOT.mask(j)) CYCLE
+        IF (vect(j) == vect(i)) CYCLE vectm2
+      ENDDO
+      count_distinct = count_distinct + 1
+      map_inv_distinct(count_distinct) = i
+    ENDDO vectm2
+  ENDIF
+ELSE
+  IF (lback) THEN
+    vect1: DO i = 1, SIZE(vect)
+      DO j = i-1, 1, -1
+        IF (vect(j) == vect(i)) CYCLE vect1
+      ENDDO
+      count_distinct = count_distinct + 1
+      map_inv_distinct(count_distinct) = i
+    ENDDO vect1
+  ELSE
+    vect2: DO i = 1, SIZE(vect)
+      DO j = 1, i-1
+        IF (vect(j) == vect(i)) CYCLE vect2
+      ENDDO
+      count_distinct = count_distinct + 1
+      map_inv_distinct(count_distinct) = i
+    ENDDO vect2
+  ENDIF
+ENDIF
+
+END FUNCTION map_inv_distinct/**/VOL7D_POLY_TYPES
