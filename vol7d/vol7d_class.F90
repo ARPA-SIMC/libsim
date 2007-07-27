@@ -654,6 +654,7 @@ END SUBROUTINE vol7d_copy
 ! Creo le routine da ripetere per i vari descrittori di dimensioni di v7d
 ! tramite un template e il preprocessore
 #define VOL7D_SORT
+#undef VOL7D_NO_ZERO_ALLOC
 #undef VOL7D_POLY_TYPE
 #define VOL7D_POLY_TYPE datetime
 #include "vol7d_class_desc_templ.F90"
@@ -670,6 +671,7 @@ END SUBROUTINE vol7d_copy
 #undef VOL7D_POLY_TYPE
 #define VOL7D_POLY_TYPE vol7d_ana
 #include "vol7d_class_desc_templ.F90"
+#define VOL7D_NO_ZERO_ALLOC
 #undef VOL7D_POLY_TYPE
 #define VOL7D_POLY_TYPE vol7d_var
 #include "vol7d_class_desc_templ.F90"

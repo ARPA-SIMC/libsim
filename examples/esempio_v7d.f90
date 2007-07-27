@@ -111,5 +111,4 @@ PRINT*,vol1d
 PRINT*,'Volume riformato, attributi:'
 PRINT*,v7dc%volanai
 
-
 END PROGRAM esempio_vol7d

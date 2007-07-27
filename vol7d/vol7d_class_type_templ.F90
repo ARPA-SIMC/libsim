@@ -321,9 +321,9 @@ qualidim(dimlist) = .TRUE.
 ndimr = SIZE(dimlist)
 !shp = SHAPE(this%voldatir)
 
-IF (ANY(.NOT.qualidim .AND. volshp > 1) ) THEN
-  CALL raise_error('dimensioni non degeneri non richieste '// &
-   to_char(PACK(volshp, mask=(.NOT.qualidim .AND. volshp > 1))))
+IF (ANY(.NOT.qualidim .AND. volshp /= 1) ) THEN
+  CALL raise_error('dimensioni non degeneri o nulle non richieste: '// &
+   to_char(PACK(volshp, mask=(.NOT.qualidim .AND. volshp /= 1))))
   RETURN
 ENDIF
 

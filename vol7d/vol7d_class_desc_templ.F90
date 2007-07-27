@@ -4,14 +4,22 @@ LOGICAL,INTENT(in) :: sort
 INTEGER,POINTER :: remap1(:), remap2(:)
 
 INTEGER :: i, n
+LOGICAL av1, av2
 
+av1 = .FALSE.; av2 = .FALSE.
 IF (.NOT.ASSOCIATED(varin1) .AND. .NOT.ASSOCIATED(varin2)) THEN
   NULLIFY(remap1, remap2, varout)
   RETURN
 ENDIF
 ! Complete allocations
-IF (.NOT.ASSOCIATED(varin1)) ALLOCATE(varin1(0))
-IF (.NOT.ASSOCIATED(varin2)) ALLOCATE(varin2(0))
+IF (.NOT.ASSOCIATED(varin1)) THEN
+  ALLOCATE(varin1(0))
+  av1 = .TRUE.
+ENDIF
+IF (.NOT.ASSOCIATED(varin2)) THEN
+  ALLOCATE(varin2(0))
+  av2 = .TRUE.
+ENDIF
 ALLOCATE(remap1(SIZE(varin1)), remap2(SIZE(varin2)))
 
 ! Count different elements
@@ -21,6 +29,15 @@ DO i = 1, SIZE(varin2)
     n = n + 1
   ENDIF
 ENDDO
+#ifdef VOL7D_NO_ZERO_ALLOC
+IF (n == 0) THEN ! in case of variables do not allocate zero-length arrays
+  DEALLOCATE(remap1, remap2)
+  NULLIFY(varout)
+  IF (av1) DEALLOCATE(varin1)
+  IF (av2) DEALLOCATE(varin2)
+  RETURN
+ENDIF
+#endif
 ! Allocate new array
 ALLOCATE(varout(n))
 ! Fill it
@@ -63,16 +80,17 @@ INTEGER,POINTER :: remap(:)
 
 INTEGER :: n
 
-IF (.NOT.ASSOCIATED(varin)) THEN
-  NULLIFY(remap, varout)
-  RETURN
-ENDIF
+NULLIFY(remap, varout)
+IF (.NOT.ASSOCIATED(varin)) RETURN
 
 IF (miss) THEN
   n = count_distinct(varin, back=.TRUE., mask=(varin /= VOL7D_POLY_TYPE/**/_miss))
 ELSE
   n = count_distinct(varin, back=.TRUE.)
 ENDIF
+#ifdef VOL7D_NO_ZERO_ALLOC
+IF (n == 0) RETURN ! in case of variables do not allocate zero-length arrays
+#endif
 ! Complete allocations
 ALLOCATE(remap(n), varout(n))
 IF (miss) THEN
