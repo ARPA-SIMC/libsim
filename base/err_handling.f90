@@ -73,7 +73,7 @@ CHARACTER (len=*), INTENT(in) :: msg
 INTEGER, OPTIONAL, INTENT(in) :: ierval
 INTEGER, OPTIONAL, INTENT(out) :: ier
 
-CALL output_message('Error', msg, eh_verbose_err, ierval)
+CALL output_message('Error: ', msg, eh_verbose_err, ierval)
 IF (eh_fatal) THEN
   IF (PRESENT(ierval)) CALL EXIT(ABS(ierval))
   STOP 1
@@ -88,7 +88,7 @@ CHARACTER (len=*), INTENT(in) :: msg
 INTEGER, OPTIONAL, INTENT(in) :: ierval
 INTEGER, OPTIONAL, INTENT(out) :: ier
 
-CALL output_message('Warning', msg, eh_verbose_warn, ierval)
+CALL output_message('Warning: ', msg, eh_verbose_warn, ierval)
 IF (PRESENT(ier) .AND. PRESENT(ierval)) ier = ierval
 
 END SUBROUTINE raise_warning
@@ -106,7 +106,7 @@ ELSE
   lverblev = eh_verbose_info
 ENDIF
 
-IF (eh_verbose) CALL output_message('Info', msg, lverblev)
+CALL output_message('Info: ', msg, lverblev)
 
 END SUBROUTINE print_info
 
@@ -153,7 +153,7 @@ INTEGER, INTENT(in) :: verblev
 INTEGER, OPTIONAL, INTENT(in) :: ierval
 
 IF (eh_verbose >= verblev) THEN
-  WRITE(eh_unit, '(3A)') head, ': ', TRIM(msg)
+  WRITE(eh_unit, '(2A)') head, TRIM(msg)
   IF (PRESENT(ierval)) WRITE(eh_unit, '(2A,I6)') head,' code: ',ierval
 ENDIF
 
