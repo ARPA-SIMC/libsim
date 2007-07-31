@@ -73,20 +73,31 @@ ENDIF
 END SUBROUTINE vol7d_remap2_/**/VOL7D_POLY_TYPE
 
 
-SUBROUTINE vol7d_remap1_/**/VOL7D_POLY_TYPE(varin, varout, sort, miss, remap)
+SUBROUTINE vol7d_remap1_/**/VOL7D_POLY_TYPE(varin, varout, &
+ sort, unique, miss, remap)
 TYPE(/**/VOL7D_POLY_TYPE),POINTER :: varin(:), varout(:)
-LOGICAL,INTENT(in) :: sort, miss
+LOGICAL,INTENT(in) :: sort, unique, miss
 INTEGER,POINTER :: remap(:)
 
-INTEGER :: n
+INTEGER :: i, j, n
+INTEGER,POINTER :: remaptmp(:)
 
 NULLIFY(remap, varout)
 IF (.NOT.ASSOCIATED(varin)) RETURN
 
 IF (miss) THEN
-  n = count_distinct(varin, back=.TRUE., mask=(varin /= VOL7D_POLY_TYPE/**/_miss))
+  IF (unique) THEN
+    n = count_distinct(varin, back=.TRUE., &
+     mask=(varin /= VOL7D_POLY_TYPE/**/_miss))
+  ELSE
+    n = COUNT(varin /= VOL7D_POLY_TYPE/**/_miss)
+  ENDIF
 ELSE
-  n = count_distinct(varin, back=.TRUE.)
+  IF (unique) THEN
+    n = count_distinct(varin, back=.TRUE.)
+  ELSE
+    n = SIZE(varin)
+  ENDIF
 ENDIF
 #ifdef VOL7D_NO_ZERO_ALLOC
 IF (n == 0) RETURN ! in case of variables do not allocate zero-length arrays
@@ -94,11 +105,34 @@ IF (n == 0) RETURN ! in case of variables do not allocate zero-length arrays
 ! Complete allocations
 ALLOCATE(remap(n), varout(n))
 IF (miss) THEN
-  remap = map_inv_distinct(varin, back=.TRUE., mask=(varin /= VOL7D_POLY_TYPE/**/_miss))
-  varout = pack_distinct(varin, back=.TRUE., mask=(varin /= VOL7D_POLY_TYPE/**/_miss))
+  IF (unique) THEN
+    remap = map_inv_distinct(varin, back=.TRUE., &
+     mask=(varin /= VOL7D_POLY_TYPE/**/_miss))
+  ELSE
+    remap = PACK((/(i, i=1,SIZE(varin))/), &
+     mask=(varin /= VOL7D_POLY_TYPE/**/_miss))
+  ENDIF
 ELSE
-  remap = map_distinct(varin, back=.TRUE.)
-  varout = pack_distinct(varin, back=.TRUE.)
+  IF (unique) THEN
+    remap = map_inv_distinct(varin, back=.TRUE.)
+  ELSE
+    remap = (/(i, i=1,n)/)
+  ENDIF
 ENDIF
+
+varout(:) = varin(remap)
+
+#ifdef VOL7D_SORT
+IF (sort .AND. unique) THEN
+ALLOCATE(remaptmp(n))
+  DO i = 1, n
+    j = COUNT(varout(i) > varout(:)) + 1
+    remaptmp(i) = remap(j)
+  ENDDO
+  DEALLOCATE(remap)
+  remap => remaptmp
+  varout(:) = varin(remap)
+ENDIF
+#endif
 
 END SUBROUTINE vol7d_remap1_/**/VOL7D_POLY_TYPE

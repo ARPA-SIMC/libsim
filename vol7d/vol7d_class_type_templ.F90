@@ -115,16 +115,16 @@ END SUBROUTINE vol7d_merge_final/**/VOL7D_POLY_TYPES
 
 
 SUBROUTINE vol7d_reform_final/**/VOL7D_POLY_TYPES(this, v7dtmp, &
- remapa, remapt, remapl, remaptr, remapn, miss)
+ remapa, remapt, remapl, remaptr, remapn, sort, unique, miss)
 TYPE(vol7d),INTENT(inout) :: this, v7dtmp
 INTEGER,INTENT(in) :: remapa(:), remapt(:), remapl(:), remaptr(:), remapn(:)
-LOGICAL,INTENT(in) :: miss
+LOGICAL,INTENT(in) :: sort, unique, miss
 
 INTEGER,POINTER :: remapv(:), remapva(:)
 
 ! 3d
 CALL vol7d_remap1_vol7d_var(this%anavar%/**/VOL7D_POLY_TYPES, &
- v7dtmp%anavar%/**/VOL7D_POLY_TYPES, .FALSE., miss, remapv)
+ v7dtmp%anavar%/**/VOL7D_POLY_TYPES, sort, unique, miss, remapv)
 IF (ASSOCIATED(v7dtmp%anavar%/**/VOL7D_POLY_TYPES)) THEN
   CALL vol7d_alloc_vol(v7dtmp)
   v7dtmp%volana/**/VOL7D_POLY_TYPES(:,:,:) = &
@@ -134,9 +134,9 @@ ENDIF
 
 ! 4d
 CALL vol7d_remap1_vol7d_var(this%anaattr%/**/VOL7D_POLY_TYPES, &
- v7dtmp%anaattr%/**/VOL7D_POLY_TYPES, .FALSE., miss, remapv)
+ v7dtmp%anaattr%/**/VOL7D_POLY_TYPES, sort, unique, miss, remapv)
 CALL vol7d_remap1_vol7d_var(this%anavarattr%/**/VOL7D_POLY_TYPES, &
- v7dtmp%anavarattr%/**/VOL7D_POLY_TYPES, .FALSE., miss, remapva)
+ v7dtmp%anavarattr%/**/VOL7D_POLY_TYPES, sort, unique, miss, remapva)
 IF (ASSOCIATED(v7dtmp%anaattr%/**/VOL7D_POLY_TYPES) .AND. &
  ASSOCIATED(v7dtmp%anavarattr%/**/VOL7D_POLY_TYPES)) THEN
   CALL vol7d_alloc_vol(v7dtmp)
@@ -152,7 +152,7 @@ ENDIF
 
 ! 6d
 CALL vol7d_remap1_vol7d_var(this%dativar%/**/VOL7D_POLY_TYPES, &
- v7dtmp%dativar%/**/VOL7D_POLY_TYPES, .FALSE., miss, remapv)
+ v7dtmp%dativar%/**/VOL7D_POLY_TYPES, sort, unique, miss, remapv)
 IF (ASSOCIATED(v7dtmp%dativar%/**/VOL7D_POLY_TYPES)) THEN
   CALL vol7d_alloc_vol(v7dtmp)
   v7dtmp%voldati/**/VOL7D_POLY_TYPES(:,:,:,:,:,:) =  &
@@ -163,9 +163,9 @@ ENDIF
 
 ! 7d
 CALL vol7d_remap1_vol7d_var(this%datiattr%/**/VOL7D_POLY_TYPES, &
- v7dtmp%datiattr%/**/VOL7D_POLY_TYPES, .FALSE., miss, remapv)
+ v7dtmp%datiattr%/**/VOL7D_POLY_TYPES, sort, unique, miss, remapv)
 CALL vol7d_remap1_vol7d_var(this%dativarattr%/**/VOL7D_POLY_TYPES, &
- v7dtmp%dativarattr%/**/VOL7D_POLY_TYPES, .FALSE., miss, remapva)
+ v7dtmp%dativarattr%/**/VOL7D_POLY_TYPES, sort, unique, miss, remapva)
 IF (ASSOCIATED(v7dtmp%datiattr%/**/VOL7D_POLY_TYPES) .AND. &
  ASSOCIATED(v7dtmp%dativarattr%/**/VOL7D_POLY_TYPES)) THEN
   CALL vol7d_alloc_vol(v7dtmp)

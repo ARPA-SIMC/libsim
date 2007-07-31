@@ -582,13 +582,13 @@ this = v7dtmp
 END SUBROUTINE vol7d_append
 
 
-SUBROUTINE vol7d_reform(this, sort, miss)
+SUBROUTINE vol7d_reform(this, sort, unique, miss)
 TYPE(vol7d),INTENT(INOUT) :: this
-LOGICAL,INTENT(IN),OPTIONAL :: sort, miss
+LOGICAL,INTENT(IN),OPTIONAL :: sort, unique, miss
 
 TYPE(vol7d) :: v7dtmp
 
-CALL vol7d_copy(this, v7dtmp, sort, miss)
+CALL vol7d_copy(this, v7dtmp, sort, unique, miss)
 ! Distruggo il vecchio volume e assegno il nuovo a this
 CALL delete(this)
 this = v7dtmp
@@ -596,11 +596,11 @@ this = v7dtmp
 END SUBROUTINE vol7d_reform
 
 
-SUBROUTINE vol7d_copy(this, that, sort, miss)
+SUBROUTINE vol7d_copy(this, that, sort, unique, miss)
 TYPE(vol7d),INTENT(INOUT) :: this, that
-LOGICAL,INTENT(IN),OPTIONAL :: sort, miss
+LOGICAL,INTENT(IN),OPTIONAL :: sort, unique, miss
 
-LOGICAL :: lsort, lmiss
+LOGICAL :: lsort, lunique, lmiss
 INTEGER,POINTER :: remapt(:), remaptr(:), remapl(:), remapa(:), remapn(:)
 
 ! Completo l'allocazione per avere un volume a norma
@@ -611,6 +611,11 @@ IF (PRESENT(sort)) THEN
 ELSE
   lsort = .FALSE.
 ENDIF
+IF (PRESENT(unique)) THEN
+  lunique = unique
+ELSE
+  lunique = .TRUE.
+ENDIF
 IF (PRESENT(miss)) THEN
   lmiss = miss
 ELSE
@@ -619,28 +624,28 @@ ENDIF
 
 ! Calcolo le mappature tra volume vecchio e volume nuovo
 ! I puntatori remap* vengono tutti o allocati o nullificati
-CALL vol7d_remap1_datetime(this%time, that%time, lsort, lmiss, &
+CALL vol7d_remap1_datetime(this%time, that%time, lsort, lunique, lmiss, &
  remapt)
-CALL vol7d_remap1_vol7d_timerange(this%timerange, that%timerange, lsort, lmiss, &
- remaptr)
-CALL vol7d_remap1_vol7d_level(this%level, that%level, lsort, lmiss, &
+CALL vol7d_remap1_vol7d_timerange(this%timerange, that%timerange, &
+ lsort, lunique, lmiss, remaptr)
+CALL vol7d_remap1_vol7d_level(this%level, that%level, lsort, lunique, lmiss, &
  remapl)
-CALL vol7d_remap1_vol7d_ana(this%ana, that%ana, lsort, lmiss, &
+CALL vol7d_remap1_vol7d_ana(this%ana, that%ana, lsort, lunique, lmiss, &
  remapa)
-CALL vol7d_remap1_vol7d_network(this%network, that%network, lsort, lmiss, &
- remapn)
+CALL vol7d_remap1_vol7d_network(this%network, that%network, &
+ lsort, lunique, lmiss, remapn)
 
 ! Faccio la riforma fisica dei volumi
 CALL vol7d_reform_finalr(this, that, &
- remapa, remapt, remapl, remaptr, remapn, lmiss)
+ remapa, remapt, remapl, remaptr, remapn, lsort, lunique, lmiss)
 CALL vol7d_reform_finald(this, that, &
- remapa, remapt, remapl, remaptr, remapn, lmiss)
+ remapa, remapt, remapl, remaptr, remapn, lsort, lunique, lmiss)
 CALL vol7d_reform_finali(this, that, &
- remapa, remapt, remapl, remaptr, remapn, lmiss)
+ remapa, remapt, remapl, remaptr, remapn, lsort, lunique, lmiss)
 CALL vol7d_reform_finalb(this, that, &
- remapa, remapt, remapl, remaptr, remapn, lmiss)
+ remapa, remapt, remapl, remaptr, remapn, lsort, lunique, lmiss)
 CALL vol7d_reform_finalc(this, that, &
- remapa, remapt, remapl, remaptr, remapn, lmiss)
+ remapa, remapt, remapl, remaptr, remapn, lsort, lunique, lmiss)
 
 ! Dealloco i vettori di rimappatura
 IF (ASSOCIATED(remapt)) DEALLOCATE(remapt)
