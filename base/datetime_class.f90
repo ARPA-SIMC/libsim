@@ -95,7 +95,7 @@ INTERFACE OPERATOR (/)
 END INTERFACE
 
 INTERFACE mod
-  MODULE PROCEDURE timedelta_mod
+  MODULE PROCEDURE timedelta_mod, datetime_timedelta_mod
 END INTERFACE
 
 CONTAINS
@@ -719,6 +719,19 @@ CALL init(res, minute=MOD(this%iminuti, that%iminuti))
 END FUNCTION timedelta_mod
 
 
+FUNCTION datetime_timedelta_mod(this, that) RESULT(res)
+TYPE(datetime),INTENT(IN) :: this
+TYPE(timedelta),INTENT(IN) :: that
+TYPE(timedelta) :: res
+
+IF (that%iminuti == 0) THEN ! Controllo nel cso di intervalli "umani"
+  res = timedelta_0
+ELSE
+  CALL init(res, minute=MOD(this%iminuti, that%iminuti))
+ENDIF
+
+END FUNCTION datetime_timedelta_mod
+
 
 SUBROUTINE jeladata5(iday,imonth,iyear,ihour,imin,iminuti)
 
@@ -828,7 +841,7 @@ INTEGER :: ndays, igg, imm, iaa
 INTEGER :: lmonth, lyear
 
 ! Limito il mese a [1-12] e correggo l'anno coerentemente
-lmonth = MOD(MOD(imm-1, 12)+12, 12) + 1 ! Problema con mod(1,12) per i < 0
+lmonth = MODULO(imm-1, 12) + 1 ! uso MODULO e non MOD per gestire bene i valori <0
 lyear = iaa + (imm - lmonth)/12
 ndays = igg+ianno(lmonth, bisextilis(lyear))
 ndays = ndays-1 + 365*(lyear-year0) + (lyear-year0)/4 - (lyear-year0)/100 + &
