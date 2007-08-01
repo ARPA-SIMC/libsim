@@ -464,30 +464,202 @@ IF (ASSOCIATED(this%datiattr%c) .AND. ASSOCIATED(this%dativarattr%c) .AND. &
   IF (linivol) this%voldatiattrc(:,:,:,:,:,:,:) = cmiss
 ENDIF
 
+! Creo gli indici var-attr
+CALL vol7d_set_attr_ind(this)
+
 END SUBROUTINE vol7d_alloc_vol
 
 
 SUBROUTINE vol7d_set_attr_ind(this)
 TYPE(vol7d),INTENT(inout) :: this
 
-integer :: i
+INTEGER :: i
 
-IF (associated(this%dativar%r)) THEN
-   IF (associated(this%dativarattr%r)) then
-      DO i = 1, size(this%dativar%r)
-         this%dativar%r(i)%r = firsttrue(this%dativar%r(i)%btable == this%dativarattr%r(:)%btable)
-      enddo
-   endif
-endif
+! real
+IF (ASSOCIATED(this%dativar%r)) THEN
+  IF (ASSOCIATED(this%dativarattr%r)) THEN
+    DO i = 1, SIZE(this%dativar%r)
+      this%dativar%r(i)%r = &
+       firsttrue(this%dativar%r(i)%btable == this%dativarattr%r(:)%btable)
+    ENDDO
+  ENDIF
 
+  IF (ASSOCIATED(this%dativarattr%d)) THEN
+    DO i = 1, SIZE(this%dativar%r)
+      this%dativar%r(i)%d = &
+       firsttrue(this%dativar%r(i)%btable == this%dativarattr%d(:)%btable)
+    ENDDO
+  ENDIF
 
-IF (associated(this%dativar%r)) THEN
-   IF (associated(this%dativarattr%b)) then
-      DO i = 1, size(this%dativar%r)
-         this%dativar%r(i)%b = firsttrue(this%dativar%r(i)%btable == this%dativarattr%b(:)%btable)
-      enddo
-   endif
-endif
+  IF (ASSOCIATED(this%dativarattr%i)) THEN
+    DO i = 1, SIZE(this%dativar%r)
+      this%dativar%r(i)%i = &
+       firsttrue(this%dativar%r(i)%btable == this%dativarattr%i(:)%btable)
+    ENDDO
+  ENDIF
+
+  IF (ASSOCIATED(this%dativarattr%b)) THEN
+    DO i = 1, SIZE(this%dativar%r)
+      this%dativar%r(i)%b = &
+       firsttrue(this%dativar%r(i)%btable == this%dativarattr%b(:)%btable)
+    ENDDO
+  ENDIF
+
+  IF (ASSOCIATED(this%dativarattr%c)) THEN
+    DO i = 1, SIZE(this%dativar%r)
+      this%dativar%r(i)%c = &
+       firsttrue(this%dativar%r(i)%btable == this%dativarattr%c(:)%btable)
+    ENDDO
+  ENDIF
+ENDIF
+! double
+IF (ASSOCIATED(this%dativar%d)) THEN
+  IF (ASSOCIATED(this%dativarattr%r)) THEN
+    DO i = 1, SIZE(this%dativar%d)
+      this%dativar%d(i)%r = &
+       firsttrue(this%dativar%d(i)%btable == this%dativarattr%r(:)%btable)
+    ENDDO
+  ENDIF
+
+  IF (ASSOCIATED(this%dativarattr%d)) THEN
+    DO i = 1, SIZE(this%dativar%d)
+      this%dativar%d(i)%d = &
+       firsttrue(this%dativar%d(i)%btable == this%dativarattr%d(:)%btable)
+    ENDDO
+  ENDIF
+
+  IF (ASSOCIATED(this%dativarattr%i)) THEN
+    DO i = 1, SIZE(this%dativar%d)
+      this%dativar%d(i)%i = &
+       firsttrue(this%dativar%d(i)%btable == this%dativarattr%i(:)%btable)
+    ENDDO
+  ENDIF
+
+  IF (ASSOCIATED(this%dativarattr%b)) THEN
+    DO i = 1, SIZE(this%dativar%d)
+      this%dativar%d(i)%b = &
+       firsttrue(this%dativar%d(i)%btable == this%dativarattr%b(:)%btable)
+    ENDDO
+  ENDIF
+
+  IF (ASSOCIATED(this%dativarattr%c)) THEN
+    DO i = 1, SIZE(this%dativar%d)
+      this%dativar%d(i)%c = &
+       firsttrue(this%dativar%d(i)%btable == this%dativarattr%c(:)%btable)
+    ENDDO
+  ENDIF
+ENDIF
+! integer
+IF (ASSOCIATED(this%dativar%i)) THEN
+  IF (ASSOCIATED(this%dativarattr%r)) THEN
+    DO i = 1, SIZE(this%dativar%i)
+      this%dativar%i(i)%r = &
+       firsttrue(this%dativar%i(i)%btable == this%dativarattr%r(:)%btable)
+    ENDDO
+  ENDIF
+
+  IF (ASSOCIATED(this%dativarattr%d)) THEN
+    DO i = 1, SIZE(this%dativar%i)
+      this%dativar%i(i)%d = &
+       firsttrue(this%dativar%i(i)%btable == this%dativarattr%d(:)%btable)
+    ENDDO
+  ENDIF
+
+  IF (ASSOCIATED(this%dativarattr%i)) THEN
+    DO i = 1, SIZE(this%dativar%i)
+      this%dativar%i(i)%i = &
+       firsttrue(this%dativar%i(i)%btable == this%dativarattr%i(:)%btable)
+    ENDDO
+  ENDIF
+
+  IF (ASSOCIATED(this%dativarattr%b)) THEN
+    DO i = 1, SIZE(this%dativar%i)
+      this%dativar%i(i)%b = &
+       firsttrue(this%dativar%i(i)%btable == this%dativarattr%b(:)%btable)
+    ENDDO
+  ENDIF
+
+  IF (ASSOCIATED(this%dativarattr%c)) THEN
+    DO i = 1, SIZE(this%dativar%i)
+      this%dativar%i(i)%c = &
+       firsttrue(this%dativar%i(i)%btable == this%dativarattr%c(:)%btable)
+    ENDDO
+  ENDIF
+ENDIF
+! byte
+IF (ASSOCIATED(this%dativar%b)) THEN
+  IF (ASSOCIATED(this%dativarattr%r)) THEN
+    DO i = 1, SIZE(this%dativar%b)
+      this%dativar%b(i)%r = &
+       firsttrue(this%dativar%b(i)%btable == this%dativarattr%r(:)%btable)
+    ENDDO
+  ENDIF
+
+  IF (ASSOCIATED(this%dativarattr%d)) THEN
+    DO i = 1, SIZE(this%dativar%b)
+      this%dativar%b(i)%d = &
+       firsttrue(this%dativar%b(i)%btable == this%dativarattr%d(:)%btable)
+    ENDDO
+  ENDIF
+
+  IF (ASSOCIATED(this%dativarattr%i)) THEN
+    DO i = 1, SIZE(this%dativar%b)
+      this%dativar%b(i)%i = &
+       firsttrue(this%dativar%b(i)%btable == this%dativarattr%i(:)%btable)
+    ENDDO
+  ENDIF
+
+  IF (ASSOCIATED(this%dativarattr%b)) THEN
+    DO i = 1, SIZE(this%dativar%b)
+      this%dativar%b(i)%b = &
+       firsttrue(this%dativar%b(i)%btable == this%dativarattr%b(:)%btable)
+    ENDDO
+  ENDIF
+
+  IF (ASSOCIATED(this%dativarattr%c)) THEN
+    DO i = 1, SIZE(this%dativar%b)
+      this%dativar%b(i)%c = &
+       firsttrue(this%dativar%b(i)%btable == this%dativarattr%c(:)%btable)
+    ENDDO
+  ENDIF
+ENDIF
+! character
+IF (ASSOCIATED(this%dativar%c)) THEN
+  IF (ASSOCIATED(this%dativarattr%r)) THEN
+    DO i = 1, SIZE(this%dativar%c)
+      this%dativar%c(i)%r = &
+       firsttrue(this%dativar%c(i)%btable == this%dativarattr%r(:)%btable)
+    ENDDO
+  ENDIF
+
+  IF (ASSOCIATED(this%dativarattr%d)) THEN
+    DO i = 1, SIZE(this%dativar%c)
+      this%dativar%c(i)%d = &
+       firsttrue(this%dativar%c(i)%btable == this%dativarattr%d(:)%btable)
+    ENDDO
+  ENDIF
+
+  IF (ASSOCIATED(this%dativarattr%i)) THEN
+    DO i = 1, SIZE(this%dativar%c)
+      this%dativar%c(i)%i = &
+       firsttrue(this%dativar%c(i)%btable == this%dativarattr%i(:)%btable)
+    ENDDO
+  ENDIF
+
+  IF (ASSOCIATED(this%dativarattr%b)) THEN
+    DO i = 1, SIZE(this%dativar%c)
+      this%dativar%c(i)%b = &
+       firsttrue(this%dativar%c(i)%btable == this%dativarattr%b(:)%btable)
+    ENDDO
+  ENDIF
+
+  IF (ASSOCIATED(this%dativarattr%c)) THEN
+    DO i = 1, SIZE(this%dativar%c)
+      this%dativar%c(i)%c = &
+       firsttrue(this%dativar%c(i)%btable == this%dativarattr%c(:)%btable)
+    ENDDO
+  ENDIF
+ENDIF
 
 END SUBROUTINE vol7d_set_attr_ind
 
@@ -501,19 +673,6 @@ CALL vol7d_append(this, that, sort)
 CALL delete(that)
 
 END SUBROUTINE vol7d_merge
-
-
-!!$SUBROUTINE vol7d_duplicate(this, that, sort)
-!!$TYPE(vol7d),INTENT(INOUT) :: this, that
-!!$LOGICAL,INTENT(IN),OPTIONAL :: sort
-!!$
-!!$! Creo un volume vuoto e gli accodo this
-!!$CALL init(that)
-!!$CALL vol7d_alloc(that, nana=0, ntime=0, nlevel=0, ntimerange=0, nnetwork=0)
-!!$CALL vol7d_alloc_vol(that)
-!!$CALL vol7d_append(that, this, sort)
-!!$
-!!$END SUBROUTINE vol7d_duplicate
 
 
 SUBROUTINE vol7d_append(this, that, sort)
@@ -578,6 +737,8 @@ IF (ASSOCIATED(remapn2)) DEALLOCATE(remapn2)
 ! Distruggo il vecchio volume e assegno il nuovo a this
 CALL delete(this)
 this = v7dtmp
+! Ricreo gli indici var-attr
+CALL vol7d_set_attr_ind(this)
 
 END SUBROUTINE vol7d_append
 
@@ -653,6 +814,9 @@ IF (ASSOCIATED(remaptr)) DEALLOCATE(remaptr)
 IF (ASSOCIATED(remapl)) DEALLOCATE(remapl)
 IF (ASSOCIATED(remapa)) DEALLOCATE(remapa)
 IF (ASSOCIATED(remapn)) DEALLOCATE(remapn)
+
+! Ricreo gli indici var-attr
+CALL vol7d_set_attr_ind(that)
 
 END SUBROUTINE vol7d_copy
 
