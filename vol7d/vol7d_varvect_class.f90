@@ -66,7 +66,7 @@ ENDIF
 IF (PRESENT(nvard)) THEN
   IF (nvard > 0) THEN
     IF (ASSOCIATED(this%d)) DEALLOCATE(this%d)
-    ALLOCATE(this%r(nvard))
+    ALLOCATE(this%d(nvard))
     IF (linit) THEN
       DO i = 1, nvard
         CALL init(this%d(i))
