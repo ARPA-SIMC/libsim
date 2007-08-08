@@ -17,6 +17,7 @@ TYPE vol7d_dballe
 END TYPE vol7d_dballe
 
 
+
 type record
 
   !! prime 5 dimensioni
@@ -107,7 +108,7 @@ IF (PRESENT(password))quipassword = password
 call idba_error_set_callback(0,idba_default_error_handler, &
      ldebug,this%handle_err)
 
-!quando scrivo bisogna gestire questo che non Ã¨ da fare ?
+!quando scrivo bisogna gestire questo che non è da fare ?
 CALL init(this%vol7d)
 
 quiwrite=.false.
@@ -138,7 +139,8 @@ END SUBROUTINE vol7d_dballe_init
 
 
 
-SUBROUTINE vol7d_dballe_importvsns(this, var, network, timei, timef,level,timerange, set_network,attr)
+SUBROUTINE vol7d_dballe_importvsns(this, var, network, timei, timef,level,timerange, set_network,&
+ attr,anavar,anaattr, varkind,attrkind,anavarkind,anaattrkind)
 TYPE(vol7d_dballe),INTENT(out) :: this
 CHARACTER(len=*),INTENT(in) :: var
 INTEGER,INTENT(in) :: network
@@ -146,15 +148,17 @@ TYPE(datetime),INTENT(in) :: timei, timef
 TYPE(vol7d_network),INTENT(in),OPTIONAL :: set_network
 TYPE(vol7d_level),INTENT(in),optional :: level
 TYPE(vol7d_timerange),INTENT(in),optional :: timerange
+CHARACTER(len=*),INTENT(in),OPTIONAL :: attr(:),anavar(:),anaattr(:)
+CHARACTER(len=*),INTENT(in),OPTIONAL :: varkind(:),attrkind(:),anavarkind(:),anaattrkind(:)
 
-CHARACTER(len=*),INTENT(in),OPTIONAL :: attr(:)
-
-CALL import(this, (/var/), network, timei, timef,level,timerange, set_network,attr)
+CALL import(this, (/var/), network, timei, timef,level,timerange, set_network,&
+ attr,anavar,anaattr, varkind,attrkind,anavarkind,anaattrkind)
 
 END SUBROUTINE vol7d_dballe_importvsns
 
 
-SUBROUTINE vol7d_dballe_importvsnv(this, var, network, timei, timef,level,timerange, set_network,attr)
+SUBROUTINE vol7d_dballe_importvsnv(this, var, network, timei, timef,level,timerange, set_network,&
+ attr,anavar,anaattr, varkind,attrkind,anavarkind,anaattrkind)
 TYPE(vol7d_dballe),INTENT(out) :: this
 CHARACTER(len=*),INTENT(in) :: var
 INTEGER,INTENT(in) :: network(:)
@@ -162,18 +166,22 @@ TYPE(datetime),INTENT(in) :: timei, timef
 TYPE(vol7d_network),INTENT(in),OPTIONAL :: set_network
 TYPE(vol7d_level),INTENT(in),optional :: level
 TYPE(vol7d_timerange),INTENT(in),optional :: timerange
-CHARACTER(len=*),INTENT(in),OPTIONAL :: attr(:)
+CHARACTER(len=*),INTENT(in),OPTIONAL :: attr(:),anavar(:),anaattr(:)
+CHARACTER(len=*),INTENT(in),OPTIONAL :: varkind(:),attrkind(:),anavarkind(:),anaattrkind(:)
+
 
 INTEGER :: i
 
 DO i = 1, SIZE(network)
-  CALL import(this, (/var/), network(i), timei, timef, level,timerange,set_network,attr)
+  CALL import(this, (/var/), network(i), timei, timef, level,timerange,set_network,&
+ attr,anavar,anaattr, varkind,attrkind,anavarkind,anaattrkind)
 ENDDO
 
 END SUBROUTINE vol7d_dballe_importvsnv
 
 
-SUBROUTINE vol7d_dballe_importvvnv(this, var, network, timei, timef, level,timerange,set_network,attr)
+SUBROUTINE vol7d_dballe_importvvnv(this, var, network, timei, timef, level,timerange,set_network,&
+ attr,anavar,anaattr, varkind,attrkind,anavarkind,anaattrkind)
 TYPE(vol7d_dballe),INTENT(out) :: this
 CHARACTER(len=*),INTENT(in) :: var(:)
 INTEGER,INTENT(in) :: network(:)
@@ -181,18 +189,21 @@ TYPE(datetime),INTENT(in) :: timei, timef
 TYPE(vol7d_network),INTENT(in),OPTIONAL :: set_network
 TYPE(vol7d_level),INTENT(in),optional :: level
 TYPE(vol7d_timerange),INTENT(in),optional :: timerange
-CHARACTER(len=*),INTENT(in),OPTIONAL :: attr(:)
+CHARACTER(len=*),INTENT(in),OPTIONAL :: attr(:),anavar(:),anaattr(:)
+CHARACTER(len=*),INTENT(in),OPTIONAL :: varkind(:),attrkind(:),anavarkind(:),anaattrkind(:)
 
 INTEGER :: i
 
 DO i = 1, SIZE(network)
-  CALL import(this, var, network(i), timei, timef, level,timerange,set_network)
+  CALL import(this, var, network(i), timei, timef, level,timerange,set_network,&
+ attr,anavar,anaattr, varkind,attrkind,anavarkind,anaattrkind)
 ENDDO
 
 END SUBROUTINE vol7d_dballe_importvvnv
 
 
-SUBROUTINE vol7d_dballe_importvvns(this, var, network, timei, timef,level,timerange, set_network,attr, varkind,attrkind)
+SUBROUTINE vol7d_dballe_importvvns(this, var, network, timei, timef,level,timerange, set_network,&
+ attr,anavar,anaattr, varkind,attrkind,anavarkind,anaattrkind)
 
 TYPE(vol7d_dballe),INTENT(inout) :: this
 CHARACTER(len=*),INTENT(in),OPTIONAL :: var(:)
@@ -201,8 +212,8 @@ TYPE(datetime),INTENT(in),OPTIONAL :: timei, timef
 TYPE(vol7d_network),INTENT(in),OPTIONAL :: set_network
 TYPE(vol7d_level),INTENT(in),optional :: level
 TYPE(vol7d_timerange),INTENT(in),optional :: timerange
-CHARACTER(len=*),INTENT(in),OPTIONAL :: attr(:)
-CHARACTER(len=*),INTENT(in),OPTIONAL :: varkind(:),attrkind(:)
+CHARACTER(len=*),INTENT(in),OPTIONAL :: attr(:),anavar(:),anaattr(:)
+CHARACTER(len=*),INTENT(in),OPTIONAL :: varkind(:),attrkind(:),anavarkind(:),anaattrkind(:)
 
 TYPE(vol7d) :: v7d
 CHARACTER(len=SIZE(var)*7) :: varlist
@@ -210,7 +221,7 @@ CHARACTER(len=SIZE(attr)*8) :: starvarlist
 CHARACTER(len=6) :: btable
 CHARACTER(len=7) ::starbtable
 
-LOGICAL ::  ldegnet, lattr
+LOGICAL ::  ldegnet, lattr, lanaattr
 integer :: year,month,day,hour,minute,sec
 integer :: rlevel, rl1, rl2
 integer :: rtimerange, p1, p2,rep_cod
@@ -220,16 +231,22 @@ integer :: indana,indtime,indlevel,indtimerange,inddativar,indnetwork
 integer :: nana,ntime,ntimerange,nlevel,nnetwork
 TYPE(vol7d_var) :: var_tmp
 
-INTEGER :: i,ii, iii,j, k,n,nn, nvar,nvarattr,istat,ana_id,ana_id_staz,nstaz,ist,indattr
-integer :: ndativarr,ndatiattrb,ndativarattrb,inddatiattr,inddativarattr
+INTEGER :: i,ii, iii,j, k,n,n_ana,nn,nvarattr,istat,ana_id,ana_id_staz,nstaz,ist,indattr
+integer :: nvar ,inddatiattr,inddativarattr
+integer :: nanavar ,indanavar,indanaattr,indanavarattr,nanavarattr
 
-REAL(kind=fp_geo) :: lat,lon  
+REAL(kind=fp_geo) :: lat,lon
+CHARACTER(len=vol7d_ana_lenident) :: ident
 INTEGER(kind=int_b)::attrdatib
 
+integer :: ndativarr,     ndativari,     ndativarb,     ndativard,     ndativarc
+integer :: ndatiattrr,    ndatiattri,    ndatiattrb,    ndatiattrd,    ndatiattrc 
+integer :: ndativarattrr, ndativarattri, ndativarattrb, ndativarattrd, ndativarattrc
 
-integer :: ndativari,     ndativarb,     ndativard,     ndativarc
-integer :: ndatiattrr,    ndatiattri,    ndatiattrd,    ndatiattrc 
-integer :: ndativarattrr, ndativarattri, ndativarattrd, ndativarattrc
+integer :: nanavarr,     nanavari,     nanavarb,     nanavard,     nanavarc
+integer :: nanaattrr,    nanaattri,    nanaattrb,    nanaattrd,    nanaattrc 
+integer :: nanavarattrr, nanavarattri, nanavarattrb, nanavarattrd, nanavarattrc
+
 integer :: ir,ib,id,ic
 
 
@@ -242,7 +259,7 @@ integer :: ir,ib,id,ic
 
 TYPE(vol7d) :: vol7dtmp
 
-type(record),ALLOCATABLE :: buffer(:)
+type(record),ALLOCATABLE :: buffer(:),bufferana(:)
 
 !!!  CALL print_info('Estratte dall''archivio '//TRIM(to_char(nobs)) // ' osservazioni')
 
@@ -256,6 +273,12 @@ IF (PRESENT(attr)) THEN
    lattr = .TRUE.
 ELSE
    lattr = .FALSE.
+ENDIF
+
+IF (PRESENT(anaattr)) THEN
+   lanaattr = .TRUE.
+ELSE
+   lanaattr = .FALSE.
 ENDIF
 
 if(present(network))call idba_set (this%handle,"rep_cod",network)
@@ -310,98 +333,146 @@ if (istat/= 0) CALL raise_error('errore allocazione memoria')
 ! dammi tutti i dati
 do i=1,N
 
-   call idba_dammelo (this%handle,btable)
+  call idba_dammelo (this%handle,btable)
+  
+  call idba_enqdate (this%handle,year,month,day,hour,minute,sec)
+  call idba_enqlevel(this%handle, rlevel, rl1, rl2)
+  call idba_enqtimerange(this%handle, rtimerange, p1, p2)
+  call idba_enq(this%handle, "rep_cod",rep_cod)
+                                !print *,"trovato network",rep_cod
+  
+                                !nbtable=btable_numerico(btable)
+                                ! ind = firsttrue(qccli%v7d%dativar%r(:)%btable == nbtable)
+                                ! IF (ind<1) cycle ! non c'e'
+  
+  buffer(i)%dator=DBA_MVR
+  buffer(i)%datoi=DBA_MVI
+  buffer(i)%datob=DBA_MVB
+  buffer(i)%datod=DBA_MVD
+  buffer(i)%datoc=DBA_MVC
+  
+  if (present(var).and. present(varkind))then
+    ii=( firsttrue(var == btable))
+    if (ii > 0)then
+                                !print*, "indici",ii, btable,(varkind(ii))
+      if(varkind(ii) == "r") call idba_enq (this%handle,btable,buffer(i)%dator)
+      if(varkind(ii) == "i") call idba_enq (this%handle,btable,buffer(i)%datoi)
+      if(varkind(ii) == "b") call idba_enq (this%handle,btable,buffer(i)%datob)
+      if(varkind(ii) == "d") call idba_enq (this%handle,btable,buffer(i)%datod)
+      if(varkind(ii) == "c") call idba_enq (this%handle,btable,buffer(i)%datoc)
+    end if
+  else
+    call idba_enq (this%handle,btable,buffer(i)%datoc) !char is default
+  end if
+  
+                                !metto in memoria l'identificatore numerico dei dati
+                                !print*,buffer(i)%data_id
+  call idba_enq (this%handle,"context_id",buffer(i)%data_id)
 
-   call idba_enqdate (this%handle,year,month,day,hour,minute,sec)
-   call idba_enqlevel(this%handle, rlevel, rl1, rl2)
-   call idba_enqtimerange(this%handle, rtimerange, p1, p2)
-   call idba_enq(this%handle, "rep_cod",rep_cod)
-   !print *,"trovato network",rep_cod
-
-   !nbtable=btable_numerico(btable)
-   ! ind = firsttrue(qccli%v7d%dativar%r(:)%btable == nbtable)
-   ! IF (ind<1) cycle ! non c'e'
- 
-   buffer(i)%dator=DBA_MVR
-   buffer(i)%datoi=DBA_MVI
-   buffer(i)%datob=DBA_MVB
-   buffer(i)%datod=DBA_MVD
-   buffer(i)%datoc=DBA_MVC
-
-   if (present(var).and. present(varkind))then
-     ii=( firsttrue(var == btable))
-     if (ii > 0)then
-       !print*, "indici",ii, btable,(varkind(ii))
-       if(varkind(ii) == "r") call idba_enq (this%handle,btable,buffer(i)%dator)
-       if(varkind(ii) == "i") call idba_enq (this%handle,btable,buffer(i)%datoi)
-       if(varkind(ii) == "b") call idba_enq (this%handle,btable,buffer(i)%datob)
-       if(varkind(ii) == "d") call idba_enq (this%handle,btable,buffer(i)%datod)
-       if(varkind(ii) == "c") call idba_enq (this%handle,btable,buffer(i)%datoc)
-     end if
-   else
-     call idba_enq (this%handle,btable,buffer(i)%dator) !real is default
-   end if
-
-   !metto in memoria l'identificatore numerico dei dati
-   call idba_enq (this%handle,"context_id",buffer(i)%data_id)
-
-   !print*,buffer(i)%data_id
-
-   !tramite ana_id imposto la stazione letta 
-   !nella lettura dei dati in anagrafica 
-   call idba_enq (this%handle, "ana_id",ana_id)
+                                !recupero i dati di anagrafica
+  call idba_enq (this%handle,"lat",   lat)
+  call idba_enq (this%handle,"lon",   lon)
+  call idba_enq (this%handle,"ident",ident)
    
-   if ( ana_id_staz /= ana_id )then 
-
-      !print *,"ana_id",ana_id
-      lat=DBA_MVR
-      lon=DBA_MVR
-      
-      call idba_set (this%handle_staz,"ana_id",ana_id)
-      
-      ! Leggo l'anagrafica per la stazione
-      call idba_quantesono(this%handle_staz,nstaz)
-      !print *,"numero anagrafiche trovate",nstaz
-
-      ! ciclo su tutte le stazioni (UNA SOLA)
-      do  iii=1,nstaz
-         call idba_elencamele(this%handle_staz)
-         
-
-         !recupero i dati di anagrafica
-         call idba_enq (this%handle_staz,"lat",   lat)
-         call idba_enq (this%handle_staz,"lon",   lon)
-
-!TODO: qui si dovrebbero leggere tutti i dati di anagrafica e metterli in buffer
-
-         !call idba_enq (this%handle_staz,"height",alt)
-         !call idba_enq (this%handle_staz,"name",  name)
-         
-         ana_id_staz = ana_id
-         
-      end do
-   
-   end if
-
-!bufferizzo il contesto
-
-   !print *,"lat,lon",lat,lon
-   !print*,year,month,day,hour,minute,sec
-   !print*,btable,dato,buffer(i)%datiattrb
-
-   !buffer(i)%ana_id=ana_id
-   call init(buffer(i)%ana,lat=lat,lon=lon)
-   call init(buffer(i)%time, year=year, month=month, day=day, hour=hour, minute=minute)
-   call init(buffer(i)%level, rlevel,rl1,rl2)
-   call init(buffer(i)%timerange, rtimerange, p1, p2)
-   call init(buffer(i)%network, rep_cod)
-   call init(buffer(i)%dativar, btable)
+                                !bufferizzo il contesto
+                                !print *,"lat,lon",lat,lon
+                                !print*,year,month,day,hour,minute,sec
+                                !print*,btable,dato,buffer(i)%datiattrb
+  
+  call init(buffer(i)%ana,lat=lat,lon=lon,ident=ident)
+  call init(buffer(i)%time, year=year, month=month, day=day, hour=hour, minute=minute)
+  call init(buffer(i)%level, rlevel,rl1,rl2)
+  call init(buffer(i)%timerange, rtimerange, p1, p2)
+  call init(buffer(i)%network, rep_cod)
+  call init(buffer(i)%dativar, btable)
 
 end do
+
+! ---------------->   anagrafica
+
+!ora leggere tutti i dati di anagrafica e metterli in bufferana
+         
+call idba_setcontextana(this%handle_staz)
+call idba_voglioquesto (this%handle_staz,N_ana)
+!print*,"numero di dati ",N_ana
+
+!ora che so quanti dati ho alloco la memoria per bufferana
+allocate(bufferana(N_ana),stat=istat)
+if (istat/= 0) CALL raise_error('errore allocazione memoria anagrafica')
+
+! dammi tutti i dati di anagrafica
+do i=1,N_ana
+
+  bufferana(i)%dator=DBA_MVR
+  bufferana(i)%datoi=DBA_MVI
+  bufferana(i)%datob=DBA_MVB
+  bufferana(i)%datod=DBA_MVD
+  bufferana(i)%datoc=DBA_MVC
+  call init(bufferana(i)%dativar, DBA_MVC)
+
+  call idba_dammelo (this%handle_staz,btable)
+
+  
+!TODO: trovare il codice B di ident
+  if (btable == "B05001" .or. btable == "B06001" .or. btable == "BXXXX")then
+
+    cycle
+  end if
+
+  call idba_enqdate (this%handle_staz,year,month,day,hour,minute,sec)
+  call idba_enqlevel(this%handle_staz, rlevel, rl1, rl2)
+  call idba_enqtimerange(this%handle_staz, rtimerange, p1, p2)
+  call idba_enq(this%handle_staz, "rep_cod",rep_cod)
+                                !print *,"trovato network",rep_cod
+  
+                                !nbtable=btable_numerico(btable)
+                                ! ind = firsttrue(qccli%v7d%dativar%r(:)%btable == nbtable)
+                                ! IF (ind<1) cycle ! non c'e'
+  
+  if (present(anavar).and. present(anavarkind))then
+    ii=( firsttrue(anavar == btable))
+    if (ii > 0)then
+                                !print*, "indici",ii, btable,(varkind(ii))
+      if(anavarkind(ii) == "r") call idba_enq (this%handle_staz,btable,bufferana(i)%dator)
+      if(anavarkind(ii) == "i") call idba_enq (this%handle_staz,btable,bufferana(i)%datoi)
+      if(anavarkind(ii) == "b") call idba_enq (this%handle_staz,btable,bufferana(i)%datob)
+      if(anavarkind(ii) == "d") call idba_enq (this%handle_staz,btable,bufferana(i)%datod)
+      if(anavarkind(ii) == "c") call idba_enq (this%handle_staz,btable,bufferana(i)%datoc)
+    end if
+  else
+    call idba_enq (this%handle_staz,btable,bufferana(i)%datoc) !char is default
+    !print*,"dato anagrafica",btable," ",bufferana(i)%dator
+  end if
+  
+                                !metto in memoria l'identificatore numerico dei dati
+                                !print*,buffer(i)%data_id
+  call idba_enq (this%handle_staz,"context_id",bufferana(i)%data_id)
+
+                                !recupero i dati di anagrafica
+  call idba_enq (this%handle_staz,"lat",   lat)
+  call idba_enq (this%handle_staz,"lon",   lon)
+  call idba_enq (this%handle_staz,"ident",ident)
+   
+                                !bufferizzo il contesto
+                                !print *,"lat,lon",lat,lon
+                                !print*,year,month,day,hour,minute,sec
+                                !print*,btable,dato,buffer(i)%datiattrb
+  
+  call init(bufferana(i)%ana,lat=lat,lon=lon,ident=ident)
+  call init(bufferana(i)%time, year=year, month=month, day=day, hour=hour, minute=minute)
+  call init(bufferana(i)%level, rlevel,rl1,rl2)
+  call init(bufferana(i)%timerange, rtimerange, p1, p2)
+  call init(bufferana(i)%network, rep_cod)
+  call init(bufferana(i)%dativar, btable)
+
+end do
+
+! ---------------->   anagrafica fine
 
 if (.not. present(var))then
   nvar = count_distinct(buffer%dativar, back=.TRUE.)
 end if
+
 nana = count_distinct(buffer%ana, back=.TRUE.)
 ntime = count_distinct(buffer%time, back=.TRUE.)
 ntimerange = count_distinct(buffer%timerange, back=.TRUE.)
@@ -416,11 +487,11 @@ if (present(varkind))then
   ndativarc= count(varkind == "c")
   
 else
-  ndativarr= nvar
+  ndativarr= 0
   ndativari= 0
   ndativarb= 0
   ndativard= 0
-  ndativarc= 0
+  ndativarc= nvar
 end if
 
 !print *, "nana=",nana," ntime=",ntime," ntimerange=",ntimerange, &
@@ -438,9 +509,9 @@ if (lattr)then
   else
     ndatiattrr= 0
     ndatiattri= 0
-    ndatiattrb=size(attr)
+    ndatiattrb= 0
     ndatiattrd= 0
-    ndatiattrc= 0
+    ndatiattrc= size(attr)
   end if
   
 else
@@ -464,6 +535,69 @@ if (ndatiattrd > 0 ) ndativarattrd=ndativarr+ndativari+ndativarb+ndativard+ndati
 if (ndatiattrc > 0 ) ndativarattrc=ndativarr+ndativari+ndativarb+ndativard+ndativarc
 
 
+! ---------------->   anagrafica
+
+if (.not. present(anavar))then
+  nanavar = count_distinct(bufferana%dativar, back=.TRUE.,mask=(bufferana%dativar%btable /= DBA_MVC))
+end if
+
+if (present(anavarkind))then
+  nanavarr= count(anavarkind == "r")
+  nanavari= count(anavarkind == "i")
+  nanavarb= count(anavarkind == "b")
+  nanavard= count(anavarkind == "d")
+  nanavarc= count(anavarkind == "c")
+  
+else
+  nanavarr= 0
+  nanavari= 0
+  nanavarb= 0
+  nanavard= 0
+  nanavarc= nanavar
+end if
+
+!print *, "nana=",nana," ntime=",ntime," ntimerange=",ntimerange, &
+!" nlevel=",nlevel," nnetwork=",nnetwork," ndativarr=",ndativarr
+
+if (lanaattr)then
+
+  if (present(anaattrkind))then
+    nanaattrr= count(anaattrkind == "r")
+    nanaattri= count(anaattrkind == "i")
+    nanaattrb= count(anaattrkind == "b")
+    nanaattrd= count(anaattrkind == "d")
+    nanaattrc= count(anaattrkind == "c")
+    
+  else
+    nanaattrr= 0
+    nanaattri= 0
+    nanaattrb= 0
+    nanaattrd= 0
+    nanaattrc= size(anaattr)
+  end if
+  
+else
+  nanaattrr=0
+  nanaattri=0
+  nanaattrb=0
+  nanaattrd=0
+  nanaattrc=0
+end if
+
+nanavarattrr=0
+nanavarattri=0
+nanavarattrb=0
+nanavarattrd=0
+nanavarattrc=0
+
+if (nanaattrr > 0 ) nanavarattrr=nanavarr+nanavari+nanavarb+nanavard+nanavarc
+if (nanaattri > 0 ) nanavarattri=nanavarr+nanavari+nanavarb+nanavard+nanavarc
+if (nanaattrb > 0 ) nanavarattrb=nanavarr+nanavari+nanavarb+nanavard+nanavarc
+if (nanaattrd > 0 ) nanavarattrd=nanavarr+nanavari+nanavarb+nanavard+nanavarc
+if (nanaattrc > 0 ) nanavarattrc=nanavarr+nanavari+nanavarb+nanavard+nanavarc
+
+! ---------------->   anagrafica fine
+
 
 CALL init(vol7dtmp)
 
@@ -474,7 +608,10 @@ call vol7d_alloc (vol7dtmp, &
  nlevel=nlevel, nnetwork=nnetwork, &
  ndativarr=ndativarr, ndativari=ndativari, ndativarb=ndativarb, ndativard=ndativard, ndativarc=ndativarc,&
  ndatiattrr=ndatiattrr, ndatiattri=ndatiattri, ndatiattrb=ndatiattrb, ndatiattrd=ndatiattrd, ndatiattrc=ndatiattrc,&
- ndativarattrr=ndativarattrr, ndativarattri=ndativarattri, ndativarattrb=ndativarattrb, ndativarattrd=ndativarattrd, ndativarattrc=ndativarattrc)
+ ndativarattrr=ndativarattrr, ndativarattri=ndativarattri, ndativarattrb=ndativarattrb, ndativarattrd=ndativarattrd, ndativarattrc=ndativarattrc,&
+ nanavarr=nanavarr, nanavari=nanavari, nanavarb=nanavarb, nanavard=nanavard, nanavarc=nanavarc,&
+ nanaattrr=nanaattrr, nanaattri=nanaattri, nanaattrb=nanaattrb, nanaattrd=nanaattrd, nanaattrc=nanaattrc,&
+ nanavarattrr=nanavarattrr, nanavarattri=nanavarattri, nanavarattrb=nanavarattrb, nanavarattrd=nanavarattrd, nanavarattrc=nanavarattrc)
 
  !print *, "nana=",nana, "ntime=",ntime, "ntimerange=",ntimerange, &
  !"nlevel=",nlevel, "nnetwork=",nnetwork, &
@@ -523,12 +660,12 @@ if (present(var).and. present(varkind))then
   end do
 else if (present(var))then
   do i=1, nvar
-    call init (vol7dtmp%dativar%r(i), btable=var(i))
+    call init (vol7dtmp%dativar%c(i), btable=var(i))
   end do
 
 else
 
-  vol7dtmp%dativar%r=pack_distinct(buffer%dativar, back=.TRUE.)
+  vol7dtmp%dativar%c=pack_distinct(buffer%dativar, back=.TRUE.)
 
 end if
 
@@ -578,7 +715,7 @@ else
   if (present(attr))then
     do i=1,size(var)
       call init (var_tmp, btable=var(i))
-      vol7dtmp%dativarattr%b(i)=var_tmp
+      vol7dtmp%dativarattr%c(i)=var_tmp
     end do
   end if
 end if
@@ -619,10 +756,153 @@ else
   if (present(attr))then
     do i=1, size(attr)
       !print*,i
-      call init (vol7dtmp%datiattr%b(i), btable=attr(i))
+      call init (vol7dtmp%datiattr%c(i), btable=attr(i))
     end do
   end if
 end if
+
+!-----------------------> anagrafica
+
+if (present(anavar).and. present(anavarkind))then
+
+  ir=0
+  ii=0
+  ib=0
+  id=0
+  ic=0
+  
+  do i=1,size(anavarkind)
+    if (anavarkind(i) == "r") then
+      ir=ir+1
+      call init (vol7dtmp%anavar%r(ir), btable=anavar(i))
+    end if
+    if (anavarkind(i) == "i") then
+      ii=ii+1
+      call init (vol7dtmp%anavar%i(ii), btable=anavar(i))
+    end if
+    if (anavarkind(i) == "b") then
+      ib=ib+1
+      call init (vol7dtmp%anavar%b(ib), btable=anavar(i))
+    end if
+    if (anavarkind(i) == "d") then
+      id=id+1
+      call init (vol7dtmp%anavar%d(id), btable=anavar(i))
+    end if
+    if (anavarkind(i) == "c") then
+      ic=ic+1
+      call init (vol7dtmp%anavar%c(ic), btable=anavar(i))  
+    end if
+  end do
+else if (present(anavar))then
+  do i=1, nanavar
+    call init (vol7dtmp%anavar%c(i), btable=anavar(i))
+  end do
+
+else
+
+  vol7dtmp%anavar%c=pack_distinct(bufferana%dativar, back=.TRUE.,mask=(bufferana%dativar%btable /= DBA_MVC))
+
+end if
+
+
+
+if ( present(anaattrkind).and. present(anaattr))then
+
+    ir=0
+    ii=0
+    ib=0
+    id=0
+    ic=0
+
+  do i=1,size(anavar)
+  
+    call init (var_tmp, btable=anavar(i))
+
+    if ( nanavarattrr > 0 )then
+      ir=ir+1
+      vol7dtmp%anavarattr%r(ir)=var_tmp
+    end if
+
+    if ( nanavarattri > 0 )then
+      ii=ii+1
+      vol7dtmp%anavarattr%i(ii)=var_tmp
+    end if
+
+    if ( nanavarattrb > 0 )then
+      ib=ib+1
+      vol7dtmp%anavarattr%b(ib)=var_tmp
+    end if
+
+    if ( nanavarattrd > 0 )then
+      id=id+1
+      vol7dtmp%anavarattr%d(id)=var_tmp
+    end if
+
+    if ( nanavarattrc > 0 )then
+      ic=ic+1
+      vol7dtmp%anavarattr%c(ic)=var_tmp
+    end if
+
+  end do
+  !print*,"totali ana attr",ir,ii,ib,id,ic
+
+else
+  if (present(anaattr))then
+    do i=1,size(anavar)
+      call init (var_tmp, btable=anavar(i))
+      vol7dtmp%anavarattr%c(i)=var_tmp
+    end do
+  end if
+end if
+
+
+if (present(anaattrkind).and. present(anaattr))then
+
+  ir=0
+  ii=0
+  ib=0
+  id=0
+  ic=0
+
+  do i=1,size(anaattrkind)
+
+    if (anaattrkind(i) == "r") then
+      ir=ir+1
+      call init (vol7dtmp%anaattr%r(ir), btable=anaattr(i))
+    end if
+    if (anaattrkind(i) == "i") then
+      ii=ii+1
+      call init (vol7dtmp%anaattr%i(ii), btable=anaattr(i))
+    end if
+    if (anaattrkind(i) == "b") then
+      ib=ib+1
+      call init (vol7dtmp%anaattr%b(ib), btable=anaattr(i))
+    end if
+    if (anaattrkind(i) == "d") then
+      id=id+1
+      call init (vol7dtmp%anaattr%d(id), btable=anaattr(i))
+    end if
+    if (anaattrkind(i) == "c") then
+      ic=ic+1
+      call init (vol7dtmp%anaattr%c(ic), btable=anaattr(i))  
+    end if
+  end do
+else
+  if (present(anaattr))then
+    do i=1, size(anaattr)
+      !print*,i
+      call init (vol7dtmp%anaattr%c(i), btable=anaattr(i))
+    end do
+  end if
+end if
+
+
+!print*,"numero variabili anagrafica",size(vol7dtmp%anavar%r)
+!do i=1,size(vol7dtmp%anavar%r)
+!  print*,"elenco variabili anagrafica>",vol7dtmp%anavar%r(i)%btable,"<fine"
+!end do
+
+!-----------------------> anagrafica fine
 
 !print*,"prima di alloc"
 
@@ -759,11 +1039,11 @@ do i =1, N
            end if
          end if
        else         
-         inddativarattr  = firsttrue(buffer(i)%dativar == vol7dtmp%dativarattr%b)
-         inddatiattr = firsttrue(var_tmp == vol7dtmp%datiattr%b)
+         inddativarattr  = firsttrue(buffer(i)%dativar == vol7dtmp%dativarattr%c)
+         inddatiattr = firsttrue(var_tmp == vol7dtmp%datiattr%c)
          call idba_enq (this%handle,starbtable,&
-          vol7dtmp%voldatiattrb(indana,indtime,indlevel,indtimerange,&
-          inddativarattr,indnetwork,inddatiattr)) !byte is default
+          vol7dtmp%voldatiattrc(indana,indtime,indlevel,indtimerange,&
+          inddativarattr,indnetwork,inddatiattr)) !char is default
        end if
 
      end do
@@ -775,7 +1055,124 @@ do i =1, N
 
  end do
 
+!------------------------- anagrafica
+
+do i =1, N_ana
+
+   indana = firsttrue(bufferana(i)%ana == vol7dtmp%ana)
+   indnetwork = firsttrue(buffer(i)%network == vol7dtmp%network)
+
+   if (indana < 1 .or. indnetwork < 1 )cycle
+
+   !print *, indana,indtime,indlevel,indtimerange,indnetwork
+
+   if(c_e(bufferana(i)%dator))then
+     indanavar = firsttrue(bufferana(i)%dativar == vol7dtmp%anavar%r)
+     vol7dtmp%volanar( indana,indanavar,indnetwork ) = bufferana(i)%dator
+   end if
+   if(c_e(bufferana(i)%datoi))then
+     indanavar = firsttrue(bufferana(i)%dativar == vol7dtmp%anavar%i)
+     vol7dtmp%volanai( indana,indanavar,indnetwork ) = bufferana(i)%datoi
+   end if
+   if(c_e(bufferana(i)%datob))then
+     indanavar = firsttrue(bufferana(i)%dativar == vol7dtmp%anavar%b)
+     vol7dtmp%volanab( indana,indanavar,indnetwork ) = bufferana(i)%datob
+   end if
+   if(c_e(bufferana(i)%datod))then
+     indanavar = firsttrue(bufferana(i)%dativar == vol7dtmp%anavar%d)
+     vol7dtmp%volanad( indana,indanavar,indnetwork ) = bufferana(i)%datod
+   end if
+   if(c_e(bufferana(i)%datoc))then
+     indanavar = firsttrue(bufferana(i)%dativar == vol7dtmp%anavar%c)
+     vol7dtmp%volanac( indana,indanavar,indnetwork ) = bufferana(i)%datoc
+   end if
+
+
+   if (lanaattr)then
+
+     call idba_unsetall (this%handle_staz)
+
+     ! creo la stringa con l'elenco
+     starvarlist = ''
+     nanavarattr=0
+     DO ii = 1, SIZE(anaattr)
+       nanavarattr = nanavarattr + 1
+       IF (nanavarattr > 1) starvarlist(LEN_TRIM(starvarlist)+1:) = ',' 
+       starvarlist(LEN_TRIM(starvarlist)+1:) = TRIM(anaattr(ii))
+     ENDDO
+     !print *,"starvarlist",starvarlist
+     
+     call idba_set (this%handle_staz,"context_id",bufferana(i)%data_id)
+     !per ogni dato ora lavoro sugli attributi
+     call idba_set(this%handle_staz, "*varlist",starvarlist )
+     call idba_voglioancora (this%handle_staz,nn)
+     !print*,buffer(i)%dativar%btable," numero attributi",nn
+     
+     do ii=1,nn ! Se ho piu` di 1 attributo devo forse trovare l'indice (ii)
+       call idba_ancora (this%handle_staz,starbtable)
+         !print *, starbtable
+       indattr = firsttrue(anaattr == starbtable)
+       IF (indattr<1) cycle ! non c'e'
+
+
+       call init (var_tmp, btable=starbtable)
+
+
+       if (present(anaattrkind))then
+         iii=( firsttrue(anaattr == starbtable))
+         !print *,"ho letto indice attributo ",starbtable,iii 
+         if (iii > 0)then
+
+           if(anaattrkind(iii) == "r") then
+             indanavarattr  = firsttrue(bufferana(i)%dativar == vol7dtmp%dativarattr%r)
+             indanaattr = firsttrue(var_tmp == vol7dtmp%anaattr%r)
+             call idba_enq (this%handle_staz,starbtable,&
+              vol7dtmp%volanaattrr(indana,indanavarattr,indnetwork,indanaattr))
+           end if
+           if(anaattrkind(iii) == "i") then
+             indanavarattr  = firsttrue(bufferana(i)%dativar == vol7dtmp%dativarattr%i)
+             indanaattr = firsttrue(var_tmp == vol7dtmp%anaattr%i)
+             call idba_enq (this%handle_staz,starbtable,&
+              vol7dtmp%volanaattri(indana,indanavarattr,indnetwork,indanaattr))
+           end if
+           if(anaattrkind(iii) == "b") then
+             indanavarattr  = firsttrue(bufferana(i)%dativar == vol7dtmp%dativarattr%b)
+             indanaattr = firsttrue(var_tmp == vol7dtmp%anaattr%b)
+             call idba_enq (this%handle_staz,starbtable,&
+              vol7dtmp%volanaattrb(indana,indanavarattr,indnetwork,indanaattr))
+           end if
+           if(anaattrkind(iii) == "d") then
+             indanavarattr  = firsttrue(bufferana(i)%dativar == vol7dtmp%dativarattr%d)
+             indanaattr = firsttrue(var_tmp == vol7dtmp%anaattr%d)
+             call idba_enq (this%handle_staz,starbtable,&
+              vol7dtmp%volanaattrd(indana,indanavarattr,indnetwork,indanaattr))
+           end if
+           if(anaattrkind(iii) == "c") then
+             indanavarattr  = firsttrue(bufferana(i)%dativar == vol7dtmp%dativarattr%c)
+             indanaattr = firsttrue(var_tmp == vol7dtmp%anaattr%c)
+             call idba_enq (this%handle_staz,starbtable,&
+              vol7dtmp%volanaattrc(indana,indanavarattr,indnetwork,indanaattr))
+           end if
+
+         end if
+       else         
+         indanavarattr  = firsttrue(bufferana(i)%dativar == vol7dtmp%anavarattr%c)
+         indanaattr = firsttrue(var_tmp == vol7dtmp%anaattr%c)
+         call idba_enq (this%handle,starbtable,&
+          vol7dtmp%volanaattrc(indana,indanavarattr,indnetwork,indanaattr)) !char is default
+       end if
+
+     end do
+   end if
+
+ end do
+
+
+!------------------------- anagrafica fine
+
+
 deallocate (buffer)
+deallocate (bufferana)
 
 ! Se l'oggetto ha gia` un volume allocato lo fondo con quello estratto
 !TODO manca test su associated dei vol*
@@ -1121,32 +1518,32 @@ do iii=1, nnetwork
 
       !print *,"network",this%vol7d%network(iii)%id
 
-! TODO : questo è un ponghino per fargli scrivere l'anagrafica
-
-      call idba_set(this%handle,"name","unknown")
+! TODO : questo era un ponghino per fargli scrivere l'anagrafica
+! call idba_set(this%handle,"name","unknown")
+! se non esiste nemmeno un dato non scrive niente
 
       do ii=1,size(this%vol7d%anavar%r(:))
-         print*,this%vol7d%anavar%r(ii)%btable , this%vol7d%volanar(i,ii,iii)
+         !print*,this%vol7d%anavar%r(ii)%btable , this%vol7d%volanar(i,ii,iii)
          call idba_set (this%handle,this%vol7d%anavar%r(ii)%btable , this%vol7d%volanar(i,ii,iii))
       end do
 
       do ii=1,size(this%vol7d%anavar%i(:))
-         print *,this%vol7d%anavar%i(ii)%btable , this%vol7d%volanai(i,ii,iii)
+         !print *,this%vol7d%anavar%i(ii)%btable , this%vol7d%volanai(i,ii,iii)
          call idba_set (this%handle,this%vol7d%anavar%i(ii)%btable , this%vol7d%volanai(i,ii,iii))
       end do
 
       do ii=1,size(this%vol7d%anavar%b(:))
-         print *,this%vol7d%anavar%b(ii)%btable , this%vol7d%volanab(i,ii,iii)
+         !print *,this%vol7d%anavar%b(ii)%btable , this%vol7d%volanab(i,ii,iii)
          call idba_set (this%handle,this%vol7d%anavar%b(ii)%btable , this%vol7d%volanab(i,ii,iii))
       end do
 
       do ii=1,size(this%vol7d%anavar%d(:))
-         print *,this%vol7d%anavar%d(ii)%btable , this%vol7d%volanad(i,ii,iii)
+         !print *,this%vol7d%anavar%d(ii)%btable , this%vol7d%volanad(i,ii,iii)
          call idba_set (this%handle,this%vol7d%anavar%d(ii)%btable , this%vol7d%volanad(i,ii,iii))
       end do
 
       do ii=1,size(this%vol7d%anavar%c(:))
-         print *,this%vol7d%anavar%c(ii)%btable , this%vol7d%volanac(i,ii,iii)
+         !print *,this%vol7d%anavar%c(ii)%btable , this%vol7d%volanac(i,ii,iii)
          call idba_set (this%handle,this%vol7d%anavar%c(ii)%btable , this%vol7d%volanac(i,ii,iii))
       end do
       
@@ -1154,7 +1551,35 @@ do iii=1, nnetwork
       call idba_enq (this%handle,"ana_id",ana_id(i,iii))
 
 
-      !TODO: scrivere gli attributi 
+!!$      !TODO: scrivere gli attributi 
+!!$
+!!$
+!!$               write=.false.
+!!$
+!!$#undef VOL7D_POLY_TYPES_V
+!!$#define VOL7D_POLY_TYPES_V r
+!!$#include "vol7d_dballe_class_var.F90"
+!!$#undef VOL7D_POLY_TYPES_V
+!!$#define VOL7D_POLY_TYPES_V i
+!!$#include "vol7d_dballe_class_var.F90"
+!!$#undef VOL7D_POLY_TYPES_V
+!!$#define VOL7D_POLY_TYPES_V b
+!!$#include "vol7d_dballe_class_var.F90"
+!!$#undef VOL7D_POLY_TYPES_V
+!!$#define VOL7D_POLY_TYPES_V d
+!!$#include "vol7d_dballe_class_var.F90"
+!!$#undef VOL7D_POLY_TYPES_V
+!!$#define VOL7D_POLY_TYPES_V c
+!!$#include "vol7d_dballe_class_var.F90"
+!!$#undef VOL7D_POLY_TYPES_V
+!!$
+!!$               if (write) then
+!!$                 !print*,"eseguo una main prendilo"
+!!$                 call idba_prendilo (this%handle)
+!!$                 write=.false.
+!!$               end if
+!!$
+
 
 
    end do
