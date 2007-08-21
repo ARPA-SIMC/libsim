@@ -72,17 +72,17 @@ ELSE
   this%p2 = imiss
   RETURN
 ENDIF
-IF (timerange == 1) THEN ! p1 sempre 0
-  this%p1 = 0
-  this%p2 = imiss
-ELSE IF (timerange == 0 .OR. timerange == 10) THEN ! solo p1
-  IF (PRESENT(p1)) THEN
-    this%p1 = p1
-  ELSE
-    this%p1 = 0
-  ENDIF
-  this%p2 = imiss
-ELSE ! tutti gli altri
+!!$IF (timerange == 1) THEN ! p1 sempre 0
+!!$  this%p1 = 0
+!!$  this%p2 = imiss
+!!$ELSE IF (timerange == 0 .OR. timerange == 10) THEN ! solo p1
+!!$  IF (PRESENT(p1)) THEN
+!!$    this%p1 = p1
+!!$  ELSE
+!!$    this%p1 = 0
+!!$  ENDIF
+!!$  this%p2 = imiss
+!!$ELSE ! tutti gli altri
   IF (PRESENT(p1)) THEN
     this%p1 = p1
   ELSE
@@ -93,7 +93,7 @@ ELSE ! tutti gli altri
   ELSE
     this%p2 = imiss
   ENDIF
-END IF
+!!$END IF
 
 END SUBROUTINE vol7d_timerange_init
 

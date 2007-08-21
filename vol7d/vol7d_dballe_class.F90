@@ -1200,7 +1200,7 @@ call vol7d_set_attr_ind(this%vol7d)
 END SUBROUTINE vol7d_dballe_importvvns
 
 
-SUBROUTINE vol7d_dballe_export(this, network, latmin,latmax,lonmin,lonmax,staz_id,ident,timei, timef,level,timerange,var,attr)
+SUBROUTINE vol7d_dballe_export(this, network, latmin,latmax,lonmin,lonmax,staz_id,ident,timei, timef,level,timerange,var,attr,anavar,anaattr)
 
 ! TODO: gestire staz_id la qual cosa vuol dire aggiungere un id nel type ana
 
@@ -1211,7 +1211,7 @@ TYPE(datetime),INTENT(in),optional :: timei, timef
 REAL(kind=fp_geo),INTENT(in),optional :: latmin,latmax,lonmin,lonmax
 TYPE(vol7d_level),INTENT(in),optional :: level
 TYPE(vol7d_timerange),INTENT(in),optional :: timerange
-CHARACTER(len=*),INTENT(in),OPTIONAL :: var(:),attr(:)
+CHARACTER(len=*),INTENT(in),OPTIONAL :: var(:),attr(:),anavar(:),anaattr(:)
 logical, allocatable :: lnetwork(:),llevel(:),ltimerange(:)
 integer,allocatable :: ana_id(:,:)
 logical :: write,writeattr
@@ -1223,7 +1223,7 @@ integer :: year,month,day,hour,minute,sec
 integer :: nstaz,ntime,ntimerange,nlevel,nnetwork
 
 
-INTEGER :: i,ii,iii,iiii,iiiii,iiiiii,j,ind,inddatiattr
+INTEGER :: i,ii,iii,iiii,iiiii,iiiiii,j,ind,inddatiattr,indanaattr
 
 REAL(kind=fp_geo) :: lat,lon 
 !INTEGER(kind=int_b)::attrdatib
@@ -1235,11 +1235,23 @@ integer :: ndativarb,ndatiattrb
 integer :: ndativard,ndatiattrd
 integer :: ndativarc,ndatiattrc
 
+integer :: nanavarr,nanaattrr
+integer :: nanavari,nanaattri
+integer :: nanavarb,nanaattrb
+integer :: nanavard,nanaattrd
+integer :: nanavarc,nanaattrc
+
 logical, allocatable :: lvarr(:),lattrr(:)
 logical, allocatable :: lvari(:),lattri(:)
 logical, allocatable :: lvarb(:),lattrb(:)
 logical, allocatable :: lvard(:),lattrd(:)
 logical, allocatable :: lvarc(:),lattrc(:)
+
+logical, allocatable :: lanavarr(:),lanaattrr(:)
+logical, allocatable :: lanavari(:),lanaattri(:)
+logical, allocatable :: lanavarb(:),lanaattrb(:)
+logical, allocatable :: lanavard(:),lanaattrd(:)
+logical, allocatable :: lanavarc(:),lanaattrc(:)
 
 
 nstaz=size(this%vol7d%ana(:))
@@ -1281,199 +1293,54 @@ else
 end if
 
 
-!type r
 
-if (associated(this%vol7d%dativar%r))then
-   ndativarr=size(this%vol7d%dativar%r(:))
-   allocate (lvarr(ndativarr))
-   if (present(var))then
-      lvarr(:)=.false.
-      do  i=1,size(var)
-         where (var(i) == this%vol7d%dativar%r(:)%btable)
-            lvarr(:)=.true.
-         end where
-      end do
-   else
-      lvarr(:)=.true.
-   end if
-else
-   allocate (lvarr(0))
-end if
-
-if (associated(this%vol7d%dativarattr%r))then
-   ndatiattrr=size(this%vol7d%datiattr%r(:))
-   allocate (lattrr(ndatiattrr))
-   if (present(attr))then
-      lattrr(:)=.false.
-      do  i=1,size(attr)
-         where (attr(i) == this%vol7d%datiattr%r(:)%btable)
-            lattrr(:)=.true.
-         end where
-      end do
-   else
-      lattrr(:)=.true.
-   end if
-else
-   allocate (lattrr(0))
-end if
-
-!# end type  r
+!!!!!  anagrafica
 
 
-
-!type c
-
-if (associated(this%vol7d%dativar%c))then
-   ndativarc=size(this%vol7d%dativar%c(:))
-   allocate (lvarc(ndativarc))
-   if (present(var))then
-      lvarc(:)=.false.
-      do  i=1,size(var)
-         where (var(i) == this%vol7d%dativar%c(:)%btable)
-            lvarc(:)=.true.
-         end where
-      end do
-   else
-      lvarc(:)=.true.
-   end if
-else
-   allocate (lvarc(0))
-end if
-
-if (associated(this%vol7d%dativarattr%c))then
-   ndatiattrc=size(this%vol7d%datiattr%c(:))
-   allocate (lattrc(ndatiattrc))
-   if (present(attr))then
-      lattrc(:)=.false.
-      do  i=1,size(attr)
-         where (attr(i) == this%vol7d%datiattr%c(:)%btable)
-            lattrc(:)=.true.
-         end where
-      end do
-   else
-      lattrc(:)=.true.
-   end if
-else
-   allocate (lattrc(0))
-end if
-
-!# end type  c
-
-!type i
-
-if (associated(this%vol7d%dativar%i))then
-   ndativari=size(this%vol7d%dativar%i(:))
-   allocate (lvari(ndativari))
-   if (present(var))then
-      lvari(:)=.false.
-      do  i=1,size(var)
-         where (var(i) == this%vol7d%dativar%i(:)%btable)
-            lvari(:)=.true.
-         end where
-      end do
-   else
-      lvari(:)=.true.
-   end if
-else
-   allocate (lvari(0))
-end if
-
-if (associated(this%vol7d%dativarattr%i))then
-   ndatiattri=size(this%vol7d%datiattr%i(:))
-   allocate (lattri(ndatiattri))
-   if (present(attr))then
-      lattri(:)=.false.
-      do  i=1,size(attr)
-         where (attr(i) == this%vol7d%datiattr%i(:)%btable)
-            lattri(:)=.true.
-         end where
-      end do
-   else
-      lattri(:)=.true.
-   end if
-else
-   allocate (lattri(0))
-end if
-
-!# end type  i
-
-!type b
-
-if (associated(this%vol7d%dativar%b))then
-   ndativarb=size(this%vol7d%dativar%b(:))
-   allocate (lvarb(ndativarb))
-   if (present(var))then
-      lvarb(:)=.false.
-      do  i=1,size(var)
-         where (var(i) == this%vol7d%dativar%b(:)%btable)
-            lvarb(:)=.true.
-         end where
-      end do
-   else
-      lvarb(:)=.true.
-   end if
-else
-   allocate (lvarb(0))
-end if
-
-if (associated(this%vol7d%dativarattr%b))then
-   ndatiattrb=size(this%vol7d%datiattr%b(:))
-   allocate (lattrb(ndatiattrb))
-   if (present(attr))then
-      lattrb(:)=.false.
-      do  i=1,size(attr)
-         where (attr(i) == this%vol7d%datiattr%b(:)%btable)
-            lattrb(:)=.true.
-         end where
-      end do
-   else
-      lattrb(:)=.true.
-   end if
-else
-   allocate (lattrb(0))
-end if
-
-!# end type  b
-
-!type d
-
-if (associated(this%vol7d%dativar%d))then
-   ndativard=size(this%vol7d%dativar%d(:))
-   allocate (lvard(ndativard))
-   if (present(var))then
-      lvard(:)=.false.
-      do  i=1,size(var)
-         where (var(i) == this%vol7d%dativar%d(:)%btable)
-            lvard(:)=.true.
-         end where
-      end do
-   else
-      lvard(:)=.true.
-   end if
-else
-   allocate (lvard(0))
-end if
-
-if (associated(this%vol7d%dativarattr%d))then
-   ndatiattrd=size(this%vol7d%datiattr%d(:))
-   allocate (lattrd(ndatiattrd))
-   if (present(attr))then
-      lattrd(:)=.false.
-      do  i=1,size(attr)
-         where (attr(i) == this%vol7d%datiattr%d(:)%btable)
-            lattrd(:)=.true.
-         end where
-      end do
-   else
-      lattrd(:)=.true.
-   end if
-else
-   allocate (lattrd(0))
-end if
-
-!# end type  d 
+#undef VOL7D_POLY_TYPES_V
+#define VOL7D_POLY_TYPES_V r
+#include "vol7d_dballe_class_nana.f90"
+#undef VOL7D_POLY_TYPES_V
+#undef VOL7D_POLY_TYPES_V
+#define VOL7D_POLY_TYPES_V i
+#include "vol7d_dballe_class_nana.f90"
+#undef VOL7D_POLY_TYPES_V
+#undef VOL7D_POLY_TYPES_V
+#define VOL7D_POLY_TYPES_V b
+#include "vol7d_dballe_class_nana.f90"
+#undef VOL7D_POLY_TYPES_V
+#undef VOL7D_POLY_TYPES_V
+#define VOL7D_POLY_TYPES_V d
+#include "vol7d_dballe_class_nana.f90"
+#undef VOL7D_POLY_TYPES_V
+#undef VOL7D_POLY_TYPES_V
+#define VOL7D_POLY_TYPES_V c
+#include "vol7d_dballe_class_nana.f90"
+#undef VOL7D_POLY_TYPES_V
 
 
+!!!!!!!   dati
+
+#undef VOL7D_POLY_TYPES_V
+#define VOL7D_POLY_TYPES_V r
+#include "vol7d_dballe_class_ndati.f90"
+#undef VOL7D_POLY_TYPES_V
+#undef VOL7D_POLY_TYPES_V
+#define VOL7D_POLY_TYPES_V i
+#include "vol7d_dballe_class_ndati.f90"
+#undef VOL7D_POLY_TYPES_V
+#undef VOL7D_POLY_TYPES_V
+#define VOL7D_POLY_TYPES_V b
+#include "vol7d_dballe_class_ndati.f90"
+#undef VOL7D_POLY_TYPES_V
+#undef VOL7D_POLY_TYPES_V
+#define VOL7D_POLY_TYPES_V d
+#include "vol7d_dballe_class_ndati.f90"
+#undef VOL7D_POLY_TYPES_V
+#undef VOL7D_POLY_TYPES_V
+#define VOL7D_POLY_TYPES_V c
+#include "vol7d_dballe_class_ndati.f90"
+#undef VOL7D_POLY_TYPES_V
 
 
 call idba_unsetall (this%handle)
@@ -1516,78 +1383,49 @@ do iii=1, nnetwork
 
       call idba_set(this%handle,"rep_cod",this%vol7d%network(iii)%id)
 
-      !print *,"network",this%vol7d%network(iii)%id
+                                !print *,"network",this%vol7d%network(iii)%id
 
-! TODO : questo era un ponghino per fargli scrivere l'anagrafica
-! call idba_set(this%handle,"name","unknown")
-! se non esiste nemmeno un dato non scrive niente
+                                ! TODO : questo era un ponghino per fargli scrivere l'anagrafica
+                                ! call idba_set(this%handle,"name","unknown")
+                                ! se non esiste nemmeno un dato non scrive niente
 
-      do ii=1,size(this%vol7d%anavar%r(:))
-         !print*,this%vol7d%anavar%r(ii)%btable , this%vol7d%volanar(i,ii,iii)
-         call idba_set (this%handle,this%vol7d%anavar%r(ii)%btable , this%vol7d%volanar(i,ii,iii))
-      end do
+      write=.false.
 
-      do ii=1,size(this%vol7d%anavar%i(:))
-         !print *,this%vol7d%anavar%i(ii)%btable , this%vol7d%volanai(i,ii,iii)
-         call idba_set (this%handle,this%vol7d%anavar%i(ii)%btable , this%vol7d%volanai(i,ii,iii))
-      end do
+#undef VOL7D_POLY_TYPES_V
+#define VOL7D_POLY_TYPES_V r
+!print*,"ana macro tipo r"
+#include "vol7d_dballe_class_ana.F90"
+#undef VOL7D_POLY_TYPES_V
+#define VOL7D_POLY_TYPES_V i
+!print*,"ana macro tipo i"
+#include "vol7d_dballe_class_ana.F90"
+#undef VOL7D_POLY_TYPES_V
+#define VOL7D_POLY_TYPES_V b
+!print*,"ana macro tipo b"
+#include "vol7d_dballe_class_ana.F90"
+#undef VOL7D_POLY_TYPES_V
+#define VOL7D_POLY_TYPES_V d
+!print*,"ana macro tipo d"
+#include "vol7d_dballe_class_ana.F90"
+#undef VOL7D_POLY_TYPES_V
+#define VOL7D_POLY_TYPES_V c
+!print*,"ana macro tipo c"
+#include "vol7d_dballe_class_ana.F90"
+#undef VOL7D_POLY_TYPES_V
 
-      do ii=1,size(this%vol7d%anavar%b(:))
-         !print *,this%vol7d%anavar%b(ii)%btable , this%vol7d%volanab(i,ii,iii)
-         call idba_set (this%handle,this%vol7d%anavar%b(ii)%btable , this%vol7d%volanab(i,ii,iii))
-      end do
-
-      do ii=1,size(this%vol7d%anavar%d(:))
-         !print *,this%vol7d%anavar%d(ii)%btable , this%vol7d%volanad(i,ii,iii)
-         call idba_set (this%handle,this%vol7d%anavar%d(ii)%btable , this%vol7d%volanad(i,ii,iii))
-      end do
-
-      do ii=1,size(this%vol7d%anavar%c(:))
-         !print *,this%vol7d%anavar%c(ii)%btable , this%vol7d%volanac(i,ii,iii)
-         call idba_set (this%handle,this%vol7d%anavar%c(ii)%btable , this%vol7d%volanac(i,ii,iii))
-      end do
-      
-      call idba_prendilo ((this%handle))
-      call idba_enq (this%handle,"ana_id",ana_id(i,iii))
-
-
-!!$      !TODO: scrivere gli attributi 
-!!$
-!!$
-!!$               write=.false.
-!!$
-!!$#undef VOL7D_POLY_TYPES_V
-!!$#define VOL7D_POLY_TYPES_V r
-!!$#include "vol7d_dballe_class_var.F90"
-!!$#undef VOL7D_POLY_TYPES_V
-!!$#define VOL7D_POLY_TYPES_V i
-!!$#include "vol7d_dballe_class_var.F90"
-!!$#undef VOL7D_POLY_TYPES_V
-!!$#define VOL7D_POLY_TYPES_V b
-!!$#include "vol7d_dballe_class_var.F90"
-!!$#undef VOL7D_POLY_TYPES_V
-!!$#define VOL7D_POLY_TYPES_V d
-!!$#include "vol7d_dballe_class_var.F90"
-!!$#undef VOL7D_POLY_TYPES_V
-!!$#define VOL7D_POLY_TYPES_V c
-!!$#include "vol7d_dballe_class_var.F90"
-!!$#undef VOL7D_POLY_TYPES_V
-!!$
-!!$               if (write) then
-!!$                 !print*,"eseguo una main prendilo"
-!!$                 call idba_prendilo (this%handle)
-!!$                 write=.false.
-!!$               end if
-!!$
-
-
+      if (write) then
+                                !print*,"eseguo una main prendilo"
+        call idba_prendilo (this%handle)
+        call idba_enq (this%handle,"ana_id",ana_id(i,iii))
+        write=.false.
+      end if
 
    end do
 end do
 
-! data
 
-!print *,"nstaz,ntime,nlevel,ntimerange,nnetwork",nstaz,ntime,nlevel,ntimerange,nnetwork
+! data
+print *,"nstaz,ntime,nlevel,ntimerange,nnetwork",nstaz,ntime,nlevel,ntimerange,nnetwork
 
 do i=1, nstaz
    do ii=1,ntime
@@ -1626,19 +1464,24 @@ do i=1, nstaz
 
 #undef VOL7D_POLY_TYPES_V
 #define VOL7D_POLY_TYPES_V r
-#include "vol7d_dballe_class_var.F90"
+!print*,"macro tipo r"
+#include "vol7d_dballe_class_dati.F90"
 #undef VOL7D_POLY_TYPES_V
 #define VOL7D_POLY_TYPES_V i
-#include "vol7d_dballe_class_var.F90"
+!print*,"macro tipo i"
+#include "vol7d_dballe_class_dati.F90"
 #undef VOL7D_POLY_TYPES_V
 #define VOL7D_POLY_TYPES_V b
-#include "vol7d_dballe_class_var.F90"
+!print*,"macro tipo b"
+#include "vol7d_dballe_class_dati.F90"
 #undef VOL7D_POLY_TYPES_V
 #define VOL7D_POLY_TYPES_V d
-#include "vol7d_dballe_class_var.F90"
+!print*,"macro tipo d"
+#include "vol7d_dballe_class_dati.F90"
 #undef VOL7D_POLY_TYPES_V
 #define VOL7D_POLY_TYPES_V c
-#include "vol7d_dballe_class_var.F90"
+!print*,"macro tipo c"
+#include "vol7d_dballe_class_dati.F90"
 #undef VOL7D_POLY_TYPES_V
 
                if (write) then
