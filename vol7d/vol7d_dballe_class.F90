@@ -393,6 +393,8 @@ end do
 !ora leggere tutti i dati di anagrafica e metterli in bufferana
          
 call idba_setcontextana(this%handle_staz)
+call idba_unset(this%handle_staz,"rep_cod")
+call idba_unset(this%handle_staz,"rep_memo")
 call idba_voglioquesto (this%handle_staz,N_ana)
 !print*,"numero di dati ",N_ana
 
@@ -413,11 +415,8 @@ do i=1,N_ana
   call idba_dammelo (this%handle_staz,btable)
 
   
-!TODO: trovare il codice B di ident
-  if (btable == "B05001" .or. btable == "B06001" .or. btable == "BXXXX")then
-
-    cycle
-  end if
+                                !salto lat lon e ident
+  if (btable == "B05001" .or. btable == "B06001" .or. btable == "B01011") cycle
 
   call idba_enqdate (this%handle_staz,year,month,day,hour,minute,sec)
   call idba_enqlevel(this%handle_staz, rlevel, rl1, rl2)
@@ -659,6 +658,7 @@ if (present(var).and. present(varkind))then
     end if
   end do
 else if (present(var))then
+
   do i=1, nvar
     call init (vol7dtmp%dativar%c(i), btable=var(i))
   end do
@@ -671,7 +671,7 @@ end if
 
 
 
-if ( present(attrkind).and. present(attr))then
+if ( present(attrkind).and. present(attr).and. present(var))then
 
     ir=0
     ii=0
@@ -681,43 +681,43 @@ if ( present(attrkind).and. present(attr))then
 
   do i=1,size(var)
   
-    call init (var_tmp, btable=var(i))
-
     if ( ndativarattrr > 0 )then
       ir=ir+1
-      vol7dtmp%dativarattr%r(ir)=var_tmp
+      call init (vol7dtmp%dativarattr%r(ir), btable=var(i))
     end if
 
     if ( ndativarattri > 0 )then
       ii=ii+1
-      vol7dtmp%dativarattr%i(ii)=var_tmp
+      call init (vol7dtmp%dativarattr%i(ii), btable=var(i))
     end if
 
     if ( ndativarattrb > 0 )then
       ib=ib+1
-      vol7dtmp%dativarattr%b(ib)=var_tmp
+      call init (vol7dtmp%dativarattr%b(ib), btable=var(i))
     end if
 
     if ( ndativarattrd > 0 )then
       id=id+1
-      vol7dtmp%dativarattr%d(id)=var_tmp
+      call init (vol7dtmp%dativarattr%d(id), btable=var(i))
     end if
 
     if ( ndativarattrc > 0 )then
       ic=ic+1
-      vol7dtmp%dativarattr%c(ic)=var_tmp
+      call init (vol7dtmp%dativarattr%c(ic), btable=var(i))
     end if
 
   end do
-  !print*,"totali data attr",ir,ii,ib,id,ic
+
+else  if (present(attr).and.present(var))then
+
+  do i=1,size(var)
+    call init (vol7dtmp%dativarattr%c(i), btable=var(i))
+  end do
 
 else
-  if (present(attr))then
-    do i=1,size(var)
-      call init (var_tmp, btable=var(i))
-      vol7dtmp%dativarattr%c(i)=var_tmp
-    end do
-  end if
+
+      vol7dtmp%dativarattr%c=vol7dtmp%dativar%c
+
 end if
 
 
@@ -752,13 +752,12 @@ if (present(attrkind).and. present(attr))then
       call init (vol7dtmp%datiattr%c(ic), btable=attr(i))  
     end if
   end do
-else
-  if (present(attr))then
-    do i=1, size(attr)
-      !print*,i
-      call init (vol7dtmp%datiattr%c(i), btable=attr(i))
-    end do
-  end if
+else  if (present(attr))then
+
+  do i=1, size(attr)
+    call init (vol7dtmp%datiattr%c(i), btable=attr(i))
+  end do
+
 end if
 
 !-----------------------> anagrafica
@@ -794,6 +793,7 @@ if (present(anavar).and. present(anavarkind))then
     end if
   end do
 else if (present(anavar))then
+
   do i=1, nanavar
     call init (vol7dtmp%anavar%c(i), btable=anavar(i))
   end do
@@ -806,7 +806,7 @@ end if
 
 
 
-if ( present(anaattrkind).and. present(anaattr))then
+if ( present(anaattrkind) .and. present(anaattr) .and. present(anavar))then
 
     ir=0
     ii=0
@@ -816,43 +816,43 @@ if ( present(anaattrkind).and. present(anaattr))then
 
   do i=1,size(anavar)
   
-    call init (var_tmp, btable=anavar(i))
-
     if ( nanavarattrr > 0 )then
       ir=ir+1
-      vol7dtmp%anavarattr%r(ir)=var_tmp
+      call init (vol7dtmp%anavarattr%r(ir), btable=anavar(i))
     end if
 
     if ( nanavarattri > 0 )then
       ii=ii+1
-      vol7dtmp%anavarattr%i(ii)=var_tmp
+      call init (vol7dtmp%anavarattr%i(ii), btable=anavar(i))
     end if
 
     if ( nanavarattrb > 0 )then
       ib=ib+1
-      vol7dtmp%anavarattr%b(ib)=var_tmp
+      call init (vol7dtmp%anavarattr%b(ib), btable=anavar(i))
     end if
 
     if ( nanavarattrd > 0 )then
       id=id+1
-      vol7dtmp%anavarattr%d(id)=var_tmp
+      call init (vol7dtmp%anavarattr%d(id), btable=anavar(i))
     end if
 
     if ( nanavarattrc > 0 )then
       ic=ic+1
-      vol7dtmp%anavarattr%c(ic)=var_tmp
+      call init (vol7dtmp%anavarattr%c(ic), btable=anavar(i))
     end if
 
   end do
-  !print*,"totali ana attr",ir,ii,ib,id,ic
+
+else  if (present(anaattr) .and. present (anavar))then
+
+  do i=1,size(anavar)
+    call init(vol7dtmp%anavarattr%c(i), btable=anavar(i))
+  end do
 
 else
-  if (present(anaattr))then
-    do i=1,size(anavar)
-      call init (var_tmp, btable=anavar(i))
-      vol7dtmp%anavarattr%c(i)=var_tmp
-    end do
-  end if
+
+    vol7dtmp%anavarattr%c=vol7dtmp%anavar%c
+
 end if
 
 
@@ -887,13 +887,12 @@ if (present(anaattrkind).and. present(anaattr))then
       call init (vol7dtmp%anaattr%c(ic), btable=anaattr(i))  
     end if
   end do
-else
-  if (present(anaattr))then
-    do i=1, size(anaattr)
-      !print*,i
-      call init (vol7dtmp%anaattr%c(i), btable=anaattr(i))
-    end do
-  end if
+else if (present(anaattr))then
+
+  do i=1, size(anaattr)
+    call init (vol7dtmp%anaattr%c(i), btable=anaattr(i))
+  end do
+
 end if
 
 
@@ -920,6 +919,19 @@ call vol7d_alloc_vol (vol7dtmp)
 !vol7dtmp%voldatiattrc=DBA_MVC
 
 !print*,"ho fatto un volume vuoto"
+
+if (lattr)then
+                                ! creo la stringa con l'elenco delle variabili di attributo
+  starvarlist = ''
+  nvarattr=0
+  DO ii = 1, SIZE(attr)
+    nvarattr = nvarattr + 1
+    IF (nvarattr > 1) starvarlist(LEN_TRIM(starvarlist)+1:) = ',' 
+    starvarlist(LEN_TRIM(starvarlist)+1:) = TRIM(attr(ii))
+  ENDDO
+     !print *,"starvarlist",starvarlist
+
+end if
 
 do i =1, N
 
@@ -969,18 +981,9 @@ do i =1, N
    if (lattr)then
 
      call idba_unsetall (this%handle)
-
-     ! creo la stringa con l'elenco
-     starvarlist = ''
-     nvarattr=0
-     DO ii = 1, SIZE(attr)
-       nvarattr = nvarattr + 1
-       IF (nvarattr > 1) starvarlist(LEN_TRIM(starvarlist)+1:) = ',' 
-       starvarlist(LEN_TRIM(starvarlist)+1:) = TRIM(attr(ii))
-     ENDDO
-     !print *,"starvarlist",starvarlist
-     
-     call idba_set (this%handle,"context_id",buffer(i)%data_id)
+     call idba_set (this%handle,"*context_id",buffer(i)%data_id)
+     call idba_set (this%handle,"*var_related",buffer(i)%dativar%btable)
+     !print*,i,"context_id",buffer(i)%data_id
      !per ogni dato ora lavoro sugli attributi
      call idba_set(this%handle, "*varlist",starvarlist )
      call idba_voglioancora (this%handle,nn)
@@ -1000,6 +1003,8 @@ do i =1, N
          iii=( firsttrue(attr == starbtable))
          !print *,"ho letto indice attributo ",starbtable,iii 
          if (iii > 0)then
+
+!TODO sostituire qui sotto con struttura case:
            if(attrkind(iii) == "r") then
              inddativarattr  = firsttrue(buffer(i)%dativar == vol7dtmp%dativarattr%r)
              inddatiattr = firsttrue(var_tmp == vol7dtmp%datiattr%r)
@@ -1044,10 +1049,29 @@ do i =1, N
          call idba_enq (this%handle,starbtable,&
           vol7dtmp%voldatiattrc(indana,indtime,indlevel,indtimerange,&
           inddativarattr,indnetwork,inddatiattr)) !char is default
+         !print*,starbtable,vol7dtmp%voldatiattrc(indana,indtime,indlevel,indtimerange,&
+         ! inddativarattr,indnetwork,inddatiattr)
        end if
 
      end do
    end if
+
+
+!!$   if (present(lattronly)) then
+!!$     if (lattronly)then
+!!$     
+!!$       starbtable=Bdata_id
+!!$       
+!!$       call init ( var_tmp, btable=starbtable )
+!!$       inddativarattr  = firsttrue ( starbtable == vol7dtmp%dativarattr%i )
+!!$       
+!!$       inddatiattr = firsttrue( var_tmp == vol7dtmp%datiattr%i )
+!!$       vol7dtmp%voldatiattrc ( indana,indtime,indlevel,indtimerange,&
+!!$        inddativarattr,indnetwork,inddatiattr ) = buffer(i)%data_id
+!!$       
+!!$     end if
+!!$   end if
+     
 
 
 !( voldati*(nana,ntime,nlevel,ntimerange,ndativar*,nnetwork)
@@ -1057,10 +1081,28 @@ do i =1, N
 
 !------------------------- anagrafica
 
+
+if (lanaattr)then
+                                ! creo la stringa con l'elenco variabili attributi di anagrafica
+  starvarlist = ''
+  nanavarattr=0
+  DO ii = 1, SIZE(anaattr)
+    nanavarattr = nanavarattr + 1
+    IF (nanavarattr > 1) starvarlist(LEN_TRIM(starvarlist)+1:) = ',' 
+    starvarlist(LEN_TRIM(starvarlist)+1:) = TRIM(anaattr(ii))
+  ENDDO
+                                !print *,"starvarlist",starvarlist
+end if
+
+
 do i =1, N_ana
 
    indana = firsttrue(bufferana(i)%ana == vol7dtmp%ana)
-   indnetwork = firsttrue(buffer(i)%network == vol7dtmp%network)
+   indnetwork = firsttrue(bufferana(i)%network == vol7dtmp%network)
+
+!TODO ponghino per sistemare la rete dell'anagrafica
+   indnetwork=1
+
 
    if (indana < 1 .or. indnetwork < 1 )cycle
 
@@ -1091,18 +1133,9 @@ do i =1, N_ana
    if (lanaattr)then
 
      call idba_unsetall (this%handle_staz)
+     call idba_set (this%handle_staz,"*context_id",bufferana(i)%data_id)
+     call idba_set (this%handle_staz,"*var_related",bufferana(i)%dativar%btable)
 
-     ! creo la stringa con l'elenco
-     starvarlist = ''
-     nanavarattr=0
-     DO ii = 1, SIZE(anaattr)
-       nanavarattr = nanavarattr + 1
-       IF (nanavarattr > 1) starvarlist(LEN_TRIM(starvarlist)+1:) = ',' 
-       starvarlist(LEN_TRIM(starvarlist)+1:) = TRIM(anaattr(ii))
-     ENDDO
-     !print *,"starvarlist",starvarlist
-     
-     call idba_set (this%handle_staz,"context_id",bufferana(i)%data_id)
      !per ogni dato ora lavoro sugli attributi
      call idba_set(this%handle_staz, "*varlist",starvarlist )
      call idba_voglioancora (this%handle_staz,nn)
@@ -1124,31 +1157,31 @@ do i =1, N_ana
          if (iii > 0)then
 
            if(anaattrkind(iii) == "r") then
-             indanavarattr  = firsttrue(bufferana(i)%dativar == vol7dtmp%dativarattr%r)
+             indanavarattr  = firsttrue(bufferana(i)%dativar == vol7dtmp%anavarattr%r)
              indanaattr = firsttrue(var_tmp == vol7dtmp%anaattr%r)
              call idba_enq (this%handle_staz,starbtable,&
               vol7dtmp%volanaattrr(indana,indanavarattr,indnetwork,indanaattr))
            end if
            if(anaattrkind(iii) == "i") then
-             indanavarattr  = firsttrue(bufferana(i)%dativar == vol7dtmp%dativarattr%i)
+             indanavarattr  = firsttrue(bufferana(i)%dativar == vol7dtmp%anavarattr%i)
              indanaattr = firsttrue(var_tmp == vol7dtmp%anaattr%i)
              call idba_enq (this%handle_staz,starbtable,&
               vol7dtmp%volanaattri(indana,indanavarattr,indnetwork,indanaattr))
            end if
            if(anaattrkind(iii) == "b") then
-             indanavarattr  = firsttrue(bufferana(i)%dativar == vol7dtmp%dativarattr%b)
+             indanavarattr  = firsttrue(bufferana(i)%dativar == vol7dtmp%anavarattr%b)
              indanaattr = firsttrue(var_tmp == vol7dtmp%anaattr%b)
              call idba_enq (this%handle_staz,starbtable,&
               vol7dtmp%volanaattrb(indana,indanavarattr,indnetwork,indanaattr))
            end if
            if(anaattrkind(iii) == "d") then
-             indanavarattr  = firsttrue(bufferana(i)%dativar == vol7dtmp%dativarattr%d)
+             indanavarattr  = firsttrue(bufferana(i)%dativar == vol7dtmp%anavarattr%d)
              indanaattr = firsttrue(var_tmp == vol7dtmp%anaattr%d)
              call idba_enq (this%handle_staz,starbtable,&
               vol7dtmp%volanaattrd(indana,indanavarattr,indnetwork,indanaattr))
            end if
            if(anaattrkind(iii) == "c") then
-             indanavarattr  = firsttrue(bufferana(i)%dativar == vol7dtmp%dativarattr%c)
+             indanavarattr  = firsttrue(bufferana(i)%dativar == vol7dtmp%anavarattr%c)
              indanaattr = firsttrue(var_tmp == vol7dtmp%anaattr%c)
              call idba_enq (this%handle_staz,starbtable,&
               vol7dtmp%volanaattrc(indana,indanavarattr,indnetwork,indanaattr))
@@ -1166,6 +1199,22 @@ do i =1, N_ana
    end if
 
  end do
+
+
+!!$ if (present(lattronly)) then
+!!$   if (lattronly)then
+!!$     
+!!$     starbtable=Bdata_id
+!!$     
+!!$     call init ( var_tmp, btable=starbtable )
+!!$     indanavarattr  = firsttrue ( starbtable == vol7dtmp%anavarattr%i )
+!!$   
+!!$     indanaattr = firsttrue( var_tmp == vol7dtmp%anaattr%i )
+!!$     vol7dtmp%volanaattrc(indana,indanavarattr,indnetwork,indanaattr) = bufferana(i)%data_id
+!!$   
+!!$   end if
+!!$ end if
+   
 
 
 !------------------------- anagrafica fine
@@ -1381,7 +1430,9 @@ do iii=1, nnetwork
          call idba_set (this%handle,"mobile",0)
       end if
 
-      call idba_set(this%handle,"rep_cod",this%vol7d%network(iii)%id)
+
+! TODO : per ora scrivo tutto nella rete ana (254); scommentare qui sotto
+!      call idba_set(this%handle,"rep_cod",this%vol7d%network(iii)%id)
 
                                 !print *,"network",this%vol7d%network(iii)%id
 
