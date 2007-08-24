@@ -4,6 +4,8 @@ USE err_handling
 USE missing_values
 IMPLICIT NONE
 
+INTEGER, PARAMETER :: dateint=SELECTED_INT_KIND(13)
+
 TYPE datetime
   PRIVATE
   INTEGER :: iminuti
@@ -18,6 +20,14 @@ END TYPE timedelta
 TYPE(datetime), PARAMETER :: datetime_miss=datetime(imiss)
 TYPE(timedelta), PARAMETER :: timedelta_miss=timedelta(imiss, 0, 0)
 TYPE(timedelta), PARAMETER :: timedelta_0=timedelta(0, 0, 0)
+
+INTEGER(kind=dateint), PARAMETER :: &
+ sec_in_day=86400, &
+ sec_in_hour=3600, &
+ sec_in_min=60, &
+ min_in_day=1440, &
+ min_in_hour=60, &
+ hour_in_day=24
 
 INTEGER,PARAMETER :: &
  year0=1, & ! anno di origine per iminuti
@@ -755,6 +765,32 @@ INTEGER :: iday, imonth, iyear, ihour, imin, iminuti
 iminuti = ndays(iday,imonth,iyear)*1440+(ihour*60)+imin
 
 END SUBROUTINE jeladata5
+
+
+SUBROUTINE seconds_until_date(year, month, day, hour, minute, second, asecond)
+INTEGER, INTENT(in) :: year, month, day, hour, minute, second
+INTEGER(kind=dateint), INTENT(out) :: asecond
+
+asecond = ndays(day,month,year)*sec_in_day + hour*sec_in_hour + &
+ minute*sec_in_min + second
+
+END SUBROUTINE seconds_until_date
+
+
+SUBROUTINE date_until_seconds(asecond, year, month, day, hour, minute, second)
+INTEGER(kind=dateint), INTENT(in) :: asecond
+INTEGER, INTENT(out) :: year, month, day, hour, minute, second
+
+INTEGER :: aday
+
+second = MOD(asecond, sec_in_min)
+minute = MOD(asecond, sec_in_hour)/sec_in_min
+hour = MOD(asecond, sec_in_day)/sec_in_hour
+aday = asecond/sec_in_day
+! IF (MOD(iminuti,1440) < 0) igiorno = igiorno-1 !?
+CALL ndyin(aday, day, month, year)
+
+END SUBROUTINE date_until_seconds
 
 
 SUBROUTINE jeladata6(iday, imonth, iyear, ihour, imin, iminuti)
