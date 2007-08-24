@@ -58,15 +58,19 @@ PRIVATE
 PUBLIC eh_verbose_err, eh_verbose_warn, eh_verbose_info, &
  raise_error, raise_warning, print_info, eh_setval, eh_getval
 
-!!$INTERFACE setval
-!!$  MODULE PROCEDURE errhandling_setval
-!!$END INTERFACE
-!!$
-!!$INTERFACE getval
-!!$  MODULE PROCEDURE errhandling_getval
-!!$END INTERFACE
-
 CONTAINS
+
+SUBROUTINE raise_fatal_error(msg, ierval, ier)
+CHARACTER (len=*), INTENT(in) :: msg
+INTEGER, OPTIONAL, INTENT(in) :: ierval
+INTEGER, OPTIONAL, INTENT(out) :: ier
+
+CALL output_message('Fatal error: ', msg, -1, ierval)
+IF (PRESENT(ierval)) CALL EXIT(ABS(ierval))
+STOP 1
+
+END SUBROUTINE raise_fatal_error
+
 
 SUBROUTINE raise_error(msg, ierval, ier)
 CHARACTER (len=*), INTENT(in) :: msg
@@ -116,7 +120,7 @@ LOGICAL, OPTIONAL, INTENT(in) :: fatal, to_stderr, to_stdout
 INTEGER, OPTIONAL, INTENT(in) :: verbose, to_unit
 
 IF (PRESENT(fatal)) eh_fatal = fatal
-IF (PRESENT(verbose)) eh_verbose = verbose
+IF (PRESENT(verbose)) eh_verbose = MAX(verbose,0)
 IF (PRESENT(to_stderr)) THEN
   IF (to_stderr) THEN
     eh_unit = stderr_unit
