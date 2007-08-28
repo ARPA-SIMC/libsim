@@ -820,6 +820,47 @@ CALL vol7d_set_attr_ind(that)
 
 END SUBROUTINE vol7d_copy
 
+
+
+SUBROUTINE vol7d_diff_only (this, that,data_only)
+TYPE(vol7d),INTENT(IN) :: this
+TYPE(vol7d),INTENT(OUT) :: that
+INTEGER(kind=int_b), PARAMETER :: bmiss = ibmiss 
+logical , optional, intent(in) :: data_only
+logical  :: ldata_only
+
+IF (PRESENT(data_only)) THEN
+  ldata_only = data_only
+ELSE
+  ldata_only = .FALSE.
+ENDIF
+
+
+#undef VOL7D_POLY_ARRAY
+#define VOL7D_POLY_ARRAY voldati
+#include "vol7d_class_diff.F90"
+#undef VOL7D_POLY_ARRAY
+#define VOL7D_POLY_ARRAY voldatiattr
+#include "vol7d_class_diff.F90"
+#undef VOL7D_POLY_ARRAY
+
+if ( .not. ldata_only) then
+
+#define VOL7D_POLY_ARRAY volana
+#include "vol7d_class_diff.F90"
+#undef VOL7D_POLY_ARRAY
+#define VOL7D_POLY_ARRAY volanaattr
+#include "vol7d_class_diff.F90"
+#undef VOL7D_POLY_ARRAY
+
+end if
+
+
+
+END SUBROUTINE vol7d_diff_only
+
+
+
 ! Creo le routine da ripetere per i vari tipi di dati vi v7d
 ! tramite un template e il preprocessore
 #undef VOL7D_POLY_TYPE

@@ -14,7 +14,7 @@ endif
 AM_FCFLAGS = -I../base
 libsim_vol7d_la_LIBADD = ../base/libsim_base.la
 noinst_HEADERS = vol7d_class_type_templ.F90 vol7d_class_desc_templ.F90 \
-vol7d_distinct.F90 \
+vol7d_distinct.F90 vol7d_class_diff.F90 vol7d_class_diff_only.f90 \
 vol7d_dballe_class_nana.f90 vol7d_dballe_class_ndati.f90 \
 vol7d_dballe_class_dati.F90 vol7d_dballe_class_datiattr.F90 \
 vol7d_dballe_class_ana.F90 vol7d_dballe_class_anaattr.F90 
@@ -30,11 +30,11 @@ vol7d_class_compute.lo: vol7d_class.$(OBJEXT)
 vol7d_class.$(OBJEXT): vol7d_utilities.$(OBJEXT) vol7d_ana_class.$(OBJEXT) \
  vol7d_timerange_class.$(OBJEXT) vol7d_level_class.$(OBJEXT) \
  vol7d_network_class.$(OBJEXT) vol7d_varvect_class.$(OBJEXT) \
- vol7d_class_type_templ.F90 vol7d_class_desc_templ.F90
+ vol7d_class_type_templ.F90 vol7d_class_desc_templ.F90 vol7d_class_diff.F90 vol7d_class_diff_only.f90
 vol7d_class.lo: vol7d_utilities.$(OBJEXT) vol7d_ana_class.$(OBJEXT) \
  vol7d_timerange_class.$(OBJEXT) vol7d_level_class.$(OBJEXT) \
  vol7d_network_class.$(OBJEXT) vol7d_varvect_class.$(OBJEXT) \
- vol7d_class_type_templ.F90 vol7d_class_desc_templ.F90
+ vol7d_class_type_templ.F90 vol7d_class_desc_templ.F90 vol7d_class_diff.F90 vol7d_class_diff_only.f90
 #vol7d_level_class.$(OBJEXT):
 #vol7d_network_class.$(OBJEXT):
 if ORSIM

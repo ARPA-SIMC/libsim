@@ -31,12 +31,18 @@ CALL init(v7d_exp,dsn="test1",user="test",write=.true.,wipe=.true.)
 
 CALL import(v7d,attr=(/"*B33195","*B33192"/))
 
-Print *,"ho estratto i dati"
+Print *,"Fine estrazione dati"
+
+!call vol7d_copy(v7d%vol7d,v7d_exp%vol7d)
+!call vol7d_diff_only(v7d%vol7d,v7d_exp%vol7d,data_only=.true.)
+!CALL delete (v7d) 
 
 v7d_exp%vol7d=v7d%vol7d
 
+Print *,"Scrivo i dati"
+
 CALL export(v7d_exp)
 
-CALL delete (v7d) !che corrisponde anche a v7d_exp
+CALL delete (v7d_exp) 
 
 END PROGRAM v7ddballe_import_export
