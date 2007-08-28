@@ -1350,18 +1350,14 @@ end if
 #define VOL7D_POLY_TYPES_V r
 #include "vol7d_dballe_class_nana.f90"
 #undef VOL7D_POLY_TYPES_V
-#undef VOL7D_POLY_TYPES_V
 #define VOL7D_POLY_TYPES_V i
 #include "vol7d_dballe_class_nana.f90"
-#undef VOL7D_POLY_TYPES_V
 #undef VOL7D_POLY_TYPES_V
 #define VOL7D_POLY_TYPES_V b
 #include "vol7d_dballe_class_nana.f90"
 #undef VOL7D_POLY_TYPES_V
-#undef VOL7D_POLY_TYPES_V
 #define VOL7D_POLY_TYPES_V d
 #include "vol7d_dballe_class_nana.f90"
-#undef VOL7D_POLY_TYPES_V
 #undef VOL7D_POLY_TYPES_V
 #define VOL7D_POLY_TYPES_V c
 #include "vol7d_dballe_class_nana.f90"
@@ -1374,18 +1370,14 @@ end if
 #define VOL7D_POLY_TYPES_V r
 #include "vol7d_dballe_class_ndati.f90"
 #undef VOL7D_POLY_TYPES_V
-#undef VOL7D_POLY_TYPES_V
 #define VOL7D_POLY_TYPES_V i
 #include "vol7d_dballe_class_ndati.f90"
-#undef VOL7D_POLY_TYPES_V
 #undef VOL7D_POLY_TYPES_V
 #define VOL7D_POLY_TYPES_V b
 #include "vol7d_dballe_class_ndati.f90"
 #undef VOL7D_POLY_TYPES_V
-#undef VOL7D_POLY_TYPES_V
 #define VOL7D_POLY_TYPES_V d
 #include "vol7d_dballe_class_ndati.f90"
-#undef VOL7D_POLY_TYPES_V
 #undef VOL7D_POLY_TYPES_V
 #define VOL7D_POLY_TYPES_V c
 #include "vol7d_dballe_class_ndati.f90"
