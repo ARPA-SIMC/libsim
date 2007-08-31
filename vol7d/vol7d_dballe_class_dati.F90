@@ -1,6 +1,5 @@
 
 
-
 !ciclo sul tipo dato
 
 
@@ -12,15 +11,31 @@ do iiiii=1,ndativar/**/VOL7D_POLY_TYPES_V
   !print*,"scrivo",this%vol7d%dativar%/**/VOL7D_POLY_TYPES_V(iiiii)%btable,&
    !this%vol7d%voldati/**/VOL7D_POLY_TYPES_V(i,ii,iii,iiii,iiiii,iiiiii)
 
-  call idba_set (this%handle,this%vol7d%dativar%/**/VOL7D_POLY_TYPES_V(iiiii)%btable , &
-   this%vol7d%voldati/**/VOL7D_POLY_TYPES_V(i,ii,iii,iiii,iiiii,iiiiii))
 
-  write =.true.
+  if (lattr_only) then
+                                !print*,i,ii,iii,iiii,iiiiii
+                                !print*,"context_id -->",this%data_id(i,ii,iii,iiii,iiiiii)
+    if (.not. c_e(this%data_id(i,ii,iii,iiii,iiiiii))) cycle
+    if (.not. c_e(this%vol7d%dativar%/**/VOL7D_POLY_TYPES_V(iiiii)%btable )) cycle
+
+    print*,"*context_id",this%data_id(i,ii,iii,iiii,iiiiii)
+    print*,"*var_related",this%vol7d%dativar%/**/VOL7D_POLY_TYPES_V(iiiii)%btable
+
+    call idba_set (this%handle,"*context_id",this%data_id(i,ii,iii,iiii,iiiiii))
+    call idba_set (this%handle,"*var_related",this%vol7d%dativar%/**/VOL7D_POLY_TYPES_V(iiiii)%btable )
+
+  else
+
+    call idba_set (this%handle,this%vol7d%dativar%/**/VOL7D_POLY_TYPES_V(iiiii)%btable , &
+     this%vol7d%voldati/**/VOL7D_POLY_TYPES_V(i,ii,iii,iiii,iiiii,iiiiii))
+    write =.true.
+
+  end if
 
   if (any(lattrr).or.any(lattri).or.any(lattrb).or.any(lattrd).or.any(lattrc))then
 
     !print*,"eseguo prendilo per attributi"
-    call idba_prendilo (this%handle)
+    if (write) call idba_prendilo (this%handle)
 
     write=.false.
     writeattr=.false.

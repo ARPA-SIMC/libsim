@@ -13,6 +13,7 @@ TYPE vol7d_dballe
   !character(len=19) :: dsn,user,password
   integer :: idbhandle,handle,handle_staz,handle_err
   integer :: debug = 1
+  integer ,pointer :: data_id(:,:,:,:,:)
 
 END TYPE vol7d_dballe
 
@@ -108,7 +109,7 @@ IF (PRESENT(password))quipassword = password
 call idba_error_set_callback(0,idba_default_error_handler, &
      ldebug,this%handle_err)
 
-!quando scrivo bisogna gestire questo che non è da fare ?
+!TODO: quando scrivo bisogna gestire questo che non è da fare ?
 CALL init(this%vol7d)
 
 quiwrite=.false.
@@ -619,6 +620,7 @@ call vol7d_alloc (vol7dtmp, &
  !"ndativarattrr=",ndativarattrr, "ndativarattri=",ndativarattri, "ndativarattrb=",ndativarattrb, "ndativarattrd=",ndativarattrd, "ndativarattrc=",ndativarattrc
  !print*,"ho fatto alloc"
 
+
 vol7dtmp%ana=pack_distinct(buffer%ana, back=.TRUE.)
 vol7dtmp%time=pack_distinct(buffer%time, back=.TRUE.)
 vol7dtmp%timerange=pack_distinct(buffer%timerange, back=.TRUE.)
@@ -907,6 +909,14 @@ end if
 
 call vol7d_alloc_vol (vol7dtmp)
 
+if (lattr) then
+
+  allocate  (this%data_id( nana, ntime, nlevel, ntimerange, nnetwork),stat=istat)
+  if (istat/= 0) CALL raise_error('errore allocazione memoria')
+  this%data_id=DBA_MVI
+
+end if
+
 !vol7dtmp%voldatir=DBA_MVR
 !vol7dtmp%voldatii=DBA_MVI
 !vol7dtmp%voldatib=DBA_MVB
@@ -980,10 +990,12 @@ do i =1, N
 
    if (lattr)then
 
+                                !memorizzo data_id
+     this%data_id(indana,indtime,indlevel,indtimerange,indnetwork)=buffer(i)%data_id
+
      call idba_unsetall (this%handle)
      call idba_set (this%handle,"*context_id",buffer(i)%data_id)
      call idba_set (this%handle,"*var_related",buffer(i)%dativar%btable)
-     !print*,i,"context_id",buffer(i)%data_id
      !per ogni dato ora lavoro sugli attributi
      call idba_set(this%handle, "*varlist",starvarlist )
      call idba_voglioancora (this%handle,nn)
@@ -1249,7 +1261,7 @@ call vol7d_set_attr_ind(this%vol7d)
 END SUBROUTINE vol7d_dballe_importvvns
 
 
-SUBROUTINE vol7d_dballe_export(this, network, latmin,latmax,lonmin,lonmax,staz_id,ident,timei, timef,level,timerange,var,attr,anavar,anaattr)
+SUBROUTINE vol7d_dballe_export(this, network, latmin,latmax,lonmin,lonmax,staz_id,ident,timei, timef,level,timerange,var,attr,anavar,anaattr,attr_only)
 
 ! TODO: gestire staz_id la qual cosa vuol dire aggiungere un id nel type ana
 
@@ -1261,9 +1273,10 @@ REAL(kind=fp_geo),INTENT(in),optional :: latmin,latmax,lonmin,lonmax
 TYPE(vol7d_level),INTENT(in),optional :: level
 TYPE(vol7d_timerange),INTENT(in),optional :: timerange
 CHARACTER(len=*),INTENT(in),OPTIONAL :: var(:),attr(:),anavar(:),anaattr(:)
+logical,intent(in),optional :: attr_only
 logical, allocatable :: lnetwork(:),llevel(:),ltimerange(:)
 integer,allocatable :: ana_id(:,:)
-logical :: write,writeattr
+logical :: write,writeattr,lattr_only
 
 !CHARACTER(len=6) :: btable
 !CHARACTER(len=7) ::starbtable
@@ -1326,6 +1339,17 @@ if (present(level))then
 else
    llevel(:)=.true.
 end if
+
+if (present(attr_only))then
+  lattr_only=attr_only
+else
+  lattr_only=.false.
+end if
+
+if ( .not. allocated(this%data_id))then
+  lattr_only=.false.
+end if
+
 
 nnetwork=size(this%vol7d%network(:))
 ntime=size(this%vol7d%time(:))
@@ -1484,24 +1508,27 @@ do i=1, nstaz
 
                if (.not. c_e(ana_id(i,iiiiii))) cycle
 
-                                !TODO: ottimizzare settando e unsettando le cose giuste al posto giusto
-
                call idba_unsetall (this%handle)
-               call idba_set (this%handle,"ana_id",ana_id(i,iiiiii))
 
-               call idba_set (this%handle,"rep_cod",this%vol7d%network(iiiiii)%id)
-               call idba_setlevel(this%handle, this%vol7d%level(iii)%level, this%vol7d%level(iii)%l1, this%vol7d%level(iii)%l2)
-               call idba_settimerange(this%handle, this%vol7d%timerange(iiii)%timerange, &
-                    this%vol7d%timerange(iiii)%p1, this%vol7d%timerange(iiii)%p2)
-
-               CALL getval(this%vol7d%time(ii), year=year, month=month, day=day, hour=hour, minute=minute)
-               call idba_setdate (this%handle,year,month,day,hour,minute,0)
-
-               !print *, ">>>>> ",ana_id(i,iiiiii),this%vol7d%network(iiiiii)%id
-               !print *, year,month,day,hour,minute
-               !print *, this%vol7d%level(iii)%level, this%vol7d%level(iii)%l1, this%vol7d%level(iii)%l2
-               !print *, this%vol7d%timerange(iiii)%timerange,this%vol7d%timerange(iiii)%p1, this%vol7d%timerange(iiii)%p2
-
+               if (.not. lattr_only) then
+                                !TODO: ottimizzare settando e unsettando le cose giuste al posto giusto
+                 
+                 call idba_set (this%handle,"ana_id",ana_id(i,iiiiii))
+                 call idba_set (this%handle,"rep_cod",this%vol7d%network(iiiiii)%id)
+                 call idba_setlevel(this%handle, this%vol7d%level(iii)%level, this%vol7d%level(iii)%l1, this%vol7d%level(iii)%l2)
+                 call idba_settimerange(this%handle, this%vol7d%timerange(iiii)%timerange, &
+                  this%vol7d%timerange(iiii)%p1, this%vol7d%timerange(iiii)%p2)
+                 
+                 CALL getval(this%vol7d%time(ii), year=year, month=month, day=day, hour=hour, minute=minute)
+                 call idba_setdate (this%handle,year,month,day,hour,minute,0)
+                 
+               end if
+               
+                                !print *, ">>>>> ",ana_id(i,iiiiii),this%vol7d%network(iiiiii)%id
+                                !print *, year,month,day,hour,minute
+                                !print *, this%vol7d%level(iii)%level, this%vol7d%level(iii)%l1, this%vol7d%level(iii)%l2
+                                !print *, this%vol7d%timerange(iiii)%timerange,this%vol7d%timerange(iiii)%p1, this%vol7d%timerange(iiii)%p2
+               
 
                write=.false.
 
@@ -1526,13 +1553,13 @@ do i=1, nstaz
 !print*,"macro tipo c"
 #include "vol7d_dballe_class_dati.F90"
 #undef VOL7D_POLY_TYPES_V
-
+               
                if (write) then
-                 !print*,"eseguo una main prendilo"
+                                !print*,"eseguo una main prendilo"
                  call idba_prendilo (this%handle)
                  write=.false.
                end if
-
+                 
             end do
          end do
       end do
@@ -1619,6 +1646,8 @@ this%idbhandle=imiss
 this%handle=imiss
 this%handle_err=imiss
 this%handle_staz=imiss
+
+deallocate (this%data_id)
 
 CALL delete(this%vol7d)
 
