@@ -1054,14 +1054,18 @@ TYPE(geo_coord), INTENT(IN) :: this
 TYPE(geo_coordvect), INTENT(IN) :: poly
 LOGICAL :: inside
 
-INTEGER :: i, j
+INTEGER :: i, j, starti
 
-! presuppongo che il poligono sia chiuso, altrimenti:
-! j = this%vsize; DO i = 1, this%vsize
 inside = .FALSE. 
 IF (this%desc%geoce .AND. poly%desc%geoce) THEN
-  j = 1
-  DO i = 2, poly%vsize
+  IF (ALL(poly%ll(1,:) == poly%ll(poly%vsize,:))) THEN ! Poligono chiuso
+    starti = 2
+    j = 1
+  ELSE ! Poligono non chiuso
+    starti = 1
+    j = poly%vsize
+  ENDIF
+  DO i = starti, poly%vsize
     IF ((poly%ll(i,2) <= this%lat .AND. &
      this%lat < poly%ll(j,2)) .OR. &
      (poly%ll(j,2) <= this%lat .AND. &
@@ -1075,8 +1079,14 @@ IF (this%desc%geoce .AND. poly%desc%geoce) THEN
     j = i
   ENDDO
 ELSE IF (this%desc%utmce .AND. poly%desc%utmce) THEN
-  j = 1
-  DO i = 2, poly%vsize
+  IF (ALL(poly%utm(1,:) == poly%utm(poly%vsize,:))) THEN ! Poligono chiuso
+    starti = 2
+    j = 1
+  ELSE ! Poligono non chiuso
+    starti = 1
+    j = poly%vsize
+  ENDIF
+  DO i = starti, poly%vsize
     IF ((poly%utm(i,2) <= this%utmn .AND. &
      this%utmn < poly%utm(j,2)) .OR. &
      (poly%utm(j,2) <= this%utmn .AND. &
