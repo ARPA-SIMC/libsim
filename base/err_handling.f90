@@ -56,14 +56,13 @@ INTEGER :: eh_unit = stderr_unit, eh_verbose = eh_verbose_info
 
 PRIVATE
 PUBLIC eh_verbose_err, eh_verbose_warn, eh_verbose_info, &
- raise_error, raise_warning, print_info, eh_setval, eh_getval
+ raise_fatal_error, raise_error, raise_warning, print_info, eh_setval, eh_getval
 
 CONTAINS
 
-SUBROUTINE raise_fatal_error(msg, ierval, ier)
+SUBROUTINE raise_fatal_error(msg, ierval)
 CHARACTER (len=*), INTENT(in) :: msg
 INTEGER, OPTIONAL, INTENT(in) :: ierval
-INTEGER, OPTIONAL, INTENT(out) :: ier
 
 CALL output_message('Fatal error: ', msg, -1, ierval)
 IF (PRESENT(ierval)) CALL EXIT(ABS(ierval))
