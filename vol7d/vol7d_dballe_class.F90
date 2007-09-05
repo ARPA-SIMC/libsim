@@ -46,18 +46,6 @@ type record
 END TYPE record
 
 
-!!$type record_attr
-!!$
-!!$  integer :: data_id
-!!$  REAL :: attrr
-!!$  REAL(kind=fp_d) :: attrd
-!!$  INTEGER :: attri
-!!$  INTEGER(kind=int_b) :: attrb 
-!!$  CHARACTER(len=vol7d_cdatalen) :: attrc 
-!!$
-!!$END TYPE record
-
-
 PRIVATE
 PUBLIC vol7d_dballe, init, delete, import, export
 
@@ -1068,24 +1056,6 @@ do i =1, N
      end do
    end if
 
-
-!!$   if (present(lattronly)) then
-!!$     if (lattronly)then
-!!$     
-!!$       starbtable=Bdata_id
-!!$       
-!!$       call init ( var_tmp, btable=starbtable )
-!!$       inddativarattr  = firsttrue ( starbtable == vol7dtmp%dativarattr%i )
-!!$       
-!!$       inddatiattr = firsttrue( var_tmp == vol7dtmp%datiattr%i )
-!!$       vol7dtmp%voldatiattrc ( indana,indtime,indlevel,indtimerange,&
-!!$        inddativarattr,indnetwork,inddatiattr ) = buffer(i)%data_id
-!!$       
-!!$     end if
-!!$   end if
-     
-
-
 !( voldati*(nana,ntime,nlevel,ntimerange,ndativar*,nnetwork)
 !  voldatiattr*(nana,ntime,nlevel,ntimerange,ndativarattr*,network,ndatiattr*) )
 
@@ -1111,10 +1081,6 @@ do i =1, N_ana
 
    indana = firsttrue(bufferana(i)%ana == vol7dtmp%ana)
    indnetwork = firsttrue(bufferana(i)%network == vol7dtmp%network)
-
-!TODO ponghino per sistemare la rete dell'anagrafica
-   indnetwork=1
-
 
    if (indana < 1 .or. indnetwork < 1 )cycle
 
@@ -1212,25 +1178,7 @@ do i =1, N_ana
 
  end do
 
-
-!!$ if (present(lattronly)) then
-!!$   if (lattronly)then
-!!$     
-!!$     starbtable=Bdata_id
-!!$     
-!!$     call init ( var_tmp, btable=starbtable )
-!!$     indanavarattr  = firsttrue ( starbtable == vol7dtmp%anavarattr%i )
-!!$   
-!!$     indanaattr = firsttrue( var_tmp == vol7dtmp%anaattr%i )
-!!$     vol7dtmp%volanaattrc(indana,indanavarattr,indnetwork,indanaattr) = bufferana(i)%data_id
-!!$   
-!!$   end if
-!!$ end if
-   
-
-
 !------------------------- anagrafica fine
-
 
 deallocate (buffer)
 deallocate (bufferana)
@@ -1447,14 +1395,9 @@ do iii=1, nnetwork
       end if
 
 
-! TODO : per ora scrivo tutto nella rete ana (254); scommentare qui sotto
-!      call idba_set(this%handle,"rep_cod",this%vol7d%network(iii)%id)
-
+      call idba_set(this%handle,"rep_cod",this%vol7d%network(iii)%id)
                                 !print *,"network",this%vol7d%network(iii)%id
 
-                                ! TODO : questo era un ponghino per fargli scrivere l'anagrafica
-                                ! call idba_set(this%handle,"name","unknown")
-                                ! se non esiste nemmeno un dato non scrive niente
 
       write=.false.
 
@@ -1492,12 +1435,15 @@ end do
 
 
 ! data
-print *,"nstaz,ntime,nlevel,ntimerange,nnetwork",nstaz,ntime,nlevel,ntimerange,nnetwork
+!print *,"nstaz,ntime,nlevel,ntimerange,nnetwork",nstaz,ntime,nlevel,ntimerange,nnetwork
 
 do i=1, nstaz
    do ii=1,ntime
-      if (present(timei) .and. present(timef))then
-         if (this%vol7d%time(ii) < timei .or. this%vol7d%time(ii) > timef ) cycle
+      if (present(timei) )then
+         if ( this%vol7d%time(ii) < timei ) cycle
+      endif
+      if (present(timef) )then
+         if ( this%vol7d%time(ii) > timef ) cycle
       endif
       do iii=1,nlevel
          if (.not.llevel(iii))cycle
@@ -1567,69 +1513,6 @@ do i=1, nstaz
 end do
 
 END SUBROUTINE vol7d_dballe_export
-
-!!$SUBROUTINE vol7d_dballe_filter(this, var, network, latmin,latmax,ident,timei, timef,level,timerange,attr)
-!!$
-!!$TYPE(vol7d_dballe),INTENT(in) :: this
-!!$CHARACTER(len=*),INTENT(in,optional) :: var(:)
-!!$INTEGER,INTENT(in),optional :: network
-!!$TYPE(datetime),INTENT(in),optional :: timei, timef
-!!$TYPE(vol7d_level),INTENT(in),optional :: level
-!!$TYPE(vol7d_timerange),INTENT(in),optional :: timerange
-!!$CHARACTER(len=*),INTENT(in),OPTIONAL :: attr(:)
-!!$logical, allocatable :: lvar(:), lnetwork(:),llevel(:),ltimerange(:),lattr(:)
-!!$
-!!$
-!!$TYPE(vol7d) :: v7d
-!!$CHARACTER(len=6) :: btable
-!!$CHARACTER(len=7) ::starbtable
-!!$
-!!$integer :: year,month,day,hour,minute,sec
-!!$integer :: rlevel, l1, l2
-!!$integer :: rtimerange, p1, p2
-!!$integer :: indana,indtime,indlevel,indtimerange,inddativar,indnetwork
-!!$
-!!$
-!!$integer :: nana,ntime,ntimerange,nlevel,nnetwork
-!!$TYPE(vol7d_var) :: var_tmp
-!!$
-!!$INTEGER :: i,ii, iii,j, k,n,nn, nvar,nvarattr,istat,ana_id,ana_id_staz,nstaz,ist,indattr
-!!$integer :: ndativarr,ndatiattrb,ndativarattrb,inddatiattr
-!!$
-!!$REAL(kind=fp_geo) :: lat,lon ,dato 
-!!$INTEGER(kind=int_b)::attrdatib
-!!$
-!!$
-!!$
-!!$CALL getval(timei, year=year, month=month, day=day, hour=hour, minute=minute)
-!!$!print *,"datemin",year,month,day,hour,minute,0
-!!$
-!!$CALL getval(timef, year=year, month=month, day=day, hour=hour, minute=minute)
-!!$!print *,"datemax",year,month,day,hour,minute,0
-!!$
-!!$if (present(var))then
-!!$   nvar= SIZE(var)
-!!$else
-!!$   nvar=0
-!!$end if
-!!$
-!!$IF (PRESENT(attr)) THEN
-!!$   nvarattr= SIZE(attr)
-!!$ELSE
-!!$   nvarattr=0
-!!$ENDIF
-!!$
-!!$
-!!$
-!!$
-!!$if (present(timerange))then
-!!$end if
-!!$
-!!$
-!!$if (present(level))then
-!!$end if
-!!$
-!!$END SUBROUTINE vol7d_dballe_filter
 
 
 SUBROUTINE vol7d_dballe_delete(this)

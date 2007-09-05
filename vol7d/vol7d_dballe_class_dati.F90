@@ -9,17 +9,17 @@ do iiiii=1,ndativar/**/VOL7D_POLY_TYPES_V
   if (.not.c_e(this%vol7d%voldati/**/VOL7D_POLY_TYPES_V(i,ii,iii,iiii,iiiii,iiiiii))) cycle
     
   !print*,"scrivo",this%vol7d%dativar%/**/VOL7D_POLY_TYPES_V(iiiii)%btable,&
-   !this%vol7d%voldati/**/VOL7D_POLY_TYPES_V(i,ii,iii,iiii,iiiii,iiiiii)
+  ! this%vol7d%voldati/**/VOL7D_POLY_TYPES_V(i,ii,iii,iiii,iiiii,iiiiii)
 
-
+  
   if (lattr_only) then
                                 !print*,i,ii,iii,iiii,iiiiii
                                 !print*,"context_id -->",this%data_id(i,ii,iii,iiii,iiiiii)
     if (.not. c_e(this%data_id(i,ii,iii,iiii,iiiiii))) cycle
     if (.not. c_e(this%vol7d%dativar%/**/VOL7D_POLY_TYPES_V(iiiii)%btable )) cycle
 
-    print*,"*context_id",this%data_id(i,ii,iii,iiii,iiiiii)
-    print*,"*var_related",this%vol7d%dativar%/**/VOL7D_POLY_TYPES_V(iiiii)%btable
+    !print*,"*context_id",this%data_id(i,ii,iii,iiii,iiiiii)
+    !print*,"*var_related",this%vol7d%dativar%/**/VOL7D_POLY_TYPES_V(iiiii)%btable
 
     call idba_set (this%handle,"*context_id",this%data_id(i,ii,iii,iiii,iiiiii))
     call idba_set (this%handle,"*var_related",this%vol7d%dativar%/**/VOL7D_POLY_TYPES_V(iiiii)%btable )

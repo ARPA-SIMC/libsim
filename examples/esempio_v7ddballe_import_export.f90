@@ -43,7 +43,7 @@ CALL init(v7d_exp,dsn="test",user="test",write=.true.,wipe=.false.)
 ! ,attr=(/"*B33192","*B33007"/),attrkind=(/"i","b"/))
 ! ,attr=(/"*B33192","*B33007"/))
 
-CALL import(v7d,var=(/"B12001"/),varkind=(/"r"/),attr=(/"*B33195","*B33192"/),attrkind=(/"r","r"/))
+CALL import(v7d,var=(/"B12001"/),varkind=(/"r"/),attr=(/"*B33195","*B33192"/),attrkind=(/"i","b"/))
 
 Print *,"Fine estrazione dati"
 
@@ -68,9 +68,10 @@ call init(ana,lat=lat,lon=lon,ident=ident)
 call init(time, year=2007, month=3, day=18, hour=00,minute=30)
 call init(level, 105,2,0)
 call init(timerange, 0, 0, 0)
-call init(network, 255)
+call init(network, 50)
 call init(dativar,"B12001" )
 call init(attrvar,"*B33192" )
+
 
 indana          = firsttrue(ana       == v7d%vol7d%ana)
 indtime         = firsttrue(time      == v7d%vol7d%time)
@@ -78,13 +79,13 @@ indtimerange    = firsttrue(timerange == v7d%vol7d%timerange)
 indlevel        = firsttrue(level     == v7d%vol7d%level)
 indnetwork      = firsttrue(network   == v7d%vol7d%network)
 inddativar      = firsttrue(dativar   == v7d%vol7d%dativar%r)
-inddativarattr  = firsttrue(dativar   == v7d%vol7d%dativarattr%r)
-inddatiattr     = firsttrue(attrvar   == v7d%vol7d%datiattr%r)
+inddativarattr  = firsttrue(dativar   == v7d%vol7d%dativarattr%b)
+inddatiattr     = firsttrue(attrvar   == v7d%vol7d%datiattr%b)
 
-print *, indana,indtime,indlevel,indtimerange,indnetwork
+print *,"modifico questo dato ", indana,indtime,indlevel,indtimerange,indnetwork
 
-v7d_exp%vol7d%voldatiattrr(indana,indtime,indlevel,indtimerange,&
- inddativarattr,indnetwork,inddatiattr) = 99
+v7d_exp%vol7d%voldatiattrb(indana,indtime,indlevel,indtimerange,&
+ inddativarattr,indnetwork,inddatiattr) = 96
 
 
 v7d_exp%data_id(indana,indtime,indlevel,indtimerange,indnetwork)=&
