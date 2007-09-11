@@ -76,6 +76,7 @@ vol7d/Makefile
 examples/Makefile
 data/Makefile
 qc/Makefile
+termolib/Makefile
 ])
 
 AC_OUTPUT
