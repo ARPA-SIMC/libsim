@@ -45,18 +45,59 @@ END INTERFACE
 CONTAINS
 
 
-FUNCTION open_package_file(filename, filetype) RESULT(unit)
+FUNCTION get_package_filepath(filename, filetype) RESULT(path)
 CHARACTER(len=*), INTENT(in) :: filename
 INTEGER, INTENT(in) :: filetype
-INTEGER :: unit
 
 INTEGER :: i, j
 CHARACTER(len=512) :: path
+LOGICAL :: exist
 
 IF (program_name == ' ') THEN
   CALL getarg(0, program_name)
   ! program_name_env?
 ENDIF
+
+IF (filetype < 1 .OR. filetype > nftype) THEN
+  path = ""
+  CALL raise_error('File type not valid')
+  RETURN
+ENDIF
+
+! try with environment variable
+CALL getenv(TRIM(program_name_env)//'_'//TRIM(filetypename(filetype)), path)
+IF (path /= ' ') THEN
+
+  path=TRIM(path)//'/'//filename
+  INQUIRE( file=path,EXIST=exist )
+  IF (exist) THEN
+    CALL print_info('Ho trovato il file '//path)
+    RETURN
+  ENDIF
+ENDIF
+! try with pathlist
+DO j = 1, SIZE(pathlist,1)
+  IF (pathlist(j,filetype) == ' ') EXIT
+  path=TRIM(pathlist(j,filetype))//'/'//TRIM(program_name)//'/'//filename
+  INQUIRE( file=path, exist=exist)
+  IF (exist) THEN
+    CALL print_info('Ho trovato il file '//path)
+    RETURN
+  ENDIF
+ENDDO
+CALL raise_error('File '//TRIM(filename)//' not found')
+path = ""
+
+END FUNCTION get_package_filepath
+
+
+
+FUNCTION open_package_file(filename, filetype) RESULT(unit)
+CHARACTER(len=*), INTENT(in) :: filename
+INTEGER, INTENT(in) :: filetype
+INTEGER :: unit,i
+
+CHARACTER(len=512) :: path
 
 IF (filetype < 1 .OR. filetype > nftype) THEN
   unit = -1
@@ -65,26 +106,17 @@ IF (filetype < 1 .OR. filetype > nftype) THEN
 ENDIF
 
 unit = getunit()
-! try with environment variable
-CALL getenv(TRIM(program_name_env)//'_'//TRIM(filetypename(filetype)), path)
+
+path=get_package_filepath(filename, filetype)
+
 IF (path /= ' ') THEN
-  OPEN(unit, file=TRIM(path)//'/'//filename, status='old', iostat = i)
+  OPEN(unit, file=path, status='old', iostat = i)
   IF (i == 0) THEN
-    CALL print_info('Ho trovato il file '//TRIM(path)//'/'//filename)
+    CALL print_info('Ho aperto il file '//TRIM(path)//'/'//filename)
     RETURN
   ENDIF
 ENDIF
-! try with pathlist
-DO j = 1, SIZE(pathlist,1)
-  IF (pathlist(j,filetype) == ' ') EXIT
-  OPEN(unit, file=TRIM(pathlist(j,filetype))//'/'//TRIM(program_name)//'/' &
-   //filename, status='old', iostat = i)
-  IF (i == 0) THEN
-    CALL print_info('Ho trovato il file '//TRIM(pathlist(j,filetype))//'/' &
-     //TRIM(program_name)//'/'//filename)
-    RETURN
-  ENDIF
-ENDDO
+
 CALL raise_error('File '//TRIM(filename)//' not found')
 unit = -1
 
