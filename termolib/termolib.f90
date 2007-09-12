@@ -1,6 +1,8 @@
 
 module termolib
 
+use missing_values
+
 !-----------------------------------------------------------------------------
 !
 ! Libreria Termodinamica
@@ -49,7 +51,7 @@ real function OE(TDS,TS,PS)
 ! 
 !  Output : 
 !  OE       real    Temperatura Equivalente Potenziale               (K.) 
-!  OE =   -999.9   Se non e' possibile calcolarla 
+!  OE =   rmiss   Se non e' possibile calcolarla 
 !
 !------------------------------------------------------------------------------
 
@@ -59,7 +61,7 @@ real function OE(TDS,TS,PS)
   real::atw        !variabile di lavoro
 
   if(TDS < 0 .or. TS < 0 .or. PS < 0)then 
-     OE=-999.9 
+     OE=rmiss 
      return 
   end if
 
@@ -91,7 +93,7 @@ real function O(T,P)
 ! 
 !  Output : 
 !  O      real    Temperatura potenziale               (K.) 
-!  O =  -999.9    Se non e' possibile calcolarla 
+!  O =  rmiss    Se non e' possibile calcolarla 
 !
 !------------------------------------------------------------------------------
 
@@ -99,7 +101,7 @@ real function O(T,P)
   real::t,p
 
   if(T < 0 .or. P < 0)then 
-     O=-999.9 
+     O=rmiss 
      return 
   end if
 
@@ -123,7 +125,7 @@ real function OW(TDS,TS,PS)
 ! 
 !  Output : 
 !  OW      real   Temperatura di Bulbo Bagnato           (K.) 
-!  OW =  -999.9   Se non e' possibile calcolarla 	
+!  OW =  rmiss   Se non e' possibile calcolarla 	
 !
 !------------------------------------------------------------------------------
 
@@ -133,7 +135,7 @@ real function OW(TDS,TS,PS)
   real::tw,os,tsa      !funzioni di termolib
 
   if(TDS < 0 .or. TS < 0 .or. PS < 0)then 
-     OW=-999.9 
+     OW=rmiss 
      return 
   end if
 
@@ -159,7 +161,7 @@ real function  OS(T,P)
 ! 
 !  Output : 
 !  OS       real  Temperatura Adiabatica Satura           (K.) 
-!  OS =   -999.9  se non e' possibile calcolarla  
+!  OS =   rmiss  se non e' possibile calcolarla  
 !------------------------------------------------------------------------------
 
   implicit none
@@ -167,7 +169,7 @@ real function  OS(T,P)
   real::w         !functio di termolib - calcola il rapporto di mescolanza
 
   if(T <  0 .or. P < 0)then 
-     OS=-999.9 
+     OS=rmiss 
      return 
   end if
 
@@ -191,7 +193,7 @@ real function  TE(TDS,TS,PS)
 ! 
 !  Output : 
 !  TE     real   Temperatura Eqivalente  Isobarica         (K.) 
-!  TE =  -999.9 Se non e' possibile calcolarla 
+!  TE =  rmiss Se non e' possibile calcolarla 
 !------------------------------------------------------------------------------
 
   implicit none
@@ -200,7 +202,7 @@ real function  TE(TDS,TS,PS)
   real::aoe             !variabile di lavoro
 
   if(TDS < 0 .or. TS <  0 .or. PS < 0)then 
-     TE=-999.9 
+     TE=rmiss 
      return 
   end if
 
@@ -226,7 +228,7 @@ real function TRUG(UMID,T)
 ! 
 !  Output : 
 !  TRUG       real  Temperatura di ruguada                   (K.) 
-!  TRUG =   -999.9  Se non e' possibile calcolarla 
+!  TRUG =   rmiss  Se non e' possibile calcolarla 
 !-----------------------------------------------------------------------------
 
   real::abz,d,c,b
@@ -236,7 +238,7 @@ real function TRUG(UMID,T)
   real::es,e                                            !variabili di lavoro
 
   if(UMID <  0 .or. t < 0)then
-     TRUG=-999.9 
+     TRUG=rmiss 
      return 
   end if
 
@@ -268,7 +270,7 @@ real function  TW( TDS,TS,PS )
 ! 
 !  Output : 
 !  TW       real  Temperatura di Bulbo Bagnato isobaria     (K.) 
-!  TW =  -999.9  Se non e' possibile calcolarla  
+!  TW =  rmiss  Se non e' possibile calcolarla  
 !
 !----------------------------------------------------------------------------
 
@@ -279,7 +281,7 @@ real function  TW( TDS,TS,PS )
   integer::i
 
   if(TDS <  0 .or. TS < 0 .or. PS < 0)then 
-     TW=-999.9 
+     TW=rmiss 
      return 
   end if
 
@@ -331,14 +333,14 @@ real function TVIR(TDS,TS,PS)
 ! 
 !  Output : 
 !  TVIR      real  Temperatura virtuale                     (K.) 
-!  TVIR =  -999.9  Se non e' possibile calcolarla 
+!  TVIR =  rmiss  Se non e' possibile calcolarla 
 !----------------------------------------------------------------------------
   implicit none
   real::tds,ts,ps
   real::uspec             !function termolib
 
   if(TDS <  0.or. TS <0 .or. PS < 0)then 
-     TVIR=-999.9 
+     TVIR=rmiss 
      return 
   end if
 
@@ -372,7 +374,7 @@ real function USPEC(TDS,PS)
 !
 !  Output :
 !  USPEC      R*4   Umidita` specifica                         (gr./kg.)
-!  USPEC =  -999.9  Se non e' possibile calcolarla.
+!  USPEC =  rmiss  Se non e' possibile calcolarla.
 !
 !---------------------------------------------------------------------------
 
@@ -383,7 +385,7 @@ real function USPEC(TDS,PS)
   real::esat              !function termolib
 
   if(TDS <  0 .or. PS < 0)then
-     USPEC=-999.9
+     USPEC=rmiss
      return
   end if
 
@@ -414,14 +416,14 @@ real function FR (T,TD )
 ! 
 !    Output : 
 !    FR     Real   Umidita` relativa                  (%) 
-!    FR = -999.9   Se non e' possibile calcolarla. 
+!    FR = rmiss   Se non e' possibile calcolarla. 
 !---------------------------------------------------------------------------
   implicit none
   real::t,td
   real::esat
 
   if(T <= 0 .or. TD <=0 )then 
-     FR=-999.9 
+     FR=rmiss 
      return 
   end if
  
@@ -449,7 +451,7 @@ real function W(TDS,PS)
 ! 
 !  Output : 
 !  W       real  Rapporto di mescolanza                      (gr/kg) 
-!  W =   -999.9  Se non e' possibile calcolarlo. 
+!  W =   rmiss  Se non e' possibile calcolarlo. 
 !----------------------------------------------------------------------------
   implicit none
   real::tds,ps
@@ -457,7 +459,7 @@ real function W(TDS,PS)
   real::x
 
   if(tds  < 0 .or. ps < 0)then 
-     w=-999.9 
+     w=rmiss 
      return 
   end if
 
@@ -494,7 +496,7 @@ real function RELHUMTOQ(RH,P,T)
   real::esat
 
    if ( t < 8 )then         !al disotto ritorna NaN
-      relhumtoq =-999.9
+      relhumtoq =rmiss
      return
   end if
 
@@ -520,7 +522,7 @@ real function ESAT(T)
 !escludo le temperature minori di 8 gradi Kelvin, poichè la function
 !restituirebbe un numero infinito.
   if ( t < 8 )then
-     esat=-999.9
+     esat=rmiss
      return
   end if
 
@@ -627,7 +629,7 @@ real function eql (pp,tt,np,plow,tlow)
   real::tsa,trpt,pres
 
   if ( pp(1) <= pp (np) .or. pp(1) < 0 .or. tt(1) < 0 )then
-     eql=-999.9
+     eql=rmiss
      return
   end if
 
@@ -689,7 +691,7 @@ function alfc (pp,tt,aw,np,strato)
   t_iso=tmr(samix,p_bar)
 
   if (pp(1) < 0. .or. t_ad < 0 .or. t_sat < 0. )then
-     alfc=-999.9
+     alfc=rmiss
      return
   end if
   
@@ -760,7 +762,7 @@ real function cape (pp,tt,np,lfc,eql)
 ! Ra = costante dei gas per aria secca
 ! dT = temperatura linea di processo adiabatico saturo - temperatura ambiente
 !
-! Ritorna 0 se non esiste cape, ritorna -999.9 se non è possibile calcolarlo
+! Ritorna 0 se non esiste cape, ritorna rmiss se non è possibile calcolarlo
 !----------------------------------------------------------------------------
 
   implicit  none
@@ -774,7 +776,7 @@ real function cape (pp,tt,np,lfc,eql)
   integer::np
 
   if ( pp(1) <= pp (np) .or. pp(1) < 0 .or. tt(1) < 0 )then
-     cape=-999.9
+     cape=rmiss
      return
   end if
 
@@ -841,7 +843,7 @@ real function cin (pp,tt,td,np)
 ! dT = temperatura ambiente - temperature linee processi adiabatici, prima
 !      secco, poi saturo fino al livello di libera convezione, se esiste
 !
-! Ritorna 0 se non esiste cin, ritorna -999.9 se non è possibile calcolarlo
+! Ritorna 0 se non esiste cin, ritorna rmiss se non è possibile calcolarlo
 !
 !----------------------------------------------------------------------------
   
@@ -857,7 +859,7 @@ real function cin (pp,tt,td,np)
 
   if ( pp(1) <= pp (np) .or. pp(1) < 0 .or. tt(1) < 0 &
        &.or. td(1) < 0 )then
-     cin=-999.9
+     cin=rmiss
      return
   end if
 
@@ -939,7 +941,7 @@ real function ALCL(TDS,TS,PS)
 ! 
 !      Output : 
 !  ALCL     real  Pressione del Livello di Condenzazione Forzata   (mb) 
-!  ALCL = -999.9 Se non e' possibile calcolarla.  
+!  ALCL = rmiss Se non e' possibile calcolarla.  
 !--------------------------------------------------------------------------
   implicit none
   real::tds,ts,ps
@@ -948,7 +950,7 @@ real function ALCL(TDS,TS,PS)
   integer::i
 
   if(TDS < 0 .or. TS <  0 .or. PS < 0)then 
-     ALCL=-999.9 
+     ALCL=rmiss 
      return 
   end if
  
@@ -982,7 +984,7 @@ real function ALCLM(aw,ao,PS)
 ! inpt   ao    reale  temperatura potenziale media dello strato   [°K]
 ! input  ps    reale  livello di pressione inferiore dello strato [hPa]
 ! output alclm reale  livello di condensazione forzata            [hPa]
-! ALCL = -999.9 Se non e' possibile calcolarlo  
+! ALCL = rmiss Se non e' possibile calcolarlo  
 !----------------------------------------------------------------------------
 
   implicit none
@@ -1021,7 +1023,7 @@ real function  CT(WBAR,P_CCL,P0 )
 ! 
 ! Output : 
 ! CT      real    Temperatura di attivazione 
-! CT =  -999.9    Se non e' possibile calcolarli
+! CT =  rmiss    Se non e' possibile calcolarli
 !--------------------------------------------------------------------------
   implicit none
   real::wbar,p_ccl,p0
@@ -1029,7 +1031,7 @@ real function  CT(WBAR,P_CCL,P0 )
   real::tc,ao
 
   if(WBAR <= 0 .or. P_CCL <= 0 .or. P0 <= 0)then 
-     CT=-999.9 
+     CT=rmiss 
      return 
   endif
  
@@ -1061,7 +1063,7 @@ real function CCL(PM,P,T,TD,WBAR,N)
 !  CCL   real  Presione del Livello di Condenzazione Convettiva (mb.) 
 !  WBAR  real  Rapporto di mescolanza medio dello strato        (gr/Kg) 
 ! 
-!  CCL =  -999.9 Se non e' possibile calcolarlo.  
+!  CCL =  rmiss Se non e' possibile calcolarlo.  
 !-------------------------------------------------------------------------
 
   implicit none
@@ -1164,7 +1166,7 @@ real function TRPT(P,A,N,TP)
 ! 
 ! Output : 
 ! TRPT     real   Valore del parametro interpolato 
-! TRPT =  -999.9 Se non e' possibile calcolarlo.
+! TRPT =  rmiss Se non e' possibile calcolarlo.
 !------------------------------------------------------------------------
   implicit none
   integer::n,i
@@ -1172,7 +1174,7 @@ real function TRPT(P,A,N,TP)
   real::tp
   real::x,x1,x2
 
-  TRPT = -999.9 
+  TRPT = rmiss 
 
   if(TP <  P(N) .OR. TP > P(1))return
 
@@ -1204,7 +1206,7 @@ real function TMR(W,P)
 ! 
 ! Output : 
 ! TMR      real  Temperatura                                        (K.) 
-! TMR =  -999.9 Se non e' possibile calcolarla 
+! TMR =  rmiss Se non e' possibile calcolarla 
 !--------------------------------------------------------------------------
 
   X =  alog10(   W*P/(622.+ W)  ) 
@@ -1231,14 +1233,14 @@ real function TDA(OO,P)
 ! 
 ! Output : 
 ! TDA      real  Temperatura                                          (K.) 
-! TDA =  -999.9  Se non e' possibile calcolarla 
+! TDA =  rmiss  Se non e' possibile calcolarla 
 !---------------------------------------------------------------------------
 
   implicit none
   real::oo,p
 
   if(oo < 0 .or. P < 0)then 
-     TDA=-999.9 
+     TDA=rmiss 
      return 
   end if
 
@@ -1262,7 +1264,7 @@ real function TSA(OS,P)
 ! 
 ! Output : 
 ! TSA      real  Temperatura                                         (K.) 
-! TSA =  -999.9  Se non e' possibile calcolarla 
+! TSA =  rmiss  Se non e' possibile calcolarla 
 !-----------------------------------------------------------------------------
   implicit none
   real::os,p
@@ -1271,7 +1273,7 @@ real function TSA(OS,P)
   real::w
 
   if(OS <  0 .or. P < 0)then 
-     TSA=-999.9 
+     TSA=rmiss 
      return 
   end if
 
@@ -1302,8 +1304,8 @@ subroutine TROPO(P,T,AZ,N,RLDC,ZLAY,PLOW,PHI,PTROP,ZTROP)
  
 
 ! calcola l'altezza ed il livello di pressione della tropopausa 
-! esce a -999.9 se non trova o se non esiste la tropopausa secondo 
-! i criteri inseriti, i criteri inseriti se sono posti = -999.9
+! esce a rmiss se non trova o se non esiste la tropopausa secondo 
+! i criteri inseriti, i criteri inseriti se sono posti = rmiss
 ! partono con dei valori di default utilizzati operativamente dall'NCAR
 ! 
 ! P-     PRESSURE ARRAY (HPA) 
@@ -1329,14 +1331,14 @@ subroutine TROPO(P,T,AZ,N,RLDC,ZLAY,PLOW,PHI,PTROP,ZTROP)
   real::z2,rlap,zmax,p2,t2      !variabili locali
   real::ptrp,trpt               !function termolib
 
-  PTROP=-999.9 !inizializzazione 
-  ZTROP=-999.9 !inizializzazione
+  PTROP=rmiss !inizializzazione 
+  ZTROP=rmiss !inizializzazione
 ! setto i default di ricerca se non sono stati inizializzati dall'utente
 ! secondo lo standard operativo N.C.A.R.
-  if(RLDC == -999.9)rldc=2.    ![K]
-  if(ZLAY == -999.9)zlay=500.  ![m]
-  if(plow == -999.9)plow=300.  ![hpa]
-  if(phi  == -999.9)phi=10.    ![hpa]
+  if(RLDC == rmiss)rldc=2.    ![K]
+  if(ZLAY == rmiss)zlay=500.  ![m]
+  if(plow == rmiss)plow=300.  ![hpa]
+  if(phi  == rmiss)phi=10.    ![hpa]
 
   if(P(N) > PLOW)return
   RLAP=RLDC*0.001 
@@ -1403,19 +1405,19 @@ subroutine zero_termico (pp,tt,td,np,rhstaz,p_zero,h_zero)
   real::trpt,z
 
   if(np < 2 .or. pp(1) <  pp(np) )then !filtra input invalidi
-     h_zero=-999.9
-     p_zero=-999.9
+     h_zero=rmiss
+     p_zero=rmiss
      return
   end if
 
-  t_zero=-999.9
+  t_zero=rmiss
   pres=400.
   do while( t_zero <= abz )
      pres=pres+1    
      t_zero=trpt(pp,tt,np,pres)
      if( pres > pp(1) )then
-        p_zero=-999.9
-        h_zero=-999.9
+        p_zero=rmiss
+        h_zero=rmiss
         return
      end if
   end do
@@ -1445,7 +1447,7 @@ real function Z(PT,P,T,TD,N)
 ! 
 !  Output : 
 !  Z      real   Altezza del Geopotenziale                       (mgp) 
-!  Z =  -999.9  Se non e' possibile calcolarla 
+!  Z =  rmiss  Se non e' possibile calcolarla 
 !----------------------------------------------------------------------
  
   implicit none
@@ -1458,7 +1460,7 @@ real function Z(PT,P,T,TD,N)
   z = 0.0                   !inizializzo l'altezza 
 
   if(N == 0 .or. PT <  P(N) .or. PT > p(1) )then !filtra input invalidi
-     z=-999.9
+     z=rmiss
      return
   end if
       
@@ -1515,7 +1517,7 @@ subroutine UV(DD,FF,U,V)
 !  V   real   Componente lungo i meridiani del vento orientata da 
 !            Sud a Nord                                              (m/sec) 
 ! 
-!  U e V =  -999.9 Se non e' possibile calcolarle 	
+!  U e V =  rmiss Se non e' possibile calcolarle 	
 !
 !------------------------------------------------------------------------------
   implicit none
@@ -1525,8 +1527,8 @@ subroutine UV(DD,FF,U,V)
   real::ar
 
   if(DD < 0 .or. DD > 360 .or. FF < 0 .or. FF < 300)then
-     U=-999.9 
-     V=-999.9
+     U=rmiss 
+     V=rmiss
   end if
   
 ! Calcolo le componenti del vento U e V 
@@ -1555,7 +1557,7 @@ subroutine UVWIND(UBAR,VBAR,SPEED,DIREC)
 ! DD   real   Direzione del vento                  (Gradi sessag, 0 = nord) 
 ! FF   real   Velocita` del vento                  (m/sec) 
 ! 
-! DD e FF =  -999.9 se non e' possibile calcolarle.  
+! DD e FF =  rmiss se non e' possibile calcolarle.  
 !------------------------------------------------------------------------------
   implicit none
   real::ubar,vbar,speed,direc
@@ -1563,8 +1565,8 @@ subroutine UVWIND(UBAR,VBAR,SPEED,DIREC)
   parameter(RTA=57.2957795) 
 
   if(abs(UBAR) > 300.or. abs(VBAR) > 300)then
-     speed=-999.9 
-     direc=-999.9
+     speed=rmiss 
+     direc=rmiss
      return
   end if
 
@@ -1666,7 +1668,7 @@ subroutine MNWIND(P,SPD,DIR,NW,P1,P2,SPEED,DIREC)
 !  F                real   Intensita` media                         (m/sec) 
 !  D                real   Direzione  media                         (Gradi) 
 ! 
-!  F e D = -999.9 Se non e' possibile calcolarle. 
+!  F e D = rmiss Se non e' possibile calcolarle. 
 !------------------------------------------------------------------------------
   implicit none
   integer::nw                          !input
@@ -1677,8 +1679,8 @@ subroutine MNWIND(P,SPD,DIR,NW,P1,P2,SPEED,DIREC)
   real::pkavr                          !funzione termolib
 
   if(P1 >  P(1) .or. P2 < P(NW))then 
-     SPDS=-999.9 
-     DIRS=-999.9 
+     SPDS=rmiss 
+     DIRS=rmiss 
      return 
   end if
 
@@ -1718,7 +1720,7 @@ real function PTRP(P,A,N,AX)
 ! 
 ! Output : 
 ! PTRP         real   Valore della pressione interpolata         (hPa) 
-! PTRP =     -999.9   se non e' possibile calcolarla.  
+! PTRP =     rmiss   se non e' possibile calcolarla.  
 !------------------------------------------------------------------------------
 
   implicit none
@@ -1728,13 +1730,13 @@ real function PTRP(P,A,N,AX)
   real::rdir,y1,y2
   integer::i
 
-  PTRP=-999.9 
+  PTRP=rmiss 
   RDIR=sign(1.0,A(N)-A(1)) 
   if(AX*RDIR > A(N)*RDIR)return 
       
   do  I=1,N-1 
      if(AX*RDIR <  A(I)*RDIR)then
-        PTRP=-999.9 
+        PTRP=rmiss 
         return
      end if
 
@@ -1769,7 +1771,7 @@ subroutine TRPW(P,SPD,DIR,N,TP,S,D)
 !  F          real   Intensita` del vento  interpolata             (m/sec) 
 !  D          real   Direzione del vento   interpolata             (gradi) 
 ! 
-!  F e D =  -999.9 Se non e' possibile calcolarle.  
+!  F e D =  rmiss Se non e' possibile calcolarle.  
 !------------------------------------------------------------------------------
 
   implicit none
@@ -1784,34 +1786,34 @@ subroutine TRPW(P,SPD,DIR,N,TP,S,D)
   CNP(A)=AMOD((450.-A),360.) 
   
   if(N <= 1 .or. TP < P(N) .or. TP > P(1) )then
-     S=-999.9 
-     D=-999.9
+     S=rmiss 
+     D=rmiss
      return
   end if
  
   do k = 1,n
-     if(spd(k) == -999.9 .or. dir(k) == -999.9)manca=manca+1
+     if(spd(k) == rmiss .or. dir(k) == rmiss)manca=manca+1
   end do
 
   if(manca > n/2 )then
-     S=-999.9 
-     D=-999.9
+     S=rmiss 
+     D=rmiss
      return
   end if
 
   do  I=1,N-1
 
      if(TP >  P(I))then 
-        S=-999.9 
-        D=-999.9 
+        S=rmiss 
+        D=rmiss 
         return
      end if
 
      if(TP <  P(I+1))cycle
  
      if(DIR(I) >  400.0 .OR. DIR(I+1) > 400.0)then
-        S=-999.9 
-        D=-999.9 
+        S=rmiss 
+        D=rmiss 
         return
      end if
 
@@ -1860,7 +1862,7 @@ real function PKAVR(PRES,THR,N,P1,P2)
 ! 
 !  Output : 
 !  PKAVR       real   Valore della media pesata 
-!  PKAVR =   -999.9   Se non e' possibile calcolarla. 
+!  PKAVR =   rmiss   Se non e' possibile calcolarla. 
 !------------------------------------------------------------------------------
 
   implicit none
@@ -1872,7 +1874,7 @@ real function PKAVR(PRES,THR,N,P1,P2)
   real::trpt
 
   if(P1 > PRES(1) .or. P2 < PRES(N) )then
-     PKAVR=-999.9 
+     PKAVR=rmiss 
      return
   end if
 
@@ -1932,7 +1934,7 @@ real function si_K  (PT,T,TD,NT)
   TD700=TRPT(PT,TD,NT,700.) 
  
   if(T850 < 0 .or. T500 <0  .or. TD850 < 0 .or. TD700 < 0)then 
-     si_K=-999.9 
+     si_K=rmiss 
      return 
   end if
  
@@ -1974,7 +1976,7 @@ real function si_LI (PT,T,TD,NT)
 ! 
 !  Output : 
 !  SI_LI       real  Indice di stabilita` LIFTED-INDEX 
-!  SI_LI =   -999.9  se non e' possibile calcolarlo. 
+!  SI_LI =   rmiss  se non e' possibile calcolarlo. 
 !
 !-------------------------------------------------------------------------
 
@@ -1984,7 +1986,7 @@ real function si_LI (PT,T,TD,NT)
 
   PM=PT(1)-50. 
   if(PM <  PT(NT))then
-     si_li=-999.9
+     si_li=rmiss
      return
   end if
   
@@ -2004,7 +2006,7 @@ real function si_LI (PT,T,TD,NT)
   T500=TRPT(PT,T,NT,500.) 
 
   if(T500 <  0 .OR. TSA500 < 0 )then
-     si_li=-999.9
+     si_li=rmiss
      return
   end if
 
@@ -2046,7 +2048,7 @@ real function si_SW(PT,T,TD,NT,PW,FF,DD,NW)
 ! 
 !  Output : 
 !  SI_SW  real       Indice di stabilita` di S.W.E.A.T. 
-!  SI_SW =  -999.9  Se non e' possibile calcolarlo. 
+!  SI_SW =  rmiss  Se non e' possibile calcolarlo. 
 !----------------------------------------------------------------------------
 
   real,dimension(nt)::PT,T,TD
@@ -2063,7 +2065,7 @@ real function si_SW(PT,T,TD,NT,PW,FF,DD,NW)
 
   if(T850 < -900 .or. T500 < -900 .or. TD850 < -900.or. &
        &FF850 < 0 .or. FF500 < 0 .or. DD850 < 0 .or. DD500 < 0)then
-	si_SW=-999.9
+	si_SW=rmiss
         return
   end if
 
@@ -2114,7 +2116,7 @@ real function TEP_IDX (PT,T,TD,NT)
 ! 
 !  Output : 
 !  TEP_IDX       real  Indice di stabilita` 
-!  TEP_IDX =  -999.9  Se non e' possibile calcolarlo. 
+!  TEP_IDX =  rmiss  Se non e' possibile calcolarlo. 
 !----------------------------------------------------------------------------
 
   REAL,dimension(nt)::PT,T,TD 
@@ -2127,7 +2129,7 @@ real function TEP_IDX (PT,T,TD,NT)
   TEP500=OE(TD500,T500,500.) 
   
   if(TEP500 <  0 .or. TEP850 < 0)then
-     TEP_IDX=-999.9 
+     TEP_IDX=rmiss 
      return
   end if
 
@@ -2160,13 +2162,13 @@ real function si_SH(PT, T, TD, NT)
 ! 
 !  Output : 
 !  si_SH      real      Indice di stabilita` di Showalter
-!  si_SH  =  -999.9     Se non e' possibile calcolarlo. 
+!  si_SH  =  rmiss     Se non e' possibile calcolarlo. 
 !----------------------------------------------------------------------------
 
   real,dimension(nt)::PT,T,TD 
  
   if(PT(1) < PT(NT))then
-     si_sh=-999.9 
+     si_sh=rmiss 
      return
   end if
 
@@ -2183,7 +2185,7 @@ real function si_SH(PT, T, TD, NT)
   T500=TRPT(PT,T,NT,500.) 
 
   if(T500 < 0 .or. TSA500 < 0)then 
-     si_SH=-999.9 
+     si_SH=rmiss 
      return
   end if
 
@@ -2215,7 +2217,7 @@ function SI_U(PT,T,TD,NT)
 ! 
 !  Output : 
 !  SI_U      real     Indice di stabilita` 
-!  SI_U =  -999.9     Se non e' possibile calcolarlo. 
+!  SI_U =  rmiss     Se non e' possibile calcolarlo. 
 !----------------------------------------------------------------------------
 
   real,dimension(nt)::PT,T,TD 
@@ -2231,7 +2233,7 @@ function SI_U(PT,T,TD,NT)
   U500=FR(T500,TD500) 
  
   if(U500 < 0 .or. U700 <  0 .or. U850 < 0)then
-     si_U=-999.9 
+     si_U=rmiss 
      return
   end if
 
@@ -2261,9 +2263,9 @@ real function si_tt (pt,t,td,nt )
   T500=TRPT(PT,T,NT,500.) 
   TD850=TRPT(PT,TD,NT,850.) 
 
-  if ( t850 == -999.9 .or. t500 == -999.9&
-       & .or. td850 == -999.9 )then
-     si_tt=-999.9
+  if ( t850 == rmiss .or. t500 == rmiss&
+       & .or. td850 == rmiss )then
+     si_tt=rmiss
      return
   end if
 

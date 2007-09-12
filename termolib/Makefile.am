@@ -1,8 +1,8 @@
 lib_LTLIBRARIES = libsim_termolib.la
 libsim_termolib_la_SOURCES = termolib.f90 
 
-#AM_FCFLAGS = -I../base -I../vol7d
-#libsim_qc_la_LIBADD = ../base/libsim_base.la
+AM_FCFLAGS = -I../base -I../vol7d
+libsim_qc_la_LIBADD = ../base/libsim_base.la
 #noinst_HEADERS = termolib.f90 
 
 # c'e` una maniera migliore?
