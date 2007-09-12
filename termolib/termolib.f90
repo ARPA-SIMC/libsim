@@ -1329,8 +1329,8 @@ subroutine TROPO(P,T,AZ,N,RLDC,ZLAY,PLOW,PHI,PTROP,ZTROP)
   real::z2,rlap,zmax,p2,t2      !variabili locali
   real::ptrp,trpt               !function termolib
 
-  PTROP=-999. !inizializzazione 
-  ZTROP=-999. !inizializzazione
+  PTROP=-999.9 !inizializzazione 
+  ZTROP=-999.9 !inizializzazione
 ! setto i default di ricerca se non sono stati inizializzati dall'utente
 ! secondo lo standard operativo N.C.A.R.
   if(RLDC == -999.9)rldc=2.    ![K]
@@ -2251,7 +2251,7 @@ real function si_tt (pt,t,td,nt )
 !    TD = Vettore Temperature di rugiada [°K]
 !
 !    VT = Vertical Total
-!    CT = Cross Total
+!    CTT = Cross Total
 !    TT = indice Total-Total
 !_____________________________________________________________
 
@@ -2268,9 +2268,9 @@ real function si_tt (pt,t,td,nt )
   end if
 
   vt =  t850  - t500
-  ct =  td850 - t500
+  ctt =  td850 - t500
 
-  si_tt=vt+ct
+  si_tt=vt+ctt
 
   return
 end function si_tt
