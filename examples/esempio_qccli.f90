@@ -1,84 +1,72 @@
-! Programma esempio di controllo dei dati per soglie
+                                ! Programma esempio di controllo dei dati per soglie
 
 program esempio_qccli
 
-  use modqccli
+use modqccli
 
-  implicit none
+implicit none
 
-  character(len=10) :: btable,starbtable
-  character(len=19) :: database,user,password
+character(len=19) :: database,user,password
+TYPE(datetime) :: ti, tf
 
-  integer :: rep_cod
-  integer :: leveltype=1,l1=0,l2=0,pindicator=0,p1=0,p2=0
-  integer :: year ,month,day,hour,min,sec
+                                !tipi derivati.
+type(qcclitype)    :: v7dqccli
+type(vol7d_dballe) :: v7ddballe
 
-  !tipo derivato per il Q.C.
-  type(qcclitype) :: qccli
+                                ! namelist utilizzata per definire il DSN
+namelist  /odbc/database,user,password
 
-  ! namelist utilizzata per definire il DSN
-  namelist  /odbc/database,user,password
+                                ! lettura della namelist utilizzata per definire il DSN
+open(10,file='odbc.nml',status='old')
+read(10,nml=odbc,iostat=io)
 
-  ! lettura della namelist utilizzata per definire il DSN
-  open(10,file='odbc.nml',status='old')
-  read(10,nml=odbc,iostat=io)
+if (io /= 0 )then
+  print *,"Errore durante la lettura della namelist odbc"
+  call exit (1)
+end if
+close(10)
+
+                                ! Definisco le date iniziale e finale
+CALL init(ti, year=2007, month=3, day=18, hour=12)
+CALL init(tf, year=2007, month=3, day=21, hour=00)
+
+                                ! Chiamo il costruttore della classe vol7d_dballe per il mio oggetto in import
+CALL init(v7ddballe,dsn=database,user=user,password=password,write=.true.,wipe=.false.)
+
+CALL import(v7ddballe,var=(/"B12001"/),varkind=(/"r"/),attr=(/"*B33195","*B33192"/),attrkind=(/"i","b"/))
+
+
+                                ! chiamiamo il "costruttore" per il Q.C.
+call init(v7dqccli,v7ddballe%v7d,ier)
+if (ier /= 0 ) then
+  print * , "errore qccliinit ier=",ier
+  call exit(1)
+end if
+
+call alloc(v7dqccli,ier)
+if (ier /= 0 ) then
+  print * , "errore qcclialloc ier=",ier
+  call exit(1)
+end if
+
   
-  if (io /= 0 )then
-     print *,"Errore durante la lettura della namelist odbc"
-     call exit (1)
-  end if
-  close(10)
+print*,"Controllo climatico"
+call quaconcli(v7dqccli,ier)
+if( ier /= 0) then
+  print *, "errore qccli= ",ier
+  call exit(1)
+end if
 
-  ! chiamiamo il "costruttore" per il Q.C.
-  call init(qccli,ier)
-  if (ier /= 0 ) then
-     print * , "errore qccliinit ier=",ier
-     call exit(1)
-  end if
 
-  call create(qccli,ier)
-  if (ier /= 0 ) then
-     print * , "errore qcclialloc ier=",ier
-     call exit(1)
-  end if
+!CALL export(v7ddballe,attr_only=.true.)
+CALL export(v7ddballe)
   
-  print*,"elaboro la stazione ",ist
 
-  qccli%valminr(1)=0.31
-  qccli%valmaxr(1)=1.12
-  !qccli%qc%ana(:)=ana
-
-  print*,"Controllo climatico"
-  call quaconcli(qccli,ier)
-
-  if( ier /= 0) then
-     print *, "errore qccli= ",ier
-     call exit(1)
-  end if
-
-  do i=1,N
-     ! cancello tutte le flag di qualità che voglio rielaborare
-     ! dico quale è il contesto dei dati
-     call idba_set (handle_write,"*context_id" , data_id(i))
-     ! in questo contesto quale variabile
-     call idba_set (handle_write,"*var_related",'B22070'     )
-     ! in questa variabile quale attributo
-     call idba_set (handle_write,"*var"        ,"*B33192"    )
-        ! e cancello gli attributi
-     call idba_scusa(handle_write)
-     
-     ! attribuisco le nuove confidenze ai dati
-     call idba_set(handle_write, "*B33192",qccli%v7d%volattrdatib(1,i,1,1,1,1,2))
-     call idba_critica(handle_write)
-  end do
-     
-  ! il "distruttore" del Q.C.
-  call delete(qccli,ier)
-
-
-  ! chiudo sessioni e connessione
-
-  stop
-
+                                ! il "distruttore" del Q.C.
+call delete(v7dqccli,ier)
+call delete(v7ddballe)
+stop
+  
 end program esempio_qccli
-
+  
+  

@@ -30,7 +30,6 @@ module modqc
   end type qcpartype
 
   type(qcpartype)  :: qcpar=qcpartype(50)
-  !integer, parameter,private :: qcparatt=50
 
 contains
 

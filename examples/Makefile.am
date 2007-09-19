@@ -1,4 +1,4 @@
-bin_PROGRAMS = esempio_v7d esempio_regrib
+bin_PROGRAMS = esempio_v7d esempio_regrib esempio_qc_convert
 
 if ORSIM
 bin_PROGRAMS += esempio_v7doracle esempio_v7doracle_multi
@@ -22,6 +22,9 @@ esempio_v7d_LDADD = ../base/libsim_base.la ../vol7d/libsim_vol7d.la $(liboracles
 esempio_regrib_SOURCES = esempio_regrib.f90
 #esempio_regrib_LDADD = $(LDADD) -lemos  $(liboraclesim) $(libdballe)
 esempio_regrib_LDADD = ../base/libsim_base.la ../grib/libsim_grib.la -lemos
+
+esempio_qc_convert_SOURCES = esempio_qc_convert.f90
+esempio_qc_convert_LDADD = ../base/libsim_base.la ../vol7d/libsim_vol7d.la $(liboraclesim) $(libdballe)
 
 if ORSIM
 esempio_v7doracle_SOURCES = esempio_v7doracle.f90
