@@ -330,7 +330,7 @@ ENDIF
 IF (ASSOCIATED(this%anavar%d) .AND. .NOT.ASSOCIATED(this%volanad)) THEN
   CALL vol7d_check_alloc_ana(this, ini)
   ALLOCATE(this%volanad(SIZE(this%ana), SIZE(this%anavar%d), SIZE(this%network)))
-  IF (linivol) this%volanad(:,:,:) = dmiss
+  IF (linivol) this%volanad(:,:,:) = rdmiss
 ENDIF
 
 IF (ASSOCIATED(this%anavar%i) .AND. .NOT.ASSOCIATED(this%volanai)) THEN
@@ -365,7 +365,7 @@ IF (ASSOCIATED(this%anaattr%d) .AND. ASSOCIATED(this%anavarattr%d) .AND. &
   CALL vol7d_check_alloc_ana(this, ini)
   ALLOCATE(this%volanaattrd(SIZE(this%ana), SIZE(this%anavarattr%d), &
    SIZE(this%network), SIZE(this%anaattr%d)))
-  IF (linivol) this%volanaattrd(:,:,:,:) = dmiss
+  IF (linivol) this%volanaattrd(:,:,:,:) = rdmiss
 ENDIF
 
 IF (ASSOCIATED(this%anaattr%i) .AND. ASSOCIATED(this%anavarattr%i) .AND. &
@@ -404,7 +404,7 @@ IF (ASSOCIATED(this%dativar%d) .AND. .NOT.ASSOCIATED(this%voldatid)) THEN
   CALL vol7d_check_alloc_dati(this, ini)
   ALLOCATE(this%voldatid(SIZE(this%ana), SIZE(this%time), SIZE(this%level), &
    SIZE(this%timerange), SIZE(this%dativar%d), SIZE(this%network)))
-  IF (linivol) this%voldatid(:,:,:,:,:,:) = dmiss
+  IF (linivol) this%voldatid(:,:,:,:,:,:) = rdmiss
 ENDIF
 
 IF (ASSOCIATED(this%dativar%i) .AND. .NOT.ASSOCIATED(this%voldatii)) THEN
@@ -444,7 +444,7 @@ IF (ASSOCIATED(this%datiattr%d) .AND. ASSOCIATED(this%dativarattr%d) .AND. &
   ALLOCATE(this%voldatiattrd(SIZE(this%ana), SIZE(this%time), SIZE(this%level), &
    SIZE(this%timerange), SIZE(this%dativarattr%d), SIZE(this%network), &
    SIZE(this%datiattr%d)))
-  IF (linivol) this%voldatiattrd(:,:,:,:,:,:,:) = dmiss
+  IF (linivol) this%voldatiattrd(:,:,:,:,:,:,:) = rdmiss
 ENDIF
 
 IF (ASSOCIATED(this%datiattr%i) .AND. ASSOCIATED(this%dativarattr%i) .AND. &
@@ -835,7 +835,8 @@ END SUBROUTINE vol7d_copy
 SUBROUTINE vol7d_diff_only (this, that,data_only)
 TYPE(vol7d),INTENT(IN) :: this
 TYPE(vol7d),INTENT(OUT) :: that
-INTEGER(kind=int_b), PARAMETER :: bmiss = ibmiss 
+!INTEGER(kind=int_b), PARAMETER :: bmiss = ibmiss 
+!INTEGER(kind=fp_d), PARAMETER :: dmiss = rdmiss 
 logical , optional, intent(in) :: data_only
 logical  :: ldata_only
 
@@ -1032,41 +1033,41 @@ if (associated(this%network))   write(unit=lunit)this%network
   !! 6a dimensione: variabile dell'anagrafica e dei dati
   !! con relativi attributi e in 5 tipi diversi
 
-if (allocated(this%anavar%r))      write(unit=lunit)this%anavar%r    
-if (allocated(this%anavar%i))      write(unit=lunit)this%anavar%i    
-if (allocated(this%anavar%b))      write(unit=lunit)this%anavar%b    
-if (allocated(this%anavar%d))      write(unit=lunit)this%anavar%d    
-if (allocated(this%anavar%c))      write(unit=lunit)this%anavar%c    
+if (associated(this%anavar%r))      write(unit=lunit)this%anavar%r    
+if (associated(this%anavar%i))      write(unit=lunit)this%anavar%i    
+if (associated(this%anavar%b))      write(unit=lunit)this%anavar%b    
+if (associated(this%anavar%d))      write(unit=lunit)this%anavar%d    
+if (associated(this%anavar%c))      write(unit=lunit)this%anavar%c    
 
-if (allocated(this%anaattr%r))     write(unit=lunit)this%anaattr%r
-if (allocated(this%anaattr%i))     write(unit=lunit)this%anaattr%i
-if (allocated(this%anaattr%b))     write(unit=lunit)this%anaattr%b
-if (allocated(this%anaattr%d))     write(unit=lunit)this%anaattr%d
-if (allocated(this%anaattr%c))     write(unit=lunit)this%anaattr%c
+if (associated(this%anaattr%r))     write(unit=lunit)this%anaattr%r
+if (associated(this%anaattr%i))     write(unit=lunit)this%anaattr%i
+if (associated(this%anaattr%b))     write(unit=lunit)this%anaattr%b
+if (associated(this%anaattr%d))     write(unit=lunit)this%anaattr%d
+if (associated(this%anaattr%c))     write(unit=lunit)this%anaattr%c
 
-if (allocated(this%anavarattr%r))  write(unit=lunit)this%anavarattr%r
-if (allocated(this%anavarattr%i))  write(unit=lunit)this%anavarattr%i
-if (allocated(this%anavarattr%b))  write(unit=lunit)this%anavarattr%b
-if (allocated(this%anavarattr%d))  write(unit=lunit)this%anavarattr%d
-if (allocated(this%anavarattr%c))  write(unit=lunit)this%anavarattr%c
+if (associated(this%anavarattr%r))  write(unit=lunit)this%anavarattr%r
+if (associated(this%anavarattr%i))  write(unit=lunit)this%anavarattr%i
+if (associated(this%anavarattr%b))  write(unit=lunit)this%anavarattr%b
+if (associated(this%anavarattr%d))  write(unit=lunit)this%anavarattr%d
+if (associated(this%anavarattr%c))  write(unit=lunit)this%anavarattr%c
 
-if (allocated(this%dativar%r))     write(unit=lunit)this%dativar%r
-if (allocated(this%dativar%i))     write(unit=lunit)this%dativar%i
-if (allocated(this%dativar%b))     write(unit=lunit)this%dativar%b
-if (allocated(this%dativar%d))     write(unit=lunit)this%dativar%d
-if (allocated(this%dativar%c))     write(unit=lunit)this%dativar%c
+if (associated(this%dativar%r))     write(unit=lunit)this%dativar%r
+if (associated(this%dativar%i))     write(unit=lunit)this%dativar%i
+if (associated(this%dativar%b))     write(unit=lunit)this%dativar%b
+if (associated(this%dativar%d))     write(unit=lunit)this%dativar%d
+if (associated(this%dativar%c))     write(unit=lunit)this%dativar%c
 
-if (allocated(this%datiattr%r))    write(unit=lunit)this%datiattr%r
-if (allocated(this%datiattr%i))    write(unit=lunit)this%datiattr%i
-if (allocated(this%datiattr%b))    write(unit=lunit)this%datiattr%b
-if (allocated(this%datiattr%d))    write(unit=lunit)this%datiattr%d
-if (allocated(this%datiattr%c))    write(unit=lunit)this%datiattr%c
+if (associated(this%datiattr%r))    write(unit=lunit)this%datiattr%r
+if (associated(this%datiattr%i))    write(unit=lunit)this%datiattr%i
+if (associated(this%datiattr%b))    write(unit=lunit)this%datiattr%b
+if (associated(this%datiattr%d))    write(unit=lunit)this%datiattr%d
+if (associated(this%datiattr%c))    write(unit=lunit)this%datiattr%c
 
-if (allocated(this%dativarattr%r)) write(unit=lunit)this%dativarattr%r
-if (allocated(this%dativarattr%i)) write(unit=lunit)this%dativarattr%i
-if (allocated(this%dativarattr%b)) write(unit=lunit)this%dativarattr%b
-if (allocated(this%dativarattr%d)) write(unit=lunit)this%dativarattr%d
-if (allocated(this%dativarattr%c)) write(unit=lunit)this%dativarattr%c
+if (associated(this%dativarattr%r)) write(unit=lunit)this%dativarattr%r
+if (associated(this%dativarattr%i)) write(unit=lunit)this%dativarattr%i
+if (associated(this%dativarattr%b)) write(unit=lunit)this%dativarattr%b
+if (associated(this%dativarattr%d)) write(unit=lunit)this%dativarattr%d
+if (associated(this%dativarattr%c)) write(unit=lunit)this%dativarattr%c
 
 !! Volumi di valori e attributi per anagrafica e dati
 
@@ -1122,7 +1123,9 @@ integer :: ltarray(8)
 read(unit=unit)ldescription
 read(unit=unit)ltarray
 
-print *,ldescription," written on: ",ltarray
+print *,"Info: reading vol7d from file"
+print *,"Info: description: ",trim(ldescription)
+print *,"Info: written on ",ltarray
 
 if (present(description))description=ldescription
 if (present(tarray))tarray=ltarray
@@ -1136,7 +1139,6 @@ read(unit=unit)&
  nanaattrr, nanaattri, nanaattrb, nanaattrd, nanaattrc,&
  nanavarattrr, nanavarattri, nanavarattrb, nanavarattrd, nanavarattrc
 
-
 call vol7d_alloc (this, &
  nana=nana, ntime=ntime, ntimerange=ntimerange, &
  nlevel=nlevel, nnetwork=nnetwork, &
@@ -1147,7 +1149,8 @@ call vol7d_alloc (this, &
  nanaattrr=nanaattrr, nanaattri=nanaattri, nanaattrb=nanaattrb, nanaattrd=nanaattrd, nanaattrc=nanaattrc,&
  nanavarattrr=nanavarattrr, nanavarattri=nanavarattri, nanavarattrb=nanavarattrb, nanavarattrd=nanavarattrd, nanavarattrc=nanavarattrc)
 
-!read(unit=unit)this
+call vol7d_alloc_vol (this)
+
 
 if (associated(this%ana))       read(unit=unit)this%ana
 if (associated(this%time))      read(unit=unit)this%time
@@ -1155,43 +1158,48 @@ if (associated(this%level))     read(unit=unit)this%level
 if (associated(this%timerange)) read(unit=unit)this%timerange
 if (associated(this%network))   read(unit=unit)this%network
 
-if (allocated(this%anavar%r))      read(unit=unit)this%anavar%r    
-if (allocated(this%anavar%i))      read(unit=unit)this%anavar%i    
-if (allocated(this%anavar%b))      read(unit=unit)this%anavar%b    
-if (allocated(this%anavar%d))      read(unit=unit)this%anavar%d    
-if (allocated(this%anavar%c))      read(unit=unit)this%anavar%c    
+if (associated(this%anavar%r))      read(unit=unit)this%anavar%r    
+if (associated(this%anavar%i))      read(unit=unit)this%anavar%i    
+if (associated(this%anavar%b))      read(unit=unit)this%anavar%b    
+if (associated(this%anavar%d))      read(unit=unit)this%anavar%d    
+if (associated(this%anavar%c))      read(unit=unit)this%anavar%c    
 
-if (allocated(this%anaattr%r))     read(unit=unit)this%anaattr%r
-if (allocated(this%anaattr%i))     read(unit=unit)this%anaattr%i
-if (allocated(this%anaattr%b))     read(unit=unit)this%anaattr%b
-if (allocated(this%anaattr%d))     read(unit=unit)this%anaattr%d
-if (allocated(this%anaattr%c))     read(unit=unit)this%anaattr%c
+if (associated(this%anaattr%r))     read(unit=unit)this%anaattr%r
+if (associated(this%anaattr%i))     read(unit=unit)this%anaattr%i
+if (associated(this%anaattr%b))     read(unit=unit)this%anaattr%b
+if (associated(this%anaattr%d))     read(unit=unit)this%anaattr%d
+if (associated(this%anaattr%c))     read(unit=unit)this%anaattr%c
 
-if (allocated(this%anavarattr%r))  read(unit=unit)this%anavarattr%r
-if (allocated(this%anavarattr%i))  read(unit=unit)this%anavarattr%i
-if (allocated(this%anavarattr%b))  read(unit=unit)this%anavarattr%b
-if (allocated(this%anavarattr%d))  read(unit=unit)this%anavarattr%d
-if (allocated(this%anavarattr%c))  read(unit=unit)this%anavarattr%c
+if (associated(this%anavarattr%r))  read(unit=unit)this%anavarattr%r
+if (associated(this%anavarattr%i))  read(unit=unit)this%anavarattr%i
+if (associated(this%anavarattr%b))  read(unit=unit)this%anavarattr%b
+if (associated(this%anavarattr%d))  read(unit=unit)this%anavarattr%d
+if (associated(this%anavarattr%c))  read(unit=unit)this%anavarattr%c
 
-if (allocated(this%dativar%r))     read(unit=unit)this%dativar%r
-if (allocated(this%dativar%i))     read(unit=unit)this%dativar%i
-if (allocated(this%dativar%b))     read(unit=unit)this%dativar%b
-if (allocated(this%dativar%d))     read(unit=unit)this%dativar%d
-if (allocated(this%dativar%c))     read(unit=unit)this%dativar%c
+if (associated(this%dativar%r))     read(unit=unit)this%dativar%r
+if (associated(this%dativar%i))     read(unit=unit)this%dativar%i
+if (associated(this%dativar%b))     read(unit=unit)this%dativar%b
+if (associated(this%dativar%d))     read(unit=unit)this%dativar%d
+if (associated(this%dativar%c))     read(unit=unit)this%dativar%c
 
-if (allocated(this%datiattr%r))    read(unit=unit)this%datiattr%r
-if (allocated(this%datiattr%i))    read(unit=unit)this%datiattr%i
-if (allocated(this%datiattr%b))    read(unit=unit)this%datiattr%b
-if (allocated(this%datiattr%d))    read(unit=unit)this%datiattr%d
-if (allocated(this%datiattr%c))    read(unit=unit)this%datiattr%c
+if (associated(this%datiattr%r))    read(unit=unit)this%datiattr%r
+if (associated(this%datiattr%i))    read(unit=unit)this%datiattr%i
+if (associated(this%datiattr%b))    read(unit=unit)this%datiattr%b
+if (associated(this%datiattr%d))    read(unit=unit)this%datiattr%d
+if (associated(this%datiattr%c))    read(unit=unit)this%datiattr%c
 
-if (allocated(this%dativarattr%r)) read(unit=unit)this%dativarattr%r
-if (allocated(this%dativarattr%i)) read(unit=unit)this%dativarattr%i
-if (allocated(this%dativarattr%b)) read(unit=unit)this%dativarattr%b
-if (allocated(this%dativarattr%d)) read(unit=unit)this%dativarattr%d
-if (allocated(this%dativarattr%c)) read(unit=unit)this%dativarattr%c
+if (associated(this%dativarattr%r)) read(unit=unit)this%dativarattr%r
+if (associated(this%dativarattr%i)) read(unit=unit)this%dativarattr%i
+if (associated(this%dativarattr%b)) read(unit=unit)this%dativarattr%b
+if (associated(this%dativarattr%d)) read(unit=unit)this%dativarattr%d
+if (associated(this%dativarattr%c)) read(unit=unit)this%dativarattr%c
 
 !! Volumi di valori e attributi per anagrafica e dati
+
+! if (associated(this%volanar))print*,"leggo volanar"
+! if (associated(this%volanaattrr))print*,"leggo volanaattrr"
+! if (associated(this%voldatir))print*,"leggo voldatir"
+! if (associated(this%voldatiattrr))print*,"leggo voldatiattrr"
 
 if (associated(this%volanar))      read(unit=unit)this%volanar
 if (associated(this%volanaattrr))  read(unit=unit)this%volanaattrr
@@ -1217,6 +1225,7 @@ if (associated(this%volanac))      read(unit=unit)this%volanac
 if (associated(this%volanaattrc))  read(unit=unit)this%volanaattrc
 if (associated(this%voldatic))     read(unit=unit)this%voldatic
 if (associated(this%voldatiattrc)) read(unit=unit)this%voldatiattrc
+
 
 end subroutine vol7d_read_from_file
 
