@@ -211,7 +211,7 @@ TYPE(vol7d_level):: level
 type(vol7d_var)  :: anavar
 
 
-call qccli_validate (qccli)
+!call qccli_validate (qccli)
 
 if (present(tbattrin))then
   indtbattrin = firsttrue(qccli%v7d%dativarattr%r(:)%btable == tbattrin)
@@ -293,8 +293,9 @@ do indana=1,size(qccli%v7d%ana)
           do indtime=1,size(qccli%v7d%time)
             if (anamaskl(indana).and.timemaskl(indtime).and.levelmaskl(indlevel).and. &
              timerangemaskl(indtimerange).and.varmaskl(inddativarr).and.networkmaskl(indnetwork).and.&
-             c_e(qccli%v7d%voldatir(indana,indtime,indlevel,indtimerange,inddativarr,indnetwork)).and. &
-             vd(qccli%v7d%voldatiattri(indana,indtime,indlevel,indtimerange,inddativarr,indnetwork,indtbattrin))) then
+             c_e(qccli%v7d%voldatir(indana,indtime,indlevel,indtimerange,inddativarr,indnetwork)))then
+              if( invalidated(qccli%v7d%voldatiattrb&
+               (indana,indtime,indlevel,indtimerange,inddativarr,indnetwork,indtbattrin))) cycle
               
               lat=0.0d0
               lon=0.0d0
@@ -306,6 +307,7 @@ do indana=1,size(qccli%v7d%ana)
               call init(anavar,"B07001" )
               indanavar        = firsttrue(qccli%v7d%anavar%i  == anavar)
 
+              if (indanavar <=0 )cycle
               altezza= qccli%v7d%volanai(indana,indanavar,indnetwork)
               call macro_height(altezza,mh)
               call init(level, 103,mh,0)
@@ -330,11 +332,11 @@ do indana=1,size(qccli%v7d%ana)
                 !print*,"dato,clima ",datoqui,climaqui
                 if ( datoqui > climaqui) then
                   
-                  qccli%v7d%voldatiattri(indana,indtime,indlevel,indtimerange,inddativarr,indnetwork,indtbattrout)=100-perc
+                  qccli%v7d%voldatiattrb(indana,indtime,indlevel,indtimerange,inddativarr,indnetwork,indtbattrout)=100-perc
 
                 else
                   
-                  qccli%v7d%voldatiattri(indana,indtime,indlevel,indtimerange,inddativarr,indnetwork,indtbattrout)=perc
+                  qccli%v7d%voldatiattrb(indana,indtime,indlevel,indtimerange,inddativarr,indnetwork,indtbattrout)=perc
                   
                 end if
  
@@ -373,13 +375,13 @@ end if
 end subroutine macro_height
 
 
-subroutine qccli_validate(qccli)
-type(qcclitype),intent(in) :: qccli
-
-!todo da validare !!!!!
-
-return
-end subroutine qccli_validate
+!!$subroutine qccli_validate(qccli)
+!!$type(qcclitype),intent(in) :: qccli
+!!$
+!!$!todo da validare
+!!$
+!!$return
+!!$end subroutine qccli_validate
 
 end module modqccli
 

@@ -36,6 +36,9 @@ interface vd
   module procedure vdi,vdb
 end interface
 
+interface invalidated
+  module procedure invalidatedi,invalidatedb
+end interface
 
 contains
 
@@ -64,6 +67,34 @@ end if
 
 return
 end function vdb
+
+
+
+logical function invalidatedi(flag)
+
+integer  :: flag
+      
+if(c_e(flag))then
+  invalidatedi=.true.
+else
+  invalidatedi=.false.
+end if
+
+return
+end function invalidatedi
+
+logical function invalidatedb(flag)
+
+integer (kind=int_b) :: flag
+      
+if(c_e(flag))then
+  invalidatedb=.true.
+else
+  invalidatedb=.false.
+end if
+
+return
+end function invalidatedb
 
 
 end module modqc

@@ -35,7 +35,7 @@ CALL init(tf, year=2007, month=9, day=16, hour=00)
 CALL init(v7ddballe,dsn=database,user=user,password=password,write=.true.,wipe=.false.)
 
 print*,"inizio importazione dati"
-CALL import(v7ddballe,var=(/"B13011"/),varkind=(/"r"/),anavar=(/"B07001"/),anavarkind=(/"i"/),attr=(/"*B33195","*B33192"/),attrkind=(/"i","i"/),timei=ti,timef=tf)
+CALL import(v7ddballe,var=(/"B13011"/),varkind=(/"r"/),anavar=(/"B07001"/),anavarkind=(/"i"/),attr=(/"*B33196","*B33192"/),attrkind=(/"b","b"/),timei=ti,timef=tf)
 print*,"finita importazione dati"
 
 print*,"inizio qc"
