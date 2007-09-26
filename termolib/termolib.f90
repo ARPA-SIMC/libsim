@@ -2,6 +2,7 @@
 module termolib
 
 use missing_values
+use phisical_constant
 
 !-----------------------------------------------------------------------------
 !

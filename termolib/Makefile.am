@@ -1,9 +1,9 @@
 lib_LTLIBRARIES = libsim_termolib.la
-libsim_termolib_la_SOURCES = termolib.f90 
+libsim_termolib_la_SOURCES =  phisical_constant.f90 termolib.f90
 
 AM_FCFLAGS = -I../base -I../vol7d
 libsim_qc_la_LIBADD = ../base/libsim_base.la
-#noinst_HEADERS = termolib.f90 
+noinst_HEADERS =  phisical_constant.f90 termolib.f90
 
 # c'e` una maniera migliore?
 tmpvar = $(libsim_termolib_la_SOURCES:.f90=.mod)
