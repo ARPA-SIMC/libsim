@@ -67,7 +67,7 @@ DO i = 1, SIZE(vol_cumd%ana)
   DO j = 1, SIZE(macroa)
     IF (geo_coord_inside(vol_cumd%ana(i)%coord, macroa(j))) THEN
       in_macroa(i) = j
-      CYCLE
+      EXIT
     ENDIF
   ENDDO
 ENDDO
