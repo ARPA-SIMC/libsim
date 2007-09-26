@@ -1,4 +1,3 @@
-
 program leggi
 
 !legge i dati alla Pavan e li mette unformatted
@@ -33,7 +32,7 @@ CHARACTER(len=vol7d_ana_lenident) :: ident
 REAL(kind=fp_geo) :: lat,lon
 !integer :: thres_quota(11) = (/-100,100,250,500,750,1000,1250,1500,1750,2000,2250/)
 integer :: livello(10) = (/50,175,375,625,875,1125,1375,1625,1875,2125/)
-integer :: scadenze(3) = (/900,1800,3600/)
+integer :: scadenze(3) = (/-900,-1800,-3600/)
 real :: dato
 
 

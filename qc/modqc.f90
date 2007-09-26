@@ -17,34 +17,53 @@ module modqc
 ! ottenere da Agenzia Regionale Prevenzione e Ambiente (ARPA) Servizio
 ! Idro Meteorologico  (SIM), Viale Silvani 6, 40122 Bologna, Italia
 
-  use kinds
-  use missing_values
+use kinds
+use missing_values
 
-  implicit none
+implicit none
 
-  public
+public
 
 
-  type :: qcpartype
-     integer (kind=int_b):: att
-  end type qcpartype
+type :: qcpartype
+  integer (kind=int_b):: att
+end type qcpartype
 
-  type(qcpartype)  :: qcpar=qcpartype(50)
+type(qcpartype)  :: qcpar=qcpartype(50)
+
+
+interface vd
+  module procedure vdi,vdb
+end interface
+
 
 contains
 
-    logical function vd(flag)
+logical function vdi(flag)
 
-      integer (kind=int_b) :: flag
+integer  :: flag
       
-      if(flag < qcpar%att .and. c_e(flag))then
-         vd=.false.
-      else
-         vd=.true.
-      end if
+if(flag < qcpar%att .and. c_e(flag))then
+  vdi=.false.
+else
+  vdi=.true.
+end if
 
-      return
-    end function vd
+return
+end function vdi
+
+logical function vdb(flag)
+
+integer (kind=int_b) :: flag
+      
+if(flag < qcpar%att .and. c_e(flag))then
+  vdb=.false.
+else
+  vdb=.true.
+end if
+
+return
+end function vdb
 
 
 end module modqc

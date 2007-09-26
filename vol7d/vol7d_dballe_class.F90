@@ -364,7 +364,7 @@ do i=1,N
   call idba_enq (this%handle,"ident",ident)
    
                                 !bufferizzo il contesto
-                                !print *,"lat,lon",lat,lon
+                                !print *,"lat,lon,ident",lat,lon,ident
                                 !print*,year,month,day,hour,minute,sec
                                 !print*,btable,dato,buffer(i)%datiattrb
   
@@ -412,7 +412,6 @@ do i=1,N_ana
   call idba_enqtimerange(this%handle_staz, rtimerange, p1, p2)
   call idba_enq(this%handle_staz, "rep_cod",rep_cod)
                                 !print *,"trovato network",rep_cod
-  
                                 !nbtable=btable_numerico(btable)
                                 ! ind = firsttrue(qccli%v7d%dativar%r(:)%btable == nbtable)
                                 ! IF (ind<1) cycle ! non c'e'

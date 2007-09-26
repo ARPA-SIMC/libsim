@@ -3,12 +3,13 @@
 program esempio_qccli
 
 use modqccli
+use vol7d_dballe_class
 
 implicit none
 
+integer :: io,ier
 character(len=19) :: database,user,password
 TYPE(datetime) :: ti, tf
-
                                 !tipi derivati.
 type(qcclitype)    :: v7dqccli
 type(vol7d_dballe) :: v7ddballe
@@ -27,17 +28,20 @@ end if
 close(10)
 
                                 ! Definisco le date iniziale e finale
-CALL init(ti, year=2007, month=3, day=18, hour=12)
-CALL init(tf, year=2007, month=3, day=21, hour=00)
+CALL init(ti, year=2007, month=9, day=15, hour=00)
+CALL init(tf, year=2007, month=9, day=16, hour=00)
 
                                 ! Chiamo il costruttore della classe vol7d_dballe per il mio oggetto in import
 CALL init(v7ddballe,dsn=database,user=user,password=password,write=.true.,wipe=.false.)
 
-CALL import(v7ddballe,var=(/"B12001"/),varkind=(/"r"/),attr=(/"*B33195","*B33192"/),attrkind=(/"i","b"/))
+print*,"inizio importazione dati"
+CALL import(v7ddballe,var=(/"B13011"/),varkind=(/"r"/),anavar=(/"B07001"/),anavarkind=(/"i"/),attr=(/"*B33195","*B33192"/),attrkind=(/"i","i"/),timei=ti,timef=tf)
+print*,"finita importazione dati"
 
+print*,"inizio qc"
 
                                 ! chiamiamo il "costruttore" per il Q.C.
-call init(v7dqccli,v7ddballe%v7d,ier)
+call init(v7dqccli,v7ddballe%vol7d,ier,v7ddballe%data_id )
 if (ier /= 0 ) then
   print * , "errore qccliinit ier=",ier
   call exit(1)
@@ -57,10 +61,10 @@ if( ier /= 0) then
   call exit(1)
 end if
 
+print*,"inizio esportazione dati"
+CALL export(v7ddballe,attr_only=.true.)
+print*,"finito esportazione dati"
 
-!CALL export(v7ddballe,attr_only=.true.)
-CALL export(v7ddballe)
-  
 
                                 ! il "distruttore" del Q.C.
 call delete(v7dqccli,ier)
