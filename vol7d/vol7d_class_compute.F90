@@ -197,7 +197,7 @@ IF (ASSOCIATED(this%voldatid)) THEN
             frac_m = 0. ! tengo il timerange che mi da` la frac max
             DO j = 1, ntr
               ! conto i dati che contribuiscono alla cumulata corrente
-              mask_time = this%voldatid(i1,:,i3,map_tr(j),i5,i6) /= dmiss .AND. &
+              mask_time = this%voldatid(i1,:,i3,map_tr(j),i5,i6) /= rdmiss .AND. &
                map_trc(:,j) == i
               n = COUNT(mask_time)
               ! conto la frazione di dati presenti rispetto a quelli necessari
