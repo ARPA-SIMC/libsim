@@ -46,10 +46,12 @@ IMPLICIT NONE
 !omend
 
 REAL, PARAMETER :: rmiss = HUGE(1.0)
-REAL(kind=fp_s), PARAMETER :: smiss = HUGE(1.0_fp_s)
-REAL(kind=fp_d), PARAMETER :: dmiss = HUGE(1.0_fp_d)
+REAL(kind=fp_s), PARAMETER :: rsmiss = HUGE(1.0_fp_s)
+REAL(kind=fp_d), PARAMETER :: rdmiss = HUGE(1.0_fp_d)
+REAL(kind=fp_d), PARAMETER :: dmiss = rdmiss
 INTEGER, PARAMETER :: imiss = HUGE(0)
 INTEGER(kind=int_b), PARAMETER :: ibmiss = HUGE(0_int_b)
+INTEGER(kind=int_b), PARAMETER :: bmiss = ibmiss
 INTEGER(kind=int_s), PARAMETER :: ismiss = HUGE(0_int_s)
 INTEGER(kind=int_l), PARAMETER :: ilmiss = HUGE(0_int_l)
 CHARACTER(len=1), PARAMETER :: cmiss = char(0)
@@ -92,7 +94,7 @@ contains
     logical function c_e_s(var)
 
 !OMSTART c_e_i
-!	function c_e_i(var)
+!	function c_e_s(var)
 !	Verifica la condizione di presenza o assenza del dato secondo
 !	le specifiche dballe restituendo una variabile logical .true.
 !	se c'e` il dato
@@ -114,7 +116,7 @@ contains
     logical function c_e_l(var)
 
 !OMSTART c_e_l
-!	function c_e_i(var)
+!	function c_e_l(var)
 !	Verifica la condizione di presenza o assenza del dato secondo
 !	le specifiche dballe restituendo una variabile logical .true.
 !	se c'e` il dato
@@ -173,7 +175,7 @@ contains
     real (kind=fp_d) ::  var
 
     c_e_d=.true.
-    if (var == dmiss)c_e_d= .FALSE. 
+    if (var == rdmiss)c_e_d= .FALSE. 
     return
     end function c_e_d
 

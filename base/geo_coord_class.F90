@@ -86,7 +86,7 @@ TYPE geo_coordvect
 END TYPE geo_coordvect
 
 TYPE(geo_coord),PARAMETER :: geo_coord_miss= &
- geo_coord(rmiss,rmiss,dmiss,dmiss,geo_coorddesc(.FALSE.,.FALSE.,imiss,imiss))
+ geo_coord(rmiss,rmiss,rdmiss,rdmiss,geo_coorddesc(.FALSE.,.FALSE.,imiss,imiss))
 
 INTEGER, PARAMETER :: & ! Tipi di coordvect (da shapelib)
  geo_coordvect_point = 1, & ! Points
@@ -430,8 +430,8 @@ IF (PRESENT(lon) .AND. PRESENT(lat)) THEN
   CALL init(this%desc, fuso, elliss, geoce=.TRUE.)
   this%lon = lon
   this%lat = lat
-  this%utme = dmiss
-  this%utmn = dmiss
+  this%utme = rdmiss
+  this%utmn = rdmiss
 ELSE IF (PRESENT(utme) .AND. PRESENT(utmn)) THEN
   CALL init(this%desc, fuso, elliss, utmce=.TRUE.)
   this%lon = rmiss
@@ -442,8 +442,8 @@ ELSE
   CALL init(this%desc, fuso, elliss)
   this%lon = rmiss
   this%lat = rmiss
-  this%utme = dmiss
-  this%utmn = dmiss
+  this%utme = rdmiss
+  this%utmn = rdmiss
 ENDIF
 
 END SUBROUTINE geo_coord_init
@@ -455,8 +455,8 @@ TYPE(geo_coord), INTENT(INOUT) :: this
 CALL delete(this%desc)
 this%lon = rmiss
 this%lat = rmiss
-this%utme = dmiss
-this%utmn = dmiss
+this%utme = rdmiss
+this%utmn = rdmiss
 
 END SUBROUTINE geo_coord_delete
 

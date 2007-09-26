@@ -8,7 +8,7 @@ USE geo_coord_class
 IMPLICIT NONE
 
 INTEGER, PARAMETER :: fp_gg = fp_s
-REAL(kind=fp_gg), PARAMETER :: gg_miss = smiss
+REAL(kind=fp_gg), PARAMETER :: gg_miss = rsmiss
 INTEGER, PARAMETER :: gg_proj_gen=-1, gg_proj_geo=0, gg_proj_utm=1, &
  gg_proj_georot=2
 
