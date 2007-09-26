@@ -232,6 +232,7 @@ real function TRUG(UMID,T)
 !  TRUG =   rmiss  Se non e' possibile calcolarla 
 !-----------------------------------------------------------------------------
 
+  implicit none  
   real::abz,d,c,b
   parameter(ABZ=273.16,D=237.3,C=17.2693882,B=6.1078)
   real::umid,t                                          !input
@@ -477,7 +478,11 @@ real function QTORELHUM(Q,P,T)
 ! CALCOLA L'UMIDITA RELATIVA A PARTIRE DALLA UMIDITA' SPECIFICA 
 ! REF.: BAKER, MON.WEA.REV.,1983,111,PAG.328 E SEG. 
 !----------------------------------------------------------------------------
-  
+
+  implicit none
+  real::q,p,t
+  real::esat
+
   QTORELHUM=Q*(P-0.378*ESAT(T))/(0.622*ESAT(T)) 
   if (QTORELHUM  < 0.)QTORELHUM=0. 
   return 
@@ -659,7 +664,7 @@ end function eql
 !----------------------------------------------------------------
 
 
-function alfc (pp,tt,aw,np,strato)
+real function alfc (pp,tt,aw,np,strato)
 
 ! calcola il livello di libera condensazione convettiva 
 ! Function completamente riscritta, sostitisce la precedente
@@ -675,12 +680,20 @@ function alfc (pp,tt,aw,np,strato)
 ! strato- spessore dello strato [hPa]
 !
 !----------------------------------------------------------------
-  real,dimension(np)::pp,tt,aw
+
+  implicit none
+  integer,intent(in)::np
+  real,intent(in),dimension(np)::pp,tt,aw
+  real,intent(in)::strato
+  real::t_iso,t_sat,p_bar,t_adi
+  real::samix,t_bar
+  real::pkavr,tda,tmr,os,trpt        !function termolib
+  real::temp,tamb,t_ad
 
 !trovo il rapporto di mescolanza medio dello strato
-  samix=PKAVR(Pp,aw,np,Pp(1),Pp(1)-strato)
+  samix=pkavr(Pp,aw,np,Pp(1),Pp(1)-strato)
 !trovo la temperatura media dello strato
-  t_bar=PKAVR(Pp,tt,np,Pp(1),Pp(1)-strato)
+  t_bar=pkavr(Pp,tt,np,Pp(1),Pp(1)-strato)
 !trovo la pressione media dello strato
   p_bar=(pp(1) + ( pp(1) -strato ))*0.5
 
@@ -1210,6 +1223,10 @@ real function TMR(W,P)
 ! TMR =  rmiss Se non e' possibile calcolarla 
 !--------------------------------------------------------------------------
 
+  implicit none
+  real,intent(in)::w,p
+  real::x
+
   X =  alog10(   W*P/(622.+ W)  ) 
   TMR=10.**(.0498646455*X+2.4082965)-7.07475+38.9114*&
        &((10.**( .0915*X ) - 1.2035 )**2 ) 
@@ -1238,7 +1255,7 @@ real function TDA(OO,P)
 !---------------------------------------------------------------------------
 
   implicit none
-  real::oo,p
+  real,intent(in)::oo,p
 
   if(oo < 0 .or. P < 0)then 
      TDA=rmiss 
@@ -1268,7 +1285,7 @@ real function TSA(OS,P)
 ! TSA =  rmiss  Se non e' possibile calcolarla 
 !-----------------------------------------------------------------------------
   implicit none
-  real::os,p
+  real,intent(in)::os,p
   real::a,tq,d,x
   integer::i
   real::w
@@ -1324,13 +1341,13 @@ subroutine TROPO(P,T,AZ,N,RLDC,ZLAY,PLOW,PHI,PTROP,ZTROP)
 ! PTROP AND ZTROP ARE OUTPUT PARAMETERS. ALL OTHERS REMAIN UNCHANGED 
 !-----------------------------------------------------------------------------
   implicit none
-  integer::n                    !input
-  real,dimension(n)::P,T,AZ     !input
-  real::rldc,zlay,plow,phi      !input
-  real::ptrop,ztrop             !output
-  integer::i,k                  !variabili locali
-  real::z2,rlap,zmax,p2,t2      !variabili locali
-  real::ptrp,trpt               !function termolib
+  integer,intent(in)::n                        !input
+  real,intent(in),dimension(n)::P,T,AZ         !input
+  real::rldc,zlay,plow,phi                     !input
+  real,intent(out)::ptrop,ztrop                !output
+  integer::i,k                                 !variabili locali
+  real::z2,rlap,zmax,p2,t2                     !variabili locali
+  real::ptrp,trpt                              !function termolib
 
   PTROP=rmiss !inizializzazione 
   ZTROP=rmiss !inizializzazione
@@ -1452,9 +1469,11 @@ real function Z(PT,P,T,TD,N)
 !----------------------------------------------------------------------
  
   implicit none
-  integer::n
-  real,dimension(n)::t,p,td
-  real::pt,a1,a2
+
+  integer,intent(in)::n
+  real,intent(in),dimension(n)::t,p,td
+  real,intent(in)::pt
+  real::a1,a2
   real::w
   integer::i,j
 
@@ -1561,7 +1580,8 @@ subroutine UVWIND(UBAR,VBAR,SPEED,DIREC)
 ! DD e FF =  rmiss se non e' possibile calcolarle.  
 !------------------------------------------------------------------------------
   implicit none
-  real::ubar,vbar,speed,direc
+  real,intent(in)::ubar,vbar
+  real,intent(out)::speed,direc
   real,rta
   parameter(RTA=57.2957795) 
 
@@ -1924,9 +1944,13 @@ real function si_K  (PT,T,TD,NT)
 ! Calcola l'indice temporalesco K-Index 
 !
 ! 
-  REAL PT(NT),T(NT),TD(NT) 
+  implicit none
+  integer,intent(in)::nt
+  REAL,intent(in),dimension(nt)::PT,T,TD 
   real::abz
   parameter(abz=273.14) 
+  real::T850,T700,T500,TD850,TD700
+  real::TMENTD
 
   T850=TRPT(PT,T,NT,850.) 
   T700=TRPT(PT,T,NT,700.) 
@@ -1981,11 +2005,13 @@ real function si_LI (PT,T,TD,NT)
 !
 !-------------------------------------------------------------------------
 
-  REAL PT(NT),T(NT),TD(NT),aw(nt)
- 
-  real::abz
-
-  PM=PT(1)-50. 
+  integer,intent(in)::nt
+  REAL,intent(in),dimension(nt)::pt,t,td
+  real,dimension(nt)::aw
+  real::pm,plift,tdew,wbar,t500,tsa500
+  real::pkavr,tmr,alcl
+  
+  pm=pt(1)-50. 
   if(PM <  PT(NT))then
      si_li=rmiss
      return
@@ -1995,7 +2021,7 @@ real function si_LI (PT,T,TD,NT)
      Aw(k)=W(td(k),Pt(k))   !rapporto di mescolanza
   end do
 
-  wbar=PKAVR(Pt,AW,nt,Pt(1),Pt(1)-50.) !wmed primi 50 hPa
+  wbar=pkavr(Pt,AW,nt,Pt(1),Pt(1)-50.) !wmed primi 50 hPa
 
   tdew=tmr(wbar,pt(1))
   plift=alcl(tdew,t(1),pt(1)) 
@@ -2052,9 +2078,14 @@ real function si_SW(PT,T,TD,NT,PW,FF,DD,NW)
 !  SI_SW =  rmiss  Se non e' possibile calcolarlo. 
 !----------------------------------------------------------------------------
 
-  real,dimension(nt)::PT,T,TD
-  real,dimension(nw)::PW,DD,FF
+  implicit none
+  integer,intent(in)::nt,nw
+  real,intent(in),dimension(nt)::PT,T,TD
+  real,intent(in),dimension(nw)::PW,DD,FF
   real::abz,convff,atr
+  real::t850,t500,td850,rtot,rs
+  real::dd850,dd500,ff500,ff850,rd85
+
   parameter(ABZ=273.15,convff=1.94,ATR=0.0174533) 
 	
   T850=  TRPT(PT,T,NT,850.)  -ABZ 
@@ -2120,8 +2151,11 @@ real function TEP_IDX (PT,T,TD,NT)
 !  TEP_IDX =  rmiss  Se non e' possibile calcolarlo. 
 !----------------------------------------------------------------------------
 
-  REAL,dimension(nt)::PT,T,TD 
- 
+  implicit none
+  integer,intent(in)::nt
+  REAL,intent(in),dimension(nt)::PT,T,TD 
+  real::t850,t500,td850,td500,tep850,tep500
+
   T850=TRPT(PT,T,NT,850.) 
   T500=TRPT(PT,T,NT,500.) 
   TD850=TRPT(PT,TD,NT,850.) 
@@ -2166,8 +2200,11 @@ real function si_SH(PT, T, TD, NT)
 !  si_SH  =  rmiss     Se non e' possibile calcolarlo. 
 !----------------------------------------------------------------------------
 
-  real,dimension(nt)::PT,T,TD 
- 
+  implicit none
+  integer,intent(in)::nt
+  real,intent(in),dimension(nt)::PT,T,TD 
+  real::td850,t850,w850,tccl,tas,tsa500,t500,pccl
+
   if(PT(1) < PT(NT))then
      si_sh=rmiss 
      return
@@ -2197,7 +2234,7 @@ end function SI_SH
 
 !----------------------------------------------------------------------------
 
-function SI_U(PT,T,TD,NT) 
+real function SI_U(PT,T,TD,NT) 
 
 !  Calcola l'indice di stabilita' definito dalla media delle umidita` 
 !  relative dei livelli 500-700-850 secondo la formula: 
@@ -2221,7 +2258,11 @@ function SI_U(PT,T,TD,NT)
 !  SI_U =  rmiss     Se non e' possibile calcolarlo. 
 !----------------------------------------------------------------------------
 
-  real,dimension(nt)::PT,T,TD 
+  implicit none
+
+  integer,intent(in)::nt
+  real,intent(in),dimension(nt)::PT,T,TD 
+  real::T850,T700,T500,TD850,TD700,TD500,U850,U700,U500
   
   T850=TRPT(PT,T,NT,850.) 
   T700=TRPT(PT,T,NT,700.) 
@@ -2258,7 +2299,10 @@ real function si_tt (pt,t,td,nt )
 !    TT = indice Total-Total
 !_____________________________________________________________
 
-  real,dimension(nt)::PT,T,TD
+  implicit none
+  integer,intent(in)::nt
+  real,intent(in),dimension(nt)::PT,T,TD
+  real::T850,T500,TD850,ctt,vt
 
   T850=TRPT(PT,T,NT,850.) 
   T500=TRPT(PT,T,NT,500.) 
