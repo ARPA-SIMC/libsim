@@ -128,11 +128,12 @@ END SUBROUTINE vol7d_dballe_init
 
 
 
-SUBROUTINE vol7d_dballe_importvsns(this, var, network, timei, timef,level,timerange, set_network,&
+SUBROUTINE vol7d_dballe_importvsns(this, var, network, coordmin, coordmax, timei, timef,level,timerange, set_network,&
  attr,anavar,anaattr, varkind,attrkind,anavarkind,anaattrkind)
 TYPE(vol7d_dballe),INTENT(out) :: this
 CHARACTER(len=*),INTENT(in) :: var
 INTEGER,INTENT(in) :: network
+TYPE(geo_coord),INTENT(in),optional :: coordmin,coordmax 
 TYPE(datetime),INTENT(in) :: timei, timef
 TYPE(vol7d_network),INTENT(in),OPTIONAL :: set_network
 TYPE(vol7d_level),INTENT(in),optional :: level
@@ -140,17 +141,18 @@ TYPE(vol7d_timerange),INTENT(in),optional :: timerange
 CHARACTER(len=*),INTENT(in),OPTIONAL :: attr(:),anavar(:),anaattr(:)
 CHARACTER(len=*),INTENT(in),OPTIONAL :: varkind(:),attrkind(:),anavarkind(:),anaattrkind(:)
 
-CALL import(this, (/var/), network, timei, timef,level,timerange, set_network,&
+CALL import(this, (/var/), network, coordmin, coordmax, timei, timef,level,timerange, set_network,&
  attr,anavar,anaattr, varkind,attrkind,anavarkind,anaattrkind)
 
 END SUBROUTINE vol7d_dballe_importvsns
 
 
-SUBROUTINE vol7d_dballe_importvsnv(this, var, network, timei, timef,level,timerange, set_network,&
+SUBROUTINE vol7d_dballe_importvsnv(this, var, network, coordmin, coordmax, timei, timef,level,timerange, set_network,&
  attr,anavar,anaattr, varkind,attrkind,anavarkind,anaattrkind)
 TYPE(vol7d_dballe),INTENT(out) :: this
 CHARACTER(len=*),INTENT(in) :: var
 INTEGER,INTENT(in) :: network(:)
+TYPE(geo_coord),INTENT(in),optional :: coordmin,coordmax 
 TYPE(datetime),INTENT(in) :: timei, timef
 TYPE(vol7d_network),INTENT(in),OPTIONAL :: set_network
 TYPE(vol7d_level),INTENT(in),optional :: level
@@ -162,18 +164,19 @@ CHARACTER(len=*),INTENT(in),OPTIONAL :: varkind(:),attrkind(:),anavarkind(:),ana
 INTEGER :: i
 
 DO i = 1, SIZE(network)
-  CALL import(this, (/var/), network(i), timei, timef, level,timerange,set_network,&
+  CALL import(this, (/var/), network(i), coordmin, coordmax, timei, timef, level,timerange,set_network,&
  attr,anavar,anaattr, varkind,attrkind,anavarkind,anaattrkind)
 ENDDO
 
 END SUBROUTINE vol7d_dballe_importvsnv
 
 
-SUBROUTINE vol7d_dballe_importvvnv(this, var, network, timei, timef, level,timerange,set_network,&
+SUBROUTINE vol7d_dballe_importvvnv(this, var, network, coordmin,coordmax, timei, timef, level,timerange,set_network,&
  attr,anavar,anaattr, varkind,attrkind,anavarkind,anaattrkind)
 TYPE(vol7d_dballe),INTENT(out) :: this
 CHARACTER(len=*),INTENT(in) :: var(:)
 INTEGER,INTENT(in) :: network(:)
+TYPE(geo_coord),INTENT(in),optional :: coordmin,coordmax 
 TYPE(datetime),INTENT(in) :: timei, timef
 TYPE(vol7d_network),INTENT(in),OPTIONAL :: set_network
 TYPE(vol7d_level),INTENT(in),optional :: level
@@ -184,19 +187,20 @@ CHARACTER(len=*),INTENT(in),OPTIONAL :: varkind(:),attrkind(:),anavarkind(:),ana
 INTEGER :: i
 
 DO i = 1, SIZE(network)
-  CALL import(this, var, network(i), timei, timef, level,timerange,set_network,&
+  CALL import(this, var, network(i), coordmin, coordmax, timei, timef, level,timerange,set_network,&
  attr,anavar,anaattr, varkind,attrkind,anavarkind,anaattrkind)
 ENDDO
 
 END SUBROUTINE vol7d_dballe_importvvnv
 
 
-SUBROUTINE vol7d_dballe_importvvns(this, var, network, timei, timef,level,timerange, set_network,&
+SUBROUTINE vol7d_dballe_importvvns(this, var, network, coordmin, coordmax, timei, timef,level,timerange, set_network,&
  attr,anavar,anaattr, varkind,attrkind,anavarkind,anaattrkind)
 
 TYPE(vol7d_dballe),INTENT(inout) :: this
 CHARACTER(len=*),INTENT(in),OPTIONAL :: var(:)
 INTEGER,INTENT(in),OPTIONAL :: network
+TYPE(geo_coord),INTENT(in),optional :: coordmin,coordmax 
 TYPE(datetime),INTENT(in),OPTIONAL :: timei, timef
 TYPE(vol7d_network),INTENT(in),OPTIONAL :: set_network
 TYPE(vol7d_level),INTENT(in),optional :: level
@@ -273,6 +277,20 @@ ENDIF
 if(present(network))call idba_set (this%handle,"rep_cod",network)
 call idba_set (this%handle,"mobile",0)
 !print*,"network,mobile",network,0
+
+if(present(coordmin))then
+  CALL geo_coord_to_geo(coordmin)
+  CALL getval(coordmin, lat=lat,lon=lon)
+  call idba_set(this%handle,"lonmin",lon)
+  call idba_set(this%handle,"latmin",lat)
+end if
+
+if(present(coordmax))then
+  CALL geo_coord_to_geo(coordmax)
+  CALL getval(coordmax, lat=lat,lon=lon)
+  call idba_set(this%handle,"lonmax",lon)
+  call idba_set(this%handle,"latmax",lat)
+end if
 
 if(present(timei))then
   CALL getval(timei, year=year, month=month, day=day, hour=hour, minute=minute)
@@ -1208,7 +1226,8 @@ call vol7d_set_attr_ind(this%vol7d)
 END SUBROUTINE vol7d_dballe_importvvns
 
 
-SUBROUTINE vol7d_dballe_export(this, network, latmin,latmax,lonmin,lonmax,staz_id,ident,timei, timef,level,timerange,var,attr,anavar,anaattr,attr_only)
+SUBROUTINE vol7d_dballe_export(this, network, coordmin, coordmax, staz_id, ident,&
+ timei, timef,level,timerange,var,attr,anavar,anaattr,attr_only)
 
 ! TODO: gestire staz_id la qual cosa vuol dire aggiungere un id nel type ana
 
@@ -1216,7 +1235,8 @@ TYPE(vol7d_dballe),INTENT(in) :: this
 INTEGER,INTENT(in),optional :: network,staz_id
 CHARACTER(len=vol7d_ana_lenident),optional :: ident
 TYPE(datetime),INTENT(in),optional :: timei, timef
-REAL(kind=fp_geo),INTENT(in),optional :: latmin,latmax,lonmin,lonmax
+TYPE(geo_coord),INTENT(in),optional :: coordmin,coordmax 
+REAL(kind=fp_geo) :: latmin,latmax,lonmin,lonmax
 TYPE(vol7d_level),INTENT(in),optional :: level
 TYPE(vol7d_timerange),INTENT(in),optional :: timerange
 CHARACTER(len=*),INTENT(in),OPTIONAL :: var(:),attr(:),anavar(:),anaattr(:)
@@ -1367,16 +1387,15 @@ do iii=1, nnetwork
 
       ana_id(i,iii)=DBA_MVI
 
-      CALL getval(this%vol7d%ana(i)%coord, lat=lat,lon=lon)
-      !print *,lat,lon
+      if (present(coordmin).and.present(coordmax))then
 
-      if (present(latmin).and.present(latmax).and.present(lonmin).and.present(lonmax))then
-         if (c_e(latmin) .and. c_e(latmax) .and. c_e(lonmin) .and. c_e(lonmax))then
-            if (lat > latmax .or. lat < latmin .or. lon > lonmax .or. lon < lonmin) cycle
-            print * ,"sei dentro, OK"
-         end if
+        if (.not. inside(this%vol7d%ana(i)%coord,coordmin,coordmax)) cycle
+                                !print * ,"sei dentro, OK"
       end if
 
+      CALL geo_coord_to_geo(this%vol7d%ana(i)%coord)
+      CALL getval(this%vol7d%ana(i)%coord, lat=lat,lon=lon)
+      !print *,lat,lon
 
       call idba_set (this%handle,"lat",lat)
       call idba_set (this%handle,"lon",lon)
