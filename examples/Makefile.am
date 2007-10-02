@@ -1,4 +1,4 @@
-bin_PROGRAMS = esempio_v7d esempio_regrib esempio_qc_convert
+bin_PROGRAMS = esempio_v7d esempio_regrib esempio_qc_convert esempio_termolib
 
 if ORSIM
 bin_PROGRAMS += esempio_v7doracle esempio_v7doracle_multi
@@ -14,8 +14,9 @@ endif
 
 #LDADD = ../base/libsim_base.la ../grib/libsim_grib.la ../vol7d/libsim_vol7d.la
 
-AM_FCFLAGS = -I../base -I../grib -I../vol7d -I../qc
+AM_FCFLAGS = -I../base -I../grib -I../vol7d -I../qc -I../termolib
 
+esempio_termolib_SOURCES  = esempio_termolib.f90 
 esempio_v7d_SOURCES = esempio_v7d.f90
 esempio_v7d_LDADD = ../base/libsim_base.la ../vol7d/libsim_vol7d.la $(liboraclesim) $(libdballe)
 
@@ -26,6 +27,7 @@ esempio_regrib_LDADD = ../base/libsim_base.la ../grib/libsim_grib.la -lemos
 esempio_qc_convert_SOURCES = esempio_qc_convert.f90
 esempio_qc_convert_LDADD = ../base/libsim_base.la ../vol7d/libsim_vol7d.la $(liboraclesim) $(libdballe)
 
+esempio_termolib_LDADD = ../base/libsim_base.la ../termolib/libsim_termolib.la 
 
 if ORSIM
 esempio_v7doracle_SOURCES = esempio_v7doracle.f90
