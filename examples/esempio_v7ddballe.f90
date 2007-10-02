@@ -19,7 +19,7 @@ CALL init(tf, year=2007, month=3, day=21, hour=00)
 CALL init(v7d)
 ! Importo i dati, variabile 'B13011' della btable (precipitazione),
 ! rete 18 (FIDUPO)
-CALL import(v7d, 'B13011', 255, ti, tf, timerange=vol7d_timerange(4,-1800,0), attr=(/"*B33192","*B33007"/))
+CALL import(v7d, 'B13011', network=255, timei=ti, timef=tf, timerange=vol7d_timerange(4,-1800,0), attr=(/"*B33192","*B33007"/))
 ! Creo una vista su un array bidimensionale che scorre le dimensioni
 ! dell'anagrafica e del tempo (vol7d_ana_d, vol7d_time_d)
 CALL vol7d_get_voldatir(v7d%vol7d, (/vol7d_ana_d,vol7d_time_d/), vol2dp=vol2d)

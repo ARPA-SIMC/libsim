@@ -9,8 +9,10 @@ implicit none
 
 integer :: io,ier
 character(len=19) :: database,user,password
-TYPE(datetime) :: ti, tf
+
                                 !tipi derivati.
+TYPE(geo_coord)    :: coordmin, coordmax 
+TYPE(datetime)     :: ti, tf
 type(qcclitype)    :: v7dqccli
 type(vol7d_dballe) :: v7ddballe
 
@@ -31,11 +33,16 @@ close(10)
 CALL init(ti, year=2007, month=9, day=15, hour=00)
 CALL init(tf, year=2007, month=9, day=16, hour=00)
 
+                                ! Definisco il box delle coordinate
+CALL init(coordmin,lat=43.70_fp_geo,lon=9.16_fp_geo)
+CALL init(coordmax,lat=45.2_fp_geo,lon=12.84_fp_geo)
+
                                 ! Chiamo il costruttore della classe vol7d_dballe per il mio oggetto in import
 CALL init(v7ddballe,dsn=database,user=user,password=password,write=.true.,wipe=.false.)
 
 print*,"inizio importazione dati"
-CALL import(v7ddballe,var=(/"B13011"/),varkind=(/"r"/),anavar=(/"B07001"/),anavarkind=(/"i"/),attr=(/"*B33196","*B33192"/),attrkind=(/"b","b"/),timei=ti,timef=tf)
+CALL import(v7ddballe,var=(/"B13011"/),varkind=(/"r"/),anavar=(/"B07001"/),anavarkind=(/"i"/),attr=(/"*B33196","*B33192"/),attrkind=(/"b","b"/)&
+ ,timei=ti,timef=tf,coordmin=coordmin,coordmax=coordmax)
 print*,"finita importazione dati"
 
 print*,"inizio qc"
