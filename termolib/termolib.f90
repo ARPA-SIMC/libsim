@@ -370,7 +370,6 @@ real function USPEC(TD,PT)
 !---------------------------------------------------------------------------
 
   real,intent(in)::td,pt
-  real::ESAT              !function termolib
 
   if(td <  0 .or. pt < 0)then
      USPEC=rmiss
@@ -408,7 +407,6 @@ real function FR (T,TD )
 !---------------------------------------------------------------------------
 
   real,intent(in)::t,td
-  real::ESAT
 
   if(t <= 0 .or. td <=0 )then 
      FR=rmiss 
@@ -443,7 +441,6 @@ real function W(TD,PT)
 !----------------------------------------------------------------------------
 
   real,intent(in)::td,pt
-  real::ESAT
   real::x
 
   if(td  < 0 .or. pt < 0)then 
@@ -1254,8 +1251,7 @@ real function TSA(OSAT,PT)
   real,intent(in)::osat,pt
   real::a,tq,d,x
   integer::i
-  real::w
-
+ 
   if(osat <  0 .or. pt < 0)then 
      TSA=rmiss 
      return 
@@ -1314,7 +1310,6 @@ subroutine TROPO(PT,T,AZ,NT,PTROP,ZTROP,RLDC,ZLAY,PLOW,PHI)
   real,intent(out)::ptrop,ztrop                   !output
   integer::i,k                                    !variabili locali
   real::z2,rlap,zmax,p2,t2                        !variabili locali
-  real::ptrp,trpt                                 !function termolib
 
   PTROP=rmiss !inizializzazione 
   ZTROP=rmiss !inizializzazione
@@ -1415,11 +1410,12 @@ subroutine zero_termico (pt,tt,td,np,rhstaz,p_zero,h_zero)
      return
   end if
 
-  t_zero=rmiss
+  t_zero=-999.9  !valore piccolo
   pres=400.
   do while( t_zero <= abz )
      pres=pres+1    
      t_zero=trpt(pt,tt,np,pres)
+
      if( pres > pt(1) )then
         p_zero=rmiss
         h_zero=rmiss
@@ -1437,14 +1433,14 @@ end subroutine zero_termico
 
 !----------------------------------------------------------------------
  
-real function Z(PT,P,T,TD,N)  
+real function Z(Plev,P,T,TD,N)  
 
 ! Calcola l' altezza geopotenziale al livello di pressione "PT" 
 ! 
-! Uso : x = Z (PT,P,T,TD,NT) 
+! Uso : x = Z (Plev,P,T,TD,NT) 
 ! 
 !  Input :
-!  PT   real   livello per il quale si vuole calcolare l'altezza (hPa) 
+!  Plev real   livello per il quale si vuole calcolare l'altezza (hPa) 
 !  P    real   Vettore delle pressioni                           (hPa) 
 !  T    real   Vettore delle Temperature dell'aria               (K.) 
 !  TD   real   Vettore delle Temperature di rugiada              (K.) 
@@ -1457,43 +1453,42 @@ real function Z(PT,P,T,TD,N)
  
   integer,intent(in)::n
   real,intent(in),dimension(n)::t,p,td
-  real,intent(in)::pt
+  real,intent(in)::plev
   real::a1,a2
-  real::w                                  !function termolib
   integer::i,j
 
   z = 0.0                   !inizializzo l'altezza 
 
-  if(N == 0 .or. PT <  P(N) .or. PT > p(1) )then !filtra input invalidi
+  if(n == 0 .or. plev <  P(N) .or. plev > p(1) )then !filtra input invalidi
      z=rmiss
      return
   end if
       
-  if(pt == p(1) )then
+  if(plev == p(1) )then
      z=0
      return
   end if
 
-  I =  0
+  i =  0
   j =  i+1
-  do while (pt < p(i+1) )
-     I = I+1 
-     J  = I+1 
-     if(PT  >= P(J))then
-        A1=T(J)*(1.+.0006078*W(TD(J),P(J))) 
-        A2=T(I)*(1.+.0006078*W(TD(I),P(I))) 
-        z = z+14.64285*(A1+A2)*(alog(P(I)/PT )) 
+  do while (plev < p(i+1) )
+     i = i+1 
+     j  = i+1 
+     if(Plev  >= P(j))then
+        a1=t(j)*(1.+.0006078*W(td(j),p(j))) 
+        a2=t(i)*(1.+.0006078*W(td(i),p(i))) 
+        z = z+14.64285*(a1+a2)*(alog(p(i)/plev )) 
         return
      end if
 
-     A1=T(J)*(1.+.0006078*W(TD(J),P(J))) 
-     A2=T(I)*(1.+.0006078*W(TD(I),P(I))) 
-     z = z+14.64285*(A1+A2)*(alog(P(I)/P(J))) 
+     a1=t(J)*(1.+.0006078*W(td(j),p(j))) 
+     a2=t(I)*(1.+.0006078*W(td(I),p(i))) 
+     z = z+14.64285*(a1+a2)*(alog(p(i)/p(j))) 
   end do
 
-  A1=T(J)*(1.+.0006078*W(TD(J),P(J))) 
-  A2=T(I)*(1.+.0006078*W(TD(I),P(I))) 
-  z =z+14.64285*(A1+A2)*(alog(P(I)/PT )) 
+  a1=t(j)*(1.+.0006078*W(td(j),p(j))) 
+  a2=t(i)*(1.+.0006078*W(td(i),p(i))) 
+  z =z+14.64285*(a1+a2)*(alog(p(i)/plev )) 
 	
   return 
 end function Z
@@ -1676,7 +1671,6 @@ subroutine MNWIND(P,SPD,DIR,NW,P1,P2,SPEED,DIREC)
   real,intent(out)::speed,direc                   !output
   real::spds,dirs,p1,p2,ubar,vbar
   integer::i
-  real::PKAVR                                     !funzione termolib
 
   if(P1 >  P(1) .or. P2 < P(NW))then 
      SPDS=rmiss 
@@ -1867,7 +1861,6 @@ real function PKAVR(PRES,THR,N,P1,P2)
   real,intent(in)::p1,p2
   real::wbar
   integer::k,i,j,l
-  real::trpt
 
   if(p1 > pres(1) .or. p2 < pres(n) )then
      PKAVR=rmiss 
@@ -1879,7 +1872,7 @@ real function PKAVR(PRES,THR,N,P1,P2)
   wbar=0.0 
   k=k+1 
   p(k)=p1 
-  a(k)=TRPT(pres,THR,N,P1) 
+  a(k)=TRPT(pres,thr,n,p1) 
 
   if (p1 == p2) then
      PKAVR=a(k)
@@ -1889,20 +1882,20 @@ real function PKAVR(PRES,THR,N,P1,P2)
   do i=1,N 
      if(pres(i) <= p2)exit
      k=k+1 
-     P(k)=pres(i) 
-     A(k)=THR(i) 
+     p(k)=pres(i) 
+     a(k)=thr(i) 
   end do
 
   k=k+1 
   p(k)=P2 
-  a(k)=TRPT(pres,THR,n,p2) 
+  a(k)=TRPT(pres,thr,n,p2) 
   j=k-1 
   do i=1,j 
      l=i+1 
-     wbar=(A(I)+A(L))*alog(P(I)/P(L))+wbar 
+     wbar=(a(i)+a(l))*alog(p(i)/p(l))+wbar 
   end do
 
-  wbar=wbar/(2.*alog(P(1)/P(k))) 
+  wbar=wbar/(2.*alog(p(1)/p(k))) 
   PKAVR=wbar 
 
   return 
@@ -1945,7 +1938,7 @@ real function SI_K  (PT,T,TD,NT)
   SI_K  = t850 - t500 + td850 - tmentd 
 
   return 
-end function si_K
+end function SI_K
 
 !-------------------------------------------------------------------------
 
