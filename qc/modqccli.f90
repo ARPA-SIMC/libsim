@@ -269,7 +269,7 @@ qccli%in_macroa = imiss
 
 DO i = 1, SIZE(qccli%v7d%ana)
   DO j = 1, SIZE(qccli%macroa)
-    IF (geo_coord_inside(qccli%v7d%ana(i)%coord, qccli%macroa(j))) THEN
+    IF (inside(qccli%v7d%ana(i)%coord, qccli%macroa(j))) THEN
       qccli%in_macroa(i) = j
       EXIT
     ENDIF
@@ -284,6 +284,7 @@ do indana=1,size(qccli%v7d%ana)
   if (qccli%in_macroa(indana) >= 1 .and. qccli%in_macroa(indana) <= 4 ) iarea=3
   if (qccli%in_macroa(indana) == 5 .or.  qccli%in_macroa(indana) == 6 ) iarea=2
   if (qccli%in_macroa(indana) == 7 .or.  qccli%in_macroa(indana) == 8 ) iarea=1
+
 
   do  indnetwork=1,size(qccli%v7d%network)
     do indlevel=1,size(qccli%v7d%level)
@@ -329,6 +330,7 @@ do indana=1,size(qccli%v7d%ana)
               climaqui= qccli%clima%voldatir(indcana,indctime,indclevel,indctimerange,indcdativarr,indcnetwork)
 
               if (c_e(climaqui).and. c_e(datoqui))then
+                !print *,"macroarea,iarea,mese,altezza,mh ",qccli%in_macroa(indana),iarea,imese,altezza,mh
                 !print*,"dato,clima ",datoqui,climaqui
                 if ( datoqui > climaqui) then
                   
