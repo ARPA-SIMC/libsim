@@ -282,6 +282,14 @@ INTERFACE OPERATOR (==)
   MODULE PROCEDURE geo_coorddesc_eq, geo_coord_eq, geo_coord_eqsv
 END INTERFACE
 
+INTERFACE OPERATOR (>=)
+  MODULE PROCEDURE geo_coord_ge, geo_coord_gesv
+END INTERFACE
+
+INTERFACE OPERATOR (<=)
+  MODULE PROCEDURE geo_coord_le, geo_coord_lesv
+END INTERFACE
+
 INTERFACE OPERATOR (/=)
   MODULE PROCEDURE geo_coord_ne, geo_coord_nesv
 END INTERFACE
@@ -304,6 +312,10 @@ END INTERFACE
 
 INTERFACE export
   MODULE PROCEDURE geo_coordvect_export, geo_coordvect_exportvect
+END INTERFACE
+
+INTERFACE inside
+  MODULE PROCEDURE geo_coord_inside, geo_coord_inside_rectang
 END INTERFACE
 
 CONTAINS
@@ -419,11 +431,13 @@ END FUNCTION geo_coorddesc_eq
 ! ===================
 ! ==   geo_coord   ==
 ! ===================
-SUBROUTINE geo_coord_init(this, lon, lat, utme, utmn, fuso, elliss)
+SUBROUTINE geo_coord_init(this, lon, lat, utme, utmn, fuso, elliss, to_geo)
 TYPE(geo_coord) :: this
 REAL(kind=fp_geo), INTENT(IN), OPTIONAL :: lon, lat
 REAL(kind=fp_utm), INTENT(IN), OPTIONAL  :: utme, utmn
 INTEGER, INTENT(IN), OPTIONAL  :: fuso, elliss
+LOGICAL, INTENT(IN),OPTIONAL:: to_geo
+LOGICAL :: lto_geo
 
 IF (.NOT.done_init) CALL init_elliss()
 IF (PRESENT(lon) .AND. PRESENT(lat)) THEN
@@ -438,6 +452,15 @@ ELSE IF (PRESENT(utme) .AND. PRESENT(utmn)) THEN
   this%lat = rmiss
   this%utme = utme
   this%utmn = utmn
+
+  IF (PRESENT(to_geo))then
+    lto_geo=to_geo
+  else
+    lto_geo=.false.
+  end if
+
+  if (lto_geo)CALL geo_coord_to_geo(this)
+
 ELSE
   CALL init(this%desc, fuso, elliss)
   this%lon = rmiss
@@ -493,6 +516,51 @@ ENDIF
 
 END FUNCTION geo_coord_eq
 
+elemental FUNCTION geo_coord_ge(this, that) RESULT(res)
+TYPE(geo_coord),INTENT(IN) :: this, that
+LOGICAL :: res
+
+IF (this%desc%geoce .AND. that%desc%geoce) THEN
+  res = (this%lon >= that%lon .AND. this%lat >= that%lat)
+ELSE IF (this%desc%utmce .AND. that%desc%utmce) THEN
+  res = (this%utme >= that%utme .AND. this%utmn >= that%utmn)
+ELSE IF (.NOT.this%desc%geoce .AND. .NOT.this%desc%utmce &
+ .AND. .NOT.that%desc%geoce .AND. .NOT.that%desc%utmce) THEN ! tutti mancanti
+  res = .TRUE.
+ELSE ! non confrontabili
+  res = .FALSE.
+ENDIF
+
+END FUNCTION geo_coord_ge
+
+
+elemental FUNCTION geo_coord_le(this, that) RESULT(res)
+TYPE(geo_coord),INTENT(IN) :: this, that
+LOGICAL :: res
+
+IF (this%desc%geoce .AND. that%desc%geoce) THEN
+  res = (this%lon <= that%lon .AND. this%lat <= that%lat)
+ELSE IF (this%desc%utmce .AND. that%desc%utmce) THEN
+  res = (this%utme <= that%utme .AND. this%utmn <= that%utmn)
+ELSE IF (.NOT.this%desc%geoce .AND. .NOT.this%desc%utmce &
+ .AND. .NOT.that%desc%geoce .AND. .NOT.that%desc%utmce) THEN ! tutti mancanti
+  res = .TRUE.
+ELSE ! non confrontabili
+  res = .FALSE.
+ENDIF
+
+END FUNCTION geo_coord_le
+
+
+FUNCTION geo_coord_inside_rectang(this, coordmin,coordmax) RESULT(res)
+TYPE(geo_coord),INTENT(IN) :: this, coordmin,coordmax
+LOGICAL :: res
+
+res = (this >= coordmin .AND. this <= coordmax)
+
+END FUNCTION geo_coord_inside_rectang
+
+
 
 FUNCTION geo_coord_eqsv(this, that) RESULT(res)
 TYPE(geo_coord),INTENT(IN) :: this, that(:)
@@ -505,6 +573,32 @@ DO i = 1, SIZE(that)
 ENDDO
 
 END FUNCTION geo_coord_eqsv
+
+
+FUNCTION geo_coord_gesv(this, that) RESULT(res)
+TYPE(geo_coord),INTENT(IN) :: this, that(:)
+LOGICAL :: res(SIZE(that))
+
+INTEGER :: i
+
+DO i = 1, SIZE(that)
+  res(i) = this >= that(i)
+ENDDO
+
+END FUNCTION geo_coord_gesv
+
+
+FUNCTION geo_coord_lesv(this, that) RESULT(res)
+TYPE(geo_coord),INTENT(IN) :: this, that(:)
+LOGICAL :: res(SIZE(that))
+
+INTEGER :: i
+
+DO i = 1, SIZE(that)
+  res(i) = this <= that(i)
+ENDDO
+
+END FUNCTION geo_coord_lesv
 
 
 elemental FUNCTION geo_coord_ne(this, that) RESULT(res)
@@ -594,11 +688,13 @@ END SUBROUTINE geo_coord_to_geo
 ! == geo_coordvect ==
 ! ===================
 RECURSIVE SUBROUTINE geo_coordvect_init(this, lon, lat, &
- utme, utmn, fuso, elliss)
+ utme, utmn, fuso, elliss,to_geo)
 TYPE(geo_coordvect), INTENT(OUT) :: this
 REAL(kind=fp_geo), INTENT(IN), OPTIONAL :: lon(:), lat(:)
 REAL(kind=fp_utm), INTENT(IN), OPTIONAL  :: utme(:), utmn(:)
 INTEGER, INTENT(IN), OPTIONAL  :: fuso, elliss
+LOGICAL,INTENT(IN),OPTIONAL :: to_geo
+LOGICAL  :: lto_geo
 
 IF (.NOT.done_init) CALL init_elliss()
 CALL delete(this)
@@ -617,6 +713,15 @@ ELSE IF (PRESENT(utme) .AND. PRESENT(utmn)) THEN
   ALLOCATE(this%utm(this%vsize,2))
   this%utm(1:this%vsize,1) = utme(1:this%vsize)
   this%utm(1:this%vsize,2) = utmn(1:this%vsize)
+
+  if (present(to_geo))then
+    lto_geo=to_geo
+  else
+    lto_geo=.false.
+  end if
+
+  if (lto_geo) CALL geo_coordvect_to_geo(this)
+
 ELSE
   CALL init(this%desc, fuso, elliss)
   this%vsize = 0
