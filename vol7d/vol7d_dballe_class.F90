@@ -1,5 +1,22 @@
 MODULE vol7d_dballe_class
 
+!omstart vol7d_dballe_class
+!idx classe per l'import ed export di volumi da e in DB-All.e 
+!Questo modulo definisce gli oggetti e i metodi per gestire
+!l'importazione e l'esportazione di volumi dal database per dati sparsi
+!DB-All.e
+!
+
+!L'oggetto principale definito dalla classe è:
+!
+!vol7d_dballe
+!l'oggetto è costituito da un oggetto vol7d attorniato dalle 
+!informazioni necessarie per l'accesso al DSN di DB-All.e
+! e da una matrice necessaria per l'ottimizzazione della scrittura dei 
+!dati in export
+!omend
+
+
 USE char_utilities
 USE vol7d_class
 USE vol7d_utilities
@@ -70,6 +87,25 @@ CONTAINS
 
 
 SUBROUTINE vol7d_dballe_init(this,dsn,user,password,debug,write,wipe)
+
+!omstart init(this,dsn,user,password,debug,write,wipe)
+!idx classe per l'import ed export di volumi da e in DB-All.e 
+!
+!TYPE(vol7d_dballe),INTENT(out) :: this
+!                                  l'oggetto da inizializzare
+!character(len=*), INTENT(in),OPTIONAL :: dsn,user,password
+!                                  parametri per l'accesso al DSN di DB-All.e
+!integer,INTENT(in),OPTIONAL :: debug
+!                                  attiva alcune opzioni di debug
+!                                  default=1
+!logical,INTENT(in),OPTIONAL :: write
+!                                  abilita la scrittura sul DSN
+!                                  default=.false.
+!logical,INTENT(in),OPTIONAL :: wipe
+!                                  svuota il DSN e lo prepara per una scrittura
+!                                  default=.false.
+!omend
+
 TYPE(vol7d_dballe),INTENT(out) :: this
 character(len=*), INTENT(in),OPTIONAL :: dsn,user,password
 integer,INTENT(in),OPTIONAL :: debug
@@ -126,16 +162,42 @@ if (quiwipe)call idba_scopa (this%handle,"")
 
 END SUBROUTINE vol7d_dballe_init
 
+!omstart import(this, var, network, coordmin,coordmax, timei, timef, level,timerange,set_network, attr,anavar,anaattr, varkind,attrkind,anavarkind,anaattrkind)
+!
+!idx importa un volume dati da un DSN DB_all.e
+!
+!TYPE(vol7d_dballe),INTENT(out) :: this
+!                               oggetto vol7d_dballe
+!CHARACTER(len=*),INTENT(in) :: var
+!                               variabili da importare secondo la 
+!                               tabella B locale o relativi alias
+!INTEGER,INTENT(in) :: network
+!                               codici dei network da importare
+!TYPE(geo_coord),INTENT(in),optional :: coordmin,coordmax 
+!                               coordinate minime e massime che definiscono il 
+!                               rettangolo di estrazione per l'importazione
+!TYPE(datetime),INTENT(in) :: timei, timef
+!                               estremi temporali dell'estrazione per l'importazione
+!TYPE(vol7d_level),INTENT(in),optional :: level
+!                               livello selezionato per l'estrazione
+!TYPE(vol7d_timerange),INTENT(in),optional :: timerange
+!                               timerange selezionato per l'importazione
+!TYPE(vol7d_network),INTENT(in),OPTIONAL :: set_network
+!                               estrae i dati migliori disponibili "mergiandoli" in un'unica rete 
+!                               definita da questo parametro
+!                               ANCORA DA TESTARE !!!!
+!CHARACTER(len=*),INTENT(in),OPTIONAL :: attr(:),anavar(:),anaattr(:)
+!CHARACTER(len=*),INTENT(in),OPTIONAL :: varkind(:),attrkind(:),anavarkind(:),anaattrkind(:)
 
+!omend
 
 SUBROUTINE vol7d_dballe_importvsns(this, var, network, coordmin, coordmax, timei, timef,level,timerange, set_network,&
  attr,anavar,anaattr, varkind,attrkind,anavarkind,anaattrkind)
 TYPE(vol7d_dballe),INTENT(out) :: this
-CHARACTER(len=*),INTENT(in) :: var
-INTEGER,INTENT(in) :: network
+CHARACTER(len=*),INTENT(in),optional :: var
 TYPE(geo_coord),INTENT(in),optional :: coordmin,coordmax 
-TYPE(datetime),INTENT(in) :: timei, timef
-TYPE(vol7d_network),INTENT(in),OPTIONAL :: set_network
+TYPE(datetime),INTENT(in),optional :: timei, timef
+TYPE(vol7d_network),INTENT(in),OPTIONAL :: network,set_network
 TYPE(vol7d_level),INTENT(in),optional :: level
 TYPE(vol7d_timerange),INTENT(in),optional :: timerange
 CHARACTER(len=*),INTENT(in),OPTIONAL :: attr(:),anavar(:),anaattr(:)
@@ -150,11 +212,10 @@ END SUBROUTINE vol7d_dballe_importvsns
 SUBROUTINE vol7d_dballe_importvsnv(this, var, network, coordmin, coordmax, timei, timef,level,timerange, set_network,&
  attr,anavar,anaattr, varkind,attrkind,anavarkind,anaattrkind)
 TYPE(vol7d_dballe),INTENT(out) :: this
-CHARACTER(len=*),INTENT(in) :: var
-INTEGER,INTENT(in) :: network(:)
+CHARACTER(len=*),INTENT(in),optional :: var
 TYPE(geo_coord),INTENT(in),optional :: coordmin,coordmax 
-TYPE(datetime),INTENT(in) :: timei, timef
-TYPE(vol7d_network),INTENT(in),OPTIONAL :: set_network
+TYPE(datetime),INTENT(in),optional :: timei, timef
+TYPE(vol7d_network),INTENT(in),OPTIONAL :: network(:),set_network
 TYPE(vol7d_level),INTENT(in),optional :: level
 TYPE(vol7d_timerange),INTENT(in),optional :: timerange
 CHARACTER(len=*),INTENT(in),OPTIONAL :: attr(:),anavar(:),anaattr(:)
@@ -174,11 +235,10 @@ END SUBROUTINE vol7d_dballe_importvsnv
 SUBROUTINE vol7d_dballe_importvvnv(this, var, network, coordmin,coordmax, timei, timef, level,timerange,set_network,&
  attr,anavar,anaattr, varkind,attrkind,anavarkind,anaattrkind)
 TYPE(vol7d_dballe),INTENT(out) :: this
-CHARACTER(len=*),INTENT(in) :: var(:)
-INTEGER,INTENT(in) :: network(:)
+CHARACTER(len=*),INTENT(in),optional :: var(:)
 TYPE(geo_coord),INTENT(in),optional :: coordmin,coordmax 
-TYPE(datetime),INTENT(in) :: timei, timef
-TYPE(vol7d_network),INTENT(in),OPTIONAL :: set_network
+TYPE(datetime),INTENT(in),optional :: timei, timef
+TYPE(vol7d_network),INTENT(in),OPTIONAL :: network(:),set_network
 TYPE(vol7d_level),INTENT(in),optional :: level
 TYPE(vol7d_timerange),INTENT(in),optional :: timerange
 CHARACTER(len=*),INTENT(in),OPTIONAL :: attr(:),anavar(:),anaattr(:)
@@ -199,10 +259,9 @@ SUBROUTINE vol7d_dballe_importvvns(this, var, network, coordmin, coordmax, timei
 
 TYPE(vol7d_dballe),INTENT(inout) :: this
 CHARACTER(len=*),INTENT(in),OPTIONAL :: var(:)
-INTEGER,INTENT(in),OPTIONAL :: network
 TYPE(geo_coord),INTENT(in),optional :: coordmin,coordmax 
 TYPE(datetime),INTENT(in),OPTIONAL :: timei, timef
-TYPE(vol7d_network),INTENT(in),OPTIONAL :: set_network
+TYPE(vol7d_network),INTENT(in),OPTIONAL :: network,set_network
 TYPE(vol7d_level),INTENT(in),optional :: level
 TYPE(vol7d_timerange),INTENT(in),optional :: timerange
 CHARACTER(len=*),INTENT(in),OPTIONAL :: attr(:),anavar(:),anaattr(:)
@@ -274,31 +333,35 @@ ELSE
    lanaattr = .FALSE.
 ENDIF
 
-if(present(network))call idba_set (this%handle,"rep_cod",network)
-call idba_set (this%handle,"mobile",0)
-!print*,"network,mobile",network,0
+call idba_unsetall(this%handle)
 
-if(present(coordmin))then
+if(present(network))call idba_set (this%handle,"rep_cod",network%id)
+call idba_set (this%handle,"mobile",0)
+!print*,"network,mobile",network%id,0
+
+if(ldegnet)call idba_set (this%handle,"query","best")
+
+if (present(coordmin)) then
   CALL geo_coord_to_geo(coordmin)
   CALL getval(coordmin, lat=lat,lon=lon)
   call idba_set(this%handle,"lonmin",lon)
   call idba_set(this%handle,"latmin",lat)
 end if
 
-if(present(coordmax))then
+if (present(coordmax)) then
   CALL geo_coord_to_geo(coordmax)
   CALL getval(coordmax, lat=lat,lon=lon)
   call idba_set(this%handle,"lonmax",lon)
   call idba_set(this%handle,"latmax",lat)
 end if
 
-if(present(timei))then
+if (present(timei)) then
   CALL getval(timei, year=year, month=month, day=day, hour=hour, minute=minute)
   call idba_setdatemin(this%handle,year,month,day,hour,minute,0)
                                 !print *,"datemin",year,month,day,hour,minute,0
 end if
 
-if (present(timef))then
+if (present(timef)) then
   CALL getval(timef, year=year, month=month, day=day, hour=hour, minute=minute)
   call idba_setdatemax(this%handle,year,month,day,hour,minute,0)
                                 !print *,"datemax",year,month,day,hour,minute,0
@@ -307,7 +370,7 @@ end if
 
 nvar=0
 
-if (present (var))then
+if (present (var)) then
                                 ! creo la stringa con l'elenco
   varlist = ''
   DO i = 1, SIZE(var)
@@ -397,11 +460,47 @@ end do
 
 ! ---------------->   anagrafica
 
-!ora leggere tutti i dati di anagrafica e metterli in bufferana
-         
+!ora legge tutti i dati di anagrafica e li mette in bufferana
+
+call idba_unsetall(this%handle_staz)
+
+if(present(network))call idba_set (this%handle_staz,"rep_cod",network%id)
+call idba_set (this%handle_staz,"mobile",0)
+!print*,"network,mobile",network%id,0
+
+if(ldegnet)call idba_set (this%handle_staz,"query","best")
+
+if (present(coordmin)) then
+  CALL geo_coord_to_geo(coordmin)
+  CALL getval(coordmin, lat=lat,lon=lon)
+  call idba_set(this%handle_staz,"lonmin",lon)
+  call idba_set(this%handle_staz,"latmin",lat)
+end if
+
+if (present(coordmax)) then
+  CALL geo_coord_to_geo(coordmax)
+  CALL getval(coordmax, lat=lat,lon=lon)
+  call idba_set(this%handle_staz,"lonmax",lon)
+  call idba_set(this%handle_staz,"latmax",lat)
+end if
+
+nanavar=0
+
+if (present (anavar)) then
+                                ! creo la stringa con l'elenco
+  varlist = ''
+  DO i = 1, SIZE(anavar)
+    nanavar = nanavar + 1
+    IF (nanavar > 1) varlist(LEN_TRIM(varlist)+1:) = ',' 
+    varlist(LEN_TRIM(varlist)+1:) = TRIM(anavar(i))
+  ENDDO
+                                !print *,"varlist",varlist
+  call idba_set(this%handle_staz, "varlist",varlist )
+
+end if
+
+
 call idba_setcontextana(this%handle_staz)
-call idba_unset(this%handle_staz,"rep_cod")
-call idba_unset(this%handle_staz,"rep_memo")
 call idba_voglioquesto (this%handle_staz,N_ana)
 !print*,"numero di dati ",N_ana
 
@@ -434,6 +533,7 @@ do i=1,N_ana
                                 ! ind = firsttrue(qccli%v7d%dativar%r(:)%btable == nbtable)
                                 ! IF (ind<1) cycle ! non c'e'
   
+
   if (present(anavar).and. present(anavarkind))then
     ii=( firsttrue(anavar == btable))
     if (ii > 0)then
@@ -483,6 +583,7 @@ ntime = count_distinct(buffer%time, back=.TRUE.)
 ntimerange = count_distinct(buffer%timerange, back=.TRUE.)
 nlevel = count_distinct(buffer%level, back=.TRUE.)
 nnetwork = count_distinct(buffer%network, back=.TRUE.)
+if(ldegnet)nnetwork=1
 
 if (present(varkind))then
   ndativarr= count(varkind == "r")
@@ -630,7 +731,12 @@ vol7dtmp%ana=pack_distinct(buffer%ana, back=.TRUE.)
 vol7dtmp%time=pack_distinct(buffer%time, back=.TRUE.)
 vol7dtmp%timerange=pack_distinct(buffer%timerange, back=.TRUE.)
 vol7dtmp%level=pack_distinct(buffer%level, back=.TRUE.)
-vol7dtmp%network=pack_distinct(buffer%network, back=.TRUE.)
+
+if(ldegnet)then
+  vol7dtmp%network(1)=set_network
+else
+  vol7dtmp%network=pack_distinct(buffer%network, back=.TRUE.)
+end if
 
 !print*,"reti presenti", vol7dtmp%network%id,buffer%network%id
 
@@ -718,7 +824,7 @@ if ( present(attrkind).and. present(attr).and. present(var))then
 else  if (present(attr).and.present(var))then
 
   do i=1,size(var)
-    call init (vol7dtmp%dativarattr%c(i), btable=var(i))
+    if ( ndativarattrc > 0 )call init (vol7dtmp%dativarattr%c(i), btable=var(i))
   end do
 
 else
@@ -853,7 +959,7 @@ if ( present(anaattrkind) .and. present(anaattr) .and. present(anavar))then
 else  if (present(anaattr) .and. present (anavar))then
 
   do i=1,size(anavar)
-    call init(vol7dtmp%anavarattr%c(i), btable=anavar(i))
+    if ( nanavarattrc > 0 )call init(vol7dtmp%anavarattr%c(i), btable=anavar(i))
   end do
 
 else
@@ -954,8 +1060,11 @@ do i =1, N
    indtime = firsttrue(buffer(i)%time == vol7dtmp%time)
    indtimerange = firsttrue(buffer(i)%timerange == vol7dtmp%timerange)
    indlevel = firsttrue(buffer(i)%level == vol7dtmp%level)
-   indnetwork = firsttrue(buffer(i)%network == vol7dtmp%network)
-
+   if (ldegnet)then
+     indnetwork=1
+   else
+     indnetwork = firsttrue(buffer(i)%network == vol7dtmp%network)
+   endif
    !print *, indana,indtime,indlevel,indtimerange,indnetwork
 
    if(c_e(buffer(i)%dator))then
@@ -1097,7 +1206,12 @@ end if
 do i =1, N_ana
 
    indana = firsttrue(bufferana(i)%ana == vol7dtmp%ana)
-   indnetwork = firsttrue(bufferana(i)%network == vol7dtmp%network)
+
+   if (ldegnet)then
+     indnetwork=1
+   else
+     indnetwork = firsttrue(bufferana(i)%network == vol7dtmp%network)
+   endif
 
    if (indana < 1 .or. indnetwork < 1 )cycle
 
