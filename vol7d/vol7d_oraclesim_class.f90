@@ -64,8 +64,10 @@ END INTERFACE
 CONTAINS
 
 
-SUBROUTINE vol7d_oraclesim_init(this)
+SUBROUTINE vol7d_oraclesim_init(this, dsn, user, password, write, wipe)
 TYPE(vol7d_oraclesim),INTENT(out) :: this
+CHARACTER(len=*), INTENT(in),OPTIONAL :: dsn, user, password
+LOGICAL,INTENT(in),OPTIONAL :: wipe, WRITE
 
 CALL vol7d_oraclesim_alloc(nmaxmin)
 IF (.NOT. ALLOCATED(vartable)) CALL vol7d_oraclesim_setup_conv()
