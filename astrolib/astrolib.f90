@@ -1,6 +1,5 @@
 module astrolib
 
-  use missing_values
   use phis_const
 
   implicit none
@@ -70,13 +69,13 @@ CONTAINS
     twx = hb - ha	     !  length of twilight in radians
     twx = 12.0*twx/pi	     !	length of twilight in hours 
 
+!Conversion of angle to hours and minutes
     daylen = degs*ha/7.5
       
     if (daylen<0.0001)daylen = 0.0
 
-! inverno artico 
-    riset = 12.0 - 12.0 * ha/pi + tzone - longit/15.0 + equation/60.0
-    settm = 12.0 + 12.0 * ha/pi + tzone - longit/15.0 + equation/60.0
+    riset = 12.0 - 12.0 * ha/pi - tzone - longit/15.0 + equation/60.0
+    settm = 12.0 + 12.0 * ha/pi - tzone - longit/15.0 + equation/60.0
     
     noont = riset + 12.0 * ha/pi
     altmax = 90.0 + delta * degs - latit
@@ -227,7 +226,7 @@ real  function FNDAY (y,m,d,h)
     real::rad_max
     integer::igio,l
     real::daylen,twam,twpm,riset,settm,rlat_rad,real_alba,real_tram
-    real::rappsol,daily_et_radiation
+    real::rappsol
     integer::mant_alba,mant_tram
     
     data mese/31,28,31,30,31,30,31,31,30,31,30,31/
@@ -246,7 +245,7 @@ real  function FNDAY (y,m,d,h)
 
 !converto la latitudine in radianti
     rlat_rad= rlat / 180 * 4 * atan (1.)
-    radi=radi*0.23892        ! da watt/m2  a cal/cm2  
+    radi=radi*0.23892                       ! da watt/m2  a cal/cm2  
 
 !radiazione massima astronomica in MegaJoule/m2
     rad_max= DAILY_ET_RADIATION (igio,rlat_rad)
@@ -297,7 +296,7 @@ real  function FNDAY (y,m,d,h)
 !-----------------------------------------------------------------------------
 
 
-  function DAILY_ET_RADIATION (giul,rlat)
+real  function DAILY_ET_RADIATION (giul,rlat)
 
 !input : giorno giuliano - Intero
 !input : latitudine in Radianti della localita' (negativa emisfero sud)- Reale
@@ -308,13 +307,12 @@ real  function FNDAY (y,m,d,h)
 
     integer,intent(in)::giul
     real,intent(in)::rlat
-    real::daily_et_radiation,soldec,omega
-    real::solar_declination,sunset_hour_angle,earth_sun_distance
+    real::soldec,omega
     
-    soldec=SOLAR_DECLINATION(giuliano)
+    soldec=SOLAR_DECLINATION(giul)
     omega=SUNSET_HOUR_ANGLE (rlat,soldec)
-    
-    daily_et_radiation= 37.5 *  EARTH_SUN_DISTANCE (giuliano) * &
+
+    daily_et_radiation= 37.5 *  EARTH_SUN_DISTANCE (giul) * &
          &( omega * sin (rlat) * sin (soldec) + cos (rlat) * &
          &cos(soldec) * sin (omega))
 
@@ -334,8 +332,7 @@ real  function FNDAY (y,m,d,h)
     real::x
 
     x = -tan (rlat) * tan (soldec)
-    SUNSET_HOUR_ANGLE= atan ( -x / sqrt ( -x * x +1 ) ) &
-         &+2 * atan (1.)
+    SUNSET_HOUR_ANGLE= atan ( -x / sqrt ( -x * x +1 ) ) +2 * atan (1.)
 
     return
   end function SUNSET_HOUR_ANGLE
