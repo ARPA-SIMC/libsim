@@ -77,6 +77,8 @@ examples/Makefile
 data/Makefile
 qc/Makefile
 termolib/Makefile
+doc/Doxyfile
+doc/Makefile
 ])
 
 AC_OUTPUT
