@@ -1,3 +1,5 @@
+!> Utilità e definizioni per il controllo di qualità
+
 module modqc
 
 ! Copyright (C) 2007
@@ -24,27 +26,31 @@ implicit none
 
 public
 
-
+!> Definisce il livello di attendibilità per i dati validi
 type :: qcpartype
   integer (kind=int_b):: att
 end type qcpartype
 
+!> Per dafault i dati con confidenza inferiore a 50 vengono scartati
 type(qcpartype)  :: qcpar=qcpartype(50)
 
 
+!> Test di validità dei dati
 interface vd
   module procedure vdi,vdb
 end interface
 
+!> Test di dato invalidato
 interface invalidated
   module procedure invalidatedi,invalidatedb
 end interface
 
 contains
 
+!> Test di validità di dati integer
 logical function vdi(flag)
 
-integer  :: flag
+integer  :: flag !< confidenza
       
 if(flag < qcpar%att .and. c_e(flag))then
   vdi=.false.
@@ -55,9 +61,12 @@ end if
 return
 end function vdi
 
+
+!> Test di validità di dati byte
+
 logical function vdb(flag)
 
-integer (kind=int_b) :: flag
+integer (kind=int_b) :: flag !< confidenza
       
 if(flag < qcpar%att .and. c_e(flag))then
   vdb=.false.
@@ -69,10 +78,10 @@ return
 end function vdb
 
 
-
+!> Test di dato invalidato intero
 logical function invalidatedi(flag)
 
-integer  :: flag
+integer  :: flag !< attributo di invalidazione del dato
       
 if(c_e(flag))then
   invalidatedi=.true.
@@ -83,9 +92,12 @@ end if
 return
 end function invalidatedi
 
+
+!> Test di dato invalidato byte
+
 logical function invalidatedb(flag)
 
-integer (kind=int_b) :: flag
+integer (kind=int_b) :: flag !< attributo di invalidazione del dato
       
 if(c_e(flag))then
   invalidatedb=.true.

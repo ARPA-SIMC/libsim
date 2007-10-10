@@ -1,4 +1,13 @@
+!>\example esempio_qccli.f90
+!! Esempio di utilizzo della classe qccli.
+
+!>\brief Controllo di qualità climatico
+
+!> \todo Bisognerebbe validate il volume sottoposto al controllo per vedere se ha i requisiti
+
+
 module modqccli
+
 
 use modqc
 use vol7d_class
@@ -9,29 +18,32 @@ implicit none
 
 public
 
+!>\brief Oggetto principale per il controllo diqualità
 type :: qcclitype
 
-  type (vol7d),pointer :: v7d
-  type (vol7d) :: clima
-  integer,pointer :: data_id_in(:,:,:,:,:)
-  integer,pointer :: data_id_out(:,:,:,:,:)
+  type (vol7d),pointer :: v7d !< Volume dati da controllare
+  type (vol7d) :: clima !< Clima di tutte le variabili da controllare
+  integer,pointer :: data_id_in(:,:,:,:,:) !< Indici dati del DB in input
+  integer,pointer :: data_id_out(:,:,:,:,:) !< Indici dati del DB in output
 
-  integer, pointer :: in_macroa(:)
+  integer, pointer :: in_macroa(:) !< Maacroarea di appartenenza delle stazioni
 
-  TYPE(geo_coordvect),POINTER :: macroa(:)
-  CHARACTER(len=512) :: filesim
+  TYPE(geo_coordvect),POINTER :: macroa(:) !< serie di coordinate che definiscono le macroaree
 
 end type qcclitype
 
 
+!>\brief Inizializzazione
 interface init
   module procedure qccliinit
 end interface
 
+!>\brief  Allocazione di memoria
 interface alloc
   module procedure qcclialloc
 end interface
 
+!>\brief Cancellazione
 interface delete
   module procedure qcclidelete
 end interface
@@ -39,14 +51,17 @@ end interface
 
 contains
 
+!>\brief Controllo di qualità climatico
 subroutine qccliinit(qccli,v7d,ier,data_id_in,macropath,climapath)
 
-type(qcclitype),intent(in out) :: qccli
-integer ,intent(out) :: ier
-integer :: istat,iuni
+type(qcclitype),intent(in out) :: qccli !< Oggetto per il controllo climatico
 type (vol7d),intent(in),target:: v7d
-integer,intent(in),optional,target:: data_id_in(:,:,:,:,:)
-character(len=512),intent(in),optional :: macropath,climapath
+integer ,intent(out) :: ier !< condizione di errore
+integer,intent(in),optional,target:: data_id_in(:,:,:,:,:) !< Indici dei dati in DB
+character(len=512),intent(in),optional :: macropath !< file delle macroaree
+character(len=512),intent(in),optional :: climapath !< file con il volume del clima
+
+integer :: istat,iuni
 character(len=512) :: filepath
 
 ier=0
@@ -86,13 +101,13 @@ return
 end subroutine qccliinit
 
 
-
+!>\brief Allocazioni di memoria
 subroutine qcclialloc(qccli,ier)
                                 ! pseudo costruttore con distruttore automatico
 
-type(qcclitype),intent(in out) :: qccli
+type(qcclitype),intent(in out) :: qccli !< Oggetto per il controllo climatico
+integer ,intent(out):: ier !< stato di errore
 
-integer ,intent(out):: ier
 integer :: istat,istatt,nv
 integer :: sh(5)
 
@@ -138,11 +153,13 @@ return
 end subroutine qcclialloc
 
 
+!>\brief Deallocazione della memoria
+
 subroutine qcclidealloc(qccli,ier)
                                 ! pseudo distruttore
 
-type(qcclitype),intent(in out) :: qccli
-integer,intent(out) :: ier
+type(qcclitype),intent(in out) :: qccli !< Oggetto per l controllo climatico
+integer,intent(out) :: ier !< Condizione di errore
 
 ier=0
 
@@ -166,11 +183,13 @@ return
 end subroutine qcclidealloc
 
 
+!>\brief Cancellazione
 
 subroutine qcclidelete(qccli,ier)
                                 ! decostruttore a mezzo
-type(qcclitype),intent(in out) :: qccli
-integer ,intent(out) :: ier
+type(qcclitype),intent(in out) :: qccli !< Oggetto per l controllo climatico
+integer ,intent(out) :: ier !< Condizione di errore
+
 integer :: istat
 
 ier=0
@@ -183,13 +202,32 @@ return
 end subroutine qcclidelete
 
 
+!>\brief Controllo di Qualità climatico
+!!
+!!Questo è il vero e proprio controllo di qualità climatico.
+!!Avendo a disposizione un volume dati climatico ed in particolare
+!!contenente i percentili suddivisi per area e per altezza sul livello
+!!del mare, per ogni mese dell'anno viene selezionato il percentile 80% e sulla base di questo 
+!!vengono assegnate le opportune confidenze.
+
+!> \todo Da terminare la documentazione
+
+
+
 SUBROUTINE QuaConCLI (qccli,ier,tbattrin,tbattrout,&
  anamask,timemask,levelmask,timerangemask,varmask,networkmask)
 
-type(qcclitype),intent(in out) :: qccli
-integer ,intent(out) :: ier
-logical ,intent(in),optional :: anamask(:),timemask(:),levelmask(:),timerangemask(:),varmask(:),networkmask(:)
-character (len=10) ,intent(in),optional :: tbattrin,tbattrout
+
+type(qcclitype),intent(in out) :: qccli !< Oggetto per il controllo di qualità
+integer ,intent(out) :: ier !< Condizione di errore
+character (len=10) ,intent(in),optional :: tbattrin !< <ttributo con la confidenza in input
+character (len=10) ,intent(in),optional :: tbattrout !< <ttributo con la confidenza in output
+logical ,intent(in),optional :: anamask(:) !< Filtro sulle anagrafiche
+logical ,intent(in),optional :: timemask(:) !< Filtro sul tempo
+logical ,intent(in),optional :: levelmask(:) !< Filtro sui livelli
+logical ,intent(in),optional :: timerangemask(:) !< filtro sui timerange
+logical ,intent(in),optional :: varmask(:) !< Filtro sulle variabili
+logical ,intent(in),optional :: networkmask(:) !< Filtro sui network
 CHARACTER(len=vol7d_ana_lenident) :: ident
 REAL(kind=fp_geo) :: lat,lon
 integer :: imese
@@ -375,6 +413,7 @@ else
 end if
 
 end subroutine macro_height
+
 
 
 !!$subroutine qccli_validate(qccli)

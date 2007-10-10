@@ -34,7 +34,7 @@ CALL init(v7d,dsn="test",user="test",password="")
 ! Importo i dati, variabile 'B13011' della btable (precipitazione),
 ! rete 18 (FIDUPO), 20 (SIMNBO), 21 (SIMNPR)
 CALL import(v7d, 'B13011', network, timei=ti, timef=tf, set_network=dummy_network)
-PRINT*,SHAPE(v7d%vol7d%voldatir)
+! PRINT*,SHAPE(v7d%vol7d%voldatir)
 
 
 ! Cumulo i dati su intervalli orari

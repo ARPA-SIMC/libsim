@@ -52,6 +52,16 @@ CREATE_SUBDIRS         = NO
 
 OUTPUT_LANGUAGE        = Italian
 
+
+#INPUT_ENCODING This tag can be used to specify the character encoding
+#of the source files that doxygen parses. Internally doxygen uses the
+#UTF-8 encoding, which is also the default input encoding. Doxygen uses
+#libiconv (or the iconv built into libc) for the transcoding. See the
+#libiconv documentation for the list of possible encodings.
+
+INPUT_ENCODING = ISO-8859-1
+
+
 # This tag can be used to specify the encoding used in the generated output. 
 # The encoding is not always determined by the language that is chosen, 
 # but also whether or not the output is meant for Windows or non-Windows users. 
@@ -464,7 +474,7 @@ WARN_LOGFILE           =
 # directories like "/usr/src/myproject". Separate the files or directories 
 # with spaces.
 
-INPUT                  = @top_srcdir@/base @top_srcdir@/vol7d @top_srcdir@/grib
+INPUT                  = @top_srcdir@/base @top_srcdir@/vol7d @top_srcdir@/grib @top_srcdir@/qc
 
 #INPUT = @top_srcdir@/src/main @top_srcdir@/doc/general @top_srcdir@/src/datatypes/Mesh.F90 @top_srcdir@/src/utils
 
@@ -507,7 +517,7 @@ EXCLUDE_PATTERNS       =
 # directories that contain example code fragments that are included (see 
 # the \include command).
 
-EXAMPLE_PATH           = 
+EXAMPLE_PATH           = @top_srcdir@/examples
 
 # If the value of the EXAMPLE_PATH tag contains directories, you can use the 
 # EXAMPLE_PATTERNS tag to specify one or more wildcard pattern (like *.cpp 
