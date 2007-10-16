@@ -257,7 +257,7 @@ end subroutine qcclidelete
 !!vengono assegnate le opportune confidenze.
 
 
-SUBROUTINE QuaConCLI (qccli,ier,tbattrin,tbattrout,&
+SUBROUTINE QuaConCLI (qccli,ier,tbattrin,tbattrout,perc,&
  anamask,timemask,levelmask,timerangemask,varmask,networkmask)
 
 
@@ -299,7 +299,7 @@ type(vol7d_var)  :: anavar
 if (present(perc))then
   lperc=perc
 else
-  perc=80
+  lperc=80
 end if
 
 if (present(tbattrin))then
@@ -389,7 +389,7 @@ do indana=1,size(qccli%v7d%ana)
               
               lat=0.0d0
               lon=0.0d0
-              write(ident,'("BOX-",2i2.2)')iarea,perc   ! macro-area e percentile
+              write(ident,'("BOX-",2i2.2)')iarea,lperc   ! macro-area e percentile
               call init(ana,lat=lat,lon=lon,ident=ident)
 
               CALL getval(qccli%v7d%time(indtime), month=imese)
@@ -423,11 +423,11 @@ do indana=1,size(qccli%v7d%ana)
                 !print*,"dato,clima ",datoqui,climaqui
                 if ( datoqui > climaqui) then
                   
-                  qccli%v7d%voldatiattrb(indana,indtime,indlevel,indtimerange,inddativarr,indnetwork,indtbattrout)=100-perc
+                  qccli%v7d%voldatiattrb(indana,indtime,indlevel,indtimerange,inddativarr,indnetwork,indtbattrout)=100-lperc
 
                 else
                   
-                  qccli%v7d%voldatiattrb(indana,indtime,indlevel,indtimerange,inddativarr,indnetwork,indtbattrout)=perc
+                  qccli%v7d%voldatiattrb(indana,indtime,indlevel,indtimerange,inddativarr,indnetwork,indtbattrout)=lperc
                   
                 end if
  
