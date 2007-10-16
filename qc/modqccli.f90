@@ -1,9 +1,55 @@
-!>\example esempio_qccli.f90
-!! Esempio di utilizzo della classe qccli.
 
-!>\brief Controllo di qualità climatico
+!>\brief Controllo di qualità climatico.
+!! Questo modulo permette di effettuare una valutazione della probabilità che un certo intervallo 
+!! di misura ha di verificarsi. Per fare ciò si utilizzano una serie di percentili precedentemente calcolati.
+!! Il clima (percentili) sono suddivisi per macroarea, altezza dal livello del mare e mese dell'anno.
+!!
+!! definizione delle macroaree:
+!! le macroaree sono tre bsate sulle macroaree definite piu'
+!! generalmente al SIM; queste prime macroaree sono definite dal file di
+!! default polipciv4.dat. Attribuendo una numerazione che parte da Sud e Est e scorre prima verso Nord
+!! le nuove aree vengono cosi' definite:
+!!  \arg area clima  1 -> macroarea SIM  7,8
+!!  \arg area clima  2 -> macroarea SIM  5,6
+!!  \arg area clima  3 -> macroarea SIM  1,2,3,4 
+!!
+!!Le altezze invece vengono cosi' definite:
+!!  classe altezza = (altezza+150)/250
+!! ottenendo un indice da 1 a 10 (inserendo altezze in metri).
+!! Questo indice viene utilizzato per selezionare un livello tipico utilizzato nella descrizione del clima 
+!! con leveltype=103:
+!! \arg livello(10) = (/50,175,375,625,875,1125,1375,1625,1875,2125/)
+!!
+!! Area e percentile vengono utilizzati per costruire l'ident dell'anagrafica del Vol7d del clima.
+!! Il clima infatti è memorizzato su file nel formato binario di Vol7d utilizzando come anno per i 
+!! dati il 1001, ora 00 e minuti 00, ora contenuto nel file climaprec.v7d.
+!! ecco come viene definito l'ident del clima:
+!! \arg write(ident,'("BOX-",2i2.2)')iarea,perc   ! macro-area e percentile
+!! In questo modo è possibile inserire nel Vol7d del clima qualsiasi parametro per leveltype e timerange.
+!! Il clima viene letto dalla init.
+!! Dopo l'allocazione di memoria le successive operazioni svolte da qccli sono principalmente le seguenti:
+!! \arg non trattare in alcun modo i dati invalidati (manualmente)
+!! \arg selezionare i dati per cui è possibile effettuare il controllo (area, variabile,confidenza, etc)
+!! \arg ai dati selezionati viene attribuita una confidenza pari al percentile richiesto se inferiore al valore fornito dal clima
+!! o 100-percentile se superiore 
+!!
+!! Per considerare valido un dato in ingresso (da sottoporre al controllo) è utilizzato in attributo dei dati 
+!! che deve contenere la flag di eventuale invalidazione (manuale); la confidenza al dato calcolata viene scritta
+!! in un attributo del dato. Questi due attributi possono essere specificati nella chiamata oppure assunti come 
+!! default relativamente al primo e secondo attributo ai dati del volume.
+!!
+!! Oltre all'attributo con la confidenza, se presente, viene scritto anche l'id relativo ai dati a cui sono
+!! state attribuite le confidenze, operazione necessaria per l'ottimizzazione della riscrittura dei dati.
+!!
+!!\ingroup qc
 
-!> \todo Bisognerebbe validate il volume sottoposto al controllo per vedere se ha i requisiti
+!> \todo Bisognerebbe validare il volume sottoposto al controllo per vedere se ha i requisiti.
+!!\todo Per ora il controllo climatico è stato sviluppato e testato per le precipitazioni: 
+!!gli altri parametri devono essere implementati apportando piccole modifiche. 
+!!
+
+!#!! Programma Esempio del controllo climatico per le precipitazioni:
+!#!! \include  esempio_qccli.f90
 
 
 module modqccli
@@ -25,9 +71,7 @@ type :: qcclitype
   type (vol7d) :: clima !< Clima di tutte le variabili da controllare
   integer,pointer :: data_id_in(:,:,:,:,:) !< Indici dati del DB in input
   integer,pointer :: data_id_out(:,:,:,:,:) !< Indici dati del DB in output
-
   integer, pointer :: in_macroa(:) !< Maacroarea di appartenenza delle stazioni
-
   TYPE(geo_coordvect),POINTER :: macroa(:) !< serie di coordinate che definiscono le macroaree
 
 end type qcclitype
@@ -51,12 +95,14 @@ end interface
 
 contains
 
-!>\brief Controllo di qualità climatico
+!>\brief Init del controllo di qualità climatico.
+!!Effettua la lettura dei file e altre operazioni di inizializzazione.
+
 subroutine qccliinit(qccli,v7d,ier,data_id_in,macropath,climapath)
 
 type(qcclitype),intent(in out) :: qccli !< Oggetto per il controllo climatico
-type (vol7d),intent(in),target:: v7d
-integer ,intent(out) :: ier !< condizione di errore
+type (vol7d),intent(in),target:: v7d !< Il volume Vol7d da controllare
+integer ,intent(out) :: ier !< condizione di errore ( tutto OK = O )
 integer,intent(in),optional,target:: data_id_in(:,:,:,:,:) !< Indici dei dati in DB
 character(len=512),intent(in),optional :: macropath !< file delle macroaree
 character(len=512),intent(in),optional :: climapath !< file con il volume del clima
@@ -185,6 +231,7 @@ end subroutine qcclidealloc
 
 !>\brief Cancellazione
 
+
 subroutine qcclidelete(qccli,ier)
                                 ! decostruttore a mezzo
 type(qcclitype),intent(in out) :: qccli !< Oggetto per l controllo climatico
@@ -202,16 +249,12 @@ return
 end subroutine qcclidelete
 
 
-!>\brief Controllo di Qualità climatico
-!!
+!>\brief Controllo di Qualità climatico.
 !!Questo è il vero e proprio controllo di qualità climatico.
-!!Avendo a disposizione un volume dati climatico ed in particolare
-!!contenente i percentili suddivisi per area e per altezza sul livello
-!!del mare, per ogni mese dell'anno viene selezionato il percentile 80% e sulla base di questo 
+!!Avendo a disposizione un volume dati climatico 
+!!contenente i percentili suddivisi per area, altezza sul livello
+!!del mare, per mese dell'anno viene selezionato il percentile (default=80%) e sulla base di questo 
 !!vengono assegnate le opportune confidenze.
-
-!> \todo Da terminare la documentazione
-
 
 
 SUBROUTINE QuaConCLI (qccli,ier,tbattrin,tbattrout,&
@@ -220,18 +263,20 @@ SUBROUTINE QuaConCLI (qccli,ier,tbattrin,tbattrout,&
 
 type(qcclitype),intent(in out) :: qccli !< Oggetto per il controllo di qualità
 integer ,intent(out) :: ier !< Condizione di errore
-character (len=10) ,intent(in),optional :: tbattrin !< <ttributo con la confidenza in input
-character (len=10) ,intent(in),optional :: tbattrout !< <ttributo con la confidenza in output
+character (len=10) ,intent(in),optional :: tbattrin !< attributo con la confidenza in input
+character (len=10) ,intent(in),optional :: tbattrout !< attributo con la confidenza in output
 logical ,intent(in),optional :: anamask(:) !< Filtro sulle anagrafiche
 logical ,intent(in),optional :: timemask(:) !< Filtro sul tempo
 logical ,intent(in),optional :: levelmask(:) !< Filtro sui livelli
 logical ,intent(in),optional :: timerangemask(:) !< filtro sui timerange
 logical ,intent(in),optional :: varmask(:) !< Filtro sulle variabili
 logical ,intent(in),optional :: networkmask(:) !< Filtro sui network
+integer,intent(in),optional :: perc   !< Percentile soglia da usare nel controllo(default: 80)
+
+
 CHARACTER(len=vol7d_ana_lenident) :: ident
 REAL(kind=fp_geo) :: lat,lon
 integer :: imese
-integer :: perc = 80
                                 !local
 integer :: i,j,indtbattrin,indtbattrout,i1,i2,i3,i4,i5,i6
 logical :: anamaskl(size(qccli%v7d%ana)), timemaskl(size(qccli%v7d%time)), levelmaskl(size(qccli%v7d%level)), &
@@ -240,7 +285,7 @@ logical :: anamaskl(size(qccli%v7d%ana)), timemaskl(size(qccli%v7d%time)), level
 integer :: indana ,indanavar, indtime ,indlevel ,indtimerange ,inddativarr, indnetwork
 integer :: indcana,           indctime,indclevel,indctimerange,indcdativarr,indcnetwork
 real :: datoqui,climaqui
-integer :: altezza,mh,iarea
+integer :: altezza,mh,iarea,lperc
 
 
 TYPE(vol7d_ana)  :: ana
@@ -250,6 +295,12 @@ type(vol7d_var)  :: anavar
 
 
 !call qccli_validate (qccli)
+
+if (present(perc))then
+  lperc=perc
+else
+  perc=80
+end if
 
 if (present(tbattrin))then
   indtbattrin = firsttrue(qccli%v7d%dativarattr%r(:)%btable == tbattrin)
@@ -425,4 +476,8 @@ end subroutine macro_height
 !!$end subroutine qccli_validate
 
 end module modqccli
+
+
+!> \example esempio_qccli.f90
+!! Un programma esempio del modulo qccli
 

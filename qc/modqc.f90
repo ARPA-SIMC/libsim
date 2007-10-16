@@ -1,4 +1,10 @@
+!> \defgroup qc 
+!! Procedure per il controllo di qualità.
+!! Al momento è implementato solo il controllo di qualità climatico.
+
+
 !> Utilità e definizioni per il controllo di qualità
+!!\ingroup qc
 
 module modqc
 
