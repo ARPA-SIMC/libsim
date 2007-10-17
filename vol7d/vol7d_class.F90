@@ -1,3 +1,12 @@
+!>\brief  Modulo base per i volumi Vol7d
+!!
+!!Questo modulo definisce gli oggetti e i metodi per gestire
+!!volumi di dati sparsi.
+!!
+!!Programma che scrive su file  un volume vol7d letto da una serie di file ASCII.
+!!\include esempio_qc_convert.f90
+
+
 MODULE vol7d_class
 USE kinds
 USE datetime_class
@@ -80,10 +89,13 @@ INTERFACE delete
   MODULE PROCEDURE vol7d_delete
 END INTERFACE
 
+
+!> Scrittura su file
 INTERFACE write_on_file
   MODULE PROCEDURE vol7d_write_on_file
 END INTERFACE
 
+!> Lettura da file
 INTERFACE read_from_file
   MODULE PROCEDURE vol7d_read_from_file
 END INTERFACE
@@ -117,7 +129,8 @@ PRIVATE vol7d_get_volr, vol7d_get_vold, vol7d_get_voli, vol7d_get_volb, &
  volptr1di, volptr2di, volptr3di, volptr4di, volptr5di, volptr6di, volptr7di, &
  volptr1db, volptr2db, volptr3db, volptr4db, volptr5db, volptr6db, volptr7db, &
  volptr1dc, volptr2dc, volptr3dc, volptr4dc, volptr5dc, volptr6dc, volptr7dc, &
- vol7d_nullifyr, vol7d_nullifyd, vol7d_nullifyi, vol7d_nullifyb, vol7d_nullifyc
+ vol7d_nullifyr, vol7d_nullifyd, vol7d_nullifyi, vol7d_nullifyb, vol7d_nullifyc, &
+ vol7d_write_on_file, vol7d_read_from_file
 
 
 CONTAINS
@@ -925,14 +938,21 @@ END SUBROUTINE vol7d_diff_only
 #define VOL7D_POLY_TYPE vol7d_var
 #include "vol7d_class_desc_templ.F90"
 
-
+!>\brief Scrittura su file di un volume Vol7d.
+!! Scrittura su file unformatted di un intero volume Vol7d.
+!! Il volume viene serializzato e scritto su file.
+!! Se non viene fornita l'unità su cui è stata precedentemente aperto un file
+!! viene aperto un file di default con nome pari al nome del programma in esecuzione con postfisso ".v7d".
+!! Come parametro opzionale c'è la description che insieme alla data corrente viene inserita nell'header del file.
+!!
 
 subroutine vol7d_write_on_file (this,unit,description)
 
-integer,optional :: unit
+TYPE(vol7d),INTENT(IN) :: this !< volume vol7d da scrivere 
+integer,optional :: unit !< unità su cui scrivere
+character(len=*),INTENT(IN),optional :: description !< descrizione del volume
+
 integer :: lunit
-TYPE(vol7d),INTENT(IN) :: this
-character(len=*),INTENT(IN),optional :: description
 character(len=254) :: ldescription,arg
 integer :: nana, ntime, ntimerange, nlevel, nnetwork, &
  ndativarr, ndativari, ndativarb, ndativard, ndativarc,&
@@ -1101,11 +1121,18 @@ if (.not. present(unit)) close(unit=lunit)
 end subroutine vol7d_write_on_file
 
 
+!>\brief Lettura da file di un volume Vol7d.
+!! Lettura da file unformatted di un intero volume Vol7d.
+!! Questa subroutine comprende vol7d_alloc e vol7d_alloc_vol
 
 subroutine vol7d_read_from_file (this,unit,description,tarray)
 
-integer,intent(in) :: unit
-TYPE(vol7d),INTENT(OUT) :: this
+TYPE(vol7d),INTENT(OUT) :: this !< Volume vol7d da leggere
+integer,intent(in) :: unit !< unità su cui è stato aperto un file
+character(len=*),INTENT(out),optional :: description !< descrizione del volume letto
+integer,intent(out),optional :: tarray(8) !< vettore come definito da "date_and_time" della data di scrittura del volume
+
+
 integer :: nana, ntime, ntimerange, nlevel, nnetwork, &
  ndativarr, ndativari, ndativarb, ndativard, ndativarc,&
  ndatiattrr, ndatiattri, ndatiattrb, ndatiattrd, ndatiattrc,&
@@ -1114,9 +1141,7 @@ integer :: nana, ntime, ntimerange, nlevel, nnetwork, &
  nanaattrr, nanaattri, nanaattrb, nanaattrd, nanaattrc,&
  nanavarattrr, nanavarattri, nanavarattrb, nanavarattrd, nanavarattrc
 
-character(len=*),INTENT(out),optional :: description
 character(len=254) :: ldescription
-integer,intent(out),optional :: tarray(8)
 integer :: ltarray(8)
 
 
@@ -1232,3 +1257,8 @@ end subroutine vol7d_read_from_file
 
 END MODULE vol7d_class
 
+!>\example esempio_qc_convert.f90
+!!\brief Programma esempio semplice per la scrittura su file di un volume vol7d 
+!!
+!!Programma che scrive su file  un volume vol7d letto da una serie di file ASCII.
+!!Questo programma scrive i dati del clima che poi verranno letti da modqccli

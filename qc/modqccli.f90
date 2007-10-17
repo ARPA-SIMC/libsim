@@ -47,9 +47,8 @@
 !!\todo Per ora il controllo climatico è stato sviluppato e testato per le precipitazioni: 
 !!gli altri parametri devono essere implementati apportando piccole modifiche. 
 !!
-
-!#!! Programma Esempio del controllo climatico per le precipitazioni:
-!#!! \include  esempio_qccli.f90
+!! Programma Esempio del controllo climatico per le precipitazioni:
+!! \include  esempio_qccli.f90
 
 
 module modqccli
@@ -257,7 +256,7 @@ end subroutine qcclidelete
 !!vengono assegnate le opportune confidenze.
 
 
-SUBROUTINE QuaConCLI (qccli,ier,tbattrin,tbattrout,perc,&
+SUBROUTINE quaconcli (qccli,ier,tbattrin,tbattrout,perc,&
  anamask,timemask,levelmask,timerangemask,varmask,networkmask)
 
 
@@ -449,7 +448,7 @@ end do
 ier=0
 return
 
-end subroutine QUACONCLI
+end subroutine quaconcli
 
 
 subroutine macro_height(altezza,mh)
