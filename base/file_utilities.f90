@@ -1,28 +1,24 @@
+!> \brief Utilità per i file.
+!!
+!! Questo modulo raccoglie utilità di uso generale legate alla gestione dei file.
+!! \ingroup base
 MODULE file_utilities
 USE err_handling
 IMPLICIT NONE
 
-!omstart file_utilities
-!idx Modulo di utiit&agrave; per la gestione dei file
-!Questo modulo definisce le seguenti routine/funzioni:
-!
-!FUNCTION getunit()
-!INTEGER :: unit
-!
-!Restituisce un numero intero associato ad un'unit&agrave; di file libera,
-!utilizzabilie in una OPEN() fortran; restituisce -1 in caso di errore
-!
-!Esempio di utilizzo:
-!INTEGER :: n
-!...
-!n=getunit()
-!OPEN(n, FILE='ostregheta.txt')
-!
-!omend
-
-
 CONTAINS
 
+!> Restituisce il numero di un'unità I/O Fortran attualmente non
+!! utilizzata. Restituisce -1 in caso di errore. Da inserire in un'istruzione
+!! fortran \c OPEN. Esempio di utilizzo:
+!! \code
+!! USE file_utilities
+!! ...
+!! INTEGER :: n
+!! ...
+!! n=getunit()
+!! OPEN(n, FILE='ostregheta.txt')
+!! \endcode
 FUNCTION getunit() RESULT(unit)
 INTEGER :: unit
 

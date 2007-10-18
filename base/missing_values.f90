@@ -1,20 +1,10 @@
-! Copyright (C) 2007
-
-! Questo programma Ã¨ software libero; Ã¨ lecito ridistribuirlo e/o
-! modificarlo secondo i termini della Licenza Pubblica Generica SMR come
-! pubblicata da ARPA SMR ; o la versione 1 della licenza o (a scelta)
-! una versione successiva.
-
-! Questo programma Ã¨ distribuito nella speranza che sia utile, ma SENZA
-! ALCUNA GARANZIA; senza neppure la garanzia implicita di
-! COMMERCIABILITÃ€ o di APPLICABILITÃ€ PER UN PARTICOLARE SCOPO. Si veda
-! la Licenza Pubblica Generica SMR per avere maggiori dettagli.
-
-! Ognuno dovrebbe avere ricevuto una copia della Licenza Pubblica
-! Generica SMR insieme a questo programma; in caso contrario, la si puÃ²
-! ottenere da Agenzia Regionale Prevenzione e Ambiente (ARPA) Servizio
-! Idro Meteorologico  (SIM), Viale Silvani 6, 40122 Bologna, Italia
-
+!> \brief Valori mancanti.
+!!
+!! Questo modulo fornisce strumenti per gestire i valori
+!! mancanti per vari tipi di dati.  È importante usare le costanti del
+!! tipo giusto per i propri dati per evitare conversioni automatiche che
+!! darebbero risultati errati.
+!! \ingroup base
 MODULE missing_values
 USE kinds
 IMPLICIT NONE
@@ -45,30 +35,29 @@ IMPLICIT NONE
 !vedi kinds
 !omend
 
-REAL, PARAMETER :: rmiss = HUGE(1.0)
-REAL(kind=fp_s), PARAMETER :: rsmiss = HUGE(1.0_fp_s)
-REAL(kind=fp_d), PARAMETER :: rdmiss = HUGE(1.0_fp_d)
-REAL(kind=fp_d), PARAMETER :: dmiss = rdmiss
-INTEGER, PARAMETER :: imiss = HUGE(0)
-INTEGER(kind=int_b), PARAMETER :: ibmiss = HUGE(0_int_b)
-INTEGER(kind=int_b), PARAMETER :: bmiss = ibmiss
-INTEGER(kind=int_s), PARAMETER :: ismiss = HUGE(0_int_s)
-INTEGER(kind=int_l), PARAMETER :: ilmiss = HUGE(0_int_l)
-CHARACTER(len=1), PARAMETER :: cmiss = char(0)
+REAL, PARAMETER :: rmiss = HUGE(1.0) !< reale di default
+REAL(kind=fp_s), PARAMETER :: rsmiss = HUGE(1.0_fp_s) !< reale a singola precisione \a (kind=fp_s)
+REAL(kind=fp_d), PARAMETER :: rdmiss = HUGE(1.0_fp_d) !< reale a doppia precisione \a (kind=fp_d)
+REAL(kind=fp_d), PARAMETER :: dmiss = rdmiss !< 
+INTEGER, PARAMETER :: imiss = HUGE(0) !< intero di default
+INTEGER(kind=int_b), PARAMETER :: ibmiss = HUGE(0_int_b) !< intero ad 1 byte \a (kind=int_b)
+INTEGER(kind=int_b), PARAMETER :: bmiss = ibmiss !< 
+INTEGER(kind=int_s), PARAMETER :: ismiss = HUGE(0_int_s) !< intero a 2 byte \a (kind=int_s)
+INTEGER(kind=int_l), PARAMETER :: ilmiss = HUGE(0_int_l) !< intero a 4 byte \a (kind=int_l)
+CHARACTER(len=1), PARAMETER :: cmiss = char(0) !< carattere (qualsiasi lunghezza)
 
 
-interface c_e
-   module procedure c_e_b, c_e_s, c_e_l, c_e_r, c_e_d, c_e_c
-   
-end interface
+!> Insieme di funzioni che restitiuscono \a .TRUE. se l'argomento è un dato valido 
+!! e \a .FALSE. se è mancante; è richiamabile per tutti i tipi definiti sopra.
+INTERFACE c_e
+  MODULE PROCEDURE c_e_b, c_e_s, c_e_l, c_e_r, c_e_d, c_e_c
+END INTERFACE
 
+PUBLIC
 
-public
+CONTAINS
 
-
-contains
-
-  
+!> Controlla se l'argomento byte è un dato valido
   logical function c_e_b(var)
 
 !OMSTART c_e_b
@@ -83,7 +72,7 @@ contains
 !	C_E_B	LOGICAL	.TRUE.se il dato e` presente
 !OMEND
 
-    integer(kind=int_b)  :: var
+    integer(kind=int_b)  :: var !< variabile da controllare
 
     c_e_b=.true.
     if (var == ibmiss)c_e_b= .FALSE. 
@@ -91,6 +80,7 @@ contains
     end function c_e_b
 
 
+!> Controlla se l'argomento short è un dato valido
     logical function c_e_s(var)
 
 !OMSTART c_e_i
@@ -105,7 +95,7 @@ contains
 !	C_E_i	LOGICAL	.TRUE.se il dato e` presente
 !OMEND
 
-    integer (kind=int_s) ::  var
+    integer (kind=int_s) ::  var !< variabile da controllare
 
     c_e_s=.true.
     if (var == ismiss)c_e_s= .FALSE. 
@@ -113,6 +103,7 @@ contains
     end function c_e_s
 
 
+!> Controlla se l'argomento long è un dato valido
     logical function c_e_l(var)
 
 !OMSTART c_e_l
@@ -127,7 +118,7 @@ contains
 !	C_E_l	LOGICAL	.TRUE.se il dato e` presente
 !OMEND
 
-    integer (kind=int_l) ::  var
+    integer (kind=int_l) ::  var !< variabile da controllare
 
     c_e_l=.true.
     if (var == ilmiss)c_e_l= .FALSE. 
@@ -137,6 +128,7 @@ contains
 
 
 
+!> Controlla se l'argomento real è un dato valido
     logical function c_e_r(var)
 
 !OMSTART c_e_r
@@ -151,13 +143,14 @@ contains
 !	C_E_R	LOGICAL	.TRUE.se il dato e` presente
 !OMEND
 
-    real :: var
+    real :: var !< variabile da controllare
 
     c_e_r=.true.
     if (var == rmiss)c_e_r= .FALSE. 
     return
     end function c_e_r
 
+!> Controlla se l'argomento double è un dato valido
     logical function c_e_d(var)
 
 !OMSTART c_e_d
@@ -172,7 +165,7 @@ contains
 !	C_E_D	LOGICAL	.TRUE.se il dato e` presente
 !OMEND
 
-    real (kind=fp_d) ::  var
+    real (kind=fp_d) ::  var !< variabile da controllare
 
     c_e_d=.true.
     if (var == rdmiss)c_e_d= .FALSE. 
@@ -181,6 +174,7 @@ contains
 
 
 
+!> Controlla se l'argomento character è un dato valido
     logical function c_e_c(var)
 !OMSTART C_E_C
 !	function c_e_c(var)
@@ -194,7 +188,7 @@ contains
 !	C_E_C	LOGICAL		.TRUE.se il dato e` presente
 !OMEND
 
-      character (len=*) var
+      character (len=*) var !< variabile da controllare
 
       c_e_c=.true.
       if (var == cmiss)c_e_c=.false.

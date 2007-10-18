@@ -1,3 +1,17 @@
+!> \brief Classi per la gestione delle coordinate temporali.
+!! 
+!! Questo module definisce un paio di classi per la gestione di
+!! date assolute e di intervalli temporali.
+!! Entrambe le classi hanno le componenti di tipo \c PRIVATE, per
+!! cui non possono essere manipolate direttamente ma solo tramite i
+!! relativi metodi.  Attualmente la precisione massima consentita è di un
+!! minuto, mentre l'estensione delle date rappresentabili va dall'anno 1
+!! all'anno 4074 d.C. circa, ipotizzando un calendario gregoriano per
+!! tutto il periodo.  Questo fatto implica che le date precedenti
+!! all'introduzione del calendario gregoriano avranno discrepanze di uno
+!! o più giorni rispetto alle date storiche "vere", ammesso che
+!! qualcuno conosca queste ultime.
+!! \ingroup base
 MODULE datetime_class
 USE kinds
 USE err_handling
@@ -6,19 +20,29 @@ IMPLICIT NONE
 
 INTEGER, PARAMETER :: dateint=SELECTED_INT_KIND(13)
 
+!> Classe che indica un istante temporale assoluto.
 TYPE datetime
   PRIVATE
   INTEGER :: iminuti
 END TYPE  datetime
 
+!> Classe che indica un intervallo temporale relativo.
+!! Può assumere anche valori <0. Può assumere  valori "puri", cioè
+!! intervalli temporali di durata fissa, e valori "popolari", cioè
+!! intervalli di durata variabile in unità di mesi e/o anni, o anche
+!! valori misti, cioè mesi/anni + un intervallo fisso; tuttavia negli
+!! ultimi 2 casi le operazioni che si possono effettuare con
+!! oggetti di questa classe sono limitate.
 TYPE timedelta
   PRIVATE
   INTEGER :: iminuti, month, year
 END TYPE timedelta
 
-
+!> valore mancante per datetime
 TYPE(datetime), PARAMETER :: datetime_miss=datetime(imiss)
+!> valore mancante per timedelta
 TYPE(timedelta), PARAMETER :: timedelta_miss=timedelta(imiss, 0, 0)
+!> intervallo timedelta di durata nulla
 TYPE(timedelta), PARAMETER :: timedelta_0=timedelta(0, 0, 0)
 
 INTEGER(kind=dateint), PARAMETER :: &
@@ -52,58 +76,135 @@ PUBLIC datetime, datetime_miss, init, delete, getval, &
  timedelta_ge, timedelta_gesv, timedelta_le, timedelta_lesv, &
  timedelta_add, timedelta_sub, timedelta_mod, mod
 
+!> Costruttori per le classi datetime e timedelta. Devono essere richiamati
+!! per tutti gli oggetti di questo tipo definiti in un programma
+!! tranne i casi in cui un oggetto viene creato per assegnazione.
 INTERFACE init
   MODULE PROCEDURE datetime_init, timedelta_init
 END INTERFACE
 
+!> Distruttori per le 2 classi. Distruggono gli oggetti in maniera pulita,
+!! assegnando loro un valore mancante.
 INTERFACE delete
   MODULE PROCEDURE datetime_delete, timedelta_delete
 END INTERFACE
 
+!> Restituiscono il valore dell'oggetto nella forma desiderata.
 INTERFACE getval
   MODULE PROCEDURE datetime_getval, timedelta_getval
 END INTERFACE
 
+!> Operatore logico di uguaglianza tra oggetti della stessa classe.
+!! Funziona anche per 
+!! confronti di tipo array-array (qualsiasi n. di dimensioni) e di tipo
+!! scalare-vettore(1-d) (ma non vettore(1-d)-scalare o tra array con più
+!! di 1 dimensione e scalari).
 INTERFACE OPERATOR (==)
   MODULE PROCEDURE datetime_eq, datetime_eqsv, timedelta_eq, timedelta_eqsv
 END INTERFACE
 
+!> Operatore logico di disuguaglianza tra oggetti della stessa classe.
+!! Funziona anche per 
+!! confronti di tipo array-array (qualsiasi n. di dimensioni) e di tipo
+!! scalare-vettore(1-d) (ma non vettore(1-d)-scalare o tra array con più
+!! di 1 dimensione e scalari).
 INTERFACE OPERATOR (/=)
   MODULE PROCEDURE datetime_ne, datetime_nesv, timedelta_ne, timedelta_nesv
 END INTERFACE
 
+!> Operatore logico maggiore tra oggetti della stessa classe.
+!! Funziona anche per 
+!! confronti di tipo array-array (qualsiasi n. di dimensioni) e di tipo
+!! scalare-vettore(1-d) (ma non vettore(1-d)-scalare o tra array con più
+!! di 1 dimensione e scalari). Nel caso di valori mancanti il risultato
+!! non è specificato. Il risultato non è altresì specificato nel caso di oggetti
+!! \a timedelta "popolari" o misti.
 INTERFACE OPERATOR (>)
   MODULE PROCEDURE datetime_gt, datetime_gtsv, timedelta_gt, timedelta_gtsv
 END INTERFACE
 
+!> Operatore logico minore tra oggetti della stessa classe.
+!! Funziona anche per 
+!! confronti di tipo array-array (qualsiasi n. di dimensioni) e di tipo
+!! scalare-vettore(1-d) (ma non vettore(1-d)-scalare o tra array con più
+!! di 1 dimensione e scalari). Nel caso di valori mancanti il risultato
+!! non è specificato. Il risultato non è altresì specificato nel caso di oggetti
+!! \a timedelta "popolari" o misti.
 INTERFACE OPERATOR (<)
   MODULE PROCEDURE datetime_lt, datetime_ltsv, timedelta_lt, timedelta_ltsv
 END INTERFACE
 
+!> Operatore logico maggiore-uguale tra oggetti della stessa classe.
+!! Funziona anche per 
+!! confronti di tipo array-array (qualsiasi n. di dimensioni) e di tipo
+!! scalare-vettore(1-d) (ma non vettore(1-d)-scalare o tra array con più
+!! di 1 dimensione e scalari). Nel caso di valori mancanti il risultato
+!! non è specificato. Il risultato non è altresì specificato nel caso di oggetti
+!! \a timedelta "popolari" o misti.
 INTERFACE OPERATOR (>=)
   MODULE PROCEDURE datetime_ge, datetime_gesv, timedelta_ge, timedelta_gesv
 END INTERFACE
 
+!> Operatore logico minore-uguale tra oggetti della stessa classe.
+!! Funziona anche per 
+!! confronti di tipo array-array (qualsiasi n. di dimensioni) e di tipo
+!! scalare-vettore(1-d) (ma non vettore(1-d)-scalare o tra array con più
+!! di 1 dimensione e scalari). Nel caso di valori mancanti il risultato
+!! non è specificato. Il risultato non è altresì specificato nel caso di oggetti
+!! \a timedelta "popolari" o misti.
 INTERFACE OPERATOR (<=)
   MODULE PROCEDURE datetime_le, datetime_lesv, timedelta_le, timedelta_lesv
 END INTERFACE
 
+!> Operatore di somma per datetime e timedelta. Solo alcune combinazioni
+!! sono definite:
+!! - \a timedelta + \a timedelta = \a timedelta
+!! - \a datetime + \a timedelta = \a datetime
+!! .
+!! Funzionano anche con oggetti \a timedelta "popolari" o misti.
 INTERFACE OPERATOR (+)
   MODULE PROCEDURE datetime_add, timedelta_add
 END INTERFACE
 
+!> Operatore di sottrazione per datetime e timedelta. Solo alcune combinazioni
+!! sono definite:
+!! - \a timedelta - \a timedelta = \a timedelta
+!! - \a datetime - \a timedelta = \a datetime
+!! - \a datetime - \a datetime = \a timedelta
+!! .
+!! Funzionano anche con oggetti \a timedelta "popolari" o misti.
 INTERFACE OPERATOR (-)
   MODULE PROCEDURE datetime_subdt, datetime_subtd, timedelta_sub
 END INTERFACE
 
+!> Operatore di moltiplicazione di timedelta per uno scalare. Sono definite:
+!! - \a timedelta * \a INTEGER = \a timedelta
+!! - \a INTEGER * \a timedelta = \a timedelta
+!! .
+!! Funzionano anche con oggetti \a timedelta "popolari" o misti.
 INTERFACE OPERATOR (*)
   MODULE PROCEDURE timedelta_mult, timedelta_tlum
 END INTERFACE
 
+!> Operatore di divisione di timedelta. Sono definite:
+!! - \a timedelta / \a INTEGER = \a timedelta
+!! - \a timedelta / \a timedelta = \a INTEGER
+!! .
+!! La prima combinazione è valida per tutti i tipi di intervallo, mentre la
+!! seconda è definita solo per intervalli "puri".
 INTERFACE OPERATOR (/)
   MODULE PROCEDURE timedelta_divint, timedelta_divtd
 END INTERFACE
 
+!> Operatore di resto della divisione. Sono definite le combinazioni:
+!! - \a MOD(\a timedelta, \a timedelta) = \a timedelta
+!! - \a MOD(\a datetime, \a timedelta) = \a timedelta
+!! .
+!! Sono definite solo per intervalli "puri"
+!! La seconda combinazione ha senso principalmente con intervalli di
+!! 1 minuto, 1 ora o
+!! 1 giorno, per calcolare di quanto l'oggetto \a datetime indicato dista
+!! dal minuto, ora o giorno tondo precedente più vicino.
 INTERFACE mod
   MODULE PROCEDURE timedelta_mod, datetime_timedelta_mod
 END INTERFACE
@@ -113,13 +214,20 @@ CONTAINS
 ! ==============
 ! == datetime ==
 ! ==============
+!> Costruisce un oggetto \a datetime con i parametri opzionali forniti.
+!! Se non viene passato nulla lo inizializza a 1/1/1.
 SUBROUTINE datetime_init(this, iminuti, year, month, day, hour, minute, &
  unixtime, isodate, oraclesimdate)
-TYPE(datetime),INTENT(INOUT) :: this
-INTEGER,INTENT(IN),OPTIONAL :: iminuti, year, month, day, hour, minute
-INTEGER(kind=int_ll),INTENT(IN),OPTIONAL ::  unixtime
-CHARACTER(len=*),INTENT(IN),OPTIONAL :: isodate
-CHARACTER(len=12),INTENT(IN),OPTIONAL :: oraclesimdate
+TYPE(datetime),INTENT(INOUT) :: this !< oggetto da inizializzare
+INTEGER,INTENT(IN),OPTIONAL :: iminuti
+INTEGER,INTENT(IN),OPTIONAL :: year !< anno d.C., se è specificato, tutti gli eventuali parametri tranne \a month, \a day, \a hour e \a minute sono ignorati; per un problema non risolto, sono ammessi solo anni >0 (d.C.)
+INTEGER,INTENT(IN),OPTIONAL :: month !< mese, default=1 se è specificato year; può assumere anche valori <1 o >12, l'oggetto finale si aggiusta coerentemente
+INTEGER,INTENT(IN),OPTIONAL :: day !< mese, default=1 se è specificato year; può anch'esso assumere valori fuori dai limiti canonici
+INTEGER,INTENT(IN),OPTIONAL :: hour !< ore, default=0 se è specificato year; può anch'esso assumere valori fuori dai limiti canonici
+INTEGER,INTENT(IN),OPTIONAL :: minute !< minuti, default=0 se è specificato year; può anch'esso assumere valori fuori dai limiti canonici
+INTEGER(kind=int_ll),INTENT(IN),OPTIONAL ::  unixtime !< inizializza l'oggetto a \a unixtime secondi dopo il 1/1/1970 (convenzione UNIX, notare che il parametro deve essere un intero a 8 byte), se è presente tutto il resto è ignorato
+CHARACTER(len=*),INTENT(IN),OPTIONAL :: isodate !< inizializza l'oggetto ad una data espressa nel formato \c AAAA-MM-GG \c hh:mm, un sottoinsieme del formato noto come \a ISO
+CHARACTER(len=12),INTENT(IN),OPTIONAL :: oraclesimdate !< inizializza l'oggetto ad una data espressa nel formato \c AAAAMMGGhhmm, come nelle routine per l'accesso al db Oracle del SIM.
 
 INTEGER :: lyear, lmonth, lday, lhour, lminute, ier
 
@@ -167,6 +275,8 @@ ELSE IF (PRESENT(oraclesimdate)) THEN ! formato YYYYMMDDhhmm
   CALL jeladata5(lday,lmonth,lyear,lhour,lminute,this%iminuti)
 ELSE IF (PRESENT(unixtime)) THEN ! secondi dal 01/01/1970 (unix)
   this%iminuti = unixtime/60_int_ll + unmim
+ELSE
+  this%iminuti = 0
 ENDIF
 
 END SUBROUTINE datetime_init
@@ -179,14 +289,21 @@ this%iminuti = imiss
 
 END SUBROUTINE datetime_delete
 
-
+!> Restituisce il valore di un oggetto \a datetime in una o più
+!! modalità desiderate. Qualsiasi combinazione dei parametri
+!! opzionali è consentita.
 SUBROUTINE datetime_getval(this, iminuti, year, month, day, hour, minute, &
  unixtime, isodate, oraclesimdate)
-TYPE(datetime),INTENT(IN) :: this
-INTEGER,INTENT(OUT),OPTIONAL :: iminuti, year, month, day, hour, minute
-INTEGER(kind=int_ll),INTENT(OUT),OPTIONAL ::  unixtime
-CHARACTER(len=16),INTENT(OUT),OPTIONAL :: isodate
-CHARACTER(len=12),INTENT(OUT),OPTIONAL :: oraclesimdate
+TYPE(datetime),INTENT(IN) :: this !< oggetto di cui restituire il valore
+INTEGER,INTENT(OUT),OPTIONAL :: iminuti
+INTEGER,INTENT(OUT),OPTIONAL :: year !< anno
+INTEGER,INTENT(OUT),OPTIONAL :: month !< mese
+INTEGER,INTENT(OUT),OPTIONAL :: day !< giorno
+INTEGER,INTENT(OUT),OPTIONAL :: hour !< ore
+INTEGER,INTENT(OUT),OPTIONAL :: minute !< minuti
+INTEGER(kind=int_ll),INTENT(OUT),OPTIONAL :: unixtime !< secondi a partire dal 1/1/1970
+CHARACTER(len=16),INTENT(OUT),OPTIONAL :: isodate !< data completa nel formato \c AAAA-MM-GG \c hh:mm
+CHARACTER(len=12),INTENT(OUT),OPTIONAL :: oraclesimdate !< data completa nel formato \c AAAAMMGGhhmm
 
 INTEGER :: lyear, lmonth, lday, lhour, lminute, ier
 
@@ -435,9 +552,17 @@ END FUNCTION datetime_subtd
 ! ===============
 ! == timedelta ==
 ! ===============
+!> Costruisce un oggetto \a timedelta con i parametri opzionali forniti.
+!! Se non viene passato nulla lo inizializza a intervallo di durata nulla.
+!! L'intervallo ottenuto è pari alla somma dei valori di tutti i parametri
+!! forniti, ovviamente non fornire un parametro equivale a fornirlo =0.
 SUBROUTINE timedelta_init(this, year, month, day, hour, minute)
-TYPE(timedelta),INTENT(INOUT) :: this
-INTEGER,INTENT(IN),OPTIONAL :: year, month, day, hour, minute
+TYPE(timedelta),INTENT(INOUT) :: this !< oggetto da inizializzare
+INTEGER,INTENT(IN),OPTIONAL :: year !< anni, se presente l'oggetto diventa "popolare"
+INTEGER,INTENT(IN),OPTIONAL :: month !< mesi, se presente l'oggetto diventa "popolare"
+INTEGER,INTENT(IN),OPTIONAL :: day !< giorni
+INTEGER,INTENT(IN),OPTIONAL :: hour !< ore
+INTEGER,INTENT(IN),OPTIONAL :: minute !< minuti
 
 this%iminuti = 0
 IF (PRESENT(year)) THEN
@@ -473,13 +598,21 @@ this%month = 0
 END SUBROUTINE timedelta_delete
 
 
+!> Restituisce il valore di un oggetto \a timedelta in una o più
+!! modalità desiderate. Qualsiasi combinazione dei parametri
+!! opzionali è consentita.
 SUBROUTINE timedelta_getval(this, year, month, day, hour, minute, &
  ahour, aminute, isodate, oraclesimdate)
-TYPE(timedelta),INTENT(IN) :: this
-INTEGER,INTENT(OUT),OPTIONAL :: year, month, day, hour, minute, &
- ahour, aminute
-CHARACTER(len=16),INTENT(OUT),OPTIONAL :: isodate
-CHARACTER(len=12),INTENT(OUT),OPTIONAL :: oraclesimdate
+TYPE(timedelta),INTENT(IN) :: this !< oggetto di cui restituire il valore
+INTEGER,INTENT(OUT),OPTIONAL :: year !< anni, /=0 solo per intervalli "popolari"
+INTEGER,INTENT(OUT),OPTIONAL :: month !< mesi, /=0 solo per intervalli "popolari"
+INTEGER,INTENT(OUT),OPTIONAL :: day !< giorni totali
+INTEGER,INTENT(OUT),OPTIONAL :: hour !< ore modulo 24
+INTEGER,INTENT(OUT),OPTIONAL :: minute !< minuti modulo 60
+INTEGER,INTENT(OUT),OPTIONAL :: ahour !< ore totali
+INTEGER,INTENT(OUT),OPTIONAL :: aminute !< minuti totali
+CHARACTER(len=16),INTENT(OUT),OPTIONAL :: isodate !< intervallo totale nel formato \c GGGGGGGGGG \c hh:mm
+CHARACTER(len=12),INTENT(OUT),OPTIONAL :: oraclesimdate !< intervallo totale nel formato \c GGGGGGGGhhmm
 
 INTEGER :: lyear, lmonth, lday, lhour, lminute, ier
 
