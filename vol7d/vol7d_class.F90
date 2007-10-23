@@ -1,12 +1,67 @@
-!>\brief  Modulo base per i volumi Vol7d
-!!
-!!Questo modulo definisce gli oggetti e i metodi per gestire
-!!volumi di dati sparsi.
-!!
-!!Programma che scrive su file  un volume vol7d letto da una serie di file ASCII.
-!!\include esempio_qc_convert.f90
+!> \defgroup vol7d Pacchetto libsim, libreria vol7d.
+!! La libreria vol7d di libsim contiene classi per la gestione in
+!! Fortran 90 di dati puntuali, tipicamente osservazioni da stazioni meteo,
+!! e per la loro importazione da Db-Alle e dal database Oracle del SIM.
+!! Per compilare e linkare programmi che fanno uso di questa libreria si
+!! dovranno inserire gli appositi comandi \c USE nelle unità di
+!! programma coinvolte e usare, in fase di compilazione, l'opzione
+!! \c -I/usr/include e, in fase di linking, l'opzione
+!! \c -lsim_vol7d, presupponendo che l'installazione sia stata
+!! fatta a livello di sistema.
 
-
+!> Classe per la gestione di un volume completo di dati osservati.
+!! Questo modulo definisce gli oggetti e i metodi per gestire
+!! volumi di dati meteorologici sparsi.
+!! I volumi definiti sono principalmente di 4 categorie:
+!!  - volumi di anagrafica, hanno 3 dimensioni:
+!!    - anagrafica
+!!    - variabile di anagrafica
+!!    - rete
+!!  - volumi di attributi di anagrafica, hanno 4 dimensioni:
+!!    - anagrafica
+!!    - variabile di anagrafica
+!!    - rete
+!!    - variabile di attributi delle variabili di anagrafica
+!!  - volumi di dati, hanno 6 dimensioni:
+!!    - anagrafica
+!!    - tempo
+!!    - livello verticale
+!!    - intervallo temporale (timerange)
+!!    - variabile di dati
+!!    - rete
+!!  - volumi di attributi di dati, hanno 7 dimensioni:
+!!    - anagrafica
+!!    - tempo
+!!    - livello verticale
+!!    - intervallo temporale (timerange)
+!!    - variabile di dati
+!!    - rete
+!!    - variabile di attributi delle variabili di dati
+!!
+!! Tutte le variabili sono inoltre disponibile in 5 tipi diversi:
+!!  - reale (abbreviato r)
+!!  - doppia precisione (abbreviato d)
+!!  - intero  (abbreviato i)
+!!  - byte (abbreviato b)
+!!  - carattere (abbreviato c)
+!!
+!! Per ognuna delle dimensioni possibili, incluse le variabili e gli
+!! attributi con i loro diversi tipi,
+!! è definito un cosiddetto "vettore di descrittori", con un
+!! numero di elementi pari all'estensione della dimensione stessa,
+!! che contiene le informazioni necessarie a descrivere
+!! gli elementi di quella dimensione.
+!! In realtà l'utente non dovrà generalmente occuparsi di costruire
+!! un oggetto vol7d con le proprie mani ma utilizzerà nella maggior parte
+!! dei casi i metodi di importazione preconfezionati che importano dati da
+!! DB-All.e (vol7d_dballe_class) o dal DB Oracle del SIM (vol7d_oraclesim_class).
+!! 
+!!
+!! Il programma esempio_v7d.f90 contiene un esempio elementare di uso
+!! della classe vol7d:
+!! \include esempio_v7d.f90
+!!
+!! \ingroup vol7d
 MODULE vol7d_class
 USE kinds
 USE datetime_class
@@ -18,88 +73,120 @@ USE vol7d_network_class
 USE vol7d_varvect_class
 IMPLICIT NONE
 
-!! Le dimensioni sono queste:
-!! datiana(ana,anavar,network)
-!! attrdatiana(ana,attranavar,network,attr)
-!! dati(ana,time,level,timerange,dativar,network)
-!! attrdati(ana,time,level,timerange,attrdativar,network,attr)
 
 INTEGER, PARAMETER :: vol7d_maxdim_a = 3, vol7d_maxdim_aa = 4, &
- vol7d_maxdim_d = 6, vol7d_maxdim_ad = 7, &
- vol7d_ana_a = 1, vol7d_var_a = 2, vol7d_network_a = 3, &
- vol7d_attr_a = 4, &
- vol7d_ana_d = 1, vol7d_time_d = 2,  vol7d_level_d = 3, &
- vol7d_timerange_d = 4, vol7d_var_d = 5, vol7d_network_d = 6, &
- vol7d_attr_d = 7, &
- vol7d_cdatalen=20
+ vol7d_maxdim_d = 6, vol7d_maxdim_ad = 7
+
+INTEGER, PARAMETER :: vol7d_ana_a=1 !< indice della dimensione "anagrafica" nei volumi di anagrafica, da usare nei metodi vol7d_get_volana*
+INTEGER, PARAMETER :: vol7d_var_a=2 !< indice della dimensione "variabile" nei volumi di anagrafica, da usare nei metodi vol7d_get_volana*
+INTEGER, PARAMETER :: vol7d_network_a=3 !< indice della dimensione "rete" nei volumi di anagrafica, da usare nei metodi vol7d_get_volana*
+INTEGER, PARAMETER :: vol7d_attr_a=4 !< indice della dimensione "attributo" nei volumi di anagrafica, da usare nei metodi vol7d_get_volana*
+INTEGER, PARAMETER :: vol7d_ana_d=1 !< indice della dimensione "anagrafica" nei volumi di dati, da usare nei metodi vol7d_get_volana*
+INTEGER, PARAMETER :: vol7d_time_d=2 !< indice della dimensione "tempo" nei volumi di dati, da usare nei metodi vol7d_get_volana*
+INTEGER, PARAMETER :: vol7d_level_d=3 !< indice della dimensione "livello verticale" nei volumi di dati, da usare nei metodi vol7d_get_volana*
+INTEGER, PARAMETER :: vol7d_timerange_d=4 !< indice della dimensione "intervallo temporale" nei volumi di dati, da usare nei metodi vol7d_get_volana*
+INTEGER, PARAMETER :: vol7d_var_d=5 !< indice della dimensione "variabile" nei volumi di dati, da usare nei metodi vol7d_get_volana*
+INTEGER, PARAMETER :: vol7d_network_d=6 !< indice della dimensione "rete" nei volumi di dati, da usare nei metodi vol7d_get_volana*
+INTEGER, PARAMETER :: vol7d_attr_d=7 !< indice della dimensione "attributo" nei volumi di dati, da usare nei metodi vol7d_get_volana*
+INTEGER, PARAMETER :: vol7d_cdatalen=20
 
 TYPE vol7d_varmap
   INTEGER :: r, d, i, b, c
 END TYPE vol7d_varmap
 
+!> Definisce un oggetto contenente i volumi anagrafica e dati e tutti
+!! i descrittori delle loro dimensioni.
 TYPE vol7d
-  !! prime 5 dimensioni
+!> vettore descrittore della dimensione anagrafica
   TYPE(vol7d_ana),POINTER :: ana(:)
+!> vettore descrittore della dimensione tempo
   TYPE(datetime),POINTER :: time(:)
+!> vettore descrittore della dimensione livello verticale
   TYPE(vol7d_level),POINTER :: level(:)
+!> vettore descrittore della dimensione intervallo temporale (timerange)
   TYPE(vol7d_timerange),POINTER :: timerange(:)
+!> vettore descrittore della dimensione rete
   TYPE(vol7d_network),POINTER :: network(:)
-  !! 6a dimensione: variabile dell'anagrafica e dei dati
-  !! con relativi attributi e in 5 tipi diversi
-  TYPE(vol7d_varvect) :: &
-   anavar,     & ! Variabili dell'anagrafica
-   anaattr,    & ! Attributi delle variabili dell'anagrafica
-   anavarattr, & ! Variabili dell'anagrafica che hanno tali attributi
-   dativar,    & ! Variabili dei dati
-   datiattr,   & ! Attributi delle variabili dei dati
-   dativarattr   ! Variabili dei dati che hanno tali attributi
+!> vettore descrittore della dimensione variabile di anagrafica
+  TYPE(vol7d_varvect) :: anavar
+!> vettore descrittore della dimensione attributo delle variabili di anagrafica
+    TYPE(vol7d_varvect) :: anaattr
+!> vettore descrittore della dimensione variabile di anagrafica che ha tali attributi
+    TYPE(vol7d_varvect) :: anavarattr
+!> vettore descrittore della dimensione variabile di dati
+    TYPE(vol7d_varvect) :: dativar
+!> vettore descrittore della dimensione attributo delle variabili di dati
+    TYPE(vol7d_varvect) :: datiattr
+!> vettore descrittore della dimensione variabile di dati che ha tali attributi
+    TYPE(vol7d_varvect) :: dativarattr
 
-  !! Volumi di valori e attributi per anagrafica e dati
+!> volume di anagrafica a valori reali
   REAL,POINTER :: volanar(:,:,:)
+!> volume di anagrafica a valori a doppia precisione
   REAL(kind=fp_d),POINTER :: volanad(:,:,:)
+!> volume di anagrafica a valori interi
   INTEGER,POINTER :: volanai(:,:,:)
+!> volume di anagrafica a valori byte
   INTEGER(kind=int_b),POINTER :: volanab(:,:,:)
+!> volume di anagrafica a valori carattere
   CHARACTER(len=vol7d_cdatalen),POINTER :: volanac(:,:,:)
 
+!> volume di attributi di anagrafica a valori reali
   REAL,POINTER :: volanaattrr(:,:,:,:)
+!> volume di attributi di anagrafica a valori a doppia precisione
   REAL(kind=fp_d),POINTER :: volanaattrd(:,:,:,:)
+!> volume di attributi di anagrafica a valori interi
   INTEGER,POINTER :: volanaattri(:,:,:,:)
+!> volume di attributi di anagrafica a valori byte
   INTEGER(kind=int_b),POINTER :: volanaattrb(:,:,:,:)
+!> volume di attributi di anagrafica a valori carattere
   CHARACTER(len=vol7d_cdatalen),POINTER :: volanaattrc(:,:,:,:)
 
+!> volume di dati a valori reali
   REAL,POINTER :: voldatir(:,:,:,:,:,:) ! sono i dati
+!> volume di dati a valori a doppia precisione
   REAL(kind=fp_d),POINTER :: voldatid(:,:,:,:,:,:)
+!> volume di dati a valori interi
   INTEGER,POINTER :: voldatii(:,:,:,:,:,:)
+!> volume di dati a valori byte
   INTEGER(kind=int_b),POINTER :: voldatib(:,:,:,:,:,:)
+!> volume di dati a valori carattere
   CHARACTER(len=vol7d_cdatalen),POINTER :: voldatic(:,:,:,:,:,:)
 
+!> volume di attributi di dati a valori reali
   REAL,POINTER :: voldatiattrr(:,:,:,:,:,:,:)
+!> volume di attributi di dati a valori a doppia precisione
   REAL(kind=fp_d),POINTER :: voldatiattrd(:,:,:,:,:,:,:)
+!> volume di attributi di dati a valori interi
   INTEGER,POINTER :: voldatiattri(:,:,:,:,:,:,:)
+!> volume di attributi di dati a valori byte
   INTEGER(kind=int_b),POINTER :: voldatiattrb(:,:,:,:,:,:,:)
+!> volume di attributi di dati a valori carattere
   CHARACTER(len=vol7d_cdatalen),POINTER :: voldatiattrc(:,:,:,:,:,:,:)
 
 END TYPE vol7d
 
+!> Costruttore per la classe vol7d.
+!! Deve essere richiamato 
+!! per tutti gli oggetti di questo tipo definiti in un programma.
 INTERFACE init
   MODULE PROCEDURE vol7d_init
 END INTERFACE
 
+!> Distruttore per la classe vol7d.
 INTERFACE delete
   MODULE PROCEDURE vol7d_delete
 END INTERFACE
 
-
-!> Scrittura su file
+!> Scrittura su file.
 INTERFACE write_on_file
   MODULE PROCEDURE vol7d_write_on_file
 END INTERFACE
 
-!> Lettura da file
+!> Lettura da file.
 INTERFACE read_from_file
   MODULE PROCEDURE vol7d_read_from_file
 END INTERFACE
-
 
 
 !!$INTERFACE get_volana
@@ -130,14 +217,19 @@ PRIVATE vol7d_get_volr, vol7d_get_vold, vol7d_get_voli, vol7d_get_volb, &
  volptr1db, volptr2db, volptr3db, volptr4db, volptr5db, volptr6db, volptr7db, &
  volptr1dc, volptr2dc, volptr3dc, volptr4dc, volptr5dc, volptr6dc, volptr7dc, &
  vol7d_nullifyr, vol7d_nullifyd, vol7d_nullifyi, vol7d_nullifyb, vol7d_nullifyc, &
- vol7d_write_on_file, vol7d_read_from_file
+ vol7d_init, vol7d_delete, vol7d_write_on_file, vol7d_read_from_file, &
+ vol7d_check_alloc_ana,  vol7d_check_alloc_dati
 
 
 CONTAINS
 
 
+!> Inizializza un oggetto di tipo vol7d.
+!! Non riceve alcun parametro tranne l'oggetto stesso. Attenzione, è necessario
+!! comunque chiamare sempre il costruttore per evitare di avere dei puntatori in
+!! uno stato indefinito.
 SUBROUTINE vol7d_init(this)
-TYPE(vol7d),intent(out) :: this
+TYPE(vol7d),intent(out) :: this !< oggetto da inizializzare
 
 CALL init(this%anavar)
 CALL init(this%anaattr)
@@ -157,8 +249,10 @@ NULLIFY(this%volanac, this%volanaattrc, this%voldatic, this%voldatiattrc)
 END SUBROUTINE vol7d_init
 
 
+!> Distrugge l'oggetto in maniera pulita, liberando l'eventuale memoria
+!! dinamicamente allocata.
 SUBROUTINE vol7d_delete(this)
-TYPE(vol7d),intent(inout) :: this
+TYPE(vol7d),intent(inout) :: this !< oggetto da distruggere
 
 IF (ASSOCIATED(this%volanar)) DEALLOCATE(this%volanar)
 IF (ASSOCIATED(this%volanad)) DEALLOCATE(this%volanad)
@@ -196,7 +290,44 @@ CALL delete(this%dativarattr)
 
 END SUBROUTINE vol7d_delete
 
-
+!> Metodo per allocare i descrittori delle 7 dimensioni.
+!! Riceve un grande numero di parametri opzionali che
+!! indicano quali descrittori allocare e con quale estensione;
+!! i descrittori non specificati non vengono toccati.
+!! Può essere quindi chiamato più volte allocando via via
+!! descrittori relativi a dimensioni diverse.
+!! Se un descrittore richiesto è già allocato, viene deallocato
+!! (perdendone l'eventuale contenuto) e riallocato con l'estensione
+!! richiesta.
+!! Per i descrittori relativi a dimensioni che non siano variabili o attributi,
+!! è possibile specificare l'estensione di una dimensione a 0,
+!! in tal caso il descrittore viene comunque allocato con lunghezza nulla,
+!! che è diverso da non allocarlo. Per i descrittori di variabili e attributi
+!! passare un'estensione 0 equivale a non fornire il parametro.
+!! Avere uno o più descrittori dimensionati con estensione nulla fa sì
+!! che anche il volume dati successivamente allocato abbia estensione nulla;
+!! sebbene ciò appaia inutile, un volume del genere può in realtà servire,
+!! in associazione ai metodi ::vol7d_merge o ::vol7d_append per estendere
+!! un volume esistente aggiungendo elementi in alcune dimensioni (quelle
+!! a estensione non nulla, ovviamente) e mantenendo invariato tutto il resto.
+!! Per quanto riguarda i descrittori delle dimensioni relative alle
+!! variabili, la relativa estesnsione è specificata con la nomenclatura
+!! \a n<x><y><z> dove <x> può valere:
+!!  - \a ana per variabili relative a voumi di anagrafica
+!!  - \a dati per variabili relative a voumi di dati
+!!
+!! <y> può valere:
+!!  - \a var per variabili
+!!  - \a attr per attributi
+!!  - \a varattr variabili aventi attributi nei volumi di attributi
+!!
+!! <z> può valere:
+!!  - \a r per variabili o attributi a valori reali
+!!  - \a d per variabili o attributi a valori a doppia precisione
+!!  - \a i per variabili o attributi a valori interi
+!!  - \a b per variabili o attributi a valori byte
+!!  - \a c per variabili o attributi a valori carattere
+!!
 SUBROUTINE vol7d_alloc(this, nana, ntime, nlevel, ntimerange, nnetwork, &
  nanavarr, nanavard, nanavari, nanavarb, nanavarc, &
  nanaattrr, nanaattrd, nanaattri, nanaattrb, nanaattrc, &
@@ -205,15 +336,21 @@ SUBROUTINE vol7d_alloc(this, nana, ntime, nlevel, ntimerange, nnetwork, &
  ndatiattrr, ndatiattrd, ndatiattri, ndatiattrb, ndatiattrc, &
  ndativarattrr, ndativarattrd, ndativarattri, ndativarattrb, ndativarattrc, &
  ini)
-TYPE(vol7d),INTENT(inout) :: this
-INTEGER,INTENT(in),OPTIONAL :: nana, ntime, nlevel, ntimerange, nnetwork, &
+TYPE(vol7d),INTENT(inout) :: this !< oggetto di cui allocare i descrittori
+INTEGER,INTENT(in),OPTIONAL :: nana !< estensione della dimensione anagrafica
+INTEGER,INTENT(in),OPTIONAL :: ntime !< estensione della dimensione tempo
+INTEGER,INTENT(in),OPTIONAL :: nlevel !< estensione della dimensione livello varticale
+INTEGER,INTENT(in),OPTIONAL :: ntimerange !< estensione della dimensione intervallo temporale (timerange)
+INTEGER,INTENT(in),OPTIONAL :: nnetwork !< estensione della dimensione rete
+!> estensione delle possibili dimensioni variabile
+INTEGER,INTENT(in),OPTIONAL :: &
  nanavarr, nanavard, nanavari, nanavarb, nanavarc, &
  nanaattrr, nanaattrd, nanaattri, nanaattrb, nanaattrc, &
  nanavarattrr, nanavarattrd, nanavarattri, nanavarattrb, nanavarattrc, &
  ndativarr, ndativard, ndativari, ndativarb, ndativarc, &
  ndatiattrr, ndatiattrd, ndatiattri, ndatiattrb, ndatiattrc, &
  ndativarattrr, ndativarattrd, ndativarattri, ndativarattrb, ndativarattrc
-LOGICAL,INTENT(in),OPTIONAL :: ini
+LOGICAL,INTENT(in),OPTIONAL :: ini !< se fornito e vale \c .TRUE., viene chiamato il costruttore, senza parametri opzionali, per ogni elemento di tutti i descrittori allocati, inizializzandolo quindi a valore mancante
 
 INTEGER :: i
 LOGICAL :: linit
@@ -321,9 +458,24 @@ IF (.NOT. ASSOCIATED(this%timerange)) CALL vol7d_alloc(this, ntimerange=1, ini=i
 END SUBROUTINE vol7d_check_alloc_dati
 
 
+!> Metodo per allocare i volumi richiesti di variabili e attributi per
+!! anagrafica e dati.
+!! Se alcuni dei descrittori relativi alle dimensioni anagrafica,
+!! livello verticale, tempo, intervallo temporale (timerange), rete non sono
+!! stati richiesti preventivamente con la ::vol7d_alloc, essi vengono allocati
+!! automaticamente da questo metodo
+!! con estensione di default pari a 1 (non 0!), questo significa, ad esempio,
+!! che se prevedo di avere soli dati superficiali, cioè ad un solo livello
+!! verticale, o una sola rete di stazioni, non devo preoccuparmi di
+!! specificare questa informazione.
+!! Tra i 20 possibili volumi allocabili
+!! ((variabili,attributi)*(anagrafica,dati)*(r,d,i,b,c)=20)
+!! saranno allocati solo quelli per cui è stata specificata l'estensione
+!! del corrispondente descrittore variabili/attributi con la ::vol7d_alloc.
 SUBROUTINE vol7d_alloc_vol(this, ini, inivol)
-TYPE(vol7d),INTENT(inout) :: this
-LOGICAL,INTENT(in),OPTIONAL :: ini, inivol
+TYPE(vol7d),INTENT(inout) :: this !< oggetto di cui allocare i volumi
+LOGICAL,INTENT(in),OPTIONAL :: ini !< se fornito e vale \c .TRUE., viene chiamato il costruttore, senza parametri opzionali, per ogni elemento di tutti i descrittori allocati
+LOGICAL,INTENT(in),OPTIONAL :: inivol !< se fornito e vale \c .TRUE., i volumi allocati saranno inizializzati a valore mancante
 
 LOGICAL :: linivol
 
@@ -493,8 +645,14 @@ CALL vol7d_set_attr_ind(this)
 END SUBROUTINE vol7d_alloc_vol
 
 
+!> Metodo per creare gli indici che associano le variabili aventi attributo
+!! alle variabili nei relativi descrittori.
+!! Ha senso chiamare questo metodo solo dopo che i descrittori delle variabili
+!! e degli attributi desiderati sono stati allocati ed è stato assegnato un
+!! valore ai relativi membri btable (vedi vol7d_var_class::vol7d_var), se
+!! i descrittori non sono stati allocati o assegnati, il metodo non fa niente.
 SUBROUTINE vol7d_set_attr_ind(this)
-TYPE(vol7d),INTENT(inout) :: this
+TYPE(vol7d),INTENT(inout) :: this !< oggetto in cui creare gli indici
 
 INTEGER :: i
 
@@ -687,9 +845,13 @@ ENDIF
 END SUBROUTINE vol7d_set_attr_ind
 
 
+!> Metodo per fondere 2 oggetti vol7d.
+!! Il secondo volume viene accodato al primo
+!! e poi distrutto, si veda quindi la descrizione di ::vol7d_append.
 SUBROUTINE vol7d_merge(this, that, sort)
-TYPE(vol7d),INTENT(INOUT) :: this, that
-LOGICAL,INTENT(IN),OPTIONAL :: sort
+TYPE(vol7d),INTENT(INOUT) :: this !< primo oggetto in ingresso, alla fine conterrà il risultato della fusione
+TYPE(vol7d),INTENT(INOUT) :: that !< secondo oggetto in ingresso, alla fine sarà distrutto
+LOGICAL,INTENT(IN),OPTIONAL :: sort !< se fornito e uguale a \c .TRUE., i descrittori che supportano un ordinamento (operatori > e/o <) risulteranno ordinati in ordine crescente nell'oggetto finale
 
 ! Accodo that a this e distruggo that
 CALL vol7d_append(this, that, sort)
@@ -698,9 +860,33 @@ CALL delete(that)
 END SUBROUTINE vol7d_merge
 
 
+!> Metodo per accodare un oggetto vol7d ad un altro.
+!! Si tratta di un metodo molto potente e versatile;
+!! i descrittori delle dimensioni del volume finale conterranno i valori
+!! dei corrispondenti descrittori del primo e del secondo volume
+!! e i volumi di anagrafica e dati conterranno i valori dei due volumi
+!! ai posti giusti, e valori mancanti per le nuove combinazioni che
+!! eventualmente si verranno a creare.
+!! Se i volumi multidimensionali di anagrafica e/o dati dei 2 oggetti
+!! hanno un'intersezione non nulla, negli elementi comuni il volume finale
+!! conterrà il corrispondente elemento del \b secondo volume.
+!! Attenzione che, durante l'esecuzione del metodo, la memoria richiesta è
+!! pari alla memoria complessiva occupata dai 2 volumi iniziali più
+!! la memoria complessiva del volume finale, per cui, nel caso di volumi grandi,
+!! ci potebbero essere problemi di esaurimento della memoria centrale.
+!!
+!! \todo nel caso di elementi comuni inserire la possibiità (opzionale per
+!! non penalizzare le prestazioni quando ciò non serve) di effettuare una scelta
+!! più ragionata dell'elemento da tenere, almeno controllando i dati mancanti
+!! se non le flag di qualità
+!!
+!! \todo "rateizzare" l'allocazione dei volumi per ridurre l'occupazione di
+!! memoria nel caso siano allocati contemporaneamente volumi di variabili e
+!! di attributi o più volumi di tipi diversi
 SUBROUTINE vol7d_append(this, that, sort)
-TYPE(vol7d),INTENT(INOUT) :: this, that
-LOGICAL,INTENT(IN),OPTIONAL :: sort
+TYPE(vol7d),INTENT(INOUT) :: this !< primo oggetto in ingresso, a cui sarà accodato il secondo
+TYPE(vol7d),INTENT(IN) :: that !< secondo oggetto in ingresso, non viene modificato dal metodo
+LOGICAL,INTENT(IN),OPTIONAL :: sort !< se fornito e uguale a \c .TRUE., i descrittori che supportano un ordinamento (operatori > e/o <) risulteranno ordinati in ordine crescente nell'oggetto finale
 
 TYPE(vol7d) :: v7dtmp
 LOGICAL :: lsort
@@ -766,23 +952,43 @@ CALL vol7d_set_attr_ind(this)
 END SUBROUTINE vol7d_append
 
 
-SUBROUTINE vol7d_reform(this, sort, unique, miss)
-TYPE(vol7d),INTENT(INOUT) :: this
-LOGICAL,INTENT(IN),OPTIONAL :: sort, unique, miss
-
-TYPE(vol7d) :: v7dtmp
-
-CALL vol7d_copy(this, v7dtmp, sort, unique, miss)
-! Distruggo il vecchio volume e assegno il nuovo a this
-CALL delete(this)
-this = v7dtmp
-
-END SUBROUTINE vol7d_reform
-
-
+!> Metodo per creare una copia completa e indipendente di un oggetto vol7d.
+!! Questo metodo crea un duplicato di tutti i membri di un oggetto vol7d,
+!! con la possibilità di rielaborarlo durante la copia.
+!! Attenzione, il codice:
+!! \code
+!! USE vol7d_class
+!! TYPE(vol7d) :: vol1, vol2
+!! CALL init(vol1)
+!! CALL init(vol2)
+!! ... ! riempio vol1
+!! vol2 = vol1
+!! \endcode
+!! fa una cosa diversa rispetto a:
+!! \code
+!! USE vol7d_class
+!! TYPE(vol7d) :: vol1, vol2
+!! CALL init(vol1)
+!! CALL init(vol2)
+!! ... ! riempio vol1
+!! CALL vol7d_copy(vol1, vol2)
+!! \endcode
+!! nel primo caso, infatti, l'operatore di assegnazione copia solo i componenti
+!! statici di \a vol1 nei corrispondenti elementi di \a vol2, mentre i componenti che
+!! sono allocati dinamicamente (cioè quelli che in ::vol7d hanno l'attributo
+!! \c POINTER, in pratica quasi tutti) non vengono duplicati, ma per essi vol2
+!! conterrà un puntatore al corrispondente elemento a cui già punta vol1, e quindi 
+!! eventuali cambiamenti al contenuto di uno dei due oggetti influenzerà il
+!! contenuto dell'altro; nel secondo caso, invece, vol1 e vol2 sono, dopo la
+!! vol7d_copy, 2 istanze
+!! completamente indipendenti, ma uguali tra loro per contenuto, della classe
+!! vol7d, e quindi hanno vita indipendente.
 SUBROUTINE vol7d_copy(this, that, sort, unique, miss)
-TYPE(vol7d),INTENT(INOUT) :: this, that
-LOGICAL,INTENT(IN),OPTIONAL :: sort, unique, miss
+TYPE(vol7d),INTENT(INOUT) :: this !< oggetto origine
+TYPE(vol7d),INTENT(INOUT) :: that !< oggetto destinazione
+LOGICAL,INTENT(IN),OPTIONAL :: sort !< se fornito e uguale a \c .TRUE., i descrittori che supportano un ordinamento (operatori > e/o <) risulteranno ordinati in ordine crescente nell'oggetto destinazione
+LOGICAL,INTENT(IN),OPTIONAL :: unique !< se fornito e uguale a \c .TRUE., gli eventuali elementi duplicati nei descrittori dell'oggetto origine verranno collassati in un unico elemento (con eventuale perdita dei dati relativi agli elementi duplicati)
+LOGICAL,INTENT(IN),OPTIONAL :: miss !< se fornito e uguale a \c .TRUE., gli eventuali elementi dei descrittori uguali al corrispondente valore mancante verranno eliminati dall'oggetto finale
 
 LOGICAL :: lsort, lunique, lmiss
 INTEGER,POINTER :: remapt(:), remaptr(:), remapl(:), remapa(:), remapn(:)
@@ -844,6 +1050,38 @@ CALL vol7d_set_attr_ind(that)
 END SUBROUTINE vol7d_copy
 
 
+!> Metodo per riformare in varie maniere un oggetto vol7d.
+!! Equivale ad una copia (vedi ::vol7d_copy)
+!! seguita dalla distruzione del volume iniziale e alla
+!! sua riassegnazione al volume copiato. Ha senso se almeno uno dei parametri
+!! \a sort, \a uniq o \a miss è fornito uguale a \c .TRUE., altrimenti
+!! è solo una perdita di tempo.
+!! Può essere utile, ad esempio, per eliminare stazioni
+!! o istanti temporali indesiderati, basta assegnare il loro corrispondente
+!! elemento del descrittore a valore mancante e chiamare vol7d_reform
+!! con miss=.TRUE. .
+SUBROUTINE vol7d_reform(this, sort, unique, miss)
+TYPE(vol7d),INTENT(INOUT) :: this !< oggetto da riformare
+LOGICAL,INTENT(IN),OPTIONAL :: sort !< se fornito e uguale a \c .TRUE., i descrittori che supportano un ordinamento (operatori > e/o <) risulteranno ordinati in ordine crescente nell'oggetto riformato
+LOGICAL,INTENT(IN),OPTIONAL :: unique !< se fornito e uguale a \c .TRUE., gli eventuali elementi duplicati nei descrittori dell'oggetto iniziale verranno collassati in un unico elemento (con eventuale perdita dei dati relativi agli elementi duplicati)
+LOGICAL,INTENT(IN),OPTIONAL :: miss !< se fornito e uguale a \c .TRUE., gli eventuali elementi dei descrittori uguali al corrispondente valore mancante verranno eliminati dall'oggetto riformato
+
+TYPE(vol7d) :: v7dtmp
+
+CALL vol7d_copy(this, v7dtmp, sort, unique, miss)
+! Distruggo il vecchio volume e assegno il nuovo a this
+CALL delete(this)
+this = v7dtmp
+
+END SUBROUTINE vol7d_reform
+
+
+!! \fn vol7d_get_volanar(this, dimlist, vol1dp, vol2dp, vol3dp, vol4dp, vol5dp, vol6dp, vol7dp) 
+!! \brief Crea una vista a dimensione ridotta di un volume di anagrafica
+!! di tipo reale.
+!! È la prima di una serie di 5 subroutine per i 5 tipi supportati in vol7d.
+!! \param this oggetto di cui creare la vista
+!! \param dimlist lista delle dimensioni da includere nella vista, attenzione tutte le dimsnioni non degeneri (cioè con estensione >1) devono essere incluse nella lista
 
 SUBROUTINE vol7d_diff_only (this, that,data_only)
 TYPE(vol7d),INTENT(IN) :: this
@@ -944,7 +1182,6 @@ END SUBROUTINE vol7d_diff_only
 !! Se non viene fornita l'unità su cui è stata precedentemente aperto un file
 !! viene aperto un file di default con nome pari al nome del programma in esecuzione con postfisso ".v7d".
 !! Come parametro opzionale c'è la description che insieme alla data corrente viene inserita nell'header del file.
-!!
 
 subroutine vol7d_write_on_file (this,unit,description)
 

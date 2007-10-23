@@ -1,31 +1,56 @@
+!> Classe per la gestione dell'anagrafica di stazioni meteo e affini.
+!! Questo modulo definisce una classe in grado di rappresentare
+!! le caratteristiche di una stazione meteo fissa o mobile.
+!! \ingroup vol7d
 MODULE vol7d_ana_class
 USE kinds
 USE missing_values
 USE geo_coord_class
 IMPLICIT NONE
 
+!> Lunghezza della stringa che indica l'identificativo del volo.
 INTEGER,PARAMETER :: vol7d_ana_lenident=20
 
+!> Definisce l'anagrafica di una stazione.
+!! I membri di \a vol7d_ana sono pubblici e quindi liberamente
+!! accessibili e scrivibili, ma è comunque consigliato assegnarli tramite
+!! il costruttore ::init.
 TYPE vol7d_ana
-  TYPE(geo_coord) :: coord
-  CHARACTER(len=vol7d_ana_lenident) :: ident
+  TYPE(geo_coord) :: coord !< coordinata per una stazione fissa
+  CHARACTER(len=vol7d_ana_lenident) :: ident !< identificativo per una stazione mobile (es. aereo)
 END TYPE  vol7d_ana
 
 ! Deve essere dichiarata PARAMETER, non e` cosi` per un bug del pgi
+!> Valore mancante per vo7d_ana.
 TYPE(vol7d_ana) :: vol7d_ana_miss=vol7d_ana(geo_coord_miss,cmiss)
 
+!> Costruttore per la classe vol7d_ana.
+!! Deve essere richiamato 
+!! per tutti gli oggetti di questo tipo definiti in un programma.
 INTERFACE init
   MODULE PROCEDURE vol7d_ana_init
 END INTERFACE
 
+!> Distruttore per la classe vol7d_ana.
+!! Distrugge l'oggetto in maniera pulita, assegnandogli un valore mancante.
 INTERFACE delete
   MODULE PROCEDURE vol7d_ana_delete
 END INTERFACE
 
+!> Operatore logico di uguaglianza tra oggetti della classe vol7d_ana.
+!! Funziona anche per 
+!! confronti di tipo array-array (qualsiasi n. di dimensioni) e di tipo
+!! scalare-vettore(1-d) (ma non vettore(1-d)-scalare o tra array con più
+!! di 1 dimensione e scalari).
 INTERFACE OPERATOR (==)
   MODULE PROCEDURE vol7d_ana_eq, vol7d_ana_eqsv
 END INTERFACE
 
+!> Operatore logico di disuguaglianza tra oggetti della classe vol7d_ana.
+!! Funziona anche per 
+!! confronti di tipo array-array (qualsiasi n. di dimensioni) e di tipo
+!! scalare-vettore(1-d) (ma non vettore(1-d)-scalare o tra array con più
+!! di 1 dimensione e scalari).
 INTERFACE OPERATOR (/=)
   MODULE PROCEDURE vol7d_ana_ne, vol7d_ana_nesv
 END INTERFACE
@@ -48,10 +73,14 @@ END INTERFACE
 
 CONTAINS
 
+!> Inizializza un oggetto \a vol7d_ana con i parametri opzionali forniti.
+!! Se non viene passato nessun parametro opzionale l'oggetto è
+!! inizializzato a valore mancante.
 SUBROUTINE vol7d_ana_init(this, lon, lat, ident)
-TYPE(vol7d_ana),INTENT(INOUT) :: this
-REAL(kind=fp_geo),INTENT(in),OPTIONAL :: lon, lat
-CHARACTER(len=vol7d_ana_lenident),INTENT(in),OPTIONAL :: ident
+TYPE(vol7d_ana),INTENT(INOUT) :: this !< oggetto da inizializzare
+REAL(kind=fp_geo),INTENT(in),OPTIONAL :: lon !< longitudine
+REAL(kind=fp_geo),INTENT(in),OPTIONAL :: lat !< latitudine
+CHARACTER(len=vol7d_ana_lenident),INTENT(in),OPTIONAL :: ident !< identificativo del volo
 
 CALL init(this%coord, lon=lon, lat=lat)
 IF (PRESENT(ident)) THEN
@@ -63,8 +92,9 @@ ENDIF
 END SUBROUTINE vol7d_ana_init
 
 
+!> Distrugge l'oggetto in maniera pulita, assegnandogli un valore mancante.
 SUBROUTINE vol7d_ana_delete(this)
-TYPE(vol7d_ana),INTENT(INOUT) :: this
+TYPE(vol7d_ana),INTENT(INOUT) :: this !< oggetto da distruggre
 
 CALL delete(this%coord)
 this%ident = cmiss

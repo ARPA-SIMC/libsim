@@ -1,43 +1,100 @@
+!> Classe per la gestione degli intervalli temporali di osservazioni
+!! meteo e affini.
+!! Questo modulo definisce una classe in grado di rappresentare
+!! l'intervallo di tempo a cui si riferisce un'osservazione meteo,
+!! ad es. valore istantaneo, cumulato, medio, ecc., prendendo in prestito
+!! concetti dal formato grib.
+!! \ingroup vol7d
 MODULE vol7d_timerange_class
 USE kinds
 USE missing_values
 IMPLICIT NONE
 
+!> Definisce l'intervallo temporale di un'osservazione meteo.
+!! I membri di \a vol7d_timerange sono pubblici e quindi liberamente
+!! accessibili e scrivibili, ma è comunque consigliato assegnarli tramite
+!! il costruttore ::init.
 TYPE vol7d_timerange
-  INTEGER :: timerange,p1,p2
+  INTEGER :: timerange !< tipo di intervallo temporale (vedi tabella 5 formato grib WMO http://www.ecmwf.int/publications/manuals/libraries/gribex/wmoCodeTable5.html)
+  INTEGER :: p1 !< valore numerico del primo istante temporale, se previsto da \a timerange
+  INTEGER :: p2 !< valore numerico del secondo istante temporale, se previsto da \a timerange
 END TYPE vol7d_timerange
 
+!> Valore mancante per vol7d_timerange.
 TYPE(vol7d_timerange),PARAMETER :: vol7d_timerange_miss= &
  vol7d_timerange(imiss,imiss,imiss)
 
+!> Costruttore per la classe vol7d_timerange.
+!! Deve essere richiamato 
+!! per tutti gli oggetti di questo tipo definiti in un programma.
 INTERFACE init
   MODULE PROCEDURE vol7d_timerange_init
 END INTERFACE
 
+!> Distruttore per la classe vol7d_timerange.
+!! Distrugge l'oggetto in maniera pulita, assegnandogli un valore mancante.
 INTERFACE delete
   MODULE PROCEDURE vol7d_timerange_delete
 END INTERFACE
 
+!> Operatore logico di uguaglianza tra oggetti della classe vol7d_timerange.
+!! Funziona anche per 
+!! confronti di tipo array-array (qualsiasi n. di dimensioni) e di tipo
+!! scalare-vettore(1-d) (ma non vettore(1-d)-scalare o tra array con più
+!! di 1 dimensione e scalari).
 INTERFACE OPERATOR (==)
   MODULE PROCEDURE vol7d_timerange_eq, vol7d_timerange_eqsv
 END INTERFACE
 
+!> Operatore logico di disuguaglianza tra oggetti della classe vol7d_timerange.
+!! Funziona anche per 
+!! confronti di tipo array-array (qualsiasi n. di dimensioni) e di tipo
+!! scalare-vettore(1-d) (ma non vettore(1-d)-scalare o tra array con più
+!! di 1 dimensione e scalari).
 INTERFACE OPERATOR (/=)
   MODULE PROCEDURE vol7d_timerange_ne, vol7d_timerange_nesv
 END INTERFACE
 
+!> Operatore logico maggiore tra oggetti della classe vol7d_timerange.
+!! Funziona anche per 
+!! confronti di tipo array-array (qualsiasi n. di dimensioni) e di tipo
+!! scalare-vettore(1-d) (ma non vettore(1-d)-scalare o tra array con più
+!! di 1 dimensione e scalari).
+!! Il confronto è fatto sui valori di \a timerange e, a parità di \a timerange,
+!! su \a p1 e \a p2 se definiti.
 INTERFACE OPERATOR (>)
   MODULE PROCEDURE vol7d_timerange_gt, vol7d_timerange_gtsv
 END INTERFACE
 
+!> Operatore logico minore tra oggetti della classe vol7d_timerange.
+!! Funziona anche per 
+!! confronti di tipo array-array (qualsiasi n. di dimensioni) e di tipo
+!! scalare-vettore(1-d) (ma non vettore(1-d)-scalare o tra array con più
+!! di 1 dimensione e scalari).
+!! Il confronto è fatto sui valori di \a timerange e, a parità di \a timerange,
+!! su \a p1 e \a p2 se definiti.
 INTERFACE OPERATOR (<)
   MODULE PROCEDURE vol7d_timerange_lt, vol7d_timerange_ltsv
 END INTERFACE
 
+!> Operatore logico maggiore-uguale tra oggetti della classe vol7d_timerange.
+!! Funziona anche per 
+!! confronti di tipo array-array (qualsiasi n. di dimensioni) e di tipo
+!! scalare-vettore(1-d) (ma non vettore(1-d)-scalare o tra array con più
+!! di 1 dimensione e scalari).
+!! Il confronto è fatto sui valori di \a timerange e, a parità di \a timerange,
+!! su \a p1 e \a p2 se definiti.
 INTERFACE OPERATOR (>=)
   MODULE PROCEDURE vol7d_timerange_ge, vol7d_timerange_gesv
 END INTERFACE
 
+!> Operatore logico minore-uguale tra oggetti della classe vol7d_timerange.
+!! Funziona anche per 
+!! confronti di tipo array-array (qualsiasi n. di dimensioni) e di tipo
+!! scalare-vettore(1-d) (ma non vettore(1-d)-scalare o tra array con più
+!! di 1 dimensione e scalari).
+!! Il confronto è fatto sui valori di \a timerange e, a parità di \a timerange,
+!! su \a p1 e \a p2 se definiti.
 INTERFACE OPERATOR (<=)
   MODULE PROCEDURE vol7d_timerange_le, vol7d_timerange_lesv
 END INTERFACE
@@ -60,9 +117,14 @@ END INTERFACE
 
 CONTAINS
 
+!> Inizializza un oggetto \a vol7d_timerange con i parametri opzionali forniti.
+!! Se non viene passato nessun parametro opzionale l'oggetto è
+!! inizializzato a valore mancante.
 SUBROUTINE vol7d_timerange_init(this, timerange, p1, p2)
-TYPE(vol7d_timerange),INTENT(INOUT) :: this
-INTEGER,INTENT(IN),OPTIONAL :: timerange, p1, p2
+TYPE(vol7d_timerange),INTENT(INOUT) :: this !< oggetto da inizializzare
+INTEGER,INTENT(IN),OPTIONAL :: timerange !< tipo di intervallo temporale
+INTEGER,INTENT(IN),OPTIONAL :: p1 !< valore per il primo istante temporale
+INTEGER,INTENT(IN),OPTIONAL :: p2 !< valore per il secondo istante temporale
 
 IF (PRESENT(timerange)) THEN
   this%timerange = timerange
@@ -98,6 +160,7 @@ ENDIF
 END SUBROUTINE vol7d_timerange_init
 
 
+!> Distrugge l'oggetto in maniera pulita, assegnandogli un valore mancante.
 SUBROUTINE vol7d_timerange_delete(this)
 TYPE(vol7d_timerange),INTENT(INOUT) :: this
 

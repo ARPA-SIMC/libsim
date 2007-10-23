@@ -182,17 +182,26 @@ ENDIF
 END SUBROUTINE vol7d_reform_final/**/VOL7D_POLY_TYPES
 
 
+!> Crea una vista a dimensione ridotta di un volume di anagrafica
+!! di tipo VOL7D_POLY_TYPE. È necessario fornire uno solo dei parametri
+!! opzionali \a vol*dp corrispondente al numero di dimensioni richieste.
+!! L'ordine delle dimensioni nella vista è quello prefissato in ::vol7d
+!! indipendentemente dall'ordine delle dimensioni fornito in \a dimlist.
 SUBROUTINE vol7d_get_volana/**/VOL7D_POLY_TYPES(this, dimlist, vol1dp, &
  vol2dp, vol3dp, vol4dp, vol5dp, vol6dp, vol7dp)
-TYPE(vol7d),INTENT(in) :: this
+TYPE(vol7d),INTENT(in) :: this !< oggetto di cui creare la vista
+!> lista delle dimensioni da includere nella vista, attenzione tutte le
+!! dimensioni non degeneri (cioè con estensione >1) devono essere incluse
+!! nella lista; utilizzare le costanti ::vol7d_ana_a ... ::vol7d_attr_a,
+!! ::vol7d_ana_d ... vol7d_attr_d
 INTEGER,INTENT(in) :: dimlist(:)
-VOL7D_POLY_TYPE,POINTER,OPTIONAL :: vol1dp(:)
-VOL7D_POLY_TYPE,POINTER,OPTIONAL :: vol2dp(:,:)
-VOL7D_POLY_TYPE,POINTER,OPTIONAL :: vol3dp(:,:,:)
-VOL7D_POLY_TYPE,POINTER,OPTIONAL :: vol4dp(:,:,:,:)
-VOL7D_POLY_TYPE,POINTER,OPTIONAL :: vol5dp(:,:,:,:,:)
-VOL7D_POLY_TYPE,POINTER,OPTIONAL :: vol6dp(:,:,:,:,:,:)
-VOL7D_POLY_TYPE,POINTER,OPTIONAL :: vol7dp(:,:,:,:,:,:,:)
+VOL7D_POLY_TYPE,POINTER,OPTIONAL :: vol1dp(:) !< vista 1d
+VOL7D_POLY_TYPE,POINTER,OPTIONAL :: vol2dp(:,:) !< vista 2d
+VOL7D_POLY_TYPE,POINTER,OPTIONAL :: vol3dp(:,:,:) !< vista 3d
+VOL7D_POLY_TYPE,POINTER,OPTIONAL :: vol4dp(:,:,:,:) !< vista 4d
+VOL7D_POLY_TYPE,POINTER,OPTIONAL :: vol5dp(:,:,:,:,:) !< vista 5d
+VOL7D_POLY_TYPE,POINTER,OPTIONAL :: vol6dp(:,:,:,:,:,:) !< vista 6d
+VOL7D_POLY_TYPE,POINTER,OPTIONAL :: vol7dp(:,:,:,:,:,:,:) !< vista 7d
 
 INTEGER :: voldim(vol7d_maxdim_ad)
 

@@ -47,7 +47,8 @@
 !!
 !!Programma esempio
 !!\include esempio_v7ddballe.f90
-
+!!
+!!\ingroup vol7d
 MODULE vol7d_dballe_class
 
 USE char_utilities

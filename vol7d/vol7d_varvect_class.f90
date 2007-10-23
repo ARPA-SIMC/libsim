@@ -1,33 +1,59 @@
+!> Classe per gestire un vettore di oggetti di tipo vol7d_var_class::vol7d_var.
+!! Questo modulo definisce una classe per gestire un vettore di ogetti vol7d_var,
+!! cioè variabili meteorologiche osservate, anche aventi tipi numerici diversi.
+!! \ingroup vol7d
 MODULE vol7d_varvect_class
 USE kinds
 USE missing_values
 USE vol7d_var_class
 IMPLICIT NONE
 
+!> Definisce un vettore di vol7d_var_class::vol7d_var per ogni tipo di dato
+!! supportato.
+!! Un puntatore non associato indica che non c'è nessuna variabile avente
+!! dati di quel tipo.
+!! I membri di \a vol7d_varvect sono pubblici e quindi liberamente
+!! accessibili e scrivibili, ma è comunque consigliato allocarli tramite
+!! l'apposito metodo.
 TYPE vol7d_varvect
-  TYPE(vol7d_var),POINTER :: r(:), d(:), i(:), b(:), c(:)
+  TYPE(vol7d_var),POINTER :: r(:) !< vettore di variabili reali
+  TYPE(vol7d_var),POINTER :: d(:) !< vettore di variabili a doppia precisione
+  TYPE(vol7d_var),POINTER :: i(:) !< vettore di variabili intere
+  TYPE(vol7d_var),POINTER :: b(:) !< vettore di variabili byte
+  TYPE(vol7d_var),POINTER :: c(:) !< vettore di variabili carattere
 END TYPE  vol7d_varvect
 
+
+!> Costruttore per la classe vol7d_varvect.
+!! Deve essere richiamato 
+!! per tutti gli oggetti di questo tipo definiti in un programma.
 INTERFACE init
   MODULE PROCEDURE vol7d_varvect_init
 END INTERFACE
 
+!> Distruttore per la classe vol7d_varvect.
 INTERFACE delete
   MODULE PROCEDURE vol7d_varvect_delete
 END INTERFACE
 
 CONTAINS
 
+!> Inizializza un oggetto di tipo vol7d_varvect.
+!! Non riceve alcun parametro tranne l'oggetto stesso.  Attenzione, è necessario
+!! comunque chiamare sempre il costruttore per evitare di avere dei puntatori in
+!! uno stato indefinito.
 SUBROUTINE vol7d_varvect_init(this)
-TYPE(vol7d_varvect),INTENT(INOUT) :: this
+TYPE(vol7d_varvect),INTENT(INOUT) :: this !< oggetto da inizializzare
 
 NULLIFY(this%r, this%d, this%i, this%b, this%c)
 
 END SUBROUTINE vol7d_varvect_init
 
 
+!> Distrugge l'oggetto in maniera pulita, liberando l'eventuale memoria
+!! dinamicamente allocata.
 SUBROUTINE vol7d_varvect_delete(this)
-TYPE(vol7d_varvect),INTENT(INOUT) :: this
+TYPE(vol7d_varvect),INTENT(INOUT) :: this !< oggetto da distruggere
 
 IF (ASSOCIATED(this%r)) DEALLOCATE(this%r)
 IF (ASSOCIATED(this%d)) DEALLOCATE(this%d)
@@ -38,10 +64,19 @@ IF (ASSOCIATED(this%c)) DEALLOCATE(this%c)
 END SUBROUTINE vol7d_varvect_delete
 
 
+!> Metodo per allocare i vettori di variabili richiesti.
+!! Se uno dei parametri \a nvar* non è presente o è <= 0 non viene
+!! allocato niente per quel tipo di variabile.
+!! Il metodo può essere chiamato più volte per allocare successivamente
+!! diversi tipi di variabili.
 SUBROUTINE vol7d_varvect_alloc(this, nvarr, nvard, nvari, nvarb, nvarc, ini)
-TYPE(vol7d_varvect),INTENT(INOUT) :: this
-INTEGER,INTENT(in),OPTIONAL :: nvarr, nvard, nvari, nvarb, nvarc
-LOGICAL,INTENT(in),OPTIONAL :: ini
+TYPE(vol7d_varvect),INTENT(INOUT) :: this !< oggetto in cui allocare i vettori
+INTEGER,INTENT(in),OPTIONAL :: nvarr !< numero di variabili con dati reali
+INTEGER,INTENT(in),OPTIONAL :: nvard !< numero di variabili con dati a doppia precisione
+INTEGER,INTENT(in),OPTIONAL :: nvari !< numero di variabili con dati interi
+INTEGER,INTENT(in),OPTIONAL :: nvarb !< numero di variabili con dati byte
+INTEGER,INTENT(in),OPTIONAL :: nvarc !< numero di variabili con dati carattere
+LOGICAL,INTENT(in),OPTIONAL :: ini !< se fornito e vale \c .TRUE., viene chiamato il costruttore vol7d_var_class::init (senza parametri opzionali) per ognuna delle variabili allocate in ciascun vettore
 
 INTEGER :: i
 LOGICAL :: linit

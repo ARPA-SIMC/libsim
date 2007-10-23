@@ -1,3 +1,11 @@
+!> \brief Estensione della class vol7d_class per compiere semplici
+!! operazioni matematico-statistiche sui volumi.
+!!
+!! Questo modulo estende vol7d_class aggiungendo operazioni elementari
+!! quali la media e la cumulazione di dati in un volume vol7d_class::vol7d.
+!! \ingroup vol7d
+!!
+!! \todo estendere l'operazione di media anche a dati istantanei.
 MODULE vol7d_class_compute
 USE vol7d_class
 
@@ -5,24 +13,52 @@ IMPLICIT NONE
 
 CONTAINS
 
+!> Cumula le osservazioni su un intervallo specificato quando possibile.
+!! Crea un nuovo oggetto vol7d che contiene solo i dati del volume originario
+!! soddisfacenti le condizioni:
+!!  - variabili di tipo reale o doppia precisione
+!!  - intervallo temporale di tipo "cumulazione"
+!!    (vol7d_timerange_class::vol7d_timerange::timerange = 4)
+!!    da un tempo passato al tempo attuale
+!!  - intervallo di cumulazione che sia uguale o un sottomultiplo dell'intervallo
+!!    di cumulazione desiderato \a step
+!!
+!! I volumi di anagrafica e relativi attributi sono copiati nel nuovo oggetto
+!! senza variazioni.
+!! Se \a start non è specificato, il metodo calcola automaticamente l'inizio
+!! del periodo di cumulazione come il primo intervallo di tempo disponibile
+!! nel volume, modulo \a step.
+!! Per avere un pieno controllo sull'inizio della cumulazione, conviene
+!! comunque specificare
+!! \a start (attenzione che nel volume finale il tempo iniziale non sarà poi
+!! \a start ma \a start + \a step perché le osservazioni cumulate sono
+!! considerate valide al termine del periodo di cumulazione).
+! Questo significa, ad esempio, che se estraiamo
+! le precipitazioni cumulate dall'archivio Oracle del SIM (vedi
+! vol7d_oraclecim_class) ad es. dalle 00 del 10/12/2004 alle 00 dell'11/12/2004
 SUBROUTINE vol7d_cumulate(this, that, step, start, frac_valid)
-TYPE(vol7d),INTENT(in) :: this
-TYPE(vol7d),INTENT(out) :: that
-TYPE(timedelta),INTENT(in) :: step
-TYPE(datetime),INTENT(in),OPTIONAL :: start
-REAL,INTENT(in),OPTIONAL :: frac_valid
+TYPE(vol7d),INTENT(in) :: this !< oggetto da cumulare, non viene modificato dal metodo
+TYPE(vol7d),INTENT(out) :: that !< oggetto contenente, in uscita, i valori cumulati
+TYPE(timedelta),INTENT(in) :: step !< intervallo di cumulazione
+TYPE(datetime),INTENT(in),OPTIONAL :: start !< inizio del periodo di cumulazione
+REAL,INTENT(in),OPTIONAL :: frac_valid !< frazione minima di dati validi necessaria per considerare accettabile un dato cumulato, default=1
 
 CALL vol7d_extend_cumavg(this, that, 4, step, start, frac_valid)
 
 END SUBROUTINE vol7d_cumulate
 
 
+!> Media le osservazioni su un intervallo specificato quando possibile.
+!! Funziona esattamente come il metodo ::vol7d_cumulate ma agisce
+!! sui dati aventi un timerange di tipo "media"
+!! (vol7d_timerange_class::vol7d_timerange::timerange = 3) e ne calcola
+!! la media sull'intervallo specificato.
 SUBROUTINE vol7d_average(this, that, step, start, frac_valid)
-TYPE(vol7d),INTENT(in) :: this
-TYPE(vol7d),INTENT(out) :: that
-TYPE(timedelta),INTENT(in) :: step
-TYPE(datetime),INTENT(in),OPTIONAL :: start
-REAL,INTENT(in),OPTIONAL :: frac_valid
+TYPE(vol7d),INTENT(in) :: this !< oggetto da mediare, non viene modificato dal metodo
+TYPE(vol7d),INTENT(out) :: that !< oggetto contenente, in uscita, i valori mediati
+TYPE(timedelta),INTENT(in) :: step !< intervallo di media
+TYPE(datetime),INTENT(in),OPTIONAL :: start !< inizio del periodo di media
+REAL,INTENT(in),OPTIONAL :: frac_valid !< frazione minima di dati validi necessaria per considerare accettabile un dato mediato, default=1
 
 CALL vol7d_extend_cumavg(this, that, 3, step, start, frac_valid)
 

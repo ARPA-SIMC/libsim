@@ -1,12 +1,28 @@
+!> \brief Estensione di vol7d_class per importare volumi di dati
+!! dall'archivio Oracle del SIM.
+!!
+!! Questo modulo definisce gli oggetti e i metodi per importare
+!! un volume di dati dall'archivio Oracle del SIM in un oggetto di tipo
+!! vol7d_class::vol7d.
+!!
+!! \todo terminare la procedura per creare i file di anagrafica direttamente
+!! dall'archivio Oracle (Andrea Selvini) e offrire la possibilità di importare
+!! (nella ::import) anche variabili di anagrafica come la quota della stazione.
+!!
+!! \ingroup vol7d
 MODULE vol7d_oraclesim_class
 USE char_utilities
 USE vol7d_class
 USE vol7d_utilities
 IMPLICIT NONE
 
+!> Oggetto usato per interfacciarsi all'archivio.
+!! Estende vol7d_class::vol7d aggiungendo le informazioni necessarie
+!! all'estrazione. L'utente, pur potendo accedere a tutti i componenti
+!! dell'oggetto, dovrà preoccuparsi del solo componente vol7d.
 TYPE vol7d_oraclesim
-  TYPE(vol7d) :: vol7d
-  INTEGER :: ounit
+  TYPE(vol7d) :: vol7d !< oggetto di tipo vol7d che conterrà i dati estratti
+  INTEGER :: ounit !< informazione di servizio
 END TYPE vol7d_oraclesim
 
 TYPE ora_var_conv
@@ -48,14 +64,19 @@ PRIVATE
 PUBLIC vol7d_oraclesim, vol7d_oraclesim_init, vol7d_oraclesim_delete, &
  import
 
+!> Costruttore per la classe vol7d_oraclesim.
+!! Deve essere richiamato 
+!! per tutti gli oggetti di questo tipo definiti in un programma.
 INTERFACE init
   MODULE PROCEDURE vol7d_oraclesim_init
 END INTERFACE
 
+!> Distruttore per la classe vol7d_oraclesim.
 INTERFACE delete
   MODULE PROCEDURE vol7d_oraclesim_delete
 END INTERFACE
 
+!> Metodi di importazione dati dall'archivio Oracle.
 INTERFACE import
   MODULE PROCEDURE vol7d_oraclesim_importvsns, vol7d_oraclesim_importvvns, &
    vol7d_oraclesim_importvsnv, vol7d_oraclesim_importvvnv
@@ -64,6 +85,13 @@ END INTERFACE
 CONTAINS
 
 
+!> Inizializza un oggetto di tipo vol7doraclesim.
+!! Trattandosi di un'estensione di vol7d, provvede ad inizializzare
+!! anche l'oggetto vol7d contenuto.
+!! Riceve parametri opzionali per pura compatibilità
+!! con il corrispondente metodo di vol7d_dballe_class, ma essi sono ininfluenti.
+!! Alla prima chiamata in un programma, provvede anche ad importare
+!! le tabelle di conversione variabili dal file vartab.csv.
 SUBROUTINE vol7d_oraclesim_init(this, dsn, user, password, write, wipe)
 TYPE(vol7d_oraclesim),INTENT(out) :: this
 CHARACTER(len=*), INTENT(in),OPTIONAL :: dsn, user, password
@@ -78,6 +106,9 @@ CALL init(this%vol7d)
 END SUBROUTINE vol7d_oraclesim_init
 
 
+!> Distrugge l'oggetto in maniera pulita.
+!! Trattandosi di un'estensione di vol7d, provvede a distruggere
+!! anche l'oggetto vol7d contenuto.
 SUBROUTINE vol7d_oraclesim_delete(this)
 TYPE(vol7d_oraclesim) :: this
 
@@ -91,63 +122,73 @@ ENDIF
 END SUBROUTINE vol7d_oraclesim_delete
 
 
-SUBROUTINE vol7d_oraclesim_importvsns(this, var, network, timei, timef,level,timerange, set_network)
+SUBROUTINE vol7d_oraclesim_importvsns(this, var, network, timei, timef, level, &
+ timerange, set_network)
 TYPE(vol7d_oraclesim),INTENT(out) :: this
 CHARACTER(len=*),INTENT(in) :: var
 INTEGER,INTENT(in) :: network
 TYPE(datetime),INTENT(in) :: timei, timef
+TYPE(vol7d_level),INTENT(in),OPTIONAL :: level
+TYPE(vol7d_timerange),INTENT(in),OPTIONAL :: timerange
 TYPE(vol7d_network),INTENT(in),OPTIONAL :: set_network
-TYPE(vol7d_level),INTENT(in),optional :: level
-TYPE(vol7d_timerange),INTENT(in),optional :: timerange
 
-CALL import(this, (/var/), network, timei, timef, level,timerange,set_network)
+CALL import(this, (/var/), network, timei, timef, level, timerange, set_network)
 
 END SUBROUTINE vol7d_oraclesim_importvsns
 
 
-SUBROUTINE vol7d_oraclesim_importvsnv(this, var, network, timei, timef,level,timerange, set_network)
+SUBROUTINE vol7d_oraclesim_importvsnv(this, var, network, timei, timef, level, &
+ timerange, set_network)
 TYPE(vol7d_oraclesim),INTENT(out) :: this
 CHARACTER(len=*),INTENT(in) :: var
 INTEGER,INTENT(in) :: network(:)
 TYPE(datetime),INTENT(in) :: timei, timef
+TYPE(vol7d_level),INTENT(in),OPTIONAL :: level
+TYPE(vol7d_timerange),INTENT(in),OPTIONAL :: timerange
 TYPE(vol7d_network),INTENT(in),OPTIONAL :: set_network
-TYPE(vol7d_level),INTENT(in),optional :: level
-TYPE(vol7d_timerange),INTENT(in),optional :: timerange
 
 INTEGER :: i
 
 DO i = 1, SIZE(network)
-  CALL import(this, (/var/), network(i), timei, timef, level,timerange,set_network)
+  CALL import(this, (/var/), network(i), timei, timef, level, timerange, &
+   set_network)
 ENDDO
 
 END SUBROUTINE vol7d_oraclesim_importvsnv
 
 
-SUBROUTINE vol7d_oraclesim_importvvnv(this, var, network, timei, timef,level,timerange, set_network)
-TYPE(vol7d_oraclesim),INTENT(out) :: this
-CHARACTER(len=*),INTENT(in) :: var(:)
-INTEGER,INTENT(in) :: network(:)
-TYPE(datetime),INTENT(in) :: timei, timef
-TYPE(vol7d_network),INTENT(in),OPTIONAL :: set_network
-TYPE(vol7d_level),INTENT(in),optional :: level
-TYPE(vol7d_timerange),INTENT(in),optional :: timerange
+!> Importa un volume vol7d dall'archivio Oracle SIM.
+!! Attualmente l'importazione crea solo un volume di dati reali
+!! vol7d_class::vol7d::voldatir. Tutti i descrittori vengono assegnati
+!! correttamente, compresa l'anagrafica delle stazioni.
+SUBROUTINE vol7d_oraclesim_importvvnv(this, var, network, timei, timef, level, &
+ timerange, set_network)
+TYPE(vol7d_oraclesim),INTENT(out) :: this !< oggetto in cui importare i dati
+CHARACTER(len=*),INTENT(in) :: var(:) !< lista delle variabili da importare (codice alfanumerico della tabella B del WMO)
+INTEGER,INTENT(in) :: network(:) !< indicativo numerico della rete nell'archivio SIM
+TYPE(datetime),INTENT(in) :: timei !< istante iniziale delle osservazionida estrarre (estremo incluso)
+TYPE(datetime),INTENT(in) :: timef !< istante finale delle osservazionida estrarre (estremo incluso)
+TYPE(vol7d_level),INTENT(in),OPTIONAL :: level !< estrae solo il livello verticale fornito, default=tutti
+TYPE(vol7d_timerange),INTENT(in),OPTIONAL :: timerange !< estrae solo i dati con intervallo temporale (es. istantaneo, cumulato, ecc.) analogo al timerange fornito, default=tutti
+TYPE(vol7d_network),INTENT(in),OPTIONAL :: set_network !< se fornito, collassa tutte le reti nell'unica rete indicata, eliminando le stazioni comuni a reti diverse
 
 INTEGER :: i
 
 DO i = 1, SIZE(network)
-  CALL import(this, var, network(i), timei, timef, level,timerange,set_network)
+  CALL import(this, var, network(i), timei, timef, level, timerange, set_network)
 ENDDO
 
 END SUBROUTINE vol7d_oraclesim_importvvnv
 
 
-SUBROUTINE vol7d_oraclesim_importvvns(this, var, network, timei, timef, level,timerange,set_network)
+SUBROUTINE vol7d_oraclesim_importvvns(this, var, network, timei, timef, level, &
+ timerange, set_network)
 TYPE(vol7d_oraclesim),INTENT(out) :: this
 CHARACTER(len=*),INTENT(in) :: var(:)
 INTEGER,INTENT(in) :: network
 TYPE(datetime),INTENT(in) :: timei, timef
-TYPE(vol7d_level),INTENT(in),optional :: level
-TYPE(vol7d_timerange),INTENT(in),optional :: timerange
+TYPE(vol7d_level),INTENT(in),OPTIONAL :: level
+TYPE(vol7d_timerange),INTENT(in),OPTIONAL :: timerange
 TYPE(vol7d_network),INTENT(in),OPTIONAL :: set_network
 
 TYPE(vol7d) :: v7dtmp, v7dtmp2
@@ -190,13 +231,13 @@ DO nvin = 1, SIZE(var)
     IF (vartable(nvbt)%varbt == var(nvin) .AND. &
      vartable(nvbt)%network == network) THEN
 
-       if (present(level))then
-          if (vartable(nvbt)%level /= level )cycle
-       end if
+      IF (PRESENT(level))THEN
+        IF (vartable(nvbt)%level /= level) CYCLE
+      END IF
 
-       if (present(timerange))then
-          if (vartable(nvbt)%timerange /= timerange )cycle
-       end if
+      IF (PRESENT(timerange))THEN
+        IF (vartable(nvbt)%timerange /= timerange) CYCLE
+      END IF
 
       found = .TRUE.
       nvar = nvar + 1
@@ -220,13 +261,13 @@ DO nvin = 1, SIZE(var)
      vartable(nvbt)%network == network) THEN
       nvar = nvar + 1
 
-       if (present(level))then
-          if (vartable(nvbt)%level /= level )cycle
-       end if
+      IF (PRESENT(level))THEN
+        IF (vartable(nvbt)%level /= level) CYCLE
+      END IF
 
-       if (present(timerange))then
-          if (vartable(nvbt)%timerange /= timerange )cycle
-       end if
+      IF (PRESENT(timerange))THEN
+        IF (vartable(nvbt)%timerange /= timerange) CYCLE
+      END IF
 
 ! Controllare di non eccedere cvar????
       IF (nvar > 1) cvar(LEN_TRIM(cvar)+1:) = ',' ! Finezza per la ','

@@ -1,29 +1,62 @@
+!> Classe per la gestione delle variabili osservate da stazioni meteo e affini.
+!! Questo modulo definisce una classe per rappresentare variabili meteorologiche
+!! osservate, o attributi, aventi diversi tipi numerici o carattere.
+!! \ingroup vol7d
 MODULE vol7d_var_class
 USE kinds
 USE missing_values
 IMPLICIT NONE
 
+!> Definisce una variabile meteorologica osservata o un suo attributo.
+!! I membri \a r, \a d, \a i, \a b, \a c servono, internamente a vol7d,
+!! per associare le variabili agli attributi, e indicano
+!! a quale variabile, nel descrittore delle variabili, coincide
+!! la variabile corrente nel descrittore delle "variabili aventi attributo".
+!! I membri di \a vol7d_var sono pubblici e quindi liberamente
+!! accessibili e scrivibili, ma è comunque consigliato assegnarli tramite
+!! il costruttore ::init.
 TYPE vol7d_var
-  CHARACTER(len=10) :: btable
-  CHARACTER(len=20) :: description, unit
-  INTEGER :: r, d, i, b, c
+  CHARACTER(len=10) :: btable !< codice della variabile secondo la tabella B del WMO.
+  CHARACTER(len=20) :: description !< descrizione testuale della variabile (a solo scopo estetico)
+  CHARACTER(len=20) :: unit !< descrizione testuale dell'unità di misura (a solo scopo estetico)
+  INTEGER :: r !< indice della variabile di dati reale che possiede l'attributo corrente
+  INTEGER :: d !< indice della variabile di dati a doppia precisione che possiede l'attributo corrente
+  INTEGER :: i !< indice della variabile di dati intera che possiede l'attributo corrente
+  INTEGER :: b !< indice della variabile di dati byte che possiede l'attributo corrente
+  INTEGER :: c !< indice della variabile di dati carattere che possiede l'attributo corrente
 END TYPE  vol7d_var
 
+!> Valore mancante per vol7d_var.
 TYPE(vol7d_var),PARAMETER :: vol7d_var_miss= &
  vol7d_var(cmiss,cmiss,cmiss,imiss,imiss,imiss,imiss,imiss)
 
+!> Costruttore per la classe vol7d_var.
+!! Deve essere richiamato 
+!! per tutti gli oggetti di questo tipo definiti in un programma.
 INTERFACE init
   MODULE PROCEDURE vol7d_var_init
 END INTERFACE
 
+!> Distruttore per la classe vol7d_var.
+!! Distrugge l'oggetto in maniera pulita, assegnandogli un valore mancante.
 INTERFACE delete
   MODULE PROCEDURE vol7d_var_delete
 END INTERFACE
 
+!> Operatore logico di uguaglianza tra oggetti della classe vol7d_var.
+!! Funziona anche per 
+!! confronti di tipo array-array (qualsiasi n. di dimensioni) e di tipo
+!! scalare-vettore(1-d) (ma non vettore(1-d)-scalare o tra array con più
+!! di 1 dimensione e scalari).
 INTERFACE OPERATOR (==)
   MODULE PROCEDURE vol7d_var_eq, vol7d_var_eqsv
 END INTERFACE
 
+!> Operatore logico di disuguaglianza tra oggetti della classe vol7d_var.
+!! Funziona anche per 
+!! confronti di tipo array-array (qualsiasi n. di dimensioni) e di tipo
+!! scalare-vettore(1-d) (ma non vettore(1-d)-scalare o tra array con più
+!! di 1 dimensione e scalari).
 INTERFACE OPERATOR (/=)
   MODULE PROCEDURE vol7d_var_ne, vol7d_var_nesv
 END INTERFACE
@@ -46,11 +79,17 @@ END INTERFACE
 
 CONTAINS
 
+!> Inizializza un oggetto \a vol7d_var con i parametri opzionali forniti.
+!! Se non viene passato nessun parametro opzionale l'oggetto è
+!! inizializzato a valore mancante.
+!! I membri \a r, \a d, \a i, \a b, \a c non possono essere assegnati
+!! tramite costruttore, ma solo direttamente.
 SUBROUTINE vol7d_var_init(this, btable, description, unit)
-TYPE(vol7d_var),INTENT(INOUT) :: this
+TYPE(vol7d_var),INTENT(INOUT) :: this !< oggetto da inizializzare
 !INTEGER,INTENT(in),OPTIONAL :: btable
-CHARACTER(len=*),INTENT(in),OPTIONAL :: btable
-CHARACTER(len=20),INTENT(in),OPTIONAL :: description, unit
+CHARACTER(len=*),INTENT(in),OPTIONAL :: btable !< codice della variabile
+CHARACTER(len=20),INTENT(in),OPTIONAL :: description !< descrizione della variabile
+CHARACTER(len=20),INTENT(in),OPTIONAL :: unit !< unità di misura
 
 IF (PRESENT(btable)) THEN
   this%btable = btable
@@ -80,8 +119,9 @@ this%c = -1
 END SUBROUTINE vol7d_var_init
 
 
+!> Distrugge l'oggetto in maniera pulita, assegnandogli un valore mancante.
 SUBROUTINE vol7d_var_delete(this)
-TYPE(vol7d_var),INTENT(INOUT) :: this
+TYPE(vol7d_var),INTENT(INOUT) :: this !< oggetto da distruggre
 
 this%btable = cmiss
 this%description = cmiss
