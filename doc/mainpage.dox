@@ -1,0 +1,29 @@
+/*! \mainpage libsim Librerie di software idrometeorologico del SIM.
+
+Questo pacchetto rappresenta un contenitore delle procedure Fortran 90
+sviluppate al SIM che sono di utilità generale per chi sviluppa
+software idrometeorologico in tale linguaggio. Il progetto è nato
+attorno alla classe vol7d per gestire dati puntuali (vedi
+vol7d_class), che ne costituisce il nucleo, ma include molte altre
+cose, a partire dalle utilità di base per gestire spazio, tempo,
+condizioni di errore, accesso a file, ecc. (libreria sim_base) fino a
+librerie di più alto livello come sim_termolib, che fornisce funzioni
+per i calcoli termodinamici o sim_grib che fornisce un'interfaccia tra
+la libreria grib EMOS e le suddette classi di base per la gestione di
+griglie georeferenziate.
+
+Tutti sono invitati a utilizzare le librerie nei loro programmi e a
+contribuire al loro sviluppo inserendovi e documentando procedure che
+ritengono potenzialmente utili ad altri, piuttosto che tenerle
+confinate in un proprio programmino locale o tramandarle oralmente.
+
+\section doc Documentazione del codice
+
+Il codice è documentato usando doxygen, uno strumento che rende la
+documentazione molto comoda da scrivere ma meno comoda da leggere,
+cercheremo di fare il nostro meglio per migliorarne la chiarezza
+strada facendo. Intanto consigliamo di cominciare aprendo l'etichetta
+"sezioni" in cima alla pagina e accedendo da lì ai moduli che
+interessano.
+
+*/

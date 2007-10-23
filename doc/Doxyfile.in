@@ -22,7 +22,7 @@ PROJECT_NAME           = @PACKAGE_NAME@
 # This could be handy for archiving the generated documentation or 
 # if some version control system is used.
 
-PROJECT_NUMBER         = @PACKAGE_VERSION@
+PROJECT_NUMBER         = Versione @PACKAGE_VERSION@
 
 # The OUTPUT_DIRECTORY tag is used to specify the (relative or absolute) 
 # base path where the generated documentation will be put. 
@@ -70,7 +70,7 @@ INPUT_ENCODING = ISO-8859-1
 # whereas setting the tag to NO uses a Unix-style encoding (the default for 
 # all platforms other than Windows).
 
-USE_WINDOWS_ENCODING   = NO
+#USE_WINDOWS_ENCODING   = NO
 
 # If the BRIEF_MEMBER_DESC tag is set to YES (the default) Doxygen will 
 # include brief member descriptions after the members that are listed in 
@@ -316,7 +316,7 @@ CASE_SENSE_NAMES       = YES
 # will show members with their full class and namespace scopes in the 
 # documentation. If set to YES the scope will be hidden.
 
-HIDE_SCOPE_NAMES       = NO
+HIDE_SCOPE_NAMES       = YES
 
 # If the SHOW_INCLUDE_FILES tag is set to YES (the default) then Doxygen 
 # will put a list of the files that are included by a file in the documentation 
@@ -474,7 +474,7 @@ WARN_LOGFILE           =
 # directories like "/usr/src/myproject". Separate the files or directories 
 # with spaces.
 
-INPUT                  = @top_srcdir@/base @top_srcdir@/vol7d @top_srcdir@/grib @top_srcdir@/qc
+INPUT                  = @srcdir@ @top_srcdir@/base @top_srcdir@/vol7d @top_srcdir@/grib @top_srcdir@/qc
 
 #INPUT = @top_srcdir@/src/main @top_srcdir@/doc/general @top_srcdir@/src/datatypes/Mesh.F90 @top_srcdir@/src/utils
 
@@ -485,7 +485,7 @@ INPUT                  = @top_srcdir@/base @top_srcdir@/vol7d @top_srcdir@/grib 
 # *.c *.cc *.cxx *.cpp *.c++ *.java *.ii *.ixx *.ipp *.i++ *.inl *.h *.hh *.hxx 
 # *.hpp *.h++ *.idl *.odl *.cs *.php *.php3 *.inc *.m *.mm *.py
 
-FILE_PATTERNS          = *.f90 *.F90
+FILE_PATTERNS          = *.dox *.f90 *.F90
 
 # The RECURSIVE tag can be used to turn specify whether or not subdirectories 
 # should be searched for input files as well. Possible values are YES and NO. 
@@ -995,7 +995,7 @@ ENABLE_PREPROCESSING   = YES
 # compilation will be performed. Macro expansion can be done in a controlled 
 # way by setting EXPAND_ONLY_PREDEF to YES.
 
-MACRO_EXPANSION        = NO
+MACRO_EXPANSION        = YES
 
 # If the EXPAND_ONLY_PREDEF and MACRO_EXPANSION tags are both set to YES 
 # then the macro expansion is limited to the macros specified with the 
