@@ -81,8 +81,8 @@ TYPE(geo_coord),PARAMETER :: geo_coord_miss= &
 ! queste costanti indicano le possibili topologie di un oggetto della
 ! classe \a geo_coordvect, sono tratte dal formato shapefile.
 INTEGER, PARAMETER :: geo_coordvect_point = 1 !< Tipi di geo_coordvect (da shapelib): punti isolati
-INTEGER, PARAMETER :: geo_coordvect_arc = 3 !< Tipi di geo_coordvect (da shapelib): archi (poligoni non necesariamente chiusi, archi multipli non implementati)
-INTEGER, PARAMETER :: geo_coordvect_polygon = 5 !< Tipi di geo_coordvect (da shapelib): poligoni (poligoni necesariamente chiusi, poligoni multipli non implementati)
+INTEGER, PARAMETER :: geo_coordvect_arc = 3 !< Tipi di geo_coordvect (da shapelib): archi (poligoni non necessariamente chiusi, archi multipli non implementati)
+INTEGER, PARAMETER :: geo_coordvect_polygon = 5 !< Tipi di geo_coordvect (da shapelib): poligoni (poligoni necessariamente chiusi, poligoni multipli non implementati)
 INTEGER, PARAMETER :: geo_coordvect_multipoint = 8 !< Tipi di geo_coordvect (da shapelib): gruppi di punti
 
 REAL, PRIVATE :: overalloc = 2.0 ! fattore di sovrallocazione
@@ -536,7 +536,7 @@ END SUBROUTINE geo_coord_init
 
 !> Distrugge l'oggetto in maniera pulita, assegnandogli un valore mancante.
 SUBROUTINE geo_coord_delete(this)
-TYPE(geo_coord), INTENT(INOUT) :: this
+TYPE(geo_coord), INTENT(INOUT) :: this !< oggetto da distruggre
 
 CALL delete(this%desc)
 this%lon = rmiss
@@ -701,7 +701,7 @@ ELSE IF (this%desc%utmce .AND. that%desc%geoce) THEN
   CALL geo_coord_to_geo(this)
 ELSE IF (this%desc%utmce .AND. that%desc%utmce) THEN ! diversi fusi/ellissoidi? siamo fusi!
   CALL geo_coord_to_geo(that)
-  CALL geo_coord_to_utm(that, fuso=this%desc%fuso)
+  CALL geo_coord_to_utm(that, fuso=this%desc%fuso, elliss=that%desc%elliss)
 ENDIF
 
 END SUBROUTINE geo_coord_equalize
@@ -722,12 +722,13 @@ END SUBROUTINE geo_coord_to_geo
 !> Ricalcola le coordinate dell'oggetto nel sistema UTM.
 !! È possibile specificare il fuso UTM se non
 !! era stato specificato in fase di inizializzazione.
-SUBROUTINE geo_coord_to_utm(this, fuso)
+SUBROUTINE geo_coord_to_utm(this, fuso, elliss)
 TYPE(geo_coord), INTENT (INOUT) :: this !< oggetto di cui ricalcolare le coordinate
 INTEGER, INTENT(IN), OPTIONAL  :: fuso !< eventuale fuso UTM
+INTEGER, INTENT(IN), OPTIONAL :: elliss !< eventuale ellissoide
 
 IF (.NOT.this%desc%geoce .OR. this%desc%utmce) RETURN ! Niente da fare
-CALL geo_coorddesc_setval(this%desc, fuso, utmce=.TRUE.)
+CALL geo_coorddesc_setval(this%desc, fuso, elliss, utmce=.TRUE.)
 CALL ll2utm(this%lon, this%lat, this%desc%fuso, this%desc%elliss, &
  this%utme, this%utmn)
 
@@ -767,7 +768,7 @@ END FUNCTION geo_coord_dist
 !! del rettangolo.
 !! Tutti gli oggetti devono essere già stati
 !! convertiti ad un sistema di coordinate comune, altrimenti viene
-!! restituito \c.FALSE. .
+!! restituito \c .FALSE. .
 FUNCTION geo_coord_inside_rectang(this, coordmin, coordmax) RESULT(res)
 TYPE(geo_coord),INTENT(IN) :: this !< oggetto di cui determinare la posizione
 TYPE(geo_coord),INTENT(IN) :: coordmin !< vertice sud-ovest del rettangolo
@@ -911,7 +912,7 @@ ELSE IF (this%desc%utmce .AND. that%desc%geoce) THEN
   CALL geo_coordvect_to_geo(this)
 ELSE IF (this%desc%utmce .AND. that%desc%utmce) THEN ! diversi fusi/ellissoidi? siamo fusi!
   CALL geo_coordvect_to_geo(this)
-  CALL geo_coordvect_to_utm(this, fuso=that%desc%fuso)
+  CALL geo_coordvect_to_utm(this, fuso=that%desc%fuso, elliss=that%desc%elliss)
 ENDIF
 
 END SUBROUTINE geo_coordvect_equalize
@@ -938,14 +939,15 @@ END SUBROUTINE geo_coordvect_to_geo
 !> Ricalcola le coordinate dell'oggetto nel sistema UTM.
 !! È possibile specificare il fuso UTM se non
 !! era stato specificato in fase di inizializzazione.
-SUBROUTINE geo_coordvect_to_utm(this, fuso)
+SUBROUTINE geo_coordvect_to_utm(this, fuso, elliss)
 TYPE(geo_coordvect), INTENT (INOUT) :: this !< oggetto di cui ricalcolare le coordinate
 INTEGER, INTENT(IN), OPTIONAL :: fuso !< eventuale fuso UTM
+INTEGER, INTENT(IN), OPTIONAL :: elliss !< eventuale ellissoide
 
 INTEGER :: i
 
 IF (.NOT.this%desc%geoce .OR. this%desc%utmce) RETURN ! Niente da fare
-CALL geo_coorddesc_setval(this%desc, fuso, utmce=.TRUE.)
+CALL geo_coorddesc_setval(this%desc, fuso, elliss, utmce=.TRUE.)
 ALLOCATE(this%utm(this%vsize,2))
 
 DO i = 1, this%vsize
@@ -1305,8 +1307,8 @@ END SUBROUTINE geo_coordvect_exportvect
 !! Funziona anche se la topologia di \a poly non è poligonale,
 !! forzandone la chiusura; usa un algoritmo di ricerca del numero di
 !! intersezioni, come indicato in
-!! \link http://www.faqs.org/faqs/graphics/algorithms-faq/
-!! comp.graphics.algorithms FAQ \endlink o in
+!! comp.graphics.algorithms FAQ (http://www.faqs.org/faqs/graphics/algorithms-faq/)
+!!  o in
 !! http://www.ecse.rpi.edu/Homepages/wrf/Research/Short_Notes/pnpoly.html
 FUNCTION geo_coord_inside(this, poly) RESULT(inside)
 TYPE(geo_coord), INTENT(IN) :: this !< oggetto di cui determinare la posizione

@@ -1,4 +1,4 @@
-!> \defgroup qc 
+!> \defgroup qc Pacchetto libsim, libreria qc.
 !! Procedure per il controllo di qualità.
 !! Al momento è implementato solo il controllo di qualità climatico.
 

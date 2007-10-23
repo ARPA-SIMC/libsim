@@ -1,5 +1,5 @@
 !> \defgroup base Pacchetto libsim, libreria base.
-!! La libreria base del pacchetto libsim contiene moduli e classi di uso
+!! La libreria base di libsim contiene moduli e classi di uso
 !! generale in applicazioni scientifiche scritte in Fortran 90. Per
 !! compilare e linkare programmi che fanno uso di questa libreria si
 !! dovranno inserire gli appositi comandi \c USE nelle unità di
@@ -8,11 +8,12 @@
 !! \c -lsim_base, presupponendo che l'installazione sia stata
 !! fatta a livello di sistema.
 
-!> \brief Definizione di costanti utili per KIND
-!!
+!> \brief Definizione di costanti utili per dichiarare variabili di tipi
+!! desiderati.
 !! Questo modulo definisce delle costanti da usare nelle dichiarazioni
-!! di variabili e nella conversione di costanti per essere sicuri di
-!! usare i tipi desiderati.
+!! di variabili (tramite l'attributo \c KIND)
+!! e nella conversione di costanti (tramite l'underscore \c _ ) per essere
+!! sicuri di usare i tipi desiderati.
 !! Esempio tipico di utilizzo:
 !! \code
 !! USE kinds
