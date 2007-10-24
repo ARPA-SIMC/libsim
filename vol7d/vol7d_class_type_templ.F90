@@ -188,20 +188,15 @@ END SUBROUTINE vol7d_reform_final/**/VOL7D_POLY_TYPES
 !! L'ordine delle dimensioni nella vista è quello prefissato in ::vol7d
 !! indipendentemente dall'ordine delle dimensioni fornito in \a dimlist.
 SUBROUTINE vol7d_get_volana/**/VOL7D_POLY_TYPES(this, dimlist, vol1dp, &
- vol2dp, vol3dp, vol4dp, vol5dp, vol6dp, vol7dp)
+ vol2dp, vol3dp)
 TYPE(vol7d),INTENT(in) :: this !< oggetto di cui creare la vista
 !> lista delle dimensioni da includere nella vista, attenzione tutte le
 !! dimensioni non degeneri (cioè con estensione >1) devono essere incluse
-!! nella lista; utilizzare le costanti ::vol7d_ana_a ... ::vol7d_attr_a,
-!! ::vol7d_ana_d ... vol7d_attr_d
+!! nella lista; utilizzare le costanti ::vol7d_ana_a ... ::vol7d_attr_a, ecc.
 INTEGER,INTENT(in) :: dimlist(:)
-VOL7D_POLY_TYPE,POINTER,OPTIONAL :: vol1dp(:) !< vista 1d
-VOL7D_POLY_TYPE,POINTER,OPTIONAL :: vol2dp(:,:) !< vista 2d
-VOL7D_POLY_TYPE,POINTER,OPTIONAL :: vol3dp(:,:,:) !< vista 3d
-VOL7D_POLY_TYPE,POINTER,OPTIONAL :: vol4dp(:,:,:,:) !< vista 4d
-VOL7D_POLY_TYPE,POINTER,OPTIONAL :: vol5dp(:,:,:,:,:) !< vista 5d
-VOL7D_POLY_TYPE,POINTER,OPTIONAL :: vol6dp(:,:,:,:,:,:) !< vista 6d
-VOL7D_POLY_TYPE,POINTER,OPTIONAL :: vol7dp(:,:,:,:,:,:,:) !< vista 7d
+VOL7D_POLY_TYPE,POINTER,OPTIONAL :: vol1dp(:) !< array che in uscita conterrà la vista 1d
+VOL7D_POLY_TYPE,POINTER,OPTIONAL :: vol2dp(:,:) !< array che in uscita conterrà la vista 2d
+VOL7D_POLY_TYPE,POINTER,OPTIONAL :: vol3dp(:,:,:) !< array che in uscita conterrà la vista 3d
 
 INTEGER :: voldim(vol7d_maxdim_ad)
 
@@ -210,26 +205,30 @@ IF (ASSOCIATED(this%volana/**/VOL7D_POLY_TYPES)) THEN
   voldim(SIZE(SHAPE(this%volana/**/VOL7D_POLY_TYPES))+1:) = 1
 
   CALL vol7d_get_vol/**/VOL7D_POLY_TYPES(this%volana/**/VOL7D_POLY_TYPES, voldim, dimlist, &
-   vol1dp, vol2dp, vol3dp, vol4dp, vol5dp, vol6dp, vol7dp)
+   vol1dp, vol2dp, vol3dp)
 ELSE
-  CALL vol7d_nullify/**/VOL7D_POLY_TYPES(vol1dp, vol2dp, vol3dp, vol4dp, &
-   vol5dp, vol6dp, vol7dp)
+  CALL vol7d_nullify/**/VOL7D_POLY_TYPES(vol1dp, vol2dp, vol3dp)
 ENDIF
 
 END SUBROUTINE vol7d_get_volana/**/VOL7D_POLY_TYPES
 
 
+!> Crea una vista a dimensione ridotta di un volume di attributi di anagrafica
+!! di tipo VOL7D_POLY_TYPE. È necessario fornire uno solo dei parametri
+!! opzionali \a vol*dp corrispondente al numero di dimensioni richieste.
+!! L'ordine delle dimensioni nella vista è quello prefissato in ::vol7d
+!! indipendentemente dall'ordine delle dimensioni fornito in \a dimlist.
 SUBROUTINE vol7d_get_volanaattr/**/VOL7D_POLY_TYPES(this, dimlist, vol1dp, &
- vol2dp, vol3dp, vol4dp, vol5dp, vol6dp, vol7dp)
-TYPE(vol7d),INTENT(in) :: this
+ vol2dp, vol3dp, vol4dp)
+TYPE(vol7d),INTENT(in) :: this !< oggetto di cui creare la vista
+!> lista delle dimensioni da includere nella vista, attenzione tutte le
+!! dimensioni non degeneri (cioè con estensione >1) devono essere incluse
+!! nella lista; utilizzare le costanti ::vol7d_ana_a ... ::vol7d_attr_a, ecc.
 INTEGER,INTENT(in) :: dimlist(:)
-VOL7D_POLY_TYPE,POINTER,OPTIONAL :: vol1dp(:)
-VOL7D_POLY_TYPE,POINTER,OPTIONAL :: vol2dp(:,:)
-VOL7D_POLY_TYPE,POINTER,OPTIONAL :: vol3dp(:,:,:)
-VOL7D_POLY_TYPE,POINTER,OPTIONAL :: vol4dp(:,:,:,:)
-VOL7D_POLY_TYPE,POINTER,OPTIONAL :: vol5dp(:,:,:,:,:)
-VOL7D_POLY_TYPE,POINTER,OPTIONAL :: vol6dp(:,:,:,:,:,:)
-VOL7D_POLY_TYPE,POINTER,OPTIONAL :: vol7dp(:,:,:,:,:,:,:)
+VOL7D_POLY_TYPE,POINTER,OPTIONAL :: vol1dp(:) !< array che in uscita conterrà la vista 1d
+VOL7D_POLY_TYPE,POINTER,OPTIONAL :: vol2dp(:,:) !< array che in uscita conterrà la vista 2d
+VOL7D_POLY_TYPE,POINTER,OPTIONAL :: vol3dp(:,:,:) !< array che in uscita conterrà la vista 3d
+VOL7D_POLY_TYPE,POINTER,OPTIONAL :: vol4dp(:,:,:,:) !< array che in uscita conterrà la vista 4d
 
 INTEGER :: voldim(vol7d_maxdim_ad)
 
@@ -238,26 +237,32 @@ IF (ASSOCIATED(this%volanaattr/**/VOL7D_POLY_TYPES)) THEN
   voldim(SIZE(SHAPE(this%volanaattr/**/VOL7D_POLY_TYPES))+1:) = 1
 
   CALL vol7d_get_vol/**/VOL7D_POLY_TYPES(this%volanaattr/**/VOL7D_POLY_TYPES, voldim, dimlist, &
-   vol1dp, vol2dp, vol3dp, vol4dp, vol5dp, vol6dp, vol7dp)
+   vol1dp, vol2dp, vol3dp, vol4dp)
 ELSE
-  CALL vol7d_nullify/**/VOL7D_POLY_TYPES(vol1dp, vol2dp, vol3dp, vol4dp, &
-   vol5dp, vol6dp, vol7dp)
+  CALL vol7d_nullify/**/VOL7D_POLY_TYPES(vol1dp, vol2dp, vol3dp, vol4dp)
 ENDIF
 
 END SUBROUTINE vol7d_get_volanaattr/**/VOL7D_POLY_TYPES
 
 
+!> Crea una vista a dimensione ridotta di un volume di dati
+!! di tipo VOL7D_POLY_TYPE. È necessario fornire uno solo dei parametri
+!! opzionali \a vol*dp corrispondente al numero di dimensioni richieste.
+!! L'ordine delle dimensioni nella vista è quello prefissato in ::vol7d
+!! indipendentemente dall'ordine delle dimensioni fornito in \a dimlist.
 SUBROUTINE vol7d_get_voldati/**/VOL7D_POLY_TYPES(this, dimlist, vol1dp, &
- vol2dp, vol3dp, vol4dp, vol5dp, vol6dp, vol7dp)
-TYPE(vol7d),INTENT(in) :: this
+ vol2dp, vol3dp, vol4dp, vol5dp, vol6dp)
+TYPE(vol7d),INTENT(in) :: this !< oggetto di cui creare la vista
+!> lista delle dimensioni da includere nella vista, attenzione tutte le
+!! dimensioni non degeneri (cioè con estensione >1) devono essere incluse
+!! nella lista; utilizzare le costanti ::vol7d_ana_d ... ::vol7d_attr_d, ecc.
 INTEGER,INTENT(in) :: dimlist(:)
-VOL7D_POLY_TYPE,POINTER,OPTIONAL :: vol1dp(:)
-VOL7D_POLY_TYPE,POINTER,OPTIONAL :: vol2dp(:,:)
-VOL7D_POLY_TYPE,POINTER,OPTIONAL :: vol3dp(:,:,:)
-VOL7D_POLY_TYPE,POINTER,OPTIONAL :: vol4dp(:,:,:,:)
-VOL7D_POLY_TYPE,POINTER,OPTIONAL :: vol5dp(:,:,:,:,:)
-VOL7D_POLY_TYPE,POINTER,OPTIONAL :: vol6dp(:,:,:,:,:,:)
-VOL7D_POLY_TYPE,POINTER,OPTIONAL :: vol7dp(:,:,:,:,:,:,:)
+VOL7D_POLY_TYPE,POINTER,OPTIONAL :: vol1dp(:) !< array che in uscita conterrà la vista 1d
+VOL7D_POLY_TYPE,POINTER,OPTIONAL :: vol2dp(:,:) !< array che in uscita conterrà la vista 2d
+VOL7D_POLY_TYPE,POINTER,OPTIONAL :: vol3dp(:,:,:) !< array che in uscita conterrà la vista 3d
+VOL7D_POLY_TYPE,POINTER,OPTIONAL :: vol4dp(:,:,:,:) !< array che in uscita conterrà la vista 4d
+VOL7D_POLY_TYPE,POINTER,OPTIONAL :: vol5dp(:,:,:,:,:) !< array che in uscita conterrà la vista 5d
+VOL7D_POLY_TYPE,POINTER,OPTIONAL :: vol6dp(:,:,:,:,:,:) !< array che in uscita conterrà la vista 6d
 
 INTEGER :: voldim(vol7d_maxdim_ad)
 
@@ -266,26 +271,34 @@ IF (ASSOCIATED(this%voldati/**/VOL7D_POLY_TYPES)) THEN
   voldim(SIZE(SHAPE(this%voldati/**/VOL7D_POLY_TYPES))+1:) = 1
 
   CALL vol7d_get_vol/**/VOL7D_POLY_TYPES(this%voldati/**/VOL7D_POLY_TYPES, voldim, dimlist, &
-   vol1dp, vol2dp, vol3dp, vol4dp, vol5dp, vol6dp, vol7dp)
+   vol1dp, vol2dp, vol3dp, vol4dp, vol5dp, vol6dp)
 ELSE
   CALL vol7d_nullify/**/VOL7D_POLY_TYPES(vol1dp, vol2dp, vol3dp, vol4dp, &
-   vol5dp, vol6dp, vol7dp)
+   vol5dp, vol6dp)
 ENDIF
 
 END SUBROUTINE vol7d_get_voldati/**/VOL7D_POLY_TYPES
 
 
+!> Crea una vista a dimensione ridotta di un volume di attributi di dati
+!! di tipo VOL7D_POLY_TYPE. È necessario fornire uno solo dei parametri
+!! opzionali \a vol*dp corrispondente al numero di dimensioni richieste.
+!! L'ordine delle dimensioni nella vista è quello prefissato in ::vol7d
+!! indipendentemente dall'ordine delle dimensioni fornito in \a dimlist.
 SUBROUTINE vol7d_get_voldatiattr/**/VOL7D_POLY_TYPES(this, dimlist, vol1dp, &
  vol2dp, vol3dp, vol4dp, vol5dp, vol6dp, vol7dp)
-TYPE(vol7d),INTENT(in) :: this
+TYPE(vol7d),INTENT(in) :: this !< oggetto di cui creare la vista
+!> lista delle dimensioni da includere nella vista, attenzione tutte le
+!! dimensioni non degeneri (cioè con estensione >1) devono essere incluse
+!! nella lista; utilizzare le costanti ::vol7d_ana_d ... ::vol7d_attr_d, ecc.
 INTEGER,INTENT(in) :: dimlist(:)
-VOL7D_POLY_TYPE,POINTER,OPTIONAL :: vol1dp(:)
-VOL7D_POLY_TYPE,POINTER,OPTIONAL :: vol2dp(:,:)
-VOL7D_POLY_TYPE,POINTER,OPTIONAL :: vol3dp(:,:,:)
-VOL7D_POLY_TYPE,POINTER,OPTIONAL :: vol4dp(:,:,:,:)
-VOL7D_POLY_TYPE,POINTER,OPTIONAL :: vol5dp(:,:,:,:,:)
-VOL7D_POLY_TYPE,POINTER,OPTIONAL :: vol6dp(:,:,:,:,:,:)
-VOL7D_POLY_TYPE,POINTER,OPTIONAL :: vol7dp(:,:,:,:,:,:,:)
+VOL7D_POLY_TYPE,POINTER,OPTIONAL :: vol1dp(:) !< array che in uscita conterrà la vista 1d
+VOL7D_POLY_TYPE,POINTER,OPTIONAL :: vol2dp(:,:) !< array che in uscita conterrà la vista 2d
+VOL7D_POLY_TYPE,POINTER,OPTIONAL :: vol3dp(:,:,:) !< array che in uscita conterrà la vista 3d
+VOL7D_POLY_TYPE,POINTER,OPTIONAL :: vol4dp(:,:,:,:) !< array che in uscita conterrà la vista 4d
+VOL7D_POLY_TYPE,POINTER,OPTIONAL :: vol5dp(:,:,:,:,:) !< array che in uscita conterrà la vista 5d
+VOL7D_POLY_TYPE,POINTER,OPTIONAL :: vol6dp(:,:,:,:,:,:) !< array che in uscita conterrà la vista 6d
+VOL7D_POLY_TYPE,POINTER,OPTIONAL :: vol7dp(:,:,:,:,:,:,:) !< array che in uscita conterrà la vista 7d
 
 INTEGER :: voldim(vol7d_maxdim_ad)
 

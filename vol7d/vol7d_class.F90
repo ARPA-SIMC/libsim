@@ -38,7 +38,7 @@
 !!    - rete
 !!    - variabile di attributi delle variabili di dati
 !!
-!! Tutte le variabili sono inoltre disponibile in 5 tipi diversi:
+!! Tutte le variabili sono inoltre disponibil1 in 5 tipi diversi:
 !!  - reale (abbreviato r)
 !!  - doppia precisione (abbreviato d)
 !!  - intero  (abbreviato i)
@@ -81,13 +81,13 @@ INTEGER, PARAMETER :: vol7d_ana_a=1 !< indice della dimensione "anagrafica" nei 
 INTEGER, PARAMETER :: vol7d_var_a=2 !< indice della dimensione "variabile" nei volumi di anagrafica, da usare nei metodi vol7d_get_volana*
 INTEGER, PARAMETER :: vol7d_network_a=3 !< indice della dimensione "rete" nei volumi di anagrafica, da usare nei metodi vol7d_get_volana*
 INTEGER, PARAMETER :: vol7d_attr_a=4 !< indice della dimensione "attributo" nei volumi di anagrafica, da usare nei metodi vol7d_get_volana*
-INTEGER, PARAMETER :: vol7d_ana_d=1 !< indice della dimensione "anagrafica" nei volumi di dati, da usare nei metodi vol7d_get_volana*
-INTEGER, PARAMETER :: vol7d_time_d=2 !< indice della dimensione "tempo" nei volumi di dati, da usare nei metodi vol7d_get_volana*
-INTEGER, PARAMETER :: vol7d_level_d=3 !< indice della dimensione "livello verticale" nei volumi di dati, da usare nei metodi vol7d_get_volana*
-INTEGER, PARAMETER :: vol7d_timerange_d=4 !< indice della dimensione "intervallo temporale" nei volumi di dati, da usare nei metodi vol7d_get_volana*
-INTEGER, PARAMETER :: vol7d_var_d=5 !< indice della dimensione "variabile" nei volumi di dati, da usare nei metodi vol7d_get_volana*
-INTEGER, PARAMETER :: vol7d_network_d=6 !< indice della dimensione "rete" nei volumi di dati, da usare nei metodi vol7d_get_volana*
-INTEGER, PARAMETER :: vol7d_attr_d=7 !< indice della dimensione "attributo" nei volumi di dati, da usare nei metodi vol7d_get_volana*
+INTEGER, PARAMETER :: vol7d_ana_d=1 !< indice della dimensione "anagrafica" nei volumi di dati, da usare nei metodi vol7d_get_voldati*
+INTEGER, PARAMETER :: vol7d_time_d=2 !< indice della dimensione "tempo" nei volumi di dati, da usare nei metodi vol7d_get_voldati*
+INTEGER, PARAMETER :: vol7d_level_d=3 !< indice della dimensione "livello verticale" nei volumi di dati, da usare nei metodi vol7d_get_voldati*
+INTEGER, PARAMETER :: vol7d_timerange_d=4 !< indice della dimensione "intervallo temporale" nei volumi di dati, da usare nei metodi vol7d_get_voldati*
+INTEGER, PARAMETER :: vol7d_var_d=5 !< indice della dimensione "variabile" nei volumi di dati, da usare nei metodi vol7d_get_voldati*
+INTEGER, PARAMETER :: vol7d_network_d=6 !< indice della dimensione "rete" nei volumi di dati, da usare nei metodi vol7d_get_voldati*
+INTEGER, PARAMETER :: vol7d_attr_d=7 !< indice della dimensione "attributo" nei volumi di dati, da usare nei metodi vol7d_get_voldati*
 INTEGER, PARAMETER :: vol7d_cdatalen=20
 
 TYPE vol7d_varmap
@@ -1076,13 +1076,6 @@ this = v7dtmp
 END SUBROUTINE vol7d_reform
 
 
-!! \fn vol7d_get_volanar(this, dimlist, vol1dp, vol2dp, vol3dp, vol4dp, vol5dp, vol6dp, vol7dp) 
-!! \brief Crea una vista a dimensione ridotta di un volume di anagrafica
-!! di tipo reale.
-!! È la prima di una serie di 5 subroutine per i 5 tipi supportati in vol7d.
-!! \param this oggetto di cui creare la vista
-!! \param dimlist lista delle dimensioni da includere nella vista, attenzione tutte le dimsnioni non degeneri (cioè con estensione >1) devono essere incluse nella lista
-
 SUBROUTINE vol7d_diff_only (this, that,data_only)
 TYPE(vol7d),INTENT(IN) :: this
 TYPE(vol7d),INTENT(OUT) :: that
@@ -1123,7 +1116,7 @@ END SUBROUTINE vol7d_diff_only
 
 
 
-! Creo le routine da ripetere per i vari tipi di dati vi v7d
+! Creo le routine da ripetere per i vari tipi di dati di v7d
 ! tramite un template e il preprocessore
 #undef VOL7D_POLY_TYPE
 #undef VOL7D_POLY_TYPES
