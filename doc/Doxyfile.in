@@ -511,7 +511,7 @@ EXCLUDE_SYMLINKS       = NO
 # against the file with absolute path, so to exclude all test directories 
 # for example use the pattern */test/*
 
-EXCLUDE_PATTERNS       = 
+EXCLUDE_PATTERNS       = vol7d_class_desc_templ.F90 vol7d_class_diff.F90 vol7d_class_type_templ.F90 vol7d_dballe_class_anaattr.F90 vol7d_dballe_class_ana.F90 vol7d_dballe_class_datiattr.F90 vol7d_dballe_class_dati.F90 vol7d_class_diff_only.f90 vol7d_dballe_class_nana.f90 vol7d_dballe_class_ndati.f90
 
 # The EXAMPLE_PATH tag can be used to specify one or more files or 
 # directories that contain example code fragments that are included (see 
@@ -556,7 +556,8 @@ INPUT_FILTER           =
 # info on how filters are used. If FILTER_PATTERNS is empty, INPUT_FILTER 
 # is applied to all files.
 
-FILTER_PATTERNS        = *.F90=cpp -lang-fortran -traditional-cpp -D_LANGUAGE_FORTRAN
+FILTER_PATTERNS        = *.F90=./fpp
+#FILTER_PATTERNS        = *.F90="cpp -lang-fortran -traditional-cpp -D_LANGUAGE_FORTRAN"
 
 # If the FILTER_SOURCE_FILES tag is set to YES, the input filter (if set using 
 # INPUT_FILTER) will be used to filter the input files when producing source 
@@ -1012,7 +1013,7 @@ SEARCH_INCLUDES        = YES
 # contain include files that are not input files but should be processed by 
 # the preprocessor.
 
-INCLUDE_PATH           = 
+INCLUDE_PATH           = @top_srcdir@
 
 # You can use the INCLUDE_FILE_PATTERNS tag to specify one or more wildcard 
 # patterns (like *.h and *.hpp) to filter out the header-files in the 
