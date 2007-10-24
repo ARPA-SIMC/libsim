@@ -139,7 +139,7 @@ call init(qccli%clima)
 
 iuni=getunit()
 open (unit=iuni,file=filepath,form="UNFORMATTED")
-call read_from_file (qccli%clima,unit=iuni)
+call import(qccli%clima,unit=iuni)
 close (unit=iuni)
 
 return

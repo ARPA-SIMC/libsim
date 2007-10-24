@@ -179,12 +179,12 @@ INTERFACE delete
 END INTERFACE
 
 !> Scrittura su file.
-INTERFACE write_on_file
+INTERFACE export
   MODULE PROCEDURE vol7d_write_on_file
 END INTERFACE
 
 !> Lettura da file.
-INTERFACE read_from_file
+INTERFACE import
   MODULE PROCEDURE vol7d_read_from_file
 END INTERFACE
 
