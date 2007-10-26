@@ -1,0 +1,44 @@
+PROGRAM v7ddballe_export
+! Programma di esempio di lettura da file e scrittura nell'archivio DB-all.e
+
+USE vol7d_dballe_class
+USE vol7d_class
+
+IMPLICIT NONE
+
+TYPE(vol7d) :: v7d
+TYPE(vol7d_dballe) :: v7d_exp
+
+TYPE(vol7d_ana) :: ana
+TYPE(datetime) :: time
+TYPE(vol7d_level) :: level
+TYPE(vol7d_timerange) :: timerange
+TYPE(vol7d_network) :: network
+TYPE(vol7d_var) ::  dativar,attrvar
+CHARACTER(len=vol7d_ana_lenident) :: ident
+REAL(kind=fp_geo) :: lat,lon
+
+integer :: indana,indtime,indlevel,indtimerange,inddativar,indnetwork
+integer :: inddatiattr,inddativarattr
+
+
+! Chiamo il costruttore della classe vol7d_dballe per il mio oggetto in import
+CALL init(v7d)
+
+! Chiamo il costruttore della classe vol7d_dballe per il mio oggetto in export
+CALL init(v7d_exp,dsn="test3",user="test",write=.true.,wipe=.true.)
+
+CALL import(v7d,filename="lt-esempio_v7ddballe_multi.v7d")
+
+Print *,"Fine lettura dati"
+
+v7d_exp%vol7d = v7d
+
+Print *,"Scrivo i dati"
+
+CALL export(v7d_exp)
+
+CALL delete (v7d_exp) 
+!CALL delete (v7d) 
+
+END PROGRAM v7ddballe_export

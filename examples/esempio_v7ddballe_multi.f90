@@ -8,7 +8,7 @@ USE vol7d_dballe_class
 IMPLICIT NONE
 
 TYPE(vol7d_dballe) :: v7d
-TYPE(vol7d_network) :: dummy_network,network(3)
+TYPE(vol7d_network) :: dummy_network,network(8)
 TYPE(datetime) :: ti, tf, tc
 TYPE(vol7d) :: vol_cumh, vol_cumd
 TYPE(timedelta) :: dt_cum
@@ -21,21 +21,30 @@ TYPE(geo_coordvect),POINTER :: macroa(:)
 INTEGER, ALLOCATABLE :: in_macroa(:)
 
 ! Definisco le date iniziale e finale
-CALL init(ti, year=2007, month=3, day=18, hour=12)
+CALL init(ti, year=2007, month=3, day=18, hour=00)
 CALL init(tf, year=2007, month=3, day=21, hour=00)
-CALL init(dummy_network, 1)
-CALL init(network(1), 255)
-CALL init(network(2), 20)
-CALL init(network(3), 255)
+CALL init(dummy_network, 255)
+CALL init(network(1), 11)
+CALL init(network(2), 13)
+CALL init(network(3), 15)
+CALL init(network(4), 18)
+CALL init(network(5), 19)
+CALL init(network(6), 20)
+CALL init(network(7), 21)
+CALL init(network(8), 22)
+!CALL init(network(9), 12)
+!CALL init(network(10), 17)
 
 
 ! Chiamo il costruttore della classe vol7d_dballe per il mio oggetto
 CALL init(v7d,dsn="test",user="test",password="")
 ! Importo i dati, variabile 'B13011' della btable (precipitazione),
 ! rete 18 (FIDUPO), 20 (SIMNBO), 21 (SIMNPR)
-CALL import(v7d, 'B13011', network, timei=ti, timef=tf, set_network=dummy_network)
-! PRINT*,SHAPE(v7d%vol7d%voldatir)
+CALL import(v7d, 'B13011', network, timei=ti, timef=tf, set_network=dummy_network,varkind=(/"r"/))
 
+PRINT*,SHAPE(v7d%vol7d%voldatir)
+
+call export(v7d%vol7d)
 
 ! Cumulo i dati su intervalli orari
 CALL init(dt_cum, hour=1)
