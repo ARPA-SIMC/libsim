@@ -115,7 +115,7 @@ end do
 
 open (unit=1,file="climaprec.v7d",form="UNFORMATTED")
 
-call write_on_file(v7d,unit=1)
+call export(v7d,unit=1)
 
 close (unit=1)
 
