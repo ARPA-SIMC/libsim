@@ -14,7 +14,7 @@ IMPLICIT NONE
 !! accessibili e scrivibili, ma è comunque consigliato assegnarli tramite
 !! il costruttore ::init.
 TYPE vol7d_network
-  INTEGER :: id !> identificativo numerico della rete
+  INTEGER :: id !< identificativo numerico della rete
 END TYPE vol7d_network
 
 !> Valore mancante per vol7d_network.

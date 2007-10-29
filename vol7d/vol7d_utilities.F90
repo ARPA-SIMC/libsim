@@ -69,7 +69,7 @@ CALL getenv(TRIM(program_name_env)//'_'//TRIM(filetypename(filetype)), path)
 IF (path /= ' ') THEN
 
   path=TRIM(path)//'/'//filename
-  INQUIRE( file=path,EXIST=exist )
+  INQUIRE(file=path, exist=exist)
   IF (exist) THEN
     CALL print_info('Ho trovato il file '//path)
     RETURN
@@ -79,7 +79,7 @@ ENDIF
 DO j = 1, SIZE(pathlist,1)
   IF (pathlist(j,filetype) == ' ') EXIT
   path=TRIM(pathlist(j,filetype))//'/'//TRIM(program_name)//'/'//filename
-  INQUIRE( file=path, exist=exist)
+  INQUIRE(file=path, exist=exist)
   IF (exist) THEN
     CALL print_info('Ho trovato il file '//path)
     RETURN
@@ -89,7 +89,6 @@ CALL raise_error('File '//TRIM(filename)//' not found')
 path = ""
 
 END FUNCTION get_package_filepath
-
 
 
 FUNCTION open_package_file(filename, filetype) RESULT(unit)
@@ -112,7 +111,7 @@ path=get_package_filepath(filename, filetype)
 IF (path /= ' ') THEN
   OPEN(unit, file=path, status='old', iostat = i)
   IF (i == 0) THEN
-    CALL print_info('Ho aperto il file '//TRIM(path)//'/'//filename)
+    CALL print_info('Ho aperto il file '//TRIM(path))
     RETURN
   ENDIF
 ENDIF
