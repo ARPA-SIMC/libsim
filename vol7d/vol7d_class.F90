@@ -13,23 +13,23 @@
 !! Questo modulo definisce gli oggetti e i metodi per gestire
 !! volumi di dati meteorologici sparsi.
 !! I volumi definiti sono principalmente di 4 categorie:
-!!  - volumi di anagrafica, hanno 3 dimensioni:
+!!  - volumi di anagrafica (vol7d::volanar & c.), hanno 3 dimensioni:
 !!    - anagrafica
 !!    - variabile di anagrafica
 !!    - rete
-!!  - volumi di attributi di anagrafica, hanno 4 dimensioni:
+!!  - volumi di attributi di anagrafica (vol7d::volanaattrr & c.), hanno 4 dimensioni:
 !!    - anagrafica
 !!    - variabile di anagrafica
 !!    - rete
 !!    - variabile di attributi delle variabili di anagrafica
-!!  - volumi di dati, hanno 6 dimensioni:
+!!  - volumi di dati (vol7d::voldatir & c.), hanno 6 dimensioni:
 !!    - anagrafica
 !!    - tempo
 !!    - livello verticale
 !!    - intervallo temporale (timerange)
 !!    - variabile di dati
 !!    - rete
-!!  - volumi di attributi di dati, hanno 7 dimensioni:
+!!  - volumi di attributi di dati (vol7d::voldatiattrr & c.), hanno 7 dimensioni:
 !!    - anagrafica
 !!    - tempo
 !!    - livello verticale
