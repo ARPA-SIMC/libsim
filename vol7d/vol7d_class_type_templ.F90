@@ -187,6 +187,21 @@ END SUBROUTINE vol7d_reform_final/**/VOL7D_POLY_TYPES
 !! opzionali \a vol*dp corrispondente al numero di dimensioni richieste.
 !! L'ordine delle dimensioni nella vista è quello prefissato in ::vol7d
 !! indipendentemente dall'ordine delle dimensioni fornito in \a dimlist.
+!! In caso di fallimento, in particolare se \a dimlist non contiene
+!! tutte le dimensioni non degeneri del volume richiesto oppure se una delle
+!! dimensioni è =0, il puntatore \a vol*dp è restituito in uno stato disassociato,
+!! per cui è opportuno controllare sempre in uscita, lo stato del puntatore
+!! per evitare che il programma abortisca con un errore di sistema, ad esempio:
+!! \code
+!! VOL7D_POLY_TYPE, POINTER :: vol1d(:)
+!! ...
+!! CALL vol7d_get_volana/**/VOL7D_POLY_TYPES(v7d1, (/vol7d_ana_d/), vol1d)
+!! IF (ASSOCIATED(vol1d)) THEN
+!!   PRINT*,vol1d
+!! ...
+!! ENDIF
+!! RETURN
+!! \endcode
 SUBROUTINE vol7d_get_volana/**/VOL7D_POLY_TYPES(this, dimlist, vol1dp, &
  vol2dp, vol3dp)
 TYPE(vol7d),INTENT(in) :: this !< oggetto di cui creare la vista
@@ -200,14 +215,20 @@ VOL7D_POLY_TYPE,POINTER,OPTIONAL :: vol3dp(:,:,:) !< array che in uscita conterr
 
 INTEGER :: voldim(vol7d_maxdim_ad)
 
+CALL vol7d_nullify/**/VOL7D_POLY_TYPES(vol1dp, vol2dp, vol3dp)
+
 IF (ASSOCIATED(this%volana/**/VOL7D_POLY_TYPES)) THEN
   voldim(1:SIZE(SHAPE((this%volana/**/VOL7D_POLY_TYPES)))) = SHAPE(this%volana/**/VOL7D_POLY_TYPES)
   voldim(SIZE(SHAPE(this%volana/**/VOL7D_POLY_TYPES))+1:) = 1
 
+! Senza questo controllo l'eseguibile abortisce se compilato con PGI e -C
+  IF (ANY(voldim == 0)) THEN
+    CALL raise_warning('vol7d_get_volana non supporta volumi con dimensioni nulle')
+    RETURN
+  ENDIF
+
   CALL vol7d_get_vol/**/VOL7D_POLY_TYPES(this%volana/**/VOL7D_POLY_TYPES, voldim, dimlist, &
    vol1dp, vol2dp, vol3dp)
-ELSE
-  CALL vol7d_nullify/**/VOL7D_POLY_TYPES(vol1dp, vol2dp, vol3dp)
 ENDIF
 
 END SUBROUTINE vol7d_get_volana/**/VOL7D_POLY_TYPES
@@ -218,6 +239,21 @@ END SUBROUTINE vol7d_get_volana/**/VOL7D_POLY_TYPES
 !! opzionali \a vol*dp corrispondente al numero di dimensioni richieste.
 !! L'ordine delle dimensioni nella vista è quello prefissato in ::vol7d
 !! indipendentemente dall'ordine delle dimensioni fornito in \a dimlist.
+!! In caso di fallimento, in particolare se \a dimlist non contiene
+!! tutte le dimensioni non degeneri del volume richiesto oppure se una delle
+!! dimensioni è =0, il puntatore \a vol*dp è restituito in uno stato disassociato,
+!! per cui è opportuno controllare sempre in uscita, lo stato del puntatore
+!! per evitare che il programma abortisca con un errore di sistema, ad esempio:
+!! \code
+!! VOL7D_POLY_TYPE, POINTER :: vol1d(:)
+!! ...
+!! CALL vol7d_get_volanaattr/**/VOL7D_POLY_TYPES(v7d1, (/vol7d_ana_d/), vol1d)
+!! IF (ASSOCIATED(vol1d)) THEN
+!!   PRINT*,vol1d
+!! ...
+!! ENDIF
+!! RETURN
+!! \endcode
 SUBROUTINE vol7d_get_volanaattr/**/VOL7D_POLY_TYPES(this, dimlist, vol1dp, &
  vol2dp, vol3dp, vol4dp)
 TYPE(vol7d),INTENT(in) :: this !< oggetto di cui creare la vista
@@ -232,14 +268,20 @@ VOL7D_POLY_TYPE,POINTER,OPTIONAL :: vol4dp(:,:,:,:) !< array che in uscita conte
 
 INTEGER :: voldim(vol7d_maxdim_ad)
 
+CALL vol7d_nullify/**/VOL7D_POLY_TYPES(vol1dp, vol2dp, vol3dp, vol4dp)
+
 IF (ASSOCIATED(this%volanaattr/**/VOL7D_POLY_TYPES)) THEN
   voldim(1:SIZE(SHAPE((this%volanaattr/**/VOL7D_POLY_TYPES)))) = SHAPE(this%volanaattr/**/VOL7D_POLY_TYPES)
   voldim(SIZE(SHAPE(this%volanaattr/**/VOL7D_POLY_TYPES))+1:) = 1
 
+! Senza questo controllo l'eseguibile abortisce se compilato con PGI e -C
+  IF (ANY(voldim == 0)) THEN
+    CALL raise_warning('vol7d_get_volanaattr non supporta volumi con dimensioni nulle')
+    RETURN
+  ENDIF
+
   CALL vol7d_get_vol/**/VOL7D_POLY_TYPES(this%volanaattr/**/VOL7D_POLY_TYPES, voldim, dimlist, &
    vol1dp, vol2dp, vol3dp, vol4dp)
-ELSE
-  CALL vol7d_nullify/**/VOL7D_POLY_TYPES(vol1dp, vol2dp, vol3dp, vol4dp)
 ENDIF
 
 END SUBROUTINE vol7d_get_volanaattr/**/VOL7D_POLY_TYPES
@@ -250,6 +292,21 @@ END SUBROUTINE vol7d_get_volanaattr/**/VOL7D_POLY_TYPES
 !! opzionali \a vol*dp corrispondente al numero di dimensioni richieste.
 !! L'ordine delle dimensioni nella vista è quello prefissato in ::vol7d
 !! indipendentemente dall'ordine delle dimensioni fornito in \a dimlist.
+!! In caso di fallimento, in particolare se \a dimlist non contiene
+!! tutte le dimensioni non degeneri del volume richiesto oppure se una delle
+!! dimensioni è =0, il puntatore \a vol*dp è restituito in uno stato disassociato,
+!! per cui è opportuno controllare sempre in uscita, lo stato del puntatore
+!! per evitare che il programma abortisca con un errore di sistema, ad esempio:
+!! \code
+!! VOL7D_POLY_TYPE, POINTER :: vol2d(:,:)
+!! ...
+!! CALL vol7d_get_voldati/**/VOL7D_POLY_TYPES(v7d1, (/vol7d_ana_d, vol7d_time_d/), vol2d)
+!! IF (ASSOCIATED(vol2d)) THEN
+!!   PRINT*,vol2d
+!! ...
+!! ENDIF
+!! RETURN
+!! \endcode
 SUBROUTINE vol7d_get_voldati/**/VOL7D_POLY_TYPES(this, dimlist, vol1dp, &
  vol2dp, vol3dp, vol4dp, vol5dp, vol6dp)
 TYPE(vol7d),INTENT(in) :: this !< oggetto di cui creare la vista
@@ -266,15 +323,21 @@ VOL7D_POLY_TYPE,POINTER,OPTIONAL :: vol6dp(:,:,:,:,:,:) !< array che in uscita c
 
 INTEGER :: voldim(vol7d_maxdim_ad)
 
+CALL vol7d_nullify/**/VOL7D_POLY_TYPES(vol1dp, vol2dp, vol3dp, vol4dp, &
+ vol5dp, vol6dp)
+
 IF (ASSOCIATED(this%voldati/**/VOL7D_POLY_TYPES)) THEN
   voldim(1:SIZE(SHAPE((this%voldati/**/VOL7D_POLY_TYPES)))) = SHAPE(this%voldati/**/VOL7D_POLY_TYPES)
   voldim(SIZE(SHAPE(this%voldati/**/VOL7D_POLY_TYPES))+1:) = 1
 
+! Senza questo controllo l'eseguibile abortisce se compilato con PGI e -C
+  IF (ANY(voldim == 0)) THEN
+    CALL raise_warning('vol7d_get_voldati non supporta volumi con dimensioni nulle')
+    RETURN
+  ENDIF
+
   CALL vol7d_get_vol/**/VOL7D_POLY_TYPES(this%voldati/**/VOL7D_POLY_TYPES, voldim, dimlist, &
    vol1dp, vol2dp, vol3dp, vol4dp, vol5dp, vol6dp)
-ELSE
-  CALL vol7d_nullify/**/VOL7D_POLY_TYPES(vol1dp, vol2dp, vol3dp, vol4dp, &
-   vol5dp, vol6dp)
 ENDIF
 
 END SUBROUTINE vol7d_get_voldati/**/VOL7D_POLY_TYPES
@@ -285,6 +348,21 @@ END SUBROUTINE vol7d_get_voldati/**/VOL7D_POLY_TYPES
 !! opzionali \a vol*dp corrispondente al numero di dimensioni richieste.
 !! L'ordine delle dimensioni nella vista è quello prefissato in ::vol7d
 !! indipendentemente dall'ordine delle dimensioni fornito in \a dimlist.
+!! In caso di fallimento, in particolare se \a dimlist non contiene
+!! tutte le dimensioni non degeneri del volume richiesto oppure se una delle
+!! dimensioni è =0, il puntatore \a vol*dp è restituito in uno stato disassociato,
+!! per cui è opportuno controllare sempre in uscita, lo stato del puntatore
+!! per evitare che il programma abortisca con un errore di sistema, ad esempio:
+!! \code
+!! VOL7D_POLY_TYPE, POINTER :: vol2d(:,:)
+!! ...
+!! CALL vol7d_get_voldatiattr/**/VOL7D_POLY_TYPES(v7d1, (/vol7d_ana_d, vol7d_time_d/), vol2d)
+!! IF (ASSOCIATED(vol2d)) THEN
+!!   PRINT*,vol2d
+!! ...
+!! ENDIF
+!! RETURN
+!! \endcode
 SUBROUTINE vol7d_get_voldatiattr/**/VOL7D_POLY_TYPES(this, dimlist, vol1dp, &
  vol2dp, vol3dp, vol4dp, vol5dp, vol6dp, vol7dp)
 TYPE(vol7d),INTENT(in) :: this !< oggetto di cui creare la vista
@@ -302,15 +380,21 @@ VOL7D_POLY_TYPE,POINTER,OPTIONAL :: vol7dp(:,:,:,:,:,:,:) !< array che in uscita
 
 INTEGER :: voldim(vol7d_maxdim_ad)
 
+CALL vol7d_nullify/**/VOL7D_POLY_TYPES(vol1dp, vol2dp, vol3dp, vol4dp, &
+ vol5dp, vol6dp, vol7dp)
+
 IF (ASSOCIATED(this%voldatiattr/**/VOL7D_POLY_TYPES)) THEN
   voldim(1:SIZE(SHAPE((this%voldatiattr/**/VOL7D_POLY_TYPES)))) = SHAPE(this%voldatiattr/**/VOL7D_POLY_TYPES)
 !  voldim(SIZE(SHAPE(this%voldatiattr/**/VOL7D_POLY_TYPES))+1:) = 1
 
+! Senza questo controllo l'eseguibile abortisce se compilato con PGI e -C
+  IF (ANY(voldim == 0)) THEN
+    CALL raise_warning('vol7d_get_voldatiattr non supporta volumi con dimensioni nulle')
+    RETURN
+  ENDIF
+
   CALL vol7d_get_vol/**/VOL7D_POLY_TYPES(this%voldatiattr/**/VOL7D_POLY_TYPES, voldim, dimlist, &
    vol1dp, vol2dp, vol3dp, vol4dp, vol5dp, vol6dp, vol7dp)
-ELSE
-  CALL vol7d_nullify/**/VOL7D_POLY_TYPES(vol1dp, vol2dp, vol3dp, vol4dp, &
-   vol5dp, vol6dp, vol7dp)
 ENDIF
 
 END SUBROUTINE vol7d_get_voldatiattr/**/VOL7D_POLY_TYPES

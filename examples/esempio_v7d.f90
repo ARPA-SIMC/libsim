@@ -1,5 +1,6 @@
 PROGRAM esempio_vol7d
 USE vol7d_class
+IMPLICIT NONE
 
 TYPE(vol7d) :: v7d1, v7d2, v7d3, v7dc
 REAL, POINTER :: vol1d(:)
