@@ -16,7 +16,7 @@ USE vol7d_class
 USE vol7d_utilities
 IMPLICIT NONE
 
-!> Oggetto usato per interfacciarsi all'archivio.
+!> Definisce un'istanza di estrazione dall'archivio Oracle SIM.
 !! Estende vol7d_class::vol7d aggiungendo le informazioni necessarie
 !! all'estrazione. L'utente, pur potendo accedere a tutti i componenti
 !! dell'oggetto, dovrà preoccuparsi del solo componente vol7d.
@@ -33,7 +33,7 @@ TYPE ora_var_conv
   TYPE(vol7d_timerange) :: timerange
   CHARACTER(len=20) :: description
   REAL :: afact, bfact
-  INTEGER :: network
+  INTEGER :: networkid
 END TYPE ora_var_conv
 
 TYPE ora_ana
@@ -47,7 +47,6 @@ TYPE ora_network_conv
 END TYPE ora_network_conv
 
 INTEGER,EXTERNAL :: n_getgsta ! da sostituire con include/interface ?!
-!http://spino.metarpa/~patruno/accesso_db_meteo/accesso_db_per_programmatori/node55.html
 
 INTEGER,ALLOCATABLE ::stazo(:), varo(:), valid(:)
 REAL,ALLOCATABLE :: valore1(:), valore2(:)
@@ -122,30 +121,36 @@ ENDIF
 END SUBROUTINE vol7d_oraclesim_delete
 
 
+!> Importa un volume vol7d dall'archivio Oracle SIM.
+!! Analoga alla ::vol7d_oraclesim_importvvnv ma con \a var e \a network scalari.
 SUBROUTINE vol7d_oraclesim_importvsns(this, var, network, timei, timef, level, &
  timerange, set_network)
-TYPE(vol7d_oraclesim),INTENT(out) :: this
-CHARACTER(len=*),INTENT(in) :: var
-INTEGER,INTENT(in) :: network
-TYPE(datetime),INTENT(in) :: timei, timef
-TYPE(vol7d_level),INTENT(in),OPTIONAL :: level
-TYPE(vol7d_timerange),INTENT(in),OPTIONAL :: timerange
-TYPE(vol7d_network),INTENT(in),OPTIONAL :: set_network
+TYPE(vol7d_oraclesim),INTENT(out) :: this !< oggetto in cui importare i dati
+CHARACTER(len=*),INTENT(in) :: var !< variabile da importare (codice alfanumerico della tabella B del WMO)
+TYPE(vol7d_network),INTENT(in) :: network !< rete da estrarre, inizializzata con l'indicativo numerico che ha nell'archivio SIM
+TYPE(datetime),INTENT(in) :: timei !< istante iniziale delle osservazioni da estrarre (estremo incluso)
+TYPE(datetime),INTENT(in) :: timef !< istante finale delle osservazioni da estrarre (estremo incluso)
+TYPE(vol7d_level),INTENT(in),OPTIONAL :: level !< estrae solo il livello verticale fornito, default=tutti
+TYPE(vol7d_timerange),INTENT(in),OPTIONAL :: timerange !< estrae solo i dati con intervallo temporale (es. istantaneo, cumulato, ecc.) analogo al timerange fornito, default=tutti
+TYPE(vol7d_network),INTENT(in),OPTIONAL :: set_network !< se fornito, collassa tutte le reti nell'unica rete indicata, eliminando le stazioni comuni a reti diverse
 
 CALL import(this, (/var/), network, timei, timef, level, timerange, set_network)
 
 END SUBROUTINE vol7d_oraclesim_importvsns
 
 
+!> Importa un volume vol7d dall'archivio Oracle SIM.
+!! Analoga alla ::vol7d_oraclesim_importvvnv ma con \a var scalare.
 SUBROUTINE vol7d_oraclesim_importvsnv(this, var, network, timei, timef, level, &
  timerange, set_network)
-TYPE(vol7d_oraclesim),INTENT(out) :: this
-CHARACTER(len=*),INTENT(in) :: var
-INTEGER,INTENT(in) :: network(:)
-TYPE(datetime),INTENT(in) :: timei, timef
-TYPE(vol7d_level),INTENT(in),OPTIONAL :: level
-TYPE(vol7d_timerange),INTENT(in),OPTIONAL :: timerange
-TYPE(vol7d_network),INTENT(in),OPTIONAL :: set_network
+TYPE(vol7d_oraclesim),INTENT(out) :: this !< oggetto in cui importare i dati
+CHARACTER(len=*),INTENT(in) :: var !< variabile da importare (codice alfanumerico della tabella B del WMO)
+TYPE(vol7d_network),INTENT(in) :: network(:) !< lista di reti da estrarre, inizializzata con l'indicativo numerico che ha nell'archivio SIM
+TYPE(datetime),INTENT(in) :: timei !< istante iniziale delle osservazioni da estrarre (estremo incluso)
+TYPE(datetime),INTENT(in) :: timef !< istante finale delle osservazioni da estrarre (estremo incluso)
+TYPE(vol7d_level),INTENT(in),OPTIONAL :: level !< estrae solo il livello verticale fornito, default=tutti
+TYPE(vol7d_timerange),INTENT(in),OPTIONAL :: timerange !< estrae solo i dati con intervallo temporale (es. istantaneo, cumulato, ecc.) analogo al timerange fornito, default=tutti
+TYPE(vol7d_network),INTENT(in),OPTIONAL :: set_network !< se fornito, collassa tutte le reti nell'unica rete indicata, eliminando le stazioni comuni a reti diverse
 
 INTEGER :: i
 
@@ -165,9 +170,9 @@ SUBROUTINE vol7d_oraclesim_importvvnv(this, var, network, timei, timef, level, &
  timerange, set_network)
 TYPE(vol7d_oraclesim),INTENT(out) :: this !< oggetto in cui importare i dati
 CHARACTER(len=*),INTENT(in) :: var(:) !< lista delle variabili da importare (codice alfanumerico della tabella B del WMO)
-INTEGER,INTENT(in) :: network(:) !< indicativo numerico della rete nell'archivio SIM
-TYPE(datetime),INTENT(in) :: timei !< istante iniziale delle osservazionida estrarre (estremo incluso)
-TYPE(datetime),INTENT(in) :: timef !< istante finale delle osservazionida estrarre (estremo incluso)
+TYPE(vol7d_network),INTENT(in) :: network(:) !< lista di reti da estrarre, inizializzata con l'indicativo numerico che ha nell'archivio SIM
+TYPE(datetime),INTENT(in) :: timei !< istante iniziale delle osservazioni da estrarre (estremo incluso)
+TYPE(datetime),INTENT(in) :: timef !< istante finale delle osservazioni da estrarre (estremo incluso)
 TYPE(vol7d_level),INTENT(in),OPTIONAL :: level !< estrae solo il livello verticale fornito, default=tutti
 TYPE(vol7d_timerange),INTENT(in),OPTIONAL :: timerange !< estrae solo i dati con intervallo temporale (es. istantaneo, cumulato, ecc.) analogo al timerange fornito, default=tutti
 TYPE(vol7d_network),INTENT(in),OPTIONAL :: set_network !< se fornito, collassa tutte le reti nell'unica rete indicata, eliminando le stazioni comuni a reti diverse
@@ -181,15 +186,18 @@ ENDDO
 END SUBROUTINE vol7d_oraclesim_importvvnv
 
 
+!> Importa un volume vol7d dall'archivio Oracle SIM.
+!! Analoga alla ::vol7d_oraclesim_importvvnv ma con \a network scalare.
 SUBROUTINE vol7d_oraclesim_importvvns(this, var, network, timei, timef, level, &
  timerange, set_network)
-TYPE(vol7d_oraclesim),INTENT(out) :: this
-CHARACTER(len=*),INTENT(in) :: var(:)
-INTEGER,INTENT(in) :: network
-TYPE(datetime),INTENT(in) :: timei, timef
-TYPE(vol7d_level),INTENT(in),OPTIONAL :: level
-TYPE(vol7d_timerange),INTENT(in),OPTIONAL :: timerange
-TYPE(vol7d_network),INTENT(in),OPTIONAL :: set_network
+TYPE(vol7d_oraclesim),INTENT(out) :: this !< oggetto in cui importare i dati
+CHARACTER(len=*),INTENT(in) :: var(:) !< lista delle variabili da importare (codice alfanumerico della tabella B del WMO)
+TYPE(vol7d_network),INTENT(in) :: network !< rete da estrarre, inizializzata con l'indicativo numerico che ha nell'archivio SIM
+TYPE(datetime),INTENT(in) :: timei !< istante iniziale delle osservazioni da estrarre (estremo incluso)
+TYPE(datetime),INTENT(in) :: timef !< istante finale delle osservazioni da estrarre (estremo incluso)
+TYPE(vol7d_level),INTENT(in),OPTIONAL :: level !< estrae solo il livello verticale fornito, default=tutti
+TYPE(vol7d_timerange),INTENT(in),OPTIONAL :: timerange !< estrae solo i dati con intervallo temporale (es. istantaneo, cumulato, ecc.) analogo al timerange fornito, default=tutti
+TYPE(vol7d_network),INTENT(in),OPTIONAL :: set_network !< se fornito, collassa tutte le reti nell'unica rete indicata, eliminando le stazioni comuni a reti diverse
 
 TYPE(vol7d) :: v7dtmp, v7dtmp2
 TYPE(datetime) :: odatetime
@@ -206,21 +214,21 @@ CALL getval(timei, year=datai(3), month=datai(2), day=datai(1), &
 CALL getval(timef, year=dataf(3), month=dataf(2), day=dataf(1), &
  hour=oraf(1), minute=oraf(2))
 CALL eh_getval(verbose=verbose)
-IF (verbose >= eh_verbose_info) THEN ! <0 prolisso, >0 sintetico
+IF (verbose > eh_verbose_info) THEN ! <0 prolisso, >0 sintetico
   CALL n_set_select_mode(-1)
 ELSE
   CALL n_set_select_mode(1)
 ENDIF
 
-cnetwork = TRIM(to_char(network))
+cnetwork = TRIM(to_char(network%id))
 ! Cerco la rete nella tabella
-IF (network <= 0 .OR. network >= netmax ) THEN
+IF (network%id <= 0 .OR. network%id >= netmax ) THEN
   CALL raise_error('rete '//TRIM(cnetwork)//' non valida')
   STOP
 ENDIF
 ! Leggo l'anagrafica per la rete se necessario
-IF (.NOT. ASSOCIATED(networktable(network)%ana)) THEN
-  CALL vol7d_oraclesim_ora_ana(network)
+IF (.NOT. ASSOCIATED(networktable(network%id)%ana)) THEN
+  CALL vol7d_oraclesim_ora_ana(network%id)
 ENDIF
 ! Conto le variabili da estrarre
 nvar = 0
@@ -229,7 +237,7 @@ DO nvin = 1, SIZE(var)
   found = .FALSE.
   DO nvbt = 1, SIZE(vartable)
     IF (vartable(nvbt)%varbt == var(nvin) .AND. &
-     vartable(nvbt)%network == network) THEN
+     vartable(nvbt)%networkid == network%id) THEN
 
       IF (PRESENT(level))THEN
         IF (vartable(nvbt)%level /= level) CYCLE
@@ -258,7 +266,7 @@ cvar = ''
 DO nvin = 1, SIZE(var)
   DO nvbt = 1, SIZE(vartable)
     IF (vartable(nvbt)%varbt == var(nvin) .AND. &
-     vartable(nvbt)%network == network) THEN
+     vartable(nvbt)%networkid == network%id) THEN
       nvar = nvar + 1
 
       IF (PRESENT(level))THEN
@@ -283,7 +291,6 @@ DO WHILE(.TRUE.)
   nobs = n_getgsta(this%ounit, cnetwork, cvar, datai, orai, &
    dataf, oraf, nvout, &
    nmax, cdatao, stazo, varo, valore1, valore2, valore3, valid)
-!  IF (verbose) 
   PRINT* ! Termina la riga per estetica, manca un \n
   IF (nobs < nmax .OR. nmax >= nmaxmax) EXIT ! tutto estratto o errore
   CALL print_info('Troppe osservazioni, rialloco ' &
@@ -312,7 +319,7 @@ CALL pack_distinct_c(cdatao(1:nobs), tmtmp, back=.TRUE.)
 vartmp(:) = pack_distinct(varo(1:nobs), back=.TRUE.)
 
 DO i = 1, nana
-  IF (.NOT. ANY(anatmp(i) == networktable(network)%ana(:)%ora_cod)) THEN
+  IF (.NOT. ANY(anatmp(i) == networktable(network%id)%ana(:)%ora_cod)) THEN
     non_valid = .TRUE.
     CALL raise_warning('stazione oraclesim '//TRIM(to_char(anatmp(i)))// &
      ' non trovata nell''anagrafica della rete '//TRIM(cnetwork)// &
@@ -382,15 +389,15 @@ DO i = 1, nvar
       CALL init(v7dtmp%time(j), oraclesimdate=tmtmp(j))
     ENDDO
     DO j = 1, nana
-      k = firsttrue(anatmp(j) == networktable(network)%ana(:)%ora_cod) ! ottimizzar
+      k = firsttrue(anatmp(j) == networktable(network%id)%ana(:)%ora_cod) ! ottimizzar
       CALL init(v7dtmp%ana(j), &
-       lon=REAL(networktable(network)%ana(k)%lon,fp_geo), &
-       lat=REAL(networktable(network)%ana(k)%lat,fp_geo))
+       lon=REAL(networktable(network%id)%ana(k)%lon,fp_geo), &
+       lat=REAL(networktable(network%id)%ana(k)%lat,fp_geo))
     ENDDO
     IF (PRESENT(set_network)) THEN
       v7dtmp%network(1) = set_network ! dummy network
     ELSE
-      CALL init(v7dtmp%network(1), network)
+      v7dtmp%network(1) = network
     ENDIF
   ELSE ! successivamente li copio da quelli precedenti
     v7dtmp%time = v7dtmp2%time
@@ -504,7 +511,7 @@ IF (i > 0) THEN
     READ(line(sep(11)+1:sep(12)-1),'(A)')vartable(i)%description
     READ(line(sep(12)+1:sep(13)-1),'(F10.0)')vartable(i)%afact
     READ(line(sep(13)+1:sep(14)-1),'(F10.0)')vartable(i)%bfact
-    READ(line(sep(14)+1:sep(15)-1),'(I8)')vartable(i)%network
+    READ(line(sep(14)+1:sep(15)-1),'(I8)')vartable(i)%networkid
   ENDDO readline
 120 CONTINUE
 
@@ -516,13 +523,13 @@ END SUBROUTINE vol7d_oraclesim_setup_conv
 
 
 ! Legge l'anagrafica per la rete specificata
-SUBROUTINE vol7d_oraclesim_ora_ana(network)
-INTEGER,INTENT(in) :: network
+SUBROUTINE vol7d_oraclesim_ora_ana(networkid)
+INTEGER,INTENT(in) :: networkid
 
 INTEGER :: i, j, un
 CHARACTER(len=3) :: cnet
 
-cnet = to_char(network,'(I3.3)')
+cnet = to_char(networkid,'(I3.3)')
 un = open_package_file('simana_'//cnet//'.txt', filetype_data)
 IF (un < 0) STOP
 
@@ -533,12 +540,12 @@ DO WHILE(.TRUE.)
 ENDDO
 100 CONTINUE
 REWIND(un)
-ALLOCATE(networktable(network)%ana(i))
+ALLOCATE(networktable(networkid)%ana(i))
 
 DO j = 1, i
-  READ(un,*)networktable(network)%ana(j)%ora_cod, &
-   networktable(network)%ana(j)%lat, networktable(network)%ana(j)%lon, &
-   networktable(network)%ana(j)%alt
+  READ(un,*)networktable(networkid)%ana(j)%ora_cod, &
+   networktable(networkid)%ana(j)%lat, networktable(networkid)%ana(j)%lon, &
+   networktable(networkid)%ana(j)%alt
 ENDDO
 CLOSE(un)
 

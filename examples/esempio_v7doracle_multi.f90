@@ -7,8 +7,8 @@ USE vol7d_oraclesim_class
 
 IMPLICIT NONE
 
-TYPE(vol7d_oraclesim) :: v7d
-TYPE(vol7d_network) :: dummy_network
+TYPE(vol7d_oraclesim) :: db_v7d
+TYPE(vol7d_network) :: dummy_network, network(8)
 TYPE(datetime) :: ti, tf, tc
 TYPE(vol7d) :: vol_cumh, vol_cumd
 TYPE(timedelta) :: dt_cum
@@ -21,29 +21,44 @@ TYPE(geo_coordvect),POINTER :: macroa(:)
 INTEGER, ALLOCATABLE :: in_macroa(:)
 
 ! Definisco le date iniziale e finale
-CALL init(ti, year=2007, month=3, day=18, hour=12)
+CALL init(ti, year=2007, month=3, day=18, hour=00)
 CALL init(tf, year=2007, month=3, day=21, hour=00)
 ! Definisco una rete fittizia in cui forzare i dati
-CALL init(dummy_network, 1)
+CALL init(dummy_network, 255)
+! Definisco le reti da cui voglio estrarre
+CALL init(network(1), 11)
+!CALL init(network(2), 12)
+CALL init(network(2), 13)
+CALL init(network(3), 15)
+!CALL init(network(5), 17)
+CALL init(network(4), 18)
+CALL init(network(5), 19)
+CALL init(network(6), 20)
+CALL init(network(7), 21)
+CALL init(network(8), 22)
 ! Chiamo il costruttore della classe vol7d_oraclesim per il mio oggetto
-CALL init(v7d)
+CALL init(db_v7d)
 ! Importo i dati, variabile 'B13011' della btable (precipitazione),
 ! per un vettore di reti mettendo tutto in un'unica rete
-CALL import(v7d, 'B13011', (/11,12,13,15,17,18,19,20,21,22/), &
+CALL import(db_v7d, 'B13011', network, &
  ti, tf, set_network=dummy_network)
+OPEN(10, FILE='v7d_oracle.dat', FORM='unformatted', ACCESS='sequential')
+CALL export(db_v7d%vol7d,10)
+CLOSE(10)
 
 ! Cumulo i dati su intervalli orari
 CALL init(dt_cum, hour=1)
-CALL vol7d_cumulate(v7d%vol7d, vol_cumh, dt_cum)
+CALL vol7d_cumulate(db_v7d%vol7d, vol_cumh, dt_cum)
 ! Mi faccio dare una "vista" bidimensionale dei miei dati
 CALL vol7d_get_voldatir(vol_cumh, (/vol7d_ana_d,vol7d_time_d/), vol2dp=vol2d_cum)
+PRINT*,SHAPE(db_v7d%vol7d%voldatir)
 ! Stampo la media su tutte le stazioni ora per ora
 DO i = 1, SIZE(vol_cumh%time)
   CALL getval(vol_cumh%time(i), oraclesimdate=c)
   n = COUNT (vol2d_cum(:,i) /= rmiss)
   IF (n > 0) THEN
-    PRINT'(2A,G12.5)',c,' prec. media (mm): ', &
-     SUM(vol2d_cum(:,i), mask=(vol2d_cum(:,i) /= rmiss))/n
+    PRINT'(2A,G12.5,1X,I5)',c,' prec. media (mm): ', &
+     SUM(vol2d_cum(:,i), mask=(vol2d_cum(:,i) /= rmiss))/n, n
   ENDIF
 ENDDO
 
@@ -55,10 +70,7 @@ CALL vol7d_cumulate(vol_cumh, vol_cumd, dt_cum, tc)
 CALL vol7d_get_voldatir(vol_cumd, (/vol7d_ana_d,vol7d_time_d/), vol2dp=vol2d_cum)
 
 ! Importo un file con le macroaree Emilia Romagna
-un = open_package_file('polipciv4.dat', filetype_data)
-IF (un < 0) STOP 1
-INQUIRE(unit=un, name=filesim)
-CLOSE(un)
+filesim=get_package_filepath('polipciv4.dat', filetype_data)
 CALL import(macroa, shpfilesim=filesim)
 ALLOCATE(in_macroa(SIZE(vol_cumd%ana)))
 in_macroa = 0
