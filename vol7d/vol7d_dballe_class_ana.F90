@@ -1,5 +1,6 @@
 !ciclo sul tipo dato
 
+if (nanavar/**/VOL7D_POLY_TYPES_V > 0 ) datiana=.true.
 
 do ii=1,nanavar/**/VOL7D_POLY_TYPES_V
 
