@@ -136,7 +136,7 @@ CONTAINS
 
 !>\brief  inizializza l'oggetto
 
-SUBROUTINE vol7d_dballe_init(this,dsn,user,password,debug,write,wipe)
+SUBROUTINE vol7d_dballe_init(this,dsn,user,password,debug,write,wipe,repinfo)
 
 
 TYPE(vol7d_dballe),INTENT(out) :: this !< l'oggetto da inizializzare
@@ -144,11 +144,13 @@ character(len=*), INTENT(in),OPTIONAL :: dsn !< per l'accesso al DSN ( default="
 character(len=*), INTENT(in),OPTIONAL :: user !< per l'accesso al DSN ( default="test" )
 character(len=*), INTENT(in),OPTIONAL :: password !< per l'accesso al DSN ( default="" )
 integer,INTENT(in),OPTIONAL :: debug !< attiva alcune opzioni di debug ( default=1 )
-logical,INTENT(in),OPTIONAL :: wipe !<  svuota il DSN e/o lo prepara per una scrittura ( default=.false. )
 logical,INTENT(in),OPTIONAL :: write !< abilita la scrittura sul DSN ( default=.false. )
+logical,INTENT(in),OPTIONAL :: wipe !<  svuota il DSN e/o lo prepara per una scrittura ( default=.false. )
+character(len=*), INTENT(in),OPTIONAL :: repinfo !< eventuale file repinfo.csv usato con wipe ( default="" )
 
 integer :: ldebug
 character(len=50) :: quidsn,quiuser,quipassword
+character(len=255) :: quirepinfo
 logical :: quiwrite,quiwipe
 
 
@@ -179,8 +181,12 @@ if (present(write))then
 endif
 
 quiwipe=.false.
+quirepinfo=""
 if (present(wipe))then
-   quiwipe=wipe
+  quiwipe=wipe
+  if (present(repinfo))then
+    quirepinfo=repinfo
+  endif
 endif
 
 !print*,"write=",quiwrite,"wipe=",wipe,"dsn=",quidsn
@@ -195,7 +201,7 @@ else
    call idba_preparati (this%idbhandle,this%handle_staz,"read","read","read")
 end if
 
-if (quiwipe)call idba_scopa (this%handle,"")
+if (quiwipe)call idba_scopa (this%handle,quirepinfo)
 
 END SUBROUTINE vol7d_dballe_init
 
@@ -1433,7 +1439,7 @@ logical,intent(in),optional :: attr_only
 REAL(kind=fp_geo) :: latmin,latmax,lonmin,lonmax
 logical, allocatable :: lnetwork(:),llevel(:),ltimerange(:)
 integer,allocatable :: ana_id(:,:)
-logical :: write,writeattr,lattr_only
+logical :: write,writeattr,lattr_only,datiana
 
 !CHARACTER(len=6) :: btable
 !CHARACTER(len=7) ::starbtable
@@ -1608,6 +1614,7 @@ do iii=1, nnetwork
 
 
       write=.false.
+      datiana=.false.
 
 #undef VOL7D_POLY_TYPES_V
 #define VOL7D_POLY_TYPES_V r
@@ -1631,7 +1638,10 @@ do iii=1, nnetwork
 #include "vol7d_dballe_class_ana.F90"
 #undef VOL7D_POLY_TYPES_V
 
-      if (write) then
+      !se NON ho dati di anagrafica (ma solo lat e long ..) devo fare comunque una prendilo
+      ! in quanto write indica DATI in sospeso da scrivere
+
+      if (write.or..not.datiana) then
                                 !print*,"eseguo una main prendilo"
         call idba_prendilo (this%handle)
         call idba_enq (this%handle,"ana_id",ana_id(i,iii))
@@ -1740,7 +1750,7 @@ this%handle=imiss
 this%handle_err=imiss
 this%handle_staz=imiss
 
-deallocate (this%data_id)
+if (associated(this%data_id)) deallocate (this%data_id)
 
 CALL delete(this%vol7d)
 
