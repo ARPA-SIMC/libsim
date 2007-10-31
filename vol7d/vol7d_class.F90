@@ -1076,18 +1076,29 @@ this = v7dtmp
 END SUBROUTINE vol7d_reform
 
 
-SUBROUTINE vol7d_diff_only (this, that,data_only)
-TYPE(vol7d),INTENT(IN) :: this
-TYPE(vol7d),INTENT(OUT) :: that
+!> Metodo per ottenere solo le differenze tra due oggetti vol7d.
+!! Il primo volume viene confrontato col secondo; nel secondo volume ovunque 
+!! i dati confrontati siano coincidenti viene impostato valore mancante.
+
+SUBROUTINE vol7d_diff_only (this, that,data_only,ana)
+TYPE(vol7d),INTENT(IN) :: this !< primo volume da confrontare
+TYPE(vol7d),INTENT(OUT) :: that !< secondo volume da confrontare in cui eliminare i dati coincidenti
 !INTEGER(kind=int_b), PARAMETER :: bmiss = ibmiss 
 !INTEGER(kind=fp_d), PARAMETER :: dmiss = rdmiss 
-logical , optional, intent(in) :: data_only
-logical  :: ldata_only
+logical , optional, intent(in) :: data_only !< attiva l'elaborazione dei soli dati e non dell'anagrafica (default: .false.)
+logical , optional, intent(in) :: ana !< attiva l'elaborazione dell'anagrafica (coordinate e ident) (defaul: .false.)
+logical  :: ldata_only,lana
 
 IF (PRESENT(data_only)) THEN
   ldata_only = data_only
 ELSE
   ldata_only = .FALSE.
+ENDIF
+
+IF (PRESENT(ana)) THEN
+  lana = ana
+ELSE
+  lana = .FALSE.
 ENDIF
 
 
@@ -1107,6 +1118,12 @@ if ( .not. ldata_only) then
 #define VOL7D_POLY_ARRAY volanaattr
 #include "vol7d_class_diff.F90"
 #undef VOL7D_POLY_ARRAY
+
+  if(lana)then
+    where ( this%ana == that%ana )
+      that%ana = vol7d_ana_miss
+    end where
+  end if
 
 end if
 
