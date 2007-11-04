@@ -37,7 +37,7 @@ TYPE ora_var_conv
 END TYPE ora_var_conv
 
 TYPE ora_ana
-  REAL :: lon, lat
+  real(kind=fp_geo) :: lon, lat
   INTEGER :: alt
   INTEGER :: ora_cod
 END TYPE ora_ana
@@ -391,8 +391,8 @@ DO i = 1, nvar
     DO j = 1, nana
       k = firsttrue(anatmp(j) == networktable(network%id)%ana(:)%ora_cod) ! ottimizzar
       CALL init(v7dtmp%ana(j), &
-       lon=REAL(networktable(network%id)%ana(k)%lon,fp_geo), &
-       lat=REAL(networktable(network%id)%ana(k)%lat,fp_geo))
+       lon=networktable(network%id)%ana(k)%lon, &
+       lat=networktable(network%id)%ana(k)%lat)
     ENDDO
     IF (PRESENT(set_network)) THEN
       v7dtmp%network(1) = set_network ! dummy network
