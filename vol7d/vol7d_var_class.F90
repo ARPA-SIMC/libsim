@@ -17,8 +17,8 @@ IMPLICIT NONE
 !! il costruttore ::init.
 TYPE vol7d_var
   CHARACTER(len=10) :: btable !< codice della variabile secondo la tabella B del WMO.
-  CHARACTER(len=20) :: description !< descrizione testuale della variabile (a solo scopo estetico)
-  CHARACTER(len=20) :: unit !< descrizione testuale dell'unità di misura (a solo scopo estetico)
+  CHARACTER(len=65) :: description !< descrizione testuale della variabile (opzionale)
+  CHARACTER(len=24) :: unit !< descrizione testuale dell'unità di misura (opzionale)
   INTEGER :: r !< indice della variabile di dati reale che possiede l'attributo corrente
   INTEGER :: d !< indice della variabile di dati a doppia precisione che possiede l'attributo corrente
   INTEGER :: i !< indice della variabile di dati intera che possiede l'attributo corrente

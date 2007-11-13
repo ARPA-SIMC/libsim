@@ -82,6 +82,17 @@ TYPE vol7d_dballe
 
 END TYPE vol7d_dballe
 
+INTEGER, PARAMETER, PRIVATE :: nftype = 2
+CHARACTER(len=16), PARAMETER, PRIVATE :: &
+ pathlist(2,nftype) = RESHAPE((/ &
+ '/usr/share      ', '/usr/local/share', &
+ '/etc            ', '/usr/local/etc  ' /), &
+ (/2,nftype/))
+
+
+CHARACTER(len=20),PRIVATE :: dballe_name='dballe', dballe_name_env='DBA_TABLES'
+
+
 !>\brief inizializza
 INTERFACE init
   MODULE PROCEDURE vol7d_dballe_init
@@ -1391,6 +1402,8 @@ ENDIF
 
 call vol7d_set_attr_ind(this%vol7d)
 
+call vol7d_dballe_set_var_du(this%vol7d)
+
 !print *,"R-R",this%vol7d%dativar%r(:)%r 
 !print *,"R-I",this%vol7d%dativar%r(:)%i 
 !print *,"R-B",this%vol7d%dativar%r(:)%b 
@@ -1755,6 +1768,291 @@ if (associated(this%data_id)) deallocate (this%data_id)
 CALL delete(this%vol7d)
 
 END SUBROUTINE vol7d_dballe_delete
+
+
+
+subroutine vol7d_dballe_import_dballevar(this)
+
+type(vol7d_var),pointer :: this(:)
+type(vol7d_var),allocatable,save :: blocal(:)
+INTEGER :: i,un
+
+IF (associated(this)) return
+IF (allocated(blocal)) then
+  ALLOCATE(this(size(blocal)))
+  this=blocal
+  return
+end if
+
+un = open_dballe_file('dballe.txt', filetype_data)
+IF (un < 0) then
+  print *,"errore open_dballe_file"
+                                !>\todo gestione corretta dell'errore
+  return
+end if
+
+i = 0
+DO WHILE(.TRUE.)
+  READ(un,*,END=100)
+  i = i + 1
+ENDDO
+100 CONTINUE
+
+IF (i > 0) THEN
+  ALLOCATE(this(i))
+  ALLOCATE(blocal(i))
+  REWIND(un)
+  i = 0
+  readline: DO WHILE(.TRUE.)
+    READ(un,'(1x,A6,,1x,a65,a24)',END=120)blocal(i)%btable,blocal(i)%description,blocal(i)%unit
+    blocal(i)%btable(:1)="B"
+    print*,"B=",blocal(i)%btable
+    print*," D=",blocal(i)%description
+    PRINT*," U=",blocal(i)%unit
+    i = i + 1
+  ENDDO readline
+
+120 CONTINUE
+  CALL print_info('Ho letto '//TRIM(to_char(i))//' variabili dalla tabella')
+
+  this=blocal
+
+ENDIF
+CLOSE(un)
+
+END SUBROUTINE vol7d_dballe_import_dballevar
+
+
+
+!>\brief Integra il vettore delle variabili in vol7d con le descrizioni e le unità di misura
+!eventualmente mancanti.
+
+subroutine vol7d_dballe_set_var_du(this)
+
+TYPE(vol7d) :: this !< oggetto vol7d con le variabili da integrare
+integer :: i,j
+type(vol7d_var),pointer :: dballevar(:)
+
+
+call vol7d_dballe_import_dballevar(dballevar)
+
+#undef VOL7D_POLY_NAME
+#define VOL7D_POLY_NAME dativar
+
+
+#undef VOL7D_POLY_TYPES_V
+#define VOL7D_POLY_TYPES_V r
+#include "vol7d_dballe_class_var_du.f90"
+#undef VOL7D_POLY_TYPES_V
+#define VOL7D_POLY_TYPES_V i
+#include "vol7d_dballe_class_var_du.f90"
+#undef VOL7D_POLY_TYPES_V
+#define VOL7D_POLY_TYPES_V b
+#include "vol7d_dballe_class_var_du.f90"
+#undef VOL7D_POLY_TYPES_V
+#define VOL7D_POLY_TYPES_V d
+#include "vol7d_dballe_class_var_du.f90"
+#undef VOL7D_POLY_TYPES_V
+#define VOL7D_POLY_TYPES_V c
+#include "vol7d_dballe_class_var_du.f90"
+#undef VOL7D_POLY_TYPES_V
+
+#undef VOL7D_POLY_NAME
+#define VOL7D_POLY_NAME anavar
+
+
+#undef VOL7D_POLY_TYPES_V
+#define VOL7D_POLY_TYPES_V r
+#include "vol7d_dballe_class_var_du.f90"
+#undef VOL7D_POLY_TYPES_V
+#define VOL7D_POLY_TYPES_V i
+#include "vol7d_dballe_class_var_du.f90"
+#undef VOL7D_POLY_TYPES_V
+#define VOL7D_POLY_TYPES_V b
+#include "vol7d_dballe_class_var_du.f90"
+#undef VOL7D_POLY_TYPES_V
+#define VOL7D_POLY_TYPES_V d
+#include "vol7d_dballe_class_var_du.f90"
+#undef VOL7D_POLY_TYPES_V
+#define VOL7D_POLY_TYPES_V c
+#include "vol7d_dballe_class_var_du.f90"
+#undef VOL7D_POLY_TYPES_V
+
+
+#undef VOL7D_POLY_NAME
+#define VOL7D_POLY_NAME datiattr
+
+
+#undef VOL7D_POLY_TYPES_V
+#define VOL7D_POLY_TYPES_V r
+#include "vol7d_dballe_class_var_du.f90"
+#undef VOL7D_POLY_TYPES_V
+#define VOL7D_POLY_TYPES_V i
+#include "vol7d_dballe_class_var_du.f90"
+#undef VOL7D_POLY_TYPES_V
+#define VOL7D_POLY_TYPES_V b
+#include "vol7d_dballe_class_var_du.f90"
+#undef VOL7D_POLY_TYPES_V
+#define VOL7D_POLY_TYPES_V d
+#include "vol7d_dballe_class_var_du.f90"
+#undef VOL7D_POLY_TYPES_V
+#define VOL7D_POLY_TYPES_V c
+#include "vol7d_dballe_class_var_du.f90"
+#undef VOL7D_POLY_TYPES_V
+
+
+#undef VOL7D_POLY_NAME
+#define VOL7D_POLY_NAME anaattr
+
+
+#undef VOL7D_POLY_TYPES_V
+#define VOL7D_POLY_TYPES_V r
+#include "vol7d_dballe_class_var_du.f90"
+#undef VOL7D_POLY_TYPES_V
+#define VOL7D_POLY_TYPES_V i
+#include "vol7d_dballe_class_var_du.f90"
+#undef VOL7D_POLY_TYPES_V
+#define VOL7D_POLY_TYPES_V b
+#include "vol7d_dballe_class_var_du.f90"
+#undef VOL7D_POLY_TYPES_V
+#define VOL7D_POLY_TYPES_V d
+#include "vol7d_dballe_class_var_du.f90"
+#undef VOL7D_POLY_TYPES_V
+#define VOL7D_POLY_TYPES_V c
+#include "vol7d_dballe_class_var_du.f90"
+#undef VOL7D_POLY_TYPES_V
+
+
+
+
+!!$
+!!$do i =1,size(this%dativar%r)
+!!$  j=firsttrue(this%dativar%r(i)%btable == dballevar(:)%btable)
+!!$  if ( j > 0 )then
+!!$    if(.not.c_e(this%dativar%r(i)%description))this%dativar%r(i)%description =  dballevar(j)%description
+!!$    if(.not.c_e(this%dativar%r(i)%unit))this%dativar%r(i)%unit =  dballevar(j)%unit
+!!$  end if
+!!$end do
+!!$
+!!$
+!!$
+!!$
+!!$
+!!$
+!!$do i =1,size(this%dativar%i)
+!!$  j=firsttrue(this%dativar%i(i)%btable == dballevar(:)%btable)
+!!$  if ( j > 0 )then
+!!$    if(this%dativar%i(i)%description == ' ')this%dativar%i(i)%description =  dballevar(j)%description
+!!$    if(this%dativar%i(i)%unit == ' ')this%dativar%i(i)%unit =  dballevar(j)%unit
+!!$  end if
+!!$end do
+!!$
+!!$do i =1,size(this%dativar%b)
+!!$  j=firsttrue(this%dativar%b(i)%btable == dballevar(:)%btable)
+!!$  if ( j > 0 )then
+!!$    if(this%dativar%b(i)%description == ' ')this%dativar%b(i)%description =  dballevar(j)%description
+!!$    if(this%dativar%b(i)%unit == ' ')this%dativar%b(i)%unit =  dballevar(j)%unit
+!!$  end if
+!!$end do
+!!$
+!!$do i =1,size(this%dativar%d)
+!!$  j=firsttrue(this%dativar%d(i)%btable == dballevar(:)%btable)
+!!$  if ( j > 0 )then
+!!$    if(this%dativar%d(i)%description == ' ')this%dativar%d(i)%description =  dballevar(j)%description
+!!$    if(this%dativar%d(i)%unit == ' ')this%dativar%d(i)%unit =  dballevar(j)%unit
+!!$  end if
+!!$end do
+!!$
+!!$do i =1,size(this%dativar%c)
+!!$  j=firsttrue(this%dativar%c(i)%btable == dballevar(:)%btable)
+!!$  if ( j > 0 )then
+!!$    if(this%dativar%c(i)%description == ' ')this%dativar%c(i)%description =  dballevar(j)%description
+!!$    if(this%dativar%c(i)%unit == ' ')this%dativar%c(i)%unit =  dballevar(j)%unit
+!!$  end if
+!!$end do
+
+
+return
+
+end subroutine vol7d_dballe_set_var_du
+
+
+
+FUNCTION get_dballe_filepath(filename, filetype) RESULT(path)
+CHARACTER(len=*), INTENT(in) :: filename
+INTEGER, INTENT(in) :: filetype
+
+INTEGER :: i, j
+CHARACTER(len=512) :: path
+LOGICAL :: exist
+
+IF (dballe_name == ' ') THEN
+  CALL getarg(0, dballe_name)
+  ! dballe_name_env
+ENDIF
+
+IF (filetype < 1 .OR. filetype > nftype) THEN
+  path = ""
+  CALL raise_error('File type not valid')
+  RETURN
+ENDIF
+
+! try with environment variable
+CALL getenv(TRIM(dballe_name_env), path)
+IF (path /= ' ') THEN
+
+  path=TRIM(path)//'/'//filename
+  INQUIRE(file=path, exist=exist)
+  IF (exist) THEN
+    CALL print_info('Ho trovato il file '//path)
+    RETURN
+  ENDIF
+ENDIF
+! try with pathlist
+DO j = 1, SIZE(pathlist,1)
+  IF (pathlist(j,filetype) == ' ') EXIT
+  path=TRIM(pathlist(j,filetype))//'/'//TRIM(dballe_name)//'/'//filename
+  INQUIRE(file=path, exist=exist)
+  IF (exist) THEN
+    CALL print_info('Ho trovato il file '//path)
+    RETURN
+  ENDIF
+ENDDO
+CALL raise_error('File '//TRIM(filename)//' not found')
+path = ""
+
+END FUNCTION get_dballe_filepath
+
+
+FUNCTION open_dballe_file(filename, filetype) RESULT(unit)
+CHARACTER(len=*), INTENT(in) :: filename
+INTEGER, INTENT(in) :: filetype
+INTEGER :: unit,i
+
+CHARACTER(len=512) :: path
+
+IF (filetype < 1 .OR. filetype > nftype) THEN
+  unit = -1
+  CALL raise_error('File type not valid')
+  RETURN
+ENDIF
+
+unit = getunit()
+
+path=get_dballe_filepath(filename, filetype)
+
+IF (path /= ' ') THEN
+  OPEN(unit, file=path, status='old', iostat = i)
+  IF (i == 0) THEN
+    CALL print_info('Ho aperto il file '//TRIM(path))
+    RETURN
+  ENDIF
+ENDIF
+
+CALL raise_error('File '//TRIM(filename)//' not found')
+unit = -1
+
+END FUNCTION open_dballe_file
 
 
 END MODULE 

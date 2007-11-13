@@ -16,7 +16,7 @@ CHARACTER(len=6), PARAMETER, PRIVATE :: &
  filetypename(nftype) = (/ 'DATA  ', 'CONFIG' /)
 INTEGER, PARAMETER :: filetype_data = 1, filetype_config = 2
 
-CHARACTER(len=20) :: program_name='vol7d', program_name_env='VOL7D'
+CHARACTER(len=20) :: program_name='libsim', program_name_env='VOL7D'
 
 
 ! la routine per i char non puo' essere sviluppata in macro perche` si deve scrivere diversa
