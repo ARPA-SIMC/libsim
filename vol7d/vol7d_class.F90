@@ -64,6 +64,7 @@
 !! \ingroup vol7d
 MODULE vol7d_class
 USE kinds
+USE err_handling
 USE datetime_class
 USE vol7d_utilities
 USE vol7d_ana_class
@@ -883,9 +884,13 @@ END SUBROUTINE vol7d_merge
 !! \todo "rateizzare" l'allocazione dei volumi per ridurre l'occupazione di
 !! memoria nel caso siano allocati contemporaneamente volumi di variabili e
 !! di attributi o più volumi di tipi diversi
+!!
+!! \todo il parametro \a that è dichiarato \a INOUT perché la vol7d_alloc_vol
+!! può modificarlo, bisognerebbe implementare una vol7d_check_vol che restituisca
+!! errore anziché usare la vol7d_alloc_vol.
 SUBROUTINE vol7d_append(this, that, sort)
 TYPE(vol7d),INTENT(INOUT) :: this !< primo oggetto in ingresso, a cui sarà accodato il secondo
-TYPE(vol7d),INTENT(IN) :: that !< secondo oggetto in ingresso, non viene modificato dal metodo
+TYPE(vol7d),INTENT(INOUT) :: that !< secondo oggetto in ingresso, non viene modificato dal metodo
 LOGICAL,INTENT(IN),OPTIONAL :: sort !< se fornito e uguale a \c .TRUE., i descrittori che supportano un ordinamento (operatori > e/o <) risulteranno ordinati in ordine crescente nell'oggetto finale
 
 TYPE(vol7d) :: v7dtmp
@@ -1478,14 +1483,19 @@ read(unit=lunit)&
  nanavarattrr, nanavarattri, nanavarattrb, nanavarattrd, nanavarattrc
 
 call vol7d_alloc (this, &
- nana=nana, ntime=ntime, ntimerange=ntimerange, &
- nlevel=nlevel, nnetwork=nnetwork, &
- ndativarr=ndativarr, ndativari=ndativari, ndativarb=ndativarb, ndativard=ndativard, ndativarc=ndativarc,&
- ndatiattrr=ndatiattrr, ndatiattri=ndatiattri, ndatiattrb=ndatiattrb, ndatiattrd=ndatiattrd, ndatiattrc=ndatiattrc,&
- ndativarattrr=ndativarattrr, ndativarattri=ndativarattri, ndativarattrb=ndativarattrb, ndativarattrd=ndativarattrd, ndativarattrc=ndativarattrc,&
- nanavarr=nanavarr, nanavari=nanavari, nanavarb=nanavarb, nanavard=nanavard, nanavarc=nanavarc,&
- nanaattrr=nanaattrr, nanaattri=nanaattri, nanaattrb=nanaattrb, nanaattrd=nanaattrd, nanaattrc=nanaattrc,&
- nanavarattrr=nanavarattrr, nanavarattri=nanavarattri, nanavarattrb=nanavarattrb, nanavarattrd=nanavarattrd, nanavarattrc=nanavarattrc)
+ nana=nana, ntime=ntime, ntimerange=ntimerange, nlevel=nlevel, nnetwork=nnetwork,&
+ ndativarr=ndativarr, ndativari=ndativari, ndativarb=ndativarb,&
+ ndativard=ndativard, ndativarc=ndativarc,&
+ ndatiattrr=ndatiattrr, ndatiattri=ndatiattri, ndatiattrb=ndatiattrb,&
+ ndatiattrd=ndatiattrd, ndatiattrc=ndatiattrc,&
+ ndativarattrr=ndativarattrr, ndativarattri=ndativarattri, ndativarattrb=ndativarattrb, &
+ ndativarattrd=ndativarattrd, ndativarattrc=ndativarattrc,&
+ nanavarr=nanavarr, nanavari=nanavari, nanavarb=nanavarb, &
+ nanavard=nanavard, nanavarc=nanavarc,&
+ nanaattrr=nanaattrr, nanaattri=nanaattri, nanaattrb=nanaattrb,&
+ nanaattrd=nanaattrd, nanaattrc=nanaattrc,&
+ nanavarattrr=nanavarattrr, nanavarattri=nanavarattri, nanavarattrb=nanavarattrb, &
+ nanavarattrd=nanavarattrd, nanavarattrc=nanavarattrc)
 
 call vol7d_alloc_vol (this)
 

@@ -66,15 +66,10 @@ INTEGER,PARAMETER :: &
 
 PRIVATE
 PUBLIC datetime, datetime_miss, init, delete, getval, &
- datetime_eq, datetime_eqsv, datetime_ne, datetime_nesv, &
- datetime_gt, datetime_gtsv, datetime_lt, datetime_ltsv, &
- datetime_ge, datetime_gesv, datetime_le, datetime_lesv, &
- datetime_add, datetime_subdt, datetime_subtd, &
- timedelta, timedelta_miss, timedelta_0, &
- timedelta_eq, timedelta_eqsv, timedelta_ne, timedelta_nesv, &
- timedelta_gt, timedelta_gtsv, timedelta_lt, timedelta_ltsv, &
- timedelta_ge, timedelta_gesv, timedelta_le, timedelta_lesv, &
- timedelta_add, timedelta_sub, timedelta_mod, mod
+ OPERATOR(==), OPERATOR(/=), OPERATOR(>), OPERATOR(<), &
+ OPERATOR(>=), OPERATOR(<=), OPERATOR(+), OPERATOR(-), &
+ OPERATOR(*), OPERATOR(/), mod, &
+ timedelta, timedelta_miss, timedelta_0
 
 !> Costruttori per le classi datetime e timedelta. Devono essere richiamati
 !! per tutti gli oggetti di questo tipo definiti in un programma

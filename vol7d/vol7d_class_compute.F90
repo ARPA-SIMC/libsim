@@ -36,8 +36,12 @@ CONTAINS
 ! Questo significa, ad esempio, che se estraiamo
 ! le precipitazioni cumulate dall'archivio Oracle del SIM (vedi
 ! vol7d_oraclecim_class) ad es. dalle 00 del 10/12/2004 alle 00 dell'11/12/2004
+!!
+!! \todo il parametro \a this è dichiarato \a INOUT perché la vol7d_alloc_vol
+!! può modificarlo, bisognerebbe implementare una vol7d_check_vol che restituisca
+!! errore anziché usare la vol7d_alloc_vol.
 SUBROUTINE vol7d_cumulate(this, that, step, start, frac_valid)
-TYPE(vol7d),INTENT(in) :: this !< oggetto da cumulare, non viene modificato dal metodo
+TYPE(vol7d),INTENT(inout) :: this !< oggetto da cumulare, non viene modificato dal metodo
 TYPE(vol7d),INTENT(out) :: that !< oggetto contenente, in uscita, i valori cumulati
 TYPE(timedelta),INTENT(in) :: step !< intervallo di cumulazione
 TYPE(datetime),INTENT(in),OPTIONAL :: start !< inizio del periodo di cumulazione
@@ -53,8 +57,12 @@ END SUBROUTINE vol7d_cumulate
 !! sui dati aventi un timerange di tipo "media"
 !! (vol7d_timerange_class::vol7d_timerange::timerange = 3) e ne calcola
 !! la media sull'intervallo specificato.
+!!
+!! \todo il parametro \a this è dichiarato \a INOUT perché la vol7d_alloc_vol
+!! può modificarlo, bisognerebbe implementare una vol7d_check_vol che restituisca
+!! errore anziché usare la vol7d_alloc_vol.
 SUBROUTINE vol7d_average(this, that, step, start, frac_valid)
-TYPE(vol7d),INTENT(in) :: this !< oggetto da mediare, non viene modificato dal metodo
+TYPE(vol7d),INTENT(inout) :: this !< oggetto da mediare, non viene modificato dal metodo
 TYPE(vol7d),INTENT(out) :: that !< oggetto contenente, in uscita, i valori mediati
 TYPE(timedelta),INTENT(in) :: step !< intervallo di media
 TYPE(datetime),INTENT(in),OPTIONAL :: start !< inizio del periodo di media
