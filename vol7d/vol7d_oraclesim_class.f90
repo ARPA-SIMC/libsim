@@ -13,7 +13,7 @@
 MODULE vol7d_oraclesim_class
 USE char_utilities
 USE vol7d_class
-USE vol7d_utilities
+USE file_utilities
 IMPLICIT NONE
 
 !> Definisce un'istanza di estrazione dall'archivio Oracle SIM.
