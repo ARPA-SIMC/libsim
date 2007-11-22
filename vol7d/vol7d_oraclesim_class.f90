@@ -530,7 +530,7 @@ INTEGER :: i, j, un
 CHARACTER(len=3) :: cnet
 
 cnet = to_char(networkid,'(I3.3)')
-un = open_package_file('simana_'//cnet//'.txt', filetype_data)
+un = open_package_file('net_'//cnet//'.simana', filetype_data)
 IF (un < 0) STOP
 
 i = 0
