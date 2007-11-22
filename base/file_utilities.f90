@@ -144,16 +144,48 @@ END FUNCTION open_package_file
 !> Interpreta una riga di un file csv.
 !! Restituisce in vdelim gli indici dei separatori (cdelim, default ',')
 !! trovati nella stringa line (tipicamente la riga di un file csv)
-!! per definizione: vdelim(1)=0, vdelim(size(vdelim))=LEN_TRIM(line)+1
+!! per definizione: vdelim(1)=0, vdelim(size(vdelim))=LEN_TRIM(line)+1 .
 !! Ignora le righe che iniziano con il carattere \c # .
 !! Il valore restituito dalla funzione è:
 !!  - 0 se tutto è andato bene
 !!  - -1 se si tratta di una riga di commento
-!!  - -2 se la riga contiene un numero di separatori maggiore della dimensione di vdelim, in tal caso sono assegnati solo quelli che ci stanno in vdelim
+!!  - -2 se la riga contiene un numero di separatori maggiore della dimensione di
+!!    \a vdelim, in tal caso sono assegnati solo quelli che ci stanno in \a vdelim.
+!!
+!! Esempio di utilizzo:
+!! \code
+!! INTEGER,PARAMETER :: nf=4 ! formato file
+!! INTEGER :: i, sep(nf), n1, n2, un, i1, i2, i3
+!! CHARACTER(len=512) :: line
+!!
+!! un = open_package_file('varmap.csv', filetype_data)
+!! IF (un < 0) CALL raise_fatal_error('non trovo il file delle variabili')
+!!
+!! ...
+!! i = 0
+!! readline: DO WHILE(.TRUE.)
+!!   READ(un,'(A)',END=120)line
+!!   IF (delim_csv(line, sep) < 0) CYCLE readline
+!!   i = i + 1
+!!   READ(line(sep(1)+1:sep(2)-1),'(I8)')vartable(i)%varora
+!!   READ(line(sep(2)+1:sep(3)-1),'(A)')vartable(i)%varbt
+!!   READ(line(sep(3)+1:sep(4)-1),'(A)')vartable(i)%unit
+!!  ENDDO readline
+!! 120 CONTINUE
+!! CALL print_info('Ho letto '//TRIM(to_char(i))//' variabili dalla tabella')
+!! CLOSE(un)
+!! \endcode
+!! Per leggere un file tipo:
+!! \code
+!! 160,B13011,mm->KG/M**2
+!! 220,B13011,mm/10->KG/M**2
+!! 159,B13011,mm->KG/M**2
+!! 159,B13011,mm->KG/M**2
+!! \endcode
 FUNCTION delim_csv(line, vdelim, cdelim) RESULT(status)
 CHARACTER(len=*),INTENT(in) :: line !< riga in formato csv da interpretare
 INTEGER,INTENT(out) :: vdelim(:) !< vettore degli indici dei separatori trovati in \a line, per definizione vdelim(1)=0, vdelim(size(vdelim))=LEN_TRIM(line)+1, deve essere dimansionato al numero di campi previsti in \a line +1
-CHARACTER(len=1),INTENT(in),OPTIONAL :: cdelim !< caattere da interpretare come delimitatore, default \c ','
+CHARACTER(len=1),INTENT(in),OPTIONAL :: cdelim !< carattere da interpretare come delimitatore, default \c ','
 INTEGER :: status
 
 CHARACTER (len=1) :: cldelim
