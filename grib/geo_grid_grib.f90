@@ -101,7 +101,12 @@ END SELECT
 ! Allocate space if necessary
 CALL alloc(this, ier)
 IF (ier /= 0) RETURN
+NULLIFY(field)
 CALL getval(this, field2d=field)
+IF (.NOT. ASSOCIATED(field)) THEN
+  CALL raise_error('griglia non allocata')
+  RETURN
+ENDIF
 ! Transfer data field changing scanning mode to 64
 IF (IAND(grib%isec2(11), 128) == 0) THEN
   x1 = 1
