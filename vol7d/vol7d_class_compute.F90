@@ -7,6 +7,7 @@
 !!
 !! \todo estendere l'operazione di media anche a dati istantanei.
 MODULE vol7d_class_compute
+USE datetime_class
 USE vol7d_class
 
 IMPLICIT NONE
@@ -74,7 +75,7 @@ END SUBROUTINE vol7d_average
 
 
 SUBROUTINE vol7d_extend_cumavg(this, that, tri, step, start, frac_valid)
-TYPE(vol7d),INTENT(in) :: this
+TYPE(vol7d),INTENT(inout) :: this
 TYPE(vol7d),INTENT(out) :: that
 INTEGER,INTENT(in) :: tri
 TYPE(timedelta),INTENT(in) :: step

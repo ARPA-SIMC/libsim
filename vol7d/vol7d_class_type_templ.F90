@@ -418,7 +418,9 @@ LOGICAL :: qualidim(vol7d_maxdim_ad)
 
 IF (MAXVAL(dimlist) > vol7d_maxdim_ad .OR. MINVAL(dimlist) < 1 &
  .OR. SIZE(dimlist) > vol7d_maxdim_ad) THEN
-  CALL raise_error('dimensioni non valide '//to_char(dimlist))
+  CALL raise_error('dimensioni non valide ')
+! Questa crea problemi a gfortran, forse e` sbagliata, controllare:
+!  CALL raise_error('dimensioni non valide '//to_char(dimlist))
   RETURN
 ENDIF
 qualidim = .FALSE.
@@ -428,8 +430,10 @@ ndimr = SIZE(dimlist)
 !shp = SHAPE(this%voldatir)
 
 IF (ANY(.NOT.qualidim .AND. volshp /= 1) ) THEN
-  CALL raise_error('dimensioni non degeneri o nulle non richieste: '// &
-   to_char(PACK(volshp, mask=(.NOT.qualidim .AND. volshp /= 1))))
+  CALL raise_error('dimensioni non degeneri o nulle non richieste: ')
+! Questa crea problemi a gfortran, forse e` sbagliata, controllare:
+!  CALL raise_error('dimensioni non degeneri o nulle non richieste: '// &
+!   to_char(PACK(volshp, mask=(.NOT.qualidim .AND. volshp /= 1))))
   RETURN
 ENDIF
 
