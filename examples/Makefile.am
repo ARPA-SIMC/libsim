@@ -1,15 +1,15 @@
-bin_PROGRAMS = esempio_v7d esempio_regrib esempio_qc_convert esempio_termolib
+noinst_PROGRAMS = esempio_v7d esempio_regrib esempio_qc_convert esempio_termolib
 
 if ORSIM
-bin_PROGRAMS += esempio_v7doracle esempio_v7doracle_multi
+noinst_PROGRAMS += esempio_v7doracle esempio_v7doracle_multi
 endif
 
 if DBALLE
-bin_PROGRAMS += esempio_v7ddballe esempio_v7ddballe_multi esempio_v7ddballe_import_export esempio_v7ddballe_export esempio_qccli 
+noinst_PROGRAMS += esempio_v7ddballe esempio_v7ddballe_multi esempio_v7ddballe_import_export esempio_v7ddballe_export esempio_qccli 
 endif
 
 if SHP
-bin_PROGRAMS += esempio_geo_coordvect
+noinst_PROGRAMS += esempio_geo_coordvect
 endif
 
 #LDADD = ../base/libsim_base.la ../grib/libsim_grib.la ../vol7d/libsim_vol7d.la
