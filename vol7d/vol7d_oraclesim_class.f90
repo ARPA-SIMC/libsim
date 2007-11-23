@@ -206,7 +206,7 @@ INTEGER :: i, j, k, nvar, nobs, ntime, nana, nvout, nvin, nvbt, &
 CHARACTER(len=8) :: cnetwork
 CHARACTER(len=SIZE(var)*16) :: cvar
 CHARACTER(len=12),ALLOCATABLE :: tmtmp(:)
-INTEGER,ALLOCATABLE :: anatmp(:), vartmp(:), mapdatao(:)
+INTEGER,ALLOCATABLE :: anatmp(:), vartmp(:), mapdatao(:), mapstazo(:)
 LOGICAL :: found, non_valid, varbt_req(SIZE(vartable))
 
 CALL getval(timei, year=datai(3), month=datai(2), day=datai(1), &
@@ -366,11 +366,11 @@ IF (non_valid) THEN
   CALL pack_distinct_c(cdatao(1:nobs), tmtmp, back=.TRUE., mask=(cdatao(1:nobs) /= ''))
   vartmp(:) = pack_distinct(varo(1:nobs), back=.TRUE., mask=(varo(1:nobs) /= 0))
 ENDIF
-! creo la mappatura, riciclo stazo che e` intero, con cdatao non posso
-ALLOCATE(mapdatao(nobs))
+! creo la mappatura
+ALLOCATE(mapdatao(nobs), mapstazo(nobs))
 DO i = 1, nana
   WHERE(stazo(1:nobs) == anatmp(i))
-    stazo(1:nobs) = i
+    mapstazo(1:nobs) = i
   END WHERE
 ENDDO
 DO i = 1, ntime
@@ -413,8 +413,9 @@ DO i = 1, nvar
   CALL vol7d_alloc_vol(v7dtmp)
   v7dtmp%voldatir(:,:,:,:,:,:) = rmiss
   DO j = 1, nobs
-    IF (varo(j) /= vartmp(i)) CYCLE ! solo la variabile corrente
-    v7dtmp%voldatir(stazo(j),mapdatao(j),1,1,1,1) = &
+! Solo la variabile corrente e, implicitamente, dato non scartato
+    IF (varo(j) /= vartmp(i)) CYCLE
+    v7dtmp%voldatir(mapstazo(j),mapdatao(j),1,1,1,1) = &
      valore1(j)*vartable()%afact+vartable()%bfact 
   ENDDO
 
@@ -433,7 +434,7 @@ ELSE ! altrimenti lo assegno
   this%vol7d = v7dtmp2
 ENDIF
 
-DEALLOCATE(anatmp, tmtmp, vartmp, mapdatao)
+DEALLOCATE(anatmp, tmtmp, vartmp, mapdatao, mapstazo)
 
 END SUBROUTINE vol7d_oraclesim_importvvns
 
@@ -479,11 +480,12 @@ CHARACTER(len=512) :: line
 TYPE(ora_ana),POINTER :: dummy => null() ! temporaneo
 
 un = open_package_file('varmap.csv', filetype_data)
-IF (un < 0) STOP
+IF (un < 0) CALL raise_fatal_error('non trovo il file delle variabili')
 
 i = 0
 DO WHILE(.TRUE.)
-  READ(un,*,END=100)
+  READ(un,'(A)',END=100)line
+  IF (delim_csv(line, sep) < 0) CYCLE
   i = i + 1
 ENDDO
 100 CONTINUE
@@ -495,8 +497,8 @@ IF (i > 0) THEN
   i = 0
   readline: DO WHILE(.TRUE.)
     READ(un,'(A)',END=120)line
-    i = i + 1
     IF (delim_csv(line, sep) < 0) CYCLE readline
+    i = i + 1
     READ(line(sep(1)+1:sep(2)-1),'(I8)')vartable(i)%varora
     READ(line(sep(2)+1:sep(3)-1),'(A)')vartable(i)%varbt
     READ(line(sep(3)+1:sep(4)-1),'(A)')vartable(i)%unit
