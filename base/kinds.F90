@@ -1,3 +1,4 @@
+#include "config.h"
 !> \defgroup base Pacchetto libsim, libreria base.
 !! La libreria base di libsim contiene moduli e classi di uso
 !! generale in applicazioni scientifiche scritte in Fortran 90. Per
@@ -47,7 +48,6 @@ INTEGER, PARAMETER :: fp_q = &
  ( ( ( 1 + SIGN( 1, fp_q_t ) ) / 2 ) * fp_q_t ) + &
  ( ( ( 1 - SIGN( 1, fp_q_t ) ) / 2 ) * fp_d )
 
-! Da condizionare con #ifdef !
-INTEGER, PARAMETER :: ptr_c = int_l !< intero della dimensione di un puntatore C
+INTEGER, PARAMETER :: ptr_c = SIZEOF_PTR_C !< intero della dimensione di un puntatore C
 
 END MODULE kinds

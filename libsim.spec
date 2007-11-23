@@ -1,6 +1,6 @@
 Summary: libsim: librerie di utilità in Fortran 90
 Name: libsim
-Version: 1.1
+Version: 1.2
 Release: 1
 License: GPL
 Group: Development
@@ -45,6 +45,7 @@ make
 %{_bindir}/*
 %{_datadir}/%{name}/*
 #%{_docdir}/%{name}/*
+%doc examples/*.f90
 
 %clean
 rm -rf %{buildroot}
@@ -58,6 +59,9 @@ rm -rf %{buildroot}
 %postun
 
 %changelog
+* Thu Nov 22 2007 Davide Cesari <cesari@malina.metarpa> - 1.2-1
+- Nuova versione
+
 * Fri Jun 15 2007 Davide Cesari <cesari@malina.metarpa> - 1.1-1
 - Prima pacchettizzazione su Fedora Core 4
 

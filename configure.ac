@@ -1,12 +1,27 @@
 dnl Process this file with autoconf to produce a configure script.
 
-AC_INIT(libsim, 1.1, [dcesari@arpa.emr.it])
+AC_INIT(libsim, 1.2, [dcesari@arpa.emr.it])
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_SRCDIR([configure.ac])
 AM_INIT_AUTOMAKE([foreign])
 
 AC_LANG([C])
 AC_C_BIGENDIAN
+AC_CHECK_SIZEOF(void *)
+
+if test "x$ac_cv_sizeof_void_p" = "x1"; then
+  sizeof_ptr_c="int_b"
+elif test "x$ac_cv_sizeof_void_p" = "x2"; then
+  sizeof_ptr_c="int_s"
+elif test "x$ac_cv_sizeof_void_p" = "x4"; then
+  sizeof_ptr_c="int_l"
+elif test "x$ac_cv_sizeof_void_p" = "x8"; then
+  sizeof_ptr_c="int_ll"
+else
+  sizeof_ptr_c="__error__"
+fi
+AC_DEFINE_UNQUOTED(SIZEOF_PTR_C, $sizeof_ptr_c,
+ "Fortran KIND defining an INTEGER containing a C pointer")
 
 dnl Locate Fortran 90 compiler among these if not specified
 AC_PROG_FC([pgf90 ifort gfortran g95 xlf90 f90])
