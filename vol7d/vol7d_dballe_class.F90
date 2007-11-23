@@ -1804,16 +1804,16 @@ IF (i > 0) THEN
   REWIND(un)
   i = 0
   readline: DO WHILE(.TRUE.)
+    i = i + 1
     READ(un,'(1x,A6,,1x,a65,a24)',END=120)blocal(i)%btable,blocal(i)%description,blocal(i)%unit
     blocal(i)%btable(:1)="B"
     print*,"B=",blocal(i)%btable
     print*," D=",blocal(i)%description
     PRINT*," U=",blocal(i)%unit
-    i = i + 1
   ENDDO readline
 
 120 CONTINUE
-  CALL print_info('Ho letto '//TRIM(to_char(i))//' variabili dalla tabella')
+  CALL print_info('Ho letto '//TRIM(to_char(i-1))//' variabili dalla tabella')
 
   this=blocal
 
