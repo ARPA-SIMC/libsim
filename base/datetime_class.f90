@@ -211,10 +211,9 @@ CONTAINS
 ! ==============
 !> Costruisce un oggetto \a datetime con i parametri opzionali forniti.
 !! Se non viene passato nulla lo inizializza a 1/1/1.
-SUBROUTINE datetime_init(this, iminuti, year, month, day, hour, minute, &
- unixtime, isodate, oraclesimdate)
+SUBROUTINE datetime_init(this, year, month, day, hour, minute, &
+ unixtime, isodate, oraclesimdate, iminuti)
 TYPE(datetime),INTENT(INOUT) :: this !< oggetto da inizializzare
-INTEGER,INTENT(IN),OPTIONAL :: iminuti
 INTEGER,INTENT(IN),OPTIONAL :: year !< anno d.C., se è specificato, tutti gli eventuali parametri tranne \a month, \a day, \a hour e \a minute sono ignorati; per un problema non risolto, sono ammessi solo anni >0 (d.C.)
 INTEGER,INTENT(IN),OPTIONAL :: month !< mese, default=1 se è specificato year; può assumere anche valori <1 o >12, l'oggetto finale si aggiusta coerentemente
 INTEGER,INTENT(IN),OPTIONAL :: day !< mese, default=1 se è specificato year; può anch'esso assumere valori fuori dai limiti canonici
@@ -223,6 +222,7 @@ INTEGER,INTENT(IN),OPTIONAL :: minute !< minuti, default=0 se è specificato year
 INTEGER(kind=int_ll),INTENT(IN),OPTIONAL ::  unixtime !< inizializza l'oggetto a \a unixtime secondi dopo il 1/1/1970 (convenzione UNIX, notare che il parametro deve essere un intero a 8 byte), se è presente tutto il resto è ignorato
 CHARACTER(len=*),INTENT(IN),OPTIONAL :: isodate !< inizializza l'oggetto ad una data espressa nel formato \c AAAA-MM-GG \c hh:mm, un sottoinsieme del formato noto come \a ISO
 CHARACTER(len=12),INTENT(IN),OPTIONAL :: oraclesimdate !< inizializza l'oggetto ad una data espressa nel formato \c AAAAMMGGhhmm, come nelle routine per l'accesso al db Oracle del SIM.
+INTEGER,INTENT(IN),OPTIONAL :: iminuti !< non usare, a solo uso interno
 
 INTEGER :: lyear, lmonth, lday, lhour, lminute, ier
 
@@ -287,10 +287,9 @@ END SUBROUTINE datetime_delete
 !> Restituisce il valore di un oggetto \a datetime in una o più
 !! modalità desiderate. Qualsiasi combinazione dei parametri
 !! opzionali è consentita.
-SUBROUTINE datetime_getval(this, iminuti, year, month, day, hour, minute, &
- unixtime, isodate, oraclesimdate)
+SUBROUTINE datetime_getval(this, year, month, day, hour, minute, &
+ unixtime, isodate, oraclesimdate, iminuti)
 TYPE(datetime),INTENT(IN) :: this !< oggetto di cui restituire il valore
-INTEGER,INTENT(OUT),OPTIONAL :: iminuti
 INTEGER,INTENT(OUT),OPTIONAL :: year !< anno
 INTEGER,INTENT(OUT),OPTIONAL :: month !< mese
 INTEGER,INTENT(OUT),OPTIONAL :: day !< giorno
@@ -299,6 +298,7 @@ INTEGER,INTENT(OUT),OPTIONAL :: minute !< minuti
 INTEGER(kind=int_ll),INTENT(OUT),OPTIONAL :: unixtime !< secondi a partire dal 1/1/1970
 CHARACTER(len=16),INTENT(OUT),OPTIONAL :: isodate !< data completa nel formato \c AAAA-MM-GG \c hh:mm
 CHARACTER(len=12),INTENT(OUT),OPTIONAL :: oraclesimdate !< data completa nel formato \c AAAAMMGGhhmm
+INTEGER,INTENT(OUT),OPTIONAL :: iminuti !< non usare, a solo uso interno
 
 INTEGER :: lyear, lmonth, lday, lhour, lminute, ier
 
