@@ -254,3 +254,61 @@ ELSE
 ENDIF
 
 END FUNCTION map_inv_distinct/**/VOL7D_POLY_TYPES
+
+
+#ifndef VOL7D_NO_PACK
+! Cerca l'indice del primo o ultimo elemento di vect uguale a search
+FUNCTION index/**/VOL7D_POLY_TYPES(vect, search, mask, back) &
+ RESULT(index_)
+VOL7D_POLY_TYPE,INTENT(in) :: vect(:), search
+LOGICAL,INTENT(in),OPTIONAL :: mask(:), back
+INTEGER :: index_
+
+INTEGER :: i, j
+LOGICAL :: lback
+
+IF (PRESENT(back)) THEN
+  lback = back
+ELSE
+  lback = .FALSE.
+ENDIF
+index_ = 0
+
+IF (PRESENT (mask)) THEN
+  IF (lback) THEN
+    vectm1: DO i = SIZE(vect), 1, -1
+      IF (.NOT.mask(i)) CYCLE vectm1
+      IF (vect(i) == search) THEN
+        index_ = i
+        RETURN
+      ENDIF
+    ENDDO vectm1
+  ELSE
+    vectm2: DO i = 1, SIZE(vect)
+      IF (.NOT.mask(i)) CYCLE vectm2
+      IF (vect(i) == search) THEN
+        index_ = i
+        RETURN
+      ENDIF
+    ENDDO vectm2
+  ENDIF
+ELSE
+  IF (lback) THEN
+    vect1: DO i = SIZE(vect), 1, -1
+      IF (vect(i) == search) THEN
+        index_ = i
+        RETURN
+      ENDIF
+    ENDDO vect1
+  ELSE
+    vect2: DO i = 1, SIZE(vect)
+      IF (vect(i) == search) THEN
+        index_ = i
+        RETURN
+      ENDIF
+    ENDDO vect2
+  ENDIF
+ENDIF
+
+END FUNCTION index/**/VOL7D_POLY_TYPES
+#endif

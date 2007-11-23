@@ -77,6 +77,10 @@ INTERFACE map_inv_distinct
   MODULE PROCEDURE map_inv_distinct_var
 END INTERFACE
 
+INTERFACE index
+  MODULE PROCEDURE index_var
+END INTERFACE
+
 CONTAINS
 
 !> Inizializza un oggetto \a vol7d_var con i parametri opzionali forniti.

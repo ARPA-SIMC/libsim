@@ -29,6 +29,11 @@ INTERFACE map_inv_distinct
    map_inv_distinct_datetime, map_inv_distinct_c
 END INTERFACE
 
+INTERFACE index
+  MODULE PROCEDURE index_i, index_r, index_d, &
+   index_datetime !, index_c
+END INTERFACE
+
 CONTAINS
 
 

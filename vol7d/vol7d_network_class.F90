@@ -67,6 +67,10 @@ INTERFACE map_inv_distinct
   MODULE PROCEDURE map_inv_distinct_network
 END INTERFACE
 
+INTERFACE index
+  MODULE PROCEDURE index_network
+END INTERFACE
+
 CONTAINS
 
 !> Inizializza un oggetto \a vol7d_network con i parametri opzionali forniti.

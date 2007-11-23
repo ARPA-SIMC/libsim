@@ -115,6 +115,10 @@ INTERFACE map_inv_distinct
   MODULE PROCEDURE map_inv_distinct_timerange
 END INTERFACE
 
+INTERFACE index
+  MODULE PROCEDURE index_timerange
+END INTERFACE
+
 CONTAINS
 
 !> Inizializza un oggetto \a vol7d_timerange con i parametri opzionali forniti.

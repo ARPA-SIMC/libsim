@@ -112,6 +112,10 @@ INTERFACE map_inv_distinct
   MODULE PROCEDURE map_inv_distinct_level
 END INTERFACE
 
+INTERFACE index
+  MODULE PROCEDURE index_level
+END INTERFACE
+
 CONTAINS
 
 !> Inizializza un oggetto \a vol7d_level con i parametri opzionali forniti.

@@ -71,6 +71,10 @@ INTERFACE map_inv_distinct
   MODULE PROCEDURE map_inv_distinct_ana
 END INTERFACE
 
+INTERFACE index
+  MODULE PROCEDURE index_ana
+END INTERFACE
+
 CONTAINS
 
 !> Inizializza un oggetto \a vol7d_ana con i parametri opzionali forniti.
