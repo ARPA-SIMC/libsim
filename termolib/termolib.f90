@@ -549,11 +549,11 @@ real function AEQL(PT,T,NT,PLOW,THS)
 !------------------------------------------------------------------------------
   
   integer,intent(in)::nt
-  real,intent(in),dimension(n)::pt,t
+  real,intent(in),dimension(nt)::pt,t
   real,intent(in)::plow,ths
   real::ths_l
   real::x,pc,del,tccl
-  integer::j,ih,il,i,n
+  integer::j,ih,il,i
 
   pc=plow
   ths_l=ths
@@ -563,9 +563,9 @@ real function AEQL(PT,T,NT,PLOW,THS)
      ths_l=  OS(tccl,plow)
   end if
      
-  do  j=1,n-1
+  do  j=1,nt-1
 
-     i=n-j
+     i=nt-j
 
      if(pt(I+1) > plow)then
         AEQL=pc
