@@ -43,9 +43,10 @@ CALL init(db_v7d)
 ! per un vettore di reti mettendo tutto in un'unica rete
 CALL import(db_v7d, 'B13011', network, &
  ti, tf, set_network=dummy_network)
-OPEN(10, FILE='v7d_oracle.dat', FORM='unformatted', ACCESS='sequential')
-CALL export(db_v7d%vol7d,10)
-CLOSE(10)
+un=getunit()
+OPEN(un, FILE='v7d_oracle.dat', FORM='unformatted', ACCESS='sequential')
+CALL export(db_v7d%vol7d, un)
+CLOSE(un)
 
 ! Cumulo i dati su intervalli orari
 CALL init(dt_cum, hour=1)

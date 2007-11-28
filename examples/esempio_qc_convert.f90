@@ -34,6 +34,7 @@ REAL(kind=fp_geo) :: lat,lon
 integer :: livello(10) = (/50,175,375,625,875,1125,1375,1625,1875,2125/)
 integer :: scadenze(3) = (/-900,-1800,-3600/)
 real :: dato
+integer :: iunit=1
 
 
 CALL init(v7d)
@@ -86,7 +87,7 @@ do iarea = 1, 3
       filename="/home/pavan/cq_emr/percentili/"//filename
       
       print *, "apro file=",filename
-      open (unit=1,file=filename)
+      open (unit=iunit,file=filename)
       
       do itime = 1,12
 
@@ -108,16 +109,16 @@ do iarea = 1, 3
         end do
       end do
       
-      close(unit=1)
+      close(unit=iunit)
     end do
   end do
 end do
 
-open (unit=1,file="climaprec.v7d",form="UNFORMATTED")
+open (unit=iunit,file="climaprec.v7d",form="UNFORMATTED")
 
-call export(v7d,unit=1)
+call export(v7d,unit=iunit)
 
-close (unit=1)
+close (unit=iunit)
 
 
 end program leggi

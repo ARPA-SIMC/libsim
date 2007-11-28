@@ -20,9 +20,9 @@ use phisical_constant
   real::llc
 
 !apertura file di output :
-  open(unit=22,name='../data/testa_termo.lis',status='unknown')
+  open(unit=22,file='../data/testa_termo.lis',status='unknown')
 !apertura file di input :
-  open(unit=33,name='../data/estra_temp.dat',status='old',readonly,iostat=ier)
+  open(unit=33,file='../data/estra_temp.dat',status='old',action='read',iostat=ier)
 
   ict=0
   do while (ier == 0)

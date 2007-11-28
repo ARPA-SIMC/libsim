@@ -60,8 +60,7 @@ TYPE(ora_var_conv),ALLOCATABLE :: vartable(:)
 TYPE(ora_network_conv) :: networktable(netmax)
 
 PRIVATE
-PUBLIC vol7d_oraclesim, vol7d_oraclesim_init, vol7d_oraclesim_delete, &
- import
+PUBLIC vol7d_oraclesim, init, delete, import
 
 !> Costruttore per la classe vol7d_oraclesim.
 !! Deve essere richiamato 
@@ -416,7 +415,7 @@ DO i = 1, nvar
 ! Solo la variabile corrente e, implicitamente, dato non scartato
     IF (varo(j) /= vartmp(i)) CYCLE
     v7dtmp%voldatir(mapstazo(j),mapdatao(j),1,1,1,1) = &
-     valore1(j)*vartable()%afact+vartable()%bfact 
+     valore1(j)*vartable(nvbt)%afact+vartable(nvbt)%bfact 
   ENDDO
 
   IF (i == 1) THEN ! la prima volta assegno a v7dtmp2
