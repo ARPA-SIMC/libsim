@@ -16,6 +16,7 @@ USE missing_values
 USE char_utilities
 USE err_handling
 USE geo_coord_class
+USE phys_const
 
 IMPLICIT NONE
 
@@ -411,8 +412,8 @@ ELSE
     this%coord(:,j,2) = this%y1+(j-1)*this%dy
   ENDDO
   IF (this%proj == gg_proj_georot) THEN
-    cosy = COSD(this%yrot)
-    siny = SIND(this%yrot)
+    cosy = COS(degrad*this%yrot)
+    siny = SIN(degrad*this%yrot)
     DO j = 1, this%ny
       DO i = 1, this%nx
         CALL rtlld(this%coord(i, j, 1), this%coord(i, j, 2), this%xrot, cosy, siny)
@@ -430,13 +431,13 @@ REAL, INTENT(in) :: x0, cy0, sy0
 
 REAL :: sx, sy, cx, cy
 
-sx = SIND(x)
-cx = COSD(x)
-sy = SIND(y)
-cy = COSD(y)
+sx = SIN(degrad*x)
+cx = COS(degrad*x)
+sy = SIN(degrad*y)
+cy = COS(degrad*y)
 
-y = ASIND(sy0*cy*cx+cy0*sy)
-x = x0 + ASIND(sx*cy/COSD(y))
+y = raddeg*ASIN(sy0*cy*cx+cy0*sy)
+x = x0 + raddeg*ASIN(sx*cy/COS(degrad*y))
 
 END SUBROUTINE rtlld
 

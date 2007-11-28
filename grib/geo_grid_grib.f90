@@ -77,7 +77,7 @@ CASE(10, 14, 30, 34) ! Rotated lat/lon or Gaussian
 !!$  s2_13 = grib%isec2(13)/1000.
 !!$  s2_14 = grib%isec2(14)/1000.
   CALL setval(this, xrot=grib%isec2(14)/1000., &
-   yrot=acosd(-sind(grib%isec2(13)/1000.)), rot=grib%zsec2(1))
+   yrot=raddeg*ACOS(-SIN(degrad*grib%isec2(13)/1000.)), rot=grib%zsec2(1))
 CASE default
   CALL setval(this, xrot=0., yrot=-90., rot=0.)
 END SELECT
@@ -204,7 +204,7 @@ SELECT CASE(grib%isec2(1))
 CASE(10, 14, 30, 34) ! Rotated lat/lon or Gaussian
   CALL getval(this, xrot=s2_14, yrot=s2_13, rot=grib%zsec2(1))
   grib%isec2(14) = s2_14*1000.
-  grib%isec2(13) = asind(-cosd(s2_13))*1000.
+  grib%isec2(13) = raddeg*ASIN(-COS(degrad*s2_13))*1000.
 END SELECT
 
 !!$IF (grib%isec2(1) == 20 .OR. grib%isec2(1) == 24 .OR. &
