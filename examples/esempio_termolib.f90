@@ -2,6 +2,7 @@ program esempio_termolib
 
 use termolib
 use missing_values
+use file_utilities
 use phisical_constant
 
 !-------------------------------------------------------
@@ -18,11 +19,12 @@ use phisical_constant
   real,dimension(npoint)::pp,tt,dd,dir,for,alt
   real,dimension(npoint)::ao,aw
   real::llc
+  integer::unit
 
 !apertura file di output :
-  open(unit=22,file='../data/testa_termo.lis',status='unknown')
+  unit = open_package_file('estra_temp.dat', filetype_data)
+  open(unit=22,file='testa_termo.lis',status='unknown')
 !apertura file di input :
-  open(unit=33,file='../data/estra_temp.dat',status='old',action='read',iostat=ier)
 
   ict=0
   do while (ier == 0)
@@ -32,7 +34,7 @@ use phisical_constant
 !rugiada [K], Direzione del vento [Sess.], forza del vento [KT], altezza [m]
 !che per provare il programma di esempio tornero' a calcolare
 
-     read(33,*,end=33)pp(ict),tt(ict),dd(ict),dir(ict),for(ict),alt(ict)
+     read(unit,*,end=33)pp(ict),tt(ict),dd(ict),dir(ict),for(ict),alt(ict)
         
      for(ict)=for(ict)*0.5148     !converto da KT a m/s
      Ao(ict)=O(Tt(ict),Pp(ict))   !temperatura potenziale
@@ -40,7 +42,7 @@ use phisical_constant
 
   end do
       
-33 close(33)
+33 close(unit)
       
   ict=ict-1
 !calcolo una serie di indici di stabilita' atmosferica
