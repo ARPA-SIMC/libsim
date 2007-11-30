@@ -66,6 +66,7 @@ INTEGER,PARAMETER :: &
 
 PRIVATE
 PUBLIC datetime, datetime_miss, init, delete, getval, &
+ read_unit, write_unit, &
  OPERATOR(==), OPERATOR(/=), OPERATOR(>), OPERATOR(<), &
  OPERATOR(>=), OPERATOR(<=), OPERATOR(+), OPERATOR(-), &
  OPERATOR(*), OPERATOR(/), mod, &
@@ -202,6 +203,20 @@ END INTERFACE
 !! dal minuto, ora o giorno tondo precedente più vicino.
 INTERFACE mod
   MODULE PROCEDURE timedelta_mod, datetime_timedelta_mod
+END INTERFACE
+
+!> Legge un oggetto datetime/timedelta o un vettore di oggetti datetime/timedelta da
+!! un file \c FORMATTED o \c UNFORMATTED.
+INTERFACE read_unit
+  MODULE PROCEDURE datetime_read_unit, datetime_vect_read_unit, &
+   timedelta_read_unit, timedelta_vect_read_unit
+END INTERFACE
+
+!> Scrive un oggetto datetime/timedelta o un vettore di oggetti datetime/timedelta su
+!! un file \c FORMATTED o \c UNFORMATTED.
+INTERFACE write_unit
+  MODULE PROCEDURE datetime_write_unit, datetime_vect_write_unit, &
+   timedelta_write_unit, timedelta_vect_write_unit
 END INTERFACE
 
 CONTAINS
@@ -544,6 +559,88 @@ ENDIF
 END FUNCTION datetime_subtd
 
 
+!> Legge da un'unità di file il contenuto dell'oggetto \a this.
+!! Il record da leggere deve essere stato scritto con la ::write_unit
+!! e, nel caso \a this sia un vettore, la lunghezza del record e quella
+!! del vettore devono essere accordate. Il metodo controlla se il file è
+!! aperto per un I/O formattato o non formattato e fa la cosa giusta.
+SUBROUTINE datetime_read_unit(this, unit)
+TYPE(datetime),INTENT(out) :: this !< oggetto da leggere
+INTEGER, INTENT(in) :: unit !< unità da cui leggere
+
+CALL datetime_vect_read_unit((/this/), unit)
+
+END SUBROUTINE datetime_read_unit
+
+
+!> Legge da un'unità di file il contenuto dell'oggetto \a this.
+!! Il record da leggere deve essere stato scritto con la ::write_unit
+!! e, nel caso \a this sia un vettore, la lunghezza del record e quella
+!! del vettore devono essere accordate. Il metodo controlla se il file è
+!! aperto per un I/O formattato o non formattato e fa la cosa giusta.
+SUBROUTINE datetime_vect_read_unit(this, unit)
+TYPE(datetime) :: this(:) !< oggetto da leggere
+INTEGER, INTENT(in) :: unit !< unità da cui leggere
+
+CHARACTER(len=40) :: form
+CHARACTER(len=16), ALLOCATABLE :: dateiso(:)
+INTEGER :: i
+
+ALLOCATE(dateiso(SIZE(this)))
+INQUIRE(unit, form=form)
+IF (form == 'FORMATTED') THEN
+  READ(unit,'(4(A16,1X))')dateiso
+ELSE
+  READ(unit)dateiso
+ENDIF
+DO i = 1, SIZE(dateiso)
+  CALL init(this(i), isodate=dateiso(i))
+ENDDO
+DEALLOCATE(dateiso)
+
+END SUBROUTINE datetime_vect_read_unit
+
+
+!> Scrive su un'unità di file il contenuto dell'oggetto \a this.
+!! Il record scritto potrà successivamente essere letto con la ::read_unit.
+!! Il metodo controlla se il file è
+!! aperto per un I/O formattato o non formattato e fa la cosa giusta.
+SUBROUTINE datetime_write_unit(this, unit)
+TYPE(datetime),INTENT(in) :: this !< oggetto da scrivere
+INTEGER, INTENT(in) :: unit !< unità su cui scrivere
+
+CALL datetime_vect_write_unit((/this/), unit)
+
+END SUBROUTINE datetime_write_unit
+
+
+!> Scrive su un'unità di file il contenuto dell'oggetto \a this.
+!! Il record scritto potrà successivamente essere letto con la ::read_unit.
+!! Il metodo controlla se il file è
+!! aperto per un I/O formattato o non formattato e fa la cosa giusta.
+SUBROUTINE datetime_vect_write_unit(this, unit)
+TYPE(datetime),INTENT(in) :: this(:) !< oggetto da scrivere
+INTEGER, INTENT(in) :: unit !< unità su cui scrivere
+
+CHARACTER(len=40) :: form
+CHARACTER(len=16), ALLOCATABLE :: dateiso(:)
+INTEGER :: i
+
+ALLOCATE(dateiso(SIZE(this)))
+DO i = 1, SIZE(dateiso)
+  CALL getval(this(i), isodate=dateiso(i))
+ENDDO
+INQUIRE(unit, form=form)
+IF (form == 'FORMATTED') THEN
+  WRITE(unit,'(4(A16,1X))')dateiso
+ELSE
+  WRITE(unit)dateiso
+ENDIF
+DEALLOCATE(dateiso)
+
+END SUBROUTINE datetime_vect_write_unit
+
+
 ! ===============
 ! == timedelta ==
 ! ===============
@@ -551,33 +648,46 @@ END FUNCTION datetime_subtd
 !! Se non viene passato nulla lo inizializza a intervallo di durata nulla.
 !! L'intervallo ottenuto è pari alla somma dei valori di tutti i parametri
 !! forniti, ovviamente non fornire un parametro equivale a fornirlo =0.
-SUBROUTINE timedelta_init(this, year, month, day, hour, minute)
+SUBROUTINE timedelta_init(this, year, month, day, hour, minute, isodate, oraclesimdate)
 TYPE(timedelta),INTENT(INOUT) :: this !< oggetto da inizializzare
 INTEGER,INTENT(IN),OPTIONAL :: year !< anni, se presente l'oggetto diventa "popolare"
 INTEGER,INTENT(IN),OPTIONAL :: month !< mesi, se presente l'oggetto diventa "popolare"
 INTEGER,INTENT(IN),OPTIONAL :: day !< giorni
 INTEGER,INTENT(IN),OPTIONAL :: hour !< ore
 INTEGER,INTENT(IN),OPTIONAL :: minute !< minuti
+CHARACTER(len=*),INTENT(IN),OPTIONAL :: isodate !< inizializza l'oggetto ad un intervallo nel formato \c GGGGGGGGGG \c hh:mm, ignorando tutti gli altri parametri
+CHARACTER(len=12),INTENT(IN),OPTIONAL :: oraclesimdate !< inizializza l'oggetto ad un intervallo nel formato \c GGGGGGGGhhmm, ignorando tutti gli altri parametri
 
-this%iminuti = 0
-IF (PRESENT(year)) THEN
-  this%year = year
+
+INTEGER :: d, h, m
+
+IF (PRESENT(isodate)) THEN
+  READ(isodate, '(I10,1X,I2,1X,I2)')d, h, m
+  this%iminuti = 1440*d + 60*h + m
+ELSE IF (PRESENT(oraclesimdate)) THEN
+  READ(isodate, '(I8,2I2)')d, h, m
+  this%iminuti = 1440*d + 60*h + m
 ELSE
-  this%year = 0
-ENDIF
-IF (PRESENT(month)) THEN
-  this%month = month
-ELSE
-  this%month = 0
-ENDIF
-IF (PRESENT(day)) THEN
-  this%iminuti = this%iminuti + 1440*day
-ENDIF
-IF (PRESENT(hour)) THEN
-  this%iminuti = this%iminuti + 60*hour
-ENDIF
-IF (PRESENT(minute)) THEN
-  this%iminuti = this%iminuti + minute
+  this%iminuti = 0
+  IF (PRESENT(year)) THEN
+    this%year = year
+  ELSE
+    this%year = 0
+  ENDIF
+  IF (PRESENT(month)) THEN
+    this%month = month
+  ELSE
+    this%month = 0
+  ENDIF
+  IF (PRESENT(day)) THEN
+    this%iminuti = this%iminuti + 1440*day
+  ENDIF
+  IF (PRESENT(hour)) THEN
+    this%iminuti = this%iminuti + 60*hour
+  ENDIF
+  IF (PRESENT(minute)) THEN
+    this%iminuti = this%iminuti + minute
+  ENDIF
 ENDIF
 
 END SUBROUTINE timedelta_init
@@ -869,6 +979,88 @@ ELSE
 ENDIF
 
 END FUNCTION datetime_timedelta_mod
+
+
+!> Legge da un'unità di file il contenuto dell'oggetto \a this.
+!! Il record da leggere deve essere stato scritto con la ::write_unit
+!! e, nel caso \a this sia un vettore, la lunghezza del record e quella
+!! del vettore devono essere accordate. Il metodo controlla se il file è
+!! aperto per un I/O formattato o non formattato e fa la cosa giusta.
+SUBROUTINE timedelta_read_unit(this, unit)
+TYPE(timedelta),INTENT(out) :: this !< oggetto da leggere
+INTEGER, INTENT(in) :: unit !< unità da cui leggere
+
+CALL timedelta_vect_read_unit((/this/), unit)
+
+END SUBROUTINE timedelta_read_unit
+
+
+!> Legge da un'unità di file il contenuto dell'oggetto \a this.
+!! Il record da leggere deve essere stato scritto con la ::write_unit
+!! e, nel caso \a this sia un vettore, la lunghezza del record e quella
+!! del vettore devono essere accordate. Il metodo controlla se il file è
+!! aperto per un I/O formattato o non formattato e fa la cosa giusta.
+SUBROUTINE timedelta_vect_read_unit(this, unit)
+TYPE(timedelta) :: this(:) !< oggetto da leggere
+INTEGER, INTENT(in) :: unit !< unità da cui leggere
+
+CHARACTER(len=40) :: form
+CHARACTER(len=16), ALLOCATABLE :: dateiso(:)
+INTEGER :: i
+
+ALLOCATE(dateiso(SIZE(this)))
+INQUIRE(unit, form=form)
+IF (form == 'FORMATTED') THEN
+  READ(unit,'(4(A16,1X))')dateiso
+ELSE
+  READ(unit)dateiso
+ENDIF
+DO i = 1, SIZE(dateiso)
+  CALL init(this(i), isodate=dateiso(i))
+ENDDO
+DEALLOCATE(dateiso)
+
+END SUBROUTINE timedelta_vect_read_unit
+
+
+!> Scrive su un'unità di file il contenuto dell'oggetto \a this.
+!! Il record scritto potrà successivamente essere letto con la ::read_unit.
+!! Il metodo controlla se il file è
+!! aperto per un I/O formattato o non formattato e fa la cosa giusta.
+SUBROUTINE timedelta_write_unit(this, unit)
+TYPE(timedelta),INTENT(in) :: this !< oggetto da scrivere
+INTEGER, INTENT(in) :: unit !< unità su cui scrivere
+
+CALL timedelta_vect_write_unit((/this/), unit)
+
+END SUBROUTINE timedelta_write_unit
+
+
+!> Scrive su un'unità di file il contenuto dell'oggetto \a this.
+!! Il record scritto potrà successivamente essere letto con la ::read_unit.
+!! Il metodo controlla se il file è
+!! aperto per un I/O formattato o non formattato e fa la cosa giusta.
+SUBROUTINE timedelta_vect_write_unit(this, unit)
+TYPE(timedelta),INTENT(in) :: this(:) !< oggetto da scrivere
+INTEGER, INTENT(in) :: unit !< unità su cui scrivere
+
+CHARACTER(len=40) :: form
+CHARACTER(len=16), ALLOCATABLE :: dateiso(:)
+INTEGER :: i
+
+ALLOCATE(dateiso(SIZE(this)))
+DO i = 1, SIZE(dateiso)
+  CALL getval(this(i), isodate=dateiso(i))
+ENDDO
+INQUIRE(unit, form=form)
+IF (form == 'FORMATTED') THEN
+  WRITE(unit,'(4(A16,1X))')dateiso
+ELSE
+  WRITE(unit)dateiso
+ENDIF
+DEALLOCATE(dateiso)
+
+END SUBROUTINE timedelta_vect_write_unit
 
 
 SUBROUTINE jeladata5(iday,imonth,iyear,ihour,imin,iminuti)

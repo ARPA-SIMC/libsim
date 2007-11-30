@@ -358,6 +358,18 @@ INTERFACE export
   MODULE PROCEDURE geo_coordvect_export, geo_coordvect_exportvect
 END INTERFACE
 
+!> Legge un oggetto geo_coord o un vettore di oggetti geo_coord da
+!! un file \c FORMATTED o \c UNFORMATTED.
+INTERFACE read_unit
+  MODULE PROCEDURE geo_coord_read_unit, geo_coord_vect_read_unit
+END INTERFACE
+
+!> Scrive un oggetto geo_coord o un vettore di oggetti geo_coord su
+!! un file \c FORMATTED o \c UNFORMATTED.
+INTERFACE write_unit
+  MODULE PROCEDURE geo_coord_write_unit, geo_coord_vect_write_unit
+END INTERFACE
+
 !> Determina se un punto sta dentro un poligono o un rettangolo.
 INTERFACE inside
   MODULE PROCEDURE geo_coord_inside, geo_coord_inside_rectang
@@ -680,6 +692,86 @@ DO i = 1, SIZE(that)
 ENDDO
 
 END FUNCTION geo_coord_nesv
+
+
+!> Legge da un'unità di file il contenuto dell'oggetto \a this.
+!! Il record da leggere deve essere stato scritto con la ::write_unit
+!! e, nel caso \a this sia un vettore, la lunghezza del record e quella
+!! del vettore devono essere accordate. Il metodo controlla se il file è
+!! aperto per un I/O formattato o non formattato e fa la cosa giusta.
+SUBROUTINE geo_coord_read_unit(this, unit)
+TYPE(geo_coord),INTENT(out) :: this !< oggetto da leggere
+INTEGER, INTENT(in) :: unit !< unità da cui leggere
+
+CALL geo_coord_vect_read_unit((/this/), unit)
+
+END SUBROUTINE geo_coord_read_unit
+
+
+!> Legge da un'unità di file il contenuto dell'oggetto \a this.
+!! Il record da leggere deve essere stato scritto con la ::write_unit
+!! e, nel caso \a this sia un vettore, la lunghezza del record e quella
+!! del vettore devono essere accordate. Il metodo controlla se il file è
+!! aperto per un I/O formattato o non formattato e fa la cosa giusta.
+SUBROUTINE geo_coord_vect_read_unit(this, unit)
+TYPE(geo_coord) :: this(:) !< oggetto da leggere
+INTEGER, INTENT(in) :: unit !< unità da cui leggere
+
+CHARACTER(len=40) :: form
+INTEGER :: i
+
+INQUIRE(unit, form=form)
+IF (form == 'FORMATTED') THEN
+  READ(unit,'(4G25.16E3,/,2L1,2I12)') &
+   (this(i)%lon,this(i)%lat,this(i)%utme,this(i)%utmn, &
+   this(i)%desc%geoce,this(i)%desc%utmce,this(i)%desc%fuso,this(i)%desc%elliss, &
+   i=1,SIZE(this))
+ELSE
+  READ(unit)(this(i)%lon,this(i)%lat,this(i)%utme,this(i)%utmn, &
+   this(i)%desc%geoce,this(i)%desc%utmce,this(i)%desc%fuso,this(i)%desc%elliss, &
+   i=1,SIZE(this))
+ENDIF
+
+END SUBROUTINE geo_coord_vect_read_unit
+
+
+!> Scrive su un'unità di file il contenuto dell'oggetto \a this.
+!! Il record scritto potrà successivamente essere letto con la ::read_unit.
+!! Il metodo controlla se il file è
+!! aperto per un I/O formattato o non formattato e fa la cosa giusta.
+SUBROUTINE geo_coord_write_unit(this, unit)
+TYPE(geo_coord),INTENT(in) :: this !< oggetto da scrivere
+INTEGER, INTENT(in) :: unit !< unità su cui scrivere
+
+CALL geo_coord_vect_write_unit((/this/), unit)
+
+END SUBROUTINE geo_coord_write_unit
+
+
+!> Scrive su un'unità di file il contenuto dell'oggetto \a this.
+!! Il record scritto potrà successivamente essere letto con la ::read_unit.
+!! Il metodo controlla se il file è
+!! aperto per un I/O formattato o non formattato e fa la cosa giusta.
+SUBROUTINE geo_coord_vect_write_unit(this, unit)
+TYPE(geo_coord),INTENT(in) :: this(:) !< oggetto da scrivere
+INTEGER, INTENT(in) :: unit !< unità su cui scrivere
+
+CHARACTER(len=40) :: form
+INTEGER :: i
+
+INQUIRE(unit, form=form)
+IF (form == 'FORMATTED') THEN
+  WRITE(unit,'(4G25.16E3,/,2L1,2I12)') &
+   (this(i)%lon,this(i)%lat,this(i)%utme,this(i)%utmn, &
+   this(i)%desc%geoce,this(i)%desc%utmce,this(i)%desc%fuso,this(i)%desc%elliss, &
+   i=1,SIZE(this))
+ELSE
+  WRITE(unit)(this(i)%lon,this(i)%lat,this(i)%utme,this(i)%utmn, &
+   this(i)%desc%geoce,this(i)%desc%utmce,this(i)%desc%fuso,this(i)%desc%elliss, &
+   i=1,SIZE(this))
+ENDIF
+
+END SUBROUTINE geo_coord_vect_write_unit
 
 
 !> Tenta di rendere confrontabili due oggetti geo_coord convertendo

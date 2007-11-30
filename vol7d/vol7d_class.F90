@@ -471,8 +471,8 @@ END SUBROUTINE vol7d_check_alloc_dati
 !! specificare questa informazione.
 !! Tra i 20 possibili volumi allocabili
 !! ((variabili,attributi)*(anagrafica,dati)*(r,d,i,b,c)=20)
-!! saranno allocati solo quelli per cui è stata specificata l'estensione
-!! del corrispondente descrittore variabili/attributi con la ::vol7d_alloc.
+!! saranno allocati solo quelli per cui è stato precedentemente richiesto il
+!! corrispondente descrittore variabili/attributi con la ::vol7d_alloc.
 SUBROUTINE vol7d_alloc_vol(this, ini, inivol)
 TYPE(vol7d),INTENT(inout) :: this !< oggetto di cui allocare i volumi
 LOGICAL,INTENT(in),OPTIONAL :: ini !< se fornito e vale \c .TRUE., viene chiamato il costruttore, senza parametri opzionali, per ogni elemento di tutti i descrittori allocati
@@ -1322,8 +1322,8 @@ write(unit=lunit)&
 
 
 !! prime 5 dimensioni
-if (associated(this%ana))       write(unit=lunit)this%ana
-if (associated(this%time))      write(unit=lunit)this%time
+if (associated(this%ana))       call write_unit(this%ana, lunit)
+if (associated(this%time))      call write_unit(this%time, lunit)
 if (associated(this%level))     write(unit=lunit)this%level
 if (associated(this%timerange)) write(unit=lunit)this%timerange
 if (associated(this%network))   write(unit=lunit)this%network
@@ -1500,8 +1500,8 @@ call vol7d_alloc (this, &
 call vol7d_alloc_vol (this)
 
 
-if (associated(this%ana))       read(unit=lunit)this%ana
-if (associated(this%time))      read(unit=lunit)this%time
+if (associated(this%ana))       call read_unit(this%ana, lunit)
+if (associated(this%time))      call read_unit(this%time, lunit)
 if (associated(this%level))     read(unit=lunit)this%level
 if (associated(this%timerange)) read(unit=lunit)this%timerange
 if (associated(this%network))   read(unit=lunit)this%network

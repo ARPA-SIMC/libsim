@@ -55,6 +55,18 @@ INTERFACE OPERATOR (/=)
   MODULE PROCEDURE vol7d_ana_ne, vol7d_ana_nesv
 END INTERFACE
 
+!> Legge un oggetto vol7d_ana o un vettore di oggetti vol7d_ana da
+!! un file \c FORMATTED o \c UNFORMATTED.
+INTERFACE read_unit
+  MODULE PROCEDURE vol7d_ana_read_unit, vol7d_ana_vect_read_unit
+END INTERFACE
+
+!> Scrive un oggetto vol7d_ana o un vettore di oggetti vol7d_ana su
+!! un file \c FORMATTED o \c UNFORMATTED.
+INTERFACE write_unit
+  MODULE PROCEDURE vol7d_ana_write_unit, vol7d_ana_vect_write_unit
+END INTERFACE
+
 INTERFACE count_distinct
   MODULE PROCEDURE count_distinct_ana
 END INTERFACE
@@ -152,6 +164,76 @@ DO i = 1, SIZE(that)
 ENDDO
 
 END FUNCTION vol7d_ana_nesv
+
+
+!> Legge da un'unità di file il contenuto dell'oggetto \a this.
+!! Il record da leggere deve essere stato scritto con la ::write_unit
+!! e, nel caso \a this sia un vettore, la lunghezza del record e quella
+!! del vettore devono essere accordate. Il metodo controlla se il file è
+!! aperto per un I/O formattato o non formattato e fa la cosa giusta.
+SUBROUTINE vol7d_ana_read_unit(this, unit)
+TYPE(vol7d_ana),INTENT(out) :: this !< oggetto da leggere
+INTEGER, INTENT(in) :: unit !< unità da cui leggere
+
+CALL vol7d_ana_vect_read_unit((/this/), unit)
+
+END SUBROUTINE vol7d_ana_read_unit
+
+
+!> Legge da un'unità di file il contenuto dell'oggetto \a this.
+!! Il record da leggere deve essere stato scritto con la ::write_unit
+!! e, nel caso \a this sia un vettore, la lunghezza del record e quella
+!! del vettore devono essere accordate. Il metodo controlla se il file è
+!! aperto per un I/O formattato o non formattato e fa la cosa giusta.
+SUBROUTINE vol7d_ana_vect_read_unit(this, unit)
+TYPE(vol7d_ana) :: this(:) !< oggetto da leggere
+INTEGER, INTENT(in) :: unit !< unità da cui leggere
+
+CHARACTER(len=40) :: form
+
+CALL read_unit(this%coord, unit)
+INQUIRE(unit, form=form)
+IF (form == 'FORMATTED') THEN
+  READ(unit,'(A)')this(:)%ident
+ELSE
+  READ(unit)this(:)%ident
+ENDIF
+
+END SUBROUTINE vol7d_ana_vect_read_unit
+
+
+!> Scrive su un'unità di file il contenuto dell'oggetto \a this.
+!! Il record scritto potrà successivamente essere letto con la ::read_unit.
+!! Il metodo controlla se il file è
+!! aperto per un I/O formattato o non formattato e fa la cosa giusta.
+SUBROUTINE vol7d_ana_write_unit(this, unit)
+TYPE(vol7d_ana),INTENT(in) :: this !< oggetto da scrivere
+INTEGER, INTENT(in) :: unit !< unità su cui scrivere
+
+CALL vol7d_ana_vect_write_unit((/this/), unit)
+
+END SUBROUTINE vol7d_ana_write_unit
+
+
+!> Scrive su un'unità di file il contenuto dell'oggetto \a this.
+!! Il record scritto potrà successivamente essere letto con la ::read_unit.
+!! Il metodo controlla se il file è
+!! aperto per un I/O formattato o non formattato e fa la cosa giusta.
+SUBROUTINE vol7d_ana_vect_write_unit(this, unit)
+TYPE(vol7d_ana),INTENT(in) :: this(:) !< oggetto da scrivere
+INTEGER, INTENT(in) :: unit !< unità su cui scrivere
+
+CHARACTER(len=40) :: form
+
+CALL write_unit(this%coord, unit)
+INQUIRE(unit, form=form)
+IF (form == 'FORMATTED') THEN
+  WRITE(unit,'(A)')this(:)%ident
+ELSE
+  WRITE(unit)this(:)%ident
+ENDIF
+
+END SUBROUTINE vol7d_ana_vect_write_unit
 
 
 #define VOL7D_POLY_TYPE TYPE(vol7d_ana)
