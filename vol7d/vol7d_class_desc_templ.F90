@@ -107,10 +107,10 @@ ALLOCATE(remap(n), varout(n))
 IF (miss) THEN
   IF (unique) THEN
     remap = map_inv_distinct(varin, back=.TRUE., &
-     mask=(varin /= VOL7D_POLY_TYPE/**/_miss))
+     mask=(VOL7D_POLY_TYPE/**/_miss /= varin))
   ELSE
     remap = PACK((/(i, i=1,SIZE(varin))/), &
-     mask=(varin /= VOL7D_POLY_TYPE/**/_miss))
+     mask=VOL7D_POLY_TYPE/**/_miss /= varin)
   ENDIF
 ELSE
   IF (unique) THEN
