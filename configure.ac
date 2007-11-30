@@ -49,7 +49,7 @@ AC_ARG_ENABLE(oraclesim, AC_HELP_STRING([--disable-oraclesim],
 if test "x$enableval" = "xyes"; then
 if test -n "$ORACLE_HOME"; then
 AC_MSG_RESULT([oraclesim code included])
-liboraclesim="-L$ORACLE_HOME/lib -lclntsh -lrouMW -lsupport -lrouGW -lix -lemos"
+liboraclesim="-L$ORACLE_HOME/lib -lclntsh -lrouMW -lsupport -lrouGW -lix" dnl -lemos
 AC_SUBST(liboraclesim)
 else
 AC_MSG_RESULT([oraclesim code not included because \$ORACLE_HOME not set])
@@ -59,6 +59,16 @@ else
 AC_MSG_RESULT([oraclesim code not included])
 fi
 AM_CONDITIONAL(ORSIM, test "x$enableval" = "xyes")
+
+AC_ARG_ENABLE(grib, AC_HELP_STRING([--disable-grib],
+  [disable grib support]),,[enableval=yes])dnl default enable
+if test "x$enableval" = "xyes"; then
+AC_MSG_RESULT([grib code included])
+AC_CHECK_LIB([emos], [gribex], , AC_MSG_ERROR([ECMWF emos library not found]))
+else
+AC_MSG_RESULT([grib code not included])
+fi
+AM_CONDITIONAL(GRIB, test "x$enableval" = "xyes")
 
 AC_ARG_ENABLE(dballe, AC_HELP_STRING([--disable-dballe],
   [disable dballe support]),,[enableval=yes])dnl default enable
