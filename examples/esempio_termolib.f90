@@ -19,13 +19,14 @@ use phisical_constant
   real,dimension(npoint)::pp,tt,dd,dir,for,alt
   real,dimension(npoint)::ao,aw
   real::llc
-  integer::unit
+  INTEGER::unit,ier
 
 !apertura file di output :
   unit = open_package_file('estra_temp.dat', filetype_data)
   open(unit=22,file='testa_termo.lis',status='unknown')
 !apertura file di input :
 
+  ier=0
   ict=0
   do while (ier == 0)
 

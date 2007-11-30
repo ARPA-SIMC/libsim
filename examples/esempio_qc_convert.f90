@@ -101,7 +101,7 @@ do iarea = 1, 3
           iana=iarea+(iper-1)*3
           call init(v7d%ana(iana),lat=lat,lon=lon,ident=ident)
 
-          read (1,"(10x,f)") dato
+          read (iunit,"(10x,f7.0)") dato
           if (dato == -999.9) dato=rmiss
 
           v7d%voldatir(iana,itime,ilevel,itimerange,idativarr,inetwork) = dato          
