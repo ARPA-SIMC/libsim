@@ -1829,7 +1829,7 @@ END SUBROUTINE vol7d_dballe_import_dballevar
 
 subroutine vol7d_dballe_set_var_du(this)
 
-TYPE(vol7d) :: this !< oggetto vol7d con le variabili da integrare
+TYPE(vol7d) :: this !< oggetto vol7d con le variabili da completare
 integer :: i,j
 type(vol7d_var),pointer :: dballevar(:)
 
@@ -1921,56 +1921,6 @@ call vol7d_dballe_import_dballevar(dballevar)
 #define VOL7D_POLY_TYPES_V c
 #include "vol7d_dballe_class_var_du.f90"
 #undef VOL7D_POLY_TYPES_V
-
-
-
-
-!!$
-!!$do i =1,size(this%dativar%r)
-!!$  j=firsttrue(this%dativar%r(i)%btable == dballevar(:)%btable)
-!!$  if ( j > 0 )then
-!!$    if(.not.c_e(this%dativar%r(i)%description))this%dativar%r(i)%description =  dballevar(j)%description
-!!$    if(.not.c_e(this%dativar%r(i)%unit))this%dativar%r(i)%unit =  dballevar(j)%unit
-!!$  end if
-!!$end do
-!!$
-!!$
-!!$
-!!$
-!!$
-!!$
-!!$do i =1,size(this%dativar%i)
-!!$  j=firsttrue(this%dativar%i(i)%btable == dballevar(:)%btable)
-!!$  if ( j > 0 )then
-!!$    if(this%dativar%i(i)%description == ' ')this%dativar%i(i)%description =  dballevar(j)%description
-!!$    if(this%dativar%i(i)%unit == ' ')this%dativar%i(i)%unit =  dballevar(j)%unit
-!!$  end if
-!!$end do
-!!$
-!!$do i =1,size(this%dativar%b)
-!!$  j=firsttrue(this%dativar%b(i)%btable == dballevar(:)%btable)
-!!$  if ( j > 0 )then
-!!$    if(this%dativar%b(i)%description == ' ')this%dativar%b(i)%description =  dballevar(j)%description
-!!$    if(this%dativar%b(i)%unit == ' ')this%dativar%b(i)%unit =  dballevar(j)%unit
-!!$  end if
-!!$end do
-!!$
-!!$do i =1,size(this%dativar%d)
-!!$  j=firsttrue(this%dativar%d(i)%btable == dballevar(:)%btable)
-!!$  if ( j > 0 )then
-!!$    if(this%dativar%d(i)%description == ' ')this%dativar%d(i)%description =  dballevar(j)%description
-!!$    if(this%dativar%d(i)%unit == ' ')this%dativar%d(i)%unit =  dballevar(j)%unit
-!!$  end if
-!!$end do
-!!$
-!!$do i =1,size(this%dativar%c)
-!!$  j=firsttrue(this%dativar%c(i)%btable == dballevar(:)%btable)
-!!$  if ( j > 0 )then
-!!$    if(this%dativar%c(i)%description == ' ')this%dativar%c(i)%description =  dballevar(j)%description
-!!$    if(this%dativar%c(i)%unit == ' ')this%dativar%c(i)%unit =  dballevar(j)%unit
-!!$  end if
-!!$end do
-
 
 return
 

@@ -22,8 +22,12 @@ call init(network,id=255)
 CALL init(v7d)
 
 ! Importo i dati, variabile 'B13011' della btable (precipitazione),
-CALL import(v7d, 'B13011',set_network=network,  attr=(/"*B33192","*B33007"/))
+CALL import(v7d, 'B13011',set_network=network,varkind=(/"r"/),  attr=(/"*B33192","*B33007"/))
 !CALL import(v7d, 'B13011', network=network, timei=ti, timef=tf, timerange=vol7d_timerange(4,-1800,0), attr=(/"*B33192","*B33007"/))
+
+print *,v7d%vol7d%dativar%r
+print *,v7d%vol7d%datiattr%c
+
 
 ! Creo una vista su un array bidimensionale che scorre le dimensioni
 ! dell'anagrafica e del tempo (vol7d_ana_d, vol7d_time_d)
