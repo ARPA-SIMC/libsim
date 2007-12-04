@@ -228,7 +228,7 @@ TYPE(vol7d_dballe),INTENT(out) :: this  !< oggetto vol7d_dballe
 CHARACTER(len=*),INTENT(in),optional :: var  !< variabile da importare secondo la tabella B locale o relativi alias
 !> coordinate minime e massime che definiscono il 
 !! rettangolo di estrazione per l'importazione
-TYPE(geo_coord),INTENT(in),optional :: coordmin,coordmax 
+TYPE(geo_coord),INTENT(inout),optional :: coordmin,coordmax 
 !>estremi temporali (inizio e fine) dell'estrazione per l'importazione
 TYPE(datetime),INTENT(in),optional :: timei, timef
 TYPE(vol7d_network),INTENT(in),OPTIONAL :: network !< network da importare
@@ -286,7 +286,7 @@ SUBROUTINE vol7d_dballe_importvsnv(this, var, network, coordmin, coordmax, timei
  attr,anavar,anaattr, varkind,attrkind,anavarkind,anaattrkind)
 TYPE(vol7d_dballe),INTENT(out) :: this !< oggetto vol7d_dballe
 CHARACTER(len=*),INTENT(in),optional :: var
-TYPE(geo_coord),INTENT(in),optional :: coordmin,coordmax 
+TYPE(geo_coord),INTENT(inout),optional :: coordmin,coordmax 
 TYPE(datetime),INTENT(in),optional :: timei, timef
 TYPE(vol7d_network),INTENT(in),OPTIONAL :: network(:),set_network
 TYPE(vol7d_level),INTENT(in),optional :: level
@@ -311,10 +311,11 @@ END SUBROUTINE vol7d_dballe_importvsnv
 SUBROUTINE vol7d_dballe_importvvnv(this, var, network, coordmin,coordmax, timei, timef, level,timerange,set_network,&
  attr,anavar,anaattr, varkind,attrkind,anavarkind,anaattrkind)
 TYPE(vol7d_dballe),INTENT(out) :: this !< oggetto vol7d_dballe
-CHARACTER(len=*),INTENT(in),optional :: var(:)
-TYPE(geo_coord),INTENT(in),optional :: coordmin,coordmax 
+CHARACTER(len=*),INTENT(in) :: var(:)
+TYPE(geo_coord),INTENT(inout),optional :: coordmin,coordmax 
 TYPE(datetime),INTENT(in),optional :: timei, timef
-TYPE(vol7d_network),INTENT(in),OPTIONAL :: network(:),set_network
+TYPE(vol7d_network),INTENT(in) :: network(:)
+TYPE(vol7d_network),INTENT(in),OPTIONAL :: set_network
 TYPE(vol7d_level),INTENT(in),optional :: level
 TYPE(vol7d_timerange),INTENT(in),optional :: timerange
 CHARACTER(len=*),INTENT(in),OPTIONAL :: attr(:),anavar(:),anaattr(:)
@@ -337,7 +338,7 @@ SUBROUTINE vol7d_dballe_importvvns(this, var, network, coordmin, coordmax, timei
 
 TYPE(vol7d_dballe),INTENT(inout) :: this !< oggetto vol7d_dballe
 CHARACTER(len=*),INTENT(in),OPTIONAL :: var(:)
-TYPE(geo_coord),INTENT(in),optional :: coordmin,coordmax 
+TYPE(geo_coord),INTENT(inout),optional :: coordmin,coordmax 
 TYPE(datetime),INTENT(in),OPTIONAL :: timei, timef
 TYPE(vol7d_network),INTENT(in),OPTIONAL :: network,set_network
 TYPE(vol7d_level),INTENT(in),optional :: level
@@ -1431,7 +1432,7 @@ SUBROUTINE vol7d_dballe_export(this, network, coordmin, coordmax, ident,&
 
 !> \todo gestire il filtro staz_id la qual cosa vuol dire aggiungere un id nel type ana
 
-TYPE(vol7d_dballe),INTENT(in) :: this !< oggetto contenente il volume e altre info per l'accesso al DSN
+TYPE(vol7d_dballe),INTENT(inout) :: this !< oggetto contenente il volume e altre info per l'accesso al DSN
 INTEGER,INTENT(in),optional :: network !< network da exportare
 !> coordinate minime e massime che definiscono il 
 !! rettangolo di estrazione per l'esportazione
@@ -1522,7 +1523,7 @@ else
   lattr_only=.false.
 end if
 
-if ( .not. allocated(this%data_id))then
+if ( .not. associated(this%data_id))then
   lattr_only=.false.
 end if
 
@@ -1805,7 +1806,7 @@ IF (i > 0) THEN
   i = 0
   readline: DO WHILE(.TRUE.)
     i = i + 1
-    READ(un,'(1x,A6,,1x,a65,a24)',END=120)blocal(i)%btable,blocal(i)%description,blocal(i)%unit
+    READ(un,'(1x,A6,1x,a65,a24)',END=120)blocal(i)%btable,blocal(i)%description,blocal(i)%unit
     blocal(i)%btable(:1)="B"
     print*,"B=",blocal(i)%btable
     print*," D=",blocal(i)%description

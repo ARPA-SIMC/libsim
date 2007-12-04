@@ -1202,11 +1202,12 @@ END SUBROUTINE vol7d_diff_only
 !! Come parametro opzionale c'è la description che insieme alla data corrente viene inserita nell'header del file.
 
 
-subroutine vol7d_write_on_file (this,unit,description,filename)
+subroutine vol7d_write_on_file (this,unit,description,filename,filename_auto)
 
 TYPE(vol7d),INTENT(IN) :: this !< volume vol7d da scrivere 
 integer,optional,intent(inout) :: unit !< unità su cui scrivere; se passata =0 ritorna il valore rielaborato (default =rielaborato internamente con getlun )
-character(len=*),intent(inout),optional :: filename !< nome del file su cui scrivere; se passato ="" ritorna il valore rielaborato
+character(len=*),intent(in),optional :: filename !< nome del file su cui scrivere
+character(len=*),intent(out),optional :: filename_auto !< nome del file generato se "filename" è omesso
 character(len=*),INTENT(IN),optional :: description !< descrizione del volume
 
 integer :: lunit
@@ -1247,12 +1248,12 @@ lfilename=trim(arg)//".v7d"
 if (index(arg,'/',back=.true.) > 0) lfilename=lfilename(index(arg,'/',back=.true.)+1 : )
 
 if (present(filename))then
-  if (filename == "")then
-    filename=lfilename
-  else
+  if (filename /= "")then
     lfilename=filename
   end if
 end if
+
+if (present(filename_auto))filename_auto=lfilename
 
 
 inquire(unit=lunit,opened=opened)
@@ -1407,11 +1408,12 @@ end subroutine vol7d_write_on_file
 !! tali parametri saranno in output.
 
 
-subroutine vol7d_read_from_file (this,unit,filename,description,tarray)
+subroutine vol7d_read_from_file (this,unit,filename,description,tarray,filename_auto)
 
 TYPE(vol7d),INTENT(OUT) :: this !< Volume vol7d da leggere
 integer,intent(inout),optional :: unit !< unità su cui è stato aperto un file; se =0 rielaborato internamente (default = elaborato internamente con getunit)
-character(len=*),INTENT(inout),optional :: filename !< nome del file eventualmente da aprire (default = (nome dell'eseguibile)//.v7d )
+character(len=*),INTENT(in),optional :: filename !< nome del file eventualmente da aprire (default = (nome dell'eseguibile)//.v7d )
+character(len=*),intent(out),optional :: filename_auto !< nome del file generato se "filename" è omesso
 character(len=*),INTENT(out),optional :: description !< descrizione del volume letto
 integer,intent(out),optional :: tarray(8) !< vettore come definito da "date_and_time" della data di scrittura del volume
 
@@ -1446,12 +1448,12 @@ lfilename=trim(arg)//".v7d"
 if (index(arg,'/',back=.true.) > 0) lfilename=lfilename(index(arg,'/',back=.true.)+1 : )
 
 if (present(filename))then
-  if (filename == "")then
-    filename=lfilename
-  else
+  if (filename /= "")then
     lfilename=filename
   end if
 end if
+
+if (present(filename_auto))filename_auto=lfilename
 
 
 inquire(unit=lunit,opened=opened)
