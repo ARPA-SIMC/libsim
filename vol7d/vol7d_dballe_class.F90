@@ -793,10 +793,18 @@ call vol7d_alloc (vol7dtmp, &
  nlevel=nlevel, nnetwork=nnetwork, &
  ndativarr=ndativarr, ndativari=ndativari, ndativarb=ndativarb, ndativard=ndativard, ndativarc=ndativarc,&
  ndatiattrr=ndatiattrr, ndatiattri=ndatiattri, ndatiattrb=ndatiattrb, ndatiattrd=ndatiattrd, ndatiattrc=ndatiattrc,&
- ndativarattrr=ndativarattrr, ndativarattri=ndativarattri, ndativarattrb=ndativarattrb, ndativarattrd=ndativarattrd, ndativarattrc=ndativarattrc,&
+ ndativarattrr=ndativarattrr, &
+ ndativarattri=ndativarattri, &
+ ndativarattrb=ndativarattrb, &
+ ndativarattrd=ndativarattrd, &
+ ndativarattrc=ndativarattrc,&
  nanavarr=nanavarr, nanavari=nanavari, nanavarb=nanavarb, nanavard=nanavard, nanavarc=nanavarc,&
  nanaattrr=nanaattrr, nanaattri=nanaattri, nanaattrb=nanaattrb, nanaattrd=nanaattrd, nanaattrc=nanaattrc,&
- nanavarattrr=nanavarattrr, nanavarattri=nanavarattri, nanavarattrb=nanavarattrb, nanavarattrd=nanavarattrd, nanavarattrc=nanavarattrc)
+ nanavarattrr=nanavarattrr, &
+ nanavarattri=nanavarattri, &
+ nanavarattrb=nanavarattrb, &
+ nanavarattrd=nanavarattrd, &
+ nanavarattrc=nanavarattrc)
 
  !print *, "nana=",nana, "ntime=",ntime, "ntimerange=",ntimerange, &
  !"nlevel=",nlevel, "nnetwork=",nnetwork, &
