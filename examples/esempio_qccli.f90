@@ -41,7 +41,9 @@ CALL init(coordmax,lat=45.2_fp_geo,lon=12.84_fp_geo)
 CALL init(v7ddballe,dsn=database,user=user,password=password,write=.true.,wipe=.false.)
 
 print*,"inizio importazione dati"
-CALL import(v7ddballe,var=(/"B13011"/),varkind=(/"r"/),anavar=(/"B07001"/),anavarkind=(/"i"/),attr=(/"*B33196","*B33192"/),attrkind=(/"b","b"/)&
+CALL import(v7ddballe,var=(/"B13011"/),varkind=(/"r"/),&
+ anavar=(/"B07001"/),anavarkind=(/"i"/),&
+ attr=(/"*B33196","*B33192"/),attrkind=(/"b","b"/)&
  ,timei=ti,timef=tf,coordmin=coordmin,coordmax=coordmax)
 print*,"finita importazione dati"
 
