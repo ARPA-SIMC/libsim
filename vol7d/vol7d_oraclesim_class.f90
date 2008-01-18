@@ -313,9 +313,9 @@ nana = count_distinct(stazo(1:nobs), back=.TRUE.)
 ntime = count_distinct(cdatao(1:nobs), back=.TRUE.)
 nvar = count_distinct(varo(1:nobs), back=.TRUE.)
 ALLOCATE(anatmp(nana), tmtmp(ntime), vartmp(nvar))
-anatmp(:) = pack_distinct(stazo(1:nobs), back=.TRUE.)
+anatmp(:) = pack_distinct(stazo(1:nobs), nana, back=.TRUE.)
 CALL pack_distinct_c(cdatao(1:nobs), tmtmp, back=.TRUE.)
-vartmp(:) = pack_distinct(varo(1:nobs), back=.TRUE.)
+vartmp(:) = pack_distinct(varo(1:nobs), nvar, back=.TRUE.)
 
 DO i = 1, nana
   IF (.NOT. ANY(anatmp(i) == networktable(network%id)%ana(:)%ora_cod)) THEN
@@ -361,9 +361,9 @@ IF (non_valid) THEN
   ntime = count_distinct(cdatao(1:nobs), back=.TRUE., mask=(cdatao(1:nobs) /= ''))
   nvar = count_distinct(varo(1:nobs), back=.TRUE., mask=(varo(1:nobs) /= 0))
   ALLOCATE(anatmp(nana), tmtmp(ntime), vartmp(nvar))
-  anatmp(:) = pack_distinct(stazo(1:nobs), back=.TRUE., mask=(stazo(1:nobs) /= 0))
+  anatmp(:) = pack_distinct(stazo(1:nobs), nana, back=.TRUE., mask=(stazo(1:nobs) /= 0))
   CALL pack_distinct_c(cdatao(1:nobs), tmtmp, back=.TRUE., mask=(cdatao(1:nobs) /= ''))
-  vartmp(:) = pack_distinct(varo(1:nobs), back=.TRUE., mask=(varo(1:nobs) /= 0))
+  vartmp(:) = pack_distinct(varo(1:nobs), nvar, back=.TRUE., mask=(varo(1:nobs) /= 0))
 ENDIF
 ! creo la mappatura
 ALLOCATE(mapdatao(nobs), mapstazo(nobs))

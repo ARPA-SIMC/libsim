@@ -814,15 +814,15 @@ call vol7d_alloc (vol7dtmp, &
  !print*,"ho fatto alloc"
 
 
-vol7dtmp%ana=pack_distinct(buffer%ana, back=.TRUE.)
-vol7dtmp%time=pack_distinct(buffer%time, back=.TRUE.)
-vol7dtmp%timerange=pack_distinct(buffer%timerange, back=.TRUE.)
-vol7dtmp%level=pack_distinct(buffer%level, back=.TRUE.)
+vol7dtmp%ana=pack_distinct(buffer%ana, nana, back=.TRUE.)
+vol7dtmp%time=pack_distinct(buffer%time, ntime, back=.TRUE.)
+vol7dtmp%timerange=pack_distinct(buffer%timerange, ntimerange, back=.TRUE.)
+vol7dtmp%level=pack_distinct(buffer%level, nlevel, back=.TRUE.)
 
 if(ldegnet)then
   vol7dtmp%network(1)=set_network
 else
-  vol7dtmp%network=pack_distinct(buffer%network, back=.TRUE.)
+  vol7dtmp%network=pack_distinct(buffer%network, nnetwork, back=.TRUE.)
 end if
 
 !print*,"reti presenti", vol7dtmp%network%id,buffer%network%id
@@ -865,7 +865,7 @@ else if (present(var))then
 
 else
 
-  vol7dtmp%dativar%c=pack_distinct(buffer%dativar, back=.TRUE.)
+  vol7dtmp%dativar%c=pack_distinct(buffer%dativar, ndativarc, back=.TRUE.)
 
 end if
 
@@ -1000,7 +1000,7 @@ else if (present(anavar))then
 
 else
 
-  vol7dtmp%anavar%c=pack_distinct(bufferana%dativar, back=.TRUE.,mask=(bufferana%dativar%btable /= DBA_MVC))
+  vol7dtmp%anavar%c=pack_distinct(bufferana%dativar, nanavarc, back=.TRUE.,mask=(bufferana%dativar%btable /= DBA_MVC))
 
 end if
 

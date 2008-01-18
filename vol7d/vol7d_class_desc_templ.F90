@@ -106,7 +106,7 @@ IF (n == 0) RETURN ! in case of variables do not allocate zero-length arrays
 ALLOCATE(remap(n), varout(n))
 IF (miss) THEN
   IF (unique) THEN
-    remap = map_inv_distinct(varin, back=.TRUE., &
+    remap = map_inv_distinct(varin, n, back=.TRUE., &
      mask=(VOL7D_POLY_TYPE/**/_miss /= varin))
   ELSE
     remap = PACK((/(i, i=1,SIZE(varin))/), &
@@ -114,7 +114,7 @@ IF (miss) THEN
   ENDIF
 ELSE
   IF (unique) THEN
-    remap = map_inv_distinct(varin, back=.TRUE.)
+    remap = map_inv_distinct(varin, n, back=.TRUE.)
   ELSE
     remap = (/(i, i=1,n)/)
   ENDIF

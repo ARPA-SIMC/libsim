@@ -86,12 +86,13 @@ END FUNCTION firsttrue
 SUBROUTINE pack_distinct_c(vect, pack_distinct, mask, back) !RESULT(pack_distinct)
 CHARACTER(len=*),INTENT(in) :: vect(:)
 LOGICAL,INTENT(in),OPTIONAL :: mask(:), back
-CHARACTER(len=LEN(vect)) :: pack_distinct(SIZE(vect))
+CHARACTER(len=LEN(vect)) :: pack_distinct(:)
 
 INTEGER :: count_distinct
-INTEGER :: i, j
+INTEGER :: i, j, dim
 LOGICAL :: lback
 
+dim = SIZE(pack_distinct)
 IF (PRESENT(back)) THEN
   lback = back
 ELSE
@@ -107,6 +108,7 @@ IF (PRESENT (mask)) THEN
         IF (vect(j) == vect(i)) CYCLE vectm1
       ENDDO
       count_distinct = count_distinct + 1
+      IF (count_distinct > dim) EXIT
       pack_distinct(count_distinct) = vect(i)
     ENDDO vectm1
   ELSE
@@ -116,6 +118,7 @@ IF (PRESENT (mask)) THEN
         IF (vect(j) == vect(i)) CYCLE vectm2
       ENDDO
       count_distinct = count_distinct + 1
+      IF (count_distinct > dim) EXIT
       pack_distinct(count_distinct) = vect(i)
     ENDDO vectm2
   ENDIF
@@ -126,6 +129,7 @@ ELSE
         IF (vect(j) == vect(i)) CYCLE vect1
       ENDDO
       count_distinct = count_distinct + 1
+      IF (count_distinct > dim) EXIT
       pack_distinct(count_distinct) = vect(i)
     ENDDO vect1
   ELSE
@@ -134,6 +138,7 @@ ELSE
         IF (vect(j) == vect(i)) CYCLE vect2
       ENDDO
       count_distinct = count_distinct + 1
+      IF (count_distinct > dim) EXIT
       pack_distinct(count_distinct) = vect(i)
     ENDDO vect2
   ENDIF

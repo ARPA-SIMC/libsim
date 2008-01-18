@@ -57,10 +57,12 @@ END FUNCTION count_distinct/**/VOL7D_POLY_TYPES
 
 #ifndef VOL7D_NO_PACK
 ! compatta gli elementi distinti di vect in un array
-FUNCTION pack_distinct/**/VOL7D_POLY_TYPES(vect, mask, back) RESULT(pack_distinct)
+FUNCTION pack_distinct/**/VOL7D_POLY_TYPES(vect, dim, mask, back) &
+ RESULT(pack_distinct)
 VOL7D_POLY_TYPE,INTENT(in) :: vect(:)
+INTEGER,INTENT(in) :: dim
 LOGICAL,INTENT(in),OPTIONAL :: mask(:), back
-VOL7D_POLY_TYPE :: pack_distinct(SIZE(vect))
+VOL7D_POLY_TYPE :: pack_distinct(dim)
 
 INTEGER :: count_distinct
 INTEGER :: i, j
@@ -82,6 +84,7 @@ IF (PRESENT (mask)) THEN
         IF (vect(j) == vect(i)) CYCLE vectm1
       ENDDO
       count_distinct = count_distinct + 1
+      IF (count_distinct > dim) EXIT
       pack_distinct(count_distinct) = vect(i)
     ENDDO vectm1
   ELSE
@@ -92,6 +95,7 @@ IF (PRESENT (mask)) THEN
         IF (vect(j) == vect(i)) CYCLE vectm2
       ENDDO
       count_distinct = count_distinct + 1
+      IF (count_distinct > dim) EXIT
       pack_distinct(count_distinct) = vect(i)
     ENDDO vectm2
   ENDIF
@@ -102,6 +106,7 @@ ELSE
         IF (vect(j) == vect(i)) CYCLE vect1
       ENDDO
       count_distinct = count_distinct + 1
+      IF (count_distinct > dim) EXIT
       pack_distinct(count_distinct) = vect(i)
     ENDDO vect1
   ELSE
@@ -110,6 +115,7 @@ ELSE
         IF (vect(j) == vect(i)) CYCLE vect2
       ENDDO
       count_distinct = count_distinct + 1
+      IF (count_distinct > dim) EXIT
       pack_distinct(count_distinct) = vect(i)
     ENDDO vect2
   ENDIF
@@ -193,11 +199,12 @@ ENDIF
 END FUNCTION map_distinct/**/VOL7D_POLY_TYPES
 
 
-FUNCTION map_inv_distinct/**/VOL7D_POLY_TYPES(vect, mask, back) &
+FUNCTION map_inv_distinct/**/VOL7D_POLY_TYPES(vect, dim, mask, back) &
  RESULT(map_inv_distinct)
 VOL7D_POLY_TYPE,INTENT(in) :: vect(:)
+INTEGER,INTENT(in) :: dim
 LOGICAL,INTENT(in),OPTIONAL :: mask(:), back
-INTEGER :: map_inv_distinct(SIZE(vect))
+INTEGER :: map_inv_distinct(dim)
 
 INTEGER :: count_distinct
 INTEGER :: i, j
@@ -220,6 +227,7 @@ IF (PRESENT (mask)) THEN
         IF (vect(j) == vect(i)) CYCLE vectm1
       ENDDO
       count_distinct = count_distinct + 1
+      IF (count_distinct > dim) EXIT
       map_inv_distinct(count_distinct) = i
     ENDDO vectm1
   ELSE
@@ -230,6 +238,7 @@ IF (PRESENT (mask)) THEN
         IF (vect(j) == vect(i)) CYCLE vectm2
       ENDDO
       count_distinct = count_distinct + 1
+      IF (count_distinct > dim) EXIT
       map_inv_distinct(count_distinct) = i
     ENDDO vectm2
   ENDIF
@@ -240,6 +249,7 @@ ELSE
         IF (vect(j) == vect(i)) CYCLE vect1
       ENDDO
       count_distinct = count_distinct + 1
+      IF (count_distinct > dim) EXIT
       map_inv_distinct(count_distinct) = i
     ENDDO vect1
   ELSE
@@ -248,6 +258,7 @@ ELSE
         IF (vect(j) == vect(i)) CYCLE vect2
       ENDDO
       count_distinct = count_distinct + 1
+      IF (count_distinct > dim) EXIT
       map_inv_distinct(count_distinct) = i
     ENDDO vect2
   ENDIF

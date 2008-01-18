@@ -1,4 +1,4 @@
-
+if (associated(this%/**/VOL7D_POLY_NAME%/**/VOL7D_POLY_TYPES_V)) then
 do i =1,size(this%/**/VOL7D_POLY_NAME%/**/VOL7D_POLY_TYPES_V)
 
 if (this%/**/VOL7D_POLY_NAME%/**/VOL7D_POLY_TYPES_V(i)%btable(:1) == "*") then
@@ -12,5 +12,5 @@ end if
     if(.not.c_e(this%/**/VOL7D_POLY_NAME%/**/VOL7D_POLY_TYPES_V(i)%unit))this%/**/VOL7D_POLY_NAME%/**/VOL7D_POLY_TYPES_V(i)%unit =  dballevar(j)%unit
   end if
 end do
-
+endif
 
