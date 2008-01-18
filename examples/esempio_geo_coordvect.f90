@@ -1,7 +1,6 @@
 PROGRAM esempio_geo_coordvect
 USE file_utilities
 USE geo_coord_class
-USE vol7d_utilities
 IMPLICIT NONE
 
 TYPE(geo_coordvect),POINTER :: macroa(:)
