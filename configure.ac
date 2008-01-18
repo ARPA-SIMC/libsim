@@ -1,6 +1,6 @@
 dnl Process this file with autoconf to produce a configure script.
 
-AC_INIT(libsim, 1.3, [dcesari@arpa.emr.it])
+AC_INIT(libsim, 1.4, [dcesari@arpa.emr.it])
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_SRCDIR([configure.ac])
 AM_INIT_AUTOMAKE([foreign])
@@ -35,26 +35,30 @@ AC_FC_SRCEXT(f90)dnl and use .f90 extension
 AC_ARG_ENABLE(shapelib, AC_HELP_STRING([--disable-shapelib],
   [disable shapelib support]),,[enableval=yes])dnl default enable
 if test "x$enableval" = "xyes"; then
-AC_MSG_RESULT([shapelib code included])
-AC_CHECK_LIB([shp-fortran], [shpopen], , AC_MSG_ERROR([fortran bindings to shp library not found]), [-l shp] )
+AC_CHECK_LIB([shp-fortran], [shpopen], 
+ AC_MSG_RESULT([shapelib code included])
+  libshp="-lshp-fortran -lshp"
+  AC_SUBST(libshp),
+ AC_MSG_ERROR([fortran bindings to shp library not found]), [-lshp] )
 else
 AC_MSG_RESULT([shapelib code not included])
 fi
 AM_CONDITIONAL(SHP, test "x$enableval" = "xyes")
 
-dnl AC_SEARCH_LIBS([gribex], [picogrib emos], ,
-dnl                          AC_MSG_RESULT([grib decoding library not found]), )
 AC_ARG_ENABLE(oraclesim, AC_HELP_STRING([--disable-oraclesim],
-  [disable oraclesim support]),,[enableval=yes])dnl default enable
+  [disable oraclesim/meteodata support]),,[enableval=yes])dnl default enable
 if test "x$enableval" = "xyes"; then
 if test -n "$ORACLE_HOME"; then
-AC_MSG_RESULT([oraclesim code included])
-liboraclesim="-L$ORACLE_HOME/lib -lclntsh -lrouMW -lsupport -lrouGW -lix" dnl -lemos
-AC_SUBST(liboraclesim)
+oralibdir="-L$ORACLE_HOME/lib"
 else
-AC_MSG_RESULT([oraclesim code not included because \$ORACLE_HOME not set])
-enableval=no
+oralibdir=" "
 fi
+AC_CHECK_LIB([rouMW], [n_getgsta], 
+ AC_MSG_RESULT([oraclesim code included])
+  liboraclesim="$oralibdir -lrouMW -lclntsh -lsupport -lrouGW -lix"
+  AC_SUBST(liboraclesim),
+ AC_MSG_ERROR([oraclesim/meteodata libraries not found]),
+ [$oralibdir -lclntsh -lsupport -lrouGW -lix])
 else
 AC_MSG_RESULT([oraclesim code not included])
 fi
@@ -63,8 +67,11 @@ AM_CONDITIONAL(ORSIM, test "x$enableval" = "xyes")
 AC_ARG_ENABLE(grib, AC_HELP_STRING([--disable-grib],
   [disable grib support]),,[enableval=yes])dnl default enable
 if test "x$enableval" = "xyes"; then
-AC_MSG_RESULT([grib code included])
-AC_CHECK_LIB([emos], [gribex], , AC_MSG_ERROR([ECMWF emos library not found]))
+AC_CHECK_LIB([emos], [gribex],
+ AC_MSG_RESULT([grib code included])
+  libgrib="-lemos"
+  AC_SUBST(libgrib),
+ AC_MSG_ERROR([ECMWF emos library not found]))
 else
 AC_MSG_RESULT([grib code not included])
 fi
@@ -73,19 +80,13 @@ AM_CONDITIONAL(GRIB, test "x$enableval" = "xyes")
 AC_ARG_ENABLE(dballe, AC_HELP_STRING([--disable-dballe],
   [disable dballe support]),,[enableval=yes])dnl default enable
 if test "x$enableval" = "xyes"; then
-
 AC_MSG_RESULT([dballe code included])
 libdballe="-ldballef -ldballe-core -lcnf -lodbc -lgdbm -lpopt -lm"
-
 AC_SUBST(libdballe)
-
 else
-
 AC_MSG_RESULT([dballe code not included])
-
 fi
 AM_CONDITIONAL(DBALLE, test "x$enableval" = "xyes")
-
 
 AC_LANG_POP()dnl back to C
 AC_PROG_LIBTOOL

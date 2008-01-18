@@ -1,7 +1,7 @@
 Summary: libsim: librerie di utilità in Fortran 90
 Name: libsim
-Version: 1.2
-Release: 1
+Version: 1.4
+Release: 2
 License: GPL
 Group: Development
 URL: http://www.arpa.emr.it/sim
@@ -29,12 +29,12 @@ ARPA-SIM.
 %setup -q
 
 %build
-FC=pgf90 %configure
+%configure FC=gfortran CPPFLAGS='-I/usr/include/' LDFLAGS=-L/usr/lib/oracle/11.1.0.1/client/lib
 make 
 
 %install
-%makeinstall
-
+#makeinstall
+make DESTDIR=%{buildroot} install
 
 %files
 %defattr(-, root, root)
@@ -59,6 +59,15 @@ rm -rf %{buildroot}
 %postun
 
 %changelog
+* Fri Jan 18 2008 Davide Cesari <cesari@malina.metarpa> - 1.4-2
+- Add search path for oracle libraries.
+
+* Thu Jan 17 2008 Davide Cesari <cesari@malina.metarpa> - 1.4-1
+- New version.
+
+* Mon Dec 10 2007 Davide Cesari <cesari@malina.metarpa> - 1.3-2
+- Fixed makeinstall for Fedora 8.
+
 * Thu Nov 22 2007 Davide Cesari <cesari@malina.metarpa> - 1.2-1
 - Nuova versione
 

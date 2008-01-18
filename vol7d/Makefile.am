@@ -10,9 +10,13 @@ if DBALLE
 libsim_vol7d_la_SOURCES += vol7d_dballe_class.F90
 endif
 
-#libsim_vol7d_la_FFLAGS = -I../base
 AM_FCFLAGS = -I../base
+if DBALLE
+AM_FCFLAGS += -I/usr/include/dballe
+endif
+AM_LDFLAGS = $(libdballe) $(liboraclesim)
 libsim_vol7d_la_LIBADD = ../base/libsim_base.la
+
 noinst_HEADERS = vol7d_class_type_templ.F90 vol7d_class_desc_templ.F90 \
 vol7d_distinct.F90 vol7d_class_diff.F90 vol7d_class_diff_only.f90 \
 vol7d_dballe_class_nana.f90 vol7d_dballe_class_ndati.f90 \
@@ -53,7 +57,6 @@ vol7d_dballe_class.lo: vol7d_class.$(OBJEXT) vol7d_utilities.$(OBJEXT) \
 vol7d_dballe_class_nana.f90 vol7d_dballe_class_ndati.f90 \
 vol7d_dballe_class_dati.F90 vol7d_dballe_class_datiattr.F90 \
 vol7d_dballe_class_ana.F90 vol7d_dballe_class_anaattr.F90  vol7d_dballe_class_var_du.f90
-AM_FCFLAGS += -I /usr/include/dballe
 endif
 
 #vol7d_timerange_class.$(OBJEXT):
