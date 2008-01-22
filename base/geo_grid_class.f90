@@ -670,11 +670,11 @@ ALLOCATE(tmp5d(sh(1)/ngx, sh(2)/ngy, sh(3), sh(4), sh(5)))
 DO l5 = 1, sh(5)
   DO l4 = 1, sh(4)
     DO l3 = 1, sh(3)
-      ii = 0
       jj = 0
       DO j = 1, this%ny-ngy+1, ngy
         je = j+ngy-1
         jj = jj+1
+        ii = 0
         DO i = 1, this%nx-ngx+1, ngx
           ie = i+ngx-1
           ii = ii+1
