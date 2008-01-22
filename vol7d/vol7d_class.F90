@@ -1223,6 +1223,43 @@ integer :: nana, ntime, ntimerange, nlevel, nnetwork, &
 integer :: tarray(8)
 logical :: opened,exist
 
+ nana=0
+ ntime=0
+ ntimerange=0
+ nlevel=0
+ nnetwork=0
+ ndativarr=0
+ ndativari=0
+ ndativarb=0
+ ndativard=0
+ ndativarc=0
+ ndatiattrr=0
+ ndatiattri=0
+ ndatiattrb=0
+ ndatiattrd=0
+ ndatiattrc=0
+ ndativarattrr=0
+ ndativarattri=0
+ ndativarattrb=0
+ ndativarattrd=0
+ ndativarattrc=0
+ nanavarr=0
+ nanavari=0
+ nanavarb=0
+ nanavard=0
+ nanavarc=0
+ nanaattrr=0
+ nanaattri=0
+ nanaattrb=0
+ nanaattrd=0
+ nanaattrc=0
+ nanavarattrr=0
+ nanavarattri=0
+ nanavarattrb=0
+ nanavarattrd=0
+ nanavarattrc=0
+
+
 !call idate(im,id,iy)
 call date_and_time(values=tarray)
 call getarg(0,arg)
@@ -1264,47 +1301,47 @@ if (.not. opened) then
   print *, "opened: ",lfilename
 end if
 
-nana=size(this%ana)
-ntime=size(this%time)
-ntimerange=size(this%timerange)
-nlevel=size(this%level)
-nnetwork=size(this%network)
+if (associated(this%ana)) nana=size(this%ana)
+if (associated(this%time)) ntime=size(this%time)
+if (associated(this%timerange)) ntimerange=size(this%timerange)
+if (associated(this%level)) nlevel=size(this%level)
+if (associated(this%network)) nnetwork=size(this%network)
 
-ndativarr=size(this%dativar%r)
-ndativari=size(this%dativar%i)
-ndativarb=size(this%dativar%b)
-ndativard=size(this%dativar%d)
-ndativarc=size(this%dativar%c)
+if (associated(this%dativar%r)) ndativarr=size(this%dativar%r)
+if (associated(this%dativar%i)) ndativari=size(this%dativar%i)
+if (associated(this%dativar%b)) ndativarb=size(this%dativar%b)
+if (associated(this%dativar%d)) ndativard=size(this%dativar%d)
+if (associated(this%dativar%c)) ndativarc=size(this%dativar%c)
 
-ndatiattrr=size(this%datiattr%r)
-ndatiattri=size(this%datiattr%i)
-ndatiattrb=size(this%datiattr%b)
-ndatiattrd=size(this%datiattr%d)
-ndatiattrc=size(this%datiattr%c)
+if (associated(this%datiattr%r)) ndatiattrr=size(this%datiattr%r)
+if (associated(this%datiattr%i)) ndatiattri=size(this%datiattr%i)
+if (associated(this%datiattr%b)) ndatiattrb=size(this%datiattr%b)
+if (associated(this%datiattr%d)) ndatiattrd=size(this%datiattr%d)
+if (associated(this%datiattr%c)) ndatiattrc=size(this%datiattr%c)
 
-ndativarattrr=size(this%dativarattr%r)
-ndativarattri=size(this%dativarattr%i)
-ndativarattrb=size(this%dativarattr%b)
-ndativarattrd=size(this%dativarattr%d)
-ndativarattrc=size(this%dativarattr%c)
+if (associated(this%dativarattr%r)) ndativarattrr=size(this%dativarattr%r)
+if (associated(this%dativarattr%i)) ndativarattri=size(this%dativarattr%i)
+if (associated(this%dativarattr%b)) ndativarattrb=size(this%dativarattr%b)
+if (associated(this%dativarattr%d)) ndativarattrd=size(this%dativarattr%d)
+if (associated(this%dativarattr%c)) ndativarattrc=size(this%dativarattr%c)
  
-nanavarr=size(this%anavar%r)
-nanavari=size(this%anavar%i)
-nanavarb=size(this%anavar%b)
-nanavard=size(this%anavar%d)
-nanavarc=size(this%anavar%c)
+if (associated(this%anavar%r)) nanavarr=size(this%anavar%r)
+if (associated(this%anavar%)) nanavari=size(this%anavar%i)
+if (associated(this%anavar%b)) nanavarb=size(this%anavar%b)
+if (associated(this%anavar%d)) nanavard=size(this%anavar%d)
+if (associated(this%anavar%c)) nanavarc=size(this%anavar%c)
 
-nanaattrr=size(this%anaattr%r)
-nanaattri=size(this%anaattr%i)
-nanaattrb=size(this%anaattr%b)
-nanaattrd=size(this%anaattr%d)
-nanaattrc=size(this%anaattr%c)
+if (associated(this%anaattr%r)) nanaattrr=size(this%anaattr%r)
+if (associated(this%anaattr%i)) nanaattri=size(this%anaattr%i)
+if (associated(this%anaattr%b)) nanaattrb=size(this%anaattr%b)
+if (associated(this%anaattr%d)) nanaattrd=size(this%anaattr%d)
+if (associated(this%anaattr%c)) nanaattrc=size(this%anaattr%c)
 
-nanavarattrr=size(this%anavarattr%r)
-nanavarattri=size(this%anavarattr%i)
-nanavarattrb=size(this%anavarattr%b)
-nanavarattrd=size(this%anavarattr%d)
-nanavarattrc=size(this%anavarattr%c)
+if (associated(this%anavarattr%r)) nanavarattrr=size(this%anavarattr%r)
+if (associated(this%anavarattr%)) nanavarattri=size(this%anavarattr%i)
+if (associated(this%anavarattr%b)) nanavarattrb=size(this%anavarattr%b)
+if (associated(this%anavarattr%d)) nanavarattrd=size(this%anavarattr%d)
+if (associated(this%anavarattr%c)) nanavarattrc=size(this%anavarattr%c)
 
 write(unit=lunit)ldescription
 write(unit=lunit)tarray
