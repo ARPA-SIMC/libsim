@@ -116,6 +116,7 @@ INTEGER :: actsize, ierval
 REAL, POINTER :: pzsec4(:)
 REAL, TARGET :: zzsec4(1)
 
+IF (PRESENT(ier)) ier = 0
 pzsec4 => zzsec4 ! Gribex requires a valid section 4 also for 'I/J', satisfy it!
 ierval = 1 ! Do not abort in case of error
 CALL gribex(this%isec0, this%isec1, this%isec2, this%zsec2, &
