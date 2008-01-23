@@ -164,6 +164,7 @@ character(len=50) :: quidsn,quiuser,quipassword
 character(len=255) :: quirepinfo
 logical :: quiwrite,quiwipe
 
+nullify(this%data_id)
 
 IF (PRESENT(debug)) THEN
   ldebug = debug
@@ -1501,10 +1502,34 @@ logical, allocatable :: lanavard(:),lanaattrd(:)
 logical, allocatable :: lanavarc(:),lanaattrc(:)
 
 
+ndativarr=0
+ndatiattrr=0
+ndativari=0
+ndatiattri=0
+ndativarb=0
+ndatiattrb=0
+ndativard=0
+ndatiattrd=0
+ndativarc=0
+ndatiattrc=0
+
+nanavarr=0
+nanaattrr=0
+nanavari=0
+nanaattri=0
+nanavarb=0
+nanaattrb=0
+nanavard=0
+nanaattrd=0
+nanavarc=0
+nanaattrc=0
+
+
 nstaz=size(this%vol7d%ana(:))
 
 ntimerange=size(this%vol7d%timerange(:))
 allocate (ltimerange(ntimerange))
+ltimerange=.false.
 
 if (present(timerange))then
       where (timerange == this%vol7d%timerange(:))
@@ -1516,6 +1541,7 @@ end if
 
 nlevel=size(this%vol7d%level(:))
 allocate (llevel(nlevel))
+llevel=.false.
 
 if (present(level))then
       where (level == this%vol7d%level(:))
@@ -1540,6 +1566,7 @@ nnetwork=size(this%vol7d%network(:))
 ntime=size(this%vol7d%time(:))
 
 allocate (lnetwork(nnetwork))
+lnetwork=.false.
 allocate (ana_id(nstaz,nnetwork))
 
 if (present(network))then
@@ -1551,9 +1578,7 @@ else
 end if
 
 
-
 !!!!!  anagrafica
-
 
 #undef VOL7D_POLY_TYPES_V
 #define VOL7D_POLY_TYPES_V r
@@ -1597,6 +1622,8 @@ call idba_unsetall (this%handle)
      
 ! vital statistics data
 call idba_setcontextana (this%handle)
+
+!print *,"nstaz,ntime,nlevel,ntimerange,nnetwork",nstaz,ntime,nlevel,ntimerange,nnetwork
 
 do iii=1, nnetwork
    if (.not.lnetwork(iii))cycle

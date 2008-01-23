@@ -2,6 +2,7 @@
 
 !ciclo sul tipo dato
 
+!if (associated(this%vol7d%voldati/**/VOL7D_POLY_TYPES_V)) then
 
 do iiiii=1,ndativar/**/VOL7D_POLY_TYPES_V
 
@@ -70,6 +71,7 @@ do iiiii=1,ndativar/**/VOL7D_POLY_TYPES_V
   
 end do
 
+!end if
 
 !#fine ciclo sul tipo dato
 

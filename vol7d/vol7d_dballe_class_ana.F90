@@ -1,6 +1,10 @@
 !ciclo sul tipo dato
 
-if (nanavar/**/VOL7D_POLY_TYPES_V > 0 ) datiana=.true.
+if (nanavar/**/VOL7D_POLY_TYPES_V > 0 ) then
+
+datiana=.true.
+
+!if (associatedvolana/**/VOL7D_POLY_TYPES_V) then
 
 do ii=1,nanavar/**/VOL7D_POLY_TYPES_V
 
@@ -54,6 +58,7 @@ do ii=1,nanavar/**/VOL7D_POLY_TYPES_V
   
 end do
 
+end if
 
 !#fine ciclo sul tipo dato
 
