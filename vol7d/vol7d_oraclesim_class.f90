@@ -378,6 +378,7 @@ DO i = 1, ntime
   END WHERE
 ENDDO
 ! ciclo sulle variabili per riempire vol7d
+CALL init(v7dtmp2) ! nel caso di nvar/nobs = 0
 DO i = 1, nvar
   CALL init(v7dtmp)
   CALL vol7d_alloc(v7dtmp, ntime=ntime, nana=nana, &
