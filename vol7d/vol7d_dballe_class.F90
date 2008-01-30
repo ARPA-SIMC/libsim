@@ -1462,7 +1462,7 @@ logical,intent(in),optional :: attr_only
 REAL(kind=fp_geo) :: latmin,latmax,lonmin,lonmax
 logical, allocatable :: lnetwork(:),llevel(:),ltimerange(:)
 integer,allocatable :: ana_id(:,:)
-logical :: write,writeattr,lattr_only,datiana
+logical :: write,writeattr,lattr_only
 
 !CHARACTER(len=6) :: btable
 !CHARACTER(len=7) ::starbtable
@@ -1536,7 +1536,7 @@ if (present(timerange))then
          ltimerange(:)=.true.
       end where
 else
-   ltimerange(:)=.true.
+   ltimerange=.true.
 end if
 
 nlevel=size(this%vol7d%level(:))
@@ -1548,7 +1548,7 @@ if (present(level))then
          llevel(:)=.true.
       end where
 else
-   llevel(:)=.true.
+   llevel=.true.
 end if
 
 if (present(attr_only))then
@@ -1574,7 +1574,7 @@ if (present(network))then
          lnetwork(:)=.true.
       end where
 else
-   lnetwork(:)=.true.
+   lnetwork=.true.
 end if
 
 
@@ -1618,12 +1618,9 @@ end if
 #undef VOL7D_POLY_TYPES_V
 
 
-call idba_unsetall (this%handle)
-     
 ! vital statistics data
-call idba_setcontextana (this%handle)
 
-!print *,"nstaz,ntime,nlevel,ntimerange,nnetwork",nstaz,ntime,nlevel,ntimerange,nnetwork
+print *,"nstaz,ntime,nlevel,ntimerange,nnetwork",nstaz,ntime,nlevel,ntimerange,nnetwork
 
 do iii=1, nnetwork
    if (.not.lnetwork(iii))cycle
@@ -1642,6 +1639,9 @@ do iii=1, nnetwork
       CALL getval(this%vol7d%ana(i)%coord, lat=lat,lon=lon)
       !print *,lat,lon
 
+      call idba_unsetall (this%handle)
+      call idba_setcontextana (this%handle)
+     
       call idba_set (this%handle,"lat",lat)
       call idba_set (this%handle,"lon",lon)
 
@@ -1662,8 +1662,7 @@ do iii=1, nnetwork
                                 !print *,"network",this%vol7d%network(iii)%id
 
 
-      write=.false.
-      datiana=.false.
+      write=.true.
 
 #undef VOL7D_POLY_TYPES_V
 #define VOL7D_POLY_TYPES_V r
@@ -1690,11 +1689,13 @@ do iii=1, nnetwork
       !se NON ho dati di anagrafica (ma solo lat e long ..) devo fare comunque una prendilo
       ! in quanto write indica DATI in sospeso da scrivere
 
-      if (write.or..not.datiana) then
-                                !print*,"eseguo una main prendilo"
+      if (write) then
+                                !print *,"eseguo una main prendilo",this%vol7d%network(iii)%id
         call idba_prendilo (this%handle)
-        call idba_enq (this%handle,"ana_id",ana_id(i,iii))
         write=.false.
+
+        call idba_enq (this%handle,"ana_id",ana_id(i,iii))
+                                !print *,"ana_id",ana_id(i,iii)
       end if
 
    end do
