@@ -9,7 +9,7 @@ noinst_PROGRAMS += esempio_v7doracle esempio_v7doracle_multi
 endif
 
 if DBALLE
-noinst_PROGRAMS += esempio_v7ddballe esempio_v7ddballe_multi esempio_v7ddballe_import_export esempio_v7ddballe_export esempio_qccli cumula_evento
+noinst_PROGRAMS += esempio_v7ddballe esempio_v7ddballe_multi esempio_v7ddballe_import_export esempio_v7ddballe_export esempio_qccli 
 endif
 
 if SHP
@@ -49,9 +49,6 @@ esempio_v7ddballe_multi_LDADD = ../base/libsim_base.la ../vol7d/libsim_vol7d.la 
 
 esempio_v7ddballe_import_export_SOURCES = esempio_v7ddballe_import_export.f90
 esempio_v7ddballe_import_export_LDADD = ../base/libsim_base.la ../vol7d/libsim_vol7d.la $(libdballe)
-
-cumula_evento_SOURCES = cumula_evento.f90
-cumula_evento_LDADD = ../base/libsim_base.la ../vol7d/libsim_vol7d.la $(libdballe)
 
 esempio_v7ddballe_export_SOURCES = esempio_v7ddballe_export.f90
 esempio_v7ddballe_export_LDADD = ../base/libsim_base.la ../vol7d/libsim_vol7d.la $(libdballe)
