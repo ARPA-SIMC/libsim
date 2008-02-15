@@ -216,4 +216,39 @@ vdelim(j) = LEN_TRIM(line) + 1
 END FUNCTION delim_csv
 
 
+FUNCTION delim_csv_q(line, vdelim, cdelim, cquot) RESULT(status)
+CHARACTER(len=*),INTENT(in) :: line !< riga in formato csv da interpretare
+INTEGER,INTENT(out) :: vdelim(:) !< vettore degli indici dei separatori trovati in \a line, per definizione vdelim(1)=0, vdelim(size(vdelim))=LEN_TRIM(line)+1, deve essere dimansionato al numero di campi previsti in \a line +1
+CHARACTER(len=1),INTENT(in),OPTIONAL :: cdelim !< carattere da interpretare come delimitatore di campi, default \c ','
+CHARACTER(len=1),INTENT(in),OPTIONAL :: cquot !< carattere da interpretare come delimitatore, default \c ','
+INTEGER :: status
+
+CHARACTER (len=1) :: cldelim
+INTEGER :: j
+
+IF (line(1:1) == '#') THEN ! Commento
+  status = -1
+  RETURN
+ENDIF
+IF (PRESENT(cdelim)) THEN
+  cldelim = cdelim
+ELSE
+  cldelim = ','
+ENDIF
+
+vdelim(1) = 0
+DO j = 2, SIZE(vdelim)-1
+  vdelim(j) = INDEX(line(vdelim(j-1)+1:), cldelim) + vdelim(j-1)
+  IF (vdelim(j) == vdelim(j-1)) THEN ! N. di record insufficiente
+    vdelim(j+1:) = vdelim(j)
+    status = -2
+    RETURN
+  ENDIF
+ENDDO
+status = 0
+vdelim(j) = LEN_TRIM(line) + 1
+
+END FUNCTION delim_csv_q
+
+
 END MODULE file_utilities
