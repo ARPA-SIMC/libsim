@@ -35,15 +35,15 @@ END TYPE  datetime
 !! oggetti di questa classe sono limitate.
 TYPE timedelta
   PRIVATE
-  INTEGER :: iminuti, month, year
+  INTEGER :: iminuti, month
 END TYPE timedelta
 
 !> valore mancante per datetime
 TYPE(datetime), PARAMETER :: datetime_miss=datetime(imiss)
 !> valore mancante per timedelta
-TYPE(timedelta), PARAMETER :: timedelta_miss=timedelta(imiss, 0, 0)
+TYPE(timedelta), PARAMETER :: timedelta_miss=timedelta(imiss, 0)
 !> intervallo timedelta di durata nulla
-TYPE(timedelta), PARAMETER :: timedelta_0=timedelta(0, 0, 0)
+TYPE(timedelta), PARAMETER :: timedelta_0=timedelta(0, 0)
 
 INTEGER(kind=dateint), PARAMETER :: &
  sec_in_day=86400, &
@@ -234,7 +234,7 @@ INTEGER,INTENT(IN),OPTIONAL :: month !< mese, default=1 se è specificato year; p
 INTEGER,INTENT(IN),OPTIONAL :: day !< mese, default=1 se è specificato year; può anch'esso assumere valori fuori dai limiti canonici
 INTEGER,INTENT(IN),OPTIONAL :: hour !< ore, default=0 se è specificato year; può anch'esso assumere valori fuori dai limiti canonici
 INTEGER,INTENT(IN),OPTIONAL :: minute !< minuti, default=0 se è specificato year; può anch'esso assumere valori fuori dai limiti canonici
-INTEGER(kind=int_ll),INTENT(IN),OPTIONAL ::  unixtime !< inizializza l'oggetto a \a unixtime secondi dopo il 1/1/1970 (convenzione UNIX, notare che il parametro deve essere un intero a 8 byte), se è presente tutto il resto è ignorato
+INTEGER(kind=int_ll),INTENT(IN),OPTIONAL :: unixtime !< inizializza l'oggetto a \a unixtime secondi dopo il 1/1/1970 (convenzione UNIX, notare che il parametro deve essere un intero a 8 byte), se è presente tutto il resto è ignorato
 CHARACTER(len=*),INTENT(IN),OPTIONAL :: isodate !< inizializza l'oggetto ad una data espressa nel formato \c AAAA-MM-GG \c hh:mm, un sottoinsieme del formato noto come \a ISO
 CHARACTER(len=12),INTENT(IN),OPTIONAL :: oraclesimdate !< inizializza l'oggetto ad una data espressa nel formato \c AAAAMMGGhhmm, come nelle routine per l'accesso al db Oracle del SIM.
 INTEGER,INTENT(IN),OPTIONAL :: iminuti !< non usare, a solo uso interno
@@ -508,14 +508,13 @@ INTEGER :: lyear, lmonth, lday, lhour, lminute
 IF (this == datetime_miss .OR. that == timedelta_miss) THEN
   CALL delete(res)
 ELSE
-  IF (that%month == 0 .AND. that%year == 0) THEN
+  IF (that%month == 0) THEN
     CALL init(res, iminuti=this%iminuti+that%iminuti)
   ELSE
     CALL init(res, iminuti=this%iminuti+that%iminuti)
     CALL getval(res, year=lyear, month=lmonth, day=lday, hour=lhour, &
      minute=lminute)
-    CALL init(res, year=lyear+that%year, month=lmonth+that%month, day=lday, &
-     hour=lhour, minute=lminute)
+    CALL init(res, year=lyear, month=lmonth+that%month, day=lday, hour=lhour, minute=lminute)
   ENDIF
 ENDIF
 
@@ -545,14 +544,13 @@ INTEGER :: lyear, lmonth, lday, lhour, lminute
 IF (this == datetime_miss .OR. that == timedelta_miss) THEN
   CALL delete(res)
 ELSE
-  IF (that%month == 0 .AND. that%year == 0) THEN
+  IF (that%month == 0) THEN
     CALL init(res, iminuti=this%iminuti-that%iminuti)
   ELSE
     CALL init(res, iminuti=this%iminuti-that%iminuti)
     CALL getval(res, year=lyear, month=lmonth, day=lday, hour=lhour, &
      minute=lminute)
-    CALL init(res, year=lyear-that%year, month=lmonth-that%month, day=lday, &
-     hour=lhour, minute=lminute)
+    CALL init(res, year=lyear, month=lmonth-that%month, day=lday, hour=lhour, minute=lminute)
   ENDIF
 ENDIF
 
@@ -669,15 +667,12 @@ ELSE IF (PRESENT(oraclesimdate)) THEN
   this%iminuti = 1440*d + 60*h + m
 ELSE
   this%iminuti = 0
+  this%month = 0
   IF (PRESENT(year)) THEN
-    this%year = year
-  ELSE
-    this%year = 0
+    this%month = this%month + year*12
   ENDIF
   IF (PRESENT(month)) THEN
-    this%month = month
-  ELSE
-    this%month = 0
+    this%month = this%month + month
   ENDIF
   IF (PRESENT(day)) THEN
     this%iminuti = this%iminuti + 1440*day
@@ -697,7 +692,6 @@ SUBROUTINE timedelta_delete(this)
 TYPE(timedelta),INTENT(INOUT) :: this
 
 this%iminuti = imiss
-this%year = 0
 this%month = 0
 
 END SUBROUTINE timedelta_delete
@@ -706,11 +700,12 @@ END SUBROUTINE timedelta_delete
 !> Restituisce il valore di un oggetto \a timedelta in una o più
 !! modalità desiderate. Qualsiasi combinazione dei parametri
 !! opzionali è consentita.
-SUBROUTINE timedelta_getval(this, year, month, day, hour, minute, &
+SUBROUTINE timedelta_getval(this, year, month, amonth, day, hour, minute, &
  ahour, aminute, isodate, oraclesimdate)
 TYPE(timedelta),INTENT(IN) :: this !< oggetto di cui restituire il valore
 INTEGER,INTENT(OUT),OPTIONAL :: year !< anni, /=0 solo per intervalli "popolari"
-INTEGER,INTENT(OUT),OPTIONAL :: month !< mesi, /=0 solo per intervalli "popolari"
+INTEGER,INTENT(OUT),OPTIONAL :: month !< mesi modulo 12, /=0 solo per intervalli "popolari"
+INTEGER,INTENT(OUT),OPTIONAL :: amonth !< mesi totali, /=0 solo per intervalli "popolari"
 INTEGER,INTENT(OUT),OPTIONAL :: day !< giorni totali
 INTEGER,INTENT(OUT),OPTIONAL :: hour !< ore modulo 24
 INTEGER,INTENT(OUT),OPTIONAL :: minute !< minuti modulo 60
@@ -736,11 +731,14 @@ ENDIF
 IF (PRESENT(day)) THEN
   day = this%iminuti/1440
 ENDIF
+IF (PRESENT(amonth)) THEN
+  amonth = this%month
+ENDIF
 IF (PRESENT(month)) THEN
-  month = this%month
+  month = MOD(this%month-1,12)+1
 ENDIF
 IF (PRESENT(year)) THEN
-  year = this%year
+  year = this%month/12
 ENDIF
 IF (PRESENT(isodate)) THEN ! Non standard, inventato!
   WRITE(isodate, '(I10.10,1X,I2.2,A1,I2.2)') this%iminuti/1440, &
@@ -758,8 +756,7 @@ elemental FUNCTION timedelta_eq(this, that) RESULT(res)
 TYPE(timedelta),INTENT(IN) :: this, that
 LOGICAL :: res
 
-res = (this%iminuti == that%iminuti &
- .AND. this%month == that%month .AND. this%year == that%year)
+res = (this%iminuti == that%iminuti .AND. this%month == that%month)
 
 END FUNCTION timedelta_eq
 
@@ -903,8 +900,7 @@ FUNCTION timedelta_add(this, that) RESULT(res)
 TYPE(timedelta),INTENT(IN) :: this, that
 TYPE(timedelta) :: res
 
-CALL init(res, minute=this%iminuti+that%iminuti, &
- month=this%month+that%month, year=this%year+that%year)
+CALL init(res, minute=this%iminuti+that%iminuti, month=this%month+that%month)
 
 END FUNCTION timedelta_add
 
@@ -913,8 +909,7 @@ FUNCTION timedelta_sub(this, that) RESULT(res)
 TYPE(timedelta),INTENT(IN) :: this, that
 TYPE(timedelta) :: res
 
-CALL init(res, minute=this%iminuti-that%iminuti, &
- month=this%month-that%month, year=this%year-that%year)
+CALL init(res, minute=this%iminuti-that%iminuti, month=this%month-that%month)
 
 END FUNCTION timedelta_sub
 
@@ -924,7 +919,7 @@ TYPE(timedelta),INTENT(IN) :: this
 INTEGER,INTENT(IN) :: n
 TYPE(timedelta) :: res
 
-CALL init(res, minute=this%iminuti*n, month=this%month*n, year=this%year*n)
+CALL init(res, minute=this%iminuti*n, month=this%month*n)
 
 END FUNCTION timedelta_mult
 
@@ -934,7 +929,7 @@ INTEGER,INTENT(IN) :: n
 TYPE(timedelta),INTENT(IN) :: this
 TYPE(timedelta) :: res
 
-CALL init(res, minute=this%iminuti*n, month=this%month*n, year=this%year*n)
+CALL init(res, minute=this%iminuti*n, month=this%month*n)
 
 END FUNCTION timedelta_tlum
 
@@ -944,7 +939,7 @@ TYPE(timedelta),INTENT(IN) :: this
 INTEGER,INTENT(IN) :: n
 TYPE(timedelta) :: res
 
-CALL init(res, minute=this%iminuti/n, month=this%month/n, year=this%year/n)
+CALL init(res, minute=this%iminuti/n, month=this%month/n)
 
 END FUNCTION timedelta_divint
 
@@ -1085,6 +1080,31 @@ INTEGER :: iday, imonth, iyear, ihour, imin, iminuti
 iminuti = ndays(iday,imonth,iyear)*1440+(ihour*60)+imin
 
 END SUBROUTINE jeladata5
+
+
+SUBROUTINE jeladata5_1(iday,imonth,iyear,ihour,imin,imillisec)
+
+!!omstart JELADATA5
+!     SUBROUTINE JELADATA5(IDAY,IMONTH,IYEAR,IHOUR,IMIN,
+!     1                 IMINUTI)
+!
+!     Calcola i minuti trascorsi tra il 1/1/1 e la data fornita
+!
+!     variabili integer*4
+!     IN:
+!     IDAY,IMONTH,IYEAR,  I*4
+!     IHOUR,IMIN                GIORNO MESE ANNO ORE MINUTI
+!
+!     OUT:
+!     IMINUTI           I*4     MINUTI AD INIZIARE DALLE ORE 00 DEL 1/1/1
+!!OMEND
+
+INTEGER :: iday, imonth, iyear, ihour, imin
+INTEGER(KIND=int_ll) :: imillisec
+
+imillisec = INT(ndays(iday,imonth,iyear)*1440+(ihour*60)+imin, KIND=int_ll)*60000
+
+END SUBROUTINE jeladata5_1
 
 
 SUBROUTINE seconds_until_date(year, month, day, hour, minute, second, asecond)
