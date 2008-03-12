@@ -33,8 +33,8 @@ CALL init(v7d2%ana(1), lon=11.5_fp_geo, lat=44.5_fp_geo)
 CALL init(v7d3%ana(1), lon=11.5_fp_geo, lat=44.5_fp_geo)
 
 ! livello
-CALL init(v7d1%level(1), level=105, l1=10)
-CALL init(v7d2%level(1), level=105, l1=10)
+CALL init(v7d1%level(1), level1=105, l1=10)
+CALL init(v7d2%level(1), level1=105, l1=10)
 
 ! scadenza
 CALL init(v7d1%timerange(1), timerange=4, p1=-3600, p2=0)

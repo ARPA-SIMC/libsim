@@ -42,9 +42,9 @@ END TYPE ora_var_conv
 !  INTEGER :: ora_cod
 !END TYPE ora_ana
 
-TYPE ora_network_conv
-  TYPE(ora_ana),POINTER :: ana(:)
-END TYPE ora_network_conv
+!TYPE ora_network_conv
+!  TYPE(ora_ana),POINTER :: ana(:)
+!END TYPE ora_network_conv
 
 INTEGER,EXTERNAL :: n_getgsta ! da sostituire con include/interface ?!
 
@@ -477,10 +477,10 @@ END SUBROUTINE vol7d_oraclesim_dealloc
 
 ! Legge la tabella di conversione per le variabili
 SUBROUTINE vol7d_oraclesim_setup_conv()
-INTEGER,PARAMETER :: nf=15 ! formato file
-INTEGER :: i, sep(nf), n1, n2, un, i1, i2, i3
+INTEGER,PARAMETER :: nf=16 ! formato file
+INTEGER :: i, sep(nf), n1, n2, un, i1, i2, i3, i4
 CHARACTER(len=512) :: line
-TYPE(ora_ana),POINTER :: dummy => null() ! temporaneo
+!TYPE(ora_ana),POINTER :: dummy => null() ! temporaneo
 
 un = open_package_file('varmap.csv', filetype_data)
 IF (un < 0) CALL raise_fatal_error('non trovo il file delle variabili')
@@ -508,15 +508,16 @@ IF (i > 0) THEN
     READ(line(sep(4)+1:sep(5)-1),'(I8)')i1
     READ(line(sep(5)+1:sep(6)-1),'(I8)')i2
     READ(line(sep(6)+1:sep(7)-1),'(I8)')i3
-    CALL init(vartable(i)%level, i1, i2, i3)
-    READ(line(sep(7)+1:sep(8)-1),'(I8)')i1
-    READ(line(sep(8)+1:sep(9)-1),'(I8)')i2
-    READ(line(sep(9)+1:sep(10)-1),'(I8)')i3
-    CALL init(vartable(i)%timerange, i1, i2, i3)
-    READ(line(sep(11)+1:sep(12)-1),'(A)')vartable(i)%description
-    READ(line(sep(12)+1:sep(13)-1),'(F10.0)')vartable(i)%afact
-    READ(line(sep(13)+1:sep(14)-1),'(F10.0)')vartable(i)%bfact
-    READ(line(sep(14)+1:sep(15)-1),'(I8)')vartable(i)%networkid
+    READ(line(sep(7)+1:sep(8)-1),'(I8)')i4
+    CALL init(vartable(i)%level, i1, i2, i3, 14)
+    READ(line(sep(8)+1:sep(9)-1),'(I8)')i1
+    READ(line(sep(9)+1:sep(10)-1),'(I8)')i2
+    READ(line(sep(10)+1:sep(11)-1),'(I8)')i3
+    CALL init(vartable(i)%timerange, i1, i3, i2)
+    READ(line(sep(12)+1:sep(13)-1),'(A)')vartable(i)%description
+    READ(line(sep(13)+1:sep(14)-1),'(F10.0)')vartable(i)%afact
+    READ(line(sep(14)+1:sep(15)-1),'(F10.0)')vartable(i)%bfact
+    READ(line(sep(15)+1:sep(16)-1),'(I8)')vartable(i)%networkid
   ENDDO readline
 120 CONTINUE
 

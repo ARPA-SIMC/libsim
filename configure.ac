@@ -1,6 +1,6 @@
 dnl Process this file with autoconf to produce a configure script.
 
-AC_INIT(libsim, 1.4, [dcesari@arpa.emr.it])
+AC_INIT(libsim, 2.0, [dcesari@arpa.emr.it])
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_SRCDIR([configure.ac])
 AM_INIT_AUTOMAKE([foreign])
@@ -105,6 +105,7 @@ qc/Makefile
 termolib/Makefile
 doc/Doxyfile
 doc/Makefile
+log4fortran/Makefile
 ])
 
 AC_OUTPUT

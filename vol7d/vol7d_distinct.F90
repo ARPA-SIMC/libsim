@@ -275,7 +275,7 @@ VOL7D_POLY_TYPE,INTENT(in) :: vect(:), search
 LOGICAL,INTENT(in),OPTIONAL :: mask(:), back
 INTEGER :: index_
 
-INTEGER :: i, j
+INTEGER :: i
 LOGICAL :: lback
 
 IF (PRESENT(back)) THEN

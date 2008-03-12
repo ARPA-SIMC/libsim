@@ -19,7 +19,7 @@ CONTAINS
 !! soddisfacenti le condizioni:
 !!  - variabili di tipo reale o doppia precisione
 !!  - intervallo temporale di tipo "cumulazione"
-!!    (vol7d_timerange_class::vol7d_timerange::timerange = 4)
+!!    (vol7d_timerange_class::vol7d_timerange::timerange = 1)
 !!    da un tempo passato al tempo attuale
 !!  - intervallo di cumulazione che sia uguale o un sottomultiplo dell'intervallo
 !!    di cumulazione desiderato \a step
@@ -48,7 +48,7 @@ TYPE(timedelta),INTENT(in) :: step !< intervallo di cumulazione
 TYPE(datetime),INTENT(in),OPTIONAL :: start !< inizio del periodo di cumulazione
 REAL,INTENT(in),OPTIONAL :: frac_valid !< frazione minima di dati validi necessaria per considerare accettabile un dato cumulato, default=1
 
-CALL vol7d_extend_cumavg(this, that, 4, step, start, frac_valid)
+CALL vol7d_extend_cumavg(this, that, 1, step, start, frac_valid)
 
 END SUBROUTINE vol7d_cumulate
 
@@ -56,7 +56,7 @@ END SUBROUTINE vol7d_cumulate
 !> Media le osservazioni su un intervallo specificato quando possibile.
 !! Funziona esattamente come il metodo ::vol7d_cumulate ma agisce
 !! sui dati aventi un timerange di tipo "media"
-!! (vol7d_timerange_class::vol7d_timerange::timerange = 3) e ne calcola
+!! (vol7d_timerange_class::vol7d_timerange::timerange = 0) e ne calcola
 !! la media sull'intervallo specificato.
 !!
 !! \todo il parametro \a this è dichiarato \a INOUT perché la vol7d_alloc_vol
@@ -69,7 +69,7 @@ TYPE(timedelta),INTENT(in) :: step !< intervallo di media
 TYPE(datetime),INTENT(in),OPTIONAL :: start !< inizio del periodo di media
 REAL,INTENT(in),OPTIONAL :: frac_valid !< frazione minima di dati validi necessaria per considerare accettabile un dato mediato, default=1
 
-CALL vol7d_extend_cumavg(this, that, 3, step, start, frac_valid)
+CALL vol7d_extend_cumavg(this, that, 0, step, start, frac_valid)
 
 END SUBROUTINE vol7d_average
 
@@ -83,7 +83,7 @@ TYPE(datetime),INTENT(in),OPTIONAL :: start
 REAL,INTENT(in),OPTIONAL :: frac_valid
 
 TYPE(datetime) :: lstart, lend, tmptime, tmptimes, t1, t2
-TYPE(timedelta) dt1, dt2, stepvero
+TYPE(timedelta) dt1, stepvero
 INTEGER :: steps, ntr, nstep, ncum, nval, i, j, k, i1, i3, i5, i6, n
 INTEGER,ALLOCATABLE :: map_tr(:), map_trc(:,:), count_trc(:,:)
 LOGICAL,ALLOCATABLE :: mask_time(:)
@@ -99,8 +99,8 @@ ENDIF
 ! mi premunisco da un oggetto non inizializzato
 CALL vol7d_alloc_vol(this)
 ! conto quanti timerange si riferiscono a cumulazioni
-ntr = COUNT(this%timerange(:)%timerange == tri .AND. this%timerange(:)%p2 == 0 &
- .AND. this%timerange(:)%p1 < 0)
+ntr = COUNT(this%timerange(:)%timerange == tri .AND. this%timerange(:)%p2 /= imiss &
+ .AND. this%timerange(:)%p2 /= 0 .AND. this%timerange(:)%p1 == 0)
 IF (ntr == 0) THEN
   CALL raise_warning('nessun timerange adatto per media/cumulazione')
   RETURN
@@ -108,8 +108,8 @@ ENDIF
 ! pulisco e ordino il volume originale
 CALL vol7d_reform(this, miss=.FALSE., sort=.FALSE., unique=.TRUE.)
 ! riconto i timerange, potrebbero essere diminuiti a causa di unique
-ntr = COUNT(this%timerange(:)%timerange == tri .AND. this%timerange(:)%p2 == 0 &
- .AND. this%timerange(:)%p1 < 0)
+ntr = COUNT(this%timerange(:)%timerange == tri .AND. this%timerange(:)%p2 /= imiss &
+ .AND. this%timerange(:)%p2 /= 0 .AND. this%timerange(:)%p1 == 0)
 
 ! conto il numero di time necessari in uscita
 ! lo faccio passo-passo e non con una divisione
@@ -120,9 +120,10 @@ IF (PRESENT(start)) THEN ! start fornito esplicitamente
 ELSE ! calcolo automatico di start
 ! calcolo il piu` breve intervallo di cumulazione disponibile
 ! potrei usare il piu` lungo se volessi (avrei piu` dati ma peggiori)
-  i = MAXVAL(this%timerange(:)%p1, mask=(this%timerange(:)%timerange == tri &
-   .AND. this%timerange(:)%p2 == 0 .AND. this%timerange(:)%p1 < 0))
-  CALL init(dt1, minute=i/60)
+  i = MINVAL(this%timerange(:)%p2, mask=(this%timerange(:)%timerange == tri .AND. &
+   this%timerange(:)%p2 /= imiss .AND. this%timerange(:)%p2 /= 0 .AND. this%timerange(:)%p1 == 0))
+
+  CALL init(dt1, minute=-i/60) ! usare msec
   lstart = this%time(1)+dt1 ! torno indietro di dt1 (dt1 < 0!)
   lstart = lstart+(MOD(lstart, step)) ! arrotondo a step
 ENDIF
@@ -145,7 +146,7 @@ DO i = 1, nstep
 ENDDO
 CALL getval(step, aminute=steps)
 steps = steps*60
-CALL init(that%timerange(1), timerange=tri, p1=-steps, p2=0)
+CALL init(that%timerange(1), timerange=tri, p1=0, p2=steps) ! modificare eventualmente p1
 
 ! Faccio una prima copia del volume originale
 CALL vol7d_copy(this, v7dtmp, miss=.FALSE., sort=.FALSE., unique=.FALSE.)
@@ -163,12 +164,14 @@ CALL vol7d_merge(that, v7dtmp, sort=.TRUE.)
 
 nval = 0
 DO j = 1, SIZE(this%timerange)
-  IF (this%timerange(j)%timerange /= tri .OR. this%timerange(j)%p2 /= 0 &
-   .OR. this%timerange(j)%p1 >= 0) CYCLE
+  IF (this%timerange(j)%timerange /= tri .OR. this%timerange(j)%p2 == imiss &
+   .OR. this%timerange(j)%p2 == 0 .OR. this%timerange(j)%p1 /= 0) CYCLE
+
   nval = nval + 1
   map_tr(nval) = j ! mappatura per ottimizzare il successivo ciclo sui timerange
-  CALL init(dt1, minute=this%timerange(j)%p1/60)
-  CALL init(dt2, minute=this%timerange(j)%p2/60)
+!  CALL init(dt1, minute=-this%timerange(j)%p2/60) ! usare msec
+  CALL init(dt1, minute=this%timerange(j)%p2/60) ! usare msec
+!  CALL init(dt2, minute=0) !this%timerange(j)%p2/60) ! usare msec
 
   ! calcolo il numero teorico di intervalli in ingresso che
   ! contribuiscono all'intervallo corrente in uscita
@@ -178,7 +181,8 @@ DO j = 1, SIZE(this%timerange)
   DO WHILE(tmptime <= lend)
     ncum = ncum + 1
     stepvero = tmptime - tmptimes ! funziona anche se step e` "umano"
-    count_trc(ncum,nval) = stepvero/(dt2-dt1)
+!    count_trc(ncum,nval) = stepvero/(dt2-dt1)
+    count_trc(ncum,nval) = stepvero/dt1
     tmptimes = tmptime
     tmptime = tmptime + step
   ENDDO
@@ -186,8 +190,8 @@ DO j = 1, SIZE(this%timerange)
   ! corrente in uscita, scartando quelli che distano un numero non intero
   ! di intervalli in ingresso dall'inizio dell'intervallo in uscita
   DO i = 1, SIZE(this%time)
-    t1 = this%time(i) + dt1
-    t2 = this%time(i) + dt2
+    t1 = this%time(i) - dt1
+    t2 = this%time(i)
     DO k = 1, nstep
       IF (t1 >= that%time(k) - step .AND. t2 <= that%time(k)) THEN
         IF (MOD(t1-(that%time(k)-step), t2-t1) == timedelta_0) THEN

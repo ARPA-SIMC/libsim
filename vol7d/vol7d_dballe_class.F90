@@ -57,7 +57,7 @@ USE vol7d_utilities
 
 IMPLICIT NONE
 PRIVATE
-PUBLIC vol7d_dballe, init, delete, import, export
+PUBLIC vol7d_dballe, init, delete, import, export,  vol7d_dballe_importvvns
 
 include "dballef.h"
 
@@ -181,8 +181,8 @@ IF (PRESENT(user))quiuser = user
 IF (PRESENT(password))quipassword = password
 
 ! utilizziamo la routine di default per la gestione dell'errore
-call idba_error_set_callback(0,idba_default_error_handler, &
-     ldebug,this%handle_err)
+!call idba_error_set_callback(0,idba_default_error_handler, &
+!     ldebug,this%handle_err)
 
 !TODO: quando scrivo bisogna gestire questo che non è da fare ?
 CALL init(this%vol7d)
@@ -289,7 +289,8 @@ TYPE(vol7d_dballe),INTENT(out) :: this !< oggetto vol7d_dballe
 CHARACTER(len=*),INTENT(in),optional :: var
 TYPE(geo_coord),INTENT(inout),optional :: coordmin,coordmax 
 TYPE(datetime),INTENT(in),optional :: timei, timef
-TYPE(vol7d_network),INTENT(in),OPTIONAL :: network(:),set_network
+TYPE(vol7d_network),INTENT(in) :: network(:)
+TYPE(vol7d_network),INTENT(in),OPTIONAL :: set_network
 TYPE(vol7d_level),INTENT(in),optional :: level
 TYPE(vol7d_timerange),INTENT(in),optional :: timerange
 CHARACTER(len=*),INTENT(in),OPTIONAL :: attr(:),anavar(:),anaattr(:)
@@ -347,7 +348,7 @@ TYPE(vol7d_timerange),INTENT(in),optional :: timerange
 CHARACTER(len=*),INTENT(in),OPTIONAL :: attr(:),anavar(:),anaattr(:)
 CHARACTER(len=*),INTENT(in),OPTIONAL :: varkind(:),attrkind(:),anavarkind(:),anaattrkind(:)
 
-TYPE(vol7d) :: v7d
+!TYPE(vol7d) :: v7d
 CHARACTER(len=SIZE(var)*7) :: varlist
 CHARACTER(len=SIZE(attr)*8) :: starvarlist
 CHARACTER(len=6) :: btable
@@ -355,7 +356,7 @@ CHARACTER(len=7) ::starbtable
 
 LOGICAL ::  ldegnet, lattr, lanaattr
 integer :: year,month,day,hour,minute,sec
-integer :: rlevel, rl1, rl2
+integer :: rlevel1, rl1,rlevel2, rl2
 integer :: rtimerange, p1, p2,rep_cod
 integer :: indana,indtime,indlevel,indtimerange,inddativar,indnetwork
 
@@ -363,13 +364,13 @@ integer :: indana,indtime,indlevel,indtimerange,inddativar,indnetwork
 integer :: nana,ntime,ntimerange,nlevel,nnetwork
 TYPE(vol7d_var) :: var_tmp
 
-INTEGER :: i,ii, iii,j, k,n,n_ana,nn,nvarattr,istat,ana_id,ana_id_staz,nstaz,ist,indattr
+INTEGER :: i,ii, iii,n,n_ana,nn,nvarattr,istat,indattr
 integer :: nvar ,inddatiattr,inddativarattr
 integer :: nanavar ,indanavar,indanaattr,indanavarattr,nanavarattr
 
 REAL(kind=fp_geo) :: lat,lon
 CHARACTER(len=vol7d_ana_lenident) :: ident
-INTEGER(kind=int_b)::attrdatib
+!INTEGER(kind=int_b)::attrdatib
 
 integer :: ndativarr,     ndativari,     ndativarb,     ndativard,     ndativarc
 integer :: ndatiattrr,    ndatiattri,    ndatiattrb,    ndatiattrd,    ndatiattrc 
@@ -394,6 +395,7 @@ TYPE(vol7d) :: vol7dtmp
 type(record),ALLOCATABLE :: buffer(:),bufferana(:)
 
 !!!  CALL print_info('Estratte dall''archivio '//TRIM(to_char(nobs)) // ' osservazioni')
+
 
 IF (PRESENT(set_network)) THEN
    ldegnet = .TRUE.
@@ -469,7 +471,7 @@ if (present(timerange))then
 end if
 
 if (present(level))then
-   call idba_setlevel(this%handle, level%level, level%l1, level%l2)
+   call idba_setlevel(this%handle, level%level1, level%l1,level%level2, level%l2)
 end if
 
 call idba_voglioquesto (this%handle,N)
@@ -486,7 +488,7 @@ do i=1,N
   call idba_dammelo (this%handle,btable)
   
   call idba_enqdate (this%handle,year,month,day,hour,minute,sec)
-  call idba_enqlevel(this%handle, rlevel, rl1, rl2)
+  call idba_enqlevel(this%handle, rlevel1, rl1, rlevel2,rl2)
   call idba_enqtimerange(this%handle, rtimerange, p1, p2)
   call idba_enq(this%handle, "rep_cod",rep_cod)
                                 !print *,"trovato network",rep_cod
@@ -531,7 +533,7 @@ do i=1,N
   
   call init(buffer(i)%ana,lat=lat,lon=lon,ident=ident)
   call init(buffer(i)%time, year=year, month=month, day=day, hour=hour, minute=minute)
-  call init(buffer(i)%level, rlevel,rl1,rl2)
+  call init(buffer(i)%level, rlevel1,rl1,rlevel2,rl2)
   call init(buffer(i)%timerange, rtimerange, p1, p2)
   call init(buffer(i)%network, rep_cod)
   call init(buffer(i)%dativar, btable)
@@ -605,7 +607,7 @@ do i=1,N_ana
   if (btable == "B05001" .or. btable == "B06001" .or. btable == "B01011") cycle
 
   call idba_enqdate (this%handle_staz,year,month,day,hour,minute,sec)
-  call idba_enqlevel(this%handle_staz, rlevel, rl1, rl2)
+  call idba_enqlevel(this%handle_staz, rlevel1, rl1, rlevel2,rl2)
   call idba_enqtimerange(this%handle_staz, rtimerange, p1, p2)
   call idba_enq(this%handle_staz, "rep_cod",rep_cod)
                                 !print *,"trovato network",rep_cod
@@ -645,7 +647,7 @@ do i=1,N_ana
   
   call init(bufferana(i)%ana,lat=lat,lon=lon,ident=ident)
   call init(bufferana(i)%time, year=year, month=month, day=day, hour=hour, minute=minute)
-  call init(bufferana(i)%level, rlevel,rl1,rl2)
+  call init(bufferana(i)%level, rlevel1,rl1,rlevel2,rl2)
   call init(bufferana(i)%timerange, rtimerange, p1, p2)
   call init(bufferana(i)%network, rep_cod)
   call init(bufferana(i)%dativar, btable)
@@ -807,12 +809,15 @@ call vol7d_alloc (vol7dtmp, &
  nanavarattrd=nanavarattrd, &
  nanavarattrc=nanavarattrc)
 
- !print *, "nana=",nana, "ntime=",ntime, "ntimerange=",ntimerange, &
- !"nlevel=",nlevel, "nnetwork=",nnetwork, &
- !"ndativarr=",ndativarr, "ndativari=",ndativari, "ndativarb=",ndativarb, "ndativard=",ndativard, "ndativarc=",ndativarc,&
- !"ndatiattrr=",ndatiattrr, "ndatiattri=",ndatiattri, "ndatiattrb=",ndatiattrb, "ndatiattrd=",ndatiattrd, "ndatiattrc=",ndatiattrc,&
- !"ndativarattrr=",ndativarattrr, "ndativarattri=",ndativarattri, "ndativarattrb=",ndativarattrb, "ndativarattrd=",ndativarattrd, "ndativarattrc=",ndativarattrc
- !print*,"ho fatto alloc"
+ print *, "nana=",nana, "ntime=",ntime, "ntimerange=",ntimerange, &
+ "nlevel=",nlevel, "nnetwork=",nnetwork, &
+ "ndativarr=",ndativarr, "ndativari=",ndativari, &
+ "ndativarb=",ndativarb, "ndativard=",ndativard, "ndativarc=",ndativarc,&
+ "ndatiattrr=",ndatiattrr, "ndatiattri=",ndatiattri, "ndatiattrb=",ndatiattrb,&
+ "ndatiattrd=",ndatiattrd, "ndatiattrc=",ndatiattrc,&
+ "ndativarattrr=",ndativarattrr, "ndativarattri=",ndativarattri, "ndativarattrb=",ndativarattrb,&
+ "ndativarattrd=",ndativarattrd, "ndativarattrc=",ndativarattrc
+ print*,"ho fatto alloc"
 
 
 vol7dtmp%ana=pack_distinct(buffer%ana, nana, back=.TRUE.)
@@ -915,9 +920,9 @@ else  if (present(attr).and.present(var))then
     if ( ndativarattrc > 0 )call init (vol7dtmp%dativarattr%c(i), btable=var(i))
   end do
 
-else
+else if (associated(vol7dtmp%dativarattr%c).and. associated(vol7dtmp%dativar%c)) then
 
-      vol7dtmp%dativarattr%c=vol7dtmp%dativar%c
+      vol7dtmp%dativarattr%c(1)=vol7dtmp%dativar%c(1)
 
 end if
 
@@ -1050,7 +1055,7 @@ else  if (present(anaattr) .and. present (anavar))then
     if ( nanavarattrc > 0 )call init(vol7dtmp%anavarattr%c(i), btable=anavar(i))
   end do
 
-else
+else if (associated(vol7dtmp%anavarattr%c) .and. associated(vol7dtmp%anavar%c)) then
 
     vol7dtmp%anavarattr%c=vol7dtmp%anavar%c
 
@@ -1097,14 +1102,14 @@ else if (present(anaattr))then
 end if
 
 
-!print*,"numero variabili anagrafica",size(vol7dtmp%anavar%r)
+print*,"numero variabili anagrafica",size(vol7dtmp%anavar%r)
 !do i=1,size(vol7dtmp%anavar%r)
 !  print*,"elenco variabili anagrafica>",vol7dtmp%anavar%r(i)%btable,"<fine"
 !end do
 
 !-----------------------> anagrafica fine
 
-!print*,"prima di alloc"
+print*,"prima di alloc"
 
 call vol7d_alloc_vol (vol7dtmp)
 
@@ -1459,7 +1464,7 @@ CHARACTER(len=*),INTENT(in),OPTIONAL :: var(:),attr(:),anavar(:),anaattr(:)
 !! (solitamente ricopiato dall'oggetto letto)
 logical,intent(in),optional :: attr_only 
 
-REAL(kind=fp_geo) :: latmin,latmax,lonmin,lonmax
+!REAL(kind=fp_geo) :: latmin,latmax,lonmin,lonmax
 logical, allocatable :: lnetwork(:),llevel(:),ltimerange(:)
 integer,allocatable :: ana_id(:,:)
 logical :: write,writeattr,lattr_only
@@ -1467,11 +1472,11 @@ logical :: write,writeattr,lattr_only
 !CHARACTER(len=6) :: btable
 !CHARACTER(len=7) ::starbtable
 
-integer :: year,month,day,hour,minute,sec
+integer :: year,month,day,hour,minute
 integer :: nstaz,ntime,ntimerange,nlevel,nnetwork
 
 
-INTEGER :: i,ii,iii,iiii,iiiii,iiiiii,j,ind,inddatiattr,indanaattr
+INTEGER :: i,ii,iii,iiii,iiiii,iiiiii,ind,inddatiattr,indanaattr
 
 REAL(kind=fp_geo) :: lat,lon 
 !INTEGER(kind=int_b)::attrdatib
@@ -1620,7 +1625,7 @@ end if
 
 ! vital statistics data
 
-print *,"nstaz,ntime,nlevel,ntimerange,nnetwork",nstaz,ntime,nlevel,ntimerange,nnetwork
+!print *,"nstaz,ntime,nlevel,ntimerange,nnetwork",nstaz,ntime,nlevel,ntimerange,nnetwork
 
 do iii=1, nnetwork
    if (.not.lnetwork(iii))cycle
@@ -1729,7 +1734,8 @@ do i=1, nstaz
                  
                  call idba_set (this%handle,"ana_id",ana_id(i,iiiiii))
                  call idba_set (this%handle,"rep_cod",this%vol7d%network(iiiiii)%id)
-                 call idba_setlevel(this%handle, this%vol7d%level(iii)%level, this%vol7d%level(iii)%l1, this%vol7d%level(iii)%l2)
+                 call idba_setlevel(this%handle, this%vol7d%level(iii)%level1, this%vol7d%level(iii)%l1,&
+                  this%vol7d%level(iii)%level2, this%vol7d%level(iii)%l2)
                  call idba_settimerange(this%handle, this%vol7d%timerange(iiii)%timerange, &
                   this%vol7d%timerange(iiii)%p1, this%vol7d%timerange(iiii)%p2)
                  
@@ -1740,7 +1746,7 @@ do i=1, nstaz
                
                                 !print *, ">>>>> ",ana_id(i,iiiiii),this%vol7d%network(iiiiii)%id
                                 !print *, year,month,day,hour,minute
-                                !print *, this%vol7d%level(iii)%level, this%vol7d%level(iii)%l1, this%vol7d%level(iii)%l2
+                                !print *, this%vol7d%level(iii)%level1, this%vol7d%level(iii)%l1, this%vol7d%level(iii)%l2
                                 !print *, this%vol7d%timerange(iiii)%timerange,this%vol7d%timerange(iiii)%p1, this%vol7d%timerange(iiii)%p2
                
 
@@ -1812,7 +1818,7 @@ subroutine vol7d_dballe_import_dballevar(this)
 
 type(vol7d_var),pointer :: this(:)
 type(vol7d_var),allocatable,save :: blocal(:)
-INTEGER :: i,un
+INTEGER :: i,un,n
 
 IF (associated(this)) return
 IF (allocated(blocal)) then
@@ -1828,28 +1834,25 @@ IF (un < 0) then
   return
 end if
 
-i = 0
+n = 0
 DO WHILE(.TRUE.)
   READ(un,*,END=100)
-  i = i + 1
+  n = n + 1
 ENDDO
 100 CONTINUE
 
-IF (i > 0) THEN
-  ALLOCATE(this(i))
-  ALLOCATE(blocal(i))
+IF (n > 0) THEN
+  ALLOCATE(this(n))
+  ALLOCATE(blocal(n))
   REWIND(un)
-  i = 0
-  readline: DO WHILE(.TRUE.)
-    i = i + 1
-    READ(un,'(1x,A6,1x,a65,a24)',END=120)blocal(i)%btable,blocal(i)%description,blocal(i)%unit
+  readline: do i = 1 ,n
+    READ(un,'(1x,A6,1x,a65,a24)')blocal(i)%btable,blocal(i)%description,blocal(i)%unit
     blocal(i)%btable(:1)="B"
-    print*,"B=",blocal(i)%btable
-    print*," D=",blocal(i)%description
-    PRINT*," U=",blocal(i)%unit
+    !print*,"B=",blocal(i)%btable
+    !print*," D=",blocal(i)%description
+    !PRINT*," U=",blocal(i)%unit
   ENDDO readline
 
-120 CONTINUE
   CALL print_info('Ho letto '//TRIM(to_char(i-1))//' variabili dalla tabella')
 
   this=blocal
@@ -1969,7 +1972,7 @@ FUNCTION get_dballe_filepath(filename, filetype) RESULT(path)
 CHARACTER(len=*), INTENT(in) :: filename
 INTEGER, INTENT(in) :: filetype
 
-INTEGER :: i, j
+INTEGER ::  j
 CHARACTER(len=512) :: path
 LOGICAL :: exist
 

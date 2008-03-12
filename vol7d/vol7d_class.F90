@@ -368,7 +368,7 @@ IF (PRESENT(nana)) THEN
     IF (ASSOCIATED(this%ana)) DEALLOCATE(this%ana)
     ALLOCATE(this%ana(nana))
     IF (linit) THEN
-      DO i = i, nana
+      DO i = 1, nana
         CALL init(this%ana(i))
       ENDDO
     ENDIF
@@ -379,7 +379,7 @@ IF (PRESENT(ntime)) THEN
     IF (ASSOCIATED(this%time)) DEALLOCATE(this%time)
     ALLOCATE(this%time(ntime))
     IF (linit) THEN
-      DO i = i, ntime
+      DO i = 1, ntime
         CALL init(this%time(i))
       ENDDO
     ENDIF
@@ -390,7 +390,7 @@ IF (PRESENT(nlevel)) THEN
     IF (ASSOCIATED(this%level)) DEALLOCATE(this%level)
     ALLOCATE(this%level(nlevel))
     IF (linit) THEN
-      DO i = i, nlevel
+      DO i = 1, nlevel
         CALL init(this%level(i))
       ENDDO
     ENDIF
@@ -401,7 +401,7 @@ IF (PRESENT(ntimerange)) THEN
     IF (ASSOCIATED(this%timerange)) DEALLOCATE(this%timerange)
     ALLOCATE(this%timerange(ntimerange))
     IF (linit) THEN
-      DO i = i, ntimerange
+      DO i = 1, ntimerange
         CALL init(this%timerange(i))
       ENDDO
     ENDIF
@@ -412,7 +412,7 @@ IF (PRESENT(nnetwork)) THEN
     IF (ASSOCIATED(this%network)) DEALLOCATE(this%network)
     ALLOCATE(this%network(nnetwork))
     IF (linit) THEN
-      DO i = i, nnetwork
+      DO i = 1, nnetwork
         CALL init(this%network(i))
       ENDDO
     ENDIF

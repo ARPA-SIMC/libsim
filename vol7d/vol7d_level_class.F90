@@ -13,13 +13,14 @@ IMPLICIT NONE
 !! accessibili e scrivibili, ma è comunque consigliato assegnarli tramite
 !! il costruttore ::init.
 TYPE vol7d_level
-  INTEGER :: level !< tipo di livello o strato verticale (vedi tabella 3 formato grib WMO http://www.ecmwf.int/publications/manuals/libraries/gribex/wmoCodeTable3.html)
-  INTEGER :: l1 !< valore numerico del primo livello, se previsto da \a level
-  INTEGER :: l2 !< valore numerico del secondo livello, se previsto da \a level (in altre parole, se l'osservazione è riferita ad uno strato di spessore finito)
+  INTEGER :: level1 !< tipo di livello o strato verticale (vedi tabella 4.10 formato grib2 WMO http://www.wmo.ch/pages/prog/www/WMOCodes/Operational/GRIB2/FM92-GRIB2-2007Nov.pdf )
+  INTEGER :: l1 !< valore numerico del primo livello, se previsto da \a level1
+  INTEGER :: level2 !< tipo di livello o strato verticale (vedi tabella 4.10 formato grib2 WMO http://www.wmo.ch/pages/prog/www/WMOCodes/Operational/GRIB2/FM92-GRIB2-2007Nov.pdf )
+  INTEGER :: l2 !< valore numerico del secondo livello, se previsto da \a level2 (in altre parole, se il dato è riferita ad uno strato di spessore finito)
 END TYPE  vol7d_level
 
 !> Valore mancante per vol7d_level.
-TYPE(vol7d_level),PARAMETER :: vol7d_level_miss=vol7d_level(imiss,imiss,imiss)
+TYPE(vol7d_level),PARAMETER :: vol7d_level_miss=vol7d_level(imiss,imiss,imiss,imiss)
 
 !> Costruttore per la classe vol7d_level.
 !! Deve essere richiamato 
@@ -121,23 +122,32 @@ CONTAINS
 !> Inizializza un oggetto \a vol7d_level con i parametri opzionali forniti.
 !! Se non viene passato nessun parametro opzionale l'oggetto è
 !! inizializzato a valore mancante.
-SUBROUTINE vol7d_level_init(this, level, l1, l2)
+SUBROUTINE vol7d_level_init(this, level1, l1, level2, l2)
 TYPE(vol7d_level),INTENT(INOUT) :: this !< oggetto da inizializzare
-INTEGER,INTENT(IN),OPTIONAL :: level !< tipo di livello
+INTEGER,INTENT(IN),OPTIONAL :: level1 !< tipo di livello 1
 INTEGER,INTENT(IN),OPTIONAL :: l1 !< valore per il primo livello
+INTEGER,INTENT(IN),OPTIONAL :: level2 !< tipo di livello 2
 INTEGER,INTENT(IN),OPTIONAL :: l2 !< valore per il secondo livello
 
-this%level = imiss
+this%level1 = imiss
 this%l1 = imiss
+this%level2 = imiss
 this%l2 = imiss
 
-IF (PRESENT(level)) THEN
-  this%level = level
+IF (PRESENT(level1)) THEN
+  this%level1 = level1
 ELSE
   RETURN
 END IF
 
 IF (PRESENT(l1))  this%l1 = l1
+
+IF (PRESENT(level2)) THEN
+  this%level2 = level2
+ELSE
+  RETURN
+END IF
+
 IF (PRESENT(l2))  this%l2 = l2
 
 END SUBROUTINE vol7d_level_init
@@ -147,8 +157,9 @@ END SUBROUTINE vol7d_level_init
 SUBROUTINE vol7d_level_delete(this)
 TYPE(vol7d_level),INTENT(INOUT) :: this !< oggetto da distruggre
 
-this%level = imiss
+this%level2 = imiss
 this%l1 = imiss
+this%level2 = imiss
 this%l2 = imiss
 
 END SUBROUTINE vol7d_level_delete
@@ -158,7 +169,9 @@ elemental FUNCTION vol7d_level_eq(this, that) RESULT(res)
 TYPE(vol7d_level),INTENT(IN) :: this, that
 LOGICAL :: res
 
-IF (this%level == that%level .AND. &
+IF ( &
+ this%level1 == that%level1 .AND. &
+ this%level2 == that%level2 .AND. &
  this%l1 == that%l1 .AND. this%l2 == that%l2) THEN
   res = .TRUE.
 ELSE
@@ -207,10 +220,14 @@ elemental FUNCTION vol7d_level_gt(this, that) RESULT(res)
 TYPE(vol7d_level),INTENT(IN) :: this, that
 LOGICAL :: res
 
-IF (this%level > that%level .OR. &
- (this%level == that%level .AND. this%l1 > that%l1) .OR. &
- (this%level == that%level .AND. this%l1 == that%l1 .AND. &
- this%l2 > that%l2)) THEN
+IF (&
+ this%level1 > that%level1 .OR. &
+ (this%level1 == that%level1 .AND. this%l1 > that%l1) .OR. &
+ (this%level1 == that%level1 .AND. this%l1 == that%l1 .AND. &
+ (&
+ this%level2 > that%level2 .OR. &
+ (this%level2 == that%level2 .AND. this%l2 > that%l2) &
+ ))) THEN
   res = .TRUE.
 ELSE
   res = .FALSE.
@@ -236,10 +253,14 @@ elemental FUNCTION vol7d_level_lt(this, that) RESULT(res)
 TYPE(vol7d_level),INTENT(IN) :: this, that
 LOGICAL :: res
 
-IF (this%level < that%level .OR. &
- (this%level == that%level .AND. this%l1 < that%l1) .OR. &
- (this%level == that%level .AND. this%l1 == that%l1 .AND. &
- this%l2 < that%l2)) THEN
+IF (&
+ this%level1 < that%level1 .OR. &
+ (this%level1 == that%level1 .AND. this%l1 < that%l1) .OR. &
+ (this%level1 == that%level1 .AND. this%l1 == that%l1 .AND. &
+ (&
+ this%level2 < that%level2 .OR. &
+ (this%level2 == that%level2 .AND. this%l2 < that%l2) &
+ ))) THEN
   res = .TRUE.
 ELSE
   res = .FALSE.

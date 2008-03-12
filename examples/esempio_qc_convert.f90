@@ -74,7 +74,7 @@ call init(v7d%dativar%r(idativarr), btable="B13011")
 do iarea = 1, 3
   do ilevel = 1,10
 
-    call init(v7d%level(ilevel),103,livello(ilevel),0)
+    call init(v7d%level(ilevel),103,livello(ilevel),0,0)
 
     do itimerange=1,3
 
