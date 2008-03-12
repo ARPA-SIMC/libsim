@@ -24,13 +24,31 @@ AC_DEFINE_UNQUOTED(SIZEOF_PTR_C, $sizeof_ptr_c,
  "Fortran KIND defining an INTEGER containing a C pointer")
 
 dnl Locate Fortran 90 compiler among these if not specified
-AC_PROG_FC([pgf90 ifort gfortran g95 xlf90 f90])
+AC_PROG_FC([gfortran pgf90 ifort g95 xlf90 f90])
 F77=$FC
 dnl AC_FC_WRAPPERS()dnl Determine how to call C from Fortran
+
+dnl search for log4c, if not found build a dummy log4fortran
+AC_CHECK_HEADERS([log4c.h] ,
+  AC_CHECK_LIB([log4c], [log4c_init], , AC_MSG_ERROR([log4c broken!])),
+  AC_MSG_RESULT([Building dummy log4fortran])
+  dummy_log4fortran=yes
+ )
+
+if test "x$dummy_log4fortran" = "x"; then
+AC_CHECK_HEADERS([f77.h] ,
+  AC_CHECK_LIB([cnf], [cnfCptr],
+ , AC_MSG_ERROR([cnf broken!])),
+  AC_MSG_RESULT([Building dummy log4fortran])
+  dummy_log4fortran=yes
+ )
+fi
+AM_CONDITIONAL(LOG4FORTRAN, test "x$dummy_log4fortran" != "xyes")
 
 dnl AC_LANG_PUSH([Fortran 77])dnl Do the following checks in Fortran
 AC_LANG_PUSH(Fortran)dnl Do the following checks in Fortran
 AC_FC_SRCEXT(f90)dnl and use .f90 extension
+
 
 AC_ARG_ENABLE(shapelib, AC_HELP_STRING([--disable-shapelib],
   [disable shapelib support]),,[enableval=yes])dnl default enable

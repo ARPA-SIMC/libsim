@@ -1,4 +1,4 @@
-noinst_PROGRAMS = esempio_v7d esempio_qc_convert esempio_termolib
+noinst_PROGRAMS = esempio_v7d esempio_qc_convert esempio_termolib log4fortran
 
 if GRIB
 noinst_PROGRAMS += esempio_regrib
@@ -16,10 +16,17 @@ if SHP
 noinst_PROGRAMS += esempio_geo_coordvect
 endif
 
-AM_FCFLAGS = -I../base -I../grib -I../vol7d -I../qc -I../termolib
+AM_FCFLAGS = -I../base -I../grib -I../vol7d -I../qc -I../termolib -I../log4fortran
 
 esempio_v7d_SOURCES = esempio_v7d.f90
 esempio_v7d_LDADD = ../base/libsim_base.la ../vol7d/libsim_vol7d.la
+
+log4fortran_SOURCES = log4fortran.f90
+log4fortran_LDADD =  ../log4fortran/liblog4fortran.la
+
+#if LOG4FORTRAN
+#log4fortran_LDADD =  
+#endif
 
 if GRIB
 esempio_regrib_SOURCES = esempio_regrib.f90
