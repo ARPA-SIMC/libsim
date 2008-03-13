@@ -23,7 +23,7 @@ INTEGER, PARAMETER :: dateint=SELECTED_INT_KIND(13)
 !> Classe che indica un istante temporale assoluto.
 TYPE datetime
   PRIVATE
-  INTEGER :: iminuti
+  INTEGER(KIND=int_ll) :: iminuti
 END TYPE  datetime
 
 !> Classe che indica un intervallo temporale relativo.
@@ -35,7 +35,8 @@ END TYPE  datetime
 !! oggetti di questa classe sono limitate.
 TYPE timedelta
   PRIVATE
-  INTEGER :: iminuti, month
+  INTEGER(KIND=int_ll) :: iminuti
+  INTEGER :: month
 END TYPE timedelta
 
 !> valore mancante per datetime
@@ -59,10 +60,13 @@ INTEGER,PARAMETER :: &
  d4=d1*4+1, & ! giorni/4 anni nel calendario gregoriano
  d100=d1*100+25-1, & ! giorni/100 anni nel calendario gregoriano
  d400=d1*400+100-3, & ! giorni/400 anni nel calendario gregoriano
- unmim=1035593280, & ! differenza tra 01/01/1970 e 01/01/0001 (per unixtime)
+ unmin=1035593280, & ! differenza tra 01/01/1970 e 01/01/0001 (min, per unixtime)
  ianno(13,2)=RESHAPE((/ &
  0,31,59,90,120,151,181,212,243,273,304,334,365, &
  0,31,60,91,121,152,182,213,244,274,305,335,366/),(/13,2/))
+
+INTEGER(KIND=int_ll),PARAMETER :: &
+ unsec=62135596800 ! differenza tra 01/01/1970 e 01/01/0001 (sec, per unixtime)
 
 PRIVATE
 PUBLIC datetime, datetime_miss, init, delete, getval, &
@@ -226,20 +230,21 @@ CONTAINS
 ! ==============
 !> Costruisce un oggetto \a datetime con i parametri opzionali forniti.
 !! Se non viene passato nulla lo inizializza a 1/1/1.
-SUBROUTINE datetime_init(this, year, month, day, hour, minute, &
+SUBROUTINE datetime_init(this, year, month, day, hour, minute, msec, &
  unixtime, isodate, oraclesimdate, iminuti)
 TYPE(datetime),INTENT(INOUT) :: this !< oggetto da inizializzare
 INTEGER,INTENT(IN),OPTIONAL :: year !< anno d.C., se è specificato, tutti gli eventuali parametri tranne \a month, \a day, \a hour e \a minute sono ignorati; per un problema non risolto, sono ammessi solo anni >0 (d.C.)
-INTEGER,INTENT(IN),OPTIONAL :: month !< mese, default=1 se è specificato year; può assumere anche valori <1 o >12, l'oggetto finale si aggiusta coerentemente
-INTEGER,INTENT(IN),OPTIONAL :: day !< mese, default=1 se è specificato year; può anch'esso assumere valori fuori dai limiti canonici
-INTEGER,INTENT(IN),OPTIONAL :: hour !< ore, default=0 se è specificato year; può anch'esso assumere valori fuori dai limiti canonici
-INTEGER,INTENT(IN),OPTIONAL :: minute !< minuti, default=0 se è specificato year; può anch'esso assumere valori fuori dai limiti canonici
+INTEGER,INTENT(IN),OPTIONAL :: month !< mese, default=1 se è specificato \a year; può assumere anche valori <1 o >12, l'oggetto finale si aggiusta coerentemente
+INTEGER,INTENT(IN),OPTIONAL :: day !< mese, default=1 se è specificato \a year; può anch'esso assumere valori fuori dai limiti canonici
+INTEGER,INTENT(IN),OPTIONAL :: hour !< ore, default=0 se è specificato \a year; può anch'esso assumere valori fuori dai limiti canonici
+INTEGER,INTENT(IN),OPTIONAL :: minute !< minuti, default=0 se è specificato \a year; può anch'esso assumere valori fuori dai limiti canonici
+INTEGER,INTENT(IN),OPTIONAL :: msec !< millisecondi, default=0 se è specificato \a year; può anch'esso assumere valori fuori dai limiti canonici
 INTEGER(kind=int_ll),INTENT(IN),OPTIONAL :: unixtime !< inizializza l'oggetto a \a unixtime secondi dopo il 1/1/1970 (convenzione UNIX, notare che il parametro deve essere un intero a 8 byte), se è presente tutto il resto è ignorato
 CHARACTER(len=*),INTENT(IN),OPTIONAL :: isodate !< inizializza l'oggetto ad una data espressa nel formato \c AAAA-MM-GG \c hh:mm, un sottoinsieme del formato noto come \a ISO
 CHARACTER(len=12),INTENT(IN),OPTIONAL :: oraclesimdate !< inizializza l'oggetto ad una data espressa nel formato \c AAAAMMGGhhmm, come nelle routine per l'accesso al db Oracle del SIM.
-INTEGER,INTENT(IN),OPTIONAL :: iminuti !< non usare, a solo uso interno
+INTEGER(kind=int_ll),INTENT(IN),OPTIONAL :: iminuti !< non usare, a solo uso interno
 
-INTEGER :: lyear, lmonth, lday, lhour, lminute, ier
+INTEGER :: lyear, lmonth, lday, lhour, lminute, lsec, lmsec, ier
 
 IF (PRESENT(iminuti)) THEN ! minuti dal 01/01/0001 (libmega)
   this%iminuti = iminuti
@@ -265,16 +270,34 @@ ELSE IF (PRESENT(year)) THEN ! anno/mese/giorno, ecc.
   ELSE
     lminute = 0
   ENDIF
-  CALL jeladata5(lday, lmonth, lyear, lhour, lminute, this%iminuti)
-ELSE IF (PRESENT(isodate)) THEN ! formato iso YYYY-MM-DD hh:mm
-  READ(isodate,'(I4,1X,I2,1X,I2,1X,I2,1X,I2)', iostat=ier) &
-   lyear, lmonth, lday, lhour, lminute
-  IF (ier /= 0) THEN
-    CALL delete(this)
-    CALL raise_error('isodate '//TRIM(isodate)//' non valida')
-    RETURN
+  IF (PRESENT(msec)) THEN
+    lmsec = msec
+  ELSE
+    lmsec = 0
   ENDIF
-  CALL jeladata5(lday,lmonth,lyear,lhour,lminute,this%iminuti)
+  CALL jeladata5_1(lday, lmonth, lyear, lhour, lminute, lmsec, this%iminuti)
+ELSE IF (PRESENT(isodate)) THEN ! formato iso YYYY-MM-DD hh:mm:ss.msc
+  lhour = 0
+  lminute = 0
+  lmsec = 0
+  READ(isodate,'(I4,1X,I2,1X,I2)', err=100) lyear, lmonth, lday
+  IF (LEN_TRIM(isodate) >= 16) THEN
+    READ(isodate,'(11X,I2,1X,I2)', err=100) lhour, lminute
+    IF (LEN_TRIM(isodate) >= 19) THEN
+      READ(isodate,'(17X,I2)', err=100) lsec
+      IF (LEN_TRIM(isodate) >= 23) THEN
+        READ(isodate,'(20X,I3)', err=100) lmsec
+      ENDIF
+      lmsec = lmsec + lsec*1000
+    ENDIF
+  ENDIF
+  CALL jeladata5_1(lday, lmonth, lyear, lhour, lminute, lmsec, this%iminuti)
+  RETURN
+100 CONTINUE ! condizione di errore in isodate
+  CALL delete(this)
+  CALL raise_error('isodate '//TRIM(isodate)//' non valida')
+  RETURN
+  CALL jeladata5_1(lday,lmonth,lyear,lhour,lminute,0,this%iminuti)
 ELSE IF (PRESENT(oraclesimdate)) THEN ! formato YYYYMMDDhhmm
   READ(oraclesimdate,'(I4,4I2)', iostat=ier) lyear, lmonth, lday, lhour, lminute
   IF (ier /= 0) THEN
@@ -282,9 +305,9 @@ ELSE IF (PRESENT(oraclesimdate)) THEN ! formato YYYYMMDDhhmm
     CALL raise_error('oraclesimdate '//TRIM(oraclesimdate)//' non valida')
     RETURN
   ENDIF
-  CALL jeladata5(lday,lmonth,lyear,lhour,lminute,this%iminuti)
+  CALL jeladata5_1(lday,lmonth,lyear,lhour,lminute,0,this%iminuti)
 ELSE IF (PRESENT(unixtime)) THEN ! secondi dal 01/01/1970 (unix)
-  this%iminuti = unixtime/60_int_ll + unmim
+  this%iminuti = (unixtime + unsec)*1000
 ELSE
   this%iminuti = 0
 ENDIF
@@ -302,7 +325,7 @@ END SUBROUTINE datetime_delete
 !> Restituisce il valore di un oggetto \a datetime in una o più
 !! modalità desiderate. Qualsiasi combinazione dei parametri
 !! opzionali è consentita.
-SUBROUTINE datetime_getval(this, year, month, day, hour, minute, &
+SUBROUTINE datetime_getval(this, year, month, day, hour, minute, msec, &
  unixtime, isodate, oraclesimdate, iminuti)
 TYPE(datetime),INTENT(IN) :: this !< oggetto di cui restituire il valore
 INTEGER,INTENT(OUT),OPTIONAL :: year !< anno
@@ -310,20 +333,24 @@ INTEGER,INTENT(OUT),OPTIONAL :: month !< mese
 INTEGER,INTENT(OUT),OPTIONAL :: day !< giorno
 INTEGER,INTENT(OUT),OPTIONAL :: hour !< ore
 INTEGER,INTENT(OUT),OPTIONAL :: minute !< minuti
+INTEGER,INTENT(OUT),OPTIONAL :: msec !< millisecondi
 INTEGER(kind=int_ll),INTENT(OUT),OPTIONAL :: unixtime !< secondi a partire dal 1/1/1970
-CHARACTER(len=16),INTENT(OUT),OPTIONAL :: isodate !< data completa nel formato \c AAAA-MM-GG \c hh:mm
+CHARACTER(len=*),INTENT(OUT),OPTIONAL :: isodate !< data completa nel formato \c AAAA-MM-GG \c hh:mm:ss.msc
 CHARACTER(len=12),INTENT(OUT),OPTIONAL :: oraclesimdate !< data completa nel formato \c AAAAMMGGhhmm
-INTEGER,INTENT(OUT),OPTIONAL :: iminuti !< non usare, a solo uso interno
+INTEGER(kind=int_ll),INTENT(OUT),OPTIONAL :: iminuti !< non usare, a solo uso interno
 
-INTEGER :: lyear, lmonth, lday, lhour, lminute, ier
+INTEGER :: lyear, lmonth, lday, lhour, lminute, lmsec, ier
 
 IF (PRESENT(iminuti)) THEN
   iminuti = this%iminuti
 ENDIF
 IF (PRESENT(year) .OR. PRESENT(month) .OR. PRESENT(day) .OR. PRESENT(hour) &
- .OR. PRESENT(minute) .OR. PRESENT(unixtime) .OR. PRESENT(isodate) &
- .OR. PRESENT(oraclesimdate)) THEN
-  CALL jeladata6(lday, lmonth, lyear, lhour, lminute, this%iminuti)
+ .OR. PRESENT(minute) .OR. PRESENT(msec) .OR. PRESENT(unixtime) &
+ .OR. PRESENT(isodate) .OR. PRESENT(oraclesimdate)) THEN
+  CALL jeladata6_1(lday, lmonth, lyear, lhour, lminute, lmsec, this%iminuti)
+  IF (PRESENT(msec)) THEN 
+    msec = lmsec
+  ENDIF
   IF (PRESENT(minute)) THEN 
     minute = lminute
   ENDIF
@@ -340,14 +367,23 @@ IF (PRESENT(year) .OR. PRESENT(month) .OR. PRESENT(day) .OR. PRESENT(hour) &
     year = lyear
   ENDIF
   IF (PRESENT(isodate)) THEN
-    WRITE(isodate, '(I4.4,A1,I2.2,A1,I2.2,1X,I2.2,A1,I2.2)') &
-     lyear, '-', lmonth, '-', lday, lhour, ':', lminute
+    IF (LEN(isodate) <= 16) THEN
+      WRITE(isodate, '(I4.4,A1,I2.2,A1,I2.2,1X,I2.2,A1,I2.2)') &
+       lyear, '-', lmonth, '-', lday, lhour, ':', lminute
+    ELSE IF(LEN(isodate) <= 19) THEN
+      WRITE(isodate, '(I4.4,A1,I2.2,A1,I2.2,1X,I2.2,A1,I2.2,A1,I2.2)') &
+       lyear, '-', lmonth, '-', lday, lhour, ':', lminute, ':', lmsec/60
+    ELSE
+      WRITE(isodate, '(I4.4,A1,I2.2,A1,I2.2,1X,I2.2,A1,I2.2,A1,I2.2,A1,I3.3)') &
+       lyear, '-', lmonth, '-', lday, lhour, ':', lminute, ':', lmsec/1000, &
+       '.', MOD(lmsec, 1000)
+    ENDIF
   ENDIF
   IF (PRESENT(oraclesimdate)) THEN
     WRITE(oraclesimdate, '(I4.4,4I2.2)') lyear, lmonth, lday, lhour, lminute
   ENDIF
   IF (PRESENT(unixtime)) THEN
-    unixtime = (this%iminuti-unmim)*60_int_ll
+    unixtime = this%iminuti/1000_int_ll-unsec
   ENDIF
 ENDIF
 
@@ -503,7 +539,7 @@ TYPE(datetime),INTENT(IN) :: this
 TYPE(timedelta),INTENT(IN) :: that
 TYPE(datetime) :: res
 
-INTEGER :: lyear, lmonth, lday, lhour, lminute
+INTEGER :: lyear, lmonth, lday, lhour, lminute, lmsec
 
 IF (this == datetime_miss .OR. that == timedelta_miss) THEN
   CALL delete(res)
@@ -513,8 +549,9 @@ ELSE
   ELSE
     CALL init(res, iminuti=this%iminuti+that%iminuti)
     CALL getval(res, year=lyear, month=lmonth, day=lday, hour=lhour, &
-     minute=lminute)
-    CALL init(res, year=lyear, month=lmonth+that%month, day=lday, hour=lhour, minute=lminute)
+     minute=lminute, msec=lmsec)
+    CALL init(res, year=lyear, month=lmonth+that%month, day=lday, &
+     hour=lhour, minute=lminute, msec=lmsec)
   ENDIF
 ENDIF
 
@@ -528,7 +565,7 @@ TYPE(timedelta) :: res
 IF (this == datetime_miss .OR. that == datetime_miss) THEN
   CALL delete(res)
 ELSE
-  CALL init(res, minute=this%iminuti-that%iminuti)
+  CALL init(res, iminuti=this%iminuti-that%iminuti)
 ENDIF
 
 END FUNCTION datetime_subdt
@@ -539,7 +576,7 @@ TYPE(datetime),INTENT(IN) :: this
 TYPE(timedelta),INTENT(IN) :: that
 TYPE(datetime) :: res
 
-INTEGER :: lyear, lmonth, lday, lhour, lminute
+INTEGER :: lyear, lmonth, lday, lhour, lminute, lmsec
 
 IF (this == datetime_miss .OR. that == timedelta_miss) THEN
   CALL delete(res)
@@ -549,8 +586,9 @@ ELSE
   ELSE
     CALL init(res, iminuti=this%iminuti-that%iminuti)
     CALL getval(res, year=lyear, month=lmonth, day=lday, hour=lhour, &
-     minute=lminute)
-    CALL init(res, year=lyear, month=lmonth-that%month, day=lday, hour=lhour, minute=lminute)
+     minute=lminute, msec=lmsec)
+    CALL init(res, year=lyear, month=lmonth-that%month, day=lday, &
+     hour=lhour, minute=lminute, msec=lmsec)
   ENDIF
 ENDIF
 
@@ -581,13 +619,13 @@ TYPE(datetime) :: this(:) !< oggetto da leggere
 INTEGER, INTENT(in) :: unit !< unità da cui leggere
 
 CHARACTER(len=40) :: form
-CHARACTER(len=16), ALLOCATABLE :: dateiso(:)
+CHARACTER(len=23), ALLOCATABLE :: dateiso(:)
 INTEGER :: i
 
 ALLOCATE(dateiso(SIZE(this)))
 INQUIRE(unit, form=form)
 IF (form == 'FORMATTED') THEN
-  READ(unit,'(4(A16,1X))')dateiso
+  READ(unit,'(3(A23,1X))')dateiso
 ELSE
   READ(unit)dateiso
 ENDIF
@@ -630,7 +668,7 @@ DO i = 1, SIZE(dateiso)
 ENDDO
 INQUIRE(unit, form=form)
 IF (form == 'FORMATTED') THEN
-  WRITE(unit,'(4(A16,1X))')dateiso
+  WRITE(unit,'(3(A23,1X))')dateiso
 ELSE
   WRITE(unit)dateiso
 ENDIF
@@ -646,28 +684,36 @@ END SUBROUTINE datetime_vect_write_unit
 !! Se non viene passato nulla lo inizializza a intervallo di durata nulla.
 !! L'intervallo ottenuto è pari alla somma dei valori di tutti i parametri
 !! forniti, ovviamente non fornire un parametro equivale a fornirlo =0.
-SUBROUTINE timedelta_init(this, year, month, day, hour, minute, isodate, oraclesimdate)
+SUBROUTINE timedelta_init(this, year, month, day, hour, minute, msec, iminuti, &
+ isodate, oraclesimdate)
 TYPE(timedelta),INTENT(INOUT) :: this !< oggetto da inizializzare
 INTEGER,INTENT(IN),OPTIONAL :: year !< anni, se presente l'oggetto diventa "popolare"
 INTEGER,INTENT(IN),OPTIONAL :: month !< mesi, se presente l'oggetto diventa "popolare"
 INTEGER,INTENT(IN),OPTIONAL :: day !< giorni
 INTEGER,INTENT(IN),OPTIONAL :: hour !< ore
 INTEGER,INTENT(IN),OPTIONAL :: minute !< minuti
-CHARACTER(len=*),INTENT(IN),OPTIONAL :: isodate !< inizializza l'oggetto ad un intervallo nel formato \c GGGGGGGGGG \c hh:mm, ignorando tutti gli altri parametri
+INTEGER,INTENT(IN),OPTIONAL :: msec !< millisecondi
+INTEGER(kind=int_ll),INTENT(IN),OPTIONAL :: iminuti !< non usare, a solo uso interno
+CHARACTER(len=*),INTENT(IN),OPTIONAL :: isodate !< inizializza l'oggetto ad un intervallo nel formato \c GGGGGGGGGG \c hh:mm:ss.msc, ignorando tutti gli altri parametri
 CHARACTER(len=12),INTENT(IN),OPTIONAL :: oraclesimdate !< inizializza l'oggetto ad un intervallo nel formato \c GGGGGGGGhhmm, ignorando tutti gli altri parametri
 
 
-INTEGER :: d, h, m
+INTEGER :: d, h, m, s, ms
 
-IF (PRESENT(isodate)) THEN
-  READ(isodate, '(I10,1X,I2,1X,I2)')d, h, m
-  this%iminuti = 1440*d + 60*h + m
+this%month = 0
+IF (PRESENT(iminuti)) THEN
+  this%iminuti = iminuti
+ELSE IF (PRESENT(isodate)) THEN
+  READ(isodate, '(I10,1X,I2,1X,I2,1X,I2,1X,I3)')d, h, m, s, ms
+  this%iminuti = 86400000_int_ll*INT(d, KIND=int_ll) + &
+   3600000_int_ll*INT(h, KIND=int_ll) + 60000_int_ll*INT(m, KIND=int_ll) + &
+   1000_int_ll*INT(s, KIND=int_ll) + INT(ms, KIND=int_ll)
 ELSE IF (PRESENT(oraclesimdate)) THEN
-  READ(isodate, '(I8,2I2)')d, h, m
-  this%iminuti = 1440*d + 60*h + m
+  READ(oraclesimdate, '(I8,2I2)')d, h, m
+  this%iminuti = 86400000_int_ll*INT(d, KIND=int_ll) + &
+   3600000_int_ll*INT(h, KIND=int_ll) + 60000_int_ll*INT(m, KIND=int_ll)
 ELSE
   this%iminuti = 0
-  this%month = 0
   IF (PRESENT(year)) THEN
     this%month = this%month + year*12
   ENDIF
@@ -675,13 +721,16 @@ ELSE
     this%month = this%month + month
   ENDIF
   IF (PRESENT(day)) THEN
-    this%iminuti = this%iminuti + 1440*day
+    this%iminuti = this%iminuti + 86400000_int_ll*INT(day, KIND=int_ll)
   ENDIF
   IF (PRESENT(hour)) THEN
-    this%iminuti = this%iminuti + 60*hour
+    this%iminuti = this%iminuti + 3600000_int_ll*INT(hour, KIND=int_ll)
   ENDIF
   IF (PRESENT(minute)) THEN
-    this%iminuti = this%iminuti + minute
+    this%iminuti = this%iminuti + 60000_int_ll*INT(minute, KIND=int_ll)
+  ENDIF
+  IF (PRESENT(msec)) THEN
+    this%iminuti = this%iminuti + msec
   ENDIF
 ENDIF
 
@@ -700,8 +749,8 @@ END SUBROUTINE timedelta_delete
 !> Restituisce il valore di un oggetto \a timedelta in una o più
 !! modalità desiderate. Qualsiasi combinazione dei parametri
 !! opzionali è consentita.
-SUBROUTINE timedelta_getval(this, year, month, amonth, day, hour, minute, &
- ahour, aminute, isodate, oraclesimdate)
+SUBROUTINE timedelta_getval(this, year, month, amonth, day, hour, minute, msec, &
+ ahour, aminute, amsec, iminuti, isodate, oraclesimdate)
 TYPE(timedelta),INTENT(IN) :: this !< oggetto di cui restituire il valore
 INTEGER,INTENT(OUT),OPTIONAL :: year !< anni, /=0 solo per intervalli "popolari"
 INTEGER,INTENT(OUT),OPTIONAL :: month !< mesi modulo 12, /=0 solo per intervalli "popolari"
@@ -709,27 +758,39 @@ INTEGER,INTENT(OUT),OPTIONAL :: amonth !< mesi totali, /=0 solo per intervalli "
 INTEGER,INTENT(OUT),OPTIONAL :: day !< giorni totali
 INTEGER,INTENT(OUT),OPTIONAL :: hour !< ore modulo 24
 INTEGER,INTENT(OUT),OPTIONAL :: minute !< minuti modulo 60
+INTEGER,INTENT(OUT),OPTIONAL :: msec !< millisecondi modulo 1000
 INTEGER,INTENT(OUT),OPTIONAL :: ahour !< ore totali
 INTEGER,INTENT(OUT),OPTIONAL :: aminute !< minuti totali
-CHARACTER(len=16),INTENT(OUT),OPTIONAL :: isodate !< intervallo totale nel formato \c GGGGGGGGGG \c hh:mm
+INTEGER,INTENT(OUT),OPTIONAL :: amsec !< millisecondi totali
+INTEGER(kind=int_ll),INTENT(OUT),OPTIONAL :: iminuti !< non usare, a solo uso interno
+CHARACTER(len=*),INTENT(OUT),OPTIONAL :: isodate !< intervallo totale nel formato \c GGGGGGGGGG \c hh:mm:ss.msc
 CHARACTER(len=12),INTENT(OUT),OPTIONAL :: oraclesimdate !< intervallo totale nel formato \c GGGGGGGGhhmm
 
 INTEGER :: lyear, lmonth, lday, lhour, lminute, ier
 
+IF (PRESENT(iminuti)) THEN 
+  iminuti = this%iminuti
+ENDIF
+IF (PRESENT(amsec)) THEN 
+  amsec = this%iminuti
+ENDIF
 IF (PRESENT(aminute)) THEN 
-  aminute = this%iminuti
+  aminute = this%iminuti/60000_int_ll
 ENDIF
 IF (PRESENT(ahour)) THEN
-  ahour = this%iminuti/60
+  ahour = this%iminuti/3600000_int_ll
+ENDIF
+IF (PRESENT(msec)) THEN 
+  msec = MOD(this%iminuti, 60000)
 ENDIF
 IF (PRESENT(minute)) THEN 
-  minute = MOD(this%iminuti,60)
+  minute = MOD(this%iminuti/60000_int_ll, 60)
 ENDIF
 IF (PRESENT(hour)) THEN
-  hour = MOD(this%iminuti,1440)/60
+  hour = MOD(this%iminuti/3600000_int_ll, 24)
 ENDIF
 IF (PRESENT(day)) THEN
-  day = this%iminuti/1440
+  day = this%iminuti/86400000_int_ll
 ENDIF
 IF (PRESENT(amonth)) THEN
   amonth = this%month
@@ -741,12 +802,14 @@ IF (PRESENT(year)) THEN
   year = this%month/12
 ENDIF
 IF (PRESENT(isodate)) THEN ! Non standard, inventato!
-  WRITE(isodate, '(I10.10,1X,I2.2,A1,I2.2)') this%iminuti/1440, &
-   MOD(this%iminuti,1440)/60, ':', MOD(this%iminuti,60)
+  WRITE(isodate, '(I10.10,1X,I2.2,A1,I2.2,A1,I2.2,A1,I3.3)') &
+   this%iminuti/86400000_int_ll, MOD(this%iminuti/3600000_int_ll, 24), ':', &
+   MOD(this%iminuti/60000_int_ll, 60), ':', MOD(this%iminuti/1000_int_ll, 60), &
+   '.', MOD(this%iminuti, 1000)
 ENDIF
 IF (PRESENT(oraclesimdate)) THEN
-  WRITE(oraclesimdate, '(I8.8,2I2.2)') this%iminuti/1440, &
-   MOD(this%iminuti,1440)/60, MOD(this%iminuti,60)
+  WRITE(oraclesimdate, '(I8.8,2I2.2)') this%iminuti/86400000_int_ll, &
+   MOD(this%iminuti/3600000_int_ll, 24), MOD(this%iminuti/60000_int_ll, 60)
 ENDIF
 
 END SUBROUTINE timedelta_getval
@@ -900,7 +963,7 @@ FUNCTION timedelta_add(this, that) RESULT(res)
 TYPE(timedelta),INTENT(IN) :: this, that
 TYPE(timedelta) :: res
 
-CALL init(res, minute=this%iminuti+that%iminuti, month=this%month+that%month)
+CALL init(res, iminuti=this%iminuti+that%iminuti, month=this%month+that%month)
 
 END FUNCTION timedelta_add
 
@@ -909,7 +972,7 @@ FUNCTION timedelta_sub(this, that) RESULT(res)
 TYPE(timedelta),INTENT(IN) :: this, that
 TYPE(timedelta) :: res
 
-CALL init(res, minute=this%iminuti-that%iminuti, month=this%month-that%month)
+CALL init(res, iminuti=this%iminuti-that%iminuti, month=this%month-that%month)
 
 END FUNCTION timedelta_sub
 
@@ -919,7 +982,7 @@ TYPE(timedelta),INTENT(IN) :: this
 INTEGER,INTENT(IN) :: n
 TYPE(timedelta) :: res
 
-CALL init(res, minute=this%iminuti*n, month=this%month*n)
+CALL init(res, iminuti=this%iminuti*n, month=this%month*n)
 
 END FUNCTION timedelta_mult
 
@@ -929,7 +992,7 @@ INTEGER,INTENT(IN) :: n
 TYPE(timedelta),INTENT(IN) :: this
 TYPE(timedelta) :: res
 
-CALL init(res, minute=this%iminuti*n, month=this%month*n)
+CALL init(res, iminuti=this%iminuti*n, month=this%month*n)
 
 END FUNCTION timedelta_tlum
 
@@ -939,7 +1002,7 @@ TYPE(timedelta),INTENT(IN) :: this
 INTEGER,INTENT(IN) :: n
 TYPE(timedelta) :: res
 
-CALL init(res, minute=this%iminuti/n, month=this%month/n)
+CALL init(res, iminuti=this%iminuti/n, month=this%month/n)
 
 END FUNCTION timedelta_divint
 
@@ -957,7 +1020,7 @@ FUNCTION timedelta_mod(this, that) RESULT(res)
 TYPE(timedelta),INTENT(IN) :: this, that
 TYPE(timedelta) :: res
 
-CALL init(res, minute=MOD(this%iminuti, that%iminuti))
+CALL init(res, iminuti=MOD(this%iminuti, that%iminuti))
 
 END FUNCTION timedelta_mod
 
@@ -970,7 +1033,7 @@ TYPE(timedelta) :: res
 IF (that%iminuti == 0) THEN ! Controllo nel cso di intervalli "umani"
   res = timedelta_0
 ELSE
-  CALL init(res, minute=MOD(this%iminuti, that%iminuti))
+  CALL init(res, iminuti=MOD(this%iminuti, that%iminuti))
 ENDIF
 
 END FUNCTION datetime_timedelta_mod
@@ -1000,13 +1063,13 @@ TYPE(timedelta) :: this(:) !< oggetto da leggere
 INTEGER, INTENT(in) :: unit !< unità da cui leggere
 
 CHARACTER(len=40) :: form
-CHARACTER(len=16), ALLOCATABLE :: dateiso(:)
+CHARACTER(len=23), ALLOCATABLE :: dateiso(:)
 INTEGER :: i
 
 ALLOCATE(dateiso(SIZE(this)))
 INQUIRE(unit, form=form)
 IF (form == 'FORMATTED') THEN
-  READ(unit,'(4(A16,1X))')dateiso
+  READ(unit,'(3(A23,1X))')dateiso
 ELSE
   READ(unit)dateiso
 ENDIF
@@ -1040,7 +1103,7 @@ TYPE(timedelta),INTENT(in) :: this(:) !< oggetto da scrivere
 INTEGER, INTENT(in) :: unit !< unità su cui scrivere
 
 CHARACTER(len=40) :: form
-CHARACTER(len=16), ALLOCATABLE :: dateiso(:)
+CHARACTER(len=23), ALLOCATABLE :: dateiso(:)
 INTEGER :: i
 
 ALLOCATE(dateiso(SIZE(this)))
@@ -1049,7 +1112,7 @@ DO i = 1, SIZE(dateiso)
 ENDDO
 INQUIRE(unit, form=form)
 IF (form == 'FORMATTED') THEN
-  WRITE(unit,'(4(A16,1X))')dateiso
+  WRITE(unit,'(3(A23,1X))')dateiso
 ELSE
   WRITE(unit)dateiso
 ENDIF
@@ -1082,27 +1145,12 @@ iminuti = ndays(iday,imonth,iyear)*1440+(ihour*60)+imin
 END SUBROUTINE jeladata5
 
 
-SUBROUTINE jeladata5_1(iday,imonth,iyear,ihour,imin,imillisec)
-
-!!omstart JELADATA5
-!     SUBROUTINE JELADATA5(IDAY,IMONTH,IYEAR,IHOUR,IMIN,
-!     1                 IMINUTI)
-!
-!     Calcola i minuti trascorsi tra il 1/1/1 e la data fornita
-!
-!     variabili integer*4
-!     IN:
-!     IDAY,IMONTH,IYEAR,  I*4
-!     IHOUR,IMIN                GIORNO MESE ANNO ORE MINUTI
-!
-!     OUT:
-!     IMINUTI           I*4     MINUTI AD INIZIARE DALLE ORE 00 DEL 1/1/1
-!!OMEND
-
-INTEGER :: iday, imonth, iyear, ihour, imin
+SUBROUTINE jeladata5_1(iday,imonth,iyear,ihour,imin,imsec,imillisec)
+INTEGER :: iday, imonth, iyear, ihour, imin, imsec
 INTEGER(KIND=int_ll) :: imillisec
 
-imillisec = INT(ndays(iday,imonth,iyear)*1440+(ihour*60)+imin, KIND=int_ll)*60000
+imillisec = INT(ndays(iday,imonth,iyear)*1440+(ihour*60)+imin, KIND=int_ll)*60000 &
+ + imsec
 
 END SUBROUTINE jeladata5_1
 
@@ -1161,6 +1209,24 @@ IF (MOD(iminuti,1440) < 0) igiorno = igiorno-1
 CALL ndyin(igiorno,iday,imonth,iyear)
 
 END SUBROUTINE jeladata6
+
+
+SUBROUTINE jeladata6_1(iday, imonth, iyear, ihour, imin, imsec, imillisec)
+INTEGER(KIND=int_ll), INTENT(IN) :: imillisec
+INTEGER, INTENT(OUT) :: iday, imonth, iyear, ihour, imin, imsec
+
+INTEGER :: igiorno
+
+imsec = MOD(imillisec, 60000_int_ll) ! partial msec
+!imin = MOD(imillisec/60000_int_ll, 60)
+!ihour = MOD(imillisec/3600000_int_ll, 24)
+imin = MOD(imillisec, 3600000_int_ll)/60000_int_ll
+ihour = MOD(imillisec, 86400000_int_ll)/3600000_int_ll
+igiorno = imillisec/86400000_int_ll
+!IF (MOD(imillisec,1440) < 0) igiorno = igiorno-1 !?!?!?
+CALL ndyin(igiorno,iday,imonth,iyear)
+
+END SUBROUTINE jeladata6_1
 
 
 SUBROUTINE ndyin(ndays,igg,imm,iaa)
