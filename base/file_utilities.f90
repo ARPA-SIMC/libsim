@@ -1,8 +1,15 @@
 !> \brief Utilità per i file.
 !!
 !! Questo modulo raccoglie utilità di uso generale legate alla gestione dei file.
+!! Un primo gruppo di utilità gestisce la localizzazioen e l'apertura di file di
+!! configurazione in directory standard o specificate da una variabile d'ambiente.
+!! Esso definisce inoltre la classe \a csv_record ed una serie di metodi associati
+!! che permette di interpretare i record di un file formato csv.
 !! \ingroup base
 MODULE file_utilities
+USE kinds
+USE char_utilities
+USE missing_values
 USE err_handling
 IMPLICIT NONE
 
@@ -19,6 +26,38 @@ INTEGER, PARAMETER :: filetype_config = 2 !< Il file richiesto è un file di conf
 
 CHARACTER(len=20) :: program_name='libsim', program_name_env='LIBSIM'
 
+!> Classe che permette di interpretare i record di un file formato csv.
+TYPE csv_record
+  PRIVATE
+  INTEGER :: cursor !, nfield, ntotal
+!  CHARACTER(LEN=1) :: csep, cquote
+  INTEGER(KIND=int_b) :: csep, cquote
+  INTEGER(KIND=int_b), POINTER :: record(:)
+END TYPE csv_record
+
+!> Costruttore per la classe \a csv_record. Deve essere richiamato
+!! per ogni record (riga) csv da interpretare.
+INTERFACE init
+  MODULE PROCEDURE csv_record_init
+END INTERFACE
+
+!> Distruttore per la classe \a csv_record. È importante richiamarlo prima
+!! di riutilizzare l'oggetto per un record successivo altrimenti si
+!! perde memoria allocata.
+INTERFACE delete
+  MODULE PROCEDURE csv_record_delete
+END INTERFACE
+
+!> Metodi per ottenere successivamente i campi di un oggetto \a csv_record.
+!! Usare il nome generico \c csv_record_getfield con i parametri opportuni,
+!! ci penserà il compiltore a scegliere il metodo giusto.
+INTERFACE csv_record_getfield
+  MODULE PROCEDURE csv_record_getfield_char, csv_record_getfield_int, &
+   csv_record_getfield_real
+END INTERFACE
+
+PRIVATE csv_record_init, csv_record_delete, csv_record_getfield_char, &
+ csv_record_getfield_int, csv_record_getfield_real
 
 CONTAINS
 
@@ -215,40 +254,227 @@ vdelim(j) = LEN_TRIM(line) + 1
 
 END FUNCTION delim_csv
 
+!> Inizializza un oggetto \a csv_record con il record fornito in ingresso.
+!! È possibile specificare opzionalmente i caratteri da usare come
+!! delimitatore e come raggruppatore di campo, ed è possibile ottenere
+!! in uscita il numero di campi presenti. È in generale sconsigliato richiedere
+!! esplicitamente il numero di campi se non necessario, perché richiede una
+!! quantità aggiuntiva di calcoli, si consiglia di usare il metodo ::csv_record_end.!! Attenzione, la classe \a csv_record non gestisce i record csv che si estendono
+!! su più righe.
+SUBROUTINE csv_record_init(this, record, csep, cquote, nfield)
+TYPE(csv_record),INTENT(INOUT) :: this !< oggetto da inizializzare
+CHARACTER(LEN=*),INTENT(IN) :: record !< record csv da interpretare
+CHARACTER(LEN=1),INTENT(IN),OPTIONAL :: csep !< carattere separatore di campo, default \c , (virgola)
+CHARACTER(LEN=1),INTENT(IN),OPTIONAL :: cquote !< carattere raggruppatore di campo, default \c " (doppio apice); è usato tipicamente quando un campo contiene virgole o spazi iniali o finali
+INTEGER,INTENT(OUT),OPTIONAL :: nfield !< numero di campi contenuti nel record
 
-FUNCTION delim_csv_q(line, vdelim, cdelim, cquot) RESULT(status)
-CHARACTER(len=*),INTENT(in) :: line !< riga in formato csv da interpretare
-INTEGER,INTENT(out) :: vdelim(:) !< vettore degli indici dei separatori trovati in \a line, per definizione vdelim(1)=0, vdelim(size(vdelim))=LEN_TRIM(line)+1, deve essere dimansionato al numero di campi previsti in \a line +1
-CHARACTER(len=1),INTENT(in),OPTIONAL :: cdelim !< carattere da interpretare come delimitatore di campi, default \c ','
-CHARACTER(len=1),INTENT(in),OPTIONAL :: cquot !< carattere da interpretare come delimitatore, default \c ','
-INTEGER :: status
+INTEGER :: l
 
-CHARACTER (len=1) :: cldelim
-INTEGER :: j
-
-IF (line(1:1) == '#') THEN ! Commento
-  status = -1
-  RETURN
-ENDIF
-IF (PRESENT(cdelim)) THEN
-  cldelim = cdelim
+IF (PRESENT(csep)) THEN
+  this%csep = TRANSFER(csep, this%csep)
 ELSE
-  cldelim = ','
+  this%csep = TRANSFER(',', this%csep)
+ENDIF
+IF (PRESENT(cquote)) THEN
+  this%cquote = TRANSFER(cquote, this%cquote)
+ELSE
+  this%cquote = TRANSFER('"', this%cquote)
+ENDIF
+l = LEN_TRIM(record)
+ALLOCATE(this%record(l))
+this%record(:) = TRANSFER(record, this%record, l) ! ice in pgf90 with TRIM(record)
+this%cursor = 1
+
+IF (PRESENT(nfield)) THEN
+  nfield = 0
+  DO WHILE(.NOT.csv_record_end(this)) ! faccio un giro a vuoto sul record
+    nfield = nfield + 1
+    CALL csv_record_getfield(this)
+  ENDDO
+  this%cursor = 1 ! riazzero il cursore
 ENDIF
 
-vdelim(1) = 0
-DO j = 2, SIZE(vdelim)-1
-  vdelim(j) = INDEX(line(vdelim(j-1)+1:), cldelim) + vdelim(j-1)
-  IF (vdelim(j) == vdelim(j-1)) THEN ! N. di record insufficiente
-    vdelim(j+1:) = vdelim(j)
-    status = -2
-    RETURN
+END SUBROUTINE csv_record_init
+
+
+!> Distrugge l'oggetto \a csv_record, liberando la memoria allocata.
+SUBROUTINE csv_record_delete(this)
+TYPE(csv_record), INTENT(INOUT) :: this !< oggetto da distruggere
+
+DEALLOCATE(this%record)
+
+END SUBROUTINE csv_record_delete
+
+
+!> Restituisce il campo successivo del record \a this in formato \c CHARACTER.
+!! Fa avanzare il puntatore di campo, per cui non è più possibile tornare
+!! indietro.
+!! Se tutti i campi sono stati interpretati restituisce comunque una stringa
+!! nulla (cioè una stringa di spazi e una lunghezza zero), per verificare la
+!! fine del record usare il metodo ::csv_record_end .
+SUBROUTINE csv_record_getfield_char(this, field, flen, ier)
+TYPE(csv_record),INTENT(INOUT) :: this !< oggetto di cui restituire i campi
+CHARACTER(LEN=*),INTENT(OUT),OPTIONAL :: field !< contenuto del campo, se non è fornito si limita a far avanzare il puntatore di campo; se la variabile fornita non è lunga a sufficienza viene stampato un warning e viene assegnato solo il possibile;
+!< la stringa è comunque teminata da spazi, per cui è necessario usare il parametro \a flen per non perdere eventuali spazi significativi al termine del campo
+INTEGER,INTENT(OUT),OPTIONAL :: flen !< lunghezza effettiva del campo, è calcolata correttamente anche nei casi in cui \a field non è fornita o non è sufficientemente lungo a contenere il campo
+INTEGER,INTENT(OUT),OPTIONAL :: ier !< codice di errore, 0 = tutto bene, 1 = \a field troppo corta per contenere il campo (ha senso solo se \a field è fornito)
+
+LOGICAL :: inquote, inpre, inpost, firstquote
+INTEGER :: i, ocursor, ofcursor, lier
+
+IF (PRESENT(field)) field = ''
+IF (PRESENT(ier)) ier = 0
+lier = 0
+ocursor = 0
+ofcursor = 0
+inquote = .FALSE.
+inpre = .TRUE.
+inpost = .FALSE.
+firstquote = .FALSE.
+
+DO i = this%cursor, SIZE(this%record)
+  IF (inpre) THEN ! sono nel preludio, butto via gli spazi
+    IF (is_space(this%record(i))) THEN
+      CYCLE
+    ELSE
+      inpre = .FALSE.
+    ENDIF
+  ENDIF
+
+  IF (.NOT.inquote) THEN ! fuori da " "
+    IF (this%record(i) == this%cquote) THEN ! ": inizia " "
+      inquote = .TRUE.
+      CYCLE
+    ELSE IF (this%record(i) == this%csep) THEN ! ,: fine campo
+      EXIT
+    ELSE ! carattere normale, elimina "trailing blanks"
+      CALL add_char(this%record(i), .TRUE., field, ier)
+      CYCLE
+    ENDIF
+  ELSE ! dentro " "
+    IF (.NOT.firstquote) THEN ! il precedente non e` "
+      IF (this%record(i) == this%cquote) THEN ! ": fine " " oppure ""
+        firstquote = .TRUE.
+        CYCLE
+      ELSE ! carattere normale
+        CALL add_char(this%record(i), .FALSE., field, ier)
+        CYCLE
+      ENDIF
+    ELSE ! il precedente e` "
+      firstquote = .FALSE.
+      IF (this%record(i) == this%cquote) THEN ! ": sequenza ""
+        CALL add_char(this%cquote, .FALSE., field, ier)
+        CYCLE
+      ELSE ! carattere normale: e` terminata " "
+        inquote = .FALSE.
+        IF (this%record(i) == this%csep) THEN ! , fine campo
+          EXIT
+        ELSE ! carattere normale, elimina "trailing blanks"
+          CALL add_char(this%record(i), .TRUE., field, ier)
+          CYCLE
+        ENDIF
+      ENDIF
+    ENDIF
   ENDIF
 ENDDO
-status = 0
-vdelim(j) = LEN_TRIM(line) + 1
 
-END FUNCTION delim_csv_q
+this%cursor = MIN(i + 1, SIZE(this%record) + 1)
+IF (PRESENT(flen)) flen = ofcursor ! restituisco la lunghezza
+IF (PRESENT(field)) THEN ! controllo overflow di field
+  IF (ofcursor > LEN(field)) THEN
+    IF (PRESENT(ier)) ier = 1
+    CALL raise_warning('in csv_record_getfield, stringa troppo corta: '// &
+     TRIM(to_char(LEN(field)))//'/'//TRIM(to_char(ocursor)))
+  ENDIF
+ENDIF
+
+CONTAINS
+
+SUBROUTINE add_char(char, check_space, field, ier)
+INTEGER(kind=int_b) :: char
+LOGICAL,INTENT(IN) :: check_space
+CHARACTER(LEN=*),INTENT(OUT),OPTIONAL :: field
+INTEGER,INTENT(OUT),OPTIONAL :: ier
+
+ocursor = ocursor + 1
+IF (PRESENT(field)) THEN
+  IF (ocursor <= LEN(field)) THEN
+    field(ocursor:ocursor) = TRANSFER(char, field)
+  ENDIF
+ENDIF
+IF (check_space) THEN
+  IF (.NOT.is_space(char)) ofcursor = ocursor
+ELSE
+  ofcursor = ocursor
+ENDIF
+
+END SUBROUTINE add_char
+
+FUNCTION is_space(char)
+INTEGER(kind=int_b) :: char
+LOGICAL :: is_space
+
+is_space = (char == 32 .OR. char == 9) ! improve
+
+END FUNCTION is_space
+
+END SUBROUTINE csv_record_getfield_char
+
+
+!> Restituisce il campo successivo del record \a this in formato \c INTEGER.
+!! Fa avanzare il puntatore di campo, per cui non è più possibile tornare
+!! indietro.
+!! Se il campo non è adatto ad essere convertito in intero (compreso il caso di
+!! fine record), oppure se il campo è più lungo di 32 caratteri, viene restituito
+!! un valore mancante (vedi missing_values).
+SUBROUTINE csv_record_getfield_int(this, field, ier)
+TYPE(csv_record),INTENT(INOUT) :: this !< oggetto di cui restituire i campi
+INTEGER,INTENT(OUT) :: field !< valore del campo, = \a imiss se la conversione fallisce
+INTEGER,INTENT(OUT),OPTIONAL :: ier ! codice di errore, 0 = tutto bene, 1 = impossibile convertire il campo a numero intero
+
+CHARACTER(LEN=32) :: cfield
+INTEGER :: lier
+
+CALL csv_record_getfield(this, field=cfield, ier=lier)
+IF (lier == 0) READ(cfield, '(I32)', iostat=lier) field
+IF (lier /= 0) THEN
+  field = imiss
+  CALL raise_error('in csv_record_getfield_int, campo errato: '//TRIM(cfield))
+ENDIF
+IF (PRESENT(ier)) ier = lier
+
+END SUBROUTINE csv_record_getfield_int
+
+
+SUBROUTINE csv_record_getfield_real(this, field, ier)
+TYPE(csv_record),INTENT(INOUT) :: this
+REAL,INTENT(OUT) :: field
+INTEGER,INTENT(OUT),OPTIONAL :: ier
+
+CHARACTER(LEN=32) :: cfield
+INTEGER :: lier
+
+CALL csv_record_getfield(this, field=cfield, ier=lier)
+IF (lier == 0) READ(cfield, '(F32.0)', iostat=lier) field
+IF (lier /= 0) THEN
+  field = imiss
+  CALL raise_error('in csv_record_getfield_real, campo errato: '//TRIM(cfield))
+ENDIF
+IF (PRESENT(ier)) ier = lier
+
+END SUBROUTINE csv_record_getfield_real
+
+
+!> Informa se l'interpretazione del record è giunta al termine (\c .TRUE.)
+!! o se ci sono ancora dei campi da interpretare (\c .FALSE.).
+FUNCTION csv_record_end(this)
+TYPE(csv_record), INTENT(IN) :: this !< oggetto su cui operare
+LOGICAL :: csv_record_end
+
+csv_record_end = this%cursor > SIZE(this%record)
+
+END FUNCTION csv_record_end
+
 
 
 END MODULE file_utilities
