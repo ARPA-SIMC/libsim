@@ -65,8 +65,14 @@ INTEGER,PARAMETER :: &
  0,31,59,90,120,151,181,212,243,273,304,334,365, &
  0,31,60,91,121,152,182,213,244,274,305,335,366/),(/13,2/))
 
-INTEGER(KIND=int_ll),PARAMETER :: &
- unsec=62135596800 ! differenza tra 01/01/1970 e 01/01/0001 (sec, per unixtime)
+INTEGER(KIND=8),PARAMETER :: &
+
+! not compatible with gfortran
+! unsec=62135596800 ! differenza tra 01/01/1970 e 01/01/0001 (sec, per unixtime)
+
+ unsec=0 ! differenza tra 01/01/1970 e 01/01/0001 (sec, per unixtime)
+
+!
 
 PRIVATE
 PUBLIC datetime, datetime_miss, init, delete, getval, &
@@ -625,7 +631,7 @@ INTEGER :: i
 ALLOCATE(dateiso(SIZE(this)))
 INQUIRE(unit, form=form)
 IF (form == 'FORMATTED') THEN
-  READ(unit,'(3(A23,1X))')dateiso
+  READ(unit,'(A23,1X)')dateiso
 ELSE
   READ(unit)dateiso
 ENDIF
@@ -659,7 +665,7 @@ TYPE(datetime),INTENT(in) :: this(:) !< oggetto da scrivere
 INTEGER, INTENT(in) :: unit !< unità su cui scrivere
 
 CHARACTER(len=40) :: form
-CHARACTER(len=16), ALLOCATABLE :: dateiso(:)
+CHARACTER(len=23), ALLOCATABLE :: dateiso(:)
 INTEGER :: i
 
 ALLOCATE(dateiso(SIZE(this)))
@@ -668,7 +674,7 @@ DO i = 1, SIZE(dateiso)
 ENDDO
 INQUIRE(unit, form=form)
 IF (form == 'FORMATTED') THEN
-  WRITE(unit,'(3(A23,1X))')dateiso
+  WRITE(unit,'(A23,1X)')dateiso
 ELSE
   WRITE(unit)dateiso
 ENDIF
