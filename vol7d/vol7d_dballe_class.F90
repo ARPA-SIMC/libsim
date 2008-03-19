@@ -57,7 +57,7 @@ USE vol7d_utilities
 
 IMPLICIT NONE
 PRIVATE
-PUBLIC vol7d_dballe, init, delete, import, export,  vol7d_dballe_importvvns
+PUBLIC vol7d_dballe, init, delete, import, export
 
 include "dballef.h"
 
@@ -225,14 +225,14 @@ END SUBROUTINE vol7d_dballe_init
 
 SUBROUTINE vol7d_dballe_importvsns(this, var, network, coordmin, coordmax, timei, timef,level,timerange, set_network,&
  attr,anavar,anaattr, varkind,attrkind,anavarkind,anaattrkind)
-TYPE(vol7d_dballe),INTENT(out) :: this  !< oggetto vol7d_dballe
+TYPE(vol7d_dballe),INTENT(inout) :: this  !< oggetto vol7d_dballe
 CHARACTER(len=*),INTENT(in),optional :: var  !< variabile da importare secondo la tabella B locale o relativi alias
 !> coordinate minime e massime che definiscono il 
 !! rettangolo di estrazione per l'importazione
 TYPE(geo_coord),INTENT(inout),optional :: coordmin,coordmax 
 !>estremi temporali (inizio e fine) dell'estrazione per l'importazione
 TYPE(datetime),INTENT(in),optional :: timei, timef
-TYPE(vol7d_network),INTENT(in),OPTIONAL :: network !< network da importare
+TYPE(vol7d_network),INTENT(in),optional :: network !< network da importare
 !>                               estrae i dati migliori disponibili "mergiandoli" in un'unica rete 
 !!                               definita da questo parametro:
 !!                               ANCORA DA TESTARE !!!!
@@ -285,8 +285,8 @@ END SUBROUTINE vol7d_dballe_importvsns
 
 SUBROUTINE vol7d_dballe_importvsnv(this, var, network, coordmin, coordmax, timei, timef,level,timerange, set_network,&
  attr,anavar,anaattr, varkind,attrkind,anavarkind,anaattrkind)
-TYPE(vol7d_dballe),INTENT(out) :: this !< oggetto vol7d_dballe
-CHARACTER(len=*),INTENT(in),optional :: var
+TYPE(vol7d_dballe),INTENT(inout) :: this !< oggetto vol7d_dballe
+CHARACTER(len=*),INTENT(in) :: var
 TYPE(geo_coord),INTENT(inout),optional :: coordmin,coordmax 
 TYPE(datetime),INTENT(in),optional :: timei, timef
 TYPE(vol7d_network),INTENT(in) :: network(:)
@@ -312,7 +312,7 @@ END SUBROUTINE vol7d_dballe_importvsnv
 
 SUBROUTINE vol7d_dballe_importvvnv(this, var, network, coordmin,coordmax, timei, timef, level,timerange,set_network,&
  attr,anavar,anaattr, varkind,attrkind,anavarkind,anaattrkind)
-TYPE(vol7d_dballe),INTENT(out) :: this !< oggetto vol7d_dballe
+TYPE(vol7d_dballe),INTENT(inout) :: this !< oggetto vol7d_dballe
 CHARACTER(len=*),INTENT(in) :: var(:)
 TYPE(geo_coord),INTENT(inout),optional :: coordmin,coordmax 
 TYPE(datetime),INTENT(in),optional :: timei, timef
@@ -809,15 +809,15 @@ call vol7d_alloc (vol7dtmp, &
  nanavarattrd=nanavarattrd, &
  nanavarattrc=nanavarattrc)
 
- print *, "nana=",nana, "ntime=",ntime, "ntimerange=",ntimerange, &
- "nlevel=",nlevel, "nnetwork=",nnetwork, &
- "ndativarr=",ndativarr, "ndativari=",ndativari, &
- "ndativarb=",ndativarb, "ndativard=",ndativard, "ndativarc=",ndativarc,&
- "ndatiattrr=",ndatiattrr, "ndatiattri=",ndatiattri, "ndatiattrb=",ndatiattrb,&
- "ndatiattrd=",ndatiattrd, "ndatiattrc=",ndatiattrc,&
- "ndativarattrr=",ndativarattrr, "ndativarattri=",ndativarattri, "ndativarattrb=",ndativarattrb,&
- "ndativarattrd=",ndativarattrd, "ndativarattrc=",ndativarattrc
- print*,"ho fatto alloc"
+! print *, "nana=",nana, "ntime=",ntime, "ntimerange=",ntimerange, &
+! "nlevel=",nlevel, "nnetwork=",nnetwork, &
+! "ndativarr=",ndativarr, "ndativari=",ndativari, &
+! "ndativarb=",ndativarb, "ndativard=",ndativard, "ndativarc=",ndativarc,&
+! "ndatiattrr=",ndatiattrr, "ndatiattri=",ndatiattri, "ndatiattrb=",ndatiattrb,&
+! "ndatiattrd=",ndatiattrd, "ndatiattrc=",ndatiattrc,&
+! "ndativarattrr=",ndativarattrr, "ndativarattri=",ndativarattri, "ndativarattrb=",ndativarattrb,&
+! "ndativarattrd=",ndativarattrd, "ndativarattrc=",ndativarattrc
+! print*,"ho fatto alloc"
 
 
 vol7dtmp%ana=pack_distinct(buffer%ana, nana, back=.TRUE.)
@@ -1102,14 +1102,14 @@ else if (present(anaattr))then
 end if
 
 
-print*,"numero variabili anagrafica",size(vol7dtmp%anavar%r)
+!print*,"numero variabili anagrafica",size(vol7dtmp%anavar%r)
 !do i=1,size(vol7dtmp%anavar%r)
 !  print*,"elenco variabili anagrafica>",vol7dtmp%anavar%r(i)%btable,"<fine"
 !end do
 
 !-----------------------> anagrafica fine
 
-print*,"prima di alloc"
+!print*,"prima di alloc"
 
 call vol7d_alloc_vol (vol7dtmp)
 
