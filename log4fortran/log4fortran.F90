@@ -1,3 +1,5 @@
+#include "config.h"
+
 module log4fortran
 
 INTEGER ,PARAMETER ::&
@@ -14,11 +16,43 @@ INTEGER ,PARAMETER ::&
  L4F_UNKNOWN  = 1000
 
 
-#if !defined(LOG4FORTRAN)
+contains
+
+!subroutine exit (exitstatus)
+!integer ::  exitstatus
+!
+!call exit_ (exitstatus)
+!
+!end subroutine exit
+
+
+subroutine log4fortran_launcher(a_name)
+
+integer :: tarray(8)
+character (len=255) :: LOG4_APPLICATION_NAME,LOG4_APPLICATION_ID,arg
+character (len=*) :: a_name
+
+call date_and_time(values=tarray)
+call getarg(0,arg)
+call getenv("LOG4_APPLICATION_NAME",LOG4_APPLICATION_NAME)
+call getenv("LOG4_APPLICATION_ID",LOG4_APPLICATION_ID)
+
+if (LOG4_APPLICATION_NAME=="" .or. LOG4_APPLICATION_ID=="") then
+
+  a_name="ci devo mmettere arg e tarray"
+
+else
+
+  a_name = trim(LOG4_APPLICATION_NAME)//"["//trim(LOG4_APPLICATION_ID)//"]"
+
+end if
+
+end subroutine log4fortran_launcher
+
+#ifndef LOG4FORTRAN
 
 ! definisce delle dummy routine
 
-contains
 
 integer function log4fortran_init()
 
@@ -58,5 +92,6 @@ end function log4fortran_fini
 
 
 #endif
+
 
 end module log4fortran

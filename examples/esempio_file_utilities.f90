@@ -24,7 +24,7 @@ CLOSE(un)
 OPEN(un, FILE='tmp.csv') ! lo riapro
 nrec = 0
 DO WHILE(.TRUE.) ! ciclo sui record
-  READ(un,iostat=iost,'(A)') line
+  READ(un,"(A)",iostat=iost) line
   IF (iost /= 0) EXIT
   nrec = nrec + 1
 

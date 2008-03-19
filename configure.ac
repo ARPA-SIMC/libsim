@@ -43,6 +43,11 @@ AC_CHECK_HEADERS([f77.h] ,
   dummy_log4fortran=yes
  )
 fi
+
+dnl end of test for log4c
+if test "x$dummy_log4fortran" != "xyes" ; then
+  AC_DEFINE_UNQUOTED(LOG4FORTRAN, TRUE,"Enable log4c")
+fi
 AM_CONDITIONAL(LOG4FORTRAN, test "x$dummy_log4fortran" != "xyes")
 
 dnl AC_LANG_PUSH([Fortran 77])dnl Do the following checks in Fortran
@@ -99,7 +104,7 @@ AC_ARG_ENABLE(dballe, AC_HELP_STRING([--disable-dballe],
   [disable dballe support]),,[enableval=yes])dnl default enable
 if test "x$enableval" = "xyes"; then
 AC_MSG_RESULT([dballe code included])
-libdballe="-ldballef -ldballe-core -lcnf -lodbc -lgdbm -lpopt -lm"
+libdballe="-ldballef -ldballe -lcnf -lodbc -lgdbm -lpopt -lm"
 AC_SUBST(libdballe)
 else
 AC_MSG_RESULT([dballe code not included])

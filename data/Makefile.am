@@ -1,8 +1,10 @@
+dist_pkgdata_DATA = climaprec.v7d 
+
 if ORSIM
 
 dist_bin_SCRIPTS = libsim_gen_ana_ora.sh libsim_gen_var_ora.sh
 
-dist_pkgdata_DATA = varmap.csv polipciv4.dat estra_temp.dat
+dist_pkgdata_DATA += varmap.csv polipciv4.dat estra_temp.dat
 
 dist_pkgdata_DATA += \
   net_001.simana  net_011.simana  net_021.simana  net_030.simana  net_041.simana \
