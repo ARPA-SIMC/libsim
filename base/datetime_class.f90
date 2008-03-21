@@ -65,14 +65,8 @@ INTEGER,PARAMETER :: &
  0,31,59,90,120,151,181,212,243,273,304,334,365, &
  0,31,60,91,121,152,182,213,244,274,305,335,366/),(/13,2/))
 
-INTEGER(KIND=8),PARAMETER :: &
-
-! not compatible with gfortran
-! unsec=62135596800 ! differenza tra 01/01/1970 e 01/01/0001 (sec, per unixtime)
-
- unsec=0 ! differenza tra 01/01/1970 e 01/01/0001 (sec, per unixtime)
-
-!
+INTEGER(KIND=int_ll),PARAMETER :: &
+ unsec=62135596800_int_ll ! differenza tra 01/01/1970 e 01/01/0001 (sec, per unixtime)
 
 PRIVATE
 PUBLIC datetime, datetime_miss, init, delete, getval, &
