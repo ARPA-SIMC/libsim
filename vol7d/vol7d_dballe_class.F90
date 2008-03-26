@@ -1439,7 +1439,6 @@ END SUBROUTINE vol7d_dballe_importvvns
 !!
 !! Riscrive i dati nel DSN di DB-All.e con la possibilità di attivare
 !! una serie di filtri.
-!!
 
 SUBROUTINE vol7d_dballe_export(this, network, coordmin, coordmax, ident,&
  timei, timef,level,timerange,var,attr,anavar,anaattr,attr_only)

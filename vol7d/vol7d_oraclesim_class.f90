@@ -225,7 +225,7 @@ cnetwork = TRIM(to_char(network%id))
 ! Cerco la rete nella tabella
 IF (network%id <= 0 .OR. network%id >= oraclesim_netmax ) THEN
   CALL raise_error('rete '//TRIM(cnetwork)//' non valida')
-  STOP
+  return
 ENDIF
 ! Leggo l'anagrafica per la rete se necessario
 IF (.NOT. networktable(network%id)) THEN
@@ -257,7 +257,7 @@ DO nvin = 1, SIZE(var)
    ' non valida per la rete '//TRIM(cnetwork))
 ENDDO
 IF (nvar == 0) THEN
-  CALL raise_error('nessuna delle variabili '//TRIM(var(1))// &
+  CALL raise_warning('nessuna delle variabili '//TRIM(var(1))// &
    ' e` valida per la rete '//TRIM(cnetwork))
   RETURN
 ENDIF
