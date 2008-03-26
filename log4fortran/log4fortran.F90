@@ -30,7 +30,7 @@
 !!
 !! La gestione di appenders e layouts viene demandata in toto al file
 !! di configurazione di log4c (vedere apposita documentazione
-!! http://log4c.cvs.sourceforge.net/*checkout*/log4c/log4c/doc/Log4C-DevelopersGuide.odt )
+!! http://log4c.cvs.sourceforge.net/\*checkout\*/log4c/log4c/doc/Log4C-DevelopersGuide.odt )
 !!
 !!log4fortran by default can log messages with some standard priority levels:
 !!
@@ -107,7 +107,7 @@ INTEGER ,PARAMETER :: L4F_UNKNOWN  = 1000 !< standard priority
 
 !> priority: default value used only when compiled without log4c or cnf
 !!(the configuration file is ignored)  
-integer :: log4fortran_priority=L4F_NOTICE 
+integer :: l4f_priority=L4F_NOTICE 
 
 
 character(len=510):: dummy_a_name
@@ -120,7 +120,7 @@ contains
 !!LOG4_APPLICATION_NAME,LOG4_APPLICATION_ID e compone il nome univoco
 !!per il logging.  Se le variabili di ambiente non sono impostate
 !!ritorna un nome definito dal nome del processo e da un timestamp
-subroutine log4fortran_launcher(a_name)
+subroutine l4f_launcher(a_name)
 
 integer :: tarray(8)
 character (len=255) :: LOG4_APPLICATION_NAME,LOG4_APPLICATION_ID,arg
@@ -131,7 +131,7 @@ call getarg(0,arg)
 call getenv("LOG4_APPLICATION_NAME",LOG4_APPLICATION_NAME)
 call getenv("LOG4_APPLICATION_ID",LOG4_APPLICATION_ID)
 
-if (LOG4_APPLICATION_NAME=="" .or. LOG4_APPLICATION_ID=="") then
+if (LOG4_APPLICATION_NAME=="" .and. LOG4_APPLICATION_ID=="") then
 
   write (a_name,"(a,a,8i5,a)")trim(arg),"[",tarray,"]"
 
@@ -141,86 +141,86 @@ else
 
 end if
 
-end subroutine log4fortran_launcher
+end subroutine l4f_launcher
 
 #ifndef LOG4FORTRAN
 
 ! definisce delle dummy routine
 
 !>log4fortran constructors
-integer function log4fortran_init()
+integer function l4f_init()
 
-log4fortran_priority=L4F_NOTICE
+l4f_priority=L4F_NOTICE
 
-log4fortran_init= 1
+l4f_init= 1
 
-end function log4fortran_init
+end function l4f_init
 
 
 
 !>Initialize a logging category.
-integer function log4fortran_category_get (a_name)
+integer function l4f_category_get (a_name)
 character (len=*),intent(in) :: a_name !< category name
 
 dummy_a_name=a_name
 
-log4fortran_category_get= 0
+l4f_category_get= 0
 
-end function log4fortran_category_get
+end function l4f_category_get
 
 
 
 !>Delete a logging category.
-subroutine log4fortran_category_delete(a_category)
+subroutine l4f_category_delete(a_category)
 integer,intent(in):: a_category !< category name
 
 if (a_category == 0 ) dummy_a_name=""
 
-end subroutine log4fortran_category_delete
+end subroutine l4f_category_delete
 
 
 !>Emit log message for a category with specific priority
-subroutine log4fortran_category_log (a_category,a_priority,&
+subroutine l4f_category_log (a_category,a_priority,&
  a_format)
 integer,intent(in):: a_category !< category name
 integer,intent(in):: a_priority !< priority level
 character(len=*),intent(in):: a_format !< message to emit
 
-if (a_category == 0 .and. a_priority <= log4fortran_priority  ) then
-  write(*,*)"[dummy] ",log4fortran_msg(a_priority),trim(dummy_a_name)," - ",a_format
+if (a_category == 0 .and. a_priority <= l4f_priority  ) then
+  write(*,*)"[dummy] ",l4f_msg(a_priority),trim(dummy_a_name)," - ",a_format
 end if
 
-end subroutine log4fortran_category_log
+end subroutine l4f_category_log
 
 
 !>log4fortran destructors
-integer function log4fortran_fini()
+integer function l4f_fini()
 
-log4fortran_fini= 0
+l4f_fini= 0
 
-end function log4fortran_fini
+end function l4f_fini
 
 !>Ritorna un messaggio caratteristico delle priorità standard
-character(len=12) function  log4fortran_msg(a_priority)
+character(len=12) function  l4f_msg(a_priority)
 
 integer,intent(in):: a_priority !< category name
 
-  write(log4fortran_msg,*)a_priority
+write(l4f_msg,*)a_priority
 
-  if (a_priority == L4F_FATAL)   log4fortran_msg="FATAL"
-  if (a_priority == L4F_ALERT)   log4fortran_msg="ALERT"
-  if (a_priority == L4F_CRIT)    log4fortran_msg="CRIT"
-  if (a_priority == L4F_ERROR)   log4fortran_msg="ERROR"
-  if (a_priority == L4F_WARN)    log4fortran_msg="WARN"
-  if (a_priority == L4F_NOTICE)  log4fortran_msg="NOTICE"
-  if (a_priority == L4F_INFO)    log4fortran_msg="INFO"
-  if (a_priority == L4F_DEBUG)   log4fortran_msg="DEBUG"
-  if (a_priority == L4F_TRACE)   log4fortran_msg="TRACE"
-  if (a_priority == L4F_NOTSET)  log4fortran_msg="NOTSET"
-  if (a_priority == L4F_UNKNOWN) log4fortran_msg="UNKNOWN"
+if (a_priority == L4F_FATAL)   l4f_msg="FATAL"
+if (a_priority == L4F_ALERT)   l4f_msg="ALERT"
+if (a_priority == L4F_CRIT)    l4f_msg="CRIT"
+if (a_priority == L4F_ERROR)   l4f_msg="ERROR"
+if (a_priority == L4F_WARN)    l4f_msg="WARN"
+if (a_priority == L4F_NOTICE)  l4f_msg="NOTICE"
+if (a_priority == L4F_INFO)    l4f_msg="INFO"
+if (a_priority == L4F_DEBUG)   l4f_msg="DEBUG"
+if (a_priority == L4F_TRACE)   l4f_msg="TRACE"
+if (a_priority == L4F_NOTSET)  l4f_msg="NOTSET"
+if (a_priority == L4F_UNKNOWN) l4f_msg="UNKNOWN"
 
 
-end function log4fortran_msg
+end function l4f_msg
 
 
 

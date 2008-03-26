@@ -4,11 +4,11 @@
 
 
 
-F77_INTEGER_FUNCTION(log4fortran_init)() {
+F77_INTEGER_FUNCTION(l4f_init)() {
   return log4c_init();
 }
 
-F77_POINTER_FUNCTION(log4fortran_category_get)(CHARACTER(a_name) TRAIL(a_name)) {
+F77_POINTER_FUNCTION(l4f_category_get)(CHARACTER(a_name) TRAIL(a_name)) {
 
   void   *tmpptr;
   int tmpfptr;
@@ -33,7 +33,7 @@ F77_POINTER_FUNCTION(log4fortran_category_get)(CHARACTER(a_name) TRAIL(a_name)) 
 }
 
 
-F77_SUBROUTINE(log4fortran_category_delete)(POINTER(a_category)){
+F77_SUBROUTINE(l4f_category_delete)(POINTER(a_category)){
 
   GENPTR_POINTER(a_category)
   
@@ -42,7 +42,7 @@ F77_SUBROUTINE(log4fortran_category_delete)(POINTER(a_category)){
 }
 
 
-F77_SUBROUTINE(log4fortran_category_log)(POINTER(a_category), 
+F77_SUBROUTINE(l4f_category_log)(POINTER(a_category), 
 					 INTEGER(a_priority),
 					 CHARACTER(a_format) TRAIL(a_format)) {
   char ptr_a_format[101];
@@ -57,6 +57,6 @@ F77_SUBROUTINE(log4fortran_category_log)(POINTER(a_category),
 }
 
 
-F77_INTEGER_FUNCTION(log4fortran_fini)() {
+F77_INTEGER_FUNCTION(l4f_fini)() {
   return log4c_fini();
 }
