@@ -73,7 +73,7 @@ INTEGER, OPTIONAL, INTENT(in) :: ierval !< codice di errore opzionale
 
 CALL output_message('Fatal error: ', msg, -1, ierval)
 IF (PRESENT(ierval)) CALL EXIT(ABS(ierval))
-STOP 1
+call exit(1)
 
 END SUBROUTINE raise_fatal_error
 
@@ -90,7 +90,7 @@ INTEGER, OPTIONAL, INTENT(out) :: ier !< codice di errore opzionale restituito i
 CALL output_message('Error: ', msg, eh_verbose_err, ierval)
 IF (eh_fatal) THEN
   IF (PRESENT(ierval)) CALL EXIT(ABS(ierval))
-  STOP 1
+  call exit(1)
 ENDIF
 IF (PRESENT(ier) .AND. PRESENT(ierval)) ier = ierval
 
