@@ -27,9 +27,9 @@ esempio_v7d_LDADD = ../base/libsim_base.la ../vol7d/libsim_vol7d.la
 log4fortran_SOURCES = log4fortran.f90
 log4fortran_LDADD =  ../log4fortran/liblog4fortran.la
 
-#if LOG4FORTRAN
-#log4fortran_LDADD =  
-#endif
+if LOG4FORTRAN
+EXTRA_DIST = log4crc
+endif
 
 if GRIB
 esempio_regrib_SOURCES = esempio_regrib.f90
