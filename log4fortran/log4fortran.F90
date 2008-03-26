@@ -114,6 +114,61 @@ character(len=510):: dummy_a_name
 
 private dummy_a_name 
 
+
+#ifdef LOG4FORTRAN
+
+interface
+
+!>log4fortran constructors
+integer function l4f_init()
+
+end function l4f_init
+
+
+
+!>Initialize a logging category.
+integer function l4f_category_get (a_name)
+character (len=*),intent(in) :: a_name !< category name
+
+end function l4f_category_get
+
+
+
+!>Delete a logging category.
+subroutine l4f_category_delete(a_category)
+integer,intent(in):: a_category !< category name
+
+end subroutine l4f_category_delete
+
+
+!>Emit log message for a category with specific priority
+subroutine l4f_category_log (a_category,a_priority,&
+ a_format)
+integer,intent(in):: a_category !< category name
+integer,intent(in):: a_priority !< priority level
+character(len=*),intent(in):: a_format !< message to emit
+
+end subroutine l4f_category_log
+
+
+!>log4fortran destructors
+integer function l4f_fini()
+
+end function l4f_fini
+
+!>Ritorna un messaggio caratteristico delle priorità standard
+character(len=12) function  l4f_msg(a_priority)
+integer,intent(in):: a_priority !< category name
+
+end function l4f_msg
+
+end interface
+
+#endif
+
+
+
+
 contains
 
 !>Routine specifica per il SIM; cattura le variabili di ambiente
@@ -124,7 +179,7 @@ subroutine l4f_launcher(a_name)
 
 integer :: tarray(8)
 character (len=255) :: LOG4_APPLICATION_NAME,LOG4_APPLICATION_ID,arg
-character (len=*),intent(out) :: a_name !<
+character (len=*),intent(out) :: a_name !< nome univoco per logging
 
 call date_and_time(values=tarray)
 call getarg(0,arg)
@@ -143,7 +198,10 @@ end if
 
 end subroutine l4f_launcher
 
+
+
 #ifndef LOG4FORTRAN
+
 
 ! definisce delle dummy routine
 
