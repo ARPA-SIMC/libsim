@@ -4,24 +4,32 @@
 
 
 
-
 F77_INTEGER_FUNCTION(log4fortran_init)() {
   return log4c_init();
 }
 
 F77_POINTER_FUNCTION(log4fortran_category_get)(CHARACTER(a_name) TRAIL(a_name)) {
 
-  void *tmpptr;
+  void   *tmpptr;
+  int tmpfptr;
   char ptr_a_name[101];
 
   GENPTR_CHARACTER(a_name)
   cnfImprt(a_name, a_name_length > 100 ? 100:a_name_length, ptr_a_name);
 
   tmpptr = log4c_category_get(ptr_a_name);
-  if (cnfRegp(tmpptr) == 1)
-    return cnfFptr(tmpptr);
-  else
-    return 0;
+
+  // get if already registered
+  tmpfptr=cnfFptr(tmpptr);
+  
+  if (tmpfptr == 0)
+    // if not registered try to register
+    if (cnfRegp(tmpptr) == 1)
+      // convert to fortran
+      tmpfptr= cnfFptr(tmpptr);
+
+  return tmpfptr;
+
 }
 
 

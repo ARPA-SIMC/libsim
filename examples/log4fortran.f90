@@ -11,6 +11,9 @@ call log4fortran_launcher(a_name)
 !init di log4fortran
 ier=log4fortran_init()
 
+!change the default verbosity level (dummy routine only !)
+log4fortran_priority=L4F_DEBUG
+
 !imposta a_name
 category=log4fortran_category_get(a_name)
 
