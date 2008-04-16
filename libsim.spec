@@ -1,14 +1,24 @@
 Summary: libsim: librerie di utilità in Fortran 90
 Name: libsim
-Version: 1.4
-Release: 2
+Version: 2.1
+Release: 1
 License: GPL
-Group: Development
+Group: Applications/Meteo
 URL: http://www.arpa.emr.it/sim
-Packager: Davide Cesari <ppatruno@arpa.emr.it>
+Packager: Davide Cesari <dcesari@arpa.emr.it>
 Source: %{name}-%{version}.tar.gz
 BuildRoot: /var/tmp/%{name}-buildroot
 BuildRequires: shapelib-fortran
+
+%package -n libsim-doc
+Summary:   libsim documentation
+Group: Applications/Meteo
+
+
+%description  -n libsim-doc
+Librerie di utilità in Fortran 90
+Documentazione 
+
 
 %description
 Libsim comprende tre gruppi di moduli di utilità in Fortran 90:
@@ -25,6 +35,9 @@ l'elaborazione di dati osservativi idro-meteo, includendo metodi per
 la loro importazione da database tipo DbAll-e e dal database Oracle di
 ARPA-SIM.
 
+
+
+
 %prep
 %setup -q
 
@@ -33,7 +46,6 @@ ARPA-SIM.
 make 
 
 %install
-#makeinstall
 make DESTDIR=%{buildroot} install
 
 %files
@@ -47,6 +59,11 @@ make DESTDIR=%{buildroot} install
 #%{_docdir}/%{name}/*
 %doc examples/*.f90
 
+%files -n libsim-doc
+%defattr(-,root,root,-)
+%doc %{_docdir}/libsim/html
+
+
 %clean
 rm -rf %{buildroot}
 
@@ -59,6 +76,9 @@ rm -rf %{buildroot}
 %postun
 
 %changelog
+* Wed Apr 16 2008 Davide Cesari <cesari@malina.metarpa> - 2.0-1
+- New version
+
 * Fri Jan 18 2008 Davide Cesari <cesari@malina.metarpa> - 1.4-2
 - Add search path for oracle libraries.
 
