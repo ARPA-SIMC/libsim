@@ -8,6 +8,7 @@ IMPLICIT NONE
 
 TYPE(vol7d_oraclesim) :: db_v7d
 TYPE(vol7d_network) :: network
+TYPE(vol7d_timerange) :: timerange
 TYPE(datetime) :: ti, tf
 CHARACTER(len=12) :: c
 INTEGER :: i, n
@@ -18,11 +19,13 @@ CALL init(ti, year=2007, month=3, day=18, hour=12)
 CALL init(tf, year=2007, month=3, day=21, hour=00)
 ! Definisco le reti da cui voglio estrarre
 CALL init(network, 18)
+! Definisco il timerange desiderato
+CALL init(timerange, 1, 0, 1800)
 ! Chiamo il costruttore della classe vol7d_oraclesim per il mio oggetto
 CALL init(db_v7d)
 ! Importo i dati, variabile 'B13011' della btable (precipitazione),
 ! rete 18 (FIDUPO)
-CALL import(db_v7d, 'B13011', network, ti, tf, timerange=vol7d_timerange(4,-1800,0))
+CALL import(db_v7d, 'B13011', network, ti, tf, timerange=timerange)
 ! Creo una vista su un array bidimensionale che scorre le dimensioni
 ! dell'anagrafica e del tempo (vol7d_ana_d, vol7d_time_d)
 CALL vol7d_get_voldatir(db_v7d%vol7d, (/vol7d_ana_d,vol7d_time_d/), vol2dp=vol2d)
