@@ -75,12 +75,13 @@ END SUBROUTINE vol7d_remap2_/**/VOL7D_POLY_TYPE
 
 SUBROUTINE vol7d_remap1_/**/VOL7D_POLY_TYPE(varin, varout, &
  sort, unique, miss, remap)
-TYPE(/**/VOL7D_POLY_TYPE),POINTER :: varin(:), varout(:)
+TYPE(/**/VOL7D_POLY_TYPE),POINTER :: varin(:), varout(:), varoutsort(:)
 LOGICAL,INTENT(in) :: sort, unique, miss
 INTEGER,POINTER :: remap(:)
 
-INTEGER :: i, j, n
+INTEGER :: i, j, n, r
 INTEGER,POINTER :: remaptmp(:)
+TYPE(/**/VOL7D_POLY_TYPE) :: v
 
 NULLIFY(remap, varout)
 IF (.NOT.ASSOCIATED(varin)) RETURN
@@ -123,15 +124,18 @@ ENDIF
 varout(:) = varin(remap)
 
 #ifdef VOL7D_SORT
-IF (sort .AND. unique) THEN
-ALLOCATE(remaptmp(n))
-  DO i = 1, n
-    j = COUNT(varout(i) > varout(:)) + 1
-    remaptmp(i) = remap(j)
+IF (sort) THEN ! sort with the simplest algorithm both varout and remap
+  DO j = 2, n
+    v = varout(j)
+    r = remap(j)
+    DO i = j-1, 1, -1
+      IF (v >= varout(i)) EXIT
+      varout(i+1) = varout(i)
+      remap(i+1) = remap(i)
+    ENDDO
+    varout(i+1) = v
+    remap(i+1) = r
   ENDDO
-  DEALLOCATE(remap)
-  remap => remaptmp
-  varout(:) = varin(remap)
 ENDIF
 #endif
 
