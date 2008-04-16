@@ -44,10 +44,12 @@ esempio_termolib_LDADD = ../base/libsim_base.la ../termolib/libsim_termolib.la
 
 if ORSIM
 esempio_v7doracle_SOURCES = esempio_v7doracle.f90
-esempio_v7doracle_LDADD = ../base/libsim_base.la ../vol7d/libsim_vol7d.la $(liboraclesim)
+esempio_v7doracle_LDADD = ../base/libsim_base.la ../vol7d/libsim_vol7d.la 
+# $(liboraclesim)
 
 esempio_v7doracle_multi_SOURCES = esempio_v7doracle_multi.f90
-esempio_v7doracle_multi_LDADD = ../base/libsim_base.la ../vol7d/libsim_vol7d.la $(liboraclesim)
+esempio_v7doracle_multi_LDADD = ../base/libsim_base.la ../vol7d/libsim_vol7d.la
+# $(liboraclesim)
 endif
 
 if DBALLE
