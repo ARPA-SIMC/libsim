@@ -117,14 +117,14 @@ private dummy_a_name
 
 #ifdef LOG4FORTRAN
 
-interface
-
+!>Qui sono reperibili function e subroutine definite tramite questa interface
+!!e che richiamano funzioni C tramite la libreria CNF. Le funzioni chiamabili da fortran
+!!sono equivalenti a quelle messe a disposizione dalla libreria log4C
+interface 
 !>log4fortran constructors
 integer function l4f_init()
 
 end function l4f_init
-
-
 
 !>Initialize a logging category.
 integer function l4f_category_get (a_name)
