@@ -10,10 +10,19 @@ if DBALLE
 libsim_vol7d_la_SOURCES += vol7d_dballe_class.F90
 endif
 
+if NETCDF
+libsim_vol7d_la_SOURCES += vol7d_netcdf_class.F90
+endif
+
 AM_FCFLAGS = -I../base
 if DBALLE
 AM_FCFLAGS += -I/usr/include/dballe
 endif
+
+if NETCDF
+AM_FCFLAGS += -I/usr/include/netcdf-3
+endif
+
 AM_LDFLAGS = $(libdballe) $(liboraclesim)
 libsim_vol7d_la_LIBADD = ../base/libsim_base.la
 
@@ -58,6 +67,13 @@ vol7d_dballe_class_nana.f90 vol7d_dballe_class_ndati.f90 \
 vol7d_dballe_class_dati.F90 vol7d_dballe_class_datiattr.F90 \
 vol7d_dballe_class_ana.F90 vol7d_dballe_class_anaattr.F90  vol7d_dballe_class_var_du.f90
 endif
+
+
+if NETCDF
+vol7d_netcdf_class.$(OBJEXT): vol7d_class.$(OBJEXT) vol7d_utilities.$(OBJEXT)
+vol7d_netcdf_class.lo: vol7d_class.$(OBJEXT) vol7d_utilities.$(OBJEXT)
+endif
+
 
 #vol7d_timerange_class.$(OBJEXT):
 #vol7d_utilities.$(OBJEXT):

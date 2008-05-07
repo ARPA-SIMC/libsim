@@ -111,6 +111,22 @@ AC_MSG_RESULT([dballe code not included])
 fi
 AM_CONDITIONAL(DBALLE, test "x$enableval" = "xyes")
 
+
+#we here test for f77; will be better develop a test for f90
+AC_ARG_ENABLE(netcdf, AC_HELP_STRING([--disable-netcdf],
+  [disable netcdf support]),,[enableval=yes])dnl default enable
+if test "x$enableval" = "xyes"; then
+AC_CHECK_LIB([netcdff], [nf_inq_libvers],
+ AC_MSG_RESULT([netcdf code included])
+  libnetcdf="-lnetcdff -lnetcdf"
+  AC_SUBST(libnetcdf),
+ AC_MSG_ERROR([netcdf library not found]),[-lnetcdf])
+else
+AC_MSG_RESULT([netcdf code not included])
+fi
+AM_CONDITIONAL(NETCDF, test "x$enableval" = "xyes")
+
+
 AC_LANG_POP()dnl back to C
 AC_PROG_LIBTOOL
 

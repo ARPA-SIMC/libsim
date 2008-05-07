@@ -580,6 +580,33 @@ CALL getval(this%desc, fuso, elliss)
 END SUBROUTINE geo_coord_getval
 
 
+!> Restituisce la latitudine di uno o più componenti di un oggetto \a geo_coord.
+!! Se la latitudine non è stata inizializzata né calcolata
+!! restituisce il corrispondente valore mancante.
+!! Nata per permettere operazioni vettorizzate
+elemental FUNCTION  getlat(this)
+TYPE(geo_coord),INTENT(IN) :: this !< oggetto di cui restituire latitudine
+REAL(kind=fp_geo) :: getlat !< latitudine geografica
+
+getlat = this%lat
+
+
+END FUNCTION getlat
+
+!> Restituisce la longitudine di uno o più componenti di un oggetto \a geo_coord.
+!! Se la latitudine non è stata inizializzata né calcolata
+!! restituisce il corrispondente valore mancante.
+!! Nata per permettere operazioni vettorizzate
+elemental FUNCTION  getlon(this)
+TYPE(geo_coord),INTENT(IN) :: this !< oggetto di cui restituire latitudine
+REAL(kind=fp_geo) :: getlon !< longitudine geografica
+
+getlon = this%lon
+
+END FUNCTION getlon
+
+
+
 elemental FUNCTION geo_coord_eq(this, that) RESULT(res)
 TYPE(geo_coord),INTENT(IN) :: this, that
 LOGICAL :: res

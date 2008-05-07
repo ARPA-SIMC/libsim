@@ -74,7 +74,7 @@ PUBLIC datetime, datetime_miss, init, delete, getval, &
  OPERATOR(==), OPERATOR(/=), OPERATOR(>), OPERATOR(<), &
  OPERATOR(>=), OPERATOR(<=), OPERATOR(+), OPERATOR(-), &
  OPERATOR(*), OPERATOR(/), mod, &
- timedelta, timedelta_miss, timedelta_0
+ timedelta, timedelta_miss, timedelta_0, timedelta_getamsec
 
 !> Costruttori per le classi datetime e timedelta. Devono essere richiamati
 !! per tutti gli oggetti di questo tipo definiti in un programma
@@ -558,14 +558,18 @@ ENDIF
 END FUNCTION datetime_add
 
 
-FUNCTION datetime_subdt(this, that) RESULT(res)
+elemental FUNCTION datetime_subdt(this, that) RESULT(res)
 TYPE(datetime),INTENT(IN) :: this, that
 TYPE(timedelta) :: res
 
 IF (this == datetime_miss .OR. that == datetime_miss) THEN
-  CALL delete(res)
+  !CALL delete(res)
+  res=timedelta_miss
 ELSE
-  CALL init(res, iminuti=this%iminuti-that%iminuti)
+
+  res%iminuti=this%iminuti-that%iminuti
+
+ ! CALL init(res, iminuti=this%iminuti-that%iminuti)
 ENDIF
 
 END FUNCTION datetime_subdt
@@ -761,7 +765,7 @@ INTEGER,INTENT(OUT),OPTIONAL :: minute !< minuti modulo 60
 INTEGER,INTENT(OUT),OPTIONAL :: msec !< millisecondi modulo 1000
 INTEGER,INTENT(OUT),OPTIONAL :: ahour !< ore totali
 INTEGER,INTENT(OUT),OPTIONAL :: aminute !< minuti totali
-INTEGER,INTENT(OUT),OPTIONAL :: amsec !< millisecondi totali
+INTEGER(kind=int_ll),INTENT(OUT),OPTIONAL :: amsec !< millisecondi totali
 INTEGER(kind=int_ll),INTENT(OUT),OPTIONAL :: iminuti !< non usare, a solo uso interno
 CHARACTER(len=*),INTENT(OUT),OPTIONAL :: isodate !< intervallo totale nel formato \c GGGGGGGGGG \c hh:mm:ss.msc
 CHARACTER(len=12),INTENT(OUT),OPTIONAL :: oraclesimdate !< intervallo totale nel formato \c GGGGGGGGhhmm
@@ -813,6 +817,16 @@ IF (PRESENT(oraclesimdate)) THEN
 ENDIF
 
 END SUBROUTINE timedelta_getval
+
+
+!> Restituisce il valore in millisecondi totali di un oggetto \a timedelta.
+elemental FUNCTION timedelta_getamsec(this)
+TYPE(timedelta),INTENT(IN) :: this !< oggetto di cui restituire il valore
+INTEGER(kind=int_ll) :: timedelta_getamsec !< millisecondi totali
+
+timedelta_getamsec = this%iminuti
+
+END FUNCTION timedelta_getamsec
 
 
 elemental FUNCTION timedelta_eq(this, that) RESULT(res)
