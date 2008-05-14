@@ -3,11 +3,12 @@ program demo2
 !legge i dati da file formattato
 
 USE vol7d_netcdf_class
+USE vol7d_dballe_class
 USE vol7d_class
 
 IMPLICIT NONE
 
-integer :: nana, ntime ,nlevel, ntimerange, ndativarr, nnetwork !,nanavari
+integer :: nana, ntime ,nlevel, ntimerange, ndativarr, nnetwork ,nanavarc
 integer :: iana, itime, ilevel, itimerange, idativarr, inetwork
 TYPE(vol7d) :: v7d
 TYPE(datetime) :: time
@@ -23,28 +24,35 @@ real :: prec,temp
 
 CALL init(v7d)
 
+!open (unit=10,file="in.dat")
 read(10,*)nana,ntime
 
 ntimerange=2
 nlevel=2
 nnetwork=1
 ndativarr=2
+nanavarc=1
 
 call vol7d_alloc (v7d, &
  nana=nana, ntime=ntime, ntimerange=ntimerange, &
  nlevel=nlevel, nnetwork=nnetwork, &
- ndativarr=ndativarr)
+ ndativarr=ndativarr,nanavarc=nanavarc)
 
 call vol7d_alloc_vol (v7d)
 
 inetwork=1
 call init(v7d%network(inetwork), 11)
+call init(v7d%anavar%c(1), btable="B01019")     ! LONG STATION OR SITE NAME
 call init(v7d%dativar%r(1), btable="B13011")    ! precipitazione
 call init(v7d%dativar%r(2), btable="B12001")    ! temperatura
 call init(v7d%level(1),1,0,0)                   ! al suolo
 call init(v7d%level(2),105,2,0)                 ! a 2 m dal suolo
-call init(v7d%timerange(1),1,0, 3600)          ! cumulate n 1 ora
-call init(v7d%timerange(2),254,    0, 0)          ! "istantanee"
+call init(v7d%timerange(1),1,0, 3600)           ! cumulate n 1 ora
+call init(v7d%timerange(2),254,    0, 0)        ! "istantanee"
+
+v7d%volanac(1,1,1)="stazione 1 "
+v7d%volanac(2,1,1)="stazione 2 "
+
 
 
 do ist=1,nana
@@ -61,7 +69,7 @@ do ist=1,nana
     idativarr= 1
     v7d%voldatir(iana,itime,ilevel,itimerange,idativarr,inetwork) = prec
     
-    itimerange=1     
+    itimerange=2     
     ilevel=2
     idativarr= 2
     v7d%voldatir(iana,itime,ilevel,itimerange,idativarr,inetwork) = temp
@@ -69,8 +77,10 @@ do ist=1,nana
   end do
 end do
 
+call vol7d_dballe_set_var_du(v7d)
+
+print*,v7d%anavar%c
 
 call export(v7d,ncconventions="CF-1.1 vol7d")
-
 
 end program demo2

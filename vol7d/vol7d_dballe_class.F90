@@ -1,4 +1,3 @@
-
 !>\brief  classe per import ed export di volumi da e in DB-All.e 
 !!
 !!Questo modulo definisce gli oggetti e i metodi per gestire
@@ -57,7 +56,7 @@ USE vol7d_utilities
 
 IMPLICIT NONE
 PRIVATE
-PUBLIC vol7d_dballe, init, delete, import, export
+PUBLIC vol7d_dballe, init, delete, import, export, vol7d_dballe_set_var_du
 
 include "dballef.h"
 
