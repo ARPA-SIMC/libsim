@@ -5,6 +5,11 @@ program demo2
 USE vol7d_netcdf_class
 USE vol7d_dballe_class
 USE vol7d_class
+use log4fortran
+
+integer :: category,ier
+character(len=512):: a_name
+
 
 IMPLICIT NONE
 
@@ -21,6 +26,11 @@ REAL(kind=fp_geo) :: lat,lon
 integer :: year,month,day,hour,minute,ist
 real :: prec,temp
 
+!questa chiamata prende dal launcher il nome univoco
+call l4f_launcher(a_name)
+
+!init di log4fortran
+ier=l4f_init()
 
 CALL init(v7d)
 
@@ -59,7 +69,8 @@ do ist=1,nana
   do itime=1,ntime
     
     read (10,*) iana,lat,lon,year,month,day,hour,minute,prec,temp
-    if (iana /= ist) print *,"abbiamo un serio problema ",iana,ist
+    if (iana /= ist) call l4f_category_log(category,L4F_ERROR,&
+         "abbiamo un serio problema ")
 
     call init(v7d%ana(iana),lat=lat,lon=lon)
     call init(v7d%time(itime), year=year, month=month, day=day, hour=hour, minute=minute)
@@ -82,5 +93,9 @@ call vol7d_dballe_set_var_du(v7d)
 print*,v7d%anavar%c
 
 call export(v7d,ncconventions="CF-1.1 vol7d")
+
+!chiudo il logger
+call l4f_category_delete(category)
+ier=l4f_fini()
 
 end program demo2
