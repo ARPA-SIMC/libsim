@@ -26,10 +26,10 @@ esempio_file_utilities_SOURCES = esempio_file_utilities.f90
 esempio_file_utilities_LDADD = ../base/libsim_base.la
 
 esempio_v7d_SOURCES = esempio_v7d.f90
-esempio_v7d_LDADD = ../base/libsim_base.la ../vol7d/libsim_vol7d.la $(libnetcdf) 
+esempio_v7d_LDADD = ../base/libsim_base.la ../vol7d/libsim_vol7d.la ../log4fortran/liblog4fortran.la $(libnetcdf) 
 
 log4fortran_SOURCES = log4fortran.f90
-log4fortran_LDADD =  ../log4fortran/liblog4fortran.la
+log4fortran_LDADD =  ../log4fortran/liblog4fortran.la ../base/libsim_base.la
 
 if LOG4FORTRAN
 EXTRA_DIST = log4crc
@@ -41,41 +41,41 @@ esempio_regrib_LDADD = ../base/libsim_base.la ../grib/libsim_grib.la $(libgrib)
 endif
 
 esempio_qc_convert_SOURCES = esempio_qc_convert.f90
-esempio_qc_convert_LDADD = ../base/libsim_base.la ../vol7d/libsim_vol7d.la  $(libnetcdf) 
+esempio_qc_convert_LDADD = ../base/libsim_base.la ../vol7d/libsim_vol7d.la ../log4fortran/liblog4fortran.la $(libnetcdf) 
 
 esempio_termolib_SOURCES  = esempio_termolib.f90 
 esempio_termolib_LDADD = ../base/libsim_base.la ../termolib/libsim_termolib.la 
 
 if ORSIM
 esempio_v7doracle_SOURCES = esempio_v7doracle.f90
-esempio_v7doracle_LDADD = ../base/libsim_base.la ../vol7d/libsim_vol7d.la $(libnetcdf) 
+esempio_v7doracle_LDADD = ../base/libsim_base.la ../vol7d/libsim_vol7d.la ../log4fortran/liblog4fortran.la $(libnetcdf) 
 # $(liboraclesim)
 
 esempio_v7doracle_multi_SOURCES = esempio_v7doracle_multi.f90
-esempio_v7doracle_multi_LDADD = ../base/libsim_base.la ../vol7d/libsim_vol7d.la $(libnetcdf)
+esempio_v7doracle_multi_LDADD = ../base/libsim_base.la ../vol7d/libsim_vol7d.la ../log4fortran/liblog4fortran.la $(libnetcdf)
 # $(liboraclesim)
 endif
 
 if DBALLE
 esempio_v7ddballe_SOURCES = esempio_v7ddballe.f90
-esempio_v7ddballe_LDADD = ../base/libsim_base.la ../vol7d/libsim_vol7d.la $(libdballe) $(libnetcdf)
+esempio_v7ddballe_LDADD = ../base/libsim_base.la ../vol7d/libsim_vol7d.la ../log4fortran/liblog4fortran.la $(libdballe) $(libnetcdf)
 
 esempio_v7ddballe_multi_SOURCES = esempio_v7ddballe_multi.f90
-esempio_v7ddballe_multi_LDADD = ../base/libsim_base.la ../vol7d/libsim_vol7d.la $(libdballe) $(libnetcdf)
+esempio_v7ddballe_multi_LDADD = ../base/libsim_base.la ../vol7d/libsim_vol7d.la ../log4fortran/liblog4fortran.la $(libdballe) $(libnetcdf)
 
 esempio_v7ddballe_import_export_SOURCES = esempio_v7ddballe_import_export.f90
-esempio_v7ddballe_import_export_LDADD = ../base/libsim_base.la ../vol7d/libsim_vol7d.la $(libdballe) $(libnetcdf)
+esempio_v7ddballe_import_export_LDADD = ../base/libsim_base.la ../vol7d/libsim_vol7d.la ../log4fortran/liblog4fortran.la $(libdballe) $(libnetcdf)
 
 esempio_v7ddballe_export_SOURCES = esempio_v7ddballe_export.f90
-esempio_v7ddballe_export_LDADD = ../base/libsim_base.la ../vol7d/libsim_vol7d.la $(libdballe) $(libnetcdf)
+esempio_v7ddballe_export_LDADD = ../base/libsim_base.la ../vol7d/libsim_vol7d.la ../log4fortran/liblog4fortran.la $(libdballe) $(libnetcdf)
 
 esempio_qccli_SOURCES = esempio_qccli.f90
-esempio_qccli_LDADD = ../base/libsim_base.la ../vol7d/libsim_vol7d.la ../qc/libsim_qc.la $(libdballe) $(libnetcdf)
+esempio_qccli_LDADD = ../base/libsim_base.la ../vol7d/libsim_vol7d.la ../log4fortran/liblog4fortran.la ../qc/libsim_qc.la $(libdballe) $(libnetcdf)
 endif
 
 if NETCDF
 esempio_v7dnetcdf_SOURCES = esempio_v7dnetcdf.f90
-esempio_v7dnetcdf_LDADD = ../base/libsim_base.la ../vol7d/libsim_vol7d.la $(libdballe) $(libnetcdf)
+esempio_v7dnetcdf_LDADD = ../base/libsim_base.la ../vol7d/libsim_vol7d.la  ../log4fortran/liblog4fortran.la ../log4fortran/liblog4fortran.la $(libdballe) $(libnetcdf)
 
 endif
 

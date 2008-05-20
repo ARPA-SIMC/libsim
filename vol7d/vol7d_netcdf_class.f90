@@ -7,12 +7,13 @@ USE vol7d_utilities
 USE geo_coord_class
 USE datetime_class
 use netcdf
+use log4fortran
 
 IMPLICIT NONE
 PRIVATE
 PUBLIC  import, export
 
-
+character (len=255),parameter:: subcategory="vol7d_netcdf_class"
 
 !!$!>\brief importa
 !!$INTERFACE import
@@ -67,10 +68,20 @@ integer :: i
 
 type(datetime) :: timeref 
 
+integer :: category
+character(len=512):: a_name
+
+
+
+call l4f_launcher(a_name,a_name_append=subcategory)
+category=l4f_category_get(a_name)
+
+
 if (ncconventions == "CF-1.1") then
    call vol7d_netcdf_export_CF (this,ncconventions,ncunit,description,filename)
 else if (ncconventions /= "CF-1.1 vol7d") then
-  print *,"ncconventions not supported: ", ncconventions
+
+  call l4f_category_log(category,L4F_INFO,"ncconventions not supported: "// a2c(ncconventions))
   call exit(1)
 end if
 
@@ -100,7 +111,12 @@ end if
 if (.not. present(ncunit))then
 
    inquire(file=lfilename,EXIST=exist)
-   if (exist) CALL raise_error('file exist; cannot open new file')
+
+   if (exist) then 
+     call l4f_category_log(category,L4F_ERROR,"file exist; cannot open new file: "//a2c(lfilename))
+     CALL raise_error('file exist; cannot open new file')
+   end if
+
    call check( "0",nf90_create(lfilename, nf90_clobber, lunit) )
    print *, "opened: ",lfilename
 
@@ -108,7 +124,11 @@ else
   if (ncunit==0)then
 
      inquire(file=lfilename,EXIST=exist)
-     if (exist) CALL raise_error('file exist; cannot open new file')
+     if (exist)then 
+       call l4f_category_log(category,L4F_ERROR,"file exist; cannot open new file: "//a2c(lfilename))
+       CALL raise_error('file exist; cannot open new file')
+     end if
+
      call check( "0",nf90_create(lfilename, nf90_clobber, lunit) )
      print *, "opened: ",lfilename
 
@@ -477,8 +497,17 @@ integer :: i
 
 type(datetime) :: timeref 
 
+integer :: category
+character(len=512):: a_name
+
+
+call l4f_launcher(a_name,a_name_append=subcategory)
+category=l4f_category_get(a_name)
+
+
 if (ncconventions /= "CF-1.1") then
-  print *,"ncconventions not supported: ", ncconventions
+
+  call l4f_category_log(category,L4F_INFO,"ncconventions not supported: "// a2c(ncconventions))
   call exit(1)
 end if
 

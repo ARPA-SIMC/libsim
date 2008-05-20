@@ -93,6 +93,9 @@
 !!\ingroup log4fortran
 module log4fortran
 
+use kinds
+use missing_values
+
 INTEGER ,PARAMETER :: L4F_FATAL    = 000  !< standard priority
 INTEGER ,PARAMETER :: L4F_ALERT    = 100  !< standard priority
 INTEGER ,PARAMETER :: L4F_CRIT     = 200  !< standard priority
@@ -113,6 +116,12 @@ integer :: l4f_priority=L4F_NOTICE
 character(len=510):: dummy_a_name
 
 private dummy_a_name 
+
+
+!> trasforma qualsiasi tipo fondamentale in stringa
+INTERFACE a2c
+  MODULE PROCEDURE c2c,r2c,d2c,i2c,b2c
+END INTERFACE
 
 
 #ifdef LOG4FORTRAN
@@ -166,35 +175,51 @@ end interface
 
 #endif
 
-
-
-
 contains
 
 !>Routine specifica per il SIM; cattura le variabili di ambiente
 !!LOG4_APPLICATION_NAME,LOG4_APPLICATION_ID e compone il nome univoco
 !!per il logging.  Se le variabili di ambiente non sono impostate
 !!ritorna un nome definito dal nome del processo e da un timestamp
-subroutine l4f_launcher(a_name)
+subroutine l4f_launcher(a_name,a_name_force,a_name_append)
 
 integer :: tarray(8)
 character (len=255) :: LOG4_APPLICATION_NAME,LOG4_APPLICATION_ID,arg
 character (len=*),intent(out) :: a_name !< nome univoco per logging
+character (len=*),intent(in),optional :: a_name_force !< forza il valore di a_name
+character (len=*),intent(in),optional :: a_name_append !< valore da appendere a a_name
+character (len=255),save :: a_name_save=cmiss
 
-call date_and_time(values=tarray)
-call getarg(0,arg)
-call getenv("LOG4_APPLICATION_NAME",LOG4_APPLICATION_NAME)
-call getenv("LOG4_APPLICATION_ID",LOG4_APPLICATION_ID)
-
-if (LOG4_APPLICATION_NAME=="" .and. LOG4_APPLICATION_ID=="") then
-
-  write (a_name,"(a,a,8i5,a)")trim(arg),"[",tarray,"]"
-
+if (present(a_name_force))then
+  a_name=a_name_force
+else if (c_e(a_name_save))then
+  a_name=a_name_save
 else
 
-  a_name = trim(LOG4_APPLICATION_NAME)//"["//trim(LOG4_APPLICATION_ID)//"]"
-
+  call date_and_time(values=tarray)
+  call getarg(0,arg)
+  call getenv("LOG4_APPLICATION_NAME",LOG4_APPLICATION_NAME)
+  call getenv("LOG4_APPLICATION_ID",LOG4_APPLICATION_ID)
+  
+  if (LOG4_APPLICATION_NAME=="" .and. LOG4_APPLICATION_ID=="") then
+    
+    write (a_name,"(a,a,8i5,a)")trim(arg),"[",tarray,"]"
+    
+  else
+    
+    a_name = trim(LOG4_APPLICATION_NAME)//"["//trim(LOG4_APPLICATION_ID)//"]"
+    
+  end if
+  
 end if
+
+
+a_name_save=a_name
+
+if (present(a_name_append))then
+  a_name=a2c(a_name)//"."//a2c(a_name_append)
+end if
+  
 
 end subroutine l4f_launcher
 
@@ -283,5 +308,60 @@ end function l4f_msg
 
 
 #endif
+
+
+
+function c2c(c)
+
+character (len=*) :: c
+character (len=len_trim(c)) :: c2c
+
+c2c=c
+
+end function c2c
+
+
+
+
+function r2c(r)
+
+real :: r
+character (len=15) :: r2c
+
+write (r2c,*)r
+
+end function r2c
+
+
+function d2c(d)
+
+real(kind=fp_d) :: d
+character (len=24) :: d2c
+
+write (d2c,*)d
+
+end function d2c
+
+
+function i2c(i)
+
+integer :: i
+character (len=12) :: i2c
+
+write (i2c,*)i
+
+end function i2c
+
+
+function b2c(b)
+
+INTEGER(kind=int_b) :: b
+character (len=6) :: b2c
+
+write (b2c,*)b
+
+end function b2c
+
+
 
 end module log4fortran

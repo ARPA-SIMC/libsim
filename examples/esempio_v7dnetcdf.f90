@@ -7,11 +7,10 @@ USE vol7d_dballe_class
 USE vol7d_class
 use log4fortran
 
+IMPLICIT NONE
+
 integer :: category,ier
 character(len=512):: a_name
-
-
-IMPLICIT NONE
 
 integer :: nana, ntime ,nlevel, ntimerange, ndativarr, nnetwork ,nanavarc
 integer :: iana, itime, ilevel, itimerange, idativarr, inetwork
@@ -27,7 +26,11 @@ integer :: year,month,day,hour,minute,ist
 real :: prec,temp
 
 !questa chiamata prende dal launcher il nome univoco
-call l4f_launcher(a_name)
+call l4f_launcher(a_name,a_name_force="demo")
+
+!imposta a_name
+category=l4f_category_get(a_name)
+
 
 !init di log4fortran
 ier=l4f_init()
@@ -63,6 +66,7 @@ call init(v7d%timerange(2),254,    0, 0)        ! "istantanee"
 v7d%volanac(1,1,1)="stazione 1 "
 v7d%volanac(2,1,1)="stazione 2 "
 
+call l4f_category_log(category,L4F_INFO,"demo scrittura netcdf da vol7d")
 
 
 do ist=1,nana
@@ -70,7 +74,7 @@ do ist=1,nana
     
     read (10,*) iana,lat,lon,year,month,day,hour,minute,prec,temp
     if (iana /= ist) call l4f_category_log(category,L4F_ERROR,&
-         "abbiamo un serio problema ")
+         "abbiamo un serio problema "//a2c(iana)//a2c(ist))
 
     call init(v7d%ana(iana),lat=lat,lon=lon)
     call init(v7d%time(itime), year=year, month=month, day=day, hour=hour, minute=minute)
@@ -90,7 +94,6 @@ end do
 
 call vol7d_dballe_set_var_du(v7d)
 
-print*,v7d%anavar%c
 
 call export(v7d,ncconventions="CF-1.1 vol7d")
 
