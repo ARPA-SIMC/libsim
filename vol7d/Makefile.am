@@ -11,7 +11,7 @@ libsim_vol7d_la_SOURCES += vol7d_dballe_class.F90
 endif
 
 if NETCDF
-libsim_vol7d_la_SOURCES += vol7d_netcdf_class.F90
+libsim_vol7d_la_SOURCES += vol7d_netcdf_class.f90
 endif
 
 AM_FCFLAGS = -I../base -I../log4fortran

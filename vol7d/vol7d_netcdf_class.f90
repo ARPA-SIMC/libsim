@@ -67,6 +67,8 @@ integer :: ana_ident_varid,ana_dimid,ana_lon_varid,ana_lat_varid &
 integer :: i
 
 type(datetime) :: timeref 
+character (len=23) :: isodate
+
 
 integer :: category
 character(len=512):: a_name
@@ -140,6 +142,7 @@ end if
 
 
 call init(timeref,year=1,month=1,day=1,hour=00,minute=00)
+call getval(timeref,isodate=isodate)
 
 nana=size(this%ana)
 ntime=size(this%time)
@@ -238,7 +241,10 @@ call check( "10",nf90_def_var(lunit, "ana_lat", NF90_DOUBLE, ana_dimid, ana_lat_
 call check( "11",nf90_def_var(lunit, "ana_lon", NF90_DOUBLE, ana_dimid, ana_lon_varid) )
 call check( "12",nf90_def_var(lunit, "ana_ident", NF90_CHAR, (/ ident_len_dimid,ana_dimid/), ana_ident_varid) )
 
+
 call check( "13",nf90_def_var(lunit, "time_iminuti", NF90_INT, time_dimid, time_iminuti_varid) )
+call check( "1313",nf90_put_att(lunit,time_iminuti_varid, "units","minute since "//isodate) )
+
 
 call check( "14",nf90_def_var(lunit, "timerange_vect", NF90_INT, (/timerange_dimid,timerange_vdim_dimid/), timerange_vect_varid) )
 call check( "15",nf90_def_var(lunit, "level_vect", NF90_INT, (/level_dimid, level_vdim_dimid/), level_vect_varid) )
