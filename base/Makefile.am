@@ -9,6 +9,8 @@ AM_LDFLAGS = $(libshp)
 tmpvar = $(libsim_base_la_SOURCES:.f90=.mod)
 nodist_include_HEADERS = $(tmpvar:.F90=.mod)
 
+char_utilities.$(OBJEXT): kinds.$(OBJEXT)
+char_utilities.lo: kinds.$(OBJEXT)
 datetime_class.$(OBJEXT): err_handling.$(OBJEXT) missing_values.$(OBJEXT)
 datetime_class.lo: err_handling.$(OBJEXT) missing_values.$(OBJEXT)
 err_handling.$(OBJEXT): io_units.$(OBJEXT)
