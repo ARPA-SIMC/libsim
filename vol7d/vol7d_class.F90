@@ -988,12 +988,18 @@ END SUBROUTINE vol7d_append
 !! vol7d_copy, 2 istanze
 !! completamente indipendenti, ma uguali tra loro per contenuto, della classe
 !! vol7d, e quindi hanno vita indipendente.
-SUBROUTINE vol7d_copy(this, that, sort, unique, miss)
+SUBROUTINE vol7d_copy(this, that, sort, unique, miss, ltime, ltimerange, &
+ llevel, lana, lnetwork)
 TYPE(vol7d),INTENT(INOUT) :: this !< oggetto origine
 TYPE(vol7d),INTENT(INOUT) :: that !< oggetto destinazione
 LOGICAL,INTENT(IN),OPTIONAL :: sort !< se fornito e uguale a \c .TRUE., i descrittori che supportano un ordinamento (operatori > e/o <) risulteranno ordinati in ordine crescente nell'oggetto destinazione
 LOGICAL,INTENT(IN),OPTIONAL :: unique !< se fornito e uguale a \c .TRUE., gli eventuali elementi duplicati nei descrittori dell'oggetto origine verranno collassati in un unico elemento (con eventuale perdita dei dati relativi agli elementi duplicati)
 LOGICAL,INTENT(IN),OPTIONAL :: miss !< se fornito e uguale a \c .TRUE., gli eventuali elementi dei descrittori uguali al corrispondente valore mancante verranno eliminati dall'oggetto finale
+LOGICAL,INTENT(IN),OPTIONAL :: ltime(:) !< se fornito, deve essere un vettore logico della stessa lunghezza di \a this%time indicante quali elementi della dimensione \a time mantenere (valori \c .TRUE.) e quali scartare (valori \c .FALSE.) nel volume copiato; è compatibile col parametro \a miss
+LOGICAL,INTENT(IN),OPTIONAL :: ltimerange(:) !< come il precedente per la dimensione \a timerange
+LOGICAL,INTENT(IN),OPTIONAL :: llevel(:) !< come il precedente per la dimensione \a level
+LOGICAL,INTENT(IN),OPTIONAL :: lana(:) !< come il precedente per la dimensione \a ana
+LOGICAL,INTENT(IN),OPTIONAL :: lnetwork(:) !< come il precedente per la dimensione \a network
 
 LOGICAL :: lsort, lunique, lmiss
 INTEGER,POINTER :: remapt(:), remaptr(:), remapl(:), remapa(:), remapn(:)
@@ -1020,15 +1026,15 @@ ENDIF
 ! Calcolo le mappature tra volume vecchio e volume nuovo
 ! I puntatori remap* vengono tutti o allocati o nullificati
 CALL vol7d_remap1_datetime(this%time, that%time, lsort, lunique, lmiss, &
- remapt)
+ remapt, ltime)
 CALL vol7d_remap1_vol7d_timerange(this%timerange, that%timerange, &
- lsort, lunique, lmiss, remaptr)
+ lsort, lunique, lmiss, remaptr, ltimerange)
 CALL vol7d_remap1_vol7d_level(this%level, that%level, lsort, lunique, lmiss, &
- remapl)
+ remapl, llevel)
 CALL vol7d_remap1_vol7d_ana(this%ana, that%ana, lsort, lunique, lmiss, &
- remapa)
+ remapa, lana)
 CALL vol7d_remap1_vol7d_network(this%network, that%network, &
- lsort, lunique, lmiss, remapn)
+ lsort, lunique, lmiss, remapn, lnetwork)
 
 ! Faccio la riforma fisica dei volumi
 CALL vol7d_reform_finalr(this, that, &
@@ -1065,15 +1071,22 @@ END SUBROUTINE vol7d_copy
 !! o istanti temporali indesiderati, basta assegnare il loro corrispondente
 !! elemento del descrittore a valore mancante e chiamare vol7d_reform
 !! con miss=.TRUE. .
-SUBROUTINE vol7d_reform(this, sort, unique, miss)
+SUBROUTINE vol7d_reform(this, sort, unique, miss, ltime, ltimerange, &
+ llevel, lana, lnetwork)
 TYPE(vol7d),INTENT(INOUT) :: this !< oggetto da riformare
 LOGICAL,INTENT(IN),OPTIONAL :: sort !< se fornito e uguale a \c .TRUE., i descrittori che supportano un ordinamento (operatori > e/o <) risulteranno ordinati in ordine crescente nell'oggetto riformato
 LOGICAL,INTENT(IN),OPTIONAL :: unique !< se fornito e uguale a \c .TRUE., gli eventuali elementi duplicati nei descrittori dell'oggetto iniziale verranno collassati in un unico elemento (con eventuale perdita dei dati relativi agli elementi duplicati)
 LOGICAL,INTENT(IN),OPTIONAL :: miss !< se fornito e uguale a \c .TRUE., gli eventuali elementi dei descrittori uguali al corrispondente valore mancante verranno eliminati dall'oggetto riformato
+LOGICAL,INTENT(IN),OPTIONAL :: ltime(:) !< se fornito, deve essere un vettore logico della stessa lunghezza di \a this%time indicante quali elementi della dimensione \a time mantenere (valori \c .TRUE.) e quali scartare (valori \c .FALSE.) nel volume copiato; è compatibile col parametro \a miss
+LOGICAL,INTENT(IN),OPTIONAL :: ltimerange(:) !< come il precedente per la dimensione \a timerange
+LOGICAL,INTENT(IN),OPTIONAL :: llevel(:) !< come il precedente per la dimensione \a level
+LOGICAL,INTENT(IN),OPTIONAL :: lana(:) !< come il precedente per la dimensione \a ana
+LOGICAL,INTENT(IN),OPTIONAL :: lnetwork(:) !< come il precedente per la dimensione \a network
 
 TYPE(vol7d) :: v7dtmp
 
-CALL vol7d_copy(this, v7dtmp, sort, unique, miss)
+CALL vol7d_copy(this, v7dtmp, sort, unique, miss, ltime, ltimerange, &
+ llevel, lana, lnetwork)
 ! Distruggo il vecchio volume e assegno il nuovo a this
 CALL delete(this)
 this = v7dtmp
@@ -1084,14 +1097,13 @@ END SUBROUTINE vol7d_reform
 !> Metodo per ottenere solo le differenze tra due oggetti vol7d.
 !! Il primo volume viene confrontato col secondo; nel secondo volume ovunque 
 !! i dati confrontati siano coincidenti viene impostato valore mancante.
-
-SUBROUTINE vol7d_diff_only (this, that,data_only,ana)
+SUBROUTINE vol7d_diff_only (this, that, data_only,ana)
 TYPE(vol7d),INTENT(IN) :: this !< primo volume da confrontare
 TYPE(vol7d),INTENT(OUT) :: that !< secondo volume da confrontare in cui eliminare i dati coincidenti
 !INTEGER(kind=int_b), PARAMETER :: bmiss = ibmiss 
 !INTEGER(kind=fp_d), PARAMETER :: dmiss = rdmiss 
 logical , optional, intent(in) :: data_only !< attiva l'elaborazione dei soli dati e non dell'anagrafica (default: .false.)
-logical , optional, intent(in) :: ana !< attiva l'elaborazione dell'anagrafica (coordinate e ident) (defaul: .false.)
+logical , optional, intent(in) :: ana !< attiva l'elaborazione dell'anagrafica (coordinate e ident) (default: .false.)
 logical  :: ldata_only,lana
 
 IF (PRESENT(data_only)) THEN

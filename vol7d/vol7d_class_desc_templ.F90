@@ -74,24 +74,32 @@ END SUBROUTINE vol7d_remap2_/**/VOL7D_POLY_TYPE
 
 
 SUBROUTINE vol7d_remap1_/**/VOL7D_POLY_TYPE(varin, varout, &
- sort, unique, miss, remap)
+ sort, unique, miss, remap, misslist)
 TYPE(/**/VOL7D_POLY_TYPE),POINTER :: varin(:), varout(:), varoutsort(:)
 LOGICAL,INTENT(in) :: sort, unique, miss
 INTEGER,POINTER :: remap(:)
+LOGICAL,INTENT(in),OPTIONAL :: misslist(:)
 
 INTEGER :: i, j, n, r
 INTEGER,POINTER :: remaptmp(:)
 TYPE(/**/VOL7D_POLY_TYPE) :: v
+LOGICAL,ALLOCATABLE :: lmask(:) ! local mask of values to be remapped
 
 NULLIFY(remap, varout)
 IF (.NOT.ASSOCIATED(varin)) RETURN
 
-IF (miss) THEN
+IF (PRESENT(misslist) .OR. miss) THEN
+! prepare local mask
+  ALLOCATE (lmask(SIZE(varin)))
+  lmask = .TRUE.
+  IF (PRESENT(misslist) .AND. SIZE(misslist) == SIZE(varin)) &
+   lmask = lmask .AND. misslist
+  IF (miss) lmask = lmask .AND. (varin /= VOL7D_POLY_TYPE/**/_miss)
+
   IF (unique) THEN
-    n = count_distinct(varin, back=.TRUE., &
-     mask=(varin /= VOL7D_POLY_TYPE/**/_miss))
+    n = count_distinct(varin, back=.TRUE., mask=lmask)
   ELSE
-    n = COUNT(varin /= VOL7D_POLY_TYPE/**/_miss)
+    n = COUNT(lmask)
   ENDIF
 ELSE
   IF (unique) THEN
@@ -105,14 +113,13 @@ IF (n == 0) RETURN ! in case of variables do not allocate zero-length arrays
 #endif
 ! Complete allocations
 ALLOCATE(remap(n), varout(n))
-IF (miss) THEN
+IF (PRESENT(misslist) .OR. miss) THEN
   IF (unique) THEN
-    remap = map_inv_distinct(varin, n, back=.TRUE., &
-     mask=(VOL7D_POLY_TYPE/**/_miss /= varin))
+    remap = map_inv_distinct(varin, n, back=.TRUE., mask=lmask)
   ELSE
-    remap = PACK((/(i, i=1,SIZE(varin))/), &
-     mask=VOL7D_POLY_TYPE/**/_miss /= varin)
+    remap = PACK((/(i, i=1,SIZE(varin))/), mask=lmask)
   ENDIF
+  DEALLOCATE(lmask) ! not used anymore (deallocation useless in f95)
 ELSE
   IF (unique) THEN
     remap = map_inv_distinct(varin, n, back=.TRUE.)
