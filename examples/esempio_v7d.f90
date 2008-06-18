@@ -1,8 +1,10 @@
 PROGRAM esempio_vol7d
+USE datetime_class ! strano ma purtroppo ci vuole !
 USE vol7d_class
 IMPLICIT NONE
 
-TYPE(vol7d) :: v7d1, v7d2, v7d3, v7dc
+TYPE(vol7d) :: v7d1, v7d2, v7d3, v7dc, v7dl
+TYPE(datetime) :: enddate
 REAL, POINTER :: vol1d(:)
 INTEGER :: i, n1 = 5, n2 = 2
 
@@ -54,7 +56,7 @@ v7d1%dativarattr%b(1)%btable="B22070"
 
 DO i=1,n1
   ! ci scrivo le date di riferimento
-  CALL init(v7d1%time(i), year=2007, month=3, day=i+5)
+  v7d1%time(i) = datetime_new(year=2007, month=3, day=i+5)
   ! ci scrivo il dato reale
   v7d1%voldatir(1,i,1,1,1,1)=22.4+0.5*i
   ! ci scrivo gli attributi byte
@@ -64,7 +66,7 @@ END DO
 
 DO i=1,n2
   ! ci scrivo le date di riferimento
-  CALL init(v7d2%time(i), year=2007, month=3, day=(i-1)*10+1)
+  v7d2%time(i) = datetime_new(year=2007, month=3, day=(i-1)*10+1)
   ! ci scrivo il dato reale
   v7d2%voldatir(1,i,1,1,1,1)=26.4+0.5*i
 END DO
@@ -92,7 +94,7 @@ PRINT*,vol1d
 PRINT*,'Volume 1+2+3, attributi:'
 PRINT*,v7d1%volanai
 
-! copio il volumo in un altro e distruggo l'originale
+! copio il volume in un altro e distruggo l'originale
 CALL vol7d_copy(v7d1, v7dc)
 CALL delete (v7d1)
 
@@ -107,9 +109,19 @@ v7dc%time(SIZE(v7dc%time)-1) = datetime_miss
 CALL vol7d_reform(v7dc, miss=.TRUE.)
 
 CALL vol7d_get_voldatir(v7dc, (/vol7d_time_d/), vol1d)
-PRINT*,'Volume riformato, dati:'
+PRINT*,'Volume riformato, (tolto il penultimo livello temporale) dati:'
 PRINT*,vol1d
-PRINT*,'Volume riformato, attributi:'
+PRINT*,'Volume riformato, (tolto il penultimo livello temporale) attributi:'
 PRINT*,v7dc%volanai
+
+! copio il volume in un altro tenendo solo le date prima di enddate
+!CALL init(enddate, year=2007, month=3, day=8)
+CALL vol7d_copy(v7dc, v7dl, ltime=(v7dc%time < datetime_new(year=2007, month=3, day=8)))
+CALL vol7d_get_voldatir(v7dl, (/vol7d_time_d/), vol1d)
+PRINT*,'Volume copiato (tolte le ultime date), dati:'
+PRINT*,vol1d
+PRINT*,'Volume copiato (tolte le ultime date), attributi:'
+PRINT*,v7dl%volanai
+
 
 END PROGRAM esempio_vol7d
