@@ -74,7 +74,7 @@ PUBLIC datetime, datetime_miss, datetime_new, init, delete, getval, &
  OPERATOR(==), OPERATOR(/=), OPERATOR(>), OPERATOR(<), &
  OPERATOR(>=), OPERATOR(<=), OPERATOR(+), OPERATOR(-), &
  OPERATOR(*), OPERATOR(/), mod, &
- timedelta, timedelta_miss, timedelta_0, timedelta_getamsec
+ timedelta, timedelta_miss, timedelta_new, timedelta_0, timedelta_getamsec
 
 !> Costruttori per le classi datetime e timedelta. Devono essere richiamati
 !! per tutti gli oggetti di questo tipo definiti in un programma
@@ -278,6 +278,7 @@ CHARACTER(len=*),INTENT(IN),OPTIONAL :: simpledate !< inizializza l'oggetto ad u
 CHARACTER(len=12),INTENT(IN),OPTIONAL :: oraclesimdate !< inizializza l'oggetto ad una data espressa nel formato \c AAAAMMGGhhmm, come nelle routine per l'accesso al db Oracle del SIM.
 
 INTEGER :: lyear, lmonth, lday, lhour, lminute, lsec, lmsec, ier
+CHARACTER(len=23) :: datebuf
 
 IF (PRESENT(year)) THEN ! anno/mese/giorno, ecc.
   lyear = year
@@ -310,51 +311,33 @@ IF (PRESENT(year)) THEN ! anno/mese/giorno, ecc.
 ELSE IF (PRESENT(unixtime)) THEN ! secondi dal 01/01/1970 (unix)
   this%iminuti = (unixtime + unsec)*1000
 ELSE IF (PRESENT(isodate)) THEN ! formato iso YYYY-MM-DD hh:mm:ss.msc
-  lhour = 0
-  lminute = 0
-  lmsec = 0
-  READ(isodate,'(I4,1X,I2,1X,I2)', err=100) lyear, lmonth, lday
-  IF (LEN_TRIM(isodate) >= 16) THEN
-    READ(isodate,'(11X,I2,1X,I2)', err=100) lhour, lminute
-    IF (LEN_TRIM(isodate) >= 19) THEN
-      READ(isodate,'(17X,I2)', err=100) lsec
-      IF (LEN_TRIM(isodate) >= 23) THEN
-        READ(isodate,'(20X,I3)', err=100) lmsec
-      ENDIF
-      lmsec = lmsec + lsec*1000
-    ENDIF
-  ENDIF
+  datebuf(1:23) = '0001-01-01 00:00:00.000'
+  datebuf(1:MIN(LEN(isodate),23)) = isodate(1:MIN(LEN(isodate),23))
+  READ(datebuf,'(I4,1X,I2,1X,I2,1X,I2,1X,I2,1X,I2,1X,I3)', err=100) &
+   lyear, lmonth, lday, lhour, lminute, lsec, lmsec
+  lmsec = lmsec + lsec*1000
   CALL jeladata5_1(lday, lmonth, lyear, lhour, lminute, lmsec, this%iminuti)
   RETURN
+
 100 CONTINUE ! condizione di errore in isodate
   CALL delete(this)
   CALL raise_error('isodate '//TRIM(isodate)//' non valida')
   RETURN
-  CALL jeladata5_1(lday,lmonth,lyear,lhour,lminute,0,this%iminuti)
+
 ELSE IF (PRESENT(simpledate)) THEN ! formato YYYYMMDDhhmmssmsc
-  lhour = 0
-  lminute = 0
-  lmsec = 0
-  READ(simpledate,'(I4,2I2)', err=120) lyear, lmonth, lday
-  IF (LEN_TRIM(simpledate) >= 10) THEN
-    READ(simpledate,'(8X,I2)', err=120) lhour
-    IF (LEN_TRIM(simpledate) >= 12) THEN
-      READ(simpledate,'(10X,I2)', err=120) lminute
-      IF (LEN_TRIM(simpledate) >= 14) THEN
-        READ(simpledate,'(12X,I2)', err=120) lsec
-        IF (LEN_TRIM(simpledate) >= 17) THEN
-          READ(simpledate,'(14X,I3)', err=120) lmsec
-        ENDIF
-        lmsec = lmsec + lsec*1000
-      ENDIF
-    ENDIF
-  ENDIF
+  datebuf(1:17) = '00010101000000000'
+  datebuf(1:MIN(LEN(simpledate),17)) = simpledate(1:MIN(LEN(simpledate),17))
+  READ(datebuf,'(I4.4,5I2.2,I3.3)', err=120) &
+   lyear, lmonth, lday, lhour, lminute, lsec, lmsec
+  lmsec = lmsec + lsec*1000
   CALL jeladata5_1(lday, lmonth, lyear, lhour, lminute, lmsec, this%iminuti)
   RETURN
-120 CONTINUE
+
+120 CONTINUE ! condizione di errore in simpledate
   CALL delete(this)
-  CALL raise_error('oraclesimdate '//TRIM(oraclesimdate)//' non valida')
+  CALL raise_error('simpledate '//TRIM(simpledate)//' non valida')
   RETURN
+
 ELSE IF (PRESENT(oraclesimdate)) THEN ! formato YYYYMMDDhhmm
   CALL raise_warning('in datetime_init, parametro oraclesimdate '// &
    'obsoleto, usare piuttosto simpledate')
@@ -381,9 +364,10 @@ END SUBROUTINE datetime_delete
 
 !> Restituisce il valore di un oggetto \a datetime in una o più
 !! modalità desiderate. Qualsiasi combinazione dei parametri
-!! opzionali è consentita.
+!! opzionali è consentita. \a oraclesimedate è
+!! obsoleto, usare piuttosto \a simpledate.
 SUBROUTINE datetime_getval(this, year, month, day, hour, minute, msec, &
- unixtime, isodate, oraclesimdate)
+ unixtime, isodate, simpledate, oraclesimdate)
 TYPE(datetime),INTENT(IN) :: this !< oggetto di cui restituire il valore
 INTEGER,INTENT(OUT),OPTIONAL :: year !< anno
 INTEGER,INTENT(OUT),OPTIONAL :: month !< mese
@@ -392,14 +376,16 @@ INTEGER,INTENT(OUT),OPTIONAL :: hour !< ore
 INTEGER,INTENT(OUT),OPTIONAL :: minute !< minuti
 INTEGER,INTENT(OUT),OPTIONAL :: msec !< millisecondi
 INTEGER(kind=int_ll),INTENT(OUT),OPTIONAL :: unixtime !< secondi a partire dal 1/1/1970
-CHARACTER(len=*),INTENT(OUT),OPTIONAL :: isodate !< data completa nel formato \c AAAA-MM-GG \c hh:mm:ss.msc
-CHARACTER(len=12),INTENT(OUT),OPTIONAL :: oraclesimdate !< data completa nel formato \c AAAAMMGGhhmm
+CHARACTER(len=*),INTENT(OUT),OPTIONAL :: isodate !< data completa nel formato \c AAAA-MM-GG \c hh:mm:ss.msc (simil-ISO), la variabile può essere più corta di 23 caratteri, in tal caso conterrà solo ciò che vi cape
+CHARACTER(len=*),INTENT(OUT),OPTIONAL :: simpledate !< data completa nel formato \c AAAAMMGGhhmmssmsc , la variabile può essere più corta di 17 caratteri, in tal caso conterrà solo ciò che vi cape, da preferire rispetto a \a oraclesimdate
+CHARACTER(len=12),INTENT(OUT),OPTIONAL :: oraclesimdate !< data parziale nel formato \c AAAAMMGGhhmm
 
 INTEGER :: lyear, lmonth, lday, lhour, lminute, lmsec, ier
+CHARACTER(len=23) :: datebuf
 
 IF (PRESENT(year) .OR. PRESENT(month) .OR. PRESENT(day) .OR. PRESENT(hour) &
- .OR. PRESENT(minute) .OR. PRESENT(msec) .OR. PRESENT(unixtime) &
- .OR. PRESENT(isodate) .OR. PRESENT(oraclesimdate)) THEN
+ .OR. PRESENT(minute) .OR. PRESENT(msec) .OR. PRESENT(isodate) &
+ .OR. PRESENT(simpledate) .OR. PRESENT(oraclesimdate)) THEN
   CALL jeladata6_1(lday, lmonth, lyear, lhour, lminute, lmsec, this%iminuti)
   IF (PRESENT(msec)) THEN 
     msec = lmsec
@@ -420,24 +406,24 @@ IF (PRESENT(year) .OR. PRESENT(month) .OR. PRESENT(day) .OR. PRESENT(hour) &
     year = lyear
   ENDIF
   IF (PRESENT(isodate)) THEN
-    IF (LEN(isodate) <= 16) THEN
-      WRITE(isodate, '(I4.4,A1,I2.2,A1,I2.2,1X,I2.2,A1,I2.2)') &
-       lyear, '-', lmonth, '-', lday, lhour, ':', lminute
-    ELSE IF(LEN(isodate) <= 19) THEN
-      WRITE(isodate, '(I4.4,A1,I2.2,A1,I2.2,1X,I2.2,A1,I2.2,A1,I2.2)') &
-       lyear, '-', lmonth, '-', lday, lhour, ':', lminute, ':', lmsec/60
-    ELSE
-      WRITE(isodate, '(I4.4,A1,I2.2,A1,I2.2,1X,I2.2,A1,I2.2,A1,I2.2,A1,I3.3)') &
-       lyear, '-', lmonth, '-', lday, lhour, ':', lminute, ':', lmsec/1000, &
-       '.', MOD(lmsec, 1000)
-    ENDIF
+    WRITE(datebuf(1:23), '(I4.4,A1,I2.2,A1,I2.2,1X,I2.2,A1,I2.2,A1,I2.2,A1,I3.3)') &
+     lyear, '-', lmonth, '-', lday, lhour, ':', lminute, ':', lmsec/1000, &
+     '.', MOD(lmsec, 1000)
+    isodate = datebuf(1:MIN(LEN(isodate),23))
+  ENDIF
+  IF (PRESENT(simpledate)) THEN
+    WRITE(datebuf(1:17), '(I4.4,5I2.2,I3.3)') &
+     lyear, lmonth, lday, lhour, lminute, lmsec/1000, MOD(lmsec, 1000)
+    simpledate = datebuf(1:MIN(LEN(simpledate),17))
   ENDIF
   IF (PRESENT(oraclesimdate)) THEN
+    CALL raise_warning('in datetime_getval, parametro oraclesimdate '// &
+     'obsoleto, usare piuttosto simpledate')
     WRITE(oraclesimdate, '(I4.4,4I2.2)') lyear, lmonth, lday, lhour, lminute
   ENDIF
-  IF (PRESENT(unixtime)) THEN
-    unixtime = this%iminuti/1000_int_ll-unsec
-  ENDIF
+ENDIF
+IF (PRESENT(unixtime)) THEN
+  unixtime = this%iminuti/1000_int_ll-unsec
 ENDIF
 
 END SUBROUTINE datetime_getval
@@ -773,49 +759,36 @@ CHARACTER(len=*),INTENT(IN),OPTIONAL :: isodate !< inizializza l'oggetto ad un i
 CHARACTER(len=*),INTENT(IN),OPTIONAL :: simpledate !< inizializza l'oggetto ad un intervallo nel formato \c GGGGGGGGhhmmmsc, ignorando tutti gli altri parametri, da preferire rispetto a \a oraclesimdate
 CHARACTER(len=12),INTENT(IN),OPTIONAL :: oraclesimdate !< inizializza l'oggetto ad un intervallo nel formato \c GGGGGGGGhhmm, ignorando tutti gli altri parametri
 
-
 INTEGER :: d, h, m, s, ms
+CHARACTER(len=23) :: datebuf
 
 this%month = 0
 IF (PRESENT(isodate)) THEN
-  h = 0
-  m = 0
-  s = 0
-  ms = 0
-  READ(isodate, '(I10)') d
-  IF (LEN(isodate) >= 16) THEN
-    READ(isodate, '(11X,I2,1X,I2)') h, m
-    IF (LEN(isodate) >= 19) THEN
-      READ(isodate, '(16X,1X,I2)') s
-      IF (LEN(isodate) >= 22) THEN
-        READ(isodate, '(19X,I3)') ms
-      ENDIF
-    ENDIF
-  ENDIF
+  datebuf(1:23) = '0000000000 00:00:00.000'
+  datebuf(1:MIN(LEN(isodate),23)) = isodate(1:MIN(LEN(isodate),23))
+  READ(datebuf,'(I10,1X,I2,1X,I2,1X,I2,1X,I3)', err=200) d, h, m, s, ms
   this%iminuti = 86400000_int_ll*INT(d, KIND=int_ll) + &
    3600000_int_ll*INT(h, KIND=int_ll) + 60000_int_ll*INT(m, KIND=int_ll) + &
    1000_int_ll*INT(s, KIND=int_ll) + INT(ms, KIND=int_ll)
+  RETURN
+
+200 CONTINUE ! condizione di errore in isodate
+  CALL delete(this)
+  CALL raise_error('isodate '//TRIM(isodate)//' non valida')
+
 ELSE IF (PRESENT(simpledate)) THEN
-  h = 0
-  m = 0
-  s = 0
-  ms = 0
-  READ(simpledate, '(I8)') d
-  IF (LEN(simpledate) >= 10) THEN
-    READ(simpledate, '(8X,I2)') h
-    IF (LEN(simpledate) >= 12) THEN
-      READ(simpledate, '(10X,I2)') m
-      IF (LEN(simpledate) >= 14) THEN
-        READ(simpledate, '(12X,I2)')s
-        IF (LEN(simpledate) >= 17) THEN
-          READ(simpledate, '(14X,I3)')ms
-        ENDIF
-      ENDIF
-    ENDIF
-  ENDIF
+  datebuf(1:17) = '00000000000000000'
+  datebuf(1:MIN(LEN(simpledate),17)) = simpledate(1:MIN(LEN(simpledate),17))
+  READ(datebuf,'(I8.8,3I2.2,I3.3)', err=220) d, h, m, s, ms
   this%iminuti = 86400000_int_ll*INT(d, KIND=int_ll) + &
    3600000_int_ll*INT(h, KIND=int_ll) + 60000_int_ll*INT(m, KIND=int_ll) + &
    1000_int_ll*INT(s, KIND=int_ll) + INT(ms, KIND=int_ll)
+
+220 CONTINUE ! condizione di errore in simpledate
+  CALL delete(this)
+  CALL raise_error('simpledate '//TRIM(simpledate)//' non valida')
+  RETURN
+
 ELSE IF (PRESENT(oraclesimdate)) THEN
   CALL raise_warning('in timedelta_init, parametro oraclesimdate '// &
    'obsoleto, usare piuttosto simpledate')
@@ -858,9 +831,10 @@ END SUBROUTINE timedelta_delete
 
 !> Restituisce il valore di un oggetto \a timedelta in una o più
 !! modalità desiderate. Qualsiasi combinazione dei parametri
-!! opzionali è consentita.
+!! opzionali è consentita. \a oraclesimedate è
+!! obsoleto, usare piuttosto \a simpledate.
 SUBROUTINE timedelta_getval(this, year, month, amonth, day, hour, minute, msec, &
- ahour, aminute, amsec, isodate, oraclesimdate)
+ ahour, aminute, amsec, isodate, simpledate, oraclesimdate)
 TYPE(timedelta),INTENT(IN) :: this !< oggetto di cui restituire il valore
 INTEGER,INTENT(OUT),OPTIONAL :: year !< anni, /=0 solo per intervalli "popolari"
 INTEGER,INTENT(OUT),OPTIONAL :: month !< mesi modulo 12, /=0 solo per intervalli "popolari"
@@ -872,10 +846,12 @@ INTEGER,INTENT(OUT),OPTIONAL :: msec !< millisecondi modulo 1000
 INTEGER,INTENT(OUT),OPTIONAL :: ahour !< ore totali
 INTEGER,INTENT(OUT),OPTIONAL :: aminute !< minuti totali
 INTEGER(kind=int_ll),INTENT(OUT),OPTIONAL :: amsec !< millisecondi totali
-CHARACTER(len=*),INTENT(OUT),OPTIONAL :: isodate !< intervallo totale nel formato \c GGGGGGGGGG \c hh:mm:ss.msc
+CHARACTER(len=*),INTENT(OUT),OPTIONAL :: isodate !< intervallo totale nel formato \c GGGGGGGGGG \c hh:mm:ss.msc  (simil-ISO), la variabile può essere più corta di 23 caratteri, in tal caso conterrà solo ciò che vi cape
+CHARACTER(len=*),INTENT(OUT),OPTIONAL :: simpledate  !< intervallo totale nel formato \c GGGGGGGGhhmmssmsc , la variabile può essere più corta di 17 caratteri, in tal caso conterrà solo ciò che vi cape, da preferire rispetto a \a oraclesimdate
 CHARACTER(len=12),INTENT(OUT),OPTIONAL :: oraclesimdate !< intervallo totale nel formato \c GGGGGGGGhhmm
 
 INTEGER :: lyear, lmonth, lday, lhour, lminute, ier
+CHARACTER(len=23) :: datebuf
 
 IF (PRESENT(amsec)) THEN 
   amsec = this%iminuti
@@ -908,12 +884,23 @@ IF (PRESENT(year)) THEN
   year = this%month/12
 ENDIF
 IF (PRESENT(isodate)) THEN ! Non standard, inventato!
-  WRITE(isodate, '(I10.10,1X,I2.2,A1,I2.2,A1,I2.2,A1,I3.3)') &
+  WRITE(datebuf(1:23), '(I10.10,1X,I2.2,A1,I2.2,A1,I2.2,A1,I3.3)') &
    this%iminuti/86400000_int_ll, MOD(this%iminuti/3600000_int_ll, 24), ':', &
    MOD(this%iminuti/60000_int_ll, 60), ':', MOD(this%iminuti/1000_int_ll, 60), &
    '.', MOD(this%iminuti, 1000)
+  isodate = datebuf(1:MIN(LEN(isodate),23))
+
+ENDIF
+IF (PRESENT(simpledate)) THEN
+  WRITE(datebuf(1:17), '(I8.8,3I2.2,I3.3)') &
+   this%iminuti/86400000_int_ll, MOD(this%iminuti/3600000_int_ll, 24), &
+   MOD(this%iminuti/60000_int_ll, 60), MOD(this%iminuti/1000_int_ll, 60), &
+   MOD(this%iminuti, 1000)
+  simpledate = datebuf(1:MIN(LEN(simpledate),17))
 ENDIF
 IF (PRESENT(oraclesimdate)) THEN
+  CALL raise_warning('in timedelta_getval, parametro oraclesimdate '// &
+   'obsoleto, usare piuttosto simpledate')
   WRITE(oraclesimdate, '(I8.8,2I2.2)') this%iminuti/86400000_int_ll, &
    MOD(this%iminuti/3600000_int_ll, 24), MOD(this%iminuti/60000_int_ll, 60)
 ENDIF
@@ -1203,6 +1190,29 @@ DEALLOCATE(dateiso)
 
 END SUBROUTINE timedelta_vect_read_unit
 
+
+FUNCTION timedelta_to_char(this) RESULT(res)
+TYPE(timedelta),INTENT(in) :: this !< oggetto da scrivere
+
+CHARACTER(len=23) :: res
+
+CALL getval(this, isodate=res)
+
+END FUNCTION timedelta_to_char
+
+
+FUNCTION timedeltavect_to_char(this) RESULT(res)
+TYPE(timedelta),INTENT(in) :: this(:) !< oggetto da scrivere
+
+CHARACTER(len=23) :: res(SIZE(this))
+
+INTEGER :: i
+
+DO i = 1, SIZE(this)
+  CALL getval(this(i), isodate=res(i))
+ENDDO
+
+END FUNCTION timedeltavect_to_char
 
 !> Scrive su un'unità di file il contenuto dell'oggetto \a this.
 !! Il record scritto potrà successivamente essere letto con la ::read_unit.
