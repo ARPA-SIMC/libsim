@@ -83,7 +83,7 @@ if (ncconventions == "CF-1.1") then
    call vol7d_netcdf_export_CF (this,ncconventions,ncunit,description,filename)
 else if (ncconventions /= "CF-1.1 vol7d") then
 
-  call l4f_category_log(category,L4F_INFO,"ncconventions not supported: "// a2c(ncconventions))
+  call l4f_category_log(category,L4F_INFO,"ncconventions not supported: "// to_char(ncconventions))
   call exit(1)
 end if
 
@@ -115,7 +115,7 @@ if (.not. present(ncunit))then
    inquire(file=lfilename,EXIST=exist)
 
    if (exist) then 
-     call l4f_category_log(category,L4F_ERROR,"file exist; cannot open new file: "//a2c(lfilename))
+     call l4f_category_log(category,L4F_ERROR,"file exist; cannot open new file: "//to_char(lfilename))
      CALL raise_error('file exist; cannot open new file')
    end if
 
@@ -127,7 +127,7 @@ else
 
      inquire(file=lfilename,EXIST=exist)
      if (exist)then 
-       call l4f_category_log(category,L4F_ERROR,"file exist; cannot open new file: "//a2c(lfilename))
+       call l4f_category_log(category,L4F_ERROR,"file exist; cannot open new file: "//to_char(lfilename))
        CALL raise_error('file exist; cannot open new file')
      end if
 
@@ -585,7 +585,7 @@ category=l4f_category_get(a_name)
 
 if (ncconventions /= "CF-1.1") then
 
-  call l4f_category_log(category,L4F_INFO,"ncconventions not supported: "// a2c(ncconventions))
+  call l4f_category_log(category,L4F_INFO,"ncconventions not supported: "// to_char(ncconventions))
   call exit(1)
 end if
 

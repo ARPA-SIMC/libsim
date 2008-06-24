@@ -95,6 +95,8 @@ module log4fortran
 
 use kinds
 use missing_values
+use char_utilities
+implicit none
 
 INTEGER ,PARAMETER :: L4F_FATAL    = 000  !< standard priority
 INTEGER ,PARAMETER :: L4F_ALERT    = 100  !< standard priority
@@ -119,9 +121,9 @@ private dummy_a_name
 
 
 !> trasforma qualsiasi tipo fondamentale in stringa
-INTERFACE a2c
-  MODULE PROCEDURE c2c,r2c,d2c,i2c,b2c
-END INTERFACE
+!INTERFACE a2c
+!  MODULE PROCEDURE c2c,r2c,d2c,i2c,b2c
+!END INTERFACE
 
 
 #ifdef LOG4FORTRAN
@@ -217,7 +219,7 @@ end if
 a_name_save=a_name
 
 if (present(a_name_append))then
-  a_name=a2c(a_name)//"."//a2c(a_name_append)
+  a_name=to_char(a_name)//"."//to_char(a_name_append)
 end if
   
 
@@ -311,56 +313,56 @@ end function l4f_msg
 
 
 
-function c2c(c)
-
-character (len=*) :: c
-character (len=len_trim(c)) :: c2c
-
-c2c=c
-
-end function c2c
-
-
-
-
-function r2c(r)
-
-real :: r
-character (len=15) :: r2c
-
-write (r2c,*)r
-
-end function r2c
-
-
-function d2c(d)
-
-real(kind=fp_d) :: d
-character (len=24) :: d2c
-
-write (d2c,*)d
-
-end function d2c
-
-
-function i2c(i)
-
-integer :: i
-character (len=12) :: i2c
-
-write (i2c,*)i
-
-end function i2c
-
-
-function b2c(b)
-
-INTEGER(kind=int_b) :: b
-character (len=6) :: b2c
-
-write (b2c,*)b
-
-end function b2c
+!function c2c(c)
+!
+!character (len=*) :: c
+!character (len=len_trim(c)) :: c2c
+!
+!c2c=c
+!
+!end function c2c
+!
+!
+!
+!
+!function r2c(r)
+!
+!real :: r
+!character (len=15) :: r2c
+!
+!write (r2c,*)r
+!
+!end function r2c
+!
+!
+!function d2c(d)
+!
+!real(kind=fp_d) :: d
+!character (len=24) :: d2c
+!
+!write (d2c,*)d
+!
+!end function d2c
+!
+!
+!function i2c(i)
+!
+!integer :: i
+!character (len=12) :: i2c
+!
+!write (i2c,*)i
+!
+!end function i2c
+!
+!
+!function b2c(b)
+!
+!INTEGER(kind=int_b) :: b
+!character (len=6) :: b2c
+!
+!write (b2c,*)b
+!
+!end function b2c
 
 
 

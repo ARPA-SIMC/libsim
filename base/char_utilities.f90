@@ -15,7 +15,8 @@ MODULE char_utilities
 USE kinds
 IMPLICIT NONE
 
-PRIVATE int_to_char
+PRIVATE int_to_char, byte_to_char, char_to_char, &
+   real_to_char, double_to_char
 
 !> Insieme di funzioni che restituiscono la variabile in input
 !! convertita in stringa con un
@@ -29,25 +30,91 @@ PRIVATE int_to_char
 !! esecuzione se il formato non è sintatticamente corretto o non si
 !! accorda con il tipo di \a x.
 INTERFACE to_char
-  MODULE PROCEDURE int_to_char
+  MODULE PROCEDURE int_to_char, byte_to_char, char_to_char, &
+   real_to_char, double_to_char
 END INTERFACE
 
 CONTAINS
 
 !> Variante con input intero
-ELEMENTAL FUNCTION int_to_char(i, form)
-INTEGER,INTENT(in) :: i !< valore da rappresentare in CHARACTER
+ELEMENTAL FUNCTION int_to_char(in, form) RESULT(char)
+INTEGER,INTENT(in) :: in !< valore da rappresentare in CHARACTER
 CHARACTER(len=*),INTENT(in),OPTIONAL :: form !< formato opzionale
 
-CHARACTER(len=10) :: int_to_char
+CHARACTER(len=10) :: char
 
 IF (PRESENT(form)) THEN
-  WRITE(int_to_char,form) i
+  WRITE(char,form) in
 ELSE
-  WRITE(int_to_char,'(I0)') i
+  WRITE(char,'(I0)') in
 ENDIF
 
 END FUNCTION int_to_char
+
+
+!> Variante con input byte
+ELEMENTAL FUNCTION byte_to_char(in, form) RESULT(char)
+INTEGER(kind=int_b),INTENT(in) :: in !< valore da rappresentare in CHARACTER
+CHARACTER(len=*),INTENT(in),OPTIONAL :: form !< formato opzionale
+
+CHARACTER(len=4) :: char
+
+IF (PRESENT(form)) THEN
+  WRITE(char,form) in
+ELSE
+  WRITE(char,'(I0)') in
+ENDIF
+
+END FUNCTION byte_to_char
+
+
+!> Variante con input character
+ELEMENTAL FUNCTION char_to_char(in, form) RESULT(char)
+CHARACTER(len=*),INTENT(in) :: in !< valore da rappresentare in CHARACTER
+CHARACTER(len=*),INTENT(in),OPTIONAL :: form !< formato opzionale
+
+CHARACTER(len=LEN_TRIM(in)) :: char
+
+IF (PRESENT(form)) THEN
+  WRITE(char,form) in
+ELSE
+  char = TRIM(in)
+ENDIF
+
+END FUNCTION char_to_char
+
+
+!> Variante con input reale
+ELEMENTAL FUNCTION real_to_char(in, form) RESULT(char)
+REAL,INTENT(in) :: in !< valore da rappresentare in CHARACTER
+CHARACTER(len=*),INTENT(in),OPTIONAL :: form !< formato opzionale
+
+CHARACTER(len=15) :: char
+
+IF (PRESENT(form)) THEN
+  WRITE(char,form) in
+ELSE
+  WRITE(char,'(G15.9)') in
+ENDIF
+
+END FUNCTION real_to_char
+
+
+!> Variante con input reale a doppia precisione
+ELEMENTAL FUNCTION double_to_char(in, form) RESULT(char)
+DOUBLE PRECISION,INTENT(in) :: in !< valore da rappresentare in CHARACTER
+CHARACTER(len=*),INTENT(in),OPTIONAL :: form !< formato opzionale
+
+CHARACTER(len=24) :: char
+
+IF (PRESENT(form)) THEN
+  WRITE(char,form) in
+ELSE
+  WRITE(char,'(G24.17)') in
+ENDIF
+
+END FUNCTION double_to_char
+
 
 !> Converte una variabile \a CHARACTER in una stringa passabile ad una
 !! funzione scritta in linguaggio C come \a char* .

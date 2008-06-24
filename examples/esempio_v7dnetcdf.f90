@@ -74,7 +74,7 @@ do ist=1,nana
     
     read (10,*) iana,lat,lon,year,month,day,hour,minute,prec,temp
     if (iana /= ist) call l4f_category_log(category,L4F_ERROR,&
-         "abbiamo un serio problema "//a2c(iana)//a2c(ist))
+         "abbiamo un serio problema "//to_char(iana)//to_char(ist))
 
     call init(v7d%ana(iana),lat=lat,lon=lon)
     call init(v7d%time(itime), year=year, month=month, day=day, hour=hour, minute=minute)
