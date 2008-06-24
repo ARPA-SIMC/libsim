@@ -24,6 +24,14 @@ geo_grid_class.lo: kinds.$(OBJEXT) missing_values.$(OBJEXT) char_utilities.$(OBJ
 missing_values.$(OBJEXT): kinds.$(OBJEXT)
 missing_values.lo: kinds.$(OBJEXT)
 
+check_PROGRAMS = char_utilities_test datetime_test
+TESTS = $(check_PROGRAMS)
+
+char_utilities_test_SOURCES = char_utilities_test.f90
+char_utilities_test_LDADD = libsim_base.la 
+
+datetime_test_SOURCES = datetime_test.f90
+datetime_test_LDADD = libsim_base.la 
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT) *.mod
