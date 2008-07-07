@@ -1,6 +1,6 @@
 Summary: libsim: librerie di utilità in Fortran 90
 Name: libsim
-Version: 2.1
+Version: 2.2
 Release: 1
 License: GPL
 Group: Applications/Meteo
@@ -8,17 +8,14 @@ URL: http://www.arpa.emr.it/sim
 Packager: Davide Cesari <dcesari@arpa.emr.it>
 Source: %{name}-%{version}.tar.gz
 BuildRoot: /var/tmp/%{name}-buildroot
-BuildRequires: shapelib-fortran
+BuildRequires: shapelib-fortran-devel oracle-instantclient-devel libemos
 
 %package -n libsim-doc
-Summary:   libsim documentation
+Summary:  libsim documentation
 Group: Applications/Meteo
 
-
-%description  -n libsim-doc
-Librerie di utilità in Fortran 90
-Documentazione 
-
+%description -n libsim-doc
+Librerie di utilità in Fortran 90, documentazione .
 
 %description
 Libsim comprende tre gruppi di moduli di utilità in Fortran 90:
@@ -35,14 +32,11 @@ l'elaborazione di dati osservativi idro-meteo, includendo metodi per
 la loro importazione da database tipo DbAll-e e dal database Oracle di
 ARPA-SIM.
 
-
-
-
 %prep
 %setup -q
 
 %build
-%configure FC=gfortran CPPFLAGS='-I/usr/include/' LDFLAGS=-L/usr/lib/oracle/11.1.0.1/client/lib
+%configure FC=gfortran FCFLAGS=-I/usr/include/ ORA_VER=oracle/11.1.0.1/client
 make 
 
 %install
@@ -63,7 +57,6 @@ make DESTDIR=%{buildroot} install
 %defattr(-,root,root,-)
 %doc %{_docdir}/libsim/html
 
-
 %clean
 rm -rf %{buildroot}
 
@@ -76,7 +69,10 @@ rm -rf %{buildroot}
 %postun
 
 %changelog
-* Wed Apr 16 2008 Davide Cesari <cesari@malina.metarpa> - 2.0-1
+* Mon Jul  7 2008 Davide Cesari <cesari@malina.metarpa> - 2.2-1
+- New version, -I/usr/include now as FCFLAGS, ORA_VER added
+
+* Wed Apr 16 2008 Davide Cesari <cesari@malina.metarpa> - 2.1-1
 - New version
 
 * Fri Jan 18 2008 Davide Cesari <cesari@malina.metarpa> - 1.4-2

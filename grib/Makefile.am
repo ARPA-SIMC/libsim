@@ -3,8 +3,7 @@ lib_LTLIBRARIES = libsim_grib.la
 libsim_grib_la_SOURCES = grib_io_class.f90 geo_grid_grib.f90 matchgrib_class.f90
 
 AM_FCFLAGS = -I../base
-AM_LDFLAGS = $(libgrib)
-libsim_grib_la_LIBADD = ../base/libsim_base.la
+libsim_grib_la_LIBADD = ../base/libsim_base.la $(GRIB_LIBS)
 
 # c'e` una maniera migliore?
 tmpvar = $(libsim_grib_la_SOURCES:.f90=.mod)
