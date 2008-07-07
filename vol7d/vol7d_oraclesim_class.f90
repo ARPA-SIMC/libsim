@@ -11,6 +11,7 @@
 !!
 !! \ingroup vol7d
 MODULE vol7d_oraclesim_class
+USE kinds
 USE char_utilities
 USE vol7d_class
 USE file_utilities
@@ -23,6 +24,7 @@ IMPLICIT NONE
 TYPE vol7d_oraclesim
   TYPE(vol7d) :: vol7d !< oggetto di tipo vol7d che conterrà i dati estratti
   INTEGER :: ounit !< informazione di servizio
+  INTEGER(kind=ptr_c) :: connid
 END TYPE vol7d_oraclesim
 
 TYPE ora_var_conv
@@ -36,24 +38,18 @@ TYPE ora_var_conv
   INTEGER :: networkid
 END TYPE ora_var_conv
 
-!TYPE ora_ana
-!  real(kind=fp_geo) :: lon, lat
-!  INTEGER :: alt
-!  INTEGER :: ora_cod
-!END TYPE ora_ana
-
-!TYPE ora_network_conv
-!  TYPE(ora_ana),POINTER :: ana(:)
-!END TYPE ora_network_conv
-
-INTEGER,EXTERNAL :: n_getgsta ! da sostituire con include/interface ?!
+INTEGER,EXTERNAL :: oraextra_gethead, oraextra_getdata ! da sostituire con include/interface ?!
+INTEGER(kind=ptr_c),EXTERNAL :: oraextra_init
 
 INTEGER,ALLOCATABLE ::stazo(:), varo(:), valid(:)
 REAL,ALLOCATABLE :: valore1(:), valore2(:)
-CHARACTER(len=1),ALLOCATABLE :: valore3(:)
+INTEGER(kind=int_b),ALLOCATABLE :: sdatao(:,:), cflag(:,:)
+!CHARACTER(len=1),ALLOCATABLE :: valore3(:)
 CHARACTER(len=12),ALLOCATABLE ::cdatao(:)
 INTEGER :: nmax=0, nact=0
-INTEGER,PARAMETER :: nmaxmin=100000, nmaxmax=5000000, oraclesim_netmax=45
+INTEGER,PARAMETER :: nmaxmin=100000, nmaxmax=5000000, oraclesim_netmax=45, &
+ datelen=13, flaglen=10
+ 
 ! tabella di conversione variabili da btable a oraclesim
 TYPE(ora_var_conv),ALLOCATABLE :: vartable(:)
 ! tabella reti e anagrafica
@@ -62,7 +58,7 @@ LOGICAL :: networktable(oraclesim_netmax) = .FALSE.
 
 
 PRIVATE
-PUBLIC vol7d_oraclesim, init, delete, import, oraclesim_netmax
+PUBLIC vol7d_oraclesim, init, delete, import!, oraclesim_netmax
 
 !> Costruttore per la classe vol7d_oraclesim.
 !! Deve essere richiamato 
@@ -78,29 +74,54 @@ END INTERFACE
 
 !> Metodi di importazione dati dall'archivio Oracle.
 INTERFACE import
-  MODULE PROCEDURE vol7d_oraclesim_importvsns, vol7d_oraclesim_importvvns, &
-   vol7d_oraclesim_importvsnv, vol7d_oraclesim_importvvnv
+  MODULE PROCEDURE vol7d_oraclesim_import
 END INTERFACE
 
 CONTAINS
 
-
 !> Inizializza un oggetto di tipo vol7doraclesim.
 !! Trattandosi di un'estensione di vol7d, provvede ad inizializzare
 !! anche l'oggetto vol7d contenuto.
-!! Riceve parametri opzionali per pura compatibilità
-!! con il corrispondente metodo di vol7d_dballe_class, ma essi sono ininfluenti.
 !! Alla prima chiamata in un programma, provvede anche ad importare
 !! le tabelle di conversione variabili dal file vartab.csv.
 SUBROUTINE vol7d_oraclesim_init(this, dsn, user, password, write, wipe)
-TYPE(vol7d_oraclesim),INTENT(out) :: this
-CHARACTER(len=*), INTENT(in),OPTIONAL :: dsn, user, password
-LOGICAL,INTENT(in),OPTIONAL :: wipe, WRITE
+TYPE(vol7d_oraclesim),INTENT(out) :: this !< Oggetto da inizializzare
+CHARACTER(len=*), INTENT(in),OPTIONAL :: dsn !< Nome del database, se non fornito usa il nome standard per l'archivio Oracle del SIM
+CHARACTER(len=*), INTENT(in),OPTIONAL :: user !< Nome utente per il server Oracle, se non fornito usa il nome standard per l'archivio Oracle del SIM
+CHARACTER(len=*), INTENT(in),OPTIONAL :: password !< Password per il server Oracle, se non fornito usa la password standard per l'archivio Oracle del SIM
+LOGICAL,INTENT(in),OPTIONAL :: WRITE !< Non utilizzato, presente per compatibilità
+LOGICAL,INTENT(in),OPTIONAL :: wipe !< Non utilizzato, presente per compatibilità
 
+CHARACTER(len=32) :: ldsn, luser, lpassword
+
+INTEGER :: err
+INTEGER(kind=int_b) :: msg(256)
+IF (PRESENT(dsn)) THEN
+  ldsn = dsn
+ELSE
+  ldsn = 'metw'
+ENDIF
+IF (PRESENT(user)) THEN
+  luser = user
+ELSE
+  luser = 'leggo'
+ENDIF
+IF (PRESENT(password)) THEN
+  lpassword = password
+ELSE
+  lpassword = 'meteo'
+ENDIF
+
+this%connid = oraextra_init(fchar_to_cstr(TRIM(luser)), &
+ fchar_to_cstr(TRIM(lpassword)), fchar_to_cstr(TRIM(ldsn)), err)
+IF (err /= 0) THEN
+  CALL oraextra_geterr(this%connid, msg)
+  CALL oraextra_delete(this%connid)
+  CALL raise_fatal_error(TRIM(cstr_to_fchar(msg)))
+ENDIF
 CALL vol7d_oraclesim_alloc(nmaxmin)
 IF (.NOT. ALLOCATED(vartable)) CALL vol7d_oraclesim_setup_conv()
 nact = nact + 1 ! Tengo il conto delle istanze attive
-this%ounit = -1
 CALL init(this%vol7d)
 
 END SUBROUTINE vol7d_oraclesim_init
@@ -112,7 +133,7 @@ END SUBROUTINE vol7d_oraclesim_init
 SUBROUTINE vol7d_oraclesim_delete(this)
 TYPE(vol7d_oraclesim) :: this
 
-IF (this%ounit >= 0) CALL n_close(this%ounit)
+CALL oraextra_delete(this%connid)
 nact = MAX(nact - 1, 0) ! Tengo il conto delle istanze attive
 IF (nact == 0) THEN
   CALL vol7d_oraclesim_dealloc()
@@ -123,51 +144,10 @@ END SUBROUTINE vol7d_oraclesim_delete
 
 
 !> Importa un volume vol7d dall'archivio Oracle SIM.
-!! Analoga alla ::vol7d_oraclesim_importvvnv ma con \a var e \a network scalari.
-SUBROUTINE vol7d_oraclesim_importvsns(this, var, network, timei, timef, level, &
- timerange, set_network)
-TYPE(vol7d_oraclesim),INTENT(out) :: this !< oggetto in cui importare i dati
-CHARACTER(len=*),INTENT(in) :: var !< variabile da importare (codice alfanumerico della tabella B del WMO)
-TYPE(vol7d_network),INTENT(in) :: network !< rete da estrarre, inizializzata con l'indicativo numerico che ha nell'archivio SIM
-TYPE(datetime),INTENT(in) :: timei !< istante iniziale delle osservazioni da estrarre (estremo incluso)
-TYPE(datetime),INTENT(in) :: timef !< istante finale delle osservazioni da estrarre (estremo incluso)
-TYPE(vol7d_level),INTENT(in),OPTIONAL :: level !< estrae solo il livello verticale fornito, default=tutti
-TYPE(vol7d_timerange),INTENT(in),OPTIONAL :: timerange !< estrae solo i dati con intervallo temporale (es. istantaneo, cumulato, ecc.) analogo al timerange fornito, default=tutti
-TYPE(vol7d_network),INTENT(in),OPTIONAL :: set_network !< se fornito, collassa tutte le reti nell'unica rete indicata, eliminando le stazioni comuni a reti diverse
-
-CALL import(this, (/var/), network, timei, timef, level, timerange, set_network)
-
-END SUBROUTINE vol7d_oraclesim_importvsns
-
-
-!> Importa un volume vol7d dall'archivio Oracle SIM.
-!! Analoga alla ::vol7d_oraclesim_importvvnv ma con \a var scalare.
-SUBROUTINE vol7d_oraclesim_importvsnv(this, var, network, timei, timef, level, &
- timerange, set_network)
-TYPE(vol7d_oraclesim),INTENT(out) :: this !< oggetto in cui importare i dati
-CHARACTER(len=*),INTENT(in) :: var !< variabile da importare (codice alfanumerico della tabella B del WMO)
-TYPE(vol7d_network),INTENT(in) :: network(:) !< lista di reti da estrarre, inizializzata con l'indicativo numerico che ha nell'archivio SIM
-TYPE(datetime),INTENT(in) :: timei !< istante iniziale delle osservazioni da estrarre (estremo incluso)
-TYPE(datetime),INTENT(in) :: timef !< istante finale delle osservazioni da estrarre (estremo incluso)
-TYPE(vol7d_level),INTENT(in),OPTIONAL :: level !< estrae solo il livello verticale fornito, default=tutti
-TYPE(vol7d_timerange),INTENT(in),OPTIONAL :: timerange !< estrae solo i dati con intervallo temporale (es. istantaneo, cumulato, ecc.) analogo al timerange fornito, default=tutti
-TYPE(vol7d_network),INTENT(in),OPTIONAL :: set_network !< se fornito, collassa tutte le reti nell'unica rete indicata, eliminando le stazioni comuni a reti diverse
-
-INTEGER :: i
-
-DO i = 1, SIZE(network)
-  CALL import(this, (/var/), network(i), timei, timef, level, timerange, &
-   set_network)
-ENDDO
-
-END SUBROUTINE vol7d_oraclesim_importvsnv
-
-
-!> Importa un volume vol7d dall'archivio Oracle SIM.
 !! Attualmente l'importazione crea solo un volume di dati reali
 !! vol7d_class::vol7d::voldatir. Tutti i descrittori vengono assegnati
 !! correttamente, compresa l'anagrafica delle stazioni.
-SUBROUTINE vol7d_oraclesim_importvvnv(this, var, network, timei, timef, level, &
+SUBROUTINE vol7d_oraclesim_import(this, var, network, timei, timef, level, &
  timerange, set_network)
 TYPE(vol7d_oraclesim),INTENT(out) :: this !< oggetto in cui importare i dati
 CHARACTER(len=*),INTENT(in) :: var(:) !< lista delle variabili da importare (codice alfanumerico della tabella B del WMO)
@@ -181,14 +161,14 @@ TYPE(vol7d_network),INTENT(in),OPTIONAL :: set_network !< se fornito, collassa t
 INTEGER :: i
 
 DO i = 1, SIZE(network)
-  CALL import(this, var, network(i), timei, timef, level, timerange, set_network)
+  CALL vol7d_oraclesim_importvvns(this, var, network(i), timei, timef, &
+   level, timerange, set_network)
 ENDDO
 
-END SUBROUTINE vol7d_oraclesim_importvvnv
+END SUBROUTINE vol7d_oraclesim_import
 
 
-!> Importa un volume vol7d dall'archivio Oracle SIM.
-!! Analoga alla ::vol7d_oraclesim_importvvnv ma con \a network scalare.
+! Routine interna che fa la vera importazione, una rete alla volta
 SUBROUTINE vol7d_oraclesim_importvvns(this, var, network, timei, timef, level, &
  timerange, set_network)
 TYPE(vol7d_oraclesim),INTENT(out) :: this !< oggetto in cui importare i dati
@@ -202,24 +182,16 @@ TYPE(vol7d_network),INTENT(in),OPTIONAL :: set_network !< se fornito, collassa t
 
 TYPE(vol7d) :: v7dtmp, v7dtmp2
 TYPE(datetime) :: odatetime
-INTEGER :: i, j, k, nvar, nobs, ntime, nana, nvout, nvin, nvbt, &
- datai(3), orai(2), dataf(3), oraf(2), verbose
+INTEGER :: i, j, k, nvar, nobs, nobso, ntime, nana, nvout, nvin, nvbt
 CHARACTER(len=8) :: cnetwork
-CHARACTER(len=SIZE(var)*16) :: cvar
 CHARACTER(len=12),ALLOCATABLE :: tmtmp(:)
-INTEGER,ALLOCATABLE :: anatmp(:), vartmp(:), mapdatao(:), mapstazo(:)
+CHARACTER(len=12) :: datai, dataf
+INTEGER,ALLOCATABLE :: anatmp(:), vartmp(:), mapdatao(:), mapstazo(:), varlist(:)
 LOGICAL :: found, non_valid, varbt_req(SIZE(vartable))
+INTEGER(kind=int_b) :: msg(256)
 
-CALL getval(timei, year=datai(3), month=datai(2), day=datai(1), &
- hour=orai(1), minute=orai(2))
-CALL getval(timef, year=dataf(3), month=dataf(2), day=dataf(1), &
- hour=oraf(1), minute=oraf(2))
-CALL eh_getval(verbose=verbose)
-IF (verbose > eh_verbose_info) THEN ! <0 prolisso, >0 sintetico
-  CALL n_set_select_mode(-1)
-ELSE
-  CALL n_set_select_mode(1)
-ENDIF
+CALL getval(timei, simpledate=datai)
+CALL getval(timef, simpledate=dataf)
 
 cnetwork = TRIM(to_char(network%id))
 ! Cerco la rete nella tabella
@@ -232,7 +204,7 @@ IF (.NOT. networktable(network%id)) THEN
   CALL vol7d_oraclesim_ora_ana(network%id)
 ENDIF
 ! Conto le variabili da estrarre
-nvar = 0
+!nvar = 0
 varbt_req(:) = .FALSE.
 DO nvin = 1, SIZE(var)
   found = .FALSE.
@@ -249,7 +221,7 @@ DO nvin = 1, SIZE(var)
       END IF
 
       found = .TRUE.
-      nvar = nvar + 1
+!      nvar = nvar + 1
       varbt_req(nvbt) = .TRUE.
     ENDIF
   ENDDO
@@ -262,54 +234,32 @@ IF (nvar == 0) THEN
   RETURN
 ENDIF
 ! Mappo le variabili da btable a oraclesim e creo la stringa con l'elenco
-nvar = 0
-cvar = ''
-DO nvin = 1, SIZE(var)
-  DO nvbt = 1, SIZE(vartable)
-    IF (vartable(nvbt)%varbt == var(nvin) .AND. &
-     vartable(nvbt)%networkid == network%id) THEN
 
-      IF (PRESENT(level))THEN
-        IF (vartable(nvbt)%level /= level) CYCLE
-      END IF
+nvar = COUNT(varbt_req)
+ALLOCATE(varlist(nvar))
+varlist = PACK(vartable(:)%varora, varbt_req)
+CALL print_info('in oraclesim_class nvar='//to_char(nvar))
 
-      IF (PRESENT(timerange))THEN
-        IF (vartable(nvbt)%timerange /= timerange) CYCLE
-      END IF
-      nvar = nvar + 1
-
-! Controllare di non eccedere cvar????
-      IF (nvar > 1) cvar(LEN_TRIM(cvar)+1:) = ',' ! Finezza per la ','
-      cvar(LEN_TRIM(cvar)+1:) = TRIM(to_char(vartable(nvbt)%varora))
-    ENDIF
-  ENDDO
-ENDDO
-
-nvout = 1 ! n. di valori in uscita, raffinare
-! Ripeto l'estrazione oracle fino ad essere sicuro di avere
-! estratto tutto (nobs < nmax)
-DO WHILE(.TRUE.)
-  nobs = n_getgsta(this%ounit, cnetwork, cvar, datai, orai, &
-   dataf, oraf, nvout, &
-   nmax, cdatao, stazo, varo, valore1, valore2, valore3, valid)
-  PRINT* ! Termina la riga per estetica, manca un \n
-  IF (nobs < nmax .OR. nmax >= nmaxmax) EXIT ! tutto estratto o errore
-  CALL print_info('Troppe osservazioni, rialloco ' &
-   //TRIM(to_char(MIN(nmax*2, nmaxmax)))//' elementi')
-  CALL vol7d_oraclesim_alloc(MIN(nmax*2, nmaxmax))
-ENDDO
+nobs = oraextra_gethead(this%connid, fchar_to_cstr(datai), &
+ fchar_to_cstr(dataf), network%id, varlist, SIZE(varlist))
 IF (nobs < 0) THEN
-  CALL raise_error('in estrazione oracle', nobs)
-  RETURN
-ELSE
-  CALL print_info('Estratte dall''archivio '//TRIM(to_char(nobs)) &
-   //' osservazioni')
+  CALL oraextra_geterr(this%connid, msg)
+  CALL raise_fatal_error('in oraextra_gethead: '//TRIM(cstr_to_fchar(msg)))
 ENDIF
-IF (nobs >= nmax) THEN ! tertium datur
-  CALL raise_warning('troppi dati richiesti, estrazione incompleta')
+CALL print_info('in oraextra_gethead nobs='//to_char(nobs))
+
+CALL vol7d_oraclesim_alloc(nobs) ! Mi assicuro di avere spazio
+i = oraextra_getdata(this%connid, nobs, nobso, sdatao, stazo, varo, valore1, &
+ valore2, rmiss)
+IF (i /= 0) THEN
+  CALL oraextra_geterr(this%connid, msg)
+  CALL raise_fatal_error('in oraextra_getdata: '//TRIM(cstr_to_fchar(msg)))
 ENDIF
 
-! Controllo la validita` dei descrittori ana, time e var ottenuti da oracle
+nobs = nobso
+DO i = 1, nobs
+  cdatao(i) = cstr_to_fchar(sdatao(:,i))
+ENDDO
 non_valid = .FALSE. ! ottimizzazione per la maggior parte dei casi
 nana = count_distinct(stazo(1:nobs), back=.TRUE.)
 ntime = count_distinct(cdatao(1:nobs), back=.TRUE.)
@@ -318,6 +268,7 @@ ALLOCATE(anatmp(nana), tmtmp(ntime), vartmp(nvar))
 anatmp(:) = pack_distinct(stazo(1:nobs), nana, back=.TRUE.)
 CALL pack_distinct_c(cdatao(1:nobs), tmtmp, back=.TRUE.)
 vartmp(:) = pack_distinct(varo(1:nobs), nvar, back=.TRUE.)
+CALL print_info('in oraclesim_class onvar='//to_char(nvar))
 
 DO i = 1, nana
   IF (.NOT. ANY(anatmp(i) == netana(network%id)%volanai(:,1,1))) THEN
@@ -332,7 +283,8 @@ DO i = 1, nana
 ENDDO
 
 DO i = 1, ntime
-  CALL init(odatetime, oraclesimdate=tmtmp(i))
+!  CALL init(odatetime, oraclesimdate=tmtmp(i))
+ odatetime = datetime_new(simpledate=tmtmp(i))
   IF (odatetime < timei .OR. odatetime > timef) THEN
     non_valid = .TRUE.
     CALL raise_warning('data oraclesim '//tmtmp(i)//' inattesa, la ignoro')
@@ -352,6 +304,7 @@ DO i = 1, nvar
     END WHERE
   ENDIF
 ENDDO
+
 ! ricreo gli elenchi solo se ci sono dati rigettati
 IF (non_valid) THEN
   DEALLOCATE(anatmp, tmtmp, vartmp)
@@ -367,6 +320,8 @@ IF (non_valid) THEN
   CALL pack_distinct_c(cdatao(1:nobs), tmtmp, back=.TRUE., mask=(cdatao(1:nobs) /= ''))
   vartmp(:) = pack_distinct(varo(1:nobs), nvar, back=.TRUE., mask=(varo(1:nobs) /= 0))
 ENDIF
+
+
 ! creo la mappatura
 ALLOCATE(mapdatao(nobs), mapstazo(nobs))
 DO i = 1, nana
@@ -388,7 +343,7 @@ DO i = 1, nvar
 
   IF (i == 1) THEN ! la prima volta inizializzo i descrittori fissi
     DO j = 1, ntime
-      CALL init(v7dtmp%time(j), oraclesimdate=tmtmp(j))
+      v7dtmp%time(j) = datetime_new(simpledate=tmtmp(j))
     ENDDO
     DO j = 1, nana
       k = firsttrue(anatmp(j) == netana(network%id)%volanai(:,1,1)) ! ottimizzare
@@ -447,9 +402,12 @@ SUBROUTINE vol7d_oraclesim_alloc(n)
 INTEGER,INTENT(in) :: n
 
 IF (nmax >= n) RETURN ! c'e' gia' posto sufficiente
-CALL vol7d_oraclesim_dealloc
-ALLOCATE(stazo(n), varo(n), valid(n), valore1(n), valore2(n), valore3(n), &
- cdatao(n))
+IF (ALLOCATED(stazo)) DEALLOCATE(stazo, varo, valid, valore1, valore2, &
+ sdatao, cdatao, cflag)
+!ALLOCATE(stazo(n), varo(n), valid(n), valore1(n), valore2(n), valore3(n), &
+! cdatao(n))
+ALLOCATE(stazo(n), varo(n), valid(n), valore1(n), valore2(n), &
+ sdatao(datelen, n), cdatao(n), cflag(flaglen,n))
 
 nmax = n
 
@@ -468,8 +426,8 @@ DO i = 1, oraclesim_netmax
     networktable(i) = .FALSE.
   ENDIF
 ENDDO
-IF (ALLOCATED(stazo)) DEALLOCATE(stazo, varo, valid, valore1, valore2, valore3, &
- cdatao)
+IF (ALLOCATED(stazo)) DEALLOCATE(stazo, varo, valid, valore1, valore2, &
+ sdatao, cdatao, cflag)
 nmax = 0
 
 END SUBROUTINE vol7d_oraclesim_dealloc
@@ -574,3 +532,14 @@ END SUBROUTINE vol7d_oraclesim_ora_ana
 
 
 END MODULE vol7d_oraclesim_class
+
+
+!SUBROUTINE set_c_pointer(punteur, punte)
+!IMPLICIT NONE
+!
+!INTEGER,POINTER :: punteur
+!INTEGER :: punte
+!
+!punteur => punte
+!
+!END SUBROUTINE oraclesim_c_setpointer

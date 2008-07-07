@@ -1,6 +1,6 @@
 dnl Process this file with autoconf to produce a configure script.
 
-AC_INIT(libsim, 2.1, [dcesari@arpa.emr.it])
+AC_INIT(libsim, 2.2, [dcesari@arpa.emr.it])
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_SRCDIR([configure.ac])
 AM_INIT_AUTOMAKE([foreign])
@@ -26,7 +26,7 @@ AC_DEFINE_UNQUOTED(SIZEOF_PTR_C, $sizeof_ptr_c,
 dnl Locate Fortran 90 compiler among these if not specified
 AC_PROG_FC([gfortran pgf90 ifort g95 xlf90 f90])
 F77=$FC
-dnl AC_FC_WRAPPERS()dnl Determine how to call C from Fortran
+AC_FC_WRAPPERS()dnl Determine how to call C from Fortran
 
 dnl search for log4c, if not found build a dummy log4fortran
 AC_CHECK_HEADERS([log4c.h] ,
@@ -50,6 +50,39 @@ if test "x$dummy_log4fortran" != "xyes" ; then
 fi
 AM_CONDITIONAL(LOG4FORTRAN, test "x$dummy_log4fortran" != "xyes")
 
+AC_ARG_ENABLE(oraclesim, AC_HELP_STRING([--disable-oraclesim],
+  [disable oraclesim/meteodata support]),,[enableval=yes])dnl default enable
+if test "x$enableval" = "xyes"; then
+save_cppflags=$CPPFLAGS
+if test -n "$ORACLE_VER"; then
+ora_cppflags="-I/usr/include/$ORACLE_VER"
+ora_ldflags="-L/usr/lib/$ORACLE_VER/lib"
+dnl elif test -n "ORACLE_HOME"; then che fare?
+else
+ora_cppflags=''
+ora_ldflags=''
+fi
+ora_libs='-locci -lclntsh'
+
+CPPFLAGS="$CPPFLAGS $ora_cppflags"
+AC_CHECK_HEADER([oci.h],
+ ORA_CPPFLAGS="$ora_cppflags",
+ AC_MSG_ERROR([Oracle-OCI headers not found - try defining ORACLE_VER=oracle/<version>/client]))
+CPPFLAGS=$save_cppflags
+
+AC_CHECK_LIB([occi], [OCIEnvCreate],
+ORA_LDFLAGS=$ora_ldflags
+ORA_LIBS=$ora_libs
+,AC_MSG_ERROR([Oracle-OCI libraries not found - try defining ORACLE_VER=oracle/<version>/client]),
+  [$ora_ldflags $ora_libs])
+
+AC_SUBST(ORA_CPPFLAGS)
+AC_SUBST(ORA_LDFLAGS)
+AC_SUBST(ORA_LIBS)
+unset save_cppflags ora_cppflags ora_ldflags ora_lib
+fi
+AM_CONDITIONAL(ORSIM, test "x$enableval" = "xyes")
+
 dnl AC_LANG_PUSH([Fortran 77])dnl Do the following checks in Fortran
 AC_LANG_PUSH(Fortran)dnl Do the following checks in Fortran
 AC_FC_SRCEXT(f90)dnl and use .f90 extension
@@ -60,40 +93,23 @@ AC_ARG_ENABLE(shapelib, AC_HELP_STRING([--disable-shapelib],
 if test "x$enableval" = "xyes"; then
 AC_CHECK_LIB([shp-fortran], [shpopen], 
  AC_MSG_RESULT([shapelib code included])
-  libshp="-lshp-fortran -lshp"
-  AC_SUBST(libshp),
+  SHP_LIBS="-lshp-fortran -lshp"
+  AC_SUBST(SHP_LIBS)
+  AC_DEFINE(HAVE_LIBSHP_FORTRAN, 1, "shp-fortran library found"),
  AC_MSG_ERROR([fortran bindings to shp library not found]), [-lshp] )
 else
 AC_MSG_RESULT([shapelib code not included])
 fi
 AM_CONDITIONAL(SHP, test "x$enableval" = "xyes")
 
-AC_ARG_ENABLE(oraclesim, AC_HELP_STRING([--disable-oraclesim],
-  [disable oraclesim/meteodata support]),,[enableval=yes])dnl default enable
-if test "x$enableval" = "xyes"; then
-if test -n "$ORACLE_HOME"; then
-oralibdir="-L$ORACLE_HOME/lib"
-else
-oralibdir=" "
-fi
-AC_CHECK_LIB([rouMW], [n_getgsta], 
- AC_MSG_RESULT([oraclesim code included])
-  liboraclesim="$oralibdir -lrouMW -lclntsh -lsupport -lrouGW -lix"
-  AC_SUBST(liboraclesim),
- AC_MSG_ERROR([oraclesim/meteodata libraries not found]),
- [$oralibdir -lclntsh -lsupport -lrouGW -lix])
-else
-AC_MSG_RESULT([oraclesim code not included])
-fi
-AM_CONDITIONAL(ORSIM, test "x$enableval" = "xyes")
 
 AC_ARG_ENABLE(grib, AC_HELP_STRING([--disable-grib],
   [disable grib support]),,[enableval=yes])dnl default enable
 if test "x$enableval" = "xyes"; then
 AC_CHECK_LIB([emos], [gribex],
  AC_MSG_RESULT([grib code included])
-  libgrib="-lemos"
-  AC_SUBST(libgrib),
+  GRIB_LIBS="-lemos"
+  AC_SUBST(GRIB_LIBS),
  AC_MSG_ERROR([ECMWF emos library not found]))
 else
 AC_MSG_RESULT([grib code not included])
@@ -104,8 +120,8 @@ AC_ARG_ENABLE(dballe, AC_HELP_STRING([--disable-dballe],
   [disable dballe support]),,[enableval=yes])dnl default enable
 if test "x$enableval" = "xyes"; then
 AC_MSG_RESULT([dballe code included])
-libdballe="-ldballef -ldballe -lcnf -lodbc -lgdbm -lpopt -lm"
-AC_SUBST(libdballe)
+DBALLE_LIBS="-ldballef -ldballe -lcnf -lodbc -lgdbm -lpopt -lm"
+AC_SUBST(DBALLE_LIBS)
 else
 AC_MSG_RESULT([dballe code not included])
 fi
@@ -118,8 +134,8 @@ AC_ARG_ENABLE(netcdf, AC_HELP_STRING([--disable-netcdf],
 if test "x$enableval" = "xyes"; then
 AC_CHECK_LIB([netcdff], [nf_inq_libvers],
  AC_MSG_RESULT([netcdf code included])
-  libnetcdf="-lnetcdff -lnetcdf"
-  AC_SUBST(libnetcdf),
+ NETCDF_LIBS="-lnetcdff -lnetcdf"
+ AC_SUBST(NETCDF_LIBS),
  AC_MSG_ERROR([netcdf library not found]),[-lnetcdf])
 else
 AC_MSG_RESULT([netcdf code not included])

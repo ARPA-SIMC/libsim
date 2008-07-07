@@ -41,7 +41,7 @@ CALL init(network(8), 22)
 CALL init(db_v7d)
 ! Importo i dati, variabile 'B13011' della btable (precipitazione),
 ! per un vettore di reti mettendo tutto in un'unica rete
-CALL import(db_v7d, 'B13011', network, &
+CALL import(db_v7d, (/'B13011'/), (/network/), &
  ti, tf, set_network=dummy_network)
 un=getunit()
 OPEN(un, FILE='v7d_oracle.dat', FORM='unformatted', ACCESS='sequential')
@@ -56,7 +56,7 @@ CALL vol7d_get_voldatir(vol_cumh, (/vol7d_ana_d,vol7d_time_d/), vol2dp=vol2d_cum
 PRINT*,SHAPE(db_v7d%vol7d%voldatir)
 ! Stampo la media su tutte le stazioni ora per ora
 DO i = 1, SIZE(vol_cumh%time)
-  CALL getval(vol_cumh%time(i), oraclesimdate=c)
+  CALL getval(vol_cumh%time(i), simpledate=c)
   n = COUNT (vol2d_cum(:,i) /= rmiss)
   IF (n > 0) THEN
     PRINT'(2A,G12.5,1X,I5)',c,' prec. media (mm): ', &
@@ -88,7 +88,7 @@ ENDDO
 
 ! Stampo la media su tutte le stazioni di ogni macroarea giorno per giorno
 DO i = 1, SIZE(vol_cumd%time)
-  CALL getval(vol_cumd%time(i), oraclesimdate=c)
+  CALL getval(vol_cumd%time(i), simpledate=c)
   DO j = 1, SIZE(macroa)
     n = COUNT(vol2d_cum(:,i) /= rmiss .AND. in_macroa(:) == j)
     IF (n > 0) THEN
