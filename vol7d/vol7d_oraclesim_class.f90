@@ -43,9 +43,9 @@ INTEGER(kind=ptr_c),EXTERNAL :: oraextra_init
 
 INTEGER,ALLOCATABLE ::stazo(:), varo(:), valid(:)
 REAL,ALLOCATABLE :: valore1(:), valore2(:)
-INTEGER(kind=int_b),ALLOCATABLE :: sdatao(:,:), cflag(:,:)
+INTEGER(kind=int_b),ALLOCATABLE :: cdatao(:,:), cflag(:,:)
 !CHARACTER(len=1),ALLOCATABLE :: valore3(:)
-CHARACTER(len=12),ALLOCATABLE ::cdatao(:)
+CHARACTER(len=12),ALLOCATABLE ::fdatao(:)
 INTEGER :: nmax=0, nact=0
 INTEGER,PARAMETER :: nmaxmin=100000, nmaxmax=5000000, oraclesim_netmax=45, &
  datelen=13, flaglen=10
@@ -249,8 +249,8 @@ ENDIF
 CALL print_info('in oraextra_gethead nobs='//to_char(nobs))
 
 CALL vol7d_oraclesim_alloc(nobs) ! Mi assicuro di avere spazio
-i = oraextra_getdata(this%connid, nobs, nobso, sdatao, stazo, varo, valore1, &
- valore2, rmiss)
+i = oraextra_getdata(this%connid, nobs, nobso, cdatao, stazo, varo, valore1, &
+ valore2, cflag, rmiss)
 IF (i /= 0) THEN
   CALL oraextra_geterr(this%connid, msg)
   CALL raise_fatal_error('in oraextra_getdata: '//TRIM(cstr_to_fchar(msg)))
@@ -258,15 +258,31 @@ ENDIF
 
 nobs = nobso
 DO i = 1, nobs
-  cdatao(i) = cstr_to_fchar(sdatao(:,i))
+  fdatao(i) = cstr_to_fchar(cdatao(:,i)) ! Converto la data da char C a CHARACTER
+! Gestione flag di qualita` fase 0
+  IF (cflag(1,i) == ICHAR('1')) THEN ! dato invalidato manualmente
+    valore1(i) = rmiss ! forzo dato mancante
+  ELSE IF (cflag(1,i) == ICHAR('2')) THEN ! dato modificato manualmente
+! il valore buono e` il secondo a meno che esso non sia mancante
+! come nei casi indicati da vpavan@arpa.emr.it e-mail del 14/07/2008:
+! ==
+! variabile precipitazione o bagnatura fogliare. I dati originali
+! (cumulate) saltano una mezzora, o piu` di una, ma il dato successivo al
+! periodo mancante e` uguale all'ultimo dato buono. Se ne desume che non
+! e` piovuto per tutto il periodo e il valore 0 viene immesso nel primo
+! campo.
+! ==
+! in tal caso e` buono il primo
+    IF (valore2(i) /= rmiss) valore1(i) = valore2(i)
+  ENDIF
 ENDDO
 non_valid = .FALSE. ! ottimizzazione per la maggior parte dei casi
 nana = count_distinct(stazo(1:nobs), back=.TRUE.)
-ntime = count_distinct(cdatao(1:nobs), back=.TRUE.)
+ntime = count_distinct(fdatao(1:nobs), back=.TRUE.)
 nvar = count_distinct(varo(1:nobs), back=.TRUE.)
 ALLOCATE(anatmp(nana), tmtmp(ntime), vartmp(nvar))
 anatmp(:) = pack_distinct(stazo(1:nobs), nana, back=.TRUE.)
-CALL pack_distinct_c(cdatao(1:nobs), tmtmp, back=.TRUE.)
+CALL pack_distinct_c(fdatao(1:nobs), tmtmp, back=.TRUE.)
 vartmp(:) = pack_distinct(varo(1:nobs), nvar, back=.TRUE.)
 CALL print_info('in oraclesim_class onvar='//to_char(nvar))
 
@@ -288,7 +304,7 @@ DO i = 1, ntime
   IF (odatetime < timei .OR. odatetime > timef) THEN
     non_valid = .TRUE.
     CALL raise_warning('data oraclesim '//tmtmp(i)//' inattesa, la ignoro')
-    WHERE(cdatao(1:nobs) == tmtmp(i))
+    WHERE(fdatao(1:nobs) == tmtmp(i))
       stazo(1:nobs) = 0
     END WHERE
   ENDIF
@@ -309,15 +325,15 @@ ENDDO
 IF (non_valid) THEN
   DEALLOCATE(anatmp, tmtmp, vartmp)
   WHERE (stazo(1:nobs) == 0) ! mal comune, mezzo gaudio
-    cdatao(1:nobs) = ''
+    fdatao(1:nobs) = ''
     varo(1:nobs) = 0
   END WHERE
   nana = count_distinct(stazo(1:nobs), back=.TRUE., mask=(stazo(1:nobs) /= 0))
-  ntime = count_distinct(cdatao(1:nobs), back=.TRUE., mask=(cdatao(1:nobs) /= ''))
+  ntime = count_distinct(fdatao(1:nobs), back=.TRUE., mask=(fdatao(1:nobs) /= ''))
   nvar = count_distinct(varo(1:nobs), back=.TRUE., mask=(varo(1:nobs) /= 0))
   ALLOCATE(anatmp(nana), tmtmp(ntime), vartmp(nvar))
   anatmp(:) = pack_distinct(stazo(1:nobs), nana, back=.TRUE., mask=(stazo(1:nobs) /= 0))
-  CALL pack_distinct_c(cdatao(1:nobs), tmtmp, back=.TRUE., mask=(cdatao(1:nobs) /= ''))
+  CALL pack_distinct_c(fdatao(1:nobs), tmtmp, back=.TRUE., mask=(fdatao(1:nobs) /= ''))
   vartmp(:) = pack_distinct(varo(1:nobs), nvar, back=.TRUE., mask=(varo(1:nobs) /= 0))
 ENDIF
 
@@ -330,7 +346,7 @@ DO i = 1, nana
   END WHERE
 ENDDO
 DO i = 1, ntime
-  WHERE(cdatao(1:nobs) == tmtmp(i))
+  WHERE(fdatao(1:nobs) == tmtmp(i))
     mapdatao(1:nobs) = i
   END WHERE
 ENDDO
@@ -403,11 +419,11 @@ INTEGER,INTENT(in) :: n
 
 IF (nmax >= n) RETURN ! c'e' gia' posto sufficiente
 IF (ALLOCATED(stazo)) DEALLOCATE(stazo, varo, valid, valore1, valore2, &
- sdatao, cdatao, cflag)
+ cdatao, fdatao, cflag)
 !ALLOCATE(stazo(n), varo(n), valid(n), valore1(n), valore2(n), valore3(n), &
 ! cdatao(n))
 ALLOCATE(stazo(n), varo(n), valid(n), valore1(n), valore2(n), &
- sdatao(datelen, n), cdatao(n), cflag(flaglen,n))
+ cdatao(datelen, n), fdatao(n), cflag(flaglen,n))
 
 nmax = n
 
@@ -427,7 +443,7 @@ DO i = 1, oraclesim_netmax
   ENDIF
 ENDDO
 IF (ALLOCATED(stazo)) DEALLOCATE(stazo, varo, valid, valore1, valore2, &
- sdatao, cdatao, cflag)
+ cdatao, fdatao, cflag)
 nmax = 0
 
 END SUBROUTINE vol7d_oraclesim_dealloc
