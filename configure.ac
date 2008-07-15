@@ -120,7 +120,7 @@ AC_ARG_ENABLE(dballe, AC_HELP_STRING([--disable-dballe],
   [disable dballe support]),,[enableval=yes])dnl default enable
 if test "x$enableval" = "xyes"; then
 AC_MSG_RESULT([dballe code included])
-DBALLE_LIBS="-ldballef -ldballe -lcnf -lodbc -lgdbm -lpopt -lm"
+DBALLE_LIBS="-ldballef -ldballe -lcnf -lodbc -lm"
 AC_SUBST(DBALLE_LIBS)
 else
 AC_MSG_RESULT([dballe code not included])
