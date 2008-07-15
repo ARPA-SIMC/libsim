@@ -34,7 +34,7 @@ print *,v7d%vol7d%datiattr%c
 CALL vol7d_get_voldatir(v7d%vol7d, (/vol7d_ana_d,vol7d_time_d/), vol2dp=vol2d)
 ! Calcolo la media e la stampo assieme all'istante
 DO i = 1, SIZE(v7d%vol7d%time)
-  CALL getval(v7d%vol7d%time(i), oraclesimdate=c)
+  CALL getval(v7d%vol7d%time(i), simpledate=c)
   n = COUNT (vol2d(:,i) /= rmiss)
   IF (n > 0) THEN
     PRINT*, c, ' prec. media:', SUM(vol2d(:,i), mask=(vol2d(:,i) /= rmiss))/n,n

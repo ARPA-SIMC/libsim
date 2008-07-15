@@ -54,7 +54,7 @@ CALL vol7d_cumulate(v7d%vol7d, vol_cumh, dt_cum)
 CALL vol7d_get_voldatir(vol_cumh, (/vol7d_ana_d,vol7d_time_d/), vol2dp=vol2d_cum)
 ! Stampo la media su tutte le stazioni ora per ora
 DO i = 1, SIZE(vol_cumh%time)
-  CALL getval(vol_cumh%time(i), oraclesimdate=c)
+  CALL getval(vol_cumh%time(i), simpledate=c)
   n = COUNT (vol2d_cum(:,i) /= rmiss)
   IF (n > 0) THEN
     PRINT'(2A,G12.5)',c,' prec. media (mm): ', &
@@ -89,7 +89,7 @@ ENDDO
 
 ! Stampo la media su tutte le stazioni di ogni macroarea giorno per giorno
 DO i = 1, SIZE(vol_cumd%time)
-  CALL getval(vol_cumd%time(i), oraclesimdate=c)
+  CALL getval(vol_cumd%time(i), simpledate=c)
   DO j = 1, SIZE(macroa)
     n = COUNT(vol2d_cum(:,i) /= rmiss .AND. in_macroa(:) == j)
     IF (n > 0) THEN
