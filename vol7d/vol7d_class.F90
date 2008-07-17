@@ -989,17 +989,31 @@ END SUBROUTINE vol7d_append
 !! completamente indipendenti, ma uguali tra loro per contenuto, della classe
 !! vol7d, e quindi hanno vita indipendente.
 SUBROUTINE vol7d_copy(this, that, sort, unique, miss, ltime, ltimerange, &
- llevel, lana, lnetwork)
+ llevel, lana, lnetwork, &
+ lanavarr, lanavard, lanavari, lanavarb, lanavarc, &
+ lanaattrr, lanaattrd, lanaattri, lanaattrb, lanaattrc, &
+ lanavarattrr, lanavarattrd, lanavarattri, lanavarattrb, lanavarattrc, &
+ ldativarr, ldativard, ldativari, ldativarb, ldativarc, &
+ ldatiattrr, ldatiattrd, ldatiattri, ldatiattrb, ldatiattrc, &
+ ldativarattrr, ldativarattrd, ldativarattri, ldativarattrb, ldativarattrc)
 TYPE(vol7d),INTENT(INOUT) :: this !< oggetto origine
 TYPE(vol7d),INTENT(INOUT) :: that !< oggetto destinazione
 LOGICAL,INTENT(IN),OPTIONAL :: sort !< se fornito e uguale a \c .TRUE., i descrittori che supportano un ordinamento (operatori > e/o <) risulteranno ordinati in ordine crescente nell'oggetto destinazione
 LOGICAL,INTENT(IN),OPTIONAL :: unique !< se fornito e uguale a \c .TRUE., gli eventuali elementi duplicati nei descrittori dell'oggetto origine verranno collassati in un unico elemento (con eventuale perdita dei dati relativi agli elementi duplicati)
 LOGICAL,INTENT(IN),OPTIONAL :: miss !< se fornito e uguale a \c .TRUE., gli eventuali elementi dei descrittori uguali al corrispondente valore mancante verranno eliminati dall'oggetto finale
-LOGICAL,INTENT(IN),OPTIONAL :: ltime(:) !< se fornito, deve essere un vettore logico della stessa lunghezza di \a this%time indicante quali elementi della dimensione \a time mantenere (valori \c .TRUE.) e quali scartare (valori \c .FALSE.) nel volume copiato; è compatibile col parametro \a miss
+LOGICAL,INTENT(IN),OPTIONAL :: ltime(:) !< se fornito, deve essere un vettore logico della stessa lunghezza di \a this::time indicante quali elementi della dimensione \a time mantenere (valori \c .TRUE.) e quali scartare (valori \c .FALSE.) nel volume copiato; è compatibile col parametro \a miss
 LOGICAL,INTENT(IN),OPTIONAL :: ltimerange(:) !< come il precedente per la dimensione \a timerange
 LOGICAL,INTENT(IN),OPTIONAL :: llevel(:) !< come il precedente per la dimensione \a level
 LOGICAL,INTENT(IN),OPTIONAL :: lana(:) !< come il precedente per la dimensione \a ana
 LOGICAL,INTENT(IN),OPTIONAL :: lnetwork(:) !< come il precedente per la dimensione \a network
+!> come il precedente per tutte le possibili dimensioni variabile
+LOGICAL,INTENT(in),OPTIONAL :: &
+ lanavarr(:), lanavard(:), lanavari(:), lanavarb(:), lanavarc(:), &
+ lanaattrr(:), lanaattrd(:), lanaattri(:), lanaattrb(:), lanaattrc(:), &
+ lanavarattrr(:), lanavarattrd(:), lanavarattri(:), lanavarattrb(:), lanavarattrc(:), &
+ ldativarr(:), ldativard(:), ldativari(:), ldativarb(:), ldativarc(:), &
+ ldatiattrr(:), ldatiattrd(:), ldatiattri(:), ldatiattrb(:), ldatiattrc(:), &
+ ldativarattrr(:), ldativarattrd(:), ldativarattri(:), ldativarattrb(:), ldativarattrc(:)
 
 LOGICAL :: lsort, lunique, lmiss
 INTEGER,POINTER :: remapt(:), remaptr(:), remapl(:), remapa(:), remapn(:)
@@ -1036,17 +1050,28 @@ CALL vol7d_remap1_vol7d_ana(this%ana, that%ana, lsort, lunique, lmiss, &
 CALL vol7d_remap1_vol7d_network(this%network, that%network, &
  lsort, lunique, lmiss, remapn, lnetwork)
 
+! lanavari, lanavarb, lanavarc, &
+! lanaattri, lanaattrb, lanaattrc, &
+! lanavarattri, lanavarattrb, lanavarattrc, &
+! ldativari, ldativarb, ldativarc, &
+! ldatiattri, ldatiattrb, ldatiattrc, &
+! ldativarattri, ldativarattrb, ldativarattrc
 ! Faccio la riforma fisica dei volumi
 CALL vol7d_reform_finalr(this, that, &
- remapa, remapt, remapl, remaptr, remapn, lsort, lunique, lmiss)
+ remapa, remapt, remapl, remaptr, remapn, lsort, lunique, lmiss, &
+ lanavarr, lanaattrr, lanavarattrr, ldativarr, ldatiattrr, ldativarattrr)
 CALL vol7d_reform_finald(this, that, &
- remapa, remapt, remapl, remaptr, remapn, lsort, lunique, lmiss)
+ remapa, remapt, remapl, remaptr, remapn, lsort, lunique, lmiss, &
+ lanavard, lanaattrd, lanavarattrd, ldativard, ldatiattrd, ldativarattrd)
 CALL vol7d_reform_finali(this, that, &
- remapa, remapt, remapl, remaptr, remapn, lsort, lunique, lmiss)
+ remapa, remapt, remapl, remaptr, remapn, lsort, lunique, lmiss, &
+ lanavari, lanaattri, lanavarattri, ldativari, ldatiattri, ldativarattri)
 CALL vol7d_reform_finalb(this, that, &
- remapa, remapt, remapl, remaptr, remapn, lsort, lunique, lmiss)
+ remapa, remapt, remapl, remaptr, remapn, lsort, lunique, lmiss, &
+ lanavarb, lanaattrb, lanavarattrb, ldativarb, ldatiattrb, ldativarattrb)
 CALL vol7d_reform_finalc(this, that, &
- remapa, remapt, remapl, remaptr, remapn, lsort, lunique, lmiss)
+ remapa, remapt, remapl, remaptr, remapn, lsort, lunique, lmiss, &
+ lanavarc, lanaattrc, lanavarattrc, ldativarc, ldatiattrc, ldativarattrc)
 
 ! Dealloco i vettori di rimappatura
 IF (ASSOCIATED(remapt)) DEALLOCATE(remapt)
@@ -1072,21 +1097,41 @@ END SUBROUTINE vol7d_copy
 !! elemento del descrittore a valore mancante e chiamare vol7d_reform
 !! con miss=.TRUE. .
 SUBROUTINE vol7d_reform(this, sort, unique, miss, ltime, ltimerange, &
- llevel, lana, lnetwork)
+ llevel, lana, lnetwork, &
+ lanavarr, lanavard, lanavari, lanavarb, lanavarc, &
+ lanaattrr, lanaattrd, lanaattri, lanaattrb, lanaattrc, &
+ lanavarattrr, lanavarattrd, lanavarattri, lanavarattrb, lanavarattrc, &
+ ldativarr, ldativard, ldativari, ldativarb, ldativarc, &
+ ldatiattrr, ldatiattrd, ldatiattri, ldatiattrb, ldatiattrc, &
+ ldativarattrr, ldativarattrd, ldativarattri, ldativarattrb, ldativarattrc)
 TYPE(vol7d),INTENT(INOUT) :: this !< oggetto da riformare
 LOGICAL,INTENT(IN),OPTIONAL :: sort !< se fornito e uguale a \c .TRUE., i descrittori che supportano un ordinamento (operatori > e/o <) risulteranno ordinati in ordine crescente nell'oggetto riformato
 LOGICAL,INTENT(IN),OPTIONAL :: unique !< se fornito e uguale a \c .TRUE., gli eventuali elementi duplicati nei descrittori dell'oggetto iniziale verranno collassati in un unico elemento (con eventuale perdita dei dati relativi agli elementi duplicati)
 LOGICAL,INTENT(IN),OPTIONAL :: miss !< se fornito e uguale a \c .TRUE., gli eventuali elementi dei descrittori uguali al corrispondente valore mancante verranno eliminati dall'oggetto riformato
-LOGICAL,INTENT(IN),OPTIONAL :: ltime(:) !< se fornito, deve essere un vettore logico della stessa lunghezza di \a this%time indicante quali elementi della dimensione \a time mantenere (valori \c .TRUE.) e quali scartare (valori \c .FALSE.) nel volume copiato; è compatibile col parametro \a miss
+LOGICAL,INTENT(IN),OPTIONAL :: ltime(:) !< se fornito, deve essere un vettore logico della stessa lunghezza di \a this::time indicante quali elementi della dimensione \a time mantenere (valori \c .TRUE.) e quali scartare (valori \c .FALSE.) nel volume copiato; è compatibile col parametro \a miss
 LOGICAL,INTENT(IN),OPTIONAL :: ltimerange(:) !< come il precedente per la dimensione \a timerange
 LOGICAL,INTENT(IN),OPTIONAL :: llevel(:) !< come il precedente per la dimensione \a level
 LOGICAL,INTENT(IN),OPTIONAL :: lana(:) !< come il precedente per la dimensione \a ana
 LOGICAL,INTENT(IN),OPTIONAL :: lnetwork(:) !< come il precedente per la dimensione \a network
+!> come il precedente per tutte le possibili dimensioni variabile
+LOGICAL,INTENT(in),OPTIONAL :: &
+ lanavarr(:), lanavard(:), lanavari(:), lanavarb(:), lanavarc(:), &
+ lanaattrr(:), lanaattrd(:), lanaattri(:), lanaattrb(:), lanaattrc(:), &
+ lanavarattrr(:), lanavarattrd(:), lanavarattri(:), lanavarattrb(:), lanavarattrc(:), &
+ ldativarr(:), ldativard(:), ldativari(:), ldativarb(:), ldativarc(:), &
+ ldatiattrr(:), ldatiattrd(:), ldatiattri(:), ldatiattrb(:), ldatiattrc(:), &
+ ldativarattrr(:), ldativarattrd(:), ldativarattri(:), ldativarattrb(:), ldativarattrc(:)
 
 TYPE(vol7d) :: v7dtmp
 
 CALL vol7d_copy(this, v7dtmp, sort, unique, miss, ltime, ltimerange, &
- llevel, lana, lnetwork)
+ llevel, lana, lnetwork, &
+ lanavarr, lanavard, lanavari, lanavarb, lanavarc, &
+ lanaattrr, lanaattrd, lanaattri, lanaattrb, lanaattrc, &
+ lanavarattrr, lanavarattrd, lanavarattri, lanavarattrb, lanavarattrc, &
+ ldativarr, ldativard, ldativari, ldativarb, ldativarc, &
+ ldatiattrr, ldatiattrd, ldatiattri, ldatiattrb, ldatiattrc, &
+ ldativarattrr, ldativarattrd, ldativarattri, ldativarattrb, ldativarattrc)
 ! Distruggo il vecchio volume e assegno il nuovo a this
 CALL delete(this)
 this = v7dtmp
