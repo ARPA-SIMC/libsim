@@ -86,7 +86,7 @@ TYPE(datetime) :: lstart, lend, tmptime, tmptimes, t1, t2
 TYPE(timedelta) dt1, stepvero
 INTEGER :: steps, ntr, nstep, ncum, nval, i, j, k, i1, i3, i5, i6, n
 INTEGER,ALLOCATABLE :: map_tr(:), map_trc(:,:), count_trc(:,:)
-LOGICAL,ALLOCATABLE :: mask_time(:)
+LOGICAL,ALLOCATABLE :: mask_time(:), ltime(:)
 REAL :: lfrac_valid, frac_c, frac_m
 TYPE(vol7d) :: v7dtmp
 
@@ -105,7 +105,7 @@ IF (ntr == 0) THEN
   CALL raise_warning('nessun timerange adatto per media/cumulazione')
   RETURN
 ENDIF
-! pulisco e ordino il volume originale
+! pulisco il volume originale (attivare miss?)
 CALL vol7d_reform(this, miss=.FALSE., sort=.FALSE., unique=.TRUE.)
 ! riconto i timerange, potrebbero essere diminuiti a causa di unique
 ntr = COUNT(this%timerange(:)%timerange == tri .AND. this%timerange(:)%p2 /= imiss &
@@ -148,17 +148,13 @@ CALL getval(step, aminute=steps)
 steps = steps*60
 CALL init(that%timerange(1), timerange=tri, p1=0, p2=steps) ! modificare eventualmente p1
 
-! Faccio una prima copia del volume originale
-CALL vol7d_copy(this, v7dtmp, miss=.FALSE., sort=.FALSE., unique=.FALSE.)
-! elimino da essa quello che non serve
-DO i = 1, SIZE(v7dtmp%time)
-  IF (.NOT.ANY(v7dtmp%time(i) == that%time)) v7dtmp%time(i) = datetime_miss
+! Faccio una copia del volume originale eliminando da essa quello che non serve
+! attenzione uso mask_time
+DO i = 1, SIZE(this%time)
+  mask_time(i) = ANY(this%time(i) == that%time)
 ENDDO
-DO i = 1, SIZE(v7dtmp%timerange)
-  IF (v7dtmp%timerange(i) /= that%timerange(1)) &
-   v7dtmp%timerange(i) = vol7d_timerange_miss
-ENDDO
-CALL vol7d_reform(v7dtmp, miss=.TRUE., sort=.FALSE., unique=.FALSE.)
+CALL vol7d_copy(this, v7dtmp, miss=.FALSE., sort=.FALSE., unique=.FALSE., &
+ ltimerange=(this%timerange(:) == that%timerange(1)), ltime=mask_time)
 ! Infine fondo quanto rimasto del volume originale con la bozza del nuovo volume
 CALL vol7d_merge(that, v7dtmp, sort=.TRUE.)
 
@@ -203,6 +199,7 @@ DO j = 1, SIZE(this%timerange)
 ENDDO
 
 ! finalmente cumulo
+! attenzione riuso mask_time
 IF (ASSOCIATED(this%voldatir)) THEN
   DO i = 1, nstep
     DO i1 = 1, SIZE(this%ana)
