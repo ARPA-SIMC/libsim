@@ -41,19 +41,20 @@ CALL init(network(8), 22)
 CALL init(db_v7d)
 ! Importo i dati, variabile 'B13011' della btable (precipitazione),
 ! per un vettore di reti mettendo tutto in un'unica rete
+! richiedo anche la variabile di anagrafica 'B07001' (altezza stazione)
 CALL import(db_v7d, (/'B13011'/), (/network/), &
- ti, tf, set_network=dummy_network)
+ ti, tf, anavar=(/'B07001'/), set_network=dummy_network)
 un=getunit()
 OPEN(un, FILE='v7d_oracle.dat', FORM='unformatted', ACCESS='sequential')
 CALL export(db_v7d%vol7d, un)
 CLOSE(un)
 
+PRINT*,SHAPE(db_v7d%vol7d%voldatir)
 ! Cumulo i dati su intervalli orari
 CALL init(dt_cum, hour=1)
 CALL vol7d_cumulate(db_v7d%vol7d, vol_cumh, dt_cum)
 ! Mi faccio dare una "vista" bidimensionale dei miei dati
 CALL vol7d_get_voldatir(vol_cumh, (/vol7d_ana_d,vol7d_time_d/), vol2dp=vol2d_cum)
-PRINT*,SHAPE(db_v7d%vol7d%voldatir)
 ! Stampo la media su tutte le stazioni ora per ora
 DO i = 1, SIZE(vol_cumh%time)
   CALL getval(vol_cumh%time(i), simpledate=c)
@@ -98,5 +99,18 @@ DO i = 1, SIZE(vol_cumd%time)
     ENDIF
   ENDDO
 ENDDO
+
+! Stampo la quota media delle stazioni di ogni macroarea
+i=firsttrue(vol_cumd%anavar%r(:)%btable == 'B07001')
+IF (i > 0) THEN
+  DO j = 1, SIZE(macroa)
+    n = COUNT(vol_cumd%volanar(:,i,1) /= rmiss .AND. in_macroa(:) == j)
+    IF (n > 0) THEN
+      PRINT'(A,I3,A,G12.5)','macroarea: ',j,' altezza media (m): ', &
+     SUM(vol_cumd%volanar(:,i,1), mask=(vol_cumd%volanar(:,i,1) /= rmiss &
+     .AND. in_macroa(:) == j))/n
+    ENDIF
+  ENDDO
+ENDIF
 
 END PROGRAM v7doracle

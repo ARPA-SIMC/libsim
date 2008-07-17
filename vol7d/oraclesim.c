@@ -26,9 +26,8 @@ a.dset_stam_identnr,a.vard_identnr, \
 NVL(a.valore_principale,1.0E+15),NVL(a.valore_ausiliario,1.0E+15), \
 NVL(a.flag,'000000000') \
 FROM ";
+/* ,a.valore_chiaro */
 
-/* ,a.valore_chiaro,a.flag \ */
-/* nvl(a.valore_ausiliario,-999999.) */
 static char *query2 = (char *)
   " a WHERE \
 dset_istante_wmo_fine >= TO_DATE(:ti,'YYYYMMDDHH24MI') AND \
@@ -60,7 +59,6 @@ typedef struct _OracleDbConnection
   OCIBind *bnd4p;
   char table[TABLEN];
   char errmsg[MSGLEN];
-
 } OracleDbConnection;
 
 OracleDbConnection *FC_FUNC_(oraextra_init, ORAEXTRA_INIT)
@@ -336,12 +334,7 @@ int FC_FUNC_(oraextra_getdata, ORAEXTRA_GETDATA)
       float *ovalp, float *ovala /*, char *ovalc */, char *oflag, float *rmiss) {
   OracleDbConnection *dbconnid = *fdbconnid;
   sword status = OCI_SUCCESS;
-/*   sb2 *ovalp_ind, *ovala_ind, *oflag_ind; */
   int i, ret;
-
-/*   ovalp_ind = malloc((*nr)*sizeof(*ovalp_ind)); */
-/*   ovala_ind = malloc((*nr)*sizeof(*ovala_ind)); */
-/*   oflag_ind = malloc((*nr)*sizeof(*oflag_ind)); */
 
   checkerr(dbconnid, OCIDefineByPos(dbconnid->stmthp, &dbconnid->defn1p,
  				    dbconnid->errhp, 1,
@@ -364,19 +357,19 @@ int FC_FUNC_(oraextra_getdata, ORAEXTRA_GETDATA)
   checkerr(dbconnid, OCIDefineByPos(dbconnid->stmthp, &dbconnid->defn4p,
 				    dbconnid->errhp, 4,
 				    (dvoid *) ovalp, sizeof(ovalp[0]), SQLT_FLT,
-				    (dvoid *) 0, /* ovalp_ind, */
+				    (dvoid *) 0,
 				    (ub2 *) 0, (ub2 *) 0, OCI_DEFAULT));
 
   checkerr(dbconnid, OCIDefineByPos(dbconnid->stmthp, &dbconnid->defn5p,
 				    dbconnid->errhp, 5,
 				    (dvoid *) ovala, sizeof(ovala[0]), SQLT_FLT,
-				    (dvoid *) 0, /* ovala_ind, */
+				    (dvoid *) 0,
 				    (ub2 *) 0, (ub2 *) 0, OCI_DEFAULT));
 
   checkerr(dbconnid, OCIDefineByPos(dbconnid->stmthp, &dbconnid->defn5p,
 				    dbconnid->errhp, 6,
 				    (dvoid *) oflag, FLAGLEN, SQLT_STR,
-				    (dvoid *) 0, /* oflag_ind, */
+				    (dvoid *) 0,
 				    (ub2 *) 0, (ub2 *) 0, OCI_DEFAULT));
 
   status=checkerr(dbconnid, OCIStmtFetch2(dbconnid->stmthp, dbconnid->errhp,
@@ -386,9 +379,7 @@ int FC_FUNC_(oraextra_getdata, ORAEXTRA_GETDATA)
     if (checkerr(dbconnid, OCIAttrGet(dbconnid->stmthp, OCI_HTYPE_STMT, vnr, 0, 
 				      OCI_ATTR_ROW_COUNT, dbconnid->errhp))
 	== OCI_SUCCESS)
-      for (i=0; i<*vnr; i++) {
-/*  	if (ovalp_ind[i] == -1) ovalp[i] = *rmiss; */
-/*   	if (ovala_ind[i] == -1) ovala[i] = *rmiss; */
+      for (i=0; i<*vnr; i++) { /* inserisco i dati mancanti stile libsim */
  	if (ovalp[i] > 1.0E+14) ovalp[i] = *rmiss;
   	if (ovala[i] > 1.0E+14) ovala[i] = *rmiss;
       }
@@ -397,9 +388,6 @@ int FC_FUNC_(oraextra_getdata, ORAEXTRA_GETDATA)
     *vnr = 0;
     ret = 2;
   }
-/*   free(ovalp_ind); */
-/*   free(ovala_ind); */
-/*   free(oflag_ind); */
   return ret;
 }
 

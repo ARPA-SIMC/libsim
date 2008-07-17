@@ -6,8 +6,7 @@
 !! vol7d_class::vol7d.
 !!
 !! \todo terminare la procedura per creare i file di anagrafica direttamente
-!! dall'archivio Oracle (Andrea Selvini) e offrire la possibilità di importare
-!! (nella ::import) anche variabili di anagrafica come la quota della stazione.
+!! dall'archivio Oracle (Andrea Selvini).
 !!
 !! \ingroup vol7d
 MODULE vol7d_oraclesim_class
@@ -55,7 +54,7 @@ TYPE(ora_var_conv),ALLOCATABLE :: vartable(:)
 ! tabella reti e anagrafica
 TYPE(vol7d) :: netana(oraclesim_netmax)
 LOGICAL :: networktable(oraclesim_netmax) = .FALSE.
-
+INTEGER, PARAMETER :: netana_nvarr=2, netana_nvari=1, netana_nvarc=1
 
 PRIVATE
 PUBLIC vol7d_oraclesim, init, delete, import!, oraclesim_netmax
@@ -144,25 +143,42 @@ END SUBROUTINE vol7d_oraclesim_delete
 
 
 !> Importa un volume vol7d dall'archivio Oracle SIM.
-!! Attualmente l'importazione crea solo un volume di dati reali
-!! vol7d_class::vol7d::voldatir. Tutti i descrittori vengono assegnati
-!! correttamente, compresa l'anagrafica delle stazioni.
+!! Tutti i descrittori vengono assegnati correttamente,
+!! compresa l'anagrafica delle stazioni.
+!! Attualmente l'importazione crea un volume di dati reali
+!! vol7d_class::vol7d::voldatir con le osservazioni richieste
+!! ed un eventuale volume di variabili di anagrafica
+!! intere, reali e/o carattere vol7d_class::vol7d::volanai,
+!! vol7d_class::vol7d::volanar, vol7d_class::vol7d::volanac
+!! se il parametro \a anavar viene fornito; le variabili di anagrafica
+!! attualmente disponibili sono:
+!!  - 'B07001' station height (reale)
+!!  - 'B07031' barometer height (reale)
+!!  - 'B01192' Oracle station id (intero)
+!!  - 'B01019' station name (carattere)
+!!
+!! Gestisce le flag di qualità SIM 'fase 0', cioè:
+!!  - '1' dato invalidato manualmente -> restituisce valore mancante
+!!  - '2' dato sostituito manualmente -> restituisce il dato sostituito
+!!
 SUBROUTINE vol7d_oraclesim_import(this, var, network, timei, timef, level, &
- timerange, set_network)
+ timerange, anavar, set_network)
 TYPE(vol7d_oraclesim),INTENT(out) :: this !< oggetto in cui importare i dati
-CHARACTER(len=*),INTENT(in) :: var(:) !< lista delle variabili da importare (codice alfanumerico della tabella B del WMO)
+CHARACTER(len=*),INTENT(in) :: var(:) !< lista delle variabili da importare, codice alfanumerico della tabella B locale
 TYPE(vol7d_network),INTENT(in) :: network(:) !< lista di reti da estrarre, inizializzata con l'indicativo numerico che ha nell'archivio SIM
 TYPE(datetime),INTENT(in) :: timei !< istante iniziale delle osservazioni da estrarre (estremo incluso)
 TYPE(datetime),INTENT(in) :: timef !< istante finale delle osservazioni da estrarre (estremo incluso)
 TYPE(vol7d_level),INTENT(in),OPTIONAL :: level !< estrae solo il livello verticale fornito, default=tutti
 TYPE(vol7d_timerange),INTENT(in),OPTIONAL :: timerange !< estrae solo i dati con intervallo temporale (es. istantaneo, cumulato, ecc.) analogo al timerange fornito, default=tutti
+!> variabili da importare secondo la tabella B locale o relativi alias relative ad anagrafica
+CHARACTER(len=*),INTENT(in),OPTIONAL :: anavar(:) !< lista delle variabili di anagrafica da importare, codice alfanumerico della tabella B locale, se non fornito non ne importa nessuna
 TYPE(vol7d_network),INTENT(in),OPTIONAL :: set_network !< se fornito, collassa tutte le reti nell'unica rete indicata, eliminando le stazioni comuni a reti diverse
 
 INTEGER :: i
 
 DO i = 1, SIZE(network)
   CALL vol7d_oraclesim_importvvns(this, var, network(i), timei, timef, &
-   level, timerange, set_network)
+   level, timerange, anavar, set_network)
 ENDDO
 
 END SUBROUTINE vol7d_oraclesim_import
@@ -170,7 +186,7 @@ END SUBROUTINE vol7d_oraclesim_import
 
 ! Routine interna che fa la vera importazione, una rete alla volta
 SUBROUTINE vol7d_oraclesim_importvvns(this, var, network, timei, timef, level, &
- timerange, set_network)
+ timerange, anavar, set_network)
 TYPE(vol7d_oraclesim),INTENT(out) :: this !< oggetto in cui importare i dati
 CHARACTER(len=*),INTENT(in) :: var(:) !< lista delle variabili da importare (codice alfanumerico della tabella B del WMO)
 TYPE(vol7d_network),INTENT(in) :: network !< rete da estrarre, inizializzata con l'indicativo numerico che ha nell'archivio SIM
@@ -178,17 +194,20 @@ TYPE(datetime),INTENT(in) :: timei !< istante iniziale delle osservazioni da est
 TYPE(datetime),INTENT(in) :: timef !< istante finale delle osservazioni da estrarre (estremo incluso)
 TYPE(vol7d_level),INTENT(in),OPTIONAL :: level !< estrae solo il livello verticale fornito, default=tutti
 TYPE(vol7d_timerange),INTENT(in),OPTIONAL :: timerange !< estrae solo i dati con intervallo temporale (es. istantaneo, cumulato, ecc.) analogo al timerange fornito, default=tutti
+CHARACTER(len=*),INTENT(in),OPTIONAL :: anavar(:) !< lista delle variabili di anagrafica da importare, codice alfanumerico della tabella B locale, se non fornito non ne importa nessuna
 TYPE(vol7d_network),INTENT(in),OPTIONAL :: set_network !< se fornito, collassa tutte le reti nell'unica rete indicata, eliminando le stazioni comuni a reti diverse
 
-TYPE(vol7d) :: v7dtmp, v7dtmp2
+TYPE(vol7d) :: v7dtmp, v7dtmp2, v7dtmpana
 TYPE(datetime) :: odatetime
 INTEGER :: i, j, k, nvar, nobs, nobso, ntime, nana, nvout, nvin, nvbt
 CHARACTER(len=8) :: cnetwork
 CHARACTER(len=12),ALLOCATABLE :: tmtmp(:)
 CHARACTER(len=12) :: datai, dataf
 INTEGER,ALLOCATABLE :: anatmp(:), vartmp(:), mapdatao(:), mapstazo(:), varlist(:)
+LOGICAL,ALLOCATABLE :: lana(:)
 LOGICAL :: found, non_valid, varbt_req(SIZE(vartable))
 INTEGER(kind=int_b) :: msg(256)
+LOGICAL :: lanar(netana_nvarr), lanai(netana_nvari), lanac(netana_nvarc)
 
 CALL getval(timei, simpledate=datai)
 CALL getval(timef, simpledate=dataf)
@@ -204,7 +223,6 @@ IF (.NOT. networktable(network%id)) THEN
   CALL vol7d_oraclesim_ora_ana(network%id)
 ENDIF
 ! Conto le variabili da estrarre
-!nvar = 0
 varbt_req(:) = .FALSE.
 DO nvin = 1, SIZE(var)
   found = .FALSE.
@@ -221,23 +239,21 @@ DO nvin = 1, SIZE(var)
       END IF
 
       found = .TRUE.
-!      nvar = nvar + 1
       varbt_req(nvbt) = .TRUE.
     ENDIF
   ENDDO
   IF (.NOT.found) CALL raise_warning('variabile '//TRIM(var(nvin))// &
    ' non valida per la rete '//TRIM(cnetwork))
 ENDDO
+
+nvar = COUNT(varbt_req)
+ALLOCATE(varlist(nvar))
+varlist = PACK(vartable(:)%varora, varbt_req)
 IF (nvar == 0) THEN
   CALL raise_warning('nessuna delle variabili '//TRIM(var(1))// &
    ' e` valida per la rete '//TRIM(cnetwork))
   RETURN
 ENDIF
-! Mappo le variabili da btable a oraclesim e creo la stringa con l'elenco
-
-nvar = COUNT(varbt_req)
-ALLOCATE(varlist(nvar))
-varlist = PACK(vartable(:)%varora, varbt_req)
 CALL print_info('in oraclesim_class nvar='//to_char(nvar))
 
 nobs = oraextra_gethead(this%connid, fchar_to_cstr(datai), &
@@ -298,8 +314,8 @@ DO i = 1, nana
   ENDIF
 ENDDO
 
+! Praticamente inutile se mi fido della query
 DO i = 1, ntime
-!  CALL init(odatetime, oraclesimdate=tmtmp(i))
  odatetime = datetime_new(simpledate=tmtmp(i))
   IF (odatetime < timei .OR. odatetime > timef) THEN
     non_valid = .TRUE.
@@ -310,6 +326,7 @@ DO i = 1, ntime
   ENDIF
 ENDDO
 
+! Praticamente inutile se mi fido della query
 DO i = 1, nvar
   IF (.NOT.ANY((vartmp(i) == vartable(:)%varora) .AND. varbt_req(:))) THEN
     non_valid = .TRUE.
@@ -337,7 +354,6 @@ IF (non_valid) THEN
   vartmp(:) = pack_distinct(varo(1:nobs), nvar, back=.TRUE., mask=(varo(1:nobs) /= 0))
 ENDIF
 
-
 ! creo la mappatura
 ALLOCATE(mapdatao(nobs), mapstazo(nobs))
 DO i = 1, nana
@@ -358,24 +374,51 @@ DO i = 1, nvar
    nlevel=1, ntimerange=1, nnetwork=1, ndativarr=1)
 
   IF (i == 1) THEN ! la prima volta inizializzo i descrittori fissi
-    DO j = 1, ntime
-      v7dtmp%time(j) = datetime_new(simpledate=tmtmp(j))
-    ENDDO
-    DO j = 1, nana
-      k = firsttrue(anatmp(j) == netana(network%id)%volanai(:,1,1)) ! ottimizzare
-      v7dtmp%ana(j) = netana(network%id)%ana(k) ! attenzione ai puntatori
-    ENDDO
     IF (PRESENT(set_network)) THEN
       v7dtmp%network(1) = set_network ! dummy network
     ELSE
       v7dtmp%network(1) = network
     ENDIF
+    ALLOCATE(lana(SIZE(netana(network%id)%ana)))
+    lana = .FALSE.
+    DO j = 1, nana
+      k = INDEX(netana(network%id)%volanai(:,1,1), anatmp(j))
+      v7dtmp%ana(j) = netana(network%id)%ana(k) ! attenzione ai puntatori
+      lana(k) = .TRUE.
+    ENDDO
+! se sono richieste delle variabili di anagrafica
+! copio il sottoinsieme di anagrafica che mi interessa in tmpana
+! e lo fondo col volume appena creato
+    IF (PRESENT(anavar)) THEN
+      DO j = 1, SIZE(netana(network%id)%anavar%r)
+        lanar(j) = ANY(netana(network%id)%anavar%r(j)%btable == anavar)
+      ENDDO
+      DO j = 1, SIZE(netana(network%id)%anavar%i)
+        lanai(j) = ANY(netana(network%id)%anavar%i(j)%btable == anavar)
+      ENDDO
+      DO j = 1, SIZE(netana(network%id)%anavar%c)
+        lanac(j) = ANY(netana(network%id)%anavar%c(j)%btable == anavar)
+      ENDDO
+      CALL vol7d_copy(netana(network%id), v7dtmpana, lana=lana, &
+       lanavarr=lanar, lanavari=lanai, lanavarc=lanac)
+      v7dtmpana%network(1) = v7dtmp%network(1) ! faccio coincidere la rete
+! fondo v7dtmpana appena creato con v7dtmp
+! qui faccio affidamenteo sul fatto che vol7d_merge conserva l'ordine
+! del primo argomento (v7dtmp e v7dtmpana hanno la stessa anagrafica
+! ma con un ordinamento in generale diverso)
+      CALL vol7d_merge(v7dtmp, v7dtmpana)
+    ENDIF
+    DEALLOCATE(lana)
+
+    DO j = 1, ntime
+      v7dtmp%time(j) = datetime_new(simpledate=tmtmp(j))
+    ENDDO
   ELSE ! successivamente li copio da quelli precedenti
     v7dtmp%time = v7dtmp2%time
     v7dtmp%ana = v7dtmp2%ana
     v7dtmp%network = v7dtmp2%network
   ENDIF
-  nvbt = firsttrue((vartmp(i) == vartable(:)%varora) .AND. varbt_req(:))
+  nvbt = INDEX(vartable(:)%varora, vartmp(i),  mask=varbt_req(:))
   CALL init(v7dtmp%dativar%r(1), vartable(nvbt)%varbt)
   v7dtmp%level(1) = vartable(nvbt)%level
   v7dtmp%timerange(1) = vartable(nvbt)%timerange
@@ -420,8 +463,6 @@ INTEGER,INTENT(in) :: n
 IF (nmax >= n) RETURN ! c'e' gia' posto sufficiente
 IF (ALLOCATED(stazo)) DEALLOCATE(stazo, varo, valid, valore1, valore2, &
  cdatao, fdatao, cflag)
-!ALLOCATE(stazo(n), varo(n), valid(n), valore1(n), valore2(n), valore3(n), &
-! cdatao(n))
 ALLOCATE(stazo(n), varo(n), valid(n), valore1(n), valore2(n), &
  cdatao(datelen, n), fdatao(n), cflag(flaglen,n))
 
@@ -454,7 +495,6 @@ SUBROUTINE vol7d_oraclesim_setup_conv()
 INTEGER,PARAMETER :: nf=16 ! formato file
 INTEGER :: i, sep(nf), n1, n2, un, i1, i2, i3, i4
 CHARACTER(len=512) :: line
-!TYPE(ora_ana),POINTER :: dummy => null() ! temporaneo
 
 un = open_package_file('varmap.csv', filetype_data)
 IF (un < 0) CALL raise_fatal_error('non trovo il file delle variabili')
@@ -526,36 +566,31 @@ ENDDO
 REWIND(un)
 
 CALL vol7d_alloc(netana(netid), nnetwork=1, nana=i, &
- nanavarr=2, nanavari=1, nanavarc=1)
+ nanavarr=netana_nvarr, nanavari=netana_nvari, nanavarc=netana_nvarc)
 CALL vol7d_alloc_vol(netana(netid))
 CALL init(netana(netid)%network(1), id=netid)
-CALL init(netana(netid)%anavar%r(1), btable='B007001') ! station height
-CALL init(netana(netid)%anavar%r(2), btable='B007031') ! barometer height
-CALL init(netana(netid)%anavar%i(1), btable='B001192') ! Oracle station id
-CALL init(netana(netid)%anavar%c(1), btable='B001019') ! station name
+CALL init(netana(netid)%anavar%r(1), btable='B07001') ! station height
+CALL init(netana(netid)%anavar%r(2), btable='B07031') ! barometer height
+CALL init(netana(netid)%anavar%i(1), btable='B01192') ! Oracle station id
+CALL init(netana(netid)%anavar%c(1), btable='B01019') ! station name
 DO j = 1, i
   READ(un,*)netana(netid)%volanai(j,1,1), lat, lon, netana(netid)%volanar(j,1,1), &
    netana(netid)%volanar(j,2,1), macroa, netana(netid)%volanac(j,1,1)
-  CALL init(netana(netid)%ana(j), lon=lon, lat=lat)
+  IF (netana(netid)%volanar(j,1,1) < -9998.) netana(netid)%volanar(j,1,1) = rmiss
+  IF (netana(netid)%volanar(j,2,1) < -9998.) netana(netid)%volanar(j,2,1) = rmiss
+  IF (lon < -99.8 .AND. lat < -99.8) THEN
+    CALL init(netana(netid)%ana(j))
+  ELSE
+    CALL init(netana(netid)%ana(j), lon=lon, lat=lat)
+  ENDIF
 ENDDO
 CLOSE(un)
 
 CALL print_info('Ho letto l''anagrafica di '//TRIM(to_char(i))// &
  ' stazioni per la rete '//cnet)
 
-
 END SUBROUTINE vol7d_oraclesim_ora_ana
 
 
 END MODULE vol7d_oraclesim_class
 
-
-!SUBROUTINE set_c_pointer(punteur, punte)
-!IMPLICIT NONE
-!
-!INTEGER,POINTER :: punteur
-!INTEGER :: punte
-!
-!punteur => punte
-!
-!END SUBROUTINE oraclesim_c_setpointer
