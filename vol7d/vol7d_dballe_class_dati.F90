@@ -27,6 +27,10 @@ do iiiii=1,ndativar/**/VOL7D_POLY_TYPES_V
 
   else
 
+
+    call l4f_category_log(this%category,L4F_DEBUG,"setto: "//to_char(this%vol7d%dativar%/**/VOL7D_POLY_TYPES_V(iiiii)%btable)// &
+     to_char(this%vol7d%voldati/**/VOL7D_POLY_TYPES_V(i,ii,iii,iiii,iiiii,iiiiii)))
+
     call idba_set (this%handle,this%vol7d%dativar%/**/VOL7D_POLY_TYPES_V(iiiii)%btable , &
      this%vol7d%voldati/**/VOL7D_POLY_TYPES_V(i,ii,iii,iiii,iiiii,iiiiii))
     write =.true.

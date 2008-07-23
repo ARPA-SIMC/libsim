@@ -53,6 +53,7 @@ MODULE vol7d_dballe_class
 USE char_utilities
 USE vol7d_class
 USE vol7d_utilities
+use log4fortran
 
 IMPLICIT NONE
 PRIVATE
@@ -60,6 +61,9 @@ PUBLIC vol7d_dballe, init, delete, import, export, vol7d_dballe_set_var_du
 
 include "dballef.h"
 
+!external v7d_dballe_error_handler
+
+character (len=255),parameter:: subcategory="vol7d_dballe_class"
 
 !>\brief Oggetto per import ed export da DB-All.e
 !!
@@ -74,11 +78,12 @@ TYPE vol7d_dballe
   integer :: idbhandle !< handle delle sessioni connesse al DSN DB-All.e
   integer :: handle,handle_staz !< handle delle sessioni connesse al DSN DB-All.e
   integer :: handle_err !< handle delle sessioni connesse al DSN DB-All.e
-  integer :: debug = 1 !< attiva eventuali messaggi de debug
   !> memorizza gli id interni al database DB-All.e per 
   !!ottimizzare le riscritture degli attributi ai dati
   integer ,pointer :: data_id(:,:,:,:,:)
-
+  logical :: file=.false. !< true when operation refer to a file
+  integer :: category !< log4fortran
+  
 END TYPE vol7d_dballe
 
 INTEGER, PARAMETER, PRIVATE :: nftype = 2
@@ -144,75 +149,138 @@ END TYPE record
 
 CONTAINS
 
-!>\brief  inizializza l'oggetto
 
-SUBROUTINE vol7d_dballe_init(this,dsn,user,password,debug,write,wipe,repinfo)
+!>\brief  inizializza l'oggetto
+SUBROUTINE vol7d_dballe_init(this,dsn,user,password,write,wipe,repinfo,filename,format,mode,overwrite,file,categoryappend)
 
 
 TYPE(vol7d_dballe),INTENT(out) :: this !< l'oggetto da inizializzare
 character(len=*), INTENT(in),OPTIONAL :: dsn !< per l'accesso al DSN ( default="test" )
 character(len=*), INTENT(in),OPTIONAL :: user !< per l'accesso al DSN ( default="test" )
 character(len=*), INTENT(in),OPTIONAL :: password !< per l'accesso al DSN ( default="" )
-integer,INTENT(in),OPTIONAL :: debug !< attiva alcune opzioni di debug ( default=1 )
 logical,INTENT(in),OPTIONAL :: write !< abilita la scrittura sul DSN ( default=.false. )
 logical,INTENT(in),OPTIONAL :: wipe !<  svuota il DSN e/o lo prepara per una scrittura ( default=.false. )
 character(len=*), INTENT(in),OPTIONAL :: repinfo !< eventuale file repinfo.csv usato con wipe ( default="" )
+character(len=*),intent(inout),optional :: filename !< nome del file su cui scrivere; se passato ="" ritorna il valore rielaborato
+character(len=*),intent(in),optional :: format !< the file format. It can be "BUFR" or "CREX". (default="BUFR")
+character(len=*),INTENT(in),OPTIONAL :: mode !< the open mode ("r" for read, "w" for write or create) ( default="w" )
+logical,INTENT(in),OPTIONAL :: overwrite !< if the file exist it will be overwritten ( default=.false )
+logical,INTENT(in),OPTIONAL :: file !< switch to use file or data base ( default=.false )
+character(len=*),INTENT(in),OPTIONAL :: categoryappend !< appennde questo suffisso al namespace category di log4fortran
 
-integer :: ldebug
 character(len=50) :: quidsn,quiuser,quipassword
 character(len=255) :: quirepinfo
 logical :: quiwrite,quiwipe
 
+character(len=512) :: a_name
+character(len=254) :: arg,lfilename,lmode,lformat
+logical :: loverwrite,exist
+
+call l4f_launcher(a_name,a_name_append=trim(subcategory)//"."//trim(categoryappend))
+!init di log4fortran
+!ier=l4f_init()
+this%category=l4f_category_get(a_name)
+
 nullify(this%data_id)
-
-IF (PRESENT(debug)) THEN
-  ldebug = debug
-ELSE
-  ldebug = 1
-ENDIF
-
-quidsn = "test"
-quiuser = "test"
-quipassword = ""
-
-IF (PRESENT(dsn))quidsn = dsn
-IF (PRESENT(user))quiuser = user
-IF (PRESENT(password))quipassword = password
-
-! utilizziamo la routine di default per la gestione dell'errore
-!call idba_error_set_callback(0,idba_default_error_handler, &
-!     ldebug,this%handle_err)
 
 !TODO: quando scrivo bisogna gestire questo che non è da fare ?
 CALL init(this%vol7d)
 
-quiwrite=.false.
-if (present(write))then
-   quiwrite=write
-endif
+                                ! impostiamo la gestione dell'errore
+call idba_error_set_callback(0,v7d_dballe_error_handler, &
+ this%category,this%handle_err)
 
-quiwipe=.false.
-quirepinfo=""
-if (present(wipe))then
-  quiwipe=wipe
-  if (present(repinfo))then
-    quirepinfo=repinfo
-  endif
-endif
+if (file) then
 
-!print*,"write=",quiwrite,"wipe=",wipe,"dsn=",quidsn
+  call getarg(0,arg)
 
-if(quiwrite)then
-   call idba_presentati(this%idbhandle,quidsn,quiuser,quipassword)
-   call idba_preparati (this%idbhandle,this%handle,"write","write","write")
-   call idba_preparati (this%idbhandle,this%handle_staz,"write","write","write")
+  lformat="BUFR"
+  if (present(format))then
+    lformat=format
+  end if
+
+  lmode="w"
+  if (present(mode))then
+    lmode=mode
+  end if
+
+
+  lfilename=trim(arg)//"."//trim(lformat)
+  if (index(arg,'/',back=.true.) > 0) lfilename=lfilename(index(arg,'/',back=.true.)+1 : )
+
+
+  loverwrite=.false.
+  if (present(overwrite))then
+    loverwrite=overwrite
+  end if
+
+  if (present(filename))then
+    if (filename == "")then
+      filename=lfilename
+    else
+      lfilename=filename
+    end if
+  end if
+
+  if (.not.loverwrite) then
+    inquire(file=lfilename,EXIST=exist)
+  
+    if (exist) then 
+      call l4f_category_log(this%category,L4F_ERROR,"file exist; cannot open new file: "//to_char(lfilename))
+      CALL raise_fatal_error('file exist; cannot open new file')
+    end if
+  end if
+
+
+  call idba_messaggi(this%handle,lfilename,lmode,lformat)
+
+  this%file=.true.
+  call l4f_category_log(this%category,L4F_DEBUG,"handle from idba_messaggi: "//to_char(this%handle))
+  call l4f_category_log(this%category,L4F_DEBUG,"filename: "//to_char(lfilename))
+  call l4f_category_log(this%category,L4F_DEBUG,"mode: "//to_char(lmode))
+  call l4f_category_log(this%category,L4F_DEBUG,"format: "//to_char(lformat))
+
 else
-   call idba_presentati(this%idbhandle,quidsn,quiuser,quipassword)
-   call idba_preparati (this%idbhandle,this%handle,"read","read","read")
-   call idba_preparati (this%idbhandle,this%handle_staz,"read","read","read")
-end if
 
-if (quiwipe)call idba_scopa (this%handle,quirepinfo)
+  quidsn = "test"
+  quiuser = "test"
+  quipassword = ""
+  
+  IF (PRESENT(dsn))quidsn = dsn
+  IF (PRESENT(user))quiuser = user
+  IF (PRESENT(password))quipassword = password
+  
+  quiwrite=.false.
+  if (present(write))then
+    quiwrite=write
+  endif
+ 
+  quiwipe=.false.
+  quirepinfo=""
+  if (present(wipe))then
+    quiwipe=wipe
+    if (present(repinfo))then
+      quirepinfo=repinfo
+    endif
+  endif
+  
+                                !print*,"write=",quiwrite,"wipe=",wipe,"dsn=",quidsn
+  
+  if(quiwrite)then
+    call idba_presentati(this%idbhandle,quidsn,quiuser,quipassword)
+    call idba_preparati (this%idbhandle,this%handle,"write","write","write")
+    call idba_preparati (this%idbhandle,this%handle_staz,"write","write","write")
+  else
+    call idba_presentati(this%idbhandle,quidsn,quiuser,quipassword)
+    call idba_preparati (this%idbhandle,this%handle,"read","read","read")
+    call idba_preparati (this%idbhandle,this%handle_staz,"read","read","read")
+  end if
+  
+  if (quiwipe)call idba_scopa (this%handle,quirepinfo)
+  
+  this%file=.false.
+  
+endif
 
 END SUBROUTINE vol7d_dballe_init
 
@@ -1440,7 +1508,7 @@ END SUBROUTINE vol7d_dballe_importvvns
 !! una serie di filtri.
 
 SUBROUTINE vol7d_dballe_export(this, network, coordmin, coordmax, ident,&
- timei, timef,level,timerange,var,attr,anavar,anaattr,attr_only)
+ timei, timef,level,timerange,var,attr,anavar,anaattr,attr_only,force_networkid)
 
 !> \todo gestire il filtro staz_id la qual cosa vuol dire aggiungere un id nel type ana
 
@@ -1460,6 +1528,7 @@ CHARACTER(len=*),INTENT(in),OPTIONAL :: var(:),attr(:),anavar(:),anaattr(:)
 !> permette di riscrivere su un DSN letto precedentemente, modificando solo gli attributi ai dati,
 !! ottimizzando enormente le prestazioni: gli attributi riscritti saranno quelli con this%data_id definito
 !! (solitamente ricopiato dall'oggetto letto)
+INTEGER,intent(in),optional :: force_networkid !< specificando l'ID forza l'exportazione ad una singola rete  
 logical,intent(in),optional :: attr_only 
 
 !REAL(kind=fp_geo) :: latmin,latmax,lonmin,lonmax
@@ -1640,11 +1709,16 @@ do iii=1, nnetwork
 
       CALL geo_coord_to_geo(this%vol7d%ana(i)%coord)
       CALL getval(this%vol7d%ana(i)%coord, lat=lat,lon=lon)
-      !print *,lat,lon
 
       call idba_unsetall (this%handle)
+
+      if (this%file)then
+        call idba_set (this%handle,"query","message")
+      end if
+
       call idba_setcontextana (this%handle)
-     
+      if (this%file) call idba_set (this%handle,"query","message")
+
       call idba_set (this%handle,"lat",lat)
       call idba_set (this%handle,"lon",lon)
 
@@ -1655,14 +1729,17 @@ do iii=1, nnetwork
       if ( c_e(this%vol7d%ana(i)%ident)) then
          call idba_set (this%handle,"ident",ident)
          call idba_set (this%handle,"mobile",1)
-         print *, "ti piace andare a spasso he ...",ident
+         call l4f_category_log(this%category,L4F_DEBUG,"hai una stazione che va a spasso! identificativo: "//to_char(ident))
       else
          call idba_set (this%handle,"mobile",0)
       end if
 
 
-      call idba_set(this%handle,"rep_cod",this%vol7d%network(iii)%id)
-                                !print *,"network",this%vol7d%network(iii)%id
+      if (present(force_networkid)) then
+        call idba_set(this%handle,"rep_cod",force_networkid)
+      else
+        call idba_set(this%handle,"rep_cod",this%vol7d%network(iii)%id)
+      end if
 
 
       write=.true.
@@ -1692,14 +1769,22 @@ do iii=1, nnetwork
       !se NON ho dati di anagrafica (ma solo lat e long ..) devo fare comunque una prendilo
       ! in quanto write indica DATI in sospeso da scrivere
 
-      if (write) then
-                                !print *,"eseguo una main prendilo",this%vol7d%network(iii)%id
-        call idba_prendilo (this%handle)
-        write=.false.
+      if ( write ) then
 
-        call idba_enq (this%handle,"ana_id",ana_id(i,iii))
-                                !print *,"ana_id",ana_id(i,iii)
+        call l4f_category_log(this%category,L4F_DEBUG,"eseguo una main prendilo di anagrafica")
+        call idba_prendilo (this%handle)
+
+        if (.not. this%file ) then
+
+          call idba_enq (this%handle,"ana_id",ana_id(i,iii))
+
+        else
+
+          ana_id(i,iii)=1
+        end if
       end if
+
+      write=.false.
 
    end do
 end do
@@ -1707,6 +1792,7 @@ end do
 
 ! data
 !print *,"nstaz,ntime,nlevel,ntimerange,nnetwork",nstaz,ntime,nlevel,ntimerange,nnetwork
+
 
 do i=1, nstaz
    do ii=1,ntime
@@ -1727,15 +1813,53 @@ do i=1, nstaz
 
                call idba_unsetall (this%handle)
 
+               if (this%file)then
+                 call idba_set (this%handle,"query","message")
+               end if
+
                if (.not. lattr_only) then
                                 !>\todo ottimizzare settando e unsettando le cose giuste al posto giusto
                  
-                 call idba_set (this%handle,"ana_id",ana_id(i,iiiiii))
-                 call idba_set (this%handle,"rep_cod",this%vol7d%network(iiiiii)%id)
+
+                 if (this%file)then
+                   ! scrivo su file non posso usare ana_id
+                   call getval(this%vol7d%ana(i)%coord, lat=lat,lon=lon)
+                   call idba_set (this%handle,"lat",lat)
+                   call idba_set (this%handle,"lon",lon)
+                   call l4f_category_log(this%category,L4F_DEBUG,"dati riferiti a lat: "//to_char(lat)//" lon: "//to_char(lon))
+
+                   if ( c_e(this%vol7d%ana(i)%ident)) then
+                     call idba_set (this%handle,"ident",ident)
+                     call idba_set (this%handle,"mobile",1)
+                     call l4f_category_log(this%category,L4F_DEBUG,"hai una stazione che va a spasso! identificativo: "&
+                      //to_char(ident))
+                   else
+                     call idba_set (this%handle,"mobile",0)
+                   end if
+                 else
+                   call idba_set (this%handle,"ana_id",ana_id(i,iiiiii))
+                 end if
+
+                 if (present(force_networkid)) then
+                   call idba_set (this%handle,"rep_cod",force_networkid)
+                 else
+                   call idba_set (this%handle,"rep_cod",this%vol7d%network(iiiiii)%id)
+                 end if
+
                  call idba_setlevel(this%handle, this%vol7d%level(iii)%level1, this%vol7d%level(iii)%l1,&
                   this%vol7d%level(iii)%level2, this%vol7d%level(iii)%l2)
                  call idba_settimerange(this%handle, this%vol7d%timerange(iiii)%timerange, &
                   this%vol7d%timerange(iiii)%p1, this%vol7d%timerange(iiii)%p2)
+
+                 call l4f_category_log(this%category,L4F_DEBUG,"livello1: "//to_char(this%vol7d%level(iii)%level1))
+                 call l4f_category_log(this%category,L4F_DEBUG,"l1: "//to_char(this%vol7d%level(iii)%l1))
+                 call l4f_category_log(this%category,L4F_DEBUG,"livello2: "//to_char(this%vol7d%level(iii)%level2))
+                 call l4f_category_log(this%category,L4F_DEBUG,"l2: "//to_char(this%vol7d%level(iii)%l2))
+
+                 
+                 call l4f_category_log(this%category,L4F_DEBUG,"timerange: "//to_char(this%vol7d%timerange(iiii)%timerange))
+                 call l4f_category_log(this%category,L4F_DEBUG,"T1: "//to_char(this%vol7d%timerange(iiii)%p1))
+                 call l4f_category_log(this%category,L4F_DEBUG,"T2: "//to_char(this%vol7d%timerange(iiii)%p2))
                  
                  CALL getval(this%vol7d%time(ii), year=year, month=month, day=day, hour=hour, minute=minute)
                  call idba_setdate (this%handle,year,month,day,hour,minute,0)
@@ -1752,28 +1876,29 @@ do i=1, nstaz
 
 #undef VOL7D_POLY_TYPES_V
 #define VOL7D_POLY_TYPES_V r
-!print*,"macro tipo r"
+call l4f_category_log(this%category,L4F_DEBUG,"macro tipo r")
 #include "vol7d_dballe_class_dati.F90"
 #undef VOL7D_POLY_TYPES_V
 #define VOL7D_POLY_TYPES_V i
-!print*,"macro tipo i"
+call l4f_category_log(this%category,L4F_DEBUG,"macro tipo i")
 #include "vol7d_dballe_class_dati.F90"
 #undef VOL7D_POLY_TYPES_V
 #define VOL7D_POLY_TYPES_V b
-!print*,"macro tipo b"
+call l4f_category_log(this%category,L4F_DEBUG,"macro tipo b")
 #include "vol7d_dballe_class_dati.F90"
 #undef VOL7D_POLY_TYPES_V
 #define VOL7D_POLY_TYPES_V d
-!print*,"macro tipo d"
+call l4f_category_log(this%category,L4F_DEBUG,"macro tipo d")
 #include "vol7d_dballe_class_dati.F90"
 #undef VOL7D_POLY_TYPES_V
 #define VOL7D_POLY_TYPES_V c
-!print*,"macro tipo c"
+call l4f_category_log(this%category,L4F_DEBUG,"macro tipo c")
 #include "vol7d_dballe_class_dati.F90"
 #undef VOL7D_POLY_TYPES_V
                
                if (write) then
                                 !print*,"eseguo una main prendilo"
+                 call l4f_category_log(this%category,L4F_DEBUG,"eseguo una main prendilo sui dati")
                  call idba_prendilo (this%handle)
                  write=.false.
                end if
@@ -1792,9 +1917,17 @@ END SUBROUTINE vol7d_dballe_export
 SUBROUTINE vol7d_dballe_delete(this)
 TYPE(vol7d_dballe) :: this !< oggetto da cancellare
 
-call idba_fatto(this%handle)
-call idba_fatto(this%handle_staz)
-call idba_arrivederci(this%idbhandle)
+if (this%file)then
+
+  call idba_fatto(this%handle)
+  
+else
+
+  call idba_fatto(this%handle)
+  call idba_fatto(this%handle_staz)
+  call idba_arrivederci(this%idbhandle)
+
+end if
 
 !this%dsn=cmiss
 !this%user=cmiss
@@ -1807,6 +1940,13 @@ this%handle_staz=imiss
 if (associated(this%data_id)) deallocate (this%data_id)
 
 CALL delete(this%vol7d)
+
+
+!chiudo il logger
+call l4f_category_delete(this%category)
+!ier=l4f_fini()
+
+
 
 END SUBROUTINE vol7d_dballe_delete
 
@@ -2041,6 +2181,29 @@ CALL raise_error('File '//TRIM(filename)//' not found')
 unit = -1
 
 END FUNCTION open_dballe_file
+
+
+
+subroutine v7d_dballe_error_handler(category)
+
+integer :: category
+character(len=1000) :: message,buf
+
+call idba_error_message(message)
+call l4f_category_log(category,L4F_ERROR,message)
+
+call idba_error_context(buf)
+call l4f_category_log(category,L4F_DEBUG,buf)
+
+call idba_error_details(buf)
+call l4f_category_log(category,L4F_DEBUG,buf)
+
+CALL raise_fatal_error(message)
+
+
+return
+
+end subroutine v7d_dballe_error_handler
 
 
 END MODULE 
