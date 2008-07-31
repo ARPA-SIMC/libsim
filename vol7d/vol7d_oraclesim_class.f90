@@ -523,7 +523,7 @@ IF (i > 0) THEN
     READ(line(sep(5)+1:sep(6)-1),'(I8)')i2
     READ(line(sep(6)+1:sep(7)-1),'(I8)')i3
     READ(line(sep(7)+1:sep(8)-1),'(I8)')i4
-    CALL init(vartable(i)%level, i1, i2, i3, 14)
+    CALL init(vartable(i)%level, i1, i2, i3, i4)
     READ(line(sep(8)+1:sep(9)-1),'(I8)')i1
     READ(line(sep(9)+1:sep(10)-1),'(I8)')i2
     READ(line(sep(10)+1:sep(11)-1),'(I8)')i3
