@@ -40,8 +40,6 @@ call l4f_category_log(category,L4F_INFO,"demo scrittura BUFR da vol7d")
 
 call l4f_category_log(category,L4F_INFO,"inizializzazioni")
 
-!init di log4fortran
-ier=l4f_init()
 
 CALL init(v7d)
 
@@ -104,13 +102,13 @@ end do
 
 
 ! Chiamo il costruttore della classe vol7d_dballe per il mio oggetto in export
-CALL init(v7d_exp,file=.true.,overwrite=.true.,categoryappend="exportBUFR",format="CREX")
+CALL init(v7d_exp,file=.true.,write=.true.,wipe=.true.,categoryappend="exportBUFR",format="BUFR",force_networkid=255)
 
 v7d_exp%vol7d = v7d
 
 call l4f_category_log(category,L4F_INFO,"Scrivo i dati")
 
-CALL export(v7d_exp,force_networkid=255)
+CALL export(v7d_exp)
 
 CALL delete (v7d_exp) 
 

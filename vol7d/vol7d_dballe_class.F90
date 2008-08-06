@@ -151,30 +151,33 @@ CONTAINS
 
 
 !>\brief  inizializza l'oggetto
-SUBROUTINE vol7d_dballe_init(this,dsn,user,password,write,wipe,repinfo,filename,format,mode,overwrite,file,categoryappend)
+SUBROUTINE vol7d_dballe_init(this,dsn,user,password,write,wipe,repinfo,&
+ filename,format,file,categoryappend,force_networkid)
 
 
 TYPE(vol7d_dballe),INTENT(out) :: this !< l'oggetto da inizializzare
 character(len=*), INTENT(in),OPTIONAL :: dsn !< per l'accesso al DSN ( default="test" )
 character(len=*), INTENT(in),OPTIONAL :: user !< per l'accesso al DSN ( default="test" )
 character(len=*), INTENT(in),OPTIONAL :: password !< per l'accesso al DSN ( default="" )
-logical,INTENT(in),OPTIONAL :: write !< abilita la scrittura sul DSN ( default=.false. )
-logical,INTENT(in),OPTIONAL :: wipe !<  svuota il DSN e/o lo prepara per una scrittura ( default=.false. )
+logical,INTENT(in),OPTIONAL :: write !< abilita la scrittura sul DSN/file ( default=.false. )
+logical,INTENT(in),OPTIONAL :: wipe !<  svuota il DSN/file e/o lo prepara per una scrittura ( default=.false. )
 character(len=*), INTENT(in),OPTIONAL :: repinfo !< eventuale file repinfo.csv usato con wipe ( default="" )
 character(len=*),intent(inout),optional :: filename !< nome del file su cui scrivere; se passato ="" ritorna il valore rielaborato
 character(len=*),intent(in),optional :: format !< the file format. It can be "BUFR" or "CREX". (default="BUFR")
-character(len=*),INTENT(in),OPTIONAL :: mode !< the open mode ("r" for read, "w" for write or create) ( default="w" )
-logical,INTENT(in),OPTIONAL :: overwrite !< if the file exist it will be overwritten ( default=.false )
 logical,INTENT(in),OPTIONAL :: file !< switch to use file or data base ( default=.false )
 character(len=*),INTENT(in),OPTIONAL :: categoryappend !< appennde questo suffisso al namespace category di log4fortran
+INTEGER,intent(in),optional :: force_networkid !< specificando l'ID di una rete forza l'exportazione ad uno specifico template BUFR/CREX  
+
+
+character(len=1):: mode ! the open mode ("r" for read, "w" for write or create, "a" append) (comandato da "write", default="r" )
 
 character(len=50) :: quidsn,quiuser,quipassword
 character(len=255) :: quirepinfo
-logical :: quiwrite,quiwipe
+logical :: quiwrite,quiwipe,quifile
 
 character(len=512) :: a_name
-character(len=254) :: arg,lfilename,lmode,lformat
-logical :: loverwrite,exist
+character(len=254) :: arg,lfilename,lformat
+logical :: exist
 
 call l4f_launcher(a_name,a_name_append=trim(subcategory)//"."//trim(categoryappend))
 !init di log4fortran
@@ -190,7 +193,28 @@ CALL init(this%vol7d)
 call idba_error_set_callback(0,v7d_dballe_error_handler, &
  this%category,this%handle_err)
 
-if (file) then
+
+quiwrite=.false.
+if (present(write))then
+  quiwrite=write
+endif
+
+quiwipe=.false.
+quirepinfo=""
+if (present(wipe))then
+  quiwipe=wipe
+  if (present(repinfo))then
+    quirepinfo=repinfo
+  endif
+endif
+
+quifile=.false.
+if (present(file))then
+  quifile=file
+endif
+
+
+if (quifile) then
 
   call getarg(0,arg)
 
@@ -198,21 +222,10 @@ if (file) then
   if (present(format))then
     lformat=format
   end if
-
-  lmode="w"
-  if (present(mode))then
-    lmode=mode
-  end if
-
+  
 
   lfilename=trim(arg)//"."//trim(lformat)
   if (index(arg,'/',back=.true.) > 0) lfilename=lfilename(index(arg,'/',back=.true.)+1 : )
-
-
-  loverwrite=.false.
-  if (present(overwrite))then
-    loverwrite=overwrite
-  end if
 
   if (present(filename))then
     if (filename == "")then
@@ -222,22 +235,34 @@ if (file) then
     end if
   end if
 
-  if (.not.loverwrite) then
-    inquire(file=lfilename,EXIST=exist)
-  
-    if (exist) then 
-      call l4f_category_log(this%category,L4F_ERROR,"file exist; cannot open new file: "//to_char(lfilename))
-      CALL raise_fatal_error('file exist; cannot open new file')
+  inquire(file=lfilename,EXIST=exist)
+
+  mode="r"
+  if (quiwrite)then
+    if (quiwipe.or..not.exist) then
+      mode="w"
+    else
+      mode="a"
+      call l4f_category_log(this%category,L4F_INFO,"file exist; append data to file: "//to_char(lfilename))
+    end if
+  else
+    if (.not.exist) then
+      call l4f_category_log(this%category,L4F_ERROR,"file do not exist; cannot open file for read: "//to_char(lfilename))
+      CALL raise_fatal_error('file do not exist; cannot open file for read')
     end if
   end if
 
 
-  call idba_messaggi(this%handle,lfilename,lmode,lformat)
+  if (present(force_networkid)) then
+    call idba_messaggi(this%handle,lfilename,mode,lformat,force_networkid)
+  else
+    call idba_messaggi(this%handle,lfilename,mode,lformat,0)
+  end if
 
   this%file=.true.
   call l4f_category_log(this%category,L4F_DEBUG,"handle from idba_messaggi: "//to_char(this%handle))
   call l4f_category_log(this%category,L4F_DEBUG,"filename: "//to_char(lfilename))
-  call l4f_category_log(this%category,L4F_DEBUG,"mode: "//to_char(lmode))
+  call l4f_category_log(this%category,L4F_DEBUG,"mode: "//to_char(mode))
   call l4f_category_log(this%category,L4F_DEBUG,"format: "//to_char(lformat))
 
 else
@@ -249,22 +274,8 @@ else
   IF (PRESENT(dsn))quidsn = dsn
   IF (PRESENT(user))quiuser = user
   IF (PRESENT(password))quipassword = password
-  
-  quiwrite=.false.
-  if (present(write))then
-    quiwrite=write
-  endif
- 
-  quiwipe=.false.
-  quirepinfo=""
-  if (present(wipe))then
-    quiwipe=wipe
-    if (present(repinfo))then
-      quirepinfo=repinfo
-    endif
-  endif
-  
-                                !print*,"write=",quiwrite,"wipe=",wipe,"dsn=",quidsn
+    
+                                !print*,"write=",quiwrite,"wipe=",quiwipe,"dsn=",quidsn
   
   if(quiwrite)then
     call idba_presentati(this%idbhandle,quidsn,quiuser,quipassword)
@@ -401,7 +412,7 @@ END SUBROUTINE vol7d_dballe_importvvnv
 
 !>\brief Identica a vol7d_dballe_importvsns con var vettore.
 !!
-!!import da DB-all.e
+!!import da DB-all.e oppure da BUFR/CREX formato generico
 SUBROUTINE vol7d_dballe_importvvns(this, var, network, coordmin, coordmax, timei, timef,level,timerange, set_network,&
  attr,anavar,anaattr, varkind,attrkind,anavarkind,anaattrkind)
 
@@ -414,6 +425,39 @@ TYPE(vol7d_level),INTENT(in),optional :: level
 TYPE(vol7d_timerange),INTENT(in),optional :: timerange
 CHARACTER(len=*),INTENT(in),OPTIONAL :: attr(:),anavar(:),anaattr(:)
 CHARACTER(len=*),INTENT(in),OPTIONAL :: varkind(:),attrkind(:),anavarkind(:),anaattrkind(:)
+
+if (this%file) then
+
+  call vol7d_dballe_importvvns_file(this, var, network, coordmin, coordmax, timei, timef,level,timerange, set_network,&
+   attr,anavar,anaattr, varkind,attrkind,anavarkind,anaattrkind)
+
+else
+
+  call vol7d_dballe_importvvns_dba(this, var, network, coordmin, coordmax, timei, timef,level,timerange, set_network,&
+   attr,anavar,anaattr, varkind,attrkind,anavarkind,anaattrkind)
+  
+end if
+
+end SUBROUTINE vol7d_dballe_importvvns
+
+
+
+!>\brief Identica a vol7d_dballe_importvsns con var vettore.
+!!
+!!import da DB-all.e
+SUBROUTINE vol7d_dballe_importvvns_dba(this, var, network, coordmin, coordmax, timei, timef,level,timerange, set_network,&
+ attr,anavar,anaattr, varkind,attrkind,anavarkind,anaattrkind)
+
+TYPE(vol7d_dballe),INTENT(inout) :: this !< oggetto vol7d_dballe
+CHARACTER(len=*),INTENT(in),OPTIONAL :: var(:)
+TYPE(geo_coord),INTENT(inout),optional :: coordmin,coordmax 
+TYPE(datetime),INTENT(in),OPTIONAL :: timei, timef
+TYPE(vol7d_network),INTENT(in),OPTIONAL :: network,set_network
+TYPE(vol7d_level),INTENT(in),optional :: level
+TYPE(vol7d_timerange),INTENT(in),optional :: timerange
+CHARACTER(len=*),INTENT(in),OPTIONAL :: attr(:),anavar(:),anaattr(:)
+CHARACTER(len=*),INTENT(in),OPTIONAL :: varkind(:),attrkind(:),anavarkind(:),anaattrkind(:)
+
 
 !TYPE(vol7d) :: v7d
 CHARACTER(len=SIZE(var)*7) :: varlist
@@ -1499,7 +1543,7 @@ call vol7d_dballe_set_var_du(this%vol7d)
 !print *,"I-C",this%vol7d%dativar%i(:)%c 
 
 
-END SUBROUTINE vol7d_dballe_importvvns
+END SUBROUTINE vol7d_dballe_importvvns_dba
 
 
 !> \brief Exporta un volume dati a un DSN DB-all.e
@@ -1508,7 +1552,7 @@ END SUBROUTINE vol7d_dballe_importvvns
 !! una serie di filtri.
 
 SUBROUTINE vol7d_dballe_export(this, network, coordmin, coordmax, ident,&
- timei, timef,level,timerange,var,attr,anavar,anaattr,attr_only,force_networkid)
+ timei, timef,level,timerange,var,attr,anavar,anaattr,attr_only)
 
 !> \todo gestire il filtro staz_id la qual cosa vuol dire aggiungere un id nel type ana
 
@@ -1528,7 +1572,6 @@ CHARACTER(len=*),INTENT(in),OPTIONAL :: var(:),attr(:),anavar(:),anaattr(:)
 !> permette di riscrivere su un DSN letto precedentemente, modificando solo gli attributi ai dati,
 !! ottimizzando enormente le prestazioni: gli attributi riscritti saranno quelli con this%data_id definito
 !! (solitamente ricopiato dall'oggetto letto)
-INTEGER,intent(in),optional :: force_networkid !< specificando l'ID forza l'exportazione ad una singola rete  
 logical,intent(in),optional :: attr_only 
 
 !REAL(kind=fp_geo) :: latmin,latmax,lonmin,lonmax
@@ -1734,13 +1777,7 @@ do iii=1, nnetwork
          call idba_set (this%handle,"mobile",0)
       end if
 
-
-      if (present(force_networkid)) then
-        call idba_set(this%handle,"rep_cod",force_networkid)
-      else
-        call idba_set(this%handle,"rep_cod",this%vol7d%network(iii)%id)
-      end if
-
+      call idba_set(this%handle,"rep_cod",this%vol7d%network(iii)%id)
 
       write=.true.
 
@@ -1840,11 +1877,7 @@ do i=1, nstaz
                    call idba_set (this%handle,"ana_id",ana_id(i,iiiiii))
                  end if
 
-                 if (present(force_networkid)) then
-                   call idba_set (this%handle,"rep_cod",force_networkid)
-                 else
                    call idba_set (this%handle,"rep_cod",this%vol7d%network(iiiiii)%id)
-                 end if
 
                  call idba_setlevel(this%handle, this%vol7d%level(iii)%level1, this%vol7d%level(iii)%l1,&
                   this%vol7d%level(iii)%level2, this%vol7d%level(iii)%l2)
@@ -2206,7 +2239,688 @@ return
 end subroutine v7d_dballe_error_handler
 
 
-END MODULE 
+
+!>\brief Identica a vol7d_dballe_importvvns con lettura da file.
+!!
+!!import da DB-all.e
+SUBROUTINE vol7d_dballe_importvvns_file(this, var, network, coordmin, coordmax, timei, timef,level,timerange, set_network,&
+ attr,anavar,anaattr, varkind,attrkind,anavarkind,anaattrkind)
+
+TYPE(vol7d_dballe),INTENT(inout) :: this !< oggetto vol7d_dballe
+CHARACTER(len=*),INTENT(in),OPTIONAL :: var(:)
+TYPE(geo_coord),INTENT(inout),optional :: coordmin,coordmax 
+TYPE(datetime),INTENT(in),OPTIONAL :: timei, timef
+TYPE(vol7d_network),INTENT(in),OPTIONAL :: network,set_network
+TYPE(vol7d_level),INTENT(in),optional :: level
+TYPE(vol7d_timerange),INTENT(in),optional :: timerange
+CHARACTER(len=*),INTENT(in),OPTIONAL :: attr(:),anavar(:),anaattr(:)
+CHARACTER(len=*),INTENT(in),OPTIONAL :: varkind(:),attrkind(:),anavarkind(:),anaattrkind(:)
+
+!TYPE(vol7d) :: v7d
+CHARACTER(len=SIZE(var)*7) :: varlist
+CHARACTER(len=SIZE(attr)*8) :: starvarlist
+CHARACTER(len=6) :: btable
+CHARACTER(len=7) ::starbtable
+
+LOGICAL ::  ldegnet, lattr, lanaattr
+integer :: year,month,day,hour,minute,sec
+integer :: rlevel1, rl1,rlevel2, rl2
+integer :: rtimerange, p1, p2,rep_cod
+integer :: indana,indtime,indlevel,indtimerange,inddativar,indnetwork
+
+
+integer :: nana,ntime,ntimerange,nlevel,nnetwork
+TYPE(vol7d_var) :: var_tmp
+
+INTEGER :: i,ii, iii,n,n_ana,nn,nvarattr,istat,indattr,na,nd
+integer :: nvar ,inddatiattr,inddativarattr
+integer :: nanavar ,indanavar,indanaattr,indanavarattr,nanavarattr
+
+REAL(kind=fp_geo) :: lat,lon,latmin,latmax,lonmin,lonmax
+CHARACTER(len=vol7d_ana_lenident) :: ident
+!INTEGER(kind=int_b)::attrdatib
+
+integer :: ndativarr,     ndativari,     ndativarb,     ndativard,     ndativarc
+integer :: ndatiattrr,    ndatiattri,    ndatiattrb,    ndatiattrd,    ndatiattrc 
+integer :: ndativarattrr, ndativarattri, ndativarattrb, ndativarattrd, ndativarattrc
+
+integer :: nanavarr,     nanavari,     nanavarb,     nanavard,     nanavarc
+integer :: nanaattrr,    nanaattri,    nanaattrb,    nanaattrd,    nanaattrc 
+integer :: nanavarattrr, nanavarattri, nanavarattrb, nanavarattrd, nanavarattrc
+
+integer :: ir,ib,id,ic
+
+logical :: found
+TYPE(datetime) :: timee
+TYPE(vol7d_level) :: levele
+TYPE(vol7d_timerange) :: timerangee
+
+!TYPE(datetime) :: odatetime
+! nobs, ntime, nana, nvout, nvin, nvbt, &
+! datai(3), orai(2), dataf(3), oraf(2),ist
+!CHARACTER(len=12),ALLOCATABLE :: tmtmp(:)
+!INTEGER,ALLOCATABLE :: anatmp(:), vartmp(:), mapdatao(:)
+!LOGICAL :: found, non_valid, varbt_req(SIZE(vartable))
+
+
+TYPE(vol7d) :: vol7dtmp
+
+type(record),pointer :: buffer(:),bufferana(:)
+
+!!!  CALL print_info('Estratte dall''archivio '//TRIM(to_char(nobs)) // ' osservazioni')
+
+IF (PRESENT(set_network)) THEN
+   ldegnet = .TRUE.
+   call l4f_category_log(this%category,L4F_INFO,&
+    "set_network is not fully implemented in BUFR/CREX import: priority will be ignored")
+ELSE
+   ldegnet = .FALSE.
+ENDIF
+
+
+if (present(attr) .or. present(anaattr) .or. present(attrkind) .or. present(anaattrkind))then
+  call l4f_category_log(this%category,L4F_ERROR,"attributes not managed in BUFR/CREX import")
+  CALL raise_error("attributes not managed in BUFR/CREX import")
+end if
+
+call idba_unsetall(this%handle)
+
+N=1
+nd=0
+na=0
+
+call mem_acquire( buffer,nd,1000,this%category )
+call mem_acquire( bufferana,na,100,this%category )
+
+
+do while ( N > 0 )
+
+  call idba_voglioquesto (this%handle,N)
+
+  call l4f_category_log(this%category,L4F_debug,"numero dati voglioquesto:"//to_char(n))
+
+  ! dammi tutti i dati
+  do i=1,N
+
+    call idba_dammelo (this%handle,btable)
+  
+    call idba_enqdate (this%handle,year,month,day,hour,minute,sec)
+    call idba_enqlevel(this%handle, rlevel1, rl1, rlevel2,rl2)
+    call idba_enqtimerange(this%handle, rtimerange, p1, p2)
+    call idba_enq(this%handle, "rep_cod",rep_cod)
+                                !print *,"trovato network",rep_cod
+  
+                                !nbtable=btable_numerico(btable)
+                                ! ind = firsttrue(qccli%v7d%dativar%r(:)%btable == nbtable)
+                                ! IF (ind<1) cycle ! non c'e'
+
+                                !recupero i dati di anagrafica
+    call idba_enq (this%handle,"lat",   lat)
+    call idba_enq (this%handle,"lon",   lon)
+    call idba_enq (this%handle,"ident",ident)
+   
+
+    ! inizio la serie dei test con i parametri richiesti 
+
+    if(present(network)) then
+      if (rep_cod /= network%id) cycle
+    end if
+
+    if (present(coordmin)) then
+      CALL geo_coord_to_geo(coordmin)
+      CALL getval(coordmin, lat=latmin,lon=lonmin)
+      if (lonmin > lon) cycle
+      if (latmin > lat) cycle
+    end if
+
+    if (present(coordmax)) then
+      CALL geo_coord_to_geo(coordmax)
+      CALL getval(coordmax, lat=latmax,lon=lonmax)
+      if (lonmax < lon) cycle
+      if (latmax < lat) cycle
+    end if
+
+    call init(timee, year=year, month=month, day=day, hour=hour, minute=minute)
+
+    if (present(timei)) then
+      if (timee < timei) cycle
+    end if
+    if (present(timef)) then
+      if (timee > timef) cycle
+    end if
+
+    if (present(timerange))then
+      call init(timerangee, timerange%timerange, timerange%p1, timerange%p2)
+      if (timerangee /= timerange) cycle
+    end if
+
+    if (present(level))then
+      call  init (levele, rlevel1, rl1,rlevel2, rl2)
+      if (levele /= level) cycle
+    end if
+
+    if (present (var)) then
+      nvar=size(var)
+      found=.false.
+      DO ii = 1, nvar
+!        call l4f_category_log(this%category,L4F_DEBUG,"VARIABILI:"//btable//to_char(var(ii)))
+        if (btable == var(ii)) found =.true.
+      end do
+      if (.not. found) cycle
+    end if
+
+    ! fine test
+
+
+    if (rlevel1 /= 257)then
+      ! dati
+      nd =nd+1
+      call l4f_category_log(this%category,L4F_DEBUG,"numero dati dati:"//to_char(nd)//btable)
+
+      call mem_acquire( buffer,nd,0,this%category )
+  
+      buffer(nd)%dator=DBA_MVR
+      buffer(nd)%datoi=DBA_MVI
+      buffer(nd)%datob=DBA_MVB
+      buffer(nd)%datod=DBA_MVD
+      buffer(nd)%datoc=DBA_MVC
+  
+      if (present(var).and. present(varkind))then
+        ii=( firsttrue(var == btable))
+        if (ii > 0)then
+                                !print*, "indici",ii, btable,(varkind(ii))
+          if(varkind(ii) == "r") call idba_enq (this%handle,btable,buffer(nd)%dator)
+          if(varkind(ii) == "i") call idba_enq (this%handle,btable,buffer(nd)%datoi)
+          if(varkind(ii) == "b") call idba_enq (this%handle,btable,buffer(nd)%datob)
+          if(varkind(ii) == "d") call idba_enq (this%handle,btable,buffer(nd)%datod)
+          if(varkind(ii) == "c") call idba_enq (this%handle,btable,buffer(nd)%datoc)
+        end if
+      else
+        call idba_enq (this%handle,btable,buffer(nd)%datoc) !char is default
+      end if
+  
+                                !bufferizzo il contesto
+                                !print *,"lat,lon,ident",lat,lon,ident
+                                !print*,year,month,day,hour,minute,sec
+                                !print*,btable,dato,buffer(nd)%datiattrb
+  
+      call init(buffer(nd)%ana,lat=lat,lon=lon,ident=ident)
+      call init(buffer(nd)%time, year=year, month=month, day=day, hour=hour, minute=minute)
+      call init(buffer(nd)%level, rlevel1,rl1,rlevel2,rl2)
+      call init(buffer(nd)%timerange, rtimerange, p1, p2)
+      call init(buffer(nd)%network, rep_cod)
+      call init(buffer(nd)%dativar, btable)
+    
+    else
+
+      ! ---------------->   anagrafica
+
+      !ora legge tutti i dati di anagrafica e li mette in bufferana
+
+
+                                !salto lat lon e ident
+      if (btable == "B05001" .or. btable == "B06001" .or. btable == "B01011") cycle
+                                !anno mese giorno
+      if (btable == "B04001" .or. btable == "B04002" .or. btable == "B04003") cycle
+                                !ora minuti secondi
+      if (btable == "B04004" .or. btable == "B04005" .or. btable == "B04006") cycle
+                                ! network
+      if (btable == "B01193") cycle
+
+
+      na=na+1
+      call l4f_category_log(this%category,L4F_debug,"numero dati ana:"//to_char(na)//btable)
+
+      call mem_acquire( bufferana,na,0,this%category )
+
+      bufferana(na)%dator=DBA_MVR
+      bufferana(na)%datoi=DBA_MVI
+      bufferana(na)%datob=DBA_MVB
+      bufferana(na)%datod=DBA_MVD
+      bufferana(na)%datoc=DBA_MVC
+      call init(bufferana(na)%dativar, DBA_MVC)
+
+ 
+      if (present(anavar).and. present(anavarkind))then
+        ii=( firsttrue(anavar == btable))
+        if (ii > 0)then
+                                !print*, "indici",ii, btable,(varkind(ii))
+          if(anavarkind(ii) == "r") call idba_enq (this%handle,btable,bufferana(na)%dator)
+          if(anavarkind(ii) == "i") call idba_enq (this%handle,btable,bufferana(na)%datoi)
+          if(anavarkind(ii) == "b") call idba_enq (this%handle,btable,bufferana(na)%datob)
+          if(anavarkind(ii) == "d") call idba_enq (this%handle,btable,bufferana(na)%datod)
+          if(anavarkind(ii) == "c") call idba_enq (this%handle,btable,bufferana(na)%datoc)
+        end if
+      else
+        call idba_enq (this%handle,btable,bufferana(na)%datoc) !char is default
+                                !print*,"dato anagrafica",btable," ",bufferana(na)%dator
+      end if
+  
+                                !recupero i dati di anagrafica
+      call idba_enq (this%handle,"lat",   lat)
+      call idba_enq (this%handle,"lon",   lon)
+      call idba_enq (this%handle,"ident",ident)
+   
+                                !bufferizzo il contesto
+                                !print *,"lat,lon",lat,lon
+                                !print*,year,month,day,hour,minute,sec
+                                !print*,btable,dato,buffer(na)%datiattrb
+  
+      call init(bufferana(na)%ana,lat=lat,lon=lon,ident=ident)
+      call init(bufferana(na)%time, year=year, month=month, day=day, hour=hour, minute=minute)
+      call init(bufferana(na)%level, rlevel1,rl1,rlevel2,rl2)
+      call init(bufferana(na)%timerange, rtimerange, p1, p2)
+      call init(bufferana(na)%network, rep_cod)
+      call init(bufferana(na)%dativar, btable)
+
+    end if
+  end do
+end do
+
+! ---------------->   anagrafica fine
+
+if (.not. present(var))then
+  nvar = count_distinct(buffer(:nd)%dativar, back=.TRUE.)
+end if
+
+nana = count_distinct(buffer(:nd)%ana, back=.TRUE.)
+ntime = count_distinct(buffer(:nd)%time, back=.TRUE.)
+ntimerange = count_distinct(buffer(:nd)%timerange, back=.TRUE.)
+nlevel = count_distinct(buffer(:nd)%level, back=.TRUE.)
+nnetwork = count_distinct(buffer(:nd)%network, back=.TRUE.)
+if(ldegnet)nnetwork=1
+
+if (present(varkind))then
+  ndativarr= count(varkind == "r")
+  ndativari= count(varkind == "i")
+  ndativarb= count(varkind == "b")
+  ndativard= count(varkind == "d")
+  ndativarc= count(varkind == "c")
+  
+else
+  ndativarr= 0
+  ndativari= 0
+  ndativarb= 0
+  ndativard= 0
+  ndativarc= nvar
+end if
+
+!print *, "nana=",nana," ntime=",ntime," ntimerange=",ntimerange, &
+!" nlevel=",nlevel," nnetwork=",nnetwork," ndativarr=",ndativarr
+
+ndatiattrr=0
+ndatiattri=0
+ndatiattrb=0
+ndatiattrd=0
+ndatiattrc=0
+
+ndativarattrr=0
+ndativarattri=0
+ndativarattrb=0
+ndativarattrd=0
+ndativarattrc=0
+
+! ---------------->   anagrafica
+
+if (.not. present(anavar))then
+  nanavar = count_distinct(bufferana(:na)%dativar, back=.TRUE.,mask=(bufferana(:na)%dativar%btable /= DBA_MVC))
+end if
+
+if (present(anavarkind))then
+  nanavarr= count(anavarkind == "r")
+  nanavari= count(anavarkind == "i")
+  nanavarb= count(anavarkind == "b")
+  nanavard= count(anavarkind == "d")
+  nanavarc= count(anavarkind == "c")
+  
+else
+  nanavarr= 0
+  nanavari= 0
+  nanavarb= 0
+  nanavard= 0
+  nanavarc= nanavar
+end if
+
+!print *, "nana=",nana," ntime=",ntime," ntimerange=",ntimerange, &
+!" nlevel=",nlevel," nnetwork=",nnetwork," ndativarr=",ndativarr
+
+nanaattrr=0
+nanaattri=0
+nanaattrb=0
+nanaattrd=0
+nanaattrc=0
+
+nanavarattrr=0
+nanavarattri=0
+nanavarattrb=0
+nanavarattrd=0
+nanavarattrc=0
+
+
+! ---------------->   anagrafica fine
+
+
+CALL init(vol7dtmp)
+
+!print*,"ho fatto init"
+
+call vol7d_alloc (vol7dtmp, &
+ nana=nana, ntime=ntime, ntimerange=ntimerange, &
+ nlevel=nlevel, nnetwork=nnetwork, &
+ ndativarr=ndativarr, ndativari=ndativari, ndativarb=ndativarb, ndativard=ndativard, ndativarc=ndativarc,&
+ ndatiattrr=ndatiattrr, ndatiattri=ndatiattri, ndatiattrb=ndatiattrb, ndatiattrd=ndatiattrd, ndatiattrc=ndatiattrc,&
+ ndativarattrr=ndativarattrr, &
+ ndativarattri=ndativarattri, &
+ ndativarattrb=ndativarattrb, &
+ ndativarattrd=ndativarattrd, &
+ ndativarattrc=ndativarattrc,&
+ nanavarr=nanavarr, nanavari=nanavari, nanavarb=nanavarb, nanavard=nanavard, nanavarc=nanavarc,&
+ nanaattrr=nanaattrr, nanaattri=nanaattri, nanaattrb=nanaattrb, nanaattrd=nanaattrd, nanaattrc=nanaattrc,&
+ nanavarattrr=nanavarattrr, &
+ nanavarattri=nanavarattri, &
+ nanavarattrb=nanavarattrb, &
+ nanavarattrd=nanavarattrd, &
+ nanavarattrc=nanavarattrc)
+
+! print *, "nana=",nana, "ntime=",ntime, "ntimerange=",ntimerange, &
+! "nlevel=",nlevel, "nnetwork=",nnetwork, &
+! "ndativarr=",ndativarr, "ndativari=",ndativari, &
+! "ndativarb=",ndativarb, "ndativard=",ndativard, "ndativarc=",ndativarc,&
+! "ndatiattrr=",ndatiattrr, "ndatiattri=",ndatiattri, "ndatiattrb=",ndatiattrb,&
+! "ndatiattrd=",ndatiattrd, "ndatiattrc=",ndatiattrc,&
+! "ndativarattrr=",ndativarattrr, "ndativarattri=",ndativarattri, "ndativarattrb=",ndativarattrb,&
+! "ndativarattrd=",ndativarattrd, "ndativarattrc=",ndativarattrc
+! print*,"ho fatto alloc"
+
+
+vol7dtmp%ana=pack_distinct(buffer(:nd)%ana, nana, back=.TRUE.)
+vol7dtmp%time=pack_distinct(buffer(:nd)%time, ntime, back=.TRUE.)
+vol7dtmp%timerange=pack_distinct(buffer(:nd)%timerange, ntimerange, back=.TRUE.)
+vol7dtmp%level=pack_distinct(buffer(:nd)%level, nlevel, back=.TRUE.)
+
+if(ldegnet)then
+  vol7dtmp%network(1)=set_network
+else
+  vol7dtmp%network=pack_distinct(buffer(:nd)%network, nnetwork, back=.TRUE.)
+end if
+
+!print*,"reti presenti", vol7dtmp%network%id,buffer%network%id
+
+if (present(var).and. present(varkind))then
+
+  ir=0
+  ii=0
+  ib=0
+  id=0
+  ic=0
+  
+  do i=1,size(varkind)
+    if (varkind(i) == "r") then
+      ir=ir+1
+      call init (vol7dtmp%dativar%r(ir), btable=var(i))
+    end if
+    if (varkind(i) == "i") then
+      ii=ii+1
+      call init (vol7dtmp%dativar%i(ii), btable=var(i))
+    end if
+    if (varkind(i) == "b") then
+      ib=ib+1
+      call init (vol7dtmp%dativar%b(ib), btable=var(i))
+    end if
+    if (varkind(i) == "d") then
+      id=id+1
+      call init (vol7dtmp%dativar%d(id), btable=var(i))
+    end if
+    if (varkind(i) == "c") then
+      ic=ic+1
+      call init (vol7dtmp%dativar%c(ic), btable=var(i))  
+    end if
+  end do
+else if (present(var))then
+
+  do i=1, nvar
+    call init (vol7dtmp%dativar%c(i), btable=var(i))
+  end do
+
+else
+
+  vol7dtmp%dativar%c=pack_distinct(buffer(:nd)%dativar, ndativarc, back=.TRUE.)
+
+end if
+
+
+!-----------------------> anagrafica
+
+if (present(anavar).and. present(anavarkind))then
+
+  ir=0
+  ii=0
+  ib=0
+  id=0
+  ic=0
+  
+  do i=1,size(anavarkind)
+    if (anavarkind(i) == "r") then
+      ir=ir+1
+      call init (vol7dtmp%anavar%r(ir), btable=anavar(i))
+    end if
+    if (anavarkind(i) == "i") then
+      ii=ii+1
+      call init (vol7dtmp%anavar%i(ii), btable=anavar(i))
+    end if
+    if (anavarkind(i) == "b") then
+      ib=ib+1
+      call init (vol7dtmp%anavar%b(ib), btable=anavar(i))
+    end if
+    if (anavarkind(i) == "d") then
+      id=id+1
+      call init (vol7dtmp%anavar%d(id), btable=anavar(i))
+    end if
+    if (anavarkind(i) == "c") then
+      ic=ic+1
+      call init (vol7dtmp%anavar%c(ic), btable=anavar(i))  
+    end if
+  end do
+else if (present(anavar))then
+
+  do i=1, nanavar
+    call init (vol7dtmp%anavar%c(i), btable=anavar(i))
+  end do
+
+else
+
+  vol7dtmp%anavar%c=pack_distinct(bufferana(:na)%dativar, nanavarc, back=.TRUE.,&
+   mask=(bufferana(:na)%dativar%btable /= DBA_MVC))
+
+end if
+
+!-----------------------> anagrafica fine
+
+!print*,"prima di alloc"
+
+call vol7d_alloc_vol (vol7dtmp)
+
+!print*,"ho fatto un volume vuoto"
+
+
+do i =1, nd
+
+   indana = firsttrue(buffer(i)%ana == vol7dtmp%ana)
+   indtime = firsttrue(buffer(i)%time == vol7dtmp%time)
+   indtimerange = firsttrue(buffer(i)%timerange == vol7dtmp%timerange)
+   indlevel = firsttrue(buffer(i)%level == vol7dtmp%level)
+   if (ldegnet)then
+     indnetwork=1
+   else
+     indnetwork = firsttrue(buffer(i)%network == vol7dtmp%network)
+   endif
+   !print *, indana,indtime,indlevel,indtimerange,indnetwork
+
+   if(c_e(buffer(i)%dator))then
+     inddativar = firsttrue(buffer(i)%dativar == vol7dtmp%dativar%r)
+     vol7dtmp%voldatir( &
+      indana,indtime,indlevel,indtimerange,inddativar,indnetwork &
+      ) = buffer(i)%dator
+   end if
+
+   if(c_e(buffer(i)%datoi)) then
+     inddativar = firsttrue(buffer(i)%dativar == vol7dtmp%dativar%i)
+     vol7dtmp%voldatii( &
+      indana,indtime,indlevel,indtimerange,inddativar,indnetwork &
+      ) = buffer(i)%datoi
+   end if
+
+   if(c_e(buffer(i)%datob)) then
+     inddativar = firsttrue(buffer(i)%dativar == vol7dtmp%dativar%b)
+     vol7dtmp%voldatib( &
+      indana,indtime,indlevel,indtimerange,inddativar,indnetwork &
+      ) = buffer(i)%datob
+   end if
+
+   if(c_e(buffer(i)%datod)) then
+     inddativar = firsttrue(buffer(i)%dativar == vol7dtmp%dativar%d)
+     vol7dtmp%voldatid( &
+      indana,indtime,indlevel,indtimerange,inddativar,indnetwork &
+      ) = buffer(i)%datod
+   end if
+
+   if(c_e(buffer(i)%datoc)) then
+     inddativar = firsttrue(buffer(i)%dativar == vol7dtmp%dativar%c)
+     vol7dtmp%voldatic( &
+      indana,indtime,indlevel,indtimerange,inddativar,indnetwork &
+      ) = buffer(i)%datoc
+   end if
+
+ end do
+
+!------------------------- anagrafica
+
+
+do i =1, Na
+
+   indana = firsttrue(bufferana(i)%ana == vol7dtmp%ana)
+
+   if (ldegnet)then
+     indnetwork=1
+   else
+     indnetwork = firsttrue(bufferana(i)%network == vol7dtmp%network)
+   endif
+
+   if (indana < 1 .or. indnetwork < 1 )cycle
+
+   !print *, indana,indtime,indlevel,indtimerange,indnetwork
+
+   if(c_e(bufferana(i)%dator))then
+     indanavar = firsttrue(bufferana(i)%dativar == vol7dtmp%anavar%r)
+     vol7dtmp%volanar( indana,indanavar,indnetwork ) = bufferana(i)%dator
+   end if
+   if(c_e(bufferana(i)%datoi))then
+     indanavar = firsttrue(bufferana(i)%dativar == vol7dtmp%anavar%i)
+     vol7dtmp%volanai( indana,indanavar,indnetwork ) = bufferana(i)%datoi
+   end if
+   if(c_e(bufferana(i)%datob))then
+     indanavar = firsttrue(bufferana(i)%dativar == vol7dtmp%anavar%b)
+     vol7dtmp%volanab( indana,indanavar,indnetwork ) = bufferana(i)%datob
+   end if
+   if(c_e(bufferana(i)%datod))then
+     indanavar = firsttrue(bufferana(i)%dativar == vol7dtmp%anavar%d)
+     vol7dtmp%volanad( indana,indanavar,indnetwork ) = bufferana(i)%datod
+   end if
+   if(c_e(bufferana(i)%datoc))then
+     indanavar = firsttrue(bufferana(i)%dativar == vol7dtmp%anavar%c)
+     vol7dtmp%volanac( indana,indanavar,indnetwork ) = bufferana(i)%datoc
+   end if
+
+ end do
+
+!------------------------- anagrafica fine
+
+!
+! Release memory
+!
+
+deallocate (buffer)
+deallocate (bufferana)
+
+! Se l'oggetto ha gia` un volume allocato lo fondo con quello estratto
+!>\todo manca test su associated dei vol*
+IF (ASSOCIATED(this%vol7d%ana) .AND. ASSOCIATED(this%vol7d%time)) THEN
+  CALL vol7d_merge(this%vol7d, vol7dtmp, sort=.TRUE.)
+ELSE ! altrimenti lo assegno
+  this%vol7d = vol7dtmp
+ENDIF
+
+call vol7d_set_attr_ind(this%vol7d)
+
+call vol7d_dballe_set_var_du(this%vol7d)
+
+!print *,"R-R",this%vol7d%dativar%r(:)%r 
+!print *,"R-I",this%vol7d%dativar%r(:)%i 
+!print *,"R-B",this%vol7d%dativar%r(:)%b 
+!print *,"R-D",this%vol7d%dativar%r(:)%d 
+!print *,"R-C",this%vol7d%dativar%r(:)%c 
+
+!print *,"I-R",this%vol7d%dativar%i(:)%r 
+!print *,"I-I",this%vol7d%dativar%i(:)%i 
+!print *,"I-B",this%vol7d%dativar%i(:)%b 
+!print *,"I-D",this%vol7d%dativar%i(:)%d 
+!print *,"I-C",this%vol7d%dativar%i(:)%c 
+
+
+END SUBROUTINE vol7d_dballe_importvvns_file
+
+
+
+subroutine mem_acquire( buffer,n,npool,category )
+
+integer      :: n,mem,npool,category
+type(record),pointer :: buffer(:)
+type(record),pointer :: buffertmp(:)
+
+
+if ( n == 0 ) then
+
+  allocate (buffer(npool))
+  return
+
+end if
+
+mem=size(buffer)
+
+!call l4f_category_log(category,L4F_DEBUG,"mem_acquire dimension of buffer: "//to_char(mem)//" "//to_char(n))
+
+if (n > mem) then
+
+  allocate (buffertmp(mem*2))
+  if ( .not. associated( buffer ) ) then
+    call l4f_category_log(category,L4F_ERROR,"mem_acquire errore allocazione meoria:"//to_char(mem*2))
+    CALL raise_error('errore allocazione memoria')
+  endif
+
+  buffertmp(:mem)=buffer(:)
+
+  deallocate (buffer)
+
+  buffer=>buffertmp
+
+!!$ DOPPIA RICOPIATURA
+!!$  allocate (buffertmp(nsav))
+!!$  buffertmp=buffer
+!!$
+!!$  deallocate (buffer)
+!!$  allocate (buffer(nsav*2))
+!!$
+!!$  buffer(:nsav)=buffertmp
+!!$  nsav=nsav*2
+!!$
+!!$  deallocate(buffertmp)
+
+end if
+
+end subroutine mem_acquire
+
+
+end MODULE vol7d_dballe_class
 
 !>\example esempio_v7ddballe.f90
 !!/brief Programma esempio semplice per l'uso di vol7d con DB-All.e
@@ -2221,3 +2935,5 @@ END MODULE
 !!\brief Esempio di utilizzo della classe vol7d_dballe_class
 !!
 !! Vengono estratti i dati e riscritti in un nuovo DSN
+
+
