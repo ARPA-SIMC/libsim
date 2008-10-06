@@ -185,8 +185,8 @@ CASE(0, 10, 20, 30) ! Lat/lon
   ENDIF
   grib%isec2(9) = s2_9*1000.
   grib%isec2(10) = s2_10*1000.
-  IF (ABS(REAL(grib%isec2(9) - s2_9*1000.)) > 0.5 .OR. &
-   ABS(REAL(grib%isec2(10) - s2_10*1000.)) > 0.5) THEN ! Increments not accurate
+  IF (ABS(REAL(grib%isec2(9) - s2_9*1000.)) > 1E-3 .OR. &
+   ABS(REAL(grib%isec2(10) - s2_10*1000.)) > 1E-3) THEN ! Increments not accurate
     grib%isec2(6) = 0
     grib%isec2(9) = 0
     grib%isec2(10) = 0
