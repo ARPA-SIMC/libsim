@@ -52,6 +52,10 @@ INTERFACE putgribdata
   MODULE PROCEDURE grio_putgribdata
 END INTERFACE
 
+INTERFACE putrawgrib
+  MODULE PROCEDURE grio_putrawgrib
+END INTERFACE
+
 PRIVATE :: rawgrib_allocate, zsec4_allocate, getgrib
 
 CONTAINS
@@ -500,6 +504,29 @@ IF (PRESENT(ier)) ier = 0
 END SUBROUTINE grio_putgribdata
 
 
+SUBROUTINE grio_putrawgrib(this, unit, ier)
+TYPE (grib_io), INTENT(inout) :: this
+INTEGER, INTENT(in) :: unit
+INTEGER, OPTIONAL, INTENT(out) :: ier
+
+INTEGER :: actsize, ierval
+
+CALL getgrib(this, -1, 'L', ierval) ! Just decode grib edition and length
+IF (ierval > 0) THEN
+  CALL raise_error('from routine gribex', ierval, ier)
+  RETURN
+ENDIF
+CALL pbwrite(unit, this%rawgrib, this%isec0(1), ierval) !actsize*nb
+IF (ierval < 0) THEN
+  CALL raise_error('from routine pbwrite', ierval, ier)
+  RETURN
+ENDIF
+
+IF (PRESENT(ier)) ier = 0
+
+END SUBROUTINE grio_putrawgrib
+
+
 SUBROUTINE getgrib(this, unit, op, ier)
 TYPE (grib_io), INTENT(inout) :: this
 INTEGER, INTENT(in) :: unit
@@ -577,13 +604,15 @@ ELSE IF (ier == -3) THEN
 !ELSE IF (ierval < 0) THEN ! The other warnings are not worth
 ENDIF
 
-IF (this%isec1(5) < 128) THEN ! Section 2 missing
-  CALL raise_error('after routine gribex, found a grib with section 2 missing', &
-   8000, ier)
-  RETURN
-ENDIF
+IF (op /= 'L') THEN
+  IF (this%isec1(5) < 128) THEN ! Section 2 missing
+    CALL raise_error('after routine gribex, found a grib with section 2 missing', &
+     8000, ier)
+    RETURN
+  ENDIF
 
-CALL mgkey_from_gribex(this%gg, this%isec1, this%isec2, this%isec4)
+  CALL mgkey_from_gribex(this%gg, this%isec1, this%isec2, this%isec4)
+ENDIF
 
 ier = 0
 
