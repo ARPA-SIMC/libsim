@@ -1,6 +1,6 @@
 dnl Process this file with autoconf to produce a configure script.
 
-AC_INIT(libsim, 2.2, [dcesari@arpa.emr.it])
+AC_INIT(libsim, 2.3, [dcesari@arpa.emr.it])
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_SRCDIR([configure.ac])
 AM_INIT_AUTOMAKE([foreign])
@@ -54,13 +54,17 @@ AC_ARG_ENABLE(oraclesim, AC_HELP_STRING([--disable-oraclesim],
   [disable oraclesim/meteodata support]),,[enableval=yes])dnl default enable
 if test "x$enableval" = "xyes"; then
 save_cppflags=$CPPFLAGS
-if test -n "$ORACLE_VER"; then
-ora_cppflags="-I/usr/include/$ORACLE_VER"
-ora_ldflags="-L/usr/lib/$ORACLE_VER/lib"
-dnl elif test -n "ORACLE_HOME"; then che fare?
-else
 ora_cppflags=''
 ora_ldflags=''
+if test -n "$ORACLE_VER"; then
+  ora_cppflags="-I/usr/include/$ORACLE_VER"
+  for try in $libdir/$ORACLE_VER/lib /usr/lib64/$ORACLE_VER/lib /usr/lib/$ORACLE_VER/lib; do
+  if test -d "$try"; then
+    ora_ldflags="-L$try"
+    break
+  fi
+done
+dnl elif test -n "ORACLE_HOME"; then che fare?
 fi
 ora_libs='-locci -lclntsh'
 
