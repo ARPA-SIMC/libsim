@@ -207,11 +207,11 @@ case ( "regular_ll")
    nx,ny, &
    lon_min, lon_max, lat_min, lat_max, component_flag)
 
-case ( "rotated_ll")
-  call get_val(this%rotated_ll,dim,&
-   nx,ny, &
-   lon_min, lon_max, lat_min, lat_max, component_flag, &
-   latitude_south_pole,longitude_south_pole,angle_rotation)
+!case ( "rotated_ll")
+!  call get_val(this%rotated_ll,dim,&
+!   nx,ny, &
+!   lon_min, lon_max, lat_min, lat_max, component_flag, &
+!   latitude_south_pole,longitude_south_pole,angle_rotation)
   
 case default
   call l4f_category_log(this%category,L4F_ERROR,"gtype: "//this%type%type//" non gestita" )

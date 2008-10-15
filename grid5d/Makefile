@@ -3,7 +3,7 @@
 
 FC = gfortran
 LD = gfortran
-FFLAGS=-I/usr/include -g -fbounds-check 
+FFLAGS=-I../log4fortran -I../base -I../vol7d -g -fbounds-check 
 LDFLAGS=-llog4fortran -lsim_base
 
 

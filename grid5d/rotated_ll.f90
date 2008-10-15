@@ -42,6 +42,10 @@ INTERFACE unproj
   MODULE PROCEDURE  unproj_rotated_ll
 END INTERFACE
 
+!>\brief ritorna i valori descrittivi del grigliato
+INTERFACE get_val
+  MODULE PROCEDURE get_val_rotated_ll
+END INTERFACE
 
 
 !>\brief definizione del grigliato rotated lat lon
@@ -200,6 +204,30 @@ lat = this%longitude_south_pole + raddeg*asin(sin(degrad*x)*cos(degrad*y)/cos(de
 
 end subroutine unproj_rotated_ll
 
+
+
+subroutine get_val_rotated_ll(this,dim, &
+ nx,ny, &
+ lon_min, lon_max, lat_min, lat_max, component_flag, &
+ latitude_south_pole,longitude_south_pole,angle_rotation)
+
+type(grid_rotated_ll),intent(in) ::this
+type(grid_dim),intent(in) :: dim
+integer,intent(out),optional :: nx, ny
+doubleprecision,intent(out),optional :: lon_min, lon_max, lat_min, lat_max
+doubleprecision,intent(out),optional :: latitude_south_pole,longitude_south_pole,angle_rotation
+integer,intent(out),optional :: component_flag
+
+
+call get_val(this%regular_ll,dim, &
+ nx,ny, &
+ lon_min, lon_max, lat_min, lat_max, component_flag)
+
+if (present(latitude_south_pole))  latitude_south_pole=this%latitude_south_pole
+if (present(longitude_south_pole)) longitude_south_pole=this%longitude_south_pole
+if (present(angle_rotation))       angle_rotation=this%angle_rotation
+
+end subroutine get_val_rotated_ll
 
 
 !!$subroutine unproj_rotated_ll(this,x,y,lon,lat )

@@ -3,6 +3,7 @@ module regular_ll_class
 ! REGULAR LAT LON
 
 use log4fortran
+use char_utilities
 
 implicit none
 
@@ -238,27 +239,13 @@ character(len=512) :: a_name
 if (present(nx))nx=dim%nx
 if (present(ny))ny=dim%ny 
 
-da ribaltare anche qui sotto
  
-this%lon_min =lon_min
-this%lon_max =lon_max
-this%lat_min =lat_min
-this%lat_max =lat_max
-this%component_flag=component_flag
+if (present(lon_min)) lon_min=this%lon_min 
+if (present(lon_max)) lon_max=this%lon_max
+if (present(lat_min)) lat_min=this%lat_min
+if (present(lat_max)) lat_max=this%lat_max
+if (present(component_flag)) component_flag=this%component_flag
 
-end subroutine init_regular_ll
-
-
-
-
-
-
-
-
-
-
-
-
-
+end subroutine get_val_regular_ll
 
 end module regular_ll_class
