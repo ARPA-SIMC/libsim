@@ -1,31 +1,54 @@
 program demo
 
 use grid_class
+use grid6d_var_class
+use log4fortran
 
 implicit none
 
-type (grid) :: grigliato
-type(grid_type) :: gtype
+integer :: category,ier
+character(len=512):: a_name
+
+
+type (grid6d_var) :: var
+type (grid_def) :: grid
+type (grid_dim) :: dim
+
+!questa chiamata prende dal launcher il nome univoco
+call l4f_launcher(a_name,a_name_force="demo")
+
+!imposta a_name
+category=l4f_category_get(a_name//".main")
+
+!init di log4fortran
+ier=l4f_init()
 
 !leggo da qualche parte i dati su grigliato
 
-gtype%type="regular_ll"
 
-call init (grigliato,gtype)
-
-grigliato%regular_ll%lon_min = -2
-grigliato%regular_ll%lon_max = 24.
-grigliato%regular_ll%lat_min = 35.
-grigliato%regular_ll%lat_max = 51.
-grigliato%regular_ll%component_flag=1
-grigliato%dim_ll%nx = 10
-grigliato%dim_ll%ny = 15
+call init (grid,dim,type="regular_ll", &
+ nx = 10,ny = 15, &
+ lon_min = -2.D0, &
+ lon_max = 24.D0, &
+ lat_min = 35.D0, &
+ lat_max = 51.D0, &
+ component_flag=1,&
+ categoryappend="grigliato regolare manuale")
 
 
-call grids_unproj(grigliato)
+call init (var)
 
-print*,grigliato%dim_ll%lat,grigliato%dim_ll%lat
+print *,var
 
-call delete(grigliato)
+call grids_unproj(grid,dim)
+
+!call l4f_category_log(category,L4F_INFO,&
+!         "unproj ritorna "//to_char(grigliato%dim%lat(1,1))//to_char(grigliato%dim%lon(1,1)))
+
+call delete(grid,dim)
+
+!chiudo il logger
+call l4f_category_delete(category)
+ier=l4f_fini()
 
 end program demo

@@ -2,11 +2,13 @@ module rotated_ll_class
 
 ! ROTATED LAT LON
 
-
+use log4fortran
 use regular_ll_class
 USE phys_const
 
 implicit none
+
+character (len=255),parameter:: subcategory="regular_ll_class"
 
 
 INTERFACE init
@@ -42,69 +44,100 @@ END INTERFACE
 
 
 
-
 !>\brief definizione del grigliato rotated lat lon
 type grid_rotated_ll
+
+  private 
 
   type(grid_regular_ll) :: regular_ll
 
   doubleprecision :: latitude_south_pole,longitude_south_pole,angle_rotation
+  integer :: category !< log4fortran
 
 end type grid_rotated_ll
+
+
+private
+public init,delete,grid_proj,grid_unproj,proj,unproj
+public grid_rotated_ll
 
 
 contains
 
 
-subroutine init_rotated_ll(this,grid_dim)
+subroutine init_rotated_ll(this,dim, &
+ nx,ny, &
+ lon_min, lon_max, lat_min, lat_max, component_flag, &
+ latitude_south_pole,longitude_south_pole,angle_rotation, &
+ categoryappend)
 
 type(grid_rotated_ll) ::this
-type(grid_dim_ll) :: grid_dim
+type(grid_dim) :: dim
+integer :: nx, ny
+doubleprecision :: lon_min, lon_max, lat_min, lat_max
+doubleprecision :: latitude_south_pole,longitude_south_pole,angle_rotation
+integer :: component_flag
+character(len=*),INTENT(in),OPTIONAL :: categoryappend !< appennde questo suffisso al namespace category di log4fortran
 
-call init_regular_ll(this%regular_ll,grid_dim)
+character(len=512) :: a_name
+
+call l4f_launcher(a_name,a_name_append=trim(subcategory)//"."//trim(categoryappend))
+this%category=l4f_category_get(a_name)
+
+call init(this%regular_ll,dim,&
+ nx,ny, &
+ lon_min, lon_max, lat_min, lat_max, component_flag, &
+ categoryappend)
+
+this%latitude_south_pole=latitude_south_pole
+this%longitude_south_pole=longitude_south_pole
+this%angle_rotation=angle_rotation
 
 end subroutine init_rotated_ll
 
 
-subroutine delete_rotated_ll(this,grid_dim)
+subroutine delete_rotated_ll(this,dim)
 
 type(grid_rotated_ll) ::this
-type(grid_dim_ll) :: grid_dim
+type(grid_dim) :: dim
 
-call delete_regular_ll(this%regular_ll,grid_dim)
+call delete(this%regular_ll,dim)
+
+!chiudo il logger
+call l4f_category_delete(this%category)
 
 end subroutine delete_rotated_ll
 
 
 
-subroutine grid_unproj_rotated_ll(this,grid_dim)
+subroutine grid_unproj_rotated_ll(this,dim)
 
 type(grid_rotated_ll) ::this
-type(grid_dim_ll) :: grid_dim
+type(grid_dim) :: dim
 
 integer :: i,j
 doubleprecision :: dlat,dlon
 
 
 
-if (.not.associated(grid_dim%lon)) then
-  allocate (grid_dim%lon(grid_dim%nx,grid_dim%ny))
+if (.not.associated(dim%lon)) then
+  allocate (dim%lon(dim%nx,dim%ny))
 end if
 
-if (.not.associated(grid_dim%lat)) then
-  allocate (grid_dim%lat(grid_dim%nx,grid_dim%ny))
+if (.not.associated(dim%lat)) then
+  allocate (dim%lat(dim%nx,dim%ny))
 end if
 
 
-dlat= (this%regular_ll%lat_max - this%regular_ll%lat_min) / dble(grid_dim%ny - 1 )
-dlon= (this%regular_ll%lon_max - this%regular_ll%lon_min) / dble(grid_dim%nx - 1 )
+dlat= (this%regular_ll%lat_max - this%regular_ll%lat_min) / dble(dim%ny - 1 )
+dlon= (this%regular_ll%lon_max - this%regular_ll%lon_min) / dble(dim%nx - 1 )
 
 call unproj_rotated_ll(this,&
- reshape((/ ((this%regular_ll%lon_min+dlon*dble(i) ,i=0,grid_dim%nx),&
- j=0,grid_dim%ny) /),(/ grid_dim%nx,grid_dim%ny /)), &
- reshape((/ ((this%regular_ll%lat_min+dlat*dble(i) ,j=0,grid_dim%ny),&
- i=0,grid_dim%nx) /),(/ grid_dim%nx,grid_dim%ny /)), &
- grid_dim%lon,grid_dim%lat)
+ reshape((/ ((this%regular_ll%lon_min+dlon*dble(i) ,i=0,dim%nx),&
+ j=0,dim%ny) /),(/ dim%nx,dim%ny /)), &
+ reshape((/ ((this%regular_ll%lat_min+dlat*dble(i) ,j=0,dim%ny),&
+ i=0,dim%nx) /),(/ dim%nx,dim%ny /)), &
+ dim%lon,dim%lat)
 
 
 end subroutine grid_unproj_rotated_ll
@@ -112,21 +145,21 @@ end subroutine grid_unproj_rotated_ll
 
 
 
-subroutine grid_proj_rotated_ll(this,grid_dim)
+subroutine grid_proj_rotated_ll(this,dim)
 
 type(grid_rotated_ll) ::this
-type(grid_dim_ll) :: grid_dim
+type(grid_dim) :: dim
 
 
 call proj_rotated_ll(this &
- ,grid_dim%lon(1,1) &
- ,grid_dim%lat(1,1) &
+ ,dim%lon(1,1) &
+ ,dim%lat(1,1) &
  ,this%regular_ll%lon_min &
  ,this%regular_ll%lat_min )
 
 call proj_rotated_ll(this &
- ,grid_dim%lon(grid_dim%nx,grid_dim%ny) &
- ,grid_dim%lat(grid_dim%nx,grid_dim%ny) &
+ ,dim%lon(dim%nx,dim%ny) &
+ ,dim%lat(dim%nx,dim%ny) &
  ,this%regular_ll%lon_max &
  ,this%regular_ll%lat_max )
 
@@ -140,7 +173,10 @@ type(grid_rotated_ll), intent(in) ::this
 doubleprecision, intent(in)  :: lon,lat
 doubleprecision, intent(out) :: x,y
 
+!call l4f_category_log(this%category,L4F_ERROR,"QUESTO CODICE è ANCORA DA SCRIVERE")
+
 !.........
+
 x=lon
 y=lat
 
@@ -219,3 +255,4 @@ end subroutine unproj_rotated_ll
 
 
 end module rotated_ll_class
+
