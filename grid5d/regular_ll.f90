@@ -215,13 +215,6 @@ y=lat
 end subroutine proj_regular_ll
 
 
-
-
-
-
-
-
-
 subroutine get_val_regular_ll(this,dim,&
  nx,ny, &
  lon_min, lon_max, lat_min, lat_max, component_flag)
@@ -234,11 +227,8 @@ integer,intent(out),optional :: component_flag
 
 character(len=512) :: a_name
 
-
-
 if (present(nx))nx=dim%nx
 if (present(ny))ny=dim%ny 
-
  
 if (present(lon_min)) lon_min=this%lon_min 
 if (present(lon_max)) lon_max=this%lon_max

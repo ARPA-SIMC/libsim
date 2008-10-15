@@ -62,7 +62,7 @@ end type grid_rotated_ll
 
 
 private
-public init,delete,grid_proj,grid_unproj,proj,unproj
+public init,delete,grid_proj,grid_unproj,proj,unproj,get_val
 public grid_rotated_ll
 
 

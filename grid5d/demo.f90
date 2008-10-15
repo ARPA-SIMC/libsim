@@ -8,7 +8,7 @@ implicit none
 
 integer :: category,ier
 character(len=512):: a_name
-
+doubleprecision :: val
 
 type (grid6d_var) :: var
 type (grid_def) :: grid
@@ -42,8 +42,14 @@ print *,var
 
 call grids_unproj(grid,dim)
 
+
 !call l4f_category_log(category,L4F_INFO,&
-!         "unproj ritorna "//to_char(grigliato%dim%lat(1,1))//to_char(grigliato%dim%lon(1,1)))
+!         "unproj ritorna "//to_char(grid%dim%lat(1,1))//to_char(grid%dim%lon(1,1)))
+
+call get_val(grid,dim,lat_max=val)
+
+call l4f_category_log(category,L4F_INFO,&
+         "get_val ritorna "//to_char(val))
 
 call delete(grid,dim)
 

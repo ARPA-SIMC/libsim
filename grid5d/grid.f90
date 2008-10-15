@@ -45,10 +45,14 @@ INTERFACE delete
   MODULE PROCEDURE delete_grid
 END INTERFACE
 
+INTERFACE get_val
+  MODULE PROCEDURE get_val_grid
+END INTERFACE
+
 
 private
 
-public grids_proj,grids_unproj,grid_def,grid_dim,init,delete
+public grids_proj,grids_unproj,grid_def,grid_dim,init,delete,get_val
 
 contains
 
@@ -183,9 +187,6 @@ end select
 end subroutine grids_unproj
 
 
-
-
-
 subroutine get_val_grid(this,dim,type,&
  nx,ny, &
  lon_min, lon_max, lat_min, lat_max, component_flag, &
@@ -194,11 +195,13 @@ subroutine get_val_grid(this,dim,type,&
 type(grid_def) :: this
 type(grid_dim) :: dim
 
-character(len=*),INTENT(in),OPTIONAL :: type
-integer,optional :: nx, ny
-doubleprecision,optional :: lon_min, lon_max, lat_min, lat_max
-doubleprecision,optional :: latitude_south_pole,longitude_south_pole,angle_rotation
-integer,optional :: component_flag
+character(len=*),INTENT(out),OPTIONAL :: type
+integer,optional,intent(out) :: nx, ny
+doubleprecision,optional,intent(out) :: lon_min, lon_max, lat_min, lat_max
+doubleprecision,optional,intent(out) :: latitude_south_pole,longitude_south_pole,angle_rotation
+integer,optional,intent(out) :: component_flag
+
+if (present(type)) type = this%type%type
 
 select case ( this%type%type)
 
@@ -207,11 +210,11 @@ case ( "regular_ll")
    nx,ny, &
    lon_min, lon_max, lat_min, lat_max, component_flag)
 
-!case ( "rotated_ll")
-!  call get_val(this%rotated_ll,dim,&
-!   nx,ny, &
-!   lon_min, lon_max, lat_min, lat_max, component_flag, &
-!   latitude_south_pole,longitude_south_pole,angle_rotation)
+case ( "rotated_ll")
+  call get_val(this%rotated_ll,dim,&
+   nx,ny, &
+   lon_min, lon_max, lat_min, lat_max, component_flag, &
+   latitude_south_pole,longitude_south_pole,angle_rotation)
   
 case default
   call l4f_category_log(this%category,L4F_ERROR,"gtype: "//this%type%type//" non gestita" )
