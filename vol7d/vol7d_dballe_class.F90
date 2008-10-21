@@ -1750,6 +1750,23 @@ do iii=1, nnetwork
                                 !print * ,"sei dentro, OK"
       end if
 
+
+! in alternativa si trattano separatamente
+!!$    if (present(coordmin)) then
+!!$      CALL geo_coord_to_geo(coordmin)
+!!$      CALL getval(coordmin, lat=latmin,lon=lonmin)
+!!$      if (lonmin > lon) cycle
+!!$      if (latmin > lat) cycle
+!!$    end if
+!!$
+!!$    if (present(coordmax)) then
+!!$      CALL geo_coord_to_geo(coordmax)
+!!$      CALL getval(coordmax, lat=latmax,lon=lonmax)
+!!$      if (lonmax < lon) cycle
+!!$      if (latmax < lat) cycle
+!!$    end if
+
+
       CALL geo_coord_to_geo(this%vol7d%ana(i)%coord)
       CALL getval(this%vol7d%ana(i)%coord, lat=lat,lon=lon)
 
@@ -2365,6 +2382,16 @@ do while ( N > 0 )
     if(present(network)) then
       if (rep_cod /= network%id) cycle
     end if
+
+! in alternativa si trattano insieme
+!!$    call init(ana,lat=lat,lon=lon,ident=ident)
+!!$
+!!$    if (present(coordmin).and.present(coordmax))then
+!!$
+!!$      if (.not. inside(this%vol7d%ana(i)%coord,coordmin,coordmax)) cycle
+!!$                                !print * ,"sei dentro, OK"
+!!$    end if
+
 
     if (present(coordmin)) then
       CALL geo_coord_to_geo(coordmin)
