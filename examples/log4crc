@@ -10,9 +10,9 @@
 	</config>
 
 	<!-- root category ========================================= -->
-<!--	<category name="root" priority="notice" appender="syslog"/> -->
-	<category name="root" priority="debug" appender="stdout"/>
-<!--	<category name="root" priority="error" appender="stdout"/> -->
+     	<category name="root" priority="debug" appender="syslog"/>
+<!--	<category name="root" priority="debug" appender="stdout"/> -->
+<!--	<category name="root" priority="error" appender="stderr"/>  -->
 <!--	<category name="root" priority="debug" appender="myappender"/> -->
 
 	<!-- default appenders ===================================== -->
@@ -24,8 +24,6 @@
 	<!-- default layouts ======================================= -->
 	<layout name="basic" type="basic"/>
 	<layout name="dated" type="dated"/>
-	<layout name="mylayout" type="%c"/>
+	<layout name="mylayout" type="%m"/>
 
 </log4c>
-
-
