@@ -152,7 +152,7 @@ CONTAINS
 
 !>\brief  inizializza l'oggetto
 SUBROUTINE vol7d_dballe_init(this,dsn,user,password,write,wipe,repinfo,&
- filename,format,file,categoryappend,force_networkid)
+ filename,format,file,categoryappend)
 
 
 TYPE(vol7d_dballe),INTENT(out) :: this !< l'oggetto da inizializzare
@@ -166,8 +166,6 @@ character(len=*),intent(inout),optional :: filename !< nome del file su cui scri
 character(len=*),intent(in),optional :: format !< the file format. It can be "BUFR" or "CREX". (default="BUFR")
 logical,INTENT(in),OPTIONAL :: file !< switch to use file or data base ( default=.false )
 character(len=*),INTENT(in),OPTIONAL :: categoryappend !< appennde questo suffisso al namespace category di log4fortran
-INTEGER,intent(in),optional :: force_networkid !< specificando l'ID di una rete forza l'exportazione ad uno specifico template BUFR/CREX  
-
 
 character(len=1):: mode ! the open mode ("r" for read, "w" for write or create, "a" append) (comandato da "write", default="r" )
 
@@ -252,12 +250,7 @@ if (quifile) then
     end if
   end if
 
-
-  if (present(force_networkid)) then
-    call idba_messaggi(this%handle,lfilename,mode,lformat,force_networkid)
-  else
-    call idba_messaggi(this%handle,lfilename,mode,lformat,0)
-  end if
+  call idba_messaggi(this%handle,lfilename,mode,lformat)
 
   this%file=.true.
   call l4f_category_log(this%category,L4F_DEBUG,"handle from idba_messaggi: "//to_char(this%handle))
@@ -1552,7 +1545,7 @@ END SUBROUTINE vol7d_dballe_importvvns_dba
 !! una serie di filtri.
 
 SUBROUTINE vol7d_dballe_export(this, network, coordmin, coordmax, ident,&
- timei, timef,level,timerange,var,attr,anavar,anaattr,attr_only)
+ timei, timef,level,timerange,var,attr,anavar,anaattr,attr_only,template)
 
 !> \todo gestire il filtro staz_id la qual cosa vuol dire aggiungere un id nel type ana
 
@@ -1573,6 +1566,8 @@ CHARACTER(len=*),INTENT(in),OPTIONAL :: var(:),attr(:),anavar(:),anaattr(:)
 !! ottimizzando enormente le prestazioni: gli attributi riscritti saranno quelli con this%data_id definito
 !! (solitamente ricopiato dall'oggetto letto)
 logical,intent(in),optional :: attr_only 
+character(len=*),intent(in),optional :: template !< specificando category.subcategory.localcategory oppure un alias ("synop", "metar","temp","generic") forza l'exportazione ad uno specifico template BUFR/CREX"  
+
 
 !REAL(kind=fp_geo) :: latmin,latmax,lonmin,lonmax
 logical, allocatable :: lnetwork(:),llevel(:),ltimerange(:)
@@ -1772,12 +1767,14 @@ do iii=1, nnetwork
 
       call idba_unsetall (this%handle)
 
-      if (this%file)then
-        call idba_set (this%handle,"query","message")
-      end if
-
       call idba_setcontextana (this%handle)
-      if (this%file) call idba_set (this%handle,"query","message")
+      if (this%file)then
+        if (present(template)) then
+          call idba_set (this%handle,"query","message "//trim(template))
+        else
+          call idba_set (this%handle,"query","message")
+        end if
+      end if
 
       call idba_set (this%handle,"lat",lat)
       call idba_set (this%handle,"lon",lon)
@@ -1868,7 +1865,11 @@ do i=1, nstaz
                call idba_unsetall (this%handle)
 
                if (this%file)then
-                 call idba_set (this%handle,"query","message")
+                 if (present(template)) then
+                   call idba_set (this%handle,"query","message "//trim(template))
+                 else
+                   call idba_set (this%handle,"query","message")
+                 end if
                end if
 
                if (.not. lattr_only) then

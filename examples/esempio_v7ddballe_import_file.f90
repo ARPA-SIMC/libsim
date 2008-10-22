@@ -38,13 +38,13 @@ call l4f_category_log(category,L4F_INFO,"Fine lettura")
 !CALL init(v7d_dba,dsn="test",user="test",write=.true.,wipe=.true.,categoryappend="exportdba")
 filename="new.bufr"
 CALL init(v7d_dba,file=.true.,write=.true.,wipe=.true.&
- ,filename=filename,force_networkid=255,categoryappend="exportBUFR")
+ ,filename=filename,categoryappend="exportBUFR")
 
 v7d_dba%vol7d=v7d_file%vol7d
 
 call l4f_category_log(category,L4F_INFO,"inizio export")
 
-call export(v7d_dba)
+call export(v7d_dba, template="generic")
 
 call l4f_category_log(category,L4F_INFO,"fine export")
 

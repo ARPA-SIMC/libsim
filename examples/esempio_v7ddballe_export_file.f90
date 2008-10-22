@@ -102,13 +102,13 @@ end do
 
 
 ! Chiamo il costruttore della classe vol7d_dballe per il mio oggetto in export
-CALL init(v7d_exp,file=.true.,write=.true.,wipe=.true.,categoryappend="exportBUFR",format="BUFR",force_networkid=255)
+CALL init(v7d_exp,file=.true.,write=.true.,wipe=.true.,categoryappend="exportBUFR",format="BUFR")
 
 v7d_exp%vol7d = v7d
 
 call l4f_category_log(category,L4F_INFO,"Scrivo i dati")
 
-CALL export(v7d_exp)
+CALL export(v7d_exp,template="generic")
 
 CALL delete (v7d_exp) 
 
