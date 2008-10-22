@@ -48,8 +48,19 @@ INTERFACE get_val
 END INTERFACE
 
 
+!>\brief ritorna i valori descrittivi del grigliato
+INTERFACE write_unit
+  MODULE PROCEDURE write_unit_regular_ll,write_unit_dim
+END INTERFACE
+
+!>\brief ritorna i valori descrittivi del grigliato
+INTERFACE read_unit
+  MODULE PROCEDURE read_unit_regular_ll,read_unit_dim
+END INTERFACE
+
+
 private
-public init,delete,grid_proj,grid_unproj,proj,unproj,get_val
+public init,delete,grid_proj,grid_unproj,proj,unproj,get_val,read_unit,write_unit
 public grid_dim,grid_regular_ll
 
 !>\brief dimensioni del grigliato lat lon con eventuali vettori di coordinate
@@ -237,5 +248,106 @@ if (present(lat_max)) lat_max=this%lat_max
 if (present(component_flag)) component_flag=this%component_flag
 
 end subroutine get_val_regular_ll
+
+
+
+!> Legge da un'unità di file il contenuto dell'oggetto \a this.
+!! Il record da leggere deve essere stato scritto con la ::write_unit
+!! Il metodo controlla se il file è
+!! aperto per un I/O formattato o non formattato e fa la cosa giusta.
+SUBROUTINE read_unit_dim(this, unit) 
+
+type(grid_dim),intent(out) :: this !< oggetto def da leggere
+INTEGER, INTENT(in) :: unit !< unità da cui leggere
+
+CHARACTER(len=40) :: form
+
+
+INQUIRE(unit, form=form)
+IF (form == 'FORMATTED') THEN
+  READ(unit,*)this%nx,this%ny
+  if (associated(this%lon).and.associated(this%lat))read(unit,*)this%lon,this%lat
+ELSE
+  READ(unit)this%nx,this%ny
+  if (associated(this%lon).and.associated(this%lat))read(unit)this%lon,this%lat
+ENDIF
+
+
+END SUBROUTINE read_unit_dim
+
+
+
+!> Scrive su un'unità di file il contenuto dell'oggetto \a this.
+!! Il record scritto potrà successivamente essere letto con la ::read_unit.
+!! Il metodo controlla se il file è
+!! aperto per un I/O formattato o non formattato e fa la cosa giusta.
+SUBROUTINE write_unit_dim(this, unit)
+
+type(grid_dim),intent(in) :: this !< oggetto def da scrivere
+INTEGER, INTENT(in) :: unit !< unità su cui scrivere
+
+CHARACTER(len=40) :: form
+
+
+INQUIRE(unit, form=form)
+IF (form == 'FORMATTED') THEN
+  WRITE(unit,*)this%nx,this%ny
+  if (associated(this%lon).and.associated(this%lat))WRITE(unit,*)this%lon,this%lat
+
+ELSE
+  WRITE(unit)this%nx,this%ny
+  if (associated(this%lon).and.associated(this%lat))WRITE(unit)this%lon,this%lat
+ENDIF
+
+END SUBROUTINE write_unit_dim
+
+
+
+!> Legge da un'unità di file il contenuto dell'oggetto \a this.
+!! Il record da leggere deve essere stato scritto con la ::write_unit
+!! Il metodo controlla se il file è
+!! aperto per un I/O formattato o non formattato e fa la cosa giusta.
+SUBROUTINE read_unit_regular_ll(this, unit) 
+
+type(grid_regular_ll),intent(out) :: this !< oggetto def da leggere
+INTEGER, INTENT(in) :: unit !< unità da cui leggere
+
+CHARACTER(len=40) :: form
+
+
+INQUIRE(unit, form=form)
+IF (form == 'FORMATTED') THEN
+  READ(unit,*)this
+ELSE
+  READ(unit)this
+ENDIF
+
+
+END SUBROUTINE read_unit_regular_ll
+
+
+
+!> Scrive su un'unità di file il contenuto dell'oggetto \a this.
+!! Il record scritto potrà successivamente essere letto con la ::read_unit.
+!! Il metodo controlla se il file è
+!! aperto per un I/O formattato o non formattato e fa la cosa giusta.
+SUBROUTINE write_unit_regular_ll(this, unit)
+
+type(grid_regular_ll),intent(in) :: this !< oggetto def da scrivere
+INTEGER, INTENT(in) :: unit !< unità su cui scrivere
+
+CHARACTER(len=40) :: form
+
+
+INQUIRE(unit, form=form)
+IF (form == 'FORMATTED') THEN
+  WRITE(unit,*)this
+ELSE
+  WRITE(unit)this
+ENDIF
+
+END SUBROUTINE write_unit_regular_ll
+
+
 
 end module regular_ll_class

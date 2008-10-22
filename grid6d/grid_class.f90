@@ -49,10 +49,18 @@ INTERFACE get_val
   MODULE PROCEDURE get_val_grid
 END INTERFACE
 
+INTERFACE write_unit
+  MODULE PROCEDURE write_unit_grid
+END INTERFACE
+
+INTERFACE read_unit
+  MODULE PROCEDURE read_unit_grid
+END INTERFACE
+
 
 private
 
-public grids_proj,grids_unproj,grid_def,grid_dim,init,delete,get_val
+public grids_proj,grids_unproj,grid_def,grid_dim,init,delete,get_val,write_unit,read_unit
 
 contains
 
@@ -226,7 +234,68 @@ end select
 end subroutine get_val_grid
 
 
+!> Legge da un'unità di file il contenuto dell'oggetto \a this.
+!! Il record da leggere deve essere stato scritto con la ::write_unit
+!! Il metodo controlla se il file è
+!! aperto per un I/O formattato o non formattato e fa la cosa giusta.
+SUBROUTINE read_unit_grid(this,dim, unit) 
+
+type(grid_def),intent(out) :: this !< oggetto def da leggere
+type(grid_dim),intent(out) :: dim !< oggetto dim da leggere
+INTEGER, INTENT(in) :: unit !< unità da cui leggere
+
+
+select case ( this%type%type)
+
+case ( "regular_ll")
+  call read_unit(this%regular_ll,unit)
+
+case ( "rotated_ll")
+  call read_unit(this%rotated_ll,unit)
+  
+case default
+  call l4f_category_log(this%category,L4F_ERROR,"gtype: "//this%type%type//" non gestita" )
+  call exit (1)
+
+end select
+
+
+call read_unit(dim,unit)
+
+
+END SUBROUTINE read_unit_grid
+
+
+
+!> Scrive su un'unità di file il contenuto dell'oggetto \a this.
+!! Il record scritto potrà successivamente essere letto con la ::read_unit.
+!! Il metodo controlla se il file è
+!! aperto per un I/O formattato o non formattato e fa la cosa giusta.
+SUBROUTINE write_unit_grid(this,dim, unit)
+
+type(grid_def),intent(in) :: this !< oggetto def da scrivere
+type(grid_dim),intent(in) :: dim !< oggetto dim da scrivere
+INTEGER, INTENT(in) :: unit !< unità su cui scrivere
+
+
+select case ( this%type%type)
+
+case ( "regular_ll")
+  call write_unit(this%regular_ll,unit)
+
+case ( "rotated_ll")
+  call write_unit(this%rotated_ll,unit)
+  
+case default
+  call l4f_category_log(this%category,L4F_ERROR,"gtype: "//this%type%type//" non gestita" )
+  call exit (1)
+
+end select
+
+call write_unit(dim,unit)
+
+
+END SUBROUTINE write_unit_grid
+
+
 end module grid_class
-
-
-

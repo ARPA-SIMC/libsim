@@ -1,7 +1,7 @@
 program demo
 
 use grid_class
-use grid6d_var_class
+use volgrid6d_var_class
 use log4fortran
 
 implicit none
@@ -10,7 +10,7 @@ integer :: category,ier
 character(len=512):: a_name
 doubleprecision :: val
 
-type (grid6d_var) :: var
+type (volgrid6d_var) :: var
 type (grid_def) :: grid
 type (grid_dim) :: dim
 
