@@ -16,7 +16,7 @@ USE kinds
 IMPLICIT NONE
 
 PRIVATE int_to_char, byte_to_char, char_to_char, &
-   real_to_char, double_to_char
+   real_to_char, double_to_char, logical_to_char
 
 !> Insieme di funzioni che restituiscono la variabile in input
 !! convertita in stringa con un
@@ -114,6 +114,22 @@ ELSE
 ENDIF
 
 END FUNCTION double_to_char
+
+
+!> Variante con input logico
+ELEMENTAL FUNCTION logical_to_char(in, form) RESULT(char)
+LOGICAL,INTENT(in) :: in !< valore da rappresentare in CHARACTER
+CHARACTER(len=*),INTENT(in),OPTIONAL :: form !< formato opzionale
+
+CHARACTER(len=1) :: char
+
+!IF (PRESENT(form)) THEN
+!  WRITE(char,form) in
+!ELSE
+WRITE(char,'(L1)') in
+!ENDIF
+
+END FUNCTION logical_to_char
 
 
 !> Converte una variabile \a CHARACTER in una stringa passabile ad una
