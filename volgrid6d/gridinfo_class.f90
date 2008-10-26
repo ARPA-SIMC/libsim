@@ -28,8 +28,10 @@ type gridinfo
   TYPE(vol7d_level) :: level
 !> vettore descrittore della dimensione variabile di anagrafica
   TYPE(volgrid6d_var) :: var
+!> id del grib come da grib_api
+  integer ::  gaid
 
-integer :: category !< log4fortran
+  integer :: category !< log4fortran
 
 end type gridinfo
 
@@ -50,9 +52,11 @@ public gridinfo,init,delete
 contains
 
 !> Inizializza un oggetto di tipo gridinfo.
-SUBROUTINE init_gridinfo(this,grid,dim,time,timerange,level,var,categoryappend)
+SUBROUTINE init_gridinfo(this,gaid,grid,dim,time,timerange,level,var,categoryappend)
 TYPE(gridinfo),intent(out) :: this !< oggetto da inizializzare
 
+!> id del grib come da grib_api
+integer,intent(in),optional ::  gaid
 !> descrittore del grigliato
 type(grid_def),intent(in),optional :: grid
 type(grid_dim),intent(in),optional :: dim
@@ -73,6 +77,13 @@ call l4f_launcher(a_name,a_name_append=trim(subcategory)//"."//trim(categoryappe
 this%category=l4f_category_get(a_name)
 
 !call l4f_category_log(this%category,L4F_DEBUG,"init grid type: "//this%grid%type%type )
+
+
+if (present(gaid))then
+  this%gaid=gaid
+else
+  this%gaid=imiss
+end if
 
 if (present(grid).and.present(dim))then
   this%grid=grid
@@ -124,5 +135,23 @@ call l4f_category_delete(this%category)
 
 end subroutine delete_gridinfo
 
+
+
+subroutine import_gridinfo (this)
+
+TYPE(gridinfo),intent(out) :: this !< oggetto da eliminare
+
+
+call l4f_category_log(this%category,L4F_DEBUG,"ora provo ad importare da grib " )
+
+
+call import_gridinfo(this%grid,this%dim,this%gaid)
+call import_gridinfo(this%time,this%gaid)
+call import_gridinfo(this%timerange,this%gaid)
+call import_gridinfo(this%level,this%gaid)
+call import_gridinfo(this%var,this%gaid)
+
+
+end subroutine import_gridinfo
 
 end module gridinfo_class
