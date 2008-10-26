@@ -4,7 +4,7 @@ USE grid_class
 USE datetime_class
 USE vol7d_timerange_class
 USE vol7d_level_class
-USE grid6d_var_class
+USE volgrid6d_var_class
 use log4fortran
 
 
@@ -27,7 +27,7 @@ type gridinfo
 !> descrittore della dimensione livello verticale
   TYPE(vol7d_level) :: level
 !> vettore descrittore della dimensione variabile di anagrafica
-  TYPE(grid6d_var) :: var
+  TYPE(volgrid6d_var) :: var
 
 integer :: category !< log4fortran
 
@@ -63,7 +63,7 @@ TYPE(vol7d_timerange),intent(in),optional :: timerange
 !> descrittore della dimensione livello verticale
 TYPE(vol7d_level),intent(in),optional :: level
 !> vettore descrittore della dimensione variabile di anagrafica
-TYPE(grid6d_var),intent(in),optional :: var
+TYPE(volgrid6d_var),intent(in),optional :: var
 
 character(len=*),INTENT(in),OPTIONAL :: categoryappend !< appennde questo suffisso al namespace category di log4fortran
 
