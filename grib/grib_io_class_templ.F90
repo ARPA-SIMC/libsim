@@ -1,8 +1,10 @@
-MODULE grib_io_class
+MODULE GRIBLIB/**/_io_class
 USE missing_values
 USE err_handling
 USE char_utilities
+#ifdef WITH_MATCH
 USE matchgrib_class
+#endif
 IMPLICIT NONE
 
 INTEGER, PARAMETER :: grio_imiss = imiss
@@ -11,18 +13,25 @@ INTEGER, PARAMETER :: lev_n_dbl(9)=(/100,103,105,107,109,111,113,115,119/)
 INTEGER, PARAMETER, PRIVATE :: &
  nb=4, & ! Integer word size, to be improved
  maxsize=16000000, startsize=1000000 ! Initial and max size of raw grib buffer
+#ifdef WITH_DWDGRIB1
+INTEGER, PRIVATE :: ibmap(1)
+#endif
 
-TYPE grib_io
-  INTEGER :: cursize
+TYPE GRIBLIB/**/_io
   INTEGER (kind=nb), POINTER :: rawgrib(:)
-  INTEGER :: isec0(2), isec1(1024), isec2(1024), isec3(2), isec4(512)
+  INTEGER :: isec0(2), isec1(1024), isec2(1024), isec3(3), isec4(512)
   REAL :: zsec2(512), zsec3(2)
   REAL, POINTER :: zsec4(:)
+#ifdef WITH_DWDGRIB1
+  INTEGER :: idims(20)
+#endif
+#ifdef WITH_MATCH
   INTEGER :: misec1(1024), misec2(1024), misec4(512)
   LOGICAL :: lmisec1(1024), lmisec2(1024), lmisec4(512)
   LOGICAL :: smartmlev, smartmtr
   TYPE(matchgrib) :: mg, gg
-END TYPE grib_io
+#endif
+END TYPE GRIBLIB/**/_io
 
 INTERFACE init
   MODULE PROCEDURE grio_init
@@ -32,6 +41,7 @@ INTERFACE delete
   MODULE PROCEDURE grio_delete
 END INTERFACE
 
+#ifdef WITH_MATCH
 INTERFACE findgribinfo
   MODULE PROCEDURE grio_findgribinfo
 END INTERFACE
@@ -39,6 +49,7 @@ END INTERFACE
 INTERFACE findgribdata
   MODULE PROCEDURE grio_findgribdata
 END INTERFACE
+#endif
 
 INTERFACE getgribinfo
   MODULE PROCEDURE grio_getgribinfo
@@ -61,48 +72,71 @@ PRIVATE :: rawgrib_allocate, zsec4_allocate, getgrib
 CONTAINS
 
 SUBROUTINE grio_init(this)
-TYPE (grib_io) :: this
+TYPE (GRIBLIB/**/_io) :: this
 
+NULLIFY(this%zsec4)
+NULLIFY(this%rawgrib)
+CALL rawgrib_allocate(this)
+#ifdef WITH_MATCH
 CALL init(this%mg)
 CALL init(this%gg)
-NULLIFY(this%zsec4)
-CALL rawgrib_allocate(this)
 this%lmisec1(:) = .FALSE.
 this%lmisec2(:) = .FALSE.
 this%lmisec4(:) = .FALSE.
 this%smartmlev = .TRUE.
 this%smartmtr = .TRUE.
+#endif
+
+#ifdef WITH_DWDGRIB1
+this%idims(:)= &
+! input lengths of:                         word
+!  isec1 isec2 isec3 isec4 bitm zsec2 zsec4 rawg XXXXX
+!(/1024, 1024,    3,  512,  -1,  512,   -1,  -1, 0, 0, &
+ (/ 321,  626,    3,   11,  -1,  512,   -1,  -1, 0, 0, &
+! output lengths of:                        word byte
+!  isec1 isec2 isec3 isec4 bitm zsec2 zsec4 rawg rawg X
+ &    0,     0,   0,    0,   0,    0,    0,   0,   0, 0/)
+#endif
 
 END SUBROUTINE grio_init
 
 
 SUBROUTINE grio_delete(this)
-TYPE (grib_io) :: this
+TYPE (GRIBLIB/**/_io) :: this
 
-DEALLOCATE(this%rawgrib)
+IF (ASSOCIATED(this%zsec4)) DEALLOCATE(this%zsec4)
+IF (ASSOCIATED(this%rawgrib)) DEALLOCATE(this%rawgrib)
+#ifdef WITH_MATCH
 CALL delete(this%mg)
 CALL delete(this%gg)
+#endif
 
 END SUBROUTINE grio_delete
 
 
 RECURSIVE SUBROUTINE rawgrib_allocate(this, size, ier)
-TYPE (grib_io), INTENT(inout) :: this
+TYPE (GRIBLIB/**/_io), INTENT(inout) :: this
 INTEGER, OPTIONAL, INTENT(in) :: size
 INTEGER, OPTIONAL, INTENT(out) :: ier
 
-INTEGER :: ierval
+INTEGER :: cursize, ierval
 
 IF (PRESENT(size)) THEN
-  this%cursize = size
+  IF (size > maxsize) THEN
+    CALL raise_error('requested size for grib message '//to_char(size)// &
+     ' words > hardcoded maximum '//to_char(maxsize),1,ier)
+    RETURN
+  ENDIF
+  cursize = size
 ELSE
-  this%cursize = startsize
+  cursize = startsize
 ENDIF
-ALLOCATE(this%rawgrib(this%cursize), STAT=ierval)
+IF (ASSOCIATED(this%rawgrib)) DEALLOCATE(this%rawgrib)
+ALLOCATE(this%rawgrib(cursize), STAT=ierval)
 ! In case of error while allocating a larger buffer,
 ! recur to reallocate a basic size buffer and exit
 IF (ierval /= 0) THEN
-  CALL raise_error('cannot allocate '//to_char(this%cursize)//' words',ierval,ier)
+  CALL raise_error('cannot allocate '//to_char(cursize)//' words',ierval,ier)
   IF (PRESENT(size)) THEN
     CALL rawgrib_allocate(this)
   ENDIF
@@ -113,34 +147,51 @@ END SUBROUTINE rawgrib_allocate
 
 
 SUBROUTINE zsec4_allocate(this, ier)
-TYPE (grib_io), INTENT(inout) :: this
+TYPE (GRIBLIB/**/_io), INTENT(inout) :: this
 INTEGER, OPTIONAL, INTENT(out) :: ier
 
-INTEGER :: actsize, ierval
+INTEGER :: actsize, ierval, szsec4
 REAL, POINTER :: pzsec4(:)
 REAL, TARGET :: zzsec4(1)
 
 IF (PRESENT(ier)) ier = 0
 pzsec4 => zzsec4 ! Gribex requires a valid section 4 also for 'I/J', satisfy it!
+
+#ifdef WITH_EMOS
 ierval = 1 ! Do not abort in case of error
 CALL gribex(this%isec0, this%isec1, this%isec2, this%zsec2, &
  this%isec3, this%zsec3, this%isec4, pzsec4, SIZE(pzsec4), &
- this%rawgrib, this%cursize, actsize, 'J', ierval)
+ this%rawgrib, SIZE(this%rawgrib), actsize, 'J', ierval)
 IF (ierval > 0) THEN
   CALL raise_error('from routine gribex',ierval, ier)
   RETURN
 ENDIF
-ALLOCATE(this%zsec4(MAX(1,this%isec4(1))), STAT=ierval)
+szsec4 = MAX(1,this%isec4(1))
+
+#else
+this%idims(7) = -1 ! do not decode data
+this%idims(17) = 0 ! for safety
+this%idims(8) = SIZE(this%rawgrib)
+CALL grbin1(1, grio_rmiss, SIZE(this%idims), this%idims, this%rawgrib, ibmap, &
+ this%isec1, this%isec2, this%isec3, this%isec4, this%zsec2, pzsec4, ierval)
 IF (ierval /= 0) THEN
-  CALL raise_error('cannot allocate '//to_char(this%isec4(1))//' words',ierval,ier)
+  CALL raise_error('from routine grbin1',ierval,ier)
+  RETURN
+ENDIF
+szsec4 = MAX(1,this%idims(17))
+#endif
+
+ALLOCATE(this%zsec4(szsec4), STAT=ierval)
+IF (ierval /= 0) THEN
+  CALL raise_error('cannot allocate '//to_char(szsec4)//' words',ierval,ier)
   RETURN
 ENDIF
 
 END SUBROUTINE zsec4_allocate
 
-
+#ifdef WITH_MATCH
 SUBROUTINE setkey(this, date, time, tr, lev, var, ext, grid)
-TYPE (grib_io) :: this
+TYPE (GRIBLIB/**/_io) :: this
 INTEGER, OPTIONAL :: date(3), time(2), tr(5), lev(4), var(3), ext(3), grid(4)
 
 IF (PRESENT(date)) THEN
@@ -303,7 +354,7 @@ END SUBROUTINE setkey
 
 
 SUBROUTINE grib_to_match(this)
-TYPE (grib_io) :: this
+TYPE (GRIBLIB/**/_io) :: this
 
 this%misec1 = this%isec1
 this%misec2 = this%isec2
@@ -313,7 +364,7 @@ END SUBROUTINE grib_to_match
 
 
 LOGICAL FUNCTION matchtime(this) RESULT(match)
-TYPE (grib_io) :: this
+TYPE (GRIBLIB/**/_io) :: this
 
 match = &
  ALL(this%isec1(10:14) == this%misec1(10:14) .OR. .NOT.this%lmisec1(10:14)) &
@@ -323,7 +374,7 @@ END FUNCTION matchtime
 
 
 LOGICAL FUNCTION matchtr(this) RESULT(match)
-TYPE (grib_io) :: this
+TYPE (GRIBLIB/**/_io) :: this
 
 IF (this%smartmtr .AND. (this%misec1(18) >= 2 .AND. this%misec1(18) <= 5)) THEN
   match = ALL(this%isec1(15:18:3) == this%misec1(15:18:3) .OR. &
@@ -339,7 +390,7 @@ END FUNCTION matchtr
 
 
 LOGICAL FUNCTION matchgrid(this) RESULT(match)
-TYPE (grib_io) :: this
+TYPE (GRIBLIB/**/_io) :: this
 
 match = ALL(this%isec2(1:3) == this%misec2(1:3) .OR. &
  .NOT.this%lmisec2(1:3)) .AND. &
@@ -349,7 +400,7 @@ END FUNCTION matchgrid
 
 
 LOGICAL FUNCTION matchvar(this) RESULT(match)
-TYPE (grib_io) :: this
+TYPE (GRIBLIB/**/_io) :: this
 
 match = ALL(this%isec1(1:2) == this%misec1(1:2) .OR. &
  .NOT.this%lmisec1(1:2)) .AND. &
@@ -359,7 +410,7 @@ END FUNCTION matchvar
 
 
 LOGICAL FUNCTION matchlev(this) RESULT(match)
-TYPE (grib_io) :: this
+TYPE (GRIBLIB/**/_io) :: this
 
 IF (this%smartmlev .AND. ANY(this%misec1(7) == lev_n_dbl)) THEN
   match = .NOT.this%lmisec1(7) .OR. &
@@ -377,7 +428,7 @@ END FUNCTION matchlev
 
 FUNCTION grio_findgribinfo(this, unit, ier)
 ! Find a grib matching this%mg key and store its info in this
-TYPE (grib_io), INTENT(inout) :: this
+TYPE (GRIBLIB/**/_io), INTENT(inout) :: this
 INTEGER, INTENT(in) :: unit
 INTEGER, OPTIONAL, INTENT(out) :: ier
 LOGICAL :: grio_findgribinfo
@@ -436,7 +487,7 @@ END FUNCTION grio_findgribinfo
 
 FUNCTION grio_findgribdata(this, unit, ier)
 ! Find a grib matching this%mg key and store its info and data in this
-TYPE (grib_io), INTENT(inout) :: this
+TYPE (GRIBLIB/**/_io), INTENT(inout) :: this
 INTEGER, INTENT(in) :: unit
 INTEGER, OPTIONAL, INTENT(out) :: ier
 LOGICAL :: grio_findgribdata
@@ -448,11 +499,12 @@ IF (grio_findgribdata .AND. ierval == 0) CALL getgrib(this, -1, 'D', ierval)
 IF (PRESENT(ier)) ier = ierval
 
 END FUNCTION grio_findgribdata
+#endif
 
 
 SUBROUTINE grio_getgribinfo(this, unit, ier)
 ! Read next grib in unit and store its info in this
-TYPE (grib_io), INTENT(inout) :: this
+TYPE (GRIBLIB/**/_io), INTENT(inout) :: this
 INTEGER, INTENT(in) :: unit
 INTEGER, OPTIONAL, INTENT(out) :: ier
 
@@ -466,7 +518,7 @@ END SUBROUTINE grio_getgribinfo
 
 SUBROUTINE grio_getgribdata(this, unit, ier)
 ! Read next grib in unit and store its info and data in this
-TYPE (grib_io), INTENT(inout) :: this
+TYPE (GRIBLIB/**/_io), INTENT(inout) :: this
 INTEGER, INTENT(in) :: unit
 INTEGER, OPTIONAL, INTENT(out) :: ier
 
@@ -479,48 +531,72 @@ END SUBROUTINE grio_getgribdata
 
 
 SUBROUTINE grio_putgribdata(this, unit, ier)
-TYPE (grib_io), INTENT(inout) :: this
+TYPE (GRIBLIB/**/_io), INTENT(inout) :: this
 INTEGER, INTENT(in) :: unit
 INTEGER, OPTIONAL, INTENT(out) :: ier
 
 INTEGER :: actsize, ierval
 
+!INTEGER :: myidims(20)
+! input lengths of:                         word
+!  isec1 isec2 isec3 isec4 bitm zsec2 zsec4 rawg XXXXX
+! (/ 321,  626,    3,   11,  -1,  512,   -1,  -1, 0, 0, &
+! output lengths of:                        word byte
+!  isec1 isec2 isec3 isec4 bitm zsec2 zsec4 rawg rawg X
+! &    0,     0,   0,    0,   0,    0,    0,   0,   0, 0/), &
+
+#ifdef WITH_EMOS
 ierval = 1 ! Do not abort in case of error
 CALL gribex(this%isec0, this%isec1, this%isec2, this%zsec2, &
  this%isec3, this%zsec3, this%isec4, this%zsec4, SIZE(this%zsec4), &
- this%rawgrib, this%cursize, actsize, 'C', ierval)
+ this%rawgrib, SIZE(this%rawgrib), actsize, 'C', ierval)
 IF (ierval > 0) THEN
   CALL raise_error('from routine gribex', ierval, ier)
   RETURN
 ENDIF
-CALL pbwrite(unit, this%rawgrib, this%isec0(1), ierval) !actsize*nb
-IF (ierval < 0) THEN
-  CALL raise_error('from routine pbwrite', ierval, ier)
-  RETURN
-ENDIF
 
-IF (PRESENT(ier)) ier = 0
+#else
+this%idims(7) = SIZE(this%zsec4)
+this%idims(8) = SIZE(this%rawgrib)
+CALL grbex1(1, 1, grio_rmiss, SIZE(this%idims), this%idims,  &
+ this%isec1, this%isec2, this%isec3, this%isec4, ibmap, &
+ this%zsec2, this%zsec4, this%rawgrib, ier)
+this%isec0(1) = this%idims(19) ! reassign length (already done at grbin1)
+
+#endif
+
+IF (unit > 0) CALL grio_putrawgrib(this, unit, ier)
 
 END SUBROUTINE grio_putgribdata
 
 
 SUBROUTINE grio_putrawgrib(this, unit, ier)
-TYPE (grib_io), INTENT(inout) :: this
+TYPE (GRIBLIB/**/_io), INTENT(inout) :: this
 INTEGER, INTENT(in) :: unit
 INTEGER, OPTIONAL, INTENT(out) :: ier
 
 INTEGER :: actsize, ierval
 
+#ifdef WITH_EMOS
 CALL getgrib(this, -1, 'L', ierval) ! Just decode grib edition and length
 IF (ierval > 0) THEN
   CALL raise_error('from routine gribex', ierval, ier)
   RETURN
 ENDIF
+
 CALL pbwrite(unit, this%rawgrib, this%isec0(1), ierval) !actsize*nb
 IF (ierval < 0) THEN
   CALL raise_error('from routine pbwrite', ierval, ier)
   RETURN
 ENDIF
+
+#else
+CALL cuegex(unit, this%isec0(1), this%rawgrib, ierval)
+IF (ierval /= 0) THEN
+  CALL raise_error('from routine cuegex', ierval, ier)
+  RETURN
+ENDIF
+#endif
 
 IF (PRESENT(ier)) ier = 0
 
@@ -528,7 +604,7 @@ END SUBROUTINE grio_putrawgrib
 
 
 SUBROUTINE getgrib(this, unit, op, ier)
-TYPE (grib_io), INTENT(inout) :: this
+TYPE (GRIBLIB/**/_io), INTENT(inout) :: this
 INTEGER, INTENT(in) :: unit
 CHARACTER(LEN=1), INTENT(in) :: op
 INTEGER, INTENT(out) :: ier
@@ -538,22 +614,18 @@ REAL, POINTER :: pzsec4(:)
 REAL, TARGET :: zzsec4(1)
 
 IF (unit >= 0) THEN ! Read the grib, otherwise use the last one read
-  ier = 1
-  DO WHILE(ier /= 0)
-    CALL pbtell(unit, fstart)
+  DO WHILE(.TRUE.)
+#ifdef WITH_EMOS
+    CALL pbtell(unit, fstart) ! remember position
     IF (fstart < 0) THEN
       CALL raise_error('in pbtell, code', fstart, ier)
       RETURN
     ENDIF
-    CALL pbgrib(unit, this%rawgrib, this%cursize*nb, actsize, ier)
-    IF (ier == -3 .AND. this%cursize < maxsize) THEN ! rawgrib too small
-      DEALLOCATE(this%rawgrib)
-      CALL rawgrib_allocate(this, this%cursize*2, ier) ! Double the size
-      IF (ier /= 0) THEN
-        CALL raise_error('in allocation', ier, ier)
-        RETURN
-      ENDIF
-      CALL pbseek(unit, fstart, 0, ier)
+    CALL pbgrib(unit, this%rawgrib, SIZE(this%rawgrib)*nb, actsize, ier)
+    IF (ier == -3) THEN ! rawgrib too small
+      CALL rawgrib_allocate(this, SIZE(this%rawgrib)*2, ier) ! Double the size
+      IF (ier /= 0) RETURN
+      CALL pbseek(unit, fstart, 0, ier) ! go back to the start of message
       IF (ier /= 0) THEN
         CALL raise_error('in pbseek, code', ier, ier)
         RETURN
@@ -563,7 +635,29 @@ IF (unit >= 0) THEN ! Read the grib, otherwise use the last one read
     ELSE IF (ier /= 0) THEN
       CALL raise_error('from routine pbgrib',ier, ier)
       RETURN
+    ELSE
+      EXIT
     ENDIF
+#else
+    CALL cuegin(unit, SIZE(this%rawgrib)*nb, this%rawgrib, actsize, ier)
+    this%isec0(1) = actsize ! store length in byte (isec0 unused in grbin1)
+    IF (ier == -2) THEN ! rawgrib too small
+      CALL rawgrib_allocate(this, actsize+8, ier) ! Increase the size with a margin
+      IF (ier /= 0) RETURN
+      CALL cback(unit, ier) ! go back to the start of message
+      IF (ier /= 0) THEN
+        CALL raise_error('in cback, code', ier, ier)
+        RETURN
+      ENDIF
+    ELSE IF (actsize == 0) THEN ! End of file
+      RETURN
+    ELSE IF (ier /= 0) THEN
+      CALL raise_error('from routine cuegin',ier, ier)
+      RETURN
+    ELSE
+      EXIT
+    ENDIF
+#endif
   ENDDO
 ENDIF
 
@@ -579,12 +673,13 @@ ELSE
   pzsec4 => this%zsec4
 ENDIF
 
+#ifdef WITH_EMOS
 this%isec3(2) = grio_imiss
 this%zsec3(2) = grio_rmiss
 ier = 1 ! Do not abort in case of error
 CALL gribex(this%isec0, this%isec1, this%isec2, this%zsec2, &
  this%isec3, this%zsec3, this%isec4, pzsec4, SIZE(pzsec4), &
- this%rawgrib, this%cursize, actsize, op, ier)
+ this%rawgrib, SIZE(this%rawgrib), actsize, op, ier)
 
 IF (ier == 710 .AND. op == 'D') THEN ! If failure due to small zsec4, retry
   DEALLOCATE(this%zsec4)
@@ -594,7 +689,7 @@ IF (ier == 710 .AND. op == 'D') THEN ! If failure due to small zsec4, retry
   ier = 1 ! Do not abort in case of error
   CALL gribex(this%isec0, this%isec1, this%isec2, this%zsec2, &
    this%isec3, this%zsec3, this%isec4, pzsec4, SIZE(pzsec4), &
-   this%rawgrib, this%cursize, actsize, op, ier)
+   this%rawgrib, SIZE(this%rawgrib), actsize, op, ier)
 ENDIF
 IF (ier > 0) THEN
   CALL raise_error('from routine gribex', ier, ier)
@@ -610,13 +705,45 @@ IF (op /= 'L') THEN
      8000, ier)
     RETURN
   ENDIF
-
+#ifdef WITH_MATCH
   CALL mgkey_from_gribex(this%gg, this%isec1, this%isec2, this%isec4)
+#endif
 ENDIF
+
+#else
+IF (op == 'I' .OR. op == 'L') THEN
+  this%idims(7) = -1 ! do not decode data
+  this%idims(8) = SIZE(this%rawgrib)
+  CALL grbin1(1, grio_rmiss, SIZE(this%idims), this%idims, this%rawgrib, ibmap, &
+   this%isec1, this%isec2, this%isec3, this%isec4, this%zsec2, pzsec4, ier)
+
+  IF (ier /= 0) THEN
+    CALL raise_error('from routine grbin1',ier,ier)
+    RETURN
+  ENDIF
+ELSE IF (op == 'D') THEN
+  DO WHILE (.TRUE.)
+    this%idims(7) = SIZE(pzsec4)
+    this%idims(17) = 0 ! for safety
+    this%idims(8) = SIZE(this%rawgrib)
+    CALL grbin1(1, grio_rmiss, SIZE(this%idims), this%idims, this%rawgrib, ibmap, &
+     this%isec1, this%isec2, this%isec3, this%isec4, this%zsec2, pzsec4, ier)
+    this%isec0(1) = this%idims(19) ! reassign length (already done at cuegin)
+    IF (ier == 0) EXIT
+    IF (this%idims(17) > this%idims(7)) THEN ! If failure due to small zsec4, retry
+      CALL zsec4_allocate(this, ier)
+      IF (ier /= 0) RETURN
+    ELSE
+      CALL raise_error('from routine grbin1',ier,ier)
+      RETURN
+    ENDIF
+  ENDDO
+ENDIF
+#endif
 
 ier = 0
 
 END SUBROUTINE getgrib
 
-END MODULE grib_io_class
+END MODULE GRIBLIB/**/_io_class
 
