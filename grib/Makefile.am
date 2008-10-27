@@ -5,7 +5,7 @@ AM_FCFLAGS = -I../base
 libsim_grib_la_LIBADD = ../base/libsim_base.la 
 
 if EMOS
-libsim_grib_la_SOURCES += grib_io_class.F90 geo_grid_grib.f90 matchgrib_class.f90
+libsim_grib_la_SOURCES += grib_io_class.F90 geo_grid_grib.F90 matchgrib_class.f90
 libsim_grib_la_LIBADD += $(EMOS_LIBS)
 endif
 
