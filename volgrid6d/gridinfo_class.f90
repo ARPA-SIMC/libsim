@@ -45,6 +45,14 @@ INTERFACE delete
   MODULE PROCEDURE delete_gridinfo
 END INTERFACE
 
+!!$INTERFACE import
+!!$  MODULE PROCEDURE import_gridinfo
+!!$END INTERFACE
+!!$
+!!$INTERFACE export
+!!$  MODULE PROCEDURE export_gridinfo
+!!$END INTERFACE
+
 private
 
 public gridinfo,init,delete
@@ -145,13 +153,33 @@ TYPE(gridinfo),intent(out) :: this !< oggetto da eliminare
 call l4f_category_log(this%category,L4F_DEBUG,"ora provo ad importare da grib " )
 
 
-call import_gridinfo(this%grid,this%dim,this%gaid)
-call import_gridinfo(this%time,this%gaid)
-call import_gridinfo(this%timerange,this%gaid)
-call import_gridinfo(this%level,this%gaid)
-call import_gridinfo(this%var,this%gaid)
+call import(this%grid,this%dim,this%gaid)
+call import(this%time,this%gaid)
+call import(this%timerange,this%gaid)
+call import(this%level,this%gaid)
+call import(this%var,this%gaid)
 
 
 end subroutine import_gridinfo
+
+
+subroutine export_gridinfo (this)
+
+TYPE(gridinfo),intent(out) :: this !< oggetto da eliminare
+
+
+call l4f_category_log(this%category,L4F_DEBUG,"ora provo ad importare da grib " )
+
+
+call export(this%grid,this%dim,this%gaid)
+call export(this%time,this%gaid)
+call export(this%timerange,this%gaid)
+call export(this%level,this%gaid)
+call export(this%var,this%gaid)
+
+
+end subroutine export_gridinfo
+
+
 
 end module gridinfo_class
