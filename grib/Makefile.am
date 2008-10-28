@@ -14,6 +14,8 @@ libsim_grib_la_SOURCES += dwdgrib1_io_class.F90 geo_grid_dwdgrib1.F90
 libsim_grib_la_LIBADD += $(DWDGRIB1_LIBS)
 endif
 
+noinst_HEADERS = grib_io_class_templ.F90 geo_grid_grib_templ.F90
+
 # c'e` una maniera migliore?
 tmpvar = $(libsim_grib_la_SOURCES:.f90=.mod)
 nodist_include_HEADERS = $(tmpvar:.F90=.mod)
@@ -32,7 +34,6 @@ geo_grid_dwdgrib1.lo: dwdgrib1_io_class.$(OBJEXT) geo_grid_grib_templ.F90
 endif
 
 endif
-
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT) *.mod

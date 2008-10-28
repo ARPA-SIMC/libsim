@@ -150,7 +150,7 @@ SUBROUTINE zsec4_allocate(this, ier)
 TYPE (GRIBLIB/**/_io), INTENT(inout) :: this
 INTEGER, OPTIONAL, INTENT(out) :: ier
 
-INTEGER :: actsize, ierval, szsec4
+INTEGER :: actsize, ierval, szsec4, grb_ed
 REAL, POINTER :: pzsec4(:)
 REAL, TARGET :: zzsec4(1)
 
@@ -172,7 +172,7 @@ szsec4 = MAX(1,this%isec4(1))
 this%idims(7) = -1 ! do not decode data
 this%idims(17) = 0 ! for safety
 this%idims(8) = SIZE(this%rawgrib)
-CALL grbin1(1, grio_rmiss, SIZE(this%idims), this%idims, this%rawgrib, ibmap, &
+CALL grbin1(grb_ed, grio_rmiss, SIZE(this%idims), this%idims, this%rawgrib, ibmap, &
  this%isec1, this%isec2, this%isec3, this%isec4, this%zsec2, pzsec4, ierval)
 IF (ierval /= 0) THEN
   CALL raise_error('from routine grbin1',ierval,ier)
@@ -591,7 +591,7 @@ IF (ierval < 0) THEN
 ENDIF
 
 #else
-CALL cuegex(unit, this%isec0(1), this%rawgrib, ierval)
+CALL cuegex(unit, this%rawgrib, this%isec0(1), ierval)
 IF (ierval /= 0) THEN
   CALL raise_error('from routine cuegex', ierval, ier)
   RETURN
@@ -609,7 +609,7 @@ INTEGER, INTENT(in) :: unit
 CHARACTER(LEN=1), INTENT(in) :: op
 INTEGER, INTENT(out) :: ier
 
-INTEGER :: actsize, fstart
+INTEGER :: actsize, fstart, grb_ed
 REAL, POINTER :: pzsec4(:)
 REAL, TARGET :: zzsec4(1)
 
@@ -650,6 +650,7 @@ IF (unit >= 0) THEN ! Read the grib, otherwise use the last one read
         RETURN
       ENDIF
     ELSE IF (actsize == 0) THEN ! End of file
+      ier = -1
       RETURN
     ELSE IF (ier /= 0) THEN
       CALL raise_error('from routine cuegin',ier, ier)
@@ -711,10 +712,10 @@ IF (op /= 'L') THEN
 ENDIF
 
 #else
-IF (op == 'I' .OR. op == 'L') THEN
+IF (op == 'I' .OR. op == 'L' .OR. op == 'J') THEN
   this%idims(7) = -1 ! do not decode data
   this%idims(8) = SIZE(this%rawgrib)
-  CALL grbin1(1, grio_rmiss, SIZE(this%idims), this%idims, this%rawgrib, ibmap, &
+  CALL grbin1(grb_ed, grio_rmiss, SIZE(this%idims), this%idims, this%rawgrib, ibmap, &
    this%isec1, this%isec2, this%isec3, this%isec4, this%zsec2, pzsec4, ier)
 
   IF (ier /= 0) THEN
@@ -726,7 +727,7 @@ ELSE IF (op == 'D') THEN
     this%idims(7) = SIZE(pzsec4)
     this%idims(17) = 0 ! for safety
     this%idims(8) = SIZE(this%rawgrib)
-    CALL grbin1(1, grio_rmiss, SIZE(this%idims), this%idims, this%rawgrib, ibmap, &
+    CALL grbin1(grb_ed, grio_rmiss, SIZE(this%idims), this%idims, this%rawgrib, ibmap, &
      this%isec1, this%isec2, this%isec3, this%isec4, this%zsec2, pzsec4, ier)
     this%isec0(1) = this%idims(19) ! reassign length (already done at cuegin)
     IF (ier == 0) EXIT

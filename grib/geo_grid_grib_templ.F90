@@ -37,7 +37,7 @@ INTEGER :: proj, x1, x2, xs, y1, y2, ys, ord(2)
 REAL :: s2_4, s2_5, s2_7, s2_8, rot
 REAL(kind=fp_gg), POINTER :: field(:,:)
 
-SELECT CASE(grib%isec2(1))
+SELECT CASE(grib%isec2(idrt))
 CASE(0)
   proj = gg_proj_geo
 CASE(10)
@@ -46,8 +46,8 @@ CASE(10)
 !  proj = gg_proj_utm
 CASE default
   proj = gg_proj_gen
-  CALL raise_warning('proiezione (drt) grib '//to_char(grib%isec2(1)) &
-   //' non supportata, procedo lo stesso')
+  CALL raise_warning('projection (drt) grib '//TRIM(to_char(grib%isec2(idrt))) &
+   //' not supported, I proceed anyway')
 END SELECT
 CALL setval(this, proj=proj)
 
@@ -148,7 +148,7 @@ ELSE
   y2 = grib%isec2(iny)
   ys = 1
 ENDIF
-IF (IAND(grib%isec2(11), 32) == 0) THEN
+IF (IAND(grib%isec2(iscm), 32) == 0) THEN
   ord = (/1,2/)
 ELSE
   ord = (/2,1/)
@@ -225,7 +225,8 @@ CASE(0, 10, 20, 30) ! Lat/lon
 #endif
 
 CASE DEFAULT ! Add other projections!!
-  CALL raise_error('projection '//to_char(grib%isec2(1))//' not supported', 1, ier)
+  CALL raise_error('projection '//TRIM(to_char(grib%isec2(idrt))) &
+   //' not supported', 1, ier)
   RETURN
 END SELECT
 

@@ -108,31 +108,31 @@ AM_CONDITIONAL(SHP, test "x$enableval" = "xyes")
 
 enablegrib=no
 AC_ARG_ENABLE(emoslib, AC_HELP_STRING([--disable-emoslib],
-  [disable grib support with emoslib]),,[enableval=yes])dnl default enable
+  [disable grib support with ECMWF emos library]),,[enableval=yes])dnl default enable
 if test "x$enableval" = "xyes"; then
 AC_CHECK_LIB([emos], [gribex],
- AC_MSG_RESULT([emoslib code included])
+ AC_MSG_RESULT([ECMWF emos code included])
   EMOS_LIBS="-lemos"
   AC_SUBST(EMOS_LIBS),
  AC_MSG_ERROR([ECMWF emos library not found]))
 else
-AC_MSG_RESULT([emos code not included])
+AC_MSG_RESULT([ECMWF emos code not included])
 fi
 AM_CONDITIONAL(EMOS, test "x$enableval" = "xyes")
 if test "x$enableval" = "xyes"; then
 enablegrib=yes
 fi
 
-AC_ARG_ENABLE(dwdlibgrib1, AC_HELP_STRING([--enable-dwdlibgrib1],
-  [enable grib support with dwdlibgrib1]),,[enableval=no])dnl default disable
+AC_ARG_ENABLE(dwdgrib1, AC_HELP_STRING([--enable-dwdgrib1],
+  [enable grib support with DWD grib1 library]),,[enableval=no])dnl default disable
 if test "x$enableval" = "xyes"; then
 AC_CHECK_LIB([grib1], [grbin1],
- AC_MSG_RESULT([dwdlibgrib1 code included])
+ AC_MSG_RESULT([DWD grib1 code included])
   DWDGRIB1_LIBS="-lgrib1"
   AC_SUBST(DWDGRIB1_LIBS),
  AC_MSG_ERROR([DWD grib1 library not found]))
 else
-AC_MSG_RESULT([dwdlibgrib1 code not included])
+AC_MSG_RESULT([DWD grib1 code not included])
 fi
 AM_CONDITIONAL(DWDGRIB1, test "x$enableval" = "xyes")
 if test "x$enableval" = "xyes"; then
