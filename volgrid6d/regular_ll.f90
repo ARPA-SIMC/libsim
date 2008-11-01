@@ -4,6 +4,8 @@ module regular_ll_class
 
 use log4fortran
 use char_utilities
+use grib_api
+use err_handling
 
 implicit none
 
@@ -59,8 +61,21 @@ INTERFACE read_unit
 END INTERFACE
 
 
+!> Import
+!! Legge i valori dal grib e li imposta appropriatamente
+INTERFACE import
+  MODULE PROCEDURE import_regular_ll
+END INTERFACE
+
+!> Export
+!! Imposta i valori nel grib
+INTERFACE export
+  MODULE PROCEDURE export_regular_ll
+END INTERFACE
+
+
 private
-public init,delete,grid_proj,grid_unproj,proj,unproj,get_val,read_unit,write_unit
+public init,delete,grid_proj,grid_unproj,proj,unproj,get_val,read_unit,write_unit,import,export
 public grid_dim,grid_regular_ll
 
 !>\brief dimensioni del grigliato lat lon con eventuali vettori di coordinate
@@ -348,6 +363,141 @@ ENDIF
 
 END SUBROUTINE write_unit_regular_ll
 
+
+
+subroutine import_regular_ll(this,dim,gaid)
+
+type(grid_regular_ll),intent(out) ::this
+type(grid_dim),intent(out)        :: dim
+integer,INTENT(in)                :: gaid
+doubleprecision :: loFirst,loLast,laFirst,laLast
+
+!!$integer ::EditionNumber
+
+! TODO
+! gestire component flag
+! component_flag
+
+
+!non usati
+!geography.gridWestEast
+!geography.gridNorthSouth
+
+
+call import_dim(dim,gaid)
+
+call grib_get(gaid,'geography.loFirst' ,loFirst)
+call grib_get(gaid,'geography.loLast'  ,loLast)
+call grib_get(gaid,'geography.laFirst' ,laFirst)
+call grib_get(gaid,'geography.laLast'  ,laLast)
+
+!TODO
+! la questione è piu' complicata
+! per avere un processo reversibile vanno calcolate usando lo scan mode
+
+this%lon_min=min(loFirst,loLast)
+this%lon_max=max(loFirst,loLast)
+this%lat_min=min(laFirst,laLast)
+this%lat_max=max(laFirst,laLast)
+
+
+!!$call grib_get(gaid,'GRIBEditionNumber',EditionNumber)
+!!$
+!!$if (EditionNumber == 1)then
+!!$
+!!$   call grib_get(gaid,'',this%)
+!!$
+!!$else if (EditionNumber == 2)then
+!!$
+!!$   call grib_get(gaid,'',this%)
+!!$  
+!!$else
+!!$
+!!$  CALL raise_error('GribEditionNumber not supported')
+!!$
+!!$end if
+
+end subroutine import_regular_ll
+
+
+
+subroutine export_regular_ll(this,dim,gaid)
+type(grid_regular_ll),intent(in) ::this
+type(grid_dim),intent(in)        :: dim
+integer,INTENT(in)               :: gaid
+doubleprecision :: loFirst,loLast,laFirst,laLast
+!!$integer ::EditionNumber
+
+call export_dim(dim,gaid)
+
+! TODO
+! gestire component flag
+! component_flag
+
+
+! TODO
+! la questione è piu' complicata
+! per avere un processo reversibile vanno calcolate usando lo scan mode
+! iScansNegatively
+! jScansPositively
+! jPointsAreConsecutive
+! alternativeRowScanning
+
+! QUESTO E' SBAGLIATO
+
+loFirst = this%lon_min
+loLast  = this%lon_max
+laFirst = this%lat_min
+laLast  = this%lat_max
+
+call grib_set(gaid,'geography.loFirst' ,loFirst)
+call grib_set(gaid,'geography.loLast'  ,loLast)
+call grib_set(gaid,'geography.laFirst' ,laFirst)
+call grib_set(gaid,'geography.laLast'  ,laLast)
+
+! TODO
+! bisogna anche eventualmente ricalcolare i passi
+
+
+!!$call grib_get(gaid,'GRIBEditionNumber',EditionNumber)
+!!$
+!!$if (EditionNumber == 1)then
+!!$
+!!$   call grib_set(gaid,'',this%)
+!!$
+!!$else if (EditionNumber == 2)then
+!!$
+!!$   call grib_set(gaid,'',this%)
+!!$
+!!$else
+!!$
+!!$  CALL raise_error('GribEditionNumber not supported')
+!!$
+!!$end if
+
+end subroutine export_regular_ll
+
+
+
+subroutine import_dim(this,gaid)
+type(grid_dim),intent(out) :: this
+integer,INTENT(in)             :: gaid
+
+   call grib_get(gaid,'numberOfPointsAlongAMeridian',this%nx)
+   call grib_get(gaid,'numberOfPointsAlongAParallel',this%ny)
+
+end subroutine import_dim
+
+
+
+subroutine export_dim(this,gaid)
+type(grid_dim),intent(in) :: this
+integer,INTENT(in)             :: gaid
+
+   call grib_set(gaid,'numberOfPointsAlongAMeridian',this%nx)
+   call grib_set(gaid,'numberOfPointsAlongAParallel',this%ny)
+
+end subroutine export_dim
 
 
 end module regular_ll_class

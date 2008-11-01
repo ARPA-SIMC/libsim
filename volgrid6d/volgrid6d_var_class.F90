@@ -5,6 +5,7 @@ MODULE volgrid6d_var_class
 USE kinds
 USE missing_values
 use grib_api
+use err_handling
 
 IMPLICIT NONE
 
@@ -250,7 +251,7 @@ if (EditionNumber == 1)then
 
   call init (this, centre, category, number)
 
-else if (EditionNumber == 1)then
+else if (EditionNumber == 2)then
 
   call grib_get(gaid,'identificationOfOriginatingGeneratingCentre',centre)
   call grib_get(gaid,'discipline',discipline)

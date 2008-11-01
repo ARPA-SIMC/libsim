@@ -159,7 +159,7 @@ TYPE(gridinfo),intent(out) :: this !< oggetto da eliminare
 call l4f_category_log(this%category,L4F_DEBUG,"ora provo ad importare da grib " )
 
 
-!call import(this%grid,this%dim,this%gaid)
+call import(this%grid,this%dim,this%gaid)
 call import(this%time,this%gaid)
 call import(this%timerange,this%gaid)
 call import(this%level,this%gaid)
@@ -177,7 +177,7 @@ TYPE(gridinfo),intent(out) :: this !< oggetto da eliminare
 call l4f_category_log(this%category,L4F_DEBUG,"ora provo ad importare da grib " )
 
 
-!call export(this%grid,this%dim,this%gaid)
+call export(this%grid,this%dim,this%gaid)
 call export(this%time,this%gaid)
 call export(this%timerange,this%gaid)
 call export(this%level,this%gaid)

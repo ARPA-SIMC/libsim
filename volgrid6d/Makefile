@@ -4,7 +4,7 @@
 FC = gfortran
 LD = gfortran
 FFLAGS=-I../log4fortran -I../base -I../vol7d -I/usr/include -g -fbounds-check 
-LDFLAGS=  -lsim_vol7d -lsim_base -llog4fortran
+LDFLAGS=  -lsim_vol7d -lsim_base -llog4fortran -lgrib_api_f90 -lgrib_api 
 
 
 

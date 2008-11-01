@@ -5,6 +5,8 @@ module rotated_ll_class
 use log4fortran
 use regular_ll_class
 USE phys_const
+use grib_api
+use err_handling
 
 implicit none
 
@@ -59,6 +61,20 @@ INTERFACE read_unit
 END INTERFACE
 
 
+!> Import
+!! Legge i valori dal grib e li imposta appropriatamente
+INTERFACE import
+  MODULE PROCEDURE import_rotated_ll
+END INTERFACE
+
+!> Export
+!! Imposta i valori nel grib
+INTERFACE export
+  MODULE PROCEDURE export_rotated_ll
+END INTERFACE
+
+
+
 !>\brief definizione del grigliato rotated lat lon
 type grid_rotated_ll
 
@@ -73,7 +89,7 @@ end type grid_rotated_ll
 
 
 private
-public init,delete,grid_proj,grid_unproj,proj,unproj,get_val,read_unit,write_unit
+public init,delete,grid_proj,grid_unproj,proj,unproj,get_val,read_unit,write_unit,import,export
 public grid_rotated_ll
 
 
@@ -286,6 +302,70 @@ ELSE
 ENDIF
 
 END SUBROUTINE write_unit_rotated_ll
+
+
+
+subroutine import_rotated_ll(this,dim,gaid)
+
+type(grid_rotated_ll),intent(out) ::this
+type(grid_dim),intent(out) :: dim
+integer,INTENT(in)              :: gaid
+integer ::EditionNumber
+
+call import (this%regular_ll,dim,gaid)
+
+call grib_get(gaid,'GRIBEditionNumber',EditionNumber)
+
+call grib_get(gaid,'longitudeOfSouthernPoleInDegrees',this%longitude_south_pole)
+call grib_get(gaid,'latitudeOfSouthernPoleInDegrees',this%latitude_south_pole)
+
+if (EditionNumber == 1)then
+
+   call grib_get(gaid,'angleOfRotationInDegrees',this%angle_rotation)
+
+else if (EditionNumber == 2)then
+
+  call grib_get(gaid,'angleOfRotationOfProjectionInDegrees',this%angle_rotation)
+  
+else
+
+  CALL raise_error('GribEditionNumber not supported')
+
+end if
+                                ! da capire come ottenere 
+
+end subroutine import_rotated_ll
+
+
+
+subroutine export_rotated_ll(this,dim,gaid)
+type(grid_rotated_ll),intent(in) ::this
+type(grid_dim),intent(in) :: dim
+integer,INTENT(in)             :: gaid
+integer ::EditionNumber
+
+call export (this%regular_ll,dim,gaid)
+
+call grib_set(gaid,'longitudeOfSouthernPoleInDegrees',this%longitude_south_pole)
+call grib_set(gaid,'latitudeOfSouthernPoleInDegrees',this%latitude_south_pole)
+
+call grib_get(gaid,'GRIBEditionNumber',EditionNumber)
+
+if (EditionNumber == 1)then
+
+   call grib_set(gaid,'angleOfRotationInDegrees',this%angle_rotation)
+
+else if (EditionNumber == 2)then
+
+   call grib_set(gaid,'angleOfRotationOfProjectionInDegrees',this%angle_rotation)
+
+else
+
+  CALL raise_error('GribEditionNumber not supported')
+
+end if
+                                ! da capire come ottenere 
+end subroutine export_rotated_ll
 
 
 

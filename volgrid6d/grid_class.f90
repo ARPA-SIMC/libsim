@@ -57,10 +57,18 @@ INTERFACE read_unit
   MODULE PROCEDURE read_unit_grid
 END INTERFACE
 
+INTERFACE import
+  MODULE PROCEDURE import_grid
+END INTERFACE
+
+INTERFACE export
+  MODULE PROCEDURE export_grid
+END INTERFACE
+
 
 private
 
-public grids_proj,grids_unproj,grid_def,grid_dim,init,delete,get_val,write_unit,read_unit
+public grids_proj,grids_unproj,grid_def,grid_dim,init,delete,get_val,write_unit,read_unit,import,export
 
 contains
 
@@ -296,6 +304,55 @@ call write_unit(dim,unit)
 
 
 END SUBROUTINE write_unit_grid
+
+
+
+SUBROUTINE import_grid(this,dim, gaid) 
+
+type(grid_def),intent(out) :: this !< oggetto def
+type(grid_dim),intent(out) :: dim !< oggetto dim
+INTEGER, INTENT(in) :: gaid !< grib_api id da cui leggere
+
+
+select case ( this%type%type)
+
+case ( "regular_ll")
+  call import(this%regular_ll,dim,gaid)
+
+case ( "rotated_ll")
+  call import(this%rotated_ll,dim,gaid)
+  
+case default
+  call l4f_category_log(this%category,L4F_ERROR,"gtype: "//this%type%type//" non gestita" )
+  call exit (1)
+
+end select
+
+END SUBROUTINE import_grid
+
+
+SUBROUTINE export_grid(this,dim, gaid) 
+
+type(grid_def),intent(out) :: this !< oggetto def
+type(grid_dim),intent(out) :: dim !< oggetto dim
+INTEGER, INTENT(in) :: gaid !< grib_api id da cui leggere
+
+
+select case ( this%type%type)
+
+case ( "regular_ll")
+  call export(this%regular_ll,dim,gaid)
+
+case ( "rotated_ll")
+  call export(this%rotated_ll,dim,gaid)
+  
+case default
+  call l4f_category_log(this%category,L4F_ERROR,"gtype: "//this%type%type//" non gestita" )
+  call exit (1)
+
+end select
+
+END SUBROUTINE export_grid
 
 
 end module grid_class
