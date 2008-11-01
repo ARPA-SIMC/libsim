@@ -10,6 +10,7 @@ module grid_class
 use regular_ll_class
 use rotated_ll_class
 use log4fortran
+use grib_api
 
 implicit none
 
@@ -313,6 +314,8 @@ type(grid_def),intent(out) :: this !< oggetto def
 type(grid_dim),intent(out) :: dim !< oggetto dim
 INTEGER, INTENT(in) :: gaid !< grib_api id da cui leggere
 
+call grib_get(gaid,'typeOfGrid' ,this%type%type)
+call l4f_category_log(this%category,L4F_DEBUG,"gtype: "//this%type%type)
 
 select case ( this%type%type)
 
@@ -323,7 +326,7 @@ case ( "rotated_ll")
   call import(this%rotated_ll,dim,gaid)
   
 case default
-  call l4f_category_log(this%category,L4F_ERROR,"gtype: "//this%type%type//" non gestita" )
+  call l4f_category_log(this%category,L4F_ERROR,"gtype non gestita: "//trim(this%type%type))
   call exit (1)
 
 end select

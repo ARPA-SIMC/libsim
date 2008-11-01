@@ -14,7 +14,7 @@ character (len=255),parameter:: subcategory="gridinfo_class"
 
 
 !> Definisce un oggetto contenente le informazioni relative a un grib
-type gridinfo
+type gridinfo_type
 
 
 !> descrittore del grigliato
@@ -33,7 +33,7 @@ type gridinfo
 
   integer :: category !< log4fortran
 
-end type gridinfo
+end type gridinfo_type
 
 
 
@@ -49,25 +49,25 @@ END INTERFACE
 !> Import
 !! Legge i valori dal grib e li imposta appropriatamente
 INTERFACE import
-  MODULE PROCEDURE import_time,import_timerange,import_level
+  MODULE PROCEDURE import_time,import_timerange,import_level,import_gridinfo
 END INTERFACE
 
 !> Export
 !! Imposta i valori nel grib
 INTERFACE export
-  MODULE PROCEDURE export_time,export_timerange,export_level
+  MODULE PROCEDURE export_time,export_timerange,export_level,export_gridinfo
 END INTERFACE
 
 
 private
 
-public gridinfo,init,delete
+public gridinfo_type,init,delete,import,export
 
 contains
 
-!> Inizializza un oggetto di tipo gridinfo.
+!> Inizializza un oggetto di tipo gridinfo_type.
 SUBROUTINE init_gridinfo(this,gaid,grid,dim,time,timerange,level,var,categoryappend)
-TYPE(gridinfo),intent(out) :: this !< oggetto da inizializzare
+TYPE(gridinfo_type),intent(out) :: this !< oggetto da inizializzare
 
 !> id del grib come da grib_api
 integer,intent(in),optional ::  gaid
@@ -134,7 +134,7 @@ end SUBROUTINE init_gridinfo
 
 
 subroutine delete_gridinfo (this)
-TYPE(gridinfo),intent(out) :: this !< oggetto da eliminare
+TYPE(gridinfo_type),intent(out) :: this !< oggetto da eliminare
 
 
 call delete(this%grid,this%dim)
@@ -153,7 +153,7 @@ end subroutine delete_gridinfo
 
 subroutine import_gridinfo (this)
 
-TYPE(gridinfo),intent(out) :: this !< oggetto da eliminare
+TYPE(gridinfo_type),intent(out) :: this !< oggetto da eliminare
 
 
 call l4f_category_log(this%category,L4F_DEBUG,"ora provo ad importare da grib " )
@@ -171,7 +171,7 @@ end subroutine import_gridinfo
 
 subroutine export_gridinfo (this)
 
-TYPE(gridinfo),intent(out) :: this !< oggetto da eliminare
+TYPE(gridinfo_type),intent(out) :: this !< oggetto da eliminare
 
 
 call l4f_category_log(this%category,L4F_DEBUG,"ora provo ad importare da grib " )
@@ -195,8 +195,8 @@ subroutine import_time(this,gaid)
 TYPE(datetime),INTENT(out) :: this
 integer,INTENT(in)         :: gaid
 integer                    :: EditionNumber
-character(len=8)           :: date
-character(len=9)           :: time
+character(len=9)           :: date
+character(len=10)           :: time
 
 
 call grib_get(gaid,'GRIBEditionNumber',EditionNumber)
@@ -204,9 +204,9 @@ call grib_get(gaid,'GRIBEditionNumber',EditionNumber)
 if (EditionNumber == 1 .or.EditionNumber == 2 )then
 
   call grib_get(gaid,'dataDate',date )
-  call grib_get(gaid,'dataTime',time(:4) )
+  call grib_get(gaid,'dataTime',time(:5) )
 
-  call init (this,simpledate=date//time(:4))
+  call init (this,simpledate=date(:8)//time(:4))
 
 else
 
@@ -319,18 +319,27 @@ subroutine import_timerange(this,gaid)
 
 TYPE(vol7d_timerange),INTENT(out) :: this
 integer,INTENT(in)          :: gaid
-integer ::EditionNumber,timerange,p1,p2
+integer ::EditionNumber,timerange,p1,p2,status
 
 call grib_get(gaid,'GRIBEditionNumber',EditionNumber)
 
 if (EditionNumber == 1 .or. EditionNumber == 2)then
   
-  call grib_get(gaid,'typeOfStatisticalProcessing',timerange)
-  call grib_get(gaid,'endStepInHours',p1)
-  call grib_get(gaid,'lengthOfTimeRange',p2)
+  call grib_get(gaid,'typeOfStatisticalProcessing',timerange,status)
+  if (status == GRIB_SUCCESS) then
+     call grib_get(gaid,'endStepInHours',p1)
+     call grib_get(gaid,'lengthOfTimeRange',p2)
   
-  call init (this, timerange,p1,p2)
+     call init (this, timerange,p1,p2)
+  else
 
+! TODO
+! qui forse bisogna capire meglio in quale template siamo
+! e come mai grib1 va a finire qui
+
+     call init (this)
+     
+  end if
 else
 
   call raise_error('GribEditionNumber not supported')
