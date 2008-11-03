@@ -12,6 +12,14 @@ implicit none
 
 character (len=255),parameter:: subcategory="regular_ll_class"
 
+!> Operatore logico di uguaglianza tra oggetti della classe regular_ll.
+!! Funziona anche per 
+!! confronti di tipo array-array (qualsiasi n. di dimensioni) e di tipo
+!! scalare-vettore(1-d) (ma non vettore(1-d)-scalare o tra array con più
+!! di 1 dimensione e scalari).
+INTERFACE OPERATOR (==)
+  MODULE PROCEDURE regular_ll_eq,dim_eq
+END INTERFACE
 
 INTERFACE init
   MODULE PROCEDURE init_regular_ll
@@ -75,7 +83,7 @@ END INTERFACE
 
 
 private
-public init,delete,grid_proj,grid_unproj,proj,unproj,get_val,read_unit,write_unit,import,export
+public init,delete,grid_proj,grid_unproj,proj,unproj,get_val,read_unit,write_unit,import,export,operator(==)
 public grid_dim,grid_regular_ll
 
 !>\brief dimensioni del grigliato lat lon con eventuali vettori di coordinate
@@ -498,6 +506,33 @@ integer,INTENT(in)             :: gaid
    call grib_set(gaid,'numberOfPointsAlongAParallel',this%ny)
 
 end subroutine export_dim
+
+
+! TODO
+! bisogna sviluppare gli altri operatori
+
+
+elemental FUNCTION regular_ll_eq(this, that) RESULT(res)
+TYPE(grid_regular_ll),INTENT(IN) :: this, that
+LOGICAL :: res
+
+res = this%lon_min == that%lon_min .and. &
+ this%lon_max == that%lon_max .and. &
+ this%lat_min == that%lat_min .and. &
+ this%lat_max == that%lat_max .and. &
+ this%component_flag == that%component_flag
+
+END FUNCTION regular_ll_eq
+
+elemental FUNCTION dim_eq(this, that) RESULT(res)
+TYPE(grid_dim),INTENT(IN) :: this, that
+LOGICAL :: res
+
+res = this%nx == that%nx .and. &
+ this%ny == that%ny
+
+END FUNCTION dim_eq
+
 
 
 end module regular_ll_class

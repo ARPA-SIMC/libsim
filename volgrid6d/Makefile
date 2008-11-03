@@ -15,8 +15,8 @@ demo.o: ./demo.f90 grid_class.o volgrid6d_var_class.o gridinfo_class.o volgrid6d
 	$(FC) $(FFLAGS) $(OTHERFLAGS) -c	./demo.f90
 demo2.o: ./demo2.f90 grid_class.o volgrid6d_var_class.o gridinfo_class.o
 	$(FC) $(FFLAGS) $(OTHERFLAGS) -c	./demo2.f90
-grid_class.o: ./grid_class.f90 regular_ll.o rotated_ll.o
-	$(FC) $(FFLAGS) $(OTHERFLAGS) -c	./grid_class.f90
+grid_class.o: ./grid_class.F90 regular_ll.o rotated_ll.o
+	$(FC) $(FFLAGS) $(OTHERFLAGS) -c	./grid_class.F90
 regular_ll.o: ./regular_ll.f90
 	$(FC) $(FFLAGS) $(OTHERFLAGS) -c	./regular_ll.f90
 rotated_ll.o: ./rotated_ll.f90 regular_ll.o
@@ -28,7 +28,7 @@ volgrid6d_class.o: ./volgrid6d_class.f90
 gridinfo_class.o: ./gridinfo_class.f90
 	$(FC) $(FFLAGS) $(OTHERFLAGS) -c	./gridinfo_class.f90
 
-SRC = demo.f90 demo2.f90 ./grid_class.f90 ./rotated_ll.f90 ./regular_ll.f90 ./volgrid6d_var_class.F90 ./volgrid6d_class.F90 gridinfo_class.f90
+SRC = demo.f90 demo2.f90 ./grid_class.F90 ./rotated_ll.f90 ./regular_ll.f90 ./volgrid6d_var_class.F90 ./volgrid6d_class.F90 gridinfo_class.f90
 OBJ =  grid_class.o rotated_ll.o regular_ll.o volgrid6d_var_class.o volgrid6d_class.o gridinfo_class.o
 clean: neat
 	-rm -f .cppdefs $(OBJ) demo demo2

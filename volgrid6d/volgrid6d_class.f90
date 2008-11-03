@@ -8,6 +8,7 @@ USE vol7d_level_class
 USE volgrid6d_var_class
 use log4fortran
 USE vol7d_utilities
+use gridinfo_class
 
 IMPLICIT NONE
 
@@ -48,22 +49,22 @@ INTERFACE delete
   MODULE PROCEDURE delete_volgrid6d
 END INTERFACE
 
-!!$!> Scrittura su file.
-!!$INTERFACE export
-!!$  MODULE PROCEDURE volgrid6d_write_on_file
-!!$END INTERFACE
-!!$
-!!$!> Lettura da file.
-!!$INTERFACE import
-!!$  MODULE PROCEDURE volgrid6d_read_from_file
-!!$END INTERFACE
-!!$
+!> Lettura da file.
+INTERFACE import
+  MODULE PROCEDURE volgrid6d_read_from_file,import_from_gridinfo,import_from_gridinfov
+END INTERFACE
+
+
+!> Scrittura su file.
+INTERFACE export
+  MODULE PROCEDURE volgrid6d_write_on_file,export_to_gridinfo,export_to_gridinfov
+END INTERFACE
 
 
 
 private
 
-public volgrid6d,init,delete !,export,import
+public volgrid6d,init,delete,export,import
 
 
 contains
@@ -422,6 +423,112 @@ if (associated(this%voldati))     read(unit=lunit)this%voldati
 
 
 end subroutine volgrid6d_read_from_file
+
+
+
+
+subroutine import_from_gridinfo (this,gridinfo,categoryappend)
+
+TYPE(volgrid6d),INTENT(OUT) :: this !< Volume volgrid6d da leggere
+type(gridinfo_type),intent(in) :: gridinfo !< gridinfo 
+character(len=*),INTENT(in),OPTIONAL :: categoryappend !< appende questo suffisso al namespace category di log4fortran
+character(len=255)   :: type
+
+
+call get_val(this%grid,this%dim,type=type)
+
+if (type == cmiss)then
+
+   call init(this,gridinfo%grid,categoryappend)
+
+else if (.not. (this%grid == gridinfo%grid .and.this%dim == gridinfo%dim ))then
+
+!TODO inserire log4f
+   
+   call raise_error ("volgrid6d: grid are different and this is not possible")
+
+end if
+
+this%gaid(&
+     index(this%time,     gridinfo%time),&
+     index(this%timerange,gridinfo%timerange),&
+     index(this%level,    gridinfo%level),&
+     index(this%var,      gridinfo%var)&
+     )=gridinfo%gaid
+
+
+end subroutine import_from_gridinfo
+
+
+subroutine export_to_gridinfo (this,gridinfo,itime,itimerange,ilevel,ivar)
+
+TYPE(volgrid6d),INTENT(in) :: this !< Volume volgrid6d da leggere
+type(gridinfo_type),intent(out) :: gridinfo !< gridinfo 
+integer ::itime,itimerange,ilevel,ivar
+
+gridinfo%grid      =this%grid
+gridinfo%dim        =this%dim
+gridinfo%time      =this%time(itime)
+gridinfo%timerange =this%timerange(itimerange)
+gridinfo%level     =this%level(ilevel)
+gridinfo%var       =this%var(ivar)
+gridinfo%gaid      =this%gaid(itime,itimerange,ilevel,ivar)
+
+end subroutine export_to_gridinfo
+
+
+
+subroutine import_from_gridinfov (this,gridinfov,categoryappend)
+
+TYPE(volgrid6d),INTENT(OUT) :: this(:) !< Vettore Volume volgrid6d da leggere
+type(gridinfo_type),intent(in) :: gridinfov(:) !< vettore gridinfo 
+character(len=*),INTENT(in),OPTIONAL :: categoryappend !< appende questo suffisso al namespace category di log4fortran
+integer :: i
+
+
+!TODO
+!contare le aree e tutto il resto
+! init alloc e quant'altro
+
+
+do i=1,size(gridinfov)
+
+   call import (this(i),gridinfov(i),categoryappend)
+
+end do
+
+
+end subroutine import_from_gridinfov
+
+
+subroutine export_to_gridinfov (this,gridinfov,categoryappend)
+
+TYPE(volgrid6d),INTENT(in) :: this !< Volume volgrid6d da leggere
+type(gridinfo_type),intent(out) :: gridinfov(:) !< vettore gridinfo 
+character(len=*),INTENT(in),OPTIONAL :: categoryappend !< appende questo suffisso al namespace category di log4fortran
+integer :: i,itime,itimerange,ilevel,ivar
+
+
+if (size(gridinfov) /= size(this%gaid))then
+
+   !TODO
+   !log4f
+
+   call raise_error("dimension mismach")
+end if
+
+
+! TODO
+! questo loop è da riscrivere per fare lo scan del volume
+
+do i=1,size(gridinfov)
+
+   call export (this,gridinfov(i),itime,itimerange,ilevel,ivar)
+
+end do
+
+
+end subroutine export_to_gridinfov
 
 
 end module volgrid6d_class

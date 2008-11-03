@@ -12,6 +12,15 @@ implicit none
 
 character (len=255),parameter:: subcategory="regular_ll_class"
 
+!> Operatore logico di uguaglianza tra oggetti della classe rotated_ll.
+!! Funziona anche per 
+!! confronti di tipo array-array (qualsiasi n. di dimensioni) e di tipo
+!! scalare-vettore(1-d) (ma non vettore(1-d)-scalare o tra array con più
+!! di 1 dimensione e scalari).
+INTERFACE OPERATOR (==)
+  MODULE PROCEDURE rotated_ll_eq
+END INTERFACE
+
 
 INTERFACE init
   MODULE PROCEDURE init_rotated_ll
@@ -89,7 +98,7 @@ end type grid_rotated_ll
 
 
 private
-public init,delete,grid_proj,grid_unproj,proj,unproj,get_val,read_unit,write_unit,import,export
+public init,delete,grid_proj,grid_unproj,proj,unproj,get_val,read_unit,write_unit,import,export,operator(==)
 public grid_rotated_ll
 
 
@@ -419,6 +428,23 @@ end subroutine export_rotated_ll
 !!$
 !!$
 !!$END SUBROUTINE rtlld
+
+
+! TODO
+! bisogna sviluppare gli altri operatori
+
+
+elemental FUNCTION rotated_ll_eq(this, that) RESULT(res)
+TYPE(grid_rotated_ll),INTENT(IN) :: this, that
+LOGICAL :: res
+
+
+res = this%regular_ll == that%regular_ll .and. &
+ this%latitude_south_pole == that%latitude_south_pole .and. &
+ this%longitude_south_pole == that%longitude_south_pole .and. &
+ this%angle_rotation == that%angle_rotation
+
+END FUNCTION rotated_ll_eq
 
 
 end module rotated_ll_class

@@ -38,6 +38,16 @@ type grid_def
 end type grid_def
 
 
+!> Operatore logico di uguaglianza tra oggetti della classe grid.
+!! Funziona anche per 
+!! confronti di tipo array-array (qualsiasi n. di dimensioni) e di tipo
+!! scalare-vettore(1-d) (ma non vettore(1-d)-scalare o tra array con più
+!! di 1 dimensione e scalari).
+INTERFACE OPERATOR (==)
+  MODULE PROCEDURE grid_eq, grid_type_eq
+END INTERFACE
+
+
 INTERFACE init
   MODULE PROCEDURE init_grid
 END INTERFACE
@@ -69,7 +79,7 @@ END INTERFACE
 
 private
 
-public grids_proj,grids_unproj,grid_def,grid_dim,init,delete,get_val,write_unit,read_unit,import,export
+public grids_proj,grids_unproj,grid_def,grid_dim,init,delete,get_val,write_unit,read_unit,import,export,operator(==)
 
 contains
 
@@ -356,6 +366,47 @@ case default
 end select
 
 END SUBROUTINE export_grid
+
+
+! TODO
+! bisogna sviluppare gli altri operatori
+
+
+elemental FUNCTION grid_eq(this, that) RESULT(res)
+TYPE(grid_def),INTENT(IN) :: this, that
+LOGICAL :: res
+
+res = this%type == that%type .and. &
+ this%regular_ll == that%regular_ll .and. &
+ this%rotated_ll == that%rotated_ll
+
+END FUNCTION grid_eq
+
+
+elemental FUNCTION grid_type_eq(this, that) RESULT(res)
+TYPE(grid_type),INTENT(IN) :: this, that
+LOGICAL :: res
+
+res = this%type == that%type
+
+END FUNCTION grid_type_eq
+
+
+
+
+! Definisce le funzioni count_distinct e pack_distinct
+#define VOL7D_POLY_TYPE TYPE(grid_type)
+#define VOL7D_POLY_TYPES _grid_type
+#include "../vol7d/vol7d_distinct.F90"
+#undef VOL7D_POLY_TYPE
+#undef VOL7D_POLY_TYPES
+
+! Definisce le funzioni count_distinct e pack_distinct
+#define VOL7D_POLY_TYPE TYPE(grid_def)
+#define VOL7D_POLY_TYPES _grid_def
+#include "../vol7d/vol7d_distinct.F90"
+#undef VOL7D_POLY_TYPE
+#undef VOL7D_POLY_TYPES
 
 
 end module grid_class
