@@ -11,6 +11,7 @@ use regular_ll_class
 use rotated_ll_class
 use log4fortran
 use grib_api
+use err_handling
 
 implicit none
 
@@ -38,61 +39,76 @@ type grid_def
 end type grid_def
 
 
+
+!>\brief definizione del grigliato in genere e delle sue dimensioni
+type griddim_def
+
+
+  type(grid_def)   :: grid
+  type(grid_dim)   :: dim
+
+  integer :: category !< log4fortran
+
+end type griddim_def
+
+
+
+
+
 !> Operatore logico di uguaglianza tra oggetti della classe grid.
 !! Funziona anche per 
 !! confronti di tipo array-array (qualsiasi n. di dimensioni) e di tipo
 !! scalare-vettore(1-d) (ma non vettore(1-d)-scalare o tra array con più
 !! di 1 dimensione e scalari).
 INTERFACE OPERATOR (==)
-  MODULE PROCEDURE grid_eq, grid_type_eq
+  MODULE PROCEDURE grid_eq, grid_type_eq,griddim_eq
 END INTERFACE
 
 
 INTERFACE init
-  MODULE PROCEDURE init_grid
+  MODULE PROCEDURE init_griddim
 END INTERFACE
 
 INTERFACE delete
-  MODULE PROCEDURE delete_grid
+  MODULE PROCEDURE delete_griddim
 END INTERFACE
 
 INTERFACE get_val
-  MODULE PROCEDURE get_val_grid
+  MODULE PROCEDURE get_val_griddim
 END INTERFACE
 
 INTERFACE write_unit
-  MODULE PROCEDURE write_unit_grid
+  MODULE PROCEDURE write_unit_griddim
 END INTERFACE
 
 INTERFACE read_unit
-  MODULE PROCEDURE read_unit_grid
+  MODULE PROCEDURE read_unit_griddim
 END INTERFACE
 
 INTERFACE import
-  MODULE PROCEDURE import_grid
+  MODULE PROCEDURE import_griddim
 END INTERFACE
 
 INTERFACE export
-  MODULE PROCEDURE export_grid
+  MODULE PROCEDURE export_griddim
 END INTERFACE
 
 
 private
 
-public grids_proj,grids_unproj,grid_def,grid_dim,init,delete,get_val,write_unit,read_unit,import,export,operator(==)
+public griddim_proj,griddim_unproj,griddim_def,grid_def,grid_dim,init,delete,get_val,write_unit,read_unit,import,export,operator(==)
 
 contains
 
 
 
-subroutine init_grid(this,dim,type,&
+subroutine init_griddim(this,type,&
  nx,ny, &
  lon_min, lon_max, lat_min, lat_max, component_flag, &
  latitude_south_pole,longitude_south_pole,angle_rotation, &
  categoryappend)
 
-type(grid_def) :: this
-type(grid_dim) :: dim
+type(griddim_def) :: this
 
 character(len=*),INTENT(in),OPTIONAL :: type
 integer,optional :: nx, ny
@@ -109,54 +125,53 @@ call l4f_launcher(a_name,a_name_append=trim(subcategory)//"."//trim(categoryappe
 this%category=l4f_category_get(a_name)
 
 if (present(type))then
-  this%type%type=type
+  this%grid%type%type=type
 else
-  this%type%type=cmiss
+  this%grid%type%type=cmiss
   return
 end if
 
 
-call l4f_category_log(this%category,L4F_DEBUG,"init gtype: "//this%type%type )
+call l4f_category_log(this%category,L4F_DEBUG,"init gtype: "//this%grid%type%type )
 
-select case ( this%type%type)
+select case ( this%grid%type%type)
 
 case ( "regular_ll")
-  call init(this%regular_ll,dim,&
+  call init(this%grid%regular_ll,this%dim,&
    nx,ny, &
    lon_min, lon_max, lat_min, lat_max, component_flag, &
    categoryappend=trim(subcategory)//"."//trim(categoryappend))
 
 case ( "rotated_ll")
-  call init(this%rotated_ll,dim,&
+  call init(this%grid%rotated_ll,this%dim,&
    nx,ny, &
    lon_min, lon_max, lat_min, lat_max, component_flag, &
    latitude_south_pole,longitude_south_pole,angle_rotation, &
    categoryappend=trim(subcategory)//"."//trim(categoryappend))
   
 case default
-  call l4f_category_log(this%category,L4F_ERROR,"gtype: "//this%type%type//" non gestita" )
+  call l4f_category_log(this%category,L4F_ERROR,"gtype: "//this%grid%type%type//" non gestita" )
   call exit (1)
 
 end select
 
 
-end subroutine init_grid
+end subroutine init_griddim
 
 
-subroutine delete_grid(this,dim)
-type(grid_def) :: this
-type(grid_dim) :: dim
+subroutine delete_griddim(this)
+type(griddim_def) :: this
 
-select case ( this%type%type)
+select case ( this%grid%type%type)
 
 case ( "regular_ll")
-  call delete(this%regular_ll,dim)
+  call delete(this%grid%regular_ll,this%dim)
 
 case ( "rotated_ll")
-  call delete(this%rotated_ll,dim)
+  call delete(this%grid%rotated_ll,this%dim)
   
 case default
-  call l4f_category_log(this%category,L4F_ERROR,"gtype: "//this%type%type//" non gestita" )
+  call l4f_category_log(this%category,L4F_ERROR,"gtype: "//this%grid%type%type//" non gestita" )
   call exit (1)
 
 end select
@@ -165,62 +180,59 @@ end select
 call l4f_category_delete(this%category)
 
 
-end subroutine delete_grid
+end subroutine delete_griddim
 
 
 
 
-subroutine grids_proj (this,dim)
+subroutine griddim_proj (this)
 
-type(grid_def) :: this
-type(grid_dim) :: dim
+type(griddim_def) :: this
 
-select case ( this%type%type)
+select case ( this%grid%type%type)
 
 case ( "regular_ll")
-  call grid_proj(this%regular_ll,dim)
+  call grid_proj(this%grid%regular_ll,this%dim)
 
 case ( "rotated_ll")
-  call grid_proj(this%rotated_ll,dim)
+  call grid_proj(this%grid%rotated_ll,this%dim)
   
 case default
-  call l4f_category_log(this%category,L4F_ERROR,"gtype: "//this%type%type//" non gestita" )
+  call l4f_category_log(this%category,L4F_ERROR,"gtype: "//this%grid%type%type//" non gestita" )
   call exit (1)
 
 end select
 
-end subroutine grids_proj
+end subroutine griddim_proj
 
 
-subroutine grids_unproj (this,dim)
+subroutine griddim_unproj (this)
 
-type(grid_def) ::this
-type(grid_dim) :: dim
+type(griddim_def) ::this
 
-select case ( this%type%type)
+select case ( this%grid%type%type)
 
 case ( "regular_ll")
-  call grid_unproj(this%regular_ll, dim)
+  call grid_unproj(this%grid%regular_ll, this%dim)
 
 case ( "rotated_ll")
-  call grid_unproj(this%rotated_ll, dim)
+  call grid_unproj(this%grid%rotated_ll, this%dim)
 
 case default
-  call l4f_category_log(this%category,L4F_ERROR,"gtype: "//this%type%type//" non gestita" )
+  call l4f_category_log(this%category,L4F_ERROR,"gtype: "//this%grid%type%type//" non gestita" )
   call exit (1)
 
 end select
 
-end subroutine grids_unproj
+end subroutine griddim_unproj
 
 
-subroutine get_val_grid(this,dim,type,&
+subroutine get_val_griddim(this,type,&
  nx,ny, &
  lon_min, lon_max, lat_min, lat_max, component_flag, &
  latitude_south_pole,longitude_south_pole,angle_rotation)
 
-type(grid_def) :: this
-type(grid_dim) :: dim
+type(griddim_def) :: this
 
 character(len=*),INTENT(out),OPTIONAL :: type
 integer,optional,intent(out) :: nx, ny
@@ -228,61 +240,60 @@ doubleprecision,optional,intent(out) :: lon_min, lon_max, lat_min, lat_max
 doubleprecision,optional,intent(out) :: latitude_south_pole,longitude_south_pole,angle_rotation
 integer,optional,intent(out) :: component_flag
 
-if (present(type)) type = this%type%type
+if (present(type)) type = this%grid%type%type
 
-select case ( this%type%type)
+select case ( this%grid%type%type)
 
 case ( "regular_ll")
-  call get_val(this%regular_ll,dim,&
+  call get_val(this%grid%regular_ll,this%dim,&
    nx,ny, &
    lon_min, lon_max, lat_min, lat_max, component_flag)
 
 case ( "rotated_ll")
-  call get_val(this%rotated_ll,dim,&
+  call get_val(this%grid%rotated_ll,this%dim,&
    nx,ny, &
    lon_min, lon_max, lat_min, lat_max, component_flag, &
    latitude_south_pole,longitude_south_pole,angle_rotation)
   
 case default
-  call l4f_category_log(this%category,L4F_ERROR,"gtype: "//this%type%type//" non gestita" )
+  call l4f_category_log(this%category,L4F_ERROR,"gtype: "//this%grid%type%type//" non gestita" )
   call exit (1)
 
 end select
 
 
-end subroutine get_val_grid
+end subroutine get_val_griddim
 
 
 !> Legge da un'unità di file il contenuto dell'oggetto \a this.
 !! Il record da leggere deve essere stato scritto con la ::write_unit
 !! Il metodo controlla se il file è
 !! aperto per un I/O formattato o non formattato e fa la cosa giusta.
-SUBROUTINE read_unit_grid(this,dim, unit) 
+SUBROUTINE read_unit_griddim(this,unit) 
 
-type(grid_def),intent(out) :: this !< oggetto def da leggere
-type(grid_dim),intent(out) :: dim !< oggetto dim da leggere
+type(griddim_def),intent(out) :: this !< oggetto griddim da leggere
 INTEGER, INTENT(in) :: unit !< unità da cui leggere
 
 
-select case ( this%type%type)
+select case ( this%grid%type%type)
 
 case ( "regular_ll")
-  call read_unit(this%regular_ll,unit)
+  call read_unit(this%grid%regular_ll,unit)
 
 case ( "rotated_ll")
-  call read_unit(this%rotated_ll,unit)
+  call read_unit(this%grid%rotated_ll,unit)
   
 case default
-  call l4f_category_log(this%category,L4F_ERROR,"gtype: "//this%type%type//" non gestita" )
+  call l4f_category_log(this%category,L4F_ERROR,"gtype: "//this%grid%type%type//" non gestita" )
   call exit (1)
 
 end select
 
 
-call read_unit(dim,unit)
+call read_unit(this%dim,unit)
 
 
-END SUBROUTINE read_unit_grid
+END SUBROUTINE read_unit_griddim
 
 
 
@@ -290,82 +301,79 @@ END SUBROUTINE read_unit_grid
 !! Il record scritto potrà successivamente essere letto con la ::read_unit.
 !! Il metodo controlla se il file è
 !! aperto per un I/O formattato o non formattato e fa la cosa giusta.
-SUBROUTINE write_unit_grid(this,dim, unit)
+SUBROUTINE write_unit_griddim(this, unit)
 
-type(grid_def),intent(in) :: this !< oggetto def da scrivere
-type(grid_dim),intent(in) :: dim !< oggetto dim da scrivere
+type(griddim_def),intent(in) :: this !< oggetto griddim da scrivere
 INTEGER, INTENT(in) :: unit !< unità su cui scrivere
 
 
-select case ( this%type%type)
+select case ( this%grid%type%type)
 
 case ( "regular_ll")
-  call write_unit(this%regular_ll,unit)
+  call write_unit(this%grid%regular_ll,unit)
 
 case ( "rotated_ll")
-  call write_unit(this%rotated_ll,unit)
+  call write_unit(this%grid%rotated_ll,unit)
   
 case default
-  call l4f_category_log(this%category,L4F_ERROR,"gtype: "//this%type%type//" non gestita" )
-  call exit (1)
+  call l4f_category_log(this%category,L4F_ERROR,"gtype: "//this%grid%type%type//" non gestita" )
+  call raise_error("gtype non gestita")
 
 end select
 
-call write_unit(dim,unit)
+call write_unit(this%dim,unit)
 
 
-END SUBROUTINE write_unit_grid
+END SUBROUTINE write_unit_griddim
 
 
 
-SUBROUTINE import_grid(this,dim, gaid) 
+SUBROUTINE import_griddim(this, gaid) 
 
-type(grid_def),intent(out) :: this !< oggetto def
-type(grid_dim),intent(out) :: dim !< oggetto dim
+type(griddim_def),intent(out) :: this !< oggetto griddim
 INTEGER, INTENT(in) :: gaid !< grib_api id da cui leggere
 
-call grib_get(gaid,'typeOfGrid' ,this%type%type)
-call l4f_category_log(this%category,L4F_DEBUG,"gtype: "//this%type%type)
+call grib_get(gaid,'typeOfGrid' ,this%grid%type%type)
+call l4f_category_log(this%category,L4F_DEBUG,"gtype: "//this%grid%type%type)
 
-select case ( this%type%type)
+select case ( this%grid%type%type)
 
 case ( "regular_ll")
-  call import(this%regular_ll,dim,gaid)
+  call import(this%grid%regular_ll,this%dim,gaid)
 
 case ( "rotated_ll")
-  call import(this%rotated_ll,dim,gaid)
+  call import(this%grid%rotated_ll,this%dim,gaid)
   
 case default
-  call l4f_category_log(this%category,L4F_ERROR,"gtype non gestita: "//trim(this%type%type))
-  call exit (1)
+  call l4f_category_log(this%category,L4F_ERROR,"gtype non gestita: "//trim(this%grid%type%type))
+  call raise_error("gtype non gestita")
 
 end select
 
-END SUBROUTINE import_grid
+END SUBROUTINE import_griddim
 
 
-SUBROUTINE export_grid(this,dim, gaid) 
+SUBROUTINE export_griddim(this, gaid) 
 
-type(grid_def),intent(out) :: this !< oggetto def
-type(grid_dim),intent(out) :: dim !< oggetto dim
+type(griddim_def),intent(out) :: this !< oggetto griddim
 INTEGER, INTENT(in) :: gaid !< grib_api id da cui leggere
 
 
-select case ( this%type%type)
+select case ( this%grid%type%type)
 
 case ( "regular_ll")
-  call export(this%regular_ll,dim,gaid)
+  call export(this%grid%regular_ll,this%dim,gaid)
 
 case ( "rotated_ll")
-  call export(this%rotated_ll,dim,gaid)
+  call export(this%grid%rotated_ll,this%dim,gaid)
   
 case default
-  call l4f_category_log(this%category,L4F_ERROR,"gtype: "//this%type%type//" non gestita" )
-  call exit (1)
+  call l4f_category_log(this%category,L4F_ERROR,"gtype: "//this%grid%type%type//" non gestita" )
+  call raise_error("gtype non gestita")
 
 end select
 
-END SUBROUTINE export_grid
+END SUBROUTINE export_griddim
 
 
 ! TODO
@@ -381,6 +389,17 @@ res = this%type == that%type .and. &
  this%rotated_ll == that%rotated_ll
 
 END FUNCTION grid_eq
+
+
+elemental FUNCTION griddim_eq(this, that) RESULT(res)
+TYPE(griddim_def),INTENT(IN) :: this, that
+LOGICAL :: res
+
+res = this%grid == that%grid .and. &
+ this%dim == that%dim
+
+END FUNCTION griddim_eq
+
 
 
 elemental FUNCTION grid_type_eq(this, that) RESULT(res)
@@ -404,6 +423,13 @@ END FUNCTION grid_type_eq
 ! Definisce le funzioni count_distinct e pack_distinct
 #define VOL7D_POLY_TYPE TYPE(grid_def)
 #define VOL7D_POLY_TYPES _grid_def
+#include "../vol7d/vol7d_distinct.F90"
+#undef VOL7D_POLY_TYPE
+#undef VOL7D_POLY_TYPES
+
+! Definisce le funzioni count_distinct e pack_distinct
+#define VOL7D_POLY_TYPE TYPE(griddim_def)
+#define VOL7D_POLY_TYPES _griddim_def
 #include "../vol7d/vol7d_distinct.F90"
 #undef VOL7D_POLY_TYPE
 #undef VOL7D_POLY_TYPES

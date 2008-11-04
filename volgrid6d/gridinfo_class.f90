@@ -18,8 +18,7 @@ type gridinfo_type
 
 
 !> descrittore del grigliato
-  type(grid_def) :: grid
-  type(grid_dim) :: dim
+  type(griddim_def) :: griddim
 !> descrittore della dimensione tempo
   TYPE(datetime) :: time
 !> descrittore della dimensione intervallo temporale (timerange)
@@ -66,14 +65,13 @@ public gridinfo_type,init,delete,import,export
 contains
 
 !> Inizializza un oggetto di tipo gridinfo_type.
-SUBROUTINE init_gridinfo(this,gaid,grid,dim,time,timerange,level,var,categoryappend)
+SUBROUTINE init_gridinfo(this,gaid,griddim,time,timerange,level,var,categoryappend)
 TYPE(gridinfo_type),intent(out) :: this !< oggetto da inizializzare
 
 !> id del grib come da grib_api
 integer,intent(in),optional ::  gaid
 !> descrittore del grigliato
-type(grid_def),intent(in),optional :: grid
-type(grid_dim),intent(in),optional :: dim
+type(griddim_def),intent(in),optional :: griddim
 !> descrittore della dimensione tempo
 TYPE(datetime),intent(in),optional :: time
 !> descrittore della dimensione intervallo temporale (timerange)
@@ -99,11 +97,10 @@ else
   this%gaid=imiss
 end if
 
-if (present(grid).and.present(dim))then
-  this%grid=grid
-  this%dim=dim
+if (present(griddim))then
+  this%griddim=griddim
 else
-  call init(this%grid,this%dim)
+  call init(this%griddim)
 end if
 
 if (present(time))then
@@ -137,7 +134,7 @@ subroutine delete_gridinfo (this)
 TYPE(gridinfo_type),intent(out) :: this !< oggetto da eliminare
 
 
-call delete(this%grid,this%dim)
+call delete(this%griddim)
 call delete(this%time)
 call delete(this%timerange)
 call delete(this%level)
@@ -159,7 +156,7 @@ TYPE(gridinfo_type),intent(out) :: this !< oggetto da eliminare
 call l4f_category_log(this%category,L4F_DEBUG,"ora provo ad importare da grib " )
 
 
-call import(this%grid,this%dim,this%gaid)
+call import(this%griddim,this%gaid)
 call import(this%time,this%gaid)
 call import(this%timerange,this%gaid)
 call import(this%level,this%gaid)
@@ -177,7 +174,7 @@ TYPE(gridinfo_type),intent(out) :: this !< oggetto da eliminare
 call l4f_category_log(this%category,L4F_DEBUG,"ora provo ad importare da grib " )
 
 
-call export(this%grid,this%dim,this%gaid)
+call export(this%griddim,this%gaid)
 call export(this%time,this%gaid)
 call export(this%timerange,this%gaid)
 call export(this%level,this%gaid)

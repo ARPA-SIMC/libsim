@@ -20,8 +20,7 @@ character (len=255),parameter:: subcategory="volgrid6d_class"
 type volgrid6d
 
 !> descrittore del grigliato
-  type(grid_def) :: grid
-  type(grid_dim) :: dim
+  type(griddim_def) :: griddim
 !> descrittore della dimensione tempo
   TYPE(datetime),pointer :: time(:)
 !> descrittore della dimensione intervallo temporale (timerange)
@@ -82,9 +81,9 @@ call l4f_launcher(a_name,a_name_append=trim(subcategory)//"."//trim(categoryappe
 this%category=l4f_category_get(a_name)
 
 if (present(grid))then
-  this%grid=grid
+  this%griddim%grid=grid
 else
-  call init(this%grid,this%dim)
+  call init(this%griddim)
 end if
 
  ! call init(this%time)         
@@ -119,7 +118,7 @@ ELSE
 ENDIF
 
 
-if (present(dim)) this%dim=dim
+if (present(dim)) this%griddim%dim=dim
 
 
 IF (PRESENT(ntime)) THEN
@@ -185,14 +184,14 @@ ELSE
 ENDIF
 
 
-IF (this%dim%nx > 0 .and. this%dim%ny > 0 .and..NOT.ASSOCIATED(this%voldati)) THEN
+IF (this%griddim%dim%nx > 0 .and. this%griddim%dim%ny > 0 .and..NOT.ASSOCIATED(this%voldati)) THEN
                                 ! Alloco i descrittori minimi per avere un volume di dati
   IF (.NOT. ASSOCIATED(this%var)) CALL volgrid6d_alloc(this, nvar=1, ini=ini)
   IF (.NOT. ASSOCIATED(this%time)) CALL volgrid6d_alloc(this, ntime=1, ini=ini)
   IF (.NOT. ASSOCIATED(this%level)) CALL volgrid6d_alloc(this, nlevel=1, ini=ini)
   IF (.NOT. ASSOCIATED(this%timerange)) CALL volgrid6d_alloc(this, ntimerange=1, ini=ini)
-
-  ALLOCATE(this%voldati( this%dim%nx,this%dim%ny,&
+  
+  ALLOCATE(this%voldati( this%griddim%dim%nx,this%griddim%dim%ny,&
    SIZE(this%time), SIZE(this%level), &
    SIZE(this%timerange), SIZE(this%var)))
   
@@ -209,7 +208,7 @@ END SUBROUTINE volgrid6d_alloc_vol
 subroutine delete_volgrid6d(this)
 type(volgrid6d) :: this
 
-call delete(this%grid,this%dim)
+call delete(this%griddim)
 
 !  call delete(this%time)
 !  call delete(this%timerange)
@@ -313,7 +312,7 @@ if (associated(this%var)) nvar=size(this%var)
 write(unit=lunit)ldescription
 write(unit=lunit)tarray
 
-call write_unit( this%grid,this%dim,lunit)
+call write_unit( this%griddim,lunit)
 write(unit=lunit) ntime, ntimerange, nlevel, nvar
 
 !! prime 4 dimensioni
@@ -402,7 +401,7 @@ if (present(description))description=ldescription
 if (present(tarray))tarray=ltarray
 
 
-call read_unit( this%grid,this%dim,lunit)
+call read_unit( this%griddim,lunit)
 read(unit=lunit) ntime, ntimerange, nlevel, nvar
 
 
@@ -435,19 +434,23 @@ character(len=*),INTENT(in),OPTIONAL :: categoryappend !< appende questo suffiss
 character(len=255)   :: type
 
 
-call get_val(this%grid,this%dim,type=type)
+call get_val(this%griddim,type=type)
 
 if (type == cmiss)then
 
-   call init(this,gridinfo%grid,categoryappend)
+   call init(this,gridinfo%griddim%grid,categoryappend)
 
-else if (.not. (this%grid == gridinfo%grid .and.this%dim == gridinfo%dim ))then
+else if (.not. (this%griddim == gridinfo%griddim ))then
 
 !TODO inserire log4f
    
-   call raise_error ("volgrid6d: grid are different and this is not possible")
+   call raise_error ("volgrid6d: grid or dim are different and this is not possible")
 
 end if
+
+!TODO
+! cosa torna index se notfound ?
+
 
 this%gaid(&
      index(this%time,     gridinfo%time),&
@@ -466,8 +469,7 @@ TYPE(volgrid6d),INTENT(in) :: this !< Volume volgrid6d da leggere
 type(gridinfo_type),intent(out) :: gridinfo !< gridinfo 
 integer ::itime,itimerange,ilevel,ivar
 
-gridinfo%grid      =this%grid
-gridinfo%dim        =this%dim
+gridinfo%griddim   =this%griddim
 gridinfo%time      =this%time(itime)
 gridinfo%timerange =this%timerange(itimerange)
 gridinfo%level     =this%level(ilevel)
@@ -484,6 +486,13 @@ TYPE(volgrid6d),INTENT(OUT) :: this(:) !< Vettore Volume volgrid6d da leggere
 type(gridinfo_type),intent(in) :: gridinfov(:) !< vettore gridinfo 
 character(len=*),INTENT(in),OPTIONAL :: categoryappend !< appende questo suffisso al namespace category di log4fortran
 integer :: i
+
+!!$call count_distinct(gridinfov%grid)
+!!$
+!!$
+!!$
+!!$call pack_distinct
+!!$
 
 
 !TODO
