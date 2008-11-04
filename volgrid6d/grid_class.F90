@@ -94,9 +94,32 @@ INTERFACE export
 END INTERFACE
 
 
+INTERFACE count_distinct
+  MODULE PROCEDURE count_distinct_griddim,count_distinct_grid_type,count_distinct_grid
+END INTERFACE
+
+INTERFACE pack_distinct
+  MODULE PROCEDURE pack_distinct_griddim,pack_distinct_grid_type,pack_distinct_grid
+END INTERFACE
+
+INTERFACE map_distinct
+  MODULE PROCEDURE map_distinct_griddim,map_distinct_grid_type,map_distinct_grid
+END INTERFACE
+
+INTERFACE map_inv_distinct
+  MODULE PROCEDURE map_inv_distinct_griddim,map_inv_distinct_grid_type,map_inv_distinct_grid
+END INTERFACE
+
+INTERFACE index
+  MODULE PROCEDURE index_griddim,index_grid_type,index_grid
+END INTERFACE
+
+
+
 private
 
-public griddim_proj,griddim_unproj,griddim_def,grid_def,grid_dim,init,delete,get_val,write_unit,read_unit,import,export,operator(==)
+public griddim_proj,griddim_unproj,griddim_def,grid_def,grid_dim,init,delete,get_val,write_unit,read_unit,import,export
+public operator(==),count_distinct,pack_distinct,map_distinct,map_inv_distinct,index
 
 contains
 
@@ -422,14 +445,14 @@ END FUNCTION grid_type_eq
 
 ! Definisce le funzioni count_distinct e pack_distinct
 #define VOL7D_POLY_TYPE TYPE(grid_def)
-#define VOL7D_POLY_TYPES _grid_def
+#define VOL7D_POLY_TYPES _grid
 #include "../vol7d/vol7d_distinct.F90"
 #undef VOL7D_POLY_TYPE
 #undef VOL7D_POLY_TYPES
 
 ! Definisce le funzioni count_distinct e pack_distinct
 #define VOL7D_POLY_TYPE TYPE(griddim_def)
-#define VOL7D_POLY_TYPES _griddim_def
+#define VOL7D_POLY_TYPES _griddim
 #include "../vol7d/vol7d_distinct.F90"
 #undef VOL7D_POLY_TYPE
 #undef VOL7D_POLY_TYPES

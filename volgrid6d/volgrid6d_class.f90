@@ -45,18 +45,18 @@ INTERFACE init
 END INTERFACE
 
 INTERFACE delete
-  MODULE PROCEDURE delete_volgrid6d
+  MODULE PROCEDURE delete_volgrid6d,delete_volgrid6dv
 END INTERFACE
 
 !> Lettura da file.
 INTERFACE import
-  MODULE PROCEDURE volgrid6d_read_from_file,import_from_gridinfo,import_from_gridinfov
+  MODULE PROCEDURE volgrid6d_read_from_file,import_from_gridinfo,import_from_gridinfovv
 END INTERFACE
 
 
 !> Scrittura su file.
 INTERFACE export
-  MODULE PROCEDURE volgrid6d_write_on_file,export_to_gridinfo,export_to_gridinfov
+  MODULE PROCEDURE volgrid6d_write_on_file,export_to_gridinfo,export_to_gridinfov,export_to_gridinfovv
 END INTERFACE
 
 
@@ -79,6 +79,8 @@ character(len=512) :: a_name
 
 call l4f_launcher(a_name,a_name_append=trim(subcategory)//"."//trim(categoryappend))
 this%category=l4f_category_get(a_name)
+
+call l4f_category_log(this%category,L4F_DEBUG,"init")
 
 if (present(grid))then
   this%griddim%grid=grid
@@ -111,6 +113,9 @@ LOGICAL,INTENT(in),OPTIONAL :: ini !< se fornito e vale \c .TRUE., viene chiamat
 INTEGER :: i
 LOGICAL :: linit
 
+call l4f_category_log(this%category,L4F_DEBUG,"alloc")
+
+
 IF (PRESENT(ini)) THEN
   linit = ini
 ELSE
@@ -124,6 +129,7 @@ if (present(dim)) this%griddim%dim=dim
 IF (PRESENT(ntime)) THEN
   IF (ntime >= 0) THEN
     IF (ASSOCIATED(this%time)) DEALLOCATE(this%time)
+    call l4f_category_log(this%category,L4F_DEBUG,"alloc ntime "//to_char(ntime))
     ALLOCATE(this%time(ntime))
     IF (linit) THEN
       DO i = 1, ntime
@@ -135,6 +141,7 @@ ENDIF
 IF (PRESENT(nlevel)) THEN
   IF (nlevel >= 0) THEN
     IF (ASSOCIATED(this%level)) DEALLOCATE(this%level)
+    call l4f_category_log(this%category,L4F_DEBUG,"alloc nlevel "//to_char(nlevel))
     ALLOCATE(this%level(nlevel))
     IF (linit) THEN
       DO i = 1, nlevel
@@ -146,6 +153,7 @@ ENDIF
 IF (PRESENT(ntimerange)) THEN
   IF (ntimerange >= 0) THEN
     IF (ASSOCIATED(this%timerange)) DEALLOCATE(this%timerange)
+    call l4f_category_log(this%category,L4F_DEBUG,"alloc ntimerange "//to_char(ntimerange))
     ALLOCATE(this%timerange(ntimerange))
     IF (linit) THEN
       DO i = 1, ntimerange
@@ -157,6 +165,7 @@ ENDIF
 IF (PRESENT(nvar)) THEN
   IF (nvar >= 0) THEN
     IF (ASSOCIATED(this%var)) DEALLOCATE(this%var)
+    call l4f_category_log(this%category,L4F_DEBUG,"alloc nvar "//to_char(nvar))
     ALLOCATE(this%var(nvar))
     IF (linit) THEN
       DO i = 1, nvar
@@ -176,6 +185,7 @@ LOGICAL,INTENT(in),OPTIONAL :: inivol !< se fornito e vale \c .TRUE., i volumi a
 
 LOGICAL :: linivol
 
+call l4f_category_log(this%category,L4F_DEBUG,"alloc_vol")
 
 IF (PRESENT(inivol)) THEN
   linivol = inivol
@@ -207,6 +217,8 @@ END SUBROUTINE volgrid6d_alloc_vol
 
 subroutine delete_volgrid6d(this)
 type(volgrid6d) :: this
+
+call l4f_category_log(this%category,L4F_DEBUG,"delete")
 
 call delete(this%griddim)
 
@@ -257,10 +269,12 @@ integer :: ntime, ntimerange, nlevel, nvar
 integer :: tarray(8)
 logical :: opened,exist
 
- ntime=0
- ntimerange=0
- nlevel=0
- nvar=0
+call l4f_category_log(this%category,L4F_DEBUG,"write on file")
+
+ntime=0
+ntimerange=0
+nlevel=0
+nvar=0
 
 !call idate(im,id,iy)
 call date_and_time(values=tarray)
@@ -355,6 +369,7 @@ character(len=254) :: ldescription,lfilename,arg
 integer :: ltarray(8),lunit
 logical :: opened,exist
 
+call l4f_category_log(this%category,L4F_DEBUG,"read from file")
 
 call getarg(0,arg)
 
@@ -436,9 +451,11 @@ character(len=255)   :: type
 
 call get_val(this%griddim,type=type)
 
-if (type == cmiss)then
+if (.not. c_e(type))then
 
    call init(this,gridinfo%griddim%grid,categoryappend)
+
+   call l4f_category_log(this%category,L4F_DEBUG,"import_from_gridinfo")
 
 else if (.not. (this%griddim == gridinfo%griddim ))then
 
@@ -469,6 +486,8 @@ TYPE(volgrid6d),INTENT(in) :: this !< Volume volgrid6d da leggere
 type(gridinfo_type),intent(out) :: gridinfo !< gridinfo 
 integer ::itime,itimerange,ilevel,ivar
 
+call l4f_category_log(this%category,L4F_DEBUG,"export_to_gridinfo")
+
 gridinfo%griddim   =this%griddim
 gridinfo%time      =this%time(itime)
 gridinfo%timerange =this%timerange(itimerange)
@@ -480,34 +499,56 @@ end subroutine export_to_gridinfo
 
 
 
-subroutine import_from_gridinfov (this,gridinfov,categoryappend)
+subroutine import_from_gridinfovv (this,gridinfov,categoryappend)
 
-TYPE(volgrid6d),INTENT(OUT) :: this(:) !< Vettore Volume volgrid6d da leggere
+TYPE(volgrid6d),pointer :: this(:) !< Vettore Volume volgrid6d da leggere
 type(gridinfo_type),intent(in) :: gridinfov(:) !< vettore gridinfo 
 character(len=*),INTENT(in),OPTIONAL :: categoryappend !< appende questo suffisso al namespace category di log4fortran
-integer :: i
 
-!!$call count_distinct(gridinfov%grid)
-!!$
-!!$
-!!$
-!!$call pack_distinct
-!!$
+integer :: i,j
+integer :: ngrid,ntime,ntimerange,nlevel,nvar
 
-
-!TODO
-!contare le aree e tutto il resto
-! init alloc e quant'altro
+!type(gridinfo_type),allocatable :: gridinfovtmp(:)
+!allocate(gridinfovtmp(size(gridinfov)))
+!gridinfovtmp=(this%griddim(i) == gridinfov%griddim(j))
+!deallocate(gridinfovtmp)
 
 
-do i=1,size(gridinfov)
+ngrid=count_distinct(gridinfov%griddim,back=.true.)
+allocate (this(ngrid))
+this%griddim=pack_distinct(gridinfov%griddim,ngrid,back=.true.)
 
-   call import (this(i),gridinfov(i),categoryappend)
+
+do i=1,ngrid
+
+  call l4f_category_log(this(i)%category,L4F_DEBUG,"import from gridinfo vettori")
+
+ ntime = count_distinct(gridinfov%time,mask=(this(i)%griddim == gridinfov%griddim),back=.true.)
+ ntimerange = count_distinct(gridinfov%timerange,mask=(this(i)%griddim == gridinfov%griddim),back=.true.)
+ nlevel = count_distinct(gridinfov%level,mask=(this(i)%griddim == gridinfov%griddim),back=.true.)
+ nvar = count_distinct(gridinfov%var,mask=(this(i)%griddim == gridinfov%griddim),back=.true.)
+
+ call init (this(i),this(i)%griddim%grid, categoryappend)
+ call volgrid6d_alloc(this(i),this(i)%griddim%dim,ntime=ntime,ntimerange=ntimerange,nlevel=nlevel,nvar=nvar)
+
+ this(i)%time=pack_distinct(gridinfov%time,ntime,mask=(this(i)%griddim == gridinfov%griddim),back=.true.)
+ this(i)%timerange=pack_distinct(gridinfov%timerange,ntimerange,mask=(this(i)%griddim == gridinfov%griddim),back=.true.)
+ this(i)%level=pack_distinct(gridinfov%level,nlevel,mask=(this(i)%griddim == gridinfov%griddim),back=.true.)
+ this(i)%var=pack_distinct(gridinfov%var,nvar,mask=(this(i)%griddim == gridinfov%griddim),back=.true.)
+
+ call volgrid6d_alloc_vol(this(i)) 
 
 end do
 
 
-end subroutine import_from_gridinfov
+do i=1,size(gridinfov)
+
+   call import (this(index(this%griddim,gridinfov(i)%griddim)),gridinfov(i),categoryappend)
+
+end do
+
+
+end subroutine import_from_gridinfovv
 
 
 subroutine export_to_gridinfov (this,gridinfov,categoryappend)
@@ -516,28 +557,98 @@ TYPE(volgrid6d),INTENT(in) :: this !< Volume volgrid6d da leggere
 type(gridinfo_type),intent(out) :: gridinfov(:) !< vettore gridinfo 
 character(len=*),INTENT(in),OPTIONAL :: categoryappend !< appende questo suffisso al namespace category di log4fortran
 integer :: i,itime,itimerange,ilevel,ivar
+integer :: ngridinfo,ntime,ntimerange,nlevel,nvar
+
+call l4f_category_log(this%category,L4F_DEBUG,"export to gridinfo singola area")
+
+ngridinfo=size(gridinfov)
 
 
-if (size(gridinfov) /= size(this%gaid))then
-
-   !TODO
-   !log4f
-
+if (ngridinfo /= size(this%gaid))then
+   !TODO  log4f
    call raise_error("dimension mismach")
 end if
 
+i=0
+ntime=size(this%time)
+ntimerange=size(this%timerange)
+nlevel=size(this%level)
+nvar=size(this%var)
 
-! TODO
-! questo loop è da riscrivere per fare lo scan del volume
+do itime=1,ntime
+  do itimerange=1,ntimerange
+    do ilevel=1,nlevel
+      do ivar=1,nvar
+        
+        i=i+1
+        if (i > ngridinfo) &
+         call raise_error ("errore stranuccio in export_to_gridinfo:"//&
+         "avevo già testato le dimensioni che ora sono sbagliate")
+        
+        call export (this,gridinfov(i),itime,itimerange,ilevel,ivar)
+        
+      end do
+    end do
+  end do
+end do
 
-do i=1,size(gridinfov)
+end subroutine export_to_gridinfov
 
-   call export (this,gridinfov(i),itime,itimerange,ilevel,ivar)
+
+subroutine export_to_gridinfovv (this,gridinfov,categoryappend)
+
+TYPE(volgrid6d),INTENT(in)  :: this(:)      !< vettore volume volgrid6d da leggere
+type(gridinfo_type),pointer :: gridinfov(:) !< vettore gridinfo 
+character(len=*),INTENT(in),OPTIONAL :: categoryappend !< appende questo suffisso al namespace category di log4fortran
+
+integer :: igrid,ngrid,start,end,ngridinfo
+
+ngrid=size(this)
+
+ngridinfo=0
+if (.not. associated(gridinfov))then
+  do igrid=1,ngrid
+
+    call l4f_category_log(this(igrid)%category,L4F_DEBUG,"export to gridinfo vettori")
+
+    ngridinfo=ngridinfo+size(this(igrid)%gaid)
+
+  end do
+  
+  allocate (gridinfov(ngridinfo))
+
+end if
+
+
+end=0
+do igrid=1,ngrid
+
+  start=end+1
+  end=end+size(this(igrid)%gaid)
+
+  call export (this(igrid),gridinfov(start:end),categoryappend)
 
 end do
 
 
-end subroutine export_to_gridinfov
+end subroutine export_to_gridinfovv
+
+
+
+
+subroutine delete_volgrid6dv(this)
+type(volgrid6d) :: this(:)
+integer :: i
+
+do i=1,size(this)
+
+  call l4f_category_log(this(i)%category,L4F_DEBUG,"delete vettori")
+
+  call delete(this(i))
+
+end do
+
+end subroutine delete_volgrid6dv
 
 
 end module volgrid6d_class
