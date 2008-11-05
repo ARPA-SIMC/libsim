@@ -178,12 +178,14 @@ ENDIF
 end SUBROUTINE volgrid6d_alloc
 
 
-SUBROUTINE volgrid6d_alloc_vol(this, ini, inivol)
+SUBROUTINE volgrid6d_alloc_vol(this, ini, inivol,decode)
 TYPE(volgrid6d),INTENT(inout) :: this !< oggetto di cui allocare i volumi
 LOGICAL,INTENT(in),OPTIONAL :: ini !< se fornito e vale \c .TRUE., viene chiamato il costruttore, senza parametri opzionali, per ogni elemento di tutti i descrittori allocati
-LOGICAL,INTENT(in),OPTIONAL :: inivol !< se fornito e vale \c .TRUE., i volumi allocati saranno inizializzati a valore mancante
+LOGICAL,INTENT(in),OPTIONAL :: inivol !< se fornito e vale \c .FALSE., i volumi allocati non saranno inizializzati a valore mancante
+LOGICAL,INTENT(in),OPTIONAL :: decode !< se fornito e vale \c .FALSE., i volumi dati non saranno allocati (gaid si comunque)
 
-LOGICAL :: linivol
+
+LOGICAL :: linivol,ldecode
 
 call l4f_category_log(this%category,L4F_DEBUG,"alloc_vol")
 
@@ -191,6 +193,12 @@ IF (PRESENT(inivol)) THEN
   linivol = inivol
 ELSE
   linivol = .TRUE.
+ENDIF
+
+IF (PRESENT(decode)) THEN
+  ldecode = decode
+ELSE
+  ldecode = .TRUE.
 ENDIF
 
 
@@ -201,11 +209,15 @@ IF (this%griddim%dim%nx > 0 .and. this%griddim%dim%ny > 0 .and..NOT.ASSOCIATED(t
   IF (.NOT. ASSOCIATED(this%level)) CALL volgrid6d_alloc(this, nlevel=1, ini=ini)
   IF (.NOT. ASSOCIATED(this%timerange)) CALL volgrid6d_alloc(this, ntimerange=1, ini=ini)
   
-  ALLOCATE(this%voldati( this%griddim%dim%nx,this%griddim%dim%ny,&
-   SIZE(this%time), SIZE(this%level), &
-   SIZE(this%timerange), SIZE(this%var)))
+  if (ldecode) then
+
+    ALLOCATE(this%voldati( this%griddim%dim%nx,this%griddim%dim%ny,&
+     SIZE(this%time), SIZE(this%level), &
+     SIZE(this%timerange), SIZE(this%var)))
   
-  IF (linivol) this%voldati = rmiss
+    IF (linivol) this%voldati = rmiss
+
+  end if
 
   ALLOCATE(this%gaid( &
    SIZE(this%time), SIZE(this%level), &
@@ -476,32 +488,80 @@ end if
 !TODO
 ! cosa torna index se notfound ?
 
+if (associated (this%gaid))then
 
 this%gaid(&
-     index(this%time,     gridinfo%time),&
-     index(this%timerange,gridinfo%timerange),&
-     index(this%level,    gridinfo%level),&
-     index(this%var,      gridinfo%var)&
-     )=gridinfo%gaid
+ index(this%time,     gridinfo%time),&
+ index(this%timerange,gridinfo%timerange),&
+ index(this%level,    gridinfo%level),&
+ index(this%var,      gridinfo%var)&
+ )=gridinfo%gaid
 
+else
+
+  call l4f_category_log(this%category,L4F_ERROR,&
+   "gaid non allocato: chiama volgrid6d_alloc_vol")
+  call raise_error("gaid non allocato: chiama volgrid6d_alloc_vol")
+
+end if
+
+
+if (associated (this%voldati))then
+
+  this%voldati(:,:,&
+   index(this%time,     gridinfo%time),&
+   index(this%timerange,gridinfo%timerange),&
+   index(this%level,    gridinfo%level),&
+   index(this%var,      gridinfo%var)&
+   ) = decode_gridinfo (gridinfo)
+
+else
+
+  call l4f_category_log(this%category,L4F_INFO,"non decodifico i dati")
+
+end if
 
 end subroutine import_from_gridinfo
 
 
-subroutine export_to_gridinfo (this,gridinfo,itime,itimerange,ilevel,ivar)
+subroutine export_to_gridinfo (this,gridinfo,itime,itimerange,ilevel,ivar,gaid_template)
 
 TYPE(volgrid6d),INTENT(in) :: this !< Volume volgrid6d da leggere
 type(gridinfo_type),intent(out) :: gridinfo !< gridinfo 
+integer, optional :: gaid_template
 integer ::itime,itimerange,ilevel,ivar
 
 call l4f_category_log(this%category,L4F_DEBUG,"export_to_gridinfo")
+
+
+if (present(gaid_template)) call grib_clone(gaid_template,gridinfo%gaid)
 
 gridinfo%griddim   =this%griddim
 gridinfo%time      =this%time(itime)
 gridinfo%timerange =this%timerange(itimerange)
 gridinfo%level     =this%level(ilevel)
 gridinfo%var       =this%var(ivar)
-gridinfo%gaid      =this%gaid(itime,itimerange,ilevel,ivar)
+
+
+if (.not. c_e(gridinfo%gaid))then
+
+  if (c_e(this%gaid(itime,itimerange,ilevel,ivar)))then
+
+    gridinfo%gaid      =this%gaid(itime,itimerange,ilevel,ivar)
+
+  else
+ 
+    call l4f_category_log(this%category,L4F_ERROR,&
+     "mancano tutti i gaid; export impossibile")
+    call raise_error("mancano tutti i gaid; export impossibile")
+
+  end if
+end if
+
+
+call encode_gridinfo(gridinfo,this%voldati(:,:,&
+ itime,itimerange,ilevel,ivar))
+
 
 end subroutine export_to_gridinfo
 
@@ -559,11 +619,12 @@ end do
 end subroutine import_from_gridinfovv
 
 
-subroutine export_to_gridinfov (this,gridinfov,categoryappend)
+subroutine export_to_gridinfov (this,gridinfov,gaid_template)
 
 TYPE(volgrid6d),INTENT(in) :: this !< Volume volgrid6d da leggere
 type(gridinfo_type),intent(out) :: gridinfov(:) !< vettore gridinfo 
-character(len=*),INTENT(in),OPTIONAL :: categoryappend !< appende questo suffisso al namespace category di log4fortran
+integer, optional :: gaid_template
+
 integer :: i,itime,itimerange,ilevel,ivar
 integer :: ngridinfo,ntime,ntimerange,nlevel,nvar
 
@@ -593,7 +654,7 @@ do itime=1,ntime
          call raise_error ("errore stranuccio in export_to_gridinfo:"//&
          "avevo già testato le dimensioni che ora sono sbagliate")
         
-        call export (this,gridinfov(i),itime,itimerange,ilevel,ivar)
+        call export (this,gridinfov(i),itime,itimerange,ilevel,ivar,gaid_template)
         
       end do
     end do
@@ -603,13 +664,14 @@ end do
 end subroutine export_to_gridinfov
 
 
-subroutine export_to_gridinfovv (this,gridinfov,categoryappend)
+subroutine export_to_gridinfovv (this,gridinfov,gaid_template,categoryappend)
 
 TYPE(volgrid6d),INTENT(in)  :: this(:)      !< vettore volume volgrid6d da leggere
 type(gridinfo_type),pointer :: gridinfov(:) !< vettore gridinfo 
 character(len=*),INTENT(in),OPTIONAL :: categoryappend !< appende questo suffisso al namespace category di log4fortran
+integer, optional :: gaid_template
 
-integer :: igrid,ngrid,start,end,ngridinfo
+integer :: i,igrid,ngrid,start,end,ngridinfo
 
 ngrid=size(this)
 
@@ -623,6 +685,10 @@ if (.not. associated(gridinfov))then
   
   allocate (gridinfov(ngridinfo))
 
+  do i=1,ngridinfo
+    call init(gridinfov(i),categoryappend=categoryappend)
+  enddo
+
 end if
 
 
@@ -634,7 +700,7 @@ do igrid=1,ngrid
 
   call l4f_category_log(this(igrid)%category,L4F_DEBUG,"export to gridinfo vettori")
 
-  call export (this(igrid),gridinfov(start:end),categoryappend)
+  call export (this(igrid),gridinfov(start:end),gaid_template)
 
 end do
 
@@ -657,6 +723,8 @@ do i=1,size(this)
 end do
 
 end subroutine delete_volgrid6dv
+
+
 
 
 end module volgrid6d_class
