@@ -82,9 +82,15 @@ INTERFACE export
 END INTERFACE
 
 
+INTERFACE display
+  MODULE PROCEDURE display_regular_ll,display_dim
+END INTERFACE
+
+
 private
 public init,delete,grid_proj,grid_unproj,proj,unproj,get_val,read_unit,write_unit,import,export,operator(==)
 public grid_dim,grid_regular_ll
+public display
 
 !>\brief dimensioni del grigliato lat lon con eventuali vettori di coordinate
 type grid_dim
@@ -533,6 +539,30 @@ res = this%nx == that%nx .and. &
 
 END FUNCTION dim_eq
 
+
+subroutine display_regular_ll(this,dim)
+type(grid_regular_ll),intent(in) ::this
+type(grid_dim),intent(in)        :: dim
+doubleprecision :: loFirst,loLast,laFirst,laLast
+
+
+call display_dim(dim)
+
+print*,"loFirst", this%lon_min
+print*,"loLast ", this%lon_max
+print*,"laFirst", this%lat_min
+print*,"laLast ", this%lat_max
+
+end subroutine display_regular_ll
+
+
+subroutine display_dim(this)
+type(grid_dim),intent(in) :: this
+
+print*,'number Of Points Along A Meridian',this%nx
+print*,'number Of Points Along A Parallel',this%ny
+
+end subroutine display_dim
 
 
 end module regular_ll_class

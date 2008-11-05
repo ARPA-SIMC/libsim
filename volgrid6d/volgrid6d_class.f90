@@ -205,7 +205,15 @@ IF (this%griddim%dim%nx > 0 .and. this%griddim%dim%ny > 0 .and..NOT.ASSOCIATED(t
    SIZE(this%time), SIZE(this%level), &
    SIZE(this%timerange), SIZE(this%var)))
   
-  IF (linivol) this%voldati(:,:,:,:,:,:) = rmiss
+  IF (linivol) this%voldati = rmiss
+
+  ALLOCATE(this%gaid( &
+   SIZE(this%time), SIZE(this%level), &
+   SIZE(this%timerange), SIZE(this%var)))
+  
+  IF (linivol) this%gaid  = imiss
+
+
   
 end if
 
@@ -609,8 +617,6 @@ ngridinfo=0
 if (.not. associated(gridinfov))then
   do igrid=1,ngrid
 
-    call l4f_category_log(this(igrid)%category,L4F_DEBUG,"export to gridinfo vettori")
-
     ngridinfo=ngridinfo+size(this(igrid)%gaid)
 
   end do
@@ -625,6 +631,8 @@ do igrid=1,ngrid
 
   start=end+1
   end=end+size(this(igrid)%gaid)
+
+  call l4f_category_log(this(igrid)%category,L4F_DEBUG,"export to gridinfo vettori")
 
   call export (this(igrid),gridinfov(start:end),categoryappend)
 

@@ -93,6 +93,10 @@ INTERFACE index
   MODULE PROCEDURE index_var
 END INTERFACE
 
+INTERFACE display
+  MODULE PROCEDURE display_volgrid6d_var
+END INTERFACE
+
 CONTAINS
 
 !> Inizializza un oggetto \a volgrid6d_var con i parametri opzionali forniti.
@@ -306,6 +310,16 @@ end if
 
 
 end subroutine export_volgrid6d_var
+
+
+
+subroutine display_volgrid6d_var(this)
+
+TYPE(volgrid6d_var),INTENT(in) :: this
+
+print*,"GRIDVAR: ",this%centre,this%discipline,this%category,this%number
+
+end subroutine display_volgrid6d_var
 
 
 END MODULE volgrid6d_var_class

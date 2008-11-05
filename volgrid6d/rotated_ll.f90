@@ -83,6 +83,11 @@ INTERFACE export
 END INTERFACE
 
 
+INTERFACE display
+  MODULE PROCEDURE display_rotated_ll
+END INTERFACE
+
+
 
 !>\brief definizione del grigliato rotated lat lon
 type grid_rotated_ll
@@ -99,6 +104,7 @@ end type grid_rotated_ll
 
 private
 public init,delete,grid_proj,grid_unproj,proj,unproj,get_val,read_unit,write_unit,import,export,operator(==)
+public display
 public grid_rotated_ll
 
 
@@ -373,9 +379,22 @@ else
   CALL raise_error('GribEditionNumber not supported')
 
 end if
-                                ! da capire come ottenere 
+
 end subroutine export_rotated_ll
 
+
+
+subroutine display_rotated_ll(this,dim)
+type(grid_rotated_ll),intent(in) ::this
+type(grid_dim),intent(in) :: dim
+
+call display (this%regular_ll,dim)
+
+print*,'longitude Of Southern Pole In Degrees     ',this%longitude_south_pole
+print*,'latitude Of Southern Pole In Degrees      ',this%latitude_south_pole
+print*,'angle Of Rotation Of Projection In Degrees',this%angle_rotation
+
+end subroutine display_rotated_ll
 
 
 !!$subroutine unproj_rotated_ll(this,x,y,lon,lat )

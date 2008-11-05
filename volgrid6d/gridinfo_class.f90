@@ -58,9 +58,14 @@ INTERFACE export
 END INTERFACE
 
 
+INTERFACE display
+  MODULE PROCEDURE display_timerange,display_level,display_gridinfo,display_gridinfov,display_time
+END INTERFACE
+
+
 private
 
-public gridinfo_type,init,delete,import,export
+public gridinfo_type,init,delete,import,export,display
 
 contains
 
@@ -150,7 +155,7 @@ end subroutine delete_gridinfo
 
 subroutine import_gridinfo (this)
 
-TYPE(gridinfo_type),intent(out) :: this !< oggetto da eliminare
+TYPE(gridinfo_type),intent(out) :: this !< oggetto da importare
 
 
 call l4f_category_log(this%category,L4F_DEBUG,"ora provo ad importare da grib " )
@@ -168,10 +173,10 @@ end subroutine import_gridinfo
 
 subroutine export_gridinfo (this)
 
-TYPE(gridinfo_type),intent(out) :: this !< oggetto da eliminare
+TYPE(gridinfo_type),intent(out) :: this !< oggetto da exportare
 
 
-call l4f_category_log(this%category,L4F_DEBUG,"ora provo ad importare da grib " )
+call l4f_category_log(this%category,L4F_DEBUG,"ora provo ad exportare da grib " )
 
 
 call export(this%griddim,this%gaid)
@@ -371,6 +376,81 @@ end if
 
 end subroutine export_timerange
 
+
+
+subroutine display_gridinfo (this)
+
+TYPE(gridinfo_type),intent(in) :: this !< oggetto da stampare
+
+
+call l4f_category_log(this%category,L4F_DEBUG,"ora mostro gridinfo " )
+
+
+print*,"----------------------- gridinfo display ---------------------"
+call display(this%griddim)
+call display(this%time)
+call display(this%timerange)
+call display(this%level)
+call display(this%var)
+print*,"--------------------------------------------------------------"
+
+
+end subroutine display_gridinfo
+
+
+
+subroutine display_gridinfov (this)
+
+TYPE(gridinfo_type),intent(in) :: this(:) !< vettore di oggetti da stampare
+integer :: i
+
+print*,"----------------------- gridinfo  vector ---------------------"
+
+do i=1, size(this)
+
+  call l4f_category_log(this(i)%category,L4F_DEBUG,"ora mostro il vettore gridinfo " )
+
+  call display(this(i))
+
+end do
+print*,"--------------------------------------------------------------"
+
+end subroutine display_gridinfov
+
+
+
+subroutine display_timerange(this)
+
+TYPE(vol7d_timerange),INTENT(in) :: this
+integer ::EditionNumber,timerange,p1,p2
+
+print*,"TIMERANGE: ",this%timerange,this%p1,this%p2
+
+end subroutine display_timerange
+
+
+
+subroutine display_level(this)
+
+TYPE(vol7d_level),INTENT(in) :: this
+
+print*,"LEVEL: ",this%level1,this%l1,this%level2,this%l2
+  
+end subroutine display_level
+
+
+
+subroutine display_time(this)
+
+TYPE(datetime),INTENT(in) :: this
+character(len=17)         :: date_time
+
+call getval (this,simpledate=date_time)
+
+print*,"TIME: ",date_time
+
+
+end subroutine display_time
 
 
 end module gridinfo_class

@@ -93,6 +93,10 @@ INTERFACE export
   MODULE PROCEDURE export_griddim
 END INTERFACE
 
+INTERFACE display
+  MODULE PROCEDURE display_griddim
+END INTERFACE
+
 
 INTERFACE count_distinct
   MODULE PROCEDURE count_distinct_griddim,count_distinct_grid_type,count_distinct_grid
@@ -118,7 +122,8 @@ END INTERFACE
 
 private
 
-public griddim_proj,griddim_unproj,griddim_def,grid_def,grid_dim,init,delete,get_val,write_unit,read_unit,import,export
+public griddim_proj,griddim_unproj,griddim_def,grid_def,grid_dim,init,delete
+public get_val,write_unit,read_unit,import,export,display
 public operator(==),count_distinct,pack_distinct,map_distinct,map_inv_distinct,index
 
 contains
@@ -433,6 +438,32 @@ res = this%type == that%type
 
 END FUNCTION grid_type_eq
 
+
+
+SUBROUTINE display_griddim(this) 
+
+type(griddim_def),intent(in) :: this !< oggetto griddim
+
+select case ( this%grid%type%type)
+
+case ( "regular_ll")
+
+  print*,"<<<<<<<<<<<<<<< regular_ll >>>>>>>>>>>>>>>>"
+  call display(this%grid%regular_ll,this%dim)
+  print*,"<<<<<<<<<<<<<<< ---------- >>>>>>>>>>>>>>>>"
+
+case ( "rotated_ll")
+  print*,"<<<<<<<<<<<<<<< rotated_ll >>>>>>>>>>>>>>>>"
+  call display(this%grid%rotated_ll,this%dim)
+  print*,"<<<<<<<<<<<<<<< ---------- >>>>>>>>>>>>>>>>"
+  
+case default
+  call l4f_category_log(this%category,L4F_ERROR,"gtype: "//this%grid%type%type//" non gestita" )
+  call raise_error("gtype non gestita")
+
+end select
+
+end SUBROUTINE display_griddim
 
 
 

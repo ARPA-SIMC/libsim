@@ -1,14 +1,16 @@
-program demo2
+program demo3
 
 use gridinfo_class
 use log4fortran
 use grib_api
+use volgrid6d_class
 
 implicit none
 
 integer :: category,ier
 character(len=512):: a_name
-type (gridinfo_type),allocatable :: gridinfo(:)
+type (gridinfo_type),pointer :: gridinfo(:)
+type (volgrid6d),pointer  :: volgrid(:)
 
 integer                            ::  ifile
 integer                            ::  iret
@@ -74,9 +76,17 @@ end do LOOP
 
 call grib_close_file(ifile)
 
+call display(gridinfo)
 
-call display (gridinfo)
+call import (volgrid,gridinfo,categoryappend="volume di test")
 
+
+
+! qui posso fare tutti iconti possibili
+
+
+
+call export (volgrid,gridinfo)
 
 do ngrib=1,size(gridinfo)
 
@@ -92,4 +102,4 @@ deallocate(gridinfo)
 call l4f_category_delete(category)
 ier=l4f_fini()
 
-end program demo2
+end program demo3
