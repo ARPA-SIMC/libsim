@@ -145,6 +145,9 @@ call delete(this%timerange)
 call delete(this%level)
 call delete(this%var)
 
+call l4f_category_log(this%category,L4F_DEBUG,"cangello gaid" )
+this%gaid=imiss
+
 !chiudo il logger
 call l4f_category_delete(this%category)
 
@@ -468,6 +471,7 @@ integer ::x1,x2,xs,y1,y2,ys,ord(2)
 
 call grib_get(this%gaid,'GRIBEditionNumber',EditionNumber)
 
+call l4f_category_log(this%category,L4F_INFO,'Edition Number: '//to_char(EditionNumber))
 
 if (EditionNumber == 2)then
 
@@ -489,11 +493,12 @@ call grib_get(this%gaid,'iScansNegatively',iScansNegatively)
 call grib_get(this%gaid,'jScansPositively',jScansPositively)
 call grib_get(this%gaid,'jPointsAreConsecutive',jPointsAreConsecutive)
 
-
 call grib_get(this%gaid,'numberOfValues',numberOfValues)
 
 if (numberOfValues /= (this%griddim%dim%nx * this%griddim%dim%ny))then
 
+  call l4f_category_log(this%category,L4F_INFO,'nx: '//to_char(this%griddim%dim%nx)&
+       //' ny: '//to_char(this%griddim%dim%ny)//to_char(this%griddim%dim%nx*this%griddim%dim%ny))
   call l4f_category_log(this%category,L4F_ERROR,'number of values different nx,ny: '//to_char(numberOfValues))
   call raise_error('number of values different nx,ny')
 
@@ -502,6 +507,7 @@ end if
                             !     get data values
 call l4f_category_log(this%category,L4F_INFO,'number of values: '//to_char(numberOfValues))
 
+call grib_set(this%gaid,'missingValue',rmiss)
 call grib_get(this%gaid,'values',vector)
 
 
@@ -541,91 +547,92 @@ end function decode_gridinfo
 
 
 
-
-
 subroutine encode_gridinfo(this,field)
 
 TYPE(gridinfo_type),INTENT(in)  :: this      !< oggetto in cui codificare
-real  :: field (this%griddim%dim%nx,this%griddim%dim%ny) !< 
+real  :: field (this%griddim%dim%nx,this%griddim%dim%ny) !< matrice dei dati da scrivere
+
+integer                     :: EditionNumber
+integer  :: alternativeRowScanning,iScansNegatively,jScansPositively,jPointsAreConsecutive
+integer :: numberOfValues,nx,ny
+real  :: vector (this%griddim%dim%nx * this%griddim%dim%ny)
+integer ::x1,x2,xs,y1,y2,ys,ord(2)
 
 
-!!$integer                     :: EditionNumber
-!!$integer  :: alternativeRowScanning,iScansNegatively,jScansPositively,jPointsAreConsecutive
-!!$integer :: numberOfValues
-!!$real  :: vector (this%griddim%dim%nx * this%griddim%dim%ny)
-!!$integer ::x1,x2,xs,y1,y2,ys,ord(2)
-!!$
-!!$
-!!$call grib_get(this%gaid,'GRIBEditionNumber',EditionNumber)
-!!$
-!!$
-!!$if (EditionNumber == 2)then
-!!$
-!!$  call grib_get(this%gaid,'alternativeRowScanning',alternativeRowScanning)
-!!$  if (alternativeRowScanning /= 0)then
-!!$    call l4f_category_log(this%category,L4F_ERROR,"alternativeRowScanning not supported: "//trim(to_char(alternativeRowScanning)))
-!!$    call raise_error('alternativeRowScanning not supported')
-!!$  end if
-!!$
-!!$else if( EditionNumber /= 1)then
-!!$
-!!$  call l4f_category_log(this%category,L4F_ERROR,"GribEditionNumber not supported: "//trim(to_char(EditionNumber)))
-!!$  call raise_error('GribEditionNumber not supported')
-!!$
-!!$end if
-!!$
-!!$
-!!$call grib_get(this%gaid,'iScansNegatively',iScansNegatively)
-!!$call grib_get(this%gaid,'jScansPositively',jScansPositively)
-!!$call grib_get(this%gaid,'jPointsAreConsecutive',jPointsAreConsecutive)
-!!$
-!!$
-!!$call grib_get(this%gaid,'numberOfValues',numberOfValues)
-!!$
-!!$if (numberOfValues /= (this%griddim%dim%nx * this%griddim%dim%ny))then
-!!$
-!!$  call l4f_category_log(this%category,L4F_ERROR,'number of values different nx,ny: '//to_char(numberOfValues))
-!!$  call raise_error('number of values different nx,ny')
-!!$
-!!$end if
-!!$
-!!$                            !     get data values
-!!$call l4f_category_log(this%category,L4F_INFO,'number of values: '//to_char(numberOfValues))
-!!$
-!!$call grib_get(this%gaid,'values',vector)
-!!$
-!!$
-!!$! Transfer data field changing scanning mode to 64
-!!$IF (iScansNegatively  == 0) THEN
-!!$  x1 = 1
-!!$  x2 = this%griddim%dim%nx
-!!$  xs = 1
-!!$ELSE
-!!$  x1 = this%griddim%dim%nx
-!!$  x2 = 1
-!!$  xs = -1
-!!$ENDIF
-!!$IF (jScansPositively == 0) THEN
-!!$  y1 = this%griddim%dim%ny
-!!$  y2 = 1
-!!$  ys = -1
-!!$ELSE
-!!$  y1 = 1
-!!$  y2 = this%griddim%dim%ny
-!!$  ys = 1
-!!$ENDIF
-!!$
-!!$IF ( jPointsAreConsecutive == 0) THEN
-!!$  ord = (/1,2/)
-!!$ELSE
-!!$  ord = (/2,1/)
-!!$ENDIF
-!!$
-!!$
-!!$field(x1:x2:xs,y1:y2:ys) = &
-!!$ RESHAPE(vector, &
-!!$ (/this%griddim%dim%nx,this%griddim%dim%ny/), ORDER=ord)
-!!$
+call grib_get(this%gaid,'GRIBEditionNumber',EditionNumber)
+
+
+if (EditionNumber == 2)then
+
+  call grib_get(this%gaid,'alternativeRowScanning',alternativeRowScanning)
+  if (alternativeRowScanning /= 0)then
+    call l4f_category_log(this%category,L4F_ERROR,"alternativeRowScanning not supported: "//trim(to_char(alternativeRowScanning)))
+    call raise_error('alternativeRowScanning not supported')
+  end if
+
+else if( EditionNumber /= 1)then
+
+  call l4f_category_log(this%category,L4F_ERROR,"GribEditionNumber not supported: "//trim(to_char(EditionNumber)))
+  call raise_error('GribEditionNumber not supported')
+
+end if
+
+
+call grib_get(this%gaid,'iScansNegatively',iScansNegatively)
+call grib_get(this%gaid,'jScansPositively',jScansPositively)
+call grib_get(this%gaid,'jPointsAreConsecutive',jPointsAreConsecutive)
+
+call grib_get(this%gaid,"numberOfPointsAlongAParallel", nx)
+call grib_get(this%gaid,"numberOfPointsAlongAMeridian",ny)
+
+numberOfValues=nx*ny
+
+if (numberOfValues /= (this%griddim%dim%nx * this%griddim%dim%ny))then
+
+  call l4f_category_log(this%category,L4F_INFO,'nx: '//to_char(this%griddim%dim%nx)&
+       //' ny: '//to_char(this%griddim%dim%ny))
+  call l4f_category_log(this%category,L4F_ERROR,'number of values different nx,ny: '//to_char(numberOfValues))
+  call raise_error('number of values different nx,ny')
+
+end if
+
+call l4f_category_log(this%category,L4F_INFO,'number of values: '//to_char(numberOfValues))
+
+
+! Transfer data field changing scanning mode to 64
+IF (iScansNegatively  == 0) THEN
+  x1 = 1
+  x2 = this%griddim%dim%nx
+  xs = 1
+ELSE
+  x1 = this%griddim%dim%nx
+  x2 = 1
+  xs = -1
+ENDIF
+IF (jScansPositively == 0) THEN
+  y1 = this%griddim%dim%ny
+  y2 = 1
+  ys = -1
+ELSE
+  y1 = 1
+  y2 = this%griddim%dim%ny
+  ys = 1
+ENDIF
+
+IF ( jPointsAreConsecutive == 0) THEN
+  ord = (/1,2/)
+ELSE
+  ord = (/2,1/)
+ENDIF
+
+
+field(x1:x2:xs,y1:y2:ys) = &
+ RESHAPE(vector, &
+ (/this%griddim%dim%nx,this%griddim%dim%ny/), ORDER=ord)
+
+call grib_set(this%gaid,'missingValue',rmiss)
+call grib_set(this%gaid,'values',pack(field,mask=.true.))
+
 
 end subroutine encode_gridinfo
 

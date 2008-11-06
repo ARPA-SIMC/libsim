@@ -124,9 +124,9 @@ subroutine init_regular_ll(this,dim,&
 
 type(grid_regular_ll) ::this
 type(grid_dim) :: dim
-integer :: nx, ny
-doubleprecision :: lon_min, lon_max, lat_min, lat_max
-integer :: component_flag
+integer,optional :: nx, ny
+doubleprecision,optional :: lon_min, lon_max, lat_min, lat_max
+integer,optional :: component_flag
 character(len=*),INTENT(in),OPTIONAL :: categoryappend !< appennde questo suffisso al namespace category di log4fortran
 
 character(len=512) :: a_name
@@ -137,13 +137,47 @@ this%category=l4f_category_get(a_name)
 nullify(dim%lon)
 nullify(dim%lat)
 
-this%lon_min =lon_min
-this%lon_max =lon_max
-this%lat_min =lat_min
-this%lat_max =lat_max
-this%component_flag=component_flag
-dim%nx = nx
-dim%ny = ny
+if (present(lon_min))then
+   this%lon_min =lon_min
+else
+   this%lon_min =dmiss
+end if
+
+if (present(lon_max)) then
+   this%lon_max =lon_max
+else
+   this%lon_max =dmiss
+end if
+
+if (present(lat_min)) then
+   this%lat_min =lat_min
+else
+   this%lat_min =dmiss
+end if
+
+if (present(lat_max)) then
+   this%lat_max =lat_max
+else
+   this%lat_max =dmiss
+end if
+
+if (present(component_flag)) then
+   this%component_flag=component_flag
+else
+   this%component_flag=imiss
+end if
+
+if (present(nx)) then
+   dim%nx = nx
+else
+   dim%nx = imiss
+end if
+
+if (present(ny)) then
+   dim%ny = ny
+else
+   dim%ny = imiss
+end if
 
 end subroutine init_regular_ll
 
@@ -152,6 +186,14 @@ subroutine delete_regular_ll(this,dim)
 
 type(grid_regular_ll) ::this
 type(grid_dim) :: dim
+
+   this%lon_min =dmiss
+   this%lon_max =dmiss
+   this%lat_min =dmiss
+   this%lat_max =dmiss
+   this%component_flag=imiss
+   dim%nx = imiss
+   dim%ny = imiss
 
 if (associated(dim%lon)) then
   deallocate(dim%lon)

@@ -119,10 +119,10 @@ subroutine init_rotated_ll(this,dim, &
 
 type(grid_rotated_ll) ::this
 type(grid_dim) :: dim
-integer :: nx, ny
-doubleprecision :: lon_min, lon_max, lat_min, lat_max
-doubleprecision :: latitude_south_pole,longitude_south_pole,angle_rotation
-integer :: component_flag
+integer,optional :: nx, ny
+doubleprecision,optional :: lon_min, lon_max, lat_min, lat_max
+doubleprecision,optional :: latitude_south_pole,longitude_south_pole,angle_rotation
+integer,optional :: component_flag
 character(len=*),INTENT(in),OPTIONAL :: categoryappend !< appennde questo suffisso al namespace category di log4fortran
 
 character(len=512) :: a_name
@@ -135,9 +135,23 @@ call init(this%regular_ll,dim,&
  lon_min, lon_max, lat_min, lat_max, component_flag, &
  categoryappend)
 
-this%latitude_south_pole=latitude_south_pole
-this%longitude_south_pole=longitude_south_pole
-this%angle_rotation=angle_rotation
+if (present(latitude_south_pole))then
+   this%latitude_south_pole=latitude_south_pole
+else
+   this%latitude_south_pole=dmiss
+end if
+
+if (present(longitude_south_pole))then
+   this%longitude_south_pole=longitude_south_pole
+else
+   this%longitude_south_pole=dmiss
+end if
+
+if (present(angle_rotation))then
+   this%angle_rotation=angle_rotation
+else
+   this%angle_rotation=dmiss
+end if
 
 end subroutine init_rotated_ll
 
@@ -148,6 +162,11 @@ type(grid_rotated_ll) ::this
 type(grid_dim) :: dim
 
 call delete(this%regular_ll,dim)
+
+   this%latitude_south_pole=dmiss
+   this%longitude_south_pole=dmiss
+   this%angle_rotation=dmiss
+
 
 !chiudo il logger
 call l4f_category_delete(this%category)

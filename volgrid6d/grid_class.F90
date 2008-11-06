@@ -53,8 +53,6 @@ end type griddim_def
 
 
 
-
-
 !> Operatore logico di uguaglianza tra oggetti della classe grid.
 !! Funziona anche per 
 !! confronti di tipo array-array (qualsiasi n. di dimensioni) e di tipo
@@ -143,7 +141,6 @@ integer,optional :: nx, ny
 doubleprecision,optional :: lon_min, lon_max, lat_min, lat_max
 doubleprecision,optional :: latitude_south_pole,longitude_south_pole,angle_rotation
 integer,optional :: component_flag
-
 character(len=*),INTENT(in),OPTIONAL :: categoryappend !< appennde questo suffisso al namespace category di log4fortran
 
 character(len=512) :: a_name
@@ -152,11 +149,16 @@ character(len=512) :: a_name
 call l4f_launcher(a_name,a_name_append=trim(subcategory)//"."//trim(categoryappend))
 this%category=l4f_category_get(a_name)
 
+call init(this%grid%regular_ll,this%dim)
+call init(this%grid%rotated_ll,this%dim)
+
 if (present(type))then
   this%grid%type%type=type
 else
   this%grid%type%type=cmiss
+
   return
+
 end if
 
 
@@ -179,7 +181,7 @@ case ( "rotated_ll")
   
 case default
   call l4f_category_log(this%category,L4F_ERROR,"gtype: "//this%grid%type%type//" non gestita" )
-  call exit (1)
+  call raise_error("gtype non gestita")
 
 end select
 
@@ -200,7 +202,7 @@ case ( "rotated_ll")
   
 case default
   call l4f_category_log(this%category,L4F_ERROR,"gtype: "//this%grid%type%type//" non gestita" )
-  call exit (1)
+  call raise_error("gtype non gestita")
 
 end select
 
@@ -227,7 +229,7 @@ case ( "rotated_ll")
   
 case default
   call l4f_category_log(this%category,L4F_ERROR,"gtype: "//this%grid%type%type//" non gestita" )
-  call exit (1)
+  call raise_error("gtype non gestita")
 
 end select
 
@@ -248,7 +250,7 @@ case ( "rotated_ll")
 
 case default
   call l4f_category_log(this%category,L4F_ERROR,"gtype: "//this%grid%type%type//" non gestita" )
-  call exit (1)
+  call raise_error("gtype non gestita")
 
 end select
 
@@ -285,7 +287,7 @@ case ( "rotated_ll")
   
 case default
   call l4f_category_log(this%category,L4F_ERROR,"gtype: "//this%grid%type%type//" non gestita" )
-  call exit (1)
+  call raise_error("gtype non gestita")
 
 end select
 
@@ -313,7 +315,7 @@ case ( "rotated_ll")
   
 case default
   call l4f_category_log(this%category,L4F_ERROR,"gtype: "//this%grid%type%type//" non gestita" )
-  call exit (1)
+  call raise_error("gtype non gestita")
 
 end select
 
