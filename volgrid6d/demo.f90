@@ -37,7 +37,7 @@ call init (griddim,type="regular_ll", &
 
 call init (var)
 
-print *,var
+call display(var)
 
 call griddim_unproj(griddim)
 

@@ -66,7 +66,6 @@ LOOP: DO WHILE (iret == GRIB_SUCCESS)
    call l4f_category_log(category,L4F_INFO,"import gridinfo")
 
    ngrib=ngrib+1
-
    call init (gridinfo(ngrib),gaid=gaid)
    call import(gridinfo(ngrib))
 

@@ -491,19 +491,19 @@ end if
 
 if (associated (this%gaid))then
 
-this%gaid(&
- index(this%time,     gridinfo%time),&
- index(this%timerange,gridinfo%timerange),&
- index(this%level,    gridinfo%level),&
- index(this%var,      gridinfo%var)&
- )=gridinfo%gaid
-
+  this%gaid(&
+   index(this%time,     gridinfo%time),&
+   index(this%timerange,gridinfo%timerange),&
+   index(this%level,    gridinfo%level),&
+   index(this%var,      gridinfo%var)&
+   )=gridinfo%gaid
+  
 else
 
   call l4f_category_log(this%category,L4F_ERROR,&
    "gaid non allocato: chiama volgrid6d_alloc_vol")
   call raise_error("gaid non allocato: chiama volgrid6d_alloc_vol")
-
+  
 end if
 
 
@@ -515,9 +515,9 @@ if (associated (this%voldati))then
    index(this%level,    gridinfo%level),&
    index(this%var,      gridinfo%var)&
    ) = decode_gridinfo (gridinfo)
-
+  
 else
-
+  
   call l4f_category_log(this%category,L4F_INFO,"non decodifico i dati")
 
 end if

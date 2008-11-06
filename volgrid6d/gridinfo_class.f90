@@ -145,7 +145,7 @@ call delete(this%timerange)
 call delete(this%level)
 call delete(this%var)
 
-call l4f_category_log(this%category,L4F_DEBUG,"cangello gaid" )
+call l4f_category_log(this%category,L4F_DEBUG,"cancello gaid" )
 this%gaid=imiss
 
 !chiudo il logger
@@ -495,12 +495,13 @@ call grib_get(this%gaid,'jPointsAreConsecutive',jPointsAreConsecutive)
 
 call grib_get(this%gaid,'numberOfValues',numberOfValues)
 
+
 if (numberOfValues /= (this%griddim%dim%nx * this%griddim%dim%ny))then
 
   call l4f_category_log(this%category,L4F_INFO,'nx: '//to_char(this%griddim%dim%nx)&
        //' ny: '//to_char(this%griddim%dim%ny)//to_char(this%griddim%dim%nx*this%griddim%dim%ny))
-  call l4f_category_log(this%category,L4F_ERROR,'number of values different nx,ny: '//to_char(numberOfValues))
-  call raise_error('number of values different nx,ny')
+  call l4f_category_log(this%category,L4F_ERROR,'number of values disagree with nx,ny: '//to_char(numberOfValues))
+  call raise_error('number of values disagree with nx,ny')
 
 end if
 
