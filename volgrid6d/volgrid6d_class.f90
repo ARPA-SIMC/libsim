@@ -214,7 +214,7 @@ IF (this%griddim%dim%nx > 0 .and. this%griddim%dim%ny > 0 .and..NOT.ASSOCIATED(t
      call l4f_category_log(this%category,L4F_DEBUG,"alloco voldati")
 
      ALLOCATE(this%voldati( this%griddim%dim%nx,this%griddim%dim%ny,&
-          SIZE(this%time), SIZE(this%level), &
+          SIZE(this%level), SIZE(this%time),  &
           SIZE(this%timerange), SIZE(this%var)))
   
      IF (linivol) this%voldati = rmiss
@@ -222,8 +222,8 @@ IF (this%griddim%dim%nx > 0 .and. this%griddim%dim%ny > 0 .and..NOT.ASSOCIATED(t
   end if
 
   call l4f_category_log(this%category,L4F_DEBUG,"alloco gaid")
-  ALLOCATE(this%gaid( &
-   SIZE(this%time), SIZE(this%level), &
+  ALLOCATE(this%gaid( SIZE(this%level),&
+   SIZE(this%time), &
    SIZE(this%timerange), SIZE(this%var)))
   
   IF (linivol) this%gaid  = imiss
@@ -469,7 +469,7 @@ TYPE(volgrid6d),INTENT(OUT) :: this !< Volume volgrid6d da leggere
 type(gridinfo_type),intent(in) :: gridinfo !< gridinfo 
 character(len=*),INTENT(in),OPTIONAL :: categoryappend !< appende questo suffisso al namespace category di log4fortran
 character(len=255)   :: type
-
+integer :: ilevel,itime,itimerange,ivar
 
 call get_val(this%griddim,type=type)
 
@@ -488,15 +488,22 @@ end if
 
 !TODO
 ! cosa torna index se notfound ?
+ilevel     = index(this%level,    gridinfo%level)
+itime      = index(this%time,     gridinfo%time)
+itimerange = index(this%timerange,gridinfo%timerange)
+ivar       = index(this%var,      gridinfo%var)
+
 
 if (associated (this%gaid))then
 
-  this%gaid(&
-   index(this%time,     gridinfo%time),&
-   index(this%timerange,gridinfo%timerange),&
-   index(this%level,    gridinfo%level),&
-   index(this%var,      gridinfo%var)&
-   )=gridinfo%gaid
+  if ( c_e (this%gaid(ilevel,itime,itimerange,ivar)))then
+
+   call l4f_category_log(this%category,L4F_WARN,"gaid exist: grib duplicated")
+!   call raise_error ("volgrid6d: gaid exist: grib duplicated")
+
+  end if
+
+  this%gaid(ilevel,itime,itimerange,ivar)=gridinfo%gaid
   
 else
 
@@ -509,12 +516,8 @@ end if
 
 if (associated (this%voldati))then
 
-  this%voldati(:,:,&
-   index(this%time,     gridinfo%time),&
-   index(this%timerange,gridinfo%timerange),&
-   index(this%level,    gridinfo%level),&
-   index(this%var,      gridinfo%var)&
-   ) = decode_gridinfo (gridinfo)
+  this%voldati(:,:,ilevel,itime,itimerange,ivar)&
+   = decode_gridinfo (gridinfo)
   
 else
   
@@ -546,9 +549,9 @@ gridinfo%var       =this%var(ivar)
 
 if (.not. c_e(gridinfo%gaid))then
 
-  if (c_e(this%gaid(itime,itimerange,ilevel,ivar)))then
+  if (c_e(this%gaid(ilevel,itime,itimerange,ivar)))then
 
-    gridinfo%gaid = this%gaid(itime,itimerange,ilevel,ivar)
+    gridinfo%gaid = this%gaid(ilevel,itime,itimerange,ivar)
 
   else
  
@@ -561,7 +564,7 @@ end if
 
 
 call encode_gridinfo(gridinfo,this%voldati(:,:,&
- itime,itimerange,ilevel,ivar))
+ ilevel,itime,itimerange,ivar))
 
 
 end subroutine export_to_gridinfo
@@ -608,6 +611,8 @@ do i=1,ngrid
    nlevel = count_distinct(gridinfov%level,mask=(this(i)%griddim == gridinfov%griddim),back=.true.)
    nvar = count_distinct(gridinfov%var,mask=(this(i)%griddim == gridinfov%griddim),back=.true.)
    
+
+!   print *,ntime,ntimerange,nlevel,nvar
 !   call init (this(i),this(i)%griddim, categoryappend)
    call l4f_category_log(this(i)%category,L4F_DEBUG,"import from gridinfo vettori")
    
@@ -630,6 +635,7 @@ do i=1,size(gridinfov)
 !   call display(gridinfov(i)%griddim)
 !   call display(this(index(this%griddim,gridinfov(i)%griddim))%griddim)
 
+!  print *,"lavoro sull'area: ",index(this%griddim,gridinfov(i)%griddim)
    call import (this(index(this%griddim,gridinfov(i)%griddim)),gridinfov(i),categoryappend)
 
 end do

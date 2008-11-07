@@ -31,22 +31,11 @@ ngrib=0
 
 call grib_open_file(ifile, 'gribmix.grb','r')
 
-! Loop on all the messages in a file.
 
-call  grib_new_from_file(ifile,gaid, iret) 
-
-DO WHILE (iret == GRIB_SUCCESS)
-
-   ngrib=ngrib+1
-   call grib_release(gaid)
-   call grib_new_from_file(ifile,gaid, iret)
-   
-end do
+call grib_count_in_file(ifile,ngrib)
 
 call l4f_category_log(category,L4F_INFO,&
          "Numero totale di grib: "//to_char(ngrib))
-
-call grib_close_file(ifile)
 
 allocate (gridinfo(ngrib))
 
@@ -58,6 +47,8 @@ call grib_open_file(ifile, 'gribmix.grb','r')
 
 !     a new grib message is loaded from file
 !     gaid is the grib id to be used in subsequent calls
+
+gaid=-1
 call  grib_new_from_file(ifile,gaid, iret) 
 
 
@@ -69,6 +60,7 @@ LOOP: DO WHILE (iret == GRIB_SUCCESS)
    call init (gridinfo(ngrib),gaid=gaid)
    call import(gridinfo(ngrib))
 
+   gaid=-1
    call grib_new_from_file(ifile,gaid, iret)
    
 end do LOOP
