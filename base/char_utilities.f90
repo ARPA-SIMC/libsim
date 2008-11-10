@@ -69,11 +69,13 @@ END FUNCTION byte_to_char
 
 
 !> Variante con input character
-ELEMENTAL FUNCTION char_to_char(in, form) RESULT(char)
+FUNCTION char_to_char(in, form) result(char)
 CHARACTER(len=*),INTENT(in) :: in !< valore da rappresentare in CHARACTER
 CHARACTER(len=*),INTENT(in),OPTIONAL :: form !< formato opzionale
 
 CHARACTER(len=LEN_TRIM(in)) :: char
+!fortran 2003
+!CHARACTER(len=:),allocatable :: char
 
 IF (PRESENT(form)) THEN
   WRITE(char,form) in

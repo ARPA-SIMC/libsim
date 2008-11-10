@@ -25,7 +25,7 @@ CALL init(gribt)
 CALL init(gribtd)
 
 DO WHILE (.TRUE.)
-  CALL setval(gribt%mg, var=(/-1, 2, 11/), lev=(/105,2,-1/))
+  CALL setval(gribt%mg, var=(/-1, 2, 11/), lev=(/105,2,-1,2/))
   IF (.NOT. findgribdata(gribt, tunit, ier)) EXIT
 !  IF (ier /= 0) EXIT
   IF (first) THEN
@@ -37,7 +37,7 @@ DO WHILE (.TRUE.)
 
   gribtd%mg = gribt%gg
 
-  CALL setval(gribtd%mg, var=(/-1, 2, 17/), lev=(/105,2,-1/))
+  CALL setval(gribtd%mg, var=(/-1, 2, 17/), lev=(/105,2,-1,2/))
   IF (.NOT. findgribdata(gribtd, tdunit, ier)) EXIT
 !  IF (ier /= 0) EXIT
 

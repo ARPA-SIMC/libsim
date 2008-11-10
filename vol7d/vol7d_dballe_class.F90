@@ -410,7 +410,7 @@ SUBROUTINE vol7d_dballe_importvvns(this, var, network, coordmin, coordmax, timei
  attr,anavar,anaattr, varkind,attrkind,anavarkind,anaattrkind)
 
 TYPE(vol7d_dballe),INTENT(inout) :: this !< oggetto vol7d_dballe
-CHARACTER(len=*),INTENT(in),OPTIONAL :: var(:)
+CHARACTER(len=*),INTENT(in) :: var(:)
 TYPE(geo_coord),INTENT(inout),optional :: coordmin,coordmax 
 TYPE(datetime),INTENT(in),OPTIONAL :: timei, timef
 TYPE(vol7d_network),INTENT(in),OPTIONAL :: network,set_network

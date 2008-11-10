@@ -4,7 +4,7 @@ use gridinfo_class
 use log4fortran
 use grib_api
 use volgrid6d_class
-
+use char_utilities
 implicit none
 
 integer :: category,ier
@@ -57,7 +57,7 @@ LOOP: DO WHILE (iret == GRIB_SUCCESS)
    call l4f_category_log(category,L4F_INFO,"import gridinfo")
 
    ngrib=ngrib+1
-   call init (gridinfo(ngrib),gaid=gaid)
+   call init (gridinfo(ngrib),gaid=gaid,categoryappend=to_char(ngrib))
    call import(gridinfo(ngrib))
 
    gaid=-1
@@ -103,7 +103,7 @@ do ngrib=1,size(gridinfoout)
    call delete (gridinfoout(ngrib))
 enddo
 
-call l4f_category_log(category,L4F_INFO,"terminato ")
+call l4f_category_log(category,L4F_INFO,"terminato")
 
 deallocate(gridinfo)
 
