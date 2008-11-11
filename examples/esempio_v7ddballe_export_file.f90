@@ -47,9 +47,9 @@ CALL init(v7d)
 read(10,*)nana,ntime
 
 ntimerange=2
-nlevel=2
+nlevel=3
 nnetwork=1
-ndativarr=2
+ndativarr=4
 nanavarc=1
 
 call l4f_category_log(category,L4F_INFO,"numero stazioni: "//to_char(nana))
@@ -63,13 +63,19 @@ call vol7d_alloc (v7d, &
 call vol7d_alloc_vol (v7d)
 
 inetwork=1
-call init(v7d%network(inetwork), 11)
+call init(v7d%network(inetwork), 1)
+
 call init(v7d%anavar%c(1), btable="B01019")     ! LONG STATION OR SITE NAME
 call init(v7d%dativar%r(1), btable="B13011")    ! precipitazione
 call init(v7d%dativar%r(2), btable="B12001")    ! temperatura
+call init(v7d%dativar%r(3), btable="B11001")    ! WIND DIRECTION 
+call init(v7d%dativar%r(4), btable="B11002")    ! WIND SPEED
+
 call init(v7d%level(1),1,0)                     ! al suolo
-call init(v7d%level(2),103,2)                   ! a 2 m dal suolo
-call init(v7d%timerange(1),1,0, 3600)           ! cumulate n 1 ora
+call init(v7d%level(2),103,2000)                ! a 2 m dal suolo
+call init(v7d%level(3),103,10000)               ! 10m
+
+call init(v7d%timerange(1),1,0, 3600)           ! cumulate n 1 ore
 call init(v7d%timerange(2),254,    0, 0)        ! "istantanee"
 
 v7d%volanac(1,1,1)="stazione 1 "
@@ -92,11 +98,22 @@ do ist=1,nana
     idativarr= 1
     v7d%voldatir(iana,itime,ilevel,itimerange,idativarr,inetwork) = prec
     
-    itimerange=2     
+    itimerange=2
     ilevel=2
     idativarr= 2
     v7d%voldatir(iana,itime,ilevel,itimerange,idativarr,inetwork) = temp
-    
+
+    itimerange=2
+    ilevel=3
+    idativarr= 3
+    v7d%voldatir(iana,itime,ilevel,itimerange,idativarr,inetwork) = 180.
+
+    itimerange=2
+    ilevel=3
+    idativarr= 4
+    v7d%voldatir(iana,itime,ilevel,itimerange,idativarr,inetwork) = 5.5
+
+   
   end do
 end do
 
@@ -108,7 +125,8 @@ v7d_exp%vol7d = v7d
 
 call l4f_category_log(category,L4F_INFO,"Scrivo i dati")
 
-CALL export(v7d_exp,template="generic")
+!CALL export(v7d_exp,template="synop")
+CALL export(v7d_exp)
 
 CALL delete (v7d_exp) 
 

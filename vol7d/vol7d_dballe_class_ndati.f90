@@ -3,6 +3,10 @@
 if (associated(this%vol7d%dativar%/**/VOL7D_POLY_TYPES_V))then
    ndativar/**/VOL7D_POLY_TYPES_V=size(this%vol7d%dativar%/**/VOL7D_POLY_TYPES_V(:))
    allocate (lvar/**/VOL7D_POLY_TYPES_V(ndativar/**/VOL7D_POLY_TYPES_V))
+
+   call l4f_category_log(this%category,L4F_DEBUG,"ndativar*: "//&
+    to_char(ndativar/**/VOL7D_POLY_TYPES_V ))
+
    lvar/**/VOL7D_POLY_TYPES_V(ndativar/**/VOL7D_POLY_TYPES_V)=.false.
    if (present(var))then
       lvar/**/VOL7D_POLY_TYPES_V(:)=.false.

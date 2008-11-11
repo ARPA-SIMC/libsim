@@ -4,15 +4,18 @@
 
 !if (associated(this%vol7d%voldati/**/VOL7D_POLY_TYPES_V)) then
 
+call l4f_category_log(this%category,L4F_DEBUG,"ndativar*: "//to_char(ndativar/**/VOL7D_POLY_TYPES_V))
+
 do iiiii=1,ndativar/**/VOL7D_POLY_TYPES_V
 
+  !call l4f_category_log(this%category,L4F_DEBUG,"indice iiiii: "//to_char(iiiii))
+  
   if (.not.lvar/**/VOL7D_POLY_TYPES_V/**/(iiiii)) cycle
   if (.not.c_e(this%vol7d%voldati/**/VOL7D_POLY_TYPES_V(i,ii,iii,iiii,iiiii,iiiiii))) cycle
     
   !print*,"scrivo",this%vol7d%dativar%/**/VOL7D_POLY_TYPES_V(iiiii)%btable,&
   ! this%vol7d%voldati/**/VOL7D_POLY_TYPES_V(i,ii,iii,iiii,iiiii,iiiiii)
 
-  
   if (lattr_only) then
                                 !print*,i,ii,iii,iiii,iiiiii
                                 !print*,"context_id -->",this%data_id(i,ii,iii,iiii,iiiiii)
