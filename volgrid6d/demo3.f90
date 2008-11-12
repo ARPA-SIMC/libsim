@@ -41,8 +41,6 @@ allocate (gridinfo(ngrib))
 
 ngrib=0
 
-call grib_open_file(ifile, 'gribmix.grb','r')
-
 ! Loop on all the messages in a file.
 
 !     a new grib message is loaded from file

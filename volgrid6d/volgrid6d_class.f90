@@ -528,39 +528,52 @@ end if
 end subroutine import_from_gridinfo
 
 
-subroutine export_to_gridinfo (this,gridinfo,itime,itimerange,ilevel,ivar,gaid_template)
+subroutine export_to_gridinfo (this,gridinfo,itime,itimerange,ilevel,ivar,gaid_template,gaset)
 
 TYPE(volgrid6d),INTENT(in) :: this !< Volume volgrid6d da leggere
 type(gridinfo_type),intent(out) :: gridinfo !< gridinfo 
+integer ::itime,itimerange,ilevel,ivar,gaid
 integer, optional :: gaid_template
-integer ::itime,itimerange,ilevel,ivar
+logical,optional  ::gaset
+
+logical           ::lgaset
+
+if (present(gaset))then
+  lgaset=gaset
+else
+  lgaset= .false.
+end if
+
 
 call l4f_category_log(this%category,L4F_DEBUG,"export_to_gridinfo")
 
 
-if (present(gaid_template)) call grib_clone(gaid_template,gridinfo%gaid)
-
-gridinfo%griddim   =this%griddim
-gridinfo%time      =this%time(itime)
-gridinfo%timerange =this%timerange(itimerange)
-gridinfo%level     =this%level(ilevel)
-gridinfo%var       =this%var(ivar)
+if (present(gaid_template)) call grib_clone(gaid_template,gaid)
 
 
 if (.not. c_e(gridinfo%gaid))then
 
   if (c_e(this%gaid(ilevel,itime,itimerange,ivar)))then
 
-    gridinfo%gaid = this%gaid(ilevel,itime,itimerange,ivar)
+    gaid = this%gaid(ilevel,itime,itimerange,ivar)
 
   else
  
+    gaid=imiss
     call l4f_category_log(this%category,L4F_ERROR,&
      "mancano tutti i gaid; export impossibile")
     call raise_error("mancano tutti i gaid; export impossibile")
 
   end if
 end if
+
+
+call init(gridinfo,gaid,&
+ this%griddim,&
+ this%time(itime),&
+ this%timerange(itimerange),&
+ this%level(ilevel),&
+ this%var(ivar),lgaset)
 
 
 call encode_gridinfo(gridinfo,this%voldati(:,:,&

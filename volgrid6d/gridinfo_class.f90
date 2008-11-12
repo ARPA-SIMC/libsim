@@ -29,7 +29,7 @@ type gridinfo_type
   TYPE(volgrid6d_var) :: var
 !> id del grib come da grib_api
   integer ::  gaid
-
+  logical ::  gaset   !<  determina se quando export devo settare le key delle grib_api
   integer :: category !< log4fortran
 
 end type gridinfo_type
@@ -70,7 +70,7 @@ public gridinfo_type,init,delete,import,export,display,decode_gridinfo,encode_gr
 contains
 
 !> Inizializza un oggetto di tipo gridinfo_type.
-SUBROUTINE init_gridinfo(this,gaid,griddim,time,timerange,level,var,categoryappend)
+SUBROUTINE init_gridinfo(this,gaid,griddim,time,timerange,level,var,gaset,categoryappend)
 TYPE(gridinfo_type),intent(out) :: this !< oggetto da inizializzare
 
 !> id del grib come da grib_api
@@ -85,6 +85,7 @@ TYPE(vol7d_timerange),intent(in),optional :: timerange
 TYPE(vol7d_level),intent(in),optional :: level
 !> vettore descrittore della dimensione variabile di anagrafica
 TYPE(volgrid6d_var),intent(in),optional :: var
+logical,intent(in),optional :: gaset
 
 character(len=*),INTENT(in),OPTIONAL :: categoryappend !< appennde questo suffisso al namespace category di log4fortran
 
@@ -96,10 +97,17 @@ this%category=l4f_category_get(a_name)
 !call l4f_category_log(this%category,L4F_DEBUG,"init grid type: "//this%grid%type%type )
 
 
+
 if (present(gaid))then
   this%gaid=gaid
 else
   this%gaid=imiss
+end if
+
+if (present(gaset))then
+  this%gaset = gaset
+else
+  this%gaset = .true.
 end if
 
 if (present(griddim))then
@@ -181,17 +189,15 @@ TYPE(gridinfo_type),intent(out) :: this !< oggetto da exportare
 
 call l4f_category_log(this%category,L4F_DEBUG,"ora provo ad exportare da grib " )
 
-
-call export(this%griddim,this%gaid)
-call export(this%time,this%gaid)
-call export(this%timerange,this%gaid)
-call export(this%level,this%gaid)
-call export(this%var,this%gaid)
-
+if (this%gaset) then
+  call export(this%griddim,this%gaid)
+  call export(this%time,this%gaid)
+  call export(this%timerange,this%gaid)
+  call export(this%level,this%gaid)
+  call export(this%var,this%gaid)
+end if
 
 end subroutine export_gridinfo
-
-
 
 
 
@@ -256,32 +262,39 @@ subroutine import_level(this,gaid)
 TYPE(vol7d_level),INTENT(out) :: this
 integer,INTENT(in)          :: gaid
 integer                     :: EditionNumber,level1,l1,level2,l2
+integer :: ltype,ltype1,scalef1,scalev1,ltype2,scalef2,scalev2
 
 call grib_get(gaid,'GRIBEditionNumber',EditionNumber)
 
 if (EditionNumber == 1)then
   
-  call grib_get(gaid,'indicatorOfTypeOfLevel',level1)
+  call grib_get(gaid,'indicatorOfTypeOfLevel',ltype)
   call grib_get(gaid,'topLevel',l1)
-  level2=imiss
   call grib_get(gaid,'bottomLevel',l2)
 
-  call init (this,level1,l1,level2,l2)
+  call cnvlevel(ltype,l1,l2,ltype1,scalef1,scalev1,ltype2,scalef1,scalev2)
 
 else if (EditionNumber == 2)then
 
-  call grib_get(gaid,'typeOfFirstFixedSurface',level1)
-  call grib_get(gaid,'scaledValueOfFirstFixedSurface',l1)
-  call grib_get(gaid,'typeOfSecondFixedSurface',level2)     ! (missing=255)
-  call grib_get(gaid,'scaledValueOfSecondFixedSurface',l2)
+  call grib_get(gaid,'typeOfFirstFixedSurface',ltype1)
+  call grib_get(gaid,'scaleFactorOfFirstFixedSurface',scalef1)
+  call grib_get(gaid,'scaledValueOfFirstFixedSurface',scalev1)
 
-  call init (this,level1,l1,level2,l2)
-  
+  call grib_get(gaid,'typeOfSecondFixedSurface',ltype2)     ! (missing=255)
+  call grib_get(gaid,'scaleFactorOfSecondFixedSurface',scalef2)
+  call grib_get(gaid,'scaledValueOfSecondFixedSurface',scalev2)
+
 else
 
   call raise_error('GribEditionNumber not supported')
 
 end if
+
+
+call level2dballe(ltype1,scalef1,scalev1,ltype2,scalef2,scalev2, level1,l1,level2,l2)
+
+call init (this,level1,l1,level2,l2)
+
 
 end subroutine import_level
 
@@ -297,16 +310,22 @@ call grib_get(gaid,'GRIBEditionNumber',EditionNumber)
 
 if (EditionNumber == 1)then
 
-  call grib_set(gaid,'indicatorOfTypeOfLevel',this%level1)
-  call grib_set(gaid,'topLevel',this%l1)
-  call grib_set(gaid,'bottomLevel',this%l2)
 
+!  call grib_set(gaid,'indicatorOfTypeOfLevel',this%level1)
+!  call grib_set(gaid,'topLevel',this%l1)
+!  call grib_set(gaid,'bottomLevel',this%l2)
+
+! call l4f_category_log(category,L4F_ERROR,"conversione non gestita" )
+
+  call raise_error("convert level from grib2 to grib1 not managed")
 
 else if (EditionNumber == 2)then
 
   call grib_set(gaid,'typeOfFirstFixedSurface',this%level1)     ! (missing=255)
+
   call grib_set(gaid,'scaledValueOfFirstFixedSurface',this%l1)
   call grib_set(gaid,'typeOfSecondFixedSurface',this%level2)
+
   call grib_set(gaid,'scaledValueOfSecondFixedSurface',this%l2)
 
 else
@@ -463,9 +482,12 @@ function decode_gridinfo(this) result (field)
 TYPE(gridinfo_type),INTENT(in)  :: this      !< oggetto da decodificare
 integer                     :: EditionNumber
 integer  :: alternativeRowScanning,iScansNegatively,jScansPositively,jPointsAreConsecutive
-integer :: numberOfValues
+integer :: numberOfValues,numberOfPoints
 real  :: field (this%griddim%dim%nx,this%griddim%dim%ny)
-real  :: vector (this%griddim%dim%nx * this%griddim%dim%ny)
+
+!TODO costretto a usare doubleprecision in quanto float non va (riportato bug grib_api)
+doubleprecision  :: vector (this%griddim%dim%nx * this%griddim%dim%ny)
+doubleprecision,allocatable  :: lats (:),lons(:)
 integer ::x1,x2,xs,y1,y2,ys,ord(2)
 
 
@@ -493,23 +515,35 @@ call grib_get(this%gaid,'iScansNegatively',iScansNegatively)
 call grib_get(this%gaid,'jScansPositively',jScansPositively)
 call grib_get(this%gaid,'jPointsAreConsecutive',jPointsAreConsecutive)
 
+call grib_set(this%gaid,'missingValue',rmiss)
+call grib_get(this%gaid,'numberOfPoints',numberOfPoints)
 call grib_get(this%gaid,'numberOfValues',numberOfValues)
 
 
-if (numberOfValues /= (this%griddim%dim%nx * this%griddim%dim%ny))then
+if (numberOfPoints /= (this%griddim%dim%nx * this%griddim%dim%ny))then
+!if (numberOfValues /= (this%griddim%dim%nx * this%griddim%dim%ny))then
 
   call l4f_category_log(this%category,L4F_INFO,'nx: '//to_char(this%griddim%dim%nx)&
        //' ny: '//to_char(this%griddim%dim%ny)//to_char(this%griddim%dim%nx*this%griddim%dim%ny))
-  call l4f_category_log(this%category,L4F_ERROR,'number of values disagree with nx,ny: '//to_char(numberOfValues))
+  call l4f_category_log(this%category,L4F_ERROR,'number of values disagree with nx,ny: '//to_char(numberOfPoints))
+!  call l4f_category_log(this%category,L4F_ERROR,'number of values disagree with nx,ny: '//to_char(numberOfValues))
   call raise_error('number of values disagree with nx,ny')
 
 end if
 
                             !     get data values
 call l4f_category_log(this%category,L4F_INFO,'number of values: '//to_char(numberOfValues))
+call l4f_category_log(this%category,L4F_INFO,'number of points: '//to_char(numberOfPoints))
 
-call grib_set(this%gaid,'missingValue',rmiss)
-call grib_get(this%gaid,'values',vector)
+allocate(lats(numberOfPoints))
+allocate(lons(numberOfPoints))
+call grib_get_data(this%gaid,lats,lons,vector)
+call l4f_category_log(this%category,L4F_INFO,'decoded')
+
+deallocate(lats)
+deallocate(lons)
+
+!call grib_get(this%gaid,'values',vector)
 
 
 ! Transfer data field changing scanning mode to 64
@@ -636,6 +670,210 @@ call grib_set(this%gaid,'values',pack(field,mask=.true.))
 
 
 end subroutine encode_gridinfo
+
+
+
+
+!derived from a work  Gilbert        ORG: W/NP11  SUBPROGRAM:    cnvlevel   DATE: 2003-06-12
+
+
+subroutine level2dballe(ltype1,scalef1,scalev1,ltype2,scalef2,scalev2, lt1,l1,lt2,l2)
+
+integer,intent(in) :: ltype1,scalef1,scalev1,ltype2,scalef2,scalev2
+integer,intent(out) ::lt1,l1,lt2,l2
+
+integer,parameter :: height(5)=(/102,103,106,117,160/)
+doubleprecision:: sl1,sl2
+
+
+if (ltype1 == 255 ) then
+  lt1=imiss
+  l1=imiss
+else
+  lt1=ltype1
+
+  sl1=scalev1*(10.D00**(-scalef1))
+
+  if ( any( ltype1 == height)) then
+
+    l1=sl1*1000.
+
+  else
+
+    l1=sl1
+
+  end if
+end if
+
+
+
+if (ltype2 == 255 ) then
+  lt2=imiss
+  l2=imiss
+else
+  lt2=ltype2
+
+  sl2=scalev2*(10.D00**(-scalef2))
+
+  if ( any( ltype2 == height)) then
+
+    l2=sl2*1000.
+
+  else
+
+    l2=sl2
+
+  end if
+end if
+
+
+
+return
+end subroutine level2dballe
+
+
+
+subroutine cnvlevel(ltype,l1,l2,ltype1,scalef1,scalev1,ltype2,scalef2,scalev2)
+
+integer,intent(in) :: ltype,l1,l2
+integer,intent(out) :: ltype1,scalef1,scalev1,ltype2,scalef2,scalev2
+
+ltype1=ltype
+scalef1=0
+scalev1=0
+ltype2=255
+scalef2=0
+scalev2=0
+
+if (ltype.eq.100) then
+  ltype1=100
+  scalev1=l1*100
+elseif (ltype.eq.101) then
+  ltype1=100
+  scalev1=l1*1000
+  ltype2=100
+  scalev2=l2*1000
+elseif (ltype.eq.102) then
+  ltype1=101
+elseif (ltype.eq.103) then
+  ltype1=102
+  scalev1=l1
+elseif (ltype.eq.104) then
+  ltype1=102
+  scalev1=l1
+  ltype2=102
+  scalev2=l2
+elseif (ltype.eq.105) then
+  ltype1=103
+  scalev1=l1
+elseif (ltype.eq.106) then
+  ltype1=103
+  scalev1=l1*100
+  ltype2=103
+  scalev2=l2*100
+elseif (ltype.eq.107) then
+  ltype1=104
+  scalef1=4
+  scalev1=l1
+elseif (ltype.eq.108) then
+  ltype1=104
+  scalef1=2
+  scalev1=l1
+  ltype2=104
+  scalef2=2
+  scalev2=l2
+elseif (ltype.eq.109) then
+  ltype1=105
+  scalev1=l1
+elseif (ltype.eq.110) then
+  ltype1=105
+  scalev1=l1
+  ltype2=105
+  scalev2=l2
+elseif (ltype.eq.111) then
+  ltype1=106
+  scalef1=2
+  scalev1=l1
+elseif (ltype.eq.112) then
+  ltype1=106
+  scalef1=2
+  scalev1=l1
+  ltype2=106
+  scalef2=2
+  scalev2=l2
+elseif (ltype.eq.113) then
+  ltype1=107
+  scalev1=l1
+elseif (ltype.eq.114) then
+  ltype1=107
+  scalev1=475+l1
+  ltype2=107
+  scalev2=475+l2
+elseif (ltype.eq.115) then
+  ltype1=108
+  scalev1=l1*100
+elseif (ltype.eq.116) then
+  ltype1=108
+  scalev1=l1*100
+  ltype2=108
+  scalev2=l2*100
+elseif (ltype.eq.117) then
+  ltype1=109
+  scalef1=9
+  scalev1=l1
+  if ( btest(l1,15) ) then
+    scalev1=-1*mod(l1,32768)
+  endif
+elseif (ltype.eq.119) then
+  ltype1=111
+  scalef1=4
+  scalev1=l1
+elseif (ltype.eq.120) then
+  ltype1=111
+  scalef1=2
+  scalev1=l1
+  ltype2=111
+  scalef2=2
+  scalev2=l2
+elseif (ltype.eq.121) then
+  ltype1=100
+  scalev1=(1100+l1)*100
+  ltype2=100
+  scalev2=(1100+l2)*100
+elseif (ltype.eq.125) then
+  ltype1=103
+  scalef1=2
+  scalev1=l1
+elseif (ltype.eq.128) then
+  ltype1=104
+  scalef1=3
+  scalev1=1100+l1
+  ltype2=104
+  scalef2=3
+  scalev2=1100+l2
+elseif (ltype.eq.141) then
+  ltype1=100
+  scalev1=l1*100
+  ltype2=100
+  scalev2=(1100+l2)*100
+elseif (ltype.eq.160) then
+  ltype1=160
+  scalev1=l1
+else
+
+  ltype1=255
+  scalef1=0
+  scalev1=0
+  ltype2=255
+  scalef2=0
+  scalev2=0
+
+  call raise_error('cnvlevel: GRIB1 Level '//to_char(ltype)//' not recognized.')
+
+endif
+
+return
+end subroutine cnvlevel
 
 
 
