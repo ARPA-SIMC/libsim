@@ -77,7 +77,11 @@ character(len=*),INTENT(in),OPTIONAL :: categoryappend !< appende questo suffiss
 
 character(len=512) :: a_name
 
-call l4f_launcher(a_name,a_name_append=trim(subcategory)//"."//trim(categoryappend))
+if (present(categoryappend))then
+   call l4f_launcher(a_name,a_name_append=trim(subcategory)//"."//trim(categoryappend))
+else
+   call l4f_launcher(a_name,a_name_append=trim(subcategory))
+endif
 this%category=l4f_category_get(a_name)
 
 call l4f_category_log(this%category,L4F_DEBUG,"init")
@@ -337,7 +341,7 @@ if (.not. opened) then
   inquire(file=lfilename,EXIST=exist)
   if (exist) CALL raise_error('file exist; cannot open new file')
   if (.not.exist) open (unit=lunit,file=lfilename,form="UNFORMATTED")
-  print *, "opened: ",lfilename
+  !print *, "opened: ",lfilename
 end if
 
 if (associated(this%time)) ntime=size(this%time)
@@ -424,14 +428,14 @@ if (.not. opened) then
   inquire(file=lfilename,EXIST=exist)
   if (.not. exist) CALL raise_error('file do not exist; cannot open file')
   if (exist) open (unit=lunit,file=lfilename,form="UNFORMATTED")
-  print *, "opened: ",lfilename
+  !print *, "opened: ",lfilename
 end if
 
 
 read(unit=lunit)ldescription
 read(unit=lunit)ltarray
 
-print *,"Info: reading volgrid6d from file"
+print *,"Info: reading volgrid6d from file"//trim(lfilename)
 print *,"Info: description: ",trim(ldescription)
 print *,"Info: written on ",ltarray
 
@@ -594,7 +598,13 @@ end if
 call l4f_category_log(this%category,L4F_DEBUG,"export_to_gridinfo")
 
 
-if (present(gaid_template)) call grib_clone(gaid_template,gaid)
+if (present(gaid_template)) then
+
+   call grib_clone(gaid_template,gaid)
+   if (.not. lgaset)call l4f_category_log(this%category,L4F_WARN,&
+        "exporting to a clone without gaset")
+
+end if
 
 
 if (.not. c_e(gridinfo%gaid))then
@@ -606,9 +616,9 @@ if (.not. c_e(gridinfo%gaid))then
   else
  
     gaid=imiss
-    call l4f_category_log(this%category,L4F_ERROR,&
+    call l4f_category_log(this%category,L4F_WARN,&
      "mancano tutti i gaid; export impossibile")
-    call raise_error("mancano tutti i gaid; export impossibile")
+    !call raise_error("mancano tutti i gaid; export impossibile")
 
   end if
 end if
@@ -642,7 +652,11 @@ integer :: category
 character(len=512) :: a_name
 
 ! category temporanea (altrimenti non possiamo loggare)
-call l4f_launcher(a_name,a_name_append=trim(subcategory)//"."//trim(categoryappend))
+if (present(categoryappend))then
+   call l4f_launcher(a_name,a_name_append=trim(subcategory)//"."//trim(categoryappend))
+else
+   call l4f_launcher(a_name,a_name_append=trim(subcategory))
+endif
 category=l4f_category_get(a_name)
 
 !type(gridinfo_type),allocatable :: gridinfovtmp(:)
@@ -657,14 +671,17 @@ call l4f_category_log(category,L4F_INFO,&
 allocate (this(ngrid))
 
 do i=1,ngrid
-   call init (this(i), categoryappend=categoryappend)
+   if (present(categoryappend))then
+      call init (this(i), categoryappend=trim(categoryappend)//"-"//to_char(ngrid))
+   else
+      call init (this(i), categoryappend=to_char(ngrid))
+   end if
 end do
 
 this%griddim=pack_distinct(gridinfov%griddim,ngrid,back=.true.)
 
 
 do i=1,ngrid
-   
    ntime = count_distinct(gridinfov%time,mask=(this(i)%griddim == gridinfov%griddim),back=.true.)
    ntimerange = count_distinct(gridinfov%timerange,mask=(this(i)%griddim == gridinfov%griddim),back=.true.)
    nlevel = count_distinct(gridinfov%level,mask=(this(i)%griddim == gridinfov%griddim),back=.true.)
@@ -706,11 +723,12 @@ call l4f_category_delete(category)
 end subroutine import_from_gridinfovv
 
 
-subroutine export_to_gridinfov (this,gridinfov,gaid_template)
+subroutine export_to_gridinfov (this,gridinfov,gaid_template,gaset)
 
 TYPE(volgrid6d),INTENT(in) :: this !< Volume volgrid6d da leggere
 type(gridinfo_type),intent(out) :: gridinfov(:) !< vettore gridinfo 
 integer, optional :: gaid_template
+logical,optional  ::gaset
 
 integer :: i,itime,itimerange,ilevel,ivar
 integer :: ngridinfo,ntime,ntimerange,nlevel,nvar
@@ -740,8 +758,7 @@ do itime=1,ntime
         if (i > ngridinfo) &
          call raise_error ("errore stranuccio in export_to_gridinfo:"//&
          "avevo già testato le dimensioni che ora sono sbagliate")
-        
-        call export (this,gridinfov(i),itime,itimerange,ilevel,ivar,gaid_template)
+        call export (this,gridinfov(i),itime,itimerange,ilevel,ivar,gaid_template,gaset)
         
       end do
     end do
@@ -751,19 +768,24 @@ end do
 end subroutine export_to_gridinfov
 
 
-subroutine export_to_gridinfovv (this,gridinfov,gaid_template,categoryappend)
+subroutine export_to_gridinfovv (this,gridinfov,gaid_template,gaset,categoryappend)
 
 TYPE(volgrid6d),INTENT(in)  :: this(:)      !< vettore volume volgrid6d da leggere
 type(gridinfo_type),pointer :: gridinfov(:) !< vettore gridinfo 
-character(len=*),INTENT(in),OPTIONAL :: categoryappend !< appende questo suffisso al namespace category di log4fortran
 integer, optional :: gaid_template
+logical,optional  ::gaset
+character(len=*),INTENT(in),OPTIONAL :: categoryappend !< appende questo suffisso al namespace category di log4fortran
 
 integer :: i,igrid,ngrid,start,end,ngridinfo,ngridinfoin
 integer :: category
 character(len=512) :: a_name
 
 ! category temporanea (altrimenti non possiamo loggare)
-call l4f_launcher(a_name,a_name_append=trim(subcategory)//"."//trim(categoryappend))
+if (present(categoryappend))then
+   call l4f_launcher(a_name,a_name_append=trim(subcategory)//"."//trim(categoryappend))
+else
+   call l4f_launcher(a_name,a_name_append=trim(subcategory))
+endif
 category=l4f_category_get(a_name)
 
 ngrid=size(this)
@@ -779,7 +801,11 @@ if (.not. associated(gridinfov))then
   allocate (gridinfov(ngridinfo))
 
   do i=1,ngridinfo
-    call init(gridinfov(i),categoryappend=categoryappend)
+     if (present(categoryappend))then
+        call init(gridinfov(i),categoryappend=trim(categoryappend)//"-"//to_char(i))
+     else
+        call init(gridinfov(i),categoryappend=to_char(i))
+     end if
   enddo
 else
 
@@ -802,7 +828,7 @@ do igrid=1,ngrid
 
   call l4f_category_log(this(igrid)%category,L4F_DEBUG,"export to gridinfo vettori")
 
-  call export (this(igrid),gridinfov(start:end),gaid_template)
+  call export (this(igrid),gridinfov(start:end),gaid_template,gaset)
 
 end do
 

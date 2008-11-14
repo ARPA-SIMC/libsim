@@ -14,7 +14,7 @@ type (volgrid6d),pointer  :: volgrid(:)
 
 integer                            ::  ifile
 integer                            ::  iret
-integer                            ::  gaid
+integer                            ::  gaid,gaid_template
 integer  :: ngrib
 
 !questa chiamata prende dal launcher il nome univoco
@@ -74,15 +74,17 @@ call import (volgrid,gridinfo,categoryappend="volume di test")
 
 call l4f_category_log(category,L4F_INFO,"delete gridinfo")
 
-do ngrib=1,size(gridinfo)
-   call delete (gridinfo(ngrib))
-enddo
+!do ngrib=1,size(gridinfo)
+!   call delete (gridinfo(ngrib))
+!enddo
 
 ! qui posso fare tutti i conti possibili
 
+call grib_new_from_template (gaid_template,"regular_ll_sfc_grib1")
+
 call l4f_category_log(category,L4F_INFO,"export")
 
-call export (volgrid,gridinfoout)
+call export (volgrid,gridinfoout,gaid_template=gaid_template,gaset=.true.)
 
 
 call grib_open_file(ifile, 'gribnew.grb','w')
@@ -90,16 +92,16 @@ call grib_open_file(ifile, 'gribnew.grb','w')
 
 do ngrib=1,size(gridinfoout)
    !     write the new message to a file
-   call grib_write(gridinfoout(ngrib)%gaid,ifile)
+
+   if(c_e(gridinfoout(ngrib)%gaid)) then
+      call export (gridinfoout(ngrib))
+      call grib_write(gridinfoout(ngrib)%gaid,ifile)
+      call delete (gridinfoout(ngrib))
+   end if
 end do
 
 call grib_close_file(ifile)
 
-call l4f_category_log(category,L4F_INFO,"delete gridinfo")
-
-do ngrib=1,size(gridinfoout)
-   call delete (gridinfoout(ngrib))
-enddo
 
 call l4f_category_log(category,L4F_INFO,"terminato")
 

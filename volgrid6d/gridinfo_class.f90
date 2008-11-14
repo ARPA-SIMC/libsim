@@ -91,11 +91,12 @@ character(len=*),INTENT(in),OPTIONAL :: categoryappend !< appennde questo suffis
 
 character(len=512) :: a_name
 
-call l4f_launcher(a_name,a_name_append=trim(subcategory)//"."//trim(categoryappend))
+if (present(categoryappend))then
+   call l4f_launcher(a_name,a_name_append=trim(subcategory)//"."//trim(categoryappend))
+else
+   call l4f_launcher(a_name,a_name_append=trim(subcategory))
+end if
 this%category=l4f_category_get(a_name)
-
-!call l4f_category_log(this%category,L4F_DEBUG,"init grid type: "//this%grid%type%type )
-
 
 
 if (present(gaid))then
@@ -104,10 +105,13 @@ else
   this%gaid=imiss
 end if
 
+call l4f_category_log(this%category,L4F_DEBUG,"init gridinfo gaid: "//to_char(this%gaid))
+
+
 if (present(gaset))then
   this%gaset = gaset
 else
-  this%gaset = .true.
+  this%gaset = .false.
 end if
 
 if (present(griddim))then
@@ -186,10 +190,9 @@ subroutine export_gridinfo (this)
 
 TYPE(gridinfo_type),intent(out) :: this !< oggetto da exportare
 
+call l4f_category_log(this%category,L4F_DEBUG,"export to grib" )
 
-call l4f_category_log(this%category,L4F_DEBUG,"ora provo ad exportare da grib " )
-
-if (this%gaset) then
+if (this%gaset .and. c_e(this%gaid)) then
   call export(this%griddim,this%gaid)
   call export(this%time,this%gaid)
   call export(this%timerange,this%gaid)
@@ -594,6 +597,9 @@ real  :: vector (this%griddim%dim%nx * this%griddim%dim%ny)
 integer ::x1,x2,xs,y1,y2,ys,ord(2)
 
 
+if (.not. c_e(this%gaid))return
+
+
 call grib_get(this%gaid,'GRIBEditionNumber',EditionNumber)
 
 
@@ -738,14 +744,15 @@ subroutine cnvlevel(ltype,l1,l2,ltype1,scalef1,scalev1,ltype2,scalef2,scalev2)
 integer,intent(in) :: ltype,l1,l2
 integer,intent(out) :: ltype1,scalef1,scalev1,ltype2,scalef2,scalev2
 
-ltype1=ltype
-scalef1=0
-scalev1=0
-ltype2=255
-scalef2=0
-scalev2=0
 
-if (ltype.eq.100) then
+if (ltype > 0 .and. ltype < 6)then 
+   ltype1=ltype
+   scalef1=0
+   scalev1=0
+   ltype2=255
+   scalef2=0
+   scalev2=0
+elseif (ltype.eq.100) then
   ltype1=100
   scalev1=l1*100
 elseif (ltype.eq.101) then
