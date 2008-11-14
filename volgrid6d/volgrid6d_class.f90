@@ -463,13 +463,22 @@ end subroutine volgrid6d_read_from_file
 
 
 
-subroutine import_from_gridinfo (this,gridinfo,categoryappend)
+SUBROUTINE import_from_gridinfo (this,gridinfo,force,categoryappend)
 
 TYPE(volgrid6d),INTENT(OUT) :: this !< Volume volgrid6d da leggere
 type(gridinfo_type),intent(in) :: gridinfo !< gridinfo 
+LOGICAL,INTENT(in),OPTIONAL :: force !< se fornito e \c .TRUE., incastra a forza il gridinfo in un elemento libero di \a this (se c'è)
 character(len=*),INTENT(in),OPTIONAL :: categoryappend !< appende questo suffisso al namespace category di log4fortran
+
 character(len=255)   :: type
 integer :: ilevel,itime,itimerange,ivar
+logical :: lforce
+
+if (present(force)) then
+  lforce = force
+else
+  lforce = .false.
+endif
 
 call get_val(this%griddim,type=type)
 
@@ -482,17 +491,54 @@ if (.not. c_e(type))then
 else if (.not. (this%griddim == gridinfo%griddim ))then
 
    call l4f_category_log(this%category,L4F_DEBUG,"volgrid6d: grid or dim are different and this is not possible")
-   call raise_error ("volgrid6d: grid or dim are different and this is not possible")
+   call raise_fatal_error ("volgrid6d: grid or dim are different and this is not possible")
 
 end if
 
-!TODO
-! cosa torna index se notfound ?
-ilevel     = index(this%level,    gridinfo%level)
-itime      = index(this%time,     gridinfo%time)
-itimerange = index(this%timerange,gridinfo%timerange)
-ivar       = index(this%var,      gridinfo%var)
+! Cerco gli indici del campo da inserire, li invento se necessario
+ilevel = index(this%level, gridinfo%level)
+IF (ilevel == 0 .AND. lforce) THEN
+  ilevel = firsttrue(this%level == vol7d_level_miss)
+  IF (ilevel /= 0) this%level(ilevel) = gridinfo%level
+ENDIF
+IF (ilevel == 0) THEN
+  CALL l4f_category_log(this%category,L4F_ERROR, &
+   "volgrid6d: level not valid for volume")
+  CALL raise_fatal_error("volgrid6d: level not valid for volume")
+ENDIF
 
+itime = index(this%time, gridinfo%time)
+IF (itime == 0 .AND. lforce) THEN
+  itime = firsttrue(this%time == datetime_miss)
+  IF (itime /= 0) this%time(itime) = gridinfo%time
+ENDIF
+IF (itime == 0) THEN
+  CALL l4f_category_log(this%category,L4F_ERROR, &
+   "volgrid6d: time not valid for volume")
+  CALL raise_fatal_error("volgrid6d: time not valid for volume")
+ENDIF
+
+itimerange = index(this%timerange,gridinfo%timerange)
+IF (itimerange == 0 .AND. lforce) THEN
+  itimerange = firsttrue(this%timerange == vol7d_timerange_miss)
+  IF (itimerange /= 0) this%timerange(itimerange) = gridinfo%timerange
+ENDIF
+IF (itimerange == 0) THEN
+  CALL l4f_category_log(this%category,L4F_ERROR, &
+   "volgrid6d: timerange not valid for volume")
+  CALL raise_fatal_error("volgrid6d: timerange not valid for volume")
+ENDIF
+
+ivar = index(this%var, gridinfo%var)
+IF (ivar == 0 .AND. lforce) THEN
+  ivar = firsttrue(this%var == volgrid6d_var_miss)
+  IF (ivar /= 0) this%var(ivar) = gridinfo%var
+ENDIF
+IF (ivar == 0) THEN
+  CALL l4f_category_log(this%category,L4F_ERROR, &
+   "volgrid6d: var not valid for volume")
+  CALL raise_fatal_error("volgrid6d: var not valid for volume")
+ENDIF
 
 if (associated (this%gaid))then
 
@@ -649,7 +695,8 @@ do i=1,size(gridinfov)
 !   call display(this(index(this%griddim,gridinfov(i)%griddim))%griddim)
 
 !  print *,"lavoro sull'area: ",index(this%griddim,gridinfov(i)%griddim)
-   call import (this(index(this%griddim,gridinfov(i)%griddim)),gridinfov(i),categoryappend)
+  CALL import (this(index(this%griddim,gridinfov(i)%griddim)), &
+   gridinfov(i),categoryappend=categoryappend)
 
 end do
 
