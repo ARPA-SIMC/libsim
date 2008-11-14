@@ -74,15 +74,15 @@ call import (volgrid,gridinfo,categoryappend="volume di test")
 
 call l4f_category_log(category,L4F_INFO,"delete gridinfo")
 
-!do ngrib=1,size(gridinfo)
-!   call delete (gridinfo(ngrib))
-!enddo
+do ngrib=1,size(gridinfo)
+  call delete (gridinfo(ngrib))
+enddo
 
 ! qui posso fare tutti i conti possibili
 
-call grib_new_from_template (gaid_template,"regular_ll_sfc_grib1")
+call grib_new_from_template (gaid_template,"regular_ll_sfc_grib2")
 
-call l4f_category_log(category,L4F_INFO,"export")
+call l4f_category_log(category,L4F_INFO,"export a un grib fatto come voglio io")
 
 call export (volgrid,gridinfoout,gaid_template=gaid_template)
 

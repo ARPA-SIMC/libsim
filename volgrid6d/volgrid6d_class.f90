@@ -587,17 +587,19 @@ integer, optional :: gaid_template
 
 call l4f_category_log(this%category,L4F_DEBUG,"export_to_gridinfo")
 
-
 if (present(gaid_template)) then
 
    call grib_clone(gaid_template,gaid)
    call l4f_category_log(this%category,L4F_DEBUG,&
         "clone to a new gaid")
+else
+
+   gaid=gridinfo%gaid
 
 end if
 
 
-if (.not. c_e(gridinfo%gaid))then
+if (.not. c_e(gaid))then
 
   if (c_e(this%gaid(ilevel,itime,itimerange,ivar)))then
 
@@ -621,6 +623,8 @@ call init(gridinfo,gaid,&
  this%level(ilevel),&
  this%var(ivar))
 
+!questo non è bellissimo: devo rendere coerenti dati e loro descrizione
+call export(gridinfo%griddim,gridinfo%gaid)
 
 call encode_gridinfo(gridinfo,this%voldati(:,:,&
  ilevel,itime,itimerange,ivar))

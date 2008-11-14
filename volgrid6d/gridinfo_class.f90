@@ -183,6 +183,8 @@ TYPE(gridinfo_type),intent(out) :: this !< oggetto da exportare
 
 call l4f_category_log(this%category,L4F_DEBUG,"export to grib" )
 
+!attenzione: exportando da volgrid griddim è già esportato
+
 if ( c_e(this%gaid)) then
   call export(this%griddim,this%gaid)
   call export(this%time,this%gaid)
@@ -313,7 +315,7 @@ if (EditionNumber == 1)then
 
 ! call l4f_category_log(category,L4F_ERROR,"conversione non gestita" )
 
-  call raise_error("convert level from grib2 to grib1 not managed")
+  call raise_error("convert level from gridinfo standard to grib1 not managed")
 
 else if (EditionNumber == 2)then
 
@@ -378,7 +380,13 @@ integer ::EditionNumber,timerange,p1,p2
 
 call grib_get(gaid,'GRIBEditionNumber',EditionNumber)
 
-if (EditionNumber == 1 .or. EditionNumber == 2)then
+if (EditionNumber == 1 ) then
+
+   call raise_error("convert timerange from gridinfo standard to grib1 not managed")
+
+else if (EditionNumber == 2)then
+
+!TODO bisogna gestire anche il template
 
   call grib_set(gaid,'typeOfStatisticalProcessing',this%timerange)
   call grib_set(gaid,'endStepInHours',this%p1)
