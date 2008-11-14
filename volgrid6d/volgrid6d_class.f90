@@ -578,22 +578,12 @@ end if
 end subroutine import_from_gridinfo
 
 
-subroutine export_to_gridinfo (this,gridinfo,itime,itimerange,ilevel,ivar,gaid_template,gaset)
+subroutine export_to_gridinfo (this,gridinfo,itime,itimerange,ilevel,ivar,gaid_template)
 
 TYPE(volgrid6d),INTENT(in) :: this !< Volume volgrid6d da leggere
 type(gridinfo_type),intent(out) :: gridinfo !< gridinfo 
 integer ::itime,itimerange,ilevel,ivar,gaid
 integer, optional :: gaid_template
-logical,optional  ::gaset
-
-logical           ::lgaset
-
-if (present(gaset))then
-  lgaset=gaset
-else
-  lgaset= .false.
-end if
-
 
 call l4f_category_log(this%category,L4F_DEBUG,"export_to_gridinfo")
 
@@ -601,8 +591,8 @@ call l4f_category_log(this%category,L4F_DEBUG,"export_to_gridinfo")
 if (present(gaid_template)) then
 
    call grib_clone(gaid_template,gaid)
-   if (.not. lgaset)call l4f_category_log(this%category,L4F_WARN,&
-        "exporting to a clone without gaset")
+   call l4f_category_log(this%category,L4F_DEBUG,&
+        "clone to a new gaid")
 
 end if
 
@@ -629,7 +619,7 @@ call init(gridinfo,gaid,&
  this%time(itime),&
  this%timerange(itimerange),&
  this%level(ilevel),&
- this%var(ivar),lgaset)
+ this%var(ivar))
 
 
 call encode_gridinfo(gridinfo,this%voldati(:,:,&
@@ -723,12 +713,11 @@ call l4f_category_delete(category)
 end subroutine import_from_gridinfovv
 
 
-subroutine export_to_gridinfov (this,gridinfov,gaid_template,gaset)
+subroutine export_to_gridinfov (this,gridinfov,gaid_template)
 
 TYPE(volgrid6d),INTENT(in) :: this !< Volume volgrid6d da leggere
 type(gridinfo_type),intent(out) :: gridinfov(:) !< vettore gridinfo 
 integer, optional :: gaid_template
-logical,optional  ::gaset
 
 integer :: i,itime,itimerange,ilevel,ivar
 integer :: ngridinfo,ntime,ntimerange,nlevel,nvar
@@ -758,7 +747,7 @@ do itime=1,ntime
         if (i > ngridinfo) &
          call raise_error ("errore stranuccio in export_to_gridinfo:"//&
          "avevo già testato le dimensioni che ora sono sbagliate")
-        call export (this,gridinfov(i),itime,itimerange,ilevel,ivar,gaid_template,gaset)
+        call export (this,gridinfov(i),itime,itimerange,ilevel,ivar,gaid_template)
         
       end do
     end do
@@ -768,12 +757,11 @@ end do
 end subroutine export_to_gridinfov
 
 
-subroutine export_to_gridinfovv (this,gridinfov,gaid_template,gaset,categoryappend)
+subroutine export_to_gridinfovv (this,gridinfov,gaid_template,categoryappend)
 
 TYPE(volgrid6d),INTENT(in)  :: this(:)      !< vettore volume volgrid6d da leggere
 type(gridinfo_type),pointer :: gridinfov(:) !< vettore gridinfo 
 integer, optional :: gaid_template
-logical,optional  ::gaset
 character(len=*),INTENT(in),OPTIONAL :: categoryappend !< appende questo suffisso al namespace category di log4fortran
 
 integer :: i,igrid,ngrid,start,end,ngridinfo,ngridinfoin
@@ -828,7 +816,7 @@ do igrid=1,ngrid
 
   call l4f_category_log(this(igrid)%category,L4F_DEBUG,"export to gridinfo vettori")
 
-  call export (this(igrid),gridinfov(start:end),gaid_template,gaset)
+  call export (this(igrid),gridinfov(start:end),gaid_template)
 
 end do
 

@@ -84,8 +84,7 @@ call grib_new_from_template (gaid_template,"regular_ll_sfc_grib1")
 
 call l4f_category_log(category,L4F_INFO,"export")
 
-call export (volgrid,gridinfoout,gaid_template=gaid_template,gaset=.true.)
-
+call export (volgrid,gridinfoout,gaid_template=gaid_template)
 
 call grib_open_file(ifile, 'gribnew.grb','w')
 

@@ -29,7 +29,6 @@ type gridinfo_type
   TYPE(volgrid6d_var) :: var
 !> id del grib come da grib_api
   integer ::  gaid
-  logical ::  gaset   !<  determina se quando export devo settare le key delle grib_api
   integer :: category !< log4fortran
 
 end type gridinfo_type
@@ -70,7 +69,7 @@ public gridinfo_type,init,delete,import,export,display,decode_gridinfo,encode_gr
 contains
 
 !> Inizializza un oggetto di tipo gridinfo_type.
-SUBROUTINE init_gridinfo(this,gaid,griddim,time,timerange,level,var,gaset,categoryappend)
+SUBROUTINE init_gridinfo(this,gaid,griddim,time,timerange,level,var,categoryappend)
 TYPE(gridinfo_type),intent(out) :: this !< oggetto da inizializzare
 
 !> id del grib come da grib_api
@@ -85,7 +84,6 @@ TYPE(vol7d_timerange),intent(in),optional :: timerange
 TYPE(vol7d_level),intent(in),optional :: level
 !> vettore descrittore della dimensione variabile di anagrafica
 TYPE(volgrid6d_var),intent(in),optional :: var
-logical,intent(in),optional :: gaset
 
 character(len=*),INTENT(in),OPTIONAL :: categoryappend !< appennde questo suffisso al namespace category di log4fortran
 
@@ -106,13 +104,6 @@ else
 end if
 
 call l4f_category_log(this%category,L4F_DEBUG,"init gridinfo gaid: "//to_char(this%gaid))
-
-
-if (present(gaset))then
-  this%gaset = gaset
-else
-  this%gaset = .false.
-end if
 
 if (present(griddim))then
   this%griddim=griddim
@@ -192,7 +183,7 @@ TYPE(gridinfo_type),intent(out) :: this !< oggetto da exportare
 
 call l4f_category_log(this%category,L4F_DEBUG,"export to grib" )
 
-if (this%gaset .and. c_e(this%gaid)) then
+if ( c_e(this%gaid)) then
   call export(this%griddim,this%gaid)
   call export(this%time,this%gaid)
   call export(this%timerange,this%gaid)
@@ -236,7 +227,7 @@ subroutine export_time(this,gaid)
 
 TYPE(datetime),INTENT(in) :: this
 integer,INTENT(in)        :: gaid
-integer                   :: EditionNumber
+integer                   :: EditionNumber,date,time
 character(len=17)         :: date_time
 
 
@@ -246,8 +237,10 @@ if (EditionNumber == 1 .or.EditionNumber == 2 )then
 
 ! datetime is AAAAMMGGhhmmssmsc
   call getval (this,simpledate=date_time)
-  call grib_set(gaid,'dataDate',date_time(:8))
-  call grib_set(gaid,'dataTime',date_time(9:14))
+  read(date_time(:8),*)date
+  read(date_time(9:14),*)time
+  call grib_set(gaid,'dataDate',date)
+  call grib_set(gaid,'dataTime',time)
 
 else
 
