@@ -502,7 +502,7 @@ end if
 ! Cerco gli indici del campo da inserire, li invento se necessario
 ilevel = index(this%level, gridinfo%level)
 IF (ilevel == 0 .AND. lforce) THEN
-  ilevel = firsttrue(this%level == vol7d_level_miss)
+  ilevel = index(this%level, vol7d_level_miss)
   IF (ilevel /= 0) this%level(ilevel) = gridinfo%level
 ENDIF
 IF (ilevel == 0) THEN
@@ -513,7 +513,7 @@ ENDIF
 
 itime = index(this%time, gridinfo%time)
 IF (itime == 0 .AND. lforce) THEN
-  itime = firsttrue(this%time == datetime_miss)
+  itime = index(this%time, datetime_miss)
   IF (itime /= 0) this%time(itime) = gridinfo%time
 ENDIF
 IF (itime == 0) THEN
@@ -524,7 +524,7 @@ ENDIF
 
 itimerange = index(this%timerange,gridinfo%timerange)
 IF (itimerange == 0 .AND. lforce) THEN
-  itimerange = firsttrue(this%timerange == vol7d_timerange_miss)
+  itimerange = index(this%timerange, vol7d_timerange_miss)
   IF (itimerange /= 0) this%timerange(itimerange) = gridinfo%timerange
 ENDIF
 IF (itimerange == 0) THEN
@@ -535,7 +535,7 @@ ENDIF
 
 ivar = index(this%var, gridinfo%var)
 IF (ivar == 0 .AND. lforce) THEN
-  ivar = firsttrue(this%var == volgrid6d_var_miss)
+  ivar = index(this%var, volgrid6d_var_miss)
   IF (ivar /= 0) this%var(ivar) = gridinfo%var
 ENDIF
 IF (ivar == 0) THEN
