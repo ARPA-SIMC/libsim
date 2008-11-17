@@ -482,16 +482,15 @@ end subroutine display_time
 
 
 function decode_gridinfo(this) result (field)
-
-TYPE(gridinfo_type),INTENT(in)  :: this      !< oggetto da decodificare
-integer                     :: EditionNumber
-integer  :: alternativeRowScanning,iScansNegatively,jScansPositively,jPointsAreConsecutive
+TYPE(gridinfo_type),INTENT(in) :: this      !< oggetto da decodificare
+integer :: EditionNumber
+integer :: alternativeRowScanning,iScansNegatively,jScansPositively,jPointsAreConsecutive
 integer :: numberOfValues,numberOfPoints
-real  :: field (this%griddim%dim%nx,this%griddim%dim%ny)
+real :: field (this%griddim%dim%nx,this%griddim%dim%ny)
 
 !TODO costretto a usare doubleprecision in quanto float non va (riportato bug grib_api)
-doubleprecision  :: vector (this%griddim%dim%nx * this%griddim%dim%ny)
-doubleprecision,allocatable  :: lats (:),lons(:)
+doubleprecision :: vector (this%griddim%dim%nx * this%griddim%dim%ny)
+doubleprecision,allocatable :: lats (:),lons(:)
 integer ::x1,x2,xs,y1,y2,ys,ord(2)
 
 
@@ -527,11 +526,12 @@ call grib_get(this%gaid,'numberOfValues',numberOfValues)
 if (numberOfPoints /= (this%griddim%dim%nx * this%griddim%dim%ny))then
 !if (numberOfValues /= (this%griddim%dim%nx * this%griddim%dim%ny))then
 
-  call l4f_category_log(this%category,L4F_INFO,'nx: '//to_char(this%griddim%dim%nx)&
-       //' ny: '//to_char(this%griddim%dim%ny)//to_char(this%griddim%dim%nx*this%griddim%dim%ny))
-  call l4f_category_log(this%category,L4F_ERROR,'number of values disagree with nx,ny: '//to_char(numberOfPoints))
-!  call l4f_category_log(this%category,L4F_ERROR,'number of values disagree with nx,ny: '//to_char(numberOfValues))
-  call raise_error('number of values disagree with nx,ny')
+  CALL l4f_category_log(this%category,L4F_ERROR, &
+   'encode_gridinfo: numberOfPoints and gridinfo size different. numberOfPoints: ' &
+   //trim(to_char(numberOfPoints))//', nx,ny:'&
+   //TRIM(to_char(this%griddim%dim%nx))//' '//trim(to_char(this%griddim%dim%ny)))
+  call raise_fatal_error( &
+   'encode_gridinfo: numberOfPoints and gridinfo size different')
 
 end if
 
@@ -587,24 +587,31 @@ end function decode_gridinfo
 
 
 subroutine encode_gridinfo(this,field)
+TYPE(gridinfo_type),INTENT(inout) :: this !< oggetto in cui codificare
+REAL,intent(in) :: field (:,:) !< matrice dei dati da scrivere
 
-TYPE(gridinfo_type),INTENT(in)  :: this      !< oggetto in cui codificare
-real  :: field (this%griddim%dim%nx,this%griddim%dim%ny) !< matrice dei dati da scrivere
-
-integer                     :: EditionNumber
-integer  :: alternativeRowScanning,iScansNegatively,jScansPositively,jPointsAreConsecutive
+integer :: EditionNumber
+integer :: alternativeRowScanning,iScansNegatively,jScansPositively,jPointsAreConsecutive
 integer :: numberOfValues,nx,ny
-real  :: vector (this%griddim%dim%nx * this%griddim%dim%ny)
-integer ::x1,x2,xs,y1,y2,ys,ord(2)
+doubleprecision :: vector (this%griddim%dim%nx * this%griddim%dim%ny)
+integer :: x1,x2,xs,y1,y2,ys,ord(2)
 
+IF (SIZE(field,1) /= this%griddim%dim%nx &
+ .OR. SIZE(field,2) /= this%griddim%dim%ny) THEN
+  CALL l4f_category_log(this%category,L4F_ERROR, &
+   'encode_gridinfo: field and gridinfo object non conformal, field: ' &
+   //TRIM(to_char(SIZE(field,1)))//' '//TRIM(to_char(SIZE(field,1)))//', nx,ny:' &
+   //TRIM(to_char(this%griddim%dim%nx))//' ' &
+       //trim(to_char(this%griddim%dim%ny)))
+  call raise_fatal_error('encode_gridinfo: field and gridinfo object non conformal')
+ENDIF
 
 if (.not. c_e(this%gaid))return
 
 
 call grib_get(this%gaid,'GRIBEditionNumber',EditionNumber)
 
-
-if (EditionNumber == 2)then
+if (EditionNumber == 2) then
 
   call grib_get(this%gaid,'alternativeRowScanning',alternativeRowScanning)
   if (alternativeRowScanning /= 0)then
@@ -612,36 +619,37 @@ if (EditionNumber == 2)then
     call raise_error('alternativeRowScanning not supported')
   end if
 
-else if( EditionNumber /= 1)then
+else if( EditionNumber /= 1) then
 
   call l4f_category_log(this%category,L4F_ERROR,"GribEditionNumber not supported: "//trim(to_char(EditionNumber)))
   call raise_error('GribEditionNumber not supported')
 
 end if
 
-
 call grib_get(this%gaid,'iScansNegatively',iScansNegatively)
 call grib_get(this%gaid,'jScansPositively',jScansPositively)
 call grib_get(this%gaid,'jPointsAreConsecutive',jPointsAreConsecutive)
 
-call grib_get(this%gaid,"numberOfPointsAlongAParallel", nx)
-call grib_get(this%gaid,"numberOfPointsAlongAMeridian",ny)
+call grib_get(this%gaid,'numberOfPointsAlongAParallel', nx)
+call grib_get(this%gaid,'numberOfPointsAlongAMeridian',ny)
 
 numberOfValues=nx*ny
 
 if (numberOfValues /= (this%griddim%dim%nx * this%griddim%dim%ny))then
 
-  call l4f_category_log(this%category,L4F_INFO,'nx: '//to_char(this%griddim%dim%nx)&
-       //' ny: '//to_char(this%griddim%dim%ny))
-  call l4f_category_log(this%category,L4F_ERROR,'number of values different nx,ny: '//to_char(numberOfValues))
-  call raise_error('number of values different nx,ny')
+  CALL l4f_category_log(this%category,L4F_ERROR, &
+   'encode_gridinfo: numberOfValues and gridinfo size different. numberOfValues: ' &
+   //trim(to_char(numberOfValues))//', nx,ny:'&
+   //TRIM(to_char(this%griddim%dim%nx))//' '//trim(to_char(this%griddim%dim%ny)))
+  call raise_fatal_error( &
+   'encode_gridinfo: numberOfValues and gridinfo size different')
 
 end if
 
 call l4f_category_log(this%category,L4F_INFO,'number of values: '//to_char(numberOfValues))
 
 
-! Transfer data field changing scanning mode to 64
+! Transfer data field changing scanning mode from 64
 IF (iScansNegatively  == 0) THEN
   x1 = 1
   x2 = this%griddim%dim%nx
@@ -662,19 +670,12 @@ ELSE
 ENDIF
 
 IF ( jPointsAreConsecutive == 0) THEN
-  ord = (/1,2/)
+  CALL grib_set(this%gaid,'values', PACK(field(x1:x2:xs,y1:y2:ys), .TRUE.))
 ELSE
-  ord = (/2,1/)
+  CALL grib_set(this%gaid,'values', PACK(TRANSPOSE(field(x1:x2:xs,y1:y2:ys)), .TRUE.))
 ENDIF
 
-
-field(x1:x2:xs,y1:y2:ys) = &
- RESHAPE(vector, &
- (/this%griddim%dim%nx,this%griddim%dim%ny/), ORDER=ord)
-
 call grib_set(this%gaid,'missingValue',rmiss)
-call grib_set(this%gaid,'values',pack(field,mask=.true.))
-
 
 end subroutine encode_gridinfo
 
