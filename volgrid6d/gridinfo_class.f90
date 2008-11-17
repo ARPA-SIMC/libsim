@@ -270,7 +270,7 @@ if (EditionNumber == 1)then
   call grib_get(gaid,'topLevel',l1)
   call grib_get(gaid,'bottomLevel',l2)
 
-  call cnvlevel(ltype,l1,l2,ltype1,scalef1,scalev1,ltype2,scalef1,scalev2)
+  call level_g1_to_g2(ltype,l1,l2,ltype1,scalef1,scalev1,ltype2,scalef1,scalev2)
 
 else if (EditionNumber == 2)then
 
@@ -278,7 +278,7 @@ else if (EditionNumber == 2)then
   call grib_get(gaid,'scaleFactorOfFirstFixedSurface',scalef1)
   call grib_get(gaid,'scaledValueOfFirstFixedSurface',scalev1)
 
-  call grib_get(gaid,'typeOfSecondFixedSurface',ltype2)     ! (missing=255)
+  call grib_get(gaid,'typeOfSecondFixedSurface',ltype2)
   call grib_get(gaid,'scaleFactorOfSecondFixedSurface',scalef2)
   call grib_get(gaid,'scaledValueOfSecondFixedSurface',scalev2)
 
@@ -288,8 +288,9 @@ else
 
 end if
 
-
-call level2dballe(ltype1,scalef1,scalev1,ltype2,scalef2,scalev2, level1,l1,level2,l2)
+! Convert missing levels and units m -> mm
+call level_g2_to_dballe(ltype1,scalef1,scalev1,ltype2,scalef2,scalev2, &
+ level1,l1,level2,l2)
 
 call init (this,level1,l1,level2,l2)
 
@@ -301,30 +302,33 @@ end subroutine import_level
 subroutine export_level(this,gaid)
 
 TYPE(vol7d_level),INTENT(in) :: this
-integer,INTENT(in)         :: gaid
-integer                     :: EditionNumber,level1,l1,level2,l2
+integer,INTENT(in) :: gaid
+
+INTEGER :: EditionNumber, ltype1, scalef1, scalev1, ltype2, scalef2, scalev2, &
+ ltype, l1, l2
+
+CALL level_dballe_to_g2(this%level1, this%l1, this%level2, this%l2, &
+ ltype1, scalef1, scalev1, ltype2, scalef2, scalev2)
 
 call grib_get(gaid,'GRIBEditionNumber',EditionNumber)
 
 if (EditionNumber == 1)then
 
+  CALL level_g2_to_g1(ltype1,scalef1,scalev1,ltype2,scalef1,scalev2,ltype,l1,l2)
 
-!  call grib_set(gaid,'indicatorOfTypeOfLevel',this%level1)
-!  call grib_set(gaid,'topLevel',this%l1)
-!  call grib_set(gaid,'bottomLevel',this%l2)
-
-! call l4f_category_log(category,L4F_ERROR,"conversione non gestita" )
-
-  call raise_error("convert level from gridinfo standard to grib1 not managed")
+  call grib_set(gaid,'indicatorOfTypeOfLevel',ltype)
+  call grib_set(gaid,'topLevel',l1)
+  call grib_set(gaid,'bottomLevel',l2)
 
 else if (EditionNumber == 2)then
 
-  call grib_set(gaid,'typeOfFirstFixedSurface',this%level1)     ! (missing=255)
+  call grib_set(gaid,'typeOfFirstFixedSurface',ltype1)
+  call grib_set(gaid,'scaleFactorOfFirstFixedSurface',scalef1)
+  call grib_set(gaid,'scaledValueOfFirstFixedSurface',scalev1)
 
-  call grib_set(gaid,'scaledValueOfFirstFixedSurface',this%l1)
-  call grib_set(gaid,'typeOfSecondFixedSurface',this%level2)
-
-  call grib_set(gaid,'scaledValueOfSecondFixedSurface',this%l2)
+  call grib_set(gaid,'typeOfSecondFixedSurface',ltype2)
+  call grib_set(gaid,'scaleFactorOfSecondFixedSurface',scalef2)
+  call grib_set(gaid,'scaledValueOfSecondFixedSurface',scalev2)
 
 else
 
@@ -698,205 +702,331 @@ end subroutine encode_gridinfo
 !derived from a work  Gilbert        ORG: W/NP11  SUBPROGRAM:    cnvlevel   DATE: 2003-06-12
 
 
-subroutine level2dballe(ltype1,scalef1,scalev1,ltype2,scalef2,scalev2, lt1,l1,lt2,l2)
-
+SUBROUTINE level_g2_to_dballe(ltype1,scalef1,scalev1,ltype2,scalef2,scalev2, lt1,l1,lt2,l2)
 integer,intent(in) :: ltype1,scalef1,scalev1,ltype2,scalef2,scalev2
 integer,intent(out) ::lt1,l1,lt2,l2
 
+
+CALL g2_to_dballe(ltype1, scalef1, scalev1, lt1, l1)
+CALL g2_to_dballe(ltype2, scalef2, scalev2, lt2, l2)
+
+CONTAINS
+
+SUBROUTINE g2_to_dballe(ltype, scalef, scalev, lt, l)
+integer,intent(in) :: ltype,scalef,scalev
+integer,intent(out) ::lt,l
+
 integer,parameter :: height(5)=(/102,103,106,117,160/)
-doubleprecision:: sl1,sl2
+doubleprecision:: sl
 
-
-if (ltype1 == 255 ) then
-  lt1=imiss
-  l1=imiss
+if (ltype == 255) then
+  lt = imiss
+  l = imiss
 else
-  lt1=ltype1
+  lt = ltype
+  sl = scalev*(10.D0**(-scalef))
 
-  sl1=scalev1*(10.D00**(-scalef1))
-
-  if ( any( ltype1 == height)) then
-
-    l1=sl1*1000.
-
+  if (any(ltype == height)) then
+    l=sl*1000.D0
   else
-
-    l1=sl1
-
+    l=sl
   end if
 end if
 
+END SUBROUTINE g2_to_dballe
+
+END SUBROUTINE level_g2_to_dballe
 
 
-if (ltype2 == 255 ) then
-  lt2=imiss
-  l2=imiss
-else
-  lt2=ltype2
-
-  sl2=scalev2*(10.D00**(-scalef2))
-
-  if ( any( ltype2 == height)) then
-
-    l2=sl2*1000.
-
-  else
-
-    l2=sl2
-
-  end if
-end if
-
-
-
-return
-end subroutine level2dballe
-
-
-
-subroutine cnvlevel(ltype,l1,l2,ltype1,scalef1,scalev1,ltype2,scalef2,scalev2)
-
-integer,intent(in) :: ltype,l1,l2
+SUBROUTINE level_dballe_to_g2(lt1,l1,lt2,l2, ltype1,scalef1,scalev1,ltype2,scalef2,scalev2)
+integer,intent(in) ::lt1,l1,lt2,l2
 integer,intent(out) :: ltype1,scalef1,scalev1,ltype2,scalef2,scalev2
 
 
-if (ltype > 0 .and. ltype < 6)then 
+CALL dballe_to_g2(lt1, l1, ltype1, scalef1, scalev1)
+CALL dballe_to_g2(lt2, l2, ltype2, scalef2, scalev2)
+
+CONTAINS
+
+SUBROUTINE dballe_to_g2(lt, l, ltype, scalef, scalev)
+integer,intent(in) ::lt,l
+integer,intent(out) :: ltype,scalef,scalev
+
+integer,parameter :: height(5)=(/102,103,106,117,160/)
+doubleprecision:: sl
+
+if (lt == imiss) then
+  ltype = 255
+  scalev = 0
+  scalef = 0
+else
+  ltype = lt
+  scalev = l
+  if (any(ltype == height)) then
+    scalef = 3
+  else
+    scalef = 0
+  end if
+endif
+
+!Caso generale reale
+!IF (ANY(ltype == height)) THEN
+!  sl=l/1000.D0
+!ELSE
+!  sl=l
+!END IF
+!IF (ABS(sl) < PRECISION) THEN
+!  scalef = 0
+!  scalev = 0
+!ELSE
+!  magn = LOG10(ABS(sl))
+!  DO scalef = magn, MAX(magn, 20)
+!    IF (ABS((sl*10.D0**(scalef) - ANINT(sl*10.D0**(scalef))) / &
+!     sl*10.D0**(scalef)) < PRECISION) EXIT
+!  ENDDO
+!  sl = scalev*(10.D0**(-scalef))
+!ENDIF
+
+END SUBROUTINE dballe_to_g2
+
+END SUBROUTINE level_dballe_to_g2
+
+
+
+SUBROUTINE level_g1_to_g2(ltype,l1,l2,ltype1,scalef1,scalev1,ltype2,scalef2,scalev2)
+integer,intent(in) :: ltype,l1,l2
+integer,intent(out) :: ltype1,scalef1,scalev1,ltype2,scalef2,scalev2
+
+ltype1=255
+scalef1=0
+scalev1=0
+ltype2=255
+scalef2=0
+scalev2=0
+
+if (ltype > 0 .and. ltype <= 9)then 
    ltype1=ltype
-   scalef1=0
-   scalev1=0
-   ltype2=255
-   scalef2=0
-   scalev2=0
-elseif (ltype.eq.100) then
+else if (ltype == 20) then
+  ltype1=20
+  scalev1=l1
+  scalef1=2
+else if (ltype == 100) then
   ltype1=100
   scalev1=l1*100
-elseif (ltype.eq.101) then
+else if (ltype == 101) then
   ltype1=100
   scalev1=l1*1000
   ltype2=100
   scalev2=l2*1000
-elseif (ltype.eq.102) then
+else if (ltype == 102) then
   ltype1=101
-elseif (ltype.eq.103) then
+else if (ltype == 103) then
   ltype1=102
   scalev1=l1
-elseif (ltype.eq.104) then
+else if (ltype == 104) then
   ltype1=102
-  scalev1=l1
+  scalev1=l1*100
   ltype2=102
-  scalev2=l2
-elseif (ltype.eq.105) then
+  scalev2=l2*100
+else if (ltype == 105) then
   ltype1=103
   scalev1=l1
-elseif (ltype.eq.106) then
+else if (ltype == 106) then
   ltype1=103
   scalev1=l1*100
   ltype2=103
   scalev2=l2*100
-elseif (ltype.eq.107) then
+else if (ltype == 107) then
   ltype1=104
   scalef1=4
   scalev1=l1
-elseif (ltype.eq.108) then
+else if (ltype == 108) then
   ltype1=104
   scalef1=2
   scalev1=l1
   ltype2=104
   scalef2=2
   scalev2=l2
-elseif (ltype.eq.109) then
+else if (ltype == 109) then
   ltype1=105
   scalev1=l1
-elseif (ltype.eq.110) then
+else if (ltype == 110) then
   ltype1=105
   scalev1=l1
   ltype2=105
   scalev2=l2
-elseif (ltype.eq.111) then
+else if (ltype == 111) then
   ltype1=106
   scalef1=2
   scalev1=l1
-elseif (ltype.eq.112) then
+else if (ltype == 112) then
   ltype1=106
   scalef1=2
   scalev1=l1
   ltype2=106
   scalef2=2
   scalev2=l2
-elseif (ltype.eq.113) then
+else if (ltype == 113) then
   ltype1=107
   scalev1=l1
-elseif (ltype.eq.114) then
+else if (ltype == 114) then
   ltype1=107
   scalev1=475+l1
   ltype2=107
   scalev2=475+l2
-elseif (ltype.eq.115) then
+else if (ltype == 115) then
   ltype1=108
   scalev1=l1*100
-elseif (ltype.eq.116) then
+else if (ltype == 116) then
   ltype1=108
   scalev1=l1*100
   ltype2=108
   scalev2=l2*100
-elseif (ltype.eq.117) then
+else if (ltype == 117) then
   ltype1=109
   scalef1=9
   scalev1=l1
   if ( btest(l1,15) ) then
     scalev1=-1*mod(l1,32768)
   endif
-elseif (ltype.eq.119) then
+else if (ltype == 119) then
   ltype1=111
   scalef1=4
   scalev1=l1
-elseif (ltype.eq.120) then
+else if (ltype == 120) then
   ltype1=111
   scalef1=2
   scalev1=l1
   ltype2=111
   scalef2=2
   scalev2=l2
-elseif (ltype.eq.121) then
+else if (ltype == 121) then
   ltype1=100
   scalev1=(1100+l1)*100
   ltype2=100
   scalev2=(1100+l2)*100
-elseif (ltype.eq.125) then
+else if (ltype == 125) then
   ltype1=103
   scalef1=2
   scalev1=l1
-elseif (ltype.eq.128) then
+else if (ltype == 128) then
   ltype1=104
   scalef1=3
   scalev1=1100+l1
   ltype2=104
   scalef2=3
   scalev2=1100+l2
-elseif (ltype.eq.141) then
+else if (ltype == 141) then
   ltype1=100
   scalev1=l1*100
   ltype2=100
   scalev2=(1100+l2)*100
-elseif (ltype.eq.160) then
+else if (ltype == 160) then
   ltype1=160
   scalev1=l1
 else
 
-  ltype1=255
-  scalef1=0
-  scalev1=0
-  ltype2=255
-  scalef2=0
-  scalev2=0
-
-  call raise_error('cnvlevel: GRIB1 Level '//to_char(ltype)//' not recognized.')
+  call raise_error('level_g1_to_g2: GRIB1 Level '//TRIM(to_char(ltype))//' not recognized.')
 
 endif
 
 return
-end subroutine cnvlevel
+END SUBROUTINE level_g1_to_g2
 
+
+SUBROUTINE level_g2_to_g1(ltype1,scalef1,scalev1,ltype2,scalef2,scalev2,ltype,l1,l2)
+integer,intent(in) :: ltype1,scalef1,scalev1,ltype2,scalef2,scalev2
+integer,intent(out) :: ltype,l1,l2
+
+if (ltype1 > 0 .and. ltype1 <= 9 .and. ltype2 == 255) then ! simple
+  ltype = ltype1
+  l1 = 0
+  l2 = 0
+else if (ltype1 == 20 .and. ltype2 == 255) then ! isothermal
+  ltype = 2
+  l1 = rescale2(scalef1,scalev1-2)!*100
+  l2 = 0
+else if (ltype1 == 100 .and. ltype2 == 255) then ! isobaric
+  ltype = 100
+  l1 = rescale2(scalef1,scalev1+2)!/100
+  l2 = 0
+else if (ltype1 == 100 .and. ltype2 == 100) then
+  ltype = 101
+  l1 = rescale1(scalef1,scalev1+3)!/1000
+  l2 = rescale1(scalef2,scalev2+3)!/1000
+else if (ltype1 == 101 .and. ltype2 == 255) then
+  ltype = 102
+  l1 = 0
+  l2 = 0
+else if (ltype1 == 102 .and. ltype2 == 255) then ! altitude over sea level
+  ltype = 103
+  l1 = rescale2(scalef1,scalev1)
+  l2 = 0
+else if (ltype1 == 102 .and. ltype2 == 102) then
+  ltype = 104
+  l1 = rescale1(scalef1,scalev1+2)!/100
+  l2 = rescale1(scalef2,scalev2+2)!/100
+else if (ltype1 == 103 .and. ltype2 == 255) then ! height over ground
+  ltype = 105
+  l1 = rescale2(scalef1,scalev1)
+  l2 = 0
+else if (ltype1 == 103 .and. ltype2 == 103) then
+  ltype = 106
+  l1 = rescale1(scalef1,scalev1+2)!/100
+  l2 = rescale1(scalef2,scalev2+2)!/100
+else if (ltype1 == 104 .and. ltype2 == 255) then ! sigma
+  ltype = 107
+  l1 = rescale2(scalef1,scalev1-4)!*10000
+  l2 = 0
+else if (ltype1 == 104 .and. ltype2 == 104) then
+  ltype = 108
+  l1 = rescale1(scalef1,scalev1-2)!*100
+  l2 = rescale1(scalef2,scalev2-2)!*100
+else if (ltype1 == 105 .and. ltype2 == 255) then ! hybrid
+  ltype = 109
+  l1 = rescale2(scalef1,scalev1)
+  l2 = 0
+else if (ltype1 == 105 .and. ltype2 == 105) then
+  ltype = 110
+  l1 = rescale1(scalef1,scalev1)
+  l2 = rescale1(scalef2,scalev2)
+else if (ltype1 == 106 .and. ltype2 == 255) then ! depth
+  ltype = 111
+  l1 = rescale2(scalef1,scalev1-2)!*100
+  l2 = 0
+else if (ltype1 == 106 .and. ltype2 == 106) then
+  ltype = 112
+  l1 = rescale1(scalef1,scalev1-2)!*100
+  l2 = rescale1(scalef2,scalev2-2)!*100
+else ! mi sono rotto per ora
+
+  ltype = 255
+  l1 = 0
+  l2 = 0
+  call raise_error('level_g2_to_g1: GRIB2 Levels '//TRIM(to_char(ltype1))//' ' &
+   //TRIM(to_char(ltype2))//' cannot be converted to GRIB1.')
+
+endif
+
+CONTAINS
+
+FUNCTION rescale1(scalef, scalev) RESULT(rescale)
+INTEGER,INTENT(in) :: scalef, scalev
+INTEGER :: rescale
+
+rescale = MIN(255, INT(scalev*10.0D0**(-scalef)))
+
+END FUNCTION rescale1
+
+FUNCTION rescale2(scalef, scalev) RESULT(rescale)
+INTEGER,INTENT(in) :: scalef, scalev
+INTEGER :: rescale
+
+rescale = MIN(65535, INT(scalev*10.0D0**(-scalef)))
+
+END FUNCTION rescale2
+
+END SUBROUTINE level_g2_to_g1
 
 
 end module gridinfo_class
