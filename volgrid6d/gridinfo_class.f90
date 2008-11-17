@@ -527,11 +527,11 @@ if (numberOfPoints /= (this%griddim%dim%nx * this%griddim%dim%ny))then
 !if (numberOfValues /= (this%griddim%dim%nx * this%griddim%dim%ny))then
 
   CALL l4f_category_log(this%category,L4F_ERROR, &
-   'encode_gridinfo: numberOfPoints and gridinfo size different. numberOfPoints: ' &
+   'dencode_gridinfo: numberOfPoints and gridinfo size different. numberOfPoints: ' &
    //trim(to_char(numberOfPoints))//', nx,ny:'&
    //TRIM(to_char(this%griddim%dim%nx))//' '//trim(to_char(this%griddim%dim%ny)))
   call raise_fatal_error( &
-   'encode_gridinfo: numberOfPoints and gridinfo size different')
+   'dencode_gridinfo: numberOfPoints and gridinfo size different')
 
 end if
 
@@ -669,13 +669,26 @@ ELSE
   ys = 1
 ENDIF
 
+
+if (any(field== rmiss)) then
+
+  call grib_set(this%gaid,'missingValue',rmiss)
+  
+  call grib_get(this%gaid,'editionNumber',editionNumber);
+  if (editionNumber == 1) then
+                                ! enable bitmap in a grib1
+    call grib_set(this%gaid,"bitmapPresent",1)
+  else
+                                ! enable bitmap in a grib2
+    call grib_set(this%gaid,"bitMapIndicator",0)
+  endif
+end if
+
 IF ( jPointsAreConsecutive == 0) THEN
   CALL grib_set(this%gaid,'values', PACK(field(x1:x2:xs,y1:y2:ys), .TRUE.))
 ELSE
   CALL grib_set(this%gaid,'values', PACK(TRANSPOSE(field(x1:x2:xs,y1:y2:ys)), .TRUE.))
 ENDIF
-
-call grib_set(this%gaid,'missingValue',rmiss)
 
 end subroutine encode_gridinfo
 
