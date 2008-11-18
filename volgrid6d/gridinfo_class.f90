@@ -344,65 +344,90 @@ end subroutine export_level
 subroutine import_timerange(this,gaid)
 
 TYPE(vol7d_timerange),INTENT(out) :: this
-integer,INTENT(in)          :: gaid
-integer ::EditionNumber,timerange,p1,p2,status
+integer,INTENT(in) :: gaid
+INTEGER :: EditionNumber, tri, unit, p1_g1, p2_g1, statproc, p1, p2, status
 
 call grib_get(gaid,'GRIBEditionNumber',EditionNumber)
 
-if (EditionNumber == 1 .or. EditionNumber == 2)then
-  
-  call grib_get(gaid,'typeOfStatisticalProcessing',timerange,status)
-  if (status == GRIB_SUCCESS) then
-     call grib_get(gaid,'endStepInHours',p1)
-     call grib_get(gaid,'lengthOfTimeRange',p2)
-  
-     call init (this, timerange,p1,p2)
-  else
+if (EditionNumber == 1) then
 
-! TODO
-! qui forse bisogna capire meglio in quale template siamo
-! e come mai grib1 va a finire qui
+  CALL grib_get(gaid,'timeRangeIndicator',tri)
+  CALL grib_get(gaid,'P1',p1_g1)
+  CALL grib_get(gaid,'P2',p2_g1)
+  CALL grib_get(gaid,'indicatorOfUnitOfTimeRange',unit)
+!  CALL grib_get(gaid,'startStepInHours',p1_g1)
+!  CALL grib_get(gaid,'endStepInHours',p2_g1)
+  CALL timerange_g1_to_g2_second(tri, p1_g1, p2_g1, unit, statproc, p1, p2)
 
-     call init (this)
+else if (EditionNumber == 2) then
+  
+!  call grib_get(gaid,'productDefinitionTemplateNumber',)
+!  call grib_get(gaid,'endStepInHours',p1)
+  CALL grib_get(gaid,'forecastTime',p1)
+  CALL grib_get(gaid,'indicatorOfUnitOfTimeRange',unit)
+  CALL gribtr_to_second(unit,p1,p1)
+  call grib_get(gaid,'typeOfStatisticalProcessing',statproc,status)
+
+  if (status == GRIB_SUCCESS .AND. statproc >= 0 .AND. statproc <= 9) then ! statistical processing
+     call grib_get(gaid,'lengthOfTimeRange',p2) 
+     CALL grib_get(gaid,'indicatorOfUnitForTimeRange',unit)
+     CALL gribtr_to_second(unit,p2,p2)
+ 
+  else ! point in time
+     statproc = 254
+     p2 = 0
      
   end if
 else
 
-  call raise_error('GribEditionNumber not supported')
+  call raise_fatal_error('GribEditionNumber not supported')
 
 end if
 
-end subroutine import_timerange
+call init (this, statproc, p1, p2)
 
+end subroutine import_timerange
 
 
 subroutine export_timerange(this,gaid)
 
 TYPE(vol7d_timerange),INTENT(in) :: this
-integer,INTENT(in)         :: gaid
-integer ::EditionNumber,timerange,p1,p2
+integer,INTENT(in) :: gaid
+INTEGER :: EditionNumber, tri, unit, p1_g1, p2_g1, p1, p2
 
 call grib_get(gaid,'GRIBEditionNumber',EditionNumber)
 
 if (EditionNumber == 1 ) then
+! Convert vol7d_timerange members to grib1 with reasonable time unit
+  CALL timerange_g2_to_g1_unit(this%timerange, this%p1, this%p2, &
+   tri, p1_g1, p2_g1, unit)
+! Set the native keys
+  CALL grib_set(gaid,'timeRangeIndicator',tri)
+  CALL grib_set(gaid,'P1',p1_g1)
+  CALL grib_set(gaid,'P2',p2_g1)
+  CALL grib_set(gaid,'indicatorOfUnitOfTimeRange',unit)
 
-   call raise_error("convert timerange from gridinfo standard to grib1 not managed")
-
-else if (EditionNumber == 2)then
+else if (EditionNumber == 2) then
+! Set reasonable time unit
+  CALL second_to_gribtr(this%p1,p1,unit)
+! Set the native keys
+  CALL grib_set(gaid,'forecastTime',p1)
+  CALL grib_set(gaid,'indicatorOfUnitOfTimeRange',unit)
+!    CALL grib_set(gaid,'endStepInHours',this%p1)
 
 !TODO bisogna gestire anche il template
-
-  call grib_set(gaid,'typeOfStatisticalProcessing',this%timerange)
-  call grib_set(gaid,'endStepInHours',this%p1)
-  call grib_set(gaid,'lengthOfTimeRange',this%p2)
+  IF (this%timerange >= 0 .AND. this%timerange <= 9) THEN
+    CALL grib_set(gaid,'typeOfStatisticalProcessing',this%timerange)
+    CALL second_to_gribtr(this%p2,p2,unit)
+    CALL grib_set(gaid,'indicatorOfUnitForTimeRange',unit)
+    CALL grib_set(gaid,'lengthOfTimeRange',p2)
+  ENDIF
 
 else
 
-  call raise_error('GribEditionNumber not supported')
+  call raise_fatal_error('GribEditionNumber not supported')
 
 end if
-
-
 
 end subroutine export_timerange
 
@@ -926,11 +951,11 @@ else if (ltype == 160) then
   scalev1=l1
 else
 
-  call raise_error('level_g1_to_g2: GRIB1 Level '//TRIM(to_char(ltype))//' not recognized.')
+  call raise_error('level_g1_to_g2: GRIB1 level '//TRIM(to_char(ltype)) &
+   //' cannot be converted to GRIB2.')
 
 endif
 
-return
 END SUBROUTINE level_g1_to_g2
 
 
@@ -1003,7 +1028,7 @@ else ! mi sono rotto per ora
   ltype = 255
   l1 = 0
   l2 = 0
-  call raise_error('level_g2_to_g1: GRIB2 Levels '//TRIM(to_char(ltype1))//' ' &
+  call raise_error('level_g2_to_g1: GRIB2 levels '//TRIM(to_char(ltype1))//' ' &
    //TRIM(to_char(ltype2))//' cannot be converted to GRIB1.')
 
 endif
@@ -1027,6 +1052,113 @@ rescale = MIN(65535, INT(scalev*10.0D0**(-scalef)))
 END FUNCTION rescale2
 
 END SUBROUTINE level_g2_to_g1
+
+
+SUBROUTINE timerange_g1_to_g2_second(tri, p1_g1, p2_g1, unit, statproc, p1, p2)
+INTEGER,INTENT(in) :: tri, p1_g1, p2_g1, unit
+INTEGER,INTENT(out) :: statproc, p1, p2
+
+IF (tri == 0 .OR. tri == 1 .OR. tri == 10) THEN ! point in time
+  statproc = 254
+  CALL gribtr_to_second(unit, p1_g1, p1)
+  p2 = 0
+!ELSE IF (tri == 2) THEN ! between p1 and p2? statproc = 255?
+ELSE IF (tri == 3) THEN ! average
+  statproc = 0
+  CALL gribtr_to_second(unit, p2_g1, p1)
+  CALL gribtr_to_second(unit, p2_g1-p1_g1, p2)
+ELSE IF (tri == 4) THEN ! accumulation
+  statproc = 1
+  CALL gribtr_to_second(unit, p2_g1, p1)
+  CALL gribtr_to_second(unit, p2_g1-p1_g1, p2)
+ELSE IF (tri == 5) THEN ! difference
+  statproc = 4
+  CALL gribtr_to_second(unit, p2_g1, p1)
+  CALL gribtr_to_second(unit, p2_g1-p1_g1, p2)
+ELSE
+  CALL raise_fatal_error('timerange_g1_to_g2: GRIB1 timerange '//TRIM(to_char(tri)) &
+   //' cannot be converted to GRIB2.')
+ENDIF
+
+END SUBROUTINE timerange_g1_to_g2_second
+
+
+SUBROUTINE timerange_g2_to_g1_unit(statproc, p1, p2, tri, p1_g1, p2_g1, unit)
+INTEGER,INTENT(in) :: statproc, p1, p2
+INTEGER,INTENT(out) :: tri, p1_g1, p2_g1, unit
+
+IF (statproc < 0 .OR. statproc > 9) THEN
+  tri = 0
+  CALL second_to_gribtr(p1, p1_g1, unit)
+  p2_g1 = 0
+ELSE IF (statproc == 0) THEN ! average
+  tri = 3
+  CALL second_to_gribtr(p1, p2_g1, unit)    ! here and after make sure that
+  CALL second_to_gribtr(p1-p2, p1_g1, unit) ! unit is the same between calls
+ELSE IF (statproc == 1) THEN ! accumulation
+  tri = 4
+  CALL second_to_gribtr(p1, p2_g1, unit)
+  CALL second_to_gribtr(p1-p2, p1_g1, unit)
+ELSE IF (statproc == 4) THEN ! difference
+  tri = 5
+  CALL second_to_gribtr(p1, p2_g1, unit)
+  CALL second_to_gribtr(p1-p2, p1_g1, unit)
+ELSE
+  CALL raise_fatal_error('timerange_g2_to_g1: GRIB2 statisticalprocessing ' &
+   //TRIM(to_char(statproc))//' cannot be converted to GRIB1.')
+ENDIF
+
+END SUBROUTINE timerange_g2_to_g1_unit
+
+
+!0       Minute
+!1       Hour
+!2       Day
+!3       Month
+!4       Year
+!5       Decade (10 years)
+!6       Normal (30 years)
+!7       Century(100 years)
+!8-9     Reserved
+!10      3 hours
+!11      6 hours
+!12      12 hours
+!13      Second
+SUBROUTINE gribtr_to_second(unit, valuein, valueout)
+INTEGER,INTENT(in) :: unit, valuein
+INTEGER,INTENT(out) :: valueout
+
+INTEGER,PARAMETER :: unitlist(0:13)=(/60,3600,86400,2592000,31536000, &
+ 315360000,946080000,imiss,imiss,imiss,10800,21600,43200,1/)
+
+IF (unit >= 0 .AND. unit <= 13) THEN
+  valueout = valuein*unitlist(unit)
+ELSE
+  valueout = imiss
+ENDIF
+
+END SUBROUTINE gribtr_to_second
+
+
+SUBROUTINE second_to_gribtr(valuein, valueout, unit)
+INTEGER,INTENT(in) :: valuein
+INTEGER,INTENT(out) :: valueout, unit
+
+IF (valuein == imiss) THEN
+  valueout = imiss
+  unit = 1
+ELSE IF (MOD(valuein,3600) == 0) THEN ! prefer hours
+  valueout = valuein/3600
+  unit = 1
+ELSE IF (MOD(valuein,60) == 0) THEN ! then minutes
+  valueout = valuein/60
+  unit = 0
+ELSE ! seconds (not supported in grib1!)
+  valueout = valuein
+  unit = 13
+ENDIF
+
+END SUBROUTINE second_to_gribtr
 
 
 end module gridinfo_class
