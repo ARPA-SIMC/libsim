@@ -24,8 +24,8 @@ category=l4f_category_get(a_name//".main")
 ier=l4f_init()
 
 
-call grib_open_file(ifile, '/dev/stdin','r')
-call grib_open_file(ofile, '/dev/stdout','w')
+call grib_open_file(ifile, 'gribmix.grb','r')
+call grib_open_file(ofile, 'gribnew.grb','w')
 
 
 ! Loop on all the messages in a file.
@@ -51,7 +51,15 @@ DO WHILE (iret == GRIB_SUCCESS)
 
    call l4f_category_log(category,L4F_INFO,"import")
 
-   call encode_gridinfo(gridinfo,decode_gridinfo(gridinfo))
+
+   call xoom_index(gridinfo,ix,iy,fx,fy,&
+ iox,ioy,fox,foy,inx,iny,fnx,fny,newx,newy) 
+
+
+decode_gridinfo(gridinfo)
+
+
+   call encode_gridinfo(gridinfo,
 
 !     call export (gridinfo)
    call grib_write(gridinfo%gaid,ofile)
