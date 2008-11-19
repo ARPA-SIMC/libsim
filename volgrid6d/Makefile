@@ -16,6 +16,7 @@ demo.o: ./demo.f90 grid_class.o volgrid6d_var_class.o gridinfo_class.o volgrid6d
 demo2.o: ./demo2.f90 grid_class.o volgrid6d_var_class.o gridinfo_class.o
 	$(FC) $(FFLAGS) $(OTHERFLAGS) -c	./demo2.f90
 demo3.o: ./demo3.f90 grid_class.o volgrid6d_var_class.o gridinfo_class.o volgrid6d_class.o
+	$(FC) $(FFLAGS) $(OTHERFLAGS) -c	./demo3.f90
 demo4.o: ./demo4.f90 grid_class.o gridinfo_class.o volgrid6d_class.o
 	$(FC) $(FFLAGS) $(OTHERFLAGS) -c	./demo4.f90
 grid_class.o: ./grid_class.F90 regular_ll.o rotated_ll.o

@@ -314,11 +314,12 @@ call grib_get(gaid,'GRIBEditionNumber',EditionNumber)
 
 if (EditionNumber == 1)then
 
-  CALL level_g2_to_g1(ltype1,scalef1,scalev1,ltype2,scalef1,scalev2,ltype,l1,l2)
-
+  CALL level_g2_to_g1(ltype1,scalef1,scalev1,ltype2,scalef2,scalev2,ltype,l1,l2)
   call grib_set(gaid,'indicatorOfTypeOfLevel',ltype)
-  call grib_set(gaid,'topLevel',l1)
+! it is important to set topLevel after, otherwise, in case of single levels
+! bottomLevel=0 overwrites topLevel (aliases in grib_api)
   call grib_set(gaid,'bottomLevel',l2)
+  call grib_set(gaid,'topLevel',l1)
 
 else if (EditionNumber == 2)then
 
@@ -969,16 +970,16 @@ if (ltype1 > 0 .and. ltype1 <= 9 .and. ltype2 == 255) then ! simple
   l2 = 0
 else if (ltype1 == 20 .and. ltype2 == 255) then ! isothermal
   ltype = 2
-  l1 = rescale2(scalef1,scalev1-2)!*100
+  l1 = rescale2(scalef1-2,scalev1)!*100
   l2 = 0
 else if (ltype1 == 100 .and. ltype2 == 255) then ! isobaric
   ltype = 100
-  l1 = rescale2(scalef1,scalev1+2)!/100
+  l1 = rescale2(scalef1+2,scalev1)!/100
   l2 = 0
 else if (ltype1 == 100 .and. ltype2 == 100) then
   ltype = 101
-  l1 = rescale1(scalef1,scalev1+3)!/1000
-  l2 = rescale1(scalef2,scalev2+3)!/1000
+  l1 = rescale1(scalef1+3,scalev1)!/1000
+  l2 = rescale1(scalef2+3,scalev2)!/1000
 else if (ltype1 == 101 .and. ltype2 == 255) then
   ltype = 102
   l1 = 0
@@ -989,24 +990,24 @@ else if (ltype1 == 102 .and. ltype2 == 255) then ! altitude over sea level
   l2 = 0
 else if (ltype1 == 102 .and. ltype2 == 102) then
   ltype = 104
-  l1 = rescale1(scalef1,scalev1+2)!/100
-  l2 = rescale1(scalef2,scalev2+2)!/100
+  l1 = rescale1(scalef1+2,scalev1)!/100
+  l2 = rescale1(scalef2+2,scalev2)!/100
 else if (ltype1 == 103 .and. ltype2 == 255) then ! height over ground
   ltype = 105
   l1 = rescale2(scalef1,scalev1)
   l2 = 0
 else if (ltype1 == 103 .and. ltype2 == 103) then
   ltype = 106
-  l1 = rescale1(scalef1,scalev1+2)!/100
-  l2 = rescale1(scalef2,scalev2+2)!/100
+  l1 = rescale1(scalef1+2,scalev1)!/100
+  l2 = rescale1(scalef2+2,scalev2)!/100
 else if (ltype1 == 104 .and. ltype2 == 255) then ! sigma
   ltype = 107
   l1 = rescale2(scalef1,scalev1-4)!*10000
   l2 = 0
 else if (ltype1 == 104 .and. ltype2 == 104) then
   ltype = 108
-  l1 = rescale1(scalef1,scalev1-2)!*100
-  l2 = rescale1(scalef2,scalev2-2)!*100
+  l1 = rescale1(scalef1-2,scalev1)!*100
+  l2 = rescale1(scalef2-2,scalev2)!*100
 else if (ltype1 == 105 .and. ltype2 == 255) then ! hybrid
   ltype = 109
   l1 = rescale2(scalef1,scalev1)
@@ -1017,12 +1018,12 @@ else if (ltype1 == 105 .and. ltype2 == 105) then
   l2 = rescale1(scalef2,scalev2)
 else if (ltype1 == 106 .and. ltype2 == 255) then ! depth
   ltype = 111
-  l1 = rescale2(scalef1,scalev1-2)!*100
+  l1 = rescale2(scalef1-2,scalev1)!*100
   l2 = 0
 else if (ltype1 == 106 .and. ltype2 == 106) then
   ltype = 112
-  l1 = rescale1(scalef1,scalev1-2)!*100
-  l2 = rescale1(scalef2,scalev2-2)!*100
+  l1 = rescale1(scalef1-2,scalev1)!*100
+  l2 = rescale1(scalef2-2,scalev2)!*100
 else ! mi sono rotto per ora
 
   ltype = 255
@@ -1062,7 +1063,10 @@ IF (tri == 0 .OR. tri == 1 .OR. tri == 10) THEN ! point in time
   statproc = 254
   CALL gribtr_to_second(unit, p1_g1, p1)
   p2 = 0
-!ELSE IF (tri == 2) THEN ! between p1 and p2? statproc = 255?
+ELSE IF (tri == 2) THEN ! somewhere between p1 and p2 -> missing
+  statproc = 255
+  CALL gribtr_to_second(unit, p2_g1, p1)
+  CALL gribtr_to_second(unit, p2_g1-p1_g1, p2)
 ELSE IF (tri == 3) THEN ! average
   statproc = 0
   CALL gribtr_to_second(unit, p2_g1, p1)
@@ -1087,11 +1091,7 @@ SUBROUTINE timerange_g2_to_g1_unit(statproc, p1, p2, tri, p1_g1, p2_g1, unit)
 INTEGER,INTENT(in) :: statproc, p1, p2
 INTEGER,INTENT(out) :: tri, p1_g1, p2_g1, unit
 
-IF (statproc < 0 .OR. statproc > 9) THEN
-  tri = 0
-  CALL second_to_gribtr(p1, p1_g1, unit)
-  p2_g1 = 0
-ELSE IF (statproc == 0) THEN ! average
+IF (statproc == 0) THEN ! average
   tri = 3
   CALL second_to_gribtr(p1, p2_g1, unit)    ! here and after make sure that
   CALL second_to_gribtr(p1-p2, p1_g1, unit) ! unit is the same between calls
@@ -1103,6 +1103,14 @@ ELSE IF (statproc == 4) THEN ! difference
   tri = 5
   CALL second_to_gribtr(p1, p2_g1, unit)
   CALL second_to_gribtr(p1-p2, p1_g1, unit)
+ELSE IF (statproc == 255) THEN ! missing -> somewhere between p1 and p2
+  tri = 2
+  CALL second_to_gribtr(p1, p2_g1, unit)
+  CALL second_to_gribtr(p1-p2, p1_g1, unit)
+ELSE IF (statproc == 254) THEN ! point in time
+  tri = 0
+  CALL second_to_gribtr(p1, p1_g1, unit)
+  p2_g1 = 0
 ELSE
   CALL raise_fatal_error('timerange_g2_to_g1: GRIB2 statisticalprocessing ' &
    //TRIM(to_char(statproc))//' cannot be converted to GRIB1.')
