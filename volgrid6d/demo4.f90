@@ -1,4 +1,4 @@
-program demo3
+program demo4
 
 use gridinfo_class
 use log4fortran
@@ -9,14 +9,13 @@ implicit none
 
 integer :: category,ier
 character(len=512):: a_name
-type (gridinfo_type),pointer :: gridinfo(:)
+type (gridinfo_type) :: gridinfo
 
-integer                            ::  ifile,gaid
+integer                            ::  ifile,ofile,gaid
 integer                            ::  iret
-integer  :: ngrib,n
 
 !questa chiamata prende dal launcher il nome univoco
-call l4f_launcher(a_name,a_name_force="demo3")
+call l4f_launcher(a_name,a_name_force="demo4")
 
 !imposta a_name
 category=l4f_category_get(a_name//".main")
@@ -25,19 +24,9 @@ category=l4f_category_get(a_name//".main")
 ier=l4f_init()
 
 
-ngrib=0
+call grib_open_file(ifile, '/dev/stdin','r')
+call grib_open_file(ofile, '/dev/stdout','w')
 
-call grib_open_file(ifile, 'gribmissing.grb','r')
-
-
-call grib_count_in_file(ifile,ngrib)
-
-call l4f_category_log(category,L4F_INFO,&
-         "Numero totale di grib: "//to_char(ngrib))
-
-allocate (gridinfo(ngrib))
-
-ngrib=0
 
 ! Loop on all the messages in a file.
 
@@ -48,50 +37,34 @@ gaid=-1
 call  grib_new_from_file(ifile,gaid, iret) 
 
 
-LOOP: DO WHILE (iret == GRIB_SUCCESS)
+DO WHILE (iret == GRIB_SUCCESS)
 
    call l4f_category_log(category,L4F_INFO,"import gridinfo")
 
-   ngrib=ngrib+1
-   call init (gridinfo(ngrib),gaid=gaid,categoryappend=to_char(ngrib))
-   call import(gridinfo(ngrib))
+   call init (gridinfo,gaid=gaid,categoryappend="test")
+   call import(gridinfo)
 
    gaid=-1
    call grib_new_from_file(ifile,gaid, iret)
    
-end do LOOP
+   call display(gridinfo)
 
-call grib_close_file(ifile)
+   call l4f_category_log(category,L4F_INFO,"import")
 
-call display(gridinfo)
+   call encode_gridinfo(gridinfo,decode_gridinfo(gridinfo))
 
-call l4f_category_log(category,L4F_INFO,"import")
-
-
-call grib_open_file(ifile, 'gribnew.grb','w')
-
-
-do n=1,ngrib
-   !     write the new message to a file
-
-   if(c_e(gridinfo(n)%gaid)) then
-
-     call encode_gridinfo(gridinfo(n),decode_gridinfo(gridinfo(n)))
-
-!     call export (gridinfo(n))
-     call grib_write(gridinfo(n)%gaid,ifile)
-     call delete (gridinfo(n))
-   end if
+!     call export (gridinfo)
+   call grib_write(gridinfo%gaid,ofile)
+   call delete (gridinfo)
 end do
 
 call grib_close_file(ifile)
+call grib_close_file(ofile)
 
 call l4f_category_log(category,L4F_INFO,"terminato")
-
-deallocate(gridinfo)
 
 !chiudo il logger
 call l4f_category_delete(category)
 ier=l4f_fini()
 
-end program demo3
+end program demo4

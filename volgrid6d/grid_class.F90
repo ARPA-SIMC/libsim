@@ -492,4 +492,134 @@ end SUBROUTINE display_griddim
 #undef VOL7D_POLY_TYPES
 
 
+
+
+
+!!$SUBROUTINE zoom_coord(this,ilon,ilat,flon,flat,newx,newy) 
+!!$
+!!$type(griddim_def),intent(in) :: this !< oggetto griddim
+!!$doubleprecision,intent(in) ::ilon,ilat,flon,flat !< zoom geographical coordinate
+!!$integer, intent(out):: newx,newy  !< new dimension for the future field
+!!$
+!!$!check
+!!$
+!!$if ( ilon > flon .or. ilat > flat ) then
+!!$    
+!!$  call l4f_category_log(this%category,L4F_ERROR,"zoom coordinate are wrong: "//&
+!!$   to_char(ilon)//to_char(ilat)//to_char(flon)//to_char(flat))
+!!$  call raise_error("zoom coordinate are wrong")
+!!$end if
+!!$
+!!$
+!!$
+!!$select case ( this%grid%type%type )
+!!$
+!!$case ( "regular_ll")
+!!$
+!!$  call zoom(this%grid%regular_ll,this%dim,ilon,ilat,flon,flat,newx,newy)
+!!$  
+!!$case ( "rotated_ll")
+!!$  call zoom(this%grid%rotated_ll,this%dim,ilon,ilat,flon,flat,newx,newy)
+!!$  
+!!$case default
+!!$  call l4f_category_log(this%category,L4F_ERROR,"gtype: "//this%grid%type%type//" non gestita" )
+!!$  call raise_error("gtype non gestita")
+!!$  
+!!$end select
+!!$
+!!$
+!!$end SUBROUTINE zoom_coord
+
+
+
+SUBROUTINE zoom_index(this,that,ix,iy,fx,fy,&
+ iox,ioy,fox,foy,inx,iny,fnx,fny,newx,newy) 
+
+type(griddim_def),intent(in) :: this !< oggetto griddim in
+type(griddim_def),intent(out) :: that !< oggetto griddim out
+integer, intent(in)  :: ix,iy,fx,fy  !< zoom index coordinate
+integer, intent(out) :: newx,newy    !< new dimension for the future field
+integer, intent(out) :: iox,ioy,fox,foy
+integer, intent(out) :: inx,iny,fnx,fny
+
+integer :: nx,ny
+doubleprecision ::  lon_min, lon_max, lat_min, lat_max,steplon,steplat
+character(len=80) :: type
+
+
+
+!check
+
+if (&
+ ix < 1  .or. fx > this%dim%nx .or. &
+ iy < 1  .or. fy > this%dim%ny .or. &
+ ix > fx .or. iy > fy &
+ ) then
+    
+  call l4f_category_log(this%category,L4F_ERROR,"zoom index are wrong: "//&
+   to_char(ix)//to_char(iy)//to_char(fx)//to_char(fy))
+  call raise_error("zoom index are wrong")
+end if
+
+
+call get_val(this,type,&
+ nx,ny, &
+ lon_min, lon_max, lat_min, lat_max)
+
+
+newx=fnx-inx+1
+newy=fny-iny+1
+
+
+iox=min(max(ix,1),nx)
+ioy=min(max(iy,1),ny)
+
+fox=max(min(fx,nx),1)
+foy=max(min(fy,ny),1)
+
+inx=max(-ix,1)
+iny=max(-ix,1)
+
+fnx=max(min(fx,nx)-ix,1)
+fny=max(min(fy,ny)-iy,1)
+
+
+newx=fnx-inx+1
+newy=fny-iny+1
+
+steplon=(lon_max-lon_min)/(nx-1)
+steplat=(lat_max-lat_min)/(ny-1)
+
+!lon_min=lon_min+steplon*
+!lon_max
+!lat_min
+!lat_max
+
+
+!TODO qui non bisogna fare una init ma una set_val
+
+call init (that,type,&
+ newx,newy, &
+ lon_min, lon_max, lat_min, lat_max)
+
+
+end SUBROUTINE zoom_index
+
+
+SUBROUTINE zoom_field(this,field,fieldz,iox,ioy,fox,foy,inx,iny,fnx,fny) 
+
+type(griddim_def),intent(in) :: this    !< oggetto griddim
+real,intent(in)      :: field(:,:)      !< matrice in ingresso
+real,intent(out)     :: fieldz(:,:)     !< matrice zoommata in uscita
+integer, intent(out) :: iox,ioy,fox,foy
+integer, intent(out) :: inx,iny,fnx,fny
+
+fieldz=rmiss
+
+fieldz(inx:fnx,iny:fny)=field(iox:fox,ioy:foy)
+
+
+end SUBROUTINE zoom_field
+
+
 end module grid_class
