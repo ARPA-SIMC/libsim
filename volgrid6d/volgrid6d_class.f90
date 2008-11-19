@@ -137,7 +137,9 @@ IF (PRESENT(ntime)) THEN
     ALLOCATE(this%time(ntime))
     IF (linit) THEN
       DO i = 1, ntime
-        CALL init(this%time(i))
+        this%time(i) = datetime_miss
+!        CALL init(this%time(i)) ! senza argomento inizializza a zero non missing
+                                 ! baco di datetime?
       ENDDO
     ENDIF
   ENDIF
@@ -489,8 +491,11 @@ call get_val(this%griddim,type=type)
 call l4f_category_log(this%category,L4F_DEBUG,"import_from_gridinfo: "//trim(type))
 
 if (.not. c_e(type))then
-
-   call init(this,gridinfo%griddim,categoryappend)
+  this%griddim = gridinfo%griddim
+! ho gia` fatto init, altrimenti non potrei fare la get_val(this%griddim)
+! per cui meglio non ripetere
+!   call init(this,gridinfo%griddim,categoryappend)
+  CALL volgrid6d_alloc_vol(this, ini=.TRUE.) ! decode?
 
 else if (.not. (this%griddim == gridinfo%griddim ))then
 
