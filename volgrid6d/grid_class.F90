@@ -271,8 +271,9 @@ doubleprecision,optional,intent(out) :: latitude_south_pole,longitude_south_pole
 integer,optional,intent(out) :: component_flag
 
 if (present(type)) type = this%grid%type%type
+if (this%grid%type%type == cmiss) return
 
-select case ( this%grid%type%type)
+select case (this%grid%type%type)
 
 case ( "regular_ll")
   call get_val(this%grid%regular_ll,this%dim,&
