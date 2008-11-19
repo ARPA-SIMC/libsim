@@ -589,9 +589,8 @@ integer :: alternativeRowScanning,iScansNegatively,jScansPositively,jPointsAreCo
 integer :: numberOfValues,numberOfPoints
 real :: field (this%griddim%dim%nx,this%griddim%dim%ny)
 
-!TODO costretto a usare doubleprecision in quanto float non va (riportato bug grib_api)
-doubleprecision :: vector (this%griddim%dim%nx * this%griddim%dim%ny)
-doubleprecision,allocatable :: lats (:),lons(:)
+real :: vector (this%griddim%dim%nx * this%griddim%dim%ny)
+real,allocatable :: lats (:),lons(:)
 integer ::x1,x2,xs,y1,y2,ys,ord(2)
 
 
