@@ -4,7 +4,7 @@
 MODULE volgrid6d_var_class
 USE kinds
 USE missing_values
-use grib_api
+!use grib_api
 use err_handling
 
 IMPLICIT NONE
@@ -39,19 +39,6 @@ END INTERFACE
 !! Distrugge l'oggetto in maniera pulita, assegnandogli un valore mancante.
 INTERFACE delete
   MODULE PROCEDURE volgrid6d_var_delete
-END INTERFACE
-
-
-!> Import per la classe volgrid6d_var.
-!! Legge i valori dal grib e li imposta appropriatamente
-INTERFACE import
-  MODULE PROCEDURE import_volgrid6d_var
-END INTERFACE
-
-!> Export per la classe volgrid6d_var.
-!! Imposta i valori nel grib
-INTERFACE export
-  MODULE PROCEDURE export_volgrid6d_var
 END INTERFACE
 
 
@@ -236,81 +223,6 @@ END FUNCTION volgrid6d_var_nesv
 #include "../vol7d/vol7d_distinct.F90"
 #undef VOL7D_POLY_TYPE
 #undef VOL7D_POLY_TYPES
-
-
-
-subroutine import_volgrid6d_var(this,gaid)
-
-TYPE(volgrid6d_var),INTENT(out) :: this
-integer,INTENT(in)              :: gaid
-integer ::EditionNumber,centre,discipline,category,number
-
-call grib_get(gaid,'GRIBEditionNumber',EditionNumber)
-
-if (EditionNumber == 1)then
-
-  call grib_get(gaid,'identificationOfOriginatingGeneratingCentre',centre)
-  call grib_get(gaid,'gribTablesVersionNo',category)
-  call grib_get(gaid,'indicatorOfParameter',number)
-
-  call init (this, centre, category, number)
-
-else if (EditionNumber == 2)then
-
-  call grib_get(gaid,'identificationOfOriginatingGeneratingCentre',centre)
-  call grib_get(gaid,'discipline',discipline)
-  call grib_get(gaid,'parameterCategory',category)
-  call grib_get(gaid,'parameterNumber',number)
-
-  call init (this, centre, category, number, discipline)
-  
-else
-
-  CALL raise_error('GribEditionNumber not supported')
-
-end if
-                                ! da capire come ottenere 
-!this%description
-!this%unit
-
-
-end subroutine import_volgrid6d_var
-
-
-
-subroutine export_volgrid6d_var(this,gaid)
-
-TYPE(volgrid6d_var),INTENT(in) :: this
-integer,INTENT(in)             :: gaid
-integer ::EditionNumber
-
-call grib_get(gaid,'GRIBEditionNumber',EditionNumber)
-
-if (EditionNumber == 1)then
-
-  call grib_set(gaid,'identificationOfOriginatingGeneratingCentre',this%centre)
-  call grib_set(gaid,'gribTablesVersionNo',this%category)
-  call grib_set(gaid,'indicatorOfParameter',this%number)
-
-else if (EditionNumber == 2)then
-
-  call grib_set(gaid,'identificationOfOriginatingGeneratingCentre',this%centre)
-  call grib_set(gaid,'discipline',this%discipline)
-  call grib_set(gaid,'parameterCategory',this%category)
-  call grib_set(gaid,'parameterNumber',this%number)
-
-else
-
-  CALL raise_error('GribEditionNumber not supported')
-
-end if
-                                ! da capire come ottenere 
-!this%description
-!this%unit
-
-
-end subroutine export_volgrid6d_var
-
 
 
 subroutine display_volgrid6d_var(this)

@@ -5,6 +5,7 @@ USE datetime_class
 USE vol7d_timerange_class
 USE vol7d_level_class
 USE volgrid6d_var_class
+use grib_api
 use log4fortran
 
 
@@ -47,15 +48,16 @@ END INTERFACE
 !> Import
 !! Legge i valori dal grib e li imposta appropriatamente
 INTERFACE import
-  MODULE PROCEDURE import_time,import_timerange,import_level,import_gridinfo
+  MODULE PROCEDURE import_time,import_timerange,import_level,import_gridinfo, &
+   import_volgrid6d_var
 END INTERFACE
 
 !> Export
 !! Imposta i valori nel grib
 INTERFACE export
-  MODULE PROCEDURE export_time,export_timerange,export_level,export_gridinfo
+  MODULE PROCEDURE export_time,export_timerange,export_level,export_gridinfo, &
+   export_volgrid6d_var
 END INTERFACE
-
 
 INTERFACE display
   MODULE PROCEDURE display_timerange,display_level,display_gridinfo,display_gridinfov,display_time
@@ -432,6 +434,75 @@ end if
 
 end subroutine export_timerange
 
+
+subroutine import_volgrid6d_var(this,gaid)
+
+TYPE(volgrid6d_var),INTENT(out) :: this
+integer,INTENT(in)              :: gaid
+integer ::EditionNumber,centre,discipline,category,number
+
+call grib_get(gaid,'GRIBEditionNumber',EditionNumber)
+
+if (EditionNumber == 1)then
+
+  call grib_get(gaid,'identificationOfOriginatingGeneratingCentre',centre)
+  call grib_get(gaid,'gribTablesVersionNo',category)
+  call grib_get(gaid,'indicatorOfParameter',number)
+
+  call init (this, centre, category, number)
+
+else if (EditionNumber == 2)then
+
+  call grib_get(gaid,'identificationOfOriginatingGeneratingCentre',centre)
+  call grib_get(gaid,'discipline',discipline)
+  call grib_get(gaid,'parameterCategory',category)
+  call grib_get(gaid,'parameterNumber',number)
+
+  call init (this, centre, category, number, discipline)
+  
+else
+
+  CALL raise_error('GribEditionNumber not supported')
+
+end if
+                                ! da capire come ottenere 
+!this%description
+!this%unit
+
+end subroutine import_volgrid6d_var
+
+
+subroutine export_volgrid6d_var(this,gaid)
+
+TYPE(volgrid6d_var),INTENT(in) :: this
+integer,INTENT(in)             :: gaid
+integer ::EditionNumber
+
+call grib_get(gaid,'GRIBEditionNumber',EditionNumber)
+
+if (EditionNumber == 1)then
+
+  call grib_set(gaid,'identificationOfOriginatingGeneratingCentre',this%centre)
+  call grib_set(gaid,'gribTablesVersionNo',this%category)
+  call grib_set(gaid,'indicatorOfParameter',this%number)
+
+else if (EditionNumber == 2)then
+
+  call grib_set(gaid,'identificationOfOriginatingGeneratingCentre',this%centre)
+  call grib_set(gaid,'discipline',this%discipline)
+  call grib_set(gaid,'parameterCategory',this%category)
+  call grib_set(gaid,'parameterNumber',this%number)
+
+else
+
+  CALL raise_error('GribEditionNumber not supported')
+
+end if
+                                ! da capire come ottenere 
+!this%description
+!this%unit
+
+end subroutine export_volgrid6d_var
 
 
 subroutine display_gridinfo (this)

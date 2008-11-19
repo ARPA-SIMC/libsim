@@ -1,6 +1,5 @@
 module volgrid6d_class
 
-
 USE grid_class
 USE datetime_class
 USE vol7d_timerange_class
@@ -9,6 +8,7 @@ USE volgrid6d_var_class
 use log4fortran
 USE vol7d_utilities
 use gridinfo_class
+use grib_api
 
 IMPLICIT NONE
 
