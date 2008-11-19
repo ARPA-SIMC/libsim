@@ -41,7 +41,7 @@ ELEMENTAL FUNCTION int_to_char(in, form) RESULT(char)
 INTEGER,INTENT(in) :: in !< valore da rappresentare in CHARACTER
 CHARACTER(len=*),INTENT(in),OPTIONAL :: form !< formato opzionale
 
-CHARACTER(len=10) :: char
+CHARACTER(len=11) :: char
 
 IF (PRESENT(form)) THEN
   WRITE(char,form) in
