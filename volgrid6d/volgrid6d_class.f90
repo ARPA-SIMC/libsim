@@ -672,7 +672,7 @@ do i=1,ngrid
    end if
 end do
 
-this%griddim=pack_distinct(gridinfov%griddim,ngrid,back=.true.)
+this(:)%griddim=pack_distinct(gridinfov%griddim,ngrid,back=.true.)
 
 
 do i=1,ngrid
@@ -682,7 +682,7 @@ do i=1,ngrid
    nvar = count_distinct(gridinfov%var,mask=(this(i)%griddim == gridinfov%griddim),back=.true.)
    
 
-!   print *,ntime,ntimerange,nlevel,nvar
+!   CALL l4f_category_log(this(i)%category,L4F_DEBUG,'volgrid6d_alloc '//TRIM(to_char(nlevel))//' '//TRIM(to_char(nvar)))
 !   call init (this(i),this(i)%griddim, categoryappend)
    call l4f_category_log(this(i)%category,L4F_DEBUG,"import from gridinfo vettori")
    

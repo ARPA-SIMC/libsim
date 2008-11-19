@@ -187,9 +187,9 @@ TYPE(volgrid6d_var),INTENT(IN) :: this, that
 LOGICAL :: res
 
 res = this%centre == that%centre .and. &
+ this%discipline == that%discipline .and. &
  this%category == that%category .and. &
- this%centre == that%centre .and. &
- this%discipline == that%discipline
+ this%number == that%number
  
 
 END FUNCTION volgrid6d_var_eq
