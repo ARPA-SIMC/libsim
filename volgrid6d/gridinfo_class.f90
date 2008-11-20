@@ -627,11 +627,11 @@ if (numberOfPoints /= (this%griddim%dim%nx * this%griddim%dim%ny))then
 !if (numberOfValues /= (this%griddim%dim%nx * this%griddim%dim%ny))then
 
   CALL l4f_category_log(this%category,L4F_ERROR, &
-   'dencode_gridinfo: numberOfPoints and gridinfo size different. numberOfPoints: ' &
+   'decode_gridinfo: numberOfPoints and gridinfo size different. numberOfPoints: ' &
    //trim(to_char(numberOfPoints))//', nx,ny:'&
    //TRIM(to_char(this%griddim%dim%nx))//' '//trim(to_char(this%griddim%dim%ny)))
   call raise_fatal_error( &
-   'dencode_gridinfo: numberOfPoints and gridinfo size different')
+   'decode_gridinfo: numberOfPoints and gridinfo size different')
 
 end if
 
@@ -692,7 +692,7 @@ REAL,intent(in) :: field (:,:) !< matrice dei dati da scrivere
 
 integer :: EditionNumber
 integer :: alternativeRowScanning,iScansNegatively,jScansPositively,jPointsAreConsecutive
-integer :: numberOfValues,nx,ny
+integer :: nx,ny
 doubleprecision :: vector (this%griddim%dim%nx * this%griddim%dim%ny)
 integer :: x1,x2,xs,y1,y2,ys,ord(2)
 
@@ -730,23 +730,29 @@ call grib_get(this%gaid,'iScansNegatively',iScansNegatively)
 call grib_get(this%gaid,'jScansPositively',jScansPositively)
 call grib_get(this%gaid,'jPointsAreConsecutive',jPointsAreConsecutive)
 
-call grib_get(this%gaid,'numberOfPointsAlongAParallel', nx)
-call grib_get(this%gaid,'numberOfPointsAlongAMeridian',ny)
 
-numberOfValues=nx*ny
+!TODO
+!assicurarsi che le set qui sotto siano opportune
+call grib_set(this%gaid,'numberOfPointsAlongAParallel',this%griddim%dim%nx)
+call grib_set(this%gaid,'numberOfPointsAlongAMeridian',this%griddim%dim%ny)
 
-if (numberOfValues /= (this%griddim%dim%nx * this%griddim%dim%ny))then
+!TODO
+!i commenti al test qui sotto sono relativi al TODO appena qui sopra
 
-  CALL l4f_category_log(this%category,L4F_ERROR, &
-   'encode_gridinfo: numberOfValues and gridinfo size different. numberOfValues: ' &
-   //trim(to_char(numberOfValues))//', nx,ny:'&
-   //TRIM(to_char(this%griddim%dim%nx))//' '//trim(to_char(this%griddim%dim%ny)))
-  call raise_fatal_error( &
-   'encode_gridinfo: numberOfValues and gridinfo size different')
+!numberOfValues=nx*ny
 
-end if
+!if (numberOfValues /= (this%griddim%dim%nx * this%griddim%dim%ny))then
+!
+!  CALL l4f_category_log(this%category,L4F_ERROR, &
+!   'encode_gridinfo: numberOfValues and gridinfo size different. numberOfValues: ' &
+!   //trim(to_char(numberOfValues))//', nx,ny:'&
+!   //TRIM(to_char(this%griddim%dim%nx))//' '//trim(to_char(this%griddim%dim%ny)))
+!  call raise_fatal_error( &
+!   'encode_gridinfo: numberOfValues and gridinfo size different')
+!
+!end if
 
-call l4f_category_log(this%category,L4F_INFO,'number of values: '//to_char(numberOfValues))
+!call l4f_category_log(this%category,L4F_INFO,'number of values: '//to_char(numberOfValues))
 
 
 ! Transfer data field changing scanning mode from 64

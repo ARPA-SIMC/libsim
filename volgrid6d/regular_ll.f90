@@ -482,6 +482,8 @@ type(grid_regular_ll),intent(in) ::this
 type(grid_dim),intent(in)        :: dim
 integer,INTENT(in)               :: gaid
 doubleprecision :: loFirst,loLast,laFirst,laLast
+integer ::iScansNegatively,jScansPositively
+
 !!$integer ::EditionNumber
 
 call export_dim(dim,gaid)
@@ -490,21 +492,32 @@ call export_dim(dim,gaid)
 ! gestire component flag
 ! component_flag
 
+call grib_get(gaid,'iScansNegatively',iScansNegatively)
+call grib_get(gaid,'jScansPositively',jScansPositively)
 
-! TODO
-! la questione è piu' complicata
-! per avere un processo reversibile vanno calcolate usando lo scan mode
-! iScansNegatively
-! jScansPositively
-! jPointsAreConsecutive
-! alternativeRowScanning
+IF (iScansNegatively  == 0) THEN
 
-! QUESTO E' SBAGLIATO
+  loFirst = this%lon_min
+  loLast  = this%lon_max
 
-loFirst = this%lon_min
-loLast  = this%lon_max
-laFirst = this%lat_min
-laLast  = this%lat_max
+else
+
+  loFirst = this%lon_max
+  loLast  = this%lon_min
+
+end IF
+
+IF (jScansPositively == 0) THEN
+
+  laFirst = this%lat_max
+  laLast  = this%lat_min
+
+else
+
+  laFirst = this%lat_min
+  laLast  = this%lat_max
+
+end IF
 
 call grib_set(gaid,'geography.loFirst' ,loFirst)
 call grib_set(gaid,'geography.loLast'  ,loLast)
@@ -514,22 +527,6 @@ call grib_set(gaid,'geography.laLast'  ,laLast)
 ! TODO
 ! bisogna anche eventualmente ricalcolare i passi
 
-
-!!$call grib_get(gaid,'GRIBEditionNumber',EditionNumber)
-!!$
-!!$if (EditionNumber == 1)then
-!!$
-!!$   call grib_set(gaid,'',this%)
-!!$
-!!$else if (EditionNumber == 2)then
-!!$
-!!$   call grib_set(gaid,'',this%)
-!!$
-!!$else
-!!$
-!!$  CALL raise_error('GribEditionNumber not supported')
-!!$
-!!$end if
 
 end subroutine export_regular_ll
 

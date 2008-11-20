@@ -123,7 +123,7 @@ private
 public griddim_proj,griddim_unproj,griddim_def,grid_def,grid_dim,init,delete
 public get_val,write_unit,read_unit,import,export,display
 public operator(==),count_distinct,pack_distinct,map_distinct,map_inv_distinct,index
-
+public zoom_index,zoom_field
 contains
 
 
@@ -550,11 +550,7 @@ character(len=80) :: type
 
 !check
 
-if (&
- ix < 1  .or. fx > this%dim%nx .or. &
- iy < 1  .or. fy > this%dim%ny .or. &
- ix > fx .or. iy > fy &
- ) then
+if ( ix > fx .or. iy > fy ) then
     
   call l4f_category_log(this%category,L4F_ERROR,"zoom index are wrong: "//&
    to_char(ix)//to_char(iy)//to_char(fx)//to_char(fy))
@@ -580,8 +576,8 @@ foy=max(min(fy,ny),1)
 inx=max(-ix,1)
 iny=max(-ix,1)
 
-fnx=max(min(fx,nx)-ix,1)
-fny=max(min(fy,ny)-iy,1)
+fnx=max(min(fx,nx)-ix+1,1)
+fny=max(min(fy,ny)-iy+1,1)
 
 
 newx=fnx-inx+1
@@ -590,25 +586,32 @@ newy=fny-iny+1
 steplon=(lon_max-lon_min)/(nx-1)
 steplat=(lat_max-lat_min)/(ny-1)
 
-!lon_min=lon_min+steplon*
-!lon_max
-!lat_min
-!lat_max
+print*,"prima", lon_min, lon_max, lat_min, lat_max
+
+lon_min=lon_min+steplon*(iox-1)
+lat_min=lat_min+steplat*(ioy-1)
+
+lon_max=lon_max+steplon*(fox-nx)
+lat_max=lat_max+steplat*(foy-ny)
+
+print*, iox,ioy,fox,foy,inx,iny,fnx,fny,newx,newy 
+print*,"dopo", lon_min, lon_max, lat_min, lat_max
 
 
-!TODO qui non bisogna fare una init ma una set_val
+that%dim%nx= newx
+that%dim%ny= newy
 
-call init (that,type,&
- newx,newy, &
- lon_min, lon_max, lat_min, lat_max)
+that%grid%regular_ll%lon_min=lon_min
+that%grid%regular_ll%lon_max=lon_max
+that%grid%regular_ll%lat_min=lat_min
+that%grid%regular_ll%lat_max=lat_max
 
 
 end SUBROUTINE zoom_index
 
 
-SUBROUTINE zoom_field(this,field,fieldz,iox,ioy,fox,foy,inx,iny,fnx,fny) 
+SUBROUTINE zoom_field(field,fieldz,iox,ioy,fox,foy,inx,iny,fnx,fny) 
 
-type(griddim_def),intent(in) :: this    !< oggetto griddim
 real,intent(in)      :: field(:,:)      !< matrice in ingresso
 real,intent(out)     :: fieldz(:,:)     !< matrice zoommata in uscita
 integer, intent(out) :: iox,ioy,fox,foy

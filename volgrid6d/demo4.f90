@@ -1,6 +1,7 @@
 program demo4
 
 use gridinfo_class
+use grid_class
 use log4fortran
 use grib_api
 use volgrid6d_class
@@ -13,6 +14,10 @@ type (gridinfo_type) :: gridinfo
 
 integer                            ::  ifile,ofile,gaid
 integer                            ::  iret
+
+integer :: ix,iy,fx,fy,iox,ioy,fox,foy,inx,iny,fnx,fny,newx,newy
+real, allocatable :: field(:,:),fieldz(:,:)
+
 
 !questa chiamata prende dal launcher il nome univoco
 call l4f_launcher(a_name,a_name_force="demo4")
@@ -51,19 +56,30 @@ DO WHILE (iret == GRIB_SUCCESS)
 
    call l4f_category_log(category,L4F_INFO,"import")
 
+   ix=5
+   iy=8
+   fx=10
+   fy=15
 
-   call xoom_index(gridinfo,ix,iy,fx,fy,&
- iox,ioy,fox,foy,inx,iny,fnx,fny,newx,newy) 
+   allocate (field(gridinfo%griddim%dim%nx,gridinfo%griddim%dim%ny))
 
+   field=decode_gridinfo(gridinfo)
 
-decode_gridinfo(gridinfo)
+   call zoom_index(gridinfo%griddim,gridinfo%griddim,ix,iy,fx,fy,&
+    iox,ioy,fox,foy,inx,iny,fnx,fny,newx,newy) 
 
+   allocate (fieldz(newx,newy))
+   
+   call zoom_field(field,fieldz,iox,ioy,fox,foy,inx,iny,fnx,fny) 
+   
+   call encode_gridinfo(gridinfo,fieldz)
+   call export (gridinfo)
 
-   call encode_gridinfo(gridinfo,
-
-!     call export (gridinfo)
    call grib_write(gridinfo%gaid,ofile)
    call delete (gridinfo)
+
+   deallocate (field,fieldz)
+
 end do
 
 call grib_close_file(ifile)
