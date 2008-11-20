@@ -272,8 +272,10 @@ if (EditionNumber == 1)then
   call grib_get(gaid,'topLevel',l1)
   call grib_get(gaid,'bottomLevel',l2)
 
-  call level_g1_to_g2(ltype,l1,l2,ltype1,scalef1,scalev1,ltype2,scalef1,scalev2)
-
+  call level_g1_to_g2(ltype,l1,l2,ltype1,scalef1,scalev1,ltype2,scalef2,scalev2)
+  IF (ltype == 111 .OR. ltype == 112) THEN
+    PRINT*,'import level',ltype1,scalef1,scalev1,ltype2,scalef2,scalev2,ltype,l2,l1
+  ENDIF
 else if (EditionNumber == 2)then
 
   call grib_get(gaid,'typeOfFirstFixedSurface',ltype1)
@@ -317,6 +319,9 @@ call grib_get(gaid,'GRIBEditionNumber',EditionNumber)
 if (EditionNumber == 1)then
 
   CALL level_g2_to_g1(ltype1,scalef1,scalev1,ltype2,scalef2,scalev2,ltype,l1,l2)
+  IF (ltype == 111 .OR. ltype == 112) THEN
+    PRINT*,'export level',ltype1,scalef1,scalev1,ltype2,scalef2,scalev2,ltype,l2,l1
+  ENDIF
   call grib_set(gaid,'indicatorOfTypeOfLevel',ltype)
 ! it is important to set topLevel after, otherwise, in case of single levels
 ! bottomLevel=0 overwrites topLevel (aliases in grib_api)
@@ -829,9 +834,9 @@ else
   sl = scalev*(10.D0**(-scalef))
 
   if (any(ltype == height)) then
-    l=sl*1000.D0
+    l = NINT(sl*1000.D0)
   else
-    l=sl
+    l = NINT(sl)
   end if
 end if
 
@@ -855,7 +860,6 @@ integer,intent(in) ::lt,l
 integer,intent(out) :: ltype,scalef,scalev
 
 integer,parameter :: height(5)=(/102,103,106,117,160/)
-doubleprecision:: sl
 
 if (lt == imiss) then
   ltype = 255
