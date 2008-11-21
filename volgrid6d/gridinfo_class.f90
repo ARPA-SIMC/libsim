@@ -185,7 +185,7 @@ TYPE(gridinfo_type),intent(out) :: this !< oggetto da exportare
 
 call l4f_category_log(this%category,L4F_DEBUG,"export to grib" )
 
-!attenzione: exportando da volgrid griddim Ã¨ giÃ  esportato
+!attenzione: exportando da volgrid griddim è già esportato
 
 if ( c_e(this%gaid)) then
   call export(this%griddim,this%gaid)

@@ -534,9 +534,8 @@ end SUBROUTINE display_griddim
 
 SUBROUTINE zoom_index(this,that,ix,iy,fx,fy,&
  iox,ioy,fox,foy,inx,iny,fnx,fny,newx,newy) 
-
 type(griddim_def),intent(in) :: this !< oggetto griddim in
-type(griddim_def),intent(out) :: that !< oggetto griddim out
+type(griddim_def),intent(out) :: that !< oggetto griddim zoomato
 integer, intent(in)  :: ix,iy,fx,fy  !< zoom index coordinate
 integer, intent(out) :: newx,newy    !< new dimension for the future field
 integer, intent(out) :: iox,ioy,fox,foy
@@ -552,9 +551,9 @@ character(len=80) :: type
 
 if ( ix > fx .or. iy > fy ) then
     
-  call l4f_category_log(this%category,L4F_ERROR,"zoom index are wrong: "//&
+  call l4f_category_log(this%category,L4F_ERROR,'zoom indices are wrong: '//&
    to_char(ix)//to_char(iy)//to_char(fx)//to_char(fy))
-  call raise_error("zoom index are wrong")
+  call raise_error('zoom indices are wrong')
 end if
 
 
@@ -623,6 +622,56 @@ fieldz(inx:fnx,iny:fny)=field(iox:fox,ioy:foy)
 
 
 end SUBROUTINE zoom_field
+
+
+!> Rigriglia \a this su una nuova griglia in cui ogni punto
+!! è uguale alla media di \a ngx X \a ngy punti della griglia originaria
+!! (medie su box).
+SUBROUTINE regrid_index(this, that, npx, npy)
+type(griddim_def),intent(in) :: this !> oggetto griddim in
+type(griddim_def),intent(out) :: that !> oggetto griddim rigrigliato
+INTEGER, INTENT(IN) :: npx !> numero di punti su cui fare la media lungo l'asse x
+INTEGER, INTENT(IN) :: npy !> numero di punti su cui fare la media lungo l'asse y
+
+
+!integer, intent(in)  :: ix,iy,fx,fy  !< zoom index coordinate
+!integer, intent(out) :: newx,newy    !< new dimension for the future field
+!integer, intent(out) :: iox,ioy,fox,foy
+!integer, intent(out) :: inx,iny,fnx,fny
+
+integer :: nx,ny
+doubleprecision ::  lon_min, lon_max, lat_min, lat_max,steplon,steplat
+character(len=80) :: type
+
+!check
+
+IF (npx <= 0 .OR. npy <= 0 .OR. npx > this%dim%nx .OR. npy > this%dim%ny) THEN
+  CALL l4f_category_log(this%category,L4F_ERROR,'invalid regrid parameters: '//&
+   TRIM(to_char(npx))//' '//TRIM(to_char(npy)))
+  CALL raise_error('invalid regrid parameters')
+ENDIF
+
+IF (npx == 1 .AND. npy == 1) THEN ! Nothing to do
+  that = this
+
+
+!that%lon_min = this%x1+(ngx-1)*0.5*this%dx
+!that%y1 = this%y1+(ngy-1)*0.5*this%dy
+!that%grid%regular_ll%lon_min = this%grid%regular_ll%lon_min+(npx-1)*0.5*this%dx
+!that%grid%regular_ll%lon_max = lon_max
+!that%grid%regular_ll%lat_min = lat_min
+!that%grid%regular_ll%lat_max = lat_max
+!
+!that%dim%nx = this%dim%nx/ngx
+!that%dim%ny = this%dim%ny/ngy
+!this%dx = this%dx*ngx
+!this%dy = this%dy*ngy
+!this%x2 = this%x1+(this%nx-1)*this%dx
+!this%y2 = this%y1+(this%ny-1)*this%dy
+
+END IF
+
+END SUBROUTINE regrid_index
 
 
 end module grid_class

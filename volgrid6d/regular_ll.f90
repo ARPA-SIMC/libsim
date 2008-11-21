@@ -127,7 +127,7 @@ type(grid_dim) :: dim
 integer,optional :: nx, ny
 doubleprecision,optional :: lon_min, lon_max, lat_min, lat_max
 integer,optional :: component_flag
-character(len=*),INTENT(in),OPTIONAL :: categoryappend !< appennde questo suffisso al namespace category di log4fortran
+character(len=*),INTENT(in),OPTIONAL :: categoryappend !< accoda questo suffisso al namespace category di log4fortran
 
 character(len=512) :: a_name
 
@@ -321,6 +321,25 @@ if (present(component_flag)) component_flag=this%component_flag
 end subroutine get_val_regular_ll
 
 
+!> Restituisce il passo di griglia lungo x
+!FUNCTION regular_ll_dlon(this) RESULT(delta)
+!TYPE(grid_regular_ll), INTENT(in) :: this
+!DOUBLEPRECISION :: delta
+!
+!delta = (this%lon_max - this%lon_min) / dble(dim%nx - 1 )
+!
+!END FUNCTION regular_ll_dlon
+!
+!
+!> Restituisce il passo di griglia lungo y
+!FUNCTION regular_ll_dlat(this) RESULT(delta)
+!TYPE(grid_regular_ll), INTENT(in) :: this
+!DOUBLEPRECISION :: delta
+!
+!delta = (this%lat_max - this%lat_min) / dble(dim%ny - 1 )
+!
+!END FUNCTION regular_ll_dlat
+
 
 !> Legge da un'unità di file il contenuto dell'oggetto \a this.
 !! Il record da leggere deve essere stato scritto con la ::write_unit
@@ -426,19 +445,17 @@ subroutine import_regular_ll(this,dim,gaid)
 type(grid_regular_ll),intent(out) ::this
 type(grid_dim),intent(out)        :: dim
 integer,INTENT(in)                :: gaid
-doubleprecision :: loFirst,loLast,laFirst,laLast
 
+doubleprecision :: loFirst,loLast,laFirst,laLast
+integer ::iScansNegatively,jScansPositively
 !!$integer ::EditionNumber
 
 ! TODO
 ! gestire component flag
-! component_flag
-
 
 !non usati
 !geography.gridWestEast
 !geography.gridNorthSouth
-
 
 call import_dim(dim,gaid)
 
@@ -447,31 +464,33 @@ call grib_get(gaid,'geography.loLast'  ,loLast)
 call grib_get(gaid,'geography.laFirst' ,laFirst)
 call grib_get(gaid,'geography.laLast'  ,laLast)
 
-!TODO
-! la questione è piu' complicata
-! per avere un processo reversibile vanno calcolate usando lo scan mode
+call grib_get(gaid,'iScansNegatively',iScansNegatively)
+call grib_get(gaid,'jScansPositively',jScansPositively)
 
-this%lon_min=min(loFirst,loLast)
-this%lon_max=max(loFirst,loLast)
-this%lat_min=min(laFirst,laLast)
-this%lat_max=max(laFirst,laLast)
+IF (iScansNegatively  == 0) THEN
 
+  this%lon_min = loFirst
+  this%lon_max = loLast 
 
-!!$call grib_get(gaid,'GRIBEditionNumber',EditionNumber)
-!!$
-!!$if (EditionNumber == 1)then
-!!$
-!!$   call grib_get(gaid,'',this%)
-!!$
-!!$else if (EditionNumber == 2)then
-!!$
-!!$   call grib_get(gaid,'',this%)
-!!$  
-!!$else
-!!$
-!!$  CALL raise_error('GribEditionNumber not supported')
-!!$
-!!$end if
+else
+
+  this%lon_max = loFirst
+  this%lon_min = loLast 
+
+end IF
+
+IF (jScansPositively == 0) THEN
+
+  this%lat_max = laFirst
+  this%lat_min = laLast 
+
+else
+
+  this%lat_min = laFirst
+  this%lat_max = laLast 
+
+end IF
+
 
 end subroutine import_regular_ll
 
@@ -481,16 +500,15 @@ subroutine export_regular_ll(this,dim,gaid)
 type(grid_regular_ll),intent(in) ::this
 type(grid_dim),intent(in)        :: dim
 integer,INTENT(in)               :: gaid
-doubleprecision :: loFirst,loLast,laFirst,laLast
+doubleprecision :: loFirst,loLast,laFirst,laLast, dlon, dlat, ratio
 integer ::iScansNegatively,jScansPositively
 
-!!$integer ::EditionNumber
+integer ::EditionNumber
 
 call export_dim(dim,gaid)
 
 ! TODO
 ! gestire component flag
-! component_flag
 
 call grib_get(gaid,'iScansNegatively',iScansNegatively)
 call grib_get(gaid,'jScansPositively',jScansPositively)
@@ -524,9 +542,29 @@ call grib_set(gaid,'geography.loLast'  ,loLast)
 call grib_set(gaid,'geography.laFirst' ,laFirst)
 call grib_set(gaid,'geography.laLast'  ,laLast)
 
-! TODO
-! bisogna anche eventualmente ricalcolare i passi
+! Recompute and code grid steps if possible
+dlat = (this%lat_max - this%lat_min) / dble(dim%ny - 1 )
+dlon = (this%lon_max - this%lon_min) / dble(dim%nx - 1 )
 
+CALL grib_get(gaid,'GRIBEditionNumber',EditionNumber)
+IF (EditionNumber == 1) THEN
+  ratio = 1.E3
+ELSE IF (EditionNumber == 2) THEN
+  ratio = 1.E6
+ELSE
+  CALL raise_error('GribEditionNumber not supported')
+ENDIF
+
+IF (ABS(NINT(dlon*ratio) - dlon*ratio) > 1.E-3 .OR. &
+ ABS(NINT(dlat*ratio) - dlat*ratio) > 1.E-3) THEN ! Increments not accurate
+  CALL grib_set(gaid,'iDirectionIncrementGiven', 0)
+  CALL grib_set(gaid,'jDirectionIncrementGiven', 0)
+ELSE
+  CALL grib_set(gaid,'iDirectionIncrementGiven', 1)
+  CALL grib_set(gaid,'jDirectionIncrementGiven', 1)
+  CALL grib_set(gaid,'geography.iInc', dlon)
+  CALL grib_set(gaid,'geography.jInc', dlat)
+ENDIF
 
 end subroutine export_regular_ll
 
