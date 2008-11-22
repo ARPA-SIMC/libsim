@@ -56,10 +56,10 @@ DO WHILE (iret == GRIB_SUCCESS)
 
    call l4f_category_log(category,L4F_INFO,"import")
 
-   ix=5
-   iy=8
-   fx=10
-   fy=15
+   ix=-5
+   iy=-6
+   fx=100
+   fy=150
 
    allocate (field(gridinfo%griddim%dim%nx,gridinfo%griddim%dim%ny))
 

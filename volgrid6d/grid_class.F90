@@ -544,13 +544,13 @@ integer, intent(out) :: inx,iny,fnx,fny
 integer :: nx,ny
 doubleprecision ::  lon_min, lon_max, lat_min, lat_max,steplon,steplat
 character(len=80) :: type
+integer :: cix,ciy ,cfx,cfy,ciox,cioy,cfox,cfoy, cinx,ciny,cfnx,cfny,nsx,nsy
 
-
+call l4f_category_log(this%category,L4F_DEBUG,'zoom indices: '//&
+   to_char(ix)//to_char(iy)//to_char(fx)//to_char(fy))
 
 !check
-
 if ( ix > fx .or. iy > fy ) then
-    
   call l4f_category_log(this%category,L4F_ERROR,'zoom indices are wrong: '//&
    to_char(ix)//to_char(iy)//to_char(fx)//to_char(fy))
   call raise_error('zoom indices are wrong')
@@ -561,41 +561,57 @@ call get_val(this,type,&
  nx,ny, &
  lon_min, lon_max, lat_min, lat_max)
 
+call l4f_category_log(this%category,L4F_DEBUG,'nx,ny: '//&
+   to_char(nx)//to_char(ny))
 
-newx=fnx-inx+1
-newy=fny-iny+1
+!coordinate cartesiane
+cix=ix-1
+ciy=iy-1
+cfx=fx-1
+cfy=fy-1
+nsx=nx-1
+nsy=ny-1
 
+ciox=min(max(cix,0),nsx)
+cioy=min(max(ciy,0),nsy)
 
-iox=min(max(ix,1),nx)
-ioy=min(max(iy,1),ny)
+cfox=max(min(cfx,nsx),0)
+cfoy=max(min(cfy,nsy),0)
 
-fox=max(min(fx,nx),1)
-foy=max(min(fy,ny),1)
+!dimensione nuovo grigliato
+newx=cfx-cix+1
+newy=cfy-ciy+1
 
-inx=max(-ix,1)
-iny=max(-ix,1)
+!test di intersezione
+if ((ix > 0 .or. ix <= nx) .or.&
+    (fx > 0 .or. fx <= nx) .or.& 
+    (iy > 0 .or. iy <= ny) .or.&
+    (fy > 0 .or. fy <= ny) )then
 
-fnx=max(min(fx,nx)-ix+1,1)
-fny=max(min(fy,ny)-iy+1,1)
+!calcolo le coordinate della vecchia matrice nella nuova
+   cinx=min(max(-cix,0),nsx)
+   ciny=min(max(-ciy,0),nsy)
 
+   cfnx=min(cfx,nsx)-cix
+   cfny=min(cfy,nsy)-ciy
 
-newx=fnx-inx+1
-newy=fny-iny+1
+else
+   
+   inx=imiss
+   iny=imiss
+   fnx=imiss
+   fny=imiss
+
+end if
 
 steplon=(lon_max-lon_min)/(nx-1)
 steplat=(lat_max-lat_min)/(ny-1)
-
-print*,"prima", lon_min, lon_max, lat_min, lat_max
 
 lon_min=lon_min+steplon*(iox-1)
 lat_min=lat_min+steplat*(ioy-1)
 
 lon_max=lon_max+steplon*(fox-nx)
 lat_max=lat_max+steplat*(foy-ny)
-
-print*, iox,ioy,fox,foy,inx,iny,fnx,fny,newx,newy 
-print*,"dopo", lon_min, lon_max, lat_min, lat_max
-
 
 that%dim%nx= newx
 that%dim%ny= newy
@@ -604,6 +620,16 @@ that%grid%regular_ll%lon_min=lon_min
 that%grid%regular_ll%lon_max=lon_max
 that%grid%regular_ll%lat_min=lat_min
 that%grid%regular_ll%lat_max=lat_max
+
+!torno alle coordinate originali
+iox=ciox+1
+ioy=cioy+1
+fox=cfox+1
+foy=cfoy+1
+inx=cinx+1
+iny=ciny+1
+fnx=cfnx+1
+fny=cfny+1
 
 
 end SUBROUTINE zoom_index
@@ -618,8 +644,11 @@ integer, intent(out) :: inx,iny,fnx,fny
 
 fieldz=rmiss
 
-fieldz(inx:fnx,iny:fny)=field(iox:fox,ioy:foy)
+if (c_e(inx).and.c_e(iny).and.c_e(fnx).and.c_e(fny))then
 
+   fieldz(inx:fnx,iny:fny)=field(iox:fox,ioy:foy)
+
+end if
 
 end SUBROUTINE zoom_field
 
