@@ -16,6 +16,7 @@ integer                            ::  ifile,ofile,gaid
 integer                            ::  iret
 
 integer :: ix,iy,fx,fy,iox,ioy,fox,foy,inx,iny,fnx,fny,newx,newy
+doubleprecision ::  ilon,ilat,flon,flat
 real, allocatable :: field(:,:),fieldz(:,:)
 
 
@@ -56,14 +57,21 @@ DO WHILE (iret == GRIB_SUCCESS)
 
    call l4f_category_log(category,L4F_INFO,"import")
 
-   ix=-5
-   iy=-6
-   fx=100
-   fy=150
-
    allocate (field(gridinfo%griddim%dim%nx,gridinfo%griddim%dim%ny))
 
    field=decode_gridinfo(gridinfo)
+
+   ilon=-5.
+   ilat=30.
+   flon=30.
+   flat=50.
+
+   call zoom_coord(gridinfo%griddim,ilon,ilat,flon,flat,ix,iy,fx,fy)
+
+!   ix=-5
+!   iy=-6
+!   fx=100
+!   fy=150
 
    call zoom_index(gridinfo%griddim,gridinfo%griddim,ix,iy,fx,fy,&
     iox,ioy,fox,foy,inx,iny,fnx,fny,newx,newy) 

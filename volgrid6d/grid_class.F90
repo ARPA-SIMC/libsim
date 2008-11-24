@@ -116,6 +116,10 @@ INTERFACE index
   MODULE PROCEDURE index_griddim,index_grid_type,index_grid
 END INTERFACE
 
+INTERFACE zoom_coord
+  MODULE PROCEDURE zoom_coord_grid
+END INTERFACE
+
 
 
 private
@@ -123,7 +127,7 @@ private
 public griddim_proj,griddim_unproj,griddim_def,grid_def,grid_dim,init,delete
 public get_val,write_unit,read_unit,import,export,display
 public operator(==),count_distinct,pack_distinct,map_distinct,map_inv_distinct,index
-public zoom_index,zoom_field
+public zoom_coord,zoom_index,zoom_field
 contains
 
 
@@ -495,41 +499,39 @@ end SUBROUTINE display_griddim
 
 
 
-!!$SUBROUTINE zoom_coord(this,ilon,ilat,flon,flat,newx,newy) 
-!!$
-!!$type(griddim_def),intent(in) :: this !< oggetto griddim
-!!$doubleprecision,intent(in) ::ilon,ilat,flon,flat !< zoom geographical coordinate
-!!$integer, intent(out):: newx,newy  !< new dimension for the future field
-!!$
-!!$!check
-!!$
-!!$if ( ilon > flon .or. ilat > flat ) then
-!!$    
-!!$  call l4f_category_log(this%category,L4F_ERROR,"zoom coordinate are wrong: "//&
-!!$   to_char(ilon)//to_char(ilat)//to_char(flon)//to_char(flat))
-!!$  call raise_error("zoom coordinate are wrong")
-!!$end if
-!!$
-!!$
-!!$
-!!$select case ( this%grid%type%type )
-!!$
-!!$case ( "regular_ll")
-!!$
-!!$  call zoom(this%grid%regular_ll,this%dim,ilon,ilat,flon,flat,newx,newy)
-!!$  
-!!$case ( "rotated_ll")
-!!$  call zoom(this%grid%rotated_ll,this%dim,ilon,ilat,flon,flat,newx,newy)
-!!$  
-!!$case default
-!!$  call l4f_category_log(this%category,L4F_ERROR,"gtype: "//this%grid%type%type//" non gestita" )
-!!$  call raise_error("gtype non gestita")
-!!$  
-!!$end select
-!!$
-!!$
-!!$end SUBROUTINE zoom_coord
+SUBROUTINE zoom_coord_grid(this,ilon,ilat,flon,flat,ix,iy,fx,fy) 
 
+type(griddim_def),intent(in) :: this !< oggetto griddim
+doubleprecision,intent(in) ::ilon,ilat,flon,flat !< zoom geographical coordinate
+integer, intent(out):: ix,iy,fx,fy  !< new index coordinate for the future field
+
+!check
+
+if ( ilon > flon .or. ilat > flat ) then
+    
+  call l4f_category_log(this%category,L4F_ERROR,"zoom coordinate are wrong: "//&
+   to_char(ilon)//to_char(ilat)//to_char(flon)//to_char(flat))
+  call raise_error("zoom coordinate are wrong")
+end if
+
+
+select case ( this%grid%type%type )
+
+case ( "regular_ll")
+
+  call zoom_coord(this%grid%regular_ll,this%dim,ilon,ilat,flon,flat,ix,iy,fx,fy)
+  
+case ( "rotated_ll")
+  call zoom_coord(this%grid%rotated_ll,this%dim,ilon,ilat,flon,flat,ix,iy,fx,fy)
+  
+case default
+  call l4f_category_log(this%category,L4F_ERROR,"gtype: "//this%grid%type%type//" non gestita" )
+  call raise_error("gtype non gestita")
+  
+end select
+
+
+end SUBROUTINE zoom_coord_grid
 
 
 SUBROUTINE zoom_index(this,that,ix,iy,fx,fy,&

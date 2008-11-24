@@ -87,6 +87,9 @@ INTERFACE display
   MODULE PROCEDURE display_rotated_ll
 END INTERFACE
 
+INTERFACE zoom_coord
+  MODULE PROCEDURE zoom_coord_rotated_ll
+END INTERFACE
 
 
 !>\brief definizione del grigliato rotated lat lon
@@ -104,7 +107,7 @@ end type grid_rotated_ll
 
 private
 public init,delete,grid_proj,grid_unproj,proj,unproj,get_val,read_unit,write_unit,import,export,operator(==)
-public display
+public display,zoom_coord
 public grid_rotated_ll
 
 
@@ -483,6 +486,27 @@ res = this%regular_ll == that%regular_ll .and. &
  this%angle_rotation == that%angle_rotation
 
 END FUNCTION rotated_ll_eq
+
+
+subroutine zoom_coord_rotated_ll(this,dim,&
+ ilon,ilat,flon,flat,ix,iy,fx,fy)
+type(grid_rotated_ll),intent(in) ::this
+type(grid_dim),intent(in)        :: dim
+doubleprecision,intent(in) :: ilon,ilat,flon,flat
+integer,intent(out) :: ix,iy,fx,fy
+doubleprecision :: step_lon,step_lat
+doubleprecision :: iplon,iplat,fplon,fplat
+
+! questo non è proprio corretto perchè si ritiene che in regular_ll 
+! x e y siano lon e lat
+! che è vero ma formalmente sbagliato
+call proj(this,ilon,ilat,iplon,iplat )
+call proj(this,flon,flat,fplon,fplat )
+
+call zoom_coord(this,dim,&
+ iplon,iplat,fplon,fplat,ix,iy,fx,fy)
+
+end subroutine zoom_coord_rotated_ll
 
 
 end module rotated_ll_class

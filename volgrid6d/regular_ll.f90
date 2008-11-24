@@ -86,11 +86,15 @@ INTERFACE display
   MODULE PROCEDURE display_regular_ll,display_dim
 END INTERFACE
 
+INTERFACE zoom_coord
+  MODULE PROCEDURE zoom_coord_regular_ll
+END INTERFACE
+
 
 private
 public init,delete,grid_proj,grid_unproj,proj,unproj,get_val,read_unit,write_unit,import,export,operator(==)
 public grid_dim,grid_regular_ll
-public display
+public display,zoom_coord
 
 !>\brief dimensioni del grigliato lat lon con eventuali vettori di coordinate
 type grid_dim
@@ -616,6 +620,30 @@ res = this%nx == that%nx .and. &
 
 END FUNCTION dim_eq
 
+
+
+subroutine zoom_coord_regular_ll(this,dim,&
+ ilon,ilat,flon,flat,ix,iy,fx,fy)
+type(grid_regular_ll),intent(in) ::this
+type(grid_dim),intent(in)        :: dim
+doubleprecision,intent(in) :: ilon,ilat,flon,flat
+integer,intent(out) :: ix,iy,fx,fy
+doubleprecision :: step_lon,step_lat
+doubleprecision :: iplon,iplat,fplon,fplat
+
+call proj(this,ilon,ilat,iplon,iplat )
+call proj(this,flon,flat,fplon,fplat )
+
+
+step_lon=(this%lon_max-this%lon_min)/(dim%nx-1)
+step_lat=(this%lat_max-this%lat_min)/(dim%ny-1)
+
+ix=(ilon-this%lon_min)/step_lon
+iy=(ilat-this%lat_min)/step_lat
+fx=(flon-this%lon_min)/step_lon
+fy=(flat-this%lat_min)/step_lat
+
+end subroutine zoom_coord_regular_ll
 
 subroutine display_regular_ll(this,dim)
 type(grid_regular_ll),intent(in) ::this
