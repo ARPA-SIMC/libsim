@@ -1,7 +1,7 @@
 AM_FCFLAGS = -I../base -I../grib -I../vol7d -I../qc -I../termolib -I../log4fortran
 EXTRA_DIST = log4crc
 
-noinst_PROGRAMS = esempio_file_utilities esempio_v7d esempio_qc_convert esempio_termolib log4fortran
+noinst_PROGRAMS = esempio_file_utilities esempio_v7d esempio_qc_convert esempio_termolib log4fortran example_getopt
 
 esempio_file_utilities_SOURCES = esempio_file_utilities.f90
 esempio_file_utilities_LDADD = ../base/libsim_base.la
@@ -17,6 +17,10 @@ esempio_termolib_LDADD = ../base/libsim_base.la ../termolib/libsim_termolib.la
 
 log4fortran_SOURCES = log4fortran.f90
 log4fortran_LDADD =  ../log4fortran/liblog4fortran.la ../base/libsim_base.la
+
+example_getopt_SOURCES = example_getopt.f90
+example_getopt_LDADD =  ../base/libsim_base.la
+
 
 if GRIB
 noinst_PROGRAMS += esempio_regrib
