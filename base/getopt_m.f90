@@ -14,54 +14,6 @@
 ! ------------------------------------------------------------
 
 !> \brief Fortran 95 getopt() and getopt_long(), similar to those in standard C library.
-!!
-!! ch = getopt( optstring, [longopts] )
-!! Returns next option character from command line arguments.
-!! If an option is not recognized, it returns '?'.
-!! If no options are left, it returns a null character, char(0).
-!!
-!! optstring contains characters that are recognized as options.
-!! If a character is followed by a colon, then it takes a required argument.
-!! For example, "x" recognizes "-x", while "x:" recognizes "-x arg" or "-xarg".
-!!
-!! optopt is set to the option character, even if it isn't recognized.
-!! optarg is set to the option's argument.
-!! optind has the index of the next argument to process. Initially optind=1.
-!! Errors are printed by default. Set opterr=.false. to suppress them.
-!!
-!! Grouped options are allowed, so "-abc" is the same as "-a -b -c".
-!!
-!! If longopts is present, it is an array of type(option_s), where each entry
-!! describes one long option.
-!!
-!!    type option_s
-!!        character(len=80) :: name
-!!        logical           :: has_arg
-!!        character         :: val
-!!    end type
-!!
-!! The name field is the option name, without the leading -- double dash.
-!! Set the has_arg field to true if it requires an argument, false if not.
-!! The val field is returned. Typically this is set to the corresponding short
-!! option, so short and long options can be processed together. (But there
-!! is no requirement that every long option has a short option, or vice-versa.)
-!!
-!! Differences from C version:
-!! - when options are finished, C version returns -1 instead of char(0),
-!!   and thus stupidly requires an int instead of a char.
-!! - does not support optreset
-!! - does not support "--" as last argument
-!! - if no argument, optarg is blank, not NULL
-!! - argc and argv are implicit
-!!
-!! Differences for long options:
-!! - optional argument to getopt(), rather than separate function getopt_long()
-!! - has_arg is logical, and does not support optional_argument
-!! - does not support flag field (and thus always returns val)
-!! - does not support longindex
-!! - does not support "--opt=value" syntax, only "--opt value"
-!! - knows the length of longopts, so does not need an empty last record
-
 module getopt_m
 !	use util_m
 	implicit none
@@ -160,8 +112,8 @@ contains
 !! - knows the length of longopts, so does not need an empty last record
 character function getopt( optstring, longopts )
 	! arguments
-	character(len=*), intent(in):: optstring
-	type(option_s),   intent(in), optional:: longopts(:)
+	character(len=*), intent(in):: optstring !< optstring contains characters that are recognized as option
+	type(option_s),   intent(in), optional:: longopts(:) !< If longopts is present, it is an array of type(option_s), where each entry describes one long option.
 	
 	! local variables
 	character(len=80):: arg
