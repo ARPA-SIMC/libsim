@@ -46,23 +46,47 @@ do
     exit
   case( 'a' )
     read(optarg,*,iostat=ier)ilon
-    call help(ier)
+    if (ier/= 0)then
+      call l4f_category_log(category,L4F_ERROR,'option argument error')
+      call help()
+      call exit(ier)
+    end if
+
   case( 'b' )
     read(optarg,*,iostat=ier)ilat
-    call help(ier)
+    if (ier/= 0)then
+      call l4f_category_log(category,L4F_ERROR,'option argument error')
+      call help()
+      call exit(ier)
+    end if
+
   case( 'c' )
     read(optarg,*,iostat=ier)flat
-    call help(ier)
+    if (ier/= 0)then
+      call l4f_category_log(category,L4F_ERROR,'option argument error')
+      call help()
+      call exit(ier)
+    end if
+
   case( 'd' )
     read(optarg,*,iostat=ier)flon
+    if (ier/= 0)then
+      call l4f_category_log(category,L4F_ERROR,'option argument error')
+      call help()
+      call exit(ier)
+    end if
+
   case( 'h' )
     call help()
   case( '?' )
     call l4f_category_log(category,L4F_ERROR,'unknown option '//optopt)
     call help()
+    call exit(1)
+
   case default
     call l4f_category_log(category,L4F_ERROR,'unhandled option '// optopt// '(this is a bug)')
     call help()
+    call exit(1)
   end select
 end do
 if ( optind <= iargc()) then
@@ -75,7 +99,7 @@ if ( optind <= iargc()) then
   optind=optind+1
 end if
 
-call l4f_category_log(category,L4F_INFO,"zooming fron file:"//trim(infile))
+call l4f_category_log(category,L4F_INFO,"zooming from file:"//trim(infile))
 call l4f_category_log(category,L4F_INFO,"zooming to   file:"//trim(outfile))
 call l4f_category_log(category,L4F_INFO,"AREA:"//to_char(ilon)//to_char(ilat)//to_char(flon)//to_char(flat))
 
@@ -111,7 +135,6 @@ DO WHILE (iret == GRIB_SUCCESS)
 
    field=decode_gridinfo(gridinfo)
 
-!   CALL init(zoom, gridinfo%griddim, 'zoom', ix=ix, iy=iy, fx=fx, fy=fy)
    CALL init(zoom, gridinfo%griddim, 'zoom', ilon=ilon,ilat=ilat,flon=flon,flat=flat,categoryappend="zommata")
 
    CALL display(zoom%griddim_out)
@@ -144,15 +167,7 @@ ier=l4f_fini()
 end program demo4
 
 
-subroutine help(ier)
-
-integer, optional :: ier
-
-if (present(ier))then
-  if (ier/= 0)then
-    call l4f_category_log(category,L4F_ERROR,'option argument error')
-  end if
-end if
+subroutine help()
 
 print*,"demo4 [-h] [-a ilon] [-b ilat] [-c flon] [-d flat] [infile] [outfile]"
 print *,"default : ilon=-5. ilat=30. flon=30. flat=50. infile=gribmix.grb outfile=gribnew.grb"
@@ -161,11 +176,5 @@ print*,"-h  this help message"
 print*,"ilon,ilat  lon and lat in the left down point"
 print*,"flon,flat  lon and lat in the right up point"
 print*,"infile,outfile  input and output file"
-
-if (present(ier))then
-  if (ier/= 0)then
-    call exit(ier)
-  end if
-end if
 
 end subroutine help
