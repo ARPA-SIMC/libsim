@@ -78,6 +78,7 @@ do
 
   case( 'h' )
     call help()
+    call exit(0)
   case( '?' )
     call l4f_category_log(category,L4F_ERROR,'unknown option '//optopt)
     call help()
