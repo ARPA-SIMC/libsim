@@ -111,19 +111,16 @@ DO WHILE (iret == GRIB_SUCCESS)
 
    field=decode_gridinfo(gridinfo)
 
-   ix=-5
-   iy=-6
-   fx=100
-   fy=150
+!   CALL init(zoom, gridinfo%griddim, 'zoom', ix=ix, iy=iy, fx=fx, fy=fy)
+   CALL init(zoom, gridinfo%griddim, 'zoom', ilon=ilon,ilat=ilat,flon=flon,flat=flat,categoryappend="zommata")
 
-   CALL init(zoom, gridinfo%griddim, 'zoom', ix=ix, iy=iy, fx=fx, fy=fy)
-   CALL display(zoom%grid_out)
+   CALL display(zoom%griddim_out)
 
-   allocate (fieldz(zoom%nx_out,zoom%ny_out))
+   allocate (fieldz(zoom%griddim_out%dim%nx,zoom%griddim_out%dim%ny))
 
    CALL compute(zoom, field, fieldz)
 
-   gridinfo%griddim = zoom%grid_out
+   gridinfo%griddim = zoom%griddim_out
 
    call encode_gridinfo(gridinfo,fieldz)
    call export (gridinfo)
