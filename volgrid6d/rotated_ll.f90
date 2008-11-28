@@ -503,7 +503,7 @@ doubleprecision :: iplon,iplat,fplon,fplat
 call proj(this,ilon,ilat,iplon,iplat )
 call proj(this,flon,flat,fplon,fplat )
 
-call zoom_coord(this,dim,&
+call zoom_coord(this%regular_ll,dim,&
  iplon,iplat,fplon,fplat,ix,iy,fx,fy)
 
 end subroutine zoom_coord_rotated_ll
