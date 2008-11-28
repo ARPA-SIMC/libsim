@@ -592,8 +592,9 @@ IF (trans_type == 'zoom') THEN
 !check
     if ( ilon > flon .or. ilat > flat ) then
 
-      call l4f_category_log(this%category,L4F_ERROR,"zoom coordinates are wrong: "//&
-       to_char(ilon)//to_char(ilat)//to_char(flon)//to_char(flat))
+      call l4f_category_log(this%category,L4F_ERROR,"zoom coordinates are wrong: ")
+      call l4f_category_log(this%category,L4F_ERROR,to_char(ilon)//to_char(ilat))
+      call l4f_category_log(this%category,L4F_ERROR,to_char(flon)//to_char(flat))
       call raise_fatal_error("zoom coordinates are wrong")
     end if
 
