@@ -578,8 +578,8 @@ subroutine import_dim(this,gaid)
 type(grid_dim),intent(out) :: this
 integer,INTENT(in)             :: gaid
 
-   call grib_get(gaid,'numberOfPointsAlongAMeridian',this%nx)
-   call grib_get(gaid,'numberOfPointsAlongAParallel',this%ny)
+   call grib_get(gaid,'numberOfPointsAlongAParallel',this%nx)
+   call grib_get(gaid,'numberOfPointsAlongAMeridian',this%ny)
 
 end subroutine import_dim
 
@@ -664,8 +664,8 @@ end subroutine display_regular_ll
 subroutine display_dim(this)
 type(grid_dim),intent(in) :: this
 
-print*,'number Of Points Along A Meridian',this%nx
-print*,'number Of Points Along A Parallel',this%ny
+print*,'number Of Points Along A Parallel',this%nx
+print*,'number Of Points Along A Meridian',this%ny
 
 end subroutine display_dim
 
