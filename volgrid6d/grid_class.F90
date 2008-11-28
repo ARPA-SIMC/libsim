@@ -11,6 +11,7 @@ use regular_ll_class
 use rotated_ll_class
 use log4fortran
 use grib_api
+use vol7d_class
 use err_handling
 
 implicit none
@@ -52,6 +53,14 @@ type griddim_def
 end type griddim_def
 
 
+TYPE grid_transform
+  TYPE(griddim_def) :: grid_in, grid_out
+  CHARACTER(len=80) :: type
+  INTEGER :: nx_out, ny_out
+  INTEGER :: intpar(20)
+  DOUBLE PRECISION :: realpar(20)
+END TYPE grid_transform
+
 
 !> Operatore logico di uguaglianza tra oggetti della classe grid.
 !! Funziona anche per 
@@ -64,7 +73,7 @@ END INTERFACE
 
 
 INTERFACE init
-  MODULE PROCEDURE init_griddim
+  MODULE PROCEDURE init_griddim, grid_transform_init
 END INTERFACE
 
 INTERFACE delete
@@ -95,6 +104,9 @@ INTERFACE display
   MODULE PROCEDURE display_griddim
 END INTERFACE
 
+INTERFACE compute
+  MODULE PROCEDURE grid_transform_compute
+END INTERFACE
 
 INTERFACE count_distinct
   MODULE PROCEDURE count_distinct_griddim,count_distinct_grid_type,count_distinct_grid
@@ -116,18 +128,14 @@ INTERFACE index
   MODULE PROCEDURE index_griddim,index_grid_type,index_grid
 END INTERFACE
 
-INTERFACE zoom_coord
-  MODULE PROCEDURE zoom_coord_grid
-END INTERFACE
-
 
 
 private
 
-public griddim_proj,griddim_unproj,griddim_def,grid_def,grid_dim,init,delete
-public get_val,write_unit,read_unit,import,export,display
+PUBLIC griddim_proj,griddim_unproj,griddim_def,grid_def,grid_dim,grid_transform,init,delete
+public get_val,write_unit,read_unit,import,export,display,compute
 public operator(==),count_distinct,pack_distinct,map_distinct,map_inv_distinct,index
-public zoom_coord,zoom_index,zoom_field
+!public zoom_index,zoom_field
 contains
 
 
@@ -499,210 +507,241 @@ end SUBROUTINE display_griddim
 
 
 
-SUBROUTINE zoom_coord_grid(this,ilon,ilat,flon,flat,ix,iy,fx,fy) 
+!!$SUBROUTINE zoom_coord(this,ilon,ilat,flon,flat,newx,newy) 
+!!$
+!!$type(griddim_def),intent(in) :: this !< oggetto griddim
+!!$doubleprecision,intent(in) ::ilon,ilat,flon,flat !< zoom geographical coordinate
+!!$integer, intent(out):: newx,newy  !< new dimension for the future field
+!!$
+!!$!check
+!!$
+!!$if ( ilon > flon .or. ilat > flat ) then
+!!$    
+!!$  call l4f_category_log(this%category,L4F_ERROR,"zoom coordinate are wrong: "//&
+!!$   to_char(ilon)//to_char(ilat)//to_char(flon)//to_char(flat))
+!!$  call raise_error("zoom coordinate are wrong")
+!!$end if
+!!$
+!!$
+!!$
+!!$select case ( this%grid%type%type )
+!!$
+!!$case ( "regular_ll")
+!!$
+!!$  call zoom(this%grid%regular_ll,this%dim,ilon,ilat,flon,flat,newx,newy)
+!!$  
+!!$case ( "rotated_ll")
+!!$  call zoom(this%grid%rotated_ll,this%dim,ilon,ilat,flon,flat,newx,newy)
+!!$  
+!!$case default
+!!$  call l4f_category_log(this%category,L4F_ERROR,"gtype: "//this%grid%type%type//" non gestita" )
+!!$  call raise_error("gtype non gestita")
+!!$  
+!!$end select
+!!$
+!!$
+!!$end SUBROUTINE zoom_coord
 
-type(griddim_def),intent(in) :: this !< oggetto griddim
-doubleprecision,intent(in) ::ilon,ilat,flon,flat !< zoom geographical coordinate
-integer, intent(out):: ix,iy,fx,fy  !< new index coordinate for the future field
+!> Initialises an object that defines a transformation on a grid.
+!! trans_type='zoom' cuts or extends \a grid on a new grid adding
+!! or removing points on the four sides (zoom).
+!! trans_type='box_regid' regrids \a grid on a new grid in which
+!! every point is the average over \a npx X \a npy points of the
+!! original grid (box average).
+!! All the proper optional parameters, after \a trans_type, should
+!! be passed in keyword mode.
+RECURSIVE SUBROUTINE grid_transform_init(this, grid, trans_type, &
+ ix, iy, fx, fy, ilon, ilat, flon, flat, &
+ npx, npy, &
+ grid_out, v7d_out, & ! varmap?
+ interp_type)
+TYPE(grid_transform),INTENT(out) :: this !< grid transformation object
+TYPE(griddim_def),INTENT(in) :: grid !< grid to be transformed
+CHARACTER(len=*) :: trans_type !< type of transformation, can be \c 'zoom', \c 'boxregrid', \c 'interp', ...
+INTEGER,INTENT(in),OPTIONAL :: ix !< index of initial point of new grid on x (for zoom)
+INTEGER,INTENT(in),OPTIONAL :: iy !< index of initial point of new grid on y (for zoom)
+INTEGER,INTENT(in),OPTIONAL :: fx !< index of final point of new grid on x (for zoom)
+INTEGER,INTENT(in),OPTIONAL :: fy !< index of final point of new grid on y (for zoom)
+DOUBLEPRECISION,INTENT(in),OPTIONAL :: ilon !< coordinate of initial point of new grid on x (for zoom)
+DOUBLEPRECISION,INTENT(in),OPTIONAL :: ilat !< coordinate of initial point of new grid on y (for zoom)
+DOUBLEPRECISION,INTENT(in),OPTIONAL :: flon !< coordinate of final point of new grid on x (for zoom)
+DOUBLEPRECISION,INTENT(in),OPTIONAL :: flat !< coordinate of final point of new grid on y (for zoom)
+INTEGER,INTENT(IN),OPTIONAL :: npx !< number of points to average along x direction (for boxregrid)
+INTEGER,INTENT(IN),OPTIONAL :: npy !< number of points to average along y direction (for boxregrid)
+TYPE(griddim_def),INTENT(inout),OPTIONAL :: grid_out !< output grid (for interp on a grid)
+TYPE(vol7d),INTENT(inout),OPTIONAL :: v7d_out !< output data volume (for interp on sparse points)
+CHARACTER(len=*),INTENT(IN),OPTIONAL :: interp_type !< type of interpolation (for interp), can be (nearest point, bilinear, ...?)
 
-!check
+INTEGER :: nx, ny
+DOUBLE PRECISION :: lon_min, lon_max, lat_min, lat_max, steplon, steplat
+INTEGER :: lix, liy, lfx, lfy
 
-if ( ilon > flon .or. ilat > flat ) then
+IF (trans_type == 'zoom') THEN
+  IF (PRESENT(ilon) .AND. PRESENT(ilat) .AND. PRESENT(flon) &
+   .AND. PRESENT(flat)) THEN ! coordinates given
     
-  call l4f_category_log(this%category,L4F_ERROR,"zoom coordinate are wrong: "//&
-   to_char(ilon)//to_char(ilat)//to_char(flon)//to_char(flat))
-  call raise_error("zoom coordinate are wrong")
-end if
-
-
-select case ( this%grid%type%type )
-
-case ( "regular_ll")
-
-  call zoom_coord(this%grid%regular_ll,this%dim,ilon,ilat,flon,flat,ix,iy,fx,fy)
-  
-case ( "rotated_ll")
-  call zoom_coord(this%grid%rotated_ll,this%dim,ilon,ilat,flon,flat,ix,iy,fx,fy)
-  
-case default
-  call l4f_category_log(this%category,L4F_ERROR,"gtype: "//this%grid%type%type//" non gestita" )
-  call raise_error("gtype non gestita")
-  
-end select
-
-
-end SUBROUTINE zoom_coord_grid
-
-
-SUBROUTINE zoom_index(this,that,ix,iy,fx,fy,&
- iox,ioy,fox,foy,inx,iny,fnx,fny,newx,newy) 
-type(griddim_def),intent(in) :: this !< oggetto griddim in
-type(griddim_def),intent(out) :: that !< oggetto griddim zoomato
-integer, intent(in)  :: ix,iy,fx,fy  !< zoom index coordinate
-integer, intent(out) :: newx,newy    !< new dimension for the future field
-integer, intent(out) :: iox,ioy,fox,foy
-integer, intent(out) :: inx,iny,fnx,fny
-
-integer :: nx,ny
-doubleprecision ::  lon_min, lon_max, lat_min, lat_max,steplon,steplat
-character(len=80) :: type
-integer :: cix,ciy ,cfx,cfy,ciox,cioy,cfox,cfoy, cinx,ciny,cfnx,cfny,nsx,nsy
-
-call l4f_category_log(this%category,L4F_DEBUG,'zoom indices: '//&
-   to_char(ix)//to_char(iy)//to_char(fx)//to_char(fy))
-
 !check
-if ( ix > fx .or. iy > fy ) then
-  call l4f_category_log(this%category,L4F_ERROR,'zoom indices are wrong: '//&
-   to_char(ix)//to_char(iy)//to_char(fx)//to_char(fy))
-  call raise_error('zoom indices are wrong')
-end if
+    if ( ilon > flon .or. ilat > flat ) then
+
+      call l4f_category_log(grid%category,L4F_ERROR,"zoom coordinates are wrong: "//&
+       to_char(ilon)//to_char(ilat)//to_char(flon)//to_char(flat))
+      call raise_fatal_error("zoom coordinates are wrong")
+    end if
+
+    select case ( grid%grid%type%type )
+
+    case ( "regular_ll")
+
+      call zoom_coord(grid%grid%regular_ll,grid%dim, &
+       ilon,ilat,flon,flat,lix,liy,lfx,lfy)
+
+    case ( "rotated_ll")
+      call zoom_coord(grid%grid%rotated_ll,grid%dim, &
+       ilon,ilat,flon,flat,lix,liy,lfx,lfy)
+
+    case default
+      call l4f_category_log(grid%category,L4F_ERROR,"gtype: "//trim(grid%grid%type%type)//" non gestita" )
+      call raise_fatal_error("gtype non gestita")
+
+    end select
+
+! use the index version
+    CALL grid_transform_init(this, grid, trans_type, ix=lix, iy=liy, fx=lfx, fy=lfy)
+    RETURN
+  ENDIF
 
 
-call get_val(this,type,&
- nx,ny, &
- lon_min, lon_max, lat_min, lat_max)
+! check
+  IF (.NOT.PRESENT(ix) .OR. .NOT.PRESENT(iy) .OR. &
+   .NOT.PRESENT(fx) .OR. .NOT.PRESENT(fy)) THEN
+    CALL l4f_category_log(grid%category,L4F_ERROR,'zoom parameters ix, iy, fx, fy not provided')
+    CALL raise_fatal_error('zoom parameters ix, iy, fx, fy not provided')
+  ENDIF
+  IF (ix > fx .OR. iy > fy) THEN
+    CALL l4f_category_log(grid%category,L4F_ERROR,'invalid zoom indices: '//&
+     to_char(ix)//to_char(iy)//to_char(fx)//to_char(fy))
+    CALL raise_fatal_error('invalid zoom indices')
+  ENDIF
 
-call l4f_category_log(this%category,L4F_DEBUG,'nx,ny: '//&
-   to_char(nx)//to_char(ny))
+  this%grid_in = grid
+  this%grid_out = grid
+  this%type = 'zoom'
 
-!coordinate cartesiane
-cix=ix-1
-ciy=iy-1
-cfx=fx-1
-cfy=fy-1
-nsx=nx-1
-nsy=ny-1
+  CALL get_val(grid, nx=nx, ny=ny, lon_min=lon_min, lon_max=lon_max, &
+   lat_min=lat_min, lat_max=lat_max)
+  steplon=(lon_max-lon_min)/(nx-1)
+  steplat=(lat_max-lat_min)/(ny-1)
 
-ciox=min(max(cix,0),nsx)
-cioy=min(max(ciy,0),nsy)
+! old indices
+  this%intpar(1) = min(max(ix,1),nx) ! iox
+  this%intpar(2) = min(max(iy,1),ny) ! ioy
+  this%intpar(3) = max(min(fx,nx),1) ! fox
+  this%intpar(4) = max(min(fy,ny),1) ! foy
+! new indices
+  this%intpar(5) = min(max(2-ix,1),nx)! inx
+  this%intpar(6) = min(max(2-iy,1),ny) ! iny
+  this%intpar(7) = min(fx,nx)-ix+1 ! fnx
+  this%intpar(8) = min(fy,ny)-iy+1 ! fny
 
-cfox=max(min(cfx,nsx),0)
-cfoy=max(min(cfy,nsy),0)
+  this%nx_out = fx - ix + 1 ! newx
+  this%ny_out = fy - iy + 1 ! newy
 
-!dimensione nuovo grigliato
-newx=cfx-cix+1
-newy=cfy-ciy+1
+  lon_min=lon_min+steplon*(ix-1)
+  lat_min=lat_min+steplat*(iy-1)
+  lon_max=lon_max+steplon*(fx-nx)
+  lat_max=lat_max+steplat*(fy-ny)
 
-!test di intersezione
-if ((ix > 0 .or. ix <= nx) .or.&
-    (fx > 0 .or. fx <= nx) .or.& 
-    (iy > 0 .or. iy <= ny) .or.&
-    (fy > 0 .or. fy <= ny) )then
+  this%grid_out%dim%nx = this%nx_out
+  this%grid_out%dim%ny = this%ny_out
 
-!calcolo le coordinate della vecchia matrice nella nuova
-   cinx=min(max(-cix,0),nsx)
-   ciny=min(max(-ciy,0),nsy)
+! da rifare, non va con le rotated_ll, come fare?
+  this%grid_out%grid%regular_ll%lon_min = lon_min
+  this%grid_out%grid%regular_ll%lon_max = lon_max
+  this%grid_out%grid%regular_ll%lat_min = lat_min
+  this%grid_out%grid%regular_ll%lat_max = lat_max
 
-   cfnx=min(cfx,nsx)-cix
-   cfny=min(cfy,nsy)-ciy
+ELSE IF (trans_type == 'boxregrid') THEN
+! check
+  IF (.NOT.PRESENT(npx) .OR. .NOT.PRESENT(npy)) THEN
+    CALL l4f_category_log(grid%category,L4F_ERROR,'boxregrid parameters npx, npy not provided')
+    CALL raise_fatal_error('boxregrid parameters npx, npy not provided')
+  ENDIF
+  IF (npx <= 0 .OR. npy <= 0 .OR. npx > grid%dim%nx .OR. npy > grid%dim%ny) THEN
+    CALL l4f_category_log(grid%category,L4F_ERROR,'invalid regrid parameters: '//&
+     TRIM(to_char(npx))//' '//TRIM(to_char(npy)))
+    CALL raise_error('invalid regrid parameters')
+  ENDIF
 
-else
-   
-   inx=imiss
-   iny=imiss
-   fnx=imiss
-   fny=imiss
+  this%grid_in = grid
+  this%grid_out = grid
+  this%type = 'boxregrid'
 
-end if
+  CALL get_val(grid, nx=nx, ny=ny, lon_min=lon_min, lon_max=lon_max, &
+   lat_min=lat_min, lat_max=lat_max)
 
-steplon=(lon_max-lon_min)/(nx-1)
-steplat=(lat_max-lat_min)/(ny-1)
+! old grid
+  this%intpar(1) = npx
+  this%intpar(2) = npy
+  this%intpar(3) = nx
+  this%intpar(4) = ny
+  steplon=(lon_max-lon_min)/(nx-1)
+  steplat=(lat_max-lat_min)/(ny-1)
+! new grid
+  this%grid_out%grid%regular_ll%lon_min = lon_min + (npx - 1)*0.5D0*steplon
+  this%grid_out%grid%regular_ll%lat_min = lat_min + (npy - 1)*0.5D0*steplat
+  this%nx_out = nx/npx
+  this%ny_out = ny/npy
+  steplon = steplon/npx
+  steplat = steplat/npy
+  this%grid_out%grid%regular_ll%lon_max = &
+   this%grid_out%grid%regular_ll%lon_min + (this%nx_out - 1)*steplon
+  this%grid_out%grid%regular_ll%lat_max = &
+   this%grid_out%grid%regular_ll%lat_min + (this%ny_out - 1)*steplat
+  this%grid_out%dim%nx = this%nx_out
+  this%grid_out%dim%ny = this%ny_out
 
-lon_min=lon_min+steplon*(iox-1)
-lat_min=lat_min+steplat*(ioy-1)
-
-lon_max=lon_max+steplon*(fox-nx)
-lat_max=lat_max+steplat*(foy-ny)
-
-that%dim%nx= newx
-that%dim%ny= newy
-
-that%grid%regular_ll%lon_min=lon_min
-that%grid%regular_ll%lon_max=lon_max
-that%grid%regular_ll%lat_min=lat_min
-that%grid%regular_ll%lat_max=lat_max
-
-!torno alle coordinate originali
-iox=ciox+1
-ioy=cioy+1
-fox=cfox+1
-foy=cfoy+1
-inx=cinx+1
-iny=ciny+1
-fnx=cfnx+1
-fny=cfny+1
-
-
-end SUBROUTINE zoom_index
-
-
-SUBROUTINE zoom_field(field,fieldz,iox,ioy,fox,foy,inx,iny,fnx,fny) 
-
-real,intent(in)      :: field(:,:)      !< matrice in ingresso
-real,intent(out)     :: fieldz(:,:)     !< matrice zoommata in uscita
-integer, intent(out) :: iox,ioy,fox,foy
-integer, intent(out) :: inx,iny,fnx,fny
-
-fieldz=rmiss
-
-if (c_e(inx).and.c_e(iny).and.c_e(fnx).and.c_e(fny))then
-
-   fieldz(inx:fnx,iny:fny)=field(iox:fox,ioy:foy)
-
-end if
-
-end SUBROUTINE zoom_field
-
-
-!> Rigriglia \a this su una nuova griglia in cui ogni punto
-!! è uguale alla media di \a ngx X \a ngy punti della griglia originaria
-!! (medie su box).
-SUBROUTINE regrid_index(this, that, npx, npy)
-type(griddim_def),intent(in) :: this !> oggetto griddim in
-type(griddim_def),intent(out) :: that !> oggetto griddim rigrigliato
-INTEGER, INTENT(IN) :: npx !> numero di punti su cui fare la media lungo l'asse x
-INTEGER, INTENT(IN) :: npy !> numero di punti su cui fare la media lungo l'asse y
-
-
-!integer, intent(in)  :: ix,iy,fx,fy  !< zoom index coordinate
-!integer, intent(out) :: newx,newy    !< new dimension for the future field
-!integer, intent(out) :: iox,ioy,fox,foy
-!integer, intent(out) :: inx,iny,fnx,fny
-
-integer :: nx,ny
-doubleprecision ::  lon_min, lon_max, lat_min, lat_max,steplon,steplat
-character(len=80) :: type
-
-!check
-
-IF (npx <= 0 .OR. npy <= 0 .OR. npx > this%dim%nx .OR. npy > this%dim%ny) THEN
-  CALL l4f_category_log(this%category,L4F_ERROR,'invalid regrid parameters: '//&
-   TRIM(to_char(npx))//' '//TRIM(to_char(npy)))
-  CALL raise_error('invalid regrid parameters')
+ELSE
+  CALL l4f_category_log(grid%category,L4F_WARN,'trans_type '//TRIM(trans_type) &
+   //' not supported')
+  CALL raise_warning('trans_type '//TRIM(trans_type)//' not supported')
+  this%type = cmiss
 ENDIF
 
-IF (npx == 1 .AND. npy == 1) THEN ! Nothing to do
-  that = this
+END SUBROUTINE grid_transform_init
 
 
-!that%lon_min = this%x1+(ngx-1)*0.5*this%dx
-!that%y1 = this%y1+(ngy-1)*0.5*this%dy
-!that%grid%regular_ll%lon_min = this%grid%regular_ll%lon_min+(npx-1)*0.5*this%dx
-!that%grid%regular_ll%lon_max = lon_max
-!that%grid%regular_ll%lat_min = lat_min
-!that%grid%regular_ll%lat_max = lat_max
-!
-!that%dim%nx = this%dim%nx/ngx
-!that%dim%ny = this%dim%ny/ngy
-!this%dx = this%dx*ngx
-!this%dy = this%dy*ngy
-!this%x2 = this%x1+(this%nx-1)*this%dx
-!this%y2 = this%y1+(this%ny-1)*this%dy
+SUBROUTINE grid_transform_compute(this, field_in, field_out)
+TYPE(grid_transform),INTENT(out) :: this
+REAL, INTENT(in) :: field_in(:,:)
+REAL, INTENT(out) :: field_out(:,:)
 
-END IF
+INTEGER :: i, j, ii, jj, ie, je, navg
 
-END SUBROUTINE regrid_index
+field_out(:,:) = rmiss
+! check size of field_in, field_out?
 
+IF (this%type == 'zoom') THEN
+  field_out(this%intpar(5):this%intpar(7), this%intpar(6):this%intpar(8)) = &
+   field_in(this%intpar(1):this%intpar(3), this%intpar(2):this%intpar(4))
+
+ELSE IF (this%type == 'boxregrid') THEN
+  jj = 0
+  DO j = 1, this%intpar(4) - this%intpar(2) + 1, this%intpar(2)
+    je = j+this%intpar(2)-1
+    jj = jj+1
+    ii = 0
+    DO i = 1, this%intpar(3) - this%intpar(3) + 1, this%intpar(3)
+      ie = i+this%intpar(1)-1
+      ii = ii+1
+      navg = COUNT(field_in(i:ie,j:je) /= rmiss)
+      IF (navg > 0) THEN
+        field_out(ii,jj) = SUM(field_in(i:ie,j:je), &
+         MASK=(field_in(i:ie,j:je) /= rmiss))/navg
+      ENDIF
+    ENDDO
+  ENDDO
+ENDIF
+
+END SUBROUTINE grid_transform_compute
 
 end module grid_class
