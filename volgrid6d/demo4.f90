@@ -41,23 +41,28 @@ outfile='gribnew.grb'
 
 opterr=.false.
 do
-  select case( getopt( "a:b:c:d:"))
+  select case( getopt( "a:b:c:d:h"))
   case( char(0))
     exit
   case( 'a' )
-    read(optarg,*,err=99,end=99)ilon
+    read(optarg,*,iostat=ier)ilon
+    call help(ier)
   case( 'b' )
-    read(optarg,*,err=99,end=99)ilat
+    read(optarg,*,iostat=ier)ilat
+    call help(ier)
   case( 'c' )
-    read(optarg,*,err=99,end=99)flat
+    read(optarg,*,iostat=ier)flat
+    call help(ier)
   case( 'd' )
-    read(optarg,*,err=99,end=99)flon
+    read(optarg,*,iostat=ier)flon
+  case( 'h' )
+    call help()
   case( '?' )
     call l4f_category_log(category,L4F_ERROR,'unknown option '//optopt)
-    call exit(1)
+    call help()
   case default
     call l4f_category_log(category,L4F_ERROR,'unhandled option '// optopt// '(this is a bug)')
-    call exit(2)
+    call help()
   end select
 end do
 if ( optind <= iargc()) then
@@ -139,9 +144,31 @@ call l4f_category_log(category,L4F_INFO,"terminato")
 call l4f_category_delete(category)
 ier=l4f_fini()
 
-call exit(0)
-
-99 call l4f_category_log(category,L4F_ERROR,'option argument error')
-call exit(1)
-
 end program demo4
+
+
+subroutine help(ier)
+
+integer, optional :: ier
+
+if (present(ier))then
+  if (ier/= 0)then
+    call l4f_category_log(category,L4F_ERROR,'option argument error')
+  end if
+end if
+
+print*,"demo4 [-h] [-a ilon] [-b ilat] [-c flon] [-d flat] [infile] [outfile]"
+print *,"default : ilon=-5. ilat=30. flon=30. flat=50. infile=gribmix.grb outfile=gribnew.grb"
+
+print*,"-h  this help message"
+print*,"ilon,ilat  lon and lat in the left down point"
+print*,"flon,flat  lon and lat in the right up point"
+print*,"infile,outfile  input and output file"
+
+if (present(ier))then
+  if (ier/= 0)then
+    call exit(ier)
+  end if
+end if
+
+end subroutine help
