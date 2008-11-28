@@ -13,23 +13,33 @@
 !
 ! ------------------------------------------------------------
 
-!> \brief Fortran 95 getopt() and getopt_long(), similar to those in standard C library.
+!> \brief Fortran 95 getopt() and getopt_long(),similar to those in standard C library.
+!! \include example_getopt.f90
+!! \ingroup base
+
 module getopt_m
 !	use util_m
-	implicit none
-	character(len=80):: optarg
-	character:: optopt
-	integer:: optind=1
-	logical:: opterr=.true.
+implicit none
+character(len=80):: optarg
+character:: optopt
+integer:: optind=1
+logical:: opterr=.true.
+
+
+!> \brief describes one long option
+!! The name field is the option name, without the leading -- double dash.
+!! Set the has_arg field to true if it requires an argument, false if not.
+!! The val field is returned. Typically this is set to the corresponding short
+!! option, so short and long options can be processed together. (But there
+!! is no requirement that every long option has a short option, or vice-versa.)
+type option_s
+  character(len=80) :: name    !< option name, without the leading -- double dash
+  logical           :: has_arg !< true if it requires an argument, false if not
+  character         :: val     !< the corresponding short option
+end type option_s
 	
-	type option_s
-		character(len=80) :: name
-		logical           :: has_arg
-		character         :: val
-	end type
-	
-	! grpind is index of next option within group; always >= 2
-	integer, private:: grpind=2
+! grpind is index of next option within group; always >= 2
+integer, private:: grpind=2
 
 contains
 
@@ -57,43 +67,11 @@ contains
 !! If longopts is present, it is an array of type(option_s), where each entry
 !! describes one long option.
 !!
-!!    type option_s
-!!        character(len=80) :: name
-!!        logical           :: has_arg
-!!        character         :: val
-!!    end type
-!!
 !! The name field is the option name, without the leading -- double dash.
 !! Set the has_arg field to true if it requires an argument, false if not.
 !! The val field is returned. Typically this is set to the corresponding short
 !! option, so short and long options can be processed together. (But there
 !! is no requirement that every long option has a short option, or vice-versa.)
-!!
-!! -----
-!! EXAMPLE
-!! program test
-!!     use getopt_m
-!!     implicit none
-!!     character:: ch
-!!     type(option_s):: opts(2)
-!!     opts(1) = option_s( "alpha", .false., 'a' )
-!!     opts(2) = option_s( "beta",  .true.,  'b' )
-!!     do
-!!         select case( getopt( "ab:c", opts ))
-!!             case( char(0))
-!!                 exit
-!!             case( 'a' )
-!!                 print *, 'option alpha/a'
-!!             case( 'b' )
-!!                 print *, 'option beta/b=', optarg
-!!             case( '?' )
-!!                 print *, 'unknown option ', optopt
-!!                 stop
-!!             case default
-!!                 print *, 'unhandled option ', optopt, ' (this is a bug)'
-!!         end select
-!!     end do
-!! end program test
 !!
 !! Differences from C version:
 !! - when options are finished, C version returns -1 instead of char(0),
@@ -110,35 +88,39 @@ contains
 !! - does not support longindex
 !! - does not support "--opt=value" syntax, only "--opt value"
 !! - knows the length of longopts, so does not need an empty last record
+!!
+!! Copyright 2008 by Mark Gates
+
 character function getopt( optstring, longopts )
 	! arguments
-	character(len=*), intent(in):: optstring !< optstring contains characters that are recognized as option
-	type(option_s),   intent(in), optional:: longopts(:) !< If longopts is present, it is an array of type(option_s), where each entry describes one long option.
-	
+type(option_s) ,   intent(in), optional :: longopts(:) !< If longopts is present, it is an array where each entry describes one long option.
+character(len=*) , intent(in) :: optstring !< optstring contains characters that are recognized as option
+
 	! local variables
-	character(len=80):: arg
+character(len=80):: arg
 	
-	optarg = ''
-	if ( optind > iargc()) then
-		getopt = char(0)
-	endif
-	
-	call getarg( optind, arg )
-	if ( present( longopts ) .and. arg(1:2) == '--' ) then
-		getopt = process_long( longopts, arg )
-	elseif ( arg(1:1) == '-' ) then
-		getopt = process_short( optstring, arg )
-	else
-		getopt = char(0)
-	endif
+optarg = ''
+if ( optind > iargc()) then
+  getopt = char(0)
+endif
+
+call getarg( optind, arg )
+if ( present( longopts ) .and. arg(1:2) == '--' ) then
+  getopt = process_long( longopts, arg )
+elseif ( arg(1:1) == '-' ) then
+  getopt = process_short( optstring, arg )
+else
+  getopt = char(0)
+endif
+
 end function getopt
 
 
 ! ----------------------------------------
 character function process_long( longopts, arg )
 	! arguments
-	type(option_s),   intent(in):: longopts(:)
-	character(len=*), intent(in):: arg
+        type(option_s),   intent(in):: longopts(:)
+        character(len=*), intent(in):: arg
 	
 	! local variables
 	integer:: i
@@ -213,9 +195,9 @@ character function process_short( optstring, arg )
 	endif
 end function process_short
 
-end module getopt_m
-
 
 !> \example example_getopt.f90
 !! \brief example of use of getopt routine
 !! Fortran 95 getopt() and getopt_long(), similar to those in standard C library.
+end module getopt_m
+
