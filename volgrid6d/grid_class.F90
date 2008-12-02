@@ -618,7 +618,7 @@ TYPE(vol7d),INTENT(inout),OPTIONAL :: v7d_out !< output data volume (for interp 
 CHARACTER(len=*),INTENT(IN),OPTIONAL :: interp_type !< type of interpolation (for interp), can be (nearest point, bilinear, ...?)
 
 INTEGER :: nx, ny
-DOUBLE PRECISION :: lon_min, lon_max, lat_min, lat_max, steplon, steplat
+DOUBLE PRECISION :: lon_min, lon_max, lat_min, lat_max, steplon, steplat,lon_min_new, lat_min_new
 INTEGER :: lix, liy, lfx, lfy
 character(len=*),INTENT(in),OPTIONAL :: categoryappend !< appennde questo suffisso al namespace category di log4fortran
 
@@ -721,15 +721,9 @@ IF (trans_type == 'zoom') THEN
 !  this%griddim_out%dim%ny = this%ny_out
 
 
-!TODO setval
-
-! da rifare, non va con le rotated_ll, come fare?
-  this%griddim_out%grid%regular_ll%lon_min = lon_min
-  this%griddim_out%grid%regular_ll%lon_max = lon_max
-  this%griddim_out%grid%regular_ll%lat_min = lat_min
-  this%griddim_out%grid%regular_ll%lat_max = lat_max
-
-
+  call set_val (this%griddim_out,&
+   lon_min = lon_min,  lon_max = lon_max ,&
+   lat_min = lat_min,  lat_max = lat_max )
 
 
 ELSE IF (trans_type == 'boxregrid') THEN
@@ -770,25 +764,20 @@ ELSE IF (trans_type == 'boxregrid') THEN
   this%intpar(4) = ny
   steplon=(lon_max-lon_min)/(nx-1)
   steplat=(lat_max-lat_min)/(ny-1)
+
 ! new grid
+  lon_min_new = lon_min + (npx - 1)*0.5D0*steplon
+  lat_min_new = lat_min + (npy - 1)*0.5D0*steplat
 
-!TODO setval
-
-  this%griddim_out%grid%regular_ll%lon_min = lon_min + (npx - 1)*0.5D0*steplon
-  this%griddim_out%grid%regular_ll%lat_min = lat_min + (npy - 1)*0.5D0*steplat
+  call set_val( this%griddim_out,lon_min = lon_min_new )
+  call set_val( this%griddim_out,lat_min = lat_min_new )
   this%griddim_out%dim%nx = nx/npx
   this%griddim_out%dim%ny = ny/npy
   steplon = steplon/npx
   steplat = steplat/npy
 
-
-
-!TODO setval
-
-  this%griddim_out%grid%regular_ll%lon_max = &
-   this%griddim_out%grid%regular_ll%lon_min + (this%griddim_out%dim%nx - 1)*steplon
-  this%griddim_out%grid%regular_ll%lat_max = &
-   this%griddim_out%grid%regular_ll%lat_min + (this%griddim_out%dim%ny - 1)*steplat
+  call set_val( this%griddim_out, lon_max = lon_min_new + (this%griddim_out%dim%nx - 1)*steplon )
+  call set_val( this%griddim_out, lat_max = lat_min_new + (this%griddim_out%dim%ny - 1)*steplat )
 !  this%griddim_out%dim%nx = this%nx_out
 !  this%griddim_out%dim%ny = this%ny_out
 
