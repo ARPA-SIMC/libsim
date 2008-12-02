@@ -1,7 +1,7 @@
 lib_LTLIBRARIES = libsim_base.la
 libsim_base_la_SOURCES = char_utilities.f90 datetime_class.f90 err_handling.f90 \
  file_utilities.f90 geo_coord_class.F90 geo_grid_class.f90 \
- io_units.f90 kinds.F90 missing_values.f90 phys_const.f90 getopt_m.f90
+ io_units.f90 kinds.F90 missing_values.f90 phys_const.f90 getopt_m.f90 optional_values.f90
 
 if SHP
 libsim_base_la_LIBADD = $(SHP_LIBS)
@@ -25,6 +25,8 @@ geo_grid_class.$(OBJEXT): kinds.$(OBJEXT) missing_values.$(OBJEXT) char_utilitie
 geo_grid_class.lo: kinds.$(OBJEXT) missing_values.$(OBJEXT) char_utilities.$(OBJEXT) err_handling.$(OBJEXT)
 missing_values.$(OBJEXT): kinds.$(OBJEXT)
 missing_values.lo: kinds.$(OBJEXT)
+optional_values.$(OBJEXT): missing_values.$(OBJEXT)
+optional_values.lo: missing_values.$(OBJEXT)
 
 check_PROGRAMS = char_utilities_test datetime_test
 TESTS = $(check_PROGRAMS)
