@@ -13,6 +13,7 @@ use log4fortran
 use grib_api
 use vol7d_class
 use err_handling
+use optional_values
 
 implicit none
 
@@ -64,6 +65,52 @@ TYPE grid_transform
 END TYPE grid_transform
 
 
+!> zoom subtype index information
+type zoom_ind
+  INTEGER :: ix !< index of initial point of new grid on x
+  INTEGER :: iy !< index of initial point of new grid on y
+  INTEGER :: fx !< index of final point of new grid on x
+  INTEGER :: fy !< index of final point of new grid on y
+end type zoom_ind
+
+!> zoom subtype coord information
+type zoom_coo
+  DOUBLEPRECISION ilon !< coordinate of initial point of new grid on x
+  DOUBLEPRECISION ilat !< coordinate of initial point of new grid on y
+  DOUBLEPRECISION flon !< coordinate of final point of new grid on x
+  DOUBLEPRECISION flat !< coordinate of final point of new grid on y
+end type zoom_coo
+
+!> zoom information
+type zoom
+  CHARACTER(len=80) :: sub_type !< subtype of transformation, can be \c 'index', \c 'coord'
+  type(zoom_ind) :: index !< zoom providing index
+  type(zoom_coo) :: coord !< zoom priding coordinates
+end type zoom
+
+!> boxregrid subtype average information
+type boxregrid_average
+INTEGER :: npx !< number of points to average along x direction
+INTEGER :: npy !< number of points to average along y direction
+end type boxregrid_average
+
+!> boxregrid  information
+type boxregrid
+  CHARACTER(len=80) :: sub_type !< subtype of transformation, can be \c 'average'
+  type(boxregrid_average) :: average
+end type boxregrid
+
+TYPE transform
+  CHARACTER(len=80) :: trans_type !< type of transformation, can be \c 'zoom', \c 'boxregrid', \c 'interp', ...
+  type(zoom) :: zoom
+  type(boxregrid) :: boxregrid
+!  type(interp) :: interp
+
+  integer :: category !< log4fortran
+
+END TYPE transform
+
+
 !> Operatore logico di uguaglianza tra oggetti della classe grid.
 !! Funziona anche per 
 !! confronti di tipo array-array (qualsiasi n. di dimensioni) e di tipo
@@ -75,11 +122,11 @@ END INTERFACE
 
 
 INTERFACE init
-  MODULE PROCEDURE init_griddim, grid_transform_init
+  MODULE PROCEDURE init_griddim, init_grid_transform,init_transform
 END INTERFACE
 
 INTERFACE delete
-  MODULE PROCEDURE delete_griddim
+  MODULE PROCEDURE delete_griddim, delete_transform
 END INTERFACE
 
 INTERFACE get_val
@@ -138,10 +185,12 @@ END INTERFACE
 
 private
 
-PUBLIC griddim_proj,griddim_unproj,griddim_def,grid_def,grid_dim,grid_transform,init,delete
+PUBLIC griddim_proj,griddim_unproj,griddim_def,grid_def,grid_dim
+public init,delete
 public get_val,set_val,write_unit,read_unit,import,export,display,compute
 public operator(==),count_distinct,pack_distinct,map_distinct,map_inv_distinct,index
 !public zoom_index,zoom_field
+public grid_transform
 contains
 
 
@@ -587,6 +636,10 @@ end SUBROUTINE display_griddim
 !!$
 !!$end SUBROUTINE zoom_coord
 
+
+
+
+
 !> Initialises an object that defines a transformation on a grid.
 !! trans_type='zoom' cuts or extends \a grid on a new grid adding
 !! or removing points on the four sides (zoom).
@@ -595,7 +648,97 @@ end SUBROUTINE display_griddim
 !! original grid (box average).
 !! All the proper optional parameters, after \a trans_type, should
 !! be passed in keyword mode.
-RECURSIVE SUBROUTINE grid_transform_init(this, griddim, trans_type, &
+SUBROUTINE init_transform(this, trans_type, &
+ ix, iy, fx, fy, ilon, ilat, flon, flat, &
+ npx, npy, &
+ zoom_type,boxregrid_type,categoryappend)
+
+TYPE(transform),INTENT(out) :: this !< transformation object
+CHARACTER(len=*) :: trans_type !< type of transformation, can be \c 'zoom', \c 'boxregrid', \c 'interp', ...
+INTEGER,INTENT(in),OPTIONAL :: ix !< index of initial point of new grid on x (for zoom)
+INTEGER,INTENT(in),OPTIONAL :: iy !< index of initial point of new grid on y (for zoom)
+INTEGER,INTENT(in),OPTIONAL :: fx !< index of final point of new grid on x (for zoom)
+INTEGER,INTENT(in),OPTIONAL :: fy !< index of final point of new grid on y (for zoom)
+DOUBLEPRECISION,INTENT(in),OPTIONAL :: ilon !< coordinate of initial point of new grid on x (for zoom)
+DOUBLEPRECISION,INTENT(in),OPTIONAL :: ilat !< coordinate of initial point of new grid on y (for zoom)
+DOUBLEPRECISION,INTENT(in),OPTIONAL :: flon !< coordinate of final point of new grid on x (for zoom)
+DOUBLEPRECISION,INTENT(in),OPTIONAL :: flat !< coordinate of final point of new grid on y (for zoom)
+INTEGER,INTENT(IN),OPTIONAL :: npx !< number of points to average along x direction (for boxregrid)
+INTEGER,INTENT(IN),OPTIONAL :: npy !< number of points to average along y direction (for boxregrid)
+CHARACTER(len=*),INTENT(IN),OPTIONAL :: zoom_type !< type of zoom
+CHARACTER(len=*),INTENT(IN),OPTIONAL :: boxregrid_type !< type of regrid
+
+character(len=*),INTENT(in),OPTIONAL :: categoryappend !< appennde questo suffisso al namespace category di log4fortran
+character(len=512) :: a_name
+
+call l4f_launcher(a_name,a_name_append=trim(subcategory)//"."//trim(categoryappend))
+this%category=l4f_category_get(a_name)
+
+this%trans_type=get_opt(trans_type,80)
+
+this%zoom%sub_type=get_opt(zoom_type,80)
+
+this%zoom%index%ix=get_opt(ix)
+this%zoom%index%iy=get_opt(iy)
+this%zoom%index%fx=get_opt(fx)
+this%zoom%index%fy=get_opt(fy)
+
+this%zoom%coord%ilon=get_opt(ilon)
+this%zoom%coord%ilat=get_opt(ilat)
+this%zoom%coord%flon=get_opt(flon)
+this%zoom%coord%flat=get_opt(flat)
+
+
+this%boxregrid%sub_type=get_opt(boxregrid_type,80)
+
+this%boxregrid%average%npx=get_opt(npx)
+this%boxregrid%average%npy=get_opt(npy)
+
+
+end SUBROUTINE init_transform
+
+
+
+
+SUBROUTINE delete_transform(this)
+
+TYPE(transform),INTENT(out) :: this !< transformation object
+
+this%trans_type=cmiss
+
+this%zoom%sub_type=cmiss
+
+this%zoom%index%ix=imiss
+this%zoom%index%iy=imiss
+this%zoom%index%fx=imiss
+this%zoom%index%fy=imiss
+
+this%zoom%coord%ilon=dmiss
+this%zoom%coord%ilat=dmiss
+this%zoom%coord%flon=dmiss
+this%zoom%coord%flat=dmiss
+
+
+this%boxregrid%sub_type=cmiss
+
+this%boxregrid%average%npx=imiss
+this%boxregrid%average%npy=imiss
+
+
+end SUBROUTINE delete_transform
+
+
+
+
+!> Initialises an object that defines a transformation on a grid.
+!! trans_type='zoom' cuts or extends \a grid on a new grid adding
+!! or removing points on the four sides (zoom).
+!! trans_type='box_regid' regrids \a grid on a new grid in which
+!! every point is the average over \a npx X \a npy points of the
+!! original grid (box average).
+!! All the proper optional parameters, after \a trans_type, should
+!! be passed in keyword mode.
+RECURSIVE SUBROUTINE init_grid_transform(this, griddim, trans_type, &
  ix, iy, fx, fy, ilon, ilat, flon, flat, &
  npx, npy, &
  griddim_out, v7d_out, & ! varmap?
@@ -660,7 +803,7 @@ IF (trans_type == 'zoom') THEN
 
 ! chiama se stessa con i parametri appena calcolati ed esce
 ! use the index version
-    CALL grid_transform_init(this, griddim, trans_type, ix=lix, iy=liy, fx=lfx, fy=lfy)
+    CALL init(this, griddim, trans_type, ix=lix, iy=liy, fx=lfx, fy=lfy)
     RETURN
   ENDIF
 
@@ -788,7 +931,7 @@ ELSE
   this%type = cmiss
 ENDIF
 
-END SUBROUTINE grid_transform_init
+END SUBROUTINE init_grid_transform
 
 
 SUBROUTINE grid_transform_compute(this, field_in, field_out)
