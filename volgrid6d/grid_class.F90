@@ -86,6 +86,10 @@ INTERFACE get_val
   MODULE PROCEDURE get_val_griddim
 END INTERFACE
 
+INTERFACE set_val
+  MODULE PROCEDURE set_val_griddim
+END INTERFACE
+
 INTERFACE write_unit
   MODULE PROCEDURE write_unit_griddim
 END INTERFACE
@@ -135,7 +139,7 @@ END INTERFACE
 private
 
 PUBLIC griddim_proj,griddim_unproj,griddim_def,grid_def,grid_dim,grid_transform,init,delete
-public get_val,write_unit,read_unit,import,export,display,compute
+public get_val,set_val,write_unit,read_unit,import,export,display,compute
 public operator(==),count_distinct,pack_distinct,map_distinct,map_inv_distinct,index
 !public zoom_index,zoom_field
 contains
@@ -276,7 +280,7 @@ subroutine get_val_griddim(this,type,&
  lon_min, lon_max, lat_min, lat_max, component_flag, &
  latitude_south_pole,longitude_south_pole,angle_rotation)
 
-type(griddim_def) :: this
+type(griddim_def),intent(in) :: this
 
 character(len=*),INTENT(out),OPTIONAL :: type
 integer,optional,intent(out) :: nx, ny
@@ -308,6 +312,45 @@ end select
 
 
 end subroutine get_val_griddim
+
+
+subroutine set_val_griddim(this,type,&
+ nx,ny, &
+ lon_min, lon_max, lat_min, lat_max, component_flag, &
+ latitude_south_pole,longitude_south_pole,angle_rotation)
+
+type(griddim_def),intent(out) :: this
+
+character(len=*),INTENT(in),OPTIONAL :: type
+integer,optional,intent(in) :: nx, ny
+doubleprecision,optional,intent(in) :: lon_min, lon_max, lat_min, lat_max
+doubleprecision,optional,intent(in) :: latitude_south_pole,longitude_south_pole,angle_rotation
+integer,optional,intent(in) :: component_flag
+
+if (present(type)) this%grid%type%type = type
+if (this%grid%type%type == cmiss) return
+
+select case (this%grid%type%type)
+
+case ( "regular_ll")
+  call set_val(this%grid%regular_ll,this%dim,&
+   nx,ny, &
+   lon_min, lon_max, lat_min, lat_max, component_flag)
+
+case ( "rotated_ll")
+  call set_val(this%grid%rotated_ll,this%dim,&
+   nx,ny, &
+   lon_min, lon_max, lat_min, lat_max, component_flag, &
+   latitude_south_pole,longitude_south_pole,angle_rotation)
+  
+case default
+  call l4f_category_log(this%category,L4F_ERROR,"gtype: "//this%grid%type%type//" non gestita" )
+  call raise_error("gtype non gestita")
+
+end select
+
+
+end subroutine set_val_griddim
 
 
 !> Legge da un'unità di file il contenuto dell'oggetto \a this.
@@ -615,6 +658,7 @@ IF (trans_type == 'zoom') THEN
 
     end select
 
+! chiama se stessa con i parametri appena calcolati ed esce
 ! use the index version
     CALL grid_transform_init(this, griddim, trans_type, ix=lix, iy=liy, fx=lfx, fy=lfy)
     RETURN
@@ -637,10 +681,22 @@ IF (trans_type == 'zoom') THEN
   this%griddim_out = griddim
   this%type = 'zoom'
 
-  CALL get_val(griddim, nx=nx, ny=ny, lon_min=lon_min, lon_max=lon_max, &
-   lat_min=lat_min, lat_max=lat_max)
-  steplon=(lon_max-lon_min)/(nx-1)
-  steplat=(lat_max-lat_min)/(ny-1)
+
+  select case ( griddim%grid%type%type )
+
+  case ( "regular_ll","rotated_ll")
+      
+    CALL get_val(griddim, nx=nx, ny=ny, lon_min=lon_min, lon_max=lon_max, &
+     lat_min=lat_min, lat_max=lat_max)
+    steplon=(lon_max-lon_min)/(nx-1)
+    steplat=(lat_max-lat_min)/(ny-1)
+    
+  case default
+    call l4f_category_log(this%category,L4F_ERROR,"gtype: "//trim(griddim%grid%type%type)//" non gestita" )
+    call raise_fatal_error("gtype non gestita")
+    
+  end select
+
 
 ! old indices
   this%intpar(1) = min(max(ix,1),nx) ! iox
@@ -664,11 +720,17 @@ IF (trans_type == 'zoom') THEN
 !  this%griddim_out%dim%nx = this%nx_out
 !  this%griddim_out%dim%ny = this%ny_out
 
+
+!TODO setval
+
 ! da rifare, non va con le rotated_ll, come fare?
   this%griddim_out%grid%regular_ll%lon_min = lon_min
   this%griddim_out%grid%regular_ll%lon_max = lon_max
   this%griddim_out%grid%regular_ll%lat_min = lat_min
   this%griddim_out%grid%regular_ll%lat_max = lat_max
+
+
+
 
 ELSE IF (trans_type == 'boxregrid') THEN
 ! check
@@ -686,8 +748,20 @@ ELSE IF (trans_type == 'boxregrid') THEN
   this%griddim_out = griddim
   this%type = 'boxregrid'
 
+
+  select case ( griddim%grid%type%type )
+
+  case ( "regular_ll","rotated_ll")
+      
   CALL get_val(griddim, nx=nx, ny=ny, lon_min=lon_min, lon_max=lon_max, &
    lat_min=lat_min, lat_max=lat_max)
+    
+  case default
+    call l4f_category_log(this%category,L4F_ERROR,"gtype: "//trim(griddim%grid%type%type)//" non gestita" )
+    call raise_fatal_error("gtype non gestita")
+    
+  end select
+
 
 ! old grid
   this%intpar(1) = npx
@@ -697,12 +771,20 @@ ELSE IF (trans_type == 'boxregrid') THEN
   steplon=(lon_max-lon_min)/(nx-1)
   steplat=(lat_max-lat_min)/(ny-1)
 ! new grid
+
+!TODO setval
+
   this%griddim_out%grid%regular_ll%lon_min = lon_min + (npx - 1)*0.5D0*steplon
   this%griddim_out%grid%regular_ll%lat_min = lat_min + (npy - 1)*0.5D0*steplat
   this%griddim_out%dim%nx = nx/npx
   this%griddim_out%dim%ny = ny/npy
   steplon = steplon/npx
   steplat = steplat/npy
+
+
+
+!TODO setval
+
   this%griddim_out%grid%regular_ll%lon_max = &
    this%griddim_out%grid%regular_ll%lon_min + (this%griddim_out%dim%nx - 1)*steplon
   this%griddim_out%grid%regular_ll%lat_max = &

@@ -58,6 +58,11 @@ INTERFACE get_val
   MODULE PROCEDURE get_val_rotated_ll
 END INTERFACE
 
+!>\brief imposta i valori descrittivi del grigliato
+INTERFACE set_val
+  MODULE PROCEDURE set_val_rotated_ll
+END INTERFACE
+
 
 !>\brief ritorna i valori descrittivi del grigliato
 INTERFACE write_unit
@@ -106,7 +111,8 @@ end type grid_rotated_ll
 
 
 private
-public init,delete,grid_proj,grid_unproj,proj,unproj,get_val,read_unit,write_unit,import,export,operator(==)
+public init,delete,grid_proj,grid_unproj,proj,unproj,get_val,set_val
+public read_unit,write_unit,import,export,operator(==)
 public display,zoom_coord
 public grid_rotated_ll
 
@@ -292,6 +298,29 @@ if (present(longitude_south_pole)) longitude_south_pole=this%longitude_south_pol
 if (present(angle_rotation))       angle_rotation=this%angle_rotation
 
 end subroutine get_val_rotated_ll
+
+subroutine set_val_rotated_ll(this,dim, &
+ nx,ny, &
+ lon_min, lon_max, lat_min, lat_max, component_flag, &
+ latitude_south_pole,longitude_south_pole,angle_rotation)
+
+type(grid_rotated_ll),intent(out) ::this
+type(grid_dim),intent(out) :: dim
+integer,intent(in),optional :: nx, ny
+doubleprecision,intent(in),optional :: lon_min, lon_max, lat_min, lat_max
+doubleprecision,intent(in),optional :: latitude_south_pole,longitude_south_pole,angle_rotation
+integer,intent(in),optional :: component_flag
+
+
+call set_val(this%regular_ll,dim, &
+ nx,ny, &
+ lon_min, lon_max, lat_min, lat_max, component_flag)
+
+if (present(latitude_south_pole))  this%latitude_south_pole=latitude_south_pole
+if (present(longitude_south_pole)) this%longitude_south_pole=longitude_south_pole
+if (present(angle_rotation))       this%angle_rotation=angle_rotation
+
+end subroutine set_val_rotated_ll
 
 
 

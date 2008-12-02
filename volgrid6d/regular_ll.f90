@@ -57,6 +57,11 @@ INTERFACE get_val
   MODULE PROCEDURE get_val_regular_ll
 END INTERFACE
 
+!>\brief imposta i valori descrittivi del grigliato
+INTERFACE set_val
+  MODULE PROCEDURE set_val_regular_ll
+END INTERFACE
+
 
 !>\brief ritorna i valori descrittivi del grigliato
 INTERFACE write_unit
@@ -92,7 +97,8 @@ END INTERFACE
 
 
 private
-public init,delete,grid_proj,grid_unproj,proj,unproj,get_val,read_unit,write_unit,import,export,operator(==)
+public init,delete,grid_proj,grid_unproj,proj,unproj,get_val,set_val
+public read_unit,write_unit,import,export,operator(==)
 public grid_dim,grid_regular_ll
 public display,zoom_coord
 
@@ -323,6 +329,32 @@ if (present(lat_max)) lat_max=this%lat_max
 if (present(component_flag)) component_flag=this%component_flag
 
 end subroutine get_val_regular_ll
+
+
+
+subroutine set_val_regular_ll(this,dim,&
+ nx,ny, &
+ lon_min, lon_max, lat_min, lat_max, component_flag)
+
+type(grid_regular_ll),intent(out) ::this
+type(grid_dim),intent(out) :: dim
+integer,intent(in),optional :: nx, ny
+doubleprecision,intent(in),optional :: lon_min, lon_max, lat_min, lat_max
+integer,intent(in),optional :: component_flag
+
+character(len=512) :: a_name
+
+if (present(nx))dim%nx=nx
+if (present(ny))dim%ny=ny 
+ 
+if (present(lon_min)) this%lon_min=lon_min 
+if (present(lon_max)) this%lon_max=lon_max
+if (present(lat_min)) this%lat_min=lat_min
+if (present(lat_max)) this%lat_max=lat_max
+if (present(component_flag)) this%component_flag=component_flag
+
+end subroutine set_val_regular_ll
+
 
 
 !> Restituisce il passo di griglia lungo x
