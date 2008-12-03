@@ -241,25 +241,30 @@ call proj_rotated_ll(this &
 end subroutine grid_proj_rotated_ll
 
 
-elemental subroutine proj_rotated_ll(this, lon,lat,x,y )
-
+elemental subroutine proj_rotated_ll(this,lon,lat,x,y)
 type(grid_rotated_ll), intent(in) ::this
 doubleprecision, intent(in)  :: lon,lat
 doubleprecision, intent(out) :: x,y
 
-!call l4f_category_log(this%category,L4F_ERROR,"QUESTO CODICE è ANCORA DA SCRIVERE")
+doubleprecision  :: cy0,sy0,rx,srx,crx,sy,cy
 
-!.........
+cy0 = cos(degrad*this%latitude_south_pole)
+sy0 = sin(degrad*this%latitude_south_pole)
 
-x=lon
-y=lat
+rx = lon - this%longitude_south_pole
+srx = sin(degrad*rx)
+crx = cos(degrad*rx)
+sy = sin(degrad*lat)
+cy = cos(degrad*lat)
+
+x = raddeg*atan2(cy*srx, cy0*cy*crx+sy0*sy)       
+y = raddeg*asin(cy0*sy - sy0*cy*crx)
 
 end subroutine proj_rotated_ll
 
 
 
-elemental subroutine unproj_rotated_ll(this,x,y,lon,lat )
-
+elemental subroutine unproj_rotated_ll(this,x,y,lon,lat)
 type(grid_rotated_ll),intent(in) ::this
 doubleprecision, intent(in)  :: x,y
 doubleprecision, intent(out) :: lon,lat
@@ -269,8 +274,9 @@ doubleprecision  :: cy0,sy0
 cy0 = cos(degrad*this%latitude_south_pole)
 sy0 = sin(degrad*this%latitude_south_pole)
 
-lon = raddeg*asin(sy0*cos(degrad*y)*cos(degrad*x)+cy0*sin(degrad*y))
-lat = this%longitude_south_pole + raddeg*asin(sin(degrad*x)*cos(degrad*y)/cos(degrad*y))
+lat = raddeg*asin(sy0*cos(degrad*y)*cos(degrad*x)+cy0*sin(degrad*y))
+lon = this%longitude_south_pole + &
+ raddeg*asin(sin(degrad*x)*cos(degrad*y)/cos(degrad*lat))
 
 end subroutine unproj_rotated_ll
 
