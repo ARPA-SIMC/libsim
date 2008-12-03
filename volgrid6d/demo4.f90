@@ -20,7 +20,9 @@ integer                            ::  iret
 integer :: ix,iy,fx,fy,iox,ioy,fox,foy,inx,iny,fnx,fny,newx,newy
 doubleprecision ::  ilon,ilat,flon,flat
 real, allocatable :: field(:,:),fieldz(:,:)
-type(grid_transform) :: zoom
+type(griddim_def) :: griddim_out
+type(transform) :: zoom
+type(grid_transform) :: grid_zoom
 
 !questa chiamata prende dal launcher il nome univoco
 call l4f_launcher(a_name,a_name_force="demo4")
@@ -136,15 +138,17 @@ DO WHILE (iret == GRIB_SUCCESS)
 
    field=decode_gridinfo(gridinfo)
 
-   CALL init(zoom, gridinfo%griddim, 'zoom', ilon=ilon,ilat=ilat,flon=flon,flat=flat,categoryappend="zommata")
+   call init(zoom, trans_type='zoom',zoom_type='coord', &
+    ilon=ilon,ilat=ilat,flon=flon,flat=flat,categoryappend="zommata")
 
-   CALL display(zoom%griddim_out)
+   call init(grid_zoom, zoom, in=gridinfo%griddim,out=griddim_out,categoryappend="grid_zommata")
+   call display(griddim_out)
 
-   allocate (fieldz(zoom%griddim_out%dim%nx,zoom%griddim_out%dim%ny))
+   allocate (fieldz(griddim_out%dim%nx,griddim_out%dim%ny))
 
-   CALL compute(zoom, field, fieldz)
+   call compute(grid_zoom, field, fieldz)
 
-   gridinfo%griddim = zoom%griddim_out
+   gridinfo%griddim = griddim_out
 
    call encode_gridinfo(gridinfo,fieldz)
    call export (gridinfo)

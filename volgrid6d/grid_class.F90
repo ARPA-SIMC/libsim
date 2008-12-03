@@ -61,6 +61,9 @@ type zoom_ind
   INTEGER :: iy !< index of initial point of new grid on y
   INTEGER :: fx !< index of final point of new grid on x
   INTEGER :: fy !< index of final point of new grid on y
+
+  integer :: iniox,inioy,infox,infoy,outinx,outiny,outfnx,outfny
+
 end type zoom_ind
 
 !> zoom subtype coord information
@@ -82,6 +85,9 @@ end type zoom
 type boxregrid_average
 INTEGER :: npx !< number of points to average along x direction
 INTEGER :: npy !< number of points to average along y direction
+
+integer :: nx,  ny
+
 end type boxregrid_average
 
 !> boxregrid  information
@@ -91,6 +97,9 @@ type boxregrid
 end type boxregrid
 
 TYPE transform
+
+  private
+
   CHARACTER(len=80) :: trans_type !< type of transformation, can be \c 'zoom', \c 'boxregrid', \c 'interp', ...
   type(zoom) :: zoom
   type(boxregrid) :: boxregrid
@@ -102,8 +111,12 @@ END TYPE transform
 
 
 TYPE grid_transform
+
+  private
+
   TYPE(transform) :: trans
-  TYPE(griddim_def) :: in, out
+
+
   INTEGER :: intpar(20)
   DOUBLE PRECISION :: realpar(20)
 
@@ -192,7 +205,7 @@ PUBLIC griddim_proj,griddim_unproj,griddim_def,grid_def,grid_dim
 public init,delete
 public get_val,set_val,write_unit,read_unit,import,export,display,compute
 public operator(==),count_distinct,pack_distinct,map_distinct,map_inv_distinct,index
-!public zoom_index,zoom_field
+public transform,grid_transform
 contains
 
 
@@ -848,24 +861,23 @@ call l4f_launcher(a_name,a_name_append=trim(subcategory)//"."//trim(categoryappe
 this%category=l4f_category_get(a_name)
 
 this%trans=trans
-this%in=in
-this%out=out
 
 IF (this%trans%trans_type == 'zoom') THEN
 
   if (this%trans%zoom%sub_type == 'coord') THEN
 
-    select case ( this%in%grid%type%type )
+    select case ( in%grid%type%type )
 
     case ( "regular_ll")
 
-      call zoom_coord(this%in%grid%regular_ll,this%in%dim, &
+      call zoom_coord(in%grid%regular_ll,in%dim, &
        this%trans%zoom%coord%ilon, this%trans%zoom%coord%ilat,&
        this%trans%zoom%coord%flon, this%trans%zoom%coord%flat,&
        this%trans%zoom%index%ix, this%trans%zoom%index%iy, &
        this%trans%zoom%index%fx, this%trans%zoom%index%fy)
 
     case ( "rotated_ll")
+
       call zoom_coord(in%grid%rotated_ll,in%dim, &
        this%trans%zoom%coord%ilon, this%trans%zoom%coord%ilat,&
        this%trans%zoom%coord%flon, this%trans%zoom%coord%flat,&
@@ -873,6 +885,7 @@ IF (this%trans%trans_type == 'zoom') THEN
        this%trans%zoom%index%fx, this%trans%zoom%index%fy)
 
     case default
+
       call l4f_category_log(this%category,L4F_ERROR,"gtype: "//trim(in%grid%type%type)//" non gestita" )
       call raise_fatal_error("gtype non gestita")
       
@@ -882,49 +895,60 @@ IF (this%trans%trans_type == 'zoom') THEN
     
   end if
 
+
   if (this%trans%zoom%sub_type == 'index') THEN
 
-    select case ( this%in%grid%type%type )
+    select case ( in%grid%type%type )
 
     case ( "regular_ll","rotated_ll")
-      
-      CALL get_val(this%in, nx=nx, ny=ny, lon_min=lon_min, lon_max=lon_max, &
+
+      CALL get_val(in, nx=nx, ny=ny, lon_min=lon_min, lon_max=lon_max, &
        lat_min=lat_min, lat_max=lat_max)
 
       steplon=(lon_max-lon_min)/(nx-1)
       steplat=(lat_max-lat_min)/(ny-1)
+
       
     case default
-      call l4f_category_log(this%category,L4F_ERROR,"gtype: "//trim(this%in%grid%type%type)//" non gestita" )
+      call l4f_category_log(this%category,L4F_ERROR,"gtype: "//trim(in%grid%type%type)//" non gestita" )
       call raise_fatal_error("gtype non gestita")
       
     end select
 
 
                                 ! old indices
-    this%intpar(1) = min(max(this%trans%zoom%index%ix,1),nx) ! iox
-    this%intpar(2) = min(max(this%trans%zoom%index%iy,1),ny) ! ioy
-    this%intpar(3) = max(min(this%trans%zoom%index%fx,nx),1) ! fox
-    this%intpar(4) = max(min(this%trans%zoom%index%fy,ny),1) ! foy
+!    this%intpar(1) = min(max(this%trans%zoom%index%ix,1),nx) ! iox
+!    this%intpar(2) = min(max(this%trans%zoom%index%iy,1),ny) ! ioy
+!    this%intpar(3) = max(min(this%trans%zoom%index%fx,nx),1) ! fox
+!    this%intpar(4) = max(min(this%trans%zoom%index%fy,ny),1) ! foy
+    this%trans%zoom%index%iniox = min(max(this%trans%zoom%index%ix,1),nx) ! iox
+    this%trans%zoom%index%inioy = min(max(this%trans%zoom%index%iy,1),ny) ! ioy
+    this%trans%zoom%index%infox = max(min(this%trans%zoom%index%fx,nx),1) ! fox
+    this%trans%zoom%index%infoy = max(min(this%trans%zoom%index%fy,ny),1) ! foy
                                 ! new indices
-    this%intpar(5) = min(max(2-this%trans%zoom%index%ix,1),nx)! inx
-    this%intpar(6) = min(max(2-this%trans%zoom%index%iy,1),ny) ! iny
-    this%intpar(7) = min(this%trans%zoom%index%fx,nx)-this%trans%zoom%index%ix+1 ! fnx
-    this%intpar(8) = min(this%trans%zoom%index%fy,ny)-this%trans%zoom%index%iy+1 ! fny
-
+!    this%intpar(5) = min(max(2-this%trans%zoom%index%ix,1),nx)! inx
+!    this%intpar(6) = min(max(2-this%trans%zoom%index%iy,1),ny) ! iny
+!    this%intpar(7) = min(this%trans%zoom%index%fx,nx)-this%trans%zoom%index%ix+1 ! fnx
+!    this%intpar(8) = min(this%trans%zoom%index%fy,ny)-this%trans%zoom%index%iy+1 ! fny
+    this%trans%zoom%index%outinx = min(max(2-this%trans%zoom%index%ix,1),nx)! inx
+    this%trans%zoom%index%outiny = min(max(2-this%trans%zoom%index%iy,1),ny) ! iny
+    this%trans%zoom%index%outfnx = min(this%trans%zoom%index%fx,nx)-this%trans%zoom%index%ix+1 ! fnx
+    this%trans%zoom%index%outfny = min(this%trans%zoom%index%fy,ny)-this%trans%zoom%index%iy+1 ! fny
 
     lon_min=lon_min+steplon*(this%trans%zoom%index%ix-1)
     lat_min=lat_min+steplat*(this%trans%zoom%index%iy-1)
     lon_max=lon_max+steplon*(this%trans%zoom%index%fx-nx)
     lat_max=lat_max+steplat*(this%trans%zoom%index%fy-ny)
-    
-    this%out%dim%nx = this%trans%zoom%index%fx - this%trans%zoom%index%ix + 1 ! newx
-    this%out%dim%ny = this%trans%zoom%index%fy - this%trans%zoom%index%iy + 1 ! newy
 
-    call set_val (this%out,&
+! TODO verificare che questa copia non copi puntatori facendo casini
+    out=in
+    
+    out%dim%nx = this%trans%zoom%index%fx - this%trans%zoom%index%ix + 1 ! newx
+    out%dim%ny = this%trans%zoom%index%fy - this%trans%zoom%index%iy + 1 ! newy
+
+    call set_val (out,&
      lon_min = lon_min,  lon_max = lon_max ,&
      lat_min = lat_min,  lat_max = lat_max )
-    
 
   else
 
@@ -938,25 +962,28 @@ ELSE IF (this%trans%trans_type == 'boxregrid') THEN
 
   if (this%trans%boxregrid%sub_type == 'average') THEN
 
-  select case ( this%in%grid%type%type )
+  select case ( in%grid%type%type )
 
   case ( "regular_ll","rotated_ll")
       
-  CALL get_val(this%in, nx=nx, ny=ny, lon_min=lon_min, lon_max=lon_max, &
+  CALL get_val(in, nx=nx, ny=ny, lon_min=lon_min, lon_max=lon_max, &
    lat_min=lat_min, lat_max=lat_max)
     
   case default
-    call l4f_category_log(this%category,L4F_ERROR,"gtype: "//trim(this%in%grid%type%type)//" non gestita" )
+    call l4f_category_log(this%category,L4F_ERROR,"gtype: "//trim(in%grid%type%type)//" non gestita" )
     call raise_fatal_error("gtype non gestita")
     
   end select
 
 
 ! old grid
-  this%intpar(1) = this%trans%boxregrid%average%npx
-  this%intpar(2) = this%trans%boxregrid%average%npy
-  this%intpar(3) = nx
-  this%intpar(4) = ny
+!  this%intpar(1) = this%trans%boxregrid%average%npx
+!  this%intpar(2) = this%trans%boxregrid%average%npy
+!  this%intpar(3) = nx
+!  this%intpar(4) = ny
+
+  this%trans%boxregrid%average%nx = nx
+  this%trans%boxregrid%average%ny = ny
 
   steplon=(lon_max-lon_min)/(nx-1)
   steplat=(lat_max-lat_min)/(ny-1)
@@ -965,17 +992,17 @@ ELSE IF (this%trans%trans_type == 'boxregrid') THEN
   lon_min_new = lon_min + (this%trans%boxregrid%average%npx - 1)*0.5D0*steplon
   lat_min_new = lat_min + (this%trans%boxregrid%average%npy - 1)*0.5D0*steplat
 
-  this%out%dim%nx = nx/this%trans%boxregrid%average%npx
-  this%out%dim%ny = ny/this%trans%boxregrid%average%npy
+  out%dim%nx = nx/this%trans%boxregrid%average%npx
+  out%dim%ny = ny/this%trans%boxregrid%average%npy
 
-  call set_val( this%out,lon_min = lon_min_new )
-  call set_val( this%out,lat_min = lat_min_new )
+  call set_val( out,lon_min = lon_min_new )
+  call set_val( out,lat_min = lat_min_new )
 
   steplon = steplon/this%trans%boxregrid%average%npx
   steplat = steplat/this%trans%boxregrid%average%npy
 
-  call set_val( this%out, lon_max = lon_min_new + (this%out%dim%nx - 1)*steplon )
-  call set_val( this%out, lat_max = lat_min_new + (this%out%dim%ny - 1)*steplat )
+  call set_val( out, lon_max = lon_min_new + (out%dim%nx - 1)*steplon )
+  call set_val( out, lat_max = lat_min_new + (out%dim%ny - 1)*steplat )
 
 
   else
@@ -1213,17 +1240,21 @@ field_out(:,:) = rmiss
 ! check size of field_in, field_out?
 
 IF (this%trans%trans_type == 'zoom') THEN
-  field_out(this%intpar(5):this%intpar(7), this%intpar(6):this%intpar(8)) = &
-   field_in(this%intpar(1):this%intpar(3), this%intpar(2):this%intpar(4))
+
+  field_out(this%trans%zoom%index%outinx:this%trans%zoom%index%outfnx, &
+   this%trans%zoom%index%outiny:this%trans%zoom%index%outfny) = &
+   field_in(this%trans%zoom%index%iniox:this%trans%zoom%index%infox, &
+   this%trans%zoom%index%inioy:this%trans%zoom%index%infoy)
 
 ELSE IF (this%trans%trans_type == 'boxregrid') THEN
+
   jj = 0
-  DO j = 1, this%intpar(4) - this%intpar(2) + 1, this%intpar(2)
-    je = j+this%intpar(2)-1
+  DO j = 1, this%trans%boxregrid%average%ny - this%trans%boxregrid%average%npy + 1, this%trans%boxregrid%average%npy
+    je = j+this%trans%boxregrid%average%npy-1
     jj = jj+1
     ii = 0
-    DO i = 1, this%intpar(3) - this%intpar(3) + 1, this%intpar(3)
-      ie = i+this%intpar(1)-1
+    DO i = 1, this%trans%boxregrid%average%nx - this%trans%boxregrid%average%nx + 1, this%trans%boxregrid%average%nx
+      ie = i+this%trans%boxregrid%average%npx-1
       ii = ii+1
       navg = COUNT(field_in(i:ie,j:je) /= rmiss)
       IF (navg > 0) THEN

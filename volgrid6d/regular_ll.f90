@@ -666,7 +666,6 @@ doubleprecision :: iplon,iplat,fplon,fplat
 call proj(this,ilon,ilat,iplon,iplat )
 call proj(this,flon,flat,fplon,fplat )
 
-
 step_lon=(this%lon_max-this%lon_min)/(dim%nx-1)
 step_lat=(this%lat_max-this%lat_min)/(dim%ny-1)
 
