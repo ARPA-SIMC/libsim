@@ -1524,7 +1524,7 @@ subroutine UV(DD,FF,U,V)
   real,intent(out)::u,v
   real::ar
 
-  if(dd < 0 .or. dd > 360 .or. ff < 0 .or. ff < 300)then
+  if(dd < 0 .or. dd > 360 .or. ff < 0 .or. ff > 300)then
      U=rmiss 
      V=rmiss
   end if
@@ -1561,7 +1561,7 @@ subroutine UVWIND(UBAR,VBAR,SPEED,DIREC)
   real,intent(in)::ubar,vbar
   real,intent(out)::speed,direc
 
-  if(abs(UBAR) > 300.or. abs(VBAR) > 300)then
+  if(abs(UBAR) > 300 .or. abs(VBAR) > 300)then
      speed=rmiss 
      direc=rmiss
      return
