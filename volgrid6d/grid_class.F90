@@ -61,9 +61,6 @@ type zoom_ind
   INTEGER :: iy !< index of initial point of new grid on y
   INTEGER :: fx !< index of final point of new grid on x
   INTEGER :: fy !< index of final point of new grid on y
-
-  integer :: iniox,inioy,infox,infoy,outinx,outiny,outfnx,outfny
-
 end type zoom_ind
 
 !> zoom subtype coord information
@@ -85,8 +82,6 @@ end type zoom
 type boxregrid_average
 INTEGER :: npx !< number of points to average along x direction
 INTEGER :: npy !< number of points to average along y direction
-
-integer :: nx,  ny
 
 end type boxregrid_average
 
@@ -120,6 +115,9 @@ TYPE grid_transform
   INTEGER :: intpar(20)
   DOUBLE PRECISION :: realpar(20)
 
+  integer :: nx,  ny
+  integer :: iniox,inioy,infox,infoy,outinx,outiny,outfnx,outfny
+  
   integer :: category !< log4fortran
 
 END TYPE grid_transform
@@ -862,6 +860,10 @@ this%category=l4f_category_get(a_name)
 
 this%trans=trans
 
+
+!TODO testare la consistenza tra trans e in
+
+
 IF (this%trans%trans_type == 'zoom') THEN
 
   if (this%trans%zoom%sub_type == 'coord') THEN
@@ -921,19 +923,19 @@ IF (this%trans%trans_type == 'zoom') THEN
 !    this%intpar(2) = min(max(this%trans%zoom%index%iy,1),ny) ! ioy
 !    this%intpar(3) = max(min(this%trans%zoom%index%fx,nx),1) ! fox
 !    this%intpar(4) = max(min(this%trans%zoom%index%fy,ny),1) ! foy
-    this%trans%zoom%index%iniox = min(max(this%trans%zoom%index%ix,1),nx) ! iox
-    this%trans%zoom%index%inioy = min(max(this%trans%zoom%index%iy,1),ny) ! ioy
-    this%trans%zoom%index%infox = max(min(this%trans%zoom%index%fx,nx),1) ! fox
-    this%trans%zoom%index%infoy = max(min(this%trans%zoom%index%fy,ny),1) ! foy
+    this%iniox = min(max(this%trans%zoom%index%ix,1),nx) ! iox
+    this%inioy = min(max(this%trans%zoom%index%iy,1),ny) ! ioy
+    this%infox = max(min(this%trans%zoom%index%fx,nx),1) ! fox
+    this%infoy = max(min(this%trans%zoom%index%fy,ny),1) ! foy
                                 ! new indices
 !    this%intpar(5) = min(max(2-this%trans%zoom%index%ix,1),nx)! inx
 !    this%intpar(6) = min(max(2-this%trans%zoom%index%iy,1),ny) ! iny
 !    this%intpar(7) = min(this%trans%zoom%index%fx,nx)-this%trans%zoom%index%ix+1 ! fnx
 !    this%intpar(8) = min(this%trans%zoom%index%fy,ny)-this%trans%zoom%index%iy+1 ! fny
-    this%trans%zoom%index%outinx = min(max(2-this%trans%zoom%index%ix,1),nx)! inx
-    this%trans%zoom%index%outiny = min(max(2-this%trans%zoom%index%iy,1),ny) ! iny
-    this%trans%zoom%index%outfnx = min(this%trans%zoom%index%fx,nx)-this%trans%zoom%index%ix+1 ! fnx
-    this%trans%zoom%index%outfny = min(this%trans%zoom%index%fy,ny)-this%trans%zoom%index%iy+1 ! fny
+    this%outinx = min(max(2-this%trans%zoom%index%ix,1),nx)! inx
+    this%outiny = min(max(2-this%trans%zoom%index%iy,1),ny) ! iny
+    this%outfnx = min(this%trans%zoom%index%fx,nx)-this%trans%zoom%index%ix+1 ! fnx
+    this%outfny = min(this%trans%zoom%index%fy,ny)-this%trans%zoom%index%iy+1 ! fny
 
     lon_min=lon_min+steplon*(this%trans%zoom%index%ix-1)
     lat_min=lat_min+steplat*(this%trans%zoom%index%iy-1)
@@ -982,8 +984,8 @@ ELSE IF (this%trans%trans_type == 'boxregrid') THEN
 !  this%intpar(3) = nx
 !  this%intpar(4) = ny
 
-  this%trans%boxregrid%average%nx = nx
-  this%trans%boxregrid%average%ny = ny
+  this%nx = nx
+  this%ny = ny
 
   steplon=(lon_max-lon_min)/(nx-1)
   steplat=(lat_max-lat_min)/(ny-1)
@@ -1241,19 +1243,19 @@ field_out(:,:) = rmiss
 
 IF (this%trans%trans_type == 'zoom') THEN
 
-  field_out(this%trans%zoom%index%outinx:this%trans%zoom%index%outfnx, &
-   this%trans%zoom%index%outiny:this%trans%zoom%index%outfny) = &
-   field_in(this%trans%zoom%index%iniox:this%trans%zoom%index%infox, &
-   this%trans%zoom%index%inioy:this%trans%zoom%index%infoy)
+  field_out(this%outinx:this%outfnx, &
+   this%outiny:this%outfny) = &
+   field_in(this%iniox:this%infox, &
+   this%inioy:this%infoy)
 
 ELSE IF (this%trans%trans_type == 'boxregrid') THEN
 
   jj = 0
-  DO j = 1, this%trans%boxregrid%average%ny - this%trans%boxregrid%average%npy + 1, this%trans%boxregrid%average%npy
+  DO j = 1, this%ny - this%trans%boxregrid%average%npy + 1, this%trans%boxregrid%average%npy
     je = j+this%trans%boxregrid%average%npy-1
     jj = jj+1
     ii = 0
-    DO i = 1, this%trans%boxregrid%average%nx - this%trans%boxregrid%average%nx + 1, this%trans%boxregrid%average%nx
+    DO i = 1, this%nx - this%nx + 1, this%nx
       ie = i+this%trans%boxregrid%average%npx-1
       ii = ii+1
       navg = COUNT(field_in(i:ie,j:je) /= rmiss)
