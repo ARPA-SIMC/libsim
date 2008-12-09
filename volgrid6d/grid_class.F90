@@ -687,25 +687,25 @@ character(len=512) :: a_name
 call l4f_launcher(a_name,a_name_append=trim(subcategory)//"."//trim(categoryappend))
 this%category=l4f_category_get(a_name)
 
-this%trans_type=get_opt(trans_type,80)
+call get_opt(trans_type,this%trans_type)
 
-this%zoom%sub_type=get_opt(zoom_type,80)
+call get_opt(zoom_type,this%zoom%sub_type)
 
-this%zoom%index%ix=get_opt(ix)
-this%zoom%index%iy=get_opt(iy)
-this%zoom%index%fx=get_opt(fx)
-this%zoom%index%fy=get_opt(fy)
+call get_opt(ix,this%zoom%index%ix)
+call get_opt(iy,this%zoom%index%iy)
+call get_opt(fx,this%zoom%index%fx)
+call get_opt(fy,this%zoom%index%fy)
 
-this%zoom%coord%ilon=get_opt(ilon)
-this%zoom%coord%ilat=get_opt(ilat)
-this%zoom%coord%flon=get_opt(flon)
-this%zoom%coord%flat=get_opt(flat)
+call get_opt(ilon,this%zoom%coord%ilon)
+call get_opt(ilat,this%zoom%coord%ilat)
+call get_opt(flon,this%zoom%coord%flon)
+call get_opt(flat,this%zoom%coord%flat)
 
 
-this%boxregrid%sub_type=get_opt(boxregrid_type,80)
+call get_opt(boxregrid_type,this%boxregrid%sub_type)
 
-this%boxregrid%average%npx=get_opt(npx)
-this%boxregrid%average%npy=get_opt(npy)
+call get_opt(npx,this%boxregrid%average%npx)
+call get_opt(npy,this%boxregrid%average%npy)
 
 
 if (this%trans_type == 'zoom') then
@@ -1260,8 +1260,8 @@ ELSE IF (this%trans%trans_type == 'boxregrid') THEN
       ii = ii+1
       navg = COUNT(field_in(i:ie,j:je) /= rmiss)
       IF (navg > 0) THEN
-        field_out(ii,jj) = SUM(field_in(i:ie,j:je), &
-         MASK=(field_in(i:ie,j:je) /= rmiss))/navg
+        field_out(ii,jj) = SUM(field_in(i:ie,j:je)/navg, &
+         MASK=(field_in(i:ie,j:je) /= rmiss))
       ENDIF
     ENDDO
   ENDDO
