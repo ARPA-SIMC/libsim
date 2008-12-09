@@ -55,6 +55,18 @@ end type griddim_def
 
 
 
+!>  subtype nearest information
+type inter_near
+  logical :: external !< enable external elaboration
+end type inter_near
+
+!>  interpolation information 
+type inter
+  CHARACTER(len=80) :: sub_type !< subtype of transformation, can be \c 'near'
+  type(inter_near) :: near !< subtype nearest information
+end type inter
+
+
 !> zoom subtype index information
 type zoom_ind
   INTEGER :: ix !< index of initial point of new grid on x
@@ -98,6 +110,7 @@ TYPE transform
   CHARACTER(len=80) :: trans_type !< type of transformation, can be \c 'zoom', \c 'boxregrid', \c 'interp', ...
   type(zoom) :: zoom
   type(boxregrid) :: boxregrid
+  type(inter) :: inter
 !  type(interp) :: interp
 
   integer :: category !< log4fortran
@@ -111,13 +124,12 @@ TYPE grid_transform
 
   TYPE(transform) :: trans
 
-
-  INTEGER :: intpar(20)
-  DOUBLE PRECISION :: realpar(20)
-
-  integer :: nx,  ny
+  integer :: innx,  inny
+  integer :: outnx, outny
   integer :: iniox,inioy,infox,infoy,outinx,outiny,outfnx,outfny
   
+  integer,pointer :: inter_index_x_near(:),inter_index_y_near(:)
+
   integer :: category !< log4fortran
 
 END TYPE grid_transform
@@ -140,7 +152,15 @@ INTERFACE init
 END INTERFACE
 
 INTERFACE delete
-  MODULE PROCEDURE delete_griddim, delete_transform
+  MODULE PROCEDURE delete_griddim, delete_grid_transform, delete_transform
+END INTERFACE
+
+INTERFACE proj
+  MODULE PROCEDURE generic_proj
+END INTERFACE
+
+INTERFACE unproj
+  MODULE PROCEDURE generic_unproj
 END INTERFACE
 
 INTERFACE get_val
@@ -199,7 +219,7 @@ END INTERFACE
 
 private
 
-PUBLIC griddim_proj,griddim_unproj,griddim_def,grid_def,grid_dim
+PUBLIC proj, unproj, griddim_proj,griddim_unproj,griddim_def,grid_def,grid_dim
 public init,delete
 public get_val,set_val,write_unit,read_unit,import,export,display,compute
 public operator(==),count_distinct,pack_distinct,map_distinct,map_inv_distinct,index
@@ -292,6 +312,53 @@ call l4f_category_delete(this%category)
 
 end subroutine delete_griddim
 
+
+
+subroutine generic_proj (this,x,y,lon,lat)
+
+type(griddim_def) :: this
+doubleprecision, intent(in)  :: x,y
+doubleprecision, intent(out) :: lon,lat
+
+
+select case ( this%grid%type%type)
+
+case ( "regular_ll")
+  call proj(this%grid%regular_ll,x,y,lon,lat)
+
+case ( "rotated_ll")
+  call proj(this%grid%rotated_ll,x,y,lon,lat)
+  
+case default
+  call l4f_category_log(this%category,L4F_ERROR,"gtype: "//this%grid%type%type//" non gestita" )
+  call raise_error("gtype non gestita")
+
+end select
+
+end subroutine generic_proj
+
+
+subroutine generic_unproj (this,lon,lat,x,y)
+
+type(griddim_def) ::this
+doubleprecision, intent(in)  :: lon,lat
+doubleprecision, intent(out) :: x,y
+
+select case ( this%grid%type%type)
+
+case ( "regular_ll")
+  call unproj(this%grid%regular_ll,lon,lat,x,y)
+
+case ( "rotated_ll")
+  call unproj(this%grid%rotated_ll,lon,lat,x,y)
+
+case default
+  call l4f_category_log(this%category,L4F_ERROR,"gtype: "//this%grid%type%type//" non gestita" )
+  call raise_error("gtype non gestita")
+
+end select
+
+end subroutine generic_unproj
 
 
 
@@ -664,7 +731,7 @@ end SUBROUTINE display_griddim
 SUBROUTINE init_transform(this, trans_type, &
  ix, iy, fx, fy, ilon, ilat, flon, flat, &
  npx, npy, &
- zoom_type,boxregrid_type,categoryappend)
+ zoom_type,boxregrid_type,inter_type,external,categoryappend)
 
 TYPE(transform),INTENT(out) :: this !< transformation object
 CHARACTER(len=*) :: trans_type !< type of transformation, can be \c 'zoom', \c 'boxregrid', \c 'interp', ...
@@ -678,8 +745,10 @@ DOUBLEPRECISION,INTENT(in),OPTIONAL :: flon !< coordinate of final point of new 
 DOUBLEPRECISION,INTENT(in),OPTIONAL :: flat !< coordinate of final point of new grid on y (for zoom)
 INTEGER,INTENT(IN),OPTIONAL :: npx !< number of points to average along x direction (for boxregrid)
 INTEGER,INTENT(IN),OPTIONAL :: npy !< number of points to average along y direction (for boxregrid)
+logical,INTENT(IN),OPTIONAL :: external !< activate external area interpolation (for interpolation nearest)
 CHARACTER(len=*),INTENT(IN),OPTIONAL :: zoom_type !< type of zoom
 CHARACTER(len=*),INTENT(IN),OPTIONAL :: boxregrid_type !< type of regrid
+CHARACTER(len=*),INTENT(IN),OPTIONAL :: inter_type !< type of interpolation
 
 character(len=*),INTENT(in),OPTIONAL :: categoryappend !< appennde questo suffisso al namespace category di log4fortran
 character(len=512) :: a_name
@@ -706,6 +775,10 @@ call get_opt(boxregrid_type,this%boxregrid%sub_type)
 
 call get_opt(npx,this%boxregrid%average%npx)
 call get_opt(npy,this%boxregrid%average%npy)
+
+
+call get_opt(inter_type,this%inter%sub_type)
+call get_opt(external,this%inter%near%external)
 
 
 if (this%trans_type == 'zoom') then
@@ -790,6 +863,35 @@ else if (this%trans_type == 'boxregrid') then
     
   end if
 
+
+else if (this%trans_type == 'inter') then
+
+  if (this%inter%sub_type == 'near')then
+
+!!$    IF ( c_e(this%boxregrid%average%npx) .and. c_e(this%boxregrid%average%npy)) THEN
+!!$
+!!$                                ! check
+!!$      IF (this%boxregrid%average%npx <= 0 .OR. this%boxregrid%average%npy <= 0 ) THEN
+!!$        CALL l4f_category_log(this%category,L4F_ERROR,'invalid regrid parameters: '//&
+!!$         TRIM(to_char(this%boxregrid%average%npx))//' '//TRIM(to_char(this%boxregrid%average%npy)))
+!!$        CALL raise_error('invalid regrid parameters')
+!!$      ENDIF
+!!$          
+!!$
+!!$    else
+!!$
+!!$      CALL l4f_category_log(this%category,L4F_ERROR,'boxregrid parameters npx, npy not provided')
+!!$      CALL raise_fatal_error('boxregrid parameters npx, npy not provided')
+!!$
+!!$    end if
+
+  else
+
+    CALL l4f_category_log(this%category,L4F_ERROR,'boxregrid: sub_type is wrong')
+    CALL raise_fatal_error('boxregrid: sub_type is wrong')
+    
+  end if
+
 else
 
   CALL l4f_category_log(this%category,L4F_ERROR,'trans_type is wrong')
@@ -827,6 +929,13 @@ this%boxregrid%sub_type=cmiss
 this%boxregrid%average%npx=imiss
 this%boxregrid%average%npy=imiss
 
+this%inter%sub_type=cmiss
+
+this%inter%near%external=.false.
+
+!chiudo il logger
+call l4f_category_delete(this%category)
+
 
 end SUBROUTINE delete_transform
 
@@ -848,7 +957,7 @@ TYPE(griddim_def),INTENT(in) :: in !< grid transformated object
 TYPE(griddim_def),INTENT(out) :: out !< grid transformated object
 
 
-INTEGER :: nx, ny
+INTEGER :: nx, ny,i,j
 DOUBLE PRECISION :: lon_min, lon_max, lat_min, lat_max, steplon, steplat,lon_min_new, lat_min_new
 
 
@@ -860,8 +969,8 @@ this%category=l4f_category_get(a_name)
 
 this%trans=trans
 
-
-!TODO testare la consistenza tra trans e in
+nullify (this%inter_index_x_near)
+nullify (this%inter_index_y_near)
 
 
 IF (this%trans%trans_type == 'zoom') THEN
@@ -919,19 +1028,11 @@ IF (this%trans%trans_type == 'zoom') THEN
 
 
                                 ! old indices
-!    this%intpar(1) = min(max(this%trans%zoom%index%ix,1),nx) ! iox
-!    this%intpar(2) = min(max(this%trans%zoom%index%iy,1),ny) ! ioy
-!    this%intpar(3) = max(min(this%trans%zoom%index%fx,nx),1) ! fox
-!    this%intpar(4) = max(min(this%trans%zoom%index%fy,ny),1) ! foy
     this%iniox = min(max(this%trans%zoom%index%ix,1),nx) ! iox
     this%inioy = min(max(this%trans%zoom%index%iy,1),ny) ! ioy
     this%infox = max(min(this%trans%zoom%index%fx,nx),1) ! fox
     this%infoy = max(min(this%trans%zoom%index%fy,ny),1) ! foy
                                 ! new indices
-!    this%intpar(5) = min(max(2-this%trans%zoom%index%ix,1),nx)! inx
-!    this%intpar(6) = min(max(2-this%trans%zoom%index%iy,1),ny) ! iny
-!    this%intpar(7) = min(this%trans%zoom%index%fx,nx)-this%trans%zoom%index%ix+1 ! fnx
-!    this%intpar(8) = min(this%trans%zoom%index%fy,ny)-this%trans%zoom%index%iy+1 ! fny
     this%outinx = min(max(2-this%trans%zoom%index%ix,1),nx)! inx
     this%outiny = min(max(2-this%trans%zoom%index%iy,1),ny) ! iny
     this%outfnx = min(this%trans%zoom%index%fx,nx)-this%trans%zoom%index%ix+1 ! fnx
@@ -984,8 +1085,8 @@ ELSE IF (this%trans%trans_type == 'boxregrid') THEN
 !  this%intpar(3) = nx
 !  this%intpar(4) = ny
 
-  this%nx = nx
-  this%ny = ny
+  this%innx = nx
+  this%inny = ny
 
   steplon=(lon_max-lon_min)/(nx-1)
   steplat=(lat_max-lat_min)/(ny-1)
@@ -1015,17 +1116,83 @@ ELSE IF (this%trans%trans_type == 'boxregrid') THEN
 
   end if
 
+ELSE IF (this%trans%trans_type == 'inter') THEN
+
+  if (this%trans%inter%sub_type == 'near') THEN
+
+  select case ( in%grid%type%type )
+
+  case ( "regular_ll","rotated_ll")
+
+    CALL get_val(in, nx=nx, ny=ny )
+    this%innx=nx
+    this%inny=ny
+
+    CALL get_val(out, nx=nx, ny=ny )
+    this%outnx=nx
+    this%outny=ny
+
+!    if (associated(this%inter_index_x_near)) deallocate (this%inter_index_x_near)
+!    if (associated(this%inter_index_y_near)) deallocate (this%inter_index_y_near)
+    allocate (this%inter_index_x_near(nx),this%inter_index_y_near(ny))
+
+    do i=1,this%outnx
+      do j=1,this%outny
+
+        call interpolation(in,this%trans%inter%sub_type,out%dim%lon(i,j),out%dim%lat(i,j),&
+         index_x=this%inter_index_x_near(i),index_y=this%inter_index_y_near(j))
+        
+      end do
+    end do
+    
+  case default
+    call l4f_category_log(this%category,L4F_ERROR,"gtype: "//trim(in%grid%type%type)//" non gestita" )
+    call raise_fatal_error("gtype non gestita")
+    
+  end select
+
+
+  end if
+
 ELSE
 
-  CALL l4f_category_log(this%category,L4F_WARN,'sub_type '//TRIM(this%trans%trans_type) &
+  CALL l4f_category_log(this%category,L4F_WARN,'trans type '//TRIM(this%trans%trans_type) &
    //' not supported')
-  CALL raise_warning('sub_type '//TRIM(this%trans%trans_type)//' not supported')
+  CALL raise_warning('trans type '//TRIM(this%trans%trans_type)//' not supported')
 
 ENDIF
 
 END SUBROUTINE init_grid_transform
 
 
+
+
+SUBROUTINE delete_grid_transform(this)
+
+TYPE(grid_transform),INTENT(inout) :: this !< grid transformation object
+
+call delete(this%trans)
+
+this%innx=imiss
+this%inny=imiss
+this%outnx=imiss
+this%outny=imiss
+this%iniox=imiss
+this%inioy=imiss
+this%infox=imiss
+this%infoy=imiss
+this%outinx=imiss
+this%outiny=imiss
+this%outfnx=imiss
+this%outfny=imiss
+
+if (associated(this%inter_index_x_near)) deallocate (this%inter_index_x_near)
+if (associated(this%inter_index_y_near)) deallocate (this%inter_index_y_near)
+
+!chiudo il logger
+call l4f_category_delete(this%category)
+
+end SUBROUTINE delete_grid_transform
 
 !!$!> Initialises an object that defines a transformation on a grid.
 !!$!! trans_type='zoom' cuts or extends \a grid on a new grid adding
@@ -1238,8 +1405,22 @@ REAL, INTENT(out) :: field_out(:,:)
 
 INTEGER :: i, j, ii, jj, ie, je, navg
 
+
+! check size of field_in, field_out
+
+if (any(shape(field_in) /= (/this%innx,this%inny/))) then
+
+  call l4f_category_log(this%category,L4F_ERROR,"inconsistent shape: "//to_char(this%innx))
+  call raise_fatal_error("inconsistent shape")
+end if
+
+if (any(shape(field_out) /= (/this%outnx,this%outny/))) then
+  call l4f_category_log(this%category,L4F_ERROR,"inconsistent shape: "//to_char(this%inny))
+  call raise_fatal_error("inconsistent shape")
+end if
+
+
 field_out(:,:) = rmiss
-! check size of field_in, field_out?
 
 IF (this%trans%trans_type == 'zoom') THEN
 
@@ -1251,11 +1432,11 @@ IF (this%trans%trans_type == 'zoom') THEN
 ELSE IF (this%trans%trans_type == 'boxregrid') THEN
 
   jj = 0
-  DO j = 1, this%ny - this%trans%boxregrid%average%npy + 1, this%trans%boxregrid%average%npy
+  DO j = 1, this%inny - this%trans%boxregrid%average%npy + 1, this%trans%boxregrid%average%npy
     je = j+this%trans%boxregrid%average%npy-1
     jj = jj+1
     ii = 0
-    DO i = 1, this%nx - this%nx + 1, this%nx
+    DO i = 1, this%innx - this%innx + 1, this%innx
       ie = i+this%trans%boxregrid%average%npx-1
       ii = ii+1
       navg = COUNT(field_in(i:ie,j:je) /= rmiss)
@@ -1265,8 +1446,46 @@ ELSE IF (this%trans%trans_type == 'boxregrid') THEN
       ENDIF
     ENDDO
   ENDDO
+
+ELSE IF (this%trans%trans_type == 'inter') THEN
+
+  DO j = 1, this%inny 
+    DO i = 1, this%innx 
+
+        field_out(i,j) = field_in(this%inter_index_x_near(i),this%inter_index_y_near(j))
+
+    ENDDO
+  ENDDO
+
 ENDIF
 
 END SUBROUTINE grid_transform_compute
+
+
+
+
+elemental subroutine interpolation(this,inter_type,lon,lat,index_x,index_y)
+
+type(griddim_def),intent(in) :: this
+character(len=*),intent(in) :: inter_type
+doubleprecision,intent(in) :: lon,lat
+integer,intent(out) :: index_x,index_y
+
+doubleprecision :: x,y
+
+
+if (inter_type == "near") then
+
+  call proj(this,x,y,lon,lat)
+
+!else
+!
+!  call l4f_category_log(this%category,L4F_ERROR,"inter_type not supported: "//trim(inter_type))
+!  call raise_fatal_error("inter_type not supported")
+
+end if
+
+end subroutine interpolation
+
 
 end module grid_class
