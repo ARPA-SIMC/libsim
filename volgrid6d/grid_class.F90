@@ -314,47 +314,47 @@ end subroutine delete_griddim
 
 
 
-subroutine generic_proj (this,x,y,lon,lat)
+elemental subroutine generic_proj (this,lon,lat,x,y)
 
-type(griddim_def) :: this
-doubleprecision, intent(in)  :: x,y
-doubleprecision, intent(out) :: lon,lat
+type(griddim_def),intent(in) :: this
+doubleprecision, intent(in) :: lon,lat
+doubleprecision, intent(out)  :: x,y
 
 
 select case ( this%grid%type%type)
 
 case ( "regular_ll")
-  call proj(this%grid%regular_ll,x,y,lon,lat)
+  call proj(this%grid%regular_ll,lon,lat,x,y)
 
 case ( "rotated_ll")
-  call proj(this%grid%rotated_ll,x,y,lon,lat)
+  call proj(this%grid%rotated_ll,lon,lat,x,y)
   
 case default
-  call l4f_category_log(this%category,L4F_ERROR,"gtype: "//this%grid%type%type//" non gestita" )
-  call raise_error("gtype non gestita")
+!  call l4f_category_log(this%category,L4F_ERROR,"gtype: "//this%grid%type%type//" non gestita" )
+!  call raise_error("gtype non gestita")
 
 end select
 
 end subroutine generic_proj
 
 
-subroutine generic_unproj (this,lon,lat,x,y)
+elemental subroutine generic_unproj (this,x,y,lon,lat)
 
-type(griddim_def) ::this
-doubleprecision, intent(in)  :: lon,lat
-doubleprecision, intent(out) :: x,y
+type(griddim_def),intent(in) ::this
+doubleprecision, intent(in) :: x,y
+doubleprecision, intent(out)  :: lon,lat
 
 select case ( this%grid%type%type)
 
 case ( "regular_ll")
-  call unproj(this%grid%regular_ll,lon,lat,x,y)
+  call unproj(this%grid%regular_ll,x,y,lon,lat)
 
 case ( "rotated_ll")
-  call unproj(this%grid%rotated_ll,lon,lat,x,y)
+  call unproj(this%grid%rotated_ll,x,y,lon,lat)
 
 case default
-  call l4f_category_log(this%category,L4F_ERROR,"gtype: "//this%grid%type%type//" non gestita" )
-  call raise_error("gtype non gestita")
+!  call l4f_category_log(this%category,L4F_ERROR,"gtype: "//this%grid%type%type//" non gestita" )
+!  call raise_error("gtype non gestita")
 
 end select
 
@@ -364,7 +364,7 @@ end subroutine generic_unproj
 
 subroutine griddim_proj (this)
 
-type(griddim_def) :: this
+type(griddim_def),intent(in) :: this
 
 select case ( this%grid%type%type)
 
@@ -385,7 +385,7 @@ end subroutine griddim_proj
 
 subroutine griddim_unproj (this)
 
-type(griddim_def) ::this
+type(griddim_def),intent(in) ::this
 
 select case ( this%grid%type%type)
 
@@ -416,6 +416,17 @@ integer,optional,intent(out) :: nx, ny
 doubleprecision,optional,intent(out) :: lon_min, lon_max, lat_min, lat_max
 doubleprecision,optional,intent(out) :: latitude_south_pole,longitude_south_pole,angle_rotation
 integer,optional,intent(out) :: component_flag
+
+
+if (present(lon_min))lon_min=dmiss
+if (present(lon_max))lon_max=dmiss
+if (present(lat_min))lat_min=dmiss
+if (present(lat_max))lat_max=dmiss
+if (present(latitude_south_pole))latitude_south_pole=dmiss
+if (present(longitude_south_pole))longitude_south_pole=dmiss
+if (present(angle_rotation))angle_rotation=dmiss
+if (present(component_flag))component_flag=imiss
+
 
 if (present(type)) type = this%grid%type%type
 if (this%grid%type%type == cmiss) return
@@ -1464,24 +1475,42 @@ END SUBROUTINE grid_transform_compute
 
 
 
-elemental subroutine interpolation(this,inter_type,lon,lat,index_x,index_y)
+subroutine interpolation(this,inter_type,lon,lat,index_x,index_y)
 
 type(griddim_def),intent(in) :: this
 character(len=*),intent(in) :: inter_type
 doubleprecision,intent(in) :: lon,lat
-integer,intent(out) :: index_x,index_y
+integer,optional,intent(out) :: index_x,index_y
 
-doubleprecision :: x,y
-
+doubleprecision :: x,y,lon_min, lon_max, lat_min, lat_max
+integer :: nx,ny
 
 if (inter_type == "near") then
 
-  call proj(this,x,y,lon,lat)
+  call proj(this,lon,lat,x,y)
 
-!else
-!
-!  call l4f_category_log(this%category,L4F_ERROR,"inter_type not supported: "//trim(inter_type))
-!  call raise_fatal_error("inter_type not supported")
+  call get_val(this,nx=nx,ny=ny, lon_min=lon_min, lon_max=lon_max,&
+   lat_min=lat_min, lat_max=lat_max)
+
+  if (present(index_x))then
+    index_x=nint((x-lon_min)/(lon_max-lon_min)/nx)
+  else
+    index_x=imiss
+  end if
+
+  if (present(index_y))then
+    index_y=nint((y-lat_min)/(lat_max-lat_min)/ny)
+  else
+    index_y=imiss
+  end if
+
+else
+
+  index_x=imiss
+  index_y=imiss
+
+  call l4f_category_log(this%category,L4F_ERROR,"inter_type not supported: "//trim(inter_type))
+  call raise_fatal_error("inter_type not supported")
 
 end if
 
