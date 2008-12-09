@@ -5,7 +5,7 @@ IMPLICIT NONE
 
 
 INTERFACE get_opt
-  MODULE PROCEDURE sget_opt_b, sget_opt_s, sget_opt_l, sget_opt_r, sget_opt_d, sget_opt_c
+  MODULE PROCEDURE sget_opt_b, sget_opt_s, sget_opt_l, sget_opt_r, sget_opt_d, sget_opt_c, sget_opt_log
 END INTERFACE
 
 PUBLIC
@@ -111,6 +111,23 @@ end function get_opt_c
 
 
 
+!> Return the optional values if present or missing
+logical  function get_opt_log(var)
+
+logical,intent(in),optional  :: var !< variabile da controllare
+
+if (present(var))then
+  get_opt_log=var
+else
+  get_opt_log=.false.
+end if
+
+return
+end function get_opt_log
+
+
+
+
 !SUBROUTINE
 
 !> Return the optional values if present or missing
@@ -211,6 +228,24 @@ end if
 
 return
 end subroutine sget_opt_c
+
+
+!> Return the optional values if present or missing
+!assume .false. for default
+subroutine sget_opt_log(var,get_opt_log)
+
+logical,intent(in),optional  :: var !< variabile da controllare
+logical,intent(out) :: get_opt_log
+
+if (present(var))then
+  get_opt_log=var
+else
+  get_opt_log=.false.
+end if
+
+return
+end subroutine sget_opt_log
+
 
 
 end module optional_values
