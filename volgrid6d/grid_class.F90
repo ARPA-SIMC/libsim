@@ -128,7 +128,7 @@ TYPE grid_transform
   integer :: outnx, outny
   integer :: iniox,inioy,infox,infoy,outinx,outiny,outfnx,outfny
   
-  integer,pointer :: inter_index_x_near(:),inter_index_y_near(:)
+  integer,pointer :: inter_index_x_near(:,:),inter_index_y_near(:,:)
 
   integer :: category !< log4fortran
 
@@ -330,6 +330,8 @@ case ( "rotated_ll")
   call proj(this%grid%rotated_ll,lon,lat,x,y)
   
 case default
+  x=dmiss
+  y=dmiss
 !  call l4f_category_log(this%category,L4F_ERROR,"gtype: "//this%grid%type%type//" non gestita" )
 !  call raise_error("gtype non gestita")
 
@@ -739,13 +741,14 @@ end SUBROUTINE display_griddim
 !! original grid (box average).
 !! All the proper optional parameters, after \a trans_type, should
 !! be passed in keyword mode.
-SUBROUTINE init_transform(this, trans_type, &
+SUBROUTINE init_transform(this, trans_type,sub_type, &
  ix, iy, fx, fy, ilon, ilat, flon, flat, &
  npx, npy, &
  zoom_type,boxregrid_type,inter_type,external,categoryappend)
 
 TYPE(transform),INTENT(out) :: this !< transformation object
 CHARACTER(len=*) :: trans_type !< type of transformation, can be \c 'zoom', \c 'boxregrid', \c 'interp', ...
+CHARACTER(len=*) :: sub_type !< sub type of transformation, depend on trans_type and is an alternative to zoom_type, boxregrid_type, inter_type
 INTEGER,INTENT(in),OPTIONAL :: ix !< index of initial point of new grid on x (for zoom)
 INTEGER,INTENT(in),OPTIONAL :: iy !< index of initial point of new grid on y (for zoom)
 INTEGER,INTENT(in),OPTIONAL :: fx !< index of final point of new grid on x (for zoom)
@@ -756,7 +759,7 @@ DOUBLEPRECISION,INTENT(in),OPTIONAL :: flon !< coordinate of final point of new 
 DOUBLEPRECISION,INTENT(in),OPTIONAL :: flat !< coordinate of final point of new grid on y (for zoom)
 INTEGER,INTENT(IN),OPTIONAL :: npx !< number of points to average along x direction (for boxregrid)
 INTEGER,INTENT(IN),OPTIONAL :: npy !< number of points to average along y direction (for boxregrid)
-logical,INTENT(IN),OPTIONAL :: external !< activate external area interpolation (for interpolation nearest)
+logical,INTENT(IN),OPTIONAL :: external !< activate external area interpolation (for interpolation)(not enabled !)
 CHARACTER(len=*),INTENT(IN),OPTIONAL :: zoom_type !< type of zoom
 CHARACTER(len=*),INTENT(IN),OPTIONAL :: boxregrid_type !< type of regrid
 CHARACTER(len=*),INTENT(IN),OPTIONAL :: inter_type !< type of interpolation
@@ -767,29 +770,32 @@ character(len=512) :: a_name
 call l4f_launcher(a_name,a_name_append=trim(subcategory)//"."//trim(categoryappend))
 this%category=l4f_category_get(a_name)
 
-call get_opt(trans_type,this%trans_type)
+call optio(trans_type,this%trans_type)
 
-call get_opt(zoom_type,this%zoom%sub_type)
+call optio(zoom_type,this%zoom%sub_type)
+if (trans_type == "zoom".and. .not. c_e(this%zoom%sub_type))call optio(sub_type,this%zoom%sub_type)
 
-call get_opt(ix,this%zoom%index%ix)
-call get_opt(iy,this%zoom%index%iy)
-call get_opt(fx,this%zoom%index%fx)
-call get_opt(fy,this%zoom%index%fy)
+call optio(ix,this%zoom%index%ix)
+call optio(iy,this%zoom%index%iy)
+call optio(fx,this%zoom%index%fx)
+call optio(fy,this%zoom%index%fy)
 
-call get_opt(ilon,this%zoom%coord%ilon)
-call get_opt(ilat,this%zoom%coord%ilat)
-call get_opt(flon,this%zoom%coord%flon)
-call get_opt(flat,this%zoom%coord%flat)
-
-
-call get_opt(boxregrid_type,this%boxregrid%sub_type)
-
-call get_opt(npx,this%boxregrid%average%npx)
-call get_opt(npy,this%boxregrid%average%npy)
+call optio(ilon,this%zoom%coord%ilon)
+call optio(ilat,this%zoom%coord%ilat)
+call optio(flon,this%zoom%coord%flon)
+call optio(flat,this%zoom%coord%flat)
 
 
-call get_opt(inter_type,this%inter%sub_type)
-call get_opt(external,this%inter%near%external)
+call optio(boxregrid_type,this%boxregrid%sub_type)
+if (trans_type == "boxregrid".and. .not. c_e(this%boxregrid%sub_type))call optio(sub_type,this%boxregrid%sub_type)
+
+call optio(npx,this%boxregrid%average%npx)
+call optio(npy,this%boxregrid%average%npy)
+
+
+call optio(inter_type,this%inter%sub_type)
+if (trans_type == "inter".and. .not. c_e(this%inter%sub_type))call optio(sub_type,this%inter%sub_type)
+call optio(external,this%inter%near%external)
 
 
 if (this%trans_type == 'zoom') then
@@ -898,8 +904,8 @@ else if (this%trans_type == 'inter') then
 
   else
 
-    CALL l4f_category_log(this%category,L4F_ERROR,'boxregrid: sub_type is wrong')
-    CALL raise_fatal_error('boxregrid: sub_type is wrong')
+    CALL l4f_category_log(this%category,L4F_ERROR,'inter: sub_type is wrong')
+    CALL raise_fatal_error('inter: sub_type is wrong')
     
   end if
 
@@ -1060,6 +1066,12 @@ IF (this%trans%trans_type == 'zoom') THEN
     out%dim%nx = this%trans%zoom%index%fx - this%trans%zoom%index%ix + 1 ! newx
     out%dim%ny = this%trans%zoom%index%fy - this%trans%zoom%index%iy + 1 ! newy
 
+    this%innx = nx
+    this%inny = ny
+
+    this%outnx=out%dim%nx
+    this%outny=out%dim%ny
+
     call set_val (out,&
      lon_min = lon_min,  lon_max = lon_max ,&
      lat_min = lat_min,  lat_max = lat_max )
@@ -1109,6 +1121,9 @@ ELSE IF (this%trans%trans_type == 'boxregrid') THEN
   out%dim%nx = nx/this%trans%boxregrid%average%npx
   out%dim%ny = ny/this%trans%boxregrid%average%npy
 
+  this%outnx=out%dim%nx
+  this%outny=out%dim%nx
+
   call set_val( out,lon_min = lon_min_new )
   call set_val( out,lat_min = lat_min_new )
 
@@ -1117,7 +1132,6 @@ ELSE IF (this%trans%trans_type == 'boxregrid') THEN
 
   call set_val( out, lon_max = lon_min_new + (out%dim%nx - 1)*steplon )
   call set_val( out, lat_max = lat_min_new + (out%dim%ny - 1)*steplat )
-
 
   else
 
@@ -1135,27 +1149,45 @@ ELSE IF (this%trans%trans_type == 'inter') THEN
 
   case ( "regular_ll","rotated_ll")
 
-    CALL get_val(in, nx=nx, ny=ny )
-    this%innx=nx
-    this%inny=ny
+    CALL get_val(out, nx=nx, ny=ny)
 
-    CALL get_val(out, nx=nx, ny=ny )
     this%outnx=nx
     this%outny=ny
 
+
 !    if (associated(this%inter_index_x_near)) deallocate (this%inter_index_x_near)
 !    if (associated(this%inter_index_y_near)) deallocate (this%inter_index_y_near)
-    allocate (this%inter_index_x_near(nx),this%inter_index_y_near(ny))
+    allocate (this%inter_index_x_near(nx,ny),this%inter_index_y_near(nx,ny))
 
-    do i=1,this%outnx
-      do j=1,this%outny
+     
+    CALL get_val(in, nx=nx, ny=ny, &
+     lon_min=lon_min, lon_max=lon_max,&
+     lat_min=lat_min, lat_max=lat_max)
 
-        call interpolation(in,this%trans%inter%sub_type,out%dim%lon(i,j),out%dim%lat(i,j),&
-         index_x=this%inter_index_x_near(i),index_y=this%inter_index_y_near(j))
-        
-      end do
-    end do
-    
+     this%innx=nx
+     this%inny=ny
+     
+
+
+!    do i=1,this%outnx
+!      do j=1,this%outny
+!
+!        call find_index(in,this%trans%inter%sub_type,out%dim%lon(i,j),out%dim%lat(i,j),&
+!         index_x=this%inter_index_x_near(i,j),index_y=this%inter_index_y_near(i,j))
+!        
+!      end do
+!    end do
+
+    print*,nx,ny, lon_min, lon_max, lat_min,lat_max
+    print*,out%dim%lon,out%dim%lat
+
+    call find_index(in,this%trans%inter%sub_type,&
+     nx=nx, ny=ny ,&
+     lon_min=lon_min, lon_max=lon_max,&
+     lat_min=lat_min, lat_max=lat_max,&
+     lon=out%dim%lon,lat=out%dim%lat,&
+     index_x=this%inter_index_x_near,index_y=this%inter_index_y_near)
+
   case default
     call l4f_category_log(this%category,L4F_ERROR,"gtype: "//trim(in%grid%type%type)//" non gestita" )
     call raise_fatal_error("gtype non gestita")
@@ -1421,12 +1453,12 @@ INTEGER :: i, j, ii, jj, ie, je, navg
 
 if (any(shape(field_in) /= (/this%innx,this%inny/))) then
 
-  call l4f_category_log(this%category,L4F_ERROR,"inconsistent shape: "//to_char(this%innx))
+  call l4f_category_log(this%category,L4F_ERROR,"inconsistent in shape: "//to_char(this%innx)//to_char(this%inny))
   call raise_fatal_error("inconsistent shape")
 end if
 
 if (any(shape(field_out) /= (/this%outnx,this%outny/))) then
-  call l4f_category_log(this%category,L4F_ERROR,"inconsistent shape: "//to_char(this%inny))
+  call l4f_category_log(this%category,L4F_ERROR,"inconsistent out shape: "//to_char(this%outny)//to_char(this%outny))
   call raise_fatal_error("inconsistent shape")
 end if
 
@@ -1460,11 +1492,15 @@ ELSE IF (this%trans%trans_type == 'boxregrid') THEN
 
 ELSE IF (this%trans%trans_type == 'inter') THEN
 
-  DO j = 1, this%inny 
-    DO i = 1, this%innx 
+  DO j = 1, this%outny 
+    DO i = 1, this%outnx 
+      print*,'indici>',i,j
+      if (c_e(this%inter_index_x_near(i,j)) .and. c_e(this%inter_index_y_near(i,j)))then
 
-        field_out(i,j) = field_in(this%inter_index_x_near(i),this%inter_index_y_near(j))
+        print*,"index",this%inter_index_x_near(i,j),this%inter_index_y_near(i,j)
+        field_out(i,j) = field_in(this%inter_index_x_near(i,j),this%inter_index_y_near(i,j))
 
+      end if
     ENDDO
   ENDDO
 
@@ -1475,46 +1511,46 @@ END SUBROUTINE grid_transform_compute
 
 
 
-subroutine interpolation(this,inter_type,lon,lat,index_x,index_y)
+elemental subroutine find_index(this,inter_type,&
+ nx,ny, lon_min, lon_max, lat_min,lat_max,&
+ lon,lat,index_x,index_y)
+
 
 type(griddim_def),intent(in) :: this
 character(len=*),intent(in) :: inter_type
+integer,intent(in) :: nx,ny
+doubleprecision,intent(in) :: lon_min, lon_max, lat_min, lat_max
 doubleprecision,intent(in) :: lon,lat
 integer,optional,intent(out) :: index_x,index_y
+doubleprecision :: x,y
 
-doubleprecision :: x,y,lon_min, lon_max, lat_min, lat_max
-integer :: nx,ny
 
 if (inter_type == "near") then
 
   call proj(this,lon,lat,x,y)
 
-  call get_val(this,nx=nx,ny=ny, lon_min=lon_min, lon_max=lon_max,&
-   lat_min=lat_min, lat_max=lat_max)
-
   if (present(index_x))then
-    index_x=nint((x-lon_min)/(lon_max-lon_min)/nx)
-  else
-    index_x=imiss
+    index_x=nint((x-lon_min)/(lon_max-lon_min)/(nx-1))+1
+    if ( index_x < 1 .or. index_x > nx ) index_x=imiss
   end if
 
   if (present(index_y))then
-    index_y=nint((y-lat_min)/(lat_max-lat_min)/ny)
-  else
-    index_y=imiss
+    index_y=nint((y-lat_min)/(lat_max-lat_min)/(ny-1))+1
+    if ( index_y < 1 .or. index_y > ny ) index_y=imiss
   end if
+
 
 else
 
-  index_x=imiss
-  index_y=imiss
+  if (present(index_x)) index_x=imiss
+  if (present(index_y)) index_y=imiss
 
-  call l4f_category_log(this%category,L4F_ERROR,"inter_type not supported: "//trim(inter_type))
-  call raise_fatal_error("inter_type not supported")
+!  call l4f_category_log(this%category,L4F_ERROR,"inter_type not supported: "//trim(inter_type))
+!  call raise_fatal_error("inter_type not supported")
 
 end if
 
-end subroutine interpolation
+end subroutine find_index
 
 
 end module grid_class

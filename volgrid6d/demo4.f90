@@ -11,7 +11,7 @@ use getopt_m
 implicit none
 
 integer :: category,ier
-character(len=512):: a_name,infile,outfile
+character(len=512):: a_name,infile='in.grb',outfile='out.grb'
 type (gridinfo_type) :: gridinfo
 character:: ch
 integer                            ::  ifile,ofile,gaid
@@ -21,8 +21,13 @@ integer :: ix,iy,fx,fy,iox,ioy,fox,foy,inx,iny,fnx,fny,newx,newy
 doubleprecision ::  ilon,ilat,flon,flat
 real, allocatable :: field(:,:),fieldz(:,:)
 type(griddim_def) :: griddim_out
-type(transform) :: zoom
-type(grid_transform) :: grid_zoom
+type(transform) :: trans
+type(grid_transform) :: grid_trans
+
+integer :: nx=10,ny=10,component_flag=0
+doubleprecision :: lon_min=0., lon_max=30., lat_min=40., lat_max=60.
+doubleprecision :: latitude_south_pole=-90.,longitude_south_pole=0.,angle_rotation=0.
+character(len=80) :: type='regular_ll',trans_type='inter',sub_type='near'
 
 !questa chiamata prende dal launcher il nome univoco
 call l4f_launcher(a_name,a_name_force="demo4")
@@ -33,7 +38,7 @@ category=l4f_category_get(a_name//".main")
 !init di log4fortran
 ier=l4f_init()
 
-
+!TODO da togliere
 ilon=-5.
 ilat=30.
 flon=30.
@@ -43,7 +48,8 @@ outfile='gribnew.grb'
 
 opterr=.false.
 do
-  select case( getopt( "a:b:c:d:h"))
+  select case( getopt( "a:b:c:d:hi:l:m:n:o:p:q:r:s:t:u:z:"))
+
   case( char(0))
     exit
   case( 'a' )
@@ -78,6 +84,81 @@ do
       call exit(ier)
     end if
 
+  case( 'i' )
+    read(optarg,*,iostat=ier)nx
+    if (ier/= 0)then
+      call l4f_category_log(category,L4F_ERROR,'option argument error')
+      call help()
+      call exit(ier)
+    end if
+  case( 'l' )
+    read(optarg,*,iostat=ier)ny
+    if (ier/= 0)then
+      call l4f_category_log(category,L4F_ERROR,'option argument error')
+      call help()
+      call exit(ier)
+    end if
+  case( 'm' )
+    read(optarg,*,iostat=ier)lon_min
+    if (ier/= 0)then
+      call l4f_category_log(category,L4F_ERROR,'option argument error')
+      call help()
+      call exit(ier)
+    end if
+  case( 'n' )
+    read(optarg,*,iostat=ier)lon_max
+    if (ier/= 0)then
+      call l4f_category_log(category,L4F_ERROR,'option argument error')
+      call help()
+      call exit(ier)
+    end if
+  case( 'o' )
+    read(optarg,*,iostat=ier)lat_min
+    if (ier/= 0)then
+      call l4f_category_log(category,L4F_ERROR,'option argument error')
+      call help()
+      call exit(ier)
+    end if
+  case( 'p' )
+    read(optarg,*,iostat=ier)lat_max
+    if (ier/= 0)then
+      call l4f_category_log(category,L4F_ERROR,'option argument error')
+      call help()
+      call exit(ier)
+    end if
+  case( 'q' )
+    read(optarg,*,iostat=ier)latitude_south_pole
+    if (ier/= 0)then
+      call l4f_category_log(category,L4F_ERROR,'option argument error')
+      call help()
+      call exit(ier)
+    end if
+  case( 'r' )
+    read(optarg,*,iostat=ier)longitude_south_pole
+    if (ier/= 0)then
+      call l4f_category_log(category,L4F_ERROR,'option argument error')
+      call help()
+      call exit(ier)
+    end if
+  case( 's' )
+    read(optarg,*,iostat=ier)angle_rotation
+    if (ier/= 0)then
+      call l4f_category_log(category,L4F_ERROR,'option argument error')
+      call help()
+      call exit(ier)
+    end if
+  case( 't' )
+    read(optarg,*,iostat=ier)component_flag
+    if (ier/= 0)then
+      call l4f_category_log(category,L4F_ERROR,'option argument error')
+      call help()
+      call exit(ier)
+    end if
+ case( 'u' )
+    type=optarg
+ case( 'z' )
+    trans_type=optarg
+
   case( 'h' )
     call help()
     call exit(0)
@@ -102,10 +183,26 @@ if ( optind <= iargc()) then
   optind=optind+1
 end if
 
-call l4f_category_log(category,L4F_INFO,"zooming from file:"//trim(infile))
-call l4f_category_log(category,L4F_INFO,"zooming to   file:"//trim(outfile))
-call l4f_category_log(category,L4F_INFO,"AREA:"//to_char(ilon)//to_char(ilat)//to_char(flon)//to_char(flat))
+call l4f_category_log(category,L4F_INFO,"transforming from file:"//trim(infile))
+call l4f_category_log(category,L4F_INFO,"transforming to   file:"//trim(outfile))
+!call l4f_category_log(category,L4F_INFO,"AREA:"//to_char(ilon)//to_char(ilat)//to_char(flon)//to_char(flat))
 
+!!call grib_new_from_template(igrib, "regular_ll_sfc_grib2")
+
+if(trans_type == 'inter')then
+  call init(griddim_out,&
+   type=type,nx=nx,ny=ny, &
+   lon_min=lon_min, lon_max=lon_max, lat_min=lat_min, lat_max=lat_max, component_flag=component_flag, &
+   latitude_south_pole=latitude_south_pole,longitude_south_pole=longitude_south_pole,angle_rotation=angle_rotation, &
+   categoryappend="regular_ll")
+
+  call griddim_unproj(griddim_out)
+  print*,'grid di interpolazione >>>>>>>>>>>>>>>>>>>>'
+  call display(griddim_out)
+  print*,griddim_out%dim%lat
+  print*,griddim_out%dim%lon
+
+end if
 
 call grib_open_file(ifile, trim(infile),'r')
 call grib_open_file(ofile, trim(outfile),'w')
@@ -124,7 +221,7 @@ DO WHILE (iret == GRIB_SUCCESS)
 
    call l4f_category_log(category,L4F_INFO,"import gridinfo")
 
-   call init (gridinfo,gaid=gaid,categoryappend="test")
+   call init (gridinfo,gaid=gaid,categoryappend="import")
    call import(gridinfo)
 
    gaid=-1
@@ -138,15 +235,16 @@ DO WHILE (iret == GRIB_SUCCESS)
 
    field=decode_gridinfo(gridinfo)
 
-   call init(zoom, trans_type='zoom',zoom_type='coord', &
-    ilon=ilon,ilat=ilat,flon=flon,flat=flat,categoryappend="zommata")
+   call init(trans, trans_type=trans_type,sub_type=sub_type, &
+    ilon=ilon,ilat=ilat,flon=flon,flat=flat,&
+    categoryappend="trasformation")
 
-   call init(grid_zoom, zoom, in=gridinfo%griddim,out=griddim_out,categoryappend="grid_zommata")
+   call init(grid_trans, trans, in=gridinfo%griddim,out=griddim_out,categoryappend="grid_zommata")
    call display(griddim_out)
 
    allocate (fieldz(griddim_out%dim%nx,griddim_out%dim%ny))
 
-   call compute(grid_zoom, field, fieldz)
+   call compute(grid_trans, field, fieldz)
 
    gridinfo%griddim = griddim_out
 
