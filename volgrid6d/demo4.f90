@@ -221,7 +221,7 @@ DO WHILE (iret == GRIB_SUCCESS)
 
    call l4f_category_log(category,L4F_INFO,"import gridinfo")
 
-   call init (gridinfo,gaid=gaid,categoryappend="import")
+   call init (gridinfo,gaid=gaid,categoryappend="importato")
    call import(gridinfo)
 
    gaid=-1
@@ -237,7 +237,7 @@ DO WHILE (iret == GRIB_SUCCESS)
 
    call init(trans, trans_type=trans_type,sub_type=sub_type, &
     ilon=ilon,ilat=ilat,flon=flon,flat=flat,&
-    categoryappend="trasformation")
+    categoryappend="trasformazione")
 
    call init(grid_trans, trans, in=gridinfo%griddim,out=griddim_out,categoryappend="grid_zommata")
    call display(griddim_out)
@@ -252,12 +252,15 @@ DO WHILE (iret == GRIB_SUCCESS)
    call export (gridinfo)
 
    call grib_write(gridinfo%gaid,ofile)
-   call delete (gridinfo)
+
+! questa delete mi cancella anche griddim_out ed è un problema !
+!   call delete (gridinfo)
 
    deallocate (field,fieldz)
 
 end do
 
+call delete(griddim_out)
 call grib_close_file(ifile)
 call grib_close_file(ofile)
 
