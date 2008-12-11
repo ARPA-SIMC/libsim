@@ -15,10 +15,10 @@ LOGICAL :: err
 PRINT*,'=== Testing datetime_class module ==='
 
 PRINT*,'Testing datetime_init and datetime_getval with simpledate'
-dt1 = datetime_new(oraclesimdate='000412300000')
+dt1 = datetime_new(simpledate='000412300000')
 CALL getval(dt1, simpledate=dtlong)
 IF (dtlong(1:12) /= '000412300000') CALL EXIT(1)
-dt1 = datetime_new(oraclesimdate='000412310000')
+dt1 = datetime_new(simpledate='000412310000')
 CALL getval(dt1, simpledate=dtlong)
 IF (dtlong(1:12) /= '000412310000') CALL EXIT(1)
 
@@ -56,5 +56,13 @@ DO i=1,101
 ENDDO
 CALL getval(dt1, simpledate=dtlong)
 IF (dtlong(1:17) /= '20001201000000000') CALL EXIT(1)
+
+PRINT*,'Testing now'
+dt1 = datetime_new(now=datetime_utc)
+dt2 = datetime_new(now=datetime_local)
+CALL getval(dt1, isodate=dtlong)
+WRITE(*,'(A,A)')'UTC time is: ',dtlong
+CALL getval(dt2, isodate=dtlong)
+WRITE(*,'(A,A)')'Local time is: ',dtlong
 
 END PROGRAM datetime_test

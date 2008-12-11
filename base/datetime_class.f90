@@ -45,6 +45,10 @@ TYPE(datetime), PARAMETER :: datetime_miss=datetime(imiss)
 TYPE(timedelta), PARAMETER :: timedelta_miss=timedelta(imiss, 0)
 !> intervallo timedelta di durata nulla
 TYPE(timedelta), PARAMETER :: timedelta_0=timedelta(0, 0)
+!> inizializza con l'ora UTC
+INTEGER, PARAMETER :: datetime_utc=1
+!> inizializza con l'ora locale
+INTEGER, PARAMETER :: datetime_local=2
 
 INTEGER(kind=dateint), PARAMETER :: &
  sec_in_day=86400, &
@@ -69,7 +73,8 @@ INTEGER(KIND=int_ll),PARAMETER :: &
  unsec=62135596800_int_ll ! differenza tra 01/01/1970 e 01/01/0001 (sec, per unixtime)
 
 PRIVATE
-PUBLIC datetime, datetime_miss, datetime_new, init, delete, getval, &
+PUBLIC datetime, datetime_miss, datetime_utc, datetime_local, &
+ datetime_new, init, delete, getval, &
  read_unit, write_unit, &
  OPERATOR(==), OPERATOR(/=), OPERATOR(>), OPERATOR(<), &
  OPERATOR(>=), OPERATOR(<=), OPERATOR(+), OPERATOR(-), &
@@ -238,7 +243,7 @@ CONTAINS
 !! (\a oraclesimdate) sono mutualmente escludentesi; \a oraclesimedate è
 !! obsoleto, usare piuttosto \a simpledate.
 FUNCTION datetime_new(year, month, day, hour, minute, msec, &
- unixtime, isodate, simpledate, oraclesimdate) RESULT(this)
+ unixtime, isodate, simpledate, oraclesimdate, now) RESULT(this)
 INTEGER,INTENT(IN),OPTIONAL :: year !< anno d.C., se è specificato, tutti gli eventuali parametri tranne \a month, \a day, \a hour, \a minute e \a msec sono ignorati; per un problema non risolto, sono ammessi solo anni >0 (d.C.)
 INTEGER,INTENT(IN),OPTIONAL :: month !< mese, default=1 se è specificato \a year; può assumere anche valori <1 o >12, l'oggetto finale si aggiusta coerentemente
 INTEGER,INTENT(IN),OPTIONAL :: day !< mese, default=1 se è specificato \a year; può anch'esso assumere valori fuori dai limiti canonici
@@ -249,11 +254,12 @@ INTEGER(kind=int_ll),INTENT(IN),OPTIONAL :: unixtime !< inizializza l'oggetto a 
 CHARACTER(len=*),INTENT(IN),OPTIONAL :: isodate !< inizializza l'oggetto ad una data espressa nel formato \c AAAA-MM-GG \c hh:mm:ss.msc, un sottoinsieme del formato noto come \a ISO, la parte iniziale \c AAAA-MM-GG è obbligatoria, il resto è opzionale
 CHARACTER(len=*),INTENT(IN),OPTIONAL :: simpledate !< inizializza l'oggetto ad una data espressa nel formato \c AAAAMMGGhhmmssmsc, la parte iniziale \c AAAAMMGG è obbligatoria, il resto è opzionale, da preferire rispetto a \a oraclesimdate
 CHARACTER(len=12),INTENT(IN),OPTIONAL :: oraclesimdate !< inizializza l'oggetto ad una data espressa nel formato \c AAAAMMGGhhmm, come nelle routine per l'accesso al db Oracle del SIM.
+INTEGER,INTENT(IN),OPTIONAL :: now !< inizializza l'oggetto all'istante corrente, se \a è \a datetime_utc inizializza con l'ora UTC (preferibile), se è \datetime_local usa l'ora locale
 
 TYPE(datetime) :: this !< oggetto da inizializzare
 
 CALL datetime_init(this, year, month, day, hour, minute, msec, &
- unixtime, isodate, simpledate, oraclesimdate)
+ unixtime, isodate, simpledate, oraclesimdate, now)
 
 END FUNCTION datetime_new
 
@@ -263,8 +269,8 @@ END FUNCTION datetime_new
 !! \a minute, \a msec), (\a unixtime), (\a isodate), (\a simpledate),
 !! (\a oraclesimdate) sono mutualmente escludentesi; \a oraclesimedate è
 !! obsoleto, usare piuttosto \a simpledate.
-SUBROUTINE datetime_init(this, year, month, day, hour, minute, msec, &
- unixtime, isodate, simpledate, oraclesimdate)
+RECURSIVE SUBROUTINE datetime_init(this, year, month, day, hour, minute, msec, &
+ unixtime, isodate, simpledate, oraclesimdate, now)
 TYPE(datetime),INTENT(INOUT) :: this !< oggetto da inizializzare
 INTEGER,INTENT(IN),OPTIONAL :: year !< anno d.C., se è specificato, tutti gli eventuali parametri tranne \a month, \a day, \a hour e \a minute sono ignorati; per un problema non risolto, sono ammessi solo anni >0 (d.C.)
 INTEGER,INTENT(IN),OPTIONAL :: month !< mese, default=1 se è specificato \a year; può assumere anche valori <1 o >12, l'oggetto finale si aggiusta coerentemente
@@ -276,8 +282,10 @@ INTEGER(kind=int_ll),INTENT(IN),OPTIONAL :: unixtime !< inizializza l'oggetto a 
 CHARACTER(len=*),INTENT(IN),OPTIONAL :: isodate !< inizializza l'oggetto ad una data espressa nel formato \c AAAA-MM-GG \c hh:mm:ss.msc, un sottoinsieme del formato noto come \a ISO, la parte iniziale \c AAAA-MM-GG è obbligatoria, il resto è opzionale
 CHARACTER(len=*),INTENT(IN),OPTIONAL :: simpledate !< inizializza l'oggetto ad una data espressa nel formato \c AAAAMMGGhhmmssmsc, la parte iniziale \c AAAAMMGG è obbligatoria, il resto è opzionale, da preferire rispetto a \a oraclesimdate
 CHARACTER(len=12),INTENT(IN),OPTIONAL :: oraclesimdate !< inizializza l'oggetto ad una data espressa nel formato \c AAAAMMGGhhmm, come nelle routine per l'accesso al db Oracle del SIM.
+INTEGER,INTENT(IN),OPTIONAL :: now !< inizializza l'oggetto all'istante corrente, se \a è \a datetime_utc inizializza con l'ora UTC (preferibile), se è \datetime_local usa l'ora locale
 
 INTEGER :: lyear, lmonth, lday, lhour, lminute, lsec, lmsec, ier
+INTEGER :: dt(8)
 CHARACTER(len=23) :: datebuf
 
 IF (PRESENT(year)) THEN ! anno/mese/giorno, ecc.
@@ -348,6 +356,11 @@ ELSE IF (PRESENT(oraclesimdate)) THEN ! formato YYYYMMDDhhmm
     RETURN
   ENDIF
   CALL jeladata5_1(lday,lmonth,lyear,lhour,lminute,0,this%iminuti)
+ELSE IF (PRESENT(now)) THEN
+  CALL DATE_AND_TIME(values=dt)
+  IF (now /= datetime_local) dt(6) = dt(6) - dt(4) ! back to UTC
+  CALL init(this, year=dt(1), month=dt(2), day=dt(3), hour=dt(5), minute=dt(6), &
+   msec=dt(7)*1000+dt(8))
 ELSE
   this%iminuti = 0
 ENDIF
