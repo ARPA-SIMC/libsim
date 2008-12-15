@@ -18,16 +18,20 @@ integer                            ::  ifile,ofile,gaid
 integer                            ::  iret
 
 integer :: ix,iy,fx,fy,iox,ioy,fox,foy,inx,iny,fnx,fny,newx,newy
-doubleprecision ::  ilon,ilat,flon,flat
+doubleprecision ::  ilon=0.,ilat=40.,flon=30.,flat=60.
 real, allocatable :: field(:,:),fieldz(:,:)
 type(griddim_def) :: griddim_out
 type(transform) :: trans
 type(grid_transform) :: grid_trans
 
-integer :: nx=10,ny=10,component_flag=0
+integer :: nx=30,ny=30,component_flag=0
 doubleprecision :: lon_min=0., lon_max=30., lat_min=40., lat_max=60.
 doubleprecision :: latitude_south_pole=-90.,longitude_south_pole=0.,angle_rotation=0.
 character(len=80) :: type='regular_ll',trans_type='inter',sub_type='near'
+
+!da eliminare
+integer :: i,j
+
 
 !questa chiamata prende dal launcher il nome univoco
 call l4f_launcher(a_name,a_name_force="demo4")
@@ -38,17 +42,9 @@ category=l4f_category_get(a_name//".main")
 !init di log4fortran
 ier=l4f_init()
 
-!TODO da togliere
-ilon=-5.
-ilat=30.
-flon=30.
-flat=50.
-infile='gribmix.grb'
-outfile='gribnew.grb'
-
 opterr=.false.
 do
-  select case( getopt( "a:b:c:d:hi:l:m:n:o:p:q:r:s:t:u:z:"))
+  select case( getopt( "a:b:c:d:hi:l:m:n:o:p:q:r:s:t:u:v:z:"))
 
   case( char(0))
     exit
@@ -69,7 +65,7 @@ do
     end if
 
   case( 'c' )
-    read(optarg,*,iostat=ier)flat
+    read(optarg,*,iostat=ier)flon
     if (ier/= 0)then
       call l4f_category_log(category,L4F_ERROR,'option argument error')
       call help()
@@ -77,7 +73,7 @@ do
     end if
 
   case( 'd' )
-    read(optarg,*,iostat=ier)flon
+    read(optarg,*,iostat=ier)flat
     if (ier/= 0)then
       call l4f_category_log(category,L4F_ERROR,'option argument error')
       call help()
@@ -156,8 +152,10 @@ do
     end if
  case( 'u' )
     type=optarg
- case( 'z' )
+ case( 'v' )
     trans_type=optarg
+ case( 'z' )
+    sub_type=optarg
 
   case( 'h' )
     call help()
@@ -190,6 +188,7 @@ call l4f_category_log(category,L4F_INFO,"transforming to   file:"//trim(outfile)
 !!call grib_new_from_template(igrib, "regular_ll_sfc_grib2")
 
 if(trans_type == 'inter')then
+
   call init(griddim_out,&
    type=type,nx=nx,ny=ny, &
    lon_min=lon_min, lon_max=lon_max, lat_min=lat_min, lat_max=lat_max, component_flag=component_flag, &
@@ -197,12 +196,15 @@ if(trans_type == 'inter')then
    categoryappend="regular_ll")
 
   call griddim_unproj(griddim_out)
+
   print*,'grid di interpolazione >>>>>>>>>>>>>>>>>>>>'
   call display(griddim_out)
-  print*,griddim_out%dim%lat
-  print*,griddim_out%dim%lon
 
 end if
+
+call init(trans, trans_type=trans_type,sub_type=sub_type, &
+ ilon=ilon,ilat=ilat,flon=flon,flat=flat,&
+ categoryappend="trasformation")
 
 call grib_open_file(ifile, trim(infile),'r')
 call grib_open_file(ofile, trim(outfile),'w')
@@ -235,11 +237,8 @@ DO WHILE (iret == GRIB_SUCCESS)
 
    field=decode_gridinfo(gridinfo)
 
-   call init(trans, trans_type=trans_type,sub_type=sub_type, &
-    ilon=ilon,ilat=ilat,flon=flon,flat=flat,&
-    categoryappend="trasformazione")
+   call init(grid_trans, trans, in=gridinfo%griddim,out=griddim_out,categoryappend="gridtrasformato")
 
-   call init(grid_trans, trans, in=gridinfo%griddim,out=griddim_out,categoryappend="grid_zommata")
    call display(griddim_out)
 
    allocate (fieldz(griddim_out%dim%nx,griddim_out%dim%ny))
@@ -253,14 +252,18 @@ DO WHILE (iret == GRIB_SUCCESS)
 
    call grib_write(gridinfo%gaid,ofile)
 
-! questa delete mi cancella anche griddim_out ed Ã¨ un problema !
+   call delete (grid_trans)
+
+! questa delete mi cancella anche griddim_out ed è un problema !
 !   call delete (gridinfo)
 
    deallocate (field,fieldz)
 
 end do
 
+call delete (trans)
 call delete(griddim_out)
+
 call grib_close_file(ifile)
 call grib_close_file(ofile)
 

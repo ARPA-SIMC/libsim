@@ -166,7 +166,7 @@ subroutine import_gridinfo (this)
 TYPE(gridinfo_type),intent(out) :: this !< oggetto da importare
 
 
-call l4f_category_log(this%category,L4F_DEBUG,"ora provo ad importare da grib " )
+call l4f_category_log(this%category,L4F_DEBUG,"ora provo ad importare da grib")
 
 
 call import(this%griddim,this%gaid)
@@ -205,7 +205,7 @@ TYPE(datetime),INTENT(out) :: this
 integer,INTENT(in)         :: gaid
 integer                    :: EditionNumber
 character(len=9)           :: date
-character(len=10)           :: time
+character(len=10)          :: time
 
 
 call grib_get(gaid,'GRIBEditionNumber',EditionNumber)
@@ -274,7 +274,7 @@ if (EditionNumber == 1)then
 
   call level_g1_to_g2(ltype,l1,l2,ltype1,scalef1,scalev1,ltype2,scalef2,scalev2)
   IF (ltype == 111 .OR. ltype == 112) THEN
-    PRINT*,'import level',ltype1,scalef1,scalev1,ltype2,scalef2,scalev2,ltype,l2,l1
+!    PRINT*,'import level',ltype1,scalef1,scalev1,ltype2,scalef2,scalev2,ltype,l2,l1
   ENDIF
 else if (EditionNumber == 2)then
 
@@ -320,7 +320,7 @@ if (EditionNumber == 1)then
 
   CALL level_g2_to_g1(ltype1,scalef1,scalev1,ltype2,scalef2,scalev2,ltype,l1,l2)
   IF (ltype == 111 .OR. ltype == 112) THEN
-    PRINT*,'export level',ltype1,scalef1,scalev1,ltype2,scalef2,scalev2,ltype,l2,l1
+!    PRINT*,'export level',ltype1,scalef1,scalev1,ltype2,scalef2,scalev2,ltype,l2,l1
   ENDIF
   call grib_set(gaid,'indicatorOfTypeOfLevel',ltype)
 ! it is important to set topLevel after, otherwise, in case of single levels
@@ -793,6 +793,18 @@ if (any(field== rmiss)) then
                                 ! enable bitmap in a grib2
     call grib_set(this%gaid,"bitMapIndicator",0)
   endif
+
+else
+
+  call grib_get(this%gaid,'editionNumber',editionNumber);
+  if (editionNumber == 1) then
+                                ! enable bitmap in a grib1
+    call grib_set(this%gaid,"bitmapPresent",0)
+  else
+                                ! enable bitmap in a grib2
+    call grib_set(this%gaid,"bitMapIndicator",1)
+  endif
+
 end if
 
 IF ( jPointsAreConsecutive == 0) THEN

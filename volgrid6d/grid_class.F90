@@ -1033,8 +1033,8 @@ IF (this%trans%trans_type == 'zoom') THEN
       CALL get_val(in, nx=nx, ny=ny, lon_min=lon_min, lon_max=lon_max, &
        lat_min=lat_min, lat_max=lat_max)
 
-      steplon=(lon_max-lon_min)/(nx-1)
-      steplat=(lat_max-lat_min)/(ny-1)
+      steplon=(lon_max-lon_min)/dble(nx-1)
+      steplat=(lat_max-lat_min)/dble(ny-1)
 
       
     case default
@@ -1149,25 +1149,25 @@ ELSE IF (this%trans%trans_type == 'inter') THEN
 
   case ( "regular_ll","rotated_ll")
 
+
+    CALL get_val(in, nx=nx, ny=ny)
+
+     this%innx=nx
+     this%inny=ny
+     
     CALL get_val(out, nx=nx, ny=ny)
 
     this%outnx=nx
     this%outny=ny
-
 
 !    if (associated(this%inter_index_x_near)) deallocate (this%inter_index_x_near)
 !    if (associated(this%inter_index_y_near)) deallocate (this%inter_index_y_near)
     allocate (this%inter_index_x_near(nx,ny),this%inter_index_y_near(nx,ny))
 
      
-    CALL get_val(in, nx=nx, ny=ny, &
+    CALL get_val(in, &
      lon_min=lon_min, lon_max=lon_max,&
      lat_min=lat_min, lat_max=lat_max)
-
-     this%innx=nx
-     this%inny=ny
-     
-
 
 !    do i=1,this%outnx
 !      do j=1,this%outny
@@ -1178,15 +1178,28 @@ ELSE IF (this%trans%trans_type == 'inter') THEN
 !      end do
 !    end do
 
-    print*,nx,ny, lon_min, lon_max, lat_min,lat_max
-    print*,out%dim%lon,out%dim%lat
+
+!do i=1,out%dim%nx
+!  do j=1,out%dim%ny
+!    print *,"lon", i,j,out%dim%lon(i,j)
+!    print *,"lat", i,j,out%dim%lat(i,j)
+!  end do
+!end do
+
 
     call find_index(in,this%trans%inter%sub_type,&
-     nx=nx, ny=ny ,&
+     nx=this%innx, ny=this%inny ,&
      lon_min=lon_min, lon_max=lon_max,&
      lat_min=lat_min, lat_max=lat_max,&
      lon=out%dim%lon,lat=out%dim%lat,&
      index_x=this%inter_index_x_near,index_y=this%inter_index_y_near)
+
+!do i=1,out%dim%nx
+!  do j=1,out%dim%ny
+!    print *,"lon lat", i,j,out%dim%lon(i,j),out%dim%lat(i,j)
+!    print *,"indx indy", this%inter_index_x_near(i,j), this%inter_index_y_near(i,j)
+!  end do
+!end do
 
   case default
     call l4f_category_log(this%category,L4F_ERROR,"gtype: "//trim(in%grid%type%type)//" non gestita" )
@@ -1494,13 +1507,10 @@ ELSE IF (this%trans%trans_type == 'inter') THEN
 
   DO j = 1, this%outny 
     DO i = 1, this%outnx 
-      print*,'indici>',i,j
-      if (c_e(this%inter_index_x_near(i,j)) .and. c_e(this%inter_index_y_near(i,j)))then
 
-        print*,"index",this%inter_index_x_near(i,j),this%inter_index_y_near(i,j)
+      if (c_e(this%inter_index_x_near(i,j)) .and. c_e(this%inter_index_y_near(i,j)))&
         field_out(i,j) = field_in(this%inter_index_x_near(i,j),this%inter_index_y_near(i,j))
 
-      end if
     ENDDO
   ENDDO
 
@@ -1514,6 +1524,7 @@ END SUBROUTINE grid_transform_compute
 elemental subroutine find_index(this,inter_type,&
  nx,ny, lon_min, lon_max, lat_min,lat_max,&
  lon,lat,index_x,index_y)
+! lon,lat,index_x,index_y)
 
 
 type(griddim_def),intent(in) :: this
@@ -1522,20 +1533,20 @@ integer,intent(in) :: nx,ny
 doubleprecision,intent(in) :: lon_min, lon_max, lat_min, lat_max
 doubleprecision,intent(in) :: lon,lat
 integer,optional,intent(out) :: index_x,index_y
-doubleprecision :: x,y
 
+doubleprecision :: x,y
 
 if (inter_type == "near") then
 
   call proj(this,lon,lat,x,y)
 
   if (present(index_x))then
-    index_x=nint((x-lon_min)/(lon_max-lon_min)/(nx-1))+1
+    index_x=nint((x-lon_min)/((lon_max-lon_min)/dble(nx-1)))+1
     if ( index_x < 1 .or. index_x > nx ) index_x=imiss
   end if
 
   if (present(index_y))then
-    index_y=nint((y-lat_min)/(lat_max-lat_min)/(ny-1))+1
+    index_y=nint((y-lat_min)/((lat_max-lat_min)/dble(ny-1)))+1
     if ( index_y < 1 .or. index_y > ny ) index_y=imiss
   end if
 
@@ -1545,6 +1556,7 @@ else
   if (present(index_x)) index_x=imiss
   if (present(index_y)) index_y=imiss
 
+! logging not possibile in elemental subroutine
 !  call l4f_category_log(this%category,L4F_ERROR,"inter_type not supported: "//trim(inter_type))
 !  call raise_fatal_error("inter_type not supported")
 

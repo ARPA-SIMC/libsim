@@ -242,15 +242,14 @@ if (.not.associated(dim%lat)) then
   call l4f_category_log(this%category,L4F_DEBUG,"size lat: "//to_char(size(dim%lat)))
 end if
 
-
-dlat= (this%lat_max - this%lat_min) / dble(dim%ny - 1 )
 dlon= (this%lon_max - this%lon_min) / dble(dim%nx - 1 )
+dlat= (this%lat_max - this%lat_min) / dble(dim%ny - 1 )
 
 call unproj_regular_ll(this,&
- reshape((/ ((this%lon_min+dlon*dble(i) ,i=0,dim%nx), &
- j=0,dim%ny) /),(/dim%nx,dim%ny/)), &
- reshape((/ ((this%lat_min+dlat*dble(i) ,j=0,dim%ny), &
- i=0,dim%nx) /),(/dim%nx,dim%ny/)), &
+ reshape((/ ((this%lon_min+(dlon*dble(i)) ,i=0,dim%nx-1), &
+ j=0,dim%ny-1) /),(/dim%nx,dim%ny/)), &
+ reshape((/ ((this%lat_min+(dlat*dble(j)) ,i=0,dim%nx-1), &
+ j=0,dim%ny-1) /),(/dim%nx,dim%ny/)), &
  dim%lon,dim%lat)
 
 
@@ -621,8 +620,8 @@ subroutine export_dim(this,gaid)
 type(grid_dim),intent(in) :: this
 integer,INTENT(in)             :: gaid
 
-   call grib_set(gaid,'numberOfPointsAlongAMeridian',this%nx)
-   call grib_set(gaid,'numberOfPointsAlongAParallel',this%ny)
+   call grib_set(gaid,'numberOfPointsAlongAParallel',this%nx)
+   call grib_set(gaid,'numberOfPointsAlongAMeridian',this%ny)
 
 end subroutine export_dim
 
@@ -666,13 +665,13 @@ doubleprecision :: iplon,iplat,fplon,fplat
 call proj(this,ilon,ilat,iplon,iplat )
 call proj(this,flon,flat,fplon,fplat )
 
-step_lon=(this%lon_max-this%lon_min)/(dim%nx-1)
-step_lat=(this%lat_max-this%lat_min)/(dim%ny-1)
+step_lon=(this%lon_max-this%lon_min)/dble(dim%nx-1)
+step_lat=(this%lat_max-this%lat_min)/dble(dim%ny-1)
 
-ix=(ilon-this%lon_min)/step_lon
-iy=(ilat-this%lat_min)/step_lat
-fx=(flon-this%lon_min)/step_lon
-fy=(flat-this%lat_min)/step_lat
+ix=nint((ilon-this%lon_min)/step_lon)+1
+iy=nint((ilat-this%lat_min)/step_lat)+1
+fx=nint((flon-this%lon_min)/step_lon)+1
+fy=nint((flat-this%lat_min)/step_lat)+1
 
 end subroutine zoom_coord_regular_ll
 
