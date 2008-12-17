@@ -60,10 +60,16 @@ type inter_near
   logical :: external !< enable external elaboration
 end type inter_near
 
+!>  subtype bilinear information
+type inter_bilin
+  logical :: external !< enable external elaboration
+end type inter_bilin
+
 !>  interpolation information 
 type inter
-  CHARACTER(len=80) :: sub_type !< subtype of transformation, can be \c 'near'
+  CHARACTER(len=80) :: sub_type !< subtype of transformation, can be \c 'near' \c 'bilin'
   type(inter_near) :: near !< subtype nearest information
+  type(inter_bilin) :: bilin !< subtype bilinear information
 end type inter
 
 
@@ -128,7 +134,10 @@ TYPE grid_transform
   integer :: outnx, outny
   integer :: iniox,inioy,infox,infoy,outinx,outiny,outfnx,outfny
   
-  integer,pointer :: inter_index_x_near(:,:),inter_index_y_near(:,:)
+  integer,pointer :: inter_index_x(:,:),inter_index_y(:,:)
+  doubleprecision,pointer :: inter_x(:,:),inter_y(:,:)
+
+  doubleprecision,pointer :: inter_xp(:,:),inter_yp(:,:)
 
   integer :: category !< log4fortran
 
@@ -280,8 +289,8 @@ case ( "rotated_ll")
    categoryappend=trim(subcategory)//"."//trim(categoryappend))
   
 case default
-  call l4f_category_log(this%category,L4F_ERROR,"gtype: "//this%grid%type%type//" non gestita" )
-  call raise_error("gtype non gestita")
+  call l4f_category_log(this%category,L4F_ERROR,"init griddim gtype: "//this%grid%type%type//" non gestita" )
+  call raise_error("init griddim gtype non gestita")
 
 end select
 
@@ -301,8 +310,8 @@ case ( "rotated_ll")
   call delete(this%grid%rotated_ll,this%dim)
   
 case default
-  call l4f_category_log(this%category,L4F_ERROR,"gtype: "//this%grid%type%type//" non gestita" )
-  call raise_error("gtype non gestita")
+  call l4f_category_log(this%category,L4F_ERROR,"delete griddim gtype: "//this%grid%type%type//" non gestita" )
+  call raise_error("delete griddim gtype non gestita")
 
 end select
 
@@ -377,8 +386,8 @@ case ( "rotated_ll")
   call grid_proj(this%grid%rotated_ll,this%dim)
   
 case default
-  call l4f_category_log(this%category,L4F_ERROR,"gtype: "//this%grid%type%type//" non gestita" )
-  call raise_error("gtype non gestita")
+  call l4f_category_log(this%category,L4F_ERROR,"griddim proj gtype: "//this%grid%type%type//" non gestita" )
+  call raise_error("griddim proj gtype non gestita")
 
 end select
 
@@ -398,8 +407,8 @@ case ( "rotated_ll")
   call grid_unproj(this%grid%rotated_ll, this%dim)
 
 case default
-  call l4f_category_log(this%category,L4F_ERROR,"gtype: "//this%grid%type%type//" non gestita" )
-  call raise_error("gtype non gestita")
+  call l4f_category_log(this%category,L4F_ERROR,"griddim unproj gtype: "//this%grid%type%type//" non gestita" )
+  call raise_error("griddim unproj gtype non gestita")
 
 end select
 
@@ -447,8 +456,8 @@ case ( "rotated_ll")
    latitude_south_pole,longitude_south_pole,angle_rotation)
   
 case default
-  call l4f_category_log(this%category,L4F_ERROR,"gtype: "//this%grid%type%type//" non gestita" )
-  call raise_error("gtype non gestita")
+  call l4f_category_log(this%category,L4F_ERROR,"get_val_griddim gtype: "//this%grid%type%type//" non gestita" )
+  call raise_error("get_val_griddim gtype non gestita")
 
 end select
 
@@ -486,8 +495,8 @@ case ( "rotated_ll")
    latitude_south_pole,longitude_south_pole,angle_rotation)
   
 case default
-  call l4f_category_log(this%category,L4F_ERROR,"gtype: "//this%grid%type%type//" non gestita" )
-  call raise_error("gtype non gestita")
+  call l4f_category_log(this%category,L4F_ERROR,"set_val_griddim gtype: "//this%grid%type%type//" non gestita" )
+  call raise_error("set_val_griddim gtype non gestita")
 
 end select
 
@@ -546,8 +555,8 @@ case ( "rotated_ll")
   call write_unit(this%grid%rotated_ll,unit)
   
 case default
-  call l4f_category_log(this%category,L4F_ERROR,"gtype: "//this%grid%type%type//" non gestita" )
-  call raise_error("gtype non gestita")
+  call l4f_category_log(this%category,L4F_ERROR,"write_unit_griddim gtype: "//trim(this%grid%type%type)//" non gestita" )
+  call raise_error("write_unit_griddim gtype non gestita")
 
 end select
 
@@ -575,8 +584,8 @@ case ( "rotated_ll")
   call import(this%grid%rotated_ll,this%dim,gaid)
   
 case default
-  call l4f_category_log(this%category,L4F_ERROR,"gtype non gestita: "//trim(this%grid%type%type))
-  call raise_error("gtype non gestita")
+  call l4f_category_log(this%category,L4F_ERROR,"import griddim gtype non gestita: "//trim(this%grid%type%type))
+  call raise_error("import griddim gtype non gestita")
 
 end select
 
@@ -598,8 +607,8 @@ case ( "rotated_ll")
   call export(this%grid%rotated_ll,this%dim,gaid)
   
 case default
-  call l4f_category_log(this%category,L4F_ERROR,"gtype: "//this%grid%type%type//" non gestita" )
-  call raise_error("gtype non gestita")
+  call l4f_category_log(this%category,L4F_ERROR,"export griddim gtype: "//this%grid%type%type//" non gestita" )
+  call raise_error("export griddim gtype non gestita")
 
 end select
 
@@ -660,8 +669,8 @@ case ( "rotated_ll")
   print*,"<<<<<<<<<<<<<<< ---------- >>>>>>>>>>>>>>>>"
   
 case default
-  call l4f_category_log(this%category,L4F_ERROR,"gtype: "//this%grid%type%type//" non gestita" )
-  call raise_error("gtype non gestita")
+  call l4f_category_log(this%category,L4F_ERROR,"display griddim gtype: "//this%grid%type%type//" non gestita" )
+  call raise_error("display griddim gtype non gestita")
 
 end select
 
@@ -902,6 +911,8 @@ else if (this%trans_type == 'inter') then
 !!$
 !!$    end if
 
+  else if (this%inter%sub_type == 'bilin')then
+
   else
 
     CALL l4f_category_log(this%category,L4F_ERROR,'inter: sub_type is wrong')
@@ -949,6 +960,7 @@ this%boxregrid%average%npy=imiss
 this%inter%sub_type=cmiss
 
 this%inter%near%external=.false.
+this%inter%bilin%external=.false.
 
 !chiudo il logger
 call l4f_category_delete(this%category)
@@ -986,9 +998,14 @@ this%category=l4f_category_get(a_name)
 
 this%trans=trans
 
-nullify (this%inter_index_x_near)
-nullify (this%inter_index_y_near)
+nullify (this%inter_index_x)
+nullify (this%inter_index_y)
 
+nullify (this%inter_x)
+nullify (this%inter_y)
+
+nullify (this%inter_xp)
+nullify (this%inter_yp)
 
 IF (this%trans%trans_type == 'zoom') THEN
 
@@ -1014,8 +1031,9 @@ IF (this%trans%trans_type == 'zoom') THEN
 
     case default
 
-      call l4f_category_log(this%category,L4F_ERROR,"gtype: "//trim(in%grid%type%type)//" non gestita" )
-      call raise_fatal_error("gtype non gestita")
+      call l4f_category_log(this%category,L4F_ERROR,"init_grid_transform zoom coord gtype: "&
+       //trim(in%grid%type%type)//" non gestita" )
+      call raise_fatal_error("init_grid_transform zoom coord gtype non gestita")
       
     end select
 
@@ -1027,22 +1045,22 @@ IF (this%trans%trans_type == 'zoom') THEN
   if (this%trans%zoom%sub_type == 'index') THEN
 
     select case ( in%grid%type%type )
-
+      
     case ( "regular_ll","rotated_ll")
-
+      
       CALL get_val(in, nx=nx, ny=ny, lon_min=lon_min, lon_max=lon_max, &
        lat_min=lat_min, lat_max=lat_max)
-
+      
       steplon=(lon_max-lon_min)/dble(nx-1)
       steplat=(lat_max-lat_min)/dble(ny-1)
-
+      
       
     case default
-      call l4f_category_log(this%category,L4F_ERROR,"gtype: "//trim(in%grid%type%type)//" non gestita" )
-      call raise_fatal_error("gtype non gestita")
+      call l4f_category_log(this%category,L4F_ERROR,"init_grid_transform zoom index gtype: "&
+       //trim(in%grid%type%type)//" non gestita" )
+      call raise_fatal_error("init_grid_transform zoom index gtype non gestita")
       
     end select
-
 
                                 ! old indices
     this%iniox = min(max(this%trans%zoom%index%ix,1),nx) ! iox
@@ -1065,7 +1083,7 @@ IF (this%trans%trans_type == 'zoom') THEN
     
     out%dim%nx = this%trans%zoom%index%fx - this%trans%zoom%index%ix + 1 ! newx
     out%dim%ny = this%trans%zoom%index%fy - this%trans%zoom%index%iy + 1 ! newy
-
+    
     this%innx = nx
     this%inny = ny
 
@@ -1075,7 +1093,7 @@ IF (this%trans%trans_type == 'zoom') THEN
     call set_val (out,&
      lon_min = lon_min,  lon_max = lon_max ,&
      lat_min = lat_min,  lat_max = lat_max )
-
+    
   else
 
     CALL l4f_category_log(this%category,L4F_WARN,'sub_type '//TRIM(this%trans%zoom%sub_type) &
@@ -1088,18 +1106,19 @@ ELSE IF (this%trans%trans_type == 'boxregrid') THEN
 
   if (this%trans%boxregrid%sub_type == 'average') THEN
 
-  select case ( in%grid%type%type )
+    select case ( in%grid%type%type )
 
-  case ( "regular_ll","rotated_ll")
+    case ( "regular_ll","rotated_ll")
       
-  CALL get_val(in, nx=nx, ny=ny, lon_min=lon_min, lon_max=lon_max, &
-   lat_min=lat_min, lat_max=lat_max)
+      CALL get_val(in, nx=nx, ny=ny, lon_min=lon_min, lon_max=lon_max, &
+       lat_min=lat_min, lat_max=lat_max)
+      
+    case default
+      call l4f_category_log(this%category,L4F_ERROR,"init_grid_transform boxregrid average gtype: "&
+       //trim(in%grid%type%type)//" non gestita" )
+      call raise_fatal_error("init_grid_transform boxregrid average gtype non gestita")
     
-  case default
-    call l4f_category_log(this%category,L4F_ERROR,"gtype: "//trim(in%grid%type%type)//" non gestita" )
-    call raise_fatal_error("gtype non gestita")
-    
-  end select
+    end select
 
 
 ! old grid
@@ -1108,30 +1127,30 @@ ELSE IF (this%trans%trans_type == 'boxregrid') THEN
 !  this%intpar(3) = nx
 !  this%intpar(4) = ny
 
-  this%innx = nx
-  this%inny = ny
+    this%innx = nx
+    this%inny = ny
 
-  steplon=(lon_max-lon_min)/(nx-1)
-  steplat=(lat_max-lat_min)/(ny-1)
+    steplon=(lon_max-lon_min)/(nx-1)
+    steplat=(lat_max-lat_min)/(ny-1)
 
 ! new grid
-  lon_min_new = lon_min + (this%trans%boxregrid%average%npx - 1)*0.5D0*steplon
-  lat_min_new = lat_min + (this%trans%boxregrid%average%npy - 1)*0.5D0*steplat
+    lon_min_new = lon_min + (this%trans%boxregrid%average%npx - 1)*0.5D0*steplon
+    lat_min_new = lat_min + (this%trans%boxregrid%average%npy - 1)*0.5D0*steplat
 
-  out%dim%nx = nx/this%trans%boxregrid%average%npx
-  out%dim%ny = ny/this%trans%boxregrid%average%npy
+    out%dim%nx = nx/this%trans%boxregrid%average%npx
+    out%dim%ny = ny/this%trans%boxregrid%average%npy
 
-  this%outnx=out%dim%nx
-  this%outny=out%dim%nx
+    this%outnx=out%dim%nx
+    this%outny=out%dim%nx
 
-  call set_val( out,lon_min = lon_min_new )
-  call set_val( out,lat_min = lat_min_new )
+    call set_val( out,lon_min = lon_min_new )
+    call set_val( out,lat_min = lat_min_new )
 
-  steplon = steplon/this%trans%boxregrid%average%npx
-  steplat = steplat/this%trans%boxregrid%average%npy
+    steplon = steplon/this%trans%boxregrid%average%npx
+    steplat = steplat/this%trans%boxregrid%average%npy
 
-  call set_val( out, lon_max = lon_min_new + (out%dim%nx - 1)*steplon )
-  call set_val( out, lat_max = lat_min_new + (out%dim%ny - 1)*steplat )
+    call set_val( out, lon_max = lon_min_new + (out%dim%nx - 1)*steplon )
+    call set_val( out, lat_max = lat_min_new + (out%dim%ny - 1)*steplat )
 
   else
 
@@ -1140,81 +1159,83 @@ ELSE IF (this%trans%trans_type == 'boxregrid') THEN
     CALL raise_warning('trans_type '//TRIM(this%trans%boxregrid%sub_type)//' not supported')
 
   end if
-
+  
 ELSE IF (this%trans%trans_type == 'inter') THEN
 
-  if (this%trans%inter%sub_type == 'near') THEN
-
-  select case ( in%grid%type%type )
-
-  case ( "regular_ll","rotated_ll")
-
-
-    CALL get_val(in, nx=nx, ny=ny)
-
-     this%innx=nx
-     this%inny=ny
-     
-    CALL get_val(out, nx=nx, ny=ny)
-
-    this%outnx=nx
-    this%outny=ny
-
-!    if (associated(this%inter_index_x_near)) deallocate (this%inter_index_x_near)
-!    if (associated(this%inter_index_y_near)) deallocate (this%inter_index_y_near)
-    allocate (this%inter_index_x_near(nx,ny),this%inter_index_y_near(nx,ny))
-
-     
-    CALL get_val(in, &
-     lon_min=lon_min, lon_max=lon_max,&
-     lat_min=lat_min, lat_max=lat_max)
-
-!    do i=1,this%outnx
-!      do j=1,this%outny
-!
-!        call find_index(in,this%trans%inter%sub_type,out%dim%lon(i,j),out%dim%lat(i,j),&
-!         index_x=this%inter_index_x_near(i,j),index_y=this%inter_index_y_near(i,j))
-!        
-!      end do
-!    end do
-
-
-!do i=1,out%dim%nx
-!  do j=1,out%dim%ny
-!    print *,"lon", i,j,out%dim%lon(i,j)
-!    print *,"lat", i,j,out%dim%lat(i,j)
-!  end do
-!end do
-
-
-    call find_index(in,this%trans%inter%sub_type,&
-     nx=this%innx, ny=this%inny ,&
-     lon_min=lon_min, lon_max=lon_max,&
-     lat_min=lat_min, lat_max=lat_max,&
-     lon=out%dim%lon,lat=out%dim%lat,&
-     index_x=this%inter_index_x_near,index_y=this%inter_index_y_near)
-
-!do i=1,out%dim%nx
-!  do j=1,out%dim%ny
-!    print *,"lon lat", i,j,out%dim%lon(i,j),out%dim%lat(i,j)
-!    print *,"indx indy", this%inter_index_x_near(i,j), this%inter_index_y_near(i,j)
-!  end do
-!end do
-
-  case default
-    call l4f_category_log(this%category,L4F_ERROR,"gtype: "//trim(in%grid%type%type)//" non gestita" )
-    call raise_fatal_error("gtype non gestita")
+  if (this%trans%inter%sub_type == 'near' .or. this%trans%inter%sub_type == 'bilin' ) THEN
     
-  end select
+    select case ( in%grid%type%type )
+      
+    case ( "regular_ll","rotated_ll")
 
 
+      CALL get_val(in, nx=nx, ny=ny)
+      
+      this%innx=nx
+      this%inny=ny
+      
+      CALL get_val(out, nx=nx, ny=ny)
+      
+      this%outnx=nx
+      this%outny=ny
+      
+      allocate (this%inter_index_x(nx,ny),this%inter_index_y(nx,ny))
+    
+      CALL get_val(in, &
+       lon_min=lon_min, lon_max=lon_max,&
+       lat_min=lat_min, lat_max=lat_max)
+
+      call find_index(in,this%trans%inter%sub_type,&
+       nx=this%innx, ny=this%inny ,&
+       lon_min=lon_min, lon_max=lon_max,&
+       lat_min=lat_min, lat_max=lat_max,&
+       lon=out%dim%lon,lat=out%dim%lat,&
+       index_x=this%inter_index_x,index_y=this%inter_index_y)
+
+
+      if ( this%trans%inter%sub_type == 'bilin' ) THEN
+        allocate (this%inter_x(nx,ny),this%inter_y(nx,ny))
+        allocate (this%inter_xp(this%outnx,this%outny),this%inter_yp(this%outnx,this%outny))
+
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+! TODO ora utilizzo le latmin etc. ma il caso non è generale
+! la getval in altri casi non mi restituisce niente e quindi bisognerà inventarsi
+! un piano di proiezione X,Y (da 0. a 1. ?) a cui far riferimento
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+        do i=1, this%innx
+          do J=1, this%inny
+
+            this%inter_x(nx,ny)=lon_min+(lon_max-lon_min)/dble(nx-1)*(i-1)
+            this%inter_y(nx,ny)=lat_min+(lat_max-lat_min)/dble(ny-1)*(j-1)
+          
+          end do
+        end do
+
+        call proj(in,out%dim%lon,out%dim%lat,this%inter_xp,this%inter_yp)
+
+      end if
+
+    case default
+      call l4f_category_log(this%category,L4F_ERROR,"init_grid_transform inter gtype: "//trim(in%grid%type%type)//" non gestita" )
+      call raise_fatal_error("init_grid_transform inter gtype non gestita")
+      
+    end select
+
+  else
+
+    CALL l4f_category_log(this%category,L4F_WARN,'init_grid_transform inter sub_type '//TRIM(this%trans%inter%sub_type) &
+     //' not supported')
+    CALL raise_warning('init_grid_transform inter sub_type '//TRIM(this%trans%inter%sub_type)//' not supported')
+    
   end if
-
+    
 ELSE
 
-  CALL l4f_category_log(this%category,L4F_WARN,'trans type '//TRIM(this%trans%trans_type) &
+  CALL l4f_category_log(this%category,L4F_WARN,'init_grid_transform trans type '//TRIM(this%trans%trans_type) &
    //' not supported')
-  CALL raise_warning('trans type '//TRIM(this%trans%trans_type)//' not supported')
+  CALL raise_warning('init_grid_transform trans type '//TRIM(this%trans%trans_type)//' not supported')
 
 ENDIF
 
@@ -1242,8 +1263,14 @@ this%outiny=imiss
 this%outfnx=imiss
 this%outfny=imiss
 
-if (associated(this%inter_index_x_near)) deallocate (this%inter_index_x_near)
-if (associated(this%inter_index_y_near)) deallocate (this%inter_index_y_near)
+if (associated(this%inter_index_x)) deallocate (this%inter_index_x)
+if (associated(this%inter_index_y)) deallocate (this%inter_index_y)
+
+if (associated(this%inter_x)) deallocate (this%inter_x)
+if (associated(this%inter_y)) deallocate (this%inter_y)
+
+if (associated(this%inter_xp)) deallocate (this%inter_xp)
+if (associated(this%inter_yp)) deallocate (this%inter_yp)
 
 !chiudo il logger
 call l4f_category_delete(this%category)
@@ -1460,7 +1487,7 @@ REAL, INTENT(in) :: field_in(:,:)
 REAL, INTENT(out) :: field_out(:,:)
 
 INTEGER :: i, j, ii, jj, ie, je, navg
-
+doubleprecision :: z1,z2,z3,z4,x1,x3,y1,y3,xp,yp
 
 ! check size of field_in, field_out
 
@@ -1505,19 +1532,95 @@ ELSE IF (this%trans%trans_type == 'boxregrid') THEN
 
 ELSE IF (this%trans%trans_type == 'inter') THEN
 
-  DO j = 1, this%outny 
-    DO i = 1, this%outnx 
+  IF (this%trans%inter%sub_type == 'near') THEN
 
-      if (c_e(this%inter_index_x_near(i,j)) .and. c_e(this%inter_index_y_near(i,j)))&
-        field_out(i,j) = field_in(this%inter_index_x_near(i,j),this%inter_index_y_near(i,j))
+    DO j = 1, this%outny 
+      DO i = 1, this%outnx 
 
+        if (c_e(this%inter_index_x(i,j)) .and. c_e(this%inter_index_y(i,j)))&
+         field_out(i,j) = field_in(this%inter_index_x(i,j),this%inter_index_y(i,j))
+
+      ENDDO
     ENDDO
-  ENDDO
+
+  else if (this%trans%inter%sub_type == 'bilin') THEN
+
+
+    DO j = 1, this%outny 
+      DO i = 1, this%outnx 
+
+        field_out(i,j) = rmiss
+
+        if   (c_e(this%inter_index_x(i,j)) .and. c_e(this%inter_index_y(i,j)))then
+
+          z1=field_in(this%inter_index_x(i,j),this%inter_index_y(i,j))         
+          z2=field_in(this%inter_index_x(i,j)+1,this%inter_index_y(i,j))     
+          z3=field_in(this%inter_index_x(i,j)+1,this%inter_index_y(i,j)+1) 
+          z4=field_in(this%inter_index_x(i,j),this%inter_index_y(i,j)+1)     
+
+          if (c_e(z1) .and. c_e(z2) .and. c_e(z3) .and. c_e(z4)) then 
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+! TODO ora utilizzo le latmin etc. ma il caso non è generale
+! la getval in altri casi non mi restituisce niente e quindi bisognerà inventarsi
+! un piano di proiezione X,Y (da 0. a 1. ?) a cui far riferimento
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+            x1=this%inter_x(this%inter_index_x(i,j),this%inter_index_y(i,j))         
+            y1=this%inter_y(this%inter_index_x(i,j),this%inter_index_y(i,j))     
+            x3=this%inter_x(this%inter_index_x(i,j)+1,this%inter_index_y(i,j)+1) 
+            y3=this%inter_y(this%inter_index_x(i,j)+1,this%inter_index_y(i,j)+1)     
+            
+            xp=this%inter_xp(i,j)
+            yp=this%inter_xp(i,j)
+            
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+            field_out(i,j) = hbilin (z1,z2,z3,z4,x1,y1,x3,y3,xp,yp)
+
+          end if
+        end if
+
+      ENDDO
+    ENDDO
+
+    
+  END IF
 
 ENDIF
 
 END SUBROUTINE grid_transform_compute
 
+elemental real function hbilin (z1,z2,z3,z4,x1,y1,x3,y3,xp,yp) result (zp)
+
+doubleprecision,intent(in) :: z1,z2,z3,z4,x1,y1,x3,y3,xp,yp
+
+doubleprecision :: z5,z6,p1,p2
+
+!     effettua interpolazione bilineare dati i valori nei punti
+!     1,2,3,4 e le coordinate dei punti 1 e 3 oltre a quelle
+!     del punto p dove viene valutato il campo.
+!_____________________________________________________________
+!				disposizione punti
+!	4	3
+!
+!	  p
+!
+!	1	2
+! _____________________________________________________________
+
+     
+
+p2=((yp-y1)/(y3-y1))
+p1=((xp-x1)/(x3-x1))
+
+z5=(z4-z1)*p2+z1
+z6=(z3-z2)*p2+z2
+
+zp=(z6-z5)*(p1)+z5
+      
+
+end function hbilin
 
 
 
@@ -1550,6 +1653,19 @@ if (inter_type == "near") then
     if ( index_y < 1 .or. index_y > ny ) index_y=imiss
   end if
 
+else if (inter_type == "bilin") then
+
+  call proj(this,lon,lat,x,y)
+
+  if (present(index_x))then
+    index_x=(x-lon_min)/((lon_max-lon_min)/dble(nx-1))+1
+    if ( index_x < 1 .or. index_x+1 > nx ) index_x=imiss
+  end if
+
+  if (present(index_y))then
+    index_y=(y-lat_min)/((lat_max-lat_min)/dble(ny-1))+1
+    if ( index_y < 1 .or. index_y+1 > ny ) index_y=imiss
+  end if
 
 else
 

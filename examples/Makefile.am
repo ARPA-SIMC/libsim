@@ -1,4 +1,4 @@
-AM_FCFLAGS = -I../base -I../grib -I../vol7d -I../qc -I../termolib -I../log4fortran
+AM_FCFLAGS = -I../base -I../grib -I../volgrid6d -I../vol7d -I../qc -I../termolib -I../log4fortran 
 EXTRA_DIST = log4crc
 
 noinst_PROGRAMS = esempio_file_utilities esempio_v7d esempio_qc_convert esempio_termolib log4fortran example_getopt
@@ -76,4 +76,22 @@ noinst_PROGRAMS += esempio_geo_coordvect
 
 esempio_geo_coordvect_SOURCES = esempio_geo_coordvect.f90
 esempio_geo_coordvect_LDADD =  ../base/libsim_base.la
+endif
+
+if GRIBAPI
+
+noinst_PROGRAMS += example_vg6d_1 example_vg6d_2 example_vg6d_3 example_vg6d_4
+
+example_vg6d_1_SOURCES = example_vg6d_1.f90
+example_vg6d_1_LDADD = ../volgrid6d/libsim_volgrid6d.la ../base/libsim_base.la ../vol7d/libsim_vol7d.la ../log4fortran/liblog4fortran.la
+
+example_vg6d_2_SOURCES = example_vg6d_2.f90
+example_vg6d_2_LDADD = ../volgrid6d/libsim_volgrid6d.la ../base/libsim_base.la ../vol7d/libsim_vol7d.la ../log4fortran/liblog4fortran.la
+
+example_vg6d_3_SOURCES = example_vg6d_3.f90
+example_vg6d_3_LDADD = ../volgrid6d/libsim_volgrid6d.la ../base/libsim_base.la ../vol7d/libsim_vol7d.la ../log4fortran/liblog4fortran.la
+
+example_vg6d_4_SOURCES = example_vg6d_4.f90
+example_vg6d_4_LDADD = ../volgrid6d/libsim_volgrid6d.la ../base/libsim_base.la ../vol7d/libsim_vol7d.la ../log4fortran/liblog4fortran.la
+
 endif

@@ -152,6 +152,22 @@ fi
 AM_CONDITIONAL(DBALLE, test "x$enableval" = "xyes")
 
 
+AC_ARG_ENABLE(gribapi, AC_HELP_STRING([--disable-gribapi],
+  [disable gribapi support]),,[enableval=yes])dnl default enable
+if test "x$enableval" = "xyes"; then
+ # test in f77 because f90 test do not work
+ AC_CHECK_LIB([grib_api_f77], [grib_set_int],
+ AC_MSG_RESULT([gribapi code included])
+  GRIBAPI_LIBS="-lgrib_api_f90 -lgrib_api"
+  AC_SUBST(GRIBAPI_LIBS),
+ AC_MSG_ERROR([gribapi library not found]),
+[-lgrib_api])
+else
+AC_MSG_RESULT([gribapi code not included])
+fi
+AM_CONDITIONAL(GRIBAPI, test "x$enableval" = "xyes")
+
+
 #we here test for f77; will be better develop a test for f90
 AC_ARG_ENABLE(netcdf, AC_HELP_STRING([--disable-netcdf],
   [disable netcdf support]),,[enableval=yes])dnl default enable
@@ -178,6 +194,7 @@ Makefile
 base/Makefile
 grib/Makefile
 vol7d/Makefile
+volgrid6d/Makefile
 examples/Makefile
 data/Makefile
 qc/Makefile

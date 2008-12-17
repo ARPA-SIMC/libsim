@@ -30,7 +30,7 @@ endif
 
 if NETCDF
 libsim_vol7d_la_SOURCES += vol7d_netcdf_class.f90
-AM_FCFLAGS += -I/usr/include
+AM_FCFLAGS += -I/usr/include/netcdf-3
 libsim_vol7d_la_LIBADD += $(NETCDF_LIBS)
 endif
 
