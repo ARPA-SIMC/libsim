@@ -24,7 +24,7 @@ type(griddim_def) :: griddim_out
 type(transform) :: trans
 type(grid_transform) :: grid_trans
 
-integer :: nx=30,ny=30,component_flag=0
+integer :: nx=100,ny=100,component_flag=0
 doubleprecision :: lon_min=0., lon_max=30., lat_min=40., lat_max=60.
 doubleprecision :: latitude_south_pole=-90.,longitude_south_pole=0.,angle_rotation=0.
 character(len=80) :: type='regular_ll',trans_type='inter',sub_type='near'

@@ -1194,7 +1194,7 @@ ELSE IF (this%trans%trans_type == 'inter') THEN
 
 
       if ( this%trans%inter%sub_type == 'bilin' ) THEN
-        allocate (this%inter_x(nx,ny),this%inter_y(nx,ny))
+        allocate (this%inter_x(this%innx,this%inny),this%inter_y(this%innx,this%inny))
         allocate (this%inter_xp(this%outnx,this%outny),this%inter_yp(this%outnx,this%outny))
 
 
@@ -1207,8 +1207,8 @@ ELSE IF (this%trans%trans_type == 'inter') THEN
         do i=1, this%innx
           do J=1, this%inny
 
-            this%inter_x(nx,ny)=lon_min+(lon_max-lon_min)/dble(nx-1)*(i-1)
-            this%inter_y(nx,ny)=lat_min+(lat_max-lat_min)/dble(ny-1)*(j-1)
+            this%inter_x(i,j)=lon_min+(((lon_max-lon_min)/dble(this%innx-1))*(i-1))
+            this%inter_y(i,j)=lat_min+(((lat_max-lat_min)/dble(this%inny-1))*(j-1))
           
           end do
         end do
@@ -1487,7 +1487,8 @@ REAL, INTENT(in) :: field_in(:,:)
 REAL, INTENT(out) :: field_out(:,:)
 
 INTEGER :: i, j, ii, jj, ie, je, navg
-doubleprecision :: z1,z2,z3,z4,x1,x3,y1,y3,xp,yp
+real :: z1,z2,z3,z4
+doubleprecision  :: x1,x3,y1,y3,xp,yp
 
 ! check size of field_in, field_out
 
@@ -1549,8 +1550,6 @@ ELSE IF (this%trans%trans_type == 'inter') THEN
     DO j = 1, this%outny 
       DO i = 1, this%outnx 
 
-        field_out(i,j) = rmiss
-
         if   (c_e(this%inter_index_x(i,j)) .and. c_e(this%inter_index_y(i,j)))then
 
           z1=field_in(this%inter_index_x(i,j),this%inter_index_y(i,j))         
@@ -1572,7 +1571,7 @@ ELSE IF (this%trans%trans_type == 'inter') THEN
             y3=this%inter_y(this%inter_index_x(i,j)+1,this%inter_index_y(i,j)+1)     
             
             xp=this%inter_xp(i,j)
-            yp=this%inter_xp(i,j)
+            yp=this%inter_yp(i,j)
             
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
@@ -1593,9 +1592,12 @@ END SUBROUTINE grid_transform_compute
 
 elemental real function hbilin (z1,z2,z3,z4,x1,y1,x3,y3,xp,yp) result (zp)
 
-doubleprecision,intent(in) :: z1,z2,z3,z4,x1,y1,x3,y3,xp,yp
+doubleprecision,intent(in):: x1,y1,x3,y3,xp,yp 
+real,intent(in) :: z1,z2,z3,z4
 
-doubleprecision :: z5,z6,p1,p2
+doubleprecision :: p1,p2
+real :: z5,z6
+
 
 !     effettua interpolazione bilineare dati i valori nei punti
 !     1,2,3,4 e le coordinate dei punti 1 e 3 oltre a quelle

@@ -242,7 +242,7 @@ if (EditionNumber == 1 .or.EditionNumber == 2 )then
 ! datetime is AAAAMMGGhhmmssmsc
   call getval (this,simpledate=date_time)
   read(date_time(:8),*)date
-  read(date_time(9:14),*)time
+  read(date_time(9:12),*)time
   call grib_set(gaid,'dataDate',date)
   call grib_set(gaid,'dataTime',time)
 
