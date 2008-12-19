@@ -18,15 +18,15 @@ integer                            ::  ifile,ofile,gaid
 integer                            ::  iret
 
 integer :: ix,iy,fx,fy,iox,ioy,fox,foy,inx,iny,fnx,fny,newx,newy
-doubleprecision ::  ilon=0.,ilat=40.,flon=30.,flat=60.
+doubleprecision ::  ilon=0.,ilat=30.,flon=30.,flat=60.
 real, allocatable :: field(:,:),fieldz(:,:)
 type(griddim_def) :: griddim_out
 type(transform) :: trans
 type(grid_transform) :: grid_trans
 
-integer :: nx=100,ny=100,component_flag=0
-doubleprecision :: lon_min=0., lon_max=30., lat_min=40., lat_max=60.
-doubleprecision :: latitude_south_pole=-90.,longitude_south_pole=0.,angle_rotation=0.
+integer :: nx=30,ny=30,component_flag=0
+doubleprecision :: lon_min=0., lon_max=30., lat_min=30., lat_max=60.
+doubleprecision :: latitude_south_pole=-32.5,longitude_south_pole=10.,angle_rotation=0.
 character(len=80) :: type='regular_ll',trans_type='inter',sub_type='near'
 
 !da eliminare
@@ -281,12 +281,32 @@ end program demo4
 
 subroutine help()
 
-print*,"demo4 [-h] [-a ilon] [-b ilat] [-c flon] [-d flat] [infile] [outfile]"
-print *,"default : ilon=-5. ilat=30. flon=30. flat=50. infile=gribmix.grb outfile=gribnew.grb"
-
+print*,"demo4 [-h] [-a ilon] [-b ilat] [-c flon] [-d flat] "
+print*,"           [-i nx] [-l ny] [-m lon_min] [-n lon_max] [-o lat_min] [-p lat_max]"
+print*,"           [-q latitude_south_pole] [-r longitude_south_pole] [-s angle_rotation] [-t component_flag]"
+print*,"           [-u type] [-v trans_type] [-z sub_type=optarg]"
+print*,"           [infile] [outfile]"
+print*,""
 print*,"-h  this help message"
 print*,"ilon,ilat  lon and lat in the left down point"
-print*,"flon,flat  lon and lat in the right up point"
+print*,"flon,flat  lon and lat in the right up  point"
+print*,"trans_type transformation type; inter for interpolation, zomm for zomming, boxrregrid for resolution change"
+print*,"sub_type   transformation sub_type"
+print*,"           inter: near , bilin"
+print*,"           zoom: index , coord"
+print*,"           boxregrid: average"
 print*,"infile,outfile  input and output file"
+print*,""
+print*,"only interpolation options:"
+print*,"type             grid type: regular_ll , rotated_ll" 
+print*,"nx, ny           number of nodes on interpolated grid"
+print*,"lon_min lat_min  lon and lat in the left down point of interpolated grid" 
+print*,"lat_min lat_max  lon and lat in the right up  point of interpolated grid" 
+print*,"latitude_south_pole, longitude_south_pole, angle_rotation   rotated grid parameters"
+print*,""
+print *,"default : ilon=0. ilat=30. flon=30. flat=60."
+print*,"           nx=30 ny=30 lon_min=0. lon_max=30. lat_min=30. lat_max=60"
+print*,"           latitude_south_pole=-32.5 longitude_south_pole=10. angle_rotation=0. (component_flag=not.impl.)"
+print*,"           type=regular_ll trans_type=inter sub_type=near"
 
 end subroutine help
