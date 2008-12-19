@@ -44,6 +44,10 @@ INTERFACE delete
   MODULE PROCEDURE delete_gridinfo
 END INTERFACE
 
+INTERFACE clone
+  MODULE PROCEDURE clone_gridinfo
+END INTERFACE
+
 
 !> Import
 !! Legge i valori dal grib e li imposta appropriatamente
@@ -66,7 +70,8 @@ END INTERFACE
 
 private
 
-public gridinfo_type,init,delete,import,export,display,decode_gridinfo,encode_gridinfo
+public gridinfo_type,init,delete,import,export,clone
+public display,decode_gridinfo,encode_gridinfo
 
 contains
 
@@ -159,6 +164,24 @@ call l4f_category_delete(this%category)
 
 end subroutine delete_gridinfo
 
+
+!> Clona un oggetto di tipo gridinfo_type.
+SUBROUTINE clone_gridinfo(this,that)
+TYPE(gridinfo_type),intent(in) :: this !< oggetto da clonare
+TYPE(gridinfo_type),intent(out) :: that !< oggetto clonato
+
+call grib_clone(this%gaid,that%gaid)
+
+call copy(this%griddim,that%griddim)
+
+that%time=this%time
+that%timerange=this%timerange
+that%level=this%level
+that%var=this%var
+
+that%category=this%category
+
+end SUBROUTINE clone_gridinfo
 
 
 subroutine import_gridinfo (this)

@@ -164,6 +164,10 @@ INTERFACE delete
   MODULE PROCEDURE delete_griddim, delete_grid_transform, delete_transform
 END INTERFACE
 
+INTERFACE copy
+  MODULE PROCEDURE copy_griddim
+END INTERFACE
+
 INTERFACE proj
   MODULE PROCEDURE generic_proj
 END INTERFACE
@@ -229,7 +233,7 @@ END INTERFACE
 private
 
 PUBLIC proj, unproj, griddim_proj,griddim_unproj,griddim_def,grid_def,grid_dim
-public init,delete
+public init,delete,copy
 public get_val,set_val,write_unit,read_unit,import,export,display,compute
 public operator(==),count_distinct,pack_distinct,map_distinct,map_inv_distinct,index
 public transform,grid_transform
@@ -321,6 +325,19 @@ call l4f_category_delete(this%category)
 
 end subroutine delete_griddim
 
+
+subroutine copy_griddim(this,that)
+
+type(griddim_def),intent(in) :: this
+type(griddim_def),intent(out) :: that
+
+!whithout pointer
+that%grid=this%grid
+
+!this have pointer
+call copy (this%dim,that%dim)
+
+end subroutine copy_griddim
 
 
 elemental subroutine generic_proj (this,lon,lat,x,y)
@@ -1078,8 +1095,7 @@ IF (this%trans%trans_type == 'zoom') THEN
     lon_max=lon_max+steplon*(this%trans%zoom%index%fx-nx)
     lat_max=lat_max+steplat*(this%trans%zoom%index%fy-ny)
 
-! TODO verificare che questa copia non copi puntatori facendo casini
-    out=in
+    call copy (in,out)
     
     out%dim%nx = this%trans%zoom%index%fx - this%trans%zoom%index%ix + 1 ! newx
     out%dim%ny = this%trans%zoom%index%fy - this%trans%zoom%index%iy + 1 ! newy

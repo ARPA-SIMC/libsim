@@ -245,7 +245,13 @@ DO WHILE (iret == GRIB_SUCCESS)
 
    call compute(grid_trans, field, fieldz)
 
-   gridinfo%griddim = griddim_out
+   call delete(gridinfo%griddim)
+   call copy(griddim_out,gridinfo%griddim)
+
+! oppure per mantenere il vecchio gridinfo
+!   call clone(gridinfo , gridinfo_out)
+!   call delete(gridinfo_out%griddim)
+!   call copy(griddim_out,gridinfo_out%griddim)
 
    call encode_gridinfo(gridinfo,fieldz)
    call export (gridinfo)
@@ -253,10 +259,7 @@ DO WHILE (iret == GRIB_SUCCESS)
    call grib_write(gridinfo%gaid,ofile)
 
    call delete (grid_trans)
-
-! questa delete mi cancella anche griddim_out ed è un problema !
-!   call delete (gridinfo)
-
+   call delete (gridinfo)
    deallocate (field,fieldz)
 
 end do

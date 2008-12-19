@@ -29,6 +29,10 @@ INTERFACE delete
   MODULE PROCEDURE delete_regular_ll
 END INTERFACE
 
+INTERFACE copy
+  MODULE PROCEDURE copy_dim
+END INTERFACE
+
 
 !>\brief trasforma grigliato da coordinate geografiche a coordinate x,y in proiezione
 INTERFACE grid_proj
@@ -97,7 +101,7 @@ END INTERFACE
 
 
 private
-public init,delete,grid_proj,grid_unproj,proj,unproj,get_val,set_val
+public init,delete,copy,grid_proj,grid_unproj,proj,unproj,get_val,set_val
 public read_unit,write_unit,import,export,operator(==)
 public grid_dim,grid_regular_ll
 public display,zoom_coord
@@ -218,6 +222,28 @@ end if
 call l4f_category_delete(this%category)
 
 end subroutine delete_regular_ll
+
+
+subroutine copy_dim(this,that)
+
+type(grid_dim),intent(in) :: this
+type(grid_dim),intent(out) :: that
+
+that%nx=this%nx
+that%ny=this%ny
+
+if (.not.associated(that%lon)) then
+  allocate (that%lon(that%nx,that%ny))
+end if
+
+if (.not.associated(that%lat)) then
+  allocate (that%lat(that%nx,that%ny))
+end if
+
+that%lon(:,:)=this%lon(:,:)
+that%lat(:,:)=this%lat(:,:)
+
+end subroutine copy_dim
 
 
 
