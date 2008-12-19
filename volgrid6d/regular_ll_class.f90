@@ -613,14 +613,21 @@ IF (EditionNumber == 1) THEN
 ELSE IF (EditionNumber == 2) THEN
   ratio = 1.E6
 ELSE
+  call l4f_category_log(this%category,L4F_ERROR,"GribEditionNumber not supported: "//trim(to_char(editionNumber)))
   CALL raise_error('GribEditionNumber not supported')
 ENDIF
 
+
+!TODO da verificare questo test (pare non funzionare)
 IF (ABS(NINT(dlon*ratio) - dlon*ratio) > 1.E-3 .OR. &
  ABS(NINT(dlat*ratio) - dlat*ratio) > 1.E-3) THEN ! Increments not accurate
   CALL grib_set(gaid,'iDirectionIncrementGiven', 0)
   CALL grib_set(gaid,'jDirectionIncrementGiven', 0)
+  CALL grib_set_missing(gaid,'geography.iInc')
+  CALL grib_set_missing(gaid,'geography.jInc')
+  call l4f_category_log(this%category,L4F_DEBUG,"incremets not given: inaccurate!")
 ELSE
+  call l4f_category_log(this%category,L4F_DEBUG,"setting incremets: "//trim(to_char(dlon))//trim(to_char(dlat)))
   CALL grib_set(gaid,'iDirectionIncrementGiven', 1)
   CALL grib_set(gaid,'jDirectionIncrementGiven', 1)
   CALL grib_set(gaid,'geography.iInc', dlon)

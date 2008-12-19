@@ -615,6 +615,9 @@ type(griddim_def),intent(out) :: this !< oggetto griddim
 INTEGER, INTENT(in) :: gaid !< grib_api id da cui leggere
 
 
+call grib_set(gaid,'typeOfGrid' ,this%grid%type%type)
+call l4f_category_log(this%category,L4F_DEBUG,"gtype: "//this%grid%type%type)
+
 select case ( this%grid%type%type)
 
 case ( "regular_ll")
