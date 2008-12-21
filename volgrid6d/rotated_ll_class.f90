@@ -4,7 +4,7 @@ module rotated_ll_class
 
 use log4fortran
 use regular_ll_class
-USE phys_const
+USE doubleprecision_phys_const
 use grib_api
 use err_handling
 
@@ -246,16 +246,23 @@ type(grid_rotated_ll), intent(in) ::this
 doubleprecision, intent(in)  :: lon,lat
 doubleprecision, intent(out) :: x,y
 
-doubleprecision  :: cy0,sy0,rx,srx,crx,sy,cy
+doubleprecision  :: cy0,sy0,rx,srx,crx,sy,cy,lpolosud
 
-cy0 = cos(degrad*this%latitude_south_pole)
-sy0 = sin(degrad*this%latitude_south_pole)
+!TODO NON funziona , da correggere 
 
-rx = lon - this%longitude_south_pole
-srx = sin(degrad*rx)
-crx = cos(degrad*rx)
+
+lpolosud=acos(-sin(degrad*this%latitude_south_pole))
+
+rx = degrad*(lon - this%longitude_south_pole)
+srx = sin(rx)
+crx = cos(rx)
+
+sy0 = sin(lpolosud)
+cy0 = cos(lpolosud)
+
 sy = sin(degrad*lat)
 cy = cos(degrad*lat)
+
 
 x = raddeg*atan2(cy*srx, cy0*cy*crx+sy0*sy)       
 y = raddeg*asin(cy0*sy - sy0*cy*crx)
@@ -269,10 +276,12 @@ type(grid_rotated_ll),intent(in) ::this
 doubleprecision, intent(in)  :: x,y
 doubleprecision, intent(out) :: lon,lat
 
-doubleprecision  :: cy0,sy0
+doubleprecision  :: cy0,sy0,lpolosud
 
-cy0 = cos(degrad*this%latitude_south_pole)
-sy0 = sin(degrad*this%latitude_south_pole)
+lpolosud=acos(-sin(degrad*this%latitude_south_pole))
+
+cy0 = cos(lpolosud)
+sy0 = sin(lpolosud)
 
 lat = raddeg*asin(sy0*cos(degrad*y)*cos(degrad*x)+cy0*sin(degrad*y))
 lon = this%longitude_south_pole + &

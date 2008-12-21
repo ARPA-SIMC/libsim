@@ -29,6 +29,9 @@ doubleprecision :: lon_min=0., lon_max=30., lat_min=30., lat_max=60.
 doubleprecision :: latitude_south_pole=-32.5,longitude_south_pole=10.,angle_rotation=0.
 character(len=80) :: type='regular_ll',trans_type='inter',sub_type='near'
 
+doubleprecision ::x,y,lon,lat
+
+
 !da eliminare
 integer :: i,j
 

@@ -830,6 +830,9 @@ else
 
 end if
 
+
+!TODO: gestire in caso TUTTI dati mancanti
+
 IF ( jPointsAreConsecutive == 0) THEN
   CALL grib_set(this%gaid,'values', PACK(field(x1:x2:xs,y1:y2:ys), .TRUE.))
 ELSE

@@ -609,29 +609,50 @@ dlon = (this%lon_max - this%lon_min) / dble(dim%nx - 1 )
 
 CALL grib_get(gaid,'GRIBEditionNumber',EditionNumber)
 IF (EditionNumber == 1) THEN
-  ratio = 1.E3
+  ratio = 1.d3
 ELSE IF (EditionNumber == 2) THEN
-  ratio = 1.E6
+  ratio = 1.d6
 ELSE
   call l4f_category_log(this%category,L4F_ERROR,"GribEditionNumber not supported: "//trim(to_char(editionNumber)))
   CALL raise_error('GribEditionNumber not supported')
 ENDIF
 
 
-!TODO da verificare questo test (pare non funzionare)
-IF (ABS(NINT(dlon*ratio) - dlon*ratio) > 1.E-3 .OR. &
- ABS(NINT(dlat*ratio) - dlat*ratio) > 1.E-3) THEN ! Increments not accurate
-  CALL grib_set(gaid,'iDirectionIncrementGiven', 0)
-  CALL grib_set(gaid,'jDirectionIncrementGiven', 0)
-  CALL grib_set_missing(gaid,'geography.iInc')
-  CALL grib_set_missing(gaid,'geography.jInc')
-  call l4f_category_log(this%category,L4F_DEBUG,"incremets not given: inaccurate!")
+!TODO da verificare questo test (la costante 0.5 è casuale)
+IF (ABS(NINT(dlon*ratio) - dlon*ratio) > 0.5 .OR. &
+ ABS(NINT(dlat*ratio) - dlat*ratio) > 0.5) THEN ! Increments not accurate
+
+  call l4f_category_log(this%category,L4F_INFO,"incremets not given: inaccurate!")
+  call l4f_category_log(this%category,L4F_DEBUG,"lon incremets difference: "//&
+   to_char(ABS(NINT(dlon*ratio) - dlon*ratio)))
+  call l4f_category_log(this%category,L4F_DEBUG,"lat incremets difference: "//&
+   to_char(ABS(NINT(dlat*ratio) - dlat*ratio)))
+
+  CALL grib_set(gaid,'resolutionAndComponentFlags',0)
+  CALL grib_set_missing(gaid,'iDirectionIncrement')
+  CALL grib_set_missing(gaid,'jDirectionIncrement')
+
+! questo non va
+!  CALL grib_set(gaid,'ijDirectionIncrementGiven', 0)
+!  CALL grib_set(gaid,'iDirectionIncrementGiven', 0)
+!  CALL grib_set(gaid,'jDirectionIncrementGiven', 0)
+!  CALL grib_set_missing(gaid,'geography.iInc')
+!  CALL grib_set_missing(gaid,'geography.jInc')
+
 ELSE
   call l4f_category_log(this%category,L4F_DEBUG,"setting incremets: "//trim(to_char(dlon))//trim(to_char(dlat)))
-  CALL grib_set(gaid,'iDirectionIncrementGiven', 1)
-  CALL grib_set(gaid,'jDirectionIncrementGiven', 1)
-  CALL grib_set(gaid,'geography.iInc', dlon)
-  CALL grib_set(gaid,'geography.jInc', dlat)
+
+  CALL grib_set(gaid,'resolutionAndComponentFlags',128)
+  CALL grib_set(gaid,'iDirectionIncrement',dlon*ratio)
+  CALL grib_set(gaid,'jDirectionIncrement',dlat*ratio)
+
+! questo non va
+!  CALL grib_set(gaid,'ijDirectionIncrementGiven', 1)
+!  CALL grib_set(gaid,'iDirectionIncrementGiven', 1)
+!  CALL grib_set(gaid,'jDirectionIncrementGiven', 1)
+!  CALL grib_set(gaid,'geography.iInc', dlon)
+!  CALL grib_set(gaid,'geography.jInc', dlat)
+
 ENDIF
 
 end subroutine export_regular_ll
