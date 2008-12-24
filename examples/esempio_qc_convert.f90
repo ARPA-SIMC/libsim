@@ -84,7 +84,7 @@ do iarea = 1, 3
       filename = "pctl_prec_"//minuti(itimerange)//"m_all_"//area(iarea)
       write (filename(20:) ,"(i1.1)")ilevel-1
       filename =filename(:20)//".txt"
-      filename="/home/pavan/cq_emr/percentili/"//filename
+      filename="/autofs/nethomes/pavan/cq_emr/percentili/"//filename
       
       print *, "apro file=",filename
       open (unit=iunit,file=filename)

@@ -111,6 +111,10 @@ character(len=512) :: filepath
 
 ier=0
 
+nullify ( qccli%in_macroa )
+nullify ( qccli%data_id_in )
+nullify ( qccli%data_id_out )
+
 ! riporto il volume dati nel mio oggetto
 qccli%v7d => v7d
 
@@ -118,7 +122,6 @@ if (present(data_id_in))then
   qccli%data_id_in => data_id_in
 end if
 
-nullify ( qccli%in_macroa )
 
 if (present(macropath))then
   filepath=macropath
