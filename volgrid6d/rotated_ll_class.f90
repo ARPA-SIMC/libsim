@@ -436,6 +436,11 @@ if (EditionNumber == 1)then
 
    call grib_set(gaid,'angleOfRotationInDegrees',this%angle_rotation)
 
+!TODO
+! per ora devo fare questo ma poi i PV dovranno essere gestiti
+   call grib_set(gaid,"numberOfVerticalCoordinateValues",0)
+   call grib_set(gaid,"pvlLocation",255)
+
 else if (EditionNumber == 2)then
 
    call grib_set(gaid,'angleOfRotationOfProjectionInDegrees',this%angle_rotation)
