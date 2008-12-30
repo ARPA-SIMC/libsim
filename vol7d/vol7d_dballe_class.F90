@@ -1678,6 +1678,8 @@ ntime=size(this%vol7d%time(:))
 allocate (lnetwork(nnetwork))
 lnetwork=.false.
 allocate (ana_id(nstaz,nnetwork))
+ana_id=DBA_MVI
+
 
 if (present(network))then
       where (network == this%vol7d%network(:)%id)
@@ -1755,8 +1757,6 @@ do iii=1, nnetwork
    end if
 
    do i=1, nstaz
-
-      ana_id(i,iii)=DBA_MVI
 
       if (present(coordmin).and.present(coordmax))then
 
