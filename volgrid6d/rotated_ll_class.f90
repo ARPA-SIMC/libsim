@@ -413,7 +413,6 @@ else
   CALL raise_error('GribEditionNumber not supported')
 
 end if
-                                ! da capire come ottenere 
 
 end subroutine import_rotated_ll
 
@@ -436,10 +435,6 @@ if (EditionNumber == 1)then
 
    call grib_set(gaid,'angleOfRotationInDegrees',this%angle_rotation)
 
-!TODO
-! per ora devo fare questo ma poi i PV dovranno essere gestiti
-   call grib_set(gaid,"numberOfVerticalCoordinateValues",0)
-   call grib_set(gaid,"pvlLocation",255)
 
 else if (EditionNumber == 2)then
 

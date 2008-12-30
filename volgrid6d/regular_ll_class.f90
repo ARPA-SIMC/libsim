@@ -610,6 +610,13 @@ dlon = (this%lon_max - this%lon_min) / dble(dim%nx - 1 )
 CALL grib_get(gaid,'GRIBEditionNumber',EditionNumber)
 IF (EditionNumber == 1) THEN
   ratio = 1.d3
+
+!TODO
+! per ora devo fare questo ma poi i PV dovranno essere gestiti
+!   call grib_set(gaid,"numberOfVerticalCoordinateValues",0)
+!   call grib_set(gaid,"pvlLocation",255)
+
+
 ELSE IF (EditionNumber == 2) THEN
   ratio = 1.d6
 ELSE

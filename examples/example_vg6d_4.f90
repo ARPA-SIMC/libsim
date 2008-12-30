@@ -54,7 +54,7 @@ do
   case( 'a' )
     read(optarg,*,iostat=ier)ilon
     if (ier/= 0)then
-      call l4f_category_log(category,L4F_ERROR,'option argument error')
+      call l4f_category_log(category,L4F_ERROR,'a option argument error')
       call help()
       call exit(ier)
     end if
@@ -62,7 +62,7 @@ do
   case( 'b' )
     read(optarg,*,iostat=ier)ilat
     if (ier/= 0)then
-      call l4f_category_log(category,L4F_ERROR,'option argument error')
+      call l4f_category_log(category,L4F_ERROR,'b option argument error')
       call help()
       call exit(ier)
     end if
@@ -70,7 +70,7 @@ do
   case( 'c' )
     read(optarg,*,iostat=ier)flon
     if (ier/= 0)then
-      call l4f_category_log(category,L4F_ERROR,'option argument error')
+      call l4f_category_log(category,L4F_ERROR,'c option argument error')
       call help()
       call exit(ier)
     end if
@@ -78,7 +78,7 @@ do
   case( 'd' )
     read(optarg,*,iostat=ier)flat
     if (ier/= 0)then
-      call l4f_category_log(category,L4F_ERROR,'option argument error')
+      call l4f_category_log(category,L4F_ERROR,'d option argument error')
       call help()
       call exit(ier)
     end if
@@ -86,70 +86,70 @@ do
   case( 'i' )
     read(optarg,*,iostat=ier)nx
     if (ier/= 0)then
-      call l4f_category_log(category,L4F_ERROR,'option argument error')
+      call l4f_category_log(category,L4F_ERROR,'i option argument error')
       call help()
       call exit(ier)
     end if
   case( 'l' )
     read(optarg,*,iostat=ier)ny
     if (ier/= 0)then
-      call l4f_category_log(category,L4F_ERROR,'option argument error')
+      call l4f_category_log(category,L4F_ERROR,'l option argument error')
       call help()
       call exit(ier)
     end if
   case( 'm' )
     read(optarg,*,iostat=ier)lon_min
     if (ier/= 0)then
-      call l4f_category_log(category,L4F_ERROR,'option argument error')
+      call l4f_category_log(category,L4F_ERROR,'m option argument error')
       call help()
       call exit(ier)
     end if
   case( 'n' )
     read(optarg,*,iostat=ier)lon_max
     if (ier/= 0)then
-      call l4f_category_log(category,L4F_ERROR,'option argument error')
+      call l4f_category_log(category,L4F_ERROR,'n option argument error')
       call help()
       call exit(ier)
     end if
   case( 'o' )
     read(optarg,*,iostat=ier)lat_min
     if (ier/= 0)then
-      call l4f_category_log(category,L4F_ERROR,'option argument error')
+      call l4f_category_log(category,L4F_ERROR,'o option argument error')
       call help()
       call exit(ier)
     end if
   case( 'p' )
     read(optarg,*,iostat=ier)lat_max
     if (ier/= 0)then
-      call l4f_category_log(category,L4F_ERROR,'option argument error')
+      call l4f_category_log(category,L4F_ERROR,'p option argument error')
       call help()
       call exit(ier)
     end if
   case( 'q' )
     read(optarg,*,iostat=ier)latitude_south_pole
     if (ier/= 0)then
-      call l4f_category_log(category,L4F_ERROR,'option argument error')
+      call l4f_category_log(category,L4F_ERROR,'q option argument error')
       call help()
       call exit(ier)
     end if
   case( 'r' )
     read(optarg,*,iostat=ier)longitude_south_pole
     if (ier/= 0)then
-      call l4f_category_log(category,L4F_ERROR,'option argument error')
+      call l4f_category_log(category,L4F_ERROR,'r option argument error')
       call help()
       call exit(ier)
     end if
   case( 's' )
     read(optarg,*,iostat=ier)angle_rotation
     if (ier/= 0)then
-      call l4f_category_log(category,L4F_ERROR,'option argument error')
+      call l4f_category_log(category,L4F_ERROR,'s option argument error')
       call help()
       call exit(ier)
     end if
   case( 't' )
     read(optarg,*,iostat=ier)component_flag
     if (ier/= 0)then
-      call l4f_category_log(category,L4F_ERROR,'option argument error')
+      call l4f_category_log(category,L4F_ERROR,'t option argument error')
       call help()
       call exit(ier)
     end if
