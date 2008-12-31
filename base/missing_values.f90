@@ -58,7 +58,7 @@ PUBLIC
 CONTAINS
 
 !> Controlla se l'argomento byte è un dato valido
-  logical function c_e_b(var)
+elemental  logical function c_e_b(var)
 
 !OMSTART c_e_b
 !	function c_e_b(var)
@@ -72,7 +72,7 @@ CONTAINS
 !	C_E_B	LOGICAL	.TRUE.se il dato e` presente
 !OMEND
 
-    integer(kind=int_b)  :: var !< variabile da controllare
+    integer(kind=int_b),intent(in)  :: var !< variabile da controllare
 
     c_e_b=.true.
     if (var == ibmiss)c_e_b= .FALSE. 
@@ -81,7 +81,7 @@ CONTAINS
 
 
 !> Controlla se l'argomento short è un dato valido
-    logical function c_e_s(var)
+elemental    logical function c_e_s(var)
 
 !OMSTART c_e_i
 !	function c_e_s(var)
@@ -95,7 +95,7 @@ CONTAINS
 !	C_E_i	LOGICAL	.TRUE.se il dato e` presente
 !OMEND
 
-    integer (kind=int_s) ::  var !< variabile da controllare
+    integer (kind=int_s),intent(in) ::  var !< variabile da controllare
 
     c_e_s=.true.
     if (var == ismiss)c_e_s= .FALSE. 
@@ -104,7 +104,7 @@ CONTAINS
 
 
 !> Controlla se l'argomento long è un dato valido
-    logical function c_e_l(var)
+elemental    logical function c_e_l(var)
 
 !OMSTART c_e_l
 !	function c_e_l(var)
@@ -118,7 +118,7 @@ CONTAINS
 !	C_E_l	LOGICAL	.TRUE.se il dato e` presente
 !OMEND
 
-    integer (kind=int_l) ::  var !< variabile da controllare
+    integer (kind=int_l),intent(in) ::  var !< variabile da controllare
 
     c_e_l=.true.
     if (var == ilmiss)c_e_l= .FALSE. 
@@ -129,7 +129,7 @@ CONTAINS
 
 
 !> Controlla se l'argomento real è un dato valido
-    logical function c_e_r(var)
+elemental    logical function c_e_r(var)
 
 !OMSTART c_e_r
 !	function c_e_r(var)
@@ -143,7 +143,7 @@ CONTAINS
 !	C_E_R	LOGICAL	.TRUE.se il dato e` presente
 !OMEND
 
-    real :: var !< variabile da controllare
+    real,intent(in) :: var !< variabile da controllare
 
     c_e_r=.true.
     if (var == rmiss)c_e_r= .FALSE. 
@@ -151,7 +151,7 @@ CONTAINS
     end function c_e_r
 
 !> Controlla se l'argomento double è un dato valido
-    logical function c_e_d(var)
+elemental    logical function c_e_d(var)
 
 !OMSTART c_e_d
 !	function c_e_d(var)
@@ -165,7 +165,7 @@ CONTAINS
 !	C_E_D	LOGICAL	.TRUE.se il dato e` presente
 !OMEND
 
-    real (kind=fp_d) ::  var !< variabile da controllare
+    real (kind=fp_d),intent(in) ::  var !< variabile da controllare
 
     c_e_d=.true.
     if (var == rdmiss)c_e_d= .FALSE. 
@@ -175,7 +175,7 @@ CONTAINS
 
 
 !> Controlla se l'argomento character è un dato valido
-    logical function c_e_c(var)
+elemental    logical function c_e_c(var)
 !OMSTART C_E_C
 !	function c_e_c(var)
 !	Verifica la condizione di presenza o assenza del dato secondo
@@ -188,7 +188,7 @@ CONTAINS
 !	C_E_C	LOGICAL		.TRUE.se il dato e` presente
 !OMEND
 
-      character (len=*) var !< variabile da controllare
+      character (len=*),intent(in) :: var !< variabile da controllare
 
       c_e_c=.true.
       if (var == cmiss)c_e_c=.false.
