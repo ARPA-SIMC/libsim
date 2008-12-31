@@ -552,6 +552,8 @@ else
 
 end IF
 
+!cerco di esprimere le coordinate come in un piano cartesiano
+if (this%lon_max-this%lon_min < 0) this%lon_min=this%lon_min-360.d0
 
 end subroutine import_regular_ll
 
@@ -597,6 +599,10 @@ else
   laLast  = this%lat_max
 
 end IF
+
+!report lon in standard grib 2 definition
+if (loFirst < 0.d0)loFirst=loFirst+360.d0
+if (loLast < 0.d0)loLast=loLast+360.d0
 
 call grib_set(gaid,'geography.loFirst' ,loFirst)
 call grib_set(gaid,'geography.loLast'  ,loLast)
