@@ -109,7 +109,7 @@ type boxregrid
   type(boxregrid_average) :: average
 end type boxregrid
 
-TYPE transform
+TYPE transform_def
 
   private
 
@@ -121,14 +121,14 @@ TYPE transform
 
   integer :: category !< log4fortran
 
-END TYPE transform
+END TYPE transform_def
 
 
 TYPE grid_transform
 
   private
 
-  TYPE(transform) :: trans
+  TYPE(transform_def) :: trans
 
   integer :: innx,  inny
   integer :: outnx, outny
@@ -236,7 +236,7 @@ PUBLIC proj, unproj, griddim_proj,griddim_unproj,griddim_def,grid_def,grid_dim
 public init,delete,copy
 public get_val,set_val,write_unit,read_unit,import,export,display,compute
 public operator(==),count_distinct,pack_distinct,map_distinct,map_inv_distinct,index
-public transform,grid_transform
+public transform_def,grid_transform
 contains
 
 
@@ -775,7 +775,7 @@ SUBROUTINE init_transform(this, trans_type,sub_type, &
  npx, npy, &
  zoom_type,boxregrid_type,inter_type,external,categoryappend)
 
-TYPE(transform),INTENT(out) :: this !< transformation object
+TYPE(transform_def),INTENT(out) :: this !< transformation object
 CHARACTER(len=*) :: trans_type !< type of transformation, can be \c 'zoom', \c 'boxregrid', \c 'interp', ...
 CHARACTER(len=*) :: sub_type !< sub type of transformation, depend on trans_type and is an alternative to zoom_type, boxregrid_type, inter_type
 INTEGER,INTENT(in),OPTIONAL :: ix !< index of initial point of new grid on x (for zoom)
@@ -955,7 +955,7 @@ end SUBROUTINE init_transform
 
 SUBROUTINE delete_transform(this)
 
-TYPE(transform),INTENT(out) :: this !< transformation object
+TYPE(transform_def),INTENT(out) :: this !< transformation object
 
 this%trans_type=cmiss
 
@@ -1001,7 +1001,7 @@ end SUBROUTINE delete_transform
 SUBROUTINE init_grid_transform(this,trans,in,out,categoryappend)
 
 TYPE(grid_transform),INTENT(out) :: this !< grid transformation object
-TYPE(transform),INTENT(in) :: trans !< transformation object
+TYPE(transform_def),INTENT(in) :: trans !< transformation object
 TYPE(griddim_def),INTENT(in) :: in !< grid transformated object
 TYPE(griddim_def),INTENT(out) :: out !< grid transformated object
 
@@ -1501,7 +1501,7 @@ end SUBROUTINE delete_grid_transform
 !!$
 
 SUBROUTINE grid_transform_compute(this, field_in, field_out)
-TYPE(grid_transform),INTENT(out) :: this
+TYPE(grid_transform),INTENT(in) :: this
 REAL, INTENT(in) :: field_in(:,:)
 REAL, INTENT(out) :: field_out(:,:)
 

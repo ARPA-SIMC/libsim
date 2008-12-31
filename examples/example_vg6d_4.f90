@@ -21,7 +21,7 @@ integer :: ix,iy,fx,fy,iox,ioy,fox,foy,inx,iny,fnx,fny,newx,newy
 doubleprecision ::  ilon=0.,ilat=30.,flon=30.,flat=60.
 real, allocatable :: field(:,:),fieldz(:,:)
 type(griddim_def) :: griddim_out
-type(transform) :: trans
+type(transform_def) :: trans
 type(grid_transform) :: grid_trans
 
 integer :: nx=30,ny=30,component_flag=0

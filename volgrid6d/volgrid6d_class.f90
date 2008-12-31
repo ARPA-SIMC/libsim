@@ -59,11 +59,17 @@ INTERFACE export
   MODULE PROCEDURE volgrid6d_write_on_file,export_to_gridinfo,export_to_gridinfov,export_to_gridinfovv
 END INTERFACE
 
+INTERFACE compute
+  MODULE PROCEDURE volgrid6d_transform_compute
+END INTERFACE
 
+INTERFACE transform
+  MODULE PROCEDURE volgrid6d_transform,volgrid6dv_transform
+END INTERFACE
 
 private
 
-public volgrid6d,init,delete,export,import
+public volgrid6d,init,delete,export,import,compute,transform
 
 
 contains
@@ -89,7 +95,7 @@ call l4f_category_log(this%category,L4F_DEBUG,"init")
 call init(this%griddim)
 
 if (present(griddim))then
-  this%griddim=griddim
+  call copy (griddim,this%griddim)
 end if
 
  ! call init(this%time)         
@@ -127,7 +133,7 @@ ELSE
 ENDIF
 
 
-if (present(dim)) this%griddim%dim=dim
+if (present(dim)) call copy (dim,this%griddim%dim)
 
 
 IF (PRESENT(ntime)) THEN
@@ -851,6 +857,105 @@ do i=1,size(this)
 end do
 
 end subroutine delete_volgrid6dv
+
+
+SUBROUTINE volgrid6d_transform_compute(this, volgrid6d_in, volgrid6d_out)
+TYPE(grid_transform),INTENT(in) :: this
+type(volgrid6d), INTENT(in) :: volgrid6d_in
+type(volgrid6d), INTENT(out) :: volgrid6d_out
+
+integer :: ntime, ntimerange, nlevel, nvar
+integer :: itime, itimerange, ilevel, ivar
+
+
+ntime=0
+ntimerange=0
+nlevel=0
+nvar=0
+
+if (associated(volgrid6d_in%time)) ntime=size(volgrid6d_in%time)
+if (associated(volgrid6d_in%timerange)) ntimerange=size(volgrid6d_in%timerange)
+if (associated(volgrid6d_in%level)) nlevel=size(volgrid6d_in%level)
+if (associated(volgrid6d_in%var)) nvar=size(volgrid6d_in%var)
+
+do itime=1,ntime
+  do itimerange=1,ntimerange
+    do ilevel=1,nlevel
+      do ivar=1,nvar
+        
+        call compute(this, &
+         volgrid6d_in%voldati(:,:,ilevel,itime,itimerange,ivar),&
+         volgrid6d_out%voldati(:,:,ilevel,itime,itimerange,ivar))
+
+      end do
+    end do
+  end do
+end do
+
+end SUBROUTINE volgrid6d_transform_compute
+
+
+subroutine volgrid6d_transform(this,griddim, volgrid6d_in, volgrid6d_out,categoryappend)
+type(transform_def),intent(in) :: this
+type(griddim_def) :: griddim
+type(volgrid6d), INTENT(in) :: volgrid6d_in
+type(volgrid6d), INTENT(out) :: volgrid6d_out
+character(len=*),INTENT(in),OPTIONAL :: categoryappend !< appende questo suffisso al namespace category di log4fortran
+
+type(grid_transform) :: grid_trans
+integer :: ntime, ntimerange, nlevel, nvar
+
+
+call init (volgrid6d_out,griddim,categoryappend)
+
+ntime=0
+ntimerange=0
+nlevel=0
+nvar=0
+
+if (associated(volgrid6d_in%time)) ntime=size(volgrid6d_in%time)
+if (associated(volgrid6d_in%timerange)) ntimerange=size(volgrid6d_in%timerange)
+if (associated(volgrid6d_in%level)) nlevel=size(volgrid6d_in%level)
+if (associated(volgrid6d_in%var)) nvar=size(volgrid6d_in%var)
+
+call volgrid6d_alloc(volgrid6d_out, griddim%dim, ntime, nlevel, ntimerange, nvar)
+
+!ensure unproj was called
+call griddim_unproj(volgrid6d_out%griddim)
+
+call init(grid_trans, this, in=volgrid6d_in%griddim,out=volgrid6d_out%griddim,&
+ categoryappend=categoryappend)
+
+call compute(grid_trans, volgrid6d_in, volgrid6d_out)
+
+call delete (grid_trans)
+
+
+end subroutine volgrid6d_transform
+
+
+
+
+subroutine volgrid6dv_transform(this,griddim, volgrid6d_in, volgrid6d_out,categoryappend)
+type(transform_def),intent(in) :: this
+type(griddim_def) :: griddim
+type(volgrid6d), INTENT(in) :: volgrid6d_in(:)
+type(volgrid6d), pointer :: volgrid6d_out(:)
+character(len=*),INTENT(in),OPTIONAL :: categoryappend !< appende questo suffisso al namespace category di log4fortran
+
+integer :: i,n
+n=size(volgrid6d_in)
+
+allocate( volgrid6d_out(n))
+
+do i=1,n
+
+  call transform (this,griddim, volgrid6d_in(i), volgrid6d_out(i),categoryappend)
+
+end do
+
+end subroutine volgrid6dv_transform
+
 
 
 
