@@ -39,11 +39,12 @@ integer :: i,j
 !questa chiamata prende dal launcher il nome univoco
 call l4f_launcher(a_name,a_name_force="demo4")
 
+!init di log4fortran
+ier=l4f_init()
+
 !imposta a_name
 category=l4f_category_get(a_name//".main")
 
-!init di log4fortran
-ier=l4f_init()
 
 opterr=.false.
 do

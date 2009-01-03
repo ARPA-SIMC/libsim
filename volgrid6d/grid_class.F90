@@ -1509,16 +1509,21 @@ INTEGER :: i, j, ii, jj, ie, je, navg
 real :: z1,z2,z3,z4
 doubleprecision  :: x1,x3,y1,y3,xp,yp
 
+call l4f_category_log(this%category,L4F_ERROR,"start grid_transform_compute")
+
 ! check size of field_in, field_out
 
 if (any(shape(field_in) /= (/this%innx,this%inny/))) then
 
-  call l4f_category_log(this%category,L4F_ERROR,"inconsistent in shape: "//to_char(this%innx)//to_char(this%inny))
+  call l4f_category_log(this%category,L4F_ERROR,"inconsistent in shape: "//&
+   trim(to_char(this%innx))//" - "//trim(to_char(this%inny)))
   call raise_fatal_error("inconsistent shape")
 end if
 
 if (any(shape(field_out) /= (/this%outnx,this%outny/))) then
-  call l4f_category_log(this%category,L4F_ERROR,"inconsistent out shape: "//to_char(this%outny)//to_char(this%outny))
+
+  call l4f_category_log(this%category,L4F_ERROR,"inconsistent out shape: "//&
+   trim(to_char(this%outny))//" - "//trim(to_char(this%outny)))
   call raise_fatal_error("inconsistent shape")
 end if
 
@@ -1527,12 +1532,16 @@ field_out(:,:) = rmiss
 
 IF (this%trans%trans_type == 'zoom') THEN
 
+  call l4f_category_log(this%category,L4F_ERROR,"start grid_transform_compute zoom")
+
   field_out(this%outinx:this%outfnx, &
    this%outiny:this%outfny) = &
    field_in(this%iniox:this%infox, &
    this%inioy:this%infoy)
 
 ELSE IF (this%trans%trans_type == 'boxregrid') THEN
+
+  call l4f_category_log(this%category,L4F_ERROR,"start grid_transform_compute boxregrid")
 
   jj = 0
   DO j = 1, this%inny - this%trans%boxregrid%average%npy + 1, this%trans%boxregrid%average%npy
@@ -1551,6 +1560,8 @@ ELSE IF (this%trans%trans_type == 'boxregrid') THEN
   ENDDO
 
 ELSE IF (this%trans%trans_type == 'inter') THEN
+
+  call l4f_category_log(this%category,L4F_ERROR,"start grid_transform_compute inter")
 
   IF (this%trans%inter%sub_type == 'near') THEN
 

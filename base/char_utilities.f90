@@ -31,7 +31,7 @@ PRIVATE int_to_char, byte_to_char, char_to_char, &
 !! accorda con il tipo di \a x.
 INTERFACE to_char
   MODULE PROCEDURE int_to_char, byte_to_char, char_to_char, &
-   real_to_char, double_to_char
+   real_to_char, double_to_char, logical_to_char
 END INTERFACE
 
 CONTAINS

@@ -232,16 +232,25 @@ type(grid_dim),intent(out) :: that
 that%nx=this%nx
 that%ny=this%ny
 
-if (.not.associated(that%lon)) then
-  allocate (that%lon(that%nx,that%ny))
+if (associated(this%lon))then
+  if (.not.associated(that%lon)) then
+    allocate (that%lon(that%nx,that%ny))
+    that%lon(:,:)=this%lon(:,:)
+  end if
+else
+  nullify (that%lon)
 end if
 
-if (.not.associated(that%lat)) then
-  allocate (that%lat(that%nx,that%ny))
+
+if (associated(this%lat))then
+  if (.not.associated(that%lat)) then
+    allocate (that%lat(that%nx,that%ny))
+    that%lat(:,:)=this%lat(:,:)
+  end if
+else
+  nullify (that%lat)
 end if
 
-that%lon(:,:)=this%lon(:,:)
-that%lat(:,:)=this%lat(:,:)
 
 end subroutine copy_dim
 

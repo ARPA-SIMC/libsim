@@ -1670,6 +1670,7 @@ if (associated(this%volanaattrc))  read(unit=lunit)this%volanaattrc
 if (associated(this%voldatic))     read(unit=lunit)this%voldatic
 if (associated(this%voldatiattrc)) read(unit=lunit)this%voldatiattrc
 
+if (.not. present(unit)) close(unit=lunit)
 
 end subroutine vol7d_read_from_file
 

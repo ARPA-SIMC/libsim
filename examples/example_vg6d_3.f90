@@ -20,11 +20,11 @@ integer  :: ngrib
 !questa chiamata prende dal launcher il nome univoco
 call l4f_launcher(a_name,a_name_force="demo3")
 
-!imposta a_name
-category=l4f_category_get(a_name//".main")
-
 !init di log4fortran
 ier=l4f_init()
+
+!imposta a_name
+category=l4f_category_get(a_name//".main")
 
 
 ngrib=0
@@ -105,6 +105,7 @@ call grib_close_file(ifile)
 call l4f_category_log(category,L4F_INFO,"terminato")
 
 deallocate(gridinfo)
+deallocate(gridinfoout)
 
 !chiudo il logger
 call l4f_category_delete(category)

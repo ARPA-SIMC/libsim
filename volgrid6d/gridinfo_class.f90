@@ -7,6 +7,7 @@ USE vol7d_level_class
 USE volgrid6d_var_class
 use grib_api
 use log4fortran
+use optional_values
 
 
 IMPLICIT NONE
@@ -76,7 +77,7 @@ public display,decode_gridinfo,encode_gridinfo
 contains
 
 !> Inizializza un oggetto di tipo gridinfo_type.
-SUBROUTINE init_gridinfo(this,gaid,griddim,time,timerange,level,var,categoryappend)
+SUBROUTINE init_gridinfo(this,gaid,griddim,time,timerange,level,var,clone,categoryappend)
 TYPE(gridinfo_type),intent(out) :: this !< oggetto da inizializzare
 
 !> id del grib come da grib_api
@@ -91,7 +92,7 @@ TYPE(vol7d_timerange),intent(in),optional :: timerange
 TYPE(vol7d_level),intent(in),optional :: level
 !> vettore descrittore della dimensione variabile di anagrafica
 TYPE(volgrid6d_var),intent(in),optional :: var
-
+logical , intent(in),optional :: clone !< se fornito e \c .TRUE., clona gaid to gridinfo
 character(len=*),INTENT(in),OPTIONAL :: categoryappend !< appennde questo suffisso al namespace category di log4fortran
 
 character(len=512) :: a_name
@@ -103,14 +104,21 @@ else
 end if
 this%category=l4f_category_get(a_name)
 
+call l4f_category_log(this%category,L4F_DEBUG,"start init gridinfo")
 
 if (present(gaid))then
-  this%gaid=gaid
+
+  if (optio_log(clone))then
+    call grib_clone(gaid,this%gaid)
+  else
+    this%gaid=gaid
+  end if
 else
   this%gaid=imiss
 end if
 
-call l4f_category_log(this%category,L4F_DEBUG,"init gridinfo gaid: "//to_char(this%gaid))
+call l4f_category_log(this%category,L4F_DEBUG,"gaid present: "&
+ //to_char(c_e(this%gaid))//" value: "//to_char(this%gaid))
 
 if (present(griddim))then
   this%griddim=griddim
@@ -148,6 +156,7 @@ end SUBROUTINE init_gridinfo
 subroutine delete_gridinfo (this)
 TYPE(gridinfo_type),intent(out) :: this !< oggetto da eliminare
 
+call l4f_category_log(this%category,L4F_DEBUG,"start delete_gridinfo" )
 
 call delete(this%griddim)
 call delete(this%time)
@@ -155,7 +164,8 @@ call delete(this%timerange)
 call delete(this%level)
 call delete(this%var)
 
-call l4f_category_log(this%category,L4F_DEBUG,"cancello gaid" )
+call l4f_category_log(this%category,L4F_DEBUG,"delete gaid" )
+call grib_release (this%gaid) 
 this%gaid=imiss
 
 !chiudo il logger
@@ -189,7 +199,7 @@ subroutine import_gridinfo (this)
 TYPE(gridinfo_type),intent(out) :: this !< oggetto da importare
 
 
-call l4f_category_log(this%category,L4F_DEBUG,"ora provo ad importare da grib")
+call l4f_category_log(this%category,L4F_DEBUG,"import from gaid")
 
 
 call import(this%griddim,this%gaid)
@@ -206,7 +216,7 @@ subroutine export_gridinfo (this)
 
 TYPE(gridinfo_type),intent(out) :: this !< oggetto da exportare
 
-call l4f_category_log(this%category,L4F_DEBUG,"export to grib" )
+call l4f_category_log(this%category,L4F_DEBUG,"export to gaid" )
 
 !attenzione: exportando da volgrid griddim è già esportato
 
