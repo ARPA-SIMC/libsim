@@ -472,7 +472,7 @@ ENDIF
 END SUBROUTINE geo_coorddesc_setval
 
 
-SUBROUTINE geo_coorddesc_getval(this, fuso, elliss)
+elemental SUBROUTINE geo_coorddesc_getval(this, fuso, elliss)
 TYPE(geo_coorddesc),INTENT(IN) :: this
 INTEGER, INTENT(OUT), OPTIONAL  :: fuso, elliss
 
@@ -562,7 +562,7 @@ END SUBROUTINE geo_coord_delete
 !! Qualsiasi combinazione dei parametri opzionali è consentita; se
 !! il tipo di coordinata richiesta non è stato inizializzato né calcolato,
 !! restituisce il corrispondente valore mancante.
-SUBROUTINE geo_coord_getval(this, lon, lat, utme, utmn, fuso, elliss)
+elemental SUBROUTINE geo_coord_getval(this, lon, lat, utme, utmn, fuso, elliss)
 TYPE(geo_coord),INTENT(IN) :: this !< oggetto di cui restituire i componenti
 REAL(kind=fp_geo), INTENT(OUT), OPTIONAL :: lon !< longitudine geografica
 REAL(kind=fp_geo), INTENT(OUT), OPTIONAL :: lat !< latitudine geografica
