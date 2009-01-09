@@ -34,7 +34,7 @@ call init(ana(2),lat=45.6D0,lon=11.8D0)
 call init(ana(3),lat=46.6D0,lon=12.8D0)
 
 !trasformation object
-call init(trans, trans_type="inter",sub_type="near", categoryappend="trasformation")
+call init(trans, trans_type="inter",sub_type="bilin", categoryappend="trasformation")
 
 call import (volgrid,filename="in.grb",categoryappend="volume letto")
 

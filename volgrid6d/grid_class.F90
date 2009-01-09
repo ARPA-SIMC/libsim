@@ -1326,7 +1326,6 @@ IF (this%trans%trans_type == 'inter') THEN
        lon=reshape(lon,(/size(lon),1/)),lat=reshape(lat,(/size(lat),1/)),&
        index_x=this%inter_index_x,index_y=this%inter_index_y)
 
-      deallocate(lon,lat)
 
       if ( this%trans%inter%sub_type == 'bilin' ) THEN
         allocate (this%inter_x(this%innx,this%inny),this%inter_y(this%innx,this%inny))
@@ -1353,6 +1352,8 @@ IF (this%trans%trans_type == 'inter') THEN
        this%inter_xp,this%inter_yp)
 
       end if
+
+      deallocate(lon,lat)
 
     case default
       call l4f_category_log(this%category,L4F_ERROR,"init_grid_transform inter gtype: "//trim(in%grid%type%type)//" non gestita" )
