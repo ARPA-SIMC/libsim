@@ -88,7 +88,7 @@ CONTAINS
 !! inizializzato a valore mancante.
 !! I membri \a r, \a d, \a i, \a b, \a c non possono essere assegnati
 !! tramite costruttore, ma solo direttamente.
-SUBROUTINE vol7d_var_init(this, btable, description, unit)
+elemental SUBROUTINE vol7d_var_init(this, btable, description, unit)
 TYPE(vol7d_var),INTENT(INOUT) :: this !< oggetto da inizializzare
 !INTEGER,INTENT(in),OPTIONAL :: btable
 CHARACTER(len=*),INTENT(in),OPTIONAL :: btable !< codice della variabile
@@ -124,7 +124,7 @@ END SUBROUTINE vol7d_var_init
 
 
 !> Distrugge l'oggetto in maniera pulita, assegnandogli un valore mancante.
-SUBROUTINE vol7d_var_delete(this)
+elemental SUBROUTINE vol7d_var_delete(this)
 TYPE(vol7d_var),INTENT(INOUT) :: this !< oggetto da distruggre
 
 this%btable = cmiss

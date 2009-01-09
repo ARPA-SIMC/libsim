@@ -52,7 +52,7 @@ END SUBROUTINE vol7d_varvect_init
 
 !> Distrugge l'oggetto in maniera pulita, liberando l'eventuale memoria
 !! dinamicamente allocata.
-SUBROUTINE vol7d_varvect_delete(this)
+elemental SUBROUTINE vol7d_varvect_delete(this)
 TYPE(vol7d_varvect),INTENT(INOUT) :: this !< oggetto da distruggere
 
 IF (ASSOCIATED(this%r)) DEALLOCATE(this%r)

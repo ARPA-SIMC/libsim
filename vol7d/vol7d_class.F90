@@ -252,7 +252,7 @@ END SUBROUTINE vol7d_init
 
 !> Distrugge l'oggetto in maniera pulita, liberando l'eventuale memoria
 !! dinamicamente allocata.
-SUBROUTINE vol7d_delete(this)
+elemental SUBROUTINE vol7d_delete(this)
 TYPE(vol7d),intent(inout) :: this !< oggetto da distruggere
 
 IF (ASSOCIATED(this%volanar)) DEALLOCATE(this%volanar)
