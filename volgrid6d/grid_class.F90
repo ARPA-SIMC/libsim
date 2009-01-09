@@ -11,7 +11,7 @@ use regular_ll_class
 use rotated_ll_class
 use log4fortran
 use grib_api
-use vol7d_class
+use vol7d_ana_class
 use err_handling
 use optional_values
 
@@ -157,7 +157,7 @@ END INTERFACE
 
 
 INTERFACE init
-  MODULE PROCEDURE init_griddim, init_grid_transform,init_transform
+  MODULE PROCEDURE init_griddim, init_grid_transform, init_grid_v7d_transform, init_transform
 END INTERFACE
 
 INTERFACE delete
@@ -1263,6 +1263,123 @@ END SUBROUTINE init_grid_transform
 
 
 
+SUBROUTINE init_grid_v7d_transform(this,trans,in,ana,categoryappend)
+
+TYPE(grid_transform),INTENT(out) :: this !< grid transformation object
+TYPE(transform_def),INTENT(in) :: trans !< transformation object
+TYPE(griddim_def),INTENT(in) :: in !< grid transformated object
+TYPE(vol7d_ana),INTENT(in) :: ana(:) !< vol7d_ana vector objects to transform
+character(len=*),INTENT(in),OPTIONAL :: categoryappend !< appennde questo suffisso al namespace category di log4fortran
+
+
+INTEGER :: nx, ny,i,j
+DOUBLE PRECISION :: lon_min, lon_max, lat_min, lat_max, steplon, steplat,lon_min_new, lat_min_new
+doubleprecision,allocatable :: lon(:),lat(:)
+
+character(len=512) :: a_name
+
+call l4f_launcher(a_name,a_name_append=trim(subcategory)//"."//trim(categoryappend))
+this%category=l4f_category_get(a_name)
+
+this%trans=trans
+
+nullify (this%inter_index_x)
+nullify (this%inter_index_y)
+
+nullify (this%inter_x)
+nullify (this%inter_y)
+
+nullify (this%inter_xp)
+nullify (this%inter_yp)
+
+
+IF (this%trans%trans_type == 'inter') THEN
+
+  if (this%trans%inter%sub_type == 'near' .or. this%trans%inter%sub_type == 'bilin' ) THEN
+    
+    select case ( in%grid%type%type )
+      
+    case ( "regular_ll","rotated_ll")
+
+
+      CALL get_val(in, nx=nx, ny=ny)
+      
+      this%innx=nx
+      this%inny=ny
+      
+      this%outnx=size(ana)
+      this%outny=1
+      
+      allocate (this%inter_index_x(nx,ny),this%inter_index_y(nx,ny))
+      allocate(lon(this%outnx),lat(this%outnx))
+
+      CALL get_val(in, &
+       lon_min=lon_min, lon_max=lon_max,&
+       lat_min=lat_min, lat_max=lat_max)
+
+      call getval(ana(:)%coord,lon=lon,lat=lat)
+
+      call find_index(in,this%trans%inter%sub_type,&
+       nx=this%innx, ny=this%inny ,&
+       lon_min=lon_min, lon_max=lon_max,&
+       lat_min=lat_min, lat_max=lat_max,&
+       lon=reshape(lon,(/size(lon),1/)),lat=reshape(lat,(/size(lat),1/)),&
+       index_x=this%inter_index_x,index_y=this%inter_index_y)
+
+      deallocate(lon,lat)
+
+      if ( this%trans%inter%sub_type == 'bilin' ) THEN
+        allocate (this%inter_x(this%innx,this%inny),this%inter_y(this%innx,this%inny))
+        allocate (this%inter_xp(this%outnx,this%outny),this%inter_yp(this%outnx,this%outny))
+
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+! TODO ora utilizzo le latmin etc. ma il caso non è generale
+! la getval in altri casi non mi restituisce niente e quindi bisognerà inventarsi
+! un piano di proiezione X,Y (da 0. a 1. ?) a cui far riferimento
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+        do i=1, this%innx
+          do J=1, this%inny
+
+            this%inter_x(i,j)=lon_min+(((lon_max-lon_min)/dble(this%innx-1))*(i-1))
+            this%inter_y(i,j)=lat_min+(((lat_max-lat_min)/dble(this%inny-1))*(j-1))
+          
+          end do
+        end do
+
+        call proj(in,&
+       reshape(lon,(/size(lon),1/)),reshape(lat,(/size(lat),1/)),&
+       this%inter_xp,this%inter_yp)
+
+      end if
+
+    case default
+      call l4f_category_log(this%category,L4F_ERROR,"init_grid_transform inter gtype: "//trim(in%grid%type%type)//" non gestita" )
+      call raise_fatal_error("init_grid_transform inter gtype non gestita")
+      
+    end select
+
+  else
+
+    CALL l4f_category_log(this%category,L4F_WARN,'init_grid_transform inter sub_type '//TRIM(this%trans%inter%sub_type) &
+     //' not supported')
+    CALL raise_warning('init_grid_transform inter sub_type '//TRIM(this%trans%inter%sub_type)//' not supported')
+    
+  end if
+    
+ELSE
+
+  CALL l4f_category_log(this%category,L4F_WARN,'init_grid_transform trans type '//TRIM(this%trans%trans_type) &
+   //' not supported')
+  CALL raise_warning('init_grid_transform trans type '//TRIM(this%trans%trans_type)//' not supported')
+
+ENDIF
+
+END SUBROUTINE init_grid_v7d_transform
+
+
+
 SUBROUTINE delete_grid_transform(this)
 
 TYPE(grid_transform),INTENT(inout) :: this !< grid transformation object
@@ -1509,7 +1626,7 @@ INTEGER :: i, j, ii, jj, ie, je, navg
 real :: z1,z2,z3,z4
 doubleprecision  :: x1,x3,y1,y3,xp,yp
 
-call l4f_category_log(this%category,L4F_ERROR,"start grid_transform_compute")
+call l4f_category_log(this%category,L4F_DEBUG,"start grid_transform_compute")
 
 ! check size of field_in, field_out
 
@@ -1532,7 +1649,7 @@ field_out(:,:) = rmiss
 
 IF (this%trans%trans_type == 'zoom') THEN
 
-  call l4f_category_log(this%category,L4F_ERROR,"start grid_transform_compute zoom")
+  call l4f_category_log(this%category,L4F_DEBUG,"start grid_transform_compute zoom")
 
   field_out(this%outinx:this%outfnx, &
    this%outiny:this%outfny) = &
@@ -1541,7 +1658,7 @@ IF (this%trans%trans_type == 'zoom') THEN
 
 ELSE IF (this%trans%trans_type == 'boxregrid') THEN
 
-  call l4f_category_log(this%category,L4F_ERROR,"start grid_transform_compute boxregrid")
+  call l4f_category_log(this%category,L4F_DEBUG,"start grid_transform_compute boxregrid")
 
   jj = 0
   DO j = 1, this%inny - this%trans%boxregrid%average%npy + 1, this%trans%boxregrid%average%npy
@@ -1561,7 +1678,7 @@ ELSE IF (this%trans%trans_type == 'boxregrid') THEN
 
 ELSE IF (this%trans%trans_type == 'inter') THEN
 
-  call l4f_category_log(this%category,L4F_ERROR,"start grid_transform_compute inter")
+  call l4f_category_log(this%category,L4F_DEBUG,"start grid_transform_compute inter")
 
   IF (this%trans%inter%sub_type == 'near') THEN
 
