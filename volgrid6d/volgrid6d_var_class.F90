@@ -90,7 +90,7 @@ CONTAINS
 !! Se non viene passato un parametro opzionale l'oggetto è
 !! inizializzato con quel parametro e tutti i successivi a valore mancante.
 !! Per il grib1 omettere discipline che verrà impostato a 255 (missing del grib2)
-SUBROUTINE volgrid6d_var_init(this, centre, category, number, discipline,description,unit)
+elemental SUBROUTINE volgrid6d_var_init(this, centre, category, number, discipline,description,unit)
 TYPE(volgrid6d_var),INTENT(INOUT) :: this !< oggetto da inizializzare
 !INTEGER,INTENT(in),OPTIONAL :: btable
 

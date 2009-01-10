@@ -65,11 +65,17 @@ type inter_bilin
   logical :: external !< enable external elaboration
 end type inter_bilin
 
+!>  subtype linear information
+type inter_linear
+  logical :: external !< enable external elaboration
+end type inter_linear
+
 !>  interpolation information 
 type inter
   CHARACTER(len=80) :: sub_type !< subtype of transformation, can be \c 'near' \c 'bilin'
   type(inter_near) :: near !< subtype nearest information
   type(inter_bilin) :: bilin !< subtype bilinear information
+  type(inter_linear) :: linear !< subtype linear information
 end type inter
 
 
@@ -157,7 +163,7 @@ END INTERFACE
 
 
 INTERFACE init
-  MODULE PROCEDURE init_griddim, init_grid_transform, init_grid_v7d_transform, init_transform
+  MODULE PROCEDURE init_griddim, init_grid_transform, init_grid_v7d_transform, init_v7d_grid_transform, init_transform
 END INTERFACE
 
 INTERFACE delete
@@ -205,7 +211,7 @@ INTERFACE display
 END INTERFACE
 
 INTERFACE compute
-  MODULE PROCEDURE grid_transform_compute
+  MODULE PROCEDURE grid_transform_compute,v7d_grid_transform_compute
 END INTERFACE
 
 INTERFACE count_distinct
@@ -825,6 +831,8 @@ call optio(npy,this%boxregrid%average%npy)
 call optio(inter_type,this%inter%sub_type)
 if (trans_type == "inter".and. .not. c_e(this%inter%sub_type))call optio(sub_type,this%inter%sub_type)
 call optio(external,this%inter%near%external)
+call optio(external,this%inter%bilin%external)
+call optio(external,this%inter%linear%external)
 
 
 if (this%trans_type == 'zoom') then
@@ -933,6 +941,12 @@ else if (this%trans_type == 'inter') then
 
   else if (this%inter%sub_type == 'bilin')then
 
+!..
+
+  else if (this%inter%sub_type == 'linear')then
+
+!..
+
   else
 
     CALL l4f_category_log(this%category,L4F_ERROR,'inter: sub_type is wrong')
@@ -981,6 +995,7 @@ this%inter%sub_type=cmiss
 
 this%inter%near%external=.false.
 this%inter%bilin%external=.false.
+this%inter%linear%external=.false.
 
 !chiudo il logger
 call l4f_category_delete(this%category)
@@ -1380,6 +1395,93 @@ ENDIF
 END SUBROUTINE init_grid_v7d_transform
 
 
+SUBROUTINE init_v7d_grid_transform(this,trans,ana,out,categoryappend)
+
+TYPE(grid_transform),INTENT(out) :: this !< grid transformation object
+TYPE(transform_def),INTENT(in) :: trans !< transformation object
+TYPE(vol7d_ana),INTENT(in) :: ana(:) !< vol7d_ana vector objects to transform
+TYPE(griddim_def),INTENT(in) :: out !< grid transformated object
+character(len=*),INTENT(in),OPTIONAL :: categoryappend !< appennde questo suffisso al namespace category di log4fortran
+
+
+INTEGER :: nx, ny,i,j
+DOUBLE PRECISION :: lon_min, lon_max, lat_min, lat_max, steplon, steplat,lon_min_new, lat_min_new
+doubleprecision,allocatable :: lon(:),lat(:)
+
+character(len=512) :: a_name
+
+call l4f_launcher(a_name,a_name_append=trim(subcategory)//"."//trim(categoryappend))
+this%category=l4f_category_get(a_name)
+
+this%trans=trans
+
+nullify (this%inter_index_x)
+nullify (this%inter_index_y)
+
+nullify (this%inter_x)
+nullify (this%inter_y)
+
+nullify (this%inter_xp)
+nullify (this%inter_yp)
+
+
+IF (this%trans%trans_type == 'inter') THEN
+
+  if ( this%trans%inter%sub_type == 'linear' ) THEN
+    
+    select case ( out%grid%type%type )
+      
+    case ( "regular_ll","rotated_ll")
+
+
+      CALL get_val(out, nx=nx, ny=ny)
+      
+      this%outnx=nx
+      this%outny=ny
+      
+      this%innx=size(ana)
+      this%inny=1
+      
+      allocate(lon(this%innx),lat(this%innx))
+      allocate (this%inter_xp(this%innx,this%inny),this%inter_yp(this%innx,this%inny))
+
+      CALL get_val(out, &
+       lon_min=lon_min, lon_max=lon_max,&
+       lat_min=lat_min, lat_max=lat_max)
+
+      call getval(ana(:)%coord,lon=lon,lat=lat)
+
+      call proj(out,&
+       reshape(lon,(/size(lon),1/)),reshape(lat,(/size(lat),1/)),&
+       this%inter_xp,this%inter_yp)
+      
+      deallocate(lon,lat)
+
+    case default
+      call l4f_category_log(this%category,L4F_ERROR,"init_grid_transform inter gtype: "//trim(out%grid%type%type)//" non gestita" )
+      call raise_fatal_error("init_grid_transform inter gtype non gestita")
+      
+    end select
+
+  else
+
+    CALL l4f_category_log(this%category,L4F_WARN,'init_grid_transform inter sub_type '//TRIM(this%trans%inter%sub_type) &
+     //' not supported')
+    CALL raise_warning('init_grid_transform inter sub_type '//TRIM(this%trans%inter%sub_type)//' not supported')
+    
+  end if
+    
+ELSE
+
+  CALL l4f_category_log(this%category,L4F_WARN,'init_grid_transform trans type '//TRIM(this%trans%trans_type) &
+   //' not supported')
+  CALL raise_warning('init_grid_transform trans type '//TRIM(this%trans%trans_type)//' not supported')
+
+ENDIF
+
+END SUBROUTINE init_v7d_grid_transform
+
+
 
 SUBROUTINE delete_grid_transform(this)
 
@@ -1738,6 +1840,88 @@ ENDIF
 
 END SUBROUTINE grid_transform_compute
 
+
+SUBROUTINE v7d_grid_transform_compute(this, field_in, field_out)
+TYPE(grid_transform),INTENT(in) :: this
+REAL, INTENT(in) :: field_in(:)
+REAL, INTENT(out) :: field_out(:,:)
+
+!!$INTEGER :: i, j, ii, jj, ie, je, navg
+!!$real :: z1,z2,z3,z4
+!!$doubleprecision  :: x1,x3,y1,y3,xp,yp
+!!$
+!!$call l4f_category_log(this%category,L4F_DEBUG,"start v7d_grid_transform_compute")
+!!$
+!!$! check size of field_in, field_out
+!!$
+!!$if (any(shape(field_in) /= (/this%innx,this%inny/))) then
+!!$
+!!$  call l4f_category_log(this%category,L4F_ERROR,"inconsistent in shape: "//&
+!!$   trim(to_char(this%innx))//" - "//trim(to_char(this%inny)))
+!!$  call raise_fatal_error("inconsistent shape")
+!!$end if
+!!$
+!!$if (any(shape(field_out) /= (/this%outnx,this%outny/))) then
+!!$
+!!$  call l4f_category_log(this%category,L4F_ERROR,"inconsistent out shape: "//&
+!!$   trim(to_char(this%outny))//" - "//trim(to_char(this%outny)))
+!!$  call raise_fatal_error("inconsistent shape")
+!!$end if
+!!$
+!!$
+!!$field_out(:,:) = rmiss
+!!$
+!!$IF (this%trans%trans_type == 'inter') THEN
+!!$
+!!$  call l4f_category_log(this%category,L4F_DEBUG,"start v7d_grid_transform_compute inter")
+!!$
+!!$  if (this%trans%inter%sub_type == 'linear') THEN
+!!$
+!!$
+!!$    DO j = 1, this%outny 
+!!$      DO i = 1, this%outnx 
+!!$
+!!$        if   (c_e(this%inter_index_x(i,j)) .and. c_e(this%inter_index_y(i,j)))then
+!!$
+!!$          z1=field_in(this%inter_index_x(i,j),this%inter_index_y(i,j))         
+!!$          z2=field_in(this%inter_index_x(i,j)+1,this%inter_index_y(i,j))     
+!!$          z3=field_in(this%inter_index_x(i,j)+1,this%inter_index_y(i,j)+1) 
+!!$          z4=field_in(this%inter_index_x(i,j),this%inter_index_y(i,j)+1)     
+!!$
+!!$          if (c_e(z1) .and. c_e(z2) .and. c_e(z3) .and. c_e(z4)) then 
+!!$
+!!$!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!$! TODO ora utilizzo le latmin etc. ma il caso non è generale
+!!$! la getval in altri casi non mi restituisce niente e quindi bisognerà inventarsi
+!!$! un piano di proiezione X,Y (da 0. a 1. ?) a cui far riferimento
+!!$!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!$
+!!$            x1=this%inter_x(this%inter_index_x(i,j),this%inter_index_y(i,j))         
+!!$            y1=this%inter_y(this%inter_index_x(i,j),this%inter_index_y(i,j))     
+!!$            x3=this%inter_x(this%inter_index_x(i,j)+1,this%inter_index_y(i,j)+1) 
+!!$            y3=this%inter_y(this%inter_index_x(i,j)+1,this%inter_index_y(i,j)+1)     
+!!$            
+!!$            xp=this%inter_xp(i,j)
+!!$            yp=this%inter_yp(i,j)
+!!$            
+!!$!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!$
+!!$            field_out(i,j) = hbilin (z1,z2,z3,z4,x1,y1,x3,y3,xp,yp)
+!!$
+!!$          end if
+!!$        end if
+!!$        
+!!$      ENDDO
+!!$    ENDDO
+!!$    
+!!$    
+!!$  END IF
+!!$
+!!$ENDIF
+
+END SUBROUTINE v7d_grid_transform_compute
+
+
 elemental real function hbilin (z1,z2,z3,z4,x1,y1,x3,y3,xp,yp) result (zp)
 
 doubleprecision,intent(in):: x1,y1,x3,y3,xp,yp 
@@ -1832,3 +2016,62 @@ end subroutine find_index
 
 
 end module grid_class
+
+
+!!$      PROGRAM NNEX01
+!!$C
+!!$C  Simple example of natural neighbor linear interpolation.
+!!$C
+!!$      PARAMETER(ISLIM = 6, NUMXOUT = 21, NUMYOUT = 21)
+!!$C
+!!$C  Dimension for the work space for the NCAR Graphics call to
+!!$C  SRFACE to plot the interpolated grid.
+!!$C
+!!$      PARAMETER(IDIM=2*NUMXOUT*NUMYOUT)
+!!$C
+!!$C  Input data arrays.
+!!$C
+!!$      DOUBLE PRECISION X(ISLIM), Y(ISLIM), Z(ISLIM)
+!!$C
+!!$C  Output grid arrays.
+!!$C
+!!$      DOUBLE PRECISION XI(NUMXOUT), YI(NUMYOUT), ZI(NUMXOUT,NUMYOUT)
+!!$      REAL             XP(NUMXOUT), YP(NUMYOUT), ZP(NUMXOUT,NUMYOUT)
+!!$C
+!!$C  Define the input data arrays.
+!!$C
+!!$      DATA X/0.00, 1.00, 0.00, 1.00, 0.40, 0.75 /
+!!$      DATA Y/0.00, 0.00, 1.00, 1.00, 0.20, 0.65 /
+!!$      DATA Z/0.00, 0.00, 0.00, 0.00, 1.25, 0.80 /
+!!$C
+!!$      DIMENSION IWORK(IDIM)
+!!$C
+!!$C  Define the output grid.
+!!$C
+!!$      XMIN = 0.
+!!$      XMAX = 1.
+!!$      XINC = (XMAX-XMIN)/(NUMXOUT-1.) 
+!!$      DO 20 I=1,NUMXOUT
+!!$        XI(I) = XMIN+REAL(I-1) * XINC
+!!$   20 CONTINUE
+!!$C
+!!$      YMAX =  1.
+!!$      YMIN =  0.
+!!$      YINC = (YMAX-YMIN)/(NUMYOUT-1.)
+!!$      DO 30 J=1,NUMYOUT
+!!$        YI(J) = YMIN+REAL(J-1) * YINC
+!!$   30 CONTINUE 
+!!$C
+!!$C  Do the gridding.
+!!$C
+!!$      CALL NATGRIDD(ISLIM,X,Y,Z,NUMXOUT,NUMYOUT,XI,YI,ZI,IER)
+!!$      IF (IER .NE. 0) THEN
+!!$        WRITE (6,510) IER
+!!$  510   FORMAT('Error return from NATGRIDS = ',I3)
+!!$      ENDIF
+!!$C 
+!!$      STOP
+!!$      END
+!!$
+!!$
+!!$

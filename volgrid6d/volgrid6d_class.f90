@@ -64,11 +64,13 @@ INTERFACE export
 END INTERFACE
 
 INTERFACE compute
-  MODULE PROCEDURE volgrid6d_transform_compute,volgrid6d_v7d_transform_compute
+  MODULE PROCEDURE volgrid6d_transform_compute,volgrid6d_v7d_transform_compute,&
+   v7d_volgrid6d_transform_compute
 END INTERFACE
 
 INTERFACE transform
-  MODULE PROCEDURE volgrid6d_transform,volgrid6dv_transform,volgrid6d_v7d_transform,volgrid6dv_v7d_transform
+  MODULE PROCEDURE volgrid6d_transform,volgrid6dv_transform,&
+   volgrid6d_v7d_transform, volgrid6dv_v7d_transform, v7d_volgrid6d_transform
 END INTERFACE
 
 private
@@ -1005,7 +1007,7 @@ end subroutine volgrid6d_import_from_grib
 
 subroutine volgrid6d_export_to_grib (this,unit,filename,gaid_template,categoryappend)
 
-TYPE(volgrid6d),pointer :: this(:) !< Volume volgrid6d da leggere
+TYPE(volgrid6d),pointer :: this(:) !< Volumi volgrid6d da exportare
 integer,intent(inout),optional :: unit !< unità su cui è stato aperto un file; se =0 rielaborato internamente (default = elaborato internamente con getunit)
 character(len=*),INTENT(in),optional :: filename !< nome del file eventualmente da aprire (default = (nome dell'eseguibile)//.v7d )
 integer,INTENT(in),OPTIONAL :: gaid_template !< grib template
@@ -1393,6 +1395,122 @@ end do
 end subroutine volgrid6dv_v7d_transform
 
 
+SUBROUTINE v7d_volgrid6d_transform_compute(this, vol7d_in, volgrid6d_out, networkid)
+TYPE(grid_transform),INTENT(in) :: this
+type(vol7d), INTENT(in) :: vol7d_in
+type(volgrid6d), INTENT(out) :: volgrid6d_out
+integer,optional,intent(in) :: networkid
+
+integer :: nana, ntime, ntimerange, nlevel, nvar, nnetwork
+integer :: itime, itimerange, ilevel, ivar, inetwork
+real,allocatable :: voldatir_out(:,:)
+type(vol7d_network) :: network
+
+!TODO category sarebbe da prendere da vol7d
+call l4f_category_log(volgrid6d_out%category,L4F_DEBUG,"start volgrid6d_transform_compute")
+
+ntime=0
+ntimerange=0
+nlevel=0
+nvar=0
+
+if (present(networkid))then
+  call init(network,id=networkid)
+  inetwork= index(vol7d_in%network,network)
+else
+  inetwork=1
+end if
+
+if (associated(vol7d_in%time))then
+  ntime=size(vol7d_in%time)
+                                !TODO tramutare in copy
+  volgrid6d_out%time=vol7d_in%time
+end if
+
+if (associated(vol7d_in%timerange))then
+  ntimerange=size(vol7d_in%timerange)
+                                !TODO tramutare in copy
+  volgrid6d_out%timerange=vol7d_in%timerange
+end if
+
+if (associated(vol7d_in%level))then
+  nlevel=size(vol7d_in%level)
+                                !TODO tramutare in copy
+  volgrid6d_out%level=vol7d_in%level
+end if
+
+if (associated(vol7d_in%dativar%r))then
+  nvar=size(vol7d_in%dativar%r)
+  !TODO
+  call varbufr2vargrib(vol7d_in%dativar%r, volgrid6d_out%var)
+end if
+
+nana=size(vol7d_in%voldatir(:,1,1,1,1,1))
+
+do itime=1,ntime
+  do itimerange=1,ntimerange
+    do ilevel=1,nlevel
+      do ivar=1,nvar
+ 
+        call compute(this, &
+         vol7d_in%voldatir(:,itime,ilevel,itimerange,ivar,inetwork),&
+         volgrid6d_out%voldati(:,:,ilevel,itime,itimerange,ivar))
+
+! 1 indice della dimensione "anagrafica"
+! 2 indice della dimensione "tempo"
+! 3 indice della dimensione "livello verticale"
+! 4 indice della dimensione "intervallo temporale"
+! 5 indice della dimensione "variabile"
+! 6 indice della dimensione "rete"
+
+      end do
+    end do
+  end do
+end do
+
+end SUBROUTINE v7d_volgrid6d_transform_compute
+
+
+subroutine v7d_volgrid6d_transform(this,griddim, vol7d_in, volgrid6d_out, networkid,categoryappend)
+type(transform_def),intent(in) :: this
+type(griddim_def),intent(in) :: griddim
+type(vol7d), INTENT(in) :: vol7d_in
+type(volgrid6d), INTENT(out) :: volgrid6d_out
+integer,optional,intent(in) :: networkid
+character(len=*),INTENT(in),OPTIONAL :: categoryappend !< appende questo suffisso al namespace category di log4fortran
+
+type(grid_transform) :: grid_trans
+integer :: ntime, ntimerange, nlevel, nvar
+
+!TODO la category sarebbe da prendere da vol7d
+!call l4f_category_log(vol7d_out%category,L4F_DEBUG,"start volgrid6d_transform")
+
+ntime=0
+ntimerange=0
+nlevel=0
+nvar=0
+
+if (associated(vol7d_in%time)) ntime=size(vol7d_in%time)
+if (associated(vol7d_in%timerange)) ntimerange=size(vol7d_in%timerange)
+if (associated(vol7d_in%level)) nlevel=size(vol7d_in%level)
+if (associated(vol7d_in%dativar%r)) nvar=size(vol7d_in%dativar%r)
+
+call init(grid_trans, this, ana=vol7d_in%ana, out=griddim,&
+ categoryappend=categoryappend)
+
+call init (volgrid6d_out, griddim, categoryappend=categoryappend)
+
+call volgrid6d_alloc(volgrid6d_out, griddim%dim, ntime=ntime, nlevel=nlevel, ntimerange=ntimerange, nvar=nvar)
+
+call volgrid6d_alloc_vol(volgrid6d_out)
+
+call compute(grid_trans, vol7d_in, volgrid6d_out, networkid)
+
+call delete (grid_trans)
+
+end subroutine v7d_volgrid6d_transform
+
+
 ! TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO
 elemental subroutine vargrib2varbufr(vargrib, varbufr)
 
@@ -1404,4 +1522,18 @@ call init(varbufr, btable="B12001")
 end subroutine vargrib2varbufr
 
 
+! TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO
+elemental subroutine varbufr2vargrib(varbufr, vargrib)
+
+type(vol7d_var),intent(in) :: varbufr
+type(volgrid6d_var),intent(out) :: vargrib
+
+!SUBROUTINE volgrid6d_var_init(this, centre, category, number, discipline,description,unit)
+!TODO cambia da grib1 a grib2
+call init(vargrib, centre=200, category=1, number=11)
+
+end subroutine varbufr2vargrib
+
 end module volgrid6d_class
+
+
