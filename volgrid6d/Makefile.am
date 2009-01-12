@@ -22,6 +22,10 @@ libsim_volgrid6d_la_SOURCES = grid_class.F90 rotated_ll_class.f90 regular_ll_cla
 libsim_volgrid6d_la_LIBADD += $(GRIBAPI_LIBS)
 endif
 
+if NGMATH
+AM_FCFLAGS+=-DNGMATH
+endif
+
 
 
 if GRIBAPI

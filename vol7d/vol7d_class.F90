@@ -189,6 +189,10 @@ INTERFACE import
   MODULE PROCEDURE vol7d_read_from_file
 END INTERFACE
 
+!>Print object
+INTERFACE display
+  MODULE PROCEDURE vol7d_display
+END INTERFACE
 
 !!$INTERFACE get_volana
 !!$  MODULE PROCEDURE vol7d_get_volanar, vol7d_get_volanad, vol7d_get_volanai, &
@@ -219,7 +223,7 @@ PRIVATE vol7d_get_volr, vol7d_get_vold, vol7d_get_voli, vol7d_get_volb, &
  volptr1dc, volptr2dc, volptr3dc, volptr4dc, volptr5dc, volptr6dc, volptr7dc, &
  vol7d_nullifyr, vol7d_nullifyd, vol7d_nullifyi, vol7d_nullifyb, vol7d_nullifyc, &
  vol7d_init, vol7d_delete, vol7d_write_on_file, vol7d_read_from_file, &
- vol7d_check_alloc_ana,  vol7d_check_alloc_dati
+ vol7d_check_alloc_ana,  vol7d_check_alloc_dati, vol7d_display
 
 
 CONTAINS
@@ -290,6 +294,55 @@ CALL delete(this%datiattr)
 CALL delete(this%dativarattr)
 
 END SUBROUTINE vol7d_delete
+
+
+!TODO da completare !
+!> stampa a video una sintesi del contenuto
+SUBROUTINE vol7d_display(this)
+TYPE(vol7d),intent(in) :: this !< oggetto da visualizzare
+integer :: i
+
+
+print*,"<<<<<<<<<<<<<<<<<<< vol7d object >>>>>>>>>>>>>>>>>>>>"
+
+!!$IF (ASSOCIATED(this%ana))         call display(this%ana)
+IF (ASSOCIATED(this%time))then        
+  print*,"---- time vector ----"
+  print*,"elements=",size(this%time)
+  do i=1, size(this%time)
+    call display(this%time(i))
+  end do
+end if
+
+IF (ASSOCIATED(this%level)) then
+  print*,"---- level vector ----"
+  print*,"elements=",size(this%level)
+  do i =1,size(this%level)
+    call display(this%level(i))
+  end do
+end if
+
+IF (ASSOCIATED(this%timerange))then
+  print*,"---- timerange vector ----"
+  print*,"elements=",size(this%timerange)
+  do i =1,size(this%timerange)
+    call display(this%timerange(i))
+  end do
+end if
+
+!!$IF (ASSOCIATED(this%network))     call display(this%network)
+!!$
+!!$if (associated(this%anavar))      call display(this%anavar)
+!!$if (associated(this%anaattr))     call display(this%anaattr)
+!!$if (associated(this%anavarattr))  call display(this%anavarattr)
+!!$if (associated(this%dativar))     call display(this%dativar)
+!!$if (associated(this%datiattr))    call display(this%datiattr)
+!!$if (associated(this%dativarattr)) call display(this%dativarattr)
+
+print*,"<<<<<<<<<<<<<<<<<<< END vol7d object >>>>>>>>>>>>>>>>>>>>"
+
+END SUBROUTINE vol7d_display
+
 
 !> Metodo per allocare i descrittori delle 7 dimensioni.
 !! Riceve un grande numero di parametri opzionali che

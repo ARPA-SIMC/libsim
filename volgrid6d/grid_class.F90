@@ -1444,6 +1444,7 @@ IF (this%trans%trans_type == 'inter') THEN
       
       allocate(lon(this%innx),lat(this%innx))
       allocate (this%inter_xp(this%innx,this%inny),this%inter_yp(this%innx,this%inny))
+      allocate (this%inter_x(this%outnx,this%outny),this%inter_y(this%outnx,this%outny))
 
       CALL get_val(out, &
        lon_min=lon_min, lon_max=lon_max,&
@@ -1455,7 +1456,25 @@ IF (this%trans%trans_type == 'inter') THEN
        reshape(lon,(/size(lon),1/)),reshape(lat,(/size(lat),1/)),&
        this%inter_xp,this%inter_yp)
       
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+! TODO ora utilizzo le latmin etc. ma il caso non è generale
+! la getval in altri casi non mi restituisce niente e quindi bisognerà inventarsi
+! un piano di proiezione X,Y (da 0. a 1. ?) a cui far riferimento
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+      do i=1, this%outnx
+        do J=1, this%outny
+
+          this%inter_x(i,j)=lon_min+(((lon_max-lon_min)/dble(this%outnx-1))*(i-1))
+          this%inter_y(i,j)=lat_min+(((lat_max-lat_min)/dble(this%outny-1))*(j-1))
+          
+        end do
+      end do
+
+
       deallocate(lon,lat)
+
 
     case default
       call l4f_category_log(this%category,L4F_ERROR,"init_grid_transform inter gtype: "//trim(out%grid%type%type)//" non gestita" )
@@ -1833,8 +1852,17 @@ ELSE IF (this%trans%trans_type == 'inter') THEN
       ENDDO
     ENDDO
 
+  else
+
+    call l4f_category_log(this%category,L4F_ERROR,"sub_type not right here: "//this%trans%inter%sub_type)
+    call raise_fatal_error("sub_type not right here")
     
   END IF
+
+else
+
+  call l4f_category_log(this%category,L4F_ERROR,"trans_type not right here: "//this%trans%trans_type)
+  call raise_fatal_error("trans_type not right here")
 
 ENDIF
 
@@ -1844,80 +1872,96 @@ END SUBROUTINE grid_transform_compute
 SUBROUTINE v7d_grid_transform_compute(this, field_in, field_out)
 TYPE(grid_transform),INTENT(in) :: this
 REAL, INTENT(in) :: field_in(:)
-REAL, INTENT(out) :: field_out(:,:)
+REAL, INTENT(out):: field_out(:,:)
+real,allocatable :: field_in_p(:),x_in_p(:),y_in_p(:)
+real,allocatable :: x_out(:),y_out(:)
+
+integer :: inn_p,ier
 
 !!$INTEGER :: i, j, ii, jj, ie, je, navg
 !!$real :: z1,z2,z3,z4
 !!$doubleprecision  :: x1,x3,y1,y3,xp,yp
-!!$
-!!$call l4f_category_log(this%category,L4F_DEBUG,"start v7d_grid_transform_compute")
-!!$
-!!$! check size of field_in, field_out
-!!$
-!!$if (any(shape(field_in) /= (/this%innx,this%inny/))) then
-!!$
-!!$  call l4f_category_log(this%category,L4F_ERROR,"inconsistent in shape: "//&
-!!$   trim(to_char(this%innx))//" - "//trim(to_char(this%inny)))
-!!$  call raise_fatal_error("inconsistent shape")
-!!$end if
-!!$
-!!$if (any(shape(field_out) /= (/this%outnx,this%outny/))) then
-!!$
-!!$  call l4f_category_log(this%category,L4F_ERROR,"inconsistent out shape: "//&
-!!$   trim(to_char(this%outny))//" - "//trim(to_char(this%outny)))
-!!$  call raise_fatal_error("inconsistent shape")
-!!$end if
-!!$
-!!$
-!!$field_out(:,:) = rmiss
-!!$
-!!$IF (this%trans%trans_type == 'inter') THEN
-!!$
-!!$  call l4f_category_log(this%category,L4F_DEBUG,"start v7d_grid_transform_compute inter")
-!!$
-!!$  if (this%trans%inter%sub_type == 'linear') THEN
-!!$
-!!$
-!!$    DO j = 1, this%outny 
-!!$      DO i = 1, this%outnx 
-!!$
-!!$        if   (c_e(this%inter_index_x(i,j)) .and. c_e(this%inter_index_y(i,j)))then
-!!$
-!!$          z1=field_in(this%inter_index_x(i,j),this%inter_index_y(i,j))         
-!!$          z2=field_in(this%inter_index_x(i,j)+1,this%inter_index_y(i,j))     
-!!$          z3=field_in(this%inter_index_x(i,j)+1,this%inter_index_y(i,j)+1) 
-!!$          z4=field_in(this%inter_index_x(i,j),this%inter_index_y(i,j)+1)     
-!!$
-!!$          if (c_e(z1) .and. c_e(z2) .and. c_e(z3) .and. c_e(z4)) then 
-!!$
-!!$!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!$! TODO ora utilizzo le latmin etc. ma il caso non è generale
-!!$! la getval in altri casi non mi restituisce niente e quindi bisognerà inventarsi
-!!$! un piano di proiezione X,Y (da 0. a 1. ?) a cui far riferimento
-!!$!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!$
-!!$            x1=this%inter_x(this%inter_index_x(i,j),this%inter_index_y(i,j))         
-!!$            y1=this%inter_y(this%inter_index_x(i,j),this%inter_index_y(i,j))     
-!!$            x3=this%inter_x(this%inter_index_x(i,j)+1,this%inter_index_y(i,j)+1) 
-!!$            y3=this%inter_y(this%inter_index_x(i,j)+1,this%inter_index_y(i,j)+1)     
-!!$            
-!!$            xp=this%inter_xp(i,j)
-!!$            yp=this%inter_yp(i,j)
-!!$            
-!!$!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!$
-!!$            field_out(i,j) = hbilin (z1,z2,z3,z4,x1,y1,x3,y3,xp,yp)
-!!$
-!!$          end if
-!!$        end if
-!!$        
-!!$      ENDDO
-!!$    ENDDO
-!!$    
-!!$    
-!!$  END IF
-!!$
-!!$ENDIF
+
+call l4f_category_log(this%category,L4F_DEBUG,"start v7d_grid_transform_compute")
+
+! check size of field_in, field_out
+
+if (size(field_in) /= this%innx) then
+
+  call l4f_category_log(this%category,L4F_ERROR,"inconsistent in shape: "//&
+   trim(to_char(this%innx)))
+  call raise_fatal_error("inconsistent shape")
+end if
+
+if (any(shape(field_out) /= (/this%outnx,this%outny/))) then
+
+  call l4f_category_log(this%category,L4F_ERROR,"inconsistent out shape: "//&
+   trim(to_char(this%outny))//" - "//trim(to_char(this%outny)))
+  call raise_fatal_error("inconsistent shape")
+end if
+
+field_out(:,:) = rmiss
+
+IF (this%trans%trans_type == 'inter') THEN
+
+  call l4f_category_log(this%category,L4F_DEBUG,"start v7d_grid_transform_compute inter")
+
+  if (this%trans%inter%sub_type == 'linear') THEN
+
+    inn_p=count(c_e(field_in))
+
+    call l4f_category_log(this%category,L4F_INFO,"Number of sparse data points= "//to_char(inn_p))
+
+    if (inn_p > 2) then
+
+      allocate(field_in_p(inn_p))
+      allocate(x_in_p(inn_p))
+      allocate(y_in_p(inn_p))
+
+      where(c_e(field_in))
+        field_in_p=field_in
+        x_in_p=this%inter_xp(:,1)
+        y_in_p=this%inter_yp(:,1)
+      end where
+
+#ifdef NGMATH
+
+      CALL NATGRIDS(inn_p,x_in_p,y_in_p,field_in_p,&
+       this%outnx ,this%outny ,real(this%inter_x(:,1)),real(this%inter_y(1,:)),field_out,IER)
+#else
+      call l4f_category_log(this%category,L4F_ERROR,"libsim compiled without NATGRIDD (ngmath ncarg library)")
+      call raise_fatal_error("libsim compiled without NATGRIDD (ngmath ncarg library)")
+
+#endif
+
+      IF (IER .NE. 0) THEN
+        call l4f_category_log(this%category,L4F_ERROR,"Error return from NATGRIDD = "//to_char(ier))
+        call raise_fatal_error("Error return from NATGRIDD")
+      ENDIF
+
+      deallocate(field_in_p)
+
+    else
+
+      call l4f_category_log(this%category,L4F_INFO,"Insufficient data in gridded region to triangulate")
+
+    end if
+
+
+  else
+      
+    call l4f_category_log(this%category,L4F_ERROR,"sub_type not right here: "//this%trans%inter%sub_type)
+    call raise_fatal_error("sub_type not right here")
+      
+  END IF
+
+else
+
+  call l4f_category_log(this%category,L4F_ERROR,"trans_type not right here: "//this%trans%trans_type)
+  call raise_fatal_error("trans_type not right here")
+  
+END IF
+
 
 END SUBROUTINE v7d_grid_transform_compute
 

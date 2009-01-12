@@ -168,6 +168,31 @@ fi
 AM_CONDITIONAL(GRIBAPI, test "x$enableval" = "xyes")
 
 
+AC_ARG_ENABLE(ngmath, AC_HELP_STRING([--disable-ngmath],
+  [disable ngmath ncarg interpolation support]),,[enableval=yes])dnl default enable
+if test "x$enableval" = "xyes"; then
+ # test in f77 because f90 test do not work
+
+  _ldflags=${LDFLAGS}
+
+  LDFLAGS="-L/usr/lib/ncarg $LDFLAGS"
+  AC_CHECK_LIB([ngmath], [natgridd],
+    NGMATH_LDFLAGS="-L/usr/lib/ncarg"
+    NGMATH_LIBS="-lngmath"
+    AC_MSG_RESULT([ngmath code included]),
+    AC_MSG_ERROR([ngmath ncarg library not found]))
+
+  AC_SUBST(NGMATH_LDFLAGS)
+  AC_SUBST(NGMATH_LIBS)
+
+  LDFLAGS=$_ldflags
+
+else
+  AC_MSG_RESULT([ngmath code not included])
+fi
+  AM_CONDITIONAL(NGMATH, test "x$enableval" = "xyes")
+
+
 #we here test for f77; will be better develop a test for f90
 AC_ARG_ENABLE(netcdf, AC_HELP_STRING([--disable-netcdf],
   [disable netcdf support]),,[enableval=yes])dnl default enable

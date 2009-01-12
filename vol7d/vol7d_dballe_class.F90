@@ -410,7 +410,7 @@ SUBROUTINE vol7d_dballe_importvvns(this, var, network, coordmin, coordmax, timei
  attr,anavar,anaattr, varkind,attrkind,anavarkind,anaattrkind)
 
 TYPE(vol7d_dballe),INTENT(inout) :: this !< oggetto vol7d_dballe
-CHARACTER(len=*),INTENT(in) :: var(:)
+CHARACTER(len=*),INTENT(in),optional :: var(:)
 TYPE(geo_coord),INTENT(inout),optional :: coordmin,coordmax 
 TYPE(datetime),INTENT(in),OPTIONAL :: timei, timef
 TYPE(vol7d_network),INTENT(in),OPTIONAL :: network,set_network
@@ -2411,7 +2411,6 @@ do while ( N > 0 )
     call idba_enq (this%handle,"lon",   lon)
     call idba_enq (this%handle,"ident",ident)
    
-
     ! inizio la serie dei test con i parametri richiesti 
 
     if(present(network)) then
@@ -2447,6 +2446,7 @@ do while ( N > 0 )
     if (present(timei)) then
       if (timee < timei) cycle
     end if
+
     if (present(timef)) then
       if (timee > timef) cycle
     end if
@@ -2461,18 +2461,22 @@ do while ( N > 0 )
       if (levele /= level) cycle
     end if
 
+
+!! TODO attenzione attenzione
+! qui non si capisce cosa succede
+! pare che se var viene omessa, pur essendo tutto optional
+! il test present sia sempre true !!!!!!
     if (present (var)) then
       nvar=size(var)
       found=.false.
       DO ii = 1, nvar
-!        call l4f_category_log(this%category,L4F_DEBUG,"VARIABILI:"//btable//to_char(var(ii)))
+        call l4f_category_log(this%category,L4F_DEBUG,"VARIABILI:"//btable//to_char(var(ii)))
         if (btable == var(ii)) found =.true.
       end do
       if (.not. found) cycle
     end if
 
     ! fine test
-
 
     if (rlevel1 /= 257)then
       ! dati

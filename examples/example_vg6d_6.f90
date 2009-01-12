@@ -12,7 +12,7 @@ integer :: category,ier,i
 character(len=512):: a_name,filename="out.bufr"
 type (volgrid6d),pointer  :: volgrid(:),volgrid_out(:)
 type(transform_def) :: trans
-type(vol7d_ana) :: ana(3)
+type(vol7d_ana) :: ana(5)
 type(vol7d),pointer :: vol7d_out(:)
 TYPE(vol7d_dballe) :: v7d_exp
 
@@ -32,6 +32,8 @@ call l4f_category_log(category,L4F_INFO,"inizio")
 call init(ana(1),lat=45.D0,lon=11.D0)
 call init(ana(2),lat=45.6D0,lon=11.8D0)
 call init(ana(3),lat=46.6D0,lon=12.8D0)
+call init(ana(4),lat=40.6D0,lon=11.8D0)
+call init(ana(5),lat=40.0D0,lon=10.0D0)
 
 !trasformation object
 call init(trans, trans_type="inter",sub_type="bilin", categoryappend="trasformation")

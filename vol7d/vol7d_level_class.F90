@@ -117,6 +117,11 @@ INTERFACE index
   MODULE PROCEDURE index_level
 END INTERFACE
 
+!>Print object
+INTERFACE display
+  MODULE PROCEDURE display_level
+END INTERFACE
+
 CONTAINS
 
 !> Inizializza un oggetto \a vol7d_level con i parametri opzionali forniti.
@@ -163,6 +168,15 @@ this%level2 = imiss
 this%l2 = imiss
 
 END SUBROUTINE vol7d_level_delete
+
+
+subroutine display_level(this)
+
+TYPE(vol7d_level),INTENT(in) :: this
+
+print*,"LEVEL: ",this%level1,this%l1,this%level2,this%l2
+  
+end subroutine display_level
 
 
 elemental FUNCTION vol7d_level_eq(this, that) RESULT(res)

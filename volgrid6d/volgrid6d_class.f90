@@ -1407,7 +1407,7 @@ real,allocatable :: voldatir_out(:,:)
 type(vol7d_network) :: network
 
 !TODO category sarebbe da prendere da vol7d
-call l4f_category_log(volgrid6d_out%category,L4F_DEBUG,"start volgrid6d_transform_compute")
+call l4f_category_log(volgrid6d_out%category,L4F_DEBUG,"start v7d_volgrid6d_transform_compute")
 
 ntime=0
 ntimerange=0
@@ -1451,7 +1451,7 @@ do itime=1,ntime
   do itimerange=1,ntimerange
     do ilevel=1,nlevel
       do ivar=1,nvar
- 
+
         call compute(this, &
          vol7d_in%voldatir(:,itime,ilevel,itimerange,ivar,inetwork),&
          volgrid6d_out%voldati(:,:,ilevel,itime,itimerange,ivar))

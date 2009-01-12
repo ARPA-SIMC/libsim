@@ -64,8 +64,9 @@ INTERFACE export
    export_volgrid6d_var
 END INTERFACE
 
+!> Print object
 INTERFACE display
-  MODULE PROCEDURE display_timerange,display_level,display_gridinfo,display_gridinfov,display_time
+  MODULE PROCEDURE display_gridinfo,display_gridinfov
 END INTERFACE
 
 
@@ -581,42 +582,6 @@ end do
 print*,"--------------------------------------------------------------"
 
 end subroutine display_gridinfov
-
-
-
-subroutine display_timerange(this)
-
-TYPE(vol7d_timerange),INTENT(in) :: this
-integer ::EditionNumber,timerange,p1,p2
-
-print*,"TIMERANGE: ",this%timerange,this%p1,this%p2
-
-end subroutine display_timerange
-
-
-
-subroutine display_level(this)
-
-TYPE(vol7d_level),INTENT(in) :: this
-
-print*,"LEVEL: ",this%level1,this%l1,this%level2,this%l2
-  
-end subroutine display_level
-
-
-
-subroutine display_time(this)
-
-TYPE(datetime),INTENT(in) :: this
-character(len=17)         :: date_time
-
-call getval (this,simpledate=date_time)
-
-print*,"TIME: ",date_time
-
-
-end subroutine display_time
-
 
 
 

@@ -79,7 +79,8 @@ PUBLIC datetime, datetime_miss, datetime_utc, datetime_local, &
  OPERATOR(==), OPERATOR(/=), OPERATOR(>), OPERATOR(<), &
  OPERATOR(>=), OPERATOR(<=), OPERATOR(+), OPERATOR(-), &
  OPERATOR(*), OPERATOR(/), mod, &
- timedelta, timedelta_miss, timedelta_new, timedelta_0, timedelta_getamsec
+ timedelta, timedelta_miss, timedelta_new, timedelta_0, timedelta_getamsec,&
+ display
 
 !> Costruttori per le classi datetime e timedelta. Devono essere richiamati
 !! per tutti gli oggetti di questo tipo definiti in un programma
@@ -228,6 +229,12 @@ INTERFACE write_unit
    timedelta_write_unit, timedelta_vect_write_unit
 END INTERFACE
 
+!> Print object
+INTERFACE display
+  MODULE PROCEDURE display_datetime
+END INTERFACE
+
+
 CONTAINS
 
 ! ==============
@@ -374,6 +381,20 @@ TYPE(datetime),INTENT(INOUT) :: this
 this%iminuti = imiss
 
 END SUBROUTINE datetime_delete
+
+
+subroutine display_datetime(this)
+
+TYPE(datetime),INTENT(in) :: this
+character(len=17)         :: date_time
+
+call getval (this,simpledate=date_time)
+
+print*,"TIME: ",date_time
+
+
+end subroutine display_datetime
+
 
 !> Restituisce il valore di un oggetto \a datetime in una o più
 !! modalità desiderate. Qualsiasi combinazione dei parametri

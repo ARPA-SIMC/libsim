@@ -119,6 +119,11 @@ INTERFACE index
   MODULE PROCEDURE index_timerange
 END INTERFACE
 
+!>Print object
+INTERFACE display
+  MODULE PROCEDURE display_timerange
+END INTERFACE
+
 CONTAINS
 
 !> Inizializza un oggetto \a vol7d_timerange con i parametri opzionali forniti.
@@ -173,6 +178,16 @@ this%p1 = imiss
 this%p2 = imiss
 
 END SUBROUTINE vol7d_timerange_delete
+
+
+subroutine display_timerange(this)
+
+TYPE(vol7d_timerange),INTENT(in) :: this
+integer ::EditionNumber,timerange,p1,p2
+
+print*,"TIMERANGE: ",this%timerange,this%p1,this%p2
+
+end subroutine display_timerange
 
 
 elemental FUNCTION vol7d_timerange_eq(this, that) RESULT(res)
