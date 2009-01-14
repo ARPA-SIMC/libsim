@@ -201,13 +201,13 @@ subroutine delete_regular_ll(this,dim)
 type(grid_regular_ll) ::this
 type(grid_dim) :: dim
 
-   this%lon_min =dmiss
-   this%lon_max =dmiss
-   this%lat_min =dmiss
-   this%lat_max =dmiss
-   this%component_flag=imiss
-   dim%nx = imiss
-   dim%ny = imiss
+this%lon_min =dmiss
+this%lon_max =dmiss
+this%lat_min =dmiss
+this%lat_max =dmiss
+this%component_flag=imiss
+dim%nx = imiss
+dim%ny = imiss
 
 if (associated(dim%lon)) then
   deallocate(dim%lon)

@@ -2398,6 +2398,18 @@ do while ( N > 0 )
   
     call idba_enqdate (this%handle,year,month,day,hour,minute,sec)
     call idba_enqlevel(this%handle, rlevel1, rl1, rlevel2,rl2)
+    !TODO
+    !dballe BUG: missing viene scritto come 0
+    !qui faccio un altibug ma sarà meglio eliminarlo in futuro
+    if  (rlevel1 == 0 .or. rlevel1 == 255 )then
+      rlevel1=imiss
+      rl1=imiss 
+    end if
+    if  (rlevel2 == 0 .or. rlevel2 == 255 )then
+      rlevel2=imiss
+      rl2=imiss 
+    end if
+
     call idba_enqtimerange(this%handle, rtimerange, p1, p2)
     call idba_enq(this%handle, "rep_cod",rep_cod)
                                 !print *,"trovato network",rep_cod
@@ -2470,7 +2482,7 @@ do while ( N > 0 )
       nvar=size(var)
       found=.false.
       DO ii = 1, nvar
-        call l4f_category_log(this%category,L4F_DEBUG,"VARIABILI:"//btable//to_char(var(ii)))
+        !call l4f_category_log(this%category,L4F_DEBUG,"VARIABILI:"//btable//to_char(var(ii)))
         if (btable == var(ii)) found =.true.
       end do
       if (.not. found) cycle

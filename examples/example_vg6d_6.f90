@@ -54,6 +54,7 @@ CALL init(v7d_exp,file=.true.,write=.true.,wipe=.true.,filename=filename,&
 categoryappend="exportBUFR",format="BUFR")
 
 do i = 1 , size(vol7d_out)
+  call display(vol7d_out(i))
   call vol7d_copy (vol7d_out(i), v7d_exp%vol7d) 
   call export (v7d_exp)
 end do

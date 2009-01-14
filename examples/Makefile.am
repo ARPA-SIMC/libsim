@@ -1,5 +1,6 @@
 AM_FCFLAGS = -I../base -I../grib -I../volgrid6d -I../vol7d -I../qc -I../termolib -I../log4fortran 
 EXTRA_DIST = log4crc
+bin_PROGRAMS =
 
 noinst_PROGRAMS = esempio_file_utilities esempio_v7d esempio_qc_convert esempio_termolib log4fortran example_getopt
 
@@ -85,6 +86,7 @@ endif
 if GRIBAPI
 
 noinst_PROGRAMS += example_vg6d_1 example_vg6d_2 example_vg6d_3 example_vg6d_4 example_vg6d_5 example_vg6d_6 example_vg6d_7
+bin_PROGRAMS += subarea
 
 example_vg6d_1_SOURCES = example_vg6d_1.f90
 example_vg6d_1_LDADD = ../volgrid6d/libsim_volgrid6d.la ../base/libsim_base.la ../vol7d/libsim_vol7d.la ../log4fortran/liblog4fortran.la $(NGMATH_OPTIONS)
@@ -107,5 +109,10 @@ example_vg6d_6_LDADD = ../volgrid6d/libsim_volgrid6d.la ../base/libsim_base.la .
 
 example_vg6d_7_SOURCES = example_vg6d_7.f90
 example_vg6d_7_LDADD = ../volgrid6d/libsim_volgrid6d.la ../base/libsim_base.la ../vol7d/libsim_vol7d.la ../log4fortran/liblog4fortran.la  $(NGMATH_OPTIONS)
+
+
+subarea_SOURCES = subarea.f90
+subarea_LDADD = ../volgrid6d/libsim_volgrid6d.la ../base/libsim_base.la ../vol7d/libsim_vol7d.la ../log4fortran/liblog4fortran.la $(NGMATH_OPTIONS)
+
 
 endif

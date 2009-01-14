@@ -122,7 +122,7 @@ call l4f_category_log(this%category,L4F_DEBUG,"gaid present: "&
  //to_char(c_e(this%gaid))//" value: "//to_char(this%gaid))
 
 if (present(griddim))then
-  this%griddim=griddim
+  call copy(griddim,this%griddim)
 else
   call init(this%griddim)
 end if

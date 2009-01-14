@@ -1442,7 +1442,7 @@ IF (this%trans%trans_type == 'inter') THEN
       this%innx=size(ana)
       this%inny=1
       
-      allocate(lon(this%innx),lat(this%innx))
+      allocate (lon(this%innx),lat(this%innx))
       allocate (this%inter_xp(this%innx,this%inny),this%inter_yp(this%innx,this%inny))
       allocate (this%inter_x(this%outnx,this%outny),this%inter_y(this%outnx,this%outny))
 
@@ -1939,7 +1939,7 @@ IF (this%trans%trans_type == 'inter') THEN
         call raise_fatal_error("Error return from NATGRIDD")
       ENDIF
 
-      deallocate(field_in_p)
+      deallocate(field_in_p,x_in_p,y_in_p)
 
     else
 
