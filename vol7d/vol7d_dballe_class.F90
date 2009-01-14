@@ -297,7 +297,7 @@ END SUBROUTINE vol7d_dballe_init
 SUBROUTINE vol7d_dballe_importvsns(this, var, network, coordmin, coordmax, timei, timef,level,timerange, set_network,&
  attr,anavar,anaattr, varkind,attrkind,anavarkind,anaattrkind)
 TYPE(vol7d_dballe),INTENT(inout) :: this  !< oggetto vol7d_dballe
-CHARACTER(len=*),INTENT(in),optional :: var  !< variabile da importare secondo la tabella B locale o relativi alias
+CHARACTER(len=*),INTENT(in) :: var  !< variabile da importare secondo la tabella B locale o relativi alias
 !> coordinate minime e massime che definiscono il 
 !! rettangolo di estrazione per l'importazione
 TYPE(geo_coord),INTENT(inout),optional :: coordmin,coordmax 
@@ -406,6 +406,7 @@ END SUBROUTINE vol7d_dballe_importvvnv
 !>\brief Identica a vol7d_dballe_importvsns con var vettore.
 !!
 !!import da DB-all.e oppure da BUFR/CREX formato generico
+
 SUBROUTINE vol7d_dballe_importvvns(this, var, network, coordmin, coordmax, timei, timef,level,timerange, set_network,&
  attr,anavar,anaattr, varkind,attrkind,anavarkind,anaattrkind)
 
