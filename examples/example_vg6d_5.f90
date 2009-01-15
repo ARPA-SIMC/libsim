@@ -8,6 +8,7 @@ use char_utilities
 implicit none
 
 integer :: category,ier,gaid_template
+integer :: i,j
 character(len=512):: a_name
 type (volgrid6d),pointer  :: volgrid(:),volgrid_out(:)
 type(transform_def) :: trans
@@ -26,6 +27,39 @@ call l4f_category_log(category,L4F_INFO,"inizio")
 call import (volgrid,filename="in.grb",categoryappend="volume letto")
 
 ! qui posso fare tutti i conti possibili
+print*,"-------------"
+call griddim_unproj(volgrid(1)%griddim)
+
+print*,"sotto"
+
+do i=1,volgrid(1)%griddim%dim%nx,10
+  j=1
+  print*,volgrid(1)%griddim%dim%lon(i,j),volgrid(1)%griddim%dim%lat(i,j)
+end do
+
+print*,"destra"
+
+do j=1,volgrid(1)%griddim%dim%ny,10
+  i=volgrid(1)%griddim%dim%nx
+  print*,volgrid(1)%griddim%dim%lon(i,j),volgrid(1)%griddim%dim%lat(i,j)
+end do
+
+print*,"sopra"
+
+do i=volgrid(1)%griddim%dim%nx,1,-10
+  j=volgrid(1)%griddim%dim%ny
+  print*,volgrid(1)%griddim%dim%lon(i,j),volgrid(1)%griddim%dim%lat(i,j)
+end do
+
+print*,"sinistra"
+
+do j=volgrid(1)%griddim%dim%ny,1,-10
+  i=1
+  print*,volgrid(1)%griddim%dim%lon(i,j),volgrid(1)%griddim%dim%lat(i,j)
+end do
+
+
+print*,"-------------"
 
 call init(trans, trans_type="zoom",sub_type="coord", &
  ilon=-10.d0,ilat=40.d0,flon=10.d0,flat=50.d0,&

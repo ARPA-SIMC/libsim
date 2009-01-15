@@ -232,6 +232,8 @@ type(grid_dim),intent(out) :: that
 that%nx=this%nx
 that%ny=this%ny
 
+print*,"ECCOLI",that%nx,that%ny
+
 if (associated(this%lon))then
   if (.not.associated(that%lon)) then
     allocate (that%lon(that%nx,that%ny))

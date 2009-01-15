@@ -202,15 +202,16 @@ if (.not.associated(dim%lat)) then
   allocate (dim%lat(dim%nx,dim%ny))
 end if
 
-
-dlat= (this%regular_ll%lat_max - this%regular_ll%lat_min) / dble(dim%ny - 1 )
 dlon= (this%regular_ll%lon_max - this%regular_ll%lon_min) / dble(dim%nx - 1 )
+dlat= (this%regular_ll%lat_max - this%regular_ll%lat_min) / dble(dim%ny - 1 )
 
 call unproj_rotated_ll(this,&
- reshape((/ ((this%regular_ll%lon_min+dlon*dble(i) ,i=0,dim%nx),&
- j=0,dim%ny) /),(/ dim%nx,dim%ny /)), &
- reshape((/ ((this%regular_ll%lat_min+dlat*dble(i) ,j=0,dim%ny),&
- i=0,dim%nx) /),(/ dim%nx,dim%ny /)), &
+ reshape((/ &
+ ((this%regular_ll%lon_min+dlon*dble(i) ,i=0,dim%nx-1), j=0,dim%ny-1) /),&
+ (/ dim%nx,dim%ny /)), &
+ reshape((/ &
+ ((this%regular_ll%lat_min+dlat*dble(j) ,i=0,dim%nx-1), j=0,dim%ny-1) /),&
+ (/ dim%nx,dim%ny /)), &
  dim%lon,dim%lat)
 
 
