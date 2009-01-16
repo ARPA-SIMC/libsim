@@ -232,8 +232,6 @@ type(grid_dim),intent(out) :: that
 that%nx=this%nx
 that%ny=this%ny
 
-print*,"ECCOLI",that%nx,that%ny
-
 if (associated(this%lon))then
   if (.not.associated(that%lon)) then
     allocate (that%lon(that%nx,that%ny))
@@ -283,10 +281,12 @@ dlon= (this%lon_max - this%lon_min) / dble(dim%nx - 1 )
 dlat= (this%lat_max - this%lat_min) / dble(dim%ny - 1 )
 
 call unproj_regular_ll(this,&
- reshape((/ ((this%lon_min+(dlon*dble(i)) ,i=0,dim%nx-1), &
- j=0,dim%ny-1) /),(/dim%nx,dim%ny/)), &
- reshape((/ ((this%lat_min+(dlat*dble(j)) ,i=0,dim%nx-1), &
- j=0,dim%ny-1) /),(/dim%nx,dim%ny/)), &
+ reshape((/ &
+ ((this%lon_min+(dlon*dble(i)) ,i=0,dim%nx-1), j=0,dim%ny-1) /),&
+ (/dim%nx,dim%ny/)), &
+ reshape((/ &
+ ((this%lat_min+(dlat*dble(j)) ,i=0,dim%nx-1), j=0,dim%ny-1) /),&
+ (/dim%nx,dim%ny/)), &
  dim%lon,dim%lat)
 
 
