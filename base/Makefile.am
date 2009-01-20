@@ -27,6 +27,8 @@ missing_values.$(OBJEXT): kinds.$(OBJEXT)
 missing_values.lo: kinds.$(OBJEXT)
 optional_values.$(OBJEXT): missing_values.$(OBJEXT)
 optional_values.lo: missing_values.$(OBJEXT)
+getopt_m.$(OBJEXT): err_handling.$(OBJEXT)
+getopt_m.lo: err_handling.$(OBJEXT)
 
 check_PROGRAMS = char_utilities_test datetime_test
 TESTS = $(check_PROGRAMS)

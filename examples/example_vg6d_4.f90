@@ -46,7 +46,6 @@ ier=l4f_init()
 category=l4f_category_get(a_name//".main")
 
 
-opterr=.false.
 do
   select case( getopt( "a:b:c:d:hi:l:m:n:o:p:q:r:s:t:u:v:z:"))
 
