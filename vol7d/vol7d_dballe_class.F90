@@ -1748,13 +1748,9 @@ call l4f_category_log(this%category,L4F_DEBUG,"macro ndati tipo c")
 do iii=1, nnetwork
    if (.not.lnetwork(iii))cycle
 
-! l'anagrafica la scrivo solo per i generici
-   if (present(template)) then
-     if (template /= "generic") then
-       cycle
-     end if
-   else
-     if (this%vol7d%network(iii)%id /= 254 )cycle
+! l'anagrafica su file la scrivo solo per i generici
+   if (this%file .and. present(template)) then
+     if (template /= "generic") cycle
    end if
 
    do i=1, nstaz
@@ -1846,12 +1842,7 @@ do iii=1, nnetwork
         call idba_prendilo (this%handle)
 
         if (.not. this%file ) then
-
           call idba_enq (this%handle,"ana_id",ana_id(i,iii))
-
-        else
-
-          ana_id(i,iii)=1
         end if
       end if
 
@@ -1867,10 +1858,6 @@ end do
 
 do i=1, nstaz
 
-
-
-
-
    do ii=1,ntime
       if (present(timei) )then
          if ( this%vol7d%time(ii) < timei ) cycle
@@ -1882,9 +1869,10 @@ do i=1, nstaz
       do iiiiii=1, nnetwork
         if (.not.lnetwork(iiiiii))cycle
 
-        if (.not. c_e(ana_id(i,iiiiii))) cycle
+        if ( (.not. this%file) .and. (.not. c_e(ana_id(i,iiiiii))) ) cycle
 
                                 !>\todo ottimizzare settando e unsettando le cose giuste al posto giusto
+
         call idba_unsetall (this%handle)
         
         if (this%file)then
