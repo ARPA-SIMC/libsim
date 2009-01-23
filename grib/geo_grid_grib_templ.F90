@@ -274,7 +274,7 @@ ELSE
   x2 = 1
   xs = -1
 ENDIF
-IF (IAND(grib%isec2(11), 64) == 0) THEN
+IF (IAND(grib%isec2(iscm), 64) == 0) THEN
   y1 = grib%isec2(iny)
   y2 = 1
   ys = -1
