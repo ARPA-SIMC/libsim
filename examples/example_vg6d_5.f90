@@ -28,12 +28,7 @@ call import (volgrid,filename="in.grb",categoryappend="volume letto")
 
 ! qui posso fare tutti i conti possibili
 !!$print*,"-------------"
-
-! TODO
-! attenzione se qui faccio unproj poi zooommo c'è un problema:
-! %dim con lat e lon vengono allocate, poi vengono modificate solo nx e ny
-! rimaniamo cosi' in una situazione inconsistente e pronta a produrre un bel crash
-
+!!$
 !!$call griddim_unproj(volgrid(1)%griddim)
 !!$
 !!$print*,"sotto"

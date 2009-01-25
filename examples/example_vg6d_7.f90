@@ -60,10 +60,8 @@ call import (v7d_import,var=(/"B12001"/),varkind=(/"r"/))
 
 call display(v7d_import%vol7d)
 
-!call transform(trans,griddim_out, vol7d_in=v7d_import%vol7d, volgrid6d_out=volgrid, categoryappend="trasforma")
-call transform(trans,griddim_out, vol7d_in=v7d_import%vol7d, volgrid6d_out=volgrid(1))
-
 call l4f_category_log(category,L4F_INFO,"trasformato")
+call transform(trans,griddim_out, vol7d_in=v7d_import%vol7d, volgrid6d_out=volgrid(1), categoryappend="trasform->")
 
 call l4f_category_log(category,L4F_INFO,"export to GRIB")
 call export (volgrid,gaid_template=gaid_template,categoryappend="volume scritto")
