@@ -87,6 +87,11 @@ INTERFACE index
   MODULE PROCEDURE index_ana
 END INTERFACE
 
+!>Print object
+INTERFACE display
+  MODULE PROCEDURE display_ana
+END INTERFACE
+
 CONTAINS
 
 !> Inizializza un oggetto \a vol7d_ana con i parametri opzionali forniti.
@@ -116,6 +121,17 @@ CALL delete(this%coord)
 this%ident = cmiss
 
 END SUBROUTINE vol7d_ana_delete
+
+
+subroutine display_ana(this)
+
+TYPE(vol7d_ana),INTENT(in) :: this
+doubleprecision :: lon,lat
+
+call getval(this%coord,lon=lon,lat=lat)
+print*,"ANA: ",this%ident,lon,lat
+
+end subroutine display_ana
 
 
 elemental FUNCTION vol7d_ana_eq(this, that) RESULT(res)

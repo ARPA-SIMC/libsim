@@ -305,7 +305,22 @@ integer :: i
 
 print*,"<<<<<<<<<<<<<<<<<<< vol7d object >>>>>>>>>>>>>>>>>>>>"
 
-!!$IF (ASSOCIATED(this%ana))         call display(this%ana)
+IF (ASSOCIATED(this%network))then
+  print*,"---- network vector ----"
+  print*,"elements=",size(this%network)
+  do i=1, size(this%network)
+    call display(this%network(i))
+  end do
+end IF
+
+IF (ASSOCIATED(this%ana))then
+  print*,"---- ana vector ----"
+  print*,"elements=",size(this%ana)
+  do i=1, size(this%ana)
+    call display(this%ana(i))
+  end do
+end IF
+
 IF (ASSOCIATED(this%time))then        
   print*,"---- time vector ----"
   print*,"elements=",size(this%time)

@@ -71,6 +71,11 @@ INTERFACE index
   MODULE PROCEDURE index_network
 END INTERFACE
 
+!>Print object
+INTERFACE display
+  MODULE PROCEDURE display_network
+END INTERFACE
+
 CONTAINS
 
 !> Inizializza un oggetto \a vol7d_network con i parametri opzionali forniti.
@@ -96,6 +101,15 @@ TYPE(vol7d_network),INTENT(INOUT) :: this !< oggetto da distruggre
 this%id = imiss
 
 END SUBROUTINE vol7d_network_delete
+
+
+subroutine display_network(this)
+
+TYPE(vol7d_network),INTENT(in) :: this
+
+print*,"NETWORK: ",this%id
+
+end subroutine display_network
 
 
 elemental FUNCTION vol7d_network_eq(this, that) RESULT(res)
