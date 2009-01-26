@@ -594,6 +594,7 @@ if (associated (this%gaid))then
   end if
 
   if (optio_log(clone))then
+    this%gaid(ilevel,itime,itimerange,ivar)=-1
     call grib_clone(gridinfo%gaid,this%gaid(ilevel,itime,itimerange,ivar))
   else
     this%gaid(ilevel,itime,itimerange,ivar)=gridinfo%gaid
@@ -633,8 +634,8 @@ logical , intent(in),optional :: clone !< se fornito e \c .TRUE., clona i gaid t
 call l4f_category_log(this%category,L4F_DEBUG,"export_to_gridinfo")
 
 if (present(gaid_template)) then
-
-   call grib_clone(gaid_template,gaid)
+  gaid=-1
+  call grib_clone(gaid_template,gaid)
   call l4f_category_log(this%category,L4F_DEBUG,&
    "clone to a new gaid")
 else
@@ -649,6 +650,7 @@ if (.not. c_e(gaid))then
   if (c_e(this%gaid(ilevel,itime,itimerange,ivar)))then
 
     if (optio_log(clone))then
+      gaid=-1
       call grib_clone(this%gaid(ilevel,itime,itimerange,ivar),gaid)
     else
       gaid = this%gaid(ilevel,itime,itimerange,ivar)
@@ -1158,6 +1160,7 @@ do itime=1,ntime
 
             call l4f_category_log(volgrid6d_in%category,L4F_DEBUG,"clone gaid "//&
              trim(to_char(volgrid6d_in%gaid(ilevel,itime,itimerange,ivar))))
+            volgrid6d_out%gaid(ilevel,itime,itimerange,ivar)=-1
             call grib_clone(volgrid6d_in%gaid(ilevel,itime,itimerange,ivar),&
              volgrid6d_out%gaid(ilevel,itime,itimerange,ivar))
           else

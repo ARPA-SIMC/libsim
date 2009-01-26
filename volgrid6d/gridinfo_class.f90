@@ -110,6 +110,7 @@ call l4f_category_log(this%category,L4F_DEBUG,"start init gridinfo")
 if (present(gaid))then
 
   if (optio_log(clone))then
+    this%gaid=-1
     call grib_clone(gaid,this%gaid)
   else
     this%gaid=gaid
@@ -181,6 +182,7 @@ SUBROUTINE clone_gridinfo(this,that)
 TYPE(gridinfo_type),intent(in) :: this !< oggetto da clonare
 TYPE(gridinfo_type),intent(out) :: that !< oggetto clonato
 
+that%gaid=-1
 call grib_clone(this%gaid,that%gaid)
 
 call copy(this%griddim,that%griddim)

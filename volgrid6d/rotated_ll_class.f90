@@ -195,7 +195,7 @@ doubleprecision :: dlat,dlon
 
 if (associated(dim%lon)) then
   if (dim%nx /= size(dim%lon,1) .or. dim%ny /= size(dim%lon,2)) then
-    call l4f_category_log(this%category,L4F_WARNING,"reallocate lon in grid_unproj_rotated_ll")
+    call l4f_category_log(this%category,L4F_WARN,"reallocate lon in grid_unproj_rotated_ll")
     call l4f_category_log(this%category,L4F_DEBUG,"dealloc size lon: "//to_char(size(dim%lon)))
     deallocate(dim%lon)
   end if
@@ -203,7 +203,7 @@ end if
 
 if (associated(dim%lat)) then
   if (dim%nx /= size(dim%lat,1) .or. dim%ny /= size(dim%lat,2)) then
-    call l4f_category_log(this%category,L4F_WARNING,"reallocate lat in grid_unproj_rotated_ll")
+    call l4f_category_log(this%category,L4F_WARN,"reallocate lat in grid_unproj_rotated_ll")
     call l4f_category_log(this%category,L4F_DEBUG,"dealloc size lat: "//to_char(size(dim%lat)))
     deallocate (dim%lat)
   end if
