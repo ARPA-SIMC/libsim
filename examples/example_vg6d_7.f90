@@ -18,7 +18,7 @@ type(vol7d) :: vol7d_in
 TYPE(vol7d_dballe) :: v7d_import
 type(griddim_def) :: griddim_out
 
-integer :: nx=30,ny=30,component_flag=0,gaid_template
+integer :: nx=40,ny=40,component_flag=0,gaid_template
 doubleprecision :: lon_min=0., lon_max=30., lat_min=30., lat_max=60.
 doubleprecision :: latitude_south_pole=-32.5,longitude_south_pole=10.,angle_rotation=0.
 character(len=80) :: type='regular_ll',trans_type='inter',sub_type='linear'

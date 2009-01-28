@@ -1296,6 +1296,8 @@ character(len=512) :: a_name
 call l4f_launcher(a_name,a_name_append=trim(subcategory)//"."//trim(categoryappend))
 this%category=l4f_category_get(a_name)
 
+call l4f_category_log(this%category,L4F_DEBUG,"start init_grid_v7d_transform" )
+
 this%trans=trans
 
 nullify (this%inter_index_x)
@@ -1325,7 +1327,8 @@ IF (this%trans%trans_type == 'inter') THEN
       this%outnx=size(ana)
       this%outny=1
       
-      allocate (this%inter_index_x(nx,ny),this%inter_index_y(nx,ny))
+      allocate (this%inter_index_x(this%outnx,this%outny),&
+       this%inter_index_y(this%outnx,this%outny))
       allocate(lon(this%outnx),lat(this%outnx))
 
       CALL get_val(in, &
@@ -1815,7 +1818,6 @@ ELSE IF (this%trans%trans_type == 'inter') THEN
 
   else if (this%trans%inter%sub_type == 'bilin') THEN
 
-
     DO j = 1, this%outny 
       DO i = 1, this%outnx 
 
@@ -1918,11 +1920,9 @@ IF (this%trans%trans_type == 'inter') THEN
       allocate(x_in_p(inn_p))
       allocate(y_in_p(inn_p))
 
-      where(c_e(field_in))
-        field_in_p=field_in
-        x_in_p=this%inter_xp(:,1)
-        y_in_p=this%inter_yp(:,1)
-      end where
+      field_in_p=pack(field_in,c_e(field_in))
+      x_in_p=pack(this%inter_xp(:,1),c_e(field_in))
+      y_in_p=pack(this%inter_yp(:,1),c_e(field_in))
 
 #ifdef NGMATH
 

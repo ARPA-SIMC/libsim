@@ -1254,7 +1254,7 @@ integer :: nana, ntime, ntimerange, nlevel, nvar, nnetwork
 integer :: itime, itimerange, ilevel, ivar, inetwork
 real,allocatable :: voldatir_out(:,:)
 
-call l4f_category_log(volgrid6d_in%category,L4F_DEBUG,"start volgrid6d_transform_compute")
+call l4f_category_log(volgrid6d_in%category,L4F_DEBUG,"start volgrid6d_v7d_transform_compute")
 
 ntime=0
 ntimerange=0
@@ -1293,7 +1293,7 @@ if (associated(volgrid6d_in%var))then
   call vargrib2varbufr(volgrid6d_in%var, vol7d_out%dativar%r)
 end if
 
-nana=size(vol7d_out%voldatir(:,1,1,1,1,1))
+nana=size(vol7d_out%ana)
 
 allocate(voldatir_out(nana,1))
 
@@ -1340,7 +1340,7 @@ character(len=*),INTENT(in),OPTIONAL :: categoryappend !< appende questo suffiss
 type(grid_transform) :: grid_trans
 integer :: ntime, ntimerange, nlevel, nvar, nana
 
-call l4f_category_log(volgrid6d_in%category,L4F_DEBUG,"start volgrid6d_transform")
+call l4f_category_log(volgrid6d_in%category,L4F_DEBUG,"start volgrid6d_v7d_transform")
 
 nana=size(ana)
 ntime=0

@@ -8,11 +8,11 @@ USE vol7d_class
 
 implicit none
 
-integer :: category,ier,i
+integer :: category,ier,i,nana
 character(len=512):: a_name,filename="out.bufr"
 type (volgrid6d),pointer  :: volgrid(:),volgrid_out(:)
 type(transform_def) :: trans
-type(vol7d_ana) :: ana(5)
+type(vol7d_ana),allocatable :: ana(:)
 type(vol7d),pointer :: vol7d_out(:)
 TYPE(vol7d_dballe) :: v7d_exp
 
@@ -28,12 +28,21 @@ category=l4f_category_get(a_name//".main")
 
 call l4f_category_log(category,L4F_INFO,"inizio")
 
-!target points 
-call init(ana(1),lat=45.D0,lon=11.D0)
-call init(ana(2),lat=45.6D0,lon=11.8D0)
-call init(ana(3),lat=46.6D0,lon=12.8D0)
-call init(ana(4),lat=40.6D0,lon=11.8D0)
-call init(ana(5),lat=40.0D0,lon=10.0D0)
+!!$nana=5
+!!$allocate(ana(nana))
+!!$!target points 
+!!$call init(ana(1),lat=45.D0,lon=11.D0)
+!!$call init(ana(2),lat=45.6D0,lon=11.8D0)
+!!$call init(ana(3),lat=46.6D0,lon=12.8D0)
+!!$call init(ana(4),lat=40.6D0,lon=11.8D0)
+!!$call init(ana(5),lat=40.0D0,lon=10.0D0)
+
+open (unit=1,file="ana.txt",status="old",form="unformatted")
+read(1)nana
+allocate(ana(nana))
+call read_unit(ana,unit=1)
+close(unit=1)
+
 
 !trasformation object
 call init(trans, trans_type="inter",sub_type="bilin", categoryappend="trasformation")
@@ -56,7 +65,7 @@ categoryappend="exportBUFR",format="BUFR")
 do i = 1 , size(vol7d_out)
   call display(vol7d_out(i))
   call vol7d_copy (vol7d_out(i), v7d_exp%vol7d) 
-  call export (v7d_exp)
+  call export (v7d_exp,template="synop")
 end do
 
 call l4f_category_log(category,L4F_INFO,"terminato")
