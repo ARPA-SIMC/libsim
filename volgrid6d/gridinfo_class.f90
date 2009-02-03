@@ -91,10 +91,10 @@ TYPE(datetime),intent(in),optional :: time
 TYPE(vol7d_timerange),intent(in),optional :: timerange
 !> descrittore della dimensione livello verticale
 TYPE(vol7d_level),intent(in),optional :: level
-!> vettore descrittore della dimensione variabile di anagrafica
+!> descrittore della dimensione variabile di anagrafica
 TYPE(volgrid6d_var),intent(in),optional :: var
 logical , intent(in),optional :: clone !< se fornito e \c .TRUE., clona gaid to gridinfo
-character(len=*),INTENT(in),OPTIONAL :: categoryappend !< appennde questo suffisso al namespace category di log4fortran
+character(len=*),INTENT(in),OPTIONAL :: categoryappend !< accoda questo suffisso al namespace category di log4fortran
 
 character(len=512) :: a_name
 
@@ -196,10 +196,11 @@ that%category=this%category
 
 end SUBROUTINE clone_gridinfo
 
-
+!> Importa nell'oggetto gridinfo \a this il contenuto del messaggio grib
+!! identificato da \a this%gaid precedentemente impostato.
 subroutine import_gridinfo (this)
 
-TYPE(gridinfo_type),intent(out) :: this !< oggetto da importare
+TYPE(gridinfo_type),intent(out) :: this !< oggetto in cui importare
 
 
 call l4f_category_log(this%category,L4F_DEBUG,"import from gaid")
@@ -214,10 +215,11 @@ call import(this%var,this%gaid)
 
 end subroutine import_gridinfo
 
-
+!> Esporta il contenuto dell'oggetto gridinfo \a this in un messaggio grib
+!! identificato da \a this%gaid precedentemente impostato.
 subroutine export_gridinfo (this)
 
-TYPE(gridinfo_type),intent(out) :: this !< oggetto da exportare
+TYPE(gridinfo_type),intent(out) :: this !< oggetto da esportare
 
 call l4f_category_log(this%category,L4F_DEBUG,"export to gaid" )
 

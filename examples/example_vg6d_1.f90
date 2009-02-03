@@ -14,7 +14,7 @@ type (volgrid6d_var) :: var
 type (griddim_def) :: griddim
 
 !questa chiamata prende dal launcher il nome univoco
-call l4f_launcher(a_name,a_name_force="demo")
+call l4f_launcher(a_name,a_name_force="demo1")
 
 !imposta a_name
 category=l4f_category_get(a_name//".main")
@@ -28,8 +28,8 @@ ier=l4f_init()
 call init (griddim,type="regular_ll", &
  nx = 10,ny = 15, &
  lon_min = -2.D0, &
- lon_max = 24.D0, &
- lat_min = 35.D0, &
+ lon_max = 16.D0, &
+ lat_min = 37.D0, &
  lat_max = 51.D0, &
  component_flag=1,&
  categoryappend="grigliato regolare manuale")
