@@ -410,6 +410,7 @@ character(len=*),INTENT(in),OPTIONAL :: categoryappend !< appende questo suffiss
 
 character(len=512) :: a_name
 
+that%grid%type=this%grid%type
 
 select case ( this%grid%type%type)
 

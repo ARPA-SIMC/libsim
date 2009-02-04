@@ -615,11 +615,6 @@ integer ::iScansNegatively,jScansPositively
 
 integer ::EditionNumber
 
-!TODO:
-! qui c'è un serio problema
-! questo messaggio a volte (subarea) sparisce e poi risulta 
-! impossibile proseguire per problemi in grib_api
-! BISOGNA INDAGARE
 call l4f_category_log(this%category,L4F_DEBUG,"start export_regular_ll")
 
 call export_dim(dim,gaid)
