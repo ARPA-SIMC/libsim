@@ -1498,7 +1498,7 @@ if (associated(vol7d_in%timerange)) ntimerange=size(vol7d_in%timerange)
 if (associated(vol7d_in%level)) nlevel=size(vol7d_in%level)
 if (associated(vol7d_in%dativar%r)) nvar=size(vol7d_in%dativar%r)
 
-call init(grid_trans, this, ana=vol7d_in%ana, out=griddim,&
+call init(grid_trans, this, ana=vol7d_in%ana, griddim=griddim,&
  categoryappend=categoryappend)
 
 call init (volgrid6d_out, griddim, categoryappend=categoryappend)

@@ -474,7 +474,7 @@ WARN_LOGFILE           =
 # directories like "/usr/src/myproject". Separate the files or directories 
 # with spaces.
 
-INPUT                  = @srcdir@ @top_srcdir@/base @top_srcdir@/vol7d @top_srcdir@/grib @top_srcdir@/qc @top_srcdir@/log4fortran
+INPUT                  = @srcdir@ @top_srcdir@/base @top_srcdir@/vol7d @top_srcdir@/grib @top_srcdir@/qc @top_srcdir@/log4fortran @top_srcdir@/volgrid6d
 
 #INPUT = @top_srcdir@/src/main @top_srcdir@/doc/general @top_srcdir@/src/datatypes/Mesh.F90 @top_srcdir@/src/utils
 

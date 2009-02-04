@@ -1,9 +1,11 @@
-!>\brief  classe per la gestione di volumi di dati regolari (gridded)
+!> \defgroup volgrid6d Pacchetto volgrid6d, libreria volgrid6d
+
+!>\brief  classe per la gestione delle aree geografiche associate a dati su grigliato.
 !!
 !!Questo modulo definisce gli oggetti e i metodi per gestire
-!!l'importazione e l'esportazione di volumi regolari (gridded) 
-!!e della loro gestione nei sistemi di coordinate geografiche e proiezioni
-
+!!le aree geografiche in proiezione e non, associate a dati su grigliato (gridded).
+!!Vengono gestiti differenti sistemi di coordinate geografiche e proiezioni.
+!!\ingroup volgrid6d
 
 module grid_class
 
@@ -20,34 +22,70 @@ implicit none
 
 character (len=255),parameter:: subcategory="grid_class"
 
+!>\brief Oggetto che descrive il grid definition secondo la logica della codifica grib.
+!!(gridType in grib_api)
+!!The type of grid computed from the grid description section in grib format.
+!!
+!!    - For both editions:
+!!          - regular_ll
+!!          - reduced_ll
+!!          - mercator
+!!          - lambert
+!!          - polar_stereographic
+!!          - UTM
+!!          - simple_polyconic
+!!          - albers
+!!          - miller
+!!          - rotated_ll
+!!          - stretched_ll
+!!          - stretched_rotated_ll
+!!          - regular_gg
+!!          - rotated_gg
+!!          - stretched_gg
+!!          - stretched_rotated_gg
+!!          - reduced_gg
+!!          - sh
+!!          - rotated_sh
+!!          - stretched_sh
+!!          - stretched_rotated_sh
+!!          - space_view
+!!    - For edition 2 only:
+!!          - triangular_grid
+!!          - equatorial_azimuthal_equidistant
+!!          - azimuth_range
+!!          - cross_section
+!!          - Hovmoller
+!!          - time_section
+
+
 type grid_type
 
-  character(len=80) :: type
+  character(len=80) :: type !< The type of grid
 
 end type grid_type
 
 
-!>\brief definizione del grigliato in genere
+!>\brief definizione di tutte le tipologie di grigliato
 type grid_def
 
   private
 
-  type(grid_type)   :: type
-  type(grid_regular_ll) :: regular_ll
-  type(grid_rotated_ll) :: rotated_ll
+  type(grid_type)   :: type !< type of grid definition
+  type(grid_regular_ll) :: regular_ll !< regular lat lon grid definition
+  type(grid_rotated_ll) :: rotated_ll !< rotated lat lon grid definition
 
-  integer :: category !< log4fortran
+  integer :: category !< category for log4fortran
 
 end type grid_def
 
 
 
-!>\brief definizione del grigliato in genere e delle sue dimensioni
+!>\brief definizione del grigliato  e delle sue dimensioni
 type griddim_def
 
 
-  type(grid_def)   :: grid
-  type(grid_dim)   :: dim
+  type(grid_def)   :: grid !< definizione del grigliato
+  type(grid_dim)   :: dim  !< definizione delle dimensioni
 
   integer :: category !< log4fortran
 
@@ -57,17 +95,17 @@ end type griddim_def
 
 !>  subtype nearest information
 type inter_near
-  logical :: external !< enable external elaboration
+  logical :: external !< enable elaboration outside data bounding box
 end type inter_near
 
 !>  subtype bilinear information
 type inter_bilin
-  logical :: external !< enable external elaboration
+  logical :: external !< enable elaboration outside data bounding box
 end type inter_bilin
 
 !>  subtype linear information
 type inter_linear
-  logical :: external !< enable external elaboration
+  logical :: external !< enable elaboration outside data bounding box
 end type inter_linear
 
 !>  interpolation information 
@@ -115,26 +153,31 @@ type boxregrid
   type(boxregrid_average) :: average
 end type boxregrid
 
+
+!> \brief transformation object
+!! Specifica il tipo di traformazione richiesto
 TYPE transform_def
 
   private
 
   CHARACTER(len=80) :: trans_type !< type of transformation, can be \c 'zoom', \c 'boxregrid', \c 'interp', ...
-  type(zoom) :: zoom
-  type(boxregrid) :: boxregrid
-  type(inter) :: inter
+  type(zoom) :: zoom !< zoom specification
+  type(boxregrid) :: boxregrid !< boxregrid specification
+  type(inter) :: inter !< interpolation specification
 !  type(interp) :: interp
 
-  integer :: category !< log4fortran
+  integer :: category !< catecory for log4fortran
 
 END TYPE transform_def
 
 
+!> \brief transformation object for grid/vol7d
+!! Specifica il tipo di traformazione richiesto associato a una definizione di grid/vol7d
 TYPE grid_transform
 
   private
 
-  TYPE(transform_def) :: trans
+  TYPE(transform_def) :: trans !<  Specifica il tipo di traformazione richiesto
 
   integer :: innx,  inny
   integer :: outnx, outny
@@ -145,7 +188,7 @@ TYPE grid_transform
 
   doubleprecision,pointer :: inter_xp(:,:),inter_yp(:,:)
 
-  integer :: category !< log4fortran
+  integer :: category !< category for log4fortran
 
 END TYPE grid_transform
 
@@ -153,63 +196,74 @@ END TYPE grid_transform
 
 
 !> Operatore logico di uguaglianza tra oggetti della classe grid.
-!! Funziona anche per 
-!! confronti di tipo array-array (qualsiasi n. di dimensioni) e di tipo
+!! Funziona anche per confronti di tipo array-array (qualsiasi n. di dimensioni) e di tipo
 !! scalare-vettore(1-d) (ma non vettore(1-d)-scalare o tra array con più
 !! di 1 dimensione e scalari).
 INTERFACE OPERATOR (==)
   MODULE PROCEDURE grid_eq, grid_type_eq,griddim_eq
 END INTERFACE
 
-
+!> Costruttore dell'oggetto
 INTERFACE init
   MODULE PROCEDURE init_griddim, init_grid_transform, init_grid_v7d_transform, init_v7d_grid_transform, init_transform
 END INTERFACE
 
+!> Distruttore dell'oggetto
 INTERFACE delete
   MODULE PROCEDURE delete_griddim, delete_grid_transform, delete_transform
 END INTERFACE
 
+!> Copia l'ggetto creando una nuova istanza
 INTERFACE copy
   MODULE PROCEDURE copy_griddim
 END INTERFACE
 
+!> Proietta la coordinate geografiche nel relativo sistema di rappresentazione
 INTERFACE proj
   MODULE PROCEDURE generic_proj
 END INTERFACE
 
+!> Rstituisce le coordinate geografiche dal sistema di rappresentazione specifico
 INTERFACE unproj
   MODULE PROCEDURE generic_unproj
 END INTERFACE
 
+!> Ritorna il contenuto dell'oggetto
 INTERFACE get_val
   MODULE PROCEDURE get_val_griddim
 END INTERFACE
 
+!> Imposta il contenuto dell'oggeto
 INTERFACE set_val
   MODULE PROCEDURE set_val_griddim
 END INTERFACE
 
+!> Scrive l'ggetto su file formatted o unformatted
 INTERFACE write_unit
   MODULE PROCEDURE write_unit_griddim
 END INTERFACE
 
+!> Legge l'oggetto da file formatted o unformatted
 INTERFACE read_unit
   MODULE PROCEDURE read_unit_griddim
 END INTERFACE
 
+!> Importazione 
 INTERFACE import
   MODULE PROCEDURE import_griddim
 END INTERFACE
 
+!> Exportazione
 INTERFACE export
   MODULE PROCEDURE export_griddim
 END INTERFACE
 
+!> visualizzazione su schermo
 INTERFACE display
   MODULE PROCEDURE display_griddim
 END INTERFACE
 
+!> Calcola i nuovi dati secondo la trasformazione specificata
 INTERFACE compute
   MODULE PROCEDURE grid_transform_compute,v7d_grid_transform_compute
 END INTERFACE
@@ -246,26 +300,42 @@ public transform_def,grid_transform
 contains
 
 
-
+!> \brief init of griddim object
+!! inizializza un oggetto griddim
+!! 
 subroutine init_griddim(this,type,&
  nx,ny, &
  lon_min, lon_max, lat_min, lat_max, component_flag, &
  latitude_south_pole,longitude_south_pole,angle_rotation, &
  categoryappend)
 
-type(griddim_def) :: this
+type(griddim_def) :: this !< oggetto da creare
 
-character(len=*),INTENT(in),OPTIONAL :: type
-integer,optional :: nx, ny
+character(len=*),INTENT(in),OPTIONAL :: type !< type of grid definition
+integer,optional :: nx !< numero dei punti in X 
+integer,optional :: ny !< numero dei punti in Y
+!> longitudini e latitudini minime e massime
 doubleprecision,optional :: lon_min, lon_max, lat_min, lat_max
-doubleprecision,optional :: latitude_south_pole,longitude_south_pole,angle_rotation
+doubleprecision,optional :: latitude_south_pole !< Latitude of the southern pole of projection
+doubleprecision,optional :: longitude_south_pole !< Longitude of the southern pole of projection 
+doubleprecision,optional :: angle_rotation !< Angle of rotation of projection
+!> Resolution and Component Flags
+!! -  bit 1	
+!!            -  0	i direction increments not given
+!!            -  1	i direction increments given
+!! -  bit 2	
+!!            -  0	j direction increments not given
+!!            -  1	j direction increments given
+!! -  bit 3	
+!!            -  0 	Resolved u- and v- components of vector quantities relative to easterly and northerly directions
+!!            -  1 	Resolved u- and v- components of vector quantities relative to the defined grid in the direction of increasing x and y (or i and j) coordinates respectively
 integer,optional :: component_flag
-character(len=*),INTENT(in),OPTIONAL :: categoryappend !< appennde questo suffisso al namespace category di log4fortran
+
+character(len=*),INTENT(in),OPTIONAL :: categoryappend !< appende questo suffisso al namespace category di log4fortran
 
 character(len=512) :: a_name
 
-
-call l4f_launcher(a_name,a_name_append=trim(subcategory)//"."//trim(categoryappend))
+call l4f_launcher(a_name,a_name_append=trim(subcategory)//"."//trim(optio_c(categoryappend,255)))
 this%category=l4f_category_get(a_name)
 
 call init(this%grid%regular_ll,this%dim)
@@ -289,14 +359,14 @@ case ( "regular_ll")
   call init(this%grid%regular_ll,this%dim,&
    nx,ny, &
    lon_min, lon_max, lat_min, lat_max, component_flag, &
-   categoryappend=trim(subcategory)//"."//trim(categoryappend))
+   categoryappend=trim(subcategory)//"."//trim(optio_c(categoryappend,255)))
 
 case ( "rotated_ll")
   call init(this%grid%rotated_ll,this%dim,&
    nx,ny, &
    lon_min, lon_max, lat_min, lat_max, component_flag, &
    latitude_south_pole,longitude_south_pole,angle_rotation, &
-   categoryappend=trim(subcategory)//"."//trim(categoryappend))
+   categoryappend=trim(subcategory)//"."//trim(optio_c(categoryappend,255)))
   
 case default
   call l4f_category_log(this%category,L4F_ERROR,"init griddim gtype: "//this%grid%type%type//" non gestita" )
@@ -307,9 +377,9 @@ end select
 
 end subroutine init_griddim
 
-
+!> Cancellazione oggetto griddim
 subroutine delete_griddim(this)
-type(griddim_def) :: this
+type(griddim_def) :: this !< oggetto griddim da cancellare
 
 select case ( this%grid%type%type)
 
@@ -331,25 +401,48 @@ call l4f_category_delete(this%category)
 
 end subroutine delete_griddim
 
+!> Clona un oggetto griddim creandone una nuova istanza
+subroutine copy_griddim(this,that,categoryappend)
 
-subroutine copy_griddim(this,that)
+type(griddim_def),intent(in) :: this !< oggetto da clonare
+type(griddim_def),intent(out) :: that !> oggetto clonato
+character(len=*),INTENT(in),OPTIONAL :: categoryappend !< appende questo suffisso al namespace category di log4fortran
 
-type(griddim_def),intent(in) :: this
-type(griddim_def),intent(out) :: that
+character(len=512) :: a_name
 
-!whithout pointer
-that%grid=this%grid
 
-!this have pointer
-call copy (this%dim,that%dim)
+select case ( this%grid%type%type)
+
+case ( "regular_ll")
+
+  call copy(this%grid%regular_ll,that%grid%regular_ll,categoryappend=categoryappend)
+  call copy (this%dim,that%dim)
+
+case ( "rotated_ll")
+
+  call copy(this%grid%rotated_ll,that%grid%rotated_ll,categoryappend=categoryappend)
+  call copy (this%dim,that%dim)
+  
+case default
+  call l4f_category_log(this%category,L4F_ERROR,"copy_griddim gtype: "//this%grid%type%type//" non gestita" )
+  call raise_error("copy_griddim gtype non gestita")
+
+end select
+
+
+!new category
+call l4f_launcher(a_name,a_name_append=trim(subcategory)//"."//trim(optio_c(categoryappend,255)))
+that%category=l4f_category_get(a_name)
 
 end subroutine copy_griddim
 
-
+!> Proietta coordinate geografiche nel sistema definito
 elemental subroutine generic_proj (this,lon,lat,x,y)
 
-type(griddim_def),intent(in) :: this
-doubleprecision, intent(in) :: lon,lat
+type(griddim_def),intent(in) :: this !< definizione della proiezione
+!> coordinate geografiche da proiettare
+doubleprecision, intent(in) :: lon,lat 
+!> coordinate proiettate
 doubleprecision, intent(out)  :: x,y
 
 
@@ -371,11 +464,13 @@ end select
 
 end subroutine generic_proj
 
-
+!>Calcola le coordinate geografiche date le coordinate nel sistema definito
 elemental subroutine generic_unproj (this,x,y,lon,lat)
 
-type(griddim_def),intent(in) ::this
+type(griddim_def),intent(in) ::this !< definizione della proiezione
+!> coordinate proiettate
 doubleprecision, intent(in) :: x,y
+!> coordinate geografiche
 doubleprecision, intent(out)  :: lon,lat
 
 select case ( this%grid%type%type)
@@ -395,10 +490,12 @@ end select
 end subroutine generic_unproj
 
 
-
+!> Proietta un oggeto griddim nel sistema definito
+!! effettua una serie di conti per avere informazioni nello spazio di proiezione;
+!! l'oggetto contiene le informazione di proiezione e dati relativi al grigliato espresse nel sistema proiettato e geografico
 subroutine griddim_proj (this)
 
-type(griddim_def),intent(in) :: this
+type(griddim_def),intent(in) :: this !< oggetto che definisce la proiezione e con info relative al grigliato associato
 
 select case ( this%grid%type%type)
 
@@ -417,9 +514,12 @@ end select
 end subroutine griddim_proj
 
 
+!> Calcola informazioni nel sistema geografico di un oggeto griddim
+!! effettua una serie di conti per avere informazioni nello spazio geografico;
+!! l'oggetto contiene le informazione di proiezione e dati relativi al grigliato espresse nel sistema proiettato e geografico
 subroutine griddim_unproj (this)
 
-type(griddim_def),intent(in) ::this
+type(griddim_def),intent(in) ::this !< oggetto che definisce la proiezione e con info relative al grigliato associato
 
 select case ( this%grid%type%type)
 
@@ -438,18 +538,26 @@ end select
 end subroutine griddim_unproj
 
 
+!> restituisce il contenuto dell'oggetto
 subroutine get_val_griddim(this,type,&
  nx,ny, &
  lon_min, lon_max, lat_min, lat_max, component_flag, &
  latitude_south_pole,longitude_south_pole,angle_rotation)
 
-type(griddim_def),intent(in) :: this
+type(griddim_def),intent(in) :: this !< oggetto da esaminare
 
-character(len=*),INTENT(out),OPTIONAL :: type
-integer,optional,intent(out) :: nx, ny
-doubleprecision,optional,intent(out) :: lon_min, lon_max, lat_min, lat_max
-doubleprecision,optional,intent(out) :: latitude_south_pole,longitude_south_pole,angle_rotation
-integer,optional,intent(out) :: component_flag
+character(len=*),INTENT(out),OPTIONAL :: type !< type of grid definition
+integer,optional,intent(out) :: nx !< numero dei punti in X 
+integer,optional,intent(out) :: ny !< numero dei punti in Y
+!> longitudini minima e massima
+doubleprecision,optional,intent(out) :: lon_min, lon_max
+!> latitudini minima e massima
+doubleprecision,optional,intent(out) :: lat_min, lat_max
+doubleprecision,optional,intent(out) :: latitude_south_pole !< Latitude of the southern pole of projection
+doubleprecision,optional,intent(out) :: longitude_south_pole !< Longitude of the southern pole of projection 
+doubleprecision,optional,intent(out) :: angle_rotation !< Angle of rotation of projection
+integer,optional,intent(out) :: component_flag !< Resolution and Component Flags
+
 
 
 if (present(lon_min))lon_min=dmiss
@@ -487,7 +595,7 @@ end select
 
 end subroutine get_val_griddim
 
-
+!> Imposta il contenuto dell'oggetto
 subroutine set_val_griddim(this,type,&
  nx,ny, &
  lon_min, lon_max, lat_min, lat_max, component_flag, &
@@ -495,11 +603,17 @@ subroutine set_val_griddim(this,type,&
 
 type(griddim_def),intent(out) :: this
 
-character(len=*),INTENT(in),OPTIONAL :: type
-integer,optional,intent(in) :: nx, ny
-doubleprecision,optional,intent(in) :: lon_min, lon_max, lat_min, lat_max
-doubleprecision,optional,intent(in) :: latitude_south_pole,longitude_south_pole,angle_rotation
-integer,optional,intent(in) :: component_flag
+character(len=*),INTENT(in),OPTIONAL :: type !< type of grid definition
+integer,optional,intent(in) :: nx !< numero dei punti in X 
+integer,optional,intent(in) :: ny !< numero dei punti in Y
+!> longitudini minima e massima
+doubleprecision,optional,intent(in) :: lon_min, lon_max
+!> latitudini minima e massima
+doubleprecision,optional,intent(in) :: lat_min, lat_max
+doubleprecision,optional,intent(in) :: latitude_south_pole !< Latitude of the southern pole of projection
+doubleprecision,optional,intent(in) :: longitude_south_pole !< Longitude of the southern pole of projection 
+doubleprecision,optional,intent(in) :: angle_rotation !< Angle of rotation of projection
+integer,optional,intent(in) :: component_flag !< Resolution and Component Flags
 
 if (present(type)) this%grid%type%type = type
 if (this%grid%type%type == cmiss) return
@@ -589,14 +703,16 @@ call write_unit(this%dim,unit)
 END SUBROUTINE write_unit_griddim
 
 
-
+!> \brief import griddim object from id of the grib loaded in memory
+!! avendo a disposizione un id di un grib fornito dalla grib_api viene impostato un oggetto griddim
+!! contenente tutte le informazioni sul grigliato (rappresentazione e dimensioni)
 SUBROUTINE import_griddim(this, gaid) 
 
-type(griddim_def),intent(out) :: this !< oggetto griddim
-INTEGER, INTENT(in) :: gaid !< grib_api id da cui leggere
+type(griddim_def),intent(out) :: this !< object griddim
+INTEGER, INTENT(in) :: gaid !< grib_api id of the grib loaded in memory to import
 
 call grib_get(gaid,'typeOfGrid' ,this%grid%type%type)
-call l4f_category_log(this%category,L4F_DEBUG,"gtype: "//this%grid%type%type)
+call l4f_category_log(this%category,L4F_DEBUG,"import_griddim gtype: "//this%grid%type%type)
 
 select case ( this%grid%type%type)
 
@@ -615,14 +731,16 @@ end select
 END SUBROUTINE import_griddim
 
 
+!> \brief export from griddim object to id of the grib loaded in memory
+!! da un oggetto griddim contenente tutte le informazioni sul grigliato (rappresentazione e dimensioni)
+!! vengono impostate le chiavi relative di un id di un grib fornito dalla grib_api
 SUBROUTINE export_griddim(this, gaid) 
 
-type(griddim_def),intent(out) :: this !< oggetto griddim
-INTEGER, INTENT(in) :: gaid !< grib_api id da cui leggere
-
+type(griddim_def),intent(in) :: this !< object griddim
+INTEGER, INTENT(inout) :: gaid !< grib_api id of the grib loaded in memory to import
 
 call grib_set(gaid,'typeOfGrid' ,this%grid%type%type)
-call l4f_category_log(this%category,L4F_DEBUG,"gtype: "//this%grid%type%type)
+call l4f_category_log(this%category,L4F_DEBUG,"export_griddim gtype: "//this%grid%type%type)
 
 select case ( this%grid%type%type)
 
@@ -645,7 +763,9 @@ END SUBROUTINE export_griddim
 ! bisogna sviluppare gli altri operatori
 
 
+!> operatore di uguaglianza tra due oggetti grid
 elemental FUNCTION grid_eq(this, that) RESULT(res)
+!> oggetti da confrontare
 TYPE(grid_def),INTENT(IN) :: this, that
 LOGICAL :: res
 
@@ -656,8 +776,11 @@ res = this%type == that%type .and. &
 END FUNCTION grid_eq
 
 
+!> operatore di uguaglianza tra due oggetti griddim
 elemental FUNCTION griddim_eq(this, that) RESULT(res)
+!> oggetti da confrontare
 TYPE(griddim_def),INTENT(IN) :: this, that
+
 LOGICAL :: res
 
 res = this%grid == that%grid .and. &
@@ -667,7 +790,9 @@ END FUNCTION griddim_eq
 
 
 
+!> operatore di uguaglianza tra due oggetti grid_type
 elemental FUNCTION grid_type_eq(this, that) RESULT(res)
+!> oggetti da confrontare
 TYPE(grid_type),INTENT(IN) :: this, that
 LOGICAL :: res
 
@@ -676,10 +801,10 @@ res = this%type == that%type
 END FUNCTION grid_type_eq
 
 
-
+!> \brief display on the screen a brief content of griddim object
 SUBROUTINE display_griddim(this) 
 
-type(griddim_def),intent(in) :: this !< oggetto griddim
+type(griddim_def),intent(in) :: this !< griddim object to display
 
 select case ( this%grid%type%type)
 
@@ -727,47 +852,6 @@ end SUBROUTINE display_griddim
 
 
 
-
-
-!!$SUBROUTINE zoom_coord(this,ilon,ilat,flon,flat,newx,newy) 
-!!$
-!!$type(griddim_def),intent(in) :: this !< oggetto griddim
-!!$doubleprecision,intent(in) ::ilon,ilat,flon,flat !< zoom geographical coordinate
-!!$integer, intent(out):: newx,newy  !< new dimension for the future field
-!!$
-!!$!check
-!!$
-!!$if ( ilon > flon .or. ilat > flat ) then
-!!$    
-!!$  call l4f_category_log(this%category,L4F_ERROR,"zoom coordinate are wrong: "//&
-!!$   to_char(ilon)//to_char(ilat)//to_char(flon)//to_char(flat))
-!!$  call raise_error("zoom coordinate are wrong")
-!!$end if
-!!$
-!!$
-!!$
-!!$select case ( this%grid%type%type )
-!!$
-!!$case ( "regular_ll")
-!!$
-!!$  call zoom(this%grid%regular_ll,this%dim,ilon,ilat,flon,flat,newx,newy)
-!!$  
-!!$case ( "rotated_ll")
-!!$  call zoom(this%grid%rotated_ll,this%dim,ilon,ilat,flon,flat,newx,newy)
-!!$  
-!!$case default
-!!$  call l4f_category_log(this%category,L4F_ERROR,"gtype: "//this%grid%type%type//" non gestita" )
-!!$  call raise_error("gtype non gestita")
-!!$  
-!!$end select
-!!$
-!!$
-!!$end SUBROUTINE zoom_coord
-
-
-
-
-
 !> Initialises an object that defines a transformation on a grid.
 !! trans_type='zoom' cuts or extends \a grid on a new grid adding
 !! or removing points on the four sides (zoom).
@@ -799,10 +883,10 @@ CHARACTER(len=*),INTENT(IN),OPTIONAL :: zoom_type !< type of zoom
 CHARACTER(len=*),INTENT(IN),OPTIONAL :: boxregrid_type !< type of regrid
 CHARACTER(len=*),INTENT(IN),OPTIONAL :: inter_type !< type of interpolation
 
-character(len=*),INTENT(in),OPTIONAL :: categoryappend !< appennde questo suffisso al namespace category di log4fortran
+character(len=*),INTENT(in),OPTIONAL :: categoryappend !< appende questo suffisso al namespace category di log4fortran
 character(len=512) :: a_name
 
-call l4f_launcher(a_name,a_name_append=trim(subcategory)//"."//trim(categoryappend))
+call l4f_launcher(a_name,a_name_append=trim(subcategory)//"."//trim(optio_c(categoryappend,255)))
 this%category=l4f_category_get(a_name)
 
 call optio(trans_type,this%trans_type)
@@ -966,7 +1050,9 @@ end SUBROUTINE init_transform
 
 
 
-
+!> \brief destructor of tranform object
+!! release any memory and data associated to transformation object
+!! the logger category will be deleted too
 SUBROUTINE delete_transform(this)
 
 TYPE(transform_def),INTENT(out) :: this !< transformation object
@@ -1005,31 +1091,26 @@ end SUBROUTINE delete_transform
 
 
 !> Initialises an object that defines a transformation on a grid.
-!! trans_type='zoom' cuts or extends \a grid on a new grid adding
-!! or removing points on the four sides (zoom).
-!! trans_type='box_regid' regrids \a grid on a new grid in which
-!! every point is the average over \a npx X \a npy points of the
-!! original grid (box average).
-!! All the proper optional parameters, after \a trans_type, should
-!! be passed in keyword mode.
-
+!! Questo metodo definisce la trasformazione da un grigliato in un'altro seguendo le indicazioni contenute nell'oggetto
+!! di trasformazione. Devono essere quindi forniti il grigliato da trasformare e l'oggetto di trasformazione.
+!! Vengono generati un oggetto di trasformazione associato ai grigliati e un nuovo grigliato prodotto
+!! dalla trasformazione.
 SUBROUTINE init_grid_transform(this,trans,in,out,categoryappend)
 
-TYPE(grid_transform),INTENT(out) :: this !< grid transformation object
+TYPE(grid_transform),INTENT(out) :: this !< grid_transformation object
 TYPE(transform_def),INTENT(in) :: trans !< transformation object
-TYPE(griddim_def),INTENT(in) :: in !< grid transformated object
-TYPE(griddim_def),INTENT(out) :: out !< grid transformated object
-
+TYPE(griddim_def),INTENT(in) :: in !< griddim object to transform
+TYPE(griddim_def),INTENT(out) :: out !< griddim transformated object
+character(len=*),INTENT(in),OPTIONAL :: categoryappend !< appende questo suffisso al namespace category di log4fortran
 
 INTEGER :: nx, ny,i,j
 DOUBLE PRECISION :: lon_min, lon_max, lat_min, lat_max, steplon, steplat,lon_min_new, lat_min_new
-
-
-character(len=*),INTENT(in),OPTIONAL :: categoryappend !< appennde questo suffisso al namespace category di log4fortran
 character(len=512) :: a_name
 
-call l4f_launcher(a_name,a_name_append=trim(subcategory)//"."//trim(categoryappend))
+call l4f_launcher(a_name,a_name_append=trim(subcategory)//"."//trim(optio_c(categoryappend,255)))
 this%category=l4f_category_get(a_name)
+
+call l4f_category_log(this%category,L4F_DEBUG,"start init_grid_transform")
 
 this%trans=trans
 
@@ -1278,13 +1359,18 @@ END SUBROUTINE init_grid_transform
 
 
 
+!> Initialises an object that defines a transformation from a grid to sparse data.
+!! Questo metodo definisce la trasformazione da un grigliato a dati sparsi seguendo le indicazioni contenute nell'oggetto
+!! di trasformazione. Devono essere quindi forniti il grigliato da trasformare e l'oggetto di trasformazione.
+!! Deve essere fornito anche un oggetto contenetente le informazioni relative ai dati sparsi su cui elaborare la trasformazione.
+!! Viene generato un oggetto di trasformazione associato al grigliato e dati dati sparsi.
 SUBROUTINE init_grid_v7d_transform(this,trans,in,ana,categoryappend)
 
-TYPE(grid_transform),INTENT(out) :: this !< grid transformation object
+TYPE(grid_transform),INTENT(out) :: this !< grid_transformation object
 TYPE(transform_def),INTENT(in) :: trans !< transformation object
-TYPE(griddim_def),INTENT(in) :: in !< grid transformated object
-TYPE(vol7d_ana),INTENT(in) :: ana(:) !< vol7d_ana vector objects to transform
-character(len=*),INTENT(in),OPTIONAL :: categoryappend !< appennde questo suffisso al namespace category di log4fortran
+TYPE(griddim_def),INTENT(in) :: in !< griddim object to transform
+TYPE(vol7d_ana),INTENT(in) :: ana(:) !< vol7d_ana vector objects where (or to use) to transform
+character(len=*),INTENT(in),OPTIONAL :: categoryappend !< appende questo suffisso al namespace category di log4fortran
 
 
 INTEGER :: nx, ny,i,j
@@ -1293,7 +1379,7 @@ doubleprecision,allocatable :: lon(:),lat(:)
 
 character(len=512) :: a_name
 
-call l4f_launcher(a_name,a_name_append=trim(subcategory)//"."//trim(categoryappend))
+call l4f_launcher(a_name,a_name_append=trim(subcategory)//"."//trim(optio_c(categoryappend,255)))
 this%category=l4f_category_get(a_name)
 
 call l4f_category_log(this%category,L4F_DEBUG,"start init_grid_v7d_transform" )
@@ -1398,13 +1484,18 @@ ENDIF
 END SUBROUTINE init_grid_v7d_transform
 
 
-SUBROUTINE init_v7d_grid_transform(this,trans,ana,out,categoryappend)
+!> Initialises an object that defines a transformation from sparse data to a grid.
+!! Questo metodo definisce la trasformazione da dati sparsi a grigliato seguendo le indicazioni contenute nell'oggetto
+!! di trasformazione. Devono essere quindi forniti il grigliato da trasformare e l'oggetto di trasformazione.
+!! Deve essere fornito anche un oggetto contenetente le informazioni relative ai dati sparsi su cui elaborare la trasformazione.
+!! Viene generato un oggetto di trasformazione associato al grigliato e dati dati sparsi.
+SUBROUTINE init_v7d_grid_transform(this,trans,ana,griddim,categoryappend)
 
 TYPE(grid_transform),INTENT(out) :: this !< grid transformation object
 TYPE(transform_def),INTENT(in) :: trans !< transformation object
 TYPE(vol7d_ana),INTENT(in) :: ana(:) !< vol7d_ana vector objects to transform
-TYPE(griddim_def),INTENT(in) :: out !< grid transformated object
-character(len=*),INTENT(in),OPTIONAL :: categoryappend !< appennde questo suffisso al namespace category di log4fortran
+TYPE(griddim_def),INTENT(in) :: griddim !< grid transformated object
+character(len=*),INTENT(in),OPTIONAL :: categoryappend !< appende questo suffisso al namespace category di log4fortran
 
 
 INTEGER :: nx, ny,i,j
@@ -1413,7 +1504,7 @@ doubleprecision,allocatable :: lon(:),lat(:)
 
 character(len=512) :: a_name
 
-call l4f_launcher(a_name,a_name_append=trim(subcategory)//"."//trim(categoryappend))
+call l4f_launcher(a_name,a_name_append=trim(subcategory)//"."//trim(optio_c(categoryappend,255)))
 this%category=l4f_category_get(a_name)
 
 this%trans=trans
@@ -1432,12 +1523,12 @@ IF (this%trans%trans_type == 'inter') THEN
 
   if ( this%trans%inter%sub_type == 'linear' ) THEN
     
-    select case ( out%grid%type%type )
+    select case ( griddim%grid%type%type )
       
     case ( "regular_ll","rotated_ll")
 
 
-      CALL get_val(out, nx=nx, ny=ny)
+      CALL get_val(griddim, nx=nx, ny=ny)
       
       this%outnx=nx
       this%outny=ny
@@ -1449,13 +1540,13 @@ IF (this%trans%trans_type == 'inter') THEN
       allocate (this%inter_xp(this%innx,this%inny),this%inter_yp(this%innx,this%inny))
       allocate (this%inter_x(this%outnx,this%outny),this%inter_y(this%outnx,this%outny))
 
-      CALL get_val(out, &
+      CALL get_val(griddim, &
        lon_min=lon_min, lon_max=lon_max,&
        lat_min=lat_min, lat_max=lat_max)
 
       call getval(ana(:)%coord,lon=lon,lat=lat)
 
-      call proj(out,&
+      call proj(griddim,&
        reshape(lon,(/size(lon),1/)),reshape(lat,(/size(lat),1/)),&
        this%inter_xp,this%inter_yp)
       
@@ -1480,7 +1571,8 @@ IF (this%trans%trans_type == 'inter') THEN
 
 
     case default
-      call l4f_category_log(this%category,L4F_ERROR,"init_grid_transform inter gtype: "//trim(out%grid%type%type)//" non gestita" )
+      call l4f_category_log(this%category,L4F_ERROR,"init_grid_transform inter gtype: "//&
+       trim(griddim%grid%type%type)//" non gestita" )
       call raise_fatal_error("init_grid_transform inter gtype non gestita")
       
     end select
@@ -1505,9 +1597,12 @@ END SUBROUTINE init_v7d_grid_transform
 
 
 
+!> \brief destructor of grid_tranform object
+!! release any memory and data associated to grid_transformation object
+!! the logger category will be deleted too
 SUBROUTINE delete_grid_transform(this)
 
-TYPE(grid_transform),INTENT(inout) :: this !< grid transformation object
+TYPE(grid_transform),INTENT(inout) :: this !< grid_transform object
 
 call delete(this%trans)
 
@@ -1538,209 +1633,6 @@ call l4f_category_delete(this%category)
 
 end SUBROUTINE delete_grid_transform
 
-!!$!> Initialises an object that defines a transformation on a grid.
-!!$!! trans_type='zoom' cuts or extends \a grid on a new grid adding
-!!$!! or removing points on the four sides (zoom).
-!!$!! trans_type='box_regid' regrids \a grid on a new grid in which
-!!$!! every point is the average over \a npx X \a npy points of the
-!!$!! original grid (box average).
-!!$!! All the proper optional parameters, after \a trans_type, should
-!!$!! be passed in keyword mode.
-!!$RECURSIVE SUBROUTINE init_grid_transform(this, griddim, trans_type, &
-!!$ ix, iy, fx, fy, ilon, ilat, flon, flat, &
-!!$ npx, npy, &
-!!$ griddim_out, v7d_out, & ! varmap?
-!!$ interp_type,categoryappend)
-!!$TYPE(grid_transform),INTENT(out) :: this !< griddim transformation object
-!!$TYPE(griddim_def),INTENT(in) :: griddim !< griddim to be transformed
-!!$CHARACTER(len=*) :: trans_type !< type of transformation, can be \c 'zoom', \c 'boxregrid', \c 'interp', ...
-!!$INTEGER,INTENT(in),OPTIONAL :: ix !< index of initial point of new grid on x (for zoom)
-!!$INTEGER,INTENT(in),OPTIONAL :: iy !< index of initial point of new grid on y (for zoom)
-!!$INTEGER,INTENT(in),OPTIONAL :: fx !< index of final point of new grid on x (for zoom)
-!!$INTEGER,INTENT(in),OPTIONAL :: fy !< index of final point of new grid on y (for zoom)
-!!$DOUBLEPRECISION,INTENT(in),OPTIONAL :: ilon !< coordinate of initial point of new grid on x (for zoom)
-!!$DOUBLEPRECISION,INTENT(in),OPTIONAL :: ilat !< coordinate of initial point of new grid on y (for zoom)
-!!$DOUBLEPRECISION,INTENT(in),OPTIONAL :: flon !< coordinate of final point of new grid on x (for zoom)
-!!$DOUBLEPRECISION,INTENT(in),OPTIONAL :: flat !< coordinate of final point of new grid on y (for zoom)
-!!$INTEGER,INTENT(IN),OPTIONAL :: npx !< number of points to average along x direction (for boxregrid)
-!!$INTEGER,INTENT(IN),OPTIONAL :: npy !< number of points to average along y direction (for boxregrid)
-!!$TYPE(griddim_def),INTENT(inout),OPTIONAL :: griddim_out !< output griddim (for interp on a grid)
-!!$TYPE(vol7d),INTENT(inout),OPTIONAL :: v7d_out !< output data volume (for interp on sparse points)
-!!$CHARACTER(len=*),INTENT(IN),OPTIONAL :: interp_type !< type of interpolation (for interp), can be (nearest point, bilinear, ...?)
-!!$
-!!$INTEGER :: nx, ny
-!!$DOUBLE PRECISION :: lon_min, lon_max, lat_min, lat_max, steplon, steplat,lon_min_new, lat_min_new
-!!$INTEGER :: lix, liy, lfx, lfy
-!!$character(len=*),INTENT(in),OPTIONAL :: categoryappend !< appennde questo suffisso al namespace category di log4fortran
-!!$
-!!$character(len=512) :: a_name
-!!$
-!!$
-!!$call l4f_launcher(a_name,a_name_append=trim(subcategory)//"."//trim(categoryappend))
-!!$this%category=l4f_category_get(a_name)
-!!$
-!!$IF (trans_type == 'zoom') THEN
-!!$  IF (PRESENT(ilon) .AND. PRESENT(ilat) .AND. PRESENT(flon) &
-!!$   .AND. PRESENT(flat)) THEN ! coordinates given
-!!$    
-!!$!check
-!!$    if ( ilon > flon .or. ilat > flat ) then
-!!$
-!!$      call l4f_category_log(this%category,L4F_ERROR,"zoom coordinates are wrong: ")
-!!$      call l4f_category_log(this%category,L4F_ERROR,to_char(ilon)//to_char(ilat))
-!!$      call l4f_category_log(this%category,L4F_ERROR,to_char(flon)//to_char(flat))
-!!$      call raise_fatal_error("zoom coordinates are wrong")
-!!$    end if
-!!$
-!!$    select case ( griddim%grid%type%type )
-!!$
-!!$    case ( "regular_ll")
-!!$
-!!$      call zoom_coord(griddim%grid%regular_ll,griddim%dim, &
-!!$       ilon,ilat,flon,flat,lix,liy,lfx,lfy)
-!!$
-!!$    case ( "rotated_ll")
-!!$      call zoom_coord(griddim%grid%rotated_ll,griddim%dim, &
-!!$       ilon,ilat,flon,flat,lix,liy,lfx,lfy)
-!!$
-!!$    case default
-!!$      call l4f_category_log(this%category,L4F_ERROR,"gtype: "//trim(griddim%grid%type%type)//" non gestita" )
-!!$      call raise_fatal_error("gtype non gestita")
-!!$
-!!$    end select
-!!$
-!!$! chiama se stessa con i parametri appena calcolati ed esce
-!!$! use the index version
-!!$    CALL init(this, griddim, trans_type, ix=lix, iy=liy, fx=lfx, fy=lfy)
-!!$    RETURN
-!!$  ENDIF
-!!$
-!!$
-!!$! check
-!!$  IF (.NOT.PRESENT(ix) .OR. .NOT.PRESENT(iy) .OR. &
-!!$   .NOT.PRESENT(fx) .OR. .NOT.PRESENT(fy)) THEN
-!!$    CALL l4f_category_log(this%category,L4F_ERROR,'zoom parameters ix, iy, fx, fy not provided')
-!!$    CALL raise_fatal_error('zoom parameters ix, iy, fx, fy not provided')
-!!$  ENDIF
-!!$  IF (ix > fx .OR. iy > fy) THEN
-!!$    CALL l4f_category_log(this%category,L4F_ERROR,'invalid zoom indices: '//&
-!!$     to_char(ix)//to_char(iy)//to_char(fx)//to_char(fy))
-!!$    CALL raise_fatal_error('invalid zoom indices')
-!!$  ENDIF
-!!$
-!!$  this%griddim_in = griddim
-!!$  this%griddim_out = griddim
-!!$  this%type = 'zoom'
-!!$
-!!$
-!!$  select case ( griddim%grid%type%type )
-!!$
-!!$  case ( "regular_ll","rotated_ll")
-!!$      
-!!$    CALL get_val(griddim, nx=nx, ny=ny, lon_min=lon_min, lon_max=lon_max, &
-!!$     lat_min=lat_min, lat_max=lat_max)
-!!$    steplon=(lon_max-lon_min)/(nx-1)
-!!$    steplat=(lat_max-lat_min)/(ny-1)
-!!$    
-!!$  case default
-!!$    call l4f_category_log(this%category,L4F_ERROR,"gtype: "//trim(griddim%grid%type%type)//" non gestita" )
-!!$    call raise_fatal_error("gtype non gestita")
-!!$    
-!!$  end select
-!!$
-!!$
-!!$! old indices
-!!$  this%intpar(1) = min(max(ix,1),nx) ! iox
-!!$  this%intpar(2) = min(max(iy,1),ny) ! ioy
-!!$  this%intpar(3) = max(min(fx,nx),1) ! fox
-!!$  this%intpar(4) = max(min(fy,ny),1) ! foy
-!!$! new indices
-!!$  this%intpar(5) = min(max(2-ix,1),nx)! inx
-!!$  this%intpar(6) = min(max(2-iy,1),ny) ! iny
-!!$  this%intpar(7) = min(fx,nx)-ix+1 ! fnx
-!!$  this%intpar(8) = min(fy,ny)-iy+1 ! fny
-!!$
-!!$  this%griddim_out%dim%nx = fx - ix + 1 ! newx
-!!$  this%griddim_out%dim%ny = fy - iy + 1 ! newy
-!!$
-!!$  lon_min=lon_min+steplon*(ix-1)
-!!$  lat_min=lat_min+steplat*(iy-1)
-!!$  lon_max=lon_max+steplon*(fx-nx)
-!!$  lat_max=lat_max+steplat*(fy-ny)
-!!$
-!!$!  this%griddim_out%dim%nx = this%nx_out
-!!$!  this%griddim_out%dim%ny = this%ny_out
-!!$
-!!$
-!!$  call set_val (this%griddim_out,&
-!!$   lon_min = lon_min,  lon_max = lon_max ,&
-!!$   lat_min = lat_min,  lat_max = lat_max )
-!!$
-!!$
-!!$ELSE IF (trans_type == 'boxregrid') THEN
-!!$! check
-!!$  IF (.NOT.PRESENT(npx) .OR. .NOT.PRESENT(npy)) THEN
-!!$    CALL l4f_category_log(this%category,L4F_ERROR,'boxregrid parameters npx, npy not provided')
-!!$    CALL raise_fatal_error('boxregrid parameters npx, npy not provided')
-!!$  ENDIF
-!!$  IF (npx <= 0 .OR. npy <= 0 .OR. npx > griddim%dim%nx .OR. npy > griddim%dim%ny) THEN
-!!$    CALL l4f_category_log(this%category,L4F_ERROR,'invalid regrid parameters: '//&
-!!$     TRIM(to_char(npx))//' '//TRIM(to_char(npy)))
-!!$    CALL raise_error('invalid regrid parameters')
-!!$  ENDIF
-!!$
-!!$  this%griddim_in = griddim
-!!$  this%griddim_out = griddim
-!!$  this%type = 'boxregrid'
-!!$
-!!$
-!!$  select case ( griddim%grid%type%type )
-!!$
-!!$  case ( "regular_ll","rotated_ll")
-!!$      
-!!$  CALL get_val(griddim, nx=nx, ny=ny, lon_min=lon_min, lon_max=lon_max, &
-!!$   lat_min=lat_min, lat_max=lat_max)
-!!$    
-!!$  case default
-!!$    call l4f_category_log(this%category,L4F_ERROR,"gtype: "//trim(griddim%grid%type%type)//" non gestita" )
-!!$    call raise_fatal_error("gtype non gestita")
-!!$    
-!!$  end select
-!!$
-!!$
-!!$! old grid
-!!$  this%intpar(1) = npx
-!!$  this%intpar(2) = npy
-!!$  this%intpar(3) = nx
-!!$  this%intpar(4) = ny
-!!$  steplon=(lon_max-lon_min)/(nx-1)
-!!$  steplat=(lat_max-lat_min)/(ny-1)
-!!$
-!!$! new grid
-!!$  lon_min_new = lon_min + (npx - 1)*0.5D0*steplon
-!!$  lat_min_new = lat_min + (npy - 1)*0.5D0*steplat
-!!$
-!!$  call set_val( this%griddim_out,lon_min = lon_min_new )
-!!$  call set_val( this%griddim_out,lat_min = lat_min_new )
-!!$  this%griddim_out%dim%nx = nx/npx
-!!$  this%griddim_out%dim%ny = ny/npy
-!!$  steplon = steplon/npx
-!!$  steplat = steplat/npy
-!!$
-!!$  call set_val( this%griddim_out, lon_max = lon_min_new + (this%griddim_out%dim%nx - 1)*steplon )
-!!$  call set_val( this%griddim_out, lat_max = lat_min_new + (this%griddim_out%dim%ny - 1)*steplat )
-!!$!  this%griddim_out%dim%nx = this%nx_out
-!!$!  this%griddim_out%dim%ny = this%ny_out
-!!$
-!!$ELSE
-!!$  CALL l4f_category_log(this%category,L4F_WARN,'trans_type '//TRIM(trans_type) &
-!!$   //' not supported')
-!!$  CALL raise_warning('trans_type '//TRIM(trans_type)//' not supported')
-!!$  this%type = cmiss
-!!$ENDIF
-!!$
-!!$END SUBROUTINE init_grid_transform
-!!$
 
 SUBROUTINE grid_transform_compute(this, field_in, field_out)
 TYPE(grid_transform),INTENT(in) :: this
@@ -2062,60 +1954,3 @@ end subroutine find_index
 end module grid_class
 
 
-!!$      PROGRAM NNEX01
-!!$C
-!!$C  Simple example of natural neighbor linear interpolation.
-!!$C
-!!$      PARAMETER(ISLIM = 6, NUMXOUT = 21, NUMYOUT = 21)
-!!$C
-!!$C  Dimension for the work space for the NCAR Graphics call to
-!!$C  SRFACE to plot the interpolated grid.
-!!$C
-!!$      PARAMETER(IDIM=2*NUMXOUT*NUMYOUT)
-!!$C
-!!$C  Input data arrays.
-!!$C
-!!$      DOUBLE PRECISION X(ISLIM), Y(ISLIM), Z(ISLIM)
-!!$C
-!!$C  Output grid arrays.
-!!$C
-!!$      DOUBLE PRECISION XI(NUMXOUT), YI(NUMYOUT), ZI(NUMXOUT,NUMYOUT)
-!!$      REAL             XP(NUMXOUT), YP(NUMYOUT), ZP(NUMXOUT,NUMYOUT)
-!!$C
-!!$C  Define the input data arrays.
-!!$C
-!!$      DATA X/0.00, 1.00, 0.00, 1.00, 0.40, 0.75 /
-!!$      DATA Y/0.00, 0.00, 1.00, 1.00, 0.20, 0.65 /
-!!$      DATA Z/0.00, 0.00, 0.00, 0.00, 1.25, 0.80 /
-!!$C
-!!$      DIMENSION IWORK(IDIM)
-!!$C
-!!$C  Define the output grid.
-!!$C
-!!$      XMIN = 0.
-!!$      XMAX = 1.
-!!$      XINC = (XMAX-XMIN)/(NUMXOUT-1.) 
-!!$      DO 20 I=1,NUMXOUT
-!!$        XI(I) = XMIN+REAL(I-1) * XINC
-!!$   20 CONTINUE
-!!$C
-!!$      YMAX =  1.
-!!$      YMIN =  0.
-!!$      YINC = (YMAX-YMIN)/(NUMYOUT-1.)
-!!$      DO 30 J=1,NUMYOUT
-!!$        YI(J) = YMIN+REAL(J-1) * YINC
-!!$   30 CONTINUE 
-!!$C
-!!$C  Do the gridding.
-!!$C
-!!$      CALL NATGRIDD(ISLIM,X,Y,Z,NUMXOUT,NUMYOUT,XI,YI,ZI,IER)
-!!$      IF (IER .NE. 0) THEN
-!!$        WRITE (6,510) IER
-!!$  510   FORMAT('Error return from NATGRIDS = ',I3)
-!!$      ENDIF
-!!$C 
-!!$      STOP
-!!$      END
-!!$
-!!$
-!!$

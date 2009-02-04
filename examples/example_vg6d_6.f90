@@ -28,14 +28,14 @@ category=l4f_category_get(a_name//".main")
 
 call l4f_category_log(category,L4F_INFO,"inizio")
 
-!!$nana=5
-!!$allocate(ana(nana))
-!!$!target points 
-!!$call init(ana(1),lat=45.D0,lon=11.D0)
-!!$call init(ana(2),lat=45.6D0,lon=11.8D0)
-!!$call init(ana(3),lat=46.6D0,lon=12.8D0)
-!!$call init(ana(4),lat=40.6D0,lon=11.8D0)
-!!$call init(ana(5),lat=40.0D0,lon=10.0D0)
+!!$ nana=5
+!!$ allocate(ana(nana))
+!!$ !target points 
+!!$ call init(ana(1),lat=45.D0,lon=11.D0)
+!!$ call init(ana(2),lat=45.6D0,lon=11.8D0)
+!!$ call init(ana(3),lat=46.6D0,lon=12.8D0)
+!!$ call init(ana(4),lat=40.6D0,lon=11.8D0)
+!!$ call init(ana(5),lat=40.0D0,lon=10.0D0)
 
 open (unit=1,file="ana.txt",status="old",form="unformatted")
 read(1)nana

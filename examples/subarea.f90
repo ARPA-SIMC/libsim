@@ -177,11 +177,19 @@ end do
 if ( optind <= iargc()) then
   call getarg( optind,infile)
   optind=optind+1
+else
+    call l4f_category_log(category,L4F_ERROR,'input file missing')
+    call help()
+    call exit(1)
 end if
 
 if ( optind <= iargc()) then
   call getarg( optind,outfile)
   optind=optind+1
+else
+    call l4f_category_log(category,L4F_ERROR,'output file missing')
+    call help()
+    call exit(1)
 end if
 
 call l4f_category_log(category,L4F_INFO,"transforming from file:"//trim(infile))
@@ -229,9 +237,6 @@ DO WHILE (iret == GRIB_SUCCESS)
    call init (gridinfo,gaid=gaid,categoryappend="importato")
    call import(gridinfo)
 
-   gaid=-1
-   call grib_new_from_file(ifile,gaid, iret)
-   
    call display(gridinfo)
 
    call l4f_category_log(category,L4F_INFO,"import")
@@ -249,7 +254,7 @@ DO WHILE (iret == GRIB_SUCCESS)
    call compute(grid_trans, field, fieldz)
 
    call delete(gridinfo%griddim)
-   call copy(griddim_out,gridinfo%griddim)
+   call copy(griddim_out,gridinfo%griddim,categoryappend="clonato")
 
 ! oppure per mantenere il vecchio gridinfo
 !   call clone(gridinfo , gridinfo_out)
@@ -265,6 +270,9 @@ DO WHILE (iret == GRIB_SUCCESS)
    call delete (gridinfo)
    deallocate (field,fieldz)
 
+   gaid=-1
+   call grib_new_from_file(ifile,gaid, iret)
+   
 end do
 
 call delete (trans)

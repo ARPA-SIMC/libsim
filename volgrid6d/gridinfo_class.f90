@@ -125,7 +125,7 @@ call l4f_category_log(this%category,L4F_DEBUG,"gaid present: "&
 if (present(griddim))then
   call copy(griddim,this%griddim)
 else
-  call init(this%griddim)
+  call init(this%griddim,categoryappend=categoryappend)
 end if
 
 if (present(time))then

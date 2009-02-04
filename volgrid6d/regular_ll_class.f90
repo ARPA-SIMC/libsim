@@ -6,6 +6,7 @@ use log4fortran
 use char_utilities
 use grib_api
 use err_handling
+use optional_values
 
 implicit none
 
@@ -30,7 +31,7 @@ INTERFACE delete
 END INTERFACE
 
 INTERFACE copy
-  MODULE PROCEDURE copy_dim
+  MODULE PROCEDURE copy_dim, copy_grid_regular_ll
 END INTERFACE
 
 
@@ -145,7 +146,7 @@ character(len=*),INTENT(in),OPTIONAL :: categoryappend !< accoda questo suffisso
 
 character(len=512) :: a_name
 
-call l4f_launcher(a_name,a_name_append=trim(subcategory)//"."//trim(categoryappend))
+call l4f_launcher(a_name,a_name_append=trim(subcategory)//"."//trim(optio_c(categoryappend,255)))
 this%category=l4f_category_get(a_name)
 
 nullify(dim%lon)
@@ -224,6 +225,24 @@ call l4f_category_delete(this%category)
 end subroutine delete_regular_ll
 
 
+subroutine copy_grid_regular_ll(this,that,categoryappend)
+character(len=*),INTENT(in),OPTIONAL :: categoryappend !< accoda questo suffisso al namespace category di log4fortran
+
+character(len=512) :: a_name
+
+type(grid_regular_ll),intent(in) ::this
+type(grid_regular_ll),intent(out) ::that
+
+that=this
+
+call l4f_launcher(a_name,a_name_append=trim(subcategory)//"."//trim(optio_c(categoryappend,255)))
+that%category=l4f_category_get(a_name)
+
+call l4f_category_log(that%category,L4F_DEBUG,"end copy_grid_regular_ll")
+
+
+end subroutine copy_grid_regular_ll
+
 subroutine copy_dim(this,that)
 
 type(grid_dim),intent(in) :: this
@@ -286,12 +305,12 @@ end if
 
 if (.not.associated(dim%lon)) then
   allocate (dim%lon(dim%nx,dim%ny))
-  call l4f_category_log(this%category,L4F_DEBUG,"size lon: "//to_char(size(dim%lon)))
+  call l4f_category_log(this%category,L4F_DEBUG,"size lon matrix: "//to_char(size(dim%lon)))
 end if
 
 if (.not.associated(dim%lat)) then
   allocate (dim%lat(dim%nx,dim%ny))
-  call l4f_category_log(this%category,L4F_DEBUG,"size lat: "//to_char(size(dim%lat)))
+  call l4f_category_log(this%category,L4F_DEBUG,"size lat matrix: "//to_char(size(dim%lat)))
 end if
 
 dlon= (this%lon_max - this%lon_min) / dble(dim%nx - 1 )
@@ -595,6 +614,13 @@ doubleprecision :: loFirst,loLast,laFirst,laLast, dlon, dlat, ratio
 integer ::iScansNegatively,jScansPositively
 
 integer ::EditionNumber
+
+!TODO:
+! qui c'è un serio problema
+! questo messaggio a volte (subarea) sparisce e poi risulta 
+! impossibile proseguire per problemi in grib_api
+! BISOGNA INDAGARE
+call l4f_category_log(this%category,L4F_DEBUG,"start export_regular_ll")
 
 call export_dim(dim,gaid)
 

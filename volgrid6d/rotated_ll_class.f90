@@ -7,6 +7,7 @@ use regular_ll_class
 USE doubleprecision_phys_const
 use grib_api
 use err_handling
+use optional_values
 
 implicit none
 
@@ -28,6 +29,10 @@ END INTERFACE
 
 INTERFACE delete
   MODULE PROCEDURE delete_rotated_ll
+END INTERFACE
+
+INTERFACE copy
+  MODULE PROCEDURE copy_grid_rotated_ll
 END INTERFACE
 
 
@@ -111,7 +116,7 @@ end type grid_rotated_ll
 
 
 private
-public init,delete,grid_proj,grid_unproj,proj,unproj,get_val,set_val
+public init,delete,copy,grid_proj,grid_unproj,proj,unproj,get_val,set_val
 public read_unit,write_unit,import,export,operator(==)
 public display,zoom_coord
 public grid_rotated_ll
@@ -182,6 +187,22 @@ call l4f_category_delete(this%category)
 
 end subroutine delete_rotated_ll
 
+
+
+subroutine copy_grid_rotated_ll(this,that,categoryappend)
+character(len=*),INTENT(in),OPTIONAL :: categoryappend !< accoda questo suffisso al namespace category di log4fortran
+
+character(len=512) :: a_name
+
+type(grid_rotated_ll),intent(in) ::this
+type(grid_rotated_ll),intent(out) ::that
+
+that=this
+
+call l4f_launcher(a_name,a_name_append=trim(subcategory)//"."//trim(optio_c(categoryappend,255)))
+that%category=l4f_category_get(a_name)
+
+end subroutine copy_grid_rotated_ll
 
 
 subroutine grid_unproj_rotated_ll(this,dim)
