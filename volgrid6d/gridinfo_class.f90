@@ -559,6 +559,8 @@ if ( .not. c_e(lnamespace) )then
  lnamespace="ls"
 endif
 
+print*,"GRIB_API namesapce:",trim(lnamespace)
+
 call grib_keys_iterator_new(this,kiter,namespace=trim(lnamespace))
 
 iter: do
@@ -571,9 +573,9 @@ iter: do
   call grib_keys_iterator_get_name(kiter,key)
   call grib_get(this,trim(key),value,iret)
   if (iret == 0)then
-    print*, trim(trim(key)// ' = ' // trim(value))
+    print*, trim(key)//' = '//trim(value)
   else
-    print*, trim(key)// ' = ' // "KEY NOT FOUND !!!!!! ( bug ? )"
+    print*, trim(key)//' = '//"KEY NOT FOUND, namespace :"//trim(lnamespace)//" ( bug ? )"
   end if
 end do iter
 
