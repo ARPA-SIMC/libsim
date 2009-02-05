@@ -263,6 +263,7 @@ DO WHILE (iret == GRIB_SUCCESS)
 
    call encode_gridinfo(gridinfo,fieldz)
    call export (gridinfo)
+   call display(gridinfo,namespace="")
 
    call grib_write(gridinfo%gaid,ofile)
 

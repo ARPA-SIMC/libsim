@@ -66,7 +66,7 @@ END INTERFACE
 
 !> Print object
 INTERFACE display
-  MODULE PROCEDURE display_gridinfo,display_gridinfov
+  MODULE PROCEDURE display_gridinfo,display_gridinfov,display_gaid
 END INTERFACE
 
 
@@ -547,11 +547,45 @@ end if
 
 end subroutine export_volgrid6d_var
 
+subroutine display_gaid (this,namespace)
 
-subroutine display_gridinfo (this)
+integer :: this !< gaid
+character (len=*),optional :: namespace!< namespace grib_api key
+integer :: kiter,iret
+character(len=255) :: key,value,lnamespace
+
+lnamespace=optio_c(namespace,255)
+if ( .not. c_e(lnamespace) )then
+ lnamespace="ls"
+endif
+
+call grib_keys_iterator_new(this,kiter,namespace=trim(lnamespace))
+
+iter: do
+  call grib_keys_iterator_next(kiter, iret) 
+  
+  if (iret .ne. 1) then
+    exit iter
+  end if
+  
+  call grib_keys_iterator_get_name(kiter,key)
+  call grib_get(this,trim(key),value,iret)
+  if (iret == 0)then
+    print*, trim(trim(key)// ' = ' // trim(value))
+  else
+    print*, trim(key)// ' = ' // "KEY NOT FOUND !!!!!! ( bug ? )"
+  end if
+end do iter
+
+call grib_keys_iterator_delete(kiter)
+
+end subroutine display_gaid
+
+
+subroutine display_gridinfo (this,namespace)
 
 TYPE(gridinfo_type),intent(in) :: this !< oggetto da stampare
-
+character (len=*),optional :: namespace!< namespace grib_api key
 
 call l4f_category_log(this%category,L4F_DEBUG,"ora mostro gridinfo " )
 
@@ -562,6 +596,7 @@ call display(this%time)
 call display(this%timerange)
 call display(this%level)
 call display(this%var)
+call display(this%gaid,namespace=namespace)
 print*,"--------------------------------------------------------------"
 
 
