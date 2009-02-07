@@ -471,12 +471,17 @@ call grib_get(gaid,'GRIBEditionNumber',EditionNumber)
 
 if (EditionNumber == 1)then
 
-   call grib_set(gaid,'angleOfRotationInDegrees',this%angle_rotation)
+!TODO
+!ponghino per bug grib_api
+  call grib_set(gaid,"pvlLocation",43)
+!
+
+  call grib_set(gaid,'angleOfRotationInDegrees',this%angle_rotation)
 
 
 else if (EditionNumber == 2)then
 
-   call grib_set(gaid,'angleOfRotationOfProjectionInDegrees',this%angle_rotation)
+  call grib_set(gaid,'angleOfRotationOfProjectionInDegrees',this%angle_rotation)
 
 else
 
