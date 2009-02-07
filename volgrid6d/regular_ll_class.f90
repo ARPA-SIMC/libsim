@@ -615,6 +615,8 @@ integer ::iScansNegatively,jScansPositively
 
 integer ::EditionNumber
 
+character (len=80) :: typeOfGrid
+
 call l4f_category_log(this%category,L4F_DEBUG,"start export_regular_ll")
 
 call export_dim(dim,gaid)
@@ -667,10 +669,18 @@ IF (EditionNumber == 1) THEN
   ratio = 1.d3
 
 !TODO
+!parrebbe che:
+!nelle griglie regular_ll i pvl non si riescono a mettere
+!nelle griglie rotated_ll i pvl non si riescono a togliere
 ! per ora devo fare questo ma poi i PV dovranno essere gestiti
-!   call grib_set(gaid,"numberOfVerticalCoordinateValues",0)
-!   call grib_set(gaid,"pvlLocation",255)
-
+  call grib_get(gaid,'typeOfGrid' ,typeOfGrid)
+  if (typeOfGrid == "regular_ll") then
+    call l4f_category_log(this%category,L4F_WARN,"Elimino PVL per bug in grib_api")
+    call grib_set(gaid,"numberOfVerticalCoordinateValues",0)
+    call grib_set(gaid,"pvlLocation",255)
+    call grib_set(gaid,"PVPresent",0)
+    call grib_set(gaid,"PLPresent",0)
+  end if
 
 ELSE IF (EditionNumber == 2) THEN
   ratio = 1.d6

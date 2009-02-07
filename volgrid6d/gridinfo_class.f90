@@ -226,6 +226,13 @@ call l4f_category_log(this%category,L4F_DEBUG,"export to gaid" )
 !attenzione: exportando da volgrid griddim è già esportato
 
 if ( c_e(this%gaid)) then
+
+!!$! ponghino per gribapi ....
+!  call grib_set(this%gaid,"PVPresent",0)
+!  call grib_set(this%gaid,"PLPresent",0)
+!  call grib_set(this%gaid,"pvlLocation",255)
+!!$! end ponghino
+
   call export(this%griddim,this%gaid)
   call export(this%time,this%gaid)
   call export(this%timerange,this%gaid)

@@ -237,7 +237,7 @@ DO WHILE (iret == GRIB_SUCCESS)
    call init (gridinfo,gaid=gaid,categoryappend="importato")
    call import(gridinfo)
 
-   call display(gridinfo)
+   call display(gridinfo,namespace="")
 
    call l4f_category_log(category,L4F_INFO,"import")
 
@@ -260,6 +260,10 @@ DO WHILE (iret == GRIB_SUCCESS)
 !   call clone(gridinfo , gridinfo_out)
 !   call delete(gridinfo_out%griddim)
 !   call copy(griddim_out,gridinfo_out%griddim)
+
+! per bug della grib_api
+!   call grib_release(gridinfo%gaid)
+!   call grib_new_from_template(gridinfo%gaid,"regular_ll_pl_grib1")
 
    call encode_gridinfo(gridinfo,fieldz)
    call export (gridinfo)
