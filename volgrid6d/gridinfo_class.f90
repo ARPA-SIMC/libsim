@@ -1,3 +1,24 @@
+!> \brief Classe per la gestione delle informazioni di griglia dei grib.
+!!
+!! Questo modulo definisce gli oggetti e i metodi per gestire dati grib.
+!! Viene definito un oggetto che associa ad un oggetto grid id delle grib_api una serie di informazioni
+!! molto utili :
+!! - area geografiche in proiezione e non, associate a dati su grigliato (gridded).
+!! - descrittore della dimensione tempo
+!! - descrittore della dimensione intervallo temporale (timerange)
+!! - descrittore della dimensione livello verticale
+!! - vettore descrittore della dimensione variabile
+!!
+!! I metodi principali permettono di :
+!! - estrarre dal grib queste informazioni  
+!! - inserire nel grib queste informazioni
+!! - estrarre i dati codificati dal grib
+!! - codificare i dati nel grib
+!!
+!! Programma esempio semplice \include example_vg6d_2.f90
+!! Programma esempio complesso \include example_vg6d_4.f90
+!! \ingroup volgrid6d
+
 module gridinfo_class
 
 USE grid_class
@@ -27,24 +48,28 @@ type gridinfo_type
   TYPE(vol7d_timerange) :: timerange
 !> descrittore della dimensione livello verticale
   TYPE(vol7d_level) :: level
-!> vettore descrittore della dimensione variabile di anagrafica
+!> vettore descrittore della dimensione variabile
   TYPE(volgrid6d_var) :: var
-!> id del grib come da grib_api
-  integer ::  gaid
+  integer ::  gaid !< grib_api id of the grib loaded in memory
   integer :: category !< log4fortran
 
 end type gridinfo_type
 
 
-
+!> costructor
+!! create a new istanze of object
 INTERFACE init
   MODULE PROCEDURE init_gridinfo
 END INTERFACE
 
+!> destructor
+!! delete object 
 INTERFACE delete
   MODULE PROCEDURE delete_gridinfo
 END INTERFACE
 
+!> clone object
+!! create a new istanze of object equal to the starting one 
 INTERFACE clone
   MODULE PROCEDURE clone_gridinfo
 END INTERFACE
@@ -64,7 +89,8 @@ INTERFACE export
    export_volgrid6d_var
 END INTERFACE
 
-!> Print object
+!> Display object on screen
+!! show brief content on screen
 INTERFACE display
   MODULE PROCEDURE display_gridinfo,display_gridinfov,display_gaid
 END INTERFACE
@@ -77,12 +103,10 @@ public display,decode_gridinfo,encode_gridinfo
 
 contains
 
-!> Inizializza un oggetto di tipo gridinfo_type.
+!> Inizializza un oggetto di tipo gridinfo.
 SUBROUTINE init_gridinfo(this,gaid,griddim,time,timerange,level,var,clone,categoryappend)
 TYPE(gridinfo_type),intent(out) :: this !< oggetto da inizializzare
-
-!> id del grib come da grib_api
-integer,intent(in),optional ::  gaid
+integer,intent(in),optional ::  gaid !< grib_api id of the grib loaded in memory
 !> descrittore del grigliato
 type(griddim_def),intent(in),optional :: griddim
 !> descrittore della dimensione tempo
@@ -155,6 +179,9 @@ end if
 end SUBROUTINE init_gridinfo
 
 
+!> destructor
+!! delete gridinfo object
+!! relase memory and delete category for logging
 subroutine delete_gridinfo (this)
 TYPE(gridinfo_type),intent(out) :: this !< oggetto da eliminare
 
@@ -177,10 +204,14 @@ call l4f_category_delete(this%category)
 end subroutine delete_gridinfo
 
 
-!> Clona un oggetto di tipo gridinfo_type.
-SUBROUTINE clone_gridinfo(this,that)
+!> clone gridinfo object
+!! create a new istanze of object equal to the starting one 
+SUBROUTINE clone_gridinfo(this,that,categoryappend)
 TYPE(gridinfo_type),intent(in) :: this !< oggetto da clonare
 TYPE(gridinfo_type),intent(out) :: that !< oggetto clonato
+character(len=*),INTENT(in),OPTIONAL :: categoryappend !< appende questo suffisso al namespace category di log4fortran
+
+character(len=512) :: a_name
 
 that%gaid=-1
 call grib_clone(this%gaid,that%gaid)
@@ -192,12 +223,16 @@ that%timerange=this%timerange
 that%level=this%level
 that%var=this%var
 
-that%category=this%category
+!new category
+call l4f_launcher(a_name,a_name_append=trim(subcategory)//"."//trim(optio_c(categoryappend,255)))
+that%category=l4f_category_get(a_name)
 
 end SUBROUTINE clone_gridinfo
 
 !> Importa nell'oggetto gridinfo \a this il contenuto del messaggio grib
 !! identificato da \a this%gaid precedentemente impostato.
+!! una serie di informazioni vengono estratte dal grid e dopo qualche elaborazione 
+!! vengono memorizzate nella struttura.
 subroutine import_gridinfo (this)
 
 TYPE(gridinfo_type),intent(out) :: this !< oggetto in cui importare
@@ -217,6 +252,8 @@ end subroutine import_gridinfo
 
 !> Esporta il contenuto dell'oggetto gridinfo \a this in un messaggio grib
 !! identificato da \a this%gaid precedentemente impostato.
+!! Le informazioni contenute nella struttura dopo elcune elaborazioni vengono
+!! forzate nel contenuto del grib 
 subroutine export_gridinfo (this)
 
 TYPE(gridinfo_type),intent(out) :: this !< oggetto da esportare
@@ -243,11 +280,15 @@ end if
 end subroutine export_gridinfo
 
 
-
+!> Importa nell'oggetto datetime \a this il contenuto del messaggio grib
+!! identificato da \a gaid.
+!! le informazioni relative alla data vengono estratte dal grid e dopo qualche elaborazione 
+!! vengono memorizzate nella struttura.
 subroutine import_time(this,gaid)
 
-TYPE(datetime),INTENT(out) :: this
-integer,INTENT(in)         :: gaid
+TYPE(datetime),INTENT(out) :: this !< oggetto datetime in cui importare
+integer,INTENT(in)         :: gaid !< grib_api id of the grib loaded in memory to import 
+
 integer                    :: EditionNumber
 character(len=9)           :: date
 character(len=10)          :: time
@@ -272,10 +313,15 @@ end subroutine import_time
 
 
 
+!> Esporta il contenuto dell'oggetto datetime \a this in un messaggio grib
+!! identificato da \a gaid precedentemente impostato.
+!! Le informazioni contenute nella struttura dopo alcune elaborazioni vengono
+!! forzate nel contenuto del grib 
 subroutine export_time(this,gaid)
 
-TYPE(datetime),INTENT(in) :: this
-integer,INTENT(in)        :: gaid
+TYPE(datetime),INTENT(in) :: this !< oggetto datetime da cui exportare
+integer,INTENT(in)        :: gaid !< grib_api id of the grib loaded in memory to export
+
 integer                   :: EditionNumber,date,time
 character(len=17)         :: date_time
 
@@ -302,10 +348,15 @@ end subroutine export_time
 
 
 
+!> Importa nell'oggetto vol7d_level \a this il contenuto del messaggio grib
+!! identificato da \a gaid.
+!! Le informazioni relative al livello vengono estratte dal grid e dopo qualche elaborazione 
+!! vengono memorizzate nella struttura.
 subroutine import_level(this,gaid)
 
-TYPE(vol7d_level),INTENT(out) :: this
-integer,INTENT(in)          :: gaid
+TYPE(vol7d_level),INTENT(out) :: this !< oggetto vol7d_level in cui importare
+integer,INTENT(in)          :: gaid !< grib_api id of the grib loaded in memory to import
+
 integer                     :: EditionNumber,level1,l1,level2,l2
 integer :: ltype,ltype1,scalef1,scalev1,ltype2,scalef2,scalev2
 
@@ -348,10 +399,14 @@ end subroutine import_level
 
 
 
+!> Esporta il contenuto dell'oggetto vol7d_level \a this in un messaggio grib
+!! identificato da \a gaid precedentemente impostato.
+!! Le informazioni contenute nella struttura dopo alcune elaborazioni vengono
+!! forzate nel contenuto del grib 
 subroutine export_level(this,gaid)
 
-TYPE(vol7d_level),INTENT(in) :: this
-integer,INTENT(in) :: gaid
+TYPE(vol7d_level),INTENT(in) :: this !< oggetto vol7d_level da cui exportare
+integer,INTENT(in) :: gaid !< grib_api id of the grib loaded in memory to export
 
 INTEGER :: EditionNumber, ltype1, scalef1, scalev1, ltype2, scalef2, scalev2, &
  ltype, l1, l2
@@ -394,10 +449,15 @@ end subroutine export_level
 
 
 
+!> Importa nell'oggetto vol7d_timerange \a this il contenuto del messaggio grib
+!! identificato da \a gaid.
+!! Le informazioni relative al timerange vengono estratte dal grid e dopo qualche elaborazione 
+!! vengono memorizzate nella struttura.
 subroutine import_timerange(this,gaid)
 
-TYPE(vol7d_timerange),INTENT(out) :: this
-integer,INTENT(in) :: gaid
+TYPE(vol7d_timerange),INTENT(out) :: this !< oggetto vol7d_timerange in cui importare
+integer,INTENT(in) :: gaid !< grib_api id of the grib loaded in memory to import
+
 INTEGER :: EditionNumber, tri, unit, p1_g1, p2_g1, statproc, p1, p2, status
 
 call grib_get(gaid,'GRIBEditionNumber',EditionNumber)
@@ -442,10 +502,15 @@ call init (this, statproc, p1, p2)
 end subroutine import_timerange
 
 
+!> Esporta il contenuto dell'oggetto vol7d_timerange \a this in un messaggio grib
+!! identificato da \a gaid precedentemente impostato.
+!! Le informazioni contenute nella struttura dopo alcune elaborazioni vengono
+!! forzate nel contenuto del grib 
 subroutine export_timerange(this,gaid)
 
-TYPE(vol7d_timerange),INTENT(in) :: this
-integer,INTENT(in) :: gaid
+TYPE(vol7d_timerange),INTENT(in) :: this !< oggetto vol7d_timerange da cui exportare
+integer,INTENT(in) :: gaid !< grib_api id of the grib loaded in memory to export
+
 INTEGER :: EditionNumber, tri, unit, p1_g1, p2_g1, p1, p2
 
 call grib_get(gaid,'GRIBEditionNumber',EditionNumber)
@@ -485,10 +550,15 @@ end if
 end subroutine export_timerange
 
 
+!> Importa nell'oggetto volgrid6d_var \a this il contenuto del messaggio grib
+!! identificato da \a gaid.
+!! Le informazioni relative al parametro vengono estratte dal grid e dopo qualche elaborazione 
+!! vengono memorizzate nella struttura.
 subroutine import_volgrid6d_var(this,gaid)
 
-TYPE(volgrid6d_var),INTENT(out) :: this
-integer,INTENT(in)              :: gaid
+TYPE(volgrid6d_var),INTENT(out) :: this !< oggetto volgrid6d_var in cui importare
+integer,INTENT(in)              :: gaid !< grib_api id of the grib loaded in memory to import
+
 integer ::EditionNumber,centre,discipline,category,number
 
 call grib_get(gaid,'GRIBEditionNumber',EditionNumber)
@@ -522,10 +592,14 @@ end if
 end subroutine import_volgrid6d_var
 
 
+!> Esporta il contenuto dell'oggetto volgrid6d_var \a this in un messaggio grib
+!! identificato da \a gaid precedentemente impostato.
+!! Le informazioni contenute nella struttura dopo alcune elaborazioni vengono
+!! forzate nel contenuto del grib 
 subroutine export_volgrid6d_var(this,gaid)
 
-TYPE(volgrid6d_var),INTENT(in) :: this
-integer,INTENT(in)             :: gaid
+TYPE(volgrid6d_var),INTENT(in) :: this !< oggetto volgrid6d_var da cui exportare
+integer,INTENT(in)             :: gaid !< grib_api id of the grib loaded in memory to export
 integer ::EditionNumber
 
 call grib_get(gaid,'GRIBEditionNumber',EditionNumber)
@@ -554,10 +628,16 @@ end if
 
 end subroutine export_volgrid6d_var
 
+!> \brief Display object on screen
+!! Show brief content on screen.
+!! All the key names and values will be printed
+!! The set of keys returned can be controlled with the input variable namespace.
+!! Available namespaces are "ls" (to get the same default keys as the grib_ls and "mars" to get the keys used by mars.
 subroutine display_gaid (this,namespace)
 
-integer :: this !< gaid
-character (len=*),optional :: namespace!< namespace grib_api key
+integer :: this !< grib_api id of the grib loaded in memory
+character (len=*),optional :: namespace !< grib_api namespace of the keys to search for (all the keys if empty)
+
 integer :: kiter,iret
 character(len=255) :: key,value,lnamespace
 
@@ -591,10 +671,15 @@ call grib_keys_iterator_delete(kiter)
 end subroutine display_gaid
 
 
+!> \brief Display object on screen
+!! Show brief content on screen.
+!! Also the grib  key names and values will be printed
+!! The set of keys returned can be controlled with the input variable namespace.
+!! Available namespaces are "ls" (to get the same default keys as the grib_ls and "mars" to get the keys used by mars.
 subroutine display_gridinfo (this,namespace)
 
-TYPE(gridinfo_type),intent(in) :: this !< oggetto da stampare
-character (len=*),optional :: namespace!< namespace grib_api key
+TYPE(gridinfo_type),intent(in) :: this !< object to display
+character (len=*),optional :: namespace !< grib_api namespace of the keys to search for (all the keys if empty)
 
 call l4f_category_log(this%category,L4F_DEBUG,"ora mostro gridinfo " )
 
@@ -613,9 +698,15 @@ end subroutine display_gridinfo
 
 
 
-subroutine display_gridinfov (this)
+!> \brief Display vector of object on screen
+!! Show brief content on screen.
+!! Also the grib  key names and values will be printed
+!! The set of keys returned can be controlled with the input variable namespace.
+!! Available namespaces are "ls" (to get the same default keys as the grib_ls and "mars" to get the keys used by mars.
+subroutine display_gridinfov (this,namespace)
 
-TYPE(gridinfo_type),intent(in) :: this(:) !< vettore di oggetti da stampare
+TYPE(gridinfo_type),intent(in) :: this(:) !< vector of object to display
+character (len=*),optional :: namespace !< grib_api namespace of the keys to search for (all the keys if empty)
 integer :: i
 
 print*,"----------------------- gridinfo  vector ---------------------"
@@ -624,7 +715,7 @@ do i=1, size(this)
 
   call l4f_category_log(this(i)%category,L4F_DEBUG,"ora mostro il vettore gridinfo " )
 
-  call display(this(i))
+  call display(this(i),namespace)
 
 end do
 print*,"--------------------------------------------------------------"
@@ -632,13 +723,15 @@ print*,"--------------------------------------------------------------"
 end subroutine display_gridinfov
 
 
-
+!> Decode gridinfo object
+!! decode from a grib message the data section returning a data matrix
 function decode_gridinfo(this) result (field)
 TYPE(gridinfo_type),INTENT(in) :: this      !< oggetto da decodificare
+real :: field (this%griddim%dim%nx,this%griddim%dim%ny) !< data matrix of decoded values
+
 integer :: EditionNumber
 integer :: alternativeRowScanning,iScansNegatively,jScansPositively,jPointsAreConsecutive
 integer :: numberOfValues,numberOfPoints
-real :: field (this%griddim%dim%nx,this%griddim%dim%ny)
 
 real :: vector (this%griddim%dim%nx * this%griddim%dim%ny)
 real,allocatable :: lats (:),lons(:)
@@ -737,9 +830,11 @@ end function decode_gridinfo
 
 
 
+!> Encode gridinfo object
+!! encode from a data matrix a data section of a grib message
 subroutine encode_gridinfo(this,field)
 TYPE(gridinfo_type),INTENT(inout) :: this !< oggetto in cui codificare
-REAL,intent(in) :: field (:,:) !< matrice dei dati da scrivere
+REAL,intent(in) :: field (:,:) !< data matrix to encode
 
 integer :: EditionNumber
 integer :: alternativeRowScanning,iScansNegatively,jScansPositively,jPointsAreConsecutive
@@ -867,7 +962,7 @@ end subroutine encode_gridinfo
 
 
 
-!derived from a work  Gilbert        ORG: W/NP11  SUBPROGRAM:    cnvlevel   DATE: 2003-06-12
+!derived from a work of Gilbert  ORG: W/NP11  SUBPROGRAM:    cnvlevel   DATE: 2003-06-12
 
 
 SUBROUTINE level_g2_to_dballe(ltype1,scalef1,scalev1,ltype2,scalef2,scalev2, lt1,l1,lt2,l2)
@@ -1311,3 +1406,14 @@ END SUBROUTINE second_to_gribtr
 
 
 end module gridinfo_class
+
+
+!>\example example_vg6d_2.f90
+!!\brief Programma esempio semplice per la lettura di file grib.
+!! Programma che legge i grib contenuti in un file e li organizza in un vettore di oggetti gridinfo
+
+
+!>\example example_vg6d_4.f90
+!!\brief Programma esempio semplice per la elaborazione di file grib.
+!! Programma che legge un file contenente grib e li elabora secondo le specifiche date alinea di comando
+!! producendo un file di output contenente ancora grrib

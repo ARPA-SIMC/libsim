@@ -1,3 +1,13 @@
+!> \defgroup volgrid6d Pacchetto volgrid6d, libreria volgrid6d
+
+!> \brief Questo modulo definisce gli oggetti e i metodi per gestire dati in proiezione e non su grigliato regolare(gridded).
+!! I dati vengono organizzati in una matrice mutidimensionale le cui dimensioni sono definite in modo standard.
+!! Vengono gestiti differenti sistemi di coordinate geografiche e proiezioni.
+!! L'oggetto principale volgrid6d contiene le informazioni e i dati relativi a un grigliato omogeneo. 
+!! Un vettore di oggetti volgrid6d è in grado di contenere ogni miscela di dati.
+!! I dati possono essere importati ed exportati da grib edition 1 e 2.
+!!\ingroup volgrid6d
+
 module volgrid6d_class
 
 USE grid_class
@@ -17,8 +27,7 @@ IMPLICIT NONE
 character (len=255),parameter:: subcategory="volgrid6d_class"
 
 
-!> Definisce un oggetto contenente le informazioni e i dati relativi a grib
-!! su un grigliato omogeneo
+!> Definisce un oggetto contenente le informazioni e i dati relativi a un grigliato omogeneo
 type volgrid6d
 
 !> descrittore del grigliato
@@ -31,9 +40,10 @@ type volgrid6d
   TYPE(vol7d_level),pointer :: level(:)
 !> vettore descrittore della dimensione variabile di anagrafica
   TYPE(volgrid6d_var),pointer :: var(:)
-
+!> matrix of grib_api id of the grib loaded in memory;
+!! index are: (level,time,timerange,var)
   integer,pointer :: gaid(:,:,:,:)
-  
+!> data matrix; index are: (x,y,level,time,timerange,var)
   real,pointer :: voldati(:,:,:,:,:,:)
 
 
@@ -1458,7 +1468,7 @@ do itime=1,ntime
         call compute(this, &
          vol7d_in%voldatir(:,itime,ilevel,itimerange,ivar,inetwork),&
          volgrid6d_out%voldati(:,:,ilevel,itime,itimerange,ivar))
-
+! in vol7d:
 ! 1 indice della dimensione "anagrafica"
 ! 2 indice della dimensione "tempo"
 ! 3 indice della dimensione "livello verticale"

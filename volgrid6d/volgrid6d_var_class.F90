@@ -15,10 +15,10 @@ IMPLICIT NONE
 !! il costruttore ::init.
 TYPE volgrid6d_var
 
-  integer :: centre !< codice della variabile secondo la tabella B del WMO.
-  integer :: discipline
-  integer :: category
-  integer :: number
+  integer :: centre !< centre
+  integer :: discipline !< disciplina
+  integer :: category !< categoria
+  integer :: number !< parameter number
   CHARACTER(len=65) :: description !< descrizione testuale della variabile (opzionale)
   CHARACTER(len=24) :: unit !< descrizione testuale dell'unità di misura (opzionale)
 
@@ -48,7 +48,7 @@ END INTERFACE
 !! scalare-vettore(1-d) (ma non vettore(1-d)-scalare o tra array con più
 !! di 1 dimensione e scalari).
 INTERFACE OPERATOR (==)
-  MODULE PROCEDURE volgrid6d_var_eq, volgrid6d_var_eqsv
+  MODULE PROCEDURE volgrid6d_var_eq
 END INTERFACE
 
 !> Operatore logico di disuguaglianza tra oggetti della classe volgrid6d_var.
@@ -57,7 +57,7 @@ END INTERFACE
 !! scalare-vettore(1-d) (ma non vettore(1-d)-scalare o tra array con più
 !! di 1 dimensione e scalari).
 INTERFACE OPERATOR (/=)
-  MODULE PROCEDURE volgrid6d_var_ne, volgrid6d_var_nesv
+  MODULE PROCEDURE volgrid6d_var_ne
 END INTERFACE
 
 INTERFACE count_distinct
@@ -94,10 +94,10 @@ elemental SUBROUTINE volgrid6d_var_init(this, centre, category, number, discipli
 TYPE(volgrid6d_var),INTENT(INOUT) :: this !< oggetto da inizializzare
 !INTEGER,INTENT(in),OPTIONAL :: btable
 
-integer,INTENT(in),OPTIONAL :: centre !< codice della variabile secondo la tabella B del WMO.
-integer,INTENT(in),OPTIONAL :: category
-integer,INTENT(in),OPTIONAL :: number
-integer,INTENT(in),OPTIONAL :: discipline
+integer,INTENT(in),OPTIONAL :: centre !< centre 
+integer,INTENT(in),OPTIONAL :: category !< categoria
+integer,INTENT(in),OPTIONAL :: number !< parameter number
+integer,INTENT(in),OPTIONAL :: discipline !< disciplina
 CHARACTER(len=65),INTENT(in),OPTIONAL :: description !< descrizione testuale della variabile (opzionale)
 CHARACTER(len=24),INTENT(in),OPTIONAL :: unit !< descrizione testuale dell'unità di misura (opzionale)
 
@@ -168,8 +168,9 @@ this%unit = cmiss
 
 END SUBROUTINE volgrid6d_var_delete
 
-
+!> operatore di uguaglianza tra oggetti volgrid6d_var
 elemental FUNCTION volgrid6d_var_eq(this, that) RESULT(res)
+!> oggetti da comparare
 TYPE(volgrid6d_var),INTENT(IN) :: this, that
 LOGICAL :: res
 
@@ -182,39 +183,16 @@ res = this%centre == that%centre .and. &
 END FUNCTION volgrid6d_var_eq
 
 
-FUNCTION volgrid6d_var_eqsv(this, that) RESULT(res)
-TYPE(volgrid6d_var),INTENT(IN) :: this, that(:)
-LOGICAL :: res(SIZE(that))
-
-INTEGER :: i
-
-DO i = 1, SIZE(that)
-  res(i) = this == that(i)
-ENDDO
-
-END FUNCTION volgrid6d_var_eqsv
-
-
+!> operatore di disuguaglianza tra oggetti volgrid6d_var
 elemental FUNCTION volgrid6d_var_ne(this, that) RESULT(res)
+!> oggetti da comparare
 TYPE(volgrid6d_var),INTENT(IN) :: this, that
+
 LOGICAL :: res
 
 res = .NOT.(this == that)
 
 END FUNCTION volgrid6d_var_ne
-
-
-FUNCTION volgrid6d_var_nesv(this, that) RESULT(res)
-TYPE(volgrid6d_var),INTENT(IN) :: this, that(:)
-LOGICAL :: res(SIZE(that))
-
-INTEGER :: i
-
-DO i = 1, SIZE(that)
-  res(i) = .NOT.(this == that(i))
-ENDDO
-
-END FUNCTION volgrid6d_var_nesv
 
 
 ! Definisce le funzioni count_distinct e pack_distinct
@@ -225,9 +203,10 @@ END FUNCTION volgrid6d_var_nesv
 #undef VOL7D_POLY_TYPES
 
 
+!> \brief display on the screen a brief content of volgrid6d_var object
 subroutine display_volgrid6d_var(this)
 
-TYPE(volgrid6d_var),INTENT(in) :: this
+TYPE(volgrid6d_var),INTENT(in) :: this !< volgrid6d_var object to display
 
 print*,"GRIDVAR: ",this%centre,this%discipline,this%category,this%number
 

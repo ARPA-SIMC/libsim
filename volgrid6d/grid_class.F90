@@ -1,5 +1,3 @@
-!> \defgroup volgrid6d Pacchetto volgrid6d, libreria volgrid6d
-
 !>\brief  classe per la gestione delle aree geografiche associate a dati su grigliato.
 !!
 !!Questo modulo definisce gli oggetti e i metodi per gestire
@@ -856,7 +854,7 @@ end SUBROUTINE display_griddim
 !> Initialises an object that defines a transformation on a grid.
 !! trans_type='zoom' cuts or extends \a grid on a new grid adding
 !! or removing points on the four sides (zoom).
-!! trans_type='box_regid' regrids \a grid on a new grid in which
+!! trans_type='box_regrid' regrids \a grid on a new grid in which
 !! every point is the average over \a npx X \a npy points of the
 !! original grid (box average).
 !! All the proper optional parameters, after \a trans_type, should
@@ -1634,11 +1632,13 @@ call l4f_category_delete(this%category)
 
 end SUBROUTINE delete_grid_transform
 
-
+!> \brief from input data matrix compute the output data matrix
+!! Grid_transform object contains any information needed for computation.
+!! Field_out will bee computed.
 SUBROUTINE grid_transform_compute(this, field_in, field_out)
-TYPE(grid_transform),INTENT(in) :: this
-REAL, INTENT(in) :: field_in(:,:)
-REAL, INTENT(out) :: field_out(:,:)
+TYPE(grid_transform),INTENT(in) :: this !< grid_transformation object
+REAL, INTENT(in) :: field_in(:,:) !< input matrix
+REAL, INTENT(out) :: field_out(:,:) !< output matrix
 
 INTEGER :: i, j, ii, jj, ie, je, navg
 real :: z1,z2,z3,z4
@@ -1764,13 +1764,16 @@ ENDIF
 END SUBROUTINE grid_transform_compute
 
 
+!> \brief from input data vector compute the output data matrix
+!! Grid_transform object contains any information needed for computation.
+!! Field_out will bee computed.
 SUBROUTINE v7d_grid_transform_compute(this, field_in, field_out)
-TYPE(grid_transform),INTENT(in) :: this
-REAL, INTENT(in) :: field_in(:)
-REAL, INTENT(out):: field_out(:,:)
+TYPE(grid_transform),INTENT(in) :: this !< grid_tranform object
+REAL, INTENT(in) :: field_in(:) !< input vector
+REAL, INTENT(out):: field_out(:,:) !< output matrix
+
 real,allocatable :: field_in_p(:),x_in_p(:),y_in_p(:)
 real,allocatable :: x_out(:),y_out(:)
-
 integer :: inn_p,ier
 
 !!$INTEGER :: i, j, ii, jj, ie, je, navg
@@ -1859,28 +1862,29 @@ END IF
 END SUBROUTINE v7d_grid_transform_compute
 
 
+!> \brief bilinear interpolation
+!!     effettua interpolazione bilineare dati i valori nei punti
+!!     1,2,3,4 e le coordinate dei punti 1 e 3 oltre a quelle
+!!     del punto p dove viene valutato il campo.
+!!_____________________________________________________________
+!!				disposizione punti
+!!	4	3
+!!
+!!	  p
+!!
+!!	1	2
+!! _____________________________________________________________
+
 elemental real function hbilin (z1,z2,z3,z4,x1,y1,x3,y3,xp,yp) result (zp)
 
-doubleprecision,intent(in):: x1,y1,x3,y3,xp,yp 
-real,intent(in) :: z1,z2,z3,z4
+doubleprecision,intent(in):: x1,y1 !< coordinate of the lower left point
+doubleprecision,intent(in):: x3,y3 !< coordinate of the upper right point
+doubleprecision,intent(in):: xp,yp !< coordinate of point where interpolate
+real,intent(in) :: z1,z2,z3,z4 !< Z values on the four points
 
 doubleprecision :: p1,p2
 real :: z5,z6
 
-
-!     effettua interpolazione bilineare dati i valori nei punti
-!     1,2,3,4 e le coordinate dei punti 1 e 3 oltre a quelle
-!     del punto p dove viene valutato il campo.
-!_____________________________________________________________
-!				disposizione punti
-!	4	3
-!
-!	  p
-!
-!	1	2
-! _____________________________________________________________
-
-     
 
 p2=((yp-y1)/(y3-y1))
 p1=((xp-x1)/(x3-x1))
@@ -1894,19 +1898,21 @@ zp=(z6-z5)*(p1)+z5
 end function hbilin
 
 
-
+!> \brief locate index of requested point
 elemental subroutine find_index(this,inter_type,&
  nx,ny, lon_min, lon_max, lat_min,lat_max,&
  lon,lat,index_x,index_y)
-! lon,lat,index_x,index_y)
 
-
-type(griddim_def),intent(in) :: this
-character(len=*),intent(in) :: inter_type
-integer,intent(in) :: nx,ny
+type(griddim_def),intent(in) :: this !< griddim object (from grid)
+character(len=*),intent(in) :: inter_type !< interpolation type (determine wich point is requested)
+!> dimension (to grid)
+integer,intent(in) :: nx,ny 
+!> extreme coordinate (to grid)
 doubleprecision,intent(in) :: lon_min, lon_max, lat_min, lat_max
+!> target coordinate
 doubleprecision,intent(in) :: lon,lat
-integer,optional,intent(out) :: index_x,index_y
+!> index of point requested
+integer,optional,intent(out) :: index_x,index_y 
 
 doubleprecision :: x,y
 
