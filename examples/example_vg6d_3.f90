@@ -9,7 +9,7 @@ implicit none
 
 integer :: category,ier
 character(len=512):: a_name
-type (gridinfo_type),pointer :: gridinfo(:),gridinfoout(:)
+type (gridinfo_def),pointer :: gridinfo(:),gridinfoout(:)
 type (volgrid6d),pointer  :: volgrid(:)
 
 integer                            ::  ifile

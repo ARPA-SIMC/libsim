@@ -37,7 +37,7 @@ character (len=255),parameter:: subcategory="gridinfo_class"
 
 
 !> Definisce un oggetto contenente le informazioni relative a un grib
-type gridinfo_type
+type gridinfo_def
 
 
 !> descrittore del grigliato
@@ -53,7 +53,7 @@ type gridinfo_type
   integer ::  gaid !< grib_api id of the grib loaded in memory
   integer :: category !< log4fortran
 
-end type gridinfo_type
+end type gridinfo_def
 
 
 !> \brief Costructor
@@ -104,14 +104,14 @@ END INTERFACE
 
 private
 
-public gridinfo_type,init,delete,import,export,clone
+public gridinfo_def,init,delete,import,export,clone
 public display,decode_gridinfo,encode_gridinfo
 
 contains
 
 !> Inizializza un oggetto di tipo gridinfo.
 SUBROUTINE init_gridinfo(this,gaid,griddim,time,timerange,level,var,clone,categoryappend)
-TYPE(gridinfo_type),intent(out) :: this !< oggetto da inizializzare
+TYPE(gridinfo_def),intent(out) :: this !< oggetto da inizializzare
 integer,intent(in),optional ::  gaid !< grib_api id of the grib loaded in memory
 !> descrittore del grigliato
 type(griddim_def),intent(in),optional :: griddim
@@ -194,7 +194,7 @@ end SUBROUTINE init_gridinfo
 !! delete gridinfo object
 !! relase memory and delete category for logging
 subroutine delete_gridinfo (this)
-TYPE(gridinfo_type),intent(out) :: this !< oggetto da eliminare
+TYPE(gridinfo_def),intent(out) :: this !< oggetto da eliminare
 
 #ifdef DEBUG
 call l4f_category_log(this%category,L4F_DEBUG,"start delete_gridinfo" )
@@ -223,8 +223,8 @@ end subroutine delete_gridinfo
 !!
 !! create a new istanze of object equal to the starting one 
 SUBROUTINE clone_gridinfo(this,that,categoryappend)
-TYPE(gridinfo_type),intent(in) :: this !< oggetto da clonare
-TYPE(gridinfo_type),intent(out) :: that !< oggetto clonato
+TYPE(gridinfo_def),intent(in) :: this !< oggetto da clonare
+TYPE(gridinfo_def),intent(out) :: that !< oggetto clonato
 character(len=*),INTENT(in),OPTIONAL :: categoryappend !< appende questo suffisso al namespace category di log4fortran
 
 character(len=512) :: a_name
@@ -251,7 +251,7 @@ end SUBROUTINE clone_gridinfo
 !! vengono memorizzate nella struttura.
 subroutine import_gridinfo (this)
 
-TYPE(gridinfo_type),intent(out) :: this !< oggetto in cui importare
+TYPE(gridinfo_def),intent(out) :: this !< oggetto in cui importare
 
 
 #ifdef DEBUG
@@ -273,7 +273,7 @@ end subroutine import_gridinfo
 !! forzate nel contenuto del grib 
 subroutine export_gridinfo (this)
 
-TYPE(gridinfo_type),intent(out) :: this !< oggetto da esportare
+TYPE(gridinfo_def),intent(out) :: this !< oggetto da esportare
 
 #ifdef DEBUG
 call l4f_category_log(this%category,L4F_DEBUG,"export to gaid" )
@@ -699,7 +699,7 @@ end subroutine display_gaid
 !! Available namespaces are "ls" (to get the same default keys as the grib_ls and "mars" to get the keys used by mars.
 subroutine display_gridinfo (this,namespace)
 
-TYPE(gridinfo_type),intent(in) :: this !< object to display
+TYPE(gridinfo_def),intent(in) :: this !< object to display
 character (len=*),optional :: namespace !< grib_api namespace of the keys to search for (all the keys if empty)
 
 #ifdef DEBUG
@@ -728,7 +728,7 @@ end subroutine display_gridinfo
 !! Available namespaces are "ls" (to get the same default keys as the grib_ls and "mars" to get the keys used by mars.
 subroutine display_gridinfov (this,namespace)
 
-TYPE(gridinfo_type),intent(in) :: this(:) !< vector of object to display
+TYPE(gridinfo_def),intent(in) :: this(:) !< vector of object to display
 character (len=*),optional :: namespace !< grib_api namespace of the keys to search for (all the keys if empty)
 integer :: i
 
@@ -752,7 +752,7 @@ end subroutine display_gridinfov
 !!
 !! Decode from a grib message the data section returning a data matrix.
 function decode_gridinfo(this) result (field)
-TYPE(gridinfo_type),INTENT(in) :: this      !< oggetto da decodificare
+TYPE(gridinfo_def),INTENT(in) :: this      !< oggetto da decodificare
 real :: field (this%griddim%dim%nx,this%griddim%dim%ny) !< data matrix of decoded values
 
 integer :: EditionNumber
@@ -860,7 +860,7 @@ end function decode_gridinfo
 !!
 !! Encode from a data matrix a data section of a grib message.
 subroutine encode_gridinfo(this,field)
-TYPE(gridinfo_type),INTENT(inout) :: this !< oggetto in cui codificare
+TYPE(gridinfo_def),INTENT(inout) :: this !< oggetto in cui codificare
 REAL,intent(in) :: field (:,:) !< data matrix to encode
 
 integer :: EditionNumber

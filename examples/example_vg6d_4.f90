@@ -11,7 +11,7 @@ implicit none
 
 integer :: category,ier
 character(len=512):: a_name,infile='in.grb',outfile='out.grb'
-type (gridinfo_type) :: gridinfo
+type (gridinfo_def) :: gridinfo
 character:: ch
 integer                            ::  ifile,ofile,gaid
 integer                            ::  iret

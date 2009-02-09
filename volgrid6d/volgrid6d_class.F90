@@ -571,7 +571,7 @@ end subroutine volgrid6d_read_from_file
 SUBROUTINE import_from_gridinfo (this,gridinfo,force,clone,categoryappend)
 
 TYPE(volgrid6d),INTENT(OUT) :: this !< Volume volgrid6d da leggere
-type(gridinfo_type),intent(in) :: gridinfo !< gridinfo 
+type(gridinfo_def),intent(in) :: gridinfo !< gridinfo 
 LOGICAL,INTENT(in),OPTIONAL :: force !< se fornito e \c .TRUE., incastra a forza il gridinfo in un elemento libero di \a this (se c'è)
 logical , intent(in),optional :: clone !< se fornito e \c .TRUE., clona i gaid da gridinfo
 character(len=*),INTENT(in),OPTIONAL :: categoryappend !< appende questo suffisso al namespace category di log4fortran
@@ -697,7 +697,7 @@ end subroutine import_from_gridinfo
 subroutine export_to_gridinfo (this,gridinfo,itime,itimerange,ilevel,ivar,gaid_template,clone)
 
 TYPE(volgrid6d),INTENT(in) :: this !< Volume volgrid6d da leggere
-type(gridinfo_type),intent(out) :: gridinfo !< gridinfo 
+type(gridinfo_def),intent(out) :: gridinfo !< gridinfo 
 integer ::itime,itimerange,ilevel,ivar,gaid
 integer, optional :: gaid_template
 logical , intent(in),optional :: clone !< se fornito e \c .TRUE., clona i gaid to gridinfo
@@ -765,7 +765,7 @@ end subroutine export_to_gridinfo
 subroutine import_from_gridinfovv (this,gridinfov,clone,categoryappend)
 
 TYPE(volgrid6d),pointer :: this(:) !< Vettore Volume volgrid6d da leggere
-type(gridinfo_type),intent(in) :: gridinfov(:) !< vettore gridinfo 
+type(gridinfo_def),intent(in) :: gridinfov(:) !< vettore gridinfo 
 logical , intent(in),optional :: clone !< se fornito e \c .TRUE., clona i gaid to gridinfo
 character(len=*),INTENT(in),OPTIONAL :: categoryappend !< appende questo suffisso al namespace category di log4fortran
 
@@ -786,7 +786,7 @@ category=l4f_category_get(a_name)
 call l4f_category_log(category,L4F_DEBUG,"start import_from_gridinfovv")
 #endif
 
-!type(gridinfo_type),allocatable :: gridinfovtmp(:)
+!type(gridinfo_def),allocatable :: gridinfovtmp(:)
 !allocate(gridinfovtmp(size(gridinfov)))
 !gridinfovtmp=(this%griddim(i) == gridinfov%griddim(j))
 !deallocate(gridinfovtmp)
@@ -868,7 +868,7 @@ end subroutine import_from_gridinfovv
 subroutine export_to_gridinfov (this,gridinfov,gaid_template,clone)
 
 TYPE(volgrid6d),INTENT(in) :: this !< Volume volgrid6d da exportare
-type(gridinfo_type),intent(out) :: gridinfov(:) !< vettore gridinfo 
+type(gridinfo_def),intent(out) :: gridinfov(:) !< vettore gridinfo 
 integer, optional :: gaid_template !< eventuale template sul quale sovrascrivere i descrittori dimenticandosi del'eventuale grib originale 
 logical , intent(in),optional :: clone !< se fornito e \c .TRUE., clona i gaid to gridinfo invece di copiare il puntatore alla struttura
 
@@ -920,7 +920,7 @@ end subroutine export_to_gridinfov
 subroutine export_to_gridinfovv (this,gridinfov,gaid_template,clone,categoryappend)
 
 TYPE(volgrid6d),INTENT(in)  :: this(:)      !< vettore volume volgrid6d da exportare
-type(gridinfo_type),pointer :: gridinfov(:) !< vettore gridinfo in cui exportare
+type(gridinfo_def),pointer :: gridinfov(:) !< vettore gridinfo in cui exportare
 integer, optional :: gaid_template
 logical , intent(in),optional :: clone !< se fornito e \c .TRUE., clona i gaid to gridinfo invece di copiare semplicemente i puntatori alla struttura
 character(len=*),INTENT(in),OPTIONAL :: categoryappend !< appende questo suffisso al namespace category di log4fortran
@@ -1009,7 +1009,7 @@ integer,intent(inout),optional :: unit
 character(len=*),INTENT(in),optional :: filename
 character(len=*),INTENT(in),OPTIONAL :: categoryappend !< appende questo suffisso al namespace category di log4fortran
 
-type(gridinfo_type),allocatable :: gridinfo(:)
+type(gridinfo_def),allocatable :: gridinfo(:)
 integer::ngrib,gaid,iret,category,lunit,ier
 character(len=254) :: arg,lfilename
 
@@ -1140,7 +1140,7 @@ character(len=*),INTENT(in),optional :: filename
 integer,INTENT(in),OPTIONAL :: gaid_template !< grib id template; se fornito ignora l'eventuale gaid di volgrid6d utilizzando il template al suo posto
 character(len=*),INTENT(in),OPTIONAL :: categoryappend !< appende questo suffisso al namespace category di log4fortran
 
-type(gridinfo_type),pointer :: gridinfo(:)
+type(gridinfo_def),pointer :: gridinfo(:)
 integer::ngrib,gaid,category,lunit,ier
 character(len=254) :: arg,lfilename
 

@@ -8,7 +8,7 @@ implicit none
 
 integer :: category,ier
 character(len=512):: a_name
-type (gridinfo_type),allocatable :: gridinfo(:)
+type (gridinfo_def),allocatable :: gridinfo(:)
 
 integer                            ::  ifile
 integer                            ::  iret
