@@ -1,8 +1,11 @@
 !>\brief  classe per la gestione delle aree geografiche associate a dati su grigliato.
 !!
-!!Questo modulo definisce gli oggetti e i metodi per gestire
-!!le aree geografiche in proiezione e non, associate a dati su grigliato (gridded).
-!!Vengono gestiti differenti sistemi di coordinate geografiche e proiezioni.
+!! Questo modulo definisce gli oggetti e i metodi per gestire
+!! le aree geografiche in proiezione e non, associate a dati su grigliato (gridded).
+!! Vengono gestiti differenti sistemi di coordinate geografiche e proiezioni.
+!!
+!! Programma esempio semplice \include example_vg6d_1.f90
+!!
 !!\ingroup volgrid6d
 
 module grid_class
@@ -1981,4 +1984,9 @@ end subroutine find_index
 
 end module grid_class
 
+
+!>\example example_vg6d_1.f90
+!!\brief Programma esempio semplice per la definizione di griddim.
+!!
+!! Programma che crea un oggetto griddim e ne stampa alcuni valori a schermo. Comprende anche una demo dell'uso di log4fortran
 

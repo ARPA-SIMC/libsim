@@ -56,40 +56,46 @@ type gridinfo_type
 end type gridinfo_type
 
 
-!> costructor
+!> \brief Costructor
+!!
 !! create a new istanze of object
 INTERFACE init
   MODULE PROCEDURE init_gridinfo
 END INTERFACE
 
-!> destructor
+!> \brief destructor
+!!
 !! delete object 
 INTERFACE delete
   MODULE PROCEDURE delete_gridinfo
 END INTERFACE
 
-!> clone object
+!> \brief clone object
+!!
 !! create a new istanze of object equal to the starting one 
 INTERFACE clone
   MODULE PROCEDURE clone_gridinfo
 END INTERFACE
 
 
-!> Import
+!> \brief Import
+!!
 !! Legge i valori dal grib e li imposta appropriatamente
 INTERFACE import
   MODULE PROCEDURE import_time,import_timerange,import_level,import_gridinfo, &
    import_volgrid6d_var
 END INTERFACE
 
-!> Export
+!> \brief Export
+!!
 !! Imposta i valori nel grib
 INTERFACE export
   MODULE PROCEDURE export_time,export_timerange,export_level,export_gridinfo, &
    export_volgrid6d_var
 END INTERFACE
 
-!> Display object on screen
+!> \brief  Display object on screen
+!!
 !! show brief content on screen
 INTERFACE display
   MODULE PROCEDURE display_gridinfo,display_gridinfov,display_gaid
@@ -183,7 +189,8 @@ end if
 end SUBROUTINE init_gridinfo
 
 
-!> destructor
+!> \brief destructor
+!!
 !! delete gridinfo object
 !! relase memory and delete category for logging
 subroutine delete_gridinfo (this)
@@ -212,7 +219,8 @@ call l4f_category_delete(this%category)
 end subroutine delete_gridinfo
 
 
-!> clone gridinfo object
+!> \brief  clone gridinfo object
+!!
 !! create a new istanze of object equal to the starting one 
 SUBROUTINE clone_gridinfo(this,that,categoryappend)
 TYPE(gridinfo_type),intent(in) :: this !< oggetto da clonare
@@ -293,7 +301,7 @@ end subroutine export_gridinfo
 
 !> Importa nell'oggetto datetime \a this il contenuto del messaggio grib
 !! identificato da \a gaid.
-!! le informazioni relative alla data vengono estratte dal grid e dopo qualche elaborazione 
+!! Le informazioni relative alla data vengono estratte dal grid e dopo qualche elaborazione 
 !! vengono memorizzate nella struttura.
 subroutine import_time(this,gaid)
 
@@ -640,6 +648,7 @@ end if
 end subroutine export_volgrid6d_var
 
 !> \brief Display object on screen
+!!
 !! Show brief content on screen.
 !! All the key names and values will be printed
 !! The set of keys returned can be controlled with the input variable namespace.
@@ -683,6 +692,7 @@ end subroutine display_gaid
 
 
 !> \brief Display object on screen
+!!
 !! Show brief content on screen.
 !! Also the grib  key names and values will be printed
 !! The set of keys returned can be controlled with the input variable namespace.
@@ -711,6 +721,7 @@ end subroutine display_gridinfo
 
 
 !> \brief Display vector of object on screen
+!!
 !! Show brief content on screen.
 !! Also the grib  key names and values will be printed
 !! The set of keys returned can be controlled with the input variable namespace.
@@ -737,8 +748,9 @@ print*,"--------------------------------------------------------------"
 end subroutine display_gridinfov
 
 
-!> Decode gridinfo object
-!! decode from a grib message the data section returning a data matrix
+!> \brief Decode gridinfo object.
+!!
+!! Decode from a grib message the data section returning a data matrix.
 function decode_gridinfo(this) result (field)
 TYPE(gridinfo_type),INTENT(in) :: this      !< oggetto da decodificare
 real :: field (this%griddim%dim%nx,this%griddim%dim%ny) !< data matrix of decoded values
@@ -844,8 +856,9 @@ end function decode_gridinfo
 
 
 
-!> Encode gridinfo object
-!! encode from a data matrix a data section of a grib message
+!> \brief Encode gridinfo object.
+!!
+!! Encode from a data matrix a data section of a grib message.
 subroutine encode_gridinfo(this,field)
 TYPE(gridinfo_type),INTENT(inout) :: this !< oggetto in cui codificare
 REAL,intent(in) :: field (:,:) !< data matrix to encode
@@ -1424,10 +1437,12 @@ end module gridinfo_class
 
 !>\example example_vg6d_2.f90
 !!\brief Programma esempio semplice per la lettura di file grib.
+!!
 !! Programma che legge i grib contenuti in un file e li organizza in un vettore di oggetti gridinfo
 
 
 !>\example example_vg6d_4.f90
 !!\brief Programma esempio semplice per la elaborazione di file grib.
+!!
 !! Programma che legge un file contenente grib e li elabora secondo le specifiche date alinea di comando
 !! producendo un file di output contenente ancora grrib

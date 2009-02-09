@@ -6,6 +6,13 @@
 !! L'oggetto principale volgrid6d contiene le informazioni e i dati relativi a un grigliato omogeneo. 
 !! Un vettore di oggetti volgrid6d è in grado di contenere ogni miscela di dati.
 !! I dati possono essere importati ed exportati da grib edition 1 e 2.
+!!
+!! Programma esempio semplice \include example_vg6d_3.f90
+!! Programma trasformazione da volgrid6d a volgrid6d \include example_vg6d_5.f90
+!! Programma scrittura su file vettore di anagrafica \include example_vg6d_8.f90
+!! Programma trasformazione da volgrid6d a vol7d \include example_vg6d_6.f90
+!! Programma trasformazione da vol7d a volgrid7d \include example_vg6d_7.f90
+!!
 !!\ingroup volgrid6d
 
 module volgrid6d_class
@@ -38,7 +45,7 @@ type volgrid6d
   TYPE(vol7d_timerange),pointer :: timerange(:)
 !> descrittore della dimensione livello verticale
   TYPE(vol7d_level),pointer :: level(:)
-!> vettore descrittore della dimensione variabile di anagrafica
+!> vettore descrittore della dimensione variabile
   TYPE(volgrid6d_var),pointer :: var(:)
 !> matrix of grib_api id of the grib loaded in memory;
 !! index are: (level,time,timerange,var)
@@ -52,10 +59,16 @@ type volgrid6d
 end type volgrid6d
 
 
+!> \brief Costructor
+!!
+!! create a new istanze of object
 INTERFACE init
   MODULE PROCEDURE init_volgrid6d
 END INTERFACE
 
+!> \brief destructor
+!!
+!! delete object 
 INTERFACE delete
   MODULE PROCEDURE delete_volgrid6d,delete_volgrid6dv
 END INTERFACE
@@ -73,11 +86,17 @@ INTERFACE export
    volgrid6d_export_to_grib
 END INTERFACE
 
+!> \brief Calcola i nuovi dati secondo la trasformazione specificata
+!!
+!! Deve essere fornito l'oggetto di trasformazione
 INTERFACE compute
   MODULE PROCEDURE volgrid6d_transform_compute,volgrid6d_v7d_transform_compute,&
    v7d_volgrid6d_transform_compute
 END INTERFACE
 
+!> \brief Trasforma i dati secondo gli oggetti forniti
+!!
+!! L'oggetto trasformazione viene creato e distrutto automaticamete
 INTERFACE transform
   MODULE PROCEDURE volgrid6d_transform,volgrid6dv_transform,&
    volgrid6d_v7d_transform, volgrid6dv_v7d_transform, v7d_volgrid6d_transform
@@ -91,10 +110,12 @@ public volgrid6d,init,delete,export,import,compute,transform
 contains
 
 
+!> \brief Costructor
+!!
+!! create a new istanze of object
 subroutine init_volgrid6d (this,griddim,categoryappend)
-type(volgrid6d) :: this
-!> descrittore del grigliato
-type(griddim_def),optional :: griddim
+type(volgrid6d) :: this !< object to create
+type(griddim_def),optional :: griddim !< descrittore del grigliato
 character(len=*),INTENT(in),OPTIONAL :: categoryappend !< appende questo suffisso al namespace category di log4fortran
 
 character(len=512) :: a_name
@@ -127,15 +148,22 @@ nullify (this%gaid,this%voldati)
 end subroutine init_volgrid6d
 
 
-
+!> \brief alloca i descrittori dell'oggeto volgrid6d
+!!
+!! Questo metodo alloca i vettori dei descrittori dell'oggetto volgrid6d:
+!! - descrittore del grigliato
+!! - descrittore della dimensione tempo
+!! - descrittore della dimensione livello verticale
+!! - descrittore della dimensione intervallo temporale (timerange)
+!! - vettore descrittore della dimensione variabile
 SUBROUTINE volgrid6d_alloc(this, dim, ntime, nlevel, ntimerange, nvar, ini)
 
 TYPE(volgrid6d),INTENT(inout) :: this !< oggetto di cui allocare i descrittori
-type(grid_dim),INTENT(in),OPTIONAL :: dim !< estensione delle dimensioni X,Y orizzontali
-INTEGER,INTENT(in),OPTIONAL :: ntime !< estensione della dimensione tempo
-INTEGER,INTENT(in),OPTIONAL :: nlevel !< estensione della dimensione livello varticale
-INTEGER,INTENT(in),OPTIONAL :: ntimerange !< estensione della dimensione intervallo temporale (timerange)
-INTEGER,INTENT(in),OPTIONAL :: nvar !< estensione della dimensione variabile
+type(grid_dim),INTENT(in),OPTIONAL :: dim !< dimensioni delle dimensioni X,Y orizzontali
+INTEGER,INTENT(in),OPTIONAL :: ntime !< dimensione della dimensione tempo
+INTEGER,INTENT(in),OPTIONAL :: nlevel !< dimensione della dimensione livello varticale
+INTEGER,INTENT(in),OPTIONAL :: ntimerange !< dimensione della dimensione intervallo temporale (timerange)
+INTEGER,INTENT(in),OPTIONAL :: nvar !< dimensione della dimensione variabile
 LOGICAL,INTENT(in),OPTIONAL :: ini !< se fornito e vale \c .TRUE., viene chiamato il costruttore, senza parametri opzionali, per ogni elemento di tutti i descrittori allocati, inizializzandolo quindi a valore mancante
 
 INTEGER :: i
@@ -217,11 +245,14 @@ ENDIF
 end SUBROUTINE volgrid6d_alloc
 
 
+!> \brief alloca le matrici dati dell'oggeto volgrid6d
+!!
+!! Questo metodo alloca le matrici dati dell'oggetto volgrid6d oltre alla matrice gaid di oggetti grib id della grib_api
 SUBROUTINE volgrid6d_alloc_vol(this, ini, inivol,decode)
 TYPE(volgrid6d),INTENT(inout) :: this !< oggetto di cui allocare i volumi
-LOGICAL,INTENT(in),OPTIONAL :: ini !< se fornito e vale \c .TRUE., viene chiamato il costruttore, senza parametri opzionali, per ogni elemento di tutti i descrittori allocati
+LOGICAL,INTENT(in),OPTIONAL :: ini !< se fornito e vale \c .TRUE., viene chiamato il costruttore per i descrittori non ancora allocati con dimensione pari a 1 e ini=.TRUE.
 LOGICAL,INTENT(in),OPTIONAL :: inivol !< se fornito e vale \c .FALSE., i volumi allocati non saranno inizializzati a valore mancante
-LOGICAL,INTENT(in),OPTIONAL :: decode !< se fornito e vale \c .FALSE., i volumi dati non saranno allocati (gaid si comunque)
+LOGICAL,INTENT(in),OPTIONAL :: decode !< se fornito e vale \c .FALSE., i volumi dati non saranno allocati (this%gaid si comunque)
 
 
 LOGICAL :: linivol,ldecode
@@ -280,8 +311,10 @@ end if
 END SUBROUTINE volgrid6d_alloc_vol
 
 
-
-
+!> \brief destructor
+!!
+!! delete volgrid6d object
+!! relase memory and delete category for logging
 subroutine delete_volgrid6d(this)
 type(volgrid6d) :: this
 
@@ -443,8 +476,6 @@ end subroutine volgrid6d_write_on_file
 !! Il file puo' essere aperto opzionalmente dall'utente. Si possono passare
 !! opzionalmente unità e nome del file altrimenti assegnati internamente a dei default; se assegnati internamente 
 !! tali parametri saranno in output.
-
-
 subroutine volgrid6d_read_from_file (this,unit,filename,description,tarray,filename_auto)
 
 TYPE(volgrid6d),INTENT(OUT) :: this !< Volume volgrid6d da leggere
@@ -532,8 +563,11 @@ if (.not. present(unit)) close(unit=lunit)
 
 end subroutine volgrid6d_read_from_file
 
-
-
+!> \brief import from gridinfo object to volgrid6d
+!!
+!! Un oggetto gridinfo che al suo interno contiene un id di un grib delle grib_api e una sua sufficiente descrizione
+!! viene importato nella struttura volgrid6d organizzandolo nella sua forma multidimensionale.
+!! I descrittori di volgrid6d devono essere stati opportunamente inizializzati per poter permettere una corretta importazione.
 SUBROUTINE import_from_gridinfo (this,gridinfo,force,clone,categoryappend)
 
 TYPE(volgrid6d),INTENT(OUT) :: this !< Volume volgrid6d da leggere
@@ -656,6 +690,10 @@ end if
 end subroutine import_from_gridinfo
 
 
+!> \brief export  from volgrid6d object to gridinfo
+!!
+!! Dalla struttura volgrid6d organizzata nella sua forma multidimensionale viene esportato, specificando l'elemento richiesto,
+!! a un  oggetto gridinfo che al suo interno contiene un id di un grib delle grib_api e/o una sua sufficiente descrizione.
 subroutine export_to_gridinfo (this,gridinfo,itime,itimerange,ilevel,ivar,gaid_template,clone)
 
 TYPE(volgrid6d),INTENT(in) :: this !< Volume volgrid6d da leggere
@@ -721,6 +759,9 @@ end subroutine export_to_gridinfo
 
 
 
+!> \brief import from a vector of gridinfo object to volgrid6d
+!! 
+!! Come import_from_gridinfo ma con un vettore di gridinfo.
 subroutine import_from_gridinfovv (this,gridinfov,clone,categoryappend)
 
 TYPE(volgrid6d),pointer :: this(:) !< Vettore Volume volgrid6d da leggere
@@ -820,12 +861,16 @@ call l4f_category_delete(category)
 end subroutine import_from_gridinfovv
 
 
+!> \brief export  from volgrid6d object to a vector of gridinfo
+!!
+!! Dalla struttura volgrid6d organizzata nella sua forma multidimensionale viene esportato
+!! a un  vettore di oggetti gridinfo l'intero contenuto.
 subroutine export_to_gridinfov (this,gridinfov,gaid_template,clone)
 
-TYPE(volgrid6d),INTENT(in) :: this !< Volume volgrid6d da leggere
+TYPE(volgrid6d),INTENT(in) :: this !< Volume volgrid6d da exportare
 type(gridinfo_type),intent(out) :: gridinfov(:) !< vettore gridinfo 
-integer, optional :: gaid_template
-logical , intent(in),optional :: clone !< se fornito e \c .TRUE., clona i gaid to gridinfo
+integer, optional :: gaid_template !< eventuale template sul quale sovrascrivere i descrittori dimenticandosi del'eventuale grib originale 
+logical , intent(in),optional :: clone !< se fornito e \c .TRUE., clona i gaid to gridinfo invece di copiare il puntatore alla struttura
 
 integer :: i,itime,itimerange,ilevel,ivar
 integer :: ngridinfo,ntime,ntimerange,nlevel,nvar
@@ -867,12 +912,17 @@ end do
 end subroutine export_to_gridinfov
 
 
+!> \brief export  from a vector of volgrid6d object to a vector of gridinfo
+!!
+!! Dalla struttura volgrid6d organizzata nella sua forma multidimensionale viene esportato
+!! a un  vettore di oggetti gridinfo l'intero contenuto.
+!! l'imput a vettore permette la gestione di qualsiasi mix di dati
 subroutine export_to_gridinfovv (this,gridinfov,gaid_template,clone,categoryappend)
 
-TYPE(volgrid6d),INTENT(in)  :: this(:)      !< vettore volume volgrid6d da leggere
-type(gridinfo_type),pointer :: gridinfov(:) !< vettore gridinfo 
+TYPE(volgrid6d),INTENT(in)  :: this(:)      !< vettore volume volgrid6d da exportare
+type(gridinfo_type),pointer :: gridinfov(:) !< vettore gridinfo in cui exportare
 integer, optional :: gaid_template
-logical , intent(in),optional :: clone !< se fornito e \c .TRUE., clona i gaid to gridinfo
+logical , intent(in),optional :: clone !< se fornito e \c .TRUE., clona i gaid to gridinfo invece di copiare semplicemente i puntatori alla struttura
 character(len=*),INTENT(in),OPTIONAL :: categoryappend !< appende questo suffisso al namespace category di log4fortran
 
 integer :: i,igrid,ngrid,start,end,ngridinfo,ngridinfoin
@@ -940,12 +990,23 @@ call l4f_category_delete(category)
 
 end subroutine export_to_gridinfovv
 
-
+!> \brief importa da un file grib
+!!
+!! Questo è un metodo di alto livello. Da un file grib comunque
+!! ordinato e qualsiasi contenuto vengono importati descrittori e dati
+!! organizzandoli nella struttura ordinata di un vettore di oggetti
+!! volgrid6d. In realtà il contenuto dei grib deve essere gestito dal
+!! software di importazione limitando ad esempio i grigliati ammessi
+!! ai tipi previsti dalla classe grid. Ogni oggetto necessario viene
+!! inizializzato e allocato automaticamente.
 subroutine volgrid6d_import_from_grib (this,unit,filename,categoryappend)
 
 TYPE(volgrid6d),pointer :: this(:) !< Volume volgrid6d da leggere
-integer,intent(inout),optional :: unit !< unità su cui è stato aperto un file; se =0 rielaborato internamente (default = elaborato internamente con getunit)
-character(len=*),INTENT(in),optional :: filename !< nome del file eventualmente da aprire (default = (nome dell'eseguibile)//.v7d )
+!> unità su cui è stato aperto un file; se =0 rielaborato internamente (default = elaborato internamente con getunit) 
+!! e restituito in output; se non fornito o =0 il file viene aperto automaticamente
+integer,intent(inout),optional :: unit 
+!> nome del file eventualmente da aprire (default = (nome dell'eseguibile)//.v7d ); se = "" viene restituito in output
+character(len=*),INTENT(in),optional :: filename
 character(len=*),INTENT(in),OPTIONAL :: categoryappend !< appende questo suffisso al namespace category di log4fortran
 
 type(gridinfo_type),allocatable :: gridinfo(:)
@@ -1058,12 +1119,25 @@ end subroutine volgrid6d_import_from_grib
 
 
 
+!> \brief exporta a un file grib
+!!
+!! Questo è un metodo di alto livello.  Da un vettore di oggetti
+!! volgrid6d, descrittori e dati vengono exportati a un file grib. Un
+!! eventuale template determinerà molte delle informazione contenute
+!! nel grib; altrimenti verranno utilizzati i gaid interni a volgrid6d
+!! per mantenere le informazioni del grib le piu' coerenti
+!! possibili. Ogni oggetto necessario viene inizializzato e allocato
+!! automaticamente.
 subroutine volgrid6d_export_to_grib (this,unit,filename,gaid_template,categoryappend)
 
 TYPE(volgrid6d),pointer :: this(:) !< Volumi volgrid6d da exportare
-integer,intent(inout),optional :: unit !< unità su cui è stato aperto un file; se =0 rielaborato internamente (default = elaborato internamente con getunit)
-character(len=*),INTENT(in),optional :: filename !< nome del file eventualmente da aprire (default = (nome dell'eseguibile)//.v7d )
-integer,INTENT(in),OPTIONAL :: gaid_template !< grib template
+!> unità su cui è stato aperto un file; se =0 rielaborato internamente (default = elaborato internamente con getunit)
+!! e restituito in output; se non fornito o =0 il file viene aperto automaticamente
+integer,intent(inout),optional :: unit
+!> nome del file eventualmente da aprire (default = (nome dell'eseguibile)//.v7d );
+!! se = "" viene restituito in output
+character(len=*),INTENT(in),optional :: filename 
+integer,INTENT(in),OPTIONAL :: gaid_template !< grib id template; se fornito ignora l'eventuale gaid di volgrid6d utilizzando il template al suo posto
 character(len=*),INTENT(in),OPTIONAL :: categoryappend !< appende questo suffisso al namespace category di log4fortran
 
 type(gridinfo_type),pointer :: gridinfo(:)
@@ -1145,8 +1219,13 @@ end subroutine volgrid6d_export_to_grib
 
 
 
+!> \brief destructor
+!!
+!! delete vector of volgrid6d object
+!! relase memory and delete category for logging
 subroutine delete_volgrid6dv(this)
-type(volgrid6d) :: this(:)
+type(volgrid6d) :: this(:) !< vector of volgrid6d object
+
 integer :: i
 
 do i=1,size(this)
@@ -1162,11 +1241,15 @@ end do
 end subroutine delete_volgrid6dv
 
 
+!> \brief Calcola i nuovi dati secondo la trasformazione specificata
+!!
+!! Deve essere fornito l'oggetto di trasformazione e oggetti completi
 SUBROUTINE volgrid6d_transform_compute(this, volgrid6d_in, volgrid6d_out,clone)
-TYPE(grid_transform),INTENT(in) :: this
-type(volgrid6d), INTENT(in) :: volgrid6d_in
-type(volgrid6d), INTENT(out) :: volgrid6d_out
+TYPE(grid_transform),INTENT(in) :: this !< oggetto di trasformazione per il grigliato
+type(volgrid6d), INTENT(in) :: volgrid6d_in !< oggetto da trasformare
+type(volgrid6d), INTENT(out) :: volgrid6d_out !> oggetto trasformato; deve essere completo (init, alloc, alloc_vol)
 logical , intent(in),optional :: clone !< se fornito e \c .TRUE., clona i gaid da volgrid6d_in a volgrid6d_out
+
 integer :: ntime, ntimerange, nlevel, nvar
 integer :: itime, itimerange, ilevel, ivar
 
@@ -1236,11 +1319,15 @@ end do
 end SUBROUTINE volgrid6d_transform_compute
 
 
+!> \brief Trasforma i dati secondo gli oggetti forniti
+!!
+!! L'oggetto trasformazione su grigliato viene creato e distrutto automaticamete
+!! L'oggetto trasformato viene creato automaticamente
 subroutine volgrid6d_transform(this,griddim, volgrid6d_in, volgrid6d_out,clone,categoryappend)
-type(transform_def),intent(in) :: this
-type(griddim_def),intent(in),optional :: griddim
-type(volgrid6d), INTENT(in) :: volgrid6d_in
-type(volgrid6d), INTENT(out) :: volgrid6d_out
+type(transform_def),intent(in) :: this !< oggetto che specifica la trasformazione
+type(griddim_def),intent(in),optional :: griddim !< griddim che specifica la trasformazione
+type(volgrid6d), INTENT(in) :: volgrid6d_in !< oggetto da trasformare
+type(volgrid6d), INTENT(out) :: volgrid6d_out !< oggetto trasformato
 logical , intent(in),optional :: clone !< se fornito e \c .TRUE., clona i gaid da volgrid6d_in a volgrid6d_out
 character(len=*),INTENT(in),OPTIONAL :: categoryappend !< appende questo suffisso al namespace category di log4fortran
 
@@ -1280,13 +1367,15 @@ call delete (grid_trans)
 end subroutine volgrid6d_transform
 
 
-
-
+!> \brief Trasforma i dati secondo gli oggetti forniti (vettori)
+!!
+!! L'oggetto trasformazione su grigliato viene creato e distrutto automaticamete
+!! L'oggetto trasformato viene creato automaticamente
 subroutine volgrid6dv_transform(this,griddim, volgrid6d_in, volgrid6d_out,clone,categoryappend)
-type(transform_def),intent(in) :: this
-type(griddim_def),intent(in),optional :: griddim
-type(volgrid6d), INTENT(in) :: volgrid6d_in(:)
-type(volgrid6d), pointer :: volgrid6d_out(:)
+type(transform_def),intent(in) :: this !< oggetto che specifica la trasformazione
+type(griddim_def),intent(in),optional :: griddim !< griddim che specifica la trasformazione
+type(volgrid6d), INTENT(in) :: volgrid6d_in(:) !< vettore oggetti da trasformare
+type(volgrid6d), pointer :: volgrid6d_out(:) !< vettore oggetti trasformati
 logical , intent(in),optional :: clone !< se fornito e \c .TRUE., clona i gaid da volgrid6d_in a volgrid6d_out
 character(len=*),INTENT(in),OPTIONAL :: categoryappend !< appende questo suffisso al namespace category di log4fortran
 
@@ -1305,11 +1394,14 @@ end subroutine volgrid6dv_transform
 
 
 
+!> \brief Calcola i nuovi dati secondo la trasformazione specificata
+!!
+!! Deve essere fornito l'oggetto di trasformazione e oggetti completi
 SUBROUTINE volgrid6d_v7d_transform_compute(this, volgrid6d_in, vol7d_out,networkid)
-TYPE(grid_transform),INTENT(in) :: this
-type(volgrid6d), INTENT(in) :: volgrid6d_in
-type(vol7d), INTENT(out) :: vol7d_out
-integer,optional,intent(in) :: networkid
+TYPE(grid_transform),INTENT(in) :: this !< oggetto di trasformazione per grigliato
+type(volgrid6d), INTENT(in) :: volgrid6d_in !< oggetto da trasformare
+type(vol7d), INTENT(out) :: vol7d_out !< oggetto trasformato
+integer,optional,intent(in) :: networkid !< imposta il network in vol7d_out (default=254)
 
 integer :: nana, ntime, ntimerange, nlevel, nvar, nnetwork
 integer :: itime, itimerange, ilevel, ivar, inetwork
@@ -1391,13 +1483,16 @@ deallocate(voldatir_out)
 end SUBROUTINE volgrid6d_v7d_transform_compute
 
 
-
+!> \brief Trasforma i dati secondo gli oggetti forniti
+!!
+!! L'oggetto trasformazione su grigliato viene creato e distrutto automaticamete
+!! L'oggetto trasformato viene creato automaticamente
 subroutine volgrid6d_v7d_transform(this,ana, volgrid6d_in, vol7d_out,networkid,categoryappend)
-type(transform_def),intent(in) :: this
-type(vol7d_ana),intent(in) :: ana(:)
-type(volgrid6d), INTENT(in) :: volgrid6d_in
-type(vol7d), INTENT(out) :: vol7d_out
-integer,optional,intent(in) :: networkid
+type(transform_def),intent(in) :: this !< oggetto che specifica la trasformazione
+type(vol7d_ana),intent(in) :: ana(:) !< vettore di anagrafiche su cui effettuare la trasformazione
+type(volgrid6d), INTENT(in) :: volgrid6d_in !< oggetto da trasformare
+type(vol7d), INTENT(out) :: vol7d_out !< oggetto trasformato
+integer,optional,intent(in) :: networkid !< imposta il network in vol7d_out (default=254)
 character(len=*),INTENT(in),OPTIONAL :: categoryappend !< appende questo suffisso al namespace category di log4fortran
 
 type(grid_transform) :: grid_trans
@@ -1441,12 +1536,16 @@ call delete (grid_trans)
 end subroutine volgrid6d_v7d_transform
 
 
+!> \brief Trasforma i dati secondo gli oggetti forniti (vettori)
+!!
+!! L'oggetto trasformazione su grigliato viene creato e distrutto automaticamete
+!! L'oggetto trasformato viene creato automaticamente
 subroutine volgrid6dv_v7d_transform(this,ana, volgrid6d_in, vol7d_out,networkid,categoryappend)
-type(transform_def),intent(in) :: this
-type(vol7d_ana),intent(in) :: ana(:)
-type(volgrid6d), INTENT(in) :: volgrid6d_in(:)
-type(vol7d), pointer :: vol7d_out(:)
-integer,optional,intent(in) :: networkid
+type(transform_def),intent(in) :: this !< oggetto che specifica la trasformazione
+type(vol7d_ana),intent(in) :: ana(:) !< vettore di anagrafiche su cui effettuare la trasformazione
+type(volgrid6d), INTENT(in) :: volgrid6d_in(:) !< vettore di oggetti da trasformare
+type(vol7d), pointer :: vol7d_out(:) !< vettore di oggetti trasformati
+integer,optional,intent(in) :: networkid !< imposta il network in vol7d_out (default=254)
 character(len=*),INTENT(in),OPTIONAL :: categoryappend !< appende questo suffisso al namespace category di log4fortran
 
 integer :: i,n
@@ -1463,11 +1562,14 @@ end do
 end subroutine volgrid6dv_v7d_transform
 
 
+!> \brief Calcola i nuovi dati secondo la trasformazione specificata
+!!
+!! Deve essere fornito l'oggetto di trasformazione e oggetti completi
 SUBROUTINE v7d_volgrid6d_transform_compute(this, vol7d_in, volgrid6d_out, networkid)
-TYPE(grid_transform),INTENT(in) :: this
-type(vol7d), INTENT(in) :: vol7d_in
-type(volgrid6d), INTENT(out) :: volgrid6d_out
-integer,optional,intent(in) :: networkid
+TYPE(grid_transform),INTENT(in) :: this !< oggetto di trasformazione per grigliato
+type(vol7d), INTENT(in) :: vol7d_in !< oggetto da trasformare
+type(volgrid6d), INTENT(out) :: volgrid6d_out !< oggetto trasformato 
+integer,optional,intent(in) :: networkid !< seleziona il network da exportare da vol7d (default=1)
 
 integer :: nana, ntime, ntimerange, nlevel, nvar, nnetwork
 integer :: itime, itimerange, ilevel, ivar, inetwork
@@ -1541,12 +1643,16 @@ end do
 end SUBROUTINE v7d_volgrid6d_transform_compute
 
 
+!> \brief Trasforma i dati secondo gli oggetti forniti
+!!
+!! L'oggetto trasformazione su grigliato viene creato e distrutto automaticamete
+!! L'oggetto trasformato viene creato automaticamente
 subroutine v7d_volgrid6d_transform(this,griddim, vol7d_in, volgrid6d_out, networkid,categoryappend)
-type(transform_def),intent(in) :: this
-type(griddim_def),intent(in) :: griddim
-type(vol7d), INTENT(in) :: vol7d_in
-type(volgrid6d), INTENT(out) :: volgrid6d_out
-integer,optional,intent(in) :: networkid
+type(transform_def),intent(in) :: this !< oggetto che specifica la trasformazione
+type(griddim_def),intent(in) :: griddim  !< griddim che specifica la trasformazione
+type(vol7d), INTENT(in) :: vol7d_in !< oggetto da trasformare
+type(volgrid6d), INTENT(out) :: volgrid6d_out !< oggetto trasformato
+integer,optional,intent(in) :: networkid  !< seleziona il network da exportare da vol7d (default=1)
 character(len=*),INTENT(in),OPTIONAL :: categoryappend !< appende questo suffisso al namespace category di log4fortran
 
 type(grid_transform) :: grid_trans
@@ -1607,3 +1713,20 @@ end subroutine varbufr2vargrib
 end module volgrid6d_class
 
 
+
+!>\example example_vg6d_3.f90
+!!\brief Programma esempio semplice per gridinfo e volgrid6d.
+!!
+!! Programma che importa da file un vettore di gridinfo poi lo importa in volgrid6d. Da volgrid6d viene di nuovo creato un vettore di gridinfo per poi exportare su file.
+
+!>\example example_vg6d_5.f90
+!!\brief  Programma trasformazione da volgrid6d a volgrid6d
+
+!>\example  example_vg6d_8.f90
+!! \brief Programma scrittura su file vettore di anagrafica
+
+!>\example example_vg6d_6.f90
+!! \brief Programma trasformazione da volgrid6d a vol7d
+
+!>\example example_vg6d_7.f90
+!! \brief Programma trasformazione da vol7d a volgrid7d
