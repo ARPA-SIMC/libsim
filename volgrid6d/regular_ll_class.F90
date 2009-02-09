@@ -238,8 +238,9 @@ that=this
 call l4f_launcher(a_name,a_name_append=trim(subcategory)//"."//trim(optio_c(categoryappend,255)))
 that%category=l4f_category_get(a_name)
 
+#ifdef DEBUG
 call l4f_category_log(that%category,L4F_DEBUG,"end copy_grid_regular_ll")
-
+#endif
 
 end subroutine copy_grid_regular_ll
 
@@ -284,12 +285,16 @@ integer :: i,j
 doubleprecision :: dlat,dlon
 
 
+#ifdef DEBUG
 call l4f_category_log(this%category,L4F_DEBUG,"dimensioni: "//to_char(dim%nx)//to_char(dim%ny))
+#endif
 
 if (associated(dim%lon)) then
   if (dim%nx /= size(dim%lon,1) .or. dim%ny /= size(dim%lon,2)) then
     call l4f_category_log(this%category,L4F_WARN,"reallocate lon in grid_unproj_regular_ll")
+#ifdef DEBUG
     call l4f_category_log(this%category,L4F_DEBUG,"dealloc size lon: "//to_char(size(dim%lon)))
+#endif
     deallocate(dim%lon)
   end if
 end if
@@ -305,12 +310,16 @@ end if
 
 if (.not.associated(dim%lon)) then
   allocate (dim%lon(dim%nx,dim%ny))
+#ifdef DEBUG
   call l4f_category_log(this%category,L4F_DEBUG,"size lon matrix: "//to_char(size(dim%lon)))
+#endif
 end if
 
 if (.not.associated(dim%lat)) then
   allocate (dim%lat(dim%nx,dim%ny))
+#ifdef DEBUG
   call l4f_category_log(this%category,L4F_DEBUG,"size lat matrix: "//to_char(size(dim%lat)))
+#endif
 end if
 
 dlon= (this%lon_max - this%lon_min) / dble(dim%nx - 1 )
@@ -617,7 +626,9 @@ integer ::EditionNumber
 
 character (len=80) :: typeOfGrid
 
+#ifdef DEBUG
 call l4f_category_log(this%category,L4F_DEBUG,"start export_regular_ll")
+#endif
 
 call export_dim(dim,gaid)
 
@@ -695,10 +706,12 @@ IF (ABS(NINT(dlon*ratio) - dlon*ratio) > 0.5 .OR. &
  ABS(NINT(dlat*ratio) - dlat*ratio) > 0.5) THEN ! Increments not accurate
 
   call l4f_category_log(this%category,L4F_INFO,"incremets not given: inaccurate!")
+#ifdef DEBUG
   call l4f_category_log(this%category,L4F_DEBUG,"lon incremets difference: "//&
    to_char(ABS(NINT(dlon*ratio) - dlon*ratio)))
   call l4f_category_log(this%category,L4F_DEBUG,"lat incremets difference: "//&
    to_char(ABS(NINT(dlat*ratio) - dlat*ratio)))
+#endif
 
   CALL grib_set(gaid,'resolutionAndComponentFlags',0)
   CALL grib_set_missing(gaid,'iDirectionIncrement')
@@ -712,7 +725,9 @@ IF (ABS(NINT(dlon*ratio) - dlon*ratio) > 0.5 .OR. &
 !  CALL grib_set_missing(gaid,'geography.jInc')
 
 ELSE
+#ifdef DEBUG
   call l4f_category_log(this%category,L4F_DEBUG,"setting incremets: "//trim(to_char(dlon))//trim(to_char(dlat)))
+#endif
 
   CALL grib_set(gaid,'resolutionAndComponentFlags',128)
   CALL grib_set(gaid,'iDirectionIncrement',dlon*ratio)

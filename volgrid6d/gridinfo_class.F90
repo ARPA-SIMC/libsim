@@ -129,7 +129,9 @@ else
 end if
 this%category=l4f_category_get(a_name)
 
+#ifdef DEBUG
 call l4f_category_log(this%category,L4F_DEBUG,"start init gridinfo")
+#endif
 
 if (present(gaid))then
 
@@ -143,8 +145,10 @@ else
   this%gaid=imiss
 end if
 
+#ifdef DEBUG
 call l4f_category_log(this%category,L4F_DEBUG,"gaid present: "&
  //to_char(c_e(this%gaid))//" value: "//to_char(this%gaid))
+#endif
 
 if (present(griddim))then
   call copy(griddim,this%griddim)
@@ -185,7 +189,9 @@ end SUBROUTINE init_gridinfo
 subroutine delete_gridinfo (this)
 TYPE(gridinfo_type),intent(out) :: this !< oggetto da eliminare
 
+#ifdef DEBUG
 call l4f_category_log(this%category,L4F_DEBUG,"start delete_gridinfo" )
+#endif
 
 call delete(this%griddim)
 call delete(this%time)
@@ -193,7 +199,9 @@ call delete(this%timerange)
 call delete(this%level)
 call delete(this%var)
 
+#ifdef DEBUG
 call l4f_category_log(this%category,L4F_DEBUG,"delete gaid" )
+#endif
 call grib_release (this%gaid) 
 this%gaid=imiss
 
@@ -238,8 +246,9 @@ subroutine import_gridinfo (this)
 TYPE(gridinfo_type),intent(out) :: this !< oggetto in cui importare
 
 
+#ifdef DEBUG
 call l4f_category_log(this%category,L4F_DEBUG,"import from gaid")
-
+#endif
 
 call import(this%griddim,this%gaid)
 call import(this%time,this%gaid)
@@ -258,7 +267,9 @@ subroutine export_gridinfo (this)
 
 TYPE(gridinfo_type),intent(out) :: this !< oggetto da esportare
 
+#ifdef DEBUG
 call l4f_category_log(this%category,L4F_DEBUG,"export to gaid" )
+#endif
 
 !attenzione: exportando da volgrid griddim è già esportato
 
@@ -681,8 +692,9 @@ subroutine display_gridinfo (this,namespace)
 TYPE(gridinfo_type),intent(in) :: this !< object to display
 character (len=*),optional :: namespace !< grib_api namespace of the keys to search for (all the keys if empty)
 
+#ifdef DEBUG
 call l4f_category_log(this%category,L4F_DEBUG,"ora mostro gridinfo " )
-
+#endif
 
 print*,"----------------------- gridinfo display ---------------------"
 call display(this%griddim)
@@ -713,7 +725,9 @@ print*,"----------------------- gridinfo  vector ---------------------"
 
 do i=1, size(this)
 
+#ifdef DEBUG
   call l4f_category_log(this(i)%category,L4F_DEBUG,"ora mostro il vettore gridinfo " )
+#endif
 
   call display(this(i),namespace)
 

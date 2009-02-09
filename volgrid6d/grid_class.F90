@@ -348,8 +348,9 @@ else
 
 end if
 
-
+#ifdef DEBUG
 call l4f_category_log(this%category,L4F_DEBUG,"init gtype: "//this%grid%type%type )
+#endif
 
 select case ( this%grid%type%type)
 
@@ -711,7 +712,9 @@ type(griddim_def),intent(out) :: this !< object griddim
 INTEGER, INTENT(in) :: gaid !< grib_api id of the grib loaded in memory to import
 
 call grib_get(gaid,'typeOfGrid' ,this%grid%type%type)
+#ifdef DEBUG
 call l4f_category_log(this%category,L4F_DEBUG,"import_griddim gtype: "//this%grid%type%type)
+#endif
 
 select case ( this%grid%type%type)
 
@@ -739,7 +742,9 @@ type(griddim_def),intent(in) :: this !< object griddim
 INTEGER, INTENT(inout) :: gaid !< grib_api id of the grib loaded in memory to import
 
 call grib_set(gaid,'typeOfGrid' ,this%grid%type%type)
+#ifdef DEBUG
 call l4f_category_log(this%category,L4F_DEBUG,"export_griddim gtype: "//this%grid%type%type)
+#endif
 
 select case ( this%grid%type%type)
 
@@ -1109,7 +1114,9 @@ character(len=512) :: a_name
 call l4f_launcher(a_name,a_name_append=trim(subcategory)//"."//trim(optio_c(categoryappend,255)))
 this%category=l4f_category_get(a_name)
 
+#ifdef DEBUG
 call l4f_category_log(this%category,L4F_DEBUG,"start init_grid_transform")
+#endif
 
 this%trans=trans
 
@@ -1381,7 +1388,9 @@ character(len=512) :: a_name
 call l4f_launcher(a_name,a_name_append=trim(subcategory)//"."//trim(optio_c(categoryappend,255)))
 this%category=l4f_category_get(a_name)
 
+#ifdef DEBUG
 call l4f_category_log(this%category,L4F_DEBUG,"start init_grid_v7d_transform" )
+#endif
 
 this%trans=trans
 
@@ -1644,7 +1653,9 @@ INTEGER :: i, j, ii, jj, ie, je, navg
 real :: z1,z2,z3,z4
 doubleprecision  :: x1,x3,y1,y3,xp,yp
 
+#ifdef DEBUG
 call l4f_category_log(this%category,L4F_DEBUG,"start grid_transform_compute")
+#endif
 
 ! check size of field_in, field_out
 
@@ -1667,7 +1678,9 @@ field_out(:,:) = rmiss
 
 IF (this%trans%trans_type == 'zoom') THEN
 
+#ifdef DEBUG
   call l4f_category_log(this%category,L4F_DEBUG,"start grid_transform_compute zoom")
+#endif
 
   field_out(this%outinx:this%outfnx, &
    this%outiny:this%outfny) = &
@@ -1676,7 +1689,9 @@ IF (this%trans%trans_type == 'zoom') THEN
 
 ELSE IF (this%trans%trans_type == 'boxregrid') THEN
 
+#ifdef DEBUG
   call l4f_category_log(this%category,L4F_DEBUG,"start grid_transform_compute boxregrid")
+#endif
 
   jj = 0
   DO j = 1, this%inny - this%trans%boxregrid%average%npy + 1, this%trans%boxregrid%average%npy
@@ -1696,7 +1711,9 @@ ELSE IF (this%trans%trans_type == 'boxregrid') THEN
 
 ELSE IF (this%trans%trans_type == 'inter') THEN
 
+#ifdef DEBUG
   call l4f_category_log(this%category,L4F_DEBUG,"start grid_transform_compute inter")
+#endif
 
   IF (this%trans%inter%sub_type == 'near') THEN
 
@@ -1780,7 +1797,9 @@ integer :: inn_p,ier
 !!$real :: z1,z2,z3,z4
 !!$doubleprecision  :: x1,x3,y1,y3,xp,yp
 
+#ifdef DEBUG
 call l4f_category_log(this%category,L4F_DEBUG,"start v7d_grid_transform_compute")
+#endif
 
 ! check size of field_in, field_out
 
@@ -1802,7 +1821,9 @@ field_out(:,:) = rmiss
 
 IF (this%trans%trans_type == 'inter') THEN
 
+#ifdef DEBUG
   call l4f_category_log(this%category,L4F_DEBUG,"start v7d_grid_transform_compute inter")
+#endif
 
   if (this%trans%inter%sub_type == 'linear') THEN
 

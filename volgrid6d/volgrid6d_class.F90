@@ -106,7 +106,9 @@ else
 endif
 this%category=l4f_category_get(a_name)
 
+#ifdef DEBUG
 call l4f_category_log(this%category,L4F_DEBUG,"init")
+#endif
 
 call init(this%griddim)
 
@@ -139,8 +141,9 @@ LOGICAL,INTENT(in),OPTIONAL :: ini !< se fornito e vale \c .TRUE., viene chiamat
 INTEGER :: i
 LOGICAL :: linit
 
+#ifdef DEBUG
 call l4f_category_log(this%category,L4F_DEBUG,"alloc")
-
+#endif
 
 IF (PRESENT(ini)) THEN
   linit = ini
@@ -155,7 +158,9 @@ if (present(dim)) call copy (dim,this%griddim%dim)
 IF (PRESENT(ntime)) THEN
   IF (ntime >= 0) THEN
     IF (ASSOCIATED(this%time)) DEALLOCATE(this%time)
+#ifdef DEBUG
     call l4f_category_log(this%category,L4F_DEBUG,"alloc ntime "//to_char(ntime))
+#endif
     ALLOCATE(this%time(ntime))
     IF (linit) THEN
       DO i = 1, ntime
@@ -169,7 +174,9 @@ ENDIF
 IF (PRESENT(nlevel)) THEN
   IF (nlevel >= 0) THEN
     IF (ASSOCIATED(this%level)) DEALLOCATE(this%level)
+#ifdef DEBUG
     call l4f_category_log(this%category,L4F_DEBUG,"alloc nlevel "//to_char(nlevel))
+#endif
     ALLOCATE(this%level(nlevel))
     IF (linit) THEN
       DO i = 1, nlevel
@@ -181,7 +188,9 @@ ENDIF
 IF (PRESENT(ntimerange)) THEN
   IF (ntimerange >= 0) THEN
     IF (ASSOCIATED(this%timerange)) DEALLOCATE(this%timerange)
+#ifdef DEBUG
     call l4f_category_log(this%category,L4F_DEBUG,"alloc ntimerange "//to_char(ntimerange))
+#endif
     ALLOCATE(this%timerange(ntimerange))
     IF (linit) THEN
       DO i = 1, ntimerange
@@ -193,7 +202,9 @@ ENDIF
 IF (PRESENT(nvar)) THEN
   IF (nvar >= 0) THEN
     IF (ASSOCIATED(this%var)) DEALLOCATE(this%var)
+#ifdef DEBUG
     call l4f_category_log(this%category,L4F_DEBUG,"alloc nvar "//to_char(nvar))
+#endif
     ALLOCATE(this%var(nvar))
     IF (linit) THEN
       DO i = 1, nvar
@@ -215,8 +226,9 @@ LOGICAL,INTENT(in),OPTIONAL :: decode !< se fornito e vale \c .FALSE., i volumi 
 
 LOGICAL :: linivol,ldecode
 
+#ifdef DEBUG
 call l4f_category_log(this%category,L4F_DEBUG,"start alloc_vol")
-
+#endif
 IF (PRESENT(inivol)) THEN
   linivol = inivol
 ELSE
@@ -239,7 +251,9 @@ IF (this%griddim%dim%nx > 0 .and. this%griddim%dim%ny > 0 .and..NOT.ASSOCIATED(t
   
   if (ldecode) then
 
+#ifdef DEBUG
      call l4f_category_log(this%category,L4F_DEBUG,"alloc voldati volume")
+#endif
 
      ALLOCATE(this%voldati( this%griddim%dim%nx,this%griddim%dim%ny,&
           SIZE(this%level), SIZE(this%time),  &
@@ -249,7 +263,9 @@ IF (this%griddim%dim%nx > 0 .and. this%griddim%dim%ny > 0 .and..NOT.ASSOCIATED(t
 
   end if
 
+#ifdef DEBUG
   call l4f_category_log(this%category,L4F_DEBUG,"alloc gaid volume")
+#endif
   ALLOCATE(this%gaid( SIZE(this%level),&
    SIZE(this%time), &
    SIZE(this%timerange), SIZE(this%var)))
@@ -271,8 +287,9 @@ type(volgrid6d) :: this
 
 integer ::i,ii,iii,iiii
 
+#ifdef DEBUG
 call l4f_category_log(this%category,L4F_DEBUG,"delete")
-
+#endif
 
 if (associated(this%gaid))then
 
@@ -341,7 +358,9 @@ integer :: ntime, ntimerange, nlevel, nvar
 integer :: tarray(8)
 logical :: opened,exist
 
+#ifdef DEBUG
 call l4f_category_log(this%category,L4F_DEBUG,"write on file")
+#endif
 
 ntime=0
 ntimerange=0
@@ -441,7 +460,9 @@ character(len=254) :: ldescription,lfilename,arg
 integer :: ltarray(8),lunit
 logical :: opened,exist
 
+#ifdef DEBUG
 call l4f_category_log(this%category,L4F_DEBUG,"read from file")
+#endif
 
 call getarg(0,arg)
 
@@ -533,7 +554,9 @@ endif
 
 call get_val(this%griddim,type=type)
 
+#ifdef DEBUG
 call l4f_category_log(this%category,L4F_DEBUG,"import_from_gridinfo: "//trim(type))
+#endif
 
 if (.not. c_e(type))then
   call copy(gridinfo%griddim, this%griddim)
@@ -544,7 +567,7 @@ if (.not. c_e(type))then
 
 else if (.not. (this%griddim == gridinfo%griddim ))then
 
-   call l4f_category_log(this%category,L4F_DEBUG,"volgrid6d: grid or dim are different and this is not possible")
+   call l4f_category_log(this%category,L4F_ERROR,"volgrid6d: grid or dim are different and this is not possible")
    call raise_fatal_error ("volgrid6d: grid or dim are different and this is not possible")
 
 end if
@@ -641,13 +664,17 @@ integer ::itime,itimerange,ilevel,ivar,gaid
 integer, optional :: gaid_template
 logical , intent(in),optional :: clone !< se fornito e \c .TRUE., clona i gaid to gridinfo
 
+#ifdef DEBUG
 call l4f_category_log(this%category,L4F_DEBUG,"export_to_gridinfo")
+#endif
 
 if (present(gaid_template)) then
   gaid=-1
   call grib_clone(gaid_template,gaid)
+#ifdef DEBUG
   call l4f_category_log(this%category,L4F_DEBUG,&
    "clone to a new gaid")
+#endif
 else
 
   gaid=gridinfo%gaid
@@ -714,7 +741,9 @@ else
 endif
 category=l4f_category_get(a_name)
 
+#ifdef DEBUG
 call l4f_category_log(category,L4F_DEBUG,"start import_from_gridinfovv")
+#endif
 
 !type(gridinfo_type),allocatable :: gridinfovtmp(:)
 !allocate(gridinfovtmp(size(gridinfov)))
@@ -748,7 +777,9 @@ do i=1,ngrid
 !   CALL l4f_category_log(this(i)%category,L4F_DEBUG,'volgrid6d_alloc '//TRIM(to_char(nlevel))//' '//TRIM(to_char(nvar)))
 !   call init (this(i),this(i)%griddim, categoryappend)
 
+#ifdef DEBUG
    call l4f_category_log(this(i)%category,L4F_DEBUG,"alloc volgrid6d index: "//trim(to_char(i)))
+#endif
    
    call volgrid6d_alloc(this(i),this(i)%griddim%dim,ntime=ntime,ntimerange=ntimerange,nlevel=nlevel,nvar=nvar)
    
@@ -757,7 +788,9 @@ do i=1,ngrid
    this(i)%level=pack_distinct(gridinfov%level,nlevel,mask=(this(i)%griddim == gridinfov%griddim),back=.true.)
    this(i)%var=pack_distinct(gridinfov%var,nvar,mask=(this(i)%griddim == gridinfov%griddim),back=.true.)
 
+#ifdef DEBUG
    call l4f_category_log(this(i)%category,L4F_DEBUG,"alloc_vol volgrid6d index: "//trim(to_char(i)))
+#endif
    call volgrid6d_alloc_vol(this(i)) 
 
 end do
@@ -770,7 +803,9 @@ do i=1,size(gridinfov)
 
 !  print *,"lavoro sull'area: ",index(this%griddim,gridinfov(i)%griddim)
 
+#ifdef DEBUG
   call l4f_category_log(category,L4F_DEBUG,"import from gridinfov index: "//trim(to_char(i)))
+#endif
   call l4f_category_log(category,L4F_INFO,&
    "to volgrid6d index: "//to_char(index(this%griddim,gridinfov(i)%griddim)))
 
@@ -795,7 +830,9 @@ logical , intent(in),optional :: clone !< se fornito e \c .TRUE., clona i gaid t
 integer :: i,itime,itimerange,ilevel,ivar
 integer :: ngridinfo,ntime,ntimerange,nlevel,nvar
 
+#ifdef DEBUG
 call l4f_category_log(this%category,L4F_DEBUG,"start export_to_gridinfov")
+#endif
 
 ngridinfo=size(gridinfov)
 
@@ -889,8 +926,10 @@ do igrid=1,ngrid
   start=end+1
   end=end+size(this(igrid)%gaid)
 
+#ifdef DEBUG
   call l4f_category_log(this(igrid)%category,L4F_DEBUG,"export to gridinfo grid index: "//&
    trim(to_char(igrid))//" from "//trim(to_char(start))//" to "//trim(to_char(end)))
+#endif
   call export (this(igrid),gridinfov(start:end),gaid_template,clone=clone)
 
 end do
@@ -923,7 +962,9 @@ else
 endif
 category=l4f_category_get(a_name)
 
+#ifdef DEBUG
 call l4f_category_log(category,L4F_DEBUG,"import from grib")
+#endif
 
 call getarg(0,arg)
 
@@ -1039,7 +1080,9 @@ endif
 
 category=l4f_category_get(a_name)
 
+#ifdef DEBUG
 call l4f_category_log(category,L4F_DEBUG,"start export to grib")
+#endif
 
 call getarg(0,arg)
 
@@ -1108,7 +1151,9 @@ integer :: i
 
 do i=1,size(this)
 
+#ifdef DEBUG
   call l4f_category_log(this(i)%category,L4F_DEBUG,"delete volgrid6d vector index: "//trim(to_char(i)))
+#endif
 
   call delete(this(i))
 
@@ -1126,7 +1171,9 @@ integer :: ntime, ntimerange, nlevel, nvar
 integer :: itime, itimerange, ilevel, ivar
 
 
+#ifdef DEBUG
 call l4f_category_log(volgrid6d_in%category,L4F_DEBUG,"start volgrid6d_transform_compute")
+#endif
 
 ntime=0
 ntimerange=0
@@ -1168,8 +1215,10 @@ do itime=1,ntime
 
           if (optio_log(clone))then
 
+#ifdef DEBUG
             call l4f_category_log(volgrid6d_in%category,L4F_DEBUG,"clone gaid "//&
              trim(to_char(volgrid6d_in%gaid(ilevel,itime,itimerange,ivar))))
+#endif
             volgrid6d_out%gaid(ilevel,itime,itimerange,ivar)=-1
             call grib_clone(volgrid6d_in%gaid(ilevel,itime,itimerange,ivar),&
              volgrid6d_out%gaid(ilevel,itime,itimerange,ivar))
@@ -1198,7 +1247,9 @@ character(len=*),INTENT(in),OPTIONAL :: categoryappend !< appende questo suffiss
 type(grid_transform) :: grid_trans
 integer :: ntime, ntimerange, nlevel, nvar
 
+#ifdef DEBUG
 call l4f_category_log(volgrid6d_in%category,L4F_DEBUG,"start volgrid6d_transform")
+#endif
 
 call init (volgrid6d_out,griddim,categoryappend)
 
@@ -1264,7 +1315,9 @@ integer :: nana, ntime, ntimerange, nlevel, nvar, nnetwork
 integer :: itime, itimerange, ilevel, ivar, inetwork
 real,allocatable :: voldatir_out(:,:)
 
+#ifdef DEBUG
 call l4f_category_log(volgrid6d_in%category,L4F_DEBUG,"start volgrid6d_v7d_transform_compute")
+#endif
 
 ntime=0
 ntimerange=0
@@ -1350,7 +1403,9 @@ character(len=*),INTENT(in),OPTIONAL :: categoryappend !< appende questo suffiss
 type(grid_transform) :: grid_trans
 integer :: ntime, ntimerange, nlevel, nvar, nana
 
+#ifdef DEBUG
 call l4f_category_log(volgrid6d_in%category,L4F_DEBUG,"start volgrid6d_v7d_transform")
+#endif
 
 nana=size(ana)
 ntime=0
@@ -1420,7 +1475,9 @@ real,allocatable :: voldatir_out(:,:)
 type(vol7d_network) :: network
 
 !TODO category sarebbe da prendere da vol7d
+#ifdef DEBUG
 call l4f_category_log(volgrid6d_out%category,L4F_DEBUG,"start v7d_volgrid6d_transform_compute")
+#endif
 
 ntime=0
 ntimerange=0

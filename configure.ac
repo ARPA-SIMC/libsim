@@ -28,6 +28,11 @@ AC_PROG_FC([gfortran pgf90 ifort g95 xlf90 f90])
 F77=$FC
 AC_FC_WRAPPERS()dnl Determine how to call C from Fortran
 
+AC_ARG_ENABLE(debug-mode,
+           [  --enable-debug-mode      enable debug mode],
+	   debug="yes", debug="no")
+AM_CONDITIONAL(DEBUG, test "x$debug" = "xyes")
+
 dnl search for log4c, if not found build a dummy log4fortran
 AC_CHECK_HEADERS([log4c.h] ,
   AC_CHECK_LIB([log4c], [log4c_init], , AC_MSG_ERROR([log4c broken!])),
