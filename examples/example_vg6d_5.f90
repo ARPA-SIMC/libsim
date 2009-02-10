@@ -24,7 +24,7 @@ category=l4f_category_get(a_name//".main")
 
 call l4f_category_log(category,L4F_INFO,"inizio")
 
-call import (volgrid,filename="in.grb",categoryappend="volume letto")
+call import (volgrid,filename="../data/in.grb",categoryappend="volume letto")
 
 ! qui posso fare tutti i conti possibili
 !!$print*,"-------------"

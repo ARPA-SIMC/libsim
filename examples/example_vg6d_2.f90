@@ -27,7 +27,7 @@ ier=l4f_init()
 
 ngrib=0
 
-call grib_open_file(ifile, 'gribmix.grb','r')
+call grib_open_file(ifile, '../data/in.grb','r')
 
 ! Loop on all the messages in a file.
 
@@ -50,7 +50,7 @@ allocate (gridinfo(ngrib))
 
 ngrib=0
 
-call grib_open_file(ifile, 'gribmix.grb','r')
+call grib_open_file(ifile, '../data/in.grb','r')
 
 ! Loop on all the messages in a file.
 

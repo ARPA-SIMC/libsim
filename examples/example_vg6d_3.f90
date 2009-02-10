@@ -29,7 +29,7 @@ category=l4f_category_get(a_name//".main")
 
 ngrib=0
 
-call grib_open_file(ifile, 'gribmix.grb','r')
+call grib_open_file(ifile, '../data/in.grb','r')
 
 
 call grib_count_in_file(ifile,ngrib)
@@ -86,7 +86,7 @@ call l4f_category_log(category,L4F_INFO,"export a un grib fatto come voglio io")
 
 call export (volgrid,gridinfoout,gaid_template=gaid_template)
 
-call grib_open_file(ifile, 'gribnew.grb','w')
+call grib_open_file(ifile, 'out.grb','w')
 
 
 do ngrib=1,size(gridinfoout)

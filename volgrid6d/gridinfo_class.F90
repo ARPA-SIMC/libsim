@@ -1,13 +1,13 @@
 !> \brief Classe per la gestione delle informazioni di griglia dei grib.
 !!
 !! Questo modulo definisce gli oggetti e i metodi per gestire dati grib.
-!! Viene definito un oggetto che associa ad un oggetto grid id delle grib_api una serie di informazioni
+!! Viene definito un oggetto che associa ad un oggetto grib id delle grib_api una serie di informazioni
 !! molto utili :
 !! - area geografiche in proiezione e non, associate a dati su grigliato (gridded).
 !! - descrittore della dimensione tempo
 !! - descrittore della dimensione intervallo temporale (timerange)
 !! - descrittore della dimensione livello verticale
-!! - vettore descrittore della dimensione variabile
+!! - descrittore della dimensione variabile
 !!
 !! I metodi principali permettono di :
 !! - estrarre dal grib queste informazioni  
@@ -1444,5 +1444,5 @@ end module gridinfo_class
 !>\example example_vg6d_4.f90
 !!\brief Programma esempio semplice per la elaborazione di file grib.
 !!
-!! Programma che legge un file contenente grib e li elabora secondo le specifiche date alinea di comando
-!! producendo un file di output contenente ancora grrib
+!! Programma che legge uno ad uno i grid contenuti in un file e li
+!! elabora producendo un file di output contenente ancora grib

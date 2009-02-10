@@ -1721,6 +1721,10 @@ end module volgrid6d_class
 
 !>\example example_vg6d_5.f90
 !!\brief  Programma trasformazione da volgrid6d a volgrid6d
+!!
+!! Legge grib da un file e li organizza in un vettore di strutture
+!! volgrid6d mettendoli a disposizione per eventuali elaborazioni;
+!! vengono poi riesportati a un file grib
 
 !>\example  example_vg6d_8.f90
 !! \brief Programma scrittura su file vettore di anagrafica

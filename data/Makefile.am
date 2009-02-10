@@ -4,7 +4,7 @@ if ORSIM
 
 dist_bin_SCRIPTS = libsim_gen_ana_ora.sh libsim_gen_var_ora.sh
 
-dist_pkgdata_DATA += varmap.csv polipciv4.dat estra_temp.dat
+dist_pkgdata_DATA += varmap.csv polipciv4.dat estra_temp.dat in.grb
 
 dist_pkgdata_DATA += \
   net_001.simana  net_011.simana  net_021.simana  net_030.simana  net_041.simana \
@@ -16,7 +16,6 @@ dist_pkgdata_DATA += \
   net_007.simana  net_018.simana  net_027.simana  net_038.simana \
   net_009.simana  net_019.simana  net_028.simana  net_039.simana \
   net_010.simana  net_020.simana  net_029.simana  net_040.simana
-
 
 # Per rigenerare l'anagrafica dal DB nel ramo di sviluppo:
 # rm -f *.simana
