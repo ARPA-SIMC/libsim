@@ -2,6 +2,12 @@ AM_FCFLAGS = -I../base -I../grib -I../volgrid6d -I../vol7d -I../qc -I../termolib
 EXTRA_DIST = log4crc
 bin_PROGRAMS =
 
+
+if DEBUG
+AM_FCFLAGS+= -g  -fbounds-check -DDEBUG
+endif
+
+
 noinst_PROGRAMS = esempio_file_utilities esempio_v7d esempio_qc_convert esempio_termolib log4fortran example_getopt
 
 esempio_file_utilities_SOURCES = esempio_file_utilities.f90

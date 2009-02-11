@@ -237,7 +237,7 @@ DO WHILE (iret == GRIB_SUCCESS)
    call init (gridinfo,gaid=gaid,categoryappend="importato")
    call import(gridinfo)
 
-   call display(gridinfo,namespace="")
+      call display(gridinfo,namespace="ls")
 
    call l4f_category_log(category,L4F_INFO,"import")
 
@@ -267,7 +267,7 @@ DO WHILE (iret == GRIB_SUCCESS)
 
    call encode_gridinfo(gridinfo,fieldz)
    call export (gridinfo)
-   call display(gridinfo,namespace="")
+   call display(gridinfo,namespace="ls")
 
    call grib_write(gridinfo%gaid,ofile)
 

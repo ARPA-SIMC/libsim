@@ -27,7 +27,7 @@ AM_FCFLAGS+=-DNGMATH
 endif
 
 if DEBUG
-AM_FCFLAGS+= -g -DDEBUG
+AM_FCFLAGS+= -g  -fbounds-check -DDEBUG
 endif
 
 

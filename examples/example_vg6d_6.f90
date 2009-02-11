@@ -18,7 +18,7 @@ TYPE(vol7d_dballe) :: v7d_exp
 
 
 !questa chiamata prende dal launcher il nome univoco
-call l4f_launcher(a_name,a_name_force="demo5")
+call l4f_launcher(a_name,a_name_force="demo6")
 
 !init di log4fortran
 ier=l4f_init()
