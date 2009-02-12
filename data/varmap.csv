@@ -47,26 +47,26 @@
 162,B13013,m->M,1,0,0,0,254,0,0,neve (spessore dello strato) (IDRO),TOTAL SNOW DEPTH,1.0,0.0,20
 162,B13013,m->M,1,0,0,0,254,0,0,neve (spessore dello strato) (IDRO),TOTAL SNOW DEPTH,1.0,0.0,21
 162,B13013,m->M,1,0,0,0,254,0,0,neve (spessore dello strato) (IDRO),TOTAL SNOW DEPTH,1.0,0.0,33
-165,B11001,gsess->DEGREE TRUE,103,10000,0,0,0,0,0,Vento: direzione media degli ultimi 10 minuti (IDRO),WIND DIRECTION,1.0,0.0,11
-165,B11001,gsess->DEGREE TRUE,103,10000,0,0,0,0,0,Vento: direzione media degli ultimi 10 minuti (IDRO),WIND DIRECTION,1.0,0.0,12
-165,B11001,gsess->DEGREE TRUE,103,10000,0,0,0,0,0,Vento: direzione media degli ultimi 10 minuti (IDRO),WIND DIRECTION,1.0,0.0,13
-165,B11001,gsess->DEGREE TRUE,103,10000,0,0,0,0,0,Vento: direzione media degli ultimi 10 minuti (IDRO),WIND DIRECTION,1.0,0.0,15
-165,B11001,gsess->DEGREE TRUE,103,10000,0,0,0,0,0,Vento: direzione media degli ultimi 10 minuti (IDRO),WIND DIRECTION,1.0,0.0,16
-165,B11001,gsess->DEGREE TRUE,103,10000,0,0,0,0,0,Vento: direzione media degli ultimi 10 minuti (IDRO),WIND DIRECTION,1.0,0.0,17
-165,B11001,gsess->DEGREE TRUE,103,10000,0,0,0,0,0,Vento: direzione media degli ultimi 10 minuti (IDRO),WIND DIRECTION,1.0,0.0,18
-165,B11001,gsess->DEGREE TRUE,103,10000,0,0,0,0,0,Vento: direzione media degli ultimi 10 minuti (IDRO),WIND DIRECTION,1.0,0.0,20
-165,B11001,gsess->DEGREE TRUE,103,10000,0,0,0,0,0,Vento: direzione media degli ultimi 10 minuti (IDRO),WIND DIRECTION,1.0,0.0,21
-165,B11001,gsess->DEGREE TRUE,103,10000,0,0,0,0,0,Vento: direzione media degli ultimi 10 minuti (IDRO),WIND DIRECTION,1.0,0.0,22
-166,B11002,M/S->M/S,103,10000,0,0,0,0,0,Vento: velocita' media degli ultimi 10 minuti (IDRO),WIND SPEED,1.0,0.0,11
-166,B11002,M/S->M/S,103,10000,0,0,0,0,0,Vento: velocita' media degli ultimi 10 minuti (IDRO),WIND SPEED,1.0,0.0,12
-166,B11002,M/S->M/S,103,10000,0,0,0,0,0,Vento: velocita' media degli ultimi 10 minuti (IDRO),WIND SPEED,1.0,0.0,13
-166,B11002,M/S->M/S,103,10000,0,0,0,0,0,Vento: velocita' media degli ultimi 10 minuti (IDRO),WIND SPEED,1.0,0.0,15
-166,B11002,M/S->M/S,103,10000,0,0,0,0,0,Vento: velocita' media degli ultimi 10 minuti (IDRO),WIND SPEED,1.0,0.0,16
-166,B11002,M/S->M/S,103,10000,0,0,0,0,0,Vento: velocita' media degli ultimi 10 minuti (IDRO),WIND SPEED,1.0,0.0,17
-166,B11002,M/S->M/S,103,10000,0,0,0,0,0,Vento: velocita' media degli ultimi 10 minuti (IDRO),WIND SPEED,1.0,0.0,18
-166,B11002,M/S->M/S,103,10000,0,0,0,0,0,Vento: velocita' media degli ultimi 10 minuti (IDRO),WIND SPEED,1.0,0.0,20
-166,B11002,M/S->M/S,103,10000,0,0,0,0,0,Vento: velocita' media degli ultimi 10 minuti (IDRO),WIND SPEED,1.0,0.0,21
-166,B11002,M/S->M/S,103,10000,0,0,0,0,0,Vento: velocita' media degli ultimi 10 minuti (IDRO),WIND SPEED,1.0,0.0,22
+165,B11001,gsess->DEGREE TRUE,103,10000,0,0,254,0,0,Vento: direzione media degli ultimi 10 minuti (IDRO),WIND DIRECTION,1.0,0.0,11
+165,B11001,gsess->DEGREE TRUE,103,10000,0,0,254,0,0,Vento: direzione media degli ultimi 10 minuti (IDRO),WIND DIRECTION,1.0,0.0,12
+165,B11001,gsess->DEGREE TRUE,103,10000,0,0,254,0,0,Vento: direzione media degli ultimi 10 minuti (IDRO),WIND DIRECTION,1.0,0.0,13
+165,B11001,gsess->DEGREE TRUE,103,10000,0,0,254,0,0,Vento: direzione media degli ultimi 10 minuti (IDRO),WIND DIRECTION,1.0,0.0,15
+165,B11001,gsess->DEGREE TRUE,103,10000,0,0,254,0,0,Vento: direzione media degli ultimi 10 minuti (IDRO),WIND DIRECTION,1.0,0.0,16
+165,B11001,gsess->DEGREE TRUE,103,10000,0,0,254,0,0,Vento: direzione media degli ultimi 10 minuti (IDRO),WIND DIRECTION,1.0,0.0,17
+165,B11001,gsess->DEGREE TRUE,103,10000,0,0,254,0,0,Vento: direzione media degli ultimi 10 minuti (IDRO),WIND DIRECTION,1.0,0.0,18
+165,B11001,gsess->DEGREE TRUE,103,10000,0,0,254,0,0,Vento: direzione media degli ultimi 10 minuti (IDRO),WIND DIRECTION,1.0,0.0,20
+165,B11001,gsess->DEGREE TRUE,103,10000,0,0,254,0,0,Vento: direzione media degli ultimi 10 minuti (IDRO),WIND DIRECTION,1.0,0.0,21
+165,B11001,gsess->DEGREE TRUE,103,10000,0,0,254,0,0,Vento: direzione media degli ultimi 10 minuti (IDRO),WIND DIRECTION,1.0,0.0,22
+166,B11002,M/S->M/S,103,10000,0,0,254,0,0,Vento: velocita' media degli ultimi 10 minuti (IDRO),WIND SPEED,1.0,0.0,11
+166,B11002,M/S->M/S,103,10000,0,0,254,0,0,Vento: velocita' media degli ultimi 10 minuti (IDRO),WIND SPEED,1.0,0.0,12
+166,B11002,M/S->M/S,103,10000,0,0,254,0,0,Vento: velocita' media degli ultimi 10 minuti (IDRO),WIND SPEED,1.0,0.0,13
+166,B11002,M/S->M/S,103,10000,0,0,254,0,0,Vento: velocita' media degli ultimi 10 minuti (IDRO),WIND SPEED,1.0,0.0,15
+166,B11002,M/S->M/S,103,10000,0,0,254,0,0,Vento: velocita' media degli ultimi 10 minuti (IDRO),WIND SPEED,1.0,0.0,16
+166,B11002,M/S->M/S,103,10000,0,0,254,0,0,Vento: velocita' media degli ultimi 10 minuti (IDRO),WIND SPEED,1.0,0.0,17
+166,B11002,M/S->M/S,103,10000,0,0,254,0,0,Vento: velocita' media degli ultimi 10 minuti (IDRO),WIND SPEED,1.0,0.0,18
+166,B11002,M/S->M/S,103,10000,0,0,254,0,0,Vento: velocita' media degli ultimi 10 minuti (IDRO),WIND SPEED,1.0,0.0,20
+166,B11002,M/S->M/S,103,10000,0,0,254,0,0,Vento: velocita' media degli ultimi 10 minuti (IDRO),WIND SPEED,1.0,0.0,21
+166,B11002,M/S->M/S,103,10000,0,0,254,0,0,Vento: velocita' media degli ultimi 10 minuti (IDRO),WIND SPEED,1.0,0.0,22
 172,B13011,mm->KG/M**2,1,0,0,0,1,900,0,precipitazione nei 15 minuti ( IDRO ),TOTAL PRECIPITATION / TOTAL WATER EQUIVALENT,1.0,0.0,7
 172,B13011,mm->KG/M**2,1,0,0,0,1,900,0,precipitazione nei 15 minuti ( IDRO ),TOTAL PRECIPITATION / TOTAL WATER EQUIVALENT,1.0,0.0,9
 172,B13011,mm->KG/M**2,1,0,0,0,1,900,0,precipitazione nei 15 minuti ( IDRO ),TOTAL PRECIPITATION / TOTAL WATER EQUIVALENT,1.0,0.0,11
@@ -99,26 +99,26 @@
 221,B12001,C/10->K,103,2000,0,0,254,0,0,temperatura (LOKM),TEMPERATURE/DRY-BULB TEMPERATURE,0.1,273.15,30
 221,B12001,C/10->K,103,2000,0,0,254,0,0,temperatura (LOKM),TEMPERATURE/DRY-BULB TEMPERATURE,0.1,273.15,31
 221,B12001,C/10->K,103,2000,0,0,254,0,0,temperatura (LOKM),TEMPERATURE/DRY-BULB TEMPERATURE,0.1,273.15,32
-222,B11001,degree true->DEGREE TRUE,103,10000,0,0,0,0,0,vento direzione (LOKM),WIND DIRECTION,1.0,0.0,23
-222,B11001,degree true->DEGREE TRUE,103,10000,0,0,0,0,0,vento direzione (LOKM),WIND DIRECTION,1.0,0.0,24
-222,B11001,degree true->DEGREE TRUE,103,10000,0,0,0,0,0,vento direzione (LOKM),WIND DIRECTION,1.0,0.0,25
-222,B11001,degree true->DEGREE TRUE,103,10000,0,0,0,0,0,vento direzione (LOKM),WIND DIRECTION,1.0,0.0,26
-222,B11001,degree true->DEGREE TRUE,103,10000,0,0,0,0,0,vento direzione (LOKM),WIND DIRECTION,1.0,0.0,27
-222,B11001,degree true->DEGREE TRUE,103,10000,0,0,0,0,0,vento direzione (LOKM),WIND DIRECTION,1.0,0.0,28
-222,B11001,degree true->DEGREE TRUE,103,10000,0,0,0,0,0,vento direzione (LOKM),WIND DIRECTION,1.0,0.0,29
-222,B11001,degree true->DEGREE TRUE,103,10000,0,0,0,0,0,vento direzione (LOKM),WIND DIRECTION,1.0,0.0,30
-222,B11001,degree true->DEGREE TRUE,103,10000,0,0,0,0,0,vento direzione (LOKM),WIND DIRECTION,1.0,0.0,31
-222,B11001,degree true->DEGREE TRUE,103,10000,0,0,0,0,0,vento direzione (LOKM),WIND DIRECTION,1.0,0.0,32
-223,B11002,m/s/10->M/S,103,10000 0,0,0,0,0,vento velocita' (LOKM),WIND SPEED,0.1,0.0,23
-223,B11002,m/s/10->M/S,103,10000 0,0,0,0,0,vento velocita' (LOKM),WIND SPEED,0.1,0.0,24
-223,B11002,m/s/10->M/S,103,10000 0,0,0,0,0,vento velocita' (LOKM),WIND SPEED,0.1,0.0,25
-223,B11002,m/s/10->M/S,103,10000 0,0,0,0,0,vento velocita' (LOKM),WIND SPEED,0.1,0.0,26
-223,B11002,m/s/10->M/S,103,10000 0,0,0,0,0,vento velocita' (LOKM),WIND SPEED,0.1,0.0,27
-223,B11002,m/s/10->M/S,103,10000 0,0,0,0,0,vento velocita' (LOKM),WIND SPEED,0.1,0.0,28
-223,B11002,m/s/10->M/S,103,10000 0,0,0,0,0,vento velocita' (LOKM),WIND SPEED,0.1,0.0,29
-223,B11002,m/s/10->M/S,103,10000 0,0,0,0,0,vento velocita' (LOKM),WIND SPEED,0.1,0.0,30
-223,B11002,m/s/10->M/S,103,10000 0,0,0,0,0,vento velocita' (LOKM),WIND SPEED,0.1,0.0,31
-223,B11002,m/s/10->M/S,103,10000 0,0,0,0,0,vento velocita' (LOKM),WIND SPEED,0.1,0.0,32
+222,B11001,degree true->DEGREE TRUE,103,10000,0,0,254,0,0,vento direzione (LOKM),WIND DIRECTION,1.0,0.0,23
+222,B11001,degree true->DEGREE TRUE,103,10000,0,0,254,0,0,vento direzione (LOKM),WIND DIRECTION,1.0,0.0,24
+222,B11001,degree true->DEGREE TRUE,103,10000,0,0,254,0,0,vento direzione (LOKM),WIND DIRECTION,1.0,0.0,25
+222,B11001,degree true->DEGREE TRUE,103,10000,0,0,254,0,0,vento direzione (LOKM),WIND DIRECTION,1.0,0.0,26
+222,B11001,degree true->DEGREE TRUE,103,10000,0,0,254,0,0,vento direzione (LOKM),WIND DIRECTION,1.0,0.0,27
+222,B11001,degree true->DEGREE TRUE,103,10000,0,0,254,0,0,vento direzione (LOKM),WIND DIRECTION,1.0,0.0,28
+222,B11001,degree true->DEGREE TRUE,103,10000,0,0,254,0,0,vento direzione (LOKM),WIND DIRECTION,1.0,0.0,29
+222,B11001,degree true->DEGREE TRUE,103,10000,0,0,254,0,0,vento direzione (LOKM),WIND DIRECTION,1.0,0.0,30
+222,B11001,degree true->DEGREE TRUE,103,10000,0,0,254,0,0,vento direzione (LOKM),WIND DIRECTION,1.0,0.0,31
+222,B11001,degree true->DEGREE TRUE,103,10000,0,0,254,0,0,vento direzione (LOKM),WIND DIRECTION,1.0,0.0,32
+223,B11002,m/s/10->M/S,103,10000 0,0,254,0,0,vento velocita' (LOKM),WIND SPEED,0.1,0.0,23
+223,B11002,m/s/10->M/S,103,10000 0,0,254,0,0,vento velocita' (LOKM),WIND SPEED,0.1,0.0,24
+223,B11002,m/s/10->M/S,103,10000 0,0,254,0,0,vento velocita' (LOKM),WIND SPEED,0.1,0.0,25
+223,B11002,m/s/10->M/S,103,10000 0,0,254,0,0,vento velocita' (LOKM),WIND SPEED,0.1,0.0,26
+223,B11002,m/s/10->M/S,103,10000 0,0,254,0,0,vento velocita' (LOKM),WIND SPEED,0.1,0.0,27
+223,B11002,m/s/10->M/S,103,10000 0,0,254,0,0,vento velocita' (LOKM),WIND SPEED,0.1,0.0,28
+223,B11002,m/s/10->M/S,103,10000 0,0,254,0,0,vento velocita' (LOKM),WIND SPEED,0.1,0.0,29
+223,B11002,m/s/10->M/S,103,10000 0,0,254,0,0,vento velocita' (LOKM),WIND SPEED,0.1,0.0,30
+223,B11002,m/s/10->M/S,103,10000 0,0,254,0,0,vento velocita' (LOKM),WIND SPEED,0.1,0.0,31
+223,B11002,m/s/10->M/S,103,10000 0,0,254,0,0,vento velocita' (LOKM),WIND SPEED,0.1,0.0,32
 139,B13003,%->%,103,2000,0,0,254,0,0,umidita' istantanea (AGRMET),RELATIVE HUMIDITY,1.0,0.0,8
 139,B13003,%->%,103,2000,0,0,254,0,0,umidita' istantanea (AGRMET),RELATIVE HUMIDITY,1.0,0.0,11
 139,B13003,%->%,103,2000,0,0,254,0,0,umidita' istantanea (AGRMET),RELATIVE HUMIDITY,1.0,0.0,12
@@ -129,6 +129,10 @@
 139,B13003,%->%,103,2000,0,0,254,0,0,umidita' istantanea (AGRMET),RELATIVE HUMIDITY,1.0,0.0,18
 139,B13003,%->%,103,2000,0,0,254,0,0,umidita' istantanea (AGRMET),RELATIVE HUMIDITY,1.0,0.0,20
 139,B13003,%->%,103,2000,0,0,254,0,0,umidita' istantanea (AGRMET),RELATIVE HUMIDITY,1.0,0.0,21
+140,B13003,%->%,103,2000,0,0,0,0,3600,umidita' media (AGRMET),RELATIVE HUMIDITY,1.0,0.0,11
+140,B13003,%->%,103,2000,0,0,0,0,3600,umidita' media (AGRMET),RELATIVE HUMIDITY,1.0,0.0,13
+140,B13003,%->%,103,2000,0,0,0,0,3600,umidita' media (AGRMET),RELATIVE HUMIDITY,1.0,0.0,15
+140,B13003,%->%,103,2000,0,0,0,0,3600,umidita' media (AGRMET),RELATIVE HUMIDITY,1.0,0.0,16
 224,B13003,%->%,103,2000,0,0,254,0,0,umidita' a 2m (LOKM),RELATIVE HUMIDITY,1.0,0.0,23
 224,B13003,%->%,103,2000,0,0,254,0,0,umidita' a 2m (LOKM),RELATIVE HUMIDITY,1.0,0.0,24
 224,B13003,%->%,103,2000,0,0,254,0,0,umidita' a 2m (LOKM),RELATIVE HUMIDITY,1.0,0.0,25
