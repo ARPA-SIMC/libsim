@@ -749,7 +749,7 @@ INTEGER :: i
 
 INQUIRE(unit, form=form)
 IF (form == 'FORMATTED') THEN
-  READ(unit,'(4G25.16E3,/,L1,/,L1,/,2I12)') &
+  READ(unit,*) &
    (this(i)%lon,this(i)%lat,this(i)%utme,this(i)%utmn, &
    this(i)%desc%geoce,this(i)%desc%utmce,this(i)%desc%fuso,this(i)%desc%elliss, &
    i=1,SIZE(this))
@@ -788,7 +788,7 @@ INTEGER :: i
 
 INQUIRE(unit, form=form)
 IF (form == 'FORMATTED') THEN
-  WRITE(unit,'(4G25.16E3,/,L1,/,L1,/,2I12)') &
+  WRITE(unit,*) &
    (this(i)%lon,this(i)%lat,this(i)%utme,this(i)%utmn, &
    this(i)%desc%geoce,this(i)%desc%utmce,this(i)%desc%fuso,this(i)%desc%elliss, &
    i=1,SIZE(this))
