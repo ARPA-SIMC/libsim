@@ -92,7 +92,7 @@ endif
 if GRIBAPI
 
 noinst_PROGRAMS += example_vg6d_1 example_vg6d_2 example_vg6d_3 example_vg6d_4 example_vg6d_5 example_vg6d_6 example_vg6d_7 example_vg6d_8
-bin_PROGRAMS += subarea
+bin_PROGRAMS += subarea getpoint
 
 example_vg6d_1_SOURCES = example_vg6d_1.f90
 example_vg6d_1_LDADD = ../volgrid6d/libsim_volgrid6d.la ../base/libsim_base.la ../vol7d/libsim_vol7d.la ../log4fortran/liblog4fortran.la $(NGMATH_OPTIONS)
@@ -122,6 +122,9 @@ example_vg6d_8_LDADD = ../volgrid6d/libsim_volgrid6d.la ../base/libsim_base.la .
 
 subarea_SOURCES = subarea.f90
 subarea_LDADD = ../volgrid6d/libsim_volgrid6d.la ../base/libsim_base.la ../vol7d/libsim_vol7d.la ../log4fortran/liblog4fortran.la $(NGMATH_OPTIONS)
+
+getpoint_SOURCES = getpoint.f90
+getpoint_LDADD = ../volgrid6d/libsim_volgrid6d.la ../base/libsim_base.la ../vol7d/libsim_vol7d.la ../log4fortran/liblog4fortran.la $(NGMATH_OPTIONS)
 
 
 endif

@@ -1,4 +1,4 @@
-program demo4
+program subarea
 
 use gridinfo_class
 use grid_class
@@ -13,7 +13,6 @@ implicit none
 integer :: category,ier
 character(len=512):: a_name,infile='in.grb',outfile='out.grb'
 type (gridinfo_def) :: gridinfo
-character:: ch
 integer                            ::  ifile,ofile,gaid
 integer                            ::  iret
 
@@ -32,12 +31,8 @@ character(len=80) :: type='regular_ll',trans_type='inter',sub_type='near'
 doubleprecision ::x,y,lon,lat
 
 
-!da eliminare
-integer :: i,j
-
-
 !questa chiamata prende dal launcher il nome univoco
-call l4f_launcher(a_name,a_name_force="demo4")
+call l4f_launcher(a_name,a_name_force="subarea")
 
 !init di log4fortran
 ier=l4f_init()
@@ -292,16 +287,20 @@ call l4f_category_log(category,L4F_INFO,"terminato")
 call l4f_category_delete(category)
 ier=l4f_fini()
 
-end program demo4
+end program subarea
 
 
 subroutine help()
 
-print*,"demo4 [-h] [-a ilon] [-b ilat] [-c flon] [-d flat] "
+print*,"Grib to grib trasformation application."
+print*,"Read grib edition 1 and 2 and transform data according with optional parameters"
+print*,""
+print*,""
+print*,"subarea [-h] [-a ilon] [-b ilat] [-c flon] [-d flat] "
 print*,"           [-i nx] [-l ny] [-m lon_min] [-n lon_max] [-o lat_min] [-p lat_max]"
 print*,"           [-q latitude_south_pole] [-r longitude_south_pole] [-s angle_rotation] [-t component_flag]"
 print*,"           [-u type] [-v trans_type] [-z sub_type=optarg]"
-print*,"           [infile] [outfile]"
+print*,"           infile outfile"
 print*,""
 print*,"-h  this help message"
 print*,"ilon,ilat  lon and lat in the left down point"
