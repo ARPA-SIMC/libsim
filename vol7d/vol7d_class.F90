@@ -66,6 +66,7 @@ MODULE vol7d_class
 USE kinds
 USE err_handling
 USE datetime_class
+USE optional_values
 USE vol7d_utilities
 USE vol7d_ana_class
 USE vol7d_timerange_class
@@ -255,9 +256,12 @@ END SUBROUTINE vol7d_init
 
 
 !> Distrugge l'oggetto in maniera pulita, liberando l'eventuale memoria
-!! dinamicamente allocata.
-elemental SUBROUTINE vol7d_delete(this)
+!! dinamicamente allocata. Permette di distruggere la sola parte di dati
+!! mantenendo l'anagrafica.
+ELEMENTAL SUBROUTINE vol7d_delete(this, dataonly)
 TYPE(vol7d),intent(inout) :: this !< oggetto da distruggere
+LOGICAL, INTENT(in), OPTIONAL :: dataonly !< dealloca solo i dati, tenendo l'anagrafica, (default \c .FALSE.)
+
 
 IF (ASSOCIATED(this%volanar)) DEALLOCATE(this%volanar)
 IF (ASSOCIATED(this%volanad)) DEALLOCATE(this%volanad)
@@ -269,29 +273,35 @@ IF (ASSOCIATED(this%volanaattrd)) DEALLOCATE(this%volanaattrd)
 IF (ASSOCIATED(this%volanaattri)) DEALLOCATE(this%volanaattri)
 IF (ASSOCIATED(this%volanaattrb)) DEALLOCATE(this%volanaattrb)
 IF (ASSOCIATED(this%volanaattrc)) DEALLOCATE(this%volanaattrc)
-IF (ASSOCIATED(this%voldatir)) DEALLOCATE(this%voldatir)
-IF (ASSOCIATED(this%voldatid)) DEALLOCATE(this%voldatid)
-IF (ASSOCIATED(this%voldatii)) DEALLOCATE(this%voldatii)
-IF (ASSOCIATED(this%voldatib)) DEALLOCATE(this%voldatib)
-IF (ASSOCIATED(this%voldatic)) DEALLOCATE(this%voldatic)
-IF (ASSOCIATED(this%voldatiattrr)) DEALLOCATE(this%voldatiattrr)
-IF (ASSOCIATED(this%voldatiattrd)) DEALLOCATE(this%voldatiattrd)
-IF (ASSOCIATED(this%voldatiattri)) DEALLOCATE(this%voldatiattri)
-IF (ASSOCIATED(this%voldatiattrb)) DEALLOCATE(this%voldatiattrb)
-IF (ASSOCIATED(this%voldatiattrc)) DEALLOCATE(this%voldatiattrc)
+IF (.NOT. optio_log(dataonly)) THEN
+  IF (ASSOCIATED(this%voldatir)) DEALLOCATE(this%voldatir)
+  IF (ASSOCIATED(this%voldatid)) DEALLOCATE(this%voldatid)
+  IF (ASSOCIATED(this%voldatii)) DEALLOCATE(this%voldatii)
+  IF (ASSOCIATED(this%voldatib)) DEALLOCATE(this%voldatib)
+  IF (ASSOCIATED(this%voldatic)) DEALLOCATE(this%voldatic)
+  IF (ASSOCIATED(this%voldatiattrr)) DEALLOCATE(this%voldatiattrr)
+  IF (ASSOCIATED(this%voldatiattrd)) DEALLOCATE(this%voldatiattrd)
+  IF (ASSOCIATED(this%voldatiattri)) DEALLOCATE(this%voldatiattri)
+  IF (ASSOCIATED(this%voldatiattrb)) DEALLOCATE(this%voldatiattrb)
+  IF (ASSOCIATED(this%voldatiattrc)) DEALLOCATE(this%voldatiattrc)
+ENDIF
 
 IF (ASSOCIATED(this%ana)) DEALLOCATE(this%ana)
-IF (ASSOCIATED(this%time)) DEALLOCATE(this%time)
-IF (ASSOCIATED(this%level)) DEALLOCATE(this%level)
-IF (ASSOCIATED(this%timerange)) DEALLOCATE(this%timerange)
+IF (.NOT. optio_log(dataonly)) THEN
+  IF (ASSOCIATED(this%time)) DEALLOCATE(this%time)
+  IF (ASSOCIATED(this%level)) DEALLOCATE(this%level)
+  IF (ASSOCIATED(this%timerange)) DEALLOCATE(this%timerange)
+ENDIF
 IF (ASSOCIATED(this%network)) DEALLOCATE(this%network)
 
 CALL delete(this%anavar)
 CALL delete(this%anaattr)
 CALL delete(this%anavarattr)
-CALL delete(this%dativar)
-CALL delete(this%datiattr)
-CALL delete(this%dativarattr)
+IF (.NOT. optio_log(dataonly)) THEN
+  CALL delete(this%dativar)
+  CALL delete(this%datiattr)
+  CALL delete(this%dativarattr)
+ENDIF
 
 END SUBROUTINE vol7d_delete
 
