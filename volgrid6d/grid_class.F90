@@ -14,7 +14,7 @@ use regular_ll_class
 use rotated_ll_class
 use log4fortran
 use grib_api
-use vol7d_ana_class
+use vol7d_class
 use err_handling
 use optional_values
 
@@ -1373,12 +1373,12 @@ END SUBROUTINE init_grid_transform
 !! di trasformazione. Devono essere quindi forniti il grigliato da trasformare e l'oggetto di trasformazione.
 !! Deve essere fornito anche un oggetto contenetente le informazioni relative ai dati sparsi su cui elaborare la trasformazione.
 !! Viene generato un oggetto di trasformazione associato al grigliato e dati dati sparsi.
-SUBROUTINE init_grid_v7d_transform(this,trans,in,ana,categoryappend)
+SUBROUTINE init_grid_v7d_transform(this,trans,in,v7d,categoryappend)
 
 TYPE(grid_transform),INTENT(out) :: this !< grid_transformation object
 TYPE(transform_def),INTENT(in) :: trans !< transformation object
 TYPE(griddim_def),INTENT(in) :: in !< griddim object to transform
-TYPE(vol7d_ana),INTENT(in) :: ana(:) !< vol7d_ana vector objects where (or to use) to transform
+TYPE(vol7d),INTENT(in) :: v7d !< vol7d objects where (or to use) to transform
 character(len=*),INTENT(in),OPTIONAL :: categoryappend !< appende questo suffisso al namespace category di log4fortran
 
 
@@ -1421,7 +1421,7 @@ IF (this%trans%trans_type == 'inter') THEN
       this%innx=nx
       this%inny=ny
       
-      this%outnx=size(ana)
+      this%outnx=size(v7d%ana)
       this%outny=1
       
       allocate (this%inter_index_x(this%outnx,this%outny),&
@@ -1432,7 +1432,7 @@ IF (this%trans%trans_type == 'inter') THEN
        lon_min=lon_min, lon_max=lon_max,&
        lat_min=lat_min, lat_max=lat_max)
 
-      call getval(ana(:)%coord,lon=lon,lat=lat)
+      call getval(v7d%ana(:)%coord,lon=lon,lat=lat)
 
       call find_index(in,this%trans%inter%sub_type,&
        nx=this%innx, ny=this%inny ,&
@@ -1500,11 +1500,11 @@ END SUBROUTINE init_grid_v7d_transform
 !! di trasformazione. Devono essere quindi forniti il grigliato da trasformare e l'oggetto di trasformazione.
 !! Deve essere fornito anche un oggetto contenetente le informazioni relative ai dati sparsi su cui elaborare la trasformazione.
 !! Viene generato un oggetto di trasformazione associato al grigliato e dati dati sparsi.
-SUBROUTINE init_v7d_grid_transform(this,trans,ana,griddim,categoryappend)
+SUBROUTINE init_v7d_grid_transform(this,trans,v7d,griddim,categoryappend)
 
 TYPE(grid_transform),INTENT(out) :: this !< grid transformation object
 TYPE(transform_def),INTENT(in) :: trans !< transformation object
-TYPE(vol7d_ana),INTENT(in) :: ana(:) !< vol7d_ana vector objects to transform
+TYPE(vol7d),INTENT(in) :: v7d !< vol7d objects to transform
 TYPE(griddim_def),INTENT(in) :: griddim !< grid transformated object
 character(len=*),INTENT(in),OPTIONAL :: categoryappend !< appende questo suffisso al namespace category di log4fortran
 
@@ -1544,7 +1544,7 @@ IF (this%trans%trans_type == 'inter') THEN
       this%outnx=nx
       this%outny=ny
       
-      this%innx=size(ana)
+      this%innx=size(v7d%ana)
       this%inny=1
       
       allocate (lon(this%innx),lat(this%innx))
@@ -1555,7 +1555,7 @@ IF (this%trans%trans_type == 'inter') THEN
        lon_min=lon_min, lon_max=lon_max,&
        lat_min=lat_min, lat_max=lat_max)
 
-      call getval(ana(:)%coord,lon=lon,lat=lat)
+      call getval(v7d%ana(:)%coord,lon=lon,lat=lat)
 
       call proj(griddim,&
        reshape(lon,(/size(lon),1/)),reshape(lat,(/size(lat),1/)),&

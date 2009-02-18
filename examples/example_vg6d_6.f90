@@ -12,7 +12,7 @@ integer :: category,ier,i,nana
 character(len=512):: a_name,filename="out.bufr"
 type (volgrid6d),pointer  :: volgrid(:),volgrid_out(:)
 type(transform_def) :: trans
-type(vol7d_ana),allocatable :: ana(:)
+type(vol7d) :: v7d
 type(vol7d),pointer :: vol7d_out(:)
 TYPE(vol7d_dballe) :: v7d_exp
 
@@ -37,19 +37,18 @@ call l4f_category_log(category,L4F_INFO,"inizio")
 !!$ call init(ana(4),lat=40.6D0,lon=11.8D0)
 !!$ call init(ana(5),lat=40.0D0,lon=10.0D0)
 
-open (unit=1,file="ana.txt",status="old",form="unformatted")
-read(1)nana
-allocate(ana(nana))
-call read_unit(ana,unit=1)
-close(unit=1)
+call init(v7d)
 
+call import (v7d,filename="ana.v7d")
+
+call display(v7d)
 
 !trasformation object
 call init(trans, trans_type="inter",sub_type="bilin", categoryappend="trasformation")
 
 call import (volgrid,filename="in.grb",categoryappend="volume letto")
 
-call transform(trans,ana, volgrid6d_in=volgrid, vol7d_out=vol7d_out,categoryappend="trasforma")
+call transform(trans,v7d, volgrid6d_in=volgrid, vol7d_out=vol7d_out,categoryappend="trasforma")
 
 call l4f_category_log(category,L4F_INFO,"trasformato")
 
