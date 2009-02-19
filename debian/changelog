@@ -1,0 +1,24 @@
+libsim (2.6.3-1) unstable; urgency=low
+
+  * Reflecting the upstream version and enabling
+      - dballe
+      - grib-api
+    while disabling:
+      - libemos
+      - netcdf
+      - fortran-shape
+      - dwd-grib
+      - ngmath
+
+ -- Marco Lazzeri <mlazzeri@arpa.emr.it>  Thu, 19 Feb 2009 10:52:37 +0100
+
+libsim (2.3-1) unstable; urgency=low
+
+  * Initial release without the following options:
+    dballe
+    netcdf
+    fortran-shape
+    and with the libemos support.
+
+ -- Marco Lazzeri <mlazzeri@arpa.emr.it>  Mon, 15 Dec 2008 12:17:17 +0100
+
