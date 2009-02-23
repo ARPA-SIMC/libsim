@@ -28,6 +28,7 @@ use gridinfo_class
 use grib_api
 use optional_values
 use vol7d_class
+use file_utilities
 
 IMPLICIT NONE
 
@@ -58,10 +59,35 @@ type volgrid6d
 
 end type volgrid6d
 
+TYPE conv_func
+  REAL :: a, b
+END TYPE conv_func
+
+TYPE(conv_func), PARAMETER :: conv_func_miss=conv_func(1.0, 0.0) ! o (rmiss, rmiss)?
+
+TYPE vg6d_v7d_var_conv
+  TYPE(volgrid6d_var) :: vg6d_var
+  TYPE(vol7d_var) :: v7d_var
+  TYPE(conv_func) :: c_func
+! aggiungere informazioni ad es. su rotazione del vento
+END TYPE vg6d_v7d_var_conv
+
+TYPE(vg6d_v7d_var_conv), PARAMETER :: vg6d_v7d_var_conv_miss= &
+ vg6d_v7d_var_conv(volgrid6d_var_miss, vol7d_var_miss, conv_func_miss)
+
+TYPE(vg6d_v7d_var_conv), ALLOCATABLE :: conv_fwd(:), conv_bwd(:)
+
+INTERFACE varbufr2vargrib
+  MODULE PROCEDURE varbufr2vargrib_s, varbufr2vargrib_v
+END INTERFACE
+
+INTERFACE vargrib2varbufr
+  MODULE PROCEDURE vargrib2varbufr_s, vargrib2varbufr_v
+END INTERFACE
 
 !> \brief Costructor
 !!
-!! create a new istanze of object
+!! create a new instance of object
 INTERFACE init
   MODULE PROCEDURE init_volgrid6d
 END INTERFACE
@@ -1406,6 +1432,7 @@ integer,optional,intent(in) :: networkid !< imposta il network in vol7d_out (def
 integer :: nana, ntime, ntimerange, nlevel, nvar, nnetwork
 integer :: itime, itimerange, ilevel, ivar, inetwork
 real,allocatable :: voldatir_out(:,:)
+TYPE(conv_func), pointer :: c_func(:)
 
 #ifdef DEBUG
 call l4f_category_log(volgrid6d_in%category,L4F_DEBUG,"start volgrid6d_v7d_transform_compute")
@@ -1444,8 +1471,7 @@ end if
 
 if (associated(volgrid6d_in%var))then
   nvar=size(volgrid6d_in%var)
-  !TODO
-  call vargrib2varbufr(volgrid6d_in%var, vol7d_out%dativar%r)
+  CALL vargrib2varbufr(volgrid6d_in%var, vol7d_out%dativar%r, c_func)
 end if
 
 nana=size(vol7d_out%ana)
@@ -1479,6 +1505,17 @@ do itime=1,ntime
 end do
 
 deallocate(voldatir_out)
+
+! Rescale valid data according to variable conversion table
+IF (ASSOCIATED(c_func)) THEN
+  DO ivar = 1, nvar
+    WHERE(vol7d_out%voldatir(:,:,:,:,ivar,:) /= rmiss)
+      vol7d_out%voldatir(:,:,:,:,ivar,:) = &
+       vol7d_out%voldatir(:,:,:,:,ivar,:)*c_func(ivar)%a + c_func(ivar)%b
+    END WHERE
+  ENDDO
+  DEALLOCATE(c_func)
+ENDIF
 
 end SUBROUTINE volgrid6d_v7d_transform_compute
 
@@ -1574,7 +1611,7 @@ integer :: nana, ntime, ntimerange, nlevel, nvar, nnetwork
 integer :: itime, itimerange, ilevel, ivar, inetwork
 real,allocatable :: voldatir_out(:,:)
 type(vol7d_network) :: network
-
+TYPE(conv_func), pointer :: c_func(:)
 !TODO category sarebbe da prendere da vol7d
 #ifdef DEBUG
 call l4f_category_log(volgrid6d_out%category,L4F_DEBUG,"start v7d_volgrid6d_transform_compute")
@@ -1612,11 +1649,10 @@ end if
 
 if (associated(vol7d_in%dativar%r))then
   nvar=size(vol7d_in%dativar%r)
-  !TODO
-  call varbufr2vargrib(vol7d_in%dativar%r, volgrid6d_out%var)
+  CALL varbufr2vargrib(vol7d_in%dativar%r, volgrid6d_out%var, c_func)
 end if
 
-nana=size(vol7d_in%voldatir(:,1,1,1,1,1))
+nana=SIZE(vol7d_in%voldatir, 1)
 
 do itime=1,ntime
   do itimerange=1,ntimerange
@@ -1638,6 +1674,17 @@ do itime=1,ntime
     end do
   end do
 end do
+
+! Rescale valid data according to variable conversion table
+IF (ASSOCIATED(c_func)) THEN
+  DO ivar = 1, nvar
+    WHERE(volgrid6d_out%voldati(:,:,:,:,:,ivar) /= rmiss)
+      volgrid6d_out%voldati(:,:,:,:,:,ivar) = &
+       volgrid6d_out%voldati(:,:,:,:,:,ivar)*c_func(ivar)%a + c_func(ivar)%b
+    END WHERE
+  ENDDO
+  DEALLOCATE(c_func)
+ENDIF
 
 end SUBROUTINE v7d_volgrid6d_transform_compute
 
@@ -1686,28 +1733,169 @@ call delete (grid_trans)
 end subroutine v7d_volgrid6d_transform
 
 
-! TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO
-elemental subroutine vargrib2varbufr(vargrib, varbufr)
+SUBROUTINE vargrib2varbufr_v(vargrib, varbufr, c_func)
+TYPE(volgrid6d_var),INTENT(in) :: vargrib(:)
+TYPE(vol7d_var),INTENT(out) :: varbufr(:)
+TYPE(conv_func), POINTER :: c_func(:)
 
-type(volgrid6d_var),intent(in) :: vargrib
-type(vol7d_var),intent(out) :: varbufr
+INTEGER :: i, n
 
-call init(varbufr, btable="B12001")
+n = SIZE(vargrib)
+ALLOCATE(c_func(n))
 
-end subroutine vargrib2varbufr
+DO i = 1, n
+  CALL vargrib2varbufr_s(vargrib(i), varbufr(i), c_func(i))
+ENDDO
+
+END SUBROUTINE vargrib2varbufr_v
 
 
-! TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO
-elemental subroutine varbufr2vargrib(varbufr, vargrib)
+SUBROUTINE vargrib2varbufr_s(vargrib, varbufr, c_func)
+TYPE(volgrid6d_var),INTENT(in) :: vargrib
+TYPE(vol7d_var),INTENT(out) :: varbufr
+TYPE(conv_func) :: c_func
 
-type(vol7d_var),intent(in) :: varbufr
-type(volgrid6d_var),intent(out) :: vargrib
+INTEGER :: i
 
-!SUBROUTINE volgrid6d_var_init(this, centre, category, number, discipline,description,unit)
-!TODO cambia da grib1 a grib2
-call init(vargrib, centre=200, category=1, number=11)
+IF (.NOT. ALLOCATED(conv_fwd)) CALL vg6d_v7d_var_conv_setup()
 
-end subroutine varbufr2vargrib
+!call init(varbufr, btable="B12001")
+
+DO i = 1, SIZE(conv_fwd)
+  IF (vargrib == conv_fwd(i)%vg6d_var) THEN
+    varbufr = conv_fwd(i)%v7d_var
+    c_func = conv_fwd(i)%c_func
+    RETURN
+  ENDIF
+ENDDO
+! not found
+varbufr = vol7d_var_miss
+c_func = conv_func_miss
+
+END SUBROUTINE vargrib2varbufr_s
+
+
+SUBROUTINE varbufr2vargrib_v(varbufr, vargrib, c_func)
+type(vol7d_var),intent(in) :: varbufr(:)
+type(volgrid6d_var),intent(out) :: vargrib(:)
+TYPE(conv_func), pointer :: c_func(:)
+
+INTEGER :: i, n
+
+n = SIZE(varbufr)
+ALLOCATE(c_func(n))
+
+DO i = 1, n
+  CALL varbufr2vargrib_s(varbufr(i), vargrib(i), c_func(i))
+ENDDO
+
+END SUBROUTINE varbufr2vargrib_v
+
+
+SUBROUTINE varbufr2vargrib_s(varbufr, vargrib, c_func)
+TYPE(vol7d_var),INTENT(in) :: varbufr
+TYPE(volgrid6d_var),INTENT(out) :: vargrib
+TYPE(conv_func) :: c_func
+
+INTEGER :: i
+
+IF (.NOT. ALLOCATED(conv_bwd)) CALL vg6d_v7d_var_conv_setup()
+
+DO i = 1, SIZE(conv_bwd)
+  IF (varbufr == conv_bwd(i)%v7d_var) THEN
+    vargrib = conv_bwd(i)%vg6d_var
+    c_func = conv_bwd(i)%c_func
+    RETURN
+  ENDIF
+ENDDO
+! not found
+vargrib = volgrid6d_var_miss
+c_func = conv_func_miss
+!call init(vargrib, centre=200, category=1, number=11)
+
+END SUBROUTINE varbufr2vargrib_s
+
+
+! Private subroutine for reading forward and backward conversion tables
+! todo: better error handling
+SUBROUTINE vg6d_v7d_var_conv_setup()
+INTEGER :: un, i, n
+
+! forward, grib to bufr
+un = open_package_file('vargrib2bufr.csv', filetype_data)
+n=0
+DO WHILE(.TRUE.)
+  READ(un,*,END=100)
+  n = n + 1
+ENDDO
+
+100 CONTINUE
+
+REWIND(un)
+ALLOCATE(conv_fwd(n))
+conv_fwd(:) = vg6d_v7d_var_conv_miss
+CALL import_var_conv(un, conv_fwd)
+CLOSE(un)
+
+! backward, bufr to grib
+un = open_package_file('vargrib2bufr.csv', filetype_data)
+! use the same file for now
+!un = open_package_file('varbufr2grib.csv', filetype_data)
+n=0
+DO WHILE(.TRUE.)
+  READ(un,*,END=300)
+  n = n + 1
+ENDDO
+
+300 CONTINUE
+
+REWIND(un)
+ALLOCATE(conv_bwd(n))
+conv_bwd(:) = vg6d_v7d_var_conv_miss
+CALL import_var_conv(un, conv_bwd)
+DO i = 1, n
+  conv_bwd(i)%c_func%a = 1./conv_bwd(i)%c_func%a
+  conv_bwd(i)%c_func%b = - conv_bwd(i)%c_func%b
+ENDDO
+CLOSE(un)
+
+CONTAINS
+
+SUBROUTINE import_var_conv(un, conv_type)
+INTEGER, INTENT(in) :: un
+TYPE(vg6d_v7d_var_conv), INTENT(out) :: conv_type(:)
+
+INTEGER :: i
+TYPE(csv_record) :: csv
+CHARACTER(len=1024) :: line
+CHARACTER(len=10) :: btable
+INTEGER :: centre, category, number, discipline
+
+DO i = 1, SIZE(conv_type)
+  READ(un,'(A)',END=200)line
+  CALL init(csv, line)
+  CALL csv_record_getfield(csv, btable)
+  CALL csv_record_getfield(csv) ! skip fields for description and unit,
+  CALL csv_record_getfield(csv) ! they can be used as comments in csv file now
+  CALL init(conv_type(i)%v7d_var, btable=btable)
+
+  CALL csv_record_getfield(csv, centre)
+  CALL csv_record_getfield(csv, category)
+  CALL csv_record_getfield(csv, number)
+  CALL csv_record_getfield(csv, discipline)
+  CALL init(conv_type(i)%vg6d_var, centre=centre, category=category, &
+   number=number, discipline=discipline) ! controllare l'ordine
+
+  CALL csv_record_getfield(csv, conv_type(i)%c_func%a)
+  CALL csv_record_getfield(csv, conv_type(i)%c_func%b)
+  CALL delete(csv)
+ENDDO
+
+200 CONTINUE
+
+END SUBROUTINE import_var_conv
+
+END SUBROUTINE vg6d_v7d_var_conv_setup
 
 end module volgrid6d_class
 

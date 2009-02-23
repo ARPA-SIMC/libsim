@@ -1,14 +1,15 @@
 Summary: libsim: librerie di utilità in Fortran 90
 Name: libsim
-Version: 2.3
-Release: 2
+Version: 2.6.3
+Release: 1
 License: GPL
 Group: Applications/Meteo
 URL: http://www.arpa.emr.it/sim
 Packager: Davide Cesari <dcesari@arpa.emr.it>
 Source: %{name}-%{version}.tar.gz
 BuildRoot: /var/tmp/%{name}-buildroot
-BuildRequires: shapelib-fortran-devel oracle-instantclient-devel log4c-devel netcdf-devel libemos
+BuildRequires: shapelib-fortran-devel oracle-instantclient-devel log4c-devel netcdf-devel libemos libdballef-devel >= 4.0.6
+Requires: libdballef4 >= 4.0.6
 
 %package -n libsim-doc
 Summary: libsim documentation
