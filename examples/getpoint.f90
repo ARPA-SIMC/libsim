@@ -116,14 +116,14 @@ if (associated(volgrid)) call delete(volgrid)
 
 ! Chiamo il costruttore della classe vol7d_dballe per il mio oggetto in export
 CALL init(v7d_exp,file=.true.,write=.true.,wipe=.true.,filename=outfile,&
-categoryappend="export_BUFR",format=format)
+categoryappend="exportazione",format=format)
 
 do i = 1 , size(vol7d_out)
   v7d_exp%vol7d = vol7d_out(i) 
   call export (v7d_exp,template=template)
   call delete(v7d_exp%vol7d)
 end do
-call l4f_category_log(category,L4F_INFO,"exportato to BUFR")
+call l4f_category_log(category,L4F_INFO,"exportato to "//trim(format))
 
 call l4f_category_log(category,L4F_INFO,"end")
 

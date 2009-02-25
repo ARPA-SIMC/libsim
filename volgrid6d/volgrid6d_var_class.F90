@@ -16,9 +16,9 @@ IMPLICIT NONE
 TYPE volgrid6d_var
 
   integer :: centre !< centre
-  integer :: discipline !< disciplina
-  integer :: category !< categoria
+  integer :: category !< grib2: categoria / grib1: grib table version number
   integer :: number !< parameter number
+  integer :: discipline !< grib2: disciplina
   CHARACTER(len=65) :: description !< descrizione testuale della variabile (opzionale)
   CHARACTER(len=24) :: unit !< descrizione testuale dell'unità di misura (opzionale)
 
@@ -95,9 +95,9 @@ TYPE(volgrid6d_var),INTENT(INOUT) :: this !< oggetto da inizializzare
 !INTEGER,INTENT(in),OPTIONAL :: btable
 
 integer,INTENT(in),OPTIONAL :: centre !< centre 
-integer,INTENT(in),OPTIONAL :: category !< categoria
+integer,INTENT(in),OPTIONAL :: category !< grib2: categoria / grib1: grib table version number
 integer,INTENT(in),OPTIONAL :: number !< parameter number
-integer,INTENT(in),OPTIONAL :: discipline !< disciplina
+integer,INTENT(in),OPTIONAL :: discipline !< grib2: disciplina
 CHARACTER(len=65),INTENT(in),OPTIONAL :: description !< descrizione testuale della variabile (opzionale)
 CHARACTER(len=24),INTENT(in),OPTIONAL :: unit !< descrizione testuale dell'unità di misura (opzionale)
 

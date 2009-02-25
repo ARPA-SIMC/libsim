@@ -49,7 +49,8 @@ END INTERFACE
 !! scalare-vettore(1-d) (ma non vettore(1-d)-scalare o tra array con più
 !! di 1 dimensione e scalari).
 INTERFACE OPERATOR (==)
-  MODULE PROCEDURE vol7d_var_eq, vol7d_var_eqsv
+  MODULE PROCEDURE vol7d_var_eq
+!!$, vol7d_var_eqsv
 END INTERFACE
 
 !> Operatore logico di disuguaglianza tra oggetti della classe vol7d_var.
@@ -80,6 +81,11 @@ END INTERFACE
 INTERFACE index
   MODULE PROCEDURE index_var
 END INTERFACE
+
+INTERFACE display
+  MODULE PROCEDURE display_var
+END INTERFACE
+
 
 CONTAINS
 
@@ -143,17 +149,17 @@ res = this%btable == that%btable
 END FUNCTION vol7d_var_eq
 
 
-FUNCTION vol7d_var_eqsv(this, that) RESULT(res)
-TYPE(vol7d_var),INTENT(IN) :: this, that(:)
-LOGICAL :: res(SIZE(that))
-
-INTEGER :: i
-
-DO i = 1, SIZE(that)
-  res(i) = this == that(i)
-ENDDO
-
-END FUNCTION vol7d_var_eqsv
+!!$FUNCTION vol7d_var_eqsv(this, that) RESULT(res)
+!!$TYPE(vol7d_var),INTENT(IN) :: this, that(:)
+!!$LOGICAL :: res(SIZE(that))
+!!$
+!!$INTEGER :: i
+!!$
+!!$DO i = 1, SIZE(that)
+!!$  res(i) = this == that(i)
+!!$ENDDO
+!!$
+!!$END FUNCTION vol7d_var_eqsv
 
 
 elemental FUNCTION vol7d_var_ne(this, that) RESULT(res)
@@ -176,6 +182,17 @@ DO i = 1, SIZE(that)
 ENDDO
 
 END FUNCTION vol7d_var_nesv
+
+
+
+!> \brief display on the screen a brief content of vol7d_var object
+subroutine display_var(this)
+
+TYPE(vol7d_var),INTENT(in) :: this !< vol7d_var object to display
+
+print*,"VOL7DVAR: ",this%btable,trim(this%description)," : ",this%unit
+
+end subroutine display_var
 
 
 ! Definisce le funzioni count_distinct e pack_distinct

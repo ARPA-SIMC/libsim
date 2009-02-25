@@ -1,4 +1,4 @@
-! conta gli elementi distinti in vect
+!> conta gli elementi distinti in vect
 FUNCTION count_distinct/**/VOL7D_POLY_TYPES(vect, mask, back) RESULT(count_distinct)
 VOL7D_POLY_TYPE,INTENT(in) :: vect(:)
 LOGICAL,INTENT(in),OPTIONAL :: mask(:), back
@@ -56,7 +56,7 @@ END FUNCTION count_distinct/**/VOL7D_POLY_TYPES
 
 
 #ifndef VOL7D_NO_PACK
-! compatta gli elementi distinti di vect in un array
+!> compatta gli elementi distinti di vect in un array
 FUNCTION pack_distinct/**/VOL7D_POLY_TYPES(vect, dim, mask, back) &
  RESULT(pack_distinct)
 VOL7D_POLY_TYPE,INTENT(in) :: vect(:)
@@ -124,7 +124,7 @@ ENDIF
 END FUNCTION pack_distinct/**/VOL7D_POLY_TYPES
 #endif
 
-
+!> map distinct
 FUNCTION map_distinct/**/VOL7D_POLY_TYPES(vect, mask, back) RESULT(map_distinct)
 VOL7D_POLY_TYPE,INTENT(in) :: vect(:)
 LOGICAL,INTENT(in),OPTIONAL :: mask(:), back
@@ -199,6 +199,7 @@ ENDIF
 END FUNCTION map_distinct/**/VOL7D_POLY_TYPES
 
 
+!> map inv distinct
 FUNCTION map_inv_distinct/**/VOL7D_POLY_TYPES(vect, dim, mask, back) &
  RESULT(map_inv_distinct)
 VOL7D_POLY_TYPE,INTENT(in) :: vect(:)
@@ -268,7 +269,7 @@ END FUNCTION map_inv_distinct/**/VOL7D_POLY_TYPES
 
 
 #ifndef VOL7D_NO_PACK
-! Cerca l'indice del primo o ultimo elemento di vect uguale a search
+!> Cerca l'indice del primo o ultimo elemento di vect uguale a search
 FUNCTION index/**/VOL7D_POLY_TYPES(vect, search, mask, back) &
  RESULT(index_)
 VOL7D_POLY_TYPE,INTENT(in) :: vect(:), search

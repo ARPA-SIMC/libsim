@@ -1736,15 +1736,19 @@ end subroutine v7d_volgrid6d_transform
 SUBROUTINE vargrib2varbufr_v(vargrib, varbufr, c_func)
 TYPE(volgrid6d_var),INTENT(in) :: vargrib(:)
 TYPE(vol7d_var),INTENT(out) :: varbufr(:)
-TYPE(conv_func), POINTER :: c_func(:)
+TYPE(conv_func), POINTER,optional :: c_func(:)
 
 INTEGER :: i, n
 
 n = SIZE(vargrib)
-ALLOCATE(c_func(n))
+if ( present(c_func)) ALLOCATE(c_func(n))
 
 DO i = 1, n
-  CALL vargrib2varbufr_s(vargrib(i), varbufr(i), c_func(i))
+  if ( present(c_func)) then
+    CALL vargrib2varbufr_s(vargrib(i), varbufr(i), c_func(i))
+  else
+    CALL vargrib2varbufr_s(vargrib(i), varbufr(i))
+  end if
 ENDDO
 
 END SUBROUTINE vargrib2varbufr_v
@@ -1753,7 +1757,7 @@ END SUBROUTINE vargrib2varbufr_v
 SUBROUTINE vargrib2varbufr_s(vargrib, varbufr, c_func)
 TYPE(volgrid6d_var),INTENT(in) :: vargrib
 TYPE(vol7d_var),INTENT(out) :: varbufr
-TYPE(conv_func) :: c_func
+TYPE(conv_func),optional :: c_func
 
 INTEGER :: i
 
@@ -1764,13 +1768,13 @@ IF (.NOT. ALLOCATED(conv_fwd)) CALL vg6d_v7d_var_conv_setup()
 DO i = 1, SIZE(conv_fwd)
   IF (vargrib == conv_fwd(i)%vg6d_var) THEN
     varbufr = conv_fwd(i)%v7d_var
-    c_func = conv_fwd(i)%c_func
+    if(present(c_func)) c_func = conv_fwd(i)%c_func
     RETURN
   ENDIF
 ENDDO
 ! not found
 varbufr = vol7d_var_miss
-c_func = conv_func_miss
+if(present(c_func)) c_func = conv_func_miss
 
 END SUBROUTINE vargrib2varbufr_s
 
@@ -1896,6 +1900,133 @@ ENDDO
 END SUBROUTINE import_var_conv
 
 END SUBROUTINE vg6d_v7d_var_conv_setup
+
+
+!> convert
+!! resolved u and v components of vector quantities relative to the defined grid in the direction of
+!! increasing x and y (or i and j) coordinates respectively
+!! to
+!! resolved u and v components of vector quantities relative to easterly and notherly direction
+subroutine vg6d_wind_derot(this)
+
+type(volgrid6d) :: this !< object to derotate
+
+integer :: iu,iv,nvar,nvaru,nvarv
+type(vol7d_var) :: varu,varv
+type(vol7d_var),allocatable ::varbufr(:)
+!!$type(griddim_rota),pointer :: rota
+
+
+IF (.NOT. ALLOCATED(conv_fwd)) CALL vg6d_v7d_var_conv_setup()
+
+call init(varu,btable="B11003")
+call init(varv,btable="B11004")
+
+call display(varu)
+
+! test about presence of u and v in standard table
+
+!!# iu=index(conv_fwd(:)%vg6d_var,varu)
+!!# iv=index(conv_fwd(:)%vg6d_var,varv)
+
+if (iu == 0  .or. iv == 0 )then
+  call l4f_category_log(this%category,L4F_ERROR,"B11003 or B11004 not defined by  vg6d_v7d_var_conv_setup")
+  call raise_fatal_error ("volgrid6d: B11003 or B11004 not defined by  vg6d_v7d_var_conv_setup")
+end if
+
+
+nvar=0
+if (associated(this%var))then
+  nvar=size(this%var)
+  allocate(varbufr(nvar))
+  CALL vargrib2varbufr(this%var, varbufr)
+end if
+
+!!# nvaru=count(varbufr,varbufr==varu)
+!!# nvarv=count(varbufr,varbufr==varv)
+
+if (nvaru > 1 )then
+  call l4f_category_log(this%category,L4F_ERROR,"2 variables refer to u wind component")
+  call raise_fatal_error ("volgrid6d:2 variables refer to u wind component")
+endif
+
+if (nvarv > 1 )then
+  call l4f_category_log(this%category,L4F_ERROR,"2 variables refer to v wind component")
+  call raise_fatal_error ("volgrid6d:2 variables refer to v wind component")
+endif
+
+
+if (nvaru == 1 .and. nvarv == 0)then
+  call l4f_category_log(this%category,L4F_ERROR,"only u wind component present: derotation impossible")
+  call raise_fatal_error ("volgrid6d: only u wind component present, derotation impossible")
+endif
+
+if (nvaru == 0 .and. nvarv == 1)then
+  call l4f_category_log(this%category,L4F_ERROR,"only v wind component present: derotation impossible")
+  call raise_fatal_error ("volgrid6d: only v wind component present, derotation impossible")
+endif
+
+!nothing todo
+if (nvaru == 0 .and. nvarv == 0) return
+
+!find index of u and v components
+
+!!# iu=index(varbufr,varu)
+!!# iv=index(varbufr,varv)
+
+
+if ( conv_fwd(iu)%c_func%a /= conv_fwd(iv)%c_func%a .or. &
+ conv_fwd(iu)%c_func%b /= conv_fwd(iv)%c_func%b )then
+  
+  call l4f_category_log(this%category,L4F_WARN,"u and v wind component seam aliens; conversion factor different")
+  call l4f_category_log(this%category,L4F_WARN,"convert units of u and v wind component")
+
+                                ! Rescale valid data according to variable conversion table
+  WHERE(this%voldati(:,:,:,:,:,iu) /= rmiss)
+    this%voldati(:,:,:,:,:,iu) = &
+     this%voldati(:,:,:,:,:,iu)*conv_fwd(iu)%c_func%a + conv_fwd(iu)%c_func%b
+  END WHERE
+  
+  WHERE(this%voldati(:,:,:,:,:,iv) /= rmiss)
+    this%voldati(:,:,:,:,:,iv) = &
+     this%voldati(:,:,:,:,:,iv)*conv_fwd(iv)%c_func%a + conv_fwd(iv)%c_func%b
+  END WHERE
+  
+end if 
+
+
+!!$call wind_derot( griddim,rota)
+!!$
+!!$WHERE(volgrid6d_out%voldati(:,:,:,:,:,iu) /= rmiss .and. volgrid6d_out%voldati(:,:,:,:,:,iv) /= rmiss)
+!!$  volgrid6d_out%voldati(:,:,:,:,:,iv) =  volgrid6d_out%voldati(:,:,:,:,:,iu)*rota%x+volgrid6d_out%voldati(:,:,:,:,:,iv)*rota%y
+!!$  volgrid6d_out%voldati(:,:,:,:,:,iu) =  volgrid6d_out%voldati(:,:,:,:,:,iu)*rota%x+volgrid6d_out%voldati(:,:,:,:,:,iv)*rota%y
+!!$END WHERE
+!!$
+!!$deallocate (rota)
+
+
+if ( conv_fwd(iu)%c_func%a /= conv_fwd(iv)%c_func%a .or. &
+ conv_fwd(iu)%c_func%b /= conv_fwd(iv)%c_func%b )then
+  
+  call l4f_category_log(this%category,L4F_WARN,"reconvert units of u and v wind component")
+
+                                ! Re-scale valid data according to variable conversion table
+  WHERE(this%voldati(:,:,:,:,:,iu) /= rmiss)
+    this%voldati(:,:,:,:,:,iu) = &
+     ( this%voldati(:,:,:,:,:,iu) - conv_fwd(iu)%c_func%b ) / conv_fwd(iu)%c_func%a
+  END WHERE
+  
+  WHERE(this%voldati(:,:,:,:,:,iv) /= rmiss)
+    this%voldati(:,:,:,:,:,iv) = &
+     ( this%voldati(:,:,:,:,:,iv) - conv_fwd(iv)%c_func%b ) / conv_fwd(iv)%c_func%a 
+  END WHERE
+  
+end if 
+
+
+
+end subroutine vg6d_wind_derot
+
 
 end module volgrid6d_class
 
