@@ -4,7 +4,7 @@ cdoxdeps = Doxyfile
 all: html/index.html
 
 html/index.html: $(cdoxdeps)
-	doxygen-f $<
+	[ -x /usr/local/bin/doxygen-f ] && doxygen-f  $< || [ -x /usr/bin/doxygen ] && doxygen  $<
 
 
 EXTRA_DIST = Doxyfile.in fpp mainpage.dox breve_presentazione.odp

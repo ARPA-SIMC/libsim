@@ -69,7 +69,6 @@ esempio_v7ddballe_import_file_LDADD = ../base/libsim_base.la ../vol7d/libsim_vol
 
 esempio_qccli_SOURCES = esempio_qccli.f90
 esempio_qccli_LDADD = ../base/libsim_base.la ../vol7d/libsim_vol7d.la ../log4fortran/liblog4fortran.la ../qc/libsim_qc.la
-endif
 
 if NETCDF
 noinst_PROGRAMS += esempio_v7dnetcdf
@@ -77,6 +76,10 @@ noinst_PROGRAMS += esempio_v7dnetcdf
 esempio_v7dnetcdf_SOURCES = esempio_v7dnetcdf.f90
 esempio_v7dnetcdf_LDADD = ../base/libsim_base.la ../vol7d/libsim_vol7d.la  ../log4fortran/liblog4fortran.la
 endif
+
+
+endif
+
 
 if SHP
 noinst_PROGRAMS += esempio_geo_coordvect
@@ -91,8 +94,7 @@ endif
 
 if GRIBAPI
 
-noinst_PROGRAMS += example_vg6d_1 example_vg6d_2 example_vg6d_3 example_vg6d_4 example_vg6d_5 example_vg6d_6 example_vg6d_7 example_vg6d_8
-bin_PROGRAMS += subarea getpoint
+noinst_PROGRAMS += example_vg6d_1 example_vg6d_2 example_vg6d_3 example_vg6d_4 example_vg6d_5
 
 example_vg6d_1_SOURCES = example_vg6d_1.f90
 example_vg6d_1_LDADD = ../volgrid6d/libsim_volgrid6d.la ../base/libsim_base.la ../vol7d/libsim_vol7d.la ../log4fortran/liblog4fortran.la $(NGMATH_OPTIONS)
@@ -109,6 +111,10 @@ example_vg6d_4_LDADD = ../volgrid6d/libsim_volgrid6d.la ../base/libsim_base.la .
 example_vg6d_5_SOURCES = example_vg6d_5.f90
 example_vg6d_5_LDADD = ../volgrid6d/libsim_volgrid6d.la ../base/libsim_base.la ../vol7d/libsim_vol7d.la ../log4fortran/liblog4fortran.la $(NGMATH_OPTIONS)
 
+if DBALLE
+
+noinst_PROGRAMS += example_vg6d_6 example_vg6d_7 example_vg6d_8
+
 example_vg6d_6_SOURCES = example_vg6d_6.f90
 example_vg6d_6_LDADD = ../volgrid6d/libsim_volgrid6d.la ../base/libsim_base.la ../vol7d/libsim_vol7d.la ../log4fortran/liblog4fortran.la $(NGMATH_OPTIONS)
 
@@ -123,8 +129,12 @@ example_vg6d_8_LDADD = ../volgrid6d/libsim_volgrid6d.la ../base/libsim_base.la .
 subarea_SOURCES = subarea.f90
 subarea_LDADD = ../volgrid6d/libsim_volgrid6d.la ../base/libsim_base.la ../vol7d/libsim_vol7d.la ../log4fortran/liblog4fortran.la $(NGMATH_OPTIONS)
 
+
+bin_PROGRAMS += subarea getpoint
+
 getpoint_SOURCES = getpoint.f90
 getpoint_LDADD = ../volgrid6d/libsim_volgrid6d.la ../base/libsim_base.la ../vol7d/libsim_vol7d.la ../log4fortran/liblog4fortran.la $(NGMATH_OPTIONS)
 
+endif
 
 endif
