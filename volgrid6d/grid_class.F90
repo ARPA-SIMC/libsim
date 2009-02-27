@@ -289,6 +289,9 @@ INTERFACE index
   MODULE PROCEDURE index_griddim,index_grid_type,index_grid
 END INTERFACE
 
+INTERFACE wind_unrot
+  MODULE PROCEDURE griddim_wind_unrot
+END INTERFACE
 
 
 private
@@ -298,6 +301,7 @@ public init,delete,copy
 public get_val,set_val,write_unit,read_unit,import,export,display,compute
 public operator(==),count_distinct,pack_distinct,map_distinct,map_inv_distinct,index
 public transform_def,grid_transform
+public wind_unrot
 contains
 
 
@@ -493,9 +497,10 @@ end select
 end subroutine generic_unproj
 
 
-!> Proietta un oggeto griddim nel sistema definito
-!! effettua una serie di conti per avere informazioni nello spazio di proiezione;
-!! l'oggetto contiene le informazione di proiezione e dati relativi al grigliato espresse nel sistema proiettato e geografico
+!> Proietta un oggetto griddim nel sistema definito.
+!! Effettua una serie di conti per avere informazioni nello spazio di
+!! proiezione; l'oggetto contiene le informazioni di proiezione e dati
+!! relativi al grigliato espresse nel sistema proiettato e geografico.
 subroutine griddim_proj (this)
 
 type(griddim_def),intent(in) :: this !< oggetto che definisce la proiezione e con info relative al grigliato associato
@@ -517,10 +522,11 @@ end select
 end subroutine griddim_proj
 
 
-!> Calcola informazioni nel sistema geografico di un oggeto griddim
-!! effettua una serie di conti per avere informazioni nello spazio geografico;
-!! l'oggetto contiene le informazione di proiezione e dati relativi al grigliato espresse nel sistema proiettato e geografico
-subroutine griddim_unproj (this)
+!> Calcola informazioni nel sistema geografico di un oggetto griddim.
+!! Effettua una serie di conti per avere informazioni nello spazio
+!! geografico; l'oggetto contiene le informazioni di proiezione e dati
+!! relativi al grigliato espresse nel sistema proiettato e geografico.
+subroutine griddim_unproj(this)
 
 type(griddim_def),intent(in) ::this !< oggetto che definisce la proiezione e con info relative al grigliato associato
 
@@ -1922,7 +1928,7 @@ zp=(z6-z5)*(p1)+z5
 end function hbilin
 
 
-!> \brief locate index of requested point
+!> Locate index of requested point
 elemental subroutine find_index(this,inter_type,&
  nx,ny, lon_min, lon_max, lat_min,lat_max,&
  lon,lat,index_x,index_y)
@@ -1980,6 +1986,80 @@ else
 end if
 
 end subroutine find_index
+
+
+!> Compute rotation matrix for wind unrotation. It allocates and
+!! computes a matrix suitable for recomputing wind components in the
+!! geographical system from the components in the projected
+!! system. The rotation matrix \a rot_mat has to be passed as a
+!! pointer and successively deallocated by the caller; it is a
+!! 3-dimensional array where the first two dimensions are lon and lat
+!! and the third, with extension 4, contains the packed rotation
+!! matrix for the given grid point. It should work for every
+!! projection. In order for the method to work, the \a griddim_unproj
+!! method must have already been called for the \a griddim_def object.
+!! \todo Check the algorithm and add some orthogonality tests.
+SUBROUTINE griddim_wind_unrot(this, rot_mat)
+TYPE(griddim_def), INTENT(in) :: this !< object describing the grid
+DOUBLE PRECISION, POINTER :: rot_mat(:,:,:) !< rotation matrix for every grid point, to be deallocated by the caller, if \c .NOT. \c ASSOCIATED() an error occurred
+
+DOUBLE PRECISION :: dlat_i, dlat_j,dlon_i,dlon_j,dist_i,dist_j
+DOUBLE PRECISION :: lat_factor
+INTEGER :: i, j, ip1, im1, jp1, jm1;
+
+IF (this%dim%nx <= 0 .OR. this%dim%ny <= 0 .OR. &
+ .NOT. ASSOCIATED(this%dim%lon) .OR. .NOT. ASSOCIATED(this%dim%lat)) THEN
+  CALL l4f_category_log(this%category, L4F_ERROR, 'rotate_uv must be called after correct init of griddim object')
+  NULLIFY(rot_mat)
+  RETURN
+ENDIF
+
+ALLOCATE(rot_mat(this%dim%nx, this%dim%ny, 4))
+
+DO j = 1, this%dim%ny
+  jp1 = MIN(j+1, this%dim%ny)
+  jm1 = MAX(j-1, 1)
+  DO i = 1, this%dim%nx
+    ip1 = MIN(i+1, this%dim%ny)
+    im1 = MAX(i-1, 1)
+
+    dlat_i = this%dim%lat(ip1,j) - this%dim%lat(im1,j)
+    dlat_j = this%dim%lat(i,jp1) - this%dim%lat(i,jm1)
+
+    dlon_i = this%dim%lon(ip1,j) - this%dim%lon(im1,j)
+!	if ( dlon_i >   pi  ) dlon_i -= 2*pi;
+!	if ( dlon_i < (-pi) ) dlon_i += 2*pi;
+    dlon_j = this%dim%lon(i,jp1) - this%dim%lon(i,jm1)
+!	if ( dlon_j >   pi  ) dlon_j -= 2*pi;
+!	if ( dlon_j < (-pi) ) dlon_j += 2*pi;
+
+! check whether this is really necessary !!!!
+    lat_factor = COS(degrad*this%dim%lat(i,j))
+    dlon_i = dlon_i * lat_factor
+    dlon_j = dlon_j * lat_factor
+
+    dist_i = SQRT(dlon_i*dlon_i + dlat_i*dlat_i);
+    dist_j = SQRT(dlon_j*dlon_j + dlat_j*dlat_j);
+
+    IF (dist_i > 0.D0) THEN
+      rot_mat(i,j,1) = dlon_i/dist_i
+      rot_mat(i,j,2) = dlat_i/dist_i
+    ELSE
+      rot_mat(i,j,1) = 0.0D0
+      rot_mat(i,j,2) = 0.0D0
+    ENDIF
+    IF (dist_j > 0.D0) THEN
+      rot_mat(i,j,3) = dlon_j/dist_j
+      rot_mat(i,j,4) = dlat_j/dist_j
+    ELSE
+      rot_mat(i,j,3) = 0.0D0
+      rot_mat(i,j,4) = 0.0D0
+    ENDIF
+
+  ENDDO
+ENDDO
+
+END SUBROUTINE griddim_wind_unrot
 
 
 end module grid_class
