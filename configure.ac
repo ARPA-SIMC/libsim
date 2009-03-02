@@ -1,9 +1,12 @@
 dnl Process this file with autoconf to produce a configure script.
 
-AC_INIT(libsim, 2.6.3, [dcesari@arpa.emr.it])
+AC_INIT(libsim, 2.6.4, [dcesari@arpa.emr.it])
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_SRCDIR([configure.ac])
 AM_INIT_AUTOMAKE([foreign])
+
+LIBSIM_VERSION_INFO=`echo $VERSION | awk -F. '{ printf "%d:%d:%d", $1+$2, $3, $2 }'`
+AC_SUBST(LIBSIM_VERSION_INFO)
 
 AC_LANG([C])
 AC_C_BIGENDIAN
@@ -69,7 +72,17 @@ if test -n "$ORACLE_VER"; then
     break
   fi
 done
-dnl elif test -n "ORACLE_HOME"; then che fare?
+elif test -n "$ORACLE_HOME"; then
+  dnl Non e' semplice dire dove siano gli include
+  ora_cppflags="-I$ORACLE_HOME/sdk/include"
+  if test -d "$ORACLE_HOME/lib" ;then
+    ora_ldflags="-L$ORACLE_HOME/lib"
+  fi
+else
+  dnl tenta il default se qualcuno si e' preso la briga di standardizzare le
+  dnl cose. In tal caso si impostera' il -I anche se non e' corretto
+  ora_cppflags="-I/usr/include/oracle"
+  ora_ldflags=''
 fi
 ora_libs='-locci -lclntsh'
 

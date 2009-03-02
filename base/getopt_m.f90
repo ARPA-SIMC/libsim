@@ -95,6 +95,7 @@ type(option_s) ,   intent(in), optional :: longopts(:) !< if present, it is an a
 
 ! local variables
 character(len=80):: arg
+integer :: iargc
 
 optarg = ''
 if ( optind > iargc()) then
@@ -123,7 +124,7 @@ type(option_s),   intent(in):: longopts(:)
 character(len=*), intent(in):: arg
 
 ! local variables
-integer:: i
+INTEGER:: i, iargc
 
 ! search for matching long option
 optind = optind + 1
@@ -154,7 +155,7 @@ character function process_short( optstring, arg )
 character(len=*), intent(in):: optstring, arg
 
 ! local variables
-integer:: i, arglen
+INTEGER:: i, arglen, iargc
 
 arglen = len_trim( arg )
 optopt = arg(grpind:grpind)

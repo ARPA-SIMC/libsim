@@ -1,32 +1,3 @@
-diff -BbauNr libsim-2.6.3.orig/base/getopt_m.f90 libsim-2.6.3/base/getopt_m.f90
---- libsim-2.6.3.orig/base/getopt_m.f90	2009-02-19 10:34:13.000000000 +0100
-+++ libsim-2.6.3/base/getopt_m.f90	2009-02-19 10:46:21.000000000 +0100
-@@ -95,6 +95,7 @@
- 
- ! local variables
- character(len=80):: arg
-+integer::iargc
- 
- optarg = ''
- if ( optind > iargc()) then
-@@ -123,7 +124,7 @@
- character(len=*), intent(in):: arg
- 
- ! local variables
--integer:: i
-+integer:: i,iargc
- 
- ! search for matching long option
- optind = optind + 1
-@@ -154,7 +155,7 @@
- character(len=*), intent(in):: optstring, arg
- 
- ! local variables
--integer:: i, arglen
-+integer:: i, arglen, iargc
- 
- arglen = len_trim( arg )
- optopt = arg(grpind:grpind)
 diff -BbauNr libsim-2.6.3.orig/base/Makefile.am libsim-2.6.3/base/Makefile.am
 --- libsim-2.6.3.orig/base/Makefile.am	2009-02-19 10:34:13.000000000 +0100
 +++ libsim-2.6.3/base/Makefile.am	2009-02-19 10:43:27.000000000 +0100
@@ -39,50 +10,6 @@ diff -BbauNr libsim-2.6.3.orig/base/Makefile.am libsim-2.6.3/base/Makefile.am
  if SHP
  libsim_base_la_LIBADD = $(SHP_LIBS)
  endif
-diff -BbauNr libsim-2.6.3.orig/base/optional_values.f90 libsim-2.6.3/base/optional_values.f90
---- libsim-2.6.3.orig/base/optional_values.f90	2009-02-19 10:34:13.000000000 +0100
-+++ libsim-2.6.3/base/optional_values.f90	2009-02-19 10:43:27.000000000 +0100
-@@ -102,7 +102,7 @@
- 
- character (len=*),intent(in),optional  :: var !< variabile da controllare
- integer , intent(in) :: len
--CHARACTER(len=LEN) :: char
-+!character (len=LEN) :: char
- 
- if (present(var))then
-   char=var
-diff -BbauNr libsim-2.6.3.orig/configure.ac libsim-2.6.3/configure.ac
---- libsim-2.6.3.orig/configure.ac	2009-02-19 10:34:14.000000000 +0100
-+++ libsim-2.6.3/configure.ac	2009-02-19 10:50:00.000000000 +0100
-@@ -5,6 +5,9 @@
- AC_CONFIG_SRCDIR([configure.ac])
- AM_INIT_AUTOMAKE([foreign])
- 
-+LIBSIM_VERSION_INFO=`echo $VERSION | awk -F. '{ printf "%d:%d:%d", $1+$2, $3, $2 }'`
-+AC_SUBST(LIBSIM_VERSION_INFO)
-+
- AC_LANG([C])
- AC_C_BIGENDIAN
- AC_CHECK_SIZEOF(void *)
-@@ -69,7 +72,17 @@
-     break
-   fi
- done
--dnl elif test -n "ORACLE_HOME"; then che fare?
-+elif test -n "$ORACLE_HOME"; then
-+  dnl Non e' semplice dire dove siano gli include
-+  ora_cppflags="-I$ORACLE_HOME/sdk/include"
-+  if test -d "$ORACLE_HOME/lib" ;then
-+    ora_ldflags="-L$ORACLE_HOME/lib"
-+  fi
-+else
-+  dnl tenta il default se qualcuno si e' preso la briga di standardizzare le
-+  dnl cose. In tal caso si impostera' il -I anche se non e' corretto
-+  ora_cppflags="-I/usr/include/oracle"
-+  ora_ldflags=''
- fi
- ora_libs='-locci -lclntsh'
- 
 diff -BbauNr libsim-2.6.3.orig/doc/Makefile.am libsim-2.6.3/doc/Makefile.am
 --- libsim-2.6.3.orig/doc/Makefile.am	2008-12-15 11:11:44.000000000 +0100
 +++ libsim-2.6.3/doc/Makefile.am	2009-02-19 10:43:27.000000000 +0100
@@ -104,30 +31,6 @@ diff -BbauNr libsim-2.6.3.orig/examples/Makefile.am libsim-2.6.3/examples/Makefi
  EXTRA_DIST = log4crc
  bin_PROGRAMS =
  
-@@ -47,7 +47,7 @@
- endif
- 
- if DBALLE
--noinst_PROGRAMS += esempio_v7ddballe esempio_v7ddballe_multi esempio_v7ddballe_import_export esempio_v7ddballe_export esempio_qccli esempio_v7ddballe_export_file esempio_v7ddballe_import_file 
-+noinst_PROGRAMS += esempio_v7ddballe esempio_v7ddballe_multi esempio_v7ddballe_import_export esempio_v7ddballe_export esempio_qccli
- 
- esempio_v7ddballe_SOURCES = esempio_v7ddballe.f90
- esempio_v7ddballe_LDADD = ../base/libsim_base.la ../vol7d/libsim_vol7d.la ../log4fortran/liblog4fortran.la
-@@ -61,11 +61,14 @@
- esempio_v7ddballe_export_SOURCES = esempio_v7ddballe_export.f90
- esempio_v7ddballe_export_LDADD = ../base/libsim_base.la ../vol7d/libsim_vol7d.la ../log4fortran/liblog4fortran.la
- 
-+if NETCDF
-+noinst_PROGRAMS += esempio_v7ddballe_export_file esempio_v7ddballe_import_file 
- esempio_v7ddballe_export_file_SOURCES = esempio_v7ddballe_export_file.f90
- esempio_v7ddballe_export_file_LDADD = ../base/libsim_base.la ../vol7d/libsim_vol7d.la ../log4fortran/liblog4fortran.la
- 
- esempio_v7ddballe_import_file_SOURCES = esempio_v7ddballe_import_file.f90
- esempio_v7ddballe_import_file_LDADD = ../base/libsim_base.la ../vol7d/libsim_vol7d.la ../log4fortran/liblog4fortran.la
-+endif
- 
- esempio_qccli_SOURCES = esempio_qccli.f90
- esempio_qccli_LDADD = ../base/libsim_base.la ../vol7d/libsim_vol7d.la ../log4fortran/liblog4fortran.la ../qc/libsim_qc.la
 diff -BbauNr libsim-2.6.3.orig/grib/Makefile.am libsim-2.6.3/grib/Makefile.am
 --- libsim-2.6.3.orig/grib/Makefile.am	2008-12-15 11:11:43.000000000 +0100
 +++ libsim-2.6.3/grib/Makefile.am	2009-02-19 10:43:27.000000000 +0100
@@ -187,29 +90,6 @@ diff -BbauNr libsim-2.6.3.orig/vol7d/Makefile.am libsim-2.6.3/vol7d/Makefile.am
  if ORSIM
  libsim_vol7d_la_SOURCES += vol7d_oraclesim_class.f90 oraclesim.c
  AM_CPPFLAGS += $(ORA_CPPFLAGS)
-diff -BbauNr libsim-2.6.3.orig/vol7d/vol7d_class.F90 libsim-2.6.3/vol7d/vol7d_class.F90
---- libsim-2.6.3.orig/vol7d/vol7d_class.F90	2009-02-19 10:34:14.000000000 +0100
-+++ libsim-2.6.3/vol7d/vol7d_class.F90	2009-02-19 10:43:27.000000000 +0100
-@@ -1079,7 +1079,8 @@
- LOGICAL,INTENT(IN),OPTIONAL :: sort !< se fornito e uguale a \c .TRUE., i descrittori che supportano un ordinamento (operatori > e/o <) risulteranno ordinati in ordine crescente nell'oggetto destinazione
- LOGICAL,INTENT(IN),OPTIONAL :: unique !< se fornito e uguale a \c .TRUE., gli eventuali elementi duplicati nei descrittori dell'oggetto origine verranno collassati in un unico elemento (con eventuale perdita dei dati relativi agli elementi duplicati)
- LOGICAL,INTENT(IN),OPTIONAL :: miss !< se fornito e uguale a \c .TRUE., gli eventuali elementi dei descrittori uguali al corrispondente valore mancante verranno eliminati dall'oggetto finale
--LOGICAL,INTENT(IN),OPTIONAL :: ltime(:) !< se fornito, deve essere un vettore logico della stessa lunghezza di \a this::time indicante quali elementi della dimensione \a time mantenere (valori \c .TRUE.) e quali scartare (valori \c .FALSE.) nel volume copiato; è compatibile col parametro \a miss
-+LOGICAL,INTENT(IN),OPTIONAL :: ltime(:) !< se fornito, deve essere un vettore logico della stessa lunghezza di \a this::time indicante quali elementi della dimensione 
-+!<\a time mantenere (valori \c .TRUE.) e quali scartare (valori \c .FALSE.) nel volume copiato; è compatibile col parametro \a miss
- LOGICAL,INTENT(IN),OPTIONAL :: ltimerange(:) !< come il precedente per la dimensione \a timerange
- LOGICAL,INTENT(IN),OPTIONAL :: llevel(:) !< come il precedente per la dimensione \a level
- LOGICAL,INTENT(IN),OPTIONAL :: lana(:) !< come il precedente per la dimensione \a ana
-@@ -1186,7 +1187,8 @@
- LOGICAL,INTENT(IN),OPTIONAL :: sort !< se fornito e uguale a \c .TRUE., i descrittori che supportano un ordinamento (operatori > e/o <) risulteranno ordinati in ordine crescente nell'oggetto riformato
- LOGICAL,INTENT(IN),OPTIONAL :: unique !< se fornito e uguale a \c .TRUE., gli eventuali elementi duplicati nei descrittori dell'oggetto iniziale verranno collassati in un unico elemento (con eventuale perdita dei dati relativi agli elementi duplicati)
- LOGICAL,INTENT(IN),OPTIONAL :: miss !< se fornito e uguale a \c .TRUE., gli eventuali elementi dei descrittori uguali al corrispondente valore mancante verranno eliminati dall'oggetto riformato
--LOGICAL,INTENT(IN),OPTIONAL :: ltime(:) !< se fornito, deve essere un vettore logico della stessa lunghezza di \a this::time indicante quali elementi della dimensione \a time mantenere (valori \c .TRUE.) e quali scartare (valori \c .FALSE.) nel volume copiato; è compatibile col parametro \a miss
-+LOGICAL,INTENT(IN),OPTIONAL :: ltime(:) !< se fornito, deve essere un vettore logico della stessa lunghezza di \a this::time indicante quali elementi della dimensione 
-+!<\a time mantenere (valori \c .TRUE.) e quali scartare (valori \c .FALSE.) nel volume copiato; è compatibile col parametro \a miss
- LOGICAL,INTENT(IN),OPTIONAL :: ltimerange(:) !< come il precedente per la dimensione \a timerange
- LOGICAL,INTENT(IN),OPTIONAL :: llevel(:) !< come il precedente per la dimensione \a level
- LOGICAL,INTENT(IN),OPTIONAL :: lana(:) !< come il precedente per la dimensione \a ana
 diff -BbauNr libsim-2.6.3.orig/volgrid6d/Makefile.am libsim-2.6.3/volgrid6d/Makefile.am
 --- libsim-2.6.3.orig/volgrid6d/Makefile.am	2009-02-19 10:34:11.000000000 +0100
 +++ libsim-2.6.3/volgrid6d/Makefile.am	2009-02-19 13:28:10.000000000 +0100

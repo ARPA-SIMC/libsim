@@ -99,7 +99,7 @@ end function optio_d
 
 !> Return the optional values if present or missing
 !! N.B. elemental is not possible here
-character function optio_c(var,len) result(char)
+function optio_c(var,len) result(char)
 
 character (len=*),intent(in),optional  :: var !< variabile da controllare
 integer , intent(in) :: len
