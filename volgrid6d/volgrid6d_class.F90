@@ -553,11 +553,9 @@ if (present(filename_auto))filename_auto=lfilename
 inquire(unit=lunit,opened=opened)
 if (.not. opened) then 
   inquire(file=lfilename,EXIST=exist)
-  if (.not. exist) CALL raise_error('file do not exist; cannot open file')
-  if (exist) open (unit=lunit,file=lfilename,form="UNFORMATTED")
-  !print *, "opened: ",lfilename
+  IF (.NOT. exist) CALL raise_fatal_error('file '//TRIM(lfilename)//' does not exist, cannot open')
+  open (unit=lunit,file=lfilename,form="UNFORMATTED")
 end if
-
 
 read(unit=lunit)ldescription
 read(unit=lunit)ltarray
@@ -797,7 +795,7 @@ subroutine import_from_gridinfovv (this,gridinfov,clone,categoryappend)
 TYPE(volgrid6d),pointer :: this(:) !< Vettore Volume volgrid6d da leggere
 type(gridinfo_def),intent(in) :: gridinfov(:) !< vettore gridinfo 
 logical , intent(in),optional :: clone !< se fornito e \c .TRUE., clona i gaid to gridinfo
-character(len=*),INTENT(in),OPTIONAL :: categoryappend !< appende questo suffisso al namespace category di log4fortran
+character(len=*),INTENT(in),OPTIONAL :: categoryappend !< accoda questo suffisso al namespace category di log4fortran
 
 integer :: i,j
 integer :: ngrid,ntime,ntimerange,nlevel,nvar
