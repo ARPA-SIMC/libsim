@@ -7,3 +7,4 @@ B11004,V-component of wind,,200,2,34,255,1.0,0.0
 B13011,Total precipitation,,200,2,61,255,1.0,0.0
 B20010,Total cloud cover,,200,2,71,255,1.0,0.0
 B14018,Net short-wave radiation flux (surface),,200,2,111,255,1.0,0.0
+B14019,Net long-wave radiation flux (surface),,200,2,112,255,1.0,0.0
