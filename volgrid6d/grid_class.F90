@@ -750,6 +750,8 @@ SUBROUTINE export_griddim(this, gaid)
 type(griddim_def),intent(in) :: this !< object griddim
 INTEGER, INTENT(inout) :: gaid !< grib_api id of the grib loaded in memory to import
 
+if (.not. c_e(gaid))return
+
 call grib_set(gaid,'typeOfGrid' ,this%grid%type%type)
 #ifdef DEBUG
 call l4f_category_log(this%category,L4F_DEBUG,"export_griddim gtype: "//this%grid%type%type)
@@ -2020,7 +2022,7 @@ DO j = 1, this%dim%ny
   jp1 = MIN(j+1, this%dim%ny)
   jm1 = MAX(j-1, 1)
   DO i = 1, this%dim%nx
-    ip1 = MIN(i+1, this%dim%ny)
+    ip1 = MIN(i+1, this%dim%nx)
     im1 = MAX(i-1, 1)
 
     dlat_i = this%dim%lat(ip1,j) - this%dim%lat(im1,j)

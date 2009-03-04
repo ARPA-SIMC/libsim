@@ -567,9 +567,6 @@ doubleprecision :: loFirst,loLast,laFirst,laLast
 integer ::iScansNegatively,jScansPositively
 !!$integer ::EditionNumber
 
-! TODO
-! gestire component flag
-
 !non usati
 !geography.gridWestEast
 !geography.gridNorthSouth
@@ -611,6 +608,8 @@ end IF
 !cerco di esprimere le coordinate come in un piano cartesiano
 if (this%lon_max-this%lon_min < 0) this%lon_min=this%lon_min-360.d0
 
+CALL grib_get(gaid,'uvRelativeToGrid',this%component_flag)
+
 end subroutine import_regular_ll
 
 
@@ -631,9 +630,6 @@ call l4f_category_log(this%category,L4F_DEBUG,"start export_regular_ll")
 #endif
 
 call export_dim(dim,gaid)
-
-! TODO
-! gestire component flag
 
 call grib_get(gaid,'iScansNegatively',iScansNegatively)
 call grib_get(gaid,'jScansPositively',jScansPositively)
@@ -741,6 +737,8 @@ ELSE
 !  CALL grib_set(gaid,'geography.jInc', dlat)
 
 ENDIF
+
+CALL grib_set(gaid,'uvRelativeToGrid',this%component_flag)
 
 end subroutine export_regular_ll
 

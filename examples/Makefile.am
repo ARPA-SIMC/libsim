@@ -126,11 +126,13 @@ example_vg6d_8_SOURCES = example_vg6d_8.f90
 example_vg6d_8_LDADD = ../volgrid6d/libsim_volgrid6d.la ../base/libsim_base.la ../vol7d/libsim_vol7d.la ../log4fortran/liblog4fortran.la  $(NGMATH_OPTIONS)
 
 
+bin_PROGRAMS += subarea getpoint volgrid6dtransform
+
 subarea_SOURCES = subarea.f90
 subarea_LDADD = ../volgrid6d/libsim_volgrid6d.la ../base/libsim_base.la ../vol7d/libsim_vol7d.la ../log4fortran/liblog4fortran.la $(NGMATH_OPTIONS)
 
-
-bin_PROGRAMS += subarea getpoint
+volgrid6dtransform_SOURCES = volgrid6dtransform.f90
+volgrid6dtransform_LDADD = ../volgrid6d/libsim_volgrid6d.la ../base/libsim_base.la ../vol7d/libsim_vol7d.la ../log4fortran/liblog4fortran.la $(NGMATH_OPTIONS)
 
 getpoint_SOURCES = getpoint.f90
 getpoint_LDADD = ../volgrid6d/libsim_volgrid6d.la ../base/libsim_base.la ../vol7d/libsim_vol7d.la ../log4fortran/liblog4fortran.la $(NGMATH_OPTIONS)

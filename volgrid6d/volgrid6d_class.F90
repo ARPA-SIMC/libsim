@@ -691,6 +691,10 @@ if (associated (this%gaid))then
   if (optio_log(clone))then
     this%gaid(ilevel,itime,itimerange,ivar)=-1
     call grib_clone(gridinfo%gaid,this%gaid(ilevel,itime,itimerange,ivar))
+#ifdef DEBUG
+    call l4f_category_log(this%category,L4F_DEBUG,"clone gaid from: "//to_char(gridinfo%gaid)//&
+     " to : "//to_char(this%gaid(ilevel,itime,itimerange,ivar)))
+#endif
   else
     this%gaid(ilevel,itime,itimerange,ivar)=gridinfo%gaid
   end if
@@ -739,7 +743,7 @@ if (present(gaid_template)) then
   call grib_clone(gaid_template,gaid)
 #ifdef DEBUG
   call l4f_category_log(this%category,L4F_DEBUG,&
-   "clone to a new gaid")
+   "clone to a new gaid from:"//trim(to_char(gaid_template))//" to: "//trim(to_char(gaid)))
 #endif
 else
 
@@ -755,13 +759,18 @@ if (.not. c_e(gaid))then
     if (optio_log(clone))then
       gaid=-1
       call grib_clone(this%gaid(ilevel,itime,itimerange,ivar),gaid)
+#ifdef DEBUG
+      call l4f_category_log(this%category,L4F_DEBUG,&
+       "clone to a new gaid from:"//trim(to_char(this%gaid(ilevel,itime,itimerange,ivar)))//&
+       " to: "//trim(to_char(gaid)))
+#endif
     else
       gaid = this%gaid(ilevel,itime,itimerange,ivar)
     end if
   else
  
     gaid=imiss
-    call l4f_category_log(this%category,L4F_WARN,&
+    call l4f_category_log(this%category,L4F_INFO,&
      "mancano tutti i gaid; export impossibile")
     !call raise_error("mancano tutti i gaid; export impossibile")
 
@@ -1326,13 +1335,17 @@ do itime=1,ntime
 
           if (optio_log(clone))then
 
-#ifdef DEBUG
-            call l4f_category_log(volgrid6d_in%category,L4F_DEBUG,"clone gaid "//&
-             trim(to_char(volgrid6d_in%gaid(ilevel,itime,itimerange,ivar))))
-#endif
             volgrid6d_out%gaid(ilevel,itime,itimerange,ivar)=-1
             call grib_clone(volgrid6d_in%gaid(ilevel,itime,itimerange,ivar),&
              volgrid6d_out%gaid(ilevel,itime,itimerange,ivar))
+
+#ifdef DEBUG
+            call l4f_category_log(volgrid6d_in%category,L4F_DEBUG,"clone gaid from: "//&
+             trim(to_char(volgrid6d_in%gaid(ilevel,itime,itimerange,ivar)))//&
+             " to: "//trim(to_char(volgrid6d_out%gaid(ilevel,itime,itimerange,ivar))))
+#endif
+
+
           else
             volgrid6d_out%gaid(ilevel,itime,itimerange,ivar)=volgrid6d_in%gaid(ilevel,itime,itimerange,ivar)
           end if
@@ -1387,6 +1400,8 @@ call volgrid6d_alloc_vol(volgrid6d_out)
 
 !ensure unproj was called
 !call griddim_unproj(volgrid6d_out%griddim)
+
+call vg6d_wind_unrot(volgrid6d_in)
 
 call compute(grid_trans, volgrid6d_in, volgrid6d_out,clone)
 
@@ -1540,6 +1555,8 @@ integer :: ntime, ntimerange, nlevel, nvar, nana
 #ifdef DEBUG
 call l4f_category_log(volgrid6d_in%category,L4F_DEBUG,"start volgrid6d_v7d_transform")
 #endif
+
+call vg6d_wind_unrot(volgrid6d_in)
 
 nana=size(v7d%ana)
 ntime=0
@@ -1730,6 +1747,8 @@ call volgrid6d_alloc_vol(volgrid6d_out)
 
 call compute(grid_trans, vol7d_in, volgrid6d_out, networkid)
 
+call vg6d_wind_rot(volgrid6d_out)
+
 call delete (grid_trans)
 
 end subroutine v7d_volgrid6d_transform
@@ -1904,6 +1923,7 @@ END SUBROUTINE import_var_conv
 END SUBROUTINE vg6d_v7d_var_conv_setup
 
 
+
 !> Unrotate the wind components.
 !! It converts u and v components of vector quantities relative to the
 !! defined grid in the direction of increasing x and y coordinates to
@@ -1912,10 +1932,52 @@ END SUBROUTINE vg6d_v7d_var_conv_setup
 !! \todo Check and correct wind component flag (to be moved in
 !! griddim_def?)
 subroutine vg6d_wind_unrot(this)
-
 type(volgrid6d) :: this !< object containing wind to be unrotated
 
-INTEGER :: iu,iv,nvar,nvaru,nvarv,i,j,k
+integer :: component_flag
+
+call get_val(this%griddim,component_flag=component_flag)
+
+if (component_flag == 1) then
+
+  call  vg6d_wind__un_rot(this,.false.)
+  call set_val(this%griddim,component_flag=0)
+
+end if
+
+end subroutine vg6d_wind_unrot
+
+
+!> Rotate the wind components.
+!! It converts u and v components of vector quantities 
+!! relative to easterly and notherly direction to
+!! defined grid in the direction of increasing x and y coordinates.
+!! The original fields are overwritten.
+subroutine vg6d_wind_rot(this)
+type(volgrid6d) :: this !< object containing wind to be rotated
+
+integer :: component_flag
+
+call get_val(this%griddim,component_flag=component_flag)
+
+if (component_flag == 0) then
+
+  call  vg6d_wind__un_rot(this,.true.)
+  call set_val(this%griddim,component_flag=1)
+
+end if
+
+end subroutine vg6d_wind_rot
+
+
+
+!> Generic UnRotate the wind components.
+subroutine vg6d_wind__un_rot(this,rot)
+
+type(volgrid6d) :: this !< object containing wind to be (un)rotated
+logical :: rot !< if .true. rotate else unrotate
+
+INTEGER :: iu,iv,nvar,nvaru,nvarv,i,j,k,a11,a12,a21,a22
 type(vol7d_var) :: varu,varv
 type(vol7d_var),allocatable ::varbufr(:)
 double precision,pointer :: rot_mat(:,:,:)
@@ -2001,9 +2063,22 @@ end if
 
 ! Temporary workspace
 ALLOCATE(tmp_arr(this%griddim%dim%nx, this%griddim%dim%ny))
-IF (.NOT.ASSOCIATED(this%griddim%dim%lon) .OR. &
- .NOT.ASSOCIATED(this%griddim%dim%lat)) CALL griddim_unproj(this%griddim)
+CALL griddim_unproj(this%griddim)
 CALL wind_unrot(this%griddim, rot_mat)
+
+
+a11=1
+
+if (rot)then
+  a12=3
+  a21=2
+else
+  a12=2
+  a21=3
+end if
+
+a22=4
+
 
 DO k = 1, SIZE(this%timerange)
   DO j = 1, SIZE(this%time)
@@ -2013,12 +2088,12 @@ DO k = 1, SIZE(this%timerange)
       WHERE(this%voldati(:,:,i,j,k,iu) /= rmiss .AND. &
        this%voldati(:,:,i,j,k,iv) /= rmiss)
 
-        tmp_arr(:,:) = this%voldati(:,:,i,j,k,iu)*rot_mat(:,:,1) + &
-         this%voldati(:,:,i,j,k,iv)*rot_mat(:,:,2)
+        tmp_arr(:,:) = this%voldati(:,:,i,j,k,iu)*rot_mat(:,:,a11) + &
+         this%voldati(:,:,i,j,k,iv)*rot_mat(:,:,a12)
 
         this%voldati(:,:,i,j,k,iv) = &
-         this%voldati(:,:,i,j,k,iu)*rot_mat(:,:,3) + &
-         this%voldati(:,:,i,j,k,iv)*rot_mat(:,:,4)
+         this%voldati(:,:,i,j,k,iu)*rot_mat(:,:,a21) + &
+         this%voldati(:,:,i,j,k,iv)*rot_mat(:,:,a22)
 
         this%voldati(:,:,i,j,k,iu) = tmp_arr(:,:)
       END WHERE
@@ -2048,7 +2123,7 @@ end if
 
 
 
-end subroutine vg6d_wind_unrot
+end subroutine vg6d_wind__un_rot
 
 
 end module volgrid6d_class
