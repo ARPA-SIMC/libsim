@@ -1989,7 +1989,9 @@ IF (.NOT. ALLOCATED(conv_fwd)) CALL vg6d_v7d_var_conv_setup()
 call init(varu,btable="B11003")
 call init(varv,btable="B11004")
 
-call display(varu)
+! commentata questa inutile display perche' non compila su debian
+! There is no specific subroutine for the generic 'display', capire il motivo
+!call display(varu)
 
 ! test about presence of u and v in standard table
 
