@@ -28,7 +28,7 @@ config.status:
 	dh_testdir
 	# Add here commands to configure the package.
 	autoreconf -i -f
-	./configure --host=$(DEB_HOST_GNU_TYPE) --build=$(DEB_BUILD_GNU_TYPE) --prefix=/usr --mandir=\$${prefix}/share/man --infodir=\$${prefix}/share/info --disable-shapelib --disable-netcdf --disable-emoslib --disable-ngmath
+	./configure FCFLAGS=-I/usr/include --host=$(DEB_HOST_GNU_TYPE) --build=$(DEB_BUILD_GNU_TYPE) --prefix=/usr --mandir=\$${prefix}/share/man --infodir=\$${prefix}/share/info --disable-shapelib --disable-netcdf --disable-emoslib --disable-ngmath
 
 
 build: build-stamp
