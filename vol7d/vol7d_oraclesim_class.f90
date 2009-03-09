@@ -82,7 +82,7 @@ CONTAINS
 !! Trattandosi di un'estensione di vol7d, provvede ad inizializzare
 !! anche l'oggetto vol7d contenuto.
 !! Alla prima chiamata in un programma, provvede anche ad importare
-!! le tabelle di conversione variabili dal file vartab.csv.
+!! le tabelle di conversione variabili dal file varmap.csv.
 SUBROUTINE vol7d_oraclesim_init(this, dsn, user, password, write, wipe)
 TYPE(vol7d_oraclesim),INTENT(out) :: this !< Oggetto da inizializzare
 CHARACTER(len=*), INTENT(in),OPTIONAL :: dsn !< Nome del database, se non fornito usa il nome standard per l'archivio Oracle del SIM
@@ -495,6 +495,8 @@ SUBROUTINE vol7d_oraclesim_setup_conv()
 INTEGER,PARAMETER :: nf=16 ! formato file
 INTEGER :: i, sep(nf), n1, n2, un, i1, i2, i3, i4
 CHARACTER(len=512) :: line
+CHARACTER(len=64) :: buf
+TYPE(csv_record) :: csv
 
 un = open_package_file('varmap.csv', filetype_data)
 IF (un < 0) CALL raise_fatal_error('non trovo il file delle variabili')
@@ -502,7 +504,7 @@ IF (un < 0) CALL raise_fatal_error('non trovo il file delle variabili')
 i = 0
 DO WHILE(.TRUE.)
   READ(un,'(A)',END=100)line
-  IF (delim_csv(line, sep) < 0) CYCLE
+!  IF (delim_csv(line, sep) < 0) CYCLE
   i = i + 1
 ENDDO
 100 CONTINUE
@@ -514,24 +516,28 @@ IF (i > 0) THEN
   i = 0
   readline: DO WHILE(.TRUE.)
     READ(un,'(A)',END=120)line
-    IF (delim_csv(line, sep) < 0) CYCLE readline
+    CALL init(csv, line)
     i = i + 1
-    READ(line(sep(1)+1:sep(2)-1),'(I8)')vartable(i)%varora
-    READ(line(sep(2)+1:sep(3)-1),'(A)')vartable(i)%varbt
-    READ(line(sep(3)+1:sep(4)-1),'(A)')vartable(i)%unit
-    READ(line(sep(4)+1:sep(5)-1),'(I8)')i1
-    READ(line(sep(5)+1:sep(6)-1),'(I8)')i2
-    READ(line(sep(6)+1:sep(7)-1),'(I8)')i3
-    READ(line(sep(7)+1:sep(8)-1),'(I8)')i4
+    CALL csv_record_getfield(csv, vartable(i)%varora)
+    CALL csv_record_getfield(csv, vartable(i)%varbt)
+    CALL csv_record_getfield(csv, buf)
+    vartable(i)%unit = buf ! uso buf per evitare un warning stringa troppo corta
+    CALL csv_record_getfield(csv, i1)
+    CALL csv_record_getfield(csv, i2)
+    CALL csv_record_getfield(csv, i3)
+    CALL csv_record_getfield(csv, i4)
     CALL init(vartable(i)%level, i1, i2, i3, i4)
-    READ(line(sep(8)+1:sep(9)-1),'(I8)')i1
-    READ(line(sep(9)+1:sep(10)-1),'(I8)')i2
-    READ(line(sep(10)+1:sep(11)-1),'(I8)')i3
+    CALL csv_record_getfield(csv, i1)
+    CALL csv_record_getfield(csv, i2)
+    CALL csv_record_getfield(csv, i3)
     CALL init(vartable(i)%timerange, i1, i3, i2)
-    READ(line(sep(12)+1:sep(13)-1),'(A)')vartable(i)%description
-    READ(line(sep(13)+1:sep(14)-1),'(F10.0)')vartable(i)%afact
-    READ(line(sep(14)+1:sep(15)-1),'(F10.0)')vartable(i)%bfact
-    READ(line(sep(15)+1:sep(16)-1),'(I8)')vartable(i)%networkid
+    CALL csv_record_getfield(csv)
+    CALL csv_record_getfield(csv, buf)
+    vartable(i)%description = buf ! uso buf per evitare un warning stringa troppo corta
+    CALL csv_record_getfield(csv, vartable(i)%afact)
+    CALL csv_record_getfield(csv, vartable(i)%bfact)
+    CALL csv_record_getfield(csv, vartable(i)%networkid)
+    CALL delete(csv)
   ENDDO readline
 120 CONTINUE
 

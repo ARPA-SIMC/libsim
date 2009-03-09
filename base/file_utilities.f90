@@ -181,6 +181,7 @@ END FUNCTION open_package_file
 
 
 !> Interpreta una riga di un file csv.
+!! Resa obsoleta dalla classe ::csv_record.
 !! Restituisce in vdelim gli indici dei separatori (cdelim, default ',')
 !! trovati nella stringa line (tipicamente la riga di un file csv)
 !! per definizione: vdelim(1)=0, vdelim(size(vdelim))=LEN_TRIM(line)+1 .
@@ -306,6 +307,16 @@ DEALLOCATE(this%record)
 END SUBROUTINE csv_record_delete
 
 
+!> Riporta il puntatore del record all'inizio per permettere di scorrere
+!! nuovamente lo stesso oggetto.
+SUBROUTINE csv_record_rewind(this)
+TYPE(csv_record),INTENT(INOUT) :: this !< oggetto da reinizializzare
+
+this%cursor = 1
+
+END SUBROUTINE csv_record_rewind
+
+
 !> Restituisce il campo successivo del record \a this in formato \c CHARACTER.
 !! Fa avanzare il puntatore di campo, per cui non è più possibile tornare
 !! indietro.
@@ -316,14 +327,19 @@ SUBROUTINE csv_record_getfield_char(this, field, flen, ier)
 TYPE(csv_record),INTENT(INOUT) :: this !< oggetto di cui restituire i campi
 CHARACTER(LEN=*),INTENT(OUT),OPTIONAL :: field !< contenuto del campo, se non è fornito si limita a far avanzare il puntatore di campo; se la variabile fornita non è lunga a sufficienza viene stampato un warning e viene assegnato solo il possibile;
 !< la stringa è comunque teminata da spazi, per cui è necessario usare il parametro \a flen per non perdere eventuali spazi significativi al termine del campo
-INTEGER,INTENT(OUT),OPTIONAL :: flen !< lunghezza effettiva del campo, è calcolata correttamente anche nei casi in cui \a field non è fornita o non è sufficientemente lungo a contenere il campo
-INTEGER,INTENT(OUT),OPTIONAL :: ier !< codice di errore, 0 = tutto bene, 1 = \a field troppo corta per contenere il campo (ha senso solo se \a field è fornito)
+INTEGER,INTENT(OUT),OPTIONAL :: flen !< lunghezza effettiva del campo, è calcolata correttamente anche nei casi in cui \a field non è fornita o non è sufficientemente lunga per contenere il campo
+INTEGER,INTENT(OUT),OPTIONAL :: ier !< codice di errore, 0 = tutto bene, 1 = \a field troppo corta per contenere il campo (ha senso solo se \a field è fornita), 2 = fine record
 
 LOGICAL :: inquote, inpre, inpost, firstquote
 INTEGER :: i, ocursor, ofcursor, lier
 
 IF (PRESENT(field)) field = ''
 IF (PRESENT(ier)) ier = 0
+IF (csv_record_end(this)) THEN
+  IF (PRESENT(ier)) ier = 1
+  CALL raise_error('in csv_record_getfield, superata la fine record')
+  RETURN
+ENDIF
 lier = 0
 ocursor = 0
 ofcursor = 0
@@ -430,7 +446,7 @@ END SUBROUTINE csv_record_getfield_char
 SUBROUTINE csv_record_getfield_int(this, field, ier)
 TYPE(csv_record),INTENT(INOUT) :: this !< oggetto di cui restituire i campi
 INTEGER,INTENT(OUT) :: field !< valore del campo, = \a imiss se la conversione fallisce
-INTEGER,INTENT(OUT),OPTIONAL :: ier ! codice di errore, 0 = tutto bene, 1 = impossibile convertire il campo a numero intero
+INTEGER,INTENT(OUT),OPTIONAL :: ier ! codice di errore, 0 = tutto bene, 1 = impossibile convertire il campo a numero intero, 2 = fine record
 
 CHARACTER(LEN=32) :: cfield
 INTEGER :: lier
@@ -447,9 +463,9 @@ END SUBROUTINE csv_record_getfield_int
 
 
 SUBROUTINE csv_record_getfield_real(this, field, ier)
-TYPE(csv_record),INTENT(INOUT) :: this
-REAL,INTENT(OUT) :: field
-INTEGER,INTENT(OUT),OPTIONAL :: ier
+TYPE(csv_record),INTENT(INOUT) :: this !< oggetto di cui restituire i campi
+REAL,INTENT(OUT) :: field !< valore del campo, = \a rmiss se la conversione fallisce
+INTEGER,INTENT(OUT),OPTIONAL :: ier ! codice di errore, 0 = tutto bene, 1 = impossibile convertire il campo a numero intero, 2 = fine record
 
 CHARACTER(LEN=32) :: cfield
 INTEGER :: lier
