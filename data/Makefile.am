@@ -28,3 +28,6 @@ dist_pkgdata_DATA += \
 
 endif
 
+if GRIBAPI
+dist_pkgdata_DATA += vargrib2bufr.csv
+endif

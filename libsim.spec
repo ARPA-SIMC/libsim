@@ -1,6 +1,6 @@
 Summary: libsim: librerie di utilità in Fortran 90
 Name: libsim
-Version: 2.6.4
+Version: 2.6.5
 Release: 1
 License: GPL
 Group: Applications/Meteo
