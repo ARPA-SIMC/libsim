@@ -2072,11 +2072,11 @@ CALL wind_unrot(this%griddim, rot_mat)
 a11=1
 
 if (rot)then
-  a12=3
-  a21=2
-else
   a12=2
   a21=3
+else
+  a12=3
+  a21=2
 end if
 
 a22=4

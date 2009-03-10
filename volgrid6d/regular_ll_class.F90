@@ -573,10 +573,12 @@ integer ::iScansNegatively,jScansPositively
 
 call import_dim(dim,gaid)
 
-call grib_get(gaid,'geography.loFirst' ,loFirst)
-call grib_get(gaid,'geography.loLast'  ,loLast)
-call grib_get(gaid,'geography.laFirst' ,laFirst)
-call grib_get(gaid,'geography.laLast'  ,laLast)
+
+
+call grib_get(gaid,'longitudeOfFirstGridPointInDegrees' ,loFirst)
+call grib_get(gaid,'longitudeOfLastGridPointInDegrees'  ,loLast)
+call grib_get(gaid,'latitudeOfFirstGridPointInDegrees' ,laFirst)
+call grib_get(gaid,'latitudeOfLastGridPointInDegrees'  ,laLast)
 
 call grib_get(gaid,'iScansNegatively',iScansNegatively)
 call grib_get(gaid,'jScansPositively',jScansPositively)
@@ -623,7 +625,7 @@ integer ::iScansNegatively,jScansPositively
 
 integer ::EditionNumber
 
-character (len=80) :: typeOfGrid
+!!$character (len=80) :: typeOfGrid
 
 #ifdef DEBUG
 call l4f_category_log(this%category,L4F_DEBUG,"start export_regular_ll")
@@ -662,10 +664,10 @@ end IF
 if (loFirst < 0.d0)loFirst=loFirst+360.d0
 if (loLast < 0.d0)loLast=loLast+360.d0
 
-call grib_set(gaid,'geography.loFirst' ,loFirst)
-call grib_set(gaid,'geography.loLast'  ,loLast)
-call grib_set(gaid,'geography.laFirst' ,laFirst)
-call grib_set(gaid,'geography.laLast'  ,laLast)
+call grib_set(gaid,'longitudeOfFirstGridPointInDegrees' ,loFirst)
+call grib_set(gaid,'longitudeOfLastGridPointInDegrees'  ,loLast)
+call grib_set(gaid,'latitudeOfFirstGridPointInDegrees' ,laFirst)
+call grib_set(gaid,'latitudeOfLastGridPointInDegrees'  ,laLast)
 
 ! Recompute and code grid steps if possible
 dlat = (this%lat_max - this%lat_min) / dble(dim%ny - 1 )
@@ -680,14 +682,14 @@ IF (EditionNumber == 1) THEN
 !nelle griglie regular_ll i pvl non si riescono a mettere
 !nelle griglie rotated_ll i pvl non si riescono a togliere
 ! per ora devo fare questo ma poi i PV dovranno essere gestiti
-  call grib_get(gaid,'typeOfGrid' ,typeOfGrid)
-  if (typeOfGrid == "regular_ll") then
-    call l4f_category_log(this%category,L4F_WARN,"Elimino PVL per bug in grib_api")
-    call grib_set(gaid,"numberOfVerticalCoordinateValues",0)
-    call grib_set(gaid,"pvlLocation",255)
-    call grib_set(gaid,"PVPresent",0)
-    call grib_set(gaid,"PLPresent",0)
-  end if
+!!$  call grib_get(gaid,'typeOfGrid' ,typeOfGrid)
+!!$  if (typeOfGrid == "regular_ll") then
+!!$    call l4f_category_log(this%category,L4F_WARN,"Elimino PVL per bug in grib_api")
+!!$    call grib_set(gaid,"numberOfVerticalCoordinateValues",0)
+!!$    call grib_set(gaid,"pvlLocation",255)
+!!$    call grib_set(gaid,"PVPresent",0)
+!!$    call grib_set(gaid,"PLPresent",0)
+!!$  end if
 
 ELSE IF (EditionNumber == 2) THEN
   ratio = 1.d6
