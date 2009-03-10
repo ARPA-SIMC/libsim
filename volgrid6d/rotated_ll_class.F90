@@ -477,7 +477,7 @@ if (EditionNumber == 1)then
 
 !TODO
 !ponghino per bug grib_api
-!!$  call grib_set(gaid,"pvlLocation",43)
+  call grib_set(gaid,"pvlLocation",43)
 
 
   call grib_set(gaid,'angleOfRotationInDegrees',this%angle_rotation)
