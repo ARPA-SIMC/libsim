@@ -1,6 +1,6 @@
 Summary: libsim: librerie di utilità in Fortran 90
 Name: libsim
-Version: 2.6.5
+Version: 2.6.7
 Release: 1
 License: GPL
 Group: Applications/Meteo
@@ -8,15 +8,19 @@ URL: http://www.arpa.emr.it/sim
 Packager: Davide Cesari <dcesari@arpa.emr.it>
 Source: %{name}-%{version}.tar.gz
 BuildRoot: /var/tmp/%{name}-buildroot
-BuildRequires: shapelib-fortran-devel oracle-instantclient-devel log4c-devel netcdf-devel libemos libdballef-devel >= 4.0.6
-Requires: libdballef4 >= 4.0.6
+BuildRequires: shapelib-fortran-devel oracle-instantclient-devel libemos libdballef-devel >= 4.0.6 grib_api-devel >= 1.7.0
+Requires: libdballef4 >= 4.0.6 grib_api >= 1.7.0
+
+#temporaneo
+%define _fmoddir       %{_libdir}/gfortran/modules
+
 
 %package -n libsim-doc
-Summary: libsim documentation
+Summary:  libsim documentation
 Group: Applications/Meteo
 
 %description -n libsim-doc
-Librerie di utilità in Fortran 90, documentazione.
+Librerie di utilità in Fortran 90, documentazione .
 
 %description
 Libsim comprende tre gruppi di moduli di utilità in Fortran 90:
@@ -37,7 +41,7 @@ ARPA-SIM.
 %setup -q
 
 %build
-%configure FC=gfortran FCFLAGS=-I/usr/include/ ORACLE_VER=oracle/11.1.0.1/client
+%configure FC=gfortran FCFLAGS="-I/usr/include/ -I%{_fmoddir}" ORA_VER=oracle/11.1.0.1/client
 make 
 
 %install
@@ -70,8 +74,8 @@ rm -rf %{buildroot}
 %postun
 
 %changelog
-* Thu Jul 31 2008 root <root@localhost.localdomain> - 2.2-2
-- Bug fix for Oracle
+* Tue Mar 17 2009 root <root@strip.metarpa> - 2.6.7-1
+- cambiato il mone degli eseguibili con prefix vg6d_
 
 * Mon Jul  7 2008 Davide Cesari <cesari@malina.metarpa> - 2.2-1
 - New version, -I/usr/include now as FCFLAGS, ORA_VER added
