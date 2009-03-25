@@ -1,4 +1,4 @@
-!> \brief Costanti fisiche.
+!> \brief Costanti fisiche (SINGOLA PRECISIONE).
 !!
 !! Questo modulo definisce delle costanti fisiche di uso comune
 !! in meteorologia e discipline affini. Attualmente esse sono definite
@@ -28,6 +28,15 @@ REAL, PARAMETER :: lvw = 2.5E+6 !< calore latente...?
 
 END MODULE phys_const
 
+!> \brief Costanti fisiche (DOUBLEPRECISION).
+!!
+!! Questo modulo definisce delle costanti fisiche di uso comune
+!! in meteorologia e discipline affini. Attualmente esse sono definite
+!! solo in singola precisione, sarebbe opportuno trovare un metodo
+!! elegante per definirle semiautomaticamente anche in doppia precisione
+!! affinché possano essere usate, ad esempio, dalle routine di
+!! conversione geo-UTM della classe geo_coord_class.
+!! \ingroup base
 MODULE doubleprecision_phys_const
 IMPLICIT NONE
 
@@ -48,3 +57,4 @@ DOUBLEPRECISION, PARAMETER :: cvd = cpd-rd !< calore specifico dell'aria secca a
 DOUBLEPRECISION, PARAMETER :: lvw = 2.5E+6 !< calore latente...?
 
 END MODULE doubleprecision_phys_const
+

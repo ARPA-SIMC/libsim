@@ -261,7 +261,7 @@ INTEGER(kind=int_ll),INTENT(IN),OPTIONAL :: unixtime !< inizializza l'oggetto a 
 CHARACTER(len=*),INTENT(IN),OPTIONAL :: isodate !< inizializza l'oggetto ad una data espressa nel formato \c AAAA-MM-GG \c hh:mm:ss.msc, un sottoinsieme del formato noto come \a ISO, la parte iniziale \c AAAA-MM-GG è obbligatoria, il resto è opzionale
 CHARACTER(len=*),INTENT(IN),OPTIONAL :: simpledate !< inizializza l'oggetto ad una data espressa nel formato \c AAAAMMGGhhmmssmsc, la parte iniziale \c AAAAMMGG è obbligatoria, il resto è opzionale, da preferire rispetto a \a oraclesimdate
 CHARACTER(len=12),INTENT(IN),OPTIONAL :: oraclesimdate !< inizializza l'oggetto ad una data espressa nel formato \c AAAAMMGGhhmm, come nelle routine per l'accesso al db Oracle del SIM.
-INTEGER,INTENT(IN),OPTIONAL :: now !< inizializza l'oggetto all'istante corrente, se \a è \a datetime_utc inizializza con l'ora UTC (preferibile), se è \datetime_local usa l'ora locale
+INTEGER,INTENT(IN),OPTIONAL :: now !< inizializza l'oggetto all'istante corrente, se \a è \a datetime_utc inizializza con l'ora UTC (preferibile), se è \a datetime_local usa l'ora locale
 
 TYPE(datetime) :: this !< oggetto da inizializzare
 
@@ -289,7 +289,7 @@ INTEGER(kind=int_ll),INTENT(IN),OPTIONAL :: unixtime !< inizializza l'oggetto a 
 CHARACTER(len=*),INTENT(IN),OPTIONAL :: isodate !< inizializza l'oggetto ad una data espressa nel formato \c AAAA-MM-GG \c hh:mm:ss.msc, un sottoinsieme del formato noto come \a ISO, la parte iniziale \c AAAA-MM-GG è obbligatoria, il resto è opzionale
 CHARACTER(len=*),INTENT(IN),OPTIONAL :: simpledate !< inizializza l'oggetto ad una data espressa nel formato \c AAAAMMGGhhmmssmsc, la parte iniziale \c AAAAMMGG è obbligatoria, il resto è opzionale, da preferire rispetto a \a oraclesimdate
 CHARACTER(len=12),INTENT(IN),OPTIONAL :: oraclesimdate !< inizializza l'oggetto ad una data espressa nel formato \c AAAAMMGGhhmm, come nelle routine per l'accesso al db Oracle del SIM.
-INTEGER,INTENT(IN),OPTIONAL :: now !< inizializza l'oggetto all'istante corrente, se \a è \a datetime_utc inizializza con l'ora UTC (preferibile), se è \datetime_local usa l'ora locale
+INTEGER,INTENT(IN),OPTIONAL :: now !< inizializza l'oggetto all'istante corrente, se \a è \a datetime_utc inizializza con l'ora UTC (preferibile), se è \a datetime_local usa l'ora locale
 
 INTEGER :: lyear, lmonth, lday, lhour, lminute, lsec, lmsec, ier
 INTEGER :: dt(8)

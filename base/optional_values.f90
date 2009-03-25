@@ -1,6 +1,9 @@
-!> Questo modulo definisce delle funzioni e delle suroutine per
+!> \brief  parse command options (enhanced)
+!!
+!! Questo modulo definisce delle funzioni e delle subroutine per
 !! gestire comodamente i parametri \c OPTIONAL all'interno di
-!! subroutine.
+!! programmi.
+!!
 !! \ingroup base
 module optional_values
 
@@ -139,7 +142,7 @@ end function optio_log
 elemental subroutine soptio_b(var,optio_b)
 
 integer(kind=int_b),intent(in),optional  :: var !< variabile da controllare
-integer(kind=int_b),intent(out) :: optio_b
+integer(kind=int_b),intent(out) :: optio_b !< variabile pari a var se presente altrimenti missing
 
 if (present(var))then
   optio_b=var
@@ -154,7 +157,7 @@ end subroutine soptio_b
 elemental subroutine soptio_s(var,optio_s)
 
 integer(kind=int_s),intent(in),optional  :: var !< variabile da controllare
-integer(kind=int_s),intent(out) :: optio_s
+integer(kind=int_s),intent(out) :: optio_s !< variabile pari a var se presente altrimenti missing
 
 if (present(var))then
   optio_s=var
@@ -172,7 +175,7 @@ end subroutine soptio_s
 elemental subroutine soptio_l(var,optio_l)
 
 integer(kind=int_l),intent(in),optional  :: var !< variabile da controllare
-integer(kind=int_l),intent(out) :: optio_l
+integer(kind=int_l),intent(out) :: optio_l !< variabile pari a var se presente altrimenti missing
 
 if (present(var))then
   optio_l=var
@@ -189,7 +192,7 @@ end subroutine soptio_l
 elemental subroutine soptio_r(var,optio_r)
 
 real,intent(in),optional  :: var !< variabile da controllare
-real,intent(out) :: optio_r
+real,intent(out) :: optio_r !< variabile pari a var se presente altrimenti missing
 
 if (present(var))then
   optio_r=var
@@ -206,7 +209,7 @@ end subroutine soptio_r
 elemental subroutine soptio_d(var,optio_d)
 
 real (kind=fp_d),intent(in),optional  :: var !< variabile da controllare
-real (kind=fp_d),intent(out) :: optio_d
+real (kind=fp_d),intent(out) :: optio_d !< variabile pari a var se presente altrimenti missing
 
 if (present(var))then
   optio_d=var
@@ -222,7 +225,7 @@ end subroutine soptio_d
 elemental subroutine soptio_c(var,optio_c)
 
 character (len=*),intent(in),optional  :: var !< variabile da controllare
-CHARACTER (len=*),intent(out) :: optio_c
+CHARACTER (len=*),intent(out) :: optio_c !< variabile pari a var se presente altrimenti missing
 
 
 if (present(var))then
@@ -236,11 +239,11 @@ end subroutine soptio_c
 
 
 !> Return the optional values if present or missing
-!assume .false. for default
+!!assume .false. for default
 elemental subroutine soptio_log(var,optio_log)
 
 logical,intent(in),optional  :: var !< variabile da controllare
-logical,intent(out) :: optio_log
+logical,intent(out) :: optio_log !< variabile pari a var se presente altrimenti missing
 
 if (present(var))then
   optio_log=var
