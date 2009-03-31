@@ -1,3 +1,4 @@
+#include "config.h"
 module regular_ll_class
 
 ! REGULAR LAT LON

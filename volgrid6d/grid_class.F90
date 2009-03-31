@@ -1,3 +1,4 @@
+#include "config.h"
 !>\brief  classe per la gestione delle aree geografiche associate a dati su grigliato.
 !!
 !! Questo modulo definisce gli oggetti e i metodi per gestire

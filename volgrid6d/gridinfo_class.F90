@@ -1,3 +1,4 @@
+#include "config.h"
 !> \brief Classe per la gestione delle informazioni di griglia dei grib.
 !!
 !! Questo modulo definisce gli oggetti e i metodi per gestire dati grib.

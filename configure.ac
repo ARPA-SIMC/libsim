@@ -1,6 +1,6 @@
 dnl Process this file with autoconf to produce a configure script.
 
-AC_INIT(libsim, 2.6.7, [dcesari@arpa.emr.it])
+AC_INIT(libsim, 2.6.8, [dcesari@arpa.emr.it])
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_SRCDIR([configure.ac])
 AM_INIT_AUTOMAKE([foreign])
@@ -24,7 +24,7 @@ else
   sizeof_ptr_c="__error__"
 fi
 AC_DEFINE_UNQUOTED(SIZEOF_PTR_C, $sizeof_ptr_c,
- "Fortran KIND defining an INTEGER containing a C pointer")
+ [Fortran KIND defining an INTEGER containing a C pointer])
 
 dnl Locate Fortran 90 compiler among these if not specified
 AC_PROG_FC([gfortran pgf90 ifort g95 xlf90 f90])
@@ -34,7 +34,14 @@ AC_FC_WRAPPERS()dnl Determine how to call C from Fortran
 AC_ARG_ENABLE(debug-mode,
            [  --enable-debug-mode      enable debug mode],
 	   debug="yes", debug="no")
-AM_CONDITIONAL(DEBUG, test "x$debug" = "xyes")
+if test "x$debug" = "xyes"; then
+if test "x$FC" = "xgfortran"; then
+FCFLAGS="$FCFLAGS -g -fbounds-check"
+else
+FCFLAGS="$FCFLAGS -g -C"
+fi
+AC_DEFINE(DEBUG, 1, [Enable debugging mode])
+fi
 
 dnl search for log4c, if not found build a dummy log4fortran
 AC_CHECK_HEADERS([log4c.h] ,
@@ -54,7 +61,7 @@ fi
 
 dnl end of test for log4c
 if test "x$dummy_log4fortran" != "xyes" ; then
-  AC_DEFINE_UNQUOTED(LOG4FORTRAN, TRUE,"Enable log4c")
+  AC_DEFINE_UNQUOTED(LOG4FORTRAN, TRUE, [Enable log4c])
 fi
 AM_CONDITIONAL(LOG4FORTRAN, test "x$dummy_log4fortran" != "xyes")
 
@@ -105,7 +112,6 @@ unset save_cppflags ora_cppflags ora_ldflags ora_lib
 fi
 AM_CONDITIONAL(ORSIM, test "x$enableval" = "xyes")
 
-dnl AC_LANG_PUSH([Fortran 77])dnl Do the following checks in Fortran
 AC_LANG_PUSH(Fortran)dnl Do the following checks in Fortran
 AC_FC_SRCEXT(f90)dnl and use .f90 extension
 
@@ -117,7 +123,7 @@ AC_CHECK_LIB([shp-fortran], [shpopen],
  AC_MSG_RESULT([shapelib code included])
   SHP_LIBS="-lshp-fortran -lshp"
   AC_SUBST(SHP_LIBS)
-  AC_DEFINE(HAVE_LIBSHP_FORTRAN, 1, "shp-fortran library found"),
+  AC_DEFINE(HAVE_LIBSHP_FORTRAN, 1, [Enable shp-fortran]),
  AC_MSG_ERROR([fortran bindings to shp library not found]), [-lshp] )
 else
 AC_MSG_RESULT([shapelib code not included])
@@ -204,11 +210,12 @@ if test "x$enableval" = "xyes"; then
   AC_SUBST(NGMATH_LIBS)
 
   LDFLAGS=$_ldflags
+  AC_DEFINE(NGMATH, 1, [Enable ngmath code])
 
 else
   AC_MSG_RESULT([ngmath code not included])
 fi
-  AM_CONDITIONAL(NGMATH, test "x$enableval" = "xyes")
+AM_CONDITIONAL(NGMATH, test "x$enableval" = "xyes")
 
 
 #we here test for f77; will be better develop a test for f90

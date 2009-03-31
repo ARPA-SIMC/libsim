@@ -1,3 +1,4 @@
+#include "config.h"
 !> \defgroup volgrid6d Pacchetto volgrid6d, libreria volgrid6d
 
 !> \brief Questo modulo definisce gli oggetti e i metodi per gestire dati in proiezione e non su grigliato regolare(gridded).

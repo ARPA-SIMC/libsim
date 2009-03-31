@@ -1,6 +1,6 @@
-Summary: libsim: librerie di utilit‡ in Fortran 90
+Summary: libsim: librerie di utilit√† in Fortran 90
 Name: libsim
-Version: 2.6.7
+Version: 2.6.8
 Release: 1
 License: GPL
 Group: Applications/Meteo
@@ -16,14 +16,14 @@ Requires: libdballef4 >= 4.0.6 grib_api >= 1.7.0
 
 
 %package -n libsim-doc
-Summary:  libsim documentation
+Summary: libsim documentation
 Group: Applications/Meteo
 
 %description -n libsim-doc
-Librerie di utilit‡ in Fortran 90, documentazione .
+Librerie di utilit√† in Fortran 90, documentazione .
 
 %description
-Libsim comprende tre gruppi di moduli di utilit‡ in Fortran 90:
+Libsim comprende tre gruppi di moduli di utilit√† in Fortran 90:
 
 libsim_base definisce moduli e classi di uso generale in applicazioni
 scientifiche, come la gestione di errori in esecuzione, la gestione di
