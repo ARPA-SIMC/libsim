@@ -30,7 +30,7 @@ CONTAINS
 !
 !------------------------------------------------------------------------------
 
-real function OE(TD,TT,PT)
+elemental real function OE(TD,TT,PT)
 
 ! Calcola la  Temperatura  Equivalente  Potenziale Adiabatica , dapprima trova 
 ! la pressione  di saturazione, riporta la satura alla   1000   hPa e trova la 
@@ -75,7 +75,7 @@ end function OE
 
 !------------------------------------------------------------------------------
 
-real function O(T,PT)
+elemental real function O(T,PT)
 
 !  Calcola la Temperatura potenziale date la temperatura e la pressione. 
 !  secondo la formula : 
@@ -113,7 +113,7 @@ end function O
 
 !------------------------------------------------------------------------------
 
-real function OW(TD,TT,PT)
+elemental real function OW(TD,TT,PT)
  
 !  Calcola la Temperatura Potenziale di Bulbo Bagnato in (K) 
 !
@@ -147,7 +147,7 @@ end function OW
 
 !------------------------------------------------------------------------------
 
-real function  OS(T,PT)
+elemental real function  OS(T,PT)
 
 !  Calcola la Temperatura Adiabatica Satura 
 !  caratterizzata dalla temperatura T e dalla pressione P 
@@ -177,7 +177,7 @@ end function OS
  
 !------------------------------------------------------------------------------
 
-real function  TE(TD,TT,PT)
+elemental real function  TE(TD,TT,PT)
 
 !  Calcola la Temperatura Equivalente Isobarica espressa in gradi Kelvin 
 ! 
@@ -209,7 +209,7 @@ end function TE
 
 !------------------------------------------------------------------------------
 
-real function TRUG(UMID,T)
+elemental real function TRUG(UMID,T)
 
 !  Calcola la temperatura di rugiada  secondo la stessa formula 
 !  usata per il calcolo dell'umidita` relativa, risolta per 
@@ -247,7 +247,7 @@ end function TRUG
 !----------------------------------------------------------------------------
 
 
-real function  TW( TD,TT,PT )
+elemental real function  TW( TD,TT,PT )
 
 !  Calcola la Temperatura di Bulbo Bagnato isobarica, differisce sul
 !  secondo decimale dalla temepratura di bulbo bagnato adiabatica, poichè
@@ -305,7 +305,7 @@ end function TW
 
 !--------------------------------------------------------------------------
 
-real function TVIR(TD,TT,PT)
+elemental real function TVIR(TD,TT,PT)
 
 !  Calcola la Temperatura virtuale dell'aria secondo la formula: 
 ! 
@@ -347,7 +347,7 @@ end function TVIR
 !--------------------------------------------------------------------------
 
 
-real function USPEC(TD,PT)
+elemental real function USPEC(TD,PT)
 
 !  Calcola l'umidita` specifica secondo la formula:
 ! 
@@ -385,7 +385,7 @@ end function USPEC
 
 !--------------------------------------------------------------------------
  
-real function FR (T,TD )
+elemental real function FR (T,TD )
 
 ! Calcola l'umidita` relativa  secondo la formula: 
 !
@@ -419,7 +419,7 @@ end function FR
  
 !-----------------------------------------------------------------------------
 
-real function W(TD,PT) 
+elemental real function W(TD,PT) 
 
 !  Calcola il rapporto di mescolanza  secondo la formula: 
 ! 
@@ -456,7 +456,7 @@ end function W
 
 !-----------------------------------------------------------------
 
-real function QTORELHUM(Q,PT,T) 
+elemental real function QTORELHUM(Q,PT,T) 
  
 ! CALCOLA L'UMIDITA RELATIVA A PARTIRE DALLA UMIDITA' SPECIFICA 
 ! REF.: BAKER, MON.WEA.REV.,1983,111,PAG.328 E SEG. 
@@ -475,7 +475,7 @@ end function QTORELHUM
  
 !----------------------------------------------------------------- 
 
-real function RELHUMTOQ(RH,PT,T)
+elemental real function RELHUMTOQ(RH,PT,T)
  
 ! CALCOLA L'UMIDITA SPECIFICA A PARTIRE DALLA UMIDITA RELATIVA 
 
@@ -494,7 +494,7 @@ end function RELHUMTOQ
  
 !-----------------------------------------------------------------------
  
-real function ESAT(T)  
+elemental real function ESAT(T)  
  
 ! CALCOLA LA PRESSIONE DI VAPORE SATURO A PARTIRE DALLA TEMPERATURA 
 ! REF.: BAKER, MON.WEA.REV.,1983,111,PAG.328 E SEG. 
@@ -609,7 +609,7 @@ real function eql (pt,tt,np,plow,tlow)
 !-------------------------------------------------------------------------
  
   integer,intent(in)::np
-  real,dimension(np)::pt,tt
+  real,dimension(np),intent(in)::pt,tt
   real,intent(in)::plow,tlow
   real::pres,temp,tamb
 
@@ -908,7 +908,7 @@ end function cin
 
 !--------------------------------------------------------------------------
 
-real function ALCL(TD,TT,PT)
+elemental real function ALCL(TD,TT,PT)
 
 !  Calcola la pressione del punto di saturazione di 
 !  di una massa d'aria sollevata adiabaticamente, a prescindere dalla
@@ -955,7 +955,7 @@ end function ALCL
  
 !--------------------------------------------------------------------------
 
-real function ALCLM(aw,ao,pt)  
+elemental real function ALCLM(aw,ao,pt)  
 
 ! calcola il lifted condensation level a partire dal rapporto di mescolanza 
 ! medio dello strato e dalla temperatura potenziale media dello strato
@@ -990,7 +990,7 @@ end function ALCLM
 
 !--------------------------------------------------------------------------
 
-real function  CT(WBAR,P_CCL,P0 )     
+elemental real function  CT(WBAR,P_CCL,P0 )     
 ! 
 ! Calcola la temperatura di attivazione termo-convettiva 
 ! 
@@ -1174,7 +1174,7 @@ end function TRPT
 
 !---------------------------------------------------------------------------
 
-real function TMR(W,P)  
+elemental real function TMR(W,P)  
 
 ! Calcola la temperatura sull' isoigrometrica 
 ! caratterizzata dal rapporto di mescolanza W alla pressione P. 
@@ -1202,7 +1202,7 @@ end function TMR
 
 !---------------------------------------------------------------------------
 
-real function TDA(OO,P)    
+elemental real function TDA(OO,P)    
 
 ! Calcola la temperatura sull' adiabatica secca 
 ! caratterizzata dalla temperatura T_AD  alla pressione P. 
@@ -1232,7 +1232,7 @@ end function TDA
   
 !-----------------------------------------------------------------------------
 
-real function TSA(OSAT,PT) 
+elemental real function TSA(OSAT,PT) 
 
 ! Calcola la temperatura lungo una adiabatica satura 
 ! caratterizzata dalla temperatura T_AS alla pressione P 
@@ -1615,7 +1615,7 @@ real function AVVEZ (P1,DD1,FF1,P2,DD2,FF2,ALAT)
   call UV(dd2,ff2,U2,V2) 
   
   if(u2 > 300 .or. u1 > 300)then
-     AVVEZ=999.9 
+     AVVEZ=rmiss 
      return
   end if
 
