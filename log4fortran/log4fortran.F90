@@ -115,42 +115,24 @@ INTEGER ,PARAMETER :: L4F_UNKNOWN  = 1000 !< standard priority
 integer :: l4f_priority=L4F_NOTICE 
 
 
-character(len=510):: dummy_a_name
-
-private dummy_a_name 
-
-
-!> trasforma qualsiasi tipo fondamentale in stringa
-!INTERFACE a2c
-!  MODULE PROCEDURE c2c,r2c,d2c,i2c,b2c
-!END INTERFACE
-
-
-#ifdef LOG4FORTRAN
-
+#ifdef HAVE_LIBLOG4C
 !>Qui sono reperibili function e subroutine definite tramite questa interface
 !!e che richiamano funzioni C tramite la libreria CNF. Le funzioni chiamabili da fortran
 !!sono equivalenti a quelle messe a disposizione dalla libreria log4C
 interface 
 !>log4fortran constructors
 integer function l4f_init()
-
 end function l4f_init
 
 !>Initialize a logging category.
 integer function l4f_category_get (a_name)
 character (len=*),intent(in) :: a_name !< category name
-
 end function l4f_category_get
-
-
 
 !>Delete a logging category.
 subroutine l4f_category_delete(a_category)
 integer,intent(in):: a_category !< category name
-
 end subroutine l4f_category_delete
-
 
 !>Emit log message for a category with specific priority
 subroutine l4f_category_log (a_category,a_priority,&
@@ -158,22 +140,22 @@ subroutine l4f_category_log (a_category,a_priority,&
 integer,intent(in):: a_category !< category name
 integer,intent(in):: a_priority !< priority level
 character(len=*),intent(in):: a_format !< message to emit
-
 end subroutine l4f_category_log
-
 
 !>log4fortran destructors
 integer function l4f_fini()
-
 end function l4f_fini
 
 !>Ritorna un messaggio caratteristico delle priorità standard
-character(len=12) function  l4f_msg(a_priority)
+character(len=12) function l4f_msg(a_priority)
 integer,intent(in):: a_priority !< category name
-
 end function l4f_msg
 
 end interface
+
+#else
+
+CHARACTER(len=510), PRIVATE:: dummy_a_name
 
 #endif
 
@@ -225,53 +207,44 @@ end if
 
 end subroutine l4f_launcher
 
-
-
-#ifndef LOG4FORTRAN
-
-
+#ifndef HAVE_LIBLOG4C
 ! definisce delle dummy routine
 
 !>log4fortran constructors
 integer function l4f_init()
 
-l4f_priority=L4F_NOTICE
-
-l4f_init= 1
+l4f_priority = L4F_NOTICE
+l4f_init = 0
 
 end function l4f_init
-
 
 
 !>Initialize a logging category.
 integer function l4f_category_get (a_name)
 character (len=*),intent(in) :: a_name !< category name
 
-dummy_a_name=a_name
-
-l4f_category_get= 0
+dummy_a_name = a_name
+l4f_category_get = 0
 
 end function l4f_category_get
-
 
 
 !>Delete a logging category.
 subroutine l4f_category_delete(a_category)
 integer,intent(in):: a_category !< category name
 
-if (a_category == 0 ) dummy_a_name=""
+if (a_category == 0) dummy_a_name = ""
 
 end subroutine l4f_category_delete
 
 
 !>Emit log message for a category with specific priority
-subroutine l4f_category_log (a_category,a_priority,&
- a_format)
+subroutine l4f_category_log (a_category,a_priority,a_format)
 integer,intent(in):: a_category !< category name
 integer,intent(in):: a_priority !< priority level
 character(len=*),intent(in):: a_format !< message to emit
 
-if (a_category == 0 .and. a_priority <= l4f_priority  ) then
+if (a_category == 0 .and. a_priority <= l4f_priority) then
   write(*,*)"[dummy] ",l4f_msg(a_priority),trim(dummy_a_name)," - ",a_format
 end if
 
@@ -286,7 +259,7 @@ l4f_fini= 0
 end function l4f_fini
 
 !>Ritorna un messaggio caratteristico delle priorità standard
-character(len=12) function  l4f_msg(a_priority)
+character(len=12) function l4f_msg(a_priority)
 
 integer,intent(in):: a_priority !< category name
 
@@ -304,66 +277,8 @@ if (a_priority == L4F_TRACE)   l4f_msg="TRACE"
 if (a_priority == L4F_NOTSET)  l4f_msg="NOTSET"
 if (a_priority == L4F_UNKNOWN) l4f_msg="UNKNOWN"
 
-
 end function l4f_msg
 
-
-
 #endif
-
-
-
-!function c2c(c)
-!
-!character (len=*) :: c
-!character (len=len_trim(c)) :: c2c
-!
-!c2c=c
-!
-!end function c2c
-!
-!
-!
-!
-!function r2c(r)
-!
-!real :: r
-!character (len=15) :: r2c
-!
-!write (r2c,*)r
-!
-!end function r2c
-!
-!
-!function d2c(d)
-!
-!real(kind=fp_d) :: d
-!character (len=24) :: d2c
-!
-!write (d2c,*)d
-!
-!end function d2c
-!
-!
-!function i2c(i)
-!
-!integer :: i
-!character (len=12) :: i2c
-!
-!write (i2c,*)i
-!
-!end function i2c
-!
-!
-!function b2c(b)
-!
-!INTEGER(kind=int_b) :: b
-!character (len=6) :: b2c
-!
-!write (b2c,*)b
-!
-!end function b2c
-
-
 
 end module log4fortran

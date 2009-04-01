@@ -1853,7 +1853,7 @@ IF (this%trans%trans_type == 'inter') THEN
       x_in_p=pack(this%inter_xp(:,1),c_e(field_in))
       y_in_p=pack(this%inter_yp(:,1),c_e(field_in))
 
-#ifdef NGMATH
+#ifdef HAVE_LIBNGMATH
 
       CALL NATGRIDS(inn_p,x_in_p,y_in_p,field_in_p,&
        this%outnx ,this%outny ,real(this%inter_x(:,1)),real(this%inter_y(1,:)),field_out,IER)

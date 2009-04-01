@@ -31,10 +31,9 @@ AC_PROG_FC([gfortran pgf90 ifort g95 xlf90 f90])
 F77=$FC
 AC_FC_WRAPPERS()dnl Determine how to call C from Fortran
 
-AC_ARG_ENABLE(debug-mode,
-           [  --enable-debug-mode      enable debug mode],
-	   debug="yes", debug="no")
-if test "x$debug" = "xyes"; then
+AC_ARG_ENABLE(debug-mode, AC_HELP_STRING([--enable-debug-mode],
+  [enable debug mode]), , [enableval=no])dnl default disable
+if test "x$enableval" = "xyes"; then
 if test "x$FC" = "xgfortran"; then
 FCFLAGS="$FCFLAGS -g -fbounds-check"
 else
@@ -43,27 +42,39 @@ fi
 AC_DEFINE(DEBUG, 1, [Enable debugging mode])
 fi
 
+AC_ARG_ENABLE(log4c, AC_HELP_STRING([--disable-log4c],
+  [disable use of log4c package]), , [enableval=yes])dnl default enable
+
+if test "x$enableval" = "xyes"; then
 dnl search for log4c, if not found build a dummy log4fortran
-AC_CHECK_HEADERS([log4c.h] ,
-  AC_CHECK_LIB([log4c], [log4c_init], , AC_MSG_ERROR([log4c broken!])),
-  AC_MSG_RESULT([Building dummy log4fortran])
+  AC_CHECK_HEADERS([log4c.h],
+    log4c_h=yes,
+    AC_MSG_RESULT([Package log4c missing])
+    dummy_log4fortran=yes)
+dnl for some reason, this test does not work when inserted
+dnl in the previous AC_CHECK_HEADERS
+  if test "x$log4c_h" = "xyes"; then
+    AC_CHECK_LIB([log4c], [log4c_init],
+      true, AC_MSG_ERROR([Package log4c broken!]))dnl true is an empty operation
+    AC_CHECK_HEADERS([f77.h],
+      AC_CHECK_LIB([cnf], [cnfCptr],
+        LOG4C_LIBS="-llog4c -lcnf"
+        AC_SUBST(LOG4C_LIBS)
+        AC_DEFINE(HAVE_LIBLOG4C, 1, [Enable log4c])
+        AC_DEFINE(HAVE_LIBCNF, 1, [Enable cnf]),
+        AC_MSG_ERROR([Package cnf broken!])),
+      AC_MSG_RESULT([Package cnf missing])
+      dummy_log4fortran=yes)
+  fi
+else
+dnl build a dummy log4fortran
   dummy_log4fortran=yes
- )
-
-if test "x$dummy_log4fortran" = "x"; then
-AC_CHECK_HEADERS([f77.h] ,
-  AC_CHECK_LIB([cnf], [cnfCptr],
- , AC_MSG_ERROR([cnf broken!])),
-  AC_MSG_RESULT([Building dummy log4fortran])
-  dummy_log4fortran=yes
- )
 fi
 
-dnl end of test for log4c
-if test "x$dummy_log4fortran" != "xyes" ; then
-  AC_DEFINE_UNQUOTED(LOG4FORTRAN, TRUE, [Enable log4c])
+if test "x$dummy_log4fortran" = "xyes"; then
+  AC_MSG_RESULT([Building dummy log4fortran])
 fi
-AM_CONDITIONAL(LOG4FORTRAN, test "x$dummy_log4fortran" != "xyes")
+AM_CONDITIONAL(LOG4C, test "x$dummy_log4fortran" != "xyes")
 
 AC_ARG_ENABLE(oraclesim, AC_HELP_STRING([--disable-oraclesim],
   [disable oraclesim/meteodata support]),,[enableval=yes])dnl default enable
@@ -119,11 +130,11 @@ AC_FC_SRCEXT(f90)dnl and use .f90 extension
 AC_ARG_ENABLE(shapelib, AC_HELP_STRING([--disable-shapelib],
   [disable shapelib support]),,[enableval=yes])dnl default enable
 if test "x$enableval" = "xyes"; then
-AC_CHECK_LIB([shp-fortran], [shpopen], 
+AC_CHECK_LIB([shp-fortran], [shpopen],
  AC_MSG_RESULT([shapelib code included])
-  SHP_LIBS="-lshp-fortran -lshp"
-  AC_SUBST(SHP_LIBS)
-  AC_DEFINE(HAVE_LIBSHP_FORTRAN, 1, [Enable shp-fortran]),
+ SHP_LIBS="-lshp-fortran -lshp"
+ AC_SUBST(SHP_LIBS)
+ AC_DEFINE(HAVE_LIBSHP_FORTRAN, 1, [Enable shp-fortran]),
  AC_MSG_ERROR([fortran bindings to shp library not found]), [-lshp] )
 else
 AC_MSG_RESULT([shapelib code not included])
@@ -179,15 +190,15 @@ AM_CONDITIONAL(DBALLE, test "x$enableval" = "xyes")
 AC_ARG_ENABLE(gribapi, AC_HELP_STRING([--disable-gribapi],
   [disable gribapi support]),,[enableval=yes])dnl default enable
 if test "x$enableval" = "xyes"; then
- # test in f77 because f90 test do not work
- AC_CHECK_LIB([grib_api_f77], [grib_set_int],
-       AC_MSG_RESULT([gribapi code included])
-       GRIBAPI_LIBS="-lgrib_api_f90 -lgrib_api -ljasper"
-       AC_SUBST(GRIBAPI_LIBS),
-       AC_MSG_ERROR([gribapi library not found]),
-       [-lgrib_api -ljasper])
+ # test in f77 because f90 test does not work
+  AC_CHECK_LIB([grib_api_f77], [grib_set_int],
+    AC_MSG_RESULT([gribapi code included])
+    GRIBAPI_LIBS="-lgrib_api_f90 -lgrib_api -ljasper"
+    AC_SUBST(GRIBAPI_LIBS),
+    AC_MSG_ERROR([gribapi library not found]),
+    [-lgrib_api -ljasper])
 else
-AC_MSG_RESULT([gribapi code not included])
+  AC_MSG_RESULT([gribapi code not included])
 fi
 AM_CONDITIONAL(GRIBAPI, test "x$enableval" = "xyes")
 
@@ -196,22 +207,19 @@ AC_ARG_ENABLE(ngmath, AC_HELP_STRING([--disable-ngmath],
   [disable ngmath ncarg interpolation support]),,[enableval=yes])dnl default enable
 if test "x$enableval" = "xyes"; then
  # test in f77 because f90 test do not work
-
   _ldflags=${LDFLAGS}
-
   LDFLAGS="-L/usr/lib/ncarg $LDFLAGS"
+
   AC_CHECK_LIB([ngmath], [natgridd],
     NGMATH_LDFLAGS="-L/usr/lib/ncarg"
     NGMATH_LIBS="-lngmath"
+    AC_SUBST(NGMATH_LDFLAGS)
+    AC_SUBST(NGMATH_LIBS)
+    AC_DEFINE(HAVE_LIBNGMATH, 1, [Enable ngmath code])
     AC_MSG_RESULT([ngmath code included]),
     AC_MSG_ERROR([ngmath ncarg library not found]))
 
-  AC_SUBST(NGMATH_LDFLAGS)
-  AC_SUBST(NGMATH_LIBS)
-
   LDFLAGS=$_ldflags
-  AC_DEFINE(NGMATH, 1, [Enable ngmath code])
-
 else
   AC_MSG_RESULT([ngmath code not included])
 fi
@@ -222,13 +230,13 @@ AM_CONDITIONAL(NGMATH, test "x$enableval" = "xyes")
 AC_ARG_ENABLE(netcdf, AC_HELP_STRING([--disable-netcdf],
   [disable netcdf support]),,[enableval=yes])dnl default enable
 if test "x$enableval" = "xyes"; then
-AC_CHECK_LIB([netcdff], [nf_inq_libvers],
- AC_MSG_RESULT([netcdf code included])
- NETCDF_LIBS="-lnetcdff -lnetcdf"
- AC_SUBST(NETCDF_LIBS),
- AC_MSG_ERROR([netcdf library not found]),[-lnetcdf])
+  AC_CHECK_LIB([netcdff], [nf_inq_libvers],
+    AC_MSG_RESULT([netcdf code included])
+    NETCDF_LIBS="-lnetcdff -lnetcdf"
+    AC_SUBST(NETCDF_LIBS),
+    AC_MSG_ERROR([netcdf library not found]),[-lnetcdf])
 else
-AC_MSG_RESULT([netcdf code not included])
+  AC_MSG_RESULT([netcdf code not included])
 fi
 AM_CONDITIONAL(NETCDF, test "x$enableval" = "xyes")
 
