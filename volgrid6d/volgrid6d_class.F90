@@ -693,8 +693,8 @@ if (associated (this%gaid))then
     this%gaid(ilevel,itime,itimerange,ivar)=-1
     call grib_clone(gridinfo%gaid,this%gaid(ilevel,itime,itimerange,ivar))
 #ifdef DEBUG
-    call l4f_category_log(this%category,L4F_DEBUG,"clone gaid from: "//to_char(gridinfo%gaid)//&
-     " to : "//to_char(this%gaid(ilevel,itime,itimerange,ivar)))
+    call l4f_category_log(this%category,L4F_DEBUG,"clone gaid from: "//TRIM(to_char(gridinfo%gaid))//&
+     " to : "//TRIM(to_char(this%gaid(ilevel,itime,itimerange,ivar))))
 #endif
   else
     this%gaid(ilevel,itime,itimerange,ivar)=gridinfo%gaid

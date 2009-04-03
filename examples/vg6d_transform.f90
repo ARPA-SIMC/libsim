@@ -17,7 +17,7 @@ type(griddim_def) :: griddim_out
 type(transform_def) :: trans
 type(grid_transform) :: grid_trans
 
-integer :: nx=30,ny=30,component_flag=1
+INTEGER :: nx=30,ny=30,component_flag=1,npx=4,npy=4
 doubleprecision :: lon_min=0., lon_max=30., lat_min=30., lat_max=60.
 doubleprecision :: latitude_south_pole=-32.5,longitude_south_pole=10.,angle_rotation=0.
 character(len=80) :: type='regular_ll',trans_type='inter',sub_type='near'
@@ -36,7 +36,7 @@ category=l4f_category_get(a_name//".main")
 call l4f_category_log(category,L4F_INFO,"inizio")
 
 do
-  select case( getopt( "a:b:c:d:hi:l:m:n:o:p:q:r:s:t:u:v:z:"))
+  select case( getopt( "a:b:c:d:f:g:hi:l:m:n:o:p:q:r:s:t:u:v:z:"))
 
   case( char(0))
     exit
@@ -72,6 +72,20 @@ do
       call exit(ier)
     end if
 
+  case( 'f' )
+    read(optarg,*,iostat=ier)npx
+    if (ier/= 0)then
+      call l4f_category_log(category,L4F_ERROR,'f option argument error')
+      call help()
+      call exit(ier)
+    end if
+  case( 'g' )
+    read(optarg,*,iostat=ier)npy
+    if (ier/= 0)then
+      call l4f_category_log(category,L4F_ERROR,'g option argument error')
+      call help()
+      call exit(ier)
+    end if
   case( 'i' )
     read(optarg,*,iostat=ier)nx
     if (ier/= 0)then
@@ -201,16 +215,19 @@ if(trans_type == 'inter')then
 
 end if
 
-call init(trans, trans_type=trans_type,sub_type=sub_type, &
- ilon=ilon,ilat=ilat,flon=flon,flat=flat,&
- categoryappend="trasformation")
-
-
 !trasformation object
-call init(trans, trans_type=trans_type,sub_type=sub_type, categoryappend="trasformation")
+call init(trans, trans_type=trans_type, sub_type=sub_type, &
+ ilon=ilon, ilat=ilat, flon=flon, flat=flat, npx=npx, npy=npy, &
+ categoryappend="trasformation")
 call import (volgrid,filename=infile,categoryappend="input")
 
-call transform(trans,griddim_out,volgrid6d_in=volgrid, volgrid6d_out=volgrid_out,clone=.true.,categoryappend="trasformato")
+if (trans_type == 'inter') then
+  CALL transform(trans,griddim_out,volgrid6d_in=volgrid, &
+   volgrid6d_out=volgrid_out,clone=.TRUE.,categoryappend="trasformato")
+else
+  CALL transform(trans,volgrid6d_in=volgrid, volgrid6d_out=volgrid_out, &
+   clone=.TRUE.,categoryappend="trasformato")
+endif
 
 call l4f_category_log(category,L4F_INFO,"trasformato")
 if (associated(volgrid)) call delete(volgrid)
@@ -240,14 +257,16 @@ print*,"and more memory will be required"
 print*,""
 print*,""
 print*,"subarea [-h] [-a ilon] [-b ilat] [-c flon] [-d flat] "
+print*,"           [-f npx] [-g npy]"
 print*,"           [-i nx] [-l ny] [-m lon_min] [-n lon_max] [-o lat_min] [-p lat_max]"
 print*,"           [-q latitude_south_pole] [-r longitude_south_pole] [-s angle_rotation] [-t component_flag]"
 print*,"           [-u type] [-v trans_type] [-z sub_type=optarg]"
 print*,"           infile outfile"
 print*,""
 print*,"-h  this help message"
-print*,"ilon,ilat  lon and lat in the left down point"
-print*,"flon,flat  lon and lat in the right up  point"
+print*,"ilon,ilat  lon and lat in the lower left point"
+print*,"flon,flat  lon and lat in the upper right point"
+PRINT*,"npx,npy    number of points along x and y for boxregrid"
 print*,"trans_type transformation type; inter for interpolation, zomm for zomming, boxrregrid for resolution change"
 print*,"sub_type   transformation sub_type"
 print*,"           inter: near , bilin"

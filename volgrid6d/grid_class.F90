@@ -139,20 +139,21 @@ end type zoom_coo
 type zoom
   CHARACTER(len=80) :: sub_type !< subtype of transformation, can be \c 'index', \c 'coord'
   type(zoom_ind) :: index !< zoom providing index
-  type(zoom_coo) :: coord !< zoom priding coordinates
+  type(zoom_coo) :: coord !< zoom providing coordinates
 end type zoom
 
-!> boxregrid subtype average information
-type boxregrid_average
-INTEGER :: npx !< number of points to average along x direction
-INTEGER :: npy !< number of points to average along y direction
-
-end type boxregrid_average
+!!> boxregrid subtype average information
+!type boxregrid_average
+!
+!end type boxregrid_average
+! no extra information needed now
 
 !> boxregrid  information
 type boxregrid
   CHARACTER(len=80) :: sub_type !< subtype of transformation, can be \c 'average'
-  type(boxregrid_average) :: average
+  INTEGER :: npx !< number of points to average along x direction
+  INTEGER :: npy !< number of points to average along y direction
+!  type(boxregrid_average) :: average
 end type boxregrid
 
 
@@ -412,14 +413,14 @@ end subroutine delete_griddim
 subroutine copy_griddim(this,that,categoryappend)
 
 type(griddim_def),intent(in) :: this !< oggetto da clonare
-type(griddim_def),intent(out) :: that !> oggetto clonato
+type(griddim_def),intent(out) :: that !< oggetto clonato
 character(len=*),INTENT(in),OPTIONAL :: categoryappend !< appende questo suffisso al namespace category di log4fortran
 
 character(len=512) :: a_name
 
 that%grid%type=this%grid%type
 
-select case ( this%grid%type%type)
+select case (this%grid%type%type)
 
 case ( "regular_ll")
 
@@ -432,8 +433,8 @@ case ( "rotated_ll")
   call copy (this%dim,that%dim)
   
 case default
-  call l4f_category_log(this%category,L4F_ERROR,"copy_griddim gtype: "//this%grid%type%type//" non gestita" )
-  call raise_error("copy_griddim gtype non gestita")
+  call l4f_category_log(this%category,L4F_ERROR,"copy_griddim gtype: "//TRIM(this%grid%type%type)//" non gestita")
+  call raise_error("copy_griddim gtype: "//TRIM(this%grid%type%type)//" non gestita")
 
 end select
 
@@ -924,9 +925,8 @@ call optio(flat,this%zoom%coord%flat)
 call optio(boxregrid_type,this%boxregrid%sub_type)
 if (trans_type == "boxregrid".and. .not. c_e(this%boxregrid%sub_type))call optio(sub_type,this%boxregrid%sub_type)
 
-call optio(npx,this%boxregrid%average%npx)
-call optio(npy,this%boxregrid%average%npy)
-
+call optio(npx,this%boxregrid%npx)
+call optio(npy,this%boxregrid%npy)
 
 call optio(inter_type,this%inter%sub_type)
 if (trans_type == "inter".and. .not. c_e(this%inter%sub_type))call optio(sub_type,this%inter%sub_type)
@@ -991,53 +991,33 @@ if (this%trans_type == 'zoom') then
 
 else if (this%trans_type == 'boxregrid') then
 
-  if (this%boxregrid%sub_type == 'average')then
+  IF (c_e(this%boxregrid%npx) .AND. c_e(this%boxregrid%npy)) THEN
 
-    IF ( c_e(this%boxregrid%average%npx) .and. c_e(this%boxregrid%average%npy)) THEN
+    IF (this%boxregrid%npx <= 0 .OR. this%boxregrid%npy <= 0 ) THEN
+      CALL l4f_category_log(this%category,L4F_ERROR,'invalid regrid parameters: '//&
+       TRIM(to_char(this%boxregrid%npx))//' '//TRIM(to_char(this%boxregrid%npy)))
+      CALL raise_error('invalid regrid parameters')
+    ENDIF
 
-                                ! check
-      IF (this%boxregrid%average%npx <= 0 .OR. this%boxregrid%average%npy <= 0 ) THEN
-        CALL l4f_category_log(this%category,L4F_ERROR,'invalid regrid parameters: '//&
-         TRIM(to_char(this%boxregrid%average%npx))//' '//TRIM(to_char(this%boxregrid%average%npy)))
-        CALL raise_error('invalid regrid parameters')
-      ENDIF
-          
+  ELSE
 
-    else
+    CALL l4f_category_log(this%category,L4F_ERROR,'boxregrid parameters npx, npy not provided')
+    CALL raise_fatal_error('boxregrid parameters npx, npy not provided')
 
-      CALL l4f_category_log(this%category,L4F_ERROR,'boxregrid parameters npx, npy not provided')
-      CALL raise_fatal_error('boxregrid parameters npx, npy not provided')
+  ENDIF
 
-    end if
-
-  else
-
+  IF (this%boxregrid%sub_type == 'average')THEN
+! nothing to do for now
+  ELSE
     CALL l4f_category_log(this%category,L4F_ERROR,'boxregrid: sub_type is wrong')
     CALL raise_fatal_error('boxregrid: sub_type is wrong')
-    
-  end if
+  ENDIF
 
 
 else if (this%trans_type == 'inter') then
 
   if (this%inter%sub_type == 'near')then
 
-!!$    IF ( c_e(this%boxregrid%average%npx) .and. c_e(this%boxregrid%average%npy)) THEN
-!!$
-!!$                                ! check
-!!$      IF (this%boxregrid%average%npx <= 0 .OR. this%boxregrid%average%npy <= 0 ) THEN
-!!$        CALL l4f_category_log(this%category,L4F_ERROR,'invalid regrid parameters: '//&
-!!$         TRIM(to_char(this%boxregrid%average%npx))//' '//TRIM(to_char(this%boxregrid%average%npy)))
-!!$        CALL raise_error('invalid regrid parameters')
-!!$      ENDIF
-!!$          
-!!$
-!!$    else
-!!$
-!!$      CALL l4f_category_log(this%category,L4F_ERROR,'boxregrid parameters npx, npy not provided')
-!!$      CALL raise_fatal_error('boxregrid parameters npx, npy not provided')
-!!$
-!!$    end if
 
   else if (this%inter%sub_type == 'bilin')then
 
@@ -1090,8 +1070,8 @@ this%zoom%coord%flat=dmiss
 
 this%boxregrid%sub_type=cmiss
 
-this%boxregrid%average%npx=imiss
-this%boxregrid%average%npy=imiss
+this%boxregrid%npx=imiss
+this%boxregrid%npy=imiss
 
 this%inter%sub_type=cmiss
 
@@ -1253,13 +1233,6 @@ ELSE IF (this%trans%trans_type == 'boxregrid') THEN
     
     end select
 
-
-! old grid
-!  this%intpar(1) = this%trans%boxregrid%average%npx
-!  this%intpar(2) = this%trans%boxregrid%average%npy
-!  this%intpar(3) = nx
-!  this%intpar(4) = ny
-
     this%innx = nx
     this%inny = ny
 
@@ -1267,11 +1240,13 @@ ELSE IF (this%trans%trans_type == 'boxregrid') THEN
     steplat=(lat_max-lat_min)/(ny-1)
 
 ! new grid
-    lon_min_new = lon_min + (this%trans%boxregrid%average%npx - 1)*0.5D0*steplon
-    lat_min_new = lat_min + (this%trans%boxregrid%average%npy - 1)*0.5D0*steplat
+    lon_min_new = lon_min + (this%trans%boxregrid%npx - 1)*0.5D0*steplon
+    lat_min_new = lat_min + (this%trans%boxregrid%npy - 1)*0.5D0*steplat
 
-    out%dim%nx = nx/this%trans%boxregrid%average%npx
-    out%dim%ny = ny/this%trans%boxregrid%average%npy
+    CALL l4f_category_log(this%category,L4F_DEBUG,"copying griddim in out")
+    call copy (in,out)
+    out%dim%nx = nx/this%trans%boxregrid%npx
+    out%dim%ny = ny/this%trans%boxregrid%npy
 
     this%outnx=out%dim%nx
     this%outny=out%dim%nx
@@ -1279,8 +1254,8 @@ ELSE IF (this%trans%trans_type == 'boxregrid') THEN
     call set_val( out,lon_min = lon_min_new )
     call set_val( out,lat_min = lat_min_new )
 
-    steplon = steplon/this%trans%boxregrid%average%npx
-    steplat = steplat/this%trans%boxregrid%average%npy
+    steplon = steplon*this%trans%boxregrid%npx
+    steplat = steplat*this%trans%boxregrid%npy
 
     call set_val( out, lon_max = lon_min_new + (out%dim%nx - 1)*steplon )
     call set_val( out, lat_max = lat_min_new + (out%dim%ny - 1)*steplat )
@@ -1706,12 +1681,12 @@ ELSE IF (this%trans%trans_type == 'boxregrid') THEN
 #endif
 
   jj = 0
-  DO j = 1, this%inny - this%trans%boxregrid%average%npy + 1, this%trans%boxregrid%average%npy
-    je = j+this%trans%boxregrid%average%npy-1
+  DO j = 1, this%inny - this%trans%boxregrid%npy + 1, this%trans%boxregrid%npy
+    je = j+this%trans%boxregrid%npy-1
     jj = jj+1
     ii = 0
-    DO i = 1, this%innx - this%innx + 1, this%innx
-      ie = i+this%trans%boxregrid%average%npx-1
+    DO i = 1, this%innx - this%trans%boxregrid%npx + 1, this%trans%boxregrid%npx
+      ie = i+this%trans%boxregrid%npx-1
       ii = ii+1
       navg = COUNT(field_in(i:ie,j:je) /= rmiss)
       IF (navg > 0) THEN
