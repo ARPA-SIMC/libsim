@@ -1249,7 +1249,7 @@ ELSE IF (this%trans%trans_type == 'boxregrid') THEN
     out%dim%ny = ny/this%trans%boxregrid%npy
 
     this%outnx=out%dim%nx
-    this%outny=out%dim%nx
+    this%outny=out%dim%ny
 
     call set_val( out,lon_min = lon_min_new )
     call set_val( out,lat_min = lat_min_new )
@@ -1649,14 +1649,16 @@ call l4f_category_log(this%category,L4F_DEBUG,"start grid_transform_compute")
 if (any(shape(field_in) /= (/this%innx,this%inny/))) then
 
   call l4f_category_log(this%category,L4F_ERROR,"inconsistent in shape: "//&
-   trim(to_char(this%innx))//" - "//trim(to_char(this%inny)))
+   TRIM(to_char(this%innx))//","//TRIM(to_char(this%inny))//" /= "//&
+   TRIM(to_char(SIZE(field_in,1)))//","//TRIM(to_char(SIZE(field_in,2))))
   call raise_fatal_error("inconsistent shape")
 end if
 
 if (any(shape(field_out) /= (/this%outnx,this%outny/))) then
 
   call l4f_category_log(this%category,L4F_ERROR,"inconsistent out shape: "//&
-   trim(to_char(this%outny))//" - "//trim(to_char(this%outny)))
+   TRIM(to_char(this%outnx))//","//TRIM(to_char(this%outny))//" /= "//&
+   TRIM(to_char(SIZE(field_out,1)))//","//TRIM(to_char(SIZE(field_out,2))))
   call raise_fatal_error("inconsistent shape")
 end if
 
