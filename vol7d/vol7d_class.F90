@@ -195,6 +195,18 @@ INTERFACE display
   MODULE PROCEDURE vol7d_display
 END INTERFACE
 
+!>doubleprecision data conversion
+INTERFACE doubledat
+  MODULE PROCEDURE doubledatd,doubledatr,doubledati,doubledatb,doubledatc
+END INTERFACE
+
+!>real data conversion
+INTERFACE realdat
+  MODULE PROCEDURE realdatd,realdatr,realdati,realdatb,realdatc
+END INTERFACE
+
+
+
 !!$INTERFACE get_volana
 !!$  MODULE PROCEDURE vol7d_get_volanar, vol7d_get_volanad, vol7d_get_volanai, &
 !!$   vol7d_get_volanab, vol7d_get_volanac
@@ -226,6 +238,7 @@ PRIVATE vol7d_get_volr, vol7d_get_vold, vol7d_get_voli, vol7d_get_volb, &
  vol7d_init, vol7d_delete, vol7d_write_on_file, vol7d_read_from_file, &
  vol7d_check_alloc_ana,  vol7d_check_alloc_dati, vol7d_display
 
+PRIVATE doubledatd,doubledatr,doubledati,doubledatb,doubledatc
 
 CONTAINS
 
@@ -355,14 +368,24 @@ IF (ASSOCIATED(this%timerange))then
   end do
 end if
 
-!!$IF (ASSOCIATED(this%network))     call display(this%network)
-!!$
-!!$if (associated(this%anavar))      call display(this%anavar)
-!!$if (associated(this%anaattr))     call display(this%anaattr)
-!!$if (associated(this%anavarattr))  call display(this%anavarattr)
-!!$if (associated(this%dativar))     call display(this%dativar)
-!!$if (associated(this%datiattr))    call display(this%datiattr)
-!!$if (associated(this%dativarattr)) call display(this%dativarattr)
+
+print*,"---- ana vector ----"
+
+print*,"- anavar -"
+call display(this%anavar)
+print*,"- anaattr -"
+call display(this%anaattr)
+print*,"- anavarattr -"
+call display(this%anavarattr)
+
+print*,"---- data vector ----"
+
+print*,"- dativar -"
+call display(this%dativar)
+print*,"- datiattr -"
+call display(this%datiattr)
+print*,"- dativarattr -"
+call display(this%dativarattr)
 
 print*,"<<<<<<<<<<<<<<<<<<< END vol7d object >>>>>>>>>>>>>>>>>>>>"
 
@@ -1765,6 +1788,202 @@ if (associated(this%voldatiattrc)) read(unit=lunit)this%voldatiattrc
 if (.not. present(unit)) close(unit=lunit)
 
 end subroutine vol7d_read_from_file
+
+
+
+! to double precision
+
+elemental doubleprecision function doubledatd(voldat,var)
+
+doubleprecision,intent(in) :: voldat
+type(vol7d_var),intent(in) :: var
+
+if (c_e(voldat))then
+  doubledatd=voldat
+else
+  doubledatd=dmiss
+end if
+
+end function doubledatd
+
+
+elemental doubleprecision function doubledatr(voldat,var)
+
+real,intent(in) :: voldat
+type(vol7d_var),intent(in) :: var
+
+if (c_e(voldat))then
+  doubledatr=voldat
+else
+  doubledatr=dmiss
+end if
+
+end function doubledatr
+
+
+elemental doubleprecision function doubledati(voldat,var)
+
+integer,intent(in) :: voldat
+type(vol7d_var),intent(in) :: var
+
+if (c_e(voldat))then
+  doubledati=dble(voldat)/10d0**var%scalefactor
+else
+  doubledati=dmiss
+end if
+
+end function doubledati
+
+
+elemental doubleprecision function doubledatb(voldat,var)
+
+integer(kind=int_b),intent(in) :: voldat
+type(vol7d_var),intent(in) :: var
+
+if (c_e(voldat))then
+  doubledatb=dble(voldat)/10d0**var%scalefactor
+else
+  doubledatb=dmiss
+end if
+
+end function doubledatb
+
+
+
+elemental doubleprecision function doubledatc(voldat,var)
+
+CHARACTER(len=vol7d_cdatalen),intent(in) :: voldat
+type(vol7d_var),intent(in) :: var
+
+if (c_e(voldat))then
+  read (voldat,*)doubledatc
+  doubledatc=doubledatc/10d0**var%scalefactor
+else
+  doubledatc=dmiss
+end if
+
+end function doubledatc
+
+
+!!$!esempio senza elemental
+!!$function doubledatc(voldat,var,double)
+!!$
+!!$doubleprecision :: doubledatc(size(voldat))
+!!$CHARACTER(len=vol7d_cdatalen),intent(in) :: voldat(:)
+!!$type(vol7d_var),intent(in) :: var
+!!$doubleprecision,intent(in) :: double
+!!$
+!!$integer :: i
+!!$
+!!$do i =1 ,size(voldat)
+!!$  read (voldat(i),*)doubledatc(i)
+!!$end do
+!!$
+!!$doubledatc=doubledatc/10d0**var%scalefactor
+!!$
+!!$end function doubledatc
+
+
+! to real
+
+elemental real function realdatd(voldat,var)
+
+doubleprecision,intent(in) :: voldat
+type(vol7d_var),intent(in) :: var
+
+if (c_e(voldat))then
+  realdatd=voldat
+else
+  realdatd=rmiss
+end if
+
+end function realdatd
+
+
+elemental real function realdatr(voldat,var)
+
+real,intent(in) :: voldat
+type(vol7d_var),intent(in) :: var
+
+if (c_e(voldat))then
+  realdatr=voldat
+else
+  realdatr=rmiss
+end if
+
+end function realdatr
+
+
+elemental real function realdati(voldat,var)
+
+integer,intent(in) :: voldat
+type(vol7d_var),intent(in) :: var
+
+if (c_e(voldat))then
+  realdati=float(voldat)/10.**var%scalefactor
+else
+  realdati=rmiss
+end if
+
+end function realdati
+
+
+elemental real function realdatb(voldat,var)
+
+integer(kind=int_b),intent(in) :: voldat
+type(vol7d_var),intent(in) :: var
+
+if (c_e(voldat))then
+  realdatb=float(voldat)/10.**var%scalefactor
+else
+  realdatb=rmiss
+end if
+
+end function realdatb
+
+
+
+elemental real function realdatc(voldat,var)
+
+CHARACTER(len=vol7d_cdatalen),intent(in) :: voldat
+type(vol7d_var),intent(in) :: var
+
+if (c_e(voldat))then
+  read (voldat,*)realdatc
+  realdatc=realdatc/10.**var%scalefactor
+else
+  realdatc=rmiss
+end if
+
+end function realdatc
+
+
+
+
+!!$elemental INTEGER(kind=int_b) function doubledatb(voldat,var,double)
+!!$
+!!$real,intent(in) :: voldat
+!!$type(vol7d_var),intent(in) :: var
+!!$integer(kind=int_b),intent(in) :: byte
+!!$
+!!$doubledatb=voldat*10.**var%scalefactor
+!!$
+!!$end function doubledatb
+!!$
+!!$
+!!$
+!!$elemental CHARACTER(len=vol7d_cdatalen) function doubledatc(voldat,var,double)
+!!$
+!!$real,intent(in) :: voldat
+!!$type(vol7d_var),intent(in) :: var
+!!$CHARACTER(len=vol7d_cdatalen),intent(in) :: char
+!!$
+!!$write (doubledatc,'(i20)')voldat*10.**var%scalefactor
+!!$
+!!$end function doubledatc
+
+
+
 
 
 END MODULE vol7d_class

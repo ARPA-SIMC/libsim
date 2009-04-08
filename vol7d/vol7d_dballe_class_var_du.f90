@@ -10,6 +10,7 @@ end if
   if ( j > 0 )then
     if(.not.c_e(this%/**/VOL7D_POLY_NAME%/**/VOL7D_POLY_TYPES_V(i)%description))this%/**/VOL7D_POLY_NAME%/**/VOL7D_POLY_TYPES_V(i)%description =  dballevar(j)%description
     if(.not.c_e(this%/**/VOL7D_POLY_NAME%/**/VOL7D_POLY_TYPES_V(i)%unit))this%/**/VOL7D_POLY_NAME%/**/VOL7D_POLY_TYPES_V(i)%unit =  dballevar(j)%unit
+    if(.not.c_e(this%/**/VOL7D_POLY_NAME%/**/VOL7D_POLY_TYPES_V(i)%scalefactor))this%/**/VOL7D_POLY_NAME%/**/VOL7D_POLY_TYPES_V(i)%scalefactor =  dballevar(j)%scalefactor
   end if
 end do
 endif

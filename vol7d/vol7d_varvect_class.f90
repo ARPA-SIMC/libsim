@@ -6,6 +6,9 @@ MODULE vol7d_varvect_class
 USE kinds
 USE missing_values
 USE vol7d_var_class
+USE optional_values
+use err_handling
+
 IMPLICIT NONE
 
 !> Definisce un vettore di vol7d_var_class::vol7d_var per ogni tipo di dato
@@ -35,6 +38,16 @@ END INTERFACE
 INTERFACE delete
   MODULE PROCEDURE vol7d_varvect_delete
 END INTERFACE
+
+INTERFACE index
+  MODULE PROCEDURE vol7d_varvect_index,vol7d_varvect_indexvect
+END INTERFACE
+
+!> \brief display on the screen a brief content of object
+INTERFACE display
+  MODULE PROCEDURE display_varvect
+END INTERFACE
+
 
 CONTAINS
 
@@ -144,5 +157,147 @@ IF (PRESENT(nvarc)) THEN
 ENDIF
 
 END SUBROUTINE vol7d_varvect_alloc
+
+
+!> Cerca l'indice del primo o ultimo elemento di this uguale a search
+subroutine vol7d_varvect_index(this, search, mask, back,type,index_v)
+
+TYPE(vol7d_varvect),intent(in) :: this !< object to search in
+type(vol7d_var),INTENT(in) ::  search !< what to search
+LOGICAL,INTENT(in),OPTIONAL :: mask(:), back
+character(len=*),intent(inout),optional :: type
+INTEGER :: index_v !< indice del primo o ultimo elemento di this uguale a search
+
+
+index_v=0
+
+select case (optio_c(type,1))
+
+case ("d")
+  if (associated(this%d))then
+    index_v=index(this%d(:), search, mask, back) ! vettore di variabili a doppia precisione
+  end if
+    
+case ("r")
+  if (associated(this%r))then
+    index_v=index(this%r(:), search, mask, back) ! vettore di variabili reali
+  end if
+
+case ("i")
+  if (associated(this%i))then
+    index_v=index(this%i(:), search, mask, back) ! vettore di variabili intere
+  end if
+
+case ("b")
+  if (associated(this%b))then
+    index_v=index(this%b(:), search, mask, back) ! vettore di variabili byte
+  end if
+
+case ("c")
+  if (associated(this%c))then
+    index_v=index(this%c(:), search, mask, back) ! vettore di variabili carattere
+  end if
+
+case (cmiss)
+
+  if (associated(this%d))then
+    index_v=index(this%d(:), search, mask, back) ! vettore di variabili a doppia precisione
+    if (present(type)) type="d"
+  end if
+
+  if(index_v == 0)then
+    if (associated(this%r))then
+      index_v=index(this%r(:), search, mask, back) ! vettore di variabili reali
+      if (present(type)) type="r"
+    end if
+  end if
+  
+  if(index_v == 0)then
+    if (associated(this%i))then
+      index_v=index(this%i(:), search, mask, back) ! vettore di variabili intere
+      if (present(type)) type="i"
+  end if
+end if
+  
+  if(index_v == 0)then
+    if (associated(this%b))then
+      index_v=index(this%b(:), search, mask, back) ! vettore di variabili byte
+      if (present(type)) type="b"
+    end if
+  end if
+  
+  if(index_v == 0)then
+    if (associated(this%c))then
+      index_v=index(this%c(:), search, mask, back) ! vettore di variabili carattere
+      if (present(type)) type="c"
+    end if
+  end if
+
+  if (index_v == 0) type=cmiss
+
+case default
+
+  CALL raise_error('variable type not contemplated: '//type)
+
+end select
+
+end subroutine vol7d_varvect_index
+
+
+!> Cerca l'indice del primo o ultimo elemento di this uguale a search
+subroutine vol7d_varvect_indexvect(this, search, type,index_v)
+
+TYPE(vol7d_varvect),intent(in) :: this !< object to search in
+type(vol7d_var),INTENT(in) ::  search(:) !< what to search
+character(len=*),intent(inout) :: type(:) !type of vector found ("d","r","i","b","c")
+INTEGER :: index_v(:) !< indice del primo o ultimo elemento di this uguale a search
+
+integer :: i
+
+do i =1 ,size(search)
+  call vol7d_varvect_index(this, search(i),type=type(i),index_v=index_v(i))
+end do
+
+end subroutine vol7d_varvect_indexvect
+
+
+!> \brief display on the screen a brief content of vol7d_var object
+subroutine display_varvect(this)
+
+TYPE(vol7d_varvect),INTENT(in) :: this !< vol7d_varvect object to display
+
+if (associated(this%d))then
+PRINT *,"-----------------  varvect  --------------------------"
+  print*,"double precision elements=",size(this%d)
+  call display(this%d(:)) ! vettore di variabili a doppia precisione
+end if
+
+if (associated(this%r))then
+PRINT *,"-----------------  varvect  --------------------------"
+  print*,"real elements=",size(this%r)
+  call display(this%r(:)) ! vettore di variabili reali
+end if
+
+if (associated(this%i))then
+PRINT *,"-----------------  varvect  --------------------------"
+  print*,"integer elements=",size(this%i)
+  call display(this%i(:)) ! vettore di variabili intere
+end if
+
+if (associated(this%b))then
+PRINT *,"-----------------  varvect  --------------------------"
+  print*,"byte elements=",size(this%b)
+  call display(this%b(:)) ! vettore di variabili byte
+end if
+
+if (associated(this%c))then
+PRINT *,"-----------------  varvect  --------------------------"
+  print*,"character elements=",size(this%c)
+  call display(this%c(:)) ! vettore di variabili carattere
+end if
+
+
+end subroutine display_varvect
+
 
 END MODULE vol7d_varvect_class

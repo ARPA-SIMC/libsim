@@ -19,6 +19,8 @@ TYPE vol7d_var
   CHARACTER(len=10) :: btable !< codice della variabile secondo la tabella B del WMO.
   CHARACTER(len=65) :: description !< descrizione testuale della variabile (opzionale)
   CHARACTER(len=24) :: unit !< descrizione testuale dell'unità di misura (opzionale)
+  integer :: scalefactor !< numero di decimali nella rappresentazione intera o character (opzionale)
+
   INTEGER :: r !< indice della variabile di dati reale che possiede l'attributo corrente
   INTEGER :: d !< indice della variabile di dati a doppia precisione che possiede l'attributo corrente
   INTEGER :: i !< indice della variabile di dati intera che possiede l'attributo corrente
@@ -28,7 +30,7 @@ END TYPE  vol7d_var
 
 !> Valore mancante per vol7d_var.
 TYPE(vol7d_var),PARAMETER :: vol7d_var_miss= &
- vol7d_var(cmiss,cmiss,cmiss,imiss,imiss,imiss,imiss,imiss)
+ vol7d_var(cmiss,cmiss,cmiss,imiss,imiss,imiss,imiss,imiss,imiss)
 
 !> Costruttore per la classe vol7d_var.
 !! Deve essere richiamato 
@@ -82,8 +84,9 @@ INTERFACE index
   MODULE PROCEDURE index_var
 END INTERFACE
 
+!> \brief display on the screen a brief content of object
 INTERFACE display
-  MODULE PROCEDURE display_var
+  MODULE PROCEDURE display_var, display_var_vect
 END INTERFACE
 
 
@@ -94,12 +97,13 @@ CONTAINS
 !! inizializzato a valore mancante.
 !! I membri \a r, \a d, \a i, \a b, \a c non possono essere assegnati
 !! tramite costruttore, ma solo direttamente.
-elemental SUBROUTINE vol7d_var_init(this, btable, description, unit)
+elemental SUBROUTINE vol7d_var_init(this, btable, description, unit,scalefactor)
 TYPE(vol7d_var),INTENT(INOUT) :: this !< oggetto da inizializzare
 !INTEGER,INTENT(in),OPTIONAL :: btable
 CHARACTER(len=*),INTENT(in),OPTIONAL :: btable !< codice della variabile
 CHARACTER(len=20),INTENT(in),OPTIONAL :: description !< descrizione della variabile
 CHARACTER(len=20),INTENT(in),OPTIONAL :: unit !< unità di misura
+integer,INTENT(in),OPTIONAL :: scalefactor !< decimali nella rappresentazione intera e character
 
 IF (PRESENT(btable)) THEN
   this%btable = btable
@@ -107,6 +111,7 @@ ELSE
   this%btable = cmiss
   this%description = cmiss
   this%unit = cmiss
+  this%scalefactor = imiss
   RETURN
 ENDIF
 IF (PRESENT(description)) THEN
@@ -119,6 +124,11 @@ IF (PRESENT(unit)) THEN
 ELSE
   this%unit = cmiss
 ENDIF
+if (present(scalefactor)) then
+  this%scalefactor = scalefactor
+else
+  this%scalefactor = imiss
+endif
 
 this%r = -1
 this%d = -1
@@ -136,6 +146,7 @@ TYPE(vol7d_var),INTENT(INOUT) :: this !< oggetto da distruggre
 this%btable = cmiss
 this%description = cmiss
 this%unit = cmiss
+this%scalefactor = imiss
 
 END SUBROUTINE vol7d_var_delete
 
@@ -190,9 +201,27 @@ subroutine display_var(this)
 
 TYPE(vol7d_var),INTENT(in) :: this !< vol7d_var object to display
 
-print*,"VOL7DVAR: ",this%btable,trim(this%description)," : ",this%unit
+print*,"VOL7DVAR: ",this%btable,trim(this%description)," : ",this%unit,&
+ " scale factor",this%scalefactor
 
 end subroutine display_var
+
+
+!> \brief display on the screen a brief content of vector of vol7d_var object
+subroutine display_var_vect(this)
+
+TYPE(vol7d_var),INTENT(in) :: this(:) !< vol7d_var vector object to display
+integer :: i
+
+do i=1,size(this)
+
+  print*,"VOL7DVAR: ",this(i)%btable,trim(this(i)%description)," : ",trim(this(i)%unit),&
+   " scale factor",this(i)%scalefactor
+
+end do
+
+end subroutine display_var_vect
+
 
 
 ! Definisce le funzioni count_distinct e pack_distinct

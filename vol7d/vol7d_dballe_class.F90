@@ -2058,11 +2058,13 @@ IF (n > 0) THEN
   ALLOCATE(blocal(n))
   REWIND(un)
   readline: do i = 1 ,n
-    READ(un,'(1x,A6,1x,a65,a24)')blocal(i)%btable,blocal(i)%description,blocal(i)%unit
+    READ(un,'(1x,A6,1x,a65,a24,i4)')blocal(i)%btable,blocal(i)%description,blocal(i)%unit,&
+     blocal(i)%scalefactor
     blocal(i)%btable(:1)="B"
     !print*,"B=",blocal(i)%btable
     !print*," D=",blocal(i)%description
     !PRINT*," U=",blocal(i)%unit
+    !PRINT*," D=",blocal(i)%scalefactor
   ENDDO readline
 
   CALL print_info('Ho letto '//TRIM(to_char(i-1))//' variabili dalla tabella')
