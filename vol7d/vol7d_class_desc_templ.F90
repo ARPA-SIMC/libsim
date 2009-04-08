@@ -92,8 +92,13 @@ IF (PRESENT(misslist) .OR. miss) THEN
 ! prepare local mask
   ALLOCATE (lmask(SIZE(varin)))
   lmask = .TRUE.
-  IF (PRESENT(misslist) .AND. SIZE(misslist) == SIZE(varin)) &
-   lmask = lmask .AND. misslist
+  IF (PRESENT(misslist)) THEN
+    IF(SIZE(misslist) >= SIZE(varin)) THEN ! Use the given mask element by element
+      lmask = lmask .AND. misslist(1:SIZE(varin))
+    ELSE IF (SIZE(misslist) == 1) THEN ! Use the given mask element for all the elements
+      lmask = lmask .AND. misslist(1)
+    ENDIF
+  ENDIF
   IF (miss) lmask = lmask .AND. (varin /= VOL7D_POLY_TYPE/**/_miss)
 
   IF (unique) THEN
@@ -109,11 +114,14 @@ ELSE
   ENDIF
 ENDIF
 #ifdef VOL7D_NO_ZERO_ALLOC
-IF (n == 0) RETURN ! in case of variables do not allocate zero-length arrays
+IF (n == 0) THEN
+  IF (ALLOCATED(lmask)) DEALLOCATE(lmask)
+  RETURN ! in case of variables do not allocate zero-length arrays
+ENDIF
 #endif
 ! Complete allocations
 ALLOCATE(remap(n), varout(n))
-IF (PRESENT(misslist) .OR. miss) THEN
+IF (ALLOCATED(lmask)) THEN
   IF (unique) THEN
     remap = map_inv_distinct(varin, n, back=.TRUE., mask=lmask)
   ELSE

@@ -1079,8 +1079,14 @@ TYPE(vol7d),INTENT(INOUT) :: that !< oggetto destinazione
 LOGICAL,INTENT(IN),OPTIONAL :: sort !< se fornito e uguale a \c .TRUE., i descrittori che supportano un ordinamento (operatori > e/o <) risulteranno ordinati in ordine crescente nell'oggetto destinazione
 LOGICAL,INTENT(IN),OPTIONAL :: unique !< se fornito e uguale a \c .TRUE., gli eventuali elementi duplicati nei descrittori dell'oggetto origine verranno collassati in un unico elemento (con eventuale perdita dei dati relativi agli elementi duplicati)
 LOGICAL,INTENT(IN),OPTIONAL :: miss !< se fornito e uguale a \c .TRUE., gli eventuali elementi dei descrittori uguali al corrispondente valore mancante verranno eliminati dall'oggetto finale
-LOGICAL,INTENT(IN),OPTIONAL :: ltime(:) !< se fornito, deve essere un vettore logico della stessa lunghezza di \a this::time indicante quali elementi della dimensione
-!< \a time mantenere (valori \c .TRUE.) e quali scartare (valori \c .FALSE.) nel volume copiato; è compatibile col parametro \a miss
+!> se fornito, deve essere un vettore logico della stessa lunghezza di
+!! this%time indicante quali elementi della dimensione \a time
+!! mantenere (valori \c .TRUE.) e quali scartare (valori \c .FALSE.)
+!! nel volume copiato; in alternativa può essere un vettore di
+!! lunghezza 1, in tal caso, se \c .FALSE. , equivale a scartare tutti
+!! gli elementi (utile principalmente per le variabili); è compatibile
+!! col parametro \a miss
+LOGICAL,INTENT(IN),OPTIONAL :: ltime(:)
 LOGICAL,INTENT(IN),OPTIONAL :: ltimerange(:) !< come il precedente per la dimensione \a timerange
 LOGICAL,INTENT(IN),OPTIONAL :: llevel(:) !< come il precedente per la dimensione \a level
 LOGICAL,INTENT(IN),OPTIONAL :: lana(:) !< come il precedente per la dimensione \a ana
@@ -1187,8 +1193,14 @@ TYPE(vol7d),INTENT(INOUT) :: this !< oggetto da riformare
 LOGICAL,INTENT(IN),OPTIONAL :: sort !< se fornito e uguale a \c .TRUE., i descrittori che supportano un ordinamento (operatori > e/o <) risulteranno ordinati in ordine crescente nell'oggetto riformato
 LOGICAL,INTENT(IN),OPTIONAL :: unique !< se fornito e uguale a \c .TRUE., gli eventuali elementi duplicati nei descrittori dell'oggetto iniziale verranno collassati in un unico elemento (con eventuale perdita dei dati relativi agli elementi duplicati)
 LOGICAL,INTENT(IN),OPTIONAL :: miss !< se fornito e uguale a \c .TRUE., gli eventuali elementi dei descrittori uguali al corrispondente valore mancante verranno eliminati dall'oggetto riformato
-LOGICAL,INTENT(IN),OPTIONAL :: ltime(:) !< se fornito, deve essere un vettore logico della stessa lunghezza di \a this::time indicante quali elementi della dimensione
-!< \a time mantenere (valori \c .TRUE.) e quali scartare (valori \c .FALSE.) nel volume copiato; è compatibile col parametro \a miss
+!> se fornito, deve essere un vettore logico della stessa lunghezza di
+!! this%time indicante quali elementi della dimensione \a time
+!! mantenere (valori \c .TRUE.) e quali scartare (valori \c .FALSE.)
+!! nel volume copiato; in alternativa può essere un vettore di
+!! lunghezza 1, in tal caso, se \c .FALSE. , equivale a scartare tutti
+!! gli elementi (utile principalmente per le variabili); è compatibile
+!! col parametro \a miss
+LOGICAL,INTENT(IN),OPTIONAL :: ltime(:)
 LOGICAL,INTENT(IN),OPTIONAL :: ltimerange(:) !< come il precedente per la dimensione \a timerange
 LOGICAL,INTENT(IN),OPTIONAL :: llevel(:) !< come il precedente per la dimensione \a level
 LOGICAL,INTENT(IN),OPTIONAL :: lana(:) !< come il precedente per la dimensione \a ana
