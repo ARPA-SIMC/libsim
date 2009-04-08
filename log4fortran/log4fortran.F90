@@ -110,9 +110,14 @@ INTEGER ,PARAMETER :: L4F_TRACE    = 800  !< standard priority
 INTEGER ,PARAMETER :: L4F_NOTSET   = 900  !< standard priority
 INTEGER ,PARAMETER :: L4F_UNKNOWN  = 1000 !< standard priority
 
-!> priority: default value used only when compiled without log4c or cnf
-!!(the configuration file is ignored)  
+!> Default priority value for logging; it is used only when
+!! compiled without log4c and cnf (the configuration file is ignored).
 integer :: l4f_priority=L4F_NOTICE 
+
+!> Default minimum priority value that generates a fatal error
+!! and terminates the program;
+!! it is used both when compiled with and without log4c.
+INTEGER, PRIVATE :: l4f_fatal_priority=L4F_CRIT
 
 
 #ifdef HAVE_LIBLOG4C
@@ -203,9 +208,19 @@ a_name_save=a_name
 if (present(a_name_append))then
   a_name=to_char(a_name)//"."//to_char(a_name_append)
 end if
-  
 
 end subroutine l4f_launcher
+
+
+!> Set the minimum priority level that generates a fatal
+!! error and terminates the program.
+SUBROUTINE l4f_set_fatal_priority(a_priority)
+integer,intent(in):: a_priority !< priority level
+
+l4f_fatal_priority = MAX(a_priority, L4F_FATAL) ! L4F_FATAL is always fatal
+
+END SUBROUTINE l4f_set_fatal_priority
+
 
 #ifndef HAVE_LIBLOG4C
 ! definisce delle dummy routine
@@ -247,6 +262,11 @@ character(len=*),intent(in):: a_format !< message to emit
 if (a_category == 0 .and. a_priority <= l4f_priority) then
   write(*,*)"[dummy] ",l4f_msg(a_priority),trim(dummy_a_name)," - ",a_format
 end if
+
+if (a_priority <= l4f_fatal_priority) then
+  WRITE(*,*)"[dummy] ",l4f_msg(a_priority),TRIM(dummy_a_name)," - ","error is fatal, exiting"
+  call exit(1)
+endif
 
 end subroutine l4f_category_log
 
