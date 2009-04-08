@@ -11,7 +11,7 @@ MODULE phys_const
 IMPLICIT NONE
 
 ! pi = 4.*ATAN(1.)
-REAL, PARAMETER :: pi = 3.14159 !< pi greco (\f$\pi\f$)
+REAL, PARAMETER :: pi =3.141593 !< pi greco (\f$\pi\f$)
 REAL, PARAMETER :: rearth = 6370997. !< raggio medio della Terra (\f$m\f$)
 REAL, PARAMETER :: gearth = 9.81 !< accelerazione gravitazionale media alla superficie terrestre (\f$m/s^2\f$)
 REAL, PARAMETER :: omearth = 2*pi/86164. !< velocità angolare terrestre (\f$s^{-1}\f$)
@@ -41,7 +41,7 @@ MODULE doubleprecision_phys_const
 IMPLICIT NONE
 
 ! pi = 4.*ATAN(1.)
-DOUBLEPRECISION, PARAMETER :: pi = 3.14159 !< pi greco (\f$\pi\f$)
+DOUBLEPRECISION, PARAMETER :: pi = 3.14159265358979 !< pi greco (\f$\pi\f$)
 DOUBLEPRECISION, PARAMETER :: rearth = 6370997. !< raggio medio della Terra (\f$m\f$)
 DOUBLEPRECISION, PARAMETER :: gearth = 9.81 !< accelerazione gravitazionale media alla superficie terrestre (\f$m/s^2\f$)
 DOUBLEPRECISION, PARAMETER :: omearth = 2*pi/86164. !< velocità angolare terrestre (\f$s^{-1}\f$)
