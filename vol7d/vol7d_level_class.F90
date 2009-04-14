@@ -162,7 +162,7 @@ END SUBROUTINE vol7d_level_init
 SUBROUTINE vol7d_level_delete(this)
 TYPE(vol7d_level),INTENT(INOUT) :: this !< oggetto da distruggre
 
-this%level2 = imiss
+this%level1 = imiss
 this%l1 = imiss
 this%level2 = imiss
 this%l2 = imiss
