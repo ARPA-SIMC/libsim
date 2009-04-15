@@ -1,4 +1,3 @@
-
 module termolib
 
 
@@ -1583,6 +1582,7 @@ subroutine UV(DD,FF,U,V)
   if(c_e(dd) .and. c_e(ff))then
 
     AR=dd*degrad
+                                !scambio seno e coseno per rotazione 90 gradi
     U=-ff*sin(AR) 
     V=-ff*cos(AR) 
 
@@ -1628,7 +1628,10 @@ subroutine UVWIND(UBAR,VBAR,SPEED,DIREC)
 
     speed=SQRT(UBAR**2+VBAR**2) 
 
-    direc=ATAN2(UBAR,VBAR)*raddeg+180.0 
+                                !scambio seno e coseno per rotazione 90 gradi
+    direc=ATAN2(-UBAR,-VBAR)*raddeg
+    direc=modulo(direc,360.)
+
     if(direc == 0.)direc=360.0 
 
   else
@@ -1668,32 +1671,36 @@ real function AVVEZ (P1,DD1,FF1,P2,DD2,FF2,ALAT)
   real::u1,u2,v1,v2,uvm,uvt,vvt,vvm
   real::grad,alamda,a,b
 
-  ALAMDA=2*OMEARTH*sin(ALAT*DEGRAD)   !Coriolis 
-  A=ALAMDA/RD 
-  B=P1/P2 
-  B=log(B) 
+  if ( c_e(P1) .and. c_e(DD1) .and. c_e(FF1) .and.&
+   c_e(P2) .and. c_e(DD2) .and. c_e(FF2) .and. c_e(ALAT)) then
+
+    ALAMDA=2*OMEARTH*sin(ALAT*DEGRAD)   !Coriolis 
+    A=ALAMDA/RD 
+    B=P1/P2 
+    B=log(B) 
  
 ! Calcolo le componenti del vento U e V 
-  call UV(dd1,ff1,U1,V1) 
-  call UV(dd2,ff2,U2,V2) 
+    call UV(dd1,ff1,U1,V1) 
+    call UV(dd2,ff2,U2,V2) 
   
-  if(u2 > 300 .or. u1 > 300)then
-     AVVEZ=rmiss 
-     return
-  end if
-
 ! Calcolo le componenti del vento termico 
-  UVT=U2-U1 
-  VVT=V2-V1 
+    UVT=U2-U1 
+    VVT=V2-V1 
  
 ! Calcolo le componenti del vento medio 
-  UVM=(U2+U1)/2.	
-  VVM=(V2+V1)/2. 
+    UVM=(U2+U1)/2.	
+    VVM=(V2+V1)/2. 
  
 ! Calcolo il valore del termine avvettivo 
-  GRAD=UVT*VVM-VVT*UVM 
-  AVVEZ=A/B*GRAD 
-  AVVEZ=AVVEZ*3600.			! in Kelvin/ore 
+    GRAD=UVT*VVM-VVT*UVM 
+    AVVEZ=A/B*GRAD 
+    AVVEZ=AVVEZ*3600.			! in Kelvin/ore 
+
+  else
+
+     AVVEZ=rmiss 
+
+  end if
 
   return
 end function AVVEZ
