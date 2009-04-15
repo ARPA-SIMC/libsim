@@ -3,7 +3,7 @@ module termolib
 
 
 use missing_values
-use phisical_constant
+use phys_const
 
 !-----------------------------------------------------------------------------
 !
@@ -243,17 +243,18 @@ elemental real function TRUG(UMID,T)
 !  TRUG =     rmiss  Se non e' possibile calcolarla 
 !-----------------------------------------------------------------------------
 
-  real::d,c
-  parameter(D=237.3,C=17.2693882)
-  real,intent(in)::umid,t                               !input
-  real::es,e                                            !variabili di lavoro
+  real,intent(in) :: umid,t               !input
+
+  real,parameter  :: D=237.3,C=17.2693882
+  real,parameter  :: psva=6.1078        !Hpa pressione di saturazione del vapore acqueo
+  real::es,e                            !variabili di lavoro
 
   if( c_e(umid) .and. c_e(t) )then
 
     es=ESAT(t)                           ! >>> Calcolo la P.v.s 
     e=umid/100.*es                       ! >>> Calcolo la P.v. 
     TRUG=(D*log(E/psva))/(C-log(E/psva)) ! >>> Calcolo la T.d. 
-    TRUG=TRUG+abz                        ! >>> Calcolo la T.d. in Kelvin 
+    TRUG=TRUG+t0c                        ! >>> Calcolo la T.d. in Kelvin 
 
   else
 
@@ -400,7 +401,7 @@ elemental real function USPEC(TD,PT)
 
   if(c_e(td) .and. c_e(pt) )then
 
-    USPEC=eps*(ESAT(td)/(PT-(1-EPS)*ESAT(td)))
+    USPEC=eps0*(ESAT(td)/(PT-(1-EPS0)*ESAT(td)))
     USPEC=USPEC*1000.
 
   else
@@ -501,7 +502,7 @@ elemental real function QTORELHUM(Q,PT,T)
 
   real,intent(in)::q,pt,t
 
-  QTORELHUM= q * (pt-c1*ESAT(t)) / (eps*ESAT(t)) 
+  QTORELHUM= q * (pt-c1*ESAT(t)) / (eps0*ESAT(t)) 
   if (QTORELHUM  < 0.)QTORELHUM=0.
  
   return 
@@ -525,7 +526,7 @@ elemental real function RELHUMTOQ(RH,PT,T)
       return
     end if
 
-    RELHUMTOQ=rh*(eps*ESAT(t))/(pt-c1*ESAT(t)) 
+    RELHUMTOQ=rh*(eps0*ESAT(t))/(pt-c1*ESAT(t)) 
     if (RELHUMTOQ  <  0.)RELHUMTOQ = 0. 
 
   else
@@ -839,7 +840,7 @@ real function cape (pt,tt,np,lfc,eql)
 !sommando l'area del trapezoide
      if(temp_low > tamb_low .and. temp_upp > tamb_upp)then
 
-        cape=cape+ (alog (pres1/pres2))* ra * &
+        cape=cape+ (alog (pres1/pres2))* rd * &
              &( temp_low - tamb_low + temp_upp -tamb_upp )/2  
 
      end if
@@ -941,7 +942,7 @@ real function cin (pt,tt,td,np)
         tadi_upp=TSA(tmed,pres2)
      end if
 
-     cin=cin+ (alog (pres1/pres2))* ra * &
+     cin=cin+ (alog (pres1/pres2))* rd * &
           &( tamb_low - tadi_low + tamb_upp -tadi_upp )/2   
 
 !se trovo il livello di libera condensazione  esco dal do restituendoil CIN
@@ -1467,7 +1468,7 @@ subroutine zero_termico (pt,tt,td,np,rhstaz,p_zero,h_zero)
 
   t_zero=-999.9  !valore piccolo
   pres=400.
-  do while( t_zero <= abz )
+  do while( t_zero <= t0c )
      pres=pres+1    
      t_zero=trpt(pt,tt,np,pres)
 
@@ -1557,20 +1558,20 @@ end function Z
 
 subroutine UV(DD,FF,U,V)   
 
-!  Calcola le componenti U e V  del vento espresse in m/sec 
+!  Calcola le componenti U e V  del vento 
 ! 
 !      Uso : 
 !                  CALL UV (DD,FF,U,V) 
 ! 
 !      Input : 
 !  DD   real   Direzione del vento                  (Gradi sessag, 0 = nord) 
-!  FF   real   Velocita` del vento                  (m/sec) 
+!  FF   real   Velocita` del vento                  
 ! 
 !      Output : 
 !  U   real   Componente lungo i paralleli del vento orientata da 
-!            West a Est                                              (m/sec) 
+!            West a Est
 !  V   real   Componente lungo i meridiani del vento orientata da 
-!            Sud a Nord                                              (m/sec) 
+!            Sud a Nord
 ! 
 !  U e V =  rmiss Se non e' possibile calcolarle 	
 !
@@ -1579,16 +1580,19 @@ subroutine UV(DD,FF,U,V)
   real,intent(out)::u,v
   real::ar
 
-  if(dd < 0 .or. dd > 360 .or. ff < 0 .or. ff > 300)then
-     U=rmiss 
-     V=rmiss
+  if(c_e(dd) .and. c_e(ff))then
+
+    AR=dd*degrad
+    U=-ff*sin(AR) 
+    V=-ff*cos(AR) 
+
+  else
+
+    U=rmiss 
+    V=rmiss
+
   end if
-  
-! Calcolo le componenti del vento U e V 
-  AR=dd*ATR 
-  U=-ff*sin(AR) 
-  V=-ff*cos(AR) 
-  
+    
   return 
 end subroutine UV
 
@@ -1602,13 +1606,11 @@ subroutine UVWIND(UBAR,VBAR,SPEED,DIREC)
 ! 
 ! Input : 
 ! U   real   Componente lungo i paralleli del vento orientata da West a Est 
-!            espressa in (m/sec) 
 ! V   real   Componente lungo i meridiani del vento orientata da Sud a Nord 
-!            espressa in (m/sec) 
 ! 
 ! Output : 
-! DD   real   Direzione del vento                  (Gradi sessag, 0 = nord) 
-! FF   real   Velocita` del vento                  (m/sec) 
+! DD   real   Direzione del vento    (Gradi sessag, 0 calma;  360 = nord) 
+! FF   real   Velocita` del vento
 ! 
 ! DD e FF =  rmiss se non e' possibile calcolarle.  
 !------------------------------------------------------------------------------
@@ -1616,18 +1618,25 @@ subroutine UVWIND(UBAR,VBAR,SPEED,DIREC)
   real,intent(in)::ubar,vbar
   real,intent(out)::speed,direc
 
-  if(abs(UBAR) > 300 .or. abs(VBAR) > 300)then
-     speed=rmiss 
-     direc=rmiss
-     return
+  if(c_e(UBAR) .and. c_e(VBAR))then
+
+    if(ubar == 0. .and. vbar == 0.) then
+      speed =  0.
+      direc =  0.
+      return
+    end if
+
+    speed=SQRT(UBAR**2+VBAR**2) 
+
+    direc=ATAN2(UBAR,VBAR)*raddeg+180.0 
+    if(direc == 0.)direc=360.0 
+
+  else
+
+    speed=rmiss 
+    direc=rmiss
+
   end if
-
-  speed=SQRT(UBAR**2+VBAR**2) 
-  direc=360.0 
-  if(speed <=  0.01)return
-
-  direc=ATAN2(UBAR,VBAR)*RTA+180.0 
-  if(direc <= 0.1)direc=360.0 
  
   return 
  
@@ -1638,8 +1647,7 @@ end subroutine UVWIND
 real function AVVEZ (P1,DD1,FF1,P2,DD2,FF2,ALAT)   
 !
 ! costanti :
-! Aomega : Velocita' angolare terra
-! Atr    : conversione da gradi a radianti
+! Degrad    : conversione da gradi a radianti
 ! ra     : costante dei gas per aria secca
 !
 ! calcola l'avvezione termica in kelvin/ora per uno strato isobarico
@@ -1660,8 +1668,8 @@ real function AVVEZ (P1,DD1,FF1,P2,DD2,FF2,ALAT)
   real::u1,u2,v1,v2,uvm,uvt,vvt,vvm
   real::grad,alamda,a,b
 
-  ALAMDA=2*AOMEGA*sin(ALAT*ATR)   !Coriolis 
-  A=ALAMDA/RA 
+  ALAMDA=2*OMEARTH*sin(ALAT*DEGRAD)   !Coriolis 
+  A=ALAMDA/RD 
   B=P1/P2 
   B=log(B) 
  
@@ -1865,8 +1873,8 @@ subroutine TRPW(P,SPD,DIR,N,TP,S,D)
      X1=alog(P(I)) 
      X2=alog(P(I+1)) 
      X=alog(TP) 
-     A1=CNP(DIR(I))*ATR 
-     A2=CNP(DIR(I+1))*ATR 
+     A1=CNP(DIR(I))*DEGRAD 
+     A2=CNP(DIR(I+1))*DEGRAD 
      U1=SPD(I)*cos(A1) 
      U2=SPD(I+1)*cos(A2) 
      V1=SPD(I)*sin(A1) 
@@ -1877,7 +1885,7 @@ subroutine TRPW(P,SPD,DIR,N,TP,S,D)
      D=360. 
      if(S  <  0.01)return
               
-     D=CNP( RTA*ATAN2(V,U)) 
+     D=CNP( RADDEG*ATAN2(V,U)) 
      if(D <=  0.1)D=360. 
 
      return
@@ -1984,11 +1992,11 @@ real function SI_K  (PT,T,TD,NT)
      return 
   end if
  
-  t850  = t850  - abz
-  t500  = t500  - abz 
-  t700  = t700  - abz 
-  td850 = td850 - abz 
-  td700 = td700 - abz 
+  t850  = t850  - t0c
+  t500  = t500  - t0c 
+  t700  = t700  - t0c 
+  td850 = td850 - t0c 
+  td700 = td700 - t0c 
   tmentd = abs(t700-td700) 
   SI_K  = t850 - t500 + td850 - tmentd 
 
@@ -2102,9 +2110,9 @@ real function SI_SW(PT,T,TD,NT,PW,FF,DD,NW)
   real::t850,t500,td850,rtot,rs
   real::dd850,dd500,ff500,ff850,rd85
 
-  T850=  TRPT(pt,t,nt,850.)  - abz 
-  T500=  TRPT(pt,t,nt,500.)  - abz 
-  td850= TRPT(pt,td,nt,850.) - abz 
+  T850=  TRPT(pt,t,nt,850.)  - t0c 
+  T500=  TRPT(pt,t,nt,500.)  - t0c 
+  td850= TRPT(pt,td,nt,850.) - t0c 
 
   call TRPW(pw,ff,dd,nw,850.,ff850,dd850) 
   call TRPW(pw,ff,dd,nw,500.,ff500,dd500) 

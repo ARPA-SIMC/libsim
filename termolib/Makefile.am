@@ -1,5 +1,5 @@
 lib_LTLIBRARIES = libsim_termolib.la
-libsim_termolib_la_SOURCES =  phisical_constant.f90 termolib.f90
+libsim_termolib_la_SOURCES =  termolib.f90
 
 AM_FCFLAGS = -I../base
 libsim_termolib_la_LIBADD = ../base/libsim_base.la
