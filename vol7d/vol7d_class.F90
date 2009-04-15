@@ -1253,6 +1253,164 @@ this = v7dtmp
 
 END SUBROUTINE vol7d_reform
 
+!> Metodo per convertire i volumi di dati di un oggetto vol7d in dati
+!! reali dove possibile. L'oggetto convertito è una copia completa
+!! dell'originale che può essere quindi distrutto dopo la chiamata.
+!! I dati di anagrafica al momento non sono convertiti.
+!! Anche gli attributi di anagrafica e dati non sono toccati.
+SUBROUTINE vol7d_convr(this, that)
+TYPE(vol7d),INTENT(INOUT) :: this !< oggetto origine
+TYPE(vol7d),INTENT(INOUT) :: that !< oggetto convertito
+LOGICAL :: anaconv ! dovra` diventare un parametro
+INTEGER :: i
+LOGICAL :: fv(1)=(/.FALSE./), tv(1)=(/.TRUE./), acp(1), acn(1)
+TYPE(vol7d) :: v7d_tmp
+
+! richiede modifiche per convertirte i dati di anagrafica
+! per ora sempre disabilitato
+anaconv = .FALSE.
+IF (anaconv) THEN
+  acp=fv
+  acn=tv
+ELSE
+  acp=tv
+  acn=fv
+ENDIF
+
+! Volume con solo i dati reali e tutti gli attributi
+! l'anagrafica e` copiata interamente se necessario
+CALL vol7d_copy(this, that, &
+ lanavarr=tv, lanavard=acp, lanavari=acp, lanavarb=acp, lanavarc=acp, &
+ ldativarr=tv, ldativard=fv, ldativari=fv, ldativarb=fv, ldativarc=fv)
+
+
+! Volume solo di dati double
+CALL vol7d_copy(this, v7d_tmp, &
+ lanavarr=fv, lanavard=acn, lanavari=fv, lanavarb=fv, lanavarc=fv, &
+ lanaattrr=fv, lanaattrd=fv, lanaattri=fv, lanaattrb=fv, lanaattrc=fv, &
+ lanavarattrr=fv, lanavarattrd=fv, lanavarattri=fv, lanavarattrb=fv, lanavarattrc=fv, &
+ ldativarr=fv, ldativard=tv, ldativari=fv, ldativarb=fv, ldativarc=fv, &
+ ldatiattrr=fv, ldatiattrd=fv, ldatiattri=fv, ldatiattrb=fv, ldatiattrc=fv, &
+ ldativarattrr=fv, ldativarattrd=fv, ldativarattri=fv, ldativarattrb=fv, ldativarattrc=fv)
+
+! converto a dati reali
+IF (ASSOCIATED(v7d_tmp%dativar%d)) THEN ! .and. associated(v7d_tmp%voldatid) ?
+! alloco i dati reali e vi trasferisco i double
+  ALLOCATE(v7d_tmp%voldatir(SIZE(v7d_tmp%voldatid, 1), SIZE(v7d_tmp%voldatid, 2), &
+  SIZE(v7d_tmp%voldatid, 3), SIZE(v7d_tmp%voldatid, 4), SIZE(v7d_tmp%voldatid, 5), &
+  SIZE(v7d_tmp%voldatid, 6)))
+  DO i = 1, SIZE(v7d_tmp%dativar%d)
+    v7d_tmp%voldatir(:,:,:,:,i,:) = &
+     realdat(v7d_tmp%voldatid(:,:,:,:,i,:), v7d_tmp%dativar%d(i))
+  ENDDO
+  DEALLOCATE(v7d_tmp%voldatid)
+! trasferisco le variabili
+  v7d_tmp%dativar%r => v7d_tmp%dativar%d
+  NULLIFY(v7d_tmp%dativar%d)
+
+! fondo con il volume definitivo
+  CALL vol7d_merge(that, v7d_tmp)
+ELSE
+  CALL delete(v7d_tmp)
+ENDIF
+
+
+! Volume solo di dati interi
+CALL vol7d_copy(this, v7d_tmp, &
+ lanavarr=fv, lanavard=fv, lanavari=acn, lanavarb=fv, lanavarc=fv, &
+ lanaattrr=fv, lanaattrd=fv, lanaattri=fv, lanaattrb=fv, lanaattrc=fv, &
+ lanavarattrr=fv, lanavarattrd=fv, lanavarattri=fv, lanavarattrb=fv, lanavarattrc=fv, &
+ ldativarr=fv, ldativard=fv, ldativari=tv, ldativarb=fv, ldativarc=fv, &
+ ldatiattrr=fv, ldatiattrd=fv, ldatiattri=fv, ldatiattrb=fv, ldatiattrc=fv, &
+ ldativarattrr=fv, ldativarattrd=fv, ldativarattri=fv, ldativarattrb=fv, ldativarattrc=fv)
+
+! converto a dati reali
+IF (ASSOCIATED(v7d_tmp%dativar%i)) THEN
+! alloco i dati reali e vi trasferisco gli interi
+  ALLOCATE(v7d_tmp%voldatir(SIZE(v7d_tmp%voldatii, 1), SIZE(v7d_tmp%voldatii, 2), &
+  SIZE(v7d_tmp%voldatii, 3), SIZE(v7d_tmp%voldatii, 4), SIZE(v7d_tmp%voldatii, 5), &
+  SIZE(v7d_tmp%voldatii, 6)))
+  DO i = 1, SIZE(v7d_tmp%dativar%i)
+    v7d_tmp%voldatir(:,:,:,:,i,:) = &
+     realdat(v7d_tmp%voldatii(:,:,:,:,i,:), v7d_tmp%dativar%i(i))
+  ENDDO
+  DEALLOCATE(v7d_tmp%voldatii)
+! trasferisco le variabili
+  v7d_tmp%dativar%r => v7d_tmp%dativar%i
+  NULLIFY(v7d_tmp%dativar%i)
+
+! fondo con il volume definitivo
+  CALL vol7d_merge(that, v7d_tmp)
+ELSE
+  CALL delete(v7d_tmp)
+ENDIF
+
+
+! Volume solo di dati byte
+call vol7d_copy(this, v7d_tmp, &
+ lanavarr=fv, lanavard=fv, lanavari=fv, lanavarb=acn, lanavarc=fv, &
+ lanaattrr=fv, lanaattrd=fv, lanaattri=fv, lanaattrb=fv, lanaattrc=fv, &
+ lanavarattrr=fv, lanavarattrd=fv, lanavarattri=fv, lanavarattrb=fv, lanavarattrc=fv, &
+ ldativarr=fv, ldativard=fv, ldativari=fv, ldativarb=tv, ldativarc=fv, &
+ ldatiattrr=fv, ldatiattrd=fv, ldatiattri=fv, ldatiattrb=fv, ldatiattrc=fv, &
+ ldativarattrr=fv, ldativarattrd=fv, ldativarattri=fv, ldativarattrb=fv, ldativarattrc=fv)
+
+! converto a dati reali
+IF (ASSOCIATED(v7d_tmp%dativar%b)) THEN
+! alloco i dati reali e vi trasferisco i byte
+  ALLOCATE(v7d_tmp%voldatir(SIZE(v7d_tmp%voldatib, 1), SIZE(v7d_tmp%voldatib, 2), &
+  SIZE(v7d_tmp%voldatib, 3), SIZE(v7d_tmp%voldatib, 4), SIZE(v7d_tmp%voldatib, 5), &
+  SIZE(v7d_tmp%voldatib, 6)))
+  DO i = 1, SIZE(v7d_tmp%dativar%b)
+    v7d_tmp%voldatir(:,:,:,:,i,:) = &
+     realdat(v7d_tmp%voldatib(:,:,:,:,i,:), v7d_tmp%dativar%b(i))
+  ENDDO
+  DEALLOCATE(v7d_tmp%voldatib)
+! trasferisco le variabili
+  v7d_tmp%dativar%r => v7d_tmp%dativar%b
+  NULLIFY(v7d_tmp%dativar%b)
+
+! fondo con il volume definitivo
+  CALL vol7d_merge(that, v7d_tmp)
+ELSE
+  CALL delete(v7d_tmp)
+ENDIF
+
+
+! Volume solo di dati character
+call vol7d_copy(this, v7d_tmp, &
+ lanavarr=fv, lanavard=fv, lanavari=fv, lanavarb=fv, lanavarc=acn, &
+ lanaattrr=fv, lanaattrd=fv, lanaattri=fv, lanaattrb=fv, lanaattrc=fv, &
+ lanavarattrr=fv, lanavarattrd=fv, lanavarattri=fv, lanavarattrb=fv, lanavarattrc=fv, &
+ ldativarr=fv, ldativard=fv, ldativari=fv, ldativarb=fv, ldativarc=tv, &
+ ldatiattrr=fv, ldatiattrd=fv, ldatiattri=fv, ldatiattrb=fv, ldatiattrc=fv, &
+ ldativarattrr=fv, ldativarattrd=fv, ldativarattri=fv, ldativarattrb=fv, ldativarattrc=fv)
+
+! converto a dati reali
+IF (ASSOCIATED(v7d_tmp%dativar%c)) THEN
+! alloco i dati reali e vi trasferisco i character
+  ALLOCATE(v7d_tmp%voldatir(SIZE(v7d_tmp%voldatic, 1), SIZE(v7d_tmp%voldatic, 2), &
+  SIZE(v7d_tmp%voldatic, 3), SIZE(v7d_tmp%voldatic, 4), SIZE(v7d_tmp%voldatic, 5), &
+  SIZE(v7d_tmp%voldatic, 6)))
+  DO i = 1, SIZE(v7d_tmp%dativar%c)
+    v7d_tmp%voldatir(:,:,:,:,i,:) = &
+     realdat(v7d_tmp%voldatic(:,:,:,:,i,:), v7d_tmp%dativar%c(i))
+  ENDDO
+  DEALLOCATE(v7d_tmp%voldatic)
+! trasferisco le variabili
+  v7d_tmp%dativar%r => v7d_tmp%dativar%c
+  NULLIFY(v7d_tmp%dativar%c)
+
+! fondo con il volume definitivo
+  CALL vol7d_merge(that, v7d_tmp)
+ELSE
+  CALL delete(v7d_tmp)
+ENDIF
+
+
+
+END SUBROUTINE vol7d_convr
+
 
 !> Metodo per ottenere solo le differenze tra due oggetti vol7d.
 !! Il primo volume viene confrontato col secondo; nel secondo volume ovunque 
