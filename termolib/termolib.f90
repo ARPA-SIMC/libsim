@@ -62,15 +62,19 @@ elemental real function OE(TD,TT,PT)
   real,intent(in)::td,tt,pt
   real::atw                    !variabile di lavoro
 
-  if(td < 0 .or. tt < 0 .or. pt < 0)then 
+  if( c_e(td) .and. c_e(tt) .and. c_e(pt) )then 
+
+    atw = TW(td,tt,pt) 
+    OE  = OS(atw,pt) 
+  
+  else
+
      OE=rmiss 
-     return 
+
   end if
 
-  atw = TW(td,tt,pt) 
-  OE  = OS(atw,pt) 
-
   return 
+
 end function OE
 
 !------------------------------------------------------------------------------
@@ -101,12 +105,15 @@ elemental real function O(T,PT)
 
   real,intent(in)::t,pt
 
-  if(t < 0 .or. pt < 0)then 
-     O=rmiss 
-     return 
-  end if
+  if( c_e(t) .and. c_e(pt) )then 
 
-  O=t*((1000./pt)**.286) 
+    O=t*((1000./pt)**.286) 
+
+  else
+
+    O=rmiss 
+
+  end if
 
   return 
 end function O
@@ -133,14 +140,17 @@ elemental real function OW(TD,TT,PT)
   real,intent(in)::td,tt,pt       !input
   real::atw,aos                   !variabili di lavoro
  
-  if(td < 0 .or. tt < 0 .or. pt < 0)then 
-     ow=rmiss 
-     return 
-  end if
+  if(c_e(td) .and. c_e(tt) .and. c_e(pt) )then 
 
-  atw = TW  (td,tt,pt) 
-  aos = OS  (atw,pt) 
-  OW  = TSA (aos,1000.) 
+    atw = TW  (td,tt,pt) 
+    aos = OS  (atw,pt) 
+    OW  = TSA (aos,1000.) 
+
+  else
+
+     ow=rmiss 
+
+  end if
 
   return 
 end function OW
@@ -165,14 +175,18 @@ elemental real function  OS(T,PT)
 
   real,intent(in)::t,pt
 
-  if(t <  0 .or. pt < 0)then 
+  if( c_e(t) .and. c_e(pt) )then 
+
+    OS=t*((1000./pt)**.286)/(exp(-2.6518986* W(t,pt) /t)) 
+
+  else
+
      OS=rmiss 
-     return 
+
   end if
 
-  OS=t*((1000./pt)**.286)/(exp(-2.6518986* W(t,pt) /t)) 
-
   return 
+
 end function OS
  
 !------------------------------------------------------------------------------
@@ -196,13 +210,16 @@ elemental real function  TE(TD,TT,PT)
   real,intent(in)::td,tt,pt       !input
   real::aoe                        !variabile di lavoro
 
-  if(td < 0 .or. tt <  0 .or. pt < 0)then 
-     TE=rmiss 
-     return 
-  end if
+  if( c_e(td) .and. c_e(tt) .and. c_e(pt) )then 
 
-  aoe = OE  (td,tt,pt) 
-  TE  = TDA (aoe,pt) 
+    aoe = OE  (td,tt,pt) 
+    TE  = TDA (aoe,pt) 
+
+  else
+
+     TE=rmiss 
+
+  end if
 
   return 
 end function TE
@@ -231,15 +248,18 @@ elemental real function TRUG(UMID,T)
   real,intent(in)::umid,t                               !input
   real::es,e                                            !variabili di lavoro
 
-  if(umid <  0 .or. t < 0)then
-     TRUG=rmiss 
-     return 
-  end if
+  if( c_e(umid) .and. c_e(t) )then
 
-  es=ESAT(t)                           ! >>> Calcolo la P.v.s 
-  e=umid/100.*es                       ! >>> Calcolo la P.v. 
-  TRUG=(D*log(E/psva))/(C-log(E/psva)) ! >>> Calcolo la T.d. 
-  TRUG=TRUG+abz                        ! >>> Calcolo la T.d. in Kelvin 
+    es=ESAT(t)                           ! >>> Calcolo la P.v.s 
+    e=umid/100.*es                       ! >>> Calcolo la P.v. 
+    TRUG=(D*log(E/psva))/(C-log(E/psva)) ! >>> Calcolo la T.d. 
+    TRUG=TRUG+abz                        ! >>> Calcolo la T.d. in Kelvin 
+
+  else
+
+     TRUG=rmiss 
+
+  end if
 
   return 
 end function TRUG
@@ -272,33 +292,36 @@ elemental real function  TW( TD,TT,PT )
   real::aw,ao,pi,x,aos,ti                !variabili locali di lavoro
   integer::i
 
-  if(td <  0 .or. tt < 0 .or. pt < 0)then 
-     TW=rmiss 
-     return 
-  end if
+  if( c_e(td) .and. c_e(tt) .and. c_e(pt) )then 
 
-  aw = W (td,pt) 
-  ao = O (tt,pt) 
-  pi = pt 
+    aw = W (td,pt) 
+    ao = O (tt,pt) 
+    pi = pt 
 !con 10 cicli l'umidità specifica media tra td e tw dovrebbe tendere a
 !essere quella alla TW, se converge prima si esce dal ciclo 
-  do    i =1,10 
-     x  =  .02*( TMR(aw,pi) - TDA(ao,pi) ) 
-     if ( abs(X) < 0.01  )then
+    do    i =1,10 
+      x  =  .02*( TMR(aw,pi) - TDA(ao,pi) ) 
+      if ( abs(X) < 0.01  )then
         ti = TDA (ao , pi)
 !trovato il punto di intersezione,calcoliamo l'adiab. satura che ci passa 
         aos  =   OS (ti  , pi) 
         TW   =  TSA (aos , pt) 
         return
-     end if
-     pi = pi* ( 2.**(X)  ) 
-  end do
+      end if
+      pi = pi* ( 2.**(X)  ) 
+    end do
      
-  ti=TDA (ao,pi) 
+    ti=TDA (ao,pi) 
  
 !trovato il punto di intersezione,calcoliamo l'adiab. satura che ci passa
-  aos  =   os (ti  , pi) 
-  TW   =  TSA (aos , pt) 
+    aos  =   os (ti  , pi) 
+    TW   =  TSA (aos , pt) 
+
+  else
+
+     TW=rmiss 
+
+  end if
 
   return 
 end function TW
@@ -330,12 +353,16 @@ elemental real function TVIR(TD,TT,PT)
 
   real,intent(in)::td,tt,pt
 
-  if(td <  0.or. tt <0 .or. pt < 0)then 
+  if( c_e(td) .and. c_e(tt) .and. c_e(pt) )then 
+
+    TVIR = (1 + 0.00061 * USPEC(td , pt ) ) *tt 
+
+  else
+
      TVIR=rmiss 
-     return 
+
   end if
 
-  TVIR = (1 + 0.00061 * USPEC(td , pt ) ) *tt 
 
   return 
 end function TVIR
@@ -371,13 +398,16 @@ elemental real function USPEC(TD,PT)
 
   real,intent(in)::td,pt
 
-  if(td <  0 .or. pt < 0)then
-     USPEC=rmiss
-     return
-  end if
+  if(c_e(td) .and. c_e(pt) )then
 
-  USPEC=eps*(ESAT(td)/(PT-(1-EPS)*ESAT(td)))
-  USPEC=USPEC*1000.
+    USPEC=eps*(ESAT(td)/(PT-(1-EPS)*ESAT(td)))
+    USPEC=USPEC*1000.
+
+  else
+
+     USPEC=rmiss
+
+  end if
 
   return
 
@@ -408,12 +438,16 @@ elemental real function FR (T,TD )
 
   real,intent(in)::t,td
 
-  if(t <= 0 .or. td <=0 )then 
-     FR=rmiss 
-     return 
+  if( c_e(t) .and. c_e(td) )then 
+
+    FR  =  100.*( ESAT(td)/ESAT(t) ) 
+
+  else
+
+    FR=rmiss 
+
   end if
- 
-  FR  =  100.*( ESAT(td)/ESAT(t) ) 
+  
   return 
 end function FR
  
@@ -443,13 +477,16 @@ elemental real function W(TD,PT)
   real,intent(in)::td,pt
   real::x
 
-  if(td  < 0 .or. pt < 0)then 
-     W=rmiss 
-     return 
-  end if
+  if( c_e(td) .and. c_e(pt) )then 
 
-  x  =  ESAT(td) 
-  W  =  622.*x/(pt-x) 
+    x  =  ESAT(td) 
+    W  =  622.*x/(pt-x) 
+
+  else
+
+     W=rmiss 
+     
+  end if
 
   return 
 end function W
@@ -481,15 +518,24 @@ elemental real function RELHUMTOQ(RH,PT,T)
 
   real,intent(in)::rh,pt,t
 
-   if ( t < 8 )then         !al disotto ritorna NaN
+  if (c_e(rh) .and. c_e(pt) .and. c_e(t)) then
+
+    if ( t < 8 )then         !al disotto ritorna NaN
       relhumtoq =rmiss
-     return
+      return
+    end if
+
+    RELHUMTOQ=rh*(eps*ESAT(t))/(pt-c1*ESAT(t)) 
+    if (RELHUMTOQ  <  0.)RELHUMTOQ = 0. 
+
+  else
+
+    relhumtoq =rmiss
+
   end if
 
-  RELHUMTOQ=rh*(eps*ESAT(t))/(pt-c1*ESAT(t)) 
-  if (RELHUMTOQ  <  0.)RELHUMTOQ = 0. 
-
   return 
+
 end function RELHUMTOQ
  
 !-----------------------------------------------------------------------
@@ -506,22 +552,31 @@ elemental real function ESAT(T)
 
 !escludo le temperature minori di 8 gradi Kelvin, poichè la function
 !restituirebbe un numero infinito.
-  if ( t < 8 )then
-     ESAT=rmiss
-     return
-  end if
 
-  if(t > 273.16)then 
-     a=17.269 
-     b=35.86 
-  else 
-     a=21.874 
-     b=7.66 
-  end if
+  if ( c_e(t) )then
+    if ( t < 8 )then
+      ESAT=rmiss
+      return
+    end if
+
+    if(t > 273.16)then 
+      a=17.269 
+      b=35.86 
+    else 
+      a=21.874 
+      b=7.66 
+    end if
  
-  ESAT=6.11*exp(a*(t-273.16)/(t-b)) 
+    ESAT=6.11*exp(a*(t-273.16)/(t-b)) 
+
+  else
+
+    ESAT=rmiss
+
+  end if
 
   return 
+
 end function ESAT
 
 !-----------------------------------------------------------------------------
