@@ -31,7 +31,7 @@ REAL, PARAMETER :: rcp = 2./7. !< rapporto tra calore specifico...?
 REAL, PARAMETER :: cpd = rd/rcp !< calore specifico dell'aria secca a pressione costante
 REAL, PARAMETER :: cvd = cpd-rd !< calore specifico dell'aria secca a volume costante
 REAL, PARAMETER :: lvw = 2.5E+6 !< calore latente...?
-real,parameter  :: convff = 1.94  !< fattore di conversione da KT a m/s
+real,parameter  :: convff = 1.94  !< fattore di conversione da m/s a KT
 ! c1 era parameter(c1=0.378)
 real,parameter  :: c1 = 1.- mwater/mdry  !< 1. - ( mwater/mdry ) 
 

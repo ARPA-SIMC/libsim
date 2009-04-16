@@ -3,7 +3,10 @@ program esempio_termolib
 use termolib
 use missing_values
 use file_utilities
-use phisical_constant
+use phys_const
+
+
+implicit none
 
 !-------------------------------------------------------
 !
@@ -11,6 +14,10 @@ use phisical_constant
 !
 !-------------------------------------------------------
 
+real :: Q,acin,acape,altstaz,c_liftd,con_lev,eql_ii,fcl,h_zero,rhstaz,tamb
+real :: s_li,s_k,s_u,p_zero,ur,s_sw ,s_sh,SAMIX, s_tt,teta,tas,TAS_lift
+real :: Tete,TLCL,Tww,Tv,zz
+integer :: ict,k
 
 !      leggo i dati osservati
 
@@ -71,11 +78,11 @@ use phisical_constant
 
      ur=fr(tt(k),dd(k))
      Q=W(dd(k) ,Pp(k) )
-     teta= o(tt(k),pp(k) ) -abz
-     Tete=(Oe(dd(k) ,Tt(k) ,Pp(k) ))-Abz
-     Tww=(Tw(dd(k) ,Tt(k) ,Pp(k) ))-Abz
-     Tv=(Tvir(dd(k) ,Tt(k) ,Pp(k) ))-Abz
-     write(22,22)pp(k),tt(k)-abz,dd(k)-abz,ur,q,teta,tete,tww,tv,zz
+     teta= o(tt(k),pp(k) ) -t0c
+     Tete=(Oe(dd(k) ,Tt(k) ,Pp(k) ))-t0c
+     Tww=(Tw(dd(k) ,Tt(k) ,Pp(k) ))-T0c
+     Tv=(Tvir(dd(k) ,Tt(k) ,Pp(k) ))-T0c
+     write(22,22)pp(k),tt(k)-t0c,dd(k)-t0c,ur,q,teta,tete,tww,tv,zz
 
   end do
 

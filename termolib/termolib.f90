@@ -1555,7 +1555,7 @@ end function Z
 !
 !-----------------------------------------------------------------------------
 
-subroutine UV(DD,FF,U,V)   
+elemental subroutine UV(DD,FF,U,V)   
 
 !  Calcola le componenti U e V  del vento 
 ! 
@@ -1599,7 +1599,7 @@ end subroutine UV
 !--------------------------------------------------------------------------
 
 
-subroutine UVWIND(UBAR,VBAR,SPEED,DIREC)     
+elemental subroutine UVWIND(UBAR,VBAR,SPEED,DIREC)     
 ! Ricostruisce direzione e velocita` del vento dalle componenti cartesiane 
 ! 
 ! Uso :  CALL UVWIND (U,V,DD,FF) 

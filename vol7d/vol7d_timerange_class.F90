@@ -8,6 +8,7 @@
 MODULE vol7d_timerange_class
 USE kinds
 USE missing_values
+use char_utilities
 IMPLICIT NONE
 
 !> Definisce l'intervallo temporale di un'osservazione meteo.
@@ -124,6 +125,12 @@ INTERFACE display
   MODULE PROCEDURE display_timerange
 END INTERFACE
 
+!>Rapresent timerange object in a pretty string
+INTERFACE pretty_display
+  MODULE PROCEDURE pretty_display_timerange
+END INTERFACE
+
+
 CONTAINS
 
 !> Inizializza un oggetto \a vol7d_timerange con i parametri opzionali forniti.
@@ -185,9 +192,23 @@ subroutine display_timerange(this)
 TYPE(vol7d_timerange),INTENT(in) :: this
 integer ::EditionNumber,timerange,p1,p2
 
-print*,"TIMERANGE: ",this%timerange,this%p1,this%p2
+print*,pretty_display_timerange(this)
 
 end subroutine display_timerange
+
+
+
+elemental character(len=60) function pretty_display_timerange(this)
+
+TYPE(vol7d_timerange),INTENT(in) :: this
+integer ::EditionNumber,timerange,p1,p2
+
+pretty_display_timerange="Timerange: "//trim(to_char(this%timerange))//" P1: "//&
+ trim(to_char(this%p1))//" P2: "//trim(to_char(this%p2))
+
+return
+
+end function pretty_display_timerange
 
 
 elemental FUNCTION vol7d_timerange_eq(this, that) RESULT(res)

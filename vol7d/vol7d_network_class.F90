@@ -7,6 +7,7 @@
 MODULE vol7d_network_class
 USE kinds
 USE missing_values
+use char_utilities
 IMPLICIT NONE
 
 !> Definisce la rete a cui appartiene una stazione.
@@ -76,6 +77,11 @@ INTERFACE display
   MODULE PROCEDURE display_network
 END INTERFACE
 
+!>return network object in a pretty string
+INTERFACE pretty_display
+  MODULE PROCEDURE pretty_display_network
+END INTERFACE
+
 CONTAINS
 
 !> Inizializza un oggetto \a vol7d_network con i parametri opzionali forniti.
@@ -110,6 +116,18 @@ TYPE(vol7d_network),INTENT(in) :: this
 print*,"NETWORK: ",this%id
 
 end subroutine display_network
+
+
+elemental character(len=20) function pretty_display_network(this)
+
+TYPE(vol7d_network),INTENT(in) :: this
+
+pretty_display_network="Network: "//trim(to_char(this%id))
+
+return
+
+end function pretty_display_network
+
 
 
 elemental FUNCTION vol7d_network_eq(this, that) RESULT(res)
