@@ -16,9 +16,9 @@ IMPLICIT NONE
 !! accessibili e scrivibili, ma è comunque consigliato assegnarli tramite
 !! il costruttore ::init.
 TYPE vol7d_timerange
-  INTEGER :: timerange !< tipo di intervallo temporale (vedi tabella 5 formato grib WMO http://www.ecmwf.int/publications/manuals/libraries/gribex/wmoCodeTable5.html)
-  INTEGER :: p1 !< valore numerico del primo istante temporale, se previsto da \a timerange
-  INTEGER :: p2 !< valore numerico del secondo istante temporale, se previsto da \a timerange
+  INTEGER :: timerange !< proprietà statistiche del dato (es. 0=media, 1=cumulazione, 2=massimo, 3=minimo, 4=differenza... 254=dato istantaneo) tratte dalla code table 4.10 del formato WMO grib edizione 2, vedi http://www.wmo.ch/pages/prog/www/WMOCodes/GRIB.html
+  INTEGER :: p1 !< termine del periodo di validità del dato, in secondi, a partire dall'istante di riferimento (0 per dati osservati o analizzati)
+  INTEGER :: p2 !< durata del periodo di validità del dato, in secondi (0 per dati istantanei)
 END TYPE vol7d_timerange
 
 !> Valore mancante per vol7d_timerange.
@@ -125,13 +125,31 @@ INTERFACE display
   MODULE PROCEDURE display_timerange
 END INTERFACE
 
-!>Rapresent timerange object in a pretty string
+!>Represent timerange object in a pretty string
 INTERFACE pretty_display
   MODULE PROCEDURE pretty_display_timerange
 END INTERFACE
 
 
 CONTAINS
+
+
+!> Inizializza un oggetto \a vol7d_timerange con i parametri opzionali forniti.
+!! Questa è la versione \c FUNCTION, in stile F2003, del costruttore, da preferire
+!! rispetto alla versione \c SUBROUTINE \c init.
+!! Se non viene passato nessun parametro opzionale l'oggetto è
+!! inizializzato a valore mancante.
+FUNCTION timerange_new(timerange, p1, p2) RESULT(this)
+INTEGER,INTENT(IN),OPTIONAL :: timerange !< tipo di intervallo temporale
+INTEGER,INTENT(IN),OPTIONAL :: p1 !< valore per il primo istante temporale
+INTEGER,INTENT(IN),OPTIONAL :: p2 !< valore per il secondo istante temporale
+
+TYPE(vol7d_timerange) :: this !< oggetto da inizializzare
+
+CALL init(this, timerange, p1, p2)
+
+END FUNCTION timerange_new
+
 
 !> Inizializza un oggetto \a vol7d_timerange con i parametri opzionali forniti.
 !! Se non viene passato nessun parametro opzionale l'oggetto è

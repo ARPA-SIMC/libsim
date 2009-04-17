@@ -530,7 +530,7 @@ IF (i > 0) THEN
     CALL csv_record_getfield(csv, i1)
     CALL csv_record_getfield(csv, i2)
     CALL csv_record_getfield(csv, i3)
-    CALL init(vartable(i)%timerange, i1, i3, i2)
+    CALL init(vartable(i)%timerange, i1, i2, i3)
     CALL csv_record_getfield(csv)
     CALL csv_record_getfield(csv, buf)
     vartable(i)%description = buf ! uso buf per evitare un warning stringa troppo corta
