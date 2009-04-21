@@ -1,16 +1,17 @@
-!> \brief  parse command options (enhanced)
-!!
-!! Questo modulo definisce delle funzioni e delle subroutine per
-!! gestire comodamente i parametri \c OPTIONAL all'interno di
-!! programmi.
+!> Module for quickly interprert the \c OPTIONAL parameters passed
+!! to a subprogram.
+!! This module defines functions and subroutines that handle in a
+!! quick way \c OPTIONAL parameters in a subprogram by returning
+!! a useable missing value if a given parameter has not been provided.
+!! The module provide a generic subroutine, valid for almost all
+!! intrinsic types, and specific functions.
 !!
 !! \ingroup base
-module optional_values
-
-use missing_values
+MODULE optional_values
+USE missing_values
 IMPLICIT NONE
 
-!> Generica subroutine per controllare i parametri OPTIONAL.
+!> Generic subroutine for checking \c OPTIONAL parameterw.
 INTERFACE optio
   MODULE PROCEDURE soptio_b, soptio_s, soptio_l, soptio_r, soptio_d, soptio_c, soptio_log
 END INTERFACE
@@ -22,10 +23,10 @@ CONTAINS
 
 !FUNCTION
 
-!> Return the optional values if present or missing
+!> Return the optional value if present, otherwise return missing value.
 elemental integer(kind=int_b) function optio_b(var)
 
-integer(kind=int_b),intent(in),optional  :: var !< variabile da controllare
+integer(kind=int_b),intent(in),optional  :: var !< variable to be checked
 
 if (present(var))then
   optio_b=var
@@ -36,10 +37,11 @@ end if
 return
 end function optio_b
 
-!> Return the optional values if present or missing
+
+!> Return the optional value if present, otherwise return missing value.
 elemental integer(kind=int_s) function optio_s(var)
 
-integer(kind=int_s),intent(in),optional  :: var !< variabile da controllare
+integer(kind=int_s),intent(in),optional  :: var !< variable to be checked
 
 if (present(var))then
   optio_s=var
@@ -51,12 +53,10 @@ return
 end function optio_s
 
 
-
-
-!> Return the optional values if present or missing
+!> Return the optional value if present, otherwise return missing value.
 elemental integer(kind=int_l) function optio_l(var)
 
-integer(kind=int_l),intent(in),optional  :: var !< variabile da controllare
+integer(kind=int_l),intent(in),optional  :: var !< variable to be checked
 
 if (present(var))then
   optio_l=var
@@ -68,11 +68,10 @@ return
 end function optio_l
 
 
-
-!> Return the optional values if present or missing
+!> Return the optional value if present, otherwise return missing value.
 elemental real function optio_r(var)
 
-real,intent(in),optional  :: var !< variabile da controllare
+real,intent(in),optional  :: var !< variable to be checked
 
 if (present(var))then
   optio_r=var
@@ -84,11 +83,10 @@ return
 end function optio_r
 
 
+!> Return the optional value if present, otherwise return missing value.
+elemental doubleprecision function optio_d(var)
 
-!> Return the optional values if present or missing
-elemental real (kind=fp_d)  function optio_d(var)
-
-real (kind=fp_d),intent(in),optional  :: var !< variabile da controllare
+doubleprecision,intent(in),optional  :: var !< variable to be checked
 
 if (present(var))then
   optio_d=var
@@ -100,11 +98,11 @@ return
 end function optio_d
 
 
-!> Return the optional values if present or missing
-!! N.B. elemental is not possible here
+!> Return the optional value if present, otherwise return missing value.
+!! N.B. elemental is not possible here.
 function optio_c(var,len) result(char)
 
-character (len=*),intent(in),optional  :: var !< variabile da controllare
+character (len=*),intent(in),optional  :: var !< variable to be checked
 integer , intent(in) :: len
 CHARACTER(len=LEN) :: char
 
@@ -118,11 +116,10 @@ return
 end function optio_c
 
 
-
-!> Return the optional values if present or missing
+!> Return the optional value if present, otherwise return \c .FALSE. .
 elemental logical function optio_log(var)
 
-logical,intent(in),optional  :: var !< variabile da controllare
+logical,intent(in),optional  :: var !< variable to be checked
 
 if (present(var))then
   optio_log=var
@@ -134,15 +131,14 @@ return
 end function optio_log
 
 
-
-
 !SUBROUTINE
 
-!> Return the optional values if present or missing
+!> Set the output value to input, if input is present, otherwise set it
+!! to missing value.
 elemental subroutine soptio_b(var,optio_b)
 
-integer(kind=int_b),intent(in),optional  :: var !< variabile da controllare
-integer(kind=int_b),intent(out) :: optio_b !< variabile pari a var se presente altrimenti missing
+integer(kind=int_b),intent(in),optional  :: var !< variable to be checked
+integer(kind=int_b),intent(out) :: optio_b !< equal to \a var if present, otherwise equal to the corresponding missing value
 
 if (present(var))then
   optio_b=var
@@ -153,11 +149,13 @@ end if
 return
 end subroutine soptio_b
 
-!> Return the optional values if present or missing
+
+!> Set the output value to input, if input is present, otherwise set it
+!! to missing value.
 elemental subroutine soptio_s(var,optio_s)
 
-integer(kind=int_s),intent(in),optional  :: var !< variabile da controllare
-integer(kind=int_s),intent(out) :: optio_s !< variabile pari a var se presente altrimenti missing
+integer(kind=int_s),intent(in),optional  :: var !< variable to be checked
+integer(kind=int_s),intent(out) :: optio_s !< equal to \a var if present, otherwise equal to the corresponding missing value
 
 if (present(var))then
   optio_s=var
@@ -169,13 +167,12 @@ return
 end subroutine soptio_s
 
 
-
-
-!> Return the optional values if present or missing
+!> Set the output value to input, if input is present, otherwise set it
+!! to missing value.
 elemental subroutine soptio_l(var,optio_l)
 
-integer(kind=int_l),intent(in),optional  :: var !< variabile da controllare
-integer(kind=int_l),intent(out) :: optio_l !< variabile pari a var se presente altrimenti missing
+integer(kind=int_l),intent(in),optional  :: var !< variable to be checked
+integer(kind=int_l),intent(out) :: optio_l !< equal to \a var if present, otherwise equal to the corresponding missing value
 
 if (present(var))then
   optio_l=var
@@ -188,11 +185,12 @@ end subroutine soptio_l
 
 
 
-!> Return the optional values if present or missing
+!> Set the output value to input, if input is present, otherwise set it
+!! to missing value.
 elemental subroutine soptio_r(var,optio_r)
 
-real,intent(in),optional  :: var !< variabile da controllare
-real,intent(out) :: optio_r !< variabile pari a var se presente altrimenti missing
+real,intent(in),optional  :: var !< variable to be checked
+real,intent(out) :: optio_r !< equal to \a var if present, otherwise equal to the corresponding missing value
 
 if (present(var))then
   optio_r=var
@@ -204,12 +202,12 @@ return
 end subroutine soptio_r
 
 
-
-!> Return the optional values if present or missing
+!> Set the output value to input, if input is present, otherwise set it
+!! to missing value.
 elemental subroutine soptio_d(var,optio_d)
 
-real (kind=fp_d),intent(in),optional  :: var !< variabile da controllare
-real (kind=fp_d),intent(out) :: optio_d !< variabile pari a var se presente altrimenti missing
+doubleprecision,intent(in),optional  :: var !< variable to be checked
+doubleprecision,intent(out) :: optio_d !< equal to \a var if present, otherwise equal to the corresponding missing value
 
 if (present(var))then
   optio_d=var
@@ -221,11 +219,12 @@ return
 end subroutine soptio_d
 
 
-!> Return the optional values if present or missing
+!> Set the output value to input, if input is present, otherwise set it
+!! to missing value.
 elemental subroutine soptio_c(var,optio_c)
 
-character (len=*),intent(in),optional  :: var !< variabile da controllare
-CHARACTER (len=*),intent(out) :: optio_c !< variabile pari a var se presente altrimenti missing
+character (len=*),intent(in),optional  :: var !< variable to be checked
+CHARACTER (len=*),intent(out) :: optio_c !< equal to \a var if present, otherwise equal to the corresponding missing value
 
 
 if (present(var))then
@@ -238,12 +237,12 @@ return
 end subroutine soptio_c
 
 
-!> Return the optional values if present or missing
-!!assume .false. for default
+!> Set the output value to input, if input is present, otherwise set it
+!! to \c .FALSE. .
 elemental subroutine soptio_log(var,optio_log)
 
-logical,intent(in),optional  :: var !< variabile da controllare
-logical,intent(out) :: optio_log !< variabile pari a var se presente altrimenti missing
+logical,intent(in),optional  :: var !< variable to be checked
+logical,intent(out) :: optio_log !< equal to \a var if present, otherwise equal to the corresponding missing value
 
 if (present(var))then
   optio_log=var
@@ -253,7 +252,6 @@ end if
 
 return
 end subroutine soptio_log
-
 
 
 end module optional_values

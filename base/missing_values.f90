@@ -1,44 +1,27 @@
-!> \brief Valori mancanti.
+!> Valori mancanti.
+!! Questo modulo fornisce strumenti per gestire i valori mancanti per
+!! vari tipi di dati.  È importante usare le costanti del tipo giusto
+!! per i propri dati per evitare conversioni automatiche che darebbero
+!! risultati errati.
 !!
-!! Questo modulo fornisce strumenti per gestire i valori
-!! mancanti per vari tipi di dati.  È importante usare le costanti del
-!! tipo giusto per i propri dati per evitare conversioni automatiche che
-!! darebbero risultati errati.
+!! Attenzione alla differenza filosofica tra i tipi reali a singola o
+!! doppia precisione di default della piattaforma, che si ottengono
+!! dichiarando una variabile come \c REAL o \c DOUBLEPRECISION e i
+!! tipi reali a singola o doppia precisione IEEE (4 e 8 byte
+!! rispettivamente) che sono i tipi che rispettano le precisioni
+!! standard IEEE e si dichiarano con \c KIND \a fp_s e \a fp_d
+!! rispettivamente; generalmente coincidono a due a due, ma non è
+!! garantito.
+!!
 !! \ingroup base
 MODULE missing_values
 USE kinds
 IMPLICIT NONE
 
-!omstart missing_values
-!idx Costanti fortran per i valori mancanti
-!Questo modulo definisce le seguenti costanti da usare come
-!valori mancanti:
-!
-!rmiss  => reale di default
-!smiss  => reale a singola precisione (kind=fp_s)
-!dmiss  => reale a doppia precisione (kind=fp_d)
-!imiss  => intero di default
-!ibmiss => intero ad un byte (kind=int_b)
-!ismiss => intero a 2 byte (kind=int_s)
-!ilmiss => intero a 4 byte (kind=int_l)
-!cmiss  => carattere
-!
-!Fa uso dei tipi definiti dal modulo kinds
-!
-!Definisce le seguenti procedure:
-!
-!LOGICAL FUNCTION c_e(var)
-!
-!Restitiusce .TRUE. se var e` valida e .FALSE. se e` mancante;
-!e` richiamabile per tutti i tipi definiti sopra
-!
-!vedi kinds
-!omend
-
 REAL, PARAMETER :: rmiss = HUGE(1.0) !< reale di default
-REAL(kind=fp_s), PARAMETER :: rsmiss = HUGE(1.0_fp_s) !< reale a singola precisione \a (kind=fp_s)
-REAL(kind=fp_d), PARAMETER :: rdmiss = HUGE(1.0_fp_d) !< reale a doppia precisione \a (kind=fp_d)
-REAL(kind=fp_d), PARAMETER :: dmiss = rdmiss !< 
+DOUBLEPRECISION, PARAMETER :: dmiss = HUGE(1.0D0) !< doppia precisione di default
+REAL(kind=fp_s), PARAMETER :: rsmiss = HUGE(1.0_fp_s) !< reale a singola precisione IEEE \a (kind=fp_s)
+REAL(kind=fp_d), PARAMETER :: rdmiss = HUGE(1.0_fp_d) !< reale a doppia precisione IEEE \a (kind=fp_d)
 INTEGER, PARAMETER :: imiss = HUGE(0) !< intero di default
 INTEGER(kind=int_b), PARAMETER :: ibmiss = HUGE(0_int_b) !< intero ad 1 byte \a (kind=int_b)
 INTEGER(kind=int_b), PARAMETER :: bmiss = ibmiss !< 
