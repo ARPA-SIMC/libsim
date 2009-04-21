@@ -10,6 +10,7 @@ MODULE file_utilities
 USE kinds
 USE char_utilities
 USE missing_values
+USE optional_values
 USE err_handling
 IMPLICIT NONE
 
@@ -29,11 +30,14 @@ CHARACTER(len=20) :: program_name='libsim', program_name_env='LIBSIM'
 !> Classe che permette di interpretare i record di un file formato csv.
 TYPE csv_record
   PRIVATE
-  INTEGER :: cursor !, nfield, ntotal
+  INTEGER :: cursor, action !, nfield, ntotal
 !  CHARACTER(LEN=1) :: csep, cquote
   INTEGER(KIND=int_b) :: csep, cquote
   INTEGER(KIND=int_b), POINTER :: record(:)
 END TYPE csv_record
+
+INTEGER, PARAMETER, PRIVATE :: csv_basereclen=1024, &
+ csv_action_read=0, csv_action_write=1
 
 !> Costruttore per la classe \a csv_record. Deve essere richiamato
 !! per ogni record (riga) csv da interpretare.
@@ -56,8 +60,18 @@ INTERFACE csv_record_getfield
    csv_record_getfield_real
 END INTERFACE
 
+!> Metodi per aggiungere successivamente dei campi ad un oggetto \a csv_record.
+!! Usare il nome generico \c csv_record_addfield con i parametri opportuni,
+!! ci penserà il compiltore a scegliere il metodo giusto.
+INTERFACE csv_record_addfield
+  MODULE PROCEDURE csv_record_addfield_char, csv_record_addfield_int, &
+   csv_record_addfield_real
+END INTERFACE
+
+
 PRIVATE csv_record_init, csv_record_delete, csv_record_getfield_char, &
- csv_record_getfield_int, csv_record_getfield_real
+ csv_record_getfield_int, csv_record_getfield_real, csv_record_addfield_char, &
+ csv_record_addfield_int, csv_record_addfield_real
 
 CONTAINS
 
@@ -264,7 +278,7 @@ END FUNCTION delim_csv
 !! su più righe.
 SUBROUTINE csv_record_init(this, record, csep, cquote, nfield)
 TYPE(csv_record),INTENT(INOUT) :: this !< oggetto da inizializzare
-CHARACTER(LEN=*),INTENT(IN) :: record !< record csv da interpretare
+CHARACTER(LEN=*),INTENT(IN), OPTIONAL :: record !< record csv da interpretare, se non è fornito, si intende che vogliamo scrivere un record csv
 CHARACTER(LEN=1),INTENT(IN),OPTIONAL :: csep !< carattere separatore di campo, default \c , (virgola)
 CHARACTER(LEN=1),INTENT(IN),OPTIONAL :: cquote !< carattere raggruppatore di campo, default \c " (doppio apice); è usato tipicamente quando un campo contiene virgole o spazi iniali o finali
 INTEGER,INTENT(OUT),OPTIONAL :: nfield !< numero di campi contenuti nel record
@@ -281,18 +295,24 @@ IF (PRESENT(cquote)) THEN
 ELSE
   this%cquote = TRANSFER('"', this%cquote)
 ENDIF
-l = LEN_TRIM(record)
-ALLOCATE(this%record(l))
-this%record(:) = TRANSFER(record, this%record, l) ! ice in pgf90 with TRIM(record)
-this%cursor = 1
 
-IF (PRESENT(nfield)) THEN
-  nfield = 0
-  DO WHILE(.NOT.csv_record_end(this)) ! faccio un giro a vuoto sul record
-    nfield = nfield + 1
-    CALL csv_record_getfield(this)
-  ENDDO
-  this%cursor = 1 ! riazzero il cursore
+IF (PRESENT(record)) THEN
+  l = LEN_TRIM(record)
+  ALLOCATE(this%record(l))
+  this%record(:) = TRANSFER(record, this%record, l) ! ice in pgf90 with TRIM(record)
+  this%cursor = 1
+
+  IF (PRESENT(nfield)) THEN
+    nfield = 0
+    DO WHILE(.NOT.csv_record_end(this)) ! faccio un giro a vuoto sul record
+      nfield = nfield + 1
+      CALL csv_record_getfield(this)
+    ENDDO
+    this%cursor = 1 ! riazzero il cursore
+  ENDIF
+ELSE
+  ALLOCATE(this%record(csv_basereclen))
+  this%cursor = 1
 ENDIF
 
 END SUBROUTINE csv_record_init
@@ -308,13 +328,121 @@ END SUBROUTINE csv_record_delete
 
 
 !> Riporta il puntatore del record all'inizio per permettere di scorrere
-!! nuovamente lo stesso oggetto.
+!! nuovamente lo stesso oggetto o riscrivere dall'inizio.
 SUBROUTINE csv_record_rewind(this)
 TYPE(csv_record),INTENT(INOUT) :: this !< oggetto da reinizializzare
 
 this%cursor = 1
 
 END SUBROUTINE csv_record_rewind
+
+
+!> Aggiunge un campo da una variabile \c CHARACTER al record csv \a this.
+!! Il campo viene racchiuso tra apici se necessario.
+!! Da migliorare per quotare gli spazi in fondo.
+SUBROUTINE csv_record_addfield_char(this, field, form, force_quote)
+TYPE(csv_record),INTENT(INOUT) :: this !< oggetto di cui restituire i campi
+CHARACTER(LEN=*),INTENT(IN) :: field !< contenuto del campo da aggiungere
+CHARACTER(len=*),INTENT(in),OPTIONAL :: form !< formato opzionale, ignorato per ora
+LOGICAL, INTENT(in), OPTIONAL :: force_quote !< se fornito e \c .TRUE. , il campo viene racchiuso tra apici anche se non necessario
+
+INTEGER :: i
+LOGICAL :: lquote
+
+lquote = optio_log(force_quote)
+
+IF (INDEX(field, TRANSFER(this%csep,field)) == 0 .AND. INDEX(field, TRANSFER(this%cquote,field)) == 0 .AND. .NOT.lquote) THEN ! check CHAR/transfer!
+  CALL checkrealloc(LEN(field)+1)
+  IF (this%cursor > 1) CALL add_byte(this%csep) ! add separator if necessary
+  this%record(this%cursor:this%cursor+LEN(field)-1) = TRANSFER(field, this%record)
+  this%cursor = this%cursor + LEN(field)
+ELSE ! quote required
+  CALL checkrealloc(2*LEN(field)+3) ! worst case """""""""
+  IF (this%cursor > 1) CALL add_byte(this%csep) ! add separator if necessary
+  CALL add_byte(this%cquote) ! add quote
+  DO i = 1, LEN(field)
+    CALL add_char(field(i:i))
+  ENDDO
+  CALL add_byte(this%cquote) ! add quote
+ENDIF
+
+CONTAINS
+
+! Reallocate record if necessary
+SUBROUTINE checkrealloc(enlarge)
+INTEGER, INTENT(in) :: enlarge
+
+INTEGER(KIND=int_b), POINTER :: tmpptr(:)
+
+IF (this%cursor+enlarge > SIZE(this%record)) THEN
+  ALLOCATE(tmpptr(SIZE(this%record)+MAX(csv_basereclen, enlarge)))
+  tmpptr(1:SIZE(this%record)) = this%record(:)
+  DEALLOCATE(this%record)
+  this%record => tmpptr
+ENDIF
+
+END SUBROUTINE checkrealloc
+
+! add a character, doubling it if it's a quote
+SUBROUTINE add_char(char)
+CHARACTER(len=1) :: char
+
+this%record(this%cursor) = TRANSFER(char, this%record(1))
+this%cursor = this%cursor+1
+IF (this%record(this%cursor-1) == this%cquote) THEN ! double the quote
+  this%record(this%cursor) = this%cquote
+  this%cursor = this%cursor+1
+ENDIF
+
+END SUBROUTINE add_char
+
+! add a byte
+SUBROUTINE add_byte(char)
+INTEGER(kind=int_b) :: char
+
+this%record(this%cursor) = char
+this%cursor = this%cursor+1
+
+END SUBROUTINE add_byte
+
+END SUBROUTINE csv_record_addfield_char
+
+
+!> Aggiunge un campo da una variabile \c INTEGER al record csv \a this.
+!! Il campo viene racchiuso tra apici se necessario.
+SUBROUTINE csv_record_addfield_int(this, field, form, force_quote)
+TYPE(csv_record),INTENT(INOUT) :: this !< oggetto di cui restituire i campi
+INTEGER,INTENT(IN) :: field !< contenuto del campo da aggiungere
+CHARACTER(len=*),INTENT(in),OPTIONAL :: form !< formato opzionale
+LOGICAL, INTENT(in), OPTIONAL :: force_quote !< se fornito e \c .TRUE. , il campo viene racchiuso tra apici anche se non necessario
+
+CALL csv_record_addfield(this, TRIM(to_char(field, form)), force_quote=force_quote)
+
+END SUBROUTINE csv_record_addfield_int
+
+
+!> Aggiunge un campo da una variabile \c REAL al record csv \a this.
+!! Il campo viene racchiuso tra apici se necessario.
+SUBROUTINE csv_record_addfield_real(this, field, form, force_quote)
+TYPE(csv_record),INTENT(INOUT) :: this !< oggetto di cui restituire i campi
+REAL,INTENT(IN) :: field !< contenuto del campo da aggiungere
+CHARACTER(len=*),INTENT(in),OPTIONAL :: form !< formato opzionale
+LOGICAL, INTENT(in), OPTIONAL :: force_quote !< se fornito e \c .TRUE. , il campo viene racchiuso tra apici anche se non necessario
+
+CALL csv_record_addfield(this, TRIM(to_char(field, form)), force_quote=force_quote)
+
+END SUBROUTINE csv_record_addfield_real
+
+
+!> Restituisce il record corrente, pronto per poter essere scrito su un file.
+FUNCTION csv_record_getrecord(this)
+TYPE(csv_record),INTENT(IN) :: this !< oggetto di cui restituire il record
+
+CHARACTER(len=this%cursor-1) :: csv_record_getrecord
+
+csv_record_getrecord = TRANSFER(this%record(1:this%cursor-1), csv_record_getrecord)
+
+END FUNCTION csv_record_getrecord
 
 
 !> Restituisce il campo successivo del record \a this in formato \c CHARACTER.
@@ -462,6 +590,12 @@ IF (PRESENT(ier)) ier = lier
 END SUBROUTINE csv_record_getfield_int
 
 
+!> Restituisce il campo successivo del record \a this in formato \c REAL.
+!! Fa avanzare il puntatore di campo, per cui non è più possibile tornare
+!! indietro.
+!! Se il campo non è adatto ad essere convertito in reale (compreso il caso di
+!! fine record), oppure se il campo è più lungo di 32 caratteri, viene restituito
+!! un valore mancante (vedi missing_values).
 SUBROUTINE csv_record_getfield_real(this, field, ier)
 TYPE(csv_record),INTENT(INOUT) :: this !< oggetto di cui restituire i campi
 REAL,INTENT(OUT) :: field !< valore del campo, = \a rmiss se la conversione fallisce
