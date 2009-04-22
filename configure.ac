@@ -1,6 +1,6 @@
 dnl Process this file with autoconf to produce a configure script.
 
-AC_INIT(libsim, 2.6.8, [dcesari@arpa.emr.it])
+AC_INIT(libsim, 2.6.9, [dcesari@arpa.emr.it])
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_SRCDIR([configure.ac])
 AM_INIT_AUTOMAKE([foreign])
@@ -226,6 +226,30 @@ fi
 AM_CONDITIONAL(NGMATH, test "x$enableval" = "xyes")
 
 
+AC_ARG_ENABLE(ncarg, AC_HELP_STRING([--disable-ncarg],
+  [enable ncar graphics]),,[enableval=yes])dnl default enable
+if test "x$enableval" = "xyes"; then
+ # test in f77 because f90 test do not work
+  _ldflags=${LDFLAGS}
+  LDFLAGS="-L/usr/lib/ncarg $LDFLAGS"
+
+  AC_CHECK_LIB([ncarg], [ngpswk],
+    NCARG_LDFLAGS="-L/usr/lib/ncarg"
+    NCARG_LIBS="-lncarg -lncarg_gks -lncarg_c -lX11"
+    AC_SUBST(NCARG_LDFLAGS)
+    AC_SUBST(NCARG_LIBS)
+    AC_DEFINE(HAVE_LIBNCARG, 1, [Enable ncar graphics code])
+    AC_MSG_RESULT([ncar graphics code included]),
+    AC_MSG_ERROR([ncar graphics library not found]),
+    [-lncarg_gks -lncarg_c -lX11])
+
+  LDFLAGS=$_ldflags
+else
+  AC_MSG_RESULT([ncar graphics code not included])
+fi
+AM_CONDITIONAL(NCARG, test "x$enableval" = "xyes")
+
+
 #we here test for f77; will be better develop a test for f90
 AC_ARG_ENABLE(netcdf, AC_HELP_STRING([--disable-netcdf],
   [disable netcdf support]),,[enableval=yes])dnl default enable
@@ -260,6 +284,7 @@ termolib/Makefile
 doc/Doxyfile
 doc/Makefile
 log4fortran/Makefile
+graphics/Makefile
 ])
 
 AC_OUTPUT

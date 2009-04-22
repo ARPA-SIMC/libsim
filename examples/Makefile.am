@@ -1,4 +1,4 @@
-AM_FCFLAGS = -I../base -I../grib -I../volgrid6d -I../vol7d -I../qc -I../termolib -I../log4fortran 
+AM_FCFLAGS = -I../base -I../grib -I../volgrid6d -I../vol7d -I../qc -I../termolib -I../log4fortran  -I../graphics
 EXTRA_DIST = log4crc
 bin_PROGRAMS =
 
@@ -73,6 +73,13 @@ noinst_PROGRAMS += esempio_v7dnetcdf
 
 esempio_v7dnetcdf_SOURCES = esempio_v7dnetcdf.f90
 esempio_v7dnetcdf_LDADD = ../base/libsim_base.la ../vol7d/libsim_vol7d.la  ../log4fortran/liblog4fortran.la
+endif
+
+if NCARG
+noinst_PROGRAMS += example_ncarg_sounding
+
+example_ncarg_sounding_SOURCES = example_ncarg_sounding.f90
+example_ncarg_sounding_LDADD = ../graphics/libsim_graphics.la ../base/libsim_base.la ../vol7d/libsim_vol7d.la  ../log4fortran/liblog4fortran.la ../termolib/libsim_termolib.la
 endif
 
 endif
