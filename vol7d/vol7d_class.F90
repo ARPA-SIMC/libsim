@@ -1984,7 +1984,7 @@ elemental doubleprecision function doubledati(voldat,var)
 integer,intent(in) :: voldat
 type(vol7d_var),intent(in) :: var
 
-if (c_e(voldat))then
+if (c_e(voldat) .and. c_e(var%scalefactor))then
   doubledati=dble(voldat)/10d0**var%scalefactor
 else
   doubledati=dmiss
@@ -1998,7 +1998,7 @@ elemental doubleprecision function doubledatb(voldat,var)
 integer(kind=int_b),intent(in) :: voldat
 type(vol7d_var),intent(in) :: var
 
-if (c_e(voldat))then
+if (c_e(voldat) .and. c_e(var%scalefactor))then
   doubledatb=dble(voldat)/10d0**var%scalefactor
 else
   doubledatb=dmiss
@@ -2013,7 +2013,7 @@ elemental doubleprecision function doubledatc(voldat,var)
 CHARACTER(len=vol7d_cdatalen),intent(in) :: voldat
 type(vol7d_var),intent(in) :: var
 
-if (c_e(voldat))then
+if (c_e(voldat) .and. c_e(var%scalefactor))then
   read (voldat,*)doubledatc
   doubledatc=doubledatc/10d0**var%scalefactor
 else
@@ -2077,7 +2077,7 @@ elemental real function realdati(voldat,var)
 integer,intent(in) :: voldat
 type(vol7d_var),intent(in) :: var
 
-if (c_e(voldat))then
+if (c_e(voldat) .and. c_e(var%scalefactor))then
   realdati=float(voldat)/10.**var%scalefactor
 else
   realdati=rmiss
@@ -2091,7 +2091,7 @@ elemental real function realdatb(voldat,var)
 integer(kind=int_b),intent(in) :: voldat
 type(vol7d_var),intent(in) :: var
 
-if (c_e(voldat))then
+if (c_e(voldat) .and. c_e(var%scalefactor))then
   realdatb=float(voldat)/10.**var%scalefactor
 else
   realdatb=rmiss
@@ -2106,7 +2106,7 @@ elemental real function realdatc(voldat,var)
 CHARACTER(len=vol7d_cdatalen),intent(in) :: voldat
 type(vol7d_var),intent(in) :: var
 
-if (c_e(voldat))then
+if (c_e(voldat) .and. c_e(var%scalefactor))then
   read (voldat,*)realdatc
   realdatc=realdatc/10.**var%scalefactor
 else
