@@ -503,19 +503,18 @@ call gpl (2,xx,yy)
 CALL GSTXAL(2,5)
 call GSCHUP (0.,1.)
 call gschh(0.010)
-call set_color("foreground")
 call gsln (1)
 call GSLWSC(3.)
 
 call herlo_frame (tmin,tmax,ptop,pdown,pdiag1,pdiag2,dim_x,dim_y,ratio,&
  &offset_x,spazio,offset_y,x_frame,x_clip,y_frame,y_clip)
 
-call gpl (7,x_frame,y_frame)
-
                                 !clipping forma strana diagramma
 call set_color("background")
 call gfa (6,x_clip,y_clip)
 
+call set_color("foreground")
+call gpl (7,x_frame,y_frame)
 
 
 ! ---------------------------------------------------------------------------------------------
@@ -601,51 +600,51 @@ subroutine herlo_frame (tmin,tmax,ptop,pdown,pdiag1,pdiag2,&
 !----------------------------------------------------------------------
 
 
-!  disegno il frame del nomogramma :
+!  calcolo coordinate del frame del nomogramma :
 
-  real,intent(in)::tmin,tmax,ptop,pdown,pdiag1,pdiag2,dim_x,dim_y,ratio,&
-       &offset_x,spazio,offset_y
-  real,dimension(7),intent(out)::frame_x,frame_y
-  real,dimension(6),intent(out)::x_clip,y_clip
+real,intent(in)::tmin,tmax,ptop,pdown,pdiag1,pdiag2,dim_x,dim_y,ratio,&
+ &offset_x,spazio,offset_y
+real,dimension(7),intent(out)::frame_x,frame_y
+real,dimension(6),intent(out)::x_clip,y_clip
 
-  frame_x(1)=x_coord (tmin,tmax,tmin,ptop,pdown,pdown,dim_x,dim_y,&
-       &ratio,offset_x,spazio)
-  frame_y(1)=y_coord (pdown,dim_y,offset_y)
-  frame_x(2)=x_coord (tmin,tmax,tmax,ptop,pdown,pdown,dim_x,dim_y,&
-       &ratio,offset_x,spazio)
-  frame_y(2)=y_coord (pdown,dim_y,offset_y)
-  frame_x(3)=frame_x(2)
-  frame_y(3)=y_coord (pdiag1,dim_y,offset_y)   
-  frame_x(4)=x_coord (tmin,tmax,tmax-14,ptop,pdown,pdown,dim_x,dim_y,ratio,&
+frame_x(1)=x_coord (tmin,tmax,tmin,ptop,pdown,pdown,dim_x,dim_y,&
+ &ratio,offset_x,spazio)
+frame_y(1)=y_coord (pdown,dim_y,offset_y)
+frame_x(2)=x_coord (tmin,tmax,tmax,ptop,pdown,pdown,dim_x,dim_y,&
+ &ratio,offset_x,spazio)
+frame_y(2)=y_coord (pdown,dim_y,offset_y)
+frame_x(3)=frame_x(2)
+frame_y(3)=y_coord (pdiag1,dim_y,offset_y)   
+frame_x(4)=x_coord (tmin,tmax,tmax-14,ptop,pdown,pdown,dim_x,dim_y,ratio,&
        &offset_x,spazio)
-  frame_y(4)=y_coord (pdiag2,dim_y,offset_y)   
-  frame_x(5)=frame_x(4)
-  frame_y(5)=y_coord (ptop,dim_y,offset_y)   
-  frame_x(6)=x_coord (tmin,tmax,tmin,ptop,pdown,pdown,dim_x,dim_y,&
-       &ratio,offset_x,spazio)
-  frame_y(6)=frame_y(5)
-  frame_y(7)=frame_y(1)
-  frame_x(7)=frame_x(1)
+frame_y(4)=y_coord (pdiag2,dim_y,offset_y)   
+frame_x(5)=frame_x(4)
+frame_y(5)=y_coord (ptop,dim_y,offset_y)   
+frame_x(6)=x_coord (tmin,tmax,tmin,ptop,pdown,pdown,dim_x,dim_y,&
+ &ratio,offset_x,spazio)
+frame_y(6)=frame_y(5)
+frame_y(7)=frame_y(1)
+frame_x(7)=frame_x(1)
 
-  x_clip(1)=frame_x(3)+0.002
-  y_clip(1)=frame_y(3)
+x_clip(1)=frame_x(3)
+y_clip(1)=frame_y(3)
 
-  x_clip(2)=frame_x(4)+0.002
-  y_clip(2)=frame_y(4)
+x_clip(2)=frame_x(4)
+y_clip(2)=frame_y(4)
 
-  x_clip(3)=frame_x(5)+0.002
-  y_clip(3)=frame_y(5)
+x_clip(3)=frame_x(5)
+y_clip(3)=frame_y(5)
 
-  x_clip(4)=1.
-  y_clip(4)=1.
+x_clip(4)=1.
+y_clip(4)=1.
 
-  x_clip(5)=1.
-  y_clip(5)=0.
+x_clip(5)=1.
+y_clip(5)=0.
 
-  x_clip(6)=x_clip(1)
-  y_clip(6)=y_clip(1)
+x_clip(6)=x_clip(1)
+y_clip(6)=y_clip(1)
   
-  return
+return
 
 end subroutine herlo_frame
 
