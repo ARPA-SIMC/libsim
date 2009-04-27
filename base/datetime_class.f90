@@ -74,7 +74,7 @@ INTEGER(KIND=int_ll),PARAMETER :: &
 
 PRIVATE
 PUBLIC datetime, datetime_miss, datetime_utc, datetime_local, &
- datetime_new, init, delete, getval, &
+ datetime_new, init, delete, getval, to_char, &
  read_unit, write_unit, &
  OPERATOR(==), OPERATOR(/=), OPERATOR(>), OPERATOR(<), &
  OPERATOR(>=), OPERATOR(<=), OPERATOR(+), OPERATOR(-), &
@@ -98,6 +98,11 @@ END INTERFACE
 !> Restituiscono il valore dell'oggetto nella forma desiderata.
 INTERFACE getval
   MODULE PROCEDURE datetime_getval, timedelta_getval
+END INTERFACE
+
+!> Restituiscono il valore dell'oggetto in forma di stringa stampabile.
+INTERFACE to_char
+  MODULE PROCEDURE datetime_to_char, timedelta_to_char
 END INTERFACE
 
 !> Operatore logico di uguaglianza tra oggetti della stessa classe.
@@ -383,19 +388,6 @@ this%iminuti = imiss
 END SUBROUTINE datetime_delete
 
 
-subroutine display_datetime(this)
-
-TYPE(datetime),INTENT(in) :: this
-character(len=17)         :: date_time
-
-call getval (this,simpledate=date_time)
-
-print*,"TIME: ",date_time
-
-
-end subroutine display_datetime
-
-
 !> Restituisce il valore di un oggetto \a datetime in una o più
 !! modalità desiderate. Qualsiasi combinazione dei parametri
 !! opzionali è consentita. \a oraclesimedate è
@@ -463,7 +455,30 @@ ENDIF
 END SUBROUTINE datetime_getval
 
 
-elemental FUNCTION datetime_eq(this, that) RESULT(res)
+!> Restituisce una rappresentazione carattere stampabile di un oggetto
+!! \a datetime.
+FUNCTION datetime_to_char(this) RESULT(char)
+TYPE(datetime),INTENT(IN) :: this
+
+CHARACTER(len=23) :: char
+
+CALL getval(this, isodate=char)
+
+END FUNCTION datetime_to_char
+
+
+SUBROUTINE display_datetime(this)
+TYPE(datetime),INTENT(in) :: this
+character(len=17)         :: date_time
+
+call getval (this,simpledate=date_time)
+
+print*,"TIME: ",date_time
+
+end subroutine display_datetime
+
+
+ELEMENTAL FUNCTION datetime_eq(this, that) RESULT(res)
 TYPE(datetime),INTENT(IN) :: this, that
 LOGICAL :: res
 
@@ -942,6 +957,18 @@ ENDIF
 END SUBROUTINE timedelta_getval
 
 
+!> Restituisce una rappresentazione carattere stampabile di un oggetto
+!! \a timedelta.
+FUNCTION timedelta_to_char(this) RESULT(char)
+TYPE(timedelta),INTENT(IN) :: this
+
+CHARACTER(len=23) :: char
+
+CALL getval(this, isodate=char)
+
+END FUNCTION timedelta_to_char
+
+
 !> Restituisce il valore in millisecondi totali di un oggetto \a timedelta.
 elemental FUNCTION timedelta_getamsec(this)
 TYPE(timedelta),INTENT(IN) :: this !< oggetto di cui restituire il valore
@@ -1224,29 +1251,6 @@ DEALLOCATE(dateiso)
 
 END SUBROUTINE timedelta_vect_read_unit
 
-
-FUNCTION timedelta_to_char(this) RESULT(res)
-TYPE(timedelta),INTENT(in) :: this !< oggetto da scrivere
-
-CHARACTER(len=23) :: res
-
-CALL getval(this, isodate=res)
-
-END FUNCTION timedelta_to_char
-
-
-FUNCTION timedeltavect_to_char(this) RESULT(res)
-TYPE(timedelta),INTENT(in) :: this(:) !< oggetto da scrivere
-
-CHARACTER(len=23) :: res(SIZE(this))
-
-INTEGER :: i
-
-DO i = 1, SIZE(this)
-  CALL getval(this(i), isodate=res(i))
-ENDDO
-
-END FUNCTION timedeltavect_to_char
 
 !> Scrive su un'unità di file il contenuto dell'oggetto \a this.
 !! Il record scritto potrà successivamente essere letto con la ::read_unit.
