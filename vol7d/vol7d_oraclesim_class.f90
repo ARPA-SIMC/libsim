@@ -116,7 +116,7 @@ this%connid = oraextra_init(fchar_to_cstr(TRIM(luser)), &
 IF (err /= 0) THEN
   CALL oraextra_geterr(this%connid, msg)
   CALL oraextra_delete(this%connid)
-  CALL raise_fatal_error(TRIM(cstr_to_fchar(msg)))
+  CALL l4f_log(L4F_FATAL, TRIM(cstr_to_fchar(msg)))
 ENDIF
 CALL vol7d_oraclesim_alloc(nmaxmin)
 IF (.NOT. ALLOCATED(vartable)) CALL vol7d_oraclesim_setup_conv()
@@ -215,7 +215,7 @@ CALL getval(timef, simpledate=dataf)
 cnetwork = TRIM(to_char(network%id))
 ! Cerco la rete nella tabella
 IF (network%id <= 0 .OR. network%id >= oraclesim_netmax ) THEN
-  CALL raise_error('rete '//TRIM(cnetwork)//' non valida')
+  CALL l4f_log(L4F_ERROR, 'in oraclesim rete '//TRIM(cnetwork)//' non valida')
   return
 ENDIF
 ! Leggo l'anagrafica per la rete se necessario
@@ -242,7 +242,7 @@ DO nvin = 1, SIZE(var)
       varbt_req(nvbt) = .TRUE.
     ENDIF
   ENDDO
-  IF (.NOT.found) CALL raise_warning('variabile '//TRIM(var(nvin))// &
+  IF (.NOT.found) CALL l4f_log(L4F_WARN, 'variabile '//TRIM(var(nvin))// &
    ' non valida per la rete '//TRIM(cnetwork))
 ENDDO
 
@@ -250,26 +250,26 @@ nvar = COUNT(varbt_req)
 ALLOCATE(varlist(nvar))
 varlist = PACK(vartable(:)%varora, varbt_req)
 IF (nvar == 0) THEN
-  CALL raise_warning('nessuna delle variabili '//TRIM(var(1))// &
+  CALL l4f_log(L4F_WARN, 'nessuna delle variabili '//TRIM(var(1))// &
    ' e` valida per la rete '//TRIM(cnetwork))
   RETURN
 ENDIF
-CALL print_info('in oraclesim_class nvar='//to_char(nvar))
+CALL l4f_log(L4F_INFO, 'in oraclesim_class nvar='//to_char(nvar))
 
 nobs = oraextra_gethead(this%connid, fchar_to_cstr(datai), &
  fchar_to_cstr(dataf), network%id, varlist, SIZE(varlist))
 IF (nobs < 0) THEN
   CALL oraextra_geterr(this%connid, msg)
-  CALL raise_fatal_error('in oraextra_gethead: '//TRIM(cstr_to_fchar(msg)))
+  CALL l4f_log(L4F_FATAL, 'in oraextra_gethead: '//TRIM(cstr_to_fchar(msg)))
 ENDIF
-CALL print_info('in oraextra_gethead nobs='//to_char(nobs))
+CALL l4f_log(L4F_INFO, 'in oraextra_gethead nobs='//to_char(nobs))
 
 CALL vol7d_oraclesim_alloc(nobs) ! Mi assicuro di avere spazio
 i = oraextra_getdata(this%connid, nobs, nobso, cdatao, stazo, varo, valore1, &
  valore2, cflag, rmiss)
 IF (i /= 0) THEN
   CALL oraextra_geterr(this%connid, msg)
-  CALL raise_fatal_error('in oraextra_getdata: '//TRIM(cstr_to_fchar(msg)))
+  CALL l4f_log(L4F_FATAL, 'in oraextra_getdata: '//TRIM(cstr_to_fchar(msg)))
 ENDIF
 
 nobs = nobso
@@ -300,12 +300,12 @@ ALLOCATE(anatmp(nana), tmtmp(ntime), vartmp(nvar))
 anatmp(:) = pack_distinct(stazo(1:nobs), nana, back=.TRUE.)
 CALL pack_distinct_c(fdatao(1:nobs), tmtmp, back=.TRUE.)
 vartmp(:) = pack_distinct(varo(1:nobs), nvar, back=.TRUE.)
-CALL print_info('in oraclesim_class onvar='//to_char(nvar))
+CALL l4f_log(L4F_INFO, 'in oraclesim_class onvar='//to_char(nvar))
 
 DO i = 1, nana
   IF (.NOT. ANY(anatmp(i) == netana(network%id)%volanai(:,1,1))) THEN
     non_valid = .TRUE.
-    CALL raise_warning('stazione oraclesim '//TRIM(to_char(anatmp(i)))// &
+    CALL l4f_log(L4F_WARN, 'stazione oraclesim '//TRIM(to_char(anatmp(i)))// &
      ' non trovata nell''anagrafica della rete '//TRIM(cnetwork)// &
      ', la ignoro')
     WHERE(stazo(1:nobs) == anatmp(i))
@@ -319,7 +319,7 @@ DO i = 1, ntime
  odatetime = datetime_new(simpledate=tmtmp(i))
   IF (odatetime < timei .OR. odatetime > timef) THEN
     non_valid = .TRUE.
-    CALL raise_warning('data oraclesim '//tmtmp(i)//' inattesa, la ignoro')
+    CALL l4f_log(L4F_WARN, 'data oraclesim '//tmtmp(i)//' inattesa, la ignoro')
     WHERE(fdatao(1:nobs) == tmtmp(i))
       stazo(1:nobs) = 0
     END WHERE
@@ -330,7 +330,7 @@ ENDDO
 DO i = 1, nvar
   IF (.NOT.ANY((vartmp(i) == vartable(:)%varora) .AND. varbt_req(:))) THEN
     non_valid = .TRUE.
-    CALL raise_warning('variabile oraclesim '//TRIM(to_char(vartmp(i)))// &
+    CALL l4f_log(L4F_WARN, 'variabile oraclesim '//TRIM(to_char(vartmp(i)))// &
      ' inattesa, la ignoro')
     WHERE(varo(1:nobs) == vartmp(i))
       stazo(1:nobs) = 0
@@ -499,7 +499,7 @@ CHARACTER(len=64) :: buf
 TYPE(csv_record) :: csv
 
 un = open_package_file('varmap.csv', filetype_data)
-IF (un < 0) CALL raise_fatal_error('non trovo il file delle variabili')
+IF (un < 0) CALL l4f_log(L4F_FATAL, 'in oraclesim non trovo il file delle variabili')
 
 i = 0
 DO WHILE(.TRUE.)
@@ -541,7 +541,7 @@ IF (i > 0) THEN
   ENDDO readline
 120 CONTINUE
 
-  CALL print_info('Ho letto '//TRIM(to_char(i))//' variabili dalla tabella')
+  CALL l4f_log(L4F_INFO, 'Ho letto '//TRIM(to_char(i))//' variabili dalla tabella')
 ENDIF
 CLOSE(un)
 
@@ -561,7 +561,7 @@ networktable(netid) = .TRUE.
 CALL init(netana(netid))
 cnet = to_char(netid,'(I3.3)')
 un = open_package_file('net_'//cnet//'.simana', filetype_data)
-IF (un < 0) CALL raise_fatal_error('non trovo il file di anagrafica per la rete '//cnet)
+IF (un < 0) CALL l4f_log(L4F_FATAL, 'non trovo il file di anagrafica per la rete '//cnet)
 
 i = 0
 DO WHILE(.TRUE.)
@@ -592,7 +592,7 @@ DO j = 1, i
 ENDDO
 CLOSE(un)
 
-CALL print_info('Ho letto l''anagrafica di '//TRIM(to_char(i))// &
+CALL l4f_log(L4F_INFO, 'ho letto l''anagrafica di '//TRIM(to_char(i))// &
  ' stazioni per la rete '//cnet)
 
 END SUBROUTINE vol7d_oraclesim_ora_ana

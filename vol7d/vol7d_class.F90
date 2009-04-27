@@ -64,9 +64,9 @@
 !! \ingroup vol7d
 MODULE vol7d_class
 USE kinds
-USE err_handling
 USE datetime_class
 USE optional_values
+USE log4fortran
 USE vol7d_utilities
 USE vol7d_ana_class
 USE vol7d_timerange_class
@@ -1625,10 +1625,12 @@ if (present(filename_auto))filename_auto=lfilename
 
 inquire(unit=lunit,opened=opened)
 if (.not. opened) then 
-  inquire(file=lfilename,EXIST=exist)
-  if (exist) CALL raise_error('file exist; cannot open new file')
-  if (.not.exist) open (unit=lunit,file=lfilename,form="UNFORMATTED")
-  print *, "opened: ",lfilename
+  inquire(file=lfilename, EXIST=exist)
+  IF (exist) THEN
+    CALL l4f_log(L4F_FATAL, 'file exists, cannot open a new file')
+  ENDIF
+  OPEN(unit=lunit, file=lfilename, form="UNFORMATTED")
+  CALL l4f_log(L4F_INFO, 'opened: '//TRIM(lfilename))
 end if
 
 if (associated(this%ana)) nana=size(this%ana)
@@ -1824,20 +1826,23 @@ if (present(filename_auto))filename_auto=lfilename
 
 
 inquire(unit=lunit,opened=opened)
-if (.not. opened) then 
+IF (.NOT. opened) THEN 
   inquire(file=lfilename,EXIST=exist)
-  if (.not. exist) CALL raise_error('file do not exist; cannot open file')
-  if (exist) open (unit=lunit,file=lfilename,form="UNFORMATTED")
-  print *, "opened: ",lfilename
+  IF (.NOT.exist) THEN
+    CALL l4f_log(L4F_FATAL, 'file does not exist, cannot open')
+  ENDIF
+  OPEN(unit=lunit, file=lfilename, form="UNFORMATTED")
+  CALL l4f_log(L4F_INFO, 'opened: '//TRIM(lfilename))
 end if
 
 
 read(unit=lunit)ldescription
 read(unit=lunit)ltarray
 
-print *,"Info: reading vol7d from file"
-print *,"Info: description: ",trim(ldescription)
-print *,"Info: written on ",ltarray
+CALL l4f_log(L4F_INFO, 'Reading vol7d from file')
+CALL l4f_log(L4F_INFO, 'description: '//TRIM(ldescription))
+CALL l4f_log(L4F_INFO, 'written on '//TRIM(to_char(ltarray(1)))//' '// &
+ TRIM(to_char(ltarray(2)))//' '//TRIM(to_char(ltarray(3))))
 
 if (present(description))description=ldescription
 if (present(tarray))tarray=ltarray
@@ -1912,11 +1917,6 @@ if (associated(this%dativarattr%d)) read(unit=lunit)this%dativarattr%d
 if (associated(this%dativarattr%c)) read(unit=lunit)this%dativarattr%c
 
 !! Volumi di valori e attributi per anagrafica e dati
-
-! if (associated(this%volanar))print*,"leggo volanar"
-! if (associated(this%volanaattrr))print*,"leggo volanaattrr"
-! if (associated(this%voldatir))print*,"leggo voldatir"
-! if (associated(this%voldatiattrr))print*,"leggo voldatiattrr"
 
 if (associated(this%volanar))      read(unit=lunit)this%volanar
 if (associated(this%volanaattrr))  read(unit=lunit)this%volanaattrr

@@ -7,7 +7,7 @@ USE kinds
 USE missing_values
 USE vol7d_var_class
 USE optional_values
-use err_handling
+USE log4fortran
 
 IMPLICIT NONE
 
@@ -237,7 +237,7 @@ end if
 
 case default
 
-  CALL raise_error('variable type not contemplated: '//type)
+  CALL l4f_log(L4F_ERROR, 'variable type not contemplated: '//type)
 
 end select
 

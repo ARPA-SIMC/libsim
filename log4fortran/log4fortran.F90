@@ -91,86 +91,81 @@
 !!Here's one sample log4crc configuration file \include log4crc
 !!
 !!\ingroup log4fortran
-module log4fortran
-
+MODULE log4fortran
 use kinds
 use missing_values
 use char_utilities
+use io_units
 implicit none
 
-INTEGER ,PARAMETER :: L4F_FATAL    = 000  !< standard priority
-INTEGER ,PARAMETER :: L4F_ALERT    = 100  !< standard priority
-INTEGER ,PARAMETER :: L4F_CRIT     = 200  !< standard priority
-INTEGER ,PARAMETER :: L4F_ERROR    = 300  !< standard priority
-INTEGER ,PARAMETER :: L4F_WARN     = 400  !< standard priority
-INTEGER ,PARAMETER :: L4F_NOTICE   = 500  !< standard priority
-INTEGER ,PARAMETER :: L4F_INFO     = 600  !< standard priority
-INTEGER ,PARAMETER :: L4F_DEBUG    = 700  !< standard priority
-INTEGER ,PARAMETER :: L4F_TRACE    = 800  !< standard priority
-INTEGER ,PARAMETER :: L4F_NOTSET   = 900  !< standard priority
-INTEGER ,PARAMETER :: L4F_UNKNOWN  = 1000 !< standard priority
+INTEGER, PARAMETER :: L4F_FATAL    = 000  !< standard priority
+INTEGER, PARAMETER :: L4F_ALERT    = 100  !< standard priority
+INTEGER, PARAMETER :: L4F_CRIT     = 200  !< standard priority
+INTEGER, PARAMETER :: L4F_ERROR    = 300  !< standard priority
+INTEGER, PARAMETER :: L4F_WARN     = 400  !< standard priority
+INTEGER, PARAMETER :: L4F_NOTICE   = 500  !< standard priority
+INTEGER, PARAMETER :: L4F_INFO     = 600  !< standard priority
+INTEGER, PARAMETER :: L4F_DEBUG    = 700  !< standard priority
+INTEGER, PARAMETER :: L4F_TRACE    = 800  !< standard priority
+INTEGER, PARAMETER :: L4F_NOTSET   = 900  !< standard priority
+INTEGER, PARAMETER :: L4F_UNKNOWN  = 1000 !< standard priority
 
-!> Default priority value for logging; it is used only when
-!! compiled without log4c and cnf (the configuration file is ignored).
-integer :: l4f_priority=L4F_NOTICE 
-
-!> Default minimum priority value that generates a fatal error
-!! and terminates the program;
-!! it is used both when compiled with and without log4c.
-INTEGER, PRIVATE :: l4f_fatal_priority=L4F_CRIT
+INTEGER, PRIVATE :: l4f_log_priority = L4F_INFO
+INTEGER, PRIVATE :: l4f_fatal_priority = L4F_CRIT
+INTEGER, PRIVATE :: l4f_unit = stdout_unit
+LOGICAL, PRIVATE :: l4f_initialised = .FALSE.
+LOGICAL, PRIVATE :: l4f_category_initialised = .FALSE.
+INTEGER, PRIVATE :: l4f_default_category = imiss
+CHARACTER(len=510), PRIVATE :: l4f_default_a_name = 'no category'
 
 
 #ifdef HAVE_LIBLOG4C
-!>Qui sono reperibili function e subroutine definite tramite questa interface
-!!e che richiamano funzioni C tramite la libreria CNF. Le funzioni chiamabili da fortran
-!!sono equivalenti a quelle messe a disposizione dalla libreria log4C
+!> Interfaces to C function wrappers, generated through CNF library,
+!! which call the corresponding C functions of the log4c library.
 interface 
-!>log4fortran constructors
-integer function l4f_init()
-end function l4f_init
+! log4fortran constructor
+integer function l4f_init_l4c()
+end function l4f_init_l4c
 
-!>Initialize a logging category.
-integer function l4f_category_get (a_name)
+! Initialize a logging category.
+integer function l4f_category_get_l4c (a_name)
 character (len=*),intent(in) :: a_name !< category name
-end function l4f_category_get
+end function l4f_category_get_l4c
 
-!>Delete a logging category.
+!> Delete a logging category.
 subroutine l4f_category_delete(a_category)
 integer,intent(in):: a_category !< category name
 end subroutine l4f_category_delete
 
-!>Emit log message for a category with specific priority
-subroutine l4f_category_log (a_category,a_priority,&
- a_format)
+! Emit log message for a category with specific priority
+subroutine l4f_category_log_l4c(a_category,a_priority,a_format)
 integer,intent(in):: a_category !< category name
 integer,intent(in):: a_priority !< priority level
 character(len=*),intent(in):: a_format !< message to emit
-end subroutine l4f_category_log
+end subroutine l4f_category_log_l4c
 
-!>log4fortran destructors
-integer function l4f_fini()
-end function l4f_fini
+! log4fortran destructor
+integer function l4f_fini_l4c()
+end function l4f_fini_l4c
 
 !>Ritorna un messaggio caratteristico delle priorità standard
-character(len=12) function l4f_msg(a_priority)
-integer,intent(in):: a_priority !< category name
-end function l4f_msg
-
+!character(len=12) function l4f_msg(a_priority)
+!integer,intent(in):: a_priority !< category name
+!end function l4f_msg
+! serve questa interfaccia?
 end interface
-
-#else
-
-CHARACTER(len=510), PRIVATE:: dummy_a_name
 
 #endif
 
-contains
+CONTAINS
 
-!>Routine specifica per il SIM; cattura le variabili di ambiente
-!!LOG4_APPLICATION_NAME,LOG4_APPLICATION_ID e compone il nome univoco
-!!per il logging.  Se le variabili di ambiente non sono impostate
-!!ritorna un nome definito dal nome del processo e da un timestamp
-subroutine l4f_launcher(a_name,a_name_force,a_name_append)
+!> Routine di inizializzazione specifica per il SIM.
+!! Cattura le variabili di ambiente
+!! LOG4_APPLICATION_NAME,LOG4_APPLICATION_ID e compone il nome univoco
+!! per il logging.  Se le variabili di ambiente non sono impostate
+!! ritorna un nome definito dal nome del processo e da un timestamp.
+!! È utilizzata sia con che senza log4c.
+SUBROUTINE l4f_launcher(a_name,a_name_force,a_name_append)
 
 integer :: tarray(8)
 character (len=255) :: LOG4_APPLICATION_NAME,LOG4_APPLICATION_ID,arg
@@ -199,9 +194,7 @@ else
     a_name = trim(LOG4_APPLICATION_NAME)//"["//trim(LOG4_APPLICATION_ID)//"]"
     
   end if
-  
 end if
-
 
 a_name_save=a_name
 
@@ -212,93 +205,200 @@ end if
 end subroutine l4f_launcher
 
 
+!> Initialise log4fortran environment.
+INTEGER FUNCTION l4f_init()
+
+#ifdef HAVE_LIBLOG4C
+l4f_init = l4f_init_l4c()
+#else
+l4f_init = 0
+#endif
+
+l4f_log_priority = L4F_INFO
+l4f_default_category = imiss
+l4f_initialised = .TRUE.
+
+END FUNCTION l4f_init
+
+
+!> Initialise a logging category.
+INTEGER FUNCTION l4f_category_get(a_name)
+CHARACTER(len=*),INTENT(in) :: a_name !< category name
+
+#ifdef HAVE_LIBLOG4C
+l4f_category_get = l4f_category_get_l4c(a_name)
+
+! Store the first category as the default
+IF (.NOT. c_e(l4f_default_category)) THEN
+  l4f_default_a_name = a_name
+  l4f_default_category = l4f_category_get
+  l4f_category_initialised = .TRUE.
+ENDIF
+
+#else
+! Set the category as the default
+l4f_default_a_name = a_name
+l4f_default_category = 0
+l4f_category_initialised = .TRUE.
+l4f_category_get = 0
+#endif
+
+END FUNCTION l4f_category_get
+
+
+#ifndef HAVE_LIBLOG4C
+!> Delete a logging category.
+subroutine l4f_category_delete(a_category)
+integer,intent(in):: a_category !< category name
+
+if (a_category == 0) l4f_default_a_name = ""
+
+end subroutine l4f_category_delete
+#endif
+
+
+!> Cleans up the log4fortran environment.
+INTEGER FUNCTION l4f_fini()
+
+l4f_initialised = .FALSE.
+l4f_category_initialised = .FALSE.
+l4f_default_category = imiss
+l4f_default_a_name = 'no category'
+
+#ifdef HAVE_LIBLOG4C
+l4f_fini = l4f_fini_l4c()
+#else
+l4f_fini = 0
+#endif
+
+END FUNCTION l4f_fini
+
+
+!> Emit log message for a category with specific priority.
+!! Calls the interface to the corresponding log4c function
+!! or sends the output to the standard unit.
+!! Program is terminated if necessary.
+SUBROUTINE l4f_category_log(a_category, a_priority, a_format)
+INTEGER,INTENT(in):: a_category !< category name
+INTEGER,INTENT(in):: a_priority !< priority level
+CHARACTER(len=*),INTENT(in):: a_format !< message to emit
+
+#ifdef HAVE_LIBLOG4C
+CALL l4f_category_log_l4c(a_category, a_priority, a_format)
+#else
+IF (a_category == 0 .AND. a_priority <= l4f_log_priority) THEN
+  WRITE(l4f_unit,'(A)')'[dummy] '//l4f_msg(a_priority)//TRIM(l4f_default_a_name)//&
+   ' - '//TRIM(a_format)
+END IF
+#endif
+
+CALL check_terminate(a_priority)
+
+END SUBROUTINE l4f_category_log
+
+
+!> Emit log message for default category with specific priority.
+!! It works also in case of uninitialised environment with an output
+!! on the standard logging unit.
+SUBROUTINE l4f_log(a_priority, a_format)
+INTEGER,INTENT(in):: a_priority !< priority level
+CHARACTER(len=*),INTENT(in):: a_format !< message to emit
+
+#ifdef HAVE_LIBLOG4C
+IF (l4f_initialised .AND. l4f_category_initialised) THEN ! use default category
+  CALL l4f_category_log(l4f_default_category, a_priority, a_format)
+ELSE IF (a_priority <= l4f_log_priority) THEN ! Fallback with dummy logging
+  WRITE(l4f_unit,'(A)')'[no log4c] '//l4f_msg(a_priority)//&
+   TRIM(l4f_default_a_name)//' - '//TRIM(a_format)
+  CALL check_terminate(a_priority)
+END IF
+#else
+CALL l4f_category_log(0, a_priority, a_format)
+#endif
+
+END SUBROUTINE l4f_log
+
+
+!> Set the minimum priority level that generates a log message.
+!! It is used only when logging without log4c or when the log4fortran
+!! environment has not been initialised.  In the other cases the log4c
+!! configuration file takes precedence.  At program startup
+!! it is set to \a L4F_INFO .
+SUBROUTINE l4f_set_log_priority(a_priority)
+INTEGER,INTENT(in):: a_priority !< priority level
+
+l4f_log_priority = a_priority
+!MAX(a_priority, L4F_FATAL) ! L4F_FATAL always logs?
+
+END SUBROUTINE l4f_set_log_priority
+
+
 !> Set the minimum priority level that generates a fatal
-!! error and terminates the program.
+!! error and terminates the program.  At program startup
+!! it is set to \a L4F_CRIT .
 SUBROUTINE l4f_set_fatal_priority(a_priority)
-integer,intent(in):: a_priority !< priority level
+INTEGER,INTENT(in):: a_priority !< priority level
 
 l4f_fatal_priority = MAX(a_priority, L4F_FATAL) ! L4F_FATAL is always fatal
 
 END SUBROUTINE l4f_set_fatal_priority
 
 
-#ifndef HAVE_LIBLOG4C
-! definisce delle dummy routine
+!> Set the fortran I/O unit to which log messages are redirected.
+!! It is used only when logging without log4c or when the log4fortran
+!! environment has not been initialised.  At program startup
+!! it is set to \a stdout .
+SUBROUTINE l4f_set_unit(unit)
+INTEGER,INTENT(in):: unit !< fortran unit number
 
-!>log4fortran constructors
-integer function l4f_init()
+l4f_unit = unit
 
-l4f_priority = L4F_NOTICE
-l4f_init = 0
-
-end function l4f_init
-
-
-!>Initialize a logging category.
-integer function l4f_category_get (a_name)
-character (len=*),intent(in) :: a_name !< category name
-
-dummy_a_name = a_name
-l4f_category_get = 0
-
-end function l4f_category_get
+END SUBROUTINE l4f_set_unit
 
 
-!>Delete a logging category.
-subroutine l4f_category_delete(a_category)
-integer,intent(in):: a_category !< category name
+!> Returns a text message describing the given priority.
+CHARACTER(len=9) FUNCTION l4f_msg(a_priority)
+INTEGER,INTENT(in):: a_priority !< category name
 
-if (a_category == 0) dummy_a_name = ""
+SELECT CASE(a_priority)
+CASE(L4F_FATAL)
+  l4f_msg = "FATAL"
+CASE(L4F_ALERT)
+  l4f_msg = "ALERT"
+CASE(L4F_CRIT)
+  l4f_msg = "CRIT"
+CASE(L4F_ERROR)
+  l4f_msg = "ERROR"
+CASE(L4F_WARN)
+  l4f_msg = "WARN"
+CASE(L4F_NOTICE)
+  l4f_msg = "NOTICE"
+CASE(L4F_INFO)
+  l4f_msg = "INFO"
+CASE(L4F_DEBUG)
+  l4f_msg = "DEBUG"
+CASE(L4F_TRACE)
+  l4f_msg = "TRACE"
+CASE(L4F_NOTSET)
+  l4f_msg = "NOTSET"
+CASE(L4F_UNKNOWN)
+  l4f_msg = "UNKNOWN"
+CASE DEFAULT
+  l4f_msg = to_char(a_priority)
+END SELECT
 
-end subroutine l4f_category_delete
+END FUNCTION l4f_msg
 
 
-!>Emit log message for a category with specific priority
-subroutine l4f_category_log (a_category,a_priority,a_format)
-integer,intent(in):: a_category !< category name
-integer,intent(in):: a_priority !< priority level
-character(len=*),intent(in):: a_format !< message to emit
+! Internal subroutine for termination of program in case of error.
+SUBROUTINE check_terminate(a_priority)
+INTEGER,INTENT(in):: a_priority
 
-if (a_category == 0 .and. a_priority <= l4f_priority) then
-  write(*,*)"[dummy] ",l4f_msg(a_priority),trim(dummy_a_name)," - ",a_format
-end if
+IF (a_priority <= l4f_fatal_priority) THEN
+  CALL EXIT(1)
+ENDIF
 
-if (a_priority <= l4f_fatal_priority) then
-  WRITE(*,*)"[dummy] ",l4f_msg(a_priority),TRIM(dummy_a_name)," - ","error is fatal, exiting"
-  call exit(1)
-endif
-
-end subroutine l4f_category_log
+END SUBROUTINE check_terminate
 
 
-!>log4fortran destructors
-integer function l4f_fini()
-
-l4f_fini= 0
-
-end function l4f_fini
-
-!>Ritorna un messaggio caratteristico delle priorità standard
-character(len=12) function l4f_msg(a_priority)
-
-integer,intent(in):: a_priority !< category name
-
-write(l4f_msg,*)a_priority
-
-if (a_priority == L4F_FATAL)   l4f_msg="FATAL"
-if (a_priority == L4F_ALERT)   l4f_msg="ALERT"
-if (a_priority == L4F_CRIT)    l4f_msg="CRIT"
-if (a_priority == L4F_ERROR)   l4f_msg="ERROR"
-if (a_priority == L4F_WARN)    l4f_msg="WARN"
-if (a_priority == L4F_NOTICE)  l4f_msg="NOTICE"
-if (a_priority == L4F_INFO)    l4f_msg="INFO"
-if (a_priority == L4F_DEBUG)   l4f_msg="DEBUG"
-if (a_priority == L4F_TRACE)   l4f_msg="TRACE"
-if (a_priority == L4F_NOTSET)  l4f_msg="NOTSET"
-if (a_priority == L4F_UNKNOWN) l4f_msg="UNKNOWN"
-
-end function l4f_msg
-
-#endif
-
-end module log4fortran
+END MODULE log4fortran

@@ -4,11 +4,11 @@
 
 
 
-F77_INTEGER_FUNCTION(l4f_init)() {
+F77_INTEGER_FUNCTION(l4f_init_l4c)() {
   return log4c_init();
 }
 
-F77_POINTER_FUNCTION(l4f_category_get)(CHARACTER(a_name) TRAIL(a_name)) {
+F77_POINTER_FUNCTION(l4f_category_get_l4c)(CHARACTER(a_name) TRAIL(a_name)) {
 
   void   *tmpptr;
   int tmpfptr;
@@ -42,9 +42,9 @@ F77_SUBROUTINE(l4f_category_delete)(POINTER(a_category)){
 }
 
 
-F77_SUBROUTINE(l4f_category_log)(POINTER(a_category), 
-					 INTEGER(a_priority),
-					 CHARACTER(a_format) TRAIL(a_format)) {
+F77_SUBROUTINE(l4f_category_log_l4c)(POINTER(a_category), 
+				     INTEGER(a_priority),
+				     CHARACTER(a_format) TRAIL(a_format)) {
   char ptr_a_format[101];
 
   GENPTR_POINTER(a_category)
@@ -57,6 +57,6 @@ F77_SUBROUTINE(l4f_category_log)(POINTER(a_category),
 }
 
 
-F77_INTEGER_FUNCTION(l4f_fini)() {
+F77_INTEGER_FUNCTION(l4f_fini_l4c)() {
   return log4c_fini();
 }

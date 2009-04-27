@@ -1,6 +1,5 @@
 MODULE vol7d_utilities
 USE file_utilities
-USE err_handling
 USE datetime_class
 USE kinds
 

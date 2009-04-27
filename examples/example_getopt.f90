@@ -1,6 +1,6 @@
 PROGRAM example_getopt
 USE getopt_m
-USE err_handling
+USE log4fortran
 IMPLICIT NONE
 
 CHARACTER(len=1) :: ch
@@ -19,23 +19,23 @@ DO
   CASE( CHAR(0)) ! end of options
     EXIT
   CASE( 'a' ) ! long/short option without argument
-    CALL print_info('option alpha/a')
+    CALL l4f_log(L4F_INFO, 'option alpha/a')
   CASE( 'b' ) ! long/short option with argument
-    CALL print_info('option beta/b='//TRIM(optarg))
+    CALL l4f_log(L4F_INFO, 'option beta/b='//TRIM(optarg))
   CASE( 'c' ) ! no long option here
-    CALL print_info('option c')
+    CALL l4f_log(L4F_INFO, 'option c')
   CASE( '?' )
-    CALL raise_error('unknown option '//TRIM(optopt))
+    CALL l4f_log(L4F_FATAL, 'unknown option '//TRIM(optopt))
   CASE default
-    CALL raise_error('unhandled option '//TRIM(optopt)//' this should not happen')
+    CALL l4f_log(L4F_FATAL, 'unhandled option '//TRIM(optopt)//' this should not happen')
   END SELECT
 END DO
 
 IF (optind <= iargc()) THEN
-  CALL print_info('extra arguments provided:')
+  CALL l4f_log(L4F_INFO, 'extra arguments provided:')
   DO i = optind, iargc()
     CALL getarg(i, extraopt)
-    CALL print_info(TRIM(extraopt))
+    CALL l4f_log(L4F_INFO, TRIM(extraopt))
   ENDDO
 ENDIF
 
