@@ -4,7 +4,7 @@
 !! Un primo gruppo di utilità gestisce la localizzazioen e l'apertura di file di
 !! configurazione in directory standard o specificate da una variabile d'ambiente.
 !! Esso definisce inoltre la classe \a csv_record ed una serie di metodi associati
-!! che permette di interpretare i record di un file formato csv.
+!! che permette di creare e interpretare i record di un file formato csv.
 !! \ingroup base
 MODULE file_utilities
 USE kinds
@@ -28,10 +28,11 @@ INTEGER, PARAMETER :: filetype_config = 2 !< Il file richiesto è un file di conf
 CHARACTER(len=20) :: program_name='libsim', program_name_env='LIBSIM'
 
 !> Classe che permette di interpretare i record di un file formato csv.
+!! Vedi la pagina http://en.wikipedia.org/wiki/Comma-separated_values
+!! per una descrizione dettagliata del formato.
 TYPE csv_record
   PRIVATE
-  INTEGER :: cursor, action !, nfield, ntotal
-!  CHARACTER(LEN=1) :: csep, cquote
+  INTEGER :: cursor, action, nfield !, ntotal
   INTEGER(KIND=int_b) :: csep, cquote
   INTEGER(KIND=int_b), POINTER :: record(:)
 END TYPE csv_record
@@ -269,18 +270,27 @@ vdelim(j) = LEN_TRIM(line) + 1
 
 END FUNCTION delim_csv
 
-!> Inizializza un oggetto \a csv_record con il record fornito in ingresso.
+!> Inizializza un oggetto \a csv_record.
+!! Se il record è fornito in ingresso, l'oggetto è utilizzato per la decodifica
+!! di un record csv letto da file (metodi \a csv_record_getfield ),
+!! se invece il record è assente l'oggetto è adibito alla codifica
+!! di un record csv (metodi \a csv_record_addfield ) per la successiva
+!! scrittura su file.
 !! È possibile specificare opzionalmente i caratteri da usare come
-!! delimitatore e come raggruppatore di campo, ed è possibile ottenere
-!! in uscita il numero di campi presenti. È in generale sconsigliato richiedere
-!! esplicitamente il numero di campi se non necessario, perché richiede una
-!! quantità aggiuntiva di calcoli, si consiglia di usare il metodo ::csv_record_end.!! Attenzione, la classe \a csv_record non gestisce i record csv che si estendono
+!! delimitatore e come raggruppatore di campo.
+!!
+!! Nel caso di decodifica, è possibile ottenere subito
+!! in uscita il numero di campi presenti anche se è in generale sconsigliato,
+!! se non necessario, perché richiede una
+!! quantità aggiuntiva di calcoli; in alternativa si può usare il metodo
+!! ::csv_record_end.
+!! Attenzione, la classe \a csv_record non gestisce i record csv che si estendono
 !! su più righe.
 SUBROUTINE csv_record_init(this, record, csep, cquote, nfield)
 TYPE(csv_record),INTENT(INOUT) :: this !< oggetto da inizializzare
-CHARACTER(LEN=*),INTENT(IN), OPTIONAL :: record !< record csv da interpretare, se non è fornito, si intende che vogliamo scrivere un record csv
+CHARACTER(LEN=*),INTENT(IN), OPTIONAL :: record !< record csv da interpretare, se non è fornito, si intende che vogliamo codificare un record csv
 CHARACTER(LEN=1),INTENT(IN),OPTIONAL :: csep !< carattere separatore di campo, default \c , (virgola)
-CHARACTER(LEN=1),INTENT(IN),OPTIONAL :: cquote !< carattere raggruppatore di campo, default \c " (doppio apice); è usato tipicamente quando un campo contiene virgole o spazi iniali o finali
+CHARACTER(LEN=1),INTENT(IN),OPTIONAL :: cquote !< carattere raggruppatore di campo, default \c " (doppio apice); è usato tipicamente quando un campo contiene virgole o spazi iniziali o finali
 INTEGER,INTENT(OUT),OPTIONAL :: nfield !< numero di campi contenuti nel record
 
 INTEGER :: l
@@ -296,11 +306,12 @@ ELSE
   this%cquote = TRANSFER('"', this%cquote)
 ENDIF
 
+this%cursor = 1
+this%nfield = 0
 IF (PRESENT(record)) THEN
   l = LEN_TRIM(record)
   ALLOCATE(this%record(l))
   this%record(:) = TRANSFER(record, this%record, l) ! ice in pgf90 with TRIM(record)
-  this%cursor = 1
 
   IF (PRESENT(nfield)) THEN
     nfield = 0
@@ -312,7 +323,6 @@ IF (PRESENT(record)) THEN
   ENDIF
 ELSE
   ALLOCATE(this%record(csv_basereclen))
-  this%cursor = 1
 ENDIF
 
 END SUBROUTINE csv_record_init
@@ -333,6 +343,7 @@ SUBROUTINE csv_record_rewind(this)
 TYPE(csv_record),INTENT(INOUT) :: this !< oggetto da reinizializzare
 
 this%cursor = 1
+this%nfield = 0
 
 END SUBROUTINE csv_record_rewind
 
@@ -350,21 +361,34 @@ INTEGER :: i
 LOGICAL :: lquote
 
 lquote = optio_log(force_quote)
-
-IF (INDEX(field, TRANSFER(this%csep,field)) == 0 .AND. INDEX(field, TRANSFER(this%cquote,field)) == 0 .AND. .NOT.lquote) THEN ! check CHAR/transfer!
+IF (LEN(field) == 0) THEN ! Particular case to be handled separately
+  CALL checkrealloc(1)
+  IF (this%nfield > 0) THEN
+    CALL add_byte(this%csep) ! add separator if necessary
+  ELSE
+    CALL add_byte(this%cquote) ! if first record is empty it should be quoted
+    CALL add_byte(this%cquote) ! in case it is the only one
+  ENDIF
+ELSE IF (INDEX(field, TRANSFER(this%csep,field)) == 0 &
+ .AND. INDEX(field, TRANSFER(this%cquote,field)) == 0 &
+ .AND. .NOT.is_space_c(field(1:1)) &
+ .AND. .NOT.is_space_c(field(LEN(field):LEN(field))) &
+ .AND. .NOT.lquote) THEN ! quote not required
   CALL checkrealloc(LEN(field)+1)
-  IF (this%cursor > 1) CALL add_byte(this%csep) ! add separator if necessary
+  IF (this%nfield > 0) CALL add_byte(this%csep) ! add separator if necessary
   this%record(this%cursor:this%cursor+LEN(field)-1) = TRANSFER(field, this%record)
   this%cursor = this%cursor + LEN(field)
 ELSE ! quote required
   CALL checkrealloc(2*LEN(field)+3) ! worst case """""""""
-  IF (this%cursor > 1) CALL add_byte(this%csep) ! add separator if necessary
+  IF (this%nfield > 0) CALL add_byte(this%csep) ! add separator if necessary
   CALL add_byte(this%cquote) ! add quote
   DO i = 1, LEN(field)
     CALL add_char(field(i:i))
   ENDDO
   CALL add_byte(this%cquote) ! add quote
 ENDIF
+
+this%nfield = this%nfield + 1
 
 CONTAINS
 
@@ -435,12 +459,14 @@ END SUBROUTINE csv_record_addfield_real
 
 
 !> Restituisce il record corrente, pronto per poter essere scrito su un file.
-FUNCTION csv_record_getrecord(this)
+FUNCTION csv_record_getrecord(this, nfield)
 TYPE(csv_record),INTENT(IN) :: this !< oggetto di cui restituire il record
+INTEGER, INTENT(out), OPTIONAL :: nfield !< numero di campi inseriti nel record
 
 CHARACTER(len=this%cursor-1) :: csv_record_getrecord
 
 csv_record_getrecord = TRANSFER(this%record(1:this%cursor-1), csv_record_getrecord)
+IF (present(nfield)) nfield = this%nfield
 
 END FUNCTION csv_record_getrecord
 
@@ -478,7 +504,7 @@ firstquote = .FALSE.
 
 DO i = this%cursor, SIZE(this%record)
   IF (inpre) THEN ! sono nel preludio, butto via gli spazi
-    IF (is_space(this%record(i))) THEN
+    IF (is_space_b(this%record(i))) THEN
       CYCLE
     ELSE
       inpre = .FALSE.
@@ -547,20 +573,12 @@ IF (PRESENT(field)) THEN
   ENDIF
 ENDIF
 IF (check_space) THEN
-  IF (.NOT.is_space(char)) ofcursor = ocursor
+  IF (.NOT.is_space_b(char)) ofcursor = ocursor
 ELSE
   ofcursor = ocursor
 ENDIF
 
 END SUBROUTINE add_char
-
-FUNCTION is_space(char)
-INTEGER(kind=int_b) :: char
-LOGICAL :: is_space
-
-is_space = (char == 32 .OR. char == 9) ! improve
-
-END FUNCTION is_space
 
 END SUBROUTINE csv_record_getfield_char
 
@@ -580,10 +598,14 @@ CHARACTER(LEN=32) :: cfield
 INTEGER :: lier
 
 CALL csv_record_getfield(this, field=cfield, ier=lier)
-IF (lier == 0) READ(cfield, '(I32)', iostat=lier) field
-IF (lier /= 0) THEN
+IF (lier == 0. .AND. LEN_TRIM(cfield) /= 0) THEN
+  READ(cfield, '(I32)', iostat=lier) field
+  IF (lier /= 0) THEN
+    field = imiss
+    CALL raise_error('in csv_record_getfield_int, campo errato: '//TRIM(cfield))
+  ENDIF
+ELSE
   field = imiss
-  CALL raise_error('in csv_record_getfield_int, campo errato: '//TRIM(cfield))
 ENDIF
 IF (PRESENT(ier)) ier = lier
 
@@ -605,10 +627,14 @@ CHARACTER(LEN=32) :: cfield
 INTEGER :: lier
 
 CALL csv_record_getfield(this, field=cfield, ier=lier)
-IF (lier == 0) READ(cfield, '(F32.0)', iostat=lier) field
-IF (lier /= 0) THEN
-  field = imiss
-  CALL raise_error('in csv_record_getfield_real, campo errato: '//TRIM(cfield))
+IF (lier == 0. .AND. LEN_TRIM(cfield) /= 0) THEN
+  READ(cfield, '(F32.0)', iostat=lier) field
+  IF (lier /= 0) THEN
+    field = rmiss
+    CALL raise_error('in csv_record_getfield_real, campo errato: '//TRIM(cfield))
+  ENDIF
+ELSE
+  field = rmiss
 ENDIF
 IF (PRESENT(ier)) ier = lier
 
@@ -625,6 +651,23 @@ csv_record_end = this%cursor > SIZE(this%record)
 
 END FUNCTION csv_record_end
 
+
+FUNCTION is_space_c(char) RESULT(is_space)
+CHARACTER(len=1) :: char
+LOGICAL :: is_space
+
+is_space = (ICHAR(char) == 32 .OR. ICHAR(char) == 9) ! improve
+
+END FUNCTION is_space_c
+
+
+FUNCTION is_space_b(char) RESULT(is_space)
+INTEGER(kind=int_b) :: char
+LOGICAL :: is_space
+
+is_space = (char == 32 .OR. char == 9) ! improve
+
+END FUNCTION is_space_b
 
 
 END MODULE file_utilities

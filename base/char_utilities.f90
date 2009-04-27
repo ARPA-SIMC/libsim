@@ -91,12 +91,17 @@ ELEMENTAL FUNCTION real_to_char(in, form) RESULT(char)
 REAL,INTENT(in) :: in !< valore da rappresentare in CHARACTER
 CHARACTER(len=*),INTENT(in),OPTIONAL :: form !< formato opzionale
 
-CHARACTER(len=15) :: char
+CHARACTER(len=15) :: char, tmpchar
+INTEGER :: i
 
 IF (PRESENT(form)) THEN
   WRITE(char,form) in
 ELSE
-  WRITE(char,'(G15.9)') in
+  WRITE(tmpchar,'(G15.9)') in
+  DO i = 1, LEN(tmpchar)
+    IF (tmpchar(i:i) /= ' ') EXIT
+  ENDDO
+  char = tmpchar(i:)
 ENDIF
 
 END FUNCTION real_to_char
@@ -107,12 +112,18 @@ ELEMENTAL FUNCTION double_to_char(in, form) RESULT(char)
 DOUBLE PRECISION,INTENT(in) :: in !< valore da rappresentare in CHARACTER
 CHARACTER(len=*),INTENT(in),OPTIONAL :: form !< formato opzionale
 
-CHARACTER(len=24) :: char
+CHARACTER(len=24) :: char, tmpchar
+INTEGER :: i
+
 
 IF (PRESENT(form)) THEN
   WRITE(char,form) in
 ELSE
-  WRITE(char,'(G24.17)') in
+  WRITE(tmpchar,'(G24.17)') in
+  DO i = 1, LEN(tmpchar)
+    IF (tmpchar(i:i) /= ' ') EXIT
+  ENDDO
+  char = tmpchar(i:)
 ENDIF
 
 END FUNCTION double_to_char

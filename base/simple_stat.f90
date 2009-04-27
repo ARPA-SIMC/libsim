@@ -2,7 +2,9 @@
 !! The functions provided are average, variance, linear correlation
 !! coefficient and percentile for a population. Missing data are
 !! excluded from computations and from weighing. Currently only \a
-!! REAL functions are available, the module should be extended to \a
+!! REAL functions are available.
+!!
+!! \todo Dhe module should be extended to \a
 !! DOUBLEPRECISION with a transparent interface.
 !! \ingroup base
 MODULE simple_stat
@@ -35,7 +37,8 @@ PUBLIC stat_average, stat_variance, stat_linear_corr, stat_percentile
 CONTAINS
 
 
-!> Compute the average of the random variable provided, taking into account missing data.
+!> Compute the average of the random variable provided,
+!! taking into account missing data.
 FUNCTION stat_averager(sample, nomiss) RESULT(average)
 REAL, INTENT(in) :: sample(:) !< the variable to be averaged
 LOGICAL, OPTIONAL, INTENT(in) :: nomiss
@@ -96,8 +99,8 @@ END FUNCTION stat_variancer
 
 !> Compute the linear correlation coefficient between the two random
 !! variables provided, taking into account missing data. Data are
-!! considered missing when at least one has variable a missing value.
-!! The average and the variance of each variabl can be returned as
+!! considered missing when at least one variable has a missing value.
+!! The average and the variance of each variable can be returned as
 !! optional parameters since they are computed anyway.
 FUNCTION stat_linear_corrr(sample1, sample2, average1, average2, &
  variance1, variance2, nomiss) RESULT(linear_corr)

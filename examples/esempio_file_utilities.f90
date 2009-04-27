@@ -14,11 +14,33 @@ CALL eh_setval(fatal=.FALSE.)
 un=getunit() ! ottengo un'unita` libera
 
 OPEN(un, FILE='tmp.csv') ! creo il file csv al volo
-WRITE(un,'(A)')'simple, 10,20, ciao bello'
-WRITE(un,'(A)')'more complex, " 10",, "ciao, ""bello"""'
+CALL init(csv)
+CALL csv_record_addfield(csv, 'simple')
+CALL csv_record_addfield(csv, ' 10')
+CALL csv_record_addfield(csv, '20')
+CALL csv_record_addfield(csv, ' ciao bello')
+WRITE(un, '(A)') TRIM(csv_record_getrecord(csv))
+CALL delete(csv)
+
+CALL init(csv)
+CALL csv_record_addfield(csv, 'more complex ')
+CALL csv_record_addfield(csv, '" 10"')
+CALL csv_record_addfield(csv, '')
+CALL csv_record_addfield(csv, ' ciao, "bello"')
+WRITE(un, '(A)') TRIM(csv_record_getrecord(csv))
+CALL delete(csv)
+
 WRITE(un,'(A)')'wrong behavior , " 10" ,20 , "ciao, ""bello""'
 WRITE(un,'(A)')'end of wrong behavior'
-WRITE(un,'(A)')'20, 10.5, 9.81, non numeric'
+
+CALL init(csv)
+CALL csv_record_addfield(csv, 20)
+CALL csv_record_addfield(csv, 10.5)
+CALL csv_record_addfield(csv, 9.81, '(F4.2)')
+CALL csv_record_addfield(csv, 'non numeric')
+WRITE(un, '(A)') TRIM(csv_record_getrecord(csv))
+CALL delete(csv)
+
 CLOSE(un)
 
 OPEN(un, FILE='tmp.csv') ! lo riapro
