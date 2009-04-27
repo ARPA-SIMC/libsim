@@ -272,4 +272,149 @@ DEALLOCATE(map_tr, map_trc, count_trc, mask_time)
 
 END SUBROUTINE vol7d_extend_cumavg
 
+!> Riempimento dei buchi temporali in un volume.
+!! Questo metodo crea, a partire da un volume originale, un nuovo
+!! volume dati in cui la dimensione tempo contiene tutti gli istanti
+!! tra \a start e \a stopp (o tra il primo e l'ultimo livello
+!! temporale) ad intervalli \a step. Gli eventuali livelli mancanti
+!! vengono aggiunti riempiendo le corrispondenti posizioni dei volumi
+!! dati con valori mancanti. I livelli temporali che non sono ad
+!! intervalli \a step interi a partire dall'inizio, oppure quelli che
+!! giacciono fuori dall'intervallo \a start:stop non vengono toccati e
+!! quindi rimangono immutati nel volume finale (si veda anche la
+!! descrizione di ::vol7d_regularize_time). Il volume originale non
+!! viene modificato e quindi dovrà essere distrutto da parte del
+!! programma chiamante se il suo contenuto non è più
+!! richiesto. Attenzione, il metodo fa affidamento sul fatto che la
+!! dimensione tempo (vettore \a this%time ) sia ordinata per valori
+!! crescenti, il che è vero nella maggior parte dei casi ma potrebbe
+!! non esserlo sempre.
+!!
+!! \todo gestire in maniera corretta li eventuali casi di volumi non
+!! ordinati nella dimensione tempo.
+SUBROUTINE vol7d_fill_time(this, that, step, start, stopp)
+TYPE(vol7d),INTENT(inout) :: this
+TYPE(vol7d),INTENT(inout) :: that
+TYPE(timedelta),INTENT(in) :: step
+TYPE(datetime),INTENT(in),OPTIONAL :: start
+TYPE(datetime),INTENT(in),OPTIONAL :: stopp
+
+TYPE(datetime) :: counter, lstart, lstop
+INTEGER :: n, naddtime
+
+CALL vol7d_alloc_vol(this) ! controllo di sicurezza
+! Assunzione che this%time sia in ordine crescente, e` vero nella >
+! parte dei casi, aggiungere eventualmente un controllo con 
+! riordino se necessario
+IF (PRESENT(start)) THEN
+  lstart = start
+ELSE
+  lstart = this%time(1)
+ENDIF
+IF (PRESENT(stopp)) THEN
+  lstop = stopp
+ELSE
+  lstop = this%time(SIZE(this%time))
+ENDIF
+CALL l4f_log(L4F_INFO, 'Intervallo livelli temporali: '//TRIM(to_char(lstart))// &
+ ' '//TRIM(to_char(lstop)))
+
+! Conto i livelli temporali da aggiungere per completare la serie
+naddtime = 0
+counter = lstart
+DO WHILE(counter <= lstop)
+! questo algoritmo scala male, se time e` gia` ordinato si puo` fare di meglio
+  IF (.NOT.ANY(counter == this%time(:))) THEN
+    naddtime = naddtime + 1
+  ENDIF
+  counter = counter + step
+ENDDO
+
+IF (naddtime > 0) THEN
+
+  CALL init(that)
+  CALL vol7d_alloc(that, ntime=naddtime)
+  CALL vol7d_alloc_vol(that)
+
+  n = 0
+  counter = lstart
+  DO WHILE(counter <= lstop .AND. n < naddtime)
+    IF (.NOT.ANY(counter == this%time(:))) THEN
+      n = n + 1
+      that%time(n) = counter
+    ENDIF
+    counter = counter + step
+  ENDDO
+  CALL vol7d_append(that, this)
+
+ELSE
+  CALL vol7d_copy(this, that)
+ENDIF
+
+END SUBROUTINE vol7d_fill_time
+
+
+!> Regolarizzazione della dimensione tempo in un volume.
+!! Questo metodo crea, a partire da un volume originale, un nuovo
+!! volume dati in cui la dimensione tempo contiene tutti e soli gli
+!! istanti tra \a start e \a stopp (o tra il primo e l'ultimo livello
+!! temporale) ad intervalli \a step. Gli eventuali livelli mancanti
+!! vengono aggiunti riempiendo le corrispondenti posizioni dei volumi
+!! dati con valori mancanti. Fa quindi un lavoro simile al metodo
+!! ::vol7d_fill_time ma in più elimina i livelli temporali che non
+!! soddisfano la condizione richiesta.  Il volume originale non viene
+!! modificato e quindi dovrà essere distrutto da parte del programma
+!! chiamante se il suo contenuto non è più richiesto. Attenzione, il
+!! metodo fa affidamento sul fatto che la dimensione tempo (vettore \a
+!! this%time ) sia ordinata per valori crescenti, il che è vero nella
+!! maggior parte dei casi ma potrebbe non esserlo sempre.
+!!
+!! \todo gestire in maniera corretta li eventuali casi di volumi non
+!! ordinati nella dimensione tempo.
+SUBROUTINE vol7d_regularize_time(this, that, step, start, stopp)
+TYPE(vol7d),INTENT(inout) :: this
+TYPE(vol7d),INTENT(inout) :: that
+TYPE(timedelta),INTENT(in) :: step
+TYPE(datetime),INTENT(in),OPTIONAL :: start
+TYPE(datetime),INTENT(in),OPTIONAL :: stopp
+
+TYPE(datetime) :: counter, lstart, lstop
+INTEGER :: n
+LOGICAL, ALLOCATABLE :: time_mask(:)
+TYPE(vol7d) :: v7dtmp
+
+CALL vol7d_alloc_vol(this) ! controllo di sicurezza
+! Assunzione che this%time sia in ordine crescente, e` vero nella >
+! parte dei casi, aggiungere eventualmente un controllo con 
+! riordino se necessario
+IF (PRESENT(start)) THEN
+  lstart = start
+ELSE
+  lstart = this%time(1)
+ENDIF
+IF (PRESENT(stopp)) THEN
+  lstop = stopp
+ELSE
+  lstop = this%time(SIZE(this%time))
+ENDIF
+
+ALLOCATE(time_mask(SIZE(this%time)))
+time_mask(:) = .TRUE.
+DO n = 1, SIZE(this%time)
+  IF (this%time(n) < lstart .OR. this%time(n) > lstop .OR. &
+   MOD(this%time(n) - lstart, step) /= timedelta_0) THEN
+    time_mask(n) = .FALSE.
+  ENDIF
+ENDDO
+IF (ALL(time_mask)) THEN
+  v7dtmp = this ! do not lose time in a simple common case
+  CALL vol7d_fill_time(v7dtmp, that, step, start, stopp)
+ELSE
+  CALL vol7d_copy(this, v7dtmp, ltime=time_mask)
+  CALL vol7d_fill_time(v7dtmp, that, step, start, stopp)
+  CALL delete(v7dtmp) ! must be cleaned in this case
+ENDIF
+
+END SUBROUTINE vol7d_regularize_time
+
 END MODULE vol7d_class_compute
