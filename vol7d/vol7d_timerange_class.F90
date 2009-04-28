@@ -126,8 +126,8 @@ INTERFACE display
 END INTERFACE
 
 !>Represent timerange object in a pretty string
-INTERFACE pretty_display
-  MODULE PROCEDURE pretty_display_timerange
+INTERFACE to_char
+  MODULE PROCEDURE to_char_timerange
 END INTERFACE
 
 
@@ -210,23 +210,23 @@ subroutine display_timerange(this)
 TYPE(vol7d_timerange),INTENT(in) :: this
 integer ::EditionNumber,timerange,p1,p2
 
-print*,pretty_display_timerange(this)
+print*,to_char_timerange(this)
 
 end subroutine display_timerange
 
 
 
-elemental character(len=60) function pretty_display_timerange(this)
+elemental character(len=60) function to_char_timerange(this)
 
 TYPE(vol7d_timerange),INTENT(in) :: this
 integer ::EditionNumber,timerange,p1,p2
 
-pretty_display_timerange="Timerange: "//trim(to_char(this%timerange))//" P1: "//&
+to_char_timerange="Timerange: "//trim(to_char(this%timerange))//" P1: "//&
  trim(to_char(this%p1))//" P2: "//trim(to_char(this%p2))
 
 return
 
-end function pretty_display_timerange
+end function to_char_timerange
 
 
 elemental FUNCTION vol7d_timerange_eq(this, that) RESULT(res)

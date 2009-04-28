@@ -1102,8 +1102,8 @@ if( ind /= 0 ) nome=v7d%volanac(ana,ind,network)
 label=""
 call getval(v7d%time(time),isodate=label(:16))
 
-label=trim(label)//" "//trim(pretty_display(v7d%timerange(timerange)))//&
- " "//trim(pretty_display(v7d%network(network)))
+label=trim(label)//" "//trim(to_char(v7d%timerange(timerange)))//&
+ " "//trim(to_char(v7d%network(network)))
 
 !scrivo header
 

@@ -78,8 +78,8 @@ INTERFACE display
 END INTERFACE
 
 !>return network object in a pretty string
-INTERFACE pretty_display
-  MODULE PROCEDURE pretty_display_network
+INTERFACE to_char
+  MODULE PROCEDURE to_char_network
 END INTERFACE
 
 CONTAINS
@@ -113,20 +113,20 @@ subroutine display_network(this)
 
 TYPE(vol7d_network),INTENT(in) :: this
 
-print*,"NETWORK: ",this%id
+print*,to_char_network(this)
 
 end subroutine display_network
 
 
-elemental character(len=20) function pretty_display_network(this)
+elemental character(len=20) function to_char_network(this)
 
 TYPE(vol7d_network),INTENT(in) :: this
 
-pretty_display_network="Network: "//trim(to_char(this%id))
+to_char_network="Network: "//trim(to_char(this%id))
 
 return
 
-end function pretty_display_network
+end function to_char_network
 
 
 
