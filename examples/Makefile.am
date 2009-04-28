@@ -20,7 +20,7 @@ log4fortran_SOURCES = log4fortran.f90
 log4fortran_LDADD =  ../log4fortran/liblog4fortran.la ../base/libsim_base.la
 
 example_getopt_SOURCES = example_getopt.f90
-example_getopt_LDADD =  ../base/libsim_base.la
+example_getopt_LDADD =  ../log4fortran/liblog4fortran.la ../base/libsim_base.la
 
 
 if GRIB
@@ -38,6 +38,11 @@ esempio_v7doracle_LDADD = ../base/libsim_base.la ../vol7d/libsim_vol7d.la ../log
 
 esempio_v7doracle_multi_SOURCES = esempio_v7doracle_multi.f90
 esempio_v7doracle_multi_LDADD = ../base/libsim_base.la ../vol7d/libsim_vol7d.la ../log4fortran/liblog4fortran.la
+
+bin_PROGRAMS += v7d_pollini
+
+v7d_pollini_SOURCES = v7d_pollini.f90
+v7d_pollini_LDADD = ../base/libsim_base.la ../vol7d/libsim_vol7d.la ../log4fortran/liblog4fortran.la
 endif
 
 if DBALLE

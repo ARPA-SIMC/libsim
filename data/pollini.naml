@@ -1,0 +1,50 @@
+&POLLINI
+ variabili =
+  'B15230', 'B15254',
+  'B15238',
+  'B15201', 'B15202', 'B15203',
+  'B15221', 'B15222',
+  'B15204', 'B15205', 'B15206',
+  'B15207', 'B15208', 'B15209',
+  'B15219', 'B15220',
+  'B15210', 'B15211', 'B15212', 'B15213',
+  'B15200', 'B15247',
+  'B15214', 'B15215', 'B15216',
+  'B15231', 'B15255',
+  'B15217', 'B15248',
+  'B15229', 'B15253',
+  'B15232', 'B15233', 'B15234',
+  'B15239', 'B15241', 'B15242',
+  'B15240',
+  'B15226', 'B15227', 'B15228',
+  'B15218', 'B15249',
+ famiglie =
+  'Aceracee', 'Aceracee',
+  'Alternaria',
+  'Betulacee', 'Betulacee', 'Betulacee',
+  'ChenopodiaceeAmarantacee', 'ChenopodiaceeAmarantacee',
+  'Composite', 'Composite', 'Composite',
+  'Corilacee', 'Corilacee', 'Corilacee',
+  'CupressaceeTaxacee', 'CupressaceeTaxacee',
+  'Fagacee', 'Fagacee', 'Fagacee', 'Fagacee',
+  'Graminacee', 'Graminacee',
+  'Oleacee', 'Oleacee', 'Oleacee',
+  'Pinacee', 'Pinacee',
+  'Plantaginacee', 'Plantaginacee',
+  'Platanacee', 'Platanacee',
+  'Salicacee', 'Salicacee', 'Salicacee',
+  'SporeFungine', 'SporeFungine', 'SporeFungine',
+  'Stemphylium',
+  'Ulmacee', 'Ulmacee', 'Ulmacee',
+  'Urticacee', 'Urticacee'
+
+ stazioni = 4176, 4177, 4178, 4179, 4180, 4181, 4182, 4184, 4185, 4186, 4187,
+  4188, 4189, 4190
+ file_stazioni = 'PC1_pollini.csv', 'PR2_pollini.csv', 'RE1_pollini.csv',
+  'MO1_pollini.csv', 'MO2_pollini.csv', 'BO1_pollini.csv', 'FE1_pollini.csv',
+  'RA2_pollini.csv', 'RA3_pollini.csv', 'FO1_pollini.csv',
+  'FO2_pollini.csv', 'FO3_pollini.csv', 'BO3_pollini.csv', 'BO5_pollini.csv',
+
+ data_inizio = '1997-04-01 00:00'
+ data_fine   = '1998-04-01 00:00'
+/END
