@@ -417,4 +417,176 @@ ENDIF
 
 END SUBROUTINE vol7d_regularize_time
 
+
+
+
+!> Metodo per normalizzare la coordinata verticale.
+!! Per ora la normalizzazione effettuata riporta i valori di pressione
+!! nella sezione dati alla coordinata verticale sostituendo quella eventualmente presente.
+!! Classicamente serve per i dati con coordinata verticale model layer (105)
+!! Essendo che la pressione varia nello spazio orizzontale e nel tempo
+!! questo metodo restituisce un solo profilo verticale.
+SUBROUTINE vol7d_normalize_vcoord(this,that,time,ana,timerange,network)
+TYPE(vol7d),INTENT(INOUT)  :: this !< oggetto da normalizzare
+TYPE(vol7d),INTENT(OUT) :: that !< oggetto normalizzato
+integer,intent(in)   :: time,ana,timerange,network !< indici dell'elemento da estrarre
+
+character(len=1) :: type
+integer :: ind
+TYPE(vol7d_var) ::  var
+LOGICAL,allocatable :: ltime(:),ltimerange(:),lana(:),lnetwork(:)
+
+allocate(ltime(size(this%time)))
+allocate(ltimerange(size(this%timerange)))
+allocate(lana(size(this%ana)))
+allocate(lnetwork(size(this%network)))
+
+ltime=.false.
+ltimerange=.false.
+lana=.false.
+lnetwork=.false.
+
+ltime(time)=.true.
+ltimerange(timerange)=.true.
+lana(ana)=.true.
+lnetwork(network)=.true.
+
+
+
+call vol7d_copy(this, that,unique=.true.,&
+ ltime=ltime,ltimerange=ltimerange,lana=lana,lnetwork=lnetwork )
+
+call init(var, btable="B10004")    ! Pressure
+type=cmiss
+!type="i"
+call vol7d_varvect_index(that%dativar,var , type=type,index_v=ind)
+
+select case (type)
+
+case("d")
+  
+  where (that%level%level1 == 105.and.that%level%level2 == 105)
+    that%level%level1 = 100
+    that%level%l1 = realdat(that%voldatid(1,1,:,1,ind,1),that%dativar%d(ind))
+    that%level%level2 = imiss
+    that%level%l2 = imiss
+  end where
+
+case("r")
+
+  where (that%level%level1 == 105.and.that%level%level2 == 105)
+    that%level%level1 = 100
+    that%level%l1 = realdat(that%voldatir(1,1,:,1,ind,1),that%dativar%r(ind))
+    that%level%level2 = imiss
+    that%level%l2 = imiss
+  end where
+
+case("i")
+    
+  where (that%level%level1 == 105.and.that%level%level2 == 105)
+    that%level%level1 = 100
+    that%level%l1 = realdat(that%voldatii(1,1,:,1,ind,1),that%dativar%i(ind))
+    that%level%level2 = imiss
+    that%level%l2 = imiss
+  end where
+
+case("b")
+
+  where (that%level%level1 == 105.and.that%level%level2 == 105)
+    that%level%level1 = 100
+    that%level%l1 = realdat(that%voldatib(1,1,:,1,ind,1),that%dativar%b(ind))
+    that%level%level2 = imiss
+    that%level%l2 = imiss
+  end where
+
+case("c")
+
+  where (that%level%level1 == 105.and.that%level%level2 == 105)
+    that%level%level1 = 100
+    that%level%l1 = realdat(that%voldatic(1,1,:,1,ind,1),that%dativar%c(ind))
+    that%level%level2 = imiss
+    that%level%l2 = imiss
+  end where
+    
+end select
+
+deallocate(ltime)
+deallocate(ltimerange)
+deallocate(lana)
+deallocate(lnetwork)
+
+END SUBROUTINE vol7d_normalize_vcoord
+
+
+!> Metodo per normalizzare la coordinata verticale.
+!! Per ora la normalizzazione effettuata riporta i valori di pressione
+!! nella sezione dati alla coordinata verticale sostituendo quella eventualmente presente.
+!! Classicamente serve per i dati con coordinata verticale model layer (105)
+!! Essendo che la pressione varia nello spazio orizzontale e nel tempo
+!! questo metodo restituisce un solo profilo verticale.
+SUBROUTINE vol7d_compute_var(this,that,var)
+TYPE(vol7d),INTENT(INOUT)  :: this !< oggetto da normalizzare
+TYPE(vol7d),INTENT(OUT) :: that !< oggetto normalizzato
+
+character(len=1) :: type
+integer :: ind
+TYPE(vol7d_var),intent(in) ::  var
+
+
+!!$call init(var, btable="B10004")    ! Pressure
+!!$type=cmiss
+!!$call vol7d_varvect_index(that%dativar,var , type=type,index_v=ind)
+!!$
+!!$select case (type)
+!!$
+!!$case("d")
+!!$  
+!!$  where (that%level%level1 == 105.and.that%level%level2 == 105)
+!!$    that%level%level1 = 100
+!!$    that%level%l1 = realdat(that%voldatid(1,1,:,1,ind,1),that%dativar%d(ind))
+!!$    that%level%level2 = imiss
+!!$    that%level%l2 = imiss
+!!$  end where
+!!$
+!!$case("r")
+!!$
+!!$  where (that%level%level1 == 105.and.that%level%level2 == 105)
+!!$    that%level%level1 = 100
+!!$    that%level%l1 = realdat(that%voldatir(1,1,:,1,ind,1),that%dativar%r(ind))
+!!$    that%level%level2 = imiss
+!!$    that%level%l2 = imiss
+!!$  end where
+!!$
+!!$case("i")
+!!$    
+!!$  where (that%level%level1 == 105.and.that%level%level2 == 105)
+!!$    that%level%level1 = 100
+!!$    that%level%l1 = realdat(that%voldatii(1,1,:,1,ind,1),that%dativar%i(ind))
+!!$    that%level%level2 = imiss
+!!$    that%level%l2 = imiss
+!!$  end where
+!!$
+!!$case("b")
+!!$
+!!$  where (that%level%level1 == 105.and.that%level%level2 == 105)
+!!$    that%level%level1 = 100
+!!$    that%level%l1 = realdat(that%voldatib(1,1,:,1,ind,1),that%dativar%b(ind))
+!!$    that%level%level2 = imiss
+!!$    that%level%l2 = imiss
+!!$  end where
+!!$
+!!$case("c")
+!!$
+!!$  where (that%level%level1 == 105.and.that%level%level2 == 105)
+!!$    that%level%level1 = 100
+!!$    that%level%l1 = realdat(that%voldatic(1,1,:,1,ind,1),that%dativar%c(ind))
+!!$    that%level%level2 = imiss
+!!$    that%level%l2 = imiss
+!!$  end where
+!!$    
+!!$end select
+
+
+END SUBROUTINE vol7d_compute_var
+
 END MODULE vol7d_class_compute

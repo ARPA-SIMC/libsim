@@ -715,7 +715,7 @@ type=cmiss
 !type="i"
 call vol7d_varvect_index(v7d%dativar,var , type=type,index_v=ind)
 
-if( ind /= 0 ) then
+!if( ind /= 0 ) then
   select case (type)
 
   case("d")
@@ -743,7 +743,7 @@ if( ind /= 0 ) then
     r_tt=rmiss
 
   end select
-end if
+!end if
 
 call init(var, btable="B12003")    ! temperatura rugiada
 
@@ -753,7 +753,7 @@ type=cmiss
 !type="i"
 call vol7d_varvect_index(v7d%dativar,var , type=type,index_v=ind)
 
-if( ind /= 0 ) then
+!if( ind /= 0 ) then
   select case (type)
 
   case("d")
@@ -781,7 +781,7 @@ if( ind /= 0 ) then
     r_tr=rmiss
 
   end select
-end if
+!end if
 
 !unidità relativa
 
@@ -801,7 +801,7 @@ type=cmiss
 !type="i"
 call vol7d_varvect_index(v7d%dativar,var , type=type,index_v=ind)
 
-if( ind /= 0 ) then
+!if( ind /= 0 ) then
   select case (type)
 
   case("d")
@@ -829,7 +829,8 @@ if( ind /= 0 ) then
     r_dd=rmiss
 
   end select
-end if
+!end if
+
 call init(var, btable="B11002")    ! WIND SPEED : M/S 
 
 allocate(r_ff(levP))
@@ -838,7 +839,7 @@ type=cmiss
 !type="i"
 call vol7d_varvect_index(v7d%dativar,var , type=type,index_v=ind)
 
-if( ind /= 0 ) then
+!if( ind /= 0 ) then
   select case (type)
 
   case("d")
@@ -866,12 +867,19 @@ if( ind /= 0 ) then
     r_ff=rmiss
 
   end select
-end if
+
+!end if
 
 allocate(u(levP),v(levP))
 
-!conversione in u,v e metri al secondo
-CALL UV(r_dd,r_ff*convff,u,v)
+!conversione unità di misura
+where (c_e(r_ff))
+  r_ff=r_ff*convff
+end where
+
+!conversione in u,v
+CALL UV(r_dd,r_ff,u,v)
+
 
 
 ! disegno la temperatura
@@ -962,11 +970,10 @@ call gtx ( xx(1)+0.01,0.8,'wind')
 
 ! simbologia synottica
 
-! attenzione questo colore non viene considerato dalla successiva routine ncar
 if (present (wcolor))then
   color=trim(optio_c(wcolor,40))
 else
-  color="ever-green2"
+  color="foreground"
 end if
 call GSLWSC(1.5)
 
@@ -1006,6 +1013,7 @@ character(len=1)            :: type
 
 integer                     :: ind
 TYPE(vol7d_var) ::  var
+doubleprecision :: lon,lat
 
 
 
@@ -1021,7 +1029,7 @@ TYPE(vol7d_var) ::  var
 call init(var, btable="B01001")    ! WMO BLOCK NUMBER 
 type=cmiss
 call vol7d_varvect_index(v7d%anavar,var , type=type,index_v=ind)
-if( ind /= 0 ) then
+!if( ind /= 0 ) then
   select case (type)
   case("d")
     wmob=realdat(v7d%volanad(ana,ind,network),v7d%anavar%d(ind))
@@ -1036,12 +1044,12 @@ if( ind /= 0 ) then
   case default
     wmob=rmiss
   end select
-end if
+!end if
 
 call init(var, btable="B01002")    ! WMO STATION NUMBER
 type=cmiss
 call vol7d_varvect_index(v7d%anavar,var , type=type,index_v=ind)
-if( ind /= 0 ) then
+!if( ind /= 0 ) then
   select case (type)
   case("d")
     wmos=realdat(v7d%volanad(ana,ind,network),v7d%anavar%d(ind))
@@ -1056,7 +1064,7 @@ if( ind /= 0 ) then
   case default
     wmos=rmiss
   end select
-end if
+!end if
 
 title=""
 if (c_e(wmob)) title=trim(to_char(int(wmob)))
@@ -1066,7 +1074,7 @@ if (title /= "") title="Station: "//title
 call init(var, btable="B07001")    ! HEIGHT OF STATION
 type=cmiss
 call vol7d_varvect_index(v7d%anavar,var , type=type,index_v=ind)
-if( ind /= 0 ) then
+!if( ind /= 0 ) then
   select case (type)
   case("d")
     ht=realdat(v7d%volanad(ana,ind,network),v7d%anavar%d(ind))
@@ -1081,7 +1089,11 @@ if( ind /= 0 ) then
   case default
     ht=rmiss
   end select
-end if
+!end if
+
+call getval(v7d%ana(ana)%coord,lon=lon,lat=lat)
+!title=trim(title)//" lat:"//trim(to_char(lat)(1:5))//" lon:"//trim(to_char(lon)(1:5))
+write(title,'(a,2(a,f7.2))') trim(title)," lat:",lat," lon:",lon
 
 if (c_e(ht)) title=trim(title)//"  height:"//trim(to_char(int(ht)))//" m. "
 

@@ -85,6 +85,14 @@ noinst_PROGRAMS += example_ncarg_sounding
 
 example_ncarg_sounding_SOURCES = example_ncarg_sounding.f90
 example_ncarg_sounding_LDADD = ../graphics/libsim_graphics.la ../base/libsim_base.la ../vol7d/libsim_vol7d.la  ../log4fortran/liblog4fortran.la ../termolib/libsim_termolib.la
+
+
+bin_PROGRAMS += v7d_plot_sound
+
+v7d_plot_sound_SOURCES = v7d_plot_sound.f90
+v7d_plot_sound_LDADD = ../graphics/libsim_graphics.la ../base/libsim_base.la ../vol7d/libsim_vol7d.la  ../log4fortran/liblog4fortran.la ../termolib/libsim_termolib.la
+
+
 endif
 
 endif
