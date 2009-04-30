@@ -12,8 +12,8 @@ use getopt_m
 implicit none
 
 integer :: category,ier
-integer :: wstype=8 ! default out on X11 display
-character(len=512):: a_name,infile,outfile
+integer :: wstype=imiss
+character(len=512):: a_name,infile,outfile,PSTYPE="PS", ORIENT="LANDSCAPE", COLOR="COLOR"
 TYPE(vol7d_dballe) :: v7d_dba
 TYPE(vol7d) :: v7d_profile
 type(ncar_plot) :: plot
@@ -31,7 +31,7 @@ category=l4f_category_get(a_name//".main")
 call l4f_category_log(category,L4F_INFO,"inizio")
 
 do
-  select case( getopt( "w:h"))
+  select case( getopt( "w:p:o:c:h"))
 
   case( char(0))
     exit
@@ -40,6 +40,30 @@ do
     read(optarg,*,iostat=ier)wstype
     if (ier/= 0)then
       call l4f_category_log(category,L4F_ERROR,'w option argument error')
+      call help()
+      call exit(ier)
+    end if
+
+  case( 'p' )
+    pstype=optarg
+    if (pstype/='PS' .and. pstype/='EPS' .and. pstype/='EPSI')then
+      call l4f_category_log(category,L4F_ERROR,'p option argument error')
+      call help()
+      call exit(ier)
+    end if
+
+  case( 'o' )
+    orient=optarg
+    if (orient/='PORTRAIT' .and. orient/='LANDSCAPE')then
+      call l4f_category_log(category,L4F_ERROR,'o option argument error')
+      call help()
+      call exit(ier)
+    end if
+
+  case( 'c' )
+    color=optarg
+    if (color/='COLOR' .and. color/='MONOCHOME')then
+      call l4f_category_log(category,L4F_ERROR,'c option argument error')
       call help()
       call exit(ier)
     end if
@@ -94,7 +118,11 @@ call vol7d_reform(v7d_dba%vol7d,sort=.true.)
 
 call display(v7d_dba%vol7d)
 
-call init(plot,file=outfile,wstype=wstype,PSTYPE="PS", ORIENT="LANDSCAPE",COLOR="COLOR")
+if ( c_e(wstype))then
+  call init(plot,file=outfile,wstype=wstype)
+else
+  call init(plot,file=outfile,PSTYPE=pstype, ORIENT=orient,COLOR=color)
+end if
 
 do network=1,size(v7d_dba%vol7d%network)
   do ana=1, size(v7d_dba%vol7d%ana)
@@ -132,14 +160,19 @@ subroutine help()
 print*,"Plot herlofson diagram  from bufr/crex file."
 print*,""
 print*,""
-print*,"v7d_plt_sound [-h] [-w wstype]  infile outfile"
+print*,"v7d_plt_sound [-h] [-w wstype] [-p PSTYPE] [-o ORIENT] [-c COLOR]  infile outfile"
 print*,""
 print*,"-h         this help message"
-print*,"wstype     work station type (see ncar GKS manuals) "
+print*,"wstype     work station type (see ncar GKS manuals - wstype=8 X11 display)"
+print*,""
+print*,"    oppure se omesso wstype"
+print*,""
+print*,"pstype     'PS', 'EPS', or 'EPSI'"
+print*,"orient     'PORTRAIT' or 'LANDSCAPE'"
+print*,"color      'COLOR' or 'MONOCHROME'" 
 print*,""
 print*,""
-print *,"default : wstype=8 X11 display"
-
+print *,"default :  pstype='PS' orient='LANDSCAPE' clor='COLOR'"
 end subroutine help
 
 

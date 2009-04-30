@@ -224,12 +224,19 @@ do l = tmax-160,tmax,20
   area_fill_x(4)=x_coord (tmin,tmax,t1,ptop,pdown,ptop,dim_x,dim_y,&
    &ratio,offset_x,spazio)
   area_fill_x(5)=area_fill_x(1)
+
+  call GSFAIS(3)
+  call GSFASI(6)
   call gfa (5,area_fill_x,area_fill_y)
 end do
 
 
                                 ! pulisco lo sporco prodotto disegnando le isoterme colorate
                                 ! riquadro a sinistra
+
+call GSFAIS(1)
+!call GSFASI(6)
+
 area_fill_x(1)=0.
 area_fill_x(2)=x_coord (tmin,tmax,tmin,ptop,pdown,pdown,dim_x,dim_y,ratio,&
  &offset_x,spazio)
