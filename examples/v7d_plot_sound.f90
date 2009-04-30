@@ -31,7 +31,7 @@ category=l4f_category_get(a_name//".main")
 call l4f_category_log(category,L4F_INFO,"inizio")
 
 do
-  select case( getopt( "d:h"))
+  select case( getopt( "w:h"))
 
   case( char(0))
     exit
