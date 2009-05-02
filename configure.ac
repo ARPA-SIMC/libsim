@@ -235,7 +235,7 @@ if test "x$enableval" = "xyes"; then
 
   AC_CHECK_LIB([ncarg], [ngpswk],
     NCARG_LDFLAGS="-L/usr/lib/ncarg"
-    NCARG_LIBS="-lncarg -lncarg_gks -lncarg_c -lX11"
+    NCARG_LIBS="-lncarg -lncarg_gks -lncarg_c -lX11 -lpng"
     AC_SUBST(NCARG_LDFLAGS)
     AC_SUBST(NCARG_LIBS)
     AC_DEFINE(HAVE_LIBNCARG, 1, [Enable ncar graphics code])

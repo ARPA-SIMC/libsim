@@ -62,7 +62,7 @@ do
 
   case( 'c' )
     color=optarg
-    if (color/='COLOR' .and. color/='MONOCHOME')then
+    if (color/='COLOR' .and. color/='MONOCHROME')then
       call l4f_category_log(category,L4F_ERROR,'c option argument error')
       call help()
       call exit(ier)
