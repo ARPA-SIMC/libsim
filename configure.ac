@@ -227,7 +227,7 @@ AM_CONDITIONAL(NGMATH, test "x$enableval" = "xyes")
 
 
 AC_ARG_ENABLE(ncarg, AC_HELP_STRING([--disable-ncarg],
-  [enable ncar graphics]),,[enableval=yes])dnl default enable
+  [disable ncar graphics]),,[enableval=yes])dnl default enable
 if test "x$enableval" = "xyes"; then
  # test in f77 because f90 test do not work
   _ldflags=${LDFLAGS}
