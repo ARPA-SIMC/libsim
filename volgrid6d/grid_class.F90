@@ -13,6 +13,7 @@ module grid_class
 
 use regular_ll_class
 use rotated_ll_class
+use lambert_class
 use log4fortran
 use grib_api
 use vol7d_class
@@ -75,6 +76,7 @@ type grid_def
   type(grid_type)   :: type !< type of grid definition
   type(grid_regular_ll) :: regular_ll !< regular lat lon grid definition
   type(grid_rotated_ll) :: rotated_ll !< rotated lat lon grid definition
+  type(grid_lambert) :: lambert !< Lambert conformal grid definition
 
   integer :: category !< category for log4fortran
 
@@ -314,6 +316,7 @@ subroutine init_griddim(this,type,&
  nx,ny, &
  lon_min, lon_max, lat_min, lat_max, component_flag, &
  latitude_south_pole,longitude_south_pole,angle_rotation, &
+ latin1,latin2,lov,lad,projection_center_flag, &
  categoryappend)
 
 type(griddim_def) :: this !< oggetto da creare
@@ -323,9 +326,6 @@ integer,optional :: nx !< numero dei punti in X
 integer,optional :: ny !< numero dei punti in Y
 !> longitudini e latitudini minime e massime
 doubleprecision,optional :: lon_min, lon_max, lat_min, lat_max
-doubleprecision,optional :: latitude_south_pole !< Latitude of the southern pole of projection
-doubleprecision,optional :: longitude_south_pole !< Longitude of the southern pole of projection 
-doubleprecision,optional :: angle_rotation !< Angle of rotation of projection
 !> Resolution and Component Flags
 !! -  bit 1	
 !!            -  0	i direction increments not given
@@ -335,10 +335,18 @@ doubleprecision,optional :: angle_rotation !< Angle of rotation of projection
 !!            -  1	j direction increments given
 !! -  bit 3	
 !!            -  0 	Resolved u- and v- components of vector quantities relative to easterly and northerly directions
-!!            -  1 	Resolved u- and v- components of vector quantities relative to the defined grid in the direction of increasing x and y (or i and j) coordinates respectively
+!!            -  1 	Resolved u- and v- components of vector quantities relative to the defined grid in the direction of increasing x and y (or i and j) coordinates respectively (0=north, 128=south)
 integer,optional :: component_flag
+doubleprecision,optional :: latitude_south_pole !< Latitude of the southern pole of projection
+doubleprecision,optional :: longitude_south_pole !< Longitude of the southern pole of projection 
+doubleprecision,optional :: angle_rotation !< Angle of rotation of projection
+doubleprecision,optional :: latin1 !< First standard latitude from main pole (Lambert)
+doubleprecision,optional :: latin2 !< Second standard latitude from main pole (Lambert)
+doubleprecision,OPTIONAL :: lov !< Line of view, also known as reference longitude or orientation of the grid (polar projections)
+doubleprecision,OPTIONAL :: lad !< Latitude at which dx and dy (in m) are specified (Lambert, grib2 only)
+integer,optional :: projection_center_flag !< Flag indicating which pole is represented
 
-character(len=*),INTENT(in),OPTIONAL :: categoryappend !< appende questo suffisso al namespace category di log4fortran
+character(len=*),INTENT(in),OPTIONAL :: categoryappend !< accoda questo suffisso al namespace category di log4fortran
 
 character(len=512) :: a_name
 
@@ -376,6 +384,14 @@ case ( "rotated_ll")
    latitude_south_pole,longitude_south_pole,angle_rotation, &
    categoryappend=trim(subcategory)//"."//trim(optio_c(categoryappend,255)))
   
+case ( "lambert")
+  call init(this%grid%lambert,this%dim,&
+   nx,ny, &
+   lon_min, lon_max, component_flag, &
+   latitude_south_pole,longitude_south_pole,latin1,latin2, &
+   lov,lad,projection_center_flag, &
+   categoryappend=trim(subcategory)//"."//trim(optio_c(categoryappend,255)))
+  
 case default
   call l4f_category_log(this%category,L4F_ERROR,"init griddim gtype: "//this%grid%type%type//" non gestita" )
   call raise_error("init griddim gtype non gestita")
@@ -396,6 +412,9 @@ case ( "regular_ll")
 
 case ( "rotated_ll")
   call delete(this%grid%rotated_ll,this%dim)
+  
+case ( "lambert")
+  call delete(this%grid%lambert,this%dim)
   
 case default
   call l4f_category_log(this%category,L4F_ERROR,"delete griddim gtype: "//this%grid%type%type//" non gestita" )
@@ -425,12 +444,17 @@ select case (this%grid%type%type)
 case ( "regular_ll")
 
   call copy(this%grid%regular_ll,that%grid%regular_ll,categoryappend=categoryappend)
-  call copy (this%dim,that%dim)
+  call copy(this%dim,that%dim)
 
 case ( "rotated_ll")
 
   call copy(this%grid%rotated_ll,that%grid%rotated_ll,categoryappend=categoryappend)
-  call copy (this%dim,that%dim)
+  call copy(this%dim,that%dim)
+  
+case ( "lambert")
+
+  call copy(this%grid%lambert,that%grid%lambert,categoryappend=categoryappend)
+  call copy(this%dim,that%dim)
   
 case default
   call l4f_category_log(this%category,L4F_ERROR,"copy_griddim gtype: "//TRIM(this%grid%type%type)//" non gestita")
@@ -463,6 +487,9 @@ case ( "regular_ll")
 case ( "rotated_ll")
   call proj(this%grid%rotated_ll,lon,lat,x,y)
   
+case ( "lambert")
+  call proj(this%grid%lambert,lon,lat,x,y)
+  
 case default
   x=dmiss
   y=dmiss
@@ -490,6 +517,9 @@ case ( "regular_ll")
 case ( "rotated_ll")
   call unproj(this%grid%rotated_ll,x,y,lon,lat)
 
+case ( "lambert")
+  call unproj(this%grid%lambert,x,y,lon,lat)
+
 case default
 !  call l4f_category_log(this%category,L4F_ERROR,"gtype: "//this%grid%type%type//" non gestita" )
 !  call raise_error("gtype non gestita")
@@ -514,6 +544,9 @@ case ( "regular_ll")
 
 case ( "rotated_ll")
   call grid_proj(this%grid%rotated_ll,this%dim)
+  
+case ( "lambert")
+  call grid_proj(this%grid%lambert,this%dim)
   
 case default
   call l4f_category_log(this%category,L4F_ERROR,"griddim proj gtype: "//this%grid%type%type//" non gestita" )
@@ -540,6 +573,9 @@ case ( "regular_ll")
 case ( "rotated_ll")
   call grid_unproj(this%grid%rotated_ll, this%dim)
 
+case ( "lambert")
+  call grid_unproj(this%grid%lambert, this%dim)
+  
 case default
   call l4f_category_log(this%category,L4F_ERROR,"griddim unproj gtype: "//this%grid%type%type//" non gestita" )
   call raise_error("griddim unproj gtype non gestita")
@@ -553,8 +589,8 @@ end subroutine griddim_unproj
 subroutine get_val_griddim(this,type,&
  nx,ny, &
  lon_min, lon_max, lat_min, lat_max, component_flag, &
- latitude_south_pole,longitude_south_pole,angle_rotation)
-
+ latitude_south_pole,longitude_south_pole,angle_rotation, &
+ latin1,latin2,lov,lad,projection_center_flag)
 type(griddim_def),intent(in) :: this !< oggetto da esaminare
 
 character(len=*),INTENT(out),OPTIONAL :: type !< type of grid definition
@@ -564,11 +600,15 @@ integer,optional,intent(out) :: ny !< numero dei punti in Y
 doubleprecision,optional,intent(out) :: lon_min, lon_max
 !> latitudini minima e massima
 doubleprecision,optional,intent(out) :: lat_min, lat_max
+integer,optional,intent(out) :: component_flag !< Resolution and Component Flags
 doubleprecision,optional,intent(out) :: latitude_south_pole !< Latitude of the southern pole of projection
 doubleprecision,optional,intent(out) :: longitude_south_pole !< Longitude of the southern pole of projection 
 doubleprecision,optional,intent(out) :: angle_rotation !< Angle of rotation of projection
-integer,optional,intent(out) :: component_flag !< Resolution and Component Flags
-
+doubleprecision,optional,intent(out) :: latin1 !< First standard latitude from main pole (Lambert)
+doubleprecision,optional,intent(out) :: latin2 !< Second standard latitude from main pole (Lambert)
+doubleprecision,OPTIONAL,intent(out) :: lov !< Line of view, also known as reference longitude or orientation of the grid (polar projections)
+doubleprecision,OPTIONAL,intent(out) :: lad !< Latitude at which dx and dy (in m) are specified (Lambert, grib2 only)
+integer,optional,intent(out) :: projection_center_flag !< Flag indicating which pole is represented
 
 
 if (present(lon_min))lon_min=dmiss
@@ -597,6 +637,13 @@ case ( "rotated_ll")
    lon_min, lon_max, lat_min, lat_max, component_flag, &
    latitude_south_pole,longitude_south_pole,angle_rotation)
   
+case ( "lambert")
+  call get_val(this%grid%lambert,this%dim, &
+   nx,ny, &
+   lon_min, lon_max, lat_min, lat_max, component_flag, &
+   latitude_south_pole,longitude_south_pole,latin1,latin2, &
+   lov,lad,projection_center_flag)
+
 case default
   call l4f_category_log(this%category,L4F_ERROR,"get_val_griddim gtype: "//this%grid%type%type//" non gestita" )
   call raise_error("get_val_griddim gtype non gestita")
@@ -610,7 +657,8 @@ end subroutine get_val_griddim
 subroutine set_val_griddim(this,type,&
  nx,ny, &
  lon_min, lon_max, lat_min, lat_max, component_flag, &
- latitude_south_pole,longitude_south_pole,angle_rotation)
+ latitude_south_pole,longitude_south_pole,angle_rotation, &
+ latin1,latin2,lov,lad,projection_center_flag)
 
 type(griddim_def),intent(out) :: this
 
@@ -621,10 +669,15 @@ integer,optional,intent(in) :: ny !< numero dei punti in Y
 doubleprecision,optional,intent(in) :: lon_min, lon_max
 !> latitudini minima e massima
 doubleprecision,optional,intent(in) :: lat_min, lat_max
+integer,optional,intent(in) :: component_flag !< Resolution and Component Flags
 doubleprecision,optional,intent(in) :: latitude_south_pole !< Latitude of the southern pole of projection
 doubleprecision,optional,intent(in) :: longitude_south_pole !< Longitude of the southern pole of projection 
 doubleprecision,optional,intent(in) :: angle_rotation !< Angle of rotation of projection
-integer,optional,intent(in) :: component_flag !< Resolution and Component Flags
+doubleprecision,optional,intent(in) :: latin1 !< First standard latitude from main pole (Lambert)
+doubleprecision,optional,intent(in) :: latin2 !< Second standard latitude from main pole (Lambert)
+doubleprecision,OPTIONAL,intent(in) :: lov !< Line of view, also known as reference longitude or orientation of the grid (polar projections)
+doubleprecision,OPTIONAL,intent(in) :: lad !< Latitude at which dx and dy (in m) are specified (Lambert, grib2 only)
+integer,optional,intent(in) :: projection_center_flag !< Flag indicating which pole is represented
 
 if (present(type)) this%grid%type%type = type
 if (this%grid%type%type == cmiss) return
@@ -642,6 +695,13 @@ case ( "rotated_ll")
    lon_min, lon_max, lat_min, lat_max, component_flag, &
    latitude_south_pole,longitude_south_pole,angle_rotation)
   
+case ( "lambert")
+  call set_val(this%grid%lambert,this%dim, &
+   nx,ny, &
+   lon_min, lon_max, lat_min, lat_max, component_flag, &
+   latitude_south_pole,longitude_south_pole,latin1,latin2, &
+   lov,lad,projection_center_flag)
+
 case default
   call l4f_category_log(this%category,L4F_ERROR,"set_val_griddim gtype: "//this%grid%type%type//" non gestita" )
   call raise_error("set_val_griddim gtype non gestita")
@@ -669,6 +729,9 @@ case ( "regular_ll")
 
 case ( "rotated_ll")
   call read_unit(this%grid%rotated_ll,unit)
+  
+case ( "lambert")
+  call read_unit(this%grid%lambert,unit)
   
 case default
   call l4f_category_log(this%category,L4F_ERROR,"gtype: "//this%grid%type%type//" non gestita" )
@@ -701,6 +764,9 @@ case ( "regular_ll")
 
 case ( "rotated_ll")
   call write_unit(this%grid%rotated_ll,unit)
+  
+case ( "lambert")
+  call write_unit(this%grid%lambert,unit)
   
 case default
   call l4f_category_log(this%category,L4F_ERROR,"write_unit_griddim gtype: "//trim(this%grid%type%type)//" non gestita" )
@@ -735,6 +801,9 @@ case ( "regular_ll")
 case ( "rotated_ll")
   call import(this%grid%rotated_ll,this%dim,gaid)
   
+case ( "lambert")
+  call import(this%grid%lambert,this%dim,gaid)
+  
 case default
   call l4f_category_log(this%category,L4F_ERROR,"import griddim gtype non gestita: "//trim(this%grid%type%type))
   call raise_error("import griddim gtype non gestita")
@@ -767,6 +836,9 @@ case ( "regular_ll")
 case ( "rotated_ll")
   call export(this%grid%rotated_ll,this%dim,gaid)
   
+case ( "lambert")
+  call export(this%grid%lambert,this%dim,gaid)
+  
 case default
   call l4f_category_log(this%category,L4F_ERROR,"export griddim gtype: "//this%grid%type%type//" non gestita" )
   call raise_error("export griddim gtype non gestita")
@@ -788,7 +860,8 @@ LOGICAL :: res
 
 res = this%type == that%type .and. &
  this%regular_ll == that%regular_ll .and. &
- this%rotated_ll == that%rotated_ll
+ this%rotated_ll == that%rotated_ll .and. &
+ this%lambert == that%lambert
 
 END FUNCTION grid_eq
 
@@ -834,6 +907,11 @@ case ( "regular_ll")
 case ( "rotated_ll")
   print*,"<<<<<<<<<<<<<<< rotated_ll >>>>>>>>>>>>>>>>"
   call display(this%grid%rotated_ll,this%dim)
+  print*,"<<<<<<<<<<<<<<< ---------- >>>>>>>>>>>>>>>>"
+  
+case ( "lambert")
+  print*,"<<<<<<<<<<<<<<<  lambert   >>>>>>>>>>>>>>>>"
+  call display(this%grid%lambert,this%dim)
   print*,"<<<<<<<<<<<<<<< ---------- >>>>>>>>>>>>>>>>"
   
 case default
@@ -1143,6 +1221,14 @@ IF (this%trans%trans_type == 'zoom') THEN
        this%trans%zoom%index%ix, this%trans%zoom%index%iy, &
        this%trans%zoom%index%fx, this%trans%zoom%index%fy)
 
+    case ( "lambert")
+
+      call zoom_coord(in%grid%lambert,in%dim, &
+       this%trans%zoom%coord%ilon, this%trans%zoom%coord%ilat,&
+       this%trans%zoom%coord%flon, this%trans%zoom%coord%flat,&
+       this%trans%zoom%index%ix, this%trans%zoom%index%iy, &
+       this%trans%zoom%index%fx, this%trans%zoom%index%fy)
+
     case default
 
       call l4f_category_log(this%category,L4F_ERROR,"init_grid_transform zoom coord gtype: "&
@@ -1160,7 +1246,7 @@ IF (this%trans%trans_type == 'zoom') THEN
 
     select case ( in%grid%type%type )
       
-    case ( "regular_ll","rotated_ll")
+    case ( "regular_ll","rotated_ll") ! TODO Lambert che fare?
       
       CALL get_val(in, nx=nx, ny=ny, lon_min=lon_min, lon_max=lon_max, &
        lat_min=lat_min, lat_max=lat_max)

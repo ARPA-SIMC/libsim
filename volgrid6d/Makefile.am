@@ -16,7 +16,7 @@ nodist_include_HEADERS = $(tmpvar:.F90=.mod)
 
 
 if GRIBAPI
-libsim_volgrid6d_la_SOURCES = grid_class.F90 rotated_ll_class.F90 regular_ll_class.F90 volgrid6d_var_class.F90 volgrid6d_class.F90 gridinfo_class.F90
+libsim_volgrid6d_la_SOURCES = grid_class.F90 lambert_class.F90 rotated_ll_class.F90 regular_ll_class.F90 volgrid6d_var_class.F90 volgrid6d_class.F90 gridinfo_class.F90
 libsim_volgrid6d_la_LIBADD += $(GRIBAPI_LIBS)
 endif
 
@@ -26,10 +26,12 @@ libsim_volgrid6d_la_LIBADD += $(NGMATH_LIBS)
 endif
 
 if GRIBAPI
-grid_class.o: regular_ll_class.$(OBJEXT) rotated_ll_class.$(OBJEXT)
-grid_class.lo: regular_ll_class.$(OBJEXT) rotated_ll_class.$(OBJEXT)
-rotated_ll.o: regular_ll_class.$(OBJEXT)
-rotated_ll.lo: regular_ll_class.$(OBJEXT)
+grid_class.o: regular_ll_class.$(OBJEXT) rotated_ll_class.$(OBJEXT) lambert_class.$(OBJEXT)
+grid_class.lo: regular_ll_class.$(OBJEXT) rotated_ll_class.$(OBJEXT) lambert_class.$(OBJEXT)
+rotated_ll_class.o: regular_ll_class.$(OBJEXT)
+rotated_ll_class.lo: regular_ll_class.$(OBJEXT)
+lambert_class.o: regular_ll_class.$(OBJEXT)
+lambert_class.lo: regular_ll_class.$(OBJEXT)
 volgrid6d_var_class.o: ../vol7d/vol7d_distinct.F90
 volgrid6d_var_class.lo: ../vol7d/vol7d_distinct.F90
 volgrid6d_class.o: volgrid6d_var_class.$(OBJEXT) grid_class.$(OBJEXT) gridinfo_class.$(OBJEXT)

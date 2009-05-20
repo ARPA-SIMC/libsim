@@ -11,7 +11,7 @@ use optional_values
 
 implicit none
 
-character (len=255),parameter:: subcategory="regular_ll_class"
+character (len=255),parameter:: subcategory="rotated_ll_class"
 
 !> Operatore logico di uguaglianza tra oggetti della classe rotated_ll.
 !! Funziona anche per 
@@ -36,24 +36,22 @@ INTERFACE copy
 END INTERFACE
 
 
-!>\brief traforma grigliato da coordinate geografiche a coordinate x,y in proiezione
+!>\brief trasforma grigliato da coordinate geografiche a coordinate x,y in proiezione
 INTERFACE grid_proj
   MODULE PROCEDURE  grid_proj_rotated_ll 
 END INTERFACE
 
-!>\brief traforma grigliato da coordinate x,y in proiezione a coordinate geografiche
+!>\brief trasforma grigliato da coordinate x,y in proiezione a coordinate geografiche
 INTERFACE grid_unproj
   MODULE PROCEDURE  grid_unproj_rotated_ll 
 END INTERFACE
 
-
-
-!>\brief traforma da coordinate geografiche a coordinate x,y in proiezione
+!>\brief trasforma da coordinate geografiche a coordinate x,y in proiezione
 INTERFACE proj
   MODULE PROCEDURE  proj_rotated_ll
 END INTERFACE
 
-!>\brief traforma da coordinate x,y in proiezione a coordinate geografiche
+!>\brief trasforma da coordinate x,y in proiezione a coordinate geografiche
 INTERFACE unproj
   MODULE PROCEDURE  unproj_rotated_ll
 END INTERFACE
@@ -68,26 +66,22 @@ INTERFACE set_val
   MODULE PROCEDURE set_val_rotated_ll
 END INTERFACE
 
-
-!>\brief ritorna i valori descrittivi del grigliato
+!>\brief scrive l'oggetto su un'unità I/O
 INTERFACE write_unit
   MODULE PROCEDURE write_unit_rotated_ll
 END INTERFACE
 
-!>\brief ritorna i valori descrittivi del grigliato
+!>\brief legge l'oggetto da un'unità I/O
 INTERFACE read_unit
   MODULE PROCEDURE read_unit_rotated_ll
 END INTERFACE
 
-
-!> Import
-!! Legge i valori dal grib e li imposta appropriatamente
+!> Legge i valori dal grib e li imposta appropriatamente
 INTERFACE import
   MODULE PROCEDURE import_rotated_ll
 END INTERFACE
 
-!> Export
-!! Imposta i valori nel grib
+!> Imposta i valori nel grib
 INTERFACE export
   MODULE PROCEDURE export_rotated_ll
 END INTERFACE
