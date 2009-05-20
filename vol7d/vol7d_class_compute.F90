@@ -345,7 +345,7 @@ IF (naddtime > 0) THEN
     ENDIF
     counter = counter + step
   ENDDO
-  CALL vol7d_append(that, this)
+  CALL vol7d_append(that, this, sort=.TRUE.)
 
 ELSE
   CALL vol7d_copy(this, that)
@@ -369,7 +369,7 @@ END SUBROUTINE vol7d_fill_time
 !! this%time ) sia ordinata per valori crescenti, il che è vero nella
 !! maggior parte dei casi ma potrebbe non esserlo sempre.
 !!
-!! \todo gestire in maniera corretta li eventuali casi di volumi non
+!! \todo gestire in maniera corretta gli eventuali casi di volumi non
 !! ordinati nella dimensione tempo.
 SUBROUTINE vol7d_regularize_time(this, that, step, start, stopp)
 TYPE(vol7d),INTENT(inout) :: this
