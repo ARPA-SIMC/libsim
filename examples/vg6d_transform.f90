@@ -20,9 +20,10 @@ type(grid_transform) :: grid_trans
 INTEGER :: nx=30,ny=30,component_flag=1,npx=4,npy=4
 doubleprecision :: lon_min=0., lon_max=30., lat_min=30., lat_max=60.
 doubleprecision :: latitude_south_pole=-32.5,longitude_south_pole=10.,angle_rotation=0.
-character(len=80) :: type='regular_ll',trans_type='inter',sub_type='near'
+character(len=80) :: type='regular_ll',trans_type='none',sub_type='near'
 
 doubleprecision ::x,y,lon,lat
+logical :: c2agrid=.false.
 
 !questa chiamata prende dal launcher il nome univoco
 call l4f_launcher(a_name,a_name_force="volgrid6dtransform")
@@ -36,7 +37,7 @@ category=l4f_category_get(a_name//".main")
 call l4f_category_log(category,L4F_INFO,"inizio")
 
 do
-  select case( getopt( "a:b:c:d:f:g:hi:l:m:n:o:p:q:r:s:t:u:v:z:"))
+  select case( getopt( "a:b:c:d:ef:g:hi:l:m:n:o:p:q:r:s:t:u:v:z:"))
 
   case( char(0))
     exit
@@ -71,6 +72,9 @@ do
       call help()
       call exit(ier)
     end if
+
+  case( 'e' )
+    c2agrid=.true.
 
   case( 'f' )
     read(optarg,*,iostat=ier)npx
@@ -215,29 +219,48 @@ if(trans_type == 'inter')then
 
 end if
 
-!trasformation object
-call init(trans, trans_type=trans_type, sub_type=sub_type, &
- ilon=ilon, ilat=ilat, flon=flon, flat=flat, npx=npx, npy=npy, &
- categoryappend="trasformation")
+
 call import (volgrid,filename=infile,categoryappend="input")
+if (c2agrid) call vg6d_c2a(volgrid)
 
-if (trans_type == 'inter') then
-  CALL transform(trans,griddim_out,volgrid6d_in=volgrid, &
-   volgrid6d_out=volgrid_out,clone=.TRUE.,categoryappend="trasformato")
+
+if (trans_type == 'none') then
+
+  !exportazione
+  call export (volgrid,filename=outfile,categoryappend="exportazione")
+
+  call l4f_category_log(category,L4F_INFO,"end")
+
+  if (associated(volgrid)) call delete (volgrid)
+
 else
-  CALL transform(trans,volgrid6d_in=volgrid, volgrid6d_out=volgrid_out, &
-   clone=.TRUE.,categoryappend="trasformato")
-endif
 
-call l4f_category_log(category,L4F_INFO,"trasformato")
-if (associated(volgrid)) call delete(volgrid)
+ !trasformation object
+  call init(trans, trans_type=trans_type, sub_type=sub_type, &
+   ilon=ilon, ilat=ilat, flon=flon, flat=flat, npx=npx, npy=npy, &
+   categoryappend="trasformation")
 
-!exportazione
-call export (volgrid_out,filename=outfile,categoryappend="exportazione")
+  if (trans_type == 'inter') then
+    CALL transform(trans,griddim_out,volgrid6d_in=volgrid, &
+     volgrid6d_out=volgrid_out,clone=.TRUE.,categoryappend="trasformato")
+  else
+    CALL transform(trans,volgrid6d_in=volgrid, volgrid6d_out=volgrid_out, &
+     clone=.TRUE.,categoryappend="trasformato")
+  endif
 
-call l4f_category_log(category,L4F_INFO,"end")
+  call l4f_category_log(category,L4F_INFO,"trasformato")
+  if (associated(volgrid)) call delete(volgrid)
 
-call delete (volgrid_out)
+
+  !exportazione
+  call export (volgrid_out,filename=outfile,categoryappend="exportazione")
+
+  call l4f_category_log(category,L4F_INFO,"end")
+
+  call delete (volgrid_out)
+
+end if
+
 
 !chiudo il logger
 call l4f_category_delete(category)
@@ -257,6 +280,7 @@ print*,"and more memory will be required"
 print*,""
 print*,""
 print*,"subarea [-h] [-a ilon] [-b ilat] [-c flon] [-d flat] "
+print*,"           [-e]"
 print*,"           [-f npx] [-g npy]"
 print*,"           [-i nx] [-l ny] [-m lon_min] [-n lon_max] [-o lat_min] [-p lat_max]"
 print*,"           [-q latitude_south_pole] [-r longitude_south_pole] [-s angle_rotation] [-t component_flag]"
@@ -264,6 +288,7 @@ print*,"           [-u type] [-v trans_type] [-z sub_type=optarg]"
 print*,"           infile outfile"
 print*,""
 print*,"-h  this help message"
+print*,"-e  interpolate U/V points of C grid in the relative T points like A grid"
 print*,"ilon,ilat  lon and lat in the lower left point"
 print*,"flon,flat  lon and lat in the upper right point"
 PRINT*,"npx,npy    number of points along x and y for boxregrid"
@@ -272,6 +297,7 @@ print*,"sub_type   transformation sub_type"
 print*,"           inter: near , bilin"
 print*,"           zoom: index , coord"
 print*,"           boxregrid: average"
+print*,"           none: no operations"
 print*,"infile,outfile  input and output file"
 print*,""
 print*,"only interpolation options:"
@@ -284,6 +310,6 @@ print*,""
 print *,"default : ilon=0. ilat=30. flon=30. flat=60."
 print*,"           nx=30 ny=30 lon_min=0. lon_max=30. lat_min=30. lat_max=60"
 print*,"           latitude_south_pole=-32.5 longitude_south_pole=10. angle_rotation=0. component_flag=1"
-print*,"           type=regular_ll trans_type=inter sub_type=near"
+print*,"           type=regular_ll trans_type=none sub_type=near"
 
 end subroutine help

@@ -135,7 +135,7 @@ END INTERFACE
 
 private
 
-PUBLIC volgrid6d,init,delete,export,import,compute,transform,wind_unrot
+PUBLIC volgrid6d,init,delete,export,import,compute,transform,wind_unrot,vg6d_c2a
 
 
 contains
@@ -2127,6 +2127,291 @@ end if
 
 
 end subroutine vg6d_wind__un_rot
+
+
+
+
+!!$cerchiamo di capire la logica:
+!!$
+!!$casi:
+!!$
+!!$1) abbiamo un solo volume: deve essere fornita la direzione dello shift
+!!$                           calcoliamo H e ce lo portiamo
+!!$2) abbiamo due volumi:
+!!$      1) volume U e volume V: calcoliamo quello H e ce li portiamo
+!!$      2) volume U/V e volume H : riportiamo U/V su H
+!!$3) abbiamo tre volumi: riportiamo U e V su H
+!!$
+!!$casi strani:
+!!$1) non abbiamo U in volume U
+!!$2) non abbiamo V in volume V
+!!$3) abbiamo altra roba oltre a U e V in volumi U e V
+!!$
+!!$
+!!$quindi i passi sono:
+!!$1) trovare i volumi interessati
+!!$2) definire o calcolare griglia H
+!!$3) trasformare i volumi in H 
+
+
+
+subroutine vg6d_c2a (this)
+
+TYPE(volgrid6d),INTENT(inout)  :: this(:)      !< vettore volume volgrid6d da exportare
+
+integer :: ngrid,igrid,jgrid,ugrid,vgrid,tgrid
+doubleprecision :: lon_min, lon_max, lat_min, lat_max
+doubleprecision :: lon_min_t, lon_max_t, lat_min_t, lat_max_t
+doubleprecision :: step_lon,step_lat
+character(len=80) :: type_t,type
+
+ngrid=size(this)
+
+do igrid=1,ngrid
+
+  tgrid=igrid
+  call get_val(this(igrid)%griddim,lon_min=lon_min_t, lon_max=lon_max_t, lat_min=lat_min_t, lat_max=lat_max_t,type=type_t)
+  step_lon=(lon_max_t-lon_min_t)/dble(this(igrid)%griddim%dim%nx-1)
+  step_lat=(lat_max_t-lat_min_t)/dble(this(igrid)%griddim%dim%ny-1)
+
+  do jgrid=1,ngrid
+
+    call l4f_category_log(this(igrid)%category,L4F_INFO,"C grid: search U/V/T points:"//to_char(igrid)//to_char(jgrid))
+
+    ugrid=imiss
+    vgrid=imiss
+
+    if (this(igrid)%griddim == this(jgrid)%griddim ) cycle
+
+    if (this(igrid)%griddim%dim%nx == this(jgrid)%griddim%dim%nx .and. &
+     this(igrid)%griddim%dim%ny == this(jgrid)%griddim%dim%ny ) then
+
+      call get_val(this(jgrid)%griddim,lon_min=lon_min, lon_max=lon_max, lat_min=lat_min, lat_max=lat_max,type=type)
+
+      if (type_t /= type )cycle
+
+      if ( lon_min == lon_min_t+step_lon/2.d0 .and. lon_max == lon_max_t+step_lon/2.d0 ) then
+        if ( lon_min == lon_min_t .and. lon_max == lon_max_t ) then
+
+          ugrid=jgrid
+
+        end if
+      end if
+
+      if ( lat_min == lat_min_t+step_lat/2.d0 .and. lat_max == lat_max_t+step_lat/2.d0 ) then
+        if ( lat_min == lat_min_t .and. lat_max == lat_max_t ) then
+
+          vgrid=jgrid
+
+        end if
+      end if
+    end if
+
+  end do
+
+  ! abbiamo almeno due volumi: riportiamo U e/o V su T
+  if (c_e(ugrid)) then
+    call vg6d_c2a_grid(this(ugrid),this(tgrid),cgrid=1)
+    call vg6d_c2a_mat(this(ugrid),cgrid=1)
+  end if
+
+  if (c_e(vgrid)) then
+    call vg6d_c2a_grid(this(vgrid),this(tgrid),cgrid=2)
+    call vg6d_c2a_mat(this(vgrid),cgrid=2)
+  end if
+
+end do
+  
+
+end subroutine vg6d_c2a
+
+
+!> Convert C grid to A grid
+subroutine vg6d_c2a_grid(this,vg6d_t,cgrid)
+
+type(volgrid6d),intent(inout) :: this !< object containing fields to be translated (U or V points)
+type(volgrid6d),intent(in),optional :: vg6d_t !< object containing T points
+integer,intent(in) :: cgrid !< in C grid (Arakawa) we have 0=T,1=U,2=V points
+
+doubleprecision :: lon_min, lon_max, lat_min, lat_max
+doubleprecision :: step_lon,step_lat
+
+
+if (present(vg6d_t)) then
+
+ call get_val(vg6d_t%griddim,lon_min=lon_min, lon_max=lon_max, lat_min=lat_min, lat_max=lat_max)
+ call set_val(this%griddim,lon_min=lon_min, lon_max=lon_max, lat_min=lat_min, lat_max=lat_max)
+
+else
+
+  select case (cgrid)
+
+  case(0)
+
+    call l4f_category_log(this%category,L4F_INFO,"C grid: T points, nothing to do")
+    return
+
+  case (1)
+
+    call l4f_category_log(this%category,L4F_INFO,"C grid: U points, we need interpolation")
+
+    call get_val(this%griddim, lon_min=lon_min, lon_max=lon_max)
+    step_lon=(lon_max-lon_min)/dble(this%griddim%dim%nx-1)
+    lon_min=lon_min-step_lon/2.d0
+    lon_max=lon_max-step_lon/2.d0
+    call set_val(this%griddim, lon_min=lon_min, lon_max=lon_max)
+    
+  case (2)
+
+    call l4f_category_log(this%category,L4F_INFO,"C grid: V points, we need interpolation")
+
+    call get_val(this%griddim, lat_min=lat_min, lat_max=lat_max)
+    step_lat=(lat_max-lat_min)/dble(this%griddim%dim%ny-1)
+    lat_min=lat_min-step_lat/2.d0
+    lat_max=lat_max-step_lat/2.d0
+    call set_val(this%griddim, lat_min=lat_min, lat_max=lat_max)
+    
+  case default
+
+    call l4f_category_log(this%category,L4F_ERROR,"C grid type not known")
+    call raise_fatal_error ("volgrid6d: C grid type not kmow")
+
+  end select
+
+end if
+
+
+call griddim_unproj(this%griddim)
+
+
+end subroutine vg6d_c2a_grid
+
+!> Convert C grid to A grid
+subroutine vg6d_c2a_mat(this,cgrid)
+
+type(volgrid6d),intent(inout) :: this !< object containing fields to be translated
+integer,intent(in) :: cgrid !< in C grid (Arakawa) we have 0=T,1=U,2=V points
+
+INTEGER :: nvar,nvaru,nvarv,i,j,k,iv
+type(vol7d_var) :: varu,varv
+type(vol7d_var),allocatable ::varbufr(:)
+double precision,allocatable :: tmp_arr(:,:)
+
+
+IF (.NOT. ALLOCATED(conv_fwd)) CALL vg6d_v7d_var_conv_setup()
+
+call init(varu,btable="B11003")
+call init(varv,btable="B11004")
+
+! test about presence of u and v in standard table
+
+if ( index(conv_fwd(:)%v7d_var,varu) == 0  .or. index(conv_fwd(:)%v7d_var,varv) == 0 )then
+  call l4f_category_log(this%category,L4F_ERROR,"B11003 and/or B11004 not defined by  vg6d_v7d_var_conv_setup")
+  call raise_fatal_error ("volgrid6d: B11003 and/or B11004 not defined by  vg6d_v7d_var_conv_setup")
+end if
+
+nvar=0
+if (associated(this%var))then
+  nvar=size(this%var)
+  allocate(varbufr(nvar))
+  CALL vargrib2varbufr(this%var, varbufr)
+end if
+
+nvaru=COUNT(varbufr==varu)
+nvarv=COUNT(varbufr==varv)
+
+if (nvaru > 1 )then
+  call l4f_category_log(this%category,L4F_WARN,"2 variables refer to u wind component")
+  call raise_error ("volgrid6d:2 variables refer to u wind component")
+endif
+
+if (nvarv > 1 )then
+  call l4f_category_log(this%category,L4F_WARN,"2 variables refer to v wind component")
+  call raise_error ("volgrid6d:2 variables refer to v wind component")
+endif
+
+if (nvaru == 0 .and. nvarv == 0) then
+  call l4f_category_log(this%category,L4F_WARN,"no u or v wind component found")
+  call raise_error ("volgrid6d: no u or v wind component found")
+endif
+
+if ( COUNT(varbufr/=varu .and. varbufr/=varv) > 0 )then
+  call l4f_category_log(this%category,L4F_WARN,"there are variables different from u and v wind component in C grid")
+  call raise_error ("volgrid6d: there are variables different from u and v wind component in C grid")
+endif
+
+! Temporary workspace
+ALLOCATE(tmp_arr(this%griddim%dim%nx, this%griddim%dim%ny))
+tmp_arr=rmiss
+
+timerange: DO k = 1, SIZE(this%timerange)
+  DO j = 1, SIZE(this%time)
+    DO i = 1, SIZE(this%level)
+      DO iv = 1, SIZE(this%var)
+        
+        select case (cgrid)
+
+        case(0)               ! T points; nothing to do
+
+          exit timerange
+
+        case(1)               ! U points to H points
+
+          WHERE(this%voldati(1,:,i,j,k,iv) /= rmiss .AND. &
+           this%voldati(2,:,i,j,k,iv) /= rmiss)
+
+                                ! West boundary
+            tmp_arr(1,:) = this%voldati(1,:,i,j,k,iv) - (this%voldati(2,:,i,j,k,iv) - this%voldati(1,:,i,j,k,iv)) / 2.
+                                ! Rest of the matrix
+          end WHERE
+
+          WHERE(this%voldati(1:this%griddim%dim%nx-1,:,i,j,k,iv) /= rmiss .AND. &
+           this%voldati(2:this%griddim%dim%nx,:,i,j,k,iv) /= rmiss)
+
+            tmp_arr(2:this%griddim%dim%nx,:) = (this%voldati(1:this%griddim%dim%nx-1,:,i,j,k,iv) + &
+             this%voldati(2:this%griddim%dim%nx,:,i,j,k,iv)) / 2.
+            
+          end WHERE
+
+          this%voldati(:,:,i,j,k,iv)=tmp_arr
+            
+        CASE (2)              ! V points to H points
+
+          WHERE(this%voldati(:,1,i,j,k,iv) /= rmiss .AND. &
+           this%voldati(:,2,i,j,k,iv) /= rmiss)
+
+                                ! South boundary
+            tmp_arr(:,1) = this%voldati(:,1,i,j,k,iv) - (this%voldati(:,2,i,j,k,iv) - this%voldati(:,1,i,j,k,iv)) / 2.
+
+          end WHERE
+
+          WHERE(this%voldati(:,1:this%griddim%dim%nx-1,i,j,k,iv) /= rmiss .AND. &
+           this%voldati(:,2:this%griddim%dim%nx,i,j,k,iv) /= rmiss)
+
+                                ! Rest of the matrix
+            tmp_arr(:,2:this%griddim%dim%ny) = (this%voldati(:,1:this%griddim%dim%ny-1,i,j,k,iv) + &
+             this%voldati(:,2:this%griddim%dim%ny,i,j,k,iv)) / 2.
+            
+          end WHERE
+
+          this%voldati(:,:,i,j,k,iv)=tmp_arr
+            
+
+        CASE DEFAULT
+
+          call l4f_category_log(this%category,L4F_ERROR,"C grid type not known")
+          call raise_fatal_error ("volgrid6d: C grid type not kmow")
+
+        END select
+
+      ENDDO
+    ENDDO
+  ENDDO
+ENDDO timerange
+
+DEALLOCATE (tmp_arr)
+
+end subroutine vg6d_c2a_mat
 
 
 end module volgrid6d_class
