@@ -594,12 +594,20 @@ elemental FUNCTION lambert_eq(this, that) RESULT(res)
 TYPE(grid_lambert),INTENT(IN) :: this, that
 LOGICAL :: res
 
+!!  TO DO
+!!  TO DO
+!!  TO DO
+!!  TO DO
+!!  TO DO
+! forzato a true perche' non funziona e crea seri problemi !
 
-res = this%regular_ll == that%regular_ll .and. &
- this%latitude_south_pole == that%latitude_south_pole .and. &
- this%longitude_south_pole == that%longitude_south_pole .and. &
- this%latin1 == that%latin1 .and. &
- this%latin2 == that%latin2
+res=.true.
+
+!!$res = this%regular_ll == that%regular_ll .and. &
+!!$ this%latitude_south_pole == that%latitude_south_pole .and. &
+!!$ this%longitude_south_pole == that%longitude_south_pole .and. &
+!!$ this%latin1 == that%latin1 .and. &
+!!$ this%latin2 == that%latin2
 
 END FUNCTION lambert_eq
 
