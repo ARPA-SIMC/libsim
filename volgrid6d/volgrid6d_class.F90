@@ -133,9 +133,16 @@ INTERFACE wind_unrot
   MODULE PROCEDURE vg6d_wind_unrot
 END INTERFACE
 
+!> \brief  Display object on screen
+!!
+!! show brief content on screen
+INTERFACE display
+  MODULE PROCEDURE display_volgrid6d,display_volgrid6dv
+END INTERFACE
+
 private
 
-PUBLIC volgrid6d,init,delete,export,import,compute,transform,wind_unrot,vg6d_c2a
+PUBLIC volgrid6d,init,delete,export,import,compute,transform,wind_unrot,vg6d_c2a,display
 
 
 contains
@@ -772,7 +779,7 @@ if (.not. c_e(gaid))then
  
     gaid=imiss
     call l4f_category_log(this%category,L4F_INFO,&
-     "mancano tutti i gaid; export impossibile")
+     "mancano tutti i gaid; export impossible, no not warry, sometime will be normaly ")
     !call raise_error("mancano tutti i gaid; export impossibile")
 
   end if
@@ -2153,6 +2160,7 @@ end subroutine vg6d_wind__un_rot
 !!$2) definire o calcolare griglia H
 !!$3) trasformare i volumi in H 
 
+!! TODO per ora la griglia H(t) deve essere fornita
 
 
 subroutine vg6d_c2a (this)
@@ -2162,45 +2170,71 @@ TYPE(volgrid6d),INTENT(inout)  :: this(:)      !< vettore volume volgrid6d da ex
 integer :: ngrid,igrid,jgrid,ugrid,vgrid,tgrid
 doubleprecision :: lon_min, lon_max, lat_min, lat_max
 doubleprecision :: lon_min_t, lon_max_t, lat_min_t, lat_max_t
-doubleprecision :: step_lon,step_lat
+doubleprecision :: step_lon_t,step_lat_t
 character(len=80) :: type_t,type
 
 ngrid=size(this)
 
 do igrid=1,ngrid
 
+  ugrid=imiss
+  vgrid=imiss
+
   tgrid=igrid
   call get_val(this(igrid)%griddim,lon_min=lon_min_t, lon_max=lon_max_t, lat_min=lat_min_t, lat_max=lat_max_t,type=type_t)
-  step_lon=(lon_max_t-lon_min_t)/dble(this(igrid)%griddim%dim%nx-1)
-  step_lat=(lat_max_t-lat_min_t)/dble(this(igrid)%griddim%dim%ny-1)
+  step_lon_t=(lon_max_t-lon_min_t)/dble(this(igrid)%griddim%dim%nx-1)
+  step_lat_t=(lat_max_t-lat_min_t)/dble(this(igrid)%griddim%dim%ny-1)
 
   do jgrid=1,ngrid
 
-    call l4f_category_log(this(igrid)%category,L4F_INFO,"C grid: search U/V/T points:"//to_char(igrid)//to_char(jgrid))
-
-    ugrid=imiss
-    vgrid=imiss
-
+#ifdef DEBUG
+    call l4f_category_log(this(igrid)%category,L4F_DEBUG,"C grid: search U/V/T points:"//to_char(igrid)//to_char(jgrid))
+    call l4f_category_log(this(igrid)%category,L4F_DEBUG,"C grid: test delta: "//to_char(step_lon_t)//to_char(step_lat_t))
+#endif
+    
     if (this(igrid)%griddim == this(jgrid)%griddim ) cycle
 
     if (this(igrid)%griddim%dim%nx == this(jgrid)%griddim%dim%nx .and. &
      this(igrid)%griddim%dim%ny == this(jgrid)%griddim%dim%ny ) then
 
       call get_val(this(jgrid)%griddim,lon_min=lon_min, lon_max=lon_max, lat_min=lat_min, lat_max=lat_max,type=type)
-
+      
       if (type_t /= type )cycle
 
-      if ( abs(lon_min - (lon_min_t+step_lon/2.d0)) < 1.d-3 .and. abs(lon_max - (lon_max_t+step_lon/2.d0)) < 1.d-3 ) then
-        if ( lon_min == lon_min_t .and. lon_max == lon_max_t ) then
+#ifdef DEBUG
+      call l4f_category_log(this(igrid)%category,L4F_DEBUG,"C grid: test U "//&
+       to_char(lon_min)//to_char(lon_max)//to_char(lat_min)//to_char(lat_max))
 
+      call l4f_category_log(this(igrid)%category,L4F_DEBUG,"diff coordinate lat"//&
+       to_char(abs(lon_min - (lon_min_t+step_lon_t/2.d0)))//&
+       to_char(abs(lon_max - (lon_max_t+step_lon_t/2.d0))))
+      call l4f_category_log(this(igrid)%category,L4F_DEBUG,"diff coordinate lon"//&
+       to_char(abs(lat_min - (lat_min_t+step_lat_t/2.d0)))//&
+       to_char(abs(lat_max - (lat_max_t+step_lat_t/2.d0))))
+#endif
+
+      if ( abs(lon_min - (lon_min_t+step_lon_t/2.d0)) < 1.d-3 .and. abs(lon_max - (lon_max_t+step_lon_t/2.d0)) < 1.d-3 ) then
+        if ( abs(lat_min - lat_min_t) < 1.d-3 .and. abs(lat_max - lat_max_t) < 1.d-3 ) then
+
+#ifdef DEBUG
+          call l4f_category_log(this(igrid)%category,L4F_DEBUG,"C grid: trovato U")
+#endif
           ugrid=jgrid
 
         end if
       end if
 
-      if ( abs(lat_min - (lat_min_t+step_lat/2.d0)) < 1.d-3 .and. abs(lat_max - (lat_max_t+step_lat/2.d0)) < 1.d-3 ) then
-        if ( lat_min == lat_min_t .and. lat_max == lat_max_t ) then
+#ifdef DEBUG
+      call l4f_category_log(this(igrid)%category,L4F_DEBUG,"C grid: test V "//&
+       to_char(lon_min)//to_char(lon_max)//to_char(lat_min)//to_char(lat_max))
+#endif
 
+      if ( abs(lat_min - (lat_min_t+step_lat_t/2.d0)) < 1.d-3 .and. abs(lat_max - (lat_max_t+step_lat_t/2.d0)) < 1.d-3 ) then
+        if ( abs(lon_min - lon_min_t) < 1.d-3 .and. abs(lon_max - lon_max_t) < 1.d-3  ) then
+          
+#ifdef DEBUG
+          call l4f_category_log(this(igrid)%category,L4F_DEBUG,"C grid: trovato V")
+#endif
           vgrid=jgrid
 
         end if
@@ -2211,11 +2245,17 @@ do igrid=1,ngrid
 
   ! abbiamo almeno due volumi: riportiamo U e/o V su T
   if (c_e(ugrid)) then
+#ifdef DEBUG
+    call l4f_category_log(this(igrid)%category,L4F_DEBUG,"C grid U points: riportiamo U su T "//to_char(tgrid)//to_char(ugrid))
+#endif
     call vg6d_c2a_grid(this(ugrid),this(tgrid),cgrid=1)
     call vg6d_c2a_mat(this(ugrid),cgrid=1)
   end if
 
   if (c_e(vgrid)) then
+#ifdef DEBUG
+    call l4f_category_log(this(igrid)%category,L4F_DEBUG,"C grid V points: riportiamo V su T "//to_char(tgrid)//to_char(vgrid))
+#endif
     call vg6d_c2a_grid(this(vgrid),this(tgrid),cgrid=2)
     call vg6d_c2a_mat(this(vgrid),cgrid=2)
   end if
@@ -2248,12 +2288,16 @@ else
 
   case(0)
 
-    call l4f_category_log(this%category,L4F_INFO,"C grid: T points, nothing to do")
+#ifdef DEBUG
+    call l4f_category_log(this%category,L4F_DEBUG,"C grid: T points, nothing to do")
+#endif
     return
 
   case (1)
 
-    call l4f_category_log(this%category,L4F_INFO,"C grid: U points, we need interpolation")
+#ifdef DEBUG
+    call l4f_category_log(this%category,L4F_DEBUG,"C grid: U points, we need interpolation")
+#endif
 
     call get_val(this%griddim, lon_min=lon_min, lon_max=lon_max)
     step_lon=(lon_max-lon_min)/dble(this%griddim%dim%nx-1)
@@ -2263,7 +2307,9 @@ else
     
   case (2)
 
-    call l4f_category_log(this%category,L4F_INFO,"C grid: V points, we need interpolation")
+#ifdef DEBUG
+    call l4f_category_log(this%category,L4F_DEBUG,"C grid: V points, we need interpolation")
+#endif
 
     call get_val(this%griddim, lat_min=lat_min, lat_max=lat_max)
     step_lat=(lat_max-lat_min)/dble(this%griddim%dim%ny-1)
@@ -2349,6 +2395,8 @@ timerange: DO k = 1, SIZE(this%timerange)
     DO i = 1, SIZE(this%level)
       DO iv = 1, SIZE(this%var)
         
+        tmp_arr=rmiss
+
         select case (cgrid)
 
         case(0)               ! T points; nothing to do
@@ -2357,14 +2405,13 @@ timerange: DO k = 1, SIZE(this%timerange)
 
         case(1)               ! U points to H points
 
+                                ! West boundary
           WHERE(this%voldati(1,:,i,j,k,iv) /= rmiss .AND. &
            this%voldati(2,:,i,j,k,iv) /= rmiss)
-
-                                ! West boundary
             tmp_arr(1,:) = this%voldati(1,:,i,j,k,iv) - (this%voldati(2,:,i,j,k,iv) - this%voldati(1,:,i,j,k,iv)) / 2.
-                                ! Rest of the matrix
           end WHERE
 
+                                ! Rest of the matrix
           WHERE(this%voldati(1:this%griddim%dim%nx-1,:,i,j,k,iv) /= rmiss .AND. &
            this%voldati(2:this%griddim%dim%nx,:,i,j,k,iv) /= rmiss)
 
@@ -2377,18 +2424,18 @@ timerange: DO k = 1, SIZE(this%timerange)
             
         CASE (2)              ! V points to H points
 
+                                ! South boundary
           WHERE(this%voldati(:,1,i,j,k,iv) /= rmiss .AND. &
            this%voldati(:,2,i,j,k,iv) /= rmiss)
 
-                                ! South boundary
             tmp_arr(:,1) = this%voldati(:,1,i,j,k,iv) - (this%voldati(:,2,i,j,k,iv) - this%voldati(:,1,i,j,k,iv)) / 2.
 
           end WHERE
 
-          WHERE(this%voldati(:,1:this%griddim%dim%nx-1,i,j,k,iv) /= rmiss .AND. &
-           this%voldati(:,2:this%griddim%dim%nx,i,j,k,iv) /= rmiss)
-
                                 ! Rest of the matrix
+          WHERE(this%voldati(:,1:this%griddim%dim%ny-1,i,j,k,iv) /= rmiss .AND. &
+           this%voldati(:,2:this%griddim%dim%ny,i,j,k,iv) /= rmiss)
+
             tmp_arr(:,2:this%griddim%dim%ny) = (this%voldati(:,1:this%griddim%dim%ny-1,i,j,k,iv) + &
              this%voldati(:,2:this%griddim%dim%ny,i,j,k,iv)) / 2.
             
@@ -2412,6 +2459,93 @@ ENDDO timerange
 DEALLOCATE (tmp_arr)
 
 end subroutine vg6d_c2a_mat
+
+
+!> \brief Display object on screen
+!!
+!! Show brief content on screen.
+subroutine display_volgrid6d (this)
+
+TYPE(volgrid6d),intent(in) :: this !< object to display
+integer :: i
+
+#ifdef DEBUG
+call l4f_category_log(this%category,L4F_DEBUG,"ora mostro gridinfo " )
+#endif
+
+print*,"----------------------- volgrid6d display ---------------------"
+call display(this%griddim)
+
+IF (ASSOCIATED(this%time))then
+  print*,"---- time vector ----"
+  print*,"elements=",size(this%time)
+  do i=1, size(this%time)
+    call display(this%time(i))
+  end do
+end IF
+
+IF (ASSOCIATED(this%timerange))then
+  print*,"---- timerange vector ----"
+  print*,"elements=",size(this%timerange)
+  do i=1, size(this%timerange)
+    call display(this%timerange(i))
+  end do
+end IF
+
+IF (ASSOCIATED(this%level))then
+  print*,"---- level vector ----"
+  print*,"elements=",size(this%level)
+  do i=1, size(this%level)
+    call display(this%level(i))
+  end do
+end IF
+
+IF (ASSOCIATED(this%var))then
+  print*,"---- var vector ----"
+  print*,"elements=",size(this%var)
+  do i=1, size(this%var)
+    call display(this%var(i))
+  end do
+end IF
+
+IF (ASSOCIATED(this%gaid))then
+  print*,"---- gaid vector (present mask only) ----"
+  print*,"elements=",shape(this%gaid)
+  print* ,c_e(this%gaid)
+end IF
+
+print*,"--------------------------------------------------------------"
+
+
+end subroutine display_volgrid6d
+
+
+!> \brief Display vector of object on screen
+!!
+!! Show brief content on screen.
+subroutine display_volgrid6dv (this)
+
+TYPE(volgrid6d),intent(in) :: this(:) !< vector of object to display
+integer :: i
+
+print*,"----------------------- volgrid6d  vector ---------------------"
+
+print*,"elements=",size(this)
+
+do i=1, size(this)
+
+#ifdef DEBUG
+  call l4f_category_log(this(i)%category,L4F_DEBUG,"ora mostro il vettore volgrid6d" )
+#endif
+
+  call display(this(i))
+
+end do
+print*,"--------------------------------------------------------------"
+
+end subroutine display_volgrid6dv
+
+
 
 
 end module volgrid6d_class

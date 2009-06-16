@@ -226,6 +226,7 @@ if (c2agrid) call vg6d_c2a(volgrid)
 
 if (trans_type == 'none') then
 
+  !call display(volgrid)
   !exportazione
   call export (volgrid,filename=outfile,categoryappend="exportazione")
 
