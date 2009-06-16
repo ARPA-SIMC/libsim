@@ -2190,7 +2190,7 @@ do igrid=1,ngrid
 
       if (type_t /= type )cycle
 
-      if ( lon_min == lon_min_t+step_lon/2.d0 .and. lon_max == lon_max_t+step_lon/2.d0 ) then
+      if ( abs(lon_min - (lon_min_t+step_lon/2.d0)) < 1.d-3 .and. abs(lon_max - (lon_max_t+step_lon/2.d0)) < 1.d-3 ) then
         if ( lon_min == lon_min_t .and. lon_max == lon_max_t ) then
 
           ugrid=jgrid
@@ -2198,7 +2198,7 @@ do igrid=1,ngrid
         end if
       end if
 
-      if ( lat_min == lat_min_t+step_lat/2.d0 .and. lat_max == lat_max_t+step_lat/2.d0 ) then
+      if ( abs(lat_min - (lat_min_t+step_lat/2.d0)) < 1.d-3 .and. abs(lat_max - (lat_max_t+step_lat/2.d0)) < 1.d-3 ) then
         if ( lat_min == lat_min_t .and. lat_max == lat_max_t ) then
 
           vgrid=jgrid
