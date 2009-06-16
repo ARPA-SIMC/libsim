@@ -196,7 +196,7 @@ DO j = 1, SIZE(db_v7d%vol7d%ana) ! stazione
       n = COUNT(vol3d(j,i,:) /= rmiss .AND. v7dfamptr(:) == k)
       IF (n > 0) THEN
         conc = SUM(vol3d(j,i,:), mask=(vol3d(j,i,:) /= rmiss .AND. v7dfamptr(:) == k))
-        CALL csv_record_addfield(csv_write, conc, form='(F0.2)')
+        CALL csv_record_addfield(csv_write, conc, form='(F0.1)')
         ndstaz(j) = ndstaz(j) + 1
       ELSE
         conc = rmiss
