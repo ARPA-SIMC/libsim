@@ -490,7 +490,7 @@ INTEGER :: i, ocursor, ofcursor, lier
 IF (PRESENT(field)) field = ''
 IF (PRESENT(ier)) ier = 0
 IF (csv_record_end(this)) THEN
-  IF (PRESENT(ier)) ier = 1
+  IF (PRESENT(ier)) ier = 2
   CALL raise_error('in csv_record_getfield, superata la fine record')
   RETURN
 ENDIF
