@@ -272,8 +272,8 @@ end if
 CALL proj_lambert(this, this%regular_ll%lon_min, this%regular_ll%lat_min, &
  xmin, ymin)
 
-dlon= (this%regular_ll%lon_max - this%regular_ll%lon_min) / dble(dim%nx - 1 )
-dlat= (this%regular_ll%lat_max - this%regular_ll%lat_min) / dble(dim%ny - 1 )
+dlon= (this%regular_ll%lon_max - this%regular_ll%lon_min) / dble(dim%nx - 1 )*1000.D0
+dlat= (this%regular_ll%lat_max - this%regular_ll%lat_min) / dble(dim%ny - 1 )*1000.D0
 
 call unproj_lambert(this,&
  reshape((/ &
@@ -594,20 +594,13 @@ elemental FUNCTION lambert_eq(this, that) RESULT(res)
 TYPE(grid_lambert),INTENT(IN) :: this, that
 LOGICAL :: res
 
-!!  TO DO
-!!  TO DO
-!!  TO DO
-!!  TO DO
-!!  TO DO
-! forzato a true perche' non funziona e crea seri problemi !
-
-res=.true.
-
-!!$res = this%regular_ll == that%regular_ll .and. &
-!!$ this%latitude_south_pole == that%latitude_south_pole .and. &
-!!$ this%longitude_south_pole == that%longitude_south_pole .and. &
-!!$ this%latin1 == that%latin1 .and. &
-!!$ this%latin2 == that%latin2
+res = this%regular_ll == that%regular_ll .and. &
+ this%latitude_south_pole == that%latitude_south_pole .and. &
+ this%longitude_south_pole == that%longitude_south_pole .and. &
+ this%latin1 == that%latin1 .and. &
+ this%latin2 == that%latin2 .and. &
+ this%lov == this%lov .and. this%lad == that%lad &
+ .and. this%projection_center_flag == that%projection_center_flag
 
 END FUNCTION lambert_eq
 

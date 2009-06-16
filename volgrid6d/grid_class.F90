@@ -355,6 +355,7 @@ this%category=l4f_category_get(a_name)
 
 call init(this%grid%regular_ll,this%dim)
 call init(this%grid%rotated_ll,this%dim)
+call init(this%grid%lambert,this%dim)
 
 if (present(type))then
   this%grid%type%type=type

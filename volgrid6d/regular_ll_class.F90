@@ -568,18 +568,25 @@ doubleprecision :: loFirst,loLast,laFirst,laLast
 integer ::iScansNegatively,jScansPositively
 !!$integer ::EditionNumber
 
-!non usati
-!geography.gridWestEast
-!geography.gridNorthSouth
+integer :: ierr
+doubleprecision :: dx, dy
 
 call import_dim(dim,gaid)
 
+CALL grib_get(gaid,'DxInMetres', dx, ierr)
+IF (ierr /= GRIB_SUCCESS) dx = dmiss
+CALL grib_get(gaid,'DyInMetres', dy, ierr)
+IF (ierr /= GRIB_SUCCESS) dy = dmiss
 
-
-call grib_get(gaid,'longitudeOfFirstGridPointInDegrees' ,loFirst)
-call grib_get(gaid,'longitudeOfLastGridPointInDegrees'  ,loLast)
-call grib_get(gaid,'latitudeOfFirstGridPointInDegrees' ,laFirst)
-call grib_get(gaid,'latitudeOfLastGridPointInDegrees'  ,laLast)
+call grib_get(gaid,'longitudeOfFirstGridPointInDegrees' ,loFirst, ierr)
+IF (ierr /= GRIB_SUCCESS) loFirst = dmiss
+call grib_get(gaid,'longitudeOfLastGridPointInDegrees'  ,loLast, ierr)
+IF (ierr /= GRIB_SUCCESS) loLast = dmiss
+call grib_get(gaid,'latitudeOfFirstGridPointInDegrees' ,laFirst, ierr)
+IF (ierr /= GRIB_SUCCESS) laFirst = dmiss
+call grib_get(gaid,'latitudeOfLastGridPointInDegrees'  ,laLast, ierr)
+IF (ierr /= GRIB_SUCCESS) laLast = dmiss
+! codificare dx e dy in loLast laLast?
 
 call grib_get(gaid,'iScansNegatively',iScansNegatively)
 call grib_get(gaid,'jScansPositively',jScansPositively)
@@ -587,24 +594,40 @@ call grib_get(gaid,'jScansPositively',jScansPositively)
 IF (iScansNegatively  == 0) THEN
 
   this%lon_min = loFirst
-  this%lon_max = loLast 
+  IF (c_e(loLast)) THEN
+    this%lon_max = loLast
+  ELSE IF (c_e(loFirst) .AND. c_e(dx)) THEN
+    this%lon_max = loFirst + dx*(dim%nx-1)
+  ENDIF
 
 else
 
   this%lon_max = loFirst
-  this%lon_min = loLast 
+  IF (c_e(loLast)) THEN
+    this%lon_min = loLast
+  ELSE IF (c_e(loFirst) .AND. c_e(dx)) THEN
+    this%lon_min = loFirst - dx*(dim%nx-1)
+  ENDIF
 
 end IF
 
 IF (jScansPositively == 0) THEN
 
   this%lat_max = laFirst
-  this%lat_min = laLast 
+  IF (c_e(laLast)) THEN
+    this%lat_min = laLast
+  ELSE IF (c_e(laFirst) .AND. c_e(dy)) THEN
+    this%lat_min = laFirst - dy*(dim%ny-1)
+  ENDIF
 
 else
 
   this%lat_min = laFirst
-  this%lat_max = laLast 
+  IF (c_e(laLast)) THEN
+    this%lat_max = laLast
+  ELSE IF (c_e(laFirst) .AND. c_e(dy)) THEN
+    this%lat_max = laFirst + dy*(dim%ny-1)
+  ENDIF
 
 end IF
 
@@ -704,17 +727,20 @@ ENDIF
 IF (ABS(NINT(dlon*ratio) - dlon*ratio) > 0.5 .OR. &
  ABS(NINT(dlat*ratio) - dlat*ratio) > 0.5) THEN ! Increments not accurate
 
-  call l4f_category_log(this%category,L4F_INFO,"incremets not given: inaccurate!")
+  call l4f_category_log(this%category,L4F_INFO,"increments not given: inaccurate!")
 #ifdef DEBUG
-  call l4f_category_log(this%category,L4F_DEBUG,"lon incremets difference: "//&
+  call l4f_category_log(this%category,L4F_DEBUG,"lon increments difference: "//&
    to_char(ABS(NINT(dlon*ratio) - dlon*ratio)))
-  call l4f_category_log(this%category,L4F_DEBUG,"lat incremets difference: "//&
+  call l4f_category_log(this%category,L4F_DEBUG,"lat increments difference: "//&
    to_char(ABS(NINT(dlat*ratio) - dlat*ratio)))
 #endif
 
   CALL grib_set(gaid,'resolutionAndComponentFlags',0)
-  CALL grib_set_missing(gaid,'iDirectionIncrement')
-  CALL grib_set_missing(gaid,'jDirectionIncrement')
+!  CALL grib_set_missing(gaid,'iDirectionIncrement')
+!  CALL grib_set_missing(gaid,'jDirectionIncrement')
+! Di, Dj are universal aliases
+  CALL grib_set_missing(gaid,'Di')
+  CALL grib_set_missing(gaid,'Dj')
 
 ! questo non va
 !  CALL grib_set(gaid,'ijDirectionIncrementGiven', 0)
@@ -729,8 +755,11 @@ ELSE
 #endif
 
   CALL grib_set(gaid,'resolutionAndComponentFlags',128)
-  CALL grib_set(gaid,'iDirectionIncrement',dlon*ratio)
-  CALL grib_set(gaid,'jDirectionIncrement',dlat*ratio)
+!  CALL grib_set(gaid,'iDirectionIncrement',dlon*ratio)
+!  CALL grib_set(gaid,'jDirectionIncrement',dlat*ratio)
+! Di, Dj are universal aliases
+  CALL grib_set(gaid,'Di',dlon*ratio)
+  CALL grib_set(gaid,'Dj',dlat*ratio)
 
 ! questo non va
 !  CALL grib_set(gaid,'ijDirectionIncrementGiven', 1)
@@ -751,8 +780,11 @@ subroutine import_dim(this,gaid)
 type(grid_dim),intent(out) :: this
 integer,INTENT(in)             :: gaid
 
-   call grib_get(gaid,'numberOfPointsAlongAParallel',this%nx)
-   call grib_get(gaid,'numberOfPointsAlongAMeridian',this%ny)
+!   call grib_get(gaid,'numberOfPointsAlongAParallel',this%nx)
+!   call grib_get(gaid,'numberOfPointsAlongAMeridian',this%ny)
+! Ni, Nj are universal aliases
+   call grib_get(gaid,'Ni',this%nx)
+   call grib_get(gaid,'Nj',this%ny)
 
 end subroutine import_dim
 
