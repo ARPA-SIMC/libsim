@@ -135,7 +135,6 @@ call l4f_category_delete(category)
 ier=l4f_fini()
 
 end program getpoint
-
 subroutine help()
 
 print*,"Grib to bufr/crex trasformation application."
@@ -146,9 +145,9 @@ print*,"getpoint [-h] [-a lon] [-b lat] [-f format] [-t template] [-v trans_type
 print*,""
 print*,"-h         this help message"
 print*,"lon,lat    lon and lat of the target point"
-print*,"format     specificando category.subcategory.localcategory oppure un alias"
+print*,"format     BUFR/CREX"
+print*,"template   specificando category.subcategory.localcategory oppure un alias"
 print*,"           ('synop', 'metar','temp','generic') forza l'exportazione ad uno specifico template BUFR/CREX"
-print*,"template   template of BUFR/CREX messages"
 print*,"trans_type transformation type; inter for interpolation"
 print*,"sub_type   transformation sub_type"
 print*,"           inter: near , bilin"
