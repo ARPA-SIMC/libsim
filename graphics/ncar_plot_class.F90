@@ -800,15 +800,95 @@ r_ur=fr(r_tt,r_tr)
 !vento
 
 
-call init(var, btable="B11001")    ! WIND DIRECTION : DEGREE TRUE 
-
-allocate(r_dd(levP))
+call init(var, btable="B11003")    ! U-COMPONENT : M/S 
+allocate(u(levP))
 
 type=cmiss
 !type="i"
 call vol7d_varvect_index(v7d%dativar,var , type=type,index_v=ind)
 
 !if( ind /= 0 ) then
+  select case (type)
+
+  case("d")
+    u=pack(realdat(v7d%voldatid(ana,time,:,timerange,ind,network),v7d%dativar%d(ind)),&
+     (v7d%level%level1 == 100.and.v7d%level%level2 == imiss))
+
+  case("r")
+    u=pack(realdat(v7d%voldatir(ana,time,:,timerange,ind,network),v7d%dativar%r(ind)),&
+     (v7d%level%level1 == 100.and.v7d%level%level2 == imiss))
+
+  case("i")
+    u=pack(realdat(v7d%voldatii(ana,time,:,timerange,ind,network),v7d%dativar%i(ind)),&
+     (v7d%level%level1 == 100.and.v7d%level%level2 == imiss))
+
+  case("b")
+    u=pack(realdat(v7d%voldatib(ana,time,:,timerange,ind,network),v7d%dativar%b(ind)),&
+     (v7d%level%level1 == 100.and.v7d%level%level2 == imiss))
+
+  case("c")
+    u=pack(realdat(v7d%voldatic(ana,time,:,timerange,ind,network),v7d%dativar%c(ind)),&
+     (v7d%level%level1 == 100.and.v7d%level%level2 == imiss))
+
+  case default
+
+    u=rmiss
+
+  end select
+!end if
+
+
+call init(var, btable="B11004")    ! V-COMPONENT : M/S
+allocate(v(levP))
+
+type=cmiss
+!type="i"
+call vol7d_varvect_index(v7d%dativar,var , type=type,index_v=ind)
+
+!if( ind /= 0 ) then
+  select case (type)
+
+  case("d")
+    v=pack(realdat(v7d%voldatid(ana,time,:,timerange,ind,network),v7d%dativar%d(ind)),&
+     (v7d%level%level1 == 100.and.v7d%level%level2 == imiss))
+
+  case("r")
+    v=pack(realdat(v7d%voldatir(ana,time,:,timerange,ind,network),v7d%dativar%r(ind)),&
+     (v7d%level%level1 == 100.and.v7d%level%level2 == imiss))
+
+  case("i")
+    v=pack(realdat(v7d%voldatii(ana,time,:,timerange,ind,network),v7d%dativar%i(ind)),&
+     (v7d%level%level1 == 100.and.v7d%level%level2 == imiss))
+
+  case("b")
+    v=pack(realdat(v7d%voldatib(ana,time,:,timerange,ind,network),v7d%dativar%b(ind)),&
+     (v7d%level%level1 == 100.and.v7d%level%level2 == imiss))
+
+  case("c")
+    v=pack(realdat(v7d%voldatic(ana,time,:,timerange,ind,network),v7d%dativar%c(ind)),&
+     (v7d%level%level1 == 100.and.v7d%level%level2 == imiss))
+
+  case default
+
+    v=rmiss
+
+  end select
+
+!end if
+
+
+! test su tutti U e V mancanti
+! cerco DD FF
+if (.not. any(c_e(u)) .and. .not. any(c_e(v))) then
+
+  call init(var, btable="B11001")    ! WIND DIRECTION : DEGREE TRUE 
+  allocate(r_dd(levP))
+
+  type=cmiss
+  !type="i"
+  call vol7d_varvect_index(v7d%dativar,var , type=type,index_v=ind)
+  
+  !if( ind /= 0 ) then
   select case (type)
 
   case("d")
@@ -836,17 +916,16 @@ call vol7d_varvect_index(v7d%dativar,var , type=type,index_v=ind)
     r_dd=rmiss
 
   end select
-!end if
+  !end if
 
-call init(var, btable="B11002")    ! WIND SPEED : M/S 
+  call init(var, btable="B11002")    ! WIND SPEED : M/S 
+  allocate(r_ff(levP))
 
-allocate(r_ff(levP))
+  type=cmiss
+  !type="i"
+  call vol7d_varvect_index(v7d%dativar,var , type=type,index_v=ind)
 
-type=cmiss
-!type="i"
-call vol7d_varvect_index(v7d%dativar,var , type=type,index_v=ind)
-
-!if( ind /= 0 ) then
+  !if( ind /= 0 ) then
   select case (type)
 
   case("d")
@@ -875,18 +954,12 @@ call vol7d_varvect_index(v7d%dativar,var , type=type,index_v=ind)
 
   end select
 
-!end if
+  !end if
 
-allocate(u(levP),v(levP))
+  !conversione in u,v
+  CALL UV(r_dd,r_ff,u,v)
 
-!conversione unità di misura
-where (c_e(r_ff))
-  r_ff=r_ff*convff
-end where
-
-!conversione in u,v
-CALL UV(r_dd,r_ff,u,v)
-
+end if
 
 
 ! disegno la temperatura
@@ -994,7 +1067,8 @@ CALL WMSETI("wdf",1)
 do l=1,levP
   if (c_e(u(l)).and. c_e(v(l)) .and. r_pr(l) >= ptop) then
     yww=y_coord (r_pr(l),dim_y,offset_y)  
-    CALL WMBARB(xww,yww,u(l),v(l))
+                                !con conversione unità di misura
+    CALL WMBARB(xww,yww,u(l)*convff,v(l)*convff)
   end if
 end do
 
