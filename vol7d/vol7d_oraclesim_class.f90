@@ -580,8 +580,8 @@ CALL init(netana(netid)%anavar%r(2), btable='B07031') ! barometer height
 CALL init(netana(netid)%anavar%i(1), btable='B01192') ! Oracle station id
 CALL init(netana(netid)%anavar%c(1), btable='B01019') ! station name
 DO j = 1, i
-  READ(un,*)netana(netid)%volanai(j,1,1), lat, lon, netana(netid)%volanar(j,1,1), &
-   netana(netid)%volanar(j,2,1), macroa, netana(netid)%volanac(j,1,1)
+  READ(un,*)netana(netid)%volanai(j,1,1), lat, lon, netana(netid)%volanar(j,2,1), &
+   netana(netid)%volanar(j,1,1), macroa, netana(netid)%volanac(j,1,1)
   IF (netana(netid)%volanar(j,1,1) < -9998.) netana(netid)%volanar(j,1,1) = rmiss
   IF (netana(netid)%volanar(j,2,1) < -9998.) netana(netid)%volanar(j,2,1) = rmiss
   IF (lon < -99.8 .AND. lat < -99.8) THEN

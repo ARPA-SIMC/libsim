@@ -49,6 +49,7 @@ crea_anag_reti_simana()
 #
 # Il primo parametro e' l'identificativo numerico della rete;
 # il secondo parametro e' il nome file su cui scrivere l'uscita.
+# da chiarire se usare pm.z_quota_slm o st.z_quota_stazione
 {
     cat > $sqlfile <<EOF
 set lines 2000
