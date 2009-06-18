@@ -644,7 +644,7 @@ subroutine export_regular_ll(this,dim,gaid)
 type(grid_regular_ll),intent(in) ::this
 type(grid_dim),intent(in)        :: dim
 integer,INTENT(in)               :: gaid
-doubleprecision :: loFirst,loLast,laFirst,laLast, dlon, dlat, ratio
+doubleprecision :: loFirst,loLast,laFirst,laLast, dlon, dlat, ratio, tol
 integer ::iScansNegatively,jScansPositively
 
 integer ::EditionNumber
@@ -684,15 +684,6 @@ else
 
 end IF
 
-!report lon in standard grib 2 definition
-if (loFirst < 0.d0)loFirst=loFirst+360.d0
-if (loLast < 0.d0)loLast=loLast+360.d0
-
-call grib_set(gaid,'longitudeOfFirstGridPointInDegrees' ,loFirst)
-call grib_set(gaid,'longitudeOfLastGridPointInDegrees'  ,loLast)
-call grib_set(gaid,'latitudeOfFirstGridPointInDegrees' ,laFirst)
-call grib_set(gaid,'latitudeOfLastGridPointInDegrees'  ,laLast)
-
 ! Recompute and code grid steps if possible
 dlat = (this%lat_max - this%lat_min) / dble(dim%ny - 1 )
 dlon = (this%lon_max - this%lon_min) / dble(dim%nx - 1 )
@@ -717,22 +708,32 @@ IF (EditionNumber == 1) THEN
 
 ELSE IF (EditionNumber == 2) THEN
   ratio = 1.d6
+!report lon in standard grib 2 definition
+  IF (loFirst < 0.d0)loFirst=loFirst+360.d0
+  IF (loLast < 0.d0)loLast=loLast+360.d0
+
 ELSE
   call l4f_category_log(this%category,L4F_ERROR,"GribEditionNumber not supported: "//trim(to_char(editionNumber)))
   CALL raise_error('GribEditionNumber not supported')
 ENDIF
 
+call grib_set(gaid,'longitudeOfFirstGridPointInDegrees',loFirst)
+call grib_set(gaid,'longitudeOfLastGridPointInDegrees',loLast)
+call grib_set(gaid,'latitudeOfFirstGridPointInDegrees',laFirst)
+call grib_set(gaid,'latitudeOfLastGridPointInDegrees',laLast)
 
-!TODO da verificare questo test (la costante 0.5 è casuale)
-IF (ABS(NINT(dlon*ratio) - dlon*ratio) > 0.5 .OR. &
- ABS(NINT(dlat*ratio) - dlat*ratio) > 0.5) THEN ! Increments not accurate
+! test relative coordinate truncation error with respect to tol
+! tol should be tuned
+tol = 1.0d0/ratio
+IF (ABS(NINT(dlon*ratio)/(dlon*ratio) - 1.0d0) > tol .OR. &
+ ABS(NINT(dlat*ratio)/(dlat*ratio) - 1.0d0) > tol) THEN ! Increments not accurate
 
   call l4f_category_log(this%category,L4F_INFO,"increments not given: inaccurate!")
 #ifdef DEBUG
-  call l4f_category_log(this%category,L4F_DEBUG,"lon increments difference: "//&
-   to_char(ABS(NINT(dlon*ratio) - dlon*ratio)))
-  call l4f_category_log(this%category,L4F_DEBUG,"lat increments difference: "//&
-   to_char(ABS(NINT(dlat*ratio) - dlat*ratio)))
+  call l4f_category_log(this%category,L4F_DEBUG,"dlon relative error: "//&
+   to_char(ABS(NINT(dlon*ratio)/(dlon*ratio) - 1.0d0))//">"//to_char(tol))
+  call l4f_category_log(this%category,L4F_DEBUG,"dlat relative error: "//&
+   to_char(ABS(NINT(dlat*ratio)/(dlat*ratio) - 1.0d0))//">"//to_char(tol))
 #endif
 
   CALL grib_set(gaid,'resolutionAndComponentFlags',0)
@@ -751,7 +752,7 @@ IF (ABS(NINT(dlon*ratio) - dlon*ratio) > 0.5 .OR. &
 
 ELSE
 #ifdef DEBUG
-  call l4f_category_log(this%category,L4F_DEBUG,"setting incremets: "//trim(to_char(dlon))//trim(to_char(dlat)))
+  CALL l4f_category_log(this%category,L4F_DEBUG,"setting increments: "//TRIM(to_char(dlon))//' '//TRIM(to_char(dlat)))
 #endif
 
   CALL grib_set(gaid,'resolutionAndComponentFlags',128)
