@@ -685,7 +685,7 @@ integer                     :: l,levP,levT,ind
 
 real,dimension(300)         :: xx,yy
 real,allocatable            :: r_tt(:),r_pr(:),r_tr(:),r_ur(:),r_dd(:),r_ff(:),&
-                               u(:),v(:)
+                               u(:),v(:),r_uq(:)
 real                        :: ratio,xww,yww
 real                        :: psat
 character(len=1)            :: type
@@ -717,6 +717,7 @@ r_pr=pack(v7d%level%l1,v7d%level%level1 == 100 .and. v7d%level%level2 == imiss)/
 
 call init(var, btable="B12001")    ! temperatura
 allocate(r_tt(levP))
+r_tt=rmiss
 
 type=cmiss
 !type="i"
@@ -755,6 +756,7 @@ call vol7d_varvect_index(v7d%dativar,var , type=type,index_v=ind)
 call init(var, btable="B12003")    ! temperatura rugiada
 
 allocate(r_tr(levP))
+r_tr=rmiss
 
 type=cmiss
 !type="i"
@@ -790,11 +792,65 @@ call vol7d_varvect_index(v7d%dativar,var , type=type,index_v=ind)
   end select
 !end if
 
-!unidità relativa
+!umidità relativa
 
 allocate(r_ur(levP))
 
 r_ur=fr(r_tt,r_tr)
+
+
+!umidità specifica
+
+if (.not. any(c_e(r_ur))) then
+
+  call init(var, btable="B13001")    ! Specific humidity,KG/KG
+  allocate(r_uq(levP))
+  r_uq=rmiss
+
+  type=cmiss
+  !type="i"
+  call vol7d_varvect_index(v7d%dativar,var , type=type,index_v=ind)
+
+  !if( ind /= 0 ) then
+  select case (type)
+
+  case("d")
+    r_uq=pack(realdat(v7d%voldatid(ana,time,:,timerange,ind,network),v7d%dativar%d(ind)),&
+     (v7d%level%level1 == 100.and.v7d%level%level2 == imiss))
+    
+  case("r")
+    r_uq=pack(realdat(v7d%voldatir(ana,time,:,timerange,ind,network),v7d%dativar%r(ind)),&
+     (v7d%level%level1 == 100.and.v7d%level%level2 == imiss))
+  
+  case("i")
+    r_uq=pack(realdat(v7d%voldatii(ana,time,:,timerange,ind,network),v7d%dativar%i(ind)),&
+     (v7d%level%level1 == 100.and.v7d%level%level2 == imiss))
+    
+  case("b")
+    r_uq=pack(realdat(v7d%voldatib(ana,time,:,timerange,ind,network),v7d%dativar%b(ind)),&
+     (v7d%level%level1 == 100.and.v7d%level%level2 == imiss))
+
+  case("c")
+    r_uq=pack(realdat(v7d%voldatic(ana,time,:,timerange,ind,network),v7d%dativar%c(ind)),&
+     (v7d%level%level1 == 100.and.v7d%level%level2 == imiss))
+
+  case default
+
+    r_uq=rmiss
+
+  end select
+!end if
+
+r_ur=QTORELHUM(r_uq,r_pr,r_tt)
+
+! delete very dry points for truncation problem
+where (r_ur < 10. )
+  r_ur=rmiss
+end where
+r_tr=TRUG(r_ur,r_tt)
+
+
+end if
 
 
 !vento
@@ -802,6 +858,7 @@ r_ur=fr(r_tt,r_tr)
 
 call init(var, btable="B11003")    ! U-COMPONENT : M/S 
 allocate(u(levP))
+u=rmiss
 
 type=cmiss
 !type="i"
@@ -840,6 +897,7 @@ call vol7d_varvect_index(v7d%dativar,var , type=type,index_v=ind)
 
 call init(var, btable="B11004")    ! V-COMPONENT : M/S
 allocate(v(levP))
+v=rmiss
 
 type=cmiss
 !type="i"
@@ -883,6 +941,7 @@ if (.not. any(c_e(u)) .and. .not. any(c_e(v))) then
 
   call init(var, btable="B11001")    ! WIND DIRECTION : DEGREE TRUE 
   allocate(r_dd(levP))
+  r_dd=rmiss
 
   type=cmiss
   !type="i"
@@ -920,6 +979,7 @@ if (.not. any(c_e(u)) .and. .not. any(c_e(v))) then
 
   call init(var, btable="B11002")    ! WIND SPEED : M/S 
   allocate(r_ff(levP))
+  r_ff=rmiss
 
   type=cmiss
   !type="i"
