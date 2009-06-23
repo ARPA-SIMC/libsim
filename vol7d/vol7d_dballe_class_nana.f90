@@ -12,7 +12,7 @@ if (associated(this%vol7d%anavar%/**/VOL7D_POLY_TYPES_V))then
          end where
       end do
    else
-      lanavar/**/VOL7D_POLY_TYPES_V(:)=.true.
+      lanavar/**/VOL7D_POLY_TYPES_V(:)=c_e(this%vol7d%anavar%/**/VOL7D_POLY_TYPES_V(:)%btable)
    end if
 else
    allocate (lanavar/**/VOL7D_POLY_TYPES_V(0))
@@ -30,11 +30,11 @@ if (associated(this%vol7d%anavarattr%/**/VOL7D_POLY_TYPES_V))then
          end where
       end do
    else
-      lanaattr/**/VOL7D_POLY_TYPES_V(:)=.true.
+      lanaattr/**/VOL7D_POLY_TYPES_V(:)=c_e(this%vol7d%anaattr%/**/VOL7D_POLY_TYPES_V(:)%btable)
    end if
 else
    allocate (lanaattr/**/VOL7D_POLY_TYPES_V(0))
 end if
 
-!# end type  r
+!# end type /**/VOL7D_POLY_TYPES_V
 

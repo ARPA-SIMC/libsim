@@ -16,7 +16,7 @@ if (associated(this%vol7d%dativar%/**/VOL7D_POLY_TYPES_V))then
          end where
       end do
    else
-     lvar/**/VOL7D_POLY_TYPES_V(:)=.true.
+     lvar/**/VOL7D_POLY_TYPES_V(:)=c_e(this%vol7d%dativar%/**/VOL7D_POLY_TYPES_V(:)%btable)
    end if
 else
    allocate (lvar/**/VOL7D_POLY_TYPES_V(0))
@@ -34,7 +34,7 @@ if (associated(this%vol7d%dativarattr%/**/VOL7D_POLY_TYPES_V))then
          end where
       end do
    else
-      lattr/**/VOL7D_POLY_TYPES_V(:)=.true.
+      lattr/**/VOL7D_POLY_TYPES_V(:)=c_e(this%vol7d%datiattr%/**/VOL7D_POLY_TYPES_V(:)%btable)
    end if
 else
    allocate (lattr/**/VOL7D_POLY_TYPES_V(0))
