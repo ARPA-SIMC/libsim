@@ -250,10 +250,14 @@ elemental real function TRUG(UMID,T)
 
   if( c_e(umid) .and. c_e(t) )then
 
-    es=ESAT(t)                           ! >>> Calcolo la P.v.s 
-    e=umid/100.*es                       ! >>> Calcolo la P.v. 
-    TRUG=(D*log(E/psva))/(C-log(E/psva)) ! >>> Calcolo la T.d. 
-    TRUG=TRUG+t0c                        ! >>> Calcolo la T.d. in Kelvin 
+    if (umid < 0.1)then
+      trug=0.
+    else
+      es=ESAT(t)                           ! >>> Calcolo la P.v.s 
+      e=umid/100.*es                       ! >>> Calcolo la P.v. 
+      TRUG=(D*log(E/psva))/(C-log(E/psva)) ! >>> Calcolo la T.d. 
+      TRUG=TRUG+t0c                        ! >>> Calcolo la T.d. in Kelvin 
+    end if
 
   else
 
@@ -501,7 +505,7 @@ elemental real function QTORELHUM(Q,PT,T)
 
   real,intent(in)::q,pt,t
 
-  QTORELHUM= q * (pt-c1*ESAT(t)) / (eps0*ESAT(t)) 
+  QTORELHUM= q * (pt-c1*ESAT(t)) / (eps0*ESAT(t))*100. 
   if (QTORELHUM  < 0.)QTORELHUM=0.
  
   return 
