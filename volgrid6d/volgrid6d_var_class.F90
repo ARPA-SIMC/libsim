@@ -169,16 +169,45 @@ this%unit = cmiss
 END SUBROUTINE volgrid6d_var_delete
 
 !> operatore di uguaglianza tra oggetti volgrid6d_var
+!!centre is tested for local definition only
 elemental FUNCTION volgrid6d_var_eq(this, that) RESULT(res)
 !> oggetti da comparare
 TYPE(volgrid6d_var),INTENT(IN) :: this, that
 LOGICAL :: res
 
-res = this%centre == that%centre .and. &
- this%discipline == that%discipline .and. &
- this%category == that%category .and. &
- this%number == that%number
- 
+if  ( this%discipline == that%discipline )then
+
+  if ( this%discipline == 255 )then
+                                !grib1
+     res= this%category == that%category .and. &
+     this%number == that%number
+
+    if ( (this%category >= 128 .and. this%category <= 254) .or. &
+     (this%number >= 128 .and. this%number <= 254) )then
+      res = res .and. this%centre == that%centre           !local definition (centre is important)
+    end if
+
+  else
+                                !grib2
+    res = this%category == that%category .and. &
+     this%number == that%number
+
+    if ( (this%discipline >= 192 .and. this%discipline <= 254) .or. &
+     (this%category >= 192 .and. this%category <= 254) .or. &
+     (this%number >= 192 .and. this%number <= 254) )then
+      res = res .and. this%centre == that%centre           !local definition (centre is important)
+    end if
+
+  end if
+
+else
+
+  ! one is grib1 and other is grib2 or different discipline
+  res=.false.
+
+end if
+
+
 
 END FUNCTION volgrid6d_var_eq
 
