@@ -64,7 +64,7 @@ TYPE conv_func
   REAL :: a, b
 END TYPE conv_func
 
-TYPE(conv_func), PARAMETER :: conv_func_miss=conv_func(1.0, 0.0) ! o (rmiss, rmiss)?
+TYPE(conv_func), PARAMETER :: conv_func_miss=conv_func(rmiss,rmiss)
 
 TYPE vg6d_v7d_var_conv
   TYPE(volgrid6d_var) :: vg6d_var
@@ -1534,10 +1534,14 @@ deallocate(voldatir_out)
 ! Rescale valid data according to variable conversion table
 IF (ASSOCIATED(c_func)) THEN
   DO ivar = 1, nvar
-    WHERE(vol7d_out%voldatir(:,:,:,:,ivar,:) /= rmiss)
-      vol7d_out%voldatir(:,:,:,:,ivar,:) = &
-       vol7d_out%voldatir(:,:,:,:,ivar,:)*c_func(ivar)%a + c_func(ivar)%b
-    END WHERE
+    if (c_func(ivar)%a /= conv_func_miss%a .or. c_func(ivar)%b /= conv_func_miss%b )then
+      WHERE(vol7d_out%voldatir(:,:,:,:,ivar,:) /= rmiss)
+        vol7d_out%voldatir(:,:,:,:,ivar,:) = &
+         vol7d_out%voldatir(:,:,:,:,ivar,:)*c_func(ivar)%a + c_func(ivar)%b
+      END WHERE
+    else
+      vol7d_out%voldatir(:,:,:,:,ivar,:)=rmiss
+    end if
   ENDDO
   DEALLOCATE(c_func)
 ENDIF
@@ -1705,10 +1709,14 @@ end do
 ! Rescale valid data according to variable conversion table
 IF (ASSOCIATED(c_func)) THEN
   DO ivar = 1, nvar
-    WHERE(volgrid6d_out%voldati(:,:,:,:,:,ivar) /= rmiss)
-      volgrid6d_out%voldati(:,:,:,:,:,ivar) = &
-       volgrid6d_out%voldati(:,:,:,:,:,ivar)*c_func(ivar)%a + c_func(ivar)%b
-    END WHERE
+    if ( c_func(ivar)%a /= conv_func_miss%a .or. c_func(ivar)%b /= conv_func_miss%b )then
+      WHERE(volgrid6d_out%voldati(:,:,:,:,:,ivar) /= rmiss )
+        volgrid6d_out%voldati(:,:,:,:,:,ivar) = &
+         volgrid6d_out%voldati(:,:,:,:,:,ivar)*c_func(ivar)%a + c_func(ivar)%b
+      END WHERE
+    else
+      volgrid6d_out%voldati(:,:,:,:,:,ivar) = rmiss
+    end if
   ENDDO
   DEALLOCATE(c_func)
 ENDIF
@@ -1773,7 +1781,7 @@ n = SIZE(vargrib)
 if ( present(c_func)) ALLOCATE(c_func(n))
 
 DO i = 1, n
-  if ( present(c_func)) then
+  if (present(c_func))then
     CALL vargrib2varbufr_s(vargrib(i), varbufr(i), c_func(i))
   else
     CALL vargrib2varbufr_s(vargrib(i), varbufr(i))
@@ -1909,7 +1917,7 @@ DO i = 1, SIZE(conv_type)
   CALL init(csv, line)
   CALL csv_record_getfield(csv, btable)
   CALL csv_record_getfield(csv) ! skip fields for description and unit,
-  CALL csv_record_getfield(csv) ! they can be used as comments in csv file now
+  CALL csv_record_getfield(csv) ! they correspond to grib information, not bufr Btable
   CALL init(conv_type(i)%v7d_var, btable=btable)
 
   CALL csv_record_getfield(csv, centre)
