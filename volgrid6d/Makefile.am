@@ -16,7 +16,7 @@ nodist_include_HEADERS = $(tmpvar:.F90=.mod)
 
 
 if GRIBAPI
-libsim_volgrid6d_la_SOURCES = grid_class.F90 lambert_class.F90 rotated_ll_class.F90 regular_ll_class.F90 volgrid6d_var_class.F90 volgrid6d_class.F90 gridinfo_class.F90
+libsim_volgrid6d_la_SOURCES =  regular_ll_class.F90 lambert_class.F90 rotated_ll_class.F90 grid_class.F90 volgrid6d_var_class.F90 volgrid6d_class.F90 gridinfo_class.F90
 libsim_volgrid6d_la_LIBADD += $(GRIBAPI_LIBS)
 endif
 
