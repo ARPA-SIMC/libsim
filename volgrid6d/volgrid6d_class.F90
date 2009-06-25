@@ -1,3 +1,4 @@
+
 #include "config.h"
 !> \defgroup volgrid6d Pacchetto volgrid6d, libreria volgrid6d
 
@@ -54,7 +55,8 @@ type volgrid6d
   integer,pointer :: gaid(:,:,:,:)
 !> data matrix; index are: (x,y,level,time,timerange,var)
   real,pointer :: voldati(:,:,:,:,:,:)
-
+!> time definition; 0=time is reference time ; 1=time is validity time
+  integer :: time_definition
 
   integer :: category !< log4fortran
 
@@ -151,9 +153,10 @@ contains
 !> \brief Costructor
 !!
 !! create a new istanze of object
-subroutine init_volgrid6d (this,griddim,categoryappend)
+subroutine init_volgrid6d (this,griddim,time_definition,categoryappend)
 type(volgrid6d) :: this !< object to create
 type(griddim_def),optional :: griddim !< descrittore del grigliato
+integer,INTENT(IN),OPTIONAL :: time_definition !< 0=time is reference time ; 1=time is validity time
 character(len=*),INTENT(in),OPTIONAL :: categoryappend !< appende questo suffisso al namespace category di log4fortran
 
 character(len=512) :: a_name
@@ -179,6 +182,12 @@ end if
  ! call init(this%timerange)    
  ! call init(this%level)        
  ! call init(this%var)          
+
+if(present(time_definition)) then
+  this%time_definition=time_definition
+else
+    this%time_definition=0  !default to reference time
+end if
 
 nullify (this%time,this%timerange,this%level,this%var)
 nullify (this%gaid,this%voldati)          
@@ -1387,7 +1396,7 @@ integer :: ntime, ntimerange, nlevel, nvar
 call l4f_category_log(volgrid6d_in%category,L4F_DEBUG,"start volgrid6d_transform")
 #endif
 
-call init (volgrid6d_out,griddim,categoryappend)
+call init (volgrid6d_out,griddim,categoryappend=categoryappend)
 
 ntime=0
 ntimerange=0
@@ -1454,10 +1463,11 @@ type(volgrid6d), INTENT(in) :: volgrid6d_in !< oggetto da trasformare
 type(vol7d), INTENT(out) :: vol7d_out !< oggetto trasformato
 integer,optional,intent(in) :: networkid !< imposta il network in vol7d_out (default=254)
 
-integer :: nana, ntime, ntimerange, nlevel, nvar, nnetwork
+integer :: nntime, nana, ntime, ntimerange, nlevel, nvar, nnetwork
 integer :: itime, itimerange, ilevel, ivar, inetwork
 real,allocatable :: voldatir_out(:,:)
 TYPE(conv_func), pointer :: c_func(:)
+type(datetime),allocatable ::validitytime(:,:)
 
 #ifdef DEBUG
 call l4f_category_log(volgrid6d_in%category,L4F_DEBUG,"start volgrid6d_v7d_transform_compute")
@@ -1476,21 +1486,42 @@ else
   call init(vol7d_out%network(1),id=254)
 end if
 
-if (associated(volgrid6d_in%time))then
-  ntime=size(volgrid6d_in%time)
-                                !TODO tramutare in copy
-  vol7d_out%time=volgrid6d_in%time
-end if
-
 if (associated(volgrid6d_in%timerange))then
   ntimerange=size(volgrid6d_in%timerange)
-                                !TODO tramutare in copy
   vol7d_out%timerange=volgrid6d_in%timerange
+end if
+
+if (associated(volgrid6d_in%time))then
+  ntime=size(volgrid6d_in%time)
+
+  if (vol7d_out%time_definition == volgrid6d_in%time_definition) then
+
+                                ! i time sono definiti uguali: assegno
+    vol7d_out%time=volgrid6d_in%time
+
+  else
+                                ! converto reference in validity
+    allocate (validitytime(ntime,ntimerange))
+    do itime=1,ntime
+      do itimerange=1,ntimerange
+        if (vol7d_out%time_definition > volgrid6d_in%time_definition) then
+          validitytime(itime,itimerange) = &
+           volgrid6d_in%time(itime) + timedelta_new(msec=volgrid6d_in%timerange(itimerange)%p1*1000)
+        else
+          validitytime(itime,itimerange) = &
+           volgrid6d_in%time(itime) - timedelta_new(msec=volgrid6d_in%timerange(itimerange)%p1*1000)
+        end if
+      end do
+    end do
+
+    nntime = count_distinct(reshape(validitytime,(/ntime*ntimerange/)), back=.TRUE.)
+    vol7d_out%time=pack_distinct(reshape(validitytime,(/ntime*ntimerange/)), nntime,back=.TRUE.)
+  
+  end if
 end if
 
 if (associated(volgrid6d_in%level))then
   nlevel=size(volgrid6d_in%level)
-                                !TODO tramutare in copy
   vol7d_out%level=volgrid6d_in%level
 end if
 
@@ -1509,13 +1540,24 @@ do itime=1,ntime
     do ilevel=1,nlevel
       do ivar=1,nvar
         
-        voldatir_out=reshape(vol7d_out%voldatir(:,itime,ilevel,itimerange,ivar,inetwork),(/nana,1/))
+                                !non è chiaro se questa sezione è utile o no
+                                !ossia il compute sotto sembra prevedere voldatir_out solo in out
+!!$        if (vol7d_out%time_definition == volgrid6d_in%time_definition) then
+!!$          voldatir_out=reshape(vol7d_out%voldatir(:,itime,ilevel,itimerange,ivar,inetwork),(/nana,1/))
+!!$        else
+!!$          voldatir_out=reshape(vol7d_out%voldatir(:,index(vol7d_out%time,validitytime(itime,ilevel)),ilevel,itimerange,ivar,inetwork),(/nana,1/))
+!!$        end if
 
         call compute(this, &
          volgrid6d_in%voldati(:,:,ilevel,itime,itimerange,ivar),&
          voldatir_out)
 
-        vol7d_out%voldatir(:,itime,ilevel,itimerange,ivar,inetwork)=reshape(voldatir_out,(/nana/))
+        if (vol7d_out%time_definition == volgrid6d_in%time_definition) then
+          vol7d_out%voldatir(:,itime,ilevel,itimerange,ivar,inetwork)=reshape(voldatir_out,(/nana/))
+        else
+          vol7d_out%voldatir(:,index(vol7d_out%time,validitytime(itime,ilevel)),ilevel,itimerange,ivar,inetwork)=&
+           reshape(voldatir_out,(/nana/))
+        end if
 
 ! 1 indice della dimensione "anagrafica"
 ! 2 indice della dimensione "tempo"
@@ -1530,6 +1572,7 @@ do itime=1,ntime
 end do
 
 deallocate(voldatir_out)
+if (vol7d_out%time_definition /= volgrid6d_in%time_definition) deallocate(validitytime)
 
 ! Rescale valid data according to variable conversion table
 IF (ASSOCIATED(c_func)) THEN
@@ -1562,7 +1605,9 @@ integer,optional,intent(in) :: networkid !< imposta il network in vol7d_out (def
 character(len=*),INTENT(in),OPTIONAL :: categoryappend !< appende questo suffisso al namespace category di log4fortran
 
 type(grid_transform) :: grid_trans
-integer :: ntime, ntimerange, nlevel, nvar, nana
+integer :: ntime, ntimerange, nlevel, nvar, nana,time_definition
+integer :: itime,itimerange
+type(datetime),allocatable ::validitytime(:,:)
 
 #ifdef DEBUG
 call l4f_category_log(volgrid6d_in%category,L4F_DEBUG,"start volgrid6d_v7d_transform")
@@ -1576,8 +1621,40 @@ ntimerange=0
 nlevel=0
 nvar=0
 
-if (associated(volgrid6d_in%time)) ntime=size(volgrid6d_in%time)
+call get_val(this,time_definition=time_definition)
+if (.not. c_e(time_definition)) then
+  time_definition=1  ! default to validity time
+endif
+
 if (associated(volgrid6d_in%timerange)) ntimerange=size(volgrid6d_in%timerange)
+
+if (associated(volgrid6d_in%time)) then
+
+  ntime=size(volgrid6d_in%time)
+  
+  if (time_definition /= volgrid6d_in%time_definition) then
+    
+                                ! converto reference in validity
+    allocate (validitytime(itime,itimerange))
+    do itime=1,ntime
+      do itimerange=1,ntimerange
+        if (time_definition > volgrid6d_in%time_definition) then
+          validitytime(itime,itimerange) = &
+           volgrid6d_in%time(itime) + timedelta_new(msec=volgrid6d_in%timerange(itimerange)%p1*1000)
+        else
+          validitytime(itime,itimerange) = &
+           volgrid6d_in%time(itime) - timedelta_new(msec=volgrid6d_in%timerange(itimerange)%p1*1000)
+        end if
+      end do
+    end do
+
+    ntime = count_distinct(reshape(validitytime,(/ntime*ntimerange/)), back=.TRUE.)
+    deallocate (validitytime)
+  
+  end if
+end if
+
+
 if (associated(volgrid6d_in%level)) nlevel=size(volgrid6d_in%level)
 if (associated(volgrid6d_in%var)) nvar=size(volgrid6d_in%var)
 
@@ -1585,7 +1662,7 @@ call init(grid_trans, this, in=volgrid6d_in%griddim,v7d=v7d,&
  categoryappend=categoryappend)
 
 !TODO aggiungere categoryappend
-call init (vol7d_out)
+call init (vol7d_out,time_definition=time_definition)
 
 call vol7d_alloc(vol7d_out, nana=nana, ntime=ntime, nlevel=nlevel, ntimerange=ntimerange, ndativarr=nvar, nnetwork=1)
 
@@ -1664,6 +1741,9 @@ if (associated(vol7d_in%time))then
   ntime=size(vol7d_in%time)
                                 !TODO tramutare in copy
   volgrid6d_out%time=vol7d_in%time
+
+!!! #### convertire reference in validity
+
 end if
 
 if (associated(vol7d_in%timerange))then

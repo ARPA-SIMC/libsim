@@ -166,6 +166,9 @@ TYPE vol7d
 !> volume di attributi di dati a valori carattere
   CHARACTER(len=vol7d_cdatalen),POINTER :: voldatiattrc(:,:,:,:,:,:,:)
 
+!> time definition; 0=time is reference time ; 1=time is validity time
+  integer :: time_definition
+
 END TYPE vol7d
 
 !> Costruttore per la classe vol7d.
@@ -247,8 +250,9 @@ CONTAINS
 !! Non riceve alcun parametro tranne l'oggetto stesso. Attenzione, è necessario
 !! comunque chiamare sempre il costruttore per evitare di avere dei puntatori in
 !! uno stato indefinito.
-SUBROUTINE vol7d_init(this)
+SUBROUTINE vol7d_init(this,time_definition)
 TYPE(vol7d),intent(out) :: this !< oggetto da inizializzare
+integer,INTENT(IN),OPTIONAL :: time_definition !< 0=time is reference time ; 1=time is validity time
 
 CALL init(this%anavar)
 CALL init(this%anaattr)
@@ -264,6 +268,12 @@ NULLIFY(this%volanad, this%volanaattrd, this%voldatid, this%voldatiattrd)
 NULLIFY(this%volanai, this%volanaattri, this%voldatii, this%voldatiattri)
 NULLIFY(this%volanab, this%volanaattrb, this%voldatib, this%voldatiattrb)
 NULLIFY(this%volanac, this%volanaattrc, this%voldatic, this%voldatiattrc)
+
+if(present(time_definition)) then
+  this%time_definition=time_definition
+else
+    this%time_definition=1  !default to validity time
+end if
 
 END SUBROUTINE vol7d_init
 

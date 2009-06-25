@@ -171,7 +171,9 @@ TYPE transform_def
   type(inter) :: inter !< interpolation specification
 !  type(interp) :: interp
 
+  integer :: time_definition
   integer :: category !< catecory for log4fortran
+
 
 END TYPE transform_def
 
@@ -235,7 +237,7 @@ END INTERFACE
 
 !> Ritorna il contenuto dell'oggetto
 INTERFACE get_val
-  MODULE PROCEDURE get_val_griddim
+  MODULE PROCEDURE get_val_griddim, get_val_grid_transform
 END INTERFACE
 
 !> Imposta il contenuto dell'oggeto
@@ -585,6 +587,15 @@ end select
 
 end subroutine griddim_unproj
 
+!> restituisce il contenuto dell'oggetto
+subroutine get_val_grid_transform(this,time_definition)
+type(transform_def),intent(in) :: this !< oggetto da esaminare
+integer,INTENT(out),OPTIONAL :: time_definition !< 0=time is reference time ; 1=time is validity time
+
+time_definition=imiss
+if ( present(time_definition)) time_definition=this%time_definition
+
+end subroutine get_val_grid_transform
 
 !> restituisce il contenuto dell'oggetto
 subroutine get_val_griddim(this,type,&
@@ -959,7 +970,7 @@ end SUBROUTINE display_griddim
 SUBROUTINE init_transform(this, trans_type,sub_type, &
  ix, iy, fx, fy, ilon, ilat, flon, flat, &
  npx, npy, &
- zoom_type,boxregrid_type,inter_type,external,categoryappend)
+ zoom_type,boxregrid_type,inter_type,external,time_definition,categoryappend)
 
 TYPE(transform_def),INTENT(out) :: this !< transformation object
 CHARACTER(len=*) :: trans_type !< type of transformation, can be \c 'zoom', \c 'boxregrid', \c 'interp', ...
@@ -978,6 +989,7 @@ logical,INTENT(IN),OPTIONAL :: external !< activate external area interpolation 
 CHARACTER(len=*),INTENT(IN),OPTIONAL :: zoom_type !< type of zoom
 CHARACTER(len=*),INTENT(IN),OPTIONAL :: boxregrid_type !< type of regrid
 CHARACTER(len=*),INTENT(IN),OPTIONAL :: inter_type !< type of interpolation
+integer,INTENT(IN),OPTIONAL :: time_definition !< 0=time is reference time ; 1=time is validity time
 
 character(len=*),INTENT(in),OPTIONAL :: categoryappend !< appende questo suffisso al namespace category di log4fortran
 character(len=512) :: a_name
@@ -1000,6 +1012,11 @@ call optio(ilat,this%zoom%coord%ilat)
 call optio(flon,this%zoom%coord%flon)
 call optio(flat,this%zoom%coord%flat)
 
+call optio(time_definition,this%time_definition)
+if (this%time_definition < 0 .or. this%time_definition > 1)then
+  call l4f_category_log(this%category,L4F_ERROR,"Error in time_definition: "//to_char(this%time_definition))
+  call raise_fatal_error("Error in time_definition")
+end if
 
 call optio(boxregrid_type,this%boxregrid%sub_type)
 if (trans_type == "boxregrid".and. .not. c_e(this%boxregrid%sub_type))call optio(sub_type,this%boxregrid%sub_type)
@@ -2136,4 +2153,3 @@ end module grid_class
 !!\brief Programma esempio semplice per la definizione di griddim.
 !!
 !! Programma che crea un oggetto griddim e ne stampa alcuni valori a schermo. Comprende anche una demo dell'uso di log4fortran
-
