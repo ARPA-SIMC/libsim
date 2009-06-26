@@ -20,7 +20,7 @@ USE kinds
 USE err_handling
 USE char_utilities
 USE missing_values
-USE phys_const
+USE doubleprecision_phys_const
 USE file_utilities
 #ifdef HAVE_LIBSHP_FORTRAN
 USE shplib
