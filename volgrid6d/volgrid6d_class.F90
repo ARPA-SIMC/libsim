@@ -1384,7 +1384,8 @@ end SUBROUTINE volgrid6d_transform_compute
 subroutine volgrid6d_transform(this,griddim, volgrid6d_in, volgrid6d_out,clone,categoryappend)
 type(transform_def),intent(in) :: this !< oggetto che specifica la trasformazione
 type(griddim_def),intent(in),optional :: griddim !< griddim che specifica la trasformazione
-type(volgrid6d), INTENT(in) :: volgrid6d_in !< oggetto da trasformare
+! TODO ripristinare intent(in) dopo le opportune modifiche in grid_class.F90
+type(volgrid6d), INTENT(inout) :: volgrid6d_in !< oggetto da trasformare
 type(volgrid6d), INTENT(out) :: volgrid6d_out !< oggetto trasformato
 logical , intent(in),optional :: clone !< se fornito e \c .TRUE., clona i gaid da volgrid6d_in a volgrid6d_out
 character(len=*),INTENT(in),OPTIONAL :: categoryappend !< appende questo suffisso al namespace category di log4fortran
@@ -1434,7 +1435,8 @@ end subroutine volgrid6d_transform
 subroutine volgrid6dv_transform(this,griddim, volgrid6d_in, volgrid6d_out,clone,categoryappend)
 type(transform_def),intent(in) :: this !< oggetto che specifica la trasformazione
 type(griddim_def),intent(in),optional :: griddim !< griddim che specifica la trasformazione
-type(volgrid6d), INTENT(in) :: volgrid6d_in(:) !< vettore oggetti da trasformare
+! TODO ripristinare intent(in) dopo le opportune modifiche in grid_class.F90
+type(volgrid6d), INTENT(inout) :: volgrid6d_in(:) !< vettore oggetti da trasformare
 type(volgrid6d), pointer :: volgrid6d_out(:) !< vettore oggetti trasformati
 logical , intent(in),optional :: clone !< se fornito e \c .TRUE., clona i gaid da volgrid6d_in a volgrid6d_out
 character(len=*),INTENT(in),OPTIONAL :: categoryappend !< appende questo suffisso al namespace category di log4fortran
