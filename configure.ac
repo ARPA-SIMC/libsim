@@ -1,6 +1,6 @@
 dnl Process this file with autoconf to produce a configure script.
 
-AC_INIT(libsim, 2.6.9, [dcesari@arpa.emr.it])
+AC_INIT(libsim, 2.6.10, [dcesari@arpa.emr.it])
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_SRCDIR([configure.ac])
 AM_INIT_AUTOMAKE([foreign])
@@ -193,6 +193,7 @@ if test "x$enableval" = "xyes"; then
  # test in f77 because f90 test does not work
   AC_CHECK_LIB([grib_api_f77], [grib_set_int],
     AC_MSG_RESULT([gribapi code included])
+    AC_DEFINE(HAVE_LIBGRIBAPI, 1, [Enable gribapi code])
     GRIBAPI_LIBS="-lgrib_api_f90 -lgrib_api -ljasper"
     AC_SUBST(GRIBAPI_LIBS),
     AC_MSG_ERROR([gribapi library not found]),
