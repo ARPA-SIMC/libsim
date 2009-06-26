@@ -212,7 +212,7 @@ area_fill_y(3)=y_coord (ptop,dim_y,offset_y)
 area_fill_y(4)=y_coord (ptop,dim_y,offset_y)
 area_fill_y(5)=area_fill_y(1)
 
-do l = tmax-160,tmax,20     
+do l = nint(tmax)-160,nint(tmax),20     
   t1=real(l)
   t2=t1+10
   area_fill_x(1)=x_coord (tmin,tmax,t1,ptop,pdown,pdown,dim_x,dim_y,&
@@ -300,7 +300,7 @@ call GSLWSC(1.)
 riga_y(1)=y_coord (pdown+30.,dim_y,offset_y)
 riga_y(2)=y_coord (pdown,dim_y,offset_y)
 
-do l =tmin+10,tmax-10,10
+do l =nint(tmin)+10,nint(tmax)-10,10
   riga_x(1)=x_coord (tmin,tmax,real(l),ptop,pdown,pdown,dim_x,dim_y,&
    &ratio,offset_x,spazio)
   riga_x(2)=riga_x(1)
@@ -348,9 +348,9 @@ call set_color("foreground")
 call gsln (1)
 call GSLWSC(1.)
 
-do l=tmax+140,tmin-10,-10
+do l=nint(tmax)+140,nint(tmin)-10,-10
   ij=0
-  do k=pdown,ptop+50,-5
+  do k=nint(pdown),nint(ptop)+50,-5
     temp=real(l)
     pres=real(k)
     tabs=tda(temp+t0c,pres)-273.15
@@ -392,9 +392,9 @@ else
   psat=300.
 end if
 
-do l=tmin+20,tmax-10,5
+do l=nint(tmin)+20,nint(tmax)-10,5
   ij=0
-  do k=pdown,psat,-5
+  do k=nint(pdown),nint(psat),-5
     tt0 = oe(real(l)+t0c, real(l)+t0c,  1000.)	
     tsad = tsa(tt0,real(k))-t0c		 !teta al livello a 1000-delta P
     ycord=y_coord (real(k),dim_y,offset_y)
@@ -436,7 +436,7 @@ end if
 call gschh(0.008)
 do i = 1,isoig_num
   ij=0
-  do k = pdown,psat,-10
+  do k = nint(pdown),nint(psat),-10
     tt0=tmr(isoigrom(i),real(k))-t0c
     ycord=y_coord (real(k),dim_y,offset_y)
     xcord=x_coord (tmin,tmax,tt0,ptop,pdown,real(k),dim_x,dim_y,&
