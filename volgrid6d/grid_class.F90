@@ -1,24 +1,279 @@
 #include "config.h"
-!>\brief  classe per la gestione delle aree geografiche associate a dati su grigliato.
+!> This module defines transformation/projection functions for
+!! georeferenced data on the Sphere.
 !!
-!! Questo modulo definisce gli oggetti e i metodi per gestire
-!! le aree geografiche in proiezione e non, associate a dati su grigliato (gridded).
-!! Vengono gestiti differenti sistemi di coordinate geografiche e proiezioni.
+!! Every transformation should be in the form of \c SUBROUTINE
+!! proj_&lt;tranform&gt;(lon,lat,x,y...) for forward transformation
+!! (lon/lat to x/y) and unproj_&lt;tranform&gt;(x,y,lon,lat...) for
+!! the inverse one. Additional transformation parameters should be
+!! passed as additional arguments to the subroutine call, if possible
+!! being the same for forward and backward transformation. The
+!! transformation subroutines should be \c ELEMENTAL in order to work
+!! with scalars or arrays of any rank and size.
+!!
+!!\ingroup base
+MODULE geo_transforms
+USE doubleprecision_phys_const
+IMPLICIT NONE
+
+CONTAINS
+
+ELEMENTAL SUBROUTINE proj_regular_ll(lon,lat,x,y)
+DOUBLE PRECISION, INTENT(in)  :: lon,lat
+DOUBLE PRECISION, INTENT(out) :: x,y
+
+x = lon
+y = lat
+
+END SUBROUTINE proj_regular_ll
+
+ELEMENTAL SUBROUTINE unproj_regular_ll(x,y,lon,lat)
+DOUBLE PRECISION, INTENT(in) :: x,y
+DOUBLE PRECISION, INTENT(out) :: lon,lat
+
+lon = x
+lat = y
+
+END SUBROUTINE unproj_regular_ll
+
+
+ELEMENTAL SUBROUTINE proj_rotated_ll(lon,lat,x,y, &
+ longitude_south_pole, latitude_south_pole, angle_rotation)
+DOUBLE PRECISION, INTENT(in) :: lon,lat
+DOUBLE PRECISION, INTENT(out) :: x,y
+DOUBLE PRECISION, INTENT(in) :: longitude_south_pole, latitude_south_pole, &
+ angle_rotation
+
+DOUBLE PRECISION :: cy0,sy0,rx,srx,crx,sy,cy,lpolosud
+
+
+lpolosud=acos(-sin(degrad*latitude_south_pole))
+
+rx = degrad*(lon - longitude_south_pole)
+srx = sin(rx)
+crx = cos(rx)
+
+sy0 = sin(lpolosud)
+cy0 = cos(lpolosud)
+
+sy = sin(degrad*lat)
+cy = cos(degrad*lat)
+
+x = raddeg*atan2(cy*srx, cy0*cy*crx+sy0*sy)       
+y = raddeg*asin(cy0*sy - sy0*cy*crx)
+
+END SUBROUTINE proj_rotated_ll
+
+ELEMENTAL SUBROUTINE unproj_rotated_ll(x,y,lon,lat,&
+ longitude_south_pole, latitude_south_pole, angle_rotation)
+DOUBLE PRECISION, INTENT(in) :: x,y
+DOUBLE PRECISION, INTENT(out) :: lon,lat
+DOUBLE PRECISION, INTENT(in) :: longitude_south_pole, latitude_south_pole, &
+ angle_rotation
+
+DOUBLE PRECISION :: cy0,sy0,lpolosud
+
+lpolosud=acos(-sin(degrad*latitude_south_pole))
+
+cy0 = cos(lpolosud)
+sy0 = sin(lpolosud)
+
+lat = raddeg*asin(sy0*cos(degrad*y)*cos(degrad*x)+cy0*sin(degrad*y))
+lon = longitude_south_pole + &
+ raddeg*asin(sin(degrad*x)*cos(degrad*y)/cos(degrad*lat))
+
+END SUBROUTINE unproj_rotated_ll
+
+! come usare il polo? ruotare e antiruotare?
+ELEMENTAL SUBROUTINE proj_stretched_ll(lon,lat,x,y, &
+ longitude_stretch_pole, latitude_stretch_pole, stretch_factor)
+DOUBLE PRECISION, INTENT(in) :: lon,lat
+DOUBLE PRECISION, INTENT(out) :: x,y
+DOUBLE PRECISION, INTENT(in) :: longitude_stretch_pole, latitude_stretch_pole, &
+ stretch_factor
+
+DOUBLE PRECISION :: csq
+
+csq = stretch_factor**2
+x = lon
+y = raddeg*ASIN((1.0D0 - csq + (1.0D0 + csq)*SIN(degrad*lat)) / &
+ (1.0D0 + csq + (1.0D0 - csq)*SIN(degrad*lat)))
+
+END SUBROUTINE proj_stretched_ll
+
+ELEMENTAL SUBROUTINE unproj_stretched_ll(x,y,lon,lat,&
+ longitude_stretch_pole, latitude_stretch_pole, stretch_factor)
+DOUBLE PRECISION, INTENT(in) :: x,y
+DOUBLE PRECISION, INTENT(out) :: lon,lat
+DOUBLE PRECISION, INTENT(in) :: longitude_stretch_pole, latitude_stretch_pole, &
+ stretch_factor
+
+DOUBLE PRECISION :: csq
+
+csq = stretch_factor**2
+lon = x
+! TODO verificare la formula inversa
+lat = raddeg*ASIN((csq - 1.0D0 + (csq + 1.0D0)*SIN(degrad*y)) / &
+ (csq + 1.0D0 + (csq - 1.0D0)*SIN(degrad*y)))
+
+END SUBROUTINE unproj_stretched_ll
+
+
+! Formulas and notation from:
+! http://mathworld.wolfram.com/LambertConformalConicProjection.html
+! http://en.wikipedia.org/wiki/Lambert_conformal_conic_projection
+! http://fr.wikipedia.org/wiki/Projection_conique_conforme_de_Lambert
+! with the following guess:
+! projection is always polar, so reference latitude=+-90 according to
+! projectionCenterFlag; reference longitude is LoV.
+! how coordinates of south pole should be treated? Metview ignores them.
+ELEMENTAL SUBROUTINE proj_lambert(lon,lat,x,y, &
+ latin1, latin2, lov, lad, projection_center_flag)
+DOUBLE PRECISION, INTENT(in) :: lon,lat
+DOUBLE PRECISION, INTENT(out) :: x,y
+DOUBLE PRECISION, INTENT(in) :: latin1, latin2, lov, lad
+INTEGER, INTENT(in) :: projection_center_flag
+
+DOUBLE PRECISION  :: n, f, ro0, ro, cs1, cs2, cs3, pollat
+
+IF (IAND(projection_center_flag, 128) == 0) THEN
+  pollat = 90.D0*degrad
+ELSE
+  pollat = -90.D0*degrad
+ENDIF
+cs1 = COS(degrad*latin1)
+cs2 = TAN(pi*.25D0 + degrad*latin1*.5D0)
+
+IF (latin1 == latin2) THEN
+  n = 1.0D0 ! verify that n->1 when latin2->latin1
+ELSE
+  n = LOG(cs1/COS(degrad*latin2)) / &
+   LOG(TAN(pi*.25D0 + degrad*latin2*.5D0) / cs2)
+ENDIF
+f = cs1*cs2**n/n*rearth ! check that rearth is correct here (only if lad==latin1?)
+ro0 = f/SIN(pi*.25D0 + pollat*.5D0)**n
+
+ro = f/SIN(pi*.25D0 + degrad*lat*.5D0)**n
+
+cs3 = degrad*n*(lon - lov)
+
+x = ro*SIN(cs3)
+y = ro0 - ro*COS(cs3)
+
+END SUBROUTINE proj_lambert
+
+ELEMENTAL SUBROUTINE unproj_lambert(x,y,lon,lat, &
+ latin1, latin2, lov, lad, projection_center_flag)
+DOUBLE PRECISION, INTENT(in) :: x,y
+DOUBLE PRECISION, INTENT(out) :: lon,lat
+DOUBLE PRECISION, INTENT(in) :: latin1, latin2, lov, lad
+INTEGER, INTENT(in) :: projection_center_flag
+
+DOUBLE PRECISION  :: n, f, ro0, ro, theta, cs1, cs2, pollat
+
+! check, pollat is actually used as the latitude at which
+! y=0, may be not correct and is not enough for Southern Hemisphere
+IF (IAND(projection_center_flag, 128) == 0) THEN
+  pollat = 90.D0*degrad
+ELSE
+  pollat = -90.D0*degrad
+ENDIF
+cs1 = COS(degrad*latin1)
+cs2 = TAN(pi*.25D0 + degrad*latin1*.5D0)
+
+IF (latin1 == latin2) THEN
+  n = 1.0D0 ! verify limit
+ELSE
+  n = LOG(cs1/COS(degrad*latin2)) / &
+   LOG(TAN(pi*.25D0 + degrad*latin2*.5D0) / cs2)
+ENDIF
+f = cs1*cs2**n/n*rearth ! check that rearth is correct here (only if lad==latin1?)
+ro0 = f/SIN(pi*.25D0 + pollat*.5D0)**n
+
+ro = SIGN(SQRT(x*x + (ro0-y)*(ro0-y)), n) ! check SIGN
+theta = raddeg*ATAN2(x, ro0-y)
+
+lon = lov + theta/n
+lat = raddeg*(2.D0*ATAN((f/ro)**(1.D0/n)) - pi*.5D0)
+
+END SUBROUTINE unproj_lambert
+
+
+!http://mathworld.wolfram.com/StereographicProjection.html
+ELEMENTAL SUBROUTINE proj_polar_stereographic(lon,lat,x,y, &
+ lov, lad, projection_center_flag)
+DOUBLE PRECISION, INTENT(in) :: lon,lat
+DOUBLE PRECISION, INTENT(out) :: x,y
+DOUBLE PRECISION, INTENT(in) :: lov, lad
+INTEGER, INTENT(in) :: projection_center_flag
+
+DOUBLE PRECISION  :: k, pollat
+
+IF (IAND(projection_center_flag, 128) == 0) THEN
+  pollat = 90.D0*degrad
+ELSE
+  pollat = -90.D0*degrad
+ENDIF
+
+k = 2.0D0*rearth/(1.0D0 + SIN(pollat)*SIN(degrad*lat) + &
+ COS(pollat)*COS(degrad*lat)*COS(degrad*(lon - lov)))
+x = k*COS(degrad*lat)*SIN(degrad*(lon - lov))
+y = k*(COS(pollat)*SIN(degrad*lat) - &
+ SIN(pollat)*COS(degrad*lat)*COS(degrad*(lon - lov)))
+
+END SUBROUTINE proj_polar_stereographic
+
+ELEMENTAL SUBROUTINE unproj_polar_stereographic(x,y,lon,lat, &
+ lov, lad, projection_center_flag)
+DOUBLE PRECISION, INTENT(in) :: x,y
+DOUBLE PRECISION, INTENT(out) :: lon,lat
+DOUBLE PRECISION, INTENT(in) :: lov, lad
+INTEGER, INTENT(in) :: projection_center_flag
+
+DOUBLE PRECISION  :: ro, c, pollat
+
+IF (IAND(projection_center_flag, 128) == 0) THEN
+  pollat = 90.D0*degrad
+ELSE
+  pollat = -90.D0*degrad
+ENDIF
+
+ro = SQRT(x**2 + y**2)
+c = 2.0D0*ATAN(ro/(2.0D0*rearth))
+lat = raddeg*ASIN(COS(c)*SIN(pollat)+y*SIN(c)*COS(pollat)/ro)
+lon = lov + raddeg*ATAN2(x*SIN(c), &
+ (ro*COS(pollat)*COS(c)-y*SIN(pollat)*SIN(c)))
+
+END SUBROUTINE unproj_polar_stereographic
+
+END MODULE geo_transforms
+
+!> Classe per la gestione delle aree geografiche associate a
+!! dati su grigliato.
+!!
+!! Questo modulo definisce gli oggetti e i metodi per gestire le aree
+!! geografiche in proiezione e non, associate a dati su grigliato
+!! (gridded).  Vengono gestiti differenti sistemi di coordinate
+!! geografiche e proiezioni.
 !!
 !! Programma esempio semplice \include example_vg6d_1.f90
 !!
 !!\ingroup volgrid6d
-
 module grid_class
 
-use regular_ll_class
-use rotated_ll_class
-use lambert_class
+use gridpar_generic_class
+use gridpar_rotated_class
+use gridpar_stretched_class
+use gridpar_polarproj_class
+use geo_transforms
 use log4fortran
 use grib_api
 use vol7d_class
 use err_handling
+use grid_dim_class
 use optional_values
+use doubleprecision_phys_const
+use simple_stat
 
 implicit none
 
@@ -62,39 +317,35 @@ character (len=255),parameter:: subcategory="grid_class"
 
 
 type grid_type
-
   character(len=80) :: type !< The type of grid
-
 end type grid_type
 
+! For equatorial projections like Mercator?
+!TYPE gridpar_equatorialproj
 
-!>\brief definizione di tutte le tipologie di grigliato
+!> Definizione di tutte le tipologie di grigliato.
 type grid_def
-
   private
-
-  type(grid_type)   :: type !< type of grid definition
-  type(grid_regular_ll) :: regular_ll !< regular lat lon grid definition
-  type(grid_rotated_ll) :: rotated_ll !< rotated lat lon grid definition
-  type(grid_lambert) :: lambert !< Lambert conformal grid definition
+  type(grid_type) :: type !< type of grid definition
+  type(gridpar_generic) :: generic
+  type(gridpar_rotated) :: rotated
+  type(gridpar_stretched) :: stretched
+  type(gridpar_polarproj) :: polarproj
+!  TYPE(grid_dim), POINTER :: dim
 
   integer :: category !< category for log4fortran
-
 end type grid_def
 
 
-
-!>\brief definizione del grigliato  e delle sue dimensioni
+!> Definizione del grigliato e delle sue dimensioni. L'oggetto di tipo
+!! \a griddim_def è mantenuto separato in modo da permettere che i
+!! suoi membri siano \c PRIVATE, mentre \c dim rimane pubblico.
 type griddim_def
-
-
-  type(grid_def)   :: grid !< definizione del grigliato
-  type(grid_dim)   :: dim  !< definizione delle dimensioni
+  type(grid_def) :: grid !< definizione del grigliato
+  type(grid_dim) :: dim  !< definizione delle dimensioni
 
   integer :: category !< log4fortran
-
 end type griddim_def
-
 
 
 !>  subtype nearest information
@@ -112,12 +363,21 @@ type inter_linear
   logical :: external !< enable elaboration outside data bounding box
 end type inter_linear
 
+!>  subtype box information
+type inter_box
+  double precision :: boxdx !< longitudinal/x extension of the box for box interpolation
+  double precision :: boxdy !< latitudinal/y extension of the box for box interpolation, default the target y grid step
+  double precision :: boxpercentile !< percentile [0,100] of the distribution of points in the box to use as interpolated value, if missing, the average is used
+  logical :: external !< enable elaboration outside data bounding box
+end type inter_box
+
 !>  interpolation information 
 type inter
   CHARACTER(len=80) :: sub_type !< subtype of transformation, can be \c 'near' \c 'bilin'
   type(inter_near) :: near !< subtype nearest information
   type(inter_bilin) :: bilin !< subtype bilinear information
   type(inter_linear) :: linear !< subtype linear information
+  type(inter_box) :: box !< subtype box information
 end type inter
 
 
@@ -169,11 +429,9 @@ TYPE transform_def
   type(zoom) :: zoom !< zoom specification
   type(boxregrid) :: boxregrid !< boxregrid specification
   type(inter) :: inter !< interpolation specification
-!  type(interp) :: interp
 
   integer :: time_definition
-  integer :: category !< catecory for log4fortran
-
+  integer :: category !< category for log4fortran
 
 END TYPE transform_def
 
@@ -189,7 +447,6 @@ TYPE grid_transform
   integer :: innx,  inny
   integer :: outnx, outny
   integer :: iniox,inioy,infox,infoy,outinx,outiny,outfnx,outfny
-  
   integer,pointer :: inter_index_x(:,:),inter_index_y(:,:)
   doubleprecision,pointer :: inter_x(:,:),inter_y(:,:)
 
@@ -207,67 +464,69 @@ END TYPE grid_transform
 !! scalare-vettore(1-d) (ma non vettore(1-d)-scalare o tra array con più
 !! di 1 dimensione e scalari).
 INTERFACE OPERATOR (==)
-  MODULE PROCEDURE grid_eq, grid_type_eq,griddim_eq
+  MODULE PROCEDURE grid_eq, grid_type_eq, griddim_eq
 END INTERFACE
 
 !> Costruttore dell'oggetto
 INTERFACE init
-  MODULE PROCEDURE init_griddim, init_grid_transform, init_grid_v7d_transform, init_v7d_grid_transform, init_transform
+  MODULE PROCEDURE griddim_init, init_grid_transform, init_grid_v7d_transform, init_v7d_grid_transform, init_transform
 END INTERFACE
 
 !> Distruttore dell'oggetto
 INTERFACE delete
-  MODULE PROCEDURE delete_griddim, delete_grid_transform, delete_transform
+  MODULE PROCEDURE griddim_delete, delete_grid_transform, delete_transform
 END INTERFACE
 
 !> Copia l'ggetto creando una nuova istanza
 INTERFACE copy
-  MODULE PROCEDURE copy_griddim
+  MODULE PROCEDURE griddim_copy
 END INTERFACE
 
 !> Proietta la coordinate geografiche nel relativo sistema di rappresentazione
 INTERFACE proj
-  MODULE PROCEDURE generic_proj
+  MODULE PROCEDURE griddim_coord_proj, griddim_proj
 END INTERFACE
 
 !> Rstituisce le coordinate geografiche dal sistema di rappresentazione specifico
 INTERFACE unproj
-  MODULE PROCEDURE generic_unproj
+  MODULE PROCEDURE griddim_coord_unproj, griddim_unproj
 END INTERFACE
 
 !> Ritorna il contenuto dell'oggetto
 INTERFACE get_val
-  MODULE PROCEDURE get_val_griddim, get_val_grid_transform
+  MODULE PROCEDURE griddim_get_val, get_val_transform
 END INTERFACE
 
 !> Imposta il contenuto dell'oggeto
 INTERFACE set_val
-  MODULE PROCEDURE set_val_griddim
+  MODULE PROCEDURE griddim_set_val
 END INTERFACE
 
 !> Scrive l'ggetto su file formatted o unformatted
 INTERFACE write_unit
-  MODULE PROCEDURE write_unit_griddim
+  MODULE PROCEDURE griddim_write_unit
 END INTERFACE
 
 !> Legge l'oggetto da file formatted o unformatted
 INTERFACE read_unit
-  MODULE PROCEDURE read_unit_griddim
+  MODULE PROCEDURE griddim_read_unit
 END INTERFACE
 
+#ifdef HAVE_LIBGRIBAPI
 !> Importazione 
 INTERFACE import
-  MODULE PROCEDURE import_griddim
+  MODULE PROCEDURE griddim_import_gribapi
 END INTERFACE
 
 !> Exportazione
 INTERFACE export
-  MODULE PROCEDURE export_griddim
+  MODULE PROCEDURE griddim_export_gribapi
 END INTERFACE
+#endif
 
 !> visualizzazione su schermo
 INTERFACE display
-  MODULE PROCEDURE display_griddim
+  MODULE PROCEDURE griddim_display
 END INTERFACE
 
 !> Calcola i nuovi dati secondo la trasformazione specificata
@@ -300,34 +559,32 @@ INTERFACE wind_unrot
 END INTERFACE
 
 
-private
+PRIVATE
 
-PUBLIC proj, unproj, griddim_proj,griddim_unproj,griddim_def,grid_def,grid_dim
-public init,delete,copy
+PUBLIC proj, unproj, griddim_proj, griddim_unproj, griddim_def, grid_def, grid_dim
+PUBLIC init, delete, copy
 public get_val,set_val,write_unit,read_unit,import,export,display,compute
 public operator(==),count_distinct,pack_distinct,map_distinct,map_inv_distinct,index
 public transform_def,grid_transform
 public wind_unrot
-contains
 
+CONTAINS
 
-!> \brief init of griddim object
-!! inizializza un oggetto griddim
-!! 
-subroutine init_griddim(this,type,&
- nx,ny, &
- lon_min, lon_max, lat_min, lat_max, component_flag, &
- latitude_south_pole,longitude_south_pole,angle_rotation, &
- latin1,latin2,lov,lad,projection_center_flag, &
+!> Inizializza un oggetto griddim
+SUBROUTINE griddim_init(this, type,&
+ nx, ny, &
+ lon_min, lon_max, lat_min, lat_max, dx, dy, component_flag, &
+ latitude_south_pole, longitude_south_pole, angle_rotation, &
+ latitude_stretch_pole, longitude_stretch_pole, stretch_factor, &
+ latin1, latin2, lov, lad, projection_center_flag, &
  categoryappend)
-
-type(griddim_def) :: this !< oggetto da creare
-
-character(len=*),INTENT(in),OPTIONAL :: type !< type of grid definition
-integer,optional :: nx !< numero dei punti in X 
-integer,optional :: ny !< numero dei punti in Y
+TYPE(griddim_def) :: this !< oggetto da creare
+CHARACTER(len=*),INTENT(in),OPTIONAL :: TYPE !< type of grid definition
+INTEGER,OPTIONAL :: nx !< numero dei punti in x
+INTEGER,OPTIONAL :: ny !< numero dei punti in y
 !> longitudini e latitudini minime e massime
-doubleprecision,optional :: lon_min, lon_max, lat_min, lat_max
+DOUBLE PRECISION,OPTIONAL :: lon_min, lon_max, lat_min, lat_max
+doubleprecision,OPTIONAL,INTENT(in) :: dx, dy !< Grid steps in x and y directions
 !> Resolution and Component Flags
 !! -  bit 1	
 !!            -  0	i direction increments not given
@@ -338,558 +595,829 @@ doubleprecision,optional :: lon_min, lon_max, lat_min, lat_max
 !! -  bit 3	
 !!            -  0 	Resolved u- and v- components of vector quantities relative to easterly and northerly directions
 !!            -  1 	Resolved u- and v- components of vector quantities relative to the defined grid in the direction of increasing x and y (or i and j) coordinates respectively (0=north, 128=south)
-integer,optional :: component_flag
-doubleprecision,optional :: latitude_south_pole !< Latitude of the southern pole of projection
-doubleprecision,optional :: longitude_south_pole !< Longitude of the southern pole of projection 
-doubleprecision,optional :: angle_rotation !< Angle of rotation of projection
-doubleprecision,optional :: latin1 !< First standard latitude from main pole (Lambert)
-doubleprecision,optional :: latin2 !< Second standard latitude from main pole (Lambert)
+INTEGER,OPTIONAL :: component_flag
+doubleprecision,OPTIONAL :: latitude_south_pole !< Latitude of the southern pole of projection
+doubleprecision,OPTIONAL :: longitude_south_pole !< Longitude of the southern pole of projection 
+doubleprecision,OPTIONAL :: angle_rotation !< Angle of rotation of projection
+doubleprecision,OPTIONAL :: latitude_stretch_pole !< Latitude of the pole of stretching
+doubleprecision,OPTIONAL :: longitude_stretch_pole !< Longitude of the pole of stretching
+doubleprecision,OPTIONAL :: stretch_factor !< Stretching factor
+doubleprecision,OPTIONAL :: latin1 !< First standard latitude from main pole (Lambert)
+doubleprecision,OPTIONAL :: latin2 !< Second standard latitude from main pole (Lambert)
 doubleprecision,OPTIONAL :: lov !< Line of view, also known as reference longitude or orientation of the grid (polar projections)
 doubleprecision,OPTIONAL :: lad !< Latitude at which dx and dy (in m) are specified (Lambert, grib2 only)
-integer,optional :: projection_center_flag !< Flag indicating which pole is represented
+INTEGER,OPTIONAL :: projection_center_flag !< Flag indicating which pole is represented
 
-character(len=*),INTENT(in),OPTIONAL :: categoryappend !< accoda questo suffisso al namespace category di log4fortran
+CHARACTER(len=*),INTENT(in),OPTIONAL :: categoryappend !< accoda questo suffisso al namespace category di log4fortran
 
-character(len=512) :: a_name
+CHARACTER(len=512) :: a_name
 
-call l4f_launcher(a_name,a_name_append=trim(subcategory)//"."//trim(optio_c(categoryappend,255)))
+CALL l4f_launcher(a_name,a_name_append=TRIM(subcategory)//"."// &
+ TRIM(optio_c(categoryappend,255)))
 this%category=l4f_category_get(a_name)
 
-call init(this%grid%regular_ll,this%dim)
-call init(this%grid%rotated_ll,this%dim)
-call init(this%grid%lambert,this%dim)
+this%dim = grid_dim_init(nx, ny)
+!this%grid%dim => this%dim
 
-if (present(type))then
-  this%grid%type%type=type
-else
-  this%grid%type%type=cmiss
+IF (PRESENT(type))THEN
+  this%grid%type%type = type
+ELSE
+  this%grid%type%type = cmiss
+  RETURN
+ENDIF
 
-  return
-
-end if
+this%grid%generic = gridpar_generic_init(lon_min, lon_max, &
+ lat_min, lat_max, dx, dy, component_flag)
+this%grid%rotated = gridpar_rotated_init(longitude_south_pole, &
+ latitude_south_pole, angle_rotation)
+this%grid%stretched = gridpar_stretched_init(longitude_stretch_pole, &
+ latitude_stretch_pole, stretch_factor)
+this%grid%polarproj = gridpar_polarproj_init(latin1, latin2, lov, lad, &
+ lon_min, lat_min, projection_center_flag)
 
 #ifdef DEBUG
 call l4f_category_log(this%category,L4F_DEBUG,"init gtype: "//this%grid%type%type )
 #endif
 
-select case ( this%grid%type%type)
+END SUBROUTINE griddim_init
 
-case ( "regular_ll")
-  call init(this%grid%regular_ll,this%dim,&
-   nx,ny, &
-   lon_min, lon_max, lat_min, lat_max, component_flag, &
-   categoryappend=trim(subcategory)//"."//trim(optio_c(categoryappend,255)))
-
-case ( "rotated_ll")
-  call init(this%grid%rotated_ll,this%dim,&
-   nx,ny, &
-   lon_min, lon_max, lat_min, lat_max, component_flag, &
-   latitude_south_pole,longitude_south_pole,angle_rotation, &
-   categoryappend=trim(subcategory)//"."//trim(optio_c(categoryappend,255)))
-  
-case ( "lambert")
-  call init(this%grid%lambert,this%dim,&
-   nx,ny, &
-   lon_min, lon_max, component_flag, &
-   latitude_south_pole,longitude_south_pole,latin1,latin2, &
-   lov,lad,projection_center_flag, &
-   categoryappend=trim(subcategory)//"."//trim(optio_c(categoryappend,255)))
-  
-case default
-  call l4f_category_log(this%category,L4F_ERROR,"init griddim gtype: "//this%grid%type%type//" non gestita" )
-  call raise_error("init griddim gtype non gestita")
-
-end select
-
-
-end subroutine init_griddim
 
 !> Cancellazione oggetto griddim
-subroutine delete_griddim(this)
+SUBROUTINE griddim_delete(this)
 type(griddim_def) :: this !< oggetto griddim da cancellare
 
-select case ( this%grid%type%type)
+CALL delete(this%dim)
+!NULLIFY(this%grid%dim)
 
-case ( "regular_ll")
-  call delete(this%grid%regular_ll,this%dim)
+CALL delete(this%grid%generic)
+CALL delete(this%grid%rotated)
+CALL delete(this%grid%stretched)
+CALL delete(this%grid%polarproj)
 
-case ( "rotated_ll")
-  call delete(this%grid%rotated_ll,this%dim)
-  
-case ( "lambert")
-  call delete(this%grid%lambert,this%dim)
-  
-case default
-  call l4f_category_log(this%category,L4F_ERROR,"delete griddim gtype: "//this%grid%type%type//" non gestita" )
-  call raise_error("delete griddim gtype non gestita")
-
-end select
+this%grid%type%type=cmiss
 
 !chiudo il logger
 call l4f_category_delete(this%category)
 
+END SUBROUTINE griddim_delete
 
-end subroutine delete_griddim
 
 !> Clona un oggetto griddim creandone una nuova istanza
-subroutine copy_griddim(this,that,categoryappend)
-
+SUBROUTINE griddim_copy(this, that, categoryappend)
 type(griddim_def),intent(in) :: this !< oggetto da clonare
 type(griddim_def),intent(out) :: that !< oggetto clonato
 character(len=*),INTENT(in),OPTIONAL :: categoryappend !< appende questo suffisso al namespace category di log4fortran
 
-character(len=512) :: a_name
+CHARACTER(len=512) :: a_name
 
-that%grid%type=this%grid%type
+CALL init(that)
 
-select case (this%grid%type%type)
+that%grid%type = this%grid%type
 
-case ( "regular_ll")
+CALL copy(this%grid%generic, that%grid%generic)
+CALL copy(this%grid%rotated, that%grid%rotated)
+CALL copy(this%grid%stretched, that%grid%stretched)
+CALL copy(this%grid%polarproj, that%grid%polarproj)
 
-  call copy(this%grid%regular_ll,that%grid%regular_ll,categoryappend=categoryappend)
-  call copy(this%dim,that%dim)
-
-case ( "rotated_ll")
-
-  call copy(this%grid%rotated_ll,that%grid%rotated_ll,categoryappend=categoryappend)
-  call copy(this%dim,that%dim)
-  
-case ( "lambert")
-
-  call copy(this%grid%lambert,that%grid%lambert,categoryappend=categoryappend)
-  call copy(this%dim,that%dim)
-  
-case default
-  call l4f_category_log(this%category,L4F_ERROR,"copy_griddim gtype: "//TRIM(this%grid%type%type)//" non gestita")
-  call raise_error("copy_griddim gtype: "//TRIM(this%grid%type%type)//" non gestita")
-
-end select
-
+CALL copy(this%dim, that%dim)
 
 !new category
 call l4f_launcher(a_name,a_name_append=trim(subcategory)//"."//trim(optio_c(categoryappend,255)))
 that%category=l4f_category_get(a_name)
 
-end subroutine copy_griddim
+END SUBROUTINE griddim_copy
+
 
 !> Proietta coordinate geografiche nel sistema definito
-elemental subroutine generic_proj (this,lon,lat,x,y)
-
-type(griddim_def),intent(in) :: this !< definizione della proiezione
+ELEMENTAL SUBROUTINE griddim_coord_proj(this, lon, lat, x, y)
+TYPE(griddim_def),INTENT(in) :: this !< definizione della proiezione
 !> coordinate geografiche da proiettare
-doubleprecision, intent(in) :: lon,lat 
+doubleprecision, INTENT(in) :: lon, lat
 !> coordinate proiettate
-doubleprecision, intent(out)  :: x,y
+doubleprecision, INTENT(out) :: x, y
 
 
-select case ( this%grid%type%type)
+SELECT CASE(this%grid%type%type)
 
-case ( "regular_ll")
-  call proj(this%grid%regular_ll,lon,lat,x,y)
+CASE("regular_ll")
+  CALL proj_regular_ll(lon, lat, x, y)
 
-case ( "rotated_ll")
-  call proj(this%grid%rotated_ll,lon,lat,x,y)
+CASE("rotated_ll")
+  CALL proj_rotated_ll(lon, lat, x, y, this%grid%rotated%longitude_south_pole, &
+   this%grid%rotated%latitude_south_pole, this%grid%rotated%angle_rotation)
   
-case ( "lambert")
-  call proj(this%grid%lambert,lon,lat,x,y)
+CASE("lambert")
+  CALL proj_lambert(lon, lat, x, y, this%grid%polarproj%latin1, &
+   this%grid%polarproj%latin2, this%grid%polarproj%lov, this%grid%polarproj%lad, &
+   this%grid%polarproj%projection_center_flag)
+
+CASE("polar_stereographic")
+  CALL proj_polar_stereographic(lon, lat, x, y, this%grid%polarproj%lov, &
+   this%grid%polarproj%lad, this%grid%polarproj%projection_center_flag)
   
-case default
-  x=dmiss
-  y=dmiss
-!  call l4f_category_log(this%category,L4F_ERROR,"gtype: "//this%grid%type%type//" non gestita" )
-!  call raise_error("gtype non gestita")
+CASE default
+  x = dmiss
+  y = dmiss
 
-end select
+END SELECT
 
-end subroutine generic_proj
+END SUBROUTINE griddim_coord_proj
+
 
 !>Calcola le coordinate geografiche date le coordinate nel sistema definito
-elemental subroutine generic_unproj (this,x,y,lon,lat)
-
-type(griddim_def),intent(in) ::this !< definizione della proiezione
+ELEMENTAL SUBROUTINE griddim_coord_unproj(this, x, y, lon, lat)
+TYPE(griddim_def),INTENT(in) :: this !< definizione della proiezione
 !> coordinate proiettate
-doubleprecision, intent(in) :: x,y
+DOUBLE PRECISION, INTENT(in) :: x, y
 !> coordinate geografiche
-doubleprecision, intent(out)  :: lon,lat
+DOUBLE PRECISION, INTENT(out) :: lon, lat
 
-select case ( this%grid%type%type)
+! dove metto un risultato intermedio?
+! posso fare, essendo elemental,
+! double precision :: tmpx(size(lon,1),size(lon(2)), tmpy(size(lon,1),size(lon(2)) ?
 
-case ( "regular_ll")
-  call unproj(this%grid%regular_ll,x,y,lon,lat)
+SELECT CASE(this%grid%type%type)
 
-case ( "rotated_ll")
-  call unproj(this%grid%rotated_ll,x,y,lon,lat)
+CASE("regular_ll")
+  CALL unproj_regular_ll(x, y, lon, lat)
 
-case ( "lambert")
-  call unproj(this%grid%lambert,x,y,lon,lat)
+CASE("rotated_ll")
+  CALL unproj_rotated_ll(x, y, lon, lat, &
+   this%grid%rotated%longitude_south_pole, &
+   this%grid%rotated%latitude_south_pole, this%grid%rotated%angle_rotation)
+  
+CASE("lambert")
+  CALL unproj_lambert(x, y, lon, lat, &
+   this%grid%polarproj%latin1, this%grid%polarproj%latin2, &
+   this%grid%polarproj%lov, this%grid%polarproj%lad, &
+   this%grid%polarproj%projection_center_flag)
 
-case default
-!  call l4f_category_log(this%category,L4F_ERROR,"gtype: "//this%grid%type%type//" non gestita" )
-!  call raise_error("gtype non gestita")
+CASE("polar_stereographic")
+  CALL unproj_polar_stereographic(x, y, lon, lat, this%grid%polarproj%lov, &
+   this%grid%polarproj%lad, this%grid%polarproj%projection_center_flag)
 
-end select
+CASE default
+  lon = dmiss
+  lat = dmiss
 
-end subroutine generic_unproj
+END SELECT
 
+END SUBROUTINE griddim_coord_unproj
 
 !> Proietta un oggetto griddim nel sistema definito.
 !! Effettua una serie di conti per avere informazioni nello spazio di
 !! proiezione; l'oggetto contiene le informazioni di proiezione e dati
 !! relativi al grigliato espresse nel sistema proiettato e geografico.
-subroutine griddim_proj (this)
+SUBROUTINE griddim_proj(this)
+TYPE(griddim_def),INTENT(inout) :: this !< oggetto che definisce la proiezione e con info relative al grigliato associato
 
-type(griddim_def),intent(in) :: this !< oggetto che definisce la proiezione e con info relative al grigliato associato
+CALL proj(this, this%dim%lon(1,1), this%dim%lat(1,1), &
+ this%grid%generic%x1, this%grid%generic%y1)
 
-select case ( this%grid%type%type)
+CALL proj(this, this%dim%lon(this%dim%nx,this%dim%ny), &
+ this%dim%lat(this%dim%nx,this%dim%ny), &
+ this%grid%generic%x2, this%grid%generic%y2)
 
-case ( "regular_ll")
-  call grid_proj(this%grid%regular_ll,this%dim)
-
-case ( "rotated_ll")
-  call grid_proj(this%grid%rotated_ll,this%dim)
-  
-case ( "lambert")
-  call grid_proj(this%grid%lambert,this%dim)
-  
-case default
-  call l4f_category_log(this%category,L4F_ERROR,"griddim proj gtype: "//this%grid%type%type//" non gestita" )
-  call raise_error("griddim proj gtype non gestita")
-
-end select
-
-end subroutine griddim_proj
+END SUBROUTINE griddim_proj
 
 
 !> Calcola informazioni nel sistema geografico di un oggetto griddim.
 !! Effettua una serie di conti per avere informazioni nello spazio
 !! geografico; l'oggetto contiene le informazioni di proiezione e dati
 !! relativi al grigliato espresse nel sistema proiettato e geografico.
-subroutine griddim_unproj(this)
+SUBROUTINE griddim_unproj(this)
+TYPE(griddim_def),INTENT(inout) :: this !< oggetto che definisce la proiezione e con info relative al grigliato associato
 
-type(griddim_def),intent(in) ::this !< oggetto che definisce la proiezione e con info relative al grigliato associato
+IF (.NOT.c_e(this%dim%nx) .OR. .NOT.c_e(this%dim%ny)) RETURN
+CALL alloc(this%dim)
+CALL griddim_unproj_internal(this)
 
-select case ( this%grid%type%type)
+END SUBROUTINE griddim_unproj
 
-case ( "regular_ll")
-  call grid_unproj(this%grid%regular_ll, this%dim)
 
-case ( "rotated_ll")
-  call grid_unproj(this%grid%rotated_ll, this%dim)
+SUBROUTINE griddim_unproj_internal(this)
+TYPE(griddim_def),INTENT(inout) ::this !< oggetto che definisce la proiezione e con info relative al grigliato associato
 
-case ( "lambert")
-  call grid_unproj(this%grid%lambert, this%dim)
-  
-case default
-  call l4f_category_log(this%category,L4F_ERROR,"griddim unproj gtype: "//this%grid%type%type//" non gestita" )
-  call raise_error("griddim unproj gtype non gestita")
+DOUBLE PRECISION :: x(this%dim%nx,this%dim%ny), y(this%dim%nx,this%dim%ny)
 
-end select
+CALL gridpar_coordinates(this%grid%generic, x, y)
+CALL griddim_coord_unproj(this, x, y, this%dim%lon, this%dim%lat)
 
-end subroutine griddim_unproj
+END SUBROUTINE griddim_unproj_internal
+
 
 !> restituisce il contenuto dell'oggetto
-subroutine get_val_grid_transform(this,time_definition)
-type(transform_def),intent(in) :: this !< oggetto da esaminare
-integer,INTENT(out),OPTIONAL :: time_definition !< 0=time is reference time ; 1=time is validity time
-
-time_definition=imiss
-if ( present(time_definition)) time_definition=this%time_definition
-
-end subroutine get_val_grid_transform
-
-!> restituisce il contenuto dell'oggetto
-subroutine get_val_griddim(this,type,&
- nx,ny, &
- lon_min, lon_max, lat_min, lat_max, component_flag, &
- latitude_south_pole,longitude_south_pole,angle_rotation, &
- latin1,latin2,lov,lad,projection_center_flag)
-type(griddim_def),intent(in) :: this !< oggetto da esaminare
-
-character(len=*),INTENT(out),OPTIONAL :: type !< type of grid definition
-integer,optional,intent(out) :: nx !< numero dei punti in X 
-integer,optional,intent(out) :: ny !< numero dei punti in Y
+SUBROUTINE griddim_get_val(this, type, &
+ nx, ny, &
+ lon_min, lon_max, lat_min, lat_max, dx, dy, component_flag, &
+ latitude_south_pole, longitude_south_pole, angle_rotation, &
+ latitude_stretch_pole, longitude_stretch_pole, stretch_factor, &
+ latin1, latin2, lov, lad, projection_center_flag)
+TYPE(griddim_def),INTENT(in) :: this !< oggetto da esaminare
+CHARACTER(len=*),INTENT(out),OPTIONAL :: type !< type of grid definition
+INTEGER,OPTIONAL,INTENT(out) :: nx !< numero dei punti in X 
+INTEGER,OPTIONAL,INTENT(out) :: ny !< numero dei punti in Y
 !> longitudini minima e massima
-doubleprecision,optional,intent(out) :: lon_min, lon_max
+doubleprecision,OPTIONAL,INTENT(out) :: lon_min, lon_max
 !> latitudini minima e massima
-doubleprecision,optional,intent(out) :: lat_min, lat_max
-integer,optional,intent(out) :: component_flag !< Resolution and Component Flags
-doubleprecision,optional,intent(out) :: latitude_south_pole !< Latitude of the southern pole of projection
-doubleprecision,optional,intent(out) :: longitude_south_pole !< Longitude of the southern pole of projection 
-doubleprecision,optional,intent(out) :: angle_rotation !< Angle of rotation of projection
-doubleprecision,optional,intent(out) :: latin1 !< First standard latitude from main pole (Lambert)
-doubleprecision,optional,intent(out) :: latin2 !< Second standard latitude from main pole (Lambert)
-doubleprecision,OPTIONAL,intent(out) :: lov !< Line of view, also known as reference longitude or orientation of the grid (polar projections)
-doubleprecision,OPTIONAL,intent(out) :: lad !< Latitude at which dx and dy (in m) are specified (Lambert, grib2 only)
-integer,optional,intent(out) :: projection_center_flag !< Flag indicating which pole is represented
+doubleprecision,OPTIONAL,INTENT(out) :: lat_min, lat_max
+doubleprecision,OPTIONAL,INTENT(out) :: dx, dy !< Grid steps in x and y directions
+INTEGER,OPTIONAL,INTENT(out) :: component_flag !< Resolution and Component Flags
+doubleprecision,OPTIONAL,INTENT(out) :: latitude_south_pole !< Latitude of the southern pole of projection
+doubleprecision,OPTIONAL,INTENT(out) :: longitude_south_pole !< Longitude of the southern pole of projection 
+doubleprecision,OPTIONAL,INTENT(out) :: angle_rotation !< Angle of rotation of projection
+doubleprecision,OPTIONAL,INTENT(out) :: latitude_stretch_pole !< Latitude of the pole of stretching
+doubleprecision,OPTIONAL,INTENT(out) :: longitude_stretch_pole !< Longitude of the pole of stretching
+doubleprecision,OPTIONAL,INTENT(out) :: stretch_factor !< Stretching factor
+doubleprecision,OPTIONAL,INTENT(out) :: latin1 !< First standard latitude from main pole (Lambert)
+doubleprecision,OPTIONAL,INTENT(out) :: latin2 !< Second standard latitude from main pole (Lambert)
+doubleprecision,OPTIONAL,INTENT(out) :: lov !< Line of view, also known as reference longitude or orientation of the grid (polar projections)
+doubleprecision,OPTIONAL,INTENT(out) :: lad !< Latitude at which dx and dy (in m) are specified (Lambert, grib2 only)
+INTEGER,OPTIONAL,INTENT(out) :: projection_center_flag !< Flag indicating which pole is represented
 
 
-if (present(lon_min))lon_min=dmiss
-if (present(lon_max))lon_max=dmiss
-if (present(lat_min))lat_min=dmiss
-if (present(lat_max))lat_max=dmiss
-if (present(latitude_south_pole))latitude_south_pole=dmiss
-if (present(longitude_south_pole))longitude_south_pole=dmiss
-if (present(angle_rotation))angle_rotation=dmiss
-if (present(component_flag))component_flag=imiss
+IF (PRESENT(type)) type = this%grid%type%type
+IF (PRESENT(nx)) nx = this%dim%nx
+IF (PRESENT(ny)) ny = this%dim%ny
 
+CALL get_val(this%grid%generic, &
+ lon_min, lon_max, lat_min, lat_max, dx, dy, component_flag)
+CALL get_val(this%grid%rotated, &
+ latitude_south_pole, longitude_south_pole, angle_rotation)
+CALL get_val(this%grid%stretched, &
+ latitude_stretch_pole, longitude_stretch_pole, stretch_factor)
+CALL get_val(this%grid%polarproj, &
+ latin1, latin2, lov, lad, projection_center_flag=projection_center_flag)
 
-if (present(type)) type = this%grid%type%type
-if (this%grid%type%type == cmiss) return
+END SUBROUTINE griddim_get_val
 
-select case (this%grid%type%type)
-
-case ( "regular_ll")
-  call get_val(this%grid%regular_ll,this%dim,&
-   nx,ny, &
-   lon_min, lon_max, lat_min, lat_max, component_flag)
-
-case ( "rotated_ll")
-  call get_val(this%grid%rotated_ll,this%dim,&
-   nx,ny, &
-   lon_min, lon_max, lat_min, lat_max, component_flag, &
-   latitude_south_pole,longitude_south_pole,angle_rotation)
-  
-case ( "lambert")
-  call get_val(this%grid%lambert,this%dim, &
-   nx,ny, &
-   lon_min, lon_max, lat_min, lat_max, component_flag, &
-   latitude_south_pole,longitude_south_pole,latin1,latin2, &
-   lov,lad,projection_center_flag)
-
-case default
-  call l4f_category_log(this%category,L4F_ERROR,"get_val_griddim gtype: "//this%grid%type%type//" non gestita" )
-  call raise_error("get_val_griddim gtype non gestita")
-
-end select
-
-
-end subroutine get_val_griddim
 
 !> Imposta il contenuto dell'oggetto
-subroutine set_val_griddim(this,type,&
- nx,ny, &
- lon_min, lon_max, lat_min, lat_max, component_flag, &
- latitude_south_pole,longitude_south_pole,angle_rotation, &
- latin1,latin2,lov,lad,projection_center_flag)
-
-type(griddim_def),intent(out) :: this
-
-character(len=*),INTENT(in),OPTIONAL :: type !< type of grid definition
-integer,optional,intent(in) :: nx !< numero dei punti in X 
-integer,optional,intent(in) :: ny !< numero dei punti in Y
+SUBROUTINE griddim_set_val(this, type, &
+ nx, ny, &
+ lon_min, lon_max, lat_min, lat_max, dx, dy, component_flag, &
+ latitude_south_pole, longitude_south_pole, angle_rotation, &
+ latitude_stretch_pole, longitude_stretch_pole, stretch_factor, &
+ latin1, latin2, lov, lad,projection_center_flag)
+TYPE(griddim_def),INTENT(out) :: this
+CHARACTER(len=*),INTENT(in),OPTIONAL :: type !< type of grid definition
+INTEGER,OPTIONAL,INTENT(in) :: nx !< numero dei punti in X 
+INTEGER,OPTIONAL,INTENT(in) :: ny !< numero dei punti in Y
 !> longitudini minima e massima
-doubleprecision,optional,intent(in) :: lon_min, lon_max
+doubleprecision,OPTIONAL,INTENT(in) :: lon_min, lon_max
 !> latitudini minima e massima
-doubleprecision,optional,intent(in) :: lat_min, lat_max
-integer,optional,intent(in) :: component_flag !< Resolution and Component Flags
-doubleprecision,optional,intent(in) :: latitude_south_pole !< Latitude of the southern pole of projection
-doubleprecision,optional,intent(in) :: longitude_south_pole !< Longitude of the southern pole of projection 
-doubleprecision,optional,intent(in) :: angle_rotation !< Angle of rotation of projection
-doubleprecision,optional,intent(in) :: latin1 !< First standard latitude from main pole (Lambert)
-doubleprecision,optional,intent(in) :: latin2 !< Second standard latitude from main pole (Lambert)
-doubleprecision,OPTIONAL,intent(in) :: lov !< Line of view, also known as reference longitude or orientation of the grid (polar projections)
-doubleprecision,OPTIONAL,intent(in) :: lad !< Latitude at which dx and dy (in m) are specified (Lambert, grib2 only)
-integer,optional,intent(in) :: projection_center_flag !< Flag indicating which pole is represented
-
-if (present(type)) this%grid%type%type = type
-if (this%grid%type%type == cmiss) return
-
-select case (this%grid%type%type)
-
-case ( "regular_ll")
-  call set_val(this%grid%regular_ll,this%dim,&
-   nx,ny, &
-   lon_min, lon_max, lat_min, lat_max, component_flag)
-
-case ( "rotated_ll")
-  call set_val(this%grid%rotated_ll,this%dim,&
-   nx,ny, &
-   lon_min, lon_max, lat_min, lat_max, component_flag, &
-   latitude_south_pole,longitude_south_pole,angle_rotation)
-  
-case ( "lambert")
-  call set_val(this%grid%lambert,this%dim, &
-   nx,ny, &
-   lon_min, lon_max, lat_min, lat_max, component_flag, &
-   latitude_south_pole,longitude_south_pole,latin1,latin2, &
-   lov,lad,projection_center_flag)
-
-case default
-  call l4f_category_log(this%category,L4F_ERROR,"set_val_griddim gtype: "//this%grid%type%type//" non gestita" )
-  call raise_error("set_val_griddim gtype non gestita")
-
-end select
+doubleprecision,OPTIONAL,INTENT(in) :: lat_min, lat_max
+doubleprecision,OPTIONAL,INTENT(in) :: dx, dy !< Grid steps in x and y directions
+INTEGER,OPTIONAL,INTENT(in) :: component_flag !< Resolution and Component Flags
+doubleprecision,OPTIONAL,INTENT(in) :: latitude_south_pole !< Latitude of the southern pole of projection
+doubleprecision,OPTIONAL,INTENT(in) :: longitude_south_pole !< Longitude of the southern pole of projection
+doubleprecision,OPTIONAL,INTENT(in) :: angle_rotation !< Angle of rotation of projection
+doubleprecision,OPTIONAL,INTENT(in) :: latitude_stretch_pole !< Latitude of the pole of stretching
+doubleprecision,OPTIONAL,INTENT(in) :: longitude_stretch_pole !< Longitude of the pole of stretching
+doubleprecision,OPTIONAL,INTENT(in) :: stretch_factor !< Stretching factor
+doubleprecision,OPTIONAL,INTENT(in) :: latin1 !< First standard latitude from main pole (Lambert)
+doubleprecision,OPTIONAL,INTENT(in) :: latin2 !< Second standard latitude from main pole (Lambert)
+doubleprecision,OPTIONAL,INTENT(in) :: lov !< Line of view, also known as reference longitude or orientation of the grid (polar projections)
+doubleprecision,OPTIONAL,INTENT(in) :: lad !< Latitude at which dx and dy (in m) are specified (Lambert, grib2 only)
+INTEGER,OPTIONAL,INTENT(in) :: projection_center_flag !< Flag indicating which pole is represented
 
 
-end subroutine set_val_griddim
+IF (PRESENT(type)) this%grid%type%type = type
+IF (PRESENT(nx)) this%dim%nx = nx
+IF (PRESENT(ny)) this%dim%ny = ny
+
+CALL set_val(this%grid%generic, &
+ lon_min, lon_max, lat_min, lat_max, dx, dy, component_flag)
+CALL set_val(this%grid%rotated, &
+ latitude_south_pole, longitude_south_pole, angle_rotation)
+CALL set_val(this%grid%stretched, &
+ latitude_stretch_pole, longitude_stretch_pole, stretch_factor)
+CALL set_val(this%grid%polarproj, &
+ latin1, latin2, lov, lad, lon_min, lat_min, projection_center_flag)
+
+END SUBROUTINE griddim_set_val
 
 
 !> Legge da un'unità di file il contenuto dell'oggetto \a this.
 !! Il record da leggere deve essere stato scritto con la ::write_unit
 !! Il metodo controlla se il file è
 !! aperto per un I/O formattato o non formattato e fa la cosa giusta.
-SUBROUTINE read_unit_griddim(this,unit) 
-
-type(griddim_def),intent(out) :: this !< oggetto griddim da leggere
+SUBROUTINE griddim_read_unit(this, unit) 
+TYPE(griddim_def),INTENT(out) :: this !< oggetto griddim da leggere
 INTEGER, INTENT(in) :: unit !< unità da cui leggere
 
 
-select case ( this%grid%type%type)
+CALL read_unit(this%dim, unit)
+CALL read_unit(this%grid%generic, unit)
+CALL read_unit(this%grid%rotated, unit)
+CALL read_unit(this%grid%stretched, unit)
+CALL read_unit(this%grid%polarproj, unit)
 
-case ( "regular_ll")
-  call read_unit(this%grid%regular_ll,unit)
-
-case ( "rotated_ll")
-  call read_unit(this%grid%rotated_ll,unit)
-  
-case ( "lambert")
-  call read_unit(this%grid%lambert,unit)
-  
-case default
-  call l4f_category_log(this%category,L4F_ERROR,"gtype: "//this%grid%type%type//" non gestita" )
-  call raise_error("gtype non gestita")
-
-end select
-
-
-call read_unit(this%dim,unit)
-
-
-END SUBROUTINE read_unit_griddim
-
+END SUBROUTINE griddim_read_unit
 
 
 !> Scrive su un'unità di file il contenuto dell'oggetto \a this.
 !! Il record scritto potrà successivamente essere letto con la ::read_unit.
 !! Il metodo controlla se il file è
 !! aperto per un I/O formattato o non formattato e fa la cosa giusta.
-SUBROUTINE write_unit_griddim(this, unit)
-
-type(griddim_def),intent(in) :: this !< oggetto griddim da scrivere
+SUBROUTINE griddim_write_unit(this, unit)
+TYPE(griddim_def),INTENT(in) :: this !< oggetto griddim da scrivere
 INTEGER, INTENT(in) :: unit !< unità su cui scrivere
 
 
-select case ( this%grid%type%type)
+CALL write_unit(this%dim, unit)
+CALL write_unit(this%grid%generic, unit)
+CALL write_unit(this%grid%rotated, unit)
+CALL write_unit(this%grid%stretched, unit)
+CALL write_unit(this%grid%polarproj, unit)
 
-case ( "regular_ll")
-  call write_unit(this%grid%regular_ll,unit)
+END SUBROUTINE griddim_write_unit
 
-case ( "rotated_ll")
-  call write_unit(this%grid%rotated_ll,unit)
-  
-case ( "lambert")
-  call write_unit(this%grid%lambert,unit)
-  
-case default
-  call l4f_category_log(this%category,L4F_ERROR,"write_unit_griddim gtype: "//trim(this%grid%type%type)//" non gestita" )
-  call raise_error("write_unit_griddim gtype non gestita")
-
-end select
-
-call write_unit(this%dim,unit)
-
-
-END SUBROUTINE write_unit_griddim
-
-
-!> \brief import griddim object from id of the grib loaded in memory
-!! avendo a disposizione un id di un grib fornito dalla grib_api viene impostato un oggetto griddim
-!! contenente tutte le informazioni sul grigliato (rappresentazione e dimensioni)
-SUBROUTINE import_griddim(this, gaid) 
-
-type(griddim_def),intent(out) :: this !< object griddim
+#ifdef HAVE_LIBGRIBAPI
+!> Import griddim object from id of the grib loaded in memory.
+!! The griddim object is populated with all the grid information
+!! (size, projection, etc.) carried by the grib message represented by
+!! the grib_api id provided.
+SUBROUTINE griddim_import_gribapi(this, gaid) 
+TYPE(griddim_def),INTENT(out) :: this !< griddim object
 INTEGER, INTENT(in) :: gaid !< grib_api id of the grib loaded in memory to import
 
-call grib_get(gaid,'typeOfGrid' ,this%grid%type%type)
+DOUBLE PRECISION :: loFirst, loLast, laFirst, laLast, x1, y1
+INTEGER :: EditionNumber, iScansNegatively, jScansPositively
+
+
+! Generic keys
+CALL grib_get(gaid, 'typeOfGrid', this%grid%type%type)
 #ifdef DEBUG
-call l4f_category_log(this%category,L4F_DEBUG,"import_griddim gtype: "//this%grid%type%type)
+call l4f_category_log(this%category,L4F_DEBUG, &
+ "griddim_import: grid type "//TRIM(this%grid%type%type))
+#endif
+CALL grib_get(gaid,'GRIBEditionNumber',EditionNumber)
+
+! Keys valid for (almost?) all cases, Ni and Nj are universal aliases
+CALL grib_get(gaid, 'Ni', this%dim%nx)
+CALL grib_get(gaid, 'Nj', this%dim%ny)
+
+CALL grib_get(gaid,'iScansNegatively',iScansNegatively)
+CALL grib_get(gaid,'jScansPositively',jScansPositively)
+CALL grib_get(gaid,'uvRelativeToGrid',this%grid%generic%component_flag)
+
+! Keys for rotated grids (checked through missing values)
+CALL grib_get_dmiss(gaid,'longitudeOfSouthernPoleInDegrees', &
+ this%grid%rotated%longitude_south_pole)
+CALL grib_get_dmiss(gaid,'latitudeOfSouthernPoleInDegrees', &
+ this%grid%rotated%latitude_south_pole)
+
+IF (EditionNumber == 1) THEN
+  CALL grib_get_dmiss(gaid,'angleOfRotationInDegrees', &
+   this%grid%rotated%angle_rotation)
+ELSE IF (EditionNumber == 2)THEN
+  CALL grib_get_dmiss(gaid,'angleOfRotationOfProjectionInDegrees', &
+   this%grid%rotated%angle_rotation)
+ENDIF
+
+! Keys for stretched grids (checked through missing values)
+! units must be verified, still experimental in grib_api
+! # TODO: Is it a float? Is it signed?
+IF (EditionNumber == 1) THEN
+  CALL grib_get_dmiss(gaid,'longitudeOfStretchingPoleInDegrees', &
+   this%grid%stretched%longitude_stretch_pole)
+  CALL grib_get_dmiss(gaid,'latitudeOfStretchingPoleInDegrees', &
+   this%grid%stretched%latitude_stretch_pole)
+  CALL grib_get_dmiss(gaid,'stretchingFactor', &
+   this%grid%stretched%stretch_factor)
+ELSE IF (EditionNumber == 2) THEN
+  CALL grib_get_dmiss(gaid,'longitudeOfThePoleOfStretching', &
+   this%grid%stretched%longitude_stretch_pole)
+  CALL grib_get_dmiss(gaid,'latitudeOfThePoleOfStretching', &
+   this%grid%stretched%latitude_stretch_pole)
+  CALL grib_get_dmiss(gaid,'stretchingFactor', &
+   this%grid%stretched%stretch_factor)
+  IF (c_e(this%grid%stretched%stretch_factor)) &
+   this%grid%stretched%stretch_factor = this%grid%stretched%stretch_factor*1.0D-6
+ENDIF
+
+! Projection-dependent keys
+SELECT CASE (this%grid%type%type)
+
+! Keys for sphaerical coordinate systems
+CASE ('regular_ll', 'rotated_ll', 'stretched_ll', 'stretched_rotated_ll')
+
+  CALL grib_get(gaid,'longitudeOfFirstGridPointInDegrees',loFirst)
+  CALL grib_get(gaid,'longitudeOfLastGridPointInDegrees',loLast)
+  CALL grib_get(gaid,'latitudeOfFirstGridPointInDegrees',laFirst)
+  CALL grib_get(gaid,'latitudeOfLastGridPointInDegrees',laLast)
+
+  IF (iScansNegatively  == 0) THEN
+    this%grid%generic%x1 = loFirst
+    this%grid%generic%x2 = loLast
+  ELSE
+    this%grid%generic%x2 = loFirst
+    this%grid%generic%x1 = loLast
+  ENDIF
+  IF (jScansPositively == 0) THEN
+    this%grid%generic%y2 = laFirst
+    this%grid%generic%y1 = laLast
+  ELSE
+    this%grid%generic%y1 = laFirst
+    this%grid%generic%y2 = laLast
+  ENDIF
+
+! reset longitudes in order to have a Cartesian plane
+  IF (this%grid%generic%x2-this%grid%generic%x1 < 0) &
+   this%grid%generic%x1 = this%grid%generic%x1 - 360.D0
+
+! compute dlon and dlat (should we get them from grib?)
+  CALL gridpar_setsteps(this%grid%generic, this%dim%nx, this%dim%ny)
+
+! Keys for polar projections
+CASE ('polar_stereographic', 'lambert', 'albers')
+
+  CALL grib_get(gaid,'DxInMetres', this%grid%generic%dx)
+  CALL grib_get(gaid,'DyInMetres', this%grid%generic%dy)
+! latin1/latin2 may be missing (e.g. stereographic)
+  CALL grib_get_dmiss(gaid,'Latin1InDegrees',this%grid%polarproj%latin1)
+  CALL grib_get_dmiss(gaid,'Latin2InDegrees',this%grid%polarproj%latin2)
+! projection center flag, aka hemisphere 
+  CALL grib_get(gaid,'projectionCenterFlag',&
+   this%grid%polarproj%projection_center_flag)
+  IF (IAND(this%grid%polarproj%projection_center_flag,64) == 1) THEN
+    CALL l4f_category_log(this%category,L4F_ERROR, &
+     "griddim_import: bi-polar projections not supported")
+    CALL raise_error("griddim_import: bi-polar projections not supported")
+  ENDIF
+! line of view, aka central meridian
+  CALL grib_get(gaid,'LoVInDegrees',this%grid%polarproj%lov)
+! latitude at which dx and dy are valid
+  IF (EditionNumber == 1) THEN
+! ECMWF (gribex/grib_api) says: Grid lengths are in metres, at the
+! 60-degree parallel nearest to the pole on the projection plane.
+!  IF (IAND(this%projection_center_flag, 128) == 0) THEN
+!    this%grid%polarproj%lad = 60.D0 
+!  ELSE
+!    this%grid%polarproj%lad = -60.D0 
+!  ENDIF
+! WMO says: Grid lengths are in units of metres, at the secant cone
+! intersection parallel nearest to the pole on the projection plane.
+    this%grid%polarproj%lad = this%grid%polarproj%latin1
+  ELSE IF (EditionNumber == 2) THEN
+    CALL grib_get(gaid,'LaDInDegrees',this%grid%polarproj%latin1)
+  ENDIF
+
+! compute projected extremes from lon and lat of first point
+  CALL grib_get(gaid,'longitudeOfFirstGridPointInDegrees',loFirst)
+  CALL grib_get(gaid,'latitudeOfFirstGridPointInDegrees',laFirst)
+  CALL proj(this, loFirst, laFirst, x1, y1)
+  IF (iScansNegatively  == 0) THEN
+    this%grid%generic%x1 = x1
+    this%grid%generic%x2 = x1 + this%grid%generic%dx*DBLE(this%dim%nx - 1)
+  ELSE
+    this%grid%generic%x2 = x1
+    this%grid%generic%x1 = x1 - this%grid%generic%dx*DBLE(this%dim%nx - 1)
+  ENDIF
+  IF (jScansPositively == 0) THEN
+    this%grid%generic%y2 = y1
+    this%grid%generic%y1 = y1 - this%grid%generic%dx*DBLE(this%dim%nx - 1)
+  ELSE
+    this%grid%generic%y1 = y1
+    this%grid%generic%y2 = y1 + this%grid%generic%dx*DBLE(this%dim%nx - 1)
+  ENDIF
+! keep these values for personal pleasure
+  this%grid%polarproj%lon1 = loFirst
+  this%grid%polarproj%lat1 = laFirst
+
+CASE default
+  CALL l4f_category_log(this%category,L4F_ERROR, &
+   "griddim_import: grid type "//TRIM(this%grid%type%type)//" not supported")
+  CALL raise_error("griddim_import: grid type not supported")
+
+END SELECT
+
+CONTAINS
+! utilities routines for grib_api, is there a better place?
+SUBROUTINE grib_get_dmiss(gaid, key, value)
+INTEGER,INTENT(in) :: gaid
+CHARACTER(len=*),INTENT(in) :: key
+DOUBLE PRECISION,INTENT(out) :: value
+
+INTEGER :: ierr
+
+CALL grib_get(gaid, key, value, ierr)
+IF (ierr /= GRIB_SUCCESS) value = dmiss
+
+END SUBROUTINE grib_get_dmiss
+
+SUBROUTINE grib_get_imiss(gaid, key, value)
+INTEGER,INTENT(in) :: gaid
+CHARACTER(len=*),INTENT(in) :: key
+INTEGER,INTENT(out) :: value
+
+INTEGER :: ierr
+
+CALL grib_get(gaid, key, value, ierr)
+IF (ierr /= GRIB_SUCCESS) value = imiss
+
+END SUBROUTINE grib_get_imiss
+
+END SUBROUTINE griddim_import_gribapi
+
+
+!> Export griddim object to id of the grib loaded in memory.
+!! The necessary grib_api keys are set according to the grid
+!! information (size, projection, etc.) contained in the object.
+SUBROUTINE griddim_export_gribapi(this, gaid) 
+TYPE(griddim_def),INTENT(in) :: this !< griddim object
+INTEGER, INTENT(inout) :: gaid !< grib_api id of the grib loaded in memory to export
+
+INTEGER :: EditionNumber, iScansNegatively, jScansPositively, nv, pvl
+DOUBLE PRECISION :: loFirst, loLast, laFirst, laLast
+DOUBLE PRECISION :: sdx, sdy, ratio, tol
+
+IF (.NOT. c_e(gaid))RETURN
+
+! Generic keys
+CALL grib_get(gaid,'GRIBEditionNumber',EditionNumber)
+CALL grib_set(gaid,'typeOfGrid' ,this%grid%type%type)
+#ifdef DEBUG
+CALL l4f_category_log(this%category,L4F_DEBUG, &
+ "griddim_export grid type "//this%grid%type%type)
 #endif
 
-select case ( this%grid%type%type)
+! Keys valid for (almost?) all cases, Ni and Nj are universal aliases
+CALL grib_set(gaid, 'Ni', this%dim%nx)
+CALL grib_set(gaid, 'Nj', this%dim%ny)
 
-case ( "regular_ll")
-  call import(this%grid%regular_ll,this%dim,gaid)
+CALL grib_get(gaid,'iScansNegatively',iScansNegatively)
+CALL grib_get(gaid,'jScansPositively',jScansPositively)
 
-case ( "rotated_ll")
-  call import(this%grid%rotated_ll,this%dim,gaid)
-  
-case ( "lambert")
-  call import(this%grid%lambert,this%dim,gaid)
-  
-case default
-  call l4f_category_log(this%category,L4F_ERROR,"import griddim gtype non gestita: "//trim(this%grid%type%type))
-  call raise_error("import griddim gtype non gestita")
+! Keys for rotated grids (checked through missing values and/or error code)
+!SELECT CASE (this%grid%type%type)
+!CASE ('rotated_ll', 'stretched_rotated_ll', 'polar_stereographic', 'lambert', 'albers')
+CALL grib_set_dmiss(gaid,'longitudeOfSouthernPoleInDegrees', &
+ this%grid%rotated%longitude_south_pole)
+CALL grib_set_dmiss(gaid,'latitudeOfSouthernPoleInDegrees', &
+ this%grid%rotated%latitude_south_pole)
+IF (EditionNumber == 1) THEN
+  CALL grib_set_dmiss(gaid,'angleOfRotationInDegrees', &
+   this%grid%rotated%angle_rotation)
+ELSE IF (EditionNumber == 2)THEN
+  CALL grib_set_dmiss(gaid,'angleOfRotationOfProjectionInDegrees', &
+   this%grid%rotated%angle_rotation)
+ENDIF
 
-end select
+! Keys for stretched grids (checked through missing values)
+! units must be verified, still experimental in grib_api
+! # TODO: Is it a float? Is it signed?
+IF (EditionNumber == 1) THEN
+  CALL grib_set_dmiss(gaid,'longitudeOfStretchingPoleInDegrees', &
+   this%grid%stretched%longitude_stretch_pole)
+  CALL grib_set_dmiss(gaid,'latitudeOfStretchingPoleInDegrees', &
+   this%grid%stretched%latitude_stretch_pole)
+  CALL grib_set_dmiss(gaid,'stretchingFactor', &
+   this%grid%stretched%stretch_factor)
+ELSE IF (EditionNumber == 2) THEN
+  CALL grib_set_dmiss(gaid,'longitudeOfThePoleOfStretching', &
+   this%grid%stretched%longitude_stretch_pole)
+  CALL grib_set_dmiss(gaid,'latitudeOfThePoleOfStretching', &
+   this%grid%stretched%latitude_stretch_pole)
+  IF (c_e(this%grid%stretched%stretch_factor)) &
+   CALL grib_set(gaid,'stretchingFactor', this%grid%stretched%stretch_factor*1.0D6)
+ENDIF
 
-END SUBROUTINE import_griddim
 
+! Projection-dependent keys
+SELECT CASE (this%grid%type%type)
 
-!> \brief export from griddim object to id of the grib loaded in memory
-!! da un oggetto griddim contenente tutte le informazioni sul grigliato (rappresentazione e dimensioni)
-!! vengono impostate le chiavi relative di un id di un grib fornito dalla grib_api
-SUBROUTINE export_griddim(this, gaid) 
+! Keys for sphaerical coordinate systems
+CASE ('regular_ll', 'rotated_ll', 'stretched_ll', 'stretched_rotated_ll')
 
-type(griddim_def),intent(in) :: this !< object griddim
-INTEGER, INTENT(inout) :: gaid !< grib_api id of the grib loaded in memory to import
+  IF (iScansNegatively  == 0) THEN
+    loFirst = this%grid%generic%x1
+    loLast = this%grid%generic%x2
+  ELSE
+    loFirst = this%grid%generic%x2
+    loLast = this%grid%generic%x1
+  ENDIF
+  IF (jScansPositively == 0) THEN
+    laFirst = this%grid%generic%y2
+    laLast = this%grid%generic%y1
+  ELSE
+    laFirst = this%grid%generic%y1
+    laLast = this%grid%generic%y2
+  ENDIF
 
-if (.not. c_e(gaid))return
+  CALL grib_set(gaid,'longitudeOfFirstGridPointInDegrees',loFirst)
+  CALL grib_set(gaid,'longitudeOfLastGridPointInDegrees',loLast)
+  CALL grib_set(gaid,'latitudeOfFirstGridPointInDegrees',laFirst)
+  CALL grib_set(gaid,'latitudeOfLastGridPointInDegrees',laLast)
 
-call grib_set(gaid,'typeOfGrid' ,this%grid%type%type)
+  IF (EditionNumber == 1) THEN
+    ratio = 1.d3
+  ELSE IF (EditionNumber == 2) THEN
+    ratio = 1.d6
+! reset lon in standard grib 2 definition [0,360]
+    IF (loFirst < 0.d0) loFirst = loFirst + 360.d0
+    IF (loLast < 0.d0) loLast = loLast + 360.d0
+  ENDIF
+
+! test relative coordinate truncation error with respect to tol
+! tol should be tuned
+  sdx = this%grid%generic%dx*ratio
+  sdy = this%grid%generic%dy*ratio
+  tol = 1.0d0/ratio
+
+  IF (ABS(NINT(sdx)/sdx - 1.0d0) > tol .OR. ABS(NINT(sdy)/sdy - 1.0d0) > tol) THEN
+    CALL l4f_category_log(this%category,L4F_INFO, &
+     "increments not given: inaccurate!")
 #ifdef DEBUG
-call l4f_category_log(this%category,L4F_DEBUG,"export_griddim gtype: "//this%grid%type%type)
+    CALL l4f_category_log(this%category,L4F_DEBUG,"dlon relative error: "//&
+     TRIM(to_char(ABS(NINT(sdx)/sdx - 1.0d0)))//">"//TRIM(to_char(tol)))
+    CALL l4f_category_log(this%category,L4F_DEBUG,"dlat relative error: "//&
+     TRIM(to_char(ABS(NINT(sdy)/sdy - 1.0d0)))//">"//TRIM(to_char(tol)))
+#endif
+    CALL grib_set(gaid,'resolutionAndComponentFlags',0)
+    CALL grib_set_missing(gaid,'Di')
+    CALL grib_set_missing(gaid,'Dj')
+! questo non va
+!  CALL grib_set(gaid,'ijDirectionIncrementGiven', 0)
+!  CALL grib_set(gaid,'iDirectionIncrementGiven', 0)
+!  CALL grib_set(gaid,'jDirectionIncrementGiven', 0)
+!  CALL grib_set_missing(gaid,'geography.iInc')
+!  CALL grib_set_missing(gaid,'geography.jInc')
+
+  ELSE
+#ifdef DEBUG
+    CALL l4f_category_log(this%category,L4F_DEBUG,"setting increments: "// &
+     TRIM(to_char(this%grid%generic%dx))//' '//TRIM(to_char(this%grid%generic%dy)))
+#endif
+    CALL grib_set(gaid,'resolutionAndComponentFlags',128)
+    CALL grib_set(gaid,'iDirectionIncrementInDegrees',this%grid%generic%dx)
+    CALL grib_set(gaid,'jDirectionIncrementInDegrees',this%grid%generic%dy)
+!  CALL grib_set(gaid,'iDirectionIncrement',dlon*ratio)
+!  CALL grib_set(gaid,'jDirectionIncrement',dlat*ratio)
+! Di, Dj are universal aliases
+!  CALL grib_set(gaid,'Di',dlon*ratio)
+!  CALL grib_set(gaid,'Dj',dlat*ratio)
+  ENDIF
+
+! Keys for polar projections
+CASE ('polar_stereographic', 'lambert', 'albers')
+
+  CALL grib_set(gaid,'DxInMetres', this%grid%generic%dx)
+  CALL grib_set(gaid,'DyInMetres', this%grid%generic%dy)
+! latin1/latin2 may be missing (e.g. stereographic)
+  CALL grib_set_dmiss(gaid,'Latin1InDegrees',this%grid%polarproj%latin1)
+  CALL grib_set_dmiss(gaid,'Latin2InDegrees',this%grid%polarproj%latin2)
+! projection center flag, aka hemisphere 
+  CALL grib_set(gaid,'projectionCenterFlag',&
+   this%grid%polarproj%projection_center_flag)
+! line of view, aka central meridian
+  CALL grib_set(gaid,'LoVInDegrees',this%grid%polarproj%lov)
+! latitude at which dx and dy are valid
+  IF (EditionNumber == 2) THEN
+    CALL grib_set(gaid,'LaDInDegrees',this%grid%polarproj%lad)
+  ENDIF
+
+! compute lon and lat of first point from projected extremes
+  IF (iScansNegatively  == 0) THEN
+    IF (jScansPositively == 0) THEN
+      CALL unproj(this, this%grid%generic%x1, this%grid%generic%y2, loFirst, laFirst)
+    ELSE
+      CALL unproj(this, this%grid%generic%x1, this%grid%generic%y1, loFirst, laFirst)
+    ENDIF
+  ELSE
+    IF (jScansPositively == 0) THEN
+      CALL unproj(this, this%grid%generic%x2, this%grid%generic%y2, loFirst, laFirst)
+    ELSE
+      CALL unproj(this, this%grid%generic%x2, this%grid%generic%y1, loFirst, laFirst)
+    ENDIF
+  ENDIF
+! use the values kept for personal pleasure ?
+!  loFirst = this%grid%polarproj%lon1
+!  laFirst = this%grid%polarproj%lat1
+  CALL grib_set(gaid,'longitudeOfFirstGridPointInDegrees',loFirst)
+  CALL grib_set(gaid,'latitudeOfFirstGridPointInDegrees',laFirst)
+
+CASE default
+  CALL l4f_category_log(this%category,L4F_ERROR, &
+   "griddim_export: grid type "//TRIM(this%grid%type%type)//" not supported")
+  CALL raise_error("griddim_export: grid type not supported")
+
+END SELECT
+
+! questo non va
+!  CALL grib_set(gaid,'ijDirectionIncrementGiven', 1)
+!  CALL grib_set(gaid,'iDirectionIncrementGiven', 1)
+!  CALL grib_set(gaid,'jDirectionIncrementGiven', 1)
+!  CALL grib_set(gaid,'geography.iInc', dlon)
+!  CALL grib_set(gaid,'geography.jInc', dlat)
+
+
+!TODO
+!parrebbe che:
+!nelle griglie regular_ll i pvl non si riescono a mettere
+!nelle griglie rotated_ll i pvl non si riescono a togliere
+! per ora devo fare questo ma poi i PV dovranno essere gestiti
+! rifare meglio
+!  if (typeOfGrid == "regular_ll") then
+!    call l4f_category_log(this%category,L4F_WARN,"Elimino PVL per bug in grib_api")
+!    call grib_set(gaid,"numberOfVerticalCoordinateValues",0)
+!    call grib_set(gaid,"pvlLocation",33)
+!    call grib_set(gaid,"PVPresent",0)
+!    call grib_set(gaid,"PLPresent",0)
+!  end if
+
+! hack for position of vertical coordinate parameters
+! buggy in grib_api
+IF (EditionNumber == 1) THEN
+!  CALL grib_get(gaid,"PVPresent",pvp) ! alias, probably useless
+  CALL grib_get(gaid,"NV",nv)
+#ifdef DEBUG
+  CALL l4f_category_log(this%category,L4F_DEBUG,"griddim_export_gribapi: coding "// &
+   TRIM(to_char(nv))//" vertical coordinate parameters")
 #endif
 
-select case ( this%grid%type%type)
+  IF (nv == 0) THEN
+    pvl = 255
+  ELSE
+    SELECT CASE (this%grid%type%type)
+    CASE ('regular_ll', 'polar_stereographic')
+      pvl = 33
+    CASE ('rotated_ll', 'stretched_ll', 'lambert', 'albers')
+      pvl = 43
+    CASE ('stretched_rotated_ll')
+      pvl = 43
+    CASE DEFAULT
+      pvl = 43 !?
+    END SELECT
+  ENDIF
 
-case ( "regular_ll")
-  call export(this%grid%regular_ll,this%dim,gaid)
+  CALL grib_set(gaid,"pvlLocation",pvl)
+#ifdef DEBUG
+  CALL l4f_category_log(this%category,L4F_DEBUG,"griddim_export_gribapi: coding "// &
+   TRIM(to_char(pvl))//" as vertical coordinate parameter location")
+#endif
 
-case ( "rotated_ll")
-  call export(this%grid%rotated_ll,this%dim,gaid)
-  
-case ( "lambert")
-  call export(this%grid%lambert,this%dim,gaid)
-  
-case default
-  call l4f_category_log(this%category,L4F_ERROR,"export griddim gtype: "//this%grid%type%type//" non gestita" )
-  call raise_error("export griddim gtype non gestita")
+ENDIF
 
-end select
 
-END SUBROUTINE export_griddim
+CONTAINS
+! utilities routines for grib_api, is there a better place?
+SUBROUTINE grib_set_dmiss(gaid, key, value)
+INTEGER,INTENT(in) :: gaid
+CHARACTER(len=*),INTENT(in) :: key
+DOUBLE PRECISION,INTENT(in) :: value
 
+INTEGER :: ierr
+
+IF (c_e(value)) CALL grib_set(gaid, key, value, ierr)
+
+END SUBROUTINE grib_set_dmiss
+
+SUBROUTINE grib_set_imiss(gaid, key, value)
+INTEGER,INTENT(in) :: gaid
+CHARACTER(len=*),INTENT(in) :: key
+INTEGER,INTENT(in) :: value
+
+INTEGER :: ierr
+
+IF (c_e(value)) CALL grib_set(gaid, key, value, ierr)
+
+END SUBROUTINE grib_set_imiss
+
+END SUBROUTINE griddim_export_gribapi
+#endif
 
 ! TODO
 ! bisogna sviluppare gli altri operatori
 
 
 !> operatore di uguaglianza tra due oggetti grid
-elemental FUNCTION grid_eq(this, that) RESULT(res)
+ELEMENTAL FUNCTION grid_eq(this, that) RESULT(res)
 !> oggetti da confrontare
 TYPE(grid_def),INTENT(IN) :: this, that
 LOGICAL :: res
 
-res = this%type == that%type .and. &
- this%regular_ll == that%regular_ll .and. &
- this%rotated_ll == that%rotated_ll .and. &
- this%lambert == that%lambert
+res = this%type == that%type .AND. &
+ this%generic == that%generic .AND. &
+ this%rotated == that%rotated .AND. &
+ this%stretched == that%stretched .AND. &
+ this%polarproj == that%polarproj
 
 END FUNCTION grid_eq
 
 
 !> operatore di uguaglianza tra due oggetti griddim
-elemental FUNCTION griddim_eq(this, that) RESULT(res)
+ELEMENTAL FUNCTION griddim_eq(this, that) RESULT(res)
 !> oggetti da confrontare
 TYPE(griddim_def),INTENT(IN) :: this, that
 
 LOGICAL :: res
 
-res = this%grid == that%grid .and. &
+res = this%grid == that%grid .AND. &
  this%dim == that%dim
 
 END FUNCTION griddim_eq
-
 
 
 !> operatore di uguaglianza tra due oggetti grid_type
@@ -903,37 +1431,49 @@ res = this%type == that%type
 END FUNCTION grid_type_eq
 
 
-!> \brief display on the screen a brief content of griddim object
-SUBROUTINE display_griddim(this) 
+!> Display on the screen a brief content of griddim object.
+SUBROUTINE griddim_display(this) 
+TYPE(griddim_def),INTENT(in) :: this !< griddim object to display
 
-type(griddim_def),intent(in) :: this !< griddim object to display
+PRINT*,"<<<<<<<<<<<<<<< ",TRIM(this%grid%type%type)," >>>>>>>>>>>>>>>>"
 
-select case ( this%grid%type%type)
+CALL display(this%dim)
+CALL display(this%grid%generic)
+CALL display(this%grid%rotated)
+CALL display(this%grid%stretched)
+CALL display(this%grid%polarproj)
 
-case ( "regular_ll")
+PRINT*,"<<<<<<<<<<<<<<< ---------- >>>>>>>>>>>>>>>>"
 
-  print*,"<<<<<<<<<<<<<<< regular_ll >>>>>>>>>>>>>>>>"
-  call display(this%grid%regular_ll,this%dim)
-  print*,"<<<<<<<<<<<<<<< ---------- >>>>>>>>>>>>>>>>"
+END SUBROUTINE griddim_display
 
-case ( "rotated_ll")
-  print*,"<<<<<<<<<<<<<<< rotated_ll >>>>>>>>>>>>>>>>"
-  call display(this%grid%rotated_ll,this%dim)
-  print*,"<<<<<<<<<<<<<<< ---------- >>>>>>>>>>>>>>>>"
-  
-case ( "lambert")
-  print*,"<<<<<<<<<<<<<<<  lambert   >>>>>>>>>>>>>>>>"
-  call display(this%grid%lambert,this%dim)
-  print*,"<<<<<<<<<<<<<<< ---------- >>>>>>>>>>>>>>>>"
-  
-case default
-  call l4f_category_log(this%category,L4F_ERROR,"display griddim gtype: "//this%grid%type%type//" non gestita" )
-  call raise_error("display griddim gtype non gestita")
 
-end select
+SUBROUTINE zoom_coord(this, ilon, ilat, flon, flat, ix, iy, fx, fy)
+TYPE(griddim_def),INTENT(in) :: this
+!TYPE(grid_dim),INTENT(in) :: dim
+DOUBLE PRECISION,INTENT(in) :: ilon,ilat,flon,flat
+INTEGER,INTENT(out) :: ix, iy, fx, fy
 
-end SUBROUTINE display_griddim
+DOUBLE PRECISION :: dx, dy
+DOUBLE PRECISION :: ix1, iy1, fx1, fy1
+INTEGER :: lix, liy, lfx, lfy
 
+
+! compute projected coordinates of vertices of desired lonlat rectangle
+CALL proj(this, ilon, ilat, ix1, iy1)
+CALL proj(this, flon, flat, fx1, fy1)
+! compute projected indices
+lix = NINT((ix1-this%grid%generic%x1)/this%grid%generic%dx) + 1
+liy = NINT((iy1-this%grid%generic%y1)/this%grid%generic%dy) + 1
+lfx = NINT((fx1-this%grid%generic%x1)/this%grid%generic%dx) + 1
+lfy = NINT((fy1-this%grid%generic%y1)/this%grid%generic%dy) + 1
+! swap projected indices, in case grid is "strongly rotated"
+ix = MIN(lix, lfx)
+fx = MAX(lix, lfx)
+iy = MIN(liy, lfy)
+fy = MAX(liy, lfy)
+
+END SUBROUTINE zoom_coord
 
 
 ! Definisce le funzioni count_distinct e pack_distinct
@@ -969,9 +1509,8 @@ end SUBROUTINE display_griddim
 !! be passed in keyword mode.
 SUBROUTINE init_transform(this, trans_type,sub_type, &
  ix, iy, fx, fy, ilon, ilat, flon, flat, &
- npx, npy, &
+ npx, npy, boxdx, boxdy, boxpercentile, &
  zoom_type,boxregrid_type,inter_type,external,time_definition,categoryappend)
-
 TYPE(transform_def),INTENT(out) :: this !< transformation object
 CHARACTER(len=*) :: trans_type !< type of transformation, can be \c 'zoom', \c 'boxregrid', \c 'interp', ...
 CHARACTER(len=*) :: sub_type !< sub type of transformation, depend on trans_type and is an alternative to zoom_type, boxregrid_type, inter_type
@@ -985,12 +1524,14 @@ DOUBLEPRECISION,INTENT(in),OPTIONAL :: flon !< coordinate of final point of new 
 DOUBLEPRECISION,INTENT(in),OPTIONAL :: flat !< coordinate of final point of new grid on y (for zoom)
 INTEGER,INTENT(IN),OPTIONAL :: npx !< number of points to average along x direction (for boxregrid)
 INTEGER,INTENT(IN),OPTIONAL :: npy !< number of points to average along y direction (for boxregrid)
-logical,INTENT(IN),OPTIONAL :: external !< activate external area interpolation (for interpolation)(not enabled !)
+DOUBLEPRECISION,INTENT(in),OPTIONAL :: boxdx !< longitudinal/x extension of the box for box interpolation, default the target x grid step
+DOUBLEPRECISION,INTENT(in),OPTIONAL :: boxdy !< latitudinal/y extension of the box for box interpolation, default the target y grid step
+DOUBLEPRECISION,INTENT(in),OPTIONAL :: boxpercentile !< percentile [0,1] of the distribution of points in the box to use as interpolated value, if missing, the average is used
 CHARACTER(len=*),INTENT(IN),OPTIONAL :: zoom_type !< type of zoom
 CHARACTER(len=*),INTENT(IN),OPTIONAL :: boxregrid_type !< type of regrid
 CHARACTER(len=*),INTENT(IN),OPTIONAL :: inter_type !< type of interpolation
-integer,INTENT(IN),OPTIONAL :: time_definition !< 0=time is reference time ; 1=time is validity time
-
+LOGICAL,INTENT(IN),OPTIONAL :: external !< activate external area interpolation (for interpolation)(not enabled !)
+INTEGER,INTENT(IN),OPTIONAL :: time_definition !< 0=time is reference time ; 1=time is validity time
 character(len=*),INTENT(in),OPTIONAL :: categoryappend !< appende questo suffisso al namespace category di log4fortran
 character(len=512) :: a_name
 
@@ -1014,8 +1555,9 @@ call optio(flat,this%zoom%coord%flat)
 
 call optio(time_definition,this%time_definition)
 if (this%time_definition < 0 .or. this%time_definition > 1)then
-  call l4f_category_log(this%category,L4F_ERROR,"Error in time_definition: "//to_char(this%time_definition))
-  call raise_fatal_error("Error in time_definition")
+  this%time_definition = 1
+!  call l4f_category_log(this%category,L4F_ERROR,"Error in time_definition: "//to_char(this%time_definition))
+!  call raise_fatal_error("Error in time_definition")
 end if
 
 call optio(boxregrid_type,this%boxregrid%sub_type)
@@ -1079,8 +1621,9 @@ if (this%trans_type == 'zoom') then
 
   else
 
-    CALL l4f_category_log(this%category,L4F_ERROR,'zoom: sub_type is wrong')
-    CALL raise_fatal_error('zoom: sub_type is wrong')
+    CALL l4f_category_log(this%category,L4F_ERROR,'zoom: sub_type '// &
+     TRIM(this%zoom%sub_type)//' is wrong')
+    CALL raise_fatal_error('zoom: sub_type '//TRIM(this%zoom%sub_type)//' is wrong')
 
   end if
 
@@ -1105,8 +1648,10 @@ else if (this%trans_type == 'boxregrid') then
   IF (this%boxregrid%sub_type == 'average')THEN
 ! nothing to do for now
   ELSE
-    CALL l4f_category_log(this%category,L4F_ERROR,'boxregrid: sub_type is wrong')
-    CALL raise_fatal_error('boxregrid: sub_type is wrong')
+    CALL l4f_category_log(this%category,L4F_ERROR,'boxregrid: sub_type '// &
+     TRIM(this%boxregrid%sub_type)//' is wrong')
+    CALL raise_fatal_error('boxregrid: sub_type '// &
+     TRIM(this%boxregrid%sub_type)//' is wrong')
   ENDIF
 
 
@@ -1122,18 +1667,27 @@ else if (this%trans_type == 'inter') then
   else if (this%inter%sub_type == 'linear')then
 
 !..
+  else if (this%inter%sub_type == 'box')then
+
+    CALL optio(boxdx,this%inter%box%boxdx)
+    CALL optio(boxdy,this%inter%box%boxdy)
+    CALL optio(boxpercentile,this%inter%box%boxpercentile)
 
   else
 
-    CALL l4f_category_log(this%category,L4F_ERROR,'inter: sub_type is wrong')
-    CALL raise_fatal_error('inter: sub_type is wrong')
+    CALL l4f_category_log(this%category,L4F_ERROR,'inter: sub_type '// &
+     TRIM(this%inter%sub_type)//' is wrong')
+    CALL raise_fatal_error('inter: sub_type '// &
+     TRIM(this%inter%sub_type)//' is wrong')
     
   end if
 
 else
 
-  CALL l4f_category_log(this%category,L4F_ERROR,'trans_type is wrong')
-  CALL raise_fatal_error('trans_type is wrong')
+  CALL l4f_category_log(this%category,L4F_ERROR,'trans_type '// &
+   TRIM(this%trans_type)//' is wrong')
+  CALL raise_fatal_error('trans_type '// &
+   TRIM(this%trans_type)//' is wrong')
 
 end IF
 
@@ -1182,22 +1736,33 @@ call l4f_category_delete(this%category)
 end SUBROUTINE delete_transform
 
 
+!> restituisce il contenuto dell'oggetto
+SUBROUTINE get_val_transform(this,time_definition)
+type(transform_def),intent(in) :: this !< oggetto da esaminare
+integer,INTENT(out),OPTIONAL :: time_definition !< 0=time is reference time ; 1=time is validity time
+
+if ( present(time_definition)) time_definition=this%time_definition
+
+END SUBROUTINE get_val_transform
+
+
 !> Initialises an object that defines a transformation on a grid.
 !! Questo metodo definisce la trasformazione da un grigliato in un'altro seguendo le indicazioni contenute nell'oggetto
 !! di trasformazione. Devono essere quindi forniti il grigliato da trasformare e l'oggetto di trasformazione.
 !! Vengono generati un oggetto di trasformazione associato ai grigliati e un nuovo grigliato prodotto
 !! dalla trasformazione.
 SUBROUTINE init_grid_transform(this,trans,in,out,categoryappend)
-
 TYPE(grid_transform),INTENT(out) :: this !< grid_transformation object
 TYPE(transform_def),INTENT(in) :: trans !< transformation object
-TYPE(griddim_def),INTENT(in) :: in !< griddim object to transform
+TYPE(griddim_def),INTENT(inout) :: in !< griddim object to transform
 TYPE(griddim_def),INTENT(out) :: out !< griddim transformated object
-character(len=*),INTENT(in),OPTIONAL :: categoryappend !< appende questo suffisso al namespace category di log4fortran
+CHARACTER(len=*),INTENT(in),OPTIONAL :: categoryappend !< appende questo suffisso al namespace category di log4fortran
 
 INTEGER :: nx, ny,i,j
-DOUBLE PRECISION :: lon_min, lon_max, lat_min, lat_max, steplon, steplat,lon_min_new, lat_min_new
+DOUBLE PRECISION :: lon_min, lon_max, lat_min, lat_max, steplon, steplat, &
+ lon_min_new, lat_min_new
 character(len=512) :: a_name
+doubleprecision :: l1, l2
 
 call l4f_launcher(a_name,a_name_append=trim(subcategory)//"."//trim(optio_c(categoryappend,255)))
 this%category=l4f_category_get(a_name)
@@ -1221,39 +1786,11 @@ IF (this%trans%trans_type == 'zoom') THEN
 
   if (this%trans%zoom%sub_type == 'coord') THEN
 
-    select case ( in%grid%type%type )
-
-    case ( "regular_ll")
-
-      call zoom_coord(in%grid%regular_ll,in%dim, &
-       this%trans%zoom%coord%ilon, this%trans%zoom%coord%ilat,&
-       this%trans%zoom%coord%flon, this%trans%zoom%coord%flat,&
-       this%trans%zoom%index%ix, this%trans%zoom%index%iy, &
-       this%trans%zoom%index%fx, this%trans%zoom%index%fy)
-
-    case ( "rotated_ll")
-
-      call zoom_coord(in%grid%rotated_ll,in%dim, &
-       this%trans%zoom%coord%ilon, this%trans%zoom%coord%ilat,&
-       this%trans%zoom%coord%flon, this%trans%zoom%coord%flat,&
-       this%trans%zoom%index%ix, this%trans%zoom%index%iy, &
-       this%trans%zoom%index%fx, this%trans%zoom%index%fy)
-
-    case ( "lambert")
-
-      call zoom_coord(in%grid%lambert,in%dim, &
-       this%trans%zoom%coord%ilon, this%trans%zoom%coord%ilat,&
-       this%trans%zoom%coord%flon, this%trans%zoom%coord%flat,&
-       this%trans%zoom%index%ix, this%trans%zoom%index%iy, &
-       this%trans%zoom%index%fx, this%trans%zoom%index%fy)
-
-    case default
-
-      call l4f_category_log(this%category,L4F_ERROR,"init_grid_transform zoom coord gtype: "&
-       //trim(in%grid%type%type)//" non gestita" )
-      call raise_fatal_error("init_grid_transform zoom coord gtype non gestita")
-      
-    end select
+    CALL zoom_coord(in, &
+     this%trans%zoom%coord%ilon, this%trans%zoom%coord%ilat,&
+     this%trans%zoom%coord%flon, this%trans%zoom%coord%flat,&
+     this%trans%zoom%index%ix, this%trans%zoom%index%iy, &
+     this%trans%zoom%index%fx, this%trans%zoom%index%fy)
 
     this%trans%zoom%sub_type = 'index'
     
@@ -1262,23 +1799,8 @@ IF (this%trans%trans_type == 'zoom') THEN
 
   if (this%trans%zoom%sub_type == 'index') THEN
 
-    select case ( in%grid%type%type )
-      
-    case ( "regular_ll","rotated_ll") ! TODO Lambert che fare?
-      
-      CALL get_val(in, nx=nx, ny=ny, lon_min=lon_min, lon_max=lon_max, &
-       lat_min=lat_min, lat_max=lat_max)
-      
-      steplon=(lon_max-lon_min)/dble(nx-1)
-      steplat=(lat_max-lat_min)/dble(ny-1)
-      
-      
-    case default
-      call l4f_category_log(this%category,L4F_ERROR,"init_grid_transform zoom index gtype: "&
-       //trim(in%grid%type%type)//" non gestita" )
-      call raise_fatal_error("init_grid_transform zoom index gtype non gestita")
-      
-    end select
+    CALL get_val(in, nx=nx, ny=ny, lon_min=lon_min, lon_max=lon_max, &
+     lat_min=lat_min, lat_max=lat_max, dx=steplon, dy=steplat)
 
                                 ! old indices
     this%iniox = min(max(this%trans%zoom%index%ix,1),nx) ! iox
@@ -1308,7 +1830,7 @@ IF (this%trans%trans_type == 'zoom') THEN
     this%outny=out%dim%ny
 
     call set_val (out,&
-     lon_min = lon_min,  lon_max = lon_max ,&
+     lon_min = lon_min,  lon_max = lon_max, &
      lat_min = lat_min,  lat_max = lat_max )
     
   else
@@ -1321,27 +1843,13 @@ IF (this%trans%trans_type == 'zoom') THEN
 
 ELSE IF (this%trans%trans_type == 'boxregrid') THEN
 
-  if (this%trans%boxregrid%sub_type == 'average') THEN
+  IF (this%trans%boxregrid%sub_type == 'average') THEN
 
-    select case ( in%grid%type%type )
-
-    case ( "regular_ll","rotated_ll")
-      
-      CALL get_val(in, nx=nx, ny=ny, lon_min=lon_min, lon_max=lon_max, &
-       lat_min=lat_min, lat_max=lat_max)
-      
-    case default
-      call l4f_category_log(this%category,L4F_ERROR,"init_grid_transform boxregrid average gtype: "&
-       //trim(in%grid%type%type)//" non gestita" )
-      call raise_fatal_error("init_grid_transform boxregrid average gtype non gestita")
-    
-    end select
+    CALL get_val(in, nx=nx, ny=ny, lon_min=lon_min, lon_max=lon_max, &
+     lat_min=lat_min, lat_max=lat_max, dx=steplon, dy=steplat)
 
     this%innx = nx
     this%inny = ny
-
-    steplon=(lon_max-lon_min)/(nx-1)
-    steplat=(lat_max-lat_min)/(ny-1)
 
 ! new grid
     lon_min_new = lon_min + (this%trans%boxregrid%npx - 1)*0.5D0*steplon
@@ -1354,94 +1862,89 @@ ELSE IF (this%trans%trans_type == 'boxregrid') THEN
 
     this%outnx=out%dim%nx
     this%outny=out%dim%ny
-
-    call set_val( out,lon_min = lon_min_new )
-    call set_val( out,lat_min = lat_min_new )
-
     steplon = steplon*this%trans%boxregrid%npx
     steplat = steplat*this%trans%boxregrid%npy
 
-    call set_val( out, lon_max = lon_min_new + (out%dim%nx - 1)*steplon )
-    call set_val( out, lat_max = lat_min_new + (out%dim%ny - 1)*steplat )
-
-  else
+    CALL set_val(out, lon_min=lon_min_new, lat_min=lat_min_new, &
+     lon_max=lon_min_new + DBLE(out%dim%nx-1)*steplon, dx=steplon, &
+     lat_max=lat_min_new + DBLE(out%dim%ny-1)*steplat, dy=steplat)
+  ELSE
 
     CALL l4f_category_log(this%category,L4F_WARN,'trans_type '//TRIM(this%trans%boxregrid%sub_type) &
      //' not supported')
     CALL raise_warning('trans_type '//TRIM(this%trans%boxregrid%sub_type)//' not supported')
 
-  end if
+  ENDIF
   
 ELSE IF (this%trans%trans_type == 'inter') THEN
 
-  if (this%trans%inter%sub_type == 'near' .or. this%trans%inter%sub_type == 'bilin' ) THEN
+! set increments in new grid in order for all the baraque to work
+  CALL gridpar_setsteps(out%grid%generic, out%dim%nx, out%dim%ny)
+
+  IF (this%trans%inter%sub_type == 'near' .OR. this%trans%inter%sub_type == 'bilin' ) THEN
     
-    select case ( in%grid%type%type )
-      
-    case ( "regular_ll","rotated_ll")
+    CALL get_val(in, nx=this%innx, ny=this%inny, &
+     lon_min=lon_min, lon_max=lon_max, lat_min=lat_min, lat_max=lat_max)
+    CALL get_val(out, nx=this%outnx, ny=this%outny)
+  
+    ALLOCATE(this%inter_index_x(this%outnx,this%outny), &
+     this%inter_index_y(this%outnx,this%outny))
 
+    CALL find_index(in,this%trans%inter%sub_type,&
+     nx=this%innx, ny=this%inny ,&
+     lon_min=lon_min, lon_max=lon_max,&
+     lat_min=lat_min, lat_max=lat_max,&
+     lon=out%dim%lon,lat=out%dim%lat,&
+     index_x=this%inter_index_x,index_y=this%inter_index_y)
 
-      CALL get_val(in, nx=nx, ny=ny)
-      
-      this%innx=nx
-      this%inny=ny
-      
-      CALL get_val(out, nx=nx, ny=ny)
-      
-      this%outnx=nx
-      this%outny=ny
-      
-      allocate (this%inter_index_x(nx,ny),this%inter_index_y(nx,ny))
-    
-      CALL get_val(in, &
-       lon_min=lon_min, lon_max=lon_max,&
-       lat_min=lat_min, lat_max=lat_max)
+    IF ( this%trans%inter%sub_type == 'bilin' ) THEN
+      ALLOCATE(this%inter_x(this%innx,this%inny), &
+       this%inter_y(this%innx,this%inny))
+      ALLOCATE(this%inter_xp(this%outnx,this%outny), &
+       this%inter_yp(this%outnx,this%outny))
 
-      call find_index(in,this%trans%inter%sub_type,&
-       nx=this%innx, ny=this%inny ,&
-       lon_min=lon_min, lon_max=lon_max,&
-       lat_min=lat_min, lat_max=lat_max,&
-       lon=out%dim%lon,lat=out%dim%lat,&
-       index_x=this%inter_index_x,index_y=this%inter_index_y)
+! compute coordinates of input grid
+      CALL gridpar_coordinates(in%grid%generic, this%inter_x, this%inter_y)
+! TODO chi mi garantisce che e` stata chiamata la unproj(out)?
+! compute coordinates of output grid in input system
+      CALL proj(in,out%dim%lon,out%dim%lat,this%inter_xp,this%inter_yp)
 
+    ENDIF
+  ELSE IF (this%trans%inter%sub_type == 'box') THEN
 
-      if ( this%trans%inter%sub_type == 'bilin' ) THEN
-        allocate (this%inter_x(this%innx,this%inny),this%inter_y(this%innx,this%inny))
-        allocate (this%inter_xp(this%outnx,this%outny),this%inter_yp(this%outnx,this%outny))
+    CALL get_val(in, nx=this%innx, ny=this%inny)
+    CALL get_val(out, nx=this%outnx, ny=this%outny)
+! if box size not provided, use the actual grid step
+    IF (.NOT.c_e(this%trans%inter%box%boxdx)) &
+     CALL get_val(out, dx=this%trans%inter%box%boxdx)
+    IF (.NOT.c_e(this%trans%inter%box%boxdy)) &
+     CALL get_val(out, dx=this%trans%inter%box%boxdy)
+! half size is actually needed
+    this%trans%inter%box%boxdx = this%trans%inter%box%boxdx*0.5D0
+    this%trans%inter%box%boxdy = this%trans%inter%box%boxdy*0.5D0
+! unlike before, here index arrays must have the shape of input grid
+    ALLOCATE(this%inter_index_x(this%innx,this%inny), &
+     this%inter_index_y(this%innx,this%inny), &
+     this%inter_x(this%innx,this%inny), &
+     this%inter_y(this%innx,this%inny))
 
+! compute coordinates of input grid in output system
+    CALL unproj(in) ! TODO costringe a dichiarare in INTENT(inout), si puo` evitare?
+    CALL proj(out,in%dim%lon,in%dim%lat,this%inter_x,this%inter_y)
+! find index of output box where every input point falls
+    CALL find_index_in_box(out, this%inter_x, this%inter_y, &
+     this%trans%inter%box%boxdx, this%trans%inter%box%boxdy, &
+     this%inter_index_x, this%inter_index_y)
+! not needed anymore
+    DEALLOCATE(this%inter_x, this%inter_y)
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-! TODO ora utilizzo le latmin etc. ma il caso non è generale
-! la getval in altri casi non mi restituisce niente e quindi bisognerà inventarsi
-! un piano di proiezione X,Y (da 0. a 1. ?) a cui far riferimento
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-        do i=1, this%innx
-          do J=1, this%inny
-
-            this%inter_x(i,j)=lon_min+(((lon_max-lon_min)/dble(this%innx-1))*(i-1))
-            this%inter_y(i,j)=lat_min+(((lat_max-lat_min)/dble(this%inny-1))*(j-1))
-          
-          end do
-        end do
-
-        call proj(in,out%dim%lon,out%dim%lat,this%inter_xp,this%inter_yp)
-
-      end if
-
-    case default
-      call l4f_category_log(this%category,L4F_ERROR,"init_grid_transform inter gtype: "//trim(in%grid%type%type)//" non gestita" )
-      call raise_fatal_error("init_grid_transform inter gtype non gestita")
-      
-    end select
-
-  else
+  ELSE
 
     CALL l4f_category_log(this%category,L4F_WARN,'init_grid_transform inter sub_type '//TRIM(this%trans%inter%sub_type) &
      //' not supported')
     CALL raise_warning('init_grid_transform inter sub_type '//TRIM(this%trans%inter%sub_type)//' not supported')
     
-  end if
+  ENDIF
     
 ELSE
 
@@ -1454,15 +1957,12 @@ ENDIF
 END SUBROUTINE init_grid_transform
 
 
-
-
 !> Initialises an object that defines a transformation from a grid to sparse data.
 !! Questo metodo definisce la trasformazione da un grigliato a dati sparsi seguendo le indicazioni contenute nell'oggetto
 !! di trasformazione. Devono essere quindi forniti il grigliato da trasformare e l'oggetto di trasformazione.
 !! Deve essere fornito anche un oggetto contenetente le informazioni relative ai dati sparsi su cui elaborare la trasformazione.
 !! Viene generato un oggetto di trasformazione associato al grigliato e dati dati sparsi.
 SUBROUTINE init_grid_v7d_transform(this,trans,in,v7d,categoryappend)
-
 TYPE(grid_transform),INTENT(out) :: this !< grid_transformation object
 TYPE(transform_def),INTENT(in) :: trans !< transformation object
 TYPE(griddim_def),INTENT(in) :: in !< griddim object to transform
@@ -1497,81 +1997,61 @@ nullify (this%inter_yp)
 
 IF (this%trans%trans_type == 'inter') THEN
 
-  if (this%trans%inter%sub_type == 'near' .or. this%trans%inter%sub_type == 'bilin' ) THEN
-    
-    select case ( in%grid%type%type )
-      
-    case ( "regular_ll","rotated_ll")
+  IF (this%trans%inter%sub_type == 'near' .OR. this%trans%inter%sub_type == 'bilin' ) THEN
 
+    CALL get_val(in, nx=nx, ny=ny)
+    this%innx=nx
+    this%inny=ny
 
-      CALL get_val(in, nx=nx, ny=ny)
-      
-      this%innx=nx
-      this%inny=ny
-      
-      this%outnx=size(v7d%ana)
-      this%outny=1
-      
-      allocate (this%inter_index_x(this%outnx,this%outny),&
-       this%inter_index_y(this%outnx,this%outny))
-      allocate(lon(this%outnx),lat(this%outnx))
+    this%outnx=SIZE(v7d%ana)
+    this%outny=1
 
-      CALL get_val(in, &
-       lon_min=lon_min, lon_max=lon_max,&
-       lat_min=lat_min, lat_max=lat_max)
+    ALLOCATE (this%inter_index_x(this%outnx,this%outny),&
+     this%inter_index_y(this%outnx,this%outny))
+    ALLOCATE(lon(this%outnx),lat(this%outnx))
 
-      call getval(v7d%ana(:)%coord,lon=lon,lat=lat)
+    CALL get_val(in, &
+     lon_min=lon_min, lon_max=lon_max,&
+     lat_min=lat_min, lat_max=lat_max)
 
-      call find_index(in,this%trans%inter%sub_type,&
-       nx=this%innx, ny=this%inny ,&
-       lon_min=lon_min, lon_max=lon_max,&
-       lat_min=lat_min, lat_max=lat_max,&
-       lon=reshape(lon,(/size(lon),1/)),lat=reshape(lat,(/size(lat),1/)),&
-       index_x=this%inter_index_x,index_y=this%inter_index_y)
+    CALL getval(v7d%ana(:)%coord,lon=lon,lat=lat)
 
+    CALL find_index(in,this%trans%inter%sub_type,&
+     nx=this%innx, ny=this%inny ,&
+     lon_min=lon_min, lon_max=lon_max,&
+     lat_min=lat_min, lat_max=lat_max,&
+     lon=RESHAPE(lon,(/SIZE(lon),1/)),lat=RESHAPE(lat,(/SIZE(lat),1/)),&
+     index_x=this%inter_index_x,index_y=this%inter_index_y)
 
-      if ( this%trans%inter%sub_type == 'bilin' ) THEN
-        allocate (this%inter_x(this%innx,this%inny),this%inter_y(this%innx,this%inny))
-        allocate (this%inter_xp(this%outnx,this%outny),this%inter_yp(this%outnx,this%outny))
+    IF ( this%trans%inter%sub_type == 'bilin' ) THEN
+      ALLOCATE(this%inter_x(this%innx,this%inny),this%inter_y(this%innx,this%inny))
+      ALLOCATE(this%inter_xp(this%outnx,this%outny),this%inter_yp(this%outnx,this%outny))
 
+! TODO verificare che siano equivalenti e cancellare le righe commentate
+!        do i=1, this%innx
+!          do J=1, this%inny
+!            this%inter_x(i,j)=lon_min+(((lon_max-lon_min)/dble(this%innx-1))*(i-1))
+!            this%inter_y(i,j)=lat_min+(((lat_max-lat_min)/dble(this%inny-1))*(j-1))
+!          end do
+!        end do
+      CALL gridpar_coordinates(in%grid%generic, this%inter_x, this%inter_y)
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-! TODO ora utilizzo le latmin etc. ma il caso non è generale
-! la getval in altri casi non mi restituisce niente e quindi bisognerà inventarsi
-! un piano di proiezione X,Y (da 0. a 1. ?) a cui far riferimento
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-        do i=1, this%innx
-          do J=1, this%inny
-
-            this%inter_x(i,j)=lon_min+(((lon_max-lon_min)/dble(this%innx-1))*(i-1))
-            this%inter_y(i,j)=lat_min+(((lat_max-lat_min)/dble(this%inny-1))*(j-1))
-          
-          end do
-        end do
-
-        call proj(in,&
-       reshape(lon,(/size(lon),1/)),reshape(lat,(/size(lat),1/)),&
+      CALL proj(in,&
+       RESHAPE(lon,(/SIZE(lon),1/)),RESHAPE(lat,(/SIZE(lat),1/)),&
        this%inter_xp,this%inter_yp)
 
-      end if
+    ENDIF
 
-      deallocate(lon,lat)
+    DEALLOCATE(lon,lat)
 
-    case default
-      call l4f_category_log(this%category,L4F_ERROR,"init_grid_transform inter gtype: "//trim(in%grid%type%type)//" non gestita" )
-      call raise_fatal_error("init_grid_transform inter gtype non gestita")
-      
-    end select
-
-  else
+  ELSE
 
     CALL l4f_category_log(this%category,L4F_WARN,'init_grid_transform inter sub_type '//TRIM(this%trans%inter%sub_type) &
      //' not supported')
     CALL raise_warning('init_grid_transform inter sub_type '//TRIM(this%trans%inter%sub_type)//' not supported')
     
-  end if
-    
+  ENDIF
+
 ELSE
 
   CALL l4f_category_log(this%category,L4F_WARN,'init_grid_transform trans type '//TRIM(this%trans%trans_type) &
@@ -1589,7 +2069,6 @@ END SUBROUTINE init_grid_v7d_transform
 !! Deve essere fornito anche un oggetto contenetente le informazioni relative ai dati sparsi su cui elaborare la trasformazione.
 !! Viene generato un oggetto di trasformazione associato al grigliato e dati dati sparsi.
 SUBROUTINE init_v7d_grid_transform(this,trans,v7d,griddim,categoryappend)
-
 TYPE(grid_transform),INTENT(out) :: this !< grid transformation object
 TYPE(transform_def),INTENT(in) :: trans !< transformation object
 TYPE(vol7d),INTENT(in) :: v7d !< vol7d objects to transform
@@ -1622,61 +2101,71 @@ IF (this%trans%trans_type == 'inter') THEN
 
   if ( this%trans%inter%sub_type == 'linear' ) THEN
     
-    select case ( griddim%grid%type%type )
-      
-    case ( "regular_ll","rotated_ll")
+    CALL get_val(griddim, nx=nx, ny=ny)
+    this%outnx=nx
+    this%outny=ny
+  
+    this%innx=SIZE(v7d%ana)
+    this%inny=1
+  
+    ALLOCATE(lon(this%innx),lat(this%innx))
+    ALLOCATE(this%inter_xp(this%innx,this%inny),this%inter_yp(this%innx,this%inny))
+    ALLOCATE(this%inter_x(this%outnx,this%outny),this%inter_y(this%outnx,this%outny))
 
+    CALL get_val(griddim, &
+     lon_min=lon_min, lon_max=lon_max,&
+     lat_min=lat_min, lat_max=lat_max)
 
-      CALL get_val(griddim, nx=nx, ny=ny)
-      
-      this%outnx=nx
-      this%outny=ny
-      
-      this%innx=size(v7d%ana)
-      this%inny=1
-      
-      allocate (lon(this%innx),lat(this%innx))
-      allocate (this%inter_xp(this%innx,this%inny),this%inter_yp(this%innx,this%inny))
-      allocate (this%inter_x(this%outnx,this%outny),this%inter_y(this%outnx,this%outny))
+    CALL getval(v7d%ana(:)%coord,lon=lon,lat=lat)
 
-      CALL get_val(griddim, &
-       lon_min=lon_min, lon_max=lon_max,&
-       lat_min=lat_min, lat_max=lat_max)
+    CALL proj(griddim,&
+     RESHAPE(lon,(/SIZE(lon),1/)),RESHAPE(lat,(/SIZE(lat),1/)),&
+     this%inter_xp,this%inter_yp)
 
-      call getval(v7d%ana(:)%coord,lon=lon,lat=lat)
+! TODO verificare che siano equivalenti e cancellare le righe commentate
+!    DO i=1, this%outnx
+!      DO J=1, this%outny
+!        this%inter_x(i,j)=lon_min+(((lon_max-lon_min)/DBLE(this%outnx-1))*(i-1))
+!        this%inter_y(i,j)=lat_min+(((lat_max-lat_min)/DBLE(this%outny-1))*(j-1))
+!      END DO
+!    END DO
+    CALL gridpar_coordinates(griddim%grid%generic, this%inter_x, this%inter_y)
 
-      call proj(griddim,&
-       reshape(lon,(/size(lon),1/)),reshape(lat,(/size(lat),1/)),&
-       this%inter_xp,this%inter_yp)
-      
+    DEALLOCATE(lon,lat)
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-! TODO ora utilizzo le latmin etc. ma il caso non è generale
-! la getval in altri casi non mi restituisce niente e quindi bisognerà inventarsi
-! un piano di proiezione X,Y (da 0. a 1. ?) a cui far riferimento
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  ELSE IF (this%trans%inter%sub_type == 'box') THEN
 
-      do i=1, this%outnx
-        do J=1, this%outny
+    this%innx=SIZE(v7d%ana)
+    this%inny=1
+    CALL get_val(griddim, nx=this%outnx, ny=this%outny)
+! if box size not provided, use the actual grid step
+    IF (.NOT.c_e(this%trans%inter%box%boxdx)) &
+     CALL get_val(griddim, dx=this%trans%inter%box%boxdx)
+    IF (.NOT.c_e(this%trans%inter%box%boxdy)) &
+     CALL get_val(griddim, dx=this%trans%inter%box%boxdy)
+! half size is actually needed
+    this%trans%inter%box%boxdx = this%trans%inter%box%boxdx*0.5D0
+    this%trans%inter%box%boxdy = this%trans%inter%box%boxdy*0.5D0
+! unlike before, here index arrays must have the shape of input grid
+    ALLOCATE(lon(this%innx),lat(this%innx))
+    ALLOCATE(this%inter_index_x(this%innx,this%inny), &
+     this%inter_index_y(this%innx,this%inny), &
+     this%inter_x(this%innx,this%inny), &
+     this%inter_y(this%innx,this%inny))
 
-          this%inter_x(i,j)=lon_min+(((lon_max-lon_min)/dble(this%outnx-1))*(i-1))
-          this%inter_y(i,j)=lat_min+(((lat_max-lat_min)/dble(this%outny-1))*(j-1))
-          
-        end do
-      end do
+! compute coordinates of input grid in output system
+    CALL getval(v7d%ana(:)%coord,lon=lon,lat=lat)
+    CALL proj(griddim,&
+     RESHAPE(lon,(/this%innx,1/)),RESHAPE(lat,(/this%innx,1/)),&
+     this%inter_x,this%inter_y)
+! find index of output box where every input point falls
+    CALL find_index_in_box(griddim, this%inter_x, this%inter_y, &
+     this%trans%inter%box%boxdx, this%trans%inter%box%boxdy, &
+     this%inter_index_x, this%inter_index_y)
+! not needed anymore
+    DEALLOCATE(this%inter_x, this%inter_y)
 
-
-      deallocate(lon,lat)
-
-
-    case default
-      call l4f_category_log(this%category,L4F_ERROR,"init_grid_transform inter gtype: "//&
-       trim(griddim%grid%type%type)//" non gestita" )
-      call raise_fatal_error("init_grid_transform inter gtype non gestita")
-      
-    end select
-
-  else
+  ELSE
 
     CALL l4f_category_log(this%category,L4F_WARN,'init_grid_transform inter sub_type '//TRIM(this%trans%inter%sub_type) &
      //' not supported')
@@ -1693,7 +2182,6 @@ ELSE
 ENDIF
 
 END SUBROUTINE init_v7d_grid_transform
-
 
 
 !> \brief destructor of grid_tranform object
@@ -1732,13 +2220,14 @@ call l4f_category_delete(this%category)
 
 end SUBROUTINE delete_grid_transform
 
-!> \brief from input data matrix compute the output data matrix
+
+!> From input data array compute the output data array.
 !! Grid_transform object contains any information needed for computation.
-!! Field_out will bee computed.
+!! Field_out will be computed.
 SUBROUTINE grid_transform_compute(this, field_in, field_out)
 TYPE(grid_transform),INTENT(in) :: this !< grid_transformation object
-REAL, INTENT(in) :: field_in(:,:) !< input matrix
-REAL, INTENT(out) :: field_out(:,:) !< output matrix
+REAL, INTENT(in) :: field_in(:,:) !< input array
+REAL, INTENT(out) :: field_out(:,:) !< output aarray
 
 INTEGER :: i, j, ii, jj, ie, je, navg
 real :: z1,z2,z3,z4
@@ -1824,39 +2313,70 @@ ELSE IF (this%trans%trans_type == 'inter') THEN
     DO j = 1, this%outny 
       DO i = 1, this%outnx 
 
-        if   (c_e(this%inter_index_x(i,j)) .and. c_e(this%inter_index_y(i,j)))then
+        IF   (c_e(this%inter_index_x(i,j)) .AND. c_e(this%inter_index_y(i,j)))THEN
 
-          z1=field_in(this%inter_index_x(i,j),this%inter_index_y(i,j))         
-          z2=field_in(this%inter_index_x(i,j)+1,this%inter_index_y(i,j))     
-          z3=field_in(this%inter_index_x(i,j)+1,this%inter_index_y(i,j)+1) 
-          z4=field_in(this%inter_index_x(i,j),this%inter_index_y(i,j)+1)     
+          z1=field_in(this%inter_index_x(i,j),this%inter_index_y(i,j))
+          z2=field_in(this%inter_index_x(i,j)+1,this%inter_index_y(i,j))
+          z3=field_in(this%inter_index_x(i,j)+1,this%inter_index_y(i,j)+1)
+          z4=field_in(this%inter_index_x(i,j),this%inter_index_y(i,j)+1)
 
-          if (c_e(z1) .and. c_e(z2) .and. c_e(z3) .and. c_e(z4)) then 
+          IF (c_e(z1) .AND. c_e(z2) .AND. c_e(z3) .AND. c_e(z4)) THEN
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-! TODO ora utilizzo le latmin etc. ma il caso non è generale
-! la getval in altri casi non mi restituisce niente e quindi bisognerà inventarsi
-! un piano di proiezione X,Y (da 0. a 1. ?) a cui far riferimento
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+            x1=this%inter_x(this%inter_index_x(i,j),this%inter_index_y(i,j))
+            y1=this%inter_y(this%inter_index_x(i,j),this%inter_index_y(i,j))
+            x3=this%inter_x(this%inter_index_x(i,j)+1,this%inter_index_y(i,j)+1)
+            y3=this%inter_y(this%inter_index_x(i,j)+1,this%inter_index_y(i,j)+1)
 
-            x1=this%inter_x(this%inter_index_x(i,j),this%inter_index_y(i,j))         
-            y1=this%inter_y(this%inter_index_x(i,j),this%inter_index_y(i,j))     
-            x3=this%inter_x(this%inter_index_x(i,j)+1,this%inter_index_y(i,j)+1) 
-            y3=this%inter_y(this%inter_index_x(i,j)+1,this%inter_index_y(i,j)+1)     
-            
             xp=this%inter_xp(i,j)
             yp=this%inter_yp(i,j)
             
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
             field_out(i,j) = hbilin (z1,z2,z3,z4,x1,y1,x3,y3,xp,yp)
 
-          end if
-        end if
+          END IF
+        END IF
 
       ENDDO
     ENDDO
 
+  else if (this%trans%inter%sub_type == 'box') THEN
+!TODO controllare cosa succede se le maschere sono tutte .FALSE.
+    IF (c_e(this%trans%inter%box%boxpercentile)) THEN ! percentile
+      IF (this%trans%inter%box%boxpercentile >= 1.0D0) THEN ! optimize for max
+        DO j = 1, this%outny
+          DO i = 1, this%outnx
+!            field_out(i,j) = MAXVAL(field_in, &
+!             mask=(this%inter_index_x == i .AND. &
+!             this%inter_index_y == j))
+          ENDDO
+        ENDDO
+      ELSE IF (this%trans%inter%box%boxpercentile <= 0.0D0) THEN ! optimize for min
+        DO j = 1, this%outny
+          DO i = 1, this%outnx
+!            field_out(i,j) = MINVAL(field_in, &
+!             mask=(this%inter_index_x == i .AND. &
+!             this%inter_index_y == j))
+          ENDDO
+        ENDDO
+      ELSE
+        DO j = 1, this%outny
+          DO i = 1, this%outnx
+            field_out(i:i,j) = stat_percentile( &
+             RESHAPE(field_in, (/SIZE(field_in)/)), &
+             (/REAL(this%trans%inter%box%boxpercentile)/), &
+             mask=RESHAPE((this%inter_index_x == i .AND. &
+             this%inter_index_y == j), (/SIZE(field_in)/)))
+          ENDDO
+        ENDDO
+      ENDIF
+    ELSE ! average
+      DO j = 1, this%outny
+        DO i = 1, this%outnx
+!          field_out(i,j) = stat_average(field_in, &
+!           mask=(this%inter_index_x == i .AND. &
+!           this%inter_index_y == j))
+        ENDDO
+      ENDDO
+    ENDIF
   else
 
     call l4f_category_log(this%category,L4F_ERROR,"sub_type not right here: "//this%trans%inter%sub_type)
@@ -1874,9 +2394,9 @@ ENDIF
 END SUBROUTINE grid_transform_compute
 
 
-!> \brief from input data vector compute the output data matrix
+!> From input data vector compute the output data array.
 !! Grid_transform object contains any information needed for computation.
-!! Field_out will bee computed.
+!! Field_out will be computed.
 SUBROUTINE v7d_grid_transform_compute(this, field_in, field_out)
 TYPE(grid_transform),INTENT(in) :: this !< grid_tranform object
 REAL, INTENT(in) :: field_in(:) !< input vector
@@ -1971,7 +2491,6 @@ else
   call raise_fatal_error("trans_type not right here")
   
 END IF
-
 
 END SUBROUTINE v7d_grid_transform_compute
 
@@ -2072,6 +2591,34 @@ end if
 end subroutine find_index
 
 
+!> Locate index of requested point
+SUBROUTINE find_index_in_box(this, xin, yin, dx, dy, index_x, index_y)
+TYPE(griddim_def),INTENT(in) :: this
+DOUBLE PRECISION,INTENT(in) :: xin(:,:), yin(:,:)
+DOUBLE PRECISION,INTENT(in) :: dx, dy
+INTEGER,INTENT(out) :: index_x(:,:), index_y(:,:)
+
+DOUBLE PRECISION :: xout(this%dim%nx,this%dim%ny), yout(this%dim%nx,this%dim%ny)
+INTEGER :: i, j
+! compute coordinates of output grid
+CALL gridpar_coordinates(this%grid%generic, xout, yout)
+
+index_x(:,:) = imiss
+index_x(:,:) = imiss
+
+DO j = 1, this%dim%ny
+  DO i = 1, this%dim%nx
+    WHERE(xin(:,:) >= xout(i,j)-dx .AND. xin(:,:) < xout(i,j)+dx .AND. &
+     yin(:,:) >= yout(i,j)-dy .AND. yin(:,:) < yout(i,j)+dy)
+      index_x(:,:) = i
+      index_y(:,:) = j
+    END WHERE
+  ENDDO
+ENDDO
+
+END SUBROUTINE find_index_in_box
+
+
 !> Compute rotation matrix for wind unrotation. It allocates and
 !! computes a matrix suitable for recomputing wind components in the
 !! geographical system from the components in the projected
@@ -2153,3 +2700,4 @@ end module grid_class
 !!\brief Programma esempio semplice per la definizione di griddim.
 !!
 !! Programma che crea un oggetto griddim e ne stampa alcuni valori a schermo. Comprende anche una demo dell'uso di log4fortran
+
