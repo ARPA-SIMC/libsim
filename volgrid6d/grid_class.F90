@@ -15,6 +15,10 @@
 MODULE geo_transforms
 USE doubleprecision_phys_const
 IMPLICIT NONE
+PRIVATE
+PUBLIC proj_regular_ll, unproj_regular_ll, proj_rotated_ll, unproj_rotated_ll, &
+ proj_stretched_ll, unproj_stretched_ll, proj_lambert, unproj_lambert, &
+ proj_polar_stereographic, unproj_polar_stereographic
 
 CONTAINS
 
@@ -272,7 +276,7 @@ use vol7d_class
 use err_handling
 use grid_dim_class
 use optional_values
-use doubleprecision_phys_const
+!use doubleprecision_phys_const
 use simple_stat
 
 implicit none
@@ -1554,10 +1558,10 @@ call optio(flon,this%zoom%coord%flon)
 call optio(flat,this%zoom%coord%flat)
 
 call optio(time_definition,this%time_definition)
-if (this%time_definition < 0 .or. this%time_definition > 1)then
-  this%time_definition = 1
-!  call l4f_category_log(this%category,L4F_ERROR,"Error in time_definition: "//to_char(this%time_definition))
-!  call raise_fatal_error("Error in time_definition")
+if (c_e(this%time_definition) .and. &
+ (this%time_definition < 0 .OR. this%time_definition > 1))THEN
+  call l4f_category_log(this%category,L4F_ERROR,"Error in time_definition: "//to_char(this%time_definition))
+  call raise_fatal_error("Error in time_definition")
 end if
 
 call optio(boxregrid_type,this%boxregrid%sub_type)
@@ -2631,6 +2635,7 @@ END SUBROUTINE find_index_in_box
 !! method must have already been called for the \a griddim_def object.
 !! \todo Check the algorithm and add some orthogonality tests.
 SUBROUTINE griddim_wind_unrot(this, rot_mat)
+USE doubleprecision_phys_const
 TYPE(griddim_def), INTENT(in) :: this !< object describing the grid
 DOUBLE PRECISION, POINTER :: rot_mat(:,:,:) !< rotation matrix for every grid point, to be deallocated by the caller, if \c .NOT. \c ASSOCIATED() an error occurred
 

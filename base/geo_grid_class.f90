@@ -16,7 +16,7 @@ USE missing_values
 USE char_utilities
 USE err_handling
 USE geo_coord_class
-USE phys_const
+!USE phys_const
 
 IMPLICIT NONE
 
@@ -389,6 +389,7 @@ END SUBROUTINE gg_adjust_coord
 !! specificato. Le coordinate possono essere ottenute tramite la ::getval
 !! nel parametro coord.
 SUBROUTINE gg_compute_coord(this)
+USE phys_const
 TYPE (geo_grid) :: this !< oggetto di cui calcolare le coordinate
 
 INTEGER :: i, j
@@ -426,6 +427,8 @@ END SUBROUTINE gg_compute_coord
 
 
 SUBROUTINE rtlld(x, y, x0, cy0, sy0)
+USE geo_coord_class
+USE phys_const
 REAL, INTENT(inout) :: x, y
 REAL, INTENT(in) :: x0, cy0, sy0
 

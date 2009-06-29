@@ -20,7 +20,7 @@ USE kinds
 USE err_handling
 USE char_utilities
 USE missing_values
-USE doubleprecision_phys_const
+!USE doubleprecision_phys_const
 USE file_utilities
 #ifdef HAVE_LIBSHP_FORTRAN
 USE shplib
@@ -874,6 +874,7 @@ END SUBROUTINE geo_coord_to_utm
 !! convertiti ad un sistema di coordinate comune, altrimenti viene
 !! restituito un valore mancante.
 FUNCTION geo_coord_dist(this, that) RESULT(dist)
+USE doubleprecision_phys_const
 TYPE(geo_coord), INTENT (IN) :: this !< primo punto
 TYPE(geo_coord), INTENT (IN) :: that !< secondo punto
 REAL(kind=fp_geo) :: dist !< distanza in metri
