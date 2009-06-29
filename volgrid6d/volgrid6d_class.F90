@@ -1517,7 +1517,7 @@ if (associated(volgrid6d_in%time))then
     end do
 
     nntime = count_distinct(reshape(validitytime,(/ntime*ntimerange/)), back=.TRUE.)
-    vol7d_out%time=pack_distinct(reshape(validitytime,(/ntime*ntimerange/)), nntime*ntimerange,back=.TRUE.)
+    vol7d_out%time=pack_distinct(reshape(validitytime,(/ntime*ntimerange/)), nntime,back=.TRUE.)
   
   end if
 end if
