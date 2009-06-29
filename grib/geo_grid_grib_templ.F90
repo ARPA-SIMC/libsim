@@ -25,6 +25,7 @@ END INTERFACE
 CONTAINS
 
 SUBROUTINE geo_grid_import_from_/**/GRIBLIB(this, grib, ier)
+USE phys_const
 !
 ! Import data from relevant gribex section arrays,
 ! after call to a gribex I or D operation, into a geo_grid object
@@ -161,6 +162,7 @@ END SUBROUTINE geo_grid_import_from_/**/GRIBLIB
 
 
 SUBROUTINE geo_grid_export_to_/**/GRIBLIB(this, grib, ier)
+USE phys_const
 !
 ! Export a geo_grid object to a grib_io object
 !
