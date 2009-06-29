@@ -636,8 +636,8 @@ this%grid%rotated = gridpar_rotated_init(longitude_south_pole, &
  latitude_south_pole, angle_rotation)
 this%grid%stretched = gridpar_stretched_init(longitude_stretch_pole, &
  latitude_stretch_pole, stretch_factor)
-this%grid%polarproj = gridpar_polarproj_init(latin1, latin2, lov, lad, &
- lon_min, lat_min, projection_center_flag)
+!tt this%grid%polarproj = gridpar_polarproj_init(latin1, latin2, lov, lad, &
+!tt  lon_min, lat_min, projection_center_flag)
 
 #ifdef DEBUG
 call l4f_category_log(this%category,L4F_DEBUG,"init gtype: "//this%grid%type%type )
@@ -656,7 +656,7 @@ CALL delete(this%dim)
 CALL delete(this%grid%generic)
 CALL delete(this%grid%rotated)
 CALL delete(this%grid%stretched)
-CALL delete(this%grid%polarproj)
+!tt CALL delete(this%grid%polarproj)
 
 this%grid%type%type=cmiss
 
@@ -681,7 +681,7 @@ that%grid%type = this%grid%type
 CALL copy(this%grid%generic, that%grid%generic)
 CALL copy(this%grid%rotated, that%grid%rotated)
 CALL copy(this%grid%stretched, that%grid%stretched)
-CALL copy(this%grid%polarproj, that%grid%polarproj)
+!tt CALL copy(this%grid%polarproj, that%grid%polarproj)
 
 CALL copy(this%dim, that%dim)
 
@@ -949,6 +949,7 @@ INTEGER, INTENT(in) :: gaid !< grib_api id of the grib loaded in memory to impor
 DOUBLE PRECISION :: loFirst, loLast, laFirst, laLast, x1, y1
 INTEGER :: EditionNumber, iScansNegatively, jScansPositively
 
+call init(this)
 
 ! Generic keys
 CALL grib_get(gaid, 'typeOfGrid', this%grid%type%type)
@@ -1405,8 +1406,9 @@ LOGICAL :: res
 res = this%type == that%type .AND. &
  this%generic == that%generic .AND. &
  this%rotated == that%rotated .AND. &
- this%stretched == that%stretched .AND. &
- this%polarproj == that%polarproj
+ this%stretched == that%stretched 
+!tt .AND. &
+!tt  this%polarproj == that%polarproj
 
 END FUNCTION grid_eq
 

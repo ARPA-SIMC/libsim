@@ -1557,7 +1557,7 @@ do itime=1,ntime
         if (vol7d_out%time_definition == volgrid6d_in%time_definition) then
           vol7d_out%voldatir(:,itime,ilevel,itimerange,ivar,inetwork)=reshape(voldatir_out,(/nana/))
         else
-          vol7d_out%voldatir(:,index(vol7d_out%time,validitytime(itime,ilevel)),ilevel,itimerange,ivar,inetwork)=&
+          vol7d_out%voldatir(:,index(vol7d_out%time,validitytime(itime,itimerange)),ilevel,itimerange,ivar,inetwork)=&
            reshape(voldatir_out,(/nana/))
         end if
 
@@ -1637,7 +1637,7 @@ if (associated(volgrid6d_in%time)) then
   if (time_definition /= volgrid6d_in%time_definition) then
     
                                 ! converto reference in validity
-    allocate (validitytime(itime,itimerange))
+    allocate (validitytime(ntime,ntimerange))
     do itime=1,ntime
       do itimerange=1,ntimerange
         if (time_definition > volgrid6d_in%time_definition) then

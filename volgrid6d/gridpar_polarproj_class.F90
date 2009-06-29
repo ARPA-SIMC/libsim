@@ -1,6 +1,7 @@
 #include "config.h"
 MODULE gridpar_polarproj_class
 USE missing_values
+USE optional_values
 IMPLICIT NONE
 
 !> Tipo derivato che descrive i parametri aggiuntivi per una proiezione polare.
@@ -61,48 +62,13 @@ INTEGER,OPTIONAL,INTENT(in) :: projection_center_flag
 
 TYPE(gridpar_polarproj) :: this
 
-
-IF (PRESENT(latin1)) THEN
-  this%latin1 = latin1
-ELSE
-  this%latin1 = dmiss
-ENDIF
-
-IF (PRESENT(latin2)) THEN
-  this%latin2 = latin2
-ELSE
-  this%latin2 = dmiss
-ENDIF
-
-IF (PRESENT(lov)) THEN
-  this%lov = lov
-ELSE
-  this%lov = dmiss
-ENDIF
-
-IF (PRESENT(lad)) THEN
-  this%lad = lad
-ELSE
-  this%lad = dmiss
-ENDIF
-
-IF (PRESENT(lon1)) THEN
-  this%lon1 = lon1
-ELSE
-  this%lon1 = dmiss
-ENDIF
-
-IF (PRESENT(lat1)) THEN
-  this%lat1 = lat1
-ELSE
-  this%lat1 = dmiss
-ENDIF
-
-IF (PRESENT(projection_center_flag)) THEN
-  this%projection_center_flag = projection_center_flag
-ELSE
-  this%projection_center_flag = imiss
-ENDIF
+  this%latin1 = optio_d(latin1)
+  this%latin2 = optio_d(latin2)
+  this%lov = optio_d(lov)
+  this%lad = optio_d(lad)
+  this%lon1 = optio_d(lon1)
+  this%lat1 = optio_d(lat1)
+  this%projection_center_flag = optio_l(projection_center_flag)
 
 END FUNCTION gridpar_polarproj_init
 
