@@ -295,7 +295,7 @@ END SUBROUTINE vol7d_dballe_init
 !! var e network sono scalari.
 
 SUBROUTINE vol7d_dballe_importvsns(this, var, network, coordmin, coordmax, timei, timef,level,timerange, set_network,&
- attr,anavar,anaattr, varkind,attrkind,anavarkind,anaattrkind)
+ attr,anavar,anaattr, varkind,attrkind,anavarkind,anaattrkind,anaonly)
 TYPE(vol7d_dballe),INTENT(inout) :: this  !< oggetto vol7d_dballe
 CHARACTER(len=*),INTENT(in) :: var  !< variabile da importare secondo la tabella B locale o relativi alias
 !> coordinate minime e massime che definiscono il 
@@ -344,6 +344,7 @@ CHARACTER(len=*),INTENT(in),OPTIONAL :: anavarkind(:)
 !! - "d" = double precision
 !! - "c" = character 
 CHARACTER(len=*),INTENT(in),OPTIONAL :: anaattrkind(:)
+logical,intent(in),optional :: anaonly !< imposta importazione della sola anagrafica 
 
 CALL import(this, (/var/), network, coordmin, coordmax, timei, timef,level,timerange, set_network,&
  attr,anavar,anaattr, varkind,attrkind,anavarkind,anaattrkind)
@@ -408,7 +409,7 @@ END SUBROUTINE vol7d_dballe_importvvnv
 !!import da DB-all.e oppure da BUFR/CREX formato generico
 
 SUBROUTINE vol7d_dballe_importvvns(this, var, network, coordmin, coordmax, timei, timef,level,timerange, set_network,&
- attr,anavar,anaattr, varkind,attrkind,anavarkind,anaattrkind)
+ attr,anavar,anaattr, varkind,attrkind,anavarkind,anaattrkind,anaonly)
 
 TYPE(vol7d_dballe),INTENT(inout) :: this !< oggetto vol7d_dballe
 CHARACTER(len=*),INTENT(in),optional :: var(:)
@@ -419,13 +420,18 @@ TYPE(vol7d_level),INTENT(in),optional :: level
 TYPE(vol7d_timerange),INTENT(in),optional :: timerange
 CHARACTER(len=*),INTENT(in),OPTIONAL :: attr(:),anavar(:),anaattr(:)
 CHARACTER(len=*),INTENT(in),OPTIONAL :: varkind(:),attrkind(:),anavarkind(:),anaattrkind(:)
+logical,intent(in),optional :: anaonly
 
 if (this%file) then
 
   call vol7d_dballe_importvvns_file(this, var, network, coordmin, coordmax, timei, timef,level,timerange, set_network,&
-   attr,anavar,anaattr, varkind,attrkind,anavarkind,anaattrkind)
+   attr,anavar,anaattr, varkind,attrkind,anavarkind,anaattrkind,anaonly)
 
 else
+  if (optio_log(anaonly)) then
+      call l4f_category_log(this%category,L4F_ERROR,"anaonly=.true. not supported accessing to dba")
+      CALL raise_fatal_error("anaonly=.true. not supported accessing to dba")
+  end if
 
   call vol7d_dballe_importvvns_dba(this, var, network, coordmin, coordmax, timei, timef,level,timerange, set_network,&
    attr,anavar,anaattr, varkind,attrkind,anavarkind,anaattrkind)
@@ -2287,7 +2293,7 @@ end subroutine v7d_dballe_error_handler
 !!
 !!import da DB-all.e
 SUBROUTINE vol7d_dballe_importvvns_file(this, var, network, coordmin, coordmax, timei, timef,level,timerange, set_network,&
- attr,anavar,anaattr, varkind,attrkind,anavarkind,anaattrkind)
+ attr,anavar,anaattr, varkind,attrkind,anavarkind,anaattrkind,anaonly)
 
 TYPE(vol7d_dballe),INTENT(inout) :: this !< oggetto vol7d_dballe
 CHARACTER(len=*),INTENT(in),OPTIONAL :: var(:)
@@ -2298,6 +2304,7 @@ TYPE(vol7d_level),INTENT(in),optional :: level
 TYPE(vol7d_timerange),INTENT(in),optional :: timerange
 CHARACTER(len=*),INTENT(in),OPTIONAL :: attr(:),anavar(:),anaattr(:)
 CHARACTER(len=*),INTENT(in),OPTIONAL :: varkind(:),attrkind(:),anavarkind(:),anaattrkind(:)
+logical,intent(in),optional :: anaonly
 
 !TYPE(vol7d) :: v7d
 CHARACTER(len=SIZE(var)*7) :: varlist
@@ -2305,7 +2312,7 @@ CHARACTER(len=SIZE(attr)*8) :: starvarlist
 CHARACTER(len=6) :: btable
 CHARACTER(len=7) ::starbtable
 
-LOGICAL ::  ldegnet, lattr, lanaattr
+LOGICAL ::  ldegnet, lattr, lanaattr,lanaonly
 integer :: year,month,day,hour,minute,sec
 integer :: rlevel1, rl1,rlevel2, rl2
 integer :: rtimerange, p1, p2,rep_cod
@@ -2351,6 +2358,8 @@ TYPE(vol7d) :: vol7dtmp
 type(record),pointer :: buffer(:),bufferana(:)
 
 !!!  CALL print_info('Estratte dall''archivio '//TRIM(to_char(nobs)) // ' osservazioni')
+
+call optio(anaonly,lanaonly)
 
 IF (PRESENT(set_network)) THEN
    ldegnet = .TRUE.
@@ -2465,24 +2474,28 @@ do while ( N > 0 )
     end if
 
 
-!! TODO attenzione attenzione
-! qui non si capisce cosa succede
-! pare che se var viene omessa, pur essendo tutto optional
-! il test present sia sempre true !!!!!!
-    if (present (var)) then
-      nvar=size(var)
-      found=.false.
-      DO ii = 1, nvar
-        !call l4f_category_log(this%category,L4F_DEBUG,"VARIABILI:"//btable//to_char(var(ii)))
-        if (btable == var(ii)) found =.true.
-      end do
-      if (.not. found) cycle
-    end if
-
-    ! fine test
-
     if (rlevel1 /= 257)then
       ! dati
+
+
+      !! TODO attenzione attenzione
+      ! qui non si capisce cosa succede
+      ! pare che se var viene omessa, pur essendo tutto optional
+      ! il test present sia sempre true !!!!!!
+
+      if (present (var)) then
+        nvar=size(var)
+        found=.false.
+        DO ii = 1, nvar
+                                !call l4f_category_log(this%category,L4F_DEBUG,"VARIABILI:"//btable//to_char(var(ii)))
+          if (btable == var(ii)) found =.true.
+        end do
+        if (.not. found) cycle
+      end if
+      
+      ! fine test
+
+
       nd =nd+1
       call l4f_category_log(this%category,L4F_DEBUG,"numero dati dati:"//to_char(nd)//btable)
 
@@ -2523,6 +2536,17 @@ do while ( N > 0 )
     else
 
       ! ---------------->   anagrafica
+
+      if (present (anavar)) then
+        nanavar=size(anavar)
+        found=.false.
+        DO ii = 1, nanavar
+                                !call l4f_category_log(this%category,L4F_DEBUG,"VARIABILI:"//btable//to_char(var(ii)))
+          if (btable == anavar(ii)) found =.true.
+        end do
+        if (.not. found) cycle
+      end if
+
 
       !ora legge tutti i dati di anagrafica e li mette in bufferana
 
@@ -2672,6 +2696,31 @@ nanavarattrc=0
 CALL init(vol7dtmp)
 
 !print*,"ho fatto init"
+
+
+if (lanaonly)then
+
+  ! qui faccio le operazioni minime per avere solo l'anagrafica utile per certe operazioni
+
+  call vol7d_alloc (vol7dtmp, nana=nana)
+  vol7dtmp%ana=pack_distinct(buffer(:nd)%ana, nana, back=.TRUE.)
+
+  ! Release memory
+  deallocate (buffer)
+  deallocate (bufferana)
+
+  ! Se l'oggetto ha gia` un volume allocato lo fondo con quello estratto
+  !>\todo manca test su associated dei vol*
+  IF (ASSOCIATED(this%vol7d%ana) .AND. ASSOCIATED(this%vol7d%time)) THEN
+    CALL vol7d_merge(this%vol7d, vol7dtmp, sort=.TRUE.)
+  ELSE ! altrimenti lo assegno
+    this%vol7d = vol7dtmp
+  ENDIF
+
+  return
+
+end if
+
 
 call vol7d_alloc (vol7dtmp, &
  nana=nana, ntime=ntime, ntimerange=ntimerange, &

@@ -107,9 +107,12 @@ if (c_e(fileana))then
   ! Chiamo il costruttore della classe vol7d_dballe per l'anagrafica in import
   CALL init(v7d_ana,file=.true.,write=.false.,filename=fileana,&
    categoryappend="anagrafica")
-  CALL import(v7d_ana)
-  CALL vol7d_copy(v7d_ana%vol7d, v7d)
-!  v7d=v7d_ana%vol7d
+  CALL import(v7d_ana,anaonly=.true.)
+
+  call init(v7d)
+  call vol7d_alloc(v7d,nana=size(v7d_ana%vol7d%ana))
+  call vol7d_alloc_vol(v7d)
+  v7d%ana=v7d_ana%vol7d%ana
   CALL delete(v7d_ana)
 
 else
@@ -121,6 +124,8 @@ else
   v7d%ana(1)=ana
 
 end if
+
+call display(v7d)
 
 !trasformation object
 call init(trans, trans_type=trans_type,sub_type=sub_type, categoryappend="trasformation")
