@@ -10,13 +10,13 @@ use getopt_m
 implicit none
 
 integer :: category,ier,i,nana
-character(len=512):: a_name,infile,outfile
+character(len=512):: a_name,infile,outfile,fileana=cmiss
 type (volgrid6d),pointer  :: volgrid(:),volgrid_out(:)
 type(transform_def) :: trans
 type(vol7d) :: v7d
 type(vol7d_ana) :: ana
 type(vol7d),pointer :: vol7d_out(:)
-TYPE(vol7d_dballe) :: v7d_exp
+TYPE(vol7d_dballe) :: v7d_exp,v7d_ana
 doubleprecision :: lon=0.D0,lat=45.D0
 character(len=4) :: format="bufr"
 character(len=80) :: template="generic",trans_type="inter",sub_type="bilin"
@@ -35,7 +35,7 @@ call l4f_category_log(category,L4F_INFO,"inizio")
 
 
 do
-  select case( getopt( "a:b:f:t:v:z:"))
+  select case( getopt( "a:b:c:f:t:v:z:"))
 
   case( char(0))
     exit
@@ -54,6 +54,8 @@ do
       call help()
       call exit(ier)
     end if
+  case( 'c' )
+    fileana=optarg
   case( 'f' )
     format=optarg
   case( 't' )
@@ -97,14 +99,25 @@ end if
 
 call l4f_category_log(category,L4F_INFO,"transforming from file:"//trim(infile))
 call l4f_category_log(category,L4F_INFO,"transforming to   file:"//trim(outfile))
-call l4f_category_log(category,L4F_INFO,"POINT:"//to_char(lon)//to_char(lat))
+!call l4f_category_log(category,L4F_INFO,"POINT:"//to_char(lon)//to_char(lat))
 
-call init(v7d)
-call vol7d_alloc(v7d,nana=1)
-call vol7d_alloc_vol(v7d)
 
-call init(ana,lat=lat,lon=lon)
-v7d%ana(1)=ana
+if (c_e(fileana))then
+
+  ! Chiamo il costruttore della classe vol7d_dballe per l'anagrafica in import
+  CALL init(v7d_ana,file=.true.,write=.false.,filename=fileana,&
+   categoryappend="anagrafica")
+  v7d=v7d_ana%vol7d
+
+else
+
+  call init(v7d)
+  call vol7d_alloc(v7d,nana=1)
+  call vol7d_alloc_vol(v7d)
+  call init(ana,lat=lat,lon=lon)
+  v7d%ana(1)=ana
+
+end if
 
 !trasformation object
 call init(trans, trans_type=trans_type,sub_type=sub_type, categoryappend="trasformation")
@@ -138,14 +151,15 @@ end program getpoint
 subroutine help()
 
 print*,"Grib to bufr/crex trasformation application."
-print*,"Read grib edition 1 and 2 and interpolate data over specified single point"
+print*,"Read grib edition 1 and 2 and interpolate data over specified points"
 print*,""
 print*,""
-print*,"getpoint [-h] [-a lon] [-b lat] [-f format] [-t template] [-v trans_type] [-z sub_type] infile outfile"
+print*,"getpoint [-h] [-a lon] [-c fileana] [-b lat] [-f format] [-t template] [-v trans_type] [-z sub_type] infile outfile"
 print*,""
 print*,"-h         this help message"
-print*,"lon,lat    lon and lat of the target point"
-print*,"format     BUFR/CREX"
+print*,"lon,lat    lon and lat of single target point (in alternative to fileana)"
+print*,"fileana    file BUFR/CREX with geographical information of points to interpolate"
+print*,"format     format of fileout: BUFR/CREX"
 print*,"template   specificando category.subcategory.localcategory oppure un alias"
 print*,"           ('synop', 'metar','temp','generic') forza l'exportazione ad uno specifico template BUFR/CREX"
 print*,"trans_type transformation type; inter for interpolation"
