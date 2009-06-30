@@ -107,7 +107,10 @@ if (c_e(fileana))then
   ! Chiamo il costruttore della classe vol7d_dballe per l'anagrafica in import
   CALL init(v7d_ana,file=.true.,write=.false.,filename=fileana,&
    categoryappend="anagrafica")
-  v7d=v7d_ana%vol7d
+  CALL import(v7d_ana)
+  CALL vol7d_copy(v7d_ana%vol7d, v7d)
+!  v7d=v7d_ana%vol7d
+  CALL delete(v7d_ana)
 
 else
 
