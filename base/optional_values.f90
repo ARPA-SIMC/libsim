@@ -242,7 +242,7 @@ end subroutine soptio_c
 elemental subroutine soptio_log(var,optio_log)
 
 logical,intent(in),optional  :: var !< variable to be checked
-logical,intent(out) :: optio_log !< equal to \a var if present, otherwise equal to the corresponding missing value
+logical,intent(out) :: optio_log !< equal to \a var if present, otherwise equal to .false.
 
 if (present(var))then
   optio_log=var
