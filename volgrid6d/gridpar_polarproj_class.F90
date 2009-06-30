@@ -53,7 +53,7 @@ PRIVATE gridpar_polarproj_delete, gridpar_polarproj_get_val, gridpar_polarproj_s
 
 CONTAINS
 
-FUNCTION gridpar_polarproj_init(latin1, latin2, lov, lad, lon1, lat1, &
+FUNCTION gridpar_polarproj_new(latin1, latin2, lov, lad, lon1, lat1, &
  projection_center_flag) RESULT(this)
 DOUBLE PRECISION,OPTIONAL,INTENT(in) :: latin1, latin2
 DOUBLE PRECISION,OPTIONAL,INTENT(in) :: lov, lad
@@ -62,15 +62,15 @@ INTEGER,OPTIONAL,INTENT(in) :: projection_center_flag
 
 TYPE(gridpar_polarproj) :: this
 
-  this%latin1 = optio_d(latin1)
-  this%latin2 = optio_d(latin2)
-  this%lov = optio_d(lov)
-  this%lad = optio_d(lad)
-  this%lon1 = optio_d(lon1)
-  this%lat1 = optio_d(lat1)
-  this%projection_center_flag = optio_l(projection_center_flag)
+this%latin1 = optio_d(latin1)
+this%latin2 = optio_d(latin2)
+this%lov = optio_d(lov)
+this%lad = optio_d(lad)
+this%lon1 = optio_d(lon1)
+this%lat1 = optio_d(lat1)
+this%projection_center_flag = optio_l(projection_center_flag)
 
-END FUNCTION gridpar_polarproj_init
+END FUNCTION gridpar_polarproj_new
 
 
 SUBROUTINE gridpar_polarproj_delete(this)

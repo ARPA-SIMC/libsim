@@ -627,17 +627,16 @@ IF (PRESENT(type))THEN
   this%grid%type%type = type
 ELSE
   this%grid%type%type = cmiss
-  RETURN
 ENDIF
 
-this%grid%generic = gridpar_generic_init(lon_min, lon_max, &
+this%grid%generic = gridpar_generic_new(lon_min, lon_max, &
  lat_min, lat_max, dx, dy, component_flag)
-this%grid%rotated = gridpar_rotated_init(longitude_south_pole, &
+this%grid%rotated = gridpar_rotated_new(longitude_south_pole, &
  latitude_south_pole, angle_rotation)
-this%grid%stretched = gridpar_stretched_init(longitude_stretch_pole, &
+this%grid%stretched = gridpar_stretched_new(longitude_stretch_pole, &
  latitude_stretch_pole, stretch_factor)
-!tt this%grid%polarproj = gridpar_polarproj_init(latin1, latin2, lov, lad, &
-!tt  lon_min, lat_min, projection_center_flag)
+this%grid%polarproj = gridpar_polarproj_new(latin1, latin2, lov, lad, &
+ lon_min, lat_min, projection_center_flag)
 
 #ifdef DEBUG
 call l4f_category_log(this%category,L4F_DEBUG,"init gtype: "//this%grid%type%type )
@@ -656,7 +655,7 @@ CALL delete(this%dim)
 CALL delete(this%grid%generic)
 CALL delete(this%grid%rotated)
 CALL delete(this%grid%stretched)
-!tt CALL delete(this%grid%polarproj)
+CALL delete(this%grid%polarproj)
 
 this%grid%type%type=cmiss
 
@@ -681,7 +680,7 @@ that%grid%type = this%grid%type
 CALL copy(this%grid%generic, that%grid%generic)
 CALL copy(this%grid%rotated, that%grid%rotated)
 CALL copy(this%grid%stretched, that%grid%stretched)
-!tt CALL copy(this%grid%polarproj, that%grid%polarproj)
+CALL copy(this%grid%polarproj, that%grid%polarproj)
 
 CALL copy(this%dim, that%dim)
 
@@ -937,6 +936,22 @@ CALL write_unit(this%grid%polarproj, unit)
 
 END SUBROUTINE griddim_write_unit
 
+
+!> Generates coordinates of every point of a generic grid from the
+!! grid description. The number of grid points along both direction is
+!! guessed from the shape of x and y arrays, which must be conformal.
+SUBROUTINE griddim_coordinates(this, x, y)
+TYPE(griddim_def),INTENT(in) :: this !< generic grid descriptor
+DOUBLE PRECISION,INTENT(out) :: x(:,:) !< x coordinate of every point, linearly computed between grid extremes
+DOUBLE PRECISION,INTENT(out) :: y(:,:) !< y coordinate of every point, linearly computed between grid extremes, it should have the same shape as x(:,:)
+
+
+CALL gridpar_coordinates(this%grid%generic, x, y)
+
+END SUBROUTINE griddim_coordinates
+
+
+
 #ifdef HAVE_LIBGRIBAPI
 !> Import griddim object from id of the grib loaded in memory.
 !! The griddim object is populated with all the grid information
@@ -949,7 +964,7 @@ INTEGER, INTENT(in) :: gaid !< grib_api id of the grib loaded in memory to impor
 DOUBLE PRECISION :: loFirst, loLast, laFirst, laLast, x1, y1
 INTEGER :: EditionNumber, iScansNegatively, jScansPositively
 
-call init(this)
+CALL init(this)
 
 ! Generic keys
 CALL grib_get(gaid, 'typeOfGrid', this%grid%type%type)
@@ -1406,9 +1421,8 @@ LOGICAL :: res
 res = this%type == that%type .AND. &
  this%generic == that%generic .AND. &
  this%rotated == that%rotated .AND. &
- this%stretched == that%stretched 
-!tt .AND. &
-!tt  this%polarproj == that%polarproj
+ this%stretched == that%stretched .AND. &
+ this%polarproj == that%polarproj
 
 END FUNCTION grid_eq
 

@@ -46,7 +46,7 @@ PRIVATE gridpar_rotated_delete, gridpar_rotated_get_val, gridpar_rotated_set_val
 
 CONTAINS
 
-FUNCTION gridpar_rotated_init(longitude_south_pole, latitude_south_pole, &
+FUNCTION gridpar_rotated_new(longitude_south_pole, latitude_south_pole, &
  angle_rotation) RESULT(this)
 TYPE(gridpar_rotated) :: this
 DOUBLE PRECISION,INTENT(in),OPTIONAL :: longitude_south_pole
@@ -72,7 +72,7 @@ ELSE
   this%angle_rotation = dmiss
 ENDIF
 
-END FUNCTION gridpar_rotated_init
+END FUNCTION gridpar_rotated_new
 
 
 SUBROUTINE gridpar_rotated_delete(this)

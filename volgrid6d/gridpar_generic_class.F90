@@ -56,13 +56,13 @@ INTERFACE display
   MODULE PROCEDURE gridpar_generic_display
 END INTERFACE
 
-PRIVATE gridpar_generic_delete, gridpar_generic_get_val, gridpar_generic_set_val, &
- gridpar_generic_copy, gridpar_generic_eq, &
+PRIVATE gridpar_generic_delete, gridpar_generic_get_val, &
+ gridpar_generic_set_val, gridpar_generic_copy, gridpar_generic_eq, &
  gridpar_generic_read_unit, gridpar_generic_write_unit, gridpar_generic_display
 
 CONTAINS
 
-FUNCTION gridpar_generic_init(x1, x2, y1, y2, &
+FUNCTION gridpar_generic_new(x1, x2, y1, y2, &
  dx, dy, component_flag) RESULT(this)
 !> longitudini e latitudini minime e massime
 DOUBLE PRECISION,OPTIONAL,INTENT(in) :: x1, x2, y1, y2
@@ -125,7 +125,7 @@ ELSE
   this%component_flag = imiss
 ENDIF
 
-END FUNCTION gridpar_generic_init
+END FUNCTION gridpar_generic_new
 
 
 SUBROUTINE gridpar_generic_delete(this)

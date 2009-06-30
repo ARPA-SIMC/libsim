@@ -46,7 +46,7 @@ PRIVATE gridpar_stretched_delete, gridpar_stretched_get_val, gridpar_stretched_s
 
 CONTAINS
 
-FUNCTION gridpar_stretched_init(longitude_stretch_pole, latitude_stretch_pole, &
+FUNCTION gridpar_stretched_new(longitude_stretch_pole, latitude_stretch_pole, &
  stretch_factor) RESULT(this)
 TYPE(gridpar_stretched) :: this
 DOUBLE PRECISION,INTENT(in),OPTIONAL :: longitude_stretch_pole
@@ -72,7 +72,7 @@ ELSE
   this%stretch_factor = dmiss
 ENDIF
 
-END FUNCTION gridpar_stretched_init
+END FUNCTION gridpar_stretched_new
 
 
 SUBROUTINE gridpar_stretched_delete(this)
