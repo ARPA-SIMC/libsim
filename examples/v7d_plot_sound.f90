@@ -12,12 +12,17 @@ use getopt_m
 implicit none
 
 integer :: category,ier
-integer :: wstype=imiss
+integer :: wstype=imiss,ic
 character(len=512):: a_name,infile,outfile,PSTYPE="PS", ORIENT="LANDSCAPE", COLOR="COLOR"
 TYPE(vol7d_dballe) :: v7d_dba
 TYPE(vol7d) :: v7d_profile
 type(ncar_plot) :: plot
 integer   :: time,ana,timerange,network
+
+character(len=20) ::  tcolor(6)=(/'tan','brown','orange','red','black','black'/)
+character(len=20) ::  tdcolor(6)=(/'yellow','green','forest Green','cyan','black','black'/)
+character(len=20) ::  ucolor(6)=(/'sky blue','blue','blue magenta','magenta','black','black'/)
+character(len=20) ::  wcolor(6)=(/'light gray','dark gray','black','violet','black','black'/)
 
 !questa chiamata prende dal launcher il nome univoco
 call l4f_launcher(a_name,a_name_force="readtemp")
@@ -124,20 +129,25 @@ else
   call init(plot,file=outfile,PSTYPE=pstype, ORIENT=orient,COLOR=color)
 end if
 
-do network=1,size(v7d_dba%vol7d%network)
-  do ana=1, size(v7d_dba%vol7d%ana)
-    do time=1, size(v7d_dba%vol7d%time)
-      do timerange=1, size(v7d_dba%vol7d%timerange)
+do ana=1, size(v7d_dba%vol7d%ana)
+  do time=1, size(v7d_dba%vol7d%time)
+    do timerange=1, size(v7d_dba%vol7d%timerange)
+      do network=1,size(v7d_dba%vol7d%network)
 
+        ic=mod(network-1,6)+1       ! cicla sui 6 colori
         call init(v7d_profile)
         call plot_herlofson(plot,logo="Test : S.I.M.C. ARPA Emilia Romagna")
         call vol7d_normalize_vcoord(v7d_dba%vol7d,v7d_profile,ana,time,timerange,network)
-        call plot_vertical_plofiles(plot,v7d_profile,1,1,1,1)
-        call plot_vp_title (plot,v7d_profile,1,1,1,1)
-        CALL FRAME
+
+        call plot_vertical_plofiles(plot,v7d_profile,1,1,1,1,&
+         tcolor=tcolor(ic),tdcolor=tdcolor(ic),&
+         ucolor=ucolor(ic),wcolor=wcolor(ic))
+
+        if (ic == 1) call plot_vp_title (plot,v7d_profile,1,1,1,1,color=tcolor(ic))  !solo primo titolo
         call delete(v7d_profile)
 
       end do
+      CALL FRAME
     end do
   end do
 end do

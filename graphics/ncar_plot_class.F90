@@ -1139,7 +1139,7 @@ return
 end subroutine ncar_plot_vertical_profiles
 
 
-subroutine ncar_plot_vp_title (this,v7d,ana,time,timerange,network)
+subroutine ncar_plot_vp_title (this,v7d,ana,time,timerange,network,color)
 
 
 type(ncar_plot),intent(in)  :: this
@@ -1148,8 +1148,10 @@ integer,intent(in)          :: ana
 integer,intent(in)          :: time
 integer,intent(in)          :: timerange
 integer,intent(in)          :: network
+character(len=*),optional   :: color
+
 real                        :: wmob,wmos,ht
-character(len=100)          :: label,title,nome
+character(len=100)          :: label,title,nome,tmpc,lcolor
 character(len=1)            :: type
 
 integer                     :: ind
@@ -1157,7 +1159,11 @@ TYPE(vol7d_var) ::  var
 doubleprecision :: lon,lat
 
 
-
+if (present(color))then
+  lcolor=color
+else
+  lcolor='blue'
+end if
 
 ! informazioni di anagrafica etc
 
@@ -1209,7 +1215,13 @@ call vol7d_varvect_index(v7d%anavar,var , type=type,index_v=ind)
 
 title=""
 if (c_e(wmob)) title=trim(to_char(int(wmob)))
-if (c_e(wmos)) title=trim(title)//trim(to_char(int(wmos)))
+if (c_e(wmos)) then
+  write (tmpc,'(i3.3)')int(wmos)
+else
+  tmpc="///"
+end if
+
+title=trim(title)//trim(tmpc)
 if (title /= "") title="Station: "//title
 
 call init(var, btable="B07001")    ! HEIGHT OF STATION
@@ -1263,7 +1275,7 @@ label=trim(label)//" "//trim(to_char(v7d%timerange(timerange)))//&
 CALL GSTXAL(1,5)
 call GSCHUP (0.,1.)
 call gschh(0.010)
-call set_color("blue")
+call set_color(trim(lcolor))
 
 
 call gtx (0.1,0.98,trim(nome))
