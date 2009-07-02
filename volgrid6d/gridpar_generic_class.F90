@@ -1,6 +1,7 @@
 #include "config.h"
 MODULE gridpar_generic_class
 USE missing_values
+USE optional_values
 IMPLICIT NONE
 
 !> Tipo derivato che descrive una griglia generica rettangolare.
@@ -82,48 +83,13 @@ INTEGER,OPTIONAL,INTENT(in) :: component_flag
 
 TYPE(gridpar_generic) :: this
 
-
-IF (PRESENT(x1)) THEN
-  this%x1 = x1
-ELSE
-  this%x1 = dmiss
-ENDIF
-
-IF (PRESENT(y1)) THEN
-  this%y1 = y1
-ELSE
-  this%y1 = dmiss
-ENDIF
-
-IF (PRESENT(x2)) THEN
-  this%x2 = x2
-ELSE
-  this%x2 = dmiss
-ENDIF
-
-IF (PRESENT(y2)) THEN
-  this%y2 = y2
-ELSE
-  this%y2 = dmiss
-ENDIF
-
-IF (PRESENT(dx)) THEN
-  this%dx = dx
-ELSE
-  this%dx = dmiss
-ENDIF
-
-IF (PRESENT(dy)) THEN
-  this%dy = dy
-ELSE
-  this%dy = dmiss
-ENDIF
-
-IF (PRESENT(component_flag)) THEN
-  this%component_flag = component_flag
-ELSE
-  this%component_flag = imiss
-ENDIF
+this%x1 = optio_d(x1)
+this%y1 = optio_d(y1)
+this%x2 = optio_d(x2)
+this%y2 = optio_d(y2)
+this%dx = optio_d(dx)
+this%dy = optio_d(dy)
+this%component_flag = optio_l(component_flag)
 
 END FUNCTION gridpar_generic_new
 

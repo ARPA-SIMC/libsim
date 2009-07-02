@@ -951,6 +951,29 @@ CALL gridpar_coordinates(this%grid%generic, x, y)
 END SUBROUTINE griddim_coordinates
 
 
+!> Compute grid steps
+SUBROUTINE griddim_steps(this, nx, ny, dx, dy)
+TYPE(griddim_def), INTENT(in) :: this !< generic grid descriptor
+INTEGER,INTENT(in) :: nx !< number of points along x direction
+INTEGER,INTENT(in) :: ny !< number of points along y direction
+DOUBLE PRECISION,INTENT(out) :: dx !< grid step along x direction
+DOUBLE PRECISION,INTENT(out) :: dy !< grid step along y direction
+
+CALL gridpar_steps(this%grid%generic, nx, ny, dx, dy)
+
+END SUBROUTINE griddim_steps
+
+
+!> Compute and set grid steps
+SUBROUTINE griddim_setsteps(this, nx, ny)
+TYPE(griddim_def), INTENT(inout) :: this !< generic grid descriptor
+INTEGER,INTENT(in) :: nx !< number of points along x direction
+INTEGER,INTENT(in) :: ny !< number of points along y direction
+
+CALL gridpar_setsteps(this%grid%generic, nx, ny)
+
+END SUBROUTINE griddim_setsteps
+
 
 #ifdef HAVE_LIBGRIBAPI
 !> Import griddim object from id of the grib loaded in memory.
@@ -1047,7 +1070,7 @@ CASE ('regular_ll', 'rotated_ll', 'stretched_ll', 'stretched_rotated_ll')
   IF (this%grid%generic%x2-this%grid%generic%x1 < 0) &
    this%grid%generic%x1 = this%grid%generic%x1 - 360.D0
 
-! compute dlon and dlat (should we get them from grib?)
+! compute dx and dy (should we get them from grib?)
   CALL gridpar_setsteps(this%grid%generic, this%dim%nx, this%dim%ny)
 
 ! Keys for polar projections
@@ -1068,6 +1091,11 @@ CASE ('polar_stereographic', 'lambert', 'albers')
   ENDIF
 ! line of view, aka central meridian
   CALL grib_get(gaid,'LoVInDegrees',this%grid%polarproj%lov)
+#ifdef DEBUG
+  CALL l4f_category_log(this%category,L4F_DEBUG, &
+   "griddim_import centralMeridian "//TRIM(to_char(this%grid%polarproj%lov)))
+#endif
+
 ! latitude at which dx and dy are valid
   IF (EditionNumber == 1) THEN
 ! ECMWF (gribex/grib_api) says: Grid lengths are in metres, at the
@@ -1899,7 +1927,7 @@ ELSE IF (this%trans%trans_type == 'boxregrid') THEN
 ELSE IF (this%trans%trans_type == 'inter') THEN
 
 ! set increments in new grid in order for all the baraque to work
-  CALL gridpar_setsteps(out%grid%generic, out%dim%nx, out%dim%ny)
+  CALL griddim_setsteps(out, out%dim%nx, out%dim%ny)
 
   IF (this%trans%inter%sub_type == 'near' .OR. this%trans%inter%sub_type == 'bilin' ) THEN
     
@@ -1924,7 +1952,7 @@ ELSE IF (this%trans%trans_type == 'inter') THEN
        this%inter_yp(this%outnx,this%outny))
 
 ! compute coordinates of input grid
-      CALL gridpar_coordinates(in%grid%generic, this%inter_x, this%inter_y)
+      CALL griddim_coordinates(in, this%inter_x, this%inter_y)
 ! TODO chi mi garantisce che e` stata chiamata la unproj(out)?
 ! compute coordinates of output grid in input system
       CALL proj(in,out%dim%lon,out%dim%lat,this%inter_xp,this%inter_yp)
@@ -2054,7 +2082,7 @@ IF (this%trans%trans_type == 'inter') THEN
 !            this%inter_y(i,j)=lat_min+(((lat_max-lat_min)/dble(this%inny-1))*(j-1))
 !          end do
 !        end do
-      CALL gridpar_coordinates(in%grid%generic, this%inter_x, this%inter_y)
+      CALL griddim_coordinates(in, this%inter_x, this%inter_y)
 
       CALL proj(in,&
        RESHAPE(lon,(/SIZE(lon),1/)),RESHAPE(lat,(/SIZE(lat),1/)),&
@@ -2149,7 +2177,7 @@ IF (this%trans%trans_type == 'inter') THEN
 !        this%inter_y(i,j)=lat_min+(((lat_max-lat_min)/DBLE(this%outny-1))*(j-1))
 !      END DO
 !    END DO
-    CALL gridpar_coordinates(griddim%grid%generic, this%inter_x, this%inter_y)
+    CALL griddim_coordinates(griddim, this%inter_x, this%inter_y)
 
     DEALLOCATE(lon,lat)
 
@@ -2621,7 +2649,7 @@ INTEGER,INTENT(out) :: index_x(:,:), index_y(:,:)
 DOUBLE PRECISION :: xout(this%dim%nx,this%dim%ny), yout(this%dim%nx,this%dim%ny)
 INTEGER :: i, j
 ! compute coordinates of output grid
-CALL gridpar_coordinates(this%grid%generic, xout, yout)
+CALL griddim_coordinates(this, xout, yout)
 
 index_x(:,:) = imiss
 index_x(:,:) = imiss
