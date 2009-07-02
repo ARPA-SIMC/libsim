@@ -810,15 +810,15 @@ end if
 call l4f_category_log(this%category,L4F_INFO,'number of values: '//to_char(numberOfValues))
 call l4f_category_log(this%category,L4F_INFO,'number of points: '//to_char(numberOfPoints))
 
-allocate(lats(numberOfPoints))
-allocate(lons(numberOfPoints))
-call grib_get_data(this%gaid,lats,lons,vector)
-call l4f_category_log(this%category,L4F_INFO,'decoded')
+!allocate(lats(numberOfPoints))
+!allocate(lons(numberOfPoints))
+!call grib_get_data(this%gaid,lats,lons,vector)
+!call l4f_category_log(this%category,L4F_INFO,'decoded')
+!
+!deallocate(lats)
+!deallocate(lons)
 
-deallocate(lats)
-deallocate(lons)
-
-!call grib_get(this%gaid,'values',vector)
+call grib_get(this%gaid,'values',vector)
 
 
 ! Transfer data field changing scanning mode to 64
