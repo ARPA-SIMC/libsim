@@ -138,7 +138,8 @@ DOUBLE PRECISION, INTENT(out) :: x,y
 DOUBLE PRECISION, INTENT(in) :: latin1, latin2, lov, lad
 INTEGER, INTENT(in) :: projection_center_flag
 
-DOUBLE PRECISION  :: n, f, ro0, ro, cs1, cs2, cs3, pollat
+DOUBLE PRECISION  :: n, f, ro0, ro, cs1, cs2, cs3, pollat, angle, cot
+DOUBLE PRECISION, PARAMETER :: epsy = 1.0D-100
 
 IF (IAND(projection_center_flag, 128) == 0) THEN
   pollat = 90.D0*degrad
@@ -149,15 +150,27 @@ cs1 = COS(degrad*latin1)
 cs2 = TAN(pi*.25D0 + degrad*latin1*.5D0)
 
 IF (latin1 == latin2) THEN
-  n = 1.0D0 ! verify that n->1 when latin2->latin1
+  n = SIN(degrad*latin1) ! verify that n->sin(latin1) when latin2->latin1
 ELSE
   n = LOG(cs1/COS(degrad*latin2)) / &
    LOG(TAN(pi*.25D0 + degrad*latin2*.5D0) / cs2)
 ENDIF
 f = cs1*cs2**n/n*rearth ! check that rearth is correct here (only if lad==latin1?)
-ro0 = f/SIN(pi*.25D0 + pollat*.5D0)**n
+angle = pi*.25D0 + pollat*.5D0
+cot = COS(angle)/SIN(angle)
+IF (cot > epsy) THEN
+  ro0 = f*cot**n
+ELSE
+  ro0 = 0.0D0
+ENDIF
 
-ro = f/SIN(pi*.25D0 + degrad*lat*.5D0)**n
+angle = pi*.25D0 + degrad*lat*.5D0
+cot = COS(angle)/SIN(angle)
+IF (cot > epsy) THEN
+  ro = f*cot**n
+ELSE
+  ro = 0.0D0
+ENDIF
 
 cs3 = degrad*n*(lon - lov)
 
@@ -173,7 +186,8 @@ DOUBLE PRECISION, INTENT(out) :: lon,lat
 DOUBLE PRECISION, INTENT(in) :: latin1, latin2, lov, lad
 INTEGER, INTENT(in) :: projection_center_flag
 
-DOUBLE PRECISION  :: n, f, ro0, ro, theta, cs1, cs2, pollat
+DOUBLE PRECISION :: n, f, ro0, ro, theta, cs1, cs2, pollat, angle, cot
+DOUBLE PRECISION, PARAMETER :: epsy = 1.0D-100
 
 ! check, pollat is actually used as the latitude at which
 ! y=0, may be not correct and is not enough for Southern Hemisphere
@@ -186,13 +200,19 @@ cs1 = COS(degrad*latin1)
 cs2 = TAN(pi*.25D0 + degrad*latin1*.5D0)
 
 IF (latin1 == latin2) THEN
-  n = 1.0D0 ! verify limit
+  n = SIN(degrad*latin1) ! verify limit
 ELSE
   n = LOG(cs1/COS(degrad*latin2)) / &
    LOG(TAN(pi*.25D0 + degrad*latin2*.5D0) / cs2)
 ENDIF
 f = cs1*cs2**n/n*rearth ! check that rearth is correct here (only if lad==latin1?)
-ro0 = f/SIN(pi*.25D0 + pollat*.5D0)**n
+angle = pi*.25D0 + pollat*.5D0
+cot = COS(angle)/SIN(angle)
+IF (cot > epsy) THEN
+  ro0 = f*cot**n
+ELSE
+  ro0 = 0.0D0
+ENDIF
 
 ro = SIGN(SQRT(x*x + (ro0-y)*(ro0-y)), n) ! check SIGN
 theta = raddeg*ATAN2(x, ro0-y)
