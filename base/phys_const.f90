@@ -22,9 +22,9 @@ REAL, PARAMETER :: mwater =  28.9644 !< molar mass of water (mol)
 real,parameter  :: rgas = 8314.472 !< universal gas constant R 
 real,parameter  :: mdry = 18.0153 !< molar mass of dry air 
 ! rd= 287.05831986852826 ma si trova rd=287.05
-REAL, PARAMETER :: rd =  rgas/mwater  !< costante dei gas per l'aria secca
+REAL, PARAMETER :: rd =  rgas/mdry  !< costante dei gas per l'aria secca
 ! rv= 461.522816717 ma in vecchi testi   8314.3/18.016=461.495337478
-REAL, PARAMETER :: rv = rgas/mdry !< costante dei gas per il vapore acqueo (\f$JK^{-1}Kg^{-1}\f$)
+REAL, PARAMETER :: rv = rgas/mwater !< costante dei gas per il vapore acqueo (\f$JK^{-1}Kg^{-1}\f$)
 REAL, PARAMETER :: eps0 = rd/rv !< \f$rd/rv\f$
 REAL, PARAMETER :: epsy = rv/rd-1. !< \f$rv/rd -1\f$
 REAL, PARAMETER :: rcp = 2./7. !< rapporto tra calore specifico...?
@@ -63,9 +63,9 @@ DOUBLEPRECISION, PARAMETER :: mwater =  28.9644 !< molar mass of water (mol)
 DOUBLEPRECISION,parameter  :: rgas = 8314.472 !< universal gas constant R 
 DOUBLEPRECISION,parameter  :: mdry = 18.0153 !< molar mass of dry air 
 ! rd= 287.05831986852826 ma si trova rd=287.05
-DOUBLEPRECISION, PARAMETER :: rd =  rgas/mwater  !< costante dei gas per l'aria secca
+DOUBLEPRECISION, PARAMETER :: rd =  rgas/mdry  !< costante dei gas per l'aria secca
 ! rv= 461.522816717 ma in vecchi testi   8314.3/18.016=461.495337478
-DOUBLEPRECISION, PARAMETER :: rv = rgas/mdry !< costante dei gas per il vapore acqueo (\f$JK^{-1}Kg^{-1}\f$)
+DOUBLEPRECISION, PARAMETER :: rv = rgas/mwater !< costante dei gas per il vapore acqueo (\f$JK^{-1}Kg^{-1}\f$)
 DOUBLEPRECISION, PARAMETER :: eps0 = rd/rv !< \f$rd/rv\f$
 DOUBLEPRECISION, PARAMETER :: epsy = rv/rd-1. !< \f$rv/rd -1\f$
 DOUBLEPRECISION, PARAMETER :: rcp = 2./7. !< rapporto tra calore specifico...?
