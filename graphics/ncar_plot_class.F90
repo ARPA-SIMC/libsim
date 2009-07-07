@@ -219,7 +219,7 @@ case ("herlofson" , cmiss )
   pdiag2=700.
   xrotation=-45.
 
-case("helofson-down")
+case("herlofson-down")
 ! herlofson basso
   ptop=500.
   pdown=1050.
