@@ -47,7 +47,7 @@ call display(v7d_dba%vol7d)
 
 !out on ps file
 call init(plot,file="example_ncarg_sounding.ps",&
- PSTYPE="PS", ORIENT="LANDSCAPE",COLOR="COLOR")
+ PSTYPE="PS", ORIENT="PORTRAIT",COLOR="COLOR")
 
 !out on X11 display
 !call init(plot,wstype=8)

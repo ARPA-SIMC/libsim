@@ -53,6 +53,24 @@ INTERFACE plot_vertical_plofiles
 END INTERFACE
 
 
+real,parameter  :: dim_x=0.8,dim_y=0.8,offset_x=0.05,offset_y=0.05
+
+! herlofson
+real  :: ptop=100.,pdown=1050.,tmin=-40.,tmax=40.,pdiag1=850.,pdiag2=700.
+real  :: xrotation=-45.
+!!$
+!!$
+!!$! herlofson basso
+!!$real  :: ptop=500.,pdown=1050.,tmin=-20.,tmax=40.,pdiag1=850.,pdiag2=700.
+!!$real  :: xrotation=-45.
+
+
+!!$!emagramma
+!!$real  :: ptop=100.,pdown=1050.,tmin=-70.,tmax=35.,pdiag1=850.,pdiag2=700.
+!!$real  :: xrotation=0.
+
+
+
 !> \brief plot soundings title
 !!
 !! plot soundings vertical plofiles titles
@@ -157,20 +175,15 @@ end subroutine delete_ncar_plot
 !! Programma grafico per la rappresentazione del sondaggio termodinamico 
 !! dell'atmosfera su di un nomogramma di Herlofson ( detto anche skew-T) 
 !! 
-subroutine ncar_plot_herlofson (this,logo)
+subroutine ncar_plot_herlofson (this,logo,nomogramma)
 
 
 type(ncar_plot),intent(in)  :: this
-character(len=*),intent(in),optional :: logo
+character(len=*),intent(in),optional :: logo,nomogramma
 
-
-real,parameter              :: dim_x=0.8,dim_y=0.8,offset_x=0.1,offset_y=0.1,spazio=0.05
-real,parameter              :: delta_y=1.,ptop=100.,pdown=1050.,tmin=-40.,&
- tmax=40.,pdiag1=850.,pdiag2=700.
-integer,parameter           :: isoig_num=10,std=11
-real,dimension(std),parameter :: pressioni=(/1050.,1000.,850.,700.,&
+real,parameter :: pressioni(11)=(/1050.,1000.,850.,700.,&
  500.,400.,300.,250.,200.,150.,100./)
-real,dimension(isoig_num),parameter :: isoigrom=(/0.1,0.2,0.5,1.,2.,3.,5.,&
+real,parameter :: isoigrom(10)=(/0.1,0.2,0.5,1.,2.,3.,5.,&
  8.,15.,20./)
 
 integer                     :: i,l,ij,k
@@ -183,21 +196,62 @@ real,dimension(6)           :: x_clip,y_clip
 real,dimension(7)           :: x_frame,y_frame
 real                        :: ycord,xcord,ratio,x_min,x_max
 real                        :: tabs,temp,pres,tsad,tt0,t1,t2
-real                        :: delta_icao,psat
+real                        :: delta_icao,psat,htop
 
-character(len=100)          :: label
+character(len=100)          :: label,lnomogramma
 
 
 ! ---------------------------------------------------------------------------------------------
 ! settaggi generali per il grafico
 ! ---------------------------------------------------------------------------------------------
 
+call optio(nomogramma,lnomogramma)
+
+select case(lnomogramma)
+
+case ("herlofson" , cmiss )
+! herlofson
+  ptop=100.
+  pdown=1050.
+  tmin=-40.
+  tmax=40.
+  pdiag1=850.
+  pdiag2=700.
+  xrotation=-45.
+
+case("helofson-down")
+! herlofson basso
+  ptop=500.
+  pdown=1050.
+  tmin=-20.
+  tmax=40.
+  pdiag1=850.
+  pdiag2=700.
+  xrotation=-45.
+
+case("emagramma")
+!emagramma
+  ptop=100.
+  pdown=1050.
+  tmin=-70.
+  tmax=35.
+  pdiag1=850.
+  pdiag2=700.
+  xrotation=0.
+
+case default
+
+  call l4f_category_log(this%category,L4F_ERROR,"errore tipo nomogramma: "//trim(nomogramma))
+  call raise_fatal_error("errore tipo nomogramma: "//trim(nomogramma))
+  
+end select
+
 ratio=real(this%uy-this%ly)/real(this%ux-this%lx)
 
 x_min=x_coord (tmin,tmax,tmin,ptop,pdown,pdown,dim_x,dim_y,ratio,&
- &offset_x,spazio) 
+ &offset_x) 
 x_max=x_coord (tmin,tmax,tmax,ptop,pdown,pdown,dim_x,dim_y,ratio,&
- &offset_x,spazio)
+ &offset_x)
 
 ! ---------------------------------------------------------------------------------------------
 !Isoterme colorate a passi di 10 C
@@ -216,13 +270,13 @@ do l = nint(tmax)-160,nint(tmax),20
   t1=real(l)
   t2=t1+10
   area_fill_x(1)=x_coord (tmin,tmax,t1,ptop,pdown,pdown,dim_x,dim_y,&
-   &ratio,offset_x,spazio)
+   &ratio,offset_x)
   area_fill_x(2)=x_coord (tmin,tmax,t2,ptop,pdown,pdown,dim_x,dim_y,&
-   &ratio,offset_x,spazio)
+   &ratio,offset_x)
   area_fill_x(3)=x_coord (tmin,tmax,t2,ptop,pdown,ptop,dim_x,dim_y,&
-   &ratio,offset_x,spazio)
+   &ratio,offset_x)
   area_fill_x(4)=x_coord (tmin,tmax,t1,ptop,pdown,ptop,dim_x,dim_y,&
-   &ratio,offset_x,spazio)
+   &ratio,offset_x)
   area_fill_x(5)=area_fill_x(1)
 
   call GSFAIS(3)
@@ -239,7 +293,7 @@ call GSFAIS(1)
 
 area_fill_x(1)=0.
 area_fill_x(2)=x_coord (tmin,tmax,tmin,ptop,pdown,pdown,dim_x,dim_y,ratio,&
- &offset_x,spazio)
+ &offset_x)
 area_fill_x(3)=area_fill_x(2)
 area_fill_x(4)=area_fill_x(1)
 area_fill_x(5)=area_fill_x(1)
@@ -255,7 +309,7 @@ call gfa (5,area_fill_x,area_fill_y)
                                 ! pulisco lo sporco prodotto disegnando le isoterme colorate
                                 ! riquadro a destra
 area_fill_x(1)=x_coord (tmin,tmax,tmax,ptop,pdown,pdown,dim_x,dim_y,&
- &ratio,offset_x,spazio)
+ &ratio,offset_x)
 area_fill_x(2)=1.
 area_fill_x(3)=area_fill_x(2)
 area_fill_x(4)=area_fill_x(1)
@@ -279,7 +333,7 @@ p=(/(real(k),k=int(pdown),int(ptop),-5)/)
 
 y=y_coord (p,dim_y,offset_y)
 x=x_coord (tmin,tmax, 0. ,ptop,pdown,p,dim_x,&
-   &dim_y,ratio,offset_x,spazio)
+   &dim_y,ratio,offset_x)
   
 ij=count(x >= x_min  .and. x <= x_max )
 
@@ -297,19 +351,19 @@ call set_color("foreground")
 call gsln (1)
 call GSLWSC(1.)
 
-riga_y(1)=y_coord (pdown+30.,dim_y,offset_y)
 riga_y(2)=y_coord (pdown,dim_y,offset_y)
+riga_y(1)=riga_y(2)-0.01
 
 do l =nint(tmin)+10,nint(tmax)-10,10
   riga_x(1)=x_coord (tmin,tmax,real(l),ptop,pdown,pdown,dim_x,dim_y,&
-   &ratio,offset_x,spazio)
+   &ratio,offset_x)
   riga_x(2)=riga_x(1)
   write(label,'(i0)')l
   call gpl(2,riga_x,riga_y)
   call gtx(riga_x(1),riga_y(1),trim(label))
 end do
 
-call gtx (0.45,0.06,'Temperature [C]')
+call gtx (0.45,0.02,'Temperature [C]')
 
 
 ! ---------------------------------------------------------------------------------------------
@@ -325,16 +379,18 @@ call GSLWSC(1.)
 
 riga_x(1)=x_min-0.01
 riga_x(2)=x_max
-do i=1,std
-  riga_y(1)=y_coord (pressioni(i),dim_y,offset_y)
-  riga_y(2)=riga_y(1)
-  write(label,'(i0)')int(pressioni(i))
-  call gtx(riga_x(1),riga_y(1),trim(label))
-  call gpl(2,riga_x,riga_y)
+do i=1,size(pressioni)
+  if (pressioni(i) >= ptop )then
+    riga_y(1)=y_coord (pressioni(i),dim_y,offset_y)
+    riga_y(2)=riga_y(1)
+    write(label,'(i0)')int(pressioni(i))
+    call gtx(riga_x(1),riga_y(1),trim(label))
+    call gpl(2,riga_x,riga_y)
+  end if
 end do
 
 call GSCHUP (-1.,0.)
-call gtx ( 0.1,0.5,'Pressure [hPa]')
+call gtx ( 0.01,0.5,'Pressure [hPa]')
 
 
 ! ---------------------------------------------------------------------------------------------
@@ -353,10 +409,10 @@ do l=nint(tmax)+140,nint(tmin)-10,-10
   do k=nint(pdown),nint(ptop)+50,-5
     temp=real(l)
     pres=real(k)
-    tabs=tda(temp+t0c,pres)-273.15
+    tabs=tda(temp+t0c,pres)-t0c
     ycord=y_coord (real(k),dim_y,offset_y)
     xcord=x_coord (tmin,tmax,tabs,ptop,pdown,real(k),dim_x,dim_y,&
-     &ratio,offset_x,spazio)
+     &ratio,offset_x)
     if (xcord >= x_min .and. xcord <= x_max)then
       ij=ij+1  
       xx(ij)=xcord
@@ -386,11 +442,7 @@ call gsln (1)
 call GSLWSC(1.)
 
 
-if (ptop < 300)then
-  psat=ptop+75.
-else
-  psat=300.
-end if
+psat=ptop+75.
 
 do l=nint(tmin)+20,nint(tmax)-10,5
   ij=0
@@ -399,7 +451,7 @@ do l=nint(tmin)+20,nint(tmax)-10,5
     tsad = tsa(tt0,real(k))-t0c		 !teta al livello a 1000-delta P
     ycord=y_coord (real(k),dim_y,offset_y)
     xcord=x_coord (tmin,tmax,tsad,ptop,pdown,real(k),dim_x,dim_y,ratio,&
-     &offset_x,spazio)
+     &offset_x)
     if (xcord >= x_min .and. xcord <= x_max )then
       ij=ij+1  
       xx(ij)=xcord
@@ -427,21 +479,17 @@ call set_color("brown")
 call gsln (3)
 call GSLWSC(1.)
 
-if (ptop < 500)then
-  psat=ptop+85.
-else
-  psat=500.
-end if
+psat=ptop+85.
 
 call gschh(0.008)
-do i = 1,isoig_num
+do i = 1,size(isoigrom)
   ij=0
   do k = nint(pdown),nint(psat),-10
     tt0=tmr(isoigrom(i),real(k))-t0c
     ycord=y_coord (real(k),dim_y,offset_y)
     xcord=x_coord (tmin,tmax,tt0,ptop,pdown,real(k),dim_x,dim_y,&
-     &ratio,offset_x,spazio)
-    if (xcord >= x_min .and. xcord <= x_max-.11 )then
+     &ratio,offset_x)
+    if (xcord >= x_min .and. xcord <= x_max-.15 )then
       ij=ij+1  
       xx(ij)=xcord
       yy(ij)=ycord
@@ -463,42 +511,39 @@ call GSLWSC(1.5)
 call gsln (1)
 
 
-if (ptop > 300 )then
-  psat=ptop+50
-else
-  psat=300.
-end if
+psat=max(ptop,300.)
+
 
 yy(1)=y_coord (pdown,dim_y,offset_y)
 xx(1)=coord_prh (tmin,tmax,50.,ptop,pdown,&
- &dim_x,dim_y,ratio,offset_x,spazio)
+ &dim_x,dim_y,ratio,offset_x)
 
 xx(2)=coord_prh (tmin,tmax,50.,ptop,pdown,&
- &dim_x,dim_y,ratio,offset_x,spazio)
+ &dim_x,dim_y,ratio,offset_x)
 yy(2)=y_coord (psat,dim_y,offset_y)
 
 call gpl (2,xx,yy)
 
 
 xx(1)=coord_prh (tmin,tmax,100.,ptop,pdown,&
- &dim_x,dim_y,ratio,offset_x,spazio)
+ &dim_x,dim_y,ratio,offset_x)
 xx(2)=coord_prh (tmin,tmax,100.,ptop,pdown,&
- &dim_x,dim_y,ratio,offset_x,spazio)
+ &dim_x,dim_y,ratio,offset_x)
 
 call gpl (2,xx,yy)
 
 call gsln (3)
 
 xx(1)=coord_prh (tmin,tmax,25.,ptop,pdown,&
- &dim_x,dim_y,ratio,offset_x,spazio)
+ &dim_x,dim_y,ratio,offset_x)
 xx(2)=coord_prh (tmin,tmax,25.,ptop,pdown,&
- &dim_x,dim_y,ratio,offset_x,spazio)
+ &dim_x,dim_y,ratio,offset_x)
 call gpl (2,xx,yy)
 
 xx(1)=coord_prh (tmin,tmax,75.,ptop,pdown,&
- &dim_x,dim_y,ratio,offset_x,spazio)
+ &dim_x,dim_y,ratio,offset_x)
 xx(2)=coord_prh (tmin,tmax,75.,ptop,pdown,&
- &dim_x,dim_y,ratio,offset_x,spazio)
+ &dim_x,dim_y,ratio,offset_x)
 call gpl (2,xx,yy)
 
 
@@ -514,7 +559,7 @@ call gsln (1)
 call GSLWSC(3.)
 
 call herlo_frame (tmin,tmax,ptop,pdown,pdiag1,pdiag2,dim_x,dim_y,ratio,&
- &offset_x,spazio,offset_y,x_frame,x_clip,y_frame,y_clip)
+ &offset_x,offset_y,x_frame,x_clip,y_frame,y_clip)
 
                                 !clipping forma strana diagramma
 call set_color("background")
@@ -544,21 +589,24 @@ call GSLWSC(2.)
 yy(1)=y_coord (pdown,dim_y,offset_y)
 yy(2)=y_coord (ptop,dim_y,offset_y)
 xx(1)=x_coord (tmin,tmax,tmax,ptop,pdown,pdown,dim_x,dim_y,&
- &ratio,offset_x,spazio)
+ &ratio,offset_x)
 xx(2)=xx(1)
 call gpl (2,xx,yy)
 
 
 ! altezze standard
 yy(1)=y_coord (1013.25,dim_y,offset_y)
-yy(2)=y_coord (103.,dim_y,offset_y)
-delta_icao=(yy(2)-yy(1))/16.
+htop=y_coord (103.,dim_y,offset_y)
+delta_icao=(htop-yy(1))/16.
+
+htop=y_coord (ptop,dim_y,offset_y)
 
 xx(2)=xx(2)+0.005
 
 call GSLWSC(1.)
 
 do l =0,16
+  if ( yy(1) > htop ) exit
   yy(2)=yy(1)
   call gpl (2,xx,yy)
   write(label,'(i0)')l
@@ -568,7 +616,7 @@ end do
 
 
 xx(1)=x_coord (tmin,tmax,tmax-0.5,ptop,pdown,pdown,dim_x,dim_y,&
- &ratio,offset_x,spazio)
+ &ratio,offset_x)
 CALL GSTXAL(2,5)
 call GSCHUP (-1.,0.)
 call gtx ( xx(1),0.5,'HEIGHT [Km] - standard I.C.A.O. -')
@@ -581,7 +629,7 @@ call GSCHUP (0.,1.)
 call gschh(0.010)
 call set_color("blue")
 
-if (present(logo)) call gtx ( 0.9,0.02,trim(logo))
+if (present(logo)) call gtx ( 0.9,0.01,trim(logo))
 
 return
 
@@ -598,7 +646,7 @@ contains
 !------------------------------------------------------------------------
 
 subroutine herlo_frame (tmin,tmax,ptop,pdown,pdiag1,pdiag2,&
-     &dim_x,dim_y,ratio,offset_x,spazio,offset_y,frame_x,&
+     &dim_x,dim_y,ratio,offset_x,offset_y,frame_x,&
      &x_clip,frame_y,y_clip)
  
 ! Subroutine per il plottaggio del frame del nomogramma di Herlofson
@@ -610,25 +658,25 @@ subroutine herlo_frame (tmin,tmax,ptop,pdown,pdiag1,pdiag2,&
 !  calcolo coordinate del frame del nomogramma :
 
 real,intent(in)::tmin,tmax,ptop,pdown,pdiag1,pdiag2,dim_x,dim_y,ratio,&
- &offset_x,spazio,offset_y
+ &offset_x,offset_y
 real,dimension(7),intent(out)::frame_x,frame_y
 real,dimension(6),intent(out)::x_clip,y_clip
 
 frame_x(1)=x_coord (tmin,tmax,tmin,ptop,pdown,pdown,dim_x,dim_y,&
- &ratio,offset_x,spazio)
+ &ratio,offset_x)
 frame_y(1)=y_coord (pdown,dim_y,offset_y)
 frame_x(2)=x_coord (tmin,tmax,tmax,ptop,pdown,pdown,dim_x,dim_y,&
- &ratio,offset_x,spazio)
+ &ratio,offset_x)
 frame_y(2)=y_coord (pdown,dim_y,offset_y)
 frame_x(3)=frame_x(2)
 frame_y(3)=y_coord (pdiag1,dim_y,offset_y)   
 frame_x(4)=x_coord (tmin,tmax,tmax-14,ptop,pdown,pdown,dim_x,dim_y,ratio,&
-       &offset_x,spazio)
+       &offset_x)
 frame_y(4)=y_coord (pdiag2,dim_y,offset_y)   
 frame_x(5)=frame_x(4)
 frame_y(5)=y_coord (ptop,dim_y,offset_y)   
 frame_x(6)=x_coord (tmin,tmax,tmin,ptop,pdown,pdown,dim_x,dim_y,&
- &ratio,offset_x,spazio)
+ &ratio,offset_x)
 frame_y(6)=frame_y(5)
 frame_y(7)=frame_y(1)
 frame_x(7)=frame_x(1)
@@ -676,10 +724,6 @@ integer,intent(in)          :: network
 character (len=*),intent(in),optional :: tcolor,tdcolor,ucolor,wcolor
 
 TYPE(vol7d_var) ::  var
-
-real,parameter              :: dim_x=0.8,dim_y=0.8,offset_x=0.1,offset_y=0.1,spazio=0.05
-real,parameter              :: ptop=100.,pdown=1050.,tmin=-40.,&
- tmax=40.,pdiag1=850.,pdiag2=700.
 
 integer                     :: l,levP,levT,ind
 
@@ -1035,7 +1079,7 @@ levT=count(c_e(r_tt).and. r_pr >= ptop)
 if(levT > 1) then
   
   call gpl(levT,&
-   pack(x_coord(tmin,tmax,r_tt-t0c,ptop,pdown,r_pr,dim_x,dim_y,ratio,offset_x,spazio),&
+   pack(x_coord(tmin,tmax,r_tt-t0c,ptop,pdown,r_pr,dim_x,dim_y,ratio,offset_x),&
    (c_e(r_tt).and. r_pr >= ptop)),&
    pack(y_coord(r_pr,dim_y,offset_y),(c_e(r_tt).and. r_pr >= ptop)))
   
@@ -1056,7 +1100,7 @@ levT=count(c_e(r_tr).and. r_pr >= ptop)
 if(levT > 1) then
   
   call gpl(levT,&
-   pack(x_coord(tmin,tmax,r_tr-t0c,ptop,pdown,r_pr,dim_x,dim_y,ratio,offset_x,spazio),&
+   pack(x_coord(tmin,tmax,r_tr-t0c,ptop,pdown,r_pr,dim_x,dim_y,ratio,offset_x),&
    (c_e(r_tr).and. r_pr >= ptop)),&
    pack(y_coord(r_pr,dim_y,offset_y),(c_e(r_tr).and. r_pr >= ptop)))
   
@@ -1073,18 +1117,13 @@ call GSLWSC(2.)
 call gsln (1)
 
 
-if (ptop > 300 )then
-  psat=ptop+50
-else
-  psat=300.
-end if
-
+psat=max(ptop,300.)
 
 levT=count(c_e(r_ur).and. r_pr >= psat)
 if(levT > 1) then
   
   call gpl(levT,&
-   pack(coord_prh(tmin,tmax,r_ur,ptop,pdown,dim_x,dim_y,ratio,offset_x,spazio),&
+   pack(coord_prh(tmin,tmax,r_ur,ptop,pdown,dim_x,dim_y,ratio,offset_x),&
    (c_e(r_ur).and. r_pr >= psat)),&
    pack(y_coord(r_pr,dim_y,offset_y),(c_e(r_ur).and. r_pr >= psat)))
 
@@ -1099,8 +1138,8 @@ call GSLWSC(2.5)
 ! asse verticale
 yy(1)=y_coord (pdown,dim_y,offset_y)
 yy(2)=y_coord (ptop,dim_y,offset_y)
-xx(1)=x_coord (tmin,tmax,tmax+9.,ptop,pdown,pdown,&
- &dim_x,dim_y,ratio,offset_x,spazio)
+xx(1)=x_coord (tmin,tmax,tmax,ptop,pdown,pdown,&
+ &dim_x,dim_y,ratio,offset_x)+0.09
 xx(2)=xx(1)
 call gpl (2,xx,yy)
 
@@ -1117,8 +1156,8 @@ else
 end if
 call GSLWSC(1.5)
 
-xww=x_coord (tmin,tmax,tmax+9.,ptop,pdown,pdown,&
- dim_x,dim_y,ratio,offset_x,spazio)
+xww=x_coord (tmin,tmax,tmax,ptop,pdown,pdown,&
+ dim_x,dim_y,ratio,offset_x)+0.09
 
 !imposta lo standar synottico per la provenienza del vento
 CALL WMSETI("col",color_index(color))
@@ -1330,21 +1369,18 @@ elemental real function y_coord (p,dim_y,offset_y)
 
 real,intent(in)  :: p,dim_y,offset_y
 
-real::ptop_herlo,pdown_herlo,delta_herlo
-parameter (ptop_herlo=100.,pdown_herlo=1050.,&
- &delta_herlo=pdown_herlo-ptop_herlo)
 real::porig,pmax,pres,yy
   
 !!$  work=ptop_herlo+delta_herlo*(p-ptop)/(pdown-ptop)
 
 if (c_e(p))then
-  porig=(log(pdown_herlo/pdown_herlo))
-  pmax=(log(pdown_herlo/ptop_herlo))
-  pres=(log(pdown_herlo/P))
+  porig=(log(pdown/pdown))
+  pmax=(log(pdown/ptop))
+  pres=(log(pdown/P))
   
-  yy=((pres-porig)/(pmax-porig))
+  yy=((pres-porig)/(pmax-porig))*dim_y
   
-  y_coord=yy*dim_y+offset_y
+  y_coord=yy+offset_y
 
   !!$  porig=32.182-44.061*ALOG10(pdown) 
 
@@ -1362,49 +1398,81 @@ end function y_coord
 !------------------------------------------------------------------------------
 
 elemental real function x_coord (tmin,tmax,t,ptop,pdown,p,dim_x,dim_y,ratio,&
+     &offset_x)
+
+real,intent(in) :: tmin,tmax,t,ptop,pdown,p,dim_x,dim_y,ratio,offset_x
+
+real :: xx,porig,pmax,pres,yy
+real :: incli
+
+incli=xrotation*(pi/180.) ! gradi in radianti
+
+if(c_e(t).and.c_e(p))then
+  porig=(log(pdown/pdown))
+  pmax=(log(pdown/ptop))
+  pres=(log(pdown/p))
+    
+  yy=((pres-porig)/(pmax-porig))*dim_y
+
+  xx=(t-tmin)/(tmax-tmin)*dim_x/ratio
+
+ ! devo riscalare per adattarmi alle espansioni dovute alla rotazione dell'asse
+  xx=xx*cos(45.*(pi/180.)+incli)
+
+  x_coord = xx * cos(incli) - yy * sin(incli) !rotazione dell'angolo incli
+
+  x_coord=x_coord+offset_x
+  
+else
+
+  x_coord=rmiss
+
+end if
+return 
+
+end function x_coord
+
+
+
+elemental real function x_coord_old (tmin,tmax,t,ptop,pdown,p,dim_x,dim_y,ratio,&
      &offset_x,spazio)
 
 real,intent(in) :: tmin,tmax,t,ptop,pdown,p,dim_x,dim_y,ratio,offset_x,spazio
 
-  real::ptop_herlo,pdown_herlo,delta_herlo
-  parameter (ptop_herlo=100.,pdown_herlo=1050.,&
-       &delta_herlo=pdown_herlo-ptop_herlo)
-  real::xx,porig,pmax,pres,yy,y
-  real,parameter::d2r=(3.145714/180.)  ! per tappare le obsolete sind-cosd-tand
-  real::torig,t_max,temp
- 
+real::xx,porig,pmax,pres,yy,y
+real::torig,t_max,temp
+real,parameter :: incli=45.*(pi/180.) ! 45 gradi in radianti
 
-  if(c_e(t))then
+if(c_e(t))then
 
-    torig=sin(45*d2r)*tmin
-    t_max=sin(45*d2r)*tmax
-    temp=sin(45*d2r)*t
+  torig=sin(incli)*tmin
+  t_max=sin(incli)*tmax
+  temp=sin(incli)*t
+
+  xx=(temp-torig)/(t_max-torig)
+  xx=xx*dim_x                   !coordinata grafico a pdown
+
+  porig=(log(pdown/pdown))/cpd
+  pmax=(log(pdown/ptop))/cpd
+  pres=(log(pdown/p))/cpd
     
-    xx=(temp-torig)/(t_max-torig)
-    xx=xx*dim_x                   !coordinata grafico a pdown
+  yy=((pres-porig)/(pmax-porig))
+  y=yy*dim_y
+  x_coord_old=(xx+y)*ratio+offset_x+spazio
   
-    porig=(log(pdown/pdown))/2.6
-    pmax=(log(pdown/ptop))/2.6
-    pres=(log(pdown/p))/2.6
-    
-    yy=((pres-porig)/(pmax-porig))
-    Y=yy*dim_y
-    x_coord=(xx+y)*ratio+offset_x+spazio
-    
-  else
+else
 
-    x_coord=rmiss
+  x_coord_old=rmiss
 
-  end if
-  return 
+end if
+return 
 
-end function x_coord
+end function x_coord_old
 
 !---------------------------------------------------------------
 
-!TOLTA variabile p
 elemental real function coord_prh (tmin,tmax,rh,ptop,pdown,dim_x,dim_y,&
-     &ratio,offset_x,spazio)
+     &ratio,offset_x)
 
 ! funzione ancillare nomogramam di herlofson
 !
@@ -1413,7 +1481,7 @@ elemental real function coord_prh (tmin,tmax,rh,ptop,pdown,dim_x,dim_y,&
 !-----------------------------------------------------------------------
 
 real, intent(in) ::tmin,tmax,ptop,pdown,dim_x,dim_y,&
- ratio,offset_x,spazio,rh
+ ratio,offset_x,rh
 
 real::fine,orig,delta_x,xx  !variabili locali
 
@@ -1421,14 +1489,14 @@ real::fine,orig,delta_x,xx  !variabili locali
 if (c_e(rh))then
 
   orig= x_coord (tmin,tmax,tmin,ptop,pdown,pdown,dim_x,dim_y,ratio,&
-   &offset_x,spazio)
+   &offset_x)
   fine= x_coord (tmin,tmax,tmin+15,ptop,pdown,pdown,dim_x,dim_y,&
-   &ratio,offset_x,spazio)
+   &ratio,offset_x)
   delta_x=fine-orig
     
   xx=(rh/100.)*delta_x
     
-  coord_prh=xx*ratio+offset_x+spazio
+  coord_prh=xx*ratio+offset_x
 
 else
 

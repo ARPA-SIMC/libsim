@@ -14,6 +14,7 @@ implicit none
 integer :: category,ier
 integer :: wstype=imiss,ic
 character(len=512):: a_name,infile,outfile,PSTYPE="PS", ORIENT="LANDSCAPE", COLOR="COLOR"
+character(len=100) :: nomogramma
 TYPE(vol7d_dballe) :: v7d_dba
 TYPE(vol7d) :: v7d_profile
 type(ncar_plot) :: plot
@@ -36,7 +37,7 @@ category=l4f_category_get(a_name//".main")
 call l4f_category_log(category,L4F_INFO,"inizio")
 
 do
-  select case( getopt( "w:p:o:c:h"))
+  select case( getopt( "w:p:o:c:n:h"))
 
   case( char(0))
     exit
@@ -72,6 +73,9 @@ do
       call help()
       call exit(ier)
     end if
+
+  case( 'n' )
+    nomogramma=optarg
 
   case( 'h' )
     call help()
@@ -136,7 +140,7 @@ do ana=1, size(v7d_dba%vol7d%ana)
 
         ic=mod(network-1,6)+1       ! cicla sui 6 colori
         call init(v7d_profile)
-        call plot_herlofson(plot,logo="Test : S.I.M.C. ARPA Emilia Romagna")
+        call plot_herlofson(plot,logo="Test : S.I.M.C. ARPA Emilia Romagna",nomogramma=nomogramma)
         call vol7d_normalize_vcoord(v7d_dba%vol7d,v7d_profile,ana,time,timerange,network)
 
         call plot_vertical_plofiles(plot,v7d_profile,1,1,1,1,&
@@ -170,7 +174,7 @@ subroutine help()
 print*,"Plot herlofson diagram  from bufr/crex file."
 print*,""
 print*,""
-print*,"v7d_plt_sound [-h] [-w wstype] [-p PSTYPE] [-o ORIENT] [-c COLOR]  infile outfile"
+print*,"v7d_plt_sound [-h] [-w wstype] [-p PSTYPE] [-o ORIENT] [-c COLOR] [-n nomogramma] infile outfile"
 print*,""
 print*,"-h         this help message"
 print*,"wstype     work station type (see ncar GKS manuals - wstype=8 X11 display)"
@@ -180,9 +184,10 @@ print*,""
 print*,"pstype     'PS', 'EPS', or 'EPSI'"
 print*,"orient     'PORTRAIT' or 'LANDSCAPE'"
 print*,"color      'COLOR' or 'MONOCHROME'" 
+print*,"nomogramma 'tipo di nomogramma aerologico: herlofson//herlofson-down//emagramma'"
 print*,""
 print*,""
-print *,"default :  pstype='PS' orient='LANDSCAPE' clor='COLOR'"
+print *,"default :  pstype='PS' orient='LANDSCAPE' clor='COLOR' nomogramma='herlofson'"
 end subroutine help
 
 
