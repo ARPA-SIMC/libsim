@@ -53,7 +53,7 @@ INTERFACE plot_vertical_plofiles
 END INTERFACE
 
 
-real,parameter  :: dim_x=0.8,dim_y=0.8,offset_x=0.05,offset_y=0.05
+real,parameter  :: dim_x=0.8,dim_y=0.8,offset_x=0.05,offset_y=0.05,ptopu=300.
 
 ! herlofson
 real  :: ptop=100.,pdown=1050.,tmin=-40.,tmax=40.,pdiag1=850.,pdiag2=700.
@@ -194,7 +194,7 @@ real,allocatable            :: x(:),y(:),p(:)
 real,dimension(300)         :: xx,yy
 real,dimension(6)           :: x_clip,y_clip
 real,dimension(7)           :: x_frame,y_frame
-real                        :: ycord,xcord,ratio,x_min,x_max
+real                        :: ycord,xcord,ratio,x_min,x_max,x_minh,y_maxh,xtest
 real                        :: tabs,temp,pres,tsad,tt0,t1,t2
 real                        :: delta_icao,psat,htop
 
@@ -234,7 +234,17 @@ case("emagramma")
   ptop=100.
   pdown=1050.
   tmin=-70.
-  tmax=35.
+  tmax=40.
+  pdiag1=850.
+  pdiag2=700.
+  xrotation=0.
+
+case("emagramma-down")
+!emagramma
+  ptop=500.
+  pdown=1050.
+  tmin=-60.
+  tmax=40.
   pdiag1=850.
   pdiag2=700.
   xrotation=0.
@@ -250,8 +260,16 @@ ratio=real(this%uy-this%ly)/real(this%ux-this%lx)
 
 x_min=x_coord (tmin,tmax,tmin,ptop,pdown,pdown,dim_x,dim_y,ratio,&
  &offset_x) 
+
+x_minh=coord_prh (tmin,tmax,100.,ptop,pdown,&
+ &dim_x,dim_y,ratio,offset_x)+0.01
+
 x_max=x_coord (tmin,tmax,tmax,ptop,pdown,pdown,dim_x,dim_y,ratio,&
  &offset_x)
+
+psat=max(ptop,ptopu)
+y_maxh=y_coord (psat,dim_y,offset_y)
+
 
 ! ---------------------------------------------------------------------------------------------
 !Isoterme colorate a passi di 10 C
@@ -354,7 +372,7 @@ call GSLWSC(1.)
 riga_y(2)=y_coord (pdown,dim_y,offset_y)
 riga_y(1)=riga_y(2)-0.01
 
-do l =nint(tmin)+10,nint(tmax)-10,10
+do l =nint(tmin),nint(tmax),10
   riga_x(1)=x_coord (tmin,tmax,real(l),ptop,pdown,pdown,dim_x,dim_y,&
    &ratio,offset_x)
   riga_x(2)=riga_x(1)
@@ -413,15 +431,21 @@ do l=nint(tmax)+140,nint(tmin)-10,-10
     ycord=y_coord (real(k),dim_y,offset_y)
     xcord=x_coord (tmin,tmax,tabs,ptop,pdown,real(k),dim_x,dim_y,&
      &ratio,offset_x)
-    if (xcord >= x_min .and. xcord <= x_max)then
+    if (ycord < y_maxh )then
+      xtest=x_minh
+    else
+      xtest=x_min
+    end if
+    if (xcord >= xtest .and. xcord <= x_max)then
       ij=ij+1  
       xx(ij)=xcord
       yy(ij)=ycord
     end if
   end do
   if (ij > 1 )then
-    call gpl (ij,xx,yy)
-    if ( l >= tmax-10 .and. l <= tmax+100 )then
+!    if ( l >= tmax-10 .and. l <= tmax+100 )then
+    if (  l <= tmax+100 )then
+      call gpl (ij,xx,yy)
       write(label,'(i0)')l
       call gtx(xx(ij),yy(ij),trim(label))
     end if
@@ -452,15 +476,21 @@ do l=nint(tmin)+20,nint(tmax)-10,5
     ycord=y_coord (real(k),dim_y,offset_y)
     xcord=x_coord (tmin,tmax,tsad,ptop,pdown,real(k),dim_x,dim_y,ratio,&
      &offset_x)
-    if (xcord >= x_min .and. xcord <= x_max )then
+    if (ycord < y_maxh )then
+      xtest=x_minh
+    else
+      xtest=x_min
+    end if
+    if (xcord >= xtest .and. xcord <= x_max )then
       ij=ij+1  
       xx(ij)=xcord
       yy(ij)=ycord
     end if
   end do
   if (ij > 1 )then
-    call gpl (ij,xx,yy)
-    if ( l >= tmin+35 .and. l <= tmax-10)then
+!    if ( l >= tmin+35 .and. l <= tmax-10)then
+    if (  l <= tmax-10)then
+      call gpl (ij,xx,yy)
       write(label,'(i0)')l
       call gtx(xx(ij),yy(ij),trim(label))
     end if
@@ -506,31 +536,47 @@ end do
 ! Umidità relativa
 ! ---------------------------------------------------------------------------------------------
 
+psat=max(ptop,ptopu)
+
+
+!ripulisco l'area per l'umidita'
+
+xx(1)=coord_prh (tmin,tmax,0.,ptop,pdown,&
+ &dim_x,dim_y,ratio,offset_x)
+yy(1)=y_coord (pdown,dim_y,offset_y)
+
+xx(2)=xx(1)
+yy(2)=y_coord (psat,dim_y,offset_y)
+
+xx(3)=coord_prh (tmin,tmax,100.,ptop,pdown,&
+ &dim_x,dim_y,ratio,offset_x)
+yy(3)=yy(2)
+
+xx(4)=xx(3)
+yy(4)=yy(1)
+
+call set_color("background")
+call GSFAIS(1)
+
+call gfa (4,xx(1:4),yy(1:4))
+
+
+!disegno gli assi
 call set_color("ever-green1")
 call GSLWSC(1.5)
 call gsln (1)
 
-
-psat=max(ptop,300.)
-
-
-yy(1)=y_coord (pdown,dim_y,offset_y)
 xx(1)=coord_prh (tmin,tmax,50.,ptop,pdown,&
  &dim_x,dim_y,ratio,offset_x)
+xx(2)=xx(1)
 
-xx(2)=coord_prh (tmin,tmax,50.,ptop,pdown,&
+call gpl (2,xx(1:2),yy(1:2))
+
+xx(3)=coord_prh (tmin,tmax,100.,ptop,pdown,&
  &dim_x,dim_y,ratio,offset_x)
-yy(2)=y_coord (psat,dim_y,offset_y)
+xx(4)=xx(3)
 
-call gpl (2,xx,yy)
-
-
-xx(1)=coord_prh (tmin,tmax,100.,ptop,pdown,&
- &dim_x,dim_y,ratio,offset_x)
-xx(2)=coord_prh (tmin,tmax,100.,ptop,pdown,&
- &dim_x,dim_y,ratio,offset_x)
-
-call gpl (2,xx,yy)
+call gpl (2,xx(3:4),yy(3:4))
 
 call gsln (3)
 

@@ -20,10 +20,10 @@ TYPE(vol7d) :: v7d_profile
 type(ncar_plot) :: plot
 integer   :: time,ana,timerange,network
 
-character(len=20) ::  tcolor(6)=(/'tan','brown','orange','red','black','black'/)
-character(len=20) ::  tdcolor(6)=(/'yellow','green','forest Green','cyan','black','black'/)
+character(len=20) ::  tcolor(6)=(/'brown','green','red','black','black','tan'/)
+character(len=20) ::  tdcolor(6)=(/'orange','forest Green','cyan','black','black','yellow'/)
 character(len=20) ::  ucolor(6)=(/'sky blue','blue','blue magenta','magenta','black','black'/)
-character(len=20) ::  wcolor(6)=(/'light gray','dark gray','black','violet','black','black'/)
+character(len=20) ::  wcolor(6)=(/'black','light gray','dark gray','black','violet','green'/)
 
 !questa chiamata prende dal launcher il nome univoco
 call l4f_launcher(a_name,a_name_force="readtemp")
@@ -187,7 +187,7 @@ print*,""
 print*,"pstype     'PS', 'EPS', or 'EPSI'"
 print*,"orient     'PORTRAIT' or 'LANDSCAPE'"
 print*,"color      'COLOR' or 'MONOCHROME'" 
-print*,"nomogramma 'tipo di nomogramma aerologico: herlofson//herlofson-down//emagramma'"
+print*,"nomogramma 'tipo di nomogramma aerologico: herlofson//herlofson-down//emagramma//emagramma-down'"
 print*,"logo       'logo to print in footer'"
 print*,""
 print*,""
