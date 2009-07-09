@@ -78,10 +78,17 @@ INTERFACE plot_vp_title
   MODULE PROCEDURE ncar_plot_vp_title
 END INTERFACE
 
+!> \brief plot soundings legend
+!!
+!! plot soundings vertical plofiles legend
+INTERFACE plot_vp_legend
+  MODULE PROCEDURE ncar_plot_vp_legend
+END INTERFACE
+
 
 
 private
-public ncar_plot,init,delete,plot_herlofson,plot_vertical_plofiles,plot_vp_title
+public ncar_plot,init,delete,plot_herlofson,plot_vertical_plofiles,plot_vp_title,plot_vp_legend
 
 
 contains
@@ -225,8 +232,8 @@ case("herlofson-down")
   pdown=1050.
   tmin=-20.
   tmax=40.
-  pdiag1=850.
-  pdiag2=700.
+  pdiag1=500.
+  pdiag2=500.
   xrotation=-45.
 
 case("emagramma")
@@ -1370,6 +1377,67 @@ call gtx (0.1,0.94,trim(label))
 return
 
 end subroutine ncar_plot_vp_title
+
+
+subroutine ncar_plot_vp_legend (this,v7d,ana,time,timerange,network,color,position)
+
+
+type(ncar_plot),intent(in)  :: this
+type(vol7d),intent(in)      :: v7d
+integer,intent(in)          :: ana
+integer,intent(in)          :: time
+integer,intent(in)          :: timerange
+integer,intent(in)          :: network
+character(len=*),optional   :: color
+integer,optional            :: position
+
+integer                     :: lposition
+real                        :: wmob,wmos,ht
+character(len=100)          :: label,title,nome,tmpc,lcolor
+character(len=1)            :: type
+
+integer                     :: ind
+TYPE(vol7d_var) ::  var
+doubleprecision :: lon,lat
+
+
+if (present(color))then
+  lcolor=color
+else
+  lcolor='blue'
+end if
+
+if (present(position))then
+  lposition=position
+else
+  lposition=1
+end if
+
+! informazioni di anagrafica etc
+
+!!$ dimensioni di vol7d
+!!$    * anagrafica
+!!$    * livello verticale
+!!$    * variabile di dati
+!!$    * network
+
+label=trim(to_char(v7d%network(network)))
+
+!scrivo header
+
+CALL GSTXAL(1,5)
+call GSCHUP (0.,1.)
+call gschh(0.010)
+call set_color(trim(lcolor))
+
+
+call gtx (0.5+(0.1*(lposition-1)),0.94,trim(label))
+
+return
+
+end subroutine ncar_plot_vp_legend
+
+
 
 
 subroutine set_color(color)

@@ -139,11 +139,13 @@ end if
 do ana=1, size(v7d_dba%vol7d%ana)
   do time=1, size(v7d_dba%vol7d%time)
     do timerange=1, size(v7d_dba%vol7d%timerange)
+
+      call plot_herlofson(plot,logo=logo,nomogramma=nomogramma)
+
       do network=1,size(v7d_dba%vol7d%network)
 
         ic=mod(network-1,6)+1       ! cicla sui 6 colori
         call init(v7d_profile)
-        call plot_herlofson(plot,logo=logo,nomogramma=nomogramma)
         call vol7d_normalize_vcoord(v7d_dba%vol7d,v7d_profile,ana,time,timerange,network)
 
         call plot_vertical_plofiles(plot,v7d_profile,1,1,1,1,&
@@ -151,6 +153,7 @@ do ana=1, size(v7d_dba%vol7d%ana)
          ucolor=ucolor(ic),wcolor=wcolor(ic))
 
         if (ic == 1) call plot_vp_title (plot,v7d_profile,1,1,1,1,color=tcolor(ic))  !solo primo titolo
+        call plot_vp_legend (plot,v7d_profile,1,1,1,1,color=tcolor(ic),position=ic)  ! visulizza rete
         call delete(v7d_profile)
 
       end do
