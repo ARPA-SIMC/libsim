@@ -1145,10 +1145,10 @@ CASE ('polar_stereographic', 'lambert', 'albers')
   ENDIF
   IF (jScansPositively == 0) THEN
     this%grid%generic%y2 = y1
-    this%grid%generic%y1 = y1 - this%grid%generic%dx*DBLE(this%dim%nx - 1)
+    this%grid%generic%y1 = y1 - this%grid%generic%dy*DBLE(this%dim%ny - 1)
   ELSE
     this%grid%generic%y1 = y1
-    this%grid%generic%y2 = y1 + this%grid%generic%dx*DBLE(this%dim%nx - 1)
+    this%grid%generic%y2 = y1 + this%grid%generic%dy*DBLE(this%dim%ny - 1)
   ENDIF
 ! keep these values for personal pleasure
   this%grid%polarproj%lon1 = loFirst
