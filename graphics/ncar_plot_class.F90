@@ -220,7 +220,7 @@ case ("herlofson" , cmiss )
 ! herlofson
   ptop=100.
   pdown=1050.
-  tmin=-40.
+  tmin=-50.
   tmax=40.
   pdiag1=850.
   pdiag2=700.
@@ -1118,6 +1118,16 @@ if (.not. any(c_e(u)) .and. .not. any(c_e(v))) then
 
 end if
 
+!!$print*,"sondaggio"
+!!$do l=1,size(r_tt)
+!!$  if (c_e(r_tt(l)) .and. c_e(r_tr(l))) then
+!!$    print*,l,r_tt(l),r_tr(l),(r_tt(l)-r_tr(l)),r_ur(l)
+!!$    if (r_tt(l)-r_tr(l) < 0.) then
+!!$      print *,"errore"
+!!$    end if
+!!$  end if
+!!$enddo
+
 
 ! disegno la temperatura
 if (present (tcolor))then
@@ -1243,10 +1253,10 @@ integer,intent(in)          :: network
 character(len=*),optional   :: color
 
 real                        :: wmob,wmos,ht
-character(len=100)          :: label,title,nome,tmpc,lcolor
+character(len=100)          :: title,nome,tmpc,lcolor
 character(len=1)            :: type
 
-integer                     :: ind
+integer                     :: ind,pos
 TYPE(vol7d_var) ::  var
 doubleprecision :: lon,lat
 
@@ -1336,11 +1346,6 @@ call vol7d_varvect_index(v7d%anavar,var , type=type,index_v=ind)
   end select
 !end if
 
-call getval(v7d%ana(ana)%coord,lon=lon,lat=lat)
-!title=trim(title)//" lat:"//trim(to_char(lat)(1:5))//" lon:"//trim(to_char(lon)(1:5))
-write(title,'(a,2(a,f7.2))') trim(title)," lat:",lat," lon:",lon
-
-if (c_e(ht)) title=trim(title)//"  height:"//trim(to_char(int(ht)))//" m. "
 
 nome=""
 
@@ -1355,12 +1360,17 @@ call vol7d_varvect_index(v7d%anavar,var , type=type,index_v=ind)
 if( ind /= 0 ) nome=v7d%volanac(ana,ind,network)
 
 
-!time
-label=""
-call getval(v7d%time(time),isodate=label(:16))
+call getval(v7d%ana(ana)%coord,lon=lon,lat=lat)
+!title=trim(title)//" lat:"//trim(to_char(lat)(1:5))//" lon:"//trim(to_char(lon)(1:5))
+write(title,'(a,2(a,f7.2))') trim(title)," lat:",lat," lon:",lon
 
-label=trim(label)//" "//trim(to_char(v7d%timerange(timerange)))//&
- " "//trim(to_char(v7d%network(network)))
+if (c_e(ht)) title=trim(title)//"  height:"//trim(to_char(int(ht)))//" m. "
+
+
+!time
+pos=len_trim(title)
+call getval(v7d%time(time),isodate=title(pos+3:pos+3+15))
+
 
 !scrivo header
 
@@ -1372,14 +1382,14 @@ call set_color(trim(lcolor))
 
 call gtx (0.1,0.98,trim(nome))
 call gtx (0.1,0.96,trim(title))
-call gtx (0.1,0.94,trim(label))
 
 return
 
 end subroutine ncar_plot_vp_title
 
 
-subroutine ncar_plot_vp_legend (this,v7d,ana,time,timerange,network,color,position)
+subroutine ncar_plot_vp_legend (this,v7d,ana,time,timerange,network,&
+ tcolor,tdcolor,ucolor,wcolor,position)
 
 
 type(ncar_plot),intent(in)  :: this
@@ -1388,23 +1398,35 @@ integer,intent(in)          :: ana
 integer,intent(in)          :: time
 integer,intent(in)          :: timerange
 integer,intent(in)          :: network
-character(len=*),optional   :: color
+character(len=*),optional   :: tcolor,tdcolor,ucolor,wcolor
 integer,optional            :: position
 
 integer                     :: lposition
-real                        :: wmob,wmos,ht
-character(len=100)          :: label,title,nome,tmpc,lcolor
-character(len=1)            :: type
-
-integer                     :: ind
-TYPE(vol7d_var) ::  var
-doubleprecision :: lon,lat
+character(len=100)          :: label,ltcolor,ltdcolor,lucolor,lwcolor
 
 
-if (present(color))then
-  lcolor=color
+if (present(tcolor))then
+  ltcolor=tcolor
 else
-  lcolor='blue'
+  ltcolor='blue'
+end if
+
+if (present(tdcolor))then
+  ltdcolor=tdcolor
+else
+  ltdcolor='blue'
+end if
+
+if (present(ucolor))then
+  lucolor=ucolor
+else
+  lucolor='blue'
+end if
+
+if (present(wcolor))then
+  lwcolor=wcolor
+else
+  lwcolor='blue'
 end if
 
 if (present(position))then
@@ -1413,30 +1435,34 @@ else
   lposition=1
 end if
 
-! informazioni di anagrafica etc
-
 !!$ dimensioni di vol7d
 !!$    * anagrafica
 !!$    * livello verticale
 !!$    * variabile di dati
 !!$    * network
 
-label=trim(to_char(v7d%network(network)))
-
-!scrivo header
-
 CALL GSTXAL(1,5)
 call GSCHUP (0.,1.)
-call gschh(0.010)
-call set_color(trim(lcolor))
+call gschh(0.0085)
 
+label="(T)  "//trim(to_char(v7d%network(network)))
+call set_color(trim(ltcolor))
+call gtx (0.01+(0.23*(lposition-1)),0.94,trim(label))
 
-call gtx (0.5+(0.1*(lposition-1)),0.94,trim(label))
+label="(TD) "//trim(to_char(v7d%timerange(timerange)))
+call set_color(trim(ltdcolor))
+call gtx (0.01+(0.23*(lposition-1)),0.92,trim(label))
+
+call set_color(trim(lucolor))
+call gtx (0.01+(0.23*(lposition-1)),0.90,trim("(Umid)"))
+
+call set_color(trim(lwcolor))
+call gtx (0.01+(0.23*(lposition-1)),0.88,trim("(Wind)"))
+
 
 return
 
 end subroutine ncar_plot_vp_legend
-
 
 
 

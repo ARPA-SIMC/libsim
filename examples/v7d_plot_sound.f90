@@ -12,7 +12,7 @@ use getopt_m
 implicit none
 
 integer :: category,ier
-integer :: wstype=imiss,ic
+integer :: wstype=imiss,icicle,ic
 character(len=512):: a_name,infile,outfile,PSTYPE="PS", ORIENT="LANDSCAPE", COLOR="COLOR"
 character(len=100) :: nomogramma="herlofson",logo="Met Service"
 TYPE(vol7d_dballe) :: v7d_dba
@@ -20,10 +20,10 @@ TYPE(vol7d) :: v7d_profile
 type(ncar_plot) :: plot
 integer   :: time,ana,timerange,network
 
-character(len=20) ::  tcolor(6)=(/'brown','green','red','black','black','tan'/)
-character(len=20) ::  tdcolor(6)=(/'orange','forest Green','cyan','black','black','yellow'/)
-character(len=20) ::  ucolor(6)=(/'sky blue','blue','blue magenta','magenta','black','black'/)
-character(len=20) ::  wcolor(6)=(/'black','light gray','dark gray','black','violet','green'/)
+character(len=20) ::  tcolor(4)=(/'brown','red','black','tan'/)
+character(len=20) ::  tdcolor(4)=(/'orange','forest Green','cyan','yellow'/)
+character(len=20) ::  ucolor(4)=(/'sky blue','blue','blue magenta','magenta'/)
+character(len=20) ::  wcolor(4)=(/'black','violet','light gray','dark gray'/)
 
 !questa chiamata prende dal launcher il nome univoco
 call l4f_launcher(a_name,a_name_force="readtemp")
@@ -138,13 +138,12 @@ end if
 
 do ana=1, size(v7d_dba%vol7d%ana)
   do time=1, size(v7d_dba%vol7d%time)
+    call plot_herlofson(plot,logo=logo,nomogramma=nomogramma)
+    icicle=0
     do timerange=1, size(v7d_dba%vol7d%timerange)
-
-      call plot_herlofson(plot,logo=logo,nomogramma=nomogramma)
-
       do network=1,size(v7d_dba%vol7d%network)
-
-        ic=mod(network-1,6)+1       ! cicla sui 6 colori
+        ic=mod(icicle,4)+1       ! cicla sui 4 colori
+        icicle=icicle+1
         call init(v7d_profile)
         call vol7d_normalize_vcoord(v7d_dba%vol7d,v7d_profile,ana,time,timerange,network)
 
@@ -153,12 +152,13 @@ do ana=1, size(v7d_dba%vol7d%ana)
          ucolor=ucolor(ic),wcolor=wcolor(ic))
 
         if (ic == 1) call plot_vp_title (plot,v7d_profile,1,1,1,1,color=tcolor(ic))  !solo primo titolo
-        call plot_vp_legend (plot,v7d_profile,1,1,1,1,color=tcolor(ic),position=ic)  ! visulizza rete
+        call plot_vp_legend (plot,v7d_profile,1,1,1,1,&
+         tcolor=tcolor(ic),tdcolor=tdcolor(ic),ucolor=ucolor(ic),wcolor=wcolor(ic),position=ic) ! legenda
         call delete(v7d_profile)
 
       end do
-      CALL FRAME
     end do
+    CALL FRAME
   end do
 end do
 
