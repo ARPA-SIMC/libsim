@@ -1222,34 +1222,34 @@ CALL grib_get(gaid,'jScansPositively',jScansPositively)
 !SELECT CASE (this%grid%type%type)
 !CASE ('rotated_ll', 'stretched_rotated_ll', 'polar_stereographic', 'lambert', 'albers')
 CALL grib_set_dmiss(gaid,'longitudeOfSouthernPoleInDegrees', &
- this%grid%rotated%longitude_south_pole)
+ this%grid%rotated%longitude_south_pole, 0.0D0)
 CALL grib_set_dmiss(gaid,'latitudeOfSouthernPoleInDegrees', &
- this%grid%rotated%latitude_south_pole)
+ this%grid%rotated%latitude_south_pole, -90.0D0)
 IF (EditionNumber == 1) THEN
   CALL grib_set_dmiss(gaid,'angleOfRotationInDegrees', &
-   this%grid%rotated%angle_rotation)
+   this%grid%rotated%angle_rotation, 0.0D0)
 ELSE IF (EditionNumber == 2)THEN
   CALL grib_set_dmiss(gaid,'angleOfRotationOfProjectionInDegrees', &
-   this%grid%rotated%angle_rotation)
+   this%grid%rotated%angle_rotation, 0.0D0)
 ENDIF
 
-! Keys for stretched grids (checked through missing values)
+! Keys for stretched grids (checked through missing values and/or error code)
 ! units must be verified, still experimental in grib_api
 ! # TODO: Is it a float? Is it signed?
 IF (EditionNumber == 1) THEN
   CALL grib_set_dmiss(gaid,'longitudeOfStretchingPoleInDegrees', &
-   this%grid%stretched%longitude_stretch_pole)
+   this%grid%stretched%longitude_stretch_pole, 0.0D0)
   CALL grib_set_dmiss(gaid,'latitudeOfStretchingPoleInDegrees', &
-   this%grid%stretched%latitude_stretch_pole)
+   this%grid%stretched%latitude_stretch_pole, -90.0D0)
   CALL grib_set_dmiss(gaid,'stretchingFactor', &
-   this%grid%stretched%stretch_factor)
+   this%grid%stretched%stretch_factor, 1.0D0)
 ELSE IF (EditionNumber == 2) THEN
   CALL grib_set_dmiss(gaid,'longitudeOfThePoleOfStretching', &
-   this%grid%stretched%longitude_stretch_pole)
+   this%grid%stretched%longitude_stretch_pole, 0.0D0)
   CALL grib_set_dmiss(gaid,'latitudeOfThePoleOfStretching', &
-   this%grid%stretched%latitude_stretch_pole)
-  IF (c_e(this%grid%stretched%stretch_factor)) &
-   CALL grib_set(gaid,'stretchingFactor', this%grid%stretched%stretch_factor*1.0D6)
+   this%grid%stretched%latitude_stretch_pole, -90.0D0)
+  CALL grib_set_dmiss(gaid,'stretchingFactor', &
+   this%grid%stretched%stretch_factor*1.0D6, 1.0D6)
 ENDIF
 
 
@@ -1306,7 +1306,7 @@ CASE ('regular_ll', 'rotated_ll', 'stretched_ll', 'stretched_rotated_ll')
     CALL grib_set(gaid,'resolutionAndComponentFlags',0)
     CALL grib_set_missing(gaid,'Di')
     CALL grib_set_missing(gaid,'Dj')
-! questo non va
+! these do not work
 !  CALL grib_set(gaid,'ijDirectionIncrementGiven', 0)
 !  CALL grib_set(gaid,'iDirectionIncrementGiven', 0)
 !  CALL grib_set(gaid,'jDirectionIncrementGiven', 0)
@@ -1321,16 +1321,11 @@ CASE ('regular_ll', 'rotated_ll', 'stretched_ll', 'stretched_rotated_ll')
     CALL grib_set(gaid,'resolutionAndComponentFlags',128)
     CALL grib_set(gaid,'iDirectionIncrementInDegrees',this%grid%generic%dx)
     CALL grib_set(gaid,'jDirectionIncrementInDegrees',this%grid%generic%dy)
-!  CALL grib_set(gaid,'iDirectionIncrement',dlon*ratio)
-!  CALL grib_set(gaid,'jDirectionIncrement',dlat*ratio)
-! Di, Dj are universal aliases
-!  CALL grib_set(gaid,'Di',dlon*ratio)
-!  CALL grib_set(gaid,'Dj',dlat*ratio)
   ENDIF
 
 ! Keys for polar projections
 CASE ('polar_stereographic', 'lambert', 'albers')
-
+! increments are required
   CALL grib_set(gaid,'DxInMetres', this%grid%generic%dx)
   CALL grib_set(gaid,'DyInMetres', this%grid%generic%dy)
 ! latin1/latin2 may be missing (e.g. stereographic)
@@ -1372,14 +1367,6 @@ CASE default
   CALL raise_error("griddim_export: grid type not supported")
 
 END SELECT
-
-! questo non va
-!  CALL grib_set(gaid,'ijDirectionIncrementGiven', 1)
-!  CALL grib_set(gaid,'iDirectionIncrementGiven', 1)
-!  CALL grib_set(gaid,'jDirectionIncrementGiven', 1)
-!  CALL grib_set(gaid,'geography.iInc', dlon)
-!  CALL grib_set(gaid,'geography.jInc', dlat)
-
 
 !TODO
 !parrebbe che:
@@ -1431,25 +1418,35 @@ ENDIF
 
 CONTAINS
 ! utilities routines for grib_api, is there a better place?
-SUBROUTINE grib_set_dmiss(gaid, key, value)
+SUBROUTINE grib_set_dmiss(gaid, key, value, default)
 INTEGER,INTENT(in) :: gaid
 CHARACTER(len=*),INTENT(in) :: key
 DOUBLE PRECISION,INTENT(in) :: value
+DOUBLE PRECISION,INTENT(in),OPTIONAL :: default
 
 INTEGER :: ierr
 
-IF (c_e(value)) CALL grib_set(gaid, key, value, ierr)
+IF (c_e(value)) THEN
+  CALL grib_set(gaid, key, value, ierr)
+ELSE IF (PRESENT(default)) THEN
+  CALL grib_set(gaid, key, default, ierr)
+ENDIF
 
 END SUBROUTINE grib_set_dmiss
 
-SUBROUTINE grib_set_imiss(gaid, key, value)
+SUBROUTINE grib_set_imiss(gaid, key, value, default)
 INTEGER,INTENT(in) :: gaid
 CHARACTER(len=*),INTENT(in) :: key
 INTEGER,INTENT(in) :: value
+INTEGER,INTENT(in),OPTIONAL :: default
 
 INTEGER :: ierr
 
-IF (c_e(value)) CALL grib_set(gaid, key, value, ierr)
+IF (c_e(value)) THEN
+  CALL grib_set(gaid, key, value, ierr)
+ELSE IF (PRESENT(default)) THEN
+  CALL grib_set(gaid, key, default, ierr)
+ENDIF
 
 END SUBROUTINE grib_set_imiss
 

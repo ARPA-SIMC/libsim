@@ -760,9 +760,8 @@ integer :: EditionNumber
 integer :: alternativeRowScanning,iScansNegatively,jScansPositively,jPointsAreConsecutive
 integer :: numberOfValues,numberOfPoints
 
-real :: vector (this%griddim%dim%nx * this%griddim%dim%ny)
-real,allocatable :: lats (:),lons(:)
-integer ::x1,x2,xs,y1,y2,ys,ord(2)
+real :: vector(this%griddim%dim%nx * this%griddim%dim%ny)
+integer :: x1,x2,xs,y1,y2,ys,ord(2)
 
 
 call grib_get(this%gaid,'GRIBEditionNumber',EditionNumber)
@@ -810,16 +809,7 @@ end if
 call l4f_category_log(this%category,L4F_INFO,'number of values: '//to_char(numberOfValues))
 call l4f_category_log(this%category,L4F_INFO,'number of points: '//to_char(numberOfPoints))
 
-!allocate(lats(numberOfPoints))
-!allocate(lons(numberOfPoints))
-!call grib_get_data(this%gaid,lats,lons,vector)
-!call l4f_category_log(this%category,L4F_INFO,'decoded')
-!
-!deallocate(lats)
-!deallocate(lons)
-
-call grib_get(this%gaid,'values',vector)
-
+CALL grib_get(this%gaid,'values',vector)
 
 ! Transfer data field changing scanning mode to 64
 IF (iScansNegatively  == 0) THEN
@@ -846,7 +836,6 @@ IF ( jPointsAreConsecutive == 0) THEN
 ELSE
   ord = (/2,1/)
 ENDIF
-
 
 field(x1:x2:xs,y1:y2:ys) = &
  RESHAPE(vector, &
@@ -904,30 +893,9 @@ call grib_get(this%gaid,'iScansNegatively',iScansNegatively)
 call grib_get(this%gaid,'jScansPositively',jScansPositively)
 call grib_get(this%gaid,'jPointsAreConsecutive',jPointsAreConsecutive)
 
-
-!TODO
-!assicurarsi che le set qui sotto siano opportune
-call grib_set(this%gaid,'numberOfPointsAlongAParallel',this%griddim%dim%nx)
-call grib_set(this%gaid,'numberOfPointsAlongAMeridian',this%griddim%dim%ny)
-
-!TODO
-!i commenti al test qui sotto sono relativi al TODO appena qui sopra
-
-!numberOfValues=nx*ny
-
-!if (numberOfValues /= (this%griddim%dim%nx * this%griddim%dim%ny))then
-!
-!  CALL l4f_category_log(this%category,L4F_ERROR, &
-!   'encode_gridinfo: numberOfValues and gridinfo size different. numberOfValues: ' &
-!   //trim(to_char(numberOfValues))//', nx,ny:'&
-!   //TRIM(to_char(this%griddim%dim%nx))//' '//trim(to_char(this%griddim%dim%ny)))
-!  call raise_fatal_error( &
-!   'encode_gridinfo: numberOfValues and gridinfo size different')
-!
-!end if
-
-!call l4f_category_log(this%category,L4F_INFO,'number of values: '//to_char(numberOfValues))
-
+! queste sono gia` fatte in export_gridinfo, si potrebbero evitare?!
+call grib_set(this%gaid,'Ni',this%griddim%dim%nx)
+call grib_set(this%gaid,'Nj',this%griddim%dim%ny)
 
 ! Transfer data field changing scanning mode from 64
 IF (iScansNegatively  == 0) THEN
@@ -977,12 +945,14 @@ else
 end if
 
 
-!TODO: gestire in caso TUTTI dati mancanti
+!TODO: gestire il caso TUTTI dati mancanti
 
 IF ( jPointsAreConsecutive == 0) THEN
-  CALL grib_set(this%gaid,'values', PACK(field(x1:x2:xs,y1:y2:ys), .TRUE.))
+  CALL grib_set(this%gaid,'values', RESHAPE(field(x1:x2:xs,y1:y2:ys), &
+   (/this%griddim%dim%nx*this%griddim%dim%ny/)))
 ELSE
-  CALL grib_set(this%gaid,'values', PACK(TRANSPOSE(field(x1:x2:xs,y1:y2:ys)), .TRUE.))
+  CALL grib_set(this%gaid,'values', RESHAPE(TRANSPOSE(field(x1:x2:xs,y1:y2:ys)), &
+   (/this%griddim%dim%nx*this%griddim%dim%ny/)))
 ENDIF
 
 end subroutine encode_gridinfo
