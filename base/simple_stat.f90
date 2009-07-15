@@ -324,10 +324,16 @@ REAL :: lsample(SIZE(sample)), v, rindex
 INTEGER :: sample_count, i, j, iindex
 LOGICAL :: sample_mask(SIZE(sample))
 
+percentile(:) = rmiss
 sample_mask = (sample /= rmiss)
 IF (PRESENT(mask)) sample_mask = sample_mask .AND. mask
 sample_count = COUNT(sample_mask)
+IF (sample_count == 0) RETURN ! particular case
 lsample(1:sample_count) = PACK(sample, mask=sample_mask)
+IF (sample_count == 1) THEN ! other particular case
+  percentile(:) = lsample(1)
+  RETURN
+ENDIF
 
 ! sort
 DO j = 2, sample_count
@@ -348,8 +354,6 @@ DO j = 1, SIZE(perc_vals)
 ! compute linearly interpolated percentile
     percentile(j) = lsample(iindex)*(REAL(iindex+1, kind=KIND(rindex))-rindex) &
      + lsample(iindex+1)*(rindex-REAL(iindex, kind=KIND(rindex)))
-  ELSE
-    percentile(j) = rmiss
   ENDIF
 ENDDO
 
@@ -371,10 +375,16 @@ DOUBLE PRECISION :: lsample(SIZE(sample)), v, rindex
 INTEGER :: sample_count, i, j, iindex
 LOGICAL :: sample_mask(SIZE(sample))
 
+percentile(:) = dmiss
 sample_mask = (sample /= dmiss)
 IF (PRESENT(mask)) sample_mask = sample_mask .AND. mask
 sample_count = COUNT(sample_mask)
+IF (sample_count == 0) RETURN ! particular case
 lsample(1:sample_count) = PACK(sample, mask=sample_mask)
+IF (sample_count == 1) THEN ! other particular case
+  percentile(:) = lsample(1)
+  RETURN
+ENDIF
 
 ! sort
 DO j = 2, sample_count
