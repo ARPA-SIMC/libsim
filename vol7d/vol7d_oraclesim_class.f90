@@ -117,6 +117,7 @@ IF (err /= 0) THEN
   CALL oraextra_geterr(this%connid, msg)
   CALL oraextra_delete(this%connid)
   CALL l4f_log(L4F_FATAL, TRIM(cstr_to_fchar(msg)))
+  CALL raise_fatal_error(TRIM(cstr_to_fchar(msg)))
 ENDIF
 CALL vol7d_oraclesim_alloc(nmaxmin)
 IF (.NOT. ALLOCATED(vartable)) CALL vol7d_oraclesim_setup_conv()
@@ -261,6 +262,7 @@ nobs = oraextra_gethead(this%connid, fchar_to_cstr(datai), &
 IF (nobs < 0) THEN
   CALL oraextra_geterr(this%connid, msg)
   CALL l4f_log(L4F_FATAL, 'in oraextra_gethead: '//TRIM(cstr_to_fchar(msg)))
+  CALL raise_fatal_error('in oraextra_gethead: '//TRIM(cstr_to_fchar(msg)))
 ENDIF
 CALL l4f_log(L4F_INFO, 'in oraextra_gethead nobs='//to_char(nobs))
 
@@ -270,6 +272,7 @@ i = oraextra_getdata(this%connid, nobs, nobso, cdatao, stazo, varo, valore1, &
 IF (i /= 0) THEN
   CALL oraextra_geterr(this%connid, msg)
   CALL l4f_log(L4F_FATAL, 'in oraextra_getdata: '//TRIM(cstr_to_fchar(msg)))
+  CALL raise_fatal_error('in oraextra_getdata: '//TRIM(cstr_to_fchar(msg)))
 ENDIF
 
 nobs = nobso
@@ -499,8 +502,10 @@ CHARACTER(len=64) :: buf
 TYPE(csv_record) :: csv
 
 un = open_package_file('varmap.csv', filetype_data)
-IF (un < 0) CALL l4f_log(L4F_FATAL, 'in oraclesim non trovo il file delle variabili')
-
+IF (un < 0) then
+  CALL l4f_log(L4F_FATAL, 'in oraclesim non trovo il file delle variabili')
+  CALL raise_fatal_error('in oraclesim non trovo il file delle variabili')
+END IF
 i = 0
 DO WHILE(.TRUE.)
   READ(un,'(A)',END=100)line
@@ -561,8 +566,10 @@ networktable(netid) = .TRUE.
 CALL init(netana(netid))
 cnet = to_char(netid,'(I3.3)')
 un = open_package_file('net_'//cnet//'.simana', filetype_data)
-IF (un < 0) CALL l4f_log(L4F_FATAL, 'non trovo il file di anagrafica per la rete '//cnet)
-
+IF (un < 0) then
+  CALL l4f_log(L4F_FATAL, 'non trovo il file di anagrafica per la rete '//cnet)
+  CALL raise_fatal_error('non trovo il file di anagrafica per la rete '//cnet)
+END IF
 i = 0
 DO WHILE(.TRUE.)
   READ(un,*,END=100)

@@ -26,8 +26,10 @@ DO
     CALL l4f_log(L4F_INFO, 'option c')
   CASE( '?' )
     CALL l4f_log(L4F_FATAL, 'unknown option '//TRIM(optopt))
+    call exit(1)
   CASE default
     CALL l4f_log(L4F_FATAL, 'unhandled option '//TRIM(optopt)//' this should not happen')
+    call exit(2)
   END SELECT
 END DO
 

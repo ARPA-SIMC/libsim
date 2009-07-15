@@ -67,6 +67,7 @@ USE kinds
 USE datetime_class
 USE optional_values
 USE log4fortran
+USE err_handling 
 USE vol7d_utilities
 USE vol7d_ana_class
 USE vol7d_timerange_class
@@ -1640,6 +1641,7 @@ if (.not. opened) then
   inquire(file=lfilename, EXIST=exist)
   IF (exist) THEN
     CALL l4f_log(L4F_FATAL, 'file exists, cannot open a new file')
+    CALL raise_fatal_error('file exist; cannot open new file')
   ENDIF
   OPEN(unit=lunit, file=lfilename, form="UNFORMATTED")
   CALL l4f_log(L4F_INFO, 'opened: '//TRIM(lfilename))
@@ -1842,6 +1844,7 @@ IF (.NOT. opened) THEN
   inquire(file=lfilename,EXIST=exist)
   IF (.NOT.exist) THEN
     CALL l4f_log(L4F_FATAL, 'file does not exist, cannot open')
+    CALL raise_fatal_error('file do not exist; cannot open file')
   ENDIF
   OPEN(unit=lunit, file=lfilename, form="UNFORMATTED")
   CALL l4f_log(L4F_INFO, 'opened: '//TRIM(lfilename))
