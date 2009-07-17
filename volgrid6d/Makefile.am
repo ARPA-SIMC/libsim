@@ -2,11 +2,12 @@ lib_LTLIBRARIES = libsim_volgrid6d.la
 
 # Opzioni Fortran (-I... sono da considerarsi opzioni fortran
 # e non del preprocessore perche' servono per USE e non per #include)
-AM_FCFLAGS = -I../base -I../log4fortran -I../vol7d
+AM_FCFLAGS = -I../log4fortran -I../base -I../vol7d
 # Opzioni linker
 AM_LDFLAGS =
 # Librerie aggiuntive
-libsim_volgrid6d_la_LIBADD = ../base/libsim_base.la
+libsim_volgrid6d_la_LIBADD = ../log4fortran/liblog4fortran.la \
+ ../base/libsim_base.la ../vol7d/libsim_vol7d.la
 
 #noinst_HEADERS = ../vol7d/vol7d_distinct.F90
 
