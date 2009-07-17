@@ -833,7 +833,7 @@ CASE ('polar_stereographic', 'lambert', 'albers')
   IF (IAND(this%grid%polarproj%projection_center_flag,64) == 1) THEN
     CALL l4f_category_log(this%category,L4F_ERROR, &
      "griddim_import: bi-polar projections not supported")
-    CALL raise_error("griddim_import: bi-polar projections not supported")
+    CALL raise_error()
   ENDIF
 ! line of view, aka central meridian
   CALL grib_get(gaid,'LoVInDegrees',this%grid%polarproj%lov)
@@ -883,7 +883,7 @@ CASE ('polar_stereographic', 'lambert', 'albers')
 CASE default
   CALL l4f_category_log(this%category,L4F_ERROR, &
    "griddim_import: grid type "//TRIM(this%grid%type%type)//" not supported")
-  CALL raise_error("griddim_import: grid type not supported")
+  CALL raise_error()
 
 END SELECT
 
@@ -1090,7 +1090,7 @@ CASE ('polar_stereographic', 'lambert', 'albers')
 CASE default
   CALL l4f_category_log(this%category,L4F_ERROR, &
    "griddim_export: grid type "//TRIM(this%grid%type%type)//" not supported")
-  CALL raise_error("griddim_export: grid type not supported")
+  CALL raise_error()
 
 END SELECT
 
@@ -1348,7 +1348,7 @@ call optio(time_definition,this%time_definition)
 if (c_e(this%time_definition) .and. &
  (this%time_definition < 0 .OR. this%time_definition > 1))THEN
   call l4f_category_log(this%category,L4F_ERROR,"Error in time_definition: "//to_char(this%time_definition))
-  call raise_fatal_error("Error in time_definition")
+  call raise_fatal_error()
 end if
 
 call optio(boxregrid_type,this%boxregrid%sub_type)
@@ -1364,26 +1364,32 @@ call optio(external,this%inter%bilin%external)
 call optio(external,this%inter%linear%external)
 
 
-if (this%trans_type == 'zoom') then
+IF (this%trans_type == 'zoom') THEN
 
   if (this%zoom%sub_type == 'coord')then
 
     if (c_e(this%zoom%coord%ilon) .and. c_e(this%zoom%coord%ilat) .and. &
         c_e(this%zoom%coord%flon) .and. c_e(this%zoom%coord%flat)) then ! coordinates given
     
-                                !check
-      if ( this%zoom%coord%ilon > this%zoom%coord%flon .or. this%zoom%coord%ilat > this%zoom%coord%flat ) then
+!check
+      if ( this%zoom%coord%ilon > this%zoom%coord%flon .or. &
+       this%zoom%coord%ilat > this%zoom%coord%flat ) then
 
-        call l4f_category_log(this%category,L4F_ERROR,"zoom coordinates are wrong: ")
-        call l4f_category_log(this%category,L4F_ERROR,to_char(ilon)//to_char(this%zoom%coord%ilat))
-        call l4f_category_log(this%category,L4F_ERROR,to_char(flon)//to_char(this%zoom%coord%flat))
-        call raise_fatal_error("zoom coordinates are wrong")
+        call l4f_category_log(this%category,L4F_ERROR, &
+         "invalid zoom coordinates: ")
+        call l4f_category_log(this%category,L4F_ERROR, &
+         TRIM(to_char(this%zoom%coord%ilon))//'/'// &
+         TRIM(to_char(this%zoom%coord%flon)))
+        call l4f_category_log(this%category,L4F_ERROR, &
+         TRIM(to_char(this%zoom%coord%ilat))//'/'// &
+         TRIM(to_char(this%zoom%coord%flat)))
+        call raise_fatal_error()
       end if
 
     else
 
-      call l4f_category_log(this%category,L4F_ERROR,"zoom: coord missing parameter")
-      call raise_fatal_error("zoom: coord missing parameter")
+      call l4f_category_log(this%category,L4F_ERROR,"zoom: coord parameters missing")
+      call raise_fatal_error()
         
     end if
 
@@ -1394,18 +1400,25 @@ if (this%trans_type == 'zoom') then
 
 
                                 ! check
-      if (this%zoom%index%ix > this%zoom%index%fx .OR. this%zoom%index%iy > this%zoom%index%fy) then
+      if (this%zoom%index%ix > this%zoom%index%fx .OR. &
+       this%zoom%index%iy > this%zoom%index%fy) THEN
 
-        CALL l4f_category_log(this%category,L4F_ERROR,'invalid zoom indices: '//&
-         to_char(this%zoom%index%ix)//to_char(this%zoom%index%iy)//&
-         to_char(this%zoom%index%fx)//to_char(this%zoom%index%fy))
-        CALL raise_fatal_error('invalid zoom indices')
+        CALL l4f_category_log(this%category,L4F_ERROR,'invalid zoom indices: ')
+        CALL l4f_category_log(this%category,L4F_ERROR, &
+         TRIM(to_char(this%zoom%index%ix))//'/'// &
+         TRIM(to_char(this%zoom%index%fx)))
+        CALL l4f_category_log(this%category,L4F_ERROR, &
+         TRIM(to_char(this%zoom%index%iy))//'/'// &
+         TRIM(to_char(this%zoom%index%fy)))
+
+        CALL raise_fatal_error()
       ENDIF
 
     else
 
-      CALL l4f_category_log(this%category,L4F_ERROR,'zoom: index parameters ix, iy, fx, fy not provided')
-      CALL raise_fatal_error('zoom: index parameters ix, iy, fx, fy not provided')
+      CALL l4f_category_log(this%category,L4F_ERROR,&
+       'zoom: index parameters ix, iy, fx, fy not provided')
+      CALL raise_fatal_error()
 
     ENDIF
   
@@ -1414,76 +1427,80 @@ if (this%trans_type == 'zoom') then
 
     CALL l4f_category_log(this%category,L4F_ERROR,'zoom: sub_type '// &
      TRIM(this%zoom%sub_type)//' is wrong')
-    CALL raise_fatal_error('zoom: sub_type '//TRIM(this%zoom%sub_type)//' is wrong')
+    CALL raise_fatal_error()
 
   end if
 
 
-else if (this%trans_type == 'boxregrid') then
+ELSE IF (this%trans_type == 'boxregrid') THEN
 
   IF (c_e(this%boxregrid%npx) .AND. c_e(this%boxregrid%npy)) THEN
 
     IF (this%boxregrid%npx <= 0 .OR. this%boxregrid%npy <= 0 ) THEN
       CALL l4f_category_log(this%category,L4F_ERROR,'invalid regrid parameters: '//&
        TRIM(to_char(this%boxregrid%npx))//' '//TRIM(to_char(this%boxregrid%npy)))
-      CALL raise_error('invalid regrid parameters')
+      CALL raise_fatal_error()
     ENDIF
 
   ELSE
 
-    CALL l4f_category_log(this%category,L4F_ERROR,'boxregrid parameters npx, npy not provided')
-    CALL raise_fatal_error('boxregrid parameters npx, npy not provided')
+    CALL l4f_category_log(this%category,L4F_ERROR, &
+     'boxregrid parameters npx, npy not provided')
+    CALL raise_fatal_error()
 
   ENDIF
 
   IF (this%boxregrid%sub_type == 'average')THEN
-! nothing to do for now
+! nothing to do here
   ELSE
     CALL l4f_category_log(this%category,L4F_ERROR,'boxregrid: sub_type '// &
      TRIM(this%boxregrid%sub_type)//' is wrong')
-    CALL raise_fatal_error('boxregrid: sub_type '// &
-     TRIM(this%boxregrid%sub_type)//' is wrong')
+    CALL raise_fatal_error()
   ENDIF
 
-
-else if (this%trans_type == 'inter') then
+ELSE IF (this%trans_type == 'inter') THEN
 
   if (this%inter%sub_type == 'near')then
-
-
+! nothing to do here
   else if (this%inter%sub_type == 'bilin')then
-
-!..
-
+! nothing to do here
   else if (this%inter%sub_type == 'linear')then
-
-!..
-  else if (this%inter%sub_type == 'box')then
-
-    CALL optio(boxdx,this%inter%box%boxdx)
-    CALL optio(boxdy,this%inter%box%boxdy)
-    CALL optio(boxpercentile,this%inter%box%boxpercentile)
-
+! nothing to do here
   else
-
     CALL l4f_category_log(this%category,L4F_ERROR,'inter: sub_type '// &
      TRIM(this%inter%sub_type)//' is wrong')
-    CALL raise_fatal_error('inter: sub_type '// &
-     TRIM(this%inter%sub_type)//' is wrong')
-    
-  end if
+    CALL raise_fatal_error()
+  endif
 
-else
+ELSE IF (this%inter%sub_type == 'boxinter')THEN
+
+  CALL optio(boxdx,this%inter%box%boxdx) ! unused
+  CALL optio(boxdy,this%inter%box%boxdy) ! now
+
+  IF (this%inter%sub_type == 'average') THEN
+! nothing to do here
+  ELSE IF (this%inter%sub_type == 'max') THEN
+! nothing to do here
+  ELSE IF (this%inter%sub_type == 'min') THEN
+! nothing to do here
+  ELSE IF (this%inter%sub_type == 'percentile') THEN
+    CALL optio(boxpercentile,this%inter%box%boxpercentile)
+  ELSE
+    CALL l4f_category_log(this%category,L4F_ERROR,'boxinter: sub_type '// &
+     TRIM(this%inter%sub_type)//' is wrong')
+    CALL raise_fatal_error()
+  ENDIF
+
+ELSE
 
   CALL l4f_category_log(this%category,L4F_ERROR,'trans_type '// &
    TRIM(this%trans_type)//' is wrong')
-  CALL raise_fatal_error('trans_type '// &
-   TRIM(this%trans_type)//' is wrong')
+  CALL raise_fatal_error()
 
-end IF
+ENDIF
 
 
-end SUBROUTINE init_transform
+END SUBROUTINE init_transform
 
 
 
@@ -1585,10 +1602,7 @@ IF (this%trans%trans_type == 'zoom') THEN
 
     this%trans%zoom%sub_type = 'index'
     
-  end if
-
-
-  if (this%trans%zoom%sub_type == 'index') THEN
+  else if (this%trans%zoom%sub_type == 'index') THEN
 
     CALL get_val(in, nx=nx, ny=ny, lon_min=lon_min, lon_max=lon_max, &
      lat_min=lat_min, lat_max=lat_max, dx=steplon, dy=steplat)
@@ -1624,12 +1638,12 @@ IF (this%trans%trans_type == 'zoom') THEN
      lon_min = lon_min,  lon_max = lon_max, &
      lat_min = lat_min,  lat_max = lat_max )
     
-  else
+  ELSE
 
-    CALL l4f_category_log(this%category,L4F_WARN,'sub_type '//TRIM(this%trans%zoom%sub_type) &
+    CALL l4f_category_log(this%category,L4F_WARN, &
+     'init_grid_transform zoom sub_type '//TRIM(this%trans%inter%sub_type) &
      //' not supported')
-    CALL raise_warning('sub_type '//TRIM(this%trans%zoom%sub_type)//' not supported')
-
+    
   end if
 
 ELSE IF (this%trans%trans_type == 'boxregrid') THEN
@@ -1659,12 +1673,13 @@ ELSE IF (this%trans%trans_type == 'boxregrid') THEN
     CALL set_val(out, lon_min=lon_min_new, lat_min=lat_min_new, &
      lon_max=lon_min_new + DBLE(out%dim%nx-1)*steplon, dx=steplon, &
      lat_max=lat_min_new + DBLE(out%dim%ny-1)*steplat, dy=steplat)
+
   ELSE
 
-    CALL l4f_category_log(this%category,L4F_WARN,'trans_type '//TRIM(this%trans%boxregrid%sub_type) &
+    CALL l4f_category_log(this%category,L4F_WARN, &
+     'init_grid_transform boxregrid sub_type '//TRIM(this%trans%inter%sub_type) &
      //' not supported')
-    CALL raise_warning('trans_type '//TRIM(this%trans%boxregrid%sub_type)//' not supported')
-
+    
   ENDIF
   
 ELSE IF (this%trans%trans_type == 'inter') THEN
@@ -1701,47 +1716,47 @@ ELSE IF (this%trans%trans_type == 'inter') THEN
       CALL proj(in,out%dim%lon,out%dim%lat,this%inter_xp,this%inter_yp)
 
     ENDIF
-  ELSE IF (this%trans%inter%sub_type == 'box') THEN
-
-    CALL get_val(in, nx=this%innx, ny=this%inny)
-    CALL get_val(out, nx=this%outnx, ny=this%outny, &
-     lon_min=lon_min, lon_max=lon_max, lat_min=lat_min, lat_max=lat_max)
-! TODO now box size is ignored
-! if box size not provided, use the actual grid step
-    IF (.NOT.c_e(this%trans%inter%box%boxdx)) &
-     CALL get_val(out, dx=this%trans%inter%box%boxdx)
-    IF (.NOT.c_e(this%trans%inter%box%boxdy)) &
-     CALL get_val(out, dx=this%trans%inter%box%boxdy)
-! half size is actually needed
-    this%trans%inter%box%boxdx = this%trans%inter%box%boxdx*0.5D0
-    this%trans%inter%box%boxdy = this%trans%inter%box%boxdy*0.5D0
-! unlike before, here index arrays must have the shape of input grid
-    ALLOCATE(this%inter_index_x(this%innx,this%inny), &
-     this%inter_index_y(this%innx,this%inny))
-
-! compute coordinates of input grid in geo system
-    CALL unproj(in) ! TODO costringe a dichiarare in INTENT(inout), si puo` evitare?
-! use find_index in the opposite way as before
-    CALL find_index(out,'near',&
-     nx=this%outnx, ny=this%outny ,&
-     lon_min=lon_min, lon_max=lon_max,&
-     lat_min=lat_min, lat_max=lat_max,&
-     lon=in%dim%lon, lat=in%dim%lat,&
-     index_x=this%inter_index_x, index_y=this%inter_index_y)
-
   ELSE
 
-    CALL l4f_category_log(this%category,L4F_WARN,'init_grid_transform inter sub_type '//TRIM(this%trans%inter%sub_type) &
+    CALL l4f_category_log(this%category,L4F_WARN, &
+     'init_grid_transform inter sub_type '//TRIM(this%trans%inter%sub_type) &
      //' not supported')
-    CALL raise_warning('init_grid_transform inter sub_type '//TRIM(this%trans%inter%sub_type)//' not supported')
     
   ENDIF
-    
+
+ELSE IF (this%trans%trans_type == 'boxinter') THEN
+
+  CALL get_val(in, nx=this%innx, ny=this%inny)
+  CALL get_val(out, nx=this%outnx, ny=this%outny, &
+   lon_min=lon_min, lon_max=lon_max, lat_min=lat_min, lat_max=lat_max)
+! TODO now box size is ignored
+! if box size not provided, use the actual grid step
+  IF (.NOT.c_e(this%trans%inter%box%boxdx)) &
+   CALL get_val(out, dx=this%trans%inter%box%boxdx)
+  IF (.NOT.c_e(this%trans%inter%box%boxdy)) &
+   CALL get_val(out, dx=this%trans%inter%box%boxdy)
+! half size is actually needed
+  this%trans%inter%box%boxdx = this%trans%inter%box%boxdx*0.5D0
+  this%trans%inter%box%boxdy = this%trans%inter%box%boxdy*0.5D0
+! unlike before, here index arrays must have the shape of input grid
+  ALLOCATE(this%inter_index_x(this%innx,this%inny), &
+   this%inter_index_y(this%innx,this%inny))
+
+! compute coordinates of input grid in geo system
+  CALL unproj(in) ! TODO costringe a dichiarare in INTENT(inout), si puo` evitare?
+! use find_index in the opposite way as before
+  CALL find_index(out,'near',&
+   nx=this%outnx, ny=this%outny ,&
+   lon_min=lon_min, lon_max=lon_max,&
+   lat_min=lat_min, lat_max=lat_max,&
+   lon=in%dim%lon, lat=in%dim%lat,&
+   index_x=this%inter_index_x, index_y=this%inter_index_y)
+
 ELSE
 
-  CALL l4f_category_log(this%category,L4F_WARN,'init_grid_transform trans type '//TRIM(this%trans%trans_type) &
+  CALL l4f_category_log(this%category,L4F_WARN, &
+   'init_grid_transform trans type '//TRIM(this%trans%trans_type) &
    //' not supported')
-  CALL raise_warning('init_grid_transform trans type '//TRIM(this%trans%trans_type)//' not supported')
 
 ENDIF
 
@@ -1818,13 +1833,6 @@ IF (this%trans%trans_type == 'inter') THEN
       ALLOCATE(this%inter_x(this%innx,this%inny),this%inter_y(this%innx,this%inny))
       ALLOCATE(this%inter_xp(this%outnx,this%outny),this%inter_yp(this%outnx,this%outny))
 
-! TODO verificare che siano equivalenti e cancellare le righe commentate
-!        do i=1, this%innx
-!          do J=1, this%inny
-!            this%inter_x(i,j)=lon_min+(((lon_max-lon_min)/dble(this%innx-1))*(i-1))
-!            this%inter_y(i,j)=lat_min+(((lat_max-lat_min)/dble(this%inny-1))*(j-1))
-!          end do
-!        end do
       CALL griddim_coordinates(in, this%inter_x, this%inter_y)
 
       CALL proj(in,&
@@ -1837,17 +1845,17 @@ IF (this%trans%trans_type == 'inter') THEN
 
   ELSE
 
-    CALL l4f_category_log(this%category,L4F_WARN,'init_grid_transform inter sub_type '//TRIM(this%trans%inter%sub_type) &
+    CALL l4f_category_log(this%category,L4F_WARN, &
+     'init_grid_v7d_transform inter sub_type '//TRIM(this%trans%inter%sub_type) &
      //' not supported')
-    CALL raise_warning('init_grid_transform inter sub_type '//TRIM(this%trans%inter%sub_type)//' not supported')
     
   ENDIF
 
 ELSE
 
-  CALL l4f_category_log(this%category,L4F_WARN,'init_grid_transform trans type '//TRIM(this%trans%trans_type) &
+  CALL l4f_category_log(this%category,L4F_WARN, &
+   'init_grid_v7d_transform trans type '//TRIM(this%trans%trans_type) &
    //' not supported')
-  CALL raise_warning('init_grid_transform trans type '//TRIM(this%trans%trans_type)//' not supported')
 
 ENDIF
 
@@ -1890,7 +1898,7 @@ nullify (this%inter_yp)
 
 IF (this%trans%trans_type == 'inter') THEN
 
-  if ( this%trans%inter%sub_type == 'linear' ) THEN
+  IF ( this%trans%inter%sub_type == 'linear' ) THEN
     
     CALL get_val(griddim, nx=nx, ny=ny)
     this%outnx=nx
@@ -1913,62 +1921,53 @@ IF (this%trans%trans_type == 'inter') THEN
      RESHAPE(lon,(/SIZE(lon),1/)),RESHAPE(lat,(/SIZE(lat),1/)),&
      this%inter_xp,this%inter_yp)
 
-! TODO verificare che siano equivalenti e cancellare le righe commentate
-!    DO i=1, this%outnx
-!      DO J=1, this%outny
-!        this%inter_x(i,j)=lon_min+(((lon_max-lon_min)/DBLE(this%outnx-1))*(i-1))
-!        this%inter_y(i,j)=lat_min+(((lat_max-lat_min)/DBLE(this%outny-1))*(j-1))
-!      END DO
-!    END DO
     CALL griddim_coordinates(griddim, this%inter_x, this%inter_y)
 
     DEALLOCATE(lon,lat)
 
-  ELSE IF (this%trans%inter%sub_type == 'box') THEN
-
-    this%innx=SIZE(v7d%ana)
-    this%inny=1
-    CALL get_val(griddim, nx=this%outnx, ny=this%outny)
-! if box size not provided, use the actual grid step
-    IF (.NOT.c_e(this%trans%inter%box%boxdx)) &
-     CALL get_val(griddim, dx=this%trans%inter%box%boxdx)
-    IF (.NOT.c_e(this%trans%inter%box%boxdy)) &
-     CALL get_val(griddim, dx=this%trans%inter%box%boxdy)
-! half size is actually needed
-    this%trans%inter%box%boxdx = this%trans%inter%box%boxdx*0.5D0
-    this%trans%inter%box%boxdy = this%trans%inter%box%boxdy*0.5D0
-! unlike before, here index arrays must have the shape of input grid
-    ALLOCATE(lon(this%innx),lat(this%innx))
-    ALLOCATE(this%inter_index_x(this%innx,this%inny), &
-     this%inter_index_y(this%innx,this%inny), &
-     this%inter_x(this%innx,this%inny), &
-     this%inter_y(this%innx,this%inny))
-
-! compute coordinates of input grid in output system
-    CALL getval(v7d%ana(:)%coord,lon=lon,lat=lat)
-    CALL proj(griddim,&
-     RESHAPE(lon,(/this%innx,1/)),RESHAPE(lat,(/this%innx,1/)),&
-     this%inter_x,this%inter_y)
-! find index of output box where every input point falls
-    CALL find_index_in_box(griddim, this%inter_x, this%inter_y, &
-     this%trans%inter%box%boxdx, this%trans%inter%box%boxdy, &
-     this%inter_index_x, this%inter_index_y)
-! not needed anymore
-    DEALLOCATE(this%inter_x, this%inter_y)
-
   ELSE
 
-    CALL l4f_category_log(this%category,L4F_WARN,'init_grid_transform inter sub_type '//TRIM(this%trans%inter%sub_type) &
+    CALL l4f_category_log(this%category,L4F_WARN, &
+     'init_v7d_grid_transform inter sub_type '//TRIM(this%trans%inter%sub_type) &
      //' not supported')
-    CALL raise_warning('init_grid_transform inter sub_type '//TRIM(this%trans%inter%sub_type)//' not supported')
-    
-  end if
-    
+
+  ENDIF
+
+ELSE IF (this%trans%trans_type == 'boxinter') THEN
+
+  this%innx=SIZE(v7d%ana)
+  this%inny=1
+  CALL get_val(griddim, nx=this%outnx, ny=this%outny, &
+   lon_min=lon_min, lon_max=lon_max, lat_min=lat_min, lat_max=lat_max)
+! TODO now box size is ignored
+! if box size not provided, use the actual grid step
+  IF (.NOT.c_e(this%trans%inter%box%boxdx)) &
+   CALL get_val(griddim, dx=this%trans%inter%box%boxdx)
+  IF (.NOT.c_e(this%trans%inter%box%boxdy)) &
+   CALL get_val(griddim, dx=this%trans%inter%box%boxdy)
+! half size is actually needed
+  this%trans%inter%box%boxdx = this%trans%inter%box%boxdx*0.5D0
+  this%trans%inter%box%boxdy = this%trans%inter%box%boxdy*0.5D0
+! index arrays must have the shape of input grid
+  ALLOCATE(lon(this%innx),lat(this%innx))
+  ALLOCATE(this%inter_index_x(this%innx,this%inny), &
+   this%inter_index_y(this%innx,this%inny))
+
+! get coordinates of input grid in geo system
+  CALL getval(v7d%ana(:)%coord,lon=lon,lat=lat)
+! use find_index in the opposite way
+  CALL find_index(griddim,'near',&
+   nx=this%outnx, ny=this%outny ,&
+   lon_min=lon_min, lon_max=lon_max,&
+   lat_min=lat_min, lat_max=lat_max,&
+   lon=lon, lat=lat,&
+   index_x=this%inter_index_x(:,1), index_y=this%inter_index_y(:,1))
+
 ELSE
 
-  CALL l4f_category_log(this%category,L4F_WARN,'init_grid_transform trans type '//TRIM(this%trans%trans_type) &
+  CALL l4f_category_log(this%category,L4F_WARN, &
+   'init_v7d_grid_transform trans type '//TRIM(this%trans%trans_type) &
    //' not supported')
-  CALL raise_warning('init_grid_transform trans type '//TRIM(this%trans%trans_type)//' not supported')
 
 ENDIF
 
@@ -2036,7 +2035,7 @@ if (any(shape(field_in) /= (/this%innx,this%inny/))) then
   call l4f_category_log(this%category,L4F_ERROR,"inconsistent in shape: "//&
    TRIM(to_char(this%innx))//","//TRIM(to_char(this%inny))//" /= "//&
    TRIM(to_char(SIZE(field_in,1)))//","//TRIM(to_char(SIZE(field_in,2))))
-  call raise_fatal_error("inconsistent shape")
+  call raise_fatal_error()
 end if
 
 if (any(shape(field_out) /= (/this%outnx,this%outny/))) then
@@ -2044,7 +2043,7 @@ if (any(shape(field_out) /= (/this%outnx,this%outny/))) then
   call l4f_category_log(this%category,L4F_ERROR,"inconsistent out shape: "//&
    TRIM(to_char(this%outnx))//","//TRIM(to_char(this%outny))//" /= "//&
    TRIM(to_char(SIZE(field_out,1)))//","//TRIM(to_char(SIZE(field_out,2))))
-  call raise_fatal_error("inconsistent shape")
+  call raise_fatal_error()
 end if
 
 
@@ -2053,7 +2052,8 @@ field_out(:,:) = rmiss
 IF (this%trans%trans_type == 'zoom') THEN
 
 #ifdef DEBUG
-  call l4f_category_log(this%category,L4F_DEBUG,"start grid_transform_compute zoom")
+  call l4f_category_log(this%category,L4F_DEBUG, &
+   "start grid_transform_compute zoom")
 #endif
 
   field_out(this%outinx:this%outfnx, &
@@ -2064,7 +2064,8 @@ IF (this%trans%trans_type == 'zoom') THEN
 ELSE IF (this%trans%trans_type == 'boxregrid') THEN
 
 #ifdef DEBUG
-  call l4f_category_log(this%category,L4F_DEBUG,"start grid_transform_compute boxregrid")
+  call l4f_category_log(this%category,L4F_DEBUG, &
+   "start grid_transform_compute boxregrid")
 #endif
 
   jj = 0
@@ -2086,7 +2087,8 @@ ELSE IF (this%trans%trans_type == 'boxregrid') THEN
 ELSE IF (this%trans%trans_type == 'inter') THEN
 
 #ifdef DEBUG
-  call l4f_category_log(this%category,L4F_DEBUG,"start grid_transform_compute inter")
+  call l4f_category_log(this%category,L4F_DEBUG, &
+   "start grid_transform_compute inter")
 #endif
 
   IF (this%trans%inter%sub_type == 'near') THEN
@@ -2130,98 +2132,85 @@ ELSE IF (this%trans%trans_type == 'inter') THEN
       ENDDO
     ENDDO
 
-  else if (this%trans%inter%sub_type == 'box') THEN
-    IF (c_e(this%trans%inter%box%boxpercentile)) THEN ! percentile
-      IF (this%trans%inter%box%boxpercentile >= 100.0D0) THEN ! optimize for max
-        field_out(:,:) = rmiss
-        DO j = 1, this%inny
-          DO i = 1, this%innx
-            IF (c_e(this%inter_index_x(i,j)) .AND. c_e(this%inter_index_y(i,j))) THEN
-              IF (c_e(field_out(this%inter_index_x(i,j),this%inter_index_y(i,j)))) THEN
-                field_out(this%inter_index_x(i,j),this%inter_index_y(i,j)) = &
-                 MAX(field_out(this%inter_index_x(i,j),this%inter_index_y(i,j)), &
-                 field_in(i,j))
-              ELSE
-                field_out(this%inter_index_x(i,j),this%inter_index_y(i,j)) = field_in(i,j)
-              ENDIF
-            ENDIF
-          ENDDO
-        ENDDO
+  ENDIF
+ELSE IF (this%trans%trans_type == 'boxinter') THEN
 
-!        DO j = 1, this%outny
-!          DO i = 1, this%outnx
-!            field_out(i,j) = MAXVAL(field_in, &
-!             mask=(this%inter_index_x == i .AND. &
-!             this%inter_index_y == j))
-!          ENDDO
-!        ENDDO
-      ELSE IF (this%trans%inter%box%boxpercentile <= 0.0D0) THEN ! optimize for min
-        field_out(:,:) = rmiss
-        DO j = 1, this%inny
-          DO i = 1, this%innx
-            IF (c_e(this%inter_index_x(i,j)) .AND. c_e(this%inter_index_y(i,j))) THEN
-              IF (c_e(field_out(this%inter_index_x(i,j),this%inter_index_y(i,j)))) THEN
-                field_out(this%inter_index_x(i,j),this%inter_index_y(i,j)) = &
-                 MIN(field_out(this%inter_index_x(i,j),this%inter_index_y(i,j)), &
-                 field_in(i,j))
-              ELSE
-                field_out(this%inter_index_x(i,j),this%inter_index_y(i,j)) = field_in(i,j)
-              ENDIF
-            ENDIF
-          ENDDO
-        ENDDO
+#ifdef DEBUG
+  call l4f_category_log(this%category,L4F_DEBUG, &
+   "start grid_transform_compute boxinter")
+#endif
 
-      ELSE ! full percentile
-        DO j = 1, this%outny
-          DO i = 1, this%outnx
-            field_out(i:i,j) = stat_percentile( &
-             RESHAPE(field_in, (/SIZE(field_in)/)), &
-             (/REAL(this%trans%inter%box%boxpercentile)/), &
-             mask=RESHAPE((this%inter_index_x == i .AND. &
-             this%inter_index_y == j), (/SIZE(field_in)/)))
-          ENDDO
-        ENDDO
-      ENDIF
-    ELSE ! average
-!      DO j = 1, this%outny
-!        DO i = 1, this%outnx
-!          field_out(i,j) = stat_average(field_in, &
-!           mask=(this%inter_index_x == i .AND. &
-!           this%inter_index_y == j))
-!        ENDDO
-!      ENDDO
-      ALLOCATE(nval(this%outnx, this%outny))
-      field_out(:,:) = 0.0
-      nval(:,:) = 0
-      DO j = 1, this%inny
-        DO i = 1, this%innx
-          IF (c_e(this%inter_index_x(i,j)) .AND. c_e(this%inter_index_y(i,j))) THEN
-            field_out(this%inter_index_x(i,j),this%inter_index_y(i,j)) = &
-             field_out(this%inter_index_x(i,j),this%inter_index_y(i,j)) + &
-             field_in(i,j)
-            nval(this%inter_index_x(i,j),this%inter_index_y(i,j)) = &
-             nval(this%inter_index_x(i,j),this%inter_index_y(i,j)) + 1
-          ENDIF
-        ENDDO
-      ENDDO
-      WHERE (nval(:,:) /= 0)
-        field_out(:,:) = field_out(:,:)/nval(:,:)
-      ELSEWHERE
-        field_out(:,:) = rmiss
-      END WHERE
-      DEALLOCATE(nval)
-    ENDIF
-  else
-
-    call l4f_category_log(this%category,L4F_ERROR,"sub_type not right here: "//this%trans%inter%sub_type)
-    call raise_fatal_error("sub_type not right here")
+  IF (this%trans%inter%sub_type == 'average') THEN
     
-  END IF
+    ALLOCATE(nval(this%outnx, this%outny))
+    field_out(:,:) = 0.0
+    nval(:,:) = 0
+    DO j = 1, this%inny
+      DO i = 1, this%innx
+        IF (c_e(this%inter_index_x(i,j)) .AND. c_e(this%inter_index_y(i,j))) THEN
+          field_out(this%inter_index_x(i,j),this%inter_index_y(i,j)) = &
+           field_out(this%inter_index_x(i,j),this%inter_index_y(i,j)) + &
+           field_in(i,j)
+          nval(this%inter_index_x(i,j),this%inter_index_y(i,j)) = &
+           nval(this%inter_index_x(i,j),this%inter_index_y(i,j)) + 1
+        ENDIF
+      ENDDO
+    ENDDO
+    WHERE (nval(:,:) /= 0)
+      field_out(:,:) = field_out(:,:)/nval(:,:)
+    ELSEWHERE
+      field_out(:,:) = rmiss
+    END WHERE
+    DEALLOCATE(nval)
 
-else
+  ELSE IF (this%trans%inter%sub_type == 'max') THEN
 
-  call l4f_category_log(this%category,L4F_ERROR,"trans_type not right here: "//this%trans%trans_type)
-  call raise_fatal_error("trans_type not right here")
+    field_out(:,:) = rmiss
+    DO j = 1, this%inny
+      DO i = 1, this%innx
+        IF (c_e(this%inter_index_x(i,j)) .AND. c_e(this%inter_index_y(i,j))) THEN
+          IF (c_e(field_out(this%inter_index_x(i,j),this%inter_index_y(i,j)))) THEN
+            field_out(this%inter_index_x(i,j),this%inter_index_y(i,j)) = &
+             MAX(field_out(this%inter_index_x(i,j),this%inter_index_y(i,j)), &
+             field_in(i,j))
+          ELSE
+            field_out(this%inter_index_x(i,j),this%inter_index_y(i,j)) = field_in(i,j)
+          ENDIF
+        ENDIF
+      ENDDO
+    ENDDO
+
+
+  ELSE IF (this%trans%inter%sub_type == 'min') THEN
+
+    field_out(:,:) = rmiss
+    DO j = 1, this%inny
+      DO i = 1, this%innx
+        IF (c_e(this%inter_index_x(i,j)) .AND. c_e(this%inter_index_y(i,j))) THEN
+          IF (c_e(field_out(this%inter_index_x(i,j),this%inter_index_y(i,j)))) THEN
+            field_out(this%inter_index_x(i,j),this%inter_index_y(i,j)) = &
+             MIN(field_out(this%inter_index_x(i,j),this%inter_index_y(i,j)), &
+             field_in(i,j))
+          ELSE
+            field_out(this%inter_index_x(i,j),this%inter_index_y(i,j)) = field_in(i,j)
+          ENDIF
+        ENDIF
+      ENDDO
+    ENDDO
+
+  ELSE IF (this%trans%inter%sub_type == 'percentile') THEN
+    
+    DO j = 1, this%outny
+      DO i = 1, this%outnx
+        field_out(i:i,j) = stat_percentile( &
+         RESHAPE(field_in, (/SIZE(field_in)/)), &
+         (/REAL(this%trans%inter%box%boxpercentile)/), &
+         mask=RESHAPE((this%inter_index_x == i .AND. &
+         this%inter_index_y == j), (/SIZE(field_in)/)))
+      ENDDO
+    ENDDO
+
+  ENDIF
 
 ENDIF
 
@@ -2250,18 +2239,20 @@ call l4f_category_log(this%category,L4F_DEBUG,"start v7d_grid_transform_compute"
 
 ! check size of field_in, field_out
 
-if (size(field_in) /= this%innx) then
+IF (SIZE(field_in) /= this%innx .OR. 1 /= this%inny) THEN
 
   call l4f_category_log(this%category,L4F_ERROR,"inconsistent in shape: "//&
-   trim(to_char(this%innx)))
-  call raise_fatal_error("inconsistent shape")
+   TRIM(to_char(this%innx))//","//TRIM(to_char(this%inny))//" /= "//&
+   TRIM(to_char(SIZE(field_in)))//",1")
+  call raise_fatal_error()
 end if
 
 if (any(shape(field_out) /= (/this%outnx,this%outny/))) then
 
   call l4f_category_log(this%category,L4F_ERROR,"inconsistent out shape: "//&
-   trim(to_char(this%outny))//" - "//trim(to_char(this%outny)))
-  call raise_fatal_error("inconsistent shape")
+   TRIM(to_char(this%outnx))//","//TRIM(to_char(this%outny))//" /= "//&
+   TRIM(to_char(SIZE(field_out,1)))//","//TRIM(to_char(SIZE(field_out,2))))
+  call raise_fatal_error()
 end if
 
 field_out(:,:) = rmiss
@@ -2291,16 +2282,17 @@ IF (this%trans%trans_type == 'inter') THEN
 #ifdef HAVE_LIBNGMATH
 
       CALL NATGRIDS(inn_p,x_in_p,y_in_p,field_in_p,&
-       this%outnx ,this%outny ,real(this%inter_x(:,1)),real(this%inter_y(1,:)),field_out,IER)
+       this%outnx, this%outny, REAL(this%inter_x(:,1)), &
+       REAL(this%inter_y(1,:)), field_out, ier)
 #else
       call l4f_category_log(this%category,L4F_ERROR,"libsim compiled without NATGRIDD (ngmath ncarg library)")
-      call raise_fatal_error("libsim compiled without NATGRIDD (ngmath ncarg library)")
+      call raise_fatal_error()
 
 #endif
 
-      IF (IER .NE. 0) THEN
+      IF (ier /= 0) THEN
         call l4f_category_log(this%category,L4F_ERROR,"Error return from NATGRIDD = "//to_char(ier))
-        call raise_fatal_error("Error return from NATGRIDD")
+        call raise_fatal_error()
       ENDIF
 
       deallocate(field_in_p,x_in_p,y_in_p)
@@ -2311,19 +2303,24 @@ IF (this%trans%trans_type == 'inter') THEN
 
     end if
 
+  ELSE IF (this%trans%trans_type == 'boxinter') THEN ! use the grid-grid method
+      
+    CALL compute(this, RESHAPE(field_in, (/SIZE(field_in), 1/)), field_out)
 
-  else
-      
-    call l4f_category_log(this%category,L4F_ERROR,"sub_type not right here: "//this%trans%inter%sub_type)
-    call raise_fatal_error("sub_type not right here")
-      
+  ELSE
+
+    call l4f_category_log(this%category,L4F_ERROR, &
+     "sub_type not right here: "//this%trans%inter%sub_type)
+    call raise_fatal_error()
+
   END IF
 
 else
 
-  call l4f_category_log(this%category,L4F_ERROR,"trans_type not right here: "//this%trans%trans_type)
-  call raise_fatal_error("trans_type not right here")
-  
+  call l4f_category_log(this%category,L4F_ERROR, &
+   "trans_type not right here: "//this%trans%trans_type)
+  call raise_fatal_error()
+
 END IF
 
 END SUBROUTINE v7d_grid_transform_compute
@@ -2426,31 +2423,31 @@ end subroutine find_index
 
 
 !> Locate index of requested point
-SUBROUTINE find_index_in_box(this, xin, yin, dx, dy, index_x, index_y)
-TYPE(griddim_def),INTENT(in) :: this
-DOUBLE PRECISION,INTENT(in) :: xin(:,:), yin(:,:)
-DOUBLE PRECISION,INTENT(in) :: dx, dy
-INTEGER,INTENT(out) :: index_x(:,:), index_y(:,:)
-
-DOUBLE PRECISION :: xout(this%dim%nx,this%dim%ny), yout(this%dim%nx,this%dim%ny)
-INTEGER :: i, j
-! compute coordinates of output grid
-CALL griddim_coordinates(this, xout, yout)
-
-index_x(:,:) = imiss
-index_x(:,:) = imiss
-
-DO j = 1, this%dim%ny
-  DO i = 1, this%dim%nx
-    WHERE(xin(:,:) >= xout(i,j)-dx .AND. xin(:,:) < xout(i,j)+dx .AND. &
-     yin(:,:) >= yout(i,j)-dy .AND. yin(:,:) < yout(i,j)+dy)
-      index_x(:,:) = i
-      index_y(:,:) = j
-    END WHERE
-  ENDDO
-ENDDO
-
-END SUBROUTINE find_index_in_box
+!SUBROUTINE find_index_in_box(this, xin, yin, dx, dy, index_x, index_y)
+!TYPE(griddim_def),INTENT(in) :: this
+!DOUBLE PRECISION,INTENT(in) :: xin(:,:), yin(:,:)
+!DOUBLE PRECISION,INTENT(in) :: dx, dy
+!INTEGER,INTENT(out) :: index_x(:,:), index_y(:,:)
+!
+!DOUBLE PRECISION :: xout(this%dim%nx,this%dim%ny), yout(this%dim%nx,this%dim%ny)
+!INTEGER :: i, j
+!
+!CALL griddim_coordinates(this, xout, yout)
+!
+!index_x(:,:) = imiss
+!index_x(:,:) = imiss
+!
+!DO j = 1, this%dim%ny
+!  DO i = 1, this%dim%nx
+!    WHERE(xin(:,:) >= xout(i,j)-dx .AND. xin(:,:) < xout(i,j)+dx .AND. &
+!     yin(:,:) >= yout(i,j)-dy .AND. yin(:,:) < yout(i,j)+dy)
+!      index_x(:,:) = i
+!      index_y(:,:) = j
+!    END WHERE
+!  ENDDO
+!ENDDO
+!
+!END SUBROUTINE find_index_in_box
 
 
 !> Compute rotation matrix for wind unrotation. It allocates and
