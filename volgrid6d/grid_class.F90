@@ -23,7 +23,6 @@ use vol7d_class
 use err_handling
 use grid_dim_class
 use optional_values
-!use doubleprecision_phys_const
 use simple_stat
 
 implicit none
@@ -1705,7 +1704,9 @@ ELSE IF (this%trans%trans_type == 'inter') THEN
   ELSE IF (this%trans%inter%sub_type == 'box') THEN
 
     CALL get_val(in, nx=this%innx, ny=this%inny)
-    CALL get_val(out, nx=this%outnx, ny=this%outny)
+    CALL get_val(out, nx=this%outnx, ny=this%outny, &
+     lon_min=lon_min, lon_max=lon_max, lat_min=lat_min, lat_max=lat_max)
+! TODO now box size is ignored
 ! if box size not provided, use the actual grid step
     IF (.NOT.c_e(this%trans%inter%box%boxdx)) &
      CALL get_val(out, dx=this%trans%inter%box%boxdx)
@@ -1716,19 +1717,17 @@ ELSE IF (this%trans%trans_type == 'inter') THEN
     this%trans%inter%box%boxdy = this%trans%inter%box%boxdy*0.5D0
 ! unlike before, here index arrays must have the shape of input grid
     ALLOCATE(this%inter_index_x(this%innx,this%inny), &
-     this%inter_index_y(this%innx,this%inny), &
-     this%inter_x(this%innx,this%inny), &
-     this%inter_y(this%innx,this%inny))
+     this%inter_index_y(this%innx,this%inny))
 
-! compute coordinates of input grid in output system
+! compute coordinates of input grid in geo system
     CALL unproj(in) ! TODO costringe a dichiarare in INTENT(inout), si puo` evitare?
-    CALL proj(out,in%dim%lon,in%dim%lat,this%inter_x,this%inter_y)
-! find index of output box where every input point falls
-    CALL find_index_in_box(out, this%inter_x, this%inter_y, &
-     this%trans%inter%box%boxdx, this%trans%inter%box%boxdy, &
-     this%inter_index_x, this%inter_index_y)
-! not needed anymore
-    DEALLOCATE(this%inter_x, this%inter_y)
+! use find_index in the opposite way as before
+    CALL find_index(out,'near',&
+     nx=this%outnx, ny=this%outny ,&
+     lon_min=lon_min, lon_max=lon_max,&
+     lat_min=lat_min, lat_max=lat_max,&
+     lon=in%dim%lon, lat=in%dim%lat,&
+     index_x=this%inter_index_x, index_y=this%inter_index_y)
 
   ELSE
 
@@ -2022,6 +2021,7 @@ REAL, INTENT(in) :: field_in(:,:) !< input array
 REAL, INTENT(out) :: field_out(:,:) !< output aarray
 
 INTEGER :: i, j, ii, jj, ie, je, navg
+INTEGER,ALLOCATABLE :: nval(:,:)
 real :: z1,z2,z3,z4
 doubleprecision  :: x1,x3,y1,y3,xp,yp
 
@@ -2131,25 +2131,47 @@ ELSE IF (this%trans%trans_type == 'inter') THEN
     ENDDO
 
   else if (this%trans%inter%sub_type == 'box') THEN
-!TODO controllare cosa succede se le maschere sono tutte .FALSE.
     IF (c_e(this%trans%inter%box%boxpercentile)) THEN ! percentile
-      IF (this%trans%inter%box%boxpercentile >= 1.0D0) THEN ! optimize for max
-        DO j = 1, this%outny
-          DO i = 1, this%outnx
+      IF (this%trans%inter%box%boxpercentile >= 100.0D0) THEN ! optimize for max
+        field_out(:,:) = rmiss
+        DO j = 1, this%inny
+          DO i = 1, this%innx
+            IF (c_e(this%inter_index_x(i,j)) .AND. c_e(this%inter_index_y(i,j))) THEN
+              IF (c_e(field_out(this%inter_index_x(i,j),this%inter_index_y(i,j)))) THEN
+                field_out(this%inter_index_x(i,j),this%inter_index_y(i,j)) = &
+                 MAX(field_out(this%inter_index_x(i,j),this%inter_index_y(i,j)), &
+                 field_in(i,j))
+              ELSE
+                field_out(this%inter_index_x(i,j),this%inter_index_y(i,j)) = field_in(i,j)
+              ENDIF
+            ENDIF
+          ENDDO
+        ENDDO
+
+!        DO j = 1, this%outny
+!          DO i = 1, this%outnx
 !            field_out(i,j) = MAXVAL(field_in, &
 !             mask=(this%inter_index_x == i .AND. &
 !             this%inter_index_y == j))
-          ENDDO
-        ENDDO
+!          ENDDO
+!        ENDDO
       ELSE IF (this%trans%inter%box%boxpercentile <= 0.0D0) THEN ! optimize for min
-        DO j = 1, this%outny
-          DO i = 1, this%outnx
-!            field_out(i,j) = MINVAL(field_in, &
-!             mask=(this%inter_index_x == i .AND. &
-!             this%inter_index_y == j))
+        field_out(:,:) = rmiss
+        DO j = 1, this%inny
+          DO i = 1, this%innx
+            IF (c_e(this%inter_index_x(i,j)) .AND. c_e(this%inter_index_y(i,j))) THEN
+              IF (c_e(field_out(this%inter_index_x(i,j),this%inter_index_y(i,j)))) THEN
+                field_out(this%inter_index_x(i,j),this%inter_index_y(i,j)) = &
+                 MIN(field_out(this%inter_index_x(i,j),this%inter_index_y(i,j)), &
+                 field_in(i,j))
+              ELSE
+                field_out(this%inter_index_x(i,j),this%inter_index_y(i,j)) = field_in(i,j)
+              ENDIF
+            ENDIF
           ENDDO
         ENDDO
-      ELSE
+
+      ELSE ! full percentile
         DO j = 1, this%outny
           DO i = 1, this%outnx
             field_out(i:i,j) = stat_percentile( &
@@ -2161,13 +2183,33 @@ ELSE IF (this%trans%trans_type == 'inter') THEN
         ENDDO
       ENDIF
     ELSE ! average
-      DO j = 1, this%outny
-        DO i = 1, this%outnx
+!      DO j = 1, this%outny
+!        DO i = 1, this%outnx
 !          field_out(i,j) = stat_average(field_in, &
 !           mask=(this%inter_index_x == i .AND. &
 !           this%inter_index_y == j))
+!        ENDDO
+!      ENDDO
+      ALLOCATE(nval(this%outnx, this%outny))
+      field_out(:,:) = 0.0
+      nval(:,:) = 0
+      DO j = 1, this%inny
+        DO i = 1, this%innx
+          IF (c_e(this%inter_index_x(i,j)) .AND. c_e(this%inter_index_y(i,j))) THEN
+            field_out(this%inter_index_x(i,j),this%inter_index_y(i,j)) = &
+             field_out(this%inter_index_x(i,j),this%inter_index_y(i,j)) + &
+             field_in(i,j)
+            nval(this%inter_index_x(i,j),this%inter_index_y(i,j)) = &
+             nval(this%inter_index_x(i,j),this%inter_index_y(i,j)) + 1
+          ENDIF
         ENDDO
       ENDDO
+      WHERE (nval(:,:) /= 0)
+        field_out(:,:) = field_out(:,:)/nval(:,:)
+      ELSEWHERE
+        field_out(:,:) = rmiss
+      END WHERE
+      DEALLOCATE(nval)
     ENDIF
   else
 
