@@ -68,12 +68,12 @@ CONTAINS
 !! dalle impostazioni del livello massimo di disturbo tollerabile)
 !! e l'esecuzione del programma si interrompe incondizionatamente.
 SUBROUTINE raise_fatal_error(msg, ierval)
-CHARACTER (len=*), INTENT(in) :: msg !< messaggio di errore
+CHARACTER (len=*), OPTIONAL, INTENT(in) :: msg !< messaggio di errore
 INTEGER, OPTIONAL, INTENT(in) :: ierval !< codice di errore opzionale
 
-CALL output_message('Fatal error: ', msg, -1, ierval)
-IF (PRESENT(ierval)) CALL EXIT(ABS(ierval))
-call exit(1)
+IF (PRESENT(msg)) CALL output_message('Fatal error: ', msg, -1, ierval)
+IF (PRESENT(ierval)) CALL exit(ABS(ierval))
+CALL exit(1)
 
 END SUBROUTINE raise_fatal_error
 
@@ -83,14 +83,14 @@ END SUBROUTINE raise_fatal_error
 !! si interrompe ed esce con codice di
 !! errore di sistema \a ierval (se fornito).
 SUBROUTINE raise_error(msg, ierval, ier)
-CHARACTER (len=*), INTENT(in) :: msg !< messaggio di errore
+CHARACTER (len=*), OPTIONAL, INTENT(in) :: msg !< messaggio di errore
 INTEGER, OPTIONAL, INTENT(in) :: ierval !< codice di errore opzionale
 INTEGER, OPTIONAL, INTENT(out) :: ier !< codice di errore opzionale restituito in uscita
 
-CALL output_message('Error: ', msg, eh_verbose_err, ierval)
+IF (PRESENT(msg)) CALL output_message('Error: ', msg, eh_verbose_err, ierval)
 IF (eh_fatal) THEN
-  IF (PRESENT(ierval)) CALL EXIT(ABS(ierval))
-  call exit(1)
+  IF (PRESENT(ierval)) CALL exit(ABS(ierval))
+  CALL exit(1)
 ENDIF
 IF (PRESENT(ier) .AND. PRESENT(ierval)) ier = ierval
 
@@ -103,7 +103,7 @@ CHARACTER (len=*), INTENT(in) :: msg !< messaggio di avviso
 INTEGER, OPTIONAL, INTENT(in) :: ierval !< codice di errore opzionale
 INTEGER, OPTIONAL, INTENT(out) :: ier !< codice di errore opzionale restituito in uscita
 
-CALL output_message('Warning: ', msg, eh_verbose_warn, ierval)
+CALL output_message('Per favore, non usare la raise_warning nei tuoi programmi, e` obsoleta: ', msg, eh_verbose_warn, ierval)
 IF (PRESENT(ier) .AND. PRESENT(ierval)) ier = ierval
 
 END SUBROUTINE raise_warning
@@ -122,7 +122,7 @@ ELSE
   lverblev = eh_verbose_info
 ENDIF
 
-CALL output_message('Info: ', msg, lverblev)
+CALL output_message('Per favore, non usare la print_info nei tuoi programmi, e` obsoleta: ', msg, lverblev)
 
 END SUBROUTINE print_info
 

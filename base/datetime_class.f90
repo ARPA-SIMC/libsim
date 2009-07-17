@@ -14,6 +14,7 @@
 !! \ingroup base
 MODULE datetime_class
 USE kinds
+USE log4fortran
 USE err_handling
 USE missing_values
 IMPLICIT NONE
@@ -341,7 +342,8 @@ ELSE IF (PRESENT(isodate)) THEN ! formato iso YYYY-MM-DD hh:mm:ss.msc
 
 100 CONTINUE ! condizione di errore in isodate
   CALL delete(this)
-  CALL raise_error('isodate '//TRIM(isodate)//' non valida')
+  CALL l4f_log(L4F_ERROR, 'isodate '//TRIM(isodate)//' not valid')
+  CALL raise_error()
   RETURN
 
 ELSE IF (PRESENT(simpledate)) THEN ! formato YYYYMMDDhhmmssmsc
@@ -355,16 +357,18 @@ ELSE IF (PRESENT(simpledate)) THEN ! formato YYYYMMDDhhmmssmsc
 
 120 CONTINUE ! condizione di errore in simpledate
   CALL delete(this)
-  CALL raise_error('simpledate '//TRIM(simpledate)//' non valida')
+  CALL l4f_log(L4F_ERROR, 'simpledate '//TRIM(simpledate)//' not valid')
+  CALL raise_error()
   RETURN
 
 ELSE IF (PRESENT(oraclesimdate)) THEN ! formato YYYYMMDDhhmm
-  CALL raise_warning('in datetime_init, parametro oraclesimdate '// &
+  CALL l4f_log(L4F_WARN, 'in datetime_init, parametro oraclesimdate '// &
    'obsoleto, usare piuttosto simpledate')
   READ(oraclesimdate,'(I4,4I2)', iostat=ier) lyear, lmonth, lday, lhour, lminute
   IF (ier /= 0) THEN
     CALL delete(this)
-    CALL raise_error('oraclesimdate '//TRIM(oraclesimdate)//' non valida')
+    CALL l4f_log(L4F_ERROR, 'oraclesimdate '//TRIM(oraclesimdate)//' not valid')
+    CALL raise_error()
     RETURN
   ENDIF
   CALL jeladata5_1(lday,lmonth,lyear,lhour,lminute,0,this%iminuti)
@@ -443,7 +447,7 @@ IF (PRESENT(year) .OR. PRESENT(month) .OR. PRESENT(day) .OR. PRESENT(hour) &
     simpledate = datebuf(1:MIN(LEN(simpledate),17))
   ENDIF
   IF (PRESENT(oraclesimdate)) THEN
-    CALL raise_warning('in datetime_getval, parametro oraclesimdate '// &
+    CALL l4f_log(L4F_WARN, 'in datetime_getval, parametro oraclesimdate '// &
      'obsoleto, usare piuttosto simpledate')
     WRITE(oraclesimdate, '(I4.4,4I2.2)') lyear, lmonth, lday, lhour, lminute
   ENDIF
@@ -823,7 +827,8 @@ IF (PRESENT(isodate)) THEN
 
 200 CONTINUE ! condizione di errore in isodate
   CALL delete(this)
-  CALL raise_error('isodate '//TRIM(isodate)//' non valida')
+  CALL l4f_log(L4F_ERROR, 'isodate '//TRIM(isodate)//' not valid')
+  CALL raise_error()
 
 ELSE IF (PRESENT(simpledate)) THEN
   datebuf(1:17) = '00000000000000000'
@@ -835,11 +840,12 @@ ELSE IF (PRESENT(simpledate)) THEN
 
 220 CONTINUE ! condizione di errore in simpledate
   CALL delete(this)
-  CALL raise_error('simpledate '//TRIM(simpledate)//' non valida')
+  CALL l4f_log(L4F_ERROR, 'simpledate '//TRIM(simpledate)//' not valid')
+  CALL raise_error()
   RETURN
 
 ELSE IF (PRESENT(oraclesimdate)) THEN
-  CALL raise_warning('in timedelta_init, parametro oraclesimdate '// &
+    CALL l4f_log(L4F_WARN, 'in timedelta_init, parametro oraclesimdate '// &
    'obsoleto, usare piuttosto simpledate')
   READ(oraclesimdate, '(I8,2I2)')d, h, m
   this%iminuti = 86400000_int_ll*INT(d, KIND=int_ll) + &
@@ -948,7 +954,7 @@ IF (PRESENT(simpledate)) THEN
   simpledate = datebuf(1:MIN(LEN(simpledate),17))
 ENDIF
 IF (PRESENT(oraclesimdate)) THEN
-  CALL raise_warning('in timedelta_getval, parametro oraclesimdate '// &
+  CALL l4f_log(L4F_WARN, 'in timedelta_getval, parametro oraclesimdate '// &
    'obsoleto, usare piuttosto simpledate')
   WRITE(oraclesimdate, '(I8.8,2I2.2)') this%iminuti/86400000_int_ll, &
    MOD(this%iminuti/3600000_int_ll, 24), MOD(this%iminuti/60000_int_ll, 60)

@@ -23,6 +23,7 @@
 !! \include example_getopt.f90
 !! \ingroup base
 MODULE getopt_m
+USE log4fortran
 USE err_handling
 IMPLICIT NONE
 
@@ -137,7 +138,9 @@ do i = 1, size(longopts)
         call getarg( optind, optarg )
         optind = optind + 1
       else
-        CALL raise_error('option '''//TRIM(arg)//''' requires an argument')
+        CALL l4f_log(L4F_ERROR, &
+         'in getopt, option '''//TRIM(arg)//''' requires an argument')
+        CALL raise_error()
       endif
     endif
     return
@@ -145,7 +148,9 @@ do i = 1, size(longopts)
 end do
 ! else not found
 process_long = '?'
-CALL raise_error('unrecognized option '''//TRIM(arg)//'''')
+CALL l4f_log(L4F_ERROR, 'in getopt, unrecognized option '''//TRIM(arg)//'''')
+CALL raise_error()
+
 end function process_long
 
 
@@ -165,7 +170,8 @@ i = index( optstring, optopt )
 if ( i == 0 ) then
 ! unrecognized option
   process_short = '?'
-  CALL raise_error('unrecognized option ''-'//optopt//'''')
+  CALL l4f_log(L4F_ERROR, 'in getopt, unrecognized option ''-'//optopt//'''')
+  CALL raise_error()
 endif
 
 IF ( i > 0 .AND. optstring(MIN(i+1,LEN(optstring)):MIN(i+1,LEN(optstring))) == ':' ) THEN
@@ -179,7 +185,8 @@ IF ( i > 0 .AND. optstring(MIN(i+1,LEN(optstring)):MIN(i+1,LEN(optstring))) == '
     call getarg( optind, optarg )
     optind = optind + 1
   else
-    CALL raise_error('option ''-'//optopt//''' requires an argument')
+    CALL l4f_log(L4F_ERROR, 'in getopt, option ''-'//optopt//''' requires an argument')
+    CALL raise_error()
   endif
   grpind = 2
 elseif ( arglen > grpind ) then

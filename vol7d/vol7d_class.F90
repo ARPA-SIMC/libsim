@@ -1640,8 +1640,9 @@ inquire(unit=lunit,opened=opened)
 if (.not. opened) then 
   inquire(file=lfilename, EXIST=exist)
   IF (exist) THEN
-    CALL l4f_log(L4F_FATAL, 'file exists, cannot open a new file')
-    CALL raise_fatal_error('file exist; cannot open new file')
+    CALL l4f_log(L4F_FATAL, &
+     'in vol7d_write_on_file, file exists, cannot open file '//TRIM(lfilename))
+    CALL raise_fatal_error()
   ENDIF
   OPEN(unit=lunit, file=lfilename, form="UNFORMATTED")
   CALL l4f_log(L4F_INFO, 'opened: '//TRIM(lfilename))
@@ -1843,8 +1844,9 @@ inquire(unit=lunit,opened=opened)
 IF (.NOT. opened) THEN 
   inquire(file=lfilename,EXIST=exist)
   IF (.NOT.exist) THEN
-    CALL l4f_log(L4F_FATAL, 'file does not exist, cannot open')
-    CALL raise_fatal_error('file do not exist; cannot open file')
+    CALL l4f_log(L4F_FATAL, &
+     'in vol7d_read_from_file, file does not exists, cannot open')
+    CALL raise_fatal_error()
   ENDIF
   OPEN(unit=lunit, file=lfilename, form="UNFORMATTED")
   CALL l4f_log(L4F_INFO, 'opened: '//TRIM(lfilename))

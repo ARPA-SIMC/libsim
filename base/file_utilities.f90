@@ -1,16 +1,16 @@
-!> \brief Utilità per i file.
-!!
-!! Questo modulo raccoglie utilità di uso generale legate alla gestione dei file.
-!! Un primo gruppo di utilità gestisce la localizzazioen e l'apertura di file di
-!! configurazione in directory standard o specificate da una variabile d'ambiente.
-!! Esso definisce inoltre la classe \a csv_record ed una serie di metodi associati
-!! che permette di creare e interpretare i record di un file formato csv.
+!> Utilities for managing files. This module is a collection of generic utilities
+!! for managing files. A group of utilities is dedicated to locating
+!! and opening configuration files in standard directories or in
+!! directories specified by environmental variables. The module also
+!! contains the class \a csv_record for creating and interpreting the
+!! records of a csv file.
 !! \ingroup base
 MODULE file_utilities
 USE kinds
 USE char_utilities
 USE missing_values
 USE optional_values
+USE log4fortran
 USE err_handling
 IMPLICIT NONE
 
@@ -22,14 +22,14 @@ CHARACTER(len=16), PARAMETER, PRIVATE :: &
  (/2,nftype/))
 CHARACTER(len=6), PARAMETER, PRIVATE :: &
  filetypename(nftype) = (/ 'DATA  ', 'CONFIG' /)
-INTEGER, PARAMETER :: filetype_data = 1 !< Il file richiesto è un file di dati
-INTEGER, PARAMETER :: filetype_config = 2 !< Il file richiesto è un file di configurazione
+INTEGER, PARAMETER :: filetype_data = 1 !< Data file requested
+INTEGER, PARAMETER :: filetype_config = 2 !< Configuration file requested
 
 CHARACTER(len=20) :: program_name='libsim', program_name_env='LIBSIM'
 
-!> Classe che permette di interpretare i record di un file formato csv.
-!! Vedi la pagina http://en.wikipedia.org/wiki/Comma-separated_values
-!! per una descrizione dettagliata del formato.
+!> Class for interpreting the records of a csv file.
+!! See http://en.wikipedia.org/wiki/Comma-separated_values for a
+!! detailed description of the csv format.
 TYPE csv_record
   PRIVATE
   INTEGER :: cursor, action, nfield !, ntotal
@@ -40,30 +40,32 @@ END TYPE csv_record
 INTEGER, PARAMETER, PRIVATE :: csv_basereclen=1024, &
  csv_action_read=0, csv_action_write=1
 
-!> Costruttore per la classe \a csv_record. Deve essere richiamato
-!! per ogni record (riga) csv da interpretare.
+!> Constructor for the class \a csv_record. It has to be called for every
+!! record (line) csv to be created or interpreted.
 INTERFACE init
   MODULE PROCEDURE csv_record_init
 END INTERFACE
 
-!> Distruttore per la classe \a csv_record. È importante richiamarlo prima
-!! di riutilizzare l'oggetto per un record successivo altrimenti si
-!! perde memoria allocata.
+!> Destructor for the class \a csv_record. It is important to call
+!! it before reusing the object for the following record, in order to
+!! avoid memory leaks.
 INTERFACE delete
   MODULE PROCEDURE csv_record_delete
 END INTERFACE
 
-!> Metodi per ottenere successivamente i campi di un oggetto \a csv_record.
-!! Usare il nome generico \c csv_record_getfield con i parametri opportuni,
-!! ci penserà il compiltore a scegliere il metodo giusto.
+!> Methods for successively obtaining the fields of a \a csv_record object.
+!! The generic name \c csv_record_getfield with parameters of the
+!! desired type should be used instead of the specific names, the
+!! compiler will select the proper subroutine.
 INTERFACE csv_record_getfield
   MODULE PROCEDURE csv_record_getfield_char, csv_record_getfield_int, &
    csv_record_getfield_real
 END INTERFACE
 
-!> Metodi per aggiungere successivamente dei campi ad un oggetto \a csv_record.
-!! Usare il nome generico \c csv_record_addfield con i parametri opportuni,
-!! ci penserà il compiltore a scegliere il metodo giusto.
+!> Methods for successively adding fields to a \a csv_record object.
+!! The generic name \c csv_record_addfield with parameters of the
+!! desired type should be used instead of the specific names, the
+!! compiler will select the proper subroutine.
 INTERFACE csv_record_addfield
   MODULE PROCEDURE csv_record_addfield_char, csv_record_addfield_int, &
    csv_record_addfield_real
@@ -76,16 +78,17 @@ PRIVATE csv_record_init, csv_record_delete, csv_record_getfield_char, &
 
 CONTAINS
 
-!> Restituisce il numero di un'unità I/O Fortran attualmente non
-!! utilizzata. Restituisce -1 in caso di errore. Da inserire in un'istruzione
-!! fortran \c OPEN. Esempio di utilizzo:
+!> Returns the number of a Fortran input/output unit currently unused.
+!! It returns -1 in case of error. Example of use:
 !! \code
 !! USE file_utilities
 !! ...
 !! INTEGER :: n
 !! ...
 !! n=getunit()
-!! OPEN(n, FILE='ostregheta.txt')
+!! IF (n /= -1) THEN
+!!   OPEN(n, FILE='ostregheta.txt')
+!!   ...
 !! \endcode
 FUNCTION getunit() RESULT(unit)
 INTEGER :: unit
@@ -97,22 +100,21 @@ DO unit = 100, 32767
   IF (.NOT. op) RETURN
 ENDDO
 
-CALL raise_error('Too many open files')
+CALL l4f_log(L4F_ERROR, 'Too many open files')
+CALL raise_error()
 unit = -1
 
 END FUNCTION getunit
 
-
-!> Trova un file specifico per il pacchetto libsim. Esegue una ricerca
-!! in varie directory nell'ordine seguente:
-!!  - directory specificata dalla variabile d'ambiente \c LIBSIM_DATA per i file di dati o \c LIBSIM_CONFIG per i file di configurazione, se definite
-!!  - directory \c /usr/share/libsim per i file di dati o \c /usr/etc/libsim per i file di configurazione
-!!  - directory \c /usr/local/share/libsim per i file di dati o \c /usr/local/etc/libsim per i file di configurazione
-!! restituisce il path completo del file eventualmente trovato o una stringa vuota
-!! se il file non è stato trovato.
+!> Looks for a specific file for the libsim package.
+!! It searches in different directories in the following order:
+!!  - directory specified by the environmental variabile \c LIBSIM_DATA for data files or \c LIBSIM_CONFIG for configuration files, if defined
+!!  - directory \c /usr/share/libsim for data files or \c /etc/libsim for configuration files
+!!  - directory \c /usr/local/share/libsim for data files or \c /usr/local/etc/libsim for configuration files.
+!! It returns the full path to the existing file or an empty string if not found.
 FUNCTION get_package_filepath(filename, filetype) RESULT(path)
-CHARACTER(len=*), INTENT(in) :: filename !< nome del file da cercare, deve essere un path relativo
-INTEGER, INTENT(in) :: filetype !< tipo di file, usare una delle constanti \a ::filetype_data o \a ::filetype_config
+CHARACTER(len=*), INTENT(in) :: filename !< name of the file to be searched, it must be a relative path name
+INTEGER, INTENT(in) :: filetype !< type of file, the constants \a ::filetype_data or \a ::filetype_config have to be used
 
 INTEGER :: i, j
 CHARACTER(len=512) :: path
@@ -125,7 +127,9 @@ ENDIF
 
 IF (filetype < 1 .OR. filetype > nftype) THEN
   path = ''
-  CALL raise_error('File type not valid')
+  CALL l4f_log(L4F_ERROR, 'package file type '//TRIM(to_char(filetype))// &
+   ' not valid')
+  CALL raise_error()
   RETURN
 ENDIF
 
@@ -136,7 +140,7 @@ IF (path /= ' ') THEN
   path=TRIM(path)//'/'//filename
   INQUIRE(file=path, exist=exist)
   IF (exist) THEN
-    CALL print_info('Ho trovato il file '//TRIM(path))
+    CALL l4f_log(L4F_INFO, 'package file '//TRIM(path)//' found')
     RETURN
   ENDIF
 ENDIF
@@ -146,50 +150,46 @@ DO j = 1, SIZE(pathlist,1)
   path=TRIM(pathlist(j,filetype))//'/'//TRIM(program_name)//'/'//filename
   INQUIRE(file=path, exist=exist)
   IF (exist) THEN
-    CALL print_info('Ho trovato il file '//TRIM(path))
+    CALL l4f_log(L4F_INFO, 'package file '//TRIM(path)//' found')
     RETURN
   ENDIF
 ENDDO
-CALL raise_error('File '//TRIM(filename)//' not found')
+CALL l4f_log(L4F_ERROR, 'package file '//TRIM(filename)//' not found')
+CALL raise_error()
 path = ''
 
 END FUNCTION get_package_filepath
 
 
-!> Apre un file specifico per il pacchetto libsim. Esegue una ricerca
-!! in varie directory nell'ordine seguente:
-!!  - directory specificata dalla variabile d'ambiente \c LIBSIM_DATA per i file di dati o \c LIBSIM_CONFIG per i file di configurazione, se definite
-!!  - directory \c /usr/share/libsim per i file di dati o \c /usr/etc/libsim per i file di configurazione
-!!  - directory \c /usr/local/share/libsim per i file di dati o \c /usr/local/etc/libsim per i file di configurazione
-!! restituisce il numero dell'unità associata al file eventualmente trovato
-!! e aperto con successo o -1 se il file non è stato trovato o si è verificato
-!! un errore in fase di apertura.
+!> Opens a specific file for the libsim package.
+!! It searches in different directories in the following order:
+!!  - directory specified by the environmental variabile \c LIBSIM_DATA for data files or \c LIBSIM_CONFIG for configuration files, if defined
+!!  - directory \c /usr/share/libsim for data files or \c /etc/libsim for configuration files
+!!  - directory \c /usr/local/share/libsim for data files or \c /usr/local/etc/libsim for configuration files
+!! It returns the unit number associated to the file found and successfully opened,
+!! or -1 if the file does not exist or an error occurred while opening it.
 FUNCTION open_package_file(filename, filetype) RESULT(unit)
-CHARACTER(len=*), INTENT(in) :: filename !< nome del file da cercare, deve essere un path relativo
-INTEGER, INTENT(in) :: filetype !< tipo di file, usare una delle constanti \a ::filetype_data o \a ::filetype_config
+CHARACTER(len=*), INTENT(in) :: filename !< name of the file to be opened, it must be a relative path name
+INTEGER, INTENT(in) :: filetype !< type of file, the constants \a ::filetype_data or \a ::filetype_config have to be used
 INTEGER :: unit, i
 
 CHARACTER(len=512) :: path
 
-IF (filetype < 1 .OR. filetype > nftype) THEN
-  unit = -1
-  CALL raise_error('File type not valid')
+unit = -1
+path=get_package_filepath(filename, filetype)
+IF (path == '') RETURN
+
+unit = getunit()
+IF (unit == -1) RETURN
+
+OPEN(unit, file=path, status='old', iostat = i)
+IF (i == 0) THEN
+  CALL l4f_log(L4F_INFO, 'package file '//TRIM(path)//' opened')
   RETURN
 ENDIF
 
-unit = getunit()
-
-path=get_package_filepath(filename, filetype)
-
-IF (path /= ' ') THEN
-  OPEN(unit, file=path, status='old', iostat = i)
-  IF (i == 0) THEN
-    CALL print_info('Ho aperto il file '//TRIM(path))
-    RETURN
-  ENDIF
-ENDIF
-
-CALL raise_error('File '//TRIM(filename)//' not found')
+CALL l4f_log(L4F_ERROR, 'package file '//TRIM(filename)//' not found')
+CALL raise_error()
 unit = -1
 
 END FUNCTION open_package_file
@@ -270,28 +270,25 @@ vdelim(j) = LEN_TRIM(line) + 1
 
 END FUNCTION delim_csv
 
-!> Inizializza un oggetto \a csv_record.
-!! Se il record è fornito in ingresso, l'oggetto è utilizzato per la decodifica
-!! di un record csv letto da file (metodi \a csv_record_getfield ),
-!! se invece il record è assente l'oggetto è adibito alla codifica
-!! di un record csv (metodi \a csv_record_addfield ) per la successiva
-!! scrittura su file.
-!! È possibile specificare opzionalmente i caratteri da usare come
-!! delimitatore e come raggruppatore di campo.
-!!
-!! Nel caso di decodifica, è possibile ottenere subito
-!! in uscita il numero di campi presenti anche se è in generale sconsigliato,
-!! se non necessario, perché richiede una
-!! quantità aggiuntiva di calcoli; in alternativa si può usare il metodo
-!! ::csv_record_end.
-!! Attenzione, la classe \a csv_record non gestisce i record csv che si estendono
-!! su più righe.
+!> Initialise a \a csv_record object.
+!! If the record is provided in input, the object is used for decoding a
+!! record read from a file (\a csv_record_getfield methods),
+!! if record is not provided, then the object will be used for
+!! coding a csv record (\a csv_record_addfield methods), for the
+!! successive write on file.
+!! It is possible to specify nonstandard characters for delimiting
+!! and grouping fields, default comma (,) and double quote (").
+!! In case of decoding, it is possible to obtain in output the number of fields
+!! in the record, but this will take extra computing time. As an alternative,
+!! the ::csv_record_end method can be used when extracting each field.
+!! Warning: the \a csv_record class does not handle csv records that extend
+!! on different lines.
 SUBROUTINE csv_record_init(this, record, csep, cquote, nfield)
-TYPE(csv_record),INTENT(INOUT) :: this !< oggetto da inizializzare
-CHARACTER(LEN=*),INTENT(IN), OPTIONAL :: record !< record csv da interpretare, se non è fornito, si intende che vogliamo codificare un record csv
-CHARACTER(LEN=1),INTENT(IN),OPTIONAL :: csep !< carattere separatore di campo, default \c , (virgola)
-CHARACTER(LEN=1),INTENT(IN),OPTIONAL :: cquote !< carattere raggruppatore di campo, default \c " (doppio apice); è usato tipicamente quando un campo contiene virgole o spazi iniziali o finali
-INTEGER,INTENT(OUT),OPTIONAL :: nfield !< numero di campi contenuti nel record
+TYPE(csv_record),INTENT(INOUT) :: this !< object to be initialised
+CHARACTER(LEN=*),INTENT(IN), OPTIONAL :: record !< csv record to be interpreted, if not provided, it means we want to code a csv record for output
+CHARACTER(LEN=1),INTENT(IN),OPTIONAL :: csep !< field separator character, default \c , (comma)
+CHARACTER(LEN=1),INTENT(IN),OPTIONAL :: cquote !< field grouping character, default \c " (double quote); it is usually used when a field contains comma or blanks
+INTEGER,INTENT(OUT),OPTIONAL :: nfield !< number of fields in the record
 
 INTEGER :: l
 
@@ -328,19 +325,18 @@ ENDIF
 END SUBROUTINE csv_record_init
 
 
-!> Distrugge l'oggetto \a csv_record, liberando la memoria allocata.
+!> Destroy the \a csv_record object, freeing allocated memory.
 SUBROUTINE csv_record_delete(this)
-TYPE(csv_record), INTENT(INOUT) :: this !< oggetto da distruggere
+TYPE(csv_record), INTENT(INOUT) :: this !< object to be destroyed
 
 DEALLOCATE(this%record)
 
 END SUBROUTINE csv_record_delete
 
 
-!> Riporta il puntatore del record all'inizio per permettere di scorrere
-!! nuovamente lo stesso oggetto o riscrivere dall'inizio.
+!> Rewind the pointer in order to allow rescan or rewrite of the same record.
 SUBROUTINE csv_record_rewind(this)
-TYPE(csv_record),INTENT(INOUT) :: this !< oggetto da reinizializzare
+TYPE(csv_record),INTENT(INOUT) :: this !< object to be rewound
 
 this%cursor = 1
 this%nfield = 0
@@ -348,14 +344,14 @@ this%nfield = 0
 END SUBROUTINE csv_record_rewind
 
 
-!> Aggiunge un campo da una variabile \c CHARACTER al record csv \a this.
-!! Il campo viene racchiuso tra apici se necessario.
-!! Da migliorare per quotare gli spazi in fondo.
+!> Add a field from a \c CHARACTER variable to the csv record \a this.
+!! The field will be quoted if necessary.
+!! \todo Improve the trailing blank quoting.
 SUBROUTINE csv_record_addfield_char(this, field, form, force_quote)
-TYPE(csv_record),INTENT(INOUT) :: this !< oggetto di cui restituire i campi
-CHARACTER(LEN=*),INTENT(IN) :: field !< contenuto del campo da aggiungere
-CHARACTER(len=*),INTENT(in),OPTIONAL :: form !< formato opzionale, ignorato per ora
-LOGICAL, INTENT(in), OPTIONAL :: force_quote !< se fornito e \c .TRUE. , il campo viene racchiuso tra apici anche se non necessario
+TYPE(csv_record),INTENT(INOUT) :: this !< object where to add field
+CHARACTER(LEN=*),INTENT(IN) :: field !< field to be added
+CHARACTER(len=*),INTENT(in),OPTIONAL :: form !< optional format, ignored by now
+LOGICAL, INTENT(in), OPTIONAL :: force_quote !< if provided and \c .TRUE. , the field will be quoted even if not necessary
 
 INTEGER :: i
 LOGICAL :: lquote
@@ -432,36 +428,37 @@ END SUBROUTINE add_byte
 END SUBROUTINE csv_record_addfield_char
 
 
-!> Aggiunge un campo da una variabile \c INTEGER al record csv \a this.
-!! Il campo viene racchiuso tra apici se necessario.
+!> Add a field from an \c INTEGER variable to the csv record \a this.
+!! The field will be quoted if necessary.
 SUBROUTINE csv_record_addfield_int(this, field, form, force_quote)
-TYPE(csv_record),INTENT(INOUT) :: this !< oggetto di cui restituire i campi
-INTEGER,INTENT(IN) :: field !< contenuto del campo da aggiungere
-CHARACTER(len=*),INTENT(in),OPTIONAL :: form !< formato opzionale
-LOGICAL, INTENT(in), OPTIONAL :: force_quote !< se fornito e \c .TRUE. , il campo viene racchiuso tra apici anche se non necessario
+TYPE(csv_record),INTENT(INOUT) :: this !< object where to add field
+INTEGER,INTENT(IN) :: field !< field to be added
+CHARACTER(len=*),INTENT(in),OPTIONAL :: form !< optional format
+LOGICAL, INTENT(in), OPTIONAL :: force_quote !< if provided and \c .TRUE. , the field will be quoted even if not necessary
 
 CALL csv_record_addfield(this, TRIM(to_char(field, form)), force_quote=force_quote)
 
 END SUBROUTINE csv_record_addfield_int
 
 
-!> Aggiunge un campo da una variabile \c REAL al record csv \a this.
-!! Il campo viene racchiuso tra apici se necessario.
+!> Add a field from a \c REAL variable to the csv record \a this.
+!! The field will be quoted if necessary.
 SUBROUTINE csv_record_addfield_real(this, field, form, force_quote)
-TYPE(csv_record),INTENT(INOUT) :: this !< oggetto di cui restituire i campi
-REAL,INTENT(IN) :: field !< contenuto del campo da aggiungere
-CHARACTER(len=*),INTENT(in),OPTIONAL :: form !< formato opzionale
-LOGICAL, INTENT(in), OPTIONAL :: force_quote !< se fornito e \c .TRUE. , il campo viene racchiuso tra apici anche se non necessario
+TYPE(csv_record),INTENT(INOUT) :: this !< object where to add field
+REAL,INTENT(IN) :: field !< field to be added
+CHARACTER(len=*),INTENT(in),OPTIONAL :: form !< optional format
+LOGICAL, INTENT(in), OPTIONAL :: force_quote !< if provided and \c .TRUE. , the field will be quoted even if not necessary
 
 CALL csv_record_addfield(this, TRIM(to_char(field, form)), force_quote=force_quote)
 
 END SUBROUTINE csv_record_addfield_real
 
 
-!> Restituisce il record corrente, pronto per poter essere scrito su un file.
+!> Return current csv-coded record as a \a CHARACTER variable, ready to be written
+!! to a file. It is not necessary to trim the result for trailing blanks.
 FUNCTION csv_record_getrecord(this, nfield)
-TYPE(csv_record),INTENT(IN) :: this !< oggetto di cui restituire il record
-INTEGER, INTENT(out), OPTIONAL :: nfield !< numero di campi inseriti nel record
+TYPE(csv_record),INTENT(IN) :: this !< object to be coded, the object is not modified, so that other fields can still be added after the call to ::csv_record_getrecord
+INTEGER, INTENT(out), OPTIONAL :: nfield !< number of fields contained in the record
 
 CHARACTER(len=this%cursor-1) :: csv_record_getrecord
 
@@ -471,18 +468,17 @@ IF (present(nfield)) nfield = this%nfield
 END FUNCTION csv_record_getrecord
 
 
-!> Restituisce il campo successivo del record \a this in formato \c CHARACTER.
-!! Fa avanzare il puntatore di campo, per cui non è più possibile tornare
-!! indietro.
-!! Se tutti i campi sono stati interpretati restituisce comunque una stringa
-!! nulla (cioè una stringa di spazi e una lunghezza zero), per verificare la
-!! fine del record usare il metodo ::csv_record_end .
+!> Returns next field from the record \a this as a \c CHARACTER variable.
+!! The field pointer is advanced to the next field.
+!! If all the fields have already been interpreted it returns an empty string
+!! anyway; in order to verify the end-of-record condition the \a ier parameter
+!! must be used.
 SUBROUTINE csv_record_getfield_char(this, field, flen, ier)
-TYPE(csv_record),INTENT(INOUT) :: this !< oggetto di cui restituire i campi
-CHARACTER(LEN=*),INTENT(OUT),OPTIONAL :: field !< contenuto del campo, se non è fornito si limita a far avanzare il puntatore di campo; se la variabile fornita non è lunga a sufficienza viene stampato un warning e viene assegnato solo il possibile;
-!< la stringa è comunque teminata da spazi, per cui è necessario usare il parametro \a flen per non perdere eventuali spazi significativi al termine del campo
-INTEGER,INTENT(OUT),OPTIONAL :: flen !< lunghezza effettiva del campo, è calcolata correttamente anche nei casi in cui \a field non è fornita o non è sufficientemente lunga per contenere il campo
-INTEGER,INTENT(OUT),OPTIONAL :: ier !< codice di errore, 0 = tutto bene, 1 = \a field troppo corta per contenere il campo (ha senso solo se \a field è fornita), 2 = fine record
+TYPE(csv_record),INTENT(INOUT) :: this !< object to be decoded
+CHARACTER(LEN=*),INTENT(OUT),OPTIONAL :: field !< contents of the field, if not provided, the field pointer is increased only; if the variable is not long enough, a warning is printed and the part that fits is returned;
+!< the variable is space-terminated anyway, so the \a flen parameter has to be used in order to evaluate possible significant trailing spaces
+INTEGER,INTENT(OUT),OPTIONAL :: flen !< actual length of the field including trailing blaks, it is correctly computed also when \a field is not provided or too short
+INTEGER,INTENT(OUT),OPTIONAL :: ier!< error code, 0 = OK, 1 = \a field too short, 2 = end of record
 
 LOGICAL :: inquote, inpre, inpost, firstquote
 INTEGER :: i, ocursor, ofcursor, lier
@@ -491,7 +487,9 @@ IF (PRESENT(field)) field = ''
 IF (PRESENT(ier)) ier = 0
 IF (csv_record_end(this)) THEN
   IF (PRESENT(ier)) ier = 2
-  CALL raise_error('in csv_record_getfield, superata la fine record')
+  CALL l4f_log(L4F_ERROR, &
+   'in csv_record_getfield, attempt to read past end of record')
+  CALL raise_error()
   RETURN
 ENDIF
 lier = 0
@@ -553,7 +551,8 @@ IF (PRESENT(flen)) flen = ofcursor ! restituisco la lunghezza
 IF (PRESENT(field)) THEN ! controllo overflow di field
   IF (ofcursor > LEN(field)) THEN
     IF (PRESENT(ier)) ier = 1
-    CALL raise_warning('in csv_record_getfield, stringa troppo corta: '// &
+    CALL l4f_log(L4F_WARN, &
+     'in csv_record_getfield, CHARACTER variable too short for field: '// &
      TRIM(to_char(LEN(field)))//'/'//TRIM(to_char(ocursor)))
   ENDIF
 ENDIF
@@ -583,16 +582,15 @@ END SUBROUTINE add_char
 END SUBROUTINE csv_record_getfield_char
 
 
-!> Restituisce il campo successivo del record \a this in formato \c INTEGER.
-!! Fa avanzare il puntatore di campo, per cui non è più possibile tornare
-!! indietro.
-!! Se il campo non è adatto ad essere convertito in intero (compreso il caso di
-!! fine record), oppure se il campo è più lungo di 32 caratteri, viene restituito
-!! un valore mancante (vedi missing_values).
+!> Returns next field from the record \a this as an \c INTEGER variable.
+!! The field pointer is advanced to the next field.
+!! If all the fields have already been interpreted or the field cannot be
+!! interpreted as an integer, or if it is longer than 32 characters,
+!! it returns a missing value.
 SUBROUTINE csv_record_getfield_int(this, field, ier)
-TYPE(csv_record),INTENT(INOUT) :: this !< oggetto di cui restituire i campi
-INTEGER,INTENT(OUT) :: field !< valore del campo, = \a imiss se la conversione fallisce
-INTEGER,INTENT(OUT),OPTIONAL :: ier ! codice di errore, 0 = tutto bene, 1 = impossibile convertire il campo a numero intero, 2 = fine record
+TYPE(csv_record),INTENT(INOUT) :: this !< object to be decoded
+INTEGER,INTENT(OUT) :: field !< value of the field, = \a imiss if conversion fails
+INTEGER,INTENT(OUT),OPTIONAL :: ier !< error code, 0 = OK, 1 = cannot convert to integer, 2 = end of record
 
 CHARACTER(LEN=32) :: cfield
 INTEGER :: lier
@@ -602,7 +600,9 @@ IF (lier == 0. .AND. LEN_TRIM(cfield) /= 0) THEN
   READ(cfield, '(I32)', iostat=lier) field
   IF (lier /= 0) THEN
     field = imiss
-    CALL raise_error('in csv_record_getfield_int, campo errato: '//TRIM(cfield))
+    CALL l4f_log(L4F_ERROR, &
+     'in csv_record_getfield, invalid integer field: '//TRIM(cfield))
+    CALL raise_error()
   ENDIF
 ELSE
   field = imiss
@@ -612,16 +612,15 @@ IF (PRESENT(ier)) ier = lier
 END SUBROUTINE csv_record_getfield_int
 
 
-!> Restituisce il campo successivo del record \a this in formato \c REAL.
-!! Fa avanzare il puntatore di campo, per cui non è più possibile tornare
-!! indietro.
-!! Se il campo non è adatto ad essere convertito in reale (compreso il caso di
-!! fine record), oppure se il campo è più lungo di 32 caratteri, viene restituito
-!! un valore mancante (vedi missing_values).
+!> Returns next field from the record \a this as a \c REAL variable.
+!! The field pointer is advanced to the next field.
+!! If all the fields have already been interpreted or the field cannot be
+!! interpreted as an integer, or if it is longer than 32 characters,
+!! it returns a missing value.
 SUBROUTINE csv_record_getfield_real(this, field, ier)
-TYPE(csv_record),INTENT(INOUT) :: this !< oggetto di cui restituire i campi
-REAL,INTENT(OUT) :: field !< valore del campo, = \a rmiss se la conversione fallisce
-INTEGER,INTENT(OUT),OPTIONAL :: ier ! codice di errore, 0 = tutto bene, 1 = impossibile convertire il campo a numero intero, 2 = fine record
+TYPE(csv_record),INTENT(INOUT) :: this !< object to be decoded
+REAL,INTENT(OUT) :: field !< value of the field, = \a imiss if conversion fails
+INTEGER,INTENT(OUT),OPTIONAL :: ier!< error code, 0 = OK, 1 = cannot convert to integer, 2 = end of record
 
 CHARACTER(LEN=32) :: cfield
 INTEGER :: lier
@@ -631,7 +630,9 @@ IF (lier == 0. .AND. LEN_TRIM(cfield) /= 0) THEN
   READ(cfield, '(F32.0)', iostat=lier) field
   IF (lier /= 0) THEN
     field = rmiss
-    CALL raise_error('in csv_record_getfield_real, campo errato: '//TRIM(cfield))
+    CALL l4f_log(L4F_ERROR, &
+     'in csv_record_getfield, invalid real field: '//TRIM(cfield))
+    CALL raise_error()
   ENDIF
 ELSE
   field = rmiss
@@ -641,10 +642,10 @@ IF (PRESENT(ier)) ier = lier
 END SUBROUTINE csv_record_getfield_real
 
 
-!> Informa se l'interpretazione del record è giunta al termine (\c .TRUE.)
-!! o se ci sono ancora dei campi da interpretare (\c .FALSE.).
+!> Tells whether end of record was reached (\c .TRUE.)
+!! or there are still some fields left (\c .FALSE.).
 FUNCTION csv_record_end(this)
-TYPE(csv_record), INTENT(IN) :: this !< oggetto su cui operare
+TYPE(csv_record), INTENT(IN) :: this !< object to be checked for end of record
 LOGICAL :: csv_record_end
 
 csv_record_end = this%cursor > SIZE(this%record)

@@ -117,7 +117,7 @@ IF (err /= 0) THEN
   CALL oraextra_geterr(this%connid, msg)
   CALL oraextra_delete(this%connid)
   CALL l4f_log(L4F_FATAL, TRIM(cstr_to_fchar(msg)))
-  CALL raise_fatal_error(TRIM(cstr_to_fchar(msg)))
+  CALL raise_fatal_error()
 ENDIF
 CALL vol7d_oraclesim_alloc(nmaxmin)
 IF (.NOT. ALLOCATED(vartable)) CALL vol7d_oraclesim_setup_conv()
@@ -255,24 +255,24 @@ IF (nvar == 0) THEN
    ' e` valida per la rete '//TRIM(cnetwork))
   RETURN
 ENDIF
-CALL l4f_log(L4F_INFO, 'in oraclesim_class nvar='//to_char(nvar))
+CALL l4f_log(L4F_INFO, 'in oraclesim_class, nvar='//to_char(nvar))
 
 nobs = oraextra_gethead(this%connid, fchar_to_cstr(datai), &
  fchar_to_cstr(dataf), network%id, varlist, SIZE(varlist))
 IF (nobs < 0) THEN
   CALL oraextra_geterr(this%connid, msg)
-  CALL l4f_log(L4F_FATAL, 'in oraextra_gethead: '//TRIM(cstr_to_fchar(msg)))
-  CALL raise_fatal_error('in oraextra_gethead: '//TRIM(cstr_to_fchar(msg)))
+  CALL l4f_log(L4F_FATAL, 'in oraextra_gethead, '//TRIM(cstr_to_fchar(msg)))
+  CALL raise_fatal_error()
 ENDIF
-CALL l4f_log(L4F_INFO, 'in oraextra_gethead nobs='//to_char(nobs))
+CALL l4f_log(L4F_INFO, 'in oraextra_gethead, nobs='//to_char(nobs))
 
 CALL vol7d_oraclesim_alloc(nobs) ! Mi assicuro di avere spazio
 i = oraextra_getdata(this%connid, nobs, nobso, cdatao, stazo, varo, valore1, &
  valore2, cflag, rmiss)
 IF (i /= 0) THEN
   CALL oraextra_geterr(this%connid, msg)
-  CALL l4f_log(L4F_FATAL, 'in oraextra_getdata: '//TRIM(cstr_to_fchar(msg)))
-  CALL raise_fatal_error('in oraextra_getdata: '//TRIM(cstr_to_fchar(msg)))
+  CALL l4f_log(L4F_FATAL, 'in oraextra_getdata, '//TRIM(cstr_to_fchar(msg)))
+  CALL raise_fatal_error()
 ENDIF
 
 nobs = nobso
@@ -503,13 +503,12 @@ TYPE(csv_record) :: csv
 
 un = open_package_file('varmap.csv', filetype_data)
 IF (un < 0) then
-  CALL l4f_log(L4F_FATAL, 'in oraclesim non trovo il file delle variabili')
-  CALL raise_fatal_error('in oraclesim non trovo il file delle variabili')
+  CALL l4f_log(L4F_FATAL, 'in oraclesim, cannot find variable file')
+  CALL raise_fatal_error()
 END IF
 i = 0
 DO WHILE(.TRUE.)
   READ(un,'(A)',END=100)line
-!  IF (delim_csv(line, sep) < 0) CYCLE
   i = i + 1
 ENDDO
 100 CONTINUE
@@ -567,8 +566,9 @@ CALL init(netana(netid))
 cnet = to_char(netid,'(I3.3)')
 un = open_package_file('net_'//cnet//'.simana', filetype_data)
 IF (un < 0) then
-  CALL l4f_log(L4F_FATAL, 'non trovo il file di anagrafica per la rete '//cnet)
-  CALL raise_fatal_error('non trovo il file di anagrafica per la rete '//cnet)
+  CALL l4f_log(L4F_FATAL, &
+   'in oraclesim, cannot find station file for network '//TRIM(cnet))
+  CALL raise_fatal_error()
 END IF
 i = 0
 DO WHILE(.TRUE.)

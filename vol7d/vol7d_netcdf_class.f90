@@ -83,11 +83,11 @@ if (ncconventions == "CF-1.1") then
    call vol7d_netcdf_export_CF (this,ncconventions,ncunit,description,filename)
 else if (ncconventions /= "CF-1.1 vol7d") then
 
-  call l4f_category_log(category,L4F_INFO,"ncconventions not supported: "// to_char(ncconventions))
-  call exit(1)
+  call l4f_category_log(category,L4F_FATAL,"ncconventions not supported: "// &
+   trim(to_char(ncconventions)))
+  call raise_fatal_error()
 end if
 
-!call idate(im,id,iy)
 call date_and_time(values=tarray)
 call getarg(0,arg)
 
@@ -109,37 +109,26 @@ if (present(filename))then
   end if
 end if
 
+IF (PRESENT(ncunit)) THEN
+  lunit = ncunit
+ELSE
+  lunit = 0
+ENDIF
 
-if (.not. present(ncunit))then
+IF (lunit == 0) THEN
 
-   inquire(file=lfilename,EXIST=exist)
+  INQUIRE(file=lfilename,EXIST=exist)
+  IF (exist) THEN 
+    CALL l4f_category_log(category,L4F_ERROR, &
+     "file exists, cannot open file "//TRIM(lfilename))
+    CALL raise_fatal_error()
+  END IF
 
-   if (exist) then 
-     call l4f_category_log(category,L4F_ERROR,"file exist; cannot open new file: "//to_char(lfilename))
-     CALL raise_error('file exist; cannot open new file')
-   end if
+  CALL check( "0",nf90_create(lfilename, nf90_clobber, lunit) )
+  CALL l4f_category_log(category,L4F_INFO, "opened "//TRIM(lfilename))
 
-   call check( "0",nf90_create(lfilename, nf90_clobber, lunit) )
-   print *, "opened: ",lfilename
-
-else
-  if (ncunit==0)then
-
-     inquire(file=lfilename,EXIST=exist)
-     if (exist)then 
-       call l4f_category_log(category,L4F_ERROR,"file exist; cannot open new file: "//to_char(lfilename))
-       CALL raise_error('file exist; cannot open new file')
-     end if
-
-     call check( "0",nf90_create(lfilename, nf90_clobber, lunit) )
-     print *, "opened: ",lfilename
-
-    ncunit=lunit
-  else
-    lunit=ncunit
-  end if
-end if
-
+END IF
+IF (PRESENT(ncunit)) ncunit = lunit ! reassign for output
 
 call init(timeref,year=1,month=1,day=1,hour=00,minute=00)
 call getval(timeref,isodate=isodate)
@@ -202,7 +191,7 @@ nanavarattrc=size(this%anavarattr%c)
 !write(unit=lunit)tarray
 
 
-#call check( "0Conventions",nf90_put_att(lunit, NF90_GLOBAL ,"Conventions",ncconventions))
+!call check( "0Conventions",nf90_put_att(lunit, NF90_GLOBAL ,"Conventions",ncconventions))
 call check( "0Conventions",nf90_put_att(lunit, NF90_GLOBAL ,"Conventions","CF-1.1"))
 call check( "0title",nf90_put_att(lunit, NF90_GLOBAL ,"title", ldescription))
 

@@ -102,7 +102,8 @@ CALL vol7d_alloc_vol(this)
 ntr = COUNT(this%timerange(:)%timerange == tri .AND. this%timerange(:)%p2 /= imiss &
  .AND. this%timerange(:)%p2 /= 0 .AND. this%timerange(:)%p1 == 0)
 IF (ntr == 0) THEN
-  CALL raise_warning('nessun timerange adatto per media/cumulazione')
+  CALL l4f_log(L4F_WARN, &
+   'vol7d_compute, no timerange suitable for average/cumulatzion')
   RETURN
 ENDIF
 ! pulisco il volume originale (attivare miss?)

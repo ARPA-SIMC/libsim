@@ -241,12 +241,12 @@ if (quifile) then
       mode="w"
     else
       mode="a"
-      call l4f_category_log(this%category,L4F_INFO,"file exist; append data to file: "//to_char(lfilename))
+      call l4f_category_log(this%category,L4F_INFO,"file exists; appending data to file: "//trim(lfilename))
     end if
   else
     if (.not.exist) then
-      call l4f_category_log(this%category,L4F_ERROR,"file do not exist; cannot open file for read: "//to_char(lfilename))
-      CALL raise_fatal_error('file do not exist; cannot open file for read')
+      call l4f_category_log(this%category,L4F_ERROR,"file does not exist; cannot open file for read: "//trim(lfilename))
+      CALL raise_fatal_error()
     end if
   end if
 
@@ -429,8 +429,8 @@ if (this%file) then
 
 else
   if (optio_log(anaonly)) then
-      call l4f_category_log(this%category,L4F_ERROR,"anaonly=.true. not supported accessing to dba")
-      CALL raise_fatal_error("anaonly=.true. not supported accessing to dba")
+    CALL l4f_category_log(this%category,L4F_ERROR,"anaonly=.true. not supported accessing to dba")
+    CALL raise_fatal_error()
   end if
 
   call vol7d_dballe_importvvns_dba(this, var, network, coordmin, coordmax, timei, timef,level,timerange, set_network,&
@@ -590,7 +590,11 @@ call idba_voglioquesto (this%handle,N)
 
 !ora che so quanti dati ho alloco la memoria per buffer
 allocate(buffer(N),stat=istat)
-if (istat/= 0) CALL raise_error('errore allocazione memoria')
+IF (istat/= 0) THEN
+  CALL l4f_category_log(this%category,L4F_ERROR,'cannot allocate ' &
+   //TRIM(to_char(n))//' buffer elements')
+  CALL raise_fatal_error()
+ENDIF
 
 
 ! dammi tutti i dati
@@ -699,7 +703,12 @@ call idba_voglioquesto (this%handle_staz,N_ana)
 
 !ora che so quanti dati ho alloco la memoria per bufferana
 allocate(bufferana(N_ana),stat=istat)
-if (istat/= 0) CALL raise_error('errore allocazione memoria anagrafica')
+if (istat/= 0) THEN
+  CALL l4f_category_log(this%category,L4F_ERROR,'cannot allocate ' &
+   //TRIM(to_char(n_ana))//' bufferana elements')
+  CALL raise_fatal_error()
+ENDIF
+
 
 ! dammi tutti i dati di anagrafica
 do i=1,N_ana
@@ -1227,8 +1236,13 @@ call vol7d_alloc_vol (vol7dtmp)
 if (lattr) then
 
   allocate  (this%data_id( nana, ntime, nlevel, ntimerange, nnetwork),stat=istat)
-  if (istat/= 0) CALL raise_error('errore allocazione memoria')
-  this%data_id=DBA_MVI
+  if (istat/= 0) THEN
+  CALL l4f_category_log(this%category,L4F_ERROR,'cannot allocate ' &
+   //TRIM(to_char(nana*ntime*nlevel*ntimerange*nnetwork))//' data_id elements')
+  CALL raise_fatal_error()
+ENDIF
+
+this%data_id=DBA_MVI
 
 end if
 
@@ -2203,7 +2217,9 @@ ENDIF
 
 IF (filetype < 1 .OR. filetype > nftype) THEN
   path = ""
-  CALL raise_error('File type not valid')
+  CALL l4f_log(L4F_ERROR, 'dballe file type '//TRIM(to_char(filetype))// &
+   ' not valid')
+  CALL raise_error()
   RETURN
 ENDIF
 
@@ -2214,7 +2230,7 @@ IF (path /= ' ') THEN
   path=TRIM(path)//'/'//filename
   INQUIRE(file=path, exist=exist)
   IF (exist) THEN
-    CALL print_info('Ho trovato il file '//path)
+    CALL l4f_log(L4F_INFO, 'dballe file '//TRIM(path)//' found')
     RETURN
   ENDIF
 ENDIF
@@ -2224,11 +2240,12 @@ DO j = 1, SIZE(pathlist,1)
   path=TRIM(pathlist(j,filetype))//'/'//TRIM(dballe_name)//'/'//filename
   INQUIRE(file=path, exist=exist)
   IF (exist) THEN
-    CALL print_info('Ho trovato il file '//path)
+    CALL l4f_log(L4F_INFO, 'dballe file '//TRIM(path)//' found')
     RETURN
   ENDIF
 ENDDO
-CALL raise_error('File '//TRIM(filename)//' not found')
+CALL l4f_log(L4F_ERROR, 'dballe file '//TRIM(filename)//' not found')
+CALL raise_error()
 path = ""
 
 END FUNCTION get_dballe_filepath
@@ -2241,25 +2258,21 @@ INTEGER :: unit,i
 
 CHARACTER(len=512) :: path
 
-IF (filetype < 1 .OR. filetype > nftype) THEN
-  unit = -1
-  CALL raise_error('File type not valid')
+unit = -1
+path=get_dballe_filepath(filename, filetype)
+IF (path == '') RETURN
+
+unit = getunit()
+IF (unit == -1) RETURN
+
+OPEN(unit, file=path, status='old', iostat = i)
+IF (i == 0) THEN
+  CALL l4f_log(L4F_INFO, 'dballe file '//TRIM(path)//' opened')
   RETURN
 ENDIF
 
-unit = getunit()
-
-path=get_dballe_filepath(filename, filetype)
-
-IF (path /= ' ') THEN
-  OPEN(unit, file=path, status='old', iostat = i)
-  IF (i == 0) THEN
-    CALL print_info('Ho aperto il file '//TRIM(path))
-    RETURN
-  ENDIF
-ENDIF
-
-CALL raise_error('File '//TRIM(filename)//' not found')
+CALL l4f_log(L4F_ERROR, 'dballe file '//TRIM(filename)//' not found')
+CALL raise_error()
 unit = -1
 
 END FUNCTION open_dballe_file
@@ -2280,7 +2293,7 @@ call l4f_category_log(category,L4F_DEBUG,buf)
 call idba_error_details(buf)
 call l4f_category_log(category,L4F_DEBUG,buf)
 
-CALL raise_fatal_error(message)
+CALL raise_fatal_error()
 
 
 return
@@ -2372,7 +2385,7 @@ ENDIF
 
 if (present(attr) .or. present(anaattr) .or. present(attrkind) .or. present(anaattrkind))then
   call l4f_category_log(this%category,L4F_ERROR,"attributes not managed in BUFR/CREX import")
-  CALL raise_error("attributes not managed in BUFR/CREX import")
+  CALL raise_error()
 end if
 
 call idba_unsetall(this%handle)
@@ -2991,7 +3004,7 @@ END SUBROUTINE vol7d_dballe_importvvns_file
 
 subroutine mem_acquire( buffer,n,npool,category )
 
-integer      :: n,mem,npool,category
+INTEGER      :: n,mem,npool,category,istat
 type(record),pointer :: buffer(:)
 type(record),pointer :: buffertmp(:)
 
@@ -3009,10 +3022,11 @@ mem=size(buffer)
 
 if (n > mem) then
 
-  allocate (buffertmp(mem*2))
-  if ( .not. associated( buffer ) ) then
-    call l4f_category_log(category,L4F_ERROR,"mem_acquire errore allocazione meoria:"//to_char(mem*2))
-    CALL raise_error('errore allocazione memoria')
+  ALLOCATE (buffertmp(mem*2),stat=istat)
+  IF (istat /= 0) THEN
+    CALL l4f_category_log(category,L4F_ERROR,'mem_acquire, cannot allocate ' &
+     //TRIM(to_char(mem*2))//' buffer elements')
+    CALL raise_fatal_error()
   endif
 
   buffertmp(:mem)=buffer(:)
@@ -3020,18 +3034,6 @@ if (n > mem) then
   deallocate (buffer)
 
   buffer=>buffertmp
-
-!!$ DOPPIA RICOPIATURA
-!!$  allocate (buffertmp(nsav))
-!!$  buffertmp=buffer
-!!$
-!!$  deallocate (buffer)
-!!$  allocate (buffer(nsav*2))
-!!$
-!!$  buffer(:nsav)=buffertmp
-!!$  nsav=nsav*2
-!!$
-!!$  deallocate(buffertmp)
 
 end if
 

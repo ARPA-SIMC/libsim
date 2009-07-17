@@ -5,7 +5,7 @@ libsim_vol7d_la_SOURCES = vol7d_ana_class.F90 vol7d_class.F90 \
  vol7d_var_class.F90 vol7d_varvect_class.f90 vol7d_class_compute.F90
 # Opzioni Fortran (-I... sono da considerarsi opzioni fortran
 # e non del preprocessore perche' servono per USE e non per #include)
-AM_FCFLAGS = -I../base -I../log4fortran
+AM_FCFLAGS = -I../log4fortran -I../base
 # Opzioni C
 AM_CFLAGS = -D_REENTRANT
 # Opzioni preprocessore
@@ -13,7 +13,7 @@ AM_CPPFLAGS =
 # Opzioni linker
 AM_LDFLAGS =
 # Librerie aggiuntive
-libsim_vol7d_la_LIBADD = ../base/libsim_base.la
+libsim_vol7d_la_LIBADD = ../log4fortran/liblog4fortran.la ../base/libsim_base.la
 
 if ORSIM
 libsim_vol7d_la_SOURCES += vol7d_oraclesim_class.f90 oraclesim.c

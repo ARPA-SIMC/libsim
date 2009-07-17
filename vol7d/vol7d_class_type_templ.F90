@@ -226,7 +226,7 @@ IF (ASSOCIATED(this%volana/**/VOL7D_POLY_TYPES)) THEN
 
 ! Senza questo controllo l'eseguibile abortisce se compilato con PGI e -C
   IF (ANY(voldim == 0)) THEN
-    CALL raise_warning('vol7d_get_volana non supporta volumi con dimensioni nulle')
+    CALL l4f_log(L4F_WARN, 'vol7d_get_volana does not support zero-size volumes')
     RETURN
   ENDIF
 
@@ -279,7 +279,7 @@ IF (ASSOCIATED(this%volanaattr/**/VOL7D_POLY_TYPES)) THEN
 
 ! Senza questo controllo l'eseguibile abortisce se compilato con PGI e -C
   IF (ANY(voldim == 0)) THEN
-    CALL raise_warning('vol7d_get_volanaattr non supporta volumi con dimensioni nulle')
+    CALL l4f_log(L4F_WARN, 'vol7d_get_volanaattr does not support zero-size volumes')
     RETURN
   ENDIF
 
@@ -335,7 +335,7 @@ IF (ASSOCIATED(this%voldati/**/VOL7D_POLY_TYPES)) THEN
 
 ! Senza questo controllo l'eseguibile abortisce se compilato con PGI e -C
   IF (ANY(voldim == 0)) THEN
-    CALL raise_warning('vol7d_get_voldati non supporta volumi con dimensioni nulle')
+    CALL l4f_log(L4F_WARN, 'vol7d_get_voldati does not support zero-size volumes')
     RETURN
   ENDIF
 
@@ -392,7 +392,7 @@ IF (ASSOCIATED(this%voldatiattr/**/VOL7D_POLY_TYPES)) THEN
 
 ! Senza questo controllo l'eseguibile abortisce se compilato con PGI e -C
   IF (ANY(voldim == 0)) THEN
-    CALL raise_warning('vol7d_get_voldatiattr non supporta volumi con dimensioni nulle')
+    CALL l4f_log(L4F_WARN, 'vol7d_get_voldatiattr does not support zero-size volumes')
     RETURN
   ENDIF
 
@@ -421,9 +421,10 @@ LOGICAL :: qualidim(vol7d_maxdim_ad)
 
 IF (MAXVAL(dimlist) > vol7d_maxdim_ad .OR. MINVAL(dimlist) < 1 &
  .OR. SIZE(dimlist) > vol7d_maxdim_ad) THEN
-  CALL raise_error('dimensioni non valide ')
+  CALL l4f_log(L4F_ERROR, 'in vol7d_getvol, dimensions not valid')
+  CALL raise_error()
 ! Questa crea problemi a gfortran, forse e` sbagliata, controllare:
-!  CALL raise_error('dimensioni non valide '//to_char(dimlist))
+! to_char(dimlist)
   RETURN
 ENDIF
 qualidim = .FALSE.
@@ -433,10 +434,10 @@ ndimr = SIZE(dimlist)
 !shp = SHAPE(this%voldatir)
 
 IF (ANY(.NOT.qualidim .AND. volshp /= 1) ) THEN
-  CALL raise_error('dimensioni non degeneri o nulle non richieste: ')
+  CALL l4f_log(L4F_ERROR, 'in vol7d_getvol, some non-degenerating or null dimensions have not been requested, this is not possible')
+  CALL raise_error()
 ! Questa crea problemi a gfortran, forse e` sbagliata, controllare:
-!  CALL raise_error('dimensioni non degeneri o nulle non richieste: '// &
-!   to_char(PACK(volshp, mask=(.NOT.qualidim .AND. volshp /= 1))))
+!   to_char(PACK(volshp, mask=(.NOT.qualidim .AND. volshp /= 1)))
   RETURN
 ENDIF
 
@@ -447,49 +448,56 @@ CASE(1)
   IF (PRESENT(vol1dp)) THEN
     CALL volptr1d/**/VOL7D_POLY_TYPES(shpr, vol1dp, vol)
   ELSE
-    CALL raise_error('puntatore 1d mancante')
+    CALL l4f_log(L4F_ERROR, 'in vol7d_getvol, 1-d pointer missing')
+    CALL raise_error()
     RETURN
   ENDIF
 CASE(2)
   IF (PRESENT(vol2dp)) THEN
     CALL volptr2d/**/VOL7D_POLY_TYPES(shpr, vol2dp, vol)
   ELSE
-    CALL raise_error('puntatore 2d mancante')
+    CALL l4f_log(L4F_ERROR, 'in vol7d_getvol, 2-d pointer missing')
+    CALL raise_error()
     RETURN
   ENDIF
 CASE(3)
   IF (PRESENT(vol3dp)) THEN
     CALL volptr3d/**/VOL7D_POLY_TYPES(shpr, vol3dp, vol)
   ELSE
-    CALL raise_error('puntatore 3d mancante')
+    CALL l4f_log(L4F_ERROR, 'in vol7d_getvol, 3-d pointer missing')
+    CALL raise_error()
     RETURN
   ENDIF
 CASE(4)
   IF (PRESENT(vol4dp)) THEN
     CALL volptr4d/**/VOL7D_POLY_TYPES(shpr, vol4dp, vol)
   ELSE
-    CALL raise_error('puntatore 4d mancante')
+    CALL l4f_log(L4F_ERROR, 'in vol7d_getvol, 4-d pointer missing')
+    CALL raise_error()
     RETURN
   ENDIF
 CASE(5)
   IF (PRESENT(vol5dp)) THEN
     CALL volptr5d/**/VOL7D_POLY_TYPES(shpr, vol5dp, vol)
   ELSE
-    CALL raise_error('puntatore 5d mancante')
+    CALL l4f_log(L4F_ERROR, 'in vol7d_getvol, 5-d pointer missing')
+    CALL raise_error()
     RETURN
   ENDIF
 CASE(6)
   IF (PRESENT(vol6dp)) THEN
     CALL volptr6d/**/VOL7D_POLY_TYPES(shpr, vol6dp, vol)
   ELSE
-    CALL raise_error('puntatore 6d mancante')
+    CALL l4f_log(L4F_ERROR, 'in vol7d_getvol, 6-d pointer missing')
+    CALL raise_error()
     RETURN
   ENDIF
 CASE(7)
   IF (PRESENT(vol7dp)) THEN
     CALL volptr7d/**/VOL7D_POLY_TYPES(shpr, vol7dp, vol)
   ELSE
-    CALL raise_error('puntatore 7d mancante')
+    CALL l4f_log(L4F_ERROR, 'in vol7d_getvol, 7-d pointer missing')
+    CALL raise_error()
     RETURN
   ENDIF
 END SELECT
