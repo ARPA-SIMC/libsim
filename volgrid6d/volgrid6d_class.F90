@@ -1278,7 +1278,7 @@ end subroutine volgrid6d_export_to_grib
 !! delete vector of volgrid6d object
 !! relase memory and delete category for logging
 subroutine delete_volgrid6dv(this)
-type(volgrid6d) :: this(:) !< vector of volgrid6d object
+TYPE(volgrid6d),POINTER :: this(:) !< vector of volgrid6d object
 
 integer :: i
 
@@ -1291,6 +1291,8 @@ do i=1,size(this)
   call delete(this(i))
 
 end do
+
+deallocate(this)
 
 end subroutine delete_volgrid6dv
 
@@ -1894,6 +1896,13 @@ ENDDO
 ! not found
 varbufr = vol7d_var_miss
 if(present(c_func)) c_func = conv_func_miss
+
+#ifdef DEBUG
+CALL l4f_log(L4F_DEBUG, 'vargrib2varbufr: variable '// &
+ TRIM(to_char(vargrib%centre))//':'//TRIM(to_char(vargrib%category))//':'// &
+ TRIM(to_char(vargrib%number))//':'//TRIM(to_char(vargrib%discipline))// &
+ ' not found in table')
+#endif
 
 END SUBROUTINE vargrib2varbufr_s
 
