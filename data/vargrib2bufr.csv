@@ -1,5 +1,8 @@
 B10004,Pressure,,255,2,1,255,1.0,0.0
 B10051,Pressure reduced to mean sea level,,255,2,2,255,1.0,0.0
+B10003,Geopotential,,255,2,6,255,1.0,0.0
+B10009,Geopotential height,,255,2,7,255,1.0,0.0
+B10007,Height,,255,2,8,255,1.0,0.0
 B12001,Temperature,,255,2,11,255,1.0,0.0
 B12003,Dew point temperature,,255,2,17,255,1.0,0.0
 B11003,U-component of wind,,255,2,33,255,1.0,0.0
@@ -9,3 +12,6 @@ B13011,Total precipitation,,255,2,61,255,1.0,0.0
 B20010,Total cloud cover,,255,2,71,255,1.0,0.0
 B14017,Net long-wave radiation flux (surface),,255,2,112,255,1.0,0.0
 B14018,Net short-wave radiation flux (surface),,255,2,111,255,1.0,0.0
+B20010,Cloud cover (total),,255,2,71,255,1.0,0.0
+B20010,Cloud cover,,78,201,29,255,1.0,0.0
+B20010,Cloud cover,,200,201,29,255,1.0,0.0
