@@ -9,7 +9,7 @@ use getopt_m
 
 implicit none
 
-integer :: category,ier,i,nana,networkid
+integer :: category,ier,i,nana,networkid=255
 character(len=512):: a_name,infile,outfile,fileana=cmiss
 type (volgrid6d),pointer  :: volgrid(:),volgrid_out(:)
 type(transform_def) :: trans
