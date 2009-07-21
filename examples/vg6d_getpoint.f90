@@ -9,7 +9,7 @@ use getopt_m
 
 implicit none
 
-integer :: category,ier,i,nana
+integer :: category,ier,i,nana,networkid
 character(len=512):: a_name,infile,outfile,fileana=cmiss
 type (volgrid6d),pointer  :: volgrid(:),volgrid_out(:)
 type(transform_def) :: trans
@@ -35,7 +35,7 @@ call l4f_category_log(category,L4F_INFO,"inizio")
 
 
 do
-  select case( getopt( "a:b:c:f:t:v:z:"))
+  select case( getopt( "a:b:c:f:t:v:z:n:h"))
 
   case( char(0))
     exit
@@ -64,6 +64,13 @@ do
     trans_type=optarg
   case( 'z' )
     sub_type=optarg
+  case( 'n' )
+    read(optarg,*,iostat=ier)networkid
+    if (ier/= 0)then
+      call l4f_category_log(category,L4F_ERROR,'a option argument error')
+      call help()
+      call exit(ier)
+    end if
 
   case( 'h' )
     call help()
@@ -130,7 +137,7 @@ call display(v7d)
 !trasformation object
 call init(trans, trans_type=trans_type,sub_type=sub_type, categoryappend="trasformation")
 call import (volgrid,filename=infile,categoryappend="volume letto")
-call transform(trans,v7d, volgrid6d_in=volgrid, vol7d_out=vol7d_out,categoryappend="trasforma")
+call transform(trans,v7d, volgrid6d_in=volgrid, vol7d_out=vol7d_out,networkid=networkid,categoryappend="trasforma")
 
 call l4f_category_log(category,L4F_INFO,"trasformato")
 if (associated(volgrid)) call delete(volgrid)
@@ -162,7 +169,8 @@ print*,"Grib to bufr/crex trasformation application."
 print*,"Read grib edition 1 and 2 and interpolate data over specified points"
 print*,""
 print*,""
-print*,"getpoint [-h] [-a lon] [-c fileana] [-b lat] [-f format] [-t template] [-v trans_type] [-z sub_type] infile outfile"
+print*,"getpoint [-h] [-a lon] [-c fileana] [-b lat] [-f format] [-t template]"&
+ "[-v trans_type] [-z sub_type] [-n networkid] infile outfile"
 print*,""
 print*,"-h         this help message"
 print*,"lon,lat    lon and lat of single target point (in alternative to fileana)"
@@ -173,8 +181,9 @@ print*,"           ('synop', 'metar','temp','generic') forza l'exportazione ad u
 print*,"trans_type transformation type; inter for interpolation"
 print*,"sub_type   transformation sub_type"
 print*,"           inter: near , bilin"
+print*,"networkid  integer identify the network"
 print*,""
 print*,""
-print *,"default : lon=0. lat=45. format=bufr template=generic trans_type=inter sub_type=bilin"
+print *,"default : lon=0. lat=45. format=bufr template=generic trans_type=inter sub_type=bilin networkid=255"
 
 end subroutine help
