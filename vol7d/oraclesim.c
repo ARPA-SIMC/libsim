@@ -20,6 +20,12 @@ FROM met_gruppi_stazioni gs, met_variabili_definite va, \
 WHERE gs.identnr = :net AND va.identnr = :var AND \
       tv1.id_tabella = gs.id_tabella_vm AND tv2.id_tabella = va.id_tabella_vm";
 
+/* TODO versione piu` semplice che non richiede la rete, da provare:
+select
+"SELECT RTRIM(tv.nome_tabella) FROM met_variabili_definite va, met_tabelle_vm tv
+WHERE va.identnr = :var AND tv.id_tabella = va.id_tabella_vm"
+*/
+
 static char *query1 = (char *)
   "SELECT TO_CHAR(a.dset_istante_wmo_fine,'YYYYMMDDHH24MI'), \
 a.dset_stam_identnr,a.vard_identnr, \
