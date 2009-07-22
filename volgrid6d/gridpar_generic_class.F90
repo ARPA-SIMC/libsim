@@ -268,6 +268,7 @@ PRINT*,"xLast ",this%x2
 PRINT*,"yFirst",this%y1
 PRINT*,"yLast ",this%y2
 PRINT*,"dx, dy",this%dx,this%dy
+PRINT*,"componentFlag",this%component_flag
 
 END SUBROUTINE gridpar_generic_display
 

@@ -739,7 +739,7 @@ CALL init(this)
 CALL grib_get(gaid, 'typeOfGrid', this%grid%type%type)
 #ifdef DEBUG
 call l4f_category_log(this%category,L4F_DEBUG, &
- "griddim_import: grid type "//TRIM(this%grid%type%type))
+ "griddim_export_gribapi, grid type "//TRIM(this%grid%type%type))
 #endif
 CALL grib_get(gaid,'GRIBEditionNumber',EditionNumber)
 
@@ -832,14 +832,14 @@ CASE ('polar_stereographic', 'lambert', 'albers')
    this%grid%polarproj%projection_center_flag)
   IF (IAND(this%grid%polarproj%projection_center_flag,64) == 1) THEN
     CALL l4f_category_log(this%category,L4F_ERROR, &
-     "griddim_import: bi-polar projections not supported")
+     "griddim_export_gribapi, bi-polar projections not supported")
     CALL raise_error()
   ENDIF
 ! line of view, aka central meridian
   CALL grib_get(gaid,'LoVInDegrees',this%grid%polarproj%lov)
 #ifdef DEBUG
   CALL l4f_category_log(this%category,L4F_DEBUG, &
-   "griddim_import centralMeridian "//TRIM(to_char(this%grid%polarproj%lov)))
+   "griddim_export_gribapi, centralMeridian "//TRIM(to_char(this%grid%polarproj%lov)))
 #endif
 
 ! latitude at which dx and dy are valid
@@ -882,7 +882,7 @@ CASE ('polar_stereographic', 'lambert', 'albers')
 
 CASE default
   CALL l4f_category_log(this%category,L4F_ERROR, &
-   "griddim_import: grid type "//TRIM(this%grid%type%type)//" not supported")
+   "griddim_export_gribapi, grid type "//TRIM(this%grid%type%type)//" not supported")
   CALL raise_error()
 
 END SELECT
@@ -934,12 +934,13 @@ CALL grib_get(gaid,'GRIBEditionNumber',EditionNumber)
 CALL grib_set(gaid,'typeOfGrid' ,this%grid%type%type)
 #ifdef DEBUG
 CALL l4f_category_log(this%category,L4F_DEBUG, &
- "griddim_export grid type "//this%grid%type%type)
+ "griddim_export_gribapi, grid type "//this%grid%type%type)
 #endif
 
 ! Keys valid for (almost?) all cases, Ni and Nj are universal aliases
 CALL grib_set(gaid, 'Ni', this%dim%nx)
 CALL grib_set(gaid, 'Nj', this%dim%ny)
+CALL grib_set(gaid,'uvRelativeToGrid',this%grid%generic%component_flag)
 
 CALL grib_get(gaid,'iScansNegatively',iScansNegatively)
 CALL grib_get(gaid,'jScansPositively',jScansPositively)
@@ -1022,29 +1023,25 @@ CASE ('regular_ll', 'rotated_ll', 'stretched_ll', 'stretched_rotated_ll')
 
   IF (ABS(NINT(sdx)/sdx - 1.0d0) > tol .OR. ABS(NINT(sdy)/sdy - 1.0d0) > tol) THEN
     CALL l4f_category_log(this%category,L4F_INFO, &
-     "increments not given: inaccurate!")
+     "griddim_export_gribapi, increments not given: inaccurate!")
 #ifdef DEBUG
-    CALL l4f_category_log(this%category,L4F_DEBUG,"dlon relative error: "//&
+    CALL l4f_category_log(this%category,L4F_DEBUG, &
+     "griddim_export_gribapi, dlon relative error: "//&
      TRIM(to_char(ABS(NINT(sdx)/sdx - 1.0d0)))//">"//TRIM(to_char(tol)))
-    CALL l4f_category_log(this%category,L4F_DEBUG,"dlat relative error: "//&
+    CALL l4f_category_log(this%category,L4F_DEBUG, &
+     "griddim_export_gribapi, dlat relative error: "//&
      TRIM(to_char(ABS(NINT(sdy)/sdy - 1.0d0)))//">"//TRIM(to_char(tol)))
 #endif
-    CALL grib_set(gaid,'resolutionAndComponentFlags',0)
+    CALL grib_set(gaid,'ijDirectionIncrementGiven',0)
     CALL grib_set_missing(gaid,'Di')
     CALL grib_set_missing(gaid,'Dj')
-! these do not work
-!  CALL grib_set(gaid,'ijDirectionIncrementGiven', 0)
-!  CALL grib_set(gaid,'iDirectionIncrementGiven', 0)
-!  CALL grib_set(gaid,'jDirectionIncrementGiven', 0)
-!  CALL grib_set_missing(gaid,'geography.iInc')
-!  CALL grib_set_missing(gaid,'geography.jInc')
-
   ELSE
 #ifdef DEBUG
-    CALL l4f_category_log(this%category,L4F_DEBUG,"setting increments: "// &
+    CALL l4f_category_log(this%category,L4F_DEBUG, &
+     "griddim_export_gribapi, setting increments: "// &
      TRIM(to_char(this%grid%generic%dx))//' '//TRIM(to_char(this%grid%generic%dy)))
 #endif
-    CALL grib_set(gaid,'resolutionAndComponentFlags',128)
+    CALL grib_set(gaid,'ijDirectionIncrementGiven',1)
     CALL grib_set(gaid,'iDirectionIncrementInDegrees',this%grid%generic%dx)
     CALL grib_set(gaid,'jDirectionIncrementInDegrees',this%grid%generic%dy)
   ENDIF
@@ -1054,6 +1051,7 @@ CASE ('polar_stereographic', 'lambert', 'albers')
 ! increments are required
   CALL grib_set(gaid,'DxInMetres', this%grid%generic%dx)
   CALL grib_set(gaid,'DyInMetres', this%grid%generic%dy)
+  CALL grib_set(gaid,'ijDirectionIncrementGiven',1)
 ! latin1/latin2 may be missing (e.g. stereographic)
   CALL grib_set_dmiss(gaid,'Latin1InDegrees',this%grid%polarproj%latin1)
   CALL grib_set_dmiss(gaid,'Latin2InDegrees',this%grid%polarproj%latin2)
@@ -1089,7 +1087,7 @@ CASE ('polar_stereographic', 'lambert', 'albers')
 
 CASE default
   CALL l4f_category_log(this%category,L4F_ERROR, &
-   "griddim_export: grid type "//TRIM(this%grid%type%type)//" not supported")
+   "griddim_export_gribapi, grid type "//TRIM(this%grid%type%type)//" not supported")
   CALL raise_error()
 
 END SELECT
@@ -1114,7 +1112,7 @@ IF (EditionNumber == 1) THEN
 !  CALL grib_get(gaid,"PVPresent",pvp) ! alias, probably useless
   CALL grib_get(gaid,"NV",nv)
 #ifdef DEBUG
-  CALL l4f_category_log(this%category,L4F_DEBUG,"griddim_export_gribapi: coding "// &
+  CALL l4f_category_log(this%category,L4F_DEBUG,"griddim_export_gribapi, coding "// &
    TRIM(to_char(nv))//" vertical coordinate parameters")
 #endif
 
@@ -1135,7 +1133,7 @@ IF (EditionNumber == 1) THEN
 
   CALL grib_set(gaid,"pvlLocation",pvl)
 #ifdef DEBUG
-  CALL l4f_category_log(this%category,L4F_DEBUG,"griddim_export_gribapi: coding "// &
+  CALL l4f_category_log(this%category,L4F_DEBUG,"griddim_export_gribapi, coding "// &
    TRIM(to_char(pvl))//" as vertical coordinate parameter location")
 #endif
 
@@ -2501,8 +2499,8 @@ DO j = 1, this%dim%ny
     dlon_i = dlon_i * lat_factor
     dlon_j = dlon_j * lat_factor
 
-    dist_i = SQRT(dlon_i*dlon_i + dlat_i*dlat_i);
-    dist_j = SQRT(dlon_j*dlon_j + dlat_j*dlat_j);
+    dist_i = SQRT(dlon_i*dlon_i + dlat_i*dlat_i)
+    dist_j = SQRT(dlon_j*dlon_j + dlat_j*dlat_j)
 
     IF (dist_i > 0.D0) THEN
       rot_mat(i,j,1) = dlon_i/dist_i

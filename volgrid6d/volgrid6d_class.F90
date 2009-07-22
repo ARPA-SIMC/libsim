@@ -131,6 +131,10 @@ INTERFACE transform
    volgrid6d_v7d_transform, volgrid6dv_v7d_transform, v7d_volgrid6d_transform
 END INTERFACE
 
+INTERFACE wind_rot
+  MODULE PROCEDURE vg6d_wind_rot
+END INTERFACE
+
 INTERFACE wind_unrot
   MODULE PROCEDURE vg6d_wind_unrot
 END INTERFACE
@@ -144,7 +148,8 @@ END INTERFACE
 
 private
 
-PUBLIC volgrid6d,init,delete,export,import,compute,transform,wind_unrot,vg6d_c2a,display
+PUBLIC volgrid6d,init,delete,export,import,compute,transform, &
+ wind_rot,wind_unrot,vg6d_c2a,display
 
 
 contains
@@ -2046,10 +2051,13 @@ integer :: component_flag
 call get_val(this%griddim,component_flag=component_flag)
 
 if (component_flag == 1) then
-
-  call  vg6d_wind__un_rot(this,.false.)
+  call l4f_category_log(this%category,L4F_INFO, &
+   "unrotating vector components")
+  call vg6d_wind__un_rot(this,.false.)
   call set_val(this%griddim,component_flag=0)
-
+else
+  call l4f_category_log(this%category,L4F_INFO, &
+   "no need to unrotate vector components")
 end if
 
 end subroutine vg6d_wind_unrot
@@ -2068,10 +2076,13 @@ integer :: component_flag
 call get_val(this%griddim,component_flag=component_flag)
 
 if (component_flag == 0) then
-
-  call  vg6d_wind__un_rot(this,.true.)
+  call l4f_category_log(this%category,L4F_INFO, &
+   "rotating vector components")
+  call vg6d_wind__un_rot(this,.true.)
   call set_val(this%griddim,component_flag=1)
-
+else
+  call l4f_category_log(this%category,L4F_INFO, &
+   "no need to rotate vector components")
 end if
 
 end subroutine vg6d_wind_rot
