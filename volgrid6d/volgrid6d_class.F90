@@ -1287,17 +1287,18 @@ TYPE(volgrid6d),POINTER :: this(:) !< vector of volgrid6d object
 
 integer :: i
 
-do i=1,size(this)
+IF (ASSOCIATED(this)) THEN
+  DO i=1,SIZE(this)
 
 #ifdef DEBUG
-  call l4f_category_log(this(i)%category,L4F_DEBUG,"delete volgrid6d vector index: "//trim(to_char(i)))
+    CALL l4f_category_log(this(i)%category,L4F_DEBUG, &
+     "delete volgrid6d vector index: "//TRIM(to_char(i)))
 #endif
+    CALL delete(this(i))
 
-  call delete(this(i))
-
-end do
-
-deallocate(this)
+  ENDDO
+  DEALLOCATE(this)
+ENDIF
 
 end subroutine delete_volgrid6dv
 
