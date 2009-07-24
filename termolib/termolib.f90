@@ -513,7 +513,30 @@ end function QTORELHUM
  
 !-----------------------------------------------------------------
 
- 
+!> Compute dew point temperature from pressure \a p and specific humidity \a q.
+!! \a p in hPa, \a q in Kg/Kg, \a td in K.
+!! From Fea, Elementi di dinamica e termodinamica dell'atmosfera, (4.11)
+ELEMENTAL REAL FUNCTION td_pq(p,q)
+IMPLICIT NONE
+! td in K, p in Pa, q in Kg/Kg
+REAL,INTENT(in) :: p, q
+REAL :: e
+REAL, PARAMETER :: rd = 287.05, rv = 461.51, &
+ eps0 = rd/rv, eps1 = 1. - eps0
+
+!REAL, EXTERNAL :: tesat
+
+! Compute vapour partial pressure
+IF (c_e(p) .AND. c_e(q)) THEN
+  e=p*q/(eps0+eps1*q)
+  td_pq=tesat(e)
+ELSE
+ td_pq = rmiss
+ENDIF
+
+END FUNCTION td_pq
+
+
 !----------------------------------------------------------------- 
 
 elemental real function RELHUMTOQ(RH,PT,T)
@@ -582,6 +605,29 @@ elemental real function ESAT(T)
   return 
 
 end function ESAT
+
+!< Compute temperature at which saturated vapor pressure is equal \a e.
+!! e in hPa, T in K.
+ELEMENTAL REAL FUNCTION tesat(e)
+REAL,intent(in) :: e
+
+REAL :: ale, t
+REAL, PARAMETER :: es0=6.11, aw=7.567*2.3025851, bw=239.7-t0c, &
+ awn=7.744*2.3025851, bwn=245.2-t0c
+
+IF (c_e(e) .AND. e > 0.0) THEN
+  ale=LOG(e/es0)
+  IF (ale > 0.) THEN
+    tesat=(aw*t0c+bw*ale)/(aw-ale)
+  ELSE
+    tesat=(awn*t0c+bwn*ale)/(awn-ale)
+  ENDIF
+ELSE
+  tesat = rmiss
+ENDIF
+
+END FUNCTION tesat
+
 
 !-----------------------------------------------------------------------------
 !

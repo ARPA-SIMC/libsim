@@ -7,11 +7,14 @@ B12001,Temperature,,255,2,11,255,1.0,0.0
 B12003,Dew point temperature,,255,2,17,255,1.0,0.0
 B11003,U-component of wind,,255,2,33,255,1.0,0.0
 B11004,V-component of wind,,255,2,34,255,1.0,0.0
-B13001,Specific humidity,KG/KG,255,2,51,255,1.0,0.0
-B13011,Total precipitation,,255,2,61,255,1.0,0.0
-B20010,Total cloud cover,,255,2,71,255,1.0,0.0
+B13001,Specific humidity,Kg/Kg,255,2,51,255,1.0,0.0
+B13011,Total precipitation,Kg/m**2,255,2,61,255,1.0,0.0
+B13128,Cloud water content (invented),Kg/Kg,78,201,31,255,1.0,0.0
+B13128,Cloud water content (invented),Kg/Kg,200,201,31,255,1.0,0.0
+B13129,Cloud ice content (invented),Kg/Kg,78,201,33,255,1.0,0.0
+B13129,Cloud ice content (invented),Kg/Kg,200,201,33,255,1.0,0.0
+B20010,Total cloud cover,Percent,255,2,71,255,1.0,0.0
+B20010,Cloud cover DWD,Percent,78,201,29,255,1.0,0.0
+B20010,Cloud cover DWD,Percent,200,201,29,255,1.0,0.0
 B14017,Net long-wave radiation flux (surface),,255,2,112,255,1.0,0.0
 B14018,Net short-wave radiation flux (surface),,255,2,111,255,1.0,0.0
-B20010,Cloud cover (total),,255,2,71,255,1.0,0.0
-B20010,Cloud cover,,78,201,29,255,1.0,0.0
-B20010,Cloud cover,,200,201,29,255,1.0,0.0
