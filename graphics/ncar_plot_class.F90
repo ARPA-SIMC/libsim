@@ -938,14 +938,19 @@ if (.not. any(c_e(r_ur))) then
   end select
 !end if
 
-r_ur=QTORELHUM(r_uq,r_pr,r_tt)
+  where ( .not. c_e(r_ur))
+    r_ur=QTORELHUM(r_uq,r_pr,r_tt)
+  end where
 
 ! delete very dry points for truncation problem
-where (r_ur < 10. )
-  r_ur=rmiss
-end where
-r_tr=TRUG(r_ur,r_tt)
+!  where (r_ur < 10. )
+!    r_ur=rmiss
+!  end where
 
+  where ( .not. c_e(r_tr))
+    !r_tr=TRUG(r_ur,r_tt)
+    r_tr=td_pq(r_pr   ,r_uq)
+  end where
 
 end if
 

@@ -181,6 +181,7 @@ if test "x$enableval" = "xyes"; then
 AC_MSG_RESULT([dballe code included])
 DBALLE_LIBS="-ldballef -ldballe -lcnf -lodbc -lm"
 AC_SUBST(DBALLE_LIBS)
+AC_DEFINE(HAVE_DBALLE, 1, [Enable dballe])
 else
 AC_MSG_RESULT([dballe code not included])
 fi

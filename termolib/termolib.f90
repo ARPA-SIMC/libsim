@@ -610,6 +610,10 @@ end function ESAT
 !! e in hPa, T in K.
 ELEMENTAL REAL FUNCTION tesat(e)
 REAL,intent(in) :: e
+!! /todo
+!! tesat on e=0. produce NaN
+!! so now there is a test to give missing value
+
 
 REAL :: ale, t
 REAL, PARAMETER :: es0=6.11, aw=7.567*2.3025851, bw=239.7-t0c, &

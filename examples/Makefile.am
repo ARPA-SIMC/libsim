@@ -30,20 +30,6 @@ esempio_regrib_SOURCES = esempio_regrib.f90
 esempio_regrib_LDADD = ../base/libsim_base.la ../grib/libsim_grib.la
 endif
 
-if ORSIM
-noinst_PROGRAMS += esempio_v7doracle esempio_v7doracle_multi
-
-esempio_v7doracle_SOURCES = esempio_v7doracle.f90
-esempio_v7doracle_LDADD = ../base/libsim_base.la ../vol7d/libsim_vol7d.la ../log4fortran/liblog4fortran.la
-
-esempio_v7doracle_multi_SOURCES = esempio_v7doracle_multi.f90
-esempio_v7doracle_multi_LDADD = ../base/libsim_base.la ../vol7d/libsim_vol7d.la ../log4fortran/liblog4fortran.la
-
-bin_PROGRAMS += v7d_pollini
-
-v7d_pollini_SOURCES = v7d_pollini.f90
-v7d_pollini_LDADD = ../base/libsim_base.la ../vol7d/libsim_vol7d.la ../log4fortran/liblog4fortran.la
-endif
 
 if DBALLE
 noinst_PROGRAMS += esempio_v7ddballe esempio_v7ddballe_multi esempio_v7ddballe_import_export esempio_v7ddballe_export esempio_qccli
@@ -61,20 +47,13 @@ esempio_v7ddballe_export_SOURCES = esempio_v7ddballe_export.f90
 esempio_v7ddballe_export_LDADD = ../base/libsim_base.la ../vol7d/libsim_vol7d.la ../log4fortran/liblog4fortran.la
 
 if NETCDF
-noinst_PROGRAMS += esempio_v7ddballe_export_file esempio_v7ddballe_import_file 
+noinst_PROGRAMS += esempio_v7ddballe_export_file esempio_v7ddballe_import_file esempio_v7dnetcdf
 
 esempio_v7ddballe_export_file_SOURCES = esempio_v7ddballe_export_file.f90
 esempio_v7ddballe_export_file_LDADD = ../base/libsim_base.la ../vol7d/libsim_vol7d.la ../log4fortran/liblog4fortran.la
 
 esempio_v7ddballe_import_file_SOURCES = esempio_v7ddballe_import_file.f90
 esempio_v7ddballe_import_file_LDADD = ../base/libsim_base.la ../vol7d/libsim_vol7d.la ../log4fortran/liblog4fortran.la
-endif
-
-esempio_qccli_SOURCES = esempio_qccli.f90
-esempio_qccli_LDADD = ../base/libsim_base.la ../vol7d/libsim_vol7d.la ../log4fortran/liblog4fortran.la ../qc/libsim_qc.la
-
-if NETCDF
-noinst_PROGRAMS += esempio_v7dnetcdf
 
 esempio_v7dnetcdf_SOURCES = esempio_v7dnetcdf.f90
 esempio_v7dnetcdf_LDADD = ../base/libsim_base.la ../vol7d/libsim_vol7d.la  ../log4fortran/liblog4fortran.la
@@ -95,7 +74,27 @@ v7d_plot_sound_LDADD = ../graphics/libsim_graphics.la ../base/libsim_base.la ../
 
 endif
 
+esempio_qccli_SOURCES = esempio_qccli.f90
+esempio_qccli_LDADD = ../base/libsim_base.la ../vol7d/libsim_vol7d.la ../log4fortran/liblog4fortran.la ../qc/libsim_qc.la
+
 endif
+
+
+if ORSIM
+noinst_PROGRAMS += esempio_v7doracle esempio_v7doracle_multi
+
+esempio_v7doracle_SOURCES = esempio_v7doracle.f90
+esempio_v7doracle_LDADD = ../base/libsim_base.la ../vol7d/libsim_vol7d.la ../log4fortran/liblog4fortran.la
+
+esempio_v7doracle_multi_SOURCES = esempio_v7doracle_multi.f90
+esempio_v7doracle_multi_LDADD = ../base/libsim_base.la ../vol7d/libsim_vol7d.la ../log4fortran/liblog4fortran.la
+
+bin_PROGRAMS += v7d_pollini
+
+v7d_pollini_SOURCES = v7d_pollini.f90
+v7d_pollini_LDADD = ../base/libsim_base.la ../vol7d/libsim_vol7d.la ../log4fortran/liblog4fortran.la
+endif
+
 
 if SHP
 noinst_PROGRAMS += esempio_geo_coordvect
