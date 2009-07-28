@@ -1,3 +1,5 @@
+#include "config.h"
+
 !> Classe per la gestione degli intervalli temporali di osservazioni
 !! meteo e affini.
 !! Questo modulo definisce una classe in grado di rappresentare
@@ -208,7 +210,6 @@ END SUBROUTINE vol7d_timerange_delete
 subroutine display_timerange(this)
 
 TYPE(vol7d_timerange),INTENT(in) :: this
-integer ::EditionNumber,timerange,p1,p2
 
 print*,to_char_timerange(this)
 
@@ -216,13 +217,22 @@ end subroutine display_timerange
 
 
 
-elemental character(len=60) function to_char_timerange(this)
+character(len=80) function to_char_timerange(this)
 
 TYPE(vol7d_timerange),INTENT(in) :: this
-integer ::EditionNumber,timerange,p1,p2
+
+#ifdef HAVE_DBALLE
+
+call idba_spiegat(0,this%timerange,this%p1,this%p2,to_char_timerange)
+
+to_char_timerange="Timerange: "//to_char_timerange
+
+#else
 
 to_char_timerange="Timerange: "//trim(to_char(this%timerange))//" P1: "//&
  trim(to_char(this%p1))//" P2: "//trim(to_char(this%p2))
+
+#endif
 
 return
 

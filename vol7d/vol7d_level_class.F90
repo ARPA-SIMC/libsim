@@ -1,3 +1,5 @@
+#include "config.h"
+
 !> Classe per la gestione dei livelli verticali in osservazioni meteo e affini.
 !! Questo modulo definisce una classe per rappresentare la localizzazione
 !! verticale di un'osservazione meteorologica, prendendo in prestito
@@ -6,6 +8,7 @@
 MODULE vol7d_level_class
 USE kinds
 USE missing_values
+use char_utilities
 IMPLICIT NONE
 
 !> Definisce il livello verticale di un'osservazione.
@@ -122,6 +125,12 @@ INTERFACE display
   MODULE PROCEDURE display_level
 END INTERFACE
 
+!>Represent level object in a pretty string
+INTERFACE to_char
+  MODULE PROCEDURE to_char_level
+END INTERFACE
+
+
 CONTAINS
 
 !> Inizializza un oggetto \a vol7d_level con i parametri opzionali forniti.
@@ -174,9 +183,31 @@ subroutine display_level(this)
 
 TYPE(vol7d_level),INTENT(in) :: this
 
-print*,"LEVEL: ",this%level1,this%l1,this%level2,this%l2
-  
+print*,to_char(this)
+
 end subroutine display_level
+
+
+
+character(len=80) function to_char_level(this)
+
+TYPE(vol7d_level),INTENT(in) :: this
+
+#ifdef HAVE_DBALLE
+
+call idba_spiegal(0,this%level1,this%l1,this%level2,this%l2,to_char_level)
+
+to_char_level="LEVEL: "//to_char_level
+
+#else
+
+to_char_level="LEVEL: "//&
+ " typelev1:"//trim(to_char(this%level1))//" L1:"//trim(to_char(this%l1))//&
+ " typelev2:"//trim(to_char(this%level2))//" L2:"//trim(to_char(this%l2))
+
+#endif
+
+end function to_char_level
 
 
 elemental FUNCTION vol7d_level_eq(this, that) RESULT(res)
