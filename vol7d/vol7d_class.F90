@@ -1,3 +1,5 @@
+#include "config.h"
+
 !> \defgroup vol7d Pacchetto libsim, libreria vol7d.
 !! La libreria vol7d di libsim contiene classi per la gestione in
 !! Fortran 90 di dati puntuali, tipicamente osservazioni da stazioni meteo,
@@ -196,7 +198,12 @@ END INTERFACE
 
 !>Print object
 INTERFACE display
-  MODULE PROCEDURE vol7d_display
+  MODULE PROCEDURE vol7d_display, dat_display, dat_vect_display
+END INTERFACE
+
+!>Represent data in a pretty string
+INTERFACE to_char
+  MODULE PROCEDURE to_char_dat
 END INTERFACE
 
 !>doubleprecision data conversion
@@ -240,7 +247,8 @@ PRIVATE vol7d_get_volr, vol7d_get_vold, vol7d_get_voli, vol7d_get_volb, &
  volptr1dc, volptr2dc, volptr3dc, volptr4dc, volptr5dc, volptr6dc, volptr7dc, &
  vol7d_nullifyr, vol7d_nullifyd, vol7d_nullifyi, vol7d_nullifyb, vol7d_nullifyc, &
  vol7d_init, vol7d_delete, vol7d_write_on_file, vol7d_read_from_file, &
- vol7d_check_alloc_ana,  vol7d_check_alloc_dati, vol7d_display
+ vol7d_check_alloc_ana,  vol7d_check_alloc_dati, vol7d_display, dat_display,dat_vect_display, &
+ to_char_dat
 
 PRIVATE doubledatd,doubledatr,doubledati,doubledatb,doubledatc
 
@@ -336,6 +344,12 @@ SUBROUTINE vol7d_display(this)
 TYPE(vol7d),intent(in) :: this !< oggetto da visualizzare
 integer :: i
 
+REAL :: rdat
+REAL(kind=fp_d) :: ddat
+INTEGER :: idat
+INTEGER(kind=int_b) :: bdat
+CHARACTER(len=vol7d_cdatalen) :: cdat
+
 
 print*,"<<<<<<<<<<<<<<<<<<< vol7d object >>>>>>>>>>>>>>>>>>>>"
 
@@ -389,6 +403,35 @@ call display(this%anaattr)
 print*,"- anavarattr -"
 call display(this%anavarattr)
 
+print*,"-- ana data section (first point) --"
+
+idat=imiss
+rdat=rmiss
+ddat=dmiss
+bdat=bmiss
+cdat=cmiss
+
+if (associated(this%volanai)) idat=this%volanai(1,1,1)
+if (associated(this%anavar%i)) call display(this%anavar%i(1),idat,rdat,ddat,bdat,cdat)
+idat=imiss
+
+if (associated(this%volanar)) rdat=this%volanar(1,1,1)
+if (associated(this%anavar%r)) call display(this%anavar%r(1),idat,rdat,ddat,bdat,cdat)
+rdat=rmiss
+
+if (associated(this%volanad)) ddat=this%volanad(1,1,1)
+if (associated(this%anavar%d)) call display(this%anavar%d(1),idat,rdat,ddat,bdat,cdat)
+ddat=dmiss
+
+if (associated(this%volanab)) bdat=this%volanab(1,1,1)
+if (associated(this%anavar%b)) call display(this%anavar%b(1),idat,rdat,ddat,bdat,cdat)
+bdat=bmiss
+
+if (associated(this%volanac)) cdat=this%volanac(1,1,1)
+if (associated(this%anavar%c)) call display(this%anavar%c(1),idat,rdat,ddat,bdat,cdat)
+cdat=cmiss
+
+
 print*,"---- data vector ----"
 
 print*,"- dativar -"
@@ -398,9 +441,150 @@ call display(this%datiattr)
 print*,"- dativarattr -"
 call display(this%dativarattr)
 
+print*,"-- data data section (first point) --"
+
+idat=imiss
+rdat=rmiss
+ddat=dmiss
+bdat=bmiss
+cdat=cmiss
+
+
+if (associated(this%voldatii)) idat=this%voldatii(1,1,1,1,1,1)
+if (associated(this%dativar%i)) call display(this%dativar%i(1),idat,rdat,ddat,bdat,cdat)
+idat=imiss
+
+if (associated(this%voldatir)) rdat=this%voldatir(1,1,1,1,1,1)
+if (associated(this%dativar%r)) call display(this%dativar%r(1),idat,rdat,ddat,bdat,cdat)
+rdat=rmiss
+
+if (associated(this%voldatid)) ddat=this%voldatid(1,1,1,1,1,1)
+if (associated(this%dativar%d)) call display(this%dativar%d(1),idat,rdat,ddat,bdat,cdat)
+ddat=dmiss
+
+if (associated(this%voldatib)) bdat=this%voldatib(1,1,1,1,1,1)
+if (associated(this%dativar%b)) call display(this%dativar%b(1),idat,rdat,ddat,bdat,cdat)
+bdat=bmiss
+
+if (associated(this%voldatic)) cdat=this%voldatic(1,1,1,1,1,1)
+if (associated(this%dativar%c)) call display(this%dativar%c(1),idat,rdat,ddat,bdat,cdat)
+cdat=cmiss
+
+
 print*,"<<<<<<<<<<<<<<<<<<< END vol7d object >>>>>>>>>>>>>>>>>>>>"
 
 END SUBROUTINE vol7d_display
+
+
+!> stampa a video una sintesi del contenuto
+SUBROUTINE dat_display(this,idat,rdat,ddat,bdat,cdat)
+TYPE(vol7d_var),intent(in) :: this !< oggetto da visualizzare
+!> real
+REAL :: rdat
+!> double precision
+REAL(kind=fp_d) :: ddat
+!> integer
+INTEGER :: idat
+!> byte
+INTEGER(kind=int_b) :: bdat
+!> character
+CHARACTER(len=*) :: cdat
+
+print *, to_char_dat(this,idat,rdat,ddat,bdat,cdat)
+
+end SUBROUTINE dat_display
+
+!> stampa a video una sintesi del contenuto
+SUBROUTINE dat_vect_display(this,idat,rdat,ddat,bdat,cdat)
+
+TYPE(vol7d_var),intent(in) :: this(:) !< oggetto da visualizzare
+!> real
+REAL :: rdat(:)
+!> double precision
+REAL(kind=fp_d) :: ddat(:)
+!> integer
+INTEGER :: idat(:)
+!> byte
+INTEGER(kind=int_b) :: bdat(:)
+!> character
+CHARACTER(len=*):: cdat(:)
+
+integer :: i
+
+do i =1,size(this)
+  call display(this(i),idat(i),rdat(i),ddat(i),bdat(i),cdat(i))
+end do
+
+end SUBROUTINE dat_vect_display
+
+
+
+character(len=80) function to_char_dat(this,idat,rdat,ddat,bdat,cdat)
+
+TYPE(vol7d_var),INTENT(in) :: this
+
+!> real
+REAL :: rdat
+!> double precision
+REAL(kind=fp_d) :: ddat
+!> integer
+INTEGER :: idat
+!> byte
+INTEGER(kind=int_b) :: bdat
+!> character
+CHARACTER(len=*) :: cdat
+
+character(len=80) ::to_char_tmp
+
+
+#ifdef HAVE_DBALLE
+integer :: handle=0
+
+to_char_dat="VALUE: "
+
+!!$ purtroppo spiegab vuole solo character !!!!
+!!$call idba_messaggi(handle,"/dev/null", "w", "BUFR")
+!!$
+!!$if ( c_e (idat)) call idba_spiegab(handle,this%btable,idat,to_char_tmp)
+!!$to_char_dat=trim(to_char_dat)//" ; "//to_char_tmp
+!!$if ( c_e (rdat)) call idba_spiegab(handle,this%btable,rdat,to_char_tmp)
+!!$to_char_dat=trim(to_char_dat)//" ; "//to_char_tmp
+!!$if ( c_e (ddat)) call idba_spiegab(handle,this%btable,ddat,to_char_tmp)
+!!$to_char_dat=trim(to_char_dat)//" ; "//to_char_tmp
+!!$if ( c_e (bdat)) call idba_spiegab(handle,this%btable,bdat,to_char_tmp)
+!!$to_char_dat=trim(to_char_dat)//" ; "//to_char_tmp
+
+if (c_e (idat)) to_char_dat=trim(to_char_dat)//" ;int> "//trim(to_char(idat))
+if (c_e (rdat)) to_char_dat=trim(to_char_dat)//" ;real> "//trim(to_char(rdat))
+if (c_e (ddat)) to_char_dat=trim(to_char_dat)//" ;double> "//trim(to_char(ddat))
+if (c_e (bdat)) to_char_dat=trim(to_char_dat)//" ;byte> "//trim(to_char(bdat))
+
+if ( c_e (cdat))then
+  call idba_messaggi(handle,"/dev/null", "w", "BUFR")
+  call idba_spiegab(handle,this%btable,cdat,to_char_tmp)
+  call idba_fatto(handle)
+  to_char_dat=trim(to_char_dat)//" ;char> "//trim(to_char_tmp)
+endif
+
+!!$call idba_fatto(handle)
+
+#else
+
+to_char_dat="VALUE: "
+if (c_e (idat)) to_char_dat=trim(to_char_dat)//" ;int> "//trim(to_char(idat))
+if (c_e (rdat)) to_char_dat=trim(to_char_dat)//" ;real> "//trim(to_char(rdat))
+if (c_e (ddat)) to_char_dat=trim(to_char_dat)//" ;double> "//trim(to_char(ddat))
+if (c_e (bdat)) to_char_dat=trim(to_char_dat)//" ;byte> "//trim(to_char(bdat))
+if (c_e (cdat)) to_char_dat=trim(to_char_dat)//" ;char> "//trim(cdat)
+
+
+#endif
+
+end function to_char_dat
+
+
+
+
 
 
 !> Metodo per allocare i descrittori delle 7 dimensioni.

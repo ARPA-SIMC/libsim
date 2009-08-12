@@ -77,6 +77,10 @@ END DO
 
 v7d3%volanai(1,1,1) = 33
 
+call display(v7d1)
+call display(v7d2)
+call display(v7d3)
+
 ! creo una vista su un vettore unidimensionale
 ! che scorre solo la dimensione del tempo (vol7d_time_d)
 CALL vol7d_get_voldatid(v7d1, (/vol7d_time_d/), vol1dd)

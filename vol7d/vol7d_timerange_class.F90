@@ -222,8 +222,11 @@ character(len=80) function to_char_timerange(this)
 TYPE(vol7d_timerange),INTENT(in) :: this
 
 #ifdef HAVE_DBALLE
+integer :: handle=0
 
-call idba_spiegat(0,this%timerange,this%p1,this%p2,to_char_timerange)
+call idba_messaggi(handle,"/dev/null", "w", "BUFR")
+call idba_spiegat(handle,this%timerange,this%p1,this%p2,to_char_timerange)
+call idba_fatto(handle)
 
 to_char_timerange="Timerange: "//to_char_timerange
 

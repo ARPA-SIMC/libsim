@@ -214,10 +214,7 @@ TYPE(vol7d_var),INTENT(in) :: this(:) !< vol7d_var vector object to display
 integer :: i
 
 do i=1,size(this)
-
-  print*,"VOL7DVAR: ",this(i)%btable,trim(this(i)%description)," : ",trim(this(i)%unit),&
-   " scale factor",this(i)%scalefactor
-
+  call display_var(this(i))
 end do
 
 end subroutine display_var_vect

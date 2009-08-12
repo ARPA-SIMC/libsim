@@ -194,8 +194,11 @@ character(len=80) function to_char_level(this)
 TYPE(vol7d_level),INTENT(in) :: this
 
 #ifdef HAVE_DBALLE
+integer :: handle=0
 
-call idba_spiegal(0,this%level1,this%l1,this%level2,this%l2,to_char_level)
+call idba_messaggi(handle,"/dev/null", "w", "BUFR")
+call idba_spiegal(handle,this%level1,this%l1,this%level2,this%l2,to_char_level)
+call idba_fatto(handle)
 
 to_char_level="LEVEL: "//to_char_level
 
