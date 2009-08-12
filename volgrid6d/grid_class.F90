@@ -1120,7 +1120,9 @@ IF (EditionNumber == 1) THEN
     pvl = 255
   ELSE
     SELECT CASE (this%grid%type%type)
-    CASE ('regular_ll', 'polar_stereographic')
+    CASE ('regular_ll') ! check whether "29-32 Set to zero (reserved)" are required
+      pvl = 29
+    CASE ('polar_stereographic')
       pvl = 33
     CASE ('rotated_ll', 'stretched_ll', 'lambert', 'albers')
       pvl = 43
