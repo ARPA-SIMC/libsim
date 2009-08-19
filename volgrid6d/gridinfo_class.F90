@@ -679,6 +679,8 @@ iter: do
   end if
   
   call grib_keys_iterator_get_name(kiter,key)
+!<\todo bug in grib_api, segmentation fault with computeStatistics key
+  if (key == 'computeStatistics') cycle
   call grib_get(this,trim(key),value,iret)
   if (iret == 0)then
     print*, trim(key)//' = '//trim(value)
