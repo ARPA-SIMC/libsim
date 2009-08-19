@@ -93,9 +93,9 @@
 !!\ingroup log4fortran
 module log4fortran
 
-use kinds
+!use kinds
 use missing_values
-use char_utilities
+!use char_utilities
 implicit none
 
 INTEGER ,PARAMETER :: L4F_FATAL    = 000  !< standard priority
@@ -184,11 +184,11 @@ character (len=255) :: LOG4_APPLICATION_NAME,LOG4_APPLICATION_ID,arg
 character (len=*),intent(out) :: a_name !< nome univoco per logging
 character (len=*),intent(in),optional :: a_name_force !< forza il valore di a_name
 character (len=*),intent(in),optional :: a_name_append !< valore da appendere a a_name
-character (len=255),save :: a_name_save=cmiss
+character (len=255),save :: a_name_save=""
 
 if (present(a_name_force))then
   a_name=a_name_force
-else if (c_e(a_name_save))then
+else if (.not. a_name_save == "")then
   a_name=a_name_save
 else
 
@@ -213,7 +213,7 @@ end if
 a_name_save=a_name
 
 if (present(a_name_append))then
-  a_name=to_char(a_name)//"."//to_char(a_name_append)
+  a_name=trim(a_name)//"."//trim(a_name_append)
 end if
   
 
