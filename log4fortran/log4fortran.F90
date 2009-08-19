@@ -93,9 +93,6 @@
 !!\ingroup log4fortran
 module log4fortran
 
-!use kinds
-use missing_values
-!use char_utilities
 implicit none
 
 INTEGER ,PARAMETER :: L4F_FATAL    = 000  !< standard priority
