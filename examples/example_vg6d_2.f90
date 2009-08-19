@@ -1,6 +1,7 @@
 program demo2
 
 use gridinfo_class
+use char_utilities
 use log4fortran
 use grib_api
 

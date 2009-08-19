@@ -1,6 +1,7 @@
 program demo
 
 use grid_class
+use char_utilities
 use log4fortran
 
 implicit none

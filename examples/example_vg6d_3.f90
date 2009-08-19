@@ -1,6 +1,7 @@
 program demo3
 
 use gridinfo_class
+use missing_values
 use log4fortran
 use grib_api
 use volgrid6d_class
