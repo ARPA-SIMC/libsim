@@ -2,13 +2,15 @@
 
 program esempio_qccli
 
+use log4fortran
 use modqccli
 use vol7d_dballe_class
 
 implicit none
 
-integer :: io,ier
+integer :: category,io,ier
 character(len=19) :: database,user,password
+character(len=512):: a_name
 
                                 !tipi derivati.
 TYPE(geo_coord)    :: coordmin, coordmax 
@@ -18,6 +20,16 @@ type(vol7d_dballe) :: v7ddballe
 
                                 ! namelist utilizzata per definire il DSN
 namelist  /odbc/database,user,password
+
+!init di log4fortran
+ier=l4f_init()
+
+!questa chiamata prende dal launcher il nome univoco
+call l4f_launcher(a_name,a_name_force="esempio_qccli")
+
+!imposta a_name
+category=l4f_category_get(a_name//".main")
+
 
                                 ! lettura della namelist utilizzata per definire il DSN
 open(10,file='odbc.nml',status='old')
@@ -30,8 +42,8 @@ end if
 close(10)
 
                                 ! Definisco le date iniziale e finale
-CALL init(ti, year=2007, month=03, day=1, hour=00)
-CALL init(tf, year=2007, month=03, day=30, hour=00)
+CALL init(ti, year=2009, month=08, day=1, hour=00)
+CALL init(tf, year=2009, month=08, day=30, hour=00)
 
                                 ! Definisco il box delle coordinate
 CALL init(coordmin,lat=43.70_fp_geo,lon=9.16_fp_geo)
@@ -48,6 +60,8 @@ CALL import(v7ddballe,var=(/"B13011"/),varkind=(/"r"/),&
  ,timei=ti,timef=tf,coordmin=coordmin,coordmax=coordmax)
 print*,"finita importazione dati"
 
+call display(v7ddballe%vol7d)
+
 print*,"inizio qc"
 
                                 ! chiamiamo il "costruttore" per il Q.C.
@@ -56,6 +70,9 @@ if (ier /= 0 ) then
   print * , "errore qccliinit ier=",ier
   call exit(1)
 end if
+
+call display(v7dqccli%clima)
+
 
 call alloc(v7dqccli,ier)
 if (ier /= 0 ) then
@@ -79,6 +96,11 @@ print*,"finito esportazione dati"
                                 ! il "distruttore" del Q.C.
 call delete(v7dqccli,ier)
 call delete(v7ddballe)
+
+!chiudo il logger
+call l4f_category_delete(category)
+ier=l4f_fini()
+
 stop
   
 end program esempio_qccli

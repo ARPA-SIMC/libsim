@@ -58,6 +58,7 @@ use modqc
 use vol7d_class
 use geo_coord_class
 use file_utilities
+use log4fortran
 
 implicit none
 
@@ -402,7 +403,7 @@ do indana=1,size(qccli%v7d%ana)
               if (indanavar <=0 )cycle
               altezza= qccli%v7d%volanai(indana,indanavar,indnetwork)
               call macro_height(altezza,mh)
-              call init(level, 103,mh,0)
+              call init(level, 102,mh)
 
               indcnetwork      = 1
               indcana          = firsttrue(qccli%clima%ana     == ana)
@@ -413,7 +414,8 @@ do indana=1,size(qccli%v7d%ana)
 
               !print *,"dato  ",qccli%v7d%timerange(indtimerange) 
               !print *,"clima ",qccli%clima%timerange
-              !print *,indcana,indctime,indclevel,indctimerange,indcdativarr,indcnetwork
+              call l4f_log(L4F_DEBUG,"Index:"// to_char(indcana)//to_char(indctime)//to_char(indclevel)//&
+               to_char(indctimerange)//to_char(indcdativarr)//to_char(indcnetwork))
               if (indcana <= 0 .or. indctime <= 0 .or. indclevel <= 0 .or. indctimerange <= 0 .or. indcdativarr <= 0 &
                .or. indcnetwork <= 0 ) cycle
 
@@ -421,8 +423,13 @@ do indana=1,size(qccli%v7d%ana)
               climaqui= qccli%clima%voldatir(indcana,indctime,indclevel,indctimerange,indcdativarr,indcnetwork)
 
               if (c_e(climaqui).and. c_e(datoqui))then
-                !print *,"macroarea,iarea,mese,altezza,mh ",qccli%in_macroa(indana),iarea,imese,altezza,mh
-                !print*,"dato,clima ",datoqui,climaqui
+
+                call l4f_log (L4F_DEBUG,"macroarea,iarea,mese,altezza,mh "//&
+                 trim(to_char(qccli%in_macroa(indana)))//" "//trim(to_char(iarea))&
+                 //" "//trim(to_char(imese))//" "//trim(to_char(altezza))//" "//trim(to_char(mh)))
+
+                call l4f_log (L4F_DEBUG,"data: "//trim(to_char(datoqui))//" ;clima: "//trim(to_char(climaqui)))
+
                 if ( datoqui > climaqui) then
                   
                   qccli%v7d%voldatiattrb(indana,indtime,indlevel,indtimerange,inddativarr,indnetwork,indtbattrout)=100-lperc
@@ -434,8 +441,9 @@ do indana=1,size(qccli%v7d%ana)
                 end if
  
                 if ( associated ( qccli%data_id_in)) then
-                  qccli%data_id_in(indana,indtime,indlevel,indtimerange,indnetwork)=&
-                   qccli%data_id_out(indana,indtime,indlevel,indtimerange,indnetwork)
+                  call l4f_log (L4F_DEBUG,"id: "//trim(to_char(qccli%data_id_in(indana,indtime,indlevel,indtimerange,indnetwork))))
+                  qccli%data_id_out(indana,indtime,indlevel,indtimerange,indnetwork)=&
+                   qccli%data_id_in(indana,indtime,indlevel,indtimerange,indnetwork)
                 end if
                 
               end if
@@ -460,7 +468,7 @@ integer :: altezza,mh
 integer :: livello(10) = (/50,175,375,625,875,1125,1375,1625,1875,2125/)
 
 if (c_e(altezza))then
-  mh=livello(min(max((altezza+150)/250,1),10))
+  mh=livello(min(max((altezza+150)/250,1),10))*1000
 else
   mh=imiss
 end if

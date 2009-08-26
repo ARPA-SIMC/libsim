@@ -1,3 +1,5 @@
+#include "config.h"
+
 !>\brief  classe per import ed export di volumi da e in DB-All.e 
 !!
 !!Questo modulo definisce gli oggetti e i metodi per gestire
@@ -1323,6 +1325,10 @@ do i =1, N
    if (lattr)then
 
                                 !memorizzo data_id
+#ifdef DEBUG
+     !CALL l4f_category_log(this%category,L4F_DEBUG,"data_id: "//trim(to_char(buffer(i)%data_id)))
+#endif
+
      this%data_id(indana,indtime,indlevel,indtimerange,indnetwork)=buffer(i)%data_id
 
      call idba_unsetall (this%handle)
@@ -2087,7 +2093,7 @@ IF (n > 0) THEN
     !PRINT*," D=",blocal(i)%scalefactor
   ENDDO readline
 
-  CALL print_info('Ho letto '//TRIM(to_char(i-1))//' variabili dalla tabella')
+  CALL l4f_log(L4F_INFO,'Ho letto '//TRIM(to_char(i-1))//' variabili dalla tabella')
 
   this=blocal
 
