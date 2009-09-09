@@ -1826,9 +1826,10 @@ do iii=1, nnetwork
       end if
 
       if ( c_e(this%vol7d%ana(i)%ident)) then
-         call idba_set (this%handle,"ident",ident)
+         call l4f_category_log(this%category,L4F_DEBUG,"I have found a mobile station! ident: "//&
+          to_char(this%vol7d%ana(i)%ident))
+         call idba_set (this%handle,"ident",this%vol7d%ana(i)%ident)
          call idba_set (this%handle,"mobile",1)
-         call l4f_category_log(this%category,L4F_DEBUG,"hai una stazione che va a spasso! identificativo: "//to_char(ident))
       else
          call idba_set (this%handle,"mobile",0)
       end if
