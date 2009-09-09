@@ -17,14 +17,16 @@
 !!  classe altezza = (altezza+150)/250
 !! ottenendo un indice da 1 a 10 (inserendo altezze in metri).
 !! Questo indice viene utilizzato per selezionare un livello tipico utilizzato nella descrizione del clima 
-!! con leveltype=103:
-!! \arg livello(10) = (/50,175,375,625,875,1125,1375,1625,1875,2125/)
+!! con leveltype=102:
+!! \arg livello1(10) = (/-100,100,250,500,750,1000,1250,1500,1750,2000/)
+!! \arg livello2(10) = (/100,250,500,750,1000,1250,1500,1750,2000,2250/)
 !!
 !! Area e percentile vengono utilizzati per costruire l'ident dell'anagrafica del Vol7d del clima.
 !! Il clima infatti è memorizzato su file nel formato binario di Vol7d utilizzando come anno per i 
-!! dati il 1001, ora 00 e minuti 00, ora contenuto nel file climaprec.v7d.
+!! dati il 1001, ora 00 e minuti 00; per ora alcuni dati sono nel file climaprec.v7d.
 !! ecco come viene definito l'ident del clima:
 !! \arg write(ident,'("BOX-",2i2.2)')iarea,perc   ! macro-area e percentile
+!! Il network utilizzato per il clima è il numero 1000
 !! In questo modo è possibile inserire nel Vol7d del clima qualsiasi parametro per leveltype e timerange.
 !! Il clima viene letto dalla init.
 !! Dopo l'allocazione di memoria le successive operazioni svolte da qccli sono principalmente le seguenti:
@@ -64,7 +66,14 @@ implicit none
 
 public
 
-!>\brief Oggetto principale per il controllo diqualità
+
+!> standard heigth for climatological use (low level)
+integer :: cli_level1(10) = (/-100,100,250,500,750,1000,1250,1500,1750,2000/)
+!> standard heigth for climatological use (hight level)
+integer :: cli_level2(10) = (/100,250,500,750,1000,1250,1500,1750,2000,2250/)
+
+
+!>\brief Oggetto principale per il controllo di qualità
 type :: qcclitype
 
   type (vol7d),pointer :: v7d !< Volume dati da controllare
@@ -288,7 +297,7 @@ logical :: anamaskl(size(qccli%v7d%ana)), timemaskl(size(qccli%v7d%time)), level
 integer :: indana ,indanavar, indtime ,indlevel ,indtimerange ,inddativarr, indnetwork
 integer :: indcana,           indctime,indclevel,indctimerange,indcdativarr,indcnetwork
 real :: datoqui,climaqui
-integer :: altezza,mh,iarea,lperc
+integer :: altezza,iarea,lperc
 
 
 TYPE(vol7d_ana)  :: ana
@@ -402,8 +411,7 @@ do indana=1,size(qccli%v7d%ana)
 
               if (indanavar <=0 )cycle
               altezza= qccli%v7d%volanai(indana,indanavar,indnetwork)
-              call macro_height(altezza,mh)
-              call init(level, 102,mh)
+              call cli_level(altezza,level)
 
               indcnetwork      = 1
               indcana          = firsttrue(qccli%clima%ana     == ana)
@@ -424,9 +432,9 @@ do indana=1,size(qccli%v7d%ana)
 
               if (c_e(climaqui).and. c_e(datoqui))then
 
-                call l4f_log (L4F_DEBUG,"macroarea,iarea,mese,altezza,mh "//&
+                call l4f_log (L4F_DEBUG,"macroarea,iarea,mese,altezza,level "//&
                  trim(to_char(qccli%in_macroa(indana)))//" "//trim(to_char(iarea))&
-                 //" "//trim(to_char(imese))//" "//trim(to_char(altezza))//" "//trim(to_char(mh)))
+                 //" "//trim(to_char(imese))//" "//trim(to_char(altezza))//" "//trim(to_char(level)))
 
                 call l4f_log (L4F_DEBUG,"data: "//trim(to_char(datoqui))//" ;clima: "//trim(to_char(climaqui)))
 
@@ -462,18 +470,30 @@ return
 end subroutine quaconcli
 
 
-subroutine macro_height(altezza,mh)
+!>\brief Return a conventional level for climatological definition.
+!! Starting from height of station in meter return a level where is defined (I hope)
+!! the climatological value 
+subroutine cli_level(heigth,level)
 
-integer :: altezza,mh
-integer :: livello(10) = (/50,175,375,625,875,1125,1375,1625,1875,2125/)
+integer,intent(in) :: heigth !< height of station in meter
+TYPE(vol7d_level),intent(out):: level !< level where is defined the climatological value (layer)
 
-if (c_e(altezza))then
-  mh=livello(min(max((altezza+150)/250,1),10))*1000
-else
-  mh=imiss
+integer :: i
+
+i=imiss
+
+if (c_e(heigth)) then
+  i=firsttrue(cli_level1 <= heigth .and. heigth <= cli_level2 )
 end if
 
-end subroutine macro_height
+if (i >= 1 .and. i <= 10 ) then
+  call init(level, 102,cli_level1(i)*1000,102,cli_level2(i)*1000)
+else
+  if (c_e(i)) CALL l4f_log(L4F_DEBUG,"cli_level: strange level, heigth: "//to_char(heigth))
+  call init(level)
+end if
+
+end subroutine cli_level
 
 
 

@@ -11,7 +11,7 @@ esempio_v7d_SOURCES = esempio_v7d.f90
 esempio_v7d_LDADD = ../base/libsim_base.la ../vol7d/libsim_vol7d.la ../log4fortran/liblog4fortran.la
 
 esempio_qc_convert_SOURCES = esempio_qc_convert.f90
-esempio_qc_convert_LDADD = ../base/libsim_base.la ../vol7d/libsim_vol7d.la ../log4fortran/liblog4fortran.la
+esempio_qc_convert_LDADD = ../base/libsim_base.la ../vol7d/libsim_vol7d.la ../log4fortran/liblog4fortran.la ../qc/libsim_qc.la
 
 esempio_termolib_SOURCES  = esempio_termolib.f90 
 esempio_termolib_LDADD = ../base/libsim_base.la ../termolib/libsim_termolib.la 
@@ -32,7 +32,7 @@ endif
 
 
 if DBALLE
-noinst_PROGRAMS += esempio_v7ddballe esempio_v7ddballe_multi esempio_v7ddballe_import_export esempio_v7ddballe_export esempio_qccli
+noinst_PROGRAMS += esempio_v7ddballe esempio_v7ddballe_multi esempio_v7ddballe_import_export esempio_v7ddballe_export esempio_qccli example_v7ddballe_v7d2dba
 
 esempio_v7ddballe_SOURCES = esempio_v7ddballe.f90
 esempio_v7ddballe_LDADD = ../base/libsim_base.la ../vol7d/libsim_vol7d.la ../log4fortran/liblog4fortran.la
@@ -45,6 +45,9 @@ esempio_v7ddballe_import_export_LDADD = ../base/libsim_base.la ../vol7d/libsim_v
 
 esempio_v7ddballe_export_SOURCES = esempio_v7ddballe_export.f90
 esempio_v7ddballe_export_LDADD = ../base/libsim_base.la ../vol7d/libsim_vol7d.la ../log4fortran/liblog4fortran.la
+
+example_v7ddballe_v7d2dba_SOURCES = example_v7ddballe_v7d2dba.f90
+example_v7ddballe_v7d2dba_LDADD = ../base/libsim_base.la ../vol7d/libsim_vol7d.la ../log4fortran/liblog4fortran.la
 
 if NETCDF
 noinst_PROGRAMS += esempio_v7ddballe_export_file esempio_v7ddballe_import_file esempio_v7dnetcdf

@@ -5,6 +5,7 @@ program leggi
 
 USE vol7d_class
 USE vol7d_utilities
+USE modqccli
 
 IMPLICIT NONE
 
@@ -32,6 +33,8 @@ CHARACTER(len=vol7d_ana_lenident) :: ident
 REAL(kind=fp_geo) :: lat,lon
 !integer :: thres_quota(11) = (/-100,100,250,500,750,1000,1250,1500,1750,2000,2250/)
 integer :: livello(10) = (/50,175,375,625,875,1125,1375,1625,1875,2125/)
+!integer :: livello1(10) = (/-100,100,250,500,750,1000,1250,1500,1750,2000/)
+!integer :: livello2(10) = (/100,250,500,750,1000,1250,1500,1750,2000,2250/)
 integer :: scadenze(3) = (/900,1800,3600/)
 real :: dato
 integer :: iunit=1
@@ -74,7 +77,7 @@ call init(v7d%dativar%r(idativarr), btable="B13011")
 do iarea = 1, 3
   do ilevel = 1,10
 
-    call init(v7d%level(ilevel),102,livello(ilevel)*1000)
+    call cli_level(livello(ilevel), v7d%level(ilevel))
 
     do itimerange=1,3
 
