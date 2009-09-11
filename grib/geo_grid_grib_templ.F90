@@ -1,5 +1,6 @@
 MODULE geo_grid_/**/GRIBLIB
 USE geo_grid_class
+USE doubleprecision_phys_const
 USE GRIBLIB/**/_io_class
 IMPLICIT NONE
 
@@ -94,11 +95,13 @@ SELECT CASE(grib%isec2(idrt))
 CASE(10, 14, 30, 34) ! Rotated lat/lon or Gaussian
 #ifdef WITH_EMOS
   CALL setval(this, xrot=grib%isec2(ilosp)/1000., &
-   yrot=raddeg*ACOS(-SIN(degrad*grib%isec2(ilasp)/1000.)), rot=grib%zsec2(1))
+   yrot=REAL(raddeg*ACOS(-SIN(degrad*grib%isec2(ilasp)/1000.D0))), &
+   rot=grib%zsec2(1))
 #elif defined WITH_DWDGRIB1
   rot = grib%isec2(22)/1000.
   CALL setval(this, xrot=grib%isec2(ilosp)/1000., &
-   yrot=raddeg*ACOS(-SIN(degrad*grib%isec2(ilasp)/1000.)), rot=rot)
+   yrot=REAL(raddeg*ACOS(-SIN(degrad*grib%isec2(ilasp)/1000.D0))), &
+   rot=rot)
 #endif
 
 CASE default
