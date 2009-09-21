@@ -1,7 +1,7 @@
 lib_LTLIBRARIES = libsim_qc.la
 libsim_qc_la_SOURCES = modqc.f90 modqccli.f90
 
-AM_FCFLAGS = -I../base -I../vol7d
+AM_FCFLAGS = -I../base -I../vol7d -I../log4fortran
 libsim_qc_la_LIBADD = ../base/libsim_base.la ../vol7d/libsim_vol7d.la
 
 if VERSIONINFO

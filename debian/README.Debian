@@ -9,22 +9,7 @@ Package rebuilded to enable the following features:
       - fortran-shape
       - dwd-grib
       - ngmath
+      - ncar
+      - doxygen (segmentation faul nel building)
 
- -- Marco Lazzeri <mlazzeri@arpa.emr.it>  Thu, 19 Feb 2009 10:52:37 +0100
-
-A first attempt but disabling almost all features:
-- oraclesim
-- dballe
-- netcdf
-- fortran-shape
-and enabling ECMWF libemos
-- libemos
-
- -- Marco Lazzeri <mlazzeri@arpa.emr.it>  Mon, 15 Dec 2008 12:17:17 +0100
-
-How to build the package:
-First of all apply the patch within the file debian/libsim_debian.patch. Move
-the file in the package root directory and than apply the patch. The patch will
-add a proper version to the lib plus other little changes needed to properly
-interact with other debian packages.
-Than act as usual.
+(per le opzioni vedi il file rules)

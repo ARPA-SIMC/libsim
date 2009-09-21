@@ -169,8 +169,8 @@ print*,"Grib to bufr/crex trasformation application."
 print*,"Read grib edition 1 and 2 and interpolate data over specified points"
 print*,""
 print*,""
-print*,"getpoint [-h] [-a lon] [-c fileana] [-b lat] [-f format] [-t template]"&
- "[-v trans_type] [-z sub_type] [-n networkid] infile outfile"
+print*,"getpoint [-h] [-a lon] [-c fileana] [-b lat] [-f format] [-t template] &
+ &[-v trans_type] [-z sub_type] [-n networkid] infile outfile"
 print*,""
 print*,"-h         this help message"
 print*,"lon,lat    lon and lat of single target point (in alternative to fileana)"
