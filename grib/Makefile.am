@@ -4,6 +4,10 @@ libsim_grib_la_SOURCES =
 AM_FCFLAGS = -I../base
 libsim_grib_la_LIBADD = ../base/libsim_base.la 
 
+if VERSIONINFO
+libsim_grib_la_LDFLAGS = -version-info @LIBSIM_VERSION_INFO@
+endif
+
 if EMOS
 libsim_grib_la_SOURCES += grib_io_class.F90 geo_grid_grib.F90 matchgrib_class.f90
 libsim_grib_la_LIBADD += $(EMOS_LIBS)

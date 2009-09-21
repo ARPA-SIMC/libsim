@@ -12,13 +12,15 @@ AM_CFLAGS = -D_REENTRANT
 AM_CPPFLAGS =
 # Opzioni linker
 AM_LDFLAGS =
+libsim_vol7d_la_LDFLAGS =
 # Librerie aggiuntive
 libsim_vol7d_la_LIBADD = ../log4fortran/liblog4fortran.la ../base/libsim_base.la
 
 if ORSIM
 libsim_vol7d_la_SOURCES += vol7d_oraclesim_class.f90 oraclesim.c
 AM_CPPFLAGS += $(ORA_CPPFLAGS)
-AM_LDFLAGS += $(ORA_LDFLAGS)
+#AM_LDFLAGS += $(ORA_LDFLAGS)
+libsim_vol7d_la_LDFLAGS += $(ORA_LDFLAGS)
 libsim_vol7d_la_LIBADD += $(ORA_LIBS)
 endif
 
@@ -32,6 +34,10 @@ if NETCDF
 libsim_vol7d_la_SOURCES += vol7d_netcdf_class.f90
 AM_FCFLAGS += -I/usr/include/netcdf-3
 libsim_vol7d_la_LIBADD += $(NETCDF_LIBS)
+endif
+
+if VERSIONINFO
+libsim_vol7d_la_LDFLAGS += -version-info @LIBSIM_VERSION_INFO@
 endif
 
 noinst_HEADERS = vol7d_class_type_templ.F90 vol7d_class_desc_templ.F90 \

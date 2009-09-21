@@ -8,6 +8,9 @@ liblog4fortran_la_SOURCES += log4fortran_c.c
 liblog4fortran_la_LIBADD = $(LOG4C_LIBS)
 endif
 
+if VERSIONINFO
+liblog4fortran_la_LDFLAGS = -version-info @LIBSIM_VERSION_INFO@
+endif
 
 nodist_include_HEADERS = log4fortran.mod
 

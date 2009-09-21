@@ -5,6 +5,7 @@ lib_LTLIBRARIES = libsim_volgrid6d.la
 AM_FCFLAGS = -I../log4fortran -I../base -I../vol7d
 # Opzioni linker
 AM_LDFLAGS =
+libsim_volgrid6d_la_LDFLAGS =
 # Librerie aggiuntive
 libsim_volgrid6d_la_LIBADD = ../log4fortran/liblog4fortran.la \
  ../base/libsim_base.la ../vol7d/libsim_vol7d.la
@@ -25,8 +26,14 @@ libsim_volgrid6d_la_LIBADD += $(GRIBAPI_LIBS)
 endif
 
 if NGMATH
-AM_LDFLAGS += $(NGMATH_LDFLAGS)
+#AM_LDFLAGS += $(NGMATH_LDFLAGS)
 libsim_volgrid6d_la_LIBADD += $(NGMATH_LIBS)
+libsim_volgrid6d_la_LDFLAGS += $(NCARG_LDFLAGS)
+
+endif
+
+if VERSIONINFO
+libsim_volgrid6d_la_LDFLAGS += -version-info @LIBSIM_VERSION_INFO@
 endif
 
 if GRIBAPI

@@ -8,6 +8,9 @@ libsim_base_la_SOURCES = char_utilities.f90 datetime_class.f90 err_handling.f90 
 AM_FCFLAGS = -I../log4fortran
 
 libsim_base_la_LIBADD = ../log4fortran/liblog4fortran.la
+if VERSIONINFO
+libsim_base_la_LDFLAGS = -version-info @LIBSIM_VERSION_INFO@
+endif
 
 if SHP
 libsim_base_la_LIBADD += $(SHP_LIBS)

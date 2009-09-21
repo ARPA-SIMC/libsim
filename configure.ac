@@ -267,6 +267,16 @@ fi
 AM_CONDITIONAL(NETCDF, test "x$enableval" = "xyes")
 
 
+AC_ARG_ENABLE(versioninfo, AC_HELP_STRING([--enable-versioninfo],
+  [enable version information in shared libraries]),,[enableval=no])dnl default disable
+AM_CONDITIONAL(VERSIONINFO, test "x$enableval" = "xyes")
+
+
+AC_ARG_ENABLE(doxydoc, AC_HELP_STRING([--disable-doxydoc],
+  [disable generation of doxygen documentation]),,[enableval=yes])dnl default enable
+AM_CONDITIONAL(DOXYDOC, test "x$enableval" = "xyes")
+
+
 AC_LANG_POP()dnl back to C
 AC_PROG_LIBTOOL
 
