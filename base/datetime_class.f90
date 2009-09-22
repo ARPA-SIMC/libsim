@@ -918,13 +918,13 @@ IF (PRESENT(ahour)) THEN
   ahour = this%iminuti/3600000_int_ll
 ENDIF
 IF (PRESENT(msec)) THEN 
-  msec = MOD(this%iminuti, 60000)
+  msec = MOD(this%iminuti, 60000_int_ll)
 ENDIF
 IF (PRESENT(minute)) THEN 
-  minute = MOD(this%iminuti/60000_int_ll, 60)
+  minute = MOD(this%iminuti/60000_int_ll, 60_int_ll)
 ENDIF
 IF (PRESENT(hour)) THEN
-  hour = MOD(this%iminuti/3600000_int_ll, 24)
+  hour = MOD(this%iminuti/3600000_int_ll, 24_int_ll)
 ENDIF
 IF (PRESENT(day)) THEN
   day = this%iminuti/86400000_int_ll
@@ -940,24 +940,24 @@ IF (PRESENT(year)) THEN
 ENDIF
 IF (PRESENT(isodate)) THEN ! Non standard, inventato!
   WRITE(datebuf(1:23), '(I10.10,1X,I2.2,A1,I2.2,A1,I2.2,A1,I3.3)') &
-   this%iminuti/86400000_int_ll, MOD(this%iminuti/3600000_int_ll, 24), ':', &
-   MOD(this%iminuti/60000_int_ll, 60), ':', MOD(this%iminuti/1000_int_ll, 60), &
-   '.', MOD(this%iminuti, 1000)
+   this%iminuti/86400000_int_ll, MOD(this%iminuti/3600000_int_ll, 24_int_ll), ':', &
+   MOD(this%iminuti/60000_int_ll, 60_int_ll), ':', MOD(this%iminuti/1000_int_ll, 60_int_ll), &
+   '.', MOD(this%iminuti, 1000_int_ll)
   isodate = datebuf(1:MIN(LEN(isodate),23))
 
 ENDIF
 IF (PRESENT(simpledate)) THEN
   WRITE(datebuf(1:17), '(I8.8,3I2.2,I3.3)') &
-   this%iminuti/86400000_int_ll, MOD(this%iminuti/3600000_int_ll, 24), &
-   MOD(this%iminuti/60000_int_ll, 60), MOD(this%iminuti/1000_int_ll, 60), &
-   MOD(this%iminuti, 1000)
+   this%iminuti/86400000_int_ll, MOD(this%iminuti/3600000_int_ll, 24_int_ll), &
+   MOD(this%iminuti/60000_int_ll, 60_int_ll), MOD(this%iminuti/1000_int_ll, 60_int_ll), &
+   MOD(this%iminuti, 1000_int_ll)
   simpledate = datebuf(1:MIN(LEN(simpledate),17))
 ENDIF
 IF (PRESENT(oraclesimdate)) THEN
   CALL l4f_log(L4F_WARN, 'in timedelta_getval, parametro oraclesimdate '// &
    'obsoleto, usare piuttosto simpledate')
   WRITE(oraclesimdate, '(I8.8,2I2.2)') this%iminuti/86400000_int_ll, &
-   MOD(this%iminuti/3600000_int_ll, 24), MOD(this%iminuti/60000_int_ll, 60)
+   MOD(this%iminuti/3600000_int_ll, 24_int_ll), MOD(this%iminuti/60000_int_ll, 60_int_ll)
 ENDIF
 
 END SUBROUTINE timedelta_getval
