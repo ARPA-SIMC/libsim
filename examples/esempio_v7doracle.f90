@@ -18,7 +18,7 @@ REAL, POINTER :: vol2d(:,:)
 CALL init(ti, year=2007, month=3, day=18, hour=12)
 CALL init(tf, year=2007, month=3, day=21, hour=00)
 ! Definisco le reti da cui voglio estrarre
-CALL init(network, 18)
+CALL init(network, 'FIDUPO')
 ! Definisco il timerange desiderato
 CALL init(timerange, 1, 0, 1800)
 ! Chiamo il costruttore della classe vol7d_oraclesim per il mio oggetto

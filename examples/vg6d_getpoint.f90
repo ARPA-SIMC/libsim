@@ -9,7 +9,8 @@ use getopt_m
 
 implicit none
 
-integer :: category,ier,i,nana,networkid=255
+integer :: category,ier,i,nana
+character(len=network_name_len) :: networkname='generic'
 character(len=512):: a_name,infile,outfile,fileana=cmiss
 type (volgrid6d),pointer  :: volgrid(:),volgrid_out(:)
 type(transform_def) :: trans
@@ -65,13 +66,7 @@ do
   case( 'z' )
     sub_type=optarg
   case( 'n' )
-    read(optarg,*,iostat=ier)networkid
-    if (ier/= 0)then
-      call l4f_category_log(category,L4F_ERROR,'a option argument error')
-      call help()
-      call exit(ier)
-    end if
-
+    networkname=optarg
   case( 'h' )
     call help()
     call exit(0)
@@ -140,7 +135,7 @@ call import (volgrid,filename=infile,categoryappend="volume letto")
 
 call display(volgrid)
 
-call transform(trans,v7d, volgrid6d_in=volgrid, vol7d_out=vol7d_out,networkid=networkid,categoryappend="trasforma")
+call transform(trans,v7d, volgrid6d_in=volgrid, vol7d_out=vol7d_out,networkname=networkname,categoryappend="trasforma")
 
 call l4f_category_log(category,L4F_INFO,"trasformato")
 if (associated(volgrid)) call delete(volgrid)
@@ -173,7 +168,7 @@ print*,"Read grib edition 1 and 2 and interpolate data over specified points"
 print*,""
 print*,""
 print*,"getpoint [-h] [-a lon] [-c fileana] [-b lat] [-f format] [-t template] &
- &[-v trans_type] [-z sub_type] [-n networkid] infile outfile"
+ &[-v trans_type] [-z sub_type] [-n networkname] infile outfile"
 print*,""
 print*,"-h         this help message"
 print*,"lon,lat    lon and lat of single target point (in alternative to fileana)"
@@ -184,7 +179,7 @@ print*,"           ('synop', 'metar','temp','generic') forza l'exportazione ad u
 print*,"trans_type transformation type; inter for interpolation"
 print*,"sub_type   transformation sub_type"
 print*,"           inter: near , bilin"
-print*,"networkid  integer identify the network"
+print*,"networkname network identifying string"
 print*,""
 print*,""
 print *,"default : lon=0. lat=45. format=bufr template=generic trans_type=inter sub_type=bilin networkid=255"

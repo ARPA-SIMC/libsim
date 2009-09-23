@@ -134,7 +134,7 @@ ALLOCATE(famptr(nvar))
 famptr(:) = map_distinct(famiglie(1:nvar), back=.TRUE.)
 
 ! Definisco le reti da cui voglio estrarre
-CALL init(network, 14)
+CALL init(network, 'POLLINI')
 
 ! Chiamo il costruttore della classe vol7d_oraclesim per il mio oggetto
 CALL init(db_v7d)

@@ -16,7 +16,7 @@ REAL, POINTER :: vol2d(:,:)
 ! Definisco le date iniziale e finale e network
 CALL init(ti, year=2007, month=3, day=18, hour=12)
 CALL init(tf, year=2007, month=3, day=21, hour=00)
-call init(network,id=255)
+call init(network,name='generic')
 
 ! Chiamo il costruttore della classe vol7d_dballe per il mio oggetto
 CALL init(v7d)

@@ -10,16 +10,18 @@ USE missing_values
 use char_utilities
 IMPLICIT NONE
 
+integer, parameter :: network_name_len=20
+
 !> Definisce la rete a cui appartiene una stazione.
 !! I membri di \a vol7d_network sono pubblici e quindi liberamente
 !! accessibili e scrivibili, ma è comunque consigliato assegnarli tramite
 !! il costruttore ::init.
 TYPE vol7d_network
-  INTEGER :: id !< identificativo numerico della rete
+  character(len=network_name_len) :: name !<  Mnemonic alias for type of report
 END TYPE vol7d_network
 
 !> Valore mancante per vol7d_network.
-TYPE(vol7d_network),PARAMETER :: vol7d_network_miss=vol7d_network(imiss)
+TYPE(vol7d_network),PARAMETER :: vol7d_network_miss=vol7d_network(cmiss)
 
 !> Costruttore per la classe vol7d_network.
 !! Deve essere richiamato 
@@ -87,14 +89,14 @@ CONTAINS
 !> Inizializza un oggetto \a vol7d_network con i parametri opzionali forniti.
 !! Se non viene passato nessun parametro opzionale l'oggetto è
 !! inizializzato a valore mancante.
-SUBROUTINE vol7d_network_init(this, id)
+SUBROUTINE vol7d_network_init(this, name)
 TYPE(vol7d_network),INTENT(INOUT) :: this !< oggetto da inizializzare
-INTEGER,INTENT(in),optional :: id !< identificativo della rete
+character(len=*),INTENT(in),optional :: name !<  Mnemonic alias for type of report
 
-IF (PRESENT(id)) THEN
-  this%id = id
+IF (PRESENT(name)) THEN
+  this%name = name
 ELSE
-  this%id = imiss
+  this%name = cmiss
 END IF
 
 END SUBROUTINE vol7d_network_init
@@ -104,7 +106,7 @@ END SUBROUTINE vol7d_network_init
 SUBROUTINE vol7d_network_delete(this)
 TYPE(vol7d_network),INTENT(INOUT) :: this !< oggetto da distruggre
 
-this%id = imiss
+this%name = cmiss
 
 END SUBROUTINE vol7d_network_delete
 
@@ -122,7 +124,7 @@ elemental character(len=20) function to_char_network(this)
 
 TYPE(vol7d_network),INTENT(in) :: this
 
-to_char_network="Network: "//trim(to_char(this%id))
+to_char_network="Network: "//trim(this%name)
 
 return
 
@@ -134,7 +136,7 @@ elemental FUNCTION vol7d_network_eq(this, that) RESULT(res)
 TYPE(vol7d_network),INTENT(IN) :: this, that
 LOGICAL :: res
 
-IF (this%id == that%id) THEN
+IF (this%name == that%name) THEN
   res = .TRUE.
 ELSE
   res = .FALSE.

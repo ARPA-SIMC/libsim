@@ -46,9 +46,9 @@ CALL init(v7d1%timerange(1), timerange=4, p1=-3600, p2=0)
 CALL init(v7d2%timerange(1), timerange=4, p1=-3600, p2=0)
 
 ! rete
-CALL init(v7d1%network(1), id=10)
-CALL init(v7d2%network(1), id=10)
-CALL init(v7d3%network(1), id=10)
+CALL init(v7d1%network(1), name='generic')
+CALL init(v7d2%network(1), name='generic')
+CALL init(v7d3%network(1), name='generic')
 
 ! ho detto che ci sono due attributi dati byte (ndatiattrb=2) e li definisco
 CALL init(v7d1%datiattr%b(1), btable='B33007')

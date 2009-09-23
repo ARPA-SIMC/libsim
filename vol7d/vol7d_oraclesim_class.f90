@@ -34,7 +34,7 @@ TYPE ora_var_conv
   TYPE(vol7d_timerange) :: timerange
   CHARACTER(len=20) :: description
   REAL :: afact, bfact
-  INTEGER :: networkid
+  CHARACTER(len=network_name_len) :: networkid
 END TYPE ora_var_conv
 
 INTEGER,EXTERNAL :: oraextra_gethead, oraextra_getdata ! da sostituire con include/interface ?!
@@ -213,23 +213,23 @@ LOGICAL :: lanar(netana_nvarr), lanai(netana_nvari), lanac(netana_nvarc)
 CALL getval(timei, simpledate=datai)
 CALL getval(timef, simpledate=dataf)
 
-cnetwork = TRIM(to_char(network%id))
+cnetwork = TRIM(to_char(network%name))
 ! Cerco la rete nella tabella
-IF (network%id <= 0 .OR. network%id >= oraclesim_netmax ) THEN
-  CALL l4f_log(L4F_ERROR, 'in oraclesim rete '//TRIM(cnetwork)//' non valida')
-  return
-ENDIF
+!!$IF (network%name <= 0 .OR. network%name >= oraclesim_netmax ) THEN
+!!$  CALL l4f_log(L4F_ERROR, 'in oraclesim rete '//TRIM(cnetwork)//' non valida')
+!!$  return
+!!$ENDIF
 ! Leggo l'anagrafica per la rete se necessario
-IF (.NOT. networktable(network%id)) THEN
-  CALL vol7d_oraclesim_ora_ana(network%id)
-ENDIF
+!!$IF (.NOT. networktable(network%name)) THEN
+!!$  CALL vol7d_oraclesim_ora_ana(network%name)
+!!$ENDIF
 ! Conto le variabili da estrarre
 varbt_req(:) = .FALSE.
 DO nvin = 1, SIZE(var)
   found = .FALSE.
   DO nvbt = 1, SIZE(vartable)
     IF (vartable(nvbt)%varbt == var(nvin) .AND. &
-     vartable(nvbt)%networkid == network%id) THEN
+     vartable(nvbt)%networkid == network%name) THEN
 
       IF (PRESENT(level))THEN
         IF (vartable(nvbt)%level /= level) CYCLE
@@ -258,7 +258,7 @@ ENDIF
 CALL l4f_log(L4F_INFO, 'in oraclesim_class, nvar='//to_char(nvar))
 
 nobs = oraextra_gethead(this%connid, fchar_to_cstr(datai), &
- fchar_to_cstr(dataf), network%id, varlist, SIZE(varlist))
+ fchar_to_cstr(dataf), network%name, varlist, SIZE(varlist))
 IF (nobs < 0) THEN
   CALL oraextra_geterr(this%connid, msg)
   CALL l4f_log(L4F_FATAL, 'in oraextra_gethead, '//TRIM(cstr_to_fchar(msg)))
@@ -305,17 +305,17 @@ CALL pack_distinct_c(fdatao(1:nobs), tmtmp, back=.TRUE.)
 vartmp(:) = pack_distinct(varo(1:nobs), nvar, back=.TRUE.)
 CALL l4f_log(L4F_INFO, 'in oraclesim_class onvar='//to_char(nvar))
 
-DO i = 1, nana
-  IF (.NOT. ANY(anatmp(i) == netana(network%id)%volanai(:,1,1))) THEN
-    non_valid = .TRUE.
-    CALL l4f_log(L4F_WARN, 'stazione oraclesim '//TRIM(to_char(anatmp(i)))// &
-     ' non trovata nell''anagrafica della rete '//TRIM(cnetwork)// &
-     ', la ignoro')
-    WHERE(stazo(1:nobs) == anatmp(i))
-      stazo(1:nobs) = 0
-    END WHERE
-  ENDIF
-ENDDO
+!!$DO i = 1, nana
+!!$  IF (.NOT. ANY(anatmp(i) == netana(network%name)%volanai(:,1,1))) THEN
+!!$    non_valid = .TRUE.
+!!$    CALL l4f_log(L4F_WARN, 'stazione oraclesim '//TRIM(to_char(anatmp(i)))// &
+!!$     ' non trovata nell''anagrafica della rete '//TRIM(cnetwork)// &
+!!$     ', la ignoro')
+!!$    WHERE(stazo(1:nobs) == anatmp(i))
+!!$      stazo(1:nobs) = 0
+!!$    END WHERE
+!!$  ENDIF
+!!$ENDDO
 
 ! Praticamente inutile se mi fido della query
 DO i = 1, ntime
@@ -382,35 +382,35 @@ DO i = 1, nvar
     ELSE
       v7dtmp%network(1) = network
     ENDIF
-    ALLOCATE(lana(SIZE(netana(network%id)%ana)))
+!!$    ALLOCATE(lana(SIZE(netana(network%name)%ana)))
     lana = .FALSE.
-    DO j = 1, nana
-      k = INDEX(netana(network%id)%volanai(:,1,1), anatmp(j))
-      v7dtmp%ana(j) = netana(network%id)%ana(k) ! attenzione ai puntatori
-      lana(k) = .TRUE.
-    ENDDO
+!!$    DO j = 1, nana
+!!$      k = INDEX(netana(network%name)%volanai(:,1,1), anatmp(j))
+!!$      v7dtmp%ana(j) = netana(network%name)%ana(k) ! attenzione ai puntatori
+!!$      lana(k) = .TRUE.
+!!$    ENDDO
 ! se sono richieste delle variabili di anagrafica
 ! copio il sottoinsieme di anagrafica che mi interessa in tmpana
 ! e lo fondo col volume appena creato
-    IF (PRESENT(anavar)) THEN
-      DO j = 1, SIZE(netana(network%id)%anavar%r)
-        lanar(j) = ANY(netana(network%id)%anavar%r(j)%btable == anavar)
-      ENDDO
-      DO j = 1, SIZE(netana(network%id)%anavar%i)
-        lanai(j) = ANY(netana(network%id)%anavar%i(j)%btable == anavar)
-      ENDDO
-      DO j = 1, SIZE(netana(network%id)%anavar%c)
-        lanac(j) = ANY(netana(network%id)%anavar%c(j)%btable == anavar)
-      ENDDO
-      CALL vol7d_copy(netana(network%id), v7dtmpana, lana=lana, &
-       lanavarr=lanar, lanavari=lanai, lanavarc=lanac)
-      v7dtmpana%network(1) = v7dtmp%network(1) ! faccio coincidere la rete
-! fondo v7dtmpana appena creato con v7dtmp
-! qui faccio affidamenteo sul fatto che vol7d_merge conserva l'ordine
-! del primo argomento (v7dtmp e v7dtmpana hanno la stessa anagrafica
-! ma con un ordinamento in generale diverso)
-      CALL vol7d_merge(v7dtmp, v7dtmpana)
-    ENDIF
+!!$    IF (PRESENT(anavar)) THEN
+!!$      DO j = 1, SIZE(netana(network%name)%anavar%r)
+!!$        lanar(j) = ANY(netana(network%name)%anavar%r(j)%btable == anavar)
+!!$      ENDDO
+!!$      DO j = 1, SIZE(netana(network%name)%anavar%i)
+!!$        lanai(j) = ANY(netana(network%name)%anavar%i(j)%btable == anavar)
+!!$      ENDDO
+!!$      DO j = 1, SIZE(netana(network%name)%anavar%c)
+!!$        lanac(j) = ANY(netana(network%name)%anavar%c(j)%btable == anavar)
+!!$      ENDDO
+!!$      CALL vol7d_copy(netana(network%name), v7dtmpana, lana=lana, &
+!!$       lanavarr=lanar, lanavari=lanai, lanavarc=lanac)
+!!$      v7dtmpana%network(1) = v7dtmp%network(1) ! faccio coincidere la rete
+!!$! fondo v7dtmpana appena creato con v7dtmp
+!!$! qui faccio affidamenteo sul fatto che vol7d_merge conserva l'ordine
+!!$! del primo argomento (v7dtmp e v7dtmpana hanno la stessa anagrafica
+!!$! ma con un ordinamento in generale diverso)
+!!$      CALL vol7d_merge(v7dtmp, v7dtmpana)
+!!$    ENDIF
     DEALLOCATE(lana)
 
     DO j = 1, ntime
@@ -554,53 +554,53 @@ END SUBROUTINE vol7d_oraclesim_setup_conv
 
 ! Legge l'anagrafica per la rete specificata
 SUBROUTINE vol7d_oraclesim_ora_ana(netid)
-INTEGER,INTENT(in) :: netid
+CHARACTER(len=network_name_len),INTENT(in) :: netid
 
 INTEGER :: i, j, un
 CHARACTER(len=3) :: cnet
 CHARACTER(len=1) :: macroa
 REAL(kind=fp_geo) :: lon, lat
 
-networktable(netid) = .TRUE.
-CALL init(netana(netid))
-cnet = to_char(netid,'(I3.3)')
-un = open_package_file('net_'//cnet//'.simana', filetype_data)
-IF (un < 0) then
-  CALL l4f_log(L4F_FATAL, &
-   'in oraclesim, cannot find station file for network '//TRIM(cnet))
-  CALL raise_fatal_error()
-END IF
-i = 0
-DO WHILE(.TRUE.)
-  READ(un,*,END=100)
-  i = i + 1
-ENDDO
-100 CONTINUE
-REWIND(un)
-
-CALL vol7d_alloc(netana(netid), nnetwork=1, nana=i, &
- nanavarr=netana_nvarr, nanavari=netana_nvari, nanavarc=netana_nvarc)
-CALL vol7d_alloc_vol(netana(netid))
-CALL init(netana(netid)%network(1), id=netid)
-CALL init(netana(netid)%anavar%r(1), btable='B07001') ! station height
-CALL init(netana(netid)%anavar%r(2), btable='B07031') ! barometer height
-CALL init(netana(netid)%anavar%i(1), btable='B01192') ! Oracle station id
-CALL init(netana(netid)%anavar%c(1), btable='B01019') ! station name
-DO j = 1, i
-  READ(un,*)netana(netid)%volanai(j,1,1), lat, lon, netana(netid)%volanar(j,2,1), &
-   netana(netid)%volanar(j,1,1), macroa, netana(netid)%volanac(j,1,1)
-  IF (netana(netid)%volanar(j,1,1) < -9998.) netana(netid)%volanar(j,1,1) = rmiss
-  IF (netana(netid)%volanar(j,2,1) < -9998.) netana(netid)%volanar(j,2,1) = rmiss
-  IF (lon < -99.8 .AND. lat < -99.8) THEN
-    CALL init(netana(netid)%ana(j))
-  ELSE
-    CALL init(netana(netid)%ana(j), lon=lon, lat=lat)
-  ENDIF
-ENDDO
-CLOSE(un)
-
-CALL l4f_log(L4F_INFO, 'ho letto l''anagrafica di '//TRIM(to_char(i))// &
- ' stazioni per la rete '//cnet)
+!!$networktable(netid) = .TRUE.
+!!$CALL init(netana(netid))
+!!$cnet = to_char(netid,'(I3.3)')
+!!$un = open_package_file('net_'//cnet//'.simana', filetype_data)
+!!$IF (un < 0) then
+!!$  CALL l4f_log(L4F_FATAL, &
+!!$   'in oraclesim, cannot find station file for network '//TRIM(cnet))
+!!$  CALL raise_fatal_error()
+!!$END IF
+!!$i = 0
+!!$DO WHILE(.TRUE.)
+!!$  READ(un,*,END=100)
+!!$  i = i + 1
+!!$ENDDO
+!!$100 CONTINUE
+!!$REWIND(un)
+!!$
+!!$CALL vol7d_alloc(netana(netid), nnetwork=1, nana=i, &
+!!$ nanavarr=netana_nvarr, nanavari=netana_nvari, nanavarc=netana_nvarc)
+!!$CALL vol7d_alloc_vol(netana(netid))
+!!$CALL init(netana(netid)%network(1), name=netid)
+!!$CALL init(netana(netid)%anavar%r(1), btable='B07001') ! station height
+!!$CALL init(netana(netid)%anavar%r(2), btable='B07031') ! barometer height
+!!$CALL init(netana(netid)%anavar%i(1), btable='B01192') ! Oracle station id
+!!$CALL init(netana(netid)%anavar%c(1), btable='B01019') ! station name
+!!$DO j = 1, i
+!!$  READ(un,*)netana(netid)%volanai(j,1,1), lat, lon, netana(netid)%volanar(j,2,1), &
+!!$   netana(netid)%volanar(j,1,1), macroa, netana(netid)%volanac(j,1,1)
+!!$  IF (netana(netid)%volanar(j,1,1) < -9998.) netana(netid)%volanar(j,1,1) = rmiss
+!!$  IF (netana(netid)%volanar(j,2,1) < -9998.) netana(netid)%volanar(j,2,1) = rmiss
+!!$  IF (lon < -99.8 .AND. lat < -99.8) THEN
+!!$    CALL init(netana(netid)%ana(j))
+!!$  ELSE
+!!$    CALL init(netana(netid)%ana(j), lon=lon, lat=lat)
+!!$  ENDIF
+!!$ENDDO
+!!$CLOSE(un)
+!!$
+!!$CALL l4f_log(L4F_INFO, 'ho letto l''anagrafica di '//TRIM(to_char(i))// &
+!!$ ' stazioni per la rete '//cnet)
 
 END SUBROUTINE vol7d_oraclesim_ora_ana
 

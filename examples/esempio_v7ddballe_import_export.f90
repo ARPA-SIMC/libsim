@@ -68,7 +68,7 @@ call init(ana,lat=lat,lon=lon,ident=ident)
 call init(time, year=2007, month=3, day=18, hour=00,minute=30)
 call init(level, 105,2,0)
 call init(timerange, 0, 0, 0)
-call init(network, 50)
+call init(network, 'rete50')
 call init(dativar,"B12001" )
 call init(attrvar,"*B33192" )
 

@@ -54,7 +54,8 @@ logical :: opened,exist
 
 integer :: ana_ident_varid,ana_dimid,ana_lon_varid,ana_lat_varid &
  ,ident_len_dimid,var_len_dimid &
- ,level_dimid,level_vdim_dimid,level_vect_varid,network_dimid,network_id_varid,timerange_vdim_dimid &
+ ,level_dimid,level_vdim_dimid,level_vect_varid,network_dimid,network_name_varid &
+ ,network_name_len_dimid,timerange_vdim_dimid &
  ,time_iminuti_varid,time_dimid,timerange_dimid,timerange_vect_varid,var_vdim_dimid &
  ,dativard_dimid,dativarr_dimid,dativari_dimid,dativarb_dimid,dativarc_len_dimid,dativarc_dimid &
  ,voldativarr_varid ,voldativari_varid ,voldativard_varid ,voldativarb_varid ,voldativarc_varid &
@@ -207,10 +208,11 @@ call check( "5",nf90_def_dim(lunit,"timerange_vdim", 3, timerange_vdim_dimid) )
 call check( "6",nf90_def_dim(lunit,"level", nlevel, level_dimid) )
 call check( "7",nf90_def_dim(lunit,"level_vdim", 4, level_vdim_dimid) )
 
-call check( "8",nf90_def_dim(lunit,"network_id", nnetwork, network_dimid) )
+call check( "8",nf90_def_dim(lunit,"network_name", nnetwork, network_dimid) )
+call check( "9",nf90_def_dim(lunit,"network_name_len",network_name_len, network_name_len_dimid) )
 
-call check( "9",nf90_def_dim(lunit,"var_vdim",3, var_vdim_dimid) )
-call check( "9",nf90_def_dim(lunit,"var_len",65, var_len_dimid) )
+call check( "10",nf90_def_dim(lunit,"var_vdim",3, var_vdim_dimid) )
+call check( "11",nf90_def_dim(lunit,"var_len",65, var_len_dimid) )
 
 
 if (nanavarr > 0) call check( "a1",nf90_def_dim(lunit,"anavarr", nanavarr, anavarr_dimid) )
@@ -263,9 +265,9 @@ call check( "15",nf90_def_var(lunit, "level", NF90_INT, (/level_vdim_dimid,level
 call check( "15fillvalue",nf90_put_att(lunit,level_vect_varid  ,"_FillValue",imiss) )
 call check( "15missing_value",nf90_put_att(lunit,level_vect_varid  ,"missing_value",imiss) )
 
-call check( "16",nf90_def_var(lunit, "network_id", NF90_INT, network_dimid, network_id_varid) )
-call check( "16fillvalue",nf90_put_att(lunit,network_id_varid  ,"_FillValue",imiss) )
-call check( "16missing_value",nf90_put_att(lunit,network_id_varid  ,"missing_value",imiss) )
+call check( "16",nf90_def_var(lunit, "network_name", NF90_CHAR,(/ network_name_len_dimid,network_dimid/), network_name_varid) )
+call check( "16fillvalue",nf90_put_att(lunit,network_name_varid  ,"_FillValue",cmiss) )
+call check( "16missing_value",nf90_put_att(lunit,network_name_varid  ,"missing_value",cmiss) )
 
 
 ! anagrafica
@@ -421,7 +423,7 @@ if (associated(this%timerange)) then
 end if
 
 if (associated(this%network)) then
-    call check( "29",nf90_put_var(lunit, network_id_varid,this%network(:)%id))
+    call check( "29",nf90_put_var(lunit, network_name_varid,this%network(:)%name))
 end if
 
 

@@ -70,7 +70,7 @@ minuti(3)="60"
 inetwork=1
 idativarr=1
 
-call init(v7d%network(inetwork), 1000)
+call init(v7d%network(inetwork), 'climat')
 call init(v7d%dativar%r(idativarr), btable="B13011")
 !call init(v7d%anavar%i(1), btable="B07001")
 

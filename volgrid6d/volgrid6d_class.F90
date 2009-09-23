@@ -1467,11 +1467,11 @@ end subroutine volgrid6dv_transform
 !> \brief Calcola i nuovi dati secondo la trasformazione specificata
 !!
 !! Deve essere fornito l'oggetto di trasformazione e oggetti completi
-SUBROUTINE volgrid6d_v7d_transform_compute(this, volgrid6d_in, vol7d_out,networkid)
+SUBROUTINE volgrid6d_v7d_transform_compute(this, volgrid6d_in, vol7d_out,networkname)
 TYPE(grid_transform),INTENT(in) :: this !< oggetto di trasformazione per grigliato
 type(volgrid6d), INTENT(in) :: volgrid6d_in !< oggetto da trasformare
 type(vol7d), INTENT(out) :: vol7d_out !< oggetto trasformato
-integer,optional,intent(in) :: networkid !< imposta il network in vol7d_out (default=254)
+character(len=network_name_len),optional,intent(in) :: networkname !< imposta il network in vol7d_out (default='generic')
 
 integer :: nntime, nana, ntime, ntimerange, nlevel, nvar, nnetwork
 integer :: itime, itimerange, ilevel, ivar, inetwork
@@ -1490,10 +1490,10 @@ nvar=0
 nnetwork=0
 
 nnetwork=size(vol7d_out%network)
-if (present(networkid))then
-  call init(vol7d_out%network(1),id=networkid)
+if (present(networkname))then
+  call init(vol7d_out%network(1),name=networkname)
 else
-  call init(vol7d_out%network(1),id=254)
+  call init(vol7d_out%network(1),name='generic')
 end if
 
 if (associated(volgrid6d_in%timerange))then
@@ -1606,12 +1606,12 @@ end SUBROUTINE volgrid6d_v7d_transform_compute
 !!
 !! L'oggetto trasformazione su grigliato viene creato e distrutto automaticamete
 !! L'oggetto trasformato viene creato automaticamente
-subroutine volgrid6d_v7d_transform(this,v7d, volgrid6d_in, vol7d_out,networkid,categoryappend)
+subroutine volgrid6d_v7d_transform(this,v7d, volgrid6d_in, vol7d_out,networkname,categoryappend)
 type(transform_def),intent(in) :: this !< oggetto che specifica la trasformazione
 type(vol7d),intent(in) :: v7d !<  anagrafiche su cui effettuare la trasformazione
 type(volgrid6d), INTENT(in) :: volgrid6d_in !< oggetto da trasformare
 type(vol7d), INTENT(out) :: vol7d_out !< oggetto trasformato
-integer,optional,intent(in) :: networkid !< imposta il network in vol7d_out (default=254)
+character(len=network_name_len),optional,intent(in) :: networkname !< imposta il network in vol7d_out (default='generic')
 character(len=*),INTENT(in),OPTIONAL :: categoryappend !< appende questo suffisso al namespace category di log4fortran
 
 type(grid_transform) :: grid_trans
@@ -1683,7 +1683,7 @@ call vol7d_alloc_vol(vol7d_out)
 !ensure unproj was called
 !call griddim_unproj(volgrid6d_out%griddim)
 
-call compute(grid_trans, volgrid6d_in, vol7d_out,networkid)
+call compute(grid_trans, volgrid6d_in, vol7d_out,networkname)
 
 call delete (grid_trans)
 
@@ -1694,12 +1694,12 @@ end subroutine volgrid6d_v7d_transform
 !!
 !! L'oggetto trasformazione su grigliato viene creato e distrutto automaticamete
 !! L'oggetto trasformato viene creato automaticamente
-subroutine volgrid6dv_v7d_transform(this,v7d, volgrid6d_in, vol7d_out,networkid,categoryappend)
+subroutine volgrid6dv_v7d_transform(this,v7d, volgrid6d_in, vol7d_out,networkname,categoryappend)
 type(transform_def),intent(in) :: this !< oggetto che specifica la trasformazione
 type(vol7d),intent(in) :: v7d !<  anagrafiche su cui effettuare la trasformazione
 type(volgrid6d), INTENT(in) :: volgrid6d_in(:) !< vettore di oggetti da trasformare
 type(vol7d), pointer :: vol7d_out(:) !< vettore di oggetti trasformati
-integer,optional,intent(in) :: networkid !< imposta il network in vol7d_out (default=254)
+character(len=network_name_len),optional,intent(in) :: networkname !< imposta il network in vol7d_out (default='generic')
 character(len=*),INTENT(in),OPTIONAL :: categoryappend !< appende questo suffisso al namespace category di log4fortran
 
 integer :: i,n
@@ -1709,7 +1709,7 @@ allocate( vol7d_out(n))
 
 do i=1,n
 
-  call transform (this,v7d, volgrid6d_in(i), vol7d_out(i),networkid,categoryappend=categoryappend)
+  call transform (this,v7d, volgrid6d_in(i), vol7d_out(i),networkname,categoryappend=categoryappend)
 
 end do
 
@@ -1719,11 +1719,11 @@ end subroutine volgrid6dv_v7d_transform
 !> \brief Calcola i nuovi dati secondo la trasformazione specificata
 !!
 !! Deve essere fornito l'oggetto di trasformazione e oggetti completi
-SUBROUTINE v7d_volgrid6d_transform_compute(this, vol7d_in, volgrid6d_out, networkid)
+SUBROUTINE v7d_volgrid6d_transform_compute(this, vol7d_in, volgrid6d_out, networkname)
 TYPE(grid_transform),INTENT(in) :: this !< oggetto di trasformazione per grigliato
 type(vol7d), INTENT(in) :: vol7d_in !< oggetto da trasformare
 type(volgrid6d), INTENT(out) :: volgrid6d_out !< oggetto trasformato 
-integer,optional,intent(in) :: networkid !< seleziona il network da exportare da vol7d (default=1)
+character(len=network_name_len),optional,intent(in) :: networkname !< seleziona il network da exportare da vol7d (default=1)
 
 integer :: nana, ntime, ntimerange, nlevel, nvar, nnetwork
 integer :: itime, itimerange, ilevel, ivar, inetwork
@@ -1740,8 +1740,8 @@ ntimerange=0
 nlevel=0
 nvar=0
 
-if (present(networkid))then
-  call init(network,id=networkid)
+if (present(networkname))then
+  call init(network,name=networkname)
   inetwork= index(vol7d_in%network,network)
 else
   inetwork=1
@@ -1818,12 +1818,12 @@ end SUBROUTINE v7d_volgrid6d_transform_compute
 !!
 !! L'oggetto trasformazione su grigliato viene creato e distrutto automaticamete
 !! L'oggetto trasformato viene creato automaticamente
-subroutine v7d_volgrid6d_transform(this,griddim, vol7d_in, volgrid6d_out, networkid,categoryappend)
+subroutine v7d_volgrid6d_transform(this,griddim, vol7d_in, volgrid6d_out, networkname,categoryappend)
 type(transform_def),intent(in) :: this !< oggetto che specifica la trasformazione
 type(griddim_def),intent(in) :: griddim  !< griddim che specifica la trasformazione
 type(vol7d), INTENT(in) :: vol7d_in !< oggetto da trasformare
 type(volgrid6d), INTENT(out) :: volgrid6d_out !< oggetto trasformato
-integer,optional,intent(in) :: networkid  !< seleziona il network da exportare da vol7d (default=1)
+character(len=network_name_len),optional,intent(in) :: networkname  !< seleziona il network da exportare da vol7d (default=generic)
 character(len=*),INTENT(in),OPTIONAL :: categoryappend !< appende questo suffisso al namespace category di log4fortran
 
 type(grid_transform) :: grid_trans
@@ -1851,7 +1851,7 @@ call volgrid6d_alloc(volgrid6d_out, griddim%dim, ntime=ntime, nlevel=nlevel, nti
 
 call volgrid6d_alloc_vol(volgrid6d_out)
 
-call compute(grid_trans, vol7d_in, volgrid6d_out, networkid)
+call compute(grid_trans, vol7d_in, volgrid6d_out, networkname)
 
 call vg6d_wind_rot(volgrid6d_out)
 

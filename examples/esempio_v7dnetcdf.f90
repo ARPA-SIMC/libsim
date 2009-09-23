@@ -54,7 +54,7 @@ call vol7d_alloc (v7d, &
 call vol7d_alloc_vol (v7d)
 
 inetwork=1
-call init(v7d%network(inetwork), 11)
+call init(v7d%network(inetwork), 'synop')
 call init(v7d%anavar%c(1), btable="B01019")     ! LONG STATION OR SITE NAME
 call init(v7d%dativar%r(1), btable="B13011")    ! precipitazione
 call init(v7d%dativar%r(2), btable="B12001")    ! temperatura

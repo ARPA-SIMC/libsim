@@ -470,7 +470,8 @@ CHARACTER(len=7) ::starbtable
 LOGICAL ::  ldegnet, lattr, lanaattr
 integer :: year,month,day,hour,minute,sec
 integer :: rlevel1, rl1,rlevel2, rl2
-integer :: rtimerange, p1, p2,rep_cod
+integer :: rtimerange, p1, p2
+character(len=network_name_len) :: rep_memo
 integer :: indana,indtime,indlevel,indtimerange,inddativar,indnetwork
 
 
@@ -530,9 +531,9 @@ ENDIF
 
 call idba_unsetall(this%handle)
 
-if(present(network))call idba_set (this%handle,"rep_cod",network%id)
+if(present(network))call idba_set (this%handle,"rep_memo",network%name)
 call idba_set (this%handle,"mobile",0)
-!print*,"network,mobile",network%id,0
+!print*,"network,mobile",network%name,0
 
 if(ldegnet)call idba_set (this%handle,"query","best")
 
@@ -607,8 +608,8 @@ do i=1,N
   call idba_enqdate (this%handle,year,month,day,hour,minute,sec)
   call idba_enqlevel(this%handle, rlevel1, rl1, rlevel2,rl2)
   call idba_enqtimerange(this%handle, rtimerange, p1, p2)
-  call idba_enq(this%handle, "rep_cod",rep_cod)
-                                !print *,"trovato network",rep_cod
+  call idba_enq(this%handle, "rep_memo",rep_memo)
+                                !print *,"trovato network",rep_memo
   
                                 !nbtable=btable_numerico(btable)
                                 ! ind = firsttrue(qccli%v7d%dativar%r(:)%btable == nbtable)
@@ -652,7 +653,7 @@ do i=1,N
   call init(buffer(i)%time, year=year, month=month, day=day, hour=hour, minute=minute)
   call init(buffer(i)%level, rlevel1,rl1,rlevel2,rl2)
   call init(buffer(i)%timerange, rtimerange, p1, p2)
-  call init(buffer(i)%network, rep_cod)
+  call init(buffer(i)%network, rep_memo)
   call init(buffer(i)%dativar, btable)
 
 end do
@@ -663,9 +664,9 @@ end do
 
 call idba_unsetall(this%handle_staz)
 
-if(present(network))call idba_set (this%handle_staz,"rep_cod",network%id)
+if(present(network))call idba_set (this%handle_staz,"rep_memo",network%name)
 call idba_set (this%handle_staz,"mobile",0)
-!print*,"network,mobile",network%id,0
+!print*,"network,mobile",network%name,0
 
 if(ldegnet)call idba_set (this%handle_staz,"query","best")
 
@@ -731,8 +732,8 @@ do i=1,N_ana
   call idba_enqdate (this%handle_staz,year,month,day,hour,minute,sec)
   call idba_enqlevel(this%handle_staz, rlevel1, rl1, rlevel2,rl2)
   call idba_enqtimerange(this%handle_staz, rtimerange, p1, p2)
-  call idba_enq(this%handle_staz, "rep_cod",rep_cod)
-                                !print *,"trovato network",rep_cod
+  call idba_enq(this%handle_staz, "rep_memo",rep_memo)
+                                !print *,"trovato network",rep_memo
                                 !nbtable=btable_numerico(btable)
                                 ! ind = firsttrue(qccli%v7d%dativar%r(:)%btable == nbtable)
                                 ! IF (ind<1) cycle ! non c'e'
@@ -771,7 +772,7 @@ do i=1,N_ana
   call init(bufferana(i)%time, year=year, month=month, day=day, hour=hour, minute=minute)
   call init(bufferana(i)%level, rlevel1,rl1,rlevel2,rl2)
   call init(bufferana(i)%timerange, rtimerange, p1, p2)
-  call init(bufferana(i)%network, rep_cod)
+  call init(bufferana(i)%network, rep_memo)
   call init(bufferana(i)%dativar, btable)
 
 end do
@@ -953,7 +954,7 @@ else
   vol7dtmp%network=pack_distinct(buffer%network, nnetwork, back=.TRUE.)
 end if
 
-!print*,"reti presenti", vol7dtmp%network%id,buffer%network%id
+!print*,"reti presenti", vol7dtmp%network%name,buffer%network%name
 
 if (present(var).and. present(varkind))then
 
@@ -1577,7 +1578,7 @@ SUBROUTINE vol7d_dballe_export(this, network, coordmin, coordmax, ident,&
 !> \todo gestire il filtro staz_id la qual cosa vuol dire aggiungere un id nel type ana
 
 TYPE(vol7d_dballe),INTENT(inout) :: this !< oggetto contenente il volume e altre info per l'accesso al DSN
-INTEGER,INTENT(in),optional :: network !< network da exportare
+character(len=network_name_len),INTENT(in),optional :: network !< network da exportare
 !> coordinate minime e massime che definiscono il 
 !! rettangolo di estrazione per l'esportazione
 TYPE(geo_coord),INTENT(in),optional :: coordmin,coordmax 
@@ -1709,7 +1710,7 @@ ana_id=DBA_MVI
 
 
 if (present(network))then
-      where (network == this%vol7d%network(:)%id)
+      where (network == this%vol7d%network(:)%name)
          lnetwork(:)=.true.
       end where
 else
@@ -1834,7 +1835,7 @@ do iii=1, nnetwork
          call idba_set (this%handle,"mobile",0)
       end if
 
-      call idba_set(this%handle,"rep_cod",this%vol7d%network(iii)%id)
+      call idba_set(this%handle,"rep_memo",this%vol7d%network(iii)%name)
 
       write=.true.
 
@@ -1935,7 +1936,7 @@ do i=1, nstaz
         end if
 
 
-        call idba_set (this%handle,"rep_cod",this%vol7d%network(iiiiii)%id)
+        call idba_set (this%handle,"rep_memo",this%vol7d%network(iiiiii)%name)
                  
 
         do iii=1,nlevel
@@ -1966,7 +1967,7 @@ do i=1, nstaz
                  
                end if
                
-                                !print *, ">>>>> ",ana_id(i,iiiiii),this%vol7d%network(iiiiii)%id
+                                !print *, ">>>>> ",ana_id(i,iiiiii),this%vol7d%network(iiiiii)%name
                                 !print *, year,month,day,hour,minute
                                 !print *, this%vol7d%level(iii)%level1, this%vol7d%level(iii)%l1, this%vol7d%level(iii)%l2
                                 !print *, this%vol7d%timerange(iiii)%timerange,this%vol7d%timerange(iiii)%p1, this%vol7d%timerange(iiii)%p2
@@ -2335,7 +2336,8 @@ CHARACTER(len=7) ::starbtable
 LOGICAL ::  ldegnet, lattr, lanaattr,lanaonly
 integer :: year,month,day,hour,minute,sec
 integer :: rlevel1, rl1,rlevel2, rl2
-integer :: rtimerange, p1, p2,rep_cod
+integer :: rtimerange, p1, p2
+character(len=network_name_len) ::rep_memo
 integer :: indana,indtime,indlevel,indtimerange,inddativar,indnetwork
 
 
@@ -2431,8 +2433,8 @@ do while ( N > 0 )
     end if
 
     call idba_enqtimerange(this%handle, rtimerange, p1, p2)
-    call idba_enq(this%handle, "rep_cod",rep_cod)
-                                !print *,"trovato network",rep_cod
+    call idba_enq(this%handle, "rep_memo",rep_memo)
+                                !print *,"trovato network",rep_memo
   
                                 !nbtable=btable_numerico(btable)
                                 ! ind = firsttrue(qccli%v7d%dativar%r(:)%btable == nbtable)
@@ -2446,7 +2448,7 @@ do while ( N > 0 )
     ! inizio la serie dei test con i parametri richiesti 
 
     if(present(network)) then
-      if (rep_cod /= network%id) cycle
+      if (rep_memo /= network%name) cycle
     end if
 
 ! in alternativa si trattano insieme
@@ -2550,7 +2552,7 @@ do while ( N > 0 )
       call init(buffer(nd)%time, year=year, month=month, day=day, hour=hour, minute=minute)
       call init(buffer(nd)%level, rlevel1,rl1,rlevel2,rl2)
       call init(buffer(nd)%timerange, rtimerange, p1, p2)
-      call init(buffer(nd)%network, rep_cod)
+      call init(buffer(nd)%network, rep_memo)
       call init(buffer(nd)%dativar, btable)
     
     else
@@ -2623,7 +2625,7 @@ do while ( N > 0 )
       call init(bufferana(na)%time, year=year, month=month, day=day, hour=hour, minute=minute)
       call init(bufferana(na)%level, rlevel1,rl1,rlevel2,rl2)
       call init(bufferana(na)%timerange, rtimerange, p1, p2)
-      call init(bufferana(na)%network, rep_cod)
+      call init(bufferana(na)%network, rep_memo)
       call init(bufferana(na)%dativar, btable)
 
     end if
@@ -2782,7 +2784,7 @@ else
   vol7dtmp%network=pack_distinct(buffer(:nd)%network, nnetwork, back=.TRUE.)
 end if
 
-!print*,"reti presenti", vol7dtmp%network%id,buffer%network%id
+!print*,"reti presenti", vol7dtmp%network%name,buffer%network%name
 
 if (present(var).and. present(varkind))then
 
