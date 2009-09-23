@@ -216,6 +216,11 @@ INTERFACE realdat
   MODULE PROCEDURE realdatd,realdatr,realdati,realdatb,realdatc
 END INTERFACE
 
+!>integer data conversion
+INTERFACE integerdat
+  MODULE PROCEDURE integerdatd,integerdatr,integerdati,integerdatb,integerdatc
+END INTERFACE
+
 
 
 !!$INTERFACE get_volana
@@ -2157,11 +2162,7 @@ elemental doubleprecision function doubledatd(voldat,var)
 doubleprecision,intent(in) :: voldat
 type(vol7d_var),intent(in) :: var
 
-if (c_e(voldat))then
-  doubledatd=voldat
-else
-  doubledatd=dmiss
-end if
+doubledatd=voldat
 
 end function doubledatd
 
@@ -2224,6 +2225,78 @@ end if
 end function doubledatc
 
 
+
+
+! to integer
+
+elemental integer function integerdatd(voldat,var)
+
+doubleprecision,intent(in) :: voldat
+type(vol7d_var),intent(in) :: var
+
+if (c_e(voldat))then
+  integerdatd=voldat*10d0**var%scalefactor
+else
+  integerdatd=imiss
+end if
+
+end function integerdatd
+
+
+elemental integer function integerdatr(voldat,var)
+
+real,intent(in) :: voldat
+type(vol7d_var),intent(in) :: var
+
+if (c_e(voldat))then
+  integerdatr=voldat*10d0**var%scalefactor
+else
+  integerdatr=imiss
+end if
+
+end function integerdatr
+
+
+elemental integer function integerdati(voldat,var)
+
+integer,intent(in) :: voldat
+type(vol7d_var),intent(in) :: var
+
+integerdati=voldat
+
+end function integerdati
+
+
+elemental integer function integerdatb(voldat,var)
+
+integer(kind=int_b),intent(in) :: voldat
+type(vol7d_var),intent(in) :: var
+
+if (c_e(voldat))then
+  integerdatb=voldat
+else
+  integerdatb=imiss
+end if
+
+end function integerdatb
+
+
+
+elemental integer function integerdatc(voldat,var)
+
+CHARACTER(len=vol7d_cdatalen),intent(in) :: voldat
+type(vol7d_var),intent(in) :: var
+
+if (c_e(voldat) .and. c_e(var%scalefactor))then
+  read (voldat,*)integerdatc
+else
+  integerdatc=imiss
+end if
+
+end function integerdatc
+
+
+
 !!$!esempio senza elemental
 !!$function doubledatc(voldat,var,double)
 !!$
@@ -2264,11 +2337,7 @@ elemental real function realdatr(voldat,var)
 real,intent(in) :: voldat
 type(vol7d_var),intent(in) :: var
 
-if (c_e(voldat))then
-  realdatr=voldat
-else
-  realdatr=rmiss
-end if
+realdatr=voldat
 
 end function realdatr
 

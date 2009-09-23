@@ -137,6 +137,9 @@ call display(v7d)
 !trasformation object
 call init(trans, trans_type=trans_type,sub_type=sub_type, categoryappend="trasformation")
 call import (volgrid,filename=infile,categoryappend="volume letto")
+
+call display(volgrid)
+
 call transform(trans,v7d, volgrid6d_in=volgrid, vol7d_out=vol7d_out,networkid=networkid,categoryappend="trasforma")
 
 call l4f_category_log(category,L4F_INFO,"trasformato")
