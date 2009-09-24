@@ -5,8 +5,38 @@
 !! un volume di dati dall'archivio Oracle del SIM in un oggetto di tipo
 !! vol7d_class::vol7d.
 !!
-!! \todo terminare la procedura per creare i file di anagrafica direttamente
-!! dall'archivio Oracle (Andrea Selvini).
+!! Attenzione, dal 23/09/2009 circa, la rete è identificata dal nome e
+!! non più da un codice numerico; il nome deve essere quello esatto
+!! (maiuscole/minuscole) inserito nel db Oracle, per riferimento, ecco
+!! riportata la tabella di conversione:
+!!
+!! <TABLE><TR><TD>Id</TD><TD>Nome</TD><TD>Id</TD><TD>Nome</TD></TR>
+!! <TR><TD> 1</TD><TD>SYNOP    </TD><TD>24</TD><TD>LILOKM   </TD></TR>
+!! <TR><TD> 2</TD><TD>TEMP     </TD><TD>25</TD><TD>PILOKM   </TD></TR>
+!! <TR><TD> 3</TD><TD>BOA      </TD><TD>26</TD><TD>TRLOKM   </TD></TR>
+!! <TR><TD> 4</TD><TD>IDRMGI   </TD><TD>27</TD><TD>VELOKM   </TD></TR>
+!! <TR><TD> 5</TD><TD>CER      </TD><TD>28</TD><TD>SALOKM   </TD></TR>
+!! <TR><TD> 6</TD><TD>UMSUOL   </TD><TD>29</TD><TD>LOLOKM   </TD></TR>
+!! <TR><TD> 7</TD><TD>CRO      </TD><TD>30</TD><TD>MALOKM   </TD></TR>
+!! <TR><TD> 8</TD><TD>CAELAMI  </TD><TD>31</TD><TD>FRLOKM   </TD></TR>
+!! <TR><TD> 9</TD><TD>ETG      </TD><TD>32</TD><TD>BZLOKM   </TD></TR>
+!! <TR><TD>10</TD><TD>METAR    </TD><TD>33</TD><TD>PO267    </TD></TR>
+!! <TR><TD>11</TD><TD>LOCALI   </TD><TD>35</TD><TD>CLIMAT   </TD></TR>
+!! <TR><TD>12</TD><TD>FIDUTO   </TD><TD>36</TD><TD>GIAS     </TD></TR>
+!! <TR><TD>13</TD><TD>AGRMET   </TD><TD>37</TD><TD>IDROST   </TD></TR>
+!! <TR><TD>14</TD><TD>POLLINI  </TD><TD>38</TD><TD>VMSTAT   </TD></TR>
+!! <TR><TD>15</TD><TD>URBANE   </TD><TD>39</TD><TD>IDRMEC   </TD></TR>
+!! <TR><TD>16</TD><TD>NURBAN   </TD><TD>40</TD><TD>CLINUR   </TD></TR>
+!! <TR><TD>17</TD><TD>FIDUMA   </TD><TD>41</TD><TD>IDRSTA   </TD></TR>
+!! <TR><TD>18</TD><TD>FIDUPO   </TD><TD>42</TD><TD>SYREP    </TD></TR>
+!! <TR><TD>19</TD><TD>ICIRFE   </TD><TD>43</TD><TD>FREATI   </TD></TR>
+!! <TR><TD>20</TD><TD>SIMNBO   </TD><TD>44</TD><TD>COREMO   </TD></TR>
+!! <TR><TD>21</TD><TD>SIMNPR   </TD><TD>45</TD><TD>IDRTL9   </TD></TR>
+!! <TR><TD>22</TD><TD>SPDSRA   </TD><TD>46</TD><TD>FIDUVE   </TD></TR>
+!! <TR><TD>23</TD><TD>EMLOKM   </TD><TD>47</TD><TD>FIDULI   </TD></TR>
+!! </TABLE>
+!!
+!! \todo estrarre l'anagrafica al volo  direttamente da Oracle.
 !!
 !! \ingroup vol7d
 MODULE vol7d_oraclesim_class
@@ -34,19 +64,19 @@ TYPE ora_var_conv
   TYPE(vol7d_timerange) :: timerange
   CHARACTER(len=20) :: description
   REAL :: afact, bfact
-  CHARACTER(len=network_name_len) :: networkid
+  INTEGER :: netid
 END TYPE ora_var_conv
 
-INTEGER,EXTERNAL :: oraextra_gethead, oraextra_getdata ! da sostituire con include/interface ?!
+INTEGER,EXTERNAL :: oraextra_getnet, oraextra_gethead, oraextra_getdata ! da sostituire con include/interface ?!
 INTEGER(kind=ptr_c),EXTERNAL :: oraextra_init
 
 INTEGER,ALLOCATABLE ::stazo(:), varo(:), valid(:)
 REAL,ALLOCATABLE :: valore1(:), valore2(:)
 INTEGER(kind=int_b),ALLOCATABLE :: cdatao(:,:), cflag(:,:)
 !CHARACTER(len=1),ALLOCATABLE :: valore3(:)
-CHARACTER(len=12),ALLOCATABLE ::fdatao(:)
+CHARACTER(len=12),ALLOCATABLE :: fdatao(:)
 INTEGER :: nmax=0, nact=0
-INTEGER,PARAMETER :: nmaxmin=100000, nmaxmax=5000000, oraclesim_netmax=45, &
+INTEGER,PARAMETER :: nmaxmin=100000, nmaxmax=5000000, oraclesim_netmax=50, &
  datelen=13, flaglen=10
  
 ! tabella di conversione variabili da btable a oraclesim
@@ -166,7 +196,7 @@ SUBROUTINE vol7d_oraclesim_import(this, var, network, timei, timef, level, &
  timerange, anavar, set_network)
 TYPE(vol7d_oraclesim),INTENT(out) :: this !< oggetto in cui importare i dati
 CHARACTER(len=*),INTENT(in) :: var(:) !< lista delle variabili da importare, codice alfanumerico della tabella B locale
-TYPE(vol7d_network),INTENT(in) :: network(:) !< lista di reti da estrarre, inizializzata con l'indicativo numerico che ha nell'archivio SIM
+TYPE(vol7d_network),INTENT(in) :: network(:) !< lista di reti da estrarre, inizializzata con il nome maiuscolo che ha nell'archivio SIM
 TYPE(datetime),INTENT(in) :: timei !< istante iniziale delle osservazioni da estrarre (estremo incluso)
 TYPE(datetime),INTENT(in) :: timef !< istante finale delle osservazioni da estrarre (estremo incluso)
 TYPE(vol7d_level),INTENT(in),OPTIONAL :: level !< estrae solo il livello verticale fornito, default=tutti
@@ -190,7 +220,7 @@ SUBROUTINE vol7d_oraclesim_importvvns(this, var, network, timei, timef, level, &
  timerange, anavar, set_network)
 TYPE(vol7d_oraclesim),INTENT(out) :: this !< oggetto in cui importare i dati
 CHARACTER(len=*),INTENT(in) :: var(:) !< lista delle variabili da importare (codice alfanumerico della tabella B del WMO)
-TYPE(vol7d_network),INTENT(in) :: network !< rete da estrarre, inizializzata con l'indicativo numerico che ha nell'archivio SIM
+TYPE(vol7d_network),INTENT(in) :: network !< rete da estrarre, inizializzata con il nome maiuscolo che ha nell'archivio SIM
 TYPE(datetime),INTENT(in) :: timei !< istante iniziale delle osservazioni da estrarre (estremo incluso)
 TYPE(datetime),INTENT(in) :: timef !< istante finale delle osservazioni da estrarre (estremo incluso)
 TYPE(vol7d_level),INTENT(in),OPTIONAL :: level !< estrae solo il livello verticale fornito, default=tutti
@@ -200,8 +230,7 @@ TYPE(vol7d_network),INTENT(in),OPTIONAL :: set_network !< se fornito, collassa t
 
 TYPE(vol7d) :: v7dtmp, v7dtmp2, v7dtmpana
 TYPE(datetime) :: odatetime
-INTEGER :: i, j, k, nvar, nobs, nobso, ntime, nana, nvout, nvin, nvbt
-CHARACTER(len=8) :: cnetwork
+INTEGER :: i, j, k, nvar, nobs, nobso, ntime, nana, nvout, nvin, nvbt, netid
 CHARACTER(len=12),ALLOCATABLE :: tmtmp(:)
 CHARACTER(len=12) :: datai, dataf
 INTEGER,ALLOCATABLE :: anatmp(:), vartmp(:), mapdatao(:), mapstazo(:), varlist(:)
@@ -213,23 +242,33 @@ LOGICAL :: lanar(netana_nvarr), lanai(netana_nvari), lanac(netana_nvarc)
 CALL getval(timei, simpledate=datai)
 CALL getval(timef, simpledate=dataf)
 
-cnetwork = TRIM(to_char(network%name))
-! Cerco la rete nella tabella
-!!$IF (network%name <= 0 .OR. network%name >= oraclesim_netmax ) THEN
-!!$  CALL l4f_log(L4F_ERROR, 'in oraclesim rete '//TRIM(cnetwork)//' non valida')
-!!$  return
-!!$ENDIF
+! chiedo ad oracle l'identificativo numerico della rete richiesta
+netid = oraextra_getnet(this%connid, fchar_to_cstr(TRIM(network%name)))
+IF (netid < 0) THEN ! errore oracle
+  CALL oraextra_geterr(this%connid, msg)
+  CALL l4f_log(L4F_FATAL, 'in oraextra_getnet, '//TRIM(cstr_to_fchar(msg)))
+  CALL raise_fatal_error()
+ELSE IF (netid == 0) THEN ! no_data probabilmente la rete non esiste
+  CALL l4f_log(L4F_ERROR, 'in oraclesim rete '//TRIM(network%name)//' non trovata in db')
+  RETURN
+ELSE IF (netid >= oraclesim_netmax) THEN ! rete valida ma non prevista dal codice
+  CALL l4f_log(L4F_ERROR, 'in oraclesim rete '//TRIM(network%name)//' trovata in db ma non ancora supportata')
+  RETURN
+ENDIF
+CALL l4f_log(L4F_INFO, 'in oraclesim_class rete: '//TRIM(network%name)// &
+ ' id: '//TRIM(to_char(netid)))
+
 ! Leggo l'anagrafica per la rete se necessario
-!!$IF (.NOT. networktable(network%name)) THEN
-!!$  CALL vol7d_oraclesim_ora_ana(network%name)
-!!$ENDIF
+IF (.NOT. networktable(netid)) THEN
+  CALL vol7d_oraclesim_ora_ana(netid)
+ENDIF
 ! Conto le variabili da estrarre
 varbt_req(:) = .FALSE.
 DO nvin = 1, SIZE(var)
   found = .FALSE.
   DO nvbt = 1, SIZE(vartable)
     IF (vartable(nvbt)%varbt == var(nvin) .AND. &
-     vartable(nvbt)%networkid == network%name) THEN
+     vartable(nvbt)%netid == netid) THEN
 
       IF (PRESENT(level))THEN
         IF (vartable(nvbt)%level /= level) CYCLE
@@ -244,7 +283,7 @@ DO nvin = 1, SIZE(var)
     ENDIF
   ENDDO
   IF (.NOT.found) CALL l4f_log(L4F_WARN, 'variabile '//TRIM(var(nvin))// &
-   ' non valida per la rete '//TRIM(cnetwork))
+   ' non valida per la rete '//TRIM(network%name))
 ENDDO
 
 nvar = COUNT(varbt_req)
@@ -252,19 +291,19 @@ ALLOCATE(varlist(nvar))
 varlist = PACK(vartable(:)%varora, varbt_req)
 IF (nvar == 0) THEN
   CALL l4f_log(L4F_WARN, 'nessuna delle variabili '//TRIM(var(1))// &
-   ' e` valida per la rete '//TRIM(cnetwork))
+   ' e` valida per la rete '//TRIM(network%name))
   RETURN
 ENDIF
 CALL l4f_log(L4F_INFO, 'in oraclesim_class, nvar='//to_char(nvar))
 
 nobs = oraextra_gethead(this%connid, fchar_to_cstr(datai), &
- fchar_to_cstr(dataf), network%name, varlist, SIZE(varlist))
+ fchar_to_cstr(dataf), netid, varlist, SIZE(varlist))
 IF (nobs < 0) THEN
   CALL oraextra_geterr(this%connid, msg)
   CALL l4f_log(L4F_FATAL, 'in oraextra_gethead, '//TRIM(cstr_to_fchar(msg)))
   CALL raise_fatal_error()
 ENDIF
-CALL l4f_log(L4F_INFO, 'in oraextra_gethead, nobs='//to_char(nobs))
+CALL l4f_log(L4F_INFO, 'in oraextra_gethead, nobs='//TRIM(to_char(nobs)))
 
 CALL vol7d_oraclesim_alloc(nobs) ! Mi assicuro di avere spazio
 i = oraextra_getdata(this%connid, nobs, nobso, cdatao, stazo, varo, valore1, &
@@ -303,19 +342,19 @@ ALLOCATE(anatmp(nana), tmtmp(ntime), vartmp(nvar))
 anatmp(:) = pack_distinct(stazo(1:nobs), nana, back=.TRUE.)
 CALL pack_distinct_c(fdatao(1:nobs), tmtmp, back=.TRUE.)
 vartmp(:) = pack_distinct(varo(1:nobs), nvar, back=.TRUE.)
-CALL l4f_log(L4F_INFO, 'in oraclesim_class onvar='//to_char(nvar))
+CALL l4f_log(L4F_INFO, 'in oraclesim_class onvar='//TRIM(to_char(nvar)))
 
-!!$DO i = 1, nana
-!!$  IF (.NOT. ANY(anatmp(i) == netana(network%name)%volanai(:,1,1))) THEN
-!!$    non_valid = .TRUE.
-!!$    CALL l4f_log(L4F_WARN, 'stazione oraclesim '//TRIM(to_char(anatmp(i)))// &
-!!$     ' non trovata nell''anagrafica della rete '//TRIM(cnetwork)// &
-!!$     ', la ignoro')
-!!$    WHERE(stazo(1:nobs) == anatmp(i))
-!!$      stazo(1:nobs) = 0
-!!$    END WHERE
-!!$  ENDIF
-!!$ENDDO
+DO i = 1, nana
+  IF (.NOT. ANY(anatmp(i) == netana(netid)%volanai(:,1,1))) THEN
+    non_valid = .TRUE.
+    CALL l4f_log(L4F_WARN, 'stazione oraclesim '//TRIM(to_char(anatmp(i)))// &
+     ' non trovata nell''anagrafica della rete '//TRIM(network%name)// &
+     ', la ignoro')
+    WHERE(stazo(1:nobs) == anatmp(i))
+      stazo(1:nobs) = 0
+    END WHERE
+  ENDIF
+ENDDO
 
 ! Praticamente inutile se mi fido della query
 DO i = 1, ntime
@@ -382,35 +421,41 @@ DO i = 1, nvar
     ELSE
       v7dtmp%network(1) = network
     ENDIF
-!!$    ALLOCATE(lana(SIZE(netana(network%name)%ana)))
+    ALLOCATE(lana(SIZE(netana(netid)%ana)))
     lana = .FALSE.
-!!$    DO j = 1, nana
-!!$      k = INDEX(netana(network%name)%volanai(:,1,1), anatmp(j))
-!!$      v7dtmp%ana(j) = netana(network%name)%ana(k) ! attenzione ai puntatori
-!!$      lana(k) = .TRUE.
-!!$    ENDDO
+    DO j = 1, nana
+      k = INDEX(netana(netid)%volanai(:,1,1), anatmp(j))
+      v7dtmp%ana(j) = netana(netid)%ana(k) ! attenzione ai puntatori
+      lana(k) = .TRUE.
+    ENDDO
 ! se sono richieste delle variabili di anagrafica
 ! copio il sottoinsieme di anagrafica che mi interessa in tmpana
 ! e lo fondo col volume appena creato
-!!$    IF (PRESENT(anavar)) THEN
-!!$      DO j = 1, SIZE(netana(network%name)%anavar%r)
-!!$        lanar(j) = ANY(netana(network%name)%anavar%r(j)%btable == anavar)
-!!$      ENDDO
-!!$      DO j = 1, SIZE(netana(network%name)%anavar%i)
-!!$        lanai(j) = ANY(netana(network%name)%anavar%i(j)%btable == anavar)
-!!$      ENDDO
-!!$      DO j = 1, SIZE(netana(network%name)%anavar%c)
-!!$        lanac(j) = ANY(netana(network%name)%anavar%c(j)%btable == anavar)
-!!$      ENDDO
-!!$      CALL vol7d_copy(netana(network%name), v7dtmpana, lana=lana, &
-!!$       lanavarr=lanar, lanavari=lanai, lanavarc=lanac)
-!!$      v7dtmpana%network(1) = v7dtmp%network(1) ! faccio coincidere la rete
-!!$! fondo v7dtmpana appena creato con v7dtmp
-!!$! qui faccio affidamenteo sul fatto che vol7d_merge conserva l'ordine
-!!$! del primo argomento (v7dtmp e v7dtmpana hanno la stessa anagrafica
-!!$! ma con un ordinamento in generale diverso)
-!!$      CALL vol7d_merge(v7dtmp, v7dtmpana)
-!!$    ENDIF
+    IF (PRESENT(anavar)) THEN
+      DO j = 1, SIZE(netana(netid)%anavar%r)
+        lanar(j) = ANY(netana(netid)%anavar%r(j)%btable == anavar)
+      ENDDO
+      DO j = 1, SIZE(netana(netid)%anavar%i)
+        lanai(j) = ANY(netana(netid)%anavar%i(j)%btable == anavar)
+      ENDDO
+      DO j = 1, SIZE(netana(netid)%anavar%c)
+        lanac(j) = ANY(netana(netid)%anavar%c(j)%btable == anavar)
+      ENDDO
+! qui copio il volume di anagrafica statico in un volume temporaneo
+! per successiva rielaborazione; la rete e` sovrascritta per cui la
+! rete del volume statico, inizializzata ad un valore "dummy", viene
+! buttata, se in futuro non fosse piu` cosi` dovro` coambiare il
+! codice in vol7d_oraclesim_ora_ana per inizializzare correttamente la
+! rete
+      CALL vol7d_copy(netana(netid), v7dtmpana, lana=lana, &
+       lanavarr=lanar, lanavari=lanai, lanavarc=lanac)
+      v7dtmpana%network(1) = v7dtmp%network(1) ! faccio coincidere la rete
+! fondo v7dtmpana appena creato con v7dtmp
+! qui faccio affidamenteo sul fatto che vol7d_merge conserva l'ordine
+! del primo argomento (v7dtmp e v7dtmpana hanno la stessa anagrafica
+! ma con un ordinamento in generale diverso)
+      CALL vol7d_merge(v7dtmp, v7dtmpana)
+    ENDIF
     DEALLOCATE(lana)
 
     DO j = 1, ntime
@@ -540,7 +585,7 @@ IF (i > 0) THEN
     vartable(i)%description = buf ! uso buf per evitare un warning stringa troppo corta
     CALL csv_record_getfield(csv, vartable(i)%afact)
     CALL csv_record_getfield(csv, vartable(i)%bfact)
-    CALL csv_record_getfield(csv, vartable(i)%networkid)
+    CALL csv_record_getfield(csv, vartable(i)%netid)
     CALL delete(csv)
   ENDDO readline
 120 CONTINUE
@@ -554,53 +599,55 @@ END SUBROUTINE vol7d_oraclesim_setup_conv
 
 ! Legge l'anagrafica per la rete specificata
 SUBROUTINE vol7d_oraclesim_ora_ana(netid)
-CHARACTER(len=network_name_len),INTENT(in) :: netid
+INTEGER,INTENT(in) :: netid
 
 INTEGER :: i, j, un
 CHARACTER(len=3) :: cnet
 CHARACTER(len=1) :: macroa
 REAL(kind=fp_geo) :: lon, lat
 
-!!$networktable(netid) = .TRUE.
-!!$CALL init(netana(netid))
-!!$cnet = to_char(netid,'(I3.3)')
-!!$un = open_package_file('net_'//cnet//'.simana', filetype_data)
-!!$IF (un < 0) then
-!!$  CALL l4f_log(L4F_FATAL, &
-!!$   'in oraclesim, cannot find station file for network '//TRIM(cnet))
-!!$  CALL raise_fatal_error()
-!!$END IF
-!!$i = 0
-!!$DO WHILE(.TRUE.)
-!!$  READ(un,*,END=100)
-!!$  i = i + 1
-!!$ENDDO
-!!$100 CONTINUE
-!!$REWIND(un)
-!!$
-!!$CALL vol7d_alloc(netana(netid), nnetwork=1, nana=i, &
-!!$ nanavarr=netana_nvarr, nanavari=netana_nvari, nanavarc=netana_nvarc)
-!!$CALL vol7d_alloc_vol(netana(netid))
-!!$CALL init(netana(netid)%network(1), name=netid)
-!!$CALL init(netana(netid)%anavar%r(1), btable='B07001') ! station height
-!!$CALL init(netana(netid)%anavar%r(2), btable='B07031') ! barometer height
-!!$CALL init(netana(netid)%anavar%i(1), btable='B01192') ! Oracle station id
-!!$CALL init(netana(netid)%anavar%c(1), btable='B01019') ! station name
-!!$DO j = 1, i
-!!$  READ(un,*)netana(netid)%volanai(j,1,1), lat, lon, netana(netid)%volanar(j,2,1), &
-!!$   netana(netid)%volanar(j,1,1), macroa, netana(netid)%volanac(j,1,1)
-!!$  IF (netana(netid)%volanar(j,1,1) < -9998.) netana(netid)%volanar(j,1,1) = rmiss
-!!$  IF (netana(netid)%volanar(j,2,1) < -9998.) netana(netid)%volanar(j,2,1) = rmiss
-!!$  IF (lon < -99.8 .AND. lat < -99.8) THEN
-!!$    CALL init(netana(netid)%ana(j))
-!!$  ELSE
-!!$    CALL init(netana(netid)%ana(j), lon=lon, lat=lat)
-!!$  ENDIF
-!!$ENDDO
-!!$CLOSE(un)
-!!$
-!!$CALL l4f_log(L4F_INFO, 'ho letto l''anagrafica di '//TRIM(to_char(i))// &
-!!$ ' stazioni per la rete '//cnet)
+networktable(netid) = .TRUE.
+CALL init(netana(netid))
+cnet = to_char(netid,'(I3.3)')
+un = open_package_file('net_'//cnet//'.simana', filetype_data)
+IF (un < 0) then
+  CALL l4f_log(L4F_FATAL, &
+   'in oraclesim, cannot find station file for network '//TRIM(cnet))
+  CALL raise_fatal_error()
+END IF
+i = 0
+DO WHILE(.TRUE.)
+  READ(un,*,END=100)
+  i = i + 1
+ENDDO
+100 CONTINUE
+REWIND(un)
+
+CALL vol7d_alloc(netana(netid), nnetwork=1, nana=i, &
+ nanavarr=netana_nvarr, nanavari=netana_nvari, nanavarc=netana_nvarc)
+CALL vol7d_alloc_vol(netana(netid))
+! attenzione, in futuro potrebbe essere necessario inizializzare
+! correttamente la rete nell'anagrafica statica
+CALL init(netana(netid)%network(1), name='dummy')
+CALL init(netana(netid)%anavar%r(1), btable='B07001') ! station height
+CALL init(netana(netid)%anavar%r(2), btable='B07031') ! barometer height
+CALL init(netana(netid)%anavar%i(1), btable='B01192') ! Oracle station id
+CALL init(netana(netid)%anavar%c(1), btable='B01019') ! station name
+DO j = 1, i
+  READ(un,*)netana(netid)%volanai(j,1,1), lat, lon, netana(netid)%volanar(j,2,1), &
+   netana(netid)%volanar(j,1,1), macroa, netana(netid)%volanac(j,1,1)
+  IF (netana(netid)%volanar(j,1,1) < -9998.) netana(netid)%volanar(j,1,1) = rmiss
+  IF (netana(netid)%volanar(j,2,1) < -9998.) netana(netid)%volanar(j,2,1) = rmiss
+  IF (lon < -99.8 .AND. lat < -99.8) THEN
+    CALL init(netana(netid)%ana(j))
+  ELSE
+    CALL init(netana(netid)%ana(j), lon=lon, lat=lat)
+  ENDIF
+ENDDO
+CLOSE(un)
+
+CALL l4f_log(L4F_INFO, 'ho letto l''anagrafica di '//TRIM(to_char(i))// &
+ ' stazioni per la rete '//cnet)
 
 END SUBROUTINE vol7d_oraclesim_ora_ana
 

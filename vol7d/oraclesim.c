@@ -12,6 +12,8 @@
 #define MSGLEN 256
 
 /* Define SQL statements to be used in program. */
+
+/* versione vecchia piu` complicta  che richiedeva rete e variabile
 static char *tabquery = (char *)
   "SELECT \
 RTRIM(DECODE(gs.id_tabvar_mod,'Y',tv1.nome_tabella,'N',tv2.nome_tabella)) \
@@ -19,12 +21,16 @@ FROM met_gruppi_stazioni gs, met_variabili_definite va, \
      met_tabelle_vm tv1, met_tabelle_vm tv2 \
 WHERE gs.identnr = :net AND va.identnr = :var AND \
       tv1.id_tabella = gs.id_tabella_vm AND tv2.id_tabella = va.id_tabella_vm";
-
-/* TODO versione piu` semplice che non richiede la rete, da provare:
-select
-"SELECT RTRIM(tv.nome_tabella) FROM met_variabili_definite va, met_tabelle_vm tv
-WHERE va.identnr = :var AND tv.id_tabella = va.id_tabella_vm"
 */
+
+/* versione piu` semplice che non richiede la rete */
+static char *tabquery = (char *)
+  "SELECT \
+RTRIM(tv.nome_tabella) FROM met_variabili_definite va, met_tabelle_vm tv \
+WHERE va.identnr = :var AND tv.id_tabella = va.id_tabella_vm";
+
+static char *netquery = (char *)
+  "SELECT G.IDENTNR FROM MET_GRUPPI_STAZIONI G WHERE G.DESCRIZIONE = :netdesc";
 
 static char *query1 = (char *)
   "SELECT TO_CHAR(a.dset_istante_wmo_fine,'YYYYMMDDHH24MI'), \
@@ -69,6 +75,8 @@ typedef struct _OracleDbConnection
 
 OracleDbConnection *FC_FUNC_(oraextra_init, ORAEXTRA_INIT)
      (char *, char *, char *, int*);
+int FC_FUNC_(oraextra_getnet, ORAEXTRA_GETNET)
+     (OracleDbConnection **, const char *);
 int FC_FUNC_(oraextra_gethead, ORAEXTRA_GETHEAD)
      (OracleDbConnection **, char *, char *, int *, int *, int *);
 int FC_FUNC_(oraextra_getdata, ORAEXTRA_GETDATA)
@@ -144,50 +152,35 @@ OracleDbConnection *FC_FUNC_(oraextra_init, ORAEXTRA_INIT)
 }
 
 
-int FC_FUNC_(oraextra_gethead, ORAEXTRA_GETHEAD)
-     (OracleDbConnection **fdbconnid, char *ti, char *tf,
-      int *net, int *var, int *nvar) {
+int FC_FUNC_(oraextra_getnet, ORAEXTRA_GETNET)
+     (OracleDbConnection **fdbconnid, const char *netdesc) {
   OracleDbConnection *dbconnid = *fdbconnid;
-  int i, nr;
   sword status;
-  char *query;
+  int onetid;
 
-  sb2 ti_ind, tf_ind, net_ind, var_ind, otab_ind;
-  sb2 ovalp_ind, ovala_ind, oflag_ind;
-  char odate[DATELEN]/* , ovalc[CVALLEN]*/, oflag[FLAGLEN] ;
-  int ostatid, ovarid;
-  float ovalp, ovala;
+  /* Preparo l'estrazione per ottenere il nemro della rete dal nome */
+  checkerr(dbconnid,
+	   OCIStmtPrepare(dbconnid->stmthp, dbconnid->errhp,
+			  (text *) netquery,
+			  (ub4) strlen(netquery),
+			  (ub4) OCI_NTV_SYNTAX, (ub4) OCI_DEFAULT));
 
-  /* Preparo l'estrazione per ottenere il nome della tabella,
-     complicazione per colpa di CAELAMI */
-  checkerr(dbconnid, OCIStmtPrepare(dbconnid->stmthp, dbconnid->errhp,
-				    (text *) tabquery,
-				    (ub4) strlen(tabquery),
-				    (ub4) OCI_NTV_SYNTAX, (ub4) OCI_DEFAULT));
 
-  /* valori validi =1, mancanti =-1 */
-  net_ind = 1;
-  var_ind = 1;
+  checkerr(dbconnid,
+	   OCIBindByName(dbconnid->stmthp, &dbconnid->bnd1p,
+			 dbconnid->errhp, (text *) ":netdesc",
+			 -1, (dvoid *) netdesc,
+			 (sword) strlen(netdesc)+1, SQLT_STR, (dvoid *) NULL,
+			 (ub2 *) 0, (ub2 *) 0, (ub4) 0, (ub4 *) 0,
+			 OCI_DEFAULT));
 
-  checkerr(dbconnid, OCIBindByName(dbconnid->stmthp, &dbconnid->bnd3p,
-				   dbconnid->errhp, (text *) ":net",
-				   -1, (dvoid *) net,
-				   (sword) sizeof(*net), SQLT_INT, (dvoid *) &net_ind,
-				   (ub2 *) 0, (ub2 *) 0, (ub4) 0, (ub4 *) 0,
-				   OCI_DEFAULT));
+  checkerr(dbconnid,
+	   OCIDefineByPos(dbconnid->stmthp, &dbconnid->defn1p,
+			  dbconnid->errhp, 1,
+			  (dvoid *) &onetid, sizeof(onetid), SQLT_INT,
+			  (dvoid *) 0,
+			  (ub2 *) 0, (ub2 *) 0, OCI_DEFAULT));
 
-  checkerr(dbconnid, OCIBindByName(dbconnid->stmthp, &dbconnid->bnd4p,
-				   dbconnid->errhp, (text *) ":var",
-				   -1, (dvoid *) var,
-				   (sword) sizeof(*var), SQLT_INT, (dvoid *) &var_ind,
-				   (ub2 *) 0, (ub2 *) 0, (ub4) 0, (ub4 *) 0,
-				   OCI_DEFAULT));
-
-  checkerr(dbconnid, OCIDefineByPos(dbconnid->stmthp, &dbconnid->defn1p,
-				    dbconnid->errhp, 1,
-				    (dvoid *) &dbconnid->table, TABLEN, SQLT_STR,
-				    (dvoid *) &otab_ind,
-				    (ub2 *) 0, (ub2 *) 0, OCI_DEFAULT));
 
   /* Lancio l'estrazione */
   if ((status = OCIStmtExecute(dbconnid->svchp, dbconnid->stmthp, dbconnid->errhp,
@@ -200,13 +193,83 @@ int FC_FUNC_(oraextra_gethead, ORAEXTRA_GETHEAD)
     }
   }
   /* Prendo la prima riga di dati */
-  if ((status=OCIStmtFetch2(dbconnid->stmthp, dbconnid->errhp, (ub4) 1,
-			    (ub2) OCI_FETCH_NEXT, (sb4) 0,
-			    (ub4) OCI_DEFAULT)) != OCI_SUCCESS) {
+  if ((status = OCIStmtFetch2(dbconnid->stmthp, dbconnid->errhp, (ub4) 1,
+			      (ub2) OCI_FETCH_NEXT, (sb4) 0,
+			      (ub4) OCI_DEFAULT)) != OCI_SUCCESS) {
     if (status == OCI_NO_DATA) {
+      return 0;
+    } else {
+      checkerr(dbconnid, status);
       return -1;
     }
-    else {
+  }
+  return onetid;
+}
+
+int FC_FUNC_(oraextra_gethead, ORAEXTRA_GETHEAD)
+     (OracleDbConnection **fdbconnid, char *ti, char *tf,
+      int *net, int *var, int *nvar) {
+  OracleDbConnection *dbconnid = *fdbconnid;
+  int i, nr;
+  sword status;
+  char *query;
+
+  /* valori validi =1, mancanti =-1,  inutilizzati per ora, ci pensa la query */
+  /*   sb2 otab_ind, ovalp_ind, ovala_ind, oflag_ind; */
+  char odate[DATELEN]/* , ovalc[CVALLEN]*/, oflag[FLAGLEN] ;
+  int ostatid, ovarid;
+  float ovalp, ovala;
+
+  /* Preparo l'estrazione per ottenere il nome della tabella,
+     complicazione per colpa di CAELAMI */
+  checkerr(dbconnid,
+	   OCIStmtPrepare(dbconnid->stmthp, dbconnid->errhp,
+			  (text *) tabquery,
+			  (ub4) strlen(tabquery),
+			  (ub4) OCI_NTV_SYNTAX, (ub4) OCI_DEFAULT));
+
+  /*
+  checkerr(dbconnid, OCIBindByName(dbconnid->stmthp, &dbconnid->bnd3p,
+				   dbconnid->errhp, (text *) ":net",
+				   -1, (dvoid *) net,
+				   (sword) sizeof(*net), SQLT_INT, (dvoid *) &net_ind,
+				   (ub2 *) 0, (ub2 *) 0, (ub4) 0, (ub4 *) 0,
+				   OCI_DEFAULT));
+  net non richiesta con la nuova query */
+
+  checkerr(dbconnid,
+	   OCIBindByName(dbconnid->stmthp, &dbconnid->bnd1p,
+			 dbconnid->errhp, (text *) ":var",
+			 -1, (dvoid *) var,
+			 (sword) sizeof(*var), SQLT_INT, (dvoid *) NULL,
+			 (ub2 *) 0, (ub2 *) 0, (ub4) 0, (ub4 *) 0,
+			 OCI_DEFAULT));
+
+  checkerr(dbconnid,
+	   OCIDefineByPos(dbconnid->stmthp, &dbconnid->defn1p,
+			  dbconnid->errhp, 1,
+			  (dvoid *) &dbconnid->table, TABLEN, SQLT_STR,
+			  (dvoid *) NULL,
+			  (ub2 *) 0, (ub2 *) 0, OCI_DEFAULT));
+
+
+  /* Lancio l'estrazione */
+  if ((status = OCIStmtExecute(dbconnid->svchp, dbconnid->stmthp, dbconnid->errhp,
+			       (ub4) 0, (ub4) 0,
+			       (CONST OCISnapshot *) NULL, (OCISnapshot *) NULL,
+ 			       OCI_STMT_SCROLLABLE_READONLY)) != OCI_SUCCESS) {
+    if (status != OCI_NO_DATA) {
+      checkerr(dbconnid, status);
+      return -1;
+    }
+  }
+  /* Prendo la prima riga di dati */
+  if ((status = OCIStmtFetch2(dbconnid->stmthp, dbconnid->errhp, (ub4) 1,
+			      (ub2) OCI_FETCH_NEXT, (sb4) 0,
+			      (ub4) OCI_DEFAULT)) != OCI_SUCCESS) {
+    if (status == OCI_NO_DATA) {
+      return -1;
+    } else {
       checkerr(dbconnid, status);
       return -1;
     }
@@ -239,30 +302,24 @@ int FC_FUNC_(oraextra_gethead, ORAEXTRA_GETHEAD)
 				    (ub4) OCI_NTV_SYNTAX, (ub4) OCI_DEFAULT));
 
 
-  /* valori validi =1, mancanti =-1 */
-  var_ind = 1;
-  ti_ind = 1;
-  tf_ind = 1;
-  net_ind = 1;
-  
   checkerr(dbconnid, OCIBindByName(dbconnid->stmthp, &dbconnid->bnd1p,
 				   dbconnid->errhp, (text *) ":ti",
 				   -1, (dvoid *) ti,
-				   DATELEN, SQLT_STR, (dvoid *) &ti_ind,
+				   DATELEN, SQLT_STR, (dvoid *) NULL,
 				   (ub2 *) 0, (ub2 *) 0, (ub4) 0, (ub4 *) 0,
 				   OCI_DEFAULT));
 
   checkerr(dbconnid, OCIBindByName(dbconnid->stmthp, &dbconnid->bnd2p,
 				   dbconnid->errhp, (text *) ":tf",
 				   -1, (dvoid *) tf,
-				   DATELEN, SQLT_STR, (dvoid *) &tf_ind,
+				   DATELEN, SQLT_STR, (dvoid *) NULL,
 				   (ub2 *) 0, (ub2 *) 0, (ub4) 0, (ub4 *) 0,
 				   OCI_DEFAULT));
 
   checkerr(dbconnid, OCIBindByName(dbconnid->stmthp, &dbconnid->bnd3p,
 				   dbconnid->errhp, (text *) ":net",
 				   -1, (dvoid *) net,
-				   (sword) sizeof(*net), SQLT_INT, (dvoid *) &net_ind,
+				   (sword) sizeof(*net), SQLT_INT, (dvoid *) NULL,
 				   (ub2 *) 0, (ub2 *) 0, (ub4) 0, (ub4 *) 0,
 				   OCI_DEFAULT));
 
@@ -287,13 +344,13 @@ int FC_FUNC_(oraextra_gethead, ORAEXTRA_GETHEAD)
   checkerr(dbconnid, OCIDefineByPos(dbconnid->stmthp, &dbconnid->defn4p,
 				    dbconnid->errhp, 4,
 				    (dvoid *) &ovalp, sizeof(ovalp), SQLT_FLT,
-				    (dvoid *) &ovalp_ind,
+				    (dvoid *) NULL,
 				    (ub2 *) 0, (ub2 *) 0, OCI_DEFAULT));
 
   checkerr(dbconnid, OCIDefineByPos(dbconnid->stmthp, &dbconnid->defn5p,
 				    dbconnid->errhp, 5,
 				    (dvoid *) &ovala, sizeof(ovala), SQLT_FLT,
-				    (dvoid *) &ovala_ind,
+				    (dvoid *) NULL,
 				    (ub2 *) 0, (ub2 *) 0, OCI_DEFAULT));
 
 /*   checkerr(dbconnid, OCIDefineByPos(dbconnid->stmthp, &dbconnid->defn6p, */
@@ -305,7 +362,7 @@ int FC_FUNC_(oraextra_gethead, ORAEXTRA_GETHEAD)
   checkerr(dbconnid, OCIDefineByPos(dbconnid->stmthp, &dbconnid->defn7p,
 				    dbconnid->errhp, 6,
 				    (dvoid *) oflag, FLAGLEN, SQLT_STR,
-				    (dvoid *) &oflag_ind,
+				    (dvoid *) NULL,
 				    (ub2 *) 0, (ub2 *) 0, OCI_DEFAULT));
 
   /* Lancio l'estrazione */

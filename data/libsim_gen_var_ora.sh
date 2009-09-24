@@ -54,7 +54,6 @@ EOF
 
 while read line; do
     var=${line%%,*}
-#    reti=`sqlplus -S leggo/meteo@metw @$sqlfile $var`
     reti=`sqlplus -S leggo/meteo@metw @$sqlfile $var`
     for rete in $reti; do
 	echo "$line,$rete"
@@ -63,6 +62,7 @@ done >$varmap <<EOF
 158,B12001,C->K,103,2000,0,0,254,0,0,Temperatura (IDRO),TEMPERATURE/DRY-BULB TEMPERATURE,1.0,273.15
 159,B13011,mm->KG/M**2,1,0,0,0,1,0,1800,precipitazione in 30 minuti (IDRO),TOTAL PRECIPITATION / TOTAL WATER EQUIVALENT,1.0,0.0
 160,B13011,mm->KG/M**2,1,0,0,0,1,0,3600,Precipitazione nell'ora (IDRO),TOTAL PRECIPITATION / TOTAL WATER EQUIVALENT,1.0,0.0
+161,B13192,m->?,1,0,0,0,254,0,0,livello idrometrico (IDRO),(description not available),1.0,0.0
 162,B13013,m->M,1,0,0,0,254,0,0,neve (spessore dello strato) (IDRO),TOTAL SNOW DEPTH,1.0,0.0
 165,B11001,gsess->DEGREE TRUE,103,10000,0,0,254,0,0,Vento: direzione media degli ultimi 10 minuti (IDRO),WIND DIRECTION,1.0,0.0
 166,B11002,M/S->M/S,103,10000,0,0,254,0,0,Vento: velocita' media degli ultimi 10 minuti (IDRO),WIND SPEED,1.0,0.0
@@ -119,6 +119,7 @@ done >$varmap <<EOF
 400,B15240,numero->?,103,15000,0,0,0,0,86400,Spore fungine_Stemphylium (POLLINI),(description not available),1.0,0.0
 401,B15241,numero->?,103,15000,0,0,0,0,86400,Spore fungine_Cladosporium (POLLINI),(description not available),1.0,0.0
 402,B15242,numero->?,103,15000,0,0,0,0,86400,Spore fungine_Epicoccum (POLLINI),(description not available),1.0,0.0
+512,B13204,mc/s->?,1,0,0,0,254,0,0,portata (FIDUTO),(description not available),1.0,0.0
 513,B15243,numero->?,103,15000,0,0,0,0,86400,Altri Pollini / Non Identificati_Altri pollini identificati (PO,(description not available),1.0,0.0
 514,B15244,numero->?,103,15000,0,0,0,0,86400,Altri Pollini / Non Identificati_Pollini non identificati (POLL,(description not available),1.0,0.0
 515,B15245,numero->?,103,15000,0,0,0,0,86400,Altre Spore / Non identificati_Altre spore fungine (POLLINI),(description not available),1.0,0.0
@@ -135,6 +136,7 @@ done >$varmap <<EOF
 547,B15000,numero->?,103,15000,0,0,0,0,86400,Ciperacee_Ciperacee indistinte 1 (POLLINI),(description not available),1.0,0.0
 548,B15001,numero->?,103,15000,0,0,0,0,86400,Juglandacee_Juglandacee indistinte 1 (POLLINI),(description not available),1.0,0.0
 549,B15002,numero->?,103,15000,0,0,0,0,86400,Ippocastanacee_Ippocastanacee indistinte 1 (POLLINI),(description not available),1.0,0.0
+663,B13204,mc/s->?,1,0,0,0,0,0,86400,portata media giornaliera (IDRTL9),(description not available),1.0,0.0
 EOF
 rm -f $sqlfile
 
