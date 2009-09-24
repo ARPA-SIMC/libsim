@@ -267,6 +267,22 @@ fi
 AM_CONDITIONAL(NETCDF, test "x$enableval" = "xyes")
 
 
+dnl define cpp macro for pasting cpp macros without blanks: with GNU
+dnl fortran compilers the -traditional-cpp option is used so that the ##
+dnl operator is not available
+if test "x$FC" = "xgfortran" -o "x$FC" = "xg95"; then
+AC_DEFINE_UNQUOTED([PASTE(a,b)], [a/**/b],
+ [macro for pasting two macros without blanks, does not work :-(])
+else
+AC_DEFINE_UNQUOTED([POSTPASTE(a,b)], [a ## b],
+ [2nd half of macro for pasting two macros without blanks])
+AC_DEFINE_UNQUOTED([PASTE(a,b)], [POSTPASTE(a,b)],
+ [macro for pasting two macros without blanks])
+fi
+
+
+AC_LANG_POP()dnl back to C
+
 AC_ARG_ENABLE(versioninfo, AC_HELP_STRING([--enable-versioninfo],
   [enable version information in shared libraries]),,[enableval=no])dnl default disable
 AM_CONDITIONAL(VERSIONINFO, test "x$enableval" = "xyes")
@@ -276,8 +292,6 @@ AC_ARG_ENABLE(doxydoc, AC_HELP_STRING([--disable-doxydoc],
   [disable generation of doxygen documentation]),,[enableval=yes])dnl default enable
 AM_CONDITIONAL(DOXYDOC, test "x$enableval" = "xyes")
 
-
-AC_LANG_POP()dnl back to C
 AC_PROG_LIBTOOL
 
 pkgdocdir='${datadir}/doc/${PACKAGE}'
