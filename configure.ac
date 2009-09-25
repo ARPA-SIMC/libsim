@@ -84,7 +84,7 @@ ora_cppflags=''
 ora_ldflags=''
 if test -n "$ORACLE_VER"; then
   ora_cppflags="-I/usr/include/$ORACLE_VER"
-  for try in $libdir/$ORACLE_VER/lib /usr/lib64/$ORACLE_VER/lib /usr/lib/$ORACLE_VER/lib; do
+  for try in /usr/lib64/$ORACLE_VER/lib /usr/lib/$ORACLE_VER/lib; do
   if test -d "$try"; then
     ora_ldflags="-L$try"
     break
@@ -208,20 +208,23 @@ AM_CONDITIONAL(GRIBAPI, test "x$enableval" = "xyes")
 AC_ARG_ENABLE(ngmath, AC_HELP_STRING([--disable-ngmath],
   [disable ngmath ncarg interpolation support]),,[enableval=yes])dnl default enable
 if test "x$enableval" = "xyes"; then
- # test in f77 because f90 test do not work
-  _ldflags=${LDFLAGS}
-  LDFLAGS="-L/usr/lib/ncarg $LDFLAGS"
-
+dnl search libdir
+ngmath_ldflags=''
+for try in /usr/lib64/ncarg /usr/lib/ncarg; do
+  if test -d "$try"; then
+    ngmath_ldflags="-L$try"
+    break
+  fi
+done
   AC_CHECK_LIB([ngmath], [natgridd],
-    NGMATH_LDFLAGS="-L/usr/lib/ncarg"
+    NGMATH_LDFLAGS=$ngmath_ldflags
     NGMATH_LIBS="-lngmath"
     AC_SUBST(NGMATH_LDFLAGS)
     AC_SUBST(NGMATH_LIBS)
     AC_DEFINE(HAVE_LIBNGMATH, 1, [Enable ngmath code])
     AC_MSG_RESULT([ngmath code included]),
-    AC_MSG_ERROR([ngmath ncarg library not found]))
-
-  LDFLAGS=$_ldflags
+    AC_MSG_ERROR([ngmath ncarg library not found]),
+    [$ngmath_ldflags])
 else
   AC_MSG_RESULT([ngmath code not included])
 fi
@@ -231,21 +234,23 @@ AM_CONDITIONAL(NGMATH, test "x$enableval" = "xyes")
 AC_ARG_ENABLE(ncarg, AC_HELP_STRING([--disable-ncarg],
   [disable ncar graphics]),,[enableval=yes])dnl default enable
 if test "x$enableval" = "xyes"; then
- # test in f77 because f90 test do not work
-  _ldflags=${LDFLAGS}
-  LDFLAGS="-L/usr/lib/ncarg $LDFLAGS"
-
+dnl search libdir
+ncarg_ldflags=''
+for try in /usr/lib64/ncarg /usr/lib/ncarg; do
+  if test -d "$try"; then
+    ncarg_ldflags="-L$try"
+    break
+  fi
+done
   AC_CHECK_LIB([ncarg], [ngpswk],
-    NCARG_LDFLAGS="-L/usr/lib/ncarg"
+    NCARG_LDFLAGS=$ncarg_ldflags
     NCARG_LIBS="-lncarg -lncarg_gks -lncarg_c -lX11 -lpng"
     AC_SUBST(NCARG_LDFLAGS)
     AC_SUBST(NCARG_LIBS)
     AC_DEFINE(HAVE_LIBNCARG, 1, [Enable ncar graphics code])
     AC_MSG_RESULT([ncar graphics code included]),
     AC_MSG_ERROR([ncar graphics library not found]),
-    [-lncarg_gks -lncarg_c -lX11])
-
-  LDFLAGS=$_ldflags
+    [$ncarg_ldflags -lncarg_gks -lncarg_c -lX11])
 else
   AC_MSG_RESULT([ncar graphics code not included])
 fi
