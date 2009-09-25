@@ -1,3 +1,4 @@
+#include "config.h"
 MODULE vol7d_utilities
 USE file_utilities
 USE datetime_class

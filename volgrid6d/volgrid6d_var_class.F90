@@ -1,3 +1,5 @@
+#include "config.h"
+
 !> Classe per la gestione delle variabili da grib.
 !! Questo modulo definisce una classe per rappresentare variabili meteorologiche.
 !! \ingroup volgrid6d

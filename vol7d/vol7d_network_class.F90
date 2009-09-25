@@ -1,3 +1,5 @@
+#include "config.h"
+
 !> Classe per la gestione delle reti di stazioni per osservazioni meteo e affini.
 !! Questo modulo definisce una classe per identificare la rete
 !! a cui appartiene una stazione. Per rete si intende un insieme di stazioni

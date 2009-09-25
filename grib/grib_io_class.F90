@@ -1,3 +1,4 @@
+#include "config.h"
 #define GRIBLIB grib
 #define WITH_MATCH
 #define WITH_EMOS

@@ -1,3 +1,5 @@
+#include "config.h"
+
 !> Classe per la gestione delle variabili osservate da stazioni meteo e affini.
 !! Questo modulo definisce una classe per rappresentare variabili meteorologiche
 !! osservate, o attributi, aventi diversi tipi numerici o carattere.

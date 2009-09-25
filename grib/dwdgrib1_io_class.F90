@@ -1,3 +1,4 @@
+#include "config.h"
 #define GRIBLIB dwdgrib1
 #undef WITH_MATCH
 #undef WITH_EMOS

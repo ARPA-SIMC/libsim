@@ -1,3 +1,5 @@
+#include "config.h"
+
 !> Classe per la gestione dell'anagrafica di stazioni meteo e affini.
 !! Questo modulo definisce una classe in grado di rappresentare
 !! le caratteristiche di una stazione meteo fissa o mobile.
