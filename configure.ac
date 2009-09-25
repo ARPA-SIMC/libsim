@@ -283,7 +283,17 @@ AC_DEFINE_UNQUOTED([POSTPASTE(a,b)], [a ## b],
  [2nd half of macro for pasting two macros without blanks])
 AC_DEFINE_UNQUOTED([PASTE(a,b)], [POSTPASTE(a,b)],
  [macro for pasting two macros without blanks])
+AC_MSG_RESULT([Please preprocess your source files by hand with
+portability/conv_cpp.sh -f command before compiling the first time,
+sorry for the inconvenience.])
 fi
+
+dnl options to be added compulsorily for particular compilers
+case "$FC" in
+  *xlf*)
+  FCFLAGS="$FCFLAGS -F "'$(abs_top_builddir)/portability/xlf.cfg'
+;;
+esac
 
 
 AC_LANG_POP()dnl back to C
