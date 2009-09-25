@@ -6,7 +6,7 @@ IMPLICIT NONE
 CHARACTER(len=1) :: ch
 CHARACTER(len=512) :: extraopt
 TYPE(option_s) :: opts(2)
-INTEGER :: i
+INTEGER :: i, iargc
 
 ! Define two long options corresponding to short options a and b,
 ! the first without, the second with optional argument
