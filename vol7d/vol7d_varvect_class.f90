@@ -39,6 +39,8 @@ INTERFACE delete
   MODULE PROCEDURE vol7d_varvect_delete
 END INTERFACE
 
+!> Return the index of first or last element of \a this equal to \a
+!! search.
 INTERFACE index
   MODULE PROCEDURE vol7d_varvect_index,vol7d_varvect_indexvect
 END INTERFACE
@@ -159,81 +161,82 @@ ENDIF
 END SUBROUTINE vol7d_varvect_alloc
 
 
-!> Cerca l'indice del primo o ultimo elemento di this uguale a search
-subroutine vol7d_varvect_index(this, search, mask, back,type,index_v)
-
+!> Return the index of first or last element of \a this equal to \a
+!! search.
+FUNCTION vol7d_varvect_index(this, search, mask, back, type) RESULT(index_)
 TYPE(vol7d_varvect),intent(in) :: this !< object to search in
 type(vol7d_var),INTENT(in) ::  search !< what to search
-LOGICAL,INTENT(in),OPTIONAL :: mask(:), back
-character(len=*),intent(inout),optional :: type
-INTEGER :: index_v !< indice del primo o ultimo elemento di this uguale a search
+LOGICAL,INTENT(in),OPTIONAL :: mask(:) !< search only among elements for which \a mask is \a .TRUE.
+LOGICAL,INTENT(in),OPTIONAL :: back !< if \a .TRUE. search from the end
+character(len=*),intent(inout),optional :: type !< type of vector found ("d","r","i","b","c")
+INTEGER :: index_
 
 
-index_v=0
+index_=0
 
 select case (optio_c(type,1))
 
 case ("d")
   if (associated(this%d))then
-    index_v=index(this%d(:), search, mask, back) ! vettore di variabili a doppia precisione
+    index_=index(this%d(:), search, mask, back) ! vettore di variabili a doppia precisione
   end if
     
 case ("r")
   if (associated(this%r))then
-    index_v=index(this%r(:), search, mask, back) ! vettore di variabili reali
+    index_=index(this%r(:), search, mask, back) ! vettore di variabili reali
   end if
 
 case ("i")
   if (associated(this%i))then
-    index_v=index(this%i(:), search, mask, back) ! vettore di variabili intere
+    index_=index(this%i(:), search, mask, back) ! vettore di variabili intere
   end if
 
 case ("b")
   if (associated(this%b))then
-    index_v=index(this%b(:), search, mask, back) ! vettore di variabili byte
+    index_=index(this%b(:), search, mask, back) ! vettore di variabili byte
   end if
 
 case ("c")
   if (associated(this%c))then
-    index_v=index(this%c(:), search, mask, back) ! vettore di variabili carattere
+    index_=index(this%c(:), search, mask, back) ! vettore di variabili carattere
   end if
 
 case (cmiss)
 
   if (associated(this%d))then
-    index_v=index(this%d(:), search, mask, back) ! vettore di variabili a doppia precisione
+    index_=index(this%d(:), search, mask, back) ! vettore di variabili a doppia precisione
     if (present(type)) type="d"
   end if
 
-  if(index_v == 0)then
+  if(index_ == 0)then
     if (associated(this%r))then
-      index_v=index(this%r(:), search, mask, back) ! vettore di variabili reali
+      index_=index(this%r(:), search, mask, back) ! vettore di variabili reali
       if (present(type)) type="r"
     end if
   end if
   
-  if(index_v == 0)then
+  if(index_ == 0)then
     if (associated(this%i))then
-      index_v=index(this%i(:), search, mask, back) ! vettore di variabili intere
+      index_=index(this%i(:), search, mask, back) ! vettore di variabili intere
       if (present(type)) type="i"
   end if
 end if
   
-  if(index_v == 0)then
+  if(index_ == 0)then
     if (associated(this%b))then
-      index_v=index(this%b(:), search, mask, back) ! vettore di variabili byte
+      index_=index(this%b(:), search, mask, back) ! vettore di variabili byte
       if (present(type)) type="b"
     end if
   end if
   
-  if(index_v == 0)then
+  if(index_ == 0)then
     if (associated(this%c))then
-      index_v=index(this%c(:), search, mask, back) ! vettore di variabili carattere
+      index_=index(this%c(:), search, mask, back) ! vettore di variabili carattere
       if (present(type)) type="c"
     end if
   end if
 
-  if (index_v == 0) type=cmiss
+  if (index_ == 0) type=cmiss
 
 case default
 
@@ -241,24 +244,25 @@ case default
 
 end select
 
-end subroutine vol7d_varvect_index
+END FUNCTION vol7d_varvect_index
 
 
-!> Cerca l'indice del primo o ultimo elemento di this uguale a search
-subroutine vol7d_varvect_indexvect(this, search, type,index_v)
-
+!> Return the index of first or last element of \a this equal to \a
+!! search.
+FUNCTION vol7d_varvect_indexvect(this, search, back, TYPE) RESULT(index_)
 TYPE(vol7d_varvect),intent(in) :: this !< object to search in
 type(vol7d_var),INTENT(in) ::  search(:) !< what to search
-character(len=*),intent(inout) :: type(:) !type of vector found ("d","r","i","b","c")
-INTEGER :: index_v(:) !< indice del primo o ultimo elemento di this uguale a search
+LOGICAL,INTENT(in),OPTIONAL :: back !< if \a .TRUE. search from the end
+character(len=*),intent(inout) :: type(:) !< type of vector found ("d","r","i","b","c")
+INTEGER :: index_(SIZE(search))
 
 integer :: i
 
 do i =1 ,size(search)
-  call vol7d_varvect_index(this, search(i),type=type(i),index_v=index_v(i))
+  index_(i) = vol7d_varvect_index(this, search(i), back=back, type=type(i))
 end do
 
-end subroutine vol7d_varvect_indexvect
+END FUNCTION vol7d_varvect_indexvect
 
 
 !> \brief display on the screen a brief content of vol7d_var object

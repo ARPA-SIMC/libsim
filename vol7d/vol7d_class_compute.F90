@@ -460,7 +460,7 @@ call vol7d_copy(this, that,unique=.true.,&
 call init(var, btable="B10004")    ! Pressure
 type=cmiss
 !type="i"
-call vol7d_varvect_index(that%dativar,var , type=type,index_v=ind)
+ind = index(that%dativar, var, type=type)
 
 select case (type)
 

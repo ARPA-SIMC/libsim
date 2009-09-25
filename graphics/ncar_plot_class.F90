@@ -818,7 +818,7 @@ r_tt=rmiss
 
 type=cmiss
 !type="i"
-call vol7d_varvect_index(v7d%dativar,var , type=type,index_v=ind)
+ind = index(v7d%dativar, var, type=type)
 
 !if( ind /= 0 ) then
   select case (type)
@@ -857,7 +857,7 @@ r_tr=rmiss
 
 type=cmiss
 !type="i"
-call vol7d_varvect_index(v7d%dativar,var , type=type,index_v=ind)
+ind = index(v7d%dativar, var, type=type)
 
 !if( ind /= 0 ) then
   select case (type)
@@ -906,7 +906,7 @@ if (.not. any(c_e(r_ur))) then
 
   type=cmiss
   !type="i"
-  call vol7d_varvect_index(v7d%dativar,var , type=type,index_v=ind)
+  ind = index(v7d%dativar, var, type=type)
 
   !if( ind /= 0 ) then
   select case (type)
@@ -964,7 +964,7 @@ u=rmiss
 
 type=cmiss
 !type="i"
-call vol7d_varvect_index(v7d%dativar,var , type=type,index_v=ind)
+ind = index(v7d%dativar, var, type=type)
 
 !if( ind /= 0 ) then
   select case (type)
@@ -1003,7 +1003,7 @@ v=rmiss
 
 type=cmiss
 !type="i"
-call vol7d_varvect_index(v7d%dativar,var , type=type,index_v=ind)
+ind = index(v7d%dativar, var, type=type)
 
 !if( ind /= 0 ) then
   select case (type)
@@ -1047,7 +1047,7 @@ if (.not. any(c_e(u)) .and. .not. any(c_e(v))) then
 
   type=cmiss
   !type="i"
-  call vol7d_varvect_index(v7d%dativar,var , type=type,index_v=ind)
+  ind = index(v7d%dativar, var, type=type)
   
   !if( ind /= 0 ) then
   select case (type)
@@ -1085,7 +1085,7 @@ if (.not. any(c_e(u)) .and. .not. any(c_e(v))) then
 
   type=cmiss
   !type="i"
-  call vol7d_varvect_index(v7d%dativar,var , type=type,index_v=ind)
+  ind = index(v7d%dativar, var, type=type)
 
   !if( ind /= 0 ) then
   select case (type)
@@ -1282,7 +1282,7 @@ end if
 
 call init(var, btable="B01001")    ! WMO BLOCK NUMBER 
 type=cmiss
-call vol7d_varvect_index(v7d%anavar,var , type=type,index_v=ind)
+ind = index(v7d%anavar, var, type=type)
 !if( ind /= 0 ) then
   select case (type)
   case("d")
@@ -1302,7 +1302,7 @@ call vol7d_varvect_index(v7d%anavar,var , type=type,index_v=ind)
 
 call init(var, btable="B01002")    ! WMO STATION NUMBER
 type=cmiss
-call vol7d_varvect_index(v7d%anavar,var , type=type,index_v=ind)
+ind = index(v7d%anavar, var, type=type)
 !if( ind /= 0 ) then
   select case (type)
   case("d")
@@ -1333,7 +1333,7 @@ if (title /= "") title="Station: "//title
 
 call init(var, btable="B07001")    ! HEIGHT OF STATION
 type=cmiss
-call vol7d_varvect_index(v7d%anavar,var , type=type,index_v=ind)
+ind = index(v7d%anavar, var, type=type)
 !if( ind /= 0 ) then
   select case (type)
   case("d")
@@ -1356,12 +1356,12 @@ nome=""
 
 call init(var, btable="B01063")    ! ICAO LOCATION INDICATOR
 type="c"
-call vol7d_varvect_index(v7d%anavar,var , type=type,index_v=ind)
+ind = index(v7d%anavar, var, type=type)
 if( ind /= 0 ) nome=v7d%volanac(ana,ind,network)
 
 call init(var, btable="B01019")    ! LONG STATION OR SITE NAME
 type="c"
-call vol7d_varvect_index(v7d%anavar,var , type=type,index_v=ind)
+ind = index(v7d%anavar, var, type=type)
 if( ind /= 0 ) nome=v7d%volanac(ana,ind,network)
 
 
