@@ -15,6 +15,9 @@ MODULE char_utilities
 USE kinds
 IMPLICIT NONE
 
+CHARACTER( * ), PRIVATE, PARAMETER :: LOWER_CASE = 'abcdefghijklmnopqrstuvwxyz'
+CHARACTER( * ), PRIVATE, PARAMETER :: UPPER_CASE = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+
 PRIVATE int_to_char, byte_to_char, char_to_char, &
    real_to_char, double_to_char, logical_to_char
 
@@ -182,5 +185,41 @@ ENDDO
 
 END FUNCTION cstr_to_fchar
 
+!> convert lowercase to uppercase
+FUNCTION UpperCase ( Input_String ) RESULT ( Output_String )
+CHARACTER( * ), INTENT( IN ) :: Input_String !< strig to convert
+CHARACTER( LEN( Input_String ) ) :: Output_String
+                                ! -- Local variables
+INTEGER :: i, n
+
+                                ! -- Copy input string
+Output_String = Input_String
+                                ! -- Loop over string elements
+DO i = 1, LEN( Output_String )
+                                ! -- Find location of letter in lower case constant string
+  n = INDEX( LOWER_CASE, Output_String( i:i ) )
+                                ! -- If current substring is a lower case letter, make it upper case
+  IF ( n /= 0 ) Output_String( i:i ) = UPPER_CASE( n:n )
+END DO
+END FUNCTION UpperCase
+
+!> convert uppercase to lowercase
+FUNCTION LowerCase ( Input_String ) RESULT ( Output_String )
+                                ! -- Argument and result
+CHARACTER( * ), INTENT( IN ) :: Input_String !< strig to convert
+CHARACTER( LEN( Input_String ) ) :: Output_String
+                                ! -- Local variables
+INTEGER :: i, n
+
+                                ! -- Copy input string
+Output_String = Input_String
+                                ! -- Loop over string elements
+DO i = 1, LEN( Output_String )
+                                ! -- Find location of letter in upper case constant string
+  n = INDEX( UPPER_CASE, Output_String( i:i ) )
+                                ! -- If current substring is an upper case letter, make it lower case
+  IF ( n /= 0 ) Output_String( i:i ) = LOWER_CASE( n:n )
+END DO
+END FUNCTION LowerCase
 
 END MODULE char_utilities
