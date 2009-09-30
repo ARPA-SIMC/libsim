@@ -182,6 +182,6 @@ print*,"           inter: near , bilin"
 print*,"networkname network identifying string"
 print*,""
 print*,""
-print *,"default : lon=0. lat=45. format=bufr template=generic trans_type=inter sub_type=bilin networkid=255"
+print *,"default : lon=0. lat=45. format=bufr template=generic trans_type=inter sub_type=bilin networkname=generic"
 
 end subroutine help
