@@ -96,7 +96,7 @@ TYPE(vol7d_network),INTENT(INOUT) :: this !< oggetto da inizializzare
 character(len=*),INTENT(in),optional :: name !<  Mnemonic alias for type of report
 
 IF (PRESENT(name)) THEN
-  this%name = name
+  this%name = lowercase(name)
 ELSE
   this%name = cmiss
 END IF
