@@ -1211,8 +1211,10 @@ xx(1)=x_coord (tmin,tmax,tmax,ptop,pdown,pdown,&
 xx(2)=xx(1)
 call gpl (2,xx,yy)
 
+CALL GSTXAL(3,5)
+call gschh(0.01)
 call GSCHUP (-1.,0.)
-call gtx ( xx(1)+0.01,0.8,'wind')
+call gtx ( xx(1),yy(2),'wind')
 
 
 ! simbologia synottica
@@ -1448,7 +1450,7 @@ end if
 
 CALL GSTXAL(1,5)
 call GSCHUP (0.,1.)
-call gschh(0.0085)
+call gschh(0.0065)
 
 label="(T)  "//trim(to_char(v7d%network(network)))
 call set_color(trim(ltcolor))
