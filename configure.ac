@@ -1,6 +1,6 @@
 dnl Process this file with autoconf to produce a configure script.
 
-AC_INIT(libsim, 2.6.10, [dcesari@arpa.emr.it])
+AC_INIT(libsim, 3.0.0, [dcesari@arpa.emr.it])
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_SRCDIR([configure.ac])
 AM_INIT_AUTOMAKE([foreign])
@@ -298,8 +298,8 @@ esac
 
 AC_LANG_POP()dnl back to C
 
-AC_ARG_ENABLE(versioninfo, AC_HELP_STRING([--enable-versioninfo],
-  [enable version information in shared libraries]),,[enableval=no])dnl default disable
+AC_ARG_ENABLE(versioninfo, AC_HELP_STRING([--disable-versioninfo],
+  [disable version information in shared libraries]),,[enableval=yes])dnl default disable
 AM_CONDITIONAL(VERSIONINFO, test "x$enableval" = "xyes")
 
 
