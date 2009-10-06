@@ -19,7 +19,7 @@ TYPE(vol7d_dballe) :: v7d_dba
 TYPE(vol7d) :: v7d_profile
 type(ncar_plot) :: plot
 integer   :: time,ana,timerange,network
-logical ::  packtimerange=.false.,changepg=.false.
+logical ::  packtimerange=.false.,changepg=.false.,distinct=.false.
 character(len=20) ::  tcolor(4)=(/'brown','red','black','tan'/)
 character(len=20) ::  tdcolor(4)=(/'orange','forest Green','cyan','yellow'/)
 character(len=20) ::  ucolor(4)=(/'sky blue','blue','blue magenta','magenta'/)
@@ -37,7 +37,7 @@ category=l4f_category_get(a_name//".main")
 call l4f_category_log(category,L4F_INFO,"inizio")
 
 do
-  select case( getopt( "w:p:o:c:n:l:ht"))
+  select case( getopt( "w:p:o:c:n:l:htd"))
 
   case( char(0))
     exit
@@ -91,6 +91,9 @@ do
 
   case( 't' )
     packtimerange=.true.
+
+  case( 'd' )
+    distinct=.true.
 
   case default
     call l4f_category_log(category,L4F_ERROR,'unhandled option '// optopt// '(this is a bug)')
@@ -146,8 +149,13 @@ do ana=1, size(v7d_dba%vol7d%ana)
 
       if (packtimerange) then
         ic=mod(ic,4)+1       ! cicla sui 4 colori
-        if (changepg) CALL FRAME
-        changepg=.false.
+
+        if (changepg) then
+          CALL FRAME
+          ic=1
+          changepg=.false.
+        end if
+
         if (ic == 1)  then
           call plot_vp_title (plot,v7d_dba%vol7d,ana,time,1,network,color=tcolor(ic))  !solo primo titolo
           call plot_herlofson(plot,logo=logo,nomogramma=nomogramma)
@@ -158,8 +166,13 @@ do ana=1, size(v7d_dba%vol7d%ana)
 
         if (.not. packtimerange) then
           ic=mod(ic,4)+1       ! cicla sui 4 colori
-          if (changepg) CALL FRAME
-          changepg=.false.
+
+          if (changepg) then
+            CALL FRAME
+            ic=1
+            changepg=.false.
+          end if
+
           if (ic == 1)  then
             call plot_vp_title (plot,v7d_dba%vol7d,ana,time,timerange,network,color=tcolor(ic))  !solo primo titolo
             call plot_herlofson(plot,logo=logo,nomogramma=nomogramma)
@@ -178,6 +191,9 @@ do ana=1, size(v7d_dba%vol7d%ana)
          tcolor=tcolor(ic),tdcolor=tdcolor(ic),ucolor=ucolor(ic),wcolor=wcolor(ic),position=ic) ! legenda
         call delete(v7d_profile)
         if (ic == 4 )changepg=.true.
+        if (distinct) then
+          changepg=.true.
+        end if
 
       end do
     end do
@@ -203,7 +219,7 @@ subroutine help()
 print*,"Plot herlofson diagram  from bufr/crex file."
 print*,""
 print*,""
-print*,"v7d_plt_sound [-h] [-w wstype] [-p PSTYPE] [-o ORIENT] [-c COLOR] [-n nomogramma] [-l logo] [-t] infile outfile"
+print*,"v7d_plt_sound [-h] [-w wstype] [-p PSTYPE] [-o ORIENT] [-c COLOR] [-n nomogramma] [-l logo] [-t] [-d] infile outfile"
 print*,""
 print*,"-h            this help message"
 print*,"-w wstype     work station type (see ncar GKS manuals - wstype=8 X11 display)"
@@ -216,6 +232,7 @@ print*,"-c color      'COLOR' or 'MONOCHROME'"
 print*,"-n nomogramma 'tipo di nomogramma aerologico: herlofson//herlofson-down//emagramma//emagramma-down'"
 print*,"-l logo       'logo to print in footer'"
 print*,"-t            'collapse timerange dimension writing the first in title and legend'"
+print*,"-d            'distinct page each sounding'"
 print*,""
 print*,""
 print *,"default :  pstype='PS' orient='LANDSCAPE' clor='COLOR' nomogramma='herlofson' logo='Met Service'"
