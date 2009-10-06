@@ -12,14 +12,14 @@ use getopt_m
 implicit none
 
 integer :: category,ier
-integer :: wstype=imiss,icicle,ic
+integer :: wstype=imiss,ic
 character(len=512):: a_name,infile,outfile,PSTYPE="PS", ORIENT="LANDSCAPE", COLOR="COLOR"
 character(len=100) :: nomogramma="herlofson",logo="Met Service"
 TYPE(vol7d_dballe) :: v7d_dba
 TYPE(vol7d) :: v7d_profile
 type(ncar_plot) :: plot
 integer   :: time,ana,timerange,network
-
+logical ::  packtimerange=.false.,changepg=.false.
 character(len=20) ::  tcolor(4)=(/'brown','red','black','tan'/)
 character(len=20) ::  tdcolor(4)=(/'orange','forest Green','cyan','yellow'/)
 character(len=20) ::  ucolor(4)=(/'sky blue','blue','blue magenta','magenta'/)
@@ -37,7 +37,7 @@ category=l4f_category_get(a_name//".main")
 call l4f_category_log(category,L4F_INFO,"inizio")
 
 do
-  select case( getopt( "w:p:o:c:n:l:h"))
+  select case( getopt( "w:p:o:c:n:l:ht"))
 
   case( char(0))
     exit
@@ -89,6 +89,9 @@ do
     call help()
     call exit(1)
 
+  case( 't' )
+    packtimerange=.true.
+
   case default
     call l4f_category_log(category,L4F_ERROR,'unhandled option '// optopt// '(this is a bug)')
     call help()
@@ -138,27 +141,47 @@ end if
 
 do ana=1, size(v7d_dba%vol7d%ana)
   do time=1, size(v7d_dba%vol7d%time)
-    call plot_herlofson(plot,logo=logo,nomogramma=nomogramma)
-    icicle=0
-    do timerange=1, size(v7d_dba%vol7d%timerange)
-      do network=1,size(v7d_dba%vol7d%network)
-        ic=mod(icicle,4)+1       ! cicla sui 4 colori
-        icicle=icicle+1
+    ic=0
+    do network=1,size(v7d_dba%vol7d%network)
+
+      if (packtimerange) then
+        ic=mod(ic,4)+1       ! cicla sui 4 colori
+        if (changepg) CALL FRAME
+        changepg=.false.
+        if (ic == 1)  then
+          call plot_vp_title (plot,v7d_dba%vol7d,ana,time,1,network,color=tcolor(ic))  !solo primo titolo
+          call plot_herlofson(plot,logo=logo,nomogramma=nomogramma)
+        end if
+      end if
+
+      do timerange=1, size(v7d_dba%vol7d%timerange)
+
+        if (.not. packtimerange) then
+          ic=mod(ic,4)+1       ! cicla sui 4 colori
+          if (changepg) CALL FRAME
+          changepg=.false.
+          if (ic == 1)  then
+            call plot_vp_title (plot,v7d_dba%vol7d,ana,time,timerange,network,color=tcolor(ic))  !solo primo titolo
+            call plot_herlofson(plot,logo=logo,nomogramma=nomogramma)
+          end if
+        end if
+
         call init(v7d_profile)
         call vol7d_normalize_vcoord(v7d_dba%vol7d,v7d_profile,ana,time,timerange,network)
+
 
         call plot_vertical_plofiles(plot,v7d_profile,1,1,1,1,&
          tcolor=tcolor(ic),tdcolor=tdcolor(ic),&
          ucolor=ucolor(ic),wcolor=wcolor(ic))
 
-        if (ic == 1) call plot_vp_title (plot,v7d_profile,1,1,1,1,color=tcolor(ic))  !solo primo titolo
         call plot_vp_legend (plot,v7d_profile,1,1,1,1,&
          tcolor=tcolor(ic),tdcolor=tdcolor(ic),ucolor=ucolor(ic),wcolor=wcolor(ic),position=ic) ! legenda
         call delete(v7d_profile)
+        if (ic == 4 )changepg=.true.
 
       end do
     end do
-    CALL FRAME
+    changepg=.true.
   end do
 end do
 
@@ -180,18 +203,19 @@ subroutine help()
 print*,"Plot herlofson diagram  from bufr/crex file."
 print*,""
 print*,""
-print*,"v7d_plt_sound [-h] [-w wstype] [-p PSTYPE] [-o ORIENT] [-c COLOR] [-n nomogramma] [-l logo] infile outfile"
+print*,"v7d_plt_sound [-h] [-w wstype] [-p PSTYPE] [-o ORIENT] [-c COLOR] [-n nomogramma] [-l logo] [-t] infile outfile"
 print*,""
-print*,"-h         this help message"
-print*,"wstype     work station type (see ncar GKS manuals - wstype=8 X11 display)"
+print*,"-h            this help message"
+print*,"-w wstype     work station type (see ncar GKS manuals - wstype=8 X11 display)"
 print*,""
 print*,"    oppure se omesso wstype"
 print*,""
-print*,"pstype     'PS', 'EPS', or 'EPSI'"
-print*,"orient     'PORTRAIT' or 'LANDSCAPE'"
-print*,"color      'COLOR' or 'MONOCHROME'" 
-print*,"nomogramma 'tipo di nomogramma aerologico: herlofson//herlofson-down//emagramma//emagramma-down'"
-print*,"logo       'logo to print in footer'"
+print*,"-p pstype     'PS', 'EPS', or 'EPSI'"
+print*,"-o orient     'PORTRAIT' or 'LANDSCAPE'"
+print*,"-c color      'COLOR' or 'MONOCHROME'" 
+print*,"-n nomogramma 'tipo di nomogramma aerologico: herlofson//herlofson-down//emagramma//emagramma-down'"
+print*,"-l logo       'logo to print in footer'"
+print*,"-t            'collapse timerange dimension writing the first in title and legend'"
 print*,""
 print*,""
 print *,"default :  pstype='PS' orient='LANDSCAPE' clor='COLOR' nomogramma='herlofson' logo='Met Service'"
