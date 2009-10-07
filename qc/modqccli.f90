@@ -18,8 +18,8 @@
 !! ottenendo un indice da 1 a 10 (inserendo altezze in metri).
 !! Questo indice viene utilizzato per selezionare un livello tipico utilizzato nella descrizione del clima 
 !! con leveltype=102:
-!! \arg livello1(10) = (/-100,100,250,500,750,1000,1250,1500,1750,2000/)
-!! \arg livello2(10) = (/100,250,500,750,1000,1250,1500,1750,2000,2250/)
+!! \arg livello1(ncli_level) = (/-100,100,250,500,750,1000,1250,1500,1750,2000/)
+!! \arg livello2(ncli_level) = (/100,250,500,750,1000,1250,1500,1750,2000,2250/)
 !!
 !! Area e percentile vengono utilizzati per costruire l'ident dell'anagrafica del Vol7d del clima.
 !! Il clima infatti è memorizzato su file nel formato binario di Vol7d utilizzando come anno per i 
@@ -61,16 +61,18 @@ use vol7d_class
 use geo_coord_class
 use file_utilities
 use log4fortran
+use char_utilities
+use vol7d_dballe_class
 
 implicit none
 
 public
 
-
+integer, parameter :: ncli_level=10
 !> standard heigth for climatological use (low level)
-integer :: cli_level1(10) = (/-100,100,250,500,750,1000,1250,1500,1750,2000/)
+integer :: cli_level1(ncli_level) = (/-100,100,250,500,750,1000,1250,1500,1750,2000/)
 !> standard heigth for climatological use (hight level)
-integer :: cli_level2(10) = (/100,250,500,750,1000,1250,1500,1750,2000,2250/)
+integer :: cli_level2(ncli_level) = (/100,250,500,750,1000,1250,1500,1750,2000,2250/)
 
 
 !>\brief Oggetto principale per il controllo di qualità
@@ -116,6 +118,8 @@ integer,intent(in),optional,target:: data_id_in(:,:,:,:,:) !< Indici dei dati in
 character(len=512),intent(in),optional :: macropath !< file delle macroaree
 character(len=512),intent(in),optional :: climapath !< file con il volume del clima
 
+type (vol7d_dballe) :: v7d_dballetmp
+
 integer :: istat,iuni
 character(len=512) :: filepath
 
@@ -142,7 +146,7 @@ end if
 CALL import(qccli%macroa, shpfilesim=filepath)
 
 if (present(climapath))then
-  filepath=macropath
+  filepath=climapath
 else
  filepath=get_package_filepath('climaprec.v7d', filetype_data)
 end if
@@ -150,10 +154,21 @@ end if
 
 call init(qccli%clima)
 
-iuni=getunit()
-open (unit=iuni,file=filepath,form="UNFORMATTED")
-call import(qccli%clima,unit=iuni)
-close (unit=iuni)
+select case (trim(lowercase(suffixname(filepath))))
+
+case("v7d")
+  iuni=getunit()
+  open (unit=iuni,file=filepath,form="UNFORMATTED")
+  call import(qccli%clima,unit=iuni)
+  close (unit=iuni)
+case("bufr")
+  call init(v7d_dballetmp,file=.true.,filename=filepath)
+  call import(v7d_dballetmp)
+  call copy(v7d_dballetmp%vol7d,qccli%clima)
+  call delete(v7d_dballetmp)
+case default
+  call raise_error(filepath//" file type not supported")
+end select
 
 return
 end subroutine qccliinit
@@ -418,6 +433,10 @@ do indana=1,size(qccli%v7d%ana)
               indctime         = firsttrue(time                              == qccli%clima%time)
               indclevel        = firsttrue(level                             == qccli%clima%level)
               indctimerange    = firsttrue(qccli%v7d%timerange(indtimerange) == qccli%clima%timerange)
+
+! attenzione attenzione TODO
+! se leggo da bufr il default è char e non reale
+
               indcdativarr     = firsttrue(qccli%v7d%dativar%r(inddativarr)  == qccli%clima%dativar%r)
 
               !print *,"dato  ",qccli%v7d%timerange(indtimerange) 
@@ -495,6 +514,24 @@ end if
 
 end subroutine cli_level
 
+
+!> Initialize level according to climate definition at SIMC 
+subroutine cli_level_generate(level)
+
+TYPE(vol7d_level),intent(out):: level(:) !< level where is defined the climatological value (layer)
+
+integer :: i
+
+if (size(level) /= ncli_level ) then
+  call l4f_log(L4F_ERROR,"cli_level_generate: level dimension /= "//trim(to_char(ncli_level)))
+  call raise_error("cli_level_generate: level dimension /= "//trim(to_char(ncli_level)))
+end if
+
+do i=1,ncli_level
+  call init(level(i), 102,cli_level1(i)*1000,102,cli_level2(i)*1000)
+end do
+
+end subroutine cli_level_generate
 
 
 !!$subroutine qccli_validate(qccli)
