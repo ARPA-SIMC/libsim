@@ -1922,12 +1922,16 @@ do i=1, nstaz
           call idba_set (this%handle,"lat",lat)
           call idba_set (this%handle,"lon",lon)
           call l4f_category_log(this%category,L4F_DEBUG,"dati riferiti a lat: "//to_char(lat)//" lon: "//to_char(lon))
+
+          if (present(ident))then
+            if (c_e(ident) .and. ident /= this%vol7d%ana(i)%ident ) cycle
+          end if
           
           if ( c_e(this%vol7d%ana(i)%ident)) then
-            call idba_set (this%handle,"ident",ident)
+            call idba_set (this%handle,"ident",this%vol7d%ana(i)%ident)
             call idba_set (this%handle,"mobile",1)
             call l4f_category_log(this%category,L4F_DEBUG,"hai una stazione che va a spasso! identificativo: "&
-             //to_char(ident))
+             //to_char(this%vol7d%ana(i)%ident))
           else
             call idba_set (this%handle,"mobile",0)
           end if
