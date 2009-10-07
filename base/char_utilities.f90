@@ -222,4 +222,84 @@ DO i = 1, LEN( Output_String )
 END DO
 END FUNCTION LowerCase
 
+
+!> Returns \a input_string aligned to the left (i.e. without leading blanks).
+!! The needed number of trailing blanks is added at the end in order
+!! to keep the length of the resulting string equal to the input
+!! length.
+FUNCTION align_left(input_string) RESULT(aligned)
+CHARACTER(len=*), INTENT(in) :: input_string !< string to be aligned
+
+CHARACTER(len=LEN(input_string)) :: aligned
+
+aligned = input_string(fnblnk(input_string):)
+
+END FUNCTION align_left
+
+
+!> Returns \a input_string aligned to the right (i.e. without trailing blanks).
+!! The needed number of leading blanks is added at the beginning in
+!! order to keep the length of the resulting string equal to the input
+!! length.
+FUNCTION align_right(input_string) RESULT(aligned)
+CHARACTER(len=*), INTENT(in) :: input_string !< string to be aligned
+
+CHARACTER(len=LEN(input_string)) :: aligned
+
+aligned = ''
+aligned(LEN(input_string)-lnblnk(input_string)+1:) = input_string
+
+END FUNCTION align_right
+
+
+!> Returns \a input_string centered, i.e. with an equal number of 
+!! leading and trailing blanks (±1 if they are odd).  The needed
+!! number of leading blanks is added or removed at the beginning in
+!! order to keep the length of the resulting string equal to the input
+!! length.
+FUNCTION align_center(input_string) RESULT(aligned)
+CHARACTER(len=*), INTENT(in) :: input_string !< string to be aligned
+
+CHARACTER(len=LEN(input_string)) :: aligned
+
+INTEGER :: n1, n2
+
+n1 = fnblnk(input_string)
+n2 = LEN(input_string)-lnblnk(input_string)+1
+
+aligned = ''
+aligned((n1+n2)/2:) = input_string(n1:)
+
+END FUNCTION align_center
+
+
+!> Return the index of last character in \a input_string which is not
+!! a blank space. If the strings is zero-length or contains only blank
+!! spaces, returns zero.
+FUNCTION lnblnk(input_string) RESULT(nblnk)
+CHARACTER(len=*), INTENT(in) :: input_string !< string to be scanned
+
+INTEGER :: nblnk
+
+DO nblnk = LEN(input_string), 1, -1
+  IF (input_string(nblnk:nblnk) /= ' ') RETURN
+ENDDO
+
+END FUNCTION lnblnk
+
+
+!> Return the index of first character in \a input_string which is not
+!! a blank space. If the strings is zero-length or contains only blank
+!! spaces, returns \a LEN(input_string)+1.
+FUNCTION fnblnk(input_string) RESULT(nblnk)
+CHARACTER(len=*), INTENT(in) :: input_string !< string to be scanned
+
+INTEGER :: nblnk
+
+DO nblnk = 1, LEN(input_string)
+  IF (input_string(nblnk:nblnk) /= ' ') RETURN
+ENDDO
+
+END FUNCTION fnblnk
+
 END MODULE char_utilities
