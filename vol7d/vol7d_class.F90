@@ -221,6 +221,10 @@ INTERFACE integerdat
   MODULE PROCEDURE integerdatd,integerdatr,integerdati,integerdatb,integerdatc
 END INTERFACE
 
+!>copy object
+INTERFACE copy
+  MODULE PROCEDURE vol7d_copy
+END INTERFACE
 
 
 !!$INTERFACE get_volana
@@ -343,7 +347,7 @@ CALL delete(this%dativarattr)
 END SUBROUTINE vol7d_delete
 
 
-!TODO da completare !
+!TODO da completare ! aborta se i volumi sono allocati a dimensione 0
 !> stampa a video una sintesi del contenuto
 SUBROUTINE vol7d_display(this)
 TYPE(vol7d),intent(in) :: this !< oggetto da visualizzare
@@ -400,12 +404,14 @@ end if
 
 
 print*,"---- ana vector ----"
-
-print*,"- anavar -"
+print*,""
+print*,"->>>>>>>>> anavar -"
 call display(this%anavar)
-print*,"- anaattr -"
+print*,""
+print*,"->>>>>>>>> anaattr -"
 call display(this%anaattr)
-print*,"- anavarattr -"
+print*,""
+print*,"->>>>>>>>> anavarattr -"
 call display(this%anavarattr)
 
 print*,"-- ana data section (first point) --"
@@ -416,34 +422,55 @@ ddat=dmiss
 bdat=bmiss
 cdat=cmiss
 
-if (associated(this%volanai)) idat=this%volanai(1,1,1)
-if (associated(this%anavar%i)) call display(this%anavar%i(1),idat,rdat,ddat,bdat,cdat)
+if (associated(this%volanai)) then
+  do i=1,size(this%anavar%i)
+    idat=this%volanai(1,i,1)
+    if (associated(this%anavar%i)) call display(this%anavar%i(i),idat,rdat,ddat,bdat,cdat)
+  end do
+end if
 idat=imiss
 
-if (associated(this%volanar)) rdat=this%volanar(1,1,1)
-if (associated(this%anavar%r)) call display(this%anavar%r(1),idat,rdat,ddat,bdat,cdat)
+if (associated(this%volanar)) then
+  do i=1,size(this%anavar%r)
+    rdat=this%volanar(1,i,1)
+    if (associated(this%anavar%i)) call display(this%anavar%r(i),idat,rdat,ddat,bdat,cdat)
+  end do
+end if
 rdat=rmiss
 
-if (associated(this%volanad)) ddat=this%volanad(1,1,1)
-if (associated(this%anavar%d)) call display(this%anavar%d(1),idat,rdat,ddat,bdat,cdat)
+if (associated(this%volanad)) then
+  do i=1,size(this%anavar%d)
+    ddat=this%volanad(1,i,1)
+    if (associated(this%anavar%d)) call display(this%anavar%d(i),idat,rdat,ddat,bdat,cdat)
+  end do
+end if
 ddat=dmiss
 
-if (associated(this%volanab)) bdat=this%volanab(1,1,1)
-if (associated(this%anavar%b)) call display(this%anavar%b(1),idat,rdat,ddat,bdat,cdat)
+if (associated(this%volanab)) then
+  do i=1,size(this%anavar%b)
+    bdat=this%volanab(1,i,1)
+    if (associated(this%anavar%b)) call display(this%anavar%b(i),idat,rdat,ddat,bdat,cdat)
+  end do
+end if
 bdat=bmiss
 
-if (associated(this%volanac)) cdat=this%volanac(1,1,1)
-if (associated(this%anavar%c)) call display(this%anavar%c(1),idat,rdat,ddat,bdat,cdat)
+if (associated(this%volanac)) then
+  do i=1,size(this%anavar%c)
+    cdat=this%volanac(1,i,1)
+    if (associated(this%anavar%c)) call display(this%anavar%c(i),idat,rdat,ddat,bdat,cdat)
+  end do
+end if
 cdat=cmiss
 
-
 print*,"---- data vector ----"
-
-print*,"- dativar -"
+print*,""
+print*,"->>>>>>>>> dativar -"
 call display(this%dativar)
-print*,"- datiattr -"
+print*,""
+print*,"->>>>>>>>> datiattr -"
 call display(this%datiattr)
-print*,"- dativarattr -"
+print*,""
+print*,"->>>>>>>>> dativarattr -"
 call display(this%dativarattr)
 
 print*,"-- data data section (first point) --"
@@ -454,25 +481,44 @@ ddat=dmiss
 bdat=bmiss
 cdat=cmiss
 
-
-if (associated(this%voldatii)) idat=this%voldatii(1,1,1,1,1,1)
-if (associated(this%dativar%i)) call display(this%dativar%i(1),idat,rdat,ddat,bdat,cdat)
+if (associated(this%voldatii)) then
+  do i=1,size(this%dativar%i)
+    idat=this%voldatii(1,i,1,1,1,1)
+    if (associated(this%dativar%i)) call display(this%dativar%i(i),idat,rdat,ddat,bdat,cdat)
+  end do
+end if
 idat=imiss
 
-if (associated(this%voldatir)) rdat=this%voldatir(1,1,1,1,1,1)
-if (associated(this%dativar%r)) call display(this%dativar%r(1),idat,rdat,ddat,bdat,cdat)
+if (associated(this%voldatir)) then
+  do i=1,size(this%dativar%r)
+    rdat=this%voldatir(1,i,1,1,1,1)
+    if (associated(this%dativar%i)) call display(this%dativar%r(i),idat,rdat,ddat,bdat,cdat)
+  end do
+end if
 rdat=rmiss
 
-if (associated(this%voldatid)) ddat=this%voldatid(1,1,1,1,1,1)
-if (associated(this%dativar%d)) call display(this%dativar%d(1),idat,rdat,ddat,bdat,cdat)
+if (associated(this%voldatid)) then
+  do i=1,size(this%dativar%d)
+    ddat=this%voldatid(1,i,1,1,1,1)
+    if (associated(this%dativar%d)) call display(this%dativar%d(i),idat,rdat,ddat,bdat,cdat)
+  end do
+end if
 ddat=dmiss
 
-if (associated(this%voldatib)) bdat=this%voldatib(1,1,1,1,1,1)
-if (associated(this%dativar%b)) call display(this%dativar%b(1),idat,rdat,ddat,bdat,cdat)
+if (associated(this%voldatib)) then
+  do i=1,size(this%dativar%b)
+    bdat=this%voldatib(1,i,1,1,1,1)
+    if (associated(this%dativar%b)) call display(this%dativar%b(i),idat,rdat,ddat,bdat,cdat)
+  end do
+end if
 bdat=bmiss
 
-if (associated(this%voldatic)) cdat=this%voldatic(1,1,1,1,1,1)
-if (associated(this%dativar%c)) call display(this%dativar%c(1),idat,rdat,ddat,bdat,cdat)
+if (associated(this%voldatic)) then
+  do i=1,size(this%dativar%c)
+    cdat=this%voldatic(1,i,1,1,1,1)
+    if (associated(this%dativar%c)) call display(this%dativar%c(i),idat,rdat,ddat,bdat,cdat)
+  end do
+end if
 cdat=cmiss
 
 
