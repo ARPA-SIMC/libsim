@@ -302,4 +302,20 @@ ENDDO
 
 END FUNCTION fnblnk
 
+
+!> return the suffix of filename
+FUNCTION suffixname ( Input_String ) RESULT ( Output_String )
+                                ! -- Argument and result
+CHARACTER( * ), INTENT( IN ) :: Input_String !< strig to convert
+CHARACTER( LEN( Input_String ) ) :: Output_String
+                                ! -- Local variables
+INTEGER :: i
+
+Output_String=""
+i = index (input_string,".",back=.True.)
+if (i > 0 .and. i < len(Input_String)) Output_String= Input_String(i+1:)
+
+END FUNCTION Suffixname
+
+
 END MODULE char_utilities
