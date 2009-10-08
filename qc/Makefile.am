@@ -1,3 +1,4 @@
+if DBALLE
 lib_LTLIBRARIES = libsim_qc.la
 libsim_qc_la_SOURCES = modqc.f90 modqccli.f90
 
@@ -11,7 +12,7 @@ endif
 # c'e` una maniera migliore?
 tmpvar = $(libsim_qc_la_SOURCES:.f90=.mod)
 nodist_include_HEADERS = $(tmpvar:.F90=.mod)
-
+endif
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT) *.mod

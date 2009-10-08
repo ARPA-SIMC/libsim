@@ -2,16 +2,13 @@ AM_FCFLAGS = -I../base -I../grib -I../volgrid6d -I../vol7d -I../qc -I../termolib
 EXTRA_DIST = log4crc
 bin_PROGRAMS =
 
-noinst_PROGRAMS = esempio_file_utilities esempio_v7d esempio_qc_convert esempio_termolib log4fortran example_getopt
+noinst_PROGRAMS = esempio_file_utilities esempio_v7d esempio_termolib log4fortran example_getopt
 
 esempio_file_utilities_SOURCES = esempio_file_utilities.f90
 esempio_file_utilities_LDADD = ../base/libsim_base.la
 
 esempio_v7d_SOURCES = esempio_v7d.f90
 esempio_v7d_LDADD = ../base/libsim_base.la ../vol7d/libsim_vol7d.la ../log4fortran/liblog4fortran.la
-
-esempio_qc_convert_SOURCES = esempio_qc_convert.f90
-esempio_qc_convert_LDADD = ../base/libsim_base.la ../vol7d/libsim_vol7d.la ../log4fortran/liblog4fortran.la ../qc/libsim_qc.la
 
 esempio_termolib_SOURCES  = esempio_termolib.f90 
 esempio_termolib_LDADD = ../base/libsim_base.la ../termolib/libsim_termolib.la 
@@ -32,7 +29,7 @@ endif
 
 
 if DBALLE
-noinst_PROGRAMS += esempio_v7ddballe esempio_v7ddballe_multi esempio_v7ddballe_import_export esempio_v7ddballe_export esempio_qccli example_v7ddballe_v7d2dba
+noinst_PROGRAMS += esempio_v7ddballe esempio_v7ddballe_multi esempio_v7ddballe_import_export esempio_v7ddballe_export esempio_qccli esempio_qc_convert example_v7ddballe_v7d2dba
 
 esempio_v7ddballe_SOURCES = esempio_v7ddballe.f90
 esempio_v7ddballe_LDADD = ../base/libsim_base.la ../vol7d/libsim_vol7d.la ../log4fortran/liblog4fortran.la
@@ -79,6 +76,9 @@ endif
 
 esempio_qccli_SOURCES = esempio_qccli.f90
 esempio_qccli_LDADD = ../base/libsim_base.la ../vol7d/libsim_vol7d.la ../log4fortran/liblog4fortran.la ../qc/libsim_qc.la
+
+esempio_qc_convert_SOURCES = esempio_qc_convert.f90
+esempio_qc_convert_LDADD = ../base/libsim_base.la ../vol7d/libsim_vol7d.la ../log4fortran/liblog4fortran.la ../qc/libsim_qc.la
 
 endif
 
