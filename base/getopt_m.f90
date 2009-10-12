@@ -25,6 +25,8 @@
 MODULE getopt_m
 USE log4fortran
 USE err_handling
+USE kinds
+USE char_utilities
 IMPLICIT NONE
 
 CHARACTER(len=80):: optarg !< the argument to the current option, if applicable
@@ -50,6 +52,39 @@ end type option_s
 
 ! grpind is index of next option within group; always >= 2
 integer, private:: grpind=2
+
+INTERFACE op_option_new
+  MODULE PROCEDURE op_option_newc, op_option_newi, op_option_newr, op_option_newd, &
+   op_option_newl !, op_option_newcount
+END INTERFACE
+
+INTERFACE delete
+  MODULE PROCEDURE optionparser_delete, op_option_delete
+END INTERFACE
+
+TYPE optionparser
+  PRIVATE
+  INTEGER(kind=int_b),POINTER :: usage_msg(:), description_msg(:)
+  TYPE(op_option), POINTER :: option(:)
+  LOGICAL :: option_allocated
+END TYPE optionparser
+
+TYPE op_option
+  PRIVATE
+  CHARACTER(len=1) :: short_opt
+  CHARACTER(len=80) :: long_opt
+  LOGICAL :: need_arg
+  CHARACTER(len=1024),POINTER :: destc
+  INTEGER :: destclen
+  INTEGER,POINTER :: desti
+  REAL,POINTER :: destr
+  DOUBLE PRECISION, POINTER :: destd
+  LOGICAL,POINTER :: destl
+  INTEGER,POINTER :: destcount
+  INTEGER(kind=int_b),POINTER :: help_msg(:)
+END TYPE op_option
+
+PRIVATE op_option_new_common, op_option_found
 
 contains
 
@@ -203,5 +238,334 @@ end function process_short
 !> \example example_getopt.f90
 !! \brief example of use of getopt routine
 !! Fortran 95 getopt() and getopt_long(), similar to those in standard C library.
+
+FUNCTION op_option_newc(short_opt, long_opt, dest, default, help) RESULT(this)
+CHARACTER(len=1),INTENT(in) :: short_opt !< the short option (may be empty)
+CHARACTER(len=*),INTENT(in) :: long_opt !< the long option (may be empty)
+CHARACTER(len=*),TARGET :: dest !< the destination of the option parse result
+CHARACTER(len=*),OPTIONAL :: default !< the default value to give to dest if no option is not found
+CHARACTER(len=*),OPTIONAL :: help !< the help message that will be formatted and pretty-printed on screen
+
+TYPE(op_option) :: this
+
+! common initialisation
+this = op_option_new_common(short_opt, long_opt, help)
+
+this%destc => dest
+this%destclen = LEN(dest) ! needed to avoid exceeding the length of dest
+IF (PRESENT(default)) this%destc(1:this%destclen) = default
+this%need_arg = .TRUE.
+
+END FUNCTION op_option_newc
+
+
+FUNCTION op_option_newi(short_opt, long_opt, dest, default, help) RESULT(this)
+CHARACTER(len=1),INTENT(in) :: short_opt !< the short option (may be empty)
+CHARACTER(len=*),INTENT(in) :: long_opt !< the long option (may be empty)
+INTEGER,TARGET :: dest !< the destination of the option parse result
+INTEGER,OPTIONAL :: default !< the default value to give to dest if no option is not found
+CHARACTER(len=*),OPTIONAL :: help !< the help message that will be formatted and pretty-printed on screen
+
+TYPE(op_option) :: this
+
+! common initialisation
+this = op_option_new_common(short_opt, long_opt, help)
+
+this%desti => dest
+IF (PRESENT(default)) this%desti = default
+this%need_arg = .TRUE.
+
+END FUNCTION op_option_newi
+
+
+FUNCTION op_option_newr(short_opt, long_opt, dest, default, help) RESULT(this)
+CHARACTER(len=1),INTENT(in) :: short_opt !< the short option (may be empty)
+CHARACTER(len=*),INTENT(in) :: long_opt !< the long option (may be empty)
+REAL,TARGET :: dest !< the destination of the option parse result
+REAL,OPTIONAL :: default !< the default value to give to dest if no option is not found
+CHARACTER(len=*),OPTIONAL :: help !< the help message that will be formatted and pretty-printed on screen
+
+TYPE(op_option) :: this
+
+! common initialisation
+this = op_option_new_common(short_opt, long_opt, help)
+
+this%destr => dest
+IF (PRESENT(default)) this%destr = default
+this%need_arg = .TRUE.
+
+END FUNCTION op_option_newr
+
+
+FUNCTION op_option_newd(short_opt, long_opt, dest, default, help) RESULT(this)
+CHARACTER(len=1),INTENT(in) :: short_opt !< the short option (may be empty)
+CHARACTER(len=*),INTENT(in) :: long_opt !< the long option (may be empty)
+DOUBLE PRECISION,TARGET :: dest !< the destination of the option parse result
+DOUBLE PRECISION,OPTIONAL :: default !< the default value to give to dest if no option is not found
+CHARACTER(len=*),OPTIONAL :: help !< the help message that will be formatted and pretty-printed on screen
+
+TYPE(op_option) :: this
+
+! common initialisation
+this = op_option_new_common(short_opt, long_opt, help)
+
+this%destd => dest
+IF (PRESENT(default)) this%destd = default
+this%need_arg = .TRUE.
+
+END FUNCTION op_option_newd
+
+
+FUNCTION op_option_newl(short_opt, long_opt, dest, default, help) RESULT(this)
+CHARACTER(len=1),INTENT(in) :: short_opt !< the short option (may be empty)
+CHARACTER(len=*),INTENT(in) :: long_opt !< the long option (may be empty)
+LOGICAL,TARGET :: dest !< the destination of the option parse result
+LOGICAL,OPTIONAL :: default !< the default value to give to dest if no option is not found
+CHARACTER(len=*),OPTIONAL :: help !< the help message that will be formatted and pretty-printed on screen
+
+TYPE(op_option) :: this
+
+! common initialisation
+this = op_option_new_common(short_opt, long_opt, help)
+
+this%destl => dest
+IF (PRESENT(default)) this%destl = default
+this%need_arg = .FALSE.
+
+END FUNCTION op_option_newl
+
+
+!FUNCTION op_option_newcount(short_opt, long_opt, dest, default, help) RESULT(this)
+!CHARACTER(len=1),INTENT(in) :: short_opt !< the short option (may be empty)
+!CHARACTER(len=*),INTENT(in) :: long_opt !< the long option (may be empty)
+!INTEGER,TARGET :: dest !< the destination of the option parse result
+!INTEGER,OPTIONAL :: default !< the default value to give to dest if no option is not found
+!CHARACTER(len=*),OPTIONAL :: help !< the help message that will be formatted and pretty-printed on screen
+!
+!TYPE(op_option) :: this
+!
+!! common initialisation
+!this = op_option_new_common(short_opt, long_opt, help)
+!
+!this%destcount => dest
+!IF (PRESENT(default)) this%destcount = default
+!this%need_arg = .FALSE.
+!NULLIFY(this%desti)
+!NULLIFY(this%destr)
+!NULLIFY(this%destd)
+!NULLIFY(this%destl)
+!
+!END FUNCTION op_option_newcount
+
+
+FUNCTION op_option_new_common(short_opt, long_opt, help) RESULT(this)
+CHARACTER(len=1),INTENT(in) :: short_opt
+CHARACTER(len=*),INTENT(in) :: long_opt
+CHARACTER(len=*),OPTIONAL :: help
+
+TYPE(op_option) :: this
+
+INTEGER(kind=int_b) :: dummy(1)
+
+IF (short_opt == '' .AND. long_opt == '') THEN
+  !errore
+ENDIF
+this%short_opt = short_opt
+this%long_opt = long_opt
+IF (PRESENT(help)) THEN
+  ALLOCATE(this%help_msg(LEN_TRIM(help) + 1))
+  this%help_msg = fchar_to_cstr(TRIM(help))
+ELSE
+  NULLIFY(this%help_msg)
+ENDIF
+NULLIFY(this%destc)
+NULLIFY(this%desti)
+NULLIFY(this%destr)
+NULLIFY(this%destd)
+NULLIFY(this%destl)
+NULLIFY(this%destcount)
+
+END FUNCTION op_option_new_common
+
+
+SUBROUTINE op_option_delete(this)
+TYPE(op_option),INTENT(out) :: this
+
+IF (ASSOCIATED(this%help_msg)) DEALLOCATE(this%help_msg)
+NULLIFY(this%destc)
+NULLIFY(this%desti)
+NULLIFY(this%destr)
+NULLIFY(this%destd)
+NULLIFY(this%destl)
+NULLIFY(this%destcount)
+
+END SUBROUTINE op_option_delete
+
+
+SUBROUTINE op_option_found(this, optarg)
+TYPE(op_option),INTENT(inout) :: this
+CHARACTER(len=*),INTENT(in),OPTIONAL :: optarg
+
+
+IF (this%need_arg .AND. PRESENT(optarg)) THEN
+  IF (ASSOCIATED(this%destc)) THEN
+    this%destc(1:this%destclen) = optarg
+  ELSE IF (ASSOCIATED(this%desti)) THEN
+    READ(optarg,'(I12)',ERR=100)this%desti
+  ELSE IF (ASSOCIATED(this%destr)) THEN
+    READ(optarg,'(F20.0)',ERR=100)this%destr
+  ELSE IF (ASSOCIATED(this%destd)) THEN
+    READ(optarg,'(F20.0)',ERR=100)this%destd
+  ENDIF
+ELSE IF (ASSOCIATED(this%destl)) THEN
+  this%destl = .TRUE.
+ELSE IF (ASSOCIATED(this%destcount)) THEN
+  this%destcount = this%destcount + 1
+ENDIF
+RETURN
+
+100 CONTINUE ! error condition 
+
+END SUBROUTINE op_option_found
+
+
+FUNCTION optionparser_new(option) RESULT(this)
+TYPE(op_option),TARGET,OPTIONAL :: option(:)
+
+TYPE(optionparser) :: this
+
+NULLIFY(this%usage_msg, this%description_msg)
+IF (PRESENT(option)) this%option => option
+this%option_allocated = .FALSE.
+
+END FUNCTION optionparser_new
+
+
+SUBROUTINE optionparser_delete(this)
+TYPE(optionparser),INTENT(inout) :: this
+
+INTEGER :: i
+
+IF (ASSOCIATED(this%option)) THEN
+  DO i = 1, SIZE(this%option)
+    CALL delete(this%option(i))
+  ENDDO
+ENDIF
+IF (ASSOCIATED(this%usage_msg)) DEALLOCATE(this%usage_msg)
+IF (ASSOCIATED(this%description_msg)) DEALLOCATE(this%description_msg)
+IF (this%option_allocated) DEALLOCATE(this%option)
+
+END SUBROUTINE optionparser_delete
+
+
+FUNCTION optionparser_parseoptions(this) RESULT(nextarg)
+TYPE(optionparser),INTENT(inout) :: this
+
+INTEGER :: nextarg
+
+INTEGER :: i, j, endopt, indeq
+CHARACTER(len=1024) :: arg, optarg
+
+i = 1
+DO WHILE(i <= iargc())
+  CALL getarg(i, arg)
+  IF (arg == '--') THEN ! end of options
+    nextarg = i + 1
+    RETURN
+  ELSE IF (arg(1:2) == '--') THEN ! long option
+    indeq = INDEX(arg, '=')
+    IF (indeq /= 0) THEN ! = present
+      endopt = indeq - 1
+    ELSE ! no =
+      endopt = LEN_TRIM(arg)
+    ENDIF
+    find_longopt: DO j = 1, SIZE(this%option)
+      IF (this%option(j)%long_opt == arg(3:endopt)) THEN ! found option
+        IF (this%option(j)%need_arg) THEN
+          IF (indeq /= 0) THEN
+            optarg = arg(indeq+1:)
+          ELSE
+            i=i+1
+            CALL getarg(i, optarg)
+          ENDIF
+          CALL op_option_found(this%option(j), optarg)
+        ELSE
+          CALL op_option_found(this%option(j))
+        ENDIF
+        EXIT find_longopt
+      ENDIF
+    ENDDO find_longopt
+  ELSE IF (arg(1:1) == '-') THEN ! short option
+    find_shortopt: DO j = 1, SIZE(this%option)
+      IF (this%option(j)%short_opt == arg(2:2)) THEN ! found option
+        IF (this%option(j)%need_arg) THEN
+          IF (LEN_TRIM(arg) > 2) THEN
+            optarg = arg(3:)
+          ELSE
+            i=i+1
+            CALL getarg(i, optarg)
+          ENDIF
+          CALL op_option_found(this%option(j), optarg)
+        ELSE
+          CALL op_option_found(this%option(j))
+        ENDIF
+        EXIT find_shortopt
+      ENDIF
+    ENDDO find_shortopt
+  ELSE ! end of options
+    nextarg = i
+    RETURN
+  ENDIF
+  i = i + 1
+ENDDO
+nextarg = i
+
+END FUNCTION optionparser_parseoptions
+
+
+SUBROUTINE optionparser_printhelp(this)
+TYPE(optionparser),INTENT(inout) :: this
+
+INTEGER :: i, j, n, ncols
+CHARACTER(len=80) :: buf
+character(len=10) :: argname
+TYPE(line_split) :: help_line
+
+ncols = default_columns()
+CALL getarg(0, buf)
+
+WRITE(*,'(A)')'Usage: '//TRIM(buf)//' [options] [arguments]'
+WRITE(*,'(A)')'Where [options] can be any of:'
+
+DO i = 1, SIZE(this%option)
+  WRITE(*,'()')
+  IF (this%option(i)%need_arg) THEN
+    IF (ASSOCIATED(this%option(i)%destc)) THEN
+      argname = 'STRING'
+    ELSE IF (ASSOCIATED(this%option(i)%desti)) THEN
+      argname = 'INT'
+    ELSE IF (ASSOCIATED(this%option(i)%destr) .OR. &
+     ASSOCIATED(this%option(i)%destd)) THEN
+      argname = 'REAL'
+    ELSE
+      argname = 'ARG'
+    ENDIF
+    WRITE(*,'(''-'',A,'' '',A,'', --'',A,''='',A)') &
+     this%option(i)%short_opt,TRIM(argname), &
+     TRIM(this%option(i)%long_opt),TRIM(argname)
+  ELSE
+    WRITE(*,'(''-'',A,'', --'',A)') &
+     this%option(i)%short_opt,TRIM(this%option(i)%long_opt)
+  ENDIF
+  IF (ASSOCIATED(this%option(i)%help_msg)) THEN
+    help_line = line_split_new(cstr_to_fchar(this%option(i)%help_msg), ncols-10)
+    DO j = 1, line_split_get_nlines(help_line)
+      WRITE(*,'(T10,A)')line_split_get_line(help_line,j)
+    ENDDO
+  ENDIF
+ENDDO
+
+END SUBROUTINE optionparser_printhelp
+
 end module getopt_m
 
