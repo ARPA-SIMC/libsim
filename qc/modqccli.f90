@@ -68,6 +68,8 @@ implicit none
 
 public
 
+character (len=255),parameter:: subcategory="QCcli"
+
 integer, parameter :: ncli_level=10
 !> standard heigth for climatological use (low level)
 integer :: cli_level1(ncli_level) = (/-100,100,250,500,750,1000,1250,1500,1750,2000/)
@@ -84,7 +86,7 @@ type :: qcclitype
   integer,pointer :: data_id_out(:,:,:,:,:) !< Indici dati del DB in output
   integer, pointer :: in_macroa(:) !< Maacroarea di appartenenza delle stazioni
   TYPE(geo_coordvect),POINTER :: macroa(:) !< serie di coordinate che definiscono le macroaree
-
+  integer :: category !< log4fortran
 end type qcclitype
 
 
@@ -109,21 +111,25 @@ contains
 !>\brief Init del controllo di qualità climatico.
 !!Effettua la lettura dei file e altre operazioni di inizializzazione.
 
-subroutine qccliinit(qccli,v7d,ier,data_id_in,macropath,climapath)
+subroutine qccliinit(qccli,v7d,var,data_id_in,macropath,climapath,categoryappend)
 
 type(qcclitype),intent(in out) :: qccli !< Oggetto per il controllo climatico
 type (vol7d),intent(in),target:: v7d !< Il volume Vol7d da controllare
-integer ,intent(out) :: ier !< condizione di errore ( tutto OK = O )
+character(len=*),INTENT(in) :: var(:)!< variabili da importare secondo la tabella B locale o relativi alias
 integer,intent(in),optional,target:: data_id_in(:,:,:,:,:) !< Indici dei dati in DB
 character(len=512),intent(in),optional :: macropath !< file delle macroaree
 character(len=512),intent(in),optional :: climapath !< file con il volume del clima
+character(len=*),INTENT(in),OPTIONAL :: categoryappend !< appennde questo suffisso al namespace category di log4fortran
 
 type (vol7d_dballe) :: v7d_dballetmp
 
-integer :: istat,iuni
+integer :: istat,iuni,i
 character(len=512) :: filepath
+character(len=512) :: a_name
 
-ier=0
+
+call l4f_launcher(a_name,a_name_append=trim(subcategory)//"."//trim(categoryappend))
+qccli%category=l4f_category_get(a_name)
 
 nullify ( qccli%in_macroa )
 nullify ( qccli%data_id_in )
@@ -148,7 +154,7 @@ CALL import(qccli%macroa, shpfilesim=filepath)
 if (present(climapath))then
   filepath=climapath
 else
- filepath=get_package_filepath('climaprec.v7d', filetype_data)
+ filepath=get_package_filepath('climaprec.bufr', filetype_data)
 end if
 
 
@@ -162,11 +168,13 @@ case("v7d")
   call import(qccli%clima,unit=iuni)
   close (unit=iuni)
 case("bufr")
-  call init(v7d_dballetmp,file=.true.,filename=filepath)
-  call import(v7d_dballetmp)
+  call init(v7d_dballetmp,file=.true.,filename=filepath,categoryappend=trim(a_name)//".clima")
+  !call import(v7d_dballetmp)
+  call import(v7d_dballetmp,var=var,varkind=(/("r",i=1,size(var))/))
   call copy(v7d_dballetmp%vol7d,qccli%clima)
   call delete(v7d_dballetmp)
 case default
+  call l4f_category_log(qccli%category,L4F_ERROR,"file type not supported: "//trim(filepath))
   call raise_error(filepath//" file type not supported")
 end select
 
@@ -175,24 +183,17 @@ end subroutine qccliinit
 
 
 !>\brief Allocazioni di memoria
-subroutine qcclialloc(qccli,ier)
+subroutine qcclialloc(qccli)
                                 ! pseudo costruttore con distruttore automatico
 
 type(qcclitype),intent(in out) :: qccli !< Oggetto per il controllo climatico
-integer ,intent(out):: ier !< stato di errore
 
 integer :: istat,istatt,nv
 integer :: sh(5)
 
 ! se ti sei dimenticato di deallocare ci penso io
-call  qcclidealloc(qccli,ier)
-if ( ier /= 0 )then
-  ier=2
-  return
-end if
+call  qcclidealloc(qccli)
 
-istatt=0
-ier=0
 
 !!$if (associated (qccli%v7d%dativar%r )) then
 !!$  nv=size(qccli%v7d%dativar%r)
@@ -208,14 +209,18 @@ ier=0
 
 if (associated (qccli%v7d%ana )) then
   allocate (qccli%in_macroa(size(qccli%v7d%ana )),stat=istatt)
-  if (istatt /= 0) ier=1
+  if (istatt /= 0) then
+    call l4f_category_log(qccli%category,L4F_ERROR,"allocate error")
+    call raise_error("allocate error")
+  end if
 end if
 
 if (associated(qccli%data_id_in))then
   sh=shape(qccli%data_id_in)
   allocate (qccli%data_id_out(sh(1),sh(2),sh(3),sh(4),sh(5)),stat=istatt)
   if (istatt /= 0)then
-    ier=1
+    call l4f_category_log(qccli%category,L4F_ERROR,"allocate error")
+    call raise_error("allocate error")
   else
     qccli%data_id_out=imiss
   end if
@@ -228,13 +233,10 @@ end subroutine qcclialloc
 
 !>\brief Deallocazione della memoria
 
-subroutine qcclidealloc(qccli,ier)
+subroutine qcclidealloc(qccli)
                                 ! pseudo distruttore
 
 type(qcclitype),intent(in out) :: qccli !< Oggetto per l controllo climatico
-integer,intent(out) :: ier !< Condizione di errore
-
-ier=0
 
 !!$if ( associated ( qccli%valminr)) then
 !!$  deallocate(qccli%valminr)
@@ -259,18 +261,18 @@ end subroutine qcclidealloc
 !>\brief Cancellazione
 
 
-subroutine qcclidelete(qccli,ier)
+subroutine qcclidelete(qccli)
                                 ! decostruttore a mezzo
 type(qcclitype),intent(in out) :: qccli !< Oggetto per l controllo climatico
-integer ,intent(out) :: ier !< Condizione di errore
 
 integer :: istat
 
-ier=0
-
-call qcclidealloc(qccli,ier)
+call qcclidealloc(qccli)
 
 call delete(qccli%clima)
+
+!delete logger
+call l4f_category_delete(qccli%category)
 
 return
 end subroutine qcclidelete
@@ -284,12 +286,11 @@ end subroutine qcclidelete
 !!vengono assegnate le opportune confidenze.
 
 
-SUBROUTINE quaconcli (qccli,ier,tbattrin,tbattrout,perc,&
+SUBROUTINE quaconcli (qccli,tbattrin,tbattrout,perc,&
  anamask,timemask,levelmask,timerangemask,varmask,networkmask)
 
 
 type(qcclitype),intent(in out) :: qccli !< Oggetto per il controllo di qualità
-integer ,intent(out) :: ier !< Condizione di errore
 character (len=10) ,intent(in),optional :: tbattrin !< attributo con la confidenza in input
 character (len=10) ,intent(in),optional :: tbattrout !< attributo con la confidenza in output
 logical ,intent(in),optional :: anamask(:) !< Filtro sulle anagrafiche
@@ -342,8 +343,10 @@ else
 end if
 
 if (indtbattrin <=0 .or. indtbattrout <= 0 ) then
-  ier=5
-  return
+
+  call l4f_category_log(qccli%category,L4F_ERROR,"error finding attribute index in/out")
+  call raise_error("error finding attribute index in/out")
+
 end if
 
 if(present(anamask)) then
@@ -441,8 +444,9 @@ do indana=1,size(qccli%v7d%ana)
 
               !print *,"dato  ",qccli%v7d%timerange(indtimerange) 
               !print *,"clima ",qccli%clima%timerange
-              call l4f_log(L4F_DEBUG,"Index:"// to_char(indcana)//to_char(indctime)//to_char(indclevel)//&
-               to_char(indctimerange)//to_char(indcdativarr)//to_char(indcnetwork))
+              !call l4f_log(L4F_DEBUG,"Index:"// to_char(indcana)//to_char(indctime)//to_char(indclevel)//&
+              ! to_char(indctimerange)//to_char(indcdativarr)//to_char(indcnetwork))
+
               if (indcana <= 0 .or. indctime <= 0 .or. indclevel <= 0 .or. indctimerange <= 0 .or. indcdativarr <= 0 &
                .or. indcnetwork <= 0 ) cycle
 
@@ -482,8 +486,6 @@ do indana=1,size(qccli%v7d%ana)
   end do
 end do
 
-
-ier=0
 return
 
 end subroutine quaconcli
