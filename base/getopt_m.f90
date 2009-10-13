@@ -12,15 +12,25 @@
 ! me regarding licensing terms.
 !
 ! ------------------------------------------------------------
-
-!> Fortran 95 getopt() and getopt_long(), similar to those in standard C library.
-!! This module provides the getopt function, scans the command line
-!! and returns the options and possible optional arguments matching
-!! those requested.
-!! The scanning stops when a non option argument (i.e. not starting with \c -)
-!! or the special argument \c -- is found, so that the remaining arguments
-!! (through \a optind) can be treated as a list of files or operands for the program.
+!> Module for parsing command-line optons.
+!! This module defines 2 alternative approaches for parsing
+!! command-line arguments: the Fortran 95 getopt() and getopt_long()
+!! functions, similar to those in standard C library and the optparser
+!! class, similar to the one found in the Python library.
+!!
+!! The getopt function scans the command line and returns the options
+!! and possible optional arguments matching those requested.  The
+!! scanning stops when a non option argument (i.e. not starting with
+!! \c -) or the special argument \c -- is found, so that the remaining
+!! arguments (through \a optind) can be treated as a list of files or
+!! operands for the program.
+!!
 !! \include example_getopt.f90
+!!
+!! The optparse class provides a more object-oriented approach and a
+!! simple way to build a help message from the command-line options
+!! definition.
+!!
 !! \ingroup base
 MODULE getopt_m
 USE log4fortran
@@ -54,21 +64,62 @@ end type option_s
 integer, private:: grpind=2
 
 INTERFACE op_option_new
-  MODULE PROCEDURE op_option_newc, op_option_newi, op_option_newr, op_option_newd, &
-   op_option_newl !, op_option_newcount
+  MODULE PROCEDURE op_optionc_new, op_optioni_new, op_optionr_new, op_optiond_new, &
+   op_optionl_new !, op_option_newcount
 END INTERFACE
 
 INTERFACE delete
   MODULE PROCEDURE optionparser_delete, op_option_delete
 END INTERFACE
 
+
+!> This class allows to describe how to parse the command-line options
+!! of a program in an object-oriented way, similarly to the optparse
+!! class found in Python library. The command-line options are
+!! described by an array of getopt_m::op_option objects, and the
+!! effect of command line parsing is to set some desired variables
+!! according to the information provided on the command line.
+!!
+!! The class handles both GNU-style long options, introduced by a
+!! double dash \c -- and containing any character except the equal
+!! sign \c == , and the traditional Unix short options, introduced by
+!! a single dash \c - and containing a single character which can be
+!! any ASCII character except the dash itself.
+!!
+!! Options may require an argument, which can be integer, real, double
+!! precision or character, in that case the argument may be given in
+!! the following way (long and short options):
+!!
+!!  - <tt>--lon=34.5</tt>
+!!  - <tt>--lon 34.5</tt>
+!!  - <tt>-l34.5</tt>
+!!  - <tt>-l 34.5</tt>
+!!
+!! Grouping of short options, like \c -xvf is not allowed.  When a
+!! double dash \c -- or an argument (which is not an argument to an
+!! option) not starting by a dash \c - is encountered, the parsing of
+!! optons stops and the management of the remaining arguments
+!! (typically a list of files) is left to the calling program.
 TYPE optionparser
   PRIVATE
   INTEGER(kind=int_b),POINTER :: usage_msg(:), description_msg(:)
   TYPE(op_option), POINTER :: option(:)
-  LOGICAL :: option_allocated
+  LOGICAL :: option_allocated, error_cond
 END TYPE optionparser
 
+!> This class, to be used in association with the getopt_m::optionparser class,
+!! describes a single command-line option.
+!! Options can be of the following kinds:
+!!
+!!  - character (with additional argument)
+!!  - integer (with additional argument)
+!!  - real (with additional argument)
+!!  - double precision (with additional argument)
+!!  - logical (without additional argument)
+!!  - count (without additional argument)
+!!
+!! Each option can be introduced by a short and/or a long option
+!! string, see the description of getopt_m::optionparser .
 TYPE op_option
   PRIVATE
   CHARACTER(len=1) :: short_opt
@@ -239,11 +290,19 @@ end function process_short
 !! \brief example of use of getopt routine
 !! Fortran 95 getopt() and getopt_long(), similar to those in standard C library.
 
-FUNCTION op_option_newc(short_opt, long_opt, dest, default, help) RESULT(this)
+
+!> Create a new option with a character type argument.
+!! When parsing will be performed, if the requested option is
+!! encountered, its corresponding compulsory argument will be copied
+!! into the provided destination, truncating it if it is too long. An
+!! optional value can be provided for the destination. Please use the
+!! generic \a op_option_new constructor rather than this particular
+!! function.
+FUNCTION op_optionc_new(short_opt, long_opt, dest, default, help) RESULT(this)
 CHARACTER(len=1),INTENT(in) :: short_opt !< the short option (may be empty)
 CHARACTER(len=*),INTENT(in) :: long_opt !< the long option (may be empty)
 CHARACTER(len=*),TARGET :: dest !< the destination of the option parse result
-CHARACTER(len=*),OPTIONAL :: default !< the default value to give to dest if no option is not found
+CHARACTER(len=*),OPTIONAL :: default !< the default value to give to dest if option is not found
 CHARACTER(len=*),OPTIONAL :: help !< the help message that will be formatted and pretty-printed on screen
 
 TYPE(op_option) :: this
@@ -256,14 +315,20 @@ this%destclen = LEN(dest) ! needed to avoid exceeding the length of dest
 IF (PRESENT(default)) this%destc(1:this%destclen) = default
 this%need_arg = .TRUE.
 
-END FUNCTION op_option_newc
+END FUNCTION op_optionc_new
 
 
-FUNCTION op_option_newi(short_opt, long_opt, dest, default, help) RESULT(this)
+!> Create a new option with an integer type argument.
+!! When parsing will be performed, if the requested option is
+!! encountered, its corresponding compulsory argument will be copied
+!! into the provided destination. An optional value can be provided
+!! for the destination. Please use the generic \a op_option_new
+!! constructor rather than this particular function.
+FUNCTION op_optioni_new(short_opt, long_opt, dest, default, help) RESULT(this)
 CHARACTER(len=1),INTENT(in) :: short_opt !< the short option (may be empty)
 CHARACTER(len=*),INTENT(in) :: long_opt !< the long option (may be empty)
 INTEGER,TARGET :: dest !< the destination of the option parse result
-INTEGER,OPTIONAL :: default !< the default value to give to dest if no option is not found
+INTEGER,OPTIONAL :: default !< the default value to give to dest if option is not found
 CHARACTER(len=*),OPTIONAL :: help !< the help message that will be formatted and pretty-printed on screen
 
 TYPE(op_option) :: this
@@ -275,14 +340,20 @@ this%desti => dest
 IF (PRESENT(default)) this%desti = default
 this%need_arg = .TRUE.
 
-END FUNCTION op_option_newi
+END FUNCTION op_optioni_new
 
 
-FUNCTION op_option_newr(short_opt, long_opt, dest, default, help) RESULT(this)
+!> Create a new option with a real type argument.
+!! When parsing will be performed, if the requested option is
+!! encountered, its corresponding compulsory argument will be copied
+!! into the provided destination. An optional value can be provided
+!! for the destination. Please use the generic \a op_option_new
+!! constructor rather than this particular function.
+FUNCTION op_optionr_new(short_opt, long_opt, dest, default, help) RESULT(this)
 CHARACTER(len=1),INTENT(in) :: short_opt !< the short option (may be empty)
 CHARACTER(len=*),INTENT(in) :: long_opt !< the long option (may be empty)
 REAL,TARGET :: dest !< the destination of the option parse result
-REAL,OPTIONAL :: default !< the default value to give to dest if no option is not found
+REAL,OPTIONAL :: default !< the default value to give to dest if option is not found
 CHARACTER(len=*),OPTIONAL :: help !< the help message that will be formatted and pretty-printed on screen
 
 TYPE(op_option) :: this
@@ -294,14 +365,20 @@ this%destr => dest
 IF (PRESENT(default)) this%destr = default
 this%need_arg = .TRUE.
 
-END FUNCTION op_option_newr
+END FUNCTION op_optionr_new
 
 
-FUNCTION op_option_newd(short_opt, long_opt, dest, default, help) RESULT(this)
+!> Create a new option with a double precision type argument.
+!! When parsing will be performed, if the requested option is
+!! encountered, its corresponding compulsory argument will be copied
+!! into the provided destination. An optional value can be provided
+!! for the destination. Please use the generic \a op_option_new
+!! constructor rather than this particular function.
+FUNCTION op_optiond_new(short_opt, long_opt, dest, default, help) RESULT(this)
 CHARACTER(len=1),INTENT(in) :: short_opt !< the short option (may be empty)
 CHARACTER(len=*),INTENT(in) :: long_opt !< the long option (may be empty)
 DOUBLE PRECISION,TARGET :: dest !< the destination of the option parse result
-DOUBLE PRECISION,OPTIONAL :: default !< the default value to give to dest if no option is not found
+DOUBLE PRECISION,OPTIONAL :: default !< the default value to give to dest if option is not found
 CHARACTER(len=*),OPTIONAL :: help !< the help message that will be formatted and pretty-printed on screen
 
 TYPE(op_option) :: this
@@ -313,14 +390,18 @@ this%destd => dest
 IF (PRESENT(default)) this%destd = default
 this%need_arg = .TRUE.
 
-END FUNCTION op_option_newd
+END FUNCTION op_optiond_new
 
 
-FUNCTION op_option_newl(short_opt, long_opt, dest, default, help) RESULT(this)
+!> Create a new logical option, without optional argument.
+!! When parsing will be performed, if the requested option is
+!! encountered, the provided destination will be set to \a
+!! .TRUE. . Please use the generic \a op_option_new constructor rather
+!! than this particular function.
+FUNCTION op_optionl_new(short_opt, long_opt, dest, help) RESULT(this)
 CHARACTER(len=1),INTENT(in) :: short_opt !< the short option (may be empty)
 CHARACTER(len=*),INTENT(in) :: long_opt !< the long option (may be empty)
 LOGICAL,TARGET :: dest !< the destination of the option parse result
-LOGICAL,OPTIONAL :: default !< the default value to give to dest if no option is not found
 CHARACTER(len=*),OPTIONAL :: help !< the help message that will be formatted and pretty-printed on screen
 
 TYPE(op_option) :: this
@@ -329,35 +410,36 @@ TYPE(op_option) :: this
 this = op_option_new_common(short_opt, long_opt, help)
 
 this%destl => dest
-IF (PRESENT(default)) this%destl = default
+!IF (PRESENT(default)) this%destl = default
 this%need_arg = .FALSE.
 
-END FUNCTION op_option_newl
+END FUNCTION op_optionl_new
 
 
-!FUNCTION op_option_newcount(short_opt, long_opt, dest, default, help) RESULT(this)
-!CHARACTER(len=1),INTENT(in) :: short_opt !< the short option (may be empty)
-!CHARACTER(len=*),INTENT(in) :: long_opt !< the long option (may be empty)
-!INTEGER,TARGET :: dest !< the destination of the option parse result
-!INTEGER,OPTIONAL :: default !< the default value to give to dest if no option is not found
-!CHARACTER(len=*),OPTIONAL :: help !< the help message that will be formatted and pretty-printed on screen
-!
-!TYPE(op_option) :: this
-!
-!! common initialisation
-!this = op_option_new_common(short_opt, long_opt, help)
-!
-!this%destcount => dest
-!IF (PRESENT(default)) this%destcount = default
-!this%need_arg = .FALSE.
-!NULLIFY(this%desti)
-!NULLIFY(this%destr)
-!NULLIFY(this%destd)
-!NULLIFY(this%destl)
-!
-!END FUNCTION op_option_newcount
+!> Create a new counter option, without optional argument.
+!! When parsing will be performed, the provided destination will be
+!! incremented by one, starting from \a start, each time the
+!! requested option is encountered.
+FUNCTION op_option_count_new(short_opt, long_opt, dest, default, help) RESULT(this)
+CHARACTER(len=1),INTENT(in) :: short_opt !< the short option (may be empty)
+CHARACTER(len=*),INTENT(in) :: long_opt !< the long option (may be empty)
+INTEGER,TARGET :: dest !< the destination of the option parse result
+INTEGER,OPTIONAL :: default !< initial value for \a dest
+CHARACTER(len=*),OPTIONAL :: help !< the help message that will be formatted and pretty-printed on screen
+
+TYPE(op_option) :: this
+
+! common initialisation
+this = op_option_new_common(short_opt, long_opt, help)
+
+this%destcount => dest
+IF (PRESENT(default)) this%destcount = default
+this%need_arg = .FALSE.
+
+END FUNCTION op_option_count_new
 
 
+! private function
 FUNCTION op_option_new_common(short_opt, long_opt, help) RESULT(this)
 CHARACTER(len=1),INTENT(in) :: short_opt
 CHARACTER(len=*),INTENT(in) :: long_opt
@@ -368,7 +450,9 @@ TYPE(op_option) :: this
 INTEGER(kind=int_b) :: dummy(1)
 
 IF (short_opt == '' .AND. long_opt == '') THEN
-  !errore
+! programmer error condition, option empty
+  CALL l4f_log(L4F_ERROR, 'in op_option, both short and log options empty')
+  CALL raise_error()
 ENDIF
 this%short_opt = short_opt
 this%long_opt = long_opt
@@ -388,8 +472,10 @@ NULLIFY(this%destcount)
 END FUNCTION op_option_new_common
 
 
+!> Desctructor for the \a op_option class, the memory associated with
+!! the object is freed.
 SUBROUTINE op_option_delete(this)
-TYPE(op_option),INTENT(out) :: this
+TYPE(op_option),INTENT(out) :: this !< object to destroy
 
 IF (ASSOCIATED(this%help_msg)) DEALLOCATE(this%help_msg)
 NULLIFY(this%destc)
@@ -402,10 +488,13 @@ NULLIFY(this%destcount)
 END SUBROUTINE op_option_delete
 
 
-SUBROUTINE op_option_found(this, optarg)
+FUNCTION op_option_found(this, optarg) RESULT(err)
 TYPE(op_option),INTENT(inout) :: this
 CHARACTER(len=*),INTENT(in),OPTIONAL :: optarg
 
+LOGICAL :: err
+
+err = .FALSE.
 
 IF (this%need_arg .AND. PRESENT(optarg)) THEN
   IF (ASSOCIATED(this%destc)) THEN
@@ -413,9 +502,9 @@ IF (this%need_arg .AND. PRESENT(optarg)) THEN
   ELSE IF (ASSOCIATED(this%desti)) THEN
     READ(optarg,'(I12)',ERR=100)this%desti
   ELSE IF (ASSOCIATED(this%destr)) THEN
-    READ(optarg,'(F20.0)',ERR=100)this%destr
+    READ(optarg,'(F20.0)',ERR=102)this%destr
   ELSE IF (ASSOCIATED(this%destd)) THEN
-    READ(optarg,'(F20.0)',ERR=100)this%destd
+    READ(optarg,'(F20.0)',ERR=102)this%destd
   ENDIF
 ELSE IF (ASSOCIATED(this%destl)) THEN
   this%destl = .TRUE.
@@ -424,25 +513,59 @@ ELSE IF (ASSOCIATED(this%destcount)) THEN
 ENDIF
 RETURN
 
-100 CONTINUE ! error condition 
+100 err = .TRUE.
+CALL l4f_log(L4F_ERROR, &
+ 'in op_option, argument '''//TRIM(optarg)//''' not valid as integer')
+RETURN
+102 err = .TRUE.
+CALL l4f_log(L4F_ERROR, &
+ 'in op_option, argument '''//TRIM(optarg)//''' not valid as real')
+RETURN
 
-END SUBROUTINE op_option_found
+END FUNCTION op_option_found
 
 
-FUNCTION optionparser_new(option) RESULT(this)
-TYPE(op_option),TARGET,OPTIONAL :: option(:)
+!> Create a new instance of an optionparser object. An array of \a op_option
+!! objects, must be provided, describing the set of command-line
+!! options recognized by the program. Additional help messages can be
+!! provided.
+!!
+!! The \a option array must be allocated, either statically or
+!! dinamically, by the calling program with the correct size (the
+!! number of different options recognized), and each of its elements
+!! has to be initialised, either before or after calling
+!! ::optionparser_new, using one of the op_option*_new functions.
+FUNCTION optionparser_new(option, usage_msg, description_msg) RESULT(this)
+TYPE(op_option),TARGET :: option(:)
+CHARACTER(len=*), INTENT(in), OPTIONAL :: usage_msg !< short help message which describes the program usage, if not provided, a standard mesage will be printed
+CHARACTER(len=*), INTENT(in), OPTIONAL :: description_msg !< long help message which describes the program purpose, if not provided, nothing will be printed
 
 TYPE(optionparser) :: this
 
-NULLIFY(this%usage_msg, this%description_msg)
-IF (PRESENT(option)) this%option => option
+IF (PRESENT(usage_msg)) THEN
+  CALL fchar_to_cstr_alloc(TRIM(usage_msg), this%usage_msg)
+ELSE
+  NULLIFY(this%usage_msg)
+ENDIF
+IF (PRESENT(description_msg)) THEN
+  CALL fchar_to_cstr_alloc(TRIM(description_msg), this%description_msg)
+ELSE
+  NULLIFY(this%description_msg)
+ENDIF
+!IF (PRESENT(option)) this%option => option
+this%option => option
 this%option_allocated = .FALSE.
+this%error_cond = .FALSE.
 
 END FUNCTION optionparser_new
 
 
+!> Destroy the optionparser object freeing all the associated memory.
+!! The destructor for each \a op_option object associated with the
+!! optionparser object \a this is called as well, while the allocation
+!! status of the option array is not modified.
 SUBROUTINE optionparser_delete(this)
-TYPE(optionparser),INTENT(inout) :: this
+TYPE(optionparser),INTENT(inout) :: this !< object to destroy
 
 INTEGER :: i
 
@@ -458,8 +581,12 @@ IF (this%option_allocated) DEALLOCATE(this%option)
 END SUBROUTINE optionparser_delete
 
 
+!> This method performs the parsing of the command-line options
+!! previously described when instantiating the optionparser object \a
+!! this. The destination variables are assigned according to the
+!! options encountered on the command line.
 FUNCTION optionparser_parseoptions(this) RESULT(nextarg)
-TYPE(optionparser),INTENT(inout) :: this
+TYPE(optionparser),INTENT(inout) :: this !< optionparser object with correctly initialised options
 
 INTEGER :: nextarg
 
@@ -488,13 +615,18 @@ DO WHILE(i <= iargc())
             i=i+1
             CALL getarg(i, optarg)
           ENDIF
-          CALL op_option_found(this%option(j), optarg)
+          this%error_cond = op_option_found(this%option(j), optarg)
         ELSE
-          CALL op_option_found(this%option(j))
+          this%error_cond = op_option_found(this%option(j))
         ENDIF
         EXIT find_longopt
       ENDIF
     ENDDO find_longopt
+    IF (j > SIZE(this%option)) THEN
+      this%error_cond = .TRUE.
+      CALL l4f_log(L4F_ERROR, &
+       'in optionparser, long option '''//TRIM(arg)//''' not valid')
+    ENDIF
   ELSE IF (arg(1:1) == '-') THEN ! short option
     find_shortopt: DO j = 1, SIZE(this%option)
       IF (this%option(j)%short_opt == arg(2:2)) THEN ! found option
@@ -505,37 +637,69 @@ DO WHILE(i <= iargc())
             i=i+1
             CALL getarg(i, optarg)
           ENDIF
-          CALL op_option_found(this%option(j), optarg)
+          this%error_cond = op_option_found(this%option(j), optarg)
         ELSE
-          CALL op_option_found(this%option(j))
+          this%error_cond = op_option_found(this%option(j))
         ENDIF
         EXIT find_shortopt
       ENDIF
     ENDDO find_shortopt
+    IF (j > SIZE(this%option)) THEN
+      this%error_cond = .TRUE.
+      CALL l4f_log(L4F_ERROR, &
+       'in optionparser, long option '''//TRIM(arg)//''' not valid')
+    ENDIF
   ELSE ! end of options
     nextarg = i
     RETURN
   ENDIF
   i = i + 1
+  IF (this%error_cond) THEN
+    CALL optionparser_printhelp(this)
+    RETURN
+  ENDIF
+  
 ENDDO
 nextarg = i
 
 END FUNCTION optionparser_parseoptions
 
 
+!> Print the help message well formatted on stdout. It can be called
+!! by the user program and it is called anyway in case of error in the
+!! interpretation of the command line.
 SUBROUTINE optionparser_printhelp(this)
-TYPE(optionparser),INTENT(inout) :: this
+TYPE(optionparser),INTENT(inout) :: this !< optionparser object with correctly initialised options
 
 INTEGER :: i, j, n, ncols
+INTEGER, PARAMETER :: indent = 10
 CHARACTER(len=80) :: buf
-character(len=10) :: argname
+CHARACTER(len=10) :: argname
 TYPE(line_split) :: help_line
 
 ncols = default_columns()
-CALL getarg(0, buf)
 
-WRITE(*,'(A)')'Usage: '//TRIM(buf)//' [options] [arguments]'
-WRITE(*,'(A)')'Where [options] can be any of:'
+IF (ASSOCIATED(this%description_msg)) THEN
+  help_line = line_split_new(cstr_to_fchar(this%description_msg), ncols)
+  DO j = 1, line_split_get_nlines(help_line)
+    WRITE(*,'(A)')line_split_get_line(help_line,j)
+  ENDDO
+  CALL delete(help_line)
+  WRITE(*,'()')
+ENDIF
+
+IF (ASSOCIATED(this%usage_msg)) THEN
+  help_line = line_split_new(cstr_to_fchar(this%usage_msg), ncols)
+  DO j = 1, line_split_get_nlines(help_line)
+    WRITE(*,'(A)')line_split_get_line(help_line,j)
+  ENDDO
+  CALL delete(help_line)
+ELSE
+  CALL getarg(0, buf)
+  WRITE(*,'(A)')'Usage: '//TRIM(buf)//' [options] [arguments]'
+  WRITE(*,'(A)')'Where [options] can be any of:'
+ENDIF
+
 
 DO i = 1, SIZE(this%option)
   WRITE(*,'()')
@@ -558,10 +722,11 @@ DO i = 1, SIZE(this%option)
      this%option(i)%short_opt,TRIM(this%option(i)%long_opt)
   ENDIF
   IF (ASSOCIATED(this%option(i)%help_msg)) THEN
-    help_line = line_split_new(cstr_to_fchar(this%option(i)%help_msg), ncols-10)
+    help_line = line_split_new(cstr_to_fchar(this%option(i)%help_msg), ncols-indent)
     DO j = 1, line_split_get_nlines(help_line)
       WRITE(*,'(T10,A)')line_split_get_line(help_line,j)
     ENDDO
+    CALL delete(help_line)
   ENDIF
 ENDDO
 

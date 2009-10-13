@@ -590,7 +590,7 @@ INTEGER :: cols
 
 INTEGER, PARAMETER :: defaultcols = 80 ! default of the defaults
 INTEGER, PARAMETER :: maxcols = 256 ! maximum value
-CHARACTER(len=8) :: ccols
+CHARACTER(len=10) :: ccols
 
 cols = defaultcols
 CALL getenv('COLUMNS', ccols)
