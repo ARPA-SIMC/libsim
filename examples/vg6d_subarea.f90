@@ -1,4 +1,4 @@
-program subarea
+PROGRAM subarea
 
 use gridinfo_class
 use grid_class
@@ -29,7 +29,9 @@ doubleprecision :: latitude_south_pole=-32.5,longitude_south_pole=10.,angle_rota
 character(len=80) :: type='regular_ll',trans_type='inter',sub_type='near'
 
 doubleprecision ::x,y,lon,lat
-
+type(op_option) :: options(17) ! remember to update dimension when adding options
+type(optionparser) :: opt
+integer :: iargc
 
 !questa chiamata prende dal launcher il nome univoco
 call l4f_launcher(a_name,a_name_force="subarea")
@@ -40,152 +42,82 @@ ier=l4f_init()
 !imposta a_name
 category=l4f_category_get(a_name//".main")
 
+! define command-line options
+options(1) = op_option_new('v', 'trans-type', trans_type, 'inter', help= &
+ 'transformation type: ''inter'' for interpolation, ''zoom'' for zooming, ''boxregrid'' for resolution reduction')
+options(2) = op_option_new('z', 'sub-type', sub_type, 'near', help= &
+ 'transformation subtype, for inter: ''near'', ''bilin'', ''boxaverage'', &
+ &for zoom: ''index'', ''coord'', for boxregrid: ''average''')
 
-do
-  select case( getopt( "a:b:c:d:hi:l:m:n:o:p:q:r:s:t:u:v:z:"))
+options(3) = op_option_new('u', 'type', type, 'regular_ll', help= &
+ 'type of interpolated grid: ''regular_ll'', ''rotated_ll''')
+options(4) = op_option_new('i', 'nx', nx, 31, help= &
+ 'number of nodes along x axis on interpolated grid')
+options(5) = op_option_new('l', 'ny', ny, 31, help= &
+ 'number of nodes along y axis on interpolated grid')
+options(6) = op_option_new('m', 'x-min', lon_min, 0.0D0, help= &
+ 'x coordinate of the lower left corner of interpolated grid')
+options(7) = op_option_new('o', 'y-min', lat_min, 30.0D0, help= &
+ 'y coordinate of the lower left corner of interpolated grid')
+options(8) = op_option_new('n', 'x-max', lon_max, 30.0D0, help= &
+ 'x coordinate of the upper right corner of interpolated grid')
+options(9) = op_option_new('p', 'y-max', lat_max, 60.0D0, help= &
+ 'y coordinate of the upper right corner of interpolated grid')
 
-  case( char(0))
-    exit
-  case( 'a' )
-    read(optarg,*,iostat=ier)ilon
-    if (ier/= 0)then
-      call l4f_category_log(category,L4F_ERROR,'a option argument error')
-      call help()
-      call exit(ier)
-    end if
+options(10) = op_option_new('q', 'latitude-south-pole', latitude_south_pole, &
+ -32.5D0, help='latitude of south pole for rotated grid')
+options(11) = op_option_new('r', 'longitude-south-pole', longitude_south_pole, &
+ 10.0D0, help='longitude of south pole for rotated grid')
+options(12) = op_option_new('s', 'angle-rotation', angle_rotation, &
+ 0.0D0, help='angle of rotation for rotated grid')
 
-  case( 'b' )
-    read(optarg,*,iostat=ier)ilat
-    if (ier/= 0)then
-      call l4f_category_log(category,L4F_ERROR,'b option argument error')
-      call help()
-      call exit(ier)
-    end if
+!options(13) = op_option_new('t', 'component-flag', component_flag, &
+! 0, help='wind component flag')
 
-  case( 'c' )
-    read(optarg,*,iostat=ier)flon
-    if (ier/= 0)then
-      call l4f_category_log(category,L4F_ERROR,'c option argument error')
-      call help()
-      call exit(ier)
-    end if
+options(13) = op_option_new('a', 'ilon', ilon, 0.0D0, help= &
+ 'longitude of the southwestern zooming corner')
+options(14) = op_option_new('b', 'ilat', ilat, 30.D0, help= &
+ 'latitude of the southwestern zooming corner')
+options(15) = op_option_new('c', 'flon', flon, 30.D0, help= &
+ 'longitude of the northeastern zooming corner')
+options(16) = op_option_new('d', 'flat', flat, 60.D0, help= &
+ 'latitude of the northeastern zooming corner')
 
-  case( 'd' )
-    read(optarg,*,iostat=ier)flat
-    if (ier/= 0)then
-      call l4f_category_log(category,L4F_ERROR,'d option argument error')
-      call help()
-      call exit(ier)
-    end if
+options(17) = op_option_help_new('h', 'help', help= &
+ 'show an help message')
 
-  case( 'i' )
-    read(optarg,*,iostat=ier)nx
-    if (ier/= 0)then
-      call l4f_category_log(category,L4F_ERROR,'i option argument error')
-      call help()
-      call exit(ier)
-    end if
-  case( 'l' )
-    read(optarg,*,iostat=ier)ny
-    if (ier/= 0)then
-      call l4f_category_log(category,L4F_ERROR,'l option argument error')
-      call help()
-      call exit(ier)
-    end if
-  case( 'm' )
-    read(optarg,*,iostat=ier)lon_min
-    if (ier/= 0)then
-      call l4f_category_log(category,L4F_ERROR,'m option argument error')
-      call help()
-      call exit(ier)
-    end if
-  case( 'n' )
-    read(optarg,*,iostat=ier)lon_max
-    if (ier/= 0)then
-      call l4f_category_log(category,L4F_ERROR,'n option argument error')
-      call help()
-      call exit(ier)
-    end if
-  case( 'o' )
-    read(optarg,*,iostat=ier)lat_min
-    if (ier/= 0)then
-      call l4f_category_log(category,L4F_ERROR,'o option argument error')
-      call help()
-      call exit(ier)
-    end if
-  case( 'p' )
-    read(optarg,*,iostat=ier)lat_max
-    if (ier/= 0)then
-      call l4f_category_log(category,L4F_ERROR,'p option argument error')
-      call help()
-      call exit(ier)
-    end if
-  case( 'q' )
-    read(optarg,*,iostat=ier)latitude_south_pole
-    if (ier/= 0)then
-      call l4f_category_log(category,L4F_ERROR,'q option argument error')
-      call help()
-      call exit(ier)
-    end if
-  case( 'r' )
-    read(optarg,*,iostat=ier)longitude_south_pole
-    if (ier/= 0)then
-      call l4f_category_log(category,L4F_ERROR,'r option argument error')
-      call help()
-      call exit(ier)
-    end if
-  case( 's' )
-    read(optarg,*,iostat=ier)angle_rotation
-    if (ier/= 0)then
-      call l4f_category_log(category,L4F_ERROR,'s option argument error')
-      call help()
-      call exit(ier)
-    end if
-  case( 't' )
-    read(optarg,*,iostat=ier)component_flag
-    if (ier/= 0)then
-      call l4f_category_log(category,L4F_ERROR,'t option argument error')
-      call help()
-      call exit(ier)
-    end if
- case( 'u' )
-    type=optarg
- case( 'v' )
-    trans_type=optarg
- case( 'z' )
-    sub_type=optarg
+! define the option parser
+opt = optionparser_new(options, description_msg= &
+ 'Grib to grib trasformation application. It reads grib edition 1 and 2 &
+ &and zooms, interpolates or regrids data according to optional parameters.', &
+ usage_msg='Usage: vg6d_subarea [options] inputfile outputfile')
 
-  case( 'h' )
-    call help()
-    call exit(0)
-  case( '?' )
-    call l4f_category_log(category,L4F_ERROR,'unknown option '//optopt)
-    call help()
-    call exit(1)
+! parse options and check for errors
+optind = optionparser_parseoptions(opt)
+IF (optind <= 0) THEN
+  CALL l4f_category_log(category,L4F_ERROR,'error in command-line parameters')
+  CALL EXIT(1)
+ENDIF
 
-  case default
-    call l4f_category_log(category,L4F_ERROR,'unhandled option '// optopt// '(this is a bug)')
-    call help()
-    call exit(1)
-  end select
-end do
 if ( optind <= iargc()) then
-  call getarg( optind,infile)
+  call getarg(optind, infile)
   optind=optind+1
 else
-    call l4f_category_log(category,L4F_ERROR,'input file missing')
-    call help()
-    call exit(1)
+  call l4f_category_log(category,L4F_ERROR,'input file missing')
+  call optionparser_printhelp(opt)
+  call exit(1)
 end if
 
 if ( optind <= iargc()) then
-  call getarg( optind,outfile)
+  call getarg(optind, outfile)
   optind=optind+1
 else
-    call l4f_category_log(category,L4F_ERROR,'output file missing')
-    call help()
-    call exit(1)
+  call l4f_category_log(category,L4F_ERROR,'output file missing')
+  call optionparser_printhelp(opt)
+  call exit(1)
 end if
+
+CALL delete(opt)
 
 call l4f_category_log(category,L4F_INFO,"transforming from file:"//trim(infile))
 call l4f_category_log(category,L4F_INFO,"transforming to   file:"//trim(outfile))
@@ -232,7 +164,7 @@ DO WHILE (iret == GRIB_SUCCESS)
    call init (gridinfo,gaid=gaid,categoryappend="importato")
    call import(gridinfo)
 
-      call display(gridinfo,namespace="ls")
+   call display(gridinfo,namespace="ls")
 
    call l4f_category_log(category,L4F_INFO,"import")
 
@@ -288,40 +220,3 @@ call l4f_category_delete(category)
 ier=l4f_fini()
 
 end program subarea
-
-
-subroutine help()
-
-print*,"Grib to grib trasformation application."
-print*,"Read grib edition 1 and 2 and transform data according with optional parameters"
-print*,""
-print*,""
-print*,"subarea [-h] [-a ilon] [-b ilat] [-c flon] [-d flat] "
-print*,"           [-i nx] [-l ny] [-m lon_min] [-n lon_max] [-o lat_min] [-p lat_max]"
-print*,"           [-q latitude_south_pole] [-r longitude_south_pole] [-s angle_rotation] [-t component_flag]"
-print*,"           [-u type] [-v trans_type] [-z sub_type=optarg]"
-print*,"           infile outfile"
-print*,""
-print*,"-h  this help message"
-print*,"ilon,ilat  lon and lat in the left down point"
-print*,"flon,flat  lon and lat in the right up  point"
-print*,"trans_type transformation type; inter for interpolation, zomm for zomming, boxrregrid for resolution change"
-print*,"sub_type   transformation sub_type"
-print*,"           inter: near , bilin"
-print*,"           zoom: index , coord"
-print*,"           boxregrid: average"
-print*,"infile,outfile  input and output file"
-print*,""
-print*,"only interpolation options:"
-print*,"type             grid type: regular_ll , rotated_ll" 
-print*,"nx, ny           number of nodes on interpolated grid"
-print*,"lon_min lat_min  lon and lat in the left down point of interpolated grid" 
-print*,"lat_min lat_max  lon and lat in the right up  point of interpolated grid" 
-print*,"latitude_south_pole, longitude_south_pole, angle_rotation   rotated grid parameters"
-print*,""
-print *,"default : ilon=0. ilat=30. flon=30. flat=60."
-print*,"           nx=30 ny=30 lon_min=0. lon_max=30. lat_min=30. lat_max=60"
-print*,"           latitude_south_pole=-32.5 longitude_south_pole=10. angle_rotation=0. (component_flag=not.impl.)"
-print*,"           type=regular_ll trans_type=inter sub_type=near"
-
-end subroutine help

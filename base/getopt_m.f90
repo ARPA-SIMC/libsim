@@ -124,6 +124,7 @@ TYPE op_option
   PRIVATE
   CHARACTER(len=1) :: short_opt
   CHARACTER(len=80) :: long_opt
+  INTEGER :: opttype
   LOGICAL :: need_arg
   CHARACTER(len=1024),POINTER :: destc
   INTEGER :: destclen
@@ -135,6 +136,8 @@ TYPE op_option
   INTEGER(kind=int_b),POINTER :: help_msg(:)
 END TYPE op_option
 
+INTEGER, PARAMETER, PRIVATE :: opttype_c = 1, opttype_i = 2, opttype_r = 3, &
+ opttype_d = 4, opttype_l = 5, opttype_count = 6, opttype_help = 7
 PRIVATE op_option_new_common, op_option_found
 
 contains
@@ -313,6 +316,7 @@ this = op_option_new_common(short_opt, long_opt, help)
 this%destc => dest
 this%destclen = LEN(dest) ! needed to avoid exceeding the length of dest
 IF (PRESENT(default)) this%destc(1:this%destclen) = default
+this%opttype = opttype_c
 this%need_arg = .TRUE.
 
 END FUNCTION op_optionc_new
@@ -338,6 +342,7 @@ this = op_option_new_common(short_opt, long_opt, help)
 
 this%desti => dest
 IF (PRESENT(default)) this%desti = default
+this%opttype = opttype_i
 this%need_arg = .TRUE.
 
 END FUNCTION op_optioni_new
@@ -363,6 +368,7 @@ this = op_option_new_common(short_opt, long_opt, help)
 
 this%destr => dest
 IF (PRESENT(default)) this%destr = default
+this%opttype = opttype_r
 this%need_arg = .TRUE.
 
 END FUNCTION op_optionr_new
@@ -388,6 +394,7 @@ this = op_option_new_common(short_opt, long_opt, help)
 
 this%destd => dest
 IF (PRESENT(default)) this%destd = default
+this%opttype = opttype_d
 this%need_arg = .TRUE.
 
 END FUNCTION op_optiond_new
@@ -411,6 +418,7 @@ this = op_option_new_common(short_opt, long_opt, help)
 
 this%destl => dest
 !IF (PRESENT(default)) this%destl = default
+this%opttype = opttype_l
 this%need_arg = .FALSE.
 
 END FUNCTION op_optionl_new
@@ -420,11 +428,11 @@ END FUNCTION op_optionl_new
 !! When parsing will be performed, the provided destination will be
 !! incremented by one, starting from \a start, each time the
 !! requested option is encountered.
-FUNCTION op_option_count_new(short_opt, long_opt, dest, default, help) RESULT(this)
+FUNCTION op_option_count_new(short_opt, long_opt, dest, start, help) RESULT(this)
 CHARACTER(len=1),INTENT(in) :: short_opt !< the short option (may be empty)
 CHARACTER(len=*),INTENT(in) :: long_opt !< the long option (may be empty)
 INTEGER,TARGET :: dest !< the destination of the option parse result
-INTEGER,OPTIONAL :: default !< initial value for \a dest
+INTEGER,OPTIONAL :: start !< initial value for \a dest
 CHARACTER(len=*),OPTIONAL :: help !< the help message that will be formatted and pretty-printed on screen
 
 TYPE(op_option) :: this
@@ -433,10 +441,30 @@ TYPE(op_option) :: this
 this = op_option_new_common(short_opt, long_opt, help)
 
 this%destcount => dest
-IF (PRESENT(default)) this%destcount = default
+IF (PRESENT(start)) this%destcount = start
+this%opttype = opttype_count
 this%need_arg = .FALSE.
 
 END FUNCTION op_option_count_new
+
+
+!> Create a new help option, without optional argument.
+!! When parsing will be performed, the full help message will be
+!! printed if this option is encountered.
+FUNCTION op_option_help_new(short_opt, long_opt, help) RESULT(this)
+CHARACTER(len=1),INTENT(in) :: short_opt !< the short option (may be empty)
+CHARACTER(len=*),INTENT(in) :: long_opt !< the long option (may be empty)
+CHARACTER(len=*),OPTIONAL :: help !< the help message that will be formatted and pretty-printed on screen
+
+TYPE(op_option) :: this
+
+! common initialisation
+this = op_option_new_common(short_opt, long_opt, help)
+
+this%opttype = opttype_help
+this%need_arg = .FALSE.
+
+END FUNCTION op_option_help_new
 
 
 ! private function
@@ -456,6 +484,8 @@ IF (short_opt == '' .AND. long_opt == '') THEN
 ENDIF
 this%short_opt = short_opt
 this%long_opt = long_opt
+this%opttype = -1
+this%need_arg = .FALSE.
 IF (PRESENT(help)) THEN
   ALLOCATE(this%help_msg(LEN_TRIM(help) + 1))
   this%help_msg = fchar_to_cstr(TRIM(help))
@@ -472,7 +502,7 @@ NULLIFY(this%destcount)
 END FUNCTION op_option_new_common
 
 
-!> Desctructor for the \a op_option class, the memory associated with
+!> Destructor for the \a op_option class, the memory associated with
 !! the object is freed.
 SUBROUTINE op_option_delete(this)
 TYPE(op_option),INTENT(out) :: this !< object to destroy
@@ -496,21 +526,27 @@ LOGICAL :: err
 
 err = .FALSE.
 
-IF (this%need_arg .AND. PRESENT(optarg)) THEN
-  IF (ASSOCIATED(this%destc)) THEN
-    this%destc(1:this%destclen) = optarg
-  ELSE IF (ASSOCIATED(this%desti)) THEN
-    READ(optarg,'(I12)',ERR=100)this%desti
-  ELSE IF (ASSOCIATED(this%destr)) THEN
-    READ(optarg,'(F20.0)',ERR=102)this%destr
-  ELSE IF (ASSOCIATED(this%destd)) THEN
-    READ(optarg,'(F20.0)',ERR=102)this%destd
+SELECT CASE(this%opttype)
+CASE(opttype_c)
+  this%destc(1:this%destclen) = optarg
+  IF (LEN_TRIM(optarg) > this%destclen) THEN
+    CALL l4f_log(L4F_WARN, &
+     'in op_option, argument '''//TRIM(optarg)//''' too long, truncated')
   ENDIF
-ELSE IF (ASSOCIATED(this%destl)) THEN
+CASE(opttype_i)
+  READ(optarg,'(I12)',ERR=100)this%desti
+CASE(opttype_r)
+  READ(optarg,'(F20.0)',ERR=102)this%destr
+CASE(opttype_d)
+  READ(optarg,'(F20.0)',ERR=102)this%destd
+CASE(opttype_l)
   this%destl = .TRUE.
-ELSE IF (ASSOCIATED(this%destcount)) THEN
+CASE(opttype_count)
   this%destcount = this%destcount + 1
-ENDIF
+CASE(opttype_help)
+  err = .TRUE.
+END SELECT
+
 RETURN
 
 100 err = .TRUE.
@@ -523,6 +559,48 @@ CALL l4f_log(L4F_ERROR, &
 RETURN
 
 END FUNCTION op_option_found
+
+
+!> Return a string which gives a short representation of the
+!! option \a this, without help message. The resulting string is quite
+!! long and it should be trimmed with the \a TRIM() intrinsic
+!! function.
+FUNCTION op_option_format_opt(this) RESULT(format_opt)
+TYPE(op_option),INTENT(inout) :: this
+
+CHARACTER(len=100) :: format_opt
+
+CHARACTER(len=10) :: argname
+
+SELECT CASE(this%opttype)
+CASE(opttype_c)
+  argname = 'STRING'
+CASE(opttype_i)
+  argname = 'INT'
+CASE(opttype_r, opttype_d)
+  argname = 'REAL'
+CASE default
+  argname = ''
+END SELECT
+
+format_opt = ''
+IF (this%short_opt /= '') THEN
+  format_opt(LEN_TRIM(format_opt)+1:) = '-'//this%short_opt
+  IF (argname /= '') THEN
+    format_opt(LEN_TRIM(format_opt)+1:) = ' '//argname
+  ENDIF
+ENDIF
+IF (this%short_opt /= '' .AND. this%long_opt /= '') THEN
+  format_opt(LEN_TRIM(format_opt)+1:) = ', '
+ENDIF
+IF (this%long_opt /= '') THEN
+  format_opt(LEN_TRIM(format_opt)+1:) = '--'//this%long_opt
+  IF (argname /= '') THEN
+    format_opt(LEN_TRIM(format_opt)+1:) = '='//argname
+  ENDIF
+ENDIF  
+
+END FUNCTION op_option_format_opt
 
 
 !> Create a new instance of an optionparser object. An array of \a op_option
@@ -582,9 +660,11 @@ END SUBROUTINE optionparser_delete
 
 
 !> This method performs the parsing of the command-line options
-!! previously described when instantiating the optionparser object \a
-!! this. The destination variables are assigned according to the
-!! options encountered on the command line.
+!! which have been previously described when instantiating the
+!! optionparser object \a this. The destination variables are assigned
+!! according to the options encountered on the command line.  The
+!! return value is the index of the first optional argument after
+!! interpretation of all command-line options.
 FUNCTION optionparser_parseoptions(this) RESULT(nextarg)
 TYPE(optionparser),INTENT(inout) :: this !< optionparser object with correctly initialised options
 
@@ -656,6 +736,7 @@ DO WHILE(i <= iargc())
   i = i + 1
   IF (this%error_cond) THEN
     CALL optionparser_printhelp(this)
+    nextarg = -1
     RETURN
   ENDIF
   
@@ -679,6 +760,7 @@ TYPE(line_split) :: help_line
 
 ncols = default_columns()
 
+! print description message
 IF (ASSOCIATED(this%description_msg)) THEN
   help_line = line_split_new(cstr_to_fchar(this%description_msg), ncols)
   DO j = 1, line_split_get_nlines(help_line)
@@ -688,6 +770,7 @@ IF (ASSOCIATED(this%description_msg)) THEN
   WRITE(*,'()')
 ENDIF
 
+! print usage message
 IF (ASSOCIATED(this%usage_msg)) THEN
   help_line = line_split_new(cstr_to_fchar(this%usage_msg), ncols)
   DO j = 1, line_split_get_nlines(help_line)
@@ -700,27 +783,12 @@ ELSE
   WRITE(*,'(A)')'Where [options] can be any of:'
 ENDIF
 
+WRITE(*,'()')
 
-DO i = 1, SIZE(this%option)
-  WRITE(*,'()')
-  IF (this%option(i)%need_arg) THEN
-    IF (ASSOCIATED(this%option(i)%destc)) THEN
-      argname = 'STRING'
-    ELSE IF (ASSOCIATED(this%option(i)%desti)) THEN
-      argname = 'INT'
-    ELSE IF (ASSOCIATED(this%option(i)%destr) .OR. &
-     ASSOCIATED(this%option(i)%destd)) THEN
-      argname = 'REAL'
-    ELSE
-      argname = 'ARG'
-    ENDIF
-    WRITE(*,'(''-'',A,'' '',A,'', --'',A,''='',A)') &
-     this%option(i)%short_opt,TRIM(argname), &
-     TRIM(this%option(i)%long_opt),TRIM(argname)
-  ELSE
-    WRITE(*,'(''-'',A,'', --'',A)') &
-     this%option(i)%short_opt,TRIM(this%option(i)%long_opt)
-  ENDIF
+DO i = 1, SIZE(this%option) ! loop over options
+! print option brief representation
+  WRITE(*,'(A)')TRIM(op_option_format_opt(this%option(i)))
+! print option help
   IF (ASSOCIATED(this%option(i)%help_msg)) THEN
     help_line = line_split_new(cstr_to_fchar(this%option(i)%help_msg), ncols-indent)
     DO j = 1, line_split_get_nlines(help_line)
