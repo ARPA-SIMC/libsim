@@ -17,19 +17,19 @@ integer                            ::  ifile,ofile,gaid
 integer                            ::  iret
 
 integer :: ix,iy,fx,fy,iox,ioy,fox,foy,inx,iny,fnx,fny,newx,newy
-doubleprecision ::  ilon=0.,ilat=30.,flon=30.,flat=60.
+doubleprecision ::  ilon,ilat,flon,flat
 real, allocatable :: field(:,:),fieldz(:,:)
 type(griddim_def) :: griddim_out
 type(transform_def) :: trans
 type(grid_transform) :: grid_trans
 
-integer :: nx=30,ny=30,component_flag=0
-doubleprecision :: lon_min=0., lon_max=30., lat_min=30., lat_max=60.
-doubleprecision :: latitude_south_pole=-32.5,longitude_south_pole=10.,angle_rotation=0.
-character(len=80) :: type='regular_ll',trans_type='inter',sub_type='near'
+integer :: nx,ny,component_flag,npx,npy
+doubleprecision :: lon_min, lon_max, lat_min, lat_max
+doubleprecision :: latitude_south_pole,longitude_south_pole,angle_rotation
+character(len=80) :: type,trans_type,sub_type
 
 doubleprecision ::x,y,lon,lat
-type(op_option) :: options(17) ! remember to update dimension when adding options
+type(op_option) :: options(19) ! remember to update dimension when adding options
 type(optionparser) :: opt
 integer :: iargc
 
@@ -71,9 +71,6 @@ options(11) = op_option_new('r', 'longitude-south-pole', longitude_south_pole, &
 options(12) = op_option_new('s', 'angle-rotation', angle_rotation, &
  0.0D0, help='angle of rotation for rotated grid')
 
-!options(13) = op_option_new('t', 'component-flag', component_flag, &
-! 0, help='wind component flag')
-
 options(13) = op_option_new('a', 'ilon', ilon, 0.0D0, help= &
  'longitude of the southwestern zooming corner')
 options(14) = op_option_new('b', 'ilat', ilat, 30.D0, help= &
@@ -83,7 +80,20 @@ options(15) = op_option_new('c', 'flon', flon, 30.D0, help= &
 options(16) = op_option_new('d', 'flat', flat, 60.D0, help= &
  'latitude of the northeastern zooming corner')
 
-options(17) = op_option_help_new('h', 'help', help= &
+options(17) = op_option_new('f', 'npx', npx, 4, help= &
+ 'number of nodes along x axis on input grid, over which to perform average for boxregrid')
+options(18) = op_option_new('g', 'npy', npy, 4, help= &
+ 'number of nodes along x axis on input grid, over which to perform average for boxregrid')
+
+!options(19) = op_option_new('e', 'a-grid', c2agrid, help= &
+! 'interpolate U/V points of an Arakawa C grid on the corresponding T points &
+! &of an Arakawa A grid')
+
+!options(20) = op_option_new('t', 'component-flag', component_flag, &
+! 0, help='wind component flag in interpolated grid (0/1)')
+
+
+options(19) = op_option_help_new('h', 'help', help= &
  'show an help message')
 
 ! define the option parser
@@ -140,8 +150,12 @@ if(trans_type == 'inter')then
 
 end if
 
-call init(trans, trans_type=trans_type,sub_type=sub_type, &
- ilon=ilon,ilat=ilat,flon=flon,flat=flat,&
+!call init(trans, trans_type=trans_type,sub_type=sub_type, &
+! ilon=ilon,ilat=ilat,flon=flon,flat=flat,&
+! categoryappend="trasformation")
+call init(trans, trans_type=trans_type, sub_type=sub_type, &
+ ilon=ilon, ilat=ilat, flon=flon, flat=flat, npx=npx, npy=npy, &
+ boxpercentile=0.5D0, &
  categoryappend="trasformation")
 
 call grib_open_file(ifile, trim(infile),'r')
