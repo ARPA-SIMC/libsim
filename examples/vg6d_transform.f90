@@ -3,6 +3,7 @@ program volgrid6dtransform
 use log4fortran
 use volgrid6d_class
 use grid_class
+use grid_transform_class
 use getopt_m
 
 implicit none

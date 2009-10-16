@@ -20,6 +20,7 @@
 module volgrid6d_class
 
 USE grid_class
+USE grid_transform_class
 USE datetime_class
 USE vol7d_timerange_class
 USE vol7d_level_class

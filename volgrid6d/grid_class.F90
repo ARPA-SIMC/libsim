@@ -1,212 +1,78 @@
 #include "config.h"
-!> Classe per la gestione delle aree geografiche associate a
-!! dati su grigliato.
+!> Module for describing rectanguler geographical grids.
+!! This module defines classes and methods describing rectanguler
+!! geographical grids in different projections.
 !!
-!! Questo modulo definisce gli oggetti e i metodi per gestire le aree
-!! geografiche in proiezione e non, associate a dati su grigliato
-!! (gridded).  Vengono gestiti differenti sistemi di coordinate
-!! geografiche e proiezioni.
-!!
-!! Programma esempio semplice \include example_vg6d_1.f90
+!! See the example program \include example_vg6d_1.f90
 !!
 !!\ingroup volgrid6d
 module grid_class
-
 use gridpar_generic_class
 use gridpar_rotated_class
 use gridpar_stretched_class
 use gridpar_polarproj_class
 use geo_transforms
 use log4fortran
+#ifdef HAVE_LIBGRIBAPI
 use grib_api
-use vol7d_class
+#endif
 use err_handling
 use grid_dim_class
-use optional_values
-use simple_stat
-
 implicit none
 
 
 character (len=255),parameter:: subcategory="grid_class"
 
-!>\brief Oggetto che descrive il grid definition secondo la logica della codifica grib.
-!!(gridType in grib_api)
-!!The type of grid computed from the grid description section in grib format.
+!> This object, for internal use only, describes a geographical projection
+!! following the WMO grib conventions (gridType in grib_api). In the
+!! case of import from grib, the type of projection is computed from
+!! the grid description section in grib file, the projections
+!! currently supported or for which support is planned are:
 !!
-!!    - For both editions:
-!!          - regular_ll
-!!          - reduced_ll
-!!          - mercator
-!!          - lambert
-!!          - polar_stereographic
-!!          - UTM
-!!          - simple_polyconic
-!!          - albers
-!!          - miller
-!!          - rotated_ll
-!!          - stretched_ll
-!!          - stretched_rotated_ll
-!!          - regular_gg
-!!          - rotated_gg
-!!          - stretched_gg
-!!          - stretched_rotated_gg
-!!          - reduced_gg
-!!          - sh
-!!          - rotated_sh
-!!          - stretched_sh
-!!          - stretched_rotated_sh
-!!          - space_view
-!!    - For edition 2 only:
-!!          - triangular_grid
-!!          - equatorial_azimuthal_equidistant
-!!          - azimuth_range
-!!          - cross_section
-!!          - Hovmoller
-!!          - time_section
-
-
+!!    - For grib edition 1 and 2:
+!!          - regular_ll (works)
+!!          - mercator (to be done)
+!!          - lambert (works, to be completed)
+!!          - polar_stereographic (to be tested)
+!!          - UTM (to be done, needs standardization)
+!!          - albers (to be done)
+!!          - rotated_ll (works)
+!!          - stretched_ll (to be completed and tested)
+!!          - stretched_rotated_ll (to be completed and tested)
+!!    - For grib edition 2 only:
+!!          - equatorial_azimuthal_equidistant (to be done)
 type grid_type
-  character(len=80) :: type !< The type of grid
+  character(len=80) :: type !< the type of grid
 end type grid_type
 
 ! For equatorial projections like Mercator?
 !TYPE gridpar_equatorialproj
 
-!> Definizione di tutte le tipologie di grigliato.
+!> This object, mainly for internal use, describes a grid on
+!! a geographic projection except the grid dimensions.
 type grid_def
   private
-  type(grid_type) :: type !< type of grid definition
+  type(grid_type) :: type
   type(gridpar_generic) :: generic
   type(gridpar_rotated) :: rotated
   type(gridpar_stretched) :: stretched
   type(gridpar_polarproj) :: polarproj
-!  TYPE(grid_dim), POINTER :: dim
 
   integer :: category !< category for log4fortran
 end type grid_def
 
 
-!> Definizione del grigliato e delle sue dimensioni. L'oggetto di tipo
-!! \a griddim_def è mantenuto separato in modo da permettere che i
-!! suoi membri siano \c PRIVATE, mentre \c dim rimane pubblico.
+!> This object completely describes a grid on a geographic projection.
+!! It is the main object of this module to be used by user
+!! programs. The grid definition \a grid is separated from the
+!! definition of the grid dimensions \a dim in order to make members
+!! of \a grid \a PRIVATE while maintaining free access to the members
+!! of \a dim.
 type griddim_def
-  type(grid_def) :: grid !< definizione del grigliato
-  type(grid_dim) :: dim  !< definizione delle dimensioni
-
+  type(grid_def) :: grid !< grid and projection definition
+  type(grid_dim) :: dim  !< grid dimensions definition
   integer :: category !< log4fortran
 end type griddim_def
-
-
-!>  subtype nearest information
-type inter_near
-  logical :: external !< enable elaboration outside data bounding box
-end type inter_near
-
-!>  subtype bilinear information
-type inter_bilin
-  logical :: external !< enable elaboration outside data bounding box
-end type inter_bilin
-
-!>  subtype linear information
-type inter_linear
-  logical :: external !< enable elaboration outside data bounding box
-end type inter_linear
-
-!>  subtype box information
-type inter_box
-  double precision :: boxdx !< longitudinal/x extension of the box for box interpolation
-  double precision :: boxdy !< latitudinal/y extension of the box for box interpolation, default the target y grid step
-  double precision :: boxpercentile !< percentile [0,100] of the distribution of points in the box to use as interpolated value, if missing, the average is used
-  logical :: external !< enable elaboration outside data bounding box
-end type inter_box
-
-!>  interpolation information 
-type inter
-  CHARACTER(len=80) :: sub_type !< subtype of transformation, can be \c 'near' \c 'bilin'
-  type(inter_near) :: near !< subtype nearest information
-  type(inter_bilin) :: bilin !< subtype bilinear information
-  type(inter_linear) :: linear !< subtype linear information
-  type(inter_box) :: box !< subtype box information
-end type inter
-
-
-!> zoom subtype index information
-type zoom_ind
-  INTEGER :: ix !< index of initial point of new grid on x
-  INTEGER :: iy !< index of initial point of new grid on y
-  INTEGER :: fx !< index of final point of new grid on x
-  INTEGER :: fy !< index of final point of new grid on y
-end type zoom_ind
-
-!> zoom subtype coord information
-type zoom_coo
-  DOUBLEPRECISION ilon !< coordinate of initial point of new grid on x
-  DOUBLEPRECISION ilat !< coordinate of initial point of new grid on y
-  DOUBLEPRECISION flon !< coordinate of final point of new grid on x
-  DOUBLEPRECISION flat !< coordinate of final point of new grid on y
-end type zoom_coo
-
-!> zoom information
-type zoom
-  CHARACTER(len=80) :: sub_type !< subtype of transformation, can be \c 'index', \c 'coord'
-  type(zoom_ind) :: index !< zoom providing index
-  type(zoom_coo) :: coord !< zoom providing coordinates
-end type zoom
-
-!!> boxregrid subtype average information
-!type boxregrid_average
-!
-!end type boxregrid_average
-! no extra information needed now
-
-!> boxregrid  information
-type boxregrid
-  CHARACTER(len=80) :: sub_type !< subtype of transformation, can be \c 'average'
-  INTEGER :: npx !< number of points to average along x direction
-  INTEGER :: npy !< number of points to average along y direction
-!  type(boxregrid_average) :: average
-end type boxregrid
-
-
-!> \brief transformation object
-!! Specifica il tipo di traformazione richiesto
-TYPE transform_def
-
-  private
-
-  CHARACTER(len=80) :: trans_type !< type of transformation, can be \c 'zoom', \c 'boxregrid', \c 'interp', ...
-  type(zoom) :: zoom !< zoom specification
-  type(boxregrid) :: boxregrid !< boxregrid specification
-  type(inter) :: inter !< interpolation specification
-
-  integer :: time_definition
-  integer :: category !< category for log4fortran
-
-END TYPE transform_def
-
-
-!> \brief transformation object for grid/vol7d
-!! Specifica il tipo di traformazione richiesto associato a una definizione di grid/vol7d
-TYPE grid_transform
-
-  private
-
-  TYPE(transform_def) :: trans !<  Specifica il tipo di traformazione richiesto
-
-  integer :: innx,  inny
-  integer :: outnx, outny
-  integer :: iniox,inioy,infox,infoy,outinx,outiny,outfnx,outfny
-  integer,pointer :: inter_index_x(:,:),inter_index_y(:,:)
-  doubleprecision,pointer :: inter_x(:,:),inter_y(:,:)
-
-  doubleprecision,pointer :: inter_xp(:,:),inter_yp(:,:)
-
-  integer :: category !< category for log4fortran
-
-END TYPE grid_transform
-
-
 
 
 !> Operatore logico di uguaglianza tra oggetti della classe grid.
@@ -219,12 +85,12 @@ END INTERFACE
 
 !> Costruttore dell'oggetto
 INTERFACE init
-  MODULE PROCEDURE griddim_init, init_grid_transform, init_grid_v7d_transform, init_v7d_grid_transform, init_transform
+  MODULE PROCEDURE griddim_init
 END INTERFACE
 
 !> Distruttore dell'oggetto
 INTERFACE delete
-  MODULE PROCEDURE griddim_delete, delete_grid_transform, delete_transform
+  MODULE PROCEDURE griddim_delete
 END INTERFACE
 
 !> Copia l'ggetto creando una nuova istanza
@@ -244,7 +110,7 @@ END INTERFACE
 
 !> Ritorna il contenuto dell'oggetto
 INTERFACE get_val
-  MODULE PROCEDURE griddim_get_val, get_val_transform
+  MODULE PROCEDURE griddim_get_val
 END INTERFACE
 
 !> Imposta il contenuto dell'oggeto
@@ -279,11 +145,6 @@ INTERFACE display
   MODULE PROCEDURE griddim_display
 END INTERFACE
 
-!> Calcola i nuovi dati secondo la trasformazione specificata
-INTERFACE compute
-  MODULE PROCEDURE grid_transform_compute,v7d_grid_transform_compute
-END INTERFACE
-
 INTERFACE count_distinct
   MODULE PROCEDURE count_distinct_griddim,count_distinct_grid_type,count_distinct_grid
 END INTERFACE
@@ -311,11 +172,11 @@ END INTERFACE
 
 PRIVATE
 
-PUBLIC proj, unproj, griddim_proj, griddim_unproj, griddim_def, grid_def, grid_dim
+PUBLIC proj, unproj, griddim_proj, griddim_unproj, griddim_gen_coord, &
+ griddim_zoom_coord, griddim_setsteps, griddim_def, grid_def, grid_dim
 PUBLIC init, delete, copy
-public get_val,set_val,write_unit,read_unit,import,export,display,compute
+public get_val,set_val,write_unit,read_unit,import,export,display
 public operator(==),count_distinct,pack_distinct,map_distinct,map_inv_distinct,index
-public transform_def,grid_transform
 public wind_unrot
 
 CONTAINS
@@ -686,7 +547,7 @@ END SUBROUTINE griddim_write_unit
 !> Generates coordinates of every point of a generic grid from the
 !! grid description. The number of grid points along both direction is
 !! guessed from the shape of x and y arrays, which must be conformal.
-SUBROUTINE griddim_coordinates(this, x, y)
+SUBROUTINE griddim_gen_coord(this, x, y)
 TYPE(griddim_def),INTENT(in) :: this !< generic grid descriptor
 DOUBLE PRECISION,INTENT(out) :: x(:,:) !< x coordinate of every point, linearly computed between grid extremes
 DOUBLE PRECISION,INTENT(out) :: y(:,:) !< y coordinate of every point, linearly computed between grid extremes, it should have the same shape as x(:,:)
@@ -694,7 +555,7 @@ DOUBLE PRECISION,INTENT(out) :: y(:,:) !< y coordinate of every point, linearly 
 
 CALL gridpar_coordinates(this%grid%generic, x, y)
 
-END SUBROUTINE griddim_coordinates
+END SUBROUTINE griddim_gen_coord
 
 
 !> Compute grid steps
@@ -1239,34 +1100,6 @@ PRINT*,"<<<<<<<<<<<<<<< ---------- >>>>>>>>>>>>>>>>"
 END SUBROUTINE griddim_display
 
 
-SUBROUTINE zoom_coord(this, ilon, ilat, flon, flat, ix, iy, fx, fy)
-TYPE(griddim_def),INTENT(in) :: this
-!TYPE(grid_dim),INTENT(in) :: dim
-DOUBLE PRECISION,INTENT(in) :: ilon,ilat,flon,flat
-INTEGER,INTENT(out) :: ix, iy, fx, fy
-
-DOUBLE PRECISION :: dx, dy
-DOUBLE PRECISION :: ix1, iy1, fx1, fy1
-INTEGER :: lix, liy, lfx, lfy
-
-
-! compute projected coordinates of vertices of desired lonlat rectangle
-CALL proj(this, ilon, ilat, ix1, iy1)
-CALL proj(this, flon, flat, fx1, fy1)
-! compute projected indices
-lix = NINT((ix1-this%grid%generic%x1)/this%grid%generic%dx) + 1
-liy = NINT((iy1-this%grid%generic%y1)/this%grid%generic%dy) + 1
-lfx = NINT((fx1-this%grid%generic%x1)/this%grid%generic%dx) + 1
-lfy = NINT((fy1-this%grid%generic%y1)/this%grid%generic%dy) + 1
-! swap projected indices, in case grid is "strongly rotated"
-ix = MIN(lix, lfx)
-fx = MAX(lix, lfx)
-iy = MIN(liy, lfy)
-fy = MAX(liy, lfy)
-
-END SUBROUTINE zoom_coord
-
-
 ! Definisce le funzioni count_distinct e pack_distinct
 #define VOL7D_POLY_TYPE TYPE(grid_type)
 #define VOL7D_POLY_TYPES _grid_type
@@ -1287,1167 +1120,6 @@ END SUBROUTINE zoom_coord
 #include "../vol7d/vol7d_distinct.F90"
 #undef VOL7D_POLY_TYPE
 #undef VOL7D_POLY_TYPES
-
-
-
-!> Initialises an object that defines a transformation on a grid.
-!! trans_type='zoom' cuts or extends \a grid on a new grid adding
-!! or removing points on the four sides (zoom).
-!! trans_type='box_regrid' regrids \a grid on a new grid in which
-!! every point is the average over \a npx X \a npy points of the
-!! original grid (box average).
-!! All the proper optional parameters, after \a trans_type, should
-!! be passed in keyword mode.
-SUBROUTINE init_transform(this, trans_type,sub_type, &
- ix, iy, fx, fy, ilon, ilat, flon, flat, &
- npx, npy, boxdx, boxdy, boxpercentile, &
- zoom_type,boxregrid_type,inter_type,external,time_definition,categoryappend)
-TYPE(transform_def),INTENT(out) :: this !< transformation object
-CHARACTER(len=*) :: trans_type !< type of transformation, can be \c 'zoom', \c 'boxregrid', \c 'interp', ...
-CHARACTER(len=*) :: sub_type !< sub type of transformation, depend on trans_type and is an alternative to zoom_type, boxregrid_type, inter_type
-INTEGER,INTENT(in),OPTIONAL :: ix !< index of initial point of new grid on x (for zoom)
-INTEGER,INTENT(in),OPTIONAL :: iy !< index of initial point of new grid on y (for zoom)
-INTEGER,INTENT(in),OPTIONAL :: fx !< index of final point of new grid on x (for zoom)
-INTEGER,INTENT(in),OPTIONAL :: fy !< index of final point of new grid on y (for zoom)
-DOUBLEPRECISION,INTENT(in),OPTIONAL :: ilon !< coordinate of initial point of new grid on x (for zoom)
-DOUBLEPRECISION,INTENT(in),OPTIONAL :: ilat !< coordinate of initial point of new grid on y (for zoom)
-DOUBLEPRECISION,INTENT(in),OPTIONAL :: flon !< coordinate of final point of new grid on x (for zoom)
-DOUBLEPRECISION,INTENT(in),OPTIONAL :: flat !< coordinate of final point of new grid on y (for zoom)
-INTEGER,INTENT(IN),OPTIONAL :: npx !< number of points to average along x direction (for boxregrid)
-INTEGER,INTENT(IN),OPTIONAL :: npy !< number of points to average along y direction (for boxregrid)
-DOUBLEPRECISION,INTENT(in),OPTIONAL :: boxdx !< longitudinal/x extension of the box for box interpolation, default the target x grid step
-DOUBLEPRECISION,INTENT(in),OPTIONAL :: boxdy !< latitudinal/y extension of the box for box interpolation, default the target y grid step
-DOUBLEPRECISION,INTENT(in),OPTIONAL :: boxpercentile !< percentile [0,1] of the distribution of points in the box to use as interpolated value, if missing, the average is used
-CHARACTER(len=*),INTENT(IN),OPTIONAL :: zoom_type !< type of zoom
-CHARACTER(len=*),INTENT(IN),OPTIONAL :: boxregrid_type !< type of regrid
-CHARACTER(len=*),INTENT(IN),OPTIONAL :: inter_type !< type of interpolation
-LOGICAL,INTENT(IN),OPTIONAL :: external !< activate external area interpolation (for interpolation)(not enabled !)
-INTEGER,INTENT(IN),OPTIONAL :: time_definition !< 0=time is reference time ; 1=time is validity time
-character(len=*),INTENT(in),OPTIONAL :: categoryappend !< appende questo suffisso al namespace category di log4fortran
-character(len=512) :: a_name
-
-call l4f_launcher(a_name,a_name_append=trim(subcategory)//"."//trim(optio_c(categoryappend,255)))
-this%category=l4f_category_get(a_name)
-
-call optio(trans_type,this%trans_type)
-
-call optio(zoom_type,this%zoom%sub_type)
-if (trans_type == "zoom".and. .not. c_e(this%zoom%sub_type))call optio(sub_type,this%zoom%sub_type)
-
-call optio(ix,this%zoom%index%ix)
-call optio(iy,this%zoom%index%iy)
-call optio(fx,this%zoom%index%fx)
-call optio(fy,this%zoom%index%fy)
-
-call optio(ilon,this%zoom%coord%ilon)
-call optio(ilat,this%zoom%coord%ilat)
-call optio(flon,this%zoom%coord%flon)
-call optio(flat,this%zoom%coord%flat)
-
-call optio(time_definition,this%time_definition)
-if (c_e(this%time_definition) .and. &
- (this%time_definition < 0 .OR. this%time_definition > 1))THEN
-  call l4f_category_log(this%category,L4F_ERROR,"Error in time_definition: "//to_char(this%time_definition))
-  call raise_fatal_error()
-end if
-
-call optio(boxregrid_type,this%boxregrid%sub_type)
-if (trans_type == "boxregrid".and. .not. c_e(this%boxregrid%sub_type))call optio(sub_type,this%boxregrid%sub_type)
-
-call optio(npx,this%boxregrid%npx)
-call optio(npy,this%boxregrid%npy)
-
-call optio(inter_type,this%inter%sub_type)
-if (trans_type == "inter".and. .not. c_e(this%inter%sub_type))call optio(sub_type,this%inter%sub_type)
-call optio(external,this%inter%near%external)
-call optio(external,this%inter%bilin%external)
-call optio(external,this%inter%linear%external)
-
-
-IF (this%trans_type == 'zoom') THEN
-
-  if (this%zoom%sub_type == 'coord')then
-
-    if (c_e(this%zoom%coord%ilon) .and. c_e(this%zoom%coord%ilat) .and. &
-        c_e(this%zoom%coord%flon) .and. c_e(this%zoom%coord%flat)) then ! coordinates given
-    
-!check
-      if ( this%zoom%coord%ilon > this%zoom%coord%flon .or. &
-       this%zoom%coord%ilat > this%zoom%coord%flat ) then
-
-        call l4f_category_log(this%category,L4F_ERROR, &
-         "invalid zoom coordinates: ")
-        call l4f_category_log(this%category,L4F_ERROR, &
-         TRIM(to_char(this%zoom%coord%ilon))//'/'// &
-         TRIM(to_char(this%zoom%coord%flon)))
-        call l4f_category_log(this%category,L4F_ERROR, &
-         TRIM(to_char(this%zoom%coord%ilat))//'/'// &
-         TRIM(to_char(this%zoom%coord%flat)))
-        call raise_fatal_error()
-      end if
-
-    else
-
-      call l4f_category_log(this%category,L4F_ERROR,"zoom: coord parameters missing")
-      call raise_fatal_error()
-        
-    end if
-
-  else if (this%zoom%sub_type == 'index')then
-
-    if (c_e(this%zoom%index%ix) .and. c_e(this%zoom%index%iy) .or. &
-        c_e(this%zoom%index%fx) .or. c_e(this%zoom%index%fy)) then
-
-
-                                ! check
-      if (this%zoom%index%ix > this%zoom%index%fx .OR. &
-       this%zoom%index%iy > this%zoom%index%fy) THEN
-
-        CALL l4f_category_log(this%category,L4F_ERROR,'invalid zoom indices: ')
-        CALL l4f_category_log(this%category,L4F_ERROR, &
-         TRIM(to_char(this%zoom%index%ix))//'/'// &
-         TRIM(to_char(this%zoom%index%fx)))
-        CALL l4f_category_log(this%category,L4F_ERROR, &
-         TRIM(to_char(this%zoom%index%iy))//'/'// &
-         TRIM(to_char(this%zoom%index%fy)))
-
-        CALL raise_fatal_error()
-      ENDIF
-
-    else
-
-      CALL l4f_category_log(this%category,L4F_ERROR,&
-       'zoom: index parameters ix, iy, fx, fy not provided')
-      CALL raise_fatal_error()
-
-    ENDIF
-  
-
-  else
-
-    CALL l4f_category_log(this%category,L4F_ERROR,'zoom: sub_type '// &
-     TRIM(this%zoom%sub_type)//' is wrong')
-    CALL raise_fatal_error()
-
-  end if
-
-
-ELSE IF (this%trans_type == 'boxregrid') THEN
-
-  IF (c_e(this%boxregrid%npx) .AND. c_e(this%boxregrid%npy)) THEN
-
-    IF (this%boxregrid%npx <= 0 .OR. this%boxregrid%npy <= 0 ) THEN
-      CALL l4f_category_log(this%category,L4F_ERROR,'invalid regrid parameters: '//&
-       TRIM(to_char(this%boxregrid%npx))//' '//TRIM(to_char(this%boxregrid%npy)))
-      CALL raise_fatal_error()
-    ENDIF
-
-  ELSE
-
-    CALL l4f_category_log(this%category,L4F_ERROR, &
-     'boxregrid parameters npx, npy not provided')
-    CALL raise_fatal_error()
-
-  ENDIF
-
-  IF (this%boxregrid%sub_type == 'average')THEN
-! nothing to do here
-  ELSE
-    CALL l4f_category_log(this%category,L4F_ERROR,'boxregrid: sub_type '// &
-     TRIM(this%boxregrid%sub_type)//' is wrong')
-    CALL raise_fatal_error()
-  ENDIF
-
-ELSE IF (this%trans_type == 'inter') THEN
-
-  if (this%inter%sub_type == 'near')then
-! nothing to do here
-  else if (this%inter%sub_type == 'bilin')then
-! nothing to do here
-  else if (this%inter%sub_type == 'linear')then
-! nothing to do here
-  else
-    CALL l4f_category_log(this%category,L4F_ERROR,'inter: sub_type '// &
-     TRIM(this%inter%sub_type)//' is wrong')
-    CALL raise_fatal_error()
-  endif
-
-ELSE IF (this%inter%sub_type == 'boxinter')THEN
-
-  CALL optio(boxdx,this%inter%box%boxdx) ! unused
-  CALL optio(boxdy,this%inter%box%boxdy) ! now
-
-  IF (this%inter%sub_type == 'average') THEN
-! nothing to do here
-  ELSE IF (this%inter%sub_type == 'max') THEN
-! nothing to do here
-  ELSE IF (this%inter%sub_type == 'min') THEN
-! nothing to do here
-  ELSE IF (this%inter%sub_type == 'percentile') THEN
-    CALL optio(boxpercentile,this%inter%box%boxpercentile)
-  ELSE
-    CALL l4f_category_log(this%category,L4F_ERROR,'boxinter: sub_type '// &
-     TRIM(this%inter%sub_type)//' is wrong')
-    CALL raise_fatal_error()
-  ENDIF
-
-ELSE
-
-  CALL l4f_category_log(this%category,L4F_ERROR,'trans_type '// &
-   TRIM(this%trans_type)//' is wrong')
-  CALL raise_fatal_error()
-
-ENDIF
-
-
-END SUBROUTINE init_transform
-
-
-
-!> \brief destructor of tranform object
-!! release any memory and data associated to transformation object
-!! the logger category will be deleted too
-SUBROUTINE delete_transform(this)
-
-TYPE(transform_def),INTENT(out) :: this !< transformation object
-
-this%trans_type=cmiss
-
-this%zoom%sub_type=cmiss
-
-this%zoom%index%ix=imiss
-this%zoom%index%iy=imiss
-this%zoom%index%fx=imiss
-this%zoom%index%fy=imiss
-
-this%zoom%coord%ilon=dmiss
-this%zoom%coord%ilat=dmiss
-this%zoom%coord%flon=dmiss
-this%zoom%coord%flat=dmiss
-
-
-this%boxregrid%sub_type=cmiss
-
-this%boxregrid%npx=imiss
-this%boxregrid%npy=imiss
-
-this%inter%sub_type=cmiss
-
-this%inter%near%external=.false.
-this%inter%bilin%external=.false.
-this%inter%linear%external=.false.
-
-!chiudo il logger
-call l4f_category_delete(this%category)
-
-
-end SUBROUTINE delete_transform
-
-
-!> restituisce il contenuto dell'oggetto
-SUBROUTINE get_val_transform(this,time_definition)
-type(transform_def),intent(in) :: this !< oggetto da esaminare
-integer,INTENT(out),OPTIONAL :: time_definition !< 0=time is reference time ; 1=time is validity time
-
-if ( present(time_definition)) time_definition=this%time_definition
-
-END SUBROUTINE get_val_transform
-
-
-!> Initialises an object that defines a transformation on a grid.
-!! Questo metodo definisce la trasformazione da un grigliato in un'altro seguendo le indicazioni contenute nell'oggetto
-!! di trasformazione. Devono essere quindi forniti il grigliato da trasformare e l'oggetto di trasformazione.
-!! Vengono generati un oggetto di trasformazione associato ai grigliati e un nuovo grigliato prodotto
-!! dalla trasformazione.
-SUBROUTINE init_grid_transform(this,trans,in,out,categoryappend)
-TYPE(grid_transform),INTENT(out) :: this !< grid_transformation object
-TYPE(transform_def),INTENT(in) :: trans !< transformation object
-TYPE(griddim_def),INTENT(inout) :: in !< griddim object to transform
-TYPE(griddim_def),INTENT(out) :: out !< griddim transformated object
-CHARACTER(len=*),INTENT(in),OPTIONAL :: categoryappend !< appende questo suffisso al namespace category di log4fortran
-
-INTEGER :: nx, ny,i,j
-DOUBLE PRECISION :: lon_min, lon_max, lat_min, lat_max, steplon, steplat, &
- lon_min_new, lat_min_new
-character(len=512) :: a_name
-doubleprecision :: l1, l2
-
-call l4f_launcher(a_name,a_name_append=trim(subcategory)//"."//trim(optio_c(categoryappend,255)))
-this%category=l4f_category_get(a_name)
-
-#ifdef DEBUG
-call l4f_category_log(this%category,L4F_DEBUG,"start init_grid_transform")
-#endif
-
-this%trans=trans
-
-nullify (this%inter_index_x)
-nullify (this%inter_index_y)
-
-nullify (this%inter_x)
-nullify (this%inter_y)
-
-nullify (this%inter_xp)
-nullify (this%inter_yp)
-
-IF (this%trans%trans_type == 'zoom') THEN
-
-  if (this%trans%zoom%sub_type == 'coord') THEN
-
-    CALL zoom_coord(in, &
-     this%trans%zoom%coord%ilon, this%trans%zoom%coord%ilat,&
-     this%trans%zoom%coord%flon, this%trans%zoom%coord%flat,&
-     this%trans%zoom%index%ix, this%trans%zoom%index%iy, &
-     this%trans%zoom%index%fx, this%trans%zoom%index%fy)
-
-    this%trans%zoom%sub_type = 'index'
-    
-  else if (this%trans%zoom%sub_type == 'index') THEN
-
-    CALL get_val(in, nx=nx, ny=ny, lon_min=lon_min, lon_max=lon_max, &
-     lat_min=lat_min, lat_max=lat_max, dx=steplon, dy=steplat)
-
-                                ! old indices
-    this%iniox = min(max(this%trans%zoom%index%ix,1),nx) ! iox
-    this%inioy = min(max(this%trans%zoom%index%iy,1),ny) ! ioy
-    this%infox = max(min(this%trans%zoom%index%fx,nx),1) ! fox
-    this%infoy = max(min(this%trans%zoom%index%fy,ny),1) ! foy
-                                ! new indices
-    this%outinx = min(max(2-this%trans%zoom%index%ix,1),nx)! inx
-    this%outiny = min(max(2-this%trans%zoom%index%iy,1),ny) ! iny
-    this%outfnx = min(this%trans%zoom%index%fx,nx)-this%trans%zoom%index%ix+1 ! fnx
-    this%outfny = min(this%trans%zoom%index%fy,ny)-this%trans%zoom%index%iy+1 ! fny
-
-    lon_min=lon_min+steplon*(this%trans%zoom%index%ix-1)
-    lat_min=lat_min+steplat*(this%trans%zoom%index%iy-1)
-    lon_max=lon_max+steplon*(this%trans%zoom%index%fx-nx)
-    lat_max=lat_max+steplat*(this%trans%zoom%index%fy-ny)
-
-    call copy (in,out)
-    
-    out%dim%nx = this%trans%zoom%index%fx - this%trans%zoom%index%ix + 1 ! newx
-    out%dim%ny = this%trans%zoom%index%fy - this%trans%zoom%index%iy + 1 ! newy
-    
-    this%innx = nx
-    this%inny = ny
-
-    this%outnx=out%dim%nx
-    this%outny=out%dim%ny
-
-    call set_val (out,&
-     lon_min = lon_min,  lon_max = lon_max, &
-     lat_min = lat_min,  lat_max = lat_max )
-    
-  ELSE
-
-    CALL l4f_category_log(this%category,L4F_WARN, &
-     'init_grid_transform zoom sub_type '//TRIM(this%trans%inter%sub_type) &
-     //' not supported')
-    
-  end if
-
-ELSE IF (this%trans%trans_type == 'boxregrid') THEN
-
-  IF (this%trans%boxregrid%sub_type == 'average') THEN
-
-    CALL get_val(in, nx=nx, ny=ny, lon_min=lon_min, lon_max=lon_max, &
-     lat_min=lat_min, lat_max=lat_max, dx=steplon, dy=steplat)
-
-    this%innx = nx
-    this%inny = ny
-
-! new grid
-    lon_min_new = lon_min + (this%trans%boxregrid%npx - 1)*0.5D0*steplon
-    lat_min_new = lat_min + (this%trans%boxregrid%npy - 1)*0.5D0*steplat
-
-    CALL l4f_category_log(this%category,L4F_DEBUG,"copying griddim in out")
-    call copy (in,out)
-    out%dim%nx = nx/this%trans%boxregrid%npx
-    out%dim%ny = ny/this%trans%boxregrid%npy
-
-    this%outnx=out%dim%nx
-    this%outny=out%dim%ny
-    steplon = steplon*this%trans%boxregrid%npx
-    steplat = steplat*this%trans%boxregrid%npy
-
-    CALL set_val(out, lon_min=lon_min_new, lat_min=lat_min_new, &
-     lon_max=lon_min_new + DBLE(out%dim%nx-1)*steplon, dx=steplon, &
-     lat_max=lat_min_new + DBLE(out%dim%ny-1)*steplat, dy=steplat)
-
-  ELSE
-
-    CALL l4f_category_log(this%category,L4F_WARN, &
-     'init_grid_transform boxregrid sub_type '//TRIM(this%trans%inter%sub_type) &
-     //' not supported')
-    
-  ENDIF
-  
-ELSE IF (this%trans%trans_type == 'inter') THEN
-
-! set increments in new grid in order for all the baraque to work
-  CALL griddim_setsteps(out, out%dim%nx, out%dim%ny)
-
-  IF (this%trans%inter%sub_type == 'near' .OR. this%trans%inter%sub_type == 'bilin' ) THEN
-    
-    CALL get_val(in, nx=this%innx, ny=this%inny, &
-     lon_min=lon_min, lon_max=lon_max, lat_min=lat_min, lat_max=lat_max)
-    CALL get_val(out, nx=this%outnx, ny=this%outny)
-  
-    ALLOCATE(this%inter_index_x(this%outnx,this%outny), &
-     this%inter_index_y(this%outnx,this%outny))
-
-    CALL find_index(in,this%trans%inter%sub_type,&
-     nx=this%innx, ny=this%inny ,&
-     lon_min=lon_min, lon_max=lon_max,&
-     lat_min=lat_min, lat_max=lat_max,&
-     lon=out%dim%lon,lat=out%dim%lat,&
-     index_x=this%inter_index_x,index_y=this%inter_index_y)
-
-    IF ( this%trans%inter%sub_type == 'bilin' ) THEN
-      ALLOCATE(this%inter_x(this%innx,this%inny), &
-       this%inter_y(this%innx,this%inny))
-      ALLOCATE(this%inter_xp(this%outnx,this%outny), &
-       this%inter_yp(this%outnx,this%outny))
-
-! compute coordinates of input grid
-      CALL griddim_coordinates(in, this%inter_x, this%inter_y)
-! TODO chi mi garantisce che e` stata chiamata la unproj(out)?
-! compute coordinates of output grid in input system
-      CALL proj(in,out%dim%lon,out%dim%lat,this%inter_xp,this%inter_yp)
-
-    ENDIF
-  ELSE
-
-    CALL l4f_category_log(this%category,L4F_WARN, &
-     'init_grid_transform inter sub_type '//TRIM(this%trans%inter%sub_type) &
-     //' not supported')
-    
-  ENDIF
-
-ELSE IF (this%trans%trans_type == 'boxinter') THEN
-
-  CALL get_val(in, nx=this%innx, ny=this%inny)
-  CALL get_val(out, nx=this%outnx, ny=this%outny, &
-   lon_min=lon_min, lon_max=lon_max, lat_min=lat_min, lat_max=lat_max)
-! TODO now box size is ignored
-! if box size not provided, use the actual grid step
-  IF (.NOT.c_e(this%trans%inter%box%boxdx)) &
-   CALL get_val(out, dx=this%trans%inter%box%boxdx)
-  IF (.NOT.c_e(this%trans%inter%box%boxdy)) &
-   CALL get_val(out, dx=this%trans%inter%box%boxdy)
-! half size is actually needed
-  this%trans%inter%box%boxdx = this%trans%inter%box%boxdx*0.5D0
-  this%trans%inter%box%boxdy = this%trans%inter%box%boxdy*0.5D0
-! unlike before, here index arrays must have the shape of input grid
-  ALLOCATE(this%inter_index_x(this%innx,this%inny), &
-   this%inter_index_y(this%innx,this%inny))
-
-! compute coordinates of input grid in geo system
-  CALL unproj(in) ! TODO costringe a dichiarare in INTENT(inout), si puo` evitare?
-! use find_index in the opposite way as before
-  CALL find_index(out,'near',&
-   nx=this%outnx, ny=this%outny ,&
-   lon_min=lon_min, lon_max=lon_max,&
-   lat_min=lat_min, lat_max=lat_max,&
-   lon=in%dim%lon, lat=in%dim%lat,&
-   index_x=this%inter_index_x, index_y=this%inter_index_y)
-
-ELSE
-
-  CALL l4f_category_log(this%category,L4F_WARN, &
-   'init_grid_transform trans type '//TRIM(this%trans%trans_type) &
-   //' not supported')
-
-ENDIF
-
-END SUBROUTINE init_grid_transform
-
-
-!> Initialises an object that defines a transformation from a grid to sparse data.
-!! Questo metodo definisce la trasformazione da un grigliato a dati sparsi seguendo le indicazioni contenute nell'oggetto
-!! di trasformazione. Devono essere quindi forniti il grigliato da trasformare e l'oggetto di trasformazione.
-!! Deve essere fornito anche un oggetto contenetente le informazioni relative ai dati sparsi su cui elaborare la trasformazione.
-!! Viene generato un oggetto di trasformazione associato al grigliato e dati dati sparsi.
-SUBROUTINE init_grid_v7d_transform(this,trans,in,v7d,categoryappend)
-TYPE(grid_transform),INTENT(out) :: this !< grid_transformation object
-TYPE(transform_def),INTENT(in) :: trans !< transformation object
-TYPE(griddim_def),INTENT(in) :: in !< griddim object to transform
-TYPE(vol7d),INTENT(in) :: v7d !< vol7d objects where (or to use) to transform
-character(len=*),INTENT(in),OPTIONAL :: categoryappend !< appende questo suffisso al namespace category di log4fortran
-
-
-INTEGER :: nx, ny,i,j
-DOUBLE PRECISION :: lon_min, lon_max, lat_min, lat_max, steplon, steplat,lon_min_new, lat_min_new
-doubleprecision,allocatable :: lon(:),lat(:)
-
-character(len=512) :: a_name
-
-call l4f_launcher(a_name,a_name_append=trim(subcategory)//"."//trim(optio_c(categoryappend,255)))
-this%category=l4f_category_get(a_name)
-
-#ifdef DEBUG
-call l4f_category_log(this%category,L4F_DEBUG,"start init_grid_v7d_transform" )
-#endif
-
-this%trans=trans
-
-nullify (this%inter_index_x)
-nullify (this%inter_index_y)
-
-nullify (this%inter_x)
-nullify (this%inter_y)
-
-nullify (this%inter_xp)
-nullify (this%inter_yp)
-
-
-IF (this%trans%trans_type == 'inter') THEN
-
-  IF (this%trans%inter%sub_type == 'near' .OR. this%trans%inter%sub_type == 'bilin' ) THEN
-
-    CALL get_val(in, nx=nx, ny=ny)
-    this%innx=nx
-    this%inny=ny
-
-    this%outnx=SIZE(v7d%ana)
-    this%outny=1
-
-    ALLOCATE (this%inter_index_x(this%outnx,this%outny),&
-     this%inter_index_y(this%outnx,this%outny))
-    ALLOCATE(lon(this%outnx),lat(this%outnx))
-
-    CALL get_val(in, &
-     lon_min=lon_min, lon_max=lon_max,&
-     lat_min=lat_min, lat_max=lat_max)
-
-    CALL getval(v7d%ana(:)%coord,lon=lon,lat=lat)
-
-    CALL find_index(in,this%trans%inter%sub_type,&
-     nx=this%innx, ny=this%inny ,&
-     lon_min=lon_min, lon_max=lon_max,&
-     lat_min=lat_min, lat_max=lat_max,&
-     lon=RESHAPE(lon,(/SIZE(lon),1/)),lat=RESHAPE(lat,(/SIZE(lat),1/)),&
-     index_x=this%inter_index_x,index_y=this%inter_index_y)
-
-    IF ( this%trans%inter%sub_type == 'bilin' ) THEN
-      ALLOCATE(this%inter_x(this%innx,this%inny),this%inter_y(this%innx,this%inny))
-      ALLOCATE(this%inter_xp(this%outnx,this%outny),this%inter_yp(this%outnx,this%outny))
-
-      CALL griddim_coordinates(in, this%inter_x, this%inter_y)
-
-      CALL proj(in,&
-       RESHAPE(lon,(/SIZE(lon),1/)),RESHAPE(lat,(/SIZE(lat),1/)),&
-       this%inter_xp,this%inter_yp)
-
-    ENDIF
-
-    DEALLOCATE(lon,lat)
-
-  ELSE
-
-    CALL l4f_category_log(this%category,L4F_WARN, &
-     'init_grid_v7d_transform inter sub_type '//TRIM(this%trans%inter%sub_type) &
-     //' not supported')
-    
-  ENDIF
-
-ELSE
-
-  CALL l4f_category_log(this%category,L4F_WARN, &
-   'init_grid_v7d_transform trans type '//TRIM(this%trans%trans_type) &
-   //' not supported')
-
-ENDIF
-
-END SUBROUTINE init_grid_v7d_transform
-
-
-!> Initialises an object that defines a transformation from sparse data to a grid.
-!! Questo metodo definisce la trasformazione da dati sparsi a grigliato seguendo le indicazioni contenute nell'oggetto
-!! di trasformazione. Devono essere quindi forniti il grigliato da trasformare e l'oggetto di trasformazione.
-!! Deve essere fornito anche un oggetto contenetente le informazioni relative ai dati sparsi su cui elaborare la trasformazione.
-!! Viene generato un oggetto di trasformazione associato al grigliato e dati dati sparsi.
-SUBROUTINE init_v7d_grid_transform(this,trans,v7d,griddim,categoryappend)
-TYPE(grid_transform),INTENT(out) :: this !< grid transformation object
-TYPE(transform_def),INTENT(in) :: trans !< transformation object
-TYPE(vol7d),INTENT(in) :: v7d !< vol7d objects to transform
-TYPE(griddim_def),INTENT(in) :: griddim !< grid transformated object
-character(len=*),INTENT(in),OPTIONAL :: categoryappend !< appende questo suffisso al namespace category di log4fortran
-
-
-INTEGER :: nx, ny,i,j
-DOUBLE PRECISION :: lon_min, lon_max, lat_min, lat_max, steplon, steplat,lon_min_new, lat_min_new
-doubleprecision,allocatable :: lon(:),lat(:)
-
-character(len=512) :: a_name
-
-call l4f_launcher(a_name,a_name_append=trim(subcategory)//"."//trim(optio_c(categoryappend,255)))
-this%category=l4f_category_get(a_name)
-
-this%trans=trans
-
-nullify (this%inter_index_x)
-nullify (this%inter_index_y)
-
-nullify (this%inter_x)
-nullify (this%inter_y)
-
-nullify (this%inter_xp)
-nullify (this%inter_yp)
-
-
-IF (this%trans%trans_type == 'inter') THEN
-
-  IF ( this%trans%inter%sub_type == 'linear' ) THEN
-    
-    CALL get_val(griddim, nx=nx, ny=ny)
-    this%outnx=nx
-    this%outny=ny
-  
-    this%innx=SIZE(v7d%ana)
-    this%inny=1
-  
-    ALLOCATE(lon(this%innx),lat(this%innx))
-    ALLOCATE(this%inter_xp(this%innx,this%inny),this%inter_yp(this%innx,this%inny))
-    ALLOCATE(this%inter_x(this%outnx,this%outny),this%inter_y(this%outnx,this%outny))
-
-    CALL get_val(griddim, &
-     lon_min=lon_min, lon_max=lon_max,&
-     lat_min=lat_min, lat_max=lat_max)
-
-    CALL getval(v7d%ana(:)%coord,lon=lon,lat=lat)
-
-    CALL proj(griddim,&
-     RESHAPE(lon,(/SIZE(lon),1/)),RESHAPE(lat,(/SIZE(lat),1/)),&
-     this%inter_xp,this%inter_yp)
-
-    CALL griddim_coordinates(griddim, this%inter_x, this%inter_y)
-
-    DEALLOCATE(lon,lat)
-
-  ELSE
-
-    CALL l4f_category_log(this%category,L4F_WARN, &
-     'init_v7d_grid_transform inter sub_type '//TRIM(this%trans%inter%sub_type) &
-     //' not supported')
-
-  ENDIF
-
-ELSE IF (this%trans%trans_type == 'boxinter') THEN
-
-  this%innx=SIZE(v7d%ana)
-  this%inny=1
-  CALL get_val(griddim, nx=this%outnx, ny=this%outny, &
-   lon_min=lon_min, lon_max=lon_max, lat_min=lat_min, lat_max=lat_max)
-! TODO now box size is ignored
-! if box size not provided, use the actual grid step
-  IF (.NOT.c_e(this%trans%inter%box%boxdx)) &
-   CALL get_val(griddim, dx=this%trans%inter%box%boxdx)
-  IF (.NOT.c_e(this%trans%inter%box%boxdy)) &
-   CALL get_val(griddim, dx=this%trans%inter%box%boxdy)
-! half size is actually needed
-  this%trans%inter%box%boxdx = this%trans%inter%box%boxdx*0.5D0
-  this%trans%inter%box%boxdy = this%trans%inter%box%boxdy*0.5D0
-! index arrays must have the shape of input grid
-  ALLOCATE(lon(this%innx),lat(this%innx))
-  ALLOCATE(this%inter_index_x(this%innx,this%inny), &
-   this%inter_index_y(this%innx,this%inny))
-
-! get coordinates of input grid in geo system
-  CALL getval(v7d%ana(:)%coord,lon=lon,lat=lat)
-! use find_index in the opposite way
-  CALL find_index(griddim,'near',&
-   nx=this%outnx, ny=this%outny ,&
-   lon_min=lon_min, lon_max=lon_max,&
-   lat_min=lat_min, lat_max=lat_max,&
-   lon=lon, lat=lat,&
-   index_x=this%inter_index_x(:,1), index_y=this%inter_index_y(:,1))
-
-ELSE
-
-  CALL l4f_category_log(this%category,L4F_WARN, &
-   'init_v7d_grid_transform trans type '//TRIM(this%trans%trans_type) &
-   //' not supported')
-
-ENDIF
-
-END SUBROUTINE init_v7d_grid_transform
-
-
-!> \brief destructor of grid_tranform object
-!! release any memory and data associated to grid_transformation object
-!! the logger category will be deleted too
-SUBROUTINE delete_grid_transform(this)
-
-TYPE(grid_transform),INTENT(inout) :: this !< grid_transform object
-
-call delete(this%trans)
-
-this%innx=imiss
-this%inny=imiss
-this%outnx=imiss
-this%outny=imiss
-this%iniox=imiss
-this%inioy=imiss
-this%infox=imiss
-this%infoy=imiss
-this%outinx=imiss
-this%outiny=imiss
-this%outfnx=imiss
-this%outfny=imiss
-
-if (associated(this%inter_index_x)) deallocate (this%inter_index_x)
-if (associated(this%inter_index_y)) deallocate (this%inter_index_y)
-
-if (associated(this%inter_x)) deallocate (this%inter_x)
-if (associated(this%inter_y)) deallocate (this%inter_y)
-
-if (associated(this%inter_xp)) deallocate (this%inter_xp)
-if (associated(this%inter_yp)) deallocate (this%inter_yp)
-
-!chiudo il logger
-call l4f_category_delete(this%category)
-
-end SUBROUTINE delete_grid_transform
-
-
-!> From input data array compute the output data array.
-!! Grid_transform object contains any information needed for computation.
-!! Field_out will be computed.
-SUBROUTINE grid_transform_compute(this, field_in, field_out)
-TYPE(grid_transform),INTENT(in) :: this !< grid_transformation object
-REAL, INTENT(in) :: field_in(:,:) !< input array
-REAL, INTENT(out) :: field_out(:,:) !< output aarray
-
-INTEGER :: i, j, ii, jj, ie, je, navg
-INTEGER,ALLOCATABLE :: nval(:,:)
-real :: z1,z2,z3,z4
-doubleprecision  :: x1,x3,y1,y3,xp,yp
-
-#ifdef DEBUG
-call l4f_category_log(this%category,L4F_DEBUG,"start grid_transform_compute")
-#endif
-
-! check size of field_in, field_out
-
-if (any(shape(field_in) /= (/this%innx,this%inny/))) then
-
-  call l4f_category_log(this%category,L4F_ERROR,"inconsistent in shape: "//&
-   TRIM(to_char(this%innx))//","//TRIM(to_char(this%inny))//" /= "//&
-   TRIM(to_char(SIZE(field_in,1)))//","//TRIM(to_char(SIZE(field_in,2))))
-  call raise_fatal_error()
-end if
-
-if (any(shape(field_out) /= (/this%outnx,this%outny/))) then
-
-  call l4f_category_log(this%category,L4F_ERROR,"inconsistent out shape: "//&
-   TRIM(to_char(this%outnx))//","//TRIM(to_char(this%outny))//" /= "//&
-   TRIM(to_char(SIZE(field_out,1)))//","//TRIM(to_char(SIZE(field_out,2))))
-  call raise_fatal_error()
-end if
-
-
-field_out(:,:) = rmiss
-
-IF (this%trans%trans_type == 'zoom') THEN
-
-#ifdef DEBUG
-  call l4f_category_log(this%category,L4F_DEBUG, &
-   "start grid_transform_compute zoom")
-#endif
-
-  field_out(this%outinx:this%outfnx, &
-   this%outiny:this%outfny) = &
-   field_in(this%iniox:this%infox, &
-   this%inioy:this%infoy)
-
-ELSE IF (this%trans%trans_type == 'boxregrid') THEN
-
-#ifdef DEBUG
-  call l4f_category_log(this%category,L4F_DEBUG, &
-   "start grid_transform_compute boxregrid")
-#endif
-
-  jj = 0
-  DO j = 1, this%inny - this%trans%boxregrid%npy + 1, this%trans%boxregrid%npy
-    je = j+this%trans%boxregrid%npy-1
-    jj = jj+1
-    ii = 0
-    DO i = 1, this%innx - this%trans%boxregrid%npx + 1, this%trans%boxregrid%npx
-      ie = i+this%trans%boxregrid%npx-1
-      ii = ii+1
-      navg = COUNT(field_in(i:ie,j:je) /= rmiss)
-      IF (navg > 0) THEN
-        field_out(ii,jj) = SUM(field_in(i:ie,j:je)/navg, &
-         MASK=(field_in(i:ie,j:je) /= rmiss))
-      ENDIF
-    ENDDO
-  ENDDO
-
-ELSE IF (this%trans%trans_type == 'inter') THEN
-
-#ifdef DEBUG
-  call l4f_category_log(this%category,L4F_DEBUG, &
-   "start grid_transform_compute inter")
-#endif
-
-  IF (this%trans%inter%sub_type == 'near') THEN
-
-    DO j = 1, this%outny 
-      DO i = 1, this%outnx 
-
-        if (c_e(this%inter_index_x(i,j)) .and. c_e(this%inter_index_y(i,j)))&
-         field_out(i,j) = field_in(this%inter_index_x(i,j),this%inter_index_y(i,j))
-
-      ENDDO
-    ENDDO
-
-  else if (this%trans%inter%sub_type == 'bilin') THEN
-
-    DO j = 1, this%outny 
-      DO i = 1, this%outnx 
-
-        IF   (c_e(this%inter_index_x(i,j)) .AND. c_e(this%inter_index_y(i,j)))THEN
-
-          z1=field_in(this%inter_index_x(i,j),this%inter_index_y(i,j))
-          z2=field_in(this%inter_index_x(i,j)+1,this%inter_index_y(i,j))
-          z3=field_in(this%inter_index_x(i,j)+1,this%inter_index_y(i,j)+1)
-          z4=field_in(this%inter_index_x(i,j),this%inter_index_y(i,j)+1)
-
-          IF (c_e(z1) .AND. c_e(z2) .AND. c_e(z3) .AND. c_e(z4)) THEN
-
-            x1=this%inter_x(this%inter_index_x(i,j),this%inter_index_y(i,j))
-            y1=this%inter_y(this%inter_index_x(i,j),this%inter_index_y(i,j))
-            x3=this%inter_x(this%inter_index_x(i,j)+1,this%inter_index_y(i,j)+1)
-            y3=this%inter_y(this%inter_index_x(i,j)+1,this%inter_index_y(i,j)+1)
-
-            xp=this%inter_xp(i,j)
-            yp=this%inter_yp(i,j)
-            
-            field_out(i,j) = hbilin (z1,z2,z3,z4,x1,y1,x3,y3,xp,yp)
-
-          END IF
-        END IF
-
-      ENDDO
-    ENDDO
-
-  ENDIF
-ELSE IF (this%trans%trans_type == 'boxinter') THEN
-
-#ifdef DEBUG
-  call l4f_category_log(this%category,L4F_DEBUG, &
-   "start grid_transform_compute boxinter")
-#endif
-
-  IF (this%trans%inter%sub_type == 'average') THEN
-    
-    ALLOCATE(nval(this%outnx, this%outny))
-    field_out(:,:) = 0.0
-    nval(:,:) = 0
-    DO j = 1, this%inny
-      DO i = 1, this%innx
-        IF (c_e(this%inter_index_x(i,j)) .AND. c_e(this%inter_index_y(i,j))) THEN
-          field_out(this%inter_index_x(i,j),this%inter_index_y(i,j)) = &
-           field_out(this%inter_index_x(i,j),this%inter_index_y(i,j)) + &
-           field_in(i,j)
-          nval(this%inter_index_x(i,j),this%inter_index_y(i,j)) = &
-           nval(this%inter_index_x(i,j),this%inter_index_y(i,j)) + 1
-        ENDIF
-      ENDDO
-    ENDDO
-    WHERE (nval(:,:) /= 0)
-      field_out(:,:) = field_out(:,:)/nval(:,:)
-    ELSEWHERE
-      field_out(:,:) = rmiss
-    END WHERE
-    DEALLOCATE(nval)
-
-  ELSE IF (this%trans%inter%sub_type == 'max') THEN
-
-    field_out(:,:) = rmiss
-    DO j = 1, this%inny
-      DO i = 1, this%innx
-        IF (c_e(this%inter_index_x(i,j)) .AND. c_e(this%inter_index_y(i,j))) THEN
-          IF (c_e(field_out(this%inter_index_x(i,j),this%inter_index_y(i,j)))) THEN
-            field_out(this%inter_index_x(i,j),this%inter_index_y(i,j)) = &
-             MAX(field_out(this%inter_index_x(i,j),this%inter_index_y(i,j)), &
-             field_in(i,j))
-          ELSE
-            field_out(this%inter_index_x(i,j),this%inter_index_y(i,j)) = field_in(i,j)
-          ENDIF
-        ENDIF
-      ENDDO
-    ENDDO
-
-
-  ELSE IF (this%trans%inter%sub_type == 'min') THEN
-
-    field_out(:,:) = rmiss
-    DO j = 1, this%inny
-      DO i = 1, this%innx
-        IF (c_e(this%inter_index_x(i,j)) .AND. c_e(this%inter_index_y(i,j))) THEN
-          IF (c_e(field_out(this%inter_index_x(i,j),this%inter_index_y(i,j)))) THEN
-            field_out(this%inter_index_x(i,j),this%inter_index_y(i,j)) = &
-             MIN(field_out(this%inter_index_x(i,j),this%inter_index_y(i,j)), &
-             field_in(i,j))
-          ELSE
-            field_out(this%inter_index_x(i,j),this%inter_index_y(i,j)) = field_in(i,j)
-          ENDIF
-        ENDIF
-      ENDDO
-    ENDDO
-
-  ELSE IF (this%trans%inter%sub_type == 'percentile') THEN
-    
-    DO j = 1, this%outny
-      DO i = 1, this%outnx
-        field_out(i:i,j) = stat_percentile( &
-         RESHAPE(field_in, (/SIZE(field_in)/)), &
-         (/REAL(this%trans%inter%box%boxpercentile)/), &
-         mask=RESHAPE((this%inter_index_x == i .AND. &
-         this%inter_index_y == j), (/SIZE(field_in)/)))
-      ENDDO
-    ENDDO
-
-  ENDIF
-
-ENDIF
-
-END SUBROUTINE grid_transform_compute
-
-
-!> From input data vector compute the output data array.
-!! Grid_transform object contains any information needed for computation.
-!! Field_out will be computed.
-SUBROUTINE v7d_grid_transform_compute(this, field_in, field_out)
-TYPE(grid_transform),INTENT(in) :: this !< grid_tranform object
-REAL, INTENT(in) :: field_in(:) !< input vector
-REAL, INTENT(out):: field_out(:,:) !< output matrix
-
-real,allocatable :: field_in_p(:),x_in_p(:),y_in_p(:)
-real,allocatable :: x_out(:),y_out(:)
-integer :: inn_p,ier
-
-!!$INTEGER :: i, j, ii, jj, ie, je, navg
-!!$real :: z1,z2,z3,z4
-!!$doubleprecision  :: x1,x3,y1,y3,xp,yp
-
-#ifdef DEBUG
-call l4f_category_log(this%category,L4F_DEBUG,"start v7d_grid_transform_compute")
-#endif
-
-! check size of field_in, field_out
-
-IF (SIZE(field_in) /= this%innx .OR. 1 /= this%inny) THEN
-
-  call l4f_category_log(this%category,L4F_ERROR,"inconsistent in shape: "//&
-   TRIM(to_char(this%innx))//","//TRIM(to_char(this%inny))//" /= "//&
-   TRIM(to_char(SIZE(field_in)))//",1")
-  call raise_fatal_error()
-end if
-
-if (any(shape(field_out) /= (/this%outnx,this%outny/))) then
-
-  call l4f_category_log(this%category,L4F_ERROR,"inconsistent out shape: "//&
-   TRIM(to_char(this%outnx))//","//TRIM(to_char(this%outny))//" /= "//&
-   TRIM(to_char(SIZE(field_out,1)))//","//TRIM(to_char(SIZE(field_out,2))))
-  call raise_fatal_error()
-end if
-
-field_out(:,:) = rmiss
-
-IF (this%trans%trans_type == 'inter') THEN
-
-#ifdef DEBUG
-  call l4f_category_log(this%category,L4F_DEBUG,"start v7d_grid_transform_compute inter")
-#endif
-
-  if (this%trans%inter%sub_type == 'linear') THEN
-
-    inn_p=count(c_e(field_in))
-
-    call l4f_category_log(this%category,L4F_INFO,"Number of sparse data points= "//to_char(inn_p))
-
-    if (inn_p > 2) then
-
-      allocate(field_in_p(inn_p))
-      allocate(x_in_p(inn_p))
-      allocate(y_in_p(inn_p))
-
-      field_in_p=pack(field_in,c_e(field_in))
-      x_in_p=pack(this%inter_xp(:,1),c_e(field_in))
-      y_in_p=pack(this%inter_yp(:,1),c_e(field_in))
-
-#ifdef HAVE_LIBNGMATH
-
-      CALL NATGRIDS(inn_p,x_in_p,y_in_p,field_in_p,&
-       this%outnx, this%outny, REAL(this%inter_x(:,1)), &
-       REAL(this%inter_y(1,:)), field_out, ier)
-#else
-      call l4f_category_log(this%category,L4F_ERROR,"libsim compiled without NATGRIDD (ngmath ncarg library)")
-      call raise_fatal_error()
-
-#endif
-
-      IF (ier /= 0) THEN
-        call l4f_category_log(this%category,L4F_ERROR,"Error return from NATGRIDD = "//to_char(ier))
-        call raise_fatal_error()
-      ENDIF
-
-      deallocate(field_in_p,x_in_p,y_in_p)
-
-    else
-
-      call l4f_category_log(this%category,L4F_INFO,"Insufficient data in gridded region to triangulate")
-
-    end if
-
-  ELSE IF (this%trans%trans_type == 'boxinter') THEN ! use the grid-grid method
-      
-    CALL compute(this, RESHAPE(field_in, (/SIZE(field_in), 1/)), field_out)
-
-  ELSE
-
-    call l4f_category_log(this%category,L4F_ERROR, &
-     "sub_type not right here: "//this%trans%inter%sub_type)
-    call raise_fatal_error()
-
-  END IF
-
-else
-
-  call l4f_category_log(this%category,L4F_ERROR, &
-   "trans_type not right here: "//this%trans%trans_type)
-  call raise_fatal_error()
-
-END IF
-
-END SUBROUTINE v7d_grid_transform_compute
-
-
-!> \brief bilinear interpolation
-!!     effettua interpolazione bilineare dati i valori nei punti
-!!     1,2,3,4 e le coordinate dei punti 1 e 3 oltre a quelle
-!!     del punto p dove viene valutato il campo.
-!!_____________________________________________________________
-!!				disposizione punti
-!!	4	3
-!!
-!!	  p
-!!
-!!	1	2
-!! _____________________________________________________________
-
-elemental real function hbilin (z1,z2,z3,z4,x1,y1,x3,y3,xp,yp) result (zp)
-
-doubleprecision,intent(in):: x1,y1 !< coordinate of the lower left point
-doubleprecision,intent(in):: x3,y3 !< coordinate of the upper right point
-doubleprecision,intent(in):: xp,yp !< coordinate of point where interpolate
-real,intent(in) :: z1,z2,z3,z4 !< Z values on the four points
-
-doubleprecision :: p1,p2
-real :: z5,z6
-
-
-p2=((yp-y1)/(y3-y1))
-p1=((xp-x1)/(x3-x1))
-
-z5=(z4-z1)*p2+z1
-z6=(z3-z2)*p2+z2
-
-zp=(z6-z5)*(p1)+z5
-      
-
-end function hbilin
-
-
-!> Locate index of requested point
-elemental subroutine find_index(this,inter_type,&
- nx,ny, lon_min, lon_max, lat_min,lat_max,&
- lon,lat,index_x,index_y)
-
-type(griddim_def),intent(in) :: this !< griddim object (from grid)
-character(len=*),intent(in) :: inter_type !< interpolation type (determine wich point is requested)
-!> dimension (to grid)
-integer,intent(in) :: nx,ny 
-!> extreme coordinate (to grid)
-doubleprecision,intent(in) :: lon_min, lon_max, lat_min, lat_max
-!> target coordinate
-doubleprecision,intent(in) :: lon,lat
-!> index of point requested
-integer,optional,intent(out) :: index_x,index_y 
-
-doubleprecision :: x,y
-
-if (inter_type == "near") then
-
-  call proj(this,lon,lat,x,y)
-
-  if (present(index_x))then
-    index_x=nint((x-lon_min)/((lon_max-lon_min)/dble(nx-1)))+1
-    if ( index_x < 1 .or. index_x > nx ) index_x=imiss
-  end if
-
-  if (present(index_y))then
-    index_y=nint((y-lat_min)/((lat_max-lat_min)/dble(ny-1)))+1
-    if ( index_y < 1 .or. index_y > ny ) index_y=imiss
-  end if
-
-else if (inter_type == "bilin") then
-
-  call proj(this,lon,lat,x,y)
-
-  if (present(index_x))then
-    index_x=(x-lon_min)/((lon_max-lon_min)/dble(nx-1))+1
-    if ( index_x < 1 .or. index_x+1 > nx ) index_x=imiss
-  end if
-
-  if (present(index_y))then
-    index_y=(y-lat_min)/((lat_max-lat_min)/dble(ny-1))+1
-    if ( index_y < 1 .or. index_y+1 > ny ) index_y=imiss
-  end if
-
-else
-
-  if (present(index_x)) index_x=imiss
-  if (present(index_y)) index_y=imiss
-
-! logging not possibile in elemental subroutine
-!  call l4f_category_log(this%category,L4F_ERROR,"inter_type not supported: "//trim(inter_type))
-!  call raise_fatal_error("inter_type not supported")
-
-end if
-
-end subroutine find_index
-
-
-!> Locate index of requested point
-!SUBROUTINE find_index_in_box(this, xin, yin, dx, dy, index_x, index_y)
-!TYPE(griddim_def),INTENT(in) :: this
-!DOUBLE PRECISION,INTENT(in) :: xin(:,:), yin(:,:)
-!DOUBLE PRECISION,INTENT(in) :: dx, dy
-!INTEGER,INTENT(out) :: index_x(:,:), index_y(:,:)
-!
-!DOUBLE PRECISION :: xout(this%dim%nx,this%dim%ny), yout(this%dim%nx,this%dim%ny)
-!INTEGER :: i, j
-!
-!CALL griddim_coordinates(this, xout, yout)
-!
-!index_x(:,:) = imiss
-!index_x(:,:) = imiss
-!
-!DO j = 1, this%dim%ny
-!  DO i = 1, this%dim%nx
-!    WHERE(xin(:,:) >= xout(i,j)-dx .AND. xin(:,:) < xout(i,j)+dx .AND. &
-!     yin(:,:) >= yout(i,j)-dy .AND. yin(:,:) < yout(i,j)+dy)
-!      index_x(:,:) = i
-!      index_y(:,:) = j
-!    END WHERE
-!  ENDDO
-!ENDDO
-!
-!END SUBROUTINE find_index_in_box
 
 
 !> Compute rotation matrix for wind unrotation. It allocates and
@@ -2525,11 +1197,40 @@ ENDDO
 END SUBROUTINE griddim_wind_unrot
 
 
+SUBROUTINE griddim_zoom_coord(this, ilon, ilat, flon, flat, ix, iy, fx, fy)
+TYPE(griddim_def),INTENT(in) :: this
+!TYPE(grid_dim),INTENT(in) :: dim
+DOUBLE PRECISION,INTENT(in) :: ilon,ilat,flon,flat
+INTEGER,INTENT(out) :: ix, iy, fx, fy
+
+DOUBLE PRECISION :: dx, dy
+DOUBLE PRECISION :: ix1, iy1, fx1, fy1
+INTEGER :: lix, liy, lfx, lfy
+
+
+! compute projected coordinates of vertices of desired lonlat rectangle
+CALL proj(this, ilon, ilat, ix1, iy1)
+CALL proj(this, flon, flat, fx1, fy1)
+! compute projected indices
+lix = NINT((ix1-this%grid%generic%x1)/this%grid%generic%dx) + 1
+liy = NINT((iy1-this%grid%generic%y1)/this%grid%generic%dy) + 1
+lfx = NINT((fx1-this%grid%generic%x1)/this%grid%generic%dx) + 1
+lfy = NINT((fy1-this%grid%generic%y1)/this%grid%generic%dy) + 1
+! swap projected indices, in case grid is "strongly rotated"
+ix = MIN(lix, lfx)
+fx = MAX(lix, lfx)
+iy = MIN(liy, lfy)
+fy = MAX(liy, lfy)
+
+END SUBROUTINE griddim_zoom_coord
+
+
 end module grid_class
 
 
 !>\example example_vg6d_1.f90
 !!\brief Programma esempio semplice per la definizione di griddim.
 !!
-!! Programma che crea un oggetto griddim e ne stampa alcuni valori a schermo. Comprende anche una demo dell'uso di log4fortran
+!! Programma che crea un oggetto griddim e ne stampa alcuni valori a
+!! schermo. Comprende anche una demo dell'uso di log4fortran.
 

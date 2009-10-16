@@ -2,6 +2,7 @@ program demo4
 
 use gridinfo_class
 use grid_class
+use grid_transform_class
 use log4fortran
 use grib_api
 use volgrid6d_class
