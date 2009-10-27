@@ -120,16 +120,12 @@ REAL,INTENT(in) :: in !< value to be represented as CHARACTER
 CHARACTER(len=*),INTENT(in),OPTIONAL :: form !< optional format
 
 CHARACTER(len=15) :: char, tmpchar
-INTEGER :: i
 
 IF (PRESENT(form)) THEN
   WRITE(char,form) in
 ELSE
   WRITE(tmpchar,'(G15.9)') in
-  DO i = 1, LEN(tmpchar)
-    IF (tmpchar(i:i) /= ' ') EXIT
-  ENDDO
-  char = tmpchar(i:)
+  char = align_left(tmpchar)
 ENDIF
 
 END FUNCTION real_to_char
@@ -142,17 +138,13 @@ DOUBLE PRECISION,INTENT(in) :: in !< value to be represented as CHARACTER
 CHARACTER(len=*),INTENT(in),OPTIONAL :: form !< optional format
 
 CHARACTER(len=24) :: char, tmpchar
-INTEGER :: i
 
 
 IF (PRESENT(form)) THEN
   WRITE(char,form) in
 ELSE
   WRITE(tmpchar,'(G24.17)') in
-  DO i = 1, LEN(tmpchar)
-    IF (tmpchar(i:i) /= ' ') EXIT
-  ENDDO
-  char = tmpchar(i:)
+  char = align_left(tmpchar)
 ENDIF
 
 END FUNCTION double_to_char
@@ -274,7 +266,7 @@ END FUNCTION LowerCase
 !! The needed number of trailing blanks is added at the end in order
 !! to keep the length of the resulting string equal to the input
 !! length.
-FUNCTION align_left(input_string) RESULT(aligned)
+ELEMENTAL FUNCTION align_left(input_string) RESULT(aligned)
 CHARACTER(len=*), INTENT(in) :: input_string !< string to be aligned
 
 CHARACTER(len=LEN(input_string)) :: aligned
@@ -288,7 +280,7 @@ END FUNCTION align_left
 !! The needed number of leading blanks is added at the beginning in
 !! order to keep the length of the resulting string equal to the input
 !! length.
-FUNCTION align_right(input_string) RESULT(aligned)
+ELEMENTAL FUNCTION align_right(input_string) RESULT(aligned)
 CHARACTER(len=*), INTENT(in) :: input_string !< string to be aligned
 
 CHARACTER(len=LEN(input_string)) :: aligned
@@ -304,7 +296,7 @@ END FUNCTION align_right
 !! number of leading blanks is added or removed at the beginning and
 !! at the end in order to keep the length of the resulting string
 !! equal to the input length.
-FUNCTION align_center(input_string) RESULT(aligned)
+ELEMENTAL FUNCTION align_center(input_string) RESULT(aligned)
 CHARACTER(len=*), INTENT(in) :: input_string !< string to be aligned
 
 CHARACTER(len=LEN(input_string)) :: aligned
@@ -325,9 +317,9 @@ END FUNCTION align_center
 !! spaces, zero is returned. It is named l_nblnk and not lnblnk in
 !! order to avoid conflict with a nondefault intrinsic Fortran
 !! function with the same name, available on some compilers.
-FUNCTION l_nblnk(input_string, blnk) RESULT(nblnk)
+ELEMENTAL FUNCTION l_nblnk(input_string, blnk) RESULT(nblnk)
 CHARACTER(len=*), INTENT(in) :: input_string !< string to be scanned
-CHARACTER(len=1), OPTIONAL :: blnk !< optional blank character, if not provided, a blank space is assumed
+CHARACTER(len=1), INTENT(in), OPTIONAL :: blnk !< optional blank character, if not provided, a blank space is assumed
 
 CHARACTER(len=1) :: lblnk
 INTEGER :: nblnk
@@ -348,9 +340,9 @@ END FUNCTION l_nblnk
 !> Return the index of first character in \a input_string which is not
 !! a blank space. If the string is zero-length or contains only blank
 !! spaces, \a LEN(input_string)+1 is returned.
-FUNCTION f_nblnk(input_string, blnk) RESULT(nblnk)
+ELEMENTAL FUNCTION f_nblnk(input_string, blnk) RESULT(nblnk)
 CHARACTER(len=*), INTENT(in) :: input_string !< string to be scanned
-CHARACTER(len=1), OPTIONAL :: blnk !< optional blank character, if not provided, a blank space is assumed
+CHARACTER(len=1), INTENT(in), OPTIONAL :: blnk !< optional blank character, if not provided, a blank space is assumed
 
 CHARACTER(len=1) :: lblnk
 INTEGER :: nblnk

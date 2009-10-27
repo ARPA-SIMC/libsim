@@ -309,9 +309,16 @@ CHARACTER(len=*),OPTIONAL :: default !< the default value to give to dest if opt
 CHARACTER(len=*),OPTIONAL :: help !< the help message that will be formatted and pretty-printed on screen
 
 TYPE(op_option) :: this
+CHARACTER(LEN=40) :: cdefault
+
+IF (PRESENT(default)) THEN
+  cdefault = ' [default='//TRIM(default)//']'
+ELSE
+  cdefault = ''
+ENDIF
 
 ! common initialisation
-this = op_option_new_common(short_opt, long_opt, help)
+this = op_option_new_common(short_opt, long_opt, cdefault, help)
 
 this%destc => dest
 this%destclen = LEN(dest) ! needed to avoid exceeding the length of dest
@@ -336,9 +343,16 @@ INTEGER,OPTIONAL :: default !< the default value to give to dest if option is no
 CHARACTER(len=*),OPTIONAL :: help !< the help message that will be formatted and pretty-printed on screen
 
 TYPE(op_option) :: this
+CHARACTER(LEN=40) :: cdefault
+
+IF (PRESENT(default)) THEN
+  cdefault = ' [default='//TRIM(to_char(default))//']'
+ELSE
+  cdefault = ''
+ENDIF
 
 ! common initialisation
-this = op_option_new_common(short_opt, long_opt, help)
+this = op_option_new_common(short_opt, long_opt, cdefault, help)
 
 this%desti => dest
 IF (PRESENT(default)) this%desti = default
@@ -362,9 +376,15 @@ REAL,OPTIONAL :: default !< the default value to give to dest if option is not f
 CHARACTER(len=*),OPTIONAL :: help !< the help message that will be formatted and pretty-printed on screen
 
 TYPE(op_option) :: this
+CHARACTER(LEN=40) :: cdefault
 
+IF (PRESENT(default)) THEN
+  cdefault = ' [default='//TRIM(to_char(default))//']'
+ELSE
+  cdefault = ''
+ENDIF
 ! common initialisation
-this = op_option_new_common(short_opt, long_opt, help)
+this = op_option_new_common(short_opt, long_opt, cdefault, help)
 
 this%destr => dest
 IF (PRESENT(default)) this%destr = default
@@ -388,9 +408,16 @@ DOUBLE PRECISION,OPTIONAL :: default !< the default value to give to dest if opt
 CHARACTER(len=*),OPTIONAL :: help !< the help message that will be formatted and pretty-printed on screen
 
 TYPE(op_option) :: this
+CHARACTER(LEN=40) :: cdefault
+
+IF (PRESENT(default)) THEN
+  cdefault = ' [default='//TRIM(align_left(to_char(default,'(G15.9)')))//']'
+ELSE
+  cdefault = ''
+ENDIF
 
 ! common initialisation
-this = op_option_new_common(short_opt, long_opt, help)
+this = op_option_new_common(short_opt, long_opt, cdefault, help)
 
 this%destd => dest
 IF (PRESENT(default)) this%destd = default
@@ -414,7 +441,7 @@ CHARACTER(len=*),OPTIONAL :: help !< the help message that will be formatted and
 TYPE(op_option) :: this
 
 ! common initialisation
-this = op_option_new_common(short_opt, long_opt, help)
+this = op_option_new_common(short_opt, long_opt, '', help)
 
 this%destl => dest
 !IF (PRESENT(default)) this%destl = default
@@ -438,7 +465,7 @@ CHARACTER(len=*),OPTIONAL :: help !< the help message that will be formatted and
 TYPE(op_option) :: this
 
 ! common initialisation
-this = op_option_new_common(short_opt, long_opt, help)
+this = op_option_new_common(short_opt, long_opt, '', help)
 
 this%destcount => dest
 IF (PRESENT(start)) this%destcount = start
@@ -459,7 +486,7 @@ CHARACTER(len=*),OPTIONAL :: help !< the help message that will be formatted and
 TYPE(op_option) :: this
 
 ! common initialisation
-this = op_option_new_common(short_opt, long_opt, help)
+this = op_option_new_common(short_opt, long_opt, '', help)
 
 this%opttype = opttype_help
 this%need_arg = .FALSE.
@@ -468,9 +495,10 @@ END FUNCTION op_option_help_new
 
 
 ! private function
-FUNCTION op_option_new_common(short_opt, long_opt, help) RESULT(this)
+FUNCTION op_option_new_common(short_opt, long_opt, default, help) RESULT(this)
 CHARACTER(len=1),INTENT(in) :: short_opt
 CHARACTER(len=*),INTENT(in) :: long_opt
+CHARACTER(len=*) :: default
 CHARACTER(len=*),OPTIONAL :: help
 
 TYPE(op_option) :: this
@@ -487,8 +515,8 @@ this%long_opt = long_opt
 this%opttype = -1
 this%need_arg = .FALSE.
 IF (PRESENT(help)) THEN
-  ALLOCATE(this%help_msg(LEN_TRIM(help) + 1))
-  this%help_msg = fchar_to_cstr(TRIM(help))
+  ALLOCATE(this%help_msg(LEN_TRIM(help) + LEN_TRIM(default) + 1))
+  this%help_msg = fchar_to_cstr(TRIM(help)//TRIM(default))
 ELSE
   NULLIFY(this%help_msg)
 ENDIF
