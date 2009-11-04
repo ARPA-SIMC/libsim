@@ -78,8 +78,8 @@ integer, parameter :: cli_level2(cli_nlevel) = (/100,250,500,750,1000,1250,1500,
 
 !> conventional coordinate for superarea location
 integer, parameter :: cli_nsuperarea=3
-real, parameter :: cli_superarea_lat(cli_nsuperarea)=(/45.06,44.33,44.06/)
-real, parameter :: cli_superarea_lon(cli_nsuperarea)=(/9.68,11.75,11.57/)
+real(kind=fp_geo), parameter :: cli_superarea_lat(cli_nsuperarea)=(/45.06,44.33,44.06/)
+real(kind=fp_geo), parameter :: cli_superarea_lon(cli_nsuperarea)=(/9.68,11.75,11.57/)
 
 
 !>\brief Oggetto principale per il controllo di qualità
