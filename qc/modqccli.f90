@@ -70,11 +70,16 @@ public
 
 character (len=255),parameter:: subcategory="QCcli"
 
-integer, parameter :: ncli_level=10
+integer, parameter :: cli_nlevel=10
 !> standard heigth for climatological use (low level)
-integer :: cli_level1(ncli_level) = (/-100,100,250,500,750,1000,1250,1500,1750,2000/)
+integer, parameter :: cli_level1(cli_nlevel) = (/-100,100,250,500,750,1000,1250,1500,1750,2000/)
 !> standard heigth for climatological use (hight level)
-integer :: cli_level2(ncli_level) = (/100,250,500,750,1000,1250,1500,1750,2000,2250/)
+integer, parameter :: cli_level2(cli_nlevel) = (/100,250,500,750,1000,1250,1500,1750,2000,2250/)
+
+!> conventional coordinate for superarea location
+integer, parameter :: cli_nsuperarea=3
+real, parameter :: cli_superarea_lat(cli_nsuperarea)=(/45.06,44.33,44.06/)
+real, parameter :: cli_superarea_lon(cli_nsuperarea)=(/9.68,11.75,11.57/)
 
 
 !>\brief Oggetto principale per il controllo di qualità
@@ -398,12 +403,7 @@ ENDDO
 
 do indana=1,size(qccli%v7d%ana)
 
-  ! rielabora le macroarea facendole Valentine thinking
-
-  if (qccli%in_macroa(indana) >= 1 .and. qccli%in_macroa(indana) <= 4 ) iarea=3
-  if (qccli%in_macroa(indana) == 5 .or.  qccli%in_macroa(indana) == 6 ) iarea=2
-  if (qccli%in_macroa(indana) == 7 .or.  qccli%in_macroa(indana) == 8 ) iarea=1
-
+  iarea= supermacroa(qccli%in_macroa(indana))
 
   do  indnetwork=1,size(qccli%v7d%network)
     do indlevel=1,size(qccli%v7d%level)
@@ -524,12 +524,12 @@ TYPE(vol7d_level),intent(out):: level(:) !< level where is defined the climatolo
 
 integer :: i
 
-if (size(level) /= ncli_level ) then
-  call l4f_log(L4F_ERROR,"cli_level_generate: level dimension /= "//trim(to_char(ncli_level)))
-  call raise_error("cli_level_generate: level dimension /= "//trim(to_char(ncli_level)))
+if (size(level) /= cli_nlevel ) then
+  call l4f_log(L4F_ERROR,"cli_level_generate: level dimension /= "//trim(to_char(cli_nlevel)))
+  call raise_error("cli_level_generate: level dimension /= "//trim(to_char(cli_nlevel)))
 end if
 
-do i=1,ncli_level
+do i=1,cli_nlevel
   call init(level(i), 102,cli_level1(i)*1000,102,cli_level2(i)*1000)
 end do
 
@@ -543,6 +543,38 @@ end subroutine cli_level_generate
 !!$
 !!$return
 !!$end subroutine qccli_validate
+
+
+
+
+!> Rielabora le macroarea facendole Valentine/Elements thinking
+integer function supermacroa(macroa)
+
+integer, intent(in) :: macroa 
+                                ! rielabora le macroarea facendole Valentine thinking
+
+supermacroa=imiss
+
+if (macroa == 1 .or. macroa == 2 .or. macroa == 4 ) supermacroa=3
+if (macroa == 3 .or. macroa == 5 .or. macroa == 6 ) supermacroa=2
+if (macroa == 7 .or. macroa == 8 ) supermacroa=1
+
+end function supermacroa
+
+
+
+
+
+!!$  ! rielabora le macroarea facendole Valentine thinking
+!!$
+!!$  if (qccli%in_macroa(indana) == 1 .or. qccli%in_macroa(indana) == 2 .or. qccli%in_macroa(indana) == 4 ) iarea=3
+!!$  if (qccli%in_macroa(indana) == 3 .or. qccli%in_macroa(indana) == 5 .or.  qccli%in_macroa(indana) == 6 ) iarea=2
+!!$  if (qccli%in_macroa(indana) == 7 .or.  qccli%in_macroa(indana) == 8 ) iarea=1
+
+
+
+
+
 
 end module modqccli
 
