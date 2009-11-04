@@ -25,9 +25,9 @@ integer :: nana, ntime ,nlevel, ntimerange, ndativarr, nnetwork !,nanavari
 integer :: iana, itime, ilevel, itimerange, idativarr, inetwork
 TYPE(vol7d) :: v7d
 TYPE(vol7d_dballe) :: v7d_dballe
-TYPE(vol7d_ana) :: ana(3)
+TYPE(vol7d_ana) :: ana(cli_nsuperarea)
 TYPE(datetime) :: time
-TYPE(vol7d_level) :: level(ncli_level)
+TYPE(vol7d_level) :: level(cli_nlevel)
 TYPE(vol7d_timerange) :: timerange(3)
 TYPE(vol7d_network) :: network
 TYPE(vol7d_var) ::  dativar,anavar
@@ -59,7 +59,7 @@ CALL init(v7d)
 nana=9*3
 ntime=12
 ntimerange=3
-nlevel=ncli_level
+nlevel=cli_nlevel
 nnetwork=1
 ndativarr=1
 !nanavari=1
@@ -90,8 +90,8 @@ call init(v7d%dativar%r(idativarr), btable="B13011")
 call cli_level_generate(v7d%level)
 
 
-do iarea = 1, 3
-  do ilevel = 1,ncli_level
+do iarea = 1, cli_nsuperarea
+  do ilevel = 1,cli_nlevel
 
 !    call init(v7d%level(ilevel), 102,cli_level1(ilevel)*1000,102,cli_level2(ilevel)*1000)
 
@@ -117,7 +117,7 @@ do iarea = 1, 3
           lat=0.0
           lon=0.0
           write(ident,'("BOX-",2i2.2)')iarea,iper*10
-          iana=iarea+(iper-1)*3
+          iana=iarea+(iper-1)*cli_nsuperarea
           call init(v7d%ana(iana),lat=lat,lon=lon,ident=ident)
 
           read (iunit,"(10x,f7.0)") dato
