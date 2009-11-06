@@ -20,10 +20,10 @@ TYPE(vol7d) :: v7d_profile
 type(ncar_plot) :: plot
 integer   :: time,ana,timerange,network
 logical ::  packtimerange=.false.,changepg=.false.,distinct=.false.
-character(len=20) ::  tcolor(4)=(/'brown','red','black','tan'/)
-character(len=20) ::  tdcolor(4)=(/'orange','forest Green','cyan','yellow'/)
-character(len=20) ::  ucolor(4)=(/'sky blue','blue','blue magenta','magenta'/)
-character(len=20) ::  wcolor(4)=(/'black','violet','light gray','dark gray'/)
+character(len=20) ::  tcolor(4)=(/'brown','red  ','black','tan  '/)
+character(len=20) ::  tdcolor(4)=(/'orange      ','forest Green','cyan        ','yellow      '/)
+character(len=20) ::  ucolor(4)=(/'sky blue    ','blue        ','blue magenta','magenta     '/)
+character(len=20) ::  wcolor(4)=(/'black     ','violet    ','light gray','dark gray '/)
 
 !questa chiamata prende dal launcher il nome univoco
 call l4f_launcher(a_name,a_name_force="readtemp")

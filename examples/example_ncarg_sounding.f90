@@ -15,10 +15,10 @@ TYPE(vol7d_dballe) :: v7d_dba
 type(ncar_plot) :: plot
 integer   :: time,ana,timerange,network
 
-character(len=20) ::  tcolor(6)=(/'tan','brown','orange','red','black','black'/)
-character(len=20) ::  tdcolor(6)=(/'yellow','green','forest Green','cyan','black','black'/)
-character(len=20) ::  ucolor(6)=(/'sky blue','blue','blue magenta','magenta','black','black'/)
-character(len=20) ::  wcolor(6)=(/'light gray','dark gray','black','violet','black','black'/)
+character(len=20) ::  tcolor(6)=(/'tan   ','brown ','orange','red   ','black ','black '/)
+character(len=20) ::  tdcolor(6)=(/'yellow      ','green       ','forest Green','cyan        ','black       ','black       '/)
+character(len=20) ::  ucolor(6)=(/'sky blue    ','blue        ','blue magenta','magenta     ','black       ','black       '/)
+character(len=20) ::  wcolor(6)=(/'light gray','dark gray ','black     ','violet    ','black     ','black     '/)
 
 
 !questa chiamata prende dal launcher il nome univoco
