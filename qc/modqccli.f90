@@ -10,8 +10,8 @@
 !! default polipciv4.dat. Attribuendo una numerazione che parte da Sud e Est e scorre prima verso Nord
 !! le nuove aree vengono cosi' definite:
 !!  \arg area clima  1 -> macroarea SIM  7,8
-!!  \arg area clima  2 -> macroarea SIM  5,6
-!!  \arg area clima  3 -> macroarea SIM  1,2,3,4 
+!!  \arg area clima  2 -> macroarea SIM  3,5,6
+!!  \arg area clima  3 -> macroarea SIM  1,2,4 
 !!
 !!Le altezze invece vengono cosi' definite:
 !!  classe altezza = (altezza+150)/250
@@ -78,8 +78,8 @@ integer, parameter :: cli_level2(cli_nlevel) = (/100,250,500,750,1000,1250,1500,
 
 !> conventional coordinate for superarea location
 integer, parameter :: cli_nsuperarea=3
-real(kind=fp_geo), parameter :: cli_superarea_lat(cli_nsuperarea)=(/45.06,44.33,44.06/)
-real(kind=fp_geo), parameter :: cli_superarea_lon(cli_nsuperarea)=(/9.68,11.75,11.57/)
+real(kind=fp_geo), parameter :: cli_superarea_lat(cli_nsuperarea)=(/44.76,44.50,44.34/)
+real(kind=fp_geo), parameter :: cli_superarea_lon(cli_nsuperarea)=(/9.83,11.00,11.93/)
 
 
 !>\brief Oggetto principale per il controllo di qualità
