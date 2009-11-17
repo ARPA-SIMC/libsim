@@ -2577,8 +2577,11 @@ do while ( N > 0 )
       !ora legge tutti i dati di anagrafica e li mette in bufferana
 
 
+      if (.not. lanaonly)then
                                 !salto lat lon e ident
-      if (btable == "B05001" .or. btable == "B06001" .or. btable == "B01011") cycle
+        if (btable == "B05001" .or. btable == "B06001" .or. btable == "B01011") cycle
+
+      end if
                                 !anno mese giorno
       if (btable == "B04001" .or. btable == "B04002" .or. btable == "B04003") cycle
                                 !ora minuti secondi
@@ -2623,7 +2626,7 @@ do while ( N > 0 )
                                 !bufferizzo il contesto
                                 !print *,"lat,lon",lat,lon
                                 !print*,year,month,day,hour,minute,sec
-                                !print*,btable,dato,buffer(na)%datiattrb
+                                !print*,btable,na
   
       call init(bufferana(na)%ana,lat=lat,lon=lon,ident=ident)
       call init(bufferana(na)%time, year=year, month=month, day=day, hour=hour, minute=minute)
@@ -2642,7 +2645,7 @@ if (.not. present(var))then
   nvar = count_distinct(buffer(:nd)%dativar, back=.TRUE.)
 end if
 
-nana = count_distinct(buffer(:nd)%ana, back=.TRUE.)
+nana = count_distinct(bufferana(:na)%ana, back=.TRUE.)
 ntime = count_distinct(buffer(:nd)%time, back=.TRUE.)
 ntimerange = count_distinct(buffer(:nd)%timerange, back=.TRUE.)
 nlevel = count_distinct(buffer(:nd)%level, back=.TRUE.)
@@ -2664,8 +2667,8 @@ else
   ndativarc= nvar
 end if
 
-!print *, "nana=",nana," ntime=",ntime," ntimerange=",ntimerange, &
-!" nlevel=",nlevel," nnetwork=",nnetwork," ndativarr=",ndativarr
+!!$print *, "nana=",nana," ntime=",ntime," ntimerange=",ntimerange, &
+!!$ " nlevel=",nlevel," nnetwork=",nnetwork," ndativarr=",ndativarr
 
 ndatiattrr=0
 ndatiattri=0
@@ -2729,7 +2732,7 @@ if (lanaonly)then
   ! qui faccio le operazioni minime per avere solo l'anagrafica utile per certe operazioni
 
   call vol7d_alloc (vol7dtmp, nana=nana)
-  vol7dtmp%ana=pack_distinct(buffer(:nd)%ana, nana, back=.TRUE.)
+  vol7dtmp%ana=pack_distinct(bufferana(:na)%ana, nana, back=.TRUE.)
 
   ! Release memory
   deallocate (buffer)
@@ -2777,7 +2780,7 @@ call vol7d_alloc (vol7dtmp, &
 ! print*,"ho fatto alloc"
 
 
-vol7dtmp%ana=pack_distinct(buffer(:nd)%ana, nana, back=.TRUE.)
+vol7dtmp%ana=pack_distinct(bufferana(:na)%ana, nana, back=.TRUE.)
 vol7dtmp%time=pack_distinct(buffer(:nd)%time, ntime, back=.TRUE.)
 vol7dtmp%timerange=pack_distinct(buffer(:nd)%timerange, ntimerange, back=.TRUE.)
 vol7dtmp%level=pack_distinct(buffer(:nd)%level, nlevel, back=.TRUE.)
