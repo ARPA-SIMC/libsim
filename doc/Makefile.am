@@ -25,6 +25,6 @@ clean-local:
 
 endif
 
-EXTRA_DIST = Doxyfile.in fpp mainpage.dox breve_presentazione.odp
+EXTRA_DIST = Doxyfile.in fpp mainpage.dox footer.html breve_presentazione.odp
 #SUBDIRS=pictures
 
