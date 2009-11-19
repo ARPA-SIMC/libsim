@@ -8,11 +8,11 @@ IMPLICIT NONE
 TYPE gridpar_polarproj
 !> latitudini a cui il piano di proiezione è secante alla sfera
   DOUBLE PRECISION :: latin1, latin2
-  DOUBLE PRECISION :: lov !> line of view, ovvero meridiano parallelo all'asse y del piano di proiezione
-  DOUBLE PRECISION :: lad !> latitudine a cui dx e dy (in m) sono specificati
+  DOUBLE PRECISION :: lov !< line of view, ovvero meridiano parallelo all'asse y del piano di proiezione
+  DOUBLE PRECISION :: lad !< latitudine a cui dx e dy (in m) sono specificati
 !> conservate per ricordo nel caso grib
   DOUBLE PRECISION :: lon1, lat1
-  INTEGER :: projection_center_flag !> 0 = polo sud, 128 = polo nord
+  INTEGER :: projection_center_flag !< 0 = polo sud, 128 = polo nord
 END TYPE gridpar_polarproj
 
 INTERFACE delete

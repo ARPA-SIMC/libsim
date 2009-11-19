@@ -116,7 +116,7 @@ return
 end function optio_c
 
 
-!> Return the optional value if present, otherwise return \c .FALSE. .
+!> Return the optional value if present, otherwise return .FALSE. .
 elemental logical function optio_log(var)
 
 logical,intent(in),optional  :: var !< variable to be checked

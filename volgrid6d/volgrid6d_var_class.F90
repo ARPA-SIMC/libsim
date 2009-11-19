@@ -26,9 +26,8 @@ TYPE volgrid6d_var
 
 END TYPE  volgrid6d_var
 
-!> Valore mancante per volgrid6d_var.
 TYPE(volgrid6d_var),PARAMETER :: volgrid6d_var_miss= &
- volgrid6d_var(imiss,imiss,imiss,imiss,cmiss,cmiss)
+ volgrid6d_var(imiss,imiss,imiss,imiss,cmiss,cmiss) !< Valore mancante per volgrid6d_var.
 
 !> Costruttore per la classe volgrid6d_var.
 !! Deve essere richiamato 
