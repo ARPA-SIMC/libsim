@@ -54,27 +54,27 @@
 !!Configuration syntax:
 !!
 !!The log4crc configuration file uses an XML syntax. The root element
-!!is <log4c> and it can be used to control the configuration file
+!!is &lt;log4c&gt; and it can be used to control the configuration file
 !!version interface with the attribute "version". The following 4
-!!elements are supported: <config>, <category>, <appender> and
-!!<layout>.
+!!elements are supported: &lt;config&gt;, &lt;category&gt;, &lt;appender&gt; and
+!!&lt;layout&gt;.
 !!
-!!     The <config> element controls the global log4c
-!!     configuration. It has 3 sub elements. The <nocleanup> flag
-!!     inhibits the log4c destructors routines. The <bufsize> element
+!!     The &lt;config&gt; element controls the global log4c
+!!     configuration. It has 3 sub elements. The &lt;nocleanup&gt; flag
+!!     inhibits the log4c destructors routines. The &lt;bufsize&gt; element
 !!     sets the buffer size used to format log4c_logging_event_t
-!!     objects. If is set to 0, the allocation is dynamic (the <debug>
+!!     objects. If is set to 0, the allocation is dynamic (the &lt;debug&gt;
 !!     element is currently unused).
 !!
-!!     The <category> element has 3 possible attributes: the category
+!!     The &lt;category&gt; element has 3 possible attributes: the category
 !!     "name", the category "priority" and the category
 !!     "appender". Future versions will handle multple appenders per
 !!     category.
 !!
-!!     The <appender> element has 3 possible attributes: the appender
+!!     The &lt;appender&gt; element has 3 possible attributes: the appender
 !!     "name", the appender "type", and the appender "layout".
 !!
-!!     The <layout> element has 2 possible attributes: the layout
+!!     The &lt;layout&gt; element has 2 possible attributes: the layout
 !!     "name" and the layout "type".
 !!
 !!

@@ -659,17 +659,17 @@ end function to_char_dat
 !! un volume esistente aggiungendo elementi in alcune dimensioni (quelle
 !! a estensione non nulla, ovviamente) e mantenendo invariato tutto il resto.
 !! Per quanto riguarda i descrittori delle dimensioni relative alle
-!! variabili, la relativa estesnsione è specificata con la nomenclatura
-!! \a n<x><y><z> dove <x> può valere:
+!! variabili, la relativa estensione è specificata con la nomenclatura
+!! \a n&lt;x&gt;&lt;y&gt;&lt;z&gt; dove &lt;x&gt; può valere:
 !!  - \a ana per variabili relative a voumi di anagrafica
 !!  - \a dati per variabili relative a voumi di dati
 !!
-!! <y> può valere:
+!! &lt;y&gt; può valere:
 !!  - \a var per variabili
 !!  - \a attr per attributi
 !!  - \a varattr variabili aventi attributi nei volumi di attributi
 !!
-!! <z> può valere:
+!! &lt;z&gt; può valere:
 !!  - \a r per variabili o attributi a valori reali
 !!  - \a d per variabili o attributi a valori a doppia precisione
 !!  - \a i per variabili o attributi a valori interi
