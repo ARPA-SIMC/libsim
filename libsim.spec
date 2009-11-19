@@ -1,7 +1,7 @@
 Summary: libsim: librerie di utilità in Fortran 90
 Name: libsim
 Version: 3.0.0
-Release: 579
+Release: 604
 License: GPL
 Group: Applications/Meteo
 URL: http://www.arpa.emr.it/sim
@@ -12,8 +12,9 @@ BuildRequires: shapelib-fortran-devel oracle-instantclient-devel libemos libdbal
 Requires: libdballef4 >= 4.0.13 grib_api >= 1.8.0
 
 #temporaneo
+%if 0%{?fedora} < 9
 %define _fmoddir       %{_libdir}/gfortran/modules
-
+%endif
 
 %package -n libsim-doc
 Summary:  libsim documentation
@@ -46,13 +47,21 @@ make
 
 %install
 make DESTDIR=%{buildroot} install
+%if 0%{?fedora} >= 9
+mkdir -p $RPM_BUILD_ROOT%{_fmoddir}
+mv $RPM_BUILD_ROOT%{_includedir}/*.mod $RPM_BUILD_ROOT%{_fmoddir}
+%endif
 
 %files
 %defattr(-, root, root)
 %{_libdir}/*.a
 %{_libdir}/*.la
 %{_libdir}/*.so*
+%if 0%{?fedora} < 9
 %{_includedir}/*
+%else
+%{_fmoddir}/*.mod
+%endif
 %{_bindir}/*
 %{_datadir}/%{name}/*
 #%{_docdir}/%{name}/*

@@ -47,7 +47,9 @@ vol7d_dballe_class_dati.F90 vol7d_dballe_class_datiattr.F90 \
 vol7d_dballe_class_ana.F90 vol7d_dballe_class_anaattr.F90 vol7d_dballe_class_var_du.f90
 
 # c'e` una maniera migliore?
-tmpvar = $(libsim_vol7d_la_SOURCES:.f90=.mod)
+tmpvar1 = $(libsim_vol7d_la_SOURCES:oraclesim.c=)
+tmpvar = $(tmpvar1:.f90=.mod)
+#tmpvar = $(libsim_vol7d_la_SOURCES:.f90=.mod)
 nodist_include_HEADERS = $(tmpvar:.F90=.mod)
 
 vol7d_class_compute.$(OBJEXT): vol7d_class.$(OBJEXT)
