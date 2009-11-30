@@ -565,7 +565,7 @@ this%isec0(1) = this%idims(19) ! reassign length (already done at grbin1)
 
 #endif
 
-IF (unit > 0) CALL grio_putrawgrib(this, unit, ier)
+IF (unit >= 0) CALL grio_putrawgrib(this, unit, ier)
 
 END SUBROUTINE grio_putgribdata
 
