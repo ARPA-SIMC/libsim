@@ -27,6 +27,7 @@ INTEGER(kind=int_b), PARAMETER :: ibmiss = HUGE(0_int_b) !< intero ad 1 byte \a 
 INTEGER(kind=int_b), PARAMETER :: bmiss = ibmiss !< 
 INTEGER(kind=int_s), PARAMETER :: ismiss = HUGE(0_int_s) !< intero a 2 byte \a (kind=int_s)
 INTEGER(kind=int_l), PARAMETER :: ilmiss = HUGE(0_int_l) !< intero a 4 byte \a (kind=int_l)
+INTEGER(kind=int_ll), PARAMETER :: illmiss = HUGE(0_int_ll) !< intero a 8 byte \a (kind=int_ll)
 CHARACTER(len=1), PARAMETER :: cmiss = char(0) !< carattere (qualsiasi lunghezza)
 
 

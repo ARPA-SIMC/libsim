@@ -41,9 +41,9 @@ TYPE timedelta
 END TYPE timedelta
 
 !> valore mancante per datetime
-TYPE(datetime), PARAMETER :: datetime_miss=datetime(imiss)
+TYPE(datetime), PARAMETER :: datetime_miss=datetime(illmiss)
 !> valore mancante per timedelta
-TYPE(timedelta), PARAMETER :: timedelta_miss=timedelta(imiss, 0)
+TYPE(timedelta), PARAMETER :: timedelta_miss=timedelta(illmiss, 0)
 !> intervallo timedelta di durata nulla
 TYPE(timedelta), PARAMETER :: timedelta_0=timedelta(0, 0)
 !> inizializza con l'ora UTC
@@ -378,7 +378,7 @@ ELSE IF (PRESENT(now)) THEN
   CALL init(this, year=dt(1), month=dt(2), day=dt(3), hour=dt(5), minute=dt(6), &
    msec=dt(7)*1000+dt(8))
 ELSE
-  this%iminuti = 0
+  this = datetime_miss
 ENDIF
 
 END SUBROUTINE datetime_init
@@ -416,45 +416,82 @@ CHARACTER(len=23) :: datebuf
 IF (PRESENT(year) .OR. PRESENT(month) .OR. PRESENT(day) .OR. PRESENT(hour) &
  .OR. PRESENT(minute) .OR. PRESENT(msec) .OR. PRESENT(isodate) &
  .OR. PRESENT(simpledate) .OR. PRESENT(oraclesimdate)) THEN
-  CALL jeladata6_1(lday, lmonth, lyear, lhour, lminute, lmsec, this%iminuti)
-  IF (PRESENT(msec)) THEN 
-    msec = lmsec
+
+  IF (this==datetime_miss) THEN
+
+    IF (PRESENT(msec)) THEN 
+      msec = imiss
+    ENDIF
+    IF (PRESENT(minute)) THEN 
+      minute = imiss
+    ENDIF
+    IF (PRESENT(hour)) THEN
+      hour = imiss
+    ENDIF
+    IF (PRESENT(day)) THEN
+      day = imiss
+    ENDIF
+    IF (PRESENT(month)) THEN
+      month = imiss
+    ENDIF
+    IF (PRESENT(year)) THEN
+      year = imiss
+    ENDIF
+    IF (PRESENT(isodate)) THEN
+      isodate = cmiss
+    ENDIF
+    IF (PRESENT(simpledate)) THEN
+      simpledate = cmiss
+    ENDIF
+    IF (PRESENT(oraclesimdate)) THEN
+      CALL l4f_log(L4F_WARN, 'in datetime_getval, parametro oraclesimdate '// &
+       'obsoleto, usare piuttosto simpledate')
+      oraclesimdate=cmiss
+    ENDIF
+
+  ELSE
+
+    CALL jeladata6_1(lday, lmonth, lyear, lhour, lminute, lmsec, this%iminuti)
+    IF (PRESENT(msec)) THEN 
+      msec = lmsec
+    ENDIF
+    IF (PRESENT(minute)) THEN 
+      minute = lminute
+    ENDIF
+    IF (PRESENT(hour)) THEN
+      hour = lhour
+    ENDIF
+    IF (PRESENT(day)) THEN
+      day = lday
+    ENDIF
+    IF (PRESENT(month)) THEN
+      month = lmonth
+    ENDIF
+    IF (PRESENT(year)) THEN
+      year = lyear
+    ENDIF
+    IF (PRESENT(isodate)) THEN
+      WRITE(datebuf(1:23), '(I4.4,A1,I2.2,A1,I2.2,1X,I2.2,A1,I2.2,A1,I2.2,A1,I3.3)') &
+       lyear, '-', lmonth, '-', lday, lhour, ':', lminute, ':', lmsec/1000, &
+       '.', MOD(lmsec, 1000)
+      isodate = datebuf(1:MIN(LEN(isodate),23))
+    ENDIF
+    IF (PRESENT(simpledate)) THEN
+      WRITE(datebuf(1:17), '(I4.4,5I2.2,I3.3)') &
+       lyear, lmonth, lday, lhour, lminute, lmsec/1000, MOD(lmsec, 1000)
+      simpledate = datebuf(1:MIN(LEN(simpledate),17))
+    ENDIF
+    IF (PRESENT(oraclesimdate)) THEN
+      CALL l4f_log(L4F_WARN, 'in datetime_getval, parametro oraclesimdate '// &
+       'obsoleto, usare piuttosto simpledate')
+      WRITE(oraclesimdate, '(I4.4,4I2.2)') lyear, lmonth, lday, lhour, lminute
+    ENDIF
   ENDIF
-  IF (PRESENT(minute)) THEN 
-    minute = lminute
+  IF (PRESENT(unixtime)) THEN
+    unixtime = this%iminuti/1000_int_ll-unsec
   ENDIF
-  IF (PRESENT(hour)) THEN
-    hour = lhour
-  ENDIF
-  IF (PRESENT(day)) THEN
-    day = lday
-  ENDIF
-  IF (PRESENT(month)) THEN
-    month = lmonth
-  ENDIF
-  IF (PRESENT(year)) THEN
-    year = lyear
-  ENDIF
-  IF (PRESENT(isodate)) THEN
-    WRITE(datebuf(1:23), '(I4.4,A1,I2.2,A1,I2.2,1X,I2.2,A1,I2.2,A1,I2.2,A1,I3.3)') &
-     lyear, '-', lmonth, '-', lday, lhour, ':', lminute, ':', lmsec/1000, &
-     '.', MOD(lmsec, 1000)
-    isodate = datebuf(1:MIN(LEN(isodate),23))
-  ENDIF
-  IF (PRESENT(simpledate)) THEN
-    WRITE(datebuf(1:17), '(I4.4,5I2.2,I3.3)') &
-     lyear, lmonth, lday, lhour, lminute, lmsec/1000, MOD(lmsec, 1000)
-    simpledate = datebuf(1:MIN(LEN(simpledate),17))
-  ENDIF
-  IF (PRESENT(oraclesimdate)) THEN
-    CALL l4f_log(L4F_WARN, 'in datetime_getval, parametro oraclesimdate '// &
-     'obsoleto, usare piuttosto simpledate')
-    WRITE(oraclesimdate, '(I4.4,4I2.2)') lyear, lmonth, lday, lhour, lminute
-  ENDIF
-ENDIF
-IF (PRESENT(unixtime)) THEN
-  unixtime = this%iminuti/1000_int_ll-unsec
-ENDIF
+  
+END IF
 
 END SUBROUTINE datetime_getval
 
@@ -850,7 +887,14 @@ ELSE IF (PRESENT(oraclesimdate)) THEN
   READ(oraclesimdate, '(I8,2I2)')d, h, m
   this%iminuti = 86400000_int_ll*INT(d, KIND=int_ll) + &
    3600000_int_ll*INT(h, KIND=int_ll) + 60000_int_ll*INT(m, KIND=int_ll)
-ELSE
+
+ELSE IF (.not. present(year) .and. .not. present(month) .and. .not. present(day)&
+ .and. .not. present(hour) .and. .not. present(minute) .and. .not. present(msec)&
+ .and. .not. present(isodate) .and. .not. present(simpledate) .and. .not. present(oraclesimdate)) THEN
+
+  this=timedelta_miss
+
+ELSE 
   this%iminuti = 0
   IF (PRESENT(year)) THEN
     this%month = this%month + year*12
@@ -871,6 +915,9 @@ ELSE
     this%iminuti = this%iminuti + msec
   ENDIF
 ENDIF
+
+
+
 
 END SUBROUTINE timedelta_init
 

@@ -29,7 +29,7 @@ endif
 
 
 if DBALLE
-noinst_PROGRAMS += esempio_v7ddballe esempio_v7ddballe_multi esempio_v7ddballe_import_export esempio_v7ddballe_export esempio_qccli esempio_qc_convert example_v7ddballe_v7d2dba
+noinst_PROGRAMS += esempio_v7ddballe esempio_v7ddballe_multi esempio_v7ddballe_import_export esempio_v7ddballe_export esempio_qccli esempio_qc_convert example_v7ddballe_v7d2dba esempio_v7ddballe_move_and_collapse
 
 esempio_v7ddballe_SOURCES = esempio_v7ddballe.f90
 esempio_v7ddballe_LDADD = ../base/libsim_base.la ../vol7d/libsim_vol7d.la ../log4fortran/liblog4fortran.la
@@ -45,6 +45,10 @@ esempio_v7ddballe_export_LDADD = ../base/libsim_base.la ../vol7d/libsim_vol7d.la
 
 example_v7ddballe_v7d2dba_SOURCES = example_v7ddballe_v7d2dba.f90
 example_v7ddballe_v7d2dba_LDADD = ../base/libsim_base.la ../vol7d/libsim_vol7d.la ../log4fortran/liblog4fortran.la
+
+esempio_v7ddballe_move_and_collapse_SOURCES = esempio_v7ddballe_move_and_collapse.f90
+esempio_v7ddballe_move_and_collapse_LDADD = ../base/libsim_base.la ../vol7d/libsim_vol7d.la ../log4fortran/liblog4fortran.la
+
 
 if NETCDF
 noinst_PROGRAMS += esempio_v7ddballe_export_file esempio_v7ddballe_import_file esempio_v7dnetcdf

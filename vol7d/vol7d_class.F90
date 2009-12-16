@@ -483,7 +483,7 @@ cdat=cmiss
 
 if (associated(this%voldatii)) then
   do i=1,size(this%dativar%i)
-    idat=this%voldatii(1,i,1,1,1,1)
+    idat=this%voldatii(1,1,1,1,i,1)
     if (associated(this%dativar%i)) call display(this%dativar%i(i),idat,rdat,ddat,bdat,cdat)
   end do
 end if
@@ -491,7 +491,7 @@ idat=imiss
 
 if (associated(this%voldatir)) then
   do i=1,size(this%dativar%r)
-    rdat=this%voldatir(1,i,1,1,1,1)
+    rdat=this%voldatir(1,1,1,1,i,1)
     if (associated(this%dativar%i)) call display(this%dativar%r(i),idat,rdat,ddat,bdat,cdat)
   end do
 end if
@@ -499,7 +499,7 @@ rdat=rmiss
 
 if (associated(this%voldatid)) then
   do i=1,size(this%dativar%d)
-    ddat=this%voldatid(1,i,1,1,1,1)
+    ddat=this%voldatid(1,1,1,1,i,1)
     if (associated(this%dativar%d)) call display(this%dativar%d(i),idat,rdat,ddat,bdat,cdat)
   end do
 end if
@@ -507,7 +507,7 @@ ddat=dmiss
 
 if (associated(this%voldatib)) then
   do i=1,size(this%dativar%b)
-    bdat=this%voldatib(1,i,1,1,1,1)
+    bdat=this%voldatib(1,1,1,1,i,1)
     if (associated(this%dativar%b)) call display(this%dativar%b(i),idat,rdat,ddat,bdat,cdat)
   end do
 end if
@@ -515,7 +515,7 @@ bdat=bmiss
 
 if (associated(this%voldatic)) then
   do i=1,size(this%dativar%c)
-    cdat=this%voldatic(1,i,1,1,1,1)
+    cdat=this%voldatic(1,1,1,1,i,1)
     if (associated(this%dativar%c)) call display(this%dativar%c(i),idat,rdat,ddat,bdat,cdat)
   end do
 end if
@@ -2458,6 +2458,93 @@ end function realdatc
 
 
 
+!> Move data for all variables from one coordinate in the character volume to other.
+!! Only not missing data will be copyed and all attributes will be moved together.
+!! Usefull to colapse data spread in more indices (level or time or ....).
+!! After the move is possible to set to missing some descriptor and make a copy with miss=.true. 
+!! to obtain a new vol7d with less data shape.
+subroutine move_datac (v7d,&
+ indana,indtime,indlevel,indtimerange,indnetwork,&
+ indananew,indtimenew,indlevelnew,indtimerangenew,indnetworknew)
+
+TYPE(vol7d),intent(inout) :: v7d !< data in form of character in this object will be moved
+
+integer,intent(in) :: indana,indtime,indlevel,indtimerange,indnetwork !< source coordinate of the data
+integer,intent(in) :: indananew,indtimenew,indlevelnew,indtimerangenew,indnetworknew !< destination coordinate of data
+integer :: inddativar,inddatiattr,inddativarattr
+
+
+do inddativar=1,size(v7d%dativar%c)
+
+  if (c_e(&
+   v7d%voldatic &
+   (indana,indtime,indlevel,indtimerange,inddativar,indnetwork)  &
+   )) then
+
+                                ! dati
+    v7d%voldatic &
+     (indananew,indtimenew,indlevelnew,indtimerangenew,inddativar,indnetworknew) = &
+     v7d%voldatic &
+     (indana,indtime,indlevel,indtimerange,inddativar,indnetwork)
+
+
+                                ! attributi
+    if (associated (v7d%dativarattr%i)) then
+      inddativarattr  = index(v7d%dativarattr%i,v7d%dativar%c(inddativar))
+      if (inddativarattr > 0 ) then
+        v7d%voldatiattri &
+         (indananew,indtimenew,indlevelnew,indtimerangenew,inddativarattr,indnetworknew,:) = &
+         v7d%voldatiattri &
+         (indana,indtime,indlevel,indtimerange,inddativarattr,indnetwork,:)
+      end if
+    end if
+
+    if (associated (v7d%dativarattr%r)) then
+      inddativarattr  = index(v7d%dativarattr%r,v7d%dativar%c(inddativar))
+      if (inddativarattr > 0 ) then
+        v7d%voldatiattrr &
+         (indananew,indtimenew,indlevelnew,indtimerangenew,inddativarattr,indnetworknew,:) = &
+         v7d%voldatiattrr &
+         (indana,indtime,indlevel,indtimerange,inddativarattr,indnetwork,:)
+      end if
+    end if
+
+    if (associated (v7d%dativarattr%d)) then
+      inddativarattr  = index(v7d%dativarattr%d,v7d%dativar%c(inddativar))
+      if (inddativarattr > 0 ) then
+        v7d%voldatiattrd &
+         (indananew,indtimenew,indlevelnew,indtimerangenew,inddativarattr,indnetworknew,:) = &
+         v7d%voldatiattrd &
+         (indana,indtime,indlevel,indtimerange,inddativarattr,indnetwork,:)
+      end if
+    end if
+
+    if (associated (v7d%dativarattr%b)) then
+      inddativarattr  = index(v7d%dativarattr%b,v7d%dativar%c(inddativar))
+      if (inddativarattr > 0 ) then
+        v7d%voldatiattrb &
+         (indananew,indtimenew,indlevelnew,indtimerangenew,inddativarattr,indnetworknew,:) = &
+         v7d%voldatiattrb &
+         (indana,indtime,indlevel,indtimerange,inddativarattr,indnetwork,:)
+      end if
+    end if
+
+    if (associated (v7d%dativarattr%c)) then
+      inddativarattr  = index(v7d%dativarattr%c,v7d%dativar%c(inddativar))
+      if (inddativarattr > 0 ) then
+        v7d%voldatiattrc &
+         (indananew,indtimenew,indlevelnew,indtimerangenew,inddativarattr,indnetworknew,:) = &
+         v7d%voldatiattrc &
+         (indana,indtime,indlevel,indtimerange,inddativarattr,indnetwork,:)
+      end if
+    end if
+
+  end if
+
+end do
+
+end subroutine move_datac
+
 
 
 END MODULE vol7d_class
@@ -2467,3 +2554,7 @@ END MODULE vol7d_class
 !!
 !!Programma che scrive su file  un volume vol7d letto da una serie di file ASCII.
 !!Questo programma scrive i dati del clima che poi verranno letti da modqccli
+
+
+!>\example v7ddballe_move_and_collapse.f90
+!!\brief ! Example program to reduce to one the dimensions of levels and time without loss of data
