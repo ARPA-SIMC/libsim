@@ -1904,12 +1904,10 @@ ENDDO
 varbufr = vol7d_var_miss
 if(present(c_func)) c_func = conv_func_miss
 
-#ifdef DEBUG
-CALL l4f_log(L4F_DEBUG, 'vargrib2varbufr: variable '// &
+CALL l4f_log(L4F_WARN, 'vargrib2varbufr: variable '// &
  TRIM(to_char(vargrib%centre))//':'//TRIM(to_char(vargrib%category))//':'// &
  TRIM(to_char(vargrib%number))//':'//TRIM(to_char(vargrib%discipline))// &
  ' not found in table')
-#endif
 
 END SUBROUTINE vargrib2varbufr_s
 
@@ -1951,6 +1949,11 @@ ENDDO
 vargrib = volgrid6d_var_miss
 c_func = conv_func_miss
 !call init(vargrib, centre=200, category=1, number=11)
+
+CALL l4f_log(L4F_WARN, 'varbufr2vargrib: variable '// &
+ varbufr%btable//" : "//trim(varbufr%description)//" : "//trim(varbufr%unit)// &
+ ' not found in table')
+
 
 END SUBROUTINE varbufr2vargrib_s
 
