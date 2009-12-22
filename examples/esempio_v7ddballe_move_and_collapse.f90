@@ -74,6 +74,10 @@ end do
 call vol7d_copy(v7d_in%vol7d,v7d_out%vol7d,miss=.true.)
 CALL delete (v7d_in)
 
+!set to missing the ambigous descriptions
+call init (v7d_out%vol7d%level(1))
+call init (v7d_out%vol7d%time(1))
+
 call display(v7d_out%vol7d)
 CALL export(v7d_out)
 CALL delete(v7d_out) 
