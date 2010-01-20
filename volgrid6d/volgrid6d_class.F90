@@ -152,6 +152,7 @@ private
 PUBLIC volgrid6d,init,delete,export,import,compute,transform, &
  wind_rot,wind_unrot,vg6d_c2a,display
 
+integer stallo
 
 contains
 
@@ -242,7 +243,11 @@ IF (PRESENT(ntime)) THEN
 #ifdef DEBUG
     call l4f_category_log(this%category,L4F_DEBUG,"alloc ntime "//to_char(ntime))
 #endif
-    ALLOCATE(this%time(ntime))
+    ALLOCATE(this%time(ntime),stat=stallo)
+    if (stallo /=0)then
+      call l4f_category_log(this%category,L4F_ERROR,"allocating memory")
+      CALL raise_fatal_error("allocating memory")
+    end if
     IF (linit) THEN
       DO i = 1, ntime
         this%time(i) = datetime_miss
@@ -258,7 +263,11 @@ IF (PRESENT(nlevel)) THEN
 #ifdef DEBUG
     call l4f_category_log(this%category,L4F_DEBUG,"alloc nlevel "//to_char(nlevel))
 #endif
-    ALLOCATE(this%level(nlevel))
+    ALLOCATE(this%level(nlevel),stat=stallo)
+    if (stallo /=0)then
+      call l4f_category_log(this%category,L4F_ERROR,"allocating memory")
+      CALL raise_fatal_error("allocating memory")
+    end if
     IF (linit) THEN
       DO i = 1, nlevel
         CALL init(this%level(i))
@@ -272,7 +281,11 @@ IF (PRESENT(ntimerange)) THEN
 #ifdef DEBUG
     call l4f_category_log(this%category,L4F_DEBUG,"alloc ntimerange "//to_char(ntimerange))
 #endif
-    ALLOCATE(this%timerange(ntimerange))
+    ALLOCATE(this%timerange(ntimerange),stat=stallo)
+    if (stallo /=0)then
+      call l4f_category_log(this%category,L4F_ERROR,"allocating memory")
+      CALL raise_fatal_error("allocating memory")
+    end if
     IF (linit) THEN
       DO i = 1, ntimerange
         CALL init(this%timerange(i))
@@ -286,7 +299,11 @@ IF (PRESENT(nvar)) THEN
 #ifdef DEBUG
     call l4f_category_log(this%category,L4F_DEBUG,"alloc nvar "//to_char(nvar))
 #endif
-    ALLOCATE(this%var(nvar))
+    ALLOCATE(this%var(nvar),stat=stallo)
+    if (stallo /=0)then
+      call l4f_category_log(this%category,L4F_ERROR,"allocating memory")
+      CALL raise_fatal_error("allocating memory")
+    end if
     IF (linit) THEN
       DO i = 1, nvar
         CALL init(this%var(i))
@@ -341,7 +358,11 @@ IF (this%griddim%dim%nx > 0 .and. this%griddim%dim%ny > 0 .and..NOT.ASSOCIATED(t
 
      ALLOCATE(this%voldati( this%griddim%dim%nx,this%griddim%dim%ny,&
           SIZE(this%level), SIZE(this%time),  &
-          SIZE(this%timerange), SIZE(this%var)))
+          SIZE(this%timerange), SIZE(this%var)),stat=stallo)
+     if (stallo /=0)then
+       call l4f_category_log(this%category,L4F_ERROR,"allocating memory")
+       CALL raise_fatal_error("allocating memory")
+     end if
   
      IF (linivol) this%voldati = rmiss
 
@@ -352,8 +373,12 @@ IF (this%griddim%dim%nx > 0 .and. this%griddim%dim%ny > 0 .and..NOT.ASSOCIATED(t
 #endif
   ALLOCATE(this%gaid( SIZE(this%level),&
    SIZE(this%time), &
-   SIZE(this%timerange), SIZE(this%var)))
-  
+   SIZE(this%timerange), SIZE(this%var)),stat=stallo)
+  if (stallo /=0)then
+    call l4f_category_log(this%category,L4F_ERROR,"allocating memory")
+    CALL raise_fatal_error("allocating memory")
+  end if
+
   IF (linivol) this%gaid  = imiss
 
 
@@ -855,8 +880,11 @@ ngrid=count_distinct(gridinfov%griddim,back=.true.)
 call l4f_category_log(category,L4F_INFO,&
      "numero delle aree differenti: "//to_char(ngrid))
 
-allocate (this(ngrid))
-
+allocate (this(ngrid),stat=stallo)
+if (stallo /=0)then
+  call l4f_category_log(category,L4F_ERROR,"allocating memory")
+  CALL raise_fatal_error("allocating memory")
+end if
 do i=1,ngrid
    if (present(categoryappend))then
       call init (this(i), categoryappend=trim(categoryappend)//"-"//to_char(ngrid))
@@ -1008,8 +1036,11 @@ if (.not. associated(gridinfov))then
 
   end do
   
-  allocate (gridinfov(ngridinfo))
-
+  allocate (gridinfov(ngridinfo),stat=stallo)
+  if (stallo /=0)then
+    call l4f_category_log(category,L4F_ERROR,"allocating memory")
+    CALL raise_fatal_error("allocating memory")
+  end if
   do i=1,ngridinfo
      if (present(categoryappend))then
         call init(gridinfov(i),categoryappend=trim(categoryappend)//"-"//to_char(i))
@@ -1122,7 +1153,11 @@ call l4f_category_log(category,L4F_INFO,&
 
 if (ngrib > 0 ) then
 
-  allocate (gridinfo(ngrib))
+  allocate (gridinfo(ngrib),stat=stallo)
+  if (stallo /=0)then
+    call l4f_category_log(category,L4F_ERROR,"allocating memory")
+    CALL raise_fatal_error("allocating memory")
+  end if
 
   ngrib=0
   
@@ -1453,7 +1488,12 @@ character(len=*),INTENT(in),OPTIONAL :: categoryappend !< appende questo suffiss
 integer :: i,n
 n=size(volgrid6d_in)
 
-allocate( volgrid6d_out(n))
+allocate( volgrid6d_out(n),stat=stallo)
+if (stallo /=0)then
+  call l4f_log(L4F_ERROR,"allocating memory")
+  call raise_fatal_error("allocating memory")
+end if
+
 
 do i=1,n
 
@@ -1512,7 +1552,12 @@ if (associated(volgrid6d_in%time))then
 
   else
                                 ! converto reference in validity
-    allocate (validitytime(ntime,ntimerange))
+    allocate (validitytime(ntime,ntimerange),stat=stallo)
+    if (stallo /=0)then
+      call l4f_category_log(volgrid6d_in%category,L4F_ERROR,"allocating memory")
+      call raise_fatal_error("allocating memory")
+    end if
+
     do itime=1,ntime
       do itimerange=1,ntimerange
         if (vol7d_out%time_definition > volgrid6d_in%time_definition) then
@@ -1543,7 +1588,11 @@ end if
 
 nana=size(vol7d_out%ana)
 
-allocate(voldatir_out(nana,1))
+allocate(voldatir_out(nana,1),stat=stallo)
+if (stallo /=0)then
+  call l4f_category_log(volgrid6d_in%category,L4F_ERROR,"allocating memory")
+  call raise_fatal_error("allocating memory")
+end if
 
 inetwork=1
 do itime=1,ntime
@@ -1646,7 +1695,12 @@ if (associated(volgrid6d_in%time)) then
   if (time_definition /= volgrid6d_in%time_definition) then
     
                                 ! converto reference in validity
-    allocate (validitytime(ntime,ntimerange))
+    allocate (validitytime(ntime,ntimerange),stat=stallo)
+    if (stallo /=0)then
+      call l4f_category_log(volgrid6d_in%category,L4F_ERROR,"allocating memory")
+      call raise_fatal_error("allocating memory")
+    end if
+
     do itime=1,ntime
       do itimerange=1,ntimerange
         if (time_definition > volgrid6d_in%time_definition) then
@@ -1706,7 +1760,11 @@ character(len=*),INTENT(in),OPTIONAL :: categoryappend !< appende questo suffiss
 integer :: i,n
 n=size(volgrid6d_in)
 
-allocate( vol7d_out(n))
+allocate( vol7d_out(n),stat=stallo)
+if (stallo /=0)then
+  call l4f_log(L4F_ERROR,"allocating memory")
+  call raise_fatal_error("allocating memory")
+end if
 
 do i=1,n
 
@@ -1869,7 +1927,11 @@ TYPE(conv_func), POINTER,optional :: c_func(:)
 INTEGER :: i, n
 
 n = SIZE(vargrib)
-if ( present(c_func)) ALLOCATE(c_func(n))
+if ( present(c_func)) ALLOCATE(c_func(n),stat=stallo)
+if (stallo /=0)then
+  call l4f_log(L4F_ERROR,"allocating memory")
+  call raise_fatal_error("allocating memory")
+end if
 
 DO i = 1, n
   if (present(c_func))then
@@ -1920,7 +1982,11 @@ TYPE(conv_func), pointer :: c_func(:)
 INTEGER :: i, n
 
 n = SIZE(varbufr)
-ALLOCATE(c_func(n))
+ALLOCATE(c_func(n),stat=stallo)
+if (stallo /=0)then
+  call l4f_log(L4F_ERROR,"allocating memory")
+  call raise_fatal_error("allocating memory")
+end if
 
 DO i = 1, n
   CALL varbufr2vargrib_s(varbufr(i), vargrib(i), c_func(i))
@@ -1974,7 +2040,12 @@ ENDDO
 100 CONTINUE
 
 REWIND(un)
-ALLOCATE(conv_fwd(n))
+ALLOCATE(conv_fwd(n),stat=stallo)
+if (stallo /=0)then
+  call l4f_log(L4F_ERROR,"allocating memory")
+  call raise_fatal_error("allocating memory")
+end if
+
 conv_fwd(:) = vg6d_v7d_var_conv_miss
 CALL import_var_conv(un, conv_fwd)
 CLOSE(un)
@@ -1992,7 +2063,12 @@ ENDDO
 300 CONTINUE
 
 REWIND(un)
-ALLOCATE(conv_bwd(n))
+ALLOCATE(conv_bwd(n),stat=stallo)
+if (stallo /=0)then
+  call l4f_log(L4F_ERROR,"allocating memory")
+  call raise_fatal_error("allocating memory")
+end if
+
 conv_bwd(:) = vg6d_v7d_var_conv_miss
 CALL import_var_conv(un, conv_bwd)
 DO i = 1, n
@@ -2130,7 +2206,12 @@ end if
 nvar=0
 if (associated(this%var))then
   nvar=size(this%var)
-  allocate(varbufr(nvar))
+  allocate(varbufr(nvar),stat=stallo)
+  if (stallo /=0)then
+    call l4f_log(L4F_ERROR,"allocating memory")
+    call raise_fatal_error("allocating memory")
+  end if
+
   CALL vargrib2varbufr(this%var, varbufr)
 end if
 
@@ -2187,7 +2268,12 @@ end if
 
 
 ! Temporary workspace
-ALLOCATE(tmp_arr(this%griddim%dim%nx, this%griddim%dim%ny))
+ALLOCATE(tmp_arr(this%griddim%dim%nx, this%griddim%dim%ny),stat=stallo)
+if (stallo /=0)then
+  call l4f_log(L4F_ERROR,"allocating memory")
+  call raise_fatal_error("allocating memory")
+end if
+
 CALL griddim_unproj(this%griddim)
 CALL wind_unrot(this%griddim, rot_mat)
 
@@ -2474,7 +2560,12 @@ end if
 nvar=0
 if (associated(this%var))then
   nvar=size(this%var)
-  allocate(varbufr(nvar))
+  allocate(varbufr(nvar),stat=stallo)
+  if (stallo /=0)then
+    call l4f_log(L4F_ERROR,"allocating memory")
+    call raise_fatal_error("allocating memory")
+  end if
+
   CALL vargrib2varbufr(this%var, varbufr)
 end if
 
@@ -2502,7 +2593,12 @@ if ( COUNT(varbufr/=varu .and. varbufr/=varv) > 0 )then
 endif
 
 ! Temporary workspace
-ALLOCATE(tmp_arr(this%griddim%dim%nx, this%griddim%dim%ny))
+ALLOCATE(tmp_arr(this%griddim%dim%nx, this%griddim%dim%ny),stat=stallo)
+if (stallo /=0)then
+  call l4f_log(L4F_ERROR,"allocating memory")
+  call raise_fatal_error("allocating memory")
+end if
+
 tmp_arr=rmiss
 
 timerange: DO k = 1, SIZE(this%timerange)
