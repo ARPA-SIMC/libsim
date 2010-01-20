@@ -193,7 +193,6 @@ CALL init(this%vol7d)
 call idba_error_set_callback(0,v7d_dballe_error_handler, &
  this%category,this%handle_err)
 
-
 quiwrite=.false.
 if (present(write))then
   quiwrite=write
@@ -2035,6 +2034,9 @@ else
 
 end if
 
+call idba_error_remove_callback(this%handle_err)
+
+
 !this%dsn=cmiss
 !this%user=cmiss
 !this%password=cmiss
@@ -2300,12 +2302,12 @@ call idba_error_message(message)
 call l4f_category_log(category,L4F_ERROR,message)
 
 call idba_error_context(buf)
-call l4f_category_log(category,L4F_DEBUG,buf)
+call l4f_category_log(category,L4F_DEBUG,trim(buf))
 
 call idba_error_details(buf)
-call l4f_category_log(category,L4F_DEBUG,buf)
+call l4f_category_log(category,L4F_DEBUG,trim(buf))
 
-CALL raise_fatal_error()
+CALL raise_fatal_error("dballe: "//message)
 
 
 return
