@@ -365,8 +365,8 @@ IF (LEN(field) == 0) THEN ! Particular case to be handled separately
     CALL add_byte(this%cquote) ! if first record is empty it should be quoted
     CALL add_byte(this%cquote) ! in case it is the only one
   ENDIF
-ELSE IF (INDEX(field, TRANSFER(this%csep,field)) == 0 &
- .AND. INDEX(field, TRANSFER(this%cquote,field)) == 0 &
+ELSE IF (INDEX(field, TRANSFER(this%csep,field(1:1))) == 0 &
+ .AND. INDEX(field, TRANSFER(this%cquote,field(1:1))) == 0 &
  .AND. .NOT.is_space_c(field(1:1)) &
  .AND. .NOT.is_space_c(field(LEN(field):LEN(field))) &
  .AND. .NOT.lquote) THEN ! quote not required
