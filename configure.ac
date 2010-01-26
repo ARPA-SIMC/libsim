@@ -119,6 +119,7 @@ ORA_LIBS=$ora_libs
 AC_SUBST(ORA_CPPFLAGS)
 AC_SUBST(ORA_LDFLAGS)
 AC_SUBST(ORA_LIBS)
+AC_DEFINE(HAVE_ORSIM, 1, [Enable oraclesim])
 unset save_cppflags ora_cppflags ora_ldflags ora_lib
 fi
 AM_CONDITIONAL(ORSIM, test "x$enableval" = "xyes")
