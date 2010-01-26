@@ -2260,10 +2260,15 @@ elemental doubleprecision function doubledatc(voldat,var)
 
 CHARACTER(len=vol7d_cdatalen),intent(in) :: voldat
 type(vol7d_var),intent(in) :: var
+integer:: ier
 
 if (c_e(voldat) .and. c_e(var%scalefactor))then
-  read (voldat,*)doubledatc
-  doubledatc=doubledatc/10d0**var%scalefactor
+  read (voldat,*,iostat=ier)doubledatc
+  if(ier==0)then
+    doubledatc=doubledatc/10d0**var%scalefactor
+  else
+    doubledatc=dmiss
+  end if
 else
   doubledatc=dmiss
 end if
@@ -2332,9 +2337,14 @@ elemental integer function integerdatc(voldat,var)
 
 CHARACTER(len=vol7d_cdatalen),intent(in) :: voldat
 type(vol7d_var),intent(in) :: var
+integer:: ier
+
 
 if (c_e(voldat) .and. c_e(var%scalefactor))then
-  read (voldat,*)integerdatc
+  read (voldat,*,iostat=ier)integerdatc
+  if (ier /= 0)then
+    integerdatc=imiss
+  end if
 else
   integerdatc=imiss
 end if
@@ -2421,10 +2431,15 @@ elemental real function realdatc(voldat,var)
 
 CHARACTER(len=vol7d_cdatalen),intent(in) :: voldat
 type(vol7d_var),intent(in) :: var
+integer:: ier
 
 if (c_e(voldat) .and. c_e(var%scalefactor))then
-  read (voldat,*)realdatc
-  realdatc=realdatc/10.**var%scalefactor
+  read (voldat,*,iostat=ier)realdatc
+  if (ier == 0)then
+    realdatc=realdatc/10.**var%scalefactor
+  else
+    realdatc=rmiss
+  end if
 else
   realdatc=rmiss
 end if
