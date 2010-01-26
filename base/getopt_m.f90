@@ -68,6 +68,10 @@ INTERFACE op_option_new
    op_optionl_new !, op_option_newcount
 END INTERFACE
 
+INTERFACE c_e
+  MODULE PROCEDURE op_option_c_e
+END INTERFACE
+
 INTERFACE delete
   MODULE PROCEDURE optionparser_delete, op_option_delete
 END INTERFACE
@@ -138,7 +142,9 @@ END TYPE op_option
 
 INTEGER, PARAMETER, PRIVATE :: opttype_c = 1, opttype_i = 2, opttype_r = 3, &
  opttype_d = 4, opttype_l = 5, opttype_count = 6, opttype_help = 7
-PRIVATE op_option_new_common, op_option_found
+PRIVATE op_option_new_common, op_option_found, &
+ op_optionc_new, op_optioni_new, op_optionr_new, op_optiond_new, op_optionl_new, &
+ op_option_c_e
 
 contains
 
@@ -444,7 +450,7 @@ TYPE(op_option) :: this
 this = op_option_new_common(short_opt, long_opt, '', help)
 
 this%destl => dest
-!IF (PRESENT(default)) this%destl = default
+!IF (PRESENT(default)) this%destl = default ! should it be set to .FALSE. here?
 this%opttype = opttype_l
 this%need_arg = .FALSE.
 
@@ -631,6 +637,25 @@ ENDIF
 END FUNCTION op_option_format_opt
 
 
+FUNCTION op_option_c_e(this) RESULT(c_e)
+TYPE(op_option),INTENT(in) :: this
+
+LOGICAL :: c_e
+
+c_e = this%long_opt /= ' ' .OR. this%short_opt /= ' '
+
+END FUNCTION op_option_c_e
+
+
+ELEMENTAL SUBROUTINE op_option_nullify(this)
+TYPE(op_option),INTENT(inout) :: this
+
+this%long_opt = ''
+this%short_opt = ''
+
+END SUBROUTINE op_option_nullify
+
+
 !> Create a new instance of an optionparser object. An array of \a op_option
 !! objects, must be provided, describing the set of command-line
 !! options recognized by the program. Additional help messages can be
@@ -715,6 +740,7 @@ DO WHILE(i <= iargc())
       endopt = LEN_TRIM(arg)
     ENDIF
     find_longopt: DO j = 1, SIZE(this%option)
+      IF (.NOT. c_e(this%option(j))) CYCLE find_longopt
       IF (this%option(j)%long_opt == arg(3:endopt)) THEN ! found option
         IF (this%option(j)%need_arg) THEN
           IF (indeq /= 0) THEN
@@ -737,6 +763,7 @@ DO WHILE(i <= iargc())
     ENDIF
   ELSE IF (arg(1:1) == '-') THEN ! short option
     find_shortopt: DO j = 1, SIZE(this%option)
+      IF (.NOT. c_e(this%option(j))) CYCLE find_shortopt
       IF (this%option(j)%short_opt == arg(2:2)) THEN ! found option
         IF (this%option(j)%need_arg) THEN
           IF (LEN_TRIM(arg) > 2) THEN
@@ -814,6 +841,7 @@ ENDIF
 WRITE(*,'()')
 
 DO i = 1, SIZE(this%option) ! loop over options
+  IF (.NOT. c_e(this%option(i))) CYCLE
 ! print option brief representation
   WRITE(*,'(A)')TRIM(op_option_format_opt(this%option(i)))
 ! print option help
