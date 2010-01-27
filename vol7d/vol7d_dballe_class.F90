@@ -1873,6 +1873,23 @@ do iii=1, nnetwork
         end if
       end if
 
+
+      do ii=1,nanavarr
+        if (c_e(this%vol7d%anavar%r(ii)%btable))call idba_unset (this%handle,this%vol7d%anavar%r(ii)%btable )
+      end do
+      do ii=1,nanavari
+        if (c_e(this%vol7d%anavar%i(ii)%btable))call idba_unset (this%handle,this%vol7d%anavar%i(ii)%btable )
+      end do
+      do ii=1,nanavarb
+        if (c_e(this%vol7d%anavar%b(ii)%btable))call idba_unset (this%handle,this%vol7d%anavar%b(ii)%btable )
+      end do
+      do ii=1,nanavard
+        if (c_e(this%vol7d%anavar%d(ii)%btable))call idba_unset (this%handle,this%vol7d%anavar%d(ii)%btable )
+      end do
+      do ii=1,nanavarc
+        if (c_e(this%vol7d%anavar%c(ii)%btable))call idba_unset (this%handle,this%vol7d%anavar%c(ii)%btable )
+      end do
+
       write=.false.
 
    end do
@@ -2004,6 +2021,22 @@ call l4f_category_log(this%category,L4F_DEBUG,"macro tipo c")
                                 !print*,"eseguo una main prendilo"
                  call l4f_category_log(this%category,L4F_DEBUG,"eseguo una main prendilo sui dati")
                  call idba_prendilo (this%handle)
+
+                 do iiiii=1,ndativarr
+                   if(c_e(this%vol7d%dativar%r(iiiii)%btable))call idba_unset (this%handle,this%vol7d%dativar%r(iiiii)%btable )
+                 end do
+                 do iiiii=1,ndativari
+                   if(c_e(this%vol7d%dativar%i(iiiii)%btable))call idba_unset (this%handle,this%vol7d%dativar%i(iiiii)%btable )
+                 end do
+                 do iiiii=1,ndativarb
+                   if(c_e(this%vol7d%dativar%b(iiiii)%btable))call idba_unset (this%handle,this%vol7d%dativar%b(iiiii)%btable )
+                 end do
+                 do iiiii=1,ndativard
+                   if(c_e(this%vol7d%dativar%d(iiiii)%btable))call idba_unset (this%handle,this%vol7d%dativar%d(iiiii)%btable )
+                 end do
+                 do iiiii=1,ndativarc
+                   if(c_e(this%vol7d%dativar%c(iiiii)%btable))call idba_unset (this%handle,this%vol7d%dativar%c(iiiii)%btable )
+                 end do
 
                  write=.false.
                end if

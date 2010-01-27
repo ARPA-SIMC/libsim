@@ -13,7 +13,7 @@ implicit none
 integer :: category,ier,i,nana
 character(len=network_name_len) :: networkname='generic'
 character(len=512):: a_name,infile,outfile,fileana=cmiss
-type (volgrid6d),pointer  :: volgrid(:),volgrid_out(:)
+type (volgrid6d),pointer  :: volgrid(:)
 type(transform_def) :: trans
 type(vol7d) :: v7d
 type(vol7d_ana) :: ana
