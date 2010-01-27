@@ -59,7 +59,7 @@ END INTERFACE
 !! compiler will select the proper subroutine.
 INTERFACE csv_record_getfield
   MODULE PROCEDURE csv_record_getfield_char, csv_record_getfield_int, &
-   csv_record_getfield_real
+   csv_record_getfield_real, csv_record_getfield_double
 END INTERFACE
 
 !> Methods for successively adding fields to a \a csv_record object.
@@ -68,13 +68,14 @@ END INTERFACE
 !! compiler will select the proper subroutine.
 INTERFACE csv_record_addfield
   MODULE PROCEDURE csv_record_addfield_char, csv_record_addfield_int, &
-   csv_record_addfield_real
+   csv_record_addfield_real, csv_record_addfield_double
 END INTERFACE
 
 
 PRIVATE csv_record_init, csv_record_delete, csv_record_getfield_char, &
- csv_record_getfield_int, csv_record_getfield_real, csv_record_addfield_char, &
- csv_record_addfield_int, csv_record_addfield_real
+ csv_record_getfield_int, csv_record_getfield_real, csv_record_getfield_double, &
+ csv_record_addfield_char, csv_record_addfield_int, csv_record_addfield_real, &
+ csv_record_addfield_double
 
 CONTAINS
 
@@ -454,6 +455,19 @@ CALL csv_record_addfield(this, TRIM(to_char(field, form)), force_quote=force_quo
 END SUBROUTINE csv_record_addfield_real
 
 
+!> Add a field from a \c DOUBLE PRECISION variable to the csv record \a this.
+!! The field will be quoted if necessary.
+SUBROUTINE csv_record_addfield_double(this, field, form, force_quote)
+TYPE(csv_record),INTENT(INOUT) :: this !< object where to add field
+DOUBLE PRECISION,INTENT(IN) :: field !< field to be added
+CHARACTER(len=*),INTENT(in),OPTIONAL :: form !< optional format
+LOGICAL, INTENT(in), OPTIONAL :: force_quote !< if provided and \c .TRUE. , the field will be quoted even if not necessary
+
+CALL csv_record_addfield(this, TRIM(to_char(field, form)), force_quote=force_quote)
+
+END SUBROUTINE csv_record_addfield_double
+
+
 !> Return current csv-coded record as a \a CHARACTER variable, ready to be written
 !! to a file. It is not necessary to trim the result for trailing blanks.
 FUNCTION csv_record_getrecord(this, nfield)
@@ -619,7 +633,7 @@ END SUBROUTINE csv_record_getfield_int
 !! it returns a missing value.
 SUBROUTINE csv_record_getfield_real(this, field, ier)
 TYPE(csv_record),INTENT(INOUT) :: this !< object to be decoded
-REAL,INTENT(OUT) :: field !< value of the field, = \a imiss if conversion fails
+REAL,INTENT(OUT) :: field !< value of the field, = \a rmiss if conversion fails
 INTEGER,INTENT(OUT),OPTIONAL :: ier!< error code, 0 = OK, 1 = cannot convert to integer, 2 = end of record
 
 CHARACTER(LEN=32) :: cfield
@@ -640,6 +654,36 @@ ENDIF
 IF (PRESENT(ier)) ier = lier
 
 END SUBROUTINE csv_record_getfield_real
+
+
+!> Returns next field from the record \a this as a \c DOUBLE PRECISION variable.
+!! The field pointer is advanced to the next field.
+!! If all the fields have already been interpreted or the field cannot be
+!! interpreted as an integer, or if it is longer than 32 characters,
+!! it returns a missing value.
+SUBROUTINE csv_record_getfield_double(this, field, ier)
+TYPE(csv_record),INTENT(INOUT) :: this !< object to be decoded
+DOUBLE PRECISION,INTENT(OUT) :: field !< value of the field, = \a dmiss if conversion fails
+INTEGER,INTENT(OUT),OPTIONAL :: ier!< error code, 0 = OK, 1 = cannot convert to integer, 2 = end of record
+
+CHARACTER(LEN=32) :: cfield
+INTEGER :: lier
+
+CALL csv_record_getfield(this, field=cfield, ier=lier)
+IF (lier == 0. .AND. LEN_TRIM(cfield) /= 0) THEN
+  READ(cfield, '(F32.0)', iostat=lier) field
+  IF (lier /= 0) THEN
+    field = dmiss
+    CALL l4f_log(L4F_ERROR, &
+     'in csv_record_getfield, invalid double precision field: '//TRIM(cfield))
+    CALL raise_error()
+  ENDIF
+ELSE
+  field = dmiss
+ENDIF
+IF (PRESENT(ier)) ier = lier
+
+END SUBROUTINE csv_record_getfield_double
 
 
 !> Tells whether end of record was reached (\c .TRUE.)

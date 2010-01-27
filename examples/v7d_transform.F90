@@ -32,7 +32,7 @@ INTEGER :: category
 ! for csv output
 CHARACTER(len=8) :: csv_volume
 CHARACTER(len=512) :: csv_column, csv_variable
-LOGICAL :: csv_header, csv_skip_miss
+LOGICAL :: csv_header, csv_skip_miss, csv_rescale
 INTEGER :: icsv_column(7)
 
 
@@ -109,6 +109,9 @@ csv_header = .FALSE.
 options(34) = op_option_new(' ', 'csv-skip-miss', csv_skip_miss, help= &
  'skip records containing only missing values in csv output')
 csv_skip_miss = .FALSE.
+options(35) = op_option_new(' ', 'csv-rescale', csv_rescale, help= &
+ 'rescale integer variables according to its scale factor in output')
+csv_rescale = .FALSE.
 
 ! help option
 options(40) = op_option_help_new('h', 'help', help= &
@@ -270,7 +273,7 @@ ELSE IF (output_format == 'csv') THEN
     OPEN(iun, file=output_file, form='FORMATTED', access='SEQUENTIAL')
   ENDIF
   CALL csv_export(v7d, csv_volume, csv_variable, csv_header, csv_skip_miss, &
-   icsv_column, iun, nc)
+   csv_rescale, icsv_column, iun, nc)
   IF (output_file /= '-') CLOSE(iun)
   CALL delete(v7d)
 ELSE IF (output_format == 'BUFR' .OR. output_format == 'CREX') THEN
@@ -291,14 +294,14 @@ END PROGRAM v7d_transform
 
 
 SUBROUTINE csv_export(v7d, csv_volume, csv_variable, csv_header, csv_skip_miss, &
- icsv_column, iun, nc)
+ csv_rescale, icsv_column, iun, nc)
 USE vol7d_class
 USE file_utilities
 IMPLICIT NONE
 TYPE(vol7d),INTENT(inout) :: v7d
 CHARACTER(len=8),INTENT(in) :: csv_volume
 CHARACTER(len=512),INTENT(in) :: csv_variable
-LOGICAL,INTENT(in) :: csv_header, csv_skip_miss
+LOGICAL,INTENT(in) :: csv_header, csv_skip_miss, csv_rescale
 INTEGER,INTENT(in) :: icsv_column(7)
 INTEGER,INTENT(in) :: iun, nc
 
@@ -352,10 +355,42 @@ DO i2 = 1, size(v7d%time)
               ENDIF
             ENDDO
           ENDIF
+          IF (ASSOCIATED(v7d%voldatid)) THEN
+            DO i5 = 1, SIZE(v7d%voldatid(i1,i2,i3,i4,:,i6))
+              IF (c_e(v7d%voldatid(i1,i2,i3,i4,i5,i6))) THEN
+                CALL csv_record_addfield(csvline,v7d%voldatid(i1,i2,i3,i4,i5,i6))
+                no_miss = .TRUE.
+              ELSE
+                CALL csv_record_addfield(csvline,'')
+              ENDIF
+            ENDDO
+          ENDIF
           IF (ASSOCIATED(v7d%voldatii)) THEN
             DO i5 = 1, SIZE(v7d%voldatii(i1,i2,i3,i4,:,i6))
               IF (c_e(v7d%voldatii(i1,i2,i3,i4,i5,i6))) THEN
-                CALL csv_record_addfield(csvline,v7d%voldatii(i1,i2,i3,i4,i5,i6))
+                IF (csv_rescale .AND. c_e(v7d%dativar%i(i5)%scalefactor)) THEN
+                  CALL csv_record_addfield(csvline, &
+                   10.**(-v7d%dativar%i(i5)%scalefactor)* &
+                   REAL(v7d%voldatii(i1,i2,i3,i4,i5,i6)))
+                ELSE
+                  CALL csv_record_addfield(csvline,v7d%voldatii(i1,i2,i3,i4,i5,i6))
+                ENDIF
+                no_miss = .TRUE.
+              ELSE
+                CALL csv_record_addfield(csvline,'')
+              ENDIF
+            ENDDO
+          ENDIF
+          IF (ASSOCIATED(v7d%voldatib)) THEN
+            DO i5 = 1, SIZE(v7d%voldatib(i1,i2,i3,i4,:,i6))
+              IF (c_e(v7d%voldatib(i1,i2,i3,i4,i5,i6))) THEN
+                IF (csv_rescale .AND. c_e(v7d%dativar%b(i5)%scalefactor)) THEN
+                  CALL csv_record_addfield(csvline, &
+                   10.**(-v7d%dativar%b(i5)%scalefactor)* &
+                   REAL(v7d%voldatib(i1,i2,i3,i4,i5,i6)))
+                ELSE
+                  CALL csv_record_addfield(csvline,INT(v7d%voldatib(i1,i2,i3,i4,i5,i6)))
+                ENDIF
                 no_miss = .TRUE.
               ELSE
                 CALL csv_record_addfield(csvline,'')
