@@ -41,8 +41,9 @@ category=l4f_category_get(a_name//".main")
 call l4f_category_log(category,L4F_INFO,"inizio")
 
 ! define command-line options
-options(1) = op_option_new('v', 'trans-type', trans_type, 'inter', help= &
- 'transformation type: ''inter'' for interpolation, ''zoom'' for zooming, ''boxregrid'' for resolution reduction')
+options(1) = op_option_new('v', 'trans-type', trans_type, 'none', help= &
+ 'transformation type: ''inter'' for interpolation, ''zoom'' for zooming, &
+ &''boxregrid'' for resolution reduction, ''none'' for no operation')
 options(2) = op_option_new('z', 'sub-type', sub_type, 'near', help= &
  'transformation subtype, for inter: ''near'', ''bilin'', ''boxaverage'', &
  &for zoom: ''index'', ''coord'', for boxregrid: ''average''')
@@ -100,8 +101,8 @@ opt = optionparser_new(options, description_msg= &
  &The whole grib data file is read and organized in memory, transformed, and &
  &written on output. So it is possible to perform multi-field elaborations &
  &like wind component transformation, but memory constraints limit the number &
- &of input fields. The more different date, timeranges, levels and parameters &
- &are imported, even with empty combinations, the more memory will be required', &
+ &of input fields. More different date, timeranges, levels and parameters &
+ &are imported, even with empty combinations, and more memory will be required', &
  usage_msg='Usage: vg6d_transform [options] inputfile outputfile')
 
 ! parse options and check for errors
