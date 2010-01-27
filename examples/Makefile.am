@@ -100,8 +100,13 @@ bin_PROGRAMS += v7d_pollini
 
 v7d_pollini_SOURCES = v7d_pollini.f90
 v7d_pollini_LDADD = ../base/libsim_base.la ../vol7d/libsim_vol7d.la ../log4fortran/liblog4fortran.la
+
 endif
 
+bin_PROGRAMS += v7d_transform
+
+v7d_transform_SOURCES = v7d_transform.F90
+v7d_transform_LDADD = ../base/libsim_base.la ../vol7d/libsim_vol7d.la ../log4fortran/liblog4fortran.la
 
 if SHP
 noinst_PROGRAMS += esempio_geo_coordvect
@@ -154,3 +159,4 @@ vg6d_subarea_LDADD = ../volgrid6d/libsim_volgrid6d.la ../base/libsim_base.la ../
 vg6d_transform_SOURCES = vg6d_transform.f90
 vg6d_transform_LDADD = ../volgrid6d/libsim_volgrid6d.la ../base/libsim_base.la ../vol7d/libsim_vol7d.la ../log4fortran/liblog4fortran.la
 endif
+
