@@ -89,6 +89,7 @@ INTEGER,ALLOCATABLE :: map_tr(:), map_trc(:,:), count_trc(:,:)
 LOGICAL,ALLOCATABLE :: mask_time(:), ltime(:)
 REAL :: lfrac_valid, frac_c, frac_m
 TYPE(vol7d) :: v7dtmp
+LOGICAL usestart
 
 IF (PRESENT(frac_valid)) THEN
   lfrac_valid = frac_valid
@@ -116,7 +117,9 @@ ntr = COUNT(this%timerange(:)%timerange == tri .AND. this%timerange(:)%p2 /= imi
 ! lo faccio passo-passo e non con una divisione
 ! per farlo funzionare anche con le cumulate "umane"
 ! lstart e` l'inizio (non il termine) del primo periodo di cumulazione
-IF (PRESENT(start)) THEN ! start fornito esplicitamente
+usestart = PRESENT(start) ! treat datetime_miss as .NOT.PRESENT()
+IF (usestart) usestart = usestart .AND. start /= datetime_miss
+IF (usestart) THEN ! start fornito esplicitamente
   lstart = start
 ELSE ! calcolo automatico di start
 ! calcolo il piu` breve intervallo di cumulazione disponibile

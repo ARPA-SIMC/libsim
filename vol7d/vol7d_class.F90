@@ -1245,11 +1245,18 @@ LOGICAL :: lsort
 INTEGER,POINTER :: remapt1(:), remapt2(:), remaptr1(:), remaptr2(:), &
  remapl1(:), remapl2(:), remapa1(:), remapa2(:), remapn1(:), remapn2(:)
 
+IF (this%time_definition /= that%time_definition) THEN
+  CALL l4f_log(L4F_FATAL, &
+   'in vol7d_append, file exists, cannot append volumes with different &
+   &time definition')
+  CALL raise_fatal_error()
+ENDIF
+
 ! Completo l'allocazione per avere volumi a norma
 CALL vol7d_alloc_vol(this)
 CALL vol7d_alloc_vol(that)
 
-CALL init(v7dtmp)
+CALL init(v7dtmp, time_definition=this%time_definition)
 lsort = .FALSE.
 IF (PRESENT(sort)) lsort = sort
 
@@ -1436,6 +1443,7 @@ IF (ASSOCIATED(remapn)) DEALLOCATE(remapn)
 
 ! Ricreo gli indici var-attr
 CALL vol7d_set_attr_ind(that)
+that%time_definition = this%time_definition
 
 END SUBROUTINE vol7d_copy
 

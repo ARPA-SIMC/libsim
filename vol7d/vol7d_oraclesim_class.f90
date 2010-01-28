@@ -114,7 +114,8 @@ CONTAINS
 !! anche l'oggetto vol7d contenuto.
 !! Alla prima chiamata in un programma, provvede anche ad importare
 !! le tabelle di conversione variabili dal file varmap.csv.
-SUBROUTINE vol7d_oraclesim_init(this, dsn, user, password, write, wipe)
+SUBROUTINE vol7d_oraclesim_init(this, time_definition, dsn, user, password, WRITE, wipe)
+INTEGER,INTENT(IN),OPTIONAL :: time_definition !< 0=time is reference time; 1=time is validity time
 TYPE(vol7d_oraclesim),INTENT(out) :: this !< Oggetto da inizializzare
 CHARACTER(len=*), INTENT(in),OPTIONAL :: dsn !< Nome del database, se non fornito usa il nome standard per l'archivio Oracle del SIM
 CHARACTER(len=*), INTENT(in),OPTIONAL :: user !< Nome utente per il server Oracle, se non fornito usa il nome standard per l'archivio Oracle del SIM
@@ -153,7 +154,7 @@ ENDIF
 CALL vol7d_oraclesim_alloc(nmaxmin)
 IF (.NOT. ALLOCATED(vartable)) CALL vol7d_oraclesim_setup_conv()
 nact = nact + 1 ! Tengo il conto delle istanze attive
-CALL init(this%vol7d)
+CALL init(this%vol7d, time_definition)
 
 END SUBROUTINE vol7d_oraclesim_init
 
