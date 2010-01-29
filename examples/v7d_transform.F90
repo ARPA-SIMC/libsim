@@ -5,6 +5,7 @@ USE char_utilities
 USE getopt_m
 USE io_units
 USE vol7d_class
+USE vol7d_class_compute
 USE datetime_class
 USE vol7d_oraclesim_class
 USE vol7d_dballe_class
@@ -19,15 +20,21 @@ CHARACTER(len=512) :: input_file, output_file, network_list, variable_list
 TYPE(vol7d_network), ALLOCATABLE :: nl(:)
 CHARACTER(len=10), ALLOCATABLE :: vl(:)
 CHARACTER(len=23) :: start_date, end_date
-TYPE(datetime) :: sd, ed
+TYPE(datetime) :: s_d, e_d
 INTEGER :: iun, ier, i, j, n, nc
 INTEGER,POINTER :: w_s(:), w_e(:)
-TYPE(vol7d) :: v7d
+TYPE(vol7d) :: v7d, v7d_comp1, v7d_comp2
 TYPE(vol7d_dballe) :: v7d_dba, v7d_dba_out
 TYPE(vol7d_oraclesim) :: v7d_osim
 LOGICAL :: ldisplay
 CHARACTER(len=512):: a_name
 INTEGER :: category
+
+! for computing
+LOGICAL :: comp_regularize, comp_average, comp_cumulate
+CHARACTER(len=23) :: comp_interval, comp_start
+TYPE(timedelta) :: c_i
+TYPE(datetime) :: c_s
 
 ! for csv output
 CHARACTER(len=8) :: csv_volume
@@ -54,7 +61,7 @@ options(1) = op_option_new(' ', 'input-format', input_format, 'native', help= &
  &, ''dba'' for dballe database&
 #endif
 #ifdef HAVE_ORSIM
- &, orsim for SIM Oracle database&
+ &, ''orsim'' for SIM Oracle database&
 #endif
  &')
 options(2) = op_option_new('i', 'input-file', input_file, '-', help= &
@@ -63,9 +70,9 @@ options(2) = op_option_new('i', 'input-file', input_file, '-', help= &
  &user/password@dsn, if empty or ''-'', a suitable default is used.')
 
 ! input database options
-options(4) = op_option_new('s', 'start-date', start_date, '1900-01-01 00:00', help= &
+options(4) = op_option_new('s', 'start-date', start_date, '1900-01-01 00:00:00', help= &
  'if input-format is of database type, initial date for extracting data')
-options(5) = op_option_new('e', 'end-date', end_date, '2021-01-01 00:00', help= &
+options(5) = op_option_new('e', 'end-date', end_date, '2021-01-01 00:00:00', help= &
  'if input-format is of database type, final date for extracting data')
 options(6) = op_option_new('n', 'network-list', network_list, '', help= &
  'if input-format is of database type, list of station networks to be extracted &
@@ -80,6 +87,24 @@ options(10) = op_option_new('d', 'display', ldisplay, help= &
  'briefly display the data volume imported, warning: this option is incompatible &
  &with output on stdout.')
 ldisplay = .FALSE.
+options(11) = op_option_new(' ', 'comp-regularize', comp_regularize, help= &
+ 'regularize the time series keeping only the data at regular time intervals')
+comp_regularize = .FALSE.
+options(12) = op_option_new(' ', 'comp-average', comp_average, help= &
+ 'recompute average of average fields on a different time interval')
+comp_average = .FALSE.
+options(13) = op_option_new(' ', 'comp-cumulate', comp_cumulate, help= &
+ 'recompute cumulation of accumulated fields on a different time interval')
+comp_cumulate = .FALSE.
+options(14) = op_option_new(' ', 'comp-interval', comp_interval, '0000000001 00:00:00.000', help= &
+ 'length of regularization, average or cumulation interval in the format &
+ &''DDDDDDDDDD hh:mm:ss.msc''')
+options(15) = op_option_new(' ', 'comp-start', comp_start, '', help= &
+ 'start of regularization, average or cumulation period, an empty value means &
+ &take the initial period of the available data; the format is the same as for &
+ &--start-date parameter')
+
+
 
 ! options for defining output
 options(20) = op_option_new('o', 'output-file', output_file, '-', help= &
@@ -158,8 +183,14 @@ IF (LEN_TRIM(variable_list) > 0) THEN
   ENDDO
   DEALLOCATE(w_s, w_e)
 ENDIF
-CALL init(sd, isodate=start_date)
-CALL init(ed, isodate=end_date)
+CALL init(s_d, isodate=start_date)
+CALL init(e_d, isodate=end_date)
+c_i = timedelta_new(isodate=comp_interval)
+IF (comp_start /= '') THEN
+  c_s = datetime_new(isodate=comp_start)
+ELSE
+  c_s = datetime_miss
+ENDIF
 
 ! check csv-column
 nc = word_split(csv_column, w_s, w_e, ',')
@@ -199,7 +230,7 @@ IF (input_format == 'native') THEN
     iun = getunit()
     OPEN(iun, file=input_file, form='UNFORMATTED', access='SEQUENTIAL')
   ENDIF
-  CALL init(v7d)
+  CALL init(v7d, time_definition=0)
   CALL IMPORT(v7d, unit=iun)
 
 #ifdef HAVE_DBALLE
@@ -223,7 +254,7 @@ ELSE IF (input_format == 'dba') THEN
     CALL EXIT(1)
   ENDIF
   CALL init(v7d_dba, file=.FALSE.) ! dsn, user, password? repinfo??
-  CALL import(v7d_dba, vl, nl, timei=sd, timef=ed)
+  CALL import(v7d_dba, vl, nl, timei=s_d, timef=e_d)
   v7d = v7d_dba%vol7d
 #endif
 
@@ -235,8 +266,8 @@ ELSE IF (input_format == 'orsim') THEN
      &and --variable-list with SIM Oracle source.')
     CALL EXIT(1)
   ENDIF
-  CALL init(v7d_osim) ! dsn, user, password? repinfo??
-  CALL import(v7d_osim, vl, nl, timei=sd, timef=ed)
+  CALL init(v7d_osim, time_definition=0) ! dsn, user, password? repinfo??
+  CALL import(v7d_osim, vl, nl, timei=s_d, timef=e_d)
   v7d = v7d_osim%vol7d
 #endif
 
@@ -253,6 +284,30 @@ CALL vol7d_dballe_set_var_du(v7d)
 #endif
 
 IF (ldisplay) CALL display(v7d)
+
+IF (comp_regularize) THEN
+  CALL init(v7d_comp1)
+  CALL vol7d_regularize_time(v7d, v7d_comp1, c_i, c_s)
+  CALL delete(v7d)
+  v7d = v7d_comp1
+ENDIF
+
+IF (comp_average .OR. comp_cumulate) THEN
+  CALL init(v7d_comp1)
+  CALL init(v7d_comp2)
+  IF (comp_average) THEN
+    CALL vol7d_average(v7d, v7d_comp1, c_i, c_s)
+  ENDIF
+  IF (comp_cumulate) THEN
+    CALL vol7d_cumulate(v7d, v7d_comp2, c_i, c_s)
+  ENDIF
+! merge the tho computed fields and throw away the rest
+! to be improved in vol7d_compute
+  CALL delete(v7d)
+  CALL vol7d_append(v7d_comp1, v7d_comp2, sort=.TRUE.)
+  v7d = v7d_comp1
+  CALL delete(v7d_comp2)
+ENDIF
 
 ! output
 IF (output_format == 'native') THEN
@@ -306,7 +361,8 @@ INTEGER,INTENT(in) :: icsv_column(7)
 INTEGER,INTENT(in) :: iun, nc
 
 LOGICAL :: no_miss
-CHARACTER(len=50) :: coldes(7)
+CHARACTER(len=50) :: deshead(7)=(/'COORD    ','REFTIME  ','VERTLEV  ','TIMERANGE', &
+ 'VARIABLE ','NETWORK  ','ATTRIBUTE'/), desdata(7)
 TYPE(csv_record) :: csvline
 INTEGER :: i, i1, i2, i3, i4, i5, i6, i7, nv
 REAL(kind=fp_geo) :: l1, l2
@@ -324,26 +380,61 @@ IF (csv_variable /= 'all') THEN
   DEALLOCATE(w_s, w_e)
 ENDIF
 
+IF (csv_header) THEN
+  CALL init(csvline)
+  DO i = 1, nc ! add header for the dimensions descriptors
+    CALL csv_record_addfield(csvline,TRIM(deshead(icsv_column(i))))
+  ENDDO
+  IF (ASSOCIATED(v7d%dativar%r)) THEN
+    DO i5 = 1, SIZE(v7d%dativar%r)
+      CALL csv_record_addfield(csvline,TRIM(v7d%dativar%r(i5)%btable))
+    ENDDO
+  ENDIF
+  IF (ASSOCIATED(v7d%dativar%d)) THEN
+    DO i5 = 1, SIZE(v7d%dativar%d)
+      CALL csv_record_addfield(csvline,TRIM(v7d%dativar%d(i5)%btable))
+    ENDDO
+  ENDIF
+  IF (ASSOCIATED(v7d%dativar%i)) THEN
+    DO i5 = 1, SIZE(v7d%dativar%i)
+      CALL csv_record_addfield(csvline,TRIM(v7d%dativar%i(i5)%btable))
+    ENDDO
+  ENDIF
+  IF (ASSOCIATED(v7d%dativar%b)) THEN
+    DO i5 = 1, SIZE(v7d%dativar%b)
+      CALL csv_record_addfield(csvline,TRIM(v7d%dativar%b(i5)%btable))
+    ENDDO
+  ENDIF
+  IF (ASSOCIATED(v7d%dativar%c)) THEN
+    DO i5 = 1, SIZE(v7d%dativar%c)
+      CALL csv_record_addfield(csvline,TRIM(v7d%dativar%c(i5)%btable))
+    ENDDO
+  ENDIF
+
+  WRITE(iun,'(A)')csv_record_getrecord(csvline)
+  CALL delete(csvline)
+ENDIF
+
 DO i2 = 1, size(v7d%time)
-  coldes(2) = ''
-  CALL getval(v7d%time(i2), isodate=coldes(2)(1:19))
+  desdata(2) = ''
+  CALL getval(v7d%time(i2), isodate=desdata(2)(1:19))
   DO i4 = 1, SIZE(v7d%timerange)
-    coldes(4) = TRIM(to_char(v7d%timerange(i4)%timerange))//','// &
+    desdata(4) = TRIM(to_char(v7d%timerange(i4)%timerange))//','// &
      TRIM(to_char(v7d%timerange(i4)%p1))//','//TRIM(to_char(v7d%timerange(i4)%p2))
     DO i3 = 1, SIZE(v7d%level)
-      coldes(3) = TRIM(to_char(v7d%level(i3)%level1))// &
+      desdata(3) = TRIM(to_char(v7d%level(i3)%level1))// &
        ','//TRIM(to_char(v7d%level(i3)%l1))// &
        ','//TRIM(to_char(v7d%level(i3)%level2))// &
        ','//TRIM(to_char(v7d%level(i3)%l2))
       DO i6 = 1, SIZE(v7d%network)
-        coldes(6) = v7d%network(i6)%name
+        desdata(6) = v7d%network(i6)%name
         DO i1 = 1, SIZE(v7d%ana)
           CALL getval(v7d%ana(i1)%coord, lon=l1, lat=l2)
-          coldes(1) = TRIM(to_char(l1))//','//TRIM(to_char(l2))
+          desdata(1) = TRIM(to_char(l1))//','//TRIM(to_char(l2))
           no_miss = .FALSE.
           CALL init(csvline)
-          DO i = 1, nc
-            CALL csv_record_addfield(csvline,TRIM(coldes(icsv_column(i))))
+          DO i = 1, nc ! add data for the dimensions descriptors
+            CALL csv_record_addfield(csvline,TRIM(desdata(icsv_column(i))))
           ENDDO
           IF (ASSOCIATED(v7d%voldatir)) THEN
             DO i5 = 1, SIZE(v7d%voldatir(i1,i2,i3,i4,:,i6))
