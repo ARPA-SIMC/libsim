@@ -1247,7 +1247,7 @@ INTEGER,POINTER :: remapt1(:), remapt2(:), remaptr1(:), remaptr2(:), &
 
 IF (this%time_definition /= that%time_definition) THEN
   CALL l4f_log(L4F_FATAL, &
-   'in vol7d_append, file exists, cannot append volumes with different &
+   'in vol7d_append, cannot append volumes with different &
    &time definition')
   CALL raise_fatal_error()
 ENDIF
@@ -1943,7 +1943,8 @@ write(unit=lunit)&
  ndativarattrr, ndativarattri, ndativarattrb, ndativarattrd, ndativarattrc,&
  nanavarr, nanavari, nanavarb, nanavard, nanavarc,&
  nanaattrr, nanaattri, nanaattrb, nanaattrd, nanaattrc,&
- nanavarattrr, nanavarattri, nanavarattrb, nanavarattrd, nanavarattrc
+ nanavarattrr, nanavarattri, nanavarattrb, nanavarattrd, nanavarattrc, &
+ this%time_definition
 
 
 !write(unit=lunit)this
@@ -2114,7 +2115,8 @@ read(unit=lunit)&
  ndativarattrr, ndativarattri, ndativarattrb, ndativarattrd, ndativarattrc,&
  nanavarr, nanavari, nanavarb, nanavard, nanavarc,&
  nanaattrr, nanaattri, nanaattrb, nanaattrd, nanaattrc,&
- nanavarattrr, nanavarattri, nanavarattrb, nanavarattrd, nanavarattrc
+ nanavarattrr, nanavarattri, nanavarattrb, nanavarattrd, nanavarattrc, &
+ this%time_definition
 
 call vol7d_alloc (this, &
  nana=nana, ntime=ntime, ntimerange=ntimerange, nlevel=nlevel, nnetwork=nnetwork,&
