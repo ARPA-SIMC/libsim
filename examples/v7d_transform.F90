@@ -363,7 +363,8 @@ INTEGER,INTENT(in) :: iun, nc
 LOGICAL :: no_miss
 CHARACTER(len=50) :: deshead(7)=(/'COORD    ','REFTIME  ','VERTLEV  ','TIMERANGE', &
  'VARIABLE ','NETWORK  ','ATTRIBUTE'/), desdata(7)
-TYPE(csv_record) :: csvline
+CHARACTER(len=128) :: charbuffer
+TYPE(csv_record) :: csvline, csv_desdata(7)
 INTEGER :: i, i1, i2, i3, i4, i5, i6, i7, nv
 REAL(kind=fp_geo) :: l1, l2
 INTEGER,POINTER :: w_s(:), w_e(:)
@@ -382,9 +383,20 @@ ENDIF
 
 IF (csv_header) THEN
   CALL init(csvline)
-  DO i = 1, nc ! add header for the dimensions descriptors
-    CALL csv_record_addfield(csvline,TRIM(deshead(icsv_column(i))))
-  ENDDO
+  CALL csv_record_addfield(csvline, 'time')
+  CALL csv_record_addfield(csvline, 'timerange')
+  CALL csv_record_addfield(csvline, 'p1')
+  CALL csv_record_addfield(csvline, 'p2')
+  CALL csv_record_addfield(csvline, 'lon')
+  CALL csv_record_addfield(csvline, 'lat')
+  CALL csv_record_addfield(csvline, 'level1')
+  CALL csv_record_addfield(csvline, 'l1')
+  CALL csv_record_addfield(csvline, 'level2')
+  CALL csv_record_addfield(csvline, 'l2')
+  CALL csv_record_addfield(csvline, 'network')
+!  DO i = 1, nc ! add header for the dimensions descriptors
+!    CALL csv_record_addfield(csvline,TRIM(deshead(icsv_column(i))))
+!  ENDDO
   IF (ASSOCIATED(v7d%dativar%r)) THEN
     DO i5 = 1, SIZE(v7d%dativar%r)
       CALL csv_record_addfield(csvline,TRIM(v7d%dativar%r(i5)%btable))
@@ -415,26 +427,45 @@ IF (csv_header) THEN
   CALL delete(csvline)
 ENDIF
 
+DO i = 1, SIZE(csv_desdata)
+  CALL init(csv_desdata(i))
+ENDDO
+
 DO i2 = 1, size(v7d%time)
-  desdata(2) = ''
-  CALL getval(v7d%time(i2), isodate=desdata(2)(1:19))
+  CALL csv_record_rewind(csv_desdata(2))
+  CALL getval(v7d%time(i2), isodate=charbuffer(1:19))
+  CALL csv_record_addfield(csv_desdata(2), charbuffer(1:19))
   DO i4 = 1, SIZE(v7d%timerange)
-    desdata(4) = TRIM(to_char(v7d%timerange(i4)%timerange))//','// &
-     TRIM(to_char(v7d%timerange(i4)%p1))//','//TRIM(to_char(v7d%timerange(i4)%p2))
+    CALL csv_record_rewind(csv_desdata(4))
+    CALL csv_record_addfield(csv_desdata(4), v7d%timerange(i4)%timerange)
+    CALL csv_record_addfield(csv_desdata(4), v7d%timerange(i4)%p1)
+    CALL csv_record_addfield(csv_desdata(4), v7d%timerange(i4)%p2)
+!    desdata(4) = TRIM(to_char(v7d%timerange(i4)%timerange))//','// &
+!     TRIM(to_char(v7d%timerange(i4)%p1))//','//TRIM(to_char(v7d%timerange(i4)%p2))
     DO i3 = 1, SIZE(v7d%level)
-      desdata(3) = TRIM(to_char(v7d%level(i3)%level1))// &
-       ','//TRIM(to_char(v7d%level(i3)%l1))// &
-       ','//TRIM(to_char(v7d%level(i3)%level2))// &
-       ','//TRIM(to_char(v7d%level(i3)%l2))
+      CALL csv_record_rewind(csv_desdata(3))
+      CALL csv_record_addfield(csv_desdata(3), v7d%level(i3)%level1)
+      CALL csv_record_addfield(csv_desdata(3), v7d%level(i3)%l1)
+      CALL csv_record_addfield(csv_desdata(3), v7d%level(i3)%level2)
+      CALL csv_record_addfield(csv_desdata(3), v7d%level(i3)%l2)
+!      desdata(3) = TRIM(to_char(v7d%level(i3)%level1))// &
+!       ','//TRIM(to_char(v7d%level(i3)%l1))// &
+!       ','//TRIM(to_char(v7d%level(i3)%level2))// &
+!       ','//TRIM(to_char(v7d%level(i3)%l2))
       DO i6 = 1, SIZE(v7d%network)
-        desdata(6) = v7d%network(i6)%name
+        CALL csv_record_rewind(csv_desdata(6))
+        CALL csv_record_addfield(csv_desdata(6), v7d%network(i6)%name) ! trim?
+!        desdata(6) = v7d%network(i6)%name
         DO i1 = 1, SIZE(v7d%ana)
+          CALL csv_record_rewind(csv_desdata(1))
           CALL getval(v7d%ana(i1)%coord, lon=l1, lat=l2)
-          desdata(1) = TRIM(to_char(l1))//','//TRIM(to_char(l2))
+          CALL csv_record_addfield(csv_desdata(1), l1)
+          CALL csv_record_addfield(csv_desdata(1), l2)
+!          desdata(1) = TRIM(to_char(l1))//','//TRIM(to_char(l2))
           no_miss = .FALSE.
           CALL init(csvline)
           DO i = 1, nc ! add data for the dimensions descriptors
-            CALL csv_record_addfield(csvline,TRIM(desdata(icsv_column(i))))
+            CALL csv_record_addfield(csvline,csv_desdata(icsv_column(i)))
           ENDDO
           IF (ASSOCIATED(v7d%voldatir)) THEN
             DO i5 = 1, SIZE(v7d%voldatir(i1,i2,i3,i4,:,i6))

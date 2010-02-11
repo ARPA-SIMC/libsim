@@ -68,14 +68,16 @@ END INTERFACE
 !! compiler will select the proper subroutine.
 INTERFACE csv_record_addfield
   MODULE PROCEDURE csv_record_addfield_char, csv_record_addfield_int, &
-   csv_record_addfield_real, csv_record_addfield_double
+   csv_record_addfield_real, csv_record_addfield_double, &
+   csv_record_addfield_csv_record
 END INTERFACE
 
 
 PRIVATE csv_record_init, csv_record_delete, csv_record_getfield_char, &
  csv_record_getfield_int, csv_record_getfield_real, csv_record_getfield_double, &
  csv_record_addfield_char, csv_record_addfield_int, csv_record_addfield_real, &
- csv_record_addfield_double
+ csv_record_addfield_double, csv_record_addfield_csv_record, &
+ checkrealloc, add_byte
 
 CONTAINS
 
@@ -359,50 +361,35 @@ LOGICAL :: lquote
 
 lquote = optio_log(force_quote)
 IF (LEN(field) == 0) THEN ! Particular case to be handled separately
-  CALL checkrealloc(1)
+  CALL checkrealloc(this, 1)
   IF (this%nfield > 0) THEN
-    CALL add_byte(this%csep) ! add separator if necessary
+    CALL add_byte(this, this%csep) ! add separator if necessary
   ELSE
-    CALL add_byte(this%cquote) ! if first record is empty it should be quoted
-    CALL add_byte(this%cquote) ! in case it is the only one
+    CALL add_byte(this, this%cquote) ! if first record is empty it should be quoted
+    CALL add_byte(this, this%cquote) ! in case it is the only one
   ENDIF
 ELSE IF (INDEX(field, TRANSFER(this%csep,field(1:1))) == 0 &
  .AND. INDEX(field, TRANSFER(this%cquote,field(1:1))) == 0 &
  .AND. .NOT.is_space_c(field(1:1)) &
  .AND. .NOT.is_space_c(field(LEN(field):LEN(field))) &
  .AND. .NOT.lquote) THEN ! quote not required
-  CALL checkrealloc(LEN(field)+1)
-  IF (this%nfield > 0) CALL add_byte(this%csep) ! add separator if necessary
+  CALL checkrealloc(this, LEN(field)+1)
+  IF (this%nfield > 0) CALL add_byte(this, this%csep) ! add separator if necessary
   this%record(this%cursor:this%cursor+LEN(field)-1) = TRANSFER(field, this%record)
   this%cursor = this%cursor + LEN(field)
 ELSE ! quote required
-  CALL checkrealloc(2*LEN(field)+3) ! worst case """""""""
-  IF (this%nfield > 0) CALL add_byte(this%csep) ! add separator if necessary
-  CALL add_byte(this%cquote) ! add quote
+  CALL checkrealloc(this, 2*LEN(field)+3) ! worst case """""""""
+  IF (this%nfield > 0) CALL add_byte(this, this%csep) ! add separator if necessary
+  CALL add_byte(this, this%cquote) ! add quote
   DO i = 1, LEN(field)
     CALL add_char(field(i:i))
   ENDDO
-  CALL add_byte(this%cquote) ! add quote
+  CALL add_byte(this, this%cquote) ! add quote
 ENDIF
 
 this%nfield = this%nfield + 1
 
 CONTAINS
-
-! Reallocate record if necessary
-SUBROUTINE checkrealloc(enlarge)
-INTEGER, INTENT(in) :: enlarge
-
-INTEGER(KIND=int_b), POINTER :: tmpptr(:)
-
-IF (this%cursor+enlarge > SIZE(this%record)) THEN
-  ALLOCATE(tmpptr(SIZE(this%record)+MAX(csv_basereclen, enlarge)))
-  tmpptr(1:SIZE(this%record)) = this%record(:)
-  DEALLOCATE(this%record)
-  this%record => tmpptr
-ENDIF
-
-END SUBROUTINE checkrealloc
 
 ! add a character, doubling it if it's a quote
 SUBROUTINE add_char(char)
@@ -417,16 +404,35 @@ ENDIF
 
 END SUBROUTINE add_char
 
+END SUBROUTINE csv_record_addfield_char
+
+
+! Reallocate record if necessary
+SUBROUTINE checkrealloc(this, enlarge)
+TYPE(csv_record),INTENT(INOUT) :: this
+INTEGER, INTENT(in) :: enlarge
+
+INTEGER(KIND=int_b), POINTER :: tmpptr(:)
+
+IF (this%cursor+enlarge > SIZE(this%record)) THEN
+  ALLOCATE(tmpptr(SIZE(this%record)+MAX(csv_basereclen, enlarge)))
+  tmpptr(1:SIZE(this%record)) = this%record(:)
+  DEALLOCATE(this%record)
+  this%record => tmpptr
+ENDIF
+
+END SUBROUTINE checkrealloc
+
+
 ! add a byte
-SUBROUTINE add_byte(char)
+SUBROUTINE add_byte(this, char)
+TYPE(csv_record),INTENT(INOUT) :: this
 INTEGER(kind=int_b) :: char
 
 this%record(this%cursor) = char
 this%cursor = this%cursor+1
 
 END SUBROUTINE add_byte
-
-END SUBROUTINE csv_record_addfield_char
 
 
 !> Add a field from an \c INTEGER variable to the csv record \a this.
@@ -466,6 +472,26 @@ LOGICAL, INTENT(in), OPTIONAL :: force_quote !< if provided and \c .TRUE. , the 
 CALL csv_record_addfield(this, TRIM(to_char(field, form)), force_quote=force_quote)
 
 END SUBROUTINE csv_record_addfield_double
+
+
+!> Add a full \a csv_record object to the csv record \a this.
+!! The object to be added must have been generated through \a
+!! csv_record_addfield calls (csv encoding mode). Both \a csv_record
+!! objects \a this and \a record must use the same delimiter and
+!! quoting characters, otherwise the operation will silently fail.
+SUBROUTINE csv_record_addfield_csv_record(this, record)
+TYPE(csv_record),INTENT(INOUT) :: this !< object where to add record
+TYPE(csv_record),INTENT(IN) :: record !< record to be added
+
+IF (this%csep /= record%csep .OR. this%cquote /= record%cquote) RETURN ! error
+CALL checkrealloc(this, record%cursor)
+IF (this%nfield > 0) CALL add_byte(this, this%csep)
+this%record(this%cursor:this%cursor+record%cursor-2) = &
+ record%record(1:record%cursor-1)
+this%cursor = this%cursor + record%cursor-1
+this%nfield = this%nfield + record%nfield
+
+END SUBROUTINE csv_record_addfield_csv_record
 
 
 !> Return current csv-coded record as a \a CHARACTER variable, ready to be written
