@@ -39,8 +39,8 @@ TYPE(datetime) :: c_s
 ! for csv output
 CHARACTER(len=8) :: csv_volume
 CHARACTER(len=512) :: csv_column, csv_variable
-LOGICAL :: csv_header, csv_skip_miss, csv_rescale
-INTEGER :: icsv_column(7)
+LOGICAL :: csv_skip_miss, csv_rescale
+INTEGER :: csv_header, icsv_column(7)
 
 
 !questa chiamata prende dal launcher il nome univoco
@@ -128,9 +128,8 @@ options(32) = op_option_new(' ', 'csv-variable', csv_variable, 'all', help= &
  'list of variables that have to appear in the data columns of csv output: &
  &''all'' or a comma-separated list of B-table alphanumeric codes, e.g. &
  &''B10004,B12001'' in the desired order')
-options(33) = op_option_new(' ', 'csv-header', csv_header, help= &
- 'write header as first record of csv output')
-csv_header = .FALSE.
+options(33) = op_option_new(' ', 'csv-header', csv_header, 2, help= &
+ 'write 0 to 2 header lines at the beginning of csv output')
 options(34) = op_option_new(' ', 'csv-skip-miss', csv_skip_miss, help= &
  'skip records containing only missing values in csv output')
 csv_skip_miss = .FALSE.
@@ -356,7 +355,8 @@ IMPLICIT NONE
 TYPE(vol7d),INTENT(inout) :: v7d
 CHARACTER(len=8),INTENT(in) :: csv_volume
 CHARACTER(len=512),INTENT(in) :: csv_variable
-LOGICAL,INTENT(in) :: csv_header, csv_skip_miss, csv_rescale
+INTEGER,INTENT(in) :: csv_header 
+LOGICAL,INTENT(in) :: csv_skip_miss, csv_rescale
 INTEGER,INTENT(in) :: icsv_column(7)
 INTEGER,INTENT(in) :: iun, nc
 
@@ -381,7 +381,14 @@ IF (csv_variable /= 'all') THEN
   DEALLOCATE(w_s, w_e)
 ENDIF
 
-IF (csv_header) THEN
+IF (csv_header > 1) THEN
+  CALL init(csvline)
+  CALL csv_record_addfield(csvline, 'written by v7d_transform')
+  WRITE(iun,'(A)')csv_record_getrecord(csvline)
+  CALL delete(csvline)
+ENDIF
+
+IF (csv_header > 0) THEN
   CALL init(csvline)
   CALL csv_record_addfield(csvline, 'time')
   CALL csv_record_addfield(csvline, 'timerange')
