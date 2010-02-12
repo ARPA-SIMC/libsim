@@ -176,31 +176,33 @@ call grib_open_file(ofile, trim(outfile),'w')
 DO WHILE (.TRUE.)
   gaid=-1
   CALL  grib_new_from_file(ifile, gaid, iret)
-  IF (iret /= GRIB_SUCCESS) EXIT
+  IF (iret /= GRIB_SUCCESS) THEN ! THEN because of a bug in gfortran?!
+    EXIT
+  ENDIF
 
-   call l4f_category_log(category,L4F_INFO,"import gridinfo")
+  call l4f_category_log(category,L4F_INFO,"import gridinfo")
 
-   call init (gridinfo,gaid=gaid,categoryappend="importato")
-   call import(gridinfo)
+  call init (gridinfo,gaid=gaid,categoryappend="importato")
+  call import(gridinfo)
 
-   call display(gridinfo,namespace="ls")
+  call display(gridinfo,namespace="ls")
 
-   call l4f_category_log(category,L4F_INFO,"import")
+  call l4f_category_log(category,L4F_INFO,"import")
 
-   allocate (field(gridinfo%griddim%dim%nx,gridinfo%griddim%dim%ny))
+  allocate (field(gridinfo%griddim%dim%nx,gridinfo%griddim%dim%ny))
 
-   field=decode_gridinfo(gridinfo)
+  field=decode_gridinfo(gridinfo)
 
-   call init(grid_trans, trans, in=gridinfo%griddim,out=griddim_out,categoryappend="gridtrasformato")
+  call init(grid_trans, trans, in=gridinfo%griddim,out=griddim_out,categoryappend="gridtrasformato")
 
-   call display(griddim_out)
+  call display(griddim_out)
 
-   allocate (fieldz(griddim_out%dim%nx,griddim_out%dim%ny))
+  allocate (fieldz(griddim_out%dim%nx,griddim_out%dim%ny))
 
-   call compute(grid_trans, field, fieldz)
+  call compute(grid_trans, field, fieldz)
 
-   call delete(gridinfo%griddim)
-   call copy(griddim_out,gridinfo%griddim,categoryappend="clonato")
+  call delete(gridinfo%griddim)
+  call copy(griddim_out,gridinfo%griddim,categoryappend="clonato")
 
 ! oppure per mantenere il vecchio gridinfo
 !   call clone(gridinfo , gridinfo_out)
@@ -211,21 +213,21 @@ DO WHILE (.TRUE.)
 !   call grib_release(gridinfo%gaid)
 !   call grib_new_from_template(gridinfo%gaid,"regular_ll_pl_grib1")
 
-   IF (reset_scmode) THEN ! set "Cartesian" scanning mode
-     CALL grib_set(gridinfo%gaid, 'iScansNegatively', 0)
-     CALL grib_set(gridinfo%gaid, 'jScansPositively', 1)
-     CALL grib_set(gridinfo%gaid, 'jPointsAreConsecutive', 0)
-   ENDIF
+  IF (reset_scmode) THEN ! set "Cartesian" scanning mode
+    CALL grib_set(gridinfo%gaid, 'iScansNegatively', 0)
+    CALL grib_set(gridinfo%gaid, 'jScansPositively', 1)
+    CALL grib_set(gridinfo%gaid, 'jPointsAreConsecutive', 0)
+  ENDIF
 
-   call encode_gridinfo(gridinfo,fieldz)
-   call export (gridinfo)
-   call display(gridinfo,namespace="ls")
+  call encode_gridinfo(gridinfo,fieldz)
+  call export (gridinfo)
+  call display(gridinfo,namespace="ls")
 
-   call grib_write(gridinfo%gaid,ofile)
+  call grib_write(gridinfo%gaid,ofile)
 
-   call delete (grid_trans)
-   call delete (gridinfo)
-   deallocate (field,fieldz)
+  call delete (grid_trans)
+  call delete (gridinfo)
+  deallocate (field,fieldz)
 
 end do
 

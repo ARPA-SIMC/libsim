@@ -1,7 +1,7 @@
 Summary: libsim: librerie di utilità in Fortran 90
 Name: libsim
 Version: 3.0.0
-Release: 607
+Release: 629
 License: GPL
 Group: Applications/Meteo
 URL: http://www.arpa.emr.it/sim
@@ -24,19 +24,25 @@ Group: Applications/Meteo
 Librerie di utilità in Fortran 90, documentazione .
 
 %description
-Libsim comprende tre gruppi di moduli di utilità in Fortran 90:
+Libsim comprende quattro gruppi di moduli di utilità in Fortran 90:
 
 libsim_base definisce moduli e classi di uso generale in applicazioni
 scientifiche, come la gestione di errori in esecuzione, la gestione di
 dati georeferenziati, di coordinate temporali, ecc.
 
 libsim_grib definisce una serie di classi ad alto livello stratificate
-sopra la libreria ECMWF emos per gestire l'I/O di file in formato grib.
+sopra la libreria ECMWF emos per gestire l'I/O di file in formato
+grib.
 
 libsim_vol7d definisce una serie di classi per facilitare
 l'elaborazione di dati osservativi idro-meteo, includendo metodi per
 la loro importazione da database tipo DbAll-e e dal database Oracle di
 ARPA-SIM.
+
+libsim_volgrid6d definisce una serie di classi per facilitare
+l'elaborazione di dati idro-meteo su grigliati georeferenziati,
+compresa la trasformazione in griglie di tipo diverso e in oggetti di
+tipo vol7d.
 
 %prep
 %setup -q
