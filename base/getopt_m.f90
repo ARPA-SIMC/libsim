@@ -652,6 +652,7 @@ TYPE(op_option),INTENT(inout) :: this
 
 this%long_opt = ''
 this%short_opt = ''
+NULLIFY(this%help_msg)
 
 END SUBROUTINE op_option_nullify
 

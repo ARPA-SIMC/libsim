@@ -28,9 +28,10 @@ integer :: nx,ny,component_flag,npx,npy
 doubleprecision :: lon_min, lon_max, lat_min, lat_max
 doubleprecision :: latitude_south_pole,longitude_south_pole,angle_rotation
 character(len=80) :: type,trans_type,sub_type
+LOGICAL :: reset_scmode
 
 doubleprecision ::x,y,lon,lat
-type(op_option) :: options(19) ! remember to update dimension when adding options
+type(op_option) :: options(30) ! remember to update dimension when adding options
 type(optionparser) :: opt
 integer :: iargc
 
@@ -44,6 +45,8 @@ ier=l4f_init()
 category=l4f_category_get(a_name//".main")
 
 ! define command-line options
+CALL op_option_nullify(options)
+
 options(1) = op_option_new('v', 'trans-type', trans_type, 'inter', help= &
  'transformation type: ''inter'' for interpolation, ''zoom'' for zooming, ''boxregrid'' for resolution reduction')
 options(2) = op_option_new('z', 'sub-type', sub_type, 'near', help= &
@@ -93,8 +96,13 @@ options(18) = op_option_new('g', 'npy', npy, 4, help= &
 !options(20) = op_option_new('t', 'component-flag', component_flag, &
 ! 0, help='wind component flag in interpolated grid (0/1)')
 
+reset_scmode = .FALSE.
+options(21) = op_option_new('', 'reset-scmode', reset_scmode, &
+ help='reset output grid scanning mode to a predefined standard value: &
+ &first point in SW corner, i direction scans first &
+ &[default=keep scanning mode of input grib messages]')
 
-options(19) = op_option_help_new('h', 'help', help= &
+options(30) = op_option_help_new('h', 'help', help= &
  'show an help message')
 
 ! define the option parser
@@ -162,17 +170,13 @@ call init(trans, trans_type=trans_type, sub_type=sub_type, &
 call grib_open_file(ifile, trim(infile),'r')
 call grib_open_file(ofile, trim(outfile),'w')
 
-
 ! Loop on all the messages in a file.
-
 !     a new grib message is loaded from file
 !     gaid is the grib id to be used in subsequent calls
-
-gaid=-1
-call  grib_new_from_file(ifile,gaid, iret) 
-
-
-DO WHILE (iret == GRIB_SUCCESS)
+DO WHILE (.TRUE.)
+  gaid=-1
+  CALL  grib_new_from_file(ifile, gaid, iret)
+  IF (iret /= GRIB_SUCCESS) EXIT
 
    call l4f_category_log(category,L4F_INFO,"import gridinfo")
 
@@ -207,6 +211,12 @@ DO WHILE (iret == GRIB_SUCCESS)
 !   call grib_release(gridinfo%gaid)
 !   call grib_new_from_template(gridinfo%gaid,"regular_ll_pl_grib1")
 
+   IF (reset_scmode) THEN ! set "Cartesian" scanning mode
+     CALL grib_set(gridinfo%gaid, 'iScansNegatively', 0)
+     CALL grib_set(gridinfo%gaid, 'jScansPositively', 1)
+     CALL grib_set(gridinfo%gaid, 'jPointsAreConsecutive', 0)
+   ENDIF
+
    call encode_gridinfo(gridinfo,fieldz)
    call export (gridinfo)
    call display(gridinfo,namespace="ls")
@@ -217,9 +227,6 @@ DO WHILE (iret == GRIB_SUCCESS)
    call delete (gridinfo)
    deallocate (field,fieldz)
 
-   gaid=-1
-   call grib_new_from_file(ifile,gaid, iret)
-   
 end do
 
 call delete (trans)
