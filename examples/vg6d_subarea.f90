@@ -97,7 +97,7 @@ options(18) = op_option_new('g', 'npy', npy, 4, help= &
 ! 0, help='wind component flag in interpolated grid (0/1)')
 
 reset_scmode = .FALSE.
-options(21) = op_option_new('', 'reset-scmode', reset_scmode, &
+options(21) = op_option_new(' ', 'reset-scmode', reset_scmode, &
  help='reset output grid scanning mode to a predefined standard value: &
  &first point in SW corner, i direction scans first &
  &[default=keep scanning mode of input grib messages]')
