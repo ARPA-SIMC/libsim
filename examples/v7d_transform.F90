@@ -390,17 +390,17 @@ ENDIF
 
 IF (csv_header > 0) THEN
   CALL init(csvline)
-  CALL csv_record_addfield(csvline, 'time')
-  CALL csv_record_addfield(csvline, 'timerange')
-  CALL csv_record_addfield(csvline, 'p1')
-  CALL csv_record_addfield(csvline, 'p2')
-  CALL csv_record_addfield(csvline, 'lon')
-  CALL csv_record_addfield(csvline, 'lat')
-  CALL csv_record_addfield(csvline, 'level1')
-  CALL csv_record_addfield(csvline, 'l1')
-  CALL csv_record_addfield(csvline, 'level2')
-  CALL csv_record_addfield(csvline, 'l2')
-  CALL csv_record_addfield(csvline, 'network')
+  CALL csv_record_addfield(csvline, 'Date')
+  CALL csv_record_addfield(csvline, 'Time range')
+  CALL csv_record_addfield(csvline, 'P1')
+  CALL csv_record_addfield(csvline, 'P2')
+  CALL csv_record_addfield(csvline, 'Longitude')
+  CALL csv_record_addfield(csvline, 'Latitude')
+  CALL csv_record_addfield(csvline, 'Level1')
+  CALL csv_record_addfield(csvline, 'L1')
+  CALL csv_record_addfield(csvline, 'Level2')
+  CALL csv_record_addfield(csvline, 'L2')
+  CALL csv_record_addfield(csvline, 'Report')
 !  DO i = 1, nc ! add header for the dimensions descriptors
 !    CALL csv_record_addfield(csvline,TRIM(deshead(icsv_column(i))))
 !  ENDDO
