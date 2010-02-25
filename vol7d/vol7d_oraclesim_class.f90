@@ -166,6 +166,7 @@ SUBROUTINE vol7d_oraclesim_delete(this)
 TYPE(vol7d_oraclesim) :: this
 
 CALL oraextra_delete(this%connid)
+CALL delete(this%vol7d)
 nact = MAX(nact - 1, 0) ! Tengo il conto delle istanze attive
 IF (nact == 0) THEN
   CALL vol7d_oraclesim_dealloc()
@@ -194,6 +195,10 @@ END SUBROUTINE vol7d_oraclesim_delete
 !!  - '1' dato invalidato manualmente -> restituisce valore mancante
 !!  - '2' dato sostituito manualmente -> restituisce il dato sostituito
 !!
+!! Nel caso non sia stato trovato nulla in archivio per i parametri
+!! richiesti, il volume risultante è vuoto e quindi inutilizzabile;
+!! per evitare errori fatali, controllare il volume \a this%vol7d con
+!! la funzione c_e, se restituisce \a .FALSE. non deve essere usato.
 SUBROUTINE vol7d_oraclesim_import(this, var, network, timei, timef, level, &
  timerange, anavar, set_network)
 TYPE(vol7d_oraclesim),INTENT(out) :: this !< oggetto in cui importare i dati
@@ -472,21 +477,14 @@ DO i = 1, nvar
      valore1(j)*vartable(nvbt)%afact+vartable(nvbt)%bfact 
   ENDDO
 
-  IF (i == 1) THEN ! la prima volta assegno a v7dtmp2
-    v7dtmp2 = v7dtmp
-  ELSE ! successivamente fondo con il volume precedente
-    CALL vol7d_merge(v7dtmp2, v7dtmp, sort=.FALSE.)
-  ENDIF
+! Fondo il volume appena estratto con quello del ciclo precedente
+  CALL vol7d_merge(v7dtmp2, v7dtmp, sort=.FALSE.)
 ENDDO
 
-! Se l'oggetto ha gia` un volume allocato lo fondo con quello estratto
-IF (ASSOCIATED(this%vol7d%ana) .AND. ASSOCIATED(this%vol7d%time) .AND. &
- ASSOCIATED(this%vol7d%voldatir)) THEN
-  CALL vol7d_merge(this%vol7d, v7dtmp2, sort=.TRUE.)
-ELSE ! altrimenti lo assegno
-  this%vol7d = v7dtmp2
-ENDIF
-
+! Fondo a sua volta tutto il volume estratto con il contenuto di this
+CALL vol7d_merge(this%vol7d, v7dtmp2, sort=.FALSE.)
+CALL vol7d_smart_sort_time(this%vol7d)
+! Pulizie finali non incluse
 DEALLOCATE(anatmp, tmtmp, vartmp, mapdatao, mapstazo)
 
 END SUBROUTINE vol7d_oraclesim_importvvns

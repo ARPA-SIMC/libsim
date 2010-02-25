@@ -226,6 +226,10 @@ INTERFACE copy
   MODULE PROCEDURE vol7d_copy
 END INTERFACE
 
+!> Test for a missing volume
+INTERFACE c_e
+  MODULE PROCEDURE vol7d_c_e
+END INTERFACE
 
 !!$INTERFACE get_volana
 !!$  MODULE PROCEDURE vol7d_get_volanar, vol7d_get_volanad, vol7d_get_volanai, &
@@ -260,6 +264,8 @@ PRIVATE vol7d_get_volr, vol7d_get_vold, vol7d_get_voli, vol7d_get_volb, &
  to_char_dat
 
 PRIVATE doubledatd,doubledatr,doubledati,doubledatb,doubledatc
+
+PRIVATE vol7d_c_e
 
 CONTAINS
 
@@ -569,7 +575,6 @@ end do
 end SUBROUTINE dat_vect_display
 
 
-
 character(len=80) function to_char_dat(this,idat,rdat,ddat,bdat,cdat)
 
 TYPE(vol7d_var),INTENT(in) :: this
@@ -634,8 +639,30 @@ if (c_e (cdat)) to_char_dat=trim(to_char_dat)//" ;char> "//trim(cdat)
 end function to_char_dat
 
 
+!> Tests whether anything has ever been assigned to a vol7d object
+!! (.TRUE.) or it is as clean as after an init (.FALSE.).
+FUNCTION vol7d_c_e(this) RESULT(c_e)
+TYPE(vol7d), INTENT(in) :: this
 
+LOGICAL :: c_e
 
+c_e = ASSOCIATED(this%ana) .OR. ASSOCIATED(this%time) .OR. &
+ ASSOCIATED(this%level) .OR. ASSOCIATED(this%timerange) .OR. &
+ ASSOCIATED(this%network) .OR. &
+ ASSOCIATED(this%anavar%r) .OR. ASSOCIATED(this%anavar%d) .OR. &
+ ASSOCIATED(this%anavar%i) .OR. ASSOCIATED(this%anavar%b) .OR. &
+ ASSOCIATED(this%anavar%c) .OR. &
+ ASSOCIATED(this%anaattr%r) .OR. ASSOCIATED(this%anaattr%d) .OR. &
+ ASSOCIATED(this%anaattr%i) .OR. ASSOCIATED(this%anaattr%b) .OR. &
+ ASSOCIATED(this%anaattr%c) .OR. &
+ ASSOCIATED(this%dativar%r) .OR. ASSOCIATED(this%dativar%d) .OR. &
+ ASSOCIATED(this%dativar%i) .OR. ASSOCIATED(this%dativar%b) .OR. &
+ ASSOCIATED(this%dativar%c) .OR. &
+ ASSOCIATED(this%datiattr%r) .OR. ASSOCIATED(this%datiattr%d) .OR. &
+ ASSOCIATED(this%datiattr%i) .OR. ASSOCIATED(this%datiattr%b) .OR. &
+ ASSOCIATED(this%datiattr%c)
+
+END FUNCTION vol7d_c_e
 
 
 !> Metodo per allocare i descrittori delle 7 dimensioni.
@@ -1194,16 +1221,25 @@ END SUBROUTINE vol7d_set_attr_ind
 
 
 !> Metodo per fondere 2 oggetti vol7d.
-!! Il secondo volume viene accodato al primo
-!! e poi distrutto, si veda quindi la descrizione di ::vol7d_append.
+!! Il secondo volume viene accodato al primo e poi distrutto, si veda
+!! quindi la descrizione di ::vol7d_append.  Se uno degli oggetti \a
+!! this o \a that sono vuoti non perde tempo inutile,
 SUBROUTINE vol7d_merge(this, that, sort)
 TYPE(vol7d),INTENT(INOUT) :: this !< primo oggetto in ingresso, alla fine conterrà il risultato della fusione
 TYPE(vol7d),INTENT(INOUT) :: that !< secondo oggetto in ingresso, alla fine sarà distrutto
 LOGICAL,INTENT(IN),OPTIONAL :: sort !< se fornito e uguale a \c .TRUE., i descrittori che supportano un ordinamento (operatori > e/o <) risulteranno ordinati in ordine crescente nell'oggetto finale
 
-! Accodo that a this e distruggo that
-CALL vol7d_append(this, that, sort)
-CALL delete(that)
+TYPE(vol7d) :: v7d_clean
+
+
+IF (.NOT.c_e(this)) THEN ! speedup
+  this = that
+  CALL init(v7d_clean)
+  that = v7d_clean ! destroy that without deallocating
+ELSE ! Append that to this and destroy that
+  CALL vol7d_append(this, that, sort)
+  CALL delete(that)
+ENDIF
 
 END SUBROUTINE vol7d_merge
 
@@ -1221,7 +1257,8 @@ END SUBROUTINE vol7d_merge
 !! Attenzione che, durante l'esecuzione del metodo, la memoria richiesta è
 !! pari alla memoria complessiva occupata dai 2 volumi iniziali più
 !! la memoria complessiva del volume finale, per cui, nel caso di volumi grandi,
-!! ci potebbero essere problemi di esaurimento della memoria centrale.
+!! ci potrebbero essere problemi di esaurimento della memoria centrale.
+!! Se l'oggetto \a that è vuoto non perde tempo inutile,
 !!
 !! \todo nel caso di elementi comuni inserire la possibiità (opzionale per
 !! non penalizzare le prestazioni quando ciò non serve) di effettuare una scelta
@@ -1244,6 +1281,12 @@ TYPE(vol7d) :: v7dtmp
 LOGICAL :: lsort
 INTEGER,POINTER :: remapt1(:), remapt2(:), remaptr1(:), remaptr2(:), &
  remapl1(:), remapl2(:), remapa1(:), remapa2(:), remapn1(:), remapn2(:)
+
+IF (.NOT.c_e(that)) RETURN ! speedup, nothing to do
+IF (.NOT.c_e(this)) THEN ! this case is like a vol7d_copy, more efficient to copy?
+  CALL vol7d_copy(that, this, sort=sort)
+  RETURN
+ENDIF
 
 IF (this%time_definition /= that%time_definition) THEN
   CALL l4f_log(L4F_FATAL, &
@@ -1313,7 +1356,8 @@ END SUBROUTINE vol7d_append
 
 !> Metodo per creare una copia completa e indipendente di un oggetto vol7d.
 !! Questo metodo crea un duplicato di tutti i membri di un oggetto vol7d,
-!! con la possibilità di rielaborarlo durante la copia.
+!! con la possibilità di rielaborarlo durante la copia. Se l'oggetto da copiare
+!! è vuoto non perde tempo inutile.
 !! Attenzione, il codice:
 !! \code
 !! USE vol7d_class
@@ -1363,10 +1407,14 @@ LOGICAL,INTENT(IN),OPTIONAL :: miss !< se fornito e uguale a \c .TRUE., gli even
 !! gli elementi (utile principalmente per le variabili); è compatibile
 !! col parametro \a miss
 LOGICAL,INTENT(IN),OPTIONAL :: ltime(:)
-LOGICAL,INTENT(IN),OPTIONAL :: ltimerange(:) !< come il precedente per la dimensione \a timerange
-LOGICAL,INTENT(IN),OPTIONAL :: llevel(:) !< come il precedente per la dimensione \a level
-LOGICAL,INTENT(IN),OPTIONAL :: lana(:) !< come il precedente per la dimensione \a ana
-LOGICAL,INTENT(IN),OPTIONAL :: lnetwork(:) !< come il precedente per la dimensione \a network
+!> come il precedente per la dimensione \a timerange
+LOGICAL,INTENT(IN),OPTIONAL :: ltimerange(:)
+!> come il precedente per la dimensione \a level
+LOGICAL,INTENT(IN),OPTIONAL :: llevel(:)
+!> come il precedente per la dimensione \a ana
+LOGICAL,INTENT(IN),OPTIONAL :: lana(:)
+!> come il precedente per la dimensione \a network
+LOGICAL,INTENT(IN),OPTIONAL :: lnetwork(:)
 !> come il precedente per tutte le possibili dimensioni variabile
 LOGICAL,INTENT(in),OPTIONAL :: &
  lanavarr(:), lanavard(:), lanavari(:), lanavarb(:), lanavarc(:), &
@@ -1379,9 +1427,9 @@ LOGICAL,INTENT(in),OPTIONAL :: &
 LOGICAL :: lsort, lunique, lmiss
 INTEGER,POINTER :: remapt(:), remaptr(:), remapl(:), remapa(:), remapn(:)
 
-! Completo l'allocazione per avere un volume a norma
-CALL vol7d_alloc_vol(this)
 CALL init(that)
+IF (.NOT.c_e(this)) RETURN ! speedup, nothing to do
+CALL vol7d_alloc_vol(this) ! be safe
 IF (PRESENT(sort)) THEN
   lsort = sort
 ELSE
@@ -1506,6 +1554,7 @@ CALL delete(this)
 this = v7dtmp
 
 END SUBROUTINE vol7d_reform
+
 
 !> Sorts the time dimension in the volume \a this only when necessary.
 !! Most of the times, the time dimension in a vol7d is correctly

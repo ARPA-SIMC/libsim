@@ -48,14 +48,12 @@ TYPE(timedelta),INTENT(in) :: step !< intervallo di cumulazione
 TYPE(datetime),INTENT(in),OPTIONAL :: start !< inizio del periodo di cumulazione
 REAL,INTENT(in),OPTIONAL :: frac_valid !< frazione minima di dati validi necessaria per considerare accettabile un dato cumulato, default=1
 
-TYPE(vol7d) :: v7dtmp
+TYPE(vol7d) :: thatobs, thatfcst, v7dtmp
 
-CALL vol7d_extend_cumavg_obs(this, that, 1, step, start, frac_valid, other=v7dtmp)
-!CALL delete(this)
-!this = v7dtmp
-!CALL vol7d_extend_cumavg_fcst(this, that, 1, step, start, frac_valid, other=v7dtmp)
-!CALL delete(this)
-!this = v7dtmp
+CALL vol7d_extend_cumavg_obs(this, thatobs, 1, step, start, frac_valid)!, other=v7dtmp)
+!CALL vol7d_extend_cumavg_fcst(this, thatfcst, 1, step, start, frac_valid)!, other=v7dtmp)
+!CALL vol7d_merge(thatobs, thatfcst)
+that = thatobs
 
 END SUBROUTINE vol7d_cumulate
 
@@ -99,6 +97,7 @@ REAL :: lfrac_valid, frac_c, frac_m
 TYPE(vol7d) :: v7dtmp
 LOGICAL usestart
 
+CALL init(that)
 IF (PRESENT(frac_valid)) THEN
   lfrac_valid = frac_valid
 ELSE
@@ -113,11 +112,11 @@ ntr = COUNT(this%timerange(:)%timerange == tri .AND. this%timerange(:)%p2 /= imi
 IF (ntr == 0) THEN
   CALL l4f_log(L4F_WARN, &
    'vol7d_compute, no timeranges suitable for statistical processing')
-  CALL makeother() ! a useless copy is done here, improve!
+  CALL makeother() ! a useless copy is done here, improve!?
   RETURN
 ENDIF
-! cleanup the original volume (switch off miss?) (no need to sort here?)
-CALL vol7d_reform(this, miss=.TRUE., sort=.FALSE., unique=.TRUE.)
+! cleanup the original volume
+CALL vol7d_reform(this, miss=.FALSE., sort=.FALSE., unique=.TRUE.)
 ! riconto i timerange, potrebbero essere diminuiti a causa di unique
 ntr = COUNT(this%timerange(:)%timerange == tri .AND. this%timerange(:)%p2 /= imiss &
  .AND. this%timerange(:)%p2 /= 0 .AND. this%timerange(:)%p1 == 0)
@@ -151,7 +150,6 @@ ALLOCATE(map_tr(ntr), map_trc(SIZE(this%time), ntr), count_trc(nstep, ntr), &
  mask_time(SIZE(this%time)))
 map_trc(:,:) = 0
 ! creo un modello di volume con cio` che potrebbe non esserci nel volume vecchio
-CALL init(that)
 CALL vol7d_alloc(that, nana=0, ntime=nstep, nlevel=0, ntimerange=1, nnetwork=0)
 CALL vol7d_alloc_vol(that)
 DO i = 1, nstep
@@ -289,7 +287,7 @@ CONTAINS
 
 SUBROUTINE makeother()
 IF (PRESENT(other)) THEN ! create volume with the remaining data for further processing
-  CALL vol7d_copy(this, other, miss=.FALSE., sort=.TRUE., unique=.FALSE., &
+  CALL vol7d_copy(this, other, miss=.FALSE., sort=.FALSE., unique=.FALSE., &
    ltimerange=(this%timerange(:)%timerange /= tri .OR. this%timerange(:)%p2 == imiss &
    .OR. this%timerange(:)%p2 == 0 .OR. this%timerange(:)%p1 /= 0))
 ENDIF
