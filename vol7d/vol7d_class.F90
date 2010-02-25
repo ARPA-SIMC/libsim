@@ -1507,6 +1507,28 @@ this = v7dtmp
 
 END SUBROUTINE vol7d_reform
 
+!> Sorts the time dimension in the volume \a this only when necessary.
+!! Most of the times, the time dimension in a vol7d is correctly
+!! sorted; on the other side many methods rely on this. This method
+!! performs a quick check and sorts time dimension only if necessary,
+!! improving safety without impairing performance.
+SUBROUTINE vol7d_smart_sort_time(this)
+TYPE(vol7d),INTENT(INOUT) :: this !< object to be sorted
+
+INTEGER :: i
+LOGICAL :: to_be_sorted
+
+to_be_sorted = .FALSE.
+CALL vol7d_alloc_vol(this)
+
+DO i = 2, SIZE(this%time)
+  IF (this%time(i) < this%time(i-1)) EXIT
+ENDDO
+IF (i == SIZE(this%time)+1) RETURN ! loop completed OK
+
+CALL vol7d_reform(this, sort=.TRUE.)
+
+END SUBROUTINE vol7d_smart_sort_time
 
 
 !> Metodo per convertire i volumi di dati di un oggetto vol7d in dati

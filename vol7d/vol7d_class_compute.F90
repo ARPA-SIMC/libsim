@@ -48,7 +48,14 @@ TYPE(timedelta),INTENT(in) :: step !< intervallo di cumulazione
 TYPE(datetime),INTENT(in),OPTIONAL :: start !< inizio del periodo di cumulazione
 REAL,INTENT(in),OPTIONAL :: frac_valid !< frazione minima di dati validi necessaria per considerare accettabile un dato cumulato, default=1
 
-CALL vol7d_extend_cumavg(this, that, 1, step, start, frac_valid)
+TYPE(vol7d) :: v7dtmp
+
+CALL vol7d_extend_cumavg_obs(this, that, 1, step, start, frac_valid, other=v7dtmp)
+!CALL delete(this)
+!this = v7dtmp
+!CALL vol7d_extend_cumavg_fcst(this, that, 1, step, start, frac_valid, other=v7dtmp)
+!CALL delete(this)
+!this = v7dtmp
 
 END SUBROUTINE vol7d_cumulate
 
@@ -69,18 +76,19 @@ TYPE(timedelta),INTENT(in) :: step !< intervallo di media
 TYPE(datetime),INTENT(in),OPTIONAL :: start !< inizio del periodo di media
 REAL,INTENT(in),OPTIONAL :: frac_valid !< frazione minima di dati validi necessaria per considerare accettabile un dato mediato, default=1
 
-CALL vol7d_extend_cumavg(this, that, 0, step, start, frac_valid)
+CALL vol7d_extend_cumavg_obs(this, that, 0, step, start, frac_valid)
 
 END SUBROUTINE vol7d_average
 
 
-SUBROUTINE vol7d_extend_cumavg(this, that, tri, step, start, frac_valid)
+SUBROUTINE vol7d_extend_cumavg_obs(this, that, tri, step, start, frac_valid, other)
 TYPE(vol7d),INTENT(inout) :: this
 TYPE(vol7d),INTENT(out) :: that
 INTEGER,INTENT(in) :: tri
 TYPE(timedelta),INTENT(in) :: step
 TYPE(datetime),INTENT(in),OPTIONAL :: start
 REAL,INTENT(in),OPTIONAL :: frac_valid
+TYPE(vol7d),INTENT(out),OPTIONAL :: other
 
 TYPE(datetime) :: lstart, lend, tmptime, tmptimes, t1, t2
 TYPE(timedelta) dt1, stepvero
@@ -97,18 +105,19 @@ ELSE
   lfrac_valid = 1.0
 ENDIF
 
-! mi premunisco da un oggetto non inizializzato
+! be safe
 CALL vol7d_alloc_vol(this)
-! conto quanti timerange si riferiscono a cumulazioni
+! count timeranges of type statistical processing for observed data
 ntr = COUNT(this%timerange(:)%timerange == tri .AND. this%timerange(:)%p2 /= imiss &
  .AND. this%timerange(:)%p2 /= 0 .AND. this%timerange(:)%p1 == 0)
 IF (ntr == 0) THEN
   CALL l4f_log(L4F_WARN, &
-   'vol7d_compute, no timerange suitable for average/cumulatzion')
+   'vol7d_compute, no timeranges suitable for statistical processing')
+  CALL makeother() ! a useless copy is done here, improve!
   RETURN
 ENDIF
-! pulisco il volume originale (attivare miss?)
-CALL vol7d_reform(this, miss=.FALSE., sort=.FALSE., unique=.TRUE.)
+! cleanup the original volume (switch off miss?) (no need to sort here?)
+CALL vol7d_reform(this, miss=.TRUE., sort=.FALSE., unique=.TRUE.)
 ! riconto i timerange, potrebbero essere diminuiti a causa di unique
 ntr = COUNT(this%timerange(:)%timerange == tri .AND. this%timerange(:)%p2 /= imiss &
  .AND. this%timerange(:)%p2 /= 0 .AND. this%timerange(:)%p1 == 0)
@@ -274,7 +283,20 @@ ENDIF
 
 DEALLOCATE(map_tr, map_trc, count_trc, mask_time)
 
-END SUBROUTINE vol7d_extend_cumavg
+CALL makeother()
+
+CONTAINS
+
+SUBROUTINE makeother()
+IF (PRESENT(other)) THEN ! create volume with the remaining data for further processing
+  CALL vol7d_copy(this, other, miss=.FALSE., sort=.TRUE., unique=.FALSE., &
+   ltimerange=(this%timerange(:)%timerange /= tri .OR. this%timerange(:)%p2 == imiss &
+   .OR. this%timerange(:)%p2 == 0 .OR. this%timerange(:)%p1 /= 0))
+ENDIF
+END SUBROUTINE makeother
+
+END SUBROUTINE vol7d_extend_cumavg_obs
+
 
 !> Riempimento dei buchi temporali in un volume.
 !! Questo metodo crea, a partire da un volume originale, un nuovo
@@ -289,13 +311,9 @@ END SUBROUTINE vol7d_extend_cumavg
 !! descrizione di ::vol7d_regularize_time). Il volume originale non
 !! viene modificato e quindi dovrà essere distrutto da parte del
 !! programma chiamante se il suo contenuto non è più
-!! richiesto. Attenzione, il metodo fa affidamento sul fatto che la
-!! dimensione tempo (vettore \a this%time ) sia ordinata per valori
-!! crescenti, il che è vero nella maggior parte dei casi ma potrebbe
-!! non esserlo sempre.
-!!
-!! \todo gestire in maniera corretta li eventuali casi di volumi non
-!! ordinati nella dimensione tempo.
+!! richiesto. Attenzione, se necessario la dimensione tempo (vettore
+!! \a this%time del volume \a this ) viene riordinata, come effetto
+!! collaterale della chiamata.
 SUBROUTINE vol7d_fill_time(this, that, step, start, stopp)
 TYPE(vol7d),INTENT(inout) :: this
 TYPE(vol7d),INTENT(inout) :: that
@@ -304,12 +322,9 @@ TYPE(datetime),INTENT(in),OPTIONAL :: start
 TYPE(datetime),INTENT(in),OPTIONAL :: stopp
 
 TYPE(datetime) :: counter, lstart, lstop
-INTEGER :: n, naddtime
+INTEGER :: i, naddtime
 
-CALL vol7d_alloc_vol(this) ! controllo di sicurezza
-! Assunzione che this%time sia in ordine crescente, e` vero nella >
-! parte dei casi, aggiungere eventualmente un controllo con 
-! riordino se necessario
+CALL vol7d_smart_sort_time(this)
 IF (PRESENT(start)) THEN
   lstart = start
 ELSE
@@ -320,19 +335,38 @@ IF (PRESENT(stopp)) THEN
 ELSE
   lstop = this%time(SIZE(this%time))
 ENDIF
-CALL l4f_log(L4F_INFO, 'Intervallo livelli temporali: '//TRIM(to_char(lstart))// &
+CALL l4f_log(L4F_INFO, 'Time level interval: '//TRIM(to_char(lstart))// &
  ' '//TRIM(to_char(lstop)))
 
-! Conto i livelli temporali da aggiungere per completare la serie
+! Count the number of time levels required for completing the series
+! valid also in the case (SIZE(this%time) == 0)
 naddtime = 0
 counter = lstart
-DO WHILE(counter <= lstop)
-! questo algoritmo scala male, se time e` gia` ordinato si puo` fare di meglio
-  IF (.NOT.ANY(counter == this%time(:))) THEN
-    naddtime = naddtime + 1
-  ENDIF
+i = 1
+naddcount: DO WHILE(counter <= lstop)
+  DO WHILE(i <= SIZE(this%time)) ! this%time(i) chases counter
+    IF (counter < this%time(i)) THEN ! this%time(i) overtook counter
+      i = MAX(i-1,1) ! go back if possible
+      EXIT
+    ELSE IF (counter == this%time(i)) THEN ! found matching time
+      counter = counter + step
+      CYCLE naddcount
+    ENDIF
+    i = i + 1
+  ENDDO
+  naddtime = naddtime + 1
   counter = counter + step
-ENDDO
+ENDDO naddcount
+
+! old universal algorithm, not optimized, check that the new one is equivalent
+!naddtime = 0
+!counter = lstart
+!DO WHILE(counter <= lstop)
+!  IF (.NOT.ANY(counter == this%time(:))) THEN
+!    naddtime = naddtime + 1
+!  ENDIF
+!  counter = counter + step
+!ENDDO
 
 IF (naddtime > 0) THEN
 
@@ -340,15 +374,26 @@ IF (naddtime > 0) THEN
   CALL vol7d_alloc(that, ntime=naddtime)
   CALL vol7d_alloc_vol(that)
 
-  n = 0
+  ! Repeat the count loop setting the time levels to be added
+  naddtime = 0
   counter = lstart
-  DO WHILE(counter <= lstop .AND. n < naddtime)
-    IF (.NOT.ANY(counter == this%time(:))) THEN
-      n = n + 1
-      that%time(n) = counter
-    ENDIF
+  i = 1
+  naddadd: DO WHILE(counter <= lstop)
+    DO WHILE(i <= SIZE(this%time)) ! this%time(i) chases counter
+      IF (counter < this%time(i)) THEN ! this%time(i) overtook counter
+        i = MAX(i-1,1) ! go back if possible
+        EXIT
+      ELSE IF (counter == this%time(i)) THEN ! found matching time
+        counter = counter + step
+        CYCLE naddadd
+      ENDIF
+      i = i + 1
+    ENDDO
+    naddtime = naddtime + 1
+    that%time(naddtime) = counter ! only difference
     counter = counter + step
-  ENDDO
+  ENDDO naddadd
+
   CALL vol7d_append(that, this, sort=.TRUE.)
 
 ELSE
@@ -368,13 +413,9 @@ END SUBROUTINE vol7d_fill_time
 !! ::vol7d_fill_time ma in più elimina i livelli temporali che non
 !! soddisfano la condizione richiesta.  Il volume originale non viene
 !! modificato e quindi dovrà essere distrutto da parte del programma
-!! chiamante se il suo contenuto non è più richiesto. Attenzione, il
-!! metodo fa affidamento sul fatto che la dimensione tempo (vettore \a
-!! this%time ) sia ordinata per valori crescenti, il che è vero nella
-!! maggior parte dei casi ma potrebbe non esserlo sempre.
-!!
-!! \todo gestire in maniera corretta gli eventuali casi di volumi non
-!! ordinati nella dimensione tempo.
+!! chiamante se il suo contenuto non è più richiesto. Attenzione, se
+!! necessario, la dimensione tempo (vettore \a this%time del volume \a
+!! this ) viene riordinata, come effetto collaterale della chiamata.
 SUBROUTINE vol7d_regularize_time(this, that, step, start, stopp)
 TYPE(vol7d),INTENT(inout) :: this
 TYPE(vol7d),INTENT(inout) :: that
@@ -387,10 +428,7 @@ INTEGER :: n
 LOGICAL, ALLOCATABLE :: time_mask(:)
 TYPE(vol7d) :: v7dtmp
 
-CALL vol7d_alloc_vol(this) ! controllo di sicurezza
-! Assunzione che this%time sia in ordine crescente, e` vero nella >
-! parte dei casi, aggiungere eventualmente un controllo con 
-! riordino se necessario
+CALL vol7d_smart_sort_time(this)
 IF (PRESENT(start)) THEN
   lstart = start
 ELSE
@@ -420,8 +458,6 @@ ELSE
 ENDIF
 
 END SUBROUTINE vol7d_regularize_time
-
-
 
 
 !> Metodo per normalizzare la coordinata verticale.
