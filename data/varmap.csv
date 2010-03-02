@@ -13,6 +13,8 @@
 158,B12001,C->K,103,2000,0,0,254,0,0,Temperatura (IDRO),TEMPERATURE/DRY-BULB TEMPERATURE,1.0,273.15,21
 158,B12001,C->K,103,2000,0,0,254,0,0,Temperatura (IDRO),TEMPERATURE/DRY-BULB TEMPERATURE,1.0,273.15,22
 158,B12001,C->K,103,2000,0,0,254,0,0,Temperatura (IDRO),TEMPERATURE/DRY-BULB TEMPERATURE,1.0,273.15,33
+158,B12001,C->K,103,2000,0,0,254,0,0,Temperatura (IDRO),TEMPERATURE/DRY-BULB TEMPERATURE,1.0,273.15,46
+158,B12001,C->K,103,2000,0,0,254,0,0,Temperatura (IDRO),TEMPERATURE/DRY-BULB TEMPERATURE,1.0,273.15,47
 159,B13011,mm->KG/M**2,1,0,0,0,1,0,1800,precipitazione in 30 minuti (IDRO),TOTAL PRECIPITATION / TOTAL WATER EQUIVALENT,1.0,0.0,5
 159,B13011,mm->KG/M**2,1,0,0,0,1,0,1800,precipitazione in 30 minuti (IDRO),TOTAL PRECIPITATION / TOTAL WATER EQUIVALENT,1.0,0.0,7
 159,B13011,mm->KG/M**2,1,0,0,0,1,0,1800,precipitazione in 30 minuti (IDRO),TOTAL PRECIPITATION / TOTAL WATER EQUIVALENT,1.0,0.0,12
@@ -42,6 +44,8 @@
 160,B13011,mm->KG/M**2,1,0,0,0,1,0,3600,Precipitazione nell'ora (IDRO),TOTAL PRECIPITATION / TOTAL WATER EQUIVALENT,1.0,0.0,33
 160,B13011,mm->KG/M**2,1,0,0,0,1,0,3600,Precipitazione nell'ora (IDRO),TOTAL PRECIPITATION / TOTAL WATER EQUIVALENT,1.0,0.0,37
 160,B13011,mm->KG/M**2,1,0,0,0,1,0,3600,Precipitazione nell'ora (IDRO),TOTAL PRECIPITATION / TOTAL WATER EQUIVALENT,1.0,0.0,39
+160,B13011,mm->KG/M**2,1,0,0,0,1,0,3600,Precipitazione nell'ora (IDRO),TOTAL PRECIPITATION / TOTAL WATER EQUIVALENT,1.0,0.0,46
+160,B13011,mm->KG/M**2,1,0,0,0,1,0,3600,Precipitazione nell'ora (IDRO),TOTAL PRECIPITATION / TOTAL WATER EQUIVALENT,1.0,0.0,47
 161,B13192,m->?,1,0,0,0,254,0,0,livello idrometrico (IDRO),(description not available),1.0,0.0,5
 161,B13192,m->?,1,0,0,0,254,0,0,livello idrometrico (IDRO),(description not available),1.0,0.0,8
 161,B13192,m->?,1,0,0,0,254,0,0,livello idrometrico (IDRO),(description not available),1.0,0.0,12
@@ -52,6 +56,8 @@
 161,B13192,m->?,1,0,0,0,254,0,0,livello idrometrico (IDRO),(description not available),1.0,0.0,21
 161,B13192,m->?,1,0,0,0,254,0,0,livello idrometrico (IDRO),(description not available),1.0,0.0,22
 161,B13192,m->?,1,0,0,0,254,0,0,livello idrometrico (IDRO),(description not available),1.0,0.0,33
+161,B13192,m->?,1,0,0,0,254,0,0,livello idrometrico (IDRO),(description not available),1.0,0.0,46
+161,B13192,m->?,1,0,0,0,254,0,0,livello idrometrico (IDRO),(description not available),1.0,0.0,47
 162,B13013,m->M,1,0,0,0,254,0,0,neve (spessore dello strato) (IDRO),TOTAL SNOW DEPTH,1.0,0.0,11
 162,B13013,m->M,1,0,0,0,254,0,0,neve (spessore dello strato) (IDRO),TOTAL SNOW DEPTH,1.0,0.0,15
 162,B13013,m->M,1,0,0,0,254,0,0,neve (spessore dello strato) (IDRO),TOTAL SNOW DEPTH,1.0,0.0,17
@@ -59,6 +65,8 @@
 162,B13013,m->M,1,0,0,0,254,0,0,neve (spessore dello strato) (IDRO),TOTAL SNOW DEPTH,1.0,0.0,20
 162,B13013,m->M,1,0,0,0,254,0,0,neve (spessore dello strato) (IDRO),TOTAL SNOW DEPTH,1.0,0.0,21
 162,B13013,m->M,1,0,0,0,254,0,0,neve (spessore dello strato) (IDRO),TOTAL SNOW DEPTH,1.0,0.0,33
+162,B13013,m->M,1,0,0,0,254,0,0,neve (spessore dello strato) (IDRO),TOTAL SNOW DEPTH,1.0,0.0,46
+162,B13013,m->M,1,0,0,0,254,0,0,neve (spessore dello strato) (IDRO),TOTAL SNOW DEPTH,1.0,0.0,47
 165,B11001,gsess->DEGREE TRUE,103,10000,0,0,254,0,0,Vento: direzione media degli ultimi 10 minuti (IDRO),WIND DIRECTION,1.0,0.0,11
 165,B11001,gsess->DEGREE TRUE,103,10000,0,0,254,0,0,Vento: direzione media degli ultimi 10 minuti (IDRO),WIND DIRECTION,1.0,0.0,12
 165,B11001,gsess->DEGREE TRUE,103,10000,0,0,254,0,0,Vento: direzione media degli ultimi 10 minuti (IDRO),WIND DIRECTION,1.0,0.0,13
@@ -69,6 +77,8 @@
 165,B11001,gsess->DEGREE TRUE,103,10000,0,0,254,0,0,Vento: direzione media degli ultimi 10 minuti (IDRO),WIND DIRECTION,1.0,0.0,20
 165,B11001,gsess->DEGREE TRUE,103,10000,0,0,254,0,0,Vento: direzione media degli ultimi 10 minuti (IDRO),WIND DIRECTION,1.0,0.0,21
 165,B11001,gsess->DEGREE TRUE,103,10000,0,0,254,0,0,Vento: direzione media degli ultimi 10 minuti (IDRO),WIND DIRECTION,1.0,0.0,22
+165,B11001,gsess->DEGREE TRUE,103,10000,0,0,254,0,0,Vento: direzione media degli ultimi 10 minuti (IDRO),WIND DIRECTION,1.0,0.0,46
+165,B11001,gsess->DEGREE TRUE,103,10000,0,0,254,0,0,Vento: direzione media degli ultimi 10 minuti (IDRO),WIND DIRECTION,1.0,0.0,47
 166,B11002,M/S->M/S,103,10000,0,0,254,0,0,Vento: velocita' media degli ultimi 10 minuti (IDRO),WIND SPEED,1.0,0.0,11
 166,B11002,M/S->M/S,103,10000,0,0,254,0,0,Vento: velocita' media degli ultimi 10 minuti (IDRO),WIND SPEED,1.0,0.0,12
 166,B11002,M/S->M/S,103,10000,0,0,254,0,0,Vento: velocita' media degli ultimi 10 minuti (IDRO),WIND SPEED,1.0,0.0,13
@@ -79,6 +89,8 @@
 166,B11002,M/S->M/S,103,10000,0,0,254,0,0,Vento: velocita' media degli ultimi 10 minuti (IDRO),WIND SPEED,1.0,0.0,20
 166,B11002,M/S->M/S,103,10000,0,0,254,0,0,Vento: velocita' media degli ultimi 10 minuti (IDRO),WIND SPEED,1.0,0.0,21
 166,B11002,M/S->M/S,103,10000,0,0,254,0,0,Vento: velocita' media degli ultimi 10 minuti (IDRO),WIND SPEED,1.0,0.0,22
+166,B11002,M/S->M/S,103,10000,0,0,254,0,0,Vento: velocita' media degli ultimi 10 minuti (IDRO),WIND SPEED,1.0,0.0,46
+166,B11002,M/S->M/S,103,10000,0,0,254,0,0,Vento: velocita' media degli ultimi 10 minuti (IDRO),WIND SPEED,1.0,0.0,47
 172,B13011,mm->KG/M**2,1,0,0,0,1,0,900,precipitazione nei 15 minuti ( IDRO ),TOTAL PRECIPITATION / TOTAL WATER EQUIVALENT,1.0,0.0,7
 172,B13011,mm->KG/M**2,1,0,0,0,1,0,900,precipitazione nei 15 minuti ( IDRO ),TOTAL PRECIPITATION / TOTAL WATER EQUIVALENT,1.0,0.0,9
 172,B13011,mm->KG/M**2,1,0,0,0,1,0,900,precipitazione nei 15 minuti ( IDRO ),TOTAL PRECIPITATION / TOTAL WATER EQUIVALENT,1.0,0.0,11
@@ -141,6 +153,8 @@
 139,B13003,%->%,103,2000,0,0,254,0,0,umidita' istantanea (AGRMET),RELATIVE HUMIDITY,1.0,0.0,18
 139,B13003,%->%,103,2000,0,0,254,0,0,umidita' istantanea (AGRMET),RELATIVE HUMIDITY,1.0,0.0,20
 139,B13003,%->%,103,2000,0,0,254,0,0,umidita' istantanea (AGRMET),RELATIVE HUMIDITY,1.0,0.0,21
+139,B13003,%->%,103,2000,0,0,254,0,0,umidita' istantanea (AGRMET),RELATIVE HUMIDITY,1.0,0.0,46
+139,B13003,%->%,103,2000,0,0,254,0,0,umidita' istantanea (AGRMET),RELATIVE HUMIDITY,1.0,0.0,47
 140,B13003,%->%,103,2000,0,0,0,0,3600,umidita' media (AGRMET),RELATIVE HUMIDITY,1.0,0.0,11
 140,B13003,%->%,103,2000,0,0,0,0,3600,umidita' media (AGRMET),RELATIVE HUMIDITY,1.0,0.0,13
 140,B13003,%->%,103,2000,0,0,0,0,3600,umidita' media (AGRMET),RELATIVE HUMIDITY,1.0,0.0,15
@@ -241,4 +255,6 @@
 547,B15000,numero->?,103,15000,0,0,0,0,86400,Ciperacee_Ciperacee indistinte 1 (POLLINI),(description not available),1.0,0.0,14
 548,B15001,numero->?,103,15000,0,0,0,0,86400,Juglandacee_Juglandacee indistinte 1 (POLLINI),(description not available),1.0,0.0,14
 549,B15002,numero->?,103,15000,0,0,0,0,86400,Ippocastanacee_Ippocastanacee indistinte 1 (POLLINI),(description not available),1.0,0.0,14
+550,B12001,C->K,103,1000,0,0,254,0,0,Temperatura (IDRO),TEMPERATURE/DRY-BULB TEMPERATURE,1.0,273.15,11
+563,B12001,C->K,103,500,0,0,254,0,0,Temperatura (IDRO),TEMPERATURE/DRY-BULB TEMPERATURE,1.0,273.15,11
 663,B13204,mc/s->?,1,0,0,0,0,0,86400,portata media giornaliera (IDRTL9),(description not available),1.0,0.0,45

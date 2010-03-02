@@ -136,6 +136,8 @@ done >$varmap <<EOF
 547,B15000,numero->?,103,15000,0,0,0,0,86400,Ciperacee_Ciperacee indistinte 1 (POLLINI),(description not available),1.0,0.0
 548,B15001,numero->?,103,15000,0,0,0,0,86400,Juglandacee_Juglandacee indistinte 1 (POLLINI),(description not available),1.0,0.0
 549,B15002,numero->?,103,15000,0,0,0,0,86400,Ippocastanacee_Ippocastanacee indistinte 1 (POLLINI),(description not available),1.0,0.0
+550,B12001,C->K,103,1000,0,0,254,0,0,Temperatura (IDRO),TEMPERATURE/DRY-BULB TEMPERATURE,1.0,273.15
+563,B12001,C->K,103,500,0,0,254,0,0,Temperatura (IDRO),TEMPERATURE/DRY-BULB TEMPERATURE,1.0,273.15
 663,B13204,mc/s->?,1,0,0,0,0,0,86400,portata media giornaliera (IDRTL9),(description not available),1.0,0.0
 EOF
 rm -f $sqlfile
