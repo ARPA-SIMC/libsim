@@ -1,7 +1,7 @@
-Summary: libsim: librerie di utilit‡ in Fortran 90
+Summary: libsim: librerie di utilit√† in Fortran 90
 Name: libsim
 Version: 3.0.0
-Release: 629
+Release: 638
 License: GPL
 Group: Applications/Meteo
 URL: http://www.arpa.emr.it/sim
@@ -21,10 +21,10 @@ Summary:  libsim documentation
 Group: Applications/Meteo
 
 %description -n libsim-doc
-Librerie di utilit‡ in Fortran 90, documentazione .
+Librerie di utilit√† in Fortran 90, documentazione .
 
 %description
-Libsim comprende quattro gruppi di moduli di utilit‡ in Fortran 90:
+Libsim comprende quattro gruppi di moduli di utilit√† in Fortran 90:
 
 libsim_base definisce moduli e classi di uso generale in applicazioni
 scientifiche, come la gestione di errori in esecuzione, la gestione di
