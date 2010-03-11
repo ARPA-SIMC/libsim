@@ -149,7 +149,7 @@ endif
 
 bin_PROGRAMS += vg6d_getpoint vg6d_subarea vg6d_transform
 
-vg6d_getpoint_SOURCES = vg6d_getpoint.f90
+vg6d_getpoint_SOURCES = vg6d_getpoint.F90
 vg6d_getpoint_LDADD = ../volgrid6d/libsim_volgrid6d.la  ../vol7d/libsim_vol7d.la ../base/libsim_base.la ../log4fortran/liblog4fortran.la
 
 vg6d_subarea_SOURCES = vg6d_subarea.f90
