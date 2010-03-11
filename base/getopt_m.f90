@@ -121,9 +121,15 @@ END TYPE optionparser
 !!  - double precision (with additional argument)
 !!  - logical (without additional argument)
 !!  - count (without additional argument)
+!!  - help (without additional argument)
 !!
 !! Each option can be introduced by a short and/or a long option
-!! string, see the description of getopt_m::optionparser .
+!! string, see the description of getopt_m::optionparser . Each object
+!! of the class has to be instantiated through the generic constructor
+!! getopt_m::op_option_new , which is an interface to the specific
+!! constructors for the different option types, or with
+!! getopt_m::op_option_count_new or getopt_m::op_option_help_new for
+!! count or help options respectively.
 TYPE op_option
   PRIVATE
   CHARACTER(len=1) :: short_opt
@@ -619,16 +625,16 @@ END SELECT
 
 format_opt = ''
 IF (this%short_opt /= '') THEN
-  format_opt(LEN_TRIM(format_opt)+1:) = '-'//this%short_opt
+  format_opt(LEN_TRIM(format_opt)+1:) = ' -'//this%short_opt
   IF (argname /= '') THEN
     format_opt(LEN_TRIM(format_opt)+1:) = ' '//argname
   ENDIF
 ENDIF
 IF (this%short_opt /= '' .AND. this%long_opt /= '') THEN
-  format_opt(LEN_TRIM(format_opt)+1:) = ', '
+  format_opt(LEN_TRIM(format_opt)+1:) = ','
 ENDIF
 IF (this%long_opt /= '') THEN
-  format_opt(LEN_TRIM(format_opt)+1:) = '--'//this%long_opt
+  format_opt(LEN_TRIM(format_opt)+1:) = ' --'//this%long_opt
   IF (argname /= '') THEN
     format_opt(LEN_TRIM(format_opt)+1:) = '='//argname
   ENDIF
@@ -669,7 +675,7 @@ END SUBROUTINE op_option_nullify
 !! ::optionparser_new, using one of the op_option*_new functions.
 FUNCTION optionparser_new(option, usage_msg, description_msg) RESULT(this)
 TYPE(op_option),TARGET :: option(:)
-CHARACTER(len=*), INTENT(in), OPTIONAL :: usage_msg !< short help message which describes the program usage, if not provided, a standard mesage will be printed
+CHARACTER(len=*), INTENT(in), OPTIONAL :: usage_msg !< short help message which describes the program usage, if not provided, a standard message will be printed
 CHARACTER(len=*), INTENT(in), OPTIONAL :: description_msg !< long help message which describes the program purpose, if not provided, nothing will be printed
 
 TYPE(optionparser) :: this
@@ -816,16 +822,6 @@ TYPE(line_split) :: help_line
 
 ncols = default_columns()
 
-! print description message
-IF (ASSOCIATED(this%description_msg)) THEN
-  help_line = line_split_new(cstr_to_fchar(this%description_msg), ncols)
-  DO j = 1, line_split_get_nlines(help_line)
-    WRITE(*,'(A)')line_split_get_line(help_line,j)
-  ENDDO
-  CALL delete(help_line)
-  WRITE(*,'()')
-ENDIF
-
 ! print usage message
 IF (ASSOCIATED(this%usage_msg)) THEN
   help_line = line_split_new(cstr_to_fchar(this%usage_msg), ncols)
@@ -836,10 +832,19 @@ IF (ASSOCIATED(this%usage_msg)) THEN
 ELSE
   CALL getarg(0, buf)
   WRITE(*,'(A)')'Usage: '//TRIM(buf)//' [options] [arguments]'
-  WRITE(*,'(A)')'Where [options] can be any of:'
 ENDIF
 
-WRITE(*,'()')
+! print description message
+IF (ASSOCIATED(this%description_msg)) THEN
+  WRITE(*,'()')
+  help_line = line_split_new(cstr_to_fchar(this%description_msg), ncols)
+  DO j = 1, line_split_get_nlines(help_line)
+    WRITE(*,'(A)')line_split_get_line(help_line,j)
+  ENDDO
+  CALL delete(help_line)
+ENDIF
+
+WRITE(*,'(/,A)')'Options:'
 
 DO i = 1, SIZE(this%option) ! loop over options
   IF (.NOT. c_e(this%option(i))) CYCLE
