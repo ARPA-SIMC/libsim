@@ -141,7 +141,7 @@ CALL init(db_v7d)
 ! estraggo i dati
 CALL import(db_v7d, variabili(1:nvar), (/network/), &
  datetime_new(isodate=data_inizio), datetime_new(isodate=data_fine), &
- anavar=(/'B01192'/), timerange=timerange_new(0,0,86400))
+ anavar=(/'B01192'/), timerange=vol7d_timerange_new(0,0,86400))
 
 dtfill = timedelta_new(day=1)
 CALL vol7d_fill_time(db_v7d%vol7d, v7d_fill, dtfill, datetime_new(isodate=data_inizio), datetime_new(isodate=data_fine))

@@ -141,7 +141,7 @@ CONTAINS
 !! rispetto alla versione \c SUBROUTINE \c init.
 !! Se non viene passato nessun parametro opzionale l'oggetto è
 !! inizializzato a valore mancante.
-FUNCTION timerange_new(timerange, p1, p2) RESULT(this)
+FUNCTION vol7d_timerange_new(timerange, p1, p2) RESULT(this)
 INTEGER,INTENT(IN),OPTIONAL :: timerange !< tipo di intervallo temporale
 INTEGER,INTENT(IN),OPTIONAL :: p1 !< valore per il primo istante temporale
 INTEGER,INTENT(IN),OPTIONAL :: p2 !< valore per il secondo istante temporale
@@ -150,7 +150,7 @@ TYPE(vol7d_timerange) :: this !< oggetto da inizializzare
 
 CALL init(this, timerange, p1, p2)
 
-END FUNCTION timerange_new
+END FUNCTION vol7d_timerange_new
 
 
 !> Inizializza un oggetto \a vol7d_timerange con i parametri opzionali forniti.
