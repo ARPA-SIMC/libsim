@@ -16,7 +16,8 @@ IMPLICIT NONE
 TYPE(op_option) :: options(40) ! remember to update dimension when adding options
 TYPE(optionparser) :: opt
 CHARACTER(len=8) :: input_format, output_format
-CHARACTER(len=512) :: input_file, output_file, network_list, variable_list 
+CHARACTER(len=512) :: input_file, output_file, network_list, variable_list
+character(len=80) :: output_template
 TYPE(vol7d_network), ALLOCATABLE :: nl(:)
 CHARACTER(len=10), ALLOCATABLE :: vl(:)
 CHARACTER(len=23) :: start_date, end_date
@@ -64,10 +65,10 @@ options(1) = op_option_new(' ', 'input-format', input_format, 'native', help= &
  &, ''orsim'' for SIM Oracle database&
 #endif
  &')
-options(2) = op_option_new('i', 'input-file', input_file, '-', help= &
- 'if input-format is of file type, input file name, ''-'' for stdin; &
- &if input-format is of database type, database access info in the form &
- &user/password@dsn, if empty or ''-'', a suitable default is used.')
+!options(2) = op_option_new('i', 'input-file', input_file, '-', help= &
+! 'if input-format is of file type, input file name, ''-'' for stdin; &
+! &if input-format is of database type, database access info in the form &
+! &user/password@dsn, if empty or ''-'', a suitable default is used.')
 
 ! input database options
 options(4) = op_option_new('s', 'start-date', start_date, '1900-01-01 00:00:00', help= &
@@ -107,14 +108,19 @@ options(15) = op_option_new(' ', 'comp-start', comp_start, '', help= &
 
 
 ! options for defining output
-options(20) = op_option_new('o', 'output-file', output_file, '-', help= &
- 'output file, ''-'' for stdout')
+!options(20) = op_option_new('o', 'output-file', output_file, '-', help= &
+! 'output file, ''-'' for stdout')
 options(21) = op_option_new(' ', 'output-format', output_format, 'native', help= &
  'format of output file, ''native'' for vol7d native binary format&
 #ifdef HAVE_DBALLE
  &, ''BUFR'' for BUFR with generic template, ''CREX'' for CREX format&
 #endif
  &, csv for formatted csv output')
+#ifdef HAVE_DBALLE
+options(22) = op_option_new('t', 'output-template', output_template, 'generic', help= &
+ 'output TEMPLATE for BUFR/CREX, in the form ''category.subcategory.localcategory'', or &
+& an alias like ''synop'', ''metar'',''temp'',''generic''')
+#endif
 
 ! options for configuring csv output
 options(30) = op_option_new(' ', 'csv-volume', csv_volume, 'all', help= &
@@ -155,12 +161,36 @@ opt = optionparser_new(options, description_msg= &
 #ifdef HAVE_DBALLE
  &, or into a BUFR/CREX file&
 #endif
- &, or into a configurable formatted csv file.')
+ &, or into a configurable formatted csv file. &
+ &If input-format is of file type, inputfile ''-'' indicates stdin, &
+ &if input-format is of database type, inputfile specifies &
+ &database access info in the form user/password@dsn, &
+ &if empty or ''-'', a suitable default is used. &
+ &If output-format is of file type, outputfile ''-'' indicates stdout.', &
+ usage_msg='v7d_transform [options] inputfile outputfile')
 
 ! parse options and check for errors
 optind = optionparser_parseoptions(opt)
 IF (optind <= 0) THEN
   CALL l4f_category_log(category,L4F_ERROR,'error in command-line parameters')
+  CALL EXIT(1)
+ENDIF
+
+IF ( optind <= iargc()) THEN
+  CALL getarg(optind, input_file)
+  optind=optind+1
+ELSE
+  CALL l4f_category_log(category,L4F_ERROR,'input file missing')
+  CALL optionparser_printhelp(opt)
+  CALL EXIT(1)
+ENDIF
+
+IF (optind <= iargc()) THEN
+  CALL getarg(optind, output_file)
+  optind=optind+1
+ELSE
+  CALL l4f_category_log(category,L4F_ERROR,'output file missing')
+  CALL optionparser_printhelp(opt)
   CALL EXIT(1)
 ENDIF
 
@@ -230,7 +260,10 @@ IF (input_format == 'native') THEN
     OPEN(iun, file=input_file, form='UNFORMATTED', access='SEQUENTIAL')
   ENDIF
   CALL init(v7d, time_definition=0)
-  CALL IMPORT(v7d, unit=iun)
+  CALL import(v7d, unit=iun)
+  IF (input_file /= '-') THEN
+    CLOSE(iun)
+  ENDIF
 
 #ifdef HAVE_DBALLE
 ELSE IF (input_format == 'BUFR' .OR. input_format == 'CREX') THEN
@@ -241,7 +274,7 @@ ELSE IF (input_format == 'BUFR' .OR. input_format == 'CREX') THEN
     CALL EXIT(1)
   ELSE
     CALL init(v7d_dba, filename=input_file, FORMAT=input_format, file=.TRUE.)
-    CALL IMPORT(v7d_dba)
+    CALL import(v7d_dba)
     v7d = v7d_dba%vol7d
   ENDIF
 
@@ -292,13 +325,13 @@ IF (comp_regularize) THEN
 ENDIF
 
 IF (comp_average .OR. comp_cumulate) THEN
-  CALL init(v7d_comp1)
-  CALL init(v7d_comp2)
+  CALL init(v7d_comp1, time_definition=v7d%time_definition)
+  CALL init(v7d_comp2, time_definition=v7d%time_definition)
   IF (comp_average) THEN
     CALL vol7d_average(v7d, v7d_comp1, c_i, c_s)
   ENDIF
   IF (comp_cumulate) THEN
-    CALL vol7d_cumulate(v7d, v7d_comp2, c_i, c_s)
+    CALL vol7d_cumulate(v7d, v7d_comp2, c_i, c_s, full_steps=.TRUE.)
   ENDIF
 ! merge the tho computed fields and throw away the rest
 ! to be improved in vol7d_compute
@@ -319,6 +352,7 @@ IF (output_format == 'native') THEN
   CALL export(v7d, unit=iun)
   IF (output_file /= '-') CLOSE(iun)
   CALL delete(v7d)
+
 ELSE IF (output_format == 'csv') THEN
   IF (output_file == '-') THEN
     iun = stdout_unit
@@ -330,12 +364,16 @@ ELSE IF (output_format == 'csv') THEN
    csv_rescale, icsv_column, iun, nc)
   IF (output_file /= '-') CLOSE(iun)
   CALL delete(v7d)
+
+#ifdef HAVE_DBALLE
 ELSE IF (output_format == 'BUFR' .OR. output_format == 'CREX') THEN
   CALL init(v7d_dba_out, filename=output_file, FORMAT=output_format, file=.TRUE., &
    WRITE=.TRUE., wipe=.TRUE.)
   v7d_dba_out%vol7d = v7d
-  CALL export(v7d_dba_out)
+  CALL export(v7d_dba_out, template=output_template)
   CALL delete(v7d_dba_out)
+#endif
+
 ELSE IF (output_format /= '') THEN
   CALL l4f_category_log(category, L4F_ERROR, &
    'error in command-line parameters, format '// &
@@ -343,6 +381,19 @@ ELSE IF (output_format /= '') THEN
   CALL EXIT(1)
 ENDIF
 
+! cleanly close the databases
+IF (input_format == 'native') THEN
+  CALL delete(v7d)
+#ifdef HAVE_DBALLE
+ELSE IF (input_format == 'BUFR' .OR. input_format == 'CREX' &
+ .OR. input_format == 'dba') THEN
+  CALL delete(v7d_dba)
+#endif
+#ifdef HAVE_ORSIM
+ELSE IF (input_format == 'orsim') THEN
+  CALL delete(v7d_osim)
+#endif
+ENDIF
 
 END PROGRAM v7d_transform
 
