@@ -79,9 +79,10 @@ options(6) = op_option_new('n', 'network-list', network_list, '', help= &
  'if input-format is of database type, list of station networks to be extracted &
  &in the form of a comma-separated list of alphanumeric network identifiers')
 options(7) = op_option_new('v', 'variable-list', variable_list, '', help= &
- 'if input-format is of database type, list of variables to be extracted &
- & in the form of a comma-separated list of B-table alphanumeric codes, e.g. &
- &''B10004,B12001''')
+ 'if input-format is of database type, list of variables to be extracted, &
+ &including station variables, &
+ &in the form of a comma-separated list of B-table alphanumeric codes, &
+ &e.g. ''B01192,B13011,B10004,B12001''')
 
 ! option for displaying/processing
 options(10) = op_option_new('d', 'display', ldisplay, help= &
@@ -92,7 +93,7 @@ options(11) = op_option_new(' ', 'comp-regularize', comp_regularize, help= &
  'regularize the time series keeping only the data at regular time intervals')
 comp_regularize = .FALSE.
 options(12) = op_option_new(' ', 'comp-average', comp_average, help= &
- 'recompute average of average fields on a different time interval')
+ 'recompute average of averaged fields on a different time interval')
 comp_average = .FALSE.
 options(13) = op_option_new(' ', 'comp-cumulate', comp_cumulate, help= &
  'recompute cumulation of accumulated fields on a different time interval')
@@ -276,6 +277,7 @@ ELSE IF (input_format == 'BUFR' .OR. input_format == 'CREX') THEN
     CALL init(v7d_dba, filename=input_file, FORMAT=input_format, file=.TRUE.)
     CALL import(v7d_dba)
     v7d = v7d_dba%vol7d
+    CALL init(v7d_dba%vol7d) ! nullify without deallocating
   ENDIF
 
 ELSE IF (input_format == 'dba') THEN
@@ -288,6 +290,7 @@ ELSE IF (input_format == 'dba') THEN
   CALL init(v7d_dba, file=.FALSE.) ! dsn, user, password? repinfo??
   CALL import(v7d_dba, vl, nl, timei=s_d, timef=e_d)
   v7d = v7d_dba%vol7d
+  CALL init(v7d_dba%vol7d) ! nullify without deallocating
 #endif
 
 #ifdef HAVE_ORSIM
@@ -299,8 +302,9 @@ ELSE IF (input_format == 'orsim') THEN
     CALL EXIT(1)
   ENDIF
   CALL init(v7d_osim, time_definition=0) ! dsn, user, password? repinfo??
-  CALL import(v7d_osim, vl, nl, timei=s_d, timef=e_d)
+  CALL import(v7d_osim, vl, nl, timei=s_d, timef=e_d, anavar=vl)
   v7d = v7d_osim%vol7d
+  CALL init(v7d_osim%vol7d) ! nullify without deallocating
 #endif
 
 ELSE
@@ -423,6 +427,11 @@ INTEGER,POINTER :: w_s(:), w_e(:)
 
 IF (csv_variable /= 'all') THEN
   nv = word_split(csv_variable, w_s, w_e, ',')
+  CALL checkvar(v7d%anavar%r)
+  CALL checkvar(v7d%anavar%d)
+  CALL checkvar(v7d%anavar%i)
+  CALL checkvar(v7d%anavar%b)
+  CALL checkvar(v7d%anavar%c)
   CALL checkvar(v7d%dativar%r)
   CALL checkvar(v7d%dativar%d)
   CALL checkvar(v7d%dativar%i)
@@ -455,6 +464,31 @@ IF (csv_header > 0) THEN
 !  DO i = 1, nc ! add header for the dimensions descriptors
 !    CALL csv_record_addfield(csvline,TRIM(deshead(icsv_column(i))))
 !  ENDDO
+  IF (ASSOCIATED(v7d%anavar%r)) THEN
+    DO i5 = 1, SIZE(v7d%anavar%r)
+      CALL csv_record_addfield(csvline,TRIM(v7d%anavar%r(i5)%btable))
+    ENDDO
+  ENDIF
+  IF (ASSOCIATED(v7d%anavar%d)) THEN
+    DO i5 = 1, SIZE(v7d%anavar%d)
+      CALL csv_record_addfield(csvline,TRIM(v7d%anavar%d(i5)%btable))
+    ENDDO
+  ENDIF
+  IF (ASSOCIATED(v7d%anavar%i)) THEN
+    DO i5 = 1, SIZE(v7d%anavar%i)
+      CALL csv_record_addfield(csvline,TRIM(v7d%anavar%i(i5)%btable))
+    ENDDO
+  ENDIF
+  IF (ASSOCIATED(v7d%anavar%b)) THEN
+    DO i5 = 1, SIZE(v7d%anavar%b)
+      CALL csv_record_addfield(csvline,TRIM(v7d%anavar%b(i5)%btable))
+    ENDDO
+  ENDIF
+  IF (ASSOCIATED(v7d%anavar%c)) THEN
+    DO i5 = 1, SIZE(v7d%anavar%c)
+      CALL csv_record_addfield(csvline,TRIM(v7d%anavar%c(i5)%btable))
+    ENDDO
+  ENDIF
   IF (ASSOCIATED(v7d%dativar%r)) THEN
     DO i5 = 1, SIZE(v7d%dativar%r)
       CALL csv_record_addfield(csvline,TRIM(v7d%dativar%r(i5)%btable))
@@ -525,6 +559,70 @@ DO i2 = 1, size(v7d%time)
           DO i = 1, nc ! add data for the dimensions descriptors
             CALL csv_record_addfield(csvline,csv_desdata(icsv_column(i)))
           ENDDO
+! ana variables
+          IF (ASSOCIATED(v7d%volanar)) THEN
+            DO i5 = 1, SIZE(v7d%volanar(i1,:,i6))
+              IF (c_e(v7d%volanar(i1,i5,i6))) THEN
+                CALL csv_record_addfield(csvline,v7d%volanar(i1,i5,i6))
+                no_miss = .TRUE.
+              ELSE
+                CALL csv_record_addfield(csvline,'')
+              ENDIF
+            ENDDO
+          ENDIF
+          IF (ASSOCIATED(v7d%volanad)) THEN
+            DO i5 = 1, SIZE(v7d%volanad(i1,:,i6))
+              IF (c_e(v7d%volanad(i1,i5,i6))) THEN
+                CALL csv_record_addfield(csvline,v7d%volanad(i1,i5,i6))
+                no_miss = .TRUE.
+              ELSE
+                CALL csv_record_addfield(csvline,'')
+              ENDIF
+            ENDDO
+          ENDIF
+          IF (ASSOCIATED(v7d%volanai)) THEN
+            DO i5 = 1, SIZE(v7d%volanai(i1,:,i6))
+              IF (c_e(v7d%volanai(i1,i5,i6))) THEN
+                IF (csv_rescale .AND. c_e(v7d%dativar%i(i5)%scalefactor)) THEN
+                  CALL csv_record_addfield(csvline, &
+                   10.**(-v7d%dativar%i(i5)%scalefactor)* &
+                   REAL(v7d%volanai(i1,i5,i6)))
+                ELSE
+                  CALL csv_record_addfield(csvline,v7d%volanai(i1,i5,i6))
+                ENDIF
+                no_miss = .TRUE.
+              ELSE
+                CALL csv_record_addfield(csvline,'')
+              ENDIF
+            ENDDO
+          ENDIF
+          IF (ASSOCIATED(v7d%volanab)) THEN
+            DO i5 = 1, SIZE(v7d%volanab(i1,:,i6))
+              IF (c_e(v7d%volanab(i1,i5,i6))) THEN
+                IF (csv_rescale .AND. c_e(v7d%dativar%b(i5)%scalefactor)) THEN
+                  CALL csv_record_addfield(csvline, &
+                   10.**(-v7d%dativar%b(i5)%scalefactor)* &
+                   REAL(v7d%volanab(i1,i5,i6)))
+                ELSE
+                  CALL csv_record_addfield(csvline,INT(v7d%volanab(i1,i5,i6)))
+                ENDIF
+                no_miss = .TRUE.
+              ELSE
+                CALL csv_record_addfield(csvline,'')
+              ENDIF
+            ENDDO
+          ENDIF
+          IF (ASSOCIATED(v7d%volanac)) THEN
+            DO i5 = 1, SIZE(v7d%volanac(i1,:,i6))
+              IF (c_e(v7d%volanac(i1,i5,i6))) THEN
+                CALL csv_record_addfield(csvline,TRIM(v7d%volanac(i1,i5,i6)))
+                no_miss = .TRUE.
+              ELSE
+                CALL csv_record_addfield(csvline,'')
+              ENDIF
+            ENDDO
+          ENDIF
+! data variables
           IF (ASSOCIATED(v7d%voldatir)) THEN
             DO i5 = 1, SIZE(v7d%voldatir(i1,i2,i3,i4,:,i6))
               IF (c_e(v7d%voldatir(i1,i2,i3,i4,i5,i6))) THEN
@@ -580,13 +678,14 @@ DO i2 = 1, size(v7d%time)
           IF (ASSOCIATED(v7d%voldatic)) THEN
             DO i5 = 1, SIZE(v7d%voldatic(i1,i2,i3,i4,:,i6))
               IF (c_e(v7d%voldatic(i1,i2,i3,i4,i5,i6))) THEN
-                CALL csv_record_addfield(csvline,v7d%voldatic(i1,i2,i3,i4,i5,i6))
+                CALL csv_record_addfield(csvline,TRIM(v7d%voldatic(i1,i2,i3,i4,i5,i6)))
                 no_miss = .TRUE.
               ELSE
                 CALL csv_record_addfield(csvline,'')
               ENDIF
             ENDDO
           ENDIF
+
           IF (.NOT.csv_skip_miss .OR. no_miss) THEN
             WRITE(iun,'(A)')csv_record_getrecord(csvline)
           ENDIF

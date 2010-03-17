@@ -1,4 +1,4 @@
-PROGRAM subarea
+PROGRAM vg6d_subarea
 
 use gridinfo_class
 use grid_class
@@ -28,7 +28,8 @@ integer :: nx,ny,component_flag,npx,npy
 doubleprecision :: lon_min, lon_max, lat_min, lat_max
 doubleprecision :: latitude_south_pole,longitude_south_pole,angle_rotation
 character(len=80) :: type,trans_type,sub_type
-LOGICAL :: reset_scmode
+CHARACTER(len=3) :: set_scmode
+LOGICAL :: ldisplay
 
 doubleprecision ::x,y,lon,lat
 type(op_option) :: options(30) ! remember to update dimension when adding options
@@ -96,11 +97,18 @@ options(18) = op_option_new('g', 'npy', npy, 4, help= &
 !options(20) = op_option_new('t', 'component-flag', component_flag, &
 ! 0, help='wind component flag in interpolated grid (0/1)')
 
-reset_scmode = .FALSE.
-options(21) = op_option_new(' ', 'reset-scmode', reset_scmode, &
- help='reset output grid scanning mode to a predefined standard value: &
- &first point in SW corner, i direction scans first &
- &[default=keep scanning mode of input grib messages]')
+options(21) = op_option_new(' ', 'set-scmode', set_scmode, 'xxx', &
+ help='set output grid scanning mode to a particular standard value: &
+ &3 binary digits indicating respectively iScansNegatively, jScansPositively and &
+ &jPointsAreConsecutive (grib_api jargon), 0 for false, 1 for true, &
+ &000 for ECMWF-like grids, 010 for COSMO and Cartesian-like grids. &
+ &Any other character indicates to keep the &
+ &corresponding original scanning mode value')
+
+options(25) = op_option_new(' ', 'display', ldisplay, help= &
+ 'briefly display the data volume imported, warning: this option is incompatible &
+ &with output on stdout.')
+ldisplay = .FALSE.
 
 options(30) = op_option_help_new('h', 'help', help= &
  'show an help message')
@@ -154,8 +162,10 @@ if(trans_type == 'inter')then
 
   call griddim_unproj(griddim_out)
 
-  print*,'grid di interpolazione >>>>>>>>>>>>>>>>>>>>'
-  call display(griddim_out)
+  IF (ldisplay) THEN
+    PRINT*,'grid di interpolazione >>>>>>>>>>>>>>>>>>>>'
+    CALL display(griddim_out)
+  ENDIF
 
 end if
 
@@ -213,10 +223,21 @@ DO WHILE (.TRUE.)
 !   call grib_release(gridinfo%gaid)
 !   call grib_new_from_template(gridinfo%gaid,"regular_ll_pl_grib1")
 
-  IF (reset_scmode) THEN ! set "Cartesian" scanning mode
+! set scanning mode
+  IF (set_scmode(1:1) == '0') THEN
     CALL grib_set(gridinfo%gaid, 'iScansNegatively', 0)
+  ELSE IF (set_scmode(1:1) == '1') THEN
+    CALL grib_set(gridinfo%gaid, 'iScansNegatively', 1)
+  ENDIF
+  IF (set_scmode(2:2) == '0') THEN
+    CALL grib_set(gridinfo%gaid, 'jScansPositively', 0)
+  ELSE IF (set_scmode(2:2) == '1') THEN
     CALL grib_set(gridinfo%gaid, 'jScansPositively', 1)
+  ENDIF
+  IF (set_scmode(3:3) == '0') THEN
     CALL grib_set(gridinfo%gaid, 'jPointsAreConsecutive', 0)
+  ELSE IF (set_scmode(3:3) == '1') THEN
+    CALL grib_set(gridinfo%gaid, 'jPointsAreConsecutive', 1)
   ENDIF
 
   call encode_gridinfo(gridinfo,fieldz)
@@ -243,4 +264,4 @@ call l4f_category_log(category,L4F_INFO,"terminato")
 call l4f_category_delete(category)
 ier=l4f_fini()
 
-end program subarea
+END PROGRAM vg6d_subarea
