@@ -88,7 +88,7 @@ end type boxregrid
 !! The input vertical coordinate can be indicated either as the value
 !! of the vertical level (so that it will be the same on every point
 !! at a given vertical level), or as the value of a specified variable
-!! at each oint in space (so that it will depend on the horizontal
+!! at each point in space (so that it will depend on the horizontal
 !! position too).
 TYPE vertint
   CHARACTER(len=80) :: sub_type !< subtype of transformation, can be \c 'linear'
@@ -104,7 +104,7 @@ END TYPE vertint
 TYPE transform_def
   private
 
-  CHARACTER(len=80) :: trans_type !< type of transformation, can be \c 'zoom', \c 'boxregrid', \c 'interp' ...
+  CHARACTER(len=80) :: trans_type !< type of transformation, can be \c 'zoom', \c 'boxregrid', \c 'inter', \c 'vertint' ...
   type(zoom) :: zoom !< zoom specification
   type(boxregrid) :: boxregrid !< boxregrid specification
   type(inter) :: inter !< interpolation specification
@@ -179,9 +179,10 @@ CONTAINS
 SUBROUTINE init_transform(this, trans_type,sub_type, &
  ix, iy, fx, fy, ilon, ilat, flon, flat, &
  npx, npy, boxdx, boxdy, boxpercentile, &
- zoom_type,boxregrid_type,inter_type,external,time_definition,categoryappend)
+ zoom_type,boxregrid_type,inter_type,external,time_definition, &
+ input_levtype, input_coordvar, output_levtype, categoryappend)
 TYPE(transform_def),INTENT(out) :: this !< transformation object
-CHARACTER(len=*) :: trans_type !< type of transformation, can be \c 'zoom', \c 'boxregrid', \c 'interp', ...
+CHARACTER(len=*) :: trans_type !< type of transformation, can be \c 'zoom', \c 'boxregrid', \c 'interp', \c 'vertint' ...
 CHARACTER(len=*) :: sub_type !< sub type of transformation, depend on trans_type and is an alternative to zoom_type, boxregrid_type, inter_type
 INTEGER,INTENT(in),OPTIONAL :: ix !< index of initial point of new grid on x (for zoom)
 INTEGER,INTENT(in),OPTIONAL :: iy !< index of initial point of new grid on y (for zoom)
@@ -201,7 +202,10 @@ CHARACTER(len=*),INTENT(IN),OPTIONAL :: boxregrid_type !< type of regrid
 CHARACTER(len=*),INTENT(IN),OPTIONAL :: inter_type !< type of interpolation
 LOGICAL,INTENT(IN),OPTIONAL :: external !< activate external area interpolation (for interpolation)(not enabled !)
 INTEGER,INTENT(IN),OPTIONAL :: time_definition !< 0=time is reference time ; 1=time is validity time
-character(len=*),INTENT(in),OPTIONAL :: categoryappend !< appende questo suffisso al namespace category di log4fortran
+TYPE(vol7d_level),INTENT(IN),OPTIONAL :: input_levtype !< type of vertical level of input data to be vertically interpolated (only type of first and second surface are used, level values are ignored)
+TYPE(vol7d_var),INTENT(IN),OPTIONAL :: input_coordvar !< variable that defines the vertical coordinate in the input volume for vertical interpolation, if missing, the value of the vertical level defined with \a input_levtype is used
+TYPE(vol7d_level),INTENT(IN),OPTIONAL :: output_levtype !< type of vertical level to which data should be vertically interpolated (only type of first and second surface are used, level values are ignored)
+character(len=*),INTENT(in),OPTIONAL :: categoryappend !< suffix to append to log4fortran namespace category
 character(len=512) :: a_name
 
 call l4f_launcher(a_name,a_name_append=trim(subcategory)//"."//trim(optio_c(categoryappend,255)))
@@ -368,6 +372,34 @@ ELSE IF (this%inter%sub_type == 'boxinter')THEN
      TRIM(this%inter%sub_type)//' is wrong')
     CALL raise_fatal_error()
   ENDIF
+
+ELSE IF (this%trans_type == 'vertint') THEN
+
+  CALL optio(sub_type,this%vertint%sub_type)
+
+  IF (PRESENT(input_levtype)) THEN
+    this%vertint%input_levtype = input_levtype
+  ELSE
+    CALL l4f_category_log(this%category,L4F_ERROR, &
+     'vertint parameter input_levtype provided')
+    CALL raise_fatal_error()
+  ENDIF
+
+  IF (PRESENT(input_coordvar)) THEN
+    this%vertint%input_coordvar = input_coordvar
+  ELSE
+    this%vertint%input_coordvar = vol7d_var_miss
+  ENDIF
+
+  IF (PRESENT(output_levtype)) THEN
+    this%vertint%input_levtype = input_levtype
+  ELSE
+    CALL l4f_category_log(this%category,L4F_ERROR, &
+     'vertint parameter input_levtype provided')
+    CALL raise_fatal_error()
+  ENDIF
+
+
 
 ELSE
 
