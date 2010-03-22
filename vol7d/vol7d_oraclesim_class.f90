@@ -191,16 +191,26 @@ END SUBROUTINE vol7d_oraclesim_delete
 !!  - 'B01192' Oracle station id (intero)
 !!  - 'B01019' station name (carattere)
 !!
-!! Gestisce le flag di qualità SIM 'fase 0', cioè:
+!! si potrebbero implementare i seguenti attributi di dati:
+!!  - 'B01193' Report code (intero)
+!!  - 'B01194' Report mnemonic (carattere)
+!!  - 'B33195' MeteoDB variable ID (intero)
+!!  - 'B33196' Data has been invalidated
+!!  - 'B33197' Manual replacement in substitution
+!!
+!! non sono attualmente previsti attributi di anagrafica.
+!!
+!! Gestisce le flag di qualità SIM 'fase 0.1', cioè:
 !!  - '1' dato invalidato manualmente -> restituisce valore mancante
 !!  - '2' dato sostituito manualmente -> restituisce il dato sostituito
+!!  - '3' dato invalidato automaticamente -> restituisce valore mancante
 !!
 !! Nel caso non sia stato trovato nulla in archivio per i parametri
 !! richiesti, il volume risultante è vuoto e quindi inutilizzabile;
 !! per evitare errori fatali, controllare il volume \a this%vol7d con
 !! la funzione c_e, se restituisce \a .FALSE. non deve essere usato.
 SUBROUTINE vol7d_oraclesim_import(this, var, network, timei, timef, level, &
- timerange, anavar, set_network)
+ timerange, anavar, attr, anaattr, set_network)
 TYPE(vol7d_oraclesim),INTENT(out) :: this !< oggetto in cui importare i dati
 CHARACTER(len=*),INTENT(in) :: var(:) !< lista delle variabili da importare, codice alfanumerico della tabella B locale
 TYPE(vol7d_network),INTENT(in) :: network(:) !< lista di reti da estrarre, inizializzata con il nome che ha nell'archivio SIM
@@ -210,13 +220,15 @@ TYPE(vol7d_level),INTENT(in),OPTIONAL :: level !< estrae solo il livello vertica
 TYPE(vol7d_timerange),INTENT(in),OPTIONAL :: timerange !< estrae solo i dati con intervallo temporale (es. istantaneo, cumulato, ecc.) analogo al timerange fornito, default=tutti
 !> variabili da importare secondo la tabella B locale o relativi alias relative ad anagrafica
 CHARACTER(len=*),INTENT(in),OPTIONAL :: anavar(:) !< lista delle variabili di anagrafica da importare, codice alfanumerico della tabella B locale, se non fornito non ne importa nessuna
+CHARACTER(len=*),INTENT(in),OPTIONAL :: attr(:) !< lista degli attributi delle variabili da importare, codice alfanumerico della tabella B locale, se non fornito non ne importa nessuno
+CHARACTER(len=*),INTENT(in),OPTIONAL :: anaattr(:) !< lista degli attributi delle variabili di anagrafica da importare, codice alfanumerico della tabella B locale, se non fornito non ne importa nessuno
 TYPE(vol7d_network),INTENT(in),OPTIONAL :: set_network !< se fornito, collassa tutte le reti nell'unica rete indicata, eliminando le stazioni comuni a reti diverse
 
 INTEGER :: i
 
 DO i = 1, SIZE(network)
   CALL vol7d_oraclesim_importvvns(this, var, network(i), timei, timef, &
-   level, timerange, anavar, set_network)
+   level, timerange, anavar, attr, anaattr, set_network)
 ENDDO
 
 END SUBROUTINE vol7d_oraclesim_import
@@ -224,7 +236,7 @@ END SUBROUTINE vol7d_oraclesim_import
 
 ! Routine interna che fa la vera importazione, una rete alla volta
 SUBROUTINE vol7d_oraclesim_importvvns(this, var, network, timei, timef, level, &
- timerange, anavar, set_network)
+ timerange, anavar, attr, anaattr, set_network)
 TYPE(vol7d_oraclesim),INTENT(out) :: this !< oggetto in cui importare i dati
 CHARACTER(len=*),INTENT(in) :: var(:) !< lista delle variabili da importare (codice alfanumerico della tabella B del WMO)
 TYPE(vol7d_network),INTENT(in) :: network !< rete da estrarre, inizializzata con il nome che ha nell'archivio SIM
@@ -233,6 +245,8 @@ TYPE(datetime),INTENT(in) :: timef !< istante finale delle osservazioni da estra
 TYPE(vol7d_level),INTENT(in),OPTIONAL :: level !< estrae solo il livello verticale fornito, default=tutti
 TYPE(vol7d_timerange),INTENT(in),OPTIONAL :: timerange !< estrae solo i dati con intervallo temporale (es. istantaneo, cumulato, ecc.) analogo al timerange fornito, default=tutti
 CHARACTER(len=*),INTENT(in),OPTIONAL :: anavar(:) !< lista delle variabili di anagrafica da importare, codice alfanumerico della tabella B locale, se non fornito non ne importa nessuna
+CHARACTER(len=*),INTENT(in),OPTIONAL :: attr(:) !< lista degli attributi delle variabili da importare, codice alfanumerico della tabella B locale, se non fornito non ne importa nessuno
+CHARACTER(len=*),INTENT(in),OPTIONAL :: anaattr(:) !< lista degli attributi delle variabili di anagrafica da importare, codice alfanumerico della tabella B locale, se non fornito non ne importa nessuno
 TYPE(vol7d_network),INTENT(in),OPTIONAL :: set_network !< se fornito, collassa tutte le reti nell'unica rete indicata, eliminando le stazioni comuni a reti diverse
 
 TYPE(vol7d) :: v7dtmp, v7dtmp2, v7dtmpana
@@ -245,6 +259,8 @@ LOGICAL,ALLOCATABLE :: lana(:)
 LOGICAL :: found, non_valid, varbt_req(SIZE(vartable))
 INTEGER(kind=int_b) :: msg(256)
 LOGICAL :: lanar(netana_nvarr), lanai(netana_nvari), lanac(netana_nvarc)
+! per attributi
+INTEGER :: ndai, ndac, attr_netid, attr_netname, attr_varid, attr_simflag
 
 CALL getval(timei, simpledate=datai)
 CALL getval(timef, simpledate=dataf)
@@ -279,7 +295,7 @@ DO nvin = 1, SIZE(var)
     ENDIF
   ENDDO
   IF (.NOT.found) CALL l4f_log(L4F_WARN, 'variabile '//TRIM(var(nvin))// &
-   ' non valida per la rete '//TRIM(network%name))
+   ' non valida per la rete '//TRIM(network%name)//', la ignoro')
 ENDDO
 
 nvar = COUNT(varbt_req)
@@ -292,6 +308,36 @@ IF (nvar == 0) THEN
 ENDIF
 CALL l4f_log(L4F_INFO, 'in oraclesim_class, nvar='//to_char(nvar))
 
+! Controllo gli attributi richiesti
+! inizializzo a 0 attributi
+attr_netid = imiss
+attr_netname = imiss
+attr_varid = imiss
+attr_simflag = imiss
+ndai = 0; ndac = 0
+! controllo cosa e` stato richiesto
+IF (PRESENT(attr)) THEN
+  DO i = 1, SIZE(attr)
+    IF (attr(i) == 'B01193') THEN
+      ndai = ndai + 1
+      attr_netid = ndai
+    ELSE IF (attr(i) == 'B01194') THEN
+      ndac = ndac + 1
+      attr_netname = ndac
+    ELSE IF (attr(i) == 'B01195') THEN
+      ndai = ndai + 1
+      attr_varid = ndai
+    ELSE IF (attr(i) == 'B01196') THEN ! falso, correggere
+      ndac = ndac + 1
+      attr_simflag = ndac
+    ELSE
+      CALL l4f_log(L4F_WARN, 'attributo variabile oraclesim '//TRIM(attr(i))// &
+       ' non valido, lo ignoro')
+    ENDIF
+  ENDDO
+ENDIF
+
+! Comincio l'estrazione
 nobs = oraextra_gethead(this%connid, fchar_to_cstr(datai), &
  fchar_to_cstr(dataf), netid, varlist, SIZE(varlist))
 IF (nobs < 0) THEN
@@ -313,8 +359,13 @@ ENDIF
 nobs = nobso
 DO i = 1, nobs
   fdatao(i) = cstr_to_fchar(cdatao(:,i)) ! Converto la data da char C a CHARACTER
-! Gestione flag di qualita` fase 0
-  IF (cflag(1,i) == ICHAR('1')) THEN ! dato invalidato manualmente
+! Gestione flag di qualita` fase 0.1
+  IF (cflag(1,i) == ICHAR('1') .OR. cflag(1,i) == ICHAR('3')) THEN
+! dato invalidato manualmente o automaticamente
+!    CALL l4f_log(L4F_INFO, 'vol7d_oraclesim_import: found quality flag '// &
+!     TRIM(to_char(cflag(1,i)))//' for station ' &
+!     //TRIM(to_char(stazo(i)))//', values '//TRIM(to_char(valore1(i)))// &
+!     ':'//TRIM(to_char(valore2(i))))
     valore1(i) = rmiss ! forzo dato mancante
   ELSE IF (cflag(1,i) == ICHAR('2')) THEN ! dato modificato manualmente
 ! il valore buono e` il secondo a meno che esso non sia mancante
@@ -327,8 +378,17 @@ DO i = 1, nobs
 ! campo.
 ! ==
 ! in tal caso e` buono il primo
+!    CALL l4f_log(L4F_INFO, 'vol7d_oraclesim_import: found quality flag '// &
+!     TRIM(to_char(cflag(1,i)))//' for station ' &
+!     //TRIM(to_char(stazo(i)))//', values '//TRIM(to_char(valore1(i)))// &
+!     ':'//TRIM(to_char(valore2(i))))
     IF (valore2(i) /= rmiss) valore1(i) = valore2(i)
   ENDIF
+!  CALL l4f_log(L4F_INFO, 'vol7d_oraclesim_import: quality flag '// &
+!   TRIM(cstr_to_fchar(cflag(:,i)))//' for station ' &
+!   //TRIM(to_char(stazo(i)))//', values '//TRIM(to_char(valore1(i)))// &
+!   ':'//TRIM(to_char(valore2(i))))
+
 ENDDO
 non_valid = .FALSE. ! ottimizzazione per la maggior parte dei casi
 nana = count_distinct(stazo(1:nobs), back=.TRUE.)
@@ -408,8 +468,11 @@ ENDDO
 CALL init(v7dtmp2) ! nel caso di nvar/nobs = 0
 DO i = 1, nvar
   CALL init(v7dtmp)
+
   CALL vol7d_alloc(v7dtmp, ntime=ntime, nana=nana, &
-   nlevel=1, ntimerange=1, nnetwork=1, ndativarr=1)
+   nlevel=1, ntimerange=1, nnetwork=1, ndativarr=1, &
+   ndatiattri=ndai, ndatiattrc=ndac, &
+   ndativarattri=MIN(ndai,1), ndativarattrc=MIN(ndac,1)) ! per var/attr 0=.NOT.PRESENT()
 
   IF (i == 1) THEN ! la prima volta inizializzo i descrittori fissi
     IF (PRESENT(set_network)) THEN
@@ -467,15 +530,49 @@ DO i = 1, nvar
   v7dtmp%level(1) = vartable(nvbt)%level
   v7dtmp%timerange(1) = vartable(nvbt)%timerange
 
+! Copio la variabile per gli attributi
+  IF (ASSOCIATED(v7dtmp%dativarattr%i)) &
+   v7dtmp%dativarattr%i(1) = v7dtmp%dativar%r(1)
+  IF (ASSOCIATED(v7dtmp%dativarattr%c)) &
+   v7dtmp%dativarattr%c(1) = v7dtmp%dativar%r(1)
+
+! Creo le variabili degli attributi
+  IF (c_e(attr_netid)) CALL init(v7dtmp%datiattr%i(attr_netid), 'B01193')
+  IF (c_e(attr_netname)) CALL init(v7dtmp%datiattr%c(attr_netname), 'B01194')
+  IF (c_e(attr_varid)) CALL init(v7dtmp%datiattr%i(attr_varid), 'B01195')
+  IF (c_e(attr_simflag)) CALL init(v7dtmp%datiattr%c(attr_simflag), 'B01196')
+
 ! Alloco e riempio il volume di dati
-  CALL vol7d_alloc_vol(v7dtmp)
-  v7dtmp%voldatir(:,:,:,:,:,:) = rmiss
+  CALL vol7d_alloc_vol(v7dtmp, inivol=.TRUE.)
+!  v7dtmp%voldatir(:,:,:,:,:,:) = rmiss ! da eliminare, grazie a inivol=.TRUE.
   DO j = 1, nobs
 ! Solo la variabile corrente e, implicitamente, dato non scartato
     IF (varo(j) /= vartmp(i)) CYCLE
     v7dtmp%voldatir(mapstazo(j),mapdatao(j),1,1,1,1) = &
-     valore1(j)*vartable(nvbt)%afact+vartable(nvbt)%bfact 
+     valore1(j)*vartable(nvbt)%afact+vartable(nvbt)%bfact
   ENDDO
+! Imposto gli attributi richiesti
+  IF (c_e(attr_netid)) THEN ! report code, alias network id
+    v7dtmp%voldatiattri(:,:,1,1,1,1,attr_netid) = netid
+  ENDIF
+  IF (c_e(attr_netname)) THEN ! report mnemonic, alias network name
+    v7dtmp%voldatiattrc(:,:,1,1,1,1,attr_netname) = network%name
+  ENDIF
+  IF (c_e(attr_varid)) THEN ! variable id
+    DO j = 1, nobs
+! Solo la variabile corrente e, implicitamente, dato non scartato
+      IF (varo(j) /= vartmp(i)) CYCLE
+      v7dtmp%voldatiattri(mapstazo(j),mapdatao(j),1,1,1,1,attr_varid) = varo(j)
+    ENDDO
+  ENDIF
+  IF (c_e(attr_simflag)) THEN ! quality flag
+    DO j = 1, nobs
+! Solo la variabile corrente e, implicitamente, dato non scartato
+      IF (varo(j) /= vartmp(i)) CYCLE
+      v7dtmp%voldatiattrc(mapstazo(j),mapdatao(j),1,1,1,1,attr_simflag) = &
+       cstr_to_fchar(cflag(:,j))
+    ENDDO
+  ENDIF
 
 ! Fondo il volume appena estratto con quello del ciclo precedente
   CALL vol7d_merge(v7dtmp2, v7dtmp, sort=.FALSE.)
@@ -483,7 +580,7 @@ ENDDO
 
 ! Fondo a sua volta tutto il volume estratto con il contenuto di this
 CALL vol7d_merge(this%vol7d, v7dtmp2, sort=.FALSE.)
-CALL vol7d_smart_sort_time(this%vol7d)
+CALL vol7d_smart_sort(this%vol7d, ltime=.TRUE.)
 ! Pulizie finali non incluse
 DEALLOCATE(anatmp, tmtmp, vartmp, mapdatao, mapstazo)
 
