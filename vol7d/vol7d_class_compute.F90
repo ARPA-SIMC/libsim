@@ -539,7 +539,7 @@ TYPE(datetime),INTENT(in),OPTIONAL :: stopp
 TYPE(datetime) :: counter, lstart, lstop
 INTEGER :: i, naddtime
 
-CALL vol7d_smart_sort_time(this)
+CALL vol7d_smart_sort(this, ltime=.TRUE.)
 IF (PRESENT(start)) THEN
   lstart = start
 ELSE
@@ -643,7 +643,7 @@ INTEGER :: n
 LOGICAL, ALLOCATABLE :: time_mask(:)
 TYPE(vol7d) :: v7dtmp
 
-CALL vol7d_smart_sort_time(this)
+CALL vol7d_smart_sort(this, ltime=.TRUE.)
 IF (PRESENT(start)) THEN
   lstart = start
 ELSE

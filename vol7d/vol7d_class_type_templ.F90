@@ -100,7 +100,7 @@ IF (ASSOCIATED(v7dtmp%datiattr%/**/VOL7D_POLY_TYPES) .AND. &
   ENDIF
   IF (ASSOCIATED(remapv2) .AND. ASSOCIATED(remapva2)) THEN
     v7dtmp%voldatiattr/**/VOL7D_POLY_TYPES &
-     (remapa2(:),remapt1(:),remapl1(:),remaptr1(:),remapva2(:),remapn2(:),remapv2(:)) = &
+     (remapa2(:),remapt2(:),remapl2(:),remaptr2(:),remapva2(:),remapn2(:),remapv2(:)) = &
      that%voldatiattr/**/VOL7D_POLY_TYPES(:,:,:,:,:,:,:)
     DEALLOCATE(remapv2)
   ELSE IF (ASSOCIATED(remapv2)) THEN
