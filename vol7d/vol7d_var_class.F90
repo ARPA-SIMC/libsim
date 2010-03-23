@@ -99,13 +99,13 @@ CONTAINS
 !! inizializzato a valore mancante.
 !! I membri \a r, \a d, \a i, \a b, \a c non possono essere assegnati
 !! tramite costruttore, ma solo direttamente.
-elemental SUBROUTINE vol7d_var_init(this, btable, description, unit,scalefactor)
+elemental SUBROUTINE vol7d_var_init(this, btable, description, unit, scalefactor)
 TYPE(vol7d_var),INTENT(INOUT) :: this !< oggetto da inizializzare
 !INTEGER,INTENT(in),OPTIONAL :: btable
 CHARACTER(len=*),INTENT(in),OPTIONAL :: btable !< codice della variabile
-CHARACTER(len=20),INTENT(in),OPTIONAL :: description !< descrizione della variabile
-CHARACTER(len=20),INTENT(in),OPTIONAL :: unit !< unità di misura
-integer,INTENT(in),OPTIONAL :: scalefactor !< decimali nella rappresentazione intera e character
+CHARACTER(len=*),INTENT(in),OPTIONAL :: description !< descrizione della variabile
+CHARACTER(len=*),INTENT(in),OPTIONAL :: unit !< unità di misura
+INTEGER,INTENT(in),OPTIONAL :: scalefactor !< decimali nella rappresentazione intera e character
 
 IF (PRESENT(btable)) THEN
   this%btable = btable
