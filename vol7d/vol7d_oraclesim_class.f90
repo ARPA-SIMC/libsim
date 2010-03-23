@@ -127,20 +127,18 @@ CHARACTER(len=32) :: ldsn, luser, lpassword
 
 INTEGER :: err
 INTEGER(kind=int_b) :: msg(256)
+
+ldsn = 'metw'
+luser = 'leggo'
+lpassword = 'meteo'
 IF (PRESENT(dsn)) THEN
-  ldsn = dsn
-ELSE
-  ldsn = 'metw'
+  IF (c_e(dsn)) ldsn = dsn
 ENDIF
 IF (PRESENT(user)) THEN
-  luser = user
-ELSE
-  luser = 'leggo'
+  IF (c_e(user)) luser = user
 ENDIF
 IF (PRESENT(password)) THEN
-  lpassword = password
-ELSE
-  lpassword = 'meteo'
+  IF (c_e(password)) lpassword = password
 ENDIF
 
 this%connid = oraextra_init(fchar_to_cstr(TRIM(luser)), &
@@ -177,28 +175,35 @@ END SUBROUTINE vol7d_oraclesim_delete
 
 
 !> Importa un volume vol7d dall'archivio Oracle SIM.
-!! Tutti i descrittori vengono assegnati correttamente,
-!! compresa l'anagrafica delle stazioni.
-!! Attualmente l'importazione crea un volume di dati reali
-!! vol7d_class::vol7d::voldatir con le osservazioni richieste
-!! ed un eventuale volume di variabili di anagrafica
-!! intere, reali e/o carattere vol7d_class::vol7d::volanai,
-!! vol7d_class::vol7d::volanar, vol7d_class::vol7d::volanac
-!! se il parametro \a anavar viene fornito; le variabili di anagrafica
-!! attualmente disponibili sono:
+!! Tutti i descrittori vengono assegnati correttamente, compresa
+!! l'anagrafica delle stazioni e gli attributi dei dati.  Attualmente
+!! l'importazione crea un volume di dati reali
+!! vol7d_class::vol7d::voldatir con le osservazioni richieste, un
+!! eventuale volume di variabili di anagrafica intere, reali e/o
+!! carattere vol7d_class::vol7d::volanai, vol7d_class::vol7d::volanar,
+!! vol7d_class::vol7d::volanac se il parametro \a anavar viene fornito
+!! e, infine, un eventuale volume di attributi dei dati, interi e/o
+!! carattere vol7d_class::vol7d::voldatiattri,
+!! vol7d_class::vol7d::voldatiattrc se il parametro \a attr viene
+!! fornito.
+!!
+!! Le variabili di anagrafica attualmente disponibili sono:
 !!  - 'B07001' station height (reale)
 !!  - 'B07031' barometer height (reale)
 !!  - 'B01192' Oracle station id (intero)
 !!  - 'B01019' station name (carattere)
 !!
-!! si potrebbero implementare i seguenti attributi di dati:
-!!  - 'B01193' Report code (intero)
-!!  - 'B01194' Report mnemonic (carattere)
+!! Gli attributi di dati attualmente disponibili sono:
+!!  - 'B01193' Report (network) code (intero)
+!!  - 'B01194' Report (network) mnemonic (carattere)
+!!  - 'B33192' Climatological and consistency check (intero)
+!!  - 'B33192' Time consistency (intero)
+!!  - 'B33192' Space consistency (intero)
 !!  - 'B33195' MeteoDB variable ID (intero)
-!!  - 'B33196' Data has been invalidated
-!!  - 'B33197' Manual replacement in substitution
+!!  - 'B33196' Data has been invalidated (intero)
+!!  - 'B33197' Manual replacement in substitution (intero)
 !!
-!! non sono attualmente previsti attributi di anagrafica.
+!! Non sono attualmente previsti attributi di anagrafica.
 !!
 !! Gestisce le flag di qualità SIM 'fase 0.1', cioè:
 !!  - '1' dato invalidato manualmente -> restituisce valore mancante
@@ -260,7 +265,8 @@ LOGICAL :: found, non_valid, varbt_req(SIZE(vartable))
 INTEGER(kind=int_b) :: msg(256)
 LOGICAL :: lanar(netana_nvarr), lanai(netana_nvari), lanac(netana_nvarc)
 ! per attributi
-INTEGER :: ndai, ndac, attr_netid, attr_netname, attr_varid, attr_simflag
+INTEGER :: ndai, ndac, attr_netid, attr_netname, attr_varid, attr_qcflag_clim, &
+ attr_qcflag_time, attr_qcflag_space, attr_qcflag_inv, attr_qcflag_repl
 
 CALL getval(timei, simpledate=datai)
 CALL getval(timef, simpledate=dataf)
@@ -313,7 +319,11 @@ CALL l4f_log(L4F_INFO, 'in oraclesim_class, nvar='//to_char(nvar))
 attr_netid = imiss
 attr_netname = imiss
 attr_varid = imiss
-attr_simflag = imiss
+attr_qcflag_clim = imiss
+attr_qcflag_time = imiss
+attr_qcflag_space = imiss
+attr_qcflag_inv = imiss
+attr_qcflag_repl = imiss
 ndai = 0; ndac = 0
 ! controllo cosa e` stato richiesto
 IF (PRESENT(attr)) THEN
@@ -324,12 +334,24 @@ IF (PRESENT(attr)) THEN
     ELSE IF (attr(i) == 'B01194') THEN
       ndac = ndac + 1
       attr_netname = ndac
-    ELSE IF (attr(i) == 'B01195') THEN
+    ELSE IF (attr(i) == 'B33195') THEN
       ndai = ndai + 1
       attr_varid = ndai
-    ELSE IF (attr(i) == 'B01196') THEN ! falso, correggere
-      ndac = ndac + 1
-      attr_simflag = ndac
+    ELSE IF (attr(i) == 'B33192') THEN
+      ndai = ndai + 1
+      attr_qcflag_clim = ndai
+    ELSE IF (attr(i) == 'B33193') THEN
+      ndai = ndai + 1
+      attr_qcflag_time = ndai
+    ELSE IF (attr(i) == 'B33194') THEN
+      ndai = ndai + 1
+      attr_qcflag_space = ndai
+    ELSE IF (attr(i) == 'B33196') THEN
+      ndai = ndai + 1
+      attr_qcflag_inv = ndai
+    ELSE IF (attr(i) == 'B33197') THEN
+      ndai = ndai + 1
+      attr_qcflag_repl = ndai
     ELSE
       CALL l4f_log(L4F_WARN, 'attributo variabile oraclesim '//TRIM(attr(i))// &
        ' non valido, lo ignoro')
@@ -359,15 +381,10 @@ ENDIF
 nobs = nobso
 DO i = 1, nobs
   fdatao(i) = cstr_to_fchar(cdatao(:,i)) ! Converto la data da char C a CHARACTER
-! Gestione flag di qualita` fase 0.1
-  IF (cflag(1,i) == ICHAR('1') .OR. cflag(1,i) == ICHAR('3')) THEN
+  IF (c_e(make_qcflag_inv(cflag(:,i))) .OR. c_e(make_qcflag_invaut(cflag(:,i)))) THEN
 ! dato invalidato manualmente o automaticamente
-!    CALL l4f_log(L4F_INFO, 'vol7d_oraclesim_import: found quality flag '// &
-!     TRIM(to_char(cflag(1,i)))//' for station ' &
-!     //TRIM(to_char(stazo(i)))//', values '//TRIM(to_char(valore1(i)))// &
-!     ':'//TRIM(to_char(valore2(i))))
     valore1(i) = rmiss ! forzo dato mancante
-  ELSE IF (cflag(1,i) == ICHAR('2')) THEN ! dato modificato manualmente
+  ELSE IF (c_e(make_qcflag_repl(cflag(:,i)))) THEN ! dato modificato manualmente
 ! il valore buono e` il secondo a meno che esso non sia mancante
 ! come nei casi indicati da vpavan@arpa.emr.it e-mail del 14/07/2008:
 ! ==
@@ -378,16 +395,8 @@ DO i = 1, nobs
 ! campo.
 ! ==
 ! in tal caso e` buono il primo
-!    CALL l4f_log(L4F_INFO, 'vol7d_oraclesim_import: found quality flag '// &
-!     TRIM(to_char(cflag(1,i)))//' for station ' &
-!     //TRIM(to_char(stazo(i)))//', values '//TRIM(to_char(valore1(i)))// &
-!     ':'//TRIM(to_char(valore2(i))))
     IF (valore2(i) /= rmiss) valore1(i) = valore2(i)
   ENDIF
-!  CALL l4f_log(L4F_INFO, 'vol7d_oraclesim_import: quality flag '// &
-!   TRIM(cstr_to_fchar(cflag(:,i)))//' for station ' &
-!   //TRIM(to_char(stazo(i)))//', values '//TRIM(to_char(valore1(i)))// &
-!   ':'//TRIM(to_char(valore2(i))))
 
 ENDDO
 non_valid = .FALSE. ! ottimizzazione per la maggior parte dei casi
@@ -491,6 +500,8 @@ DO i = 1, nvar
 ! copio il sottoinsieme di anagrafica che mi interessa in tmpana
 ! e lo fondo col volume appena creato
     IF (PRESENT(anavar)) THEN
+! queste funzionano anche se SIZE(anavar) == 0 grazie al fatto che
+! ANY(var(SIZE == 0)) = .FALSE.
       DO j = 1, SIZE(netana(netid)%anavar%r)
         lanar(j) = ANY(netana(netid)%anavar%r(j)%btable == anavar)
       ENDDO
@@ -526,7 +537,7 @@ DO i = 1, nvar
     v7dtmp%network = v7dtmp2%network
   ENDIF
   nvbt = INDEX(vartable(:)%varora, vartmp(i),  mask=varbt_req(:))
-  CALL init(v7dtmp%dativar%r(1), vartable(nvbt)%varbt)
+  CALL init(v7dtmp%dativar%r(1), vartable(nvbt)%varbt, unit=vartable(nvbt)%unit)
   v7dtmp%level(1) = vartable(nvbt)%level
   v7dtmp%timerange(1) = vartable(nvbt)%timerange
 
@@ -537,10 +548,22 @@ DO i = 1, nvar
    v7dtmp%dativarattr%c(1) = v7dtmp%dativar%r(1)
 
 ! Creo le variabili degli attributi
-  IF (c_e(attr_netid)) CALL init(v7dtmp%datiattr%i(attr_netid), 'B01193')
-  IF (c_e(attr_netname)) CALL init(v7dtmp%datiattr%c(attr_netname), 'B01194')
-  IF (c_e(attr_varid)) CALL init(v7dtmp%datiattr%i(attr_varid), 'B01195')
-  IF (c_e(attr_simflag)) CALL init(v7dtmp%datiattr%c(attr_simflag), 'B01196')
+  IF (c_e(attr_netid)) CALL init(v7dtmp%datiattr%i(attr_netid), 'B01193', &
+   unit='NUMERIC', scalefactor=0)
+  IF (c_e(attr_netname)) CALL init(v7dtmp%datiattr%c(attr_netname), 'B01194', &
+   unit='CCITTIA5', scalefactor=0)
+  IF (c_e(attr_varid)) CALL init(v7dtmp%datiattr%i(attr_varid), 'B33195', &
+   unit='NUMERIC', scalefactor=0)
+  IF (c_e(attr_qcflag_clim)) CALL init(v7dtmp%datiattr%i(attr_qcflag_clim), &
+   'B33192', unit='NUMERIC', scalefactor=0)
+  IF (c_e(attr_qcflag_time)) CALL init(v7dtmp%datiattr%i(attr_qcflag_time), &
+   'B33193', unit='NUMERIC', scalefactor=0)
+  IF (c_e(attr_qcflag_space)) CALL init(v7dtmp%datiattr%i(attr_qcflag_space), &
+   'B33194', unit='NUMERIC', scalefactor=0)
+  IF (c_e(attr_qcflag_inv)) CALL init(v7dtmp%datiattr%i(attr_qcflag_inv), &
+   'B33196', unit='NUMERIC', scalefactor=0)
+  IF (c_e(attr_qcflag_repl)) CALL init(v7dtmp%datiattr%i(attr_qcflag_repl), &
+   'B33197', unit='NUMERIC', scalefactor=0)
 
 ! Alloco e riempio il volume di dati
   CALL vol7d_alloc_vol(v7dtmp, inivol=.TRUE.)
@@ -565,12 +588,39 @@ DO i = 1, nvar
       v7dtmp%voldatiattri(mapstazo(j),mapdatao(j),1,1,1,1,attr_varid) = varo(j)
     ENDDO
   ENDIF
-  IF (c_e(attr_simflag)) THEN ! quality flag
+  IF (c_e(attr_qcflag_clim)) THEN
     DO j = 1, nobs
-! Solo la variabile corrente e, implicitamente, dato non scartato
       IF (varo(j) /= vartmp(i)) CYCLE
-      v7dtmp%voldatiattrc(mapstazo(j),mapdatao(j),1,1,1,1,attr_simflag) = &
-       cstr_to_fchar(cflag(:,j))
+      v7dtmp%voldatiattri(mapstazo(j),mapdatao(j),1,1,1,1,attr_qcflag_clim) = &
+       make_qcflag_clim(cflag(:,j))
+    ENDDO
+  ENDIF
+  IF (c_e(attr_qcflag_time)) THEN
+    DO j = 1, nobs
+      IF (varo(j) /= vartmp(i)) CYCLE
+      v7dtmp%voldatiattri(mapstazo(j),mapdatao(j),1,1,1,1,attr_qcflag_time) = &
+       make_qcflag_time(cflag(:,j))
+    ENDDO
+  ENDIF
+  IF (c_e(attr_qcflag_space)) THEN
+    DO j = 1, nobs
+      IF (varo(j) /= vartmp(i)) CYCLE
+      v7dtmp%voldatiattri(mapstazo(j),mapdatao(j),1,1,1,1,attr_qcflag_space) = &
+       make_qcflag_space(cflag(:,j))
+    ENDDO
+  ENDIF
+  IF (c_e(attr_qcflag_inv)) THEN
+    DO j = 1, nobs
+      IF (varo(j) /= vartmp(i)) CYCLE
+      v7dtmp%voldatiattri(mapstazo(j),mapdatao(j),1,1,1,1,attr_qcflag_inv) = &
+       make_qcflag_inv(cflag(:,j))
+    ENDDO
+  ENDIF
+  IF (c_e(attr_qcflag_repl)) THEN
+    DO j = 1, nobs
+      IF (varo(j) /= vartmp(i)) CYCLE
+      v7dtmp%voldatiattri(mapstazo(j),mapdatao(j),1,1,1,1,attr_qcflag_repl) = &
+       make_qcflag_repl(cflag(:,j))
     ENDDO
   ENDIF
 
@@ -783,10 +833,12 @@ CALL vol7d_alloc_vol(netana(netid))
 ! attenzione, in futuro potrebbe essere necessario inizializzare
 ! correttamente la rete nell'anagrafica statica
 CALL init(netana(netid)%network(1), name='dummy')
-CALL init(netana(netid)%anavar%r(1), btable='B07001') ! station height
-CALL init(netana(netid)%anavar%r(2), btable='B07031') ! barometer height
-CALL init(netana(netid)%anavar%i(1), btable='B01192') ! Oracle station id
-CALL init(netana(netid)%anavar%c(1), btable='B01019') ! station name
+CALL init(netana(netid)%anavar%r(1), btable='B07001', unit='M') ! station height
+CALL init(netana(netid)%anavar%r(2), btable='B07031', unit='M') ! barometer height
+CALL init(netana(netid)%anavar%i(1), btable='B01192', unit='NUMERIC', &
+ scalefactor=0) ! Oracle station id
+CALL init(netana(netid)%anavar%c(1), btable='B01019', unit='CCITTIA5', &
+ scalefactor=0) ! station name
 
 i = oraextra_getanadata(this%connid, nana, vnana, vol7d_cdatalen+1, &
  netana(netid)%volanai(1,1,1), tmpll(1,1), tmpll(1,2), &
@@ -851,9 +903,86 @@ ELSE IF (netid >= oraclesim_netmax) THEN ! rete valida ma non prevista dal codic
   RETURN
 ENDIF
 CALL l4f_log(L4F_INFO, 'in oraclesim_class rete: '//TRIM(network%name)// &
-   ' id: '//TRIM(to_char(netid)))
+ ' id: '//TRIM(to_char(netid)))
 
 END FUNCTION vol7d_oraclesim_get_netid
+
+! funzioni per interpretare la flag di qualita` SIM
+FUNCTION make_qcflag_clim(simflag) RESULT(flag)
+INTEGER(kind=int_b) :: simflag(flaglen)
+INTEGER :: flag
+
+IF (simflag(2) /= ICHAR('0') .OR. simflag(3) /= ICHAR('0')) THEN
+  flag = (simflag(2)-ICHAR('0'))*10 + simflag(3)-ICHAR('0')
+ELSE
+  flag = imiss
+ENDIF
+
+END FUNCTION make_qcflag_clim
+
+FUNCTION make_qcflag_time(simflag) RESULT(flag)
+INTEGER(kind=int_b) :: simflag(flaglen)
+INTEGER :: flag
+
+IF (simflag(4) /= ICHAR('0') .OR. simflag(5) /= ICHAR('0')) THEN
+  flag = (simflag(4)-ICHAR('0'))*10 + simflag(5)-ICHAR('0')
+ELSE
+  flag = imiss
+ENDIF
+
+END FUNCTION make_qcflag_time
+
+FUNCTION make_qcflag_space(simflag) RESULT(flag)
+INTEGER(kind=int_b) :: simflag(flaglen)
+INTEGER :: flag
+
+IF (simflag(6) /= ICHAR('0') .OR. simflag(7) /= ICHAR('0')) THEN
+  flag = (simflag(6)-ICHAR('0'))*10 + simflag(7)-ICHAR('0')
+ELSE
+  flag = imiss
+ENDIF
+
+END FUNCTION make_qcflag_space
+
+! Gestione flag di qualita` fase 0.1
+! dato invalidato manualmente
+FUNCTION make_qcflag_inv(simflag) RESULT(flag)
+INTEGER(kind=int_b) :: simflag(flaglen)
+INTEGER :: flag
+
+IF (simflag(1) == ICHAR('1')) THEN
+  flag = 0
+ELSE
+  flag = imiss
+ENDIF
+
+END FUNCTION make_qcflag_inv
+
+! dato modificato manualmente
+FUNCTION make_qcflag_repl(simflag) RESULT(flag)
+INTEGER(kind=int_b) :: simflag(flaglen)
+INTEGER :: flag
+
+IF (simflag(1) == ICHAR('2')) THEN
+  flag = 0
+ELSE
+  flag = imiss
+ENDIF
+
+END FUNCTION make_qcflag_repl
+
+! dato invalidato automaticamente
+FUNCTION make_qcflag_invaut(simflag) RESULT(flag)
+INTEGER(kind=int_b) :: simflag(flaglen)
+INTEGER :: flag
+
+IF (simflag(1) == ICHAR('3')) THEN
+  flag = 0
+ELSE
+  flag = imiss
+ENDIF
+
+END FUNCTION make_qcflag_invaut
 
 
 END MODULE vol7d_oraclesim_class

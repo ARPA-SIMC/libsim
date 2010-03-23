@@ -46,8 +46,9 @@ static char *query1 = (char *)
   "SELECT TO_CHAR(a.dset_istante_wmo_fine,'YYYYMMDDHH24MI'), \
 a.dset_stam_identnr,a.vard_identnr, \
 NVL(a.valore_principale,1.0E+15),NVL(a.valore_ausiliario,1.0E+15), \
-NVL(a.flag,'000000000') \
+LPAD(NVL(a.flag,'000000000'), 9, '0') \
 FROM ";
+/* TO_CHAR(NVL(a.flag,'000000000'), '999999999') */
 /* ,a.valore_chiaro */
 
 static char *query2 = (char *)
