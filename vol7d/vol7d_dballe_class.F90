@@ -264,10 +264,15 @@ else
   quidsn = "test"
   quiuser = "test"
   quipassword = ""
-  
-  IF (PRESENT(dsn))quidsn = dsn
-  IF (PRESENT(user))quiuser = user
-  IF (PRESENT(password))quipassword = password
+  IF (PRESENT(dsn)) THEN
+    IF (c_e(dsn)) quidsn = dsn
+  ENDIF
+  IF (PRESENT(user)) THEN
+    IF (c_e(user)) quiuser = user
+  ENDIF
+  IF (PRESENT(password)) THEN
+    IF (c_e(password)) quipassword = password
+  ENDIF
     
                                 !print*,"write=",quiwrite,"wipe=",quiwipe,"dsn=",quidsn
   
