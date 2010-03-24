@@ -441,8 +441,8 @@ IF (ASSOCIATED(this%voldatir)) THEN
                  this%voldatir(i1,i2,i3,i,i5,i6) /= rmiss) THEN
                   IF (tri == 0) THEN ! average
                     that%voldatir(i1,i2,i3,i4,i5,i6) = &
-                     (this%voldatir(i1,i2,i3,j,i5,i6)/this%timerange(j)%p2 - &
-                     this%voldatir(i1,i2,i3,i,i5,i6)/this%timerange(i)%p2)* &
+                     (this%voldatir(i1,i2,i3,j,i5,i6)*this%timerange(j)%p2 - &
+                     this%voldatir(i1,i2,i3,i,i5,i6)*this%timerange(i)%p2)/ &
                      steps ! optimize avoiding conversions
                   ELSE IF (tri == 1) THEN ! cumulation, compute MAX(0.,)?
                     that%voldatir(i1,i2,i3,i4,i5,i6) = &
@@ -475,8 +475,8 @@ IF (ASSOCIATED(this%voldatid)) THEN
                  this%voldatid(i1,i2,i3,i,i5,i6) /= dmiss) THEN
                   IF (tri == 0) THEN ! average
                     that%voldatid(i1,i2,i3,i4,i5,i6) = &
-                     (this%voldatid(i1,i2,i3,j,i5,i6)/this%timerange(j)%p2 - &
-                     this%voldatid(i1,i2,i3,i,i5,i6)/this%timerange(i)%p2)* &
+                     (this%voldatid(i1,i2,i3,j,i5,i6)*this%timerange(j)%p2 - &
+                     this%voldatid(i1,i2,i3,i,i5,i6)*this%timerange(i)%p2)/ &
                      steps ! optimize avoiding conversions
                   ELSE IF (tri == 1) THEN ! cumulation, compute MAX(0.,)?
                     that%voldatid(i1,i2,i3,i4,i5,i6) = &
