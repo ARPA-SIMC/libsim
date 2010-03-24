@@ -2354,9 +2354,12 @@ end subroutine v7d_dballe_error_handler
 
 
 
-!>\brief Identica a vol7d_dballe_importvvns con lettura da file.
+!>\brief It works like vol7d_dballe_importvvns reading from file.
 !!
-!!import da DB-all.e
+!! It works like vol7d_dballe_importvvns reading from file but with some restrictions.
+!! File can user BUFR or CREX format.
+!! Attributes will not be imported at all.
+
 SUBROUTINE vol7d_dballe_importvvns_file(this, var, network, coordmin, coordmax, timei, timef,level,timerange, set_network,&
  attr,anavar,anaattr, varkind,attrkind,anavarkind,anaattrkind,anaonly)
 
@@ -2617,11 +2620,6 @@ do while ( N > 0 )
       !ora legge tutti i dati di anagrafica e li mette in bufferana
 
 
-      if (.not. lanaonly)then
-                                !salto lat lon e ident
-        if (btable == "B05001" .or. btable == "B06001" .or. btable == "B01011") cycle
-
-      end if
                                 !anno mese giorno
       if (btable == "B04001" .or. btable == "B04002" .or. btable == "B04003") cycle
                                 !ora minuti secondi
@@ -2629,6 +2627,11 @@ do while ( N > 0 )
                                 ! network
       if (btable == "B01193") cycle
 
+      if (.not. lanaonly)then
+                                !salto lat lon e ident
+        if (btable == "B05001" .or. btable == "B06001" .or. btable == "B01011") btable= DBA_MVC
+
+      end if
 
       na=na+1
       call l4f_category_log(this%category,L4F_debug,"numero dati ana:"//to_char(na)//btable)
@@ -2642,22 +2645,23 @@ do while ( N > 0 )
       bufferana(na)%datoc=DBA_MVC
       call init(bufferana(na)%dativar, DBA_MVC)
 
- 
-      if (present(anavar).and. present(anavarkind))then
-        ii=( firsttrue(anavar == btable))
-        if (ii > 0)then
+
+      if (c_e(btable)) then
+        if (present(anavar).and. present(anavarkind))then
+          ii=( firsttrue(anavar == btable))
+          if (ii > 0)then
                                 !print*, "indici",ii, btable,(varkind(ii))
-          if(anavarkind(ii) == "r") call idba_enq (this%handle,btable,bufferana(na)%dator)
-          if(anavarkind(ii) == "i") call idba_enq (this%handle,btable,bufferana(na)%datoi)
-          if(anavarkind(ii) == "b") call idba_enq (this%handle,btable,bufferana(na)%datob)
-          if(anavarkind(ii) == "d") call idba_enq (this%handle,btable,bufferana(na)%datod)
-          if(anavarkind(ii) == "c") call idba_enq (this%handle,btable,bufferana(na)%datoc)
-        end if
-      else
-        call idba_enq (this%handle,btable,bufferana(na)%datoc) !char is default
+            if(anavarkind(ii) == "r") call idba_enq (this%handle,btable,bufferana(na)%dator)
+            if(anavarkind(ii) == "i") call idba_enq (this%handle,btable,bufferana(na)%datoi)
+            if(anavarkind(ii) == "b") call idba_enq (this%handle,btable,bufferana(na)%datob)
+            if(anavarkind(ii) == "d") call idba_enq (this%handle,btable,bufferana(na)%datod)
+            if(anavarkind(ii) == "c") call idba_enq (this%handle,btable,bufferana(na)%datoc)
+          end if
+        else
+          call idba_enq (this%handle,btable,bufferana(na)%datoc) !char is default
                                 !print*,"dato anagrafica",btable," ",bufferana(na)%dator
+        end if
       end if
-  
                                 !recupero i dati di anagrafica
       call idba_enq (this%handle,"lat",   lat)
       call idba_enq (this%handle,"lon",   lon)
@@ -2684,6 +2688,7 @@ end do
 if (.not. present(var))then
   nvar = count_distinct(buffer(:nd)%dativar, back=.TRUE.)
 end if
+
 
 nana = count_distinct(bufferana(:na)%ana, back=.TRUE.)
 ntime = count_distinct(buffer(:nd)%time, back=.TRUE.)
@@ -2809,15 +2814,15 @@ call vol7d_alloc (vol7dtmp, &
  nanavarattrd=nanavarattrd, &
  nanavarattrc=nanavarattrc)
 
-! print *, "nana=",nana, "ntime=",ntime, "ntimerange=",ntimerange, &
-! "nlevel=",nlevel, "nnetwork=",nnetwork, &
-! "ndativarr=",ndativarr, "ndativari=",ndativari, &
-! "ndativarb=",ndativarb, "ndativard=",ndativard, "ndativarc=",ndativarc,&
-! "ndatiattrr=",ndatiattrr, "ndatiattri=",ndatiattri, "ndatiattrb=",ndatiattrb,&
-! "ndatiattrd=",ndatiattrd, "ndatiattrc=",ndatiattrc,&
-! "ndativarattrr=",ndativarattrr, "ndativarattri=",ndativarattri, "ndativarattrb=",ndativarattrb,&
-! "ndativarattrd=",ndativarattrd, "ndativarattrc=",ndativarattrc
-! print*,"ho fatto alloc"
+!!$ print *, "nana=",nana, "ntime=",ntime, "ntimerange=",ntimerange, &
+!!$ "nlevel=",nlevel, "nnetwork=",nnetwork, &
+!!$ "ndativarr=",ndativarr, "ndativari=",ndativari, &
+!!$ "ndativarb=",ndativarb, "ndativard=",ndativard, "ndativarc=",ndativarc,&
+!!$ "ndatiattrr=",ndatiattrr, "ndatiattri=",ndatiattri, "ndatiattrb=",ndatiattrb,&
+!!$ "ndatiattrd=",ndatiattrd, "ndatiattrc=",ndatiattrc,&
+!!$ "ndativarattrr=",ndativarattrr, "ndativarattri=",ndativarattri, "ndativarattrb=",ndativarattrb,&
+!!$ "ndativarattrd=",ndativarattrd, "ndativarattrc=",ndativarattrc
+!!$ print*,"ho fatto alloc"
 
 
 vol7dtmp%ana=pack_distinct(bufferana(:na)%ana, nana, back=.TRUE.)
