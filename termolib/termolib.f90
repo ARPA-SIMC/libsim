@@ -1664,15 +1664,15 @@ end subroutine UV
 elemental subroutine UVWIND(UBAR,VBAR,SPEED,DIREC)     
 ! Ricostruisce direzione e velocita` del vento dalle componenti cartesiane 
 ! 
-! Uso :  CALL UVWIND (U,V,DD,FF) 
+! Uso :  CALL UVWIND (U,V,FF,DD) 
 ! 
 ! Input : 
 ! U   real   Componente lungo i paralleli del vento orientata da West a Est 
 ! V   real   Componente lungo i meridiani del vento orientata da Sud a Nord 
 ! 
 ! Output : 
-! DD   real   Direzione del vento    (Gradi sessag, 0 calma;  360 = nord) 
 ! FF   real   Velocita` del vento
+! DD   real   Direzione del vento    (Gradi sessag, 0 calma;  360 = nord) 
 ! 
 ! DD e FF =  rmiss se non e' possibile calcolarle.  
 !------------------------------------------------------------------------------
