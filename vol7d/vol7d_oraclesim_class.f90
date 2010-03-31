@@ -206,17 +206,18 @@ END SUBROUTINE vol7d_oraclesim_delete
 !! Non sono attualmente previsti attributi di anagrafica.
 !!
 !! Gestisce le flag di qualità SIM 'fase 0.1', cioè:
-!!  - '1' dato invalidato manualmente -> restituisce valore mancante
-!!  - '2' dato sostituito manualmente -> restituisce il dato sostituito
-!!  - '3' dato invalidato automaticamente -> restituisce valore mancante
+!!  - '1' dato invalidato manualmente -&gt; restituisce valore mancante
+!!  - '2' dato sostituito manualmente -&gt; restituisce il dato sostituito
+!!  - '3' dato invalidato automaticamente -&gt; restituisce valore mancante
 !!
 !! Nel caso non sia stato trovato nulla in archivio per i parametri
 !! richiesti, il volume risultante è vuoto e quindi inutilizzabile;
-!! per evitare errori fatali, controllare il volume \a this%vol7d con
-!! la funzione c_e, se restituisce \a .FALSE. non deve essere usato.
+!! per evitare errori fatali, controllare l'oggetto \a
+!! vol7d_oraclesim_class::vol7d_oraclesim::vol7d con la funzione \a
+!! c_e, se restituisce \a .FALSE. non deve essere usato.
 SUBROUTINE vol7d_oraclesim_import(this, var, network, timei, timef, level, &
  timerange, anavar, attr, anaattr, set_network)
-TYPE(vol7d_oraclesim),INTENT(out) :: this !< oggetto in cui importare i dati
+TYPE(vol7d_oraclesim),INTENT(inout) :: this !< oggetto in cui importare i dati
 CHARACTER(len=*),INTENT(in) :: var(:) !< lista delle variabili da importare, codice alfanumerico della tabella B locale
 TYPE(vol7d_network),INTENT(in) :: network(:) !< lista di reti da estrarre, inizializzata con il nome che ha nell'archivio SIM
 TYPE(datetime),INTENT(in) :: timei !< istante iniziale delle osservazioni da estrarre (estremo incluso)
@@ -239,20 +240,21 @@ ENDDO
 END SUBROUTINE vol7d_oraclesim_import
 
 
-! Routine interna che fa la vera importazione, una rete alla volta
+! Routine interna che fa la vera importazione, una rete alla volta,
+! non documentata per non incasinare doxygen
 SUBROUTINE vol7d_oraclesim_importvvns(this, var, network, timei, timef, level, &
  timerange, anavar, attr, anaattr, set_network)
-TYPE(vol7d_oraclesim),INTENT(out) :: this !< oggetto in cui importare i dati
-CHARACTER(len=*),INTENT(in) :: var(:) !< lista delle variabili da importare (codice alfanumerico della tabella B del WMO)
-TYPE(vol7d_network),INTENT(in) :: network !< rete da estrarre, inizializzata con il nome che ha nell'archivio SIM
-TYPE(datetime),INTENT(in) :: timei !< istante iniziale delle osservazioni da estrarre (estremo incluso)
-TYPE(datetime),INTENT(in) :: timef !< istante finale delle osservazioni da estrarre (estremo incluso)
-TYPE(vol7d_level),INTENT(in),OPTIONAL :: level !< estrae solo il livello verticale fornito, default=tutti
-TYPE(vol7d_timerange),INTENT(in),OPTIONAL :: timerange !< estrae solo i dati con intervallo temporale (es. istantaneo, cumulato, ecc.) analogo al timerange fornito, default=tutti
-CHARACTER(len=*),INTENT(in),OPTIONAL :: anavar(:) !< lista delle variabili di anagrafica da importare, codice alfanumerico della tabella B locale, se non fornito non ne importa nessuna
-CHARACTER(len=*),INTENT(in),OPTIONAL :: attr(:) !< lista degli attributi delle variabili da importare, codice alfanumerico della tabella B locale, se non fornito non ne importa nessuno
-CHARACTER(len=*),INTENT(in),OPTIONAL :: anaattr(:) !< lista degli attributi delle variabili di anagrafica da importare, codice alfanumerico della tabella B locale, se non fornito non ne importa nessuno
-TYPE(vol7d_network),INTENT(in),OPTIONAL :: set_network !< se fornito, collassa tutte le reti nell'unica rete indicata, eliminando le stazioni comuni a reti diverse
+TYPE(vol7d_oraclesim),INTENT(inout) :: this
+CHARACTER(len=*),INTENT(in) :: var(:)
+TYPE(vol7d_network),INTENT(in) :: network
+TYPE(datetime),INTENT(in) :: timei
+TYPE(datetime),INTENT(in) :: timef
+TYPE(vol7d_level),INTENT(in),OPTIONAL :: level
+TYPE(vol7d_timerange),INTENT(in),OPTIONAL :: timerange
+CHARACTER(len=*),INTENT(in),OPTIONAL :: anavar(:)
+CHARACTER(len=*),INTENT(in),OPTIONAL :: attr(:)
+CHARACTER(len=*),INTENT(in),OPTIONAL :: anaattr(:)
+TYPE(vol7d_network),INTENT(in),OPTIONAL :: set_network
 
 TYPE(vol7d) :: v7dtmp, v7dtmp2, v7dtmpana
 TYPE(datetime) :: odatetime
@@ -907,45 +909,49 @@ CALL l4f_log(L4F_INFO, 'in oraclesim_class rete: '//TRIM(network%name)// &
 
 END FUNCTION vol7d_oraclesim_get_netid
 
-! funzioni per interpretare la flag di qualita` SIM
+! Funzioni per interpretare la flag di qualita` SIM
+! CdQ climatologico
 FUNCTION make_qcflag_clim(simflag) RESULT(flag)
 INTEGER(kind=int_b) :: simflag(flaglen)
 INTEGER :: flag
 
-IF (simflag(2) /= ICHAR('0') .OR. simflag(3) /= ICHAR('0')) THEN
-  flag = (simflag(2)-ICHAR('0'))*10 + simflag(3)-ICHAR('0')
-ELSE
-  flag = imiss
-ENDIF
+flag = make_qcflag(simflag(2:3))
 
 END FUNCTION make_qcflag_clim
 
+! CdQ temporale
 FUNCTION make_qcflag_time(simflag) RESULT(flag)
 INTEGER(kind=int_b) :: simflag(flaglen)
 INTEGER :: flag
 
-IF (simflag(4) /= ICHAR('0') .OR. simflag(5) /= ICHAR('0')) THEN
-  flag = (simflag(4)-ICHAR('0'))*10 + simflag(5)-ICHAR('0')
-ELSE
-  flag = imiss
-ENDIF
+flag = make_qcflag(simflag(4:5))
 
 END FUNCTION make_qcflag_time
 
+! CdQ spaziale
 FUNCTION make_qcflag_space(simflag) RESULT(flag)
 INTEGER(kind=int_b) :: simflag(flaglen)
 INTEGER :: flag
 
-IF (simflag(6) /= ICHAR('0') .OR. simflag(7) /= ICHAR('0')) THEN
-  flag = (simflag(6)-ICHAR('0'))*10 + simflag(7)-ICHAR('0')
-ELSE
-  flag = imiss
-ENDIF
+flag = make_qcflag(simflag(6:7))
 
 END FUNCTION make_qcflag_space
 
-! Gestione flag di qualita` fase 0.1
-! dato invalidato manualmente
+! Generica funzione per interpretare la flag di qualita`, 2 cifre in
+! carattere, '00' equivale a flag assente
+FUNCTION make_qcflag(simflag) RESULT(flag)
+INTEGER(kind=int_b) :: simflag(2)
+INTEGER :: flag
+
+flag = (simflag(1)-ICHAR('0'))*10 + simflag(2)-ICHAR('0')
+IF (flag <= 0 .OR. flag > 99) flag = imiss
+
+END FUNCTION make_qcflag
+
+! Gestione flag di qualita` fase 0.1, per compatibilita` con quanto
+! fatto da dballe, queste funzioni restituiscono 0 se la flag
+! richiesta e` presente o dato mancante se essa e` assente.
+! Dato invalidato manualmente
 FUNCTION make_qcflag_inv(simflag) RESULT(flag)
 INTEGER(kind=int_b) :: simflag(flaglen)
 INTEGER :: flag
@@ -958,7 +964,7 @@ ENDIF
 
 END FUNCTION make_qcflag_inv
 
-! dato modificato manualmente
+! Dato modificato manualmente
 FUNCTION make_qcflag_repl(simflag) RESULT(flag)
 INTEGER(kind=int_b) :: simflag(flaglen)
 INTEGER :: flag
@@ -971,7 +977,7 @@ ENDIF
 
 END FUNCTION make_qcflag_repl
 
-! dato invalidato automaticamente
+! Dato invalidato automaticamente
 FUNCTION make_qcflag_invaut(simflag) RESULT(flag)
 INTEGER(kind=int_b) :: simflag(flaglen)
 INTEGER :: flag
