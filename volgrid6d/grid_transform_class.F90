@@ -381,7 +381,7 @@ ELSE IF (this%trans_type == 'vertint') THEN
     this%vertint%input_levtype = input_levtype
   ELSE
     CALL l4f_category_log(this%category,L4F_ERROR, &
-     'vertint parameter input_levtype provided')
+     'vertint parameter input_levtype not provided')
     CALL raise_fatal_error()
   ENDIF
 
@@ -392,14 +392,12 @@ ELSE IF (this%trans_type == 'vertint') THEN
   ENDIF
 
   IF (PRESENT(output_levtype)) THEN
-    this%vertint%input_levtype = input_levtype
+    this%vertint%output_levtype = output_levtype
   ELSE
     CALL l4f_category_log(this%category,L4F_ERROR, &
-     'vertint parameter input_levtype provided')
+     'vertint parameter output_levtype not provided')
     CALL raise_fatal_error()
   ENDIF
-
-
 
 ELSE
 
