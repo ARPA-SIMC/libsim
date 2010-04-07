@@ -2625,7 +2625,7 @@ do while ( N > 0 )
                                 !ora minuti secondi
       if (btable == "B04004" .or. btable == "B04005" .or. btable == "B04006") cycle
                                 ! network
-      if (btable == "B01193") cycle
+      if (btable == "B01193" .or. btable == "B01194") cycle
 
       if (.not. lanaonly)then
                                 !salto lat lon e ident
