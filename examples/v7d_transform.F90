@@ -649,23 +649,23 @@ DO i2 = 1, size(v7d%time)
   CALL csv_record_addfield(csv_desdata(2), charbuffer(1:19))
   DO i4 = 1, SIZE(v7d%timerange)
     CALL csv_record_rewind(csv_desdata(4))
-    CALL csv_record_addfield(csv_desdata(4), v7d%timerange(i4)%timerange)
-    CALL csv_record_addfield(csv_desdata(4), v7d%timerange(i4)%p1)
-    CALL csv_record_addfield(csv_desdata(4), v7d%timerange(i4)%p2)
+    CALL csv_record_addfield_miss(csv_desdata(4), v7d%timerange(i4)%timerange)
+    CALL csv_record_addfield_miss(csv_desdata(4), v7d%timerange(i4)%p1)
+    CALL csv_record_addfield_miss(csv_desdata(4), v7d%timerange(i4)%p2)
     DO i3 = 1, SIZE(v7d%level)
       CALL csv_record_rewind(csv_desdata(3))
-      CALL csv_record_addfield(csv_desdata(3), v7d%level(i3)%level1)
-      CALL csv_record_addfield(csv_desdata(3), v7d%level(i3)%l1)
-      CALL csv_record_addfield(csv_desdata(3), v7d%level(i3)%level2)
-      CALL csv_record_addfield(csv_desdata(3), v7d%level(i3)%l2)
+      CALL csv_record_addfield_miss(csv_desdata(3), v7d%level(i3)%level1)
+      CALL csv_record_addfield_miss(csv_desdata(3), v7d%level(i3)%l1)
+      CALL csv_record_addfield_miss(csv_desdata(3), v7d%level(i3)%level2)
+      CALL csv_record_addfield_miss(csv_desdata(3), v7d%level(i3)%l2)
       DO i6 = 1, SIZE(v7d%network)
         CALL csv_record_rewind(csv_desdata(6))
-        CALL csv_record_addfield(csv_desdata(6), TRIM(v7d%network(i6)%name))
+        CALL csv_record_addfield_miss(csv_desdata(6), TRIM(v7d%network(i6)%name))
         DO i1 = 1, SIZE(v7d%ana)
           CALL csv_record_rewind(csv_desdata(1))
           CALL getval(v7d%ana(i1)%coord, lon=l1, lat=l2)
-          CALL csv_record_addfield(csv_desdata(1), l1)
-          CALL csv_record_addfield(csv_desdata(1), l2)
+          CALL csv_record_addfield_miss(csv_desdata(1), l1)
+          CALL csv_record_addfield_miss(csv_desdata(1), l2)
           no_miss = .FALSE. ! keep track of line with all missing data
           CALL init(csvline)
           DO i = 1, nc ! add data for the dimensions descriptors
@@ -674,20 +674,12 @@ DO i2 = 1, size(v7d%time)
 ! ana variables
           IF (ASSOCIATED(v7d%volanar)) THEN
             DO i5 = 1, SIZE(v7d%volanar(i1,:,i6))
-              IF (c_e(v7d%volanar(i1,i5,i6))) THEN
-                CALL csv_record_addfield(csvline, v7d%volanar(i1,i5,i6))
-              ELSE
-                CALL csv_record_addfield(csvline,'')
-              ENDIF
+              CALL csv_record_addfield_miss(csvline, v7d%volanar(i1,i5,i6))
             ENDDO
           ENDIF
           IF (ASSOCIATED(v7d%volanad)) THEN
             DO i5 = 1, SIZE(v7d%volanad(i1,:,i6))
-              IF (c_e(v7d%volanad(i1,i5,i6))) THEN
-                CALL csv_record_addfield(csvline, v7d%volanad(i1,i5,i6))
-              ELSE
-                CALL csv_record_addfield(csvline,'')
-              ENDIF
+              CALL csv_record_addfield_miss(csvline, v7d%volanad(i1,i5,i6))
             ENDDO
           ENDIF
           IF (ASSOCIATED(v7d%volanai)) THEN
@@ -709,22 +701,14 @@ DO i2 = 1, size(v7d%time)
           IF (ASSOCIATED(v7d%volanaattrr)) THEN
             DO i7 = 1, SIZE(v7d%anaattr%r)
               DO i5 = 1, SIZE(v7d%anavarattr%r)
-                IF (c_e(v7d%volanaattrr(i1,i5,i6,i7))) THEN
-                  CALL csv_record_addfield(csvline, v7d%volanaattrr(i1,i5,i6,i7))
-                ELSE
-                  CALL csv_record_addfield(csvline,'')
-                ENDIF
+                CALL csv_record_addfield_miss(csvline, v7d%volanaattrr(i1,i5,i6,i7))
               ENDDO
             ENDDO
           ENDIF
           IF (ASSOCIATED(v7d%volanaattrd)) THEN
             DO i7 = 1, SIZE(v7d%anaattr%d)
               DO i5 = 1, SIZE(v7d%anavarattr%d)
-                IF (c_e(v7d%volanaattrd(i1,i5,i6,i7))) THEN
-                  CALL csv_record_addfield(csvline, v7d%volanaattrd(i1,i5,i6,i7))
-                ELSE
-                  CALL csv_record_addfield(csvline,'')
-                ENDIF
+                CALL csv_record_addfield_miss(csvline, v7d%volanaattrd(i1,i5,i6,i7))
               ENDDO
             ENDDO
           ENDIF

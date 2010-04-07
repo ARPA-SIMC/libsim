@@ -65,11 +65,22 @@ END INTERFACE
 !> Methods for successively adding fields to a \a csv_record object.
 !! The generic name \c csv_record_addfield with parameters of the
 !! desired type should be used instead of the specific names, the
-!! compiler will select the proper subroutine.
+!! compiler will select the proper subroutine. Missing values are
+!! literally inserted in the output without special treatment.
 INTERFACE csv_record_addfield
   MODULE PROCEDURE csv_record_addfield_char, csv_record_addfield_int, &
    csv_record_addfield_real, csv_record_addfield_double, &
    csv_record_addfield_csv_record
+END INTERFACE
+
+!> Methods for successively adding fields to a \a csv_record object.
+!! The generic name \c csv_record_addfield with parameters of the
+!! desired type should be used instead of the specific names, the
+!! compiler will select the proper subroutine. Missing values are
+!! inserted as empty fields.
+INTERFACE csv_record_addfield_miss
+  MODULE PROCEDURE csv_record_addfield_char_miss, csv_record_addfield_int_miss, &
+   csv_record_addfield_real_miss, csv_record_addfield_double_miss
 END INTERFACE
 
 
@@ -77,6 +88,8 @@ PRIVATE csv_record_init, csv_record_delete, csv_record_getfield_char, &
  csv_record_getfield_int, csv_record_getfield_real, csv_record_getfield_double, &
  csv_record_addfield_char, csv_record_addfield_int, csv_record_addfield_real, &
  csv_record_addfield_double, csv_record_addfield_csv_record, &
+ csv_record_addfield_char_miss, csv_record_addfield_int_miss, &
+ csv_record_addfield_real_miss, csv_record_addfield_double_miss, &
  checkrealloc, add_byte
 
 CONTAINS
@@ -288,9 +301,9 @@ END FUNCTION delim_csv
 !! on different lines.
 SUBROUTINE csv_record_init(this, record, csep, cquote, nfield)
 TYPE(csv_record),INTENT(INOUT) :: this !< object to be initialised
-CHARACTER(LEN=*),INTENT(IN), OPTIONAL :: record !< csv record to be interpreted, if not provided, it means we want to code a csv record for output
-CHARACTER(LEN=1),INTENT(IN),OPTIONAL :: csep !< field separator character, default \c , (comma)
-CHARACTER(LEN=1),INTENT(IN),OPTIONAL :: cquote !< field grouping character, default \c " (double quote); it is usually used when a field contains comma or blanks
+CHARACTER(len=*),INTENT(IN), OPTIONAL :: record !< csv record to be interpreted, if not provided, it means we want to code a csv record for output
+CHARACTER(len=1),INTENT(IN),OPTIONAL :: csep !< field separator character, default \c , (comma)
+CHARACTER(len=1),INTENT(IN),OPTIONAL :: cquote !< field grouping character, default \c " (double quote); it is usually used when a field contains comma or blanks
 INTEGER,INTENT(OUT),OPTIONAL :: nfield !< number of fields in the record
 
 INTEGER :: l
@@ -352,7 +365,7 @@ END SUBROUTINE csv_record_rewind
 !! \todo Improve the trailing blank quoting.
 SUBROUTINE csv_record_addfield_char(this, field, form, force_quote)
 TYPE(csv_record),INTENT(INOUT) :: this !< object where to add field
-CHARACTER(LEN=*),INTENT(IN) :: field !< field to be added
+CHARACTER(len=*),INTENT(IN) :: field !< field to be added
 CHARACTER(len=*),INTENT(in),OPTIONAL :: form !< optional format, ignored by now
 LOGICAL, INTENT(in), OPTIONAL :: force_quote !< if provided and \c .TRUE. , the field will be quoted even if not necessary
 
@@ -435,6 +448,24 @@ this%cursor = this%cursor+1
 END SUBROUTINE add_byte
 
 
+!> Add a field from a \c CHARACTER variable to the csv record \a this.
+!! The field will be quoted if necessary. A missing value is inserted
+!! as an empty field.
+SUBROUTINE csv_record_addfield_char_miss(this, field, form, force_quote)
+TYPE(csv_record),INTENT(INOUT) :: this !< object where to add field
+CHARACTER(len=*),INTENT(IN) :: field !< field to be added
+CHARACTER(len=*),INTENT(in),OPTIONAL :: form !< optional format, ignored by now
+LOGICAL, INTENT(in), OPTIONAL :: force_quote !< if provided and \c .TRUE. , the field will be quoted even if not necessary
+
+IF (c_e(field)) THEN
+  CALL csv_record_addfield(this, field, form, force_quote=force_quote)
+ELSE
+  CALL csv_record_addfield(this, '')
+ENDIF
+
+END SUBROUTINE csv_record_addfield_char_miss
+
+
 !> Add a field from an \c INTEGER variable to the csv record \a this.
 !! The field will be quoted if necessary.
 SUBROUTINE csv_record_addfield_int(this, field, form, force_quote)
@@ -446,6 +477,24 @@ LOGICAL, INTENT(in), OPTIONAL :: force_quote !< if provided and \c .TRUE. , the 
 CALL csv_record_addfield(this, TRIM(to_char(field, form)), force_quote=force_quote)
 
 END SUBROUTINE csv_record_addfield_int
+
+
+!> Add a field from an \c INTEGER variable to the csv record \a this.
+!! The field will be quoted if necessary. A missing value is inserted
+!! as an empty field.
+SUBROUTINE csv_record_addfield_int_miss(this, field, form, force_quote)
+TYPE(csv_record),INTENT(INOUT) :: this !< object where to add field
+INTEGER,INTENT(IN) :: field !< field to be added
+CHARACTER(len=*),INTENT(in),OPTIONAL :: form !< optional format
+LOGICAL, INTENT(in), OPTIONAL :: force_quote !< if provided and \c .TRUE. , the field will be quoted even if not necessary
+
+IF (c_e(field)) THEN
+  CALL csv_record_addfield(this, TRIM(to_char(field, form)), force_quote=force_quote)
+ELSE
+  CALL csv_record_addfield(this, '')
+ENDIF
+
+END SUBROUTINE csv_record_addfield_int_miss
 
 
 !> Add a field from a \c REAL variable to the csv record \a this.
@@ -461,6 +510,24 @@ CALL csv_record_addfield(this, TRIM(to_char(field, form)), force_quote=force_quo
 END SUBROUTINE csv_record_addfield_real
 
 
+!> Add a field from a \c REAL variable to the csv record \a this.
+!! The field will be quoted if necessary. A missing value is inserted
+!! as an empty field.
+SUBROUTINE csv_record_addfield_real_miss(this, field, form, force_quote)
+TYPE(csv_record),INTENT(INOUT) :: this !< object where to add field
+REAL,INTENT(IN) :: field !< field to be added
+CHARACTER(len=*),INTENT(in),OPTIONAL :: form !< optional format
+LOGICAL, INTENT(in), OPTIONAL :: force_quote !< if provided and \c .TRUE. , the field will be quoted even if not necessary
+
+IF (c_e(field)) THEN
+  CALL csv_record_addfield(this, TRIM(to_char(field, form)), force_quote=force_quote)
+ELSE
+  CALL csv_record_addfield(this, '')
+ENDIF
+
+END SUBROUTINE csv_record_addfield_real_miss
+
+
 !> Add a field from a \c DOUBLE PRECISION variable to the csv record \a this.
 !! The field will be quoted if necessary.
 SUBROUTINE csv_record_addfield_double(this, field, form, force_quote)
@@ -472,6 +539,24 @@ LOGICAL, INTENT(in), OPTIONAL :: force_quote !< if provided and \c .TRUE. , the 
 CALL csv_record_addfield(this, TRIM(to_char(field, form)), force_quote=force_quote)
 
 END SUBROUTINE csv_record_addfield_double
+
+
+!> Add a field from a \c DOUBLE PRECISION variable to the csv record \a this.
+!! The field will be quoted if necessary. A missing value is inserted
+!! as an empty field.
+SUBROUTINE csv_record_addfield_double_miss(this, field, form, force_quote)
+TYPE(csv_record),INTENT(INOUT) :: this !< object where to add field
+DOUBLE PRECISION,INTENT(IN) :: field !< field to be added
+CHARACTER(len=*),INTENT(in),OPTIONAL :: form !< optional format
+LOGICAL, INTENT(in), OPTIONAL :: force_quote !< if provided and \c .TRUE. , the field will be quoted even if not necessary
+
+IF (c_e(field)) THEN
+  CALL csv_record_addfield(this, TRIM(to_char(field, form)), force_quote=force_quote)
+ELSE
+  CALL csv_record_addfield(this, '')
+ENDIF
+
+END SUBROUTINE csv_record_addfield_double_miss
 
 
 !> Add a full \a csv_record object to the csv record \a this.
@@ -515,7 +600,7 @@ END FUNCTION csv_record_getrecord
 !! must be used.
 SUBROUTINE csv_record_getfield_char(this, field, flen, ier)
 TYPE(csv_record),INTENT(INOUT) :: this !< object to be decoded
-CHARACTER(LEN=*),INTENT(OUT),OPTIONAL :: field !< contents of the field, if not provided, the field pointer is increased only; if the variable is not long enough, a warning is printed and the part that fits is returned;
+CHARACTER(len=*),INTENT(OUT),OPTIONAL :: field !< contents of the field, if not provided, the field pointer is increased only; if the variable is not long enough, a warning is printed and the part that fits is returned;
 !< the variable is space-terminated anyway, so the \a flen parameter has to be used in order to evaluate possible significant trailing spaces
 INTEGER,INTENT(OUT),OPTIONAL :: flen !< actual length of the field including trailing blaks, it is correctly computed also when \a field is not provided or too short
 INTEGER,INTENT(OUT),OPTIONAL :: ier!< error code, 0 = OK, 1 = \a field too short, 2 = end of record
@@ -602,7 +687,7 @@ CONTAINS
 SUBROUTINE add_char(char, check_space, field, ier)
 INTEGER(kind=int_b) :: char
 LOGICAL,INTENT(IN) :: check_space
-CHARACTER(LEN=*),INTENT(OUT),OPTIONAL :: field
+CHARACTER(len=*),INTENT(OUT),OPTIONAL :: field
 INTEGER,INTENT(OUT),OPTIONAL :: ier
 
 ocursor = ocursor + 1
@@ -632,13 +717,14 @@ TYPE(csv_record),INTENT(INOUT) :: this !< object to be decoded
 INTEGER,INTENT(OUT) :: field !< value of the field, = \a imiss if conversion fails
 INTEGER,INTENT(OUT),OPTIONAL :: ier !< error code, 0 = OK, 1 = cannot convert to integer, 2 = end of record
 
-CHARACTER(LEN=32) :: cfield
+CHARACTER(len=32) :: cfield
 INTEGER :: lier
 
 CALL csv_record_getfield(this, field=cfield, ier=lier)
-IF (lier == 0. .AND. LEN_TRIM(cfield) /= 0) THEN
+IF (lier == 0 .AND. LEN_TRIM(cfield) /= 0) THEN
   READ(cfield, '(I32)', iostat=lier) field
   IF (lier /= 0) THEN
+    lier = 1 ! standardize
     field = imiss
     CALL l4f_log(L4F_ERROR, &
      'in csv_record_getfield, invalid integer field: '//TRIM(cfield))
@@ -662,13 +748,14 @@ TYPE(csv_record),INTENT(INOUT) :: this !< object to be decoded
 REAL,INTENT(OUT) :: field !< value of the field, = \a rmiss if conversion fails
 INTEGER,INTENT(OUT),OPTIONAL :: ier!< error code, 0 = OK, 1 = cannot convert to integer, 2 = end of record
 
-CHARACTER(LEN=32) :: cfield
+CHARACTER(len=32) :: cfield
 INTEGER :: lier
 
 CALL csv_record_getfield(this, field=cfield, ier=lier)
-IF (lier == 0. .AND. LEN_TRIM(cfield) /= 0) THEN
+IF (lier == 0 .AND. LEN_TRIM(cfield) /= 0) THEN
   READ(cfield, '(F32.0)', iostat=lier) field
   IF (lier /= 0) THEN
+    lier = 1 ! standardize
     field = rmiss
     CALL l4f_log(L4F_ERROR, &
      'in csv_record_getfield, invalid real field: '//TRIM(cfield))
@@ -692,13 +779,14 @@ TYPE(csv_record),INTENT(INOUT) :: this !< object to be decoded
 DOUBLE PRECISION,INTENT(OUT) :: field !< value of the field, = \a dmiss if conversion fails
 INTEGER,INTENT(OUT),OPTIONAL :: ier!< error code, 0 = OK, 1 = cannot convert to integer, 2 = end of record
 
-CHARACTER(LEN=32) :: cfield
+CHARACTER(len=32) :: cfield
 INTEGER :: lier
 
 CALL csv_record_getfield(this, field=cfield, ier=lier)
-IF (lier == 0. .AND. LEN_TRIM(cfield) /= 0) THEN
+IF (lier == 0 .AND. LEN_TRIM(cfield) /= 0) THEN
   READ(cfield, '(F32.0)', iostat=lier) field
   IF (lier /= 0) THEN
+    lier = 1 ! standardize
     field = dmiss
     CALL l4f_log(L4F_ERROR, &
      'in csv_record_getfield, invalid double precision field: '//TRIM(cfield))
