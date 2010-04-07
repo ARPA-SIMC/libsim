@@ -136,7 +136,7 @@ options(22) = op_option_new('t', 'output-template', output_template, 'generic', 
 options(30) = op_option_new(' ', 'csv-volume', csv_volume, 'all', help= &
  'vol7d volumes to be output to csv: ''all'' for all volumes, &
  &''ana'' for station volumes only or ''data'' for data volumes only')
-options(31) = op_option_new(' ', 'csv-column', csv_column, 'time,timerange,ana,level', help= &
+options(31) = op_option_new(' ', 'csv-column', csv_column, 'time,timerange,ana,level,network', help= &
  'list of columns (excluding variables) that have to appear in csv output: &
  &a comma-separated combination of ''time,timerange,level,ana,network'' &
  &in the desired order')
@@ -496,26 +496,6 @@ IF (csv_variable /= 'all') THEN
   CALL checkvarvect(v7d%dativar)
   CALL checkvarvect(v7d%datiattr)
   CALL checkvarvect(v7d%dativarattr)
-!  CALL checkvar(v7d%anavar%r)
-!  CALL checkvar(v7d%anavar%d)
-!  CALL checkvar(v7d%anavar%i)
-!  CALL checkvar(v7d%anavar%b)
-!  CALL checkvar(v7d%anavar%c)
-!  CALL checkvar(v7d%dativar%r)
-!  CALL checkvar(v7d%dativar%d)
-!  CALL checkvar(v7d%dativar%i)
-!  CALL checkvar(v7d%dativar%b)
-!  CALL checkvar(v7d%dativar%c)
-!  CALL checkvar(v7d%datiattr%r)
-!  CALL checkvar(v7d%datiattr%d)
-!  CALL checkvar(v7d%datiattr%i)
-!  CALL checkvar(v7d%datiattr%b)
-!  CALL checkvar(v7d%datiattr%c)
-!  CALL checkvar(v7d%dativarattr%r)
-!  CALL checkvar(v7d%dativarattr%d)
-!  CALL checkvar(v7d%dativarattr%i)
-!  CALL checkvar(v7d%dativarattr%b)
-!  CALL checkvar(v7d%dativarattr%c)
   CALL vol7d_reform(v7d, miss=.TRUE.) ! sort?
   DEALLOCATE(w_s, w_e)
 ENDIF
@@ -528,45 +508,101 @@ IF (csv_header > 1) THEN ! Dummy header line, for compatibility
 ENDIF
 
 IF (csv_header > 0) THEN ! Main header line
+
+  DO i = 1, SIZE(csv_desdata)
+    CALL init(csv_desdata(i))
+  ENDDO
+
+! Create header entries for all the v7d non-variables dimensions
+  CALL csv_record_addfield(csv_desdata(1), 'Longitude')
+  CALL csv_record_addfield(csv_desdata(1), 'Latitude')
+  CALL csv_record_addfield(csv_desdata(2), 'Date')
+  CALL csv_record_addfield(csv_desdata(3), 'Level1')
+  CALL csv_record_addfield(csv_desdata(3), 'L1')
+  CALL csv_record_addfield(csv_desdata(3), 'Level2')
+  CALL csv_record_addfield(csv_desdata(3), 'L2')
+  CALL csv_record_addfield(csv_desdata(4), 'Time range')
+  CALL csv_record_addfield(csv_desdata(4), 'P1')
+  CALL csv_record_addfield(csv_desdata(4), 'P2')
+  CALL csv_record_addfield(csv_desdata(6), 'Report')
+
   CALL init(csvline)
-  CALL csv_record_addfield(csvline, 'Date')
-  CALL csv_record_addfield(csvline, 'Time range')
-  CALL csv_record_addfield(csvline, 'P1')
-  CALL csv_record_addfield(csvline, 'P2')
-  CALL csv_record_addfield(csvline, 'Longitude')
-  CALL csv_record_addfield(csvline, 'Latitude')
-  CALL csv_record_addfield(csvline, 'Level1')
-  CALL csv_record_addfield(csvline, 'L1')
-  CALL csv_record_addfield(csvline, 'Level2')
-  CALL csv_record_addfield(csvline, 'L2')
-  CALL csv_record_addfield(csvline, 'Report')
+  DO i = 1, nc ! add the required header entries in the desirded order
+    CALL csv_record_addfield(csvline,csv_desdata(icsv_column(i)))
+  ENDDO
+! and now add the header entries for the variables
 ! ana variables
   IF (ASSOCIATED(v7d%anavar%r)) THEN
     DO i5 = 1, SIZE(v7d%anavar%r)
-      CALL csv_record_addfield(csvline,"Ana "//TRIM(v7d%anavar%r(i5)%btable))
+      CALL csv_record_addfield(csvline,'Ana '//TRIM(v7d%anavar%r(i5)%btable))
     ENDDO
   ENDIF
   IF (ASSOCIATED(v7d%anavar%d)) THEN
     DO i5 = 1, SIZE(v7d%anavar%d)
-      CALL csv_record_addfield(csvline,"Ana "//TRIM(v7d%anavar%d(i5)%btable))
+      CALL csv_record_addfield(csvline,'Ana '//TRIM(v7d%anavar%d(i5)%btable))
     ENDDO
   ENDIF
   IF (ASSOCIATED(v7d%anavar%i)) THEN
     DO i5 = 1, SIZE(v7d%anavar%i)
-      CALL csv_record_addfield(csvline,"Ana "//TRIM(v7d%anavar%i(i5)%btable))
+      CALL csv_record_addfield(csvline,'Ana '//TRIM(v7d%anavar%i(i5)%btable))
     ENDDO
   ENDIF
   IF (ASSOCIATED(v7d%anavar%b)) THEN
     DO i5 = 1, SIZE(v7d%anavar%b)
-      CALL csv_record_addfield(csvline,"Ana "//TRIM(v7d%anavar%b(i5)%btable))
+      CALL csv_record_addfield(csvline,'Ana '//TRIM(v7d%anavar%b(i5)%btable))
     ENDDO
   ENDIF
   IF (ASSOCIATED(v7d%anavar%c)) THEN
     DO i5 = 1, SIZE(v7d%anavar%c)
-      CALL csv_record_addfield(csvline,"Ana "//TRIM(v7d%anavar%c(i5)%btable))
+      CALL csv_record_addfield(csvline,'Ana '//TRIM(v7d%anavar%c(i5)%btable))
     ENDDO
   ENDIF
-! todo ana attr variables
+! ana attr variables
+  IF (ASSOCIATED(v7d%anaattr%r) .AND. ASSOCIATED(v7d%anavarattr%r)) THEN
+    DO i7 = 1, SIZE(v7d%anaattr%r)
+      DO i5 = 1, SIZE(v7d%anavarattr%r)
+        CALL csv_record_addfield(csvline,'(Ana '// &
+         TRIM(v7d%anavarattr%r(i5)%btable) &
+         //','//TRIM(v7d%anaattr%r(i7)%btable)//')')
+      ENDDO
+    ENDDO
+  ENDIF
+  IF (ASSOCIATED(v7d%anaattr%d) .AND. ASSOCIATED(v7d%anavarattr%d)) THEN
+    DO i7 = 1, SIZE(v7d%anaattr%d)
+      DO i5 = 1, SIZE(v7d%anavarattr%d)
+        CALL csv_record_addfield(csvline,'(Ana '// &
+         TRIM(v7d%anavarattr%d(i5)%btable) &
+         //','//TRIM(v7d%anaattr%d(i7)%btable)//')')
+      ENDDO
+    ENDDO
+  ENDIF
+  IF (ASSOCIATED(v7d%anaattr%i) .AND. ASSOCIATED(v7d%anavarattr%i)) THEN
+    DO i7 = 1, SIZE(v7d%anaattr%i)
+      DO i5 = 1, SIZE(v7d%anavarattr%i)
+        CALL csv_record_addfield(csvline,'(Ana '// &
+         TRIM(v7d%anavarattr%i(i5)%btable) &
+         //','//TRIM(v7d%anaattr%i(i7)%btable)//')')
+      ENDDO
+    ENDDO
+  ENDIF
+  IF (ASSOCIATED(v7d%anaattr%b) .AND. ASSOCIATED(v7d%anavarattr%b)) THEN
+    DO i7 = 1, SIZE(v7d%anaattr%b)
+      DO i5 = 1, SIZE(v7d%anavarattr%b)
+        CALL csv_record_addfield(csvline,'(Ana '// &
+         TRIM(v7d%anavarattr%b(i5)%btable) &
+         //','//TRIM(v7d%anaattr%b(i7)%btable)//')')
+      ENDDO
+    ENDDO
+  ENDIF
+  IF (ASSOCIATED(v7d%anaattr%c) .AND. ASSOCIATED(v7d%anavarattr%c)) THEN
+    DO i7 = 1, SIZE(v7d%anaattr%c)
+      DO i5 = 1, SIZE(v7d%anavarattr%c)
+        CALL csv_record_addfield(csvline,'(Ana '// &
+         TRIM(v7d%anavarattr%c(i5)%btable) &
+         //','//TRIM(v7d%anaattr%c(i7)%btable)//')')
+      ENDDO
+    ENDDO
+  ENDIF
 ! data variables
   IF (ASSOCIATED(v7d%dativar%r)) THEN
     DO i5 = 1, SIZE(v7d%dativar%r)
@@ -643,6 +679,7 @@ DO i = 1, SIZE(csv_desdata)
   CALL init(csv_desdata(i))
 ENDDO
 
+! Create data entries for all the v7d non-variables dimensions
 DO i2 = 1, size(v7d%time)
   CALL csv_record_rewind(csv_desdata(2))
   CALL getval(v7d%time(i2), isodate=charbuffer(1:19))
@@ -666,11 +703,13 @@ DO i2 = 1, size(v7d%time)
           CALL getval(v7d%ana(i1)%coord, lon=l1, lat=l2)
           CALL csv_record_addfield_miss(csv_desdata(1), l1)
           CALL csv_record_addfield_miss(csv_desdata(1), l2)
-          no_miss = .FALSE. ! keep track of line with all missing data
+
           CALL init(csvline)
-          DO i = 1, nc ! add data for the dimensions descriptors
+          DO i = 1, nc ! add the required data entries in the desirded order
             CALL csv_record_addfield(csvline,csv_desdata(icsv_column(i)))
           ENDDO
+          no_miss = .FALSE. ! keep track of line with all missing data
+! and now add the data entries for the variables
 ! ana variables
           IF (ASSOCIATED(v7d%volanar)) THEN
             DO i5 = 1, SIZE(v7d%volanar(i1,:,i6))
