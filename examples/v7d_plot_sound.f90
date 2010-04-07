@@ -34,7 +34,7 @@ ier=l4f_init()
 !imposta a_name
 category=l4f_category_get(a_name//".main")
 
-call l4f_category_log(category,L4F_INFO,"inizio")
+call l4f_category_log(category,L4F_INFO,"start")
 
 do
   select case( getopt( "w:p:o:c:n:l:htd"))
@@ -148,7 +148,7 @@ do ana=1, size(v7d_dba%vol7d%ana)
     do network=1,size(v7d_dba%vol7d%network)
 
       if (packtimerange) then
-        ic=mod(ic,4)+1       ! cicla sui 4 colori
+        ic=mod(ic,4)+1       ! cicle over 4 color
 
         if (changepg) then
           CALL FRAME
@@ -165,7 +165,7 @@ do ana=1, size(v7d_dba%vol7d%ana)
       do timerange=1, size(v7d_dba%vol7d%timerange)
 
         if (.not. packtimerange) then
-          ic=mod(ic,4)+1       ! cicla sui 4 colori
+          ic=mod(ic,4)+1       ! cicle over 4 color
 
           if (changepg) then
             CALL FRAME
@@ -205,7 +205,7 @@ call delete(plot)
 
 call delete (v7d_dba)
 
-call l4f_category_log(category,L4F_INFO,"terminato")
+call l4f_category_log(category,L4F_INFO,"terminated")
 
 
 !chiudo il logger
@@ -224,7 +224,7 @@ print*,""
 print*,"-h            this help message"
 print*,"-w wstype     work station type (see ncar GKS manuals - wstype=8 X11 display)"
 print*,""
-print*,"    oppure se omesso wstype"
+print*,"   if wstype omitted:"
 print*,""
 print*,"-p pstype     'PS', 'EPS', or 'EPSI'"
 print*,"-o orient     'PORTRAIT' or 'LANDSCAPE'"
