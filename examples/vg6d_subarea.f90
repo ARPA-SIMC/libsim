@@ -95,7 +95,13 @@ options(18) = op_option_new('g', 'npy', npy, 4, help= &
 ! &of an Arakawa A grid')
 
 !options(20) = op_option_new('t', 'component-flag', component_flag, &
-! 0, help='wind component flag in interpolated grid (0/1)')
+! 0, help='wind component flag in interpolated grid, 0=wind components referred to &
+! &geographic E an N directions, 1=wind components referred to grid x and y &
+! &directions')
+! impossible to change it now, the value of input grid will be kept in output,
+! but results are wrong if grids are differently oriented and vector fields
+! are interpolated
+component_flag = 0
 
 options(21) = op_option_new(' ', 'set-scmode', set_scmode, 'xxx', &
  help='set output grid scanning mode to a particular standard value: &
@@ -148,34 +154,28 @@ CALL delete(opt)
 
 call l4f_category_log(category,L4F_INFO,"transforming from file:"//trim(infile))
 call l4f_category_log(category,L4F_INFO,"transforming to   file:"//trim(outfile))
-!call l4f_category_log(category,L4F_INFO,"AREA:"//to_char(ilon)//to_char(ilat)//to_char(flon)//to_char(flat))
-
-!!call grib_new_from_template(igrib, "regular_ll_sfc_grib2")
 
 if(trans_type == 'inter')then
 
-  call init(griddim_out,&
-   type=type,nx=nx,ny=ny, &
-   lon_min=lon_min, lon_max=lon_max, lat_min=lat_min, lat_max=lat_max, component_flag=component_flag, &
-   latitude_south_pole=latitude_south_pole,longitude_south_pole=longitude_south_pole,angle_rotation=angle_rotation, &
+  call init(griddim_out, type=type, nx=nx, ny=ny, &
+   lon_min=lon_min, lon_max=lon_max, lat_min=lat_min, lat_max=lat_max, &
+   component_flag=component_flag, latitude_south_pole=latitude_south_pole, &
+   longitude_south_pole=longitude_south_pole, angle_rotation=angle_rotation, &
    categoryappend="regular_ll")
 
   call griddim_unproj(griddim_out)
 
   IF (ldisplay) THEN
-    PRINT*,'grid di interpolazione >>>>>>>>>>>>>>>>>>>>'
+    PRINT*,'output grid >>>>>>>>>>>>>>>>>>>>'
     CALL display(griddim_out)
   ENDIF
 
 end if
 
-!call init(trans, trans_type=trans_type,sub_type=sub_type, &
-! ilon=ilon,ilat=ilat,flon=flon,flat=flat,&
-! categoryappend="trasformation")
 call init(trans, trans_type=trans_type, sub_type=sub_type, &
  ilon=ilon, ilat=ilat, flon=flon, flat=flat, npx=npx, npy=npy, &
  boxpercentile=0.5D0, &
- categoryappend="trasformation")
+ categoryappend="transformation")
 
 call grib_open_file(ifile, trim(infile),'r')
 call grib_open_file(ofile, trim(outfile),'w')
@@ -192,10 +192,12 @@ DO WHILE (.TRUE.)
 
   call l4f_category_log(category,L4F_INFO,"import gridinfo")
 
-  call init (gridinfo,gaid=gaid,categoryappend="importato")
+  call init(gridinfo, gaid=gaid, categoryappend="imported")
   call import(gridinfo)
 
-  call display(gridinfo,namespace="ls")
+  IF (ldisplay) THEN
+    CALL display(gridinfo,namespace="ls")
+  ENDIF
 
   call l4f_category_log(category,L4F_INFO,"import")
 
@@ -203,16 +205,19 @@ DO WHILE (.TRUE.)
 
   field=decode_gridinfo(gridinfo)
 
-  call init(grid_trans, trans, in=gridinfo%griddim,out=griddim_out,categoryappend="gridtrasformato")
+  call init(grid_trans, trans, in=gridinfo%griddim, out=griddim_out,&
+   categoryappend="gridtransformed")
 
-  call display(griddim_out)
+  IF (ldisplay) THEN
+    CALL display(griddim_out)
+  ENDIF
 
   allocate (fieldz(griddim_out%dim%nx,griddim_out%dim%ny))
 
   call compute(grid_trans, field, fieldz)
 
   call delete(gridinfo%griddim)
-  call copy(griddim_out,gridinfo%griddim,categoryappend="clonato")
+  call copy(griddim_out,gridinfo%griddim,categoryappend="cloned")
 
 ! oppure per mantenere il vecchio gridinfo
 !   call clone(gridinfo , gridinfo_out)
@@ -242,7 +247,9 @@ DO WHILE (.TRUE.)
 
   call encode_gridinfo(gridinfo,fieldz)
   call export (gridinfo)
-  call display(gridinfo,namespace="ls")
+  IF (ldisplay) THEN
+    CALL display(gridinfo,namespace="ls")
+  ENDIF
 
   call grib_write(gridinfo%gaid,ofile)
 
@@ -258,9 +265,9 @@ call delete(griddim_out)
 call grib_close_file(ifile)
 call grib_close_file(ofile)
 
-call l4f_category_log(category,L4F_INFO,"terminato")
+call l4f_category_log(category,L4F_INFO,"end")
 
-!chiudo il logger
+! Close the logger
 call l4f_category_delete(category)
 ier=l4f_fini()
 

@@ -1,8 +1,53 @@
 #include "config.h"
-!> Module for defining transformations between geographical grids and
-!! between geographical grids and sparse data and vice-versa.
-!! Different types of horizontal and vertical interpolations,
-!! horizontal zooming and regridding are supported.
+!> Module for defining transformations between rectangular
+!! georeferenced grids and between grids and sparse points and
+!! vice-versa. The module defines two classes: \a transform_def which
+!! describes an 'abstract' transformation between grids and/or sparse
+!! points, and \a grid_transform which includes a \a transform_def
+!! object and describes a transformation between specific grids and/or
+!! sets of sparse points, with precomputed coefficients specific to
+!! the grids/sparse points involved. A single \a transform_def object
+!! can be used for defining different \a grid_transform objects which
+!! apply the same transformation to different sets of grids/sparse
+!! points pairs. In the same manner, a single \a grid_transform object
+!! can be used for interpolating any number of fields lying on the
+!! same grids/sparse points pair, thus recycling the interpolation
+!! coefficients which are computed only once at the time of defining
+!! the \a grid_transform object.
+!!
+!! Different abstract transformations are supported, defined by the
+!! parameter \a trans_type, and its corresponding \a sub_type:
+!!
+!!  - trans_type='zoom' cuts or extends the input grid on a new one
+!!    adding or removing points on the four sides (grid-to-grid only)
+!!    - sub_type='coord' the bounds of the zoomed/extended area are
+!!      defined by geographical coordinates
+!!    - sub_type='index' the bounds of the zoomed/extended area are
+!!      defined by grid indices
+!!  - trans_type='boxregrid' regrids the input data grid on a new grid
+!!    in which the value at every point is a the result of a function
+!!    computed over \a npx X \a npy points of the original grid
+!!    (grid-to-grid only)
+!!    - sub_type='average' the function used is the average
+!!  - trans_type='inter' interpolates the input data on a new set of points
+!!    - sub_type='near' the interpolated value is that of the nearest
+!!      input point (grid-to-grid, grid-to-sparse point)
+!!    - sub_type='bilin' the interpolated value is computed as a
+!!      bilinear interpolation of the 4 surrounding input points
+!!      (grid-to-grid, grid-to-sparse point)
+!!    - sub_type='linear' the interpolated value is computed as a
+!!      linear interpolation of the 3 surrounding input points
+!!      individuated by means of a triangulation procedure (sparse
+!!      points-to-grid)
+!!  - trans_type='boxinter' computes data on a new grid in which the
+!!    value at every point is the result of a function computed over
+!!    those input points that lie into the output point grid box
+!!    (grid-to-grid and sparse points-to-grid)
+!!    - sub_type='average' the function used is the average
+!!    - sub_type='max' the function used is the maximum
+!!    - sub_type='min' the function used is the minimum
+!!    - sub_type='percentile' the function used is a requested
+!!      percentile of the input points distribution.
 !!
 !! \ingroup volgrid6d
 MODULE grid_transform_class
@@ -30,7 +75,7 @@ type inter_linear
   logical :: external ! enable elaboration outside data bounding box
 end type inter_linear
 
-!  subtype box information
+! subtype box information
 type inter_box
   double precision :: boxdx ! longitudinal/x extension of the box for box interpolation, default the target x grid step
   double precision :: boxdy ! latitudinal/y extension of the box for box interpolation, default the target y grid step
@@ -38,9 +83,9 @@ type inter_box
   logical :: external ! enable elaboration outside data bounding box
 end type inter_box
 
-!> interpolation information 
+! interpolation information 
 type inter
-  CHARACTER(len=80) :: sub_type !< subtype of transformation, can be \c 'near', \c 'bilin', \c 'linear', \c 'box'
+  CHARACTER(len=80) :: sub_type ! subtype of transformation, can be \c 'near', \c 'bilin', \c 'linear', \c 'box'
   type(inter_near) :: near ! subtype nearest information
   type(inter_bilin) :: bilin ! subtype bilinear information
   type(inter_linear) :: linear ! subtype linear information
@@ -63,9 +108,9 @@ type zoom_coo
   DOUBLEPRECISION flat ! coordinate of final point of new grid on y
 end type zoom_coo
 
-!> zoom information
+! zoom information
 type zoom
-  CHARACTER(len=80) :: sub_type !< subtype of transformation, can be \c 'index', \c 'coord'
+  CHARACTER(len=80) :: sub_type ! subtype of transformation, can be \c 'index', \c 'coord'
   type(zoom_ind) :: index ! zoom providing index
   type(zoom_coo) :: coord ! zoom providing coordinates
 end type zoom
@@ -76,25 +121,25 @@ end type zoom
 !end type boxregrid_average
 ! no extra information needed now
 
-!> boxregrid  information
+! boxregrid  information
 type boxregrid
-  CHARACTER(len=80) :: sub_type !< subtype of transformation, can be \c 'average'
-  INTEGER :: npx !< number of points to average along x direction
-  INTEGER :: npy !< number of points to average along y direction
+  CHARACTER(len=80) :: sub_type ! subtype of transformation, can be \c 'average'
+  INTEGER :: npx ! number of points to average along x direction
+  INTEGER :: npy ! number of points to average along y direction
 !  type(boxregrid_average) :: average
 end type boxregrid
 
-!> Vertical interpolation information.
-!! The input vertical coordinate can be indicated either as the value
-!! of the vertical level (so that it will be the same on every point
-!! at a given vertical level), or as the value of a specified variable
-!! at each point in space (so that it will depend on the horizontal
-!! position too).
+! Vertical interpolation information.
+! The input vertical coordinate can be indicated either as the value
+! of the vertical level (so that it will be the same on every point
+! at a given vertical level), or as the value of a specified variable
+! at each point in space (so that it will depend on the horizontal
+! position too).
 TYPE vertint
-  CHARACTER(len=80) :: sub_type !< subtype of transformation, can be \c 'linear'
-  TYPE(vol7d_level) :: input_levtype !< type of vertical level of input data (only type of first and second surface are used, level values are ignored)
-  TYPE(vol7d_var) :: input_coordvar !< variable that defines the vertical coordinate in the input volume, if missing, the value of the vertical level is used
-  TYPE(vol7d_level) :: output_levtype !< type of vertical level of output data (only type of first and second surface are used, level values are ignored)
+  CHARACTER(len=80) :: sub_type ! subtype of transformation, can be \c 'linear'
+  TYPE(vol7d_level) :: input_levtype ! type of vertical level of input data (only type of first and second surface are used, level values are ignored)
+  TYPE(vol7d_var) :: input_coordvar ! variable that defines the vertical coordinate in the input volume, if missing, the value of the vertical level is used
+  TYPE(vol7d_level) :: output_levtype ! type of vertical level of output data (only type of first and second surface are used, level values are ignored)
 END TYPE vertint
 
 !> This object defines the type of transformation to be applied.
@@ -104,19 +149,19 @@ END TYPE vertint
 TYPE transform_def
   private
 
-  CHARACTER(len=80) :: trans_type !< type of transformation, can be \c 'zoom', \c 'boxregrid', \c 'inter', \c 'vertint' ...
-  type(zoom) :: zoom !< zoom specification
-  type(boxregrid) :: boxregrid !< boxregrid specification
-  type(inter) :: inter !< interpolation specification
-  type(vertint) :: vertint !< vertical interpolation specification
-  integer :: time_definition !< time definition for interpolating to sparse points
-  integer :: category !< category for log4fortran
+  CHARACTER(len=80) :: trans_type ! type of transformation, can be \c 'zoom', \c 'boxregrid', \c 'inter', \c 'vertint' ...
+  type(zoom) :: zoom ! zoom specification
+  type(boxregrid) :: boxregrid ! boxregrid specification
+  type(inter) :: inter ! interpolation specification
+  type(vertint) :: vertint ! vertical interpolation specification
+  integer :: time_definition ! time definition for interpolating to sparse points
+  integer :: category ! category for log4fortran
 
 END TYPE transform_def
 
 
 !> This object fully defines a transformation between a couple of
-!! particular \a grid_def or \a vol7d objects (any combination is
+!! particular \a griddim_def or \a vol7d objects (any combination is
 !! possible). It carries information about the objects' mutual
 !! coordinates in order to speed up the transformation when it has to
 !! be repeated on objects having the same coordinates and grid
@@ -132,58 +177,56 @@ TYPE grid_transform
   integer,pointer :: inter_index_x(:,:),inter_index_y(:,:)
   doubleprecision,pointer :: inter_x(:,:),inter_y(:,:)
   doubleprecision,pointer :: inter_xp(:,:),inter_yp(:,:)
-!  type(volgrid6d) :: input_vertcoordvol !< volume which provides the input vertical coordinate if separated from the data volume itself (for vertint) cannot be here because of cross-use, should be an argument of compute
-!  type(vol7d_level), pointer :: output_vertlevlist(:) !< list of vertical levels of output data (for vertint) can be here or an argument of compute, how to do?
-
-  integer :: category !< category for log4fortran
+!  type(volgrid6d) :: input_vertcoordvol ! volume which provides the input vertical coordinate if separated from the data volume itself (for vertint) cannot be here because of cross-use, should be an argument of compute
+!  type(vol7d_level), pointer :: output_vertlevlist(:) ! list of vertical levels of output data (for vertint) can be here or an argument of compute, how to do?
+  integer :: category ! category for log4fortran
 
 END TYPE grid_transform
 
 
-!> Costruttore dell'oggetto
+!> Constructors of the corresponding objects.
 INTERFACE init
-  MODULE PROCEDURE init_grid_transform, init_grid_v7d_transform, init_v7d_grid_transform, init_transform
+  MODULE PROCEDURE transform_init, grid_transform_init, &
+   grid_transform_grid_vol7d_init, grid_transform_vol7d_grid_init
 END INTERFACE
 
-!> Distruttore dell'oggetto
+!> Destructors of the corresponding objects.
 INTERFACE delete
-  MODULE PROCEDURE delete_grid_transform, delete_transform
+  MODULE PROCEDURE transform_delete, grid_transform_delete
 END INTERFACE
 
-!> Ritorna il contenuto dell'oggetto
+!> Method for returning the contents of the object.
 INTERFACE get_val
-  MODULE PROCEDURE get_val_transform
+  MODULE PROCEDURE transform_get_val
 END INTERFACE
 
-!> Calcola i nuovi dati secondo la trasformazione specificata
+!> Compute the output data array from input data array according to
+!! the defined transformation.
 INTERFACE compute
-  MODULE PROCEDURE grid_transform_compute,v7d_grid_transform_compute
+  MODULE PROCEDURE grid_transform_compute, grid_transform_v7d_grid_compute
 END INTERFACE
 
 PRIVATE
 PUBLIC init, delete, get_val, compute
-PUBLIC transform_def,grid_transform
+PUBLIC transform_def, grid_transform
 
 CONTAINS
 
 
-
-!> Initialises an object that defines a transformation on a grid.
-!! trans_type='zoom' cuts or extends \a grid on a new grid adding
-!! or removing points on the four sides (zoom).
-!! trans_type='box_regrid' regrids \a grid on a new grid in which
-!! every point is the average over \a npx X \a npy points of the
-!! original grid (box average).
-!! All the proper optional parameters, after \a trans_type, should
-!! be passed in keyword mode.
-SUBROUTINE init_transform(this, trans_type,sub_type, &
+!> Constructor for a \a transform_def object, defining an abstract
+!! transformation between gridded and/or sparse point data.  The
+!! parameters \a trans_type and \a sub_type define the type of
+!! transformation, while all the other following parameters are
+!! optional, they have to be passed in keyword mode and those required
+!! by the transformation type and subtype chosen have to be present.
+SUBROUTINE transform_init(this, trans_type, sub_type, &
  ix, iy, fx, fy, ilon, ilat, flon, flat, &
  npx, npy, boxdx, boxdy, boxpercentile, &
- zoom_type,boxregrid_type,inter_type,external,time_definition, &
+ external, time_definition, &
  input_levtype, input_coordvar, output_levtype, categoryappend)
 TYPE(transform_def),INTENT(out) :: this !< transformation object
 CHARACTER(len=*) :: trans_type !< type of transformation, can be \c 'zoom', \c 'boxregrid', \c 'interp', \c 'vertint' ...
-CHARACTER(len=*) :: sub_type !< sub type of transformation, depend on trans_type and is an alternative to zoom_type, boxregrid_type, inter_type
+CHARACTER(len=*) :: sub_type !< sub type of transformation, it depends on \a trans_type
 INTEGER,INTENT(in),OPTIONAL :: ix !< index of initial point of new grid on x (for zoom)
 INTEGER,INTENT(in),OPTIONAL :: iy !< index of initial point of new grid on y (for zoom)
 INTEGER,INTENT(in),OPTIONAL :: fx !< index of final point of new grid on x (for zoom)
@@ -194,14 +237,11 @@ DOUBLEPRECISION,INTENT(in),OPTIONAL :: flon !< coordinate of final point of new 
 DOUBLEPRECISION,INTENT(in),OPTIONAL :: flat !< coordinate of final point of new grid on y (for zoom)
 INTEGER,INTENT(IN),OPTIONAL :: npx !< number of points to average along x direction (for boxregrid)
 INTEGER,INTENT(IN),OPTIONAL :: npy !< number of points to average along y direction (for boxregrid)
-DOUBLEPRECISION,INTENT(in),OPTIONAL :: boxdx !< longitudinal/x extension of the box for box interpolation, default the target x grid step
-DOUBLEPRECISION,INTENT(in),OPTIONAL :: boxdy !< latitudinal/y extension of the box for box interpolation, default the target y grid step
+DOUBLEPRECISION,INTENT(in),OPTIONAL :: boxdx !< longitudinal/x extension of the box for box interpolation, default the target x grid step (unimplemented !)
+DOUBLEPRECISION,INTENT(in),OPTIONAL :: boxdy !< latitudinal/y extension of the box for box interpolation, default the target y grid step (unimplemented !)
 DOUBLEPRECISION,INTENT(in),OPTIONAL :: boxpercentile !< percentile [0,1] of the distribution of points in the box to use as interpolated value, if missing, the average is used
-CHARACTER(len=*),INTENT(IN),OPTIONAL :: zoom_type !< type of zoom
-CHARACTER(len=*),INTENT(IN),OPTIONAL :: boxregrid_type !< type of regrid
-CHARACTER(len=*),INTENT(IN),OPTIONAL :: inter_type !< type of interpolation
-LOGICAL,INTENT(IN),OPTIONAL :: external !< activate external area interpolation (for interpolation)(not enabled !)
-INTEGER,INTENT(IN),OPTIONAL :: time_definition !< 0=time is reference time ; 1=time is validity time
+LOGICAL,INTENT(IN),OPTIONAL :: external !< activate external area interpolation (for interpolation) (unimplemented !)
+INTEGER,INTENT(IN),OPTIONAL :: time_definition !< time definition for output vol7d object 0=time is reference time ; 1=time is validity time
 TYPE(vol7d_level),INTENT(IN),OPTIONAL :: input_levtype !< type of vertical level of input data to be vertically interpolated (only type of first and second surface are used, level values are ignored)
 TYPE(vol7d_var),INTENT(IN),OPTIONAL :: input_coordvar !< variable that defines the vertical coordinate in the input volume for vertical interpolation, if missing, the value of the vertical level defined with \a input_levtype is used
 TYPE(vol7d_level),INTENT(IN),OPTIONAL :: output_levtype !< type of vertical level to which data should be vertically interpolated (only type of first and second surface are used, level values are ignored)
@@ -213,8 +253,7 @@ this%category=l4f_category_get(a_name)
 
 call optio(trans_type,this%trans_type)
 
-call optio(zoom_type,this%zoom%sub_type)
-if (trans_type == "zoom".and. .not. c_e(this%zoom%sub_type))call optio(sub_type,this%zoom%sub_type)
+if (trans_type == "zoom") call optio(sub_type,this%zoom%sub_type)
 
 call optio(ix,this%zoom%index%ix)
 call optio(iy,this%zoom%index%iy)
@@ -233,14 +272,13 @@ if (c_e(this%time_definition) .and. &
   call raise_fatal_error()
 end if
 
-call optio(boxregrid_type,this%boxregrid%sub_type)
-if (trans_type == "boxregrid".and. .not. c_e(this%boxregrid%sub_type))call optio(sub_type,this%boxregrid%sub_type)
+if (trans_type == "boxregrid") call optio(sub_type,this%boxregrid%sub_type)
 
 call optio(npx,this%boxregrid%npx)
 call optio(npy,this%boxregrid%npy)
 
-call optio(inter_type,this%inter%sub_type)
-if (trans_type == "inter".and. .not. c_e(this%inter%sub_type))call optio(sub_type,this%inter%sub_type)
+if (trans_type == "inter") call optio(sub_type,this%inter%sub_type)
+
 call optio(external,this%inter%near%external)
 call optio(external,this%inter%bilin%external)
 call optio(external,this%inter%linear%external)
@@ -280,8 +318,7 @@ IF (this%trans_type == 'zoom') THEN
     if (c_e(this%zoom%index%ix) .and. c_e(this%zoom%index%iy) .or. &
         c_e(this%zoom%index%fx) .or. c_e(this%zoom%index%fy)) then
 
-
-                                ! check
+! check
       if (this%zoom%index%ix > this%zoom%index%fx .OR. &
        this%zoom%index%iy > this%zoom%index%fy) THEN
 
@@ -303,7 +340,6 @@ IF (this%trans_type == 'zoom') THEN
       CALL raise_fatal_error()
 
     ENDIF
-  
 
   else
 
@@ -408,15 +444,13 @@ ELSE
 ENDIF
 
 
-END SUBROUTINE init_transform
+END SUBROUTINE transform_init
 
 
-
-!> \brief destructor of tranform object
-!! release any memory and data associated to transformation object
-!! the logger category will be deleted too
-SUBROUTINE delete_transform(this)
-
+!> Destructor of \a tranform_def object.
+!! It releases any memory and data associated to the \a transform_def
+!! object \a this, the logger category will be deleted too.
+SUBROUTINE transform_delete(this)
 TYPE(transform_def),INTENT(out) :: this !< transformation object
 
 this%trans_type=cmiss
@@ -433,7 +467,6 @@ this%zoom%coord%ilat=dmiss
 this%zoom%coord%flon=dmiss
 this%zoom%coord%flat=dmiss
 
-
 this%boxregrid%sub_type=cmiss
 
 this%boxregrid%npx=imiss
@@ -448,33 +481,41 @@ this%inter%linear%external=.false.
 !chiudo il logger
 call l4f_category_delete(this%category)
 
+END SUBROUTINE transform_delete
 
-end SUBROUTINE delete_transform
 
-
-!> restituisce il contenuto dell'oggetto
-SUBROUTINE get_val_transform(this,time_definition)
-type(transform_def),intent(in) :: this !< oggetto da esaminare
-integer,INTENT(out),OPTIONAL :: time_definition !< 0=time is reference time ; 1=time is validity time
+!> Method for returning the contents of the object.
+SUBROUTINE transform_get_val(this, time_definition)
+type(transform_def),intent(in) :: this !< object to examine
+INTEGER,INTENT(out),OPTIONAL :: time_definition !< 0=time is reference time, 1=time is validity time
 
 if ( present(time_definition)) time_definition=this%time_definition
 
-END SUBROUTINE get_val_transform
+END SUBROUTINE transform_get_val
 
 
-!> Initialises an object that defines a transformation on a grid.
-!! Questo metodo definisce la trasformazione da un grigliato in un'altro seguendo le indicazioni contenute nell'oggetto
-!! di trasformazione. Devono essere quindi forniti il grigliato da trasformare e l'oggetto di trasformazione.
-!! Vengono generati un oggetto di trasformazione associato ai grigliati e un nuovo grigliato prodotto
-!! dalla trasformazione.
-SUBROUTINE init_grid_transform(this,trans,in,out,categoryappend)
+!> Constructor for a \a grid_transform object, defining a particular
+!! grid-to-grid transformation.
+!! It defines an object describing a transformation from one
+!! rectangular grid to another; the abstract type of transformation is
+!! described in the transformation object \a trans (type
+!! transform_def) which must have been properly initialised. The
+!! additional information required here is the description of the
+!! input grid \a in (type griddim_def), the description of the output
+!! grid \a out (type griddim_def as well). The description of the
+!! output grid must be initialized for interpolating type
+!! transformations ('inter' and 'boxinter'), while it is generated by
+!! this constructor and returned in output for 'zoom' and 'boxregrid'
+!! transformations. The generated \a grid_transform object is specific
+!! to the input and output grids involved.
+SUBROUTINE grid_transform_init(this,trans,in,out,categoryappend)
 TYPE(grid_transform),INTENT(out) :: this !< grid_transformation object
 TYPE(transform_def),INTENT(in) :: trans !< transformation object
 TYPE(griddim_def),INTENT(inout) :: in !< griddim object to transform
-TYPE(griddim_def),INTENT(out) :: out !< griddim transformated object
-CHARACTER(len=*),INTENT(in),OPTIONAL :: categoryappend !< appende questo suffisso al namespace category di log4fortran
+TYPE(griddim_def),INTENT(inout) :: out !< griddim object defining target grid (input or output depending on type of transformation)
+CHARACTER(len=*),INTENT(in),OPTIONAL :: categoryappend !< append this suffix to log4fortran namespace category
 
-INTEGER :: nx, ny,i,j
+INTEGER :: nx, ny, i, j
 DOUBLE PRECISION :: lon_min, lon_max, lat_min, lat_max, steplon, steplat, &
  lon_min_new, lat_min_new
 character(len=512) :: a_name
@@ -531,7 +572,7 @@ IF (this%trans%trans_type == 'zoom') THEN
   this%infox = max(min(this%trans%zoom%index%fx,nx),1) ! fox
   this%infoy = max(min(this%trans%zoom%index%fy,ny),1) ! foy
 ! new indices
-  this%outinx = min(max(2-this%trans%zoom%index%ix,1),nx)! inx
+  this%outinx = min(max(2-this%trans%zoom%index%ix,1),nx) ! inx
   this%outiny = min(max(2-this%trans%zoom%index%iy,1),ny) ! iny
   this%outfnx = min(this%trans%zoom%index%fx,nx)-this%trans%zoom%index%ix+1 ! fnx
   this%outfny = min(this%trans%zoom%index%fy,ny)-this%trans%zoom%index%iy+1 ! fny
@@ -571,7 +612,7 @@ ELSE IF (this%trans%trans_type == 'boxregrid') THEN
     lat_min_new = lat_min + (this%trans%boxregrid%npy - 1)*0.5D0*steplat
 
     CALL l4f_category_log(this%category,L4F_DEBUG,"copying griddim in out")
-    call copy (in,out)
+    call copy(in, out)
     out%dim%nx = nx/this%trans%boxregrid%npx
     out%dim%ny = ny/this%trans%boxregrid%npy
 
@@ -596,6 +637,9 @@ ELSE IF (this%trans%trans_type == 'inter') THEN
 
 ! set increments in new grid in order for all the baraque to work
   CALL griddim_setsteps(out, out%dim%nx, out%dim%ny)
+! set output component_flag equal to input
+  CALL get_val(in, component_flag=i)
+  CALL set_val(out, component_flag=i)
 
   IF (this%trans%inter%sub_type == 'near' .OR. this%trans%inter%sub_type == 'bilin' ) THEN
     
@@ -670,23 +714,29 @@ ELSE
 
 ENDIF
 
-END SUBROUTINE init_grid_transform
+END SUBROUTINE grid_transform_init
 
 
-!> Initialises an object that defines a transformation from a grid to sparse data.
-!! Questo metodo definisce la trasformazione da un grigliato a dati sparsi seguendo le indicazioni contenute nell'oggetto
-!! di trasformazione. Devono essere quindi forniti il grigliato da trasformare e l'oggetto di trasformazione.
-!! Deve essere fornito anche un oggetto contenetente le informazioni relative ai dati sparsi su cui elaborare la trasformazione.
-!! Viene generato un oggetto di trasformazione associato al grigliato e dati dati sparsi.
-SUBROUTINE init_grid_v7d_transform(this,trans,in,v7d,categoryappend)
+!> Constructor for a \a grid_transform object, defining a particular
+!! grid-to-sparse points transformation.
+!! It defines an object describing a transformation from a rectangular
+!! grid to a set of sparse points; the abstract type of transformation
+!! is described in the transformation object \a trans (type
+!! transform_def) which must have been properly initialised. The
+!! additional information required here is the description of the
+!! input grid \a in (type griddim_def), and a vol7d object (\a v7d
+!! argument) which must have been initialized with the coordinates of
+!! sparse points over which the transformation (typically an
+!! interpolation) should take place. The generated \a grid_transform
+!! object is specific to the grid and sparse point list provided.
+SUBROUTINE grid_transform_grid_vol7d_init(this,trans,in,v7d,categoryappend)
 TYPE(grid_transform),INTENT(out) :: this !< grid_transformation object
 TYPE(transform_def),INTENT(in) :: trans !< transformation object
 TYPE(griddim_def),INTENT(in) :: in !< griddim object to transform
-TYPE(vol7d),INTENT(in) :: v7d !< vol7d objects where (or to use) to transform
-character(len=*),INTENT(in),OPTIONAL :: categoryappend !< appende questo suffisso al namespace category di log4fortran
+TYPE(vol7d),INTENT(in) :: v7d !< vol7d object with the coordinates of the sparse point to be used as transformation target
+character(len=*),INTENT(in),OPTIONAL :: categoryappend !< append this suffix to log4fortran namespace category
 
-
-INTEGER :: nx, ny,i,j
+INTEGER :: nx, ny, i, j
 DOUBLE PRECISION :: lon_min, lon_max, lat_min, lat_max, steplon, steplat,lon_min_new, lat_min_new
 doubleprecision,allocatable :: lon(:),lat(:)
 
@@ -769,21 +819,28 @@ ELSE
 
 ENDIF
 
-END SUBROUTINE init_grid_v7d_transform
+END SUBROUTINE grid_transform_grid_vol7d_init
 
 
-!> Initialises an object that defines a transformation from sparse data to a grid.
-!! Questo metodo definisce la trasformazione da dati sparsi a grigliato seguendo le indicazioni contenute nell'oggetto
-!! di trasformazione. Devono essere quindi forniti il grigliato da trasformare e l'oggetto di trasformazione.
-!! Deve essere fornito anche un oggetto contenetente le informazioni relative ai dati sparsi su cui elaborare la trasformazione.
-!! Viene generato un oggetto di trasformazione associato al grigliato e dati dati sparsi.
-SUBROUTINE init_v7d_grid_transform(this,trans,v7d,griddim,categoryappend)
+!> Constructor for a \a grid_transform object, defining a particular
+!! sparse points-to-grid transformation.
+!! It defines an object describing a transformation from a set of
+!! sparse points to a rectangular grid; the abstract type of
+!! transformation is described in the transformation object \a trans
+!! (type transform_def) which must have been properly initialised. The
+!! additional information required here is the list of the input
+!! sparse points in the form of a \a vol7d object (parameter \a v7d),
+!! which can be the same volume that will be successively used for
+!! interpolation or a volume with just the same coordinate data, and
+!! the description of the output grid \a griddim (a \a griddim_def
+!! object). The generated \a grid_transform object is specific to the
+!! sparse point list and grid provided.
+SUBROUTINE grid_transform_vol7d_grid_init(this,trans,v7d,griddim,categoryappend)
 TYPE(grid_transform),INTENT(out) :: this !< grid transformation object
 TYPE(transform_def),INTENT(in) :: trans !< transformation object
-TYPE(vol7d),INTENT(in) :: v7d !< vol7d objects to transform
-TYPE(griddim_def),INTENT(in) :: griddim !< grid transformated object
-character(len=*),INTENT(in),OPTIONAL :: categoryappend !< appende questo suffisso al namespace category di log4fortran
-
+TYPE(vol7d),INTENT(in) :: v7d !< vol7d object with the coordinates of the sparse point to be used as input (only information about coordinates is used
+TYPE(griddim_def),INTENT(in) :: griddim !< griddim object defining target grid
+character(len=*),INTENT(in),OPTIONAL :: categoryappend !< append this suffix to log4fortran namespace category
 
 INTEGER :: nx, ny,i,j
 DOUBLE PRECISION :: lon_min, lon_max, lat_min, lat_max, steplon, steplat,lon_min_new, lat_min_new
@@ -881,14 +938,13 @@ ELSE
 
 ENDIF
 
-END SUBROUTINE init_v7d_grid_transform
+END SUBROUTINE grid_transform_vol7d_grid_init
 
 
-!> \brief destructor of grid_tranform object
-!! release any memory and data associated to grid_transformation object
-!! the logger category will be deleted too
-SUBROUTINE delete_grid_transform(this)
-
+!> Destructor of \a grid_tranform object.
+!! It releases any memory and data associated to
+!! \a grid_transform object \a this, the logger category will be deleted too.
+SUBROUTINE grid_transform_delete(this)
 TYPE(grid_transform),INTENT(inout) :: this !< grid_transform object
 
 call delete(this%trans)
@@ -915,15 +971,17 @@ if (associated(this%inter_y)) deallocate (this%inter_y)
 if (associated(this%inter_xp)) deallocate (this%inter_xp)
 if (associated(this%inter_yp)) deallocate (this%inter_yp)
 
-!chiudo il logger
+! close the logger
 call l4f_category_delete(this%category)
 
-end SUBROUTINE delete_grid_transform
+END SUBROUTINE grid_transform_delete
 
 
-!> From input data array compute the output data array.
-!! Grid_transform object contains any information needed for computation.
-!! Field_out will be computed.
+!> Compute the output data array from input data array according to
+!! the defined transformation. The \a grid_transform object \a this
+!! must have been properly initialised, so that it contains all the
+!! information needed for computing the transformation. This is the
+!! grid-to-grid and grid-to-sparse points version.
 SUBROUTINE grid_transform_compute(this, field_in, field_out)
 TYPE(grid_transform),INTENT(in) :: this !< grid_transformation object
 REAL, INTENT(in) :: field_in(:,:) !< input array
@@ -959,12 +1017,13 @@ end if
 
 field_out(:,:) = rmiss
 
-IF (this%trans%trans_type == 'zoom') THEN
-
 #ifdef DEBUG
   call l4f_category_log(this%category,L4F_DEBUG, &
-   "start grid_transform_compute zoom")
+   "start grid_transform_compute "//TRIM(this%trans%trans_type)//':'// &
+   TRIM(this%trans%inter%sub_type))
 #endif
+
+IF (this%trans%trans_type == 'zoom') THEN
 
   field_out(this%outinx:this%outfnx, &
    this%outiny:this%outfny) = &
@@ -972,11 +1031,6 @@ IF (this%trans%trans_type == 'zoom') THEN
    this%inioy:this%infoy)
 
 ELSE IF (this%trans%trans_type == 'boxregrid') THEN
-
-#ifdef DEBUG
-  call l4f_category_log(this%category,L4F_DEBUG, &
-   "start grid_transform_compute boxregrid")
-#endif
 
   jj = 0
   DO j = 1, this%inny - this%trans%boxregrid%npy + 1, this%trans%boxregrid%npy
@@ -996,11 +1050,6 @@ ELSE IF (this%trans%trans_type == 'boxregrid') THEN
 
 ELSE IF (this%trans%trans_type == 'inter') THEN
 
-#ifdef DEBUG
-  call l4f_category_log(this%category,L4F_DEBUG, &
-   "start grid_transform_compute inter")
-#endif
-
   IF (this%trans%inter%sub_type == 'near') THEN
 
     DO j = 1, this%outny 
@@ -1017,7 +1066,7 @@ ELSE IF (this%trans%trans_type == 'inter') THEN
     DO j = 1, this%outny 
       DO i = 1, this%outnx 
 
-        IF   (c_e(this%inter_index_x(i,j)) .AND. c_e(this%inter_index_y(i,j)))THEN
+        IF (c_e(this%inter_index_x(i,j)) .AND. c_e(this%inter_index_y(i,j)))THEN
 
           z1=field_in(this%inter_index_x(i,j),this%inter_index_y(i,j))
           z2=field_in(this%inter_index_x(i,j)+1,this%inter_index_y(i,j))
@@ -1044,11 +1093,6 @@ ELSE IF (this%trans%trans_type == 'inter') THEN
 
   ENDIF
 ELSE IF (this%trans%trans_type == 'boxinter') THEN
-
-#ifdef DEBUG
-  call l4f_category_log(this%category,L4F_DEBUG, &
-   "start grid_transform_compute boxinter")
-#endif
 
   IF (this%trans%inter%sub_type == 'average') THEN
     
@@ -1127,21 +1171,19 @@ ENDIF
 END SUBROUTINE grid_transform_compute
 
 
-!> From input data vector compute the output data array.
-!! Grid_transform object contains any information needed for computation.
-!! Field_out will be computed.
-SUBROUTINE v7d_grid_transform_compute(this, field_in, field_out)
+!> Compute the output data array from input data array according to
+!! the defined transformation. The \a grid_transform object \a this
+!! must have been properly initialised, so that it contains all the
+!! information needed for computing the transformation. This is the
+!! sparse points-to-grid version.
+SUBROUTINE grid_transform_v7d_grid_compute(this, field_in, field_out)
 TYPE(grid_transform),INTENT(in) :: this !< grid_tranform object
-REAL, INTENT(in) :: field_in(:) !< input vector
-REAL, INTENT(out):: field_out(:,:) !< output matrix
+REAL, INTENT(in) :: field_in(:) !< input array
+REAL, INTENT(out):: field_out(:,:) !< output array
 
 real,allocatable :: field_in_p(:),x_in_p(:),y_in_p(:)
 real,allocatable :: x_out(:),y_out(:)
 integer :: inn_p,ier
-
-!!$INTEGER :: i, j, ii, jj, ie, je, navg
-!!$real :: z1,z2,z3,z4
-!!$doubleprecision  :: x1,x3,y1,y3,xp,yp
 
 #ifdef DEBUG
 call l4f_category_log(this%category,L4F_DEBUG,"start v7d_grid_transform_compute")
@@ -1213,7 +1255,7 @@ IF (this%trans%trans_type == 'inter') THEN
 
     end if
 
-  ELSE IF (this%trans%trans_type == 'boxinter') THEN ! use the grid-grid method
+  ELSE IF (this%trans%trans_type == 'boxinter') THEN ! use the grid-to-grid method
       
     CALL compute(this, RESHAPE(field_in, (/SIZE(field_in), 1/)), field_out)
 
@@ -1233,28 +1275,27 @@ else
 
 END IF
 
-END SUBROUTINE v7d_grid_transform_compute
+END SUBROUTINE grid_transform_v7d_grid_compute
 
 
-!> \brief bilinear interpolation
-!!     effettua interpolazione bilineare dati i valori nei punti
-!!     1,2,3,4 e le coordinate dei punti 1 e 3 oltre a quelle
-!!     del punto p dove viene valutato il campo.
-!!_____________________________________________________________
-!!				disposizione punti
-!!	4	3
-!!
-!!	  p
-!!
-!!	1	2
-!! _____________________________________________________________
-
+! Bilinear interpolation
+! Effettua interpolazione bilineare dati i valori nei punti 1,2,3,4 e
+! le coordinate dei punti 1 e 3 oltre a quelle del punto p dove viene
+! valutato il campo.
+!_____________________________________________________________
+!				disposizione punti
+!	4	3
+!
+!	  p
+!
+!	1	2
+! _____________________________________________________________
 elemental real function hbilin (z1,z2,z3,z4,x1,y1,x3,y3,xp,yp) result (zp)
 
-doubleprecision,intent(in):: x1,y1 !< coordinate of the lower left point
-doubleprecision,intent(in):: x3,y3 !< coordinate of the upper right point
-doubleprecision,intent(in):: xp,yp !< coordinate of point where interpolate
-real,intent(in) :: z1,z2,z3,z4 !< Z values on the four points
+doubleprecision,intent(in):: x1,y1 ! coordinate of the lower left point
+doubleprecision,intent(in):: x3,y3 ! coordinate of the upper right point
+doubleprecision,intent(in):: xp,yp ! coordinate of point where interpolate
+real,intent(in) :: z1,z2,z3,z4 ! Z values on the four points
 
 doubleprecision :: p1,p2
 real :: z5,z6
@@ -1272,20 +1313,20 @@ zp=(z6-z5)*(p1)+z5
 end function hbilin
 
 
-!> Locate index of requested point
+! Locate index of requested point
 elemental subroutine find_index(this,inter_type,&
  nx,ny, lon_min, lon_max, lat_min,lat_max,&
  lon,lat,index_x,index_y)
 
-type(griddim_def),intent(in) :: this !< griddim object (from grid)
-character(len=*),intent(in) :: inter_type !< interpolation type (determine wich point is requested)
-!> dimension (to grid)
+type(griddim_def),intent(in) :: this ! griddim object (from grid)
+character(len=*),intent(in) :: inter_type ! interpolation type (determine wich point is requested)
+! dimension (to grid)
 integer,intent(in) :: nx,ny 
-!> extreme coordinate (to grid)
+! extreme coordinate (to grid)
 doubleprecision,intent(in) :: lon_min, lon_max, lat_min, lat_max
-!> target coordinate
+! target coordinate
 doubleprecision,intent(in) :: lon,lat
-!> index of point requested
+! index of point requested
 integer,optional,intent(out) :: index_x,index_y 
 
 doubleprecision :: x,y

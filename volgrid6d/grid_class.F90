@@ -1,7 +1,7 @@
 #include "config.h"
 !> Module for describing rectanguler geographical grids.
 !! This module defines classes and methods describing rectanguler
-!! geographical grids in different projections.
+!! georefererenced grids in different projections.
 !!
 !! See the example program \include example_vg6d_1.f90
 !!
@@ -61,13 +61,11 @@ type grid_def
   integer :: category !< category for log4fortran
 end type grid_def
 
-
 !> This object completely describes a grid on a geographic projection.
-!! It is the main object of this module to be used by user
-!! programs. The grid definition \a grid is separated from the
-!! definition of the grid dimensions \a dim in order to make members
-!! of \a grid \a PRIVATE while maintaining free access to the members
-!! of \a dim.
+!! It is the main public object of this module. The grid definition \a
+!! grid is separated from the definition of the grid dimensions \a dim
+!! in order to make members of \a grid \a PRIVATE while maintaining
+!! free access to the members of \a dim.
 type griddim_def
   type(grid_def) :: grid !< grid and projection definition
   type(grid_dim) :: dim  !< grid dimensions definition
@@ -75,72 +73,73 @@ type griddim_def
 end type griddim_def
 
 
-!> Operatore logico di uguaglianza tra oggetti della classe grid.
-!! Funziona anche per confronti di tipo array-array (qualsiasi n. di dimensioni) e di tipo
-!! scalare-vettore(1-d) (ma non vettore(1-d)-scalare o tra array con più
-!! di 1 dimensione e scalari).
+!> Logical equality operators for objects of the classes \a grid_def,
+!! \a griddim_def and \a grid_type. They are all defined as \c
+!! ELEMENTAL thus work also on arrays of any shape.
 INTERFACE OPERATOR (==)
   MODULE PROCEDURE grid_eq, grid_type_eq, griddim_eq
 END INTERFACE
 
-!> Costruttore dell'oggetto
+!> Constructors of the corresponding objects.
 INTERFACE init
   MODULE PROCEDURE griddim_init
 END INTERFACE
 
-!> Distruttore dell'oggetto
+!> Destructors of the corresponding objects.
 INTERFACE delete
   MODULE PROCEDURE griddim_delete
 END INTERFACE
 
-!> Copia l'ggetto creando una nuova istanza
+!> Copy an object, creating a fully new instance.
 INTERFACE copy
   MODULE PROCEDURE griddim_copy
 END INTERFACE
 
-!> Proietta la coordinate geografiche nel relativo sistema di rappresentazione
+!> Compute forward coordinate transformation from geographical system to
+!! projected system.
 INTERFACE proj
   MODULE PROCEDURE griddim_coord_proj, griddim_proj
 END INTERFACE
 
-!> Rstituisce le coordinate geografiche dal sistema di rappresentazione specifico
+!> Compute backward coordinate transformation from projected system
+!! geographical system.
 INTERFACE unproj
   MODULE PROCEDURE griddim_coord_unproj, griddim_unproj
 END INTERFACE
 
-!> Ritorna il contenuto dell'oggetto
+!> Method for returning the contents of the object.
 INTERFACE get_val
   MODULE PROCEDURE griddim_get_val
 END INTERFACE
 
-!> Imposta il contenuto dell'oggeto
+!> Method for setting the contents of the object.
 INTERFACE set_val
   MODULE PROCEDURE griddim_set_val
 END INTERFACE
 
-!> Scrive l'ggetto su file formatted o unformatted
+!> Write the object on a formatted or unformatted file.
 INTERFACE write_unit
   MODULE PROCEDURE griddim_write_unit
 END INTERFACE
 
-!> Legge l'oggetto da file formatted o unformatted
+!> Read the object from a formatted or unformatted file.
 INTERFACE read_unit
   MODULE PROCEDURE griddim_read_unit
 END INTERFACE
 
 #ifdef HAVE_LIBGRIBAPI
-!> Importazione 
+!> Import from grib.
 INTERFACE import
   MODULE PROCEDURE griddim_import_gribapi
 END INTERFACE
 
-!> Exportazione
+!> Export to grib.
 INTERFACE export
   MODULE PROCEDURE griddim_export_gribapi
 END INTERFACE
 #endif
 
-!> visualizzazione su schermo
+!> Print a brief description on stdout.
 INTERFACE display
   MODULE PROCEDURE griddim_display
 END INTERFACE

@@ -343,8 +343,9 @@ ELSE
 ENDIF
 
 
-IF (this%griddim%dim%nx > 0 .and. this%griddim%dim%ny > 0 .and..NOT.ASSOCIATED(this%voldati)) THEN
-                                ! Alloco i descrittori minimi per avere un volume di dati
+IF (this%griddim%dim%nx > 0 .and. this%griddim%dim%ny > 0 .and. &
+ .NOT.ASSOCIATED(this%voldati)) THEN
+! Alloco i descrittori minimi per avere un volume di dati
   IF (.NOT. ASSOCIATED(this%var)) CALL volgrid6d_alloc(this, nvar=1, ini=ini)
   IF (.NOT. ASSOCIATED(this%time)) CALL volgrid6d_alloc(this, ntime=1, ini=ini)
   IF (.NOT. ASSOCIATED(this%level)) CALL volgrid6d_alloc(this, nlevel=1, ini=ini)
@@ -357,8 +358,8 @@ IF (this%griddim%dim%nx > 0 .and. this%griddim%dim%ny > 0 .and..NOT.ASSOCIATED(t
 #endif
 
      ALLOCATE(this%voldati( this%griddim%dim%nx,this%griddim%dim%ny,&
-          SIZE(this%level), SIZE(this%time),  &
-          SIZE(this%timerange), SIZE(this%var)),stat=stallo)
+      SIZE(this%level), SIZE(this%time), &
+      SIZE(this%timerange), SIZE(this%var)),stat=stallo)
      if (stallo /=0)then
        call l4f_category_log(this%category,L4F_ERROR,"allocating memory")
        CALL raise_fatal_error("allocating memory")
@@ -380,8 +381,6 @@ IF (this%griddim%dim%nx > 0 .and. this%griddim%dim%ny > 0 .and..NOT.ASSOCIATED(t
   end if
 
   IF (linivol) this%gaid  = imiss
-
-
   
 end if
 
@@ -441,9 +440,6 @@ call l4f_category_delete(this%category)
 end subroutine delete_volgrid6d
 
 
-
-
-
 !>\brief Scrittura su file di un volume Volgrid6d.
 !! Scrittura su file unformatted di un intero volume Volgrid6d.
 !! Il volume viene serializzato e scritto su file.
@@ -453,8 +449,6 @@ end subroutine delete_volgrid6d
 !! Se non viene fornito il nome file viene utilizzato un file di default con nome pari al nome del programma in 
 !! esecuzione con postfisso ".vg6d".
 !! Come parametro opzionale c'è la description che insieme alla data corrente viene inserita nell'header del file.
-
-
 subroutine volgrid6d_write_on_file (this,unit,description,filename,filename_auto)
 
 TYPE(volgrid6d),INTENT(IN) :: this !< volume volgrid6d da scrivere 
@@ -545,7 +539,6 @@ if (associated(this%voldati))     write(unit=lunit)this%voldati
 if (.not. present(unit)) close(unit=lunit)
 
 end subroutine volgrid6d_write_on_file
-
 
 
 !>\brief Lettura da file di un volume Volgrid6d.
@@ -1345,7 +1338,7 @@ end subroutine delete_volgrid6dv
 SUBROUTINE volgrid6d_transform_compute(this, volgrid6d_in, volgrid6d_out,clone)
 TYPE(grid_transform),INTENT(in) :: this !< oggetto di trasformazione per il grigliato
 type(volgrid6d), INTENT(in) :: volgrid6d_in !< oggetto da trasformare
-type(volgrid6d), INTENT(out) :: volgrid6d_out !> oggetto trasformato; deve essere completo (init, alloc, alloc_vol)
+type(volgrid6d), INTENT(out) :: volgrid6d_out !< oggetto trasformato; deve essere completo (init, alloc, alloc_vol)
 logical , intent(in),optional :: clone !< se fornito e \c .TRUE., clona i gaid da volgrid6d_in a volgrid6d_out
 
 integer :: ntime, ntimerange, nlevel, nvar
@@ -1453,20 +1446,20 @@ if (associated(volgrid6d_in%timerange)) ntimerange=size(volgrid6d_in%timerange)
 if (associated(volgrid6d_in%level)) nlevel=size(volgrid6d_in%level)
 if (associated(volgrid6d_in%var)) nvar=size(volgrid6d_in%var)
 
-call init(grid_trans, this, in=volgrid6d_in%griddim,out=volgrid6d_out%griddim,&
+
+! Ensure wind components are referred to geographical system
+call vg6d_wind_unrot(volgrid6d_in)
+
+call init(grid_trans, this, in=volgrid6d_in%griddim, out=volgrid6d_out%griddim, &
  categoryappend=categoryappend)
 
 call volgrid6d_alloc(volgrid6d_out, griddim%dim, ntime, nlevel, ntimerange, nvar)
-
 call volgrid6d_alloc_vol(volgrid6d_out)
 
 !ensure unproj was called
 !call griddim_unproj(volgrid6d_out%griddim)
 
-call vg6d_wind_unrot(volgrid6d_in)
-
 call compute(grid_trans, volgrid6d_in, volgrid6d_out,clone)
-
 call delete (grid_trans)
 
 end subroutine volgrid6d_transform
@@ -2198,8 +2191,8 @@ iu=index(conv_fwd(:)%v7d_var,varu)
 iv=index(conv_fwd(:)%v7d_var,varv)
 
 if (iu == 0  .or. iv == 0 )then
-  call l4f_category_log(this%category,L4F_ERROR,"B11003 or B11004 not defined by  vg6d_v7d_var_conv_setup")
-  call raise_fatal_error ("volgrid6d: B11003 or B11004 not defined by  vg6d_v7d_var_conv_setup")
+  call l4f_category_log(this%category,L4F_ERROR,"B11003 or B11004 not defined by vg6d_v7d_var_conv_setup")
+  call raise_fatal_error ("volgrid6d: B11003 or B11004 not defined by vg6d_v7d_var_conv_setup")
 end if
 
 
