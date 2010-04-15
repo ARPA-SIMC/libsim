@@ -23,9 +23,9 @@ TYPE(vol7d_network), ALLOCATABLE :: nl(:)
 CHARACTER(len=10), ALLOCATABLE :: vl(:), avl(:), al(:)
 CHARACTER(len=23) :: start_date, end_date
 TYPE(datetime) :: s_d, e_d
-INTEGER :: iun, ier, i, j, n, nc
+INTEGER :: iun, ier, i, j, n, nc, ninput
 INTEGER,POINTER :: w_s(:), w_e(:)
-TYPE(vol7d) :: v7d, v7d_comp1, v7d_comp2
+TYPE(vol7d) :: v7d, v7dtmp, v7d_comp1, v7d_comp2
 TYPE(vol7d_dballe) :: v7d_dba, v7d_dba_out
 TYPE(vol7d_oraclesim) :: v7d_osim
 CHARACTER(len=32) :: dsn, user, password
@@ -177,7 +177,7 @@ opt = optionparser_new(options, description_msg= &
  &database access info in the form user/password@dsn, &
  &if empty or ''-'', a suitable default is used. &
  &If output-format is of file type, outputfile ''-'' indicates stdout.', &
- usage_msg='v7d_transform [options] inputfile outputfile')
+ usage_msg='v7d_transform [options] inputfile1 [inputfile2...] outputfile')
 
 ! parse options and check for errors
 optind = optionparser_parseoptions(opt)
@@ -186,23 +186,18 @@ IF (optind <= 0) THEN
   CALL EXIT(1)
 ENDIF
 
-IF ( optind <= iargc()) THEN
-  CALL getarg(optind, input_file)
-  optind=optind+1
-ELSE
+! check input/output files
+i = iargc() - optind
+IF (i < 0) THEN
   CALL l4f_category_log(category,L4F_ERROR,'input file missing')
   CALL optionparser_printhelp(opt)
   CALL EXIT(1)
-ENDIF
-
-IF (optind <= iargc()) THEN
-  CALL getarg(optind, output_file)
-  optind=optind+1
-ELSE
+ELSE IF (i < 1) THEN
   CALL l4f_category_log(category,L4F_ERROR,'output file missing')
   CALL optionparser_printhelp(opt)
   CALL EXIT(1)
 ENDIF
+CALL getarg(iargc(), output_file)
 
 ! generate network
 IF (LEN_TRIM(network_list) > 0) THEN
@@ -277,71 +272,78 @@ END DO
 nc = j
 DEALLOCATE(w_s, w_e)
 
-! import data from source
-IF (input_format == 'native') THEN
-  IF (input_file == '-') THEN
-    iun = stdin_unit
-  ELSE
-    iun = getunit()
-    OPEN(iun, file=input_file, form='UNFORMATTED', access='SEQUENTIAL')
-  ENDIF
-  CALL init(v7d, time_definition=0)
-  CALL import(v7d, unit=iun)
-  IF (input_file /= '-') THEN
-    CLOSE(iun)
-  ENDIF
+! import data looping on input files
+CALL init(v7d)
+DO ninput = optind, iargc()-1
+  CALL getarg(ninput, input_file)
+
+  IF (input_format == 'native') THEN
+    IF (input_file == '-') THEN
+      iun = stdin_unit
+    ELSE
+      iun = getunit()
+      OPEN(iun, file=input_file, form='UNFORMATTED', access='SEQUENTIAL')
+    ENDIF
+    CALL init(v7dtmp, time_definition=0)
+    CALL import(v7dtmp, unit=iun)
+    IF (input_file /= '-') THEN
+      CLOSE(iun)
+    ENDIF
 
 #ifdef HAVE_DBALLE
-ELSE IF (input_format == 'BUFR' .OR. input_format == 'CREX') THEN
-  IF (input_file == '-') THEN
-    CALL l4f_category_log(category, L4F_ERROR, &
-     'error in command-line parameters, stdin not supported for'// &
-     TRIM(input_format)//' input format.')
-    CALL EXIT(1)
-  ELSE
-    CALL init(v7d_dba, filename=input_file, FORMAT=input_format, file=.TRUE.)
-    CALL import(v7d_dba)
-    v7d = v7d_dba%vol7d
-    CALL init(v7d_dba%vol7d) ! nullify without deallocating
-  ENDIF
+  ELSE IF (input_format == 'BUFR' .OR. input_format == 'CREX') THEN
+    IF (input_file == '-') THEN
+      CALL l4f_category_log(category, L4F_ERROR, &
+       'error in command-line parameters, stdin not supported for'// &
+       TRIM(input_format)//' input format.')
+      CALL EXIT(1)
+    ELSE
+      CALL init(v7d_dba, filename=input_file, FORMAT=input_format, file=.TRUE.)
+      CALL import(v7d_dba)
+      v7dtmp = v7d_dba%vol7d
+      CALL init(v7d_dba%vol7d) ! nullify without deallocating
+    ENDIF
 
-ELSE IF (input_format == 'dba') THEN
-  IF (.NOT.ALLOCATED(nl) .OR. .NOT.ALLOCATED(vl)) THEN
-    CALL l4f_category_log(category, L4F_ERROR, &
-     'error in command-line parameters, it is necessary to provide --network-list &
-     &and --variable-list with dbAll.e source.')
-    CALL EXIT(1)
-  ENDIF
-  CALL parse_dba_access_info(input_file, dsn, user, password)
-  CALL init(v7d_dba, dsn=dsn, user=user, password=password, file=.FALSE.)
-  CALL import(v7d_dba, vl, nl, timei=s_d, timef=e_d)
-  v7d = v7d_dba%vol7d
-  CALL init(v7d_dba%vol7d) ! nullify without deallocating
+  ELSE IF (input_format == 'dba') THEN
+    IF (.NOT.ALLOCATED(nl) .OR. .NOT.ALLOCATED(vl)) THEN
+      CALL l4f_category_log(category, L4F_ERROR, &
+       'error in command-line parameters, it is necessary to provide --network-list &
+       &and --variable-list with dbAll.e source.')
+      CALL EXIT(1)
+    ENDIF
+    CALL parse_dba_access_info(input_file, dsn, user, password)
+    CALL init(v7d_dba, dsn=dsn, user=user, password=password, file=.FALSE.)
+    CALL import(v7d_dba, vl, nl, timei=s_d, timef=e_d)
+    v7dtmp = v7d_dba%vol7d
+    CALL init(v7d_dba%vol7d) ! nullify without deallocating
 #endif
 
 #ifdef HAVE_ORSIM
-ELSE IF (input_format == 'orsim') THEN
-  IF (.NOT.ALLOCATED(nl) .OR. .NOT.ALLOCATED(vl)) THEN
-    CALL l4f_category_log(category, L4F_ERROR, &
-     'error in command-line parameters, it is necessary to provide --network-list &
-     &and --variable-list with SIM Oracle source.')
-    CALL EXIT(1)
-  ENDIF
-  CALL parse_dba_access_info(input_file, dsn, user, password)
-  CALL init(v7d_osim, dsn=dsn, user=user, password=password, time_definition=0)
-  IF (.NOT.ALLOCATED(avl)) ALLOCATE(avl(0)) ! allocate if missing
-  IF (.NOT.ALLOCATED(al)) ALLOCATE(al(0)) ! allocate if missing
-  CALL IMPORT(v7d_osim, vl, nl, timei=s_d, timef=e_d, anavar=avl, attr=al)
-  v7d = v7d_osim%vol7d
-  CALL init(v7d_osim%vol7d) ! nullify without deallocating
+  ELSE IF (input_format == 'orsim') THEN
+    IF (.NOT.ALLOCATED(nl) .OR. .NOT.ALLOCATED(vl)) THEN
+      CALL l4f_category_log(category, L4F_ERROR, &
+       'error in command-line parameters, it is necessary to provide --network-list &
+       &and --variable-list with SIM Oracle source.')
+      CALL EXIT(1)
+    ENDIF
+    CALL parse_dba_access_info(input_file, dsn, user, password)
+    CALL init(v7d_osim, dsn=dsn, user=user, password=password, time_definition=0)
+    IF (.NOT.ALLOCATED(avl)) ALLOCATE(avl(0)) ! allocate if missing
+    IF (.NOT.ALLOCATED(al)) ALLOCATE(al(0)) ! allocate if missing
+    CALL IMPORT(v7d_osim, vl, nl, timei=s_d, timef=e_d, anavar=avl, attr=al)
+    v7dtmp = v7d_osim%vol7d
+    CALL init(v7d_osim%vol7d) ! nullify without deallocating
 #endif
 
-ELSE
-  CALL l4f_category_log(category, L4F_ERROR, &
-   'error in command-line parameters, format '// &
-   TRIM(input_format)//' in --input-format not valid or not supported.')
-  CALL EXIT(1)
-ENDIF
+  ELSE
+    CALL l4f_category_log(category, L4F_ERROR, &
+     'error in command-line parameters, format '// &
+     TRIM(input_format)//' in --input-format not valid or not supported.')
+    CALL EXIT(1)
+  ENDIF
+
+  CALL vol7d_merge(v7d, v7dtmp) ! smart merge in v7d
+ENDDO
 
 ! displaying/processing
 #ifdef HAVE_DBALLE

@@ -46,7 +46,7 @@ options(1) = op_option_new('a', 'lon', lon, 0.D0, help= &
 options(2) = op_option_new('b', 'lat', lat, 45.D0, help= &
  'latitude of single interpolation point, alternative to --ana-file')
 options(3) = op_option_new('c', 'ana-file', ana_file, help= &
- 'file with coordinates of points to interpolate, alternative to --ana-file')
+ 'file with coordinates of points to interpolate, alternative to --lon, --lat')
 options(4) = op_option_new(' ', 'ana-format', ana_format, &
 #ifdef HAVE_DBALLE
 'BUFR', &
