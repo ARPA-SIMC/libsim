@@ -25,7 +25,7 @@ CHARACTER(len=23) :: start_date, end_date
 TYPE(datetime) :: s_d, e_d
 INTEGER :: iun, ier, i, j, n, nc, ninput
 INTEGER,POINTER :: w_s(:), w_e(:)
-TYPE(vol7d) :: v7d, v7dtmp, v7d_comp1, v7d_comp2
+TYPE(vol7d) :: v7d, v7dtmp, v7d_comp1, v7d_comp2, v7d_comp3
 TYPE(vol7d_dballe) :: v7d_dba, v7d_dba_out
 TYPE(vol7d_oraclesim) :: v7d_osim
 CHARACTER(len=32) :: dsn, user, password
@@ -34,7 +34,7 @@ CHARACTER(len=512):: a_name
 INTEGER :: category
 
 ! for computing
-LOGICAL :: comp_regularize, comp_average, comp_cumulate
+LOGICAL :: comp_regularize, comp_average, comp_cumulate, comp_discard
 CHARACTER(len=23) :: comp_interval, comp_start
 TYPE(timedelta) :: c_i
 TYPE(datetime) :: c_s
@@ -114,8 +114,10 @@ options(15) = op_option_new(' ', 'comp-start', comp_start, '', help= &
  'start of regularization, average or cumulation period, an empty value means &
  &take the initial period of the available data; the format is the same as for &
  &--start-date parameter')
-
-
+options(11) = op_option_new(' ', 'comp-discard', comp_discard, help= &
+ 'discard the data that are not the result of the cumulation and/or averaging &
+ &processes and keep only the result of the computations')
+comp_discard = .FALSE.
 
 ! options for defining output
 !options(20) = op_option_new('o', 'output-file', output_file, '-', help= &
@@ -363,17 +365,24 @@ IF (comp_average .OR. comp_cumulate) THEN
   CALL init(v7d_comp1, time_definition=v7d%time_definition)
   CALL init(v7d_comp2, time_definition=v7d%time_definition)
   IF (comp_average) THEN
-    CALL vol7d_average(v7d, v7d_comp1, c_i, c_s)
+    CALL vol7d_average(v7d, v7d_comp1, c_i, c_s, full_steps=.TRUE., other=v7d_comp3)
+    CALL delete(v7d)
+    v7d = v7d_comp3
   ENDIF
   IF (comp_cumulate) THEN
-    CALL vol7d_cumulate(v7d, v7d_comp2, c_i, c_s, full_steps=.TRUE.)
+    CALL vol7d_cumulate(v7d, v7d_comp2, c_i, c_s, full_steps=.TRUE., other=v7d_comp3)
+    CALL delete(v7d)
+    v7d = v7d_comp3
   ENDIF
-! merge the tho computed fields and throw away the rest
-! to be improved in vol7d_compute
-  CALL delete(v7d)
-  CALL vol7d_append(v7d_comp1, v7d_comp2, sort=.TRUE.)
-  v7d = v7d_comp1
-  CALL delete(v7d_comp2)
+! merge the tho computed fields
+  IF (comp_discard) THEN ! the user is not interested in the other volume
+    CALL delete(v7d)
+    v7d = v7d_comp1
+    CALL vol7d_merge(v7d, v7d_comp2, sort=.TRUE.)
+  ELSE
+    CALL vol7d_merge(v7d, v7d_comp1, sort=.TRUE.)
+    CALL vol7d_merge(v7d, v7d_comp2, sort=.TRUE.)
+  ENDIF
 ENDIF
 
 ! output

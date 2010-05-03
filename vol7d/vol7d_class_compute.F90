@@ -54,20 +54,27 @@ CONTAINS
 !! \todo il parametro \a this è dichiarato \a INOUT perché la vol7d_alloc_vol
 !! può modificarlo, bisognerebbe implementare una vol7d_check_vol che restituisca
 !! errore anziché usare la vol7d_alloc_vol.
-SUBROUTINE vol7d_cumulate(this, that, step, start, full_steps, frac_valid)
+SUBROUTINE vol7d_cumulate(this, that, step, start, full_steps, frac_valid, other)
 TYPE(vol7d),INTENT(inout) :: this !< oggetto da cumulare, non viene modificato dal metodo
 TYPE(vol7d),INTENT(out) :: that !< oggetto contenente, in uscita, i valori cumulati
 TYPE(timedelta),INTENT(in) :: step !< intervallo di cumulazione
 TYPE(datetime),INTENT(in),OPTIONAL :: start !< inizio del periodo di cumulazione
 LOGICAL,INTENT(in),OPTIONAL :: full_steps !< if \a .TRUE. cumulate only on intervals starting at a forecast time modulo \a step (default is to cumulate on all possible combinations of intervals)
 REAL,INTENT(in),OPTIONAL :: frac_valid !< frazione minima di dati validi necessaria per considerare accettabile un dato cumulato, default=1
+TYPE(vol7d),INTENT(inout),OPTIONAL :: other !< opional volume that, on exit, is going to be merged with the data that did not contribute to the accumulation computation
 
-TYPE(vol7d) :: thatobs, thatfcst, v7dtmp
+TYPE(vol7d) :: that1, that2, other1
 
-CALL vol7d_extend_cumavg_sum(this, thatobs, 1, step, start, frac_valid)!, other=v7dtmp)
-CALL vol7d_extend_cumavg_diff(this, thatfcst, 1, step, full_steps)!, other=v7dtmp)
-CALL vol7d_merge(thatobs, thatfcst, sort=.TRUE.)
-that = thatobs
+IF (PRESENT(other)) THEN
+  CALL vol7d_extend_cumavg_sum(this, that1, 1, step, start, frac_valid, other=other1)
+  CALL vol7d_extend_cumavg_diff(other1, that2, 1, step, full_steps, other=other)
+ELSE
+  CALL vol7d_extend_cumavg_sum(this, that1, 1, step, start, frac_valid)
+  CALL vol7d_extend_cumavg_diff(this, that2, 1, step, full_steps)
+ENDIF
+
+CALL vol7d_merge(that1, that2, sort=.TRUE.)
+that = that1
 
 END SUBROUTINE vol7d_cumulate
 
@@ -81,24 +88,34 @@ END SUBROUTINE vol7d_cumulate
 !! \todo il parametro \a this è dichiarato \a INOUT perché la vol7d_alloc_vol
 !! può modificarlo, bisognerebbe implementare una vol7d_check_vol che restituisca
 !! errore anziché usare la vol7d_alloc_vol.
-SUBROUTINE vol7d_average(this, that, step, start, full_steps, frac_valid)
+SUBROUTINE vol7d_average(this, that, step, start, full_steps, frac_valid, other)
 TYPE(vol7d),INTENT(inout) :: this !< oggetto da mediare, non viene modificato dal metodo
 TYPE(vol7d),INTENT(out) :: that !< oggetto contenente, in uscita, i valori mediati
 TYPE(timedelta),INTENT(in) :: step !< intervallo di media
 TYPE(datetime),INTENT(in),OPTIONAL :: start !< inizio del periodo di media
 LOGICAL,INTENT(in),OPTIONAL :: full_steps !< if \a .TRUE. average only on intervals starting at a forecast time modulo \a step (default is to average on all possible combinations of intervals)
 REAL,INTENT(in),OPTIONAL :: frac_valid !< frazione minima di dati validi necessaria per considerare accettabile un dato mediato, default=1
+TYPE(vol7d),INTENT(inout),OPTIONAL :: other !< opional volume that, on exit, is going to be merged with the data that did not contribute to the average computation
 
-TYPE(vol7d) :: thatobs, thatfcst, v7dtmp
+TYPE(vol7d) :: that1, that2, other1
 
-CALL vol7d_extend_cumavg_sum(this, thatobs, 0, step, start, frac_valid)!, other=v7dtmp)
-CALL vol7d_extend_cumavg_diff(this, thatfcst, 0, step, full_steps)!, other=v7dtmp)
-CALL vol7d_merge(thatobs, thatfcst, sort=.TRUE.)
-that = thatobs
+IF (PRESENT(other)) THEN
+  CALL vol7d_extend_cumavg_sum(this, that1, 0, step, start, frac_valid, other=other1)
+  CALL vol7d_extend_cumavg_diff(other1, that2, 0, step, full_steps, other=other)
+ELSE
+  CALL vol7d_extend_cumavg_sum(this, that1, 0, step, start, frac_valid)
+  CALL vol7d_extend_cumavg_diff(this, that2, 0, step, full_steps)
+ENDIF
+
+CALL vol7d_merge(that1, that2, sort=.TRUE.)
+that = that1
 
 END SUBROUTINE vol7d_average
 
 
+! Statistically process the data having time range indicator =tri
+! recomputing the values over an interval =step by aggregating data
+! statistically processed over shorter periods.
 SUBROUTINE vol7d_extend_cumavg_sum(this, that, tri, step, start, frac_valid, other)
 TYPE(vol7d),INTENT(inout) :: this
 TYPE(vol7d),INTENT(out) :: that
@@ -132,7 +149,7 @@ ntr = COUNT(this%timerange(:)%timerange == tri .AND. this%timerange(:)%p2 /= imi
 IF (ntr == 0) THEN
   CALL l4f_log(L4F_WARN, &
    'vol7d_compute, no timeranges suitable for statistical processing by sum')
-  CALL makeother() ! a useless copy is done here, improve!?
+  CALL makeother()
   RETURN
 ENDIF
 ! cleanup the original volume
@@ -316,6 +333,9 @@ END SUBROUTINE makeother
 END SUBROUTINE vol7d_extend_cumavg_sum
 
 
+! Statistically process the data having time range indicator =tri
+! recomputing the values over an interval =step by disaggregating data
+! statistically processed over longer periods.
 SUBROUTINE vol7d_extend_cumavg_diff(this, that, tri, step, full_steps, other)
 TYPE(vol7d),INTENT(inout) :: this
 TYPE(vol7d),INTENT(out) :: that
@@ -397,7 +417,7 @@ CALL vol7d_alloc(that, ntimerange=ndtr)
 that%timerange(:) = pack_distinct(tr, ndtr, back=.TRUE.)
 DEALLOCATE(tr)
 ! merge with template
-CALL vol7d_merge(that, v7dtmp, sort=.TRUE.)
+CALL vol7d_merge(that, v7dtmp)
 
 ! ALLOCATE(map_tr(ndtr,2)) ! 1-1 mapping, faster but less general
 ALLOCATE(map_tr(SIZE(this%timerange),SIZE(this%timerange)))

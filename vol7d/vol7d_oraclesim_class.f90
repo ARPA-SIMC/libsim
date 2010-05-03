@@ -6,37 +6,63 @@
 !! vol7d_class::vol7d.
 !!
 !! Attenzione, dal 23/09/2009 circa, la rete è identificata dal nome e
-!! non più da un codice numerico; il nome deve essere quello esatto
-!! (maiuscole/minuscole) inserito nel db Oracle, per riferimento, ecco
-!! riportata la tabella di conversione:
+!! non più da un codice numerico; il nome deve essere quello inserito
+!! nel db Oracle ma, per il momento, senza distinzione tra lettere
+!! maiuscole e minuscole. Per riferimento, ecco riportata una tabella
+!! di conversione che potrebbe non essere completa:
 !!
-!! <TABLE><TR><TD>Id</TD><TD>Nome</TD><TD>Id</TD><TD>Nome</TD></TR>
-!! <TR><TD> 1</TD><TD>SYNOP    </TD><TD>24</TD><TD>LILOKM   </TD></TR>
-!! <TR><TD> 2</TD><TD>TEMP     </TD><TD>25</TD><TD>PILOKM   </TD></TR>
-!! <TR><TD> 3</TD><TD>BOA      </TD><TD>26</TD><TD>TRLOKM   </TD></TR>
-!! <TR><TD> 4</TD><TD>IDRMGI   </TD><TD>27</TD><TD>VELOKM   </TD></TR>
-!! <TR><TD> 5</TD><TD>CER      </TD><TD>28</TD><TD>SALOKM   </TD></TR>
-!! <TR><TD> 6</TD><TD>UMSUOL   </TD><TD>29</TD><TD>LOLOKM   </TD></TR>
-!! <TR><TD> 7</TD><TD>CRO      </TD><TD>30</TD><TD>MALOKM   </TD></TR>
-!! <TR><TD> 8</TD><TD>CAELAMI  </TD><TD>31</TD><TD>FRLOKM   </TD></TR>
-!! <TR><TD> 9</TD><TD>ETG      </TD><TD>32</TD><TD>BZLOKM   </TD></TR>
-!! <TR><TD>10</TD><TD>METAR    </TD><TD>33</TD><TD>PO267    </TD></TR>
-!! <TR><TD>11</TD><TD>LOCALI   </TD><TD>35</TD><TD>CLIMAT   </TD></TR>
-!! <TR><TD>12</TD><TD>FIDUTO   </TD><TD>36</TD><TD>GIAS     </TD></TR>
-!! <TR><TD>13</TD><TD>AGRMET   </TD><TD>37</TD><TD>IDROST   </TD></TR>
-!! <TR><TD>14</TD><TD>POLLINI  </TD><TD>38</TD><TD>VMSTAT   </TD></TR>
-!! <TR><TD>15</TD><TD>URBANE   </TD><TD>39</TD><TD>IDRMEC   </TD></TR>
-!! <TR><TD>16</TD><TD>NURBAN   </TD><TD>40</TD><TD>CLINUR   </TD></TR>
-!! <TR><TD>17</TD><TD>FIDUMA   </TD><TD>41</TD><TD>IDRSTA   </TD></TR>
-!! <TR><TD>18</TD><TD>FIDUPO   </TD><TD>42</TD><TD>SYREP    </TD></TR>
-!! <TR><TD>19</TD><TD>ICIRFE   </TD><TD>43</TD><TD>FREATI   </TD></TR>
-!! <TR><TD>20</TD><TD>SIMNBO   </TD><TD>44</TD><TD>COREMO   </TD></TR>
-!! <TR><TD>21</TD><TD>SIMNPR   </TD><TD>45</TD><TD>IDRTL9   </TD></TR>
-!! <TR><TD>22</TD><TD>SPDSRA   </TD><TD>46</TD><TD>FIDUVE   </TD></TR>
-!! <TR><TD>23</TD><TD>EMLOKM   </TD><TD>47</TD><TD>FIDULI   </TD></TR>
+!! <TABLE><TR><TD>Id</TD><TD>Nome</TD><TD>Id</TD><TD>Nome</TD>
+!! <TD>Id</TD><TD>Nome</TD><TD>Id</TD><TD>Nome</TD></TR>
+!! <TR><TD> 1</TD><TD>SYNOP    </TD>
+!! <TD> 2</TD><TD>TEMP     </TD>
+!! <TD> 3</TD><TD>BOA      </TD>
+!! <TD> 4</TD><TD>IDRMGI   </TD></TR>
+!! <TR><TD> 5</TD><TD>CER      </TD>
+!! <TD> 6</TD><TD>UMSUOL   </TD>
+!! <TD> 7</TD><TD>CRO      </TD>
+!! <TD> 8</TD><TD>CAELAMI  </TD></TR>
+!! <TR><TD> 9</TD><TD>ETG      </TD>
+!! <TD>10</TD><TD>METAR    </TD>
+!! <TD>11</TD><TD>LOCALI   </TD>
+!! <TD>12</TD><TD>FIDUTO   </TD></TR>
+!! <TR><TD>13</TD><TD>AGRMET   </TD>
+!! <TD>14</TD><TD>POLLINI  </TD>
+!! <TD>15</TD><TD>URBANE   </TD>
+!! <TD>16</TD><TD>NURBAN   </TD></TR>
+!! <TR><TD>17</TD><TD>FIDUMA   </TD>
+!! <TD>18</TD><TD>FIDUPO   </TD>
+!! <TD>19</TD><TD>ICIRFE   </TD>
+!! <TD>20</TD><TD>SIMNBO   </TD></TR>
+!! <TR><TD>21</TD><TD>SIMNPR   </TD>
+!! <TD>22</TD><TD>SPDSRA   </TD>
+!! <TD>23</TD><TD>EMLOKM   </TD>
+!! <TD>24</TD><TD>LILOKM   </TD></TR>
+!! <TR><TD>25</TD><TD>PILOKM   </TD>
+!! <TD>26</TD><TD>TRLOKM   </TD>
+!! <TD>27</TD><TD>VELOKM   </TD>
+!! <TD>28</TD><TD>SALOKM   </TD></TR>
+!! <TR><TD>29</TD><TD>LOLOKM   </TD>
+!! <TD>30</TD><TD>MALOKM   </TD>
+!! <TD>31</TD><TD>FRLOKM   </TD>
+!! <TD>32</TD><TD>BZLOKM   </TD></TR>
+!! <TR><TD>33</TD><TD>PO267    </TD>
+!! <TD>35</TD><TD>CLIMAT   </TD>
+!! <TD>36</TD><TD>GIAS     </TD>
+!! <TD>37</TD><TD>IDROST   </TD></TR>
+!! <TR><TD>38</TD><TD>VMSTAT   </TD>
+!! <TD>39</TD><TD>IDRMEC   </TD>
+!! <TD>40</TD><TD>CLINUR   </TD>
+!! <TD>41</TD><TD>IDRSTA   </TD></TR>
+!! <TR><TD>42</TD><TD>SYREP    </TD>
+!! <TD>43</TD><TD>FREATI   </TD>
+!! <TD>44</TD><TD>COREMO   </TD>
+!! <TD>45</TD><TD>IDRTL9   </TD></TR>
+!! <TR><TD>46</TD><TD>FIDUVE   </TD>
+!! <TD>47</TD><TD>FIDULI   </TD>
 !! </TABLE>
 !!
-!! \todo estrarre l'anagrafica al volo  direttamente da Oracle.
+!! \todo estrarre la maggior quantità di informazione possibile sulle
+!! variabili direttamente da Oracle.
 !!
 !! \ingroup vol7d
 MODULE vol7d_oraclesim_class
@@ -228,7 +254,7 @@ TYPE(vol7d_timerange),INTENT(in),OPTIONAL :: timerange !< estrae solo i dati con
 CHARACTER(len=*),INTENT(in),OPTIONAL :: anavar(:) !< lista delle variabili di anagrafica da importare, codice alfanumerico della tabella B locale, se non fornito non ne importa nessuna
 CHARACTER(len=*),INTENT(in),OPTIONAL :: attr(:) !< lista degli attributi delle variabili da importare, codice alfanumerico della tabella B locale, se non fornito non ne importa nessuno
 CHARACTER(len=*),INTENT(in),OPTIONAL :: anaattr(:) !< lista degli attributi delle variabili di anagrafica da importare, codice alfanumerico della tabella B locale, se non fornito non ne importa nessuno
-TYPE(vol7d_network),INTENT(in),OPTIONAL :: set_network !< se fornito, collassa tutte le reti nell'unica rete indicata, eliminando le stazioni comuni a reti diverse
+TYPE(vol7d_network),INTENT(in),OPTIONAL :: set_network !< se fornito, collassa tutte le reti nell'unica rete indicata, eliminando le eventuali stazioni comuni a reti diverse
 
 INTEGER :: i
 
@@ -660,7 +686,7 @@ SUBROUTINE vol7d_oraclesim_importana(this, network, anavar, set_network)
 TYPE(vol7d_oraclesim),INTENT(inout) :: this !< oggetto in cui importare l'anagrafica
 TYPE(vol7d_network),INTENT(in) :: network(:) !< rete di cui estrarre l'anagrafica, inizializzata con il nome che ha nell'archivio SIM
 CHARACTER(len=*),INTENT(in),OPTIONAL :: anavar(:) !< lista delle variabili di anagrafica da importare, codice alfanumerico della tabella B locale, se non fornito non ne importa nessuna
-TYPE(vol7d_network),INTENT(in),OPTIONAL :: set_network !< se fornito, collassa tutte le reti nell'unica rete indicata, eliminando le stazioni comuni a reti diverse
+TYPE(vol7d_network),INTENT(in),OPTIONAL :: set_network !< se fornito, collassa tutte le reti nell'unica rete indicata, eliminando le eventuali stazioni comuni a reti diverse
 
 TYPE(vol7d) :: v7dtmpana
 INTEGER :: i, j, nvout, netid
