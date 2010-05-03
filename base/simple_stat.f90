@@ -363,16 +363,17 @@ END FUNCTION stat_percentiler
 !> Compute a set of percentiles for a double precision random variable.
 !! The result is a vector of the same size as the vector of percentile
 !! values provided. Percentiles are computed by linear interpolation.
-FUNCTION stat_percentiled(sample, perc_vals, mask, nomiss) RESULT(percentile)
+FUNCTION stat_percentiled(sample, perc_vals, mask, nomiss) RESULT(percentile) !, bin
 DOUBLE PRECISION, INTENT(in) :: sample(:) !< the variable for which percentiles are to be computed
 DOUBLE PRECISION, INTENT(in) :: perc_vals(:) !< the percentiles values to be computed, between 0. and 100.
 LOGICAL, OPTIONAL, INTENT(in) :: mask(:) !< additional mask to be and'ed with missing values
 LOGICAL, OPTIONAL, INTENT(in) :: nomiss
+!INTEGER, OPTIONAL, INTENT(out) :: bin(:) !< optionally return the number of points of sample included between percentile i and i+1, works only if \a perc_vals(:) is in ascending order, should be dimensioned to \a SIZE(perc_vals())-1
 
 DOUBLE PRECISION :: percentile(SIZE(perc_vals))
 
 DOUBLE PRECISION :: lsample(SIZE(sample)), v, rindex
-INTEGER :: sample_count, i, j, iindex
+INTEGER :: sample_count, i, j, iindex, oindex
 LOGICAL :: sample_mask(SIZE(sample))
 
 percentile(:) = dmiss
@@ -405,6 +406,10 @@ DO j = 1, SIZE(perc_vals)
 ! compute linearly interpolated percentile
     percentile(j) = lsample(iindex)*(REAL(iindex+1, kind=KIND(rindex))-rindex) &
      + lsample(iindex+1)*(rindex-REAL(iindex, kind=KIND(rindex)))
+!    IF (PRESENT(bin) .AND. j > 1) THEN
+!      bin(j-1) = iindex - oindex
+!    ENDIF
+    oindex = iindex
   ELSE
     percentile(j) = dmiss
   ENDIF
