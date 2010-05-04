@@ -1,5 +1,5 @@
 PROGRAM vg6d_subarea
-
+#include "config.h"
 use gridinfo_class
 use grid_class
 use grid_transform_class
@@ -29,10 +29,10 @@ doubleprecision :: lon_min, lon_max, lat_min, lat_max
 doubleprecision :: latitude_south_pole,longitude_south_pole,angle_rotation
 character(len=80) :: type,trans_type,sub_type
 CHARACTER(len=3) :: set_scmode
-LOGICAL :: ldisplay
+LOGICAL :: version, ldisplay
 
 doubleprecision ::x,y,lon,lat
-type(op_option) :: options(30) ! remember to update dimension when adding options
+type(op_option) :: options(40) ! remember to update dimension when adding options
 type(optionparser) :: opt
 integer :: iargc
 
@@ -116,8 +116,12 @@ options(25) = op_option_new(' ', 'display', ldisplay, help= &
  &with output on stdout.')
 ldisplay = .FALSE.
 
-options(30) = op_option_help_new('h', 'help', help= &
- 'show an help message')
+! help options
+options(39) = op_option_help_new('h', 'help', help= &
+ 'show an help message and exit')
+options(40) = op_option_new(' ', 'version', version, help= &
+ 'show version and exit')
+version = .FALSE.
 
 ! define the option parser
 opt = optionparser_new(options, description_msg= &
@@ -130,6 +134,11 @@ optind = optionparser_parseoptions(opt)
 IF (optind <= 0) THEN
   CALL l4f_category_log(category,L4F_ERROR,'error in command-line parameters')
   CALL EXIT(1)
+ENDIF
+
+IF (version) THEN
+  WRITE(*,'(A,1X,A)')'vg6d_subarea',VERSION
+  CALL exit(0)
 ENDIF
 
 if ( optind <= iargc()) then

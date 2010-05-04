@@ -27,6 +27,7 @@ TYPE(vol7d_dballe) :: v7d_ana, v7d_dba_out
 doubleprecision :: lon, lat
 character(len=80) :: output_template,trans_type,sub_type
 INTEGER :: output_td
+LOGICAL :: version
 
 !questa chiamata prende dal launcher il nome univoco
 call l4f_launcher(a_name,a_name_force="getpoint")
@@ -85,9 +86,13 @@ options(22) = op_option_new(' ', 'output-td', output_td, 1, help= &
  'time definition for output vol7d volume, 0 for reference time (more suitable for &
  &presenting forecast data) and 1 for verification time (more suitable for &
  &comparing forecasts with observations)')
-! help option
-options(40) = op_option_help_new('h', 'help', help= &
- 'show an help message')
+
+! help options
+options(39) = op_option_help_new('h', 'help', help= &
+ 'show an help message and exit')
+options(40) = op_option_new(' ', 'version', version, help= &
+ 'show version and exit')
+version = .FALSE.
 
 ! define the option parser
 opt = optionparser_new(options, description_msg= &
@@ -103,6 +108,11 @@ optind = optionparser_parseoptions(opt)
 IF (optind <= 0) THEN
   CALL l4f_category_log(category,L4F_ERROR,'error in command-line parameters')
   CALL EXIT(1)
+ENDIF
+
+IF (version) THEN
+  WRITE(*,'(A,1X,A)')'vg6d_getpoint',VERSION
+  CALL exit(0)
 ENDIF
 
 if (optind <= iargc()) then

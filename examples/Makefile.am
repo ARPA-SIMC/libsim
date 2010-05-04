@@ -152,10 +152,21 @@ bin_PROGRAMS += vg6d_getpoint vg6d_subarea vg6d_transform
 vg6d_getpoint_SOURCES = vg6d_getpoint.F90
 vg6d_getpoint_LDADD = ../volgrid6d/libsim_volgrid6d.la  ../vol7d/libsim_vol7d.la ../base/libsim_base.la ../log4fortran/liblog4fortran.la
 
-vg6d_subarea_SOURCES = vg6d_subarea.f90
+vg6d_subarea_SOURCES = vg6d_subarea.F90
 vg6d_subarea_LDADD = ../volgrid6d/libsim_volgrid6d.la ../base/libsim_base.la ../vol7d/libsim_vol7d.la ../log4fortran/liblog4fortran.la
 
-vg6d_transform_SOURCES = vg6d_transform.f90
+vg6d_transform_SOURCES = vg6d_transform.F90
 vg6d_transform_LDADD = ../volgrid6d/libsim_volgrid6d.la ../base/libsim_base.la ../vol7d/libsim_vol7d.la ../log4fortran/liblog4fortran.la
 endif
 
+if HELP2MAN
+
+man_MANS = v7d_transform.1
+if GRIBAPI
+man_MANS += vg6d_getpoint.1 vg6d_subarea.1 vg6d_transform.1
+endif
+
+%.1: %
+	help2man --name=$< --section=1 --no-info --output=$@ ./$<
+
+endif

@@ -1,5 +1,5 @@
-program volgrid6dtransform
-
+PROGRAM vg6d_transform
+#include "config.h"
 use log4fortran
 use volgrid6d_class
 use grid_class
@@ -25,9 +25,10 @@ character(len=80) :: type,trans_type,sub_type
 
 doubleprecision ::x,y,lon,lat
 logical :: c2agrid
-type(op_option) :: options(21) ! remember to update dimension when adding options
+type(op_option) :: options(30) ! remember to update dimension when adding options
 type(optionparser) :: opt
 integer :: iargc
+LOGICAL :: version
 
 !questa chiamata prende dal launcher il nome univoco
 call l4f_launcher(a_name,a_name_force="volgrid6dtransform")
@@ -38,9 +39,9 @@ ier=l4f_init()
 !imposta a_name
 category=l4f_category_get(a_name//".main")
 
-call l4f_category_log(category,L4F_INFO,"inizio")
-
 ! define command-line options
+CALL op_option_nullify(options)
+
 options(1) = op_option_new('v', 'trans-type', trans_type, 'none', help= &
  'transformation type: ''inter'' for interpolation, ''zoom'' for zooming, &
  &''boxregrid'' for resolution reduction, ''none'' for no operation')
@@ -91,8 +92,12 @@ options(19) = op_option_new('e', 'a-grid', c2agrid, help= &
 options(20) = op_option_new('t', 'component-flag', component_flag, &
  0, help='wind component flag in interpolated grid (0/1)')
 
-options(21) = op_option_help_new('h', 'help', help= &
- 'show an help message')
+! help options
+options(29) = op_option_help_new('h', 'help', help= &
+ 'show an help message and exit')
+options(30) = op_option_new(' ', 'version', version, help= &
+ 'show version and exit')
+version = .FALSE.
 
 ! define the option parser
 opt = optionparser_new(options, description_msg= &
@@ -110,6 +115,11 @@ optind = optionparser_parseoptions(opt)
 IF (optind <= 0) THEN
   CALL l4f_category_log(category,L4F_ERROR,'error in command-line parameters')
   CALL EXIT(1)
+ENDIF
+
+IF (version) THEN
+  WRITE(*,'(A,1X,A)')'vg6d_transform',VERSION
+  CALL exit(0)
 ENDIF
 
 if ( optind <= iargc()) then
@@ -199,5 +209,4 @@ end if
 call l4f_category_delete(category)
 ier=l4f_fini()
 
-end program volgrid6dtransform
-
+END PROGRAM vg6d_transform

@@ -13,7 +13,7 @@ USE geo_coord_class
 !USE ISO_FORTRAN_ENV
 IMPLICIT NONE
 
-TYPE(op_option) :: options(40) ! remember to update dimension when adding options
+TYPE(op_option) :: options(50) ! remember to update dimension when adding options
 TYPE(optionparser) :: opt
 CHARACTER(len=8) :: input_format, output_format
 CHARACTER(len=512) :: input_file, output_file, network_list, variable_list, &
@@ -29,7 +29,7 @@ TYPE(vol7d) :: v7d, v7dtmp, v7d_comp1, v7d_comp2, v7d_comp3
 TYPE(vol7d_dballe) :: v7d_dba, v7d_dba_out
 TYPE(vol7d_oraclesim) :: v7d_osim
 CHARACTER(len=32) :: dsn, user, password
-LOGICAL :: ldisplay
+LOGICAL :: version, ldisplay
 CHARACTER(len=512):: a_name
 INTEGER :: category
 
@@ -155,9 +155,13 @@ options(35) = op_option_new(' ', 'csv-norescale', csv_no_rescale, help= &
  'do not rescale in output integer variables according to their scale factor')
 csv_no_rescale = .FALSE.
 
-! help option
-options(40) = op_option_help_new('h', 'help', help= &
- 'show an help message')
+! help options
+options(49) = op_option_help_new('h', 'help', help= &
+ 'show an help message and exit')
+options(50) = op_option_new(' ', 'version', version, help= &
+ 'show version and exit')
+version = .FALSE.
+
 
 ! define the option parser
 opt = optionparser_new(options, description_msg= &
@@ -186,6 +190,11 @@ optind = optionparser_parseoptions(opt)
 IF (optind <= 0) THEN
   CALL l4f_category_log(category,L4F_ERROR,'error in command-line parameters')
   CALL EXIT(1)
+ENDIF
+
+IF (version) THEN
+  WRITE(*,'(A,1X,A)')'v7d_transform',VERSION
+  CALL exit(0)
 ENDIF
 
 ! check input/output files
