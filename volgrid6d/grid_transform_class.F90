@@ -142,6 +142,11 @@ TYPE vertint
   TYPE(vol7d_level) :: output_levtype ! type of vertical level of output data (only type of first and second surface are used, level values are ignored)
 END TYPE vertint
 
+!!! To do ......
+TYPE metamorphosis
+  CHARACTER(len=80) :: sub_type ! subtype of transformation, can be \c 'linear'
+END TYPE metamorphosis
+
 !> This object defines the type of transformation to be applied.
 !! It does not carry specific information about the grid to which it
 !! will be applied, so the same instance can be reused for
@@ -154,6 +159,7 @@ TYPE transform_def
   type(boxregrid) :: boxregrid ! boxregrid specification
   type(inter) :: inter ! interpolation specification
   type(vertint) :: vertint ! vertical interpolation specification
+  type(metamorphosis) :: metamorphosis ! object metamorphosis (to do !!!)
   integer :: time_definition ! time definition for interpolating to sparse points
   integer :: category ! category for log4fortran
 
@@ -283,6 +289,8 @@ call optio(external,this%inter%near%external)
 call optio(external,this%inter%bilin%external)
 call optio(external,this%inter%linear%external)
 
+if (trans_type == "metamorphosis") call optio(sub_type,this%metamorphosis%sub_type)
+
 
 IF (this%trans_type == 'zoom') THEN
 
@@ -348,6 +356,7 @@ IF (this%trans_type == 'zoom') THEN
     CALL raise_fatal_error()
 
   end if
+
 
 
 ELSE IF (this%trans_type == 'boxregrid') THEN
@@ -434,6 +443,17 @@ ELSE IF (this%trans_type == 'vertint') THEN
      'vertint parameter output_levtype not provided')
     CALL raise_fatal_error()
   ENDIF
+
+ELSE IF (this%trans_type == 'metamorphosis') THEN
+
+  if (this%metamorphosis%sub_type == 'all')then
+! nothing to do here
+  else
+    CALL l4f_category_log(this%category,L4F_ERROR,'metamorphosis: sub_type '// &
+     TRIM(this%metamorphosis%sub_type)//' is wrong')
+    CALL raise_fatal_error()
+  endif
+
 
 ELSE
 
@@ -733,13 +753,13 @@ SUBROUTINE grid_transform_grid_vol7d_init(this,trans,in,v7d,categoryappend)
 TYPE(grid_transform),INTENT(out) :: this !< grid_transformation object
 TYPE(transform_def),INTENT(in) :: trans !< transformation object
 TYPE(griddim_def),INTENT(in) :: in !< griddim object to transform
-TYPE(vol7d),INTENT(in) :: v7d !< vol7d object with the coordinates of the sparse point to be used as transformation target
+TYPE(vol7d),INTENT(inout) :: v7d !< vol7d object with the coordinates of the sparse point to be used as transformation target
 character(len=*),INTENT(in),OPTIONAL :: categoryappend !< append this suffix to log4fortran namespace category
 
 INTEGER :: nx, ny, i, j
 DOUBLE PRECISION :: lon_min, lon_max, lat_min, lat_max, steplon, steplat,lon_min_new, lat_min_new
 doubleprecision,allocatable :: lon(:),lat(:)
-
+integer :: ix,iy
 character(len=512) :: a_name
 
 call l4f_launcher(a_name,a_name_append=trim(subcategory)//"."//trim(optio_c(categoryappend,255)))
@@ -802,6 +822,44 @@ IF (this%trans%trans_type == 'inter') THEN
     ENDIF
 
     DEALLOCATE(lon,lat)
+
+  ELSE
+
+    CALL l4f_category_log(this%category,L4F_WARN, &
+     'init_grid_v7d_transform inter sub_type '//TRIM(this%trans%inter%sub_type) &
+     //' not supported')
+    
+  ENDIF
+
+
+else IF (this%trans%trans_type == 'metamorphosis') THEN
+
+  IF (this%trans%inter%sub_type == 'all' ) THEN
+
+    CALL get_val(in, nx=nx, ny=ny)
+    this%innx=nx
+    this%inny=ny
+
+    this%outnx=SIZE(v7d%ana)
+    this%outny=1
+
+    if (this%innx * this%inny /=  this%outnx * this%outny ) then
+      CALL l4f_category_log(this%category,L4F_ERROR, &
+       'init_grid_v7d_transform metamorphosis inconsistent dimension in and out '//&
+       trim(to_char(this%innx * this%inny))//"  /=  "//trim(to_char( this%outnx * this%outny)))
+      call raise_fatal_error('init_grid_v7d_transform metamorphosis inconsistent dimension in and out '//&
+       trim(to_char(this%innx * this%inny))//"  /=  "//trim(to_char( this%outnx * this%outny)))
+
+    end if
+
+    ALLOCATE(this%inter_x(this%innx,this%inny),this%inter_y(this%innx,this%inny))
+    CALL griddim_gen_coord(in, this%inter_x, this%inter_y)
+
+    do ix=1,this%innx
+      do iy=1,this%inny
+        CALL init(v7d%ana((iy-1)*this%innx+ix)%coord,lon=this%inter_x(ix,iy),lat=this%inter_y(ix,iy))
+      end do
+    end do
 
   ELSE
 
@@ -1165,6 +1223,15 @@ ELSE IF (this%trans%trans_type == 'boxinter') THEN
     ENDDO
 
   ENDIF
+
+
+ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
+
+  IF (this%trans%inter%sub_type == 'all') THEN
+
+    field_out = RESHAPE(field_in ,(/this%outnx,this%outny/))
+
+  end IF
 
 ENDIF
 

@@ -2937,53 +2937,53 @@ call vol7d_alloc_vol (vol7dtmp)
 
 do i =1, nd
 
-   indana = firsttrue(buffer(i)%ana == vol7dtmp%ana)
-   indtime = firsttrue(buffer(i)%time == vol7dtmp%time)
-   indtimerange = firsttrue(buffer(i)%timerange == vol7dtmp%timerange)
-   indlevel = firsttrue(buffer(i)%level == vol7dtmp%level)
-   if (ldegnet)then
-     indnetwork=1
-   else
-     indnetwork = firsttrue(buffer(i)%network == vol7dtmp%network)
-   endif
-   !print *, indana,indtime,indlevel,indtimerange,indnetwork
+  indana = firsttrue(buffer(i)%ana == vol7dtmp%ana)
+  indtime = firsttrue(buffer(i)%time == vol7dtmp%time)
+  indtimerange = firsttrue(buffer(i)%timerange == vol7dtmp%timerange)
+  indlevel = firsttrue(buffer(i)%level == vol7dtmp%level)
+  if (ldegnet)then
+    indnetwork=1
+  else
+    indnetwork = firsttrue(buffer(i)%network == vol7dtmp%network)
+  endif
+  !print *, indana,indtime,indlevel,indtimerange,indnetwork
 
-   if(c_e(buffer(i)%dator))then
-     inddativar = firsttrue(buffer(i)%dativar == vol7dtmp%dativar%r)
-     vol7dtmp%voldatir( &
-      indana,indtime,indlevel,indtimerange,inddativar,indnetwork &
-      ) = buffer(i)%dator
-   end if
+  if(c_e(buffer(i)%dator))then
+    inddativar = firsttrue(buffer(i)%dativar == vol7dtmp%dativar%r)
+    vol7dtmp%voldatir( &
+     indana,indtime,indlevel,indtimerange,inddativar,indnetwork &
+     ) = buffer(i)%dator
+  end if
 
-   if(c_e(buffer(i)%datoi)) then
-     inddativar = firsttrue(buffer(i)%dativar == vol7dtmp%dativar%i)
-     vol7dtmp%voldatii( &
-      indana,indtime,indlevel,indtimerange,inddativar,indnetwork &
-      ) = buffer(i)%datoi
-   end if
+  if(c_e(buffer(i)%datoi)) then
+    inddativar = firsttrue(buffer(i)%dativar == vol7dtmp%dativar%i)
+    vol7dtmp%voldatii( &
+     indana,indtime,indlevel,indtimerange,inddativar,indnetwork &
+     ) = buffer(i)%datoi
+  end if
 
-   if(c_e(buffer(i)%datob)) then
-     inddativar = firsttrue(buffer(i)%dativar == vol7dtmp%dativar%b)
-     vol7dtmp%voldatib( &
-      indana,indtime,indlevel,indtimerange,inddativar,indnetwork &
-      ) = buffer(i)%datob
-   end if
+  if(c_e(buffer(i)%datob)) then
+    inddativar = firsttrue(buffer(i)%dativar == vol7dtmp%dativar%b)
+    vol7dtmp%voldatib( &
+     indana,indtime,indlevel,indtimerange,inddativar,indnetwork &
+     ) = buffer(i)%datob
+  end if
 
-   if(c_e(buffer(i)%datod)) then
-     inddativar = firsttrue(buffer(i)%dativar == vol7dtmp%dativar%d)
-     vol7dtmp%voldatid( &
-      indana,indtime,indlevel,indtimerange,inddativar,indnetwork &
-      ) = buffer(i)%datod
-   end if
+  if(c_e(buffer(i)%datod)) then
+    inddativar = firsttrue(buffer(i)%dativar == vol7dtmp%dativar%d)
+    vol7dtmp%voldatid( &
+     indana,indtime,indlevel,indtimerange,inddativar,indnetwork &
+     ) = buffer(i)%datod
+  end if
 
-   if(c_e(buffer(i)%datoc)) then
-     inddativar = firsttrue(buffer(i)%dativar == vol7dtmp%dativar%c)
-     vol7dtmp%voldatic( &
-      indana,indtime,indlevel,indtimerange,inddativar,indnetwork &
-      ) = buffer(i)%datoc
-   end if
-
- end do
+  if(c_e(buffer(i)%datoc)) then
+    inddativar = firsttrue(buffer(i)%dativar == vol7dtmp%dativar%c)
+    vol7dtmp%voldatic( &
+     indana,indtime,indlevel,indtimerange,inddativar,indnetwork &
+     ) = buffer(i)%datoc
+  end if
+  
+end do
 
 !------------------------- anagrafica
 
