@@ -7,7 +7,9 @@ USE io_units
 USE vol7d_class
 USE vol7d_class_compute
 USE datetime_class
+#ifdef HAVE_ORSIM
 USE vol7d_oraclesim_class
+#endif
 USE vol7d_dballe_class
 USE geo_coord_class
 !USE ISO_FORTRAN_ENV
@@ -27,7 +29,9 @@ INTEGER :: iun, ier, i, j, n, nc, ninput
 INTEGER,POINTER :: w_s(:), w_e(:)
 TYPE(vol7d) :: v7d, v7dtmp, v7d_comp1, v7d_comp2, v7d_comp3
 TYPE(vol7d_dballe) :: v7d_dba, v7d_dba_out
+#ifdef HAVE_ORSIM
 TYPE(vol7d_oraclesim) :: v7d_osim
+#endif
 CHARACTER(len=32) :: dsn, user, password
 LOGICAL :: version, ldisplay
 CHARACTER(len=512):: a_name

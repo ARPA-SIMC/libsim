@@ -26,7 +26,7 @@ TYPE(vol7d_dballe) :: v7d_ana, v7d_dba_out
 doubleprecision :: lon, lat
 character(len=80) :: output_template,trans_type,sub_type
 INTEGER :: output_td
-LOGICAL :: version
+LOGICAL :: version, ldisplay
 
 !questa chiamata prende dal launcher il nome univoco
 call l4f_launcher(a_name,a_name_force="getpoint")
@@ -90,6 +90,10 @@ options(22) = op_option_new(' ', 'output-td', output_td, 1, help= &
  &comparing forecasts with observations)')
 
 ! help options
+options(38) = op_option_new('d', 'display', ldisplay, help= &
+ 'briefly display the data volume imported, warning: this option is incompatible &
+ &with output on stdout.')
+ldisplay = .FALSE.
 options(39) = op_option_help_new('h', 'help', help= &
  'show an help message and exit')
 options(40) = op_option_new(' ', 'version', version, help= &
@@ -174,14 +178,14 @@ ELSE
 
 ENDIF
 
-CALL display(v7d)
+IF (ldisplay) CALL display(v7d)
 
 !trasformation object
 CALL init(trans, trans_type=trans_type, sub_type=sub_type, &
  categoryappend="transformation", time_definition=output_td)
 call import(volgrid, filename=input_file, categoryappend="volume letto")
 
-call display(volgrid)
+IF (ldisplay) call display(volgrid)
 
 call transform(trans, volgrid6d_in=volgrid, vol7d_out=v7d_out, v7d=v7d, &
  networkname=network, categoryappend="transform")
