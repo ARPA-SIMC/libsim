@@ -49,7 +49,7 @@ call init(trans, trans_type="inter",sub_type="bilin", categoryappend="trasformat
 
 call import (volgrid,filename="in.grb",categoryappend="volume letto")
 
-call transform(trans,v7d, volgrid6d_in=volgrid, vol7d_out=vol7d_out,categoryappend="trasforma")
+call transform(trans, volgrid6d_in=volgrid, vol7d_out=vol7d_out, v7d=v7d, categoryappend="trasforma")
 
 call l4f_category_log(category,L4F_INFO,"trasformato")
 

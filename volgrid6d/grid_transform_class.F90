@@ -283,7 +283,8 @@ if (trans_type == "boxregrid") call optio(sub_type,this%boxregrid%sub_type)
 call optio(npx,this%boxregrid%npx)
 call optio(npy,this%boxregrid%npy)
 
-if (trans_type == "inter") call optio(sub_type,this%inter%sub_type)
+if (trans_type == "inter" .OR. trans_type == "boxinter") &
+ CALL optio(sub_type,this%inter%sub_type)
 
 call optio(external,this%inter%near%external)
 call optio(external,this%inter%bilin%external)
@@ -357,8 +358,6 @@ IF (this%trans_type == 'zoom') THEN
 
   end if
 
-
-
 ELSE IF (this%trans_type == 'boxregrid') THEN
 
   IF (c_e(this%boxregrid%npx) .AND. c_e(this%boxregrid%npy)) THEN
@@ -399,7 +398,7 @@ ELSE IF (this%trans_type == 'inter') THEN
     CALL raise_fatal_error()
   endif
 
-ELSE IF (this%inter%sub_type == 'boxinter')THEN
+ELSE IF (this%trans_type == 'boxinter')THEN
 
   CALL optio(boxdx,this%inter%box%boxdx) ! unused
   CALL optio(boxdy,this%inter%box%boxdy) ! now
@@ -528,7 +527,7 @@ END SUBROUTINE transform_get_val
 !! this constructor and returned in output for 'zoom' and 'boxregrid'
 !! transformations. The generated \a grid_transform object is specific
 !! to the input and output grids involved.
-SUBROUTINE grid_transform_init(this,trans,in,out,categoryappend)
+SUBROUTINE grid_transform_init(this, trans, in, out, categoryappend)
 TYPE(grid_transform),INTENT(out) :: this !< grid_transformation object
 TYPE(transform_def),INTENT(in) :: trans !< transformation object
 TYPE(griddim_def),INTENT(inout) :: in !< griddim object to transform
@@ -749,10 +748,10 @@ END SUBROUTINE grid_transform_init
 !! sparse points over which the transformation (typically an
 !! interpolation) should take place. The generated \a grid_transform
 !! object is specific to the grid and sparse point list provided.
-SUBROUTINE grid_transform_grid_vol7d_init(this,trans,in,v7d,categoryappend)
+SUBROUTINE grid_transform_grid_vol7d_init(this, trans, in, v7d, categoryappend)
 TYPE(grid_transform),INTENT(out) :: this !< grid_transformation object
 TYPE(transform_def),INTENT(in) :: trans !< transformation object
-TYPE(griddim_def),INTENT(in) :: in !< griddim object to transform
+TYPE(griddim_def),INTENT(inout) :: in !< griddim object to transform
 TYPE(vol7d),INTENT(inout) :: v7d !< vol7d object with the coordinates of the sparse point to be used as transformation target
 character(len=*),INTENT(in),OPTIONAL :: categoryappend !< append this suffix to log4fortran namespace category
 
@@ -834,30 +833,36 @@ IF (this%trans%trans_type == 'inter') THEN
 
 else IF (this%trans%trans_type == 'metamorphosis') THEN
 
-  IF (this%trans%inter%sub_type == 'all' ) THEN
+  IF (this%trans%metamorphosis%sub_type == 'all' ) THEN
 
     CALL get_val(in, nx=nx, ny=ny)
     this%innx=nx
     this%inny=ny
 
-    this%outnx=SIZE(v7d%ana)
+!    this%outnx=SIZE(v7d%ana)
+    this%outnx=nx*ny
     this%outny=1
+    CALL vol7d_alloc(v7d, nana=nx*ny)
 
-    if (this%innx * this%inny /=  this%outnx * this%outny ) then
-      CALL l4f_category_log(this%category,L4F_ERROR, &
-       'init_grid_v7d_transform metamorphosis inconsistent dimension in and out '//&
-       trim(to_char(this%innx * this%inny))//"  /=  "//trim(to_char( this%outnx * this%outny)))
-      call raise_fatal_error('init_grid_v7d_transform metamorphosis inconsistent dimension in and out '//&
-       trim(to_char(this%innx * this%inny))//"  /=  "//trim(to_char( this%outnx * this%outny)))
+!    if (this%innx * this%inny /=  this%outnx * this%outny ) then
+!      CALL l4f_category_log(this%category,L4F_ERROR, &
+!       'init_grid_v7d_transform metamorphosis inconsistent dimension in and out '//&
+!       trim(to_char(this%innx * this%inny))//"  /=  "//trim(to_char( this%outnx * this%outny)))
+!      call raise_fatal_error('init_grid_v7d_transform metamorphosis inconsistent dimension in and out '//&
+!       trim(to_char(this%innx * this%inny))//"  /=  "//trim(to_char( this%outnx * this%outny)))
+!
+!    end if
 
-    end if
 
-    ALLOCATE(this%inter_x(this%innx,this%inny),this%inter_y(this%innx,this%inny))
-    CALL griddim_gen_coord(in, this%inter_x, this%inter_y)
+!    ALLOCATE(this%inter_x(this%innx,this%inny),this%inter_y(this%innx,this%inny))
+!    CALL griddim_gen_coord(in, this%inter_x, this%inter_y)
+! compute coordinates of input grid in geo system
+    CALL unproj(in) ! TODO costringe a dichiarare in INTENT(inout), si puo` evitare?
 
-    do ix=1,this%innx
-      do iy=1,this%inny
-        CALL init(v7d%ana((iy-1)*this%innx+ix)%coord,lon=this%inter_x(ix,iy),lat=this%inter_y(ix,iy))
+    do iy=1,this%inny
+      do ix=1,this%innx
+!        CALL init(v7d%ana((iy-1)*this%innx+ix)%coord,lon=this%inter_x(ix,iy),lat=this%inter_y(ix,iy))
+        CALL init(v7d%ana((iy-1)*this%innx+ix)%coord,lon=in%dim%lon(ix,iy),lat=in%dim%lat(ix,iy))
       end do
     end do
 
@@ -1227,7 +1232,7 @@ ELSE IF (this%trans%trans_type == 'boxinter') THEN
 
 ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
 
-  IF (this%trans%inter%sub_type == 'all') THEN
+  IF (this%trans%metamorphosis%sub_type == 'all') THEN
 
     field_out = RESHAPE(field_in ,(/this%outnx,this%outny/))
 

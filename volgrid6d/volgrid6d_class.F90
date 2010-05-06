@@ -1649,7 +1649,7 @@ end SUBROUTINE volgrid6d_v7d_transform_compute
 !! L'oggetto trasformato viene creato automaticamente
 subroutine volgrid6d_v7d_transform(this, volgrid6d_in, vol7d_out, v7d, networkname,categoryappend)
 type(transform_def),intent(in) :: this !< oggetto che specifica la trasformazione
-type(volgrid6d), INTENT(in) :: volgrid6d_in !< oggetto da trasformare
+type(volgrid6d), INTENT(inout) :: volgrid6d_in !< oggetto da trasformare
 type(vol7d), INTENT(out) :: vol7d_out !< oggetto trasformato
 type(vol7d), INTENT(in), OPTIONAL :: v7d !<  anagrafiche su cui effettuare la trasformazione
 character(len=network_name_len),optional,intent(in) :: networkname !< imposta il network in vol7d_out (default='generic')
@@ -1684,8 +1684,8 @@ if (present(v7d)) then
 else
 
   call init(v7d_locana,time_definition=time_definition)
-  CALL get_val(volgrid6d_in%griddim, nx=nx, ny=ny)
-  call vol7d_alloc(v7d_locana,nana=nx*ny)
+!  CALL get_val(volgrid6d_in%griddim, nx=nx, ny=ny)
+!  call vol7d_alloc(v7d_locana,nana=nx*ny)
 
 endif
 
@@ -1727,19 +1727,16 @@ end if
 if (associated(volgrid6d_in%level)) nlevel=size(volgrid6d_in%level)
 if (associated(volgrid6d_in%var)) nvar=size(volgrid6d_in%var)
 
-
-
-call init(grid_trans, this, in=volgrid6d_in%griddim,v7d=v7d_locana,&
+call init(grid_trans, this, in=volgrid6d_in%griddim, v7d=v7d_locana,&
  categoryappend=categoryappend)
-
 
 !TODO aggiungere categoryappend
 call init (vol7d_out,time_definition=time_definition)
 
-nana=size(v7d%ana)
+nana=size(v7d_locana%ana)
 call vol7d_alloc(vol7d_out, nana=nana, ntime=ntime, nlevel=nlevel, ntimerange=ntimerange, ndativarr=nvar, nnetwork=nnetwork)
 
-vol7d_out%ana = v7d%ana
+vol7d_out%ana = v7d_locana%ana
 
 call vol7d_alloc_vol(vol7d_out)
 
@@ -1762,27 +1759,28 @@ end subroutine volgrid6d_v7d_transform
 !!
 !! L'oggetto trasformazione su grigliato viene creato e distrutto automaticamete
 !! L'oggetto trasformato viene creato automaticamente
-subroutine volgrid6dv_v7d_transform(this, volgrid6d_in, vol7d_out,v7d,networkname,categoryappend)
+subroutine volgrid6dv_v7d_transform(this, volgrid6d_in, vol7d_out, v7d, &
+ networkname,categoryappend)
 type(transform_def),intent(in) :: this !< oggetto che specifica la trasformazione
-type(volgrid6d), INTENT(in) :: volgrid6d_in(:) !< vettore di oggetti da trasformare
+type(volgrid6d), INTENT(inout) :: volgrid6d_in(:) !< vettore di oggetti da trasformare
 type(vol7d), pointer :: vol7d_out(:) !< vettore di oggetti trasformati
 type(vol7d),intent(in),optional :: v7d !<  anagrafiche su cui effettuare la trasformazione
 character(len=network_name_len),optional,intent(in) :: networkname !< imposta il network in vol7d_out (default='generic')
 character(len=*),INTENT(in),OPTIONAL :: categoryappend !< appende questo suffisso al namespace category di log4fortran
 
 integer :: i,n
+
 n=size(volgrid6d_in)
 
-allocate( vol7d_out(n),stat=stallo)
+allocate(vol7d_out(n),stat=stallo)
 if (stallo /=0)then
   call l4f_log(L4F_ERROR,"allocating memory")
   call raise_fatal_error("allocating memory")
 end if
 
 do i=1,n
-
-  call transform (this, volgrid6d_in(i), vol7d_out(i), v7d, networkname,categoryappend=categoryappend)
-
+  call transform (this, volgrid6d_in(i), vol7d_out(i), v7d, networkname, &
+   categoryappend=categoryappend)
 end do
 
 end subroutine volgrid6dv_v7d_transform

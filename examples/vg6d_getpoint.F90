@@ -21,7 +21,6 @@ character(len=network_name_len) :: network
 type(volgrid6d),pointer :: volgrid(:)
 type(transform_def) :: trans
 type(vol7d) :: v7d
-type(vol7d_ana) :: ana
 type(vol7d),pointer :: v7d_out(:)
 TYPE(vol7d_dballe) :: v7d_ana, v7d_dba_out
 doubleprecision :: lon, lat
@@ -47,7 +46,8 @@ options(1) = op_option_new('a', 'lon', lon, 0.D0, help= &
 options(2) = op_option_new('b', 'lat', lat, 45.D0, help= &
  'latitude of single interpolation point, alternative to --ana-file')
 options(3) = op_option_new('c', 'ana-file', ana_file, help= &
- 'file with coordinates of points to interpolate, alternative to --lon, --lat')
+ 'file with coordinates of points to interpolate, alternative to --lon, --lat; &
+ &no coordinate information is required for metoamorphosis trnasformation')
 options(4) = op_option_new(' ', 'ana-format', ana_format, &
 #ifdef HAVE_DBALLE
 'BUFR', &
@@ -60,9 +60,11 @@ options(4) = op_option_new(' ', 'ana-format', ana_format, &
 #endif 
  &')
 options(10) = op_option_new('v', 'trans-type', trans_type, 'inter', help= &
- 'transformation type, ''inter'' for interpolation is the only one supprted')
+ 'transformation type, ''inter'' for interpolation or ''metamorphosis'' &
+ &for keeping the same data but changing the container from grib to v7d')
 options(11) = op_option_new('z', 'sub-type', sub_type, 'bilin', help= &
- 'transformation subtype, for inter: ''near'', ''bilin''')
+ 'transformation subtype, for inter: ''near'', ''bilin'', for metamorphosis: &
+ &''all''')
 options(12) = op_option_new('n', 'network', network, 'generic', help= &
  'string identifying network for output data')
 ! options for output
@@ -149,11 +151,9 @@ IF (c_e(ana_file)) THEN
     CALL init(v7d_ana, filename=ana_file, format=ana_format, file=.TRUE., &
      write=.FALSE., categoryappend="anagrafica")
     CALL import(v7d_ana, anaonly=.TRUE.)
-    CALL vol7d_copy(v7d_ana%vol7d, v7d)
-!    CALL init(v7d)
-!    CALL vol7d_alloc(v7d,nana=SIZE(v7d_ana%vol7d%ana))
-!    CALL vol7d_alloc_vol(v7d)
-!    v7d%ana=v7d_ana%vol7d%ana
+    v7d = v7d_ana%vol7d
+! destroy v7d_ana without deallocating the contents passed to v7d
+    CALL init(v7d_ana%vol7d)
     CALL delete(v7d_ana)
 
 #endif
@@ -166,10 +166,11 @@ IF (c_e(ana_file)) THEN
 ELSE
 
   call init(v7d)
-  call vol7d_alloc(v7d,nana=1)
-  call vol7d_alloc_vol(v7d)
-  call init(ana,lat=lat,lon=lon)
-  v7d%ana(1)=ana
+  IF (trans_type == 'inter') THEN ! set coordinates for interpolation
+    CALL vol7d_alloc(v7d, nana=1)
+    CALL vol7d_alloc_vol(v7d)
+    CALL init(v7d%ana(1), lat=lat, lon=lon)
+  ENDIF
 
 ENDIF
 
@@ -182,7 +183,7 @@ call import(volgrid, filename=input_file, categoryappend="volume letto")
 
 call display(volgrid)
 
-call transform(trans,v7d, volgrid6d_in=volgrid, vol7d_out=v7d_out, &
+call transform(trans, volgrid6d_in=volgrid, vol7d_out=v7d_out, v7d=v7d, &
  networkname=network, categoryappend="transform")
 
 call l4f_category_log(category,L4F_INFO,"transformation done")
