@@ -854,15 +854,12 @@ else IF (this%trans%trans_type == 'metamorphosis') THEN
 !    end if
 
 
-!    ALLOCATE(this%inter_x(this%innx,this%inny),this%inter_y(this%innx,this%inny))
-!    CALL griddim_gen_coord(in, this%inter_x, this%inter_y)
 ! compute coordinates of input grid in geo system
     CALL unproj(in) ! TODO costringe a dichiarare in INTENT(inout), si puo` evitare?
-
     do iy=1,this%inny
       do ix=1,this%innx
-!        CALL init(v7d%ana((iy-1)*this%innx+ix)%coord,lon=this%inter_x(ix,iy),lat=this%inter_y(ix,iy))
-        CALL init(v7d%ana((iy-1)*this%innx+ix)%coord,lon=in%dim%lon(ix,iy),lat=in%dim%lat(ix,iy))
+        CALL init(v7d%ana((iy-1)*this%innx+ix), &
+         lon=in%dim%lon(ix,iy),lat=in%dim%lat(ix,iy))
       end do
     end do
 

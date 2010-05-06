@@ -81,8 +81,8 @@ options(20) = op_option_new('f', 'output-format', output_format, &
  &')
 #ifdef HAVE_DBALLE
 options(21) = op_option_new('t', 'output-template', output_template, 'generic', help= &
- 'output template for BUFR/CREX, in the form ''category.subcategory.localcategory'', or &
-& an alias like ''synop'', ''metar'',''temp'',''generic''')
+ 'output template for BUFR/CREX, in the form ''category.subcategory.localcategory'',&
+& or an alias like ''synop'', ''metar'', ''temp'', ''generic''')
 #endif
 options(22) = op_option_new(' ', 'output-td', output_td, 1, help= &
  'time definition for output vol7d volume, 0 for reference time (more suitable for &
