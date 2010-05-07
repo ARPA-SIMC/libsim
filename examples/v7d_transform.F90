@@ -40,9 +40,10 @@ INTEGER :: category
 
 ! for computing
 LOGICAL :: comp_regularize, comp_average, comp_cumulate, comp_discard
-CHARACTER(len=23) :: comp_interval, comp_start
+CHARACTER(len=23) :: comp_step, comp_start
 TYPE(timedelta) :: c_i
 TYPE(datetime) :: c_s
+REAL :: comp_frac_valid
 
 ! for csv output
 CHARACTER(len=8) :: csv_volume
@@ -110,25 +111,28 @@ options(10) = op_option_new('d', 'display', ldisplay, help= &
  &with output on stdout.')
 ldisplay = .FALSE.
 options(11) = op_option_new(' ', 'comp-regularize', comp_regularize, help= &
- 'regularize the time series keeping only the data at regular time intervals')
+ 'regularize the time series keeping only the data at regular time steps')
 comp_regularize = .FALSE.
 options(12) = op_option_new(' ', 'comp-average', comp_average, help= &
- 'recompute average of averaged fields on a different time interval')
+ 'recompute average of averaged fields on a different time step')
 comp_average = .FALSE.
 options(13) = op_option_new(' ', 'comp-cumulate', comp_cumulate, help= &
- 'recompute cumulation of accumulated fields on a different time interval')
+ 'recompute cumulation of accumulated fields on a different time step')
 comp_cumulate = .FALSE.
-options(14) = op_option_new(' ', 'comp-interval', comp_interval, '0000000001 00:00:00.000', help= &
- 'length of regularization, average or cumulation interval in the format &
+options(14) = op_option_new(' ', 'comp-step', comp_step, '0000000001 00:00:00.000', help= &
+ 'length of regularization, average or cumulation step in the format &
  &''YYYYMMDDDD hh:mm:ss.msc'', it can be simplified up to the form ''D hh''')
 options(15) = op_option_new(' ', 'comp-start', comp_start, '', help= &
- 'start of regularization, average or cumulation period, an empty value means &
- &take the initial period of the available data; the format is the same as for &
+ 'start of regularization, average or cumulation interval, an empty value means &
+ &take the initial time step of the available data; the format is the same as for &
  &--start-date parameter')
-options(11) = op_option_new(' ', 'comp-discard', comp_discard, help= &
+options(16) = op_option_new(' ', 'comp-discard', comp_discard, help= &
  'discard the data that are not the result of the cumulation and/or averaging &
  &processes and keep only the result of the computations')
 comp_discard = .FALSE.
+options(17) = op_option_new(' ', 'comp-frac-valid', comp_frac_valid, 1., help= &
+ 'specify the fraction of data that has to be valid in order to consider an &
+ &accumulated or averaged value acceptable')
 
 ! options for defining output
 !options(20) = op_option_new('o', 'output-file', output_file, '-', help= &
@@ -257,7 +261,7 @@ IF (LEN_TRIM(attribute_list) > 0) THEN
 ENDIF
 CALL init(s_d, isodate=start_date)
 CALL init(e_d, isodate=end_date)
-c_i = timedelta_new(isodate=comp_interval)
+c_i = timedelta_new(isodate=comp_step)
 IF (comp_start /= '') THEN
   c_s = datetime_new(isodate=comp_start)
 ELSE
@@ -385,12 +389,14 @@ IF (comp_average .OR. comp_cumulate) THEN
   CALL init(v7d_comp1, time_definition=v7d%time_definition)
   CALL init(v7d_comp2, time_definition=v7d%time_definition)
   IF (comp_average) THEN
-    CALL vol7d_average(v7d, v7d_comp1, c_i, c_s, full_steps=.TRUE., other=v7d_comp3)
+    CALL vol7d_average(v7d, v7d_comp1, c_i, c_s, full_steps=.TRUE., &
+     frac_valid=comp_frac_valid, other=v7d_comp3)
     CALL delete(v7d)
     v7d = v7d_comp3
   ENDIF
   IF (comp_cumulate) THEN
-    CALL vol7d_cumulate(v7d, v7d_comp2, c_i, c_s, full_steps=.TRUE., other=v7d_comp3)
+    CALL vol7d_cumulate(v7d, v7d_comp2, c_i, c_s, full_steps=.TRUE., &
+     frac_valid=comp_frac_valid, other=v7d_comp3)
     CALL delete(v7d)
     v7d = v7d_comp3
   ENDIF
