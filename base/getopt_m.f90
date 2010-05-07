@@ -136,7 +136,7 @@ TYPE op_option
   CHARACTER(len=80) :: long_opt
   INTEGER :: opttype
   LOGICAL :: need_arg
-  CHARACTER(len=1024),POINTER :: destc
+  CHARACTER(len=1),POINTER :: destc
   INTEGER :: destclen
   INTEGER,POINTER :: desti
   REAL,POINTER :: destr
@@ -332,9 +332,11 @@ ENDIF
 ! common initialisation
 this = op_option_new_common(short_opt, long_opt, cdefault, help)
 
-this%destc => dest
+this%destc => dest(1:1)
 this%destclen = LEN(dest) ! needed to avoid exceeding the length of dest
-IF (PRESENT(default)) this%destc(1:this%destclen) = default
+IF (PRESENT(default)) &
+ CALL dirty_char_assignment(this%destc, this%destclen, default, LEN(default))
+!IF (PRESENT(default)) this%destc(1:this%destclen) = default
 this%opttype = opttype_c
 this%need_arg = .TRUE.
 
@@ -395,6 +397,7 @@ IF (PRESENT(default)) THEN
 ELSE
   cdefault = ''
 ENDIF
+
 ! common initialisation
 this = op_option_new_common(short_opt, long_opt, cdefault, help)
 
@@ -568,7 +571,8 @@ err = .FALSE.
 
 SELECT CASE(this%opttype)
 CASE(opttype_c)
-  this%destc(1:this%destclen) = optarg
+  CALL dirty_char_assignment(this%destc, this%destclen, optarg, LEN_TRIM(optarg))
+!  this%destc(1:this%destclen) = optarg
   IF (LEN_TRIM(optarg) > this%destclen) THEN
     CALL l4f_log(L4F_WARN, &
      'in op_option, argument '''//TRIM(optarg)//''' too long, truncated')
@@ -863,4 +867,23 @@ ENDDO
 END SUBROUTINE optionparser_printhelp
 
 end module getopt_m
+
+SUBROUTINE dirty_char_assignment(destc, destclen, src, srclen)
+USE kinds
+IMPLICIT NONE
+
+INTEGER(kind=int_b) :: destc(*), src(*)
+INTEGER :: destclen, srclen
+
+INTEGER :: i
+
+DO i = 1, MIN(destclen, srclen)
+  destc(i) = src(i)
+ENDDO
+DO i = srclen+1, destclen
+  destc(i) = ICHAR(' ')
+ENDDO
+
+END SUBROUTINE dirty_char_assignment
+
 
