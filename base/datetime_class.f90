@@ -845,18 +845,32 @@ INTEGER,INTENT(IN),OPTIONAL :: day !< giorni
 INTEGER,INTENT(IN),OPTIONAL :: hour !< ore
 INTEGER,INTENT(IN),OPTIONAL :: minute !< minuti
 INTEGER,INTENT(IN),OPTIONAL :: msec !< millisecondi
-CHARACTER(len=*),INTENT(IN),OPTIONAL :: isodate !< inizializza l'oggetto ad un intervallo nel formato \c GGGGGGGGGG \c hh:mm:ss.msc, ignorando tutti gli altri parametri
+CHARACTER(len=*),INTENT(IN),OPTIONAL :: isodate !< inizializza l'oggetto ad un intervallo nel formato \c AAAAMMGGGG \c hh:mm:ss.msc, ignorando tutti gli altri parametri, se \c AAAA o \c MM sono diversi da 0 l'oggetto diventa "popolare"
 CHARACTER(len=*),INTENT(IN),OPTIONAL :: simpledate !< inizializza l'oggetto ad un intervallo nel formato \c GGGGGGGGhhmmmsc, ignorando tutti gli altri parametri, da preferire rispetto a \a oraclesimdate
 CHARACTER(len=12),INTENT(IN),OPTIONAL :: oraclesimdate !< inizializza l'oggetto ad un intervallo nel formato \c GGGGGGGGhhmm, ignorando tutti gli altri parametri
 
-INTEGER :: d, h, m, s, ms
+INTEGER :: n, l, lyear, lmonth, d, h, m, s, ms
 CHARACTER(len=23) :: datebuf
 
 this%month = 0
+
 IF (PRESENT(isodate)) THEN
   datebuf(1:23) = '0000000000 00:00:00.000'
-  datebuf(1:MIN(LEN(isodate),23)) = isodate(1:MIN(LEN(isodate),23))
-  READ(datebuf,'(I10,1X,I2,1X,I2,1X,I2,1X,I3)', err=200) d, h, m, s, ms
+  l = LEN_TRIM(isodate)
+!  IF (l > 0) THEN
+  n = INDEX(TRIM(isodate), ' ') ! align blank space separator
+  IF (n > 0) THEN
+    IF (n > 11 .OR. n < l - 12) GOTO 200 ! wrong format
+    datebuf(12-n:12-n+l-1) = isodate(:l)
+  ELSE
+    datebuf(1:l) = isodate(1:l)
+  ENDIF
+!  ENDIF
+  
+!  datebuf(1:MIN(LEN(isodate),23)) = isodate(1:MIN(LEN(isodate),23))
+  READ(datebuf,'(I4,I2,I4,1X,I2,1X,I2,1X,I2,1X,I3)', err=200) lyear, lmonth, d, &
+   h, m, s, ms
+  this%month = lmonth + 12*lyear
   this%iminuti = 86400000_int_ll*INT(d, KIND=int_ll) + &
    3600000_int_ll*INT(h, KIND=int_ll) + 60000_int_ll*INT(m, KIND=int_ll) + &
    1000_int_ll*INT(s, KIND=int_ll) + INT(ms, KIND=int_ll)

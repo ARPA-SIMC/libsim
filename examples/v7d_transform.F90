@@ -24,8 +24,9 @@ character(len=80) :: output_template
 TYPE(vol7d_network), ALLOCATABLE :: nl(:)
 CHARACTER(len=10), ALLOCATABLE :: vl(:), avl(:), al(:)
 CHARACTER(len=23) :: start_date, end_date
-TYPE(datetime) :: s_d, e_d
-INTEGER :: iun, ier, i, j, n, nc, ninput
+CHARACTER(len=19) :: start_date_default, end_date_default
+TYPE(datetime) :: now, s_d, e_d
+INTEGER :: iun, ier, i, j, n, nc, ninput, yy, mm, dd
 INTEGER,POINTER :: w_s(:), w_e(:)
 TYPE(vol7d) :: v7d, v7dtmp, v7d_comp1, v7d_comp2, v7d_comp3
 TYPE(vol7d_dballe) :: v7d_dba, v7d_dba_out
@@ -57,6 +58,12 @@ ier=l4f_init()
 !imposta a_name
 category=l4f_category_get(a_name//".main")
 
+now = datetime_new(now=datetime_utc)
+CALL getval(now, year=yy, month=mm, day=dd)
+CALL getval(datetime_new(year=yy, month=mm, day=dd)-timedelta_new(day=1), &
+ isodate=start_date_default)
+CALL getval(datetime_new(year=yy, month=mm, day=dd), isodate=end_date_default)
+
 ! define command-line options
 CALL op_option_nullify(options)
 
@@ -77,9 +84,9 @@ options(1) = op_option_new(' ', 'input-format', input_format, 'native', help= &
 ! &user/password@dsn, if empty or ''-'', a suitable default is used.')
 
 ! input database options
-options(4) = op_option_new('s', 'start-date', start_date, '1900-01-01 00:00:00', help= &
+options(4) = op_option_new('s', 'start-date', start_date, start_date_default, help= &
  'if input-format is of database type, initial date for extracting data')
-options(5) = op_option_new('e', 'end-date', end_date, '2021-01-01 00:00:00', help= &
+options(5) = op_option_new('e', 'end-date', end_date, end_date_default, help= &
  'if input-format is of database type, final date for extracting data')
 options(6) = op_option_new('n', 'network-list', network_list, '', help= &
  'if input-format is of database type, list of station networks to be extracted &
@@ -113,7 +120,7 @@ options(13) = op_option_new(' ', 'comp-cumulate', comp_cumulate, help= &
 comp_cumulate = .FALSE.
 options(14) = op_option_new(' ', 'comp-interval', comp_interval, '0000000001 00:00:00.000', help= &
  'length of regularization, average or cumulation interval in the format &
- &''DDDDDDDDDD hh:mm:ss.msc''')
+ &''YYYYMMDDDD hh:mm:ss.msc'', it can be simplified up to the form ''D hh''')
 options(15) = op_option_new(' ', 'comp-start', comp_start, '', help= &
  'start of regularization, average or cumulation period, an empty value means &
  &take the initial period of the available data; the format is the same as for &
