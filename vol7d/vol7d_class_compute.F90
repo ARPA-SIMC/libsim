@@ -158,9 +158,7 @@ CALL vol7d_reform(this, miss=.FALSE., sort=.FALSE., unique=.TRUE.)
 ntr = COUNT(this%timerange(:)%timerange == tri .AND. this%timerange(:)%p2 /= imiss &
  .AND. this%timerange(:)%p2 /= 0 .AND. this%timerange(:)%p1 == 0)
 
-! conto il numero di time necessari in uscita
-! lo faccio passo-passo e non con una divisione
-! per farlo funzionare anche con le cumulate "umane"
+! determino lstart
 ! lstart e` l'inizio (non il termine) del primo periodo di cumulazione
 usestart = PRESENT(start) ! treat datetime_miss as .NOT.PRESENT()
 IF (usestart) usestart = usestart .AND. start /= datetime_miss
@@ -174,9 +172,13 @@ ELSE ! calcolo automatico di start
 
   CALL init(dt1, minute=-i/60) ! usare msec
   lstart = this%time(1)+dt1 ! torno indietro di dt1 (dt1 < 0!)
-  lstart = lstart+(MOD(lstart, step)) ! arrotondo a step
+  lstart = lstart-(MOD(lstart, step)) ! arrotondo a step, controllare il -!!!
 ENDIF
 lend = this%time(SIZE(this%time))
+
+! conto il numero di time necessari in uscita
+! lo faccio passo-passo e non con una divisione
+! per farlo funzionare anche con le cumulate "umane"
 tmptime = lstart+step
 nstep = 0
 DO WHILE(tmptime <= lend)
@@ -189,8 +191,11 @@ map_trc(:,:) = 0
 ! creo un modello di volume con cio` che potrebbe non esserci nel volume vecchio
 CALL vol7d_alloc(that, nana=0, ntime=nstep, nlevel=0, ntimerange=1, nnetwork=0)
 CALL vol7d_alloc_vol(that)
+! ripeto il ciclo per assegnare i time
+tmptime = lstart+step
 DO i = 1, nstep
-  that%time(i) = lstart + i*step ! non i-1 perche' le cumulate sono valide alla fine
+  that%time(i) = tmptime ! le cumulate sono valide alla fine
+  tmptime = tmptime + step
 ENDDO
 CALL getval(step, aminute=steps)
 steps = steps*60
@@ -215,7 +220,6 @@ DO j = 1, SIZE(this%timerange)
   map_tr(nval) = j ! mappatura per ottimizzare il successivo ciclo sui timerange
 !  CALL init(dt1, minute=-this%timerange(j)%p2/60) ! usare msec
   CALL init(dt1, minute=this%timerange(j)%p2/60) ! usare msec
-!  CALL init(dt2, minute=0) !this%timerange(j)%p2/60) ! usare msec
 
   ! calcolo il numero teorico di intervalli in ingresso che
   ! contribuiscono all'intervallo corrente in uscita
@@ -225,7 +229,6 @@ DO j = 1, SIZE(this%timerange)
   DO WHILE(tmptime <= lend)
     ncum = ncum + 1
     stepvero = tmptime - tmptimes ! funziona anche se step e` "umano"
-!    count_trc(ncum,nval) = stepvero/(dt2-dt1)
     count_trc(ncum,nval) = stepvero/dt1
     tmptimes = tmptime
     tmptime = tmptime + step
