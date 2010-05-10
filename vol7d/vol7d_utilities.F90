@@ -51,6 +51,8 @@ END FUNCTION firsttrue
 
 
 ! Definisce le funzioni count_distinct e pack_distinct
+#undef VOL7D_POLY_TYPE_AUTO
+
 #undef VOL7D_POLY_TYPE
 #undef VOL7D_POLY_TYPES
 #define VOL7D_POLY_TYPE INTEGER
@@ -79,9 +81,10 @@ END FUNCTION firsttrue
 #undef VOL7D_POLY_TYPE
 #undef VOL7D_POLY_TYPES
 #define VOL7D_POLY_TYPE CHARACTER(len=*)
+#define VOL7D_POLY_TYPE_AUTO(var) CHARACTER(len=LEN(var))
 #define VOL7D_POLY_TYPES _c
 #include "vol7d_distinct.F90"
-
+#undef VOL7D_POLY_TYPE_AUTO
 
 SUBROUTINE pack_distinct_c(vect, pack_distinct, mask, back) !RESULT(pack_distinct)
 CHARACTER(len=*),INTENT(in) :: vect(:)
@@ -104,8 +107,10 @@ IF (PRESENT (mask)) THEN
   IF (lback) THEN
     vectm1: DO i = 1, SIZE(vect)
       IF (.NOT.mask(i)) CYCLE vectm1
-      DO j = i-1, 1, -1
-        IF (vect(j) == vect(i)) CYCLE vectm1
+!      DO j = i-1, 1, -1
+!        IF (vect(j) == vect(i)) CYCLE vectm1
+      DO j = count_distinct, 1, -1
+        IF (pack_distinct(j) == vect(i)) CYCLE vectm1
       ENDDO
       count_distinct = count_distinct + 1
       IF (count_distinct > dim) EXIT
@@ -114,8 +119,10 @@ IF (PRESENT (mask)) THEN
   ELSE
     vectm2: DO i = 1, SIZE(vect)
       IF (.NOT.mask(i)) CYCLE vectm2
-      DO j = 1, i-1
-        IF (vect(j) == vect(i)) CYCLE vectm2
+!      DO j = 1, i-1
+!        IF (vect(j) == vect(i)) CYCLE vectm2
+      DO j = 1, count_distinct
+        IF (pack_distinct(j) == vect(i)) CYCLE vectm2
       ENDDO
       count_distinct = count_distinct + 1
       IF (count_distinct > dim) EXIT
@@ -125,8 +132,10 @@ IF (PRESENT (mask)) THEN
 ELSE
   IF (lback) THEN
     vect1: DO i = 1, SIZE(vect)
-      DO j = i-1, 1, -1
-        IF (vect(j) == vect(i)) CYCLE vect1
+!      DO j = i-1, 1, -1
+!        IF (vect(j) == vect(i)) CYCLE vect1
+      DO j = count_distinct, 1, -1
+        IF (pack_distinct(j) == vect(i)) CYCLE vect1
       ENDDO
       count_distinct = count_distinct + 1
       IF (count_distinct > dim) EXIT
@@ -134,8 +143,10 @@ ELSE
     ENDDO vect1
   ELSE
     vect2: DO i = 1, SIZE(vect)
-      DO j = 1, i-1
-        IF (vect(j) == vect(i)) CYCLE vect2
+!      DO j = 1, i-1
+!        IF (vect(j) == vect(i)) CYCLE vect2
+      DO j = 1, count_distinct
+        IF (pack_distinct(j) == vect(i)) CYCLE vect2
       ENDDO
       count_distinct = count_distinct + 1
       IF (count_distinct > dim) EXIT

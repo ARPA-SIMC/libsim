@@ -431,7 +431,7 @@ non_valid = .FALSE. ! ottimizzazione per la maggior parte dei casi
 nana = count_distinct(stazo(1:nobs), back=.TRUE.)
 ntime = count_distinct(fdatao(1:nobs), back=.TRUE.)
 nvar = count_distinct(varo(1:nobs), back=.TRUE.)
-ALLOCATE(anatmp(nana), tmtmp(ntime), vartmp(nvar))
+ALLOCATE(anatmp(nana), tmtmp(ntime), vartmp(nvar), mapdatao(nobs), mapstazo(nobs))
 anatmp(:) = pack_distinct(stazo(1:nobs), nana, back=.TRUE.)
 CALL pack_distinct_c(fdatao(1:nobs), tmtmp, back=.TRUE.)
 vartmp(:) = pack_distinct(varo(1:nobs), nvar, back=.TRUE.)
@@ -475,32 +475,36 @@ ENDDO
 
 ! ricreo gli elenchi solo se ci sono dati rigettati
 IF (non_valid) THEN
+  CALL l4f_log(L4F_FATAL, 'Situazione non gestita!')
+  CALL EXIT(1)
   DEALLOCATE(anatmp, tmtmp, vartmp)
   WHERE (stazo(1:nobs) == 0) ! mal comune, mezzo gaudio
     fdatao(1:nobs) = ''
     varo(1:nobs) = 0
   END WHERE
   nana = count_distinct(stazo(1:nobs), back=.TRUE., mask=(stazo(1:nobs) /= 0))
-  ntime = count_distinct(fdatao(1:nobs), back=.TRUE., mask=(fdatao(1:nobs) /= ''))
-  nvar = count_distinct(varo(1:nobs), back=.TRUE., mask=(varo(1:nobs) /= 0))
+  ntime = count_distinct(fdatao(1:nobs), back=.TRUE., mask=(stazo(1:nobs) /= 0))
+  nvar = count_distinct(varo(1:nobs), back=.TRUE., mask=(stazo(1:nobs) /= 0))
   ALLOCATE(anatmp(nana), tmtmp(ntime), vartmp(nvar))
-  anatmp(:) = pack_distinct(stazo(1:nobs), nana, back=.TRUE., mask=(stazo(1:nobs) /= 0))
-  CALL pack_distinct_c(fdatao(1:nobs), tmtmp, back=.TRUE., mask=(fdatao(1:nobs) /= ''))
-  vartmp(:) = pack_distinct(varo(1:nobs), nvar, back=.TRUE., mask=(varo(1:nobs) /= 0))
+  anatmp(:) = pack_distinct(stazo(1:nobs), nana, back=.TRUE., &
+   mask=(stazo(1:nobs) /= 0))
+  CALL pack_distinct_c(fdatao(1:nobs), tmtmp, back=.TRUE., &
+   mask=(stazo(1:nobs) /= 0))
+  vartmp(:) = pack_distinct(varo(1:nobs), nvar, back=.TRUE., &
+   mask=(stazo(1:nobs) /= 0))
+! creo la mappatura
+  mapstazo(:) = 0
+  mapdatao(:) = 0
+  mapstazo(1:nobs) = map_distinct(stazo(1:nobs), back=.TRUE., &
+   mask=(stazo(1:nobs) /= 0))
+  mapdatao(1:nobs) = map_distinct(fdatao(1:nobs), back=.TRUE., &
+   mask=(stazo(1:nobs) /= 0))
+ELSE
+! creo la mappatura
+  mapstazo(:) = map_distinct(stazo(1:nobs), back=.TRUE.)
+  mapdatao(1:nobs) = map_distinct(fdatao(1:nobs), back=.TRUE.)
 ENDIF
 
-! creo la mappatura
-ALLOCATE(mapdatao(nobs), mapstazo(nobs))
-DO i = 1, nana
-  WHERE(stazo(1:nobs) == anatmp(i))
-    mapstazo(1:nobs) = i
-  END WHERE
-ENDDO
-DO i = 1, ntime
-  WHERE(fdatao(1:nobs) == tmtmp(i))
-    mapdatao(1:nobs) = i
-  END WHERE
-ENDDO
 ! ciclo sulle variabili per riempire vol7d
 CALL init(v7dtmp2) ! nel caso di nvar/nobs = 0
 DO i = 1, nvar
