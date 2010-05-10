@@ -332,7 +332,10 @@ ENDIF
 ! common initialisation
 this = op_option_new_common(short_opt, long_opt, cdefault, help)
 
-this%destc => dest(1:1)
+! this is needed in order to circumvent a bug in gfortran 4.1.2
+! in future replace with following line and erase dirty_char_pointer_set
+CALL dirty_char_pointer_set(this%destc, dest(1:1))
+!this%destc => dest!(1:1)
 this%destclen = LEN(dest) ! needed to avoid exceeding the length of dest
 IF (PRESENT(default)) &
  CALL dirty_char_assignment(this%destc, this%destclen, default, LEN(default))
@@ -866,7 +869,16 @@ ENDDO
 
 END SUBROUTINE optionparser_printhelp
 
+SUBROUTINE dirty_char_pointer_set(from, to)
+CHARACTER(len=1),POINTER :: from
+CHARACTER(len=1),TARGET :: to
+
+from => to
+
+END SUBROUTINE dirty_char_pointer_set
+
 end module getopt_m
+
 
 SUBROUTINE dirty_char_assignment(destc, destclen, src, srclen)
 USE kinds
