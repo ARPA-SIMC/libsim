@@ -143,6 +143,7 @@ ENDIF
 
 ! be safe
 CALL vol7d_alloc_vol(this)
+CALL vol7d_smart_sort(this, ltime=.TRUE.) ! need a time-ordered volume
 ! count timeranges of type statistical processing for observed data
 ntr = COUNT(this%timerange(:)%timerange == tri .AND. this%timerange(:)%p2 /= imiss &
  .AND. this%timerange(:)%p2 /= 0 .AND. this%timerange(:)%p1 == 0)
@@ -209,7 +210,7 @@ ENDDO
 CALL vol7d_copy(this, v7dtmp, miss=.FALSE., sort=.FALSE., unique=.FALSE., &
  ltimerange=(this%timerange(:) == that%timerange(1)), ltime=mask_time)
 ! Infine fondo quanto rimasto del volume originale con la bozza del nuovo volume
-CALL vol7d_merge(that, v7dtmp, sort=.TRUE.)
+CALL vol7d_merge(that, v7dtmp)
 
 nval = 0
 DO j = 1, SIZE(this%timerange)
