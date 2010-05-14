@@ -180,7 +180,7 @@ else
  !trasformation object
   call init(trans, trans_type=trans_type, sub_type=sub_type, &
    ilon=ilon, ilat=ilat, flon=flon, flat=flat, npx=npx, npy=npy, &
-   boxpercentile=0.5D0, &
+   percentile=0.5D0, &
    categoryappend="trasformation")
 
   if (trans_type == 'inter') then

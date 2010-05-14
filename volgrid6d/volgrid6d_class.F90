@@ -1647,11 +1647,13 @@ end SUBROUTINE volgrid6d_v7d_transform_compute
 !!
 !! L'oggetto trasformazione su grigliato viene creato e distrutto automaticamete
 !! L'oggetto trasformato viene creato automaticamente
-subroutine volgrid6d_v7d_transform(this, volgrid6d_in, vol7d_out, v7d, networkname,categoryappend)
+SUBROUTINE volgrid6d_v7d_transform(this, volgrid6d_in, vol7d_out, v7d, poly, &
+ networkname, categoryappend)
 type(transform_def),intent(in) :: this !< oggetto che specifica la trasformazione
 type(volgrid6d), INTENT(inout) :: volgrid6d_in !< oggetto da trasformare
 type(vol7d), INTENT(out) :: vol7d_out !< oggetto trasformato
 type(vol7d), INTENT(in), OPTIONAL :: v7d !<  anagrafiche su cui effettuare la trasformazione
+TYPE(geo_coordvect),INTENT(inout),OPTIONAL :: poly(:) !< array of polygons indicating areas over which to transform
 character(len=network_name_len),optional,intent(in) :: networkname !< imposta il network in vol7d_out (default='generic')
 character(len=*),INTENT(in),OPTIONAL :: categoryappend !< appende questo suffisso al namespace category di log4fortran
 
@@ -1673,7 +1675,6 @@ nlevel=0
 nvar=0
 nnetwork=1
 
-
 call get_val(this,time_definition=time_definition)
 if (.not. c_e(time_definition)) then
   time_definition=1  ! default to validity time
@@ -1682,13 +1683,8 @@ endif
 if (present(v7d)) then
   v7d_locana = v7d
 else
-
   call init(v7d_locana,time_definition=time_definition)
-!  CALL get_val(volgrid6d_in%griddim, nx=nx, ny=ny)
-!  call vol7d_alloc(v7d_locana,nana=nx*ny)
-
 endif
-
 
 if (associated(volgrid6d_in%timerange)) ntimerange=size(volgrid6d_in%timerange)
 
@@ -1727,7 +1723,7 @@ end if
 if (associated(volgrid6d_in%level)) nlevel=size(volgrid6d_in%level)
 if (associated(volgrid6d_in%var)) nvar=size(volgrid6d_in%var)
 
-call init(grid_trans, this, in=volgrid6d_in%griddim, v7d=v7d_locana,&
+CALL init(grid_trans, this, volgrid6d_in%griddim, v7d_locana, poly=poly, &
  categoryappend=categoryappend)
 
 !TODO aggiungere categoryappend
@@ -1743,14 +1739,13 @@ call vol7d_alloc_vol(vol7d_out)
 !ensure unproj was called
 !call griddim_unproj(volgrid6d_out%griddim)
 
-call compute(grid_trans, volgrid6d_in, vol7d_out,networkname)
+call compute(grid_trans, volgrid6d_in, vol7d_out, networkname)
 
 call delete (grid_trans)
 
 if (.not. present(v7d)) then
   call delete(v7d_locana)
 endif
-
 
 end subroutine volgrid6d_v7d_transform
 
@@ -1759,12 +1754,13 @@ end subroutine volgrid6d_v7d_transform
 !!
 !! L'oggetto trasformazione su grigliato viene creato e distrutto automaticamete
 !! L'oggetto trasformato viene creato automaticamente
-subroutine volgrid6dv_v7d_transform(this, volgrid6d_in, vol7d_out, v7d, &
+SUBROUTINE volgrid6dv_v7d_transform(this, volgrid6d_in, vol7d_out, v7d, poly, &
  networkname,categoryappend)
 type(transform_def),intent(in) :: this !< oggetto che specifica la trasformazione
 type(volgrid6d), INTENT(inout) :: volgrid6d_in(:) !< vettore di oggetti da trasformare
 type(vol7d), pointer :: vol7d_out(:) !< vettore di oggetti trasformati
 type(vol7d),intent(in),optional :: v7d !<  anagrafiche su cui effettuare la trasformazione
+TYPE(geo_coordvect),INTENT(inout),OPTIONAL :: poly(:) !< array of polygons indicating areas over which to transform
 character(len=network_name_len),optional,intent(in) :: networkname !< imposta il network in vol7d_out (default='generic')
 character(len=*),INTENT(in),OPTIONAL :: categoryappend !< appende questo suffisso al namespace category di log4fortran
 
@@ -1779,8 +1775,8 @@ if (stallo /=0)then
 end if
 
 do i=1,n
-  call transform (this, volgrid6d_in(i), vol7d_out(i), v7d, networkname, &
-   categoryappend=categoryappend)
+  CALL transform(this, volgrid6d_in(i), vol7d_out(i), v7d=v7d, poly=poly, &
+   networkname=networkname, categoryappend=categoryappend)
 end do
 
 end subroutine volgrid6dv_v7d_transform
@@ -1912,8 +1908,7 @@ if (associated(vol7d_in%timerange)) ntimerange=size(vol7d_in%timerange)
 if (associated(vol7d_in%level)) nlevel=size(vol7d_in%level)
 if (associated(vol7d_in%dativar%r)) nvar=size(vol7d_in%dativar%r)
 
-call init(grid_trans, this, v7d=vol7d_in, griddim=griddim,&
- categoryappend=categoryappend)
+call init(grid_trans, this, vol7d_in, griddim, categoryappend=categoryappend)
 
 call init (volgrid6d_out, griddim, categoryappend=categoryappend)
 

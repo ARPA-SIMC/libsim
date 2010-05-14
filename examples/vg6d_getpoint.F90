@@ -8,14 +8,15 @@ USE vol7d_dballe_class
 USE vol7d_class
 use getopt_m
 USE io_units
+USE geo_coord_class
 
 implicit none
 
 TYPE(op_option) :: options(40) ! remember to update dimension when adding options
 TYPE(optionparser) :: opt
-CHARACTER(len=8) :: ana_format, output_format
+CHARACTER(len=8) :: coord_format, output_format
 CHARACTER(len=512) :: input_file, output_file, network_list, variable_list
-CHARACTER(len=512) :: a_name, ana_file=cmiss
+CHARACTER(len=512) :: a_name, coord_file=cmiss
 INTEGER :: category, ier, i, iun
 character(len=network_name_len) :: network
 type(volgrid6d),pointer :: volgrid(:)
@@ -23,6 +24,7 @@ type(transform_def) :: trans
 type(vol7d) :: v7d
 type(vol7d),pointer :: v7d_out(:)
 TYPE(vol7d_dballe) :: v7d_ana, v7d_dba_out
+TYPE(geo_coordvect),POINTER :: poly(:)
 doubleprecision :: lon, lat
 character(len=80) :: output_template,trans_type,sub_type
 INTEGER :: output_td
@@ -42,13 +44,13 @@ CALL op_option_nullify(options)
 
 ! options for transformation
 options(1) = op_option_new('a', 'lon', lon, 0.D0, help= &
- 'longitude of single interpolation point, alternative to --ana-file')
+ 'longitude of single interpolation point, alternative to --coord-file')
 options(2) = op_option_new('b', 'lat', lat, 45.D0, help= &
- 'latitude of single interpolation point, alternative to --ana-file')
-options(3) = op_option_new('c', 'ana-file', ana_file, help= &
+ 'latitude of single interpolation point, alternative to --coord-file')
+options(3) = op_option_new('c', 'coord-file', coord_file, help= &
  'file with coordinates of points to interpolate, alternative to --lon, --lat; &
  &no coordinate information is required for metoamorphosis trnasformation')
-options(4) = op_option_new(' ', 'ana-format', ana_format, &
+options(4) = op_option_new(' ', 'coord-format', coord_format, &
 #ifdef HAVE_DBALLE
 'BUFR', &
 #else
@@ -57,11 +59,18 @@ options(4) = op_option_new(' ', 'ana-format', ana_format, &
 & help='format of input file with coordinates, ''native'' for vol7d native binary file &
 #ifdef HAVE_DBALLE
  &, ''BUFR'' for BUFR file, ''CREX'' for CREX file&
-#endif 
+#endif
+#ifdef HAVE_LIBSHP_FORTRAN
+ &, ''shp'' for shapefile (interpolation on polygons)&
+#endif
  &')
 options(10) = op_option_new('v', 'trans-type', trans_type, 'inter', help= &
  'transformation type, ''inter'' for interpolation or ''metamorphosis'' &
- &for keeping the same data but changing the container from grib to v7d')
+ &for keeping the same data but changing the container from grib to v7d&
+#ifdef HAVE_LIBSHP_FORTRAN
+ &, ''polyinter'' for statistical processing within given polygons&
+#endif
+ &')
 options(11) = op_option_new('z', 'sub-type', sub_type, 'bilin', help= &
  'transformation subtype, for inter: ''near'', ''bilin'', for metamorphosis: &
  &''all''')
@@ -142,17 +151,17 @@ end if
 call l4f_category_log(category,L4F_INFO,"transforming from file:"//trim(input_file))
 call l4f_category_log(category,L4F_INFO,"transforming to   file:"//trim(output_file))
 
-IF (c_e(ana_file)) THEN
-  IF (ana_format == 'native') THEN
+IF (c_e(coord_file)) THEN
+  IF (coord_format == 'native') THEN
     iun = getunit()
-    OPEN(iun, file=ana_file, form='UNFORMATTED', access='SEQUENTIAL')
+    OPEN(iun, file=coord_file, form='UNFORMATTED', access='SEQUENTIAL')
     CALL init(v7d, time_definition=0)
     CALL import(v7d, unit=iun)
     CLOSE(iun)
 
 #ifdef HAVE_DBALLE
-  ELSE IF (ana_format == 'BUFR' .OR. ana_format == 'CREX') THEN
-    CALL init(v7d_ana, filename=ana_file, format=ana_format, file=.TRUE., &
+  ELSE IF (coord_format == 'BUFR' .OR. coord_format == 'CREX') THEN
+    CALL init(v7d_ana, filename=coord_file, format=coord_format, file=.TRUE., &
      write=.FALSE., categoryappend="anagrafica")
     CALL import(v7d_ana, anaonly=.TRUE.)
     v7d = v7d_ana%vol7d
@@ -161,10 +170,21 @@ IF (c_e(ana_file)) THEN
     CALL delete(v7d_ana)
 
 #endif
+#ifdef HAVE_LIBSHP_FORTRAN
+  ELSE IF (coord_format == 'shp') THEN
+    NULLIFY(poly)
+    CALL import(poly, shpfile=coord_file)
+    IF (.NOT.ASSOCIATED(poly)) THEN
+      CALL l4f_category_log(category, L4F_ERROR, &
+       'error importing shapefile '//TRIM(coord_file))
+      CALL EXIT(1)
+    ENDIF
+
+#endif
   ELSE
     CALL l4f_category_log(category, L4F_ERROR, &
      'error in command-line parameters, format '// &
-     TRIM(ana_format)//' in --ana-format not valid or not supported.')
+     TRIM(coord_format)//' in --coord-format not valid or not supported.')
     CALL EXIT(1)
   ENDIF
 ELSE
@@ -188,7 +208,7 @@ call import(volgrid, filename=input_file, categoryappend="volume letto")
 IF (ldisplay) call display(volgrid)
 
 call transform(trans, volgrid6d_in=volgrid, vol7d_out=v7d_out, v7d=v7d, &
- networkname=network, categoryappend="transform")
+ poly=poly, networkname=network, categoryappend="transform")
 
 call l4f_category_log(category,L4F_INFO,"transformation done")
 if (associated(volgrid)) call delete(volgrid)

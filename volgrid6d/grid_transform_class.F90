@@ -18,16 +18,19 @@
 !! Different abstract transformations are supported, defined by the
 !! parameter \a trans_type, and its corresponding \a sub_type:
 !!
-!!  - trans_type='zoom' cuts or extends the input grid on a new one
-!!    adding or removing points on the four sides (grid-to-grid only)
+!!  - trans_type='zoom' a new grid is obtained by cutting or extending
+!!    (with missing values) the input grid, adding or removing points
+!!    on the four sides, without changing the geographical reference
+!!    system (grid-to-grid only)
 !!    - sub_type='coord' the bounds of the zoomed/extended area are
 !!      defined by geographical coordinates
 !!    - sub_type='index' the bounds of the zoomed/extended area are
 !!      defined by grid indices
 !!  - trans_type='boxregrid' regrids the input data grid on a new grid
 !!    in which the value at every point is a the result of a function
-!!    computed over \a npx X \a npy points of the original grid
-!!    (grid-to-grid only)
+!!    computed over \a npx X \a npy points of the original grid,
+!!    without changing the geographical reference system (grid-to-grid
+!!    only)
 !!    - sub_type='average' the function used is the average
 !!  - trans_type='inter' interpolates the input data on a new set of points
 !!    - sub_type='near' the interpolated value is that of the nearest
@@ -41,8 +44,18 @@
 !!      points-to-grid)
 !!  - trans_type='boxinter' computes data on a new grid in which the
 !!    value at every point is the result of a function computed over
-!!    those input points that lie into the output point grid box
+!!    those input points that lie inside the output point grid box
 !!    (grid-to-grid and sparse points-to-grid)
+!!    - sub_type='average' the function used is the average
+!!    - sub_type='max' the function used is the maximum
+!!    - sub_type='min' the function used is the minimum
+!!    - sub_type='percentile' the function used is a requested
+!!      percentile of the input points distribution.
+!!  - trans_type='polyinter' computes data on a new set of points in
+!!    which the value at every point is the result of a function
+!!    computed over those input points that lie inside an arbitrary
+!!    georoferenced polygon; the output point coordinates are defined
+!!    as the centroids of the polygons (grid-to-sparse points)
 !!    - sub_type='average' the function used is the average
 !!    - sub_type='max' the function used is the maximum
 !!    - sub_type='min' the function used is the minimum
@@ -55,79 +68,44 @@ USE vol7d_class
 USE err_handling
 USE grid_class
 USE optional_values
+USE geo_coord_class
 USE simple_stat
 IMPLICIT NONE
 
 CHARACTER(len=255),PARAMETER:: subcategory="grid_transform_class"
 
-! subtype nearest information
-type inter_near
-  logical :: external ! enable elaboration outside data bounding box
-end type inter_near
-
-! subtype bilinear information
-type inter_bilin
-  logical :: external ! enable elaboration outside data bounding box
-end type inter_bilin
-
-! subtype linear information
-type inter_linear
-  logical :: external ! enable elaboration outside data bounding box
-end type inter_linear
-
-! subtype box information
-type inter_box
+! information for interpolation aver a rectangular area
+TYPE area_info
   double precision :: boxdx ! longitudinal/x extension of the box for box interpolation, default the target x grid step
   double precision :: boxdy ! latitudinal/y extension of the box for box interpolation, default the target y grid step
-  double precision :: boxpercentile ! percentile [0,100] of the distribution of points in the box to use as interpolated value, if missing, the average is used
-  logical :: external ! enable elaboration outside data bounding box
-end type inter_box
+END TYPE area_info
 
-! interpolation information 
-type inter
-  CHARACTER(len=80) :: sub_type ! subtype of transformation, can be \c 'near', \c 'bilin', \c 'linear', \c 'box'
-  type(inter_near) :: near ! subtype nearest information
-  type(inter_bilin) :: bilin ! subtype bilinear information
-  type(inter_linear) :: linear ! subtype linear information
-  type(inter_box) :: box ! subtype box information
-end type inter
+! information for statistical processing of interpoland data
+TYPE stat_info
+  DOUBLE PRECISION :: percentile ! percentile [0,100] of the distribution of points in the box to use as interpolated value, if missing, the average is used, if 0.or 100. the MIN() and MAX() are used as a shortcut
+END TYPE stat_info
 
-! zoom subtype index information
-type zoom_ind
+! rectangle index information
+type rect_ind
   INTEGER :: ix ! index of initial point of new grid on x
   INTEGER :: iy ! index of initial point of new grid on y
   INTEGER :: fx ! index of final point of new grid on x
   INTEGER :: fy ! index of final point of new grid on y
-end type zoom_ind
+end type rect_ind
 
-! zoom subtype coord information
-type zoom_coo
+! rectangle coord information
+type rect_coo
   DOUBLEPRECISION ilon ! coordinate of initial point of new grid on x
   DOUBLEPRECISION ilat ! coordinate of initial point of new grid on y
   DOUBLEPRECISION flon ! coordinate of final point of new grid on x
   DOUBLEPRECISION flat ! coordinate of final point of new grid on y
-end type zoom_coo
+end type rect_coo
 
-! zoom information
-type zoom
-  CHARACTER(len=80) :: sub_type ! subtype of transformation, can be \c 'index', \c 'coord'
-  type(zoom_ind) :: index ! zoom providing index
-  type(zoom_coo) :: coord ! zoom providing coordinates
-end type zoom
-
-! boxregrid subtype average information
-!type boxregrid_average
-!
-!end type boxregrid_average
-! no extra information needed now
-
-! boxregrid  information
-type boxregrid
-  CHARACTER(len=80) :: sub_type ! subtype of transformation, can be \c 'average'
-  INTEGER :: npx ! number of points to average along x direction
-  INTEGER :: npy ! number of points to average along y direction
-!  type(boxregrid_average) :: average
-end type boxregrid
+! box information
+type box_info
+  INTEGER :: npx ! number of points along x direction
+  INTEGER :: npy ! number of points along y direction
+end type box_info
 
 ! Vertical interpolation information.
 ! The input vertical coordinate can be indicated either as the value
@@ -136,18 +114,14 @@ end type boxregrid
 ! at each point in space (so that it will depend on the horizontal
 ! position too).
 TYPE vertint
-  CHARACTER(len=80) :: sub_type ! subtype of transformation, can be \c 'linear'
+!  CHARACTER(len=80) :: sub_type ! subtype of transformation, can be \c 'linear'
   TYPE(vol7d_level) :: input_levtype ! type of vertical level of input data (only type of first and second surface are used, level values are ignored)
   TYPE(vol7d_var) :: input_coordvar ! variable that defines the vertical coordinate in the input volume, if missing, the value of the vertical level is used
   TYPE(vol7d_level) :: output_levtype ! type of vertical level of output data (only type of first and second surface are used, level values are ignored)
 END TYPE vertint
 
-!!! To do ......
-TYPE metamorphosis
-  CHARACTER(len=80) :: sub_type ! subtype of transformation, can be \c 'linear'
-END TYPE metamorphosis
-
-!> This object defines the type of transformation to be applied.
+!> This object defines in an abstract way the type of transformation
+!! to be applied.
 !! It does not carry specific information about the grid to which it
 !! will be applied, so the same instance can be reused for
 !! transforming in the same way different grids.
@@ -155,11 +129,15 @@ TYPE transform_def
   private
 
   CHARACTER(len=80) :: trans_type ! type of transformation, can be \c 'zoom', \c 'boxregrid', \c 'inter', \c 'vertint' ...
-  type(zoom) :: zoom ! zoom specification
-  type(boxregrid) :: boxregrid ! boxregrid specification
-  type(inter) :: inter ! interpolation specification
+  CHARACTER(len=80) :: sub_type ! subtype of transformation, can be \c 'linear'
+  logical :: external ! enable elaboration outside data bounding box
+
+  type(rect_ind) :: rect_ind ! rectangle information by index
+  type(rect_coo) :: rect_coo ! rectangle information by coordinates
+  type(area_info) :: area_info ! 
+  type(stat_info) :: stat_info ! 
+  type(box_info) :: box_info ! boxregrid specification
   type(vertint) :: vertint ! vertical interpolation specification
-  type(metamorphosis) :: metamorphosis ! object metamorphosis (to do !!!)
   integer :: time_definition ! time definition for interpolating to sparse points
   integer :: category ! category for log4fortran
 
@@ -227,7 +205,7 @@ CONTAINS
 !! by the transformation type and subtype chosen have to be present.
 SUBROUTINE transform_init(this, trans_type, sub_type, &
  ix, iy, fx, fy, ilon, ilat, flon, flat, &
- npx, npy, boxdx, boxdy, boxpercentile, &
+ npx, npy, boxdx, boxdy, percentile, &
  external, time_definition, &
  input_levtype, input_coordvar, output_levtype, categoryappend)
 TYPE(transform_def),INTENT(out) :: this !< transformation object
@@ -245,31 +223,56 @@ INTEGER,INTENT(IN),OPTIONAL :: npx !< number of points to average along x direct
 INTEGER,INTENT(IN),OPTIONAL :: npy !< number of points to average along y direction (for boxregrid)
 DOUBLEPRECISION,INTENT(in),OPTIONAL :: boxdx !< longitudinal/x extension of the box for box interpolation, default the target x grid step (unimplemented !)
 DOUBLEPRECISION,INTENT(in),OPTIONAL :: boxdy !< latitudinal/y extension of the box for box interpolation, default the target y grid step (unimplemented !)
-DOUBLEPRECISION,INTENT(in),OPTIONAL :: boxpercentile !< percentile [0,1] of the distribution of points in the box to use as interpolated value, if missing, the average is used
+DOUBLEPRECISION,INTENT(in),OPTIONAL :: percentile !< percentile [0,1] of the distribution of points in the box to use as interpolated value, if missing, the average is used
 LOGICAL,INTENT(IN),OPTIONAL :: external !< activate external area interpolation (for interpolation) (unimplemented !)
 INTEGER,INTENT(IN),OPTIONAL :: time_definition !< time definition for output vol7d object 0=time is reference time ; 1=time is validity time
 TYPE(vol7d_level),INTENT(IN),OPTIONAL :: input_levtype !< type of vertical level of input data to be vertically interpolated (only type of first and second surface are used, level values are ignored)
 TYPE(vol7d_var),INTENT(IN),OPTIONAL :: input_coordvar !< variable that defines the vertical coordinate in the input volume for vertical interpolation, if missing, the value of the vertical level defined with \a input_levtype is used
 TYPE(vol7d_level),INTENT(IN),OPTIONAL :: output_levtype !< type of vertical level to which data should be vertically interpolated (only type of first and second surface are used, level values are ignored)
 character(len=*),INTENT(in),OPTIONAL :: categoryappend !< suffix to append to log4fortran namespace category
+
 character(len=512) :: a_name
 
 call l4f_launcher(a_name,a_name_append=trim(subcategory)//"."//trim(optio_c(categoryappend,255)))
 this%category=l4f_category_get(a_name)
 
-call optio(trans_type,this%trans_type)
+this%trans_type = trans_type
+this%sub_type = sub_type
 
-if (trans_type == "zoom") call optio(sub_type,this%zoom%sub_type)
+CALL optio(external,this%external)
 
-call optio(ix,this%zoom%index%ix)
-call optio(iy,this%zoom%index%iy)
-call optio(fx,this%zoom%index%fx)
-call optio(fy,this%zoom%index%fy)
+call optio(ix,this%rect_ind%ix)
+call optio(iy,this%rect_ind%iy)
+call optio(fx,this%rect_ind%fx)
+call optio(fy,this%rect_ind%fy)
 
-call optio(ilon,this%zoom%coord%ilon)
-call optio(ilat,this%zoom%coord%ilat)
-call optio(flon,this%zoom%coord%flon)
-call optio(flat,this%zoom%coord%flat)
+call optio(ilon,this%rect_coo%ilon)
+call optio(ilat,this%rect_coo%ilat)
+call optio(flon,this%rect_coo%flon)
+call optio(flat,this%rect_coo%flat)
+
+CALL optio(boxdx,this%area_info%boxdx)
+CALL optio(boxdy,this%area_info%boxdy)
+CALL optio(percentile,this%stat_info%percentile)
+
+CALL optio(npx,this%box_info%npx)
+CALL optio(npy,this%box_info%npy)
+
+IF (PRESENT(input_levtype)) THEN
+  this%vertint%input_levtype = input_levtype
+ELSE
+  this%vertint%input_levtype = vol7d_level_miss
+ENDIF
+IF (PRESENT(input_coordvar)) THEN
+  this%vertint%input_coordvar = input_coordvar
+ELSE
+  this%vertint%input_coordvar = vol7d_var_miss
+ENDIF
+IF (PRESENT(output_levtype)) THEN
+  this%vertint%output_levtype = output_levtype
+ELSE
+  this%vertint%output_levtype = vol7d_level_miss
+ENDIF
 
 call optio(time_definition,this%time_definition)
 if (c_e(this%time_definition) .and. &
@@ -278,40 +281,26 @@ if (c_e(this%time_definition) .and. &
   call raise_fatal_error()
 end if
 
-if (trans_type == "boxregrid") call optio(sub_type,this%boxregrid%sub_type)
-
-call optio(npx,this%boxregrid%npx)
-call optio(npy,this%boxregrid%npy)
-
-if (trans_type == "inter" .OR. trans_type == "boxinter") &
- CALL optio(sub_type,this%inter%sub_type)
-
-call optio(external,this%inter%near%external)
-call optio(external,this%inter%bilin%external)
-call optio(external,this%inter%linear%external)
-
-if (trans_type == "metamorphosis") call optio(sub_type,this%metamorphosis%sub_type)
-
 
 IF (this%trans_type == 'zoom') THEN
 
-  if (this%zoom%sub_type == 'coord')then
+  if (this%sub_type == 'coord')then
 
-    if (c_e(this%zoom%coord%ilon) .and. c_e(this%zoom%coord%ilat) .and. &
-        c_e(this%zoom%coord%flon) .and. c_e(this%zoom%coord%flat)) then ! coordinates given
+    if (c_e(this%rect_coo%ilon) .and. c_e(this%rect_coo%ilat) .and. &
+        c_e(this%rect_coo%flon) .and. c_e(this%rect_coo%flat)) then ! coordinates given
     
 !check
-      if ( this%zoom%coord%ilon > this%zoom%coord%flon .or. &
-       this%zoom%coord%ilat > this%zoom%coord%flat ) then
+      if ( this%rect_coo%ilon > this%rect_coo%flon .or. &
+       this%rect_coo%ilat > this%rect_coo%flat ) then
 
         call l4f_category_log(this%category,L4F_ERROR, &
          "invalid zoom coordinates: ")
         call l4f_category_log(this%category,L4F_ERROR, &
-         TRIM(to_char(this%zoom%coord%ilon))//'/'// &
-         TRIM(to_char(this%zoom%coord%flon)))
+         TRIM(to_char(this%rect_coo%ilon))//'/'// &
+         TRIM(to_char(this%rect_coo%flon)))
         call l4f_category_log(this%category,L4F_ERROR, &
-         TRIM(to_char(this%zoom%coord%ilat))//'/'// &
-         TRIM(to_char(this%zoom%coord%flat)))
+         TRIM(to_char(this%rect_coo%ilat))//'/'// &
+         TRIM(to_char(this%rect_coo%flat)))
         call raise_fatal_error()
       end if
 
@@ -322,22 +311,22 @@ IF (this%trans_type == 'zoom') THEN
         
     end if
 
-  else if (this%zoom%sub_type == 'index')then
+  else if (this%sub_type == 'index')then
 
-    if (c_e(this%zoom%index%ix) .and. c_e(this%zoom%index%iy) .or. &
-        c_e(this%zoom%index%fx) .or. c_e(this%zoom%index%fy)) then
+    if (c_e(this%rect_ind%ix) .and. c_e(this%rect_ind%iy) .or. &
+        c_e(this%rect_ind%fx) .or. c_e(this%rect_ind%fy)) then
 
 ! check
-      if (this%zoom%index%ix > this%zoom%index%fx .OR. &
-       this%zoom%index%iy > this%zoom%index%fy) THEN
+      if (this%rect_ind%ix > this%rect_ind%fx .OR. &
+       this%rect_ind%iy > this%rect_ind%fy) THEN
 
         CALL l4f_category_log(this%category,L4F_ERROR,'invalid zoom indices: ')
         CALL l4f_category_log(this%category,L4F_ERROR, &
-         TRIM(to_char(this%zoom%index%ix))//'/'// &
-         TRIM(to_char(this%zoom%index%fx)))
+         TRIM(to_char(this%rect_ind%ix))//'/'// &
+         TRIM(to_char(this%rect_ind%fx)))
         CALL l4f_category_log(this%category,L4F_ERROR, &
-         TRIM(to_char(this%zoom%index%iy))//'/'// &
-         TRIM(to_char(this%zoom%index%fy)))
+         TRIM(to_char(this%rect_ind%iy))//'/'// &
+         TRIM(to_char(this%rect_ind%fy)))
 
         CALL raise_fatal_error()
       ENDIF
@@ -353,18 +342,18 @@ IF (this%trans_type == 'zoom') THEN
   else
 
     CALL l4f_category_log(this%category,L4F_ERROR,'zoom: sub_type '// &
-     TRIM(this%zoom%sub_type)//' is wrong')
+     TRIM(this%sub_type)//' is wrong')
     CALL raise_fatal_error()
 
   end if
 
 ELSE IF (this%trans_type == 'boxregrid') THEN
 
-  IF (c_e(this%boxregrid%npx) .AND. c_e(this%boxregrid%npy)) THEN
+  IF (c_e(this%box_info%npx) .AND. c_e(this%box_info%npy)) THEN
 
-    IF (this%boxregrid%npx <= 0 .OR. this%boxregrid%npy <= 0 ) THEN
+    IF (this%box_info%npx <= 0 .OR. this%box_info%npy <= 0 ) THEN
       CALL l4f_category_log(this%category,L4F_ERROR,'invalid regrid parameters: '//&
-       TRIM(to_char(this%boxregrid%npx))//' '//TRIM(to_char(this%boxregrid%npy)))
+       TRIM(to_char(this%box_info%npx))//' '//TRIM(to_char(this%box_info%npy)))
       CALL raise_fatal_error()
     ENDIF
 
@@ -376,68 +365,61 @@ ELSE IF (this%trans_type == 'boxregrid') THEN
 
   ENDIF
 
-  IF (this%boxregrid%sub_type == 'average')THEN
+  IF (this%sub_type == 'average')THEN
 ! nothing to do here
   ELSE
     CALL l4f_category_log(this%category,L4F_ERROR,'boxregrid: sub_type '// &
-     TRIM(this%boxregrid%sub_type)//' is wrong')
+     TRIM(this%sub_type)//' is wrong')
     CALL raise_fatal_error()
   ENDIF
 
 ELSE IF (this%trans_type == 'inter') THEN
 
-  if (this%inter%sub_type == 'near')then
+  if (this%sub_type == 'near')then
 ! nothing to do here
-  else if (this%inter%sub_type == 'bilin')then
+  else if (this%sub_type == 'bilin')then
 ! nothing to do here
-  else if (this%inter%sub_type == 'linear')then
+  else if (this%sub_type == 'linear')then
 ! nothing to do here
   else
     CALL l4f_category_log(this%category,L4F_ERROR,'inter: sub_type '// &
-     TRIM(this%inter%sub_type)//' is wrong')
+     TRIM(this%sub_type)//' is wrong')
     CALL raise_fatal_error()
   endif
 
-ELSE IF (this%trans_type == 'boxinter')THEN
+ELSE IF (this%trans_type == 'boxinter' .OR. this%trans_type == 'polyinter')THEN
 
-  CALL optio(boxdx,this%inter%box%boxdx) ! unused
-  CALL optio(boxdy,this%inter%box%boxdy) ! now
-
-  IF (this%inter%sub_type == 'average') THEN
-! nothing to do here
-  ELSE IF (this%inter%sub_type == 'max') THEN
-! nothing to do here
-  ELSE IF (this%inter%sub_type == 'min') THEN
-! nothing to do here
-  ELSE IF (this%inter%sub_type == 'percentile') THEN
-    CALL optio(boxpercentile,this%inter%box%boxpercentile)
+  IF (this%sub_type == 'average') THEN
+    this%stat_info%percentile = rmiss
+  ELSE IF (this%sub_type == 'max') THEN
+    this%stat_info%percentile = 101.
+  ELSE IF (this%sub_type == 'min') THEN
+    this%stat_info%percentile = -1.
+  ELSE IF (this%sub_type == 'percentile') THEN
+    IF (.NOT.c_e(this%stat_info%percentile)) THEN
+      CALL l4f_category_log(this%category,L4F_ERROR,TRIM(this%trans_type)// &
+       '/percentile: percentile value not provided')
+      CALL raise_fatal_error()
+    ELSE IF (this%stat_info%percentile >= 100.) THEN
+      this%sub_type = 'max'
+    ELSE IF (this%stat_info%percentile <= 0.) THEN
+      this%sub_type = 'min'
+    ENDIF
   ELSE
-    CALL l4f_category_log(this%category,L4F_ERROR,'boxinter: sub_type '// &
-     TRIM(this%inter%sub_type)//' is wrong')
+    CALL l4f_category_log(this%category,L4F_ERROR,TRIM(this%trans_type)// &
+     ': sub_type '//TRIM(this%sub_type)//' is wrong')
     CALL raise_fatal_error()
   ENDIF
 
 ELSE IF (this%trans_type == 'vertint') THEN
 
-  CALL optio(sub_type,this%vertint%sub_type)
-
-  IF (PRESENT(input_levtype)) THEN
-    this%vertint%input_levtype = input_levtype
-  ELSE
+  IF (this%vertint%input_levtype == vol7d_level_miss) THEN
     CALL l4f_category_log(this%category,L4F_ERROR, &
      'vertint parameter input_levtype not provided')
     CALL raise_fatal_error()
   ENDIF
 
-  IF (PRESENT(input_coordvar)) THEN
-    this%vertint%input_coordvar = input_coordvar
-  ELSE
-    this%vertint%input_coordvar = vol7d_var_miss
-  ENDIF
-
-  IF (PRESENT(output_levtype)) THEN
-    this%vertint%output_levtype = output_levtype
-  ELSE
+  IF (this%vertint%output_levtype == vol7d_level_miss) THEN
     CALL l4f_category_log(this%category,L4F_ERROR, &
      'vertint parameter output_levtype not provided')
     CALL raise_fatal_error()
@@ -445,11 +427,11 @@ ELSE IF (this%trans_type == 'vertint') THEN
 
 ELSE IF (this%trans_type == 'metamorphosis') THEN
 
-  if (this%metamorphosis%sub_type == 'all')then
+  if (this%sub_type == 'all')then
 ! nothing to do here
   else
     CALL l4f_category_log(this%category,L4F_ERROR,'metamorphosis: sub_type '// &
-     TRIM(this%metamorphosis%sub_type)//' is wrong')
+     TRIM(this%sub_type)//' is wrong')
     CALL raise_fatal_error()
   endif
 
@@ -474,28 +456,26 @@ TYPE(transform_def),INTENT(out) :: this !< transformation object
 
 this%trans_type=cmiss
 
-this%zoom%sub_type=cmiss
+this%sub_type=cmiss
 
-this%zoom%index%ix=imiss
-this%zoom%index%iy=imiss
-this%zoom%index%fx=imiss
-this%zoom%index%fy=imiss
+this%rect_ind%ix=imiss
+this%rect_ind%iy=imiss
+this%rect_ind%fx=imiss
+this%rect_ind%fy=imiss
 
-this%zoom%coord%ilon=dmiss
-this%zoom%coord%ilat=dmiss
-this%zoom%coord%flon=dmiss
-this%zoom%coord%flat=dmiss
+this%rect_coo%ilon=dmiss
+this%rect_coo%ilat=dmiss
+this%rect_coo%flon=dmiss
+this%rect_coo%flat=dmiss
 
-this%boxregrid%sub_type=cmiss
+this%sub_type=cmiss
 
-this%boxregrid%npx=imiss
-this%boxregrid%npy=imiss
+this%box_info%npx=imiss
+this%box_info%npy=imiss
 
-this%inter%sub_type=cmiss
+this%sub_type=cmiss
 
-this%inter%near%external=.false.
-this%inter%bilin%external=.false.
-this%inter%linear%external=.false.
+this%external=.false.
 
 !chiudo il logger
 call l4f_category_delete(this%category)
@@ -560,22 +540,22 @@ nullify (this%inter_yp)
 
 IF (this%trans%trans_type == 'zoom') THEN
 
-  if (this%trans%zoom%sub_type == 'coord') THEN
+  if (this%trans%sub_type == 'coord') THEN
 
     CALL griddim_zoom_coord(in, &
-     this%trans%zoom%coord%ilon, this%trans%zoom%coord%ilat,&
-     this%trans%zoom%coord%flon, this%trans%zoom%coord%flat,&
-     this%trans%zoom%index%ix, this%trans%zoom%index%iy, &
-     this%trans%zoom%index%fx, this%trans%zoom%index%fy)
+     this%trans%rect_coo%ilon, this%trans%rect_coo%ilat,&
+     this%trans%rect_coo%flon, this%trans%rect_coo%flat,&
+     this%trans%rect_ind%ix, this%trans%rect_ind%iy, &
+     this%trans%rect_ind%fx, this%trans%rect_ind%fy)
 
-!    this%trans%zoom%sub_type = 'index'
+!    this%trans%sub_type = 'index'
 
-  ELSE IF (this%trans%zoom%sub_type == 'index') THEN
+  ELSE IF (this%trans%sub_type == 'index') THEN
 ! nothing particular to do
   ELSE
 
     CALL l4f_category_log(this%category,L4F_WARN, &
-     'init_grid_transform zoom sub_type '//TRIM(this%trans%inter%sub_type) &
+     'init_grid_transform zoom sub_type '//TRIM(this%trans%sub_type) &
      //' not supported')
     RETURN
     
@@ -586,25 +566,25 @@ IF (this%trans%trans_type == 'zoom') THEN
    lat_min=lat_min, lat_max=lat_max, dx=steplon, dy=steplat)
 
 ! old indices
-  this%iniox = min(max(this%trans%zoom%index%ix,1),nx) ! iox
-  this%inioy = min(max(this%trans%zoom%index%iy,1),ny) ! ioy
-  this%infox = max(min(this%trans%zoom%index%fx,nx),1) ! fox
-  this%infoy = max(min(this%trans%zoom%index%fy,ny),1) ! foy
+  this%iniox = min(max(this%trans%rect_ind%ix,1),nx) ! iox
+  this%inioy = min(max(this%trans%rect_ind%iy,1),ny) ! ioy
+  this%infox = max(min(this%trans%rect_ind%fx,nx),1) ! fox
+  this%infoy = max(min(this%trans%rect_ind%fy,ny),1) ! foy
 ! new indices
-  this%outinx = min(max(2-this%trans%zoom%index%ix,1),nx) ! inx
-  this%outiny = min(max(2-this%trans%zoom%index%iy,1),ny) ! iny
-  this%outfnx = min(this%trans%zoom%index%fx,nx)-this%trans%zoom%index%ix+1 ! fnx
-  this%outfny = min(this%trans%zoom%index%fy,ny)-this%trans%zoom%index%iy+1 ! fny
+  this%outinx = min(max(2-this%trans%rect_ind%ix,1),nx) ! inx
+  this%outiny = min(max(2-this%trans%rect_ind%iy,1),ny) ! iny
+  this%outfnx = min(this%trans%rect_ind%fx,nx)-this%trans%rect_ind%ix+1 ! fnx
+  this%outfny = min(this%trans%rect_ind%fy,ny)-this%trans%rect_ind%iy+1 ! fny
 
-  lon_min=lon_min+steplon*(this%trans%zoom%index%ix-1)
-  lat_min=lat_min+steplat*(this%trans%zoom%index%iy-1)
-  lon_max=lon_max+steplon*(this%trans%zoom%index%fx-nx)
-  lat_max=lat_max+steplat*(this%trans%zoom%index%fy-ny)
+  lon_min=lon_min+steplon*(this%trans%rect_ind%ix-1)
+  lat_min=lat_min+steplat*(this%trans%rect_ind%iy-1)
+  lon_max=lon_max+steplon*(this%trans%rect_ind%fx-nx)
+  lat_max=lat_max+steplat*(this%trans%rect_ind%fy-ny)
 
   call copy (in,out)
 
-  out%dim%nx = this%trans%zoom%index%fx - this%trans%zoom%index%ix + 1 ! newx
-  out%dim%ny = this%trans%zoom%index%fy - this%trans%zoom%index%iy + 1 ! newy
+  out%dim%nx = this%trans%rect_ind%fx - this%trans%rect_ind%ix + 1 ! newx
+  out%dim%ny = this%trans%rect_ind%fy - this%trans%rect_ind%iy + 1 ! newy
 
   this%innx = nx
   this%inny = ny
@@ -618,7 +598,7 @@ IF (this%trans%trans_type == 'zoom') THEN
 
 ELSE IF (this%trans%trans_type == 'boxregrid') THEN
 
-  IF (this%trans%boxregrid%sub_type == 'average') THEN
+  IF (this%trans%sub_type == 'average') THEN
 
     CALL get_val(in, nx=nx, ny=ny, lon_min=lon_min, lon_max=lon_max, &
      lat_min=lat_min, lat_max=lat_max, dx=steplon, dy=steplat)
@@ -627,18 +607,18 @@ ELSE IF (this%trans%trans_type == 'boxregrid') THEN
     this%inny = ny
 
 ! new grid
-    lon_min_new = lon_min + (this%trans%boxregrid%npx - 1)*0.5D0*steplon
-    lat_min_new = lat_min + (this%trans%boxregrid%npy - 1)*0.5D0*steplat
+    lon_min_new = lon_min + (this%trans%box_info%npx - 1)*0.5D0*steplon
+    lat_min_new = lat_min + (this%trans%box_info%npy - 1)*0.5D0*steplat
 
     CALL l4f_category_log(this%category,L4F_DEBUG,"copying griddim in out")
     call copy(in, out)
-    out%dim%nx = nx/this%trans%boxregrid%npx
-    out%dim%ny = ny/this%trans%boxregrid%npy
+    out%dim%nx = nx/this%trans%box_info%npx
+    out%dim%ny = ny/this%trans%box_info%npy
 
     this%outnx=out%dim%nx
     this%outny=out%dim%ny
-    steplon = steplon*this%trans%boxregrid%npx
-    steplat = steplat*this%trans%boxregrid%npy
+    steplon = steplon*this%trans%box_info%npx
+    steplat = steplat*this%trans%box_info%npy
 
     CALL set_val(out, lon_min=lon_min_new, lat_min=lat_min_new, &
      lon_max=lon_min_new + DBLE(out%dim%nx-1)*steplon, dx=steplon, &
@@ -647,7 +627,7 @@ ELSE IF (this%trans%trans_type == 'boxregrid') THEN
   ELSE
 
     CALL l4f_category_log(this%category,L4F_WARN, &
-     'init_grid_transform boxregrid sub_type '//TRIM(this%trans%inter%sub_type) &
+     'init_grid_transform boxregrid sub_type '//TRIM(this%trans%sub_type) &
      //' not supported')
     
   ENDIF
@@ -660,7 +640,7 @@ ELSE IF (this%trans%trans_type == 'inter') THEN
   CALL get_val(in, component_flag=i)
   CALL set_val(out, component_flag=i)
 
-  IF (this%trans%inter%sub_type == 'near' .OR. this%trans%inter%sub_type == 'bilin' ) THEN
+  IF (this%trans%sub_type == 'near' .OR. this%trans%sub_type == 'bilin' ) THEN
     
     CALL get_val(in, nx=this%innx, ny=this%inny, &
      lon_min=lon_min, lon_max=lon_max, lat_min=lat_min, lat_max=lat_max)
@@ -669,14 +649,14 @@ ELSE IF (this%trans%trans_type == 'inter') THEN
     ALLOCATE(this%inter_index_x(this%outnx,this%outny), &
      this%inter_index_y(this%outnx,this%outny))
 
-    CALL find_index(in,this%trans%inter%sub_type,&
+    CALL find_index(in,this%trans%sub_type,&
      nx=this%innx, ny=this%inny ,&
      lon_min=lon_min, lon_max=lon_max,&
      lat_min=lat_min, lat_max=lat_max,&
      lon=out%dim%lon,lat=out%dim%lat,&
      index_x=this%inter_index_x,index_y=this%inter_index_y)
 
-    IF ( this%trans%inter%sub_type == 'bilin' ) THEN
+    IF ( this%trans%sub_type == 'bilin' ) THEN
       ALLOCATE(this%inter_x(this%innx,this%inny), &
        this%inter_y(this%innx,this%inny))
       ALLOCATE(this%inter_xp(this%outnx,this%outny), &
@@ -692,7 +672,7 @@ ELSE IF (this%trans%trans_type == 'inter') THEN
   ELSE
 
     CALL l4f_category_log(this%category,L4F_WARN, &
-     'init_grid_transform inter sub_type '//TRIM(this%trans%inter%sub_type) &
+     'init_grid_transform inter sub_type '//TRIM(this%trans%sub_type) &
      //' not supported')
     
   ENDIF
@@ -704,13 +684,13 @@ ELSE IF (this%trans%trans_type == 'boxinter') THEN
    lon_min=lon_min, lon_max=lon_max, lat_min=lat_min, lat_max=lat_max)
 ! TODO now box size is ignored
 ! if box size not provided, use the actual grid step
-  IF (.NOT.c_e(this%trans%inter%box%boxdx)) &
-   CALL get_val(out, dx=this%trans%inter%box%boxdx)
-  IF (.NOT.c_e(this%trans%inter%box%boxdy)) &
-   CALL get_val(out, dx=this%trans%inter%box%boxdy)
+  IF (.NOT.c_e(this%trans%area_info%boxdx)) &
+   CALL get_val(out, dx=this%trans%area_info%boxdx)
+  IF (.NOT.c_e(this%trans%area_info%boxdy)) &
+   CALL get_val(out, dx=this%trans%area_info%boxdy)
 ! half size is actually needed
-  this%trans%inter%box%boxdx = this%trans%inter%box%boxdx*0.5D0
-  this%trans%inter%box%boxdy = this%trans%inter%box%boxdy*0.5D0
+  this%trans%area_info%boxdx = this%trans%area_info%boxdx*0.5D0
+  this%trans%area_info%boxdy = this%trans%area_info%boxdy*0.5D0
 ! unlike before, here index arrays must have the shape of input grid
   ALLOCATE(this%inter_index_x(this%innx,this%inny), &
    this%inter_index_y(this%innx,this%inny))
@@ -743,23 +723,41 @@ END SUBROUTINE grid_transform_init
 !! is described in the transformation object \a trans (type
 !! transform_def) which must have been properly initialised. The
 !! additional information required here is the description of the
-!! input grid \a in (type griddim_def), and a vol7d object (\a v7d
-!! argument) which must have been initialized with the coordinates of
-!! sparse points over which the transformation (typically an
-!! interpolation) should take place. The generated \a grid_transform
-!! object is specific to the grid and sparse point list provided.
-SUBROUTINE grid_transform_grid_vol7d_init(this, trans, in, v7d, categoryappend)
+!! input grid \a in (type griddim_def), and, if required by the
+!! transformation type, the information about the target sparse points
+!! over which the transformation should take place:
+!!
+!!  - for 'inter' transformation, this is provided in the form of a
+!!    vol7d object (\a v7d_out argument, input), which must have been
+!!    initialized with the coordinates of desired sparse points
+!!
+!!  - for 'polyinter' transformation, this is a list of polygons (\a
+!!    poly argument), and, in this case, \a v7d_out is an output
+!!    argument which returns the coordinates of the target points
+!!    (polygons' centroids)
+!!
+!!  - for 'metamorphosis' transformation, no target point information
+!!    has to be provided in input (it is calculated on the basis of
+!!    output grid), and, as for 'polyinter', this information is
+!!    returned in output in \a v7d_out argument.
+!!
+!! The generated \a grid_transform object is specific to
+!! the grid and sparse point list provided or computed.
+SUBROUTINE grid_transform_grid_vol7d_init(this, trans, in, v7d_out, poly, &
+ categoryappend)
 TYPE(grid_transform),INTENT(out) :: this !< grid_transformation object
 TYPE(transform_def),INTENT(in) :: trans !< transformation object
 TYPE(griddim_def),INTENT(inout) :: in !< griddim object to transform
-TYPE(vol7d),INTENT(inout) :: v7d !< vol7d object with the coordinates of the sparse point to be used as transformation target
+TYPE(vol7d),INTENT(inout) :: v7d_out !< vol7d object with the coordinates of the sparse points to be used as transformation target (input or output depending on type of transformation)
+TYPE(geo_coordvect),INTENT(inout),OPTIONAL :: poly(:) !< array of polygons indicating areas over which to interpolate (for transformation type 'polyinter')
 character(len=*),INTENT(in),OPTIONAL :: categoryappend !< append this suffix to log4fortran namespace category
 
-INTEGER :: nx, ny, i, j
+INTEGER :: nx, ny, i, j, n
 DOUBLE PRECISION :: lon_min, lon_max, lat_min, lat_max, steplon, steplat,lon_min_new, lat_min_new
-doubleprecision,allocatable :: lon(:),lat(:)
+doubleprecision,pointer :: lon(:),lat(:)
 integer :: ix,iy
 character(len=512) :: a_name
+TYPE(geo_coord) :: point
 
 call l4f_launcher(a_name,a_name_append=trim(subcategory)//"."//trim(optio_c(categoryappend,255)))
 this%category=l4f_category_get(a_name)
@@ -782,13 +780,13 @@ nullify (this%inter_yp)
 
 IF (this%trans%trans_type == 'inter') THEN
 
-  IF (this%trans%inter%sub_type == 'near' .OR. this%trans%inter%sub_type == 'bilin' ) THEN
+  IF (this%trans%sub_type == 'near' .OR. this%trans%sub_type == 'bilin' ) THEN
 
     CALL get_val(in, nx=nx, ny=ny)
     this%innx=nx
     this%inny=ny
 
-    this%outnx=SIZE(v7d%ana)
+    this%outnx=SIZE(v7d_out%ana)
     this%outny=1
 
     ALLOCATE (this%inter_index_x(this%outnx,this%outny),&
@@ -799,16 +797,16 @@ IF (this%trans%trans_type == 'inter') THEN
      lon_min=lon_min, lon_max=lon_max,&
      lat_min=lat_min, lat_max=lat_max)
 
-    CALL getval(v7d%ana(:)%coord,lon=lon,lat=lat)
+    CALL getval(v7d_out%ana(:)%coord,lon=lon,lat=lat)
 
-    CALL find_index(in,this%trans%inter%sub_type,&
+    CALL find_index(in,this%trans%sub_type,&
      nx=this%innx, ny=this%inny ,&
      lon_min=lon_min, lon_max=lon_max,&
      lat_min=lat_min, lat_max=lat_max,&
      lon=RESHAPE(lon,(/SIZE(lon),1/)),lat=RESHAPE(lat,(/SIZE(lat),1/)),&
      index_x=this%inter_index_x,index_y=this%inter_index_y)
 
-    IF ( this%trans%inter%sub_type == 'bilin' ) THEN
+    IF ( this%trans%sub_type == 'bilin' ) THEN
       ALLOCATE(this%inter_x(this%innx,this%inny),this%inter_y(this%innx,this%inny))
       ALLOCATE(this%inter_xp(this%outnx,this%outny),this%inter_yp(this%outnx,this%outny))
 
@@ -825,40 +823,75 @@ IF (this%trans%trans_type == 'inter') THEN
   ELSE
 
     CALL l4f_category_log(this%category,L4F_WARN, &
-     'init_grid_v7d_transform inter sub_type '//TRIM(this%trans%inter%sub_type) &
+     'grid_transform_init inter sub_type '//TRIM(this%trans%sub_type) &
      //' not supported')
     
   ENDIF
 
+ELSE IF (this%trans%trans_type == 'polyinter') THEN
+
+  IF (.NOT.PRESENT(poly)) THEN
+    CALL l4f_category_log(this%category,L4F_ERROR, &
+     'grid_transform_init poly argument missing for polyinter transformation')
+    CALL raise_fatal_error()
+  ENDIF
+
+  CALL get_val(in, nx=this%innx, ny=this%inny)
+! unlike before, here index arrays must have the shape of input grid
+  ALLOCATE(this%inter_index_x(this%innx,this%inny), &
+   this%inter_index_y(this%innx,this%inny))
+  this%inter_index_x(:,:) = imiss
+  this%inter_index_y(:,:) = 1
+
+! compute coordinates of input grid in geo system
+  CALL unproj(in) ! TODO costringe a dichiarare in INTENT(inout), si puo` evitare?
+
+! compute coordinates of polygons in geo system
+  DO n = 1, SIZE(poly)
+    CALL to_geo(poly(n))
+  ENDDO
+
+  DO j = 1, this%inny
+    DO i = 1, this%innx
+      CALL init(point, lon=in%dim%lon(i,j), lat=in%dim%lat(i,j))
+      DO n = 1, SIZE(poly)
+        IF (inside(point, poly(n))) THEN ! stop at the first matching polygon
+          this%inter_index_x(i,j) = n
+          EXIT
+        ENDIF
+      ENDDO
+!      CALL delete(point) ! speedup
+    ENDDO
+  ENDDO
+
+  this%outnx=SIZE(poly)
+  this%outny=1
+  CALL vol7d_alloc(v7d_out, nana=SIZE(poly))
+
+! setup output point list, equal to average of polygon points
+! warning, in case of ring areas points may coincide!
+  DO n = 1, SIZE(poly)
+    CALL getval(poly(n), lon=lon, lat=lat)
+    CALL init(v7d_out%ana(n), lon=stat_average(lon), lat=stat_average(lat))
+    DEALLOCATE(lon, lat)
+  ENDDO
 
 else IF (this%trans%trans_type == 'metamorphosis') THEN
 
-  IF (this%trans%metamorphosis%sub_type == 'all' ) THEN
+  IF (this%trans%sub_type == 'all' ) THEN
 
     CALL get_val(in, nx=nx, ny=ny)
     this%innx=nx
     this%inny=ny
-
-!    this%outnx=SIZE(v7d%ana)
     this%outnx=nx*ny
     this%outny=1
-    CALL vol7d_alloc(v7d, nana=nx*ny)
-
-!    if (this%innx * this%inny /=  this%outnx * this%outny ) then
-!      CALL l4f_category_log(this%category,L4F_ERROR, &
-!       'init_grid_v7d_transform metamorphosis inconsistent dimension in and out '//&
-!       trim(to_char(this%innx * this%inny))//"  /=  "//trim(to_char( this%outnx * this%outny)))
-!      call raise_fatal_error('init_grid_v7d_transform metamorphosis inconsistent dimension in and out '//&
-!       trim(to_char(this%innx * this%inny))//"  /=  "//trim(to_char( this%outnx * this%outny)))
-!
-!    end if
-
+    CALL vol7d_alloc(v7d_out, nana=nx*ny)
 
 ! compute coordinates of input grid in geo system
     CALL unproj(in) ! TODO costringe a dichiarare in INTENT(inout), si puo` evitare?
     do iy=1,this%inny
       do ix=1,this%innx
-        CALL init(v7d%ana((iy-1)*this%innx+ix), &
+        CALL init(v7d_out%ana((iy-1)*this%innx+ix), &
          lon=in%dim%lon(ix,iy),lat=in%dim%lat(ix,iy))
       end do
     end do
@@ -866,7 +899,7 @@ else IF (this%trans%trans_type == 'metamorphosis') THEN
   ELSE
 
     CALL l4f_category_log(this%category,L4F_WARN, &
-     'init_grid_v7d_transform inter sub_type '//TRIM(this%trans%inter%sub_type) &
+     'grid_transform_init metamorphosis sub_type '//TRIM(this%trans%sub_type) &
      //' not supported')
     
   ENDIF
@@ -889,17 +922,17 @@ END SUBROUTINE grid_transform_grid_vol7d_init
 !! transformation is described in the transformation object \a trans
 !! (type transform_def) which must have been properly initialised. The
 !! additional information required here is the list of the input
-!! sparse points in the form of a \a vol7d object (parameter \a v7d),
+!! sparse points in the form of a \a vol7d object (parameter \a v7d_in),
 !! which can be the same volume that will be successively used for
 !! interpolation or a volume with just the same coordinate data, and
 !! the description of the output grid \a griddim (a \a griddim_def
 !! object). The generated \a grid_transform object is specific to the
 !! sparse point list and grid provided.
-SUBROUTINE grid_transform_vol7d_grid_init(this,trans,v7d,griddim,categoryappend)
+SUBROUTINE grid_transform_vol7d_grid_init(this, trans, v7d_in, out, categoryappend)
 TYPE(grid_transform),INTENT(out) :: this !< grid transformation object
 TYPE(transform_def),INTENT(in) :: trans !< transformation object
-TYPE(vol7d),INTENT(in) :: v7d !< vol7d object with the coordinates of the sparse point to be used as input (only information about coordinates is used
-TYPE(griddim_def),INTENT(in) :: griddim !< griddim object defining target grid
+TYPE(vol7d),INTENT(in) :: v7d_in !< vol7d object with the coordinates of the sparse point to be used as input (only information about coordinates is used)
+TYPE(griddim_def),INTENT(in) :: out !< griddim object defining target grid
 character(len=*),INTENT(in),OPTIONAL :: categoryappend !< append this suffix to log4fortran namespace category
 
 INTEGER :: nx, ny,i,j
@@ -925,65 +958,65 @@ nullify (this%inter_yp)
 
 IF (this%trans%trans_type == 'inter') THEN
 
-  IF ( this%trans%inter%sub_type == 'linear' ) THEN
+  IF ( this%trans%sub_type == 'linear' ) THEN
     
-    CALL get_val(griddim, nx=nx, ny=ny)
+    CALL get_val(out, nx=nx, ny=ny)
     this%outnx=nx
     this%outny=ny
   
-    this%innx=SIZE(v7d%ana)
+    this%innx=SIZE(v7d_in%ana)
     this%inny=1
   
     ALLOCATE(lon(this%innx),lat(this%innx))
     ALLOCATE(this%inter_xp(this%innx,this%inny),this%inter_yp(this%innx,this%inny))
     ALLOCATE(this%inter_x(this%outnx,this%outny),this%inter_y(this%outnx,this%outny))
 
-    CALL get_val(griddim, &
+    CALL get_val(out, &
      lon_min=lon_min, lon_max=lon_max,&
      lat_min=lat_min, lat_max=lat_max)
 
-    CALL getval(v7d%ana(:)%coord,lon=lon,lat=lat)
+    CALL getval(v7d_in%ana(:)%coord,lon=lon,lat=lat)
 
-    CALL proj(griddim,&
+    CALL proj(out,&
      RESHAPE(lon,(/SIZE(lon),1/)),RESHAPE(lat,(/SIZE(lat),1/)),&
      this%inter_xp,this%inter_yp)
 
-    CALL griddim_gen_coord(griddim, this%inter_x, this%inter_y)
+    CALL griddim_gen_coord(out, this%inter_x, this%inter_y)
 
     DEALLOCATE(lon,lat)
 
   ELSE
 
     CALL l4f_category_log(this%category,L4F_WARN, &
-     'init_v7d_grid_transform inter sub_type '//TRIM(this%trans%inter%sub_type) &
+     'init_v7d_grid_transform inter sub_type '//TRIM(this%trans%sub_type) &
      //' not supported')
 
   ENDIF
 
 ELSE IF (this%trans%trans_type == 'boxinter') THEN
 
-  this%innx=SIZE(v7d%ana)
+  this%innx=SIZE(v7d_in%ana)
   this%inny=1
-  CALL get_val(griddim, nx=this%outnx, ny=this%outny, &
+  CALL get_val(out, nx=this%outnx, ny=this%outny, &
    lon_min=lon_min, lon_max=lon_max, lat_min=lat_min, lat_max=lat_max)
 ! TODO now box size is ignored
 ! if box size not provided, use the actual grid step
-  IF (.NOT.c_e(this%trans%inter%box%boxdx)) &
-   CALL get_val(griddim, dx=this%trans%inter%box%boxdx)
-  IF (.NOT.c_e(this%trans%inter%box%boxdy)) &
-   CALL get_val(griddim, dx=this%trans%inter%box%boxdy)
+  IF (.NOT.c_e(this%trans%area_info%boxdx)) &
+   CALL get_val(out, dx=this%trans%area_info%boxdx)
+  IF (.NOT.c_e(this%trans%area_info%boxdy)) &
+   CALL get_val(out, dx=this%trans%area_info%boxdy)
 ! half size is actually needed
-  this%trans%inter%box%boxdx = this%trans%inter%box%boxdx*0.5D0
-  this%trans%inter%box%boxdy = this%trans%inter%box%boxdy*0.5D0
+  this%trans%area_info%boxdx = this%trans%area_info%boxdx*0.5D0
+  this%trans%area_info%boxdy = this%trans%area_info%boxdy*0.5D0
 ! index arrays must have the shape of input grid
   ALLOCATE(lon(this%innx),lat(this%innx))
   ALLOCATE(this%inter_index_x(this%innx,this%inny), &
    this%inter_index_y(this%innx,this%inny))
 
 ! get coordinates of input grid in geo system
-  CALL getval(v7d%ana(:)%coord,lon=lon,lat=lat)
+  CALL getval(v7d_in%ana(:)%coord,lon=lon,lat=lat)
 ! use find_index in the opposite way
-  CALL find_index(griddim,'near',&
+  CALL find_index(out,'near',&
    nx=this%outnx, ny=this%outny ,&
    lon_min=lon_min, lon_max=lon_max,&
    lat_min=lat_min, lat_max=lat_max,&
@@ -1041,11 +1074,15 @@ END SUBROUTINE grid_transform_delete
 !! the defined transformation. The \a grid_transform object \a this
 !! must have been properly initialised, so that it contains all the
 !! information needed for computing the transformation. This is the
-!! grid-to-grid and grid-to-sparse points version.
+!! grid-to-grid and grid-to-sparse points version. In the case of
+!! grid-to-sparse points transformation, the output argument is still
+!! a 2-d array with shape \a (np,1), which may have to be reshaped and
+!! assigned to the target 1-d array after the subroutine call by means
+!! of the \a RESHAPE() intrinsic function.
 SUBROUTINE grid_transform_compute(this, field_in, field_out)
 TYPE(grid_transform),INTENT(in) :: this !< grid_transformation object
 REAL, INTENT(in) :: field_in(:,:) !< input array
-REAL, INTENT(out) :: field_out(:,:) !< output aarray
+REAL, INTENT(out) :: field_out(:,:) !< output array
 
 INTEGER :: i, j, ii, jj, ie, je, navg
 INTEGER,ALLOCATABLE :: nval(:,:)
@@ -1080,7 +1117,7 @@ field_out(:,:) = rmiss
 #ifdef DEBUG
   call l4f_category_log(this%category,L4F_DEBUG, &
    "start grid_transform_compute "//TRIM(this%trans%trans_type)//':'// &
-   TRIM(this%trans%inter%sub_type))
+   TRIM(this%trans%sub_type))
 #endif
 
 IF (this%trans%trans_type == 'zoom') THEN
@@ -1093,12 +1130,12 @@ IF (this%trans%trans_type == 'zoom') THEN
 ELSE IF (this%trans%trans_type == 'boxregrid') THEN
 
   jj = 0
-  DO j = 1, this%inny - this%trans%boxregrid%npy + 1, this%trans%boxregrid%npy
-    je = j+this%trans%boxregrid%npy-1
+  DO j = 1, this%inny - this%trans%box_info%npy + 1, this%trans%box_info%npy
+    je = j+this%trans%box_info%npy-1
     jj = jj+1
     ii = 0
-    DO i = 1, this%innx - this%trans%boxregrid%npx + 1, this%trans%boxregrid%npx
-      ie = i+this%trans%boxregrid%npx-1
+    DO i = 1, this%innx - this%trans%box_info%npx + 1, this%trans%box_info%npx
+      ie = i+this%trans%box_info%npx-1
       ii = ii+1
       navg = COUNT(field_in(i:ie,j:je) /= rmiss)
       IF (navg > 0) THEN
@@ -1110,7 +1147,7 @@ ELSE IF (this%trans%trans_type == 'boxregrid') THEN
 
 ELSE IF (this%trans%trans_type == 'inter') THEN
 
-  IF (this%trans%inter%sub_type == 'near') THEN
+  IF (this%trans%sub_type == 'near') THEN
 
     DO j = 1, this%outny 
       DO i = 1, this%outnx 
@@ -1121,7 +1158,7 @@ ELSE IF (this%trans%trans_type == 'inter') THEN
       ENDDO
     ENDDO
 
-  else if (this%trans%inter%sub_type == 'bilin') THEN
+  else if (this%trans%sub_type == 'bilin') THEN
 
     DO j = 1, this%outny 
       DO i = 1, this%outnx 
@@ -1152,9 +1189,10 @@ ELSE IF (this%trans%trans_type == 'inter') THEN
     ENDDO
 
   ENDIF
-ELSE IF (this%trans%trans_type == 'boxinter') THEN
+ELSE IF (this%trans%trans_type == 'boxinter' &
+ .OR. this%trans%trans_type == 'polyinter') THEN
 
-  IF (this%trans%inter%sub_type == 'average') THEN
+  IF (this%trans%sub_type == 'average') THEN
     
     ALLOCATE(nval(this%outnx, this%outny))
     field_out(:,:) = 0.0
@@ -1177,7 +1215,7 @@ ELSE IF (this%trans%trans_type == 'boxinter') THEN
     END WHERE
     DEALLOCATE(nval)
 
-  ELSE IF (this%trans%inter%sub_type == 'max') THEN
+  ELSE IF (this%trans%sub_type == 'max') THEN
 
     field_out(:,:) = rmiss
     DO j = 1, this%inny
@@ -1195,7 +1233,7 @@ ELSE IF (this%trans%trans_type == 'boxinter') THEN
     ENDDO
 
 
-  ELSE IF (this%trans%inter%sub_type == 'min') THEN
+  ELSE IF (this%trans%sub_type == 'min') THEN
 
     field_out(:,:) = rmiss
     DO j = 1, this%inny
@@ -1212,13 +1250,13 @@ ELSE IF (this%trans%trans_type == 'boxinter') THEN
       ENDDO
     ENDDO
 
-  ELSE IF (this%trans%inter%sub_type == 'percentile') THEN
+  ELSE IF (this%trans%sub_type == 'percentile') THEN
     
     DO j = 1, this%outny
       DO i = 1, this%outnx
         field_out(i:i,j) = stat_percentile( &
          RESHAPE(field_in, (/SIZE(field_in)/)), &
-         (/REAL(this%trans%inter%box%boxpercentile)/), &
+         (/REAL(this%trans%stat_info%percentile)/), &
          mask=RESHAPE((this%inter_index_x == i .AND. &
          this%inter_index_y == j), (/SIZE(field_in)/)))
       ENDDO
@@ -1229,7 +1267,7 @@ ELSE IF (this%trans%trans_type == 'boxinter') THEN
 
 ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
 
-  IF (this%trans%metamorphosis%sub_type == 'all') THEN
+  IF (this%trans%sub_type == 'all') THEN
 
     field_out = RESHAPE(field_in ,(/this%outnx,this%outny/))
 
@@ -1284,7 +1322,7 @@ IF (this%trans%trans_type == 'inter') THEN
   call l4f_category_log(this%category,L4F_DEBUG,"start v7d_grid_transform_compute inter")
 #endif
 
-  if (this%trans%inter%sub_type == 'linear') THEN
+  if (this%trans%sub_type == 'linear') THEN
 
     inn_p=count(c_e(field_in))
 
@@ -1331,7 +1369,7 @@ IF (this%trans%trans_type == 'inter') THEN
   ELSE
 
     call l4f_category_log(this%category,L4F_ERROR, &
-     "sub_type not right here: "//this%trans%inter%sub_type)
+     "sub_type not right here: "//this%trans%sub_type)
     call raise_fatal_error()
 
   END IF

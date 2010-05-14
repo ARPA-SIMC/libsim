@@ -183,8 +183,7 @@ end if
 
 call init(trans, trans_type=trans_type, sub_type=sub_type, &
  ilon=ilon, ilat=ilat, flon=flon, flat=flat, npx=npx, npy=npy, &
- boxpercentile=0.5D0, &
- categoryappend="transformation")
+ percentile=0.5D0, categoryappend="transformation")
 
 call grib_open_file(ifile, trim(infile),'r')
 call grib_open_file(ofile, trim(outfile),'w')
