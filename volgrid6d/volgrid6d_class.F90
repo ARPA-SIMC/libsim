@@ -128,7 +128,7 @@ END INTERFACE
 !! Deve essere fornito l'oggetto di trasformazione
 INTERFACE compute
   MODULE PROCEDURE volgrid6d_transform_compute,volgrid6d_v7d_transform_compute,&
-   v7d_volgrid6d_transform_compute
+   v7d_volgrid6d_transform_compute, v7d_v7d_transform_compute
 END INTERFACE
 
 !> \brief Trasforma i dati secondo gli oggetti forniti
@@ -136,7 +136,8 @@ END INTERFACE
 !! L'oggetto trasformazione viene creato e distrutto automaticamete
 INTERFACE transform
   MODULE PROCEDURE volgrid6d_transform,volgrid6dv_transform,&
-   volgrid6d_v7d_transform, volgrid6dv_v7d_transform, v7d_volgrid6d_transform
+   volgrid6d_v7d_transform, volgrid6dv_v7d_transform, v7d_volgrid6d_transform, &
+   v7d_v7d_transform
 END INTERFACE
 
 INTERFACE wind_rot
@@ -1931,6 +1932,88 @@ call vg6d_wind_rot(volgrid6d_out)
 call delete (grid_trans)
 
 end subroutine v7d_volgrid6d_transform
+
+
+!> \brief Calcola i nuovi dati secondo la trasformazione specificata
+!!
+!! Deve essere fornito l'oggetto di trasformazione e oggetti completi
+SUBROUTINE v7d_v7d_transform_compute(this, vol7d_in, vol7d_out)
+TYPE(grid_transform),INTENT(in) :: this !< oggetto di trasformazione per grigliato
+type(vol7d), INTENT(in) :: vol7d_in !< oggetto da trasformare
+type(vol7d), INTENT(out) :: vol7d_out !< oggetto trasformato
+
+integer :: itime, itimerange, ilevel, ivar, inetwork
+
+#ifdef DEBUG
+call l4f_category_log(volgrid6d_in%category,L4F_DEBUG,"start vol7d_v7d_transform_compute")
+#endif
+
+vol7d_out%time(:) = vol7d_in%time(:)
+vol7d_out%timerange(:) = vol7d_in%timerange(:)
+vol7d_out%level(:) = vol7d_in%level(:)
+vol7d_out%network(:) = vol7d_in%network(:)
+
+DO inetwork = 1, SIZE(vol7d_in%network)
+  DO ivar = 1, SIZE(vol7d_in%dativar%r)
+    DO itimerange = 1, SIZE(vol7d_in%timerange)
+      DO ilevel = 1, SIZE(vol7d_in%level)
+        DO itime = 1, SIZE(vol7d_in%time)
+
+! dirty trick to make voldatir look like a 2d-array of shape (nana,1)
+          CALL compute(this, &
+           vol7d_in%voldatir(:,itime:itime,ilevel,itimerange,ivar,inetwork), &
+           vol7d_out%voldatir(:,itime:itime,ilevel,itimerange,ivar,inetwork))
+
+        ENDDO
+      ENDDO
+    ENDDO
+  ENDDO
+ENDDO
+
+
+END SUBROUTINE v7d_v7d_transform_compute
+
+
+!> \brief Trasforma i dati secondo gli oggetti forniti
+!!
+!! L'oggetto trasformazione su grigliato viene creato e distrutto automaticamete
+!! L'oggetto trasformato viene creato automaticamente
+SUBROUTINE v7d_v7d_transform(this, vol7d_in, vol7d_out, v7d, poly, &
+ categoryappend)
+type(transform_def),intent(in) :: this !< oggetto che specifica la trasformazione
+type(vol7d), INTENT(inout) :: vol7d_in !< oggetto da trasformare
+type(vol7d), INTENT(out) :: vol7d_out !< oggetto trasformato
+type(vol7d), INTENT(in), OPTIONAL :: v7d !<  anagrafiche su cui effettuare la trasformazione
+TYPE(geo_coordvect),INTENT(inout),OPTIONAL :: poly(:) !< array of polygons indicating areas over which to transform
+character(len=*),INTENT(in),OPTIONAL :: categoryappend !< appende questo suffisso al namespace category di log4fortran
+
+TYPE(grid_transform) :: grid_trans
+TYPE(vol7d) :: v7d_locana
+
+#ifdef DEBUG
+call l4f_category_log(volgrid6d_in%category,L4F_DEBUG,"start v7d_v7d_transform")
+#endif
+
+CALL init(grid_trans, this, vol7d_in, v7d_locana, poly=poly, &
+ categoryappend=categoryappend)
+
+CALL init(vol7d_out, time_definition=vol7d_in%time_definition)
+
+CALL vol7d_alloc(vol7d_out, nana=SIZE(v7d_locana%ana), ntime=SIZE(vol7d_in%time), &
+ ntimerange=SIZE(vol7d_in%timerange), nlevel=SIZE(vol7d_in%level), &
+ nnetwork=SIZE(vol7d_in%network), ndativarr=SIZE(vol7d_in%dativar%r))
+vol7d_out%ana = v7d_locana%ana
+CALL vol7d_alloc_vol(vol7d_out)
+
+CALL compute(grid_trans, vol7d_in, vol7d_out)
+
+CALL delete (grid_trans)
+
+if (.not. present(v7d)) then
+  call delete(v7d_locana)
+endif
+
+END SUBROUTINE v7d_v7d_transform
 
 
 SUBROUTINE vargrib2varbufr_v(vargrib, varbufr, c_func)

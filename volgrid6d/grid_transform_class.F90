@@ -171,7 +171,8 @@ END TYPE grid_transform
 !> Constructors of the corresponding objects.
 INTERFACE init
   MODULE PROCEDURE transform_init, grid_transform_init, &
-   grid_transform_grid_vol7d_init, grid_transform_vol7d_grid_init
+   grid_transform_grid_vol7d_init, grid_transform_vol7d_grid_init, &
+   grid_transform_vol7d_vol7d_init
 END INTERFACE
 
 !> Destructors of the corresponding objects.
@@ -869,7 +870,7 @@ ELSE IF (this%trans%trans_type == 'polyinter') THEN
   CALL vol7d_alloc(v7d_out, nana=SIZE(poly))
 
 ! setup output point list, equal to average of polygon points
-! warning, in case of ring areas points may coincide!
+! warning, in case of concave areas points may coincide!
   DO n = 1, SIZE(poly)
     CALL getval(poly(n), lon=lon, lat=lat)
     CALL init(v7d_out%ana(n), lon=stat_average(lon), lat=stat_average(lat))
@@ -924,7 +925,7 @@ END SUBROUTINE grid_transform_grid_vol7d_init
 !! additional information required here is the list of the input
 !! sparse points in the form of a \a vol7d object (parameter \a v7d_in),
 !! which can be the same volume that will be successively used for
-!! interpolation or a volume with just the same coordinate data, and
+!! interpolation, or a volume with just the same coordinate data, and
 !! the description of the output grid \a griddim (a \a griddim_def
 !! object). The generated \a grid_transform object is specific to the
 !! sparse point list and grid provided.
@@ -1032,6 +1033,140 @@ ELSE
 ENDIF
 
 END SUBROUTINE grid_transform_vol7d_grid_init
+
+
+!> Constructor for a \a grid_transform object, defining a particular
+!! sparse points-to-sparse points transformation.
+
+!! It defines an object describing a transformation from a set of
+!! sparse points to a set of sparse points; the abstract type of
+!! transformation is described in the transformation object \a trans
+!! (type transform_def) which must have been properly initialised. The
+!! additional information required here is the list of the input
+!! sparse points in the form of a \a vol7d object (parameter \a
+!! v7d_in), which can be the same volume that will be successively
+!! used for interpolation, or a volume with just the same coordinate
+!! data, and the information about the target sparse points over which
+!! the transformation should take place:
+!!
+!!  - for 'inter' transformation, this is provided in the form of a
+!!    vol7d object (\a v7d_out argument, input), which must have been
+!!    initialized with the coordinates of desired sparse points
+!!
+!!  - for 'polyinter' transformation, this is a list of polygons (\a
+!!    poly argument), and, in this case, \a v7d_out is an output
+!!    argument which returns the coordinates of the target points
+!!    (polygons' centroids)
+!!
+!! The generated \a grid_transform object is specific to the input and
+!! output sparse point lists provided or computed.
+SUBROUTINE grid_transform_vol7d_vol7d_init(this, trans, v7d_in, v7d_out, poly, &
+ categoryappend)
+TYPE(grid_transform),INTENT(out) :: this !< grid_transformation object
+TYPE(transform_def),INTENT(in) :: trans !< transformation object
+TYPE(vol7d),INTENT(in) :: v7d_in !< vol7d object with the coordinates of the sparse point to be used as input (only information about coordinates is used)
+TYPE(vol7d),INTENT(inout) :: v7d_out !< vol7d object with the coordinates of the sparse points to be used as transformation target (input or output depending on type of transformation)
+TYPE(geo_coordvect),INTENT(inout),OPTIONAL :: poly(:) !< array of polygons indicating areas over which to interpolate (for transformation type 'polyinter')
+character(len=*),INTENT(in),OPTIONAL :: categoryappend !< append this suffix to log4fortran namespace category
+
+INTEGER :: i, n
+doubleprecision,pointer :: lon(:),lat(:)
+character(len=512) :: a_name
+
+call l4f_launcher(a_name,a_name_append=trim(subcategory)//"."//trim(optio_c(categoryappend,255)))
+this%category=l4f_category_get(a_name)
+
+#ifdef DEBUG
+call l4f_category_log(this%category,L4F_DEBUG,"start init_v7d_v7d_transform" )
+#endif
+
+this%trans=trans
+
+nullify (this%inter_index_x)
+nullify (this%inter_index_y)
+
+nullify (this%inter_x)
+nullify (this%inter_y)
+
+nullify (this%inter_xp)
+nullify (this%inter_yp)
+
+
+IF (this%trans%trans_type == 'inter') THEN
+
+  IF ( this%trans%sub_type == 'linear' ) THEN
+    
+    this%outnx=SIZE(v7d_out%ana)
+    this%outny=1
+  
+    this%innx=SIZE(v7d_in%ana)
+    this%inny=1
+  
+    ALLOCATE(this%inter_xp(this%innx,this%inny),this%inter_yp(this%innx,this%inny))
+    ALLOCATE(this%inter_x(this%outnx,this%outny),this%inter_y(this%outnx,this%outny))
+
+    CALL getval(v7d_in%ana(:)%coord,lon=this%inter_xp(:,1),lat=this%inter_yp(:,1))
+    CALL getval(v7d_out%ana(:)%coord,lon=this%inter_x(:,1),lat=this%inter_y(:,1))
+
+  ELSE
+
+    CALL l4f_category_log(this%category,L4F_WARN, &
+     'init_v7d_v7d_transform inter sub_type '//TRIM(this%trans%sub_type) &
+     //' not supported')
+
+  ENDIF
+
+ELSE IF (this%trans%trans_type == 'polyinter') THEN
+
+  IF (.NOT.PRESENT(poly)) THEN
+    CALL l4f_category_log(this%category,L4F_ERROR, &
+     'grid_transform_init poly argument missing for polyinter transformation')
+    CALL raise_fatal_error()
+  ENDIF
+
+  this%innx=SIZE(v7d_in%ana)
+  this%inny=1
+! unlike before, here index arrays must have the shape of input grid
+  ALLOCATE(this%inter_index_x(this%innx,this%inny), &
+   this%inter_index_y(this%innx,this%inny))
+  this%inter_index_x(:,:) = imiss
+  this%inter_index_y(:,:) = 1
+
+! compute coordinates of polygons in geo system
+  DO n = 1, SIZE(poly)
+    CALL to_geo(poly(n))
+  ENDDO
+
+  DO i = 1, SIZE(v7d_in%ana)
+    DO n = 1, SIZE(poly)
+      IF (inside(v7d_in%ana(i)%coord, poly(n))) THEN ! stop at the first matching polygon
+        this%inter_index_x(i,1) = n
+        EXIT
+      ENDIF
+    ENDDO
+  ENDDO
+
+  this%outnx=SIZE(poly)
+  this%outny=1
+  CALL vol7d_alloc(v7d_out, nana=SIZE(poly))
+
+! setup output point list, equal to average of polygon points
+! warning, in case of concave areas points may coincide!
+  DO n = 1, SIZE(poly)
+    CALL getval(poly(n), lon=lon, lat=lat)
+    CALL init(v7d_out%ana(n), lon=stat_average(lon), lat=stat_average(lat))
+    DEALLOCATE(lon, lat)
+  ENDDO
+
+ELSE
+
+  CALL l4f_category_log(this%category,L4F_WARN, &
+   'init_v7d_v7d_transform trans type '//TRIM(this%trans%trans_type) &
+   //' not supported')
+
+ENDIF
+
+END SUBROUTINE grid_transform_vol7d_vol7d_init
 
 
 !> Destructor of \a grid_tranform object.
@@ -1324,6 +1459,7 @@ IF (this%trans%trans_type == 'inter') THEN
 
   if (this%trans%sub_type == 'linear') THEN
 
+#ifdef HAVE_LIBNGMATH
     inn_p=count(c_e(field_in))
 
     call l4f_category_log(this%category,L4F_INFO,"Number of sparse data points= "//to_char(inn_p))
@@ -1338,16 +1474,9 @@ IF (this%trans%trans_type == 'inter') THEN
       x_in_p=pack(this%inter_xp(:,1),c_e(field_in))
       y_in_p=pack(this%inter_yp(:,1),c_e(field_in))
 
-#ifdef HAVE_LIBNGMATH
-
       CALL NATGRIDS(inn_p,x_in_p,y_in_p,field_in_p,&
        this%outnx, this%outny, REAL(this%inter_x(:,1)), &
        REAL(this%inter_y(1,:)), field_out, ier)
-#else
-      call l4f_category_log(this%category,L4F_ERROR,"libsim compiled without NATGRIDD (ngmath ncarg library)")
-      call raise_fatal_error()
-
-#endif
 
       IF (ier /= 0) THEN
         call l4f_category_log(this%category,L4F_ERROR,"Error return from NATGRIDD = "//to_char(ier))
@@ -1361,6 +1490,10 @@ IF (this%trans%trans_type == 'inter') THEN
       call l4f_category_log(this%category,L4F_INFO,"Insufficient data in gridded region to triangulate")
 
     end if
+#else
+    CALL l4f_category_log(this%category,L4F_ERROR,"libsim compiled without NATGRIDD (ngmath ncarg library)")
+    CALL raise_fatal_error()
+#endif
 
   ELSE IF (this%trans%trans_type == 'boxinter') THEN ! use the grid-to-grid method
       
