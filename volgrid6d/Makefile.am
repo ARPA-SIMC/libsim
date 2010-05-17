@@ -17,11 +17,13 @@ tmpvar = $(libsim_volgrid6d_la_SOURCES:.f90=.mod)
 nodist_include_HEADERS = $(tmpvar:.F90=.mod)
 
 
-if GRIBAPI
 libsim_volgrid6d_la_SOURCES = grid_dim_class.F90 gridpar_generic_class.F90 \
  gridpar_rotated_class.F90 gridpar_polarproj_class.F90 gridpar_stretched_class.F90 \
  grid_class.F90 grid_transform_class.F90 volgrid6d_var_class.F90 \
- volgrid6d_class.F90 gridinfo_class.F90
+ volgrid6d_class.F90
+
+if GRIBAPI
+libsim_volgrid6d_la_SOURCES += gridinfo_class.F90
 libsim_volgrid6d_la_LIBADD += $(GRIBAPI_LIBS)
 endif
 
@@ -36,17 +38,21 @@ if VERSIONINFO
 libsim_volgrid6d_la_LDFLAGS += -version-info @LIBSIM_VERSION_INFO@
 endif
 
-if GRIBAPI
 grid_class.o: grid_dim_class.$(OBJEXT) gridpar_generic_class.$(OBJEXT) gridpar_rotated_class.$(OBJEXT) gridpar_stretched_class.$(OBJEXT) gridpar_polarproj_class.$(OBJEXT) ../vol7d/vol7d_distinct.F90
 grid_class.lo: grid_dim_class.$(OBJEXT) gridpar_generic_class.$(OBJEXT) gridpar_rotated_class.$(OBJEXT) gridpar_stretched_class.$(OBJEXT) gridpar_polarproj_class.$(OBJEXT) ../vol7d/vol7d_distinct.F90
 grid_transform_class.o: grid_class.$(OBJEXT) 
 grid_transform_class.lo: grid_class.$(OBJEXT) 
 volgrid6d_var_class.o: ../vol7d/vol7d_distinct.F90
 volgrid6d_var_class.lo: ../vol7d/vol7d_distinct.F90
-volgrid6d_class.o: volgrid6d_var_class.$(OBJEXT) grid_class.$(OBJEXT) grid_transform_class.$(OBJEXT) gridinfo_class.$(OBJEXT)
-volgrid6d_class.lo: volgrid6d_var_class.$(OBJEXT) grid_class.$(OBJEXT) grid_transform_class.$(OBJEXT) gridinfo_class.$(OBJEXT)
+
+if GRIBAPI
 gridinfo_class.o: volgrid6d_var_class.$(OBJEXT) grid_class.$(OBJEXT)
 gridinfo_class.lo: volgrid6d_var_class.$(OBJEXT) grid_class.$(OBJEXT)
+volgrid6d_class.o: volgrid6d_var_class.$(OBJEXT) grid_class.$(OBJEXT) grid_transform_class.$(OBJEXT) gridinfo_class.$(OBJEXT)
+volgrid6d_class.lo: volgrid6d_var_class.$(OBJEXT) grid_class.$(OBJEXT) grid_transform_class.$(OBJEXT) gridinfo_class.$(OBJEXT)
+else
+volgrid6d_class.o: volgrid6d_var_class.$(OBJEXT) grid_class.$(OBJEXT) grid_transform_class.$(OBJEXT)
+volgrid6d_class.lo: volgrid6d_var_class.$(OBJEXT) grid_class.$(OBJEXT) grid_transform_class.$(OBJEXT)
 endif
 
 mostlyclean-compile:

@@ -1,6 +1,5 @@
-
 #include "config.h"
-!> \defgroup volgrid6d Pacchetto volgrid6d, libreria volgrid6d
+!> \defgroup volgrid6d Libsim package, volgrid6d library.
 
 !> \brief Questo modulo definisce gli oggetti e i metodi per gestire dati in proiezione e non su grigliato regolare(gridded).
 !! I dati vengono organizzati in una matrice mutidimensionale le cui dimensioni sono definite in modo standard.
@@ -27,8 +26,10 @@ USE vol7d_level_class
 USE volgrid6d_var_class
 use log4fortran
 USE vol7d_utilities
+#ifdef HAVE_LIBGRIBAPI
 use gridinfo_class
 use grib_api
+#endif
 use optional_values
 use vol7d_class
 use file_utilities
@@ -105,15 +106,21 @@ END INTERFACE
 
 !> Importazione.
 INTERFACE import
-  MODULE PROCEDURE volgrid6d_read_from_file,import_from_gridinfo,import_from_gridinfovv,&
+  MODULE PROCEDURE volgrid6d_read_from_file
+#ifdef HAVE_LIBGRIBAPI
+  MODULE PROCEDURE import_from_gridinfo, import_from_gridinfovv, &
    volgrid6d_import_from_grib
+#endif
 END INTERFACE
 
 
 !> Exportazione
 INTERFACE export
-  MODULE PROCEDURE volgrid6d_write_on_file,export_to_gridinfo,export_to_gridinfov,export_to_gridinfovv,&
+  MODULE PROCEDURE volgrid6d_write_on_file
+#ifdef HAVE_LIBGRIBAPI
+  MODULE PROCEDURE export_to_gridinfo, export_to_gridinfov, export_to_gridinfovv,&
    volgrid6d_export_to_grib
+#endif
 END INTERFACE
 
 !> \brief Calcola i nuovi dati secondo la trasformazione specificata
@@ -632,6 +639,7 @@ if (.not. present(unit)) close(unit=lunit)
 
 end subroutine volgrid6d_read_from_file
 
+#ifdef HAVE_LIBGRIBAPI
 !> \brief import from gridinfo object to volgrid6d
 !!
 !! Un oggetto gridinfo che al suo interno contiene un id di un grib delle grib_api e una sua sufficiente descrizione
@@ -1304,7 +1312,7 @@ call l4f_category_delete(category)
 
 
 end subroutine volgrid6d_export_to_grib
-
+#endif
 
 
 !> \brief destructor

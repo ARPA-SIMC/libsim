@@ -174,9 +174,12 @@ PRIVATE
 PUBLIC proj, unproj, griddim_proj, griddim_unproj, griddim_gen_coord, &
  griddim_zoom_coord, griddim_setsteps, griddim_def, grid_def, grid_dim
 PUBLIC init, delete, copy
-public get_val,set_val,write_unit,read_unit,import,export,display
+public get_val,set_val,write_unit,read_unit,display
 public operator(==),count_distinct,pack_distinct,map_distinct,map_inv_distinct,index
 public wind_unrot
+#ifdef HAVE_LIBGRIBAPI
+PUBLIC import,export
+#endif
 
 CONTAINS
 
