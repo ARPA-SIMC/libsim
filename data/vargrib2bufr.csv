@@ -4,17 +4,21 @@ B10003,Geopotential,,255,2,6,255,1.0,0.0
 B10009,Geopotential height,,255,2,7,255,1.0,0.0
 B10007,Height,,255,2,8,255,1.0,0.0
 B12001,Temperature,K,255,2,11,255,1.0,0.0
+B12001,Temperature,K,98,128,130,255,1.0,0.0
 B12011,Maximun Temperature,,255,2,15,255,1.0,0.0
 B12012,Minimum Temperature,,255,2,16,255,1.0,0.0
 B12030,Soil Temperature,,255,2,85,255,1.0,0.0
 B12003,Dew point temperature,,255,2,17,255,1.0,0.0
 B11003,U-component of wind,m/s,255,2,33,255,1.0,0.0
+B11003,U-component of wind,m/s,98,128,131,255,1.0,0.0
 B11004,V-component of wind,m/s,255,2,34,255,1.0,0.0
+B11004,V-component of wind,m/s,98,128,132,255,1.0,0.0
 B11005,Omega,Pa/s,255,2,39,255,1.0,0.0
 B11006,W-component of wind,m/s,255,2,40,255,1.0,0.0
 B13001,Specific humidity,Kg/Kg,255,2,51,255,1.0,0.0
 B13003,Relative humidity,Percent,255,2,52,255,1.0,0.0
 B13011,Total precipitation,Kg/m**2,255,2,61,255,1.0,0.0
+B13011,Total precipitation,m,98,128,228,255,0.001,0.0
 B13128,Cloud water content (invented),Kg/Kg,78,201,31,255,1.0,0.0
 B13128,Cloud water content (invented),Kg/Kg,200,201,31,255,1.0,0.0
 B13129,Cloud ice content (invented),Kg/Kg,78,201,33,255,1.0,0.0
