@@ -133,7 +133,7 @@ do iarea = 1, cli_nsuperarea
   end do
 end do
 
-open (unit=iunit,file="climaprec.v7d",form="UNFORMATTED")
+open (unit=iunit,file="climaprec.v7d", form='UNFORMATTED', access='STREAM')
 
 call export(v7d,unit=iunit)
 

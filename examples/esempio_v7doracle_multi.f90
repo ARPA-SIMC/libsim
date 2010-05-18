@@ -16,7 +16,6 @@ TYPE(timedelta) :: dt_cum
 CHARACTER(len=12) :: c
 INTEGER :: i, j, n
 REAL, POINTER :: vol2d(:,:), vol2d_cum(:,:)
-INTEGER :: un
 CHARACTER(len=512) :: filesim
 TYPE(geo_coordvect),POINTER :: macroa(:)
 INTEGER, ALLOCATABLE :: in_macroa(:)
@@ -44,10 +43,6 @@ CALL init(db_v7d)
 ! richiedo anche la variabile di anagrafica 'B07001' (altezza stazione)
 CALL import(db_v7d, (/'B13011'/), (/network/), &
  ti, tf, anavar=(/'B07001'/), set_network=dummy_network)
-un=getunit()
-OPEN(un, FILE='v7d_oracle.dat', FORM='unformatted', ACCESS='sequential')
-CALL export(db_v7d%vol7d, un)
-CLOSE(un)
 
 PRINT*,SHAPE(db_v7d%vol7d%voldatir)
 ! Cumulo i dati su intervalli orari

@@ -163,8 +163,9 @@ call l4f_category_log(category,L4F_INFO,"transforming to   file:"//trim(output_f
 IF (c_e(coord_file)) THEN
   IF (coord_format == 'native') THEN
     iun = getunit()
-    OPEN(iun, file=coord_file, form='UNFORMATTED', access='SEQUENTIAL')
-    CALL init(v7d_coord, time_definition=0)
+    OPEN(iun, file=input_file, form='UNFORMATTED', access='STREAM', &
+     status='OLD', action='READ')
+    CALL init(v7d_coord)
     CALL import(v7d_coord, unit=iun)
     CLOSE(iun)
 

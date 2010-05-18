@@ -169,7 +169,7 @@ select case (trim(lowercase(suffixname(filepath))))
 
 case("v7d")
   iuni=getunit()
-  open (unit=iuni,file=filepath,form="UNFORMATTED")
+  OPEN (unit=iuni,file=filepath,form='UNFORMATTED',access='STREAM')
   call import(qccli%clima,unit=iuni)
   close (unit=iuni)
 case("bufr")
