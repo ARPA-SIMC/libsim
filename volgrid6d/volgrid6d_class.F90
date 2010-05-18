@@ -1944,14 +1944,11 @@ type(vol7d), INTENT(out) :: vol7d_out !< oggetto trasformato
 
 integer :: itime, itimerange, ilevel, ivar, inetwork
 
-#ifdef DEBUG
-call l4f_category_log(volgrid6d_in%category,L4F_DEBUG,"start vol7d_v7d_transform_compute")
-#endif
-
 vol7d_out%time(:) = vol7d_in%time(:)
 vol7d_out%timerange(:) = vol7d_in%timerange(:)
 vol7d_out%level(:) = vol7d_in%level(:)
 vol7d_out%network(:) = vol7d_in%network(:)
+vol7d_out%dativar%r(:) = vol7d_in%dativar%r(:)
 
 DO inetwork = 1, SIZE(vol7d_in%network)
   DO ivar = 1, SIZE(vol7d_in%dativar%r)
@@ -1994,6 +1991,7 @@ TYPE(vol7d) :: v7d_locana
 call l4f_category_log(volgrid6d_in%category,L4F_DEBUG,"start v7d_v7d_transform")
 #endif
 
+CALL init(v7d_locana)
 CALL init(grid_trans, this, vol7d_in, v7d_locana, poly=poly, &
  categoryappend=categoryappend)
 

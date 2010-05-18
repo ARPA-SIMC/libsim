@@ -4,7 +4,9 @@ use log4fortran
 use volgrid6d_class
 use grid_class
 use grid_transform_class
+#ifdef HAVE_DBALLE
 USE vol7d_dballe_class
+#endif
 USE vol7d_class
 use getopt_m
 USE io_units
@@ -16,14 +18,16 @@ TYPE(op_option) :: options(40) ! remember to update dimension when adding option
 TYPE(optionparser) :: opt
 CHARACTER(len=8) :: coord_format, output_format
 CHARACTER(len=512) :: input_file, output_file, network_list, variable_list
-CHARACTER(len=512) :: a_name, coord_file=cmiss
+CHARACTER(len=512) :: a_name, coord_file
 INTEGER :: category, ier, i, iun
 character(len=network_name_len) :: network
 type(volgrid6d),pointer :: volgrid(:)
 type(transform_def) :: trans
-type(vol7d) :: v7d
+type(vol7d) :: v7d_coord
 type(vol7d),pointer :: v7d_out(:)
+#ifdef HAVE_DBALLE
 TYPE(vol7d_dballe) :: v7d_ana, v7d_dba_out
+#endif
 TYPE(geo_coordvect),POINTER :: poly(:)
 doubleprecision :: lon, lat
 character(len=80) :: output_template,trans_type,sub_type
@@ -48,8 +52,9 @@ options(1) = op_option_new('a', 'lon', lon, 0.D0, help= &
 options(2) = op_option_new('b', 'lat', lat, 45.D0, help= &
  'latitude of single interpolation point, alternative to --coord-file')
 options(3) = op_option_new('c', 'coord-file', coord_file, help= &
- 'file with coordinates of points to interpolate, alternative to --lon, --lat; &
- &no coordinate information is required for metoamorphosis trnasformation')
+ 'file with coordinates of interpolation points, alternative to --lon, --lat; &
+ &no coordinate information is required for metamorphosis transformation')
+coord_file=cmiss
 options(4) = op_option_new(' ', 'coord-format', coord_format, &
 #ifdef HAVE_DBALLE
 'BUFR', &
@@ -72,11 +77,15 @@ options(10) = op_option_new('v', 'trans-type', trans_type, 'inter', help= &
 #endif
  &')
 options(11) = op_option_new('z', 'sub-type', sub_type, 'bilin', help= &
- 'transformation subtype, for inter: ''near'', ''bilin'', for metamorphosis: &
- &''all''')
+ 'transformation subtype, for inter: ''near'', ''bilin'', for metamorphosis: ''all''&
+#ifdef HAVE_LIBSHP_FORTRAN
+ &, for ''polyinter'': ''average''&
+#endif
+')
 options(12) = op_option_new('n', 'network', network, 'generic', help= &
  'string identifying network for output data')
-! options for output
+
+! options for defining output
 options(20) = op_option_new('f', 'output-format', output_format, &
 #ifdef HAVE_DBALLE
 'BUFR', &
@@ -155,8 +164,8 @@ IF (c_e(coord_file)) THEN
   IF (coord_format == 'native') THEN
     iun = getunit()
     OPEN(iun, file=coord_file, form='UNFORMATTED', access='SEQUENTIAL')
-    CALL init(v7d, time_definition=0)
-    CALL import(v7d, unit=iun)
+    CALL init(v7d_coord, time_definition=0)
+    CALL import(v7d_coord, unit=iun)
     CLOSE(iun)
 
 #ifdef HAVE_DBALLE
@@ -164,7 +173,7 @@ IF (c_e(coord_file)) THEN
     CALL init(v7d_ana, filename=coord_file, format=coord_format, file=.TRUE., &
      write=.FALSE., categoryappend="anagrafica")
     CALL import(v7d_ana, anaonly=.TRUE.)
-    v7d = v7d_ana%vol7d
+    v7d_coord = v7d_ana%vol7d
 ! destroy v7d_ana without deallocating the contents passed to v7d
     CALL init(v7d_ana%vol7d)
     CALL delete(v7d_ana)
@@ -189,16 +198,16 @@ IF (c_e(coord_file)) THEN
   ENDIF
 ELSE
 
-  call init(v7d)
+  CALL init(v7d_coord)
   IF (trans_type == 'inter') THEN ! set coordinates for interpolation
-    CALL vol7d_alloc(v7d, nana=1)
-    CALL vol7d_alloc_vol(v7d)
-    CALL init(v7d%ana(1), lat=lat, lon=lon)
+    CALL vol7d_alloc(v7d_coord, nana=1)
+    CALL vol7d_alloc_vol(v7d_coord)
+    CALL init(v7d_coord%ana(1), lat=lat, lon=lon)
   ENDIF
 
 ENDIF
 
-IF (ldisplay) CALL display(v7d)
+IF (ldisplay) CALL display(v7d_coord)
 
 !trasformation object
 CALL init(trans, trans_type=trans_type, sub_type=sub_type, &
@@ -207,7 +216,7 @@ call import(volgrid, filename=input_file, categoryappend="volume letto")
 
 IF (ldisplay) call display(volgrid)
 
-call transform(trans, volgrid6d_in=volgrid, vol7d_out=v7d_out, v7d=v7d, &
+call transform(trans, volgrid6d_in=volgrid, vol7d_out=v7d_out, v7d=v7d_coord, &
  poly=poly, networkname=network, categoryappend="transform")
 
 call l4f_category_log(category,L4F_INFO,"transformation done")

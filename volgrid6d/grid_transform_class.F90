@@ -1334,7 +1334,8 @@ ELSE IF (this%trans%trans_type == 'boxinter' &
     nval(:,:) = 0
     DO j = 1, this%inny
       DO i = 1, this%innx
-        IF (c_e(this%inter_index_x(i,j)) .AND. c_e(this%inter_index_y(i,j))) THEN
+        IF (c_e(this%inter_index_x(i,j)) .AND. c_e(this%inter_index_y(i,j)) &
+         .AND. c_e(field_in(i,j))) THEN
           field_out(this%inter_index_x(i,j),this%inter_index_y(i,j)) = &
            field_out(this%inter_index_x(i,j),this%inter_index_y(i,j)) + &
            field_in(i,j)

@@ -10,17 +10,21 @@ USE datetime_class
 #ifdef HAVE_ORSIM
 USE vol7d_oraclesim_class
 #endif
+#ifdef HAVE_DBALLE
 USE vol7d_dballe_class
+#endif
+USE grid_transform_class
+use volgrid6d_class
 USE geo_coord_class
 !USE ISO_FORTRAN_ENV
 IMPLICIT NONE
 
 TYPE(op_option) :: options(50) ! remember to update dimension when adding options
 TYPE(optionparser) :: opt
-CHARACTER(len=8) :: input_format, output_format
+CHARACTER(len=8) :: input_format, coord_format, output_format
 CHARACTER(len=512) :: input_file, output_file, network_list, variable_list, &
- anavariable_list, attribute_list
-character(len=80) :: output_template
+ anavariable_list, attribute_list, coord_file
+character(len=80) :: output_template,trans_type,sub_type
 TYPE(vol7d_network), ALLOCATABLE :: nl(:)
 CHARACTER(len=10), ALLOCATABLE :: vl(:), avl(:), al(:)
 CHARACTER(len=23) :: start_date, end_date
@@ -28,8 +32,12 @@ CHARACTER(len=19) :: start_date_default, end_date_default
 TYPE(datetime) :: now, s_d, e_d
 INTEGER :: iun, ier, i, j, n, nc, ninput, yy, mm, dd
 INTEGER,POINTER :: w_s(:), w_e(:)
-TYPE(vol7d) :: v7d, v7dtmp, v7d_comp1, v7d_comp2, v7d_comp3
+TYPE(vol7d) :: v7d, v7d_coord, v7dtmp, v7d_comp1, v7d_comp2, v7d_comp3
+TYPE(geo_coordvect),POINTER :: poly(:)
+type(transform_def) :: trans
+#ifdef HAVE_DBALLE
 TYPE(vol7d_dballe) :: v7d_dba, v7d_dba_out
+#endif
 #ifdef HAVE_ORSIM
 TYPE(vol7d_oraclesim) :: v7d_osim
 #endif
@@ -52,6 +60,7 @@ LOGICAL :: csv_skip_miss, csv_no_rescale
 INTEGER :: csv_header, icsv_column(7)
 
 
+NULLIFY(poly)
 !questa chiamata prende dal launcher il nome univoco
 CALL l4f_launcher(a_name,a_name_force="v7d_transform")
 !init di log4fortran
@@ -79,10 +88,24 @@ options(1) = op_option_new(' ', 'input-format', input_format, 'native', help= &
  &, ''orsim'' for SIM Oracle database&
 #endif
  &')
-!options(2) = op_option_new('i', 'input-file', input_file, '-', help= &
-! 'if input-format is of file type, input file name, ''-'' for stdin; &
-! &if input-format is of database type, database access info in the form &
-! &user/password@dsn, if empty or ''-'', a suitable default is used.')
+options(2) = op_option_new('c', 'coord-file', coord_file, help= &
+ 'file with coordinates of interpolation points, required if a geographical &
+ &transformation is requested')
+coord_file=cmiss
+options(3) = op_option_new(' ', 'coord-format', coord_format, &
+#ifdef HAVE_DBALLE
+'BUFR', &
+#else
+'native', &
+#endif 
+& help='format of input file with coordinates, ''native'' for vol7d native binary file &
+#ifdef HAVE_DBALLE
+ &, ''BUFR'' for BUFR file, ''CREX'' for CREX file&
+#endif
+#ifdef HAVE_LIBSHP_FORTRAN
+ &, ''shp'' for shapefile (interpolation on polygons)&
+#endif
+ &')
 
 ! input database options
 options(4) = op_option_new('s', 'start-date', start_date, start_date_default, help= &
@@ -133,6 +156,19 @@ comp_discard = .FALSE.
 options(17) = op_option_new(' ', 'comp-frac-valid', comp_frac_valid, 1., help= &
  'specify the fraction of data that has to be valid in order to consider an &
  &accumulated or averaged value acceptable')
+! option for interpolation processing
+options(18) = op_option_new(' ', 'trans-type', trans_type, ' ', help= &
+ 'transformation type, ''inter'' for interpolation&
+#ifdef HAVE_LIBSHP_FORTRAN
+ & or ''polyinter'' for statistical processing within given polygons&
+#endif
+ &, empty for no transformation')
+options(19) = op_option_new(' ', 'sub-type', sub_type, ' ', help= &
+ 'transformation subtype, for inter: ''near'', ''bilin''&
+#ifdef HAVE_LIBSHP_FORTRAN
+ &, for ''polyinter'': ''average''&
+#endif
+ &')
 
 ! options for defining output
 !options(20) = op_option_new('o', 'output-file', output_file, '-', help= &
@@ -268,6 +304,46 @@ ELSE
   c_s = datetime_miss
 ENDIF
 
+! import coord_file
+IF (c_e(coord_file)) THEN
+  IF (coord_format == 'native') THEN
+    iun = getunit()
+    OPEN(iun, file=coord_file, form='UNFORMATTED', access='SEQUENTIAL')
+    CALL init(v7d_coord, time_definition=0)
+    CALL import(v7d_coord, unit=iun)
+    CLOSE(iun)
+
+#ifdef HAVE_DBALLE
+  ELSE IF (coord_format == 'BUFR' .OR. coord_format == 'CREX') THEN
+    CALL init(v7d_dba, filename=coord_file, format=coord_format, file=.TRUE., &
+     write=.FALSE., categoryappend="anagrafica")
+    CALL import(v7d_dba, anaonly=.TRUE.)
+    v7d_coord = v7d_dba%vol7d
+! destroy v7d_ana without deallocating the contents passed to v7d
+    CALL init(v7d_dba%vol7d)
+    CALL delete(v7d_dba)
+
+#endif
+#ifdef HAVE_LIBSHP_FORTRAN
+  ELSE IF (coord_format == 'shp') THEN
+    NULLIFY(poly)
+    CALL import(poly, shpfile=coord_file)
+    IF (.NOT.ASSOCIATED(poly)) THEN
+      CALL l4f_category_log(category, L4F_ERROR, &
+       'error importing shapefile '//TRIM(coord_file))
+      CALL EXIT(1)
+    ENDIF
+
+#endif
+  ELSE
+    CALL l4f_category_log(category, L4F_ERROR, &
+     'error in command-line parameters, format '// &
+     TRIM(coord_format)//' in --coord-format not valid or not supported.')
+    CALL EXIT(1)
+  ENDIF
+
+ENDIF
+
 ! check csv-column
 nc = word_split(csv_column, w_s, w_e, ',')
 j = 0
@@ -377,6 +453,17 @@ CALL vol7d_dballe_set_var_du(v7d)
 #endif
 
 IF (ldisplay) CALL display(v7d)
+
+IF (trans_type /= '') THEN
+  CALL init(trans, trans_type=trans_type, sub_type=sub_type, &
+   categoryappend="transformation") !, time_definition=output_td)
+  CALL transform(trans, vol7d_in=v7d, vol7d_out=v7d_comp1, v7d=v7d_coord, &
+   poly=poly, categoryappend="transform")
+
+  v7d = v7d_comp1
+  CALL init(v7d_comp1)
+
+ENDIF
 
 IF (comp_regularize) THEN
   CALL init(v7d_comp1)

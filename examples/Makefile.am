@@ -106,7 +106,7 @@ endif
 bin_PROGRAMS += v7d_transform
 
 v7d_transform_SOURCES = v7d_transform.F90
-v7d_transform_LDADD = ../base/libsim_base.la ../vol7d/libsim_vol7d.la ../log4fortran/liblog4fortran.la
+v7d_transform_LDADD = ../base/libsim_base.la ../vol7d/libsim_vol7d.la ../volgrid6d/libsim_volgrid6d.la ../log4fortran/liblog4fortran.la
 
 if SHP
 noinst_PROGRAMS += esempio_geo_coordvect
