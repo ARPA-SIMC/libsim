@@ -1987,9 +1987,6 @@ character(len=*),INTENT(in),OPTIONAL :: categoryappend !< appende questo suffiss
 TYPE(grid_transform) :: grid_trans
 TYPE(vol7d) :: v7d_locana
 
-#ifdef DEBUG
-call l4f_category_log(volgrid6d_in%category,L4F_DEBUG,"start v7d_v7d_transform")
-#endif
 
 CALL init(v7d_locana)
 CALL init(grid_trans, this, vol7d_in, v7d_locana, poly=poly, &
