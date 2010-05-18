@@ -380,12 +380,13 @@ DO ninput = optind, iargc()-1
   CALL getarg(ninput, input_file)
 
   IF (input_format == 'native') THEN
-    IF (input_file == '-') THEN
-      iun = stdin_unit
-    ELSE
-      iun = getunit()
-      OPEN(iun, file=input_file, form='UNFORMATTED', access='SEQUENTIAL')
+    IF (input_file == '-') THEN ! stdin_unit does not work with unformatted
+      CALL l4f_category_log(category, L4F_INFO, 'trying /dev/stdin as stdin unit.')
+      input_file='/dev/stdin'
     ENDIF
+    iun = getunit()
+    OPEN(iun, file=input_file, form='UNFORMATTED', access='STREAM', &
+     status='OLD', action='READ')
     CALL init(v7dtmp, time_definition=0)
     CALL import(v7dtmp, unit=iun)
     IF (input_file /= '-') THEN
@@ -395,16 +396,13 @@ DO ninput = optind, iargc()-1
 #ifdef HAVE_DBALLE
   ELSE IF (input_format == 'BUFR' .OR. input_format == 'CREX') THEN
     IF (input_file == '-') THEN
-      CALL l4f_category_log(category, L4F_ERROR, &
-       'error in command-line parameters, stdin not supported for'// &
-       TRIM(input_format)//' input format.')
-      CALL EXIT(1)
-    ELSE
-      CALL init(v7d_dba, filename=input_file, FORMAT=input_format, file=.TRUE.)
-      CALL import(v7d_dba)
-      v7dtmp = v7d_dba%vol7d
-      CALL init(v7d_dba%vol7d) ! nullify without deallocating
+      CALL l4f_category_log(category, L4F_INFO, 'trying /dev/stdin as stdin unit.')
+      input_file='/dev/stdin'
     ENDIF
+    CALL init(v7d_dba, filename=input_file, FORMAT=input_format, file=.TRUE.)
+    CALL IMPORT(v7d_dba)
+    v7dtmp = v7d_dba%vol7d
+    CALL init(v7d_dba%vol7d) ! nullify without deallocating
 
   ELSE IF (input_format == 'dba') THEN
     IF (.NOT.ALLOCATED(nl) .OR. .NOT.ALLOCATED(vl)) THEN

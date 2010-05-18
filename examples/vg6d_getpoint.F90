@@ -224,12 +224,12 @@ if (associated(volgrid)) call delete(volgrid)
 
 ! output
 IF (output_format == 'native') THEN
-  IF (output_file == '-') THEN
-    iun = stdout_unit
-  ELSE
-    iun = getunit()
-    OPEN(iun, file=output_file, form='UNFORMATTED', access='SEQUENTIAL')
+  IF (output_file == '-') THEN ! stdout_unit does not work with unformatted
+    CALL l4f_category_log(category, L4F_INFO, 'trying /dev/stdout as stdout unit.')
+    output_file='/dev/stdout'
   ENDIF
+  iun = getunit()
+  OPEN(iun, file=output_file, form='UNFORMATTED', access='STREAM')
   DO i = 2, SIZE(v7d_out)
     CALL vol7d_merge(v7d_out(1), v7d_out(i), sort=(i == SIZE(v7d_out)))
   ENDDO
@@ -239,6 +239,10 @@ IF (output_format == 'native') THEN
 
 #ifdef HAVE_DBALLE
 ELSE IF (output_format == 'BUFR' .OR. output_format == 'CREX') THEN
+  IF (output_file == '-') THEN
+    CALL l4f_category_log(category, L4F_INFO, 'trying /dev/stdout as stdout unit.')
+    output_file='/dev/stdout'
+  ENDIF
   CALL init(v7d_dba_out, filename=output_file, format=output_format, file=.TRUE., &
    write=.TRUE., wipe=.TRUE., categoryappend="export")
   DO i = 1, SIZE(v7d_out)
