@@ -230,7 +230,7 @@ IF (output_format == 'native') THEN
     CALL vol7d_merge(v7d_out(1), v7d_out(i), sort=(i == SIZE(v7d_out)))
   ENDDO
   CALL export(v7d_out(1), unit=iun)
-  IF (output_file /= '-') CLOSE(iun)
+  CLOSE(iun)
   CALL delete(v7d_out(1))
 
 #ifdef HAVE_DBALLE

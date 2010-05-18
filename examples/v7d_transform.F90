@@ -487,14 +487,14 @@ ENDIF
 
 ! output
 IF (output_format == 'native') THEN
-  IF (output_file == '-') THEN
-    iun = stdout_unit
-  ELSE
-    iun = getunit()
-    OPEN(iun, file=output_file, form='UNFORMATTED', access='SEQUENTIAL')
+  IF (output_file == '-') THEN ! stdout_unit does not work with unformatted
+    CALL l4f_category_log(category, L4F_INFO, 'trying /dev/stdout as stdout unit.')
+    output_file='/dev/stdout'
   ENDIF
+  iun = getunit()
+  OPEN(iun, file=output_file, form='UNFORMATTED', access='STREAM')
   CALL export(v7d, unit=iun)
-  IF (output_file /= '-') CLOSE(iun)
+  CLOSE(iun)
   CALL delete(v7d)
 
 ELSE IF (output_format == 'csv') THEN
