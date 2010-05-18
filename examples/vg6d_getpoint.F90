@@ -162,12 +162,7 @@ call l4f_category_log(category,L4F_INFO,"transforming to   file:"//trim(output_f
 
 IF (c_e(coord_file)) THEN
   IF (coord_format == 'native') THEN
-    iun = getunit()
-    OPEN(iun, file=input_file, form='UNFORMATTED', access='STREAM', &
-     status='OLD', action='READ')
-    CALL init(v7d_coord)
-    CALL import(v7d_coord, unit=iun)
-    CLOSE(iun)
+    CALL import(v7d_coord, filename=input_file)
 
 #ifdef HAVE_DBALLE
   ELSE IF (coord_format == 'BUFR' .OR. coord_format == 'CREX') THEN
@@ -178,8 +173,8 @@ IF (c_e(coord_file)) THEN
 ! destroy v7d_ana without deallocating the contents passed to v7d
     CALL init(v7d_ana%vol7d)
     CALL delete(v7d_ana)
-
 #endif
+
 #ifdef HAVE_LIBSHP_FORTRAN
   ELSE IF (coord_format == 'shp') THEN
     NULLIFY(poly)

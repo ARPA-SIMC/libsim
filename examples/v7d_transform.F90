@@ -307,12 +307,7 @@ ENDIF
 ! import coord_file
 IF (c_e(coord_file)) THEN
   IF (coord_format == 'native') THEN
-    iun = getunit()
-    OPEN(iun, file=input_file, form='UNFORMATTED', access='STREAM', &
-     status='OLD', action='READ')
-    CALL init(v7d_coord)
-    CALL import(v7d_coord, unit=iun)
-    CLOSE(iun)
+    CALL import(v7d_coord, filename=input_file)
 
 #ifdef HAVE_DBALLE
   ELSE IF (coord_format == 'BUFR' .OR. coord_format == 'CREX') THEN
@@ -385,14 +380,7 @@ DO ninput = optind, iargc()-1
       CALL l4f_category_log(category, L4F_INFO, 'trying /dev/stdin as stdin unit.')
       input_file='/dev/stdin'
     ENDIF
-    iun = getunit()
-    OPEN(iun, file=input_file, form='UNFORMATTED', access='STREAM', &
-     status='OLD', action='READ')
-    CALL init(v7dtmp, time_definition=0)
-    CALL import(v7dtmp, unit=iun)
-    IF (input_file /= '-') THEN
-      CLOSE(iun)
-    ENDIF
+    CALL import(v7dtmp, filename=input_file)
 
 #ifdef HAVE_DBALLE
   ELSE IF (input_format == 'BUFR' .OR. input_format == 'CREX') THEN

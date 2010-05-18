@@ -2200,6 +2200,7 @@ IF (.NOT. opened) THEN
 end if
 
 
+call init(this)
 read(unit=lunit)ldescription
 read(unit=lunit)ltarray
 
