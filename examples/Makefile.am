@@ -170,3 +170,6 @@ endif
 	help2man --name=$< --section=1 --no-info --output=$@ ./$<
 
 endif
+
+mostlyclean-compile:
+	-rm -f *.$(OBJEXT) *.mod *.1
