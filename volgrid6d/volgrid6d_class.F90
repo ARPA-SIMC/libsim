@@ -253,7 +253,7 @@ IF (PRESENT(ntime)) THEN
 #endif
     ALLOCATE(this%time(ntime),stat=stallo)
     if (stallo /=0)then
-      call l4f_category_log(this%category,L4F_ERROR,"allocating memory")
+      call l4f_category_log(this%category,L4F_FATAL,"allocating memory")
       CALL raise_fatal_error("allocating memory")
     end if
     IF (linit) THEN
@@ -273,7 +273,7 @@ IF (PRESENT(nlevel)) THEN
 #endif
     ALLOCATE(this%level(nlevel),stat=stallo)
     if (stallo /=0)then
-      call l4f_category_log(this%category,L4F_ERROR,"allocating memory")
+      call l4f_category_log(this%category,L4F_FATAL,"allocating memory")
       CALL raise_fatal_error("allocating memory")
     end if
     IF (linit) THEN
@@ -291,7 +291,7 @@ IF (PRESENT(ntimerange)) THEN
 #endif
     ALLOCATE(this%timerange(ntimerange),stat=stallo)
     if (stallo /=0)then
-      call l4f_category_log(this%category,L4F_ERROR,"allocating memory")
+      call l4f_category_log(this%category,L4F_FATAL,"allocating memory")
       CALL raise_fatal_error("allocating memory")
     end if
     IF (linit) THEN
@@ -309,7 +309,7 @@ IF (PRESENT(nvar)) THEN
 #endif
     ALLOCATE(this%var(nvar),stat=stallo)
     if (stallo /=0)then
-      call l4f_category_log(this%category,L4F_ERROR,"allocating memory")
+      call l4f_category_log(this%category,L4F_FATAL,"allocating memory")
       CALL raise_fatal_error("allocating memory")
     end if
     IF (linit) THEN
@@ -369,7 +369,7 @@ IF (this%griddim%dim%nx > 0 .and. this%griddim%dim%ny > 0 .and. &
       SIZE(this%level), SIZE(this%time), &
       SIZE(this%timerange), SIZE(this%var)),stat=stallo)
      if (stallo /=0)then
-       call l4f_category_log(this%category,L4F_ERROR,"allocating memory")
+       call l4f_category_log(this%category,L4F_FATAL,"allocating memory")
        CALL raise_fatal_error("allocating memory")
      end if
   
@@ -384,7 +384,7 @@ IF (this%griddim%dim%nx > 0 .and. this%griddim%dim%ny > 0 .and. &
    SIZE(this%time), &
    SIZE(this%timerange), SIZE(this%var)),stat=stallo)
   if (stallo /=0)then
-    call l4f_category_log(this%category,L4F_ERROR,"allocating memory")
+    call l4f_category_log(this%category,L4F_FATAL,"allocating memory")
     CALL raise_fatal_error("allocating memory")
   end if
 
@@ -679,7 +679,7 @@ if (.not. c_e(type))then
 
 else if (.not. (this%griddim == gridinfo%griddim ))then
 
-   call l4f_category_log(this%category,L4F_ERROR,"volgrid6d: grid or dim are different and this is not possible")
+   call l4f_category_log(this%category,L4F_FATAL,"volgrid6d: grid or dim are different and this is not possible")
    call raise_fatal_error ("volgrid6d: grid or dim are different and this is not possible")
 
 end if
@@ -691,7 +691,7 @@ IF (ilevel == 0 .AND. lforce) THEN
   IF (ilevel /= 0) this%level(ilevel) = gridinfo%level
 ENDIF
 IF (ilevel == 0) THEN
-  CALL l4f_category_log(this%category,L4F_ERROR, &
+  CALL l4f_category_log(this%category,L4F_FATAL, &
    "volgrid6d: level not valid for volume")
   CALL raise_fatal_error("volgrid6d: level not valid for volume")
 ENDIF
@@ -702,7 +702,7 @@ IF (itime == 0 .AND. lforce) THEN
   IF (itime /= 0) this%time(itime) = gridinfo%time
 ENDIF
 IF (itime == 0) THEN
-  CALL l4f_category_log(this%category,L4F_ERROR, &
+  CALL l4f_category_log(this%category,L4F_FATAL, &
    "volgrid6d: time not valid for volume")
   CALL raise_fatal_error("volgrid6d: time not valid for volume")
 ENDIF
@@ -713,7 +713,7 @@ IF (itimerange == 0 .AND. lforce) THEN
   IF (itimerange /= 0) this%timerange(itimerange) = gridinfo%timerange
 ENDIF
 IF (itimerange == 0) THEN
-  CALL l4f_category_log(this%category,L4F_ERROR, &
+  CALL l4f_category_log(this%category,L4F_FATAL, &
    "volgrid6d: timerange not valid for volume")
   CALL raise_fatal_error("volgrid6d: timerange not valid for volume")
 ENDIF
@@ -724,7 +724,7 @@ IF (ivar == 0 .AND. lforce) THEN
   IF (ivar /= 0) this%var(ivar) = gridinfo%var
 ENDIF
 IF (ivar == 0) THEN
-  CALL l4f_category_log(this%category,L4F_ERROR, &
+  CALL l4f_category_log(this%category,L4F_FATAL, &
    "volgrid6d: var not valid for volume")
   CALL raise_fatal_error("volgrid6d: var not valid for volume")
 ENDIF
@@ -884,7 +884,7 @@ call l4f_category_log(category,L4F_INFO,&
 
 allocate (this(ngrid),stat=stallo)
 if (stallo /=0)then
-  call l4f_category_log(category,L4F_ERROR,"allocating memory")
+  call l4f_category_log(category,L4F_FATAL,"allocating memory")
   CALL raise_fatal_error("allocating memory")
 end if
 do i=1,ngrid
@@ -1040,7 +1040,7 @@ if (.not. associated(gridinfov))then
   
   allocate (gridinfov(ngridinfo),stat=stallo)
   if (stallo /=0)then
-    call l4f_category_log(category,L4F_ERROR,"allocating memory")
+    call l4f_category_log(category,L4F_FATAL,"allocating memory")
     CALL raise_fatal_error("allocating memory")
   end if
   do i=1,ngridinfo
@@ -1157,7 +1157,7 @@ if (ngrib > 0 ) then
 
   allocate (gridinfo(ngrib),stat=stallo)
   if (stallo /=0)then
-    call l4f_category_log(category,L4F_ERROR,"allocating memory")
+    call l4f_category_log(category,L4F_FATAL,"allocating memory")
     CALL raise_fatal_error("allocating memory")
   end if
 
@@ -1492,7 +1492,7 @@ n=size(volgrid6d_in)
 
 allocate( volgrid6d_out(n),stat=stallo)
 if (stallo /=0)then
-  call l4f_log(L4F_ERROR,"allocating memory")
+  call l4f_log(L4F_FATAL,"allocating memory")
   call raise_fatal_error("allocating memory")
 end if
 
@@ -1554,7 +1554,7 @@ if (associated(volgrid6d_in%time))then
                                 ! converto reference in validity
     allocate (validitytime(ntime,ntimerange),stat=stallo)
     if (stallo /=0)then
-      call l4f_category_log(volgrid6d_in%category,L4F_ERROR,"allocating memory")
+      call l4f_category_log(volgrid6d_in%category,L4F_FATAL,"allocating memory")
       call raise_fatal_error("allocating memory")
     end if
 
@@ -1590,7 +1590,7 @@ nana=size(vol7d_out%ana)
 
 allocate(voldatir_out(nana,1),stat=stallo)
 if (stallo /=0)then
-  call l4f_category_log(volgrid6d_in%category,L4F_ERROR,"allocating memory")
+  call l4f_category_log(volgrid6d_in%category,L4F_FATAL,"allocating memory")
   call raise_fatal_error("allocating memory")
 end if
 
@@ -1706,7 +1706,7 @@ if (associated(volgrid6d_in%time)) then
                                 ! converto reference in validity
     allocate (validitytime(ntime,ntimerange),stat=stallo)
     if (stallo /=0)then
-      call l4f_category_log(volgrid6d_in%category,L4F_ERROR,"allocating memory")
+      call l4f_category_log(volgrid6d_in%category,L4F_FATAL,"allocating memory")
       call raise_fatal_error("allocating memory")
     end if
 
@@ -1779,7 +1779,7 @@ n=size(volgrid6d_in)
 
 allocate(vol7d_out(n),stat=stallo)
 if (stallo /=0)then
-  call l4f_log(L4F_ERROR,"allocating memory")
+  call l4f_log(L4F_FATAL,"allocating memory")
   call raise_fatal_error("allocating memory")
 end if
 
@@ -2021,7 +2021,7 @@ INTEGER :: i, n
 n = SIZE(vargrib)
 if ( present(c_func)) ALLOCATE(c_func(n),stat=stallo)
 if (stallo /=0)then
-  call l4f_log(L4F_ERROR,"allocating memory")
+  call l4f_log(L4F_FATAL,"allocating memory")
   call raise_fatal_error("allocating memory")
 end if
 
@@ -2076,7 +2076,7 @@ INTEGER :: i, n
 n = SIZE(varbufr)
 ALLOCATE(c_func(n),stat=stallo)
 if (stallo /=0)then
-  call l4f_log(L4F_ERROR,"allocating memory")
+  call l4f_log(L4F_FATAL,"allocating memory")
   call raise_fatal_error("allocating memory")
 end if
 
@@ -2134,7 +2134,7 @@ ENDDO
 REWIND(un)
 ALLOCATE(conv_fwd(n),stat=stallo)
 if (stallo /=0)then
-  call l4f_log(L4F_ERROR,"allocating memory")
+  call l4f_log(L4F_FATAL,"allocating memory")
   call raise_fatal_error("allocating memory")
 end if
 
@@ -2157,7 +2157,7 @@ ENDDO
 REWIND(un)
 ALLOCATE(conv_bwd(n),stat=stallo)
 if (stallo /=0)then
-  call l4f_log(L4F_ERROR,"allocating memory")
+  call l4f_log(L4F_FATAL,"allocating memory")
   call raise_fatal_error("allocating memory")
 end if
 
@@ -2290,7 +2290,7 @@ iu=index(conv_fwd(:)%v7d_var,varu)
 iv=index(conv_fwd(:)%v7d_var,varv)
 
 if (iu == 0  .or. iv == 0 )then
-  call l4f_category_log(this%category,L4F_ERROR,"B11003 or B11004 not defined by vg6d_v7d_var_conv_setup")
+  call l4f_category_log(this%category,L4F_FATAL,"B11003 or B11004 not defined by vg6d_v7d_var_conv_setup")
   call raise_fatal_error ("volgrid6d: B11003 or B11004 not defined by vg6d_v7d_var_conv_setup")
 end if
 
@@ -2300,7 +2300,7 @@ if (associated(this%var))then
   nvar=size(this%var)
   allocate(varbufr(nvar),stat=stallo)
   if (stallo /=0)then
-    call l4f_log(L4F_ERROR,"allocating memory")
+    call l4f_log(L4F_FATAL,"allocating memory")
     call raise_fatal_error("allocating memory")
   end if
 
@@ -2311,23 +2311,23 @@ nvaru=COUNT(varbufr==varu)
 nvarv=COUNT(varbufr==varv)
 
 if (nvaru > 1 )then
-  call l4f_category_log(this%category,L4F_ERROR,"2 variables refer to u wind component")
+  call l4f_category_log(this%category,L4F_FATAL,"2 variables refer to u wind component")
   call raise_fatal_error ("volgrid6d:2 variables refer to u wind component")
 endif
 
 if (nvarv > 1 )then
-  call l4f_category_log(this%category,L4F_ERROR,"2 variables refer to v wind component")
+  call l4f_category_log(this%category,L4F_FATAL,"2 variables refer to v wind component")
   call raise_fatal_error ("volgrid6d:2 variables refer to v wind component")
 endif
 
 
 if (nvaru == 1 .and. nvarv == 0)then
-  call l4f_category_log(this%category,L4F_ERROR,"only u wind component present: unrotation impossible")
+  call l4f_category_log(this%category,L4F_FATAL,"only u wind component present: unrotation impossible")
   call raise_fatal_error ("volgrid6d: only u wind component present, unrotation impossible")
 endif
 
 if (nvaru == 0 .and. nvarv == 1)then
-  call l4f_category_log(this%category,L4F_ERROR,"only v wind component present: unrotation impossible")
+  call l4f_category_log(this%category,L4F_FATAL,"only v wind component present: unrotation impossible")
   call raise_fatal_error ("volgrid6d: only v wind component present, unrotation impossible")
 endif
 
@@ -2362,7 +2362,7 @@ end if
 ! Temporary workspace
 ALLOCATE(tmp_arr(this%griddim%dim%nx, this%griddim%dim%ny),stat=stallo)
 if (stallo /=0)then
-  call l4f_log(L4F_ERROR,"allocating memory")
+  call l4f_log(L4F_FATAL,"allocating memory")
   call raise_fatal_error("allocating memory")
 end if
 
@@ -2489,9 +2489,6 @@ ngrid=size(this)
 
 do igrid=1,ngrid
 
-  ugrid=imiss
-  vgrid=imiss
-  tgrid=imiss
   call init(griddim_t)
 
   call get_val(this(igrid)%griddim,lon_min=lon_min_t, lon_max=lon_max_t, lat_min=lat_min_t, lat_max=lat_max_t,type=type_t)
@@ -2499,6 +2496,10 @@ do igrid=1,ngrid
   step_lat_t=(lat_max_t-lat_min_t)/dble(this(igrid)%griddim%dim%ny-1)
 
   do jgrid=1,ngrid
+
+    ugrid=imiss
+    vgrid=imiss
+    tgrid=imiss
 
 #ifdef DEBUG
     call l4f_category_log(this(igrid)%category,L4F_DEBUG,"C grid: search U/V/T points:"//to_char(igrid)//to_char(jgrid))
@@ -2578,8 +2579,8 @@ do igrid=1,ngrid
           call l4f_category_log(this(igrid)%category,L4F_DEBUG,"C grid: found U and V case up and right")
 #endif
 
-          ugrid=igrid
           vgrid=jgrid
+          ugrid=igrid
 
           call init(griddim_t,lon_min=lon_min, lon_max=lon_max, lat_min=lat_min_t, lat_max=lat_max_t)
 
@@ -2675,7 +2676,7 @@ else
     
   case default
 
-    call l4f_category_log(this%category,L4F_ERROR,"C grid type not known")
+    call l4f_category_log(this%category,L4F_FATAL,"C grid type not known")
     call raise_fatal_error ("volgrid6d: C grid type not kmow")
 
   end select
@@ -2708,7 +2709,7 @@ call init(varv,btable="B11004")
 ! test about presence of u and v in standard table
 
 if ( index(conv_fwd(:)%v7d_var,varu) == 0  .or. index(conv_fwd(:)%v7d_var,varv) == 0 )then
-  call l4f_category_log(this%category,L4F_ERROR,"B11003 and/or B11004 not defined by  vg6d_v7d_var_conv_setup")
+  call l4f_category_log(this%category,L4F_FATAL,"B11003 and/or B11004 not defined by  vg6d_v7d_var_conv_setup")
   call raise_fatal_error ("volgrid6d: B11003 and/or B11004 not defined by  vg6d_v7d_var_conv_setup")
 end if
 
@@ -2717,7 +2718,7 @@ if (associated(this%var))then
   nvar=size(this%var)
   allocate(varbufr(nvar),stat=stallo)
   if (stallo /=0)then
-    call l4f_log(L4F_ERROR,"allocating memory")
+    call l4f_log(L4F_FATAL,"allocating memory")
     call raise_fatal_error("allocating memory")
   end if
 
@@ -2750,7 +2751,7 @@ endif
 ! Temporary workspace
 ALLOCATE(tmp_arr(this%griddim%dim%nx, this%griddim%dim%ny),stat=stallo)
 if (stallo /=0)then
-  call l4f_log(L4F_ERROR,"allocating memory")
+  call l4f_log(L4F_FATAL,"allocating memory")
   call raise_fatal_error("allocating memory")
 end if
 
@@ -2812,7 +2813,7 @@ timerange: DO k = 1, SIZE(this%timerange)
 
         CASE DEFAULT
 
-          call l4f_category_log(this%category,L4F_ERROR,"C grid type not known")
+          call l4f_category_log(this%category,L4F_FATAL,"C grid type not known")
           call raise_fatal_error ("volgrid6d: C grid type not kmow")
 
         END select
