@@ -1,3 +1,4 @@
+#include "config.h"
 !> \brief Definizione di costanti utili per le unità di I/O
 !!
 !! Questo modulo definisce delle costanti che associano
