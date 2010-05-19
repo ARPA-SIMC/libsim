@@ -222,7 +222,20 @@ end subroutine l4f_launcher
 !>log4fortran constructors
 integer function l4f_init()
 
-l4f_priority = L4F_NOTICE
+character(len=10)::priority
+integer :: iostat
+
+call getenv("LOG4C_PRIORITY",l4f_priority)
+if (la4f_priority=="") then
+  l4f_priority = L4F_NOTICE
+else
+  read(priority,*,iostat=iostat)l4f_priority
+end if
+
+if (iostat /= 0) then
+  l4f_priority = L4F_NOTICE
+end if
+
 l4f_init = 0
 
 end function l4f_init
