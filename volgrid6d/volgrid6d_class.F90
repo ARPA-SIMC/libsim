@@ -1958,7 +1958,7 @@ DO inetwork = 1, SIZE(vol7d_in%network)
 
 ! dirty trick to make voldatir look like a 2d-array of shape (nana,1)
           CALL compute(this, &
-           vol7d_in%voldatir(:,itime:itime,ilevel,itimerange,ivar,inetwork), &
+           vol7d_in%voldatir(:,itime,ilevel,itimerange,ivar,inetwork), &
            vol7d_out%voldatir(:,itime:itime,ilevel,itimerange,ivar,inetwork))
 
         ENDDO

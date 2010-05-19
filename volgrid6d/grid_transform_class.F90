@@ -41,7 +41,7 @@
 !!    - sub_type='linear' the interpolated value is computed as a
 !!      linear interpolation of the 3 surrounding input points
 !!      individuated by means of a triangulation procedure (sparse
-!!      points-to-grid)
+!!      points-to-grid, sparse points-to-sparse points)
 !!  - trans_type='boxinter' computes data on a new grid in which the
 !!    value at every point is the result of a function computed over
 !!    those input points that lie inside the output point grid box
@@ -55,7 +55,8 @@
 !!    which the value at every point is the result of a function
 !!    computed over those input points that lie inside an arbitrary
 !!    georoferenced polygon; the output point coordinates are defined
-!!    as the centroids of the polygons (grid-to-sparse points)
+!!    as the centroids of the polygons (grid-to-sparse points and
+!!    sparse points-to-sparse points)
 !!    - sub_type='average' the function used is the average
 !!    - sub_type='max' the function used is the maximum
 !!    - sub_type='min' the function used is the minimum
@@ -1405,7 +1406,7 @@ ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
 
   IF (this%trans%sub_type == 'all') THEN
 
-    field_out = RESHAPE(field_in ,(/this%outnx,this%outny/))
+    field_out = RESHAPE(field_in, (/this%outnx,this%outny/))
 
   end IF
 
@@ -1418,7 +1419,7 @@ END SUBROUTINE grid_transform_compute
 !! the defined transformation. The \a grid_transform object \a this
 !! must have been properly initialised, so that it contains all the
 !! information needed for computing the transformation. This is the
-!! sparse points-to-grid version.
+!! sparse points-to-grid and sparse points-to-sparse points version.
 SUBROUTINE grid_transform_v7d_grid_compute(this, field_in, field_out)
 TYPE(grid_transform),INTENT(in) :: this !< grid_tranform object
 REAL, INTENT(in) :: field_in(:) !< input array
