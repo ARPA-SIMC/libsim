@@ -69,7 +69,8 @@ USE kinds
 USE datetime_class
 USE optional_values
 USE log4fortran
-USE err_handling 
+USE err_handling
+USE io_units
 USE vol7d_utilities
 USE vol7d_ana_class
 USE vol7d_timerange_class
@@ -1989,7 +1990,7 @@ if (.not. opened) then
      'in vol7d_write_on_file, file exists, cannot open file '//TRIM(lfilename))
     CALL raise_fatal_error()
   ENDIF
-  OPEN(unit=lunit, file=lfilename, form='UNFORMATTED', access='STREAM')
+  OPEN(unit=lunit, file=lfilename, form='UNFORMATTED', access=stream_if_possible)
   CALL l4f_log(L4F_INFO, 'opened: '//TRIM(lfilename))
 end if
 
@@ -2194,7 +2195,7 @@ IF (.NOT. opened) THEN
      'in vol7d_read_from_file, file does not exists, cannot open')
     CALL raise_fatal_error()
   ENDIF
-  OPEN(unit=lunit, file=lfilename, form='UNFORMATTED', access='STREAM', &
+  OPEN(unit=lunit, file=lfilename, form='UNFORMATTED', access=stream_if_possible, &
    status='OLD', action='READ')
   CALL l4f_log(L4F_INFO, 'opened: '//TRIM(lfilename))
 end if

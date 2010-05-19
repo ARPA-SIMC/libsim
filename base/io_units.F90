@@ -25,4 +25,10 @@ INTEGER, PARAMETER :: stderr_unit = 0 !< standard error
 INTEGER, PARAMETER :: stdin_unit = 5 !< standard input
 INTEGER, PARAMETER :: stdout_unit = 6 !< standard output
 
+#ifdef F2003_FEATURES
+CHARACTER(len=6), PARAMETER :: stream_if_possible='STREAM'
+#else
+CHARACTER(len=10), PARAMETER :: stream_if_possible='SEQUENTIAL'
+#endif
+
 END MODULE io_units

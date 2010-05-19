@@ -26,6 +26,12 @@ fi
 AC_DEFINE_UNQUOTED(SIZEOF_PTR_C, $sizeof_ptr_c,
  [Fortran KIND defining an INTEGER containing a C pointer])
 
+AC_ARG_ENABLE(f2003-features, AC_HELP_STRING([--enable-f2003-features],
+  [enable some F2003 features]), , [enableval=no])dnl default disable
+if test "x$enableval" = "xyes"; then
+AC_DEFINE(F2003_FEATURES, 1, [Enable some F2003 features])
+fi
+
 dnl Locate Fortran 90 compiler among these if not specified
 AC_PROG_FC([gfortran pgf90 ifort g95 xlf90 f90])
 F77=$FC

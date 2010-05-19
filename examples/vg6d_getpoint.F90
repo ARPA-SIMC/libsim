@@ -225,7 +225,7 @@ IF (output_format == 'native') THEN
     output_file='/dev/stdout'
   ENDIF
   iun = getunit()
-  OPEN(iun, file=output_file, form='UNFORMATTED', access='STREAM')
+  OPEN(iun, file=output_file, form='UNFORMATTED', access=stream_if_possible)
   DO i = 2, SIZE(v7d_out)
     CALL vol7d_merge(v7d_out(1), v7d_out(i), sort=(i == SIZE(v7d_out)))
   ENDDO

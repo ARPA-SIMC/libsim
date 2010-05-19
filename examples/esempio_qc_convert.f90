@@ -7,6 +7,7 @@ USE vol7d_class
 USE vol7d_dballe_class
 USE vol7d_utilities
 USE modqccli
+USE io_units
 
 IMPLICIT NONE
 
@@ -133,7 +134,7 @@ do iarea = 1, cli_nsuperarea
   end do
 end do
 
-open (unit=iunit,file="climaprec.v7d", form='UNFORMATTED', access='STREAM')
+open (unit=iunit,file="climaprec.v7d", form='UNFORMATTED', access=stream_if_possible)
 
 call export(v7d,unit=iunit)
 

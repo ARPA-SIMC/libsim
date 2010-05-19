@@ -63,6 +63,7 @@ use file_utilities
 use log4fortran
 use char_utilities
 use vol7d_dballe_class
+use io_units
 
 implicit none
 
@@ -169,7 +170,7 @@ select case (trim(lowercase(suffixname(filepath))))
 
 case("v7d")
   iuni=getunit()
-  OPEN (unit=iuni,file=filepath,form='UNFORMATTED',access='STREAM')
+  OPEN (unit=iuni,file=filepath,form='UNFORMATTED',access=stream_if_possible)
   call import(qccli%clima,unit=iuni)
   close (unit=iuni)
 case("bufr")
