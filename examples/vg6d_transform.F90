@@ -88,6 +88,7 @@ options(18) = op_option_new('g', 'npy', npy, 4, help= &
 options(19) = op_option_new('e', 'a-grid', c2agrid, help= &
  'interpolate U/V points of an Arakawa C grid on the corresponding T points &
  &of an Arakawa A grid')
+c2agrid=.false.
 
 options(20) = op_option_new('t', 'component-flag', component_flag, &
  0, help='wind component flag in interpolated grid (0/1)')
