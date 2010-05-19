@@ -225,8 +225,8 @@ integer function l4f_init()
 character(len=10)::priority
 integer :: iostat
 
-call getenv("LOG4C_PRIORITY",l4f_priority)
-if (la4f_priority=="") then
+call getenv("LOG4C_PRIORITY",priority)
+if (priority=="") then
   l4f_priority = L4F_NOTICE
 else
   read(priority,*,iostat=iostat)l4f_priority

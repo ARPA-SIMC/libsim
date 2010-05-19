@@ -2431,40 +2431,59 @@ end subroutine vg6d_wind__un_rot
 
 
 
-!!$cerchiamo di capire la logica:
+!!$ try to understand the problem:
 !!$
-!!$casi:
+!!$ case:
 !!$
-!!$1) abbiamo un solo volume: deve essere fornita la direzione dello shift
-!!$                           calcoliamo H e ce lo portiamo
-!!$2) abbiamo due volumi:
-!!$      1) volume U e volume V: calcoliamo quello H e ce li portiamo
-!!$      2) volume U/V e volume H : riportiamo U/V su H
-!!$3) abbiamo tre volumi: riportiamo U e V su H
+!!$ 1) we have only one volume: we have to provide the direction of shift
+!!$                           compute H and traslate on it
+!!$ 2) we have two volumes:
+!!$      1) volume U and volume V: compute H nad traslate on it
+!!$      2) volume U/V and volume H : translate U/V on H
+!!$ 3) we have tree volumes: translate U and V on H
 !!$
-!!$casi strani:
-!!$1) non abbiamo U in volume U
-!!$2) non abbiamo V in volume V
-!!$3) abbiamo altra roba oltre a U e V in volumi U e V
+!!$ strange cases:
+!!$ 1) do not have U in volume U
+!!$ 2) do not have V in volume V
+!!$ 3) we have others variables more than U and V in volumes U e V
 !!$
 !!$
-!!$quindi i passi sono:
-!!$1) trovare i volumi interessati
-!!$2) definire o calcolare griglia H
-!!$3) trasformare i volumi in H 
+!!$ so the steps are:
+!!$ 1) find the volumes 
+!!$ 2) define or compute H grid
+!!$ 3) trasform the volumes in H 
 
-!! TODO per ora la griglia H(t) deve essere fornita
+!!$ N.B.
+!!$ case 1) for only one vg6d (U or V) is not managed, but
+!!$ the not pubblic subroutines will work but you have to know what you want to do
 
 
+!> \brief Convert grids type C in type A
+!! use this to interpolate data from grid type C to grid type A
+!! Grids type are defined by Arakawa
+!!
+!! We need to find this type of area in vg6d vector
+!! T   area of points with temterature etc.
+!! U   area of points with u components of winds
+!! V   area of points with v components of winds
+!!
+!! this method works if find 
+!! two volumes:
+!!      1) volume U and volume V: compute H nad traslate on it
+!!      2) volume U/V and volume H : translate U/V on H
+!! tree volumes: translate U and V on H
+!!
+!! try to work well on more datasets at once
 subroutine vg6d_c2a (this)
 
-TYPE(volgrid6d),INTENT(inout)  :: this(:)      !< vettore volume volgrid6d da exportare
+TYPE(volgrid6d),INTENT(inout)  :: this(:)      !< vettor of volumes volgrid6d to elaborate
 
 integer :: ngrid,igrid,jgrid,ugrid,vgrid,tgrid
 doubleprecision :: lon_min, lon_max, lat_min, lat_max
 doubleprecision :: lon_min_t, lon_max_t, lat_min_t, lat_max_t
 doubleprecision :: step_lon_t,step_lat_t
 character(len=80) :: type_t,type
+TYPE(griddim_def):: griddim_t
 
 ngrid=size(this)
 
@@ -2472,8 +2491,9 @@ do igrid=1,ngrid
 
   ugrid=imiss
   vgrid=imiss
+  tgrid=imiss
+  call init(griddim_t)
 
-  tgrid=igrid
   call get_val(this(igrid)%griddim,lon_min=lon_min_t, lon_max=lon_max_t, lat_min=lat_min_t, lat_max=lat_max_t,type=type_t)
   step_lon_t=(lon_max_t-lon_min_t)/dble(this(igrid)%griddim%dim%nx-1)
   step_lat_t=(lat_max_t-lat_min_t)/dble(this(igrid)%griddim%dim%ny-1)
@@ -2498,10 +2518,10 @@ do igrid=1,ngrid
       call l4f_category_log(this(igrid)%category,L4F_DEBUG,"C grid: test U "//&
        to_char(lon_min)//to_char(lon_max)//to_char(lat_min)//to_char(lat_max))
 
-      call l4f_category_log(this(igrid)%category,L4F_DEBUG,"diff coordinate lat"//&
+      call l4f_category_log(this(igrid)%category,L4F_DEBUG,"diff coordinate lon"//&
        to_char(abs(lon_min - (lon_min_t+step_lon_t/2.d0)))//&
        to_char(abs(lon_max - (lon_max_t+step_lon_t/2.d0))))
-      call l4f_category_log(this(igrid)%category,L4F_DEBUG,"diff coordinate lon"//&
+      call l4f_category_log(this(igrid)%category,L4F_DEBUG,"diff coordinate lat"//&
        to_char(abs(lat_min - (lat_min_t+step_lat_t/2.d0)))//&
        to_char(abs(lat_max - (lat_max_t+step_lat_t/2.d0))))
 #endif
@@ -2510,9 +2530,10 @@ do igrid=1,ngrid
         if ( abs(lat_min - lat_min_t) < 1.d-3 .and. abs(lat_max - lat_max_t) < 1.d-3 ) then
 
 #ifdef DEBUG
-          call l4f_category_log(this(igrid)%category,L4F_DEBUG,"C grid: trovato U")
+          call l4f_category_log(this(igrid)%category,L4F_DEBUG,"C grid: found U")
 #endif
           ugrid=jgrid
+          tgrid=igrid
 
         end if
       end if
@@ -2526,32 +2547,74 @@ do igrid=1,ngrid
         if ( abs(lon_min - lon_min_t) < 1.d-3 .and. abs(lon_max - lon_max_t) < 1.d-3  ) then
           
 #ifdef DEBUG
-          call l4f_category_log(this(igrid)%category,L4F_DEBUG,"C grid: trovato V")
+          call l4f_category_log(this(igrid)%category,L4F_DEBUG,"C grid: found V")
 #endif
           vgrid=jgrid
+          tgrid=igrid
+
+        end if
+      end if
+
+
+      ! test if we have U and V
+
+#ifdef DEBUG
+      call l4f_category_log(this(igrid)%category,L4F_DEBUG,"C grid: test U and V"//&
+       to_char(lon_min_t)//to_char(lon_max_t)//to_char(lat_min_t)//to_char(lat_max_t)//&
+       to_char(lon_min)//to_char(lon_max)//to_char(lat_min)//to_char(lat_max))
+
+      call l4f_category_log(this(igrid)%category,L4F_DEBUG,"UV diff coordinate lon"//&
+       to_char(abs(lon_min_t - lon_min)-step_lon_t/2.d0)//&
+       to_char(abs(lon_max_t - lon_max)-step_lon_t/2.d0))
+      call l4f_category_log(this(igrid)%category,L4F_DEBUG,"UV diff coordinate lat"//&
+       to_char(abs(lat_min_t - lat_min) -step_lat_t/2.d0)//&
+       to_char(abs(lat_max_t - lat_max)-step_lat_t/2.d0))
+#endif
+      
+      if ( abs(lat_min - (lat_min_t+step_lat_t/2.d0)) < 1.d-3 .and. abs(lat_max - (lat_max_t+step_lat_t/2.d0)) < 1.d-3 ) then
+        if ( abs(lon_min_t - (lon_min+step_lon_t/2.d0)) < 1.d-3 .and. abs(lon_max_t - (lon_max+step_lon_t/2.d0)) < 1.d-3  ) then
+          
+#ifdef DEBUG
+          call l4f_category_log(this(igrid)%category,L4F_DEBUG,"C grid: found U and V case up and right")
+#endif
+
+          ugrid=igrid
+          vgrid=jgrid
+
+          call init(griddim_t,lon_min=lon_min, lon_max=lon_max, lat_min=lat_min_t, lat_max=lat_max_t)
 
         end if
       end if
     end if
 
+                                ! abbiamo almeno due volumi: riportiamo U e/o V su T
+    if (c_e(ugrid)) then
+#ifdef DEBUG
+      call l4f_category_log(this(igrid)%category,L4F_DEBUG,"C grid U points: interpolate U on T "//to_char(tgrid)//to_char(ugrid))
+#endif
+      if (c_e(tgrid))then
+        call vg6d_c2a_grid(this(ugrid),this(tgrid)%griddim,cgrid=1)
+      else
+        call vg6d_c2a_grid(this(ugrid),griddim_t,cgrid=1)
+      end if
+      call vg6d_c2a_mat(this(ugrid),cgrid=1)
+    end if
+    
+    if (c_e(vgrid)) then
+#ifdef DEBUG
+      call l4f_category_log(this(igrid)%category,L4F_DEBUG,"C grid V points: interpolate V on T "//to_char(tgrid)//to_char(vgrid))
+#endif
+      if (c_e(tgrid))then
+        call vg6d_c2a_grid(this(vgrid),this(tgrid)%griddim,cgrid=2)
+      else
+        call vg6d_c2a_grid(this(vgrid),griddim_t,cgrid=2)
+      end if
+      call vg6d_c2a_mat(this(vgrid),cgrid=2)
+    end if
+
   end do
 
-  ! abbiamo almeno due volumi: riportiamo U e/o V su T
-  if (c_e(ugrid)) then
-#ifdef DEBUG
-    call l4f_category_log(this(igrid)%category,L4F_DEBUG,"C grid U points: riportiamo U su T "//to_char(tgrid)//to_char(ugrid))
-#endif
-    call vg6d_c2a_grid(this(ugrid),this(tgrid),cgrid=1)
-    call vg6d_c2a_mat(this(ugrid),cgrid=1)
-  end if
-
-  if (c_e(vgrid)) then
-#ifdef DEBUG
-    call l4f_category_log(this(igrid)%category,L4F_DEBUG,"C grid V points: riportiamo V su T "//to_char(tgrid)//to_char(vgrid))
-#endif
-    call vg6d_c2a_grid(this(vgrid),this(tgrid),cgrid=2)
-    call vg6d_c2a_mat(this(vgrid),cgrid=2)
-  end if
+  call delete(griddim_t)
 
 end do
   
@@ -2560,19 +2623,19 @@ end subroutine vg6d_c2a
 
 
 !> Convert C grid to A grid
-subroutine vg6d_c2a_grid(this,vg6d_t,cgrid)
+subroutine vg6d_c2a_grid(this,griddim_t,cgrid)
 
 type(volgrid6d),intent(inout) :: this !< object containing fields to be translated (U or V points)
-type(volgrid6d),intent(in),optional :: vg6d_t !< object containing T points
+type(griddim_def),intent(in),optional :: griddim_t !< object containing grid of T points
 integer,intent(in) :: cgrid !< in C grid (Arakawa) we have 0=T,1=U,2=V points
 
 doubleprecision :: lon_min, lon_max, lat_min, lat_max
 doubleprecision :: step_lon,step_lat
 
 
-if (present(vg6d_t)) then
+if (present(griddim_t)) then
 
- call get_val(vg6d_t%griddim,lon_min=lon_min, lon_max=lon_max, lat_min=lat_min, lat_max=lat_max)
+ call get_val(griddim_t,lon_min=lon_min, lon_max=lon_max, lat_min=lat_min, lat_max=lat_max)
  call set_val(this%griddim,lon_min=lon_min, lon_max=lon_max, lat_min=lat_min, lat_max=lat_max)
 
 else
