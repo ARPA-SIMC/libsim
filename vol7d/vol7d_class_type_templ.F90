@@ -15,11 +15,13 @@ CALL vol7d_remap2_vol7d_var(this%anavar%/**/VOL7D_POLY_TYPES, &
 IF (ASSOCIATED(v7dtmp%anavar%/**/VOL7D_POLY_TYPES)) THEN
   CALL vol7d_alloc_vol(v7dtmp)
   IF (ASSOCIATED(remapv1)) THEN
+    IF (SIZE(remapv1) > 0) &
     v7dtmp%volana/**/VOL7D_POLY_TYPES(remapa1(:),remapv1(:),remapn1(:)) = &
      this%volana/**/VOL7D_POLY_TYPES(:,:,:)
     DEALLOCATE(remapv1)
   ENDIF
   IF (ASSOCIATED(remapv2)) THEN
+    IF (SIZE(remapv2) > 0) &
     v7dtmp%volana/**/VOL7D_POLY_TYPES(remapa2(:),remapv2(:),remapn2(:)) = &
      that%volana/**/VOL7D_POLY_TYPES(:,:,:)
     DEALLOCATE(remapv2)
@@ -37,6 +39,7 @@ IF (ASSOCIATED(v7dtmp%anaattr%/**/VOL7D_POLY_TYPES) .AND. &
  ASSOCIATED(v7dtmp%anavarattr%/**/VOL7D_POLY_TYPES)) THEN
   CALL vol7d_alloc_vol(v7dtmp)
   IF (ASSOCIATED(remapv1) .AND. ASSOCIATED(remapva1)) THEN
+    IF (SIZE(remapv1) > 0 .AND. SIZE(remapva1) > 0) &
     v7dtmp%volanaattr/**/VOL7D_POLY_TYPES &
      (remapa1(:),remapva1(:),remapn1(:),remapv1(:)) = &
      this%volanaattr/**/VOL7D_POLY_TYPES(:,:,:,:)
@@ -47,6 +50,7 @@ IF (ASSOCIATED(v7dtmp%anaattr%/**/VOL7D_POLY_TYPES) .AND. &
     DEALLOCATE(remapva1)
   ENDIF
   IF (ASSOCIATED(remapv2) .AND. ASSOCIATED(remapva2)) THEN
+    IF (SIZE(remapv2) > 0 .AND. SIZE(remapva2) > 0) &
     v7dtmp%volanaattr/**/VOL7D_POLY_TYPES &
      (remapa2(:),remapva2(:),remapn2(:),remapv2(:)) = &
      that%volanaattr/**/VOL7D_POLY_TYPES(:,:,:,:)
@@ -65,12 +69,14 @@ CALL vol7d_remap2_vol7d_var(this%dativar%/**/VOL7D_POLY_TYPES, &
 IF (ASSOCIATED(v7dtmp%dativar%/**/VOL7D_POLY_TYPES)) THEN
   CALL vol7d_alloc_vol(v7dtmp)
   IF (ASSOCIATED(remapv1)) THEN
+    IF (SIZE(remapv1) > 0) &
     v7dtmp%voldati/**/VOL7D_POLY_TYPES &
      (remapa1(:),remapt1(:),remapl1(:),remaptr1(:),remapv1(:),remapn1(:)) = &
      this%voldati/**/VOL7D_POLY_TYPES(:,:,:,:,:,:)
     DEALLOCATE(remapv1)
   ENDIF
   IF (ASSOCIATED(remapv2)) THEN
+    IF (SIZE(remapv2) > 0) &
     v7dtmp%voldati/**/VOL7D_POLY_TYPES &
      (remapa2(:),remapt2(:),remapl2(:),remaptr2(:),remapv2(:),remapn2(:)) = &
      that%voldati/**/VOL7D_POLY_TYPES(:,:,:,:,:,:)
@@ -89,6 +95,7 @@ IF (ASSOCIATED(v7dtmp%datiattr%/**/VOL7D_POLY_TYPES) .AND. &
  ASSOCIATED(v7dtmp%dativarattr%/**/VOL7D_POLY_TYPES)) THEN
   CALL vol7d_alloc_vol(v7dtmp)
   IF (ASSOCIATED(remapv1) .AND. ASSOCIATED(remapva1)) THEN
+    IF (SIZE(remapv1) > 0 .AND. SIZE(remapva1) > 0) &
     v7dtmp%voldatiattr/**/VOL7D_POLY_TYPES &
      (remapa1(:),remapt1(:),remapl1(:),remaptr1(:),remapva1(:),remapn1(:),remapv1(:)) = &
      this%voldatiattr/**/VOL7D_POLY_TYPES(:,:,:,:,:,:,:)
@@ -99,6 +106,7 @@ IF (ASSOCIATED(v7dtmp%datiattr%/**/VOL7D_POLY_TYPES) .AND. &
     DEALLOCATE(remapva1)
   ENDIF
   IF (ASSOCIATED(remapv2) .AND. ASSOCIATED(remapva2)) THEN
+    IF (SIZE(remapv2) > 0 .AND. SIZE(remapva2) > 0) &
     v7dtmp%voldatiattr/**/VOL7D_POLY_TYPES &
      (remapa2(:),remapt2(:),remapl2(:),remaptr2(:),remapva2(:),remapn2(:),remapv2(:)) = &
      that%voldatiattr/**/VOL7D_POLY_TYPES(:,:,:,:,:,:,:)
