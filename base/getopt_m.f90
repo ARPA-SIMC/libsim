@@ -43,8 +43,6 @@ CHARACTER(len=80):: optarg !< the argument to the current option, if applicable
 CHARACTER:: optopt !< the current option character (for long options it is the corresponding short option)
 INTEGER:: optind=1 !< the index of current option
 
-!INTEGER :: iargc
-
 !> This derived type describes a long option.
 !! The \a name field is the option name, without the leading \c -- double dash.
 !! Set the \a has_arg field to \c .TRUE. if it requires an argument,
@@ -737,7 +735,7 @@ TYPE(optionparser),INTENT(inout) :: this !< optionparser object with correctly i
 
 INTEGER :: nextarg
 
-INTEGER :: i, j, endopt, indeq
+INTEGER :: i, j, endopt, indeq, iargc
 CHARACTER(len=1024) :: arg, optarg
 
 i = 1
