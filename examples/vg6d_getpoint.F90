@@ -19,7 +19,7 @@ TYPE(optionparser) :: opt
 CHARACTER(len=8) :: coord_format, output_format
 CHARACTER(len=512) :: input_file, output_file, network_list, variable_list
 CHARACTER(len=512) :: a_name, coord_file
-INTEGER :: category, ier, i, iun
+INTEGER :: category, ier, i, iun, iargc
 character(len=network_name_len) :: network
 type(volgrid6d),pointer :: volgrid(:)
 type(transform_def) :: trans
@@ -81,7 +81,7 @@ options(11) = op_option_new('z', 'sub-type', sub_type, 'bilin', help= &
 #ifdef HAVE_LIBSHP_FORTRAN
  &, for ''polyinter'': ''average''&
 #endif
-')
+&')
 options(12) = op_option_new('n', 'network', network, 'generic', help= &
  'string identifying network for output data')
 

@@ -1,0 +1,30 @@
+Basic instructions on how to build libsim and a minimal set of
+prerequisites on AIX with xl* compilers (sh/ksh/bash assumed):
+
+export PREFIX=/my/desired/install/prefix
+
+# jasper
+./configure --prefix=$PREFIX \
+ CC=xlc \
+ --disable-shared --disable-opengl --disable-libjpeg --without-x
+make; make install
+
+# grib_api
+./configure --prefix=$PREFIX \
+ CC=xlc CFLAGS="-I$PREFIX/include" LDFLAGS="-L$PREFIX/lib" \
+ --disable-shared
+make; make install
+
+# libsim
+./configure --prefix=$PREFIX \
+ FC=xlf LDFLAGS="-L$PREFIX/lib" CC=xlc FCFLAGS="-I$PREFIX/include" \
+ --enable-debug-mode --disable-log4c \
+ --disable-oraclesim --disable-shapelib --disable-dballe
+ --disable-ngmath --disable-ncarg --disable-emoslib \
+ --disable-shared --disable-netcdf --enable-f2003-features
+# convert sources to fit C preprocessor
+portability/conv_cpp.sh -f
+make; make install
+# enable logging
+export LOG4C_PRIORITY=1000
+# run
