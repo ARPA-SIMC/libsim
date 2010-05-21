@@ -802,11 +802,16 @@ IF (this%trans%trans_type == 'inter') THEN
     CALL getval(v7d_out%ana(:)%coord,lon=lon,lat=lat)
 
     CALL find_index(in,this%trans%sub_type,&
-     nx=this%innx, ny=this%inny ,&
-     lon_min=lon_min, lon_max=lon_max,&
-     lat_min=lat_min, lat_max=lat_max,&
-     lon=RESHAPE(lon,(/SIZE(lon),1/)),lat=RESHAPE(lat,(/SIZE(lat),1/)),&
-     index_x=this%inter_index_x,index_y=this%inter_index_y)
+     nx=this%innx, ny=this%inny, &
+     lon_min=lon_min, lon_max=lon_max, &
+     lat_min=lat_min, lat_max=lat_max, &
+     lon=lon, lat=lat, &
+     index_x=this%inter_index_x(:,1), index_y=this%inter_index_y(:,1))
+
+! To print the original coordinate
+!    CALL unproj(in)
+!    PRINT*,in%dim%lon(this%inter_index_x(1,1),this%inter_index_y(1,1)), &
+!     in%dim%lat(this%inter_index_x(1,1),this%inter_index_y(1,1))
 
     IF ( this%trans%sub_type == 'bilin' ) THEN
       ALLOCATE(this%inter_x(this%innx,this%inny),this%inter_y(this%innx,this%inny))
