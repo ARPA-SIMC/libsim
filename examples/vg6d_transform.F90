@@ -88,7 +88,6 @@ options(18) = op_option_new('g', 'npy', npy, 4, help= &
 options(19) = op_option_new('e', 'a-grid', c2agrid, help= &
  'interpolate U/V points of an Arakawa C grid on the corresponding T points &
  &of an Arakawa A grid')
-c2agrid=.false.
 
 options(20) = op_option_new('t', 'component-flag', component_flag, &
  0, help='wind component flag in interpolated grid (0/1)')
@@ -98,7 +97,6 @@ options(29) = op_option_help_new('h', 'help', help= &
  'show an help message and exit')
 options(30) = op_option_new(' ', 'version', version, help= &
  'show version and exit')
-version = .FALSE.
 
 ! define the option parser
 opt = optionparser_new(options, description_msg= &

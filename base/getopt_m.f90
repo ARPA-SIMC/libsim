@@ -308,9 +308,9 @@ end function process_short
 !! When parsing will be performed, if the requested option is
 !! encountered, its corresponding compulsory argument will be copied
 !! into the provided destination, truncating it if it is too long. An
-!! optional value can be provided for the destination. Please use the
-!! generic \a op_option_new constructor rather than this particular
-!! function.
+!! optional default value can be provided for the destination. Please
+!! use the generic \a op_option_new constructor rather than this
+!! particular function.
 FUNCTION op_optionc_new(short_opt, long_opt, dest, default, help) RESULT(this)
 CHARACTER(len=1),INTENT(in) :: short_opt !< the short option (may be empty)
 CHARACTER(len=*),INTENT(in) :: long_opt !< the long option (may be empty)
@@ -347,9 +347,9 @@ END FUNCTION op_optionc_new
 !> Create a new option with an integer type argument.
 !! When parsing will be performed, if the requested option is
 !! encountered, its corresponding compulsory argument will be copied
-!! into the provided destination. An optional value can be provided
-!! for the destination. Please use the generic \a op_option_new
-!! constructor rather than this particular function.
+!! into the provided destination. An optional default value can be
+!! provided for the destination. Please use the generic \a
+!! op_option_new constructor rather than this particular function.
 FUNCTION op_optioni_new(short_opt, long_opt, dest, default, help) RESULT(this)
 CHARACTER(len=1),INTENT(in) :: short_opt !< the short option (may be empty)
 CHARACTER(len=*),INTENT(in) :: long_opt !< the long option (may be empty)
@@ -380,9 +380,9 @@ END FUNCTION op_optioni_new
 !> Create a new option with a real type argument.
 !! When parsing will be performed, if the requested option is
 !! encountered, its corresponding compulsory argument will be copied
-!! into the provided destination. An optional value can be provided
-!! for the destination. Please use the generic \a op_option_new
-!! constructor rather than this particular function.
+!! into the provided destination. An optional value default can be
+!! provided for the destination. Please use the generic \a
+!! op_option_new constructor rather than this particular function.
 FUNCTION op_optionr_new(short_opt, long_opt, dest, default, help) RESULT(this)
 CHARACTER(len=1),INTENT(in) :: short_opt !< the short option (may be empty)
 CHARACTER(len=*),INTENT(in) :: long_opt !< the long option (may be empty)
@@ -413,9 +413,9 @@ END FUNCTION op_optionr_new
 !> Create a new option with a double precision type argument.
 !! When parsing will be performed, if the requested option is
 !! encountered, its corresponding compulsory argument will be copied
-!! into the provided destination. An optional value can be provided
-!! for the destination. Please use the generic \a op_option_new
-!! constructor rather than this particular function.
+!! into the provided destination. An optional default value can be
+!! provided for the destination. Please use the generic \a
+!! op_option_new constructor rather than this particular function.
 FUNCTION op_optiond_new(short_opt, long_opt, dest, default, help) RESULT(this)
 CHARACTER(len=1),INTENT(in) :: short_opt !< the short option (may be empty)
 CHARACTER(len=*),INTENT(in) :: long_opt !< the long option (may be empty)
@@ -446,8 +446,9 @@ END FUNCTION op_optiond_new
 !> Create a new logical option, without optional argument.
 !! When parsing will be performed, if the requested option is
 !! encountered, the provided destination will be set to \a
-!! .TRUE. . Please use the generic \a op_option_new constructor rather
-!! than this particular function.
+!! .TRUE. . The provided destination is initially set to \a
+!! .FALSE. . Please use the generic \a op_option_new constructor
+!! rather than this particular function.
 FUNCTION op_optionl_new(short_opt, long_opt, dest, help) RESULT(this)
 CHARACTER(len=1),INTENT(in) :: short_opt !< the short option (may be empty)
 CHARACTER(len=*),INTENT(in) :: long_opt !< the long option (may be empty)
@@ -460,7 +461,7 @@ TYPE(op_option) :: this
 this = op_option_new_common(short_opt, long_opt, '', help)
 
 this%destl => dest
-!IF (PRESENT(default)) this%destl = default ! should it be set to .FALSE. here?
+this%destl = .FALSE. ! unconditionally set to false, option can only set it to true
 this%opttype = opttype_l
 this%need_arg = .FALSE.
 

@@ -114,14 +114,12 @@ options(21) = op_option_new(' ', 'set-scmode', set_scmode, 'xxx', &
 options(25) = op_option_new(' ', 'display', ldisplay, help= &
  'briefly display the data volume imported, warning: this option is incompatible &
  &with output on stdout.')
-ldisplay = .FALSE.
 
 ! help options
 options(39) = op_option_help_new('h', 'help', help= &
  'show an help message and exit')
 options(40) = op_option_new(' ', 'version', version, help= &
  'show version and exit')
-version = .FALSE.
 
 ! define the option parser
 opt = optionparser_new(options, description_msg= &

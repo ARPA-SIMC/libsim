@@ -1,25 +1,23 @@
 MODULE vol7d_csv
-
-CONTAINS
-
-SUBROUTINE csv_export(v7d, csv_volume, csv_variable, csv_header, csv_skip_miss, &
- csv_rescale, icsv_column, iun)
 USE vol7d_class
 USE file_utilities
 IMPLICIT NONE
+
+! csv output configuration
+CHARACTER(len=8) :: csv_volume
+CHARACTER(len=512) :: csv_column, csv_variable
+LOGICAL :: csv_skip_miss, csv_no_rescale
+INTEGER :: csv_header, icsv_column(7)
+
+CONTAINS
+
+SUBROUTINE csv_export(v7d, iun)
 TYPE(vol7d),INTENT(inout) :: v7d
-CHARACTER(len=8),INTENT(in) :: csv_volume
-CHARACTER(len=512),INTENT(in) :: csv_variable
-INTEGER,INTENT(in) :: csv_header 
-LOGICAL,INTENT(in) :: csv_skip_miss, csv_rescale
-INTEGER,INTENT(in) :: icsv_column(:)
 INTEGER,INTENT(in) :: iun
 
 INTEGER :: licsv_column(SIZE(icsv_column))
 LOGICAL :: no_miss, anaonly
 CHARACTER(len=50) :: desdata(7)
-!deshead(7)=(/'COORD    ','REFTIME  ','VERTLEV  ','TIMERANGE', &
-! 'VARIABLE ','NETWORK  ','ATTRIBUTE'/), 
 CHARACTER(len=128) :: charbuffer
 TYPE(csv_record) :: csvline, csv_desdata(7)
 INTEGER :: i, i1, i2, i3, i4, i5, i6, i7, nv, datastart
@@ -482,7 +480,7 @@ CHARACTER(len=*),INTENT(in) :: val
 LOGICAL,INTENT(inout),OPTIONAL :: no_miss
 
 IF (c_e(val)) THEN
-  IF (csv_rescale .AND. c_e(var%scalefactor) .AND. var%unit /= 'CCITTIA5' .AND. &
+  IF (.NOT.csv_no_rescale .AND. c_e(var%scalefactor) .AND. var%unit /= 'CCITTIA5' .AND. &
    .NOT.(var%scalefactor == 0 .AND. var%unit == 'NUMERIC')) THEN
     CALL csv_record_addfield(csvline, realdat(val, var))
   ELSE
@@ -501,7 +499,7 @@ INTEGER,INTENT(in) :: val
 LOGICAL,INTENT(inout),OPTIONAL :: no_miss
 
 IF (c_e(val)) THEN
-  IF (csv_rescale .AND. c_e(var%scalefactor) .AND. &
+  IF (.NOT.csv_no_rescale .AND. c_e(var%scalefactor) .AND. &
    .NOT.(var%scalefactor == 0 .AND. var%unit == 'NUMERIC')) THEN
     CALL csv_record_addfield(csvline, realdat(val, var))
   ELSE
@@ -588,12 +586,6 @@ TYPE(timedelta) :: c_i
 TYPE(datetime) :: c_s
 REAL :: comp_frac_valid
 
-! for csv output
-CHARACTER(len=8) :: csv_volume
-CHARACTER(len=512) :: csv_column, csv_variable
-LOGICAL :: csv_skip_miss, csv_no_rescale
-INTEGER :: csv_header, icsv_column(7)
-
 
 NULLIFY(poly)
 !questa chiamata prende dal launcher il nome univoco
@@ -667,16 +659,12 @@ options(9) = op_option_new(' ', 'attribute-list', attribute_list, '', help= &
 options(10) = op_option_new('d', 'display', ldisplay, help= &
  'briefly display the data volume imported, warning: this option is incompatible &
  &with output on stdout.')
-ldisplay = .FALSE.
 options(11) = op_option_new(' ', 'comp-regularize', comp_regularize, help= &
  'regularize the time series keeping only the data at regular time steps')
-comp_regularize = .FALSE.
 options(12) = op_option_new(' ', 'comp-average', comp_average, help= &
  'recompute average of averaged fields on a different time step')
-comp_average = .FALSE.
 options(13) = op_option_new(' ', 'comp-cumulate', comp_cumulate, help= &
  'recompute cumulation of accumulated fields on a different time step')
-comp_cumulate = .FALSE.
 options(14) = op_option_new(' ', 'comp-step', comp_step, '0000000001 00:00:00.000', help= &
  'length of regularization, average or cumulation step in the format &
  &''YYYYMMDDDD hh:mm:ss.msc'', it can be simplified up to the form ''D hh''')
@@ -687,7 +675,6 @@ options(15) = op_option_new(' ', 'comp-start', comp_start, '', help= &
 options(16) = op_option_new(' ', 'comp-discard', comp_discard, help= &
  'discard the data that are not the result of the cumulation and/or averaging &
  &processes and keep only the result of the computations')
-comp_discard = .FALSE.
 options(17) = op_option_new(' ', 'comp-frac-valid', comp_frac_valid, 1., help= &
  'specify the fraction of data that has to be valid in order to consider an &
  &accumulated or averaged value acceptable')
@@ -736,17 +723,14 @@ options(33) = op_option_new(' ', 'csv-header', csv_header, 2, help= &
  'write 0 to 2 header lines at the beginning of csv output')
 options(34) = op_option_new(' ', 'csv-skip-miss', csv_skip_miss, help= &
  'skip records containing only missing values in csv output')
-csv_skip_miss = .FALSE.
 options(35) = op_option_new(' ', 'csv-norescale', csv_no_rescale, help= &
  'do not rescale in output integer variables according to their scale factor')
-csv_no_rescale = .FALSE.
 
 ! help options
 options(49) = op_option_help_new('h', 'help', help= &
  'show an help message and exit')
 options(50) = op_option_new(' ', 'version', version, help= &
  'show version and exit')
-version = .FALSE.
 
 
 ! define the option parser
@@ -1039,9 +1023,7 @@ ELSE IF (output_format == 'csv') THEN
     iun = getunit()
     OPEN(iun, file=output_file, form='FORMATTED', access='SEQUENTIAL')
   ENDIF
-! warning: csv_no_rescale transformed into csv_rescale, find a better solution
-  CALL csv_export(v7d, csv_volume, csv_variable, csv_header, csv_skip_miss, &
-   .NOT.csv_no_rescale, icsv_column(1:nc), iun)
+  CALL csv_export(v7d, iun)
   IF (output_file /= '-') CLOSE(iun)
   CALL delete(v7d)
 
