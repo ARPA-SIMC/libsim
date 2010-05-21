@@ -1,4 +1,4 @@
-dist_pkgdata_DATA = climaprec.v7d 
+dist_pkgdata_DATA = 
 
 if ORSIM
 
