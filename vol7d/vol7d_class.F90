@@ -834,6 +834,19 @@ IF (.NOT. ASSOCIATED(this%timerange)) CALL vol7d_alloc(this, ntimerange=1, ini=i
 END SUBROUTINE vol7d_check_alloc_dati
 
 
+SUBROUTINE vol7d_check_alloc(this)
+TYPE(vol7d),INTENT(inout) :: this
+
+! If anything really not allocated yet, allocate with size 0
+IF (.NOT. ASSOCIATED(this%ana)) CALL vol7d_alloc(this, nana=0)
+IF (.NOT. ASSOCIATED(this%network)) CALL vol7d_alloc(this, nnetwork=0)
+IF (.NOT. ASSOCIATED(this%time)) CALL vol7d_alloc(this, ntime=0)
+IF (.NOT. ASSOCIATED(this%level)) CALL vol7d_alloc(this, nlevel=0)
+IF (.NOT. ASSOCIATED(this%timerange)) CALL vol7d_alloc(this, ntimerange=0)
+
+END SUBROUTINE vol7d_check_alloc
+
+
 !> Metodo per allocare i volumi richiesti di variabili e attributi per
 !! anagrafica e dati.
 !! Se alcuni dei descrittori relativi alle dimensioni anagrafica,
@@ -1014,6 +1027,9 @@ IF (ASSOCIATED(this%datiattr%c) .AND. ASSOCIATED(this%dativarattr%c) .AND. &
    SIZE(this%datiattr%c)))
   IF (linivol) this%voldatiattrc(:,:,:,:,:,:,:) = cmiss
 ENDIF
+
+! Catch-all method
+CALL vol7d_check_alloc(this)
 
 ! Creo gli indici var-attr
 CALL vol7d_set_attr_ind(this)
