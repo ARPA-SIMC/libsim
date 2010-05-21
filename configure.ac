@@ -48,6 +48,17 @@ fi
 AC_DEFINE(DEBUG, 1, [Enable debugging mode])
 fi
 
+dnl options to be added compulsorily for particular compilers
+case "$FC" in
+  *xlf*)
+# -qextname: external names with underscore
+# -WF,-C!: remove C comments from preprocessed (Fortran) code
+  FCFLAGS="$FCFLAGS -qextname -WF,-C!"
+#  FCFLAGS="$FCFLAGS -qextname -F "'$(abs_top_builddir)/portability/xlf.cfg'
+;;
+esac
+
+
 AC_ARG_ENABLE(log4c, AC_HELP_STRING([--disable-log4c],
   [disable use of log4c package]), , [enableval=yes])dnl default enable
 
@@ -295,13 +306,6 @@ portability/conv_cpp.sh -f command before compiling the first time,
 sorry for the inconvenience.])
 fi
 
-dnl options to be added compulsorily for particular compilers
-case "$FC" in
-  *xlf*)
-  FCFLAGS="$FCFLAGS -F "'$(abs_top_builddir)/portability/xlf.cfg'
-;;
-esac
-
 
 AC_LANG_POP()dnl back to C
 
@@ -312,6 +316,13 @@ AM_CONDITIONAL(VERSIONINFO, test "x$enableval" = "xyes")
 AC_ARG_ENABLE(doxydoc, AC_HELP_STRING([--disable-doxydoc],
   [disable generation of doxygen documentation]),,[enableval=yes])dnl default enable
 AM_CONDITIONAL(DOXYDOC, test "x$enableval" = "xyes")
+
+
+if test "x$prefix" = "xNONE"; then
+AC_DEFINE_UNQUOTED(PREFIX, "$ac_default_prefix", [install prefix])
+else
+AC_DEFINE_UNQUOTED(PREFIX, "$prefix", [install prefix])
+fi
 
 AC_CHECK_PROG(help2man, help2man, yes, no,,)
 AM_CONDITIONAL(HELP2MAN, test "x$help2man" = "xyes")

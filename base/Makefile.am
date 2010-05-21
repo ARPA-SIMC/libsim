@@ -1,6 +1,6 @@
 lib_LTLIBRARIES = libsim_base.la
 libsim_base_la_SOURCES = char_utilities.f90 datetime_class.f90 err_handling.f90 \
- optional_values.f90 file_utilities.f90 geo_coord_class.F90 geo_grid_class.f90 \
+ optional_values.f90 file_utilities.F90 geo_coord_class.F90 geo_grid_class.f90 \
  io_units.F90 kinds.F90 missing_values.f90 phys_const.f90 getopt_m.f90 \
  simple_stat.f90 geo_transforms.f90
 # Opzioni Fortran (-I... sono da considerarsi opzioni fortran

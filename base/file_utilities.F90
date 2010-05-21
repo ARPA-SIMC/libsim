@@ -1,3 +1,4 @@
+#include "config.h"
 !> Utilities for managing files. This module is a collection of generic utilities
 !! for managing files. A group of utilities is dedicated to locating
 !! and opening configuration files in standard directories or in
@@ -14,18 +15,22 @@ USE log4fortran
 USE err_handling
 IMPLICIT NONE
 
+CHARACTER(len=128), PARAMETER :: package_name = PACKAGE
+CHARACTER(len=128), PARAMETER :: prefix = PREFIX
+
 INTEGER, PARAMETER, PRIVATE :: nftype = 2
-CHARACTER(len=16), PARAMETER, PRIVATE :: &
- pathlist(2,nftype) = RESHAPE((/ &
- '/usr/share      ', '/usr/local/share', &
- '/etc            ', '/usr/local/etc  ' /), &
+CHARACTER(len=10), PARAMETER, PRIVATE :: &
+ preflist(2,nftype) = RESHAPE((/ &
+ '/usr      ', '/usr/local', &
+ '          ', '/usr/local'/), &
  (/2,nftype/))
+CHARACTER(len=6), PARAMETER, PRIVATE :: &
+ postfix(nftype) = (/ '/share', '/etc  ' /)
 CHARACTER(len=6), PARAMETER, PRIVATE :: &
  filetypename(nftype) = (/ 'DATA  ', 'CONFIG' /)
 INTEGER, PARAMETER :: filetype_data = 1 !< Data file requested
 INTEGER, PARAMETER :: filetype_config = 2 !< Configuration file requested
 
-CHARACTER(len=20) :: program_name='libsim', program_name_env='LIBSIM'
 
 !> Class for interpreting the records of a csv file.
 !! See http://en.wikipedia.org/wiki/Comma-separated_values for a
@@ -136,10 +141,9 @@ INTEGER :: i, j
 CHARACTER(len=512) :: path
 LOGICAL :: exist
 
-IF (program_name == ' ') THEN
-  CALL getarg(0, program_name)
-  ! program_name_env?
-ENDIF
+!IF (package_name == ' ') THEN
+!  CALL getarg(0, package_name)
+!ENDIF
 
 IF (filetype < 1 .OR. filetype > nftype) THEN
   path = ''
@@ -150,20 +154,31 @@ IF (filetype < 1 .OR. filetype > nftype) THEN
 ENDIF
 
 ! try with environment variable
-CALL getenv(TRIM(program_name_env)//'_'//TRIM(filetypename(filetype)), path)
+CALL getenv(TRIM(uppercase(package_name))//'_'//TRIM(filetypename(filetype)), path)
 IF (path /= ' ') THEN
 
-  path=TRIM(path)//'/'//filename
+  path(LEN_TRIM(path)+1:) = '/'//filename
   INQUIRE(file=path, exist=exist)
   IF (exist) THEN
     CALL l4f_log(L4F_INFO, 'package file '//TRIM(path)//' found')
     RETURN
   ENDIF
 ENDIF
-! try with pathlist
-DO j = 1, SIZE(pathlist,1)
-  IF (pathlist(j,filetype) == ' ') EXIT
-  path=TRIM(pathlist(j,filetype))//'/'//TRIM(program_name)//'/'//filename
+
+! try with install prefix
+path = TRIM(prefix)//TRIM(postfix(filetype)) &
+ //'/'//TRIM(package_name)//'/'//filename
+INQUIRE(file=path, exist=exist)
+IF (exist) THEN
+  CALL l4f_log(L4F_INFO, 'package file '//TRIM(path)//' found')
+  RETURN
+ENDIF
+
+! try with default install prefix
+DO j = 1, SIZE(preflist,1)
+  IF (preflist(j,filetype) == ' ') EXIT
+  path = TRIM(preflist(j,filetype))//TRIM(postfix(filetype)) &
+   //'/'//TRIM(package_name)//'/'//filename
   INQUIRE(file=path, exist=exist)
   IF (exist) THEN
     CALL l4f_log(L4F_INFO, 'package file '//TRIM(path)//' found')
@@ -253,38 +268,38 @@ END FUNCTION open_package_file
 !! 159,B13011,mm->KG/M**2
 !! 159,B13011,mm->KG/M**2
 !! \endcode
-FUNCTION delim_csv(line, vdelim, cdelim) RESULT(status)
-CHARACTER(len=*),INTENT(in) :: line !< riga in formato csv da interpretare
-INTEGER,INTENT(out) :: vdelim(:) !< vettore degli indici dei separatori trovati in \a line, per definizione vdelim(1)=0, vdelim(size(vdelim))=LEN_TRIM(line)+1, deve essere dimansionato al numero di campi previsti in \a line +1
-CHARACTER(len=1),INTENT(in),OPTIONAL :: cdelim !< carattere da interpretare come delimitatore, default \c ','
-INTEGER :: status
-
-CHARACTER (len=1) :: cldelim
-INTEGER :: j
-
-IF (line(1:1) == '#') THEN ! Commento
-  status = -1
-  RETURN
-ENDIF
-IF (PRESENT(cdelim)) THEN
-  cldelim = cdelim
-ELSE
-  cldelim = ','
-ENDIF
-
-vdelim(1) = 0
-DO j = 2, SIZE(vdelim)-1
-  vdelim(j) = INDEX(line(vdelim(j-1)+1:), cldelim) + vdelim(j-1)
-  IF (vdelim(j) == vdelim(j-1)) THEN ! N. di record insufficiente
-    vdelim(j+1:) = vdelim(j)
-    status = -2
-    RETURN
-  ENDIF
-ENDDO
-status = 0
-vdelim(j) = LEN_TRIM(line) + 1
-
-END FUNCTION delim_csv
+!FUNCTION delim_csv(line, vdelim, cdelim) RESULT(status)
+!CHARACTER(len=*),INTENT(in) :: line !< riga in formato csv da interpretare
+!INTEGER,INTENT(out) :: vdelim(:) !< vettore degli indici dei separatori trovati in \a line, per definizione vdelim(1)=0, vdelim(size(vdelim))=LEN_TRIM(line)+1, deve essere dimansionato al numero di campi previsti in \a line +1
+!CHARACTER(len=1),INTENT(in),OPTIONAL :: cdelim !< carattere da interpretare come delimitatore, default \c ','
+!INTEGER :: status
+!
+!CHARACTER (len=1) :: cldelim
+!INTEGER :: j
+!
+!IF (line(1:1) == '#') THEN ! Commento
+!  status = -1
+!  RETURN
+!ENDIF
+!IF (PRESENT(cdelim)) THEN
+!  cldelim = cdelim
+!ELSE
+!  cldelim = ','
+!ENDIF
+!
+!vdelim(1) = 0
+!DO j = 2, SIZE(vdelim)-1
+!  vdelim(j) = INDEX(line(vdelim(j-1)+1:), cldelim) + vdelim(j-1)
+!  IF (vdelim(j) == vdelim(j-1)) THEN ! N. di record insufficiente
+!    vdelim(j+1:) = vdelim(j)
+!    status = -2
+!    RETURN
+!  ENDIF
+!ENDDO
+!status = 0
+!vdelim(j) = LEN_TRIM(line) + 1
+!
+!END FUNCTION delim_csv
 
 !> Initialise a \a csv_record object.
 !! If the record is provided in input, the object is used for decoding a
