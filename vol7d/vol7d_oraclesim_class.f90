@@ -814,6 +814,10 @@ IF (i > 0) THEN
     CALL csv_record_getfield(csv, i2)
     CALL csv_record_getfield(csv, i3)
     CALL csv_record_getfield(csv, i4)
+    IF (i3 == 0) THEN ! variable table does not contain missing values, fix
+      i3 = imiss
+      i4 = imiss
+    ENDIF
     CALL init(vartable(i)%level, i1, i2, i3, i4)
     CALL csv_record_getfield(csv, i1)
     CALL csv_record_getfield(csv, i2)
