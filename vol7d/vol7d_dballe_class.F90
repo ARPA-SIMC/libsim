@@ -3089,7 +3089,7 @@ mem=size(buffer)
 
 if (n > mem) then
 
-  ALLOCATE (buffertmp(mem*2),stat=istat)
+  ALLOCATE (buffertmp(max(mem*2),n),stat=istat)
   IF (istat /= 0) THEN
     CALL l4f_category_log(category,L4F_ERROR,'mem_acquire, cannot allocate ' &
      //TRIM(to_char(mem*2))//' buffer elements')
