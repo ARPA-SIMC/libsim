@@ -1543,13 +1543,10 @@ do i =1, N_ana
 deallocate (buffer)
 deallocate (bufferana)
 
-! Se l'oggetto ha gia` un volume allocato lo fondo con quello estratto
-!>\todo manca test su associated dei vol*
-IF (ASSOCIATED(this%vol7d%ana) .AND. ASSOCIATED(this%vol7d%time)) THEN
-  CALL vol7d_merge(this%vol7d, vol7dtmp, sort=.TRUE.)
-ELSE ! altrimenti lo assegno
-  this%vol7d = vol7dtmp
-ENDIF
+! Smart merge
+CALL vol7d_merge(this%vol7d, vol7dtmp, sort=.TRUE.)
+! should we sort separately in case no merge is done?
+!CALL vol7d_smart_sort(this%vol7d, ltime=.TRUE., ltimerange=.TRUE., llevel=.TRUE,)
 
 call vol7d_set_attr_ind(this%vol7d)
 
@@ -2777,19 +2774,15 @@ if (lanaonly)then
   ! qui faccio le operazioni minime per avere solo l'anagrafica utile per certe operazioni
 
   call vol7d_alloc (vol7dtmp, nana=nana)
+  call vol7d_alloc_vol(vol7dtmp)
   vol7dtmp%ana=pack_distinct(bufferana(:na)%ana, nana, back=.TRUE.)
 
   ! Release memory
   deallocate (buffer)
   deallocate (bufferana)
 
-  ! Se l'oggetto ha gia` un volume allocato lo fondo con quello estratto
-  !>\todo manca test su associated dei vol*
-  IF (ASSOCIATED(this%vol7d%ana) .AND. ASSOCIATED(this%vol7d%time)) THEN
-    CALL vol7d_merge(this%vol7d, vol7dtmp, sort=.TRUE.)
-  ELSE ! altrimenti lo assegno
-    this%vol7d = vol7dtmp
-  ENDIF
+  ! Smart merge
+  CALL vol7d_merge(this%vol7d, vol7dtmp)
 
   return
 
@@ -3034,13 +3027,10 @@ do i =1, Na
 deallocate (buffer)
 deallocate (bufferana)
 
-! Se l'oggetto ha gia` un volume allocato lo fondo con quello estratto
-!>\todo manca test su associated dei vol*
-IF (ASSOCIATED(this%vol7d%ana) .AND. ASSOCIATED(this%vol7d%time)) THEN
-  CALL vol7d_merge(this%vol7d, vol7dtmp, sort=.TRUE.)
-ELSE ! altrimenti lo assegno
-  this%vol7d = vol7dtmp
-ENDIF
+! Smart merge
+CALL vol7d_merge(this%vol7d, vol7dtmp, sort=.TRUE.)
+! should we sort separately in case no merge is done?
+!CALL vol7d_smart_sort(this%vol7d, ltime=.TRUE., ltimerange=.TRUE., llevel=.TRUE,)
 
 call vol7d_set_attr_ind(this%vol7d)
 
