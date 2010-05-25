@@ -2387,6 +2387,7 @@ integer :: indana,indtime,indlevel,indtimerange,inddativar,indnetwork
 
 integer :: nana,ntime,ntimerange,nlevel,nnetwork
 TYPE(vol7d_var) :: var_tmp
+TYPE(vol7d_network),ALLOCATABLE :: networktmp(:)
 
 INTEGER :: i,ii, iii,n,n_ana,nn,nvarattr,istat,indattr,na,nd
 integer :: nvar ,inddatiattr,inddativarattr
@@ -2691,8 +2692,15 @@ nana = count_distinct(bufferana(:na)%ana, back=.TRUE.)
 ntime = count_distinct(buffer(:nd)%time, back=.TRUE.)
 ntimerange = count_distinct(buffer(:nd)%timerange, back=.TRUE.)
 nlevel = count_distinct(buffer(:nd)%level, back=.TRUE.)
-nnetwork = count_distinct(buffer(:nd)%network, back=.TRUE.)
-if(ldegnet)nnetwork=1
+if (ldegnet) then
+  nnetwork=1
+else
+  ALLOCATE(networktmp(na+nd))
+  networktmp(1:nd) = buffer(1:nd)%network
+  networktmp(nd+1:na+nd) = bufferana(1:na)%network
+  nnetwork = count_distinct(networktmp, back=.TRUE.)
+endif
+
 
 if (present(varkind))then
   ndativarr= count(varkind == "r")
@@ -2773,13 +2781,20 @@ if (lanaonly)then
 
   ! qui faccio le operazioni minime per avere solo l'anagrafica utile per certe operazioni
 
-  call vol7d_alloc (vol7dtmp, nana=nana)
+  CALL vol7d_alloc (vol7dtmp, nana=nana, nnetwork=nnetwork)
   call vol7d_alloc_vol(vol7dtmp)
   vol7dtmp%ana=pack_distinct(bufferana(:na)%ana, nana, back=.TRUE.)
 
   ! Release memory
   deallocate (buffer)
   deallocate (bufferana)
+
+  if(ldegnet)then
+    vol7dtmp%network(1)=set_network
+  else
+    vol7dtmp%network=pack_distinct(networktmp, nnetwork, back=.TRUE.)
+    DEALLOCATE(networktmp)
+  end if
 
   ! Smart merge
   CALL vol7d_merge(this%vol7d, vol7dtmp)
@@ -2826,7 +2841,8 @@ vol7dtmp%level=pack_distinct(buffer(:nd)%level, nlevel, back=.TRUE.)
 if(ldegnet)then
   vol7dtmp%network(1)=set_network
 else
-  vol7dtmp%network=pack_distinct(buffer(:nd)%network, nnetwork, back=.TRUE.)
+  vol7dtmp%network=pack_distinct(networktmp, nnetwork, back=.TRUE.)
+  DEALLOCATE(networktmp)
 end if
 
 !print*,"reti presenti", vol7dtmp%network%name,buffer%network%name
