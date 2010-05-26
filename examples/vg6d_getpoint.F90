@@ -17,8 +17,8 @@ implicit none
 TYPE(op_option) :: options(40) ! remember to update dimension when adding options
 TYPE(optionparser) :: opt
 CHARACTER(len=8) :: coord_format, output_format
-CHARACTER(len=512) :: input_file, output_file, network_list, variable_list
-CHARACTER(len=512) :: a_name, coord_file
+CHARACTER(len=512) :: a_name, coord_file, input_file, output_file, &
+ network_list, variable_list
 INTEGER :: category, ier, i, iun, iargc
 character(len=network_name_len) :: network
 type(volgrid6d),pointer :: volgrid(:)
@@ -160,7 +160,7 @@ call l4f_category_log(category,L4F_INFO,"transforming to   file:"//trim(output_f
 
 IF (c_e(coord_file)) THEN
   IF (coord_format == 'native') THEN
-    CALL import(v7d_coord, filename=input_file)
+    CALL import(v7d_coord, filename=coord_file)
 
 #ifdef HAVE_DBALLE
   ELSE IF (coord_format == 'BUFR' .OR. coord_format == 'CREX') THEN
