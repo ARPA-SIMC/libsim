@@ -1965,8 +1965,8 @@ do i=1, nstaz
           call idba_set (this%handle,"mobile",1)
 #ifdef DEBUG
           call l4f_category_log(this%category,L4F_DEBUG,"there is a mobile station! identity: "&
-#endif
            //to_char(this%vol7d%ana(i)%ident))
+#endif
         else
           call idba_set (this%handle,"mobile",0)
         end if
