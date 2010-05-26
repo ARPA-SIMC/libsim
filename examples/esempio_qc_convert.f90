@@ -22,14 +22,15 @@ character(len=80) ::filename
 !REAL, PARAMETER :: rmiss = HUGE(1.0)
 
 
-integer :: nana, ntime ,nlevel, ntimerange, ndativarr, nnetwork !,nanavari
+integer :: nana, ntime ,nlevel, ndativarr, nnetwork !,nanavari
 integer :: iana, itime, ilevel, itimerange, idativarr, inetwork
+integer,parameter :: ntimerange=3 ,nperc=9
 TYPE(vol7d) :: v7d
 TYPE(vol7d_dballe) :: v7d_dballe
 TYPE(vol7d_ana) :: ana(cli_nsuperarea)
 TYPE(datetime) :: time
 TYPE(vol7d_level) :: level(cli_nlevel)
-TYPE(vol7d_timerange) :: timerange(3)
+TYPE(vol7d_timerange) :: timerange(ntimerange)
 TYPE(vol7d_network) :: network
 TYPE(vol7d_var) ::  dativar,anavar
 CHARACTER(len=vol7d_ana_lenident) :: ident
@@ -38,7 +39,7 @@ REAL(kind=fp_geo) :: lat,lon
 !integer :: livello(10) = (/50,175,375,625,875,1125,1375,1625,1875,2125/)
 !integer :: livello1(10) = (/-100,100,250,500,750,1000,1250,1500,1750,2000/)
 !integer :: livello2(10) = (/100,250,500,750,1000,1250,1500,1750,2000,2250/)
-integer :: scadenze(3) = (/900,1800,3600/)
+integer :: scadenze(ntimerange) = (/900,1800,3600/)
 real :: dato
 integer :: iunit=1
 integer :: category,ier
@@ -57,9 +58,9 @@ call l4f_category_log(category,L4F_INFO,"inizio")
 
 CALL init(v7d)
 
-nana=9*3
+nana=nperc*cli_nsuperarea
 ntime=12
-ntimerange=3
+
 nlevel=cli_nlevel
 nnetwork=1
 ndativarr=1
@@ -71,7 +72,7 @@ call vol7d_alloc (v7d, &
  ndativarr=ndativarr)
 !, nanavari=nanavari)
 
-call vol7d_alloc_vol (v7d)
+call vol7d_alloc_vol (v7d,ini=.true.)
 
 
 area(1)="e"
@@ -93,13 +94,9 @@ call cli_level_generate(v7d%level)
 
 do iarea = 1, cli_nsuperarea
   do ilevel = 1,cli_nlevel
-
-!    call init(v7d%level(ilevel), 102,cli_level1(ilevel)*1000,102,cli_level2(ilevel)*1000)
-
-    do itimerange=1,3
+    do itimerange=1,ntimerange
 
       call init(v7d%timerange(itimerange), 1, 0,scadenze(itimerange))
-
 
       filename = "pctl_prec_"//minuti(itimerange)//"m_all_"//area(iarea)
       write (filename(20:) ,"(i1.1)")ilevel-1
@@ -109,22 +106,28 @@ do iarea = 1, cli_nsuperarea
       print *, "apro file=",filename
       open (unit=iunit,file=filename)
       
-      do itime = 1,12
+      do itime = 1,ntime
 
         call init(v7d%time(itime), year=1001, month=itime, day=1, hour=0, minute=0)
 
-        do iper = 1,9
+        do iper = 1,nperc
           
-          lat=0.0
-          lon=0.0
+!!$          lat=cli_superarea_lat(iarea)
+!!$          lon=cli_superarea_lon(iarea)
+
+          lat=0.d0
+          lon=0.d0
+
           write(ident,'("BOX-",2i2.2)')iarea,iper*10
-          iana=iarea+(iper-1)*cli_nsuperarea
+          iana=iper+(iarea-1)*nperc
+!          iana=iarea+(iper-1)*cli_nsuperarea
           call init(v7d%ana(iana),lat=lat,lon=lon,ident=ident)
 
           read (iunit,"(10x,f7.0)") dato
           if (dato == -999.9) dato=rmiss
 
-          v7d%voldatir(iana,itime,ilevel,itimerange,idativarr,inetwork) = dato          
+!          v7d%voldatir(iana,itime,ilevel,itimerange,idativarr,inetwork) = dato          
+          v7d%voldatir(iana,itime,ilevel,itimerange,idativarr,inetwork) = ilevel          
           
         end do
       end do

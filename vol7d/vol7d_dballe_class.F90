@@ -254,10 +254,13 @@ if (quifile) then
   call idba_messaggi(this%handle,lfilename,mode,lformat)
 
   this%file=.true.
+
+#ifdef DEBUG
   call l4f_category_log(this%category,L4F_DEBUG,"handle from idba_messaggi: "//to_char(this%handle))
   call l4f_category_log(this%category,L4F_DEBUG,"filename: "//to_char(lfilename))
   call l4f_category_log(this%category,L4F_DEBUG,"mode: "//to_char(mode))
   call l4f_category_log(this%category,L4F_DEBUG,"format: "//to_char(lformat))
+#endif
 
 else
 
@@ -1723,23 +1726,33 @@ end if
 
 #undef VOL7D_POLY_TYPES_V
 #define VOL7D_POLY_TYPES_V r
+#ifdef DEBUG
 call l4f_category_log(this%category,L4F_DEBUG,"macro nana tipo r")
+#endif
 #include "vol7d_dballe_class_nana.f90"
 #undef VOL7D_POLY_TYPES_V
 #define VOL7D_POLY_TYPES_V i
+#ifdef DEBUG
 call l4f_category_log(this%category,L4F_DEBUG,"macro nana tipo i")
+#endif
 #include "vol7d_dballe_class_nana.f90"
 #undef VOL7D_POLY_TYPES_V
 #define VOL7D_POLY_TYPES_V b
+#ifdef DEBUG
 call l4f_category_log(this%category,L4F_DEBUG,"macro nana tipo b")
+#endif
 #include "vol7d_dballe_class_nana.f90"
 #undef VOL7D_POLY_TYPES_V
 #define VOL7D_POLY_TYPES_V d
+#ifdef DEBUG
 call l4f_category_log(this%category,L4F_DEBUG,"macro nana tipo d")
+#endif
 #include "vol7d_dballe_class_nana.f90"
 #undef VOL7D_POLY_TYPES_V
 #define VOL7D_POLY_TYPES_V c
+#ifdef DEBUG
 call l4f_category_log(this%category,L4F_DEBUG,"macro nana tipo c")
+#endif
 #include "vol7d_dballe_class_nana.f90"
 #undef VOL7D_POLY_TYPES_V
 
@@ -1748,23 +1761,33 @@ call l4f_category_log(this%category,L4F_DEBUG,"macro nana tipo c")
 
 #undef VOL7D_POLY_TYPES_V
 #define VOL7D_POLY_TYPES_V r
+#ifdef DEBUG
 call l4f_category_log(this%category,L4F_DEBUG,"macro ndati tipo r")
+#endif
 #include "vol7d_dballe_class_ndati.f90"
 #undef VOL7D_POLY_TYPES_V
 #define VOL7D_POLY_TYPES_V i
+#ifdef DEBUG
 call l4f_category_log(this%category,L4F_DEBUG,"macro ndati tipo i")
+#endif
 #include "vol7d_dballe_class_ndati.f90"
 #undef VOL7D_POLY_TYPES_V
 #define VOL7D_POLY_TYPES_V b
+#ifdef DEBUG
 call l4f_category_log(this%category,L4F_DEBUG,"macro ndati tipo b")
+#endif
 #include "vol7d_dballe_class_ndati.f90"
 #undef VOL7D_POLY_TYPES_V
 #define VOL7D_POLY_TYPES_V d
+#ifdef DEBUG
 call l4f_category_log(this%category,L4F_DEBUG,"macro ndati tipo d")
+#endif
 #include "vol7d_dballe_class_ndati.f90"
 #undef VOL7D_POLY_TYPES_V
 #define VOL7D_POLY_TYPES_V c
+#ifdef DEBUG
 call l4f_category_log(this%category,L4F_DEBUG,"macro ndati tipo c")
+#endif
 #include "vol7d_dballe_class_ndati.f90"
 #undef VOL7D_POLY_TYPES_V
 
@@ -1812,13 +1835,6 @@ do iii=1, nnetwork
       call idba_unsetall (this%handle)
 
       call idba_setcontextana (this%handle)
-      if (this%file)then
-        if (present(template)) then
-          call idba_set (this%handle,"query","message "//trim(template))
-        else
-          call idba_set (this%handle,"query","message")
-        end if
-      end if
 
       call idba_set (this%handle,"lat",lat)
       call idba_set (this%handle,"lon",lon)
@@ -1828,8 +1844,10 @@ do iii=1, nnetwork
       end if
 
       if ( c_e(this%vol7d%ana(i)%ident)) then
+#ifdef DEBUG
          call l4f_category_log(this%category,L4F_DEBUG,"I have found a mobile station! ident: "//&
           to_char(this%vol7d%ana(i)%ident))
+#endif
          call idba_set (this%handle,"ident",this%vol7d%ana(i)%ident)
          call idba_set (this%handle,"mobile",1)
       else
@@ -1838,7 +1856,6 @@ do iii=1, nnetwork
 
       call idba_set(this%handle,"rep_memo",this%vol7d%network(iii)%name)
 
-      write=.true.
 
 #undef VOL7D_POLY_TYPES_V
 #define VOL7D_POLY_TYPES_V r
@@ -1865,14 +1882,22 @@ do iii=1, nnetwork
       !se NON ho dati di anagrafica (ma solo lat e long ..) devo fare comunque una prendilo
       ! in quanto write indica DATI in sospeso da scrivere
 
-      if ( write ) then
 
-        call l4f_category_log(this%category,L4F_DEBUG,"eseguo una main prendilo di anagrafica")
-        call idba_prendilo (this%handle)
-
-        if (.not. this%file ) then
-          call idba_enq (this%handle,"ana_id",ana_id(i,iii))
+      if (this%file)then
+        if (present(template)) then
+          call idba_set (this%handle,"query","message "//trim(template))
+        else
+          call idba_set (this%handle,"query","message")
         end if
+      end if
+
+#ifdef DEBUG
+      call l4f_category_log(this%category,L4F_DEBUG,"eseguo una main prendilo di anagrafica")
+#endif
+      call idba_prendilo (this%handle)
+
+      if (.not. this%file ) then
+        call idba_enq (this%handle,"ana_id",ana_id(i,iii))
       end if
 
 
@@ -1892,7 +1917,6 @@ do iii=1, nnetwork
         if (c_e(this%vol7d%anavar%c(ii)%btable))call idba_unset (this%handle,this%vol7d%anavar%c(ii)%btable )
       end do
 
-      write=.false.
 
    end do
 end do
@@ -1904,90 +1928,85 @@ end do
 
 do i=1, nstaz
 
-   do ii=1,ntime
-      if (present(timei) )then
-         if ( this%vol7d%time(ii) < timei ) cycle
-      endif
-      if (present(timef) )then
-         if ( this%vol7d%time(ii) > timef ) cycle
-      endif
+  do ii=1,ntime
+    if (present(timei) )then
+      if ( this%vol7d%time(ii) < timei ) cycle
+    endif
+    if (present(timef) )then
+      if ( this%vol7d%time(ii) > timef ) cycle
+    endif
    
-      do iiiiii=1, nnetwork
-        if (.not.lnetwork(iiiiii))cycle
+    do iiiiii=1, nnetwork
+      if (.not.lnetwork(iiiiii))cycle
 
-        if ( (.not. this%file) .and. (.not. c_e(ana_id(i,iiiiii))) ) cycle
+      if ( (.not. this%file) .and. (.not. c_e(ana_id(i,iiiiii))) ) cycle
 
-                                !>\todo ottimizzare settando e unsettando le cose giuste al posto giusto
+                                !>\todo optimize setting and unsetting in the right place
 
-        call idba_unsetall (this%handle)
-        
-        if (this%file)then
-          if (present(template)) then
-            call idba_set (this%handle,"query","message "//trim(template))
-          else
-            call idba_set (this%handle,"query","message")
-          end if
-          call l4f_category_log(this%category,L4F_DEBUG,"chiuso messaggio ")
+      call idba_unsetall (this%handle)
+
+      CALL getval(this%vol7d%time(ii), year=year, month=month, day=day, hour=hour, minute=minute)
+      call idba_setdate (this%handle,year,month,day,hour,minute,0)
+
+      if (this%file)then
+                                ! writing on file cannot use ana_id
+        call getval(this%vol7d%ana(i)%coord, lat=lat,lon=lon)
+        call idba_set (this%handle,"lat",lat)
+        call idba_set (this%handle,"lon",lon)
+#ifdef DEBUG
+        call l4f_category_log(this%category,L4F_DEBUG,"dati riferiti a lat: "//to_char(lat)//" lon: "//to_char(lon))
+#endif        
+        if (present(ident))then
+          if (c_e(ident) .and. ident /= this%vol7d%ana(i)%ident ) cycle
         end if
-
-
-        CALL getval(this%vol7d%time(ii), year=year, month=month, day=day, hour=hour, minute=minute)
-        call idba_setdate (this%handle,year,month,day,hour,minute,0)
-
-        if (this%file)then
-                                ! scrivo su file non posso usare ana_id
-          call getval(this%vol7d%ana(i)%coord, lat=lat,lon=lon)
-          call idba_set (this%handle,"lat",lat)
-          call idba_set (this%handle,"lon",lon)
-          call l4f_category_log(this%category,L4F_DEBUG,"dati riferiti a lat: "//to_char(lat)//" lon: "//to_char(lon))
-
-          if (present(ident))then
-            if (c_e(ident) .and. ident /= this%vol7d%ana(i)%ident ) cycle
-          end if
           
-          if ( c_e(this%vol7d%ana(i)%ident)) then
-            call idba_set (this%handle,"ident",this%vol7d%ana(i)%ident)
-            call idba_set (this%handle,"mobile",1)
-            call l4f_category_log(this%category,L4F_DEBUG,"hai una stazione che va a spasso! identificativo: "&
-             //to_char(this%vol7d%ana(i)%ident))
-          else
-            call idba_set (this%handle,"mobile",0)
-          end if
+        if ( c_e(this%vol7d%ana(i)%ident)) then
+          call idba_set (this%handle,"ident",this%vol7d%ana(i)%ident)
+          call idba_set (this%handle,"mobile",1)
+#ifdef DEBUG
+          call l4f_category_log(this%category,L4F_DEBUG,"there is a mobile station! identity: "&
+#endif
+           //to_char(this%vol7d%ana(i)%ident))
         else
-          call idba_set (this%handle,"ana_id",ana_id(i,iiiiii))
+          call idba_set (this%handle,"mobile",0)
         end if
+      else
+        call idba_set (this%handle,"ana_id",ana_id(i,iiiiii))
+      end if
 
 
-        call idba_set (this%handle,"rep_memo",this%vol7d%network(iiiiii)%name)
+      call idba_set (this%handle,"rep_memo",this%vol7d%network(iiiiii)%name)
                  
 
-        do iii=1,nlevel
-          if (.not.llevel(iii))cycle
-
-         do iiii=1,ntimerange
-            if (.not.ltimerange(iiii))cycle
+      do iii=1,nlevel
+        if (.not.llevel(iii))cycle
+        
+        do iiii=1,ntimerange
+          if (.not.ltimerange(iiii))cycle
    
-               if (.not. lattr_only) then
+          if (.not. lattr_only) then
                                   
 
-                 call idba_setlevel(this%handle, this%vol7d%level(iii)%level1, this%vol7d%level(iii)%l1,&
-                  this%vol7d%level(iii)%level2, this%vol7d%level(iii)%l2)
-
-                 call l4f_category_log(this%category,L4F_DEBUG,"livello1: "//to_char(this%vol7d%level(iii)%level1))
-                 call l4f_category_log(this%category,L4F_DEBUG,"l1: "//to_char(this%vol7d%level(iii)%l1))
-                 call l4f_category_log(this%category,L4F_DEBUG,"livello2: "//to_char(this%vol7d%level(iii)%level2))
-                 call l4f_category_log(this%category,L4F_DEBUG,"l2: "//to_char(this%vol7d%level(iii)%l2))
-
-
-                 call idba_settimerange(this%handle, this%vol7d%timerange(iiii)%timerange, &
-                  this%vol7d%timerange(iiii)%p1, this%vol7d%timerange(iiii)%p2)
+            call idba_setlevel(this%handle, this%vol7d%level(iii)%level1, this%vol7d%level(iii)%l1,&
+             this%vol7d%level(iii)%level2, this%vol7d%level(iii)%l2)
+            
+#ifdef DEBUG
+            call l4f_category_log(this%category,L4F_DEBUG,"level1: "//to_char(this%vol7d%level(iii)%level1))
+            call l4f_category_log(this%category,L4F_DEBUG,"l1: "//to_char(this%vol7d%level(iii)%l1))
+            call l4f_category_log(this%category,L4F_DEBUG,"level2: "//to_char(this%vol7d%level(iii)%level2))
+            call l4f_category_log(this%category,L4F_DEBUG,"l2: "//to_char(this%vol7d%level(iii)%l2))
+#endif              
                  
-                 call l4f_category_log(this%category,L4F_DEBUG,"timerange: "//to_char(this%vol7d%timerange(iiii)%timerange))
-                 call l4f_category_log(this%category,L4F_DEBUG,"T1: "//to_char(this%vol7d%timerange(iiii)%p1))
-                 call l4f_category_log(this%category,L4F_DEBUG,"T2: "//to_char(this%vol7d%timerange(iiii)%p2))
+            call idba_settimerange(this%handle, this%vol7d%timerange(iiii)%timerange, &
+             this%vol7d%timerange(iiii)%p1, this%vol7d%timerange(iiii)%p2)
+              
+#ifdef DEBUG
+            call l4f_category_log(this%category,L4F_DEBUG,"timerange: "//to_char(this%vol7d%timerange(iiii)%timerange))
+            call l4f_category_log(this%category,L4F_DEBUG,"T1: "//to_char(this%vol7d%timerange(iiii)%p1))
+            call l4f_category_log(this%category,L4F_DEBUG,"T2: "//to_char(this%vol7d%timerange(iiii)%p2))
+#endif            
                  
-                 
-               end if
+          end if
                
                                 !print *, ">>>>> ",ana_id(i,iiiiii),this%vol7d%network(iiiiii)%name
                                 !print *, year,month,day,hour,minute
@@ -1995,58 +2014,88 @@ do i=1, nstaz
                                 !print *, this%vol7d%timerange(iiii)%timerange,this%vol7d%timerange(iiii)%p1, this%vol7d%timerange(iiii)%p2
                
 
-               write=.false.
+          write=.false.
 
 #undef VOL7D_POLY_TYPES_V
 #define VOL7D_POLY_TYPES_V r
+#ifdef DEBUG
 call l4f_category_log(this%category,L4F_DEBUG,"macro tipo r")
+#endif
 #include "vol7d_dballe_class_dati.F90"
 #undef VOL7D_POLY_TYPES_V
 #define VOL7D_POLY_TYPES_V i
+#ifdef DEBUG
 call l4f_category_log(this%category,L4F_DEBUG,"macro tipo i")
+#endif
 #include "vol7d_dballe_class_dati.F90"
 #undef VOL7D_POLY_TYPES_V
 #define VOL7D_POLY_TYPES_V b
+#ifdef DEBUG
 call l4f_category_log(this%category,L4F_DEBUG,"macro tipo b")
+#endif
 #include "vol7d_dballe_class_dati.F90"
 #undef VOL7D_POLY_TYPES_V
 #define VOL7D_POLY_TYPES_V d
+#ifdef DEBUG
 call l4f_category_log(this%category,L4F_DEBUG,"macro tipo d")
+#endif
 #include "vol7d_dballe_class_dati.F90"
 #undef VOL7D_POLY_TYPES_V
 #define VOL7D_POLY_TYPES_V c
+#ifdef DEBUG
 call l4f_category_log(this%category,L4F_DEBUG,"macro tipo c")
+#endif
 #include "vol7d_dballe_class_dati.F90"
 #undef VOL7D_POLY_TYPES_V
-               
-               if (write) then
+
+
+          if (write) then
                                 !print*,"eseguo una main prendilo"
-                 call l4f_category_log(this%category,L4F_DEBUG,"eseguo una main prendilo sui dati")
-                 call idba_prendilo (this%handle)
-
-                 do iiiii=1,ndativarr
-                   if(c_e(this%vol7d%dativar%r(iiiii)%btable))call idba_unset (this%handle,this%vol7d%dativar%r(iiiii)%btable )
-                 end do
-                 do iiiii=1,ndativari
-                   if(c_e(this%vol7d%dativar%i(iiiii)%btable))call idba_unset (this%handle,this%vol7d%dativar%i(iiiii)%btable )
-                 end do
-                 do iiiii=1,ndativarb
-                   if(c_e(this%vol7d%dativar%b(iiiii)%btable))call idba_unset (this%handle,this%vol7d%dativar%b(iiiii)%btable )
-                 end do
-                 do iiiii=1,ndativard
-                   if(c_e(this%vol7d%dativar%d(iiiii)%btable))call idba_unset (this%handle,this%vol7d%dativar%d(iiiii)%btable )
-                 end do
-                 do iiiii=1,ndativarc
-                   if(c_e(this%vol7d%dativar%c(iiiii)%btable))call idba_unset (this%handle,this%vol7d%dativar%c(iiiii)%btable )
-                 end do
-
-                 write=.false.
-               end if
+#ifdef DEBUG
+            call l4f_category_log(this%category,L4F_DEBUG,"eseguo una main prendilo sui dati")
+#endif
+            call idba_prendilo (this%handle)
                  
-            end do
-         end do
+          end if
+          
+          do iiiii=1,ndativarr
+            if(c_e(this%vol7d%dativar%r(iiiii)%btable))call idba_unset (this%handle,this%vol7d%dativar%r(iiiii)%btable )
+          end do
+          do iiiii=1,ndativari
+            if(c_e(this%vol7d%dativar%i(iiiii)%btable))call idba_unset (this%handle,this%vol7d%dativar%i(iiiii)%btable )
+          end do
+          do iiiii=1,ndativarb
+            if(c_e(this%vol7d%dativar%b(iiiii)%btable))call idba_unset (this%handle,this%vol7d%dativar%b(iiiii)%btable )
+          end do
+          do iiiii=1,ndativard
+            if(c_e(this%vol7d%dativar%d(iiiii)%btable))call idba_unset (this%handle,this%vol7d%dativar%d(iiiii)%btable )
+          end do
+          do iiiii=1,ndativarc
+            if(c_e(this%vol7d%dativar%c(iiiii)%btable))call idba_unset (this%handle,this%vol7d%dativar%c(iiiii)%btable )
+          end do
+          
+          
+        end do
       end do
-   end do
+
+      if (this%file)then
+        if (present(template)) then
+          call idba_set (this%handle,"query","message "//trim(template))
+        else
+          call idba_set (this%handle,"query","message")
+        end if
+#ifdef DEBUG
+        call l4f_category_log(this%category,L4F_DEBUG,"close message ")
+
+                                !print*,"eseguo una main prendilo"
+        call l4f_category_log(this%category,L4F_DEBUG,"eseguo una main prendilo sui dati")
+#endif
+        call idba_prendilo (this%handle)
+        
+      end if
+
+    end do
+  end do
 end do
 
 END SUBROUTINE vol7d_dballe_export
@@ -2337,10 +2386,11 @@ call idba_error_message(message)
 call l4f_category_log(category,L4F_ERROR,message)
 
 call idba_error_context(buf)
-call l4f_category_log(category,L4F_DEBUG,trim(buf))
+
+call l4f_category_log(category,L4F_INFO,trim(buf))
 
 call idba_error_details(buf)
-call l4f_category_log(category,L4F_DEBUG,trim(buf))
+call l4f_category_log(category,L4F_INFO,trim(buf))
 
 CALL raise_fatal_error("dballe: "//message)
 
@@ -2564,8 +2614,9 @@ do while ( N > 0 )
 
 
       nd =nd+1
+#ifdef DEBUG
       call l4f_category_log(this%category,L4F_DEBUG,"numero dati dati:"//to_char(nd)//btable)
-
+#endif
       call mem_acquire( buffer,nd,0,this%category )
   
       buffer(nd)%dator=DBA_MVR
