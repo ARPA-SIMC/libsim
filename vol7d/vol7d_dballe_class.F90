@@ -1600,6 +1600,43 @@ CHARACTER(len=*),INTENT(in),OPTIONAL :: var(:),attr(:),anavar(:),anaattr(:)
 logical,intent(in),optional :: attr_only 
 character(len=*),intent(in),optional :: template !< specificando category.subcategory.localcategory oppure un alias ("synop", "metar","temp","generic") forza l'exportazione ad uno specifico template BUFR/CREX"  
 
+!!$ Conversazioni con spanezz@jabber.linux.it su gio 27 mag 2010 09:38:52 CEST:
+!!$ (09:39:00) pat1@jabber.linux.it/Home: 
+!!$ ho una domanda
+!!$ scrivo dei bufr generici
+!!$ quando setto query a "message" viene chiuso un bufr
+!!$ posso scrive migliaia di cose senza mai mettere query a message
+!!$ il bufr viene piu' piccolo
+!!$ quindi nel generico mi conviene scrivere dopo un sensato uso di memoria ?
+!!$ (09:41:54) spanezz@jabber.linux.it: 
+!!$ dipende da cosa vuoi mettere nel messaggio
+!!$ (09:42:21) spanezz@jabber.linux.it: 
+!!$ puoi salvare tutto in un unico genericone se vuoi
+!!$ poi se lo archivi quando queri queri sempre tutto
+!!$ (09:42:40) pat1@jabber.linux.it/Home: 
+!!$ nel caso sto scrivendo un volume v7d di dati 
+!!$ posso farne solo un bufr oppure migliaia
+!!$ (09:48:14) spanezz@jabber.linux.it: 
+!!$ se non scrivi generici lui mette nel messaggio solo quello che ci sta nel template, ovviamente
+!!$ quindi ci sono solo un certo numero di dati che puoi settare e finiscono nell'output
+!!$ (09:49:38) pat1@jabber.linux.it/Home: 
+!!$ quindi ad esempio se scrivo generici e cambio stazione me ne POSSO fregare e mettere un solo "query=message" 
+!!$ alla fine di tutto
+!!$ ma se scrivo synop e faccio lo stesso scrivo solo l'ultima stazione ?
+!!$ (09:50:04) spanezz@jabber.linux.it: 
+!!$ ni
+!!$ (09:51:41) spanezz@jabber.linux.it: 
+!!$ la roba in cui scrivi temporaneamente i dati non è una versione in memoria di dballe (del DB di dballe intendo)
+!!$ in particolare, una un unico livello di anagrafica in cui ci sta una stazione e un'orario solo
+!!$ in particolare, ha un unico livello di anagrafica in cui ci sta una stazione e un'orario solo
+!!$ quindi se metti due stazioni, sovrascrivi la seconda
+!!$ è indicizzato per (livello, scadenza, codice variabile)
+!!$ se fai due prendilo con gli stessi (livello, scadenza, codice variabile), la seconda sovrascrive la prima
+!!$ e data ora stazione report vanno nel (livello, scadenza) di "anagrafica" (257,0,  0,0,  0,0,0)
+!!$ (09:56:43) pat1@jabber.linux.it/Home: 
+!!$ quindi per scrivere N^N roba
+!!$ devo ciclare su (livello, scadenza, codice variabile) e ogni volta fare una prendilo
+!!$ poi all'esterno devo ciclare su tutto il resto e fare una prendilo con query="message"
 
 !REAL(kind=fp_geo) :: latmin,latmax,lonmin,lonmax
 logical, allocatable :: lnetwork(:),llevel(:),ltimerange(:)
