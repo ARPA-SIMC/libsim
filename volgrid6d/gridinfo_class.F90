@@ -1299,8 +1299,8 @@ IF (tri == 0 .OR. tri == 1 .OR. tri == 10) THEN ! point in time
   statproc = 254
   CALL gribtr_to_second(unit, p1_g1, p1)
   p2 = 0
-ELSE IF (tri == 2) THEN ! somewhere between p1 and p2 -> missing
-  statproc = 255
+ELSE IF (tri == 2) THEN ! somewhere between p1 and p2
+  statproc = 205
   CALL gribtr_to_second(unit, p2_g1, p1)
   CALL gribtr_to_second(unit, p2_g1-p1_g1, p2)
 ELSE IF (tri == 3) THEN ! average
@@ -1319,6 +1319,10 @@ ELSE
   CALL raise_fatal_error('timerange_g1_to_g2: GRIB1 timerange '//TRIM(to_char(tri)) &
    //' cannot be converted to GRIB2.')
 ENDIF
+
+if (statproc == 254 .and. p2 /= 0 ) then
+  call l4f_log(L4F_WARN,"inconsistence in timerange:254,"//trim(to_char(p1))//","//trim(to_char(p2)))
+end if
 
 END SUBROUTINE timerange_g1_to_g2_second
 
