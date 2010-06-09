@@ -1299,7 +1299,7 @@ IF (tri == 0 .OR. tri == 1 .OR. tri == 10) THEN ! point in time
   statproc = 254
   CALL gribtr_to_second(unit, p1_g1, p1)
   p2 = 0
-ELSE IF (tri == 2) THEN ! somewhere between p1 and p2
+ELSE IF (tri == 2) THEN ! somewhere between p1 and p2 ! is not good for grib2 standard
   statproc = 205
   CALL gribtr_to_second(unit, p2_g1, p1)
   CALL gribtr_to_second(unit, p2_g1-p1_g1, p2)
@@ -1343,7 +1343,7 @@ ELSE IF (statproc == 4) THEN ! difference
   tri = 5
   CALL second_to_gribtr(p1, p2_g1, unit)
   CALL second_to_gribtr(p1-p2, p1_g1, unit)
-ELSE IF (statproc == 255) THEN ! missing -> somewhere between p1 and p2
+ELSE IF (statproc == 205) THEN ! is not good for grib2 standard
   tri = 2
   CALL second_to_gribtr(p1, p2_g1, unit)
   CALL second_to_gribtr(p1-p2, p1_g1, unit)
