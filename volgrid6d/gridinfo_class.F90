@@ -265,6 +265,7 @@ call import(this%timerange,this%gaid)
 call import(this%level,this%gaid)
 call import(this%var,this%gaid)
 
+call normalize_gridinfo(this)
 
 end subroutine import_gridinfo
 
@@ -290,11 +291,14 @@ if ( c_e(this%gaid)) then
 !  call grib_set(this%gaid,"pvlLocation",255)
 !!$! end ponghino
 
+  call unnormalize_gridinfo(this)
+
   call export(this%griddim,this%gaid)
   call export(this%time,this%gaid)
   call export(this%timerange,this%gaid)
   call export(this%level,this%gaid)
   call export(this%var,this%gaid)
+
 end if
 
 end subroutine export_gridinfo
@@ -559,6 +563,10 @@ else if (EditionNumber == 2) then
     CALL second_to_gribtr(this%p2,p2,unit)
     CALL grib_set(gaid,'indicatorOfUnitForTimeRange',unit)
     CALL grib_set(gaid,'lengthOfTimeRange',p2)
+  ELSE
+
+    call raise_error('typeOfStatisticalProcessing not supported: '//trim(to_char(this%timerange)))
+    
   ENDIF
 
 else
@@ -1407,6 +1415,106 @@ ELSE ! seconds (not supported in grib1!)
 ENDIF
 
 END SUBROUTINE second_to_gribtr
+
+
+!> standardize variables and timerange in DB-all.e thinking
+subroutine normalize_gridinfo(this)
+
+TYPE(gridinfo_def),intent(inout) :: this !< oggetto in cui importare
+type (volgrid6d_var)::var
+
+if (this%timerange%timerange == 205)then
+
+
+                                !tmin
+  call init (var,255,2,16,255)
+  if (var == this%var ) then
+    this%var%number=11
+    this%timerange%timerange=3
+    return
+  end if
+
+
+                                !tmax
+  call init (var,255,2,15,255)
+  if (var == this%var ) then
+    this%var%number=11
+    this%timerange%timerange=2
+    return
+  end if
+
+                                ! wind max DWD
+  call init (var,78,201,187,255)
+  if (var == this%var ) then
+    this%var%category=2
+    this%var%number=32
+    this%timerange%timerange=2
+    return
+  end if
+
+                                ! wind max SIMC
+  call init (var,200,201,187,255)
+  if (var == this%var ) then
+    this%var%category=2
+    this%var%number=32
+    this%timerange%timerange=2
+    return
+  end if
+
+end if
+
+end subroutine normalize_gridinfo
+
+
+
+!> destandardize variables and timerange from DB-all.e thinking
+subroutine unnormalize_gridinfo(this)
+TYPE(gridinfo_def),intent(inout) :: this !< oggetto in cui importare
+type (volgrid6d_var)::var
+
+if (this%timerange%timerange == 3 )then
+
+                                !tmin
+  call init (var,255,2,11,255)
+  if (var == this%var ) then
+    this%var%number=16
+    this%timerange%timerange=205
+    return
+  end if
+
+else if (this%timerange%timerange == 2 )then
+
+                                !tmax
+  call init (var,255,2,11,255)
+  if (var == this%var ) then
+    this%var%number=15
+    this%timerange%timerange=205
+    return
+  end if
+
+                                ! wind max DWD
+  call init (var,78,2,32,255)
+  if (var == this%var ) then
+    this%var%category=201
+    this%var%number=187
+    this%timerange%timerange=205
+    return
+  end if
+
+                                ! wind max SIMC
+  call init (var,200,2,32,255)
+  if (var == this%var ) then
+    this%var%category=201
+    this%var%number=187
+    this%timerange%timerange=205
+    return
+  end if
+
+end if
+
+
+end subroutine unnormalize_gridinfo
+
 
 
 end module gridinfo_class
