@@ -5,62 +5,6 @@
 !! un volume di dati dall'archivio Oracle del SIM in un oggetto di tipo
 !! vol7d_class::vol7d.
 !!
-!! Attenzione, dal 23/09/2009 circa, la rete è identificata dal nome e
-!! non più da un codice numerico; il nome deve essere quello inserito
-!! nel db Oracle ma, per il momento, senza distinzione tra lettere
-!! maiuscole e minuscole. Per riferimento, ecco riportata una tabella
-!! di conversione che potrebbe non essere completa:
-!!
-!! <TABLE><TR><TD>Id</TD><TD>Nome</TD><TD>Id</TD><TD>Nome</TD>
-!! <TD>Id</TD><TD>Nome</TD><TD>Id</TD><TD>Nome</TD></TR>
-!! <TR><TD> 1</TD><TD>SYNOP    </TD>
-!! <TD> 2</TD><TD>TEMP     </TD>
-!! <TD> 3</TD><TD>BOA      </TD>
-!! <TD> 4</TD><TD>IDRMGI   </TD></TR>
-!! <TR><TD> 5</TD><TD>CER      </TD>
-!! <TD> 6</TD><TD>UMSUOL   </TD>
-!! <TD> 7</TD><TD>CRO      </TD>
-!! <TD> 8</TD><TD>CAELAMI  </TD></TR>
-!! <TR><TD> 9</TD><TD>ETG      </TD>
-!! <TD>10</TD><TD>METAR    </TD>
-!! <TD>11</TD><TD>LOCALI   </TD>
-!! <TD>12</TD><TD>FIDUTO   </TD></TR>
-!! <TR><TD>13</TD><TD>AGRMET   </TD>
-!! <TD>14</TD><TD>POLLINI  </TD>
-!! <TD>15</TD><TD>URBANE   </TD>
-!! <TD>16</TD><TD>NURBAN   </TD></TR>
-!! <TR><TD>17</TD><TD>FIDUMA   </TD>
-!! <TD>18</TD><TD>FIDUPO   </TD>
-!! <TD>19</TD><TD>ICIRFE   </TD>
-!! <TD>20</TD><TD>SIMNBO   </TD></TR>
-!! <TR><TD>21</TD><TD>SIMNPR   </TD>
-!! <TD>22</TD><TD>SPDSRA   </TD>
-!! <TD>23</TD><TD>EMLOKM   </TD>
-!! <TD>24</TD><TD>LILOKM   </TD></TR>
-!! <TR><TD>25</TD><TD>PILOKM   </TD>
-!! <TD>26</TD><TD>TRLOKM   </TD>
-!! <TD>27</TD><TD>VELOKM   </TD>
-!! <TD>28</TD><TD>SALOKM   </TD></TR>
-!! <TR><TD>29</TD><TD>LOLOKM   </TD>
-!! <TD>30</TD><TD>MALOKM   </TD>
-!! <TD>31</TD><TD>FRLOKM   </TD>
-!! <TD>32</TD><TD>BZLOKM   </TD></TR>
-!! <TR><TD>33</TD><TD>PO267    </TD>
-!! <TD>35</TD><TD>CLIMAT   </TD>
-!! <TD>36</TD><TD>GIAS     </TD>
-!! <TD>37</TD><TD>IDROST   </TD></TR>
-!! <TR><TD>38</TD><TD>VMSTAT   </TD>
-!! <TD>39</TD><TD>IDRMEC   </TD>
-!! <TD>40</TD><TD>CLINUR   </TD>
-!! <TD>41</TD><TD>IDRSTA   </TD></TR>
-!! <TR><TD>42</TD><TD>SYREP    </TD>
-!! <TD>43</TD><TD>FREATI   </TD>
-!! <TD>44</TD><TD>COREMO   </TD>
-!! <TD>45</TD><TD>IDRTL9   </TD></TR>
-!! <TR><TD>46</TD><TD>FIDUVE   </TD>
-!! <TD>47</TD><TD>FIDULI   </TD>
-!! </TABLE>
-!!
 !! \todo estrarre la maggior quantità di informazione possibile sulle
 !! variabili direttamente da Oracle.
 !!
@@ -212,6 +156,61 @@ END SUBROUTINE vol7d_oraclesim_delete
 !! carattere vol7d_class::vol7d::voldatiattri,
 !! vol7d_class::vol7d::voldatiattrc se il parametro \a attr viene
 !! fornito.
+!!
+!! La rete è identificata dal nome e non più da un codice numerico; il
+!! nome deve essere quello inserito nel db Oracle, senza distinzione
+!! tra lettere maiuscole e minuscole. Per riferimento, ecco riportata
+!! una tabella di conversione che potrebbe non essere completa:
+!!
+!! <TABLE><TR><TD>Id</TD><TD>Nome</TD><TD>Id</TD><TD>Nome</TD>
+!! <TD>Id</TD><TD>Nome</TD><TD>Id</TD><TD>Nome</TD></TR>
+!! <TR><TD> 1</TD><TD>SYNOP    </TD>
+!! <TD> 2</TD><TD>TEMP     </TD>
+!! <TD> 3</TD><TD>BOA      </TD>
+!! <TD> 4</TD><TD>IDRMGI   </TD></TR>
+!! <TR><TD> 5</TD><TD>CER      </TD>
+!! <TD> 6</TD><TD>UMSUOL   </TD>
+!! <TD> 7</TD><TD>CRO      </TD>
+!! <TD> 8</TD><TD>CAELAMI  </TD></TR>
+!! <TR><TD> 9</TD><TD>ETG      </TD>
+!! <TD>10</TD><TD>METAR    </TD>
+!! <TD>11</TD><TD>LOCALI   </TD>
+!! <TD>12</TD><TD>FIDUTO   </TD></TR>
+!! <TR><TD>13</TD><TD>AGRMET   </TD>
+!! <TD>14</TD><TD>POLLINI  </TD>
+!! <TD>15</TD><TD>URBANE   </TD>
+!! <TD>16</TD><TD>NURBAN   </TD></TR>
+!! <TR><TD>17</TD><TD>FIDUMA   </TD>
+!! <TD>18</TD><TD>FIDUPO   </TD>
+!! <TD>19</TD><TD>ICIRFE   </TD>
+!! <TD>20</TD><TD>SIMNBO   </TD></TR>
+!! <TR><TD>21</TD><TD>SIMNPR   </TD>
+!! <TD>22</TD><TD>SPDSRA   </TD>
+!! <TD>23</TD><TD>EMLOKM   </TD>
+!! <TD>24</TD><TD>LILOKM   </TD></TR>
+!! <TR><TD>25</TD><TD>PILOKM   </TD>
+!! <TD>26</TD><TD>TRLOKM   </TD>
+!! <TD>27</TD><TD>VELOKM   </TD>
+!! <TD>28</TD><TD>SALOKM   </TD></TR>
+!! <TR><TD>29</TD><TD>LOLOKM   </TD>
+!! <TD>30</TD><TD>MALOKM   </TD>
+!! <TD>31</TD><TD>FRLOKM   </TD>
+!! <TD>32</TD><TD>BZLOKM   </TD></TR>
+!! <TR><TD>33</TD><TD>PO267    </TD>
+!! <TD>35</TD><TD>CLIMAT   </TD>
+!! <TD>36</TD><TD>GIAS     </TD>
+!! <TD>37</TD><TD>IDROST   </TD></TR>
+!! <TR><TD>38</TD><TD>VMSTAT   </TD>
+!! <TD>39</TD><TD>IDRMEC   </TD>
+!! <TD>40</TD><TD>CLINUR   </TD>
+!! <TD>41</TD><TD>IDRSTA   </TD></TR>
+!! <TR><TD>42</TD><TD>SYREP    </TD>
+!! <TD>43</TD><TD>FREATI   </TD>
+!! <TD>44</TD><TD>COREMO   </TD>
+!! <TD>45</TD><TD>IDRTL9   </TD></TR>
+!! <TR><TD>46</TD><TD>FIDUVE   </TD>
+!! <TD>47</TD><TD>FIDULI   </TD>
+!! </TABLE>
 !!
 !! Le variabili di anagrafica attualmente disponibili sono:
 !!  - 'B07001' station height (reale)
@@ -475,8 +474,8 @@ ENDDO
 
 ! ricreo gli elenchi solo se ci sono dati rigettati
 IF (non_valid) THEN
-  CALL l4f_log(L4F_FATAL, 'Situazione non gestita!')
-  CALL EXIT(1)
+!  CALL l4f_log(L4F_FATAL, 'Situazione non gestita!')
+!  CALL EXIT(1)
   DEALLOCATE(anatmp, tmtmp, vartmp)
   WHERE (stazo(1:nobs) == 0) ! mal comune, mezzo gaudio
     fdatao(1:nobs) = ''
@@ -550,7 +549,7 @@ DO i = 1, nvar
 ! codice in vol7d_oraclesim_ora_ana per inizializzare correttamente la
 ! rete
       CALL vol7d_copy(netana(netid), v7dtmpana, lana=lana, &
-       lanavarr=lanar, lanavari=lanai, lanavarc=lanac)
+       lanavarr=lanar, lanavari=lanai, lanavarc=lanac)!, unique=.TRUE.)
       v7dtmpana%network(1) = v7dtmp%network(1) ! faccio coincidere la rete
 ! fondo v7dtmpana appena creato con v7dtmp
 ! qui faccio affidamenteo sul fatto che vol7d_merge conserva l'ordine
@@ -662,6 +661,7 @@ ENDDO
 
 ! Fondo a sua volta tutto il volume estratto con il contenuto di this
 CALL vol7d_merge(this%vol7d, v7dtmp2, sort=.FALSE.)
+!CALL vol7d_reform(this%vol7d, sort=.TRUE., unique=.TRUE.)
 CALL vol7d_smart_sort(this%vol7d, ltime=.TRUE.)
 ! Pulizie finali non incluse
 DEALLOCATE(anatmp, tmtmp, vartmp, mapdatao, mapstazo)
@@ -910,6 +910,8 @@ IF (ismiss) THEN
   CALL l4f_log(L4F_WARN, 'contiene stazioni con coordinate o nomi non validi')
   CALL l4f_log(L4F_WARN, 'avverti chi di dovere!')
 ENDIF
+
+CALL vol7d_reform(netana(netid), unique=.TRUE.) ! eliminate double stations
 
 CALL l4f_log(L4F_INFO, 'ho estratto l''anagrafica di '//TRIM(to_char(nana))// &
  ' stazioni per la rete '//TRIM(to_char(netid)))
