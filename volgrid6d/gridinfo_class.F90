@@ -1307,7 +1307,7 @@ IF (tri == 0 .OR. tri == 1 .OR. tri == 10) THEN ! point in time
   statproc = 254
   CALL gribtr_to_second(unit, p1_g1, p1)
   p2 = 0
-ELSE IF (tri == 2) THEN ! somewhere between p1 and p2 ! is not good for grib2 standard
+ELSE IF (tri == 2) THEN ! somewhere between p1 and p2, not good for grib2 standard
   statproc = 205
   CALL gribtr_to_second(unit, p2_g1, p1)
   CALL gribtr_to_second(unit, p2_g1-p1_g1, p2)
@@ -1321,6 +1321,10 @@ ELSE IF (tri == 4) THEN ! accumulation
   CALL gribtr_to_second(unit, p2_g1-p1_g1, p2)
 ELSE IF (tri == 5) THEN ! difference
   statproc = 4
+  CALL gribtr_to_second(unit, p2_g1, p1)
+  CALL gribtr_to_second(unit, p2_g1-p1_g1, p2)
+ELSE IF (tri == 13) THEN ! nudging - COSMO, use a temporary value then normalize
+  statproc = 206 ! check if 206 is legal!
   CALL gribtr_to_second(unit, p2_g1, p1)
   CALL gribtr_to_second(unit, p2_g1-p1_g1, p2)
 ELSE
@@ -1338,6 +1342,8 @@ END SUBROUTINE timerange_g1_to_g2_second
 SUBROUTINE timerange_g2_to_g1_unit(statproc, p1, p2, tri, p1_g1, p2_g1, unit)
 INTEGER,INTENT(in) :: statproc, p1, p2
 INTEGER,INTENT(out) :: tri, p1_g1, p2_g1, unit
+
+INTEGER :: ptmp
 
 IF (statproc == 0) THEN ! average
   tri = 3
@@ -1362,6 +1368,14 @@ ELSE IF (statproc == 254) THEN ! point in time
 ELSE
   CALL raise_fatal_error('timerange_g2_to_g1: GRIB2 statisticalprocessing ' &
    //TRIM(to_char(statproc))//' cannot be converted to GRIB1.')
+ENDIF
+
+! p1 < 0 is not allowed, use COSMO trick
+IF (p1_g1 < 0) THEN
+  ptmp = p1_g1
+  p1_g1 = 0
+  p2_g1 = p2_g1 - ptmp
+  tri = 13
 ENDIF
 
 END SUBROUTINE timerange_g2_to_g1_unit
@@ -1417,64 +1431,193 @@ ENDIF
 END SUBROUTINE second_to_gribtr
 
 
-!> standardize variables and timerange in DB-all.e thinking
+! Standardize variables and timerange in DB-all.e thinking
 subroutine normalize_gridinfo(this)
+TYPE(gridinfo_def),intent(inout) :: this
 
-TYPE(gridinfo_def),intent(inout) :: this !< oggetto in cui importare
-type (volgrid6d_var)::var
+if (this%timerange%timerange == 205) then
 
-if (this%timerange%timerange == 205)then
-
-
-                                !tmin
-  call init (var,255,2,16,255)
-  if (var == this%var ) then
+!tmin
+  if (this%var == volgrid6d_var_new(255,2,16,255)) then
     this%var%number=11
     this%timerange%timerange=3
     return
   end if
 
-
-                                !tmax
-  call init (var,255,2,15,255)
-  if (var == this%var ) then
+!tmax
+  if (this%var == volgrid6d_var_new(255,2,15,255)) then
     this%var%number=11
     this%timerange%timerange=2
     return
   end if
 
-                                ! wind max DWD
-  call init (var,78,201,187,255)
-  if (var == this%var ) then
+! wind max DWD
+  if (this%var == volgrid6d_var_new(78,201,187,255)) then
     this%var%category=2
     this%var%number=32
     this%timerange%timerange=2
     return
   end if
 
-                                ! wind max SIMC
-  call init (var,200,201,187,255)
-  if (var == this%var ) then
+! wind max SIMC
+  if (this%var == volgrid6d_var_new(200,201,187,255)) then
     this%var%category=2
     this%var%number=32
     this%timerange%timerange=2
     return
   end if
 
-end if
+else if (this%timerange%timerange == 206) then ! COSMO specific (any center)
+
+  if (this%timerange%p1 == 0 .AND. this%timerange%p2 == 0) then ! instantaneous
+    this%timerange%timerange=254
+
+  else ! guess timerange according to parameter
+    this%timerange%p1=0 ! correct back to present
+
+! table 2
+    if (this%var == volgrid6d_var_new(this%var%centre,2,11,255)) then ! T
+      this%timerange%timerange=0 ! average
+
+    else if (this%var == volgrid6d_var_new(this%var%centre,2,15,255)) then ! T
+      this%var%number=11 ! reset also parameter
+      this%timerange%timerange=2 ! maximum
+
+    else if (this%var == volgrid6d_var_new(this%var%centre,2,16,255)) then ! T
+      this%timerange%timerange=3 ! minimum
+      this%var%number=11 ! reset also parameter
+      return
+
+    else if (this%var == volgrid6d_var_new(this%var%centre,2,17,255)) then ! TD
+      this%timerange%timerange=0 ! average
+
+    else if (this%var == volgrid6d_var_new(this%var%centre,2,33,255)) then ! U
+      this%timerange%timerange=0 ! average
+
+    else if (this%var == volgrid6d_var_new(this%var%centre,2,34,255)) then ! V
+      this%timerange%timerange=0 ! average
+
+    else if (this%var == volgrid6d_var_new(this%var%centre,2,57,255)) then ! evaporation
+      this%timerange%timerange=1 ! accumulated
+
+    else if (this%var == volgrid6d_var_new(this%var%centre,2,61,255)) then ! TOT_PREC
+      this%timerange%timerange=1 ! accumulated
+
+    else if (this%var == volgrid6d_var_new(this%var%centre,2,78,255)) then ! SNOW_CON
+      this%timerange%timerange=1 ! accumulated
+
+    else if (this%var == volgrid6d_var_new(this%var%centre,2,79,255)) then ! SNOW_GSP
+      this%timerange%timerange=1 ! accumulated
+
+    else if (this%var == volgrid6d_var_new(this%var%centre,2,90,255)) then ! RUNOFF
+      this%timerange%timerange=1 ! accumulated
+
+    else if (this%var == volgrid6d_var_new(this%var%centre,2,111,255)) then ! fluxes
+      this%timerange%timerange=0 ! average
+    else if (this%var == volgrid6d_var_new(this%var%centre,2,112,255)) then
+      this%timerange%timerange=0 ! average
+    else if (this%var == volgrid6d_var_new(this%var%centre,2,113,255)) then
+      this%timerange%timerange=0 ! average
+    else if (this%var == volgrid6d_var_new(this%var%centre,2,114,255)) then
+      this%timerange%timerange=0 ! average
+    else if (this%var == volgrid6d_var_new(this%var%centre,2,121,255)) then
+      this%timerange%timerange=0 ! average
+    else if (this%var == volgrid6d_var_new(this%var%centre,2,122,255)) then
+      this%timerange%timerange=0 ! average
+    else if (this%var == volgrid6d_var_new(this%var%centre,2,124,255)) then
+      this%timerange%timerange=0 ! average
+    else if (this%var == volgrid6d_var_new(this%var%centre,2,125,255)) then
+      this%timerange%timerange=0 ! average
+    else if (this%var == volgrid6d_var_new(this%var%centre,2,126,255)) then
+      this%timerange%timerange=0 ! average
+    else if (this%var == volgrid6d_var_new(this%var%centre,2,127,255)) then
+      this%timerange%timerange=0 ! average
+
+! table 201
+    else if (this%var == volgrid6d_var_new(this%var%centre,201,5,255)) then ! photosynthetic flux
+      this%timerange%timerange=0 ! average
+
+    else if (this%var == volgrid6d_var_new(this%var%centre,201,20,255)) then ! SUN_DUR
+      this%timerange%timerange=1 ! accumulated
+
+    else if (this%var == volgrid6d_var_new(this%var%centre,201,22,255)) then ! radiation fluxes
+      this%timerange%timerange=0 ! average
+    else if (this%var == volgrid6d_var_new(this%var%centre,201,23,255)) then
+      this%timerange%timerange=0 ! average
+    else if (this%var == volgrid6d_var_new(this%var%centre,201,24,255)) then
+      this%timerange%timerange=0 ! average
+    else if (this%var == volgrid6d_var_new(this%var%centre,201,25,255)) then
+      this%timerange%timerange=0 ! average
+    else if (this%var == volgrid6d_var_new(this%var%centre,201,26,255)) then
+      this%timerange%timerange=0 ! average
+    else if (this%var == volgrid6d_var_new(this%var%centre,201,27,255)) then
+      this%timerange%timerange=0 ! average
+
+    else if (this%var == volgrid6d_var_new(this%var%centre,201,42,255)) then ! water divergence
+      this%timerange%timerange=1 ! accumulated
+
+    else if (this%var == volgrid6d_var_new(this%var%centre,201,102,255)) then ! RAIN_GSP
+      this%timerange%timerange=1 ! accumulated
+
+    else if (this%var == volgrid6d_var_new(this%var%centre,201,113,255)) then ! RAIN_CON
+      this%timerange%timerange=1 ! accumulated
+
+    else if (this%var == volgrid6d_var_new(this%var%centre,201,132,255)) then ! GRAU_GSP
+      this%timerange%timerange=1 ! accumulated
+
+    else if (this%var == volgrid6d_var_new(this%var%centre,201,135,255)) then ! HAIL_GSP
+      this%timerange%timerange=1 ! accumulated
+
+    else if (this%var == volgrid6d_var_new(this%var%centre,201,187,255)) then ! UVMAX
+      this%var%category=2 ! really reset also parameter?
+      this%var%number=32
+      this%timerange%timerange=2 ! maximum
+
+    else if (this%var == volgrid6d_var_new(this%var%centre,201,218,255)) then ! maximum 10m dynamical gust
+      this%timerange%timerange=2 ! maximum
+
+    else if (this%var == volgrid6d_var_new(this%var%centre,201,219,255)) then ! maximum 10m convective gust
+      this%timerange%timerange=2 ! maximum
+
+! table 202
+    else if (this%var == volgrid6d_var_new(this%var%centre,202,231,255)) then ! sso parameters
+      this%timerange%timerange=0 ! average
+    else if (this%var == volgrid6d_var_new(this%var%centre,202,232,255)) then
+      this%timerange%timerange=0 ! average
+    else if (this%var == volgrid6d_var_new(this%var%centre,202,233,255)) then
+      this%timerange%timerange=0 ! average
+
+    else ! parameter not recognized, set instantaneous?
+
+      call l4f_category_log(this%category,L4F_WARN, &
+       'normalize_gridinfo: found COSMO non instantaneous analysis 13/206,'//&
+       TRIM(to_char(this%timerange%p1))//','//TRIM(to_char(this%timerange%p1)))
+      call l4f_category_log(this%category,L4F_WARN, &
+       'associated to an apparently instantaneous parameter '//&
+       TRIM(to_char(this%var%centre))//','//TRIM(to_char(this%var%category))//','//&
+       TRIM(to_char(this%var%number))//','//TRIM(to_char(this%var%discipline)))
+      call l4f_category_log(this%category,L4F_WARN, 'forcing to instantaneous')
+
+      this%timerange%p1 = 0
+      this%timerange%p2 = 0
+      this%timerange%timerange = 254
+
+    end if
+  end if ! guess timerange
+end if ! 206
 
 end subroutine normalize_gridinfo
 
 
 
-!> destandardize variables and timerange from DB-all.e thinking
+! Destandardize variables and timerange from DB-all.e thinking
 subroutine unnormalize_gridinfo(this)
-TYPE(gridinfo_def),intent(inout) :: this !< oggetto in cui importare
+TYPE(gridinfo_def),intent(inout) :: this
 type (volgrid6d_var)::var
 
 if (this%timerange%timerange == 3 )then
 
-                                !tmin
+!tmin
   call init (var,255,2,11,255)
   if (var == this%var ) then
     this%var%number=16
@@ -1484,7 +1627,7 @@ if (this%timerange%timerange == 3 )then
 
 else if (this%timerange%timerange == 2 )then
 
-                                !tmax
+!tmax
   call init (var,255,2,11,255)
   if (var == this%var ) then
     this%var%number=15
@@ -1492,7 +1635,7 @@ else if (this%timerange%timerange == 2 )then
     return
   end if
 
-                                ! wind max DWD
+! wind max DWD
   call init (var,78,2,32,255)
   if (var == this%var ) then
     this%var%category=201
@@ -1501,7 +1644,7 @@ else if (this%timerange%timerange == 2 )then
     return
   end if
 
-                                ! wind max SIMC
+! wind max SIMC
   call init (var,200,2,32,255)
   if (var == this%var ) then
     this%var%category=201

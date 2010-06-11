@@ -1,33 +1,33 @@
 #include "config.h"
 
-!> Classe per la gestione delle variabili da grib.
-!! Questo modulo definisce una classe per rappresentare variabili meteorologiche.
+!> Class for managing physical variables in a grib 1/2 fashion.
+!! This module defines a class which can represent Earth-science
+!! related physical variables, following the classification scheme
+!! adopted by WMO for grib1 and grib2 parameter definition.
+!!
 !! \ingroup volgrid6d
 MODULE volgrid6d_var_class
 USE kinds
 USE missing_values
-!use grib_api
 use err_handling
 
 IMPLICIT NONE
 
-!> Definisce una variabile meteorologica osservata.
-!! I membri di \a volgrid6d_var sono pubblici e quindi liberamente
-!! accessibili e scrivibili, ma è comunque consigliato assegnarli tramite
-!! il costruttore ::init.
+!> Definition of a physical variable.
+!! \a volgrid6d_var members are public, thus they can be freely
+!! altered, but it is advisable to set them through the
+!! volgrid6d_var_class::init constructor.
 TYPE volgrid6d_var
-
   integer :: centre !< centre
-  integer :: category !< grib2: categoria / grib1: grib table version number
+  integer :: category !< grib2: category / grib1: grib table version number
   integer :: number !< parameter number
-  integer :: discipline !< grib2: disciplina
-  CHARACTER(len=65) :: description !< descrizione testuale della variabile (opzionale)
-  CHARACTER(len=24) :: unit !< descrizione testuale dell'unità di misura (opzionale)
-
+  integer :: discipline !< grib2: discipline
+  CHARACTER(len=65) :: description !< textual description of the variable (optional)
+  CHARACTER(len=24) :: unit !< textual description of the variable's unit (optional)
 END TYPE  volgrid6d_var
 
 TYPE(volgrid6d_var),PARAMETER :: volgrid6d_var_miss= &
- volgrid6d_var(imiss,imiss,imiss,imiss,cmiss,cmiss) !< Valore mancante per volgrid6d_var.
+ volgrid6d_var(imiss,imiss,imiss,imiss,cmiss,cmiss) !< missing value volgrid6d_var.
 
 !> Costruttore per la classe volgrid6d_var.
 !! Deve essere richiamato 
@@ -87,14 +87,28 @@ END INTERFACE
 
 CONTAINS
 
+ELEMENTAL FUNCTION volgrid6d_var_new(centre, category, number, &
+ discipline, description, unit) RESULT(this)
+integer,INTENT(in),OPTIONAL :: centre !< centre 
+integer,INTENT(in),OPTIONAL :: category !< grib2: category / grib1: grib table version number
+integer,INTENT(in),OPTIONAL :: number !< parameter number
+integer,INTENT(in),OPTIONAL :: discipline !< grib2: discipline
+CHARACTER(len=65),INTENT(in),OPTIONAL :: description !< textual description of the variable
+CHARACTER(len=24),INTENT(in),OPTIONAL :: unit !< textual description of the variable's unit
+
+TYPE(volgrid6d_var) :: this !< object to be initialised
+
+CALL init(this, centre, category, number, discipline, description, unit)
+
+END FUNCTION volgrid6d_var_new
+
+
 !> Inizializza un oggetto \a volgrid6d_var con i parametri opzionali forniti.
 !! Se non viene passato un parametro opzionale l'oggetto è
 !! inizializzato con quel parametro e tutti i successivi a valore mancante.
 !! Per il grib1 omettere discipline che verrà impostato a 255 (missing del grib2)
 elemental SUBROUTINE volgrid6d_var_init(this, centre, category, number, discipline,description,unit)
 TYPE(volgrid6d_var),INTENT(INOUT) :: this !< oggetto da inizializzare
-!INTEGER,INTENT(in),OPTIONAL :: btable
-
 integer,INTENT(in),OPTIONAL :: centre !< centre 
 integer,INTENT(in),OPTIONAL :: category !< grib2: categoria / grib1: grib table version number
 integer,INTENT(in),OPTIONAL :: number !< parameter number
