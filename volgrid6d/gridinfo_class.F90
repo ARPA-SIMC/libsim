@@ -56,6 +56,7 @@ type gridinfo_def
 
 end type gridinfo_def
 
+INTEGER, PARAMETER :: cosmo_centre(3) = (/78,80,200/) ! emission centers using COSMO
 
 !> \brief Costructor
 !!
@@ -1323,9 +1324,9 @@ ELSE IF (tri == 5) THEN ! difference
   statproc = 4
   CALL gribtr_to_second(unit, p2_g1, p1)
   CALL gribtr_to_second(unit, p2_g1-p1_g1, p2)
-ELSE IF (tri == 13) THEN ! nudging - COSMO, use a temporary value then normalize
+ELSE IF (tri == 13) THEN ! COSMO-nudging, use a temporary value then normalize
   statproc = 206 ! check if 206 is legal!
-  CALL gribtr_to_second(unit, p2_g1, p1)
+  p1 = 0 ! analysis regardless of p2_g1
   CALL gribtr_to_second(unit, p2_g1-p1_g1, p2)
 ELSE
   CALL raise_fatal_error('timerange_g1_to_g2: GRIB1 timerange '//TRIM(to_char(tri)) &
@@ -1357,8 +1358,15 @@ ELSE IF (statproc == 4) THEN ! difference
   tri = 5
   CALL second_to_gribtr(p1, p2_g1, unit)
   CALL second_to_gribtr(p1-p2, p1_g1, unit)
-ELSE IF (statproc == 205) THEN ! is not good for grib2 standard
+ELSE IF (statproc == 205) THEN ! point in time interval, not good for grib2 standard
   tri = 2
+  CALL second_to_gribtr(p1, p2_g1, unit)
+  CALL second_to_gribtr(p1-p2, p1_g1, unit)
+ELSE IF (statproc == 206) THEN ! COSMO-nudging (statistical processing in the past)
+! this should never happen (at least from COSMO grib1), since 206 is
+! converted to something else in normalize_gridinfo; now a negative
+! p1_g1 is set, it will be corrected in the next section
+  tri = 13
   CALL second_to_gribtr(p1, p2_g1, unit)
   CALL second_to_gribtr(p1-p2, p1_g1, unit)
 ELSE IF (statproc == 254) THEN ! point in time
@@ -1432,10 +1440,11 @@ END SUBROUTINE second_to_gribtr
 
 
 ! Standardize variables and timerange in DB-all.e thinking
-subroutine normalize_gridinfo(this)
+SUBROUTINE normalize_gridinfo(this)
 TYPE(gridinfo_def),intent(inout) :: this
 
-if (this%timerange%timerange == 205) then
+
+IF (this%timerange%timerange == 205) THEN ! point in time interval
 
 !tmin
   if (this%var == volgrid6d_var_new(255,2,16,255)) then
@@ -1451,162 +1460,169 @@ if (this%timerange%timerange == 205) then
     return
   end if
 
-! wind max DWD
-  if (this%var == volgrid6d_var_new(78,201,187,255)) then
-    this%var%category=2
-    this%var%number=32
-    this%timerange%timerange=2
-    return
-  end if
+  IF (this%var%discipline == 255 .AND. &
+   ANY(this%var%centre == cosmo_centre)) THEN ! grib1 & COSMO
 
-! wind max SIMC
-  if (this%var == volgrid6d_var_new(200,201,187,255)) then
-    this%var%category=2
-    this%var%number=32
-    this%timerange%timerange=2
-    return
-  end if
+    IF (this%var%category == 201) THEN ! table 201
 
-else if (this%timerange%timerange == 206) then ! COSMO specific (any center)
+      IF (this%var%number == 187) THEN ! wind max
+        this%var%category=2
+        this%var%number=32
+        this%timerange%timerange=2
+      ENDIF
+    ENDIF
+  ENDIF
 
-  if (this%timerange%p1 == 0 .AND. this%timerange%p2 == 0) then ! instantaneous
+ELSE IF (this%timerange%timerange == 206) THEN ! COSMO-nudging
+
+  IF (this%timerange%p2 == 0) THEN ! instantaneous
+
     this%timerange%timerange=254
 
-  else ! guess timerange according to parameter
-    this%timerange%p1=0 ! correct back to present
+  ELSE ! guess timerange according to parameter
 
-! table 2
-    if (this%var == volgrid6d_var_new(this%var%centre,2,11,255)) then ! T
-      this%timerange%timerange=0 ! average
+    IF (this%var%discipline == 255 .AND. &
+     ANY(this%var%centre == cosmo_centre)) THEN ! grib1 & COSMO
 
-    else if (this%var == volgrid6d_var_new(this%var%centre,2,15,255)) then ! T
-      this%var%number=11 ! reset also parameter
-      this%timerange%timerange=2 ! maximum
+      IF (this%var%category == 2) THEN ! table 2
 
-    else if (this%var == volgrid6d_var_new(this%var%centre,2,16,255)) then ! T
-      this%timerange%timerange=3 ! minimum
-      this%var%number=11 ! reset also parameter
-      return
+        if (this%var%number == 11) then ! T
+          this%timerange%timerange=0 ! average
 
-    else if (this%var == volgrid6d_var_new(this%var%centre,2,17,255)) then ! TD
-      this%timerange%timerange=0 ! average
+        else if (this%var%number == 15) then ! T
+          this%timerange%timerange=2 ! maximum
+          this%var%number=11 ! reset also parameter
 
-    else if (this%var == volgrid6d_var_new(this%var%centre,2,33,255)) then ! U
-      this%timerange%timerange=0 ! average
+        else if (this%var%number == 16) then ! T
+          this%timerange%timerange=3 ! minimum
+          this%var%number=11 ! reset also parameter
 
-    else if (this%var == volgrid6d_var_new(this%var%centre,2,34,255)) then ! V
-      this%timerange%timerange=0 ! average
+        else if (this%var%number == 17) then ! TD
+          this%timerange%timerange=0 ! average
 
-    else if (this%var == volgrid6d_var_new(this%var%centre,2,57,255)) then ! evaporation
-      this%timerange%timerange=1 ! accumulated
+        else if (this%var%number == 33) then ! U
+          this%timerange%timerange=0 ! average
 
-    else if (this%var == volgrid6d_var_new(this%var%centre,2,61,255)) then ! TOT_PREC
-      this%timerange%timerange=1 ! accumulated
+        else if (this%var%number == 34) then ! V
+          this%timerange%timerange=0 ! average
 
-    else if (this%var == volgrid6d_var_new(this%var%centre,2,78,255)) then ! SNOW_CON
-      this%timerange%timerange=1 ! accumulated
+        else if (this%var%number == 57) then ! evaporation
+          this%timerange%timerange=1 ! accumulated
 
-    else if (this%var == volgrid6d_var_new(this%var%centre,2,79,255)) then ! SNOW_GSP
-      this%timerange%timerange=1 ! accumulated
+        else if (this%var%number == 61) then ! TOT_PREC
+          this%timerange%timerange=1 ! accumulated
 
-    else if (this%var == volgrid6d_var_new(this%var%centre,2,90,255)) then ! RUNOFF
-      this%timerange%timerange=1 ! accumulated
+        else if (this%var%number == 78) then ! SNOW_CON
+          this%timerange%timerange=1 ! accumulated
 
-    else if (this%var == volgrid6d_var_new(this%var%centre,2,111,255)) then ! fluxes
-      this%timerange%timerange=0 ! average
-    else if (this%var == volgrid6d_var_new(this%var%centre,2,112,255)) then
-      this%timerange%timerange=0 ! average
-    else if (this%var == volgrid6d_var_new(this%var%centre,2,113,255)) then
-      this%timerange%timerange=0 ! average
-    else if (this%var == volgrid6d_var_new(this%var%centre,2,114,255)) then
-      this%timerange%timerange=0 ! average
-    else if (this%var == volgrid6d_var_new(this%var%centre,2,121,255)) then
-      this%timerange%timerange=0 ! average
-    else if (this%var == volgrid6d_var_new(this%var%centre,2,122,255)) then
-      this%timerange%timerange=0 ! average
-    else if (this%var == volgrid6d_var_new(this%var%centre,2,124,255)) then
-      this%timerange%timerange=0 ! average
-    else if (this%var == volgrid6d_var_new(this%var%centre,2,125,255)) then
-      this%timerange%timerange=0 ! average
-    else if (this%var == volgrid6d_var_new(this%var%centre,2,126,255)) then
-      this%timerange%timerange=0 ! average
-    else if (this%var == volgrid6d_var_new(this%var%centre,2,127,255)) then
-      this%timerange%timerange=0 ! average
+        else if (this%var%number == 79) then ! SNOW_GSP
+          this%timerange%timerange=1 ! accumulated
 
-! table 201
-    else if (this%var == volgrid6d_var_new(this%var%centre,201,5,255)) then ! photosynthetic flux
-      this%timerange%timerange=0 ! average
+        else if (this%var%number == 90) then ! RUNOFF
+          this%timerange%timerange=1 ! accumulated
 
-    else if (this%var == volgrid6d_var_new(this%var%centre,201,20,255)) then ! SUN_DUR
-      this%timerange%timerange=1 ! accumulated
+        else if (this%var%number == 111) then ! fluxes
+          this%timerange%timerange=0 ! average
+        else if (this%var%number == 112) then
+          this%timerange%timerange=0 ! average
+        else if (this%var%number == 113) then
+          this%timerange%timerange=0 ! average
+        else if (this%var%number == 114) then
+          this%timerange%timerange=0 ! average
+        else if (this%var%number == 121) then
+          this%timerange%timerange=0 ! average
+        else if (this%var%number == 122) then
+          this%timerange%timerange=0 ! average
+        else if (this%var%number == 124) then
+          this%timerange%timerange=0 ! average
+        else if (this%var%number == 125) then
+          this%timerange%timerange=0 ! average
+        else if (this%var%number == 126) then
+          this%timerange%timerange=0 ! average
+        else if (this%var%number == 127) then
+          this%timerange%timerange=0 ! average
 
-    else if (this%var == volgrid6d_var_new(this%var%centre,201,22,255)) then ! radiation fluxes
-      this%timerange%timerange=0 ! average
-    else if (this%var == volgrid6d_var_new(this%var%centre,201,23,255)) then
-      this%timerange%timerange=0 ! average
-    else if (this%var == volgrid6d_var_new(this%var%centre,201,24,255)) then
-      this%timerange%timerange=0 ! average
-    else if (this%var == volgrid6d_var_new(this%var%centre,201,25,255)) then
-      this%timerange%timerange=0 ! average
-    else if (this%var == volgrid6d_var_new(this%var%centre,201,26,255)) then
-      this%timerange%timerange=0 ! average
-    else if (this%var == volgrid6d_var_new(this%var%centre,201,27,255)) then
-      this%timerange%timerange=0 ! average
+        endif
 
-    else if (this%var == volgrid6d_var_new(this%var%centre,201,42,255)) then ! water divergence
-      this%timerange%timerange=1 ! accumulated
+      ELSE IF (this%var%category == 201) THEN ! table 201
 
-    else if (this%var == volgrid6d_var_new(this%var%centre,201,102,255)) then ! RAIN_GSP
-      this%timerange%timerange=1 ! accumulated
+        if (this%var%number == 5) then ! photosynthetic flux
+          this%timerange%timerange=0 ! average
 
-    else if (this%var == volgrid6d_var_new(this%var%centre,201,113,255)) then ! RAIN_CON
-      this%timerange%timerange=1 ! accumulated
+        else if (this%var%number == 20) then ! SUN_DUR
+          this%timerange%timerange=1 ! accumulated
 
-    else if (this%var == volgrid6d_var_new(this%var%centre,201,132,255)) then ! GRAU_GSP
-      this%timerange%timerange=1 ! accumulated
+        else if (this%var%number == 22) then ! radiation fluxes
+          this%timerange%timerange=0 ! average
+        else if (this%var%number == 23) then
+          this%timerange%timerange=0 ! average
+        else if (this%var%number == 24) then
+          this%timerange%timerange=0 ! average
+        else if (this%var%number == 25) then
+          this%timerange%timerange=0 ! average
+        else if (this%var%number == 26) then
+          this%timerange%timerange=0 ! average
+        else if (this%var%number == 27) then
+          this%timerange%timerange=0 ! average
 
-    else if (this%var == volgrid6d_var_new(this%var%centre,201,135,255)) then ! HAIL_GSP
-      this%timerange%timerange=1 ! accumulated
+        else if (this%var%number == 42) then ! water divergence
+          this%timerange%timerange=1 ! accumulated
 
-    else if (this%var == volgrid6d_var_new(this%var%centre,201,187,255)) then ! UVMAX
-      this%var%category=2 ! really reset also parameter?
-      this%var%number=32
-      this%timerange%timerange=2 ! maximum
+        else if (this%var%number == 102) then ! RAIN_GSP
+          this%timerange%timerange=1 ! accumulated
 
-    else if (this%var == volgrid6d_var_new(this%var%centre,201,218,255)) then ! maximum 10m dynamical gust
-      this%timerange%timerange=2 ! maximum
+        else if (this%var%number == 113) then ! RAIN_CON
+          this%timerange%timerange=1 ! accumulated
 
-    else if (this%var == volgrid6d_var_new(this%var%centre,201,219,255)) then ! maximum 10m convective gust
-      this%timerange%timerange=2 ! maximum
+        else if (this%var%number == 132) then ! GRAU_GSP
+          this%timerange%timerange=1 ! accumulated
 
-! table 202
-    else if (this%var == volgrid6d_var_new(this%var%centre,202,231,255)) then ! sso parameters
-      this%timerange%timerange=0 ! average
-    else if (this%var == volgrid6d_var_new(this%var%centre,202,232,255)) then
-      this%timerange%timerange=0 ! average
-    else if (this%var == volgrid6d_var_new(this%var%centre,202,233,255)) then
-      this%timerange%timerange=0 ! average
+        else if (this%var%number == 135) then ! HAIL_GSP
+          this%timerange%timerange=1 ! accumulated
 
-    else ! parameter not recognized, set instantaneous?
+        else if (this%var%number == 187) then ! UVMAX
+          this%var%category=2 ! reset also parameter
+          this%var%number=32
+          this%timerange%timerange=2 ! maximum
 
-      call l4f_category_log(this%category,L4F_WARN, &
-       'normalize_gridinfo: found COSMO non instantaneous analysis 13/206,'//&
-       TRIM(to_char(this%timerange%p1))//','//TRIM(to_char(this%timerange%p1)))
-      call l4f_category_log(this%category,L4F_WARN, &
-       'associated to an apparently instantaneous parameter '//&
-       TRIM(to_char(this%var%centre))//','//TRIM(to_char(this%var%category))//','//&
-       TRIM(to_char(this%var%number))//','//TRIM(to_char(this%var%discipline)))
-      call l4f_category_log(this%category,L4F_WARN, 'forcing to instantaneous')
+        else if (this%var%number == 218) then ! maximum 10m dynamical gust
+          this%timerange%timerange=2 ! maximum
 
-      this%timerange%p1 = 0
-      this%timerange%p2 = 0
-      this%timerange%timerange = 254
+        else if (this%var%number == 219) then ! maximum 10m convective gust
+          this%timerange%timerange=2 ! maximum
 
-    end if
-  end if ! guess timerange
-end if ! 206
+        endif
 
-end subroutine normalize_gridinfo
+      ELSE IF (this%var%category == 202) THEN ! table 202
+
+        if (this%var%number == 231) then ! sso parameters
+          this%timerange%timerange=0 ! average
+        else if (this%var%number == 232) then
+          this%timerange%timerange=0 ! average
+        else if (this%var%number == 233) then
+          this%timerange%timerange=0 ! average
+        endif
+
+      ELSE ! parameter not recognized, set instantaneous?
+
+        call l4f_category_log(this%category,L4F_WARN, &
+         'normalize_gridinfo: found COSMO non instantaneous analysis 13,0,'//&
+         TRIM(to_char(this%timerange%p2)))
+        call l4f_category_log(this%category,L4F_WARN, &
+         'associated to an apparently instantaneous parameter '//&
+         TRIM(to_char(this%var%centre))//','//TRIM(to_char(this%var%category))//','//&
+         TRIM(to_char(this%var%number))//','//TRIM(to_char(this%var%discipline)))
+        call l4f_category_log(this%category,L4F_WARN, 'forcing to instantaneous')
+
+        this%timerange%p2 = 0
+        this%timerange%timerange = 254
+
+      ENDIF ! category
+    ENDIF ! grib1 & COSMO
+  ENDIF ! p2
+ENDIF ! timerange 
+
+END SUBROUTINE normalize_gridinfo
 
 
 
@@ -1657,7 +1673,6 @@ end if
 
 
 end subroutine unnormalize_gridinfo
-
 
 
 end module gridinfo_class
