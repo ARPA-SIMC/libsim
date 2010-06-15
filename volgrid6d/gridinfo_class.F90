@@ -1443,7 +1443,6 @@ END SUBROUTINE second_to_gribtr
 SUBROUTINE normalize_gridinfo(this)
 TYPE(gridinfo_def),intent(inout) :: this
 
-
 IF (this%timerange%timerange == 205) THEN ! point in time interval
 
 !tmin
@@ -1629,13 +1628,11 @@ END SUBROUTINE normalize_gridinfo
 ! Destandardize variables and timerange from DB-all.e thinking
 subroutine unnormalize_gridinfo(this)
 TYPE(gridinfo_def),intent(inout) :: this
-type (volgrid6d_var)::var
 
 if (this%timerange%timerange == 3 )then
 
 !tmin
-  call init (var,255,2,11,255)
-  if (var == this%var ) then
+  if (this%var == volgrid6d_var_new(255,2,11,255)) then
     this%var%number=16
     this%timerange%timerange=205
     return
@@ -1644,30 +1641,22 @@ if (this%timerange%timerange == 3 )then
 else if (this%timerange%timerange == 2 )then
 
 !tmax
-  call init (var,255,2,11,255)
-  if (var == this%var ) then
+  if (this%var == volgrid6d_var_new(255,2,11,255)) then
     this%var%number=15
     this%timerange%timerange=205
     return
   end if
 
-! wind max DWD
-  call init (var,78,2,32,255)
-  if (var == this%var ) then
-    this%var%category=201
-    this%var%number=187
-    this%timerange%timerange=205
-    return
-  end if
+  IF (ANY(this%var%centre == cosmo_centre)) THEN ! grib1 & COSMO
 
-! wind max SIMC
-  call init (var,200,2,32,255)
-  if (var == this%var ) then
-    this%var%category=201
-    this%var%number=187
-    this%timerange%timerange=205
-    return
-  end if
+! wind max
+    IF (this%var == volgrid6d_var_new(255,2,32,255)) THEN
+      this%var%category=201
+      this%var%number=187
+      this%timerange%timerange=205
+    ENDIF
+
+  ENDIF
 
 end if
 
