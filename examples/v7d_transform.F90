@@ -1032,6 +1032,7 @@ ELSE IF (output_format == 'BUFR' .OR. output_format == 'CREX') THEN
   CALL init(v7d_dba_out, filename=output_file, FORMAT=output_format, file=.TRUE., &
    WRITE=.TRUE., wipe=.TRUE.)
   v7d_dba_out%vol7d = v7d
+  CALL init(v7d) ! nullify without deallocating
   CALL export(v7d_dba_out, template=output_template)
   CALL delete(v7d_dba_out)
 #endif
@@ -1045,7 +1046,7 @@ ENDIF
 
 ! cleanly close the databases
 IF (input_format == 'native') THEN
-  CALL delete(v7d)
+  CALL delete(v7d) ! controllare? input native output bufr
 #ifdef HAVE_DBALLE
 ELSE IF (input_format == 'BUFR' .OR. input_format == 'CREX' &
  .OR. input_format == 'dba') THEN
