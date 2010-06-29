@@ -850,16 +850,66 @@ ind = index(v7d%dativar, var, type=type)
   end select
 !end if
 
-call init(var, btable="B12003")    ! temperatura rugiada
 
-allocate(r_tr(levP))
-r_tr=rmiss
+
+!umidità relativa
+
+
+call init(var, btable="B13003")    ! relative umidity
+
+allocate(r_ur(levP))
+
+r_ur=rmiss
 
 type=cmiss
 !type="i"
 ind = index(v7d%dativar, var, type=type)
 
 !if( ind /= 0 ) then
+select case (type)
+
+case("d")
+  r_ur=pack(realdat(v7d%voldatid(ana,time,:,timerange,ind,network),v7d%dativar%d(ind)),&
+   (v7d%level%level1 == 100.and.v7d%level%level2 == imiss))
+    
+case("r")
+  r_ur=pack(realdat(v7d%voldatir(ana,time,:,timerange,ind,network),v7d%dativar%r(ind)),&
+   (v7d%level%level1 == 100.and.v7d%level%level2 == imiss))
+  
+case("i")
+  r_ur=pack(realdat(v7d%voldatii(ana,time,:,timerange,ind,network),v7d%dativar%i(ind)),&
+   (v7d%level%level1 == 100.and.v7d%level%level2 == imiss))
+    
+case("b")
+  r_ur=pack(realdat(v7d%voldatib(ana,time,:,timerange,ind,network),v7d%dativar%b(ind)),&
+   (v7d%level%level1 == 100.and.v7d%level%level2 == imiss))
+
+case("c")
+  r_ur=pack(realdat(v7d%voldatic(ana,time,:,timerange,ind,network),v7d%dativar%c(ind)),&
+   (v7d%level%level1 == 100.and.v7d%level%level2 == imiss))
+
+case default
+
+  r_ur=rmiss
+    
+end select
+!end if
+
+
+
+
+call init(var, btable="B12003")    ! temperatura rugiada
+
+allocate(r_tr(levP))
+r_tr=rmiss
+
+
+if (.not. any(c_e(r_ur))) then
+  type=cmiss
+                                !type="i"
+  ind = index(v7d%dativar, var, type=type)
+
+                                !if( ind /= 0 ) then
   select case (type)
 
   case("d")
@@ -887,14 +937,12 @@ ind = index(v7d%dativar, var, type=type)
     r_tr=rmiss
 
   end select
-!end if
+end if
 
-!umidità relativa
 
-allocate(r_ur(levP))
-
-r_ur=fr(r_tt,r_tr)
-
+where ( .not. c_e(r_ur))
+  r_ur=fr(r_tt,r_tr)
+end where
 
 !umidità specifica
 
@@ -938,7 +986,7 @@ if (.not. any(c_e(r_ur))) then
   end select
 !end if
 
-  where ( .not. c_e(r_ur))
+   where ( .not. c_e(r_ur))
     r_ur=QTORELHUM(r_uq,r_pr,r_tt)
   end where
 
@@ -948,11 +996,16 @@ if (.not. any(c_e(r_ur))) then
 !  end where
 
   where ( .not. c_e(r_tr))
-    !r_tr=TRUG(r_ur,r_tt)
     r_tr=td_pq(r_pr   ,r_uq)
   end where
 
 end if
+
+
+where ( .not. c_e(r_tr))
+  r_tr=TRUG(r_ur,r_tt)
+end where
+
 
 
 !vento
