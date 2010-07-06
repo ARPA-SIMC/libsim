@@ -1,0 +1,77 @@
+Introduction
+------------
+
+Libsim is a ......
+
+The main characteristics of libsim are:
+
+...
+...
+
+Dependencies
+------------
+
+libsim requires ............. inorder to be built.
+
+Additionally, to build the Fortran API 
+
+To build the documentation, you need doxygen.
+
+In Fedora, the names of the packages depended on are:
+
+ * unixODBC-devel gperf gcc-gfortran doxygen tetex tetex-latex latex2html
+ * For CNF there is an unofficial starmet package: contact the DB-All.e team
+   about it.
+
+In Debian, the names of the packages depended on are:
+
+.....
+
+Building DB-All.e
+-----------------
+
+DB-All.e is already packaged in both .rpm and .deb formats, and that provides
+easy installation for most Linux distributions.
+
+If you want to build and install DB-All.e yourself, you can proceed as in most
+other Unix software::
+
+  ./configure
+  make
+  make install
+
+
+
+Documentation
+-------------
+
+Documentation for all commandline tools can be found in their manpages.  All
+commandline tools also have extensive commandline help that can be accessed
+using the "--help" option.
+
+
+
+
+Contact and copyright information
+---------------------------------
+
+The authors of libsim are:
+Davide Cesari <dcesari@arpa.emr.it>
+Paolo Patruno <ppatruno@arpa.emr.it>
+
+libsim is Copyright (C) 2010  ARPA-SIM <urpsim@smr.arpa.emr.it>
+
+Libsim is licensed under the terms of the GNU General Public License version
+2 or successive.  Please see the file COPYING for details.
+
+Contact informations for ARPA-SIM:
+
+  Agenzia Regionale Prevenzione e Ambiente (ARPA)
+  Servizio Idro-Meteorologico (SIM)
+
+  Address: Viale Silvani 6, 40122 Bologna, Italy
+  Tel: + 39 051 6497511
+  Fax: + 39 051 6497501
+  Email: urpsim@smr.arpa.emr.it
+  Website: http://www.arpa.emr.it/sim/
+
