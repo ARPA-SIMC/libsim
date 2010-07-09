@@ -17,14 +17,16 @@
 ! along with this program.  If not, see <http://www.gnu.org/licenses/>.
 MODULE vol7d_csv
 USE vol7d_class
+USE vol7d_utilities
 USE file_utilities
 IMPLICIT NONE
 
 ! csv output configuration
 CHARACTER(len=8) :: csv_volume
-CHARACTER(len=512) :: csv_column, csv_variable
+CHARACTER(len=512) :: csv_column, csv_columnorder, csv_variable
 LOGICAL :: csv_skip_miss, csv_no_rescale
-INTEGER :: csv_header, icsv_column(7)
+INTEGER :: csv_header, icsv_column(5), icsv_columnorder(5), icsv_colinvorder(7), &
+ icsv_colstart(5), icsv_colend(5), icsv_colind(5)
 
 CONTAINS
 
@@ -33,15 +35,56 @@ TYPE(vol7d),INTENT(inout) :: v7d
 INTEGER,INTENT(in) :: iun
 
 INTEGER :: licsv_column(SIZE(icsv_column))
-LOGICAL :: no_miss, anaonly
+LOGICAL :: no_miss
 CHARACTER(len=50) :: desdata(7)
-CHARACTER(len=128) :: charbuffer
 TYPE(csv_record) :: csvline, csv_desdata(7)
-INTEGER :: i, i1, i2, i3, i4, i5, i6, i7, nv, datastart
-REAL(kind=fp_geo) :: l1, l2
+INTEGER :: i, i1, i2, i3, i4, i5, i6, i7, nv
 INTEGER,POINTER :: w_s(:), w_e(:)
 
 licsv_column(:) = icsv_column(:)
+
+! If only ana volume, skip data-only dimensions
+IF (SIZE(v7d%time) == 0) THEN
+  WHERE (licsv_column(:) == vol7d_time_d)
+    licsv_column(:) = -1
+  END WHERE
+ENDIF
+IF (SIZE(v7d%level) == 0) THEN
+  WHERE (licsv_column(:) == vol7d_level_d)
+    licsv_column(:) = -1
+  END WHERE
+ENDIF
+IF (SIZE(v7d%timerange) == 0) THEN
+  WHERE (licsv_column(:) == vol7d_timerange_d)
+    licsv_column(:) = -1
+  END WHERE
+ENDIF
+
+! For column reordering
+icsv_colstart(:) = 1
+WHERE (icsv_columnorder(:) == vol7d_ana_d)
+  icsv_colend(:) = SIZE(v7d%ana)
+END WHERE
+WHERE (icsv_columnorder(:) == vol7d_time_d)
+  icsv_colend(:) = SIZE(v7d%time)
+END WHERE
+WHERE (icsv_columnorder(:) == vol7d_level_d)
+  icsv_colend(:) = SIZE(v7d%level)
+END WHERE
+WHERE (icsv_columnorder(:) == vol7d_timerange_d)
+  icsv_colend(:) = SIZE(v7d%timerange)
+END WHERE
+WHERE (icsv_columnorder(:) == vol7d_network_d)
+  icsv_colend(:) = SIZE(v7d%network)
+END WHERE
+
+! invert icsv_columnorder
+icsv_colinvorder(vol7d_ana_d) = firsttrue(icsv_columnorder(:) == vol7d_ana_d)
+icsv_colinvorder(vol7d_time_d) = firsttrue(icsv_columnorder(:) == vol7d_time_d)
+icsv_colinvorder(vol7d_level_d) = firsttrue(icsv_columnorder(:) == vol7d_level_d)
+icsv_colinvorder(vol7d_timerange_d) = firsttrue(icsv_columnorder(:) == vol7d_timerange_d)
+icsv_colinvorder(vol7d_network_d) = firsttrue(icsv_columnorder(:) == vol7d_network_d)
+! there should not be missing columns here thanks to the check in parse_v7d_column!
 
 IF (csv_variable /= 'all') THEN
   nv = word_split(csv_variable, w_s, w_e, ',')
@@ -80,30 +123,6 @@ IF (csv_header > 0) THEN ! Main header line
   CALL csv_record_addfield(csv_desdata(vol7d_timerange_d), 'P1')
   CALL csv_record_addfield(csv_desdata(vol7d_timerange_d), 'P2')
   CALL csv_record_addfield(csv_desdata(vol7d_network_d), 'Report')
-
-! If only ana volume, skip data-only dimensions
-  IF (SIZE(v7d%time) == 0) THEN
-    WHERE (licsv_column(:) == vol7d_time_d)
-      licsv_column(:) = -1
-    END WHERE
-  ENDIF
-  IF (SIZE(v7d%level) == 0) THEN
-    WHERE (licsv_column(:) == vol7d_level_d)
-      licsv_column(:) = -1
-    END WHERE
-  ENDIF
-  IF (SIZE(v7d%timerange) == 0) THEN
-    WHERE (licsv_column(:) == vol7d_timerange_d)
-      licsv_column(:) = -1
-    END WHERE
-  ENDIF
-  anaonly = SIZE(v7d%time) == 0 .AND. SIZE(v7d%level) == 0 .AND. &
-   SIZE(v7d%timerange) == 0
-  IF (anaonly) THEN
-    datastart = 0
-  ELSE
-    datastart = 1
-  ENDIF
 
   CALL init(csvline)
   DO i = 1, SIZE(licsv_column) ! add the required header entries in the desirded order
@@ -253,47 +272,41 @@ IF (csv_header > 0) THEN ! Main header line
 
   WRITE(iun,'(A)')csv_record_getrecord(csvline)
   CALL delete(csvline)
-ENDIF
+ENDIF ! csv_header > 0
 
 DO i = 1, SIZE(csv_desdata)
   CALL init(csv_desdata(i))
 ENDDO
 
 ! Create data entries for all the v7d non-variables dimensions
-DO i2 = datastart, size(v7d%time)
-  IF (i2 > 0) THEN
-    CALL csv_record_rewind(csv_desdata(2))
-    CALL getval(v7d%time(i2), isodate=charbuffer(1:19))
-    CALL csv_record_addfield(csv_desdata(2), charbuffer(1:19))
-  ENDIF
-  DO i4 = datastart, SIZE(v7d%timerange)
-    IF (i4 > 0) THEN
-      CALL csv_record_rewind(csv_desdata(4))
-      CALL csv_record_addfield_miss(csv_desdata(4), v7d%timerange(i4)%timerange)
-      CALL csv_record_addfield_miss(csv_desdata(4), v7d%timerange(i4)%p1)
-      CALL csv_record_addfield_miss(csv_desdata(4), v7d%timerange(i4)%p2)
-    ENDIF
-    DO i3 = datastart, SIZE(v7d%level)
-      IF (i3 > 0) THEN
-        CALL csv_record_rewind(csv_desdata(3))
-        CALL csv_record_addfield_miss(csv_desdata(3), v7d%level(i3)%level1)
-        CALL csv_record_addfield_miss(csv_desdata(3), v7d%level(i3)%l1)
-        CALL csv_record_addfield_miss(csv_desdata(3), v7d%level(i3)%level2)
-        CALL csv_record_addfield_miss(csv_desdata(3), v7d%level(i3)%l2)
+icsv_colind(:) = icsv_colstart(:)
+loop7d: DO WHILE(.TRUE.)
+
+! first part of the loop over columns
+  DO i = 1, 5
+    IF (icsv_colind(i) == icsv_colstart(i)) THEN
+      IF (icsv_colind(i) <= icsv_colend(i)) THEN ! skip empty dimensions (anaonly)
+        ! prepare the dimension descriptor data
+        CALL make_csv_desdata(v7d, icsv_columnorder(i), icsv_colind(i), &
+         csv_desdata(icsv_columnorder(i)))
       ENDIF
-      DO i6 = 1, SIZE(v7d%network)
-        CALL csv_record_rewind(csv_desdata(6))
-        CALL csv_record_addfield_miss(csv_desdata(6), TRIM(v7d%network(i6)%name))
-        DO i1 = 1, SIZE(v7d%ana)
-          CALL csv_record_rewind(csv_desdata(1))
-          CALL getval(v7d%ana(i1)%coord, lon=l1, lat=l2)
-          CALL csv_record_addfield_miss(csv_desdata(1), l1)
-          CALL csv_record_addfield_miss(csv_desdata(1), l2)
+    ENDIF
+  ENDDO
+
+! set indices
+  i1 = icsv_colind(icsv_colinvorder(vol7d_ana_d))
+  i2 = icsv_colind(icsv_colinvorder(vol7d_time_d))
+  i3 = icsv_colind(icsv_colinvorder(vol7d_level_d))
+  i4 = icsv_colind(icsv_colinvorder(vol7d_timerange_d))
+  i6 = icsv_colind(icsv_colinvorder(vol7d_network_d))
+
+! body of the loop here
+
 
           CALL init(csvline)
           DO i = 1, SIZE(licsv_column) ! add the required data entries in the desirded order
             IF (licsv_column(i) > 0) &
-             CALL csv_record_addfield(csvline,csv_desdata(licsv_column(i)))
+             CALL csv_record_addfield(csvline, csv_desdata(licsv_column(i)))
           ENDDO
           no_miss = .FALSE. ! keep track of line with all missing data
 ! and now add the data entries for the variables
@@ -454,11 +467,22 @@ DO i2 = datastart, size(v7d%time)
             WRITE(iun,'(A)')csv_record_getrecord(csvline)
           ENDIF
           CALL delete(csvline)
-        ENDDO
-      ENDDO
-    ENDDO
+
+! final part of the loop over columns
+  DO i = 5, 1, -1
+    IF (icsv_colind(i) < icsv_colend(i)) THEN ! increment loop index
+      icsv_colind(i) = icsv_colind(i) + 1
+! prepare the dimension descriptor data
+      CALL make_csv_desdata(v7d, icsv_columnorder(i), icsv_colind(i), &
+       csv_desdata(icsv_columnorder(i)))
+      EXIT
+    ELSE ! end of loop for this index, reset and increment next index
+      icsv_colind(i) = icsv_colstart(i)
+    ENDIF
   ENDDO
-ENDDO
+  IF (i == 0) EXIT loop7d ! all counters have reached the end
+
+END DO loop7d
 
 CONTAINS
 
@@ -544,6 +568,48 @@ END SUBROUTINE addfieldb
 
 END SUBROUTINE csv_export
 
+
+SUBROUTINE make_csv_desdata(v7d, icol, ind, csv_desdata)
+TYPE(vol7d),INTENT(inout) :: v7d
+INTEGER,INTENT(in) :: icol
+INTEGER,INTENT(in) :: ind
+TYPE(csv_record),INTENT(inout) :: csv_desdata
+
+REAL(kind=fp_geo) :: l1, l2
+CHARACTER(len=128) :: charbuffer
+
+CALL csv_record_rewind(csv_desdata)
+
+SELECT CASE(icol)
+
+CASE(vol7d_ana_d)
+  CALL getval(v7d%ana(ind)%coord, lon=l1, lat=l2)
+  CALL csv_record_addfield_miss(csv_desdata, l1)
+  CALL csv_record_addfield_miss(csv_desdata, l2)
+
+CASE(vol7d_time_d)
+  CALL getval(v7d%time(ind), isodate=charbuffer(1:19))
+  CALL csv_record_addfield(csv_desdata, charbuffer(1:19))
+
+CASE(vol7d_level_d)
+  CALL csv_record_addfield_miss(csv_desdata, v7d%level(ind)%level1)
+  CALL csv_record_addfield_miss(csv_desdata, v7d%level(ind)%l1)
+  CALL csv_record_addfield_miss(csv_desdata, v7d%level(ind)%level2)
+  CALL csv_record_addfield_miss(csv_desdata, v7d%level(ind)%l2)
+
+CASE(vol7d_timerange_d)
+  CALL csv_record_addfield_miss(csv_desdata, v7d%timerange(ind)%timerange)
+  CALL csv_record_addfield_miss(csv_desdata, v7d%timerange(ind)%p1)
+  CALL csv_record_addfield_miss(csv_desdata, v7d%timerange(ind)%p2)
+
+CASE(vol7d_network_d)
+  CALL csv_record_addfield_miss(csv_desdata, TRIM(v7d%network(ind)%name))
+
+END SELECT
+
+END SUBROUTINE make_csv_desdata
+
+
 END MODULE vol7d_csv
 
 
@@ -580,7 +646,7 @@ CHARACTER(len=10), ALLOCATABLE :: vl(:), avl(:), al(:)
 CHARACTER(len=23) :: start_date, end_date
 CHARACTER(len=19) :: start_date_default, end_date_default
 TYPE(datetime) :: now, s_d, e_d
-INTEGER :: iun, ier, i, j, n, nc, ninput, yy, mm, dd, iargc
+INTEGER :: iun, ier, i, j, n, ninput, yy, mm, dd, iargc
 INTEGER,POINTER :: w_s(:), w_e(:)
 TYPE(vol7d) :: v7d, v7d_coord, v7dtmp, v7d_comp1, v7d_comp2, v7d_comp3
 TYPE(geo_coordvect),POINTER :: poly(:)
@@ -597,7 +663,7 @@ CHARACTER(len=512):: a_name
 INTEGER :: category
 
 ! for computing
-LOGICAL :: comp_regularize, comp_average, comp_cumulate, comp_discard
+LOGICAL :: comp_regularize, comp_average, comp_cumulate, comp_discard, comp_sort
 CHARACTER(len=23) :: comp_step, comp_start
 TYPE(timedelta) :: c_i
 TYPE(datetime) :: c_s
@@ -709,17 +775,21 @@ options(19) = op_option_new(' ', 'sub-type', sub_type, ' ', help= &
 #endif
  &')
 
+
+
+options(27) = op_option_new(' ', 'comp-sort', comp_sort, help= &
+ 'sort all sortable dimensions of the volume after the computations')
 ! options for defining output
 !options(20) = op_option_new('o', 'output-file', output_file, '-', help= &
 ! 'output file, ''-'' for stdout')
-options(21) = op_option_new(' ', 'output-format', output_format, 'native', help= &
+options(28) = op_option_new(' ', 'output-format', output_format, 'native', help= &
  'format of output file, ''native'' for vol7d native binary format&
 #ifdef HAVE_DBALLE
  &, ''BUFR'' for BUFR with generic template, ''CREX'' for CREX format&
 #endif
  &, csv for formatted csv output')
 #ifdef HAVE_DBALLE
-options(22) = op_option_new('t', 'output-template', output_template, 'generic', help= &
+options(29) = op_option_new('t', 'output-template', output_template, 'generic', help= &
  'output TEMPLATE for BUFR/CREX, in the form ''category.subcategory.localcategory'', or &
 & an alias like ''synop'', ''metar'',''temp'',''generic''')
 #endif
@@ -732,15 +802,19 @@ options(31) = op_option_new(' ', 'csv-column', csv_column, 'time,timerange,ana,l
  'list of columns (excluding variables) that have to appear in csv output: &
  &a comma-separated combination of ''time,timerange,level,ana,network'' &
  &in the desired order')
-options(32) = op_option_new(' ', 'csv-variable', csv_variable, 'all', help= &
+options(32) = op_option_new(' ', 'csv-columnorder', csv_columnorder, 'time,timerange,ana,level,network', help= &
+ 'order of looping on columns (excluding variables) that have to appear in &
+ &csv output, the format is the same as for the --csv-column parameter &
+ &but here all the column identifiers have to be present')
+options(33) = op_option_new(' ', 'csv-variable', csv_variable, 'all', help= &
  'list of variables that have to appear in the data columns of csv output: &
  &''all'' or a comma-separated list of B-table alphanumeric codes, e.g. &
  &''B10004,B12001'' in the desired order')
-options(33) = op_option_new(' ', 'csv-header', csv_header, 2, help= &
+options(34) = op_option_new(' ', 'csv-header', csv_header, 2, help= &
  'write 0 to 2 header lines at the beginning of csv output')
-options(34) = op_option_new(' ', 'csv-skip-miss', csv_skip_miss, help= &
+options(35) = op_option_new(' ', 'csv-skip-miss', csv_skip_miss, help= &
  'skip records containing only missing values in csv output')
-options(35) = op_option_new(' ', 'csv-norescale', csv_no_rescale, help= &
+options(36) = op_option_new(' ', 'csv-norescale', csv_no_rescale, help= &
  'do not rescale in output integer variables according to their scale factor')
 
 ! help options
@@ -877,34 +951,8 @@ IF (c_e(coord_file)) THEN
 ENDIF
 
 ! check csv-column
-nc = word_split(csv_column, w_s, w_e, ',')
-j = 0
-icsv_column(:) = -1
-DO i = 1, MIN(nc, SIZE(icsv_column))
-  SELECT CASE(csv_column(w_s(i):w_e(i)))
-  CASE('time')
-    j = j + 1
-    icsv_column(j) = vol7d_time_d
-  CASE('timerange')
-    j = j + 1
-    icsv_column(j) = vol7d_timerange_d
-  CASE('level')
-    j = j + 1
-    icsv_column(j) = vol7d_level_d
-  CASE('ana')
-    j = j + 1
-    icsv_column(j) = vol7d_ana_d
-  CASE('network')
-    j = j + 1
-    icsv_column(j) = vol7d_network_d
-  CASE default
-    CALL l4f_category_log(category,L4F_ERROR,'error in command-line parameters, column '// &
-     csv_column(w_s(i):w_e(i))//' in --csv-column not valid.')
-    CALL EXIT(1)
-  END SELECT
-END DO
-nc = j
-DEALLOCATE(w_s, w_e)
+CALL parse_v7d_column(csv_column, icsv_column, '--csv-column', .FALSE.)
+CALL parse_v7d_column(csv_columnorder, icsv_columnorder, '--csv-columnorder', .TRUE.)
 
 ! import data looping on input files
 CALL init(v7d)
@@ -1021,6 +1069,11 @@ IF (comp_average .OR. comp_cumulate) THEN
   ENDIF
 ENDIF
 
+! sort
+IF (comp_sort) THEN
+  CALL vol7d_smart_sort(v7d, ltime=.TRUE., ltimerange=.TRUE., llevel=.TRUE.)
+ENDIF
+
 ! output
 IF (output_format == 'native') THEN
   IF (output_file == '-') THEN ! stdout_unit does not work with unformatted
@@ -1106,6 +1159,56 @@ ELSE
 ENDIF
 
 END SUBROUTINE parse_dba_access_info
+
+
+SUBROUTINE parse_v7d_column(ccol, icol, par_name, check_all)
+CHARACTER(len=*),INTENT(in) :: ccol
+INTEGER,INTENT(out) :: icol(:)
+CHARACTER(len=*),INTENT(in) :: par_name
+LOGICAL,INTENT(in) :: check_all
+
+INTEGER :: i, j, nc
+INTEGER,POINTER :: w_s(:), w_e(:)
+
+nc = word_split(ccol, w_s, w_e, ',')
+j = 0
+icol(:) = -1
+DO i = 1, MIN(nc, SIZE(icol))
+  SELECT CASE(ccol(w_s(i):w_e(i)))
+  CASE('time')
+    j = j + 1
+    icol(j) = vol7d_time_d
+  CASE('timerange')
+    j = j + 1
+    icol(j) = vol7d_timerange_d
+  CASE('level')
+    j = j + 1
+    icol(j) = vol7d_level_d
+  CASE('ana')
+    j = j + 1
+    icol(j) = vol7d_ana_d
+  CASE('network')
+    j = j + 1
+    icol(j) = vol7d_network_d
+  CASE default
+    CALL l4f_category_log(category,L4F_ERROR,'error in command-line parameters, column '// &
+     ccol(w_s(i):w_e(i))//' in '//TRIM(par_name)//' not valid.')
+    CALL EXIT(1)
+  END SELECT
+ENDDO
+nc = j
+DEALLOCATE(w_s, w_e)
+
+IF (check_all) THEN
+  IF (ALL(icol /= vol7d_time_d) .OR. ALL(icol /= vol7d_timerange_d) .OR. &
+   ALL(icol /= vol7d_level_d) .OR. ALL(icol /= vol7d_ana_d) .OR. &
+   ALL(icol /= vol7d_network_d)) THEN
+    CALL l4f_category_log(category,L4F_ERROR,'error in command-line parameters, some columns missing in '//TRIM(par_name)//' .')
+    CALL EXIT(1)
+  ENDIF
+ENDIF
+
+END SUBROUTINE parse_v7d_column
 
 END PROGRAM v7d_transform
 
