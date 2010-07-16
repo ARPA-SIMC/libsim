@@ -1595,8 +1595,8 @@ END SUBROUTINE vol7d_reform
 !! vol7d object are correctly sorted; on the other side many methods
 !! strictly rely on this fact in order to work correctly. This method
 !! performs a quick check and sorts the sortable dimensions only if
-!! necessary any of the required dimensions is not sorted in ascending
-!! order, improving safety without impairing much performance.
+!! any of the required dimensions is not sorted in ascending order,
+!! improving safety without impairing much performance.
 SUBROUTINE vol7d_smart_sort(this, ltime, ltimerange, llevel)
 TYPE(vol7d),INTENT(INOUT) :: this !< object to be sorted
 LOGICAL,OPTIONAL,INTENT(in) :: ltime !< if present and \a .TRUE., sort if time dimension is not sorted in ascending order
