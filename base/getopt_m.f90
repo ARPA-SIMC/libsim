@@ -336,7 +336,7 @@ CHARACTER(len=*),OPTIONAL :: default !< the default value to give to dest if opt
 CHARACTER(len=*),OPTIONAL :: help !< the help message that will be formatted and pretty-printed on screen
 
 TYPE(op_option) :: this
-CHARACTER(LEN=40) :: cdefault
+CHARACTER(LEN=60) :: cdefault
 
 IF (PRESENT(default)) THEN
   cdefault = ' [default='//TRIM(default)//']'
