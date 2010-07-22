@@ -183,7 +183,16 @@ def UnitFromDballe(file="/usr/share/dballe/dballe.txt"):
 zinitable = UniConvTable()
 oratable = UnitFromOracle()
 dbatable = UnitFromDballe()
-output = csv.writer(sys.stdout, delimiter=",")
+fortran = False
+if len(sys.argv) > 1:
+    if sys.argv[1] == "-f": fortran = True
+
+if fortran:
+    print "ALLOCATE(vartable(%d))" % (oratable[-1]["oracleid"],)
+    fortran_lastind = 0
+else:
+    output = csv.writer(sys.stdout, delimiter=",")
+
 # ciclo sulle variabili oracle
 for oraentry in oratable:
     conv = (1.0, 0.0)
@@ -196,11 +205,20 @@ for oraentry in oratable:
             convkey = oraentry["umis_abbr"]+"->" + dbatable[oraentry["blocal"]]["unit2"]
             if zinitable.has_key(convkey):
                 conv = zinitable[convkey]
-    
-    output.writerow([oraentry["oracleid"], oraentry["blocal"], convkey,
-                     conv[0], conv[1],
-                     oraentry["umis_abbr"], oraentry["umis_princ"], oraentry["umis_ausil"],
-                     oraentry["description"]])
+    if fortran:
+        for ind in range(fortran_lastind+1, oraentry["oracleid"]):
+            print "vartable(%d) = ora_var_conv(cmiss, rmiss, rmiss)" % (ind, )
+        print "vartable(%d) = ora_var_conv('%s', %f, %f)" % \
+            (oraentry["oracleid"], oraentry["blocal"], conv[0], conv[1])
+        fortran_lastind = oraentry["oracleid"]
+
+    else:
+        output.writerow([oraentry["oracleid"], oraentry["blocal"], convkey,
+                         conv[0], conv[1],
+                         oraentry["umis_abbr"],
+                         oraentry["umis_princ"], oraentry["umis_ausil"],
+                         oraentry["description"]])
+
 
 # (1000000.?) 246,B14021,Mjd/m**2->J/M**2,1.0,0.0
 # (1000000.?) 247,B14018,Mjd/m**2->W/M**2,1.0,0.0 (248?)
