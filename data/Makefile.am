@@ -11,3 +11,5 @@ endif
 if GRIBAPI
 dist_pkgdata_DATA += vargrib2bufr.csv
 endif
+
+EXTRA_DIST = libsim_gen_varconv_ora.py
