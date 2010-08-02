@@ -85,6 +85,7 @@ MODULE grid_transform_class
 USE vol7d_class
 USE err_handling
 USE grid_class
+USE grid_dim_class
 USE optional_values
 USE geo_coord_class
 USE simple_stat
@@ -179,6 +180,7 @@ TYPE grid_transform
   integer,pointer :: inter_index_x(:,:),inter_index_y(:,:),inter_index_z(:)
   doubleprecision,pointer :: inter_x(:,:),inter_y(:,:)
   doubleprecision,pointer :: inter_xp(:,:),inter_yp(:,:),inter_zp(:)
+  LOGICAL,POINTER :: point_mask(:,:)
 !  type(volgrid6d) :: input_vertcoordvol ! volume which provides the input vertical coordinate if separated from the data volume itself (for vertint) cannot be here because of cross-use, should be an argument of compute
 !  type(vol7d_level), pointer :: output_vertlevlist(:) ! list of vertical levels of output data (for vertint) can be here or an argument of compute, how to do?
   integer :: category ! category for log4fortran
@@ -323,6 +325,17 @@ IF (this%trans_type == 'zoom') THEN
         call raise_fatal_error()
       end if
 
+    else
+
+      call l4f_category_log(this%category,L4F_ERROR,"zoom: coord parameters missing")
+      call raise_fatal_error()
+        
+    end if
+
+  else if (this%sub_type == 'coordbb')then
+
+    if (c_e(this%rect_coo%ilon) .and. c_e(this%rect_coo%ilat) .and. &
+        c_e(this%rect_coo%flon) .and. c_e(this%rect_coo%flat)) then ! coordinates given
     else
 
       call l4f_category_log(this%category,L4F_ERROR,"zoom: coord parameters missing")
@@ -706,6 +719,7 @@ nullify (this%inter_y)
 
 nullify (this%inter_xp)
 nullify (this%inter_yp)
+nullify (this%point_mask)
 
 IF (this%trans%trans_type == 'zoom') THEN
 
@@ -718,6 +732,61 @@ IF (this%trans%trans_type == 'zoom') THEN
      this%trans%rect_ind%fx, this%trans%rect_ind%fy)
 
 !    this%trans%sub_type = 'index'
+
+  else if (this%trans%sub_type == 'coordbb') THEN
+
+    CALL unproj(in)
+    CALL get_val(in, nx=nx, ny=ny)
+
+    ALLOCATE(this%point_mask(nx,ny))
+    this%point_mask(:,:) = .FALSE.
+
+! mark points falling into requested bounding-box
+    DO j = 1, ny
+      DO i = 1, nx
+!        IF (geo_coord_inside_rectang()
+        IF (in%dim%lon(i,j) > this%trans%rect_coo%ilon .AND. &
+         in%dim%lon(i,j) < this%trans%rect_coo%flon .AND. &
+         in%dim%lat(i,j) > this%trans%rect_coo%ilat .AND. &
+         in%dim%lat(i,j) < this%trans%rect_coo%flat) THEN ! improve!
+          this%point_mask(i,j) = .TRUE.
+        ENDIF
+      ENDDO
+    ENDDO
+
+! determine cut indices keeping all points which fall inside b-b
+    DO i = 1, nx
+      IF (ANY(this%point_mask(i,:))) EXIT
+    ENDDO
+    this%trans%rect_ind%ix = i
+    DO i = nx, this%trans%rect_ind%ix, -1
+      IF (ANY(this%point_mask(i,:))) EXIT
+    ENDDO
+    this%trans%rect_ind%fx = i
+
+    DO j = 1, ny
+      IF (ANY(this%point_mask(:,j))) EXIT
+    ENDDO
+    this%trans%rect_ind%iy = j
+    DO j = ny, this%trans%rect_ind%iy, -1
+      IF (ANY(this%point_mask(:,j))) EXIT
+    ENDDO
+    this%trans%rect_ind%fy = j
+
+    DEALLOCATE(this%point_mask)
+
+    IF (this%trans%rect_ind%ix > this%trans%rect_ind%fx .OR. &
+     this%trans%rect_ind%iy > this%trans%rect_ind%fy) THEN
+
+      CALL l4f_category_log(this%category,L4F_ERROR, &
+       "zoom coordbb: no points inside bounding box "//&
+       TRIM(to_char(this%trans%rect_coo%ilon))//","// &
+       TRIM(to_char(this%trans%rect_coo%flon))//","// &
+       TRIM(to_char(this%trans%rect_coo%ilat))//","// &
+       TRIM(to_char(this%trans%rect_coo%flat)))
+      CALL raise_fatal_error()
+
+    ENDIF
 
   ELSE IF (this%trans%sub_type == 'index') THEN
 ! nothing particular to do
@@ -750,7 +819,10 @@ IF (this%trans%trans_type == 'zoom') THEN
   lon_max=lon_max+steplon*(this%trans%rect_ind%fx-nx)
   lat_max=lat_max+steplat*(this%trans%rect_ind%fy-ny)
 
-  call copy (in,out)
+  call copy(in,out)
+! if unproj has been called for in, in%dim will contain allocated coordinates
+! which will be copied to out%dim, but they are wrong
+  call dealloc(out%dim)
 
   out%dim%nx = this%trans%rect_ind%fx - this%trans%rect_ind%ix + 1 ! newx
   out%dim%ny = this%trans%rect_ind%fy - this%trans%rect_ind%iy + 1 ! newy
@@ -1370,6 +1442,7 @@ if (associated(this%inter_y)) deallocate (this%inter_y)
 
 if (associated(this%inter_xp)) deallocate (this%inter_xp)
 if (associated(this%inter_yp)) deallocate (this%inter_yp)
+if (associated(this%point_mask)) deallocate (this%point_mask)
 
 ! close the logger
 call l4f_category_delete(this%category)

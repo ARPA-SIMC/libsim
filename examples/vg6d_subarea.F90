@@ -69,7 +69,7 @@ options(1) = op_option_new('v', 'trans-type', trans_type, 'inter', help= &
  'transformation type: ''inter'' for interpolation, ''zoom'' for zooming, ''boxregrid'' for resolution reduction')
 options(2) = op_option_new('z', 'sub-type', sub_type, 'near', help= &
  'transformation subtype, for inter: ''near'', ''bilin'', ''boxaverage'', &
- &for zoom: ''index'', ''coord'', for boxregrid: ''average''')
+ &for zoom: ''index'', ''coord'', ''coordbb'', for boxregrid: ''average''')
 
 options(3) = op_option_new('u', 'type', type, 'regular_ll', help= &
  'type of interpolated grid: ''regular_ll'', ''rotated_ll''')
