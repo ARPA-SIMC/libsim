@@ -94,13 +94,13 @@ options(12) = op_option_new('s', 'angle-rotation', angle_rotation, &
  0.0D0, help='angle of rotation for rotated grid')
 
 options(13) = op_option_new('a', 'ilon', ilon, 0.0D0, help= &
- 'longitude of the southwestern zooming corner')
+ 'longitude of the southwestern zooming/bounding box corner')
 options(14) = op_option_new('b', 'ilat', ilat, 30.D0, help= &
- 'latitude of the southwestern zooming corner')
+ 'latitude of the southwestern zooming/bounding box corner')
 options(15) = op_option_new('c', 'flon', flon, 30.D0, help= &
- 'longitude of the northeastern zooming corner')
+ 'longitude of the northeastern zooming/bounding box corner')
 options(16) = op_option_new('d', 'flat', flat, 60.D0, help= &
- 'latitude of the northeastern zooming corner')
+ 'latitude of the northeastern zooming/bounding box corner')
 
 options(17) = op_option_new('f', 'npx', npx, 4, help= &
  'number of nodes along x axis on input grid, over which to perform average for boxregrid')

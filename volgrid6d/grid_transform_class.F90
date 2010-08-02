@@ -38,18 +38,22 @@
 !!  - trans_type='zoom' a new grid is obtained by cutting or extending
 !!    (with missing values) the input grid, adding or removing points
 !!    on the four sides, without changing the geographical reference
-!!    system (grid-to-grid only)
-!!    - sub_type='coord' the bounds of the zoomed/extended area are
+!!    system (grid-to-grid)
+!!    - sub_type='coord' the corners of the zoomed/extended area are
 !!      defined by geographical coordinates
+!!    - sub_type='coordbb' the bounds of the zoomed/extended area are
+!!      computed so to contain all the input points which lie in the
+!!      provided lon/lat bounding box
 !!    - sub_type='index' the bounds of the zoomed/extended area are
-!!      defined by grid indices
+!!      defined by grid indices.
 !!  - trans_type='boxregrid' regrids the input data grid on a new grid
 !!    in which the value at every point is a the result of a function
 !!    computed over \a npx X \a npy points of the original grid,
-!!    without changing the geographical reference system (grid-to-grid
-!!    only)
-!!    - sub_type='average' the function used is the average
-!!  - trans_type='inter' interpolates the input data on a new set of points
+!!    without changing the geographical reference system
+!!    (grid-to-grid)
+!!    - sub_type='average' the function used is the average.
+!!  - trans_type='inter' interpolates the input data on a new set of
+!!    points
 !!    - sub_type='near' the interpolated value is that of the nearest
 !!      input point (grid-to-grid, grid-to-sparse point)
 !!    - sub_type='bilin' the interpolated value is computed as a
@@ -58,7 +62,7 @@
 !!    - sub_type='linear' the interpolated value is computed as a
 !!      linear interpolation of the 3 surrounding input points
 !!      individuated by means of a triangulation procedure (sparse
-!!      points-to-grid, sparse points-to-sparse points)
+!!      points-to-grid, sparse points-to-sparse points).
 !!  - trans_type='boxinter' computes data on a new grid in which the
 !!    value at every point is the result of a function computed over
 !!    those input points that lie inside the output point grid box
@@ -79,6 +83,12 @@
 !!    - sub_type='min' the function used is the minimum
 !!    - sub_type='percentile' the function used is a requested
 !!      percentile of the input points distribution.
+!!  - trans_type='metamorphosis' the output points and values are the
+!!    same as the input ones but the data structure is changed from
+!!    grid to sparse points (grid-to-sparse points)
+!!    - sub_type='all' all the input points are kept in the output
+!!    - sub_type='coordbb' the input points which lie in the provided
+!!      lon/lat bounding box are kept in the output.
 !!
 !! \ingroup volgrid6d
 MODULE grid_transform_class
@@ -236,10 +246,10 @@ INTEGER,INTENT(in),OPTIONAL :: ix !< index of initial point of new grid on x (fo
 INTEGER,INTENT(in),OPTIONAL :: iy !< index of initial point of new grid on y (for zoom)
 INTEGER,INTENT(in),OPTIONAL :: fx !< index of final point of new grid on x (for zoom)
 INTEGER,INTENT(in),OPTIONAL :: fy !< index of final point of new grid on y (for zoom)
-DOUBLEPRECISION,INTENT(in),OPTIONAL :: ilon !< coordinate of initial point of new grid on x (for zoom)
-DOUBLEPRECISION,INTENT(in),OPTIONAL :: ilat !< coordinate of initial point of new grid on y (for zoom)
-DOUBLEPRECISION,INTENT(in),OPTIONAL :: flon !< coordinate of final point of new grid on x (for zoom)
-DOUBLEPRECISION,INTENT(in),OPTIONAL :: flat !< coordinate of final point of new grid on y (for zoom)
+DOUBLEPRECISION,INTENT(in),OPTIONAL :: ilon !< coordinate of initial point of new grid or of bounding box on x (for zoom and metamorphosis)
+DOUBLEPRECISION,INTENT(in),OPTIONAL :: ilat !< coordinate of initial point of new grid or of bounding box on y (for zoom and metamorphosis)
+DOUBLEPRECISION,INTENT(in),OPTIONAL :: flon !< coordinate of final point of new grid or of bounding box on x (for zoom and metamorphosis)
+DOUBLEPRECISION,INTENT(in),OPTIONAL :: flat !< coordinate of final point of new grid or of bounding box on y (for zoom and metamorphosis)
 INTEGER,INTENT(IN),OPTIONAL :: npx !< number of points to average along x direction (for boxregrid)
 INTEGER,INTENT(IN),OPTIONAL :: npy !< number of points to average along y direction (for boxregrid)
 DOUBLEPRECISION,INTENT(in),OPTIONAL :: boxdx !< longitudinal/x extension of the box for box interpolation, default the target x grid step (unimplemented !)
@@ -338,7 +348,7 @@ IF (this%trans_type == 'zoom') THEN
         c_e(this%rect_coo%flon) .and. c_e(this%rect_coo%flat)) then ! coordinates given
     else
 
-      call l4f_category_log(this%category,L4F_ERROR,"zoom: coord parameters missing")
+      call l4f_category_log(this%category,L4F_ERROR,"zoom: coordbb parameters missing")
       call raise_fatal_error()
         
     end if
@@ -461,6 +471,17 @@ ELSE IF (this%trans_type == 'metamorphosis') THEN
 
   if (this%sub_type == 'all')then
 ! nothing to do here
+  else if (this%sub_type == 'coordbb')then
+
+    if (c_e(this%rect_coo%ilon) .and. c_e(this%rect_coo%ilat) .and. &
+        c_e(this%rect_coo%flon) .and. c_e(this%rect_coo%flat)) then ! coordinates given
+    else
+
+      call l4f_category_log(this%category,L4F_ERROR,"metamorphosis: coordbb parameters missing")
+      call raise_fatal_error()
+        
+    end if
+
   else
     CALL l4f_category_log(this%category,L4F_ERROR,'metamorphosis: sub_type '// &
      TRIM(this%sub_type)//' is wrong')
@@ -735,6 +756,7 @@ IF (this%trans%trans_type == 'zoom') THEN
 
   else if (this%trans%sub_type == 'coordbb') THEN
 
+! compute coordinates of input grid in geo system
     CALL unproj(in)
     CALL get_val(in, nx=nx, ny=ny)
 
@@ -784,7 +806,7 @@ IF (this%trans%trans_type == 'zoom') THEN
        TRIM(to_char(this%trans%rect_coo%flon))//","// &
        TRIM(to_char(this%trans%rect_coo%ilat))//","// &
        TRIM(to_char(this%trans%rect_coo%flat)))
-      CALL raise_fatal_error()
+      CALL raise_fatal_error() ! really fatal error?
 
     ENDIF
 
@@ -1141,6 +1163,63 @@ else IF (this%trans%trans_type == 'metamorphosis') THEN
          lon=in%dim%lon(ix,iy),lat=in%dim%lat(ix,iy))
       end do
     end do
+
+  ELSE IF (this%trans%sub_type == 'coordbb' ) THEN
+
+! compute coordinates of input grid in geo system
+    CALL unproj(in)
+    CALL get_val(in, nx=nx, ny=ny)
+    this%innx=nx
+    this%inny=ny
+
+    ALLOCATE(this%point_mask(nx,ny))
+    this%point_mask(:,:) = .FALSE.
+
+! count and mark points falling into requested bounding-box
+    this%outnx = 0
+    this%outny = 1
+    DO iy = 1, this%inny
+      DO ix = 1, this%innx
+!        IF (geo_coord_inside_rectang()
+        IF (in%dim%lon(ix,iy) > this%trans%rect_coo%ilon .AND. &
+         in%dim%lon(ix,iy) < this%trans%rect_coo%flon .AND. &
+         in%dim%lat(ix,iy) > this%trans%rect_coo%ilat .AND. &
+         in%dim%lat(ix,iy) < this%trans%rect_coo%flat) THEN ! improve!
+          this%outnx = this%outnx + 1
+          this%point_mask(ix,iy) = .TRUE.
+        ENDIF
+      ENDDO
+    ENDDO
+
+    IF (this%outnx <= 0) THEN
+
+      CALL l4f_category_log(this%category,L4F_ERROR, &
+       "metamorphosis coordbb: no points inside bounding box "//&
+       TRIM(to_char(this%trans%rect_coo%ilon))//","// &
+       TRIM(to_char(this%trans%rect_coo%flon))//","// &
+       TRIM(to_char(this%trans%rect_coo%ilat))//","// &
+       TRIM(to_char(this%trans%rect_coo%flat)))
+      CALL raise_fatal_error() ! really fatal error?
+
+    ENDIF
+
+    CALL vol7d_alloc(v7d_out, nana=this%outnx)
+
+! collect coordinates of points falling into requested bounding-box
+    n = 0
+    metamorphosis_coordbb: DO iy = 1, this%inny
+      DO ix = 1, this%innx
+!        IF (geo_coord_inside_rectang()
+        IF (in%dim%lon(ix,iy) > this%trans%rect_coo%ilon .AND. &
+         in%dim%lon(ix,iy) < this%trans%rect_coo%flon .AND. &
+         in%dim%lat(ix,iy) > this%trans%rect_coo%ilat .AND. &
+         in%dim%lat(ix,iy) < this%trans%rect_coo%flat) THEN ! improve!
+          n = n + 1
+          IF (n > this%outnx) EXIT metamorphosis_coordbb ! useless safety check
+          CALL init(v7d_out%ana(n),lon=in%dim%lon(ix,iy),lat=in%dim%lat(ix,iy))
+        ENDIF
+      ENDDO
+    ENDDO metamorphosis_coordbb
 
   ELSE
 
@@ -1650,9 +1729,13 @@ ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
 
   IF (this%trans%sub_type == 'all') THEN
 
-    field_out = RESHAPE(field_in, (/this%outnx,this%outny/))
+    field_out(:,:) = RESHAPE(field_in(:,:), (/this%outnx,this%outny/))
 
-  end IF
+  ELSE IF (this%trans%sub_type == 'coordbb') THEN
+
+    field_out(:,1) = PACK(field_in(:,:), this%point_mask(:,:))
+
+  ENDIF
 
 ENDIF
 

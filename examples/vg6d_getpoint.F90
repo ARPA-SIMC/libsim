@@ -47,6 +47,7 @@ TYPE(vol7d_dballe) :: v7d_ana, v7d_dba_out
 #endif
 TYPE(geo_coordvect),POINTER :: poly(:)
 doubleprecision :: lon, lat
+doubleprecision ::  ilon,ilat,flon,flat
 character(len=80) :: output_template,trans_type,sub_type
 INTEGER :: output_td
 LOGICAL :: version, ldisplay
@@ -94,12 +95,23 @@ options(10) = op_option_new('v', 'trans-type', trans_type, 'inter', help= &
 #endif
  &')
 options(11) = op_option_new('z', 'sub-type', sub_type, 'bilin', help= &
- 'transformation subtype, for inter: ''near'', ''bilin'', for metamorphosis: ''all''&
+ 'transformation subtype, for inter: ''near'', ''bilin'',&
+ & for metamorphosis: ''all'', ''coordbb''&
 #ifdef HAVE_LIBSHP_FORTRAN
  &, for ''polyinter'': ''average''&
 #endif
 &')
-options(12) = op_option_new('n', 'network', network, 'generic', help= &
+
+options(13) = op_option_new('a', 'ilon', ilon, 0.0D0, help= &
+ 'longitude of the southwestern bounding box corner')
+options(14) = op_option_new('b', 'ilat', ilat, 30.D0, help= &
+ 'latitude of the southwestern bounding box corner')
+options(15) = op_option_new('c', 'flon', flon, 30.D0, help= &
+ 'longitude of the northeastern bounding box corner')
+options(16) = op_option_new('d', 'flat', flat, 60.D0, help= &
+ 'latitude of the northeastern bounding box corner')
+
+options(17) = op_option_new('n', 'network', network, 'generic', help= &
  'string identifying network for output data')
 
 ! options for defining output
@@ -220,10 +232,11 @@ ENDIF
 
 IF (ldisplay) CALL display(v7d_coord)
 
-!trasformation object
+! trasformation object
 CALL init(trans, trans_type=trans_type, sub_type=sub_type, &
+ ilon=ilon, ilat=ilat, flon=flon, flat=flat, &
  categoryappend="transformation", time_definition=output_td)
-call import(volgrid, filename=input_file, categoryappend="volume letto")
+call import(volgrid, filename=input_file, categoryappend="input volume")
 
 IF (ldisplay) call display(volgrid)
 
@@ -275,7 +288,7 @@ call l4f_category_log(category,L4F_INFO,"exported to "//trim(output_format))
 call l4f_category_log(category,L4F_INFO,"end")
 deallocate (v7d_out)
 
-!chiudo il logger
+! Close the logger
 call l4f_category_delete(category)
 ier=l4f_fini()
 
