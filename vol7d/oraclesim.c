@@ -80,7 +80,7 @@ a.dset_stam_identnr = s.identnr) AND a.vard_identnr";
 static char *query3 = (char *)
   " ORDER BY dset_istante_wmo_fine,dset_stam_identnr";
 
-/* Struttura per tenere una connessione oracle e fare login una volta sola. */
+/* Struttura per ricordare una connessione oracle e fare login una volta sola. */
 typedef struct _OracleDbConnection 
 {
   OCIEnv *envhp;
@@ -104,29 +104,42 @@ typedef struct _OracleDbConnection
 } OracleDbConnection;
 
 
-OracleDbConnection *FC_FUNC_(oraextra_init, ORAEXTRA_INIT)
+OracleDbConnection *FC_FUNC_(oraclesim_init, ORACLESIM_INIT)
      (char *, char *, char *, int*);
-int FC_FUNC_(oraextra_getnet, ORAEXTRA_GETNET)
+void FC_FUNC_(oraclesim_delete, ORACLESIM_DELETE)
+     (OracleDbConnection **);
+void FC_FUNC_(oraclesim_geterr, ORACLESIM_GETERR)
+     (OracleDbConnection **, char *);
+int FC_FUNC_(oraclesim_getnet, ORACLESIM_GETNET)
      (OracleDbConnection **, const char *);
-int FC_FUNC_(oraextra_gethead, ORAEXTRA_GETHEAD)
+int FC_FUNC_(oraclesim_getdatahead, ORACLESIM_GETDATAHEAD)
      (OracleDbConnection **, char *, char *, int *, int *, int *);
-int FC_FUNC_(oraextra_getdata, ORAEXTRA_GETDATA)
+int FC_FUNC_(oraclesim_getdatavol, ORACLESIM_GETDATAVOL)
      (OracleDbConnection **, int *, int *, char *, int *, int *,
       float *, float */* , char * */, char *, float *);
-int FC_FUNC_(oraextra_geanathead, ORAEXTRA_GETANAHEAD)
+int FC_FUNC_(oraclesim_getanahead, ORACLESIM_GETANAHEAD)
      (OracleDbConnection **, int *);
-int FC_FUNC_(oraextra_getanadata, ORAEXTRA_GETANADATA)
+int FC_FUNC_(oraclesim_getanavol, ORACLESIM_GETANAVOL)
      (OracleDbConnection **, int *, int *, int *, int *, double *, double *,
       float *, float *, char *, float *, double *);
-void FC_FUNC_(oraextra_delete, ORAEXTRA_DELETE)
-     (OracleDbConnection **);
-void FC_FUNC_(oraextra_geterr, ORAEXTRA_GETERR)
-     (OracleDbConnection **, char *);
+int FC_FUNC_(oraclesim_getvarhead, ORACLESIM_GETVARHEAD)
+     (OracleDbConnection **, int *);
+int FC_FUNC_(oraclesim_getvarvol, ORACLESIM_GETVARVOL)
+     (OracleDbConnection **, int *, int *, int *,
+      char *, int *, int *, int *, int *,
+      int *, int *, int *, int *);
+static int gettab(OracleDbConnection *, int *);
+static void datadefine(OracleDbConnection *,
+		       char *, int, int *, int *, float *, float *, char *, int);
+static void anadefine(OracleDbConnection *,
+		      int *, double *, double *, float *, float *, char *, int);
+static void vardefine(OracleDbConnection *,
+		      char *, int, int *, int *, int *, int *, int *, int *, int *);
 static sword checkerr(OracleDbConnection *, sword);
-     static int osimcountrows(OracleDbConnection *);
+static int countrows(OracleDbConnection *);
 
 
-OracleDbConnection *FC_FUNC_(oraextra_init, ORAEXTRA_INIT)
+OracleDbConnection *FC_FUNC_(oraclesim_init, ORACLESIM_INIT)
      (char *username, char *password, char *dbname, int *err) {
   sword status;
   OracleDbConnection *dbconnid;
@@ -148,6 +161,7 @@ OracleDbConnection *FC_FUNC_(oraextra_init, ORAEXTRA_INIT)
   dbconnid->defn5p = NULL;
   dbconnid->defn6p = NULL;
   dbconnid->defn7p = NULL;
+  dbconnid->defn8p = NULL;
   dbconnid->bnd1p = NULL;
   dbconnid->bnd2p = NULL;
   dbconnid->bnd3p = NULL;
@@ -159,7 +173,7 @@ OracleDbConnection *FC_FUNC_(oraextra_init, ORAEXTRA_INIT)
 			     (dvoid *) 0, (dvoid * (*)(dvoid *,size_t)) 0,
 			     (dvoid * (*)(dvoid *, dvoid *, size_t)) 0,
 			     (void (*)(dvoid *, dvoid *)) 0, (size_t) 0,
-			     (dvoid **) 0) != OCI_SUCCESS)) {
+			     (dvoid **) 0)) != OCI_SUCCESS) {
     snprintf(dbconnid->errmsg, MSGLEN, 
 	     "Oracle error - OCIEnvCreate failed with status = %d", status);
     *err = 2;
@@ -189,19 +203,40 @@ OracleDbConnection *FC_FUNC_(oraextra_init, ORAEXTRA_INIT)
 }
 
 
-int FC_FUNC_(oraextra_getnet, ORAEXTRA_GETNET)
+void FC_FUNC_(oraclesim_delete, ORACLESIM_DELETE) (OracleDbConnection **fdbconnid) {
+  OracleDbConnection *dbconnid = *fdbconnid;
+  if (dbconnid != NULL) {
+    if (dbconnid->svchp != NULL) OCILogoff(dbconnid->svchp, dbconnid->errhp);
+    if (dbconnid->stmthp != NULL) OCIHandleFree(dbconnid->stmthp, OCI_HTYPE_STMT);
+    if (dbconnid->errhp != NULL) OCIHandleFree(dbconnid->errhp, OCI_HTYPE_ERROR);
+    if (dbconnid->envhp != NULL) OCIHandleFree(dbconnid->envhp, OCI_HTYPE_ENV);
+    free(dbconnid);
+  }
+  *fdbconnid = 0;
+}
+
+
+void FC_FUNC_(oraclesim_geterr, ORACLESIM_GETERR)
+     (OracleDbConnection **fdbconnid, char *errmsg) {
+  if (*fdbconnid == NULL)
+    strcpy(errmsg, "Oracle error, allocation problem");
+  else
+    strcpy(errmsg, (*fdbconnid)->errmsg);
+}
+
+
+int FC_FUNC_(oraclesim_getnet, ORACLESIM_GETNET)
      (OracleDbConnection **fdbconnid, const char *netdesc) {
   OracleDbConnection *dbconnid = *fdbconnid;
   sword status;
   int onetid;
 
-  /* Preparo l'estrazione per ottenere il nemro della rete dal nome */
+  /* Preparo l'estrazione per ottenere il numero della rete dal nome */
   checkerr(dbconnid,
 	   OCIStmtPrepare(dbconnid->stmthp, dbconnid->errhp,
 			  (text *) netquery,
 			  (ub4) strlen(netquery),
 			  (ub4) OCI_NTV_SYNTAX, (ub4) OCI_DEFAULT));
-
 
   checkerr(dbconnid,
 	   OCIBindByName(dbconnid->stmthp, &dbconnid->bnd1p,
@@ -244,7 +279,57 @@ int FC_FUNC_(oraextra_getnet, ORAEXTRA_GETNET)
 }
 
 
-void osimdefine(OracleDbConnection *dbconnid,
+int gettab(OracleDbConnection *dbconnid, int *var) {
+  sword status;
+
+  checkerr(dbconnid,
+	   OCIStmtPrepare(dbconnid->stmthp, dbconnid->errhp,
+			  (text *) tabquery,
+			  (ub4) strlen(tabquery),
+			  (ub4) OCI_NTV_SYNTAX, (ub4) OCI_DEFAULT));
+
+  checkerr(dbconnid,
+	   OCIBindByName(dbconnid->stmthp, &dbconnid->bnd1p,
+			 dbconnid->errhp, (text *) ":var",
+			 -1, (dvoid *) var,
+			 (sword) sizeof(*var), SQLT_INT, (dvoid *) NULL,
+			 (ub2 *) 0, (ub2 *) 0, (ub4) 0, (ub4 *) 0,
+			 OCI_DEFAULT));
+
+  checkerr(dbconnid,
+	   OCIDefineByPos(dbconnid->stmthp, &dbconnid->defn1p,
+			  dbconnid->errhp, 1,
+			  (dvoid *) dbconnid->table, TABLEN, SQLT_STR,
+			  (dvoid *) NULL,
+			  (ub2 *) 0, (ub2 *) 0, OCI_DEFAULT));
+
+
+  /* Lancio l'estrazione */
+  if ((status = OCIStmtExecute(dbconnid->svchp, dbconnid->stmthp, dbconnid->errhp,
+			       (ub4) 0, (ub4) 0,
+			       (CONST OCISnapshot *) NULL, (OCISnapshot *) NULL,
+ 			       OCI_STMT_SCROLLABLE_READONLY)) != OCI_SUCCESS) {
+    if (status != OCI_NO_DATA) {
+      checkerr(dbconnid, status);
+      return -1;
+    }
+  }
+  /* Prendo la prima riga di dati */
+  if ((status = OCIStmtFetch2(dbconnid->stmthp, dbconnid->errhp, (ub4) 1,
+			      (ub2) OCI_FETCH_NEXT, (sb4) 0,
+			      (ub4) OCI_DEFAULT)) != OCI_SUCCESS) {
+    if (status == OCI_NO_DATA) {
+      return -1;
+    } else {
+      checkerr(dbconnid, status);
+      return -1;
+    }
+  }
+  return 0;
+}
+
+
+void datadefine(OracleDbConnection *dbconnid,
 		char *odate, int datelen, int *ostatid, int *ovarid,
 		float *ovalp, float *ovala, char *oflag, int flaglen) {
 
@@ -287,77 +372,24 @@ void osimdefine(OracleDbConnection *dbconnid,
 }
 
 
-int FC_FUNC_(oraextra_gethead, ORAEXTRA_GETHEAD)
+int FC_FUNC_(oraclesim_getdatahead, ORACLESIM_GETDATAHEAD)
      (OracleDbConnection **fdbconnid, char *ti, char *tf,
       int *net, int *var, int *nvar) {
   OracleDbConnection *dbconnid = *fdbconnid;
-  int i, nr;
-  sword status;
+  int i;
   char *query;
 
   /* valori validi =1, mancanti =-1,  inutilizzati per ora, ci pensa la query */
   /*   sb2 otab_ind, ovalp_ind, ovala_ind, oflag_ind; */
-  char odate[DATELEN]/* , ovalc[CVALLEN]*/, oflag[FLAGLEN] ;
+  char odate[DATELEN]/* , ovalc[CVALLEN]*/, oflag[FLAGLEN];
   int ostatid, ovarid;
   float ovalp, ovala;
 
-  /* Preparo l'estrazione per ottenere il nome della tabella,
+  /* Eseguo l'estrazione per ottenere il nome della tabella,
      complicazione per colpa di CAELAMI */
-  checkerr(dbconnid,
-	   OCIStmtPrepare(dbconnid->stmthp, dbconnid->errhp,
-			  (text *) tabquery,
-			  (ub4) strlen(tabquery),
-			  (ub4) OCI_NTV_SYNTAX, (ub4) OCI_DEFAULT));
+  if ((i = gettab(dbconnid, var)) != 0) return i;
 
-  /*
-  checkerr(dbconnid, OCIBindByName(dbconnid->stmthp, &dbconnid->bnd3p,
-				   dbconnid->errhp, (text *) ":net",
-				   -1, (dvoid *) net,
-				   (sword) sizeof(*net), SQLT_INT, (dvoid *) &net_ind,
-				   (ub2 *) 0, (ub2 *) 0, (ub4) 0, (ub4 *) 0,
-				   OCI_DEFAULT));
-  net non richiesta con la nuova query */
-
-  checkerr(dbconnid,
-	   OCIBindByName(dbconnid->stmthp, &dbconnid->bnd1p,
-			 dbconnid->errhp, (text *) ":var",
-			 -1, (dvoid *) var,
-			 (sword) sizeof(*var), SQLT_INT, (dvoid *) NULL,
-			 (ub2 *) 0, (ub2 *) 0, (ub4) 0, (ub4 *) 0,
-			 OCI_DEFAULT));
-
-  checkerr(dbconnid,
-	   OCIDefineByPos(dbconnid->stmthp, &dbconnid->defn1p,
-			  dbconnid->errhp, 1,
-			  (dvoid *) dbconnid->table, TABLEN, SQLT_STR,
-			  (dvoid *) NULL,
-			  (ub2 *) 0, (ub2 *) 0, OCI_DEFAULT));
-
-
-  /* Lancio l'estrazione */
-  if ((status = OCIStmtExecute(dbconnid->svchp, dbconnid->stmthp, dbconnid->errhp,
-			       (ub4) 0, (ub4) 0,
-			       (CONST OCISnapshot *) NULL, (OCISnapshot *) NULL,
- 			       OCI_STMT_SCROLLABLE_READONLY)) != OCI_SUCCESS) {
-    if (status != OCI_NO_DATA) {
-      checkerr(dbconnid, status);
-      return -1;
-    }
-  }
-  /* Prendo la prima riga di dati */
-  if ((status = OCIStmtFetch2(dbconnid->stmthp, dbconnid->errhp, (ub4) 1,
-			      (ub2) OCI_FETCH_NEXT, (sb4) 0,
-			      (ub4) OCI_DEFAULT)) != OCI_SUCCESS) {
-    if (status == OCI_NO_DATA) {
-      return -1;
-    } else {
-      checkerr(dbconnid, status);
-      return -1;
-    }
-  }
-
-  
-  /* Ricostruisco la query interessante con il nome della tabella ottenuto */
+  /* Ricostruisco la richiesta dati con il nome della tabella ottenuto */
   query = alloca(strlen(query1)+strlen(dbconnid->table)+strlen(query2)+
 		 10*(*nvar+1)+strlen(query3)+1);
   strcpy(query, query1);
@@ -376,7 +408,7 @@ int FC_FUNC_(oraextra_gethead, ORAEXTRA_GETHEAD)
   }
   strcat(query, query3);
 
-  /* Preparo l'estrazione interessante */
+  /* Preparo l'estrazione dati */
   checkerr(dbconnid, OCIStmtPrepare(dbconnid->stmthp, dbconnid->errhp,
 				    (text *) query,
 				    (ub4) strlen(query),
@@ -404,20 +436,22 @@ int FC_FUNC_(oraextra_gethead, ORAEXTRA_GETHEAD)
 				   (ub2 *) 0, (ub2 *) 0, (ub4) 0, (ub4 *) 0,
 				   OCI_DEFAULT));
 
-  osimdefine(dbconnid, odate, DATELEN, &ostatid, &ovarid, &ovalp, &ovala, oflag, FLAGLEN);
-  return osimcountrows(dbconnid);
+  /* definisco l'uscita */
+  datadefine(dbconnid, odate, DATELEN, &ostatid, &ovarid, &ovalp, &ovala, oflag, FLAGLEN);
+  return countrows(dbconnid);
 }
 
 
-int FC_FUNC_(oraextra_getdata, ORAEXTRA_GETDATA)
+int FC_FUNC_(oraclesim_getdatavol, ORACLESIM_GETDATAVOL)
      (OracleDbConnection **fdbconnid, int *nr, int *vnr, 
       char *odate, int *ostatid, int *ovarid,
       float *ovalp, float *ovala /*, char *ovalc */, char *oflag, float *rmiss) {
   OracleDbConnection *dbconnid = *fdbconnid;
-  sword status = OCI_SUCCESS;
+  sword status;
   int i, ret;
 
-  osimdefine(dbconnid, odate, DATELEN, ostatid, ovarid, ovalp, ovala, oflag, FLAGLEN);
+  /* definisco l'uscita */
+  datadefine(dbconnid, odate, DATELEN, ostatid, ovarid, ovalp, ovala, oflag, FLAGLEN);
 
   status=checkerr(dbconnid, OCIStmtFetch2(dbconnid->stmthp, dbconnid->errhp,
 					  (ub4) *nr, OCI_FETCH_FIRST, (sb4) 0,
@@ -442,82 +476,9 @@ int FC_FUNC_(oraextra_getdata, ORAEXTRA_GETDATA)
 }
 
 
-int FC_FUNC_(oraextra_getanahead, ORAEXTRA_GETANAHEAD)
-     (OracleDbConnection **fdbconnid, int *net) {
-  OracleDbConnection *dbconnid = *fdbconnid;
-  int i, nr;
-  sword status;
-
-  int ostatid;
-  float oqs, oqp;
-  double olon, olat;
-  char oname[NAMELEN];
-
-  
-  /* Preparo l'estrazione anagrafica */
-  checkerr(dbconnid, OCIStmtPrepare(dbconnid->stmthp, dbconnid->errhp,
-				    (text *) anaquery,
-				    (ub4) strlen(anaquery),
-				    (ub4) OCI_NTV_SYNTAX, (ub4) OCI_DEFAULT));
-
-
-  checkerr(dbconnid, OCIBindByName(dbconnid->stmthp, &dbconnid->bnd1p,
-				   dbconnid->errhp, (text *) ":net",
-				   -1, (dvoid *) net,
-				   (sword) sizeof(*net), SQLT_INT, (dvoid *) NULL,
-				   (ub2 *) 0, (ub2 *) 0, (ub4) 0, (ub4 *) 0,
-				   OCI_DEFAULT));
-
-  checkerr(dbconnid, OCIDefineByPos(dbconnid->stmthp, &dbconnid->defn1p,
-				    dbconnid->errhp, 1,
-				    (dvoid *) &ostatid, sizeof(ostatid), SQLT_INT,
-				    (dvoid *) 0,
-				    (ub2 *) 0, (ub2 *) 0, OCI_DEFAULT));
-
-  checkerr(dbconnid, OCIDefineByPos(dbconnid->stmthp, &dbconnid->defn2p,
-				    dbconnid->errhp, 2,
-				    (dvoid *) &olon, sizeof(olon), SQLT_FLT,
-				    (dvoid *) NULL,
-				    (ub2 *) 0, (ub2 *) 0, OCI_DEFAULT));
-
-  checkerr(dbconnid, OCIDefineByPos(dbconnid->stmthp, &dbconnid->defn3p,
-				    dbconnid->errhp, 3,
-				    (dvoid *) &olat, sizeof(olat), SQLT_FLT,
-				    (dvoid *) NULL,
-				    (ub2 *) 0, (ub2 *) 0, OCI_DEFAULT));
-
-  checkerr(dbconnid, OCIDefineByPos(dbconnid->stmthp, &dbconnid->defn4p,
-				    dbconnid->errhp, 4,
-				    (dvoid *) &oqs, sizeof(oqs), SQLT_FLT,
-				    (dvoid *) NULL,
-				    (ub2 *) 0, (ub2 *) 0, OCI_DEFAULT));
-
-  checkerr(dbconnid, OCIDefineByPos(dbconnid->stmthp, &dbconnid->defn5p,
-				    dbconnid->errhp, 5,
-				    (dvoid *) &oqs, sizeof(oqp), SQLT_FLT,
-				    (dvoid *) NULL,
-				    (ub2 *) 0, (ub2 *) 0, OCI_DEFAULT));
-
-  checkerr(dbconnid, OCIDefineByPos(dbconnid->stmthp, &dbconnid->defn6p,
- 				    dbconnid->errhp, 6,
- 				    (dvoid *) oname, NAMELEN, SQLT_STR,
- 				    (dvoid *) 0,
- 				    (ub2 *) 0, (ub2 *) 0, OCI_DEFAULT));
-
-  return osimcountrows(dbconnid);
-}
-
-
-
-int FC_FUNC_(oraextra_getanadata, ORAEXTRA_GETANADATA)
-     (OracleDbConnection **fdbconnid, int *nr, int *vnr, int *namelen,
-      int *ostatid, double *olon, double *olat, float *oqs, float *oqp,
-      char *oname, float *rmiss, double *dmiss) {
-  OracleDbConnection *dbconnid = *fdbconnid;
-
-  int i, ret;
-  sword status;
-
+void anadefine(OracleDbConnection *dbconnid,
+	       int *ostatid, double *olon, double *olat, float *oqs, float *oqp,
+	       char *oname, int namelen) {
   
   checkerr(dbconnid, OCIDefineByPos(dbconnid->stmthp, &dbconnid->defn1p,
 				    dbconnid->errhp, 1,
@@ -550,11 +511,54 @@ int FC_FUNC_(oraextra_getanadata, ORAEXTRA_GETANADATA)
 				    (ub2 *) 0, (ub2 *) 0, OCI_DEFAULT));
 
   checkerr(dbconnid, OCIDefineByPos(dbconnid->stmthp, &dbconnid->defn6p,
- 				    dbconnid->errhp, 6,
- 				    (dvoid *) oname, *namelen, SQLT_STR,
- 				    (dvoid *) 0,
- 				    (ub2 *) 0, (ub2 *) 0, OCI_DEFAULT));
+				    dbconnid->errhp, 6,
+				    (dvoid *) oname, namelen, SQLT_STR,
+				    (dvoid *) 0,
+				    (ub2 *) 0, (ub2 *) 0, OCI_DEFAULT));
 
+}
+
+
+int FC_FUNC_(oraclesim_getanahead, ORACLESIM_GETANAHEAD)
+     (OracleDbConnection **fdbconnid, int *net) {
+  OracleDbConnection *dbconnid = *fdbconnid;
+
+  int ostatid;
+  float oqs, oqp;
+  double olon, olat;
+  char oname[NAMELEN];
+  
+  /* Preparo l'estrazione anagrafica */
+  checkerr(dbconnid, OCIStmtPrepare(dbconnid->stmthp, dbconnid->errhp,
+				    (text *) anaquery,
+				    (ub4) strlen(anaquery),
+				    (ub4) OCI_NTV_SYNTAX, (ub4) OCI_DEFAULT));
+
+
+  checkerr(dbconnid, OCIBindByName(dbconnid->stmthp, &dbconnid->bnd1p,
+				   dbconnid->errhp, (text *) ":net",
+				   -1, (dvoid *) net,
+				   (sword) sizeof(*net), SQLT_INT, (dvoid *) NULL,
+				   (ub2 *) 0, (ub2 *) 0, (ub4) 0, (ub4 *) 0,
+				   OCI_DEFAULT));
+
+  /* definisco l'uscita */
+  anadefine(dbconnid, &ostatid, &olon, &olat, &oqs, &oqp, oname, NAMELEN);
+  return countrows(dbconnid);
+}
+
+
+
+int FC_FUNC_(oraclesim_getanavol, ORACLESIM_GETANAVOL)
+     (OracleDbConnection **fdbconnid, int *nr, int *vnr, int *namelen,
+      int *ostatid, double *olon, double *olat, float *oqs, float *oqp,
+      char *oname, float *rmiss, double *dmiss) {
+  OracleDbConnection *dbconnid = *fdbconnid;
+  int i, ret;
+  sword status;
+
+  /* definisco l'uscita */
+  anadefine(dbconnid, ostatid, olon, olat, oqs, oqp, oname, *namelen);
 
   status=checkerr(dbconnid, OCIStmtFetch2(dbconnid->stmthp, dbconnid->errhp,
 					  (ub4) *nr, OCI_FETCH_FIRST, (sb4) 0,
@@ -581,10 +585,9 @@ int FC_FUNC_(oraextra_getanadata, ORAEXTRA_GETANADATA)
 }
 
 
-void osimvardefine(OracleDbConnection *dbconnid,
-		   char *obtabvar, int btabvarlen, int *olt1, int *ol1,
-		   int *olt2, int *ol2,
-		   int *opind, int *op1, int *op2) {
+void vardefine(OracleDbConnection *dbconnid,
+	       char *obtabvar, int btabvarlen, int *olt1, int *ol1,
+	       int *olt2, int *ol2, int *opind, int *op1, int *op2) {
 
   checkerr(dbconnid, OCIDefineByPos(dbconnid->stmthp, &dbconnid->defn1p,
  				    dbconnid->errhp, 1,
@@ -636,7 +639,8 @@ void osimvardefine(OracleDbConnection *dbconnid,
 
 }
 
-int FC_FUNC_(oraextra_getvarhead, ORAEXTRA_GETVARHEAD)
+
+int FC_FUNC_(oraclesim_getvarhead, ORACLESIM_GETVARHEAD)
      (OracleDbConnection **fdbconnid, int *var) {
   OracleDbConnection *dbconnid = *fdbconnid;
 
@@ -658,24 +662,21 @@ int FC_FUNC_(oraextra_getvarhead, ORAEXTRA_GETVARHEAD)
 				   OCI_DEFAULT));
   
   /* definisco l'uscita */
-  osimvardefine(dbconnid, obtabvar, BTABVARLEN, &olt1, &ol1, &olt2, &ol2, &opind, &op1, &op2);
-
-  return osimcountrows(dbconnid);
+  vardefine(dbconnid, obtabvar, BTABVARLEN, &olt1, &ol1, &olt2, &ol2, &opind, &op1, &op2);
+  return countrows(dbconnid);
 }
 
 
-int FC_FUNC_(oraextra_getvardata, ORAEXTRA_GETVARDATA)
+int FC_FUNC_(oraclesim_getvarvol, ORACLESIM_GETVARVOL)
      (OracleDbConnection **fdbconnid, int *nr, int *vnr, int *obtabvarlen,
       char *obtabvar, int *olt1, int *ol1, int *olt2, int *ol2,
-      int *opind, int *op1, int *op2,
-      int *imiss) {
+      int *opind, int *op1, int *op2, int *imiss) {
   OracleDbConnection *dbconnid = *fdbconnid;
-
   int i, ret;
   sword status;
 
   /* definisco l'uscita */
-  osimvardefine(dbconnid, obtabvar, *obtabvarlen, olt1, ol1, olt2, ol2, opind, op1, op2);
+  vardefine(dbconnid, obtabvar, *obtabvarlen, olt1, ol1, olt2, ol2, opind, op1, op2);
 
   status=checkerr(dbconnid, OCIStmtFetch2(dbconnid->stmthp, dbconnid->errhp,
 					  (ub4) *nr, OCI_FETCH_FIRST, (sb4) 0,
@@ -702,32 +703,9 @@ int FC_FUNC_(oraextra_getvardata, ORAEXTRA_GETVARDATA)
     ret = 2;
   }
   return ret;
-
 }
 
-void FC_FUNC_(oraextra_delete, ORAEXTRA_DELETE) (OracleDbConnection **fdbconnid) {
-  OracleDbConnection *dbconnid = *fdbconnid;
-  if (dbconnid != NULL) {
-    if (dbconnid->svchp != NULL) OCILogoff(dbconnid->svchp, dbconnid->errhp);
-    if (dbconnid->stmthp != NULL) OCIHandleFree(dbconnid->stmthp, OCI_HTYPE_STMT);
-    if (dbconnid->errhp != NULL) OCIHandleFree(dbconnid->errhp, OCI_HTYPE_ERROR);
-    if (dbconnid->envhp != NULL) OCIHandleFree(dbconnid->envhp, OCI_HTYPE_ENV);
-    free(dbconnid);
-  }
-  *fdbconnid = 0;
-}
-
-
-void FC_FUNC_(oraextra_geterr, ORAEXTRA_GETERR)
-     (OracleDbConnection **fdbconnid, char *errmsg) {
-  if (*fdbconnid == NULL)
-    strcpy(errmsg, "Oracle error, allocation problem");
-  else
-    strcpy(errmsg, (*fdbconnid)->errmsg);
-}
-
-
-int osimcountrows(OracleDbConnection *dbconnid) {
+int countrows(OracleDbConnection *dbconnid) {
   int nr;
   sword status;
   
@@ -754,7 +732,6 @@ int osimcountrows(OracleDbConnection *dbconnid) {
 				    OCI_ATTR_CURRENT_POSITION, dbconnid->errhp))
       != OCI_SUCCESS) return -1;
   return nr;
-
 }
 
 

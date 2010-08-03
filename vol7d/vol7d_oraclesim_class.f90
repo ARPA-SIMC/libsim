@@ -54,9 +54,9 @@ TYPE ora_var_conv
   INTEGER :: netid
 END TYPE ora_var_conv
 
-INTEGER,EXTERNAL :: oraextra_getnet, oraextra_gethead, oraextra_getdata, &
- oraextra_getanahead, oraextra_getanadata ! da sostituire con include/interface ?!
-INTEGER(kind=ptr_c),EXTERNAL :: oraextra_init
+INTEGER,EXTERNAL :: oraclesim_getnet, oraclesim_getdatahead, oraclesim_getdatavol, &
+ oraclesim_getanahead, oraclesim_getanavol
+INTEGER(kind=ptr_c),EXTERNAL :: oraclesim_init
 
 INTEGER,ALLOCATABLE ::stazo(:), varo(:), valid(:)
 REAL,ALLOCATABLE :: valore1(:), valore2(:)
@@ -128,11 +128,11 @@ IF (PRESENT(password)) THEN
   IF (c_e(password)) lpassword = password
 ENDIF
 
-this%connid = oraextra_init(fchar_to_cstr(TRIM(luser)), &
+this%connid = oraclesim_init(fchar_to_cstr(TRIM(luser)), &
  fchar_to_cstr(TRIM(lpassword)), fchar_to_cstr(TRIM(ldsn)), err)
 IF (err /= 0) THEN
-  CALL oraextra_geterr(this%connid, msg)
-  CALL oraextra_delete(this%connid)
+  CALL oraclesim_geterr(this%connid, msg)
+  CALL oraclesim_delete(this%connid)
   CALL l4f_log(L4F_FATAL, TRIM(cstr_to_fchar(msg)))
   CALL raise_fatal_error()
 ENDIF
@@ -150,7 +150,7 @@ END SUBROUTINE vol7d_oraclesim_init
 SUBROUTINE vol7d_oraclesim_delete(this)
 TYPE(vol7d_oraclesim) :: this
 
-CALL oraextra_delete(this%connid)
+CALL oraclesim_delete(this%connid)
 CALL delete(this%vol7d)
 nact = MAX(nact - 1, 0) ! Tengo il conto delle istanze attive
 IF (nact == 0) THEN
@@ -404,21 +404,21 @@ IF (PRESENT(attr)) THEN
 ENDIF
 
 ! Comincio l'estrazione
-nobs = oraextra_gethead(this%connid, fchar_to_cstr(datai), &
+nobs = oraclesim_getdatahead(this%connid, fchar_to_cstr(datai), &
  fchar_to_cstr(dataf), netid, varlist, SIZE(varlist))
 IF (nobs < 0) THEN
-  CALL oraextra_geterr(this%connid, msg)
-  CALL l4f_log(L4F_FATAL, 'in oraextra_gethead, '//TRIM(cstr_to_fchar(msg)))
+  CALL oraclesim_geterr(this%connid, msg)
+  CALL l4f_log(L4F_FATAL, 'in oraclesim_getdatahead, '//TRIM(cstr_to_fchar(msg)))
   CALL raise_fatal_error()
 ENDIF
-CALL l4f_log(L4F_INFO, 'in oraextra_gethead, nobs='//TRIM(to_char(nobs)))
+CALL l4f_log(L4F_INFO, 'in oraclesim_getdatahead, nobs='//TRIM(to_char(nobs)))
 
 CALL vol7d_oraclesim_alloc(nobs) ! Mi assicuro di avere spazio
-i = oraextra_getdata(this%connid, nobs, nobso, cdatao, stazo, varo, valore1, &
+i = oraclesim_getdatavol(this%connid, nobs, nobso, cdatao, stazo, varo, valore1, &
  valore2, cflag, rmiss)
 IF (i /= 0) THEN
-  CALL oraextra_geterr(this%connid, msg)
-  CALL l4f_log(L4F_FATAL, 'in oraextra_getdata, '//TRIM(cstr_to_fchar(msg)))
+  CALL oraclesim_geterr(this%connid, msg)
+  CALL l4f_log(L4F_FATAL, 'in oraclesim_getdatavol, '//TRIM(cstr_to_fchar(msg)))
   CALL raise_fatal_error()
 ENDIF
 
@@ -872,10 +872,10 @@ INTEGER :: q1, q2! eliminare
 IF (networktable(netid)) RETURN ! gia` fatto
 networktable(netid) = .TRUE.
 CALL init(netana(netid))
-nana = oraextra_getanahead(this%connid, netid)
+nana = oraclesim_getanahead(this%connid, netid)
 IF (nana < 0) THEN ! errore oracle
-  CALL oraextra_geterr(this%connid, msg)
-  CALL l4f_log(L4F_FATAL, 'in oraextra_getanahead, '//TRIM(cstr_to_fchar(msg)))
+  CALL oraclesim_geterr(this%connid, msg)
+  CALL l4f_log(L4F_FATAL, 'in oraclesim_getanahead, '//TRIM(cstr_to_fchar(msg)))
   CALL raise_fatal_error()
 ENDIF
 
@@ -893,13 +893,13 @@ CALL init(netana(netid)%anavar%i(1), btable='B01192', unit='NUMERIC', &
 CALL init(netana(netid)%anavar%c(1), btable='B01019', unit='CCITTIA5', &
  scalefactor=0) ! station name
 
-i = oraextra_getanadata(this%connid, nana, vnana, vol7d_cdatalen+1, &
+i = oraclesim_getanavol(this%connid, nana, vnana, vol7d_cdatalen+1, &
  netana(netid)%volanai(1,1,1), tmpll(1,1), tmpll(1,2), &
  netana(netid)%volanar(1,1,1), netana(netid)%volanar(1,2,1), &
  tmpname(1,1), rmiss, dmiss)
 IF (i /= 0) THEN
-  CALL oraextra_geterr(this%connid, msg)
-  CALL l4f_log(L4F_FATAL, 'in oraextra_getanadata, '//TRIM(cstr_to_fchar(msg)))
+  CALL oraclesim_geterr(this%connid, msg)
+  CALL l4f_log(L4F_FATAL, 'in oraclesim_getanavol, '//TRIM(cstr_to_fchar(msg)))
   CALL raise_fatal_error()
 ENDIF
 
@@ -945,10 +945,10 @@ INTEGER :: netid
 
 INTEGER(kind=int_b) :: msg(256)
 
-netid = oraextra_getnet(this%connid, fchar_to_cstr(uppercase(TRIM(network%name))))
+netid = oraclesim_getnet(this%connid, fchar_to_cstr(uppercase(TRIM(network%name))))
 IF (netid < 0) THEN ! errore oracle
-  CALL oraextra_geterr(this%connid, msg)
-  CALL l4f_log(L4F_FATAL, 'in oraextra_getnet, '//TRIM(cstr_to_fchar(msg)))
+  CALL oraclesim_geterr(this%connid, msg)
+  CALL l4f_log(L4F_FATAL, 'in oraclesim_getnet, '//TRIM(cstr_to_fchar(msg)))
   CALL raise_fatal_error()
 ELSE IF (netid == 0) THEN ! no_data probabilmente la rete non esiste
   CALL l4f_log(L4F_ERROR, 'in oraclesim rete '//TRIM(network%name)//' non trovata in db')
