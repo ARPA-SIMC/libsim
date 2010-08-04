@@ -41,6 +41,7 @@ libsim_vol7d_la_LDFLAGS += -version-info @LIBSIM_VERSION_INFO@
 endif
 
 noinst_HEADERS = vol7d_class_type_templ.F90 vol7d_class_desc_templ.F90 \
+vol7d_oraclesim_class_vartable.F90 \
 vol7d_distinct.F90 vol7d_class_diff.F90 vol7d_class_diff_only.F90 \
 vol7d_dballe_class_nana.f90 vol7d_dballe_class_ndati.f90 \
 vol7d_dballe_class_dati.F90 vol7d_dballe_class_datiattr.F90 \
@@ -66,8 +67,8 @@ vol7d_class.lo: vol7d_utilities.$(OBJEXT) vol7d_ana_class.$(OBJEXT) \
 #vol7d_level_class.$(OBJEXT):
 #vol7d_network_class.$(OBJEXT):
 if ORSIM
-vol7d_oraclesim_class.$(OBJEXT): vol7d_class.$(OBJEXT) vol7d_utilities.$(OBJEXT)
-vol7d_oraclesim_class.lo: vol7d_class.$(OBJEXT) vol7d_utilities.$(OBJEXT)
+vol7d_oraclesim_class.$(OBJEXT): vol7d_class.$(OBJEXT) vol7d_utilities.$(OBJEXT) vol7d_oraclesim_class_vartable.F90
+vol7d_oraclesim_class.lo: vol7d_class.$(OBJEXT) vol7d_utilities.$(OBJEXT) vol7d_oraclesim_class_vartable.F90
 endif
 
 if DBALLE

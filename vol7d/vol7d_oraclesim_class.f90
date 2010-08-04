@@ -39,23 +39,25 @@ IMPLICIT NONE
 !! dell'oggetto, dovrà preoccuparsi del solo componente vol7d.
 TYPE vol7d_oraclesim
   TYPE(vol7d) :: vol7d !< oggetto di tipo vol7d che conterrà i dati estratti
-  INTEGER :: ounit !< informazione di servizio
   INTEGER(kind=ptr_c) :: connid
 END TYPE vol7d_oraclesim
 
-TYPE ora_var_conv
-  INTEGER :: varora
+TYPE ora_var_conv_static
   CHARACTER(len=10) :: varbt
+  REAL :: afact, bfact
+END TYPE ora_var_conv_static
+
+TYPE ora_var_conv_db
+  INTEGER :: varora ! inutile, eliminare a regime
   CHARACTER(len=20) :: unit
   TYPE(vol7d_level) :: level
   TYPE(vol7d_timerange) :: timerange
   CHARACTER(len=20) :: description
-  REAL :: afact, bfact
-  INTEGER :: netid
-END TYPE ora_var_conv
+END TYPE ora_var_conv_db
 
 INTEGER,EXTERNAL :: oraclesim_getnet, oraclesim_getdatahead, oraclesim_getdatavol, &
- oraclesim_getanahead, oraclesim_getanavol
+ oraclesim_getanahead, oraclesim_getanavol, &
+ oraclesim_getvarhead, oraclesim_getvarvol
 INTEGER(kind=ptr_c),EXTERNAL :: oraclesim_init
 
 INTEGER,ALLOCATABLE ::stazo(:), varo(:), valid(:)
@@ -63,12 +65,14 @@ REAL,ALLOCATABLE :: valore1(:), valore2(:)
 INTEGER(kind=int_b),ALLOCATABLE :: cdatao(:,:), cflag(:,:)
 !CHARACTER(len=1),ALLOCATABLE :: valore3(:)
 CHARACTER(len=12),ALLOCATABLE :: fdatao(:)
-INTEGER :: nmax=0, nact=0
+INTEGER :: nmax=0, nact=0, nvarmax=0
 INTEGER,PARAMETER :: nmaxmin=100000, nmaxmax=5000000, oraclesim_netmax=50, &
  datelen=13, flaglen=10
  
-! tabella di conversione variabili da btable a oraclesim
-TYPE(ora_var_conv),ALLOCATABLE :: vartable(:)
+! tabelle nuove di conversione variabili da btable a oraclesim
+TYPE(ora_var_conv_static),ALLOCATABLE :: vartable_s(:)
+TYPE(ora_var_conv_db),ALLOCATABLE :: vartable_db(:)
+
 ! tabella reti e anagrafica
 TYPE(vol7d) :: netana(oraclesim_netmax)
 LOGICAL :: networktable(oraclesim_netmax) = .FALSE.
@@ -96,14 +100,15 @@ END INTERFACE
 
 CONTAINS
 
-!> Inizializza un oggetto di tipo vol7doraclesim.
+!> Inizializza un oggetto di tipo vol7d_oraclesim.
+!! L'inizializzazione include la connessione al db Oracle.
+!! Alla prima chiamata in un programma, provvede anche ad estrarre
+!! dal database le tabelle di conversione variabili.
 !! Trattandosi di un'estensione di vol7d, provvede ad inizializzare
 !! anche l'oggetto vol7d contenuto.
-!! Alla prima chiamata in un programma, provvede anche ad importare
-!! le tabelle di conversione variabili dal file varmap.csv.
 SUBROUTINE vol7d_oraclesim_init(this, time_definition, dsn, user, password, WRITE, wipe)
-INTEGER,INTENT(IN),OPTIONAL :: time_definition !< 0=time is reference time; 1=time is validity time
 TYPE(vol7d_oraclesim),INTENT(out) :: this !< Oggetto da inizializzare
+INTEGER,INTENT(IN),OPTIONAL :: time_definition !< 0=time is reference time; 1=time is validity time
 CHARACTER(len=*), INTENT(in),OPTIONAL :: dsn !< Nome del database, se non fornito usa il nome standard per l'archivio Oracle del SIM
 CHARACTER(len=*), INTENT(in),OPTIONAL :: user !< Nome utente per il server Oracle, se non fornito usa il nome standard per l'archivio Oracle del SIM
 CHARACTER(len=*), INTENT(in),OPTIONAL :: password !< Password per il server Oracle, se non fornito usa la password standard per l'archivio Oracle del SIM
@@ -137,7 +142,7 @@ IF (err /= 0) THEN
   CALL raise_fatal_error()
 ENDIF
 CALL vol7d_oraclesim_alloc(nmaxmin)
-IF (.NOT. ALLOCATED(vartable)) CALL vol7d_oraclesim_setup_conv()
+IF (.NOT. ALLOCATED(vartable_db)) CALL vol7d_oraclesim_setup_conv_new(this)
 nact = nact + 1 ! Tengo il conto delle istanze attive
 CALL init(this%vol7d, time_definition)
 
@@ -145,6 +150,7 @@ END SUBROUTINE vol7d_oraclesim_init
 
 
 !> Distrugge l'oggetto in maniera pulita.
+!! La connessione al server Oracle viene chiusa.
 !! Trattandosi di un'estensione di vol7d, provvede a distruggere
 !! anche l'oggetto vol7d contenuto.
 SUBROUTINE vol7d_oraclesim_delete(this)
@@ -155,7 +161,8 @@ CALL delete(this%vol7d)
 nact = MAX(nact - 1, 0) ! Tengo il conto delle istanze attive
 IF (nact == 0) THEN
   CALL vol7d_oraclesim_dealloc()
-  DEALLOCATE(vartable)
+  DEALLOCATE(vartable_s)
+  DEALLOCATE(vartable_db)
 ENDIF
 
 END SUBROUTINE vol7d_oraclesim_delete
@@ -261,12 +268,11 @@ SUBROUTINE vol7d_oraclesim_import(this, var, network, timei, timef, level, &
  timerange, anavar, attr, anaattr, set_network)
 TYPE(vol7d_oraclesim),INTENT(inout) :: this !< oggetto in cui importare i dati
 CHARACTER(len=*),INTENT(in) :: var(:) !< lista delle variabili da importare, codice alfanumerico della tabella B locale
-TYPE(vol7d_network),INTENT(in) :: network(:) !< lista di reti da estrarre, inizializzata con il nome che ha nell'archivio SIM
+TYPE(vol7d_network),INTENT(in) :: network(:) !< lista di reti da estrarre, inizializzata con il nome che ha nell'archivio Oracle SIM (irrilevante se maiuscolo o minuscolo)
 TYPE(datetime),INTENT(in) :: timei !< istante iniziale delle osservazioni da estrarre (estremo incluso)
 TYPE(datetime),INTENT(in) :: timef !< istante finale delle osservazioni da estrarre (estremo incluso)
 TYPE(vol7d_level),INTENT(in),OPTIONAL :: level !< estrae solo il livello verticale fornito, default=tutti
 TYPE(vol7d_timerange),INTENT(in),OPTIONAL :: timerange !< estrae solo i dati con intervallo temporale (es. istantaneo, cumulato, ecc.) analogo al timerange fornito, default=tutti
-!> variabili da importare secondo la tabella B locale o relativi alias relative ad anagrafica
 CHARACTER(len=*),INTENT(in),OPTIONAL :: anavar(:) !< lista delle variabili di anagrafica da importare, codice alfanumerico della tabella B locale, se non fornito non ne importa nessuna
 CHARACTER(len=*),INTENT(in),OPTIONAL :: attr(:) !< lista degli attributi delle variabili da importare, codice alfanumerico della tabella B locale, se non fornito non ne importa nessuno
 CHARACTER(len=*),INTENT(in),OPTIONAL :: anaattr(:) !< lista degli attributi delle variabili di anagrafica da importare, codice alfanumerico della tabella B locale, se non fornito non ne importa nessuno
@@ -305,7 +311,7 @@ CHARACTER(len=12),ALLOCATABLE :: tmtmp(:)
 CHARACTER(len=12) :: datai, dataf
 INTEGER,ALLOCATABLE :: anatmp(:), vartmp(:), mapdatao(:), mapstazo(:), varlist(:)
 LOGICAL,ALLOCATABLE :: lana(:)
-LOGICAL :: found, non_valid, varbt_req(SIZE(vartable))
+LOGICAL :: found, non_valid, lnon_valid, varbt_req(nvarmax)
 INTEGER(kind=int_b) :: msg(256)
 LOGICAL :: lanar(netana_nvarr), lanai(netana_nvari), lanac(netana_nvarc)
 ! per attributi
@@ -324,20 +330,21 @@ CALL l4f_log(L4F_INFO, 'in oraclesim_class rete: '//TRIM(network%name)// &
 
 ! Importo l'anagrafica per la rete se necessario
 CALL vol7d_oraclesim_ora_ana(this, netid)
+
 ! Conto le variabili da estrarre
 varbt_req(:) = .FALSE.
+
 DO nvin = 1, SIZE(var)
   found = .FALSE.
-  DO nvbt = 1, SIZE(vartable)
-    IF (vartable(nvbt)%varbt == var(nvin) .AND. &
-     vartable(nvbt)%netid == netid) THEN
+  DO nvbt = 1, nvarmax
+    IF (vartable_s(nvbt)%varbt == var(nvin)) THEN
 
       IF (PRESENT(level))THEN
-        IF (vartable(nvbt)%level /= level) CYCLE
+        IF (vartable_db(nvbt)%level /= level) CYCLE
       END IF
 
       IF (PRESENT(timerange))THEN
-        IF (vartable(nvbt)%timerange /= timerange) CYCLE
+        IF (vartable_db(nvbt)%timerange /= timerange) CYCLE
       END IF
 
       found = .TRUE.
@@ -345,17 +352,19 @@ DO nvin = 1, SIZE(var)
     ENDIF
   ENDDO
   IF (.NOT.found) CALL l4f_log(L4F_WARN, 'variabile '//TRIM(var(nvin))// &
-   ' non valida per la rete '//TRIM(network%name)//', la ignoro')
+   ' non trovata nelle tabelle, la ignoro')
 ENDDO
 
 nvar = COUNT(varbt_req)
-ALLOCATE(varlist(nvar))
-varlist = PACK(vartable(:)%varora, varbt_req)
 IF (nvar == 0) THEN
-  CALL l4f_log(L4F_WARN, 'nessuna delle variabili '//TRIM(var(1))// &
-   ' e` valida per la rete '//TRIM(network%name))
+  CALL l4f_log(L4F_WARN, 'nessuna delle variabili richieste '//TRIM(var(1))// &
+   '... e` valida')
   RETURN
 ENDIF
+
+ALLOCATE(varlist(nvar))
+varlist = PACK((/(i,i=1,nvarmax)/), varbt_req)
+
 CALL l4f_log(L4F_INFO, 'in oraclesim_class, nvar='//to_char(nvar))
 
 ! Controllo gli attributi richiesti
@@ -422,7 +431,7 @@ IF (i /= 0) THEN
   CALL raise_fatal_error()
 ENDIF
 
-nobs = nobso
+nobs = nobso ! sbagliato? ne prende comunque nobs!? forse MIN(nobs, nobso)?
 DO i = 1, nobs
   fdatao(i) = cstr_to_fchar(cdatao(:,i)) ! Converto la data da char C a CHARACTER
   IF (c_e(make_qcflag_inv(cflag(:,i))) .OR. c_e(make_qcflag_invaut(cflag(:,i)))) THEN
@@ -479,20 +488,27 @@ ENDDO
 
 ! Praticamente inutile se mi fido della query
 DO i = 1, nvar
-  IF (.NOT.ANY((vartmp(i) == vartable(:)%varora) .AND. varbt_req(:))) THEN
-    non_valid = .TRUE.
+  lnon_valid = .FALSE.
+  IF (vartmp(i) < 1 .OR. vartmp(i) > nvarmax) THEN
+    lnon_valid = .TRUE.
     CALL l4f_log(L4F_WARN, 'variabile oraclesim '//TRIM(to_char(vartmp(i)))// &
-     ' inattesa, la ignoro')
+     ' fuori limiti, la ignoro')
+  ELSE IF (.NOT. varbt_req(vartmp(i))) THEN
+    lnon_valid = .TRUE.
+    CALL l4f_log(L4F_WARN, 'variabile oraclesim '//TRIM(to_char(vartmp(i)))// &
+     ' non richiesta, la ignoro')
+  ENDIF
+  IF (lnon_valid) THEN
+    non_valid = .TRUE.
     WHERE(varo(1:nobs) == vartmp(i))
       stazo(1:nobs) = 0
     END WHERE
   ENDIF
+  lnon_valid = .FALSE.
 ENDDO
 
 ! ricreo gli elenchi solo se ci sono dati rigettati
 IF (non_valid) THEN
-!  CALL l4f_log(L4F_FATAL, 'Situazione non gestita!')
-!  CALL EXIT(1)
   DEALLOCATE(anatmp, tmtmp, vartmp)
   WHERE (stazo(1:nobs) == 0) ! mal comune, mezzo gaudio
     fdatao(1:nobs) = ''
@@ -584,10 +600,10 @@ DO i = 1, nvar
     v7dtmp%ana = v7dtmp2%ana
     v7dtmp%network = v7dtmp2%network
   ENDIF
-  nvbt = INDEX(vartable(:)%varora, vartmp(i),  mask=varbt_req(:))
-  CALL init(v7dtmp%dativar%r(1), vartable(nvbt)%varbt, unit=vartable(nvbt)%unit)
-  v7dtmp%level(1) = vartable(nvbt)%level
-  v7dtmp%timerange(1) = vartable(nvbt)%timerange
+  CALL init(v7dtmp%dativar%r(1), vartable_s(vartmp(i))%varbt, &
+   unit=vartable_db(vartmp(i))%unit)
+  v7dtmp%level(1) = vartable_db(vartmp(i))%level
+  v7dtmp%timerange(1) = vartable_db(vartmp(i))%timerange
 
 ! Copio la variabile per gli attributi
   IF (ASSOCIATED(v7dtmp%dativarattr%i)) &
@@ -620,7 +636,7 @@ DO i = 1, nvar
 ! Solo la variabile corrente e, implicitamente, dato non scartato
     IF (varo(j) /= vartmp(i)) CYCLE
     v7dtmp%voldatir(mapstazo(j),mapdatao(j),1,1,1,1) = &
-     valore1(j)*vartable(nvbt)%afact+vartable(nvbt)%bfact
+     valore1(j)*vartable_s(vartmp(i))%afact+vartable_s(vartmp(i))%bfact
   ENDDO
 ! Imposto gli attributi richiesti
   IF (c_e(attr_netid)) THEN ! report code, alias network id
@@ -691,7 +707,7 @@ END SUBROUTINE vol7d_oraclesim_importvvns
 !! e viene creato un eventuale volume di variabili di anagrafica
 !! intere, reali e/o carattere vol7d_class::vol7d::volanai,
 !! vol7d_class::vol7d::volanar, vol7d_class::vol7d::volanac se il
-!! parametro \a anavar viene fornito; le variabili di anagrafica
+!! parametro \a anavar viene fornito. Le variabili di anagrafica
 !! attualmente disponibili sono:
 !!  - 'B07001' station height (reale)
 !!  - 'B07031' barometer height (reale)
@@ -702,7 +718,6 @@ END SUBROUTINE vol7d_oraclesim_importvvns
 !! reti richieste, mentre il metodo import importa solamente
 !! l'anagrafica delle stazioni per cui sono disponibili dati nel
 !! periodo richiesto.
-!!
 SUBROUTINE vol7d_oraclesim_importana(this, network, anavar, set_network)
 TYPE(vol7d_oraclesim),INTENT(inout) :: this !< oggetto in cui importare l'anagrafica
 TYPE(vol7d_network),INTENT(in) :: network(:) !< rete di cui estrarre l'anagrafica, inizializzata con il nome che ha nell'archivio SIM
@@ -795,66 +810,65 @@ END SUBROUTINE vol7d_oraclesim_dealloc
 
 
 ! Legge la tabella di conversione per le variabili
-SUBROUTINE vol7d_oraclesim_setup_conv()
-INTEGER,PARAMETER :: nf=16 ! formato file
-INTEGER :: i, sep(nf), n1, n2, un, i1, i2, i3, i4
-CHARACTER(len=512) :: line
-CHARACTER(len=64) :: buf
-TYPE(csv_record) :: csv
+SUBROUTINE vol7d_oraclesim_setup_conv_new(this)
+TYPE(vol7d_oraclesim), INTENT(inout) :: this
 
-un = open_package_file('varmap.csv', filetype_data)
-IF (un < 0) then
-  CALL l4f_log(L4F_FATAL, 'in oraclesim, cannot find variable file')
-  CALL raise_fatal_error()
-END IF
-i = 0
-DO WHILE(.TRUE.)
-  READ(un,'(A)',END=100)line
-  i = i + 1
-ENDDO
-100 CONTINUE
+INTEGER :: nv, nvo, i
+INTEGER(kind=int_b) :: msg(256)
+INTEGER, ALLOCATABLE :: identnr(:), lt1(:), l1(:), lt2(:), l2(:), &
+ pind(:), p1(:), p2(:)
 
-IF (i > 0) THEN
-  IF (ALLOCATED(vartable)) DEALLOCATE(vartable)
-  ALLOCATE(vartable(i))
-  REWIND(un)
-  i = 0
-  readline: DO WHILE(.TRUE.)
-    READ(un,'(A)',END=120)line
-    CALL init(csv, line)
-    i = i + 1
-    CALL csv_record_getfield(csv, vartable(i)%varora)
-    CALL csv_record_getfield(csv, vartable(i)%varbt)
-    CALL csv_record_getfield(csv, buf)
-    vartable(i)%unit = buf ! uso buf per evitare un warning stringa troppo corta
-    CALL csv_record_getfield(csv, i1)
-    CALL csv_record_getfield(csv, i2)
-    CALL csv_record_getfield(csv, i3)
-    CALL csv_record_getfield(csv, i4)
-    IF (i3 == 0) THEN ! variable table does not contain missing values, fix
-      i3 = imiss
-      i4 = imiss
-    ENDIF
-    CALL init(vartable(i)%level, i1, i2, i3, i4)
-    CALL csv_record_getfield(csv, i1)
-    CALL csv_record_getfield(csv, i2)
-    CALL csv_record_getfield(csv, i3)
-    CALL init(vartable(i)%timerange, i1, i2, i3)
-    CALL csv_record_getfield(csv)
-    CALL csv_record_getfield(csv, buf)
-    vartable(i)%description = buf ! uso buf per evitare un warning stringa troppo corta
-    CALL csv_record_getfield(csv, vartable(i)%afact)
-    CALL csv_record_getfield(csv, vartable(i)%bfact)
-    CALL csv_record_getfield(csv, vartable(i)%netid)
-    CALL delete(csv)
-  ENDDO readline
-120 CONTINUE
-
-  CALL l4f_log(L4F_INFO, 'Ho letto '//TRIM(to_char(i))//' variabili dalla tabella')
+! make it repeatable: allocate and statically assign only once
+IF (.NOT.ALLOCATED(vartable_s)) THEN
+! file generato dalla script data/libsim_gen_varconv_ora.py -f
+  INCLUDE 'vol7d_oraclesim_class_vartable.F90'
 ENDIF
-CLOSE(un)
 
-END SUBROUTINE vol7d_oraclesim_setup_conv
+nvarmax = SIZE(vartable_s)
+IF (ALLOCATED(vartable_db)) DEALLOCATE(vartable_db)
+
+nv = oraclesim_getvarhead(this%connid)
+IF (nv < 0) THEN ! errore oracle
+  CALL oraclesim_geterr(this%connid, msg)
+  CALL l4f_log(L4F_FATAL, 'in oraclesim_getvarhead, '//TRIM(cstr_to_fchar(msg)))
+  CALL raise_fatal_error()
+ENDIF
+
+ALLOCATE(identnr(nv), lt1(nv), l1(nv), lt2(nv), l2(nv), pind(nv), p1(nv), p2(nv))
+identnr(:) = 0
+i = oraclesim_getvarvol(this%connid, nv, nvo, identnr, &
+ lt1, l1, lt2, l2, pind, p1, p2, imiss)
+
+IF (i /= 0) THEN
+  CALL oraclesim_geterr(this%connid, msg)
+  CALL l4f_log(L4F_FATAL, 'in oraclesim_getvarvol, '//TRIM(cstr_to_fchar(msg)))
+  CALL raise_fatal_error()
+ENDIF
+
+i = MAXVAL(identnr)
+IF (i > nvarmax) THEN
+  CALL l4f_log(L4F_WARN, 'in oraclesim, variables missing from static table: ' &
+   //TRIM(to_char(nvarmax))//'/'//TRIM(to_char(i)))
+  CALL l4f_log(L4F_WARN, 'you should update the software')
+ENDIF
+
+ALLOCATE(vartable_db(nvarmax))
+vartable_db(:) = ora_var_conv_db(imiss, cmiss, vol7d_level_miss, &
+ vol7d_timerange_miss, cmiss)
+
+DO i = 1, SIZE(identnr)
+  IF (identnr(i) > 0 .AND. identnr(i) <= nvarmax) THEN
+    vartable_db(identnr(i)) = ora_var_conv_db(identnr(i), cmiss, &
+     vol7d_level_new(lt1(i),l1(i),lt2(i),l2(i)), &
+     vol7d_timerange_new(pind(i),p1(i),p2(i)), cmiss)
+  ENDIF
+ENDDO
+
+DEALLOCATE(identnr, lt1, l1, lt2, l2, pind, p1, p2)
+
+CALL l4f_log(L4F_INFO, 'in oraclesim '//TRIM(to_char(nvarmax))//' variables read')
+
+END SUBROUTINE vol7d_oraclesim_setup_conv_new
 
 
 ! Importa l'anagrafica per la rete specificata

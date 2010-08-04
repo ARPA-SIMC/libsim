@@ -17,22 +17,32 @@
 
 static char *varquery = (char *)
   "SELECT \
+v.IDENTNR, NVL(v.LTYPE1_NEW,-999), NVL(v.L1_NEW,-999), \
+NVL(v.LTYPE2_NEW,-999), NVL(v.L2_NEW,-999), NVL(v.PIND_NEW,-999), \
+NVL(v.P1_NEW,-999), NVL(v.P2_NEW,-999) \
+FROM MET_VARIABILI_DEFINITE v \
+WHERE v.BLOCAL_NEW != ' ' AND v.BLOCAL_NEW IS NOT NULL AND v.IDENTNR IS NOT NULL \
+ORDER by v.IDENTNR";
+
+/*
+  "SELECT \
 v.IDENTNR NVL(v.LTYPE1_NEW,-999) NVL(v.L1_NEW,-999) \
 NVL(v.LTYPE2_NEW,-999) NVL(v.L2_NEW NVL(v.PIND_NEW,-999) \
 NVL(v.P1_NEW,-999) NVL(v.P2_NEW,-999) \
 FROM MET_VARIABILI_DEFINITE v \
 WHERE v.BLOCAL_NEW BLOCAL = :var \
 ORDER by upper(v.IDENTNR)";
+*/
 
-  /*
+/*
 SELECT v.IDENTNR IDENT, v.BLOCAL_NEW BLOCAL, v.UMIS_CODICE_PRINCIPALE CODICE,
        u.ABBREVIAZIONE, v.DESCRIZIONE
 FROM   MET_VARIABILI_DEFINITE v, MET_UNITA_MISURA u
 WHERE BLOCAL_NEW != ' ' AND v.UMIS_CODICE_PRINCIPALE = u.CODICE
 ORDER BY IDENTNR;
-  */
+*/
 
-/* versione vecchia piu` complicta  che richiedeva rete e variabile
+/* versione vecchia piu` complicata che richiedeva rete e variabile
 static char *tabquery = (char *)
   "SELECT \
 RTRIM(DECODE(gs.id_tabvar_mod,'Y',tv1.nome_tabella,'N',tv2.nome_tabella)) \
@@ -42,11 +52,19 @@ WHERE gs.identnr = :net AND va.identnr = :var AND \
       tv1.id_tabella = gs.id_tabella_vm AND tv2.id_tabella = va.id_tabella_vm";
 */
 
-/* versione piu` semplice che non richiede la rete */
+/* versione piu` semplice che non richiede la rete
 static char *tabquery = (char *)
   "SELECT \
 RTRIM(tv.nome_tabella) FROM met_variabili_definite va, met_tabelle_vm tv \
 WHERE va.identnr = :var AND tv.id_tabella = va.id_tabella_vm";
+*/
+
+/* terza versione che richiede solo la rete, potrebbe non funzionare
+   con la rete CAELAMI, ma per ora me ne frego */
+static char *tabquery = (char *)
+  "SELECT \
+RTRIM(tv.nome_tabella) FROM met_gruppi_stazioni gs, met_tabelle_vm tv \
+WHERE gs.identnr = :net AND tv.id_tabella = gs.id_tabella_vm";
 
 static char *netquery = (char *)
   "SELECT G.IDENTNR FROM MET_GRUPPI_STAZIONI G WHERE G.DESCRIZIONE = :netdesc";
@@ -66,8 +84,6 @@ a.dset_stam_identnr,a.vard_identnr, \
 NVL(a.valore_principale,1.0E+15),NVL(a.valore_ausiliario,1.0E+15), \
 LPAD(NVL(a.flag,'000000000'), 9, '0') \
 FROM ";
-/* TO_CHAR(NVL(a.flag,'000000000'), '999999999') */
-/* ,a.valore_chiaro */
 
 static char *query2 = (char *)
   " a WHERE \
@@ -123,18 +139,18 @@ int FC_FUNC_(oraclesim_getanavol, ORACLESIM_GETANAVOL)
      (OracleDbConnection **, int *, int *, int *, int *, double *, double *,
       float *, float *, char *, float *, double *);
 int FC_FUNC_(oraclesim_getvarhead, ORACLESIM_GETVARHEAD)
-     (OracleDbConnection **, int *);
+     (OracleDbConnection ** /*, int * */);
 int FC_FUNC_(oraclesim_getvarvol, ORACLESIM_GETVARVOL)
      (OracleDbConnection **, int *, int *, int *,
-      char *, int *, int *, int *, int *,
+      int *, int *, int *, int *,
       int *, int *, int *, int *);
-static int gettab(OracleDbConnection *, int *);
+     static int gettab(OracleDbConnection *, int *, int, int *);
 static void datadefine(OracleDbConnection *,
 		       char *, int, int *, int *, float *, float *, char *, int);
 static void anadefine(OracleDbConnection *,
 		      int *, double *, double *, float *, float *, char *, int);
 static void vardefine(OracleDbConnection *,
-		      char *, int, int *, int *, int *, int *, int *, int *, int *);
+		      int *, int *, int *, int *, int *, int *, int *, int *);
 static sword checkerr(OracleDbConnection *, sword);
 static int countrows(OracleDbConnection *);
 
@@ -279,7 +295,7 @@ int FC_FUNC_(oraclesim_getnet, ORACLESIM_GETNET)
 }
 
 
-int gettab(OracleDbConnection *dbconnid, int *var) {
+int gettab(OracleDbConnection *dbconnid, int *var, int nvar, int *net) {
   sword status;
 
   checkerr(dbconnid,
@@ -288,10 +304,18 @@ int gettab(OracleDbConnection *dbconnid, int *var) {
 			  (ub4) strlen(tabquery),
 			  (ub4) OCI_NTV_SYNTAX, (ub4) OCI_DEFAULT));
 
-  checkerr(dbconnid,
+  /*  checkerr(dbconnid,
 	   OCIBindByName(dbconnid->stmthp, &dbconnid->bnd1p,
 			 dbconnid->errhp, (text *) ":var",
 			 -1, (dvoid *) var,
+			 (sword) sizeof(*var), SQLT_INT, (dvoid *) NULL,
+			 (ub2 *) 0, (ub2 *) 0, (ub4) 0, (ub4 *) 0,
+			 OCI_DEFAULT)); */
+
+  checkerr(dbconnid,
+	   OCIBindByName(dbconnid->stmthp, &dbconnid->bnd1p,
+			 dbconnid->errhp, (text *) ":net",
+			 -1, (dvoid *) net,
 			 (sword) sizeof(*var), SQLT_INT, (dvoid *) NULL,
 			 (ub2 *) 0, (ub2 *) 0, (ub4) 0, (ub4 *) 0,
 			 OCI_DEFAULT));
@@ -387,7 +411,7 @@ int FC_FUNC_(oraclesim_getdatahead, ORACLESIM_GETDATAHEAD)
 
   /* Eseguo l'estrazione per ottenere il nome della tabella,
      complicazione per colpa di CAELAMI */
-  if ((i = gettab(dbconnid, var)) != 0) return i;
+  if ((i = gettab(dbconnid, var, *nvar, net)) != 0) return i;
 
   /* Ricostruisco la richiesta dati con il nome della tabella ottenuto */
   query = alloca(strlen(query1)+strlen(dbconnid->table)+strlen(query2)+
@@ -586,12 +610,12 @@ int FC_FUNC_(oraclesim_getanavol, ORACLESIM_GETANAVOL)
 
 
 void vardefine(OracleDbConnection *dbconnid,
-	       char *obtabvar, int btabvarlen, int *olt1, int *ol1,
+	       int *oidentnr, int *olt1, int *ol1,
 	       int *olt2, int *ol2, int *opind, int *op1, int *op2) {
 
   checkerr(dbconnid, OCIDefineByPos(dbconnid->stmthp, &dbconnid->defn1p,
  				    dbconnid->errhp, 1,
- 				    (dvoid *) obtabvar, btabvarlen, SQLT_STR,
+ 				    (dvoid *) oidentnr, sizeof(*oidentnr), SQLT_INT,
  				    (dvoid *) 0,
  				    (ub2 *) 0, (ub2 *) 0, OCI_DEFAULT));
 
@@ -641,11 +665,10 @@ void vardefine(OracleDbConnection *dbconnid,
 
 
 int FC_FUNC_(oraclesim_getvarhead, ORACLESIM_GETVARHEAD)
-     (OracleDbConnection **fdbconnid, int *var) {
+     (OracleDbConnection **fdbconnid /*, int *var */) {
   OracleDbConnection *dbconnid = *fdbconnid;
 
-  char obtabvar[BTABVARLEN];
-  int olt1, ol1, olt2, ol2, opind, op1, op2;
+  int oidentnr, olt1, ol1, olt2, ol2, opind, op1, op2;
 
   /* Preparo l'estrazione variabili */
   checkerr(dbconnid, OCIStmtPrepare(dbconnid->stmthp, dbconnid->errhp,
@@ -653,30 +676,31 @@ int FC_FUNC_(oraclesim_getvarhead, ORACLESIM_GETVARHEAD)
 				    (ub4) strlen(varquery),
 				    (ub4) OCI_NTV_SYNTAX, (ub4) OCI_DEFAULT));
 
-
+  /*
   checkerr(dbconnid, OCIBindByName(dbconnid->stmthp, &dbconnid->bnd1p,
 				   dbconnid->errhp, (text *) ":var",
 				   -1, (dvoid *) var,
 				   (sword) sizeof(*var), SQLT_INT, (dvoid *) NULL,
 				   (ub2 *) 0, (ub2 *) 0, (ub4) 0, (ub4 *) 0,
 				   OCI_DEFAULT));
+  */
   
   /* definisco l'uscita */
-  vardefine(dbconnid, obtabvar, BTABVARLEN, &olt1, &ol1, &olt2, &ol2, &opind, &op1, &op2);
+  vardefine(dbconnid, &oidentnr, &olt1, &ol1, &olt2, &ol2, &opind, &op1, &op2);
   return countrows(dbconnid);
 }
 
 
 int FC_FUNC_(oraclesim_getvarvol, ORACLESIM_GETVARVOL)
-     (OracleDbConnection **fdbconnid, int *nr, int *vnr, int *obtabvarlen,
-      char *obtabvar, int *olt1, int *ol1, int *olt2, int *ol2,
+     (OracleDbConnection **fdbconnid, int *nr, int *vnr, int *oidentnr,
+      int *olt1, int *ol1, int *olt2, int *ol2,
       int *opind, int *op1, int *op2, int *imiss) {
   OracleDbConnection *dbconnid = *fdbconnid;
   int i, ret;
   sword status;
 
   /* definisco l'uscita */
-  vardefine(dbconnid, obtabvar, *obtabvarlen, olt1, ol1, olt2, ol2, opind, op1, op2);
+  vardefine(dbconnid, oidentnr, olt1, ol1, olt2, ol2, opind, op1, op2);
 
   status=checkerr(dbconnid, OCIStmtFetch2(dbconnid->stmthp, dbconnid->errhp,
 					  (ub4) *nr, OCI_FETCH_FIRST, (sb4) 0,
@@ -688,8 +712,13 @@ int FC_FUNC_(oraclesim_getvarvol, ORACLESIM_GETVARVOL)
       for (i=0; i<*vnr; i++) { /* inserisco i dati mancanti stile libsim */
  	if (olt1[i] == -999) olt1[i] = *imiss;
  	if (ol1[i] == -999) ol1[i] = *imiss;
- 	if (olt2[i] == -999) olt2[i] = *imiss;
- 	if (ol2[i] == -999) ol2[i] = *imiss;
+	if (olt2[i] == 0) { /* in Oracle qui c'e` 0 al posto di mancante */
+	  olt2[i] = *imiss;
+	  ol2[i] = *imiss;
+	} else {
+	  if (olt2[i] == -999) olt2[i] = *imiss;
+	  if (ol2[i] == -999) ol2[i] = *imiss;
+	}
  	if (opind[i] == -999) opind[i] = *imiss;
  	if (op1[i] == -999) op1[i] = *imiss;
  	if (op2[i] == -999) op2[i] = *imiss;

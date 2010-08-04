@@ -14,10 +14,10 @@ def UniConvTable():
 
     uniconvtable = {}
     uniconvsrc = """
-"K->C",				1,	-273.16
-"C->K",				1,	273.16
-"K->C/10",			10,	-2731.6
-"C/10->K",			0.1,	273.16
+"K->C",				1,	-273.15
+"C->K",				1,	273.15
+"K->C/10",			10,	-2731.5
+"C/10->K",			0.1,	273.15
 "C->C/10",			10,	0
 "C/10->C",			0.1,	0
 "YEARS->YEAR",			1,	0
@@ -58,8 +58,8 @@ def UniConvTable():
 "KGM-2->KG/M**2",		1,	0
 "J/M**2->JM-2",			1,	0
 "JM-2->J/M**2",			1,	0
-"cal/cm**2->J/M**2",		41840,	0
-"J/M**2->cal/cm**2",		0.000023901,	0
+"cal/cm**2->J/M**2",		41868,	0
+"J/M**2->cal/cm**2",		0.000023885,	0
 "Bq/L->BQ L-1",			1,		0
 "BQ L-1->Bq/L",			1,		0
 "DOBSON->DU",			1,		0
@@ -77,6 +77,8 @@ def UniConvTable():
 "M/S->nodi",			1.94384,	0
 "PA->mBar",			0.01,		0
 "mBar->PA",			100,		0
+"PA->hPa",			0.01,		0
+"hPa->PA",			100,		0
 "PA->Bar",			0.00001,	0
 "Bar->PA",			100000,		0
 "m->M",				1,		0
@@ -104,12 +106,9 @@ def UniConvTable():
 
 # problemi di dballe:
 # (45.,-22.5?) 230,B11001,ottavi->DEGREE TRUE,1.0,0.0
-# (100.,0.) 167,B10004,hPa->PA,1.0,0.0
-# (100.,0.) 505,B10004,hPa->PA,1.0,0.0
 # ci metto una pezza temporanea
     uniconvsrc = uniconvsrc + """
 "ottavi->DEGREE TRUE", 45., -22.5
-"hPa->PA", 100., 0.
 """
 
     for row in csv.reader(uniconvsrc.split('\n'), delimiter=","):
@@ -142,7 +141,7 @@ col IDENT format 999
 SELECT v.IDENTNR IDENT, v.BLOCAL_NEW BLOCAL, v.UMIS_CODICE_PRINCIPALE,
        v.UMIS_CODICE_AUSILIARIO, u.ABBREVIAZIONE, v.DESCRIZIONE
 FROM   MET_VARIABILI_DEFINITE v, MET_UNITA_MISURA u
-WHERE BLOCAL_NEW != ' ' AND BLOCAL_NEW IS NOT NULL AND v.UMIS_CODICE_PRINCIPALE = u.CODICE
+WHERE v.BLOCAL_NEW != ' ' AND v.BLOCAL_NEW IS NOT NULL AND v.UMIS_CODICE_PRINCIPALE = u.CODICE
 ORDER BY IDENTNR;
 exit;
 EOF
@@ -160,7 +159,6 @@ EOF
                          "description": row[5]})
     
     sqlplus.wait()
-#    print oratable
     return oratable
 
 
@@ -188,7 +186,7 @@ if len(sys.argv) > 1:
     if sys.argv[1] == "-f": fortran = True
 
 if fortran:
-    print "ALLOCATE(vartable(%d))" % (oratable[-1]["oracleid"],)
+    print "ALLOCATE(vartable_s(%d))" % (oratable[-1]["oracleid"],)
     fortran_lastind = 0
 else:
     output = csv.writer(sys.stdout, delimiter=",")
@@ -207,8 +205,8 @@ for oraentry in oratable:
                 conv = zinitable[convkey]
     if fortran:
         for ind in range(fortran_lastind+1, oraentry["oracleid"]):
-            print "vartable(%d) = ora_var_conv(cmiss, rmiss, rmiss)" % (ind, )
-        print "vartable(%d) = ora_var_conv('%s', %f, %f)" % \
+            print "vartable_s(%d) = ora_var_conv_static(cmiss, rmiss, rmiss)" % (ind, )
+        print "vartable_s(%d) = ora_var_conv_static('%s', %f, %f)" % \
             (oraentry["oracleid"], oraentry["blocal"], conv[0], conv[1])
         fortran_lastind = oraentry["oracleid"]
 
@@ -223,11 +221,6 @@ for oraentry in oratable:
 # (1000000.?) 246,B14021,Mjd/m**2->J/M**2,1.0,0.0
 # (1000000.?) 247,B14018,Mjd/m**2->W/M**2,1.0,0.0 (248?)
 
-# problemi di dballe:
-# (45.,-22.5?) 230,B11001,ottavi->DEGREE TRUE,1.0,0.0
-# (100.,0.) 167,B10004,hPa->PA,1.0,0.0
-# (100.,0.) 505,B10004,hPa->PA,1.0,0.0
-
 # problemi di Oracle:
 
 # 107 109 110 (cal/cm**2->W/M**2,1.0,0.0)
@@ -241,4 +234,3 @@ for oraentry in oratable:
 ## (GC / 273.15?) 451,B12064,,1.0,0.0
 ## (GC / 273.15?) 633,B22049,,1.0,0.0
 ## (GC / 273.15?) 661,B13082,,1.0,0.0
-# a volte mbar a volte hPa
