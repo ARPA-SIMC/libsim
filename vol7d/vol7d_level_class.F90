@@ -151,6 +151,24 @@ END INTERFACE
 CONTAINS
 
 !> Inizializza un oggetto \a vol7d_level con i parametri opzionali forniti.
+!! Questa è la versione \c FUNCTION, in stile F2003, del costruttore, da preferire
+!! rispetto alla versione \c SUBROUTINE \c init.
+!! Se non viene passato nessun parametro opzionale l'oggetto è
+!! inizializzato a valore mancante.
+FUNCTION vol7d_level_new(level1, l1, level2, l2) RESULT(this)
+INTEGER,INTENT(IN),OPTIONAL :: level1 !< tipo di livello 1
+INTEGER,INTENT(IN),OPTIONAL :: l1 !< valore per il primo livello
+INTEGER,INTENT(IN),OPTIONAL :: level2 !< tipo di livello 2
+INTEGER,INTENT(IN),OPTIONAL :: l2 !< valore per il secondo livello
+
+TYPE(vol7d_level) :: this !< oggetto da inizializzare
+
+CALL init(this, level1, l1, level2, l2)
+
+END FUNCTION vol7d_level_new
+
+
+!> Inizializza un oggetto \a vol7d_level con i parametri opzionali forniti.
 !! Se non viene passato nessun parametro opzionale l'oggetto è
 !! inizializzato a valore mancante.
 SUBROUTINE vol7d_level_init(this, level1, l1, level2, l2)
