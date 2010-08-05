@@ -88,7 +88,7 @@ options(4) = op_option_new(' ', 'coord-format', coord_format, &
 #endif
  &')
 options(10) = op_option_new('v', 'trans-type', trans_type, 'inter', help= &
- 'transformation type, ''inter'' for interpolation or ''metamorphosis'' &
+ 'transformation type, ''inter'' for interpolation, ''metamorphosis'' &
  &for keeping the same data but changing the container from grib to v7d&
 #ifdef HAVE_LIBSHP_FORTRAN
  &, ''polyinter'' for statistical processing within given polygons&
@@ -138,8 +138,8 @@ options(22) = op_option_new(' ', 'output-td', output_td, 1, help= &
 
 ! help options
 options(38) = op_option_new('d', 'display', ldisplay, help= &
- 'briefly display the data volume imported, warning: this option is incompatible &
- &with output on stdout.')
+ 'briefly display the data volume imported and exported, &
+ &warning: this option is incompatible with output on stdout.')
 options(39) = op_option_help_new('h', 'help', help= &
  'show an help message and exit')
 options(40) = op_option_new(' ', 'version', version, help= &
@@ -238,7 +238,7 @@ CALL init(trans, trans_type=trans_type, sub_type=sub_type, &
  categoryappend="transformation", time_definition=output_td)
 call import(volgrid, filename=input_file, categoryappend="input volume")
 
-IF (ldisplay) call display(volgrid)
+IF (ldisplay) CALL display(volgrid)
 
 call transform(trans, volgrid6d_in=volgrid, vol7d_out=v7d_out, v7d=v7d_coord, &
  poly=poly, networkname=network, categoryappend="transform")
@@ -257,6 +257,8 @@ IF (output_format == 'native') THEN
   DO i = 2, SIZE(v7d_out)
     CALL vol7d_merge(v7d_out(1), v7d_out(i), sort=(i == SIZE(v7d_out)))
   ENDDO
+  IF (ldisplay) CALL display(v7d_out(1))
+
   CALL export(v7d_out(1), unit=iun)
   CLOSE(iun)
   CALL delete(v7d_out(1))
@@ -270,6 +272,7 @@ ELSE IF (output_format == 'BUFR' .OR. output_format == 'CREX') THEN
   CALL init(v7d_dba_out, filename=output_file, format=output_format, file=.TRUE., &
    write=.TRUE., wipe=.TRUE., categoryappend="export")
   DO i = 1, SIZE(v7d_out)
+    IF (ldisplay) CALL display(v7d_out(i))
     v7d_dba_out%vol7d = v7d_out(i) 
     CALL export (v7d_dba_out, template=output_template)
     CALL delete(v7d_dba_out%vol7d)
