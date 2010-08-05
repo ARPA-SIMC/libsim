@@ -15,12 +15,13 @@
 
 ! You should have received a copy of the GNU General Public License
 ! along with this program.  If not, see <http://www.gnu.org/licenses/>.
-!> Module for quickly interprert the \c OPTIONAL parameters passed
+
+!> Module for quickly interpret the \c OPTIONAL parameters passed
 !! to a subprogram.
 !! This module defines functions and subroutines that handle in a
-!! quick way \c OPTIONAL parameters in a subprogram by returning
-!! a useable missing value if a given parameter has not been provided.
-!! The module provide a generic subroutine, valid for almost all
+!! quick way \c OPTIONAL parameters in a subprogram by returning a
+!! useable missing value if a given parameter has not been provided.
+!! The module provides a generic subroutine, valid for almost all
 !! intrinsic types, and specific functions.
 !!
 !! \ingroup base
@@ -28,7 +29,11 @@ MODULE optional_values
 USE missing_values
 IMPLICIT NONE
 
-!> Generic subroutine for checking \c OPTIONAL parameterw.
+!> Generic subroutine for checking \c OPTIONAL parameters.
+
+!! The generic interface has to be used instead of the specific
+!! one. It sets the output value to input, if input is present,
+!! otherwise it sets it to missing value.
 INTERFACE optio
   MODULE PROCEDURE soptio_b, soptio_s, soptio_l, soptio_r, soptio_d, soptio_c, soptio_log
 END INTERFACE

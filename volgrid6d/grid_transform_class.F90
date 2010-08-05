@@ -570,16 +570,8 @@ CHARACTER(len=*),INTENT(in),OPTIONAL :: categoryappend !< append this suffix to 
 DOUBLE PRECISION :: coord_in(SIZE(lev_in)), coord_out(SIZE(lev_out))
 LOGICAL :: mask_in(SIZE(lev_in)), mask_out(SIZE(lev_out))
 INTEGER :: i, j, ni, no
-character(len=512) :: a_name
 
-call l4f_launcher(a_name,a_name_append=trim(subcategory)//"."//trim(optio_c(categoryappend,255)))
-this%category=l4f_category_get(a_name)
 
-#ifdef DEBUG
-call l4f_category_log(this%category,L4F_DEBUG,"start init_grid_transform")
-#endif
-
-this%trans=trans
 
 IF (this%trans%trans_type == 'vertint') THEN
 
@@ -720,27 +712,10 @@ CHARACTER(len=*),INTENT(in),OPTIONAL :: categoryappend !< append this suffix to 
 INTEGER :: nx, ny, i, j
 DOUBLE PRECISION :: lon_min, lon_max, lat_min, lat_max, steplon, steplat, &
  lon_min_new, lat_min_new
-character(len=512) :: a_name
 doubleprecision :: l1, l2
 
-call l4f_launcher(a_name,a_name_append=trim(subcategory)//"."//trim(optio_c(categoryappend,255)))
-this%category=l4f_category_get(a_name)
 
-#ifdef DEBUG
-call l4f_category_log(this%category,L4F_DEBUG,"start init_grid_transform")
-#endif
-
-this%trans=trans
-
-nullify (this%inter_index_x)
-nullify (this%inter_index_y)
-
-nullify (this%inter_x)
-nullify (this%inter_y)
-
-nullify (this%inter_xp)
-nullify (this%inter_yp)
-nullify (this%point_mask)
+CALL grid_transform_init_common(this, trans, categoryappend)
 
 IF (this%trans%trans_type == 'zoom') THEN
 
@@ -1019,27 +994,10 @@ INTEGER :: nx, ny, i, j, n
 DOUBLE PRECISION :: lon_min, lon_max, lat_min, lat_max, steplon, steplat,lon_min_new, lat_min_new
 doubleprecision,pointer :: lon(:),lat(:)
 integer :: ix,iy
-character(len=512) :: a_name
 TYPE(geo_coord) :: point
 
-call l4f_launcher(a_name,a_name_append=trim(subcategory)//"."//trim(optio_c(categoryappend,255)))
-this%category=l4f_category_get(a_name)
 
-#ifdef DEBUG
-call l4f_category_log(this%category,L4F_DEBUG,"start init_grid_v7d_transform" )
-#endif
-
-this%trans=trans
-
-nullify (this%inter_index_x)
-nullify (this%inter_index_y)
-
-nullify (this%inter_x)
-nullify (this%inter_y)
-
-nullify (this%inter_xp)
-nullify (this%inter_yp)
-
+CALL grid_transform_init_common(this, trans, categoryappend)
 
 IF (this%trans%trans_type == 'inter') THEN
 
@@ -1115,9 +1073,9 @@ ELSE IF (this%trans%trans_type == 'polyinter') THEN
   CALL unproj(in) ! TODO costringe a dichiarare in INTENT(inout), si puo` evitare?
 
 ! compute coordinates of polygons in geo system
-  DO n = 1, SIZE(poly)
-    CALL to_geo(poly(n))
-  ENDDO
+!  DO n = 1, SIZE(poly)
+!    CALL to_geo(poly(n))
+!  ENDDO
 
   DO j = 1, this%inny
     DO i = 1, this%innx
@@ -1264,22 +1222,8 @@ INTEGER :: nx, ny,i,j
 DOUBLE PRECISION :: lon_min, lon_max, lat_min, lat_max, steplon, steplat,lon_min_new, lat_min_new
 doubleprecision,allocatable :: lon(:),lat(:)
 
-character(len=512) :: a_name
 
-call l4f_launcher(a_name,a_name_append=trim(subcategory)//"."//trim(optio_c(categoryappend,255)))
-this%category=l4f_category_get(a_name)
-
-this%trans=trans
-
-nullify (this%inter_index_x)
-nullify (this%inter_index_y)
-
-nullify (this%inter_x)
-nullify (this%inter_y)
-
-nullify (this%inter_xp)
-nullify (this%inter_yp)
-
+CALL grid_transform_init_common(this, trans, categoryappend)
 
 IF (this%trans%trans_type == 'inter') THEN
 
@@ -1394,26 +1338,9 @@ character(len=*),INTENT(in),OPTIONAL :: categoryappend !< append this suffix to 
 
 INTEGER :: i, n
 doubleprecision,pointer :: lon(:),lat(:)
-character(len=512) :: a_name
 
-call l4f_launcher(a_name,a_name_append=trim(subcategory)//"."//trim(optio_c(categoryappend,255)))
-this%category=l4f_category_get(a_name)
 
-#ifdef DEBUG
-call l4f_category_log(this%category,L4F_DEBUG,"start init_v7d_v7d_transform" )
-#endif
-
-this%trans=trans
-
-nullify (this%inter_index_x)
-nullify (this%inter_index_y)
-
-nullify (this%inter_x)
-nullify (this%inter_y)
-
-nullify (this%inter_xp)
-nullify (this%inter_yp)
-
+CALL grid_transform_init_common(this, trans, categoryappend)
 
 IF (this%trans%trans_type == 'inter') THEN
 
@@ -1456,9 +1383,9 @@ ELSE IF (this%trans%trans_type == 'polyinter') THEN
   this%inter_index_y(:,:) = 1
 
 ! compute coordinates of polygons in geo system
-  DO n = 1, SIZE(poly)
-    CALL to_geo(poly(n))
-  ENDDO
+!  DO n = 1, SIZE(poly)
+!    CALL to_geo(poly(n))
+!  ENDDO
 
   DO i = 1, SIZE(v7d_in%ana)
     DO n = 1, SIZE(poly)
@@ -1490,6 +1417,34 @@ ELSE
 ENDIF
 
 END SUBROUTINE grid_transform_vol7d_vol7d_init
+
+
+! Private subroutine for performing operations common to all constructors
+SUBROUTINE grid_transform_init_common(this, trans, categoryappend)
+TYPE(grid_transform),INTENT(inout) :: this
+TYPE(transform_def),INTENT(in) :: trans
+CHARACTER(len=*),INTENT(in),OPTIONAL :: categoryappend
+
+CHARACTER(len=512) :: a_name
+
+CALL l4f_launcher(a_name, a_name_append= &
+ TRIM(subcategory)//"."//TRIM(optio_c(categoryappend,255)))
+this%category=l4f_category_get(a_name)
+
+#ifdef DEBUG
+CALL l4f_category_log(this%category,L4F_DEBUG,"start init_grid_transform")
+#endif
+
+this%trans=trans
+NULLIFY(this%inter_index_x)
+NULLIFY(this%inter_index_y)
+NULLIFY(this%inter_x)
+NULLIFY(this%inter_y)
+NULLIFY(this%inter_xp)
+NULLIFY(this%inter_yp)
+NULLIFY(this%point_mask)
+
+END SUBROUTINE grid_transform_init_common
 
 
 !> Destructor of \a grid_tranform object.

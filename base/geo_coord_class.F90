@@ -16,21 +16,14 @@
 ! You should have received a copy of the GNU General Public License
 ! along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "config.h"
-!> \brief Classi per la gestione di dati puntuali georeferenziati
-!! 
-!! Questo modulo definisce due classi per la
-!! gestione di dati puntuali georeferenziati con coordinate geografiche
-!! o UTM.  Permette l'importazione e l'esportazione di blocchi di punti
-!! georeferenziati da/a file in formato testo e \a ESRI \a shapefile.
-!! Entrambe le classi hanno le componenti di tipo \a PRIVATE, per
-!! cui non possono essere manipolate direttamente ma solo tramite i
-!! relativi metodi.
+!> Classes for handling georeferenced sparse points in geographical
+!! corodinates.  This module defines two classes for managing
+!! georeferenced points on the Earth in geographical polar
+!! coordinates. It allows importing and exporting blocks of points
+!! from/to plain text files and \a ESRI \a shapefile's.  Both classes
+!! have \a PRIVATE members, so that they cannot be manipulated
+!! directly, but only through the proper methods.
 !!
-!! \todo i metodi di conversione geo/UTM hanno errori piccoli ma non
-!! trascurabili (dell'ordine della decina di metri) facendo un giro di
-!! conversioni avanti e indietro, forse legati alla definizione
-!! dell'ellissoide, per cui si cercano volontari -non spingete-
-!!  per indagare questo problema.
 !! \ingroup base
 MODULE geo_coord_class
 USE kinds
@@ -47,474 +40,111 @@ USE shplib
 IMPLICIT NONE
 
 
-!> Kind reale usato per le coordinate geografiche.
-!! Queste costanti devono essere utilizzate per definire o convertire i
-!! valori da utilizzare nelle chiamate ai metodi che richiedono grandezze
-!! relative a coordinate, ad esempio con:
+!> REAL Kind for geographical coordinates.
+!! This constant has to be used when defining or converting values to be
+!! used as geographical coordinates, e.g.:
 !! \code
 !! REAL(kind=fp_geo) :: x, y
-!! coord = REAL(x, kind=fp_utm)
+!! coordx = REAL(mylon, kind=fp_geo)
 !! \endcode
 INTEGER, PARAMETER :: fp_geo=fp_d
-!> Kind reale usato per le coordinate UTM
-INTEGER, PARAMETER :: fp_utm=fp_d
-!> Indica che i dati forniti sono in coordinate geografiche.
-!! Queste costanti servono per specificare, in alcuni metodi delle classi
-!! in questione, il tipo di coordinate dei dati forniti, se ciò non può
-!! essere dedotto in altre maniere.
-INTEGER, PARAMETER :: proj_geo=1
-!> Indica che i dati forniti sono in coordinate UTM
-INTEGER, PARAMETER :: proj_utm=2
 
-TYPE geo_coorddesc
-  PRIVATE
-  LOGICAL :: geoce, utmce
-  INTEGER :: fuso, elliss
-END TYPE geo_coorddesc
-
-!> Definisce un punto isolato georeferenziato
+!> Derived type defining an isolated georeferenced point on Earth in
+!! polar geographical coordinates
 TYPE geo_coord
   PRIVATE
   REAL(kind=fp_geo) :: lon, lat
-  REAL(kind=fp_utm) :: utme, utmn
-  TYPE(geo_coorddesc) :: desc
 END TYPE geo_coord
 
-!> Definisce un vettore unidimensionale di punti georeferenziati con
-!! varie possibili topologie (punto isolato, arco, poligono, gruppo di
-!! punti).
+!> Derived type defining a one-dimensional array of georeferenced points
+!! with an associated topology (isolated point, arc, polygon, group of
+!! points)
 TYPE geo_coordvect
   PRIVATE
   REAL(kind=fp_geo),POINTER :: ll(:,:) => null()
-  REAL(kind=fp_utm),POINTER :: utm(:,:) => null()
-  TYPE(geo_coorddesc) :: desc
   INTEGER :: vsize, vtype
 END TYPE geo_coordvect
 
-!> Valore mancante per geo_coord.
-TYPE(geo_coord),PARAMETER :: geo_coord_miss= &
- geo_coord(rmiss,rmiss,rdmiss,rdmiss,geo_coorddesc(.FALSE.,.FALSE.,imiss,imiss))
+!> Missing value for geo_coord
+TYPE(geo_coord),PARAMETER :: geo_coord_miss=geo_coord(rdmiss,rdmiss)
 
-! queste costanti indicano le possibili topologie di un oggetto della
-! classe \a geo_coordvect, sono tratte dal formato shapefile.
-INTEGER, PARAMETER :: geo_coordvect_point = 1 !< Tipi di geo_coordvect (da shapelib): punti isolati
-INTEGER, PARAMETER :: geo_coordvect_arc = 3 !< Tipi di geo_coordvect (da shapelib): archi (poligoni non necessariamente chiusi, archi multipli non implementati)
-INTEGER, PARAMETER :: geo_coordvect_polygon = 5 !< Tipi di geo_coordvect (da shapelib): poligoni (poligoni necessariamente chiusi, poligoni multipli non implementati)
-INTEGER, PARAMETER :: geo_coordvect_multipoint = 8 !< Tipi di geo_coordvect (da shapelib): gruppi di punti
+INTEGER, PARAMETER :: geo_coordvect_point = 1 !< Topology for geo_coordvect (from shapelib): isolated point
+INTEGER, PARAMETER :: geo_coordvect_arc = 3 !< Topology for geo_coordvect (from shapelib): arc (multiple arcs unsupported)
+INTEGER, PARAMETER :: geo_coordvect_polygon = 5 !< Topology for geo_coordvect (from shapelib): polygon (necessarily closed, multiple polygons unsupported)
+INTEGER, PARAMETER :: geo_coordvect_multipoint = 8 !< Topology for geo_coordvect (from shapelib): group of points
 
-REAL, PRIVATE :: overalloc = 2.0 ! fattore di sovrallocazione
 
-LOGICAL, PRIVATE :: done_init=.FALSE.
-
-! ===========================
-! == dichiarazioni per UTM ==
-! ===========================
-! Ellissoidi presi da 'proj -le' (http://proj.sf.net/)
-
-INTEGER, PARAMETER :: nelliss = 41 !< Numero di ellissoidi gestiti.
-
-! queste costanti vanno usate per specificare l'ellissoide da usare per
-! interpretare i dati UTM, gli ellissoidi sono tratti dal pacchetto
-! software "proj" (vedi l'uscita a video del comando \c proj \c -le ).
-INTEGER, PARAMETER :: &
-elliss_merit =    1,  & ! MERIT 1983                       
-elliss_sgs85 =    2,  & ! Soviet Geodetic System 85        
-elliss_grs80 =    3,  & ! GRS 1980(IUGG, 1980)             
-elliss_iau76 =    4,  & ! IAU 1976                         
-elliss_airy =     5,  & ! Airy 1830                        
-elliss_apl4_9 =   6,  & ! Appl. Physics. 1965              
-elliss_nwl9d =    7,  & ! Naval Weapons Lab., 1965         
-elliss_mod_airy = 8,  & ! Modified Airy                    
-elliss_andrae =   9,  & ! Andrae 1876 (Den., Iclnd.)       
-elliss_aust_sa =  10, & ! Australian Natl & S. Amer. 1969  
-elliss_grs67 =    11, & ! GRS 67(IUGG 1967)                
-elliss_bessel =   12, & ! Bessel 1841                      
-elliss_bess_nam = 13, & ! Bessel 1841 (Namibia)            
-elliss_clrk66 =   14, & ! Clarke 1866                      
-elliss_clrk80 =   15, & ! Clarke 1880 mod.                 
-elliss_cpm =      16, & ! Comm. des Poids et Mesures 1799  
-elliss_delmbr =   17, & ! Delambre 1810 (Belgium)          
-elliss_engelis =  18, & ! Engelis 1985                     
-elliss_evrst30 =  19, & ! Everest 1830                     
-elliss_evrst48 =  20, & ! Everest 1948                     
-elliss_evrst56 =  21, & ! Everest 1956                     
-elliss_evrst69 =  22, & ! Everest 1969                     
-elliss_evrstss =  23, & ! Everest (Sabah & Sarawak)        
-elliss_fschr60 =  24, & ! Fischer (Mercury Datum) 1960     
-elliss_fschr60m = 25, & ! Modified Fischer 1960            
-elliss_fschr68 =  26, & ! Fischer 1968                     
-elliss_helmert =  27, & ! Helmert 1906                     
-elliss_hough =    28, & ! Hough                            
-elliss_intl =     29, & ! International 1909 (Hayford)     
-elliss_krass =    30, & ! Krassovsky, 1942                 
-elliss_kaula =    31, & ! Kaula 1961                       
-elliss_lerch =    32, & ! Lerch 1979                       
-elliss_mprts =    33, & ! Maupertius 1738                  
-elliss_new_intl = 34, & ! New International 1967           
-elliss_plessis =  35, & ! Plessis 1817 (France)            
-elliss_seasia =   36, & ! Southeast Asia                   
-elliss_walbeck =  37, & ! Walbeck                          
-elliss_wgs60 =    38, & ! WGS 60                           
-elliss_wgs66 =    39, & ! WGS 66                           
-elliss_wgs72 =    40, & ! WGS 72                           
-elliss_wgs84 =    41    ! WGS 84                           
-
-REAL(kind=fp_utm), PARAMETER, PRIVATE :: &
- rf(nelliss)=(/ & ! Schiacciamento per ogni ellissoide
- 298.257, &
- 298.257, &
- 298.257222101, &
- 298.257, &
- 299.325, &
- 298.25, &
- 298.25, &
- 299.328, &
- 300.0, &
- 298.25, &
- 298.2471674270, &
- 299.1528128, &
- 299.1528128, &
- 294.98, &
- 293.4663, &
- 334.29, &
- 311.5, &
- 298.2566, &
- 300.8017, &
- 300.8017, &
- 300.8017, &
- 300.8017, &
- 300.8017, &
- 298.3, &
- 298.3, &
- 298.3, &
- 298.3, &
- 297., &
- 297., &
- 298.3, &
- 298.24, &
- 298.257, &
- 191., &
- 298.247, &
- 308.641, &
- 298.302, &
- 302.782, &
- 298.3, &
- 298.25, &
- 298.26, &
- 298.257223563 /)
-REAL(kind=fp_utm), PARAMETER, PRIVATE :: &
- a(nelliss)=(/ & ! Semiasse maggiore per ogni ellissoide
- 6378137.0, &
- 6378136.0, &
- 6378137.0, &
- 6378140.0, &
- 6377563.396, &
- 6378137.0, &
- 6378145.0, &
- 6377340.189, &
- 6377104.43, &
- 6378160.0, &
- 6378160.0, &
- 6377397.155, &
- 6377483.865, &
- 6378206.4, &
- 6378249.145, &
- 6375738.7, &
- 6376428., &
- 6378136.05, &
- 6377276.345, &
- 6377304.063, &
- 6377301.243, &
- 6377295.664, &
- 6377298.556, &
- 6378166., &
- 6378155., &
- 6378150., &
- 6378200., &
- 6378270.0, &
- 6378388.0, &
- 6378245.0, &
- 6378163., &
- 6378139., &
- 6397300., &
- 6378157.5, &
- 6376523., &
- 6378155.0, &
- 6376896.0, &
- 6378165.0, &
- 6378145.0, &
- 6378135.0, &
- 6378137.0 /)
-
-! Costanti per UTM basate sull'ellissoide
-!!$REAL(kind=fp_utm), PARAMETER, PRIVATE :: &
-!!$ f(nelliss)=1.0_fp_utm/rf, e2(nelliss)=2.0_fp_utm*f-f*f, &
-!!$ e1(nelliss)=f/(2.0_fp_utm-f), ep2(nelliss)=e2/(1.0_fp_utm-e2), &
-!!$ e11(nelliss)=3.0_fp_utm*e1/2.0_fp_utm - 27.0_fp_utm*e1*e1*e1/32.0_fp_utm, &
-!!$ e12(nelliss)=21.0_fp_utm*e1*e1/16.0_fp_utm - &
-!!$ 55.0_fp_utm*e1*e1*e1*e1/32.0_fp_utm, &
-!!$ e13(nelliss)=151.0_fp_utm*e1*e1*e1/96.0_fp_utm, &
-!!$ e14(nelliss)=1097.0_fp_utm*e1*e1*e1*e1/512.0_fp_utm, &
-!!$ e4(nelliss)=e2*e2, &
-!!$ e6(nelliss)=e2*e4
-! rf(nelliss) = er/(er-pr) = a/(a-b)
-
-REAL(kind=fp_utm), PRIVATE :: &
- f(nelliss), e2(nelliss), &
- e1(nelliss), ep2(nelliss), &
- e11(nelliss), &
- e12(nelliss), &
- e13(nelliss), &
- e14(nelliss), &
- e4(nelliss), &
- e6(nelliss), &
- ef0(nelliss), ef1(nelliss), ef2(nelliss), ef3(nelliss)
-
-REAL(kind=fp_utm), PARAMETER, PRIVATE :: &
- k0=0.9996_fp_utm, &         ! Fattore di scala al meridiano centrale
- false_e=500000.0_fp_utm, &  ! False easting (m)
- false_n=10000000._fp_utm, & ! False northing per l'Emisfero Sud (m)
- dtr=3.141592654_fp_utm/180.0_fp_utm, & ! definire in phys_const con kind fp_utm?
- rtd=1.0_fp_utm/dtr
-
-PRIVATE ll2utm, utm2ll
-
-!PRIVATE geo_dist_latlon
-
-!> Costruttori per le classi geo_coord e geo_coordvect.
-!! Devono essere richiamati
-!! per tutti gli oggetti di questo tipo definiti in un programma.
+!> Constructors for the two classes.
+!! They have to be called for every object of these types which is
+!! going to be used.
 INTERFACE init
-  MODULE PROCEDURE geo_coorddesc_init, geo_coord_init, geo_coordvect_init
+  MODULE PROCEDURE geo_coord_init, geo_coordvect_init
 END INTERFACE
 
-!> Distruttori per le 2 classi. Distruggono gli oggetti in maniera pulita,
-!! assegnando loro un valore mancante.
+!> Detructors for the two classes.
+!! They clean up all the information associated with the corresponding
+!! objects.
 INTERFACE delete
-  MODULE PROCEDURE geo_coorddesc_delete, geo_coord_delete, geo_coordvect_delete
+  MODULE PROCEDURE geo_coord_delete, geo_coordvect_delete
 END INTERFACE
 
-!> Restituiscono il valore delle componenti dell'oggetto nella forma desiderata.
+!> Methods for returning the value of object members.
 INTERFACE getval
-  MODULE PROCEDURE geo_coorddesc_getval, geo_coord_getval, geo_coordvect_getval
+  MODULE PROCEDURE geo_coord_getval, geo_coordvect_getval
 END INTERFACE
 
-!> Operatore logico di uguaglianza tra oggetti della classe geo_coord.
-!! Funziona anche per 
-!! confronti di tipo array-array (qualsiasi n. di dimensioni) e di tipo
-!! scalare-vettore(1-d) (ma non vettore(1-d)-scalare o tra array con più
-!! di 1 dimensione e scalari).
-!! Oggetti che sono stati inizializzati con sistemi di coordinate diversi
-!! e che non sono stati convertiti risulteranno sempre diversi.
+!> Logical equality operator.
 INTERFACE OPERATOR (==)
-  MODULE PROCEDURE geo_coorddesc_eq, geo_coord_eq, geo_coord_eqsv
+  MODULE PROCEDURE geo_coord_eq
 END INTERFACE
 
-!> Operatore logico di disuguaglianza tra oggetti della classe geo_coord.
-!! Funziona anche per 
-!! confronti di tipo array-array (qualsiasi n. di dimensioni) e di tipo
-!! scalare-vettore(1-d) (ma non vettore(1-d)-scalare o tra array con più
-!! di 1 dimensione e scalari).
-!! Oggetti che sono stati inizializzati con sistemi di coordinate diversi
-!! e che non sono stati convertiti risulteranno sempre diversi.
+!> Logical inequality operator.
 INTERFACE OPERATOR (/=)
-  MODULE PROCEDURE geo_coord_ne, geo_coord_nesv
+  MODULE PROCEDURE geo_coord_ne
 END INTERFACE
 
-!> Operatore logico maggiore-uguale tra oggetti della classe geo_coord.
-!! Restituisce \c .TRUE. nel caso \b entrambe le coordinate (lat e lon
-!! o UTM est e UTM nord) del primo oggetto siano maggiori o uguali alle
-!! corrispondenti coordinate del secondo oggetto.
-!! Funziona anche per 
-!! confronti di tipo array-array (qualsiasi n. di dimensioni) e di tipo
-!! scalare-vettore(1-d) (ma non vettore(1-d)-scalare o tra array con più
-!! di 1 dimensione e scalari). Nel caso di valori mancanti il risultato
+!> Logical greater-equal operator. Returns true if the first point
+!! lies to the northeast of the second
 INTERFACE OPERATOR (>=)
-  MODULE PROCEDURE geo_coord_ge, geo_coord_gesv
+  MODULE PROCEDURE geo_coord_ge
 END INTERFACE
 
-!> Operatore logico minore-uguale tra oggetti della classe geo_coord.
-!! Restituisce \c .TRUE. nel caso \b entrambe le coordinate (lat e lon
-!! o UTM est e UTM nord) del primo oggetto siano minori o uguali alle
-!! corrispondenti coordinate del secondo oggetto.
-!! Funziona anche per 
-!! confronti di tipo array-array (qualsiasi n. di dimensioni) e di tipo
-!! scalare-vettore(1-d) (ma non vettore(1-d)-scalare o tra array con più
-!! di 1 dimensione e scalari). Nel caso di valori mancanti il risultato
+!> Logical less-equal operator. Returns true if the first point
+!! lies to the southwest of the second
 INTERFACE OPERATOR (<=)
-  MODULE PROCEDURE geo_coord_le, geo_coord_lesv
+  MODULE PROCEDURE geo_coord_le
 END INTERFACE
 
-!> Ricalcola le coordinate dell'oggetto nel sistema geografico.
-!! Se l'oggetto ha le coordinate espresse nel sistema UTM,
-!! viene effettuata la conversione senza comunque perdere
-!! l'informazione originale nel sistema UTM.
-!! Se le coordinate geografiche sono già presenti non fa nulla.
-INTERFACE to_geo
-  MODULE PROCEDURE geo_coord_to_geo, geo_coordvect_to_geo
-END INTERFACE
-
-!> Ricalcola le coordinate dell'oggetto nel sistema UTM.
-!! Se l'oggetto ha le coordinate espresse nel sistema geografico,
-!! viene effettuata la conversione senza comunque perdere
-!! l'informazione originale nel sistema geografico.
-!! Se le coordinate UTM sono già presenti non fa nulla.
-INTERFACE to_utm
-  MODULE PROCEDURE geo_coord_to_utm, geo_coordvect_to_utm
-END INTERFACE
-
-!> Importa un vettore di oggetti geo_coordvect da un file di testo
-!! o da un file in formato ESRI/Shapefile.
+!> Import one or more \a geo_coordvect objects from a plain text file
+!! or for a file in ESRI/Shapefile format.
 INTERFACE import
   MODULE PROCEDURE geo_coordvect_import, geo_coordvect_importvect
 END INTERFACE
 
-!> Esporta un vettore di oggetti geo_coordvect in un file di testo
-!! o in un file in formato ESRI/Shapefile.
+!> Export one or more \a geo_coordvect objects to a plain text file
+!! or to a file in ESRI/Shapefile format.
 INTERFACE export
   MODULE PROCEDURE geo_coordvect_export, geo_coordvect_exportvect
 END INTERFACE
 
-!> Legge un oggetto geo_coord o un vettore di oggetti geo_coord da
-!! un file \c FORMATTED o \c UNFORMATTED.
+!> Read a single \a geo_coord object or an array of \a geo_coord objects
+!! from a Fortran \c FORMATTED or \c UNFORMATTED file.
 INTERFACE read_unit
   MODULE PROCEDURE geo_coord_read_unit, geo_coord_vect_read_unit
 END INTERFACE
 
-!> Scrive un oggetto geo_coord o un vettore di oggetti geo_coord su
-!! un file \c FORMATTED o \c UNFORMATTED.
+!> Write a single \a geo_coord object or an array of \a geo_coord objects
+!! to a Fortran \c FORMATTED or \c UNFORMATTED file.
 INTERFACE write_unit
   MODULE PROCEDURE geo_coord_write_unit, geo_coord_vect_write_unit
 END INTERFACE
 
-!> Determina se un punto sta dentro un poligono o un rettangolo.
+!> Determine whether a point lies inside a polygon or a rectangle.
 INTERFACE inside
   MODULE PROCEDURE geo_coord_inside, geo_coord_inside_rectang
 END INTERFACE
 
 CONTAINS
-
-SUBROUTINE init_elliss()
-! Queste inizializzazione sono fatte qua e non come PARAMETER sopra
-! per un bug del compilatore pgf90 con gli array costanti
-f(:) = 1.0_fp_utm/rf(:)
-e2(:) = 2.0_fp_utm*f(:) - f(:)*f(:) ! Eccentricita`
-e1(:) = f(:)/(2.0_fp_utm - f(:))
-ep2(:) = e2(:)/(1.0_fp_utm - e2(:))
-e11(:) = 3.0_fp_utm*e1(:)/2.0_fp_utm - 27.0_fp_utm*e1(:)*e1(:)*e1(:)/32.0_fp_utm
-e12(:) = 21.0_fp_utm*e1(:)*e1(:)/16.0_fp_utm &
- - 55.0_fp_utm*e1(:)*e1(:)*e1(:)*e1(:)/32.0_fp_utm
-e13(:) = 151.0_fp_utm*e1(:)*e1(:)*e1(:)/96.0_fp_utm
-e14(:) = 1097.0_fp_utm*e1(:)*e1(:)*e1(:)*e1(:)/512.0_fp_utm
-e4(:) = e2(:)*e2(:)
-e6(:) = e2(:)*e4(:)
-ef0(:) = a(:)*(1.0_fp_utm - 0.25_fp_utm*e2(:)&
- *(1.0_fp_utm+e2(:)/16.0_fp_utm*(3.0_fp_utm + 1.25_fp_utm*e2(:))))
-ef1(:) = a(:)*(0.375_fp_utm*e2(:) &
- *(1.0_fp_utm + 0.25_fp_utm*e2(:)*(1.0_fp_utm + 0.46875_fp_utm*e2(:))))
-ef2(:) = a(:)*(0.05859375_fp_utm*e2(:)*e2(:)*(1.0_fp_utm + 0.75_fp_utm*e2(:)))
-ef3(:) = a(:)*e2(:)*e2(:)*e2(:)*35.0_fp_utm/3072.0_fp_utm
-
-done_init = .TRUE.
-
-END SUBROUTINE init_elliss
-
-
-! ===================
-! == geo_coorddesc ==
-! ===================
-SUBROUTINE geo_coorddesc_init(this, fuso, elliss, geoce, utmce)
-TYPE(geo_coorddesc) :: this
-INTEGER, INTENT(IN), OPTIONAL  :: fuso, elliss
-LOGICAL, INTENT(in), OPTIONAL :: geoce, utmce
-
-IF (PRESENT(fuso)) THEN
-  this%fuso = fuso
-ELSE
-  this%fuso = imiss
-ENDIF
-IF (PRESENT(elliss)) THEN
-  this%elliss = MIN(MAX(this%elliss,1), nelliss)
-ELSE
-  this%elliss = elliss_wgs84
-ENDIF
-IF (PRESENT(geoce)) THEN
-  this%geoce = geoce
-ELSE
-  this%geoce = .FALSE.
-ENDIF
-IF (PRESENT(utmce)) THEN
-  this%utmce = utmce
-  IF (this%utmce) THEN ! Fuso necessario!
-    IF (this%fuso == imiss) THEN
-      CALL raise_fatal_error('fuso UTM non specificato')
-    ENDIF
-  ENDIF
-ELSE
-  this%utmce = .FALSE.
-ENDIF
-
-END SUBROUTINE geo_coorddesc_init
-
-
-SUBROUTINE geo_coorddesc_delete(this)
-TYPE(geo_coorddesc), INTENT(INOUT) :: this
-
-this%fuso = imiss
-this%elliss = imiss
-this%geoce = .FALSE.
-this%utmce = .FALSE.
-
-END SUBROUTINE geo_coorddesc_delete
-
-
-SUBROUTINE geo_coorddesc_setval(this, fuso, elliss, geoce, utmce)
-TYPE(geo_coorddesc) :: this
-INTEGER, INTENT(IN), OPTIONAL  :: fuso, elliss
-LOGICAL, INTENT(in), OPTIONAL :: geoce, utmce
-
-IF (PRESENT(fuso)) THEN
-  this%fuso = fuso
-ENDIF
-IF (PRESENT(elliss)) THEN
-  this%elliss = elliss
-ENDIF
-IF (PRESENT(geoce)) THEN
-  this%geoce = geoce
-ENDIF
-IF (PRESENT(utmce)) THEN
-  this%utmce = utmce
-ENDIF
-
-END SUBROUTINE geo_coorddesc_setval
-
-
-elemental SUBROUTINE geo_coorddesc_getval(this, fuso, elliss)
-TYPE(geo_coorddesc),INTENT(IN) :: this
-INTEGER, INTENT(OUT), OPTIONAL  :: fuso, elliss
-
-IF (PRESENT(fuso)) fuso = this%fuso
-IF (PRESENT(elliss)) elliss = this%elliss
-
-END SUBROUTINE geo_coorddesc_getval
-
-elemental FUNCTION geo_coorddesc_eq(this, that) RESULT(res)
-TYPE(geo_coorddesc),INTENT(IN) :: this, that
-LOGICAL :: res
-
-! I descrittori di coordinate sono == se indicano lo stesso
-! sistema di riferimento o se sono entrambi nulli
-IF ((this%geoce .AND. that%geoce) .OR. & ! geo
- (this%utmce .AND. that%utmce .AND. & ! utm
- this%fuso == that%fuso .AND. this%elliss == that%elliss) .OR. &
- (.NOT.this%geoce .AND. .NOT.that%geoce .AND. & ! tutto mancante
- .NOT.this%utmce .AND. .NOT.that%utmce)) THEN
-  res = .TRUE.
-ELSE
-  res = .FALSE.
-ENDIF
-
-END FUNCTION geo_coorddesc_eq
 
 
 ! ===================
@@ -526,40 +156,13 @@ END FUNCTION geo_coorddesc_eq
 !! succede il contrario; non è possibile specificare le coordinate in entrambi
 !! i sistemi, usare eventualmente \a to_geo. Se non viene passato nessun parametro
 !! opzionale l'oggetto è inizializzato a valore mancante.
-SUBROUTINE geo_coord_init(this, lon, lat, utme, utmn, fuso, elliss, to_geo)
+SUBROUTINE geo_coord_init(this, lon, lat)
 TYPE(geo_coord) :: this !< oggetto da inizializzare
 REAL(kind=fp_geo), INTENT(IN), OPTIONAL :: lon !< longitudine geografica
 REAL(kind=fp_geo), INTENT(IN), OPTIONAL :: lat !< latitudine geografica
-REAL(kind=fp_utm), INTENT(IN), OPTIONAL  :: utme !< coordinata UTM est
-REAL(kind=fp_utm), INTENT(IN), OPTIONAL  :: utmn !< coordinata UTM nord
-INTEGER, INTENT(IN), OPTIONAL :: fuso !< fuso UTM, da 1 a 60, con segno negativo se si tratta dell'Emisfero sud, obbligatorio per UTM, può essere specificato anche per le coordinate geografiche in vista di una successiva conversione a UTM
-INTEGER, INTENT(IN), OPTIONAL :: elliss !< ellissoide, usare una delle costanti simboliche \a elliss_* e non il valore numerico esplicito, default=elliss_wgs84
-LOGICAL, INTENT(IN), OPTIONAL :: to_geo !< se specificato a \c .TRUE. e vengono inizializzate le coordinate UTM, vengono subito ricalcolate anche le coordinate geografiche
 
-IF (.NOT.done_init) CALL init_elliss()
-IF (PRESENT(lon) .AND. PRESENT(lat)) THEN
-  CALL init(this%desc, fuso, elliss, geoce=.TRUE.)
-  this%lon = lon
-  this%lat = lat
-  this%utme = rdmiss
-  this%utmn = rdmiss
-ELSE IF (PRESENT(utme) .AND. PRESENT(utmn)) THEN
-  CALL init(this%desc, fuso, elliss, utmce=.TRUE.)
-  this%lon = rmiss
-  this%lat = rmiss
-  this%utme = utme
-  this%utmn = utmn
-  IF (PRESENT(to_geo))THEN
-    IF (to_geo) CALL geo_coord_to_geo(this)
-  END IF
-
-ELSE
-  CALL init(this%desc, fuso, elliss)
-  this%lon = rmiss
-  this%lat = rmiss
-  this%utme = rdmiss
-  this%utmn = rdmiss
-ENDIF
+CALL optio(lon, this%lon)
+CALL optio(lat, this%lat)
 
 END SUBROUTINE geo_coord_init
 
@@ -567,11 +170,8 @@ END SUBROUTINE geo_coord_init
 SUBROUTINE geo_coord_delete(this)
 TYPE(geo_coord), INTENT(INOUT) :: this !< oggetto da distruggre
 
-CALL delete(this%desc)
 this%lon = rmiss
 this%lat = rmiss
-this%utme = rdmiss
-this%utmn = rdmiss
 
 END SUBROUTINE geo_coord_delete
 
@@ -579,20 +179,13 @@ END SUBROUTINE geo_coord_delete
 !! Qualsiasi combinazione dei parametri opzionali è consentita; se
 !! il tipo di coordinata richiesta non è stato inizializzato né calcolato,
 !! restituisce il corrispondente valore mancante.
-elemental SUBROUTINE geo_coord_getval(this, lon, lat, utme, utmn, fuso, elliss)
+elemental SUBROUTINE geo_coord_getval(this, lon, lat)
 TYPE(geo_coord),INTENT(IN) :: this !< oggetto di cui restituire i componenti
 REAL(kind=fp_geo), INTENT(OUT), OPTIONAL :: lon !< longitudine geografica
 REAL(kind=fp_geo), INTENT(OUT), OPTIONAL :: lat !< latitudine geografica
-REAL(kind=fp_utm), INTENT(OUT), OPTIONAL  :: utme !< coordinata UTM est
-REAL(kind=fp_utm), INTENT(OUT), OPTIONAL  :: utmn !< coordinata UTM nord
-INTEGER, INTENT(OUT), OPTIONAL :: fuso !< fuso UTM
-INTEGER, INTENT(OUT), OPTIONAL :: elliss !< ellissoide, restituisce un valore compreso tra 1 e nelliss
 
 IF (PRESENT(lon)) lon = this%lon
 IF (PRESENT(lat)) lat = this%lat
-IF (PRESENT(utme)) utme = this%utme
-IF (PRESENT(utmn)) utmn = this%utmn
-CALL getval(this%desc, fuso, elliss)
 
 END SUBROUTINE geo_coord_getval
 
@@ -606,7 +199,6 @@ TYPE(geo_coord),INTENT(IN) :: this !< oggetto di cui restituire latitudine
 REAL(kind=fp_geo) :: getlat !< latitudine geografica
 
 getlat = this%lat
-
 
 END FUNCTION getlat
 
@@ -623,38 +215,20 @@ getlon = this%lon
 END FUNCTION getlon
 
 
-
 elemental FUNCTION geo_coord_eq(this, that) RESULT(res)
 TYPE(geo_coord),INTENT(IN) :: this, that
 LOGICAL :: res
 
-IF (this%desc%geoce .AND. that%desc%geoce) THEN
-  res = (this%lon == that%lon .AND. this%lat == that%lat)
-ELSE IF (this%desc%utmce .AND. that%desc%utmce) THEN
-  res = (this%utme == that%utme .AND. this%utmn == that%utmn)
-ELSE IF (.NOT.this%desc%geoce .AND. .NOT.this%desc%utmce &
- .AND. .NOT.that%desc%geoce .AND. .NOT.that%desc%utmce) THEN ! tutti mancanti
-  res = .TRUE.
-ELSE ! non confrontabili
-  res = .FALSE.
-ENDIF
+res = (this%lon == that%lon .AND. this%lat == that%lat)
 
 END FUNCTION geo_coord_eq
+
 
 elemental FUNCTION geo_coord_ge(this, that) RESULT(res)
 TYPE(geo_coord),INTENT(IN) :: this, that
 LOGICAL :: res
 
-IF (this%desc%geoce .AND. that%desc%geoce) THEN
-  res = (this%lon >= that%lon .AND. this%lat >= that%lat)
-ELSE IF (this%desc%utmce .AND. that%desc%utmce) THEN
-  res = (this%utme >= that%utme .AND. this%utmn >= that%utmn)
-ELSE IF (.NOT.this%desc%geoce .AND. .NOT.this%desc%utmce &
- .AND. .NOT.that%desc%geoce .AND. .NOT.that%desc%utmce) THEN ! tutti mancanti
-  res = .TRUE.
-ELSE ! non confrontabili
-  res = .FALSE.
-ENDIF
+res = (this%lon >= that%lon .AND. this%lat >= that%lat)
 
 END FUNCTION geo_coord_ge
 
@@ -663,79 +237,18 @@ elemental FUNCTION geo_coord_le(this, that) RESULT(res)
 TYPE(geo_coord),INTENT(IN) :: this, that
 LOGICAL :: res
 
-IF (this%desc%geoce .AND. that%desc%geoce) THEN
-  res = (this%lon <= that%lon .AND. this%lat <= that%lat)
-ELSE IF (this%desc%utmce .AND. that%desc%utmce) THEN
-  res = (this%utme <= that%utme .AND. this%utmn <= that%utmn)
-ELSE IF (.NOT.this%desc%geoce .AND. .NOT.this%desc%utmce &
- .AND. .NOT.that%desc%geoce .AND. .NOT.that%desc%utmce) THEN ! tutti mancanti
-  res = .TRUE.
-ELSE ! non confrontabili
-  res = .FALSE.
-ENDIF
+res = (this%lon <= that%lon .AND. this%lat <= that%lat)
 
 END FUNCTION geo_coord_le
-
-
-FUNCTION geo_coord_eqsv(this, that) RESULT(res)
-TYPE(geo_coord),INTENT(IN) :: this, that(:)
-LOGICAL :: res(SIZE(that))
-
-INTEGER :: i
-
-DO i = 1, SIZE(that)
-  res(i) = this == that(i)
-ENDDO
-
-END FUNCTION geo_coord_eqsv
-
-
-FUNCTION geo_coord_gesv(this, that) RESULT(res)
-TYPE(geo_coord),INTENT(IN) :: this, that(:)
-LOGICAL :: res(SIZE(that))
-
-INTEGER :: i
-
-DO i = 1, SIZE(that)
-  res(i) = this >= that(i)
-ENDDO
-
-END FUNCTION geo_coord_gesv
-
-
-FUNCTION geo_coord_lesv(this, that) RESULT(res)
-TYPE(geo_coord),INTENT(IN) :: this, that(:)
-LOGICAL :: res(SIZE(that))
-
-INTEGER :: i
-
-DO i = 1, SIZE(that)
-  res(i) = this <= that(i)
-ENDDO
-
-END FUNCTION geo_coord_lesv
 
 
 elemental FUNCTION geo_coord_ne(this, that) RESULT(res)
 TYPE(geo_coord),INTENT(IN) :: this, that
 LOGICAL :: res
 
-res = .NOT.(this == that)
+res = (this%lon /= that%lon .OR. this%lat /= that%lat)
 
 END FUNCTION geo_coord_ne
-
-
-FUNCTION geo_coord_nesv(this, that) RESULT(res)
-TYPE(geo_coord),INTENT(IN) :: this, that(:)
-LOGICAL :: res(SIZE(that))
-
-INTEGER :: i
-
-DO i = 1, SIZE(that)
-  res(i) = .NOT.(this == that(i))
-ENDDO
-
-END FUNCTION geo_coord_nesv
 
 
 !> Legge da un'unità di file il contenuto dell'oggetto \a this.
@@ -766,21 +279,11 @@ INTEGER :: i
 
 INQUIRE(unit, form=form)
 IF (form == 'FORMATTED') THEN
-  read(unit,*) &
-   (this(i)%lon,this(i)%lat, &
-   this(i)%desc%geoce,this(i)%desc%utmce,this(i)%desc%fuso,this(i)%desc%elliss, &
-   i=1,SIZE(this))
-
+  read(unit,*) (this(i)%lon,this(i)%lat, i=1,SIZE(this))
 !TODO bug gfortran compiler !
 !missing values are unredeable when formatted
-
-!!$   (this(i)%lon,this(i)%lat,this(i)%utme,this(i)%utmn, &
-!!$   this(i)%desc%geoce,this(i)%desc%utmce,this(i)%desc%fuso,this(i)%desc%elliss, &
-!!$   i=1,SIZE(this))
 ELSE
-  READ(unit)(this(i)%lon,this(i)%lat,this(i)%utme,this(i)%utmn, &
-   this(i)%desc%geoce,this(i)%desc%utmce,this(i)%desc%fuso,this(i)%desc%elliss, &
-   i=1,SIZE(this))
+  READ(unit) (this(i)%lon,this(i)%lat, i=1,SIZE(this))
 ENDIF
 
 END SUBROUTINE geo_coord_vect_read_unit
@@ -812,84 +315,18 @@ INTEGER :: i
 
 INQUIRE(unit, form=form)
 IF (form == 'FORMATTED') THEN
-  WRITE(unit,*) &
-   (this(i)%lon,this(i)%lat, &
-   this(i)%desc%geoce,this(i)%desc%utmce,this(i)%desc%fuso,this(i)%desc%elliss, &
-   i=1,SIZE(this))
-
+  WRITE(unit,*) (this(i)%lon,this(i)%lat, i=1,SIZE(this))
 !TODO bug gfortran compiler !
 !missing values are unredeable when formatted
-
-!!$   (this(i)%lon,this(i)%lat,this(i)%utme,this(i)%utmn, &
-!!$   this(i)%desc%geoce,this(i)%desc%utmce,this(i)%desc%fuso,this(i)%desc%elliss, &
-!!$   i=1,SIZE(this))
 ELSE
-  WRITE(unit)(this(i)%lon,this(i)%lat,this(i)%utme,this(i)%utmn, &
-   this(i)%desc%geoce,this(i)%desc%utmce,this(i)%desc%fuso,this(i)%desc%elliss, &
-   i=1,SIZE(this))
+  WRITE(unit) (this(i)%lon,this(i)%lat, i=1,SIZE(this))
 ENDIF
 
 END SUBROUTINE geo_coord_vect_write_unit
 
 
-!> Tenta di rendere confrontabili due oggetti geo_coord convertendo
-!! opportunamente le coordinate se necessario.
-!! Se i due oggetti hanno sistemi di coordinate diverse, quello che
-!! ha coordinate UTM viene convertito nel sistema geografico.
-!! Funziona anche nel caso di 2 oggetti con coordinate UTM su diversi fusi
-!! o ellissoidi, in tal caso vengono calcolate le coordinate geografiche
-!! del secondo e poi vengono riconvertito nel sistema UTM con
-!! fuso/ellissoide del primo oggetto.
-SUBROUTINE geo_coord_equalize(this, that)
-TYPE(geo_coord), INTENT (INOUT) :: this !< primo oggetto
-TYPE(geo_coord), INTENT (INOUT) :: that !< secondo oggetto
-
-IF (this%desc == that%desc) RETURN
-IF (this%desc%geoce .AND. that%desc%utmce) THEN
-  CALL geo_coord_to_geo(that)
-ELSE IF (this%desc%utmce .AND. that%desc%geoce) THEN
-  CALL geo_coord_to_geo(this)
-ELSE IF (this%desc%utmce .AND. that%desc%utmce) THEN ! diversi fusi/ellissoidi? siamo fusi!
-  CALL geo_coord_to_geo(that)
-  CALL geo_coord_to_utm(that, fuso=this%desc%fuso, elliss=that%desc%elliss)
-ENDIF
-
-END SUBROUTINE geo_coord_equalize
-
-
-!> Ricalcola le coordinate dell'oggetto nel sistema geografico.
-SUBROUTINE geo_coord_to_geo(this)
-TYPE(geo_coord), INTENT (INOUT) :: this !< oggetto di cui ricalcolare le coordinate
-
-IF (.NOT.this%desc%utmce .OR. this%desc%geoce) RETURN ! Niente da fare
-CALL geo_coorddesc_setval(this%desc, geoce=.TRUE.)
-CALL utm2ll(this%utme, this%utmn, this%desc%fuso, this%desc%elliss, &
- this%lon, this%lat)
-
-END SUBROUTINE geo_coord_to_geo
-
-
-!> Ricalcola le coordinate dell'oggetto nel sistema UTM.
-!! È possibile specificare il fuso UTM se non
-!! era stato specificato in fase di inizializzazione.
-SUBROUTINE geo_coord_to_utm(this, fuso, elliss)
-TYPE(geo_coord), INTENT (INOUT) :: this !< oggetto di cui ricalcolare le coordinate
-INTEGER, INTENT(IN), OPTIONAL  :: fuso !< eventuale fuso UTM
-INTEGER, INTENT(IN), OPTIONAL :: elliss !< eventuale ellissoide
-
-IF (.NOT.this%desc%geoce .OR. this%desc%utmce) RETURN ! Niente da fare
-CALL geo_coorddesc_setval(this%desc, fuso, elliss, utmce=.TRUE.)
-CALL ll2utm(this%lon, this%lat, this%desc%fuso, this%desc%elliss, &
- this%utme, this%utmn)
-
-END SUBROUTINE geo_coord_to_utm
-
-
 !> Restituisce la distanza in m tra 2 oggetti geo_coord.
 !! La distanza è calcolata approssimativamente ed è valida per piccoli angoli.
-!! Entrambi gli oggetti devono essere già stati
-!! convertiti ad un sistema di coordinate comune, altrimenti viene
-!! restituito un valore mancante.
 FUNCTION geo_coord_dist(this, that) RESULT(dist)
 USE doubleprecision_phys_const
 TYPE(geo_coord), INTENT (IN) :: this !< primo punto
@@ -899,15 +336,9 @@ REAL(kind=fp_geo) :: dist !< distanza in metri
 REAL(kind=fp_geo) :: x,y
 ! Distanza approssimata, valida per piccoli angoli
 
-IF (this%desc%geoce .AND. that%desc%geoce) THEN
-  x = (this%lon-that%lon)*COS(((this%lat+this%lat)/2.)*degrad)
-  y = (this%lat-that%lat)
-  dist = SQRT(x**2 + y**2)*degrad*rearth
-ELSE IF (this%desc%utmce .AND. that%desc%utmce .AND. this%desc == that%desc) THEN
-  dist = SQRT((this%utme - that%utme)**2 + (this%utmn - that%utmn)**2)
-ELSE
-  dist = rmiss
-ENDIF
+x = (this%lon-that%lon)*COS(((this%lat+this%lat)/2.)*degrad)
+y = (this%lat-that%lat)
+dist = SQRT(x**2 + y**2)*degrad*rearth
 
 END FUNCTION geo_coord_dist
 
@@ -942,44 +373,21 @@ END FUNCTION geo_coord_inside_rectang
 !! opzionale l'oggetto è inizializzato a valore mancante.
 !! Il numero di punti dell'oggetto finale sarà uguale all'estensione
 !! del più breve vettore della coppia fornita.
-RECURSIVE SUBROUTINE geo_coordvect_init(this, lon, lat, &
- utme, utmn, fuso, elliss, to_geo)
+RECURSIVE SUBROUTINE geo_coordvect_init(this, lon, lat)
 TYPE(geo_coordvect), INTENT(OUT) :: this !< oggetto da inizializzare
 REAL(kind=fp_geo), INTENT(IN), OPTIONAL :: lon(:) !< longitudine geografica
 REAL(kind=fp_geo), INTENT(IN), OPTIONAL :: lat(:) !< latitudine geografica
-REAL(kind=fp_utm), INTENT(IN), OPTIONAL  :: utme(:) !< coordinata UTM est
-REAL(kind=fp_utm), INTENT(IN), OPTIONAL  :: utmn(:) !< coordinata UTM nord
-INTEGER, INTENT(IN), OPTIONAL :: fuso !< fuso UTM, da 1 a 60, con segno negativo se si tratta dell'Emisfero sud, obbligatorio per UTM, può essere specificato anche per le coordinate geografiche in vista di una successiva conversione a UTM
-INTEGER, INTENT(IN), OPTIONAL :: elliss !< ellissoide, usare una delle costanti simboliche \a elliss_* e non il valore numerico esplicito, default=elliss_wgs84
-LOGICAL, INTENT(IN), OPTIONAL :: to_geo !< se specificato a \c .TRUE. e vengono inizializzate le coordinate UTM, vengono subito ricalcolate anche le coordinate geografiche
 
-IF (.NOT.done_init) CALL init_elliss()
-CALL delete(this)
 IF (PRESENT(lon) .AND. PRESENT(lat)) THEN
-  CALL init(this%desc, fuso, elliss, geoce=.TRUE.)
   this%vsize = MIN(SIZE(lon), SIZE(lat))
   ALLOCATE(this%ll(this%vsize,2))
   this%ll(1:this%vsize,1) = lon(1:this%vsize)
   this%ll(1:this%vsize,2) = lat(1:this%vsize)
-  NULLIFY(this%utm)
-ELSE IF (PRESENT(utme) .AND. PRESENT(utmn)) THEN
-  CALL init(this%desc, fuso, elliss, utmce=.TRUE.)
-  this%vsize = MIN(SIZE(utme), SIZE(utmn))
-  ALLOCATE(this%utm(this%vsize,2))
-  this%utm(1:this%vsize,1) = utme(1:this%vsize)
-  this%utm(1:this%vsize,2) = utmn(1:this%vsize)
-  NULLIFY(this%ll)
-
-  IF (PRESENT(to_geo))THEN
-    IF (to_geo) CALL geo_coordvect_to_geo(this)
-  END IF
-
 ELSE
-  CALL init(this%desc, fuso, elliss)
   this%vsize = 0
   NULLIFY(this%ll)
-  NULLIFY(this%utm)
 ENDIF
+this%vtype = 0 !?
 
 END SUBROUTINE geo_coordvect_init
 
@@ -989,9 +397,7 @@ END SUBROUTINE geo_coordvect_init
 SUBROUTINE geo_coordvect_delete(this)
 TYPE(geo_coordvect), INTENT(INOUT) :: this
 
-CALL delete(this%desc)
 IF (ASSOCIATED(this%ll)) DEALLOCATE(this%ll)
-IF (ASSOCIATED(this%utm)) DEALLOCATE(this%utm)
 this%vsize = 0
 this%vtype = 0
 
@@ -1006,14 +412,10 @@ END SUBROUTINE geo_coordvect_delete
 !! dichiarati come puntatori che vengono
 !! allocati dalla \a getval stessa e che devono poi essere
 !! deallocati esplicitamente dal programma chiamante.
-SUBROUTINE geo_coordvect_getval(this, lon, lat, utme, utmn, fuso, elliss)
+SUBROUTINE geo_coordvect_getval(this, lon, lat)
 TYPE(geo_coordvect),INTENT(IN) :: this !< oggetto di cui restituire i componenti
 REAL(kind=fp_geo), OPTIONAL, POINTER :: lon(:) !< longitudine geografica
 REAL(kind=fp_geo), OPTIONAL, POINTER :: lat(:) !< latitudine geografica
-REAL(kind=fp_utm), OPTIONAL, POINTER  :: utme(:) !< coordinata UTM est
-REAL(kind=fp_utm), OPTIONAL, POINTER  :: utmn(:) !< coordinata UTM nord
-INTEGER, INTENT(OUT), OPTIONAL  :: fuso !< fuso UTM
-INTEGER, INTENT(OUT), OPTIONAL  :: elliss !< ellissoide, restituisce un valore compreso tra 1 e nelliss
 
 IF (PRESENT(lon)) THEN
   IF (ASSOCIATED(this%ll)) THEN
@@ -1027,93 +429,15 @@ IF (PRESENT(lat)) THEN
     lat(:) = this%ll(1:this%vsize,2)
   ENDIF
 ENDIF
-IF (PRESENT(utme)) THEN
-  IF (ASSOCIATED(this%utm)) THEN
-    ALLOCATE(utme(this%vsize))
-    utme(:) = this%utm(1:this%vsize,1)
-  ENDIF
-ENDIF 
-IF (PRESENT(utmn)) THEN
-  IF (ASSOCIATED(this%utm)) THEN
-    ALLOCATE(utmn(this%vsize))
-    utmn(:) = this%utm(1:this%vsize,2)
-  ENDIF
-ENDIF 
-CALL getval(this%desc, fuso, elliss)
 
 END SUBROUTINE geo_coordvect_getval
 
 
-!> Tenta di rendere confrontabili due oggetti geo_coordvect convertendo
-!! opportunamente le coordinate se necessario.
-!! Se i due oggetti hanno sistemi di coordinate diverse, quello che
-!! ha coordinate UTM viene convertito nel sistema geografico.
-!! Funziona anche nel caso di 2 oggetti con coordinate UTM su diversi fusi
-!! o ellissoidi, in tal caso vengono calcolate le coordinate geografiche
-!! del secondo e poi vengono riconvertito nel sistema UTM con
-!! fuso/ellissoide del primo oggetto.
-SUBROUTINE geo_coordvect_equalize(this, that)
-TYPE(geo_coordvect), INTENT (INOUT) :: this !< primo oggetto
-TYPE(geo_coordvect), INTENT (INOUT) :: that !< secondo oggetto
-
-IF (this%desc == that%desc) RETURN
-IF (this%desc%geoce .AND. that%desc%utmce) THEN
-  CALL geo_coordvect_to_geo(that)
-ELSE IF (this%desc%utmce .AND. that%desc%geoce) THEN
-  CALL geo_coordvect_to_geo(this)
-ELSE IF (this%desc%utmce .AND. that%desc%utmce) THEN ! diversi fusi/ellissoidi? siamo fusi!
-  CALL geo_coordvect_to_geo(this)
-  CALL geo_coordvect_to_utm(this, fuso=that%desc%fuso, elliss=that%desc%elliss)
-ENDIF
-
-END SUBROUTINE geo_coordvect_equalize
-
-
-!> Ricalcola le coordinate dell'oggetto nel sistema geografico.
-SUBROUTINE geo_coordvect_to_geo(this)
-TYPE(geo_coordvect), INTENT (INOUT) :: this !< oggetto di cui ricalcolare le coordinate
-
-INTEGER :: i
-
-IF (.NOT.this%desc%utmce .OR. this%desc%geoce) RETURN ! Niente da fare
-CALL geo_coorddesc_setval(this%desc, geoce=.TRUE.)
-ALLOCATE(this%ll(this%vsize,2))
-
-DO i = 1, this%vsize
-  CALL utm2ll(this%utm(i,1), this%utm(i,2), this%desc%fuso, this%desc%elliss, &
-   this%ll(i,1), this%ll(i,2))
-ENDDO
-
-END SUBROUTINE geo_coordvect_to_geo
-
-
-!> Ricalcola le coordinate dell'oggetto nel sistema UTM.
-!! È possibile specificare il fuso UTM se non
-!! era stato specificato in fase di inizializzazione.
-SUBROUTINE geo_coordvect_to_utm(this, fuso, elliss)
-TYPE(geo_coordvect), INTENT (INOUT) :: this !< oggetto di cui ricalcolare le coordinate
-INTEGER, INTENT(IN), OPTIONAL :: fuso !< eventuale fuso UTM
-INTEGER, INTENT(IN), OPTIONAL :: elliss !< eventuale ellissoide
-
-INTEGER :: i
-
-IF (.NOT.this%desc%geoce .OR. this%desc%utmce) RETURN ! Niente da fare
-CALL geo_coorddesc_setval(this%desc, fuso, elliss, utmce=.TRUE.)
-ALLOCATE(this%utm(this%vsize,2))
-
-DO i = 1, this%vsize
-  CALL ll2utm(this%ll(i,1), this%ll(i,2), this%desc%fuso, this%desc%elliss, &
-   this%utm(i,1), this%utm(i,2))
-ENDDO
-
-END SUBROUTINE geo_coordvect_to_utm
-
-
-SUBROUTINE geo_coordvect_import(this, unitsim, shphandle, nshp, proj, fuso, elliss)
+SUBROUTINE geo_coordvect_import(this, unitsim, shphandle, nshp)
 TYPE(geo_coordvect), INTENT(OUT) :: this
 INTEGER,OPTIONAL,INTENT(IN) :: unitsim
 INTEGER(kind=ptr_c),OPTIONAL,INTENT(IN) :: shphandle
-INTEGER,OPTIONAL,INTENT(IN) :: nshp, proj, fuso, elliss
+INTEGER,OPTIONAL,INTENT(IN) :: nshp
 
 REAL(kind=fp_geo),ALLOCATABLE :: llon(:), llat(:)
 REAL(kind=fp_geo) :: lv1,lv2,lv3,lv4,lproj
@@ -1123,11 +447,6 @@ CHARACTER(len=40) :: lname
 TYPE(shpobject),POINTER :: shpobj
 #endif
 
-IF (PRESENT(proj)) THEN
-  lproj = proj
-ELSE
-  lproj = proj_geo
-ENDIF
 IF (PRESENT(unitsim)) THEN
   ! Leggo l'intestazione
   READ(unitsim,*,END=10)lvsize,lv1,lv2,lv3,lv4,lname
@@ -1141,13 +460,7 @@ IF (PRESENT(unitsim)) THEN
     llat(lvsize) = llat(1)
   ENDIF
   ! Lo inserisco nel mio oggetto
-  IF (lproj == proj_geo) THEN
-    CALL init(this, lon=llon(1:lvsize), lat=llat(1:lvsize), &
-     fuso=fuso, elliss=elliss)
-  ELSE
-    CALL init(this, utme=REAL(llon(1:lvsize),kind=fp_utm), &
-     utmn=REAL(llat(1:lvsize),kind=fp_utm), fuso=fuso, elliss=elliss)
-  ENDIF
+  CALL init(this, lon=llon(1:lvsize), lat=llat(1:lvsize))
   this%vtype = geo_coordvect_polygon ! Sempre un poligono
   
   DEALLOCATE(llon, llat)
@@ -1161,13 +474,8 @@ ELSE IF (PRESENT(shphandle) .AND. PRESENT(nshp)) THEN
   shpobj => shpreadobject(shphandle, nshp)
   IF (ASSOCIATED(shpobj)) THEN
     ! Lo inserisco nel mio oggetto
-    IF (lproj == proj_geo) THEN
-      CALL init(this, lon=REAL(shpobj%padfx,kind=fp_geo), &
-       lat=REAL(shpobj%padfy,kind=fp_geo), fuso=fuso, elliss=elliss)
-    ELSE
-      CALL init(this, utme=REAL(shpobj%padfx,kind=fp_utm), &
-       utmn=REAL(shpobj%padfy,kind=fp_utm), fuso=fuso, elliss=elliss)
-    ENDIF
+    CALL init(this, lon=REAL(shpobj%padfx,kind=fp_geo), &
+     lat=REAL(shpobj%padfy,kind=fp_geo))
     this%vtype = shpobj%nshptype
     CALL shpdestroyobject(shpobj)
   ELSE
@@ -1179,12 +487,11 @@ ENDIF
 END SUBROUTINE geo_coordvect_import
 
 
-SUBROUTINE geo_coordvect_export(this, unitsim, shphandle, nshp, proj)
+SUBROUTINE geo_coordvect_export(this, unitsim, shphandle, nshp)
 TYPE(geo_coordvect), INTENT(INOUT) :: this
 INTEGER,OPTIONAL,INTENT(IN) :: unitsim
 INTEGER(kind=ptr_c),OPTIONAL,INTENT(IN) :: shphandle
 INTEGER,OPTIONAL,INTENT(IN) :: nshp
-INTEGER,INTENT(in),OPTIONAL :: proj
 
 INTEGER :: i, lnshp, lproj
 CHARACTER(len=40) :: lname
@@ -1192,36 +499,12 @@ CHARACTER(len=40) :: lname
 TYPE(shpobject),POINTER :: shpobj
 #endif
 
-IF (PRESENT(proj)) THEN
-  IF ((proj == proj_geo .AND. this%desc%geoce) .OR. &
-   (proj == proj_utm .AND. this%desc%utmce)) THEN
-    lproj = proj
-  ELSE
-    CALL raise_error('in geo_coordvect_export, proiezione richiesta ' &
-     //TRIM(to_char(proj))//' non disponibile')
-    RETURN
-  ENDIF
-ELSE
-  IF (this%desc%geoce) THEN
-    lproj = proj_geo
-  ELSE IF (this%desc%utmce) THEN
-    lproj = proj_utm
-  ELSE
-    CALL raise_error('in geo_coordvect_export, oggetto non inizializzato')
-    RETURN
-  ENDIF
-ENDIF
-
 IF (PRESENT(unitsim)) THEN
   IF (this%vsize > 0) THEN
     ! Scrivo l'intestazione
     WRITE(unitsim,*)SIZE(this%ll,1),-1.,5000.,-0.1,1.1,'Area'
     ! Scrivo il poligono
-    IF (lproj == proj_geo) THEN
-      WRITE(unitsim,*)(this%ll(i,1:2), i=1,this%vsize)
-    ELSE IF (lproj == proj_utm) THEN
-      WRITE(unitsim,*)(this%utm(i,1:2), i=1,this%vsize)
-    ENDIF
+    WRITE(unitsim,*)(this%ll(i,1:2), i=1,this%vsize)
   ELSE
     CALL raise_warning('oggetto geo_coordvect vuoto, non scrivo niente in '// &
      TRIM(to_char(unitsim)))
@@ -1235,15 +518,10 @@ ELSE IF (PRESENT(shphandle)) THEN
   ENDIF
   NULLIFY(shpobj)
   ! Creo l'oggetto shape inizializzandolo con il mio oggetto
-  IF (lproj == proj_geo) THEN
-    shpobj => shpcreatesimpleobject(this%vtype, this%vsize, &
-     REAL(this%ll(1:this%vsize,1),kind=fp_d), &
-     REAL(this%ll(1:this%vsize,2),kind=fp_d))
-  ELSE IF (lproj == proj_utm) THEN
-    shpobj => shpcreatesimpleobject(this%vtype, this%vsize, &
-     REAL(this%utm(1:this%vsize,1),kind=fp_d), &
-     REAL(this%utm(1:this%vsize,2),kind=fp_d))
-  ENDIF
+
+  shpobj => shpcreatesimpleobject(this%vtype, this%vsize, &
+   REAL(this%ll(1:this%vsize,1),kind=fp_d), &
+   REAL(this%ll(1:this%vsize,2),kind=fp_d))
   IF (ASSOCIATED(shpobj)) THEN
     ! Lo scrivo nello shapefile
     i=shpwriteobject(shphandle, lnshp, shpobj)
@@ -1272,13 +550,10 @@ END SUBROUTINE geo_coordvect_export
 !! (per il formato shapefile è possibile solo con delle estensioni non standard),
 !! per cui questa informazione, se desiderata, deve essere fornita dal
 !! programma chiamante.
-SUBROUTINE geo_coordvect_importvect(this, shpfilesim, shpfile, proj, fuso, elliss)
+SUBROUTINE geo_coordvect_importvect(this, shpfilesim, shpfile)
 TYPE(geo_coordvect),POINTER :: this(:) !< puntatore all'oggetto su cui importare i dati, viene allocato dalla \a import stessa
 CHARACTER(len=*),INTENT(in),OPTIONAL :: shpfilesim !< nome del file in formato testo "SIM", il parametro deve essere fornito solo se si vuole importare da un file di quel tipo
 CHARACTER(len=*),INTENT(in),OPTIONAL :: shpfile !< nome delllo shapefile, il parametro deve essere fornito solo se si vuole importare da un file di quel tipo
-INTEGER,OPTIONAL,INTENT(IN) :: proj !< sistema di coordinate (proiezione) dei dati, usare i parametri \a ::proj_geo (default) o \a ::proj_utm
-INTEGER,OPTIONAL,INTENT(IN) :: fuso !< fuso UTM
-INTEGER,OPTIONAL,INTENT(IN) :: elliss !< ellissoide, default=elliss_wgs84
 
 REAL(kind=fp_geo),ALLOCATABLE :: llon(:), llat(:)
 REAL(kind=fp_geo) :: inu
@@ -1305,7 +580,7 @@ IF (PRESENT(shpfilesim)) THEN
     ALLOCATE(this(ns))
     REWIND(u)
     DO i = 1, ns
-      CALL import(this(i), unitsim=u, proj=proj, fuso=fuso, elliss=elliss)
+      CALL import(this(i), unitsim=u)
     ENDDO
   ENDIF
 20 CONTINUE
@@ -1330,8 +605,7 @@ ELSE IF (PRESENT(shpfile)) THEN
     ALLOCATE(this(ns))
     this(:)%vtype = shptype
     DO i = 1, ns
-      CALL import(this(i), shphandle=shphandle, nshp=i-1, proj=proj, &
-       fuso=fuso, elliss=elliss)
+      CALL import(this(i), shphandle=shphandle, nshp=i-1)
     ENDDO
   ENDIF
   CALL shpclose(shphandle)
@@ -1344,7 +618,7 @@ END SUBROUTINE geo_coordvect_importvect
 
 !> Esporta un vettore di oggetti \a geo_coordvect su un file in
 !! formato testo o in formato \a shapefile.
-SUBROUTINE geo_coordvect_exportvect(this, shpfilesim, shpfile, proj, append)
+SUBROUTINE geo_coordvect_exportvect(this, shpfilesim, shpfile, append)
 TYPE(geo_coordvect) :: this(:) !< oggetto da esportare
 CHARACTER(len=*),INTENT(in),OPTIONAL :: shpfilesim !< nome del file in formato testo "SIM", il parametro deve essere fornito solo se si vuole esportare su un file di quel tipo
 CHARACTER(len=*),INTENT(in),OPTIONAL :: shpfile !< nome dello shapefile, il parametro deve essere fornito solo se si vuole esportare su un file di quel tipo
@@ -1353,7 +627,6 @@ CHARACTER(len=*),INTENT(in),OPTIONAL :: shpfile !< nome dello shapefile, il para
 !! ha senso se \a this, a seguito di una chiamata a \a ::to_geo o a \a ::to_utm,
 !! contiene le coordinate in entrambi i sistemi, altrimenti i dati vengono
 !! esportati automaticamente nel solo sistema disponibile
-INTEGER,INTENT(in),OPTIONAL :: proj
 LOGICAL,INTENT(in),OPTIONAL :: append !< se è presente e vale \c .TRUE. , ::export accoda all'eventuale file esistente anziché sovrascriverlo
 
 REAL(kind=fp_geo),ALLOCATABLE :: llon(:), llat(:)
@@ -1379,7 +652,7 @@ IF (PRESENT(shpfilesim)) THEN
     OPEN(u, file=shpfilesim, status='unknown', ERR=30)
   ENDIF
   DO i = 1, SIZE(this)
-    CALL export(this(i), unitsim=u, proj=proj)
+    CALL export(this(i), unitsim=u)
   ENDDO
   CLOSE(u)
   RETURN
@@ -1403,9 +676,9 @@ ELSE IF (PRESENT(shpfile)) THEN
   CALL shpgetinfo(shphandle, ns, shptype, minb, maxb) ! Ottengo le info sul file
   DO i = 1, SIZE(this)
     IF (i > ns .OR. lappend) THEN ! Append shape
-      CALL export(this(i), shphandle=shphandle, proj=proj)
+      CALL export(this(i), shphandle=shphandle)
     ELSE ! Overwrite shape
-      CALL export(this(i), shphandle=shphandle, nshp=i-1, proj=proj)
+      CALL export(this(i), shphandle=shphandle, nshp=i-1)
     ENDIF
   ENDDO
   CALL shpclose(shphandle)
@@ -1414,43 +687,6 @@ ELSE IF (PRESENT(shpfile)) THEN
 ENDIF
 
 END SUBROUTINE geo_coordvect_exportvect
-
-
-!!$SUBROUTINE geo_coordvect_add(this, lon, lat, utme, utmn)
-!!$TYPE(geo_coordvect), INTENT(INOUT) :: this
-!!$REAL(kind=fp_geo), INTENT(IN), OPTIONAL :: lon(:), lat(:)
-!!$REAL(kind=fp_utm), INTENT(IN), OPTIONAL  :: utme(:), utmn(:)
-!!$
-!!$TYPE(geo_coordvect) :: tmp
-!!$INTEGER :: newsize
-!!$LOGICAL :: must_alloc
-!!$
-!!$IF (PRESENT(lon) .AND. PRESENT(lat)) THEN
-!!$  newsize = SIZE(this%ll,1) + MIN(SIZE(lon), SIZE(lat))
-!!$  IF (newsize > this%vsize)
-!!$  must_alloc = .FALSE.
-!!$
-!!$
-!!$IF (ASSOCIATED(this%g)) THEN
-!!$  IF (this%vsize > SIZE(this%g)) THEN
-!!$    must_alloc = .TRUE.
-!!$  ENDIF
-!!$ELSE
-!!$  must_alloc = .TRUE.
-!!$ENDIF
-!!$
-!!$IF (must_alloc) THEN
-!!$  ALLOCATE(tmp%g(MAX(INT(this%vsize*overalloc), this%vsize)))
-!!$  IF (ASSOCIATED(this%g)) THEN
-!!$    tmp%g(1:SIZE(this%g)) = this%g
-!!$    DEALLOCATE(this%g)
-!!$  ENDIF
-!!$  this%g => tmp%g
-!!$ENDIF
-!!$
-!!$CALL init(this%g(this%vsize),lon, lat, utme, utmn, fuso, elliss)
-!!$
-!!$END SUBROUTINE geo_coordvect_add
 
 
 !> Determina se il punto indicato da \a this si trova
@@ -1469,215 +705,27 @@ LOGICAL :: inside
 INTEGER :: i, j, starti
 
 inside = .FALSE. 
-IF (this%desc%geoce .AND. poly%desc%geoce) THEN
-  IF (ALL(poly%ll(1,:) == poly%ll(poly%vsize,:))) THEN ! Poligono chiuso
-    starti = 2
-    j = 1
-  ELSE ! Poligono non chiuso
-    starti = 1
-    j = poly%vsize
-  ENDIF
-  DO i = starti, poly%vsize
-    IF ((poly%ll(i,2) <= this%lat .AND. &
-     this%lat < poly%ll(j,2)) .OR. &
-     (poly%ll(j,2) <= this%lat .AND. &
-     this%lat < poly%ll(i,2))) THEN
-      IF (this%lon < (poly%ll(j,1) - poly%ll(i,1)) * &
-       (this%lat - poly%ll(i,2)) / &
-       (poly%ll(j,2) - poly%ll(i,2)) + poly%ll(i,1)) THEN
-        inside = .NOT. inside
-      ENDIF
-    ENDIF
-    j = i
-  ENDDO
-ELSE IF (this%desc%utmce .AND. poly%desc%utmce) THEN
-  IF (ALL(poly%utm(1,:) == poly%utm(poly%vsize,:))) THEN ! Poligono chiuso
-    starti = 2
-    j = 1
-  ELSE ! Poligono non chiuso
-    starti = 1
-    j = poly%vsize
-  ENDIF
-  DO i = starti, poly%vsize
-    IF ((poly%utm(i,2) <= this%utmn .AND. &
-     this%utmn < poly%utm(j,2)) .OR. &
-     (poly%utm(j,2) <= this%utmn .AND. &
-     this%utmn < poly%utm(i,2))) THEN
-      IF (this%utme < (poly%utm(j,1) - poly%utm(i,1)) * &
-       (this%utmn - poly%utm(i,2)) / &
-       (poly%utm(j,2) - poly%utm(i,2)) + poly%utm(i,1)) THEN
-        inside = .NOT. inside
-      ENDIF
-    ENDIF
-    j = i
-  ENDDO
-ELSE
-  CALL raise_error('in geo_coord_inside, sistemi di coordinate incompatibili')
+IF (ALL(poly%ll(1,:) == poly%ll(poly%vsize,:))) THEN ! Poligono chiuso
+  starti = 2
+  j = 1
+ELSE ! Poligono non chiuso
+  starti = 1
+  j = poly%vsize
 ENDIF
+DO i = starti, poly%vsize
+  IF ((poly%ll(i,2) <= this%lat .AND. &
+   this%lat < poly%ll(j,2)) .OR. &
+   (poly%ll(j,2) <= this%lat .AND. &
+   this%lat < poly%ll(i,2))) THEN
+    IF (this%lon < (poly%ll(j,1) - poly%ll(i,1)) * &
+     (this%lat - poly%ll(i,2)) / &
+     (poly%ll(j,2) - poly%ll(i,2)) + poly%ll(i,1)) THEN
+      inside = .NOT. inside
+    ENDIF
+  ENDIF
+  j = i
+ENDDO
 
 END FUNCTION geo_coord_inside
-
-
-! =================
-! == conversione ==
-! =================
-SUBROUTINE ll2utm(lon, lat, fuso, elliss, utme, utmn)
-!----------------------------------------------------------------------
-! VERSIONE CON SINTASSI F90 DELLA ROUTINE DI CALMET
-!
-! --- CALMET   Version: 5.0       Level: 970825                  LL2UTM
-!
-! --- PURPOSE:  Converts latitude/longitude to UTM coordinates
-!
-!           *** Universal Transverse Mercator (UTM) grid system divides
-!           *** the world into 60 north-south zones, covering a 6 deg.
-!           *** strip of longitude. Zone 1 begins between 180 and 174
-!           *** degrees West longitude and progresses eastward to
-!           *** zone 60.
-!           *** This routine works in both No. & So. Hemispheres
-!
-! --- INPUTS:
-!               this%lat (era RLAT) - Real        - N Latitude in decimal degrees
-!                                    (use negative for southern hemisphere)
-!               this%lon (era RLON) - Real        - E Longitude in decimal degrees
-!                                    (use negative for western hemisphere)
-!                IZ0 - Integer     - UTM zone override (used only if
-!                                    IZ0 .ne. zero).
-!
-! --- OUTPUT:
-!                  this%utme (era X) - Real        - UTM easting in km
-!                  this%utmn (era Y) - Real        - UTM northing in km
-!                 this%fuso (era IZ) - Integer     - UTM zone
-!
-!----------------------------------------------------------------------
-!IMPLICIT REAL(kind=fp_utm) (a-h,o-z) ! temporaneo
-
-REAL(kind=fp_geo),INTENT(IN) :: lon, lat
-INTEGER,INTENT(INOUT) :: fuso, elliss
-REAL(kind=fp_utm),INTENT(OUT) :: utme, utmn
-REAL(kind=fp_utm) :: deltalon, p
-REAL(kind=fp_utm) :: n, t, t2, c, m, a1, a2, a3, a4, a5, a6, sinp, cosp, tanp
-
-IF (fuso == imiss) THEN
-! ---   Locate natural zone
-  fuso = INT((180.0_fp_geo+lon)/6.0_fp_geo) + 1
-  IF (lat < 0.0_fp_geo) fuso = -fuso
-ENDIF
-
-! --- Compute delta longitude in radians
-deltalon = dtr*(lon - (6.0_fp_geo*ABS(fuso)-183.0_fp_geo))
-
-! --- Convert phi (latitude) to radians
-p = dtr*lat
-sinp = SIN(p)
-cosp = COS(p)
-tanp = TAN(p)
-
-n = a(elliss)/SQRT(1.0_fp_utm - e2(elliss)*sinp*sinp)
-t = tanp*tanp
-c = ep2(elliss)*cosp*cosp
-a1 = deltalon*cosp
-!!$m = 111132.0894_fp_utm*lat - 16216.94_fp_utm*SIN(2.0*p) + 17.21_fp_utm*SIN(4.0*p) &
-!!$ - 0.02_fp_utm*SIN(6.0*p)
-! Modificato rispetto alla routine originale, dipende dall'ellissoide
-m = ef0(elliss)*p - ef1(elliss)*SIN(2.0*p) - ef2(elliss)*SIN(4.0*p) - &
- ef3(elliss)*SIN(6.0*p)
-
-a2 = a1**2
-a3 = a2*a1
-a4 = a2**2
-a5 = a4*a1
-a6 = a4*a2
-t2 = t**2
-
-! --- Compute UTM x and y (km)
-utme = k0*n*(a1 + (1.0_fp_utm - t + c)*a3/6.0_fp_utm &
- + (5.0_fp_utm - 18.0_fp_utm*t + t2 + 72.0_fp_utm*c - 58.0_fp_utm*ep2(elliss)) &
- *a5/120.0_fp_utm) + false_e
-utmn = k0*(m + n*tanp &
- *(a2/2.0_fp_utm + (5.0_fp_utm - t + 9.0_fp_utm*c + &
- 4.0_fp_utm*c*c)*a4/24.0_fp_utm + (61.0_fp_utm - 58.0_fp_utm*t + t2 + &
- 600.0_fp_utm*c - 330.0_fp_utm*ep2(elliss))*a6/720.0_fp_utm))
-IF (fuso < 0) utmn = utmn + false_n
-
-END SUBROUTINE ll2utm
-
-
-SUBROUTINE utm2ll(utme, utmn, fuso, elliss, lon, lat)
-!----------------------------------------------------------------------
-! VERSIONE CON SINTASSI F90 DELLA ROUTINE DI CALMET
-!
-! --- CALMET   Version: 5.0       Level: 970825                  UTM2LL
-!
-! --- PURPOSE:  Converts UTM coordinates to latitude/longitude
-!               Works in both Northern & Southern Hemispheres
-!
-! --- INPUTS:
-!                  this%utme (era X) - real    - UTM easting in km
-!                  this%utmn (era Y) - real    - UTM northing in km
-!                 this%fuso (era IZ) - integer - UTM zone (6 deg N-S strip, range=1,60)
-!             LSOHEM - logical - TRUE = southern hemisphere
-!                                FALSE = northern hemisphere
-!
-! --- OUTPUT:
-!               this%lat (era RLAT) - real    - N Latitude in decimal degrees
-!               this%lon (era RLON) - real    - E Longitude in decimal degrees
-!
-!----------------------------------------------------------------------
-!IMPLICIT REAL(kind=fp_utm) (a-h,o-z) ! temporaneo
-
-REAL(kind=fp_utm),INTENT(IN) :: utme, utmn
-INTEGER,INTENT(IN) :: fuso, elliss
-REAL(kind=fp_utm),INTENT(OUT) :: lon, lat
-REAL(kind=fp_utm) :: rlon0, xm, ym, m, u, p1, c1, c2, t1, t2, n1, &
- sinp1, cosp1, tanp1, sin2p1, r0, r1, d, d2, d3, d4, d5, d6, p, l
-
-! --- Central meridian
-rlon0 = ABS(fuso)*6.0_fp_geo - 183.0_fp_geo
-
-! --- Correct for false easting, southern hemisphere and change to meters
-xm = utme - false_e
-IF (fuso < 0) THEN
-  ym = utmn - false_n
-ELSE
-  ym = utmn
-ENDIF
-
-m = ym/k0
-u = m/(a(elliss)*(1.0_fp_utm-e2(elliss)/4.0_fp_utm - &
- 3.0_fp_utm*e4(elliss)/64.0_fp_utm - 5.0_fp_utm*e6(elliss)/256.0_fp_utm))
-p1 = u + e11(elliss)*SIN(2.0_fp_utm*u) + e12(elliss)*SIN(4.0_fp_utm*u) + &
- e13(elliss)*SIN(6.0_fp_utm*u) + e14(elliss)*SIN(8.0_fp_utm*u)
-sinp1 = SIN(p1)
-cosp1 = COS(p1)
-tanp1 = TAN(p1)
-c1 = ep2(elliss)*cosp1**2
-c2 = c1**2
-t1 = tanp1**2
-t2 = t1**2
-sin2p1 = sinp1**2
-n1 = a(elliss)/SQRT(1.0_fp_utm-e2(elliss)*sin2p1)
-r0 = 1.0_fp_utm-e2(elliss)*sin2p1
-r1 = a(elliss)*(1.0_fp_utm-e2(elliss))/SQRT(r0**3)
-
-d = xm/(n1*k0)
-d2=d**2
-d3=d*d2
-d4=d*d3
-d5=d*d4
-d6=d*d5
-
-p = p1 - (n1*tanp1/r1) * (d2/2.0_fp_utm &
- - (5.0_fp_utm + 3.0_fp_utm*t1 + 10.0_fp_utm*c1 - 4.0_fp_utm*c2 &
- - 9.0_fp_utm*ep2(elliss))*d4/24.0_fp_utm &
- + (61.0_fp_utm + 90.0_fp_utm*t1 + 298.0_fp_utm*c1 + 45.0_fp_utm*t2 &
- - 252_fp_utm*ep2(elliss) - 3.0_fp_utm*c2)*d6/720.0_fp_utm)
-lat = rtd*p
-l = (d - (1.0_fp_utm + 2.0_fp_utm*t1 + c1)*d3/6.0_fp_utm &
- + (5.0_fp_utm - 2.0_fp_utm*c1 + 28.0_fp_utm*t1 - 3.0_fp_utm*c2 &
- + 8.0_fp_utm*ep2(elliss) + 24.0_fp_utm*t2)*d5/120.0_fp_utm)/cosp1
-lon = rtd*l + rlon0
-
-END SUBROUTINE utm2ll
 
 END MODULE geo_coord_class

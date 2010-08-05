@@ -17,7 +17,7 @@
 ! along with this program.  If not, see <http://www.gnu.org/licenses/>.
 PROGRAM esempio_geo_coordvect
 USE file_utilities
-USE geo_coord_class
+USE geo_coord_with_utm_class
 IMPLICIT NONE
 
 TYPE(geo_coordvect),POINTER :: macroa(:)

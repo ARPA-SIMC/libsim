@@ -562,14 +562,14 @@ call idba_set (this%handle,"mobile",0)
 if(ldegnet)call idba_set (this%handle,"query","best")
 
 if (present(coordmin)) then
-  CALL geo_coord_to_geo(coordmin)
+!  CALL geo_coord_to_geo(coordmin)
   CALL getval(coordmin, lat=lat,lon=lon)
   call idba_set(this%handle,"lonmin",lon)
   call idba_set(this%handle,"latmin",lat)
 end if
 
 if (present(coordmax)) then
-  CALL geo_coord_to_geo(coordmax)
+!  CALL geo_coord_to_geo(coordmax)
   CALL getval(coordmax, lat=lat,lon=lon)
   call idba_set(this%handle,"lonmax",lon)
   call idba_set(this%handle,"latmax",lat)
@@ -695,14 +695,14 @@ call idba_set (this%handle_staz,"mobile",0)
 if(ldegnet)call idba_set (this%handle_staz,"query","best")
 
 if (present(coordmin)) then
-  CALL geo_coord_to_geo(coordmin)
+!  CALL geo_coord_to_geo(coordmin)
   CALL getval(coordmin, lat=lat,lon=lon)
   call idba_set(this%handle_staz,"lonmin",lon)
   call idba_set(this%handle_staz,"latmin",lat)
 end if
 
 if (present(coordmax)) then
-  CALL geo_coord_to_geo(coordmax)
+!  CALL geo_coord_to_geo(coordmax)
   CALL getval(coordmax, lat=lat,lon=lon)
   call idba_set(this%handle_staz,"lonmax",lon)
   call idba_set(this%handle_staz,"latmax",lat)
@@ -1883,7 +1883,7 @@ do iii=1, nnetwork
 !!$    end if
 
 
-      CALL geo_coord_to_geo(this%vol7d%ana(i)%coord)
+!      CALL geo_coord_to_geo(this%vol7d%ana(i)%coord)
       CALL getval(this%vol7d%ana(i)%coord, lat=lat,lon=lon)
 
       call idba_unsetall (this%handle)
@@ -2611,14 +2611,14 @@ do while ( N > 0 )
 
 
     if (present(coordmin)) then
-      CALL geo_coord_to_geo(coordmin)
+!      CALL geo_coord_to_geo(coordmin)
       CALL getval(coordmin, lat=latmin,lon=lonmin)
       if (lonmin > lon) cycle
       if (latmin > lat) cycle
     end if
 
     if (present(coordmax)) then
-      CALL geo_coord_to_geo(coordmax)
+!      CALL geo_coord_to_geo(coordmax)
       CALL getval(coordmax, lat=latmax,lon=lonmax)
       if (lonmax < lon) cycle
       if (latmax < lat) cycle

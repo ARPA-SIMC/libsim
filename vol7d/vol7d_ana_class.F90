@@ -157,11 +157,7 @@ elemental FUNCTION vol7d_ana_eq(this, that) RESULT(res)
 TYPE(vol7d_ana),INTENT(IN) :: this, that
 LOGICAL :: res
 
-IF (this%coord == that%coord .AND. this%ident == that%ident) THEN
-  res = .TRUE.
-ELSE
-  res = .FALSE.
-ENDIF
+res = this%coord == that%coord .AND. this%ident == that%ident
 
 END FUNCTION vol7d_ana_eq
 

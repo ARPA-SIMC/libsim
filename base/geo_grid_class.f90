@@ -32,7 +32,7 @@ USE kinds
 USE missing_values
 USE char_utilities
 USE err_handling
-USE geo_coord_class
+USE geo_coord_with_utm_class
 !USE phys_const
 
 IMPLICIT NONE
