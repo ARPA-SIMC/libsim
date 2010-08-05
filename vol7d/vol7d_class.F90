@@ -187,7 +187,7 @@ TYPE vol7d
 !> volume di attributi di dati a valori carattere
   CHARACTER(len=vol7d_cdatalen),POINTER :: voldatiattrc(:,:,:,:,:,:,:)
 
-!> time definition; 0=time is reference time ; 1=time is validity time
+!> time definition; 0=time is reference time, 1=time is validity time
   integer :: time_definition
 
 END TYPE vol7d
@@ -1258,10 +1258,12 @@ END SUBROUTINE vol7d_set_attr_ind
 !! Il secondo volume viene accodato al primo e poi distrutto, si veda
 !! quindi la descrizione di ::vol7d_append.  Se uno degli oggetti \a
 !! this o \a that sono vuoti non perde tempo inutile,
-SUBROUTINE vol7d_merge(this, that, sort)
+SUBROUTINE vol7d_merge(this, that, sort, &
+ ltimesimple, ltimerangesimple, llevelsimple, lanasimple)
 TYPE(vol7d),INTENT(INOUT) :: this !< primo oggetto in ingresso, alla fine conterrà il risultato della fusione
 TYPE(vol7d),INTENT(INOUT) :: that !< secondo oggetto in ingresso, alla fine sarà distrutto
 LOGICAL,INTENT(IN),OPTIONAL :: sort !< se fornito e uguale a \c .TRUE., i descrittori che supportano un ordinamento (operatori > e/o <) risulteranno ordinati in ordine crescente nell'oggetto finale
+LOGICAL,INTENT(IN),OPTIONAL :: ltimesimple, ltimerangesimple, llevelsimple, lanasimple ! experimental, please do not use outside the library now
 
 TYPE(vol7d) :: v7d_clean
 
@@ -1271,7 +1273,8 @@ IF (.NOT.c_e(this)) THEN ! speedup
   CALL init(v7d_clean)
   that = v7d_clean ! destroy that without deallocating
 ELSE ! Append that to this and destroy that
-  CALL vol7d_append(this, that, sort)
+  CALL vol7d_append(this, that, sort, &
+   ltimesimple, ltimerangesimple, llevelsimple, lanasimple)
   CALL delete(that)
 ENDIF
 
@@ -1306,10 +1309,12 @@ END SUBROUTINE vol7d_merge
 !! \todo il parametro \a that è dichiarato \a INOUT perché la vol7d_alloc_vol
 !! può modificarlo, bisognerebbe implementare una vol7d_check_vol che restituisca
 !! errore anziché usare la vol7d_alloc_vol.
-SUBROUTINE vol7d_append(this, that, sort)
+SUBROUTINE vol7d_append(this, that, sort, &
+ ltimesimple, ltimerangesimple, llevelsimple, lanasimple)
 TYPE(vol7d),INTENT(INOUT) :: this !< primo oggetto in ingresso, a cui sarà accodato il secondo
 TYPE(vol7d),INTENT(INOUT) :: that !< secondo oggetto in ingresso, non viene modificato dal metodo
 LOGICAL,INTENT(IN),OPTIONAL :: sort !< se fornito e uguale a \c .TRUE., i descrittori che supportano un ordinamento (operatori > e/o <) risulteranno ordinati in ordine crescente nell'oggetto finale
+LOGICAL,INTENT(IN),OPTIONAL :: ltimesimple, ltimerangesimple, llevelsimple, lanasimple ! experimental, please do not use outside the library now
 
 TYPE(vol7d) :: v7dtmp
 LOGICAL :: lsort
@@ -1339,14 +1344,34 @@ IF (PRESENT(sort)) lsort = sort
 
 ! Calcolo le mappature tra volumi vecchi e volume nuovo
 ! I puntatori remap* vengono tutti o allocati o nullificati
-CALL vol7d_remap2_datetime(this%time, that%time, v7dtmp%time, &
- lsort, remapt1, remapt2)
-CALL vol7d_remap2_vol7d_timerange(this%timerange, that%timerange, &
- v7dtmp%timerange, lsort, remaptr1, remaptr2)
-CALL vol7d_remap2_vol7d_level(this%level, that%level, v7dtmp%level, &
- lsort, remapl1, remapl2)
-CALL vol7d_remap2_vol7d_ana(this%ana, that%ana, v7dtmp%ana, &
- .FALSE., remapa1, remapa2)
+IF (optio_log(ltimesimple)) THEN
+  CALL vol7d_remap2simple_datetime(this%time, that%time, v7dtmp%time, &
+   lsort, remapt1, remapt2)
+ELSE
+  CALL vol7d_remap2_datetime(this%time, that%time, v7dtmp%time, &
+   lsort, remapt1, remapt2)
+ENDIF
+IF (optio_log(ltimerangesimple)) THEN
+  CALL vol7d_remap2simple_vol7d_timerange(this%timerange, that%timerange, &
+   v7dtmp%timerange, lsort, remaptr1, remaptr2)
+ELSE
+  CALL vol7d_remap2_vol7d_timerange(this%timerange, that%timerange, &
+   v7dtmp%timerange, lsort, remaptr1, remaptr2)
+ENDIF
+IF (optio_log(llevelsimple)) THEN
+  CALL vol7d_remap2simple_vol7d_level(this%level, that%level, v7dtmp%level, &
+   lsort, remapl1, remapl2)
+ELSE
+  CALL vol7d_remap2_vol7d_level(this%level, that%level, v7dtmp%level, &
+   lsort, remapl1, remapl2)
+ENDIF
+IF (optio_log(lanasimple)) THEN
+  CALL vol7d_remap2simple_vol7d_ana(this%ana, that%ana, v7dtmp%ana, &
+   .FALSE., remapa1, remapa2)
+ELSE
+  CALL vol7d_remap2_vol7d_ana(this%ana, that%ana, v7dtmp%ana, &
+   .FALSE., remapa1, remapa2)
+ENDIF
 CALL vol7d_remap2_vol7d_network(this%network, that%network, v7dtmp%network, &
  .FALSE., remapn1, remapn2)
 

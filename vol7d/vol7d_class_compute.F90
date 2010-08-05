@@ -438,7 +438,7 @@ CALL vol7d_alloc(that, ntimerange=ndtr)
 that%timerange(:) = pack_distinct(tr, ndtr, back=.TRUE.)
 DEALLOCATE(tr)
 ! merge with template
-CALL vol7d_merge(that, v7dtmp)
+CALL vol7d_merge(that, v7dtmp, lanasimple=.TRUE.)
 
 ! ALLOCATE(map_tr(ndtr,2)) ! 1-1 mapping, faster but less general
 ALLOCATE(map_tr(SIZE(this%timerange),SIZE(this%timerange)))

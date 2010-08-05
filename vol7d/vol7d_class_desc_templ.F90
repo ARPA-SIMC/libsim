@@ -15,6 +15,58 @@
 
 ! You should have received a copy of the GNU General Public License
 ! along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+! Simplified version of remap2 suitable either when either of input
+! arrays is of zero length or when they are of same length and same
+! content (the last statement is not checked, the caller is trusted).
+SUBROUTINE vol7d_remap2simple_/**/VOL7D_POLY_TYPE(varin1, varin2, varout, sort, remap1, remap2)
+TYPE(/**/VOL7D_POLY_TYPE),POINTER :: varin1(:), varin2(:), varout(:)
+LOGICAL,INTENT(in) :: sort
+INTEGER,POINTER :: remap1(:), remap2(:)
+
+INTEGER :: i
+
+#ifdef VOL7D_SORT
+IF (sort) THEN ! Cannot sort here, the full version is needed
+  CALL vol7d_remap2_/**/VOL7D_POLY_TYPE(varin1, varin2, varout, sort, remap1, remap2)
+  RETURN
+ENDIF
+#endif
+#ifdef VOL7D_NO_ZERO_ALLOC
+! Don't bother with the case of variables, use the full version
+CALL vol7d_remap2_/**/VOL7D_POLY_TYPE(varin1, varin2, varout, sort, remap1, remap2)
+RETURN
+#endif
+
+IF (.NOT.ASSOCIATED(varin1) .AND. .NOT.ASSOCIATED(varin2)) THEN
+  NULLIFY(remap1, remap2, varout)
+  RETURN
+ENDIF
+! Complete allocations
+IF (.NOT.ASSOCIATED(varin1)) THEN
+  ALLOCATE(varin1(0))
+ELSE IF (.NOT.ASSOCIATED(varin2)) THEN
+  ALLOCATE(varin2(0))
+ENDIF
+IF (SIZE(varin1) /= SIZE(varin2) .AND. MIN(SIZE(varin1),SIZE(varin2)) /= 0) THEN
+! the full version is needed
+  CALL vol7d_remap2_/**/VOL7D_POLY_TYPE(varin1, varin2, varout, sort, remap1, remap2)
+  RETURN
+ENDIF
+
+ALLOCATE(remap1(SIZE(varin1)), remap2(SIZE(varin2)), &
+ varout(MAX(SIZE(varin1),SIZE(varin2))))
+remap1(:) = (/(i,i=1,SIZE(remap1))/)
+remap2(:) = (/(i,i=1,SIZE(remap2))/)
+IF (SIZE(varout) == SIZE(varin1)) THEN
+  varout(:) = varin1(:)
+ELSE
+  varout(:) = varin2(:)
+ENDIF
+
+END SUBROUTINE vol7d_remap2simple_/**/VOL7D_POLY_TYPE
+
+
 SUBROUTINE vol7d_remap2_/**/VOL7D_POLY_TYPE(varin1, varin2, varout, sort, remap1, remap2)
 TYPE(/**/VOL7D_POLY_TYPE),POINTER :: varin1(:), varin2(:), varout(:)
 LOGICAL,INTENT(in) :: sort
@@ -88,6 +140,99 @@ ENDIF
 #endif
 
 END SUBROUTINE vol7d_remap2_/**/VOL7D_POLY_TYPE
+
+
+SUBROUTINE vol7d_remap2test_/**/VOL7D_POLY_TYPE(varin1, varin2, varout, sort, remap1, remap2)
+TYPE(/**/VOL7D_POLY_TYPE),POINTER :: varin1(:), varin2(:), varout(:)
+LOGICAL,INTENT(in) :: sort
+INTEGER,POINTER :: remap1(:), remap2(:)
+
+TYPE(/**/VOL7D_POLY_TYPE),ALLOCATABLE :: varouttmp(:)
+INTEGER,ALLOCATABLE :: remaptmp(:)
+INTEGER :: i, n
+LOGICAL av1, av2
+
+av1 = .FALSE.; av2 = .FALSE.
+IF (.NOT.ASSOCIATED(varin1) .AND. .NOT.ASSOCIATED(varin2)) THEN
+  NULLIFY(remap1, remap2, varout)
+  RETURN
+ENDIF
+! Complete allocations
+IF (.NOT.ASSOCIATED(varin1)) THEN
+  ALLOCATE(varin1(0))
+  av1 = .TRUE.
+ELSE IF (.NOT.ASSOCIATED(varin2)) THEN
+  ALLOCATE(varin2(0))
+  av2 = .TRUE.
+ENDIF
+ALLOCATE(remap1(SIZE(varin1)), remap2(SIZE(varin2)))
+
+! Count different elements
+ALLOCATE(varouttmp(SIZE(varin1)+SIZE(varin2)))
+varouttmp(1:SIZE(varin1)) = varin1(:)
+varouttmp(SIZE(varin1)+1:SIZE(varin1)+SIZE(varin2)) = varin2(:)
+
+n = count_distinct(varouttmp, back=.TRUE.)
+!n = SIZE(varin1)
+!DO i = 1, SIZE(varin2)
+!  IF (ALL(varin1 /= varin2(i))) THEN ! ALL(zero-sized) = .TRUE.
+!    n = n + 1
+!  ENDIF
+!ENDDO
+#ifdef VOL7D_NO_ZERO_ALLOC
+IF (n == 0) THEN ! in case of variables do not allocate zero-length arrays
+  DEALLOCATE(remap1, remap2)
+  NULLIFY(varout)
+  IF (av1) DEALLOCATE(varin1)
+  IF (av2) DEALLOCATE(varin2)
+  RETURN
+ENDIF
+#endif
+! Allocate new array
+ALLOCATE(varout(n))
+! Fill it
+varout(:) = pack_distinct(varouttmp, n, back=.TRUE.)
+!n = SIZE(varin1)
+!varout(1:n) = varin1(:)
+!DO i = 1, SIZE(varin2)
+!  IF (ALL(varin1 /= varin2(i))) THEN
+!    n = n + 1
+!    varout(n) = varin2(i)
+!  ENDIF
+!ENDDO
+
+#ifdef VOL7D_SORT
+IF (sort) THEN ! sort
+  DO i = 1, SIZE(varin1)
+    remap1(i) = COUNT(varin1(i) > varout(:)) + 1
+  ENDDO
+  DO i = 1, SIZE(varin2)
+    remap2(i) = COUNT(varin2(i) > varout(:)) + 1
+  ENDDO
+  IF (SIZE(varin1) > 0) varout(remap1) = varin1(:)
+  IF (SIZE(varin2) > 0) varout(remap2) = varin2(:)
+ELSE ! compute simple remapping
+#endif
+
+  ALLOCATE(remaptmp(SIZE(varin1)+SIZE(varin2)))
+  remaptmp(:) = map_distinct(varouttmp, back=.TRUE.)
+  remap1(:) = remaptmp(1:SIZE(varin1))
+  remap2(:) = remaptmp(SIZE(varin1)+1:SIZE(varin1)+SIZE(varin2)) - SIZE(varin1)
+  DEALLOCATE(remaptmp)
+
+!  IF (SIZE(varin1) > 0) remap1(:) = (/(i,i=1,SIZE(varin1))/)
+!  DO i = 1, SIZE(varin2)
+!    remap2(i) = firsttrue(varin2(i) == varout(:))
+!  ENDDO
+
+
+#ifdef VOL7D_SORT
+ENDIF
+#endif
+
+DEALLOCATE(varouttmp)
+
+END SUBROUTINE vol7d_remap2test_/**/VOL7D_POLY_TYPE
 
 
 SUBROUTINE vol7d_remap1_/**/VOL7D_POLY_TYPE(varin, varout, &
