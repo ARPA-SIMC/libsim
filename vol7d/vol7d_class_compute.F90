@@ -160,7 +160,6 @@ ENDIF
 
 ! be safe
 CALL vol7d_alloc_vol(this)
-CALL vol7d_smart_sort(this, ltime=.TRUE.) ! need a time-ordered volume
 ! count timeranges of type statistical processing for observed data
 ntr = COUNT(this%timerange(:)%timerange == tri .AND. this%timerange(:)%p2 /= imiss &
  .AND. this%timerange(:)%p2 /= 0 .AND. this%timerange(:)%p1 == 0)
@@ -171,6 +170,7 @@ IF (ntr == 0) THEN
   RETURN
 ENDIF
 ! cleanup the original volume
+CALL vol7d_smart_sort(this, ltime=.TRUE.) ! need a time-ordered volume
 CALL vol7d_reform(this, miss=.FALSE., sort=.FALSE., unique=.TRUE.)
 ! recount timeranges, they could have diminished because of unique
 ntr = COUNT(this%timerange(:)%timerange == tri .AND. this%timerange(:)%p2 /= imiss &

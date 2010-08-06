@@ -58,7 +58,7 @@ ALLOCATE(remap1(SIZE(varin1)), remap2(SIZE(varin2)), &
  varout(MAX(SIZE(varin1),SIZE(varin2))))
 remap1(:) = (/(i,i=1,SIZE(remap1))/)
 remap2(:) = (/(i,i=1,SIZE(remap2))/)
-IF (SIZE(varout) == SIZE(varin1)) THEN
+IF (SIZE(varin1) > SIZE(varin2)) THEN
   varout(:) = varin1(:)
 ELSE
   varout(:) = varin2(:)

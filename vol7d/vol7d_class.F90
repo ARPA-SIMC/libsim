@@ -1310,11 +1310,15 @@ END SUBROUTINE vol7d_merge
 !! può modificarlo, bisognerebbe implementare una vol7d_check_vol che restituisca
 !! errore anziché usare la vol7d_alloc_vol.
 SUBROUTINE vol7d_append(this, that, sort, &
- ltimesimple, ltimerangesimple, llevelsimple, lanasimple)
+ ltimesimple, ltimerangesimple, llevelsimple, lanasimple, lnetworksimple)
 TYPE(vol7d),INTENT(INOUT) :: this !< primo oggetto in ingresso, a cui sarà accodato il secondo
 TYPE(vol7d),INTENT(INOUT) :: that !< secondo oggetto in ingresso, non viene modificato dal metodo
 LOGICAL,INTENT(IN),OPTIONAL :: sort !< se fornito e uguale a \c .TRUE., i descrittori che supportano un ordinamento (operatori > e/o <) risulteranno ordinati in ordine crescente nell'oggetto finale
-LOGICAL,INTENT(IN),OPTIONAL :: ltimesimple, ltimerangesimple, llevelsimple, lanasimple ! experimental, please do not use outside the library now
+! experimental, please do not use outside the library now, they force the use
+! of a simplified mapping algorithm which is valid only whene the dimension
+! content is the same in both volumes , or when one of them is empty
+LOGICAL,INTENT(IN),OPTIONAL :: ltimesimple, ltimerangesimple, llevelsimple, lanasimple, lnetworksimple
+
 
 TYPE(vol7d) :: v7dtmp
 LOGICAL :: lsort
@@ -1339,8 +1343,7 @@ CALL vol7d_alloc_vol(this)
 CALL vol7d_alloc_vol(that)
 
 CALL init(v7dtmp, time_definition=this%time_definition)
-lsort = .FALSE.
-IF (PRESENT(sort)) lsort = sort
+CALL optio(sort, lsort)
 
 ! Calcolo le mappature tra volumi vecchi e volume nuovo
 ! I puntatori remap* vengono tutti o allocati o nullificati
@@ -1372,8 +1375,13 @@ ELSE
   CALL vol7d_remap2_vol7d_ana(this%ana, that%ana, v7dtmp%ana, &
    .FALSE., remapa1, remapa2)
 ENDIF
-CALL vol7d_remap2_vol7d_network(this%network, that%network, v7dtmp%network, &
- .FALSE., remapn1, remapn2)
+IF (optio_log(lnetworksimple)) THEN
+  CALL vol7d_remap2simple_vol7d_network(this%network, that%network, v7dtmp%network, &
+   .FALSE., remapn1, remapn2)
+ELSE
+  CALL vol7d_remap2_vol7d_network(this%network, that%network, v7dtmp%network, &
+   .FALSE., remapn1, remapn2)
+ENDIF
 
 ! Faccio la fusione fisica dei volumi
 CALL vol7d_merge_finalr(this, that, v7dtmp, &
@@ -1489,21 +1497,10 @@ INTEGER,POINTER :: remapt(:), remaptr(:), remapl(:), remapa(:), remapn(:)
 CALL init(that)
 IF (.NOT.c_e(this)) RETURN ! speedup, nothing to do
 CALL vol7d_alloc_vol(this) ! be safe
-IF (PRESENT(sort)) THEN
-  lsort = sort
-ELSE
-  lsort = .FALSE.
-ENDIF
-IF (PRESENT(unique)) THEN
-  lunique = unique
-ELSE
-  lunique = .TRUE.
-ENDIF
-IF (PRESENT(miss)) THEN
-  lmiss = miss
-ELSE
-  lmiss = .FALSE.
-ENDIF
+
+CALL optio(sort, lsort)
+CALL optio(unique, lunique)
+CALL optio(miss, lmiss)
 
 ! Calcolo le mappature tra volume vecchio e volume nuovo
 ! I puntatori remap* vengono tutti o allocati o nullificati
@@ -1634,35 +1631,29 @@ LOGICAL :: to_be_sorted
 to_be_sorted = .FALSE.
 CALL vol7d_alloc_vol(this) ! usual safety check
 
-IF (PRESENT(ltime)) THEN
-  IF (ltime) THEN
-    DO i = 2, SIZE(this%time)
-      IF (this%time(i) < this%time(i-1)) THEN
-        to_be_sorted = .TRUE.
-        EXIT
-      ENDIF
-    ENDDO
-  ENDIF
+IF (optio_log(ltime)) THEN
+  DO i = 2, SIZE(this%time)
+    IF (this%time(i) < this%time(i-1)) THEN
+      to_be_sorted = .TRUE.
+      EXIT
+    ENDIF
+  ENDDO
 ENDIF
-IF (PRESENT(ltimerange)) THEN
-  IF (ltimerange) THEN
-    DO i = 2, SIZE(this%timerange)
-      IF (this%timerange(i) < this%timerange(i-1)) THEN
-        to_be_sorted = .TRUE.
-        EXIT
-      ENDIF
-    ENDDO
-  ENDIF
+IF (optio_log(ltimerange)) THEN
+  DO i = 2, SIZE(this%timerange)
+    IF (this%timerange(i) < this%timerange(i-1)) THEN
+      to_be_sorted = .TRUE.
+      EXIT
+    ENDIF
+  ENDDO
 ENDIF
-IF (PRESENT(llevel)) THEN
-  IF (llevel) THEN
-    DO i = 2, SIZE(this%level)
-      IF (this%level(i) < this%level(i-1)) THEN
-        to_be_sorted = .TRUE.
-        EXIT
-      ENDIF
-    ENDDO
-  ENDIF
+IF (optio_log(llevel)) THEN
+  DO i = 2, SIZE(this%level)
+    IF (this%level(i) < this%level(i-1)) THEN
+      to_be_sorted = .TRUE.
+      EXIT
+    ENDIF
+  ENDDO
 ENDIF
 
 IF (to_be_sorted) CALL vol7d_reform(this, sort=.TRUE.)
@@ -1699,7 +1690,6 @@ ENDIF
 CALL vol7d_copy(this, that, &
  lanavarr=tv, lanavard=acp, lanavari=acp, lanavarb=acp, lanavarc=acp, &
  ldativarr=tv, ldativard=fv, ldativari=fv, ldativarb=fv, ldativarc=fv)
-
 
 ! Volume solo di dati double
 CALL vol7d_copy(this, v7d_tmp, &
