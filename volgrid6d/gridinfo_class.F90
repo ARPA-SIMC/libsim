@@ -303,17 +303,11 @@ call l4f_category_log(this%category,L4F_DEBUG,"export to gaid" )
 
 if ( c_e(this%gaid)) then
 
-!!$! ponghino per gribapi ....
-!  call grib_set(this%gaid,"PVPresent",0)
-!  call grib_set(this%gaid,"PLPresent",0)
-!  call grib_set(this%gaid,"pvlLocation",255)
-!!$! end ponghino
-
   call unnormalize_gridinfo(this)
 
   call export(this%griddim,this%gaid)
-  call export(this%time,this%gaid)
-  call export(this%timerange,this%gaid)
+  call export(this%time,this%gaid, this%timerange)
+  CALL export(this%timerange,this%gaid, this%time)
   call export(this%level,this%gaid)
   call export(this%var,this%gaid)
 
@@ -359,34 +353,57 @@ end subroutine import_time
 !! identificato da \a gaid precedentemente impostato.
 !! Le informazioni contenute nella struttura dopo alcune elaborazioni vengono
 !! forzate nel contenuto del grib 
-subroutine export_time(this,gaid)
-
+SUBROUTINE export_time(this, gaid, timerange)
 TYPE(datetime),INTENT(in) :: this !< oggetto datetime da cui exportare
 integer,INTENT(in)        :: gaid !< grib_api id of the grib loaded in memory to export
+TYPE(vol7d_timerange) :: timerange !< timerange, used for grib2 coding of statistically processed analysed data
 
-integer                   :: EditionNumber,date,time
-character(len=17)         :: date_time
+INTEGER :: EditionNumber
 
+CALL grib_get(gaid,'GRIBEditionNumber',EditionNumber)
 
-call grib_get(gaid,'GRIBEditionNumber',EditionNumber)
+IF (EditionNumber == 1) THEN
 
-if (EditionNumber == 1 .or.EditionNumber == 2 )then
+  CALL code_referencetime(this)
+
+ELSE IF (EditionNumber == 2 )THEN
+
+  IF (timerange%p1 >= timerange%p2) THEN ! forecast-like
+    CALL code_referencetime(this)
+  ELSE IF (timerange%p1 == 0) THEN ! analysis-like
+    CALL code_referencetime(this-timedelta_new(msec=timerange%p2*1000))
+  ELSE ! bad timerange
+!      CALL l4f_category_log(this%category, L4F_ERROR, &
+!       'Timerange with 0>p1>p2 cannot be exported in grib2'
+    CALL raise_error()
+  ENDIF
+
+ELSE
+
+!  CALL l4f_category_log(this%category, L4F_ERROR, &
+!   'GribEditionNumber not supported: '//TRIM(to_char(GribEditionNumber)))
+  CALL raise_error()
+
+ENDIF
+
+CONTAINS
+
+SUBROUTINE code_referencetime(reftime)
+TYPE(datetime),INTENT(in) :: reftime
+
+INTEGER :: date,time
+CHARACTER(len=17) :: date_time
 
 ! datetime is AAAAMMGGhhmmssmsc
-  call getval (this,simpledate=date_time)
-  read(date_time(:8),*)date
-  read(date_time(9:12),*)time
-  call grib_set(gaid,'dataDate',date)
-  call grib_set(gaid,'dataTime',time)
+CALL getval (reftime,simpledate=date_time)
+READ(date_time(:8),'(I8)')date
+READ(date_time(9:12),'(I4)')time
+CALL grib_set(gaid,'dataDate',date)
+CALL grib_set(gaid,'dataTime',time)
 
-else
+END SUBROUTINE code_referencetime
 
-  CALL raise_error('GribEditionNumber not supported')
-
-end if
-
-
-end subroutine export_time
+END SUBROUTINE export_time
 
 
 
@@ -395,7 +412,6 @@ end subroutine export_time
 !! Le informazioni relative al livello vengono estratte dal grid e dopo qualche elaborazione 
 !! vengono memorizzate nella struttura.
 subroutine import_level(this,gaid)
-
 TYPE(vol7d_level),INTENT(out) :: this !< oggetto vol7d_level in cui importare
 integer,INTENT(in)          :: gaid !< grib_api id of the grib loaded in memory to import
 
@@ -411,9 +427,7 @@ if (EditionNumber == 1)then
   call grib_get(gaid,'bottomLevel',l2)
 
   call level_g1_to_g2(ltype,l1,l2,ltype1,scalef1,scalev1,ltype2,scalef2,scalev2)
-  IF (ltype == 111 .OR. ltype == 112) THEN
-!    PRINT*,'import level',ltype1,scalef1,scalev1,ltype2,scalef2,scalev2,ltype,l2,l1
-  ENDIF
+
 else if (EditionNumber == 2)then
 
   call grib_get(gaid,'typeOfFirstFixedSurface',ltype1)
@@ -436,9 +450,7 @@ call level_g2_to_dballe(ltype1,scalef1,scalev1,ltype2,scalef2,scalev2, &
 
 call init (this,level1,l1,level2,l2)
 
-
 end subroutine import_level
-
 
 
 !> Esporta il contenuto dell'oggetto vol7d_level \a this in un messaggio grib
@@ -461,9 +473,6 @@ call grib_get(gaid,'GRIBEditionNumber',EditionNumber)
 if (EditionNumber == 1)then
 
   CALL level_g2_to_g1(ltype1,scalef1,scalev1,ltype2,scalef2,scalev2,ltype,l1,l2)
-  IF (ltype == 111 .OR. ltype == 112) THEN
-!    PRINT*,'export level',ltype1,scalef1,scalev1,ltype2,scalef2,scalev2,ltype,l2,l1
-  ENDIF
   call grib_set(gaid,'indicatorOfTypeOfLevel',ltype)
 ! it is important to set topLevel after, otherwise, in case of single levels
 ! bottomLevel=0 overwrites topLevel (aliases in grib_api)
@@ -490,13 +499,11 @@ end if
 end subroutine export_level
 
 
-
 !> Importa nell'oggetto vol7d_timerange \a this il contenuto del messaggio grib
 !! identificato da \a gaid.
 !! Le informazioni relative al timerange vengono estratte dal grid e dopo qualche elaborazione 
 !! vengono memorizzate nella struttura.
 subroutine import_timerange(this,gaid)
-
 TYPE(vol7d_timerange),INTENT(out) :: this !< oggetto vol7d_timerange in cui importare
 integer,INTENT(in) :: gaid !< grib_api id of the grib loaded in memory to import
 
@@ -523,7 +530,7 @@ else if (EditionNumber == 2) then
   CALL gribtr_to_second(unit,p1,p1)
   call grib_get(gaid,'typeOfStatisticalProcessing',statproc,status)
 
-  if (status == GRIB_SUCCESS .AND. statproc >= 0 .AND. statproc <= 9) then ! statistical processing
+  if (status == GRIB_SUCCESS .AND. statproc >= 0 .AND. statproc <= 9) then ! statistically processed
      call grib_get(gaid,'lengthOfTimeRange',p2) 
      CALL grib_get(gaid,'indicatorOfUnitForTimeRange',unit)
      CALL gribtr_to_second(unit,p2,p2)
@@ -548,16 +555,16 @@ end subroutine import_timerange
 !! identificato da \a gaid precedentemente impostato.
 !! Le informazioni contenute nella struttura dopo alcune elaborazioni vengono
 !! forzate nel contenuto del grib 
-subroutine export_timerange(this,gaid)
-
+SUBROUTINE export_timerange(this, gaid, reftime)
 TYPE(vol7d_timerange),INTENT(in) :: this !< oggetto vol7d_timerange da cui exportare
 integer,INTENT(in) :: gaid !< grib_api id of the grib loaded in memory to export
+TYPE(datetime) :: reftime !< reference time of data, used for coding correct end of statistical processing period in grib2
 
 INTEGER :: EditionNumber, tri, unit, p1_g1, p2_g1, p1, p2
 
 call grib_get(gaid,'GRIBEditionNumber',EditionNumber)
 
-if (EditionNumber == 1 ) then
+IF (EditionNumber == 1 ) THEN
 ! Convert vol7d_timerange members to grib1 with reasonable time unit
   CALL timerange_g2_to_g1_unit(this%timerange, this%p1, this%p2, &
    tri, p1_g1, p2_g1, unit)
@@ -568,30 +575,82 @@ if (EditionNumber == 1 ) then
   CALL grib_set(gaid,'indicatorOfUnitOfTimeRange',unit)
 
 else if (EditionNumber == 2) then
+
+  IF (this%timerange == 254) THEN ! point in time -> template 4.0
+    CALL grib_set(gaid,'productDefinitionTemplateNumber', 0)
 ! Set reasonable time unit
-  CALL second_to_gribtr(this%p1,p1,unit)
+    CALL second_to_gribtr(this%p1,p1,unit)
 ! Set the native keys
-  CALL grib_set(gaid,'forecastTime',p1)
-  CALL grib_set(gaid,'indicatorOfUnitOfTimeRange',unit)
-!    CALL grib_set(gaid,'endStepInHours',this%p1)
+    CALL grib_set(gaid,'indicatorOfUnitOfTimeRange',unit)
+    CALL grib_set(gaid,'forecastTime',p1)
 
-!TODO bisogna gestire anche il template
-  IF (this%timerange >= 0 .AND. this%timerange <= 9) THEN
-    CALL grib_set(gaid,'typeOfStatisticalProcessing',this%timerange)
-    CALL second_to_gribtr(this%p2,p2,unit)
-    CALL grib_set(gaid,'indicatorOfUnitForTimeRange',unit)
-    CALL grib_set(gaid,'lengthOfTimeRange',p2)
+  ELSE IF (this%timerange >= 0 .AND. this%timerange <= 9) THEN
+! statistically processed -> templae 4.8
+    CALL grib_set(gaid,'productDefinitionTemplateNumber', 8)
+
+    IF (this%p1 >= this%p2) THEN ! forecast-like
+! Set reasonable time unit
+      CALL second_to_gribtr(this%p1,p1,unit)
+      CALL grib_set(gaid,'indicatorOfUnitOfTimeRange',unit)
+      CALL grib_set(gaid,'forecastTime',p1)
+      CALL code_endoftimeinterval(reftime+timedelta_new(msec=this%p2*1000))
+! Successive times processed have same start time of forecast,
+! forecast time is incremented
+      CALL grib_set(gaid,'typeOfStatisticalProcessing',this%timerange)
+      CALL grib_set(gaid,'typeOfTimeIncrement',2)
+      CALL second_to_gribtr(this%p2,p2,unit)
+      CALL grib_set(gaid,'indicatorOfUnitForTimeRange',unit)
+      CALL grib_set(gaid,'lengthOfTimeRange',p2)
+
+    ELSE IF (this%p1 == 0) THEN ! analysis-like
+! Set reasonable time unit
+      CALL second_to_gribtr(this%p2,p2,unit) ! use p2 (change initial time)
+      CALL grib_set(gaid,'indicatorOfUnitOfTimeRange',unit)
+      CALL grib_set(gaid,'forecastTime',p2)
+      CALL code_endoftimeinterval(reftime)
+! Successive times processed have same forecast time, start time of
+! forecast is incremented
+      CALL grib_set(gaid,'typeOfStatisticalProcessing',this%timerange)
+      CALL grib_set(gaid,'typeOfTimeIncrement',1)
+      CALL grib_set(gaid,'indicatorOfUnitForTimeRange',unit)
+      CALL grib_set(gaid,'lengthOfTimeRange',p2)
+
+    ELSE ! bad timerange
+!      CALL l4f_category_log(this%category, L4F_ERROR, &
+!       'Timerange with 0>p1>p2 cannot be exported in grib2'
+      CALL raise_error()
+    ENDIF
   ELSE
-
-    call raise_error('typeOfStatisticalProcessing not supported: '//trim(to_char(this%timerange)))
-    
+!    CALL l4f_category_log(this%category, L4F_ERROR, &
+!     'typeOfStatisticalProcessing not supported: '//TRIM(to_char(this%timerange)))
+    CALL raise_error()
   ENDIF
 
-else
+ELSE
+!  CALL l4f_category_log(this%category, L4F_ERROR, &
+!   'GribEditionNumber not supported: '//TRIM(to_char(GribEditionNumber)))
+  CALL raise_error()
+ENDIF
 
-  call raise_fatal_error('GribEditionNumber not supported')
+CONTAINS
 
-end if
+! Explicitely compute and code in grib2 template 4.8 the end of
+! overalltimeinterval which is not done automatically by grib_api
+SUBROUTINE code_endoftimeinterval(endtime)
+TYPE(datetime),INTENT(in) :: endtime
+
+INTEGER :: year, month, day, hour, minute, msec
+
+CALL getval(endtime, year=year, month=month, day=day, &
+ hour=hour, minute=minute, msec=msec)
+  CALL grib_set(gaid,'yearOfEndOfOverallTimeInterval',year)
+  CALL grib_set(gaid,'monthOfEndOfOverallTimeInterval',month)
+  CALL grib_set(gaid,'dayOfEndOfOverallTimeInterval',day)
+  CALL grib_set(gaid,'hourOfEndOfOverallTimeInterval',hour)
+  CALL grib_set(gaid,'minuteOfEndOfOverallTimeInterval',minute)
+  CALL grib_set(gaid,'secondOfEndOfOverallTimeInterval',msec/1000)
+
+END SUBROUTINE code_endoftimeinterval
 
 end subroutine export_timerange
 
@@ -601,7 +660,6 @@ end subroutine export_timerange
 !! Le informazioni relative al parametro vengono estratte dal grid e dopo qualche elaborazione 
 !! vengono memorizzate nella struttura.
 subroutine import_volgrid6d_var(this,gaid)
-
 TYPE(volgrid6d_var),INTENT(out) :: this !< oggetto volgrid6d_var in cui importare
 integer,INTENT(in)              :: gaid !< grib_api id of the grib loaded in memory to import
 
@@ -668,9 +726,6 @@ else
   CALL raise_error('GribEditionNumber not supported')
 
 end if
-                                ! da capire come ottenere 
-!this%description
-!this%unit
 
 end subroutine export_volgrid6d_var
 
@@ -746,7 +801,6 @@ print*,"--------------------------------------------------------------"
 
 
 end subroutine display_gridinfo
-
 
 
 !> \brief Display vector of object on screen
@@ -986,11 +1040,6 @@ ENDIF
 end subroutine encode_gridinfo
 
 
-
-
-!derived from a work of Gilbert  ORG: W/NP11  SUBPROGRAM:    cnvlevel   DATE: 2003-06-12
-
-
 SUBROUTINE level_g2_to_dballe(ltype1,scalef1,scalev1,ltype2,scalef2,scalev2, lt1,l1,lt2,l2)
 integer,intent(in) :: ltype1,scalef1,scalev1,ltype2,scalef2,scalev2
 integer,intent(out) ::lt1,l1,lt2,l2
@@ -1078,7 +1127,6 @@ endif
 END SUBROUTINE dballe_to_g2
 
 END SUBROUTINE level_dballe_to_g2
-
 
 
 SUBROUTINE level_g1_to_g2(ltype,l1,l2,ltype1,scalef1,scalev1,ltype2,scalef2,scalev2)
@@ -1316,7 +1364,15 @@ END FUNCTION rescale2
 
 END SUBROUTINE level_g2_to_g1
 
-
+! Convert timerange from grib1 to grib2-like way:
+!
+! Tri 2 (point in time) gives (hopefully temporarily) statproc 205.
+!
+! Tri 13 (COSMO-nudging) gives p1 (forecast time) 0 and a temporary
+! 206 statproc.
+!
+! Further processing and correction of the values returned is
+! performed in normalize_gridinfo.
 SUBROUTINE timerange_g1_to_g2_second(tri, p1_g1, p2_g1, unit, statproc, p1, p2)
 INTEGER,INTENT(in) :: tri, p1_g1, p2_g1, unit
 INTEGER,INTENT(out) :: statproc, p1, p2
@@ -1357,6 +1413,17 @@ end if
 END SUBROUTINE timerange_g1_to_g2_second
 
 
+! Convert timerange from grib2-like to grib1 way:
+!
+! Statproc 205 (point in time, non standard, not good in grib2) is
+! correctly converted to tri 2.
+!
+! Statproc 206 (COSMO nudging-like, non standard, not good in grib2)
+! should not appear here, but is anyway converted to tri 13 (real
+! COSMO-nudging).
+!
+! In case p1_g1<0 (i.e. statistically processed analisys data, with
+! p1=0 and p2>0), COSMO-nudging tri 13 is (mis-)used.
 SUBROUTINE timerange_g2_to_g1_unit(statproc, p1, p2, tri, p1_g1, p2_g1, unit)
 INTEGER,INTENT(in) :: statproc, p1, p2
 INTEGER,INTENT(out) :: tri, p1_g1, p2_g1, unit
@@ -1427,7 +1494,11 @@ INTEGER,PARAMETER :: unitlist(0:13)=(/60,3600,86400,2592000,31536000, &
  315360000,946080000,imiss,imiss,imiss,10800,21600,43200,1/)
 
 IF (unit >= 0 .AND. unit <= 13) THEN
-  valueout = valuein*unitlist(unit)
+  IF (c_e(unitlist(unit))) THEN
+    valueout = valuein*unitlist(unit)
+  ELSE
+    valueout = imiss
+  ENDIF
 ELSE
   valueout = imiss
 ENDIF
@@ -1456,7 +1527,19 @@ ENDIF
 END SUBROUTINE second_to_gribtr
 
 
-! Standardize variables and timerange in DB-all.e thinking
+! Standardize variables and timerange in DB-all.e thinking:
+!
+! Timerange 205 (point in time interval) is converted to maximum or
+! minimum if parameter is recognized as such and parameter is
+! corrected as well, otherwise 205 is kept (with possible error
+! conditions later).
+!
+! Timerange 206 (COSMO nudging) is converted to point in time if
+! interval length is 0, or to a proper timerange if parameter is
+! recognized as a COSMO statistically processed parameter (and in case
+! of maximum or minimum the parameter is corrected as well); if
+! parameter is not recognized, it is converted to instantaneous with a
+! warning.
 SUBROUTINE normalize_gridinfo(this)
 TYPE(gridinfo_def),intent(inout) :: this
 
@@ -1491,7 +1574,7 @@ IF (this%timerange%timerange == 205) THEN ! point in time interval
 
 ELSE IF (this%timerange%timerange == 206) THEN ! COSMO-nudging
 
-  IF (this%timerange%p2 == 0) THEN ! instantaneous
+  IF (this%timerange%p2 == 0) THEN ! point in time
 
     this%timerange%timerange=254
 
@@ -1641,8 +1724,14 @@ ENDIF ! timerange
 END SUBROUTINE normalize_gridinfo
 
 
-
-! Destandardize variables and timerange from DB-all.e thinking
+! Destandardize variables and timerange from DB-all.e thinking:
+!
+! Parameters having maximum or minimum statistical processing and
+! having a corresponding extreme parameter in grib table, are
+! temporarily converted to timerange 205 and to the corresponding
+! extreme parameter; if parameter is not recognized, the max or min
+! statistical processing is kept (with possible error conditions
+! later).
 subroutine unnormalize_gridinfo(this)
 TYPE(gridinfo_def),intent(inout) :: this
 
