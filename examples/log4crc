@@ -11,7 +11,7 @@
 
 	<!-- root category ========================================= -->
 <!--   	<category name="root" priority="debug" appender="syslog"/> -->
-	<category name="root" priority="debug" appender="stderr"/>
+	<category name="root" priority="debug" appender="stdout"/>
 <!--	<category name="root" priority="error" appender="stderr"/>  -->
 <!--	<category name="root" priority="debug" appender="myappender"/> -->
 
