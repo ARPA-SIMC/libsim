@@ -710,18 +710,21 @@ int FC_FUNC_(oraclesim_getvarvol, ORACLESIM_GETVARVOL)
 				      OCI_ATTR_ROW_COUNT, dbconnid->errhp))
 	== OCI_SUCCESS) {
       for (i=0; i<*vnr; i++) { /* inserisco i dati mancanti stile libsim */
- 	if (olt1[i] == -999) olt1[i] = *imiss;
- 	if (ol1[i] == -999) ol1[i] = *imiss;
-	if (olt2[i] == 0) { /* in Oracle qui c'e` 0 al posto di mancante */
+ 	if (olt1[i] == -999) {
+	  olt1[i] = *imiss;
+	  ol1[i] = *imiss;
+	} else {
+	  if (ol1[i] == -999) ol1[i] = *imiss;
+	}
+	if (olt2[i] == 0 || olt2[i] == -999) { /* in Oracle qui c'e` 0 al posto di mancante */
 	  olt2[i] = *imiss;
 	  ol2[i] = *imiss;
 	} else {
-	  if (olt2[i] == -999) olt2[i] = *imiss;
 	  if (ol2[i] == -999) ol2[i] = *imiss;
 	}
- 	if (opind[i] == -999) opind[i] = *imiss;
- 	if (op1[i] == -999) op1[i] = *imiss;
- 	if (op2[i] == -999) op2[i] = *imiss;
+	if (opind[i] == -999) opind[i] = *imiss;
+	if (op1[i] == -999) op1[i] = *imiss;
+	if (op2[i] == -999) op2[i] = *imiss;
       }
     } else {
       *vnr = 0;
