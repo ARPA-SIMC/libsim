@@ -628,6 +628,11 @@ USE vol7d_oraclesim_class
 #ifdef HAVE_DBALLE
 USE vol7d_dballe_class
 #endif
+#ifdef HAVE_LIBGRIBAPI
+USE grib_api
+USE grid_class
+USE gridinfo_class
+#endif
 USE grid_transform_class
 use volgrid6d_class
 USE geo_coord_class
@@ -637,10 +642,11 @@ IMPLICIT NONE
 
 TYPE(op_option) :: options(50) ! remember to update dimension when adding options
 TYPE(optionparser) :: opt
-CHARACTER(len=8) :: input_format, coord_format, output_format
-CHARACTER(len=512) :: input_file, output_file, network_list, variable_list, &
- anavariable_list, attribute_list, coord_file
-character(len=80) :: output_template,trans_type,sub_type
+CHARACTER(len=8) :: input_format, coord_format
+
+CHARACTER(len=512) :: input_file, output_file, output_format, output_template, &
+ network_list, variable_list, anavariable_list, attribute_list, coord_file
+CHARACTER(len=160) :: pre_trans_type
 TYPE(vol7d_network), ALLOCATABLE :: nl(:)
 CHARACTER(len=10), ALLOCATABLE :: vl(:), avl(:), al(:)
 CHARACTER(len=23) :: start_date, end_date
@@ -650,13 +656,15 @@ INTEGER :: iun, ier, i, j, n, ninput, yy, mm, dd, iargc
 INTEGER,POINTER :: w_s(:), w_e(:)
 TYPE(vol7d) :: v7d, v7d_coord, v7dtmp, v7d_comp1, v7d_comp2, v7d_comp3
 TYPE(geo_coordvect),POINTER :: poly(:)
-type(transform_def) :: trans
+TYPE(transform_def) :: trans
 #ifdef HAVE_DBALLE
 TYPE(vol7d_dballe) :: v7d_dba, v7d_dba_out
 #endif
 #ifdef HAVE_ORSIM
 TYPE(vol7d_oraclesim) :: v7d_osim
 #endif
+TYPE(vol7d_network) :: set_network_obj
+CHARACTER(len=network_name_len) :: set_network
 CHARACTER(len=32) :: dsn, user, password
 LOGICAL :: version, ldisplay
 CHARACTER(len=512):: a_name
@@ -669,6 +677,14 @@ TYPE(timedelta) :: c_i
 TYPE(datetime) :: c_s
 REAL :: comp_frac_valid
 
+! for grib output
+#ifdef HAVE_LIBGRIBAPI
+INTEGER :: ifile, ofile, gaid, iret
+TYPE(griddim_def) :: grid_out
+TYPE(volgrid6d) :: vg6d
+TYPE(gridinfo_def),POINTER :: gridinfo(:)
+character(len=160) :: post_trans_type
+#endif
 
 NULLIFY(poly)
 !questa chiamata prende dal launcher il nome univoco
@@ -704,11 +720,11 @@ options(2) = op_option_new('c', 'coord-file', coord_file, help= &
 coord_file=cmiss
 options(3) = op_option_new(' ', 'coord-format', coord_format, &
 #ifdef HAVE_DBALLE
-'BUFR', &
+ 'BUFR', &
 #else
-'native', &
+ 'native', &
 #endif 
-& help='format of input file with coordinates, ''native'' for vol7d native binary file &
+ & help='format of input file with coordinates, ''native'' for vol7d native binary file &
 #ifdef HAVE_DBALLE
  &, ''BUFR'' for BUFR file, ''CREX'' for CREX file&
 #endif
@@ -737,72 +753,83 @@ options(9) = op_option_new(' ', 'attribute-list', attribute_list, '', help= &
  'if input-format is of database type, list of data attributes to be extracted &
  &in the form of a comma-separated list of B-table alphanumeric codes, &
  &e.g. ''B33196,B33197''')
+options(10) = op_option_new(' ', 'set-network', set_network, '', help= &
+ 'if input-format is of database type, collapse all the input data into a single &
+ &pseudo-network with the given name, empty for keeping the original networks')
 
 ! option for displaying/processing
-options(10) = op_option_new('d', 'display', ldisplay, help= &
+options(15) = op_option_new('d', 'display', ldisplay, help= &
  'briefly display the data volume imported, warning: this option is incompatible &
  &with output on stdout.')
-options(11) = op_option_new(' ', 'comp-regularize', comp_regularize, help= &
+options(16) = op_option_new(' ', 'comp-regularize', comp_regularize, help= &
  'regularize the time series keeping only the data at regular time steps')
-options(12) = op_option_new(' ', 'comp-average', comp_average, help= &
+options(17) = op_option_new(' ', 'comp-average', comp_average, help= &
  'recompute average of averaged fields on a different time step')
-options(13) = op_option_new(' ', 'comp-cumulate', comp_cumulate, help= &
+options(18) = op_option_new(' ', 'comp-cumulate', comp_cumulate, help= &
  'recompute cumulation of accumulated fields on a different time step')
-options(14) = op_option_new(' ', 'comp-step', comp_step, '0000000001 00:00:00.000', help= &
+options(19) = op_option_new(' ', 'comp-step', comp_step, '0000000001 00:00:00.000', help= &
  'length of regularization, average or cumulation step in the format &
  &''YYYYMMDDDD hh:mm:ss.msc'', it can be simplified up to the form ''D hh''')
-options(15) = op_option_new(' ', 'comp-start', comp_start, '', help= &
+options(20) = op_option_new(' ', 'comp-start', comp_start, '', help= &
  'start of regularization, average or cumulation interval, an empty value means &
  &take the initial time step of the available data; the format is the same as for &
  &--start-date parameter')
-options(16) = op_option_new(' ', 'comp-discard', comp_discard, help= &
+options(21) = op_option_new(' ', 'comp-discard', comp_discard, help= &
  'discard the data that are not the result of the cumulation and/or averaging &
  &processes and keep only the result of the computations')
-options(17) = op_option_new(' ', 'comp-frac-valid', comp_frac_valid, 1., help= &
+options(22) = op_option_new(' ', 'comp-frac-valid', comp_frac_valid, 1., help= &
  'specify the fraction of data that has to be valid in order to consider an &
  &accumulated or averaged value acceptable')
-! option for interpolation processing
-options(18) = op_option_new(' ', 'trans-type', trans_type, ' ', help= &
- 'transformation type, ''inter'' for interpolation&
-#ifdef HAVE_LIBSHP_FORTRAN
- & or ''polyinter'' for statistical processing within given polygons&
-#endif
- &, empty for no transformation')
-options(19) = op_option_new(' ', 'sub-type', sub_type, ' ', help= &
- 'transformation subtype, for inter: ''near'', ''bilin''&
-#ifdef HAVE_LIBSHP_FORTRAN
- &, for ''polyinter'': ''average''&
-#endif
- &')
-
-
-
-options(27) = op_option_new(' ', 'comp-sort', comp_sort, help= &
+options(23) = op_option_new(' ', 'comp-sort', comp_sort, help= &
  'sort all sortable dimensions of the volume after the computations')
+
+! option for interpolation processing
+options(24) = op_option_new(' ', 'pre-trans-type', pre_trans_type, '', help= &
+ 'transformation type (sparse points to sparse points) to be applied before &
+ &other computations, in the form ''trans-type:subtype''; &
+ &''inter'' for interpolation, with subtypes ''near'', ''linear'', ''bilin''&
+#ifdef HAVE_LIBSHP_FORTRAN
+ &; ''polyinter'' for statistical processing within given polygons, &
+ &with subtype ''average''&
+#endif
+ &; empty for no transformation')
+#ifdef HAVE_LIBGRIBAPI
+options(25) = op_option_new(' ', 'post-trans-type', post_trans_type, '', help= &
+ 'transformation type (sparse points to grid) to be applied after &
+ &other computations, in the form ''trans-type:subtype''; &
+ &''inter'' for interpolation, with subtype ''linear''; &
+ &''boxinter'' for statistical processing within output grid box, &
+ &with subtype ''average''; &
+ &empty for no transformation; this option is compatible with output &
+ &on gridded format only (see output-format)')
+#endif
 ! options for defining output
-!options(20) = op_option_new('o', 'output-file', output_file, '-', help= &
-! 'output file, ''-'' for stdout')
 options(28) = op_option_new(' ', 'output-format', output_format, 'native', help= &
- 'format of output file, ''native'' for vol7d native binary format&
+ 'format of output file, in the form ''name[:template]''; ''native'' for vol7d &
+ &native binary format (no template to be specified)&
 #ifdef HAVE_DBALLE
- &, ''BUFR'' for BUFR with generic template, ''CREX'' for CREX format&
+ &; ''BUFR'' and ''CREX'' for corresponding formats, with template in the form &
+ &''category.subcategory.localcategory'' or as an alias like ''synop'', ''metar'', &
+ &''temp'', ''generic'', empty for ''generic''&
 #endif
- &, csv for formatted csv output')
-#ifdef HAVE_DBALLE
-options(29) = op_option_new('t', 'output-template', output_template, 'generic', help= &
- 'output TEMPLATE for BUFR/CREX, in the form ''category.subcategory.localcategory'', or &
-& an alias like ''synop'', ''metar'',''temp'',''generic''')
+#ifdef HAVE_LIBGRIBAPI
+ &; ''grib_api'' for gridded output in grib format, template (required) is the &
+ &path name of a grib file in which the first message defines the output grid and &
+ &is used as a template for the output grib messages, (see also post-trans-type)&
 #endif
+ &; csv for formatted csv format (no template to be specified)')
 
 ! options for configuring csv output
 options(30) = op_option_new(' ', 'csv-volume', csv_volume, 'all', help= &
  'vol7d volumes to be output to csv: ''all'' for all volumes, &
  &''ana'' for station volumes only or ''data'' for data volumes only')
-options(31) = op_option_new(' ', 'csv-column', csv_column, 'time,timerange,ana,level,network', help= &
+options(31) = op_option_new(' ', 'csv-column', csv_column, &
+ 'time,timerange,ana,level,network', help= &
  'list of columns (excluding variables) that have to appear in csv output: &
  &a comma-separated combination of ''time,timerange,level,ana,network'' &
  &in the desired order')
-options(32) = op_option_new(' ', 'csv-columnorder', csv_columnorder, 'time,timerange,ana,level,network', help= &
+options(32) = op_option_new(' ', 'csv-columnorder', csv_columnorder, &
+ 'time,timerange,ana,level,network', help= &
  'order of looping on columns (excluding variables) that have to appear in &
  &csv output, the format is the same as for the --csv-column parameter &
  &but here all the column identifiers have to be present')
@@ -826,8 +853,8 @@ options(50) = op_option_new(' ', 'version', version, help= &
 
 ! define the option parser
 opt = optionparser_new(options, description_msg= &
- 'Vol7d transformation application, it imports a vol7d volume from a &
- &native vol7d file&
+ 'Vol7d transformation application, it imports a vol7d volume of sparse point data &
+ &from a native vol7d file&
 #ifdef HAVE_DBALLE
  &, from a dbAll.e database, from a BUFR/CREX file&
 #endif
@@ -836,7 +863,10 @@ opt = optionparser_new(options, description_msg= &
 #endif
  & and exports it into a native v7d file&
 #ifdef HAVE_DBALLE
- &, or into a BUFR/CREX file&
+ &, into a BUFR/CREX file&
+#endif
+#ifdef HAVE_LIBGRIBAPI
+ &, into a GRIB file&
 #endif
  &, or into a configurable formatted csv file. &
  &If input-format is of file type, inputfile ''-'' indicates stdin, &
@@ -954,6 +984,15 @@ ENDIF
 CALL parse_v7d_column(csv_column, icsv_column, '--csv-column', .FALSE.)
 CALL parse_v7d_column(csv_columnorder, icsv_columnorder, '--csv-columnorder', .TRUE.)
 
+! check output format/template
+n = word_split(output_format, w_s, w_e, ':')
+IF (n >= 2) THEN ! set output template overriding the --output-template parameter
+  output_template = output_format(w_s(2):w_e(2))
+  output_format(w_e(1)+1:) = ' '
+ENDIF
+DEALLOCATE(w_s, w_e)
+
+
 ! import data looping on input files
 CALL init(v7d)
 DO ninput = optind, iargc()-1
@@ -1003,7 +1042,13 @@ DO ninput = optind, iargc()-1
     CALL init(v7d_osim, dsn=dsn, user=user, password=password, time_definition=0)
     IF (.NOT.ALLOCATED(avl)) ALLOCATE(avl(0)) ! allocate if missing
     IF (.NOT.ALLOCATED(al)) ALLOCATE(al(0)) ! allocate if missing
-    CALL IMPORT(v7d_osim, vl, nl, timei=s_d, timef=e_d, anavar=avl, attr=al)
+    IF (set_network /= '') THEN
+      CALL init(set_network_obj, name=set_network)
+    ELSE
+      set_network_obj = vol7d_network_miss
+    ENDIF
+    CALL IMPORT(v7d_osim, vl, nl, timei=s_d, timef=e_d, anavar=avl, attr=al, &
+     set_network=set_network_obj)
     v7dtmp = v7d_osim%vol7d
     CALL init(v7d_osim%vol7d) ! nullify without deallocating
 #endif
@@ -1025,15 +1070,30 @@ CALL vol7d_dballe_set_var_du(v7d)
 
 IF (ldisplay) CALL display(v7d)
 
-IF (trans_type /= '') THEN
-  CALL init(trans, trans_type=trans_type, sub_type=sub_type, &
-   categoryappend="transformation") !, time_definition=output_td)
-  CALL transform(trans, vol7d_in=v7d, vol7d_out=v7d_comp1, v7d=v7d_coord, &
-   poly=poly, categoryappend="transform")
+IF (pre_trans_type /= '') THEN
+  n = word_split(pre_trans_type, w_s, w_e, ':')
+  IF (n >= 2) THEN ! syntax is correct
+    CALL init(trans, trans_type=pre_trans_type(w_s(1):w_e(1)), &
+     sub_type=pre_trans_type(w_s(2):w_e(2)), categoryappend="transformation1")
+    CALL transform(trans, vol7d_in=v7d, vol7d_out=v7d_comp1, v7d=v7d_coord, &
+     poly=poly, categoryappend="transform1")
+    CALL delete(trans)
+  ELSE ! syntax is wrong
+    CALL init(v7d_comp1)
+    CALL l4f_category_log(category, L4F_ERROR, &
+     'pre-transformation syntax '//TRIM(pre_trans_type)//' non valid')
+  ENDIF
+  DEALLOCATE(w_s, w_e)
 
-  v7d = v7d_comp1
-  CALL init(v7d_comp1)
-
+  IF (c_e(v7d_comp1)) THEN ! transformation successful, use the new volume
+    v7d = v7d_comp1
+    CALL init(v7d_comp1) ! detach it
+  ELSE ! otherwise continue with original volume
+    CALL l4f_category_log(category, L4F_ERROR, &
+     'pre-transformation '//TRIM(pre_trans_type)//' failed')
+    CALL l4f_category_log(category, L4F_ERROR, &
+     'continuing with untransformed data')
+  ENDIF
 ENDIF
 
 IF (comp_regularize) THEN
@@ -1071,7 +1131,7 @@ ENDIF
 
 ! sort
 IF (comp_sort) THEN
-  CALL vol7d_smart_sort(v7d, ltime=.TRUE., ltimerange=.TRUE., llevel=.TRUE.)
+  CALL vol7d_smart_sort(v7d, lsort_time=.TRUE., lsort_timerange=.TRUE., lsort_level=.TRUE.)
 ENDIF
 
 ! output
@@ -1105,6 +1165,70 @@ ELSE IF (output_format == 'BUFR' .OR. output_format == 'CREX') THEN
   CALL init(v7d) ! nullify without deallocating
   CALL export(v7d_dba_out, template=output_template)
   CALL delete(v7d_dba_out)
+#endif
+
+#ifdef HAVE_LIBGRIBAPI
+ELSE IF (output_format == 'grib_api') THEN
+
+  IF (post_trans_type /= '' .AND. output_template /= '') THEN
+    n = word_split(post_trans_type, w_s, w_e, ':')
+    IF (n >= 2) THEN ! syntax is correct
+
+! initialize transform
+      CALL init(trans, trans_type=post_trans_type(w_s(1):w_e(1)), &
+       sub_type=post_trans_type(w_s(2):w_e(2)), categoryappend="transformation2")
+! open grib template file and import first message
+      CALL grib_open_file(ifile, output_template, 'r')
+      gaid=-1
+      CALL grib_new_from_file(ifile, gaid, iret)
+      IF (iret == GRIB_SUCCESS) THEN
+
+! use the message  as a template for defining the grid
+        CALL import(grid_out, gaid)
+! interpolate sparse data over the requested grid
+        CALL transform(trans, grid_out, v7d, vg6d, categoryappend="transform2")
+! TODO check here whether the transformation succeeded
+! serialize the interpolated volume into a gridinfo object keeping the
+! same grib template used for the grid
+        CALL export((/vg6d/), gridinfo, gaid_template=gaid)
+
+        IF (ASSOCIATED(gridinfo)) THEN
+! export to output grib file
+          CALL grib_open_file(ofile, output_file, 'w')
+          DO i = 1, SIZE(gridinfo)
+            CALL export(gridinfo(i))
+            CALL grib_write(gridinfo(i)%gaid, ofile)
+            CALL delete(gridinfo(i))
+          ENDDO
+          CALL grib_close_file(ofile)
+
+        ELSE ! export to gridinfo failed
+          CALL l4f_category_log(category,L4F_ERROR, &
+           'export of transformed volume to grib failed')
+        ENDIF
+        CALL grib_close_file(ifile)
+
+      ELSE
+        CALL l4f_category_log(category,L4F_ERROR, &
+         'cannot read any grib message from template file '//TRIM(output_template))
+      ENDIF
+      CALL delete(trans)
+
+    ELSE ! syntax is wrong
+      CALL l4f_category_log(category, L4F_ERROR, &
+       'post-transformation syntax '//TRIM(post_trans_type)//' non valid')
+    ENDIF
+    DEALLOCATE(w_s, w_e)
+
+  ELSE
+    CALL l4f_category_log(category,L4F_ERROR, &
+     'output format '//TRIM(output_format)// &
+     ' requires post-trans-type and output-template to be defined')
+    CALL l4f_category_log(category,L4F_ERROR, &
+     'post-trans-type: '//TRIM(post_trans_type)// &
+     '; output template '//TRIM(output_template))
+  ENDIF
+
 #endif
 
 ELSE IF (output_format /= '') THEN
