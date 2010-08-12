@@ -41,7 +41,7 @@ character(len=network_name_len) :: network
 type(volgrid6d),pointer :: volgrid(:)
 type(transform_def) :: trans
 type(vol7d) :: v7d_coord
-type(vol7d),pointer :: v7d_out(:)
+type(vol7d) :: v7d_out
 #ifdef HAVE_DBALLE
 TYPE(vol7d_dballe) :: v7d_ana, v7d_dba_out
 #endif
@@ -254,14 +254,11 @@ IF (output_format == 'native') THEN
   ENDIF
   iun = getunit()
   OPEN(iun, file=output_file, form='UNFORMATTED', access=stream_if_possible)
-  DO i = 2, SIZE(v7d_out)
-    CALL vol7d_merge(v7d_out(1), v7d_out(i), sort=(i == SIZE(v7d_out)))
-  ENDDO
-  IF (ldisplay) CALL display(v7d_out(1))
+  IF (ldisplay) CALL display(v7d_out)
 
-  CALL export(v7d_out(1), unit=iun)
+  CALL export(v7d_out, unit=iun)
   CLOSE(iun)
-  CALL delete(v7d_out(1))
+  CALL delete(v7d_out)
 
 #ifdef HAVE_DBALLE
 ELSE IF (output_format == 'BUFR' .OR. output_format == 'CREX') THEN
@@ -271,12 +268,9 @@ ELSE IF (output_format == 'BUFR' .OR. output_format == 'CREX') THEN
   ENDIF
   CALL init(v7d_dba_out, filename=output_file, format=output_format, file=.TRUE., &
    write=.TRUE., wipe=.TRUE., categoryappend="export")
-  DO i = 1, SIZE(v7d_out)
-    IF (ldisplay) CALL display(v7d_out(i))
-    v7d_dba_out%vol7d = v7d_out(i) 
-    CALL export (v7d_dba_out, template=output_template)
-    CALL delete(v7d_dba_out%vol7d)
-  END DO
+  IF (ldisplay) CALL display(v7d_out)
+  v7d_dba_out%vol7d = v7d_out
+  CALL export (v7d_dba_out, template=output_template)
   CALL delete(v7d_dba_out)
 #endif
 
@@ -289,7 +283,6 @@ ENDIF
 
 call l4f_category_log(category,L4F_INFO,"exported to "//trim(output_format))
 call l4f_category_log(category,L4F_INFO,"end")
-deallocate (v7d_out)
 
 ! Close the logger
 call l4f_category_delete(category)

@@ -31,7 +31,7 @@ character(len=512):: a_name,filename="out.bufr"
 type (volgrid6d),pointer  :: volgrid(:),volgrid_out(:)
 type(transform_def) :: trans
 type(vol7d) :: v7d
-type(vol7d),pointer :: vol7d_out(:)
+type(vol7d) :: vol7d_out
 TYPE(vol7d_dballe) :: v7d_exp
 
 
@@ -79,20 +79,16 @@ call l4f_category_log(category,L4F_INFO,"export to BUFR")
 CALL init(v7d_exp,file=.true.,write=.true.,wipe=.true.,filename=filename,&
 categoryappend="exportBUFR",format="BUFR")
 
-do i = 1 , size(vol7d_out)
-  call display(vol7d_out(i))
-  call vol7d_copy (vol7d_out(i), v7d_exp%vol7d) 
-  call export (v7d_exp,template="synop")
-end do
+CALL display(vol7d_out)
+v7d_exp%vol7d = vol7d_out
+CALL export(v7d_exp,TEMPLATE="synop")
 
-call l4f_category_log(category,L4F_INFO,"terminato")
+CALL l4f_category_log(category,L4F_INFO,"terminato")
 
-call delete (v7d_exp)
-if (associated(vol7d_out)) call delete(vol7d_out)
-deallocate (vol7d_out)
+CALL delete (v7d_exp)
 
 !chiudo il logger
-call l4f_category_delete(category)
+CALL l4f_category_delete(category)
 ier=l4f_fini()
 
 end program demo6
