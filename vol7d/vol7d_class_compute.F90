@@ -32,6 +32,46 @@ IMPLICIT NONE
 
 CONTAINS
 
+
+!> General-purpose method for recomputing a statistical processing on
+!! a set of data already processed with that same statistical
+!! processing, on a different time interval.  This method does not
+!! change the statistical processing (timerange) of the data, it just
+!! recomputes it on a specified interval, different from the one over
+!! which data is provided.  Statistical processing by aggregation of
+!! shorter intervals and statistical processing by difference of
+!! partially overlapping intervals are tried in turn. If only one of
+!! the two operations is desired, use the specific method \a
+!! vol7d_recompute_statistical_processing_sum or \a
+!! vol7d_recompute_statistical_processing_diff. See also the
+!! description of those methods for more details.
+SUBROUTINE vol7d_recompute_statistical_processing(this, that, stat_proc, step, start, full_steps, frac_valid, other)
+TYPE(vol7d),INTENT(inout) :: this !< volume providing data to be recomputed, it is not modified by the method, apart from performing a \a vol7d_alloc_vol on it
+TYPE(vol7d),INTENT(out) :: that !< output volume which will contain the recomputed data
+INTEGER,INTENT(in) :: stat_proc !< type of statistical processing to be recomputed (from grib2 table), only data having timerange of this type will be recomputed and will appear in the output volume
+TYPE(timedelta),INTENT(in) :: step !< length of the step over which the statistical processing is recomputed
+TYPE(datetime),INTENT(in),OPTIONAL :: start !< start of statistical processing computing interval
+LOGICAL,INTENT(in),OPTIONAL :: full_steps !< if \a .TRUE. cumulate only on intervals starting at a forecast time modulo \a step (default is to cumulate on all possible combinations of intervals)
+REAL,INTENT(in),OPTIONAL :: frac_valid !< minimum fraction of valid data required for considering acceptable a recomputed value, default=1.
+TYPE(vol7d),INTENT(inout),OPTIONAL :: other !< optional volume that, on exit, is going to be merged with the data that did not contribute to the accumulation computation
+
+TYPE(vol7d) :: that1, that2, other1
+
+IF (PRESENT(other)) THEN
+  CALL vol7d_extend_cumavg_sum(this, that1, stat_proc, step, start, frac_valid, other=other1)
+  CALL vol7d_extend_cumavg_diff(other1, that2, stat_proc, step, full_steps, other=other)
+ELSE
+  CALL vol7d_extend_cumavg_sum(this, that1, stat_proc, step, start, frac_valid)
+  CALL vol7d_extend_cumavg_diff(this, that2, stat_proc, step, full_steps)
+ENDIF
+
+CALL vol7d_merge(that1, that2, sort=.TRUE.)
+that = that1
+
+END SUBROUTINE vol7d_recompute_statistical_processing
+
+
+
 !> Cumula le osservazioni su un intervallo specificato quando possibile.
 !! Crea un nuovo oggetto vol7d che contiene solo i dati del volume originario
 !! soddisfacenti le condizioni:
@@ -170,7 +210,7 @@ IF (ntr == 0) THEN
   RETURN
 ENDIF
 ! cleanup the original volume
-CALL vol7d_smart_sort(this, ltime=.TRUE.) ! need a time-ordered volume
+CALL vol7d_smart_sort(this, lsort_time=.TRUE.) ! time-ordered volume needed
 CALL vol7d_reform(this, miss=.FALSE., sort=.FALSE., unique=.TRUE.)
 ! recount timeranges, they could have diminished because of unique
 ntr = COUNT(this%timerange(:)%timerange == tri .AND. this%timerange(:)%p2 /= imiss &
@@ -293,6 +333,14 @@ IF (ASSOCIATED(this%voldatir)) THEN
                   that%voldatir(i1,i,i3,1,i5,i6) = &
                    SUM(this%voldatir(i1,:,i3,map_tr(j),i5,i6), &
                    mask=mask_time)
+                ELSE IF (tri == 2) THEN ! maximum
+                  that%voldatir(i1,i,i3,1,i5,i6) = &
+                   MAXVAL(this%voldatir(i1,:,i3,map_tr(j),i5,i6), &
+                   mask=mask_time)
+                ELSE IF (tri == 3) THEN ! minimum
+                  that%voldatir(i1,i,i3,1,i5,i6) = &
+                   MINVAL(this%voldatir(i1,:,i3,map_tr(j),i5,i6), &
+                   mask=mask_time)
                 ENDIF
               ENDIF
             ENDDO
@@ -326,6 +374,14 @@ IF (ASSOCIATED(this%voldatid)) THEN
                 ELSE IF (tri == 1) THEN ! cumulation
                   that%voldatid(i1,i,i3,1,i5,i6) = &
                    SUM(this%voldatid(i1,:,i3,map_tr(j),i5,i6), &
+                   mask=mask_time)
+                ELSE IF (tri == 2) THEN ! maximum
+                  that%voldatid(i1,i,i3,1,i5,i6) = &
+                   MAXVAL(this%voldatid(i1,:,i3,map_tr(j),i5,i6), &
+                   mask=mask_time)
+                ELSE IF (tri == 3) THEN ! minimum
+                  that%voldatid(i1,i,i3,1,i5,i6) = &
+                   MINVAL(this%voldatid(i1,:,i3,map_tr(j),i5,i6), &
                    mask=mask_time)
                 ENDIF
               ENDIF
@@ -370,7 +426,7 @@ INTEGER :: steps, ntr, ndtr, i, j, i1, i2, i3, i4, i5, i6, n
 INTEGER(kind=int_ll) :: msteps
 INTEGER,ALLOCATABLE :: map_tr(:,:)
 LOGICAL,ALLOCATABLE :: mask_timerange(:)
-LOGICAL :: lfull_steps
+!LOGICAL :: lfull_steps
 TYPE(vol7d) :: v7dtmp
 
 CALL init(that, time_definition=this%time_definition)
@@ -382,11 +438,11 @@ IF (this%time_definition == 1) THEN ! improve and handle time_definition == 1
   RETURN
 ENDIF
 
-IF (PRESENT(full_steps)) THEN
-  lfull_steps = full_steps
-ELSE
-  lfull_steps = .FALSE.
-ENDIF
+!IF (PRESENT(full_steps)) THEN
+!  lfull_steps = full_steps
+!ELSE
+!  lfull_steps = .FALSE.
+!ENDIF
 
 ! be safe
 CALL vol7d_alloc_vol(this)
@@ -401,18 +457,8 @@ mask_timerange(:) = this%timerange(:)%timerange == tri &
  .AND. this%timerange(:)%p1 > 0 &
  .AND. this%timerange(:)%p1 >= this%timerange(:)%p2
 
-IF (lfull_steps) THEN ! keep only timeranges defining intervals ending at integer steps
+IF (optio_log(full_steps)) THEN ! keep only timeranges defining intervals ending at integer steps
   mask_timerange(:) = mask_timerange(:) .AND. (MOD(this%timerange(:)%p1, steps) == 0)
-ENDIF
-
-! create the new volume template
-! check whether any timerange already satisfies the requirements and copy it
-IF (ANY(mask_timerange(:) .AND. this%timerange(:)%p2 == steps)) THEN
-  CALL vol7d_copy(this, v7dtmp, miss=.FALSE., sort=.FALSE., unique=.FALSE., &
-   ltimerange=(mask_timerange(:) .AND. this%timerange(:)%p2 == steps))
-ELSE
-  CALL vol7d_copy(this, v7dtmp, miss=.FALSE., sort=.FALSE., unique=.FALSE., &
-   ltimerange=(/.FALSE./))
 ENDIF
 
 ! safety dimension, less is usually enough
@@ -437,6 +483,17 @@ ndtr = count_distinct(tr(1:ntr), back=.TRUE.)
 CALL vol7d_alloc(that, ntimerange=ndtr)
 that%timerange(:) = pack_distinct(tr, ndtr, back=.TRUE.)
 DEALLOCATE(tr)
+
+! create the new volume template
+! check whether any timerange already satisfies the requirements and copy it
+IF (ANY(mask_timerange(:) .AND. this%timerange(:)%p2 == steps)) THEN
+  CALL vol7d_copy(this, v7dtmp, miss=.FALSE., sort=.FALSE., unique=.FALSE., &
+   ltimerange=(mask_timerange(:) .AND. this%timerange(:)%p2 == steps))
+ELSE
+  CALL vol7d_copy(this, v7dtmp, miss=.FALSE., sort=.FALSE., unique=.FALSE., &
+   ltimerange=(/.FALSE./))
+ENDIF
+
 ! merge with template
 CALL vol7d_merge(that, v7dtmp, lanasimple=.TRUE.)
 
@@ -580,7 +637,7 @@ TYPE(datetime),INTENT(in),OPTIONAL :: stopp
 TYPE(datetime) :: counter, lstart, lstop
 INTEGER :: i, naddtime
 
-CALL vol7d_smart_sort(this, ltime=.TRUE.)
+CALL vol7d_smart_sort(this, lsort_time=.TRUE.)
 IF (PRESENT(start)) THEN
   lstart = start
 ELSE
@@ -684,7 +741,7 @@ INTEGER :: n
 LOGICAL, ALLOCATABLE :: time_mask(:)
 TYPE(vol7d) :: v7dtmp
 
-CALL vol7d_smart_sort(this, ltime=.TRUE.)
+CALL vol7d_smart_sort(this, lsort_time=.TRUE.)
 IF (PRESENT(start)) THEN
   lstart = start
 ELSE

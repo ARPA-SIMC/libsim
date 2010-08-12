@@ -549,7 +549,11 @@ DO i = 1, nvar
 
   IF (i == 1) THEN ! la prima volta inizializzo i descrittori fissi
     IF (PRESENT(set_network)) THEN
-      v7dtmp%network(1) = set_network ! dummy network
+      IF (set_network /= vol7d_network_miss) THEN
+        v7dtmp%network(1) = set_network ! set to dummy network
+      ELSE
+        v7dtmp%network(1) = network
+      ENDIF
     ELSE
       v7dtmp%network(1) = network
     ENDIF
@@ -695,7 +699,7 @@ ENDDO
 ! Fondo a sua volta tutto il volume estratto con il contenuto di this
 CALL vol7d_merge(this%vol7d, v7dtmp2, sort=.FALSE.)
 !CALL vol7d_reform(this%vol7d, sort=.TRUE., unique=.TRUE.)
-CALL vol7d_smart_sort(this%vol7d, ltime=.TRUE.)
+CALL vol7d_smart_sort(this%vol7d, lsort_time=.TRUE.)
 ! Pulizie finali non incluse
 DEALLOCATE(anatmp, tmtmp, vartmp, mapdatao, mapstazo)
 
@@ -759,7 +763,11 @@ DO i = 1, SIZE (network)
    lanavarr=lanar, lanavari=lanai, lanavarc=lanac)
 ! sovrascrivo la rete
   IF (PRESENT(set_network)) THEN
-    v7dtmpana%network(1) = set_network
+    IF (set_network /= vol7d_network_miss) THEN
+      v7dtmpana%network(1) = set_network
+    ELSE
+      v7dtmpana%network(1) = network(i)
+    ENDIF
   ELSE
     v7dtmpana%network(1) = network(i)
   ENDIF

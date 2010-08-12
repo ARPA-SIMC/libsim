@@ -1453,8 +1453,9 @@ END SUBROUTINE vol7d_append
 !! vol7d_copy, 2 istanze
 !! completamente indipendenti, ma uguali tra loro per contenuto, della classe
 !! vol7d, e quindi hanno vita indipendente.
-SUBROUTINE vol7d_copy(this, that, sort, unique, miss, ltime, ltimerange, &
- llevel, lana, lnetwork, &
+SUBROUTINE vol7d_copy(this, that, sort, unique, miss, &
+ lsort_time, lsort_timerange, lsort_level, &
+ ltime, ltimerange, llevel, lana, lnetwork, &
  lanavarr, lanavard, lanavari, lanavarb, lanavarc, &
  lanaattrr, lanaattrd, lanaattri, lanaattrb, lanaattrc, &
  lanavarattrr, lanavarattrd, lanavarattri, lanavarattrb, lanavarattrc, &
@@ -1463,9 +1464,12 @@ SUBROUTINE vol7d_copy(this, that, sort, unique, miss, ltime, ltimerange, &
  ldativarattrr, ldativarattrd, ldativarattri, ldativarattrb, ldativarattrc)
 TYPE(vol7d),INTENT(INOUT) :: this !< oggetto origine
 TYPE(vol7d),INTENT(INOUT) :: that !< oggetto destinazione
-LOGICAL,INTENT(IN),OPTIONAL :: sort !< se fornito e uguale a \c .TRUE., i descrittori che supportano un ordinamento (operatori > e/o <) risulteranno ordinati in ordine crescente nell'oggetto destinazione
-LOGICAL,INTENT(IN),OPTIONAL :: unique !< se fornito e uguale a \c .TRUE., gli eventuali elementi duplicati nei descrittori dell'oggetto origine verranno collassati in un unico elemento (con eventuale perdita dei dati relativi agli elementi duplicati)
-LOGICAL,INTENT(IN),OPTIONAL :: miss !< se fornito e uguale a \c .TRUE., gli eventuali elementi dei descrittori uguali al corrispondente valore mancante verranno eliminati dall'oggetto finale
+LOGICAL,INTENT(IN),OPTIONAL :: sort !< if present and \a .TRUE., sort all the sortable dimensions
+LOGICAL,INTENT(IN),OPTIONAL :: unique !< se fornito e uguale a \c .TRUE., gli eventuali elementi duplicati nei descrittori dell'oggetto iniziale verranno collassati in un unico elemento (con eventuale perdita dei dati relativi agli elementi duplicati)
+LOGICAL,INTENT(IN),OPTIONAL :: miss !< se fornito e uguale a \c .TRUE., gli eventuali elementi dei descrittori uguali al corrispondente valore mancante verranno eliminati dall'oggetto riformato
+LOGICAL,INTENT(IN),OPTIONAL :: lsort_time !< if present and \a .TRUE., sort only time dimension (alternative to \a sort )
+LOGICAL,INTENT(IN),OPTIONAL :: lsort_timerange !< if present and \a .TRUE., sort only timerange dimension (alternative to \a sort )
+LOGICAL,INTENT(IN),OPTIONAL :: lsort_level !< if present and \a .TRUE., sort only level dimension (alternative to \a sort )
 !> se fornito, deve essere un vettore logico della stessa lunghezza di
 !! this%time indicante quali elementi della dimensione \a time
 !! mantenere (valori \c .TRUE.) e quali scartare (valori \c .FALSE.)
@@ -1504,14 +1508,14 @@ CALL optio(miss, lmiss)
 
 ! Calcolo le mappature tra volume vecchio e volume nuovo
 ! I puntatori remap* vengono tutti o allocati o nullificati
-CALL vol7d_remap1_datetime(this%time, that%time, lsort, lunique, lmiss, &
- remapt, ltime)
+CALL vol7d_remap1_datetime(this%time, that%time, &
+ lsort.OR.optio_log(lsort_time), lunique, lmiss, remapt, ltime)
 CALL vol7d_remap1_vol7d_timerange(this%timerange, that%timerange, &
- lsort, lunique, lmiss, remaptr, ltimerange)
-CALL vol7d_remap1_vol7d_level(this%level, that%level, lsort, lunique, lmiss, &
- remapl, llevel)
-CALL vol7d_remap1_vol7d_ana(this%ana, that%ana, lsort, lunique, lmiss, &
- remapa, lana)
+ lsort.OR.optio_log(lsort_timerange), lunique, lmiss, remaptr, ltimerange)
+CALL vol7d_remap1_vol7d_level(this%level, that%level, &
+ lsort.OR.optio_log(lsort_level), lunique, lmiss, remapl, llevel)
+CALL vol7d_remap1_vol7d_ana(this%ana, that%ana, &
+ lsort, lunique, lmiss, remapa, lana)
 CALL vol7d_remap1_vol7d_network(this%network, that%network, &
  lsort, lunique, lmiss, remapn, lnetwork)
 
@@ -1562,8 +1566,9 @@ END SUBROUTINE vol7d_copy
 !! o istanti temporali indesiderati, basta assegnare il loro corrispondente
 !! elemento del descrittore a valore mancante e chiamare vol7d_reform
 !! con miss=.TRUE. .
-SUBROUTINE vol7d_reform(this, sort, unique, miss, ltime, ltimerange, &
- llevel, lana, lnetwork, &
+SUBROUTINE vol7d_reform(this, sort, unique, miss, &
+ lsort_time, lsort_timerange, lsort_level, &
+ ltime, ltimerange, llevel, lana, lnetwork, &
  lanavarr, lanavard, lanavari, lanavarb, lanavarc, &
  lanaattrr, lanaattrd, lanaattri, lanaattrb, lanaattrc, &
  lanavarattrr, lanavarattrd, lanavarattri, lanavarattrb, lanavarattrc, &
@@ -1571,9 +1576,12 @@ SUBROUTINE vol7d_reform(this, sort, unique, miss, ltime, ltimerange, &
  ldatiattrr, ldatiattrd, ldatiattri, ldatiattrb, ldatiattrc, &
  ldativarattrr, ldativarattrd, ldativarattri, ldativarattrb, ldativarattrc)
 TYPE(vol7d),INTENT(INOUT) :: this !< oggetto da riformare
-LOGICAL,INTENT(IN),OPTIONAL :: sort !< se fornito e uguale a \c .TRUE., i descrittori che supportano un ordinamento (operatori > e/o <) risulteranno ordinati in ordine crescente nell'oggetto riformato
+LOGICAL,INTENT(IN),OPTIONAL :: sort !< if present and \a .TRUE., sort all the sortable dimensions
 LOGICAL,INTENT(IN),OPTIONAL :: unique !< se fornito e uguale a \c .TRUE., gli eventuali elementi duplicati nei descrittori dell'oggetto iniziale verranno collassati in un unico elemento (con eventuale perdita dei dati relativi agli elementi duplicati)
 LOGICAL,INTENT(IN),OPTIONAL :: miss !< se fornito e uguale a \c .TRUE., gli eventuali elementi dei descrittori uguali al corrispondente valore mancante verranno eliminati dall'oggetto riformato
+LOGICAL,INTENT(IN),OPTIONAL :: lsort_time !< if present and \a .TRUE., sort only time dimension (alternative to \a sort )
+LOGICAL,INTENT(IN),OPTIONAL :: lsort_timerange !< if present and \a .TRUE., sort only timerange dimension (alternative to \a sort )
+LOGICAL,INTENT(IN),OPTIONAL :: lsort_level !< if present and \a .TRUE., sort only level dimension (alternative to \a sort )
 !> se fornito, deve essere un vettore logico della stessa lunghezza di
 !! this%time indicante quali elementi della dimensione \a time
 !! mantenere (valori \c .TRUE.) e quali scartare (valori \c .FALSE.)
@@ -1597,15 +1605,16 @@ LOGICAL,INTENT(in),OPTIONAL :: &
 
 TYPE(vol7d) :: v7dtmp
 
-CALL vol7d_copy(this, v7dtmp, sort, unique, miss, ltime, ltimerange, &
- llevel, lana, lnetwork, &
+CALL vol7d_copy(this, v7dtmp, sort, unique, miss, &
+ lsort_time, lsort_timerange, lsort_level, &
+ ltime, ltimerange, llevel, lana, lnetwork, &
  lanavarr, lanavard, lanavari, lanavarb, lanavarc, &
  lanaattrr, lanaattrd, lanaattri, lanaattrb, lanaattrc, &
  lanavarattrr, lanavarattrd, lanavarattri, lanavarattrb, lanavarattrc, &
  ldativarr, ldativard, ldativari, ldativarb, ldativarc, &
  ldatiattrr, ldatiattrd, ldatiattri, ldatiattrb, ldatiattrc, &
  ldativarattrr, ldativarattrd, ldativarattri, ldativarattrb, ldativarattrc)
-! Distruggo il vecchio volume e assegno il nuovo a this
+! destroy old volume and assign new volume to this
 CALL delete(this)
 this = v7dtmp
 
@@ -1616,14 +1625,14 @@ END SUBROUTINE vol7d_reform
 !! Most of the times, the time, timerange and level dimensions in a
 !! vol7d object are correctly sorted; on the other side many methods
 !! strictly rely on this fact in order to work correctly. This method
-!! performs a quick check and sorts the sortable dimensions only if
-!! any of the required dimensions is not sorted in ascending order,
-!! improving safety without impairing much performance.
-SUBROUTINE vol7d_smart_sort(this, ltime, ltimerange, llevel)
+!! performs a quick check and sorts the required dimensions only if
+!! they are not sorted in ascending order yet, improving safety
+!! without impairing much performance.
+SUBROUTINE vol7d_smart_sort(this, lsort_time, lsort_timerange, lsort_level)
 TYPE(vol7d),INTENT(INOUT) :: this !< object to be sorted
-LOGICAL,OPTIONAL,INTENT(in) :: ltime !< if present and \a .TRUE., sort if time dimension is not sorted in ascending order
-LOGICAL,OPTIONAL,INTENT(in) :: ltimerange !< if present and \a .TRUE., sort if timerange dimension is not sorted in ascending order
-LOGICAL,OPTIONAL,INTENT(in) :: llevel !< if present and \a .TRUE., sort if vertical level dimension is not sorted in ascending order
+LOGICAL,OPTIONAL,INTENT(in) :: lsort_time !< if present and \a .TRUE., sort time dimension if it is not sorted in ascending order
+LOGICAL,OPTIONAL,INTENT(in) :: lsort_timerange !< if present and \a .TRUE., sort timerange dimension if it is not sorted in ascending order
+LOGICAL,OPTIONAL,INTENT(in) :: lsort_level !< if present and \a .TRUE., sort vertical level dimension if it is not sorted in ascending order
 
 INTEGER :: i
 LOGICAL :: to_be_sorted
@@ -1631,7 +1640,7 @@ LOGICAL :: to_be_sorted
 to_be_sorted = .FALSE.
 CALL vol7d_alloc_vol(this) ! usual safety check
 
-IF (optio_log(ltime)) THEN
+IF (optio_log(lsort_time)) THEN
   DO i = 2, SIZE(this%time)
     IF (this%time(i) < this%time(i-1)) THEN
       to_be_sorted = .TRUE.
@@ -1639,7 +1648,7 @@ IF (optio_log(ltime)) THEN
     ENDIF
   ENDDO
 ENDIF
-IF (optio_log(ltimerange)) THEN
+IF (optio_log(lsort_timerange)) THEN
   DO i = 2, SIZE(this%timerange)
     IF (this%timerange(i) < this%timerange(i-1)) THEN
       to_be_sorted = .TRUE.
@@ -1647,7 +1656,7 @@ IF (optio_log(ltimerange)) THEN
     ENDIF
   ENDDO
 ENDIF
-IF (optio_log(llevel)) THEN
+IF (optio_log(lsort_level)) THEN
   DO i = 2, SIZE(this%level)
     IF (this%level(i) < this%level(i-1)) THEN
       to_be_sorted = .TRUE.
@@ -1656,7 +1665,8 @@ IF (optio_log(llevel)) THEN
   ENDDO
 ENDIF
 
-IF (to_be_sorted) CALL vol7d_reform(this, sort=.TRUE.)
+IF (to_be_sorted) CALL vol7d_reform(this, &
+ lsort_time=lsort_time, lsort_timerange=lsort_timerange, lsort_level=lsort_level )
 
 END SUBROUTINE vol7d_smart_sort
 
