@@ -710,7 +710,8 @@ call grib_get(gaid,'GRIBEditionNumber',EditionNumber)
 
 if (EditionNumber == 1)then
 
-  call grib_set(gaid,'identificationOfOriginatingGeneratingCentre',this%centre)
+  IF (this%centre /= 255) & ! if centre missing (coming from bufr), keep template
+   CALL grib_set(gaid,'identificationOfOriginatingGeneratingCentre',this%centre)
   call grib_set(gaid,'gribTablesVersionNo',this%category)
   call grib_set(gaid,'indicatorOfParameter',this%number)
 
