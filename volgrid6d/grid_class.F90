@@ -30,9 +30,7 @@ use gridpar_stretched_class
 use gridpar_polarproj_class
 use geo_transforms
 use log4fortran
-#ifdef HAVE_LIBGRIBAPI
-use grib_api
-#endif
+use grid_id_class
 use err_handling
 use grid_dim_class
 implicit none
@@ -144,17 +142,15 @@ INTERFACE read_unit
   MODULE PROCEDURE griddim_read_unit
 END INTERFACE
 
-#ifdef HAVE_LIBGRIBAPI
-!> Import from grib.
+!> Import griddim object from grid_id.
 INTERFACE import
-  MODULE PROCEDURE griddim_import_gribapi
+  MODULE PROCEDURE griddim_import_grid_id
 END INTERFACE
 
-!> Export to grib.
+!> Export griddim object to grid_id.
 INTERFACE export
-  MODULE PROCEDURE griddim_export_gribapi
+  MODULE PROCEDURE griddim_export_grid_id
 END INTERFACE
-#endif
 
 !> Print a brief description on stdout.
 INTERFACE display
@@ -194,9 +190,7 @@ PUBLIC init, delete, copy
 public get_val,set_val,write_unit,read_unit,display
 public operator(==),count_distinct,pack_distinct,map_distinct,map_inv_distinct,index
 public wind_unrot
-#ifdef HAVE_LIBGRIBAPI
 PUBLIC import,export
-#endif
 
 CONTAINS
 
@@ -238,7 +232,7 @@ doubleprecision,OPTIONAL :: lov !< Line of view, also known as reference longitu
 doubleprecision,OPTIONAL :: lad !< Latitude at which dx and dy (in m) are specified (Lambert, grib2 only)
 INTEGER,OPTIONAL :: projection_center_flag !< Flag indicating which pole is represented
 
-CHARACTER(len=*),INTENT(in),OPTIONAL :: categoryappend !< accoda questo suffisso al namespace category di log4fortran
+CHARACTER(len=*),INTENT(in),OPTIONAL :: categoryappend !< append this suffix to log4fortran namespace category
 
 CHARACTER(len=512) :: a_name
 
@@ -601,25 +595,119 @@ CALL gridpar_setsteps(this%grid%generic, nx, ny)
 END SUBROUTINE griddim_setsteps
 
 
+! TODO
+! bisogna sviluppare gli altri operatori
+ELEMENTAL FUNCTION grid_eq(this, that) RESULT(res)
+TYPE(grid_def),INTENT(IN) :: this, that
+LOGICAL :: res
+
+res = this%type == that%type .AND. &
+ this%generic == that%generic .AND. &
+ this%rotated == that%rotated .AND. &
+ this%stretched == that%stretched .AND. &
+ this%polarproj == that%polarproj
+
+END FUNCTION grid_eq
+
+
+ELEMENTAL FUNCTION griddim_eq(this, that) RESULT(res)
+TYPE(griddim_def),INTENT(IN) :: this, that
+LOGICAL :: res
+
+res = this%grid == that%grid .AND. &
+ this%dim == that%dim
+
+END FUNCTION griddim_eq
+
+
+ELEMENTAL FUNCTION grid_type_eq(this, that) RESULT(res)
+TYPE(grid_type),INTENT(IN) :: this, that
+LOGICAL :: res
+
+res = this%type == that%type
+
+END FUNCTION grid_type_eq
+
+
+!> Import a griddim object from a grid_id object associated to a
+!! supported gridded dataset driver (typically a grib message from
+!! grib_api or a raster band from gdal).  The griddim object is
+!! populated with all the grid information (size, projection, etc.)
+!! carried by the grid_id object provided.
+SUBROUTINE griddim_import_grid_id(this, ingrid_id)
+#ifdef HAVE_LIBGDAL
+USE gdal
+#endif
+TYPE(griddim_def),INTENT(inout) :: this !< griddim object
+TYPE(grid_id),INTENT(in) :: ingrid_id !< grid_id object with information about the grid
+
 #ifdef HAVE_LIBGRIBAPI
-!> Import griddim object from id of the grib loaded in memory.
-!! The griddim object is populated with all the grid information
-!! (size, projection, etc.) carried by the grib message represented by
-!! the grib_api id provided.
-SUBROUTINE griddim_import_gribapi(this, gaid) 
-TYPE(griddim_def),INTENT(out) :: this !< griddim object
-INTEGER, INTENT(in) :: gaid !< grib_api id of the grib loaded in memory to import
+INTEGER :: gaid
+#endif
+#ifdef HAVE_LIBGDAL
+TYPE(gdalrasterbandh) :: gdalid
+#endif
+CALL init(this)
+
+#ifdef HAVE_LIBGRIBAPI
+gaid = grid_id_get_gaid(ingrid_id)
+IF (c_e(gaid)) CALL griddim_import_gribapi(this, gaid)
+#endif
+#ifdef HAVE_LIBGDAL
+gdalid = grid_id_get_gdalid(ingrid_id)
+IF (gdalassociated(gdalid)) CALL griddim_import_gdal(this, gdalid)
+#endif
+
+END SUBROUTINE griddim_import_grid_id
+
+
+!> Export a griddim object to a grid_id object associated to a
+!! supported gridded dataset driver (typically a grib message from
+!! grib_api). All the grid information (size, projection, etc.)
+!! contained in the griddim object is exported to the grid_id object.
+SUBROUTINE griddim_export_grid_id(this, outgrid_id)
+#ifdef HAVE_LIBGDAL
+USE gdal
+#endif
+TYPE(griddim_def),INTENT(in) :: this !< griddim object
+TYPE(grid_id),INTENT(inout) :: outgrid_id !< grid_id object which will contain information about the grid
+
+#ifdef HAVE_LIBGRIBAPI
+INTEGER :: gaid
+#endif
+#ifdef HAVE_LIBGDAL
+TYPE(gdalrasterbandh) :: gdalid
+#endif
+
+#ifdef HAVE_LIBGRIBAPI
+gaid = grid_id_get_gaid(outgrid_id)
+IF (c_e(gaid)) CALL griddim_export_gribapi(this, gaid)
+#endif
+#ifdef HAVE_LIBGDAL
+gdalid = grid_id_get_gdalid(outgrid_id)
+!IF (gdalassociated(gdalid)
+! export for gdal not implemented, log?
+#endif
+
+END SUBROUTINE griddim_export_grid_id
+
+
+#ifdef HAVE_LIBGRIBAPI
+! grib_api driver
+SUBROUTINE griddim_import_gribapi(this, gaid)
+USE grib_api
+TYPE(griddim_def),INTENT(inout) :: this ! griddim object
+INTEGER, INTENT(in) :: gaid ! grib_api id of the grib loaded in memory to import
 
 DOUBLE PRECISION :: loFirst, loLast, laFirst, laLast, x1, y1
 INTEGER :: EditionNumber, iScansNegatively, jScansPositively
 
-CALL init(this)
 
 ! Generic keys
 CALL grib_get(gaid, 'typeOfGrid', this%grid%type%type)
 #ifdef DEBUG
 call l4f_category_log(this%category,L4F_DEBUG, &
- "griddim_export_gribapi, grid type "//TRIM(this%grid%type%type))
+ "griddim_import_gribapi, grid type "//TRIM(this%grid%type%type))
 #endif
 CALL grib_get(gaid,'GRIBEditionNumber',EditionNumber)
 
@@ -712,14 +800,14 @@ CASE ('polar_stereographic', 'lambert', 'albers')
    this%grid%polarproj%projection_center_flag)
   IF (IAND(this%grid%polarproj%projection_center_flag,64) == 1) THEN
     CALL l4f_category_log(this%category,L4F_ERROR, &
-     "griddim_export_gribapi, bi-polar projections not supported")
+     "griddim_import_gribapi, bi-polar projections not supported")
     CALL raise_error()
   ENDIF
 ! line of view, aka central meridian
   CALL grib_get(gaid,'LoVInDegrees',this%grid%polarproj%lov)
 #ifdef DEBUG
   CALL l4f_category_log(this%category,L4F_DEBUG, &
-   "griddim_export_gribapi, centralMeridian "//TRIM(to_char(this%grid%polarproj%lov)))
+   "griddim_import_gribapi, centralMeridian "//TRIM(to_char(this%grid%polarproj%lov)))
 #endif
 
 ! latitude at which dx and dy are valid
@@ -762,7 +850,7 @@ CASE ('polar_stereographic', 'lambert', 'albers')
 
 CASE default
   CALL l4f_category_log(this%category,L4F_ERROR, &
-   "griddim_export_gribapi, grid type "//TRIM(this%grid%type%type)//" not supported")
+   "griddim_import_gribapi, grid type "//TRIM(this%grid%type%type)//" not supported")
   CALL raise_error()
 
 END SELECT
@@ -796,18 +884,16 @@ END SUBROUTINE grib_get_imiss
 END SUBROUTINE griddim_import_gribapi
 
 
-!> Export griddim object to id of the grib loaded in memory.
-!! The necessary grib_api keys are set according to the grid
-!! information (size, projection, etc.) contained in the object.
+! grib_api driver
 SUBROUTINE griddim_export_gribapi(this, gaid) 
-TYPE(griddim_def),INTENT(in) :: this !< griddim object
-INTEGER, INTENT(inout) :: gaid !< grib_api id of the grib loaded in memory to export
+USE grib_api
+TYPE(griddim_def),INTENT(in) :: this ! griddim object
+INTEGER, INTENT(inout) :: gaid ! grib_api id of the grib loaded in memory to export
 
 INTEGER :: EditionNumber, iScansNegatively, jScansPositively, nv, pvl
 DOUBLE PRECISION :: loFirst, loLast, laFirst, laLast
 DOUBLE PRECISION :: sdx, sdy, ratio, tol
 
-IF (.NOT. c_e(gaid))RETURN
 
 ! Generic keys
 CALL grib_get(gaid,'GRIBEditionNumber',EditionNumber)
@@ -1059,47 +1145,53 @@ END SUBROUTINE grib_set_imiss
 END SUBROUTINE griddim_export_gribapi
 #endif
 
-! TODO
-! bisogna sviluppare gli altri operatori
 
+#ifdef HAVE_LIBGDAL
+! gdal driver
+SUBROUTINE griddim_import_gdal(this, gdalid)
+USE gdal
+TYPE(griddim_def),INTENT(inout) :: this ! griddim object
+TYPE(gdalrasterbandh),INTENT(in) :: gdalid ! gdal rasterband pointer
 
-!> operatore di uguaglianza tra due oggetti grid
-ELEMENTAL FUNCTION grid_eq(this, that) RESULT(res)
-!> oggetti da confrontare
-TYPE(grid_def),INTENT(IN) :: this, that
-LOGICAL :: res
+TYPE(gdaldataseth) :: hds
+REAL(kind=c_double) :: geotrans(6), invgeotrans(6), x1, y1, x2, y2
+INTEGER :: ier
 
-res = this%type == that%type .AND. &
- this%generic == that%generic .AND. &
- this%rotated == that%rotated .AND. &
- this%stretched == that%stretched .AND. &
- this%polarproj == that%polarproj
+hds = gdalgetbanddataset(gdalid) ! go back to dataset
+ier = gdalgetgeotransform(hds, geotrans)
+! get grid corners
+CALL gdalapplygeotransform(geotrans, 0.5_c_double, 0.5_c_double, x1, y1)
+CALL gdalapplygeotransform(geotrans, &
+ this%dim%nx-0.5_c_double, this%dim%ny-0.5_c_double, x2, y2)
 
-END FUNCTION grid_eq
+IF (geotrans(3) == 0.0_c_double .AND. geotrans(5) == 0.0_c_double) THEN
+! transformation is diagonal, no transposing
+  this%dim%nx =  gdalgetrasterbandxsize(gdalid)
+  this%dim%ny =  gdalgetrasterbandysize(gdalid)
+  this%grid%generic%x1 = MIN(x1, x2)
+  this%grid%generic%x2 = MAX(x1, x2)
+  this%grid%generic%y1 = MIN(y1, y2)
+  this%grid%generic%y2 = MAX(y1, y2)
 
+ELSE IF (geotrans(2) == 0.0_c_double .AND. geotrans(6) == 0.0_c_double) THEN
+! transformation is anti-diagonal, transposing will have to be done
+  this%dim%nx =  gdalgetrasterbandysize(gdalid)
+  this%dim%ny =  gdalgetrasterbandxsize(gdalid)
+  this%grid%generic%x1 = MIN(y1, y2)
+  this%grid%generic%x2 = MAX(y1, y2)
+  this%grid%generic%y1 = MIN(x1, x2)
+  this%grid%generic%y2 = MAX(x1, x2)
 
-!> operatore di uguaglianza tra due oggetti griddim
-ELEMENTAL FUNCTION griddim_eq(this, that) RESULT(res)
-!> oggetti da confrontare
-TYPE(griddim_def),INTENT(IN) :: this, that
+ELSE ! transformation is a rotation, not supported
+ENDIF
 
-LOGICAL :: res
+this%grid%type%type = 'regular_ll' ! forced, only one supported (check?)
 
-res = this%grid == that%grid .AND. &
- this%dim == that%dim
+CALL gridpar_setsteps(this%grid%generic, this%dim%nx, this%dim%ny)
+this%grid%generic%component_flag = 0
 
-END FUNCTION griddim_eq
-
-
-!> operatore di uguaglianza tra due oggetti grid_type
-elemental FUNCTION grid_type_eq(this, that) RESULT(res)
-!> oggetti da confrontare
-TYPE(grid_type),INTENT(IN) :: this, that
-LOGICAL :: res
-
-res = this%type == that%type
-
-END FUNCTION grid_type_eq
+END SUBROUTINE griddim_import_gdal
+#endif
 
 
 !> Display on the screen a brief content of griddim object.

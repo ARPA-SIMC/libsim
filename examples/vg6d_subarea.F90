@@ -21,6 +21,7 @@ use gridinfo_class
 use grid_class
 use grid_transform_class
 use log4fortran
+use grid_id_class
 use grib_api
 use volgrid6d_class
 use char_utilities
@@ -31,8 +32,9 @@ implicit none
 integer :: category,ier
 character(len=512):: a_name,infile='in.grb',outfile='out.grb'
 type (gridinfo_def) :: gridinfo
-integer                            ::  ifile,ofile,gaid
-integer                            ::  iret
+TYPE(grid_file_id) :: ifile,ofile
+TYPE(grid_id) :: input_grid_id
+INTEGER :: gaid
 
 integer :: ix,iy,fx,fy,iox,ioy,fox,foy,inx,iny,fnx,fny,newx,newy
 doubleprecision ::  ilon,ilat,flon,flat
@@ -200,22 +202,18 @@ call init(trans, trans_type=trans_type, sub_type=sub_type, &
  ilon=ilon, ilat=ilat, flon=flon, flat=flat, npx=npx, npy=npy, &
  percentile=0.5D0, categoryappend="transformation")
 
-call grib_open_file(ifile, trim(infile),'r')
-call grib_open_file(ofile, trim(outfile),'w')
+ifile = grid_file_id_new(infile,'r')
+ofile = grid_file_id_new(outfile,'w')
 
-! Loop on all the messages in a file.
-!     a new grib message is loaded from file
-!     gaid is the grib id to be used in subsequent calls
 DO WHILE (.TRUE.)
-  gaid=-1
-  CALL  grib_new_from_file(ifile, gaid, iret)
-  IF (iret /= GRIB_SUCCESS) THEN ! THEN because of a bug in gfortran?!
+  input_grid_id = grid_id_new(ifile)
+  IF (.NOT.c_e(input_grid_id)) THEN ! THEN because of a bug in gfortran?!
     EXIT
   ENDIF
 
   call l4f_category_log(category,L4F_INFO,"import gridinfo")
 
-  call init(gridinfo, gaid=gaid, categoryappend="imported")
+  call init(gridinfo, gaid=input_grid_id, categoryappend="imported")
   call import(gridinfo)
 
   IF (ldisplay) THEN
@@ -251,42 +249,45 @@ DO WHILE (.TRUE.)
 !   call grib_release(gridinfo%gaid)
 !   call grib_new_from_template(gridinfo%gaid,"regular_ll_pl_grib1")
 
-! set scanning mode
-  IF (set_scmode(1:1) == '0') THEN
-    CALL grib_set(gridinfo%gaid, 'iScansNegatively', 0)
-  ELSE IF (set_scmode(1:1) == '1') THEN
-    CALL grib_set(gridinfo%gaid, 'iScansNegatively', 1)
-  ENDIF
-  IF (set_scmode(2:2) == '0') THEN
-    CALL grib_set(gridinfo%gaid, 'jScansPositively', 0)
-  ELSE IF (set_scmode(2:2) == '1') THEN
-    CALL grib_set(gridinfo%gaid, 'jScansPositively', 1)
-  ENDIF
-  IF (set_scmode(3:3) == '0') THEN
-    CALL grib_set(gridinfo%gaid, 'jPointsAreConsecutive', 0)
-  ELSE IF (set_scmode(3:3) == '1') THEN
-    CALL grib_set(gridinfo%gaid, 'jPointsAreConsecutive', 1)
+! set scanning mode if grib_api
+  IF (grid_id_get_driver(gridinfo%gaid) == 'grib_api') THEN
+    gaid = grid_id_get_gaid(gridinfo%gaid)
+    IF (set_scmode(1:1) == '0') THEN
+      CALL grib_set(gaid, 'iScansNegatively', 0)
+    ELSE IF (set_scmode(1:1) == '1') THEN
+      CALL grib_set(gaid, 'iScansNegatively', 1)
+    ENDIF
+    IF (set_scmode(2:2) == '0') THEN
+      CALL grib_set(gaid, 'jScansPositively', 0)
+    ELSE IF (set_scmode(2:2) == '1') THEN
+      CALL grib_set(gaid, 'jScansPositively', 1)
+    ENDIF
+    IF (set_scmode(3:3) == '0') THEN
+      CALL grib_set(gaid, 'jPointsAreConsecutive', 0)
+    ELSE IF (set_scmode(3:3) == '1') THEN
+      CALL grib_set(gaid, 'jPointsAreConsecutive', 1)
+    ENDIF
   ENDIF
 
-  call encode_gridinfo(gridinfo,fieldz)
-  call export (gridinfo)
+  call encode_gridinfo(gridinfo, fieldz)
+  call export(gridinfo)
   IF (ldisplay) THEN
     CALL display(gridinfo,namespace="ls")
   ENDIF
 
-  call grib_write(gridinfo%gaid,ofile)
+  CALL export(gridinfo%gaid, ofile)
 
-  call delete (grid_trans)
-  call delete (gridinfo)
-  deallocate (field,fieldz)
+  call delete(grid_trans)
+  call delete(gridinfo)
+  DEALLOCATE(field, fieldz)
 
 end do
 
-call delete (trans)
+call delete(trans)
 call delete(griddim_out)
 
-call grib_close_file(ifile)
-call grib_close_file(ofile)
+call delete(ifile)
+call delete(ofile)
 
 call l4f_category_log(category,L4F_INFO,"end")
 

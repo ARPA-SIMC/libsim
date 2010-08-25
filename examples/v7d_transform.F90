@@ -629,7 +629,7 @@ USE vol7d_oraclesim_class
 USE vol7d_dballe_class
 #endif
 #ifdef HAVE_LIBGRIBAPI
-USE grib_api
+USE grid_id_class
 USE grid_class
 USE gridinfo_class
 #endif
@@ -679,7 +679,8 @@ REAL :: comp_frac_valid
 
 ! for grib output
 #ifdef HAVE_LIBGRIBAPI
-INTEGER :: ifile, ofile, gaid, iret
+TYPE(grid_file_id) :: ifile, ofile
+TYPE(grid_id) :: gaid
 TYPE(griddim_def) :: grid_out
 TYPE(volgrid6d) :: vg6d
 TYPE(gridinfo_def),POINTER :: gridinfo(:)
@@ -1177,11 +1178,11 @@ ELSE IF (output_format == 'grib_api') THEN
 ! initialize transform
       CALL init(trans, trans_type=post_trans_type(w_s(1):w_e(1)), &
        sub_type=post_trans_type(w_s(2):w_e(2)), categoryappend="transformation2")
-! open grib template file and import first message
-      CALL grib_open_file(ifile, output_template, 'r')
-      gaid=-1
-      CALL grib_new_from_file(ifile, gaid, iret)
-      IF (iret == GRIB_SUCCESS) THEN
+! open grib template file and import first message, format:template is
+! reconstructed here, improve
+      ifile = grid_file_id_new(TRIM(output_format)//':'//TRIM(output_template), 'r')
+      gaid = grid_id_new(ifile)
+      IF (c_e(gaid)) THEN
 
 ! use the message  as a template for defining the grid
         CALL import(grid_out, gaid)
@@ -1194,19 +1195,19 @@ ELSE IF (output_format == 'grib_api') THEN
 
         IF (ASSOCIATED(gridinfo)) THEN
 ! export to output grib file
-          CALL grib_open_file(ofile, output_file, 'w')
+          ofile = grid_file_id_new(output_file, 'w')
           DO i = 1, SIZE(gridinfo)
             CALL export(gridinfo(i))
-            CALL grib_write(gridinfo(i)%gaid, ofile)
+            CALL export(gridinfo(i)%gaid, ofile)
             CALL delete(gridinfo(i))
           ENDDO
-          CALL grib_close_file(ofile)
+          CALL delete(ofile)
 
         ELSE ! export to gridinfo failed
           CALL l4f_category_log(category,L4F_ERROR, &
            'export of transformed volume to grib failed')
         ENDIF
-        CALL grib_close_file(ifile)
+        CALL delete(ifile)
 
       ELSE
         CALL l4f_category_log(category,L4F_ERROR, &

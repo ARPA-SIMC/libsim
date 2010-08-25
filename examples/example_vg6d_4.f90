@@ -21,7 +21,7 @@ use gridinfo_class
 use grid_class
 use grid_transform_class
 use log4fortran
-use grib_api
+use grid_id_class
 use volgrid6d_class
 use char_utilities
 
@@ -31,8 +31,9 @@ integer :: category,ier
 character(len=512):: a_name,infile='../data/in.grb',outfile='out.grb'
 type (gridinfo_def) :: gridinfo
 character:: ch
-integer                            ::  ifile,ofile,gaid
-integer                            ::  iret
+type(grid_file_id) :: ifile,ofile
+type(grid_id) :: gaid
+!integer                            ::  iret
 
 integer :: ix,iy,fx,fy,iox,ioy,fox,foy,inx,iny,fnx,fny,newx,newy
 doubleprecision ::  ilon=0.,ilat=30.,flon=30.,flat=60.
@@ -79,70 +80,60 @@ call init(trans, trans_type=trans_type,sub_type=sub_type, &
  ilon=ilon,ilat=ilat,flon=flon,flat=flat,&
  categoryappend="trasformation")
 
-call grib_open_file(ifile, trim(infile),'r')
-call grib_open_file(ofile, trim(outfile),'w')
-
+ifile = grid_file_id_new(trim(infile),'r')
+ofile = grid_file_id_new(trim(outfile),'w')
 
 ! Loop on all the messages in a file.
+DO WHILE (.TRUE.)
+  gaid = grid_id_new(ifile)
+  IF (.NOT.c_e(gaid)) EXIT
 
-!     a new grib message is loaded from file
-!     gaid is the grib id to be used in subsequent calls
+  call l4f_category_log(category,L4F_INFO,"import gridinfo")
 
-gaid=-1
-call  grib_new_from_file(ifile,gaid, iret) 
+  call init (gridinfo,gaid=gaid,categoryappend="importato")
+  call import(gridinfo)
 
+  call display(gridinfo,namespace="")
 
-DO WHILE (iret == GRIB_SUCCESS)
+  call l4f_category_log(category,L4F_INFO,"import")
 
-   call l4f_category_log(category,L4F_INFO,"import gridinfo")
+  allocate (field(gridinfo%griddim%dim%nx,gridinfo%griddim%dim%ny))
 
-   call init (gridinfo,gaid=gaid,categoryappend="importato")
-   call import(gridinfo)
+  field=decode_gridinfo(gridinfo)
 
-   call display(gridinfo,namespace="")
+  call init(grid_trans, trans, in=gridinfo%griddim,out=griddim_out,categoryappend="gridtrasformato")
 
-   call l4f_category_log(category,L4F_INFO,"import")
+  call display(griddim_out)
 
-   allocate (field(gridinfo%griddim%dim%nx,gridinfo%griddim%dim%ny))
+  allocate (fieldz(griddim_out%dim%nx,griddim_out%dim%ny))
 
-   field=decode_gridinfo(gridinfo)
+  call compute(grid_trans, field, fieldz)
 
-   call init(grid_trans, trans, in=gridinfo%griddim,out=griddim_out,categoryappend="gridtrasformato")
-
-   call display(griddim_out)
-
-   allocate (fieldz(griddim_out%dim%nx,griddim_out%dim%ny))
-
-   call compute(grid_trans, field, fieldz)
-
-   call delete(gridinfo%griddim)
-   call copy(griddim_out,gridinfo%griddim,categoryappend="clonato")
+  call delete(gridinfo%griddim)
+  call copy(griddim_out,gridinfo%griddim,categoryappend="clonato")
 
 ! oppure per mantenere il vecchio gridinfo
 !   call clone(gridinfo , gridinfo_out)
 !   call delete(gridinfo_out%griddim)
 !   call copy(griddim_out,gridinfo_out%griddim)
 
-   call encode_gridinfo(gridinfo,fieldz)
-   call export (gridinfo)
-   call display(gridinfo,namespace="")
+  call encode_gridinfo(gridinfo,fieldz)
+  call export (gridinfo)
+  call display(gridinfo,namespace="")
 
-   call grib_write(gridinfo%gaid,ofile)
+  call export(gridinfo%gaid,ofile)
 
-   call delete (grid_trans)
-   call delete (gridinfo)
-   deallocate (field,fieldz)
-
-   gaid=-1
-   call grib_new_from_file(ifile,gaid, iret)
+  call delete (grid_trans)
+  call delete (gridinfo)
+  deallocate (field,fieldz)
    
 end do
 
 call delete (trans)
 call delete(griddim_out)
 
-call grib_close_file(ifile)
-call grib_close_file(ofile)
+call delete(ifile)
+call delete(ofile)
 
 call l4f_category_log(category,L4F_INFO,"terminato")
 

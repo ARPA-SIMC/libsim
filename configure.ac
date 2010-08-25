@@ -1,6 +1,6 @@
 dnl Process this file with autoconf to produce a configure script.
 
-AC_INIT(libsim, 3.0.1, [dcesari@arpa.emr.it])
+AC_INIT(libsim, 4.0.0, [dcesari@arpa.emr.it])
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_SRCDIR([configure.ac])
 AM_INIT_AUTOMAKE([foreign])
@@ -140,6 +140,22 @@ AC_DEFINE(HAVE_ORSIM, 1, [Enable oraclesim])
 unset save_cppflags ora_cppflags ora_ldflags ora_lib
 fi
 AM_CONDITIONAL(ORSIM, test "x$enableval" = "xyes")
+
+
+AC_ARG_ENABLE(gdal, AC_HELP_STRING([--disable-gdal],
+  [enable gdal support]),,[enableval=no])dnl default disable
+if test "x$enableval" = "xyes"; then
+  AC_CHECK_LIB([gdal], [GDALOpen],
+    AC_MSG_RESULT([gdal code included])
+    AC_DEFINE(HAVE_LIBGDAL, 1, [Enable gdal code])
+    GDAL_LIBS="-lgdal"
+    AC_SUBST(GDAL_LIBS),
+    AC_MSG_ERROR([gdal library not found]),)
+else
+  AC_MSG_RESULT([gdal code not included])
+fi
+AM_CONDITIONAL(GDAL, test "x$enableval" = "xyes")
+
 
 AC_LANG_PUSH(Fortran)dnl Do the following checks in Fortran
 AC_FC_SRCEXT(f90)dnl and use .f90 extension

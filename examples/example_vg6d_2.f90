@@ -20,18 +20,17 @@ program demo2
 use gridinfo_class
 use char_utilities
 use log4fortran
-use grib_api
+use grid_id_class
 
 implicit none
 
 integer :: category,ier
 character(len=512):: a_name
-type (gridinfo_def),allocatable :: gridinfo(:)
+type(gridinfo_def),allocatable :: gridinfo(:)
 
-integer                            ::  ifile
-integer                            ::  iret
-integer                            ::  gaid
-integer  :: ngrib
+TYPE(grid_file_id) :: ifile
+TYPE(grid_id) :: gaid
+INTEGER :: ngrib
 
 !questa chiamata prende dal launcher il nome univoco
 call l4f_launcher(a_name,a_name_force="demo2")
@@ -45,61 +44,44 @@ ier=l4f_init()
 
 ngrib=0
 
-call grib_open_file(ifile, '../data/in.grb','r')
-
+ifile = grid_file_id_new('../data/in.grb','r')
 ! Loop on all the messages in a file.
+DO WHILE (.TRUE.)
+  gaid = grid_id_new(ifile)
+  IF (.NOT.c_e(gaid)) EXIT
 
-call  grib_new_from_file(ifile,gaid, iret) 
+  ngrib = ngrib + 1
+  CALL delete(gaid)
+ENDDO
 
-DO WHILE (iret == GRIB_SUCCESS)
+CALL delete(ifile)
 
-   ngrib=ngrib+1
-   call grib_release(gaid)
-   call grib_new_from_file(ifile,gaid, iret)
-   
-end do
+CALL l4f_category_log(category,L4F_INFO,&
+ "Numero totale di grib: "//to_char(ngrib))
 
-call l4f_category_log(category,L4F_INFO,&
-         "Numero totale di grib: "//to_char(ngrib))
-
-call grib_close_file(ifile)
-
-allocate (gridinfo(ngrib))
+allocate(gridinfo(ngrib))
 
 ngrib=0
 
-call grib_open_file(ifile, '../data/in.grb','r')
-
+ifile = grid_file_id_new('../data/in.grb','r')
 ! Loop on all the messages in a file.
+DO WHILE (.TRUE.)
+  gaid = grid_id_new(ifile)
+  IF (.NOT.c_e(gaid)) EXIT
 
-!     a new grib message is loaded from file
-!     gaid is the grib id to be used in subsequent calls
-call  grib_new_from_file(ifile,gaid, iret) 
-
-
-LOOP: DO WHILE (iret == GRIB_SUCCESS)
-
-   call l4f_category_log(category,L4F_INFO,"import grib")
-
-   ngrib=ngrib+1
-
-   call init (gridinfo(ngrib),gaid=gaid)
-   call import(gridinfo(ngrib))
-
-   call grib_new_from_file(ifile,gaid, iret)
-   
-end do LOOP
-
-call grib_close_file(ifile)
+  CALL l4f_category_log(category,L4F_INFO,"import grib")
+  ngrib = ngrib + 1
+  CALL init(gridinfo(ngrib),gaid=gaid)
+  CALL import(gridinfo(ngrib))
+ENDDO
 
 
+call delete(ifile)
 call display (gridinfo)
 
 
 do ngrib=1,size(gridinfo)
-
    call delete (gridinfo(ngrib))
-
 enddo
 
 call l4f_category_log(category,L4F_INFO,"terminato ")

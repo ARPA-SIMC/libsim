@@ -23,7 +23,7 @@ use grid_class
 use grid_transform_class
 USE vol7d_dballe_class
 USE vol7d_class
-USE grib_api
+USE grid_id_class
 
 implicit none
 
@@ -36,7 +36,8 @@ type(vol7d) :: vol7d_in
 TYPE(vol7d_dballe) :: v7d_import
 type(griddim_def) :: griddim_out
 
-integer :: nx=40,ny=40,component_flag=0,gaid_template
+integer :: nx=40,ny=40,component_flag=0
+type(grid_id) :: gaid_template
 doubleprecision :: lon_min=0., lon_max=30., lat_min=30., lat_max=60.
 doubleprecision :: latitude_south_pole=-32.5,longitude_south_pole=10.,angle_rotation=0.
 character(len=80) :: type='regular_ll',trans_type='inter',sub_type='linear'
@@ -65,7 +66,7 @@ call griddim_unproj(griddim_out)
 print*,'grid di interpolazione >>>>>>>>>>>>>>>>>>>>'
 call display(griddim_out)
 
-call grib_new_from_template (gaid_template,"regular_ll_sfc_grib1")
+gaid_template = grid_id_new(grib_api_template="regular_ll_sfc_grib1")
 
 !trasformation object
 call init(trans, trans_type=trans_type,sub_type=sub_type, categoryappend="trasformation")
@@ -82,7 +83,8 @@ call l4f_category_log(category,L4F_INFO,"trasformato")
 call transform(trans,griddim_out, vol7d_in=v7d_import%vol7d, volgrid6d_out=volgrid(1), categoryappend="trasform->")
 
 call l4f_category_log(category,L4F_INFO,"export to GRIB")
-call export (volgrid,gaid_template=gaid_template,categoryappend="volume scritto")
+CALL export(volgrid, 'examp[le_v7d.grb', gaid_template=gaid_template,&
+ categoryappend="volume scritto")
 
 if (associated(volgrid)) call delete(volgrid)
 

@@ -16,27 +16,41 @@
 ! You should have received a copy of the GNU General Public License
 ! along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "config.h"
-!> \brief Classe per la gestione delle informazioni di griglia dei grib.
+!> Class for managing information about a single gridded georeferenced
+!! field, typically imported from an on-disk dataset like a grib file
+!! (grib_api driver) or a file in a gdal-supported format (gdal
+!! driver). This module defines a gridinfo (\a gridinfo_def TYPE)
+!! class which can contain information about a single field on a
+!! rectangular georeferenced grid, including:
 !!
-!! Questo modulo definisce gli oggetti e i metodi per gestire dati grib.
-!! Viene definito un oggetto che associa ad un oggetto grib id delle grib_api una serie di informazioni
-!! molto utili :
-!! - area geografiche in proiezione e non, associate a dati su grigliato (gridded).
-!! - descrittore della dimensione tempo
-!! - descrittore della dimensione intervallo temporale (timerange)
-!! - descrittore della dimensione livello verticale
-!! - descrittore della dimensione variabile
+!! - geographical area and projection associated to the gridded data
+!! - time dimension descriptor
+!! - timerange (forecast, analysis, statistically processed) dimension
+!!   descriptor
+!! - vertical level dimension descriptor
+!! - physical variable dimension descriptor
+!! 
+!! every object contains also an identificator of the grid (\a grid_id
+!! object), carrying information about the driver used or which has to
+!! be used for import/export from/to file. The identificator should be
+!! associated to the gridinfo object at initialization time.
 !!
-!! I metodi principali permettono di :
-!! - estrarre dal grib queste informazioni  
-!! - inserire nel grib queste informazioni
-!! - estrarre i dati codificati dal grib
-!! - codificare i dati nel grib
+!! The main methods of this class allow to:
 !!
-!! Programma esempio semplice \include example_vg6d_2.f90
-!! Programma esempio complesso \include example_vg6d_4.f90
+!! - extract (import methods) the information of the five dimension
+!!   descriptors from the associated grid_id coming from a file
+!!   (grib_api or gdal drivers)
+!! - insert (export method) the information of the five dimension
+!!   descriptors in the associated grid_id object, for successive
+!!   write to a file (grib_api driver only)
+!! - retrieve the two-dimensional field encoded into the grid_id
+!!   associated to the gridinfo object
+!! - encode a desired two-dimensional field into the grid_id
+!!   associated to the gridinfo object
+!!
+!! Simple example of use: \include example_vg6d_2.f90
+!! More complex example: \include example_vg6d_4.f90
 !! \ingroup volgrid6d
-
 module gridinfo_class
 
 USE grid_class
@@ -44,7 +58,13 @@ USE datetime_class
 USE vol7d_timerange_class
 USE vol7d_level_class
 USE volgrid6d_var_class
-use grib_api
+#ifdef HAVE_LIBGRIBAPI
+USE grib_api
+#endif
+#ifdef HAVE_LIBGDAL
+USE gdal
+#endif
+USE grid_id_class
 use log4fortran
 use optional_values
 
@@ -54,96 +74,87 @@ IMPLICIT NONE
 character (len=255),parameter:: subcategory="gridinfo_class"
 
 
-!> Definisce un oggetto contenente le informazioni relative a un grib
-type gridinfo_def
-
-
-!> descrittore del grigliato
-  type(griddim_def) :: griddim
-!> descrittore della dimensione tempo
-  TYPE(datetime) :: time
-!> descrittore della dimensione intervallo temporale (timerange)
-  TYPE(vol7d_timerange) :: timerange
-!> descrittore della dimensione livello verticale
-  TYPE(vol7d_level) :: level
-!> vettore descrittore della dimensione variabile
-  TYPE(volgrid6d_var) :: var
-  integer ::  gaid !< grib_api id of the grib loaded in memory
-  integer :: category !< log4fortran
-
-end type gridinfo_def
+!> Object describing a single gridded message/band
+TYPE gridinfo_def
+  TYPE(griddim_def) :: griddim !< grid descriptor
+  TYPE(datetime) :: time !< time dimension descriptor
+  TYPE(vol7d_timerange) :: timerange !< timerange (forecast, analysis, statistically processed) dimension descriptor
+  TYPE(vol7d_level) :: level !< vertical level dimension descriptor
+  TYPE(volgrid6d_var) :: var !< physical variable dimension descriptor
+  TYPE(grid_id) :: gaid !< grid identificator, carrying information about the driver for importation/exportation from/to file
+  INTEGER :: category !< log4fortran category
+END TYPE gridinfo_def
 
 INTEGER, PARAMETER :: cosmo_centre(3) = (/78,80,200/) ! emission centers using COSMO
 
-!> \brief Costructor
-!!
-!! create a new istanze of object
+!> Constructor, it creates a new instance of the object.
 INTERFACE init
-  MODULE PROCEDURE init_gridinfo
+  MODULE PROCEDURE gridinfo_init
 END INTERFACE
 
-!> \brief destructor
-!!
-!! delete object 
+!> Destructor, it releases every information associated with the object.
 INTERFACE delete
-  MODULE PROCEDURE delete_gridinfo
+  MODULE PROCEDURE gridinfo_delete
 END INTERFACE
 
-!> \brief clone object
-!!
-!! create a new istanze of object equal to the starting one 
+!> Clone the object, creating a new independent instance of the object
+!! exactly equal to the starting one.
 INTERFACE clone
-  MODULE PROCEDURE clone_gridinfo
+  MODULE PROCEDURE gridinfo_clone
 END INTERFACE
 
-
-!> \brief Import
-!!
-!! Legge i valori dal grib e li imposta appropriatamente
+!> Import information from a file or grid_id object into the gridinfo
+!! descriptors.
 INTERFACE import
-  MODULE PROCEDURE import_time,import_timerange,import_level,import_gridinfo, &
-   import_volgrid6d_var
+  MODULE PROCEDURE gridinfo_import, gridinfo_import_from_file
+!  MODULE PROCEDURE import_time,import_timerange,import_level,import_gridinfo, &
+!   import_volgrid6d_var,gridinfo_import_from_file
 END INTERFACE
 
-!> \brief Export
-!!
-!! Imposta i valori nel grib
+!> Export gridinfo descriptors information into a grid_id object.
 INTERFACE export
-  MODULE PROCEDURE export_time,export_timerange,export_level,export_gridinfo, &
-   export_volgrid6d_var
+  MODULE PROCEDURE gridinfo_export, gridinfo_export_to_file
+!  MODULE PROCEDURE export_time,export_timerange,export_level,export_gridinfo, &
+!   export_volgrid6d_var
 END INTERFACE
 
-!> \brief  Display object on screen
-!!
-!! show brief content on screen
+!> Display on standard output a description of the \a gridinfo object
+!! provided.
 INTERFACE display
-  MODULE PROCEDURE display_gridinfo,display_gridinfov,display_gaid
+  MODULE PROCEDURE gridinfo_display, gridinfov_display
 END INTERFACE
 
+!> Decode and return the data array from a grid_id object associated
+!! to a gridinfo object.
+INTERFACE decode_gridinfo
+  MODULE PROCEDURE gridinfo_decode_data
+END INTERFACE
 
-private
+!> Encode a data array into a grid_id object associated to a gridinfo object.
+INTERFACE encode_gridinfo
+  MODULE PROCEDURE gridinfo_encode_data
+END INTERFACE
 
-public gridinfo_def,init,delete,import,export,clone
-public display,decode_gridinfo,encode_gridinfo
+PRIVATE
+PUBLIC gridinfo_def,init,delete,import,export,clone
+PUBLIC display,decode_gridinfo,encode_gridinfo
 
-contains
+CONTAINS
 
-!> Inizializza un oggetto di tipo gridinfo.
-SUBROUTINE init_gridinfo(this,gaid,griddim,time,timerange,level,var,clone,categoryappend)
-TYPE(gridinfo_def),intent(out) :: this !< oggetto da inizializzare
-integer,intent(in),optional ::  gaid !< grib_api id of the grib loaded in memory
-!> descrittore del grigliato
-type(griddim_def),intent(in),optional :: griddim
-!> descrittore della dimensione tempo
-TYPE(datetime),intent(in),optional :: time
-!> descrittore della dimensione intervallo temporale (timerange)
-TYPE(vol7d_timerange),intent(in),optional :: timerange
-!> descrittore della dimensione livello verticale
-TYPE(vol7d_level),intent(in),optional :: level
-!> descrittore della dimensione variabile di anagrafica
-TYPE(volgrid6d_var),intent(in),optional :: var
-logical , intent(in),optional :: clone !< se fornito e \c .TRUE., clona gaid to gridinfo
-character(len=*),INTENT(in),OPTIONAL :: categoryappend !< accoda questo suffisso al namespace category di log4fortran
+!> Constructor, it creates a new instance of the object.
+!! All the additional parameters are optional and they will be
+!! initialised to the corresponding missing value if not provided.
+SUBROUTINE gridinfo_init(this, gaid, griddim, time, timerange, level, var, &
+ clone, categoryappend)
+TYPE(gridinfo_def),intent(out) :: this !< object to be initialized
+TYPE(grid_id),intent(in),optional :: gaid !< identificator of the grid to be described 
+type(griddim_def),intent(in),optional :: griddim !< grid descriptor
+TYPE(datetime),intent(in),optional :: time !< time dimension descriptor
+TYPE(vol7d_timerange),intent(in),optional :: timerange !< timerange (forecast, analysis, statistically processed) dimension descriptor
+TYPE(vol7d_level),intent(in),optional :: level !< vertical level dimension descriptor
+TYPE(volgrid6d_var),intent(in),optional :: var !< physical variable dimension descriptor
+logical , intent(in),optional :: clone !< if provided and \c .TRUE., the \a gaid will be cloned and not simply copied into the gridinfo object
+character(len=*),INTENT(in),OPTIONAL :: categoryappend !< append this suffix to log4fortran namespace category
 
 character(len=512) :: a_name
 
@@ -159,21 +170,19 @@ call l4f_category_log(this%category,L4F_DEBUG,"start init gridinfo")
 #endif
 
 if (present(gaid))then
-
   if (optio_log(clone))then
-    this%gaid=-1
-    call grib_clone(gaid,this%gaid)
+    CALL copy(gaid,this%gaid)
   else
-    this%gaid=gaid
-  end if
+    this%gaid = gaid
+  endif
 else
-  this%gaid=imiss
+  this%gaid = grid_id_new()
 end if
 
-#ifdef DEBUG
-call l4f_category_log(this%category,L4F_DEBUG,"gaid present: "&
- //to_char(c_e(this%gaid))//" value: "//to_char(this%gaid))
-#endif
+!#ifdef DEBUG
+!call l4f_category_log(this%category,L4F_DEBUG,"gaid present: "&
+! //to_char(c_e(this%gaid))//" value: "//to_char(this%gaid))
+!#endif
 
 if (present(griddim))then
   call copy(griddim,this%griddim)
@@ -205,15 +214,13 @@ else
   call init(this%var)
 end if
 
-end SUBROUTINE init_gridinfo
+END SUBROUTINE gridinfo_init
 
 
-!> \brief destructor
-!!
-!! delete gridinfo object
-!! relase memory and delete category for logging
-subroutine delete_gridinfo (this)
-TYPE(gridinfo_def),intent(out) :: this !< oggetto da eliminare
+!> Destructor, it releases every information associated with the object.
+!! It releases memory and deletes the category for logging.
+SUBROUTINE gridinfo_delete(this)
+TYPE(gridinfo_def),intent(out) :: this !< object to be deleted
 
 #ifdef DEBUG
 call l4f_category_log(this%category,L4F_DEBUG,"start delete_gridinfo" )
@@ -228,107 +235,383 @@ call delete(this%var)
 #ifdef DEBUG
 call l4f_category_log(this%category,L4F_DEBUG,"delete gaid" )
 #endif
-call grib_release (this%gaid) 
-this%gaid=imiss
+CALL delete(this%gaid) 
 
 !chiudo il logger
 call l4f_category_delete(this%category)
 
+END SUBROUTINE gridinfo_delete
 
-end subroutine delete_gridinfo
+
+!> Display on standard output a description of the \a gridinfo object
+!! provided.  For objects imported from grib_api also the grib key
+!! names and values are printed; the set of keys returned can be
+!! controlled with the input variable namespace. Available namespaces
+!! are "ls", to get the same default keys as the grib_ls command, and
+!! "mars" to get the keys used by mars, default "ls".
+SUBROUTINE gridinfo_display(this, namespace)
+TYPE(gridinfo_def),intent(in) :: this !< object to display
+CHARACTER (len=*),OPTIONAL :: namespace !< grib_api namespace of the keys to search for, all the keys if empty, default "ls"
+
+#ifdef DEBUG
+call l4f_category_log(this%category,L4F_DEBUG,"displaying gridinfo " )
+#endif
+
+print*,"----------------------- gridinfo display ---------------------"
+call display(this%griddim)
+call display(this%time)
+call display(this%timerange)
+call display(this%level)
+call display(this%var)
+call display(this%gaid, namespace=namespace)
+print*,"--------------------------------------------------------------"
+
+END SUBROUTINE gridinfo_display
+
+!> The same as gridinfo_display(), but it receives an array of
+!! gridinfo objects.
+SUBROUTINE gridinfov_display(this, namespace)
+TYPE(gridinfo_def),INTENT(in) :: this(:) !< object to display
+CHARACTER (len=*),OPTIONAL :: namespace !< grib_api namespace of the keys to search for, all the keys if empty, default "ls"
+
+INTEGER :: i
+
+PRINT*,"----------------------- gridinfo array -----------------------"
+
+do i=1, size(this)
+
+#ifdef DEBUG
+  CALL l4f_category_log(this(i)%category,L4F_DEBUG, &
+   "displaying gridinfo array, element "//TRIM(to_char(i)))
+#endif
+
+  call display(this(i), namespace)
+
+end do
+print*,"--------------------------------------------------------------"
+
+END SUBROUTINE gridinfov_display
 
 
-!> \brief  clone gridinfo object
-!!
-!! create a new istanze of object equal to the starting one 
-SUBROUTINE clone_gridinfo(this,that,categoryappend)
-TYPE(gridinfo_def),intent(in) :: this !< oggetto da clonare
-TYPE(gridinfo_def),intent(out) :: that !< oggetto clonato
-character(len=*),INTENT(in),OPTIONAL :: categoryappend !< appende questo suffisso al namespace category di log4fortran
+!> Clone the object, creating a new independent instance of the object
+!! exactly equal to the starting one.
+SUBROUTINE gridinfo_clone(this, that, categoryappend)
+TYPE(gridinfo_def),INTENT(in) :: this !< source object
+TYPE(gridinfo_def),INTENT(out) :: that !< cloned object, it does not need to be initalized
+CHARACTER(len=*),INTENT(in),OPTIONAL :: categoryappend !< append this suffix to log4fortran namespace category for the cloned object
 
-character(len=512) :: a_name
+CALL init(that, gaid=this%gaid, griddim=this%griddim, time=this%time, &
+ timerange=this%timerange, level=this%level, var=this%var, clone=.TRUE., &
+ categoryappend=categoryappend)
 
-that%gaid=-1
-call grib_clone(this%gaid,that%gaid)
+END SUBROUTINE gridinfo_clone
 
-call copy(this%griddim,that%griddim)
 
-that%time=this%time
-that%timerange=this%timerange
-that%level=this%level
-that%var=this%var
+!> Import grid_id information into a gridinfo object.
+!! This method imports into the descriptors of the gridinfo object \a
+!! this the information carried on by the grid_id object \a this%gaid,
+!! previously set, typically by reading from a file with a supported
+!! driver (e.g. grib_api or gdal). An amount of information is deduced
+!! from this%gaid and stored in the descriptors of gridinfo object \a
+!! this.
+SUBROUTINE gridinfo_import(this)
+TYPE(gridinfo_def),INTENT(inout) :: this !< gridinfo object
 
-!new category
-call l4f_launcher(a_name,a_name_append=trim(subcategory)//"."//trim(optio_c(categoryappend,255)))
-that%category=l4f_category_get(a_name)
-
-end SUBROUTINE clone_gridinfo
-
-!> Importa nell'oggetto gridinfo \a this il contenuto del messaggio grib
-!! identificato da \a this%gaid precedentemente impostato.
-!! una serie di informazioni vengono estratte dal grid e dopo qualche elaborazione 
-!! vengono memorizzate nella struttura.
-subroutine import_gridinfo (this)
-
-TYPE(gridinfo_def),intent(out) :: this !< oggetto in cui importare
-
+#ifdef HAVE_LIBGRIBAPI
+INTEGER :: gaid
+#endif
+#ifdef HAVE_LIBGDAL
+TYPE(gdalrasterbandh) :: gdalid
+#endif
 
 #ifdef DEBUG
 call l4f_category_log(this%category,L4F_DEBUG,"import from gaid")
 #endif
 
-call import(this%griddim,this%gaid)
-call import(this%time,this%gaid)
-call import(this%timerange,this%gaid)
-call import(this%level,this%gaid)
-call import(this%var,this%gaid)
+! griddim is imported separately in grid_class
+CALL import(this%griddim, this%gaid)
 
-call normalize_gridinfo(this)
+#ifdef HAVE_LIBGRIBAPI
+gaid = grid_id_get_gaid(this%gaid)
+IF (c_e(gaid)) CALL gridinfo_import_gribapi(this, gaid)
+#endif
+#ifdef HAVE_LIBGDAL
+gdalid = grid_id_get_gdalid(this%gaid)
+IF (gdalassociated(gdalid)) CALL gridinfo_import_gdal(this, gdalid)
+#endif
 
-end subroutine import_gridinfo
+END SUBROUTINE gridinfo_import
 
-!> Esporta il contenuto dell'oggetto gridinfo \a this in un messaggio grib
-!! identificato da \a this%gaid precedentemente impostato.
-!! Le informazioni contenute nella struttura dopo elcune elaborazioni vengono
-!! forzate nel contenuto del grib 
-subroutine export_gridinfo (this)
 
-TYPE(gridinfo_def),intent(out) :: this !< oggetto da esportare
+!> Import a gridinfo array from a file. It receives a pointer to an array of
+!! gridinfo objects which will be allocated to a size equal to the
+!! number of gridded messages/bands found in the file provided and it
+!! will be filled with all the data found. In case of error, the
+!! gridinfo object will not be allocated, so the success can be tested
+!! with \a ASSOCIATED(this).
+SUBROUTINE gridinfo_import_from_file(this, filename, categoryappend)
+TYPE(gridinfo_def),POINTER :: this(:) !< gridinfo array object which will be allocated and into which data will be imported
+CHARACTER(len=*),INTENT(in) :: filename !< name of file to open and import, in the form [driver:]pathname
+CHARACTER(len=*),INTENT(in),OPTIONAL :: categoryappend !< append this suffix to log4fortran namespace category
+
+INTEGER :: lunit, ngrid, stallo, category, gaid, iret
+CHARACTER(len=512) :: a_name
+TYPE(grid_file_id) :: input_file
+TYPE(grid_id) :: input_grid
+
+IF (PRESENT(categoryappend)) THEN
+  CALL l4f_launcher(a_name,a_name_append= &
+   TRIM(subcategory)//"."//TRIM(categoryappend))
+ELSE
+  CALL l4f_launcher(a_name,a_name_append=TRIM(subcategory))
+ENDIF
+category=l4f_category_get(a_name)
+
+#ifdef DEBUG
+CALL l4f_category_log(category,L4F_DEBUG,"import from file")
+#endif
+
+NULLIFY(this)
+
+input_file = grid_file_id_new(filename, 'r')
+ngrid = grid_file_id_count(input_file)
+
+CALL l4f_category_log(category,L4F_INFO, &
+ "found "//TRIM(to_char(ngrid))//" messages/bands in file "//TRIM(filename))
+
+IF (ngrid > 0) THEN
+
+  ALLOCATE (this(ngrid),stat=stallo)
+  IF (stallo == 0) THEN
+
+    ngrid = 0
+    DO WHILE(.TRUE.)
+      input_grid = grid_id_new(input_file)
+      IF (.NOT. c_e(input_grid)) EXIT
+      IF (ngrid == SIZE(this)) EXIT
+
+      CALL l4f_category_log(category,L4F_INFO,"import gridinfo")
+      ngrid = ngrid + 1
+      CALL init(this(ngrid), gaid=input_grid, &
+       categoryappend=TRIM(categoryappend)//TRIM(to_char(ngrid)))
+      CALL import(this(ngrid))
+! input_grid is intentionally not destroyed, since now it lives into this
+    ENDDO
+
+  ELSE
+
+    CALL l4f_category_log(category,L4F_ERROR,"allocating memory")
+    NULLIFY(this)
+  ENDIF
+
+ENDIF
+
+CALL delete(input_file)
+!chiudo il logger
+CALL l4f_category_delete(category)
+
+END SUBROUTINE gridinfo_import_from_file
+
+
+!> Export gridinfo descriptors information into a message/band on file.
+!! This method exports the contents of the descriptors of the gridinfo
+!! object \a this in the grid_id object \a this%gaid, previously set,
+!! for the successive write to a file. The information stored in the
+!! descriptors of gridinfo object \a this is inserted, when possible,
+!! in the grid_id object.
+SUBROUTINE gridinfo_export(this)
+TYPE(gridinfo_def),INTENT(inout) :: this !< gridinfo object
+
+#ifdef HAVE_LIBGRIBAPI
+INTEGER :: gaid
+#endif
+#ifdef HAVE_LIBGDAL
+TYPE(gdalrasterbandh) :: gdalid
+#endif
 
 #ifdef DEBUG
 call l4f_category_log(this%category,L4F_DEBUG,"export to gaid" )
 #endif
 
-!attenzione: exportando da volgrid griddim è già esportato
+! attenzione: exportando da volgrid griddim è già esportato
+! griddim is exported separately in grid_class
+CALL export(this%griddim, this%gaid)
 
-if ( c_e(this%gaid)) then
+#ifdef HAVE_LIBGRIBAPI
+gaid = grid_id_get_gaid(this%gaid)
+IF (c_e(gaid)) CALL gridinfo_export_gribapi(this, gaid)
+#endif
+#ifdef HAVE_LIBGDAL
+!gdalid = grid_id_get_gdalid(this%gaid)
+call l4f_category_log(this%category,L4F_WARN,"export to gdal not implemented" )
+#endif
 
-  call unnormalize_gridinfo(this)
-
-  call export(this%griddim,this%gaid)
-  call export(this%time,this%gaid, this%timerange)
-  CALL export(this%timerange,this%gaid, this%time)
-  call export(this%level,this%gaid)
-  call export(this%var,this%gaid)
-
-end if
-
-end subroutine export_gridinfo
+END SUBROUTINE gridinfo_export
 
 
-!> Importa nell'oggetto datetime \a this il contenuto del messaggio grib
-!! identificato da \a gaid.
-!! Le informazioni relative alla data vengono estratte dal grid e dopo qualche elaborazione 
-!! vengono memorizzate nella struttura.
-subroutine import_time(this,gaid)
+!> Export a gridinfo array to a file. It receives an array of
+!! gridinfo objects which will be exported to the given file. The
+!! driver for writing to file is chosen according to the gaid
+!! associated to the first gridinfo elements, and it must be the same
+!! for all the elements.
+SUBROUTINE gridinfo_export_to_file(this, filename, categoryappend)
+TYPE(gridinfo_def) :: this(:) !< gridinfo array object which will be written to file
+CHARACTER(len=*),INTENT(in) :: filename !< name of file to open and import, in the form [driver:]pathname
+CHARACTER(len=*),INTENT(in),OPTIONAL :: categoryappend !< append this suffix to log4fortran namespace category
 
-TYPE(datetime),INTENT(out) :: this !< oggetto datetime in cui importare
-integer,INTENT(in)         :: gaid !< grib_api id of the grib loaded in memory to import 
+INTEGER :: i, category
+CHARACTER(len=512) :: a_name
+TYPE(grid_file_id) :: output_file
 
-integer                    :: EditionNumber
-character(len=9)           :: date
-character(len=10)          :: time
+IF (PRESENT(categoryappend)) THEN
+  CALL l4f_launcher(a_name,a_name_append= &
+   TRIM(subcategory)//"."//TRIM(categoryappend))
+ELSE
+  CALL l4f_launcher(a_name,a_name_append=TRIM(subcategory))
+ENDIF
+category=l4f_category_get(a_name)
 
+#ifdef DEBUG
+CALL l4f_category_log(category,L4F_DEBUG, &
+ "exporting to file "//TRIM(filename)//" "//TRIM(to_char(SIZE(this)))//" fields")
+#endif
+
+IF (SIZE(this) > 0) THEN
+
+  ! open file
+  output_file = grid_file_id_new(filename, 'w', from_grid_id=this(1)%gaid)
+  IF (c_e(output_file)) THEN
+    DO i = 1, SIZE(this)
+      CALL export(this(i)) ! export information to gaid
+      CALL export(this(i)%gaid, output_file) ! export gaid to file
+    ENDDO
+    ! close file
+    CALL delete(output_file)
+
+  ELSE
+    CALL l4f_category_log(category,L4F_ERROR,"opening file "//TRIM(filename))
+  ENDIF ! filename opened
+  CALL l4f_category_log(category,L4F_ERROR,"empty gridinfo object, file ot created")
+ENDIF ! SIZE(this)
+
+!chiudo il logger
+CALL l4f_category_delete(category)
+
+END SUBROUTINE gridinfo_export_to_file
+
+
+!> Decode and return the data array from a grid_id object associated
+!! to a gridinfo object. This method returns a 2-d array of proper
+!! size extracted from the grid_id object associated to a gridinfo
+!! object.  This can work if the gridinfo object has been correctly
+!! initialised and associated to a grid from an on-disk dataset
+!! (e.g. grib_api or gdal file). The result is an array of size \a
+!! this%griddim%dim%nx X \a this%griddim%dim%ny so it must have been
+!! properly allocated by the caller.
+FUNCTION gridinfo_decode_data(this) RESULT(field)
+TYPE(gridinfo_def),INTENT(in) :: this !< gridinfo object
+REAL :: field(this%griddim%dim%nx, this%griddim%dim%ny) ! array of decoded values
+
+#ifdef HAVE_LIBGRIBAPI
+INTEGER :: gaid
+#endif
+#ifdef HAVE_LIBGDAL
+TYPE(gdalrasterbandh) :: gdalid
+#endif
+
+#ifdef DEBUG
+call l4f_category_log(this%category,L4F_DEBUG,"decode from gaid" )
+#endif
+
+#ifdef HAVE_LIBGRIBAPI
+gaid = grid_id_get_gaid(this%gaid)
+IF (c_e(gaid)) field(:,:) = gridinfo_decode_data_gribapi(this, gaid)
+#endif
+#ifdef HAVE_LIBGDAL
+gdalid = grid_id_get_gdalid(this%gaid)
+! subarea?
+IF (gdalassociated(gdalid)) field(:,:) = gridinfo_decode_data_gdal(this, gdalid)
+#endif
+
+END FUNCTION gridinfo_decode_data
+
+
+!> Encode a data array into a grid_id object associated to a gridinfo object.
+!! This method encodes a 2-d array of proper size into the grid_id
+!! object associated to a gridinfo object.  This can work if the
+!! gridinfo object has been correctly initialised and associated to a
+!! grid_id from an on-disk (template) dataset (grib_api or gdal
+!! file). The shape of the array must be conformal to the size of the
+!! grid previously set in the gridinfo object descriptors.
+SUBROUTINE gridinfo_encode_data(this, field)
+TYPE(gridinfo_def),INTENT(inout) :: this !< gridinfo object
+REAL,intent(in) :: field(:,:) !< data array to be encoded
+
+#ifdef HAVE_LIBGRIBAPI
+INTEGER :: gaid
+#endif
+#ifdef HAVE_LIBGDAL
+TYPE(gdalrasterbandh) :: gdalid
+#endif
+
+#ifdef DEBUG
+call l4f_category_log(this%category,L4F_DEBUG,"encode to gaid" )
+#endif
+
+#ifdef HAVE_LIBGRIBAPI
+gaid = grid_id_get_gaid(this%gaid)
+IF (c_e(gaid)) CALL gridinfo_encode_data_gribapi(this, gaid, field)
+#endif
+#ifdef HAVE_LIBGDAL
+!gdalid = grid_id_get_gdalid(this%gaid)
+call l4f_category_log(this%category,L4F_WARN,"export to gdal not implemented" )
+! subarea?
+#endif
+
+END SUBROUTINE gridinfo_encode_data
+
+
+! =========================================
+! grib_api driver specific code
+! could this be moved to a separate module?
+! =========================================
+#ifdef HAVE_LIBGRIBAPI
+SUBROUTINE gridinfo_import_gribapi(this, gaid)
+TYPE(gridinfo_def),INTENT(inout) :: this ! gridinfo object
+INTEGER, INTENT(in) :: gaid ! grib_api id of the grib loaded in memory to import
+
+call time_import_gribapi(this%time, gaid)
+call timerange_import_gribapi(this%timerange,gaid)
+call level_import_gribapi(this%level, gaid)
+call var_import_gribapi(this%var, gaid)
+
+call normalize_gridinfo(this)
+
+END SUBROUTINE gridinfo_import_gribapi
+
+
+! grib_api driver
+SUBROUTINE gridinfo_export_gribapi(this, gaid)
+TYPE(gridinfo_def),INTENT(inout) :: this ! gridinfo object
+INTEGER, INTENT(in) :: gaid ! grib_api id of the grib loaded in memory to import
+
+CALL unnormalize_gridinfo(this)
+
+CALL time_export_gribapi(this%time, gaid, this%timerange)
+CALL timerange_export_gribapi(this%timerange, gaid, this%time)
+CALL level_export_gribapi(this%level, gaid)
+CALL var_export_gribapi(this%var, gaid)
+
+END SUBROUTINE gridinfo_export_gribapi
+
+
+SUBROUTINE time_import_gribapi(this,gaid)
+TYPE(datetime),INTENT(out) :: this ! datetime object
+INTEGER,INTENT(in) :: gaid ! grib_api id of the grib loaded in memory to import 
+
+INTEGER :: EditionNumber
+CHARACTER(len=9) :: date
+CHARACTER(len=10) :: time
 
 call grib_get(gaid,'GRIBEditionNumber',EditionNumber)
 
@@ -345,18 +628,13 @@ else
 
 end if
 
-end subroutine import_time
+END SUBROUTINE time_import_gribapi
 
 
-
-!> Esporta il contenuto dell'oggetto datetime \a this in un messaggio grib
-!! identificato da \a gaid precedentemente impostato.
-!! Le informazioni contenute nella struttura dopo alcune elaborazioni vengono
-!! forzate nel contenuto del grib 
-SUBROUTINE export_time(this, gaid, timerange)
-TYPE(datetime),INTENT(in) :: this !< oggetto datetime da cui exportare
-integer,INTENT(in)        :: gaid !< grib_api id of the grib loaded in memory to export
-TYPE(vol7d_timerange) :: timerange !< timerange, used for grib2 coding of statistically processed analysed data
+SUBROUTINE time_export_gribapi(this, gaid, timerange)
+TYPE(datetime),INTENT(in) :: this ! datetime object
+INTEGER,INTENT(in) :: gaid ! grib_api id of the grib loaded in memory to export
+TYPE(vol7d_timerange) :: timerange ! timerange, used for grib2 coding of statistically processed analysed data
 
 INTEGER :: EditionNumber
 
@@ -395,7 +673,7 @@ INTEGER :: date,time
 CHARACTER(len=17) :: date_time
 
 ! datetime is AAAAMMGGhhmmssmsc
-CALL getval (reftime,simpledate=date_time)
+CALL getval(reftime, simpledate=date_time)
 READ(date_time(:8),'(I8)')date
 READ(date_time(9:12),'(I4)')time
 CALL grib_set(gaid,'dataDate',date)
@@ -403,20 +681,15 @@ CALL grib_set(gaid,'dataTime',time)
 
 END SUBROUTINE code_referencetime
 
-END SUBROUTINE export_time
+END SUBROUTINE time_export_gribapi
 
 
+SUBROUTINE level_import_gribapi(this, gaid)
+TYPE(vol7d_level),INTENT(out) :: this ! vol7d_level object
+INTEGER,INTENT(in) :: gaid ! grib_api id of the grib loaded in memory to import
 
-!> Importa nell'oggetto vol7d_level \a this il contenuto del messaggio grib
-!! identificato da \a gaid.
-!! Le informazioni relative al livello vengono estratte dal grid e dopo qualche elaborazione 
-!! vengono memorizzate nella struttura.
-subroutine import_level(this,gaid)
-TYPE(vol7d_level),INTENT(out) :: this !< oggetto vol7d_level in cui importare
-integer,INTENT(in)          :: gaid !< grib_api id of the grib loaded in memory to import
-
-integer                     :: EditionNumber,level1,l1,level2,l2
-integer :: ltype,ltype1,scalef1,scalev1,ltype2,scalef2,scalev2
+INTEGER :: EditionNumber,level1,l1,level2,l2
+INTEGER :: ltype,ltype1,scalef1,scalev1,ltype2,scalef2,scalev2
 
 call grib_get(gaid,'GRIBEditionNumber',EditionNumber)
 
@@ -450,17 +723,12 @@ call level_g2_to_dballe(ltype1,scalef1,scalev1,ltype2,scalef2,scalev2, &
 
 call init (this,level1,l1,level2,l2)
 
-end subroutine import_level
+END SUBROUTINE level_import_gribapi
 
 
-!> Esporta il contenuto dell'oggetto vol7d_level \a this in un messaggio grib
-!! identificato da \a gaid precedentemente impostato.
-!! Le informazioni contenute nella struttura dopo alcune elaborazioni vengono
-!! forzate nel contenuto del grib 
-subroutine export_level(this,gaid)
-
-TYPE(vol7d_level),INTENT(in) :: this !< oggetto vol7d_level da cui exportare
-integer,INTENT(in) :: gaid !< grib_api id of the grib loaded in memory to export
+SUBROUTINE level_export_gribapi(this, gaid)
+TYPE(vol7d_level),INTENT(in) :: this ! vol7d_level object
+INTEGER,INTENT(in) :: gaid ! grib_api id of the grib loaded in memory to export
 
 INTEGER :: EditionNumber, ltype1, scalef1, scalev1, ltype2, scalef2, scalev2, &
  ltype, l1, l2
@@ -495,17 +763,12 @@ else
 
 end if
 
+END SUBROUTINE level_export_gribapi
 
-end subroutine export_level
 
-
-!> Importa nell'oggetto vol7d_timerange \a this il contenuto del messaggio grib
-!! identificato da \a gaid.
-!! Le informazioni relative al timerange vengono estratte dal grid e dopo qualche elaborazione 
-!! vengono memorizzate nella struttura.
-subroutine import_timerange(this,gaid)
-TYPE(vol7d_timerange),INTENT(out) :: this !< oggetto vol7d_timerange in cui importare
-integer,INTENT(in) :: gaid !< grib_api id of the grib loaded in memory to import
+SUBROUTINE timerange_import_gribapi(this, gaid)
+TYPE(vol7d_timerange),INTENT(out) :: this ! vol7d_timerange object
+INTEGER,INTENT(in) :: gaid ! grib_api id of the grib loaded in memory to import
 
 INTEGER :: EditionNumber, tri, unit, p1_g1, p2_g1, statproc, p1, p2, status
 
@@ -546,19 +809,15 @@ else
 
 end if
 
-call init (this, statproc, p1, p2)
+call init(this, statproc, p1, p2)
 
-end subroutine import_timerange
+END SUBROUTINE timerange_import_gribapi
 
 
-!> Esporta il contenuto dell'oggetto vol7d_timerange \a this in un messaggio grib
-!! identificato da \a gaid precedentemente impostato.
-!! Le informazioni contenute nella struttura dopo alcune elaborazioni vengono
-!! forzate nel contenuto del grib 
-SUBROUTINE export_timerange(this, gaid, reftime)
-TYPE(vol7d_timerange),INTENT(in) :: this !< oggetto vol7d_timerange da cui exportare
-integer,INTENT(in) :: gaid !< grib_api id of the grib loaded in memory to export
-TYPE(datetime) :: reftime !< reference time of data, used for coding correct end of statistical processing period in grib2
+SUBROUTINE timerange_export_gribapi(this, gaid, reftime)
+TYPE(vol7d_timerange),INTENT(in) :: this ! vol7d_timerange object
+INTEGER,INTENT(in) :: gaid ! grib_api id of the grib loaded in memory to export
+TYPE(datetime) :: reftime ! reference time of data, used for coding correct end of statistical processing period in grib2
 
 INTEGER :: EditionNumber, tri, unit, p1_g1, p2_g1, p1, p2
 
@@ -652,18 +911,14 @@ CALL getval(endtime, year=year, month=month, day=day, &
 
 END SUBROUTINE code_endoftimeinterval
 
-end subroutine export_timerange
+END SUBROUTINE timerange_export_gribapi
 
 
-!> Importa nell'oggetto volgrid6d_var \a this il contenuto del messaggio grib
-!! identificato da \a gaid.
-!! Le informazioni relative al parametro vengono estratte dal grid e dopo qualche elaborazione 
-!! vengono memorizzate nella struttura.
-subroutine import_volgrid6d_var(this,gaid)
-TYPE(volgrid6d_var),INTENT(out) :: this !< oggetto volgrid6d_var in cui importare
-integer,INTENT(in)              :: gaid !< grib_api id of the grib loaded in memory to import
+SUBROUTINE var_import_gribapi(this, gaid)
+TYPE(volgrid6d_var),INTENT(out) :: this ! volgrid6d_var object
+INTEGER,INTENT(in) :: gaid ! grib_api id of the grib loaded in memory to import
 
-integer ::EditionNumber,centre,discipline,category,number
+INTEGER :: EditionNumber, centre, discipline, category, number
 
 call grib_get(gaid,'GRIBEditionNumber',EditionNumber)
 
@@ -693,18 +948,14 @@ end if
 !this%description
 !this%unit
 
-end subroutine import_volgrid6d_var
+END SUBROUTINE var_import_gribapi
 
 
-!> Esporta il contenuto dell'oggetto volgrid6d_var \a this in un messaggio grib
-!! identificato da \a gaid precedentemente impostato.
-!! Le informazioni contenute nella struttura dopo alcune elaborazioni vengono
-!! forzate nel contenuto del grib 
-subroutine export_volgrid6d_var(this,gaid)
+SUBROUTINE var_export_gribapi(this, gaid)
+TYPE(volgrid6d_var),INTENT(in) :: this ! volgrid6d_var object
+INTEGER,INTENT(in) :: gaid ! grib_api id of the grib loaded in memory to export
 
-TYPE(volgrid6d_var),INTENT(in) :: this !< oggetto volgrid6d_var da cui exportare
-integer,INTENT(in)             :: gaid !< grib_api id of the grib loaded in memory to export
-integer ::EditionNumber
+INTEGER ::EditionNumber
 
 call grib_get(gaid,'GRIBEditionNumber',EditionNumber)
 
@@ -728,153 +979,52 @@ else
 
 end if
 
-end subroutine export_volgrid6d_var
-
-!> \brief Display object on screen
-!!
-!! Show brief content on screen.
-!! All the key names and values will be printed
-!! The set of keys returned can be controlled with the input variable namespace.
-!! Available namespaces are "ls" (to get the same default keys as the grib_ls and "mars" to get the keys used by mars.
-subroutine display_gaid (this,namespace)
-
-integer :: this !< grib_api id of the grib loaded in memory
-character (len=*),optional :: namespace !< grib_api namespace of the keys to search for (all the keys if empty)
-
-integer :: kiter,iret
-character(len=255) :: key,value,lnamespace
-
-lnamespace=optio_c(namespace,255)
-if ( .not. c_e(lnamespace) )then
- lnamespace="ls"
-endif
-
-print*,"GRIB_API namesapce:",trim(lnamespace)
-
-call grib_keys_iterator_new(this,kiter,namespace=trim(lnamespace))
-
-iter: do
-  call grib_keys_iterator_next(kiter, iret) 
-  
-  if (iret .ne. 1) then
-    exit iter
-  end if
-  
-  call grib_keys_iterator_get_name(kiter,key)
-!<\todo bug in grib_api, segmentation fault with computeStatistics key
-  if (key == 'computeStatistics') cycle
-  call grib_get(this,trim(key),value,iret)
-  if (iret == 0)then
-    print*, trim(key)//' = '//trim(value)
-  else
-    print*, trim(key)//' = '//"KEY NOT FOUND, namespace :"//trim(lnamespace)//" ( bug ? )"
-  end if
-end do iter
-
-call grib_keys_iterator_delete(kiter)
-
-end subroutine display_gaid
+END SUBROUTINE var_export_gribapi
 
 
-!> \brief Display object on screen
-!!
-!! Show brief content on screen.
-!! Also the grib  key names and values will be printed
-!! The set of keys returned can be controlled with the input variable namespace.
-!! Available namespaces are "ls" (to get the same default keys as the grib_ls and "mars" to get the keys used by mars.
-subroutine display_gridinfo (this,namespace)
+FUNCTION gridinfo_decode_data_gribapi(this, gaid) RESULT(field)
+TYPE(gridinfo_def),INTENT(in) :: this ! gridinfo object
+INTEGER,INTENT(in) :: gaid
+REAL :: field(this%griddim%dim%nx, this%griddim%dim%ny) ! array of decoded values
 
-TYPE(gridinfo_def),intent(in) :: this !< object to display
-character (len=*),optional :: namespace !< grib_api namespace of the keys to search for (all the keys if empty)
-
-#ifdef DEBUG
-call l4f_category_log(this%category,L4F_DEBUG,"ora mostro gridinfo " )
-#endif
-
-print*,"----------------------- gridinfo display ---------------------"
-call display(this%griddim)
-call display(this%time)
-call display(this%timerange)
-call display(this%level)
-call display(this%var)
-call display(this%gaid,namespace=namespace)
-print*,"--------------------------------------------------------------"
+INTEGER :: EditionNumber
+INTEGER :: alternativeRowScanning, &
+ iScansNegatively, jScansPositively, jPointsAreConsecutive
+INTEGER :: numberOfValues,numberOfPoints
+REAL :: vector(this%griddim%dim%nx*this%griddim%dim%ny)
+INTEGER :: x1, x2, xs, y1, y2, ys, ord(2)
 
 
-end subroutine display_gridinfo
-
-
-!> \brief Display vector of object on screen
-!!
-!! Show brief content on screen.
-!! Also the grib  key names and values will be printed
-!! The set of keys returned can be controlled with the input variable namespace.
-!! Available namespaces are "ls" (to get the same default keys as the grib_ls and "mars" to get the keys used by mars.
-subroutine display_gridinfov (this,namespace)
-
-TYPE(gridinfo_def),intent(in) :: this(:) !< vector of object to display
-character (len=*),optional :: namespace !< grib_api namespace of the keys to search for (all the keys if empty)
-integer :: i
-
-print*,"----------------------- gridinfo  vector ---------------------"
-
-do i=1, size(this)
-
-#ifdef DEBUG
-  call l4f_category_log(this(i)%category,L4F_DEBUG,"ora mostro il vettore gridinfo " )
-#endif
-
-  call display(this(i),namespace)
-
-end do
-print*,"--------------------------------------------------------------"
-
-end subroutine display_gridinfov
-
-
-!> \brief Decode gridinfo object.
-!!
-!! Decode from a grib message the data section returning a data matrix.
-function decode_gridinfo(this) result (field)
-TYPE(gridinfo_def),INTENT(in) :: this      !< oggetto da decodificare
-real :: field (this%griddim%dim%nx,this%griddim%dim%ny) !< data matrix of decoded values
-
-integer :: EditionNumber
-integer :: alternativeRowScanning,iScansNegatively,jScansPositively,jPointsAreConsecutive
-integer :: numberOfValues,numberOfPoints
-
-real :: vector(this%griddim%dim%nx * this%griddim%dim%ny)
-integer :: x1,x2,xs,y1,y2,ys,ord(2)
-
-
-call grib_get(this%gaid,'GRIBEditionNumber',EditionNumber)
+call grib_get(gaid,'GRIBEditionNumber',EditionNumber)
 
 call l4f_category_log(this%category,L4F_INFO,'Edition Number: '//to_char(EditionNumber))
 
-if (EditionNumber == 2)then
+if (EditionNumber == 2) then
 
-  call grib_get(this%gaid,'alternativeRowScanning',alternativeRowScanning)
+  call grib_get(gaid,'alternativeRowScanning',alternativeRowScanning)
   if (alternativeRowScanning /= 0)then
     call l4f_category_log(this%category,L4F_ERROR,"alternativeRowScanning not supported: "//trim(to_char(alternativeRowScanning)))
-    call raise_error('alternativeRowScanning not supported')
+    call raise_error()
+    field(:,:) = rmiss
+    RETURN
   end if
 
-else if( EditionNumber /= 1)then
+else if (EditionNumber /= 1) then
 
-  call l4f_category_log(this%category,L4F_ERROR,"GribEditionNumber not supported: "//trim(to_char(EditionNumber)))
-  call raise_error('GribEditionNumber not supported')
+  CALL l4f_category_log(this%category,L4F_ERROR,"GribEditionNumber not supported: "//TRIM(to_char(EditionNumber)))
+  call raise_error()
+  field(:,:) = rmiss
+  RETURN
 
 end if
 
+call grib_get(gaid,'iScansNegatively',iScansNegatively)
+call grib_get(gaid,'jScansPositively',jScansPositively)
+call grib_get(gaid,'jPointsAreConsecutive',jPointsAreConsecutive)
 
-call grib_get(this%gaid,'iScansNegatively',iScansNegatively)
-call grib_get(this%gaid,'jScansPositively',jScansPositively)
-call grib_get(this%gaid,'jPointsAreConsecutive',jPointsAreConsecutive)
-
-call grib_set(this%gaid,'missingValue',rmiss)
-call grib_get(this%gaid,'numberOfPoints',numberOfPoints)
-call grib_get(this%gaid,'numberOfValues',numberOfValues)
-
+call grib_set(gaid,'missingValue',rmiss)
+call grib_get(gaid,'numberOfPoints',numberOfPoints)
+call grib_get(gaid,'numberOfValues',numberOfValues)
 
 if (numberOfPoints /= (this%griddim%dim%nx * this%griddim%dim%ny))then
 !if (numberOfValues /= (this%griddim%dim%nx * this%griddim%dim%ny))then
@@ -883,8 +1033,9 @@ if (numberOfPoints /= (this%griddim%dim%nx * this%griddim%dim%ny))then
    'decode_gridinfo: numberOfPoints and gridinfo size different. numberOfPoints: ' &
    //trim(to_char(numberOfPoints))//', nx,ny:'&
    //TRIM(to_char(this%griddim%dim%nx))//' '//trim(to_char(this%griddim%dim%ny)))
-  call raise_fatal_error( &
-   'decode_gridinfo: numberOfPoints and gridinfo size different')
+  call raise_error()
+  field(:,:) = rmiss
+  RETURN
 
 end if
 
@@ -892,7 +1043,7 @@ end if
 call l4f_category_log(this%category,L4F_INFO,'number of values: '//to_char(numberOfValues))
 call l4f_category_log(this%category,L4F_INFO,'number of points: '//to_char(numberOfPoints))
 
-CALL grib_get(this%gaid,'values',vector)
+CALL grib_get(gaid,'values',vector)
 
 ! Transfer data field changing scanning mode to 64
 IF (iScansNegatively  == 0) THEN
@@ -924,23 +1075,20 @@ field(x1:x2:xs,y1:y2:ys) = &
  RESHAPE(vector, &
  (/this%griddim%dim%nx,this%griddim%dim%ny/), ORDER=ord)
 
-
-end function decode_gridinfo
-
+END FUNCTION gridinfo_decode_data_gribapi
 
 
-!> \brief Encode gridinfo object.
-!!
-!! Encode from a data matrix a data section of a grib message.
-subroutine encode_gridinfo(this,field)
-TYPE(gridinfo_def),INTENT(inout) :: this !< oggetto in cui codificare
-REAL,intent(in) :: field (:,:) !< data matrix to encode
+SUBROUTINE gridinfo_encode_data_gribapi(this, gaid, field)
+TYPE(gridinfo_def),INTENT(inout) :: this ! gridinfo object
+INTEGER,INTENT(in) :: gaid ! grib_api id
+REAL,intent(in) :: field(:,:) ! data array to be encoded
 
-integer :: EditionNumber
-integer :: alternativeRowScanning,iScansNegatively,jScansPositively,jPointsAreConsecutive
-integer :: nx,ny
-doubleprecision :: vector (this%griddim%dim%nx * this%griddim%dim%ny)
-integer :: x1,x2,xs,y1,y2,ys,ord(2)
+INTEGER :: EditionNumber
+INTEGER :: alternativeRowScanning, iScansNegatively, &
+ jScansPositively, jPointsAreConsecutive
+INTEGER :: nx, ny
+doubleprecision :: vector(this%griddim%dim%nx*this%griddim%dim%ny)
+INTEGER :: x1, x2, xs, y1, y2, ys, ord(2)
 
 IF (SIZE(field,1) /= this%griddim%dim%nx &
  .OR. SIZE(field,2) /= this%griddim%dim%ny) THEN
@@ -949,36 +1097,38 @@ IF (SIZE(field,1) /= this%griddim%dim%nx &
    //TRIM(to_char(SIZE(field,1)))//' '//TRIM(to_char(SIZE(field,1)))//', nx,ny:' &
    //TRIM(to_char(this%griddim%dim%nx))//' ' &
        //trim(to_char(this%griddim%dim%ny)))
-  call raise_fatal_error('encode_gridinfo: field and gridinfo object non conformal')
+  call raise_error()
+  RETURN
 ENDIF
 
-if (.not. c_e(this%gaid))return
+if (.not. c_e(gaid)) return
 
-
-call grib_get(this%gaid,'GRIBEditionNumber',EditionNumber)
+call grib_get(gaid,'GRIBEditionNumber',EditionNumber)
 
 if (EditionNumber == 2) then
 
-  call grib_get(this%gaid,'alternativeRowScanning',alternativeRowScanning)
+  call grib_get(gaid,'alternativeRowScanning',alternativeRowScanning)
   if (alternativeRowScanning /= 0)then
     call l4f_category_log(this%category,L4F_ERROR,"alternativeRowScanning not supported: "//trim(to_char(alternativeRowScanning)))
-    call raise_error('alternativeRowScanning not supported')
+    call raise_error()
+    RETURN
   end if
 
 else if( EditionNumber /= 1) then
 
   call l4f_category_log(this%category,L4F_ERROR,"GribEditionNumber not supported: "//trim(to_char(EditionNumber)))
-  call raise_error('GribEditionNumber not supported')
+  call raise_error()
+  RETURN
 
 end if
 
-call grib_get(this%gaid,'iScansNegatively',iScansNegatively)
-call grib_get(this%gaid,'jScansPositively',jScansPositively)
-call grib_get(this%gaid,'jPointsAreConsecutive',jPointsAreConsecutive)
+call grib_get(gaid,'iScansNegatively',iScansNegatively)
+call grib_get(gaid,'jScansPositively',jScansPositively)
+call grib_get(gaid,'jPointsAreConsecutive',jPointsAreConsecutive)
 
 ! queste sono gia` fatte in export_gridinfo, si potrebbero evitare?!
-call grib_set(this%gaid,'Ni',this%griddim%dim%nx)
-call grib_set(this%gaid,'Nj',this%griddim%dim%ny)
+call grib_set(gaid,'Ni',this%griddim%dim%nx)
+call grib_set(gaid,'Nj',this%griddim%dim%ny)
 
 ! Transfer data field changing scanning mode from 64
 IF (iScansNegatively  == 0) THEN
@@ -1003,26 +1153,26 @@ ENDIF
 
 if (any(field== rmiss)) then
 
-  call grib_set(this%gaid,'missingValue',rmiss)
+  call grib_set(gaid,'missingValue',rmiss)
   
-  call grib_get(this%gaid,'editionNumber',editionNumber);
+  call grib_get(gaid,'editionNumber',editionNumber);
   if (editionNumber == 1) then
                                 ! enable bitmap in a grib1
-    call grib_set(this%gaid,"bitmapPresent",1)
+    call grib_set(gaid,"bitmapPresent",1)
   else
                                 ! enable bitmap in a grib2
-    call grib_set(this%gaid,"bitMapIndicator",0)
+    call grib_set(gaid,"bitMapIndicator",0)
   endif
 
 else
 
-  call grib_get(this%gaid,'editionNumber',editionNumber);
+  call grib_get(gaid,'editionNumber',editionNumber);
   if (editionNumber == 1) then
                                 ! enable bitmap in a grib1
-    call grib_set(this%gaid,"bitmapPresent",0)
+    call grib_set(gaid,"bitmapPresent",0)
   else
                                 ! enable bitmap in a grib2
-    call grib_set(this%gaid,"bitMapIndicator",1)
+    call grib_set(gaid,"bitMapIndicator",1)
   endif
 
 end if
@@ -1031,14 +1181,14 @@ end if
 !TODO: gestire il caso TUTTI dati mancanti
 
 IF ( jPointsAreConsecutive == 0) THEN
-  CALL grib_set(this%gaid,'values', RESHAPE(field(x1:x2:xs,y1:y2:ys), &
+  CALL grib_set(gaid,'values', RESHAPE(field(x1:x2:xs,y1:y2:ys), &
    (/this%griddim%dim%nx*this%griddim%dim%ny/)))
 ELSE
-  CALL grib_set(this%gaid,'values', RESHAPE(TRANSPOSE(field(x1:x2:xs,y1:y2:ys)), &
+  CALL grib_set(gaid,'values', RESHAPE(TRANSPOSE(field(x1:x2:xs,y1:y2:ys)), &
    (/this%griddim%dim%nx*this%griddim%dim%ny/)))
 ENDIF
 
-end subroutine encode_gridinfo
+END SUBROUTINE gridinfo_encode_data_gribapi
 
 
 SUBROUTINE level_g2_to_dballe(ltype1,scalef1,scalev1,ltype2,scalef2,scalev2, lt1,l1,lt2,l2)
@@ -1767,8 +1917,157 @@ else if (this%timerange%timerange == 2 )then
 
 end if
 
-
 end subroutine unnormalize_gridinfo
+#endif
+
+
+! =========================================
+! gdal driver specific code
+! could this be moved to a separate module?
+! =========================================
+#ifdef HAVE_LIBGDAL
+SUBROUTINE gridinfo_import_gdal(this, gdalid)
+TYPE(gridinfo_def),INTENT(inout) :: this ! gridinfo object
+TYPE(gdalrasterbandh),INTENT(in) :: gdalid ! gdal rasterband pointer
+
+TYPE(gdaldataseth) :: hds
+
+
+!call time_import_gdal(this%time, gaid)
+this%time = datetime_new(year=2010, month=1, day=1) ! conventional year
+
+!call timerange_import_gdal(this%timerange,gaid)
+this%timerange = vol7d_timerange_new(254, 0, 0) ! instantaneous data
+
+!call level_import_gdal(this%level, gaid)
+hds = gdalgetbanddataset(gdalid) ! go back to dataset
+IF (gdalgetrastercount(hds) == 1) THEN ! single level dataset
+  this%level = vol7d_level_new(1, 0) ! surface
+ELSE
+  this%level = vol7d_level_new(105, gdalgetbandnumber(gdalid)) ! hybrid level
+ENDIF
+
+!call var_import_gdal(this%var, gaid)
+this%var = volgrid6d_var_new(centre=255, category=2, number=8) ! topography height
+
+END SUBROUTINE gridinfo_import_gdal
+
+
+FUNCTION gridinfo_decode_data_gdal(this, gdalid) RESULT(field)
+TYPE(gridinfo_def),INTENT(in) :: this ! gridinfo object
+TYPE(gdalrasterbandh),INTENT(in) :: gdalid ! gdal rasterband pointer
+REAL :: field(this%griddim%dim%nx, this%griddim%dim%ny) ! array of decoded values
+
+TYPE(gdaldataseth) :: hds
+REAL(kind=c_double) :: geotrans(6), invgeotrans(6)
+REAL :: vector(this%griddim%dim%nx*this%griddim%dim%ny), gdalmiss
+INTEGER :: ix1, iy1, ix2, iy2, ixs, iys, ord(2), ier
+INTEGER(kind=c_int) :: nrx, nry
+
+nrx =  gdalgetrasterbandxsize(gdalid)
+nry =  gdalgetrasterbandysize(gdalid)
+
+if (nrx*nry /= (this%griddim%dim%nx * this%griddim%dim%ny))then
+
+  CALL l4f_category_log(this%category,L4F_ERROR, &
+   'decode_gridinfo_gdal: raster band and gridinfo size different')
+  CALL l4f_category_log(this%category,L4F_ERROR, 'rasterband: ' &
+   //TRIM(to_char(nrx))//' '//TRIM(to_char(nry))//', nx,ny:' &
+   //TRIM(to_char(this%griddim%dim%nx))//' '//TRIM(to_char(this%griddim%dim%ny)))
+  CALL raise_error()
+  field(:,:) = rmiss
+  RETURN
+
+end if
+
+hds = gdalgetbanddataset(gdalid) ! go back to dataset
+ier = gdalgetgeotransform(hds, geotrans)
+! get grid corners
+!CALL gdalapplygeotransform(geotrans, 0.5_c_double, 0.5_c_double, x1, y1)
+!CALL gdalapplygeotransform(geotrans, &
+! this%griddim%dim%nx-0.5_c_double, this%griddim%dim%ny-0.5_c_double, x2, y2)
+
+IF (geotrans(3) == 0.0_c_double .AND. geotrans(5) == 0.0_c_double) THEN
+! transformation is diagonal, no transposing
+  IF (geotrans(2) > 0.0_c_double) THEN
+    ix1 = 1 
+    ix2 = this%griddim%dim%nx
+    ixs = 1
+  ELSE
+    ix1 = this%griddim%dim%nx
+    ix2 = 1 
+    ixs = -1
+  ENDIF
+  IF (geotrans(6) > 0.0_c_double) THEN
+    iy1 = 1 
+    iy2 = this%griddim%dim%ny
+    iys = 1
+  ELSE
+    iy1 = this%griddim%dim%ny
+    iy2 = 1 
+    iys = -1
+  ENDIF
+  nrx = this%griddim%dim%nx
+  nry = this%griddim%dim%ny
+  ord = (/1,2/)
+
+ELSE IF (geotrans(2) == 0.0_c_double .AND. geotrans(6) == 0.0_c_double) THEN
+! transformation is anti-diagonal, transposing required
+  IF (geotrans(3) > 0.0_c_double) THEN
+    ix1 = 1 
+    ix2 = this%griddim%dim%nx
+    ixs = 1
+  ELSE
+    ix1 = this%griddim%dim%nx
+    ix2 = 1 
+    ixs = -1
+  ENDIF
+  IF (geotrans(5) > 0.0_c_double) THEN
+    iy1 = 1 
+    iy2 = this%griddim%dim%ny
+    iys = 1
+  ELSE
+    iy1 = this%griddim%dim%ny
+    iy2 = 1 
+    iys = -1
+  ENDIF
+  nrx = this%griddim%dim%ny
+  nry = this%griddim%dim%nx
+  ord = (/2,1/)
+ELSE ! transformation is a rotation, not supported
+  CALL l4f_category_log(this%category,L4F_ERROR, &
+   'decode_gridinfo_gdal: gdal geotransform is a generic rotation, not supported')
+  CALL raise_error()
+  field(:,:) = rmiss
+  RETURN
+ENDIF
+
+! read data from file
+ier = gdalrasterio_float32(gdalid, GF_Read, 0_c_int, 0_c_int, nrx, nry, vector, nrx, nry)
+
+IF (ier /= 0) THEN ! error in read
+  CALL l4f_category_log(this%category,L4F_ERROR, &
+   'decode_gridinfo_gdal: error in reading with gdal driver')
+  CALL raise_error()
+  vector(:) = rmiss
+
+ELSE
+! set missing value if necessary
+  gdalmiss = gdalgetrasternodatavalue(gdalid, ier)
+  IF (ier == 0) THEN ! success -> there are missing values
+    WHERE(vector(:) == gdalmiss)
+      vector(:) = rmiss
+    END WHERE
+  ENDIF
+ENDIF
+
+! reshape the field
+field(ix1:ix2:ixs,iy1:iy2:iys) = &
+ RESHAPE(vector, &
+ (/this%griddim%dim%nx,this%griddim%dim%ny/), ORDER=ord)
+
+END FUNCTION gridinfo_decode_data_gdal
+#endif
 
 
 end module gridinfo_class
