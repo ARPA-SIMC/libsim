@@ -112,6 +112,12 @@ INTEGER,PARAMETER :: grid_id_default = grid_id_gdal !< default driver if none sp
 INTEGER,PARAMETER :: grid_id_default = grid_id_notype !< default driver if none specified in constructor
 #endif
 
+!> Constructor for the corresponding classes in SUBROUTINE form.
+!! It is alternative to the *_new function constructors.
+INTERFACE init
+  MODULE PROCEDURE grid_file_id_init, grid_id_init
+END INTERFACE
+
 !> Destructor for the corresponding classes.
 INTERFACE delete
   MODULE PROCEDURE grid_file_id_delete, grid_id_delete
@@ -154,6 +160,28 @@ PRIVATE grid_file_id_delete, grid_id_delete, grid_id_copy, &
  grid_id_c_e, grid_file_id_c_e, grid_id_display
 
 CONTAINS
+
+
+!> Constructor for the \a grid_file_id class. It opens the associated
+!! file(s); the driver to be used for file access is selected
+!! according to the \a filename argument, to the optional argument
+!! \a driver, or to the optional argument \a from_grid_id, with increasing
+!! priority. If \a driver and \a from_grid_id are not provided and
+!! \a filename does not contain driver information, a default is
+!! chosen. If filename is an empty string or missing value, the object
+!! will be empty, the same will happen in case the file cannot be
+!! successfully opened. This condition can be tested with the function
+!! c_e() .
+SUBROUTINE grid_file_id_init(this, filename, mode, driver, from_grid_id)
+TYPE(grid_file_id),INTENT(out) :: this !< object to initilised
+CHARACTER(len=*),INTENT(in) :: filename !< name of file containing gridded data, in the format [driver:]pathname
+CHARACTER(len=*),INTENT(in) :: mode !< access mode for file, 'r' or 'w'
+INTEGER,INTENT(in),OPTIONAL :: driver !< select the driver that will be associated to the grid_file_id created, use the constants \a grid_id_notype, \a grid_id_grib_api, \a grid_id_gdal
+TYPE(grid_id),INTENT(in),OPTIONAL :: from_grid_id !< select the driver as the one associated to the provided grid_id object
+
+this = grid_file_id_new(filename, mode, driver, from_grid_id)
+
+END SUBROUTINE grid_file_id_init
 
 
 !> Constructor for the \a grid_file_id class. It opens the associated
@@ -238,7 +266,7 @@ count = 0
 #ifdef HAVE_LIBGRIBAPI
 IF (this%driver == grid_id_grib_api) THEN
   IF (c_e(this%gaid)) THEN
-    CALL grib_count_in_file(this%gaid, count)
+    CALL grib_count_in_file(this%gaid, count, ier)
     IF (ier /= GRIB_SUCCESS) count = 0
   ENDIF
 ENDIF
@@ -282,7 +310,7 @@ END SUBROUTINE grid_file_id_delete
 
 !> Function to check whether a \a grid_file_id object has been correctly associated
 !! to the requested file. It returns \a .FALSE. if the file has not
-!! been opened correctly or if the object has been initialised as empty.
+!! been opened correctly or if the object has been initialized as empty.
 FUNCTION grid_file_id_c_e(this)
 TYPE(grid_file_id),INTENT(in) :: this !< object to be checked
 LOGICAL :: grid_file_id_c_e
@@ -305,7 +333,7 @@ END FUNCTION grid_file_id_c_e
 
 !> Function to check whether a \a grid_file_id object has been correctly associated
 !! to the requested file. It returns \a .FALSE. if the file has not
-!! been opened correctly or if the object has been initialised as empty.
+!! been opened correctly or if the object has been initialized as empty.
 FUNCTION grid_file_id_c_e_v(this)
 TYPE(grid_file_id),INTENT(in) :: this(:) !< object to be checked
 LOGICAL :: grid_file_id_c_e_v(SIZE(this))
@@ -322,11 +350,36 @@ END FUNCTION grid_file_id_c_e_v
 !> Constructor for the \a grid_id class. It gets the next grid (grib
 !! message or raster band) from the file_id provided. If the file
 !! associated to the file_id provided contains no more grids, or if
-!! the argument \a file_id is not provided, an empty object is created;
-!! this condition can be tested with the function c_e() .
-FUNCTION grid_id_new(from_grid_file_id, grib_api_template) RESULT(this)
+!! the argument \a file_id is not provided, an empty object is
+!! created; this condition can be tested with the function c_e().
+!! Alternative ways to define the object (to be used in rare cases)
+!! are through a grib_api template file name (\a grib_api_template
+!! argument) or through a grib_api integer id obtained directly from
+!! grib_api calls (\a grib_api_id argument).
+SUBROUTINE grid_id_init(this, from_grid_file_id, grib_api_template, grib_api_id)
+TYPE(grid_id),INTENT(out) :: this !< object to be initialized
 TYPE(grid_file_id),INTENT(inout),OPTIONAL :: from_grid_file_id !< file object from which grid object has to be created
 CHARACTER(len=*),INTENT(in),OPTIONAL :: grib_api_template !< grib_api template file from which grid_object has to be created
+INTEGER,INTENT(in),OPTIONAL :: grib_api_id !< grib_api id obtained directly from a \a grib_get subroutine call
+
+this = grid_id_new(from_grid_file_id, grib_api_template, grib_api_id)
+
+END SUBROUTINE grid_id_init
+
+
+!> Constructor for the \a grid_id class. It gets the next grid (grib
+!! message or raster band) from the file_id provided. If the file
+!! associated to the file_id provided contains no more grids, or if
+!! the argument \a file_id is not provided, an empty object is
+!! created; this condition can be tested with the function c_e().
+!! Alternative ways to define the object (to be used in rare cases)
+!! are through a grib_api template file name (\a grib_api_template
+!! argument) or through a grib_api integer id obtained directly from
+!! grib_api calls (\a grib_api_id argument).
+FUNCTION grid_id_new(from_grid_file_id, grib_api_template, grib_api_id) RESULT(this)
+TYPE(grid_file_id),INTENT(inout),OPTIONAL :: from_grid_file_id !< file object from which grid object has to be created
+CHARACTER(len=*),INTENT(in),OPTIONAL :: grib_api_template !< grib_api template file from which grid_object has to be created
+INTEGER,INTENT(in),OPTIONAL :: grib_api_id !< grib_api id obtained directly from a \a grib_get subroutine call
 TYPE(grid_id) :: this
 
 INTEGER :: ier
@@ -361,10 +414,13 @@ this%driver = from_grid_file_id%driver
 #endif
 
 #ifdef HAVE_LIBGRIBAPI
-ELSE IF (present(grib_api_template)) THEN
+ELSE IF (PRESENT(grib_api_template)) THEN
   this%driver = grid_id_grib_api
   CALL grib_new_from_template(this%gaid, grib_api_template, ier)
   IF (ier /= GRIB_SUCCESS) this%gaid = imiss
+ELSE IF (PRESENT(grib_api_id)) THEN
+  this%driver = grid_id_grib_api
+  this%gaid = grib_api_id
 #endif
 ENDIF
 
@@ -450,7 +506,7 @@ END SUBROUTINE grid_id_export
 
 !> Function to check whether a \a _file_id object has been correctly associated
 !! to a grid. It returns \a .FALSE. if the grid has not been correctly
-!! obtained from the file or if the object has been initialised as
+!! obtained from the file or if the object has been initialized as
 !! empty.
 FUNCTION grid_id_c_e(this)
 TYPE(grid_id),INTENT(in) :: this !< object to be checked
@@ -474,7 +530,7 @@ END FUNCTION grid_id_c_e
 
 !> Function to check whether a \a _file_id object has been correctly associated
 !! to a grid. It returns \a .FALSE. if the grid has not been correctly
-!! obtained from the file or if the object has been initialised as
+!! obtained from the file or if the object has been initialized as
 !! empty.
 FUNCTION grid_id_c_e_v(this)
 TYPE(grid_id),INTENT(in) :: this(:) !< object to be checked
