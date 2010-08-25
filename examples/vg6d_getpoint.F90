@@ -51,6 +51,7 @@ doubleprecision ::  ilon,ilat,flon,flat
 character(len=80) :: output_template,trans_type,sub_type
 INTEGER :: output_td
 LOGICAL :: version, ldisplay
+logical :: c2agrid
 
 !questa chiamata prende dal launcher il nome univoco
 call l4f_launcher(a_name,a_name_force="getpoint")
@@ -113,6 +114,11 @@ options(16) = op_option_new('d', 'flat', flat, 60.D0, help= &
 
 options(17) = op_option_new('n', 'network', network, 'generic', help= &
  'string identifying network for output data')
+
+options(19) = op_option_new('e', 'a-grid', c2agrid, help= &
+ 'interpolate U/V points of an Arakawa C grid on the corresponding T points &
+ &of an Arakawa A grid')
+
 
 ! options for defining output
 options(20) = op_option_new('f', 'output-format', output_format, &
@@ -239,6 +245,8 @@ CALL init(trans, trans_type=trans_type, sub_type=sub_type, &
 call import(volgrid, filename=input_file, categoryappend="input volume")
 
 IF (ldisplay) CALL display(volgrid)
+
+if (c2agrid) call vg6d_c2a(volgrid)
 
 call transform(trans, volgrid6d_in=volgrid, vol7d_out=v7d_out, v7d=v7d_coord, &
  poly=poly, networkname=network, categoryappend="transform")
