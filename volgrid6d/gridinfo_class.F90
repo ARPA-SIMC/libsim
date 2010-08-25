@@ -374,7 +374,14 @@ CALL l4f_category_log(category,L4F_DEBUG,"import from file")
 NULLIFY(this)
 
 input_file = grid_file_id_new(filename, 'r')
-ngrid = grid_file_id_count(input_file)
+
+if(c_e(input_file)) then
+  ngrid = grid_file_id_count(input_file)
+else
+  CALL l4f_category_log(category,L4F_ERROR, &
+   "error opening file: "//TRIM(filename))  
+  CALL raise_error()
+end if
 
 CALL l4f_category_log(category,L4F_INFO, &
  "found "//TRIM(to_char(ngrid))//" messages/bands in file "//TRIM(filename))
@@ -400,8 +407,11 @@ IF (ngrid > 0) THEN
 
   ELSE
 
-    CALL l4f_category_log(category,L4F_ERROR,"allocating memory")
     NULLIFY(this)
+
+    CALL l4f_category_log(category,L4F_ERROR,"allocating memory")
+    CALL raise_error()
+
   ENDIF
 
 ENDIF
@@ -490,8 +500,10 @@ IF (SIZE(this) > 0) THEN
 
   ELSE
     CALL l4f_category_log(category,L4F_ERROR,"opening file "//TRIM(filename))
+    CALL raise_error()
   ENDIF ! filename opened
-  CALL l4f_category_log(category,L4F_ERROR,"empty gridinfo object, file ot created")
+ELSE
+  CALL l4f_category_log(category,L4F_WARN,"empty gridinfo object, file not created")
 ENDIF ! SIZE(this)
 
 !chiudo il logger
@@ -623,8 +635,8 @@ if (EditionNumber == 1 .or.EditionNumber == 2 )then
   call init (this,simpledate=date(:8)//time(:4))
 
 else
-
-  CALL raise_error('GribEditionNumber not supported')
+  call l4f_log(L4F_ERROR,'GribEditionNumber not supported')
+  CALL raise_error()
 
 end if
 
@@ -651,15 +663,15 @@ ELSE IF (EditionNumber == 2 )THEN
   ELSE IF (timerange%p1 == 0) THEN ! analysis-like
     CALL code_referencetime(this-timedelta_new(msec=timerange%p2*1000))
   ELSE ! bad timerange
-!      CALL l4f_category_log(this%category, L4F_ERROR, &
-!       'Timerange with 0>p1>p2 cannot be exported in grib2'
+      CALL l4f_log( L4F_ERROR, &
+       'Timerange with 0>p1>p2 cannot be exported in grib2')
     CALL raise_error()
   ENDIF
 
 ELSE
 
-!  CALL l4f_category_log(this%category, L4F_ERROR, &
-!   'GribEditionNumber not supported: '//TRIM(to_char(GribEditionNumber)))
+  CALL l4f_log( L4F_ERROR, &
+   'GribEditionNumber not supported: '//TRIM(to_char(EditionNumber)))
   CALL raise_error()
 
 ENDIF
@@ -713,7 +725,8 @@ else if (EditionNumber == 2)then
 
 else
 
-  call raise_error('GribEditionNumber not supported')
+  call l4f_log(L4F_ERROR,'GribEditionNumber not supported')
+  call raise_error()
 
 end if
 
@@ -759,7 +772,8 @@ else if (EditionNumber == 2)then
 
 else
 
-  call raise_error('GribEditionNumber not supported')
+  call l4f_log(L4F_ERROR,'GribEditionNumber not supported')
+  call raise_error()
 
 end if
 
@@ -805,7 +819,8 @@ else if (EditionNumber == 2) then
   end if
 else
 
-  call raise_fatal_error('GribEditionNumber not supported')
+  call l4f_log(L4F_ERROR,'GribEditionNumber not supported')
+  call raise_error()
 
 end if
 
@@ -875,19 +890,19 @@ else if (EditionNumber == 2) then
       CALL grib_set(gaid,'lengthOfTimeRange',p2)
 
     ELSE ! bad timerange
-!      CALL l4f_category_log(this%category, L4F_ERROR, &
-!       'Timerange with 0>p1>p2 cannot be exported in grib2'
+      CALL l4f_log(L4F_ERROR, &
+       'Timerange with 0>p1>p2 cannot be exported in grib2')
       CALL raise_error()
     ENDIF
   ELSE
-!    CALL l4f_category_log(this%category, L4F_ERROR, &
-!     'typeOfStatisticalProcessing not supported: '//TRIM(to_char(this%timerange)))
+    CALL l4f_log(L4F_ERROR, &
+     'typeOfStatisticalProcessing not supported: '//TRIM(to_char(this%timerange)))
     CALL raise_error()
   ENDIF
 
 ELSE
-!  CALL l4f_category_log(this%category, L4F_ERROR, &
-!   'GribEditionNumber not supported: '//TRIM(to_char(GribEditionNumber)))
+  CALL l4f_log(L4F_ERROR, &
+   'GribEditionNumber not supported: '//TRIM(to_char(EditionNumber)))
   CALL raise_error()
 ENDIF
 
@@ -941,7 +956,8 @@ else if (EditionNumber == 2)then
   
 else
 
-  CALL raise_error('GribEditionNumber not supported')
+  call l4f_log(L4F_ERROR,'GribEditionNumber not supported')
+  CALL raise_error()
 
 end if
                                 ! da capire come ottenere 
@@ -975,7 +991,8 @@ else if (EditionNumber == 2)then
 
 else
 
-  CALL raise_error('GribEditionNumber not supported')
+  call l4f_log(L4F_ERROR,'GribEditionNumber not supported')
+  CALL raise_error()
 
 end if
 
@@ -1413,9 +1430,9 @@ else if (ltype == 160) then
   scalev1=l1
 else
 
-  call raise_error('level_g1_to_g2: GRIB1 level '//TRIM(to_char(ltype)) &
+  call l4f_log(L4F_ERROR,'level_g1_to_g2: GRIB1 level '//TRIM(to_char(ltype)) &
    //' cannot be converted to GRIB2.')
-
+  call raise_error()
 endif
 
 END SUBROUTINE level_g1_to_g2
@@ -1490,9 +1507,9 @@ else ! mi sono rotto per ora
   ltype = 255
   l1 = 0
   l2 = 0
-  call raise_error('level_g2_to_g1: GRIB2 levels '//TRIM(to_char(ltype1))//' ' &
+  call l4f_log(L4F_ERROR,'level_g2_to_g1: GRIB2 levels '//TRIM(to_char(ltype1))//' ' &
    //TRIM(to_char(ltype2))//' cannot be converted to GRIB1.')
-
+  call raise_error()
 endif
 
 CONTAINS
@@ -1553,8 +1570,9 @@ ELSE IF (tri == 13) THEN ! COSMO-nudging, use a temporary value then normalize
   p1 = 0 ! analysis regardless of p2_g1
   CALL gribtr_to_second(unit, p2_g1-p1_g1, p2)
 ELSE
-  CALL raise_fatal_error('timerange_g1_to_g2: GRIB1 timerange '//TRIM(to_char(tri)) &
+  call l4f_log(L4F_ERROR,'timerange_g1_to_g2: GRIB1 timerange '//TRIM(to_char(tri)) &
    //' cannot be converted to GRIB2.')
+  CALL raise_error()
 ENDIF
 
 if (statproc == 254 .and. p2 /= 0 ) then
@@ -1609,8 +1627,9 @@ ELSE IF (statproc == 254) THEN ! point in time
   CALL second_to_gribtr(p1, p1_g1, unit)
   p2_g1 = 0
 ELSE
-  CALL raise_fatal_error('timerange_g2_to_g1: GRIB2 statisticalprocessing ' &
+  call l4f_log(L4F_ERROR,'timerange_g2_to_g1: GRIB2 statisticalprocessing ' &
    //TRIM(to_char(statproc))//' cannot be converted to GRIB1.')
+  CALL raise_error()
 ENDIF
 
 ! p1 < 0 is not allowed, use COSMO trick

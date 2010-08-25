@@ -15,7 +15,9 @@
 
 ! You should have received a copy of the GNU General Public License
 ! along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 #include "config.h"
+
 !> Module for defining transformations between rectangular
 !! georeferenced grids and between grids and sparse points and
 !! vice-versa. The module defines two classes: \a transform_def which
