@@ -63,10 +63,13 @@ MODULE grid_id_class
 USE grib_api
 #endif
 #ifdef HAVE_LIBGDAL
-  USE gdal
+USE gdal
 #endif
 USE missing_values
 USE optional_values
+USE char_utilities
+USE log4fortran
+USE err_handling
 IMPLICIT NONE
 
 !> Derived type associated to a file-like object containing many
@@ -668,6 +671,357 @@ TYPE(grid_id),INTENT(in) :: this !< object to query
 TYPE(gdalrasterbandh) :: gdalid
 gdalid = this%gdalid
 END FUNCTION grid_id_get_gdalid
+#endif
+
+
+!> Decode and return the data array from a grid_id object.
+!! The output array \a field must have a size matching the size of the
+!! encoded data.
+SUBROUTINE grid_id_decode_data(this, field)
+TYPE(grid_id),INTENT(in) :: this
+REAL,INTENT(out) :: field(:,:)
+
+#ifdef HAVE_LIBGRIBAPI
+IF (c_e(this%gaid)) CALL grid_id_decode_data_gribapi(this%gaid, field)
+#endif
+#ifdef HAVE_LIBGDAL
+! subarea?
+IF (gdalassociated(this%gdalid)) field(:,:) = gridinfo_decode_data_gdal(this, gdalid)
+#endif
+
+END SUBROUTINE grid_id_decode_data
+
+
+!> Encode a data array into a grid_id object.
+!! The input array \a field must have a size matching the size of the
+!! dataset.
+SUBROUTINE grid_id_encode_data(this, field)
+TYPE(grid_id),INTENT(inout) :: this !< gridinfo object
+REAL,intent(in) :: field(:,:) !< data array to be encoded
+
+#ifdef HAVE_LIBGRIBAPI
+IF (c_e(this%gaid)) CALL grid_id_encode_data_gribapi(this%gaid, field)
+#endif
+#ifdef HAVE_LIBGDAL
+!gdalid = grid_id_get_gdalid(this%gaid)
+call l4f_log(L4F_WARN,"export to gdal not implemented" )
+! subarea?
+#endif
+
+END SUBROUTINE grid_id_encode_data
+
+
+#ifdef HAVE_LIBGRIBAPI
+SUBROUTINE grid_id_decode_data_gribapi(gaid, field)
+INTEGER,INTENT(in) :: gaid ! grib_api id
+REAL,INTENT(out) :: field(:,:) ! array of decoded values
+
+INTEGER :: EditionNumber
+INTEGER :: alternativeRowScanning, &
+ iScansNegatively, jScansPositively, jPointsAreConsecutive
+INTEGER :: numberOfValues,numberOfPoints
+REAL :: vector(SIZE(field))
+INTEGER :: x1, x2, xs, y1, y2, ys, ord(2)
+
+
+call grib_get(gaid,'GRIBEditionNumber',EditionNumber)
+
+if (EditionNumber == 2) then
+
+  call grib_get(gaid,'alternativeRowScanning',alternativeRowScanning)
+  if (alternativeRowScanning /= 0)then
+    call l4f_log(L4F_ERROR, "grib_api alternativeRowScanning not supported: " &
+     //TRIM(to_char(alternativeRowScanning)))
+    call raise_error()
+    field(:,:) = rmiss
+    RETURN
+  end if
+
+else if (EditionNumber /= 1) then
+
+  CALL l4f_log(L4F_ERROR, &
+   "grib_api GribEditionNumber not supported: "//TRIM(to_char(EditionNumber)))
+  call raise_error()
+  field(:,:) = rmiss
+  RETURN
+
+end if
+
+call grib_get(gaid,'iScansNegatively',iScansNegatively)
+call grib_get(gaid,'jScansPositively',jScansPositively)
+call grib_get(gaid,'jPointsAreConsecutive',jPointsAreConsecutive)
+
+call grib_set(gaid,'missingValue',rmiss)
+call grib_get(gaid,'numberOfPoints',numberOfPoints)
+call grib_get(gaid,'numberOfValues',numberOfValues)
+
+if (numberOfPoints /= SIZE(field))then
+!if (numberOfValues /= SIZE(field))then
+
+  CALL l4f_log(L4F_ERROR, 'grib_api numberOfPoints and grid size different')
+  CALL l4f_log(L4F_ERROR, 'grib_api numberOfPoints: ' &
+   //TRIM(to_char(numberOfPoints))//', nx,ny:'&
+   //TRIM(to_char(SIZE(field,1)))//'X'//TRIM(to_char(SIZE(field,2))))
+  call raise_error()
+  field(:,:) = rmiss
+  RETURN
+
+end if
+
+                            !     get data values
+#ifdef DEBUG
+call l4f_log(L4F_INFO,'grib_api number of values: '//to_char(numberOfValues))
+call l4f_log(L4F_INFO,'grib_api number of points: '//to_char(numberOfPoints))
+#endif
+
+CALL grib_get(gaid,'values',vector)
+
+! Transfer data field changing scanning mode to 64
+IF (iScansNegatively  == 0) THEN
+  x1 = 1
+  x2 = SIZE(field,1)
+  xs = 1
+ELSE
+  x1 = SIZE(field,1)
+  x2 = 1
+  xs = -1
+ENDIF
+IF (jScansPositively == 0) THEN
+  y1 = SIZE(field,2)
+  y2 = 1
+  ys = -1
+ELSE
+  y1 = 1
+  y2 = SIZE(field,2)
+  ys = 1
+ENDIF
+
+IF ( jPointsAreConsecutive == 0) THEN
+  ord = (/1,2/)
+ELSE
+  ord = (/2,1/)
+ENDIF
+
+field(x1:x2:xs,y1:y2:ys) = RESHAPE(vector, &
+ (/SIZE(field,1),SIZE(field,2)/), ORDER=ord)
+
+END SUBROUTINE grid_id_decode_data_gribapi
+
+
+SUBROUTINE grid_id_encode_data_gribapi(gaid, field)
+INTEGER,INTENT(in) :: gaid ! grib_api id
+REAL,intent(in) :: field(:,:) ! data array to be encoded
+
+INTEGER :: EditionNumber
+INTEGER :: alternativeRowScanning, iScansNegatively, &
+ jScansPositively, jPointsAreConsecutive
+INTEGER :: nx, ny
+INTEGER :: x1, x2, xs, y1, y2, ys, ord(2)
+
+
+call grib_get(gaid,'GRIBEditionNumber',EditionNumber)
+
+if (EditionNumber == 2) then
+
+  call grib_get(gaid,'alternativeRowScanning',alternativeRowScanning)
+  if (alternativeRowScanning /= 0)then
+    call l4f_log(L4F_ERROR, "grib_api alternativeRowScanning not supported: " &
+     //TRIM(to_char(alternativeRowScanning)))
+    call raise_error()
+    RETURN
+  end if
+
+else if( EditionNumber /= 1) then
+
+  call l4f_log(L4F_ERROR, &
+   "grib_api GribEditionNumber not supported: "//TRIM(to_char(EditionNumber)))
+  call raise_error()
+  RETURN
+
+end if
+
+call grib_get(gaid,'iScansNegatively',iScansNegatively)
+call grib_get(gaid,'jScansPositively',jScansPositively)
+call grib_get(gaid,'jPointsAreConsecutive',jPointsAreConsecutive)
+
+! queste sono gia` fatte in export_gridinfo, si potrebbero evitare?!
+call grib_set(gaid,'Ni',SIZE(field,1))
+call grib_set(gaid,'Nj',SIZE(field,2))
+
+! Transfer data field changing scanning mode from 64
+IF (iScansNegatively  == 0) THEN
+  x1 = 1
+  x2 = SIZE(field,1)
+  xs = 1
+ELSE
+  x1 = SIZE(field,1)
+  x2 = 1
+  xs = -1
+ENDIF
+IF (jScansPositively == 0) THEN
+  y1 = SIZE(field,2)
+  y2 = 1
+  ys = -1
+ELSE
+  y1 = 1
+  y2 = SIZE(field,2)
+  ys = 1
+ENDIF
+
+
+if (any(field== rmiss)) then
+
+  call grib_set(gaid,'missingValue',rmiss)
+  
+  call grib_get(gaid,'editionNumber',editionNumber);
+  if (editionNumber == 1) then
+                                ! enable bitmap in a grib1
+    call grib_set(gaid,"bitmapPresent",1)
+  else
+                                ! enable bitmap in a grib2
+    call grib_set(gaid,"bitMapIndicator",0)
+  endif
+
+else
+
+  call grib_get(gaid,'editionNumber',editionNumber);
+  if (editionNumber == 1) then
+                                ! enable bitmap in a grib1
+    call grib_set(gaid,"bitmapPresent",0)
+  else
+                                ! enable bitmap in a grib2
+    call grib_set(gaid,"bitMapIndicator",1)
+  endif
+
+end if
+
+
+!TODO: gestire il caso TUTTI dati mancanti
+
+IF ( jPointsAreConsecutive == 0) THEN
+  CALL grib_set(gaid,'values', RESHAPE(field(x1:x2:xs,y1:y2:ys), &
+   (/SIZE(field)/)))
+ELSE
+  CALL grib_set(gaid,'values', RESHAPE(TRANSPOSE(field(x1:x2:xs,y1:y2:ys)), &
+   (/SIZE(field)/)))
+ENDIF
+
+END SUBROUTINE grid_id_encode_data_gribapi
+#endif
+
+
+#ifdef HAVE_LIBGDAL
+SUBROUTINE grid_id_decode_data_gdal(gdalid, field)
+INTEGER,INTENT(in) :: gdalid ! gdal id
+REAL,INTENT(out) :: field(:,:) ! array of decoded values
+
+TYPE(gdaldataseth) :: hds
+REAL(kind=c_double) :: geotrans(6), invgeotrans(6)
+REAL :: vector(SIZE(field)), gdalmiss
+INTEGER :: ix1, iy1, ix2, iy2, ixs, iys, ord(2), ier
+INTEGER(kind=c_int) :: nrx, nry
+
+
+nrx =  gdalgetrasterbandxsize(gdalid)
+nry =  gdalgetrasterbandysize(gdalid)
+
+if (nrx*nry /= (SIZE(field)))then
+
+  CALL l4f_log(L4F_ERROR, 'gdal raster band and gridinfo size different')
+  CALL l4f_log(L4F_ERROR, 'gdal rasterband: ' &
+   //TRIM(to_char(nrx))//'X'//TRIM(to_char(nry))//', nx,ny:' &
+   //TRIM(to_char(SIZE(field,1)))//'X'//TRIM(to_char(SIZE(field,2))))
+  CALL raise_error()
+  field(:,:) = rmiss
+  RETURN
+
+end if
+
+hds = gdalgetbanddataset(gdalid) ! go back to dataset
+ier = gdalgetgeotransform(hds, geotrans)
+! get grid corners
+!CALL gdalapplygeotransform(geotrans, 0.5_c_double, 0.5_c_double, x1, y1)
+!CALL gdalapplygeotransform(geotrans, &
+! SIZE(field,1)-0.5_c_double, SIZE(field,2)-0.5_c_double, x2, y2)
+
+IF (geotrans(3) == 0.0_c_double .AND. geotrans(5) == 0.0_c_double) THEN
+! transformation is diagonal, no transposing
+  IF (geotrans(2) > 0.0_c_double) THEN
+    ix1 = 1 
+    ix2 = SIZE(field,1)
+    ixs = 1
+  ELSE
+    ix1 = SIZE(field,1)
+    ix2 = 1 
+    ixs = -1
+  ENDIF
+  IF (geotrans(6) > 0.0_c_double) THEN
+    iy1 = 1 
+    iy2 = SIZE(field,2)
+    iys = 1
+  ELSE
+    iy1 = SIZE(field,2)
+    iy2 = 1 
+    iys = -1
+  ENDIF
+  nrx = SIZE(field,1)
+  nry = SIZE(field,2)
+  ord = (/1,2/)
+
+ELSE IF (geotrans(2) == 0.0_c_double .AND. geotrans(6) == 0.0_c_double) THEN
+! transformation is anti-diagonal, transposing required
+  IF (geotrans(3) > 0.0_c_double) THEN
+    ix1 = 1 
+    ix2 = SIZE(field,1)
+    ixs = 1
+  ELSE
+    ix1 = SIZE(field,1)
+    ix2 = 1 
+    ixs = -1
+  ENDIF
+  IF (geotrans(5) > 0.0_c_double) THEN
+    iy1 = 1 
+    iy2 = SIZE(field,2)
+    iys = 1
+  ELSE
+    iy1 = SIZE(field,2)
+    iy2 = 1 
+    iys = -1
+  ENDIF
+  nrx = SIZE(field,2)
+  nry = SIZE(field,1)
+  ord = (/2,1/)
+ELSE ! transformation is a rotation, not supported
+  CALL l4f_log(L4F_ERROR, 'gdal geotransform is a generic rotation, not supported')
+  CALL raise_error()
+  field(:,:) = rmiss
+  RETURN
+ENDIF
+
+! read data from file
+ier = gdalrasterio_float32(gdalid, GF_Read, 0_c_int, 0_c_int, nrx, nry, vector, nrx, nry)
+
+IF (ier /= 0) THEN ! error in read
+  CALL l4f_category_log(this%category,L4F_ERROR, &
+   'gdal error in reading with gdal driver')
+  CALL raise_error()
+  vector(:) = rmiss
+  RETURN
+ELSE
+! set missing value if necessary
+  gdalmiss = gdalgetrasternodatavalue(gdalid, ier)
+  IF (ier == 0) THEN ! success -> there are missing values
+    WHERE(vector(:) == gdalmiss)
+      vector(:) = rmiss
+    END WHERE
+  ENDIF
+ENDIF
+
+! reshape the field
+field(ix1:ix2:ixs,iy1:iy2:iys) = &
+ RESHAPE(vector, (/SIZE(field,1),SIZE(field,2)/), ORDER=ord)
+
+END SUBROUTINE grid_id_decode_data_gdal
 #endif
 
 END MODULE grid_id_class

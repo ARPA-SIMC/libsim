@@ -409,6 +409,138 @@ end if
 END SUBROUTINE volgrid6d_alloc_vol
 
 
+!> Return a 2-d pointer to a x-y slice of a volume. This method works
+!! both with volumes having allocated and non-allocated this%voldati
+!! array, and it returns a pointer to a 2-d slice either from the
+!! allocated this%voldati array or from the grid_id object on file or
+!! in memory. In the second case the pointer should be either
+!! ALLOCATE'd to the expected size or NULLIFY'ed, and if NULLIFY'ed,
+!! it is allocated within the method, thus it will have to be
+!! deallocated by the caller when not in use anymore. Since this
+!! method may be called many times by a program, it is optimized for
+!! speed and it does not make any check about the matching size of the
+!! pointer and the array or about the allocation status of \a this, so
+!! it should be called only when everything has been checked to be in
+!! good shape.
+SUBROUTINE volgrid_get_vol_2d(this, ilevel, itime, itimerange, ivar, voldati)
+TYPE(volgrid6d),INTENT(in) :: this !< object from which the slice has to be retrieved
+INTEGER,INTENT(in) :: ilevel !< index of vertical level of the slice
+INTEGER,INTENT(in) :: itime !< index of time level of the slice
+INTEGER,INTENT(in) :: itimerange !< index of timerange of the slice
+INTEGER,INTENT(in) :: ivar !< index of physical variable of the slice
+REAL,POINTER :: voldati(:,:) !< pointer to the data, if \a this%voldati is already allocated, it will just point to the requested slice, otherwise it will be allocated if and only if it is nullified on entry
+
+IF (ASSOCIATED(this%voldati)) THEN
+  voldati => this%voldati(:,:,ilevel,itime,itimerange,ivar)
+  RETURN
+ELSE
+  IF (.NOT.ASSOCIATED(voldati)) THEN
+    ALLOCATE(voldati(this%griddim%dim%nx,this%griddim%dim%ny))
+  ENDIF
+  CALL grid_id_decode_data(this%gaid(ilevel,itime,itimerange,ivar), voldati)
+ENDIF
+
+END SUBROUTINE volgrid_get_vol_2d
+
+
+!> Return a 3-d pointer to a x-y-z slice of a volume. This method works
+!! both with volumes having allocated and non-allocated this%voldati
+!! array, and it returns a pointer to a 3-d slice either from the
+!! allocated this%voldati array or from the grid_id object on file or
+!! in memory. In the second case the pointer should be either
+!! ALLOCATE'd to the expected size or NULLIFY'ed, and if NULLIFY'ed,
+!! it is allocated within the method, thus it will have to be
+!! deallocated by the caller when not in use anymore. Since this
+!! method may be called many times by a program, it is optimized for
+!! speed and it does not make any check about the matching size of the
+!! pointer and the array or about the allocation status of \a this, so
+!! it should be called only when everything has been checked to be in
+!! good shape.
+SUBROUTINE volgrid_get_vol_3d(this, itime, itimerange, ivar, voldati)
+TYPE(volgrid6d),INTENT(in) :: this !< object from which the slice has to be retrieved
+INTEGER,INTENT(in) :: itime !< index of time level of the slice
+INTEGER,INTENT(in) :: itimerange !< index of timerange of the slice
+INTEGER,INTENT(in) :: ivar !< index of physical variable of the slice
+REAL,POINTER :: voldati(:,:,:) !< pointer to the data, if \a this%voldati is already allocated, it will just point to the requested slice, otherwise it will be allocated if and only if it is nullified on entry
+
+INTEGER :: ilevel
+
+IF (ASSOCIATED(this%voldati)) THEN
+  voldati => this%voldati(:,:,:,itime,itimerange,ivar)
+  RETURN
+ELSE
+  IF (.NOT.ASSOCIATED(voldati)) THEN
+    ALLOCATE(voldati(this%griddim%dim%nx,this%griddim%dim%ny,SIZE(this%level)))
+  ENDIF
+  DO ilevel = 1, SIZE(this%level)
+    CALL grid_id_decode_data(this%gaid(ilevel,itime,itimerange,ivar), &
+     voldati(:,:,ilevel))
+  ENDDO
+ENDIF
+
+END SUBROUTINE volgrid_get_vol_3d
+
+
+!> Reset a 2-d x-y slice of a volume after the data have been modified.
+!! This method works both with volumes having allocated and
+!! non-allocated this%voldati array, and it updates the requested
+!! slice.  In case \a this%voldati is already allocated, this is a
+!! no-operation while in the other case this method encodes the filed
+!! provided into the grid_id object on file or in memory. Since this
+!! method may be called many times by a program, it is optimized for
+!! speed and it does not make any check about the matching size of the
+!! field and the array or about the allocation status of \a this, so
+!! it should be called only when everything has been checked to be in
+!! good shape.
+SUBROUTINE volgrid_set_vol_2d(this, ilevel, itime, itimerange, ivar, voldati)
+TYPE(volgrid6d),INTENT(inout) :: this !< object in which slice has to be updated
+INTEGER,INTENT(in) :: ilevel !< index of vertical level of the slice
+INTEGER,INTENT(in) :: itime !< index of time level of the slice
+INTEGER,INTENT(in) :: itimerange !< index of timerange of the slice
+INTEGER,INTENT(in) :: ivar !< index of physical variable of the slice
+REAL,INTENT(in) :: voldati(:,:) !< updated values of the slice
+
+IF (ASSOCIATED(this%voldati)) THEN
+  RETURN
+ELSE
+  CALL grid_id_encode_data(this%gaid(ilevel,itime,itimerange,ivar), voldati)
+ENDIF
+
+END SUBROUTINE volgrid_set_vol_2d
+
+
+!> Reset a 3-d x-y-z slice of a volume after the data have been modified.
+!! This method works both with volumes having allocated and
+!! non-allocated this%voldati array, and it updates the requested
+!! slice.  In case \a this%voldati is already allocated, this is a
+!! no-operation while in the other case this method encodes the filed
+!! provided into the grid_id object on file or in memory. Since this
+!! method may be called many times by a program, it is optimized for
+!! speed and it does not make any check about the matching size of the
+!! field and the array or about the allocation status of \a this, so
+!! it should be called only when everything has been checked to be in
+!! good shape.
+SUBROUTINE volgrid_set_vol_3d(this, itime, itimerange, ivar, voldati)
+TYPE(volgrid6d),INTENT(inout) :: this !< object in which slice has to be updated
+INTEGER,INTENT(in) :: itime !< index of time level of the slice
+INTEGER,INTENT(in) :: itimerange !< index of timerange of the slice
+INTEGER,INTENT(in) :: ivar !< index of physical variable of the slice
+REAL,INTENT(in) :: voldati(:,:,:) !< updated values of the slice
+
+INTEGER :: ilevel
+
+IF (ASSOCIATED(this%voldati)) THEN
+  RETURN
+ELSE
+  DO ilevel = 1, SIZE(this%level)
+    CALL grid_id_encode_data(this%gaid(ilevel,itime,itimerange,ivar), &
+     voldati(:,:,ilevel))
+  ENDDO
+ENDIF
+
+END SUBROUTINE volgrid_set_vol_3d
+
+
 !> Destructor, it releases every information and memory buffer
 !! associated with the object. It should be called also for objects
 !! crated through the \a import interface.
