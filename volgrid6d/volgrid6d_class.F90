@@ -782,17 +782,31 @@ if (.not. present(unit)) close(unit=lunit)
 end subroutine volgrid6d_read_from_file
 
 
-!> \brief import from gridinfo object to volgrid6d
-!!
-!! Un oggetto gridinfo che al suo interno contiene un id di un grib delle grib_api e una sua sufficiente descrizione
-!! viene importato nella struttura volgrid6d organizzandolo nella sua forma multidimensionale.
-!! I descrittori di volgrid6d devono essere stati opportunamente inizializzati per poter permettere una corretta importazione.
-SUBROUTINE import_from_gridinfo (this,gridinfo,force,clone,categoryappend)
-TYPE(volgrid6d),INTENT(OUT) :: this !< Volume volgrid6d da leggere
-type(gridinfo_def),intent(in) :: gridinfo !< gridinfo 
-LOGICAL,INTENT(in),OPTIONAL :: force !< se fornito e \c .TRUE., incastra a forza il gridinfo in un elemento libero di \a this (se c'è)
-logical , intent(in),optional :: clone !< se fornito e \c .TRUE., clona i gaid da gridinfo
-character(len=*),INTENT(in),OPTIONAL :: categoryappend !< appende questo suffisso al namespace category di log4fortran
+!> Import a single \a gridinfo object into a \a volgrid6d object.
+!! This methods import a single gridded field from a \a gridinfo
+!! object into a \a volgrid6d object, inseting it into the
+!! multidimensional structure of volgrid6d. The volgrid6d object must
+!! have been already initialized and the dimensions specified with
+!! volgrid6d_alloc(). If the \a force argument is missing or \a
+!! .FALSE. , the volgrid6d object dimension descriptors (time,
+!! timerange, vertical level, physical variable) must already have
+!! space for the corresponding values coming from gridinfo, otherwise
+!! the object will be rejected; this means that all the volgrid6d
+!! dimension descriptors should be correctly assigned. If \a force is
+!! \a .TRUE. , the gridinfo dimension descriptors that do not fit into
+!! available descriptors in the \a volgrid6d structure, will be
+!! accomodated in a empty (i.e. equal to missing value) descriptor, if
+!! available, other wise the gridinfo will be rejected.  The
+!! descriptor of the grid in the \a volgrid object is assigned to the
+!! descriptor contained in \a gridinfo if it is missing in \a volgrid,
+!! otherwise it is checked and the object is rejected if grids do not
+!! match.
+SUBROUTINE import_from_gridinfo(this, gridinfo, force, clone, categoryappend)
+TYPE(volgrid6d),INTENT(out) :: this !< object in which to import
+type(gridinfo_def),intent(in) :: gridinfo !< gridinfo object to be imported
+LOGICAL,INTENT(in),OPTIONAL :: force !< if provided and \c .TRUE., the gridinfo is forced into an empty element of \a this, if required and possible
+LOGICAL , INTENT(in),OPTIONAL :: clone !< if provided and \c .TRUE. , clone the gaid's from \a gridinfo to \a this
+character(len=*),INTENT(in),OPTIONAL :: categoryappend !< append this suffix to log4fortran namespace category
 
 character(len=255)   :: type
 integer :: ilevel,itime,itimerange,ivar
@@ -819,8 +833,10 @@ if (.not. c_e(type))then
 
 else if (.not. (this%griddim == gridinfo%griddim ))then
 
-   call l4f_category_log(this%category,L4F_FATAL,"volgrid6d: grid or dim are different and this is not possible")
-   call raise_fatal_error ("volgrid6d: grid or dim are different and this is not possible")
+  CALL l4f_category_log(this%category,L4F_ERROR, &
+   "volgrid and gridinfo grid type or size are different, gridinfo rejected")
+  CALL raise_error()
+  RETURN
 
 end if
 
@@ -831,9 +847,10 @@ IF (ilevel == 0 .AND. lforce) THEN
   IF (ilevel /= 0) this%level(ilevel) = gridinfo%level
 ENDIF
 IF (ilevel == 0) THEN
-  CALL l4f_category_log(this%category,L4F_FATAL, &
-   "volgrid6d: level not valid for volume")
-  CALL raise_fatal_error("volgrid6d: level not valid for volume")
+  CALL l4f_category_log(this%category,L4F_ERROR, &
+   "volgrid6d: level not valid for volume, gridinfo rejected")
+  CALL raise_error()
+  RETURN
 ENDIF
 
 itime = index(this%time, gridinfo%time)
@@ -842,9 +859,10 @@ IF (itime == 0 .AND. lforce) THEN
   IF (itime /= 0) this%time(itime) = gridinfo%time
 ENDIF
 IF (itime == 0) THEN
-  CALL l4f_category_log(this%category,L4F_FATAL, &
-   "volgrid6d: time not valid for volume")
-  CALL raise_fatal_error("volgrid6d: time not valid for volume")
+  CALL l4f_category_log(this%category,L4F_ERROR, &
+   "volgrid6d: time not valid for volume, gridinfo rejected")
+  CALL raise_error()
+  RETURN
 ENDIF
 
 itimerange = index(this%timerange,gridinfo%timerange)
@@ -853,9 +871,10 @@ IF (itimerange == 0 .AND. lforce) THEN
   IF (itimerange /= 0) this%timerange(itimerange) = gridinfo%timerange
 ENDIF
 IF (itimerange == 0) THEN
-  CALL l4f_category_log(this%category,L4F_FATAL, &
-   "volgrid6d: timerange not valid for volume")
-  CALL raise_fatal_error("volgrid6d: timerange not valid for volume")
+  CALL l4f_category_log(this%category,L4F_ERROR, &
+   "volgrid6d: timerange not valid for volume, gridinfo rejected")
+  CALL raise_error()
+  RETURN
 ENDIF
 
 ivar = index(this%var, gridinfo%var)
@@ -864,9 +883,10 @@ IF (ivar == 0 .AND. lforce) THEN
   IF (ivar /= 0) this%var(ivar) = gridinfo%var
 ENDIF
 IF (ivar == 0) THEN
-  CALL l4f_category_log(this%category,L4F_FATAL, &
-   "volgrid6d: var not valid for volume")
-  CALL raise_fatal_error("volgrid6d: var not valid for volume")
+  CALL l4f_category_log(this%category,L4F_ERROR, &
+   "volgrid6d: var not valid for volume, gridinfo rejected")
+  CALL raise_error()
+  RETURN
 ENDIF
 
 if (associated(this%gaid))then
@@ -891,6 +911,7 @@ else
   call l4f_category_log(this%category,L4F_ERROR,&
    "gaid not allocated, you probably need to call volgrid6d_alloc_vol first")
   call raise_error()
+  RETURN
   
 end if
 
@@ -899,10 +920,6 @@ if (associated (this%voldati))then
 
   this%voldati(:,:,ilevel,itime,itimerange,ivar) = decode_gridinfo(gridinfo)
   
-else
-  
-  call l4f_category_log(this%category,L4F_INFO,"non decodifico i dati")
-
 end if
 
 end subroutine import_from_gridinfo
@@ -967,21 +984,29 @@ call init(gridinfo,gaid,&
 ! reset the gridinfo, bad but necessary at this point for encoding the field
 call export(gridinfo%griddim, gridinfo%gaid)
 ! encode the field
-call encode_gridinfo(gridinfo, this%voldati(:,:,ilevel,itime,itimerange,ivar))
+IF (ASSOCIATED(this%voldati)) &
+ CALL encode_gridinfo(gridinfo, this%voldati(:,:,ilevel,itime,itimerange,ivar))
 
 end subroutine export_to_gridinfo
 
 
-
-!> \brief import from a vector of gridinfo object to volgrid6d
-!! 
-!! Come import_from_gridinfo ma con un vettore di gridinfo.
-subroutine import_from_gridinfovv (this,gridinfov,clone,categoryappend)
-
-TYPE(volgrid6d),pointer :: this(:) !< Vettore Volume volgrid6d da leggere
-type(gridinfo_def),intent(in) :: gridinfov(:) !< vettore gridinfo 
-logical , intent(in),optional :: clone !< se fornito e \c .TRUE., clona i gaid to gridinfo
-character(len=*),INTENT(in),OPTIONAL :: categoryappend !< accoda questo suffisso al namespace category di log4fortran
+!> Import an array of \a gridinfo objects into an array of \a
+!! volgrid6d objects.
+!! This method imports an array of gridded fields from a \a gridinfo
+!! object into a suitable number of \a volgrid6d objects. The number
+!! of \a volgrid6d allocated is determined by the number of different
+!! grids encountered in \a gridinfo.  Unlike the import for a single
+!! \a gridinfo, here the \a volgrid6d object is a non-associated
+!! pointer to a 1-d array of uninitialized objects, and all the
+!! dimension descriptors in each of the objects are allocated and
+!! assigned within the method according to the data contained in \a
+!! gridinfo.
+SUBROUTINE import_from_gridinfovv (this, gridinfov, clone, decode, categoryappend)
+TYPE(volgrid6d),POINTER :: this(:) !< object in which to import
+type(gridinfo_def),intent(in) :: gridinfov(:) !< gridinfo array object to be imported
+LOGICAL , INTENT(in),OPTIONAL :: clone !< if provided and \c .TRUE. , clone the gaid's from \a gridinfo to \a this
+LOGICAL,INTENT(in),OPTIONAL :: decode !< if provided and \a .FALSE. the data volume in the elements of \a this is not allocated and successive work will be performed on grid_id's
+character(len=*),INTENT(in),OPTIONAL :: categoryappend !< append this suffix to log4fortran namespace category
 
 integer :: i,j
 integer :: ngrid,ntime,ntimerange,nlevel,nvar
@@ -1049,7 +1074,7 @@ do i=1,ngrid
 #ifdef DEBUG
    call l4f_category_log(this(i)%category,L4F_DEBUG,"alloc_vol volgrid6d index: "//trim(to_char(i)))
 #endif
-   call volgrid6d_alloc_vol(this(i)) 
+   CALL volgrid6d_alloc_vol(this(i), decode=decode)
 
 end do
 
@@ -1208,23 +1233,18 @@ call l4f_category_delete(category)
 end subroutine export_to_gridinfovv
 
 
-!> \brief importa da un file grib
-!!
-!! Questo è un metodo di alto livello. Da un file grib comunque
-!! ordinato e qualsiasi contenuto vengono importati descrittori e dati
-!! organizzandoli nella struttura ordinata di un vettore di oggetti
-!! volgrid6d. In realtà il contenuto dei grib deve essere gestito dal
-!! software di importazione limitando ad esempio i grigliati ammessi
-!! ai tipi previsti dalla classe grid. Ogni oggetto necessario viene
-!! inizializzato e allocato automaticamente.
-SUBROUTINE volgrid6d_import_from_file(this, filename, categoryappend)
-TYPE(volgrid6d),pointer :: this(:) !< Volume volgrid6d da leggere
-!> unità su cui è stato aperto un file; se =0 rielaborato internamente (default = elaborato internamente con getunit) 
-!! e restituito in output; se non fornito o =0 il file viene aperto automaticamente
-!integer,intent(inout),optional :: unit 
-!> nome del file eventualmente da aprire (default = (nome dell'eseguibile)//.v7d ); se = "" viene restituito in output
-character(len=*),INTENT(in),optional :: filename
-character(len=*),INTENT(in),OPTIONAL :: categoryappend !< appende questo suffisso al namespace category di log4fortran
+!> Import the content of a supported file (like grib or gdal-supported
+!! format) into an array of \a volgrid6d objects.  This method imports
+!! a set of gridded fields from a file object into a suitable number
+!! of \a volgrid6d objects. The data are imported by creating a
+!! temporary \a gridinfo object, importing it into the \a volgrid6d
+!! object cloning the gaid's and then destroying the gridinfo, so it
+!! works similarly to vogrid6d_class::import_from_gridinfovv() method.
+SUBROUTINE volgrid6d_import_from_file(this, filename, decode, categoryappend)
+TYPE(volgrid6d),POINTER :: this(:) !< object in which to import
+CHARACTER(len=*),INTENT(in) :: filename !< name of file from which to import
+LOGICAL,INTENT(in),OPTIONAL :: decode !< if provided and \a .FALSE. the data volume in the elements of \a this is not allocated and successive work will be performed on grid_id's
+character(len=*),INTENT(in),OPTIONAL :: categoryappend !< append this suffix to log4fortran namespace category
 
 type(gridinfo_def),pointer :: gridinfo(:)
 integer::ngrib,gaid,iret,category,lunit,ier
@@ -1244,9 +1264,10 @@ CALL import(gridinfo, filename=filename, categoryappend=categoryappend)
   
 IF (ASSOCIATED(gridinfo)) THEN
 
-  CALL import(this, gridinfo, clone=.TRUE., categoryappend=categoryappend)
+  CALL import(this, gridinfo, clone=.TRUE., decode=decode, &
+   categoryappend=categoryappend)
+
   CALL l4f_category_log(category,L4F_INFO,"deleting gridinfo")
-  
   DO ngrib = 1, SIZE(gridinfo)
     CALL delete(gridinfo(ngrib))
   ENDDO
@@ -1356,6 +1377,7 @@ logical , intent(in),optional :: clone !< se fornito e \c .TRUE., clona i gaid d
 integer :: ntime, ntimerange, nlevel, nvar
 integer :: itime, itimerange, ilevel, ivar
 
+REAL,POINTER :: voldatiin(:,:), voldatiout(:,:) ! will have to be 3-d
 
 #ifdef DEBUG
 call l4f_category_log(volgrid6d_in%category,L4F_DEBUG,"start volgrid6d_transform_compute")
@@ -1385,40 +1407,56 @@ if (associated(volgrid6d_in%var))then
   nvar=size(volgrid6d_in%var)
   volgrid6d_out%var=volgrid6d_in%var
 end if
+! allocate once for speed
+IF (.NOT.ASSOCIATED(volgrid6d_in%voldati)) THEN
+  ALLOCATE(voldatiin(volgrid6d_in%griddim%dim%nx, volgrid6d_in%griddim%dim%ny))
+ENDIF
+IF (.NOT.ASSOCIATED(volgrid6d_out%voldati)) THEN
+  ALLOCATE(voldatiout(volgrid6d_out%griddim%dim%nx, volgrid6d_out%griddim%dim%ny))
+ENDIF
 
 do itime=1,ntime
   do itimerange=1,ntimerange
     do ilevel=1,nlevel
       do ivar=1,nvar
-        
-        call compute(this, &
-         volgrid6d_in%voldati(:,:,ilevel,itime,itimerange,ivar),&
-         volgrid6d_out%voldati(:,:,ilevel,itime,itimerange,ivar))
 
-                                ! if present gaid copy it
+! if present gaid copy it
         if (c_e(volgrid6d_in%gaid(ilevel,itime,itimerange,ivar)) .and. .not. &
             c_e(volgrid6d_out%gaid(ilevel,itime,itimerange,ivar))) then
 
           if (optio_log(clone))then
-
             call copy(volgrid6d_in%gaid(ilevel,itime,itimerange,ivar),&
              volgrid6d_out%gaid(ilevel,itime,itimerange,ivar))
-
 #ifdef DEBUG
             call l4f_category_log(volgrid6d_in%category,L4F_DEBUG,"cloning gaid")
 #endif
-
-
           else
-            volgrid6d_out%gaid(ilevel,itime,itimerange,ivar)=volgrid6d_in%gaid(ilevel,itime,itimerange,ivar)
+            volgrid6d_out%gaid(ilevel,itime,itimerange,ivar) = &
+             volgrid6d_in%gaid(ilevel,itime,itimerange,ivar)
           end if
-
         end if
+
+        CALL volgrid_get_vol_2d(volgrid6d_in, ilevel, itime, itimerange, ivar, &
+         voldatiin)
+        IF (ASSOCIATED(volgrid6d_out%voldati)) & ! improve!!!!
+          CALL volgrid_get_vol_2d(volgrid6d_out, ilevel, itime, itimerange, ivar, &
+           voldatiout)
+        CALL compute(this, voldatiin, voldatiout)
+        CALL volgrid_set_vol_2d(volgrid6d_out, ilevel, itime, itimerange, ivar, &
+         voldatiout)
 
       end do
     end do
   end do
 end do
+
+IF (.NOT.ASSOCIATED(volgrid6d_in%voldati)) THEN
+  DEALLOCATE(voldatiin)
+ENDIF
+IF (.NOT.ASSOCIATED(volgrid6d_out%voldati)) THEN
+  DEALLOCATE(voldatiout)
+ENDIF
+
 
 end SUBROUTINE volgrid6d_transform_compute
 
@@ -1430,13 +1468,14 @@ end SUBROUTINE volgrid6d_transform_compute
 !! is created internally and it does not require preliminary
 !! initialisation.
 SUBROUTINE volgrid6d_transform(this, griddim, volgrid6d_in, volgrid6d_out, &
- clone, categoryappend)
+ clone, decode, categoryappend)
 TYPE(transform_def),INTENT(in) :: this !< object specifying the abstract transformation
-TYPE(griddim_def),INTENT(in),OPTIONAL :: griddim !< griddim specifying the output grid (require by most transformation types)
+TYPE(griddim_def),INTENT(in),OPTIONAL :: griddim !< griddim specifying the output grid (required by most transformation types)
 ! TODO ripristinare intent(in) dopo le opportune modifiche in grid_class.F90
 TYPE(volgrid6d),INTENT(inout) :: volgrid6d_in !< object to be transformed, it is not modified, despite the INTENT(inout)
 TYPE(volgrid6d),INTENT(out) :: volgrid6d_out !< transformed object, it does not need initialisation
 LOGICAL,INTENT(in),OPTIONAL :: clone !< if provided and \a .TRUE. , clone the \a gaid's from \a volgrid6d_in to \a volgrid6d_out 
+LOGICAL,INTENT(in),OPTIONAL :: decode !< if provided and \a .FALSE. the data volume is not allocated, but work is performed on grid_id's
 CHARACTER(len=*),INTENT(in),OPTIONAL :: categoryappend !< append this suffix to log4fortran namespace category
 
 type(grid_transform) :: grid_trans
@@ -1456,6 +1495,15 @@ if (associated(volgrid6d_in%timerange)) ntimerange=size(volgrid6d_in%timerange)
 if (associated(volgrid6d_in%level)) nlevel=size(volgrid6d_in%level)
 if (associated(volgrid6d_in%var)) nvar=size(volgrid6d_in%var)
 
+IF (ntime == 0 .OR. ntimerange == 0 .OR. nlevel == 0 .OR. nvar == 0) THEN
+  CALL l4f_category_log(volgrid6d_in%category, L4F_ERROR, &
+   "trying to transform an incomplete volgrid6d object")
+  CALL init(volgrid6d_out) ! initialize to empty
+  CALL raise_error()
+  RETURN
+ENDIF
+
+
 ! Ensure wind components are referred to geographical system
 call vg6d_wind_unrot(volgrid6d_in)
 
@@ -1466,13 +1514,19 @@ call init(grid_trans, this, in=volgrid6d_in%griddim, out=volgrid6d_out%griddim, 
 IF (c_e(grid_trans)) THEN
 
   CALL volgrid6d_alloc(volgrid6d_out, griddim%dim, ntime, nlevel, ntimerange, nvar)
-  CALL volgrid6d_alloc_vol(volgrid6d_out)
+! decode status is copied from input, check whether grib_api requires
+! clone=.TRUE. in these cases
+  CALL volgrid6d_alloc_vol(volgrid6d_out, decode=ASSOCIATED(volgrid6d_in%voldati))
 
 !ensure unproj was called
 !call griddim_unproj(volgrid6d_out%griddim)
 
   CALL compute(grid_trans, volgrid6d_in, volgrid6d_out,clone)
-!ELSE how to signal error status?
+ELSE
+! should log with grid_trans%category, but it is private
+  CALL l4f_category_log(volgrid6d_in%category, L4F_ERROR, &
+   "trying to use an invalid grid_transform object")
+  CALL raise_error()
 ENDIF
 
 CALL delete (grid_trans)
@@ -1489,13 +1543,14 @@ END SUBROUTINE volgrid6d_transform
 !! to the transformation type, the output array may have of one or
 !! more \a volgrid6d elements on different grids.
 SUBROUTINE volgrid6dv_transform(this, griddim, volgrid6d_in, volgrid6d_out, &
- clone, categoryappend)
+ clone, decode, categoryappend)
 TYPE(transform_def),INTENT(in) :: this !< object specifying the abstract transformation
-TYPE(griddim_def),INTENT(in),OPTIONAL :: griddim !< griddim specifying the output grid (require by most transformation types)
+TYPE(griddim_def),INTENT(in),OPTIONAL :: griddim !< griddim specifying the output grid (required by most transformation types)
 ! TODO ripristinare intent(in) dopo le opportune modifiche in grid_class.F90
 TYPE(volgrid6d),INTENT(inout) :: volgrid6d_in(:) !< object to be transformed, it is an array of volgrid6d objects, each of which will be transformed, it is not modified, despite the INTENT(inout)
 TYPE(volgrid6d),POINTER :: volgrid6d_out(:) !< transformed object, it is a non associated pointer to an array of volgrid6d objects which will be allocated by the method
 LOGICAL,INTENT(in),OPTIONAL :: clone !< if provided and \a .TRUE. , clone the \a gaid's from \a volgrid6d_in to \a volgrid6d_out 
+LOGICAL,INTENT(in),OPTIONAL :: decode !< if provided and \a .FALSE. the data volume is not allocated, but work is performed on grid_id's
 CHARACTER(len=*),INTENT(in),OPTIONAL :: categoryappend !< append this suffix to log4fortran namespace category
 
 integer :: i
@@ -1509,7 +1564,7 @@ end if
 
 do i=1,size(volgrid6d_in)
   call transform (this, griddim, volgrid6d_in(i), volgrid6d_out(i), &
-   clone, categoryappend=categoryappend)
+   clone, decode=decode, categoryappend=categoryappend)
 end do
 
 END SUBROUTINE volgrid6dv_transform
@@ -1528,7 +1583,8 @@ integer :: nntime, nana, ntime, ntimerange, nlevel, nvar
 integer :: itime, itimerange, ilevel, ivar, inetwork
 real,allocatable :: voldatir_out(:,:)
 TYPE(conv_func), pointer :: c_func(:)
-type(datetime),allocatable ::validitytime(:,:)
+type(datetime),allocatable :: validitytime(:,:)
+REAL,POINTER :: voldatiin(:,:) ! will have to be 3-d
 
 #ifdef DEBUG
 call l4f_category_log(volgrid6d_in%category,L4F_DEBUG,"start volgrid6d_v7d_transform_compute")
@@ -1596,6 +1652,11 @@ end if
 
 nana=size(vol7d_out%ana)
 
+! allocate once for speed
+IF (.NOT.ASSOCIATED(volgrid6d_in%voldati)) THEN
+  ALLOCATE(voldatiin(volgrid6d_in%griddim%dim%nx, volgrid6d_in%griddim%dim%ny))
+ENDIF
+
 allocate(voldatir_out(nana,1),stat=stallo)
 if (stallo /=0)then
   call l4f_category_log(volgrid6d_in%category,L4F_FATAL,"allocating memory")
@@ -1616,9 +1677,10 @@ do itime=1,ntime
 !!$          voldatir_out=reshape(vol7d_out%voldatir(:,index(vol7d_out%time,validitytime(itime,ilevel)),ilevel,itimerange,ivar,inetwork),(/nana,1/))
 !!$        end if
 
-        call compute(this, &
-         volgrid6d_in%voldati(:,:,ilevel,itime,itimerange,ivar),&
-         voldatir_out)
+        CALL volgrid_get_vol_2d(volgrid6d_in, ilevel, itime, itimerange, ivar, &
+         voldatiin)
+
+        CALL compute(this, voldatiin, voldatir_out)
 
         if (vol7d_out%time_definition == volgrid6d_in%time_definition) then
           vol7d_out%voldatir(:,itime,ilevel,itimerange,ivar,inetwork)=reshape(voldatir_out,(/nana/))
@@ -1640,6 +1702,9 @@ do itime=1,ntime
 end do
 
 deallocate(voldatir_out)
+IF (.NOT.ASSOCIATED(volgrid6d_in%voldati)) THEN
+  DEALLOCATE(voldatiin)
+ENDIF
 if (vol7d_out%time_definition /= volgrid6d_in%time_definition) deallocate(validitytime)
 
 ! Rescale valid data according to variable conversion table
@@ -1813,7 +1878,8 @@ CHARACTER(len=*),OPTIONAL,INTENT(in) :: networkname !< seleziona il network da e
 
 integer :: nana, ntime, ntimerange, nlevel, nvar, nnetwork
 integer :: itime, itimerange, ilevel, ivar, inetwork
-real,allocatable :: voldatir_out(:,:)
+
+REAL,POINTER :: voldatiout(:,:) ! will have to be 3-d
 type(vol7d_network) :: network
 TYPE(conv_func), pointer :: c_func(:)
 !TODO category sarebbe da prendere da vol7d
@@ -1860,40 +1926,46 @@ if (associated(vol7d_in%dativar%r))then
 end if
 
 nana=SIZE(vol7d_in%voldatir, 1)
+! allocate once for speed
+IF (.NOT.ASSOCIATED(volgrid6d_out%voldati)) THEN
+  ALLOCATE(voldatiout(volgrid6d_out%griddim%dim%nx, volgrid6d_out%griddim%dim%ny))
+ENDIF
 
-do itime=1,ntime
-  do itimerange=1,ntimerange
-    do ilevel=1,nlevel
-      do ivar=1,nvar
+DO ivar=1,nvar
+  DO itimerange=1,ntimerange
+    DO itime=1,ntime
+      DO ilevel=1,nlevel
 
-        call compute(this, &
-         vol7d_in%voldatir(:,itime,ilevel,itimerange,ivar,inetwork),&
-         volgrid6d_out%voldati(:,:,ilevel,itime,itimerange,ivar))
-! in vol7d:
-! 1 indice della dimensione "anagrafica"
-! 2 indice della dimensione "tempo"
-! 3 indice della dimensione "livello verticale"
-! 4 indice della dimensione "intervallo temporale"
-! 5 indice della dimensione "variabile"
-! 6 indice della dimensione "rete"
-
-      end do
-    end do
-  end do
-end do
+        CALL compute(this, &
+         vol7d_in%voldatir(:,itime,ilevel,itimerange,ivar,inetwork), voldatiout)
 
 ! Rescale valid data according to variable conversion table
+        IF (ASSOCIATED(c_func)) THEN
+          IF (c_func(ivar)%a /= conv_func_miss%a .OR. &
+           c_func(ivar)%b /= conv_func_miss%b )THEN
+            WHERE(voldatiout(:,:) /= rmiss )
+              voldatiout(:,:) = voldatiout(:,:)*c_func(ivar)%a + c_func(ivar)%b
+            END WHERE
+          ELSE
+            voldatiout(:,:) = rmiss
+          ENDIF
+        ENDIF
+
+        CALL volgrid_set_vol_2d(volgrid6d_out, ilevel, itime, itimerange, ivar, &
+         voldatiout)
+!        call compute(this, &
+!         vol7d_in%voldatir(:,itime,ilevel,itimerange,ivar,inetwork),&
+!         volgrid6d_out%voldati(:,:,ilevel,itime,itimerange,ivar))
+
+      END DO
+    END DO
+  END DO
+END DO
+
+IF (.NOT.ASSOCIATED(volgrid6d_out%voldati)) THEN
+  DEALLOCATE(voldatiout)
+ENDIF
 IF (ASSOCIATED(c_func)) THEN
-  DO ivar = 1, nvar
-    if ( c_func(ivar)%a /= conv_func_miss%a .or. c_func(ivar)%b /= conv_func_miss%b )then
-      WHERE(volgrid6d_out%voldati(:,:,:,:,:,ivar) /= rmiss )
-        volgrid6d_out%voldati(:,:,:,:,:,ivar) = &
-         volgrid6d_out%voldati(:,:,:,:,:,ivar)*c_func(ivar)%a + c_func(ivar)%b
-      END WHERE
-    else
-      volgrid6d_out%voldati(:,:,:,:,:,ivar) = rmiss
-    end if
-  ENDDO
   DEALLOCATE(c_func)
 ENDIF
 
@@ -1909,7 +1981,7 @@ end SUBROUTINE v7d_volgrid6d_transform_compute
 SUBROUTINE v7d_volgrid6d_transform(this, griddim, vol7d_in, volgrid6d_out, &
  networkname, categoryappend)
 TYPE(transform_def),INTENT(in) :: this !< object specifying the abstract transformation
-TYPE(griddim_def),INTENT(in),OPTIONAL :: griddim !< griddim specifying the output grid (require by most transformation types)
+TYPE(griddim_def),INTENT(in),OPTIONAL :: griddim !< griddim specifying the output grid (required by most transformation types)
 ! TODO ripristinare intent(in) dopo le opportune modifiche in grid_class.F90
 TYPE(vol7d),INTENT(inout) :: vol7d_in !< object to be transformed, it is not modified, despite the INTENT(inout)
 TYPE(volgrid6d),INTENT(out) :: volgrid6d_out !< transformed object, it does not need initialisation
@@ -1930,19 +2002,32 @@ nlevel=SIZE(vol7d_in%level)
 nvar=0
 if (associated(vol7d_in%dativar%r)) nvar=size(vol7d_in%dativar%r)
 
+IF (nvar <= 0) THEN ! use vol7d category once it will be implemented
+  CALL l4f_log(L4F_ERROR, &
+   "trying to transform a vol7d object incomplete or without real variables")
+  CALL init(volgrid6d_out) ! initialize to empty
+  CALL raise_error()
+  RETURN
+ENDIF
+
 CALL init(grid_trans, this, vol7d_in, griddim, categoryappend=categoryappend)
 CALL init(volgrid6d_out, griddim, categoryappend=categoryappend)
 
-IF (c_e(grid_trans) .AND. nvar > 0) THEN
+IF (c_e(grid_trans)) THEN
 
   CALL volgrid6d_alloc(volgrid6d_out, griddim%dim, ntime=ntime, nlevel=nlevel, &
    ntimerange=ntimerange, nvar=nvar)
+! how to specify decode here?
   CALL volgrid6d_alloc_vol(volgrid6d_out)
 
   CALL compute(grid_trans, vol7d_in, volgrid6d_out, networkname)
 
   CALL vg6d_wind_rot(volgrid6d_out)
-!ELSE how to signal error status?
+ELSE
+! should log with grid_trans%category, but it is private
+  CALL l4f_log(L4F_ERROR, &
+   "trying to use an invalid grid_transform object")
+  CALL raise_error()
 ENDIF
 
 CALL delete(grid_trans)
@@ -2298,6 +2383,8 @@ type(vol7d_var) :: varu,varv
 type(vol7d_var),allocatable ::varbufr(:)
 double precision,pointer :: rot_mat(:,:,:)
 double precision,allocatable :: tmp_arr(:,:)
+REAL,POINTER :: voldatiu(:,:), voldativ(:,:)
+LOGICAL :: mustconvert
 
 
 IF (.NOT. ALLOCATED(conv_fwd)) CALL vg6d_v7d_var_conv_setup()
@@ -2316,7 +2403,7 @@ iv=index(conv_fwd(:)%v7d_var,varv)
 
 if (iu == 0  .or. iv == 0 )then
   call l4f_category_log(this%category,L4F_FATAL,"B11003 or B11004 not defined by vg6d_v7d_var_conv_setup")
-  call raise_fatal_error ("volgrid6d: B11003 or B11004 not defined by vg6d_v7d_var_conv_setup")
+  call raise_fatal_error ()
 end if
 
 
@@ -2363,26 +2450,16 @@ if (nvaru == 0 .and. nvarv == 0) return
 iu=index(varbufr,varu)
 iv=index(varbufr,varv)
 
-
-if ( conv_fwd(iu)%c_func%a /= conv_fwd(iv)%c_func%a .or. &
- conv_fwd(iu)%c_func%b /= conv_fwd(iv)%c_func%b )then
-  
-  call l4f_category_log(this%category,L4F_WARN,"u and v wind component seam aliens; conversion factor different")
-  call l4f_category_log(this%category,L4F_WARN,"convert units of u and v wind component")
-
-! Rescale valid data according to variable conversion table
-  WHERE(this%voldati(:,:,:,:,:,iu) /= rmiss)
-    this%voldati(:,:,:,:,:,iu) = &
-     this%voldati(:,:,:,:,:,iu)*conv_fwd(iu)%c_func%a + conv_fwd(iu)%c_func%b
-  END WHERE
-  
-  WHERE(this%voldati(:,:,:,:,:,iv) /= rmiss)
-    this%voldati(:,:,:,:,:,iv) = &
-     this%voldati(:,:,:,:,:,iv)*conv_fwd(iv)%c_func%a + conv_fwd(iv)%c_func%b
-  END WHERE
-  
-end if 
-
+if (conv_fwd(iu)%c_func%a /= conv_fwd(iv)%c_func%a .or. &
+ conv_fwd(iu)%c_func%b /= conv_fwd(iv)%c_func%b) then
+    CALL l4f_category_log(this%category,L4F_WARN, &
+   "u and v wind components seem alien, conversion factors different")
+  call l4f_category_log(this%category,L4F_WARN, &
+   "converting units of u and v wind components")
+  mustconvert = .TRUE.
+ELSE
+  mustconvert = .FALSE.
+ENDIF
 
 ! Temporary workspace
 ALLOCATE(tmp_arr(this%griddim%dim%nx, this%griddim%dim%ny),stat=stallo)
@@ -2390,13 +2467,16 @@ if (stallo /=0)then
   call l4f_log(L4F_FATAL,"allocating memory")
   call raise_fatal_error("allocating memory")
 end if
+! allocate once for speed
+IF (.NOT.ASSOCIATED(this%voldati)) THEN
+  ALLOCATE(voldatiu(this%griddim%dim%nx, this%griddim%dim%ny), &
+   voldativ(this%griddim%dim%nx, this%griddim%dim%ny))
+ENDIF
 
 CALL griddim_unproj(this%griddim)
 CALL wind_unrot(this%griddim, rot_mat)
 
-
 a11=1
-
 if (rot)then
   a12=2
   a21=3
@@ -2404,51 +2484,57 @@ else
   a12=3
   a21=2
 end if
-
 a22=4
-
 
 DO k = 1, SIZE(this%timerange)
   DO j = 1, SIZE(this%time)
     DO i = 1, SIZE(this%level)
 
-! Multiply wind components by rotation matrix
-      WHERE(this%voldati(:,:,i,j,k,iu) /= rmiss .AND. &
-       this%voldati(:,:,i,j,k,iv) /= rmiss)
+      CALL volgrid_get_vol_2d(this, i, j, k, iu, voldatiu)
+      CALL volgrid_get_vol_2d(this, i, j, k, iv, voldativ)
 
-        tmp_arr(:,:) = this%voldati(:,:,i,j,k,iu)*rot_mat(:,:,a11) + &
-         this%voldati(:,:,i,j,k,iv)*rot_mat(:,:,a12)
+! convert units forward
+      IF (mustconvert) THEN ! these WHERE should be merged!
+        WHERE(voldatiu /= rmiss)
+          voldatiu = voldatiu*conv_fwd(iu)%c_func%a + conv_fwd(iu)%c_func%b
+        END WHERE
+  
+        WHERE(voldativ /= rmiss)
+          voldativ = voldativ*conv_fwd(iv)%c_func%a + conv_fwd(iv)%c_func%b
+        END WHERE
+      ENDIF
 
-        this%voldati(:,:,i,j,k,iv) = &
-         this%voldati(:,:,i,j,k,iu)*rot_mat(:,:,a21) + &
-         this%voldati(:,:,i,j,k,iv)*rot_mat(:,:,a22)
-
-        this%voldati(:,:,i,j,k,iu) = tmp_arr(:,:)
+! multiply wind components by rotation matrix
+      WHERE(voldatiu /= rmiss .AND. voldativ /= rmiss)
+        tmp_arr(:,:) = voldatiu(:,:)*rot_mat(:,:,a11) + &
+         voldativ(:,:)*rot_mat(:,:,a12)
+        voldativ(:,:) = voldatiu(:,:)*rot_mat(:,:,a21) + &
+         voldativ(:,:)*rot_mat(:,:,a22)
+        voldatiu(:,:) = tmp_arr(:,:)
       END WHERE
+
+! convert units backward
+      IF (mustconvert) THEN ! these WHERE should be merged!
+        WHERE(voldatiu /= rmiss)
+          voldatiu = (voldatiu - conv_fwd(iu)%c_func%b) / conv_fwd(iu)%c_func%a
+        END WHERE
+
+        WHERE(voldativ /= rmiss)
+          voldativ = (voldativ - conv_fwd(iv)%c_func%b) / conv_fwd(iv)%c_func%a 
+        END WHERE
+      ENDIF
+
+      CALL volgrid_set_vol_2d(this, i, j, k, iu, voldatiu)
+      CALL volgrid_set_vol_2d(this, i, j, k, iv, voldativ)
+
     ENDDO
   ENDDO
 ENDDO
 
-DEALLOCATE (rot_mat, tmp_arr)
-
-if ( conv_fwd(iu)%c_func%a /= conv_fwd(iv)%c_func%a .or. &
- conv_fwd(iu)%c_func%b /= conv_fwd(iv)%c_func%b )then
-  
-  call l4f_category_log(this%category,L4F_WARN,"reconvert units of u and v wind component")
-
-! Re-scale valid data according to variable conversion table
-  WHERE(this%voldati(:,:,:,:,:,iu) /= rmiss)
-    this%voldati(:,:,:,:,:,iu) = &
-     ( this%voldati(:,:,:,:,:,iu) - conv_fwd(iu)%c_func%b ) / conv_fwd(iu)%c_func%a
-  END WHERE
-  
-  WHERE(this%voldati(:,:,:,:,:,iv) /= rmiss)
-    this%voldati(:,:,:,:,:,iv) = &
-     ( this%voldati(:,:,:,:,:,iv) - conv_fwd(iv)%c_func%b ) / conv_fwd(iv)%c_func%a 
-  END WHERE
-  
-end if 
-
+IF (.NOT.ASSOCIATED(this%voldati)) THEN
+  DEALLOCATE(voldatiu, voldativ)
+ENDIF
+DEALLOCATE(rot_mat, tmp_arr)
 
 
 end subroutine vg6d_wind__un_rot
@@ -2723,8 +2809,17 @@ integer,intent(in) :: cgrid !< in C grid (Arakawa) we have 0=T,1=U,2=V points
 INTEGER :: nvar,nvaru,nvarv,i,j,k,iv
 type(vol7d_var) :: varu,varv
 type(vol7d_var),allocatable ::varbufr(:)
-double precision,allocatable :: tmp_arr(:,:)
+REAL,ALLOCATABLE :: tmp_arr(:,:)
+REAL,POINTER :: voldatiuv(:,:)
 
+
+IF (cgrid == 0) RETURN ! nothing to do
+IF (cgrid /= 1 .AND. cgrid /= 2) THEN ! wrong cgrid
+  CALL l4f_category_log(this%category,L4F_FATAL,"C grid type "// &
+   TRIM(to_char(cgrid))//" not known")
+  CALL raise_error()
+  RETURN
+ENDIF
 
 IF (.NOT. ALLOCATED(conv_fwd)) CALL vg6d_v7d_var_conv_setup()
 
@@ -2732,13 +2827,13 @@ call init(varu,btable="B11003")
 call init(varv,btable="B11004")
 
 ! test about presence of u and v in standard table
-
 if ( index(conv_fwd(:)%v7d_var,varu) == 0  .or. index(conv_fwd(:)%v7d_var,varv) == 0 )then
-  call l4f_category_log(this%category,L4F_FATAL,"B11003 and/or B11004 not defined by  vg6d_v7d_var_conv_setup")
-  call raise_fatal_error ("volgrid6d: B11003 and/or B11004 not defined by  vg6d_v7d_var_conv_setup")
+  call l4f_category_log(this%category,L4F_FATAL, &
+   "variables B11003 and/or B11004 (wind components) not defined by vg6d_v7d_var_conv_setup")
+  CALL raise_error()
+  RETURN
 end if
 
-nvar=0
 if (associated(this%var))then
   nvar=size(this%var)
   allocate(varbufr(nvar),stat=stallo)
@@ -2748,106 +2843,118 @@ if (associated(this%var))then
   end if
 
   CALL vargrib2varbufr(this%var, varbufr)
+ELSE
+  CALL l4f_category_log(this%category, L4F_ERROR, &
+   "trying to destagger an incomplete volgrid6d object")
+  CALL raise_error()
+  RETURN
 end if
 
 nvaru=COUNT(varbufr==varu)
 nvarv=COUNT(varbufr==varv)
 
 if (nvaru > 1 )then
-  call l4f_category_log(this%category,L4F_WARN,"2 variables refer to u wind component")
-  call raise_error ("volgrid6d:2 variables refer to u wind component")
+  call l4f_category_log(this%category,L4F_WARN, &
+   ">1 variables refer to u wind component, destaggering will not be done ")
+  DEALLOCATE(varbufr)
+  RETURN
 endif
 
 if (nvarv > 1 )then
-  call l4f_category_log(this%category,L4F_WARN,"2 variables refer to v wind component")
-  call raise_error ("volgrid6d:2 variables refer to v wind component")
+  call l4f_category_log(this%category,L4F_WARN, &
+   ">1 variables refer to v wind component, destaggering will not be done ")
+  DEALLOCATE(varbufr)
+  RETURN
 endif
 
 if (nvaru == 0 .and. nvarv == 0) then
-  call l4f_category_log(this%category,L4F_WARN,"no u or v wind component found")
-  call raise_error ("volgrid6d: no u or v wind component found")
+  call l4f_category_log(this%category,L4F_WARN, &
+   "no u or v wind component found in volume, nothing to do")
+  DEALLOCATE(varbufr)
+  RETURN
 endif
 
-if ( COUNT(varbufr/=varu .and. varbufr/=varv) > 0 )then
-  call l4f_category_log(this%category,L4F_WARN,"there are variables different from u and v wind component in C grid")
-  call raise_error ("volgrid6d: there are variables different from u and v wind component in C grid")
+if (COUNT(varbufr/=varu .and. varbufr/=varv) > 0) then
+  call l4f_category_log(this%category,L4F_WARN, &
+   "there are variables different from u and v wind component in C grid")
 endif
 
 ! Temporary workspace
 ALLOCATE(tmp_arr(this%griddim%dim%nx, this%griddim%dim%ny),stat=stallo)
 if (stallo /=0)then
   call l4f_log(L4F_FATAL,"allocating memory")
-  call raise_fatal_error("allocating memory")
+  call raise_fatal_error()
 end if
 
-tmp_arr=rmiss
+! allocate once for speed
+IF (.NOT.ASSOCIATED(this%voldati)) THEN
+  ALLOCATE(voldatiuv(this%griddim%dim%nx, this%griddim%dim%ny), stat=stallo)
+  IF (stallo /= 0) THEN
+    CALL l4f_log(L4F_FATAL,"allocating memory")
+    CALL raise_fatal_error()
+  ENDIF
+ENDIF
 
-timerange: DO k = 1, SIZE(this%timerange)
-  DO j = 1, SIZE(this%time)
-    DO i = 1, SIZE(this%level)
-      DO iv = 1, SIZE(this%var)
-        
-        tmp_arr=rmiss
+IF (cgrid == 1) THEN ! U points to H points
+  DO iv = 1, SIZE(this%var)
+    DO k = 1, SIZE(this%timerange)
+      DO j = 1, SIZE(this%time)
+        DO i = 1, SIZE(this%level)
+          tmp_arr(:,:) = rmiss
+          CALL volgrid_get_vol_2d(this, i, j, k, iv, voldatiuv)
 
-        select case (cgrid)
+! West boundary extrapolation
+          WHERE(voldatiuv(1,:) /= rmiss .AND. voldatiuv(2,:) /= rmiss)
+            tmp_arr(1,:) = voldatiuv(1,:) - (voldatiuv(2,:) - voldatiuv(1,:)) / 2.
+          END WHERE
 
-        case(0)               ! T points; nothing to do
+! Rest of the field
+          WHERE(voldatiuv(1:this%griddim%dim%nx-1,:) /= rmiss .AND. &
+           voldatiuv(2:this%griddim%dim%nx,:) /= rmiss)
+            tmp_arr(2:this%griddim%dim%nx,:) = &
+             (voldatiuv(1:this%griddim%dim%nx-1,:) + &
+             voldatiuv(2:this%griddim%dim%nx,:)) / 2.
+          END WHERE
 
-          exit timerange
-
-        case(1)               ! U points to H points
-
-                                ! West boundary
-          WHERE(this%voldati(1,:,i,j,k,iv) /= rmiss .AND. &
-           this%voldati(2,:,i,j,k,iv) /= rmiss)
-            tmp_arr(1,:) = this%voldati(1,:,i,j,k,iv) - (this%voldati(2,:,i,j,k,iv) - this%voldati(1,:,i,j,k,iv)) / 2.
-          end WHERE
-
-                                ! Rest of the matrix
-          WHERE(this%voldati(1:this%griddim%dim%nx-1,:,i,j,k,iv) /= rmiss .AND. &
-           this%voldati(2:this%griddim%dim%nx,:,i,j,k,iv) /= rmiss)
-
-            tmp_arr(2:this%griddim%dim%nx,:) = (this%voldati(1:this%griddim%dim%nx-1,:,i,j,k,iv) + &
-             this%voldati(2:this%griddim%dim%nx,:,i,j,k,iv)) / 2.
-            
-          end WHERE
-
-          this%voldati(:,:,i,j,k,iv)=tmp_arr
-            
-        CASE (2)              ! V points to H points
-
-                                ! South boundary
-          WHERE(this%voldati(:,1,i,j,k,iv) /= rmiss .AND. &
-           this%voldati(:,2,i,j,k,iv) /= rmiss)
-
-            tmp_arr(:,1) = this%voldati(:,1,i,j,k,iv) - (this%voldati(:,2,i,j,k,iv) - this%voldati(:,1,i,j,k,iv)) / 2.
-
-          end WHERE
-
-                                ! Rest of the matrix
-          WHERE(this%voldati(:,1:this%griddim%dim%ny-1,i,j,k,iv) /= rmiss .AND. &
-           this%voldati(:,2:this%griddim%dim%ny,i,j,k,iv) /= rmiss)
-
-            tmp_arr(:,2:this%griddim%dim%ny) = (this%voldati(:,1:this%griddim%dim%ny-1,i,j,k,iv) + &
-             this%voldati(:,2:this%griddim%dim%ny,i,j,k,iv)) / 2.
-            
-          end WHERE
-
-          this%voldati(:,:,i,j,k,iv)=tmp_arr
-            
-
-        CASE DEFAULT
-
-          call l4f_category_log(this%category,L4F_FATAL,"C grid type not known")
-          call raise_fatal_error ("volgrid6d: C grid type not kmow")
-
-        END select
-
+          voldatiuv(:,:) = tmp_arr
+          CALL volgrid_set_vol_2d(this, i, j, k, iv, voldatiuv)
+        ENDDO
       ENDDO
     ENDDO
   ENDDO
-ENDDO timerange
 
+ELSE IF (cgrid == 2) THEN ! V points to H points
+  DO iv = 1, SIZE(this%var)
+    DO k = 1, SIZE(this%timerange)
+      DO j = 1, SIZE(this%time)
+        DO i = 1, SIZE(this%level)
+          tmp_arr(:,:) = rmiss
+          CALL volgrid_get_vol_2d(this, i, j, k, iv, voldatiuv)
+
+! South boundary extrapolation
+          WHERE(voldatiuv(:,1) /= rmiss .AND. voldatiuv(:,2) /= rmiss)
+            tmp_arr(:,1) = voldatiuv(:,1) - (voldatiuv(:,2) - voldatiuv(:,1)) / 2.
+          END WHERE
+
+! Rest of the field
+          WHERE(voldatiuv(:,1:this%griddim%dim%ny-1) /= rmiss .AND. &
+           voldatiuv(:,2:this%griddim%dim%ny) /= rmiss)
+            tmp_arr(:,2:this%griddim%dim%ny) = &
+             (voldatiuv(:,1:this%griddim%dim%ny-1) + &
+             voldatiuv(:,2:this%griddim%dim%ny)) / 2.
+          END WHERE
+
+          voldatiuv(:,:) = tmp_arr
+          CALL volgrid_set_vol_2d(this, i, j, k, iv, voldatiuv)
+        ENDDO
+      ENDDO
+    ENDDO
+  ENDDO
+ENDIF ! tertium non datur
+
+IF (.NOT.ASSOCIATED(this%voldati)) THEN
+  DEALLOCATE(voldatiuv)
+ENDIF
 DEALLOCATE (tmp_arr)
 
 end subroutine vg6d_c2a_mat

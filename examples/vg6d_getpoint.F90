@@ -242,7 +242,7 @@ IF (ldisplay) CALL display(v7d_coord)
 CALL init(trans, trans_type=trans_type, sub_type=sub_type, &
  ilon=ilon, ilat=ilat, flon=flon, flat=flat, &
  categoryappend="transformation", time_definition=output_td)
-call import(volgrid, filename=input_file, categoryappend="input volume")
+CALL import(volgrid, filename=input_file, decode=.FALSE., categoryappend="input volume")
 
 IF (ldisplay) CALL display(volgrid)
 

@@ -60,10 +60,12 @@ category=l4f_category_get(a_name//".main")
 CALL op_option_nullify(options)
 
 options(1) = op_option_new('v', 'trans-type', trans_type, 'none', help= &
- 'transformation type: ''inter'' for interpolation, ''zoom'' for zooming, &
+ 'transformation type: ''inter'' for interpolation, ''boxinter'' for &
+ &statistical interpolation on boxes, ''zoom'' for zooming, &
  &''boxregrid'' for resolution reduction, ''none'' for no operation')
 options(2) = op_option_new('z', 'sub-type', sub_type, 'near', help= &
- 'transformation subtype, for inter: ''near'', ''bilin'', ''boxaverage'', &
+ 'transformation subtype, for inter: ''near'', ''bilin'', for ''boxinter'': &
+ &''average'', ''max'', ''min'', &
  &for zoom: ''index'', ''coord'', ''coordbb'', for boxregrid: ''average''')
 
 options(3) = op_option_new('u', 'type', type, 'regular_ll', help= &
@@ -161,7 +163,7 @@ CALL delete(opt)
 call l4f_category_log(category,L4F_INFO,"transforming from file:"//trim(infile))
 call l4f_category_log(category,L4F_INFO,"transforming to   file:"//trim(outfile))
 
-if(trans_type == 'inter')then
+if (trans_type == 'inter' .OR. trans_type == 'boxinter') then ! griddim_out needed
 
   call init(griddim_out,&
    type=type,nx=nx,ny=ny, &
@@ -177,7 +179,7 @@ if(trans_type == 'inter')then
 end if
 
 
-call import (volgrid,filename=infile,categoryappend="input")
+CALL import(volgrid,filename=infile,decode=.FALSE.,categoryappend="input")
 if (c2agrid) call vg6d_c2a(volgrid)
 
 
@@ -199,7 +201,7 @@ else
    percentile=0.5D0, &
    categoryappend="trasformation")
 
-  if (trans_type == 'inter') then
+  if (trans_type == 'inter' .OR. trans_type == 'boxinter') then
     CALL transform(trans,griddim_out,volgrid6d_in=volgrid, &
      volgrid6d_out=volgrid_out,clone=.TRUE.,categoryappend="trasformato")
   else
