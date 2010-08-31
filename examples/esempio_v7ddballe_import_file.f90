@@ -47,7 +47,7 @@ call l4f_category_log(category,L4F_INFO,"inizializzazioni")
 CALL init(v7d_file,file=.true.,categoryappend="importBUFR")
 
 call l4f_category_log(category,L4F_INFO,"Leggo i dati")
-CALL import(v7d_file,var="B12001")
+CALL import(v7d_file,var="B12101")
 !CALL import(v7d_file)
 
 call l4f_category_log(category,L4F_INFO,"Fine lettura")

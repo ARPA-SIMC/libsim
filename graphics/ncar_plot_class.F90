@@ -829,7 +829,7 @@ r_pr=pack(v7d%level%l1,v7d%level%level1 == 100 .and. v7d%level%level2 == imiss)/
 
 !vettore temperature
 
-call init(var, btable="B12001")    ! temperatura
+call init(var, btable="B12101")    ! temperatura
 allocate(r_tt(levP))
 r_tt=rmiss
 

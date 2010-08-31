@@ -745,7 +745,7 @@ options(6) = op_option_new('n', 'network-list', network_list, '', help= &
 options(7) = op_option_new('v', 'variable-list', variable_list, '', help= &
  'if input-format is of database type, list of data variables to be extracted &
  &in the form of a comma-separated list of B-table alphanumeric codes, &
- &e.g. ''B13011,B12001''')
+ &e.g. ''B13011,B12101''')
 options(8) = op_option_new(' ', 'anavariable-list', anavariable_list, '', help= &
  'if input-format is of database type, list of station variables to be extracted &
  &in the form of a comma-separated list of B-table alphanumeric codes, &
@@ -837,7 +837,7 @@ options(32) = op_option_new(' ', 'csv-columnorder', csv_columnorder, &
 options(33) = op_option_new(' ', 'csv-variable', csv_variable, 'all', help= &
  'list of variables that have to appear in the data columns of csv output: &
  &''all'' or a comma-separated list of B-table alphanumeric codes, e.g. &
- &''B10004,B12001'' in the desired order')
+ &''B10004,B12101'' in the desired order')
 options(34) = op_option_new(' ', 'csv-header', csv_header, 2, help= &
  'write 0 to 2 header lines at the beginning of csv output')
 options(35) = op_option_new(' ', 'csv-skip-miss', csv_skip_miss, help= &

@@ -75,7 +75,7 @@ call init(trans, trans_type=trans_type,sub_type=sub_type, categoryappend="trasfo
 CALL init(v7d_import,file=.true.,write=.false.,filename=filename,&
  categoryappend="importBUFR",format="BUFR")
 
-call import (v7d_import,var=(/"B12001"/),varkind=(/"r"/))
+call import (v7d_import,var=(/"B12101"/),varkind=(/"r"/))
 
 call display(v7d_import%vol7d)
 

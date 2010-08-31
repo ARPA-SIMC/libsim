@@ -52,15 +52,15 @@ CALL init(v7d_exp,dsn="test",user="test",write=.true.,wipe=.false.)
 
 ! Importo i dati
 !  Esempi:
-!CALL import(v7d,(/"B13011","B12001"/), 255, ti, tf, timerange=vol7d_timerange(4,-1800,0), attr=(/"*B33192","*B33007"/))
-!CALL import(v7d,(/"B13011","B12001"/), 255, ti, tf,  attr=(/"*B33192","*B33007"/))
+!CALL import(v7d,(/"B13011","B12101"/), 255, ti, tf, timerange=vol7d_timerange(4,-1800,0), attr=(/"*B33192","*B33007"/))
+!CALL import(v7d,(/"B13011","B12101"/), 255, ti, tf,  attr=(/"*B33192","*B33007"/))
 !CALL import(v7d)
-!CALL import(v7d,var=(/"B13003","B13011","B12001"/))
-!CALL import(v7d,var=(/"B13003","B13011","B12001"/),varkind=(/"d","r","r"/), network=255, timei=ti, timef=tf&
+!CALL import(v7d,var=(/"B13003","B13011","B12101"/))
+!CALL import(v7d,var=(/"B13003","B13011","B12101"/),varkind=(/"d","r","r"/), network=255, timei=ti, timef=tf&
 ! ,attr=(/"*B33192","*B33007"/),attrkind=(/"i","b"/))
 ! ,attr=(/"*B33192","*B33007"/))
 
-CALL import(v7d,var=(/"B12001"/),varkind=(/"r"/),attr=(/"*B33195","*B33192"/),attrkind=(/"i","b"/))
+CALL import(v7d,var=(/"B12101"/),varkind=(/"r"/),attr=(/"*B33195","*B33192"/),attrkind=(/"i","b"/))
 
 Print *,"Fine estrazione dati"
 
@@ -86,7 +86,7 @@ call init(time, year=2007, month=3, day=18, hour=00,minute=30)
 call init(level, 105,2,0)
 call init(timerange, 0, 0, 0)
 call init(network, 'rete50')
-call init(dativar,"B12001" )
+call init(dativar,"B12101" )
 call init(attrvar,"*B33192" )
 
 

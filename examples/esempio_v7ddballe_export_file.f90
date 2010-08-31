@@ -84,7 +84,7 @@ call init(v7d%network(inetwork), 'generic')
 
 call init(v7d%anavar%c(1), btable="B01019")     ! LONG STATION OR SITE NAME
 call init(v7d%dativar%r(1), btable="B13011")    ! precipitazione
-call init(v7d%dativar%r(2), btable="B12001")    ! temperatura
+call init(v7d%dativar%r(2), btable="B12101")    ! temperatura
 call init(v7d%dativar%r(3), btable="B11001")    ! WIND DIRECTION 
 call init(v7d%dativar%r(4), btable="B11002")    ! WIND SPEED
 

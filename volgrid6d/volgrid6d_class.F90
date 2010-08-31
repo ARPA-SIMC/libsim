@@ -2155,7 +2155,6 @@ INTEGER :: i
 
 IF (.NOT. ALLOCATED(conv_fwd)) CALL vg6d_v7d_var_conv_setup()
 
-!call init(varbufr, btable="B12001")
 
 DO i = 1, SIZE(conv_fwd)
   IF (vargrib == conv_fwd(i)%vg6d_var) THEN

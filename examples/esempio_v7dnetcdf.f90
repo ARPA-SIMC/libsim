@@ -74,7 +74,7 @@ inetwork=1
 call init(v7d%network(inetwork), 'synop')
 call init(v7d%anavar%c(1), btable="B01019")     ! LONG STATION OR SITE NAME
 call init(v7d%dativar%r(1), btable="B13011")    ! precipitazione
-call init(v7d%dativar%r(2), btable="B12001")    ! temperatura
+call init(v7d%dativar%r(2), btable="B12101")    ! temperatura
 call init(v7d%level(1),1,0)                     ! al suolo
 call init(v7d%level(2),103,2)                   ! a 2 m dal suolo
 call init(v7d%timerange(1),1,0, 3600)           ! cumulate n 1 ora

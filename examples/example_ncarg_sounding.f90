@@ -53,7 +53,7 @@ call l4f_category_log(category,L4F_INFO,"inizio")
 CALL init(v7d_dba,file=.true.,write=.false.,filename=filename,&
  categoryappend="importBUFR",format="BUFR")
 
-!call import (v7d_dba,var=(/"B12001","B12003","B11001","B11002"/),varkind=(/"d","d","d","d"/))
+!call import (v7d_dba,var=(/"B12101","B12003","B11001","B11002"/),varkind=(/"d","d","d","d"/))
 call import (v7d_dba)
 
 call l4f_category_log(category,L4F_INFO,"importato vol7d")
