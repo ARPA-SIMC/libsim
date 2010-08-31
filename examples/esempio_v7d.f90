@@ -45,7 +45,7 @@ CALL vol7d_alloc_vol(v7d3)
 ! ho detto che c'è una variabile dati reale (ndativarr=1) e la definisco
 CALL init(v7d1%dativar%d(1), btable='B12101')
 CALL init(v7d2%dativar%d(1), btable='B12101')
-CALL init(v7d2%dativar%i(1), btable='B12003', scalefactor=2)
+CALL init(v7d2%dativar%i(1), btable='B12103', scalefactor=2)
 ! ho detto che c'è una variabile ana intera (nanavari=1) e la definisco
 CALL init(v7d3%anavar%i(1), btable='B10000')
 

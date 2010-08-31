@@ -915,7 +915,7 @@ end select
 
 
 
-call init(var, btable="B12003")    ! temperatura rugiada
+call init(var, btable="B12103")    ! temperatura rugiada
 
 allocate(r_tr(levP))
 r_tr=rmiss
