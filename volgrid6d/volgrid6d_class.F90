@@ -937,17 +937,21 @@ TYPE(grid_id),INTENT(in),OPTIONAL :: gaid_template !< eventuale template sul qua
 logical,intent(in),optional :: clone !< se fornito e \c .TRUE., clona i gaid to gridinfo
 
 TYPE(grid_id) :: gaid
+LOGICAL :: usetemplate
+REAL,POINTER :: voldati(:,:)
 
 #ifdef DEBUG
 call l4f_category_log(this%category,L4F_DEBUG,"export_to_gridinfo")
 #endif
 
-gaid = grid_id_new()
+usetemplate = .FALSE.
 
+gaid = grid_id_new()
 if (present(gaid_template)) then
   call copy(gaid_template, gaid)
+  usetemplate = c_e(gaid)
 #ifdef DEBUG
-  call l4f_category_log(this%category,L4F_DEBUG,"cloning to a new gaid")
+  call l4f_category_log(this%category,L4F_DEBUG,"template cloned to a new gaid")
 #endif
 else
   gaid = gridinfo%gaid ! is this really a good thing? (gridinfo was intent(out))!
@@ -955,12 +959,11 @@ end if
 
 
 if (.not.c_e(gaid)) then
-
   if (c_e(this%gaid(ilevel,itime,itimerange,ivar))) then
     if (optio_log(clone)) then
       call copy(this%gaid(ilevel,itime,itimerange,ivar), gaid)
 #ifdef DEBUG
-      CALL l4f_category_log(this%category,L4F_DEBUG,"cloning to a new gaid")
+      CALL l4f_category_log(this%category,L4F_DEBUG,"original gaid cloned to a new one")
 #endif
     else
       gaid = this%gaid(ilevel,itime,itimerange,ivar)
@@ -968,7 +971,7 @@ if (.not.c_e(gaid)) then
   else
 
     CALL l4f_category_log(this%category,L4F_INFO,&
-     "cannot find a valid gaid, you will not be able to export gridinfo to a file")
+     "cannot find a valid gaid, you may not be able to export gridinfo to a file")
 
   end if
 end if
@@ -984,8 +987,14 @@ call init(gridinfo,gaid,&
 ! reset the gridinfo, bad but necessary at this point for encoding the field
 call export(gridinfo%griddim, gridinfo%gaid)
 ! encode the field
-IF (ASSOCIATED(this%voldati)) &
+IF (ASSOCIATED(this%voldati)) THEN
  CALL encode_gridinfo(gridinfo, this%voldati(:,:,ilevel,itime,itimerange,ivar))
+ELSE IF (usetemplate) THEN ! field must be forced into template in this case
+  NULLIFY(voldati)
+  CALL volgrid_get_vol_2d(this, ilevel, itime, itimerange, ivar, voldati)
+  CALL encode_gridinfo(gridinfo, voldati)
+  DEALLOCATE(voldati)
+ENDIF
 
 end subroutine export_to_gridinfo
 

@@ -249,6 +249,7 @@ IF (this%driver == grid_id_gdal) THEN
   ELSE
     imode = GA_ReadOnly
   ENDIF
+  CALL gdalallregister()
   this%gdalid = gdalopen(TRIM(filename(n+1:))//C_NULL_CHAR, imode)
 ENDIF
 #endif
@@ -686,7 +687,7 @@ IF (c_e(this%gaid)) CALL grid_id_decode_data_gribapi(this%gaid, field)
 #endif
 #ifdef HAVE_LIBGDAL
 ! subarea?
-IF (gdalassociated(this%gdalid)) field(:,:) = gridinfo_decode_data_gdal(this, gdalid)
+IF (gdalassociated(this%gdalid)) CALL grid_id_decode_data_gdal(this%gdalid, field)
 #endif
 
 END SUBROUTINE grid_id_decode_data
@@ -700,12 +701,16 @@ TYPE(grid_id),INTENT(inout) :: this !< gridinfo object
 REAL,intent(in) :: field(:,:) !< data array to be encoded
 
 #ifdef HAVE_LIBGRIBAPI
-IF (c_e(this%gaid)) CALL grid_id_encode_data_gribapi(this%gaid, field)
+IF (this%driver == grid_id_grib_api) THEN
+  IF (c_e(this%gaid)) CALL grid_id_encode_data_gribapi(this%gaid, field)
+ENDIF
 #endif
 #ifdef HAVE_LIBGDAL
+IF (this%driver == grid_id_gdal) THEN
 !gdalid = grid_id_get_gdalid(this%gaid)
-call l4f_log(L4F_WARN,"export to gdal not implemented" )
+  CALL l4f_log(L4F_WARN,"export to gdal not implemented" )
 ! subarea?
+ENDIF
 #endif
 
 END SUBROUTINE grid_id_encode_data
@@ -912,7 +917,7 @@ END SUBROUTINE grid_id_encode_data_gribapi
 
 #ifdef HAVE_LIBGDAL
 SUBROUTINE grid_id_decode_data_gdal(gdalid, field)
-INTEGER,INTENT(in) :: gdalid ! gdal id
+TYPE(gdalrasterbandh),INTENT(in) :: gdalid ! gdal id
 REAL,INTENT(out) :: field(:,:) ! array of decoded values
 
 TYPE(gdaldataseth) :: hds
@@ -1002,8 +1007,7 @@ ENDIF
 ier = gdalrasterio_float32(gdalid, GF_Read, 0_c_int, 0_c_int, nrx, nry, vector, nrx, nry)
 
 IF (ier /= 0) THEN ! error in read
-  CALL l4f_category_log(this%category,L4F_ERROR, &
-   'gdal error in reading with gdal driver')
+  CALL l4f_log(L4F_ERROR, 'gdal error in reading with gdal driver')
   CALL raise_error()
   vector(:) = rmiss
   RETURN

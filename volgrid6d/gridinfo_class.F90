@@ -381,6 +381,7 @@ else
   CALL l4f_category_log(category,L4F_ERROR, &
    "error opening file: "//TRIM(filename))  
   CALL raise_error()
+  RETURN
 end if
 
 CALL l4f_category_log(category,L4F_INFO, &
@@ -416,6 +417,7 @@ IF (ngrid > 0) THEN
 
 ENDIF
 
+! attenzione, modificare:!!!!
 CALL delete(input_file)
 !chiudo il logger
 CALL l4f_category_delete(category)
@@ -448,12 +450,16 @@ call l4f_category_log(this%category,L4F_DEBUG,"export to gaid" )
 CALL export(this%griddim, this%gaid)
 
 #ifdef HAVE_LIBGRIBAPI
-gaid = grid_id_get_gaid(this%gaid)
-IF (c_e(gaid)) CALL gridinfo_export_gribapi(this, gaid)
+IF (grid_id_get_driver(this%gaid) == 'grib_api') THEN
+  gaid = grid_id_get_gaid(this%gaid)
+  IF (c_e(gaid)) CALL gridinfo_export_gribapi(this, gaid)
+ENDIF
 #endif
 #ifdef HAVE_LIBGDAL
+IF (grid_id_get_driver(this%gaid) == 'gdal') THEN
 !gdalid = grid_id_get_gdalid(this%gaid)
-call l4f_category_log(this%category,L4F_WARN,"export to gdal not implemented" )
+  CALL l4f_category_log(this%category,L4F_WARN,"export to gdal not implemented" )
+ENDIF
 #endif
 
 END SUBROUTINE gridinfo_export

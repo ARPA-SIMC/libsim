@@ -1161,8 +1161,8 @@ hds = gdalgetbanddataset(gdalid) ! go back to dataset
 ier = gdalgetgeotransform(hds, geotrans)
 ! get grid corners
 CALL gdalapplygeotransform(geotrans, 0.5_c_double, 0.5_c_double, x1, y1)
-CALL gdalapplygeotransform(geotrans, &
- this%dim%nx-0.5_c_double, this%dim%ny-0.5_c_double, x2, y2)
+CALL gdalapplygeotransform(geotrans, gdalgetrasterbandxsize(gdalid)-0.5_c_double, &
+ gdalgetrasterbandysize(gdalid)-0.5_c_double, x2, y2)
 
 IF (geotrans(3) == 0.0_c_double .AND. geotrans(5) == 0.0_c_double) THEN
 ! transformation is diagonal, no transposing
