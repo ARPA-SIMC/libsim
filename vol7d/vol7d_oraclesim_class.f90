@@ -359,6 +359,10 @@ nvar = COUNT(varbt_req)
 IF (nvar == 0) THEN
   CALL l4f_log(L4F_WARN, 'nessuna delle variabili richieste '//TRIM(var(1))// &
    '... e` valida')
+! messaggio da cancellare in futuro
+  CALL l4f_log(L4F_WARN, 'attenzione che ora le variabili      B10061,B12001,B12003')
+  CALL l4f_log(L4F_WARN, 'vanno sostituite rispettivamente con B10060,B12101,B12103')
+  
   RETURN
 ENDIF
 

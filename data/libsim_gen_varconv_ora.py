@@ -151,6 +151,10 @@ EOF
     sqlplus.stdin.write(query)
     for row in csv.reader(sqlplus.stdout, delimiter=","):
         if len(row) != 6: continue
+# sporca conversione per il transiente
+        if row[1].rstrip() == 'B10061': row[1] = 'B10060'
+        if row[1].rstrip() == 'B12001': row[1] = 'B12101'
+        if row[1].rstrip() == 'B12003': row[1] = 'B12103'
         oratable.append({"oracleid": int(row[0]),
                          "blocal": row[1].rstrip(),
                          "umis_princ": row[2].rstrip(),
