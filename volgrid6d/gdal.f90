@@ -230,7 +230,7 @@ INTERFACE
    BIND(C,name="GDALGetRasterNoDataValue")
   IMPORT
   TYPE(gdalrasterbandh),VALUE :: hband
-  INTEGER(kind=c_int),INTENT(out) :: pbsuccess ! boolean indicating if a value is actually associated with this layer
+  INTEGER(kind=c_int),INTENT(out) :: pbsuccess ! boolean indicating if a value is actually associated with this layer (!0 = true)
   REAL(kind=c_double) :: gdalgetrasternodatavalue
   END FUNCTION gdalgetrasternodatavalue
 
@@ -239,7 +239,7 @@ INTERFACE
    BIND(C,name="GDALGetRasterMinimum")
   IMPORT
   TYPE(gdalrasterbandh),VALUE :: hband
-  INTEGER(kind=c_int),INTENT(out) :: pbsuccess ! boolean indicating if a value is a tight minimum or not
+  INTEGER(kind=c_int),INTENT(out) :: pbsuccess ! boolean indicating if a value is a tight minimum or not (!0 = true)
   REAL(kind=c_double) :: gdalgetrasterminimum
   END FUNCTION gdalgetrasterminimum
 
@@ -248,7 +248,7 @@ INTERFACE
    BIND(C,name="GDALGetRasterMaximum")
   IMPORT
   TYPE(gdalrasterbandh),VALUE :: hband
-  INTEGER(kind=c_int),INTENT(out) :: pbsuccess ! boolean indicating if a value is a tight maximum or not
+  INTEGER(kind=c_int),INTENT(out) :: pbsuccess ! boolean indicating if a value is a tight maximum or not (!0 = true)
   REAL(kind=c_double) :: gdalgetrastermaximum
   END FUNCTION gdalgetrastermaximum
 

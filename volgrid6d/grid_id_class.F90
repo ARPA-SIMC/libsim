@@ -1014,10 +1014,18 @@ IF (ier /= 0) THEN ! error in read
 ELSE
 ! set missing value if necessary
   gdalmiss = gdalgetrasternodatavalue(gdalid, ier)
-  IF (ier == 0) THEN ! success -> there are missing values
+  IF (ier /= 0) THEN ! success -> there are missing values
+#ifdef DEBUG
+  CALL l4f_log(L4F_INFO, 'gdal missing data value: '//TRIM(to_char(gdalmiss)))
+#endif
     WHERE(vector(:) == gdalmiss)
       vector(:) = rmiss
     END WHERE
+  ELSE
+#ifdef DEBUG
+  CALL l4f_log(L4F_INFO, 'gdal no missing data found in band')
+#endif
+
   ENDIF
 ENDIF
 
