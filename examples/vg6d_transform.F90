@@ -21,6 +21,9 @@ use log4fortran
 use volgrid6d_class
 use grid_class
 use grid_transform_class
+use grid_id_class
+use err_handling
+use char_utilities
 use getopt_m
 
 implicit none
@@ -46,6 +49,9 @@ type(op_option) :: options(30) ! remember to update dimension when adding option
 type(optionparser) :: opt
 integer :: iargc
 LOGICAL :: version
+INTEGER,POINTER :: w_s(:), w_e(:)
+TYPE(grid_file_id) :: file_template
+TYPE(grid_id) :: gaid_template
 
 !questa chiamata prende dal launcher il nome univoco
 call l4f_launcher(a_name,a_name_force="volgrid6dtransform")
@@ -187,10 +193,28 @@ if (trans_type == 'none') then
 
   !call display(volgrid)
   !exportazione
-  call export (volgrid,filename=outfile,categoryappend="exportazione")
+  i = word_split(outfile, w_s, w_e, ':')
 
+  IF (i == 3) THEN ! template requested (grib_api:template_file:output_file)
+    file_template = grid_file_id_new(outfile(w_s(1):w_e(2)), 'r')
+    gaid_template = grid_id_new(file_template)
+    IF (c_e(gaid_template)) THEN
+      CALL export (volgrid, filename=outfile(w_s(1):w_e(1))//':'// &
+       outfile(w_s(3):w_e(3)), gaid_template=gaid_template, &
+       categoryappend="export_template")
+    ELSE
+      CALL l4f_category_log(category,L4F_FATAL, &
+       "opening output template "//TRIM(outfile))
+      CALL raise_fatal_error()
+    ENDIF
+
+  ELSE ! simple export
+    CALL export(volgrid,filename=outfile,categoryappend="export")
+
+  ENDIF
   call l4f_category_log(category,L4F_INFO,"end")
 
+  DEALLOCATE(w_s, w_e)
   if (associated(volgrid)) call delete (volgrid)
 
 else
