@@ -80,12 +80,14 @@ TYPE(vol7d) :: that1, that2, other1
 IF (PRESENT(other)) THEN
   CALL vol7d_recompute_statistical_processing_agg(this, that1, stat_proc, &
    step, start, frac_valid, other=other1, stat_proc_input=stat_proc_input)
-  CALL init(that2, time_definition=this%time_definition)
+!  CALL init(that2, time_definition=this%time_definition)
+  CALL vol7d_extend_cumavg_diff(other1, that2, stat_proc, step, full_steps, other=other)
 !  CALL vol7d_recompute_statistical_processing_diff(other1, that2, stat_proc, step, full_steps, other=other)
 ELSE
   CALL vol7d_recompute_statistical_processing_agg(this, that1, stat_proc, &
    step, start, frac_valid, stat_proc_input=stat_proc_input)
-  CALL init(that2, time_definition=this%time_definition)
+!  CALL init(that2, time_definition=this%time_definition)
+  CALL vol7d_extend_cumavg_diff(this, that2, stat_proc, step, full_steps)
 !  CALL vol7d_recompute_statistical_processing_diff(this, that2, stat_proc, step, full_steps)
 ENDIF
 
@@ -111,10 +113,6 @@ END SUBROUTINE vol7d_recompute_statistical_processing
 !!    and equal to a multiplier of \a step
 !!    - intervallo di cumulazione che sia uguale o un sottomultiplo dell'intervallo
 !!      di cumulazione desiderato \a step
-
-
-!siamoqua
-!SUBROUTINE vol7d_extend_cumavg_sum(this, that, tri, step, start, frac_valid, other)
 SUBROUTINE vol7d_recompute_statistical_processing_agg(this, that, stat_proc, &
  step, start, frac_valid, other, stat_proc_input)
 TYPE(vol7d),INTENT(inout) :: this !< volume providing data to be recomputed, it is not modified by the method, apart from performing a \a vol7d_alloc_vol on it
