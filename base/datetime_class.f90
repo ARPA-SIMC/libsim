@@ -67,6 +67,15 @@ TYPE(timedelta), PARAMETER :: timedelta_0=timedelta(0, 0)
 INTEGER, PARAMETER :: datetime_utc=1
 !> inizializza con l'ora locale
 INTEGER, PARAMETER :: datetime_local=2
+!> Minimum valid value for datetime
+TYPE(datetime), PARAMETER :: datetime_min=datetime(-HUGE(1_int_ll)-1)
+!> Minimum valid value for datetime
+TYPE(datetime), PARAMETER :: datetime_max=datetime(HUGE(1_int_ll)-1)
+!> Minimum valid value for timedelta
+TYPE(timedelta), PARAMETER :: timedelta_min=timedelta(-HUGE(1_int_ll)-1,0)
+!> Minimum valid value for timedelta
+TYPE(timedelta), PARAMETER :: timedelta_max=timedelta(HUGE(1_int_ll)-1,0)
+
 
 INTEGER(kind=dateint), PARAMETER :: &
  sec_in_day=86400, &
@@ -92,12 +101,14 @@ INTEGER(KIND=int_ll),PARAMETER :: &
 
 PRIVATE
 PUBLIC datetime, datetime_miss, datetime_utc, datetime_local, &
+ datetime_min, datetime_max, &
  datetime_new, init, delete, getval, to_char, &
  read_unit, write_unit, &
  OPERATOR(==), OPERATOR(/=), OPERATOR(>), OPERATOR(<), &
  OPERATOR(>=), OPERATOR(<=), OPERATOR(+), OPERATOR(-), &
  OPERATOR(*), OPERATOR(/), mod, &
- timedelta, timedelta_miss, timedelta_new, timedelta_0, timedelta_getamsec,&
+ timedelta, timedelta_miss, timedelta_new, timedelta_0, &
+ timedelta_min, timedelta_max, timedelta_getamsec,&
  display
 
 !> Costruttori per le classi datetime e timedelta. Devono essere richiamati
@@ -1254,8 +1265,8 @@ TYPE(timedelta),INTENT(IN) :: this
 INTEGER,INTENT(IN) :: n
 TYPE(timedelta) :: res
 
-res%iminuti = this%iminuti*n
-res%month = this%month*n
+res%iminuti = this%iminuti/n
+res%month = this%month/n
 
 END FUNCTION timedelta_divint
 
