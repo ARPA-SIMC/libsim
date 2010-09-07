@@ -64,7 +64,8 @@ CALL import(db_v7d, (/'B13011'/), (/network/), &
 PRINT*,SHAPE(db_v7d%vol7d%voldatir)
 ! Cumulo i dati su intervalli orari
 CALL init(dt_cum, hour=1)
-CALL vol7d_cumulate(db_v7d%vol7d, vol_cumh, dt_cum)
+CALL vol7d_recompute_stat_proc(db_v7d%vol7d, vol_cumh, 1, dt_cum)
+!CALL vol7d_cumulate(db_v7d%vol7d, vol_cumh, dt_cum)
 ! Mi faccio dare una "vista" bidimensionale dei miei dati
 CALL vol7d_get_voldatir(vol_cumh, (/vol7d_ana_d,vol7d_time_d/), vol2dp=vol2d_cum)
 ! Stampo la media su tutte le stazioni ora per ora
@@ -80,7 +81,8 @@ ENDDO
 ! Cumulo i dati su intervalli giornalieri
 CALL init(dt_cum, day=1)
 CALL init(tc, year=2007, month=3, day=17, hour=00)
-CALL vol7d_cumulate(vol_cumh, vol_cumd, dt_cum, tc)
+CALL vol7d_recompute_stat_proc(vol_cumh, vol_cumd, 1, dt_cum, tc)
+!CALL vol7d_cumulate(vol_cumh, vol_cumd, dt_cum, tc)
 ! Mi faccio dare una "vista" bidimensionale dei miei dati
 CALL vol7d_get_voldatir(vol_cumd, (/vol7d_ana_d,vol7d_time_d/), vol2dp=vol2d_cum)
 
