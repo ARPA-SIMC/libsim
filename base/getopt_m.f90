@@ -759,8 +759,11 @@ CHARACTER(len=1024) :: arg, optarg
 i = 1
 DO WHILE(i <= iargc())
   CALL getarg(i, arg)
-  IF (arg == '--') THEN ! end of options
+  IF (arg == '--') THEN ! end of options, skip --
     nextarg = i + 1
+    RETURN
+  ELSE IF (arg == '-') THEN ! end of options
+    nextarg = i
     RETURN
   ELSE IF (arg(1:2) == '--') THEN ! long option
     indeq = INDEX(arg, '=')
