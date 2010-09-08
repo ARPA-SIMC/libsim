@@ -25,7 +25,11 @@ call l4f_category_log(this%category,L4F_DEBUG,"ndativar*: "//to_char(ndativar/**
 
 do iiiii=1,ndativar/**/VOL7D_POLY_TYPES_V
 
-  !call l4f_category_log(this%category,L4F_DEBUG,"indice iiiii: "//to_char(iiiii))
+   call l4f_category_log(this%category,L4F_DEBUG,"ndativar*: "//&
+    to_char(ndativar/**/VOL7D_POLY_TYPES_V ))
+#ifdef DEBUG
+  call l4f_category_log(this%category,L4F_DEBUG,"indice iiiii: "//to_char(iiiii))
+#endif
   
   if (.not.lvar/**/VOL7D_POLY_TYPES_V/**/(iiiii)) cycle
   if (.not.c_e(this%vol7d%voldati/**/VOL7D_POLY_TYPES_V(i,ii,iii,iiii,iiiii,iiiiii))) cycle
@@ -48,8 +52,11 @@ do iiiii=1,ndativar/**/VOL7D_POLY_TYPES_V
   else
 
 
-    CALL l4f_category_log(this%category,L4F_DEBUG,"setto: "//to_char(this%vol7d%dativar%/**/VOL7D_POLY_TYPES_V(iiiii)%btable)//' '// &
-     to_char(this%vol7d%voldati/**/VOL7D_POLY_TYPES_V(i,ii,iii,iiii,iiiii,iiiiii)))
+#ifdef DEBUG
+     CALL l4f_category_log(this%category,L4F_DEBUG,"setto: "&
+          //to_char(this%vol7d%dativar%/**/VOL7D_POLY_TYPES_V(iiiii)%btable)//' '// &
+          to_char(this%vol7d%voldati/**/VOL7D_POLY_TYPES_V(i,ii,iii,iiii,iiiii,iiiiii)))
+#endif
 
     call idba_set (this%handle,this%vol7d%dativar%/**/VOL7D_POLY_TYPES_V(iiiii)%btable , &
      this%vol7d%voldati/**/VOL7D_POLY_TYPES_V(i,ii,iii,iiii,iiiii,iiiiii))
@@ -58,6 +65,12 @@ do iiiii=1,ndativar/**/VOL7D_POLY_TYPES_V
   end if
 
   if (any(lattrr).or.any(lattri).or.any(lattrb).or.any(lattrd).or.any(lattrc))then
+
+#ifdef DEBUG
+     CALL l4f_category_log(this%category,L4F_DEBUG,&
+          "I have attributes to write")
+#endif
+
 
     !print*,"eseguo prendilo per attributi"
     if (write) call idba_prendilo (this%handle)

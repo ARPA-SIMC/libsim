@@ -457,7 +457,7 @@ idat=imiss
 if (associated(this%volanar)) then
   do i=1,size(this%anavar%r)
     rdat=this%volanar(1,i,1)
-    if (associated(this%anavar%i)) call display(this%anavar%r(i),idat,rdat,ddat,bdat,cdat)
+    if (associated(this%anavar%r)) call display(this%anavar%r(i),idat,rdat,ddat,bdat,cdat)
   end do
 end if
 rdat=rmiss
@@ -516,7 +516,7 @@ idat=imiss
 if (associated(this%voldatir)) then
   do i=1,size(this%dativar%r)
     rdat=this%voldatir(1,1,1,1,i,1)
-    if (associated(this%dativar%i)) call display(this%dativar%r(i),idat,rdat,ddat,bdat,cdat)
+    if (associated(this%dativar%r)) call display(this%dativar%r(i),idat,rdat,ddat,bdat,cdat)
   end do
 end if
 rdat=rmiss
@@ -1049,7 +1049,14 @@ ENDIF
 CALL vol7d_check_alloc(this)
 
 ! Creo gli indici var-attr
+
+#ifdef DEBUG
+CALL l4f_log(L4F_DEBUG,"calling: vol7d_set_attr_ind")
+#endif
+
 CALL vol7d_set_attr_ind(this)
+
+
 
 END SUBROUTINE vol7d_alloc_vol
 
@@ -2296,8 +2303,6 @@ call vol7d_alloc (this, &
  nanavarattrr=nanavarattrr, nanavarattri=nanavarattri, nanavarattrb=nanavarattrb, &
  nanavarattrd=nanavarattrd, nanavarattrc=nanavarattrc)
 
-call vol7d_alloc_vol (this)
-
 
 if (associated(this%ana))       call read_unit(this%ana, lunit)
 if (associated(this%time))      call read_unit(this%time, lunit)
@@ -2340,6 +2345,8 @@ if (associated(this%dativarattr%i)) read(unit=lunit)this%dativarattr%i
 if (associated(this%dativarattr%b)) read(unit=lunit)this%dativarattr%b
 if (associated(this%dativarattr%d)) read(unit=lunit)this%dativarattr%d
 if (associated(this%dativarattr%c)) read(unit=lunit)this%dativarattr%c
+
+call vol7d_alloc_vol (this)
 
 !! Volumi di valori e attributi per anagrafica e dati
 

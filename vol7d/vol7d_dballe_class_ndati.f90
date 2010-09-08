@@ -21,8 +21,10 @@ if (associated(this%vol7d%dativar%/**/VOL7D_POLY_TYPES_V))then
    ndativar/**/VOL7D_POLY_TYPES_V=size(this%vol7d%dativar%/**/VOL7D_POLY_TYPES_V(:))
    allocate (lvar/**/VOL7D_POLY_TYPES_V(ndativar/**/VOL7D_POLY_TYPES_V))
 
+#ifdef DEBUG
    call l4f_category_log(this%category,L4F_DEBUG,"ndativar*: "//&
     to_char(ndativar/**/VOL7D_POLY_TYPES_V ))
+#endif
 
    lvar/**/VOL7D_POLY_TYPES_V(ndativar/**/VOL7D_POLY_TYPES_V)=.false.
    if (present(var))then
@@ -42,6 +44,12 @@ end if
 if (associated(this%vol7d%dativarattr%/**/VOL7D_POLY_TYPES_V))then
    ndatiattr/**/VOL7D_POLY_TYPES_V=size(this%vol7d%datiattr%/**/VOL7D_POLY_TYPES_V(:))
    allocate (lattr/**/VOL7D_POLY_TYPES_V(ndatiattr/**/VOL7D_POLY_TYPES_V))
+
+#ifdef DEBUG
+   call l4f_category_log(this%category,L4F_DEBUG,"ndatiattr*: "//&
+    to_char(ndatiattr/**/VOL7D_POLY_TYPES_V ))
+#endif
+
    lattr/**/VOL7D_POLY_TYPES_V(ndatiattr/**/VOL7D_POLY_TYPES_V)=.false.
    if (present(attr))then
       lattr/**/VOL7D_POLY_TYPES_V(:)=.false.
