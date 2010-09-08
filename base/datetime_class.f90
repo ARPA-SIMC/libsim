@@ -108,7 +108,7 @@ PUBLIC datetime, datetime_miss, datetime_utc, datetime_local, &
  OPERATOR(>=), OPERATOR(<=), OPERATOR(+), OPERATOR(-), &
  OPERATOR(*), OPERATOR(/), mod, &
  timedelta, timedelta_miss, timedelta_new, timedelta_0, &
- timedelta_min, timedelta_max, timedelta_getamsec,&
+ timedelta_min, timedelta_max, timedelta_getamsec, timedelta_depop, &
  display
 
 !> Costruttori per le classi datetime e timedelta. Devono essere richiamati
@@ -1072,6 +1072,27 @@ INTEGER(kind=int_ll) :: timedelta_getamsec !< millisecondi totali
 timedelta_getamsec = this%iminuti
 
 END FUNCTION timedelta_getamsec
+
+
+!> Depopularize a \a timedelta object.
+!! If the object represents a "popular" or mixed interval, a fixed
+!! interval representation is returned, by recomputing it on a
+!! standard period (starting from 1970-01-01); if it represents
+!! already a fixed interval, the same object is returned.
+FUNCTION timedelta_depop(this)
+TYPE(timedelta),INTENT(IN) :: this !< object to be depopularized
+TYPE(timedelta) :: timedelta_depop
+
+TYPE(datetime) :: tmpdt
+
+IF (this%month == 0) THEN
+  timedelta_depop = this
+ELSE
+  tmpdt = datetime_new(1970, 1, 1)
+  timedelta_depop = (tmpdt + this) - tmpdt
+ENDIF
+
+END FUNCTION timedelta_depop
 
 
 elemental FUNCTION timedelta_eq(this, that) RESULT(res)
