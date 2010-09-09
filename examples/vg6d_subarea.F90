@@ -36,7 +36,6 @@ TYPE(grid_file_id) :: ifile,ofile
 TYPE(grid_id) :: input_grid_id
 INTEGER :: gaid
 
-integer :: ix,iy,fx,fy,iox,ioy,fox,foy,inx,iny,fnx,fny,newx,newy
 doubleprecision ::  ilon,ilat,flon,flat
 real, allocatable :: field(:,:),fieldz(:,:)
 type(griddim_def) :: griddim_out
@@ -45,6 +44,7 @@ type(grid_transform) :: grid_trans
 
 integer :: nx,ny,component_flag,npx,npy
 doubleprecision :: lon_min, lon_max, lat_min, lat_max
+INTEGER :: ix, iy, fx, fy
 doubleprecision :: latitude_south_pole,longitude_south_pole,angle_rotation
 character(len=80) :: type,trans_type,sub_type
 CHARACTER(len=3) :: set_scmode
@@ -103,17 +103,25 @@ options(15) = op_option_new('c', 'flon', flon, 30.D0, help= &
  'longitude of the northeastern zooming/bounding box corner')
 options(16) = op_option_new('d', 'flat', flat, 60.D0, help= &
  'latitude of the northeastern zooming/bounding box corner')
+options(17) = op_option_new(' ', 'ix', ix, 1, help= &
+ 'x-index of the southwestern zooming corner')
+options(18) = op_option_new(' ', 'iy', iy, 1, help= &
+ 'y-index of the southwestern zooming corner')
+options(19) = op_option_new(' ', 'fx', fx, 31, help= &
+ 'x-index of the northeastern zooming corner')
+options(20) = op_option_new(' ', 'fy', fy, 31, help= &
+ 'y-index of the northeastern zooming corner')
 
-options(17) = op_option_new('f', 'npx', npx, 4, help= &
+options(21) = op_option_new('f', 'npx', npx, 4, help= &
  'number of nodes along x axis on input grid, over which to perform average for boxregrid')
-options(18) = op_option_new('g', 'npy', npy, 4, help= &
+options(22) = op_option_new('g', 'npy', npy, 4, help= &
  'number of nodes along x axis on input grid, over which to perform average for boxregrid')
 
-!options(19) = op_option_new('e', 'a-grid', c2agrid, help= &
+!options(28) = op_option_new('e', 'a-grid', c2agrid, help= &
 ! 'interpolate U/V points of an Arakawa C grid on the corresponding T points &
 ! &of an Arakawa A grid')
 
-!options(20) = op_option_new('t', 'component-flag', component_flag, &
+!options(29) = op_option_new('t', 'component-flag', component_flag, &
 ! 0, help='wind component flag in interpolated grid, 0=wind components referred to &
 ! &geographic E an N directions, 1=wind components referred to grid x and y &
 ! &directions')
@@ -122,7 +130,7 @@ options(18) = op_option_new('g', 'npy', npy, 4, help= &
 ! are interpolated
 component_flag = 0
 
-options(21) = op_option_new(' ', 'set-scmode', set_scmode, 'xxx', &
+options(30) = op_option_new(' ', 'set-scmode', set_scmode, 'xxx', &
  help='set output grid scanning mode to a particular standard value: &
  &3 binary digits indicating respectively iScansNegatively, jScansPositively and &
  &jPointsAreConsecutive (grib_api jargon), 0 for false, 1 for true, &
@@ -130,10 +138,10 @@ options(21) = op_option_new(' ', 'set-scmode', set_scmode, 'xxx', &
  &Any other character indicates to keep the &
  &corresponding original scanning mode value')
 
-options(25) = op_option_new(' ', 'display', ldisplay, help= &
+! display option
+options(38) = op_option_new(' ', 'display', ldisplay, help= &
  'briefly display the data volume imported, warning: this option is incompatible &
  &with output on stdout.')
-
 ! help options
 options(39) = op_option_help_new('h', 'help', help= &
  'show an help message and exit')
@@ -187,7 +195,7 @@ if(trans_type == 'inter')then
    lon_min=lon_min, lon_max=lon_max, lat_min=lat_min, lat_max=lat_max, &
    component_flag=component_flag, latitude_south_pole=latitude_south_pole, &
    longitude_south_pole=longitude_south_pole, angle_rotation=angle_rotation, &
-   categoryappend="regular_ll")
+   categoryappend="requested_grid")
 
   call griddim_unproj(griddim_out)
 
@@ -199,6 +207,7 @@ if(trans_type == 'inter')then
 end if
 
 call init(trans, trans_type=trans_type, sub_type=sub_type, &
+ ix=ix, iy=iy, fx=fx, fy=fy, &
  ilon=ilon, ilat=ilat, flon=flon, flat=flat, npx=npx, npy=npy, &
  percentile=0.5D0, categoryappend="transformation")
 
