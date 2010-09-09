@@ -41,6 +41,9 @@ TYPE(csv_record) :: csvline, csv_desdata(7)
 INTEGER :: i, i1, i2, i3, i4, i5, i6, i7, nv
 INTEGER,POINTER :: w_s(:), w_e(:)
 
+!IF (.NOT.c_e(v7d)) RETURN ! do not play with fire
+CALL vol7d_alloc_vol(v7d) ! be safe
+
 licsv_column(:) = icsv_column(:)
 
 ! If only ana volume, skip data-only dimensions
@@ -617,6 +620,7 @@ PROGRAM v7d_transform
 #include "config.h"
 USE log4fortran
 USE char_utilities
+USE file_utilities
 USE getopt_m
 USE io_units
 USE vol7d_class
@@ -642,6 +646,7 @@ IMPLICIT NONE
 
 TYPE(op_option) :: options(50) ! remember to update dimension when adding options
 TYPE(optionparser) :: opt
+TYPE(csv_record) :: argparse
 CHARACTER(len=8) :: input_format, coord_format
 
 CHARACTER(len=512) :: input_file, output_file, output_format, output_template, &
@@ -672,8 +677,10 @@ INTEGER :: category
 
 ! for computing
 LOGICAL :: comp_regularize, comp_average, comp_cumulate, comp_discard, comp_sort
+CHARACTER(len=13) :: comp_stat_proc
 CHARACTER(len=23) :: comp_step, comp_start
-TYPE(timedelta) :: c_i
+INTEGER :: istat_proc, ostat_proc
+TYPE(timedelta) :: c_i, comp_max_step
 TYPE(datetime) :: c_s
 REAL :: comp_frac_valid
 
@@ -759,28 +766,39 @@ options(10) = op_option_new(' ', 'set-network', set_network, '', help= &
  &pseudo-network with the given name, empty for keeping the original networks')
 
 ! option for displaying/processing
-options(15) = op_option_new('d', 'display', ldisplay, help= &
+options(14) = op_option_new('d', 'display', ldisplay, help= &
  'briefly display the data volume imported, warning: this option is incompatible &
  &with output on stdout.')
-options(16) = op_option_new(' ', 'comp-regularize', comp_regularize, help= &
+options(15) = op_option_new(' ', 'comp-regularize', comp_regularize, help= &
  'regularize the time series keeping only the data at regular time steps')
+
+options(16) = op_option_new(' ', 'comp-stat-proc', comp_stat_proc, '', help= &
+ 'statistically process data with an operator specified in the form [isp:]osp &
+ &where isp is the statistical process of input data which has to be processed &
+ &and osp is the statistical process to apply and which will appear in output &
+ &timerange; possible values for isp are 0=average, 1=accumulated, 2=maximum, &
+ &3=minimum, 254=instantaneous, possible values for osp are 0, 1, 2, 3 with the &
+ &same meaning; if isp is not provided it is assumed to be equal to osp')
+
 options(17) = op_option_new(' ', 'comp-average', comp_average, help= &
- 'recompute average of averaged fields on a different time step')
+ 'recompute average of averaged fields on a different time step, &
+ &obsolete, use --stat-proc 0 instead')
 options(18) = op_option_new(' ', 'comp-cumulate', comp_cumulate, help= &
- 'recompute cumulation of accumulated fields on a different time step')
+ 'recompute cumulation of accumulated fields on a different time step, &
+ &obsolete, use --stat-proc 1 instead')
 options(19) = op_option_new(' ', 'comp-step', comp_step, '0000000001 00:00:00.000', help= &
- 'length of regularization, average or cumulation step in the format &
+ 'length of regularization or statistical processing step in the format &
  &''YYYYMMDDDD hh:mm:ss.msc'', it can be simplified up to the form ''D hh''')
 options(20) = op_option_new(' ', 'comp-start', comp_start, '', help= &
- 'start of regularization, average or cumulation interval, an empty value means &
+ 'start of regularization, or statistical processing interval, an empty value means &
  &take the initial time step of the available data; the format is the same as for &
  &--start-date parameter')
 options(21) = op_option_new(' ', 'comp-discard', comp_discard, help= &
- 'discard the data that are not the result of the cumulation and/or averaging &
- &processes and keep only the result of the computations')
+ 'discard the data that are not the result of the requested statistical processing &
+ &and keep only the result of the computations')
 options(22) = op_option_new(' ', 'comp-frac-valid', comp_frac_valid, 1., help= &
- 'specify the fraction of data that has to be valid in order to consider an &
- &accumulated or averaged value acceptable')
+ 'specify the fraction of data that has to be valid in order to consider a &
+ &statistically processed value acceptable')
 options(23) = op_option_new(' ', 'comp-sort', comp_sort, help= &
  'sort all sortable dimensions of the volume after the computations')
 
@@ -936,14 +954,50 @@ IF (LEN_TRIM(attribute_list) > 0) THEN
   ENDDO
   DEALLOCATE(w_s, w_e)
 ENDIF
-CALL init(s_d, isodate=start_date)
-CALL init(e_d, isodate=end_date)
+! time-related arguments
+s_d = datetime_new(isodate=start_date)
+e_d = datetime_new(isodate=end_date)
 c_i = timedelta_new(isodate=comp_step)
 IF (comp_start /= '') THEN
   c_s = datetime_new(isodate=comp_start)
 ELSE
   c_s = datetime_miss
 ENDIF
+
+! check comp_stat_proc
+istat_proc = imiss
+ostat_proc = imiss
+IF (comp_stat_proc /= '') THEN
+  CALL init(argparse, comp_stat_proc, ':', nfield=n)
+  IF (n == 1) THEN
+    CALL csv_record_getfield(argparse, ostat_proc)
+    istat_proc = ostat_proc
+  ELSE  IF (n == 2) THEN
+    CALL csv_record_getfield(argparse, istat_proc)
+    CALL csv_record_getfield(argparse, ostat_proc)
+  ENDIF
+  CALL delete(argparse)
+  IF (.NOT.c_e(istat_proc) .OR. .NOT.c_e(ostat_proc)) THEN
+    CALL l4f_category_log(category, L4F_ERROR, &
+     'error in command-line parameters, wrong syntax for --comp-stat-proc: ' &
+     //comp_stat_proc)
+    CALL EXIT(1)
+  ENDIF
+ELSE
+  IF (comp_average) THEN
+    CALL l4f_category_log(category, L4F_WARN, &
+     'argument --comp-average is obsolete, next time please use --comp-stat-proc')
+    istat_proc = 0
+    ostat_proc = 0
+  ENDIF
+  IF (comp_cumulate) THEN
+    CALL l4f_category_log(category, L4F_WARN, &
+     'argument --comp-cumulate is obsolete, next time please use --comp-stat-proc')
+    istat_proc = 1
+    ostat_proc = 1
+  ENDIF
+ENDIF
+
 
 ! import coord_file
 IF (c_e(coord_file)) THEN
@@ -1104,29 +1158,43 @@ IF (comp_regularize) THEN
   v7d = v7d_comp1
 ENDIF
 
-IF (comp_average .OR. comp_cumulate) THEN
+IF (c_e(istat_proc) .AND. c_e(ostat_proc)) THEN
   CALL init(v7d_comp1, time_definition=v7d%time_definition)
   CALL init(v7d_comp2, time_definition=v7d%time_definition)
-  IF (comp_average) THEN
-    CALL vol7d_average(v7d, v7d_comp1, c_i, c_s, full_steps=.TRUE., &
-     frac_valid=comp_frac_valid, other=v7d_comp3)
-    CALL delete(v7d)
-    v7d = v7d_comp3
+  IF (istat_proc == 254) THEN
+    comp_max_step = timedelta_depop(c_i)/10 ! create an argument for tuning this
+    CALL vol7d_compute_stat_proc_agg(v7d, v7d_comp1, ostat_proc, c_i, c_s, &
+     comp_max_step, weighted=.TRUE.,  other=v7d_comp3)
+  ELSE
+    CALL vol7d_recompute_stat_proc(v7d, v7d_comp1, ostat_proc, c_i, c_s, &
+     full_steps=.TRUE., frac_valid=comp_frac_valid, other=v7d_comp3, &
+     stat_proc_input=istat_proc)
   ENDIF
-  IF (comp_cumulate) THEN
-    CALL vol7d_cumulate(v7d, v7d_comp2, c_i, c_s, full_steps=.TRUE., &
-     frac_valid=comp_frac_valid, other=v7d_comp3)
-    CALL delete(v7d)
-    v7d = v7d_comp3
-  ENDIF
+  CALL delete(v7d)
+  v7d = v7d_comp3
+
+! old version allowed multiple operations, is it important?
+!  IF (comp_average) THEN
+!    CALL vol7d_average(v7d, v7d_comp1, c_i, c_s, full_steps=.TRUE., &
+!     frac_valid=comp_frac_valid, other=v7d_comp3)
+!    CALL delete(v7d)
+!    v7d = v7d_comp3
+!  ENDIF
+!  IF (comp_cumulate) THEN
+!    CALL vol7d_cumulate(v7d, v7d_comp2, c_i, c_s, full_steps=.TRUE., &
+!     frac_valid=comp_frac_valid, other=v7d_comp3)
+!    CALL delete(v7d)
+!    v7d = v7d_comp3
+!  ENDIF
+
 ! merge the tho computed fields
   IF (comp_discard) THEN ! the user is not interested in the other volume
     CALL delete(v7d)
     v7d = v7d_comp1
-    CALL vol7d_merge(v7d, v7d_comp2, sort=.TRUE.)
+!    CALL vol7d_merge(v7d, v7d_comp2, sort=.TRUE.)
   ELSE
     CALL vol7d_merge(v7d, v7d_comp1, sort=.TRUE.)
-    CALL vol7d_merge(v7d, v7d_comp2, sort=.TRUE.)
+!    CALL vol7d_merge(v7d, v7d_comp2, sort=.TRUE.)
   ENDIF
 ENDIF
 

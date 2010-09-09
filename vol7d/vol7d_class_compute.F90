@@ -304,10 +304,11 @@ TYPE(vol7d_timerange),INTENT(out) :: otimerange
 INTEGER,POINTER :: map_tr(:), map_trc(:,:), count_trc(:,:)
 TYPE(datetime),INTENT(in),OPTIONAL :: start
 
-INTEGER :: i, j, k, nval, ncum, ntr, steps, nstep
+INTEGER :: i, j, k, nval, ncum, ntr, nstep
 LOGICAL :: usestart, tr_mask(SIZE(itimerange))
 TYPE(datetime) :: lstart, lend, tmptime, tmptimes, t1, t2
 TYPE(timedelta) :: dt1, stepvero
+INTEGER(kind=int_ll) :: tmpmsec
 
 
 ! useful timeranges
@@ -324,10 +325,9 @@ IF (usestart) THEN ! start explicitely provided
 ELSE ! compute start automatically
 ! the shortest interval available is used, the longest could be used
 ! obtaining more data but worse
-  i = MINVAL(itimerange(:)%p2, mask=tr_mask(:))
+  lstart = itime(1) - &
+   timedelta_new(msec=MINVAL(itimerange(:)%p2, mask=tr_mask(:))*1000)
 
-  CALL init(dt1, minute=-i/60) ! use msec
-  lstart = itime(1)+dt1 ! go back by dt1 (dt1 < 0!)
   lstart = lstart-(MOD(lstart, step)) ! round to step, check the - sign!!!
 ENDIF
 lend = itime(SIZE(itime))
@@ -351,8 +351,8 @@ DO i = 1, nstep
   tmptime = tmptime + step
 ENDDO
 ! compute otimerange
-CALL getval(step, aminute=steps)
-CALL init(otimerange, timerange=stat_proc, p1=0, p2=steps*60)
+CALL getval(timedelta_depop(step), amsec=tmpmsec)
+CALL init(otimerange, timerange=stat_proc, p1=0, p2=INT(tmpmsec/1000))
 
 nval = 0
 DO j = 1, SIZE(itimerange)
@@ -360,7 +360,7 @@ DO j = 1, SIZE(itimerange)
 
   nval = nval + 1
   map_tr(nval) = j ! mappatura per ottimizzare il successivo ciclo sui timerange
-  CALL init(dt1, minute=itimerange(j)%p2/60) ! usare msec
+  dt1 = timedelta_new(msec=itimerange(j)%p2*1000)
 
   ! calcolo il numero teorico di intervalli in ingresso che
   ! contribuiscono all'intervallo corrente in uscita
@@ -711,9 +711,10 @@ TYPE(vol7d_timerange),INTENT(out) :: otimerange
 INTEGER,POINTER :: itime_start(:), itime_end(:)
 TYPE(datetime),INTENT(in),OPTIONAL :: start
 
-INTEGER :: i, j, nstep, steps
+INTEGER :: i, j, nstep
 LOGICAL :: usestart
 TYPE(datetime) :: lstart, lend, tmptime
+INTEGER(kind=int_ll) :: tmpmsec
 
 
 ! compute lstart = the start time (not the end) of the first
@@ -766,8 +767,8 @@ DO i = 1, nstep
   otime(i) = tmptime ! validity time is the end of the interval
 ENDDO
 ! compute otimerange
-CALL getval(step, aminute=steps)
-CALL init(otimerange, timerange=stat_proc, p1=0, p2=steps*60)
+CALL getval(timedelta_depop(step), amsec=tmpmsec)
+CALL init(otimerange, timerange=stat_proc, p1=0, p2=INT(tmpmsec/1000_int_ll))
 
 END SUBROUTINE compute_stat_proc_agg_common
 
