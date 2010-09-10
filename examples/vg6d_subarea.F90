@@ -37,7 +37,7 @@ TYPE(grid_id) :: input_grid_id
 INTEGER :: gaid
 
 doubleprecision ::  ilon,ilat,flon,flat
-real, allocatable :: field(:,:),fieldz(:,:)
+REAL, ALLOCATABLE :: field(:,:,:),fieldz(:,:,:)
 type(griddim_def) :: griddim_out
 type(transform_def) :: trans
 type(grid_transform) :: grid_trans
@@ -231,9 +231,9 @@ DO WHILE (.TRUE.)
 
   call l4f_category_log(category,L4F_INFO,"import")
 
-  allocate (field(gridinfo%griddim%dim%nx,gridinfo%griddim%dim%ny))
+  ALLOCATE (field(gridinfo%griddim%dim%nx,gridinfo%griddim%dim%ny,1))
 
-  field=decode_gridinfo(gridinfo)
+  field(:,:,1)=decode_gridinfo(gridinfo)
 
   call init(grid_trans, trans, in=gridinfo%griddim, out=griddim_out,&
    categoryappend="gridtransformed")
@@ -242,7 +242,7 @@ DO WHILE (.TRUE.)
     CALL display(griddim_out)
   ENDIF
 
-  allocate (fieldz(griddim_out%dim%nx,griddim_out%dim%ny))
+  ALLOCATE (fieldz(griddim_out%dim%nx,griddim_out%dim%ny,1))
 
   call compute(grid_trans, field, fieldz)
 
@@ -278,7 +278,7 @@ DO WHILE (.TRUE.)
     ENDIF
   ENDIF
 
-  call encode_gridinfo(gridinfo, fieldz)
+  CALL encode_gridinfo(gridinfo, fieldz(:,:,1))
   call export(gridinfo)
   IF (ldisplay) THEN
     CALL display(gridinfo,namespace="ls")

@@ -581,7 +581,7 @@ LOGICAL :: mask_in(SIZE(lev_in)), mask_out(SIZE(lev_out))
 INTEGER :: i, j, ni, no
 
 
-this%valid = .TRUE.
+CALL grid_transform_init_common(this, trans, categoryappend)
 
 IF (this%trans%trans_type == 'vertint') THEN
 
@@ -612,6 +612,7 @@ IF (this%trans%trans_type == 'vertint') THEN
     ni = COUNT(mask_in)
     no = COUNT(mask_out)
 
+! set valid = .FALSE. here?
     IF (ni == 0) &
      CALL l4f_category_log(this%category, L4F_WARN, &
      'grid_transform_levtype_levtype_init: &
@@ -627,11 +628,11 @@ IF (this%trans%trans_type == 'vertint') THEN
      TRIM(to_char(trans%vertint%output_levtype%level2))// &
      ') suitable for interpolation')
 
-! up to this point may be common for all vertint?
+! code up to this point may be common for all vertint?
 
     ALLOCATE(this%inter_index_z(no), this%inter_zp(no))
     IF (this%trans%external .AND. ni > 0) THEN
-! initialize to first input point (extrapolate to constant value)
+! set to first input point (extrapolate to constant value)
       this%inter_index_z(:) = 1
       this%inter_zp(:) = 1.0D0
     ELSE
@@ -641,18 +642,20 @@ IF (this%trans%trans_type == 'vertint') THEN
     ENDIF
 
     DO j = 1, no
-!        this%inter_index_z(j) = ni
       DO i = 2, ni
-        IF (coord_in(i) > coord_out(j)) THEN
-          this%inter_index_z(j) = i - 1
-          this%inter_zp(j) = (coord_in(j)-coord_out(i)) / &
-           (coord_out(i-1)-coord_out(i)) ! weight for (i-1)
-          EXIT
+        IF (coord_in(i) >= coord_out(j)) THEN
+          IF (coord_out(j) >= coord_in(i-1)) THEN
+            this%inter_index_z(j) = i - 1
+            this%inter_zp(j) = (coord_out(j)-coord_in(i)) / &
+             (coord_in(i-1)-coord_in(i)) ! weight for (i-1)
+          ENDIF
+          EXIT ! exit in any case
         ENDIF
       ENDDO
       IF (i > ni .AND. this%trans%external .AND. ni > 0) THEN
-        this%inter_index_z(:) = ni - 1
-        this%inter_zp(:) = 0.0D0
+! set to last input point (extrapolate to constant value)
+        this%inter_index_z(j) = ni - 1
+        this%inter_zp(j) = 0.0D0
       ENDIF
     ENDDO
 
@@ -1550,43 +1553,54 @@ END FUNCTION grid_transform_c_e
 !! of the \a RESHAPE() intrinsic function.
 SUBROUTINE grid_transform_compute(this, field_in, field_out)
 TYPE(grid_transform),INTENT(in) :: this !< grid_transformation object
-REAL, INTENT(in) :: field_in(:,:) !< input array
-REAL, INTENT(out) :: field_out(:,:) !< output array
+REAL, INTENT(in) :: field_in(:,:,:) !< input array
+REAL, INTENT(out) :: field_out(:,:,:) !< output array
 
-INTEGER :: i, j, ii, jj, ie, je, navg
+INTEGER :: i, j, k, ii, jj, ie, je, navg
 INTEGER,ALLOCATABLE :: nval(:,:)
 real :: z1,z2,z3,z4
 doubleprecision  :: x1,x3,y1,y3,xp,yp
+INTEGER :: innx, inny, innz, outnx, outny, outnz
+
 
 #ifdef DEBUG
 call l4f_category_log(this%category,L4F_DEBUG,"start grid_transform_compute")
 #endif
 
+field_out(:,:,:) = rmiss
+
 IF (.NOT.this%valid) THEN
-  field_out(:,:) = rmiss
   call l4f_category_log(this%category,L4F_ERROR, &
    "refusing to perform a non valid transformation")
   RETURN
 ENDIF
 
+innx = SIZE(field_in,1); inny = SIZE(field_in,2); innz = SIZE(field_in,3)
+outnx = SIZE(field_out,1); outny = SIZE(field_out,2); outnz = SIZE(field_out,3)
+
 ! check size of field_in, field_out
-if (any(shape(field_in) /= (/this%innx,this%inny/))) then
-
-  call l4f_category_log(this%category,L4F_ERROR,"inconsistent in shape: "//&
+IF (innx /= this%innx .OR. inny /= this%inny) THEN
+  CALL l4f_category_log(this%category,L4F_ERROR,"inconsistent in shape: "//&
    TRIM(to_char(this%innx))//","//TRIM(to_char(this%inny))//" /= "//&
-   TRIM(to_char(SIZE(field_in,1)))//","//TRIM(to_char(SIZE(field_in,2))))
-  call raise_fatal_error()
-end if
+   TRIM(to_char(innx))//","//TRIM(to_char(inny)))
+  CALL raise_error()
+  RETURN
+ENDIF
 
-if (any(shape(field_out) /= (/this%outnx,this%outny/))) then
-
-  call l4f_category_log(this%category,L4F_ERROR,"inconsistent out shape: "//&
+IF (outnx /= this%outnx .OR. outny /= this%outny) THEN
+  CALL l4f_category_log(this%category,L4F_ERROR,"inconsistent out shape: "//&
    TRIM(to_char(this%outnx))//","//TRIM(to_char(this%outny))//" /= "//&
-   TRIM(to_char(SIZE(field_out,1)))//","//TRIM(to_char(SIZE(field_out,2))))
-  call raise_fatal_error()
-end if
+   TRIM(to_char(outnx))//","//TRIM(to_char(outny)))
+  CALL raise_error()
+  RETURN
+ENDIF
 
-field_out(:,:) = rmiss
+IF (innz /= outnz .AND. this%trans%trans_type /= 'vertint') THEN
+  CALL l4f_category_log(this%category,L4F_ERROR,"inconsistent vertical sizes: "//&
+   TRIM(to_char(innz))//" /= "//TRIM(to_char(outnz)))
+  CALL raise_error()
+  RETURN
+ENDIF
 
 #ifdef DEBUG
   call l4f_category_log(this%category,L4F_DEBUG, &
@@ -1597,25 +1611,33 @@ field_out(:,:) = rmiss
 IF (this%trans%trans_type == 'zoom') THEN
 
   field_out(this%outinx:this%outfnx, &
-   this%outiny:this%outfny) = &
+   this%outiny:this%outfny,:) = &
    field_in(this%iniox:this%infox, &
-   this%inioy:this%infoy)
+   this%inioy:this%infoy,:)
+  PRINT*,this%outinx,this%outfnx,this%outiny,this%outfny
+  PRINT*,this%iniox,this%infox,this%inioy,this%infoy
+  PRINT*,MAXVAL(field_out(this%outinx:this%outfnx,this%outiny:this%outfny,:)), &
+   MINVAL(field_out(this%outinx:this%outfnx,this%outiny:this%outfny,:))
+  PRINT*,MAXVAL(field_in(this%iniox:this%infox,this%inioy:this%infoy,:)), &
+   MINVAL(field_in(this%iniox:this%infox,this%inioy:this%infoy,:))
 
 ELSE IF (this%trans%trans_type == 'boxregrid') THEN
 
-  jj = 0
-  DO j = 1, this%inny - this%trans%box_info%npy + 1, this%trans%box_info%npy
-    je = j+this%trans%box_info%npy-1
-    jj = jj+1
-    ii = 0
-    DO i = 1, this%innx - this%trans%box_info%npx + 1, this%trans%box_info%npx
-      ie = i+this%trans%box_info%npx-1
-      ii = ii+1
-      navg = COUNT(field_in(i:ie,j:je) /= rmiss)
-      IF (navg > 0) THEN
-        field_out(ii,jj) = SUM(field_in(i:ie,j:je)/navg, &
-         MASK=(field_in(i:ie,j:je) /= rmiss))
-      ENDIF
+  DO k = 1, innz
+    jj = 0
+    DO j = 1, this%inny - this%trans%box_info%npy + 1, this%trans%box_info%npy
+      je = j+this%trans%box_info%npy-1
+      jj = jj+1
+      ii = 0
+      DO i = 1, this%innx - this%trans%box_info%npx + 1, this%trans%box_info%npx
+        ie = i+this%trans%box_info%npx-1
+        ii = ii+1
+        navg = COUNT(field_in(i:ie,j:je,k) /= rmiss)
+        IF (navg > 0) THEN
+          field_out(ii,jj,k) = SUM(field_in(i:ie,j:je,k)/navg, &
+           MASK=(field_in(i:ie,j:je,k) /= rmiss))
+        ENDIF
+      ENDDO
     ENDDO
   ENDDO
 
@@ -1623,42 +1645,47 @@ ELSE IF (this%trans%trans_type == 'inter') THEN
 
   IF (this%trans%sub_type == 'near') THEN
 
-    DO j = 1, this%outny 
-      DO i = 1, this%outnx 
+    DO k = 1, innz
+      DO j = 1, this%outny 
+        DO i = 1, this%outnx 
 
-        if (c_e(this%inter_index_x(i,j)) .and. c_e(this%inter_index_y(i,j)))&
-         field_out(i,j) = field_in(this%inter_index_x(i,j),this%inter_index_y(i,j))
+          if (c_e(this%inter_index_x(i,j)) .and. c_e(this%inter_index_y(i,j)))&
+           field_out(i,j,k) = &
+           field_in(this%inter_index_x(i,j),this%inter_index_y(i,j),k)
 
+        ENDDO
       ENDDO
     ENDDO
 
   else if (this%trans%sub_type == 'bilin') THEN
+    
+    DO k = 1, innz
+      DO j = 1, this%outny 
+        DO i = 1, this%outnx 
 
-    DO j = 1, this%outny 
-      DO i = 1, this%outnx 
+          IF (c_e(this%inter_index_x(i,j)) .AND. c_e(this%inter_index_y(i,j)))THEN
 
-        IF (c_e(this%inter_index_x(i,j)) .AND. c_e(this%inter_index_y(i,j)))THEN
+            z1=field_in(this%inter_index_x(i,j),this%inter_index_y(i,j),k)
+            z2=field_in(this%inter_index_x(i,j)+1,this%inter_index_y(i,j),k)
+            z3=field_in(this%inter_index_x(i,j)+1,this%inter_index_y(i,j)+1,k)
+            z4=field_in(this%inter_index_x(i,j),this%inter_index_y(i,j)+1,k)
 
-          z1=field_in(this%inter_index_x(i,j),this%inter_index_y(i,j))
-          z2=field_in(this%inter_index_x(i,j)+1,this%inter_index_y(i,j))
-          z3=field_in(this%inter_index_x(i,j)+1,this%inter_index_y(i,j)+1)
-          z4=field_in(this%inter_index_x(i,j),this%inter_index_y(i,j)+1)
+            IF (c_e(z1) .AND. c_e(z2) .AND. c_e(z3) .AND. c_e(z4)) THEN
 
-          IF (c_e(z1) .AND. c_e(z2) .AND. c_e(z3) .AND. c_e(z4)) THEN
+              x1=this%inter_x(this%inter_index_x(i,j),this%inter_index_y(i,j))
+              y1=this%inter_y(this%inter_index_x(i,j),this%inter_index_y(i,j))
+              x3=this%inter_x(this%inter_index_x(i,j)+1,this%inter_index_y(i,j)+1)
+              y3=this%inter_y(this%inter_index_x(i,j)+1,this%inter_index_y(i,j)+1)
 
-            x1=this%inter_x(this%inter_index_x(i,j),this%inter_index_y(i,j))
-            y1=this%inter_y(this%inter_index_x(i,j),this%inter_index_y(i,j))
-            x3=this%inter_x(this%inter_index_x(i,j)+1,this%inter_index_y(i,j)+1)
-            y3=this%inter_y(this%inter_index_x(i,j)+1,this%inter_index_y(i,j)+1)
+              xp=this%inter_xp(i,j)
+              yp=this%inter_yp(i,j)
 
-            xp=this%inter_xp(i,j)
-            yp=this%inter_yp(i,j)
-            
-            field_out(i,j) = hbilin (z1,z2,z3,z4,x1,y1,x3,y3,xp,yp)
+              field_out(i,j,k) = hbilin (z1,z2,z3,z4,x1,y1,x3,y3,xp,yp)
 
+            END IF
           END IF
-        END IF
 
+        ENDDO
       ENDDO
     ENDDO
 
@@ -1669,71 +1696,80 @@ ELSE IF (this%trans%trans_type == 'boxinter' &
   IF (this%trans%sub_type == 'average') THEN
     
     ALLOCATE(nval(this%outnx, this%outny))
-    field_out(:,:) = 0.0
-    nval(:,:) = 0
-    DO j = 1, this%inny
-      DO i = 1, this%innx
-        IF (c_e(this%inter_index_x(i,j)) .AND. c_e(this%inter_index_y(i,j)) &
-         .AND. c_e(field_in(i,j))) THEN
-          field_out(this%inter_index_x(i,j),this%inter_index_y(i,j)) = &
-           field_out(this%inter_index_x(i,j),this%inter_index_y(i,j)) + &
-           field_in(i,j)
-          nval(this%inter_index_x(i,j),this%inter_index_y(i,j)) = &
-           nval(this%inter_index_x(i,j),this%inter_index_y(i,j)) + 1
-        ENDIF
+    field_out(:,:,:) = 0.0
+    DO k = 1, innz
+      nval(:,:) = 0
+      DO j = 1, this%inny
+        DO i = 1, this%innx
+          IF (c_e(this%inter_index_x(i,j)) .AND. c_e(this%inter_index_y(i,j)) &
+           .AND. c_e(field_in(i,j,k))) THEN
+            field_out(this%inter_index_x(i,j),this%inter_index_y(i,j),k) = &
+             field_out(this%inter_index_x(i,j),this%inter_index_y(i,j),k) + &
+             field_in(i,j,k)
+            nval(this%inter_index_x(i,j),this%inter_index_y(i,j)) = &
+             nval(this%inter_index_x(i,j),this%inter_index_y(i,j)) + 1
+          ENDIF
+        ENDDO
       ENDDO
+      WHERE (nval(:,:) /= 0)
+        field_out(:,:,k) = field_out(:,:,k)/nval(:,:)
+      ELSEWHERE
+        field_out(:,:,k) = rmiss
+      END WHERE
     ENDDO
-    WHERE (nval(:,:) /= 0)
-      field_out(:,:) = field_out(:,:)/nval(:,:)
-    ELSEWHERE
-      field_out(:,:) = rmiss
-    END WHERE
     DEALLOCATE(nval)
 
   ELSE IF (this%trans%sub_type == 'max') THEN
 
-    field_out(:,:) = rmiss
-    DO j = 1, this%inny
-      DO i = 1, this%innx
-        IF (c_e(this%inter_index_x(i,j)) .AND. c_e(this%inter_index_y(i,j))) THEN
-          IF (c_e(field_out(this%inter_index_x(i,j),this%inter_index_y(i,j)))) THEN
-            field_out(this%inter_index_x(i,j),this%inter_index_y(i,j)) = &
-             MAX(field_out(this%inter_index_x(i,j),this%inter_index_y(i,j)), &
-             field_in(i,j))
-          ELSE
-            field_out(this%inter_index_x(i,j),this%inter_index_y(i,j)) = field_in(i,j)
+    field_out(:,:,:) = rmiss
+    DO k = 1, innz
+      DO j = 1, this%inny
+        DO i = 1, this%innx
+          IF (c_e(this%inter_index_x(i,j)) .AND. c_e(this%inter_index_y(i,j))) THEN
+            IF (c_e(field_out(this%inter_index_x(i,j),this%inter_index_y(i,j),k))) THEN
+              field_out(this%inter_index_x(i,j),this%inter_index_y(i,j),k) = &
+               MAX(field_out(this%inter_index_x(i,j),this%inter_index_y(i,j),k), &
+               field_in(i,j,k))
+            ELSE
+              field_out(this%inter_index_x(i,j),this%inter_index_y(i,j),k) = &
+               field_in(i,j,k)
+            ENDIF
           ENDIF
-        ENDIF
+        ENDDO
       ENDDO
     ENDDO
 
 
   ELSE IF (this%trans%sub_type == 'min') THEN
 
-    field_out(:,:) = rmiss
+    field_out(:,:,:) = rmiss
     DO j = 1, this%inny
       DO i = 1, this%innx
         IF (c_e(this%inter_index_x(i,j)) .AND. c_e(this%inter_index_y(i,j))) THEN
-          IF (c_e(field_out(this%inter_index_x(i,j),this%inter_index_y(i,j)))) THEN
-            field_out(this%inter_index_x(i,j),this%inter_index_y(i,j)) = &
-             MIN(field_out(this%inter_index_x(i,j),this%inter_index_y(i,j)), &
-             field_in(i,j))
+          IF (c_e(field_out(this%inter_index_x(i,j),this%inter_index_y(i,j),k))) THEN
+            field_out(this%inter_index_x(i,j),this%inter_index_y(i,j),k) = &
+             MIN(field_out(this%inter_index_x(i,j),this%inter_index_y(i,j),k), &
+             field_in(i,j,k))
           ELSE
-            field_out(this%inter_index_x(i,j),this%inter_index_y(i,j)) = field_in(i,j)
+            field_out(this%inter_index_x(i,j),this%inter_index_y(i,j),k) = &
+             field_in(i,j,k)
           ENDIF
         ENDIF
       ENDDO
     ENDDO
 
   ELSE IF (this%trans%sub_type == 'percentile') THEN
-    
-    DO j = 1, this%outny
-      DO i = 1, this%outnx
-        field_out(i:i,j) = stat_percentile( &
-         RESHAPE(field_in, (/SIZE(field_in)/)), &
-         (/REAL(this%trans%stat_info%percentile)/), &
-         mask=RESHAPE((this%inter_index_x == i .AND. &
-         this%inter_index_y == j), (/SIZE(field_in)/)))
+
+    DO k = 1, innz
+      DO j = 1, this%outny
+        DO i = 1, this%outnx
+! da paura
+          field_out(i:i,j,k) = stat_percentile( &
+           RESHAPE(field_in(:,:,k), (/SIZE(field_in(:,:,k))/)), &
+           (/REAL(this%trans%stat_info%percentile)/), &
+           mask=RESHAPE((this%inter_index_x == i .AND. &
+           this%inter_index_y == j), (/SIZE(field_in(:,:,k))/)))
+        ENDDO
       ENDDO
     ENDDO
 
@@ -1744,12 +1780,14 @@ ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
 
   IF (this%trans%sub_type == 'all') THEN
 
-    field_out(:,:) = RESHAPE(field_in(:,:), (/this%outnx,this%outny/))
+    field_out(:,:,:) = RESHAPE(field_in(:,:,:), (/this%outnx,this%outny,innz/))
 
   ELSE IF (this%trans%sub_type == 'coordbb') THEN
 
-    field_out(:,1) = PACK(field_in(:,:), this%point_mask(:,:))
-
+    DO k = 1, innz
+      field_out(:,1,k) = PACK(field_in(:,:,k), this%point_mask(:,:))
+    ENDDO
+    
   ENDIF
 
 ENDIF
@@ -1764,103 +1802,110 @@ END SUBROUTINE grid_transform_compute
 !! sparse points-to-grid and sparse points-to-sparse points version.
 SUBROUTINE grid_transform_v7d_grid_compute(this, field_in, field_out)
 TYPE(grid_transform),INTENT(in) :: this !< grid_tranform object
-REAL, INTENT(in) :: field_in(:) !< input array
-REAL, INTENT(out):: field_out(:,:) !< output array
+REAL, INTENT(in) :: field_in(:,:) !< input array
+REAL, INTENT(out):: field_out(:,:,:) !< output array
 
 real,allocatable :: field_in_p(:),x_in_p(:),y_in_p(:)
 real,allocatable :: x_out(:),y_out(:)
-integer :: inn_p,ier
+INTEGER :: inn_p, ier, k
+INTEGER :: innx, inny, innz, outnx, outny, outnz
 
 #ifdef DEBUG
 call l4f_category_log(this%category,L4F_DEBUG,"start v7d_grid_transform_compute")
 #endif
 
+field_out(:,:,:) = rmiss
+
 IF (.NOT.this%valid) THEN
-  field_out(:,:) = rmiss
   call l4f_category_log(this%category,L4F_ERROR, &
    "refusing to perform a non valid transformation")
   RETURN
 ENDIF
 
+innx = SIZE(field_in,1); inny = 1; innz = SIZE(field_in,2)
+outnx = SIZE(field_out,1); outny = SIZE(field_out,2); outnz = SIZE(field_out,3)
+
 ! check size of field_in, field_out
-IF (SIZE(field_in) /= this%innx .OR. 1 /= this%inny) THEN
-
-  call l4f_category_log(this%category,L4F_ERROR,"inconsistent in shape: "//&
+IF (innx /= this%innx .OR. inny /= this%inny) THEN
+  CALL l4f_category_log(this%category,L4F_ERROR,"inconsistent in shape: "//&
    TRIM(to_char(this%innx))//","//TRIM(to_char(this%inny))//" /= "//&
-   TRIM(to_char(SIZE(field_in)))//",1")
-  call raise_fatal_error()
+   TRIM(to_char(innx))//","//TRIM(to_char(inny)))
+  CALL raise_error()
+  RETURN
 end if
 
-if (any(shape(field_out) /= (/this%outnx,this%outny/))) then
-
-  call l4f_category_log(this%category,L4F_ERROR,"inconsistent out shape: "//&
+IF (outnx /= this%outnx .OR. outny /= this%outny) THEN
+  CALL l4f_category_log(this%category,L4F_ERROR,"inconsistent out shape: "//&
    TRIM(to_char(this%outnx))//","//TRIM(to_char(this%outny))//" /= "//&
-   TRIM(to_char(SIZE(field_out,1)))//","//TRIM(to_char(SIZE(field_out,2))))
-  call raise_fatal_error()
-end if
+   TRIM(to_char(outnx))//","//TRIM(to_char(outny)))
+  CALL raise_error()
+  RETURN
+ENDIF
 
-field_out(:,:) = rmiss
-
-IF (this%trans%trans_type == 'inter') THEN
+IF (innz /= outnz .AND. this%trans%trans_type /= 'vertint') THEN
+  CALL l4f_category_log(this%category,L4F_ERROR,"inconsistent vertical sizes: "//&
+   TRIM(to_char(innz))//" /= "//TRIM(to_char(outnz)))
+  CALL raise_error()
+  RETURN
+ENDIF
 
 #ifdef DEBUG
-  call l4f_category_log(this%category,L4F_DEBUG,"start v7d_grid_transform_compute inter")
+  call l4f_category_log(this%category,L4F_DEBUG, &
+   "start grid_transform_v7d_grid_compute "//TRIM(this%trans%trans_type)//':'// &
+   TRIM(this%trans%sub_type))
 #endif
+
+IF (this%trans%trans_type == 'inter') THEN
 
   IF (this%trans%sub_type == 'linear') THEN
 
 #ifdef HAVE_LIBNGMATH
-    inn_p=count(c_e(field_in))
+! optimization, allocate only once with a safe size
+    ALLOCATE(field_in_p(innx*inny), x_in_p(innx*inny), y_in_p(innx*inny))
+    DO k = 1, innz
+      inn_p = COUNT(c_e(field_in(:,k)))
 
-    call l4f_category_log(this%category,L4F_INFO,"Number of sparse data points= "//to_char(inn_p))
+      CALL l4f_category_log(this%category,L4F_INFO, &
+       "Number of sparse data points: "//TRIM(to_char(inn_p)))
 
-    if (inn_p > 2) then
+      IF (inn_p > 2) THEN
 
-      allocate(field_in_p(inn_p))
-      allocate(x_in_p(inn_p))
-      allocate(y_in_p(inn_p))
+        field_in_p(1:inn_p) = PACK(field_in(:,k), c_e(field_in(:,k)))
+        x_in_p(1:inn_p) = PACK(this%inter_xp(:,1), c_e(field_in(:,k)))
+        y_in_p(1:inn_p) = PACK(this%inter_yp(:,1), c_e(field_in(:,k)))
 
-      field_in_p=pack(field_in,c_e(field_in))
-      x_in_p=pack(this%inter_xp(:,1),c_e(field_in))
-      y_in_p=pack(this%inter_yp(:,1),c_e(field_in))
+        CALL NATGRIDS(inn_p, x_in_p, y_in_p, field_in_p, & ! (1:inn_p) omitted
+         this%outnx, this%outny, REAL(this%inter_x(:,1)), & ! no f90 interface
+         REAL(this%inter_y(1,:)), field_out(1,1,k), ier)
 
-      CALL NATGRIDS(inn_p,x_in_p,y_in_p,field_in_p,&
-       this%outnx, this%outny, REAL(this%inter_x(:,1)), &
-       REAL(this%inter_y(1,:)), field_out, ier)
+        IF (ier /= 0) THEN
+          CALL l4f_category_log(this%category,L4F_ERROR, &
+           "Error return from NATGRIDD = "//TRIM(to_char(ier)))
+          CALL raise_error()
+          EXIT
+        ENDIF ! exit loop to deallocate
+      ELSE
 
-      IF (ier /= 0) THEN
-        call l4f_category_log(this%category,L4F_ERROR,"Error return from NATGRIDD = "//to_char(ier))
-        call raise_fatal_error()
+        CALL l4f_category_log(this%category,L4F_INFO, &
+         "insufficient data in gridded region to triangulate")
+
       ENDIF
+    ENDDO
+    DEALLOCATE(field_in_p, x_in_p, y_in_p)
 
-      deallocate(field_in_p,x_in_p,y_in_p)
-
-    else
-
-      call l4f_category_log(this%category,L4F_INFO,"Insufficient data in gridded region to triangulate")
-
-    end if
 #else
-    CALL l4f_category_log(this%category,L4F_ERROR,"libsim compiled without NATGRIDD (ngmath ncarg library)")
-    CALL raise_fatal_error()
+    CALL l4f_category_log(this%category,L4F_ERROR, &
+     "libsim compiled without NATGRIDD (ngmath ncarg library)")
+    CALL raise_error()
+    RETURN
 #endif
 
-  ELSE
-
-    CALL l4f_category_log(this%category,L4F_ERROR, &
-     "sub_type not right here: "//TRIM(this%trans%sub_type))
-    call raise_fatal_error()
   ENDIF
 
 ELSE IF (this%trans%trans_type == 'boxinter') THEN ! use the grid-to-grid method
-      
-  CALL compute(this, RESHAPE(field_in, (/SIZE(field_in), 1/)), field_out)
 
-ELSE
-
-  call l4f_category_log(this%category,L4F_ERROR, &
-   "trans_type not right here: "//TRIM(this%trans%trans_type))
-  call raise_fatal_error()
+  CALL compute(this, &
+   RESHAPE(field_in, (/SIZE(field_in,1), 1, SIZE(field_in,2)/)), field_out)
 
 ENDIF
 

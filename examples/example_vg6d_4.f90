@@ -37,7 +37,7 @@ type(grid_id) :: gaid
 
 integer :: ix,iy,fx,fy,iox,ioy,fox,foy,inx,iny,fnx,fny,newx,newy
 doubleprecision ::  ilon=0.,ilat=30.,flon=30.,flat=60.
-real, allocatable :: field(:,:),fieldz(:,:)
+REAL, ALLOCATABLE :: field(:,:,:),fieldz(:,:,:)
 type(griddim_def) :: griddim_out
 type(transform_def) :: trans
 type(grid_transform) :: grid_trans
@@ -97,15 +97,15 @@ DO WHILE (.TRUE.)
 
   call l4f_category_log(category,L4F_INFO,"import")
 
-  allocate (field(gridinfo%griddim%dim%nx,gridinfo%griddim%dim%ny))
+  ALLOCATE (field(gridinfo%griddim%dim%nx,gridinfo%griddim%dim%ny,1))
 
-  field=decode_gridinfo(gridinfo)
+  field(:,:,1)=decode_gridinfo(gridinfo)
 
   call init(grid_trans, trans, in=gridinfo%griddim,out=griddim_out,categoryappend="gridtrasformato")
 
   call display(griddim_out)
 
-  allocate (fieldz(griddim_out%dim%nx,griddim_out%dim%ny))
+  ALLOCATE (fieldz(griddim_out%dim%nx,griddim_out%dim%ny,1))
 
   call compute(grid_trans, field, fieldz)
 
@@ -117,7 +117,7 @@ DO WHILE (.TRUE.)
 !   call delete(gridinfo_out%griddim)
 !   call copy(griddim_out,gridinfo_out%griddim)
 
-  call encode_gridinfo(gridinfo,fieldz)
+  call encode_gridinfo(gridinfo,fieldz(:,:,1))
   call export (gridinfo)
   call display(gridinfo,namespace="")
 

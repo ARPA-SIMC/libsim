@@ -1374,19 +1374,19 @@ ENDIF
 END SUBROUTINE volgrid6dv_delete
 
 
-!> \brief Calcola i nuovi dati secondo la trasformazione specificata
-!!
-!! Deve essere fornito l'oggetto di trasformazione e oggetti completi
+! \brief Calcola i nuovi dati secondo la trasformazione specificata
+!
+! Deve essere fornito l'oggetto di trasformazione e oggetti completi
 SUBROUTINE volgrid6d_transform_compute(this, volgrid6d_in, volgrid6d_out,clone)
-TYPE(grid_transform),INTENT(in) :: this !< oggetto di trasformazione per il grigliato
-type(volgrid6d), INTENT(in) :: volgrid6d_in !< oggetto da trasformare
-type(volgrid6d), INTENT(out) :: volgrid6d_out !< oggetto trasformato; deve essere completo (init, alloc, alloc_vol)
-logical , intent(in),optional :: clone !< se fornito e \c .TRUE., clona i gaid da volgrid6d_in a volgrid6d_out
+TYPE(grid_transform),INTENT(in) :: this ! oggetto di trasformazione per il grigliato
+type(volgrid6d), INTENT(in) :: volgrid6d_in ! oggetto da trasformare
+type(volgrid6d), INTENT(out) :: volgrid6d_out ! oggetto trasformato; deve essere completo (init, alloc, alloc_vol)
+logical , intent(in),optional :: clone ! se fornito e \c .TRUE., clona i gaid da volgrid6d_in a volgrid6d_out
 
 integer :: ntime, ntimerange, nlevel, nvar
 integer :: itime, itimerange, ilevel, ivar
 
-REAL,POINTER :: voldatiin(:,:), voldatiout(:,:) ! will have to be 3-d
+REAL,POINTER :: voldatiin(:,:,:), voldatiout(:,:,:)
 
 #ifdef DEBUG
 call l4f_category_log(volgrid6d_in%category,L4F_DEBUG,"start volgrid6d_transform_compute")
@@ -1418,17 +1418,19 @@ if (associated(volgrid6d_in%var))then
 end if
 ! allocate once for speed
 IF (.NOT.ASSOCIATED(volgrid6d_in%voldati)) THEN
-  ALLOCATE(voldatiin(volgrid6d_in%griddim%dim%nx, volgrid6d_in%griddim%dim%ny))
+  ALLOCATE(voldatiin(volgrid6d_in%griddim%dim%nx, volgrid6d_in%griddim%dim%ny, &
+   nlevel))
 ENDIF
 IF (.NOT.ASSOCIATED(volgrid6d_out%voldati)) THEN
-  ALLOCATE(voldatiout(volgrid6d_out%griddim%dim%nx, volgrid6d_out%griddim%dim%ny))
+  ALLOCATE(voldatiout(volgrid6d_out%griddim%dim%nx, volgrid6d_out%griddim%dim%ny, &
+   nlevel))
 ENDIF
 
-do itime=1,ntime
-  do itimerange=1,ntimerange
-    do ilevel=1,nlevel
-      do ivar=1,nvar
+DO ivar=1,nvar
+  DO itimerange=1,ntimerange
+    DO itime=1,ntime
 
+      DO ilevel=1,nlevel
 ! if present gaid copy it
         if (c_e(volgrid6d_in%gaid(ilevel,itime,itimerange,ivar)) .and. .not. &
             c_e(volgrid6d_out%gaid(ilevel,itime,itimerange,ivar))) then
@@ -1444,20 +1446,20 @@ do itime=1,ntime
              volgrid6d_in%gaid(ilevel,itime,itimerange,ivar)
           end if
         end if
+      ENDDO
 
-        CALL volgrid_get_vol_2d(volgrid6d_in, ilevel, itime, itimerange, ivar, &
-         voldatiin)
-        IF (ASSOCIATED(volgrid6d_out%voldati)) & ! improve!!!!
-          CALL volgrid_get_vol_2d(volgrid6d_out, ilevel, itime, itimerange, ivar, &
-           voldatiout)
-        CALL compute(this, voldatiin, voldatiout)
-        CALL volgrid_set_vol_2d(volgrid6d_out, ilevel, itime, itimerange, ivar, &
-         voldatiout)
+      CALL volgrid_get_vol_3d(volgrid6d_in, itime, itimerange, ivar, &
+       voldatiin)
+      IF (ASSOCIATED(volgrid6d_out%voldati)) & ! improve!!!!
+       CALL volgrid_get_vol_3d(volgrid6d_out, itime, itimerange, ivar, &
+       voldatiout)
+      CALL compute(this, voldatiin, voldatiout)
+      CALL volgrid_set_vol_3d(volgrid6d_out, itime, itimerange, ivar, &
+       voldatiout)
 
-      end do
-    end do
-  end do
-end do
+    ENDDO
+  ENDDO
+ENDDO
 
 IF (.NOT.ASSOCIATED(volgrid6d_in%voldati)) THEN
   DEALLOCATE(voldatiin)
@@ -1579,21 +1581,21 @@ end do
 END SUBROUTINE volgrid6dv_transform
 
 
-!> \brief Calcola i nuovi dati secondo la trasformazione specificata
-!!
-!! Deve essere fornito l'oggetto di trasformazione e oggetti completi
+! \brief Calcola i nuovi dati secondo la trasformazione specificata
+!
+! Deve essere fornito l'oggetto di trasformazione e oggetti completi
 SUBROUTINE volgrid6d_v7d_transform_compute(this, volgrid6d_in, vol7d_out, networkname)
-TYPE(grid_transform),INTENT(in) :: this !< oggetto di trasformazione per grigliato
-type(volgrid6d), INTENT(in) :: volgrid6d_in !< oggetto da trasformare
-type(vol7d), INTENT(out) :: vol7d_out !< oggetto trasformato
-CHARACTER(len=*),OPTIONAL,INTENT(in) :: networkname !< imposta il network in vol7d_out (default='generic')
+TYPE(grid_transform),INTENT(in) :: this ! oggetto di trasformazione per grigliato
+type(volgrid6d), INTENT(in) :: volgrid6d_in ! oggetto da trasformare
+type(vol7d), INTENT(out) :: vol7d_out ! oggetto trasformato
+CHARACTER(len=*),OPTIONAL,INTENT(in) :: networkname ! imposta il network in vol7d_out (default='generic')
 
 integer :: nntime, nana, ntime, ntimerange, nlevel, nvar
 integer :: itime, itimerange, ilevel, ivar, inetwork
-real,allocatable :: voldatir_out(:,:)
+REAL,ALLOCATABLE :: voldatir_out(:,:,:)
 TYPE(conv_func), pointer :: c_func(:)
 type(datetime),allocatable :: validitytime(:,:)
-REAL,POINTER :: voldatiin(:,:) ! will have to be 3-d
+REAL,POINTER :: voldatiin(:,:,:)
 
 #ifdef DEBUG
 call l4f_category_log(volgrid6d_in%category,L4F_DEBUG,"start volgrid6d_v7d_transform_compute")
@@ -1663,10 +1665,11 @@ nana=size(vol7d_out%ana)
 
 ! allocate once for speed
 IF (.NOT.ASSOCIATED(volgrid6d_in%voldati)) THEN
-  ALLOCATE(voldatiin(volgrid6d_in%griddim%dim%nx, volgrid6d_in%griddim%dim%ny))
+  ALLOCATE(voldatiin(volgrid6d_in%griddim%dim%nx, volgrid6d_in%griddim%dim%ny, &
+   nlevel))
 ENDIF
 
-allocate(voldatir_out(nana,1),stat=stallo)
+ALLOCATE(voldatir_out(nana,1,nlevel),stat=stallo)
 if (stallo /=0)then
   call l4f_category_log(volgrid6d_in%category,L4F_FATAL,"allocating memory")
   call raise_fatal_error("allocating memory")
@@ -1675,7 +1678,7 @@ end if
 inetwork=1
 do itime=1,ntime
   do itimerange=1,ntimerange
-    do ilevel=1,nlevel
+!    do ilevel=1,nlevel
       do ivar=1,nvar
         
                                 !non è chiaro se questa sezione è utile o no
@@ -1686,16 +1689,17 @@ do itime=1,ntime
 !!$          voldatir_out=reshape(vol7d_out%voldatir(:,index(vol7d_out%time,validitytime(itime,ilevel)),ilevel,itimerange,ivar,inetwork),(/nana,1/))
 !!$        end if
 
-        CALL volgrid_get_vol_2d(volgrid6d_in, ilevel, itime, itimerange, ivar, &
+        CALL volgrid_get_vol_3d(volgrid6d_in, itime, itimerange, ivar, &
          voldatiin)
 
         CALL compute(this, voldatiin, voldatir_out)
 
         if (vol7d_out%time_definition == volgrid6d_in%time_definition) then
-          vol7d_out%voldatir(:,itime,ilevel,itimerange,ivar,inetwork)=reshape(voldatir_out,(/nana/))
+          vol7d_out%voldatir(:,itime,:,itimerange,ivar,inetwork)= &
+           RESHAPE(voldatir_out,(/nana,nlevel/))
         else
-          vol7d_out%voldatir(:,index(vol7d_out%time,validitytime(itime,itimerange)),ilevel,itimerange,ivar,inetwork)=&
-           reshape(voldatir_out,(/nana/))
+          vol7d_out%voldatir(:,index(vol7d_out%time,validitytime(itime,itimerange)),:,itimerange,ivar,inetwork)=&
+           RESHAPE(voldatir_out,(/nana,nlevel/))
         end if
 
 ! 1 indice della dimensione "anagrafica"
@@ -1706,7 +1710,7 @@ do itime=1,ntime
 ! 6 indice della dimensione "rete"
 
       end do
-    end do
+!    end do
   end do
 end do
 
@@ -1876,19 +1880,19 @@ ENDDO
 END SUBROUTINE volgrid6dv_v7d_transform
 
 
-!> \brief Calcola i nuovi dati secondo la trasformazione specificata
-!!
-!! Deve essere fornito l'oggetto di trasformazione e oggetti completi
+! \brief Calcola i nuovi dati secondo la trasformazione specificata
+!
+! Deve essere fornito l'oggetto di trasformazione e oggetti completi
 SUBROUTINE v7d_volgrid6d_transform_compute(this, vol7d_in, volgrid6d_out, networkname)
-TYPE(grid_transform),INTENT(in) :: this !< oggetto di trasformazione per grigliato
-type(vol7d), INTENT(in) :: vol7d_in !< oggetto da trasformare
-type(volgrid6d), INTENT(out) :: volgrid6d_out !< oggetto trasformato 
-CHARACTER(len=*),OPTIONAL,INTENT(in) :: networkname !< seleziona il network da exportare da vol7d (default=1)
+TYPE(grid_transform),INTENT(in) :: this ! oggetto di trasformazione per grigliato
+type(vol7d), INTENT(in) :: vol7d_in ! oggetto da trasformare
+type(volgrid6d), INTENT(out) :: volgrid6d_out ! oggetto trasformato 
+CHARACTER(len=*),OPTIONAL,INTENT(in) :: networkname ! seleziona il network da exportare da vol7d (default=1)
 
 integer :: nana, ntime, ntimerange, nlevel, nvar, nnetwork
-integer :: itime, itimerange, ilevel, ivar, inetwork
+integer :: itime, itimerange, ivar, inetwork
 
-REAL,POINTER :: voldatiout(:,:) ! will have to be 3-d
+REAL,POINTER :: voldatiout(:,:,:)
 type(vol7d_network) :: network
 TYPE(conv_func), pointer :: c_func(:)
 !TODO category sarebbe da prendere da vol7d
@@ -1937,39 +1941,35 @@ end if
 nana=SIZE(vol7d_in%voldatir, 1)
 ! allocate once for speed
 IF (.NOT.ASSOCIATED(volgrid6d_out%voldati)) THEN
-  ALLOCATE(voldatiout(volgrid6d_out%griddim%dim%nx, volgrid6d_out%griddim%dim%ny))
+  ALLOCATE(voldatiout(volgrid6d_out%griddim%dim%nx, volgrid6d_out%griddim%dim%ny, &
+   nlevel))
 ENDIF
 
 DO ivar=1,nvar
   DO itimerange=1,ntimerange
     DO itime=1,ntime
-      DO ilevel=1,nlevel
 
-        CALL compute(this, &
-         vol7d_in%voldatir(:,itime,ilevel,itimerange,ivar,inetwork), voldatiout)
+      CALL compute(this, &
+       vol7d_in%voldatir(:,itime,:,itimerange,ivar,inetwork), voldatiout)
 
 ! Rescale valid data according to variable conversion table
-        IF (ASSOCIATED(c_func)) THEN
-          IF (c_func(ivar)%a /= conv_func_miss%a .OR. &
-           c_func(ivar)%b /= conv_func_miss%b )THEN
-            WHERE(voldatiout(:,:) /= rmiss )
-              voldatiout(:,:) = voldatiout(:,:)*c_func(ivar)%a + c_func(ivar)%b
-            END WHERE
-          ELSE
-            voldatiout(:,:) = rmiss
-          ENDIF
+      IF (ASSOCIATED(c_func)) THEN
+        IF (c_func(ivar)%a /= conv_func_miss%a .OR. &
+         c_func(ivar)%b /= conv_func_miss%b )THEN
+          WHERE(voldatiout(:,:,:) /= rmiss )
+            voldatiout(:,:,:) = voldatiout(:,:,:)*c_func(ivar)%a + c_func(ivar)%b
+          END WHERE
+        ELSE
+          voldatiout(:,:,:) = rmiss
         ENDIF
+      ENDIF
 
-        CALL volgrid_set_vol_2d(volgrid6d_out, ilevel, itime, itimerange, ivar, &
-         voldatiout)
-!        call compute(this, &
-!         vol7d_in%voldatir(:,itime,ilevel,itimerange,ivar,inetwork),&
-!         volgrid6d_out%voldati(:,:,ilevel,itime,itimerange,ivar))
+      CALL volgrid_set_vol_3d(volgrid6d_out, itime, itimerange, ivar, &
+       voldatiout)
 
-      END DO
-    END DO
-  END DO
-END DO
+    ENDDO
+  ENDDO
+ENDDO
 
 IF (.NOT.ASSOCIATED(volgrid6d_out%voldati)) THEN
   DEALLOCATE(voldatiout)
@@ -1978,7 +1978,7 @@ IF (ASSOCIATED(c_func)) THEN
   DEALLOCATE(c_func)
 ENDIF
 
-end SUBROUTINE v7d_volgrid6d_transform_compute
+END SUBROUTINE v7d_volgrid6d_transform_compute
 
 
 !> Performs the specified abstract transformation on the data provided.
@@ -2044,15 +2044,15 @@ CALL delete(grid_trans)
 END SUBROUTINE v7d_volgrid6d_transform
 
 
-!> \brief Calcola i nuovi dati secondo la trasformazione specificata
-!!
-!! Deve essere fornito l'oggetto di trasformazione e oggetti completi
+! \brief Calcola i nuovi dati secondo la trasformazione specificata
+!
+! Deve essere fornito l'oggetto di trasformazione e oggetti completi
 SUBROUTINE v7d_v7d_transform_compute(this, vol7d_in, vol7d_out)
-TYPE(grid_transform),INTENT(in) :: this !< oggetto di trasformazione per grigliato
-type(vol7d), INTENT(in) :: vol7d_in !< oggetto da trasformare
-type(vol7d), INTENT(out) :: vol7d_out !< oggetto trasformato
+TYPE(grid_transform),INTENT(in) :: this ! oggetto di trasformazione per grigliato
+type(vol7d), INTENT(in) :: vol7d_in ! oggetto da trasformare
+type(vol7d), INTENT(out) :: vol7d_out ! oggetto trasformato
 
-integer :: itime, itimerange, ilevel, ivar, inetwork
+INTEGER :: itime, itimerange, ivar, inetwork
 
 vol7d_out%time(:) = vol7d_in%time(:)
 vol7d_out%timerange(:) = vol7d_in%timerange(:)
@@ -2063,15 +2063,13 @@ vol7d_out%dativar%r(:) = vol7d_in%dativar%r(:)
 DO inetwork = 1, SIZE(vol7d_in%network)
   DO ivar = 1, SIZE(vol7d_in%dativar%r)
     DO itimerange = 1, SIZE(vol7d_in%timerange)
-      DO ilevel = 1, SIZE(vol7d_in%level)
-        DO itime = 1, SIZE(vol7d_in%time)
+      DO itime = 1, SIZE(vol7d_in%time)
 
 ! dirty trick to make voldatir look like a 2d-array of shape (nana,1)
-          CALL compute(this, &
-           vol7d_in%voldatir(:,itime,ilevel,itimerange,ivar,inetwork), &
-           vol7d_out%voldatir(:,itime:itime,ilevel,itimerange,ivar,inetwork))
+        CALL compute(this, &
+         vol7d_in%voldatir(:,itime,:,itimerange,ivar,inetwork), &
+         vol7d_out%voldatir(:,itime:itime,:,itimerange,ivar,inetwork))
 
-        ENDDO
       ENDDO
     ENDDO
   ENDDO
