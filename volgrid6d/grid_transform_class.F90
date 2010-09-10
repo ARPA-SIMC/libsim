@@ -1614,12 +1614,6 @@ IF (this%trans%trans_type == 'zoom') THEN
    this%outiny:this%outfny,:) = &
    field_in(this%iniox:this%infox, &
    this%inioy:this%infoy,:)
-  PRINT*,this%outinx,this%outfnx,this%outiny,this%outfny
-  PRINT*,this%iniox,this%infox,this%inioy,this%infoy
-  PRINT*,MAXVAL(field_out(this%outinx:this%outfnx,this%outiny:this%outfny,:)), &
-   MINVAL(field_out(this%outinx:this%outfnx,this%outiny:this%outfny,:))
-  PRINT*,MAXVAL(field_in(this%iniox:this%infox,this%inioy:this%infoy,:)), &
-   MINVAL(field_in(this%iniox:this%infox,this%inioy:this%infoy,:))
 
 ELSE IF (this%trans%trans_type == 'boxregrid') THEN
 
