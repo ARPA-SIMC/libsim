@@ -1,3 +1,7 @@
+# 1 "datetime_class.F90"
+# 1 "<built-in>"
+# 1 "<command-line>"
+# 1 "datetime_class.F90"
 ! Copyright (C) 2010  ARPA-SIM <urpsim@smr.arpa.emr.it>
 ! authors:
 ! Davide Cesari <dcesari@arpa.emr.it>
@@ -15,6 +19,150 @@
 
 ! You should have received a copy of the GNU General Public License
 ! along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# 1 "../config.h" 1
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# 19 "datetime_class.F90" 2
 !> \brief Classi per la gestione delle coordinate temporali.
 !! 
 !! Questo module definisce un paio di classi per la gestione di
@@ -269,7 +417,105 @@ INTERFACE display
 END INTERFACE
 
 
+
+
+
+# 1 "arrayof_pre.F90" 1
+!> This universal template can be used to wrap any
+!! derived type (e.g.  \c TYPE(2d_coord) ) defined in a \c MODULE
+!! into a derived type defining a 1-dimensional array of the original
+!! type; this array can be dynamically extended or shortened by adding
+!! or removing elements at an arbitrary position through the ::insert
+!! and ::remove methods.  All the allocations, deallocations, copy
+!! operations are taken care of in the present module; the user can
+!! also call the ::pack method in order to reduce the memory
+!! occupation of the object or the ::delete method in order to delete
+!! all the data and release all the memory.  Before use, any object of
+!! the array type should be initialised through the constructor
+!! ARRAYOF_TYPE_new:: .
+!!
+!! The template requires the definition of the following preprocessor macros
+!! before being included:
+!!  - \c TYPE(datetime) the type to be wrapped
+!!  - \c arrayof_datetime the name of the "arrayed" derived type, containing a 1-d array of TYPE(datetime), if undefined it will be \a arrayof_ARRAYOF_ORIGTYPE
+!!  - \c ARRAYOF_ORIGDESTRUCTOR(x) the instruction required in order to "destroy" an object of \c TYPE(datetime) when the ::remove method is called, optional, if undefined no destructor is called
+!!  - \c 1 to be defined if TYPE(datetime) supports the == operator, in that case the *_unique method are defined for the array
+!!
+!! The template comes in 2 parts, one to be included in the
+!! declaration part of the module (before \c CONTAINS) and the second
+!! in the execution part of it (after \c CONTAINS).
+!!
+!! The template module can be iterated on itself in order to create an
+!! array of arrays of the initial derived type, where each element
+!! of the first array is itself an array, possibly of a different length.
+!! In this case, in order to avoid preprocessor warnings, it is important to
+!! use the \c #undef command of the preprocesso to undefine the macros
+!! such as \c TYPE(datetime) , which are going to be redefined
+!! for iterating the template.
+
+
+
+
+
+!> Derived type defining the array object of \a TYPE TYPE(datetime)
+TYPE arrayof_datetime
+  TYPE(datetime), POINTER :: array(:) !< array of TYPE(datetime)
+  INTEGER :: arraysize !< current logical size of the array; it may be different from the physical size \c SIZE(this%array), and it should be used instead of \c SIZE function in order to evaluate the number of elements assigned to \a array
+  DOUBLE PRECISION :: overalloc !< overallocation factor, values close to 1. determine more calls to the system alloc function (decreased performances) at the advantage of less memory consumption; the results are not affected by the value of this member
+END TYPE arrayof_datetime
+
+INTERFACE insert
+  MODULE PROCEDURE arrayof_datetime_insert, arrayof_datetime_insert_array
+END INTERFACE
+
+INTERFACE append
+  MODULE PROCEDURE arrayof_datetime_append
+END INTERFACE
+
+INTERFACE remove
+  MODULE PROCEDURE arrayof_datetime_remove
+END INTERFACE
+
+INTERFACE delete
+  MODULE PROCEDURE arrayof_datetime_delete
+END INTERFACE
+
+INTERFACE pack
+  MODULE PROCEDURE arrayof_datetime_pack
+END INTERFACE
+
+PUBLIC arrayof_datetime
+
+PRIVATE array_of_alloc, &
+ arrayof_datetime_insert, arrayof_datetime_insert_array, &
+ arrayof_datetime_append, arrayof_datetime_remove, &
+ arrayof_datetime_delete, &
+ arrayof_datetime_pack
+
+!PUBLIC insert, remove, delete, pack
+
+
+INTERFACE insert_unique
+  MODULE PROCEDURE arrayof_datetime_insert_unique
+END INTERFACE
+
+INTERFACE append_unique
+  MODULE PROCEDURE arrayof_datetime_append_unique
+END INTERFACE
+
+PRIVATE arrayof_datetime_insert_unique, arrayof_datetime_append_unique
+
+!PUBLIC insert_unique, append_unique
+
+
+# 276 "datetime_class.F90" 2
+! from arrayof
+PUBLIC insert, remove, pack
+PUBLIC insert_unique, append_unique
+
+
 CONTAINS
+
 
 ! ==============
 ! == datetime ==
@@ -829,6 +1075,255 @@ ENDIF
 DEALLOCATE(dateiso)
 
 END SUBROUTINE datetime_vect_write_unit
+
+
+
+# 1 "arrayof_post.F90" 1
+
+
+
+
+!> Constructor for initializing an array object.
+!! It is necessary to construct any array object through
+!! the constructor function before its use, otherwise unpredictable
+!! results may happen.
+FUNCTION arrayof_datetime_new() RESULT(this)
+TYPE(arrayof_datetime) :: this !< array object to initialize
+
+! give empty/default values
+NULLIFY(this%array)
+this%arraysize = 0
+this%overalloc = 2.0D0
+
+END FUNCTION arrayof_datetime_new
+
+
+!> Method for inserting a number of elements of the array at a desired position.
+!! If necessary, the array is reallocated to accomodate the new elements.
+SUBROUTINE arrayof_datetime_insert_array(this, content, nelem, pos)
+TYPE(arrayof_datetime) :: this !< array object to extend
+TYPE(datetime), INTENT(in), OPTIONAL :: content(:) !< object of \a TYPE TYPE(datetime) to insert, if not provided, space is reserved but not initialized
+INTEGER, INTENT(in), OPTIONAL :: nelem !< number of elements to add, mutually exclusive with the previous parameter, if both are not provided, a single element is added without initialization
+INTEGER, INTENT(in), OPTIONAL :: pos !< position where to insert, if it is out of range, it is clipped, if it is not provided, the object is appended
+
+INTEGER :: i, n, p
+
+IF (PRESENT(content)) THEN ! size of data
+  n = SIZE(content)
+ELSE IF (PRESENT(nelem)) THEN ! explicit size
+  n = nelem
+ELSE ! default add one element
+  n = 1
+ENDIF
+IF (n <= 0) RETURN ! nothing to do
+
+IF (PRESENT(pos)) THEN ! clip p
+  p = MAX(1, MIN(pos, this%arraysize+1))
+ELSE ! pos not provided, append
+  p = this%arraysize + 1
+ENDIF
+this%arraysize = this%arraysize + n
+
+PRINT*,'ARRAYOF: inserting ',n,' elements at position ',p
+
+
+CALL array_of_alloc(this) ! ensure to have space
+DO i = this%arraysize, p+n, -1 ! push the elements forward starting from p
+  this%array(i) = this%array(i-n)
+ENDDO
+IF (PRESENT(content)) THEN
+  this%array(p:p+n-1) = content(:)
+ENDIF
+
+END SUBROUTINE arrayof_datetime_insert_array
+
+
+!> Method for inserting an element of the array at a desired position.
+!! If necessary, the array is reallocated to accomodate the new element.
+SUBROUTINE arrayof_datetime_insert(this, content, pos)
+TYPE(arrayof_datetime) :: this !< array object to extend
+TYPE(datetime), INTENT(in) :: content !< object of \a TYPE TYPE(datetime) to insert
+INTEGER, INTENT(in), OPTIONAL :: pos !< position where to insert, if it is out of range, it is clipped, if it is not provided, the object is appended
+
+CALL insert(this, (/content/), pos=pos)
+
+END SUBROUTINE arrayof_datetime_insert
+
+
+!> Quick function to append an element to the array.
+!! The return value is the position at which the element has been
+!! appended.
+FUNCTION arrayof_datetime_append(this, content) RESULT(pos)
+TYPE(arrayof_datetime) :: this !< array object to extend
+TYPE(datetime), INTENT(in) :: content !< object of \a TYPE TYPE(datetime) to append
+INTEGER :: pos
+
+this%arraysize = this%arraysize + 1
+pos = this%arraysize + 1
+CALL array_of_alloc(this)
+this%array(this%arraysize) = content
+
+END FUNCTION arrayof_datetime_append
+
+
+
+!> Method for inserting an element of the array at a desired position
+!! only if it is not present in the array yet.
+!! If necessary, the array is reallocated to accomodate the new element.
+SUBROUTINE arrayof_datetime_insert_unique(this, content, pos)
+TYPE(arrayof_datetime) :: this !< array object to extend
+TYPE(datetime), INTENT(in) :: content !< object of \a TYPE TYPE(datetime) to insert
+INTEGER, INTENT(in), OPTIONAL :: pos !< position where to insert, if it is out of range, it is clipped, if it is not provided, the object is appended
+
+INTEGER :: i
+
+DO i = 1, this%arraysize
+  IF (this%array(i) == content) RETURN
+ENDDO
+
+CALL insert(this, (/content/), pos=pos)
+
+END SUBROUTINE arrayof_datetime_insert_unique
+
+
+!> Quick function to append an element to the array
+!! only if it is not present in the array yet.  The return value is
+!! the position at which the element has been appended or at which it
+!! has been found.
+FUNCTION arrayof_datetime_append_unique(this, content) RESULT(pos)
+TYPE(arrayof_datetime) :: this !< array object to extend
+TYPE(datetime), INTENT(in) :: content !< object of \a TYPE TYPE(datetime) to append
+INTEGER :: pos
+
+DO pos = 1, this%arraysize
+  IF (this%array(pos) == content) RETURN
+ENDDO
+
+this%arraysize = this%arraysize + 1
+pos = this%arraysize + 1
+CALL array_of_alloc(this)
+this%array(this%arraysize) = content
+
+END FUNCTION arrayof_datetime_append_unique
+
+
+
+!> Method for removing elements of the array at a desired position.
+!! If necessary, the array is reallocated to reduce space.
+SUBROUTINE arrayof_datetime_remove(this, nelem, pos, nodestroy)
+TYPE(arrayof_datetime) :: this !< array object in which an element has to be removed
+INTEGER, INTENT(in), OPTIONAL :: nelem !< number of elements to remove, if not provided, a single element is removed
+INTEGER, INTENT(in), OPTIONAL :: pos !< position of the element to be removed, if it is out of range, it is clipped, if it is not provided, objects are removed at the end
+LOGICAL, INTENT(in), OPTIONAL :: nodestroy !< if provided and \c .TRUE. , the destructor possibily defined for the TYPE(datetime) is not called for every deleted object, may be useful if the objects to be deleted have been copied to another instance of arrayof_datetime and continue their life there
+
+INTEGER :: i, n, p
+LOGICAL :: destroy
+
+IF (this%arraysize <= 0) RETURN ! nothing to do
+IF (PRESENT(nelem)) THEN ! explicit size
+  n = nelem
+  IF (n <= 0) RETURN ! nothing to do
+ELSE ! default remove one element
+  n = 1
+ENDIF
+
+IF (PRESENT(pos)) THEN ! clip p
+  p = MAX(1, MIN(pos, this%arraysize-n+1))
+ELSE ! pos not provided, cut at the end
+  p = this%arraysize - n + 1
+ENDIF
+
+PRINT*,'ARRAYOF: removing ',n,' elements at position ',p
+
+
+! destroy the elements if needed
+# 170 "arrayof_post.F90"
+
+this%arraysize = this%arraysize - n
+DO i = p, this%arraysize ! push the elements backward starting from p
+  this%array(i) = this%array(i+n)
+ENDDO
+CALL array_of_alloc(this) ! release space if possible
+
+END SUBROUTINE arrayof_datetime_remove
+
+
+!> Destructor for finalizing an array object.  If defined, calls the
+!! destructor for every element of the array object;
+!! finally it deallocates all the space occupied.
+SUBROUTINE arrayof_datetime_delete(this, nodestroy)
+TYPE(arrayof_datetime) :: this !< array object to be destroyed
+LOGICAL, INTENT(in), OPTIONAL :: nodestroy !< if provided and \c .TRUE. , the destructor possibily defined for the TYPE(datetime) is not called for every deleted object, may be useful if the objects to be deleted have been copied to another instance of arrayof_datetime and continue their life there
+
+INTEGER :: i
+LOGICAL :: destroy
+
+
+PRINT*,'ARRAYOF: destroying ',this%arraysize
+
+IF (ASSOCIATED(this%array)) THEN
+! destroy the elements if needed
+# 206 "arrayof_post.F90"
+! free the space
+  DEALLOCATE(this%array)
+ENDIF
+! give empty values
+this=arrayof_datetime_new()
+
+END SUBROUTINE arrayof_datetime_delete
+
+
+!> Method for packing the array object reducing at a minimum
+!! the memory occupation, without destroying its contents.
+!! The value of this::overalloc remains unchanged.
+!! After the call to the method, the object can continue to be used,
+!! extended and shortened as before.
+SUBROUTINE arrayof_datetime_pack(this)
+TYPE(arrayof_datetime) :: this !< object to be packed
+
+DOUBLE PRECISION :: tmpoveralloc
+
+
+PRINT*,'ARRAYOF: packing ',this%arraysize
+
+tmpoveralloc = this%overalloc ! save value
+this%overalloc = 1.0D0
+CALL array_of_alloc(this) ! reallocate exact size
+this%overalloc = tmpoveralloc
+
+END SUBROUTINE arrayof_datetime_pack
+
+
+SUBROUTINE array_of_alloc(this)
+TYPE(arrayof_datetime) :: this
+
+TYPE(datetime), POINTER :: tmpptr(:)
+INTEGER :: newsize, copysize
+
+newsize = MAX(INT(this%arraysize*this%overalloc), this%arraysize)
+
+IF (ASSOCIATED(this%array)) THEN ! Vect already allocated
+! space is neither too small nor too big, nothing to do
+  IF (SIZE(this%array) >= this%arraysize .AND. SIZE(this%array) <= newsize) RETURN
+! if too big, reduce
+  IF (SIZE(this%array) > newsize) newsize = this%arraysize
+
+  PRINT*,'ARRAYOF: requested ',this%arraysize,' elements, allocating ',newsize
+
+  tmpptr => this%array ! keep a pointer to the old data
+  ALLOCATE(this%array(newsize))
+  copysize = MIN(this%arraysize, SIZE(tmpptr)) ! restrict to valid intervals
+  this%array(1:copysize) = tmpptr(1:copysize) ! copy the old data
+  DEALLOCATE(tmpptr) ! and destroy them
+ELSE ! need to allocate from scratch
+
+  PRINT*,'ARRAYOF: first time requested ',this%arraysize,' elements, allocating ',newsize
+
+  ALLOCATE(this%array(newsize))
+ENDIF
+
+END SUBROUTINE array_of_alloc
+# 845 "datetime_class.F90" 2
 
 
 ! ===============

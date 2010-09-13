@@ -149,6 +149,14 @@ INTERFACE to_char
   MODULE PROCEDURE to_char_timerange
 END INTERFACE
 
+#define ARRAYOF_ORIGTYPE TYPE(vol7d_timerange)
+#define ARRAYOF_TYPE arrayof_vol7d_timerange
+#define ARRAYOF_ORIGEQ 1
+#include "arrayof_pre.F90"
+! from arrayof
+PUBLIC insert, append, remove, packarray
+PUBLIC insert_unique, append_unique
+
 
 CONTAINS
 
@@ -428,6 +436,8 @@ END FUNCTION vol7d_timerange_lesv
 #include "vol7d_distinct.F90"
 #undef VOL7D_POLY_TYPE
 #undef VOL7D_POLY_TYPES
+
+#include "arrayof_post.F90"
 
 
 END MODULE vol7d_timerange_class
