@@ -135,9 +135,10 @@ ELSE
 
   IF (PRESENT(other)) THEN
     CALL vol7d_recompute_stat_proc_agg(this, that1, stat_proc, &
-     step, start, frac_valid, other=other1, stat_proc_input=stat_proc_input)
-    CALL vol7d_recompute_stat_proc_diff(other1, that2, stat_proc, &
-     step, full_steps, other=other)
+     step, start, frac_valid, other=other, stat_proc_input=stat_proc_input)
+    CALL vol7d_recompute_stat_proc_diff(this, that2, stat_proc, &
+     step, full_steps, other=other1)
+    CALL vol7d_append(other, other1, sort=.TRUE.)
   ELSE
     CALL vol7d_recompute_stat_proc_agg(this, that1, stat_proc, &
      step, start, frac_valid, stat_proc_input=stat_proc_input)
@@ -971,7 +972,7 @@ mask_timerange(:) = this%timerange(:)%timerange == tri &
  .AND. this%timerange(:)%p2 > 0
 
 IF (optio_log(full_steps)) THEN ! keep only timeranges defining intervals ending at integer steps
-  mask_timerange(:) = mask_timerange(:) .AND. (MOD(this%timerange(:)%p1, steps) == 0)
+  mask_timerange(:) = mask_timerange(:) .AND. (MOD(this%timerange(:)%p2, steps) == 0)
 ENDIF
 nitr = COUNT(mask_timerange)
 ALLOCATE(f(nitr))
@@ -1033,8 +1034,6 @@ DO l = 1, SIZE(this%time)
         IF (useful) THEN ! add otime, otimerange
           map_tr(i,j,k,l,1) = append_unique(otime, tmptime)
           map_tr(i,j,k,l,2) = append_unique(otimerange, tmptimerange)
-          CALL display(tmptime)
-          CALL display(tmptimerange)
         ENDIF
       ENDDO
     ENDDO
