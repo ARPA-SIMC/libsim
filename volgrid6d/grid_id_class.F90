@@ -682,13 +682,23 @@ SUBROUTINE grid_id_decode_data(this, field)
 TYPE(grid_id),INTENT(in) :: this
 REAL,INTENT(out) :: field(:,:)
 
+LOGICAL :: done
+
+done = .FALSE.
 #ifdef HAVE_LIBGRIBAPI
-IF (c_e(this%gaid)) CALL grid_id_decode_data_gribapi(this%gaid, field)
+IF (c_e(this%gaid)) THEN
+  CALL grid_id_decode_data_gribapi(this%gaid, field)
+  done = .TRUE.
+ENDIF
 #endif
 #ifdef HAVE_LIBGDAL
 ! subarea?
-IF (gdalassociated(this%gdalid)) CALL grid_id_decode_data_gdal(this%gdalid, field)
+IF (gdalassociated(this%gdalid)) THEN
+  CALL grid_id_decode_data_gdal(this%gdalid, field)
+  done = .TRUE.
+ENDIF
 #endif
+IF (.NOT.done) field(:,:) = rmiss
 
 END SUBROUTINE grid_id_decode_data
 
