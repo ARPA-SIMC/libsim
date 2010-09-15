@@ -776,9 +776,9 @@ options(16) = op_option_new(' ', 'comp-stat-proc', comp_stat_proc, '', help= &
  'statistically process data with an operator specified in the form [isp:]osp &
  &where isp is the statistical process of input data which has to be processed &
  &and osp is the statistical process to apply and which will appear in output &
- &timerange; possible values for isp are 0=average, 1=accumulated, 2=maximum, &
- &3=minimum, 254=instantaneous, possible values for osp are 0, 1, 2, 3 with the &
- &same meaning; if isp is not provided it is assumed to be equal to osp')
+ &timerange; possible values for isp and osp are 0=average, 1=accumulated, &
+ &2=maximum, 3=minimum, 254=instantaneous, but not all the compbinations &
+ &make sense; if isp is not provided it is assumed to be equal to osp')
 
 options(17) = op_option_new(' ', 'comp-average', comp_average, help= &
  'recompute average of averaged fields on a different time step, &
@@ -1161,15 +1161,19 @@ ENDIF
 IF (c_e(istat_proc) .AND. c_e(ostat_proc)) THEN
   CALL init(v7d_comp1, time_definition=v7d%time_definition)
   CALL init(v7d_comp2, time_definition=v7d%time_definition)
-  IF (istat_proc == 254) THEN
-    comp_max_step = timedelta_depop(c_i)/10 ! create an argument for tuning this
-    CALL vol7d_compute_stat_proc_agg(v7d, v7d_comp1, ostat_proc, c_i, c_s, &
-     comp_max_step, weighted=.TRUE.,  other=v7d_comp3)
-  ELSE
-    CALL vol7d_recompute_stat_proc(v7d, v7d_comp1, ostat_proc, c_i, c_s, &
-     full_steps=.TRUE., frac_valid=comp_frac_valid, other=v7d_comp3, &
-     stat_proc_input=istat_proc)
-  ENDIF
+!  IF (istat_proc == 254) THEN
+!    comp_max_step = timedelta_depop(c_i)/10 ! create an argument for tuning this
+!    CALL vol7d_compute_stat_proc_agg(v7d, v7d_comp1, ostat_proc, c_i, c_s, &
+!     comp_max_step, weighted=.TRUE.,  other=v7d_comp3)
+!  ELSE
+!    CALL vol7d_recompute_stat_proc(v7d, v7d_comp1, ostat_proc, c_i, c_s, &
+!     full_steps=.TRUE., frac_valid=comp_frac_valid, other=v7d_comp3, &
+!     stat_proc_input=istat_proc)
+!  ENDIF
+  CALL vol7d_compute_stat_proc(v7d, v7d_comp1, istat_proc, ostat_proc, c_i, c_s, &
+   full_steps=.TRUE., frac_valid=comp_frac_valid, &
+   max_step=timedelta_depop(c_i)/10, weighted=.TRUE., other=v7d_comp3)
+
   CALL delete(v7d)
   v7d = v7d_comp3
 

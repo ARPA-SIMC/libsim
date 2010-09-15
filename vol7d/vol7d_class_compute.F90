@@ -33,65 +33,137 @@ IMPLICIT NONE
 CONTAINS
 
 
-!> General-purpose method for recomputing a statistical processing on
-!! a set of data already processed with the same statistical
-!! processing, on a different time interval.  This method does not
-!! change the statistical processing (timerange) of the data (unless
-!! \a stat_proc_input is provided, see vol7d_recompute_stat_proc_agg()
-!! ), it just recomputes it on a specified interval, different from
-!! the one over which data is provided.  Only floating point single or
-!! double precision data are processed.  Statistical processing by
-!! aggregation of shorter intervals and statistical processing by
-!! difference of partially overlapping intervals are tried in turn. If
-!! only one of the two operations is desired, use the specific method
-!! \a vol7d_recompute_stat_proc_agg() or \a
-!! vol7d_recompute_stat_proc_diff(). In case one or both operations
-!! cannot be performed a warning is issued, but the program continues.
+!> General-purpose method for computing a statistical processing on
+!! data in a vol7d object. already processed with the same statistical
+!! processing, on a different time interval specified by \a step and
+!! \a start.  This method tries to apply all the suitable specialized
+!! statistical processing methods according to the input and output
+!! statistical processing requested.  The argument \a stat_proc_input
+!! determines which data will be processed, while the \a stat_proc
+!! argument determines the type of statistical process to be applied
+!! and which will be owned by output data.
 !!
-!! See also the description of vol7d_recompute_stat_proc_agg() and
-!! vol7d_recompute_stat_proc_diff() methods for more details.
-SUBROUTINE vol7d_recompute_stat_proc(this, that, stat_proc, &
- step, start, full_steps, frac_valid, other, stat_proc_input)
+!! The possible combinations are:
+!!
+!!  - \a stat_proc_input = 254
+!!    - \a stat_proc = 0 average instantaneous observations
+!!    - \a stat_proc = 2 compute maximum of instantaneous observations
+!!    - \a stat_proc = 3 compute minimum of instantaneous observations
+!!  processing is computed on longer intervals by aggregation, see the
+!!  description of vol7d_compute_stat_proc_agg()
+!!
+!!  - \a stat_proc_input = *
+!!    - \a stat_proc = 254 consider statistically processed values as
+!!      instantaneous without any extra processing
+!!  see the description of vol7d_decompute_stat_proc()
+!!
+!!  - \a stat_proc_input = 0, 1, 2, 3
+!!    - \a stat_proc = \a stat_proc_input recompute input data on
+!!      different intervals
+!!    the same statistical processing is applied to obtain data
+!!    processed on a different interval, either longer, by
+!!    aggregation, or shorter, by differences, see the description of
+!!    vol7d_recompute_stat_proc_agg() and
+!!    vol7d_recompute_stat_proc_diff() respectively; it is also
+!!    possible to provide \a stat_proc_input \a /= \a stat_proc, but
+!!    it has to be used with care.
+!!
+!! If a particular statistical processing cannot be performed on the
+!! input data, the program continues with a warning and, if requested,
+!! the input data is passed over to the volume specified by the \a
+!! other argument, in order to allow continuation of processing.  All
+!! the other parameters are passed over to the specifical statistical
+!! processing methods and are documented there.
+SUBROUTINE vol7d_compute_stat_proc(this, that, stat_proc_input, stat_proc, &
+ step, start, full_steps, frac_valid, max_step, weighted, other)
 TYPE(vol7d),INTENT(inout) :: this !< volume providing data to be recomputed, it is not modified by the method, apart from performing a \a vol7d_alloc_vol on it
 TYPE(vol7d),INTENT(out) :: that !< output volume which will contain the recomputed data
-INTEGER,INTENT(in) :: stat_proc !< type of statistical processing to be recomputed (from grib2 table), only data having timerange of this type will be recomputed and will appear in the output volume
+INTEGER,INTENT(in) :: stat_proc_input !< type of statistical processing of data that has to be processed (from grib2 table), only data having timerange of this type will be processed, the actual statistical processing performed and which will appear in the output volume, is however determined by \a stat_proc argument
+INTEGER,INTENT(in) :: stat_proc !< type of statistical processing to be recomputed (from grib2 table), data in output volume \a that will have a timerange of this type
 TYPE(timedelta),INTENT(in) :: step !< length of the step over which the statistical processing is performed
 TYPE(datetime),INTENT(in),OPTIONAL :: start !< start of statistical processing interval
-LOGICAL,INTENT(in),OPTIONAL :: full_steps !< if \a .TRUE. cumulate only on intervals starting at a forecast time modulo \a step (default is to cumulate on all possible combinations of intervals)
+LOGICAL,INTENT(in),OPTIONAL :: full_steps !< if \a .TRUE. cumulate only on intervals starting at a forecast time modulo \a step, default is to cumulate on all possible combinations of intervals
 REAL,INTENT(in),OPTIONAL :: frac_valid !< minimum fraction of valid data required for considering acceptable a recomputed value, default=1.
-TYPE(vol7d),INTENT(inout),OPTIONAL :: other !< optional volume that, on exit, is going to be merged with the data that did not contribute to the accumulation computation
-INTEGER,INTENT(in),OPTIONAL :: stat_proc_input !< to be used with care, type of statistical processing of data that has to be processed (from grib2 table), only data having timerange of this type will be recomputed, the actual statistical processing performed and which will appear in the output volume, is however determined by \a stat_proc argument
+TYPE(timedelta),INTENT(in),OPTIONAL :: max_step ! maximum allowed distance in time between two single valid data within a dataset, for the dataset to be eligible for statistical processing
+LOGICAL,INTENT(in),OPTIONAL :: weighted !< if provided and \c .TRUE., the statistical process is computed, if possible, by weighting every value with a weight proportional to its validity interval
+TYPE(vol7d),INTENT(inout),OPTIONAL :: other !< optional volume that, on exit, is going to contain the data that did not contribute to the accumulation computation
 
 TYPE(vol7d) :: that1, that2, other1
+INTEGER :: steps
+INTEGER(kind=int_ll) :: msteps
 
-IF (PRESENT(other)) THEN
-  CALL vol7d_recompute_stat_proc_agg(this, that1, stat_proc, &
-   step, start, frac_valid, other=other1, stat_proc_input=stat_proc_input)
-  CALL vol7d_recompute_stat_proc_diff(other1, that2, stat_proc, step, full_steps, other=other)
+IF (stat_proc_input == 254) THEN
+  CALL l4f_log(L4F_INFO, 'computing statistical processing by aggregation '//&
+   TRIM(to_char(stat_proc_input))//':'//TRIM(to_char(stat_proc)))
+
+  CALL vol7d_compute_stat_proc_agg(this, that, stat_proc, &
+   step, start, max_step, weighted, other)
+
+ELSE IF (stat_proc == 254) THEN
+  CALL l4f_log(L4F_INFO, &
+   'computing instantaneous data from statistically processed '//&
+   TRIM(to_char(stat_proc_input))//':'//TRIM(to_char(stat_proc)))
+
+! compute length of cumulation step in seconds
+  CALL getval(step, amsec=msteps)
+  steps = msteps/1000_int_ll
+
+  IF (ANY(this%timerange(:)%p2 == steps)) THEN ! data is ready
+    CALL vol7d_decompute_stat_proc(this, that, step, other, stat_proc_input)
+  ELSE
+    IF (ANY(this%timerange(:)%p2 == steps/2)) THEN ! need to average
+! average twice on step interval, with a shift of step/2
+      CALL vol7d_recompute_stat_proc_agg(this, that1, stat_proc_input, &
+     step, frac_valid=1.0)
+      CALL vol7d_recompute_stat_proc_agg(this, that2, stat_proc_input, &
+     step, start=that1%time(1)+step/2, frac_valid=1.0)
+! merge the result
+      CALL vol7d_append(that1, that2, sort=.TRUE., lanasimple=.TRUE.)
+! and process it
+      CALL vol7d_decompute_stat_proc(that1, that, step, other, stat_proc_input)
+      CALL delete(that1)
+      CALL delete(that2)
+    ELSE
+! do nothing
+    ENDIF
+  ENDIF
+
 ELSE
-  CALL vol7d_recompute_stat_proc_agg(this, that1, stat_proc, &
-   step, start, frac_valid, stat_proc_input=stat_proc_input)
-  CALL vol7d_recompute_stat_proc_diff(this, that2, stat_proc, step, full_steps)
+  CALL l4f_log(L4F_INFO, &
+   'recomputing statistically processed data by aggregation and difference '//&
+   TRIM(to_char(stat_proc_input))//':'//TRIM(to_char(stat_proc)))
+
+  IF (PRESENT(other)) THEN
+    CALL vol7d_recompute_stat_proc_agg(this, that1, stat_proc, &
+     step, start, frac_valid, other=other1, stat_proc_input=stat_proc_input)
+    CALL vol7d_recompute_stat_proc_diff(other1, that2, stat_proc, &
+     step, full_steps, other=other)
+  ELSE
+    CALL vol7d_recompute_stat_proc_agg(this, that1, stat_proc, &
+     step, start, frac_valid, stat_proc_input=stat_proc_input)
+    CALL vol7d_recompute_stat_proc_diff(this, that2, stat_proc, step, full_steps)
+  ENDIF
+
+  CALL vol7d_merge(that1, that2, sort=.TRUE.)
+  that = that1
 ENDIF
 
-CALL vol7d_merge(that1, that2, sort=.TRUE.)
-that = that1
-
-END SUBROUTINE vol7d_recompute_stat_proc
+END SUBROUTINE vol7d_compute_stat_proc
 
 
 !> Specialized method for statistically processing a set of data
 !! already processed with the same statistical processing, on a
 !! different time interval.  This method performs statistical
 !! processing by aggregation of shorter intervals.  Only floating
-!! point single or double precision data are processed.
+!! point single or double precision data with analysis/observation
+!! timerange are processed.
 !!
 !! The output \a that vol7d object contains elements from the original volume
 !! \a this satisfying the conditions
 !!  - real single or double precision variables
 !!  - timerange (vol7d_timerange_class::vol7d_timerange::timerange)
 !!    of type \a stat_proc (or \a stat_proc_input if provided)
-!!  - p1 = 0 (end of period == reference time)
+!!  - p1 = 0 (end of period == reference time, analysis/observation)
 !!  - p2 > 0 (processing interval non null, non instantaneous data)
 !!    and equal to a multiplier of \a step
 !!
@@ -103,6 +175,15 @@ END SUBROUTINE vol7d_recompute_stat_proc
 !!  - 1 cumulation
 !!  - 2 maximum
 !!  - 3 minimum
+!!
+!! The start of processing period can be computed automatically from
+!! the input intervals as the first possible interval modulo \a step,
+!! or, for a better control, it can be specified explicitely by the
+!! optional argument \a start. Be warned that, in the final volume,
+!! the first reference time will actually be \a start \a + \a step,
+!! since \a start indicates the beginning of first processing
+!! interval, while reference time (for analysis/oservation) is the end
+!! of the interval.
 !!
 !! The purpose of the optional argument \a stat_proc_input is to allow
 !! processing with a certain statistical processing operator a dataset
@@ -121,7 +202,7 @@ INTEGER,INTENT(in) :: stat_proc !< type of statistical processing to be recomput
 TYPE(timedelta),INTENT(in) :: step !< length of the step over which the statistical processing is performed
 TYPE(datetime),INTENT(in),OPTIONAL :: start !< start of statistical processing interval
 REAL,INTENT(in),OPTIONAL :: frac_valid !< minimum fraction of valid data required for considering acceptable a recomputed value, default=1.
-TYPE(vol7d),INTENT(inout),OPTIONAL :: other !< optional volume that, on exit, is going to be merged with the data that did not contribute to the accumulation computation
+TYPE(vol7d),INTENT(inout),OPTIONAL :: other !< optional volume that, on exit, is going to contain the data that did not contribute to the statistical processing
 INTEGER,INTENT(in),OPTIONAL :: stat_proc_input !< to be used with care, type of statistical processing of data that has to be processed (from grib2 table), only data having timerange of this type will be recomputed, the actual statistical processing performed and which will appear in the output volume, is however determined by \a stat_proc argument
 
 INTEGER :: tri
@@ -392,7 +473,7 @@ END SUBROUTINE recompute_stat_proc_agg_common
 !> Method for statistically processing a set of instantaneous data.
 !! This method performs statistical processing by aggregation of
 !! instantaneous data.  Only floating point single or double precision
-!! data are processed.
+!! data with analysis/observation timerange are processed.
 !!
 !! The output \a that vol7d object contains elements from the original volume
 !! \a this satisfying the conditions
@@ -413,9 +494,10 @@ END SUBROUTINE recompute_stat_proc_agg_common
 !! In the case of average, it is possible to weigh the data
 !! proportionally to the length of the time interval for which every
 !! single value is valid, i.e. halfway between the time level of the
-!! value itself and the time of its nearest valid neighbours. A
-!! maximum distance in time for input valid data can be assigned in
-!! order to filter datasets with too long "holes".
+!! value itself and the time of its nearest valid neighbours (argument
+!! \a weighted). A maximum distance in time for input valid data can
+!! be assigned with the optional argument \a max_step, in order to
+!! filter datasets with too long "holes".
 SUBROUTINE vol7d_compute_stat_proc_agg(this, that, stat_proc, &
  step, start, max_step, weighted, other)
 TYPE(vol7d),INTENT(inout) :: this !< volume providing data to be computed, it is not modified by the method, apart from performing a \a vol7d_alloc_vol on it
@@ -425,7 +507,7 @@ TYPE(timedelta),INTENT(in) :: step !< length of the step over which the statisti
 TYPE(datetime),INTENT(in),OPTIONAL :: start !< start of statistical processing interval
 TYPE(timedelta),INTENT(in),OPTIONAL :: max_step ! maximum allowed distance in time between two single valid data within a dataset, for the dataset to be eligible for statistical processing
 LOGICAL,INTENT(in),OPTIONAL :: weighted !< if provided and \c .TRUE., the statistical process is computed, if possible, by weighting every value with a weight proportional to its validity interval
-TYPE(vol7d),INTENT(inout),OPTIONAL :: other !< optional volume that, on exit, is going to be merged with the data that did not contribute to the accumulation computation
+TYPE(vol7d),INTENT(inout),OPTIONAL :: other !< optional volume that, on exit, is going to contain the data that did not contribute to the accumulation computation
 !INTEGER,INTENT(in),OPTIONAL :: stat_proc_input !< to be used with care, type of statistical processing of data that has to be processed (from grib2 table), only data having timerange of this type will be recomputed, the actual statistical processing performed and which will appear in the output volume, is however determined by \a stat_proc argument
 
 INTEGER :: tri, itr, iw, iwn, i, i1, i3, i5, i6
@@ -769,378 +851,37 @@ CALL init(otimerange, timerange=stat_proc, p1=0, p2=INT(tmpmsec/1000_int_ll))
 END SUBROUTINE compute_stat_proc_agg_common
 
 
-!> Cumula le osservazioni su un intervallo specificato quando possibile.
-!! Crea un nuovo oggetto vol7d che contiene solo i dati del volume originario
-!! soddisfacenti le condizioni:
-!!  - variabili di tipo reale o doppia precisione
-!!  - cumulabilità per aggregazione di osservazioni:
-!!    - intervallo temporale di tipo "cumulazione"
-!!      (vol7d_timerange_class::vol7d_timerange::timerange = 1)
-!!      da un tempo passato al tempo attuale
-!!    - intervallo di cumulazione che sia uguale o un sottomultiplo dell'intervallo
-!!      di cumulazione desiderato \a step
-!!  - oppure cumulabilità per dfferenza di previsioni:
-!!    - \a time_definition=0 (reference time)
-!!    - intervallo temporale di tipo "cumulazione"
-!!      (vol7d_timerange_class::vol7d_timerange::timerange = 1)
-!!      nel futuro (previsione)
-!!    - intervallo di cumulazione che sia &gt;= all'intervallo
-!!      di cumulazione desiderato \a step
+!> Method to transform the timerange of a set of data from
+!! statistically processed to instantaneous. The data does not change,
+!! only time and timerange descriptors change.
 !!
-!! I volumi di anagrafica e relativi attributi sono copiati nel nuovo oggetto
-!! senza variazioni.
-!! Se \a start non è specificato, il metodo calcola automaticamente l'inizio
-!! del periodo di cumulazione come il primo intervallo di tempo disponibile
-!! nel volume, modulo \a step.
-!! Per avere un pieno controllo sull'inizio della cumulazione, conviene
-!! comunque specificare
-!! \a start (attenzione che nel volume finale il tempo iniziale non sarà poi
-!! \a start ma \a start + \a step perché le osservazioni cumulate sono
-!! considerate valide al termine del periodo di cumulazione).
-! Questo significa, ad esempio, che se estraiamo
-! le precipitazioni cumulate dall'archivio Oracle del SIM (vedi
-! vol7d_oraclecim_class) ad es. dalle 00 del 10/12/2004 alle 00 dell'11/12/2004
-!! \a full_steps=.TRUE. permette di evitare la creazione di cumulate previste
-!! su intervalli non modulo il passo di cumulazione desiderato, ad es. per
-!! evitare di generare dati cumulati tra +2 e +5 ore avendo a disposizione
-!! previsioni con passo orario di cumulazione dall'inizio.
+!! The output \a that vol7d object contains elements from the original volume
+!! \a this satisfying the conditions
+!!  - real single or double precision variables
+!!  - timerange (vol7d_timerange_class::vol7d_timerange::timerange)
+!!    of type 0 (average) or \a stat_proc_input if provided
+!!  - p1 = 0 (end of period == reference time, analysis/observation)
+!!  - p2 == \a step
 !!
-!! \todo il parametro \a this è dichiarato \a INOUT perché la vol7d_alloc_vol
-!! può modificarlo, bisognerebbe implementare una vol7d_check_vol che restituisca
-!! errore anziché usare la vol7d_alloc_vol.
-SUBROUTINE vol7d_cumulate(this, that, step, start, full_steps, frac_valid, other)
-TYPE(vol7d),INTENT(inout) :: this !< oggetto da cumulare, non viene modificato dal metodo
-TYPE(vol7d),INTENT(out) :: that !< oggetto contenente, in uscita, i valori cumulati
-TYPE(timedelta),INTENT(in) :: step !< intervallo di cumulazione
-TYPE(datetime),INTENT(in),OPTIONAL :: start !< inizio del periodo di cumulazione
-LOGICAL,INTENT(in),OPTIONAL :: full_steps !< if \a .TRUE. cumulate only on intervals starting at a forecast time modulo \a step (default is to cumulate on all possible combinations of intervals)
-REAL,INTENT(in),OPTIONAL :: frac_valid !< frazione minima di dati validi necessaria per considerare accettabile un dato cumulato, default=1
-TYPE(vol7d),INTENT(inout),OPTIONAL :: other !< opional volume that, on exit, is going to be merged with the data that did not contribute to the accumulation computation
+!! Output data will have timerange 254, p1 = 0 and p2 = 0; the time
+!! dimension is shifted by half \a step so that it coincides with the
+!! mid point of the input statistical processing interval.
+SUBROUTINE vol7d_decompute_stat_proc(this, that, step, other, stat_proc_input)
+TYPE(vol7d),INTENT(inout) :: this !< volume providing data to be recomputed, it is not modified by the method, apart from performing a \a vol7d_alloc_vol on it
+TYPE(vol7d),INTENT(out) :: that !< output volume which will contain the recomputed data
+TYPE(timedelta),INTENT(in) :: step !< length of the step over which the statistical processing is performed
+TYPE(vol7d),INTENT(inout),OPTIONAL :: other !< optional volume that, on exit, is going to contain the data that did not contribute to the statistical processing
+INTEGER,INTENT(in),OPTIONAL :: stat_proc_input !< type of statistical processing of data that has to be processed (from grib2 table), if not provided, averaged data (statistical processing = 0) is processed
 
-TYPE(vol7d) :: that1, that2, other1
-
-IF (PRESENT(other)) THEN
-  CALL vol7d_extend_cumavg_sum(this, that1, 1, step, start, frac_valid, other=other1)
-  CALL vol7d_extend_cumavg_diff(other1, that2, 1, step, full_steps, other=other)
-ELSE
-  CALL vol7d_extend_cumavg_sum(this, that1, 1, step, start, frac_valid)
-  CALL vol7d_extend_cumavg_diff(this, that2, 1, step, full_steps)
-ENDIF
-
-CALL vol7d_merge(that1, that2, sort=.TRUE.)
-that = that1
-
-END SUBROUTINE vol7d_cumulate
-
-
-!> Media le osservazioni su un intervallo specificato quando possibile.
-!! Funziona esattamente come il metodo ::vol7d_cumulate ma agisce
-!! sui dati aventi un timerange di tipo "media"
-!! (vol7d_timerange_class::vol7d_timerange::timerange = 0) e ne calcola
-!! la media sull'intervallo specificato.
-!!
-!! \todo il parametro \a this è dichiarato \a INOUT perché la vol7d_alloc_vol
-!! può modificarlo, bisognerebbe implementare una vol7d_check_vol che restituisca
-!! errore anziché usare la vol7d_alloc_vol.
-SUBROUTINE vol7d_average(this, that, step, start, full_steps, frac_valid, other)
-TYPE(vol7d),INTENT(inout) :: this !< oggetto da mediare, non viene modificato dal metodo
-TYPE(vol7d),INTENT(out) :: that !< oggetto contenente, in uscita, i valori mediati
-TYPE(timedelta),INTENT(in) :: step !< intervallo di media
-TYPE(datetime),INTENT(in),OPTIONAL :: start !< inizio del periodo di media
-LOGICAL,INTENT(in),OPTIONAL :: full_steps !< if \a .TRUE. average only on intervals starting at a forecast time modulo \a step (default is to average on all possible combinations of intervals)
-REAL,INTENT(in),OPTIONAL :: frac_valid !< frazione minima di dati validi necessaria per considerare accettabile un dato mediato, default=1
-TYPE(vol7d),INTENT(inout),OPTIONAL :: other !< opional volume that, on exit, is going to be merged with the data that did not contribute to the average computation
-
-TYPE(vol7d) :: that1, that2, other1
-
-IF (PRESENT(other)) THEN
-  CALL vol7d_extend_cumavg_sum(this, that1, 0, step, start, frac_valid, other=other1)
-  CALL vol7d_extend_cumavg_diff(other1, that2, 0, step, full_steps, other=other)
-ELSE
-  CALL vol7d_extend_cumavg_sum(this, that1, 0, step, start, frac_valid)
-  CALL vol7d_extend_cumavg_diff(this, that2, 0, step, full_steps)
-ENDIF
-
-CALL vol7d_merge(that1, that2, sort=.TRUE.)
-that = that1
-
-END SUBROUTINE vol7d_average
-
-
-! Statistically process the data having time range indicator =tri
-! recomputing the values over an interval =step by aggregating data
-! statistically processed over shorter periods.
-SUBROUTINE vol7d_extend_cumavg_sum(this, that, tri, step, start, frac_valid, other)
-TYPE(vol7d),INTENT(inout) :: this
-TYPE(vol7d),INTENT(out) :: that
-INTEGER,INTENT(in) :: tri
-TYPE(timedelta),INTENT(in) :: step
-TYPE(datetime),INTENT(in),OPTIONAL :: start
-REAL,INTENT(in),OPTIONAL :: frac_valid
-TYPE(vol7d),INTENT(out),OPTIONAL :: other
-
-TYPE(datetime) :: lstart, lend, tmptime, tmptimes, t1, t2
-TYPE(timedelta) dt1, stepvero
-INTEGER :: steps, ntr, nstep, ncum, nval, i, j, k, i1, i3, i5, i6, n
-INTEGER,ALLOCATABLE :: map_tr(:), map_trc(:,:), count_trc(:,:)
-LOGICAL,ALLOCATABLE :: mask_time(:)
-REAL :: lfrac_valid, frac_c, frac_m
-TYPE(vol7d) :: v7dtmp
-LOGICAL usestart
-
-CALL init(that, time_definition=this%time_definition)
-IF (PRESENT(frac_valid)) THEN
-  lfrac_valid = frac_valid
-ELSE
-  lfrac_valid = 1.0
-ENDIF
-
-! be safe
-CALL vol7d_alloc_vol(this)
-! count timeranges of type statistical processing for observed data
-ntr = COUNT(this%timerange(:)%timerange == tri .AND. this%timerange(:)%p2 /= imiss &
- .AND. this%timerange(:)%p2 /= 0 .AND. this%timerange(:)%p1 == 0)
-IF (ntr == 0) THEN
-  CALL l4f_log(L4F_WARN, &
-   'vol7d_compute, no timeranges suitable for statistical processing by sum')
-  CALL makeother()
-  RETURN
-ENDIF
-! cleanup the original volume
-CALL vol7d_smart_sort(this, lsort_time=.TRUE.) ! time-ordered volume needed
-CALL vol7d_reform(this, miss=.FALSE., sort=.FALSE., unique=.TRUE.)
-! recount timeranges, they could have diminished because of unique
-ntr = COUNT(this%timerange(:)%timerange == tri .AND. this%timerange(:)%p2 /= imiss &
- .AND. this%timerange(:)%p2 /= 0 .AND. this%timerange(:)%p1 == 0)
-
-! determino lstart
-! lstart e` l'inizio (non il termine) del primo periodo di cumulazione
-usestart = PRESENT(start) ! treat datetime_miss as .NOT.PRESENT()
-IF (usestart) usestart = usestart .AND. start /= datetime_miss
-IF (usestart) THEN ! start fornito esplicitamente
-  lstart = start
-ELSE ! calcolo automatico di start
-! calcolo il piu` breve intervallo di cumulazione disponibile
-! potrei usare il piu` lungo se volessi (avrei piu` dati ma peggiori)
-  i = MINVAL(this%timerange(:)%p2, mask=(this%timerange(:)%timerange == tri .AND. &
-   this%timerange(:)%p2 /= imiss .AND. this%timerange(:)%p2 /= 0 .AND. this%timerange(:)%p1 == 0))
-
-  CALL init(dt1, minute=-i/60) ! usare msec
-  lstart = this%time(1)+dt1 ! torno indietro di dt1 (dt1 < 0!)
-  lstart = lstart-(MOD(lstart, step)) ! arrotondo a step, controllare il -!!!
-ENDIF
-lend = this%time(SIZE(this%time))
-
-! conto il numero di time necessari in uscita
-! lo faccio passo-passo e non con una divisione
-! per farlo funzionare anche con le cumulate "umane"
-tmptime = lstart+step
-nstep = 0
-DO WHILE(tmptime <= lend)
-  nstep = nstep + 1
-  tmptime = tmptime + step
-ENDDO
-ALLOCATE(map_tr(ntr), map_trc(SIZE(this%time), ntr), count_trc(nstep, ntr), &
- mask_time(SIZE(this%time)))
-map_trc(:,:) = 0
-! creo un modello di volume con cio` che potrebbe non esserci nel volume vecchio
-CALL vol7d_alloc(that, nana=0, ntime=nstep, nlevel=0, ntimerange=1, nnetwork=0)
-CALL vol7d_alloc_vol(that)
-! ripeto il ciclo per assegnare i time
-tmptime = lstart+step
-DO i = 1, nstep
-  that%time(i) = tmptime ! le cumulate sono valide alla fine
-  tmptime = tmptime + step
-ENDDO
-CALL getval(step, aminute=steps)
-steps = steps*60
-CALL init(that%timerange(1), timerange=tri, p1=0, p2=steps) ! modificare eventualmente p1
-
-! Faccio una copia del volume originale eliminando da essa quello che non serve
-! attenzione uso mask_time
-DO i = 1, SIZE(this%time)
-  mask_time(i) = ANY(this%time(i) == that%time)
-ENDDO
-CALL vol7d_copy(this, v7dtmp, miss=.FALSE., sort=.FALSE., unique=.FALSE., &
- ltimerange=(this%timerange(:) == that%timerange(1)), ltime=mask_time)
-! Infine fondo quanto rimasto del volume originale con la bozza del nuovo volume
-CALL vol7d_merge(that, v7dtmp)
-
-nval = 0
-DO j = 1, SIZE(this%timerange)
-  IF (this%timerange(j)%timerange /= tri .OR. this%timerange(j)%p2 == imiss &
-   .OR. this%timerange(j)%p2 == 0 .OR. this%timerange(j)%p1 /= 0) CYCLE
-
-  nval = nval + 1
-  map_tr(nval) = j ! mappatura per ottimizzare il successivo ciclo sui timerange
-!  CALL init(dt1, minute=-this%timerange(j)%p2/60) ! usare msec
-  CALL init(dt1, minute=this%timerange(j)%p2/60) ! usare msec
-
-  ! calcolo il numero teorico di intervalli in ingresso che
-  ! contribuiscono all'intervallo corrente in uscita
-  tmptimes = lstart
-  tmptime = lstart+step
-  ncum = 0
-  DO WHILE(tmptime <= lend)
-    ncum = ncum + 1
-    stepvero = tmptime - tmptimes ! funziona anche se step e` "umano"
-    count_trc(ncum,nval) = stepvero/dt1
-    tmptimes = tmptime
-    tmptime = tmptime + step
-  ENDDO
-  ! individuo gli intervalli in ingresso che contribuiscono all'intervallo
-  ! corrente in uscita, scartando quelli che distano un numero non intero
-  ! di intervalli in ingresso dall'inizio dell'intervallo in uscita
-  DO i = 1, SIZE(this%time)
-    t1 = this%time(i) - dt1
-    t2 = this%time(i)
-    DO k = 1, nstep
-      IF (t1 >= that%time(k) - step .AND. t2 <= that%time(k)) THEN
-        IF (MOD(t1-(that%time(k)-step), t2-t1) == timedelta_0) THEN
-          map_trc(i,nval) = k
-        ENDIF
-      ENDIF
-    ENDDO
-  ENDDO
-ENDDO
-
-! finalmente cumulo
-! attenzione riuso mask_time
-IF (ASSOCIATED(this%voldatir)) THEN
-  DO i = 1, nstep
-    DO i1 = 1, SIZE(this%ana)
-      DO i3 = 1, SIZE(this%level)
-        DO i6 = 1, SIZE(this%network)
-          DO i5 = 1, SIZE(this%dativar%r)
-            frac_m = 0. ! tengo il timerange che mi da` la frac max
-            DO j = 1, ntr
-              ! conto i dati che contribuiscono alla cumulata corrente
-              mask_time = this%voldatir(i1,:,i3,map_tr(j),i5,i6) /= rmiss .AND. &
-               map_trc(:,j) == i
-              n = COUNT(mask_time)
-              ! conto la frazione di dati presenti rispetto a quelli necessari
-              frac_c = REAL(n)/count_trc(i,j)
-              IF (frac_c >= MAX(lfrac_valid, frac_m)) THEN
-                frac_m = frac_c
-                IF (tri == 0) THEN ! average
-                  that%voldatir(i1,i,i3,1,i5,i6) = &
-                   SUM(this%voldatir(i1,:,i3,map_tr(j),i5,i6), &
-                   mask=mask_time)/n
-                ELSE IF (tri == 1) THEN ! cumulation
-                  that%voldatir(i1,i,i3,1,i5,i6) = &
-                   SUM(this%voldatir(i1,:,i3,map_tr(j),i5,i6), &
-                   mask=mask_time)
-                ELSE IF (tri == 2) THEN ! maximum
-                  that%voldatir(i1,i,i3,1,i5,i6) = &
-                   MAXVAL(this%voldatir(i1,:,i3,map_tr(j),i5,i6), &
-                   mask=mask_time)
-                ELSE IF (tri == 3) THEN ! minimum
-                  that%voldatir(i1,i,i3,1,i5,i6) = &
-                   MINVAL(this%voldatir(i1,:,i3,map_tr(j),i5,i6), &
-                   mask=mask_time)
-                ENDIF
-              ENDIF
-            ENDDO
-          ENDDO
-        ENDDO
-      ENDDO
-    ENDDO
-  ENDDO
-ENDIF
-
-IF (ASSOCIATED(this%voldatid)) THEN
-  DO i = 1, nstep
-    DO i1 = 1, SIZE(this%ana)
-      DO i3 = 1, SIZE(this%level)
-        DO i6 = 1, SIZE(this%network)
-          DO i5 = 1, SIZE(this%dativar%d)
-            frac_m = 0. ! tengo il timerange che mi da` la frac max
-            DO j = 1, ntr
-              ! conto i dati che contribuiscono alla cumulata corrente
-              mask_time = this%voldatid(i1,:,i3,map_tr(j),i5,i6) /= rdmiss .AND. &
-               map_trc(:,j) == i
-              n = COUNT(mask_time)
-              ! conto la frazione di dati presenti rispetto a quelli necessari
-              frac_c = REAL(n)/count_trc(i,j)
-              IF (frac_c >= MAX(lfrac_valid, frac_m)) THEN
-                frac_m = frac_c
-                IF (tri == 0) THEN ! average
-                  that%voldatid(i1,i,i3,1,i5,i6) = &
-                   SUM(this%voldatid(i1,:,i3,map_tr(j),i5,i6), &
-                   mask=mask_time)/n
-                ELSE IF (tri == 1) THEN ! cumulation
-                  that%voldatid(i1,i,i3,1,i5,i6) = &
-                   SUM(this%voldatid(i1,:,i3,map_tr(j),i5,i6), &
-                   mask=mask_time)
-                ELSE IF (tri == 2) THEN ! maximum
-                  that%voldatid(i1,i,i3,1,i5,i6) = &
-                   MAXVAL(this%voldatid(i1,:,i3,map_tr(j),i5,i6), &
-                   mask=mask_time)
-                ELSE IF (tri == 3) THEN ! minimum
-                  that%voldatid(i1,i,i3,1,i5,i6) = &
-                   MINVAL(this%voldatid(i1,:,i3,map_tr(j),i5,i6), &
-                   mask=mask_time)
-                ENDIF
-              ENDIF
-            ENDDO
-          ENDDO
-        ENDDO
-      ENDDO
-    ENDDO
-  ENDDO
-ENDIF
-
-DEALLOCATE(map_tr, map_trc, count_trc, mask_time)
-
-CALL makeother()
-
-CONTAINS
-
-SUBROUTINE makeother()
-IF (PRESENT(other)) THEN ! create volume with the remaining data for further processing
-  CALL vol7d_copy(this, other, miss=.FALSE., sort=.FALSE., unique=.FALSE., &
-   ltimerange=(this%timerange(:)%timerange /= tri .OR. this%timerange(:)%p2 == imiss &
-   .OR. this%timerange(:)%p2 == 0 .OR. this%timerange(:)%p1 /= 0))
-ENDIF
-END SUBROUTINE makeother
-
-END SUBROUTINE vol7d_extend_cumavg_sum
-
-
-! Statistically process the data having time range indicator =tri
-! recomputing the values over an interval =step by disaggregating data
-! statistically processed over longer periods.
-SUBROUTINE vol7d_extend_cumavg_diff(this, that, tri, step, full_steps, other)
-TYPE(vol7d),INTENT(inout) :: this
-TYPE(vol7d),INTENT(out) :: that
-INTEGER,INTENT(in) :: tri
-TYPE(timedelta),INTENT(in) :: step
-LOGICAL,INTENT(in),OPTIONAL :: full_steps
-TYPE(vol7d),INTENT(out),OPTIONAL :: other
-
-TYPE(vol7d_timerange),ALLOCATABLE :: tr(:)
-INTEGER :: steps, ntr, ndtr, i, j, i1, i2, i3, i4, i5, i6, n
+INTEGER :: i, tri, steps
 INTEGER(kind=int_ll) :: msteps
-INTEGER,ALLOCATABLE :: map_tr(:,:)
-LOGICAL,ALLOCATABLE :: mask_timerange(:)
-!LOGICAL :: lfull_steps
-TYPE(vol7d) :: v7dtmp
 
-CALL init(that, time_definition=this%time_definition)
-IF (this%time_definition == 1) THEN ! improve and handle time_definition == 1
-  CALL l4f_log(L4F_WARN, &
-   'vol7d_extend_cumavg_diff, cumulation by differences not implemented with &
-   &time_definition == 1')
-  CALL makeother(.FALSE.) ! a useless copy is done here, improve!?
-  RETURN
+
+IF (PRESENT(stat_proc_input)) THEN
+  tri = stat_proc_input
+ELSE
+  tri = 0
 ENDIF
-
-!IF (PRESENT(full_steps)) THEN
-!  lfull_steps = full_steps
-!ELSE
-!  lfull_steps = .FALSE.
-!ENDIF
-
 ! be safe
 CALL vol7d_alloc_vol(this)
 
@@ -1148,168 +889,52 @@ CALL vol7d_alloc_vol(this)
 CALL getval(step, amsec=msteps)
 steps = msteps/1000_int_ll
 
-! create a mask of suitable timeranges
-ALLOCATE(mask_timerange(SIZE(this%timerange)))
-mask_timerange(:) = this%timerange(:)%timerange == tri &
- .AND. this%timerange(:)%p1 /= imiss .AND. this%timerange(:)%p2 /= imiss &
- .AND. this%timerange(:)%p1 > 0 &
- .AND. this%timerange(:)%p1 >= this%timerange(:)%p2
+! filter requested data
+CALL vol7d_copy(this, that, miss=.FALSE., sort=.FALSE., unique=.FALSE., &
+ ltimerange=(this%timerange(:)%timerange == tri .AND. &
+ this%timerange(:)%p1 == 0 .AND. this%timerange(:)%p2 == steps))
 
-IF (optio_log(full_steps)) THEN ! keep only timeranges defining intervals ending at integer steps
-  mask_timerange(:) = mask_timerange(:) .AND. (MOD(this%timerange(:)%p1, steps) == 0)
-ENDIF
-
-! safety dimension, less is usually enough
-ALLOCATE(tr(COUNT(mask_timerange)*COUNT(mask_timerange)))
-ntr = 0
-! count the new possible timeranges
-DO i = 1, SIZE(this%timerange)
-  IF (.NOT.mask_timerange(i)) CYCLE
-  DO j = 1, SIZE(this%timerange)
-    IF (.NOT.mask_timerange(j)) CYCLE
-    IF (this%timerange(j)%p1 > this%timerange(i)%p1 .AND. & ! right order
-     this%timerange(j)%p1-this%timerange(j)%p2 == &    ! same start
-     this%timerange(i)%p1-this%timerange(i)%p2 .AND. & !
-     this%timerange(j)%p2-this%timerange(i)%p2 == steps) THEN ! right step
-      ntr = ntr + 1
-      tr(ntr) = vol7d_timerange_new(tri,this%timerange(j)%p1, steps)
-    ENDIF
-  ENDDO
-ENDDO
-! allocate and assign them
-ndtr = count_distinct(tr(1:ntr), back=.TRUE.)
-CALL vol7d_alloc(that, ntimerange=ndtr)
-that%timerange(:) = pack_distinct(tr, ndtr, back=.TRUE.)
-DEALLOCATE(tr)
-
-! create the new volume template
-! check whether any timerange already satisfies the requirements and copy it
-IF (ANY(mask_timerange(:) .AND. this%timerange(:)%p2 == steps)) THEN
-  CALL vol7d_copy(this, v7dtmp, miss=.FALSE., sort=.FALSE., unique=.FALSE., &
-   ltimerange=(mask_timerange(:) .AND. this%timerange(:)%p2 == steps))
-ELSE
-  CALL vol7d_copy(this, v7dtmp, miss=.FALSE., sort=.FALSE., unique=.FALSE., &
-   ltimerange=(/.FALSE./))
-ENDIF
-
-! merge with template
-CALL vol7d_merge(that, v7dtmp, lanasimple=.TRUE.)
-
-! ALLOCATE(map_tr(ndtr,2)) ! 1-1 mapping, faster but less general
-ALLOCATE(map_tr(SIZE(this%timerange),SIZE(this%timerange)))
-map_tr(:,:) = imiss
-DO i = 1, SIZE(this%timerange)
-  IF (.NOT.mask_timerange(i)) CYCLE
-  DO j = 1, SIZE(this%timerange)
-    IF (.NOT.mask_timerange(j)) CYCLE
-    IF (this%timerange(j)%p1 > this%timerange(i)%p1 .AND. & ! right order
-     this%timerange(j)%p1-this%timerange(j)%p2 == &    ! same start
-     this%timerange(i)%p1-this%timerange(i)%p2 .AND. & !
-     this%timerange(j)%p2-this%timerange(i)%p2 == steps) THEN ! right step
-      n = INDEX(that%timerange(:),vol7d_timerange_new(tri,this%timerange(j)%p1, steps))
-      IF (n > 0) map_tr(j,i) = n
-    ENDIF
-  ENDDO
+! convert timerange to instantaneous and go back half step in time
+that%timerange(:)%timerange = 254
+that%timerange(:)%p2 = 0
+DO i = 1, SIZE(that%time(:))
+  that%time(i) = that%time(i) - step/2
 ENDDO
 
-#ifdef DEBUG
-IF (COUNT(c_e(map_tr(:,:))) > SIZE(that%timerange(:))) THEN
-  CALL l4f_log(L4F_INFO, &
-   'vol7d_extend_cumavg_diff, duplicate sources for timeranges: '// &
-   TRIM(to_char(COUNT(c_e(map_tr(:,:)))))//' sources and '// &
-   TRIM(to_char(SIZE(that%timerange(:))))//' timeranges.')
-ENDIF
-#endif
-
-IF (ASSOCIATED(this%voldatir)) THEN
-  DO i = 1, SIZE(this%timerange)
-    IF (.NOT.mask_timerange(i)) CYCLE ! does this speed up?
-    DO j = 1, SIZE(this%timerange)
-      IF (.NOT.mask_timerange(j)) CYCLE ! does this speed up?
-      i4 = map_tr(j,i)
-      IF (.NOT.c_e(i4)) CYCLE
-      DO i6 = 1, SIZE(this%network)
-        DO i5 = 1, SIZE(this%dativar%r)
-          DO i3 = 1, SIZE(this%level)
-            DO i2 = 1, SIZE(this%time)
-              DO i1 = 1, SIZE(this%ana)
-                IF (this%voldatir(i1,i2,i3,j,i5,i6) /= rmiss .AND. &
-                 this%voldatir(i1,i2,i3,i,i5,i6) /= rmiss) THEN
-                  IF (tri == 0) THEN ! average
-                    that%voldatir(i1,i2,i3,i4,i5,i6) = &
-                     (this%voldatir(i1,i2,i3,j,i5,i6)*this%timerange(j)%p2 - &
-                     this%voldatir(i1,i2,i3,i,i5,i6)*this%timerange(i)%p2)/ &
-                     steps ! optimize avoiding conversions
-                  ELSE IF (tri == 1) THEN ! cumulation, compute MAX(0.,)?
-                    that%voldatir(i1,i2,i3,i4,i5,i6) = &
-                     this%voldatir(i1,i2,i3,j,i5,i6) - &
-                     this%voldatir(i1,i2,i3,i,i5,i6)
-                  ENDIF
-                ENDIF
-              ENDDO
-            ENDDO
-          ENDDO
-        ENDDO
-      ENDDO
-    ENDDO
-  ENDDO
+IF (PRESENT(other)) THEN ! create volume with the remaining data for further processing
+  CALL vol7d_copy(this, other, miss=.FALSE., sort=.FALSE., unique=.FALSE., &
+   ltimerange=(this%timerange(:)%timerange /= tri .OR. &
+   this%timerange(:)%p1 /= 0 .OR. this%timerange(:)%p2 /= steps))
 ENDIF
 
-IF (ASSOCIATED(this%voldatid)) THEN
-  DO i = 1, SIZE(this%timerange)
-    IF (.NOT.mask_timerange(i)) CYCLE ! does this speed up?
-    DO j = 1, SIZE(this%timerange)
-      IF (.NOT.mask_timerange(j)) CYCLE ! does this speed up?
-      i4 = map_tr(j,i)
-      IF (.NOT.c_e(i4)) CYCLE
-      DO i6 = 1, SIZE(this%network)
-        DO i5 = 1, SIZE(this%dativar%d)
-          DO i3 = 1, SIZE(this%level)
-            DO i2 = 1, SIZE(this%time)
-              DO i1 = 1, SIZE(this%ana)
-                IF (this%voldatid(i1,i2,i3,j,i5,i6) /= dmiss .AND. &
-                 this%voldatid(i1,i2,i3,i,i5,i6) /= dmiss) THEN
-                  IF (tri == 0) THEN ! average
-                    that%voldatid(i1,i2,i3,i4,i5,i6) = &
-                     (this%voldatid(i1,i2,i3,j,i5,i6)*this%timerange(j)%p2 - &
-                     this%voldatid(i1,i2,i3,i,i5,i6)*this%timerange(i)%p2)/ &
-                     steps ! optimize avoiding conversions
-                  ELSE IF (tri == 1) THEN ! cumulation, compute MAX(0.,)?
-                    that%voldatid(i1,i2,i3,i4,i5,i6) = &
-                     this%voldatid(i1,i2,i3,j,i5,i6) - &
-                     this%voldatid(i1,i2,i3,i,i5,i6)
-                  ENDIF
-                ENDIF
-              ENDDO
-            ENDDO
-          ENDDO
-        ENDDO
-      ENDDO
-    ENDDO
-  ENDDO
-ENDIF
-
-DEALLOCATE(mask_timerange, map_tr)
-CALL makeother(.TRUE.)
-
-CONTAINS
-
-SUBROUTINE makeother(filter)
-LOGICAL,INTENT(in) :: filter
-IF (PRESENT(other)) THEN
-  IF (filter) THEN ! create volume with the remaining data for further processing
-    CALL vol7d_copy(this, other, miss=.FALSE., sort=.FALSE., unique=.FALSE., &
-     ltimerange=(this%timerange(:)%timerange /= tri .OR. this%timerange(:)%p2 == imiss))
-  ELSE
-    CALL vol7d_copy(this, other, miss=.FALSE., sort=.FALSE., unique=.FALSE.)
-  ENDIF
-ENDIF
-END SUBROUTINE makeother
-
-END SUBROUTINE vol7d_extend_cumavg_diff
+END SUBROUTINE vol7d_decompute_stat_proc
 
 
-
+!> Specialized method for statistically processing a set of data
+!! already processed with the same statistical processing, on a
+!! different time interval.  This method performs statistical
+!! processing by difference of different intervals.  Only floating
+!! point single or double precision data with analysis/observation
+!! timerange are processed.
+!!
+!! The output \a that vol7d object contains elements from the original volume
+!! \a this satisfying the conditions
+!!  - real single or double precision variables
+!!  - timerange (vol7d_timerange_class::vol7d_timerange::timerange)
+!!    of type \a stat_proc (or \a stat_proc_input if provided)
+!!  - any p1 (analysis/observation or forecast)
+!!  - p2 &gt; 0 (processing interval non null, non instantaneous data)
+!!    and equal to a multiplier of \a step if \a full_steps is \c .TRUE.
+!!
+!! Output data will have timerange of type \a stat_proc and p2 = \a
+!! step.  The supported statistical processing methods (parameter \a
+!! stat_proc) are:
+!!
+!!  - 0 average
+!!  - 1 cumulation
+!!
+!! Input volume may have any value of \a this%time_definition, and
+!! that value will be conserved in the output volume.
 SUBROUTINE vol7d_recompute_stat_proc_diff(this, that, tri, step, full_steps, other)
 TYPE(vol7d),INTENT(inout) :: this
 TYPE(vol7d),INTENT(out) :: that
