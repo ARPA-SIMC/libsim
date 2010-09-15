@@ -745,7 +745,7 @@ TYPE(datetime) :: res
 INTEGER :: lyear, lmonth, lday, lhour, lminute, lmsec
 
 IF (this == datetime_miss .OR. that == timedelta_miss) THEN
-  CALL delete(res)
+  res = datetime_miss
 ELSE
   res%iminuti = this%iminuti - that%iminuti
   IF (that%month /= 0) THEN
