@@ -1161,35 +1161,13 @@ ENDIF
 IF (c_e(istat_proc) .AND. c_e(ostat_proc)) THEN
   CALL init(v7d_comp1, time_definition=v7d%time_definition)
   CALL init(v7d_comp2, time_definition=v7d%time_definition)
-!  IF (istat_proc == 254) THEN
-!    comp_max_step = timedelta_depop(c_i)/10 ! create an argument for tuning this
-!    CALL vol7d_compute_stat_proc_agg(v7d, v7d_comp1, ostat_proc, c_i, c_s, &
-!     comp_max_step, weighted=.TRUE.,  other=v7d_comp3)
-!  ELSE
-!    CALL vol7d_recompute_stat_proc(v7d, v7d_comp1, ostat_proc, c_i, c_s, &
-!     full_steps=.TRUE., frac_valid=comp_frac_valid, other=v7d_comp3, &
-!     stat_proc_input=istat_proc)
-!  ENDIF
+
   CALL vol7d_compute_stat_proc(v7d, v7d_comp1, istat_proc, ostat_proc, c_i, c_s, &
    full_steps=.TRUE., frac_valid=comp_frac_valid, &
    max_step=timedelta_depop(c_i)/10, weighted=.TRUE., other=v7d_comp3)
 
   CALL delete(v7d)
   v7d = v7d_comp3
-
-! old version allowed multiple operations, is it important?
-!  IF (comp_average) THEN
-!    CALL vol7d_average(v7d, v7d_comp1, c_i, c_s, full_steps=.TRUE., &
-!     frac_valid=comp_frac_valid, other=v7d_comp3)
-!    CALL delete(v7d)
-!    v7d = v7d_comp3
-!  ENDIF
-!  IF (comp_cumulate) THEN
-!    CALL vol7d_cumulate(v7d, v7d_comp2, c_i, c_s, full_steps=.TRUE., &
-!     frac_valid=comp_frac_valid, other=v7d_comp3)
-!    CALL delete(v7d)
-!    v7d = v7d_comp3
-!  ENDIF
 
 ! merge the tho computed fields
   IF (comp_discard) THEN ! the user is not interested in the other volume

@@ -24,6 +24,9 @@ use grid_transform_class
 #ifdef HAVE_DBALLE
 USE vol7d_dballe_class
 #endif
+#ifdef HAVE_LIBGRIBAPI
+USE grib_api_csv
+#endif
 USE vol7d_class
 use getopt_m
 USE io_units
@@ -33,9 +36,12 @@ implicit none
 
 TYPE(op_option) :: options(40) ! remember to update dimension when adding options
 TYPE(optionparser) :: opt
-CHARACTER(len=8) :: coord_format, output_format
+CHARACTER(len=12) :: coord_format, output_format
 CHARACTER(len=512) :: a_name, coord_file, input_file, output_file, &
  network_list, variable_list
+#ifdef HAVE_LIBGRIBAPI
+CHARACTER(len=512) :: output_keys
+#endif
 INTEGER :: category, ier, i, iun, iargc
 character(len=network_name_len) :: network
 type(volgrid6d),pointer :: volgrid(:)
@@ -131,6 +137,9 @@ options(20) = op_option_new('f', 'output-format', output_format, &
 #ifdef HAVE_DBALLE
  &, ''BUFR'' for BUFR with generic template, ''CREX'' for CREX format&
 #endif
+#ifdef HAVE_LIBGRIBAPI
+ &, ''grib_api_csv'' for an ASCII csv file with grib_api keys as columns&
+#endif
  &')
 #ifdef HAVE_DBALLE
 options(21) = op_option_new('t', 'output-template', output_template, 'generic', help= &
@@ -141,6 +150,12 @@ options(22) = op_option_new(' ', 'output-td', output_td, 1, help= &
  'time definition for output vol7d volume, 0 for reference time (more suitable for &
  &presenting forecast data) and 1 for verification time (more suitable for &
  &comparing forecasts with observations)')
+#ifdef HAVE_LIBGRIBAPI
+options(23) = op_option_new(' ', 'output-keys', output_keys, '', help= &
+ 'keys that have to apper in the output grib_api_csv file, any grib_api key &
+ &or ''grib_api_csv:lon'', ''grib_api_csv:lat'', ''grib_api_csv:npoint'', &
+ &''grib_api_csv:isodate'', ''grib_api_csv:value''')
+#endif
 
 ! help options
 options(38) = op_option_new('d', 'display', ldisplay, help= &
@@ -238,6 +253,14 @@ ENDIF
 
 IF (ldisplay) CALL display(v7d_coord)
 
+#ifdef HAVE_LIBGRIBAPI
+IF (output_format == 'grib_api_csv') THEN
+  output_td = 0
+  CALL l4f_category_log(category,L4F_INFO, &
+   "setting output time definition to 0 for grib_api_csv output")
+ENDIF
+#endif
+
 ! trasformation object
 CALL init(trans, trans_type=trans_type, sub_type=sub_type, &
  ilon=ilon, ilat=ilat, flon=flon, flat=flat, &
@@ -252,7 +275,6 @@ call transform(trans, volgrid6d_in=volgrid, vol7d_out=v7d_out, v7d=v7d_coord, &
  poly=poly, networkname=network, categoryappend="transform")
 
 call l4f_category_log(category,L4F_INFO,"transformation done")
-if (associated(volgrid)) call delete(volgrid)
 
 ! output
 IF (output_format == 'native') THEN
@@ -281,6 +303,19 @@ ELSE IF (output_format == 'BUFR' .OR. output_format == 'CREX') THEN
   CALL export (v7d_dba_out, template=output_template)
   CALL delete(v7d_dba_out)
 #endif
+#ifdef HAVE_LIBGRIBAPI
+ELSE IF (output_format == 'grib_api_csv') THEN
+  IF (output_file == '-') THEN
+    iun = stdout_unit
+  ELSE
+    iun = getunit()
+    OPEN(iun, file=output_file, form='FORMATTED', access='SEQUENTIAL')
+  ENDIF
+! TODO handle volgrid array
+  CALL grib_api_csv_export(v7d_out, volgrid(1), iun, output_keys)
+  IF (output_file /= '-') CLOSE(iun)
+
+#endif
 
 ELSE IF (output_format /= '') THEN
   CALL l4f_category_log(category, L4F_ERROR, &
@@ -289,6 +324,7 @@ ELSE IF (output_format /= '') THEN
   CALL EXIT(1)
 ENDIF
 
+IF (ASSOCIATED(volgrid)) CALL delete(volgrid)
 call l4f_category_log(category,L4F_INFO,"exported to "//trim(output_format))
 call l4f_category_log(category,L4F_INFO,"end")
 
