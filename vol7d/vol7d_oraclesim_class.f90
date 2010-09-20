@@ -385,28 +385,28 @@ ndai = 0; ndac = 0
 ! controllo cosa e` stato richiesto
 IF (PRESENT(attr)) THEN
   DO i = 1, SIZE(attr)
-    IF (attr(i) == '*B01193') THEN
+    IF (attr(i) == '*B01193' .OR. attr(i) == 'B01193') THEN
       ndai = ndai + 1
       attr_netid = ndai
-    ELSE IF (attr(i) == '*B01194') THEN
+    ELSE IF (attr(i) == '*B01194' .OR. attr(i) == 'B01194') THEN
       ndac = ndac + 1
       attr_netname = ndac
-    ELSE IF (attr(i) == '*B33195') THEN
+    ELSE IF (attr(i) == '*B33195' .OR. attr(i) == 'B33195') THEN
       ndai = ndai + 1
       attr_varid = ndai
-    ELSE IF (attr(i) == '*B33192') THEN
+    ELSE IF (attr(i) == '*B33192' .OR. attr(i) == 'B33192') THEN
       ndai = ndai + 1
       attr_qcflag_clim = ndai
-    ELSE IF (attr(i) == '*B33193') THEN
+    ELSE IF (attr(i) == '*B33193' .OR. attr(i) == 'B33193') THEN
       ndai = ndai + 1
       attr_qcflag_time = ndai
-    ELSE IF (attr(i) == '*B33194') THEN
+    ELSE IF (attr(i) == '*B33194' .OR. attr(i) == 'B33194') THEN
       ndai = ndai + 1
       attr_qcflag_space = ndai
-    ELSE IF (attr(i) == '*B33196') THEN
+    ELSE IF (attr(i) == '*B33196' .OR. attr(i) == 'B33196') THEN
       ndai = ndai + 1
       attr_qcflag_inv = ndai
-    ELSE IF (attr(i) == '*B33197') THEN
+    ELSE IF (attr(i) == '*B33197' .OR. attr(i) == 'B33197') THEN
       ndai = ndai + 1
       attr_qcflag_repl = ndai
     ELSE
@@ -620,22 +620,22 @@ DO i = 1, nvar
    v7dtmp%dativarattr%c(1) = v7dtmp%dativar%r(1)
 
 ! Creo le variabili degli attributi
-  IF (c_e(attr_netid)) CALL init(v7dtmp%datiattr%i(attr_netid), '*B01193', &
+  IF (c_e(attr_netid)) CALL init(v7dtmp%datiattr%i(attr_netid), 'B01193', &
    unit='NUMERIC', scalefactor=0)
-  IF (c_e(attr_netname)) CALL init(v7dtmp%datiattr%c(attr_netname), '*B01194', &
+  IF (c_e(attr_netname)) CALL init(v7dtmp%datiattr%c(attr_netname), 'B01194', &
    unit='CCITTIA5', scalefactor=0)
-  IF (c_e(attr_varid)) CALL init(v7dtmp%datiattr%i(attr_varid), '*B33195', &
+  IF (c_e(attr_varid)) CALL init(v7dtmp%datiattr%i(attr_varid), 'B33195', &
    unit='NUMERIC', scalefactor=0)
   IF (c_e(attr_qcflag_clim)) CALL init(v7dtmp%datiattr%i(attr_qcflag_clim), &
-   '*B33192', unit='NUMERIC', scalefactor=0)
+   'B33192', unit='NUMERIC', scalefactor=0)
   IF (c_e(attr_qcflag_time)) CALL init(v7dtmp%datiattr%i(attr_qcflag_time), &
-   '*B33193', unit='NUMERIC', scalefactor=0)
+   'B33193', unit='NUMERIC', scalefactor=0)
   IF (c_e(attr_qcflag_space)) CALL init(v7dtmp%datiattr%i(attr_qcflag_space), &
-   '*B33194', unit='NUMERIC', scalefactor=0)
+   'B33194', unit='NUMERIC', scalefactor=0)
   IF (c_e(attr_qcflag_inv)) CALL init(v7dtmp%datiattr%i(attr_qcflag_inv), &
-   '*B33196', unit='NUMERIC', scalefactor=0)
+   'B33196', unit='NUMERIC', scalefactor=0)
   IF (c_e(attr_qcflag_repl)) CALL init(v7dtmp%datiattr%i(attr_qcflag_repl), &
-   '*B33197', unit='NUMERIC', scalefactor=0)
+   'B33197', unit='NUMERIC', scalefactor=0)
 
 ! Alloco e riempio il volume di dati
   CALL vol7d_alloc_vol(v7dtmp, inivol=.TRUE.)
