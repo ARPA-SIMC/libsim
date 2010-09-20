@@ -55,6 +55,11 @@ TYPE ora_var_conv_db
   CHARACTER(len=20) :: description
 END TYPE ora_var_conv_db
 
+TYPE attr_builder
+  CHARACTER(len=10) :: btable ! codice B dell'attributo
+  INTEGER :: vartype ! tipo, 1=intero, 2=character, standardizzare!
+END TYPE attr_builder
+
 INTEGER,EXTERNAL :: oraclesim_getnet, oraclesim_getdatahead, oraclesim_getdatavol, &
  oraclesim_getanahead, oraclesim_getanavol, &
  oraclesim_getvarhead, oraclesim_getvarvol
@@ -72,6 +77,16 @@ INTEGER,PARAMETER :: nmaxmin=100000, nmaxmax=5000000, oraclesim_netmax=50, &
 ! tabelle nuove di conversione variabili da btable a oraclesim
 TYPE(ora_var_conv_static),ALLOCATABLE :: vartable_s(:)
 TYPE(ora_var_conv_db),ALLOCATABLE :: vartable_db(:)
+! attributi di dati disponibili
+TYPE(attr_builder) :: dataattr_builder(8) = (/ &
+ attr_builder('*B01193', 1), &
+ attr_builder('*B01194', 2), &
+ attr_builder('*B33195', 1), &
+ attr_builder('*B33192', 1), &
+ attr_builder('*B33193', 1), &
+ attr_builder('*B33194', 1), &
+ attr_builder('*B33196', 1), &
+ attr_builder('*B33197', 1) /)
 
 ! tabella reti e anagrafica
 TYPE(vol7d) :: netana(oraclesim_netmax)
@@ -245,10 +260,10 @@ END SUBROUTINE vol7d_oraclesim_delete
 !! Gli attributi di dati attualmente disponibili sono:
 !!  - '*B01193' Report (network) code (intero)
 !!  - '*B01194' Report (network) mnemonic (carattere)
+!!  - '*B33195' MeteoDB variable ID (intero)
 !!  - '*B33192' Climatological and consistency check (intero)
 !!  - '*B33193' Time consistency (intero)
 !!  - '*B33194' Space consistency (intero)
-!!  - '*B33195' MeteoDB variable ID (intero)
 !!  - '*B33196' Data has been invalidated (intero)
 !!  - '*B33197' Manual replacement in substitution (intero)
 !!
@@ -315,8 +330,8 @@ LOGICAL :: found, non_valid, lnon_valid, varbt_req(nvarmax)
 INTEGER(kind=int_b) :: msg(256)
 LOGICAL :: lanar(netana_nvarr), lanai(netana_nvari), lanac(netana_nvarc)
 ! per attributi
-INTEGER :: ndai, ndac, attr_netid, attr_netname, attr_varid, attr_qcflag_clim, &
- attr_qcflag_time, attr_qcflag_space, attr_qcflag_inv, attr_qcflag_repl
+INTEGER :: attr_in_ind(SIZE(dataattr_builder)), &
+ attr_out_ind(SIZE(dataattr_builder)), nda_type(2)
 
 CALL getval(timei, simpledate=datai)
 CALL getval(timef, simpledate=dataf)
@@ -373,43 +388,23 @@ CALL l4f_log(L4F_INFO, 'in oraclesim_class, nvar='//to_char(nvar))
 
 ! Controllo gli attributi richiesti
 ! inizializzo a 0 attributi
-attr_netid = imiss
-attr_netname = imiss
-attr_varid = imiss
-attr_qcflag_clim = imiss
-attr_qcflag_time = imiss
-attr_qcflag_space = imiss
-attr_qcflag_inv = imiss
-attr_qcflag_repl = imiss
-ndai = 0; ndac = 0
+attr_in_ind(:) = 0
+attr_out_ind(:) = 0
+nda_type(:) = 0
 ! controllo cosa e` stato richiesto
 IF (PRESENT(attr)) THEN
   DO i = 1, SIZE(attr)
-    IF (attr(i) == '*B01193' .OR. attr(i) == 'B01193') THEN
-      ndai = ndai + 1
-      attr_netid = ndai
-    ELSE IF (attr(i) == '*B01194' .OR. attr(i) == 'B01194') THEN
-      ndac = ndac + 1
-      attr_netname = ndac
-    ELSE IF (attr(i) == '*B33195' .OR. attr(i) == 'B33195') THEN
-      ndai = ndai + 1
-      attr_varid = ndai
-    ELSE IF (attr(i) == '*B33192' .OR. attr(i) == 'B33192') THEN
-      ndai = ndai + 1
-      attr_qcflag_clim = ndai
-    ELSE IF (attr(i) == '*B33193' .OR. attr(i) == 'B33193') THEN
-      ndai = ndai + 1
-      attr_qcflag_time = ndai
-    ELSE IF (attr(i) == '*B33194' .OR. attr(i) == 'B33194') THEN
-      ndai = ndai + 1
-      attr_qcflag_space = ndai
-    ELSE IF (attr(i) == '*B33196' .OR. attr(i) == 'B33196') THEN
-      ndai = ndai + 1
-      attr_qcflag_inv = ndai
-    ELSE IF (attr(i) == '*B33197' .OR. attr(i) == 'B33197') THEN
-      ndai = ndai + 1
-      attr_qcflag_repl = ndai
-    ELSE
+    DO j = 1, SIZE(dataattr_builder)
+      IF (attr(i) == dataattr_builder(j)%btable .OR. &
+       attr(i) == dataattr_builder(j)%btable(2:)) THEN
+        nda_type(dataattr_builder(j)%vartype) = &
+         nda_type(dataattr_builder(j)%vartype) + 1
+        attr_in_ind(j) = i
+        attr_out_ind(j) = nda_type(dataattr_builder(j)%vartype)
+        EXIT
+      ENDIF
+    ENDDO
+    IF (j > SIZE(dataattr_builder)) THEN
       CALL l4f_log(L4F_WARN, 'attributo variabile oraclesim '//TRIM(attr(i))// &
        ' non valido, lo ignoro')
     ENDIF
@@ -548,8 +543,8 @@ DO i = 1, nvar
 
   CALL vol7d_alloc(v7dtmp, ntime=ntime, nana=nana, &
    nlevel=1, ntimerange=1, nnetwork=1, ndativarr=1, &
-   ndatiattri=ndai, ndatiattrc=ndac, &
-   ndativarattri=MIN(ndai,1), ndativarattrc=MIN(ndac,1)) ! per var/attr 0=.NOT.PRESENT()
+   ndatiattri=nda_type(1), ndatiattrc=nda_type(2), &
+   ndativarattri=MIN(nda_type(1),1), ndativarattrc=MIN(nda_type(2),1)) ! per var/attr 0=.NOT.PRESENT()
 
   IF (i == 1) THEN ! la prima volta inizializzo i descrittori fissi
     IF (PRESENT(set_network)) THEN
@@ -620,22 +615,17 @@ DO i = 1, nvar
    v7dtmp%dativarattr%c(1) = v7dtmp%dativar%r(1)
 
 ! Creo le variabili degli attributi
-  IF (c_e(attr_netid)) CALL init(v7dtmp%datiattr%i(attr_netid), 'B01193', &
-   unit='NUMERIC', scalefactor=0)
-  IF (c_e(attr_netname)) CALL init(v7dtmp%datiattr%c(attr_netname), 'B01194', &
-   unit='CCITTIA5', scalefactor=0)
-  IF (c_e(attr_varid)) CALL init(v7dtmp%datiattr%i(attr_varid), 'B33195', &
-   unit='NUMERIC', scalefactor=0)
-  IF (c_e(attr_qcflag_clim)) CALL init(v7dtmp%datiattr%i(attr_qcflag_clim), &
-   'B33192', unit='NUMERIC', scalefactor=0)
-  IF (c_e(attr_qcflag_time)) CALL init(v7dtmp%datiattr%i(attr_qcflag_time), &
-   'B33193', unit='NUMERIC', scalefactor=0)
-  IF (c_e(attr_qcflag_space)) CALL init(v7dtmp%datiattr%i(attr_qcflag_space), &
-   'B33194', unit='NUMERIC', scalefactor=0)
-  IF (c_e(attr_qcflag_inv)) CALL init(v7dtmp%datiattr%i(attr_qcflag_inv), &
-   'B33196', unit='NUMERIC', scalefactor=0)
-  IF (c_e(attr_qcflag_repl)) CALL init(v7dtmp%datiattr%i(attr_qcflag_repl), &
-   'B33197', unit='NUMERIC', scalefactor=0)
+  DO j = 1, SIZE(dataattr_builder)
+    IF (attr_in_ind(j) > 0 .AND. attr_out_ind(j) > 0) THEN
+      IF (dataattr_builder(j)%vartype == 1) THEN
+        CALL init(v7dtmp%datiattr%i(attr_out_ind(j)), &
+         attr(attr_in_ind(j)), unit='NUMERIC', scalefactor=0)
+      ELSE IF (dataattr_builder(j)%vartype == 2) THEN
+        CALL init(v7dtmp%datiattr%c(attr_out_ind(j)), &
+         attr(attr_in_ind(j)), unit='CCITTIA5', scalefactor=0)
+      ENDIF
+    ENDIF
+  ENDDO
 
 ! Alloco e riempio il volume di dati
   CALL vol7d_alloc_vol(v7dtmp, inivol=.TRUE.)
@@ -647,51 +637,51 @@ DO i = 1, nvar
      valore1(j)*vartable_s(vartmp(i))%afact+vartable_s(vartmp(i))%bfact
   ENDDO
 ! Imposto gli attributi richiesti
-  IF (c_e(attr_netid)) THEN ! report code, alias network id
-    v7dtmp%voldatiattri(:,:,1,1,1,1,attr_netid) = netid
+  IF (attr_out_ind(1) > 0) THEN ! report code, alias network id
+    v7dtmp%voldatiattri(:,:,1,1,1,1,attr_out_ind(1)) = netid
   ENDIF
-  IF (c_e(attr_netname)) THEN ! report mnemonic, alias network name
-    v7dtmp%voldatiattrc(:,:,1,1,1,1,attr_netname) = network%name
+  IF (attr_out_ind(2) > 0) THEN ! report mnemonic, alias network name
+    v7dtmp%voldatiattrc(:,:,1,1,1,1,attr_out_ind(2)) = network%name
   ENDIF
-  IF (c_e(attr_varid)) THEN ! variable id
+  IF (attr_out_ind(3) > 0) THEN ! variable id
     DO j = 1, nobs
 ! Solo la variabile corrente e, implicitamente, dato non scartato
       IF (varo(j) /= vartmp(i)) CYCLE
-      v7dtmp%voldatiattri(mapstazo(j),mapdatao(j),1,1,1,1,attr_varid) = varo(j)
+      v7dtmp%voldatiattri(mapstazo(j),mapdatao(j),1,1,1,1,attr_out_ind(3)) = varo(j)
     ENDDO
   ENDIF
-  IF (c_e(attr_qcflag_clim)) THEN
+  IF (attr_out_ind(4) > 0) THEN
     DO j = 1, nobs
       IF (varo(j) /= vartmp(i)) CYCLE
-      v7dtmp%voldatiattri(mapstazo(j),mapdatao(j),1,1,1,1,attr_qcflag_clim) = &
+      v7dtmp%voldatiattri(mapstazo(j),mapdatao(j),1,1,1,1,attr_out_ind(4)) = &
        make_qcflag_clim(cflag(:,j))
     ENDDO
   ENDIF
-  IF (c_e(attr_qcflag_time)) THEN
+  IF (attr_out_ind(5) > 0) THEN
     DO j = 1, nobs
       IF (varo(j) /= vartmp(i)) CYCLE
-      v7dtmp%voldatiattri(mapstazo(j),mapdatao(j),1,1,1,1,attr_qcflag_time) = &
+      v7dtmp%voldatiattri(mapstazo(j),mapdatao(j),1,1,1,1,attr_out_ind(5)) = &
        make_qcflag_time(cflag(:,j))
     ENDDO
   ENDIF
-  IF (c_e(attr_qcflag_space)) THEN
+  IF (attr_out_ind(6) > 0) THEN
     DO j = 1, nobs
       IF (varo(j) /= vartmp(i)) CYCLE
-      v7dtmp%voldatiattri(mapstazo(j),mapdatao(j),1,1,1,1,attr_qcflag_space) = &
+      v7dtmp%voldatiattri(mapstazo(j),mapdatao(j),1,1,1,1,attr_out_ind(6)) = &
        make_qcflag_space(cflag(:,j))
     ENDDO
   ENDIF
-  IF (c_e(attr_qcflag_inv)) THEN
+  IF (attr_out_ind(7) > 0) THEN
     DO j = 1, nobs
       IF (varo(j) /= vartmp(i)) CYCLE
-      v7dtmp%voldatiattri(mapstazo(j),mapdatao(j),1,1,1,1,attr_qcflag_inv) = &
+      v7dtmp%voldatiattri(mapstazo(j),mapdatao(j),1,1,1,1,attr_out_ind(7)) = &
        make_qcflag_inv(cflag(:,j))
     ENDDO
   ENDIF
-  IF (c_e(attr_qcflag_repl)) THEN
+  IF (attr_out_ind(8) > 0) THEN
     DO j = 1, nobs
       IF (varo(j) /= vartmp(i)) CYCLE
-      v7dtmp%voldatiattri(mapstazo(j),mapdatao(j),1,1,1,1,attr_qcflag_repl) = &
+      v7dtmp%voldatiattri(mapstazo(j),mapdatao(j),1,1,1,1,attr_out_ind(8)) = &
        make_qcflag_repl(cflag(:,j))
     ENDDO
   ENDIF
