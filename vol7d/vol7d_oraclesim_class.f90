@@ -78,9 +78,7 @@ INTEGER,PARAMETER :: nmaxmin=100000, nmaxmax=5000000, oraclesim_netmax=50, &
 TYPE(ora_var_conv_static),ALLOCATABLE :: vartable_s(:)
 TYPE(ora_var_conv_db),ALLOCATABLE :: vartable_db(:)
 ! attributi di dati disponibili
-TYPE(attr_builder) :: dataattr_builder(8) = (/ &
- attr_builder('*B01193', 1), &
- attr_builder('*B01194', 2), &
+TYPE(attr_builder) :: dataattr_builder(6) = (/ &
  attr_builder('*B33195', 1), &
  attr_builder('*B33192', 1), &
  attr_builder('*B33193', 1), &
@@ -91,7 +89,7 @@ TYPE(attr_builder) :: dataattr_builder(8) = (/ &
 ! tabella reti e anagrafica
 TYPE(vol7d) :: netana(oraclesim_netmax)
 LOGICAL :: networktable(oraclesim_netmax) = .FALSE.
-INTEGER, PARAMETER :: netana_nvarr=2, netana_nvari=1, netana_nvarc=1
+INTEGER, PARAMETER :: netana_nvarr=2, netana_nvari=1, netana_nvarc=2
 
 PRIVATE
 PUBLIC vol7d_oraclesim, init, delete, import!, oraclesim_netmax
@@ -256,10 +254,9 @@ END SUBROUTINE vol7d_oraclesim_delete
 !!  - 'B07031' barometer height (reale)
 !!  - 'B01192' Oracle station id (intero)
 !!  - 'B01019' station name (carattere)
+!!  - 'B01194' Report (network) mnemonic (carattere)
 !!
 !! Gli attributi di dati attualmente disponibili sono:
-!!  - '*B01193' Report (network) code (intero)
-!!  - '*B01194' Report (network) mnemonic (carattere)
 !!  - '*B33195' MeteoDB variable ID (intero)
 !!  - '*B33192' Climatological and consistency check (intero)
 !!  - '*B33193' Time consistency (intero)
@@ -271,8 +268,8 @@ END SUBROUTINE vol7d_oraclesim_delete
 !!
 !! Gestisce le flag di qualità SIM 'fase 0.1', cioè:
 !!  - '1' dato invalidato manualmente -&gt; restituisce valore mancante
-!!  - '2' dato sostituito manualmente -&gt; restituisce il dato sostituito
-!!  - '3' dato invalidato automaticamente -&gt; restituisce valore mancante
+!!  - '2' dato sostituito manualmente -&gt; restituisce il dato originale
+!!  - '3' dato sostituito su un intervallo diverso -&gt; restituisce valore mancante
 !!
 !! Nel caso non sia stato trovato nulla in archivio per i parametri
 !! richiesti, il volume risultante è vuoto e quindi inutilizzabile;
@@ -447,7 +444,9 @@ DO i = 1, nobs
 ! campo.
 ! ==
 ! in tal caso e` buono il primo
-    IF (valore2(i) /= rmiss) valore1(i) = valore2(i)
+
+! tutto quanto detto sopra non e` vero, lo teniamo buono
+!    IF (valore2(i) /= rmiss) valore1(i) = valore2(i)
   ENDIF
 
 ENDDO
@@ -473,7 +472,7 @@ DO i = 1, nana
   ENDIF
 ENDDO
 
-! Praticamente inutile se mi fido della query
+! Praticamente inutile se mi fido di oracle
 DO i = 1, ntime
  odatetime = datetime_new(simpledate=tmtmp(i))
   IF (odatetime < timei .OR. odatetime > timef) THEN
@@ -485,7 +484,7 @@ DO i = 1, ntime
   ENDIF
 ENDDO
 
-! Praticamente inutile se mi fido della query
+! Praticamente inutile se mi fido di oracle
 DO i = 1, nvar
   lnon_valid = .FALSE.
   IF (vartmp(i) < 1 .OR. vartmp(i) > nvarmax) THEN
@@ -637,51 +636,45 @@ DO i = 1, nvar
      valore1(j)*vartable_s(vartmp(i))%afact+vartable_s(vartmp(i))%bfact
   ENDDO
 ! Imposto gli attributi richiesti
-  IF (attr_out_ind(1) > 0) THEN ! report code, alias network id
-    v7dtmp%voldatiattri(:,:,1,1,1,1,attr_out_ind(1)) = netid
-  ENDIF
-  IF (attr_out_ind(2) > 0) THEN ! report mnemonic, alias network name
-    v7dtmp%voldatiattrc(:,:,1,1,1,1,attr_out_ind(2)) = network%name
-  ENDIF
-  IF (attr_out_ind(3) > 0) THEN ! variable id
+  IF (attr_out_ind(1) > 0) THEN ! variable id
     DO j = 1, nobs
 ! Solo la variabile corrente e, implicitamente, dato non scartato
       IF (varo(j) /= vartmp(i)) CYCLE
-      v7dtmp%voldatiattri(mapstazo(j),mapdatao(j),1,1,1,1,attr_out_ind(3)) = varo(j)
+      v7dtmp%voldatiattri(mapstazo(j),mapdatao(j),1,1,1,1,attr_out_ind(1)) = varo(j)
+    ENDDO
+  ENDIF
+  IF (attr_out_ind(2) > 0) THEN
+    DO j = 1, nobs
+      IF (varo(j) /= vartmp(i)) CYCLE
+      v7dtmp%voldatiattri(mapstazo(j),mapdatao(j),1,1,1,1,attr_out_ind(2)) = &
+       make_qcflag_clim(cflag(:,j))
+    ENDDO
+  ENDIF
+  IF (attr_out_ind(3) > 0) THEN
+    DO j = 1, nobs
+      IF (varo(j) /= vartmp(i)) CYCLE
+      v7dtmp%voldatiattri(mapstazo(j),mapdatao(j),1,1,1,1,attr_out_ind(3)) = &
+       make_qcflag_time(cflag(:,j))
     ENDDO
   ENDIF
   IF (attr_out_ind(4) > 0) THEN
     DO j = 1, nobs
       IF (varo(j) /= vartmp(i)) CYCLE
       v7dtmp%voldatiattri(mapstazo(j),mapdatao(j),1,1,1,1,attr_out_ind(4)) = &
-       make_qcflag_clim(cflag(:,j))
+       make_qcflag_space(cflag(:,j))
     ENDDO
   ENDIF
   IF (attr_out_ind(5) > 0) THEN
     DO j = 1, nobs
       IF (varo(j) /= vartmp(i)) CYCLE
       v7dtmp%voldatiattri(mapstazo(j),mapdatao(j),1,1,1,1,attr_out_ind(5)) = &
-       make_qcflag_time(cflag(:,j))
+       make_qcflag_inv(cflag(:,j))
     ENDDO
   ENDIF
   IF (attr_out_ind(6) > 0) THEN
     DO j = 1, nobs
       IF (varo(j) /= vartmp(i)) CYCLE
       v7dtmp%voldatiattri(mapstazo(j),mapdatao(j),1,1,1,1,attr_out_ind(6)) = &
-       make_qcflag_space(cflag(:,j))
-    ENDDO
-  ENDIF
-  IF (attr_out_ind(7) > 0) THEN
-    DO j = 1, nobs
-      IF (varo(j) /= vartmp(i)) CYCLE
-      v7dtmp%voldatiattri(mapstazo(j),mapdatao(j),1,1,1,1,attr_out_ind(7)) = &
-       make_qcflag_inv(cflag(:,j))
-    ENDDO
-  ENDIF
-  IF (attr_out_ind(8) > 0) THEN
-    DO j = 1, nobs
-      IF (varo(j) /= vartmp(i)) CYCLE
-      v7dtmp%voldatiattri(mapstazo(j),mapdatao(j),1,1,1,1,attr_out_ind(8)) = &
        make_qcflag_repl(cflag(:,j))
     ENDDO
   ENDIF
@@ -711,6 +704,7 @@ END SUBROUTINE vol7d_oraclesim_importvvns
 !!  - 'B07031' barometer height (reale)
 !!  - 'B01192' Oracle station id (intero)
 !!  - 'B01019' station name (carattere)
+!!  - 'B01194' Report (network) mnemonic (carattere)
 !!
 !! Nota: questo metodo importa l'anagrafica di tutte le stazioni delle
 !! reti richieste, mentre il metodo import importa solamente
@@ -880,7 +874,7 @@ INTEGER,INTENT(in) :: netid
 
 INTEGER :: i, nana, vnana
 REAL(kind=fp_geo),ALLOCATABLE :: tmpll(:,:)
-INTEGER(kind=int_b),ALLOCATABLE :: tmpname(:,:)
+INTEGER(kind=int_b),ALLOCATABLE :: tmpname(:,:), tmpnet(:,:)
 INTEGER(kind=int_b) :: msg(256)
 LOGICAL :: ismiss
 INTEGER :: q1, q2! eliminare
@@ -895,24 +889,25 @@ IF (nana < 0) THEN ! errore oracle
   CALL raise_fatal_error()
 ENDIF
 
-ALLOCATE(tmpll(nana,2), tmpname(vol7d_cdatalen+1,nana))
+ALLOCATE(tmpll(nana,2), tmpname(vol7d_cdatalen+1,nana), &
+ tmpnet(vol7d_cdatalen+1,nana))
 CALL vol7d_alloc(netana(netid), nnetwork=1, nana=nana, &
  nanavarr=netana_nvarr, nanavari=netana_nvari, nanavarc=netana_nvarc)
 CALL vol7d_alloc_vol(netana(netid))
-! attenzione, in futuro potrebbe essere necessario inizializzare
-! correttamente la rete nell'anagrafica statica
-CALL init(netana(netid)%network(1), name='dummy')
+
 CALL init(netana(netid)%anavar%r(1), btable='B07001', unit='M') ! station height
 CALL init(netana(netid)%anavar%r(2), btable='B07031', unit='M') ! barometer height
 CALL init(netana(netid)%anavar%i(1), btable='B01192', unit='NUMERIC', &
  scalefactor=0) ! Oracle station id
 CALL init(netana(netid)%anavar%c(1), btable='B01019', unit='CCITTIA5', &
  scalefactor=0) ! station name
+CALL init(netana(netid)%anavar%c(2), btable='B01194', unit='CCITTIA5', &
+ scalefactor=0) ! network name
 
 i = oraclesim_getanavol(this%connid, nana, vnana, vol7d_cdatalen+1, &
  netana(netid)%volanai(1,1,1), tmpll(1,1), tmpll(1,2), &
  netana(netid)%volanar(1,1,1), netana(netid)%volanar(1,2,1), &
- tmpname(1,1), rmiss, dmiss)
+ tmpname(1,1), tmpnet(1,1), rmiss, dmiss)
 IF (i /= 0) THEN
   CALL oraclesim_geterr(this%connid, msg)
   CALL l4f_log(L4F_FATAL, 'in oraclesim_getanavol, '//TRIM(cstr_to_fchar(msg)))
@@ -921,6 +916,7 @@ ENDIF
 
 ismiss = .FALSE.
 DO i = 1, nana
+! station
   netana(netid)%volanac(i,1,1) = cstr_to_fchar(tmpname(:,i))
   IF (.NOT. c_e(tmpll(i,1)) .OR. .NOT. c_e(tmpll(i,2))) THEN
     CALL init(netana(netid)%ana(i))
@@ -932,9 +928,13 @@ DO i = 1, nana
     netana(netid)%volanac(i,1,1) = cmiss
     ismiss = .TRUE.
   ENDIF
+! network
+  netana(netid)%volanac(i,2,1) = cstr_to_fchar(tmpnet(:,i))
+  IF (netana(netid)%volanac(i,2,1) == '') netana(netid)%volanac(i,2,1) = cmiss
+  CALL init(netana(netid)%network(1), name=netana(netid)%volanac(i,2,1))
 ENDDO
 
-DEALLOCATE(tmpll, tmpname)
+DEALLOCATE(tmpll, tmpname, tmpnet)
 
 IF (ismiss) THEN
 ! eliminare eventualmente le stazioni mancanti con una vol7d_reform
@@ -1012,8 +1012,12 @@ FUNCTION make_qcflag(simflag) RESULT(flag)
 INTEGER(kind=int_b) :: simflag(2)
 INTEGER :: flag
 
-flag = (simflag(1)-ICHAR('0'))*10 + simflag(2)-ICHAR('0')
-IF (flag <= 0 .OR. flag > 99) flag = imiss
+! [48,54] => [-2,4]
+! 48 = bene, 53 = male
+! 54 = fuori dai limiti del sensore
+! 00 = missing
+flag = (simflag(1)-ICHAR('0'))*10 + simflag(2)-ICHAR('0') - 50
+IF (flag <= -2 .OR. flag > 4) flag = imiss
 
 END FUNCTION make_qcflag
 
@@ -1046,7 +1050,7 @@ ENDIF
 
 END FUNCTION make_qcflag_repl
 
-! Dato invalidato automaticamente
+! Dato invalidato automaticamente da cambiare
 FUNCTION make_qcflag_invaut(simflag) RESULT(flag)
 INTEGER(kind=int_b) :: simflag(flaglen)
 INTEGER :: flag

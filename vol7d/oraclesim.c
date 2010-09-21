@@ -73,9 +73,11 @@ static char *anaquery = (char *)
   "SELECT NVL(st.identnr,-9999), \
 NVL(pm.x_long_cent,-999.9), NVL(pm.y_lat_cent,-999.9), \
 NVL(st.z_quota_stazione,-9999.9), NVL(st.z_quota_pozzetto,-9999.9), \
-SUBSTR(NVL(st.nome,'S. Cresci in Valcava'),1,20) \
-FROM met_stazioni_misura st, met_punti_misura pm \
-WHERE st.gsta_identnr = :net AND pm.identnr(+) = st.pmis_identnr \
+SUBSTR(NVL(st.nome,'S. Cresci in Valcava'),1,20), \
+SUBSTR(gs.descrizione,1,20) \
+FROM met_stazioni_misura st, met_punti_misura pm, met_gruppi_stazioni gs \
+WHERE st.gsta_identnr = :net AND pm.identnr(+) = st.pmis_identnr AND \
+gs.identnr = :net \
 ORDER by upper(st.identnr)";
 
 static char *query1 = (char *)
@@ -137,7 +139,7 @@ int FC_FUNC_(oraclesim_getanahead, ORACLESIM_GETANAHEAD)
      (OracleDbConnection **, int *);
 int FC_FUNC_(oraclesim_getanavol, ORACLESIM_GETANAVOL)
      (OracleDbConnection **, int *, int *, int *, int *, double *, double *,
-      float *, float *, char *, float *, double *);
+      float *, float *, char *, char *, float *, double *);
 int FC_FUNC_(oraclesim_getvarhead, ORACLESIM_GETVARHEAD)
      (OracleDbConnection ** /*, int * */);
 int FC_FUNC_(oraclesim_getvarvol, ORACLESIM_GETVARVOL)
@@ -148,7 +150,7 @@ int FC_FUNC_(oraclesim_getvarvol, ORACLESIM_GETVARVOL)
 static void datadefine(OracleDbConnection *,
 		       char *, int, int *, int *, float *, float *, char *, int);
 static void anadefine(OracleDbConnection *,
-		      int *, double *, double *, float *, float *, char *, int);
+		      int *, double *, double *, float *, float *, char *, char *, int);
 static void vardefine(OracleDbConnection *,
 		      int *, int *, int *, int *, int *, int *, int *, int *);
 static sword checkerr(OracleDbConnection *, sword);
@@ -502,7 +504,7 @@ int FC_FUNC_(oraclesim_getdatavol, ORACLESIM_GETDATAVOL)
 
 void anadefine(OracleDbConnection *dbconnid,
 	       int *ostatid, double *olon, double *olat, float *oqs, float *oqp,
-	       char *oname, int namelen) {
+	       char *oname, char *onet, int namelen) {
   
   checkerr(dbconnid, OCIDefineByPos(dbconnid->stmthp, &dbconnid->defn1p,
 				    dbconnid->errhp, 1,
@@ -540,6 +542,12 @@ void anadefine(OracleDbConnection *dbconnid,
 				    (dvoid *) 0,
 				    (ub2 *) 0, (ub2 *) 0, OCI_DEFAULT));
 
+  checkerr(dbconnid, OCIDefineByPos(dbconnid->stmthp, &dbconnid->defn7p,
+				    dbconnid->errhp, 7,
+				    (dvoid *) onet, namelen, SQLT_STR,
+				    (dvoid *) 0,
+				    (ub2 *) 0, (ub2 *) 0, OCI_DEFAULT));
+
 }
 
 
@@ -550,7 +558,7 @@ int FC_FUNC_(oraclesim_getanahead, ORACLESIM_GETANAHEAD)
   int ostatid;
   float oqs, oqp;
   double olon, olat;
-  char oname[NAMELEN];
+  char oname[NAMELEN], onet[NAMELEN];
   
   /* Preparo l'estrazione anagrafica */
   checkerr(dbconnid, OCIStmtPrepare(dbconnid->stmthp, dbconnid->errhp,
@@ -567,22 +575,21 @@ int FC_FUNC_(oraclesim_getanahead, ORACLESIM_GETANAHEAD)
 				   OCI_DEFAULT));
 
   /* definisco l'uscita */
-  anadefine(dbconnid, &ostatid, &olon, &olat, &oqs, &oqp, oname, NAMELEN);
+  anadefine(dbconnid, &ostatid, &olon, &olat, &oqs, &oqp, oname, onet, NAMELEN);
   return countrows(dbconnid);
 }
-
 
 
 int FC_FUNC_(oraclesim_getanavol, ORACLESIM_GETANAVOL)
      (OracleDbConnection **fdbconnid, int *nr, int *vnr, int *namelen,
       int *ostatid, double *olon, double *olat, float *oqs, float *oqp,
-      char *oname, float *rmiss, double *dmiss) {
+      char *oname, char *onet, float *rmiss, double *dmiss) {
   OracleDbConnection *dbconnid = *fdbconnid;
   int i, ret;
   sword status;
 
   /* definisco l'uscita */
-  anadefine(dbconnid, ostatid, olon, olat, oqs, oqp, oname, *namelen);
+  anadefine(dbconnid, ostatid, olon, olat, oqs, oqp, oname, onet, *namelen);
 
   status=checkerr(dbconnid, OCIStmtFetch2(dbconnid->stmthp, dbconnid->errhp,
 					  (ub4) *nr, OCI_FETCH_FIRST, (sb4) 0,
