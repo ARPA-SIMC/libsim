@@ -39,6 +39,8 @@ CHARACTER( * ), PRIVATE, PARAMETER :: UPPER_CASE = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
 
 PRIVATE int_to_char, byte_to_char, char_to_char, &
    real_to_char, double_to_char, logical_to_char
+PRIVATE trim_int_to_char, trim_byte_to_char, trim_char_to_char, &
+   trim_real_to_char, trim_double_to_char, trim_logical_to_char
 
 !> Set of functions that return the input variable converted into
 !! a string, using a default format suitable to provide a reasonable
@@ -53,6 +55,14 @@ PRIVATE int_to_char, byte_to_char, char_to_char, &
 INTERFACE to_char
   MODULE PROCEDURE int_to_char, byte_to_char, char_to_char, &
    real_to_char, double_to_char, logical_to_char
+END INTERFACE
+
+!> Set of functions that return the input variable converted into
+!! a string, like "to_char" but the result will be trimmed.
+!! Those functions are not elemental and do not accept format.
+INTERFACE t2c
+  MODULE PROCEDURE trim_int_to_char, trim_byte_to_char, trim_char_to_char, &
+   trim_real_to_char, trim_double_to_char, trim_logical_to_char
 END INTERFACE
 
 !> Class that allows splitting a long line into shorter lines of equal
@@ -81,6 +91,8 @@ CONTAINS
 ELEMENTAL FUNCTION int_to_char(in, form) RESULT(char)
 INTEGER,INTENT(in) :: in !< value to be represented as CHARACTER
 CHARACTER(len=*),INTENT(in),OPTIONAL :: form !< optional format
+integer :: nchar
+
 
 CHARACTER(len=11) :: char
 
@@ -91,6 +103,17 @@ ELSE
 ENDIF
 
 END FUNCTION int_to_char
+
+
+FUNCTION trim_int_to_char(in) RESULT(char)
+INTEGER,INTENT(in) :: in !< value to be represented as CHARACTER
+
+CHARACTER(len=len_trim(int_to_char(in))) :: char
+
+char=int_to_char(in)
+
+END FUNCTION trim_int_to_char
+
 
 
 !> Version with 1-byte integer argument, please use the generic \a to_char
@@ -108,6 +131,16 @@ ELSE
 ENDIF
 
 END FUNCTION byte_to_char
+
+
+FUNCTION trim_byte_to_char(in) RESULT(char)
+INTEGER(kind=int_b),INTENT(in) :: in !< value to be represented as CHARACTER
+
+CHARACTER(len=len_trim(byte_to_char(in))) :: char
+
+char=byte_to_char(in)
+
+END FUNCTION trim_byte_to_char
 
 
 !> Version with character argument, please use the generic \a to_char
@@ -129,6 +162,18 @@ ENDIF
 
 END FUNCTION char_to_char
 
+FUNCTION trim_char_to_char(in) result(char)
+CHARACTER(len=*),INTENT(in) :: in !< value to be represented as CHARACTER
+
+CHARACTER(len=LEN_TRIM(in)) :: char
+!fortran 2003
+!CHARACTER(len=:),allocatable :: char
+
+char = char_to_char(in)
+
+END FUNCTION trim_char_to_char
+
+
 
 !> Version with single precision real argument, please use the generic
 !! \a to_char rather than this function directly.
@@ -146,6 +191,18 @@ ELSE
 ENDIF
 
 END FUNCTION real_to_char
+
+
+FUNCTION trim_real_to_char(in) RESULT(char)
+REAL,INTENT(in) :: in !< value to be represented as CHARACTER
+
+CHARACTER(len=len_trim(real_to_char(in))) :: char
+
+char=real_to_char(in)
+
+END FUNCTION trim_real_to_char
+
+
 
 
 !> Version with double precision real argument, please use the generic
@@ -166,6 +223,13 @@ ENDIF
 
 END FUNCTION double_to_char
 
+FUNCTION trim_double_to_char(in) RESULT(char)
+DOUBLE PRECISION,INTENT(in) :: in !< value to be represented as CHARACTER
+CHARACTER(len=len_trim(double_to_char(in))) :: char
+
+char=double_to_char(in)
+
+END FUNCTION trim_double_to_char
 
 !> Version with logical argument, please use the generic \a to_char
 !! rather than this function directly.
@@ -183,6 +247,18 @@ WRITE(char,'(L1)') in
 
 END FUNCTION logical_to_char
 
+ELEMENTAL FUNCTION trim_logical_to_char(in) RESULT(char)
+LOGICAL,INTENT(in) :: in !< value to be represented as CHARACTER
+
+CHARACTER(len=1) :: char
+
+!IF (PRESENT(form)) THEN
+!  WRITE(char,form) in
+!ELSE
+WRITE(char,'(L1)') in
+!ENDIF
+
+END FUNCTION trim_logical_to_char
 
 !> Converts a \a CHARACTER variable into a string which can be
 !! directly passed to a C function requiring a null-terminated \a
