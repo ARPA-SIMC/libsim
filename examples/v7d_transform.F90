@@ -782,10 +782,10 @@ options(16) = op_option_new(' ', 'comp-stat-proc', comp_stat_proc, '', help= &
 
 options(17) = op_option_new(' ', 'comp-average', comp_average, help= &
  'recompute average of averaged fields on a different time step, &
- &obsolete, use --stat-proc 0 instead')
+ &obsolete, use --comp-stat-proc 0 instead')
 options(18) = op_option_new(' ', 'comp-cumulate', comp_cumulate, help= &
  'recompute cumulation of accumulated fields on a different time step, &
- &obsolete, use --stat-proc 1 instead')
+ &obsolete, use --comp-stat-proc 1 instead')
 options(19) = op_option_new(' ', 'comp-step', comp_step, '0000000001 00:00:00.000', help= &
  'length of regularization or statistical processing step in the format &
  &''YYYYMMDDDD hh:mm:ss.msc'', it can be simplified up to the form ''D hh''')

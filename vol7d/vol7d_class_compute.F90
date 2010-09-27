@@ -146,6 +146,7 @@ ELSE
   ENDIF
 
   CALL vol7d_merge(that1, that2, sort=.TRUE.)
+  CALL delete(that2)
   that = that1
 ENDIF
 
@@ -1046,11 +1047,17 @@ that%time => otime%array
 that%timerange => otimerange%array
 
 ! create the new volume template keeping timeranges already satisfying
-! the requirements
-CALL vol7d_copy(this, v7dtmp, miss=.FALSE., sort=.FALSE., unique=.FALSE., &
- ltimerange=(mask_timerange(:) .AND. this%timerange(:)%p2 == steps))
+! the requirements; this may create undesired times, e.g. when
+! processing model analyses with increasing reference time and
+! increasing timerange
+mask_timerange(:) = mask_timerange(:) .AND. this%timerange(:)%p2 == steps
+IF (ANY(mask_timerange(:))) THEN
+  CALL vol7d_copy(this, v7dtmp, miss=.FALSE., sort=.FALSE., unique=.FALSE., &
+   ltimerange=(mask_timerange(:) .AND. this%timerange(:)%p2 == steps))
 ! merge output so far created with template
-CALL vol7d_merge(that, v7dtmp, lanasimple=.TRUE.)
+  CALL vol7d_merge(that, v7dtmp, lanasimple=.TRUE.)
+  CALL delete(v7dtmp)
+ENDIF
 
 #ifdef DEBUG
 CALL l4f_log(L4F_INFO, &
