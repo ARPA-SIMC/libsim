@@ -31,8 +31,8 @@ err_handling.$(OBJEXT): io_units.$(OBJEXT)
 err_handling.lo: io_units.$(OBJEXT)
 datetime_class.$(OBJEXT): err_handling.$(OBJEXT) missing_values.$(OBJEXT) arrayof_pre.F90 arrayof_post.F90
 datetime_class.lo: err_handling.$(OBJEXT) missing_values.$(OBJEXT) arrayof_pre.F90 arrayof_post.F90
-file_utilities.$(OBJEXT): kinds.$(OBJEXT) char_utilities.$(OBJEXT) missing_values.$(OBJEXT) err_handling.$(OBJEXT)
-file_utilities.lo: kinds.$(OBJEXT) char_utilities.$(OBJEXT) missing_values.$(OBJEXT) err_handling.$(OBJEXT)
+file_utilities.$(OBJEXT): kinds.$(OBJEXT) char_utilities.$(OBJEXT) missing_values.$(OBJEXT) err_handling.$(OBJEXT) optional_values.$(OBJEXT)
+file_utilities.lo: kinds.$(OBJEXT) char_utilities.$(OBJEXT) missing_values.$(OBJEXT) err_handling.$(OBJEXT) optional_values.$(OBJEXT)
 geo_coord_class.$(OBJEXT): kinds.$(OBJEXT) missing_values.$(OBJEXT) phys_const.$(OBJEXT)
 geo_coord_class.lo: kinds.$(OBJEXT) missing_values.$(OBJEXT) phys_const.$(OBJEXT)
 geo_coord_with_utm_class.$(OBJEXT): kinds.$(OBJEXT) missing_values.$(OBJEXT) phys_const.$(OBJEXT)
