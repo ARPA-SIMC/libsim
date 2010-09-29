@@ -1,6 +1,6 @@
 B10004,Pressure,,255,2,1,255,1.0,0.0
 B10051,Pressure reduced to mean sea level,,255,2,2,255,1.0,0.0
-B10003,Geopotential,,255,2,6,255,1.0,0.0
+B10008,Geopotential,,255,2,6,255,1.0,0.0
 B10009,Geopotential height,,255,2,7,255,1.0,0.0
 B10007,Height,,255,2,8,255,1.0,0.0
 B12101,Temperature,K,255,2,11,255,1.0,0.0
