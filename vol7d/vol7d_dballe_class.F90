@@ -113,7 +113,7 @@ CHARACTER(len=16), PARAMETER, PRIVATE :: &
  (/2,nftype/))
 
 
-CHARACTER(len=20),PRIVATE :: dballe_name='dballe', dballe_name_env='DBA_TABLES'
+CHARACTER(len=20),PRIVATE :: dballe_name='wreport', dballe_name_env='DBA_TABLES'
 
 
 !>\brief inizializza
