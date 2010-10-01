@@ -108,7 +108,7 @@ END INTERFACE
 
 !> Metodi di importazione dati dall'archivio Oracle.
 INTERFACE import
-  MODULE PROCEDURE vol7d_oraclesim_import
+  MODULE PROCEDURE vol7d_oraclesim_import, vol7d_oraclesim_importana
 END INTERFACE
 
 CONTAINS
@@ -760,7 +760,7 @@ DO i = 1, SIZE (network)
     v7dtmpana%network(1) = network(i)
   ENDIF
 ! fondo v7dtmpana appena creato con v7dtmp
-  CALL vol7d_merge(v7dtmpana, this%vol7d)
+  CALL vol7d_merge(this%vol7d, v7dtmpana)
 ENDDO
 
 END SUBROUTINE vol7d_oraclesim_importana
