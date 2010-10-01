@@ -1,0 +1,329 @@
+/*! \page v7d_transform_tut v7d_transform Tutorial
+
+The program \a v7d_transform is a command-line utility which can
+perform many useful space and time transformations and conversions on
+volumes of sparse georeferenced data coming from various sources. The
+data are internally imported into a vol7d_class::vol7d structure.
+
+The general syntax is:
+\code
+v7d_transform [options] inputfile1 [inputfile2...] outputfile
+\endcode
+
+\section if Input formats
+
+Sparse data can be imported from the following sources:
+
+ - dbAlle database (dballe driver)
+ - BUFR/CREX files (dballe driver)
+ - v7d native binary files
+ - Oracle Sim (orsim driver)
+
+BUFR/CREX and v7d native binary files can also be created by means of
+the \a vg6d_getpoint utility, starting from gridded datasets like grib
+files.
+
+The input format has to be declared with
+the \c --input-format= command line argument.
+
+For file-type input data, multiple sources of the same type can be
+indicated, so that they will be merged into a single dataset for
+computation and output, a single \c - character indicates input
+from stdin (not supported for all formats).
+
+For database-type input format, the inputfile argument specifies
+database access information in the form user/password\@dsn, if empty
+or \c - , a suitable default is used.
+
+\section of Output formats
+
+Data can be output in the following formats, regardless of the input
+format:
+
+ - dbAlle database (dballe driver, not implemented yet)
+ - BUFR/CREX files (dballe driver)
+ - v7d native binary files
+ - csv human-readable files
+ - grib gridded format (if a gridding transformation is applied).
+
+The output format has to be declared with the \c --output-format=
+command line argument. A \c - character indicates output to stdout
+(not supported for all formats).
+
+\section wff Which file format?
+
+The native format and BUFR/CREX format contain more or less the same
+information, however they have to be be used for different purposes:
+BUFR/CREX are stable formats, compatible with other applications, so
+they are suitable for long-term storage and exchange of data, while
+their reading/writing require a considerable extra amount of time. The
+v7d native format, conversely, can be read/written very quickly, and
+is suitable for working in a "pipe" of commands (stdin/stdout), but it
+is purely an internal format of libsim, which may not be portable
+among different versions or platforms, so it should be used only as a
+fast temporary storage within a single application.
+
+\section impdb Importing from database
+
+When importing from database, rather than from file, more information
+has to be specified, in order to determine what is going to be
+imported:
+
+ - \c --start-date= initial date for extracting data, in iso format \c
+   'YYYY-MM-DD&nbsp;hh:mm', hour and minute can be omitted
+ - \c --end-date= final date for extracting data, same format as
+   for \c --start-date=
+ - \c --network-list= list of station networks (report types) to be
+   extracted in the form of a comma-separated list of alphanumeric
+   network identifiers
+ - \c --variable-list= list of data variables to be extracted in the
+   form of a comma-separated list of B-table alphanumeric codes
+ - \c --anavariable-list= list of station variables to be  
+   extracted in the form of a comma-separated list of B-table            
+   alphanumeric codes
+ - \c --attribute-list= list of data attributes to be extracted in the
+   form of a comma-separated list of B-table alphanumeric codes
+ - \c --set-network= if provided, all the input data are merged into a
+   single pseudo-network with the given name, throwing away the
+   original network information.
+
+When importing data, \c --start-date, \c --end-date, \c
+--network-list and \c --variable-list are mandatory; when importing
+station information, \c --network-list and \c --anavariable-list are
+mandatory.
+
+Common values for B-table data variable codes are:
+
+ - \c B10003 Geopotential
+ - \c B10004 Pressure
+ - \c B11001 Wind direction
+ - \c B11002 Wind speed
+ - \c B11003 U-component of wind
+ - \c B11004 V-component of wind
+ - \c B12101 Temperature
+ - \c B12103 Dew-point temperature
+ - \c B13003 Relative humidity
+ - \c B13011 Total precipitation
+
+Common values for B-table data attribute codes are (Oracle SIM specific):
+
+ - \c B33192 [SIM] Climatological and consistency check
+ - \c B33193 [SIM] Time consistency
+ - \c B33194 [SIM] Space consistency
+ - \c B33195 [SIM] MeteoDB variable ID
+ - \c B33196 [SIM] Data has been invalidated
+ - \c B33197 [SIM] Manual replacement in substitution
+
+Common values for B-table station variable codes are:
+
+ - \c B07001 Station height
+ - \c B07031 Barometer height
+ - \c B01192 MeteoDB station id
+ - \c B01019 Station name
+ - \c B01194 Report (network) mnemonic
+
+\section eximpdb Examples of import from database
+
+This example imports two months of precipitation from two networks in
+the database, with output on a native binary file:
+
+\code
+v7d_transform --input-format=orsim --output-format=native \
+ --start-date='2010-02-01 00:00' --end-date='2010-04-01 00:00' \
+ --network-list=FIDUPO,SIMNPR --variable-list=B13011 \
+ - prec.v7d
+\endcode
+
+Notice the \c - character in place of output file, indicating that the
+default access credentials will be used for connecting to the
+database.
+
+This example imports only station information from two networks in the
+database, merging the networks in a single one, with output on screen
+in csv format:
+
+\code
+v7d_transform --input-format=orsim --output-format=csv \
+ --network-list=FIDUPO,SIMNPR --anavariable-list=B01019,B07001 \
+ --set-network=FIDUMNPR - -
+\endcode
+
+and the result will look more or less like this:
+
+\code
+Longitude,Latitude,Report,Ana B07001,Ana B01019
+7.1211110000000000,44.547778000000001,fidumnpr,2125.00000,Pian delle Baracche
+9.5788890000000002,46.025000000000006,fidumnpr,1840.00000,Gerola Pescegallo
+8.1999999999999993,46.125000000000000,fidumnpr,1142.00000,Pizzanco
+8.0502780000000005,45.912500000000001,fidumnpr,1304.00000,Carcoforo
+10.499167000000000,45.724167000000001,fidumnpr,500.000000,Cavacca
+8.3372219999999988,44.565000000000005,fidumnpr,187.000000,Mombaldone Bormida Q
+8.6152780000000000,45.518056000000001,fidumnpr,180.000000,Caltignaga Terdoppio
+8.0400000000000009,45.632500000000000,fidumnpr,593.000000,Passobreve Cervo
+7.1500000000000004,45.206944000000000,fidumnpr,1800.00000,Malciaussia
+9.5297590000000003,45.056675999999996,fidumnpr,65.0000000,Rottofreno
+10.092877000000000,44.438251999999999,fidumnpr,980.000000,Grammatica
+10.106135999999999,44.882868999999999,fidumnpr,61.0000000,Toccalmatto
+10.471810000000000,44.400735999999995,fidumnpr,396.000000,Gatta Secchiello
+\endcode
+
+\section statproc Time transformations - applying simple statistical processing
+
+With v7d_transform it is possible to apply simple statistical
+processing to data, using the command-line argument
+
+ - \c --comp-stat-proc=[isp:]osp
+
+where \a isp is the statistical process of input data which have to be
+processed and \a osp is the statistical process to apply and which
+will appear in output, possible values (from grib2 table) are:
+
+ - 0 average
+ - 1 accumulated
+ - 2 maximum
+ - 3 minimum
+ - 254 instantaneous.
+
+If \a isp is not provided it is assumed to be equal to \a osp.
+
+Other important command-line arguments for statistical processing are:
+
+ - \c --comp-step= length of statistical processing step in the form
+   \c 'YYYYMMDDDD&nbsp;hh:mm:ss.msc', it can be simplified up to the form
+   \c 'D&nbsp;hh'; it is not recommended to mix variable intervals like months
+   or years with fixed intervals like days or hours
+ - \c --comp-start= start of the statistical processing interval, an
+   empty value indicates to take the initial time step of the
+   available data; the format is the same as for \c --start-date=
+   parameter.
+
+Depending on the values of \a isp and \a osp, different strategies are
+applied to the data for computing the statistical processing.
+
+\subsection statproc1 Statistical processing of instantaneous data
+
+When \a isp is 254, e.g. in \c --comp-stat-proc=254:0, instantaneous
+data are processed by computing their average, minimum or maximum on
+regular intervals.  This can be applied to observed or analyzed data
+(not to forecast data).  In the case of average, every value
+contributing to the average processing is weighted according to the
+length of the interval spanned by the value, in order to take into
+account uneven distribution of data in time.
+
+\image html stat_proc_inst_agg.png
+
+In all cases, if an interval without data longer than 10\% of the
+overall processing interval is encountered, the whole interval is
+discarded (to be tuned).
+
+\subsection statproc2 Statistical processing of data already statistically processed
+
+When \a isp and \a osp are 0, 1, 2, or 3, statistically processed data
+are processed by recomputing the statistical processing on a different
+time interval with respect to the input time interval. In principle \a
+isp and \a osp should be equal, however different values are allowed,
+in that case \a osp determines the statistical processing that will be
+applied, while \a isp is only used for selecting input data.  For this
+kind of processing the two following methods are successively applied.
+
+\subsubsection statproc2_1 - Statistical processing by aggregation of shorter intervals
+
+This method supports average, accumulation, maximum and minimum
+operations, and it can be applied to observed or analyzed data (not to
+forecast data).
+
+\image html stat_proc_agg.png
+
+The additional argument:
+
+ - \c --frac-valid=
+
+specifies the minimum fraction of data that should be present in input
+for each output interval, in order to consider the processing on that
+interval valid, it should be a value between 0 and 1.
+
+When this method is applicable, it is recommended to provide the
+argument \c --comp-start=.
+
+\subsubsection statproc2_2 - Statistical processing by difference of partially overlapping intervals
+
+This method supports average and accumulation operations, and it can
+be applied to observed, analyzed or forecast data.
+
+\image html stat_proc_diff.png
+
+When this method is applied, the argument \c --comp-start= is ignored.
+
+\subsection statproc3 Statistical processing for obtaining instantaneous data
+
+This is quite a stupid operation, however it is required by some
+users, so it is allowed to set \c --comp-stat-proc=1:254 in order to
+transform average data into instantaneous data, obtaining an output
+reference time in the middle of the input average interval (see result
+Out1 in the next figure).
+
+For this method the \c --comp-step= argument indicates the length of
+time step of statistically processed input data to be used, not the
+expected step of output data, while the argument \c --comp-start= is
+ignored.
+
+If there is no available data averaged on the requested interval
+length, the algorithm looks for data averaged on half the requested
+interval length, it applies first an average processing by aggregation
+in order to obtain data on the requested interval, including both odd
+and even intervals, then it transforms them into instantaneous data
+(see result Out2 in the figure).
+
+\image html stat_proc_disagg_inst.png
+
+\section spaceproc Space transformations - applying area averages and interpolations
+
+With v7d_transform it is possible to perform geographical
+transformations befor and/or after the statistical processing.
+
+\subsection preinterp
+
+\subsection postinterp
+
+
+\section exdataproc Examples of data processing
+
+This example accumulates precipitation on 24 hours intervals, starting
+from data accumulated on shorter intervals, and outputs the data on a
+BUFR file:
+
+\code
+v7d_transform --input-format=native --output-format=BUFR \
+ --comp-stat-proc 1:1 --comp-step='01 00' --comp-start='2010-02-01 00:00' \
+ prec.v7d prec_1d.bufr
+\endcode
+
+This example computes maximum temperatures on 24 hours intervals,
+starting from instantaneous data, and outputs the data on a native
+binary file:
+
+\code
+v7d_transform --input-format=orsim --output-format=native \
+ --start-date='2010-02-01 00:00' --end-date='2010-04-01 00:00' \
+ --network-list=FIDUPO --variable-list=B12101 \
+ --comp-stat-proc 254:2 --comp-step='01 00' --comp-start='2010-02-01 00:00' \
+ - tempmax.v7d
+\endcode
+
+This example takes the output from the previous example and computes
+the average of maximum temperatures on monthly intervals:
+
+\code
+v7d_transform --input-format=native --output-format=csv \
+ --comp-stat-proc 2:0 --comp-step='010000 00' --comp-start='2010-02-01 00:00' \
+ tempmax.v7d tempavg.csv
+\endcode
+
+notice that, in this case, the volume data descriptors (variable and
+timerange) suggest that the dataset contains average temperatures,
+while these are actually averages of daily maximum temperatures, so
+part of the information is lost and the user must keep track of it
+autonomously.
+
+
+ */

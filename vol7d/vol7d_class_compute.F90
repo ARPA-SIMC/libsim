@@ -917,13 +917,13 @@ END SUBROUTINE vol7d_decompute_stat_proc
 !! different time interval.  This method performs statistical
 !! processing by difference of different intervals.  Only floating
 !! point single or double precision data with analysis/observation
-!! timerange are processed.
+!! or forecast timerange are processed.
 !!
 !! The output \a that vol7d object contains elements from the original volume
 !! \a this satisfying the conditions
 !!  - real single or double precision variables
 !!  - timerange (vol7d_timerange_class::vol7d_timerange::timerange)
-!!    of type \a stat_proc (or \a stat_proc_input if provided)
+!!    of type \a stat_proc
 !!  - any p1 (analysis/observation or forecast)
 !!  - p2 &gt; 0 (processing interval non null, non instantaneous data)
 !!    and equal to a multiplier of \a step if \a full_steps is \c .TRUE.
@@ -937,13 +937,13 @@ END SUBROUTINE vol7d_decompute_stat_proc
 !!
 !! Input volume may have any value of \a this%time_definition, and
 !! that value will be conserved in the output volume.
-SUBROUTINE vol7d_recompute_stat_proc_diff(this, that, tri, step, full_steps, other)
-TYPE(vol7d),INTENT(inout) :: this
-TYPE(vol7d),INTENT(out) :: that
-INTEGER,INTENT(in) :: tri
-TYPE(timedelta),INTENT(in) :: step
-LOGICAL,INTENT(in),OPTIONAL :: full_steps
-TYPE(vol7d),INTENT(out),OPTIONAL :: other
+SUBROUTINE vol7d_recompute_stat_proc_diff(this, that, stat_proc, step, full_steps, other)
+TYPE(vol7d),INTENT(inout) :: this !< volume providing data to be recomputed, it is not modified by the method, apart from performing a \a vol7d_alloc_vol on it
+TYPE(vol7d),INTENT(out) :: that !< output volume which will contain the recomputed data
+INTEGER,INTENT(in) :: stat_proc !< type of statistical processing to be recomputed (from grib2 table), only data having timerange of this type will be recomputed and will appear in the output volume
+TYPE(timedelta),INTENT(in) :: step !< length of the step over which the statistical processing is performed
+LOGICAL,INTENT(in),OPTIONAL :: full_steps !< if provided and \a .TRUE., process only data having processing interval (p2) equal to a multiplier of \a step
+TYPE(vol7d),INTENT(out),OPTIONAL :: other !< optional volume that, on exit, is going to contain the data that did not contribute to the statistical processing
 
 INTEGER :: i1, i2, i3, i4, i5, i6, i, j, k, l, nitr, steps
 INTEGER(kind=int_ll) :: msteps
@@ -967,7 +967,7 @@ steps = msteps/1000_int_ll
 
 ! create a mask of suitable timeranges
 ALLOCATE(mask_timerange(SIZE(this%timerange)))
-mask_timerange(:) = this%timerange(:)%timerange == tri &
+mask_timerange(:) = this%timerange(:)%timerange == stat_proc &
  .AND. this%timerange(:)%p1 /= imiss .AND. this%timerange(:)%p2 /= imiss &
  .AND. this%timerange(:)%p1 >= 0 &
  .AND. this%timerange(:)%p2 > 0
@@ -1002,7 +1002,7 @@ DO l = 1, SIZE(this%time)
         useful = .FALSE.
         CALL time_timerange_get_period(this%time(j), this%timerange(f(i)), &
          this%time_definition, pstart1, pend1, reftime1)
-        tmptimerange = vol7d_timerange_new(timerange=tri)
+        tmptimerange = vol7d_timerange_new(timerange=stat_proc)
 
         IF (reftime2 == pend2 .AND. reftime1 == pend1) THEN ! analysis
           IF (pstart2 == pstart1 .AND. pend2 > pend1) THEN ! =-|
@@ -1080,13 +1080,13 @@ IF (ASSOCIATED(this%voldatir)) THEN
 !                      IF (.NOT.c_e(that%voldatir( &
 !                       i1,map_tr(i,j,k,l,1),i3,map_tr(i,j,k,l,2),i5,i6))) THEN
 
-                      IF (tri == 0) THEN ! average
+                      IF (stat_proc == 0) THEN ! average
                         that%voldatir( &
                          i1,map_tr(i,j,k,l,1),i3,map_tr(i,j,k,l,2),i5,i6) = &
                          (this%voldatir(i1,l,i3,f(k),i5,i6)*this%timerange(f(k))%p2 - &
                          this%voldatir(i1,j,i3,f(i),i5,i6)*this%timerange(f(i))%p2)/ &
                          steps ! optimize avoiding conversions
-                      ELSE IF (tri == 1) THEN ! cumulation, compute MAX(0.,)?
+                      ELSE IF (stat_proc == 1) THEN ! cumulation, compute MAX(0.,)?
                         that%voldatir( &
                          i1,map_tr(i,j,k,l,1),i3,map_tr(i,j,k,l,2),i5,i6) = &
                          this%voldatir(i1,l,i3,f(k),i5,i6) - &
@@ -1121,13 +1121,13 @@ IF (ASSOCIATED(this%voldatid)) THEN
 !                      IF (.NOT.c_e(that%voldatid( &
 !                       i1,map_tr(i,j,k,l,1),i3,map_tr(i,j,k,l,2),i5,i6))) THEN
 
-                      IF (tri == 0) THEN ! average
+                      IF (stat_proc == 0) THEN ! average
                         that%voldatid( &
                          i1,map_tr(i,j,k,l,1),i3,map_tr(i,j,k,l,2),i5,i6) = &
                          (this%voldatid(i1,l,i3,f(k),i5,i6)*this%timerange(f(k))%p2 - &
                          this%voldatid(i1,j,i3,f(i),i5,i6)*this%timerange(f(i))%p2)/ &
                          steps ! optimize avoiding conversions
-                      ELSE IF (tri == 1) THEN ! cumulation, compute MAX(0.,)?
+                      ELSE IF (stat_proc == 1) THEN ! cumulation, compute MAX(0.,)?
                         that%voldatid( &
                          i1,map_tr(i,j,k,l,1),i3,map_tr(i,j,k,l,2),i5,i6) = &
                          this%voldatid(i1,l,i3,f(k),i5,i6) - &
@@ -1160,7 +1160,7 @@ LOGICAL,INTENT(in) :: filter
 IF (PRESENT(other)) THEN
   IF (filter) THEN ! create volume with the remaining data for further processing
     CALL vol7d_copy(this, other, miss=.FALSE., sort=.FALSE., unique=.FALSE., &
-     ltimerange=(this%timerange(:)%timerange /= tri))
+     ltimerange=(this%timerange(:)%timerange /= stat_proc))
   ELSE
     CALL vol7d_copy(this, other, miss=.FALSE., sort=.FALSE., unique=.FALSE.)
   ENDIF

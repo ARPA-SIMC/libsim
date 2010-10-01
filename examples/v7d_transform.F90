@@ -24,7 +24,7 @@ IMPLICIT NONE
 ! csv output configuration
 CHARACTER(len=8) :: csv_volume
 CHARACTER(len=512) :: csv_column, csv_columnorder, csv_variable
-LOGICAL :: csv_skip_miss, csv_no_rescale
+LOGICAL :: csv_keep_miss, csv_no_rescale
 INTEGER :: csv_header, icsv_column(5), icsv_columnorder(5), icsv_colinvorder(7), &
  icsv_colstart(5), icsv_colend(5), icsv_colind(5)
 
@@ -466,7 +466,7 @@ loop7d: DO WHILE(.TRUE.)
             ENDDO
           ENDIF
 
-          IF (.NOT.csv_skip_miss .OR. no_miss) THEN
+          IF (csv_keep_miss .OR. no_miss) THEN
             WRITE(iun,'(A)')csv_record_getrecord(csvline)
           ENDIF
           CALL delete(csvline)
@@ -676,7 +676,7 @@ CHARACTER(len=512):: a_name
 INTEGER :: category
 
 ! for computing
-LOGICAL :: comp_regularize, comp_average, comp_cumulate, comp_discard, comp_sort
+LOGICAL :: comp_regularize, comp_average, comp_cumulate, comp_keep, comp_sort, obso
 CHARACTER(len=13) :: comp_stat_proc
 CHARACTER(len=23) :: comp_step, comp_start
 INTEGER :: istat_proc, ostat_proc
@@ -780,10 +780,10 @@ options(16) = op_option_new(' ', 'comp-stat-proc', comp_stat_proc, '', help= &
  &2=maximum, 3=minimum, 254=instantaneous, but not all the compbinations &
  &make sense; if isp is not provided it is assumed to be equal to osp')
 
-options(17) = op_option_new(' ', 'comp-average', comp_average, help= &
+options(17) = op_option_new(' ', 'comp-average', obso, help= &
  'recompute average of averaged fields on a different time step, &
  &obsolete, use --comp-stat-proc 0 instead')
-options(18) = op_option_new(' ', 'comp-cumulate', comp_cumulate, help= &
+options(18) = op_option_new(' ', 'comp-cumulate', obso, help= &
  'recompute cumulation of accumulated fields on a different time step, &
  &obsolete, use --comp-stat-proc 1 instead')
 options(19) = op_option_new(' ', 'comp-step', comp_step, '0000000001 00:00:00.000', help= &
@@ -793,11 +793,11 @@ options(20) = op_option_new(' ', 'comp-start', comp_start, '', help= &
  'start of regularization, or statistical processing interval, an empty value means &
  &take the initial time step of the available data; the format is the same as for &
  &--start-date parameter')
-options(21) = op_option_new(' ', 'comp-discard', comp_discard, help= &
- 'discard the data that are not the result of the requested statistical processing &
- &and keep only the result of the computations')
+options(21) = op_option_new(' ', 'comp-keep', comp_keep, help= &
+ 'keep the data that are not the result of the requested statistical processing, &
+ &merging them with the result of the processing')
 options(22) = op_option_new(' ', 'comp-frac-valid', comp_frac_valid, 1., help= &
- 'specify the fraction of data that has to be valid in order to consider a &
+ 'specify the fraction of input data that has to be valid in order to consider a &
  &statistically processed value acceptable')
 options(23) = op_option_new(' ', 'comp-sort', comp_sort, help= &
  'sort all sortable dimensions of the volume after the computations')
@@ -858,10 +858,16 @@ options(33) = op_option_new(' ', 'csv-variable', csv_variable, 'all', help= &
  &''B10004,B12101'' in the desired order')
 options(34) = op_option_new(' ', 'csv-header', csv_header, 2, help= &
  'write 0 to 2 header lines at the beginning of csv output')
-options(35) = op_option_new(' ', 'csv-skip-miss', csv_skip_miss, help= &
- 'skip records containing only missing values in csv output')
+options(35) = op_option_new(' ', 'csv-keep-miss', csv_keep_miss, help= &
+ 'keep records containing only missing values in csv output')
 options(36) = op_option_new(' ', 'csv-norescale', csv_no_rescale, help= &
  'do not rescale in output integer variables according to their scale factor')
+
+! obsolete options
+options(45) = op_option_new(' ', 'comp-discard', obso, help= &
+ 'obsolete option, use --comp-keep with opposite meaning')
+options(46) = op_option_new(' ', 'csv-skip-miss', obso, help= &
+ 'obsolete option, use --csv-keep-miss with opposite meaning')
 
 ! help options
 options(49) = op_option_help_new('h', 'help', help= &
@@ -910,15 +916,25 @@ ENDIF
 ! check input/output files
 i = iargc() - optind
 IF (i < 0) THEN
-  CALL l4f_category_log(category,L4F_ERROR,'input file missing')
   CALL optionparser_printhelp(opt)
+  CALL l4f_category_log(category,L4F_ERROR,'input file missing')
   CALL EXIT(1)
 ELSE IF (i < 1) THEN
-  CALL l4f_category_log(category,L4F_ERROR,'output file missing')
   CALL optionparser_printhelp(opt)
+  CALL l4f_category_log(category,L4F_ERROR,'output file missing')
   CALL EXIT(1)
 ENDIF
 CALL getarg(iargc(), output_file)
+
+! check obsolete arguments
+IF (obso) THEN
+  CALL optionparser_printhelp(opt)
+  CALL l4f_category_log(category, L4F_ERROR, &
+   'arguments --comp-average --comp-cumulate --csv-skip-miss --comp-discard')
+  CALL l4f_category_log(category, L4F_ERROR, &
+   'are obsolete, please read help')
+  CALL EXIT(1)
+ENDIF
 
 ! generate network
 IF (LEN_TRIM(network_list) > 0) THEN
@@ -982,19 +998,6 @@ IF (comp_stat_proc /= '') THEN
      'error in command-line parameters, wrong syntax for --comp-stat-proc: ' &
      //comp_stat_proc)
     CALL EXIT(1)
-  ENDIF
-ELSE
-  IF (comp_average) THEN
-    CALL l4f_category_log(category, L4F_WARN, &
-     'argument --comp-average is obsolete, next time please use --comp-stat-proc')
-    istat_proc = 0
-    ostat_proc = 0
-  ENDIF
-  IF (comp_cumulate) THEN
-    CALL l4f_category_log(category, L4F_WARN, &
-     'argument --comp-cumulate is obsolete, next time please use --comp-stat-proc')
-    istat_proc = 1
-    ostat_proc = 1
   ENDIF
 ENDIF
 
@@ -1087,14 +1090,16 @@ DO ninput = optind, iargc()-1
 
 #ifdef HAVE_ORSIM
   ELSE IF (input_format == 'orsim') THEN
-    IF (.NOT.ALLOCATED(nl) .OR. .NOT.ALLOCATED(vl)) THEN
+    IF (.NOT.ALLOCATED(nl) .OR. (.NOT.ALLOCATED(vl) .AND. .NOT.ALLOCATED(avl))) THEN
       CALL l4f_category_log(category, L4F_ERROR, &
-       'error in command-line parameters, it is necessary to provide --network-list &
-       &and --variable-list with SIM Oracle source.')
+       'error in command-line parameters, it is necessary to provide --network-list')
+      CALL l4f_category_log(category, L4F_ERROR, &
+       'and either --variable-list or --anavariable-list with SIM Oracle source')
       CALL EXIT(1)
     ENDIF
     CALL parse_dba_access_info(input_file, dsn, user, password)
     CALL init(v7d_osim, dsn=dsn, user=user, password=password, time_definition=0)
+    IF (.NOT.ALLOCATED(vl)) ALLOCATE(vl(0)) ! allocate if missing
     IF (.NOT.ALLOCATED(avl)) ALLOCATE(avl(0)) ! allocate if missing
     IF (.NOT.ALLOCATED(al)) ALLOCATE(al(0)) ! allocate if missing
     IF (set_network /= '') THEN
@@ -1102,8 +1107,13 @@ DO ninput = optind, iargc()-1
     ELSE
       set_network_obj = vol7d_network_miss
     ENDIF
-    CALL IMPORT(v7d_osim, vl, nl, timei=s_d, timef=e_d, anavar=avl, attr=al, &
-     set_network=set_network_obj)
+    IF (SIZE(vl) > 0) THEN
+      CALL import(v7d_osim, vl, nl, timei=s_d, timef=e_d, anavar=avl, attr=al, &
+       set_network=set_network_obj)
+    ELSE
+      CALL import(v7d_osim, nl, anavar=avl, &
+       set_network=set_network_obj)
+    ENDIF
     v7dtmp = v7d_osim%vol7d
     CALL init(v7d_osim%vol7d) ! nullify without deallocating
 #endif
@@ -1170,13 +1180,11 @@ IF (c_e(istat_proc) .AND. c_e(ostat_proc)) THEN
   v7d = v7d_comp3
 
 ! merge the tho computed fields
-  IF (comp_discard) THEN ! the user is not interested in the other volume
+  IF (.NOT. comp_keep) THEN ! the user is not interested in the other volume
     CALL delete(v7d)
     v7d = v7d_comp1
-!    CALL vol7d_merge(v7d, v7d_comp2, sort=.TRUE.)
   ELSE
     CALL vol7d_merge(v7d, v7d_comp1, sort=.TRUE.)
-!    CALL vol7d_merge(v7d, v7d_comp2, sort=.TRUE.)
   ENDIF
 ENDIF
 
@@ -1325,10 +1333,10 @@ ELSE
     password = string(bar+1:at-1)
     dsn = string(at+1:)
   ELSE
+    CALL optionparser_printhelp(opt)
     CALL l4f_category_log(category, L4F_ERROR, &
      'error in command-line parameters, database access info '// &
      TRIM(string)//' not valid.')
-    CALL optionparser_printhelp(opt)
     CALL EXIT(1)
   ENDIF
 ENDIF
