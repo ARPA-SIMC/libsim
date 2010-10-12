@@ -41,7 +41,7 @@ AC_ARG_ENABLE(debug-mode, AC_HELP_STRING([--enable-debug-mode],
   [enable debug mode]), , [enableval=no])dnl default disable
 if test "x$enableval" = "xyes"; then
 if test "x$FC" = "xgfortran"; then
-FCFLAGS="$FCFLAGS -g -fbounds-check"
+FCFLAGS="$FCFLAGS -g -fbounds-check -O0 -fexceptions"
 else
 FCFLAGS="$FCFLAGS -g -C"
 fi
