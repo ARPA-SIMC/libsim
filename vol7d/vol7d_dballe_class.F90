@@ -196,6 +196,11 @@ character(len=512) :: a_name
 character(len=254) :: arg,lfilename,lformat
 logical :: exist
 
+this%idbhandle=imiss
+this%handle=imiss
+this%handle_err=imiss
+this%handle_staz=imiss
+
 call l4f_launcher(a_name,a_name_append=trim(subcategory)//"."//trim(categoryappend))
 !init di log4fortran
 !ier=l4f_init()
