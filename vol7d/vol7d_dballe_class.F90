@@ -484,10 +484,13 @@ TYPE(vol7d_timerange),INTENT(in),optional :: timerange
 CHARACTER(len=*),INTENT(in),OPTIONAL :: attr(:),anavar(:),anaattr(:)
 CHARACTER(len=*),INTENT(in),OPTIONAL :: varkind(:),attrkind(:),anavarkind(:),anaattrkind(:)
 
-
+INTEGER,PARAMETER :: maxvarlist=100
 !TYPE(vol7d) :: v7d
-CHARACTER(len=SIZE(var)*7) :: varlist
-CHARACTER(len=SIZE(attr)*8) :: starvarlist
+! da non fare (con gfortran?)!!!!!
+!CHARACTER(len=SIZE(var)*7) :: varlist
+!CHARACTER(len=SIZE(attr)*8) :: starvarlist
+CHARACTER(len=maxvarlist*7) :: varlist
+CHARACTER(len=maxvarlist*8) :: starvarlist
 CHARACTER(len=6) :: btable
 CHARACTER(len=7) ::starbtable
 
@@ -591,6 +594,12 @@ end if
 nvar=0
 
 if (present (var)) then
+
+  IF (SIZE(var) > maxvarlist) THEN
+    CALL l4f_category_log(this%category,L4F_ERROR,"too many variables requested: "//t2c(SIZE(var)))
+    call raise_fatal_error()
+  ENDIF
+
                                 ! creo la stringa con l'elenco
   varlist = ''
   DO i = 1, SIZE(var)
@@ -739,6 +748,8 @@ ENDIF
 
 ! dammi tutti i dati di anagrafica
 do i=1,N_ana
+  call init(bufferana(i)%ana)
+  call init(bufferana(i)%network)
 
   bufferana(i)%dator=DBA_MVR
   bufferana(i)%datoi=DBA_MVI
@@ -1287,6 +1298,12 @@ end if
 !print*,"ho fatto un volume vuoto"
 
 if (lattr)then
+
+  IF (SIZE(attr) > maxvarlist) THEN
+    CALL l4f_category_log(this%category,L4F_ERROR,"too many attributes requested: "//t2c(SIZE(attr)))
+    call raise_fatal_error()
+  ENDIF
+
                                 ! creo la stringa con l'elenco delle variabili di attributo
   starvarlist = ''
   nvarattr=0
