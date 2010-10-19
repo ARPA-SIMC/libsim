@@ -153,8 +153,8 @@ options(22) = op_option_new(' ', 'output-td', output_td, 1, help= &
 #ifdef HAVE_LIBGRIBAPI
 options(23) = op_option_new(' ', 'output-keys', output_keys, '', help= &
  'keys that have to apper in the output grib_api_csv file, any grib_api key &
- &or ''grib_api_csv:lon'', ''grib_api_csv:lat'', ''grib_api_csv:npoint'', &
- &''grib_api_csv:isodate'', ''grib_api_csv:value''')
+ &or ''gacsv:lon'', ''gacsv:lat'', ''gacsv:npoint'', &
+ &''gacsv:isodate'', ''gacsv:value''')
 #endif
 
 ! help options

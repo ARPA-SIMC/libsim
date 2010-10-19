@@ -140,26 +140,18 @@ DO l = 1, SIZE(vg6d%time)
                 CALL csv_record_addfield_miss(csvline, &
                  TRIM(to_char(v7d%voldatir(np,l,j,k,nv,1))))
               CASE default
-! TODO log warning/error
                 CALL l4f_category_log(vg6d%category,L4F_WARN, &
-                 "requested gacsv key "//keys(w_s(n):w_e(n))//" undefined")
+                 "requested gacsv key "//TRIM(keys(w_s(n):w_e(n)))//" undefined")
                 CALL csv_record_addfield(csvline, '')
               END SELECT
 
             ELSE ! the truth is in grib_api
-! TODO handle key error in grib_api and possible integer type
-!              CALL grib_get(gaid, keys(w_s(n):w_e(n)), csv_gaid, status)
-!              IF (status /= GRIB_SUCCESS) THEN
-!                csv_gaid = ''
-!                CALL l4f_category_log(vg6d%category,L4F_WARN, &
-!                 "requested grib_api key "//keys(w_s(n):w_e(n))// &
-!                 " not found in message")
-!              ENDIF
+! TODO handle non integer type in grib_api
               CALL grib_get(gaid, keys(w_s(n):w_e(n)), csv_igaid, status)
               IF (status /= GRIB_SUCCESS) THEN
                 csv_igaid = imiss
                 CALL l4f_category_log(vg6d%category,L4F_WARN, &
-                 "requested grib_api key "//keys(w_s(n):w_e(n))// &
+                 "requested grib_api key "//TRIM(keys(w_s(n):w_e(n)))// &
                  " not found in message")
               ENDIF
               CALL csv_record_addfield_miss(csvline, csv_igaid)
