@@ -2689,8 +2689,8 @@ do igrid=1,ngrid
        to_char(abs(lat_max_t - lat_max)-step_lat_t/2.d0))
 #endif
       
-      if ( abs(lat_min - (lat_min_t+step_lat_t/2.d0)) < 1.d-3 .and. abs(lat_max - (lat_max_t+step_lat_t/2.d0)) < 1.d-3 ) then
-        if ( abs(lon_min_t - (lon_min+step_lon_t/2.d0)) < 1.d-3 .and. abs(lon_max_t - (lon_max+step_lon_t/2.d0)) < 1.d-3  ) then
+      if ( abs(lat_min - (lat_min_t+step_lat_t/2.d0)) < 2.d-3 .and. abs(lat_max - (lat_max_t+step_lat_t/2.d0)) < 2.d-3 ) then
+        if ( abs(lon_min_t - (lon_min+step_lon_t/2.d0)) < 2.d-3 .and. abs(lon_max_t - (lon_max+step_lon_t/2.d0)) < 2.d-3 ) then
           
 #ifdef DEBUG
           call l4f_category_log(this(igrid)%category,L4F_DEBUG,"C grid: found U and V case up and right")
