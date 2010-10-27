@@ -25,6 +25,10 @@ clean-local:
 
 endif
 
-EXTRA_DIST = Doxyfile.in fpp mainpage.dox footer.html breve_presentazione.odp
+EXTRA_DIST = Doxyfile.in fpp mainpage.dox footer.html \
+ v7d_transform_tut.dox \
+ stat_proc_agg.png stat_proc_diff.png stat_proc_disagg_inst.png stat_proc_inst_agg.png \
+ breve_presentazione.odp
+
 #SUBDIRS=pictures
 

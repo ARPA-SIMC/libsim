@@ -17,14 +17,15 @@ Sparse data can be imported from the following sources:
  - dbAlle database (dballe driver)
  - BUFR/CREX files (dballe driver)
  - v7d native binary files
- - Oracle Sim (orsim driver)
+ - Oracle SIMC database (orsim driver)
 
 BUFR/CREX and v7d native binary files can also be created by means of
 the \a vg6d_getpoint utility, starting from gridded datasets like grib
 files.
 
-The input format has to be declared with
-the \c --input-format= command line argument.
+The input format has to be declared with the \c --input-format=
+command line argument which can take the values \c dba, \c BUFR, \c
+CREX, \c native or \c orsim.
 
 For file-type input data, multiple sources of the same type can be
 indicated, so that they will be merged into a single dataset for
@@ -43,12 +44,16 @@ format:
  - dbAlle database (dballe driver, not implemented yet)
  - BUFR/CREX files (dballe driver)
  - v7d native binary files
- - csv human-readable files
+ - csv human-readable files (csv driver)
  - grib gridded format (if a gridding transformation is applied).
 
 The output format has to be declared with the \c --output-format=
-command line argument. A \c - character indicates output to stdout
-(not supported for all formats).
+command line argument which can take the values \c BUFR, \c
+CREX, \c native, \c csv or \c grib_api.
+
+The name of the output file is indicated as the last argument on the
+command line, a \c - character indicates output to stdout (not supported
+for all formats).
 
 \section wff Which file format?
 
@@ -281,10 +286,28 @@ and even intervals, then it transforms them into instantaneous data
 With v7d_transform it is possible to perform geographical
 transformations befor and/or after the statistical processing.
 
-\subsection preinterp
+\subsection preinterp Prelimnary transformation
+
+Before the statistical processing, it is possible to perform a
+sparse-point to sparse-point transformation, which has to be specified
+in the form \c --pre-trans-type=trans-type:subtype.
+
+The only transformation type that makes sense here is \c
+polyinter:average which averages the data on a set of polygons
+provided in shapefile format with the options \c --coord-file= and \c
+--coord-format=shp.
 
 \subsection postinterp
 
+After the statistical processing, it is possible to perform a
+sparse-point to grid transformation, which has to be specified
+in the form \c --post-trans-type=trans-type:subtype.
+
+The transformation types that make sense here are \c inter:linear,
+which linearly interpolates the sparse data on a regular grid by
+triangulation, and \c boxinter:average, which computes the value at each
+grid point as the average of the sparse input data on the
+corresponding grid box.
 
 \section exdataproc Examples of data processing
 
