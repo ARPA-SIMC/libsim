@@ -1,7 +1,7 @@
 Summary: libsim: librerie di utilità in Fortran 90
 Name: libsim
 Version: 4.0.0
-Release: 788
+Release: 800
 License: GPL2+
 Group: Applications/Meteo
 URL: http://www.arpa.emr.it/sim
@@ -21,7 +21,7 @@ Summary:  libsim documentation
 Group: Applications/Meteo
 
 %description -n libsim-doc
-Librerie di utilità in Fortran 90, documentazione .
+Librerie di utilità in Fortran 90, documentazione.
 
 %description
 Libsim comprende quattro gruppi di moduli di utilità in Fortran 90:
@@ -48,7 +48,7 @@ tipo vol7d.
 %setup -q
 
 %build
-%configure FC=gfortran FCFLAGS="-I/usr/include/ -I%{_fmoddir}" ORA_VER=oracle/11.2/client
+%configure FC=gfortran FCFLAGS="-I/usr/include/ -I%{_fmoddir}" ORA_VER=oracle/11.2/client --enable-f2003-features
 make 
 
 %install
