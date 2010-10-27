@@ -25,8 +25,8 @@ IMPLICIT NONE
 CHARACTER(len=8) :: csv_volume
 CHARACTER(len=512) :: csv_column, csv_columnorder, csv_variable
 LOGICAL :: csv_keep_miss, csv_no_rescale
-INTEGER :: csv_header, icsv_column(5), icsv_columnorder(5), icsv_colinvorder(7), &
- icsv_colstart(5), icsv_colend(5), icsv_colind(5)
+INTEGER :: csv_header, icsv_column(7), icsv_columnorder(6), icsv_colinvorder(6), &
+ icsv_colstart(6), icsv_colend(6), icsv_colind(6)
 
 TYPE vol7d_var_mapper
   CHARACTER(len=2) :: cat
@@ -41,15 +41,28 @@ TYPE(vol7d),INTENT(inout) :: v7d
 INTEGER,INTENT(in) :: iun
 
 INTEGER :: licsv_column(SIZE(icsv_column))
-LOGICAL :: no_miss
+LOGICAL :: no_miss, miss_dummy
 CHARACTER(len=50) :: desdata(7)
 TYPE(csv_record) :: csvline, csv_desdata(7)
-INTEGER :: i, i1, i2, i3, i4, i5, i6, i7, nv
+INTEGER :: i, i1, i2, i3, i4, i5, i6, i7, nv, ndvar
 INTEGER,POINTER :: w_s(:), w_e(:)
 TYPE(vol7d_var_mapper),POINTER :: mapper(:)
 
-!IF (.NOT.c_e(v7d)) RETURN ! do not play with fire
 CALL vol7d_alloc_vol(v7d) ! be safe
+
+! Filter requested variables
+IF (csv_variable /= 'all') THEN
+  nv = word_split(csv_variable, w_s, w_e, ',')
+  CALL checkvarvect(v7d%anavar)
+  CALL checkvarvect(v7d%anaattr)
+  CALL checkvarvect(v7d%anavarattr)
+  CALL checkvarvect(v7d%dativar)
+  CALL checkvarvect(v7d%datiattr)
+  CALL checkvarvect(v7d%dativarattr)
+  CALL vol7d_reform(v7d, miss=.TRUE.) ! sort?
+  DEALLOCATE(w_s, w_e)
+ENDIF
+CALL var_mapper(v7d, mapper)
 
 licsv_column(:) = icsv_column(:)
 
@@ -72,6 +85,7 @@ ENDIF
 
 ! For column reordering
 icsv_colstart(:) = 1
+icsv_colend(:) = 0
 WHERE (icsv_columnorder(:) == vol7d_ana_d)
   icsv_colend(:) = SIZE(v7d%ana)
 END WHERE
@@ -84,6 +98,9 @@ END WHERE
 WHERE (icsv_columnorder(:) == vol7d_timerange_d)
   icsv_colend(:) = SIZE(v7d%timerange)
 END WHERE
+WHERE (icsv_columnorder(:) == vol7d_var_d)
+  icsv_colend(:) = SIZE(mapper)
+END WHERE
 WHERE (icsv_columnorder(:) == vol7d_network_d)
   icsv_colend(:) = SIZE(v7d%network)
 END WHERE
@@ -93,30 +110,16 @@ icsv_colinvorder(vol7d_ana_d) = firsttrue(icsv_columnorder(:) == vol7d_ana_d)
 icsv_colinvorder(vol7d_time_d) = firsttrue(icsv_columnorder(:) == vol7d_time_d)
 icsv_colinvorder(vol7d_level_d) = firsttrue(icsv_columnorder(:) == vol7d_level_d)
 icsv_colinvorder(vol7d_timerange_d) = firsttrue(icsv_columnorder(:) == vol7d_timerange_d)
+icsv_colinvorder(vol7d_var_d) = firsttrue(icsv_columnorder(:) == vol7d_var_d)
 icsv_colinvorder(vol7d_network_d) = firsttrue(icsv_columnorder(:) == vol7d_network_d)
-! there should not be missing columns here thanks to the check in parse_v7d_column!
-
-IF (csv_variable /= 'all') THEN
-  nv = word_split(csv_variable, w_s, w_e, ',')
-  CALL checkvarvect(v7d%anavar)
-  CALL checkvarvect(v7d%anaattr)
-  CALL checkvarvect(v7d%anavarattr)
-  CALL checkvarvect(v7d%dativar)
-  CALL checkvarvect(v7d%datiattr)
-  CALL checkvarvect(v7d%dativarattr)
-  CALL vol7d_reform(v7d, miss=.TRUE.) ! sort?
-  DEALLOCATE(w_s, w_e)
+! there should not be missing columns here except
+! icsv_colinvorder(vol7d_var_d) thanks to the check in
+! parse_v7d_column
+IF (icsv_colinvorder(vol7d_var_d) <= 0) THEN
+  ndvar = 5
+ELSE
+  ndvar = 6
 ENDIF
-CALL var_mapper(v7d, mapper)
-!PRINT*,SIZE(mapper)
-!PRINT*,mapper
-!
-!CALL init(csvline)
-!DO i5 = 1, SIZE(mapper)
-!  CALL add_var(v7d, mapper(i5), csvline)
-!ENDDO
-!WRITE(iun,'(A)')csv_record_getrecord(csvline)
-!CALL delete(csvline)
 
 IF (csv_header > 1) THEN ! Dummy header line, for compatibility
   CALL init(csvline)
@@ -131,7 +134,7 @@ IF (csv_header > 0) THEN ! Main header line
     CALL init(csv_desdata(i))
   ENDDO
 
-! Create header entries for all the v7d non-variables dimensions
+! Create header entries for all the v7d dimensions
   CALL csv_record_addfield(csv_desdata(vol7d_ana_d), 'Longitude')
   CALL csv_record_addfield(csv_desdata(vol7d_ana_d), 'Latitude')
   CALL csv_record_addfield(csv_desdata(vol7d_time_d), 'Date')
@@ -142,17 +145,21 @@ IF (csv_header > 0) THEN ! Main header line
   CALL csv_record_addfield(csv_desdata(vol7d_timerange_d), 'Time range')
   CALL csv_record_addfield(csv_desdata(vol7d_timerange_d), 'P1')
   CALL csv_record_addfield(csv_desdata(vol7d_timerange_d), 'P2')
+  CALL csv_record_addfield(csv_desdata(vol7d_var_d), 'Variable')
   CALL csv_record_addfield(csv_desdata(vol7d_network_d), 'Report')
+  CALL csv_record_addfield(csv_desdata(7), 'Value')
 
   CALL init(csvline)
-  DO i = 1, SIZE(licsv_column) ! add the required header entries in the desirded order
+  DO i = 1, SIZE(licsv_column) ! add the required header entries in the desired order
     IF (licsv_column(i) > 0) &
      CALL csv_record_addfield(csvline,csv_desdata(licsv_column(i)))
   ENDDO
 ! and now add the header entries for the variables
-  DO i5 = 1, SIZE(mapper)
-    CALL add_var(v7d, mapper(i5), csvline)
-  ENDDO
+  IF (ndvar == 5) THEN
+    DO i5 = 1, SIZE(mapper)
+      CALL add_var(csvline, v7d, mapper(i5))
+    ENDDO
+  ENDIF
 ! write the header line
   WRITE(iun,'(A)')csv_record_getrecord(csvline)
   CALL delete(csvline)
@@ -166,13 +173,13 @@ ENDDO
 icsv_colind(:) = icsv_colstart(:)
 loop7d: DO WHILE(.TRUE.)
 
-! first part of the loop over columns
-  DO i = 1, 5
+! initial part of the loop over columns
+  DO i = 1, ndvar
     IF (icsv_colind(i) == icsv_colstart(i)) THEN
       IF (icsv_colind(i) <= icsv_colend(i)) THEN ! skip empty dimensions (anaonly)
         ! prepare the dimension descriptor data
         CALL make_csv_desdata(v7d, icsv_columnorder(i), icsv_colind(i), &
-         csv_desdata(icsv_columnorder(i)))
+         csv_desdata(icsv_columnorder(i)), mapper)
       ENDIF
     ENDIF
   ENDDO
@@ -184,20 +191,33 @@ loop7d: DO WHILE(.TRUE.)
   i4 = icsv_colind(icsv_colinvorder(vol7d_timerange_d))
   i6 = icsv_colind(icsv_colinvorder(vol7d_network_d))
 
-! body of the loop here
-
-  
+! body of the loop
   CALL init(csvline)
-  DO i = 1, SIZE(licsv_column) ! add the required data entries in the desirded order
-    IF (licsv_column(i) > 0) &
-     CALL csv_record_addfield(csvline, csv_desdata(licsv_column(i)))
-  ENDDO
   no_miss = .FALSE. ! keep track of line with all missing data
 
+  IF (ndvar == 5) THEN
+    DO i = 1, SIZE(licsv_column) ! add the required data entries in the desired order
+      IF (licsv_column(i) > 0) &
+       CALL csv_record_addfield(csvline, csv_desdata(licsv_column(i)))
+    ENDDO
+
 ! and now add the data entries for the variables
-  DO i5 = 1, SIZE(mapper)
-    CALL add_val(v7d, mapper(i5), i1, i2, i3, i4, i6, csvline, no_miss)
-  ENDDO
+    DO i5 = 1, SIZE(mapper)
+      CALL add_val(csvline, v7d, mapper(i5), i1, i2, i3, i4, i6, miss_dummy, no_miss)
+    ENDDO
+
+  ELSE
+    i5 = icsv_colind(icsv_colinvorder(vol7d_var_d))
+
+    DO i = 1, SIZE(licsv_column) ! add the required data entries in the desired order
+      IF (licsv_column(i) > 0 .AND. licsv_column(i) <= 6) THEN
+        CALL csv_record_addfield(csvline, csv_desdata(licsv_column(i)))
+      ELSE IF (licsv_column(i) > 6) THEN
+        CALL add_val(csvline, v7d, mapper(i5), i1, i2, i3, i4, i6, no_miss, no_miss)
+      ENDIF
+    ENDDO
+
+  ENDIF
 
   IF (csv_keep_miss .OR. no_miss) THEN
     WRITE(iun,'(A)')csv_record_getrecord(csvline)
@@ -205,12 +225,12 @@ loop7d: DO WHILE(.TRUE.)
   CALL delete(csvline)
 
 ! final part of the loop over columns
-  DO i = 5, 1, -1
+  DO i = ndvar, 1, -1
     IF (icsv_colind(i) < icsv_colend(i)) THEN ! increment loop index
       icsv_colind(i) = icsv_colind(i) + 1
 ! prepare the dimension descriptor data
       CALL make_csv_desdata(v7d, icsv_columnorder(i), icsv_colind(i), &
-       csv_desdata(icsv_columnorder(i)))
+       csv_desdata(icsv_columnorder(i)), mapper)
       EXIT
     ELSE ! end of loop for this index, reset and increment next index
       icsv_colind(i) = icsv_colstart(i)
@@ -305,11 +325,12 @@ END SUBROUTINE addfieldb
 END SUBROUTINE csv_export
 
 
-SUBROUTINE make_csv_desdata(v7d, icol, ind, csv_desdata)
+SUBROUTINE make_csv_desdata(v7d, icol, ind, csv_desdata, mapper)
 TYPE(vol7d),INTENT(inout) :: v7d
 INTEGER,INTENT(in) :: icol
 INTEGER,INTENT(in) :: ind
 TYPE(csv_record),INTENT(inout) :: csv_desdata
+TYPE(vol7d_var_mapper) :: mapper(:)
 
 REAL(kind=fp_geo) :: l1, l2
 CHARACTER(len=128) :: charbuffer
@@ -337,6 +358,9 @@ CASE(vol7d_timerange_d)
   CALL csv_record_addfield_miss(csv_desdata, v7d%timerange(ind)%timerange)
   CALL csv_record_addfield_miss(csv_desdata, v7d%timerange(ind)%p1)
   CALL csv_record_addfield_miss(csv_desdata, v7d%timerange(ind)%p2)
+
+CASE(vol7d_var_d)
+  CALL add_var(csv_desdata, v7d, mapper(ind))
 
 CASE(vol7d_network_d)
   CALL csv_record_addfield_miss(csv_desdata, TRIM(v7d%network(ind)%name))
@@ -477,10 +501,10 @@ END SUBROUTINE set_mapper
 END SUBROUTINE var_mapper
 
 
-SUBROUTINE add_var(v7d, mapper, csvline)
+SUBROUTINE add_var(csvline, v7d, mapper)
+TYPE(csv_record),INTENT(inout) :: csvline
 TYPE(vol7d),INTENT(in) :: v7d
 TYPE(vol7d_var_mapper),INTENT(in) :: mapper
-TYPE(csv_record),INTENT(inout) :: csvline
 
 SELECT CASE(mapper%cat)
 CASE('av')
@@ -555,102 +579,102 @@ END SELECT
 END SUBROUTINE add_var
 
 
-SUBROUTINE add_val(v7d, mapper, i1, i2, i3, i4, i6, csvline, no_miss)
+SUBROUTINE add_val(csvline, v7d, mapper, i1, i2, i3, i4, i6, no_missa, no_missd)
+TYPE(csv_record),INTENT(inout) :: csvline
 TYPE(vol7d),INTENT(in) :: v7d
 TYPE(vol7d_var_mapper),INTENT(in) :: mapper
 INTEGER,INTENT(in) :: i1, i2, i3, i4, i6
-TYPE(csv_record),INTENT(inout) :: csvline
-LOGICAL,INTENT(out) :: no_miss
+LOGICAL,INTENT(out) :: no_missa
+LOGICAL,INTENT(out) :: no_missd
 
 SELECT CASE(mapper%cat)
 CASE('av')
   SELECT CASE(mapper%typ)
   CASE('r')
-    CALL csv_record_addfield_miss(csvline, v7d%volanar(i1,mapper%i5,i6))
+    CALL addfieldr(v7d%volanar(i1,mapper%i5,i6), no_missa)
   CASE('d')
-    CALL csv_record_addfield_miss(csvline, v7d%volanad(i1,mapper%i5,i6))
+    CALL addfieldd(v7d%volanad(i1,mapper%i5,i6), no_missa)
   CASE('i')
-    CALL addfieldi(v7d%anavar%i(mapper%i5), v7d%volanai(i1,mapper%i5,i6))
+    CALL addfieldi(v7d%anavar%i(mapper%i5), v7d%volanai(i1,mapper%i5,i6), no_missa)
   CASE('b')
-    CALL addfieldb(v7d%anavar%b(mapper%i5), v7d%volanab(i1,mapper%i5,i6))
+    CALL addfieldb(v7d%anavar%b(mapper%i5), v7d%volanab(i1,mapper%i5,i6), no_missa)
   CASE('c')
-    CALL addfieldc(v7d%anavar%c(mapper%i5), v7d%volanac(i1,mapper%i5,i6))
+    CALL addfieldc(v7d%anavar%c(mapper%i5), v7d%volanac(i1,mapper%i5,i6), no_missa)
   END SELECT
 CASE('aa')
   SELECT CASE(mapper%typ)
   CASE('r')
-    CALL csv_record_addfield_miss(csvline, v7d%volanaattrr(i1,mapper%i5,i6,mapper%i7))
+    CALL addfieldr(v7d%volanaattrr(i1,mapper%i5,i6,mapper%i7), no_missa)
   CASE('d')
-    CALL csv_record_addfield_miss(csvline, v7d%volanaattrd(i1,mapper%i5,i6,mapper%i7))
+    CALL addfieldd(v7d%volanaattrd(i1,mapper%i5,i6,mapper%i7), no_missa)
   CASE('i')
-    CALL addfieldi(v7d%anaattr%i(mapper%i7), v7d%volanaattri(i1,mapper%i5,i6,mapper%i7))
+    CALL addfieldi(v7d%anaattr%i(mapper%i7), v7d%volanaattri(i1,mapper%i5,i6,mapper%i7), &
+     no_missa)
   CASE('b')
-    CALL addfieldb(v7d%anaattr%b(mapper%i7), v7d%volanaattrb(i1,mapper%i5,i6,mapper%i7))
+    CALL addfieldb(v7d%anaattr%b(mapper%i7), v7d%volanaattrb(i1,mapper%i5,i6,mapper%i7), &
+     no_missa)
   CASE('c')
-    CALL addfieldc(v7d%anaattr%c(mapper%i7), v7d%volanaattrc(i1,mapper%i5,i6,mapper%i7))
+    CALL addfieldc(v7d%anaattr%c(mapper%i7), v7d%volanaattrc(i1,mapper%i5,i6,mapper%i7), &
+     no_missa)
   END SELECT
 CASE('dv')
   SELECT CASE(mapper%typ)
   CASE('r')
-    IF (c_e(v7d%voldatir(i1,i2,i3,i4,mapper%i5,i6))) THEN
-      CALL csv_record_addfield(csvline, v7d%voldatir(i1,i2,i3,i4,mapper%i5,i6))
-      no_miss = .TRUE.
-    ELSE
-      CALL csv_record_addfield(csvline,'')
-    ENDIF
+    CALL addfieldr(v7d%voldatir(i1,i2,i3,i4,mapper%i5,i6), no_missd)
   CASE('d')
-    IF (c_e(v7d%voldatid(i1,i2,i3,i4,mapper%i5,i6))) THEN
-      CALL csv_record_addfield(csvline, v7d%voldatid(i1,i2,i3,i4,mapper%i5,i6))
-      no_miss = .TRUE.
-    ELSE
-      CALL csv_record_addfield(csvline,'')
-    ENDIF
+    CALL addfieldd(v7d%voldatid(i1,i2,i3,i4,mapper%i5,i6), no_missd)
   CASE('i')
     CALL addfieldi(v7d%dativar%i(mapper%i5), v7d%voldatii(i1,i2,i3,i4,mapper%i5,i6), &
-     no_miss)
+     no_missd)
   CASE('b')
     CALL addfieldb(v7d%dativar%b(mapper%i5), v7d%voldatib(i1,i2,i3,i4,mapper%i5,i6), &
-     no_miss)
+     no_missd)
   CASE('c')
     CALL addfieldc(v7d%dativar%c(mapper%i5), v7d%voldatic(i1,i2,i3,i4,mapper%i5,i6), &
-     no_miss)
+     no_missd)
   END SELECT
 CASE('da')
   SELECT CASE(mapper%typ)
   CASE('r')
-    IF (c_e(v7d%voldatiattrr(i1,i2,i3,i4,mapper%i5,i6,mapper%i7))) THEN
-      CALL csv_record_addfield(csvline, &
-       v7d%voldatiattrr(i1,i2,i3,i4,mapper%i5,i6,mapper%i7))
-      no_miss = .TRUE.
-    ELSE
-      CALL csv_record_addfield(csvline,'')
-    ENDIF
+    CALL addfieldr(v7d%voldatiattrr(i1,i2,i3,i4,mapper%i5,i6,mapper%i7), no_missd)
   CASE('d')
-    IF (c_e(v7d%voldatiattrd(i1,i2,i3,i4,mapper%i5,i6,mapper%i7))) THEN
-      CALL csv_record_addfield(csvline, &
-       v7d%voldatiattrd(i1,i2,i3,i4,mapper%i5,i6,mapper%i7))
-      no_miss = .TRUE.
-    ELSE
-      CALL csv_record_addfield(csvline,'')
-    ENDIF
+    CALL addfieldd(v7d%voldatiattrd(i1,i2,i3,i4,mapper%i5,i6,mapper%i7), no_missd)
   CASE('i')
     CALL addfieldi(v7d%datiattr%i(mapper%i7), &
-     v7d%voldatiattri(i1,i2,i3,i4,mapper%i5,i6,mapper%i7), no_miss)
+     v7d%voldatiattri(i1,i2,i3,i4,mapper%i5,i6,mapper%i7), no_missd)
   CASE('b')
     CALL addfieldb(v7d%datiattr%b(mapper%i7), &
-     v7d%voldatiattrb(i1,i2,i3,i4,mapper%i5,i6,mapper%i7), no_miss)
+     v7d%voldatiattrb(i1,i2,i3,i4,mapper%i5,i6,mapper%i7), no_missd)
   CASE('c')
     CALL addfieldc(v7d%datiattr%c(mapper%i7), &
-     v7d%voldatiattrc(i1,i2,i3,i4,mapper%i5,i6,mapper%i7), no_miss)
+     v7d%voldatiattrc(i1,i2,i3,i4,mapper%i5,i6,mapper%i7), no_missd)
   END SELECT
 END SELECT
 
 CONTAINS
 
+SUBROUTINE addfieldr(val, no_miss)
+REAL,INTENT(in) :: val
+LOGICAL,INTENT(inout) :: no_miss
+
+CALL csv_record_addfield_miss(csvline, val)
+no_miss = no_miss .OR. c_e(val)
+
+END SUBROUTINE addfieldr
+
+SUBROUTINE addfieldd(val, no_miss)
+DOUBLE PRECISION,INTENT(in) :: val
+LOGICAL,INTENT(inout) :: no_miss
+
+CALL csv_record_addfield_miss(csvline, val)
+no_miss = no_miss .OR. c_e(val)
+
+END SUBROUTINE addfieldd
+
 SUBROUTINE addfieldc(var, val, no_miss)
 TYPE(vol7d_var),INTENT(in) :: var
 CHARACTER(len=*),INTENT(in) :: val
-LOGICAL,INTENT(inout),OPTIONAL :: no_miss
+LOGICAL,INTENT(inout) :: no_miss
 
 IF (c_e(val)) THEN
   IF (.NOT.csv_no_rescale .AND. c_e(var%scalefactor) .AND. var%unit /= 'CCITTIA5' .AND. &
@@ -659,7 +683,7 @@ IF (c_e(val)) THEN
   ELSE
     CALL csv_record_addfield(csvline, TRIM(val))
   ENDIF
-  IF (PRESENT(no_miss)) no_miss = .TRUE.
+  no_miss = .TRUE.
 ELSE
   CALL csv_record_addfield(csvline,'')
 ENDIF
@@ -669,7 +693,7 @@ END SUBROUTINE addfieldc
 SUBROUTINE addfieldi(var, val, no_miss)
 TYPE(vol7d_var),INTENT(in) :: var
 INTEGER,INTENT(in) :: val
-LOGICAL,INTENT(inout),OPTIONAL :: no_miss
+LOGICAL,INTENT(inout) :: no_miss
 
 IF (c_e(val)) THEN
   IF (.NOT.csv_no_rescale .AND. c_e(var%scalefactor) .AND. &
@@ -678,7 +702,7 @@ IF (c_e(val)) THEN
   ELSE
     CALL csv_record_addfield(csvline, val)
   ENDIF
-  IF (PRESENT(no_miss)) no_miss = .TRUE.
+  no_miss = .TRUE.
 ELSE
   CALL csv_record_addfield(csvline,'')
 ENDIF
@@ -688,7 +712,7 @@ END SUBROUTINE addfieldi
 SUBROUTINE addfieldb(var, val, no_miss)
 TYPE(vol7d_var),INTENT(in) :: var
 INTEGER(kind=int_b),INTENT(in) :: val
-LOGICAL,INTENT(inout),OPTIONAL :: no_miss
+LOGICAL,INTENT(inout) :: no_miss
 
 IF (c_e(val)) THEN
   CALL addfieldi(var, INT(val), no_miss)
@@ -1457,9 +1481,15 @@ DO i = 1, MIN(nc, SIZE(icol))
   CASE('ana')
     j = j + 1
     icol(j) = vol7d_ana_d
+  CASE('var')
+    j = j + 1
+    icol(j) = vol7d_var_d
   CASE('network')
     j = j + 1
     icol(j) = vol7d_network_d
+  CASE('value')
+    j = j + 1
+    icol(j) = 7
   CASE default
     CALL l4f_category_log(category,L4F_ERROR,'error in command-line parameters, column '// &
      ccol(w_s(i):w_e(i))//' in '//TRIM(par_name)//' not valid.')
@@ -1474,7 +1504,12 @@ IF (check_all) THEN
    ALL(icol /= vol7d_level_d) .OR. ALL(icol /= vol7d_ana_d) .OR. &
    ALL(icol /= vol7d_network_d)) THEN
     CALL l4f_category_log(category,L4F_ERROR,'error in command-line parameters, some columns missing in '//TRIM(par_name)//' .')
-    CALL EXIT(1)
+    CALL raise_fatal_error()
+  ENDIF
+  IF (ANY(icol == 7)) THEN
+    CALL l4f_category_log(category,L4F_ERROR,"column 'value' not valid in "// &
+     TRIM(par_name)//' .')
+    CALL raise_fatal_error()
   ENDIF
 ENDIF
 
