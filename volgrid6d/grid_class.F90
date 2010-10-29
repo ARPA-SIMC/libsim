@@ -998,18 +998,18 @@ CASE ('regular_ll', 'rotated_ll', 'stretched_ll', 'stretched_rotated_ll')
      "griddim_export_gribapi, dlat relative error: "//&
      TRIM(to_char(ABS(NINT(sdy)/sdy - 1.0d0)))//">"//TRIM(to_char(tol)))
 #endif
-    CALL grib_set(gaid,'ijDirectionIncrementGiven',0)
     CALL grib_set_missing(gaid,'Di')
     CALL grib_set_missing(gaid,'Dj')
+    CALL grib_set(gaid,'ijDirectionIncrementGiven',0)
   ELSE
 #ifdef DEBUG
     CALL l4f_category_log(this%category,L4F_DEBUG, &
      "griddim_export_gribapi, setting increments: "// &
      TRIM(to_char(this%grid%generic%dx))//' '//TRIM(to_char(this%grid%generic%dy)))
 #endif
-    CALL grib_set(gaid,'ijDirectionIncrementGiven',1)
     CALL grib_set(gaid,'iDirectionIncrementInDegrees',this%grid%generic%dx)
     CALL grib_set(gaid,'jDirectionIncrementInDegrees',this%grid%generic%dy)
+    CALL grib_set(gaid,'ijDirectionIncrementGiven',1)
   ENDIF
 
 ! Keys for polar projections
