@@ -41,7 +41,7 @@ TYPE(vol7d),INTENT(inout) :: v7d
 INTEGER,INTENT(in) :: iun
 
 INTEGER :: licsv_column(SIZE(icsv_column))
-LOGICAL :: no_miss, miss_dummy
+LOGICAL :: no_miss, no_missa, anaonly
 CHARACTER(len=50) :: desdata(7)
 TYPE(csv_record) :: csvline, csv_desdata(7)
 INTEGER :: i, i1, i2, i3, i4, i5, i6, i7, nv, ndvar
@@ -81,6 +81,12 @@ IF (SIZE(v7d%timerange) == 0) THEN
   WHERE (licsv_column(:) == vol7d_timerange_d)
     licsv_column(:) = -1
   END WHERE
+ENDIF
+IF (SIZE(v7d%time) == 0 .AND. SIZE(v7d%level) == 0 .AND. &
+ SIZE(v7d%timerange) == 0) THEN
+  anaonly = .TRUE.
+ELSE
+  anaonly = .FALSE.
 ENDIF
 
 ! For column reordering
@@ -193,7 +199,7 @@ loop7d: DO WHILE(.TRUE.)
 
 ! body of the loop
   CALL init(csvline)
-  no_miss = .FALSE. ! keep track of line with all missing data
+  no_miss = .FALSE.; no_missa = .FALSE. ! keep track of line with all missing data
 
   IF (ndvar == 5) THEN
     DO i = 1, SIZE(licsv_column) ! add the required data entries in the desired order
@@ -203,7 +209,7 @@ loop7d: DO WHILE(.TRUE.)
 
 ! and now add the data entries for the variables
     DO i5 = 1, SIZE(mapper)
-      CALL add_val(csvline, v7d, mapper(i5), i1, i2, i3, i4, i6, miss_dummy, no_miss)
+      CALL add_val(csvline, v7d, mapper(i5), i1, i2, i3, i4, i6, no_missa, no_miss)
     ENDDO
 
   ELSE
@@ -219,7 +225,7 @@ loop7d: DO WHILE(.TRUE.)
 
   ENDIF
 
-  IF (csv_keep_miss .OR. no_miss) THEN
+  IF (csv_keep_miss .OR. no_miss .OR. (no_missa .AND. anaonly)) THEN
     WRITE(iun,'(A)')csv_record_getrecord(csvline)
   ENDIF
   CALL delete(csvline)
