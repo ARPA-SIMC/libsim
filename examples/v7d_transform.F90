@@ -340,6 +340,7 @@ TYPE(vol7d_var_mapper) :: mapper(:)
 
 REAL(kind=fp_geo) :: l1, l2
 CHARACTER(len=128) :: charbuffer
+CHARACTER(len=20) :: tmpbuf
 
 CALL csv_record_rewind(csv_desdata)
 
@@ -351,8 +352,12 @@ CASE(vol7d_ana_d)
   CALL csv_record_addfield_miss(csv_desdata, l2)
 
 CASE(vol7d_time_d)
-  CALL getval(v7d%time(ind), isodate=charbuffer(1:19))
-  CALL csv_record_addfield(csv_desdata, charbuffer(1:19))
+  IF (v7d%time(ind) /= datetime_miss) THEN
+    CALL getval(v7d%time(ind), isodate=charbuffer(1:19))
+    CALL csv_record_addfield(csv_desdata, charbuffer(1:19))
+  ELSE
+    CALL csv_record_addfield(csv_desdata, '')
+  ENDIF
 
 CASE(vol7d_level_d)
   CALL csv_record_addfield_miss(csv_desdata, v7d%level(ind)%level1)
@@ -940,6 +945,7 @@ options(25) = op_option_new(' ', 'post-trans-type', post_trans_type, '', help= &
  &on gridded format only (see output-format)')
 #endif
 ! options for defining output
+output_template = ''
 options(28) = op_option_new(' ', 'output-format', output_format, 'native', help= &
  'format of output file, in the form ''name[:template]''; ''native'' for vol7d &
  &native binary format (no template to be specified)&
@@ -1161,7 +1167,7 @@ CALL parse_v7d_column(csv_columnorder, icsv_columnorder, '--csv-columnorder', .T
 
 ! check output format/template
 n = word_split(output_format, w_s, w_e, ':')
-IF (n >= 2) THEN ! set output template overriding the --output-template parameter
+IF (n >= 2) THEN ! set output template if present
   output_template = output_format(w_s(2):w_e(2))
   output_format(w_e(1)+1:) = ' '
 ENDIF
@@ -1335,6 +1341,7 @@ ELSE IF (output_format == 'csv') THEN
 
 #ifdef HAVE_DBALLE
 ELSE IF (output_format == 'BUFR' .OR. output_format == 'CREX') THEN
+  IF (output_template == '') output_template = 'generic'
   CALL init(v7d_dba_out, filename=output_file, FORMAT=output_format, file=.TRUE., &
    WRITE=.TRUE., wipe=.TRUE.)
   v7d_dba_out%vol7d = v7d
