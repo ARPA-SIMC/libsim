@@ -366,9 +366,21 @@ IF (PRESENT(year)) THEN ! anno/mese/giorno, ecc.
   ELSE
     lmsec = 0
   ENDIF
-  CALL jeladata5_1(lday, lmonth, lyear, lhour, lminute, lmsec, this%iminuti)
+
+  if (c_e(lday) .and. c_e(lmonth) .and. c_e(lyear) .and. c_e(lhour) &
+   .and. c_e(lminute) .and. c_e(lmsec)) then
+    CALL jeladata5_1(lday, lmonth, lyear, lhour, lminute, lmsec, this%iminuti)
+  else
+    this=datetime_miss
+  end if
+
 ELSE IF (PRESENT(unixtime)) THEN ! secondi dal 01/01/1970 (unix)
-  this%iminuti = (unixtime + unsec)*1000
+  if (c_e(unixtime)) then
+    this%iminuti = (unixtime + unsec)*1000
+  else
+    this=datetime_miss    
+  end if
+
 ELSE IF (PRESENT(isodate)) THEN ! formato iso YYYY-MM-DD hh:mm:ss.msc
   datebuf(1:23) = '0001-01-01 00:00:00.000'
   datebuf(1:MIN(LEN(isodate),23)) = isodate(1:MIN(LEN(isodate),23))
@@ -952,22 +964,52 @@ ELSE IF (.not. present(year) .and. .not. present(month) .and. .not. present(day)
 ELSE 
   this%iminuti = 0
   IF (PRESENT(year)) THEN
-    this%month = this%month + year*12
+    if (c_e(year))then
+      this%month = this%month + year*12
+    else
+      this=timedelta_miss
+      return
+    end if
   ENDIF
   IF (PRESENT(month)) THEN
-    this%month = this%month + month
+    if (c_e(month))then
+      this%month = this%month + month
+    else
+      this=timedelta_miss
+      return
+    end if
   ENDIF
   IF (PRESENT(day)) THEN
-    this%iminuti = this%iminuti + 86400000_int_ll*INT(day, KIND=int_ll)
+    if (c_e(day))then
+      this%iminuti = this%iminuti + 86400000_int_ll*INT(day, KIND=int_ll)
+    else
+      this=timedelta_miss
+      return
+    end if
   ENDIF
   IF (PRESENT(hour)) THEN
-    this%iminuti = this%iminuti + 3600000_int_ll*INT(hour, KIND=int_ll)
+    if (c_e(hour))then
+      this%iminuti = this%iminuti + 3600000_int_ll*INT(hour, KIND=int_ll)
+    else
+      this=timedelta_miss
+      return
+    end if
   ENDIF
   IF (PRESENT(minute)) THEN
-    this%iminuti = this%iminuti + 60000_int_ll*INT(minute, KIND=int_ll)
+    if (c_e(minute))then
+      this%iminuti = this%iminuti + 60000_int_ll*INT(minute, KIND=int_ll)
+    else
+      this=timedelta_miss
+      return
+    end if
   ENDIF
   IF (PRESENT(msec)) THEN
-    this%iminuti = this%iminuti + msec
+    if (c_e(msec))then
+      this%iminuti = this%iminuti + msec
+    else
+      this=timedelta_miss
+      return
+    end if
   ENDIF
 ENDIF
 

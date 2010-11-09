@@ -51,7 +51,7 @@ CHARACTER(len=1), PARAMETER :: cmiss = char(0) !< carattere (qualsiasi lunghezza
 !> Insieme di funzioni che restitiuscono \a .TRUE. se l'argomento è un dato valido 
 !! e \a .FALSE. se è mancante; è richiamabile per tutti i tipi definiti sopra.
 INTERFACE c_e
-  MODULE PROCEDURE c_e_b, c_e_s, c_e_l, c_e_r, c_e_d, c_e_c
+  MODULE PROCEDURE c_e_b, c_e_s, c_e_l,c_e_ll, c_e_r, c_e_d, c_e_c
 END INTERFACE
 
 PUBLIC
@@ -125,6 +125,29 @@ elemental    logical function c_e_l(var)
     if (var == ilmiss)c_e_l= .FALSE. 
     return
     end function c_e_l
+
+
+!> Controlla se l'argomento longlong è un dato valido
+elemental    logical function c_e_ll(var)
+
+!OMSTART c_e_ll
+!	function c_e_ll(var)
+!	Verifica la condizione di presenza o assenza del dato secondo
+!	le specifiche dballe restituendo una variabile logical .true.
+!	se c'e` il dato
+!
+!	INPUT:
+!	VAR	Integer	longlong dato di cui verificare la presenza
+!	OUTPUT:
+!	C_E_ll	LOGICAL	.TRUE.se il dato e` presente
+!OMEND
+
+    integer (kind=int_ll),intent(in) ::  var !< variabile da controllare
+
+    c_e_ll=.true.
+    if (var == illmiss)c_e_ll= .FALSE. 
+    return
+    end function c_e_ll
 
 
 
