@@ -1755,8 +1755,8 @@ CHARACTER(len=*),OPTIONAL,INTENT(in) :: networkname !< set the output network na
 CHARACTER(len=*),INTENT(in),OPTIONAL :: categoryappend !< append this suffix to log4fortran namespace category
 
 type(grid_transform) :: grid_trans
-integer :: ntime, ntimerange, nlevel, nvar, nana,time_definition,nnetwork
-integer :: itime,itimerange,nx,ny
+integer :: ntime, ntimerange, nlevel, nvar, nana, time_definition, nnetwork
+INTEGER :: itime, itimerange, nx, ny, iana, inetwork
 type(datetime),allocatable ::validitytime(:,:)
 type(vol7d) :: v7d_locana
 
@@ -1825,13 +1825,24 @@ CALL init(grid_trans, this, volgrid6d_in%griddim, v7d_locana, poly=poly, &
 CALL init (vol7d_out,time_definition=time_definition)
 
 IF (c_e(grid_trans)) THEN
+
   nana=SIZE(v7d_locana%ana)
   CALL vol7d_alloc(vol7d_out, nana=nana, ntime=ntime, nlevel=nlevel, &
    ntimerange=ntimerange, ndativarr=nvar, nnetwork=nnetwork)
-
   vol7d_out%ana = v7d_locana%ana
 
+  IF (PRESENT(poly)) THEN ! in case of polygon create output station id
+    CALL vol7d_alloc(vol7d_out, nanavari=1)
+    CALL init(vol7d_out%anavar%i(1), 'B01192')
+  ENDIF
+
   CALL vol7d_alloc_vol(vol7d_out)
+
+  IF (PRESENT(poly)) THEN ! in case of polygon create output station id
+    DO inetwork = 1, nnetwork
+      vol7d_out%volanai(:,1,inetwork) = (/(iana,iana=1,nana)/)
+    ENDDO
+  ENDIF
 
   CALL compute(grid_trans, volgrid6d_in, vol7d_out, networkname)
 !ELSE how to signal error status? c_e(vol7d_out)
@@ -2094,7 +2105,7 @@ TYPE(vol7d),INTENT(in),OPTIONAL :: v7d !< object containing a list of points ove
 TYPE(geo_coordvect),INTENT(inout),OPTIONAL :: poly(:) !< array of polygons indicating a list of areas over which transformation has to be done (required by some transformation types)
 CHARACTER(len=*),INTENT(in),OPTIONAL :: categoryappend !< append this suffix to log4fortran namespace category
 
-INTEGER :: nvar
+INTEGER :: nvar, iana, inetwork
 TYPE(grid_transform) :: grid_trans
 TYPE(vol7d) :: v7d_locana
 
@@ -2116,7 +2127,19 @@ IF (c_e(grid_trans) .AND. nvar > 0) THEN
    ntime=SIZE(vol7d_in%time), ntimerange=SIZE(vol7d_in%timerange), &
    nlevel=SIZE(vol7d_in%level), nnetwork=SIZE(vol7d_in%network), ndativarr=nvar)
   vol7d_out%ana = v7d_locana%ana
+
+  IF (PRESENT(poly)) THEN ! in case of polygon create output station id
+    CALL vol7d_alloc(vol7d_out, nanavari=1)
+    CALL init(vol7d_out%anavar%i(1), 'B01192')
+  ENDIF
+
   CALL vol7d_alloc_vol(vol7d_out)
+
+  IF (PRESENT(poly)) THEN ! in case of polygon create output station id
+    DO inetwork = 1, SIZE(vol7d_in%network)
+      vol7d_out%volanai(:,1,inetwork) = (/(iana,iana=1,SIZE(v7d_locana%ana))/)
+    ENDDO
+  ENDIF
 
   CALL compute(grid_trans, vol7d_in, vol7d_out)
 !ELSE how to signal error status? c_e(vol7d_out)
