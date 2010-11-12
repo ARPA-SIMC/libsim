@@ -327,6 +327,10 @@ autonomously.
 With v7d_transform it is possible to perform geographical
 transformations before and/or after the statistical processing.
 
+For a complete description of the possible transformations available
+in libsim see the \ref space_transform page; only a subset of the
+available transformations is applicable here.
+
 \subsection preinterp Preliminary transformation
 
 Before the statistical processing, it is possible to perform a
