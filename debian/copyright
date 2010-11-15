@@ -1,11 +1,10 @@
-This package was debianized by Marco Lazzeri <mlazzeri@arpa.emr.it> on
-Mon, 15 Dec 2008 12:17:17 +0100.
+This package was debianized by Daniele Branchini <dbranchini@arpa.emr.it>
 
-It was downloaded from https://svn.amr.arpa.emr.it/vol7d
+It was downloaded from https://svn.smr.arpa.emr.it/vol7d
 
 Upstream Author: Davide Cesari <dcesari@arpa.emr.it>
 
-Copyright: 2008, Davide Cesari
+Copyright: 2010, Davide Cesari
 
 License:
 
@@ -26,7 +25,7 @@ License:
 On Debian systems, the complete text of the GNU General
 Public License can be found in `/usr/share/common-licenses/GPL'.
 
-The Debian packaging is (C) 2008, Marco Lazzeri <mlazzeri@arpa.emr.it> and
+The Debian packaging is (C) 2010, Marco Lazzeri <mlazzeri@arpa.emr.it> and
 is licensed under the GPL, see above.
 
 

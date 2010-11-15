@@ -1,3 +1,33 @@
+libsim (4.0.0-807) unstable; urgency=low
+
+  * Reflecting the upstream version
+
+ -- Daniele Branchini <dbranchini@arpa.emr.it>  Mon, 15 Nov 2010 09:52:34 +0100
+
+libsim (4.0.0-792) unstable; urgency=low
+
+  * Reflecting the upstream version
+
+ -- Daniele Branchini <dbranchini@arpa.emr.it>  Tue, 5 Oct 2010 10:52:34 +0100
+
+libsim (3.0.1-744) unstable; urgency=low
+
+  * Reflecting the upstream version
+
+ -- Daniele Branchini <dbranchini@arpa.emr.it>  Mon, 16 Aug 2010 11:18:34 +0100
+
+libsim (3.0.0-706) unstable; urgency=low
+
+  * Reflecting the upstream version
+
+ -- Daniele Branchini <dbranchini@arpa.emr.it>  Wed, 28 May 2010 11:30:10 +0100
+
+libsim (3.0.0-1) unstable; urgency=low
+
+  * Reflecting the upstream version
+
+ -- Daniele Branchini <dbranchini@arpa.emr.it>  Wed, 21 Apr 2010 16:52:37 +0100
+
 libsim (2.6.10-1) unstable; urgency=low
 
   * Reflecting the upstream version
