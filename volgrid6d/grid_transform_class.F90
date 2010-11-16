@@ -49,11 +49,13 @@
 !!    - sub_type='index' the bounds of the zoomed/extended area are
 !!      defined by grid indices.
 !!  - trans_type='boxregrid' regrids the input data grid on a new grid
-!!    in which the value at every point is a the result of a function
+!!    in which the value at every point is the result of a function
 !!    computed over \a npx X \a npy points of the original grid,
 !!    without changing the geographical reference system
 !!    (grid-to-grid)
 !!    - sub_type='average' the function used is the average.
+!!    - sub_type='max' the function used is the maximum
+!!    - sub_type='min' the function used is the minimum
 !!  - trans_type='inter' interpolates the input data on a new set of
 !!    points
 !!    - sub_type='near' the interpolated value is that of the nearest
@@ -416,7 +418,8 @@ ELSE IF (this%trans_type == 'boxregrid') THEN
 
   ENDIF
 
-  IF (this%sub_type == 'average')THEN
+  IF (this%sub_type == 'average' .OR. &
+   this%sub_type == 'max' .OR. this%sub_type == 'min')THEN
 ! nothing to do here
   ELSE
     CALL l4f_category_log(this%category,L4F_ERROR,'boxregrid: sub_type '// &
@@ -856,7 +859,8 @@ IF (this%trans%trans_type == 'zoom') THEN
 
 ELSE IF (this%trans%trans_type == 'boxregrid') THEN
 
-  IF (this%trans%sub_type == 'average') THEN
+  IF (this%trans%sub_type == 'average' .OR. &
+   this%trans%sub_type == 'max' .OR. this%trans%sub_type == 'min')THEN
 
     CALL get_val(in, nx=nx, ny=ny, lon_min=lon_min, lon_max=lon_max, &
      lat_min=lat_min, lat_max=lat_max, dx=steplon, dy=steplat)
@@ -1617,23 +1621,66 @@ IF (this%trans%trans_type == 'zoom') THEN
 
 ELSE IF (this%trans%trans_type == 'boxregrid') THEN
 
-  DO k = 1, innz
-    jj = 0
-    DO j = 1, this%inny - this%trans%box_info%npy + 1, this%trans%box_info%npy
-      je = j+this%trans%box_info%npy-1
-      jj = jj+1
-      ii = 0
-      DO i = 1, this%innx - this%trans%box_info%npx + 1, this%trans%box_info%npx
-        ie = i+this%trans%box_info%npx-1
-        ii = ii+1
-        navg = COUNT(field_in(i:ie,j:je,k) /= rmiss)
-        IF (navg > 0) THEN
-          field_out(ii,jj,k) = SUM(field_in(i:ie,j:je,k)/navg, &
-           MASK=(field_in(i:ie,j:je,k) /= rmiss))
-        ENDIF
+  field_out(:,:,:) = rmiss
+
+  IF (this%trans%sub_type == 'average') THEN
+    DO k = 1, innz
+      jj = 0
+      DO j = 1, this%inny - this%trans%box_info%npy + 1, this%trans%box_info%npy
+        je = j+this%trans%box_info%npy-1
+        jj = jj+1
+        ii = 0
+        DO i = 1, this%innx - this%trans%box_info%npx + 1, this%trans%box_info%npx
+          ie = i+this%trans%box_info%npx-1
+          ii = ii+1
+          navg = COUNT(field_in(i:ie,j:je,k) /= rmiss)
+          IF (navg > 0) THEN
+            field_out(ii,jj,k) = SUM(field_in(i:ie,j:je,k)/navg, &
+             MASK=(field_in(i:ie,j:je,k) /= rmiss))
+          ENDIF
+        ENDDO
       ENDDO
     ENDDO
-  ENDDO
+
+  ELSE IF (this%trans%sub_type == 'max') THEN
+    DO k = 1, innz
+      jj = 0
+      DO j = 1, this%inny - this%trans%box_info%npy + 1, this%trans%box_info%npy
+        je = j+this%trans%box_info%npy-1
+        jj = jj+1
+        ii = 0
+        DO i = 1, this%innx - this%trans%box_info%npx + 1, this%trans%box_info%npx
+          ie = i+this%trans%box_info%npx-1
+          ii = ii+1
+          navg = COUNT(field_in(i:ie,j:je,k) /= rmiss)
+          IF (navg > 0) THEN
+            field_out(ii,jj,k) = MAXVAL(field_in(i:ie,j:je,k), &
+             MASK=(field_in(i:ie,j:je,k) /= rmiss))
+          ENDIF
+        ENDDO
+      ENDDO
+    ENDDO
+
+  ELSE IF (this%trans%sub_type == 'min') THEN
+    DO k = 1, innz
+      jj = 0
+      DO j = 1, this%inny - this%trans%box_info%npy + 1, this%trans%box_info%npy
+        je = j+this%trans%box_info%npy-1
+        jj = jj+1
+        ii = 0
+        DO i = 1, this%innx - this%trans%box_info%npx + 1, this%trans%box_info%npx
+          ie = i+this%trans%box_info%npx-1
+          ii = ii+1
+          navg = COUNT(field_in(i:ie,j:je,k) /= rmiss)
+          IF (navg > 0) THEN
+            field_out(ii,jj,k) = MINVAL(field_in(i:ie,j:je,k), &
+             MASK=(field_in(i:ie,j:je,k) /= rmiss))
+          ENDIF
+        ENDDO
+      ENDDO
+    ENDDO
+
+  ENDIF
 
 ELSE IF (this%trans%trans_type == 'inter') THEN
 

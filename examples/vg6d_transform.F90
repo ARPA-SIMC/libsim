@@ -72,9 +72,9 @@ options(1) = op_option_new('v', 'trans-type', trans_type, 'none', help= &
  &statistical interpolation on boxes, ''zoom'' for zooming, &
  &''boxregrid'' for resolution reduction, ''none'' for no operation')
 options(2) = op_option_new('z', 'sub-type', sub_type, 'near', help= &
- 'transformation subtype, for inter: ''near'', ''bilin'', for ''boxinter'': &
- &''average'', ''max'', ''min'', &
- &for zoom: ''index'', ''coord'', ''coordbb'', for boxregrid: ''average''')
+ 'transformation subtype, for inter: ''near'', ''bilin'', &
+ &for ''boxinter'' and ''boxregrid'': ''average'', ''max'', ''min'', &
+ &for zoom: ''index'', ''coord'', ''coordbb''')
 
 options(3) = op_option_new('u', 'type', type, 'regular_ll', help= &
  'type of interpolated grid: ''regular_ll'', ''rotated_ll''')
@@ -116,9 +116,9 @@ options(20) = op_option_new(' ', 'fy', fy, 31, help= &
  'y-index of the northeastern zooming corner')
 
 options(21) = op_option_new('f', 'npx', npx, 4, help= &
- 'number of nodes along x axis on input grid, over which to perform average for boxregrid')
+ 'number of nodes along x axis on input grid, over which to apply function for boxregrid')
 options(22) = op_option_new('g', 'npy', npy, 4, help= &
- 'number of nodes along x axis on input grid, over which to perform average for boxregrid')
+ 'number of nodes along x axis on input grid, over which to apply function for boxregrid')
 
 options(28)= op_option_new('e', 'a-grid', c2agrid, help= &
  'interpolate U/V points of an Arakawa C grid on the corresponding T points &

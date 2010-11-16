@@ -899,7 +899,7 @@ options(16) = op_option_new(' ', 'comp-stat-proc', comp_stat_proc, '', help= &
  &where isp is the statistical process of input data which has to be processed &
  &and osp is the statistical process to apply and which will appear in output &
  &timerange; possible values for isp and osp are 0=average, 1=accumulated, &
- &2=maximum, 3=minimum, 254=instantaneous, but not all the compbinations &
+ &2=maximum, 3=minimum, 254=instantaneous, but not all the combinations &
  &make sense; if isp is not provided it is assumed to be equal to osp')
 
 options(17) = op_option_new(' ', 'comp-average', obso, help= &
@@ -931,7 +931,7 @@ options(24) = op_option_new(' ', 'pre-trans-type', pre_trans_type, '', help= &
  &''inter'' for interpolation, with subtypes ''near'', ''linear'', ''bilin''&
 #ifdef HAVE_LIBSHP_FORTRAN
  &; ''polyinter'' for statistical processing within given polygons, &
- &with subtype ''average''&
+ &with subtype ''average'', ''max'', ''min''&
 #endif
  &; empty for no transformation')
 #ifdef HAVE_LIBGRIBAPI

@@ -837,7 +837,7 @@ else if (EditionNumber == 2) then
     CALL grib_set(gaid,'forecastTime',p1)
 
   ELSE IF (this%timerange >= 0 .AND. this%timerange <= 9) THEN
-! statistically processed -> templae 4.8
+! statistically processed -> template 4.8
     CALL grib_set(gaid,'productDefinitionTemplateNumber', 8)
 
     IF (this%p1 >= this%p2) THEN ! forecast-like
@@ -1425,6 +1425,9 @@ END SUBROUTINE timerange_g2_to_g1_unit
 !11      6 hours
 !12      12 hours
 !13      Second
+! attenzione, in COSMO:
+!13 = 15 minuti
+!14 = 30 minuti
 SUBROUTINE gribtr_to_second(unit, valuein, valueout)
 INTEGER,INTENT(in) :: unit, valuein
 INTEGER,INTENT(out) :: valueout
@@ -1445,6 +1448,7 @@ ENDIF
 END SUBROUTINE gribtr_to_second
 
 
+! improve to limit the values to 255 if possible
 SUBROUTINE second_to_gribtr(valuein, valueout, unit)
 INTEGER,INTENT(in) :: valuein
 INTEGER,INTENT(out) :: valueout, unit

@@ -105,7 +105,7 @@ options(11) = op_option_new('z', 'sub-type', sub_type, 'bilin', help= &
  'transformation subtype, for inter: ''near'', ''bilin'',&
  & for metamorphosis: ''all'', ''coordbb''&
 #ifdef HAVE_LIBSHP_FORTRAN
- &, for ''polyinter'': ''average''&
+ &, for ''polyinter'': ''average'', ''max'', ''min''&
 #endif
 &')
 
