@@ -21,9 +21,18 @@ B13128,Cloud water content (invented),Kg/Kg,78,201,31,255,1.0,0.0
 B13128,Cloud water content (invented),Kg/Kg,200,201,31,255,1.0,0.0
 B13129,Cloud ice content (invented),Kg/Kg,78,201,33,255,1.0,0.0
 B13129,Cloud ice content (invented),Kg/Kg,200,201,33,255,1.0,0.0
+B13130,Water equivalent of accumulated snow depth (invented),Kg/m**2,255,2,65,255,1.0,0.0
+B13130,Convective snow (invented),Kg/m**2,255,2,78,255,1.0,0.0
+B13130,Large scale snow (invented),Kg/m**2,255,2,79,255,1.0,00.
 B13203,Soil water content (invented),kg/m^2->Num,255,2,86,255,1.0,0.0
 B20010,Total cloud cover,Percent,255,2,71,255,1.0,0.0
 B20010,Cloud cover DWD,Percent,78,201,29,255,1.0,0.0
 B20010,Cloud cover DWD,Percent,200,201,29,255,1.0,0.0
+B10007,0C Isotherm height,m,78,201,84,255,1.0,0.0
+B10007,0C Isotherm height,m,200,201,84,255,1.0,0.0
 B14017,Net long-wave radiation flux (surface),,255,2,112,255,1.0,0.0
 B14018,Net short-wave radiation flux (surface),,255,2,111,255,1.0,0.0
+B22037,Tidal elevation with respect to national land datum,m,255,2,82,255,1.0,0.0
+B22070,Significant wave height,m,255,2,102,255,1.0,0.0
+B22070,Significant wave height,m,98,140,229,255,1.0,0.0
+B22070,Significant wave height,m,200,140,229,255,1.0,0.0
