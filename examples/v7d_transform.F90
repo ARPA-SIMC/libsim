@@ -783,6 +783,7 @@ INTEGER :: iun, ier, i, j, n, ninput, yy, mm, dd, iargc
 INTEGER,POINTER :: w_s(:), w_e(:)
 TYPE(vol7d) :: v7d, v7d_coord, v7dtmp, v7d_comp1, v7d_comp2, v7d_comp3
 TYPE(geo_coordvect),POINTER :: poly(:)
+DOUBLE PRECISION ::  ilon, ilat, flon, flat
 TYPE(transform_def) :: trans
 #ifdef HAVE_DBALLE
 TYPE(vol7d_dballe) :: v7d_dba, v7d_dba_out
@@ -888,13 +889,13 @@ options(10) = op_option_new(' ', 'set-network', set_network, '', help= &
  &pseudo-network with the given name, empty for keeping the original networks')
 
 ! option for displaying/processing
-options(14) = op_option_new('d', 'display', ldisplay, help= &
+options(12) = op_option_new('d', 'display', ldisplay, help= &
  'briefly display the data volume imported, warning: this option is incompatible &
  &with output on stdout.')
-options(15) = op_option_new(' ', 'comp-regularize', comp_regularize, help= &
+options(13) = op_option_new(' ', 'comp-regularize', comp_regularize, help= &
  'regularize the time series keeping only the data at regular time steps')
 
-options(16) = op_option_new(' ', 'comp-stat-proc', comp_stat_proc, '', help= &
+options(14) = op_option_new(' ', 'comp-stat-proc', comp_stat_proc, '', help= &
  'statistically process data with an operator specified in the form [isp:]osp &
  &where isp is the statistical process of input data which has to be processed &
  &and osp is the statistical process to apply and which will appear in output &
@@ -902,30 +903,30 @@ options(16) = op_option_new(' ', 'comp-stat-proc', comp_stat_proc, '', help= &
  &2=maximum, 3=minimum, 254=instantaneous, but not all the combinations &
  &make sense; if isp is not provided it is assumed to be equal to osp')
 
-options(17) = op_option_new(' ', 'comp-average', obso, help= &
+options(15) = op_option_new(' ', 'comp-average', obso, help= &
  'recompute average of averaged fields on a different time step, &
  &obsolete, use --comp-stat-proc 0 instead')
-options(18) = op_option_new(' ', 'comp-cumulate', obso, help= &
+options(16) = op_option_new(' ', 'comp-cumulate', obso, help= &
  'recompute cumulation of accumulated fields on a different time step, &
  &obsolete, use --comp-stat-proc 1 instead')
-options(19) = op_option_new(' ', 'comp-step', comp_step, '0000000001 00:00:00.000', help= &
+options(17) = op_option_new(' ', 'comp-step', comp_step, '0000000001 00:00:00.000', help= &
  'length of regularization or statistical processing step in the format &
  &''YYYYMMDDDD hh:mm:ss.msc'', it can be simplified up to the form ''D hh''')
-options(20) = op_option_new(' ', 'comp-start', comp_start, '', help= &
+options(18) = op_option_new(' ', 'comp-start', comp_start, '', help= &
  'start of regularization, or statistical processing interval, an empty value means &
  &take the initial time step of the available data; the format is the same as for &
  &--start-date parameter')
-options(21) = op_option_new(' ', 'comp-keep', comp_keep, help= &
+options(19) = op_option_new(' ', 'comp-keep', comp_keep, help= &
  'keep the data that are not the result of the requested statistical processing, &
  &merging them with the result of the processing')
-options(22) = op_option_new(' ', 'comp-frac-valid', comp_frac_valid, 1., help= &
+options(20) = op_option_new(' ', 'comp-frac-valid', comp_frac_valid, 1., help= &
  'specify the fraction of input data that has to be valid in order to consider a &
  &statistically processed value acceptable')
-options(23) = op_option_new(' ', 'comp-sort', comp_sort, help= &
+options(21) = op_option_new(' ', 'comp-sort', comp_sort, help= &
  'sort all sortable dimensions of the volume after the computations')
 
 ! option for interpolation processing
-options(24) = op_option_new(' ', 'pre-trans-type', pre_trans_type, '', help= &
+options(22) = op_option_new(' ', 'pre-trans-type', pre_trans_type, '', help= &
  'transformation type (sparse points to sparse points) to be applied before &
  &other computations, in the form ''trans-type:subtype''; &
  &''inter'' for interpolation, with subtypes ''near'', ''linear'', ''bilin''&
@@ -933,9 +934,11 @@ options(24) = op_option_new(' ', 'pre-trans-type', pre_trans_type, '', help= &
  &; ''polyinter'' for statistical processing within given polygons, &
  &with subtype ''average'', ''max'', ''min''&
 #endif
+ &; ''metamorphosis'' with subtype ''coordbb'' for selecting only data &
+ &within a given bounding box&
  &; empty for no transformation')
 #ifdef HAVE_LIBGRIBAPI
-options(25) = op_option_new(' ', 'post-trans-type', post_trans_type, '', help= &
+options(23) = op_option_new(' ', 'post-trans-type', post_trans_type, '', help= &
  'transformation type (sparse points to grid) to be applied after &
  &other computations, in the form ''trans-type:subtype''; &
  &''inter'' for interpolation, with subtype ''linear''; &
@@ -944,9 +947,19 @@ options(25) = op_option_new(' ', 'post-trans-type', post_trans_type, '', help= &
  &empty for no transformation; this option is compatible with output &
  &on gridded format only (see output-format)')
 #endif
+
+options(24) = op_option_new(' ', 'ilon', ilon, 0.0D0, help= &
+ 'longitude of the southwestern bounding box corner')
+options(25) = op_option_new(' ', 'ilat', ilat, 30.D0, help= &
+ 'latitude of the southwestern bounding box corner')
+options(26) = op_option_new(' ', 'flon', flon, 30.D0, help= &
+ 'longitude of the northeastern bounding box corner')
+options(27) = op_option_new(' ', 'flat', flat, 60.D0, help= &
+ 'latitude of the northeastern bounding box corner')
+
 ! options for defining output
 output_template = ''
-options(28) = op_option_new(' ', 'output-format', output_format, 'native', help= &
+options(29) = op_option_new(' ', 'output-format', output_format, 'native', help= &
  'format of output file, in the form ''name[:template]''; ''native'' for vol7d &
  &native binary format (no template to be specified)&
 #ifdef HAVE_DBALLE
@@ -1125,6 +1138,7 @@ IF (comp_stat_proc /= '') THEN
 ENDIF
 
 
+CALL init(v7d_coord)
 ! import coord_file
 IF (c_e(coord_file)) THEN
   IF (coord_format == 'native') THEN
@@ -1262,9 +1276,15 @@ IF (pre_trans_type /= '') THEN
   n = word_split(pre_trans_type, w_s, w_e, ':')
   IF (n >= 2) THEN ! syntax is correct
     CALL init(trans, trans_type=pre_trans_type(w_s(1):w_e(1)), &
+     ilon=ilon, ilat=ilat, flon=flon, flat=flat, &
      sub_type=pre_trans_type(w_s(2):w_e(2)), categoryappend="transformation1")
-    CALL transform(trans, vol7d_in=v7d, vol7d_out=v7d_comp1, v7d=v7d_coord, &
-     poly=poly, categoryappend="transform1")
+    IF (ASSOCIATED(poly)) THEN ! improve
+      CALL transform(trans, vol7d_in=v7d, vol7d_out=v7d_comp1, v7d=v7d_coord, &
+       poly=poly, categoryappend="transform1")
+    ELSE
+      CALL transform(trans, vol7d_in=v7d, vol7d_out=v7d_comp1, v7d=v7d_coord, &
+       categoryappend="transform1")
+    ENDIF
     CALL delete(trans)
   ELSE ! syntax is wrong
     CALL init(v7d_comp1)

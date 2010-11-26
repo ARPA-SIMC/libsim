@@ -1133,7 +1133,7 @@ ELSE IF (this%trans%trans_type == 'polyinter') THEN
     DEALLOCATE(lon, lat)
   ENDDO
 
-else IF (this%trans%trans_type == 'metamorphosis') THEN
+ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
 
   IF (this%trans%sub_type == 'all' ) THEN
 
@@ -1382,7 +1382,7 @@ TYPE(geo_coordvect),INTENT(inout),OPTIONAL :: poly(:) !< array of polygons indic
 character(len=*),INTENT(in),OPTIONAL :: categoryappend !< append this suffix to log4fortran namespace category
 
 INTEGER :: i, n
-doubleprecision,pointer :: lon(:),lat(:)
+DOUBLE PRECISION,POINTER :: lon(:), lat(:)
 
 
 CALL grid_transform_init_common(this, trans, categoryappend)
@@ -1455,6 +1455,81 @@ ELSE IF (this%trans%trans_type == 'polyinter') THEN
     CALL init(v7d_out%ana(n), lon=stat_average(lon), lat=stat_average(lat))
     DEALLOCATE(lon, lat)
   ENDDO
+
+ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
+
+  IF (this%trans%sub_type == 'all' ) THEN
+
+    this%innx=SIZE(v7d_in%ana)
+    this%inny=1
+    this%outnx=SIZE(v7d_in%ana)
+    this%outny=1
+    CALL vol7d_alloc(v7d_out, nana=SIZE(v7d_in%ana))
+    v7d_out%ana = v7d_in%ana
+
+  ELSE IF (this%trans%sub_type == 'coordbb' ) THEN
+
+! compute coordinates of input grid in geo system
+    this%innx=SIZE(v7d_in%ana)
+    this%inny=1
+
+    ALLOCATE(this%point_mask(this%innx,this%inny))
+    this%point_mask(:,:) = .FALSE.
+    ALLOCATE(lon(this%innx),lat(this%innx))
+
+! count and mark points falling into requested bounding-box
+    this%outnx = 0
+    this%outny = 1
+    CALL getval(v7d_in%ana(:)%coord,lon=lon,lat=lat)
+    DO i = 1, this%innx
+!      IF (geo_coord_inside_rectang()
+      IF (lon(i) > this%trans%rect_coo%ilon .AND. &
+       lon(i) < this%trans%rect_coo%flon .AND. &
+       lat(i) > this%trans%rect_coo%ilat .AND. &
+       lat(i) < this%trans%rect_coo%flat) THEN ! improve!
+        this%outnx = this%outnx + 1
+        this%point_mask(i,1) = .TRUE.
+      ENDIF
+    ENDDO
+
+    IF (this%outnx <= 0) THEN
+      CALL l4f_category_log(this%category,L4F_ERROR, &
+       "metamorphosis coordbb: no points inside bounding box "//&
+       TRIM(to_char(this%trans%rect_coo%ilon))//","// &
+       TRIM(to_char(this%trans%rect_coo%flon))//","// &
+       TRIM(to_char(this%trans%rect_coo%ilat))//","// &
+       TRIM(to_char(this%trans%rect_coo%flat)))
+      this%valid = .FALSE.
+      DEALLOCATE(lon, lat)
+      RETURN
+      !CALL raise_fatal_error() ! really fatal error?
+    ENDIF
+
+    CALL vol7d_alloc(v7d_out, nana=this%outnx)
+
+! collect coordinates of points falling into requested bounding-box
+    n = 0
+    metamorphosis_coordbb: DO i = 1, this%innx
+!      IF (geo_coord_inside_rectang()
+      IF (lon(i) > this%trans%rect_coo%ilon .AND. &
+       lon(i) < this%trans%rect_coo%flon .AND. &
+       lat(i) > this%trans%rect_coo%ilat .AND. &
+       lat(i) < this%trans%rect_coo%flat) THEN ! improve!
+        n = n + 1
+        IF (n > this%outnx) EXIT metamorphosis_coordbb ! useless safety check
+        CALL init(v7d_out%ana(n),lon=lon(i),lat=lat(i))
+      ENDIF
+    ENDDO metamorphosis_coordbb
+    DEALLOCATE(lon, lat)
+
+  ELSE
+
+    CALL l4f_category_log(this%category,L4F_WARN, &
+     'grid_transform_init metamorphosis sub_type '//TRIM(this%trans%sub_type) &
+     //' not supported')
+    this%valid = .FALSE.
+
+  ENDIF
 
 ELSE
 
@@ -1947,6 +2022,20 @@ ELSE IF (this%trans%trans_type == 'boxinter') THEN ! use the grid-to-grid method
 
   CALL compute(this, &
    RESHAPE(field_in, (/SIZE(field_in,1), 1, SIZE(field_in,2)/)), field_out)
+
+ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
+
+  IF (this%trans%sub_type == 'all') THEN
+
+    field_out(:,:,:) = RESHAPE(field_in(:,:), (/this%outnx,this%outny,innz/))
+
+  ELSE IF (this%trans%sub_type == 'coordbb') THEN
+
+    DO k = 1, innz
+      field_out(:,1,k) = PACK(field_in(:,k), this%point_mask(:,1))
+    ENDDO
+
+  ENDIF
 
 ENDIF
 
