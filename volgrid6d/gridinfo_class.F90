@@ -599,18 +599,31 @@ SUBROUTINE time_import_gribapi(this,gaid)
 TYPE(datetime),INTENT(out) :: this ! datetime object
 INTEGER,INTENT(in) :: gaid ! grib_api id of the grib loaded in memory to import 
 
-INTEGER :: EditionNumber
+INTEGER :: EditionNumber, ttimeincr, p2, unit, status
 CHARACTER(len=9) :: date
 CHARACTER(len=10) :: time
 
 call grib_get(gaid,'GRIBEditionNumber',EditionNumber)
 
-if (EditionNumber == 1 .or.EditionNumber == 2 )then
+IF (EditionNumber == 1 .OR. EditionNumber == 2) THEN
 
   call grib_get(gaid,'dataDate',date )
   call grib_get(gaid,'dataTime',time(:5) )
 
-  call init (this,simpledate=date(:8)//time(:4))
+  call init(this,simpledate=date(:8)//time(:4))
+
+  IF (EditionNumber == 2) THEN
+
+    CALL grib_get(gaid,'typeOfTimeIncrement',ttimeincr,status)
+! if analysis-like statistically processed data is encountered, the
+! reference time must be shifted to the end of the processing period
+    IF (status == GRIB_SUCCESS .AND. ttimeincr == 1) THEN
+      CALL grib_get(gaid,'lengthOfTimeRange',p2) 
+      CALL grib_get(gaid,'indicatorOfUnitForTimeRange',unit)
+      CALL gribtr_to_second(unit,p2,p2)
+      this = this + timedelta_new(msec=p2*1000)
+    ENDIF
+  ENDIF
 
 else
   call l4f_log(L4F_ERROR,'GribEditionNumber not supported')
@@ -641,8 +654,7 @@ ELSE IF (EditionNumber == 2 )THEN
   ELSE IF (timerange%p1 == 0) THEN ! analysis-like
     CALL code_referencetime(this-timedelta_new(msec=timerange%p2*1000))
   ELSE ! bad timerange
-      CALL l4f_log( L4F_ERROR, &
-       'Timerange with 0>p1>p2 cannot be exported in grib2')
+    CALL l4f_log( L4F_ERROR, 'Timerange with 0>p1>p2 cannot be exported in grib2')
     CALL raise_error()
   ENDIF
 
@@ -776,25 +788,26 @@ if (EditionNumber == 1) then
 !  CALL grib_get(gaid,'endStepInHours',p2_g1)
   CALL timerange_g1_to_g2_second(tri, p1_g1, p2_g1, unit, statproc, p1, p2)
 
-else if (EditionNumber == 2) then
+ELSE IF (EditionNumber == 2) THEN
   
-!  call grib_get(gaid,'productDefinitionTemplateNumber',)
-!  call grib_get(gaid,'endStepInHours',p1)
   CALL grib_get(gaid,'forecastTime',p1)
   CALL grib_get(gaid,'indicatorOfUnitOfTimeRange',unit)
   CALL gribtr_to_second(unit,p1,p1)
   call grib_get(gaid,'typeOfStatisticalProcessing',statproc,status)
 
-  if (status == GRIB_SUCCESS .AND. statproc >= 0 .AND. statproc <= 9) then ! statistically processed
-     call grib_get(gaid,'lengthOfTimeRange',p2) 
-     CALL grib_get(gaid,'indicatorOfUnitForTimeRange',unit)
-     CALL gribtr_to_second(unit,p2,p2)
- 
-  else ! point in time
-     statproc = 254
-     p2 = 0
-     
-  end if
+  IF (status == GRIB_SUCCESS .AND. statproc >= 0 .AND. statproc <= 9) THEN ! statistically processed
+    CALL grib_get(gaid,'lengthOfTimeRange',p2) 
+    CALL grib_get(gaid,'indicatorOfUnitForTimeRange',unit)
+    CALL gribtr_to_second(unit,p2,p2)
+
+  ELSE ! point in time
+    statproc = 254
+    p2 = 0
+  
+  ENDIF
+
+  p1 = p1 + p2 ! from start to end of time interval
+
 else
 
   call l4f_log(L4F_ERROR,'GribEditionNumber not supported')
@@ -842,7 +855,7 @@ else if (EditionNumber == 2) then
 
     IF (this%p1 >= this%p2) THEN ! forecast-like
 ! Set reasonable time unit
-      CALL second_to_gribtr(this%p1,p1,unit)
+      CALL second_to_gribtr(this%p1-this%p2,p1,unit)
       CALL grib_set(gaid,'indicatorOfUnitOfTimeRange',unit)
       CALL grib_set(gaid,'forecastTime',p1)
       CALL code_endoftimeinterval(reftime+timedelta_new(msec=this%p2*1000))
@@ -858,7 +871,7 @@ else if (EditionNumber == 2) then
 ! Set reasonable time unit
       CALL second_to_gribtr(this%p2,p2,unit) ! use p2 (change initial time)
       CALL grib_set(gaid,'indicatorOfUnitOfTimeRange',unit)
-      CALL grib_set(gaid,'forecastTime',p2)
+      CALL grib_set(gaid,'forecastTime',0)
       CALL code_endoftimeinterval(reftime)
 ! Successive times processed have same forecast time, start time of
 ! forecast is incremented
