@@ -903,6 +903,15 @@ CALL l4f_category_log(this%category,L4F_DEBUG, &
  "griddim_export_gribapi, grid type "//this%grid%type%type)
 #endif
 
+! Edition dependent setup
+IF (EditionNumber == 1) THEN
+  ratio = 1.d3
+ELSE IF (EditionNumber == 2) THEN
+  ratio = 1.d6
+ELSE
+  ratio = 0.0d0 ! signal error?!
+ENDIF
+
 ! Keys valid for (almost?) all cases, Ni and Nj are universal aliases
 CALL grib_set(gaid, 'Ni', this%dim%nx)
 CALL grib_set(gaid, 'Nj', this%dim%ny)
@@ -972,11 +981,8 @@ CASE ('regular_ll', 'rotated_ll', 'stretched_ll', 'stretched_rotated_ll')
   CALL grib_set(gaid,'latitudeOfFirstGridPointInDegrees',laFirst)
   CALL grib_set(gaid,'latitudeOfLastGridPointInDegrees',laLast)
 
-  IF (EditionNumber == 1) THEN
-    ratio = 1.d3
-  ELSE IF (EditionNumber == 2) THEN
-    ratio = 1.d6
 ! reset lon in standard grib 2 definition [0,360]
+  IF (EditionNumber == 2) THEN
     IF (loFirst < 0.d0) loFirst = loFirst + 360.d0
     IF (loLast < 0.d0) loLast = loLast + 360.d0
   ENDIF
@@ -1007,9 +1013,12 @@ CASE ('regular_ll', 'rotated_ll', 'stretched_ll', 'stretched_rotated_ll')
      "griddim_export_gribapi, setting increments: "// &
      TRIM(to_char(this%grid%generic%dx))//' '//TRIM(to_char(this%grid%generic%dy)))
 #endif
-    CALL grib_set(gaid,'iDirectionIncrementInDegrees',this%grid%generic%dx)
-    CALL grib_set(gaid,'jDirectionIncrementInDegrees',this%grid%generic%dy)
     CALL grib_set(gaid,'ijDirectionIncrementGiven',1)
+    CALL grib_set(gaid,'iDirectionIncrement',NINT(this%grid%generic%dx*ratio))
+    CALL grib_set(gaid,'jDirectionIncrement',NINT(this%grid%generic%dy*ratio))
+! this does not work in grib_set
+!    CALL grib_set(gaid,'iDirectionIncrementInDegrees',this%grid%generic%dx)
+!    CALL grib_set(gaid,'jDirectionIncrementInDegrees',this%grid%generic%dy)
   ENDIF
 
 ! Keys for polar projections

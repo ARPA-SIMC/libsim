@@ -1361,6 +1361,10 @@ ELSE IF (output_format == 'csv') THEN
 
 #ifdef HAVE_DBALLE
 ELSE IF (output_format == 'BUFR' .OR. output_format == 'CREX') THEN
+  IF (output_file == '-') THEN
+    CALL l4f_category_log(category, L4F_INFO, 'trying /dev/stdout as stdout unit.')
+    output_file='/dev/stdout'
+  ENDIF
   IF (output_template == '') output_template = 'generic'
   CALL init(v7d_dba_out, filename=output_file, FORMAT=output_format, file=.TRUE., &
    WRITE=.TRUE., wipe=.TRUE.)
