@@ -1315,6 +1315,8 @@ IF (c_e(istat_proc) .AND. c_e(ostat_proc)) THEN
   CALL init(v7d_comp1, time_definition=v7d%time_definition)
   CALL init(v7d_comp2, time_definition=v7d%time_definition)
 
+  ! inserire la realdat qua
+
   CALL vol7d_compute_stat_proc(v7d, v7d_comp1, istat_proc, ostat_proc, c_i, c_s, &
    full_steps=.TRUE., frac_valid=comp_frac_valid, &
    max_step=timedelta_depop(c_i)/10, weighted=.TRUE., other=v7d_comp3)
