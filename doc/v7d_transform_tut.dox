@@ -141,7 +141,7 @@ v7d_transform --input-format=orsim --output-format=native \
  - prec.v7d
 \endcode
 
-Notice the \c - character in place of output file, indicating that the
+Notice the \c - character in place of input file, indicating that the
 default access credentials will be used for connecting to the
 database.
 

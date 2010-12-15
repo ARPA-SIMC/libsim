@@ -1,10 +1,23 @@
 /*! \page space_transform Overview of space transformations
 
 Libsim allows to perform different space transformations on gridded
-and sparse point datasets; transformations are defined at least by 2
-parameters called \a type and \a subtype:
+and sparse point datasets; transformations are available both at the
+level of API library calls and within the command line utilities such
+as \a vg6d_subarea, \a vg6d_transform, \a vg6d_getpoint, and \a
+v7d_transform.
 
-\section zoom Type zoom
+Transformations are defined at least by 2 parameters named \a type and
+\a subtype. The transformations are divided into two main groups:
+transformations conserving the input point structure and
+transformations to an arbitrary grid or set of sparse points.
+
+\section structcons Transformations conserving the input grid structure
+
+These transformations are grid-to-grid or sparse points-to-grid; the
+output geographic projection or grid point coordinates is the same as
+the input, and only a few parameters have to be specified.
+
+\subsection zoom type=zoom
 
 It is a grid-to-grid transformation, it generates a new grid by
 cutting or extending (with missing values) the input grid, adding or
@@ -19,7 +32,35 @@ reference system:
  - sub_type='index' the bounds of the zoomed/extended area are
    defined by grid indices.
 
-\section inter Type inter
+\subsection boxregrid type=boxregrid
+
+It is a grid-to-grid transformation, it generates a new grid in which
+the value at every point is the result of a function computed over \a
+npx X \a npy points of the original grid, without changing the
+geographical reference system:
+
+ - sub_type='average' the function used is the average
+ - sub_type='max' the function used is the maximum
+ - sub_type='min' the function used is the minimum.
+
+\subsection metamorphosis type=metamorphosis
+
+When the metamorphosis transformation type is applied, the output
+points and values are the same as the input ones, but the data
+structure is changed from grid to sparse points, so it is only a
+grid-to-sparse points transformation:
+
+ - sub_type='all' all the input points are kept in the output
+ - sub_type='coordbb' the input points which lie in the provided
+   lon/lat bounding box are kept in the output.
+
+\section arbtrans Transformations to an arbitrary grid or set of sparse points
+
+These transformations produce, in output, data on an arbitrary grid or
+set of sparse points, thus a full description of the output grid or a
+list of output points have to be provided.
+
+\subsection inter type=inter
 
 This transformation interpolates the input data on a new set of
 points, the input and output datasets can be either of grid type or of
@@ -27,29 +68,40 @@ sparse data type, but not all the combinations make sense for all the
 subtypes:
 
  - sub_type='near' the interpolated value is that of the nearest
-   input point (grid-to-grid, grid-to-sparse point)
+   input point (grid-to-grid, grid-to-sparse points)
+
+\image html trans_inter_near.png
+
  - sub_type='bilin' the interpolated value is computed as a
    bilinear interpolation of the 4 surrounding input points
-   (grid-to-grid, grid-to-sparse point)
+   (grid-to-grid, grid-to-sparse points)
+
+\image html trans_inter_bilinear.png
+
  - sub_type='linear' the interpolated value is computed as a
    linear interpolation of the 3 surrounding input points
    individuated by means of a triangulation procedure (sparse
    points-to-grid, sparse points-to-sparse points).
 
-\section boxinter Type boxinter
+\image html trans_inter_linear.png
+
+\subsection boxinter type=boxinter
 
 The boxinter type is suitable both for grid-to-grid and sparse
 points-to-grid transformations and it computes data on a new grid in
 which the value at every point is the result of a function computed
-over those input points that lie inside the output point grid box ():
+over those input points that lie inside the output point's grid box:
+
+\image html trans_boxinter.png
 
  - sub_type='average' the function used is the average
  - sub_type='max' the function used is the maximum
  - sub_type='min' the function used is the minimum
- - sub_type='percentile' the function used is a requested
-   percentile of the input points distribution.
+ - sub_type='percentile' the function used is a requested percentile
+   of the input points distribution, the percentile value, in the
+   interval [0,100] has to be additionally provided.
 
-\section polyinter Type polyinter
+\subsection polyinter type=polyinter
 
 The polyinter type is suitable both for grid-to-sparse points and
 sparse points-to-sparse points transformations and it computes data on
@@ -58,21 +110,13 @@ a function computed over those input points that lie inside an
 arbitrary georoferenced polygon; the output point coordinates are
 defined as the centroids of the polygons:
 
+\image html trans_polyinter.png
+
  - sub_type='average' the function used is the average
  - sub_type='max' the function used is the maximum
  - sub_type='min' the function used is the minimum
- - sub_type='percentile' the function used is a requested
-   percentile of the input points distribution.
+ - sub_type='percentile' the function used is a requested percentile
+   of the input points distribution, the percentile value, in the
+   interval [0,100] has to be additionally provided.
 
-\section metamorphosis Type metamorphosis
-
-With the metamorphosis transformation type the output points and
- values are the same as the input ones but the data structure is
- changed from grid to sparse points, so it is only a grid-to-sparse
- points transformation:
-
- - sub_type='all' all the input points are kept in the output
- - sub_type='coordbb' the input points which lie in the provided
-   lon/lat bounding box are kept in the output.
-
- */
+*/
