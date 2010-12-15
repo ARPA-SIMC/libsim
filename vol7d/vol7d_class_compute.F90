@@ -972,7 +972,7 @@ mask_timerange(:) = this%timerange(:)%timerange == stat_proc &
  .AND. this%timerange(:)%p1 >= 0 &
  .AND. this%timerange(:)%p2 > 0
 
-IF (optio_log(full_steps)) THEN ! keep only timeranges defining intervals ending at integer steps
+IF (optio_log(full_steps) .AND. steps /= 0) THEN ! keep only timeranges defining intervals ending at integer steps, check better steps /= 0
   mask_timerange(:) = mask_timerange(:) .AND. (MOD(this%timerange(:)%p2, steps) == 0)
 ENDIF
 nitr = COUNT(mask_timerange)
