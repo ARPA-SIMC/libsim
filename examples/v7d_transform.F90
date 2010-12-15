@@ -799,7 +799,8 @@ CHARACTER(len=512):: a_name
 INTEGER :: category
 
 ! for computing
-LOGICAL :: comp_regularize, comp_average, comp_cumulate, comp_keep, comp_sort, obso, file
+LOGICAL :: comp_regularize, comp_average, comp_cumulate, comp_keep, comp_sort, obso
+LOGICAL :: file, lconvr
 CHARACTER(len=13) :: comp_stat_proc
 CHARACTER(len=23) :: comp_step, comp_start
 INTEGER :: istat_proc, ostat_proc
@@ -1331,7 +1332,22 @@ IF (c_e(istat_proc) .AND. c_e(ostat_proc)) THEN
   CALL init(v7d_comp1, time_definition=v7d%time_definition)
   CALL init(v7d_comp2, time_definition=v7d%time_definition)
 
-  IF (input_format == 'BUFR' .OR. input_format == 'CREX') THEN
+  lconvr=.false.
+  IF (ASSOCIATED(v7d%dativar%d)) THEN
+    if (SIZE(v7d%dativar%d) > 0) lconvr=.true.
+  ENDIF
+  IF (ASSOCIATED(v7d%dativar%i)) THEN
+    if (SIZE(v7d%dativar%i) > 0) lconvr=.true.
+  ENDIF
+  IF (ASSOCIATED(v7d%dativar%b)) THEN
+    if (SIZE(v7d%dativar%b) > 0) lconvr=.true.
+  ENDIF
+  IF (ASSOCIATED(v7d%dativar%c)) THEN
+    if (SIZE(v7d%dativar%c) > 0) lconvr=.true.
+  ENDIF
+
+  !IF (input_format == 'BUFR' .OR. input_format == 'CREX') THEN
+  IF (lconvr) THEN
     call vol7d_convr(v7d,v7dtmp)
     call delete(v7d)
     v7d=v7dtmp
