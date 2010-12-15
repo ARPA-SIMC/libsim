@@ -1263,6 +1263,8 @@ DO ninput = optind, iargc()-1
   ENDIF
 
   CALL vol7d_merge(v7d, v7dtmp) ! smart merge in v7d
+  CALL delete(v7dtmp)
+
 ENDDO
 
 ! displaying/processing
@@ -1315,7 +1317,11 @@ IF (c_e(istat_proc) .AND. c_e(ostat_proc)) THEN
   CALL init(v7d_comp1, time_definition=v7d%time_definition)
   CALL init(v7d_comp2, time_definition=v7d%time_definition)
 
-  ! inserire la realdat qua
+  IF (input_format == 'BUFR' .OR. input_format == 'CREX') THEN
+    call vol7d_convr(v7d,v7dtmp)
+    call delete(v7d)
+    v7d=v7dtmp
+  end if
 
   CALL vol7d_compute_stat_proc(v7d, v7d_comp1, istat_proc, ostat_proc, c_i, c_s, &
    full_steps=.TRUE., frac_valid=comp_frac_valid, &
