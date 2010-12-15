@@ -584,15 +584,19 @@ if (present(coordmax)) then
 end if
 
 if (present(timei)) then
-  CALL getval(timei, year=year, month=month, day=day, hour=hour, minute=minute)
-  call idba_setdatemin(this%handle,year,month,day,hour,minute,0)
+  if (c_e(timei)) then
+    CALL getval(timei, year=year, month=month, day=day, hour=hour, minute=minute)
+    call idba_setdatemin(this%handle,year,month,day,hour,minute,0)
                                 !print *,"datemin",year,month,day,hour,minute,0
+  end if
 end if
 
 if (present(timef)) then
-  CALL getval(timef, year=year, month=month, day=day, hour=hour, minute=minute)
-  call idba_setdatemax(this%handle,year,month,day,hour,minute,0)
+  if (c_e(timef)) then
+    CALL getval(timef, year=year, month=month, day=day, hour=hour, minute=minute)
+    call idba_setdatemax(this%handle,year,month,day,hour,minute,0)
                                 !print *,"datemax",year,month,day,hour,minute,0
+  end if
 end if
 
 
@@ -614,7 +618,7 @@ if (present (var)) then
   ENDDO
                                 !print *,"varlist",varlist
   
-  call idba_set(this%handle, "varlist",varlist )
+  if (varlist /= '' ) call idba_set(this%handle, "varlist",varlist )
 
 end if
 
@@ -821,6 +825,10 @@ end do
 
 if (.not. present(var))then
   nvar = count_distinct(buffer%dativar, back=.TRUE.)
+else
+  if (.not. any(c_e(var)))then
+    nvar = count_distinct(buffer%dativar, back=.TRUE.)
+  end if
 end if
 
 nana = count_distinct(buffer%ana, back=.TRUE.)
@@ -1028,14 +1036,15 @@ if (present(var).and. present(varkind))then
   end do
 else if (present(var))then
 
-  do i=1, nvar
-    call init (vol7dtmp%dativar%c(i), btable=var(i))
-  end do
+  if (any(c_e(var)))then
+    do i=1, nvar
+      call init (vol7dtmp%dativar%c(i), btable=var(i))
+    end do
 
-else
+  else
 
-  vol7dtmp%dativar%c=pack_distinct(buffer%dativar, ndativarc, back=.TRUE.)
-
+    vol7dtmp%dativar%c=pack_distinct(buffer%dativar, ndativarc, back=.TRUE.)
+  end if
 end if
 
 
@@ -2591,17 +2600,17 @@ do while ( N > 0 )
   
     call idba_enqdate (this%handle,year,month,day,hour,minute,sec)
     call idba_enqlevel(this%handle, rlevel1, rl1, rlevel2,rl2)
-    !TODO
-    !dballe BUG: missing viene scritto come 0
-    !qui faccio un altibug ma sarà meglio eliminarlo in futuro
-    if  (rlevel1 == 0 .or. rlevel1 == 255 )then
-      rlevel1=imiss
-      rl1=imiss 
-    end if
-    if  (rlevel2 == 0 .or. rlevel2 == 255 )then
-      rlevel2=imiss
-      rl2=imiss 
-    end if
+!!$    !TODO
+!!$    !dballe BUG: missing viene scritto come 0
+!!$    !qui faccio un altibug ma sarà meglio eliminarlo in futuro
+!!$    if  (rlevel1 == 0 .or. rlevel1 == 255 )then
+!!$      rlevel1=imiss
+!!$      rl1=imiss 
+!!$    end if
+!!$    if  (rlevel2 == 0 .or. rlevel2 == 255 )then
+!!$      rlevel2=imiss
+!!$      rl2=imiss 
+!!$    end if
 
     call idba_enqtimerange(this%handle, rtimerange, p1, p2)
     call idba_enq(this%handle, "rep_memo",rep_memo)
@@ -2621,6 +2630,8 @@ do while ( N > 0 )
     if(present(network)) then
       if (rep_memo /= network%name) cycle
     end if
+
+    print *,"passo1"
 
 ! in alternativa si trattano insieme
 !!$    call init(ana,lat=lat,lon=lon,ident=ident)
@@ -2649,11 +2660,11 @@ do while ( N > 0 )
     call init(timee, year=year, month=month, day=day, hour=hour, minute=minute)
 
     if (present(timei)) then
-      if (timee < timei) cycle
+      if (c_e(timei) .and. timee < timei) cycle
     end if
 
     if (present(timef)) then
-      if (timee > timef) cycle
+      if (c_e(timef) .and. timee > timef) cycle
     end if
 
     if (present(timerange))then
@@ -2670,22 +2681,11 @@ do while ( N > 0 )
     if (rlevel1 /= 257)then
       ! dati
 
-
-      !! TODO attenzione attenzione
-      ! qui non si capisce cosa succede
-      ! pare che se var viene omessa, pur essendo tutto optional
-      ! il test present sia sempre true !!!!!!
-
       if (present (var)) then
-        nvar=size(var)
-        found=.false.
-        DO ii = 1, nvar
-                                !call l4f_category_log(this%category,L4F_DEBUG,"VARIABILI:"//btable//to_char(var(ii)))
-          if (btable == var(ii)) found =.true.
-        end do
-        if (.not. found) cycle
+!        nvar=count(c_e(var))
+        if (any(c_e(var)) .and. (all(btable /= var))) cycle
       end if
-      
+
       ! fine test
 
 
@@ -2812,8 +2812,13 @@ end do
 
 if (.not. present(var))then
   nvar = count_distinct(buffer(:nd)%dativar, back=.TRUE.)
+else 
+  if ( all(.not. c_e(var))) then
+    nvar = count_distinct(buffer(:nd)%dativar, back=.TRUE.)
+  else
+    nvar=count(c_e(var))
+  end if
 end if
-
 
 nana = count_distinct(bufferana(:na)%ana, back=.TRUE.)
 ntime = count_distinct(buffer(:nd)%time, back=.TRUE.)
@@ -3005,15 +3010,15 @@ if (present(var).and. present(varkind))then
     end if
   end do
 else if (present(var))then
+  if (any(c_e(var))) then
+    do i=1, nvar
+      call init (vol7dtmp%dativar%c(i), btable=var(i))
+    end do
 
-  do i=1, nvar
-    call init (vol7dtmp%dativar%c(i), btable=var(i))
-  end do
+  else
 
-else
-
-  vol7dtmp%dativar%c=pack_distinct(buffer(:nd)%dativar, ndativarc, back=.TRUE.)
-
+    vol7dtmp%dativar%c=pack_distinct(buffer(:nd)%dativar, ndativarc, back=.TRUE.)
+  end if
 end if
 
 

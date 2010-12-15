@@ -799,7 +799,7 @@ CHARACTER(len=512):: a_name
 INTEGER :: category
 
 ! for computing
-LOGICAL :: comp_regularize, comp_average, comp_cumulate, comp_keep, comp_sort, obso
+LOGICAL :: comp_regularize, comp_average, comp_cumulate, comp_keep, comp_sort, obso, file
 CHARACTER(len=13) :: comp_stat_proc
 CHARACTER(len=23) :: comp_step, comp_start
 INTEGER :: istat_proc, ostat_proc
@@ -825,11 +825,12 @@ ier=l4f_init()
 !imposta a_name
 category=l4f_category_get(a_name//".main")
 
-now = datetime_new(now=datetime_utc)
-CALL getval(now, year=yy, month=mm, day=dd)
-CALL getval(datetime_new(year=yy, month=mm, day=dd)-timedelta_new(day=1), &
- isodate=start_date_default)
-CALL getval(datetime_new(year=yy, month=mm, day=dd), isodate=end_date_default)
+!!$now = datetime_new(now=datetime_utc)
+!!$CALL getval(now, year=yy, month=mm, day=dd)
+!!$CALL getval(datetime_new(year=yy, month=mm, day=dd)-timedelta_new(day=1), &
+!!$ isodate=start_date_default)
+!!$CALL getval(datetime_new(year=yy, month=mm, day=dd), isodate=end_date_default)
+
 
 ! define command-line options
 CALL op_option_nullify(options)
@@ -865,9 +866,9 @@ options(3) = op_option_new(' ', 'coord-format', coord_format, &
  &')
 
 ! input database options
-options(4) = op_option_new('s', 'start-date', start_date, start_date_default, help= &
+options(4) = op_option_new('s', 'start-date', start_date, cmiss, help= &
  'if input-format is of database type, initial date for extracting data')
-options(5) = op_option_new('e', 'end-date', end_date, end_date_default, help= &
+options(5) = op_option_new('e', 'end-date', end_date, cmiss, help= &
  'if input-format is of database type, final date for extracting data')
 options(6) = op_option_new('n', 'network-list', network_list, '', help= &
  'if input-format is of database type, list of station networks to be extracted &
@@ -1201,28 +1202,41 @@ DO ninput = optind, iargc()-1
     CALL import(v7dtmp, filename=input_file)
 
 #ifdef HAVE_DBALLE
-  ELSE IF (input_format == 'BUFR' .OR. input_format == 'CREX') THEN
-    IF (input_file == '-') THEN
-      CALL l4f_category_log(category, L4F_INFO, 'trying /dev/stdin as stdin unit.')
-      input_file='/dev/stdin'
-    ENDIF
-    CALL init(v7d_dba, filename=input_file, FORMAT=input_format, file=.TRUE.)
-    CALL IMPORT(v7d_dba)
-    v7dtmp = v7d_dba%vol7d
-    CALL init(v7d_dba%vol7d) ! nullify without deallocating
+  ELSE IF (input_format == 'BUFR' .OR. input_format == 'CREX' .OR. input_format == 'dba') THEN
 
-  ELSE IF (input_format == 'dba') THEN
-    IF (.NOT.ALLOCATED(nl) .OR. .NOT.ALLOCATED(vl)) THEN
-      CALL l4f_category_log(category, L4F_ERROR, &
-       'error in command-line parameters, it is necessary to provide --network-list &
-       &and --variable-list with dbAll.e source.')
-      CALL EXIT(1)
+    IF (.NOT.ALLOCATED(nl)) THEN
+      allocate (nl(0))
     ENDIF
-    CALL parse_dba_access_info(input_file, dsn, user, password)
-    CALL init(v7d_dba, dsn=dsn, user=user, password=password, file=.FALSE.)
-    CALL import(v7d_dba, vl, nl, timei=s_d, timef=e_d)
+
+    IF( .NOT.ALLOCATED(vl)) THEN
+      allocate (vl(0))
+    ENDIF
+
+    IF (input_format == 'BUFR' .OR. input_format == 'CREX') then
+
+      IF (input_file == '-') THEN
+        CALL l4f_category_log(category, L4F_INFO, 'trying /dev/stdin as stdin unit.')
+        input_file='/dev/stdin'
+      ENDIF
+      file=.TRUE.
+
+    ELSE IF (input_format == 'dba') THEN
+      CALL parse_dba_access_info(input_file, dsn, user, password)
+      file=.FALSE.
+    ENDIF
+    
+    CALL init(v7d_dba, filename=input_file, FORMAT=input_format,dsn=dsn, user=user, password=password, file=file)
+
+    if ( any(c_e(nl))) then
+      CALL import(v7d_dba, vl, nl, timei=s_d, timef=e_d)
+    else
+      CALL import(v7d_dba, vl,     timei=s_d, timef=e_d)
+    end if
+
     v7dtmp = v7d_dba%vol7d
     CALL init(v7d_dba%vol7d) ! nullify without deallocating
+    CALL delete(v7d_dba)
+
 #endif
 
 #ifdef HAVE_ORSIM
@@ -1456,11 +1470,6 @@ ENDIF
 ! cleanly close the databases
 IF (input_format == 'native') THEN
   CALL delete(v7d) ! controllare? input native output bufr
-#ifdef HAVE_DBALLE
-ELSE IF (input_format == 'BUFR' .OR. input_format == 'CREX' &
- .OR. input_format == 'dba') THEN
-  CALL delete(v7d_dba)
-#endif
 #ifdef HAVE_ORSIM
 ELSE IF (input_format == 'orsim') THEN
   CALL delete(v7d_osim)

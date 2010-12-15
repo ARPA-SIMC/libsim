@@ -110,7 +110,7 @@ PUBLIC datetime, datetime_miss, datetime_utc, datetime_local, &
  OPERATOR(*), OPERATOR(/), mod, &
  timedelta, timedelta_miss, timedelta_new, timedelta_0, &
  timedelta_min, timedelta_max, timedelta_getamsec, timedelta_depop, &
- display
+ display, c_e
 
 !> Costruttori per le classi datetime e timedelta. Devono essere richiamati
 !! per tutti gli oggetti di questo tipo definiti in un programma
@@ -269,6 +269,13 @@ INTERFACE display
   MODULE PROCEDURE display_datetime
 END INTERFACE
 
+
+!> Missing check
+INTERFACE c_e
+  MODULE PROCEDURE c_e_datetime
+END INTERFACE
+
+
 #define ARRAYOF_ORIGTYPE TYPE(datetime)
 #define ARRAYOF_TYPE arrayof_datetime
 #define ARRAYOF_ORIGEQ 1
@@ -382,51 +389,72 @@ ELSE IF (PRESENT(unixtime)) THEN ! secondi dal 01/01/1970 (unix)
   end if
 
 ELSE IF (PRESENT(isodate)) THEN ! formato iso YYYY-MM-DD hh:mm:ss.msc
-  datebuf(1:23) = '0001-01-01 00:00:00.000'
-  datebuf(1:MIN(LEN(isodate),23)) = isodate(1:MIN(LEN(isodate),23))
-  READ(datebuf,'(I4,1X,I2,1X,I2,1X,I2,1X,I2,1X,I2,1X,I3)', err=100) &
-   lyear, lmonth, lday, lhour, lminute, lsec, lmsec
-  lmsec = lmsec + lsec*1000
-  CALL jeladata5_1(lday, lmonth, lyear, lhour, lminute, lmsec, this%iminuti)
-  RETURN
 
+  if (c_e(isodate)) then
+    datebuf(1:23) = '0001-01-01 00:00:00.000'
+    datebuf(1:MIN(LEN(isodate),23)) = isodate(1:MIN(LEN(isodate),23))
+    READ(datebuf,'(I4,1X,I2,1X,I2,1X,I2,1X,I2,1X,I2,1X,I3)', err=100) &
+     lyear, lmonth, lday, lhour, lminute, lsec, lmsec
+    lmsec = lmsec + lsec*1000
+    CALL jeladata5_1(lday, lmonth, lyear, lhour, lminute, lmsec, this%iminuti)
+    RETURN
+    
 100 CONTINUE ! condizione di errore in isodate
-  CALL delete(this)
-  CALL l4f_log(L4F_ERROR, 'isodate '//TRIM(isodate)//' not valid')
-  CALL raise_error()
-  RETURN
-
-ELSE IF (PRESENT(simpledate)) THEN ! formato YYYYMMDDhhmmssmsc
-  datebuf(1:17) = '00010101000000000'
-  datebuf(1:MIN(LEN(simpledate),17)) = simpledate(1:MIN(LEN(simpledate),17))
-  READ(datebuf,'(I4.4,5I2.2,I3.3)', err=120) &
-   lyear, lmonth, lday, lhour, lminute, lsec, lmsec
-  lmsec = lmsec + lsec*1000
-  CALL jeladata5_1(lday, lmonth, lyear, lhour, lminute, lmsec, this%iminuti)
-  RETURN
-
-120 CONTINUE ! condizione di errore in simpledate
-  CALL delete(this)
-  CALL l4f_log(L4F_ERROR, 'simpledate '//TRIM(simpledate)//' not valid')
-  CALL raise_error()
-  RETURN
-
-ELSE IF (PRESENT(oraclesimdate)) THEN ! formato YYYYMMDDhhmm
-  CALL l4f_log(L4F_WARN, 'in datetime_init, parametro oraclesimdate '// &
-   'obsoleto, usare piuttosto simpledate')
-  READ(oraclesimdate,'(I4,4I2)', iostat=ier) lyear, lmonth, lday, lhour, lminute
-  IF (ier /= 0) THEN
     CALL delete(this)
-    CALL l4f_log(L4F_ERROR, 'oraclesimdate '//TRIM(oraclesimdate)//' not valid')
+    CALL l4f_log(L4F_ERROR, 'isodate '//TRIM(isodate)//' not valid')
     CALL raise_error()
     RETURN
-  ENDIF
-  CALL jeladata5_1(lday,lmonth,lyear,lhour,lminute,0,this%iminuti)
+  else
+    this = datetime_miss
+  end if
+
+ELSE IF (PRESENT(simpledate)) THEN ! formato YYYYMMDDhhmmssmsc
+  if (c_e(simpledate))then
+    datebuf(1:17) = '00010101000000000'
+    datebuf(1:MIN(LEN(simpledate),17)) = simpledate(1:MIN(LEN(simpledate),17))
+    READ(datebuf,'(I4.4,5I2.2,I3.3)', err=120) &
+     lyear, lmonth, lday, lhour, lminute, lsec, lmsec
+    lmsec = lmsec + lsec*1000
+    CALL jeladata5_1(lday, lmonth, lyear, lhour, lminute, lmsec, this%iminuti)
+    RETURN
+
+120 CONTINUE ! condizione di errore in simpledate
+    CALL delete(this)
+    CALL l4f_log(L4F_ERROR, 'simpledate '//TRIM(simpledate)//' not valid')
+    CALL raise_error()
+    RETURN
+  else
+    this = datetime_miss
+  end if
+
+
+ELSE IF (PRESENT(oraclesimdate)) THEN ! formato YYYYMMDDhhmm
+
+  if(c_e(oraclesimdate))then
+    CALL l4f_log(L4F_WARN, 'in datetime_init, parametro oraclesimdate '// &
+     'obsoleto, usare piuttosto simpledate')
+    READ(oraclesimdate,'(I4,4I2)', iostat=ier) lyear, lmonth, lday, lhour, lminute
+    IF (ier /= 0) THEN
+      CALL delete(this)
+      CALL l4f_log(L4F_ERROR, 'oraclesimdate '//TRIM(oraclesimdate)//' not valid')
+      CALL raise_error()
+      RETURN
+    ENDIF
+    CALL jeladata5_1(lday,lmonth,lyear,lhour,lminute,0,this%iminuti)
+  else
+    this = datetime_miss
+  end if
+
 ELSE IF (PRESENT(now)) THEN
-  CALL DATE_AND_TIME(values=dt)
-  IF (now /= datetime_local) dt(6) = dt(6) - dt(4) ! back to UTC
-  CALL init(this, year=dt(1), month=dt(2), day=dt(3), hour=dt(5), minute=dt(6), &
-   msec=dt(7)*1000+dt(8))
+  if(c_e(now))then
+    CALL DATE_AND_TIME(values=dt)
+    IF (now /= datetime_local) dt(6) = dt(6) - dt(4) ! back to UTC
+    CALL init(this, year=dt(1), month=dt(2), day=dt(3), hour=dt(5), minute=dt(6), &
+     msec=dt(7)*1000+dt(8))
+  else
+    this = datetime_miss
+  end if
+
 ELSE
   this = datetime_miss
 ENDIF
@@ -567,6 +595,16 @@ call getval (this,simpledate=date_time)
 print*,"TIME: ",date_time
 
 end subroutine display_datetime
+
+
+
+ELEMENTAL FUNCTION c_e_datetime(this) result (res)
+TYPE(datetime),INTENT(in) :: this
+LOGICAL :: res
+
+res = .not. this == datetime_miss 
+
+end FUNCTION c_e_datetime
 
 
 ELEMENTAL FUNCTION datetime_eq(this, that) RESULT(res)

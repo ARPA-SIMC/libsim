@@ -98,6 +98,11 @@ INTERFACE display
   MODULE PROCEDURE display_network
 END INTERFACE
 
+!>Check object presence
+INTERFACE c_e
+  MODULE PROCEDURE c_e_network
+END INTERFACE
+
 !>return network object in a pretty string
 INTERFACE to_char
   MODULE PROCEDURE to_char_network
@@ -137,6 +142,16 @@ TYPE(vol7d_network),INTENT(in) :: this
 print*,to_char_network(this)
 
 end subroutine display_network
+
+
+elemental function c_e_network(this) result(res)
+
+TYPE(vol7d_network),INTENT(in) :: this
+logical :: res
+
+res = .not. this == vol7d_network_miss
+
+end function c_e_network
 
 
 elemental character(len=20) function to_char_network(this)
