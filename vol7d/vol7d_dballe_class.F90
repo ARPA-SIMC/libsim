@@ -2631,7 +2631,7 @@ do while ( N > 0 )
       if (rep_memo /= network%name) cycle
     end if
 
-    print *,"passo1"
+!    print *,"passo1"
 
 ! in alternativa si trattano insieme
 !!$    call init(ana,lat=lat,lon=lon,ident=ident)
