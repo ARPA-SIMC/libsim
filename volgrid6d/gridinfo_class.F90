@@ -930,7 +930,7 @@ call grib_get(gaid,'GRIBEditionNumber',EditionNumber)
 
 if (EditionNumber == 1)then
 
-  call grib_get(gaid,'identificationOfOriginatingGeneratingCentre',centre)
+  call grib_get(gaid,'centre',centre)
   call grib_get(gaid,'gribTablesVersionNo',category)
   call grib_get(gaid,'indicatorOfParameter',number)
 
@@ -938,7 +938,7 @@ if (EditionNumber == 1)then
 
 else if (EditionNumber == 2)then
 
-  call grib_get(gaid,'identificationOfOriginatingGeneratingCentre',centre)
+  call grib_get(gaid,'centre',centre)
   call grib_get(gaid,'discipline',discipline)
   call grib_get(gaid,'parameterCategory',category)
   call grib_get(gaid,'parameterNumber',number)
@@ -969,13 +969,13 @@ call grib_get(gaid,'GRIBEditionNumber',EditionNumber)
 if (EditionNumber == 1)then
 
   IF (this%centre /= 255) & ! if centre missing (coming from bufr), keep template
-   CALL grib_set(gaid,'identificationOfOriginatingGeneratingCentre',this%centre)
+   CALL grib_set(gaid,'centre',this%centre)
   call grib_set(gaid,'gribTablesVersionNo',this%category)
   call grib_set(gaid,'indicatorOfParameter',this%number)
 
 else if (EditionNumber == 2)then
 
-  call grib_set(gaid,'identificationOfOriginatingGeneratingCentre',this%centre)
+  call grib_set(gaid,'centre',this%centre)
   call grib_set(gaid,'discipline',this%discipline)
   call grib_set(gaid,'parameterCategory',this%category)
   call grib_set(gaid,'parameterNumber',this%number)
