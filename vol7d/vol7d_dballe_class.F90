@@ -1281,8 +1281,6 @@ end if
 
 !-----------------------> anagrafica fine
 
-!print*,"prima di alloc"
-
 call vol7d_alloc_vol (vol7dtmp)
 
 if (lattr) then
@@ -1308,8 +1306,6 @@ end if
 !vol7dtmp%voldatiattrb=DBA_MVB
 !vol7dtmp%voldatiattrd=DBA_MVD
 !vol7dtmp%voldatiattrc=DBA_MVC
-
-!print*,"ho fatto un volume vuoto"
 
 if (lattr)then
 
@@ -2244,8 +2240,9 @@ end if
 
 un = open_dballe_file('dballe.txt', filetype_data)
 IF (un < 0) then
-  print *,"errore open_dballe_file"
-                                !>\todo gestione corretta dell'errore
+
+  call l4f_log(L4F_ERROR,"error open_dballe_file: dballe.txt")
+  CALL raise_error("error open_dballe_file: dballe.txt")
   return
 end if
 
@@ -2586,11 +2583,9 @@ na=0
 call mem_acquire( buffer,nd,1000,this%category )
 call mem_acquire( bufferana,na,100,this%category )
 
-
 do while ( N > 0 )
 
   call idba_voglioquesto (this%handle,N)
-
   call l4f_category_log(this%category,L4F_debug,"numero dati voglioquesto:"//to_char(n))
 
   ! dammi tutti i dati
@@ -2630,8 +2625,6 @@ do while ( N > 0 )
     if(present(network)) then
       if (rep_memo /= network%name) cycle
     end if
-
-!    print *,"passo1"
 
 ! in alternativa si trattano insieme
 !!$    call init(ana,lat=lat,lon=lon,ident=ident)
@@ -2906,9 +2899,6 @@ nanavarattrc=0
 
 CALL init(vol7dtmp)
 
-!print*,"ho fatto init"
-
-
 if (lanaonly)then
 
   ! qui faccio le operazioni minime per avere solo l'anagrafica utile per certe operazioni
@@ -3016,9 +3006,11 @@ else if (present(var))then
     end do
 
   else
-
     vol7dtmp%dativar%c=pack_distinct(buffer(:nd)%dativar, ndativarc, back=.TRUE.)
   end if
+
+else
+  vol7dtmp%dativar%c=pack_distinct(buffer(:nd)%dativar, ndativarc, back=.TRUE.)
 end if
 
 
@@ -3069,12 +3061,7 @@ end if
 
 !-----------------------> anagrafica fine
 
-!print*,"prima di alloc"
-
 call vol7d_alloc_vol (vol7dtmp)
-
-!print*,"ho fatto un volume vuoto"
-
 
 do i =1, nd
 
