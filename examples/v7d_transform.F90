@@ -1307,18 +1307,17 @@ IF (pre_trans_type /= '') THEN
     CALL init(v7d_comp1)
     CALL l4f_category_log(category, L4F_ERROR, &
      'pre-transformation syntax '//TRIM(pre_trans_type)//' non valid')
+    CALL raise_fatal_error()
   ENDIF
   DEALLOCATE(w_s, w_e)
 
-  IF (c_e(v7d_comp1)) THEN ! transformation successful, use the new volume
-    v7d = v7d_comp1
-    CALL init(v7d_comp1) ! detach it
-  ELSE ! otherwise continue with original volume
-    CALL l4f_category_log(category, L4F_ERROR, &
-     'pre-transformation '//TRIM(pre_trans_type)//' failed')
-    CALL l4f_category_log(category, L4F_ERROR, &
-     'continuing with untransformed data')
+  IF (.NOT.c_e(v7d_comp1)) THEN ! empty volume
+    CALL l4f_category_log(category, L4F_WARN, &
+     'pre-transformation '//TRIM(pre_trans_type)//' returned no points')
   ENDIF
+
+  v7d = v7d_comp1
+  CALL init(v7d_comp1) ! detach it
 ENDIF
 
 IF (comp_regularize) THEN

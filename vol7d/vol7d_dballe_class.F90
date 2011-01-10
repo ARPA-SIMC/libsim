@@ -1747,7 +1747,7 @@ nanaattrd=0
 nanavarc=0
 nanaattrc=0
 
-
+call vol7d_alloc_vol(this%vol7d) ! be safe
 nstaz=size(this%vol7d%ana(:))
 
 ntimerange=size(this%vol7d%timerange(:))
