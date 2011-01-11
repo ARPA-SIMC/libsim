@@ -1289,6 +1289,32 @@ CALL vol7d_dballe_set_var_du(v7d)
 
 IF (ldisplay) CALL display(v7d)
 
+! conversion to real required in these cases
+IF ((c_e(istat_proc) .AND. c_e(ostat_proc)) .OR. pre_trans_type /= '' .OR. &
+ (post_trans_type /= '' .AND. output_template /= '')) THEN
+
+  lconvr=.false.
+  IF (ASSOCIATED(v7d%dativar%d)) THEN
+    if (SIZE(v7d%dativar%d) > 0) lconvr=.true.
+  ENDIF
+  IF (ASSOCIATED(v7d%dativar%i)) THEN
+    if (SIZE(v7d%dativar%i) > 0) lconvr=.true.
+  ENDIF
+  IF (ASSOCIATED(v7d%dativar%b)) THEN
+    if (SIZE(v7d%dativar%b) > 0) lconvr=.true.
+  ENDIF
+  IF (ASSOCIATED(v7d%dativar%c)) THEN
+    if (SIZE(v7d%dativar%c) > 0) lconvr=.true.
+  ENDIF
+
+  IF (lconvr) THEN
+    CALL l4f_category_log(category, L4F_INFO, 'Converting input data to real for processing.')
+    call vol7d_convr(v7d,v7dtmp)
+    call delete(v7d)
+    v7d=v7dtmp
+  end if
+ENDIF
+
 IF (pre_trans_type /= '') THEN
   n = word_split(pre_trans_type, w_s, w_e, ':')
   IF (n >= 2) THEN ! syntax is correct
@@ -1471,6 +1497,7 @@ ELSE IF (output_format == 'grib_api') THEN
     CALL l4f_category_log(category,L4F_ERROR, &
      'post-trans-type: '//TRIM(post_trans_type)// &
      '; output template '//TRIM(output_template))
+    CALL raise_fatal_error()
   ENDIF
 
 #endif
