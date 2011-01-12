@@ -28,10 +28,17 @@ B13203,Soil water content (invented),kg/m^2->Num,255,2,86,255,1.0,0.0
 B20010,Total cloud cover,Percent,255,2,71,255,1.0,0.0
 B20010,Cloud cover DWD,Percent,78,201,29,255,1.0,0.0
 B20010,Cloud cover DWD,Percent,200,201,29,255,1.0,0.0
+B20052,Low cloud cover,Percent,255,2,73,255,1.0,0.0
+B20053,Medium cloud cover,Percent,255,2,74,255,1.0,0.0
+B20054,High cloud cover,Percent,255,2,75,255,1.0,0.0
 B10007,0C Isotherm height,m,78,201,84,255,1.0,0.0
 B10007,0C Isotherm height,m,200,201,84,255,1.0,0.0
-B14017,Net long-wave radiation flux (surface),,255,2,112,255,1.0,0.0
-B14018,Net short-wave radiation flux (surface),,255,2,111,255,1.0,0.0
+B14017,Net long-wave radiation flux (surface),W/m^2,255,2,112,255,1.0,0.0
+B14018,Net short-wave radiation flux (surface),W/m^2,255,2,111,255,1.0,0.0
+B14192,Instantenous sensible heat flux (invented),W/m^2,255,2,122,255,1.0,0.0
+B14193,Instantenous latent heat flux (invented),W/m^2,255,2,121,255,1.0,0.0
+B14194,Instantenous direct solar radiation DWD (invented),W/m^2,78,201,22,255,1.0,0.0
+B14195,Instantenous diffuse solar radiation DWD (invented),W/m^2,78,201,23,255,1.0,0.0
 B22037,Tidal elevation with respect to national land datum,m,255,2,82,255,1.0,0.0
 B22070,Significant wave height,m,255,2,102,255,1.0,0.0
 B22070,Significant wave height,m,98,140,229,255,1.0,0.0
