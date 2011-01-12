@@ -2018,7 +2018,8 @@ IF (this%trans%trans_type == 'inter') THEN
 
   ENDIF
 
-ELSE IF (this%trans%trans_type == 'boxinter') THEN ! use the grid-to-grid method
+ELSE IF (this%trans%trans_type == 'boxinter' &
+ .OR. this%trans%trans_type == 'polyinter') THEN ! use the grid-to-grid method
 
   CALL compute(this, &
    RESHAPE(field_in, (/SIZE(field_in,1), 1, SIZE(field_in,2)/)), field_out)
