@@ -92,7 +92,6 @@ INTEGER,PARAMETER :: &
  d4=d1*4+1, & ! giorni/4 anni nel calendario gregoriano
  d100=d1*100+25-1, & ! giorni/100 anni nel calendario gregoriano
  d400=d1*400+100-3, & ! giorni/400 anni nel calendario gregoriano
- unmin=1035593280, & ! differenza tra 01/01/1970 e 01/01/0001 (min, per unixtime)
  ianno(13,2)=RESHAPE((/ &
  0,31,59,90,120,151,181,212,243,273,304,334,365, &
  0,31,60,91,121,152,182,213,244,274,305,335,366/),(/13,2/))
@@ -107,7 +106,7 @@ PUBLIC datetime, datetime_miss, datetime_utc, datetime_local, &
  read_unit, write_unit, &
  OPERATOR(==), OPERATOR(/=), OPERATOR(>), OPERATOR(<), &
  OPERATOR(>=), OPERATOR(<=), OPERATOR(+), OPERATOR(-), &
- OPERATOR(*), OPERATOR(/), mod, &
+ OPERATOR(*), OPERATOR(/), mod, abs, &
  timedelta, timedelta_miss, timedelta_new, timedelta_0, &
  timedelta_min, timedelta_max, timedelta_getamsec, timedelta_depop, &
  display, c_e
@@ -248,6 +247,12 @@ END INTERFACE
 !! dal minuto, ora o giorno tondo precedente più vicino.
 INTERFACE mod
   MODULE PROCEDURE timedelta_mod, datetime_timedelta_mod
+END INTERFACE
+
+!> Operatore di valore assoluto di un intervallo:
+!! - \a ABS(\a timedelta) = \a timedelta
+INTERFACE abs
+  MODULE PROCEDURE timedelta_abs
 END INTERFACE
 
 !> Legge un oggetto datetime/timedelta o un vettore di oggetti datetime/timedelta da
@@ -493,9 +498,9 @@ CHARACTER(len=23) :: datebuf
 
 IF (PRESENT(year) .OR. PRESENT(month) .OR. PRESENT(day) .OR. PRESENT(hour) &
  .OR. PRESENT(minute) .OR. PRESENT(msec) .OR. PRESENT(isodate) &
- .OR. PRESENT(simpledate) .OR. PRESENT(oraclesimdate)) THEN
+ .OR. PRESENT(simpledate) .OR. PRESENT(oraclesimdate) .OR. PRESENT(unixtime)) THEN
 
-  IF (this==datetime_miss) THEN
+  IF (this == datetime_miss) THEN
 
     IF (PRESENT(msec)) THEN 
       msec = imiss
@@ -525,6 +530,9 @@ IF (PRESENT(year) .OR. PRESENT(month) .OR. PRESENT(day) .OR. PRESENT(hour) &
       CALL l4f_log(L4F_WARN, 'in datetime_getval, parametro oraclesimdate '// &
        'obsoleto, usare piuttosto simpledate')
       oraclesimdate=cmiss
+    ENDIF
+    IF (PRESENT(unixtime)) THEN
+      unixtime = illmiss
     ENDIF
 
   ELSE
@@ -564,12 +572,12 @@ IF (PRESENT(year) .OR. PRESENT(month) .OR. PRESENT(day) .OR. PRESENT(hour) &
        'obsoleto, usare piuttosto simpledate')
       WRITE(oraclesimdate, '(I4.4,4I2.2)') lyear, lmonth, lday, lhour, lminute
     ENDIF
+    IF (PRESENT(unixtime)) THEN
+      unixtime = this%iminuti/1000_int_ll-unsec
+    ENDIF
+
   ENDIF
-  IF (PRESENT(unixtime)) THEN
-    unixtime = this%iminuti/1000_int_ll-unsec
-  ENDIF
-  
-END IF
+ENDIF
 
 END SUBROUTINE datetime_getval
 
@@ -1417,6 +1425,16 @@ ELSE
 ENDIF
 
 END FUNCTION datetime_timedelta_mod
+
+
+FUNCTION timedelta_abs(this) RESULT(res)
+TYPE(timedelta),INTENT(IN) :: this
+TYPE(timedelta) :: res
+
+res%iminuti = ABS(this%iminuti)
+res%month = ABS(this%month)
+
+END FUNCTION timedelta_abs
 
 
 !> Legge da un'unità di file il contenuto dell'oggetto \a this.
