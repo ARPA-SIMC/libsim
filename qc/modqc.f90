@@ -44,10 +44,14 @@ module modqc
 
 use kinds
 use missing_values
+use optional_values
+use vol7d_class
 
 implicit none
 
-public
+private
+
+public vd,init,qcattrvars_new,invalidated,peeled,vol7d_peeling
 
 !> Definisce il livello di attendibilità per i dati validi
 type :: qcpartype
@@ -56,6 +60,18 @@ end type qcpartype
 
 !> Per dafault i dati con confidenza inferiore a 50 vengono scartati
 type(qcpartype)  :: qcpar=qcpartype(50)
+
+integer, parameter :: nqcattrvars=4
+
+type :: qcattrvars
+  TYPE(vol7d_var) :: vars(nqcattrvars)
+  CHARACTER(len=10)   :: btables(nqcattrvars) =(/"*B33192","*B33196","*B33197","*B33198"/)
+end type qcattrvars
+
+!> Varables user in Quality Control
+interface init
+  module procedure init_qcattrvars
+end interface
 
 
 !> Test di validità dei dati
@@ -71,9 +87,9 @@ end interface
 contains
 
 !> Test di validità di dati integer
-logical function vdi(flag)
+elemental logical function vdi(flag)
 
-integer  :: flag !< confidenza
+integer,intent(in)  :: flag !< confidenza
       
 if(flag < qcpar%att .and. c_e(flag))then
   vdi=.false.
@@ -87,9 +103,9 @@ end function vdi
 
 !> Test di validità di dati byte
 
-logical function vdb(flag)
+elemental logical function vdb(flag)
 
-integer (kind=int_b) :: flag !< confidenza
+integer (kind=int_b),intent(in) :: flag !< confidenza
       
 if(flag < qcpar%att .and. c_e(flag))then
   vdb=.false.
@@ -102,9 +118,9 @@ end function vdb
 
 
 !> Test di dato invalidato intero
-logical function invalidatedi(flag)
+elemental logical function invalidatedi(flag)
 
-integer  :: flag !< attributo di invalidazione del dato
+integer,intent(in)  :: flag !< attributo di invalidazione del dato
       
 if(c_e(flag))then
   invalidatedi=.true.
@@ -118,9 +134,9 @@ end function invalidatedi
 
 !> Test di dato invalidato byte
 
-logical function invalidatedb(flag)
+elemental logical function invalidatedb(flag)
 
-integer (kind=int_b) :: flag !< attributo di invalidazione del dato
+integer (kind=int_b),intent(in) :: flag !< attributo di invalidazione del dato
       
 if(c_e(flag))then
   invalidatedb=.true.
@@ -130,6 +146,89 @@ end if
 
 return
 end function invalidatedb
+
+elemental real function peeled(data,flaginv,flag1,flag2,flag3)
+
+real, intent(in) :: data
+integer(kind=int_b), intent(in),optional :: flaginv
+integer(kind=int_b), intent(in),optional :: flag1
+integer(kind=int_b), intent(in),optional :: flag2
+integer(kind=int_b), intent(in),optional :: flag3
+
+if (invalidated(optio_b(flaginv)) .and. vd(optio_b(flag1))  .and. vd(optio_b(flag2))  .and. vd(optio_b(flag3))) then 
+  peeled=data
+else
+  peeled=rmiss
+end if
+
+end function peeled
+
+
+subroutine init_qcattrvars(this)
+
+type(qcattrvars),intent(inout) :: this
+integer :: i,j
+
+do i =1, nqcattrvars
+  call init(this%vars(i),this%btables(i))
+end do
+
+end subroutine init_qcattrvars
+
+
+type(qcattrvars) function  qcattrvars_new()
+
+call init(qcattrvars_new)
+
+end function qcattrvars_new
+
+
+!> Remove data under a defined grade of confidence.
+SUBROUTINE vol7d_peeling(this)
+TYPE(vol7d),INTENT(INOUT)  :: this !< object to peeling
+
+integer :: inddativarr,inddatiattr,inddativarattr,i
+integer :: indqcattrvars
+type(qcattrvars) :: attrvars
+
+call init(attrvars)
+
+do indqcattrvars =1,nqcattrvars
+  if (associated(this%datiattr%b)) then
+    inddatiattr     = firsttrue(attrvars%vars(indqcattrvars)  == this%datiattr%b)
+
+    if (inddatiattr > 0) then
+      do inddativarr=1,size(this%dativar%r)
+        inddativarattr  = firsttrue(this%dativar%r(inddativarr)   == this%dativarattr%b)
+        
+        this%voldatir(:,:,:,:,inddativarr,:) = peeled(this%voldatir(:,:,:,:,inddativarr,:), &
+         this%voldatiattrb(:,:,:,:,inddativarattr,:,inddatiattr))
+      end do
+    end if
+
+  end if
+end do
+
+!!$do indana=1,size(this%ana)
+!!$  do  indnetwork=1,size(this%network)
+!!$    do indlevel=1,size(this%level)
+!!$      do indtimerange=1,size(this%timerange)
+!!$        do inddativarr=1,size(this%dativar%r)
+!!$          do indtime=1,size(this%time)
+!!$
+!!$            this%voldatir(indana,indtime,indlevel,indtimerange,inddativarr,indnetwork) = &
+!!$             peeled(this%voldatir(indana,indtime,indlevel,indtimerange,inddativarr,indnetwork),&
+!!$             this%voldatiattrb(indana,indtime,indlevel,indtimerange,inddativarr,indnetwork,indtbattrin))
+!!$              
+!!$          end do
+!!$        end do
+!!$      end do
+!!$    end do
+!!$  end do
+!!$end do
+
+
+END SUBROUTINE vol7d_peeling
 
 
 end module modqc

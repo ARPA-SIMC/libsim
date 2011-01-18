@@ -480,11 +480,15 @@ do indana=1,size(qccli%v7d%ana)
                 call l4f_log (L4F_DEBUG,"data: "//trim(to_char(datoqui))//" ;clima: "//trim(to_char(climaqui)))
 
                 if ( datoqui > climaqui) then
+
+                  !ATTENZIONE TODO : inddativarr È UNA GRANDE SEMPLIFICAZIONE NON VERA SE TIPI DI DATO DIVERSI !!!!
                   
                   qccli%v7d%voldatiattrb(indana,indtime,indlevel,indtimerange,inddativarr,indnetwork,indtbattrout)=100-lperc
 
                 else
                   
+                  !ATTENZIONE TODO : inddativarr È UNA GRANDE SEMPLIFICAZIONE NON VERA SE TIPI DI DATO DIVERSI !!!!
+
                   qccli%v7d%voldatiattrb(indana,indtime,indlevel,indtimerange,inddativarr,indnetwork,indtbattrout)=lperc
                   
                 end if
