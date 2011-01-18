@@ -333,7 +333,7 @@ FUNCTION stat_percentiler(sample, perc_vals, mask, nomiss) RESULT(percentile)
 REAL, INTENT(in) :: sample(:) !< the variable for which percentiles are to be computed
 REAL, INTENT(in) :: perc_vals(:) !< the percentiles values to be computed, between 0. and 100.
 LOGICAL, OPTIONAL, INTENT(in) :: mask(:) !< additional mask to be and'ed with missing values
-LOGICAL, OPTIONAL, INTENT(in) :: nomiss
+LOGICAL, OPTIONAL, INTENT(in) :: nomiss !< not used until now
 
 REAL :: percentile(SIZE(perc_vals))
 

@@ -1428,12 +1428,8 @@ deallocate(lnetwork)
 END SUBROUTINE vol7d_normalize_vcoord
 
 
-!> Metodo per normalizzare la coordinata verticale.
-!! Per ora la normalizzazione effettuata riporta i valori di pressione
-!! nella sezione dati alla coordinata verticale sostituendo quella eventualmente presente.
-!! Classicamente serve per i dati con coordinata verticale model layer (105)
-!! Essendo che la pressione varia nello spazio orizzontale e nel tempo
-!! questo metodo restituisce un solo profilo verticale.
+!> Metodo per calcolare variabili derivate.
+!! TO DO !!
 SUBROUTINE vol7d_compute_var(this,that,var)
 TYPE(vol7d),INTENT(INOUT)  :: this !< oggetto da normalizzare
 TYPE(vol7d),INTENT(OUT) :: that !< oggetto normalizzato

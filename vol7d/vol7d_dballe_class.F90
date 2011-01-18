@@ -15,9 +15,10 @@
 
 ! You should have received a copy of the GNU General Public License
 ! along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 #include "config.h"
 
-!>\brief  classe per import ed export di volumi da e in DB-All.e 
+!> \brief  classe per import ed export di volumi da e in DB-All.e 
 !!
 !!Questo modulo definisce gli oggetti e i metodi per gestire
 !!l'importazione e l'esportazione di volumi dal database per dati sparsi
@@ -67,6 +68,7 @@
 !!\include esempio_v7ddballe.f90
 !!
 !!\ingroup vol7d
+
 MODULE vol7d_dballe_class
 
 USE char_utilities
@@ -2278,8 +2280,8 @@ END SUBROUTINE vol7d_dballe_import_dballevar
 
 
 
-!>\brief Integra il vettore delle variabili in vol7d con le descrizioni e le unità di misura
-!eventualmente mancanti.
+!> \brief Integra il vettore delle variabili in vol7d con le descrizioni e le unità di misura
+!!eventualmente mancanti.
 
 subroutine vol7d_dballe_set_var_du(this)
 

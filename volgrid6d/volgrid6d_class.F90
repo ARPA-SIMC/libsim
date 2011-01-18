@@ -60,7 +60,7 @@ character (len=255),parameter:: subcategory="volgrid6d_class"
 
 !> Object describing a rectangular, homogeneous gridded dataset
 type volgrid6d
-  type(griddim_def) :: griddim !> grid descriptor
+  type(griddim_def) :: griddim !< grid descriptor
   TYPE(datetime),pointer :: time(:) !< time dimension descriptor
   TYPE(vol7d_timerange),pointer :: timerange(:) !< timerange (forecast, analysis, statistically processed) dimension descriptor
   TYPE(vol7d_level),pointer :: level(:) !< vertical level dimension descriptor

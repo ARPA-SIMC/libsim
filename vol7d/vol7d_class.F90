@@ -2751,5 +2751,5 @@ END MODULE vol7d_class
 !!Questo programma scrive i dati del clima che poi verranno letti da modqccli
 
 
-!>\example v7ddballe_move_and_collapse.f90
+!>\example esempio_v7ddballe_move_and_collapse.f90
 !!\brief ! Example program to reduce to one the dimensions of levels and time without loss of data
