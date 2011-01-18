@@ -65,7 +65,7 @@ integer, parameter :: nqcattrvars=4
 
 type :: qcattrvars
   TYPE(vol7d_var) :: vars(nqcattrvars)
-  CHARACTER(len=10)   :: btables(nqcattrvars) =(/"*B33192","*B33196","*B33197","*B33198"/)
+  CHARACTER(len=10)   :: btables(nqcattrvars)
 end type qcattrvars
 
 !> Varables user in Quality Control
@@ -169,6 +169,7 @@ subroutine init_qcattrvars(this)
 type(qcattrvars),intent(inout) :: this
 integer :: i,j
 
+this%btables(:) =(/"*B33196","*B33192","*B33193","*B33194"/)
 do i =1, nqcattrvars
   call init(this%vars(i),this%btables(i))
 end do
