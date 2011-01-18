@@ -99,17 +99,16 @@ key_mask(:) = .FALSE.
 CALL init(csvline)
 DO i = 1, ncol
   IF (keys(w_s(i):MIN(w_e(i),w_s(i)+LEN(lnmspc)-1)) == lnmspc) THEN
-    key_mask(i) = .TRUE.
-    w_s(i) = w_s(i)+LEN(lnmspc)
-    CALL csv_record_addfield(csvline, TRIM(keys(w_s(i):w_e(i))))
-  ELSE
-    CALL csv_record_addfield(csvline, TRIM(keys(w_s(i):w_e(i))))
+    key_mask(i) = .TRUE. ! it is a local namespace key
+    w_s(i) = w_s(i) + LEN(lnmspc) ! shift start pointer to skip prefix
   ENDIF
+  CALL csv_record_addfield(csvline, TRIM(keys(w_s(i):w_e(i))))
 ENDDO
 
 WRITE(iun,'(A)')csv_record_getrecord(csvline)
 CALL delete(csvline)
 
+! write csv body
 DO l = 1, SIZE(vg6d%time)
   CALL getval(vg6d%time(l), isodate=csv_time)
   DO k = 1, SIZE(vg6d%timerange)
