@@ -16,6 +16,8 @@
 ! You should have received a copy of the GNU General Public License
 ! along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+#include "config.h"
+
 !>\brief Controllo di qualità climatico.
 !! Questo modulo permette di effettuare una valutazione della probabilità che un certo intervallo 
 !! di misura ha di verificarsi. Per fare ciò si utilizzano una serie di percentili precedentemente calcolati.
@@ -79,7 +81,9 @@ use geo_coord_class
 use file_utilities
 use log4fortran
 use char_utilities
+#ifdef HAVE_DBALLE
 use vol7d_dballe_class
+#endif
 use io_units
 
 implicit none
@@ -144,7 +148,9 @@ character(len=512),intent(in),optional :: macropath !< file delle macroaree
 character(len=512),intent(in),optional :: climapath !< file con il volume del clima
 character(len=*),INTENT(in),OPTIONAL :: categoryappend !< appennde questo suffisso al namespace category di log4fortran
 
+#ifdef HAVE_DBALLE
 type (vol7d_dballe) :: v7d_dballetmp
+#endif
 
 integer :: istat,iuni,i
 character(len=512) :: filepath
@@ -177,7 +183,12 @@ CALL import(qccli%macroa, shpfilesim=filepath)
 if (present(climapath))then
   filepath=climapath
 else
+#ifdef HAVE_DBALLE
  filepath=get_package_filepath('climaprec.bufr', filetype_data)
+#else
+ filepath=get_package_filepath('climaprec.v7d', filetype_data)
+#endif
+
 end if
 
 
@@ -190,12 +201,17 @@ case("v7d")
   OPEN (unit=iuni,file=filepath,form='UNFORMATTED',access=stream_if_possible)
   call import(qccli%clima,unit=iuni)
   close (unit=iuni)
+
+#ifdef HAVE_DBALLE
+
 case("bufr")
   call init(v7d_dballetmp,file=.true.,filename=filepath,categoryappend=trim(a_name)//".clima")
   !call import(v7d_dballetmp)
   call import(v7d_dballetmp,var=var,varkind=(/("r",i=1,size(var))/))
   call copy(v7d_dballetmp%vol7d,qccli%clima)
   call delete(v7d_dballetmp)
+#endif
+
 case default
   call l4f_category_log(qccli%category,L4F_ERROR,"file type not supported: "//trim(filepath))
   call raise_error(filepath//" file type not supported")

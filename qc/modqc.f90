@@ -52,6 +52,7 @@ implicit none
 private
 
 public vd,init,qcattrvars_new,invalidated,peeled,vol7d_peeling
+public nqcattrvars, qcattrvarsbtables
 
 !> Definisce il livello di attendibilità per i dati validi
 type :: qcpartype
@@ -62,6 +63,7 @@ end type qcpartype
 type(qcpartype)  :: qcpar=qcpartype(50)
 
 integer, parameter :: nqcattrvars=4
+CHARACTER(len=10),parameter   ::qcattrvarsbtables(nqcattrvars)=(/"*B33196","*B33192","*B33193","*B33194"/)
 
 type :: qcattrvars
   TYPE(vol7d_var) :: vars(nqcattrvars)
@@ -75,7 +77,8 @@ end interface
 
 !> Remove data under a defined grade of confidence.
 interface peeled
-  module procedure peeledr, peeledd, peeledb, peeledi,peeledc
+  module procedure peeledrb, peeleddb, peeledbb, peeledib,peeledcb &
+   ,peeledri, peeleddi, peeledbi, peeledii,peeledci
 end interface
 
 
@@ -152,7 +155,9 @@ end if
 return
 end function invalidatedb
 
-elemental real function peeledr(data,flaginv,flag1,flag2,flag3)
+! byte attributes below
+
+elemental real function peeledrb(data,flaginv,flag1,flag2,flag3)
 
 real, intent(in) :: data
 integer(kind=int_b), intent(in),optional :: flaginv
@@ -161,14 +166,14 @@ integer(kind=int_b), intent(in),optional :: flag2
 integer(kind=int_b), intent(in),optional :: flag3
 
 if (invalidated(optio_b(flaginv)) .and. vd(optio_b(flag1))  .and. vd(optio_b(flag2))  .and. vd(optio_b(flag3))) then 
-  peeledr=data
+  peeledrb=data
 else
-  peeledr=rmiss
+  peeledrb=rmiss
 end if
 
-end function peeledr
+end function peeledrb
 
-elemental real(kind=fp_d) function peeledd(data,flaginv,flag1,flag2,flag3)
+elemental real(kind=fp_d) function peeleddb(data,flaginv,flag1,flag2,flag3)
 
 real(kind=fp_d), intent(in) :: data
 integer(kind=int_b), intent(in),optional :: flaginv
@@ -177,15 +182,15 @@ integer(kind=int_b), intent(in),optional :: flag2
 integer(kind=int_b), intent(in),optional :: flag3
 
 if (invalidated(optio_b(flaginv)) .and. vd(optio_b(flag1))  .and. vd(optio_b(flag2))  .and. vd(optio_b(flag3))) then 
-  peeledd=data
+  peeleddb=data
 else
-  peeledd=dmiss
+  peeleddb=dmiss
 end if
 
-end function peeledd
+end function peeleddb
 
 
-elemental integer function peeledi(data,flaginv,flag1,flag2,flag3)
+elemental integer function peeledib(data,flaginv,flag1,flag2,flag3)
 
 integer, intent(in) :: data
 integer(kind=int_b), intent(in),optional :: flaginv
@@ -194,15 +199,15 @@ integer(kind=int_b), intent(in),optional :: flag2
 integer(kind=int_b), intent(in),optional :: flag3
 
 if (invalidated(optio_b(flaginv)) .and. vd(optio_b(flag1))  .and. vd(optio_b(flag2))  .and. vd(optio_b(flag3))) then 
-  peeledi=data
+  peeledib=data
 else
-  peeledi=imiss
+  peeledib=imiss
 end if
 
-end function peeledi
+end function peeledib
 
 
-elemental integer(kind=int_b) function peeledb(data,flaginv,flag1,flag2,flag3)
+elemental integer(kind=int_b) function peeledbb(data,flaginv,flag1,flag2,flag3)
 
 integer(kind=int_b), intent(in) :: data
 integer(kind=int_b), intent(in),optional :: flaginv
@@ -211,15 +216,15 @@ integer(kind=int_b), intent(in),optional :: flag2
 integer(kind=int_b), intent(in),optional :: flag3
 
 if (invalidated(optio_b(flaginv)) .and. vd(optio_b(flag1))  .and. vd(optio_b(flag2))  .and. vd(optio_b(flag3))) then 
-  peeledb=data
+  peeledbb=data
 else
-  peeledb=bmiss
+  peeledbb=bmiss
 end if
 
-end function peeledb
+end function peeledbb
 
 
-elemental character(len=vol7d_cdatalen) function peeledc(data,flaginv,flag1,flag2,flag3)
+elemental character(len=vol7d_cdatalen) function peeledcb(data,flaginv,flag1,flag2,flag3)
 
 character(len=vol7d_cdatalen), intent(in) :: data
 integer(kind=int_b), intent(in),optional :: flaginv
@@ -228,12 +233,100 @@ integer(kind=int_b), intent(in),optional :: flag2
 integer(kind=int_b), intent(in),optional :: flag3
 
 if (invalidated(optio_b(flaginv)) .and. vd(optio_b(flag1))  .and. vd(optio_b(flag2))  .and. vd(optio_b(flag3))) then 
-  peeledc=data
+  peeledcb=data
 else
-  peeledc=cmiss
+  peeledcb=cmiss
 end if
 
-end function peeledc
+end function peeledcb
+
+
+! integer attributes below
+! here flaginv is not optional
+
+elemental real function peeledri(data,flaginv,flag1,flag2,flag3)
+
+real, intent(in) :: data
+integer, intent(in) :: flaginv
+integer, intent(in),optional :: flag1
+integer, intent(in),optional :: flag2
+integer, intent(in),optional :: flag3
+
+if (invalidated(optio_l(flaginv)) .and. vd(optio_l(flag1))  .and. vd(optio_l(flag2))  .and. vd(optio_l(flag3))) then 
+  peeledri=data
+else
+  peeledri=rmiss
+end if
+
+end function peeledri
+
+elemental real(kind=fp_d) function peeleddi(data,flaginv,flag1,flag2,flag3)
+
+real(kind=fp_d), intent(in) :: data
+integer, intent(in) :: flaginv
+integer, intent(in),optional :: flag1
+integer, intent(in),optional :: flag2
+integer, intent(in),optional :: flag3
+
+if (invalidated(optio_l(flaginv)) .and. vd(optio_l(flag1))  .and. vd(optio_l(flag2))  .and. vd(optio_l(flag3))) then 
+  peeleddi=data
+else
+  peeleddi=dmiss
+end if
+
+end function peeleddi
+
+
+elemental integer function peeledii(data,flaginv,flag1,flag2,flag3)
+
+integer, intent(in) :: data
+integer, intent(in) :: flaginv
+integer, intent(in),optional :: flag1
+integer, intent(in),optional :: flag2
+integer, intent(in),optional :: flag3
+
+if (invalidated(optio_l(flaginv)) .and. vd(optio_l(flag1))  .and. vd(optio_l(flag2))  .and. vd(optio_l(flag3))) then 
+  peeledii=data
+else
+  peeledii=imiss
+end if
+
+end function peeledii
+
+
+elemental integer(kind=int_b) function peeledbi(data,flaginv,flag1,flag2,flag3)
+
+integer(kind=int_b), intent(in) :: data
+integer, intent(in) :: flaginv
+integer, intent(in),optional :: flag1
+integer, intent(in),optional :: flag2
+integer, intent(in),optional :: flag3
+
+if (invalidated(optio_l(flaginv)) .and. vd(optio_l(flag1))  .and. vd(optio_l(flag2))  .and. vd(optio_l(flag3))) then 
+  peeledbi=data
+else
+  peeledbi=bmiss
+end if
+
+end function peeledbi
+
+
+elemental character(len=vol7d_cdatalen) function peeledci(data,flaginv,flag1,flag2,flag3)
+
+character(len=vol7d_cdatalen), intent(in) :: data
+integer, intent(in) :: flaginv
+integer, intent(in),optional :: flag1
+integer, intent(in),optional :: flag2
+integer, intent(in),optional :: flag3
+
+if (invalidated(optio_l(flaginv)) .and. vd(optio_l(flag1))  .and. vd(optio_l(flag2))  .and. vd(optio_l(flag3))) then 
+  peeledci=data
+else
+  peeledci=cmiss
+end if
+
+end function peeledci
+
 
 
 subroutine init_qcattrvars(this)
@@ -241,7 +334,7 @@ subroutine init_qcattrvars(this)
 type(qcattrvars),intent(inout) :: this
 integer :: i,j
 
-this%btables(:) =(/"*B33196","*B33192","*B33193","*B33194"/)
+this%btables(:) =qcattrvarsbtables
 do i =1, nqcattrvars
   call init(this%vars(i),this%btables(i))
 end do
@@ -272,10 +365,12 @@ do indqcattrvars =1,nqcattrvars
   if (associated(this%datiattr%b)) then
     inddatiattr     = firsttrue(attrvars%vars(indqcattrvars)  == this%datiattr%b) !indice attributo
 
+    !byte attributes !
+
     if (inddatiattr > 0) then  ! solo se c'è l'attributo
 
       do inddativar=1,size(this%dativar%r)   ! per tutte le variabili reali
-        inddativarattr  = firsttrue(this%dativar%r(inddativar)   == this%dativarattr%b)
+        inddativarattr  = this%dativar%r(inddativar)%b
         if (inddativarattr > 0) then         ! se la variabile ha quell'attributo (byte)
           this%voldatir(:,:,:,:,inddativar,:) = peeled(this%voldatir(:,:,:,:,inddativar,:), &
            this%voldatiattrb(:,:,:,:,inddativarattr,:,inddatiattr))
@@ -283,7 +378,7 @@ do indqcattrvars =1,nqcattrvars
       end do
 
       do inddativar=1,size(this%dativar%d)
-        inddativarattr  = firsttrue(this%dativar%d(inddativar)   == this%dativarattr%b)
+        inddativarattr  = this%dativar%d(inddativar)%b
         if (inddativarattr > 0) then
           this%voldatid(:,:,:,:,inddativar,:) = peeled(this%voldatid(:,:,:,:,inddativar,:), &
            this%voldatiattrb(:,:,:,:,inddativarattr,:,inddatiattr))
@@ -291,7 +386,7 @@ do indqcattrvars =1,nqcattrvars
       end do
 
       do inddativar=1,size(this%dativar%i)
-        inddativarattr  = firsttrue(this%dativar%i(inddativar)   == this%dativarattr%b)
+        inddativarattr  = this%dativar%i(inddativar)%b
         if (inddativarattr > 0) then
           this%voldatii(:,:,:,:,inddativar,:) = peeled(this%voldatii(:,:,:,:,inddativar,:), &
            this%voldatiattrb(:,:,:,:,inddativarattr,:,inddatiattr))
@@ -299,7 +394,7 @@ do indqcattrvars =1,nqcattrvars
       end do
 
       do inddativar=1,size(this%dativar%b)
-        inddativarattr  = firsttrue(this%dativar%b(inddativar)   == this%dativarattr%b)
+        inddativarattr  = this%dativar%b(inddativar)%b
         if (inddativarattr > 0) then
           this%voldatib(:,:,:,:,inddativar,:) = peeled(this%voldatib(:,:,:,:,inddativar,:), &
            this%voldatiattrb(:,:,:,:,inddativarattr,:,inddatiattr))
@@ -307,7 +402,7 @@ do indqcattrvars =1,nqcattrvars
       end do
 
       do inddativar=1,size(this%dativar%c)
-        inddativarattr  = firsttrue(this%dativar%c(inddativar)   == this%dativarattr%b)
+        inddativarattr  = this%dativar%c(inddativar)%b
         if (inddativarattr > 0) then
           this%voldatic(:,:,:,:,inddativar,:) = peeled(this%voldatic(:,:,:,:,inddativar,:), &
            this%voldatiattrb(:,:,:,:,inddativarattr,:,inddatiattr))
@@ -315,27 +410,64 @@ do indqcattrvars =1,nqcattrvars
       end do
 
     end if
+
+    !integer attributes !
+
+    if (inddatiattr > 0) then  ! solo se c'è l'attributo
+
+      do inddativar=1,size(this%dativar%r)   ! per tutte le variabili reali
+        inddativarattr  = this%dativar%r(inddativar)%i
+        if (inddativarattr > 0) then         ! se la variabile ha quell'attributo (byte)
+          this%voldatir(:,:,:,:,inddativar,:) = peeled(this%voldatir(:,:,:,:,inddativar,:), &
+           this%voldatiattri(:,:,:,:,inddativarattr,:,inddatiattr))
+        end if
+      end do
+
+      do inddativar=1,size(this%dativar%d)
+        inddativarattr  = this%dativar%d(inddativar)%i
+        if (inddativarattr > 0) then
+          this%voldatid(:,:,:,:,inddativar,:) = peeled(this%voldatid(:,:,:,:,inddativar,:), &
+           this%voldatiattri(:,:,:,:,inddativarattr,:,inddatiattr))
+        end if
+      end do
+
+      do inddativar=1,size(this%dativar%i)
+        inddativarattr  = this%dativar%i(inddativar)%i
+        if (inddativarattr > 0) then
+          this%voldatii(:,:,:,:,inddativar,:) = peeled(this%voldatii(:,:,:,:,inddativar,:), &
+           this%voldatiattri(:,:,:,:,inddativarattr,:,inddatiattr))
+        end if
+      end do
+
+      do inddativar=1,size(this%dativar%b)
+        inddativarattr  = this%dativar%b(inddativar)%i
+        if (inddativarattr > 0) then
+          this%voldatib(:,:,:,:,inddativar,:) = peeled(this%voldatib(:,:,:,:,inddativar,:), &
+           this%voldatiattri(:,:,:,:,inddativarattr,:,inddatiattr))
+        end if
+      end do
+
+      do inddativar=1,size(this%dativar%c)
+        inddativarattr  = this%dativar%c(inddativar)%i
+        if (inddativarattr > 0) then
+          this%voldatic(:,:,:,:,inddativar,:) = peeled(this%voldatic(:,:,:,:,inddativar,:), &
+           this%voldatiattri(:,:,:,:,inddativarattr,:,inddatiattr))
+        end if
+      end do
+
+    end if
+
   end if
 end do
 
-!!$do indana=1,size(this%ana)
-!!$  do  indnetwork=1,size(this%network)
-!!$    do indlevel=1,size(this%level)
-!!$      do indtimerange=1,size(this%timerange)
-!!$        do inddativarr=1,size(this%dativar%r)
-!!$          do indtime=1,size(this%time)
-!!$
-!!$            this%voldatir(indana,indtime,indlevel,indtimerange,inddativarr,indnetwork) = &
-!!$             peeled(this%voldatir(indana,indtime,indlevel,indtimerange,inddativarr,indnetwork),&
-!!$             this%voldatiattrb(indana,indtime,indlevel,indtimerange,inddativarr,indnetwork,indtbattrin))
-!!$              
-!!$          end do
-!!$        end do
-!!$      end do
-!!$    end do
-!!$  end do
-!!$end do
+IF (ASSOCIATED(this%voldatiattrr)) DEALLOCATE(this%voldatiattrr)
+IF (ASSOCIATED(this%voldatiattrd)) DEALLOCATE(this%voldatiattrd)
+IF (ASSOCIATED(this%voldatiattri)) DEALLOCATE(this%voldatiattri)
+IF (ASSOCIATED(this%voldatiattrb)) DEALLOCATE(this%voldatiattrb)
+IF (ASSOCIATED(this%voldatiattrc)) DEALLOCATE(this%voldatiattrc)
 
+CALL delete(this%datiattr)
+CALL delete(this%dativarattr)
 
 END SUBROUTINE vol7d_peeling
 

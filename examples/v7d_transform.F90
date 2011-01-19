@@ -763,6 +763,7 @@ USE grid_transform_class
 use volgrid6d_class
 USE geo_coord_class
 USE vol7d_csv
+USE modqc
 !USE ISO_FORTRAN_ENV
 IMPLICIT NONE
 
@@ -794,7 +795,7 @@ TYPE(vol7d_oraclesim) :: v7d_osim
 TYPE(vol7d_network) :: set_network_obj
 CHARACTER(len=network_name_len) :: set_network
 CHARACTER(len=32) :: dsn, user, password
-LOGICAL :: version, ldisplay
+LOGICAL :: version, ldisplay, disable_qc
 CHARACTER(len=512):: a_name
 INTEGER :: category
 
@@ -889,6 +890,9 @@ options(9) = op_option_new(' ', 'attribute-list', attribute_list, '', help= &
 options(10) = op_option_new(' ', 'set-network', set_network, '', help= &
  'if input-format is of database type, collapse all the input data into a single &
  &pseudo-network with the given name, empty for keeping the original networks')
+options(11) = op_option_new(' ', 'disable-qc', disable_qc, help= &
+ 'desable data removing based on SIMC quality control.')
+
 
 ! option for displaying/processing
 options(12) = op_option_new('d', 'display', ldisplay, help= &
@@ -1101,13 +1105,26 @@ IF (LEN_TRIM(anavariable_list) > 0) THEN
   DEALLOCATE(w_s, w_e)
 ENDIF
 IF (LEN_TRIM(attribute_list) > 0) THEN
+
+  IF (.not. disable_qc) then
+    CALL l4f_category_log(category,L4F_ERROR,'you cannot specify attribute list with quality control activated')
+    CALL raise_fatal_error()
+  end if
+
   n = word_split(attribute_list, w_s, w_e, ',')
   ALLOCATE(al(n))
   DO i = 1, n
     al(i) = attribute_list(w_s(i):w_e(i))
   ENDDO
   DEALLOCATE(w_s, w_e)
-ENDIF
+
+ELSE
+
+  ALLOCATE(al(nqcattrvars))
+  al=qcattrvarsbtables
+
+END IF
+
 ! time-related arguments
 s_d = datetime_new(isodate=start_date)
 e_d = datetime_new(isodate=end_date)
@@ -1288,6 +1305,11 @@ CALL vol7d_dballe_set_var_du(v7d)
 #endif
 
 IF (ldisplay) CALL display(v7d)
+
+
+! apply quality control data removing
+if ( .not. disable_qc) call vol7d_peeling(v7d)
+
 
 ! conversion to real required in these cases
 IF ((c_e(istat_proc) .AND. c_e(ostat_proc)) .OR. pre_trans_type /= '' .OR. &
