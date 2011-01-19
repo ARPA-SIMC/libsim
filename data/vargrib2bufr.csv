@@ -5,8 +5,10 @@ B10009,Geopotential height,,255,2,7,255,1.0,0.0
 B10007,Height,,255,2,8,255,1.0,0.0
 B12101,Temperature,K,255,2,11,255,1.0,0.0
 B12101,Temperature,K,98,128,130,255,1.0,0.0
+B12101,Temperature,K,98,128,167,255,1.0,0.0
 B12030,Soil Temperature,,255,2,85,255,1.0,0.0
 B12103,Dew point temperature,,255,2,17,255,1.0,0.0
+B12103,Dew point temperature,,98,128,168,255,1.0,0.0
 B11003,U-component of wind,m/s,255,2,33,255,1.0,0.0
 B11003,U-component of wind,m/s,98,128,131,255,1.0,0.0
 B11004,V-component of wind,m/s,255,2,34,255,1.0,0.0
