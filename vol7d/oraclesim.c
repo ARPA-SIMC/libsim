@@ -6,7 +6,7 @@
 #include "config.h"
 
 #define DATELEN 13
-#define CVALLEN 257
+#define CVALLEN 8
 #define FLAGLEN 10
 #define TABLEN 16
 #define MSGLEN 256
@@ -84,7 +84,7 @@ static char *query1 = (char *)
   "SELECT TO_CHAR(a.dset_istante_wmo_fine,'YYYYMMDDHH24MI'), \
 a.dset_stam_identnr,a.vard_identnr, \
 NVL(a.valore_principale,1.0E+15),NVL(a.valore_ausiliario,1.0E+15), \
-LPAD(NVL(a.flag,'000000000'), 9, '0') \
+NVL(valore_chiaro, ' '),LPAD(NVL(a.flag,'000000000'), 9, '0') \
 FROM ";
 
 static char *query2 = (char *)
@@ -134,7 +134,7 @@ int FC_FUNC_(oraclesim_getdatahead, ORACLESIM_GETDATAHEAD)
      (OracleDbConnection **, char *, char *, int *, int *, int *);
 int FC_FUNC_(oraclesim_getdatavol, ORACLESIM_GETDATAVOL)
      (OracleDbConnection **, int *, int *, char *, int *, int *,
-      float *, float */* , char * */, char *, float *);
+      float *, float *, char *, char *, float *);
 int FC_FUNC_(oraclesim_getanahead, ORACLESIM_GETANAHEAD)
      (OracleDbConnection **, int *);
 int FC_FUNC_(oraclesim_getanavol, ORACLESIM_GETANAVOL)
@@ -148,7 +148,7 @@ int FC_FUNC_(oraclesim_getvarvol, ORACLESIM_GETVARVOL)
       int *, int *, int *, int *);
      static int gettab(OracleDbConnection *, int *, int, int *);
 static void datadefine(OracleDbConnection *,
-		       char *, int, int *, int *, float *, float *, char *, int);
+		       char *, int, int *, int *, float *, float *, char *, char *, int, int);
 static void anadefine(OracleDbConnection *,
 		      int *, double *, double *, float *, float *, char *, char *, int);
 static void vardefine(OracleDbConnection *,
@@ -357,7 +357,7 @@ int gettab(OracleDbConnection *dbconnid, int *var, int nvar, int *net) {
 
 void datadefine(OracleDbConnection *dbconnid,
 		char *odate, int datelen, int *ostatid, int *ovarid,
-		float *ovalp, float *ovala, char *oflag, int flaglen) {
+		float *ovalp, float *ovala, char *ovalc, char *oflag, int cvallen, int flaglen) {
 
   checkerr(dbconnid, OCIDefineByPos(dbconnid->stmthp, &dbconnid->defn1p,
  				    dbconnid->errhp, 1,
@@ -391,6 +391,12 @@ void datadefine(OracleDbConnection *dbconnid,
 
   checkerr(dbconnid, OCIDefineByPos(dbconnid->stmthp, &dbconnid->defn6p,
 				    dbconnid->errhp, 6,
+				    (dvoid *) ovalc, cvallen, SQLT_STR,
+				    (dvoid *) 0,
+				    (ub2 *) 0, (ub2 *) 0, OCI_DEFAULT));
+
+  checkerr(dbconnid, OCIDefineByPos(dbconnid->stmthp, &dbconnid->defn6p,
+				    dbconnid->errhp, 7,
 				    (dvoid *) oflag, flaglen, SQLT_STR,
 				    (dvoid *) 0,
 				    (ub2 *) 0, (ub2 *) 0, OCI_DEFAULT));
@@ -407,7 +413,7 @@ int FC_FUNC_(oraclesim_getdatahead, ORACLESIM_GETDATAHEAD)
 
   /* valori validi =1, mancanti =-1,  inutilizzati per ora, ci pensa la query */
   /*   sb2 otab_ind, ovalp_ind, ovala_ind, oflag_ind; */
-  char odate[DATELEN]/* , ovalc[CVALLEN]*/, oflag[FLAGLEN];
+  char odate[DATELEN], ovalc[CVALLEN], oflag[FLAGLEN];
   int ostatid, ovarid;
   float ovalp, ovala;
 
@@ -463,7 +469,7 @@ int FC_FUNC_(oraclesim_getdatahead, ORACLESIM_GETDATAHEAD)
 				   OCI_DEFAULT));
 
   /* definisco l'uscita */
-  datadefine(dbconnid, odate, DATELEN, &ostatid, &ovarid, &ovalp, &ovala, oflag, FLAGLEN);
+  datadefine(dbconnid, odate, DATELEN, &ostatid, &ovarid, &ovalp, &ovala, ovalc, oflag, CVALLEN, FLAGLEN);
   return countrows(dbconnid);
 }
 
@@ -471,13 +477,13 @@ int FC_FUNC_(oraclesim_getdatahead, ORACLESIM_GETDATAHEAD)
 int FC_FUNC_(oraclesim_getdatavol, ORACLESIM_GETDATAVOL)
      (OracleDbConnection **fdbconnid, int *nr, int *vnr, 
       char *odate, int *ostatid, int *ovarid,
-      float *ovalp, float *ovala /*, char *ovalc */, char *oflag, float *rmiss) {
+      float *ovalp, float *ovala, char *ovalc, char *oflag, float *rmiss) {
   OracleDbConnection *dbconnid = *fdbconnid;
   sword status;
   int i, ret;
 
   /* definisco l'uscita */
-  datadefine(dbconnid, odate, DATELEN, ostatid, ovarid, ovalp, ovala, oflag, FLAGLEN);
+  datadefine(dbconnid, odate, DATELEN, ostatid, ovarid, ovalp, ovala, ovalc, oflag, CVALLEN, FLAGLEN);
 
   status=checkerr(dbconnid, OCIStmtFetch2(dbconnid->stmthp, dbconnid->errhp,
 					  (ub4) *nr, OCI_FETCH_FIRST, (sb4) 0,

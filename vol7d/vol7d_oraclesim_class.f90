@@ -67,24 +67,23 @@ INTEGER(kind=ptr_c),EXTERNAL :: oraclesim_init
 
 INTEGER,ALLOCATABLE ::stazo(:), varo(:), valid(:)
 REAL,ALLOCATABLE :: valore1(:), valore2(:)
-INTEGER(kind=int_b),ALLOCATABLE :: cdatao(:,:), cflag(:,:)
-!CHARACTER(len=1),ALLOCATABLE :: valore3(:)
+INTEGER(kind=int_b),ALLOCATABLE :: cdatao(:,:), cflag(:,:), valore3(:,:)
 CHARACTER(len=12),ALLOCATABLE :: fdatao(:)
 INTEGER :: nmax=0, nact=0, nvarmax=0
 INTEGER,PARAMETER :: nmaxmin=100000, nmaxmax=5000000, oraclesim_netmax=50, &
- datelen=13, flaglen=10
+ datelen=13, flaglen=10, cvallen=8
  
 ! tabelle nuove di conversione variabili da btable a oraclesim
 TYPE(ora_var_conv_static),ALLOCATABLE :: vartable_s(:)
 TYPE(ora_var_conv_db),ALLOCATABLE :: vartable_db(:)
 ! attributi di dati disponibili
-TYPE(attr_builder) :: dataattr_builder(6) = (/ &
- attr_builder('*B33195', 1), &
- attr_builder('*B33192', 1), &
- attr_builder('*B33193', 1), &
- attr_builder('*B33194', 1), &
- attr_builder('*B33196', 1), &
- attr_builder('*B33197', 1) /)
+TYPE(attr_builder) :: dataattr_builder(6) = (/ & ! types: rdibc
+ attr_builder('*B33195', 3), &
+ attr_builder('*B33192', 4), &
+ attr_builder('*B33193', 4), &
+ attr_builder('*B33194', 4), &
+ attr_builder('*B33196', 4), &
+ attr_builder('*B33197', 4) /)
 
 ! tabella reti e anagrafica
 TYPE(vol7d) :: netana(oraclesim_netmax)
@@ -258,11 +257,11 @@ END SUBROUTINE vol7d_oraclesim_delete
 !!
 !! Gli attributi di dati attualmente disponibili sono:
 !!  - '*B33195' MeteoDB variable ID (intero)
-!!  - '*B33192' Climatological and consistency check (intero)
-!!  - '*B33193' Time consistency (intero)
-!!  - '*B33194' Space consistency (intero)
-!!  - '*B33196' Data has been invalidated (intero)
-!!  - '*B33197' Manual replacement in substitution (intero)
+!!  - '*B33192' Climatological and consistency check (byte)
+!!  - '*B33193' Time consistency (byte)
+!!  - '*B33194' Space consistency (byte)
+!!  - '*B33196' Data has been invalidated (byte)
+!!  - '*B33197' Manual replacement in substitution (byte)
 !!
 !! Non sono attualmente previsti attributi di anagrafica.
 !!
@@ -325,10 +324,11 @@ INTEGER,ALLOCATABLE :: anatmp(:), vartmp(:), mapdatao(:), mapstazo(:), varlist(:
 LOGICAL,ALLOCATABLE :: lana(:)
 LOGICAL :: found, non_valid, lnon_valid, varbt_req(nvarmax)
 INTEGER(kind=int_b) :: msg(256)
-LOGICAL :: lanar(netana_nvarr), lanai(netana_nvari), lanac(netana_nvarc)
+LOGICAL :: lanar(netana_nvarr), lanai(netana_nvari), lanac(netana_nvarc), &
+ full_qcinfo
 ! per attributi
 INTEGER :: attr_in_ind(SIZE(dataattr_builder)), &
- attr_out_ind(SIZE(dataattr_builder)), nda_type(2)
+ attr_out_ind(SIZE(dataattr_builder)), nda_type(5)
 
 CALL getval(timei, simpledate=datai)
 CALL getval(timef, simpledate=dataf)
@@ -407,6 +407,9 @@ IF (PRESENT(attr)) THEN
     ENDIF
   ENDDO
 ENDIF
+! B33192, B33196, B33197 allow full qc, update when necessary
+full_qcinfo = (attr_out_ind(2) /= 0) .AND. (attr_out_ind(5) /= 0) .AND. &
+ (attr_out_ind(6) /= 0)
 
 ! Comincio l'estrazione
 nobs = oraclesim_getdatahead(this%connid, fchar_to_cstr(datai), &
@@ -420,7 +423,7 @@ CALL l4f_log(L4F_INFO, 'in oraclesim_getdatahead, nobs='//TRIM(to_char(nobs)))
 
 CALL vol7d_oraclesim_alloc(nobs) ! Mi assicuro di avere spazio
 i = oraclesim_getdatavol(this%connid, nobs, nobso, cdatao, stazo, varo, valore1, &
- valore2, cflag, rmiss)
+ valore2, valore3, cflag, rmiss)
 IF (i /= 0) THEN
   CALL oraclesim_geterr(this%connid, msg)
   CALL l4f_log(L4F_FATAL, 'in oraclesim_getdatavol, '//TRIM(cstr_to_fchar(msg)))
@@ -430,26 +433,13 @@ ENDIF
 nobs = nobso ! sbagliato? ne prende comunque nobs!? forse MIN(nobs, nobso)?
 DO i = 1, nobs
   fdatao(i) = cstr_to_fchar(cdatao(:,i)) ! Converto la data da char C a CHARACTER
-  IF (c_e(make_qcflag_inv(cflag(:,i))) .OR. c_e(make_qcflag_invaut(cflag(:,i)))) THEN
-! dato invalidato manualmente o automaticamente
-    valore1(i) = rmiss ! forzo dato mancante
-  ELSE IF (c_e(make_qcflag_repl(cflag(:,i)))) THEN ! dato modificato manualmente
-! il valore buono e` il secondo a meno che esso non sia mancante
-! come nei casi indicati da vpavan@arpa.emr.it e-mail del 14/07/2008:
-! ==
-! variabile precipitazione o bagnatura fogliare. I dati originali
-! (cumulate) saltano una mezzora, o piu` di una, ma il dato successivo al
-! periodo mancante e` uguale all'ultimo dato buono. Se ne desume che non
-! e` piovuto per tutto il periodo e il valore 0 viene immesso nel primo
-! campo.
-! ==
-! in tal caso e` buono il primo
-
-! tutto quanto detto sopra non e` vero, lo teniamo buono
-!    IF (valore2(i) /= rmiss) valore1(i) = valore2(i)
+  IF (full_qcinfo) THEN
+    CALL oraclesim_decode_value(valore1(i), valore2(i), valore3(:,i), cflag(:,i))
+  ELSE
+    CALL oraclesim_decode_value_simple(valore1(i), valore2(i), valore3(:,i), cflag(:,i))
   ENDIF
-
 ENDDO
+
 non_valid = .FALSE. ! ottimizzazione per la maggior parte dei casi
 nana = count_distinct(stazo(1:nobs), back=.TRUE.)
 ntime = count_distinct(fdatao(1:nobs), back=.TRUE.)
@@ -542,8 +532,12 @@ DO i = 1, nvar
 
   CALL vol7d_alloc(v7dtmp, ntime=ntime, nana=nana, &
    nlevel=1, ntimerange=1, nnetwork=1, ndativarr=1, &
-   ndatiattri=nda_type(1), ndatiattrc=nda_type(2), &
-   ndativarattri=MIN(nda_type(1),1), ndativarattrc=MIN(nda_type(2),1)) ! per var/attr 0=.NOT.PRESENT()
+   ndatiattrr=nda_type(1), ndatiattrd=nda_type(2), &
+   ndatiattri=nda_type(3), ndatiattrb=nda_type(4), &
+   ndatiattrc=nda_type(5), &
+   ndativarattrr=MIN(nda_type(1),1), ndativarattrd=MIN(nda_type(2),1), &
+   ndativarattri=MIN(nda_type(3),1), ndativarattrb=MIN(nda_type(4),1), &
+   ndativarattrc=MIN(nda_type(5),1)) ! per var/attr 0=.NOT.PRESENT()
 
   IF (i == 1) THEN ! la prima volta inizializzo i descrittori fissi
     IF (PRESENT(set_network)) THEN
@@ -608,8 +602,14 @@ DO i = 1, nvar
   v7dtmp%timerange(1) = vartable_db(vartmp(i))%timerange
 
 ! Copio la variabile per gli attributi
+  IF (ASSOCIATED(v7dtmp%dativarattr%r)) &
+   v7dtmp%dativarattr%r(1) = v7dtmp%dativar%r(1)
+  IF (ASSOCIATED(v7dtmp%dativarattr%d)) &
+   v7dtmp%dativarattr%d(1) = v7dtmp%dativar%r(1)
   IF (ASSOCIATED(v7dtmp%dativarattr%i)) &
    v7dtmp%dativarattr%i(1) = v7dtmp%dativar%r(1)
+  IF (ASSOCIATED(v7dtmp%dativarattr%b)) &
+   v7dtmp%dativarattr%b(1) = v7dtmp%dativar%r(1)
   IF (ASSOCIATED(v7dtmp%dativarattr%c)) &
    v7dtmp%dativarattr%c(1) = v7dtmp%dativar%r(1)
 
@@ -617,9 +617,18 @@ DO i = 1, nvar
   DO j = 1, SIZE(dataattr_builder)
     IF (attr_in_ind(j) > 0 .AND. attr_out_ind(j) > 0) THEN
       IF (dataattr_builder(j)%vartype == 1) THEN
-        CALL init(v7dtmp%datiattr%i(attr_out_ind(j)), &
+        CALL init(v7dtmp%datiattr%r(attr_out_ind(j)), &
          attr(attr_in_ind(j)), unit='NUMERIC', scalefactor=0)
       ELSE IF (dataattr_builder(j)%vartype == 2) THEN
+        CALL init(v7dtmp%datiattr%d(attr_out_ind(j)), &
+         attr(attr_in_ind(j)), unit='NUMERIC', scalefactor=0)
+      ELSE IF (dataattr_builder(j)%vartype == 3) THEN
+        CALL init(v7dtmp%datiattr%i(attr_out_ind(j)), &
+         attr(attr_in_ind(j)), unit='NUMERIC', scalefactor=0)
+      ELSE IF (dataattr_builder(j)%vartype == 4) THEN
+        CALL init(v7dtmp%datiattr%b(attr_out_ind(j)), &
+         attr(attr_in_ind(j)), unit='NUMERIC', scalefactor=0)
+      ELSE IF (dataattr_builder(j)%vartype == 5) THEN
         CALL init(v7dtmp%datiattr%c(attr_out_ind(j)), &
          attr(attr_in_ind(j)), unit='CCITTIA5', scalefactor=0)
       ENDIF
@@ -646,35 +655,35 @@ DO i = 1, nvar
   IF (attr_out_ind(2) > 0) THEN
     DO j = 1, nobs
       IF (varo(j) /= vartmp(i)) CYCLE
-      v7dtmp%voldatiattri(mapstazo(j),mapdatao(j),1,1,1,1,attr_out_ind(2)) = &
+      v7dtmp%voldatiattrb(mapstazo(j),mapdatao(j),1,1,1,1,attr_out_ind(2)) = &
        make_qcflag_clim(cflag(:,j))
     ENDDO
   ENDIF
   IF (attr_out_ind(3) > 0) THEN
     DO j = 1, nobs
       IF (varo(j) /= vartmp(i)) CYCLE
-      v7dtmp%voldatiattri(mapstazo(j),mapdatao(j),1,1,1,1,attr_out_ind(3)) = &
+      v7dtmp%voldatiattrb(mapstazo(j),mapdatao(j),1,1,1,1,attr_out_ind(3)) = &
        make_qcflag_time(cflag(:,j))
     ENDDO
   ENDIF
   IF (attr_out_ind(4) > 0) THEN
     DO j = 1, nobs
       IF (varo(j) /= vartmp(i)) CYCLE
-      v7dtmp%voldatiattri(mapstazo(j),mapdatao(j),1,1,1,1,attr_out_ind(4)) = &
+      v7dtmp%voldatiattrb(mapstazo(j),mapdatao(j),1,1,1,1,attr_out_ind(4)) = &
        make_qcflag_space(cflag(:,j))
     ENDDO
   ENDIF
   IF (attr_out_ind(5) > 0) THEN
     DO j = 1, nobs
       IF (varo(j) /= vartmp(i)) CYCLE
-      v7dtmp%voldatiattri(mapstazo(j),mapdatao(j),1,1,1,1,attr_out_ind(5)) = &
+      v7dtmp%voldatiattrb(mapstazo(j),mapdatao(j),1,1,1,1,attr_out_ind(5)) = &
        make_qcflag_inv(cflag(:,j))
     ENDDO
   ENDIF
   IF (attr_out_ind(6) > 0) THEN
     DO j = 1, nobs
       IF (varo(j) /= vartmp(i)) CYCLE
-      v7dtmp%voldatiattri(mapstazo(j),mapdatao(j),1,1,1,1,attr_out_ind(6)) = &
+      v7dtmp%voldatiattrb(mapstazo(j),mapdatao(j),1,1,1,1,attr_out_ind(6)) = &
        make_qcflag_repl(cflag(:,j))
     ENDDO
   ENDIF
@@ -776,9 +785,9 @@ SUBROUTINE vol7d_oraclesim_alloc(n)
 INTEGER,INTENT(in) :: n
 
 IF (nmax >= n) RETURN ! c'e' gia' posto sufficiente
-IF (ALLOCATED(stazo)) DEALLOCATE(stazo, varo, valid, valore1, valore2, &
+IF (ALLOCATED(stazo)) DEALLOCATE(stazo, varo, valid, valore1, valore2, valore3, &
  cdatao, fdatao, cflag)
-ALLOCATE(stazo(n), varo(n), valid(n), valore1(n), valore2(n), &
+ALLOCATE(stazo(n), varo(n), valid(n), valore1(n), valore2(n), valore3(cvallen, n), &
  cdatao(datelen, n), fdatao(n), cflag(flaglen,n))
 
 nmax = n
@@ -798,7 +807,7 @@ DO i = 1, oraclesim_netmax
     networktable(i) = .FALSE.
   ENDIF
 ENDDO
-IF (ALLOCATED(stazo)) DEALLOCATE(stazo, varo, valid, valore1, valore2, &
+IF (ALLOCATED(stazo)) DEALLOCATE(stazo, varo, valid, valore1, valore2, valore3, &
  cdatao, fdatao, cflag)
 nmax = 0
 
@@ -982,7 +991,7 @@ END FUNCTION vol7d_oraclesim_get_netid
 ! CdQ climatologico
 FUNCTION make_qcflag_clim(simflag) RESULT(flag)
 INTEGER(kind=int_b) :: simflag(flaglen)
-INTEGER :: flag
+INTEGER(kind=int_b) :: flag
 
 flag = make_qcflag(simflag(2:3))
 
@@ -991,7 +1000,7 @@ END FUNCTION make_qcflag_clim
 ! CdQ temporale
 FUNCTION make_qcflag_time(simflag) RESULT(flag)
 INTEGER(kind=int_b) :: simflag(flaglen)
-INTEGER :: flag
+INTEGER(kind=int_b) :: flag
 
 flag = make_qcflag(simflag(4:5))
 
@@ -1000,7 +1009,7 @@ END FUNCTION make_qcflag_time
 ! CdQ spaziale
 FUNCTION make_qcflag_space(simflag) RESULT(flag)
 INTEGER(kind=int_b) :: simflag(flaglen)
-INTEGER :: flag
+INTEGER(kind=int_b) :: flag
 
 flag = make_qcflag(simflag(6:7))
 
@@ -1010,29 +1019,35 @@ END FUNCTION make_qcflag_space
 ! carattere, '00' equivale a flag assente
 FUNCTION make_qcflag(simflag) RESULT(flag)
 INTEGER(kind=int_b) :: simflag(2)
-INTEGER :: flag
+INTEGER(kind=int_b) :: flag
 
-! [48,54] => [-2,4]
+REAL :: rflag
+! [48,54] => [-2,4] no! [100.,0.]
 ! 48 = bene, 53 = male
 ! 54 = fuori dai limiti del sensore
 ! 00 = missing
-flag = (simflag(1)-ICHAR('0'))*10 + simflag(2)-ICHAR('0') - 50
-IF (flag <= -2 .OR. flag > 4) flag = imiss
+rflag = 100. - &
+ (((simflag(1)-ICHAR('0'))*10 + simflag(2)-ICHAR('0')) - 48.)*100./6.
+IF (rflag < 0. .OR. rflag > 100.) THEN
+  flag = bmiss
+ELSE
+  flag = NINT(rflag)
+ENDIF
 
 END FUNCTION make_qcflag
 
-! Gestione flag di qualita` fase 0.1, per compatibilita` con quanto
-! fatto da dballe, queste funzioni restituiscono 0 se la flag
-! richiesta e` presente o dato mancante se essa e` assente.
+! Gestione flag di qualita`, per compatibilita` con quanto fatto da
+! dballe, queste funzioni restituiscono 0 se la flag richiesta e`
+! presente o dato mancante se essa e` assente.
 ! Dato invalidato manualmente
 FUNCTION make_qcflag_inv(simflag) RESULT(flag)
 INTEGER(kind=int_b) :: simflag(flaglen)
-INTEGER :: flag
+INTEGER(kind=int_b) :: flag
 
 IF (simflag(1) == ICHAR('1')) THEN
-  flag = 0
+  flag = 1 ! 1 the value has been substituted, 0 the value is the original value
 ELSE
-  flag = imiss
+  flag = bmiss
 ENDIF
 
 END FUNCTION make_qcflag_inv
@@ -1040,29 +1055,60 @@ END FUNCTION make_qcflag_inv
 ! Dato modificato manualmente
 FUNCTION make_qcflag_repl(simflag) RESULT(flag)
 INTEGER(kind=int_b) :: simflag(flaglen)
-INTEGER :: flag
+INTEGER(kind=int_b) :: flag
 
 IF (simflag(1) == ICHAR('2')) THEN
   flag = 0
 ELSE
-  flag = imiss
+  flag = bmiss
 ENDIF
 
 END FUNCTION make_qcflag_repl
 
-! Dato invalidato automaticamente da cambiare
-FUNCTION make_qcflag_invaut(simflag) RESULT(flag)
-INTEGER(kind=int_b) :: simflag(flaglen)
-INTEGER :: flag
 
-IF (simflag(1) == ICHAR('3')) THEN
-  flag = 0
+SUBROUTINE oraclesim_decode_value(valore1, valore2, valore3, cflag)
+REAL,INTENT(inout) :: valore1
+REAL,INTENT(in) :: valore2
+INTEGER(kind=int_b),INTENT(in) :: valore3(cvallen), cflag(flaglen)
+
+CHARACTER(len=cvallen) :: cval
+INTEGER :: v3
+
+IF (cflag(1) == ICHAR('0') .OR. cflag(1) == ICHAR('1')) THEN
+  IF (valore3(1) /= ICHAR(' ')) THEN
+    cval = cstr_to_fchar(valore3)
+    READ(v3,'(I8)',end=100,err=100)cval
+    IF (v3 < 0) valore1 = rmiss
+  ENDIF
+ELSE IF (cflag(1) == ICHAR('2')) THEN
+  valore1 = valore2
 ELSE
-  flag = imiss
+  valore1 = rmiss
 ENDIF
 
-END FUNCTION make_qcflag_invaut
+RETURN
+! error in decoding valore3
+100 valore1 = rmiss
+RETURN
 
+END SUBROUTINE oraclesim_decode_value
+
+
+SUBROUTINE oraclesim_decode_value_simple(valore1, valore2, valore3, cflag)
+REAL,INTENT(inout) :: valore1
+REAL,INTENT(in) :: valore2
+INTEGER(kind=int_b),INTENT(in) :: valore3(cvallen), cflag(flaglen)
+
+! simplified algorithm
+IF (cflag(1) == ICHAR('1')) THEN
+  valore1 = rmiss
+ELSE IF (cflag(1) == ICHAR('2')) THEN
+  valore1 = valore2
+ENDIF
+
+IF (make_qcflag_clim(cflag) < 100) valore1 = rmiss
+
+END SUBROUTINE oraclesim_decode_value_simple
 
 END MODULE vol7d_oraclesim_class
 
