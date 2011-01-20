@@ -15,7 +15,7 @@
 
 ! You should have received a copy of the GNU General Public License
 ! along with this program.  If not, see <http://www.gnu.org/licenses/>.
-MODULE vol7d_csv
+MODULE vol7d_csv_internal
 USE vol7d_class
 USE vol7d_utilities
 USE file_utilities
@@ -332,11 +332,11 @@ END SUBROUTINE csv_export
 
 
 SUBROUTINE make_csv_desdata(v7d, icol, ind, csv_desdata, mapper)
-TYPE(vol7d),INTENT(inout) :: v7d
+TYPE(vol7d),INTENT(in) :: v7d
 INTEGER,INTENT(in) :: icol
 INTEGER,INTENT(in) :: ind
 TYPE(csv_record),INTENT(inout) :: csv_desdata
-TYPE(vol7d_var_mapper) :: mapper(:)
+TYPE(vol7d_var_mapper),INTENT(in) :: mapper(:)
 
 REAL(kind=fp_geo) :: l1, l2
 CHARACTER(len=128) :: charbuffer
@@ -735,7 +735,7 @@ END SUBROUTINE addfieldb
 
 END SUBROUTINE add_val
 
-END MODULE vol7d_csv
+END MODULE vol7d_csv_internal
 
 
 PROGRAM v7d_transform
@@ -762,7 +762,7 @@ USE gridinfo_class
 USE grid_transform_class
 use volgrid6d_class
 USE geo_coord_class
-USE vol7d_csv
+USE vol7d_csv_internal
 USE modqc
 !USE ISO_FORTRAN_ENV
 IMPLICIT NONE
@@ -776,7 +776,7 @@ CHARACTER(len=512) :: input_file, output_file, output_format, output_template, &
  network_list, variable_list, anavariable_list, attribute_list, coord_file
 CHARACTER(len=160) :: pre_trans_type
 TYPE(vol7d_network), ALLOCATABLE :: nl(:)
-CHARACTER(len=10), ALLOCATABLE :: vl(:), avl(:), al(:)
+CHARACTER(len=10), ALLOCATABLE :: vl(:), avl(:), al(:), alqc(:)
 CHARACTER(len=23) :: start_date, end_date
 CHARACTER(len=19) :: start_date_default, end_date_default
 TYPE(datetime) :: now, s_d, e_d
@@ -1106,11 +1106,6 @@ IF (LEN_TRIM(anavariable_list) > 0) THEN
 ENDIF
 IF (LEN_TRIM(attribute_list) > 0) THEN
 
-  IF (.not. disable_qc) then
-    CALL l4f_category_log(category,L4F_ERROR,'you cannot specify attribute list with quality control activated')
-    CALL raise_fatal_error()
-  end if
-
   n = word_split(attribute_list, w_s, w_e, ',')
   ALLOCATE(al(n))
   DO i = 1, n
@@ -1118,12 +1113,42 @@ IF (LEN_TRIM(attribute_list) > 0) THEN
   ENDDO
   DEALLOCATE(w_s, w_e)
 
-ELSE
+  IF (.NOT.disable_qc) THEN ! add qc variables not specified yet to alqc
 
-  ALLOCATE(al(nqcattrvars))
-  al=qcattrvarsbtables
+    DO i = 1, nqcattrvars
+      IF (ALL(qcattrvarsbtables(i) /= al(:))) THEN
+        n = n + 1
+      ENDIF
+    ENDDO
+    ALLOCATE(alqc(n))
+    alqc(1:SIZE(al)) = al(:)
 
-END IF
+    n = SIZE(al)
+    DO i = 1, nqcattrvars
+      IF (ALL(qcattrvarsbtables(i) /= al(:))) THEN
+        n = n + 1
+        alqc(n) = qcattrvarsbtables(i)
+      ENDIF
+    ENDDO
+
+  ELSE ! duplicate al
+
+    ALLOCATE(alqc(n))
+    alqc(1:SIZE(al)) = al(:)
+
+  ENDIF
+
+ELSE ! no attributes requested
+
+  ALLOCATE(al(0)) ! an empty al is required for safety
+  IF (.NOT.disable_qc) THEN ! set alqc to qc variables
+    ALLOCATE(alqc(nqcattrvars))
+    alqc(:) = qcattrvarsbtables(:)
+  ELSE ! an empty alqc is required for safety
+    ALLOCATE(alqc(0))
+  ENDIF
+
+ENDIF
 
 ! time-related arguments
 s_d = datetime_new(isodate=start_date)
@@ -1243,13 +1268,22 @@ DO ninput = optind, iargc()-1
       file=.FALSE.
     ENDIF
     
-    CALL init(v7d_dba, filename=input_file, FORMAT=input_format,dsn=dsn, user=user, password=password, file=file)
+    CALL init(v7d_dba, filename=input_file, FORMAT=input_format, &
+     dsn=dsn, user=user, password=password, file=file)
 
-    if ( any(c_e(nl))) then
-      CALL import(v7d_dba, vl, nl, timei=s_d, timef=e_d)
-    else
-      CALL import(v7d_dba, vl,     timei=s_d, timef=e_d)
-    end if
+    IF (SIZE(al) > 0) THEN ! the user asked for attributes, alqc then has to be used
+      IF (ANY(c_e(nl))) THEN
+        CALL import(v7d_dba, vl, nl, attr=alqc, timei=s_d, timef=e_d)
+      ELSE
+        CALL import(v7d_dba, vl, attr=alqc, timei=s_d, timef=e_d)
+      ENDIF
+    ELSE
+      IF (ANY(c_e(nl))) THEN ! no attributes requested, use the default (get all attr?)
+        CALL import(v7d_dba, vl, nl, timei=s_d, timef=e_d)
+      ELSE
+        CALL import(v7d_dba, vl, timei=s_d, timef=e_d)
+      ENDIF
+    ENDIF
 
     v7dtmp = v7d_dba%vol7d
     CALL init(v7d_dba%vol7d) ! nullify without deallocating
@@ -1277,7 +1311,7 @@ DO ninput = optind, iargc()-1
       set_network_obj = vol7d_network_miss
     ENDIF
     IF (SIZE(vl) > 0) THEN
-      CALL import(v7d_osim, vl, nl, timei=s_d, timef=e_d, anavar=avl, attr=al, &
+      CALL import(v7d_osim, vl, nl, timei=s_d, timef=e_d, anavar=avl, attr=alqc, &
        set_network=set_network_obj)
     ELSE
       CALL import(v7d_osim, nl, anavar=avl, &
@@ -1308,8 +1342,7 @@ IF (ldisplay) CALL display(v7d)
 
 
 ! apply quality control data removing
-if ( .not. disable_qc) call vol7d_peeling(v7d)
-
+IF (.NOT.disable_qc) CALL vol7d_peeling(v7d, keep_attr=al)
 
 ! conversion to real required in these cases
 IF ((c_e(istat_proc) .AND. c_e(ostat_proc)) .OR. pre_trans_type /= '' .OR. &

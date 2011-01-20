@@ -433,11 +433,7 @@ ENDIF
 nobs = nobso ! sbagliato? ne prende comunque nobs!? forse MIN(nobs, nobso)?
 DO i = 1, nobs
   fdatao(i) = cstr_to_fchar(cdatao(:,i)) ! Converto la data da char C a CHARACTER
-  IF (full_qcinfo) THEN
-    CALL oraclesim_decode_value(valore1(i), valore2(i), valore3(:,i), cflag(:,i))
-  ELSE
-    CALL oraclesim_decode_value_simple(valore1(i), valore2(i), valore3(:,i), cflag(:,i))
-  ENDIF
+  CALL oraclesim_decode_value(valore1(i), valore2(i), valore3(:,i), cflag(:,i))
 ENDDO
 
 non_valid = .FALSE. ! ottimizzazione per la maggior parte dei casi
@@ -1045,7 +1041,7 @@ INTEGER(kind=int_b) :: simflag(flaglen)
 INTEGER(kind=int_b) :: flag
 
 IF (simflag(1) == ICHAR('1')) THEN
-  flag = 1 ! 1 the value has been substituted, 0 the value is the original value
+  flag = 0
 ELSE
   flag = bmiss
 ENDIF
@@ -1058,7 +1054,7 @@ INTEGER(kind=int_b) :: simflag(flaglen)
 INTEGER(kind=int_b) :: flag
 
 IF (simflag(1) == ICHAR('2')) THEN
-  flag = 0
+  flag = 1 ! 1 the value has been substituted, 0 the value is the original value
 ELSE
   flag = bmiss
 ENDIF
@@ -1094,21 +1090,21 @@ RETURN
 END SUBROUTINE oraclesim_decode_value
 
 
-SUBROUTINE oraclesim_decode_value_simple(valore1, valore2, valore3, cflag)
-REAL,INTENT(inout) :: valore1
-REAL,INTENT(in) :: valore2
-INTEGER(kind=int_b),INTENT(in) :: valore3(cvallen), cflag(flaglen)
-
-! simplified algorithm
-IF (cflag(1) == ICHAR('1')) THEN
-  valore1 = rmiss
-ELSE IF (cflag(1) == ICHAR('2')) THEN
-  valore1 = valore2
-ENDIF
-
-IF (make_qcflag_clim(cflag) < 100) valore1 = rmiss
-
-END SUBROUTINE oraclesim_decode_value_simple
+!SUBROUTINE oraclesim_decode_value_simple(valore1, valore2, valore3, cflag)
+!REAL,INTENT(inout) :: valore1
+!REAL,INTENT(in) :: valore2
+!INTEGER(kind=int_b),INTENT(in) :: valore3(cvallen), cflag(flaglen)
+!
+!! simplified algorithm
+!IF (cflag(1) == ICHAR('1')) THEN
+!  valore1 = rmiss
+!ELSE IF (cflag(1) == ICHAR('2')) THEN
+!  valore1 = valore2
+!ENDIF
+!
+!IF (make_qcflag_clim(cflag) < 100) valore1 = rmiss
+!
+!END SUBROUTINE oraclesim_decode_value_simple
 
 END MODULE vol7d_oraclesim_class
 
