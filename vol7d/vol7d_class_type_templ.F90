@@ -172,11 +172,16 @@ IF (ASSOCIATED(v7dtmp%anaattr%/**/VOL7D_POLY_TYPES) .AND. &
    this%volanaattr/**/VOL7D_POLY_TYPES &
    (remapa(:),remapva(:),remapn(:),remapv(:))
   DEALLOCATE(remapv, remapva)
-ELSE IF (ASSOCIATED(remapv)) THEN
-  DEALLOCATE(remapv)
-ELSE IF (ASSOCIATED(remapva)) THEN
-  DEALLOCATE(remapva)
+ELSE IF (ASSOCIATED(v7dtmp%anaattr%/**/VOL7D_POLY_TYPES)) THEN ! check
+  DEALLOCATE(v7dtmp%anaattr%/**/VOL7D_POLY_TYPES, remapv)
+ELSE IF (ASSOCIATED(v7dtmp%anavarattr%/**/VOL7D_POLY_TYPES)) THEN
+  DEALLOCATE(v7dtmp%anavarattr%/**/VOL7D_POLY_TYPES, remapva)
 ENDIF
+!ELSE IF (ASSOCIATED(remapv)) THEN
+!  DEALLOCATE(remapv)
+!ELSE IF (ASSOCIATED(remapva)) THEN
+!  DEALLOCATE(remapva)
+!ENDIF
 
 ! 6d
 CALL vol7d_remap1_vol7d_var(this%dativar%/**/VOL7D_POLY_TYPES, &
@@ -201,11 +206,16 @@ IF (ASSOCIATED(v7dtmp%datiattr%/**/VOL7D_POLY_TYPES) .AND. &
      this%voldatiattr/**/VOL7D_POLY_TYPES &
      (remapa(:),remapt(:),remapl(:),remaptr(:),remapva(:),remapn(:),remapv(:))
   DEALLOCATE(remapv, remapva)
-ELSE IF (ASSOCIATED(remapv)) THEN
-  DEALLOCATE(remapv)
-ELSE IF (ASSOCIATED(remapva)) THEN
-  DEALLOCATE(remapva)
+ELSE IF (ASSOCIATED(v7dtmp%datiattr%/**/VOL7D_POLY_TYPES)) THEN ! check
+  DEALLOCATE(v7dtmp%datiattr%/**/VOL7D_POLY_TYPES, remapv)
+ELSE IF (ASSOCIATED(v7dtmp%dativarattr%/**/VOL7D_POLY_TYPES)) THEN
+  DEALLOCATE(v7dtmp%dativarattr%/**/VOL7D_POLY_TYPES, remapva)
 ENDIF
+!ELSE IF (ASSOCIATED(remapv)) THEN
+!  DEALLOCATE(remapv)
+!ELSE IF (ASSOCIATED(remapva)) THEN
+!  DEALLOCATE(remapva)
+!ENDIF
 
 END SUBROUTINE vol7d_reform_final/**/VOL7D_POLY_TYPES
 
