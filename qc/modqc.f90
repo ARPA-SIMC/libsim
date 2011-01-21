@@ -24,24 +24,6 @@
 !!\ingroup qc
 
 module modqc
-
-! Copyright (C) 2007
-
-! Questo programma è software libero; è lecito ridistribuirlo e/o
-! modificarlo secondo i termini della Licenza Pubblica Generica SMR come
-! pubblicata da ARPA SMR ; o la versione 1 della licenza o (a scelta)
-! una versione successiva.
-
-! Questo programma è distribuito nella speranza che sia utile, ma SENZA
-! ALCUNA GARANZIA; senza neppure la garanzia implicita di
-! COMMERCIABILITÀ o di APPLICABILITÀ PER UN PARTICOLARE SCOPO. Si veda
-! la Licenza Pubblica Generica SMR per avere maggiori dettagli.
-
-! Ognuno dovrebbe avere ricevuto una copia della Licenza Pubblica
-! Generica SMR insieme a questo programma; in caso contrario, la si può
-! ottenere da Agenzia Regionale Prevenzione e Ambiente (ARPA) Servizio
-! Idro Meteorologico  (SIM), Viale Silvani 6, 40122 Bologna, Italia
-
 use kinds
 use missing_values
 use optional_values
@@ -63,7 +45,7 @@ end type qcpartype
 type(qcpartype)  :: qcpar=qcpartype(50)
 
 integer, parameter :: nqcattrvars=4
-CHARACTER(len=10),parameter   ::qcattrvarsbtables(nqcattrvars)=(/"*B33196","*B33192","*B33193","*B33194"/)
+CHARACTER(len=10),parameter :: qcattrvarsbtables(nqcattrvars)=(/"*B33196","*B33192","*B33193","*B33194"/)
 
 type :: qcattrvars
   TYPE(vol7d_var) :: vars(nqcattrvars)
@@ -110,7 +92,6 @@ end function vdi
 
 
 !> Test di validità di dati byte
-
 elemental logical function vdb(flag)
 
 integer (kind=int_b),intent(in) :: flag !< confidenza
@@ -141,7 +122,6 @@ end function invalidatedi
 
 
 !> Test di dato invalidato byte
-
 elemental logical function invalidatedb(flag)
 
 integer (kind=int_b),intent(in) :: flag !< attributo di invalidazione del dato
@@ -155,6 +135,33 @@ end if
 return
 end function invalidatedb
 
+
+! Final decision integer flags
+ELEMENTAL LOGICAL FUNCTION summaryflagi(flaginv, flag1, flag2, flag3)
+integer,intent(in),optional :: flaginv
+integer,intent(in),optional :: flag1
+integer,intent(in),optional :: flag2
+integer,intent(in),optional :: flag3
+
+summaryflagi = .NOT.invalidated(optio_l(flaginv)) .AND. &
+ vd(optio_l(flag1)) .AND. vd(optio_l(flag2)) .AND. vd(optio_l(flag3))
+
+END FUNCTION summaryflagi
+
+
+! Final decision byte flags
+ELEMENTAL LOGICAL FUNCTION summaryflagb(flaginv, flag1, flag2, flag3)
+integer(kind=int_b),intent(in),optional :: flaginv
+integer(kind=int_b),intent(in),optional :: flag1
+integer(kind=int_b),intent(in),optional :: flag2
+integer(kind=int_b),intent(in),optional :: flag3
+
+summaryflagb = .NOT.invalidated(optio_b(flaginv)) .AND. &
+ vd(optio_b(flag1)) .AND. vd(optio_b(flag2)) .AND. vd(optio_b(flag3))
+
+END FUNCTION summaryflagb
+
+
 ! byte attributes below
 
 elemental real function peeledrb(data,flaginv,flag1,flag2,flag3)
@@ -165,7 +172,7 @@ integer(kind=int_b), intent(in),optional :: flag1
 integer(kind=int_b), intent(in),optional :: flag2
 integer(kind=int_b), intent(in),optional :: flag3
 
-if (.NOT.invalidated(optio_b(flaginv)) .and. vd(optio_b(flag1))  .and. vd(optio_b(flag2))  .and. vd(optio_b(flag3))) then 
+if (summaryflagb(flaginv,flag1,flag2,flag3)) then
   peeledrb=data
 else
   peeledrb=rmiss
@@ -181,7 +188,7 @@ integer(kind=int_b), intent(in),optional :: flag1
 integer(kind=int_b), intent(in),optional :: flag2
 integer(kind=int_b), intent(in),optional :: flag3
 
-if (.NOT.invalidated(optio_b(flaginv)) .and. vd(optio_b(flag1))  .and. vd(optio_b(flag2))  .and. vd(optio_b(flag3))) then 
+if (summaryflagb(flaginv,flag1,flag2,flag3)) then
   peeleddb=data
 else
   peeleddb=dmiss
@@ -198,7 +205,7 @@ integer(kind=int_b), intent(in),optional :: flag1
 integer(kind=int_b), intent(in),optional :: flag2
 integer(kind=int_b), intent(in),optional :: flag3
 
-if (.NOT.invalidated(optio_b(flaginv)) .and. vd(optio_b(flag1))  .and. vd(optio_b(flag2))  .and. vd(optio_b(flag3))) then 
+if (summaryflagb(flaginv,flag1,flag2,flag3)) then
   peeledib=data
 else
   peeledib=imiss
@@ -215,7 +222,7 @@ integer(kind=int_b), intent(in),optional :: flag1
 integer(kind=int_b), intent(in),optional :: flag2
 integer(kind=int_b), intent(in),optional :: flag3
 
-if (.NOT.invalidated(optio_b(flaginv)) .and. vd(optio_b(flag1))  .and. vd(optio_b(flag2))  .and. vd(optio_b(flag3))) then 
+if (summaryflagb(flaginv,flag1,flag2,flag3)) then
   peeledbb=data
 else
   peeledbb=bmiss
@@ -232,7 +239,7 @@ integer(kind=int_b), intent(in),optional :: flag1
 integer(kind=int_b), intent(in),optional :: flag2
 integer(kind=int_b), intent(in),optional :: flag3
 
-if (.NOT.invalidated(optio_b(flaginv)) .and. vd(optio_b(flag1))  .and. vd(optio_b(flag2))  .and. vd(optio_b(flag3))) then 
+if (summaryflagb(flaginv,flag1,flag2,flag3)) then
   peeledcb=data
 else
   peeledcb=cmiss
@@ -252,7 +259,7 @@ integer, intent(in),optional :: flag1
 integer, intent(in),optional :: flag2
 integer, intent(in),optional :: flag3
 
-if (invalidated(optio_l(flaginv)) .and. vd(optio_l(flag1))  .and. vd(optio_l(flag2))  .and. vd(optio_l(flag3))) then 
+if (summaryflagi(flaginv,flag1,flag2,flag3)) then
   peeledri=data
 else
   peeledri=rmiss
@@ -268,7 +275,7 @@ integer, intent(in),optional :: flag1
 integer, intent(in),optional :: flag2
 integer, intent(in),optional :: flag3
 
-if (invalidated(optio_l(flaginv)) .and. vd(optio_l(flag1))  .and. vd(optio_l(flag2))  .and. vd(optio_l(flag3))) then 
+if (summaryflagi(flaginv,flag1,flag2,flag3)) then
   peeleddi=data
 else
   peeleddi=dmiss
@@ -285,7 +292,7 @@ integer, intent(in),optional :: flag1
 integer, intent(in),optional :: flag2
 integer, intent(in),optional :: flag3
 
-if (invalidated(optio_l(flaginv)) .and. vd(optio_l(flag1))  .and. vd(optio_l(flag2))  .and. vd(optio_l(flag3))) then 
+if (summaryflagi(flaginv,flag1,flag2,flag3)) then
   peeledii=data
 else
   peeledii=imiss
@@ -302,7 +309,7 @@ integer, intent(in),optional :: flag1
 integer, intent(in),optional :: flag2
 integer, intent(in),optional :: flag3
 
-if (invalidated(optio_l(flaginv)) .and. vd(optio_l(flag1))  .and. vd(optio_l(flag2))  .and. vd(optio_l(flag3))) then 
+if (summaryflagi(flaginv,flag1,flag2,flag3)) then
   peeledbi=data
 else
   peeledbi=bmiss
@@ -319,7 +326,7 @@ integer, intent(in),optional :: flag1
 integer, intent(in),optional :: flag2
 integer, intent(in),optional :: flag3
 
-if (invalidated(optio_l(flaginv)) .and. vd(optio_l(flag1))  .and. vd(optio_l(flag2))  .and. vd(optio_l(flag3))) then 
+if (summaryflagi(flaginv,flag1,flag2,flag3)) then
   peeledci=data
 else
   peeledci=cmiss
@@ -485,7 +492,7 @@ do indqcattrvars =1,nqcattrvars
   end if
 end do
 
-IF (.NOT.PRESENT(keep_attr)) THEN
+IF (.NOT.PRESENT(keep_attr)) THEN ! destroy all attributes
   IF (ASSOCIATED(this%voldatiattrr)) DEALLOCATE(this%voldatiattrr)
   IF (ASSOCIATED(this%voldatiattrd)) DEALLOCATE(this%voldatiattrd)
   IF (ASSOCIATED(this%voldatiattri)) DEALLOCATE(this%voldatiattri)
@@ -494,8 +501,8 @@ IF (.NOT.PRESENT(keep_attr)) THEN
 
   CALL delete(this%datiattr)
   CALL delete(this%dativarattr)
-ELSE
 
+ELSE ! set to missing non requested attributes and reform
   CALL missify_var(this%datiattr%r)
   CALL missify_var(this%datiattr%d)
   CALL missify_var(this%datiattr%i)
