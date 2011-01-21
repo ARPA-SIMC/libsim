@@ -1,7 +1,7 @@
 Summary: libsim: librerie di utilità in Fortran 90
 Name: libsim
 Version: 4.0.0
-Release: 800
+Release: 840
 License: GPL2+
 Group: Applications/Meteo
 URL: http://www.arpa.emr.it/sim
@@ -9,7 +9,7 @@ Packager: Davide Cesari <dcesari@arpa.emr.it>
 Source: %{name}-%{version}.tar.gz
 BuildRoot: /var/tmp/%{name}-buildroot
 BuildRequires: shapelib-fortran-devel oracle-instantclient-devel libemos libdballef-devel >= 4.0.19 grib_api-devel >= 1.8.0
-Requires: libdballef4 >= 4.0.19 grib_api >= 1.8.0
+Requires: libdballef4 >= 4.0.19 grib_api >= 1.8.0 libgrib1
 
 #temporaneo
 %if 0%{?fedora} < 9
@@ -48,7 +48,7 @@ tipo vol7d.
 %setup -q
 
 %build
-%configure FC=gfortran FCFLAGS="-I/usr/include/ -I%{_fmoddir}" ORA_VER=oracle/11.2/client --enable-f2003-features
+%configure FC=gfortran FCFLAGS="-I/usr/include/ -I%{_fmoddir}" ORA_VER=oracle/11.2/client --enable-dwdgrib1 --enable-f2003-features
 make 
 
 %install
