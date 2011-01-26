@@ -271,7 +271,7 @@ END INTERFACE
 
 !> Print object
 INTERFACE display
-  MODULE PROCEDURE display_datetime
+  MODULE PROCEDURE display_datetime, display_timedelta
 END INTERFACE
 
 
@@ -596,13 +596,19 @@ END FUNCTION datetime_to_char
 
 SUBROUTINE display_datetime(this)
 TYPE(datetime),INTENT(in) :: this
-character(len=17)         :: date_time
 
-call getval (this,simpledate=date_time)
-
-print*,"TIME: ",date_time
+print*,"TIME: ",to_char(this)
 
 end subroutine display_datetime
+
+
+
+SUBROUTINE display_timedelta(this)
+TYPE(timedelta),INTENT(in) :: this
+
+print*,"TIMEDELTA: ",to_char(this)
+
+end subroutine display_timedelta
 
 
 

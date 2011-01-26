@@ -53,6 +53,8 @@ td1 = timedelta_new(minute=60*24)
 DO i=1,366
   dt1 = dt1+td1
 ENDDO
+CALL display(td1)
+CALL display(dt1)
 CALL getval(dt1, simpledate=dtlong)
 IF (dtlong(1:17) /= '20001201000000000') CALL EXIT(1)
 
