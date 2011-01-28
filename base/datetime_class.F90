@@ -823,28 +823,25 @@ ENDIF
 END FUNCTION datetime_subtd
 
 
-!> Legge da un'unità di file il contenuto dell'oggetto \a this.
-!! Il record da leggere deve essere stato scritto con la ::write_unit
-!! e, nel caso \a this sia un vettore, la lunghezza del record e quella
-!! del vettore devono essere accordate. Il metodo controlla se il file è
-!! aperto per un I/O formattato o non formattato e fa la cosa giusta.
+!> This method reads from a Fortran file unit the contents of the
+!! object \a this.  The record to be read must have been written with
+!! the ::write_unit method.  The method works both on formatted and
+!! unformatted files.
 SUBROUTINE datetime_read_unit(this, unit)
-TYPE(datetime),INTENT(out) :: this !< oggetto da leggere
-INTEGER, INTENT(in) :: unit !< unità da cui leggere
-
+TYPE(datetime),INTENT(out) :: this !< object to be read
+INTEGER, INTENT(in) :: unit !< unit from which to read, it must be an opened Fortran file unit
 CALL datetime_vect_read_unit((/this/), unit)
 
 END SUBROUTINE datetime_read_unit
 
 
-!> Legge da un'unità di file il contenuto dell'oggetto \a this.
-!! Il record da leggere deve essere stato scritto con la ::write_unit
-!! e, nel caso \a this sia un vettore, la lunghezza del record e quella
-!! del vettore devono essere accordate. Il metodo controlla se il file è
-!! aperto per un I/O formattato o non formattato e fa la cosa giusta.
+!> This method reads from a Fortran file unit the contents of the
+!! object \a this.  The record to be read must have been written with
+!! the ::write_unit method.  The method works both on formatted and
+!! unformatted files.
 SUBROUTINE datetime_vect_read_unit(this, unit)
-TYPE(datetime) :: this(:) !< oggetto da leggere
-INTEGER, INTENT(in) :: unit !< unità da cui leggere
+TYPE(datetime) :: this(:) !< object to be read
+INTEGER, INTENT(in) :: unit !< unit from which to read, it must be an opened Fortran file unit
 
 CHARACTER(len=40) :: form
 CHARACTER(len=23), ALLOCATABLE :: dateiso(:)
@@ -865,26 +862,26 @@ DEALLOCATE(dateiso)
 END SUBROUTINE datetime_vect_read_unit
 
 
-!> Scrive su un'unità di file il contenuto dell'oggetto \a this.
-!! Il record scritto potrà successivamente essere letto con la ::read_unit.
-!! Il metodo controlla se il file è
-!! aperto per un I/O formattato o non formattato e fa la cosa giusta.
+!> This method writes on a Fortran file unit the contents of the
+!! object \a this.  The record can successively be read by the
+!! ::read_unit method.  The method works both on formatted and
+!! unformatted files.
 SUBROUTINE datetime_write_unit(this, unit)
-TYPE(datetime),INTENT(in) :: this !< oggetto da scrivere
-INTEGER, INTENT(in) :: unit !< unità su cui scrivere
+TYPE(datetime),INTENT(in) :: this !< object to be written
+INTEGER, INTENT(in) :: unit !< unit where to write, it must be an opened Fortran file unit
 
 CALL datetime_vect_write_unit((/this/), unit)
 
 END SUBROUTINE datetime_write_unit
 
 
-!> Scrive su un'unità di file il contenuto dell'oggetto \a this.
-!! Il record scritto potrà successivamente essere letto con la ::read_unit.
-!! Il metodo controlla se il file è
-!! aperto per un I/O formattato o non formattato e fa la cosa giusta.
+!> This method writes on a Fortran file unit the contents of the
+!! object \a this.  The record can successively be read by the
+!! ::read_unit method.  The method works both on formatted and
+!! unformatted files.
 SUBROUTINE datetime_vect_write_unit(this, unit)
-TYPE(datetime),INTENT(in) :: this(:) !< oggetto da scrivere
-INTEGER, INTENT(in) :: unit !< unità su cui scrivere
+TYPE(datetime),INTENT(in) :: this(:) !< object to be written
+INTEGER, INTENT(in) :: unit !< unit where to write, it must be an opened Fortran file unit
 
 CHARACTER(len=40) :: form
 CHARACTER(len=23), ALLOCATABLE :: dateiso(:)
@@ -1443,28 +1440,26 @@ res%month = ABS(this%month)
 END FUNCTION timedelta_abs
 
 
-!> Legge da un'unità di file il contenuto dell'oggetto \a this.
-!! Il record da leggere deve essere stato scritto con la ::write_unit
-!! e, nel caso \a this sia un vettore, la lunghezza del record e quella
-!! del vettore devono essere accordate. Il metodo controlla se il file è
-!! aperto per un I/O formattato o non formattato e fa la cosa giusta.
+!> This method reads from a Fortran file unit the contents of the
+!! object \a this.  The record to be read must have been written with
+!! the ::write_unit method.  The method works both on formatted and
+!! unformatted files.
 SUBROUTINE timedelta_read_unit(this, unit)
-TYPE(timedelta),INTENT(out) :: this !< oggetto da leggere
-INTEGER, INTENT(in) :: unit !< unità da cui leggere
+TYPE(timedelta),INTENT(out) :: this !< object to be read
+INTEGER, INTENT(in) :: unit !< unit from which to read, it must be an opened Fortran file unit
 
 CALL timedelta_vect_read_unit((/this/), unit)
 
 END SUBROUTINE timedelta_read_unit
 
 
-!> Legge da un'unità di file il contenuto dell'oggetto \a this.
-!! Il record da leggere deve essere stato scritto con la ::write_unit
-!! e, nel caso \a this sia un vettore, la lunghezza del record e quella
-!! del vettore devono essere accordate. Il metodo controlla se il file è
-!! aperto per un I/O formattato o non formattato e fa la cosa giusta.
+!> This method reads from a Fortran file unit the contents of the
+!! object \a this.  The record to be read must have been written with
+!! the ::write_unit method.  The method works both on formatted and
+!! unformatted files.
 SUBROUTINE timedelta_vect_read_unit(this, unit)
-TYPE(timedelta) :: this(:) !< oggetto da leggere
-INTEGER, INTENT(in) :: unit !< unità da cui leggere
+TYPE(timedelta) :: this(:) !< object to be read
+INTEGER, INTENT(in) :: unit !< unit from which to read, it must be an opened Fortran file unit
 
 CHARACTER(len=40) :: form
 CHARACTER(len=23), ALLOCATABLE :: dateiso(:)
@@ -1485,26 +1480,26 @@ DEALLOCATE(dateiso)
 END SUBROUTINE timedelta_vect_read_unit
 
 
-!> Scrive su un'unità di file il contenuto dell'oggetto \a this.
-!! Il record scritto potrà successivamente essere letto con la ::read_unit.
-!! Il metodo controlla se il file è
-!! aperto per un I/O formattato o non formattato e fa la cosa giusta.
+!> This method writes on a Fortran file unit the contents of the
+!! object \a this.  The record can successively be read by the
+!! ::read_unit method.  The method works both on formatted and
+!! unformatted files.
 SUBROUTINE timedelta_write_unit(this, unit)
-TYPE(timedelta),INTENT(in) :: this !< oggetto da scrivere
-INTEGER, INTENT(in) :: unit !< unità su cui scrivere
+TYPE(timedelta),INTENT(in) :: this !< object to be written
+INTEGER, INTENT(in) :: unit !< unit where to write, it must be an opened Fortran file unit
 
 CALL timedelta_vect_write_unit((/this/), unit)
 
 END SUBROUTINE timedelta_write_unit
 
 
-!> Scrive su un'unità di file il contenuto dell'oggetto \a this.
-!! Il record scritto potrà successivamente essere letto con la ::read_unit.
-!! Il metodo controlla se il file è
-!! aperto per un I/O formattato o non formattato e fa la cosa giusta.
+!> This method writes on a Fortran file unit the contents of the
+!! object \a this.  The record can successively be read by the
+!! ::read_unit method.  The method works both on formatted and
+!! unformatted files.
 SUBROUTINE timedelta_vect_write_unit(this, unit)
-TYPE(timedelta),INTENT(in) :: this(:) !< oggetto da scrivere
-INTEGER, INTENT(in) :: unit !< unità su cui scrivere
+TYPE(timedelta),INTENT(in) :: this(:) !< object to be written
+INTEGER, INTENT(in) :: unit !< unit where to write, it must be an opened Fortran file unit
 
 CHARACTER(len=40) :: form
 CHARACTER(len=23), ALLOCATABLE :: dateiso(:)

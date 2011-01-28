@@ -16,6 +16,10 @@
 ! You should have received a copy of the GNU General Public License
 ! along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "config.h"
+!> Module for defining the extension and coordinates of a rectangular
+!! georeferenced grid.
+!!
+!!\ingroup volgrid6d
 MODULE grid_dim_class
 USE missing_values
 USE char_utilities
@@ -23,10 +27,14 @@ USE optional_values
 USE err_handling
 IMPLICIT NONE
 
-!> Dimensioni del grigliato lat lon con eventuali vettori di coordinate
+!> Derived type describing the extension of a grid and the geographical
+!! coordinates of each point. It is not used alone but rather as a
+!! subtype of a \a griddim_def type.
 TYPE grid_dim
-  INTEGER :: nx, ny
-  DOUBLE PRECISION, POINTER :: lat(:,:), lon(:,:)
+  INTEGER :: nx !< number of points along x dimension
+  INTEGER :: ny !< number of points along y dimension
+  DOUBLE PRECISION,POINTER :: lat(:,:) !< array of geographical latitudes
+  DOUBLE PRECISION,POINTER :: lon(:,:) !< array of geographical longitudes
 END TYPE grid_dim
 
 INTERFACE delete
@@ -151,9 +159,13 @@ res = this%nx == that%nx .and. &
 END FUNCTION grid_dim_eq
 
 
+!> This method reads from a Fortran file unit the contents of the
+!! object \a this.  The record to be read must have been written with
+!! the ::write_unit method.  The method works both on formatted and
+!! unformatted files.
 SUBROUTINE grid_dim_read_unit(this, unit) 
-TYPE(grid_dim),INTENT(out) :: this !< oggetto da leggere
-INTEGER, INTENT(in) :: unit !< unità da cui leggere
+TYPE(grid_dim),INTENT(out) :: this !< object to be read
+INTEGER, INTENT(in) :: unit !< unit from which to read, it must be an opened Fortran file unit
 
 CHARACTER(len=40) :: form
 LOGICAL :: is_all
@@ -182,13 +194,13 @@ ENDIF
 END SUBROUTINE grid_dim_read_unit
 
 
-!> Scrive su un'unità di file il contenuto dell'oggetto \a this.
-!! Il record scritto potrà successivamente essere letto con la ::read_unit.
-!! Il metodo controlla se il file è
-!! aperto per un I/O formattato o non formattato e fa la cosa giusta.
+!> This method writes on a Fortran file unit the contents of the
+!! object \a this.  The record can successively be read by the
+!! ::read_unit method.  The method works both on formatted and
+!! unformatted files.
 SUBROUTINE grid_dim_write_unit(this, unit)
-TYPE(grid_dim),INTENT(in) :: this !< oggetto da scrivere
-INTEGER, INTENT(in) :: unit !< unità su cui scrivere
+TYPE(grid_dim),INTENT(in) :: this !< object to be written
+INTEGER, INTENT(in) :: unit !< unit where to write, it must be an opened Fortran file unit
 
 CHARACTER(len=40) :: form
 LOGICAL :: is_all
@@ -217,9 +229,9 @@ ENDIF
 END SUBROUTINE grid_dim_write_unit
 
 
-!> Display on the screen a brief content of griddim object.
+!> Display on the screen a brief content of the object.
 SUBROUTINE grid_dim_display(this) 
-TYPE(grid_dim),INTENT(in) :: this !< grid_dim object to display
+TYPE(grid_dim),INTENT(in) :: this !< object to display
 
 PRINT*,'Number of points along x direction',this%nx
 PRINT*,'Number of points along y direction',this%ny
