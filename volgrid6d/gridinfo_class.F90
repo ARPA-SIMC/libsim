@@ -1437,18 +1437,22 @@ END SUBROUTINE timerange_g2_to_g1_unit
 !10      3 hours
 !11      6 hours
 !12      12 hours
-!13      Second
+
 ! attenzione, in COSMO:
 !13 = 15 minuti
 !14 = 30 minuti
+
+!but somewere :
+!13      Second
+
 SUBROUTINE gribtr_to_second(unit, valuein, valueout)
 INTEGER,INTENT(in) :: unit, valuein
 INTEGER,INTENT(out) :: valueout
 
-INTEGER,PARAMETER :: unitlist(0:13)=(/60,3600,86400,2592000,31536000, &
- 315360000,946080000,imiss,imiss,imiss,10800,21600,43200,1/)
+INTEGER,PARAMETER :: unitlist(0:14)=(/60,3600,86400,2592000,31536000, &
+ 315360000,946080000,imiss,imiss,imiss,10800,21600,43200,900,1800/)
 
-IF (unit >= 0 .AND. unit <= 13) THEN
+IF (unit >= 0 .AND. unit <= 14) THEN
   IF (c_e(unitlist(unit))) THEN
     valueout = valuein*unitlist(unit)
   ELSE
@@ -1475,9 +1479,23 @@ ELSE IF (MOD(valuein,3600) == 0) THEN ! prefer hours
 ELSE IF (MOD(valuein,60) == 0) THEN ! then minutes
   valueout = valuein/60
   unit = 0
+
+  IF (valueout > 255) THEN ! 15 minutes
+    valueout = valuein/900
+    unit = 13
+    IF (valueout > 255) THEN ! 30 minutes
+      valueout = valuein/1800
+      unit = 14
+    END IF
+  END IF
+
 ELSE ! seconds (not supported in grib1!)
-  valueout = valuein
-  unit = 13
+
+  call l4f_log(L4F_ERROR,'timerange unit seconds not supported on grib edition 1')
+  CALL raise_error()
+
+!!$  valueout = valuein
+!!$  unit = 13
 ENDIF
 
 END SUBROUTINE second_to_gribtr
