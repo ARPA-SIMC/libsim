@@ -2,6 +2,7 @@
 ! authors:
 ! Davide Cesari <dcesari@arpa.emr.it>
 ! Paolo Patruno <ppatruno@arpa.emr.it>
+! Enrico Minguzzi <eminguzzi@arpa.emr.it>
 
 ! This program is free software; you can redistribute it and/or
 ! modify it under the terms of the GNU General Public License as
@@ -37,11 +38,13 @@ TYPE(volgrid6d) :: vg6d
 INTEGER :: iun
 CHARACTER(len=*) :: keys
 
+TYPE(csv_record) :: csvline
+TYPE(datetime) :: veriftime
 INTEGER,POINTER :: w_s(:), w_e(:)
 INTEGER :: n, i, j, k, l, np, nv, ncol, gaid, status
-TYPE(csv_record) :: csvline
-CHARACTER(len=24) :: csv_time, csv_timerange, csv_level, csv_gaid
 INTEGER :: csv_igaid
+CHARACTER(len=24) :: csv_time, csv_level, csv_gaid
+CHARACTER(len=12) :: csv_simpletime, csv_simplevertime
 LOGICAL,ALLOCATABLE :: key_mask(:)
 DOUBLE PRECISION :: coord
 
@@ -99,7 +102,7 @@ key_mask(:) = .FALSE.
 CALL init(csvline)
 DO i = 1, ncol
   IF (keys(w_s(i):MIN(w_e(i),w_s(i)+LEN(lnmspc)-1)) == lnmspc) THEN
-    key_mask(i) = .TRUE. ! it is a local namespace key
+    key_mask(i) = .TRUE.    ! it is a local namespace key, ie. gacsv:*
     w_s(i) = w_s(i) + LEN(lnmspc) ! shift start pointer to skip prefix
   ENDIF
   CALL csv_record_addfield(csvline, TRIM(keys(w_s(i):w_e(i))))
@@ -110,8 +113,10 @@ CALL delete(csvline)
 
 ! write csv body
 DO l = 1, SIZE(vg6d%time)
-  CALL getval(vg6d%time(l), isodate=csv_time)
+  CALL getval(vg6d%time(l), isodate=csv_time, simpledate=csv_simpletime)
   DO k = 1, SIZE(vg6d%timerange)
+    veriftime = vg6d%time(l) + timedelta_new(msec=vg6d%timerange(k)%p1*1000)
+    CALL getval(veriftime, simpledate=csv_simplevertime)
     DO j = 1, SIZE(vg6d%level)
 ! TODO handle coupling of variables on a single csv record (e.g. U/V)
       DO nv = 1, SIZE(vg6d%var)
@@ -124,6 +129,7 @@ DO l = 1, SIZE(vg6d%time)
 ! loop on columns
           DO n = 1, ncol
             IF (key_mask(n)) THEN ! the truth is inside me
+! TODO add keys: iindex, jindex, kindex, var_description
               SELECT CASE(keys(w_s(n):w_e(n)))
               CASE('lon')
                 CALL getval(v7d%ana(np)%coord, lon=coord)
@@ -138,6 +144,32 @@ DO l = 1, SIZE(vg6d%time)
               CASE('value')
                 CALL csv_record_addfield_miss(csvline, &
                  v7d%voldatir(np,l,j,k,nv,1))
+              CASE('timerange')
+                CALL csv_record_addfield(csvline, vg6d%timerange(k)%timerange)
+              CASE('p1')
+                CALL csv_record_addfield(csvline, vg6d%timerange(k)%p1)
+              CASE('p2')
+                CALL csv_record_addfield(csvline, vg6d%timerange(k)%p2)
+              CASE('level1')
+                CALL csv_record_addfield(csvline, vg6d%level(j)%level1)
+              CASE('l1')
+                CALL csv_record_addfield(csvline, vg6d%level(j)%l1)
+              CASE('level2')
+                CALL csv_record_addfield(csvline, vg6d%level(j)%level2)
+              CASE('l2')
+                CALL csv_record_addfield(csvline, vg6d%level(j)%l2)
+              CASE('centre')
+                CALL csv_record_addfield(csvline, vg6d%var(nv)%centre)
+              CASE('category')
+                CALL csv_record_addfield(csvline, vg6d%var(nv)%category)
+              CASE('number')
+                CALL csv_record_addfield(csvline, vg6d%var(nv)%number)
+              CASE('discipline')
+                CALL csv_record_addfield(csvline, vg6d%var(nv)%discipline)
+              CASE('simpledate')
+                CALL csv_record_addfield(csvline, csv_simpletime)
+              CASE('simpleverdate')
+                CALL csv_record_addfield(csvline, csv_simplevertime)
               CASE default
                 CALL l4f_category_log(vg6d%category,L4F_WARN, &
                  "requested gacsv key "//TRIM(keys(w_s(n):w_e(n)))//" undefined")

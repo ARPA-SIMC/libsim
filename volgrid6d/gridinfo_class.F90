@@ -744,6 +744,7 @@ call grib_get(gaid,'GRIBEditionNumber',EditionNumber)
 if (EditionNumber == 1)then
 
   CALL level_g2_to_g1(ltype1,scalef1,scalev1,ltype2,scalef2,scalev2,ltype,l1,l2)
+
   call grib_set(gaid,'indicatorOfTypeOfLevel',ltype)
 ! it is important to set topLevel after, otherwise, in case of single levels
 ! bottomLevel=0 overwrites topLevel (aliases in grib_api)
@@ -1300,7 +1301,7 @@ FUNCTION rescale1(scalef, scalev) RESULT(rescale)
 INTEGER,INTENT(in) :: scalef, scalev
 INTEGER :: rescale
 
-rescale = MIN(255, INT(scalev*10.0D0**(-scalef)))
+rescale = MIN(255, NINT(scalev*10.0D0**(-scalef)))
 
 END FUNCTION rescale1
 
@@ -1308,7 +1309,7 @@ FUNCTION rescale2(scalef, scalev) RESULT(rescale)
 INTEGER,INTENT(in) :: scalef, scalev
 INTEGER :: rescale
 
-rescale = MIN(65535, INT(scalev*10.0D0**(-scalef)))
+rescale = MIN(65535, NINT(scalev*10.0D0**(-scalef)))
 
 END FUNCTION rescale2
 

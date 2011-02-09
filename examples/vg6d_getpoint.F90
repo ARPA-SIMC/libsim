@@ -152,9 +152,10 @@ options(22) = op_option_new(' ', 'output-td', output_td, 1, help= &
  &comparing forecasts with observations)')
 #ifdef HAVE_LIBGRIBAPI
 options(23) = op_option_new(' ', 'output-keys', output_keys, '', help= &
- 'keys that have to apper in the output grib_api_csv file, any grib_api key &
- &or ''gacsv:lon'', ''gacsv:lat'', ''gacsv:npoint'', &
- &''gacsv:isodate'', ''gacsv:value''')
+ 'keys that have to appear in the output grib_api_csv file, any grib_api key &
+ &or ''gacsv:xxx''; xxx can be any of: lon, lat, npoint, isodate, value, &
+ &timerange, p1, p2, level1, l1, level2, l2, centre, category, number, discipline, &
+ &simpledate, simpleverdate')
 #endif
 
 ! help options
