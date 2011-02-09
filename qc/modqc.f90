@@ -356,10 +356,11 @@ call init(qcattrvars_new)
 end function qcattrvars_new
 
 
-!> Remove data under a defined grade of confidence.
+!> Remove data under the predefined grade of confidence.
+!! If  keep_attr is omitted all the attributes will be deleted after peeling
 SUBROUTINE vol7d_peeling(this, keep_attr)
 TYPE(vol7d),INTENT(INOUT)  :: this !< object to peeling
-CHARACTER(len=*),INTENT(in),OPTIONAL :: keep_attr(:)
+CHARACTER(len=*),INTENT(in),OPTIONAL :: keep_attr(:)!< Btable descriptor for attribute to retain
 
 integer :: inddativar,inddatiattr,inddativarattr
 integer :: indqcattrvars
