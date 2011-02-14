@@ -240,8 +240,10 @@ DOUBLE PRECISION, PARAMETER, PRIVATE :: &
 DOUBLE PRECISION,PARAMETER,PRIVATE :: k0=0.9996D0 ! scale factor at central meridian (check whether this is correct and constant)
 
 PRIVATE
-PUBLIC geo_proj, geo_proj_new, delete, copy, get_val, set_val, &
+PUBLIC geo_proj, geo_proj_rotated, geo_proj_stretched, geo_proj_polar, geo_proj_ellips, &
+ geo_proj_new, delete, copy, get_val, set_val, &
  write_unit, read_unit, display, proj, unproj
+
 
 CONTAINS
 

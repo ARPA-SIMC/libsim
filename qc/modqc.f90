@@ -34,7 +34,7 @@ implicit none
 private
 
 public vd,init,qcattrvars_new,invalidated,peeled,vol7d_peeling
-public nqcattrvars, qcattrvarsbtables
+public qcattrvars, nqcattrvars, qcattrvarsbtables
 
 !> Definisce il livello di attendibilità per i dati validi
 type :: qcpartype
