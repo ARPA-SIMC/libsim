@@ -2609,7 +2609,7 @@ end subroutine vg6d_wind__un_rot
 !!
 !! this method works if find 
 !! two volumes:
-!!      1) volume U and volume V: compute H nad traslate on it
+!!      1) volume U and volume V: compute H and traslate on it
 !!      2) volume U/V and volume H : translate U/V on H
 !! tree volumes: translate U and V on H
 !!
