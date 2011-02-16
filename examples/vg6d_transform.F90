@@ -39,7 +39,7 @@ type(transform_def) :: trans
 type(grid_transform) :: grid_trans
 
 integer :: nx,ny,component_flag,npx,npy
-doubleprecision :: lon_min, lon_max, lat_min, lat_max
+doubleprecision :: xmin, xmax, ymin, ymax
 INTEGER :: ix, iy, fx, fy
 doubleprecision :: latitude_south_pole,longitude_south_pole,angle_rotation
 character(len=80) :: type,trans_type,sub_type
@@ -67,7 +67,7 @@ category=l4f_category_get(a_name//".main")
 ! define command-line options
 CALL op_option_nullify(options)
 
-options(1) = op_option_new('v', 'trans-type', trans_type, 'none', help= &
+options(1) = op_option_new('v', 'trans-type', trans_type, 'interp', help= &
  'transformation type: ''inter'' for interpolation, ''boxinter'' for &
  &statistical interpolation on boxes, ''zoom'' for zooming, &
  &''boxregrid'' for resolution reduction, ''none'' for no operation')
@@ -82,13 +82,13 @@ options(4) = op_option_new('i', 'nx', nx, 31, help= &
  'number of nodes along x axis on interpolated grid')
 options(5) = op_option_new('l', 'ny', ny, 31, help= &
  'number of nodes along y axis on interpolated grid')
-options(6) = op_option_new('m', 'x-min', lon_min, 0.0D0, help= &
+options(6) = op_option_new('m', 'x-min', xmin, 0.0D0, help= &
  'x coordinate of the lower left corner of interpolated grid')
-options(7) = op_option_new('o', 'y-min', lat_min, 30.0D0, help= &
+options(7) = op_option_new('o', 'y-min', ymin, 30.0D0, help= &
  'y coordinate of the lower left corner of interpolated grid')
-options(8) = op_option_new('n', 'x-max', lon_max, 30.0D0, help= &
+options(8) = op_option_new('n', 'x-max', xmax, 30.0D0, help= &
  'x coordinate of the upper right corner of interpolated grid')
-options(9) = op_option_new('p', 'y-max', lat_max, 60.0D0, help= &
+options(9) = op_option_new('p', 'y-max', ymax, 60.0D0, help= &
  'y coordinate of the upper right corner of interpolated grid')
 
 options(10) = op_option_new('q', 'latitude-south-pole', latitude_south_pole, &
@@ -194,8 +194,8 @@ call l4f_category_log(category,L4F_INFO,"transforming to   file:"//trim(outfile)
 if (trans_type == 'inter' .OR. trans_type == 'boxinter') then ! griddim_out needed
 
   call init(griddim_out,&
-   type=type,nx=nx,ny=ny, &
-   lon_min=lon_min, lon_max=lon_max, lat_min=lat_min, lat_max=lat_max, component_flag=component_flag, &
+   proj_type=type,nx=nx,ny=ny, &
+   xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, component_flag=component_flag, &
    latitude_south_pole=latitude_south_pole,longitude_south_pole=longitude_south_pole,angle_rotation=angle_rotation, &
    categoryappend="requested_grid")
 

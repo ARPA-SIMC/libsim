@@ -40,12 +40,12 @@ ier=l4f_init()
 
 !imposto i dati su grigliato
 
-call init (griddim,type="regular_ll", &
+call init (griddim,proj_type="regular_ll", &
  nx = 10,ny = 15, &
- lon_min = -2.D0, &
- lon_max = 16.D0, &
- lat_min = 37.D0, &
- lat_max = 51.D0, &
+ xmin = -2.D0, &
+ xmax = 16.D0, &
+ ymin = 37.D0, &
+ ymax = 51.D0, &
  component_flag=1,&
  categoryappend="grigliato regolare manuale")
 
@@ -55,7 +55,7 @@ call griddim_unproj(griddim)
 call l4f_category_log(category,L4F_INFO,&
          "unproj ritorna "//to_char(griddim%dim%lat(1,1))//to_char(griddim%dim%lon(1,1)))
 
-call get_val(griddim,lat_max=val)
+call get_val(griddim,ymax=val)
 
 call l4f_category_log(category,L4F_INFO,&
          "get_val ritorna "//to_char(val))

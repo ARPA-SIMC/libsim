@@ -102,6 +102,13 @@ INTERFACE unproj
   MODULE PROCEDURE geo_proj_unproj
 END INTERFACE
 
+!> Logical equality operators for objects of the classes \a geo_proj.
+!! They are all defined as \c ELEMENTAL thus work also on arrays of
+!! any shape.
+INTERFACE OPERATOR (==)
+  MODULE PROCEDURE geo_proj_eq
+END INTERFACE
+
 INTEGER,PARAMETER :: nellips = 41 !< number of predefine ellipsoids
 
 ! queste costanti vanno usate per specificare l'ellissoide da usare per
@@ -242,7 +249,7 @@ DOUBLE PRECISION,PARAMETER,PRIVATE :: k0=0.9996D0 ! scale factor at central meri
 PRIVATE
 PUBLIC geo_proj, geo_proj_rotated, geo_proj_stretched, geo_proj_polar, geo_proj_ellips, &
  geo_proj_new, delete, copy, get_val, set_val, &
- write_unit, read_unit, display, proj, unproj
+ write_unit, read_unit, display, proj, unproj, OPERATOR(==)
 
 
 CONTAINS
@@ -617,6 +624,28 @@ CASE default
 END SELECT
 
 END SUBROUTINE geo_proj_unproj
+
+
+ELEMENTAL FUNCTION geo_proj_eq(this, that) RESULT(eq)
+TYPE(geo_proj),INTENT(in) :: this, that
+
+LOGICAL :: eq
+
+eq = this%proj_type == that%proj_type .AND. this%xoff == that%xoff .AND. &
+ this%yoff == that%yoff .AND. this%lov == that%lov .AND. &
+ this%rotated%longitude_south_pole == that%rotated%longitude_south_pole .AND. &
+ this%rotated%latitude_south_pole == that%rotated%latitude_south_pole .AND. &
+ this%rotated%angle_rotation == that%rotated%angle_rotation .AND. &
+ this%stretched%latitude_stretch_pole == that%stretched%latitude_stretch_pole .AND. &
+ this%stretched%longitude_stretch_pole == that%stretched%longitude_stretch_pole .AND. &
+ this%stretched%stretch_factor == that%stretched%stretch_factor .AND. &
+ this%polar%latin1 == that%polar%latin1 .AND. & ! polar%lon1, polar%lat1
+ this%polar%latin2 == that%polar%latin2 .AND. & ! intentionally not checked
+ this%polar%lad == that%polar%lad .AND. &
+ this%polar%projection_center_flag == that%polar%projection_center_flag .AND. &
+ this%ellips%f == that%ellips%f .AND. this%ellips%a == that%ellips%a
+
+END FUNCTION geo_proj_eq
 
 ! =====================
 ! == transformations ==

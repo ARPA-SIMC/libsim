@@ -74,7 +74,7 @@ PRIVATE grid_dim_delete, grid_dim_copy, grid_dim_alloc, grid_dim_dealloc, &
 
 CONTAINS
 
-FUNCTION grid_dim_init(nx, ny) RESULT(this)
+FUNCTION grid_dim_new(nx, ny) RESULT(this)
 INTEGER, INTENT(in), OPTIONAL :: nx, ny
 
 TYPE(grid_dim) :: this
@@ -83,7 +83,7 @@ this%nx = optio_l(nx)
 this%ny = optio_l(ny)
 NULLIFY(this%lat, this%lon)
 
-END FUNCTION grid_dim_init
+END FUNCTION grid_dim_new
 
 
 SUBROUTINE grid_dim_delete(this)
@@ -124,7 +124,7 @@ SUBROUTINE grid_dim_copy(this, that)
 TYPE(grid_dim),INTENT(in) :: this
 TYPE(grid_dim),INTENT(out) :: that
 
-that = grid_dim_init(this%nx, this%ny)
+that = grid_dim_new(this%nx, this%ny)
 
 IF (ASSOCIATED(this%lon) .AND. ASSOCIATED(this%lat))THEN
   CALL alloc(that)

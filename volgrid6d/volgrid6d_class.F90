@@ -818,7 +818,7 @@ else
   lforce = .false.
 endif
 
-call get_val(this%griddim,type=type)
+call get_val(this%griddim,proj_type=type)
 
 #ifdef DEBUG
 call l4f_category_log(this%category,L4F_DEBUG,"import_from_gridinfo: "//trim(type))
@@ -2578,7 +2578,7 @@ end subroutine vg6d_wind__un_rot
 !!$ 1) we have only one volume: we have to provide the direction of shift
 !!$                           compute H and traslate on it
 !!$ 2) we have two volumes:
-!!$      1) volume U and volume V: compute H nad traslate on it
+!!$      1) volume U and volume V: compute H and traslate on it
 !!$      2) volume U/V and volume H : translate U/V on H
 !!$ 3) we have tree volumes: translate U and V on H
 !!$
@@ -2598,20 +2598,20 @@ end subroutine vg6d_wind__un_rot
 !!$ the not pubblic subroutines will work but you have to know what you want to do
 
 
-!> \brief Convert grids type C in type A
-!! use this to interpolate data from grid type C to grid type A
-!! Grids type are defined by Arakawa
+!> Convert grids type C to type A.
+!! Use this to interpolate data from grid type C to grid type A
+!! Grids type are defined by Arakawa.
 !!
-!! We need to find this type of area in vg6d vector
+!! We need to find these types of area in a vg6d array
 !! T   area of points with temterature etc.
 !! U   area of points with u components of winds
 !! V   area of points with v components of winds
 !!
-!! this method works if find 
+!! this method works if it finds
 !! two volumes:
 !!      1) volume U and volume V: compute H and traslate on it
 !!      2) volume U/V and volume H : translate U/V on H
-!! tree volumes: translate U and V on H
+!! three volumes: translate U and V on H
 !!
 !! try to work well on more datasets at once
 subroutine vg6d_c2a (this)
@@ -2619,8 +2619,8 @@ subroutine vg6d_c2a (this)
 TYPE(volgrid6d),INTENT(inout)  :: this(:)      !< vettor of volumes volgrid6d to elaborate
 
 integer :: ngrid,igrid,jgrid,ugrid,vgrid,tgrid
-doubleprecision :: lon_min, lon_max, lat_min, lat_max
-doubleprecision :: lon_min_t, lon_max_t, lat_min_t, lat_max_t
+doubleprecision :: xmin, xmax, ymin, ymax
+doubleprecision :: xmin_t, xmax_t, ymin_t, ymax_t
 doubleprecision :: step_lon_t,step_lat_t
 character(len=80) :: type_t,type
 TYPE(griddim_def):: griddim_t
@@ -2631,9 +2631,9 @@ do igrid=1,ngrid
 
   call init(griddim_t)
 
-  call get_val(this(igrid)%griddim,lon_min=lon_min_t, lon_max=lon_max_t, lat_min=lat_min_t, lat_max=lat_max_t,type=type_t)
-  step_lon_t=(lon_max_t-lon_min_t)/dble(this(igrid)%griddim%dim%nx-1)
-  step_lat_t=(lat_max_t-lat_min_t)/dble(this(igrid)%griddim%dim%ny-1)
+  call get_val(this(igrid)%griddim,xmin=xmin_t, xmax=xmax_t, ymin=ymin_t, ymax=ymax_t,proj_type=type_t)
+  step_lon_t=(xmax_t-xmin_t)/dble(this(igrid)%griddim%dim%nx-1)
+  step_lat_t=(ymax_t-ymin_t)/dble(this(igrid)%griddim%dim%ny-1)
 
   do jgrid=1,ngrid
 
@@ -2651,24 +2651,24 @@ do igrid=1,ngrid
     if (this(igrid)%griddim%dim%nx == this(jgrid)%griddim%dim%nx .and. &
      this(igrid)%griddim%dim%ny == this(jgrid)%griddim%dim%ny ) then
 
-      call get_val(this(jgrid)%griddim,lon_min=lon_min, lon_max=lon_max, lat_min=lat_min, lat_max=lat_max,type=type)
+      call get_val(this(jgrid)%griddim,xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax,proj_type=type)
       
       if (type_t /= type )cycle
 
 #ifdef DEBUG
       call l4f_category_log(this(igrid)%category,L4F_DEBUG,"C grid: test U "//&
-       to_char(lon_min)//to_char(lon_max)//to_char(lat_min)//to_char(lat_max))
+       to_char(xmin)//to_char(xmax)//to_char(ymin)//to_char(ymax))
 
       call l4f_category_log(this(igrid)%category,L4F_DEBUG,"diff coordinate lon"//&
-       to_char(abs(lon_min - (lon_min_t+step_lon_t/2.d0)))//&
-       to_char(abs(lon_max - (lon_max_t+step_lon_t/2.d0))))
+       to_char(abs(xmin - (xmin_t+step_lon_t/2.d0)))//&
+       to_char(abs(xmax - (xmax_t+step_lon_t/2.d0))))
       call l4f_category_log(this(igrid)%category,L4F_DEBUG,"diff coordinate lat"//&
-       to_char(abs(lat_min - (lat_min_t+step_lat_t/2.d0)))//&
-       to_char(abs(lat_max - (lat_max_t+step_lat_t/2.d0))))
+       to_char(abs(ymin - (ymin_t+step_lat_t/2.d0)))//&
+       to_char(abs(ymax - (ymax_t+step_lat_t/2.d0))))
 #endif
 
-      if ( abs(lon_min - (lon_min_t+step_lon_t/2.d0)) < 1.d-3 .and. abs(lon_max - (lon_max_t+step_lon_t/2.d0)) < 1.d-3 ) then
-        if ( abs(lat_min - lat_min_t) < 1.d-3 .and. abs(lat_max - lat_max_t) < 1.d-3 ) then
+      if ( abs(xmin - (xmin_t+step_lon_t/2.d0)) < 1.d-3 .and. abs(xmax - (xmax_t+step_lon_t/2.d0)) < 1.d-3 ) then
+        if ( abs(ymin - ymin_t) < 1.d-3 .and. abs(ymax - ymax_t) < 1.d-3 ) then
 
 #ifdef DEBUG
           call l4f_category_log(this(igrid)%category,L4F_DEBUG,"C grid: found U")
@@ -2681,11 +2681,11 @@ do igrid=1,ngrid
 
 #ifdef DEBUG
       call l4f_category_log(this(igrid)%category,L4F_DEBUG,"C grid: test V "//&
-       to_char(lon_min)//to_char(lon_max)//to_char(lat_min)//to_char(lat_max))
+       to_char(xmin)//to_char(xmax)//to_char(ymin)//to_char(ymax))
 #endif
 
-      if ( abs(lat_min - (lat_min_t+step_lat_t/2.d0)) < 1.d-3 .and. abs(lat_max - (lat_max_t+step_lat_t/2.d0)) < 1.d-3 ) then
-        if ( abs(lon_min - lon_min_t) < 1.d-3 .and. abs(lon_max - lon_max_t) < 1.d-3  ) then
+      if ( abs(ymin - (ymin_t+step_lat_t/2.d0)) < 1.d-3 .and. abs(ymax - (ymax_t+step_lat_t/2.d0)) < 1.d-3 ) then
+        if ( abs(xmin - xmin_t) < 1.d-3 .and. abs(xmax - xmax_t) < 1.d-3  ) then
           
 #ifdef DEBUG
           call l4f_category_log(this(igrid)%category,L4F_DEBUG,"C grid: found V")
@@ -2701,19 +2701,19 @@ do igrid=1,ngrid
 
 #ifdef DEBUG
       call l4f_category_log(this(igrid)%category,L4F_DEBUG,"C grid: test U and V"//&
-       to_char(lon_min_t)//to_char(lon_max_t)//to_char(lat_min_t)//to_char(lat_max_t)//&
-       to_char(lon_min)//to_char(lon_max)//to_char(lat_min)//to_char(lat_max))
+       to_char(xmin_t)//to_char(xmax_t)//to_char(ymin_t)//to_char(ymax_t)//&
+       to_char(xmin)//to_char(xmax)//to_char(ymin)//to_char(ymax))
 
       call l4f_category_log(this(igrid)%category,L4F_DEBUG,"UV diff coordinate lon"//&
-       to_char(abs(lon_min_t - lon_min)-step_lon_t/2.d0)//&
-       to_char(abs(lon_max_t - lon_max)-step_lon_t/2.d0))
+       to_char(abs(xmin_t - xmin)-step_lon_t/2.d0)//&
+       to_char(abs(xmax_t - xmax)-step_lon_t/2.d0))
       call l4f_category_log(this(igrid)%category,L4F_DEBUG,"UV diff coordinate lat"//&
-       to_char(abs(lat_min_t - lat_min) -step_lat_t/2.d0)//&
-       to_char(abs(lat_max_t - lat_max)-step_lat_t/2.d0))
+       to_char(abs(ymin_t - ymin) -step_lat_t/2.d0)//&
+       to_char(abs(ymax_t - ymax)-step_lat_t/2.d0))
 #endif
       
-      if ( abs(lat_min - (lat_min_t+step_lat_t/2.d0)) < 2.d-3 .and. abs(lat_max - (lat_max_t+step_lat_t/2.d0)) < 2.d-3 ) then
-        if ( abs(lon_min_t - (lon_min+step_lon_t/2.d0)) < 2.d-3 .and. abs(lon_max_t - (lon_max+step_lon_t/2.d0)) < 2.d-3 ) then
+      if ( abs(ymin - (ymin_t+step_lat_t/2.d0)) < 2.d-3 .and. abs(ymax - (ymax_t+step_lat_t/2.d0)) < 2.d-3 ) then
+        if ( abs(xmin_t - (xmin+step_lon_t/2.d0)) < 2.d-3 .and. abs(xmax_t - (xmax+step_lon_t/2.d0)) < 2.d-3 ) then
           
 #ifdef DEBUG
           call l4f_category_log(this(igrid)%category,L4F_DEBUG,"C grid: found U and V case up and right")
@@ -2722,7 +2722,7 @@ do igrid=1,ngrid
           vgrid=jgrid
           ugrid=igrid
 
-          call init(griddim_t,lon_min=lon_min, lon_max=lon_max, lat_min=lat_min_t, lat_max=lat_max_t)
+          call init(griddim_t,xmin=xmin, xmax=xmax, ymin=ymin_t, ymax=ymax_t)
 
         end if
       end if
@@ -2770,14 +2770,14 @@ type(volgrid6d),intent(inout) :: this !< object containing fields to be translat
 type(griddim_def),intent(in),optional :: griddim_t !< object containing grid of T points
 integer,intent(in) :: cgrid !< in C grid (Arakawa) we have 0=T,1=U,2=V points
 
-doubleprecision :: lon_min, lon_max, lat_min, lat_max
+doubleprecision :: xmin, xmax, ymin, ymax
 doubleprecision :: step_lon,step_lat
 
 
 if (present(griddim_t)) then
 
- call get_val(griddim_t,lon_min=lon_min, lon_max=lon_max, lat_min=lat_min, lat_max=lat_max)
- call set_val(this%griddim,lon_min=lon_min, lon_max=lon_max, lat_min=lat_min, lat_max=lat_max)
+ call get_val(griddim_t,xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax)
+ call set_val(this%griddim,xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax)
 
 else
 
@@ -2796,11 +2796,11 @@ else
     call l4f_category_log(this%category,L4F_DEBUG,"C grid: U points, we need interpolation")
 #endif
 
-    call get_val(this%griddim, lon_min=lon_min, lon_max=lon_max)
-    step_lon=(lon_max-lon_min)/dble(this%griddim%dim%nx-1)
-    lon_min=lon_min-step_lon/2.d0
-    lon_max=lon_max-step_lon/2.d0
-    call set_val(this%griddim, lon_min=lon_min, lon_max=lon_max)
+    call get_val(this%griddim, xmin=xmin, xmax=xmax)
+    step_lon=(xmax-xmin)/dble(this%griddim%dim%nx-1)
+    xmin=xmin-step_lon/2.d0
+    xmax=xmax-step_lon/2.d0
+    call set_val(this%griddim, xmin=xmin, xmax=xmax)
     
   case (2)
 
@@ -2808,11 +2808,11 @@ else
     call l4f_category_log(this%category,L4F_DEBUG,"C grid: V points, we need interpolation")
 #endif
 
-    call get_val(this%griddim, lat_min=lat_min, lat_max=lat_max)
-    step_lat=(lat_max-lat_min)/dble(this%griddim%dim%ny-1)
-    lat_min=lat_min-step_lat/2.d0
-    lat_max=lat_max-step_lat/2.d0
-    call set_val(this%griddim, lat_min=lat_min, lat_max=lat_max)
+    call get_val(this%griddim, ymin=ymin, ymax=ymax)
+    step_lat=(ymax-ymin)/dble(this%griddim%dim%ny-1)
+    ymin=ymin-step_lat/2.d0
+    ymax=ymax-step_lat/2.d0
+    call set_val(this%griddim, ymin=ymin, ymax=ymax)
     
   case default
 

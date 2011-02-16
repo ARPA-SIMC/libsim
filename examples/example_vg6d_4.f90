@@ -43,7 +43,7 @@ type(transform_def) :: trans
 type(grid_transform) :: grid_trans
 
 integer :: nx=30,ny=30,component_flag=0
-doubleprecision :: lon_min=0., lon_max=30., lat_min=30., lat_max=60.
+doubleprecision :: xmin=0., xmax=30., ymin=30., ymax=60.
 doubleprecision :: latitude_south_pole=-32.5,longitude_south_pole=10.,angle_rotation=0.
 character(len=80) :: type='regular_ll',trans_type='inter',sub_type='near'
 
@@ -64,8 +64,8 @@ call l4f_category_log(category,L4F_INFO,"transforming to   file:"//trim(outfile)
 if(trans_type == 'inter')then
 
   call init(griddim_out,&
-   type=type,nx=nx,ny=ny, &
-   lon_min=lon_min, lon_max=lon_max, lat_min=lat_min, lat_max=lat_max, component_flag=component_flag, &
+   proj_type=type,nx=nx,ny=ny, &
+   xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, component_flag=component_flag, &
    latitude_south_pole=latitude_south_pole,longitude_south_pole=longitude_south_pole,angle_rotation=angle_rotation, &
    categoryappend="regular_ll")
 

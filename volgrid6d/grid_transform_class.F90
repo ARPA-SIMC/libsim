@@ -732,8 +732,8 @@ TYPE(griddim_def),INTENT(inout) :: out !< griddim object defining target grid (i
 CHARACTER(len=*),INTENT(in),OPTIONAL :: categoryappend !< append this suffix to log4fortran namespace category
 
 INTEGER :: nx, ny, i, j
-DOUBLE PRECISION :: lon_min, lon_max, lat_min, lat_max, steplon, steplat, &
- lon_min_new, lat_min_new
+DOUBLE PRECISION :: xmin, xmax, ymin, ymax, steplon, steplat, &
+ xmin_new, ymin_new
 doubleprecision :: l1, l2
 
 
@@ -820,8 +820,8 @@ IF (this%trans%trans_type == 'zoom') THEN
   ENDIF
 ! to do in all zoom cases
   
-  CALL get_val(in, nx=nx, ny=ny, lon_min=lon_min, lon_max=lon_max, &
-   lat_min=lat_min, lat_max=lat_max, dx=steplon, dy=steplat)
+  CALL get_val(in, nx=nx, ny=ny, xmin=xmin, xmax=xmax, &
+   ymin=ymin, ymax=ymax, dx=steplon, dy=steplat)
 
 ! old indices
   this%iniox = min(max(this%trans%rect_ind%ix,1),nx) ! iox
@@ -834,10 +834,10 @@ IF (this%trans%trans_type == 'zoom') THEN
   this%outfnx = min(this%trans%rect_ind%fx,nx)-this%trans%rect_ind%ix+1 ! fnx
   this%outfny = min(this%trans%rect_ind%fy,ny)-this%trans%rect_ind%iy+1 ! fny
 
-  lon_min=lon_min+steplon*(this%trans%rect_ind%ix-1)
-  lat_min=lat_min+steplat*(this%trans%rect_ind%iy-1)
-  lon_max=lon_max+steplon*(this%trans%rect_ind%fx-nx)
-  lat_max=lat_max+steplat*(this%trans%rect_ind%fy-ny)
+  xmin=xmin+steplon*(this%trans%rect_ind%ix-1)
+  ymin=ymin+steplat*(this%trans%rect_ind%iy-1)
+  xmax=xmax+steplon*(this%trans%rect_ind%fx-nx)
+  ymax=ymax+steplat*(this%trans%rect_ind%fy-ny)
 
   call copy(in,out)
 ! if unproj has been called for in, in%dim will contain allocated coordinates
@@ -854,23 +854,23 @@ IF (this%trans%trans_type == 'zoom') THEN
   this%outny=out%dim%ny
 
   call set_val (out,&
-   lon_min = lon_min,  lon_max = lon_max, &
-   lat_min = lat_min,  lat_max = lat_max )
+   xmin = xmin,  xmax = xmax, &
+   ymin = ymin,  ymax = ymax )
 
 ELSE IF (this%trans%trans_type == 'boxregrid') THEN
 
   IF (this%trans%sub_type == 'average' .OR. &
    this%trans%sub_type == 'max' .OR. this%trans%sub_type == 'min')THEN
 
-    CALL get_val(in, nx=nx, ny=ny, lon_min=lon_min, lon_max=lon_max, &
-     lat_min=lat_min, lat_max=lat_max, dx=steplon, dy=steplat)
+    CALL get_val(in, nx=nx, ny=ny, xmin=xmin, xmax=xmax, &
+     ymin=ymin, ymax=ymax, dx=steplon, dy=steplat)
 
     this%innx = nx
     this%inny = ny
 
 ! new grid
-    lon_min_new = lon_min + (this%trans%box_info%npx - 1)*0.5D0*steplon
-    lat_min_new = lat_min + (this%trans%box_info%npy - 1)*0.5D0*steplat
+    xmin_new = xmin + (this%trans%box_info%npx - 1)*0.5D0*steplon
+    ymin_new = ymin + (this%trans%box_info%npy - 1)*0.5D0*steplat
 
     CALL l4f_category_log(this%category,L4F_DEBUG,"copying griddim in out")
     call copy(in, out)
@@ -882,9 +882,9 @@ ELSE IF (this%trans%trans_type == 'boxregrid') THEN
     steplon = steplon*this%trans%box_info%npx
     steplat = steplat*this%trans%box_info%npy
 
-    CALL set_val(out, lon_min=lon_min_new, lat_min=lat_min_new, &
-     lon_max=lon_min_new + DBLE(out%dim%nx-1)*steplon, dx=steplon, &
-     lat_max=lat_min_new + DBLE(out%dim%ny-1)*steplat, dy=steplat)
+    CALL set_val(out, xmin=xmin_new, ymin=ymin_new, &
+     xmax=xmin_new + DBLE(out%dim%nx-1)*steplon, dx=steplon, &
+     ymax=ymin_new + DBLE(out%dim%ny-1)*steplat, dy=steplat)
 
   ELSE
 
@@ -906,7 +906,7 @@ ELSE IF (this%trans%trans_type == 'inter') THEN
   IF (this%trans%sub_type == 'near' .OR. this%trans%sub_type == 'bilin' ) THEN
     
     CALL get_val(in, nx=this%innx, ny=this%inny, &
-     lon_min=lon_min, lon_max=lon_max, lat_min=lat_min, lat_max=lat_max)
+     xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax)
     CALL get_val(out, nx=this%outnx, ny=this%outny)
   
     ALLOCATE(this%inter_index_x(this%outnx,this%outny), &
@@ -914,8 +914,8 @@ ELSE IF (this%trans%trans_type == 'inter') THEN
 
     CALL find_index(in,this%trans%sub_type,&
      nx=this%innx, ny=this%inny ,&
-     lon_min=lon_min, lon_max=lon_max,&
-     lat_min=lat_min, lat_max=lat_max,&
+     xmin=xmin, xmax=xmax,&
+     ymin=ymin, ymax=ymax,&
      lon=out%dim%lon,lat=out%dim%lat,&
      index_x=this%inter_index_x,index_y=this%inter_index_y)
 
@@ -945,7 +945,7 @@ ELSE IF (this%trans%trans_type == 'boxinter') THEN
 
   CALL get_val(in, nx=this%innx, ny=this%inny)
   CALL get_val(out, nx=this%outnx, ny=this%outny, &
-   lon_min=lon_min, lon_max=lon_max, lat_min=lat_min, lat_max=lat_max)
+   xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax)
 ! TODO now box size is ignored
 ! if box size not provided, use the actual grid step
   IF (.NOT.c_e(this%trans%area_info%boxdx)) &
@@ -964,8 +964,8 @@ ELSE IF (this%trans%trans_type == 'boxinter') THEN
 ! use find_index in the opposite way as before
   CALL find_index(out,'near',&
    nx=this%outnx, ny=this%outny ,&
-   lon_min=lon_min, lon_max=lon_max,&
-   lat_min=lat_min, lat_max=lat_max,&
+   xmin=xmin, xmax=xmax,&
+   ymin=ymin, ymax=ymax,&
    lon=in%dim%lon, lat=in%dim%lat,&
    index_x=this%inter_index_x, index_y=this%inter_index_y)
 
@@ -1021,7 +1021,7 @@ TYPE(geo_coordvect),INTENT(inout),OPTIONAL :: poly(:) !< array of polygons indic
 character(len=*),INTENT(in),OPTIONAL :: categoryappend !< append this suffix to log4fortran namespace category
 
 INTEGER :: nx, ny, i, j, n
-DOUBLE PRECISION :: lon_min, lon_max, lat_min, lat_max, steplon, steplat,lon_min_new, lat_min_new
+DOUBLE PRECISION :: xmin, xmax, ymin, ymax, steplon, steplat,xmin_new, ymin_new
 doubleprecision,pointer :: lon(:),lat(:)
 integer :: ix,iy
 TYPE(geo_coord) :: point
@@ -1045,15 +1045,15 @@ IF (this%trans%trans_type == 'inter') THEN
     ALLOCATE(lon(this%outnx),lat(this%outnx))
 
     CALL get_val(in, &
-     lon_min=lon_min, lon_max=lon_max,&
-     lat_min=lat_min, lat_max=lat_max)
+     xmin=xmin, xmax=xmax,&
+     ymin=ymin, ymax=ymax)
 
     CALL getval(v7d_out%ana(:)%coord,lon=lon,lat=lat)
 
     CALL find_index(in,this%trans%sub_type,&
      nx=this%innx, ny=this%inny, &
-     lon_min=lon_min, lon_max=lon_max, &
-     lat_min=lat_min, lat_max=lat_max, &
+     xmin=xmin, xmax=xmax, &
+     ymin=ymin, ymax=ymax, &
      lon=lon, lat=lat, &
      index_x=this%inter_index_x(:,1), index_y=this%inter_index_y(:,1))
 
@@ -1259,7 +1259,7 @@ TYPE(griddim_def),INTENT(in) :: out !< griddim object defining target grid
 character(len=*),INTENT(in),OPTIONAL :: categoryappend !< append this suffix to log4fortran namespace category
 
 INTEGER :: nx, ny,i,j
-DOUBLE PRECISION :: lon_min, lon_max, lat_min, lat_max, steplon, steplat,lon_min_new, lat_min_new
+DOUBLE PRECISION :: xmin, xmax, ymin, ymax, steplon, steplat,xmin_new, ymin_new
 doubleprecision,allocatable :: lon(:),lat(:)
 
 
@@ -1281,8 +1281,8 @@ IF (this%trans%trans_type == 'inter') THEN
     ALLOCATE(this%inter_x(this%outnx,this%outny),this%inter_y(this%outnx,this%outny))
 
     CALL get_val(out, &
-     lon_min=lon_min, lon_max=lon_max,&
-     lat_min=lat_min, lat_max=lat_max)
+     xmin=xmin, xmax=xmax,&
+     ymin=ymin, ymax=ymax)
 
     CALL getval(v7d_in%ana(:)%coord,lon=lon,lat=lat)
 
@@ -1308,7 +1308,7 @@ ELSE IF (this%trans%trans_type == 'boxinter') THEN
   this%innx=SIZE(v7d_in%ana)
   this%inny=1
   CALL get_val(out, nx=this%outnx, ny=this%outny, &
-   lon_min=lon_min, lon_max=lon_max, lat_min=lat_min, lat_max=lat_max)
+   xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax)
 ! TODO now box size is ignored
 ! if box size not provided, use the actual grid step
   IF (.NOT.c_e(this%trans%area_info%boxdx)) &
@@ -1328,8 +1328,8 @@ ELSE IF (this%trans%trans_type == 'boxinter') THEN
 ! use find_index in the opposite way
   CALL find_index(out,'near',&
    nx=this%outnx, ny=this%outny ,&
-   lon_min=lon_min, lon_max=lon_max,&
-   lat_min=lat_min, lat_max=lat_max,&
+   xmin=xmin, xmax=xmax,&
+   ymin=ymin, ymax=ymax,&
    lon=lon, lat=lat,&
    index_x=this%inter_index_x(:,1), index_y=this%inter_index_y(:,1))
 
@@ -2080,7 +2080,7 @@ end function hbilin
 
 ! Locate index of requested point
 elemental subroutine find_index(this,inter_type,&
- nx,ny, lon_min, lon_max, lat_min,lat_max,&
+ nx,ny, xmin, xmax, ymin,ymax,&
  lon,lat,index_x,index_y)
 
 type(griddim_def),intent(in) :: this ! griddim object (from grid)
@@ -2088,7 +2088,7 @@ character(len=*),intent(in) :: inter_type ! interpolation type (determine wich p
 ! dimension (to grid)
 integer,intent(in) :: nx,ny 
 ! extreme coordinate (to grid)
-doubleprecision,intent(in) :: lon_min, lon_max, lat_min, lat_max
+doubleprecision,intent(in) :: xmin, xmax, ymin, ymax
 ! target coordinate
 doubleprecision,intent(in) :: lon,lat
 ! index of point requested
@@ -2101,12 +2101,12 @@ if (inter_type == "near") then
   call proj(this,lon,lat,x,y)
 
   if (present(index_x))then
-    index_x=nint((x-lon_min)/((lon_max-lon_min)/dble(nx-1)))+1
+    index_x=nint((x-xmin)/((xmax-xmin)/dble(nx-1)))+1
     if ( index_x < 1 .or. index_x > nx ) index_x=imiss
   end if
 
   if (present(index_y))then
-    index_y=nint((y-lat_min)/((lat_max-lat_min)/dble(ny-1)))+1
+    index_y=nint((y-ymin)/((ymax-ymin)/dble(ny-1)))+1
     if ( index_y < 1 .or. index_y > ny ) index_y=imiss
   end if
 
@@ -2115,12 +2115,12 @@ else if (inter_type == "bilin") then
   call proj(this,lon,lat,x,y)
 
   if (present(index_x))then
-    index_x=(x-lon_min)/((lon_max-lon_min)/dble(nx-1))+1
+    index_x=(x-xmin)/((xmax-xmin)/dble(nx-1))+1
     if ( index_x < 1 .or. index_x+1 > nx ) index_x=imiss
   end if
 
   if (present(index_y))then
-    index_y=(y-lat_min)/((lat_max-lat_min)/dble(ny-1))+1
+    index_y=(y-ymin)/((ymax-ymin)/dble(ny-1))+1
     if ( index_y < 1 .or. index_y+1 > ny ) index_y=imiss
   end if
 
