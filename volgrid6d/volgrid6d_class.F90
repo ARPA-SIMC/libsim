@@ -18,8 +18,8 @@
 #include "config.h"
 !> \defgroup volgrid6d Libsim package, volgrid6d library.
 
-!> This module defines objects and methods for managing data on rectangular
-!! georeferenced grids.  The data are accomodated in a
+!> This module defines objects and methods for managing data volumes
+!! on rectangular georeferenced grids.  The data are accomodated in a
 !! multi-dimensional array with 6 predefined dimensions. Different
 !! geographic coordinates and projections are supported, mainly
 !! inspired by grib coding standards. The \a volgrid6d object contains

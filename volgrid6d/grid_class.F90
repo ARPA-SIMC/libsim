@@ -37,28 +37,30 @@ implicit none
 
 character (len=255),parameter:: subcategory="grid_class"
 
-!> This object, for internal use only, describes a geographical projection
-!! following the WMO grib conventions (gridType in grib_api). In the
-!! case of import from grib, the type of projection is computed from
-!! the grid description section in grib file, the projections
-!! currently supported or for which support is planned are:
+
+!> This object, mainly for internal use, describes a grid on
+!! a geographic projection, except the grid dimensions.  It follows
+!! the WMO grib conventions (gridType in grib_api). In the case of
+!! import from grib, the type of projection is computed from the grid
+!! description section in grib file, the projections currently
+!! supported or for which support is planned are:
 !!
 !!    - For grib edition 1 and 2:
 !!          - regular_ll (works)
 !!          - mercator (to be done)
 !!          - lambert (works, to be completed)
 !!          - polar_stereographic (to be tested)
-!!          - UTM (to be done, needs standardization)
 !!          - albers (to be done)
 !!          - rotated_ll (works)
 !!          - stretched_ll (to be completed and tested)
 !!          - stretched_rotated_ll (to be completed and tested)
 !!    - For grib edition 2 only:
 !!          - equatorial_azimuthal_equidistant (to be done)
-
-
-!> This object, mainly for internal use, describes a grid on
-!! a geographic projection except the grid dimensions.
+!!          - UTM (ARPA-SIM extension)
+!!
+!! The object is opaque, thus all its memebers have to be set and
+!! accessed through the constructor and the ::get_val and ::set_val
+!! methods.
 type grid_def
   private
   type(geo_proj) :: proj
@@ -623,9 +625,8 @@ USE grib_api
 TYPE(griddim_def),INTENT(inout) :: this ! griddim object
 INTEGER, INTENT(in) :: gaid ! grib_api id of the grib loaded in memory to import
 
-DOUBLE PRECISION :: loFirst, loLast, laFirst, laLast, x1, y1
-INTEGER :: EditionNumber, iScansNegatively, jScansPositively
-
+DOUBLE PRECISION :: loFirst, loLast, laFirst, laLast, x1, y1, lov, refLon
+INTEGER :: EditionNumber, iScansNegatively, jScansPositively, zone, datum
 
 ! Generic keys
 CALL grib_get(gaid, 'typeOfGrid', this%grid%proj%proj_type)
@@ -771,6 +772,45 @@ CASE ('polar_stereographic', 'lambert', 'albers')
 ! keep these values for personal pleasure
   this%grid%proj%polar%lon1 = loFirst
   this%grid%proj%polar%lat1 = laFirst
+
+CASE ('UTM')
+
+  CALL grib_get(gaid,'zone',zone)
+
+  CALL grib_get(gaid,'datum',datum)
+  IF (datum == 0) THEN
+    CALL grib_get(gaid,'referenceLongitude',refLon)
+    CALL grib_get(gaid,'falseEasting',this%grid%proj%xoff)
+    CALL grib_get(gaid,'falseNorthing',this%grid%proj%yoff)
+    CALL set_val(this%grid%proj, zone=zone, lov=refLon/1.0D6)
+    CALL set_val(this, ellips_type=ellips_wgs84)
+  ELSE
+    CALL set_val(this%grid%proj, zone=zone)
+! todo ellipsoid should be decoded from grib and set here
+  ENDIF
+
+  CALL grib_get(gaid,'eastingOfFirstGridPoint',loFirst)
+  CALL grib_get(gaid,'eastingOfLastGridPoint',loLast)
+  CALL grib_get(gaid,'northingOfFirstGridPoint',laFirst)
+  CALL grib_get(gaid,'northingOfLastGridPoint',laLast)
+
+  IF (iScansNegatively  == 0) THEN
+    this%grid%grid%xmin = loFirst
+    this%grid%grid%xmax = loLast
+  ELSE
+    this%grid%grid%xmax = loFirst
+    this%grid%grid%xmin = loLast
+  ENDIF
+  IF (jScansPositively == 0) THEN
+    this%grid%grid%ymax = laFirst
+    this%grid%grid%ymin = laLast
+  ELSE
+    this%grid%grid%ymin = laFirst
+    this%grid%grid%ymax = laLast
+  ENDIF
+
+! compute dx and dy (should we get them from grib?)
+  CALL grid_rect_setsteps(this%grid%grid, this%dim%nx, this%dim%ny)
 
 CASE default
   CALL l4f_category_log(this%category,L4F_ERROR, &

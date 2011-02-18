@@ -114,8 +114,8 @@ INTEGER,PARAMETER :: nellips = 41 !< number of predefine ellipsoids
 ! queste costanti vanno usate per specificare l'ellissoide da usare per
 ! interpretare i dati UTM, gli ellissoidi sono tratti dal pacchetto
 ! software "proj" (vedi l'uscita a video del comando \c proj \c -le ).
-INTEGER, PARAMETER :: &
-ellips_merit =    1,  & !< constants for predefined ellipsoids MERIT 1983                       
+INTEGER,PARAMETER,PUBLIC :: &
+ellips_merit =    1,  & !< constants for predefined ellipsoids MERIT 1983
 ellips_sgs85 =    2,  & !< Soviet Geodetic System 85        
 ellips_grs80 =    3,  & !< GRS 1980(IUGG, 1980)             
 ellips_iau76 =    4,  & !< IAU 1976                         
@@ -267,7 +267,7 @@ FUNCTION geo_proj_new(proj_type, lov, zone, xoff, yoff, &
  ellips_smaj_axis, ellips_flatt, ellips_type) RESULT(this)
 CHARACTER(len=*),INTENT(in),OPTIONAL :: proj_type !< type of projection
 DOUBLE PRECISION,INTENT(in),OPTIONAL :: lov !< line of view, also known as reference longitude or orientation of the grid (polar projections)
-INTEGER,OPTIONAL :: zone !< Earth zone (mainly for UTM), sets lov to the correct zone central meridian
+INTEGER,INTENT(in),OPTIONAL :: zone !< Earth zone (mainly for UTM), sets lov to the correct zone central meridian
 DOUBLE PRECISION,INTENT(in),OPTIONAL :: xoff !< offset on x axis (false easting)
 DOUBLE PRECISION,INTENT(in),OPTIONAL :: yoff !< offset on y axis (false northing)
 DOUBLE PRECISION,INTENT(in),OPTIONAL :: longitude_south_pole !< longitude of the southern pole of projection 
@@ -288,12 +288,8 @@ TYPE(geo_proj) :: this
 
 this%proj_type = optio_c(proj_type, LEN(this%proj_type))
 
-! line of view / central meridian
-this%lov = optio_d(lov)
-IF (PRESENT(zone)) THEN ! set lov according to requested UTM zone
-! warning here if both lov and zone specified?
-  this%lov = ABS(zone)*6.0D0 - 183.0D0
-ENDIF
+! line of view / central meridian, use set_val
+CALL set_val(this, zone=zone, lov=lov)
 
 ! offset / false *ing
 this%xoff = optio_d(xoff)
@@ -312,19 +308,10 @@ this%polar%latin2 = optio_d(latin2)
 this%polar%lad = optio_d(lad)
 this%polar%projection_center_flag = optio_l(projection_center_flag)
 
-IF (PRESENT(ellips_smaj_axis) .AND. PRESENT(ellips_flatt)) THEN
-! explicit ellipsoid parameters provided
-  CALL ellips_compute(this%ellips, ellips_smaj_axis, ellips_flatt)
-ELSE IF (PRESENT(ellips_type)) THEN
-  IF (ellips_type > 0 .AND. ellips_type < nellips) THEN
-! an hard coded ellipsoid has been requested
-    CALL ellips_compute(this%ellips, a(ellips_type), rf(ellips_type))
-  ELSE ! fallback to sphere
-    CALL ellips_compute(this%ellips)
-  ENDIF
-ELSE ! fallback to sphere
-  CALL ellips_compute(this%ellips)
-ENDIF
+! ellipsoid, start from sphere, then use set_val
+CALL ellips_compute(this%ellips)
+CALL set_val(this, ellips_smaj_axis=ellips_smaj_axis, ellips_flatt=ellips_flatt, &
+ ellips_type=ellips_type)
 
 END FUNCTION geo_proj_new
 
@@ -435,13 +422,15 @@ END SUBROUTINE geo_proj_get_val
 
 
 SUBROUTINE geo_proj_set_val(this, &
- proj_type, lov, xoff, yoff, &
+ proj_type, lov, zone, xoff, yoff, &
  longitude_south_pole, latitude_south_pole, angle_rotation, &
  longitude_stretch_pole, latitude_stretch_pole, stretch_factor, &
- latin1, latin2, lad, projection_center_flag)
+ latin1, latin2, lad, projection_center_flag, &
+ ellips_smaj_axis, ellips_flatt, ellips_type)
 TYPE(geo_proj),INTENT(inout) :: this
 CHARACTER(len=*),OPTIONAL :: proj_type !< Type of projection
 DOUBLE PRECISION,OPTIONAL :: lov !< Line of view, also known as reference longitude or orientation of the grid (polar projections)
+INTEGER,INTENT(in),OPTIONAL :: zone !< Earth zone (mainly for UTM), sets lov to the correct zone central meridian
 DOUBLE PRECISION,OPTIONAL :: xoff !< Offset on x axis (false easting)
 DOUBLE PRECISION,OPTIONAL :: yoff !< Offset on y axis (false northing)
 DOUBLE PRECISION,OPTIONAL :: longitude_south_pole !< Longitude of the southern pole of projection 
@@ -454,9 +443,34 @@ DOUBLE PRECISION,OPTIONAL :: latin1 !< First standard latitude from main pole (L
 DOUBLE PRECISION,OPTIONAL :: latin2 !< Second standard latitude from main pole (Lambert)
 DOUBLE PRECISION,OPTIONAL :: lad !< Latitude at which dx and dy (in m) are specified (Lambert, grib2 only)
 INTEGER,OPTIONAL :: projection_center_flag !< Flag indicating which pole is represented
+DOUBLE PRECISION,INTENT(in),OPTIONAL :: ellips_smaj_axis !< Earth semi-major axis
+DOUBLE PRECISION,INTENT(in),OPTIONAL :: ellips_flatt !< Earth flattening
+INTEGER,INTENT(in),OPTIONAL :: ellips_type !< number in the interval [1,nellips] indicating a predefined ellipsoid, alternative to the previous arguments
 
 
-! todo
+! line of view / central meridian
+IF (PRESENT(lov) .AND. PRESENT(zone)) THEN ! set lov according to requested UTM zone
+  this%lov = lov + zone*6.0D0 - 183.0D0
+ELSE IF (PRESENT(lov)) THEN
+  this%lov = lov
+ELSE IF (PRESENT(zone)) THEN
+  this%lov = zone*6.0D0 - 183.0D0
+ENDIF
+
+! ellipsoid
+IF (PRESENT(ellips_smaj_axis) .AND. PRESENT(ellips_flatt)) THEN
+! explicit ellipsoid parameters provided
+  CALL ellips_compute(this%ellips, ellips_smaj_axis, ellips_flatt)
+ELSE IF (PRESENT(ellips_type)) THEN
+  IF (ellips_type > 0 .AND. ellips_type < nellips) THEN
+! an hard coded ellipsoid has been requested
+    CALL ellips_compute(this%ellips, a(ellips_type), rf(ellips_type))
+  ELSE ! fallback to sphere
+    CALL ellips_compute(this%ellips)
+  ENDIF
+ENDIF
+
+! todo all the rest
 
 END SUBROUTINE geo_proj_set_val
 
