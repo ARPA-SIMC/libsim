@@ -67,7 +67,7 @@ category=l4f_category_get(a_name//".main")
 ! define command-line options
 CALL op_option_nullify(options)
 
-options(1) = op_option_new('v', 'trans-type', trans_type, 'interp', help= &
+options(1) = op_option_new('v', 'trans-type', trans_type, 'inter', help= &
  'transformation type: ''inter'' for interpolation, ''boxinter'' for &
  &statistical interpolation on boxes, ''zoom'' for zooming, &
  &''boxregrid'' for resolution reduction, ''none'' for no operation')
@@ -211,6 +211,14 @@ end if
 
 CALL import(volgrid,filename=infile,decode=.FALSE.,categoryappend="input")
 if (c2agrid) call vg6d_c2a(volgrid)
+IF (ldisplay) THEN
+  IF (ASSOCIATED(volgrid)) THEN
+    DO i = 1,SIZE(volgrid)
+      PRINT*,'intput grid >>>>>>>>>>>>>>>>>>>>'
+      CALL display(volgrid(i)%griddim)
+    ENDDO
+  ENDIF
+ENDIF
 
 
 if (trans_type == 'none') then

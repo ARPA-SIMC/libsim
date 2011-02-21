@@ -16,9 +16,32 @@
 ! You should have received a copy of the GNU General Public License
 ! along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "config.h"
-!> Module for describing rectanguler geographical grids.
-!! This module defines classes and methods describing rectanguler
-!! georeferenced grids in different projections.
+!> Module for describing geographically referenced regular grids.
+!! This module defines classes and methods describing rectangular
+!! georeferenced grids in different geographical projections. The grid
+!! and projection definition can be specified explicitely by the
+!! caller or they can be entirely imported from a grib file (through
+!! grib_api) or from a file format supported by gdal (through gdal
+!! fortran interface).
+!!
+!! The projection is internally stored following the WMO grib
+!! conventions (gridType in grib_api). The projections currently
+!! supported or for which support is planned are:
+!!    - For grib edition 1 and 2:
+!!          - regular_ll (works)
+!!          - mercator (to be done)
+!!          - lambert (works, to be completed)
+!!          - polar_stereographic (to be tested)
+!!          - albers (to be done)
+!!          - rotated_ll (works)
+!!          - stretched_ll (to be completed and tested)
+!!          - stretched_rotated_ll (to be completed and tested)
+!!    - For grib edition 2 only:
+!!          - UTM (ARPA-SIM extension)
+!!          - equatorial_azimuthal_equidistant (to be done)
+!!    - For gdal-supported formats:
+!!          - regular_ll
+!!
 !!
 !! See the example program \include example_vg6d_1.f90
 !!
@@ -39,26 +62,8 @@ character (len=255),parameter:: subcategory="grid_class"
 
 
 !> This object, mainly for internal use, describes a grid on
-!! a geographic projection, except the grid dimensions.  It follows
-!! the WMO grib conventions (gridType in grib_api). In the case of
-!! import from grib, the type of projection is computed from the grid
-!! description section in grib file, the projections currently
-!! supported or for which support is planned are:
-!!
-!!    - For grib edition 1 and 2:
-!!          - regular_ll (works)
-!!          - mercator (to be done)
-!!          - lambert (works, to be completed)
-!!          - polar_stereographic (to be tested)
-!!          - albers (to be done)
-!!          - rotated_ll (works)
-!!          - stretched_ll (to be completed and tested)
-!!          - stretched_rotated_ll (to be completed and tested)
-!!    - For grib edition 2 only:
-!!          - equatorial_azimuthal_equidistant (to be done)
-!!          - UTM (ARPA-SIM extension)
-!!
-!! The object is opaque, thus all its memebers have to be set and
+!! a geographical projection, except the grid dimensions.
+!! The object is opaque, thus all its members have to be set and
 !! accessed through the constructor and the ::get_val and ::set_val
 !! methods.
 type grid_def
@@ -67,6 +72,7 @@ type grid_def
   type(grid_rect) :: grid
   integer :: category
 end type grid_def
+
 
 !> This object completely describes a grid on a geographic projection.
 !! It is the main public object of this module. The grid definition \a
@@ -109,7 +115,7 @@ INTERFACE proj
 END INTERFACE
 
 !> Compute backward coordinate transformation from projected system
-!! geographical system.
+!! to geographical system.
 INTERFACE unproj
   MODULE PROCEDURE griddim_coord_unproj, griddim_unproj
 END INTERFACE

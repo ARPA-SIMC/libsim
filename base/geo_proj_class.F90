@@ -325,7 +325,10 @@ DOUBLE PRECISION,INTENT(in),OPTIONAL :: a, rf
 IF (PRESENT(a) .AND. PRESENT(rf)) THEN
   this%f = 1.0D0/rf
   this%a = a
-ELSE ! parameters for a spherical Earth
+ELSE IF (PRESENT(a)) THEN ! parameters for a spherical Earth with given radius
+  this%f = 0.0D0
+  this%a = a
+ELSE ! parameters for a standard spherical Earth
   this%f = 0.0D0
   this%a = rearth
 ENDIF
