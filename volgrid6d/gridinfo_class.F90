@@ -1521,27 +1521,28 @@ TYPE(gridinfo_def),intent(inout) :: this
 IF (this%timerange%timerange == 205) THEN ! point in time interval
 
 !tmin
-  if (this%var == volgrid6d_var_new(255,2,16,255)) then
+  IF (this%var == volgrid6d_var_new(255,2,16,255)) THEN
     this%var%number=11
     this%timerange%timerange=3
-    return
-  end if
+    RETURN
+  ENDIF
 
 !tmax
-  if (this%var == volgrid6d_var_new(255,2,15,255)) then
+  IF (this%var == volgrid6d_var_new(255,2,15,255)) THEN
     this%var%number=11
     this%timerange%timerange=2
-    return
-  end if
+    RETURN
+  ENDIF
 
+! it is accepted to keep 187 since it is wind gust, not max wind
   IF (this%var%discipline == 255 .AND. &
    ANY(this%var%centre == cosmo_centre)) THEN ! grib1 & COSMO
 
     IF (this%var%category == 201) THEN ! table 201
 
-      IF (this%var%number == 187) THEN ! wind max
-        this%var%category=2
-        this%var%number=32
+      IF (this%var%number == 187) THEN ! wind gust
+!        this%var%category=2
+!        this%var%number=32
         this%timerange%timerange=2
       ENDIF
     ENDIF
@@ -1655,8 +1656,8 @@ ELSE IF (this%timerange%timerange == 206) THEN ! COSMO-nudging
           this%timerange%timerange=1 ! accumulated
 
         else if (this%var%number == 187) then ! UVMAX
-          this%var%category=2 ! reset also parameter
-          this%var%number=32
+!          this%var%category=2 ! reset also parameter
+!          this%var%number=32
           this%timerange%timerange=2 ! maximum
 
         else if (this%var%number == 218) then ! maximum 10m dynamical gust
@@ -1712,7 +1713,7 @@ TYPE(gridinfo_def),intent(inout) :: this
 
 if (this%timerange%timerange == 3 )then
 
-!tmin
+! tmin
   if (this%var == volgrid6d_var_new(255,2,11,255)) then
     this%var%number=16
     this%timerange%timerange=205
@@ -1721,7 +1722,7 @@ if (this%timerange%timerange == 3 )then
 
 else if (this%timerange%timerange == 2 )then
 
-!tmax
+! tmax
   if (this%var == volgrid6d_var_new(255,2,11,255)) then
     this%var%number=15
     this%timerange%timerange=205
@@ -1730,10 +1731,14 @@ else if (this%timerange%timerange == 2 )then
 
   IF (ANY(this%var%centre == cosmo_centre)) THEN ! grib1 & COSMO
 
-! wind max
-    IF (this%var == volgrid6d_var_new(255,2,32,255)) THEN
-      this%var%category=201
-      this%var%number=187
+! wind 
+! it is accepted to keep 187 since it is wind gust, not max wind
+!    IF (this%var == volgrid6d_var_new(255,2,32,255)) THEN
+!      this%var%category=201
+!      this%var%number=187
+!      this%timerange%timerange=205
+!    ENDIF
+    IF (this%var == volgrid6d_var_new(255,201,187,255)) THEN
       this%timerange%timerange=205
     ENDIF
 
