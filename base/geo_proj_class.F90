@@ -562,6 +562,17 @@ IF (c_e(this%polar%latin1) .OR. c_e(this%polar%latin2)) THEN
   ENDIF
 ENDIF
 
+IF (this%ellips%f == 0.0D0) THEN
+  PRINT*,"Spherical Earth:"
+  PRINT*,"Radius (m)",this%ellips%a
+ELSE
+  PRINT*,"Ellipsoid:"
+  PRINT*,"Flattening",this%ellips%f
+  PRINT*,"Reverse of flattening",1.0D0/this%ellips%f
+  PRINT*,"Semi-major axis (m)",this%ellips%a
+ENDIF
+
+
 END SUBROUTINE geo_proj_display
 
 

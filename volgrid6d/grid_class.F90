@@ -461,7 +461,9 @@ CALL set_val(this%grid%proj, proj_type=proj_type, lov=lov, xoff=xoff, yoff=yoff,
  longitude_stretch_pole=longitude_stretch_pole, &
  latitude_stretch_pole=latitude_stretch_pole, stretch_factor=stretch_factor, &
  latin1=latin1, latin2=latin2, lad=lad, &
- projection_center_flag=projection_center_flag)
+ projection_center_flag=projection_center_flag, &
+ ellips_smaj_axis=ellips_smaj_axis, ellips_flatt=ellips_flatt, &
+ ellips_type=ellips_type)
 
 CALL set_val(this%grid%grid, &
  xmin, xmax, ymin, ymax, dx, dy, component_flag)
@@ -789,7 +791,7 @@ CASE ('UTM')
     CALL grib_get(gaid,'falseEasting',this%grid%proj%xoff)
     CALL grib_get(gaid,'falseNorthing',this%grid%proj%yoff)
     CALL set_val(this%grid%proj, zone=zone, lov=refLon/1.0D6)
-    CALL set_val(this, ellips_type=ellips_wgs84)
+    CALL set_val(this, ellips_type=ellips_clrk66)
   ELSE
     CALL set_val(this%grid%proj, zone=zone)
 ! todo ellipsoid should be decoded from grib and set here

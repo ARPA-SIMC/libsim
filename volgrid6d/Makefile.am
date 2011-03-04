@@ -35,7 +35,7 @@ endif
 
 if NGMATH
 libsim_volgrid6d_la_LIBADD += $(NGMATH_LIBS)
-libsim_volgrid6d_la_LDFLAGS += $(NCARG_LDFLAGS)
+libsim_volgrid6d_la_LDFLAGS += $(NGMATH_LDFLAGS)
 
 endif
 
