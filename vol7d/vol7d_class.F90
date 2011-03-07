@@ -146,7 +146,7 @@ TYPE vol7d
 !> volume di anagrafica a valori reali
   REAL,POINTER :: volanar(:,:,:)
 !> volume di anagrafica a valori a doppia precisione
-  REAL(kind=fp_d),POINTER :: volanad(:,:,:)
+  DOUBLE PRECISION,POINTER :: volanad(:,:,:)
 !> volume di anagrafica a valori interi
   INTEGER,POINTER :: volanai(:,:,:)
 !> volume di anagrafica a valori byte
@@ -157,7 +157,7 @@ TYPE vol7d
 !> volume di attributi di anagrafica a valori reali
   REAL,POINTER :: volanaattrr(:,:,:,:)
 !> volume di attributi di anagrafica a valori a doppia precisione
-  REAL(kind=fp_d),POINTER :: volanaattrd(:,:,:,:)
+  DOUBLE PRECISION,POINTER :: volanaattrd(:,:,:,:)
 !> volume di attributi di anagrafica a valori interi
   INTEGER,POINTER :: volanaattri(:,:,:,:)
 !> volume di attributi di anagrafica a valori byte
@@ -168,7 +168,7 @@ TYPE vol7d
 !> volume di dati a valori reali
   REAL,POINTER :: voldatir(:,:,:,:,:,:) ! sono i dati
 !> volume di dati a valori a doppia precisione
-  REAL(kind=fp_d),POINTER :: voldatid(:,:,:,:,:,:)
+  DOUBLE PRECISION,POINTER :: voldatid(:,:,:,:,:,:)
 !> volume di dati a valori interi
   INTEGER,POINTER :: voldatii(:,:,:,:,:,:)
 !> volume di dati a valori byte
@@ -179,7 +179,7 @@ TYPE vol7d
 !> volume di attributi di dati a valori reali
   REAL,POINTER :: voldatiattrr(:,:,:,:,:,:,:)
 !> volume di attributi di dati a valori a doppia precisione
-  REAL(kind=fp_d),POINTER :: voldatiattrd(:,:,:,:,:,:,:)
+  DOUBLE PRECISION,POINTER :: voldatiattrd(:,:,:,:,:,:,:)
 !> volume di attributi di dati a valori interi
   INTEGER,POINTER :: voldatiattri(:,:,:,:,:,:,:)
 !> volume di attributi di dati a valori byte
@@ -378,7 +378,7 @@ TYPE(vol7d),intent(in) :: this !< oggetto da visualizzare
 integer :: i
 
 REAL :: rdat
-REAL(kind=fp_d) :: ddat
+DOUBLE PRECISION :: ddat
 INTEGER :: idat
 INTEGER(kind=int_b) :: bdat
 CHARACTER(len=vol7d_cdatalen) :: cdat
@@ -443,7 +443,7 @@ print*,"-- ana data section (first point) --"
 idat=imiss
 rdat=rmiss
 ddat=dmiss
-bdat=bmiss
+bdat=ibmiss
 cdat=cmiss
 
 if (associated(this%volanai)) then
@@ -476,7 +476,7 @@ if (associated(this%volanab)) then
     if (associated(this%anavar%b)) call display(this%anavar%b(i),idat,rdat,ddat,bdat,cdat)
   end do
 end if
-bdat=bmiss
+bdat=ibmiss
 
 if (associated(this%volanac)) then
   do i=1,size(this%anavar%c)
@@ -502,7 +502,7 @@ print*,"-- data data section (first point) --"
 idat=imiss
 rdat=rmiss
 ddat=dmiss
-bdat=bmiss
+bdat=ibmiss
 cdat=cmiss
 
 if (associated(this%voldatii)) then
@@ -535,7 +535,7 @@ if (associated(this%voldatib)) then
     if (associated(this%dativar%b)) call display(this%dativar%b(i),idat,rdat,ddat,bdat,cdat)
   end do
 end if
-bdat=bmiss
+bdat=ibmiss
 
 if (associated(this%voldatic)) then
   do i=1,size(this%dativar%c)
@@ -557,7 +557,7 @@ TYPE(vol7d_var),intent(in) :: this !< oggetto da visualizzare
 !> real
 REAL :: rdat
 !> double precision
-REAL(kind=fp_d) :: ddat
+DOUBLE PRECISION :: ddat
 !> integer
 INTEGER :: idat
 !> byte
@@ -576,7 +576,7 @@ TYPE(vol7d_var),intent(in) :: this(:) !< oggetto da visualizzare
 !> real
 REAL :: rdat(:)
 !> double precision
-REAL(kind=fp_d) :: ddat(:)
+DOUBLE PRECISION :: ddat(:)
 !> integer
 INTEGER :: idat(:)
 !> byte
@@ -600,7 +600,7 @@ TYPE(vol7d_var),INTENT(in) :: this
 !> real
 REAL :: rdat
 !> double precision
-REAL(kind=fp_d) :: ddat
+DOUBLE PRECISION :: ddat
 !> integer
 INTEGER :: idat
 !> byte
@@ -1842,8 +1842,6 @@ END SUBROUTINE vol7d_convr
 SUBROUTINE vol7d_diff_only (this, that, data_only,ana)
 TYPE(vol7d),INTENT(IN) :: this !< primo volume da confrontare
 TYPE(vol7d),INTENT(OUT) :: that !< secondo volume da confrontare in cui eliminare i dati coincidenti
-!INTEGER(kind=int_b), PARAMETER :: bmiss = ibmiss 
-!INTEGER(kind=fp_d), PARAMETER :: dmiss = rdmiss 
 logical , optional, intent(in) :: data_only !< attiva l'elaborazione dei soli dati e non dell'anagrafica (default: .false.)
 logical , optional, intent(in) :: ana !< attiva l'elaborazione dell'anagrafica (coordinate e ident) (default: .false.)
 logical  :: ldata_only,lana
@@ -1901,7 +1899,7 @@ END SUBROUTINE vol7d_diff_only
 #include "vol7d_class_type_templ.F90"
 #undef VOL7D_POLY_TYPE
 #undef VOL7D_POLY_TYPES
-#define VOL7D_POLY_TYPE REAL(kind=fp_d)
+#define VOL7D_POLY_TYPE DOUBLE PRECISION
 #define VOL7D_POLY_TYPES d
 #include "vol7d_class_type_templ.F90"
 #undef VOL7D_POLY_TYPE

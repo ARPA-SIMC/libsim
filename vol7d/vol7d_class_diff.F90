@@ -17,19 +17,30 @@
 ! along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #undef VOL7D_POLY_TYPES_V
+#undef VOL7D_POLY_TYPES_MISS
 #define VOL7D_POLY_TYPES_V r
+#define VOL7D_POLY_TYPES_MISS rmiss
 #include "vol7d_class_diff_only.F90"
 #undef VOL7D_POLY_TYPES_V
+#undef VOL7D_POLY_TYPES_MISS
 #define VOL7D_POLY_TYPES_V i
+#define VOL7D_POLY_TYPES_MISS imiss
 #include "vol7d_class_diff_only.F90"
 #undef VOL7D_POLY_TYPES_V
+#undef VOL7D_POLY_TYPES_MISS
 #define VOL7D_POLY_TYPES_V b
+#define VOL7D_POLY_TYPES_MISS ibmiss
 #include "vol7d_class_diff_only.F90"
 #undef VOL7D_POLY_TYPES_V
+#undef VOL7D_POLY_TYPES_MISS
 #define VOL7D_POLY_TYPES_V d
+#define VOL7D_POLY_TYPES_MISS dmiss
 #include "vol7d_class_diff_only.F90"
 #undef VOL7D_POLY_TYPES_V
+#undef VOL7D_POLY_TYPES_MISS
 #define VOL7D_POLY_TYPES_V c
+#define VOL7D_POLY_TYPES_MISS cmiss
 #include "vol7d_class_diff_only.F90"
 #undef VOL7D_POLY_TYPES_V
+#undef VOL7D_POLY_TYPES_MISS
 

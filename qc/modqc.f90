@@ -225,7 +225,7 @@ integer(kind=int_b), intent(in),optional :: flag3
 if (summaryflagb(flaginv,flag1,flag2,flag3)) then
   peeledbb=data
 else
-  peeledbb=bmiss
+  peeledbb=ibmiss
 end if
 
 end function peeledbb
@@ -312,7 +312,7 @@ integer, intent(in),optional :: flag3
 if (summaryflagi(flaginv,flag1,flag2,flag3)) then
   peeledbi=data
 else
-  peeledbi=bmiss
+  peeledbi=ibmiss
 end if
 
 end function peeledbi

@@ -1025,7 +1025,7 @@ REAL :: rflag
 rflag = 100. - &
  (((simflag(1)-ICHAR('0'))*10 + simflag(2)-ICHAR('0')) - 48.)*100./6.
 IF (rflag < 0. .OR. rflag > 100.) THEN
-  flag = bmiss
+  flag = ibmiss
 ELSE
   flag = NINT(rflag)
 ENDIF
@@ -1043,7 +1043,7 @@ INTEGER(kind=int_b) :: flag
 IF (simflag(1) == ICHAR('1')) THEN
   flag = 0
 ELSE
-  flag = bmiss
+  flag = ibmiss
 ENDIF
 
 END FUNCTION make_qcflag_inv
@@ -1056,7 +1056,7 @@ INTEGER(kind=int_b) :: flag
 IF (simflag(1) == ICHAR('2')) THEN
   flag = 1 ! 1 the value has been substituted, 0 the value is the original value
 ELSE
-  flag = bmiss
+  flag = ibmiss
 ENDIF
 
 END FUNCTION make_qcflag_repl

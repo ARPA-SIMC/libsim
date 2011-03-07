@@ -419,7 +419,7 @@ else
   networkmaskl = .true.
 endif
 
-qccli%v7d%voldatiattrb(:,:,:,:,:,:,indtbattrout)=bmiss
+qccli%v7d%voldatiattrb(:,:,:,:,:,:,indtbattrout)=ibmiss
 
 
 ! valuto in quale macroarea sono le stazioni

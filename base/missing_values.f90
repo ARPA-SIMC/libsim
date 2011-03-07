@@ -15,210 +15,130 @@
 
 ! You should have received a copy of the GNU General Public License
 ! along with this program.  If not, see <http://www.gnu.org/licenses/>.
-!> Valori mancanti.
-!! Questo modulo fornisce strumenti per gestire i valori mancanti per
-!! vari tipi di dati.  È importante usare le costanti del tipo giusto
-!! per i propri dati per evitare conversioni automatiche che darebbero
-!! risultati errati.
+
+!> Definitions of constants and functions for working with missing values.
+!! This modules provides tools for handling missing values in various
+!! data types. Users should use the various \a *miss constants for
+!! setting a variable to a missing value, and use the interfaced
+!! function \a c_e or an equality test with the corresponding \a *miss
+!! constant for checking the validity of a value.
 !!
-!! Attenzione alla differenza filosofica tra i tipi reali a singola o
-!! doppia precisione di default della piattaforma, che si ottengono
-!! dichiarando una variabile come \c REAL o \c DOUBLEPRECISION e i
-!! tipi reali a singola o doppia precisione IEEE (4 e 8 byte
-!! rispettivamente) che sono i tipi che rispettano le precisioni
-!! standard IEEE e si dichiarano con \c KIND \a fp_s e \a fp_d
-!! rispettivamente; generalmente coincidono a due a due, ma non è
-!! garantito.
+!! When using the \a *miss constants, it is important to choose the
+!! constant of the right type in order to avoid implicit conversions
+!! that would impair the results.
 !!
+!! Example of typical use:
+!! \code
+!! USE missing_values
+!! ...
+!! INTEGER :: i
+!! INTEGER(kind=int_b) :: ib
+!! REAL :: r
+!! 
+!! i = imiss
+!! ib = ibmiss
+!! r = rmiss
+!! IF (c_e(i) .OR. c_e(ib)) THEN
+!!   PRINT*,"this is not executed"
+!! ENDIF
+!! IF (.NOT.c_e(r)) THEN
+!!   PRINT*,"this is executed"
+!! ENDIF
+!! ...
+!! \endcode
 !! \ingroup base
 MODULE missing_values
 USE kinds
 IMPLICIT NONE
 
-REAL, PARAMETER :: rmiss = HUGE(1.0) !< reale di default
-DOUBLEPRECISION, PARAMETER :: dmiss = HUGE(1.0D0) !< doppia precisione di default
-REAL(kind=fp_s), PARAMETER :: rsmiss = HUGE(1.0_fp_s) !< reale a singola precisione IEEE \a (kind=fp_s)
-REAL(kind=fp_d), PARAMETER :: rdmiss = HUGE(1.0_fp_d) !< reale a doppia precisione IEEE \a (kind=fp_d)
-INTEGER, PARAMETER :: imiss = HUGE(0) !< intero di default
-INTEGER(kind=int_b), PARAMETER :: ibmiss = HUGE(0_int_b) !< intero ad 1 byte \a (kind=int_b)
-INTEGER(kind=int_b), PARAMETER :: bmiss = ibmiss !< 
-INTEGER(kind=int_s), PARAMETER :: ismiss = HUGE(0_int_s) !< intero a 2 byte \a (kind=int_s)
-INTEGER(kind=int_l), PARAMETER :: ilmiss = HUGE(0_int_l) !< intero a 4 byte \a (kind=int_l)
-INTEGER(kind=int_ll), PARAMETER :: illmiss = HUGE(0_int_ll) !< intero a 8 byte \a (kind=int_ll)
-CHARACTER(len=1), PARAMETER :: cmiss = char(0) !< carattere (qualsiasi lunghezza)
+REAL, PARAMETER :: rmiss = HUGE(1.0) !< default single precision real
+DOUBLE PRECISION, PARAMETER :: dmiss = HUGE(1.0D0) !< default double precision real
+REAL(kind=fp_s), PARAMETER :: rsmiss = HUGE(1.0_fp_s) !< single precision IEEE real \a (kind=fp_s)
+REAL(kind=fp_d), PARAMETER :: rdmiss = HUGE(1.0_fp_d) !< double precision IEEE real \a (kind=fp_d)
+INTEGER, PARAMETER :: imiss = HUGE(0) !< default integer
+INTEGER(kind=int_b), PARAMETER :: ibmiss = HUGE(0_int_b) !< 1-byte integer \a (kind=int_b)
+!INTEGER(kind=int_b), PARAMETER :: bmiss = ibmiss
+INTEGER(kind=int_s), PARAMETER :: ismiss = HUGE(0_int_s) !< 2-byte integer \a (kind=int_s)
+INTEGER(kind=int_l), PARAMETER :: ilmiss = HUGE(0_int_l) !< 4-byte integer \a (kind=int_l)
+INTEGER(kind=int_ll), PARAMETER :: illmiss = HUGE(0_int_ll) !< 8-byte integer if supported \a (kind=int_ll)
+CHARACTER(len=1), PARAMETER :: cmiss = char(0) !< character (any length)
 
 
-!> Insieme di funzioni che restitiuscono \a .TRUE. se l'argomento è un dato valido 
-!! e \a .FALSE. se è mancante; è richiamabile per tutti i tipi definiti sopra.
+!> Function to check whether a value is missing or not.
+!! It works with all the basic types supported and returns a logical
+!! value \a .TRUE. if the argument is a valid value and \a .FALSE. if
+!! not. It is elemental, so it works also for arrays of any size and
+!! shape.
 INTERFACE c_e
   MODULE PROCEDURE c_e_b, c_e_s, c_e_l,c_e_ll, c_e_r, c_e_d, c_e_c
 END INTERFACE
 
-PUBLIC
+PRIVATE c_e_b, c_e_s, c_e_l,c_e_ll, c_e_r, c_e_d, c_e_c
 
 CONTAINS
 
-!> Controlla se l'argomento byte è un dato valido
-elemental  logical function c_e_b(var)
+!> Check whether the byte argument is valid.
+ELEMENTAL LOGICAL FUNCTION c_e_b(var)
+INTEGER(kind=int_b),INTENT(in)  :: var !< value to be checked
 
-!OMSTART c_e_b
-!	function c_e_b(var)
-!	Verifica la condizione di presenza o assenza del dato secondo
-!	le specifiche dballe restituendo una variabile logical .true.
-!	se c'e` il dato 
-!
-!	INPUT:
-!	VAR	byte	dato di cui verificare la presenza
-!	OUTPUT:
-!	C_E_B	LOGICAL	.TRUE.se il dato e` presente
-!OMEND
+c_e_b = var /= ibmiss
 
-    integer(kind=int_b),intent(in)  :: var !< variabile da controllare
-
-    c_e_b=.true.
-    if (var == ibmiss)c_e_b= .FALSE. 
-    return
-    end function c_e_b
+END FUNCTION c_e_b
 
 
-!> Controlla se l'argomento short è un dato valido
-elemental    logical function c_e_s(var)
+!> Check whether the short integer argument is valid.
+ELEMENTAL LOGICAL FUNCTION c_e_s(var)
+INTEGER(kind=int_s),INTENT(in)  :: var !< value to be checked
 
-!OMSTART c_e_i
-!	function c_e_s(var)
-!	Verifica la condizione di presenza o assenza del dato secondo
-!	le specifiche dballe restituendo una variabile logical .true.
-!	se c'e` il dato
-!
-!	INPUT:
-!	VAR	Integer	short dato di cui verificare la presenza
-!	OUTPUT:
-!	C_E_i	LOGICAL	.TRUE.se il dato e` presente
-!OMEND
+c_e_s = var /= ismiss
 
-    integer (kind=int_s),intent(in) ::  var !< variabile da controllare
-
-    c_e_s=.true.
-    if (var == ismiss)c_e_s= .FALSE. 
-    return
-    end function c_e_s
+END FUNCTION c_e_s
 
 
-!> Controlla se l'argomento long è un dato valido
-elemental    logical function c_e_l(var)
+!> Check whether the long integer argument is valid.
+ELEMENTAL LOGICAL FUNCTION c_e_l(var)
+INTEGER(kind=int_l),INTENT(in)  :: var !< value to be checked
 
-!OMSTART c_e_l
-!	function c_e_l(var)
-!	Verifica la condizione di presenza o assenza del dato secondo
-!	le specifiche dballe restituendo una variabile logical .true.
-!	se c'e` il dato
-!
-!	INPUT:
-!	VAR	Integer	long dato di cui verificare la presenza
-!	OUTPUT:
-!	C_E_l	LOGICAL	.TRUE.se il dato e` presente
-!OMEND
+c_e_l = var /= ilmiss
 
-    integer (kind=int_l),intent(in) ::  var !< variabile da controllare
-
-    c_e_l=.true.
-    if (var == ilmiss)c_e_l= .FALSE. 
-    return
-    end function c_e_l
+END FUNCTION c_e_l
 
 
-!> Controlla se l'argomento longlong è un dato valido
-elemental    logical function c_e_ll(var)
+! This may not compile if long long is as long as long
+!> Check whether the long long integer argument is valid.
+ELEMENTAL LOGICAL FUNCTION c_e_ll(var)
+INTEGER(kind=int_ll),INTENT(in)  :: var !< value to be checked
 
-!OMSTART c_e_ll
-!	function c_e_ll(var)
-!	Verifica la condizione di presenza o assenza del dato secondo
-!	le specifiche dballe restituendo una variabile logical .true.
-!	se c'e` il dato
-!
-!	INPUT:
-!	VAR	Integer	longlong dato di cui verificare la presenza
-!	OUTPUT:
-!	C_E_ll	LOGICAL	.TRUE.se il dato e` presente
-!OMEND
+c_e_ll = var /= illmiss
 
-    integer (kind=int_ll),intent(in) ::  var !< variabile da controllare
-
-    c_e_ll=.true.
-    if (var == illmiss)c_e_ll= .FALSE. 
-    return
-    end function c_e_ll
+END FUNCTION c_e_ll
 
 
+!> Check whether the real argument is valid.
+ELEMENTAL LOGICAL FUNCTION c_e_r(var)
+REAL,INTENT(in)  :: var !< value to be checked
+
+c_e_r = var /= rmiss
+
+END FUNCTION c_e_r
 
 
-!> Controlla se l'argomento real è un dato valido
-elemental    logical function c_e_r(var)
+!> Check whether the double precision argument is valid.
+ELEMENTAL LOGICAL FUNCTION c_e_d(var)
+DOUBLE PRECISION,INTENT(in)  :: var !< value to be checked
 
-!OMSTART c_e_r
-!	function c_e_r(var)
-!	Verifica la condizione di presenza o assenza del dato secondo
-!	le specifiche dballe restituendo una variabile logical .true.
-!	se c'e` il dato
-!
-!	INPUT:
-!	VAR	Real	dato di cui verificare la presenza
-!	OUTPUT:
-!	C_E_R	LOGICAL	.TRUE.se il dato e` presente
-!OMEND
+c_e_d = var /= dmiss
 
-    real,intent(in) :: var !< variabile da controllare
+END FUNCTION c_e_d
+! cannot implement quad precision otherwise it may not compile if missing
 
-    c_e_r=.true.
-    if (var == rmiss)c_e_r= .FALSE. 
-    return
-    end function c_e_r
+!> Check whether the character argument is valid.
+ELEMENTAL LOGICAL FUNCTION c_e_c(var)
+CHARACTER(len=*),INTENT(in)  :: var !< value to be checked
 
-!> Controlla se l'argomento double è un dato valido
-elemental    logical function c_e_d(var)
+c_e_c = var /= cmiss
 
-!OMSTART c_e_d
-!	function c_e_d(var)
-!	Verifica la condizione di presenza o assenza del dato secondo
-!	le specifiche dballe restituendo una variabile logical .true.
-!	se c'e` il dato
-!
-!	INPUT:
-!	VAR	double	dato di cui verificare la presenza
-!	OUTPUT:
-!	C_E_D	LOGICAL	.TRUE.se il dato e` presente
-!OMEND
-
-    real (kind=fp_d),intent(in) ::  var !< variabile da controllare
-
-    c_e_d=.true.
-    if (var == rdmiss)c_e_d= .FALSE. 
-    return
-    end function c_e_d
-
-
-
-!> Controlla se l'argomento character è un dato valido
-elemental    logical function c_e_c(var)
-!OMSTART C_E_C
-!	function c_e_c(var)
-!	Verifica la condizione di presenza o assenza del dato secondo
-!	le specifiche dballe restituendo una variabile logical .true.
-!	se c'e` il dato
-
-!	INPUT:
-!	VAR	CHAR*(*)  	dato di cui verificare la presenza
-!	OUTPUT:
-!	C_E_C	LOGICAL		.TRUE.se il dato e` presente
-!OMEND
-
-      character (len=*),intent(in) :: var !< variabile da controllare
-
-      c_e_c=.true.
-      if (var == cmiss)c_e_c=.false.
-      return
-
-    end function c_e_c
+END FUNCTION c_e_c
 
 
 END MODULE missing_values

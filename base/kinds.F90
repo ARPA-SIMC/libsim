@@ -16,23 +16,33 @@
 ! You should have received a copy of the GNU General Public License
 ! along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "config.h"
-!> \defgroup base Pacchetto libsim, libreria base.
-!! La libreria base di libsim contiene moduli e classi di uso
-!! generale in applicazioni scientifiche scritte in Fortran 90. Per
-!! compilare e linkare programmi che fanno uso di questa libreria si
-!! dovranno inserire gli appositi comandi \c USE nelle unità di
-!! programma coinvolte e usare, in fase di compilazione, l'opzione
-!! \c -I/usr/include e, in fase di linking, l'opzione
-!! \c -lsim_base, presupponendo che l'installazione sia stata
-!! fatta a livello di sistema.
+!> \defgroup base Libsim package, base library.
+!! The libsim base library defines modules and classes of general
+!! utility for scientifical applications in Fortran 90. In order to
+!! compile and link programs using this library, you have to insert
+!! the required \c USE statements in the program units involved,
+!! specify the location of module files when compiling (tipically \c
+!! -I/usr/lib/gfortran/modules or \c -I/usr/lib64/gfortran/modules or
+!! \c -I/usr/include) and indicate the library name \c -lsim_base when
+!! linking, assuming that the library has been installed in a default
+!! location.
 
-!> \brief Definizione di costanti utili per dichiarare variabili di tipi
-!! desiderati.
-!! Questo modulo definisce delle costanti da usare nelle dichiarazioni
-!! di variabili (tramite l'attributo \c KIND)
-!! e nella conversione di costanti (tramite l'underscore \c _ ) per essere
-!! sicuri di usare i tipi desiderati.
-!! Esempio tipico di utilizzo:
+!> Definition of constants to be used for declaring variables of a
+!! desired type. This module defines constants that can be portably
+!! used when declaring variables (through the \c KIND attribute) and
+!! when defining constants (through the underscore character \c _ ) in
+!! order to be sure that the desired type is used.
+!!
+!! There is a subtle difference between platform-default single and
+!! double precision real, obtained by declaring a variable of type \c
+!! REAL or \c DOUBLE \c PRECISION respectively, and single and double
+!! precision IEEE (4 and 8 bytes respectively) which are the standard
+!! IEEE data types and which are declared through \c REAL(kind=fp_s)
+!! and \c REAL(kind=fp_d) respectively: these two pairs of types
+!! usually coincide, but it may be not the case on some platforms, so
+!! you should choose one or the other approach depending on situation.
+!!
+!! Example of typical use:
 !! \code
 !! USE kinds
 !! ...
@@ -47,24 +57,24 @@
 MODULE kinds
 IMPLICIT NONE
 
-INTEGER, PARAMETER :: int_b    = SELECTED_INT_KIND(1) !< intero a 1 byte (byte)
-INTEGER, PARAMETER :: int_s    = SELECTED_INT_KIND(4) !< intero a 2 byte (short)
-INTEGER, PARAMETER :: int_l    = SELECTED_INT_KIND(8) !< intero a 4 byte (long)
+INTEGER, PARAMETER :: int_b    = SELECTED_INT_KIND(1) !< 1-byte integer (byte)
+INTEGER, PARAMETER :: int_s    = SELECTED_INT_KIND(4) !< 2-byte integer (short)
+INTEGER, PARAMETER :: int_l    = SELECTED_INT_KIND(8) !< 4-byte integer (long)
 INTEGER, PARAMETER, PRIVATE :: &
  int_ll_t = SELECTED_INT_KIND(16)
-!> intero a 8 byte (long long, se supportato)
+!> 8-byte integer (long long) if supported, otherwise 4-byte integer
 INTEGER, PARAMETER :: int_ll = &
  ( ( ( 1 + SIGN( 1, int_ll_t ) ) / 2 ) * int_ll_t ) + &
  ( ( ( 1 - SIGN( 1, int_ll_t ) ) / 2 ) * int_l    )
 
-INTEGER, PARAMETER :: fp_s = SELECTED_REAL_KIND(6) !< reale a singola precisione (4 byte IEEE)
-INTEGER, PARAMETER :: fp_d = SELECTED_REAL_KIND(15) !< reale a doppia precisione (8 byte IEEE)
+INTEGER, PARAMETER :: fp_s = SELECTED_REAL_KIND(6) !< single precision floating point (4 byte IEEE)
+INTEGER, PARAMETER :: fp_d = SELECTED_REAL_KIND(15) !< double precision floating point (8 byte IEEE)
 INTEGER, PARAMETER, PRIVATE :: fp_q_t = SELECTED_REAL_KIND(20)
-!> reale a quadrupla precisione (16 byte IEEE, se supportato)
+!> quad precision floating point (16 byte IEEE) if supported, otherwise double precision floating point
 INTEGER, PARAMETER :: fp_q = &
  ( ( ( 1 + SIGN( 1, fp_q_t ) ) / 2 ) * fp_q_t ) + &
  ( ( ( 1 - SIGN( 1, fp_q_t ) ) / 2 ) * fp_d )
 
-INTEGER, PARAMETER :: ptr_c = SIZEOF_PTR_C !< intero della dimensione di un puntatore C
+INTEGER, PARAMETER :: ptr_c = SIZEOF_PTR_C !< kind for an integer having the same size of a C pointer
 
 END MODULE kinds

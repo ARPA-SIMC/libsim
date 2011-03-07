@@ -16,19 +16,18 @@
 ! You should have received a copy of the GNU General Public License
 ! along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "config.h"
-!> \brief Definizione di costanti utili per le unità di I/O
+!> Definition of constants related to I/O units.
+!! This modules defines some integer constants associating the UNIX
+!! Input/Output units to Fortran units, which can then used in
+!! commands such as \c READ, \c WRITE and \c INQUIRE.
 !!
-!! Questo modulo definisce delle costanti che associano
-!! le unità di Input/Output standard UNIX alle unità di
-!! Input/Output del Fortran; si utilizzano tipicamente nei comandi
-!! READ, WRITE, INQUIRE. 
-!! Esempio tipico di utilizzo:
+!! Example of typical use:
 !! \code
 !! USE io_units
-!!
+!! ...
 !! WRITE(stout_unit,*)'Dimmi qualcosa di carino'
 !! READ(stdin_unit,*)mesg
-!! IF (mesg == 'scemo') THEN
+!! IF (mesg == 'oca') THEN
 !!   WRITE(stderr_unit,*)'Mascalzone!'
 !!   STOP
 !! ENDIF
@@ -38,11 +37,14 @@
 MODULE io_units
 IMPLICIT NONE
 
-! Da condizionare con #ifdef ?!
-INTEGER, PARAMETER :: stderr_unit = 0 !< standard error
+! These should be set by autoconf and included
 INTEGER, PARAMETER :: stdin_unit = 5 !< standard input
 INTEGER, PARAMETER :: stdout_unit = 6 !< standard output
+INTEGER, PARAMETER :: stderr_unit = 0 !< standard error
 
+! Internal undocumented variable, used as a transition to Fortran 2003
+! STREAM access, which allows working in pipe, unlike SEQUENTIAL
+! access (possibly compiler dependent)
 #ifdef F2003_FEATURES
 CHARACTER(len=6), PARAMETER :: stream_if_possible='STREAM'
 #else
