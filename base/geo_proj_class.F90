@@ -487,6 +487,8 @@ ELSE IF (PRESENT(lov)) THEN
   this%lov = lov
 ELSE IF (PRESENT(zone)) THEN
   this%lov = zone*6.0D0 - 183.0D0
+ELSE
+  this%lov = dmiss
 ENDIF
 
 ! ellipsoid

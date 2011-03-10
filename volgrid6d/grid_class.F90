@@ -650,6 +650,7 @@ CALL grib_get(gaid,'GRIBEditionNumber',EditionNumber)
 ! Keys valid for (almost?) all cases, Ni and Nj are universal aliases
 CALL grib_get(gaid, 'Ni', this%dim%nx)
 CALL grib_get(gaid, 'Nj', this%dim%ny)
+CALL griddim_import_ellipsoid(this, gaid) ! placed here, not valid for utm datum /= 1
 
 CALL grib_get(gaid,'iScansNegatively',iScansNegatively)
 CALL grib_get(gaid,'jScansPositively',jScansPositively)
@@ -794,7 +795,6 @@ CASE ('UTM')
     CALL grib_get(gaid,'falseEasting',this%grid%proj%xoff)
     CALL grib_get(gaid,'falseNorthing',this%grid%proj%yoff)
     CALL set_val(this%grid%proj, zone=zone, lov=refLon/1.0D6)
-    CALL griddim_import_ellipsoid(this, gaid)
   ELSE
     CALL l4f_category_log(this%category,L4F_ERROR,'only datum 0 supported')
     CALL raise_fatal_error()
@@ -899,8 +899,13 @@ IF (EditionNumber == 2) THEN
   END SELECT
 
 ELSE
-! improve for grib1
-  CALL set_val(this, ellips_smaj_axis=6367470.0D0, ellips_flatt=0.0D0)
+
+  CALL grib_get(gaid, 'earthIsOblate', shapeofearth)
+  IF (shapeofearth == 0) THEN ! spherical
+    CALL set_val(this, ellips_smaj_axis=6367470.0D0, ellips_flatt=0.0D0)
+  ELSE ! iau65
+    CALL set_val(this, ellips_smaj_axis=6378160.0D0, ellips_flatt=1.0D0/297.0D0)
+  ENDIF
 
 ENDIF
 
@@ -1251,10 +1256,19 @@ IF (EditionNumber == 2) THEN
 
 ELSE
 
-! improve for grib1
-!  IF (ellips_flatt == 0.0D0 .AND. r1 == 6367470.0D0) THEN ! spherical
-!    CALL grib_set(gaid, 'shapeOfTheEarth', 0)
-!  ENDIF
+  IF (r1 == 6367470.0D0 .AND. f == 0.0D0) THEN ! spherical
+    CALL grib_set(gaid, 'earthIsOblate', 0)
+  ELSE IF (r1 == 6378160.0D0 .AND. f == 1.0D0/297.0D0) THEN ! iau65
+    CALL grib_set(gaid, 'earthIsOblate', 1)
+  ELSE IF (f == 0.0D0) THEN ! generic spherical
+    CALL grib_set(gaid, 'earthIsOblate', 0)
+    CALL l4f_category_log(this%category,L4F_WARN,'desired spherical Earth radius &
+     &not supported in grib 1, coding with default radius of 6367470 m')
+  ELSE ! generic ellipsoidal
+    CALL grib_set(gaid, 'earthIsOblate', 1)
+    CALL l4f_category_log(this%category,L4F_WARN,'desired Earth ellipsoid &
+     &not supported in grib 1, coding with default iau65 ellipsoid')
+  ENDIF
 
 ENDIF
 

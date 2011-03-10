@@ -36,7 +36,6 @@ doubleprecision ::  ilon,ilat,flon,flat
 
 type(griddim_def) :: griddim_out
 type(transform_def) :: trans
-type(grid_transform) :: grid_trans
 
 integer :: nx,ny,component_flag,npx,npy
 doubleprecision :: xmin, xmax, ymin, ymax
@@ -155,7 +154,7 @@ options(40) = op_option_new(' ', 'version', version, help= &
 
 ! define the option parser
 opt = optionparser_new(options, description_msg= &
- 'Grib to grib trasformation application. It reads grib edition 1 and 2 &
+ 'Grib to grib transformation application. It reads grib edition 1 and 2 &
  &and zooms, interpolates or regrids data according to optional parameters. &
  &The whole grib data file is read and organized in memory, transformed, and &
  &written on output. So it is possible to perform multi-field elaborations &
@@ -199,7 +198,7 @@ CALL delete(opt)
 call l4f_category_log(category,L4F_INFO,"transforming from file:"//trim(infile))
 call l4f_category_log(category,L4F_INFO,"transforming to   file:"//trim(outfile))
 
-if (trans_type == 'inter' .OR. trans_type == 'boxinter') then ! griddim_out needed
+IF (trans_type == 'inter' .OR. trans_type == 'boxinter') THEN ! griddim_out needed
 
 #ifdef HAVE_LIBGRIBAPI
   IF (proj_type(1:1) == ':') THEN ! grid from a grib template
@@ -228,14 +227,9 @@ if (trans_type == 'inter' .OR. trans_type == 'boxinter') then ! griddim_out need
   ENDIF
 #endif
 
-  call griddim_unproj(griddim_out)
+  CALL griddim_unproj(griddim_out)
 
-  IF (ldisplay) THEN
-    PRINT*,'output grid >>>>>>>>>>>>>>>>>>>>'
-    CALL display(griddim_out)
-  ENDIF
-
-end if
+ENDIF
 
 
 CALL import(volgrid,filename=infile,decode=.FALSE.,categoryappend="input")
@@ -278,23 +272,30 @@ IF (trans_type == 'none') THEN  ! export with no operation
 
 else
 
- !trasformation object
-  call init(trans, trans_type=trans_type, sub_type=sub_type, &
+ ! transformation object
+  CALL init(trans, trans_type=trans_type, sub_type=sub_type, &
    ix=ix, iy=iy, fx=fx, fy=fy, &
    ilon=ilon, ilat=ilat, flon=flon, flat=flat, npx=npx, npy=npy, &
    percentile=0.5D0, &
-   categoryappend="trasformation")
+   categoryappend="transformation")
 
-  if (trans_type == 'inter' .OR. trans_type == 'boxinter') then
+  IF (trans_type == 'inter' .OR. trans_type == 'boxinter') THEN
     CALL transform(trans,griddim_out,volgrid6d_in=volgrid, &
-     volgrid6d_out=volgrid_out,clone=.TRUE.,categoryappend="trasformato")
-  else
-    CALL transform(trans,volgrid6d_in=volgrid, volgrid6d_out=volgrid_out, &
-     clone=.TRUE.,categoryappend="trasformato")
-  endif
+     volgrid6d_out=volgrid_out,clone=.TRUE.,categoryappend="transformed")
 
-  call l4f_category_log(category,L4F_INFO,"trasformato")
-  if (associated(volgrid)) call delete(volgrid)
+    IF (ldisplay) THEN ! done here in order to print final ellipsoid
+      PRINT*,'output grid >>>>>>>>>>>>>>>>>>>>'
+      IF (ASSOCIATED(volgrid_out)) CALL display(volgrid_out(1)%griddim)
+    ENDIF
+
+  ELSE
+    CALL transform(trans,volgrid6d_in=volgrid, volgrid6d_out=volgrid_out, &
+     clone=.TRUE.,categoryappend="transformed")
+
+  ENDIF
+
+  CALL l4f_category_log(category,L4F_INFO,"transformation completed")
+  IF (ASSOCIATED(volgrid)) CALL delete(volgrid)
 
 
 ! export

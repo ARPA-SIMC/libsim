@@ -733,11 +733,15 @@ CHARACTER(len=*),INTENT(in),OPTIONAL :: categoryappend !< append this suffix to 
 
 INTEGER :: nx, ny, i, j
 DOUBLE PRECISION :: xmin, xmax, ymin, ymax, steplon, steplat, &
- xmin_new, ymin_new
+ xmin_new, ymin_new, ellips_smaj_axis, ellips_flatt
 doubleprecision :: l1, l2
 
 
 CALL grid_transform_init_common(this, trans, categoryappend)
+
+! output ellipsoid has to be the same as for the input (improve)
+CALL get_val(in, ellips_smaj_axis=ellips_smaj_axis, ellips_flatt=ellips_flatt)
+CALL set_val(out, ellips_smaj_axis=ellips_smaj_axis, ellips_flatt=ellips_flatt)
 
 IF (this%trans%trans_type == 'zoom') THEN
 
