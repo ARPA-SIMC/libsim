@@ -42,7 +42,7 @@ integer :: nx,ny,component_flag,npx,npy
 doubleprecision :: xmin, xmax, ymin, ymax
 INTEGER :: ix, iy, fx, fy
 doubleprecision :: latitude_south_pole,longitude_south_pole,angle_rotation
-character(len=80) :: type,trans_type,sub_type
+character(len=80) :: proj_type,trans_type,sub_type
 
 doubleprecision ::x,y,lon,lat
 logical :: c2agrid
@@ -76,8 +76,16 @@ options(2) = op_option_new('z', 'sub-type', sub_type, 'near', help= &
  &for ''boxinter'' and ''boxregrid'': ''average'', ''max'', ''min'', &
  &for zoom: ''index'', ''coord'', ''coordbb''')
 
-options(3) = op_option_new('u', 'type', type, 'regular_ll', help= &
- 'type of interpolated grid: ''regular_ll'', ''rotated_ll''')
+options(3) = op_option_new('u', 'type', proj_type, 'regular_ll', help= &
+ 'projection and parameters of interpolated grid: it can be explicitely &
+ &specified, with a string as ''regular_ll'', ''rotated_ll'' &
+ &plus the necessary parameters as separate options&
+#ifdef GRIB_API
+ & or it can be expressed in the form '':template'' where ''template'' &
+ &is the name of a grib file, in that case all the grid definition is &
+ &taken from the first grib message of the file&
+#endif
+ ')
 options(4) = op_option_new('i', 'nx', nx, 31, help= &
  'number of nodes along x axis on interpolated grid')
 options(5) = op_option_new('l', 'ny', ny, 31, help= &
@@ -193,11 +201,32 @@ call l4f_category_log(category,L4F_INFO,"transforming to   file:"//trim(outfile)
 
 if (trans_type == 'inter' .OR. trans_type == 'boxinter') then ! griddim_out needed
 
-  call init(griddim_out,&
-   proj_type=type,nx=nx,ny=ny, &
-   xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, component_flag=component_flag, &
-   latitude_south_pole=latitude_south_pole,longitude_south_pole=longitude_south_pole,angle_rotation=angle_rotation, &
-   categoryappend="requested_grid")
+#ifdef HAVE_LIBGRIBAPI
+  IF (proj_type(1:1) == ':') THEN ! grid from a grib template
+! open grib template file and import first message
+    file_template = grid_file_id_new(proj_type(2:), 'r')
+    gaid_template = grid_id_new(file_template)
+    IF (c_e(gaid_template)) THEN
+      CALL import(griddim_out, gaid_template)
+      CALL delete(gaid_template)
+      CALL delete(file_template)
+    ELSE
+      CALL l4f_category_log(category,L4F_ERROR, &
+       'cannot read any grib message from template file '//TRIM(proj_type(2:)))
+      CALL raise_fatal_error()
+    ENDIF
+  ELSE
+#endif
+    CALL init(griddim_out,&
+     proj_type=proj_type,nx=nx,ny=ny, &
+     xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, component_flag=component_flag, &
+     latitude_south_pole=latitude_south_pole, &
+     longitude_south_pole=longitude_south_pole, angle_rotation=angle_rotation, &
+     categoryappend="requested_grid") ! explicit parameters for the grid
+
+#ifdef HAVE_LIBGRIBAPI
+  ENDIF
+#endif
 
   call griddim_unproj(griddim_out)
 
@@ -214,16 +243,15 @@ if (c2agrid) call vg6d_c2a(volgrid)
 IF (ldisplay) THEN
   IF (ASSOCIATED(volgrid)) THEN
     DO i = 1,SIZE(volgrid)
-      PRINT*,'intput grid >>>>>>>>>>>>>>>>>>>>'
+      PRINT*,'input grid >>>>>>>>>>>>>>>>>>>>'
       CALL display(volgrid(i)%griddim)
     ENDDO
   ENDIF
 ENDIF
 
 
-if (trans_type == 'none') then
+IF (trans_type == 'none') THEN  ! export with no operation
 
-  !exportazione
   i = word_split(outfile, w_s, w_e, ':')
 
   IF (i == 3) THEN ! template requested (grib_api:template_file:output_file)
@@ -232,7 +260,7 @@ if (trans_type == 'none') then
     IF (c_e(gaid_template)) THEN
       CALL export (volgrid, filename=outfile(w_s(1):w_e(1))//':'// &
        outfile(w_s(3):w_e(3)), gaid_template=gaid_template, &
-       categoryappend="export_template")
+       categoryappend="noop_export_tmpl")
     ELSE
       CALL l4f_category_log(category,L4F_FATAL, &
        "opening output template "//TRIM(outfile))
@@ -240,10 +268,10 @@ if (trans_type == 'none') then
     ENDIF
 
   ELSE ! simple export
-    CALL export(volgrid,filename=outfile,categoryappend="export")
+    CALL export(volgrid,filename=outfile,categoryappend="noop_export")
 
   ENDIF
-  call l4f_category_log(category,L4F_INFO,"end")
+  CALL l4f_category_log(category,L4F_INFO,"end")
 
   DEALLOCATE(w_s, w_e)
   if (associated(volgrid)) call delete (volgrid)
@@ -269,14 +297,31 @@ else
   if (associated(volgrid)) call delete(volgrid)
 
 
-  !exportazione
-  call export (volgrid_out,filename=outfile,categoryappend="exportazione")
+! export
+  i = word_split(outfile, w_s, w_e, ':')
 
-  call l4f_category_log(category,L4F_INFO,"end")
+  IF (i == 3) THEN ! template requested (grib_api:template_file:output_file)
+    file_template = grid_file_id_new(outfile(w_s(1):w_e(2)), 'r')
+    gaid_template = grid_id_new(file_template)
+    IF (c_e(gaid_template)) THEN
+      CALL export (volgrid_out, filename=outfile(w_s(1):w_e(1))//':'// &
+       outfile(w_s(3):w_e(3)), gaid_template=gaid_template, &
+       categoryappend="export_tmpl")
+    ELSE
+      CALL l4f_category_log(category,L4F_FATAL, &
+       "opening output template "//TRIM(outfile))
+      CALL raise_fatal_error()
+    ENDIF
 
-  call delete (volgrid_out)
+  ELSE ! simple export
+    CALL export(volgrid_out,filename=outfile,categoryappend="export")
 
-end if
+  ENDIF
+  CALL delete (volgrid_out)
+
+ENDIF
+
+CALL l4f_category_log(category,L4F_INFO,"end")
 
 
 !chiudo il logger

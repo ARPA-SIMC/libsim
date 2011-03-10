@@ -402,13 +402,16 @@ INTEGER,INTENT(out),OPTIONAL :: ellips_type !< number in the interval [1,nellips
 IF (PRESENT(nx)) nx = this%dim%nx
 IF (PRESENT(ny)) ny = this%dim%ny
 
-CALL get_val(this%grid%proj, proj_type=proj_type, lov=lov, xoff=xoff, yoff=yoff, &
+CALL get_val(this%grid%proj, proj_type=proj_type, lov=lov, zone=zone, &
+ xoff=xoff, yoff=yoff, &
  longitude_south_pole=longitude_south_pole, &
  latitude_south_pole=latitude_south_pole, angle_rotation=angle_rotation, &
  longitude_stretch_pole=longitude_stretch_pole, &
  latitude_stretch_pole=latitude_stretch_pole, stretch_factor=stretch_factor, &
  latin1=latin1, latin2=latin2, lad=lad, &
- projection_center_flag=projection_center_flag)
+ projection_center_flag=projection_center_flag, &
+ ellips_smaj_axis=ellips_smaj_axis, ellips_flatt=ellips_flatt, &
+ ellips_type=ellips_type)
 
 CALL get_val(this%grid%grid, &
  xmin, xmax, ymin, ymax, dx, dy, component_flag)
@@ -455,8 +458,8 @@ INTEGER,INTENT(in),OPTIONAL :: ellips_type !< number in the interval [1,nellips]
 IF (PRESENT(nx)) this%dim%nx = nx
 IF (PRESENT(ny)) this%dim%ny = ny
 
-CALL set_val(this%grid%proj, proj_type=proj_type, lov=lov, xoff=xoff, yoff=yoff, &
- longitude_south_pole=longitude_south_pole, &
+CALL set_val(this%grid%proj, proj_type=proj_type, lov=lov, zone=zone, &
+ xoff=xoff, yoff=yoff, longitude_south_pole=longitude_south_pole, &
  latitude_south_pole=latitude_south_pole, angle_rotation=angle_rotation, &
  longitude_stretch_pole=longitude_stretch_pole, &
  latitude_stretch_pole=latitude_stretch_pole, stretch_factor=stretch_factor, &
@@ -633,8 +636,8 @@ USE grib_api
 TYPE(griddim_def),INTENT(inout) :: this ! griddim object
 INTEGER, INTENT(in) :: gaid ! grib_api id of the grib loaded in memory to import
 
-DOUBLE PRECISION :: loFirst, loLast, laFirst, laLast, x1, y1, lov, refLon
-INTEGER :: EditionNumber, iScansNegatively, jScansPositively, zone, datum
+DOUBLE PRECISION :: loFirst, loLast, laFirst, laLast, x1, y1, lov
+INTEGER :: EditionNumber, iScansNegatively, jScansPositively, zone, datum, reflon
 
 ! Generic keys
 CALL grib_get(gaid, 'typeOfGrid', this%grid%proj%proj_type)
@@ -787,14 +790,14 @@ CASE ('UTM')
 
   CALL grib_get(gaid,'datum',datum)
   IF (datum == 0) THEN
-    CALL grib_get(gaid,'referenceLongitude',refLon)
+    CALL grib_get(gaid,'referenceLongitude',reflon)
     CALL grib_get(gaid,'falseEasting',this%grid%proj%xoff)
     CALL grib_get(gaid,'falseNorthing',this%grid%proj%yoff)
     CALL set_val(this%grid%proj, zone=zone, lov=refLon/1.0D6)
-    CALL set_val(this, ellips_type=ellips_clrk66)
+    CALL griddim_import_ellipsoid(this, gaid)
   ELSE
-    CALL set_val(this%grid%proj, zone=zone)
-! todo ellipsoid should be decoded from grib and set here
+    CALL l4f_category_log(this%category,L4F_ERROR,'only datum 0 supported')
+    CALL raise_fatal_error()
   ENDIF
 
   CALL grib_get(gaid,'eastingOfFirstGridPoint',loFirst)
@@ -853,6 +856,57 @@ IF (ierr /= GRIB_SUCCESS) value = imiss
 
 END SUBROUTINE grib_get_imiss
 
+
+SUBROUTINE griddim_import_ellipsoid(this, gaid)
+TYPE(griddim_def),INTENT(inout) :: this
+INTEGER,INTENT(in) :: gaid
+
+INTEGER :: shapeofearth, iv, is
+DOUBLE PRECISION :: r1, r2, f
+
+IF (EditionNumber == 2) THEN
+  CALL grib_get(gaid, 'shapeOfTheEarth', shapeofearth)
+  SELECT CASE(shapeofearth)
+  CASE(0) ! spherical
+    CALL set_val(this, ellips_smaj_axis=6367470.0D0, ellips_flatt=0.0D0)
+  CASE(1) ! spherical generic
+    CALL grib_get(gaid, 'scaleFactorOfRadiusOfSphericalEarth', is)
+    CALL grib_get(gaid, 'scaledValueOfRadiusOfSphericalEarth', iv)
+    r1 = DBLE(iv) / 10**is
+    CALL set_val(this, ellips_smaj_axis=r1, ellips_flatt=0.0D0)
+  CASE(2) ! iau65
+    CALL set_val(this, ellips_smaj_axis=6378160.0D0, ellips_flatt=1.0D0/297.0D0)
+  CASE(3,7) ! ellipsoidal generic
+    CALL grib_get(gaid, 'scaleFactorOfMajorAxisOfOblateSpheroidEarth', is)
+    CALL grib_get(gaid, 'scaledValueOfMajorAxisOfOblateSpheroidEarth', iv)
+    r1 = DBLE(iv) / 10**is
+    CALL grib_get(gaid, 'scaleFactorOfMinorAxisOfOblateSpheroidEarth', is)
+    CALL grib_get(gaid, 'scaledValueOfMinorAxisOfOblateSpheroidEarth', iv)
+    r2 = DBLE(iv) / 10**is
+    CALL set_val(this, ellips_smaj_axis=r1, ellips_flatt=(r1-r2)/r1)
+  CASE(4) ! iag-grs80
+    CALL set_val(this, ellips_type=ellips_grs80)
+  CASE(5) ! wgs84
+    CALL set_val(this, ellips_type=ellips_wgs84)
+  CASE(6) ! spherical
+    CALL set_val(this, ellips_smaj_axis=6371229.0D0, ellips_flatt=0.0D0)
+!  CASE(7) ! google earth-like?
+  CASE default
+    CALL l4f_category_log(this%category,L4F_ERROR,'shapeOfTheEarth '// &
+     t2c(shapeofearth)//' not supported in grib2')
+    CALL raise_fatal_error()
+
+  END SELECT
+
+ELSE
+! improve for grib1
+  CALL set_val(this, ellips_smaj_axis=6367470.0D0, ellips_flatt=0.0D0)
+
+ENDIF
+
+END SUBROUTINE griddim_import_ellipsoid
+
+
 END SUBROUTINE griddim_import_gribapi
 
 
@@ -862,8 +916,8 @@ USE grib_api
 TYPE(griddim_def),INTENT(in) :: this ! griddim object
 INTEGER, INTENT(inout) :: gaid ! grib_api id of the grib loaded in memory to export
 
-INTEGER :: EditionNumber, iScansNegatively, jScansPositively, nv, pvl
-DOUBLE PRECISION :: loFirst, loLast, laFirst, laLast
+INTEGER :: EditionNumber, iScansNegatively, jScansPositively, nv, pvl, zone
+DOUBLE PRECISION :: loFirst, loLast, laFirst, laLast, reflon
 DOUBLE PRECISION :: sdx, sdy, ratio, tol
 
 
@@ -885,6 +939,7 @@ ELSE
 ENDIF
 
 ! Keys valid for (almost?) all cases, Ni and Nj are universal aliases
+CALL griddim_export_ellipsoid(this, gaid)
 CALL grib_set(gaid, 'Ni', this%dim%nx)
 CALL grib_set(gaid, 'Nj', this%dim%ny)
 CALL grib_set(gaid,'uvRelativeToGrid',this%grid%grid%component_flag)
@@ -1032,6 +1087,41 @@ CASE ('polar_stereographic', 'lambert', 'albers')
   CALL grib_set(gaid,'longitudeOfFirstGridPointInDegrees',loFirst)
   CALL grib_set(gaid,'latitudeOfFirstGridPointInDegrees',laFirst)
 
+CASE ('UTM')
+
+  CALL grib_set(gaid,'datum',0)
+  CALL get_val(this, zone=zone, lov=reflon)
+  CALL grib_set(gaid,'referenceLongitude',NINT(refLon/1.0D6))
+  CALL grib_set(gaid,'falseEasting',this%grid%proj%xoff)
+  CALL grib_set(gaid,'falseNorthing',this%grid%proj%yoff)
+
+  CALL grib_set(gaid,'iDirectionIncrement',this%grid%grid%dx)
+  CALL grib_set(gaid,'jDirectionIncrement',this%grid%grid%dy)
+
+!res/scann ??
+
+  CALL grib_set(gaid,'zone',zone)
+
+  IF (iScansNegatively  == 0) THEN
+    loFirst = this%grid%grid%xmin
+    loLast = this%grid%grid%xmax
+  ELSE
+    loFirst = this%grid%grid%xmax
+    loLast = this%grid%grid%xmin
+  ENDIF
+  IF (jScansPositively == 0) THEN
+    laFirst = this%grid%grid%ymax
+    laLast = this%grid%grid%ymin
+  ELSE
+    laFirst = this%grid%grid%ymin
+    laLast = this%grid%grid%ymax
+  ENDIF
+
+  CALL grib_set(gaid,'eastingOfFirstGridPoint',loFirst)
+  CALL grib_set(gaid,'eastingOfLastGridPoint',loLast)
+  CALL grib_set(gaid,'northingOfFirstGridPoint',laFirst)
+  CALL grib_set(gaid,'northingOfLastGridPoint',laLast)
+
 CASE default
   CALL l4f_category_log(this%category,L4F_ERROR, &
    "griddim_export_gribapi, grid type "//TRIM(this%grid%proj%proj_type)//" not supported")
@@ -1108,6 +1198,67 @@ ELSE IF (PRESENT(default)) THEN
 ENDIF
 
 END SUBROUTINE grib_set_imiss
+
+SUBROUTINE griddim_export_ellipsoid(this, gaid)
+TYPE(griddim_def),INTENT(in) :: this
+INTEGER,INTENT(in) :: gaid
+
+INTEGER :: ellips_type, iv, is
+DOUBLE PRECISION :: r1, r2, f
+
+CALL get_val(this, ellips_smaj_axis=r1, ellips_flatt=f, ellips_type=ellips_type)
+
+IF (EditionNumber == 2) THEN
+
+  CALL grib_set_missing(gaid, 'scaleFactorOfRadiusOfSphericalEarth')
+  CALL grib_set_missing(gaid, 'scaledValueOfRadiusOfSphericalEarth')
+  CALL grib_set_missing(gaid, 'scaleFactorOfMajorAxisOfOblateSpheroidEarth')
+  CALL grib_set_missing(gaid, 'scaledValueOfMajorAxisOfOblateSpheroidEarth')
+  CALL grib_set_missing(gaid, 'scaleFactorOfMinorAxisOfOblateSpheroidEarth')
+  CALL grib_set_missing(gaid, 'scaledValueOfMinorAxisOfOblateSpheroidEarth')
+
+  SELECT CASE(ellips_type)
+  CASE(ellips_grs80) ! iag-grs80
+    CALL grib_set(gaid, 'shapeOfTheEarth', 4)
+  CASE(ellips_wgs84) ! wgs84
+    CALL grib_set(gaid, 'shapeOfTheEarth', 5)
+  CASE default
+    IF (f == 0.0D0) THEN ! spherical Earth
+      IF (r1 == 6367470.0D0) THEN ! spherical
+        CALL grib_set(gaid, 'shapeOfTheEarth', 0)
+      ELSE IF (r1 == 6371229.0D0) THEN ! spherical
+        CALL grib_set(gaid, 'shapeOfTheEarth', 6)
+      ELSE ! spherical generic
+        CALL grib_set(gaid, 'shapeOfTheEarth', 1)
+        CALL grib_set(gaid, 'scaleFactorOfRadiusOfSphericalEarth', 2)
+        CALL grib_set(gaid, 'scaledValueOfRadiusOfSphericalEarth', INT(r1*100.0D0))
+      ENDIF
+    ELSE ! ellipsoidal
+      IF (r1 == 6378160.0D0 .AND. f == 1.0D0/297.0D0) THEN ! iau65
+        CALL grib_set(gaid, 'shapeOfTheEarth', 2)
+      ELSE ! ellipsoidal generic
+        CALL grib_set(gaid, 'shapeOfTheEarth', 3) ! 7?
+        r2 = r1*(1.0D0 - f)
+        CALL grib_set(gaid, 'scaleFactorOfMajorAxisOfOblateSpheroidEarth', 2)
+        CALL grib_set(gaid, 'scaledValueOfMajorAxisOfOblateSpheroidEarth', &
+         INT(r1*100.0D0))
+        CALL grib_set(gaid, 'scaleFactorOfMinorAxisOfOblateSpheroidEarth', 2)
+        CALL grib_set(gaid, 'scaledValueOfMinorAxisOfOblateSpheroidEarth', &
+         INT(r2*100.0D0))
+      ENDIF
+    ENDIF
+  END SELECT
+
+ELSE
+
+! improve for grib1
+!  IF (ellips_flatt == 0.0D0 .AND. r1 == 6367470.0D0) THEN ! spherical
+!    CALL grib_set(gaid, 'shapeOfTheEarth', 0)
+!  ENDIF
+
+ENDIF
+
+END SUBROUTINE griddim_export_ellipsoid
 
 END SUBROUTINE griddim_export_gribapi
 #endif

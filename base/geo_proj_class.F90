@@ -159,90 +159,90 @@ ellips_wgs84 =    41    !< WGS 84
 
 DOUBLE PRECISION, PARAMETER, PRIVATE :: &
  rf(nellips)=(/ & ! inverse of flattening for each ellipsoid
- 298.257, &
- 298.257, &
- 298.257222101, &
- 298.257, &
- 299.325, &
- 298.25, &
- 298.25, &
- 299.328, &
- 300.0, &
- 298.25, &
- 298.2471674270, &
- 299.1528128, &
- 299.1528128, &
- 294.98, &
- 293.4663, &
- 334.29, &
- 311.5, &
- 298.2566, &
- 300.8017, &
- 300.8017, &
- 300.8017, &
- 300.8017, &
- 300.8017, &
- 298.3, &
- 298.3, &
- 298.3, &
- 298.3, &
- 297., &
- 297., &
- 298.3, &
- 298.24, &
- 298.257, &
- 191., &
- 298.247, &
- 308.641, &
- 298.302, &
- 302.782, &
- 298.3, &
- 298.25, &
- 298.26, &
- 298.257223563 /)
+ 298.257D0, &
+ 298.257D0, &
+ 298.257222101D0, &
+ 298.257D0, &
+ 299.325D0, &
+ 298.25D0, &
+ 298.25D0, &
+ 299.328D0, &
+ 300.0D0, &
+ 298.25D0, &
+ 298.2471674270D0, &
+ 299.1528128D0, &
+ 299.1528128D0, &
+ 294.98D0, &
+ 293.4663D0, &
+ 334.29D0, &
+ 311.5D0, &
+ 298.2566D0, &
+ 300.8017D0, &
+ 300.8017D0, &
+ 300.8017D0, &
+ 300.8017D0, &
+ 300.8017D0, &
+ 298.3D0, &
+ 298.3D0, &
+ 298.3D0, &
+ 298.3D0, &
+ 297.D0, &
+ 297.D0, &
+ 298.3D0, &
+ 298.24D0, &
+ 298.257D0, &
+ 191.D0, &
+ 298.247D0, &
+ 308.641D0, &
+ 298.302D0, &
+ 302.782D0, &
+ 298.3D0, &
+ 298.25D0, &
+ 298.26D0, &
+ 298.257223563D0 /)
 DOUBLE PRECISION, PARAMETER, PRIVATE :: &
  a(nellips)=(/ & ! semi-major axis for each ellipsoid
- 6378137.0, &
- 6378136.0, &
- 6378137.0, &
- 6378140.0, &
- 6377563.396, &
- 6378137.0, &
- 6378145.0, &
- 6377340.189, &
- 6377104.43, &
- 6378160.0, &
- 6378160.0, &
- 6377397.155, &
- 6377483.865, &
- 6378206.4, &
- 6378249.145, &
- 6375738.7, &
- 6376428., &
- 6378136.05, &
- 6377276.345, &
- 6377304.063, &
- 6377301.243, &
- 6377295.664, &
- 6377298.556, &
- 6378166., &
- 6378155., &
- 6378150., &
- 6378200., &
- 6378270.0, &
- 6378388.0, &
- 6378245.0, &
- 6378163., &
- 6378139., &
- 6397300., &
- 6378157.5, &
- 6376523., &
- 6378155.0, &
- 6376896.0, &
- 6378165.0, &
- 6378145.0, &
- 6378135.0, &
- 6378137.0 /)
+ 6378137.0D0, &
+ 6378136.0D0, &
+ 6378137.0D0, &
+ 6378140.0D0, &
+ 6377563.396D0, &
+ 6378137.0D0, &
+ 6378145.0D0, &
+ 6377340.189D0, &
+ 6377104.43D0, &
+ 6378160.0D0, &
+ 6378160.0D0, &
+ 6377397.155D0, &
+ 6377483.865D0, &
+ 6378206.4D0, &
+ 6378249.145D0, &
+ 6375738.7D0, &
+ 6376428.D0, &
+ 6378136.05D0, &
+ 6377276.345D0, &
+ 6377304.063D0, &
+ 6377301.243D0, &
+ 6377295.664D0, &
+ 6377298.556D0, &
+ 6378166.D0, &
+ 6378155.D0, &
+ 6378150.D0, &
+ 6378200.D0, &
+ 6378270.0D0, &
+ 6378388.0D0, &
+ 6378245.0D0, &
+ 6378163.D0, &
+ 6378139.D0, &
+ 6397300.D0, &
+ 6378157.5D0, &
+ 6376523.D0, &
+ 6378155.0D0, &
+ 6376896.0D0, &
+ 6378165.0D0, &
+ 6378145.0D0, &
+ 6378135.0D0, &
+ 6378137.0D0 /)
 
 DOUBLE PRECISION,PARAMETER,PRIVATE :: k0=0.9996D0 ! scale factor at central meridian (check whether this is correct and constant)
 
@@ -318,12 +318,12 @@ END FUNCTION geo_proj_new
 
 ! compute constants related to the desired ellipsoid as a function of
 ! semi-major axis and inverse of flattening
-SUBROUTINE ellips_compute(this, a, rf)
+SUBROUTINE ellips_compute(this, a, f)
 TYPE(geo_proj_ellips),INTENT(inout) :: this
-DOUBLE PRECISION,INTENT(in),OPTIONAL :: a, rf
+DOUBLE PRECISION,INTENT(in),OPTIONAL :: a, f
 
-IF (PRESENT(a) .AND. PRESENT(rf)) THEN
-  this%f = 1.0D0/rf
+IF (PRESENT(a) .AND. PRESENT(f)) THEN
+  this%f = f
   this%a = a
 ELSE IF (PRESENT(a)) THEN ! parameters for a spherical Earth with given radius
   this%f = 0.0D0
@@ -386,13 +386,15 @@ END SUBROUTINE geo_proj_copy
 
 
 SUBROUTINE geo_proj_get_val(this, &
- proj_type, lov, xoff, yoff, &
+ proj_type, lov, zone, xoff, yoff, &
  longitude_south_pole, latitude_south_pole, angle_rotation, &
  longitude_stretch_pole, latitude_stretch_pole, stretch_factor, &
- latin1, latin2, lad, projection_center_flag)
+ latin1, latin2, lad, projection_center_flag, &
+ ellips_smaj_axis, ellips_flatt, ellips_type)
 TYPE(geo_proj),INTENT(in) :: this
 CHARACTER(len=*),OPTIONAL :: proj_type !< Type of projection
 DOUBLE PRECISION,OPTIONAL :: lov !< Line of view, also known as reference longitude or orientation of the grid (polar projections)
+INTEGER,OPTIONAL :: zone !< Earth zone (mainly for UTM), sets lov to the correct zone central meridian
 DOUBLE PRECISION,OPTIONAL :: xoff !< Offset on x axis (false easting)
 DOUBLE PRECISION,OPTIONAL :: yoff !< Offset on y axis (false northing)
 DOUBLE PRECISION,OPTIONAL :: longitude_south_pole !< Longitude of the southern pole of projection 
@@ -405,9 +407,24 @@ DOUBLE PRECISION,OPTIONAL :: latin1 !< First standard latitude from main pole (L
 DOUBLE PRECISION,OPTIONAL :: latin2 !< Second standard latitude from main pole (Lambert)
 DOUBLE PRECISION,OPTIONAL :: lad !< Latitude at which dx and dy (in m) are specified (Lambert, grib2 only)
 INTEGER,OPTIONAL :: projection_center_flag !< Flag indicating which pole is represented
+DOUBLE PRECISION,OPTIONAL :: ellips_smaj_axis !< Earth semi-major axis
+DOUBLE PRECISION,OPTIONAL :: ellips_flatt !< Earth flattening
+INTEGER,OPTIONAL :: ellips_type !< number in the interval [1,nellips] indicating a predefined ellipsoid, alternative to the previous arguments
+
+INTEGER :: i
 
 IF (PRESENT(proj_type)) proj_type = this%proj_type
-IF (PRESENT(lov)) lov = this%lov
+
+IF (PRESENT(lov) .AND. PRESENT(zone)) THEN
+  zone = NINT((this%lov + 183.0D0)/6.0D0)
+  lov = this%lov - zone*6.0D0 - 183.0D0
+  IF (ABS(lov) < 1.0D-6) lov = 0.0D-6
+ELSE IF (PRESENT(lov)) THEN
+  lov = this%lov
+ELSE IF (PRESENT(zone)) THEN
+  zone = NINT((this%lov + 183.0D0)/6.0D0)
+ENDIF
+
 IF (PRESENT(xoff)) xoff = this%xoff
 IF (PRESENT(yoff)) yoff = this%yoff
 IF (PRESENT(longitude_south_pole)) longitude_south_pole = this%rotated%longitude_south_pole
@@ -420,6 +437,18 @@ IF (PRESENT(latin1)) latin1 = this%polar%latin1
 IF (PRESENT(latin2)) latin2 = this%polar%latin2
 IF (PRESENT(lad)) lad = this%polar%lad
 IF (PRESENT(projection_center_flag)) projection_center_flag = this%polar%projection_center_flag
+! ellipsoid
+IF (PRESENT(ellips_smaj_axis)) ellips_smaj_axis = this%ellips%a
+IF (PRESENT(ellips_flatt)) ellips_flatt = this%ellips%f
+IF (PRESENT(ellips_type)) THEN
+  ellips_type = imiss
+  DO i = 1, nellips
+    IF (this%ellips%f == 1.0D0/rf(i) .AND. this%ellips%a == a(i)) THEN
+      ellips_type = i
+      EXIT
+    ENDIF
+  ENDDO
+ENDIF
 
 END SUBROUTINE geo_proj_get_val
 
@@ -461,14 +490,14 @@ ELSE IF (PRESENT(zone)) THEN
 ENDIF
 
 ! ellipsoid
-IF (PRESENT(ellips_smaj_axis) .AND. PRESENT(ellips_flatt)) THEN
-! explicit ellipsoid parameters provided
+IF (PRESENT(ellips_smaj_axis)) THEN
+! explicit ellipsoid parameters provided (sphere is flatt is not present or 0)
   CALL ellips_compute(this%ellips, ellips_smaj_axis, ellips_flatt)
 ELSE IF (PRESENT(ellips_type)) THEN
-  IF (ellips_type > 0 .AND. ellips_type < nellips) THEN
+  IF (ellips_type > 0 .AND. ellips_type <= nellips) THEN
 ! an hard coded ellipsoid has been requested
-    CALL ellips_compute(this%ellips, a(ellips_type), rf(ellips_type))
-  ELSE ! fallback to sphere
+    CALL ellips_compute(this%ellips, a(ellips_type), 1.0D0/rf(ellips_type))
+  ELSE ! fallback to default sphere
     CALL ellips_compute(this%ellips)
   ENDIF
 ENDIF
