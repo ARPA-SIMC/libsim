@@ -883,6 +883,10 @@ IF (EditionNumber == 2) THEN
     CALL grib_get(gaid, 'scaleFactorOfMinorAxisOfOblateSpheroidEarth', is)
     CALL grib_get(gaid, 'scaledValueOfMinorAxisOfOblateSpheroidEarth', iv)
     r2 = DBLE(iv) / 10**is
+    IF (EditionNumber == 3) THEN ! km->m
+      r1 = r1*1000.0D0
+      r2 = r2*1000.0D0
+    ENDIF
     IF (ABS(r1) < 1.0D-6) THEN ! suspicious data read from grib
       CALL l4f_category_log(this%category,L4F_WARN,'zero Earth major axis '// &
       'read from grib, going on with spherical Earth but the results may be wrong')
@@ -1248,12 +1252,12 @@ IF (EditionNumber == 2) THEN
       IF (r1 == 6378160.0D0 .AND. f == 1.0D0/297.0D0) THEN ! iau65
         CALL grib_set(gaid, 'shapeOfTheEarth', 2)
       ELSE ! ellipsoidal generic
-        CALL grib_set(gaid, 'shapeOfTheEarth', 3) ! 7?
+        CALL grib_set(gaid, 'shapeOfTheEarth', 3)
         r2 = r1*(1.0D0 - f)
-        CALL grib_set(gaid, 'scaleFactorOfMajorAxisOfOblateSpheroidEarth', 2)
+        CALL grib_set(gaid, 'scaleFactorOfMajorAxisOfOblateSpheroidEarth', 5)
         CALL grib_set(gaid, 'scaledValueOfMajorAxisOfOblateSpheroidEarth', &
          INT(r1*100.0D0))
-        CALL grib_set(gaid, 'scaleFactorOfMinorAxisOfOblateSpheroidEarth', 2)
+        CALL grib_set(gaid, 'scaleFactorOfMinorAxisOfOblateSpheroidEarth', 5)
         CALL grib_set(gaid, 'scaledValueOfMinorAxisOfOblateSpheroidEarth', &
          INT(r2*100.0D0))
       ENDIF
