@@ -622,11 +622,16 @@ IF (EditionNumber == 1 .OR. EditionNumber == 2) THEN
       CALL grib_get(gaid,'indicatorOfUnitForTimeRange',unit)
       CALL gribtr_to_second(unit,p2,p2)
       this = this + timedelta_new(msec=p2*1000)
+    ELSE IF (status == GRIB_SUCCESS .AND. ttimeincr == 2) THEN ! usual case
+    ELSE
+      CALL l4f_log(L4F_ERROR,'typeOfTimeIncrement '//t2c(ttimeincr)// &
+       ' not supported')
+      CALL raise_error()
     ENDIF
   ENDIF
 
 else
-  call l4f_log(L4F_ERROR,'GribEditionNumber not supported')
+  CALL l4f_log(L4F_ERROR,'GribEditionNumber '//t2c(EditionNumber)//' not supported')
   CALL raise_error()
 
 end if
@@ -660,8 +665,7 @@ ELSE IF (EditionNumber == 2 )THEN
 
 ELSE
 
-  CALL l4f_log( L4F_ERROR, &
-   'GribEditionNumber not supported: '//TRIM(to_char(EditionNumber)))
+  CALL l4f_log(L4F_ERROR,'GribEditionNumber '//t2c(EditionNumber)//' not supported')
   CALL raise_error()
 
 ENDIF
@@ -715,8 +719,8 @@ else if (EditionNumber == 2)then
 
 else
 
-  call l4f_log(L4F_ERROR,'GribEditionNumber not supported')
-  call raise_error()
+  CALL l4f_log(L4F_ERROR,'GribEditionNumber '//t2c(EditionNumber)//' not supported')
+  CALL raise_error()
 
 end if
 
@@ -757,14 +761,19 @@ else if (EditionNumber == 2)then
   call grib_set(gaid,'scaleFactorOfFirstFixedSurface',scalef1)
   call grib_set(gaid,'scaledValueOfFirstFixedSurface',scalev1)
 
-  call grib_set(gaid,'typeOfSecondFixedSurface',ltype2)
-  call grib_set(gaid,'scaleFactorOfSecondFixedSurface',scalef2)
-  call grib_set(gaid,'scaledValueOfSecondFixedSurface',scalev2)
+  CALL grib_set(gaid,'typeOfSecondFixedSurface',ltype2)
+  IF (ltype2 == 255) THEN ! code missing values correctly
+    CALL grib_set_missing(gaid,'scaleFactorOfSecondFixedSurface')
+    CALL grib_set_missing(gaid,'scaledValueOfSecondFixedSurface')
+  ELSE
+    CALL grib_set(gaid,'scaleFactorOfSecondFixedSurface',scalef2)
+    CALL grib_set(gaid,'scaledValueOfSecondFixedSurface',scalev2)
+  ENDIF
 
 else
 
-  call l4f_log(L4F_ERROR,'GribEditionNumber not supported')
-  call raise_error()
+  CALL l4f_log(L4F_ERROR,'GribEditionNumber '//t2c(EditionNumber)//' not supported')
+  CALL raise_error()
 
 end if
 
@@ -775,7 +784,8 @@ SUBROUTINE timerange_import_gribapi(this, gaid)
 TYPE(vol7d_timerange),INTENT(out) :: this ! vol7d_timerange object
 INTEGER,INTENT(in) :: gaid ! grib_api id of the grib loaded in memory to import
 
-INTEGER :: EditionNumber, tri, unit, p1_g1, p2_g1, statproc, p1, p2, status
+INTEGER :: EditionNumber, tri, unit, p1_g1, p2_g1, statproc, p1, p2, ttimeincr, &
+ status
 
 call grib_get(gaid,'GRIBEditionNumber',EditionNumber)
 
@@ -801,18 +811,20 @@ ELSE IF (EditionNumber == 2) THEN
     CALL grib_get(gaid,'indicatorOfUnitForTimeRange',unit)
     CALL gribtr_to_second(unit,p2,p2)
 
+! for forecast-like timeranges p1 has to be shifted to the end of interval
+    CALL grib_get(gaid,'typeOfTimeIncrement',ttimeincr)
+    IF (ttimeincr == 2) p1 = p1 + p2
+
   ELSE ! point in time
     statproc = 254
     p2 = 0
   
   ENDIF
 
-  p1 = p1 + p2 ! from start to end of time interval
-
 else
 
-  call l4f_log(L4F_ERROR,'GribEditionNumber not supported')
-  call raise_error()
+  CALL l4f_log(L4F_ERROR,'GribEditionNumber '//t2c(EditionNumber)//' not supported')
+  CALL raise_error()
 
 end if
 
@@ -893,8 +905,7 @@ else if (EditionNumber == 2) then
   ENDIF
 
 ELSE
-  CALL l4f_log(L4F_ERROR, &
-   'GribEditionNumber not supported: '//TRIM(to_char(EditionNumber)))
+  CALL l4f_log(L4F_ERROR,'GribEditionNumber '//t2c(EditionNumber)//' not supported')
   CALL raise_error()
 ENDIF
 
@@ -948,7 +959,7 @@ else if (EditionNumber == 2)then
   
 else
 
-  call l4f_log(L4F_ERROR,'GribEditionNumber not supported')
+  CALL l4f_log(L4F_ERROR,'GribEditionNumber '//t2c(EditionNumber)//' not supported')
   CALL raise_error()
 
 end if
@@ -983,7 +994,7 @@ else if (EditionNumber == 2)then
 
 else
 
-  call l4f_log(L4F_ERROR,'GribEditionNumber not supported')
+  CALL l4f_log(L4F_ERROR,'GribEditionNumber '//t2c(EditionNumber)//' not supported')
   CALL raise_error()
 
 end if
