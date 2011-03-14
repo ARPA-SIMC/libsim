@@ -127,14 +127,14 @@ END INTERFACE
 ! methods for computing transformations through an initialised
 ! grid_transform object, probably too low level to be interfaced
 INTERFACE compute
-  MODULE PROCEDURE volgrid6d_transform_compute,volgrid6d_v7d_transform_compute,&
+  MODULE PROCEDURE volgrid6d_transform_compute, volgrid6d_v7d_transform_compute,&
    v7d_volgrid6d_transform_compute, v7d_v7d_transform_compute
 END INTERFACE
 
 !> Transform between any combination of \a volgrid6d and \a vol7d objects
 !! by means of a \a transform_def object describing the transformation.
 INTERFACE transform
-  MODULE PROCEDURE volgrid6d_transform,volgrid6dv_transform,&
+  MODULE PROCEDURE volgrid6d_transform, volgrid6dv_transform,&
    volgrid6d_v7d_transform, volgrid6dv_v7d_transform, v7d_volgrid6d_transform, &
    v7d_v7d_transform
 END INTERFACE
@@ -1072,9 +1072,9 @@ do i=1,ngrid
 #ifdef DEBUG
    call l4f_category_log(this(i)%category,L4F_DEBUG,"alloc volgrid6d index: "//trim(to_char(i)))
 #endif
-   
+ 
    call volgrid6d_alloc(this(i),this(i)%griddim%dim,ntime=ntime,ntimerange=ntimerange,nlevel=nlevel,nvar=nvar)
-   
+ 
    this(i)%time=pack_distinct(gridinfov%time,ntime,mask=(this(i)%griddim == gridinfov%griddim),back=.true.)
    this(i)%timerange=pack_distinct(gridinfov%timerange,ntimerange,mask=(this(i)%griddim == gridinfov%griddim),back=.true.)
    this(i)%level=pack_distinct(gridinfov%level,nlevel,mask=(this(i)%griddim == gridinfov%griddim),back=.true.)

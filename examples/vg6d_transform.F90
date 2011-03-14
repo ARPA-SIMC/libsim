@@ -29,7 +29,7 @@ use getopt_m
 implicit none
 
 integer :: category,ier,i,nana
-character(len=512):: a_name,infile,outfile
+CHARACTER(len=512):: a_name, infile, outfile, output_format, output_template
 type (volgrid6d),pointer  :: volgrid(:),volgrid_out(:)
 
 doubleprecision ::  ilon,ilat,flon,flat
@@ -76,15 +76,8 @@ options(2) = op_option_new('z', 'sub-type', sub_type, 'near', help= &
  &for zoom: ''index'', ''coord'', ''coordbb''')
 
 options(3) = op_option_new('u', 'type', proj_type, 'regular_ll', help= &
- 'projection and parameters of interpolated grid: it can be explicitely &
- &specified, with a string as ''regular_ll'', ''rotated_ll'' &
- &plus the necessary parameters as separate options&
-#ifdef GRIB_API
- & or it can be expressed in the form '':template'' where ''template'' &
- &is the name of a grib file, in that case all the grid definition is &
- &taken from the first grib message of the file&
-#endif
- ')
+ 'projection and parameters of interpolated grid: it is a string &
+ &as ''regular_ll'', ''rotated_ll'', ''UTM''')
 options(4) = op_option_new('i', 'nx', nx, 31, help= &
  'number of nodes along x axis on interpolated grid')
 options(5) = op_option_new('l', 'ny', ny, 31, help= &
@@ -126,6 +119,23 @@ options(21) = op_option_new('f', 'npx', npx, 4, help= &
  'number of nodes along x axis on input grid, over which to apply function for boxregrid')
 options(22) = op_option_new('g', 'npy', npy, 4, help= &
  'number of nodes along x axis on input grid, over which to apply function for boxregrid')
+
+output_template = ''
+options(23) = op_option_new(' ', 'output-format', output_format, &
+#ifdef HAVE_LIBGRIBAPI
+ 'grib_api', &
+#else
+ '', &
+#endif
+ help='format of output file, in the form ''name[:template]''&
+#ifdef HAVE_LIBGRIBAPI
+ &; ''grib_api'' for gridded output in grib format, template is the &
+ &path name of a grib file in which the first message defines the output grid and &
+ &is used as a template for the output grib messages&
+#endif
+ &; if this option includes a template, --type &
+ &argument &c. are ignored, otherwise --type &c. define the output grid')
+
 
 options(28)= op_option_new('e', 'a-grid', c2agrid, help= &
  'interpolate U/V points of an Arakawa C grid on the corresponding T points &
@@ -200,10 +210,12 @@ call l4f_category_log(category,L4F_INFO,"transforming to   file:"//trim(outfile)
 
 IF (trans_type == 'inter' .OR. trans_type == 'boxinter') THEN ! griddim_out needed
 
-#ifdef HAVE_LIBGRIBAPI
-  IF (proj_type(1:1) == ':') THEN ! grid from a grib template
+  i = word_split(output_format, w_s, w_e, ':')
+  IF (i >= 2) THEN ! grid from a grib template
+!  output_template = output_format(w_s(2):w_e(2))
+!  output_format(w_e(1)+1:) = ' '
 ! open grib template file and import first message
-    file_template = grid_file_id_new(proj_type(2:), 'r')
+    file_template = grid_file_id_new(output_format, 'r')
     gaid_template = grid_id_new(file_template)
     IF (c_e(gaid_template)) THEN
       CALL import(griddim_out, gaid_template)
@@ -211,11 +223,10 @@ IF (trans_type == 'inter' .OR. trans_type == 'boxinter') THEN ! griddim_out need
       CALL delete(file_template)
     ELSE
       CALL l4f_category_log(category,L4F_ERROR, &
-       'cannot read any grib message from template file '//TRIM(proj_type(2:)))
+       'cannot read any grib message from template file '//TRIM(output_format))
       CALL raise_fatal_error()
     ENDIF
   ELSE
-#endif
     CALL init(griddim_out,&
      proj_type=proj_type,nx=nx,ny=ny, &
      xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, component_flag=component_flag, &
@@ -223,14 +234,12 @@ IF (trans_type == 'inter' .OR. trans_type == 'boxinter') THEN ! griddim_out need
      longitude_south_pole=longitude_south_pole, angle_rotation=angle_rotation, &
      categoryappend="requested_grid") ! explicit parameters for the grid
 
-#ifdef HAVE_LIBGRIBAPI
   ENDIF
-#endif
+  DEALLOCATE(w_s, w_e)
 
   CALL griddim_unproj(griddim_out)
 
 ENDIF
-
 
 CALL import(volgrid,filename=infile,decode=.FALSE.,categoryappend="input")
 if (c2agrid) call vg6d_c2a(volgrid)

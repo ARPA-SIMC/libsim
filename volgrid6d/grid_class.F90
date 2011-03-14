@@ -883,7 +883,13 @@ IF (EditionNumber == 2) THEN
     CALL grib_get(gaid, 'scaleFactorOfMinorAxisOfOblateSpheroidEarth', is)
     CALL grib_get(gaid, 'scaledValueOfMinorAxisOfOblateSpheroidEarth', iv)
     r2 = DBLE(iv) / 10**is
-    CALL set_val(this, ellips_smaj_axis=r1, ellips_flatt=(r1-r2)/r1)
+    IF (ABS(r1) < 1.0D-6) THEN ! suspicious data read from grib
+      CALL l4f_category_log(this%category,L4F_WARN,'zero Earth major axis '// &
+      'read from grib, going on with spherical Earth but the results may be wrong')
+      CALL set_val(this, ellips_smaj_axis=6367470.0D0, ellips_flatt=0.0D0)
+    ELSE
+      CALL set_val(this, ellips_smaj_axis=r1, ellips_flatt=(r1-r2)/r1)
+    ENDIF
   CASE(4) ! iag-grs80
     CALL set_val(this, ellips_type=ellips_grs80)
   CASE(5) ! wgs84

@@ -289,6 +289,7 @@ TYPE(geo_proj) :: this
 this%proj_type = optio_c(proj_type, LEN(this%proj_type))
 
 ! line of view / central meridian, use set_val
+this%lov = optio_d(lov)
 CALL set_val(this, zone=zone, lov=lov)
 
 ! offset / false *ing
@@ -487,8 +488,6 @@ ELSE IF (PRESENT(lov)) THEN
   this%lov = lov
 ELSE IF (PRESENT(zone)) THEN
   this%lov = zone*6.0D0 - 183.0D0
-ELSE
-  this%lov = dmiss
 ENDIF
 
 ! ellipsoid
@@ -559,33 +558,37 @@ ELSE
 ENDIF
 
 IF (c_e(this%xoff) .AND. this%xoff /= 0.0D0) THEN
-  PRINT*,"false easting",this%xoff
+  PRINT*,"False easting",this%xoff
 ENDIF
 IF (c_e(this%yoff) .AND. this%yoff /= 0.0D0) THEN
-  PRINT*,"false northing",this%yoff
+  PRINT*,"False northing",this%yoff
 ENDIF
 
 IF (c_e(this%lov)) THEN
-  PRINT*,"centralMeridian",this%lov
+  PRINT*,"Central Meridian",this%lov
 ENDIF
 
-IF (c_e(this%rotated%longitude_south_pole) .OR. c_e(this%rotated%latitude_south_pole)) THEN
+IF (this%proj_type == 'rotated_ll' .OR. this%proj_type == 'stretched_rotated_ll') THEN
   PRINT*,"Rotated projection:"
-  PRINT*,"lonSouthPole",this%rotated%longitude_south_pole
-  PRINT*,"latSouthPole",this%rotated%latitude_south_pole
+  PRINT*,"lon of south pole",this%rotated%longitude_south_pole
+  PRINT*,"lat of south pole",this%rotated%latitude_south_pole
 ENDIF
 
-IF (c_e(this%stretched%longitude_stretch_pole) .OR. c_e(this%stretched%latitude_stretch_pole) .OR. &
- c_e(this%stretched%stretch_factor)) THEN
+IF (this%proj_type == 'stretched_ll' .OR. this%proj_type == 'stretched_rotated_ll') THEN
   PRINT*,"Stretched projection:"
-  PRINT*,"lonStretchPole",this%stretched%longitude_stretch_pole
-  PRINT*,"latStretchPole",this%stretched%latitude_stretch_pole
-  PRINT*,"stretchFactor ",this%stretched%stretch_factor
+  PRINT*,"lon of stretch pole",this%stretched%longitude_stretch_pole
+  PRINT*,"lat of stretch pole",this%stretched%latitude_stretch_pole
+  PRINT*,"stretching factor ",this%stretched%stretch_factor
 ENDIF
 
-IF (c_e(this%polar%latin1) .OR. c_e(this%polar%latin2)) THEN
+IF (this%proj_type == 'lambert' .OR. this%proj_type == 'polar_stereographic') THEN
   PRINT*,"Polar projection:"
-  PRINT*,"latIntersections",this%polar%latin1,this%polar%latin2
+  IF (c_e(this%polar%latin1) .OR. c_e(this%polar%latin2)) THEN
+    PRINT*,"lat of intersections",this%polar%latin1,this%polar%latin2
+  ENDIF
+  IF (c_e(this%polar%lad)) THEN
+    PRINT*,"isometric latitude",this%polar%lad
+  ENDIF
   IF (IAND(this%polar%projection_center_flag, 128) == 0) THEN
     PRINT*,"North Pole"
   ELSE
