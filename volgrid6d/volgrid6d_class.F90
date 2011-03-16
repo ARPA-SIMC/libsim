@@ -156,7 +156,8 @@ END INTERFACE
 private
 
 PUBLIC volgrid6d,init,delete,export,import,compute,transform, &
- wind_rot,wind_unrot,vg6d_c2a,display
+ wind_rot,wind_unrot,vg6d_c2a,display,conv_func,conv_func_miss,&
+ vargrib2varbufr
 
 integer stallo
 
