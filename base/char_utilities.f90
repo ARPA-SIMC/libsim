@@ -691,4 +691,86 @@ RETURN
 END FUNCTION default_columns
 
 
+
+!> remove "special char" from string
+!! return a string cleaned from some "strage" chars.
+!! Without optional values return apha char only
+ELEMENTAL FUNCTION wash_char(in, goodchar,badchar) RESULT(char)
+CHARACTER(len=*),INTENT(in) :: in !< value to be cleaned
+CHARACTER(len=*),INTENT(in),OPTIONAL :: badchar !< optional vector of "no good chars"
+CHARACTER(len=*),INTENT(in),OPTIONAL :: goodchar !< optional vector of "good chars"
+integer,allocatable :: igoodchar(:)
+integer,allocatable :: ibadchar(:)
+
+CHARACTER(len=len(in)) :: char,charr,charrr
+integer :: i,ia
+
+char=""
+charr=""
+charrr=""
+
+if (present(goodchar)) then
+
+allocate(igoodchar(len(goodchar)))
+
+  do i =1, len(goodchar)
+    igoodchar=iachar(goodchar(i:))
+  end do
+
+  do i=1,len(in)
+    ia = iachar(in(i:))
+    if (any(ia == igoodchar))then
+      charrr=trim(charrr)//achar(ia)
+    end if
+  end do
+
+deallocate(igoodchar)
+
+else
+
+  charrr=in
+
+end if
+
+
+
+if (present(badchar)) then
+
+allocate(ibadchar(len(badchar)))
+
+  do i =1, len(badchar)
+    ibadchar=iachar(badchar(i:))
+  end do
+
+  do i=1,len(charrr)
+    ia = iachar(charrr(i:))
+    if (.not. any(ia == ibadchar))then
+      charr=trim(charr)//achar(ia)
+    end if
+  end do
+
+deallocate(ibadchar)
+
+else
+
+  charr=charrr
+
+end if
+
+
+if (.not. present(goodchar) .and. .not. present(badchar)) then
+
+  do i=1,len(charr)
+    ia = iachar(charr(i:))
+    if ((ia >= 65 .and. ia <= 90) .or. &
+        (ia >= 97 .and. ia <= 122))then
+      char=trim(char)//achar(ia)
+    end if
+  end do
+
+end if
+
+
+END FUNCTION wash_char
+
 END MODULE char_utilities
