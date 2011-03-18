@@ -225,14 +225,18 @@ AM_CONDITIONAL(DBALLE, test "x$enableval" = "xyes")
 AC_ARG_ENABLE(gribapi, AC_HELP_STRING([--disable-gribapi],
   [disable gribapi support]),,[enableval=yes])dnl default enable
 if test "x$enableval" = "xyes"; then
- # test in f77 because f90 test does not work
-  AC_CHECK_LIB([grib_api_f77], [grib_set_int],
-    AC_MSG_RESULT([gribapi code included])
-    AC_DEFINE(HAVE_LIBGRIBAPI, 1, [Enable gribapi code])
-    GRIBAPI_LIBS="-lgrib_api_f90 -lgrib_api -ljasper"
-    AC_SUBST(GRIBAPI_LIBS),
-    AC_MSG_ERROR([gribapi library not found]),
-    [-lgrib_api -ljasper])
+AC_CHECK_LIB(
+	     [grib_api_f90],
+	     [grib_f_open_file],
+	     [
+	      AC_MSG_RESULT([gribapi code included])
+	      AC_DEFINE(HAVE_LIBGRIBAPI, 1, [Enable gribapi code])
+	      GRIBAPI_LIBS="-lgrib_api_f90 -lgrib_api -ljasper"
+	      AC_SUBST(GRIBAPI_LIBS)
+	     ],
+	     [AC_MSG_ERROR([grib-api library not found])],
+	     [-lgrib_api -ljasper]
+	    )
 else
   AC_MSG_RESULT([gribapi code not included])
 fi
