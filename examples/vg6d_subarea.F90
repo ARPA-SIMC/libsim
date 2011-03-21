@@ -25,7 +25,7 @@ use grid_id_class
 use grib_api
 use volgrid6d_class
 use char_utilities
-use getopt_m
+use optionparser_class
 
 implicit none
 
@@ -51,8 +51,8 @@ CHARACTER(len=3) :: set_scmode
 LOGICAL :: version, ldisplay
 
 doubleprecision ::x,y,lon,lat
-type(op_option) :: options(40) ! remember to update dimension when adding options
 type(optionparser) :: opt
+integer :: optind
 integer :: iargc
 
 !questa chiamata prende dal launcher il nome univoco
@@ -64,65 +64,69 @@ ier=l4f_init()
 !imposta a_name
 category=l4f_category_get(a_name//".main")
 
-! define command-line options
-CALL op_option_nullify(options)
+! define the option parser
+opt = optionparser_new(description_msg= &
+ 'Grib to grib trasformation application. It reads grib edition 1 and 2 &
+ &and zooms, interpolates or regrids data according to optional parameters.', &
+ usage_msg='Usage: vg6d_subarea [options] inputfile outputfile')
 
-options(1) = op_option_new('v', 'trans-type', trans_type, 'inter', help= &
+! define command-line options
+CALL optionparser_add(opt, 'v', 'trans-type', trans_type, 'inter', help= &
  'transformation type: ''inter'' for interpolation, ''zoom'' for zooming, ''boxregrid'' for resolution reduction')
-options(2) = op_option_new('z', 'sub-type', sub_type, 'near', help= &
+CALL optionparser_add(opt, 'z', 'sub-type', sub_type, 'near', help= &
  'transformation subtype, for inter: ''near'', ''bilin'', &
  &for ''boxinter'' and ''boxregrid'': ''average'', ''max'', ''min'', &
  &for zoom: ''index'', ''coord'', ''coordbb''')
 
-options(3) = op_option_new('u', 'type', type, 'regular_ll', help= &
+CALL optionparser_add(opt, 'u', 'type', type, 'regular_ll', help= &
  'type of interpolated grid: ''regular_ll'', ''rotated_ll''')
-options(4) = op_option_new('i', 'nx', nx, 31, help= &
+CALL optionparser_add(opt, 'i', 'nx', nx, 31, help= &
  'number of nodes along x axis on interpolated grid')
-options(5) = op_option_new('l', 'ny', ny, 31, help= &
+CALL optionparser_add(opt, 'l', 'ny', ny, 31, help= &
  'number of nodes along y axis on interpolated grid')
-options(6) = op_option_new('m', 'x-min', xmin, 0.0D0, help= &
+CALL optionparser_add(opt, 'm', 'x-min', xmin, 0.0D0, help= &
  'x coordinate of the lower left corner of interpolated grid')
-options(7) = op_option_new('o', 'y-min', ymin, 30.0D0, help= &
+CALL optionparser_add(opt, 'o', 'y-min', ymin, 30.0D0, help= &
  'y coordinate of the lower left corner of interpolated grid')
-options(8) = op_option_new('n', 'x-max', xmax, 30.0D0, help= &
+CALL optionparser_add(opt, 'n', 'x-max', xmax, 30.0D0, help= &
  'x coordinate of the upper right corner of interpolated grid')
-options(9) = op_option_new('p', 'y-max', ymax, 60.0D0, help= &
+CALL optionparser_add(opt, 'p', 'y-max', ymax, 60.0D0, help= &
  'y coordinate of the upper right corner of interpolated grid')
 
-options(10) = op_option_new('q', 'latitude-south-pole', latitude_south_pole, &
+CALL optionparser_add(opt, 'q', 'latitude-south-pole', latitude_south_pole, &
  -32.5D0, help='latitude of south pole for rotated grid')
-options(11) = op_option_new('r', 'longitude-south-pole', longitude_south_pole, &
+CALL optionparser_add(opt, 'r', 'longitude-south-pole', longitude_south_pole, &
  10.0D0, help='longitude of south pole for rotated grid')
-options(12) = op_option_new('s', 'angle-rotation', angle_rotation, &
+CALL optionparser_add(opt, 's', 'angle-rotation', angle_rotation, &
  0.0D0, help='angle of rotation for rotated grid')
 
-options(13) = op_option_new('a', 'ilon', ilon, 0.0D0, help= &
+CALL optionparser_add(opt, 'a', 'ilon', ilon, 0.0D0, help= &
  'longitude of the southwestern zooming/bounding box corner')
-options(14) = op_option_new('b', 'ilat', ilat, 30.D0, help= &
+CALL optionparser_add(opt, 'b', 'ilat', ilat, 30.D0, help= &
  'latitude of the southwestern zooming/bounding box corner')
-options(15) = op_option_new('c', 'flon', flon, 30.D0, help= &
+CALL optionparser_add(opt, 'c', 'flon', flon, 30.D0, help= &
  'longitude of the northeastern zooming/bounding box corner')
-options(16) = op_option_new('d', 'flat', flat, 60.D0, help= &
+CALL optionparser_add(opt, 'd', 'flat', flat, 60.D0, help= &
  'latitude of the northeastern zooming/bounding box corner')
-options(17) = op_option_new(' ', 'ix', ix, 1, help= &
+CALL optionparser_add(opt, ' ', 'ix', ix, 1, help= &
  'x-index of the southwestern zooming corner')
-options(18) = op_option_new(' ', 'iy', iy, 1, help= &
+CALL optionparser_add(opt, ' ', 'iy', iy, 1, help= &
  'y-index of the southwestern zooming corner')
-options(19) = op_option_new(' ', 'fx', fx, 31, help= &
+CALL optionparser_add(opt, ' ', 'fx', fx, 31, help= &
  'x-index of the northeastern zooming corner')
-options(20) = op_option_new(' ', 'fy', fy, 31, help= &
+CALL optionparser_add(opt, ' ', 'fy', fy, 31, help= &
  'y-index of the northeastern zooming corner')
 
-options(21) = op_option_new('f', 'npx', npx, 4, help= &
+CALL optionparser_add(opt, 'f', 'npx', npx, 4, help= &
  'number of nodes along x axis on input grid, over which to apply function for boxregrid')
-options(22) = op_option_new('g', 'npy', npy, 4, help= &
+CALL optionparser_add(opt, 'g', 'npy', npy, 4, help= &
  'number of nodes along x axis on input grid, over which to apply function for boxregrid')
 
-!options(28) = op_option_new('e', 'a-grid', c2agrid, help= &
+!CALL optionparser_add(opt, 'e', 'a-grid', c2agrid, help= &
 ! 'interpolate U/V points of an Arakawa C grid on the corresponding T points &
 ! &of an Arakawa A grid')
 
-!options(29) = op_option_new('t', 'component-flag', component_flag, &
+!CALL optionparser_add(opt, 't', 'component-flag', component_flag, &
 ! 0, help='wind component flag in interpolated grid, 0=wind components referred to &
 ! &geographic E an N directions, 1=wind components referred to grid x and y &
 ! &directions')
@@ -131,7 +135,7 @@ options(22) = op_option_new('g', 'npy', npy, 4, help= &
 ! are interpolated
 component_flag = 0
 
-options(30) = op_option_new(' ', 'set-scmode', set_scmode, 'xxx', &
+CALL optionparser_add(opt, ' ', 'set-scmode', set_scmode, 'xxx', &
  help='set output grid scanning mode to a particular standard value: &
  &3 binary digits indicating respectively iScansNegatively, jScansPositively and &
  &jPointsAreConsecutive (grib_api jargon), 0 for false, 1 for true, &
@@ -140,23 +144,15 @@ options(30) = op_option_new(' ', 'set-scmode', set_scmode, 'xxx', &
  &corresponding original scanning mode value')
 
 ! display option
-options(38) = op_option_new(' ', 'display', ldisplay, help= &
+CALL optionparser_add(opt, ' ', 'display', ldisplay, help= &
  'briefly display the data volume imported, warning: this option is incompatible &
  &with output on stdout.')
 ! help options
-options(39) = op_option_help_new('h', 'help', help= &
- 'show an help message and exit')
-options(40) = op_option_new(' ', 'version', version, help= &
- 'show version and exit')
-
-! define the option parser
-opt = optionparser_new(options, description_msg= &
- 'Grib to grib trasformation application. It reads grib edition 1 and 2 &
- &and zooms, interpolates or regrids data according to optional parameters.', &
- usage_msg='Usage: vg6d_subarea [options] inputfile outputfile')
+CALL optionparser_add_help(opt, 'h', 'help', help='show an help message and exit')
+CALL optionparser_add(opt, ' ', 'version', version, help='show version and exit')
 
 ! parse options and check for errors
-optind = optionparser_parseoptions(opt)
+optind = optionparser_parse(opt)
 IF (optind <= 0) THEN
   CALL l4f_category_log(category,L4F_ERROR,'error in command-line parameters')
   CALL EXIT(1)
@@ -167,7 +163,7 @@ IF (version) THEN
   CALL exit(0)
 ENDIF
 
-if ( optind <= iargc()) then
+if (optind <= iargc()) then
   call getarg(optind, infile)
   optind=optind+1
 else
@@ -176,7 +172,7 @@ else
   call exit(1)
 end if
 
-if ( optind <= iargc()) then
+if (optind <= iargc()) then
   call getarg(optind, outfile)
   optind=optind+1
 else

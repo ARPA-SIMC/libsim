@@ -24,23 +24,26 @@ USE vol7d_dballe_class
 USE vol7d_class_compute
 USE vol7d_class
 USE ncar_plot_class
-use getopt_m
+USE optionparser_class
+USE err_handling
 
 implicit none
 
-integer :: category,ier
-integer :: wstype=imiss,ic
-character(len=512):: a_name,infile,outfile,PSTYPE="PS", ORIENT="LANDSCAPE", COLOR="COLOR"
-character(len=100) :: nomogramma="herlofson",logo="Met Service"
+type(optionparser) :: opt
+integer :: optind, category, ier
+logical :: version
+integer :: wstype,ic
+character(len=512):: a_name, infile, outfile, PSTYPE, ORIENT, COLOR
+character(len=100) :: nomogram, logo
 TYPE(vol7d_dballe) :: v7d_dba
 TYPE(vol7d) :: v7d_profile
 type(ncar_plot) :: plot
-integer   :: time,ana,timerange,network
-logical ::  packtimerange=.false.,changepg=.false.,distinct=.false.
-character(len=20) ::  tcolor(4)=(/'brown','red  ','black','tan  '/)
-character(len=20) ::  tdcolor(4)=(/'orange      ','forest Green','cyan        ','yellow      '/)
-character(len=20) ::  ucolor(4)=(/'sky blue    ','blue        ','blue magenta','magenta     '/)
-character(len=20) ::  wcolor(4)=(/'black     ','violet    ','light gray','dark gray '/)
+integer :: time,ana,timerange,network
+logical ::  packtimerange,changepg=.false.,distinct
+character(len=20) :: tcolor(4)=(/'brown','red  ','black','tan  '/)
+character(len=20) :: tdcolor(4)=(/'orange      ','forest Green','cyan        ','yellow      '/)
+character(len=20) :: ucolor(4)=(/'sky blue    ','blue        ','blue magenta','magenta     '/)
+character(len=20) :: wcolor(4)=(/'black     ','violet    ','light gray','dark gray '/)
 
 !questa chiamata prende dal launcher il nome univoco
 call l4f_launcher(a_name,a_name_force="readtemp")
@@ -53,90 +56,74 @@ category=l4f_category_get(a_name//".main")
 
 call l4f_category_log(category,L4F_INFO,"start")
 
-do
-  select case( getopt( "w:p:o:c:n:l:htd"))
+! define the option parser
+opt = optionparser_new(description_msg= &
+ 'Program for plotting an Herlofson diagram from a BUFR/CREX file. Different &
+ &output formats, either on file or on screen, are supported.', &
+ usage_msg='v7d_plot_sound [options] inputfile outputfile')
 
-  case( char(0))
-    exit
+wstype = imiss
+CALL optionparser_add(opt, 'w', 'wstype', wstype, help= &
+ 'workstation type (see NCAR GKS manuals, e.g. 8=X11 display), if &
+ &omitted (default), then postscript is chosen, see pstype option')
+CALL optionparser_add(opt, 'p', 'pstype', pstype, 'PS', help= &
+ 'postscript type (''PS'', ''EPS'', or ''EPSI'') if wstype is provided &
+ &this option is ininfluent')
+CALL optionparser_add(opt, 'o', 'orient', orient, 'LANDSCAPE', help= &
+ 'postscript orientation (''PORTRAIT'' or ''LANDSCAPE'')')
+CALL optionparser_add(opt, 'c', 'color', color, 'COLOR', help= &
+ 'postscript color mode (''COLOR'' or ''MONOCHROME'')')
+CALL optionparser_add(opt, 'n', 'nomogram', nomogram, 'herlofson', help= &
+ 'nomogram type (''herlofson'', ''herlofson-down'', ''emagram'', ''emagram-down''')
+CALL optionparser_add(opt, 'l', 'logo', logo, 'Met Service', help= &
+ 'logo to print in footer')
+CALL optionparser_add(opt, 't', 'packtimerange', packtimerange, help= &
+ 'collapse all in a single timerange dimension, writing the first timerange &
+ &in title and legend')
+CALL optionparser_add(opt, 'd', 'distinct', distinct, help= &
+ 'put every plot on a distinct page')
 
-  case( 'w' )
-    read(optarg,*,iostat=ier)wstype
-    if (ier/= 0)then
-      call l4f_category_log(category,L4F_ERROR,'w option argument error')
-      call help()
-      call exit(ier)
-    end if
+! help options
+CALL optionparser_add_help(opt, 'h', 'help', help='show an help message and exit')
+CALL optionparser_add(opt, ' ', 'version', version, help='show version and exit')
 
-  case( 'p' )
-    pstype=optarg
-    if (pstype/='PS' .and. pstype/='EPS' .and. pstype/='EPSI')then
-      call l4f_category_log(category,L4F_ERROR,'p option argument error')
-      call help()
-      call exit(ier)
-    end if
+optind = optionparser_parse(opt)
 
-  case( 'o' )
-    orient=optarg
-    if (orient/='PORTRAIT' .and. orient/='LANDSCAPE')then
-      call l4f_category_log(category,L4F_ERROR,'o option argument error')
-      call help()
-      call exit(ier)
-    end if
+IF (pstype/='PS' .AND. pstype/='EPS' .AND. pstype/='EPSI')THEN
+  CALL optionparser_printhelp(opt)
+  CALL l4f_category_log(category,L4F_ERROR,'pstype '//TRIM(pstype)//' not valid')
+  CALL raise_fatal_error()
+ENDIF
+IF (orient/='PORTRAIT' .AND. orient/='LANDSCAPE')THEN
+  CALL optionparser_printhelp(opt)
+  CALL l4f_category_log(category,L4F_ERROR,'orient '//TRIM(orient)//' not valid')
+  CALL raise_fatal_error()
+ENDIF
+IF (color/='COLOR' .AND. color/='MONOCHROME')THEN
+  CALL optionparser_printhelp(opt)
+  CALL l4f_category_log(category,L4F_ERROR,'color '//TRIM(color)//' not valid')
+  CALL raise_fatal_error()
+ENDIF
 
-  case( 'c' )
-    color=optarg
-    if (color/='COLOR' .and. color/='MONOCHROME')then
-      call l4f_category_log(category,L4F_ERROR,'c option argument error')
-      call help()
-      call exit(ier)
-    end if
-
-  case( 'n' )
-    nomogramma=optarg
-
-  case( 'l' )
-    logo=optarg
-
-  case( 'h' )
-    call help()
-    call exit(0)
-
-  case( '?' )
-    call l4f_category_log(category,L4F_ERROR,'unknown option '//optopt)
-    call help()
-    call exit(1)
-
-  case( 't' )
-    packtimerange=.true.
-
-  case( 'd' )
-    distinct=.true.
-
-  case default
-    call l4f_category_log(category,L4F_ERROR,'unhandled option '// optopt// '(this is a bug)')
-    call help()
-    call exit(1)
-  end select
-end do
-if ( optind <= iargc()) then
-  call getarg( optind,infile)
+IF (optind <= iargc()) THEN
+  CALL getarg(optind, infile)
   optind=optind+1
-else
-    call l4f_category_log(category,L4F_ERROR,'input file missing')
-    call help()
-    call exit(1)
-end if
+ELSE
+  CALL optionparser_printhelp(opt)
+  CALL l4f_category_log(category,L4F_ERROR,'input file missing')
+  CALL raise_fatal_error()
+ENDIF
 
-if ( optind <= iargc()) then
-  call getarg( optind,outfile)
+IF (optind <= iargc()) THEN
+  CALL getarg(optind, outfile)
   optind=optind+1
-else
-    call l4f_category_log(category,L4F_ERROR,'output file missing')
-    call help()
-    call exit(1)
-end if
+ELSE
+  CALL optionparser_printhelp(opt)
+  CALL l4f_category_log(category,L4F_ERROR,'output file missing')
+  CALL raise_fatal_error()
+ENDIF
 
-
+CALL delete(opt)
 
 ! Chiamo il costruttore della classe vol7d_dballe per il mio oggetto in import
 CALL init(v7d_dba,file=.true.,write=.false.,filename=infile,&
@@ -175,7 +162,7 @@ do ana=1, size(v7d_dba%vol7d%ana)
 
         if (ic == 1)  then
           call plot_vp_title (plot,v7d_dba%vol7d,ana,time,1,network,color=tcolor(ic))  !solo primo titolo
-          call plot_herlofson(plot,logo=logo,nomogramma=nomogramma)
+          call plot_herlofson(plot,logo=logo,nomogramma=nomogram)
         end if
       end if
 
@@ -192,7 +179,7 @@ do ana=1, size(v7d_dba%vol7d%ana)
 
           if (ic == 1)  then
             call plot_vp_title (plot,v7d_dba%vol7d,ana,time,timerange,network,color=tcolor(ic))  !solo primo titolo
-            call plot_herlofson(plot,logo=logo,nomogramma=nomogramma)
+            call plot_herlofson(plot,logo=logo,nomogramma=nomogram)
           end if
         end if
 
@@ -228,32 +215,5 @@ call l4f_category_log(category,L4F_INFO,"terminated")
 !chiudo il logger
 call l4f_category_delete(category)
 ier=l4f_fini()
-
-contains
-
-subroutine help()
-
-print*,"Plot herlofson diagram  from bufr/crex file."
-print*,""
-print*,""
-print*,"v7d_plt_sound [-h] [-w wstype] [-p PSTYPE] [-o ORIENT] [-c COLOR] [-n nomogramma] [-l logo] [-t] [-d] infile outfile"
-print*,""
-print*,"-h            this help message"
-print*,"-w wstype     work station type (see ncar GKS manuals - wstype=8 X11 display)"
-print*,""
-print*,"   if wstype omitted:"
-print*,""
-print*,"-p pstype     'PS', 'EPS', or 'EPSI'"
-print*,"-o orient     'PORTRAIT' or 'LANDSCAPE'"
-print*,"-c color      'COLOR' or 'MONOCHROME'" 
-print*,"-n nomogramma 'tipo di nomogramma aerologico: herlofson//herlofson-down//emagramma//emagramma-down'"
-print*,"-l logo       'logo to print in footer'"
-print*,"-t            'collapse timerange dimension writing the first in title and legend'"
-print*,"-d            'distinct page each sounding'"
-print*,""
-print*,""
-print *,"default :  pstype='PS' orient='LANDSCAPE' clor='COLOR' nomogramma='herlofson' logo='Met Service'"
-end subroutine help
-
 
 end program example_ncarg_sounding

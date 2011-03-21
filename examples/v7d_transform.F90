@@ -20,7 +20,7 @@ PROGRAM v7d_transform
 USE log4fortran
 USE char_utilities
 USE file_utilities
-USE getopt_m
+USE optionparser_class
 USE io_units
 USE vol7d_class
 USE vol7d_class_compute
@@ -44,8 +44,8 @@ USE modqc
 !USE ISO_FORTRAN_ENV
 IMPLICIT NONE
 
-TYPE(op_option) :: options(50) ! remember to update dimension when adding options
 TYPE(optionparser) :: opt
+INTEGER :: optind
 TYPE(csv_record) :: argparse
 CHARACTER(len=8) :: input_format, coord_format
 
@@ -111,192 +111,8 @@ category=l4f_category_get(a_name//".main")
 !!$CALL getval(datetime_new(year=yy, month=mm, day=dd), isodate=end_date_default)
 
 
-! define command-line options
-CALL op_option_nullify(options)
-
-! options for defining input
-options(1) = op_option_new(' ', 'input-format', input_format, 'native', help= &
- 'format of input, ''native'' for vol7d native binary file&
-#ifdef HAVE_DBALLE
- &, ''BUFR'' for BUFR file with generic template, ''CREX'' for CREX file&
- &, ''dba'' for dballe database&
-#endif
-#ifdef HAVE_ORSIM
- &, ''orsim'' for SIM Oracle database&
-#endif
- &')
-options(2) = op_option_new('c', 'coord-file', coord_file, help= &
- 'file with coordinates of interpolation points, required if a geographical &
- &transformation is requested')
-coord_file=cmiss
-options(3) = op_option_new(' ', 'coord-format', coord_format, &
-#ifdef HAVE_DBALLE
- 'BUFR', &
-#else
- 'native', &
-#endif 
- & help='format of input file with coordinates, ''native'' for vol7d native binary file &
-#ifdef HAVE_DBALLE
- &, ''BUFR'' for BUFR file, ''CREX'' for CREX file&
-#endif
-#ifdef HAVE_LIBSHP_FORTRAN
- &, ''shp'' for shapefile (interpolation on polygons)&
-#endif
- &')
-
-! input database options
-options(4) = op_option_new('s', 'start-date', start_date, cmiss, help= &
- 'if input-format is of database type, initial date for extracting data')
-options(5) = op_option_new('e', 'end-date', end_date, cmiss, help= &
- 'if input-format is of database type, final date for extracting data')
-options(6) = op_option_new('n', 'network-list', network_list, '', help= &
- 'if input-format is of database type, list of station networks to be extracted &
- &in the form of a comma-separated list of alphanumeric network identifiers')
-options(7) = op_option_new('v', 'variable-list', variable_list, '', help= &
- 'if input-format is of database type, list of data variables to be extracted &
- &in the form of a comma-separated list of B-table alphanumeric codes, &
- &e.g. ''B13011,B12101''')
-options(8) = op_option_new(' ', 'anavariable-list', anavariable_list, '', help= &
- 'if input-format is of database type, list of station variables to be extracted &
- &in the form of a comma-separated list of B-table alphanumeric codes, &
- &e.g. ''B01192,B01193,B07001''')
-options(9) = op_option_new(' ', 'attribute-list', attribute_list, '', help= &
- 'if input-format is of database type, list of data attributes to be extracted &
- &in the form of a comma-separated list of B-table alphanumeric codes, &
- &e.g. ''B33196,B33197''')
-options(10) = op_option_new(' ', 'set-network', set_network, '', help= &
- 'if input-format is of database type, collapse all the input data into a single &
- &pseudo-network with the given name, empty for keeping the original networks')
-options(11) = op_option_new(' ', 'disable-qc', disable_qc, help= &
- 'desable data removing based on SIMC quality control.')
-
-
-! option for displaying/processing
-options(12) = op_option_new('d', 'display', ldisplay, help= &
- 'briefly display the data volume imported, warning: this option is incompatible &
- &with output on stdout.')
-options(13) = op_option_new(' ', 'comp-regularize', comp_regularize, help= &
- 'regularize the time series keeping only the data at regular time steps')
-
-options(14) = op_option_new(' ', 'comp-stat-proc', comp_stat_proc, '', help= &
- 'statistically process data with an operator specified in the form [isp:]osp &
- &where isp is the statistical process of input data which has to be processed &
- &and osp is the statistical process to apply and which will appear in output &
- &timerange; possible values for isp and osp are 0=average, 1=accumulated, &
- &2=maximum, 3=minimum, 254=instantaneous, but not all the combinations &
- &make sense; if isp is not provided it is assumed to be equal to osp')
-
-options(15) = op_option_new(' ', 'comp-average', obso, help= &
- 'recompute average of averaged fields on a different time step, &
- &obsolete, use --comp-stat-proc 0 instead')
-options(16) = op_option_new(' ', 'comp-cumulate', obso, help= &
- 'recompute cumulation of accumulated fields on a different time step, &
- &obsolete, use --comp-stat-proc 1 instead')
-options(17) = op_option_new(' ', 'comp-step', comp_step, '0000000001 00:00:00.000', help= &
- 'length of regularization or statistical processing step in the format &
- &''YYYYMMDDDD hh:mm:ss.msc'', it can be simplified up to the form ''D hh''')
-options(18) = op_option_new(' ', 'comp-start', comp_start, '', help= &
- 'start of regularization, or statistical processing interval, an empty value means &
- &take the initial time step of the available data; the format is the same as for &
- &--start-date parameter')
-options(19) = op_option_new(' ', 'comp-keep', comp_keep, help= &
- 'keep the data that are not the result of the requested statistical processing, &
- &merging them with the result of the processing')
-options(20) = op_option_new(' ', 'comp-frac-valid', comp_frac_valid, 1., help= &
- 'specify the fraction of input data that has to be valid in order to consider a &
- &statistically processed value acceptable')
-options(21) = op_option_new(' ', 'comp-sort', comp_sort, help= &
- 'sort all sortable dimensions of the volume after the computations')
-
-! option for interpolation processing
-options(22) = op_option_new(' ', 'pre-trans-type', pre_trans_type, '', help= &
- 'transformation type (sparse points to sparse points) to be applied before &
- &other computations, in the form ''trans-type:subtype''; &
- &''inter'' for interpolation, with subtypes ''near'', ''linear'', ''bilin''&
-#ifdef HAVE_LIBSHP_FORTRAN
- &; ''polyinter'' for statistical processing within given polygons, &
- &with subtype ''average'', ''max'', ''min''&
-#endif
- &; ''metamorphosis'' with subtype ''coordbb'' for selecting only data &
- &within a given bounding box&
- &; empty for no transformation')
-#ifdef HAVE_LIBGRIBAPI
-options(23) = op_option_new(' ', 'post-trans-type', post_trans_type, '', help= &
- 'transformation type (sparse points to grid) to be applied after &
- &other computations, in the form ''trans-type:subtype''; &
- &''inter'' for interpolation, with subtype ''linear''; &
- &''boxinter'' for statistical processing within output grid box, &
- &with subtype ''average''; &
- &empty for no transformation; this option is compatible with output &
- &on gridded format only (see output-format)')
-#endif
-
-options(24) = op_option_new(' ', 'ilon', ilon, 0.0D0, help= &
- 'longitude of the southwestern bounding box corner')
-options(25) = op_option_new(' ', 'ilat', ilat, 30.D0, help= &
- 'latitude of the southwestern bounding box corner')
-options(26) = op_option_new(' ', 'flon', flon, 30.D0, help= &
- 'longitude of the northeastern bounding box corner')
-options(27) = op_option_new(' ', 'flat', flat, 60.D0, help= &
- 'latitude of the northeastern bounding box corner')
-
-! options for defining output
-output_template = ''
-options(29) = op_option_new(' ', 'output-format', output_format, 'native', help= &
- 'format of output file, in the form ''name[:template]''; ''native'' for vol7d &
- &native binary format (no template to be specified)&
-#ifdef HAVE_DBALLE
- &; ''BUFR'' and ''CREX'' for corresponding formats, with template in the form &
- &''category.subcategory.localcategory'' or as an alias like ''synop'', ''metar'', &
- &''temp'', ''generic'', empty for ''generic''&
-#endif
-#ifdef HAVE_LIBGRIBAPI
- &; ''grib_api'' for gridded output in grib format, template (required) is the &
- &path name of a grib file in which the first message defines the output grid and &
- &is used as a template for the output grib messages, (see also post-trans-type)&
-#endif
- &; csv for formatted csv format (no template to be specified)')
-
-! options for configuring csv output
-options(30) = op_option_new(' ', 'csv-volume', csv_volume, 'all', help= &
- 'vol7d volumes to be output to csv: ''all'' for all volumes, &
- &''ana'' for station volumes only or ''data'' for data volumes only')
-options(31) = op_option_new(' ', 'csv-column', csv_column, &
- 'time,timerange,ana,level,network', help= &
- 'list of columns (excluding variables) that have to appear in csv output: &
- &a comma-separated combination of ''time,timerange,level,ana,network'' &
- &in the desired order')
-options(32) = op_option_new(' ', 'csv-columnorder', csv_columnorder, &
- 'time,timerange,ana,level,network', help= &
- 'order of looping on columns (excluding variables) that have to appear in &
- &csv output, the format is the same as for the --csv-column parameter &
- &but here all the column identifiers have to be present')
-options(33) = op_option_new(' ', 'csv-variable', csv_variable, 'all', help= &
- 'list of variables that have to appear in the data columns of csv output: &
- &''all'' or a comma-separated list of B-table alphanumeric codes, e.g. &
- &''B10004,B12101'' in the desired order')
-options(34) = op_option_new(' ', 'csv-header', csv_header, 2, help= &
- 'write 0 to 2 header lines at the beginning of csv output')
-options(35) = op_option_new(' ', 'csv-keep-miss', csv_keep_miss, help= &
- 'keep records containing only missing values in csv output')
-options(36) = op_option_new(' ', 'csv-norescale', csv_no_rescale, help= &
- 'do not rescale in output integer variables according to their scale factor')
-
-! obsolete options
-options(45) = op_option_new(' ', 'comp-discard', obso, help= &
- 'obsolete option, use --comp-keep with opposite meaning')
-options(46) = op_option_new(' ', 'csv-skip-miss', obso, help= &
- 'obsolete option, use --csv-keep-miss with opposite meaning')
-
-! help options
-options(49) = op_option_help_new('h', 'help', help= &
- 'show an help message and exit')
-options(50) = op_option_new(' ', 'version', version, help= &
- 'show version and exit')
-
-
 ! define the option parser
-opt = optionparser_new(options, description_msg= &
+opt = optionparser_new(description_msg= &
  'Vol7d transformation application, it imports a vol7d volume of sparse point data &
  &from a native vol7d file&
 #ifdef HAVE_DBALLE
@@ -320,8 +136,186 @@ opt = optionparser_new(options, description_msg= &
  &If output-format is of file type, outputfile ''-'' indicates stdout.', &
  usage_msg='v7d_transform [options] inputfile1 [inputfile2...] outputfile')
 
+! options for defining input
+CALL optionparser_add(opt, ' ', 'input-format', input_format, 'native', help= &
+ 'format of input, ''native'' for vol7d native binary file&
+#ifdef HAVE_DBALLE
+ &, ''BUFR'' for BUFR file with generic template, ''CREX'' for CREX file&
+ &, ''dba'' for dballe database&
+#endif
+#ifdef HAVE_ORSIM
+ &, ''orsim'' for SIM Oracle database&
+#endif
+ &')
+CALL optionparser_add(opt, 'c', 'coord-file', coord_file, help= &
+ 'file with coordinates of interpolation points, required if a geographical &
+ &transformation is requested')
+coord_file=cmiss
+CALL optionparser_add(opt, ' ', 'coord-format', coord_format, &
+#ifdef HAVE_DBALLE
+ 'BUFR', &
+#else
+ 'native', &
+#endif 
+ & help='format of input file with coordinates, ''native'' for vol7d native binary file &
+#ifdef HAVE_DBALLE
+ &, ''BUFR'' for BUFR file, ''CREX'' for CREX file&
+#endif
+#ifdef HAVE_LIBSHP_FORTRAN
+ &, ''shp'' for shapefile (interpolation on polygons)&
+#endif
+ &')
+
+! input database options
+CALL optionparser_add(opt, 's', 'start-date', start_date, cmiss, help= &
+ 'if input-format is of database type, initial date for extracting data')
+CALL optionparser_add(opt, 'e', 'end-date', end_date, cmiss, help= &
+ 'if input-format is of database type, final date for extracting data')
+CALL optionparser_add(opt, 'n', 'network-list', network_list, '', help= &
+ 'if input-format is of database type, list of station networks to be extracted &
+ &in the form of a comma-separated list of alphanumeric network identifiers')
+CALL optionparser_add(opt, 'v', 'variable-list', variable_list, '', help= &
+ 'if input-format is of database type, list of data variables to be extracted &
+ &in the form of a comma-separated list of B-table alphanumeric codes, &
+ &e.g. ''B13011,B12101''')
+CALL optionparser_add(opt, ' ', 'anavariable-list', anavariable_list, '', help= &
+ 'if input-format is of database type, list of station variables to be extracted &
+ &in the form of a comma-separated list of B-table alphanumeric codes, &
+ &e.g. ''B01192,B01193,B07001''')
+CALL optionparser_add(opt, ' ', 'attribute-list', attribute_list, '', help= &
+ 'if input-format is of database type, list of data attributes to be extracted &
+ &in the form of a comma-separated list of B-table alphanumeric codes, &
+ &e.g. ''B33196,B33197''')
+CALL optionparser_add(opt, ' ', 'set-network', set_network, '', help= &
+ 'if input-format is of database type, collapse all the input data into a single &
+ &pseudo-network with the given name, empty for keeping the original networks')
+CALL optionparser_add(opt, ' ', 'disable-qc', disable_qc, help= &
+ 'desable data removing based on SIMC quality control.')
+
+
+! option for displaying/processing
+CALL optionparser_add(opt, 'd', 'display', ldisplay, help= &
+ 'briefly display the data volume imported, warning: this option is incompatible &
+ &with output on stdout.')
+CALL optionparser_add(opt, ' ', 'comp-regularize', comp_regularize, help= &
+ 'regularize the time series keeping only the data at regular time steps')
+
+CALL optionparser_add(opt, ' ', 'comp-stat-proc', comp_stat_proc, '', help= &
+ 'statistically process data with an operator specified in the form [isp:]osp &
+ &where isp is the statistical process of input data which has to be processed &
+ &and osp is the statistical process to apply and which will appear in output &
+ &timerange; possible values for isp and osp are 0=average, 1=accumulated, &
+ &2=maximum, 3=minimum, 254=instantaneous, but not all the combinations &
+ &make sense; if isp is not provided it is assumed to be equal to osp')
+
+CALL optionparser_add(opt, ' ', 'comp-average', obso, help= &
+ 'recompute average of averaged fields on a different time step, &
+ &obsolete, use --comp-stat-proc 0 instead')
+CALL optionparser_add(opt, ' ', 'comp-cumulate', obso, help= &
+ 'recompute cumulation of accumulated fields on a different time step, &
+ &obsolete, use --comp-stat-proc 1 instead')
+CALL optionparser_add(opt, ' ', 'comp-step', comp_step, '0000000001 00:00:00.000', help= &
+ 'length of regularization or statistical processing step in the format &
+ &''YYYYMMDDDD hh:mm:ss.msc'', it can be simplified up to the form ''D hh''')
+CALL optionparser_add(opt, ' ', 'comp-start', comp_start, '', help= &
+ 'start of regularization, or statistical processing interval, an empty value means &
+ &take the initial time step of the available data; the format is the same as for &
+ &--start-date parameter')
+CALL optionparser_add(opt, ' ', 'comp-keep', comp_keep, help= &
+ 'keep the data that are not the result of the requested statistical processing, &
+ &merging them with the result of the processing')
+CALL optionparser_add(opt, ' ', 'comp-frac-valid', comp_frac_valid, 1., help= &
+ 'specify the fraction of input data that has to be valid in order to consider a &
+ &statistically processed value acceptable')
+CALL optionparser_add(opt, ' ', 'comp-sort', comp_sort, help= &
+ 'sort all sortable dimensions of the volume after the computations')
+
+! option for interpolation processing
+CALL optionparser_add(opt, ' ', 'pre-trans-type', pre_trans_type, '', help= &
+ 'transformation type (sparse points to sparse points) to be applied before &
+ &other computations, in the form ''trans-type:subtype''; &
+ &''inter'' for interpolation, with subtypes ''near'', ''linear'', ''bilin''&
+#ifdef HAVE_LIBSHP_FORTRAN
+ &; ''polyinter'' for statistical processing within given polygons, &
+ &with subtype ''average'', ''max'', ''min''&
+#endif
+ &; ''metamorphosis'' with subtype ''coordbb'' for selecting only data &
+ &within a given bounding box&
+ &; empty for no transformation')
+#ifdef HAVE_LIBGRIBAPI
+CALL optionparser_add(opt, ' ', 'post-trans-type', post_trans_type, '', help= &
+ 'transformation type (sparse points to grid) to be applied after &
+ &other computations, in the form ''trans-type:subtype''; &
+ &''inter'' for interpolation, with subtype ''linear''; &
+ &''boxinter'' for statistical processing within output grid box, &
+ &with subtype ''average''; &
+ &empty for no transformation; this option is compatible with output &
+ &on gridded format only (see output-format)')
+#endif
+
+CALL optionparser_add(opt, ' ', 'ilon', ilon, 0.0D0, help= &
+ 'longitude of the southwestern bounding box corner')
+CALL optionparser_add(opt, ' ', 'ilat', ilat, 30.D0, help= &
+ 'latitude of the southwestern bounding box corner')
+CALL optionparser_add(opt, ' ', 'flon', flon, 30.D0, help= &
+ 'longitude of the northeastern bounding box corner')
+CALL optionparser_add(opt, ' ', 'flat', flat, 60.D0, help= &
+ 'latitude of the northeastern bounding box corner')
+
+! options for defining output
+output_template = ''
+CALL optionparser_add(opt, ' ', 'output-format', output_format, 'native', help= &
+ 'format of output file, in the form ''name[:template]''; ''native'' for vol7d &
+ &native binary format (no template to be specified)&
+#ifdef HAVE_DBALLE
+ &; ''BUFR'' and ''CREX'' for corresponding formats, with template in the form &
+ &''category.subcategory.localcategory'' or as an alias like ''synop'', ''metar'', &
+ &''temp'', ''generic'', empty for ''generic''&
+#endif
+#ifdef HAVE_LIBGRIBAPI
+ &; ''grib_api'' for gridded output in grib format, template (required) is the &
+ &path name of a grib file in which the first message defines the output grid and &
+ &is used as a template for the output grib messages, (see also post-trans-type)&
+#endif
+ &; csv for formatted csv format (no template to be specified)')
+
+! options for configuring csv output
+CALL optionparser_add(opt, ' ', 'csv-volume', csv_volume, 'all', help= &
+ 'vol7d volumes to be output to csv: ''all'' for all volumes, &
+ &''ana'' for station volumes only or ''data'' for data volumes only')
+CALL optionparser_add(opt, ' ', 'csv-column', csv_column, &
+ 'time,timerange,ana,level,network', help= &
+ 'list of columns (excluding variables) that have to appear in csv output: &
+ &a comma-separated combination of ''time,timerange,level,ana,network'' &
+ &in the desired order')
+CALL optionparser_add(opt, ' ', 'csv-columnorder', csv_columnorder, &
+ 'time,timerange,ana,level,network', help= &
+ 'order of looping on columns (excluding variables) that have to appear in &
+ &csv output, the format is the same as for the --csv-column parameter &
+ &but here all the column identifiers have to be present')
+CALL optionparser_add(opt, ' ', 'csv-variable', csv_variable, 'all', help= &
+ 'list of variables that have to appear in the data columns of csv output: &
+ &''all'' or a comma-separated list of B-table alphanumeric codes, e.g. &
+ &''B10004,B12101'' in the desired order')
+CALL optionparser_add(opt, ' ', 'csv-header', csv_header, 2, help= &
+ 'write 0 to 2 header lines at the beginning of csv output')
+CALL optionparser_add(opt, ' ', 'csv-keep-miss', csv_keep_miss, help= &
+ 'keep records containing only missing values in csv output')
+CALL optionparser_add(opt, ' ', 'csv-norescale', csv_no_rescale, help= &
+ 'do not rescale in output integer variables according to their scale factor')
+
+! obsolete options
+CALL optionparser_add(opt, ' ', 'comp-discard', obso, help= &
+ 'obsolete option, use --comp-keep with opposite meaning')
+CALL optionparser_add(opt, ' ', 'csv-skip-miss', obso, help= &
+ 'obsolete option, use --csv-keep-miss with opposite meaning')
+
+! help options
+CALL optionparser_add_help(opt, 'h', 'help', help='show an help message and exit')
+CALL optionparser_add(opt, ' ', 'version', version, help='show version and exit')
+
 ! parse options and check for errors
-optind = optionparser_parseoptions(opt)
+optind = optionparser_parse(opt)
 IF (optind <= 0) THEN
   CALL l4f_category_log(category,L4F_ERROR,'error in command-line parameters')
   CALL EXIT(1)
@@ -567,6 +561,8 @@ DO ninput = optind, iargc()-1
     CALL delete(v7d_dba)
 
 #endif
+
+CALL delete(opt) ! check whether I can already get rid of this stuff now
 
 #ifdef HAVE_ORSIM
   ELSE IF (input_format == 'orsim') THEN

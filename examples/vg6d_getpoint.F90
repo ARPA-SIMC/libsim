@@ -28,14 +28,14 @@ USE vol7d_dballe_class
 USE grib_api_csv
 #endif
 USE vol7d_class
-use getopt_m
+use optionparser_class
 USE io_units
 USE geo_coord_class
 
 implicit none
 
-TYPE(op_option) :: options(40) ! remember to update dimension when adding options
 TYPE(optionparser) :: opt
+INTEGER :: optind
 CHARACTER(len=12) :: coord_format, output_format
 CHARACTER(len=512) :: a_name, coord_file, input_file, output_file, &
  network_list, variable_list
@@ -68,19 +68,26 @@ ier=l4f_init()
 !imposta a_name
 category=l4f_category_get(a_name//".main")
 
-! define command-line options
-CALL op_option_nullify(options)
+! define the option parser
+opt = optionparser_new(description_msg= &
+ 'Grib to sparse points transformation application. It reads grib edition 1 and 2, &
+ &interpolates data over specified points and exports data into a native v7d file&
+#ifdef HAVE_DBALLE
+ &, or into a BUFR/CREX file&
+#endif
+ &.', usage_msg='vg6d_getpoint [options] inputfile outputfile')
 
+! define command-line options
 ! options for transformation
-options(1) = op_option_new('a', 'lon', lon, 0.D0, help= &
+CALL optionparser_add(opt, 'a', 'lon', lon, 0.D0, help= &
  'longitude of single interpolation point, alternative to --coord-file')
-options(2) = op_option_new('b', 'lat', lat, 45.D0, help= &
+CALL optionparser_add(opt, 'b', 'lat', lat, 45.D0, help= &
  'latitude of single interpolation point, alternative to --coord-file')
-options(3) = op_option_new('c', 'coord-file', coord_file, help= &
+CALL optionparser_add(opt, 'c', 'coord-file', coord_file, help= &
  'file with coordinates of interpolation points, alternative to --lon, --lat; &
  &no coordinate information is required for metamorphosis transformation')
 coord_file=cmiss
-options(4) = op_option_new(' ', 'coord-format', coord_format, &
+CALL optionparser_add(opt, ' ', 'coord-format', coord_format, &
 #ifdef HAVE_DBALLE
 'BUFR', &
 #else
@@ -94,14 +101,14 @@ options(4) = op_option_new(' ', 'coord-format', coord_format, &
  &, ''shp'' for shapefile (interpolation on polygons)&
 #endif
  &')
-options(10) = op_option_new('v', 'trans-type', trans_type, 'inter', help= &
+CALL optionparser_add(opt, 'v', 'trans-type', trans_type, 'inter', help= &
  'transformation type, ''inter'' for interpolation, ''metamorphosis'' &
  &for keeping the same data but changing the container from grib to v7d&
 #ifdef HAVE_LIBSHP_FORTRAN
  &, ''polyinter'' for statistical processing within given polygons&
 #endif
  &')
-options(11) = op_option_new('z', 'sub-type', sub_type, 'bilin', help= &
+CALL optionparser_add(opt, 'z', 'sub-type', sub_type, 'bilin', help= &
  'transformation subtype, for inter: ''near'', ''bilin'',&
  & for metamorphosis: ''all'', ''coordbb''&
 #ifdef HAVE_LIBSHP_FORTRAN
@@ -109,25 +116,25 @@ options(11) = op_option_new('z', 'sub-type', sub_type, 'bilin', help= &
 #endif
 &')
 
-options(13) = op_option_new('a', 'ilon', ilon, 0.0D0, help= &
+CALL optionparser_add(opt, 'a', 'ilon', ilon, 0.0D0, help= &
  'longitude of the southwestern bounding box corner')
-options(14) = op_option_new('b', 'ilat', ilat, 30.D0, help= &
+CALL optionparser_add(opt, 'b', 'ilat', ilat, 30.D0, help= &
  'latitude of the southwestern bounding box corner')
-options(15) = op_option_new('c', 'flon', flon, 30.D0, help= &
+CALL optionparser_add(opt, 'c', 'flon', flon, 30.D0, help= &
  'longitude of the northeastern bounding box corner')
-options(16) = op_option_new('d', 'flat', flat, 60.D0, help= &
+CALL optionparser_add(opt, 'd', 'flat', flat, 60.D0, help= &
  'latitude of the northeastern bounding box corner')
 
-options(17) = op_option_new('n', 'network', network, 'generic', help= &
+CALL optionparser_add(opt, 'n', 'network', network, 'generic', help= &
  'string identifying network for output data')
 
-options(19) = op_option_new('e', 'a-grid', c2agrid, help= &
+CALL optionparser_add(opt, 'e', 'a-grid', c2agrid, help= &
  'interpolate U/V points of an Arakawa C grid on the corresponding T points &
  &of an Arakawa A grid')
 
 
 ! options for defining output
-options(20) = op_option_new('f', 'output-format', output_format, &
+CALL optionparser_add(opt, 'f', 'output-format', output_format, &
 #ifdef HAVE_DBALLE
 'BUFR', &
 #else
@@ -142,16 +149,16 @@ options(20) = op_option_new('f', 'output-format', output_format, &
 #endif
  &')
 #ifdef HAVE_DBALLE
-options(21) = op_option_new('t', 'output-template', output_template, 'generic', help= &
+CALL optionparser_add(opt, 't', 'output-template', output_template, 'generic', help= &
  'output template for BUFR/CREX, in the form ''category.subcategory.localcategory'',&
 & or an alias like ''synop'', ''metar'', ''temp'', ''generic''')
 #endif
-options(22) = op_option_new(' ', 'output-td', output_td, 1, help= &
+CALL optionparser_add(opt, ' ', 'output-td', output_td, 1, help= &
  'time definition for output vol7d volume, 0 for reference time (more suitable for &
  &presenting forecast data) and 1 for verification time (more suitable for &
  &comparing forecasts with observations)')
 #ifdef HAVE_LIBGRIBAPI
-options(23) = op_option_new(' ', 'output-keys', output_keys, '', help= &
+CALL optionparser_add(opt, ' ', 'output-keys', output_keys, '', help= &
  'keys that have to appear in the output grib_api_csv file, any grib_api key &
  &or ''gacsv:xxx''; xxx can be any of: lon, lat, npoint, isodate, value, &
  &timerange, p1, p2, level1, l1, level2, l2, centre, category, number, discipline, &
@@ -159,25 +166,14 @@ options(23) = op_option_new(' ', 'output-keys', output_keys, '', help= &
 #endif
 
 ! help options
-options(38) = op_option_new('d', 'display', ldisplay, help= &
+CALL optionparser_add(opt, 'd', 'display', ldisplay, help= &
  'briefly display the data volume imported and exported, &
  &warning: this option is incompatible with output on stdout.')
-options(39) = op_option_help_new('h', 'help', help= &
- 'show an help message and exit')
-options(40) = op_option_new(' ', 'version', version, help= &
- 'show version and exit')
-
-! define the option parser
-opt = optionparser_new(options, description_msg= &
- 'Grib to sparse points transformation application. It reads grib edition 1 and 2, &
- &interpolates data over specified points and exports data into a native v7d file&
-#ifdef HAVE_DBALLE
- &, or into a BUFR/CREX file&
-#endif
- &.', usage_msg='vg6d_getpoint [options] inputfile outputfile')
+CALL optionparser_add_help(opt, 'h', 'help', help='show an help message and exit')
+CALL optionparser_add(opt, ' ', 'version', version, help='show version and exit')
 
 ! parse options and check for errors
-optind = optionparser_parseoptions(opt)
+optind = optionparser_parse(opt)
 IF (optind <= 0) THEN
   CALL l4f_category_log(category,L4F_ERROR,'error in command-line parameters')
   CALL EXIT(1)
@@ -205,6 +201,8 @@ else
   call optionparser_printhelp(opt)
   call exit(1)
 end if
+
+CALL delete(opt)
 
 call l4f_category_log(category,L4F_INFO,"transforming from file:"//trim(input_file))
 call l4f_category_log(category,L4F_INFO,"transforming to   file:"//trim(output_file))

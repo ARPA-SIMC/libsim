@@ -24,9 +24,13 @@ USE vol7d_class
 USE vol7d_class_compute
 USE vol7d_utilities
 USE log4fortran
-USE getopt_m
+USE optionparser_class
 IMPLICIT NONE
 
+! Opzioni a linea di comando
+TYPE(optionparser) :: opt
+INTEGER :: optind
+LOGICAL :: version
 ! Namelist pollini e affini
 CHARACTER(len=10) :: variabili(100)!, v7variabili(100)
 CHARACTER(len=30) :: famiglie(100), file_stazioni(100)
@@ -73,35 +77,42 @@ stazioni = 0
 file_stazioni = ''
 data_inizio = ''
 data_fine = ''
-data_inizio_l = ''
-data_fine_l = ''
 file_rapporto = ''
-file_rapporto_l = ''
-file_naml = 'pollini.naml'
 ! Controllo le opzioni a linea di comando
-DO
-  SELECT CASE( getopt( 'i:f:r:n:'))
-  CASE( CHAR(0)) ! end of options
-    EXIT
-  CASE( 'i' )
-    data_inizio_l = optarg
-  CASE( 'f' )
-    data_fine_l = optarg
-  CASE( 'r' )
-    file_rapporto_l = optarg
-  CASE( 'n' )
-    file_naml = optarg
-  END SELECT
-END DO
+
+! define the option parser
+opt = optionparser_new(description_msg= &
+ 'Program for extracting pollen data from ARPA-SIM Oracle database', &
+ usage_msg='v7d_pollini [options]')
+
+CALL optionparser_add(opt, 'i', 'start-date', data_inizio_l, '', help= &
+ 'initial date for extracting data, if provided, it overrides the date &
+ &specified in the namelist file')
+CALL optionparser_add(opt, 'f', 'end-date', data_fine_l, '', help= &
+ 'final date for extracting data, if provided, it overrides the date &
+ &specified in the namelist file')
+CALL optionparser_add(opt, 'r', 'report', file_rapporto_l, '', help= &
+ 'name of output report file, if provided, it overrides the name &
+ &specified in the namelist file')
+CALL optionparser_add(opt, 'n', 'naml', file_naml, 'pollini.naml', help= &
+ 'name of namelist file where configuration will be read')
+
+! help options
+CALL optionparser_add_help(opt, 'h', 'help', help='show an help message and exit')
+CALL optionparser_add(opt, ' ', 'version', version, help='show version and exit')
 
 OPEN(10, file=file_naml)
 READ(10, NML=pollini)
 CLOSE(10)
 
+optind = optionparser_parse(opt)
+
 ! Ricopro i valori di namelist dalla linea di comando
 IF (data_inizio_l /= '') data_inizio = data_inizio_l
 IF (data_fine_l /= '') data_fine = data_fine_l
 IF (file_rapporto_l /= '') file_rapporto = file_rapporto_l
+
+CALL delete(opt)
 
 ! conto le variabili, le famiglie e le stazioni richieste
 nvar = COUNT(variabili /= '')
