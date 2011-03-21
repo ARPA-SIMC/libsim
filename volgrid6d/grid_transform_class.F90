@@ -549,11 +549,15 @@ END SUBROUTINE transform_delete
 
 
 !> Method for returning the contents of the object.
-SUBROUTINE transform_get_val(this, time_definition)
+SUBROUTINE transform_get_val(this, time_definition, trans_type, sub_type)
 type(transform_def),intent(in) :: this !< object to examine
 INTEGER,INTENT(out),OPTIONAL :: time_definition !< 0=time is reference time, 1=time is validity time
+CHARACTER(len=*),INTENT(out),OPTIONAL :: trans_type !< type of transformation
+CHARACTER(len=*),INTENT(out),OPTIONAL :: sub_type !< subtype of transformation
 
-if ( present(time_definition)) time_definition=this%time_definition
+IF (PRESENT(time_definition)) time_definition=this%time_definition
+IF (PRESENT(trans_type)) trans_type = this%trans_type
+IF (PRESENT(sub_type)) sub_type = this%sub_type
 
 END SUBROUTINE transform_get_val
 
@@ -1513,17 +1517,12 @@ ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
 
 ! collect coordinates of points falling into requested bounding-box
     n = 0
-    metamorphosis_coordbb: DO i = 1, this%innx
-!      IF (geo_coord_inside_rectang()
-      IF (lon(i) > this%trans%rect_coo%ilon .AND. &
-       lon(i) < this%trans%rect_coo%flon .AND. &
-       lat(i) > this%trans%rect_coo%ilat .AND. &
-       lat(i) < this%trans%rect_coo%flat) THEN ! improve!
+    DO i = 1, this%innx
+      IF (this%point_mask(i,1)) THEN
         n = n + 1
-        IF (n > this%outnx) EXIT metamorphosis_coordbb ! useless safety check
         CALL init(v7d_out%ana(n),lon=lon(i),lat=lat(i))
       ENDIF
-    ENDDO metamorphosis_coordbb
+    ENDDO
     DEALLOCATE(lon, lat)
 
   ELSE

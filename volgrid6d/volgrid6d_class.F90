@@ -2070,23 +2070,25 @@ vol7d_out%time(:) = vol7d_in%time(:)
 vol7d_out%timerange(:) = vol7d_in%timerange(:)
 vol7d_out%level(:) = vol7d_in%level(:)
 vol7d_out%network(:) = vol7d_in%network(:)
-vol7d_out%dativar%r(:) = vol7d_in%dativar%r(:)
+IF (ASSOCIATED(vol7d_in%dativar%r)) THEN ! work only when real vars are available
+  vol7d_out%dativar%r(:) = vol7d_in%dativar%r(:)
 
-DO inetwork = 1, SIZE(vol7d_in%network)
-  DO ivar = 1, SIZE(vol7d_in%dativar%r)
-    DO itimerange = 1, SIZE(vol7d_in%timerange)
-      DO itime = 1, SIZE(vol7d_in%time)
+  DO inetwork = 1, SIZE(vol7d_in%network)
+    DO ivar = 1, SIZE(vol7d_in%dativar%r)
+      DO itimerange = 1, SIZE(vol7d_in%timerange)
+        DO itime = 1, SIZE(vol7d_in%time)
 
 ! dirty trick to make voldatir look like a 2d-array of shape (nana,1)
-        CALL compute(this, &
-         vol7d_in%voldatir(:,itime,:,itimerange,ivar,inetwork), &
-         vol7d_out%voldatir(:,itime:itime,:,itimerange,ivar,inetwork))
+          CALL compute(this, &
+           vol7d_in%voldatir(:,itime,:,itimerange,ivar,inetwork), &
+           vol7d_out%voldatir(:,itime:itime,:,itimerange,ivar,inetwork))
 
+        ENDDO
       ENDDO
     ENDDO
   ENDDO
-ENDDO
 
+ENDIF
 
 END SUBROUTINE v7d_v7d_transform_compute
 
@@ -2109,6 +2111,7 @@ CHARACTER(len=*),INTENT(in),OPTIONAL :: categoryappend !< append this suffix to 
 INTEGER :: nvar, iana, inetwork
 TYPE(grid_transform) :: grid_trans
 TYPE(vol7d) :: v7d_locana
+CHARACTER(len=80) :: trans_type
 
 CALL vol7d_alloc_vol(vol7d_in) ! be safe
 IF (ASSOCIATED(vol7d_in%dativar%r)) nvar=SIZE(vol7d_in%dativar%r)
@@ -2122,14 +2125,16 @@ CALL init(grid_trans, this, vol7d_in, v7d_locana, poly=poly, &
 
 CALL init(vol7d_out, time_definition=vol7d_in%time_definition)
 
-IF (c_e(grid_trans) .AND. nvar > 0) THEN
+IF (c_e(grid_trans)) THEN! .AND. nvar > 0) THEN
 
   CALL vol7d_alloc(vol7d_out, nana=SIZE(v7d_locana%ana), &
    ntime=SIZE(vol7d_in%time), ntimerange=SIZE(vol7d_in%timerange), &
    nlevel=SIZE(vol7d_in%level), nnetwork=SIZE(vol7d_in%network), ndativarr=nvar)
   vol7d_out%ana = v7d_locana%ana
 
-  IF (PRESENT(poly)) THEN ! in case of polygon create output station id
+!  IF (PRESENT(poly)) THEN ! in case of polygon create output station id
+  CALL get_val(this, trans_type=trans_type)
+  IF (trans_type == 'polyinter') THEN ! in case of polygon create output station id
     CALL vol7d_alloc(vol7d_out, nanavari=1)
     CALL init(vol7d_out%anavar%i(1), 'B01192')
   ENDIF
