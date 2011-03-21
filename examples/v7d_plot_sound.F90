@@ -16,8 +16,8 @@
 ! You should have received a copy of the GNU General Public License
 ! along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ! Plot temp bufr messages with  herlofson termodinamic rappresentation 
-
-program example_ncarg_sounding
+#include "config.h"
+PROGRAM v7d_plot_sound
 
 use log4fortran
 USE vol7d_dballe_class
@@ -30,7 +30,7 @@ USE err_handling
 implicit none
 
 type(optionparser) :: opt
-integer :: optind, category, ier
+INTEGER :: optind, optstatus, category, ier
 logical :: version
 integer :: wstype,ic
 character(len=512):: a_name, infile, outfile, PSTYPE, ORIENT, COLOR
@@ -54,13 +54,11 @@ ier=l4f_init()
 !imposta a_name
 category=l4f_category_get(a_name//".main")
 
-call l4f_category_log(category,L4F_INFO,"start")
-
 ! define the option parser
 opt = optionparser_new(description_msg= &
  'Program for plotting an Herlofson diagram from a BUFR/CREX file. Different &
  &output formats, either on file or on screen, are supported.', &
- usage_msg='v7d_plot_sound [options] inputfile outputfile')
+ usage_msg='Usage: v7d_plot_sound [options] inputfile outputfile')
 
 wstype = imiss
 CALL optionparser_add(opt, 'w', 'wstype', wstype, help= &
@@ -87,7 +85,19 @@ CALL optionparser_add(opt, 'd', 'distinct', distinct, help= &
 CALL optionparser_add_help(opt, 'h', 'help', help='show an help message and exit')
 CALL optionparser_add(opt, ' ', 'version', version, help='show version and exit')
 
-optind = optionparser_parse(opt)
+! parse options and check for errors
+CALL optionparser_parse(opt, optind, optstatus)
+
+IF (optstatus == optionparser_help) THEN
+  CALL exit(0) ! generate a clean manpage
+ELSE IF (optstatus == optionparser_err) THEN
+  CALL l4f_category_log(category,L4F_ERROR,'in command-line parameters')
+  CALL raise_fatal_error()
+ENDIF
+IF (version) THEN
+  WRITE(*,'(A,1X,A)')'v7d_plot_sound',VERSION
+  CALL exit(0)
+ENDIF
 
 IF (pstype/='PS' .AND. pstype/='EPS' .AND. pstype/='EPSI')THEN
   CALL optionparser_printhelp(opt)
@@ -216,4 +226,4 @@ call l4f_category_log(category,L4F_INFO,"terminated")
 call l4f_category_delete(category)
 ier=l4f_fini()
 
-end program example_ncarg_sounding
+END PROGRAM v7d_plot_sound

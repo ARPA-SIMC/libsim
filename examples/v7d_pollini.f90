@@ -29,7 +29,7 @@ IMPLICIT NONE
 
 ! Opzioni a linea di comando
 TYPE(optionparser) :: opt
-INTEGER :: optind
+INTEGER :: optind, optstatus
 LOGICAL :: version
 ! Namelist pollini e affini
 CHARACTER(len=10) :: variabili(100)!, v7variabili(100)
@@ -105,7 +105,11 @@ OPEN(10, file=file_naml)
 READ(10, NML=pollini)
 CLOSE(10)
 
-optind = optionparser_parse(opt)
+CALL optionparser_parse(opt, optind, optstatus)
+IF (optstatus == optionparser_err) THEN
+  CALL l4f_category_log(category,L4F_ERROR,'in command-line parameters')
+  CALL raise_fatal_error()
+ENDIF
 
 ! Ricopro i valori di namelist dalla linea di comando
 IF (data_inizio_l /= '') data_inizio = data_inizio_l

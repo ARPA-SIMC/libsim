@@ -46,7 +46,7 @@ character(len=80) :: proj_type,trans_type,sub_type
 doubleprecision ::x,y,lon,lat
 logical :: c2agrid
 type(optionparser) :: opt
-integer :: optind
+INTEGER :: optind, optstatus
 integer :: iargc
 !CHARACTER(len=3) :: set_scmode
 LOGICAL :: version, ldisplay
@@ -169,12 +169,14 @@ CALL optionparser_add_help(opt, 'h', 'help', help='show an help message and exit
 CALL optionparser_add(opt, ' ', 'version', version, help='show version and exit')
 
 ! parse options and check for errors
-optind = optionparser_parse(opt)
-IF (optind <= 0) THEN
-  CALL l4f_category_log(category,L4F_ERROR,'error in command-line parameters')
-  CALL EXIT(1)
-ENDIF
+CALL optionparser_parse(opt, optind, optstatus)
 
+IF (optstatus == optionparser_help) THEN
+  CALL exit(0) ! generate a clean manpage
+ELSE IF (optstatus == optionparser_err) THEN
+  CALL l4f_category_log(category,L4F_ERROR,'in command-line parameters')
+  CALL raise_fatal_error()
+ENDIF
 IF (version) THEN
   WRITE(*,'(A,1X,A)')'vg6d_transform',VERSION
   CALL exit(0)
@@ -184,8 +186,10 @@ if ( optind <= iargc()) then
   call getarg(optind, infile)
   optind=optind+1
 else
-  call l4f_category_log(category,L4F_ERROR,'input file missing')
   call optionparser_printhelp(opt)
+  call l4f_category_log(category,L4F_ERROR,'input file missing')
+  call raise_fatal_error()
+
   call exit(1)
 end if
 
@@ -193,9 +197,9 @@ if ( optind <= iargc()) then
   call getarg(optind, outfile)
   optind=optind+1
 else
-  call l4f_category_log(category,L4F_ERROR,'output file missing')
   call optionparser_printhelp(opt)
-  call exit(1)
+  call l4f_category_log(category,L4F_ERROR,'output file missing')
+  call raise_fatal_error()
 end if
 
 CALL delete(opt)

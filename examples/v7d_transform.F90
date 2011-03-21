@@ -45,7 +45,7 @@ USE modqc
 IMPLICIT NONE
 
 TYPE(optionparser) :: opt
-INTEGER :: optind
+INTEGER :: optind, optstatus
 TYPE(csv_record) :: argparse
 CHARACTER(len=8) :: input_format, coord_format
 
@@ -134,7 +134,7 @@ opt = optionparser_new(description_msg= &
  &database access info in the form user/password@dsn, &
  &if empty or ''-'', a suitable default is used. &
  &If output-format is of file type, outputfile ''-'' indicates stdout.', &
- usage_msg='v7d_transform [options] inputfile1 [inputfile2...] outputfile')
+ usage_msg='Usage: v7d_transform [options] inputfile1 [inputfile2...] outputfile')
 
 ! options for defining input
 CALL optionparser_add(opt, ' ', 'input-format', input_format, 'native', help= &
@@ -315,12 +315,14 @@ CALL optionparser_add_help(opt, 'h', 'help', help='show an help message and exit
 CALL optionparser_add(opt, ' ', 'version', version, help='show version and exit')
 
 ! parse options and check for errors
-optind = optionparser_parse(opt)
-IF (optind <= 0) THEN
-  CALL l4f_category_log(category,L4F_ERROR,'error in command-line parameters')
-  CALL EXIT(1)
-ENDIF
+CALL optionparser_parse(opt, optind, optstatus)
 
+IF (optstatus == optionparser_help) THEN
+  CALL exit(0) ! generate a clean manpage
+ELSE IF (optstatus == optionparser_err) THEN
+  CALL l4f_category_log(category,L4F_ERROR,'in command-line parameters')
+  CALL raise_fatal_error()
+ENDIF
 IF (version) THEN
   WRITE(*,'(A,1X,A)')'v7d_transform',VERSION
   CALL exit(0)
@@ -331,11 +333,11 @@ i = iargc() - optind
 IF (i < 0) THEN
   CALL optionparser_printhelp(opt)
   CALL l4f_category_log(category,L4F_ERROR,'input file missing')
-  CALL EXIT(1)
+  CALL raise_fatal_error()
 ELSE IF (i < 1) THEN
   CALL optionparser_printhelp(opt)
   CALL l4f_category_log(category,L4F_ERROR,'output file missing')
-  CALL EXIT(1)
+  CALL raise_fatal_error()
 ENDIF
 CALL getarg(iargc(), output_file)
 

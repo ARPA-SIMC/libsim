@@ -45,17 +45,14 @@ END TYPE option
 #define ARRAYOF_ORIGTYPE TYPE(option)
 #define ARRAYOF_TYPE arrayof_option
 #define ARRAYOF_ORIGDESTRUCTOR(x) CALL option_delete(x)
-#include "arrayof_pre.F90"
+#include "arrayof_pre_nodoc.F90"
 ! from arrayof
 !PUBLIC insert, append, remove, packarray
 !PUBLIC insert_unique, append_unique
 
-!> This class allows to describe how to parse the command-line options
-!! of a program in an object-oriented way, similarly to the optparse
-!! class found in Python library. The command-line options are
-!! described by an array of getopt_m::option objects, and the
-!! effect of command line parsing is to set some desired variables
-!! according to the information provided on the command line.
+!> This class allows to parse the command-line options of a program in
+!! an object-oriented way, similarly to the optparse class found in
+!! Python library.
 !!
 !! The class handles both GNU-style long options, introduced by a
 !! double dash \c -- and containing any character except the equal
@@ -75,7 +72,7 @@ END TYPE option
 !! Grouping of short options, like \c -xvf is not allowed.  When a
 !! double dash \c -- or an argument (which is not an argument to an
 !! option) not starting by a dash \c - is encountered, the parsing of
-!! optons stops and the management of the remaining arguments
+!! options stops and the management of the remaining arguments
 !! (typically a list of files) is left to the calling program.
 !!
 !! Options can be of the following kinds:
@@ -92,10 +89,12 @@ END TYPE option
 !! character, integer, floating point or logical options) or through
 !! the specific methods optionparser_add_count, optionparser_add_help
 !! (for count and help options).
+!!
+!! The effect of command line parsing is to set some desired variables
+!! according to the information provided on the command line.
 TYPE optionparser
   PRIVATE
   INTEGER(kind=int_b),POINTER :: usage_msg(:), description_msg(:)
-  LOGICAL :: error_cond
   TYPE(arrayof_option) :: options
 END TYPE optionparser
 
@@ -112,7 +111,13 @@ INTERFACE c_e
   MODULE PROCEDURE option_c_e
 END INTERFACE
 
-!> Destructor for the optionparser classe.
+!> Destructor for the optionparser class.
+!! It destroys the \a optionparser object freeing all the associated
+!! memory.  The values assigned through command line parsing are
+!! conserved after deleting the \a optionparser object, but it is not
+!! possible to show the help with the optionparser_printhelp method.
+!!
+!! \param this TYPE(optionparser) object to be destroyed
 INTERFACE delete
   MODULE PROCEDURE optionparser_delete!?, option_delete
 END INTERFACE
@@ -121,15 +126,20 @@ END INTERFACE
 INTEGER,PARAMETER :: opttype_c = 1, opttype_i = 2, opttype_r = 3, &
  opttype_d = 4, opttype_l = 5, opttype_count = 6, opttype_help = 7
 
+INTEGER,PARAMETER :: optionparser_ok = 0 !< constants indicating the status returned by optionparser_parse, status of parsing: OK
+INTEGER,PARAMETER :: optionparser_help = 1 !< status of parsing: help has been requested
+INTEGER,PARAMETER :: optionparser_err = 2 !< status of parsing: an error was encountered
+
 PRIVATE
 PUBLIC optionparser, optionparser_new, delete, optionparser_add, &
- optionparser_add_count, optionparser_add_help, optionparser_parse, &
- optionparser_printhelp
+ optionparser_add_count, optionparser_add_help, &
+ optionparser_parse, optionparser_printhelp, &
+ optionparser_ok, optionparser_err, optionparser_help
 
 
 CONTAINS
 
-#include "arrayof_post.F90"
+#include "arrayof_post_nodoc.F90"
 
 ! Constructor for the option class
 FUNCTION option_new(short_opt, long_opt, default, help) RESULT(this)
@@ -183,13 +193,13 @@ NULLIFY(this%destcount)
 END SUBROUTINE option_delete
 
 
-FUNCTION option_found(this, optarg) RESULT(err)
+FUNCTION option_found(this, optarg) RESULT(status)
 TYPE(option),INTENT(inout) :: this
 CHARACTER(len=*),INTENT(in),OPTIONAL :: optarg
 
-LOGICAL :: err
+INTEGER :: status
 
-err = .FALSE.
+status = optionparser_ok
 
 SELECT CASE(this%opttype)
 CASE(opttype_c)
@@ -210,16 +220,16 @@ CASE(opttype_l)
 CASE(opttype_count)
   this%destcount = this%destcount + 1
 CASE(opttype_help)
-  err = .TRUE.
+  status = optionparser_help
 END SELECT
 
 RETURN
 
-100 err = .TRUE.
+100 status = optionparser_err
 CALL l4f_log(L4F_ERROR, &
  'in option, argument '''//TRIM(optarg)//''' not valid as integer')
 RETURN
-102 err = .TRUE.
+102 status = optionparser_err
 CALL l4f_log(L4F_ERROR, &
  'in option, argument '''//TRIM(optarg)//''' not valid as real')
 RETURN
@@ -298,22 +308,16 @@ IF (PRESENT(description_msg)) THEN
 ELSE
   NULLIFY(this%description_msg)
 ENDIF
-this%error_cond = .FALSE.
 this%options = arrayof_option_new()
 
 END FUNCTION optionparser_new
 
 
-!> Destroy the optionparser object freeing all the associated memory.
-!! The destructor for each \a option object associated with the
-!! optionparser object \a this is called as well, while the allocation
-!! status of the option array is not modified.
 SUBROUTINE optionparser_delete(this)
-TYPE(optionparser),INTENT(inout) :: this !< object to destroy
+TYPE(optionparser),INTENT(inout) :: this
 
 IF (ASSOCIATED(this%usage_msg)) DEALLOCATE(this%usage_msg)
 IF (ASSOCIATED(this%description_msg)) DEALLOCATE(this%description_msg)
-this%error_cond = .FALSE.
 CALL delete(this%options)
 
 END SUBROUTINE optionparser_delete
@@ -327,7 +331,7 @@ END SUBROUTINE optionparser_delete
 !! use the generic \a option_new constructor rather than this
 !! particular function.
 SUBROUTINE optionparser_add_c(this, short_opt, long_opt, dest, default, help)
-TYPE(optionparser),INTENT(inout) :: this
+TYPE(optionparser),INTENT(inout) :: this !< \a optionparser object
 CHARACTER(len=1),INTENT(in) :: short_opt !< the short option (may be empty)
 CHARACTER(len=*),INTENT(in) :: long_opt !< the long option (may be empty)
 CHARACTER(len=*),TARGET :: dest !< the destination of the option parse result
@@ -371,7 +375,7 @@ END SUBROUTINE optionparser_add_c
 !! provided for the destination. Please use the generic \a
 !! option_new constructor rather than this particular function.
 SUBROUTINE optionparser_add_i(this, short_opt, long_opt, dest, default, help)
-TYPE(optionparser),INTENT(inout) :: this
+TYPE(optionparser),INTENT(inout) :: this !< \a optionparser object
 CHARACTER(len=1),INTENT(in) :: short_opt !< the short option (may be empty)
 CHARACTER(len=*),INTENT(in) :: long_opt !< the long option (may be empty)
 INTEGER,TARGET :: dest !< the destination of the option parse result
@@ -408,7 +412,7 @@ END SUBROUTINE optionparser_add_i
 !! provided for the destination. Please use the generic \a
 !! option_new constructor rather than this particular function.
 SUBROUTINE optionparser_add_r(this, short_opt, long_opt, dest, default, help)
-TYPE(optionparser),INTENT(inout) :: this
+TYPE(optionparser),INTENT(inout) :: this !< \a optionparser object
 CHARACTER(len=1),INTENT(in) :: short_opt !< the short option (may be empty)
 CHARACTER(len=*),INTENT(in) :: long_opt !< the long option (may be empty)
 REAL,TARGET :: dest !< the destination of the option parse result
@@ -445,7 +449,7 @@ END SUBROUTINE optionparser_add_r
 !! provided for the destination. Please use the generic \a
 !! option_new constructor rather than this particular function.
 SUBROUTINE optionparser_add_d(this, short_opt, long_opt, dest, default, help)
-TYPE(optionparser),INTENT(inout) :: this
+TYPE(optionparser),INTENT(inout) :: this !< \a optionparser object
 CHARACTER(len=1),INTENT(in) :: short_opt !< the short option (may be empty)
 CHARACTER(len=*),INTENT(in) :: long_opt !< the long option (may be empty)
 DOUBLE PRECISION,TARGET :: dest !< the destination of the option parse result
@@ -482,7 +486,7 @@ END SUBROUTINE optionparser_add_d
 !! .FALSE. . Please use the generic \a option_new constructor
 !! rather than this particular function.
 SUBROUTINE optionparser_add_l(this, short_opt, long_opt, dest, help)
-TYPE(optionparser),INTENT(inout) :: this
+TYPE(optionparser),INTENT(inout) :: this !< \a optionparser object
 CHARACTER(len=1),INTENT(in) :: short_opt !< the short option (may be empty)
 CHARACTER(len=*),INTENT(in) :: long_opt !< the long option (may be empty)
 LOGICAL,TARGET :: dest !< the destination of the option parse result
@@ -509,11 +513,11 @@ END SUBROUTINE optionparser_add_l
 !! incremented by one, starting from \a start, each time the
 !! requested option is encountered.
 SUBROUTINE optionparser_add_count(this, short_opt, long_opt, dest, start, help)
-TYPE(optionparser),INTENT(inout) :: this
+TYPE(optionparser),INTENT(inout) :: this !< \a optionparser object
 CHARACTER(len=1),INTENT(in) :: short_opt !< the short option (may be empty)
 CHARACTER(len=*),INTENT(in) :: long_opt !< the long option (may be empty)
 INTEGER,TARGET :: dest !< the destination of the option parse result
-INTEGER,OPTIONAL :: start !< initial value for \a dest
+INTEGER,OPTIONAL :: start !< initial value for \a dest 
 CHARACTER(len=*),OPTIONAL :: help !< the help message that will be formatted and pretty-printed on screen
 
 INTEGER :: i
@@ -536,7 +540,7 @@ END SUBROUTINE optionparser_add_count
 !! When parsing will be performed, the full help message will be
 !! printed if this option is encountered.
 SUBROUTINE optionparser_add_help(this, short_opt, long_opt, help)
-TYPE(optionparser),INTENT(inout) :: this
+TYPE(optionparser),INTENT(inout) :: this !< \a optionparser object
 CHARACTER(len=1),INTENT(in) :: short_opt !< the short option (may be empty)
 CHARACTER(len=*),INTENT(in) :: long_opt !< the long option (may be empty)
 CHARACTER(len=*),OPTIONAL :: help !< the help message that will be formatted and pretty-printed on screen
@@ -557,27 +561,30 @@ END SUBROUTINE optionparser_add_help
 
 !> This method performs the parsing of the command-line options
 !! which have been previously described when instantiating the
-!! optionparser object \a this. The destination variables are assigned
-!! according to the options encountered on the command line.  The
-!! return value is the index of the first optional argument after
-!! interpretation of all command-line options.
-FUNCTION optionparser_parse(this) RESULT(nextarg)
-TYPE(optionparser),INTENT(inout) :: this !< optionparser object with correctly initialised options
-
-INTEGER :: nextarg
+!! optionparser object \a this. The destination variables set through
+!! the optionparser_add methods are assigned according to the options
+!! encountered on the command line.  If any optional argument remains
+!! after interpretation of all command-line options, the index of the
+!! first of them is returned in \a nextarg, otherwise \a nextarg is
+!! equal to \a iargc() \a + \a 1. The status of the parsing process
+!! should be checked via the \a status argument.
+SUBROUTINE optionparser_parse(this, nextarg, status)
+TYPE(optionparser),INTENT(inout) :: this !< \a optionparser object with correctly initialised options
+INTEGER,INTENT(out) :: nextarg !< index of the first optional argument after interpretation of all command-line options
+INTEGER,INTENT(out) :: status !< status of the parsing process, to be compared with the constants \a optionparser_ok, ecc.
 
 INTEGER :: i, j, endopt, indeq, iargc
 CHARACTER(len=1024) :: arg, optarg
 
+status = optionparser_ok
 i = 1
 DO WHILE(i <= iargc())
   CALL getarg(i, arg)
-  IF (arg == '--') THEN ! end of options, skip --
-    nextarg = i + 1
-    RETURN
-  ELSE IF (arg == '-') THEN ! end of options
-    nextarg = i
-    RETURN
+  IF (arg == '--') THEN ! explicit end of options
+    i = i + 1 ! skip present option (--)
+    EXIT
+  ELSE IF (arg == '-') THEN ! a single - is not an option
+    EXIT
   ELSE IF (arg(1:2) == '--') THEN ! long option
     indeq = INDEX(arg, '=')
     IF (indeq /= 0) THEN ! = present
@@ -595,17 +602,19 @@ DO WHILE(i <= iargc())
             i=i+1
             CALL getarg(i, optarg)
           ENDIF
-          this%error_cond = option_found(this%options%array(j), optarg)
+          status = MAX(option_found(this%options%array(j), optarg), &
+           status)
         ELSE
-          this%error_cond = option_found(this%options%array(j))
+          status = MAX(option_found(this%options%array(j)), &
+           status)
         ENDIF
         EXIT find_longopt
       ENDIF
     ENDDO find_longopt
     IF (j > this%options%arraysize) THEN
-      this%error_cond = .TRUE.
+      status = optionparser_err
       CALL l4f_log(L4F_ERROR, &
-       'in optionparser, long option '''//TRIM(arg)//''' not valid')
+       'in optionparser, option ''--'//TRIM(arg)//''' not valid')
     ENDIF
   ELSE IF (arg(1:1) == '-') THEN ! short option
     find_shortopt: DO j = 1, this%options%arraysize
@@ -618,40 +627,39 @@ DO WHILE(i <= iargc())
             i=i+1
             CALL getarg(i, optarg)
           ENDIF
-          this%error_cond = option_found(this%options%array(j), optarg)
+          status = MAX(option_found(this%options%array(j), optarg), &
+           status)
         ELSE
-          this%error_cond = option_found(this%options%array(j))
+          status = MAX(option_found(this%options%array(j)), &
+           status)
         ENDIF
         EXIT find_shortopt
       ENDIF
     ENDDO find_shortopt
     IF (j > this%options%arraysize) THEN
-      this%error_cond = .TRUE.
+      status = optionparser_err
       CALL l4f_log(L4F_ERROR, &
-       'in optionparser, long option '''//TRIM(arg)//''' not valid')
+       'in optionparser, option ''-'//TRIM(arg)//''' not valid')
     ENDIF
-  ELSE ! end of options
-    nextarg = i
-    RETURN
+  ELSE ! unrecognized = end of options
+    EXIT
   ENDIF
   i = i + 1
-  IF (this%error_cond) THEN
-    CALL optionparser_printhelp(this)
-    nextarg = -1
-    RETURN
-  ENDIF
-  
 ENDDO
-nextarg = i
 
-END FUNCTION optionparser_parse
+nextarg = i
+IF (status == optionparser_err .OR. status == optionparser_help) THEN
+  CALL optionparser_printhelp(this)
+ENDIF
+
+END SUBROUTINE optionparser_parse
 
 
 !> Print the help message well formatted on stdout. It can be called
 !! by the user program and it is called anyway in case of error in the
 !! interpretation of the command line.
 SUBROUTINE optionparser_printhelp(this)
-TYPE(optionparser),INTENT(inout) :: this !< optionparser object with correctly initialised options
+TYPE(optionparser),INTENT(inout) :: this !< \a optionparser object with correctly initialised options
 
 INTEGER :: i, j, n, ncols
 INTEGER, PARAMETER :: indent = 10

@@ -2,7 +2,7 @@ AM_FCFLAGS = -I../base -I../grib -I../volgrid6d -I../vol7d -I../qc -I../termolib
 EXTRA_DIST = log4crc
 bin_PROGRAMS =
 
-noinst_PROGRAMS = esempio_file_utilities esempio_v7d esempio_v7d_compute esempio_termolib log4fortran example_getopt example_char_utilities
+noinst_PROGRAMS = esempio_file_utilities esempio_v7d esempio_v7d_compute esempio_termolib log4fortran example_char_utilities
 
 esempio_file_utilities_SOURCES = esempio_file_utilities.f90
 esempio_file_utilities_LDADD = ../base/libsim_base.la
@@ -19,9 +19,8 @@ esempio_termolib_LDADD = ../base/libsim_base.la ../termolib/libsim_termolib.la
 log4fortran_SOURCES = log4fortran.f90
 log4fortran_LDADD =  ../log4fortran/liblog4fortran.la ../base/libsim_base.la
 
-example_getopt_SOURCES = example_getopt.f90
-example_getopt_LDADD =  ../log4fortran/liblog4fortran.la ../base/libsim_base.la
-
+# example_getopt_SOURCES = example_getopt.f90
+# example_getopt_LDADD =  ../log4fortran/liblog4fortran.la ../base/libsim_base.la
 
 example_char_utilities_SOURCES = example_char_utilities.f90
 example_char_utilities_LDADD =   ../base/libsim_base.la
@@ -80,7 +79,7 @@ example_ncarg_sounding_LDADD = ../graphics/libsim_graphics.la ../base/libsim_bas
 
 bin_PROGRAMS += v7d_plot_sound
 
-v7d_plot_sound_SOURCES = v7d_plot_sound.f90
+v7d_plot_sound_SOURCES = v7d_plot_sound.F90
 v7d_plot_sound_LDADD = ../graphics/libsim_graphics.la ../base/libsim_base.la ../vol7d/libsim_vol7d.la  ../log4fortran/liblog4fortran.la ../termolib/libsim_termolib.la
 
 
@@ -175,6 +174,12 @@ vg6d_transform_LDADD = ../volgrid6d/libsim_volgrid6d.la ../base/libsim_base.la .
 if HELP2MAN
 
 man_MANS = v7d_transform.1 vg6d_getpoint.1 vg6d_subarea.1 vg6d_transform.1
+
+if DBALLE
+if NCARG
+man_MANS += v7d_plot_sound.1
+endif
+endif
 
 %.1: %
 	help2man --name=$< --section=1 --no-info --output=$@ ./$<

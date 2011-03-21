@@ -35,7 +35,7 @@ USE geo_coord_class
 implicit none
 
 TYPE(optionparser) :: opt
-INTEGER :: optind
+INTEGER :: optind, optstatus
 CHARACTER(len=12) :: coord_format, output_format
 CHARACTER(len=512) :: a_name, coord_file, input_file, output_file, &
  network_list, variable_list
@@ -75,7 +75,7 @@ opt = optionparser_new(description_msg= &
 #ifdef HAVE_DBALLE
  &, or into a BUFR/CREX file&
 #endif
- &.', usage_msg='vg6d_getpoint [options] inputfile outputfile')
+ &.', usage_msg='Usage: vg6d_getpoint [options] inputfile outputfile')
 
 ! define command-line options
 ! options for transformation
@@ -173,12 +173,14 @@ CALL optionparser_add_help(opt, 'h', 'help', help='show an help message and exit
 CALL optionparser_add(opt, ' ', 'version', version, help='show version and exit')
 
 ! parse options and check for errors
-optind = optionparser_parse(opt)
-IF (optind <= 0) THEN
-  CALL l4f_category_log(category,L4F_ERROR,'error in command-line parameters')
-  CALL EXIT(1)
-ENDIF
+CALL optionparser_parse(opt, optind, optstatus)
 
+IF (optstatus == optionparser_help) THEN
+  CALL exit(0) ! generate a clean manpage
+ELSE IF (optstatus == optionparser_err) THEN
+  CALL l4f_category_log(category,L4F_ERROR,'in command-line parameters')
+  CALL raise_fatal_error()
+ENDIF
 IF (version) THEN
   WRITE(*,'(A,1X,A)')'vg6d_getpoint',VERSION
   CALL exit(0)
@@ -188,18 +190,18 @@ if (optind <= iargc()) then
   call getarg(optind, input_file)
   optind=optind+1
 else
-  call l4f_category_log(category,L4F_ERROR,'input file missing')
   call optionparser_printhelp(opt)
-  call exit(1)
+  call l4f_category_log(category,L4F_ERROR,'input file missing')
+  call raise_fatal_error()
 end if
 
 if (optind <= iargc()) then
   call getarg(optind,output_file)
   optind=optind+1
 else
-  call l4f_category_log(category,L4F_ERROR,'output file missing')
   call optionparser_printhelp(opt)
-  call exit(1)
+  call l4f_category_log(category,L4F_ERROR,'output file missing')
+  call raise_fatal_error()
 end if
 
 CALL delete(opt)
