@@ -20,14 +20,6 @@
 !! This module is a collection of all-purpose utilities connected to
 !! the use of CHARACTER variables, and text handling in general.
 !!
-!! Example of use:
-!! \code
-!! USE char_utilities
-!! INTEGER :: j
-!! ...
-!! CALL raise_error('The value provided, '//TRIM(to_char(j))//', is too large')
-!! ...
-!! \endcode
 !! \ingroup base
 MODULE char_utilities
 USE kinds
@@ -42,24 +34,52 @@ PRIVATE int_to_char, byte_to_char, char_to_char, &
 PRIVATE trim_int_to_char, trim_byte_to_char, trim_char_to_char, &
    trim_real_to_char, trim_double_to_char, trim_logical_to_char
 
-!> Set of functions that return the input variable converted into
-!! a string, using a default format suitable to provide a reasonable
-!! representation of the input variable, or using a user-defined
-!! format provided with the optional variable \a form.  The return
-!! value may be quite long, in order to take into account all possible
-!! cases, so it is suggested to trim the result with the intrinsic
-!! function \a TRIM() before using it. Be warned that no check is
-!! performed on the optional format \a form, so a runtime error may
-!! occur if it is syntactically wrong or not suitable to the type of
-!! data associated.
+!> Set of functions that return a CHARACTER representation of the
+!! input variable. The functions use a default format suitable to
+!! reasonably represent the input variable, or a user-defined format
+!! provided with the optional variable \a form.  The return value may
+!! be quite long, in order to take into account all possible cases, so
+!! it is suggested to trim the result with the intrinsic function \a
+!! TRIM() before using it. Be warned that no check is performed on the
+!! optional format \a form, so a runtime error may occur if it is
+!! syntactically wrong or not suitable to the data type provided.  The
+!! functions are \a ELEMENTAL, so they can be applied to arrays of any
+!! shape. The return value is of type \a CHARACTER with a predefined
+!! length depending on the type of the input.
+!!
+!! \param in (any INTEGER or REAL basic type) value to be represented as CHARACTER
+!! \param form CHARACTER(len=*),INTENT(in),OPTIONAL optional format
+!!
+!! Example of use:
+!! \code
+!! USE char_utilities
+!! INTEGER :: j
+!! ...
+!! WRITE(*,*)'The value provided, '//TRIM(to_char(j))//', is too large'
+!! ...
+!! \endcode
 INTERFACE to_char
   MODULE PROCEDURE int_to_char, byte_to_char, char_to_char, &
    real_to_char, double_to_char, logical_to_char
 END INTERFACE
 
-!> Set of functions that return the input variable converted into
-!! a string, like "to_char" but the result will be trimmed.
-!! Those functions are not elemental and do not accept format.
+!> Set of functions that return a trimmed CHARACTER representation of the
+!! input variable. The functions are analogous to \a to_char but they
+!! return representation of the input in a CHARACTER with a variable
+!! length, which needs not to be trimmed before use. The optional
+!! format here is not accepted and these functions are not \a
+!! ELEMENTAL so they work only on scalar arguments.
+!!
+!! \param in (any INTEGER or REAL basic type) value to be represented as CHARACTER
+!!
+!! Example of use:
+!! \code
+!! USE char_utilities
+!! INTEGER :: j
+!! ...
+!! WRITE(*,*)'The value provided, '//t2c(j)//', is too large'
+!! ...
+!! \endcode
 INTERFACE t2c
   MODULE PROCEDURE trim_int_to_char, trim_byte_to_char, trim_char_to_char, &
    trim_real_to_char, trim_double_to_char, trim_logical_to_char
@@ -67,7 +87,7 @@ END INTERFACE
 
 !> Class that allows splitting a long line into shorter lines of equal
 !! length at the occurrence of a specific character (typically a blank
-!! space). All the members of the class are \a PRIVATE, all the
+!! space). All the members of the class are \a PRIVATE, thus all the
 !! operations are performed through its methods.
 TYPE line_split
   PRIVATE
@@ -77,6 +97,10 @@ TYPE line_split
 END TYPE line_split
 
 !> Destructor for the \a line_split class.
+!! It cleanly destroys a \a line_split object, deallocating all the
+!! dynamically allocated space.
+!!
+!! \param this (TYPE(line_split)) object to be destroyed
 INTERFACE delete
   MODULE PROCEDURE line_split_delete
 END INTERFACE
@@ -86,13 +110,11 @@ PRIVATE line_split_delete
 
 CONTAINS
 
-!> Version with integer argument, please use the generic \a to_char
-!! rather than this function directly.
+! Version with integer argument, please use the generic \a to_char
+! rather than this function directly.
 ELEMENTAL FUNCTION int_to_char(in, form) RESULT(char)
-INTEGER,INTENT(in) :: in !< value to be represented as CHARACTER
-CHARACTER(len=*),INTENT(in),OPTIONAL :: form !< optional format
-integer :: nchar
-
+INTEGER,INTENT(in) :: in ! value to be represented as CHARACTER
+CHARACTER(len=*),INTENT(in),OPTIONAL :: form ! optional format
 
 CHARACTER(len=11) :: char
 
@@ -106,7 +128,7 @@ END FUNCTION int_to_char
 
 
 FUNCTION trim_int_to_char(in) RESULT(char)
-INTEGER,INTENT(in) :: in !< value to be represented as CHARACTER
+INTEGER,INTENT(in) :: in ! value to be represented as CHARACTER
 
 CHARACTER(len=len_trim(int_to_char(in))) :: char
 
@@ -115,12 +137,11 @@ char=int_to_char(in)
 END FUNCTION trim_int_to_char
 
 
-
-!> Version with 1-byte integer argument, please use the generic \a to_char
-!! rather than this function directly.
+! Version with 1-byte integer argument, please use the generic \a to_char
+! rather than this function directly.
 ELEMENTAL FUNCTION byte_to_char(in, form) RESULT(char)
-INTEGER(kind=int_b),INTENT(in) :: in !< value to be represented as CHARACTER
-CHARACTER(len=*),INTENT(in),OPTIONAL :: form !< optional format
+INTEGER(kind=int_b),INTENT(in) :: in ! value to be represented as CHARACTER
+CHARACTER(len=*),INTENT(in),OPTIONAL :: form ! optional format
 
 CHARACTER(len=4) :: char
 
@@ -134,7 +155,7 @@ END FUNCTION byte_to_char
 
 
 FUNCTION trim_byte_to_char(in) RESULT(char)
-INTEGER(kind=int_b),INTENT(in) :: in !< value to be represented as CHARACTER
+INTEGER(kind=int_b),INTENT(in) :: in ! value to be represented as CHARACTER
 
 CHARACTER(len=len_trim(byte_to_char(in))) :: char
 
@@ -143,12 +164,12 @@ char=byte_to_char(in)
 END FUNCTION trim_byte_to_char
 
 
-!> Version with character argument, please use the generic \a to_char
-!! rather than this function directly. It is almost useless, just
-!! provided for completeness.
+! Version with character argument, please use the generic \a to_char
+! rather than this function directly. It is almost useless, just
+! provided for completeness.
 FUNCTION char_to_char(in, form) result(char)
-CHARACTER(len=*),INTENT(in) :: in !< value to be represented as CHARACTER
-CHARACTER(len=*),INTENT(in),OPTIONAL :: form !< optional format
+CHARACTER(len=*),INTENT(in) :: in ! value to be represented as CHARACTER
+CHARACTER(len=*),INTENT(in),OPTIONAL :: form ! optional format
 
 CHARACTER(len=LEN_TRIM(in)) :: char
 !fortran 2003
@@ -162,8 +183,9 @@ ENDIF
 
 END FUNCTION char_to_char
 
+
 FUNCTION trim_char_to_char(in) result(char)
-CHARACTER(len=*),INTENT(in) :: in !< value to be represented as CHARACTER
+CHARACTER(len=*),INTENT(in) :: in ! value to be represented as CHARACTER
 
 CHARACTER(len=LEN_TRIM(in)) :: char
 !fortran 2003
@@ -174,12 +196,11 @@ char = char_to_char(in)
 END FUNCTION trim_char_to_char
 
 
-
-!> Version with single precision real argument, please use the generic
-!! \a to_char rather than this function directly.
+! Version with single precision real argument, please use the generic
+! \a to_char rather than this function directly.
 ELEMENTAL FUNCTION real_to_char(in, form) RESULT(char)
-REAL,INTENT(in) :: in !< value to be represented as CHARACTER
-CHARACTER(len=*),INTENT(in),OPTIONAL :: form !< optional format
+REAL,INTENT(in) :: in ! value to be represented as CHARACTER
+CHARACTER(len=*),INTENT(in),OPTIONAL :: form ! optional format
 
 CHARACTER(len=15) :: char, tmpchar
 
@@ -194,7 +215,7 @@ END FUNCTION real_to_char
 
 
 FUNCTION trim_real_to_char(in) RESULT(char)
-REAL,INTENT(in) :: in !< value to be represented as CHARACTER
+REAL,INTENT(in) :: in ! value to be represented as CHARACTER
 
 CHARACTER(len=len_trim(real_to_char(in))) :: char
 
@@ -203,16 +224,13 @@ char=real_to_char(in)
 END FUNCTION trim_real_to_char
 
 
-
-
-!> Version with double precision real argument, please use the generic
-!! \a to_char rather than this function directly.
+! Version with double precision real argument, please use the generic
+! \a to_char rather than this function directly.
 ELEMENTAL FUNCTION double_to_char(in, form) RESULT(char)
-DOUBLE PRECISION,INTENT(in) :: in !< value to be represented as CHARACTER
-CHARACTER(len=*),INTENT(in),OPTIONAL :: form !< optional format
+DOUBLE PRECISION,INTENT(in) :: in ! value to be represented as CHARACTER
+CHARACTER(len=*),INTENT(in),OPTIONAL :: form ! optional format
 
 CHARACTER(len=24) :: char, tmpchar
-
 
 IF (PRESENT(form)) THEN
   WRITE(char,form) in
@@ -224,18 +242,19 @@ ENDIF
 END FUNCTION double_to_char
 
 FUNCTION trim_double_to_char(in) RESULT(char)
-DOUBLE PRECISION,INTENT(in) :: in !< value to be represented as CHARACTER
+DOUBLE PRECISION,INTENT(in) :: in ! value to be represented as CHARACTER
 CHARACTER(len=len_trim(double_to_char(in))) :: char
 
 char=double_to_char(in)
 
 END FUNCTION trim_double_to_char
 
-!> Version with logical argument, please use the generic \a to_char
-!! rather than this function directly.
+
+! Version with logical argument, please use the generic \a to_char
+! rather than this function directly.
 ELEMENTAL FUNCTION logical_to_char(in, form) RESULT(char)
-LOGICAL,INTENT(in) :: in !< value to be represented as CHARACTER
-CHARACTER(len=*),INTENT(in),OPTIONAL :: form !< optional format
+LOGICAL,INTENT(in) :: in ! value to be represented as CHARACTER
+CHARACTER(len=*),INTENT(in),OPTIONAL :: form ! optional format
 
 CHARACTER(len=1) :: char
 
@@ -247,8 +266,9 @@ WRITE(char,'(L1)') in
 
 END FUNCTION logical_to_char
 
+
 ELEMENTAL FUNCTION trim_logical_to_char(in) RESULT(char)
-LOGICAL,INTENT(in) :: in !< value to be represented as CHARACTER
+LOGICAL,INTENT(in) :: in ! value to be represented as CHARACTER
 
 CHARACTER(len=1) :: char
 
@@ -260,38 +280,34 @@ WRITE(char,'(L1)') in
 
 END FUNCTION trim_logical_to_char
 
+
 !> Converts a \a CHARACTER variable into a string which can be
 !! directly passed to a C function requiring a null-terminated \a
-!! char* argument. If the result is going to be stored into an array,
-!! it has to be dimensioned with a suitable size (\a LEN(fchar) \a +
-!! \a 1 ).
+!! const \a char* (input) argument. If the result is going to be
+!! stored into an array, this has to be dimensioned with a suitable
+!! size (\a LEN(fchar) \a + \a 1 ).
 FUNCTION fchar_to_cstr(fchar) RESULT(cstr)
 CHARACTER(len=*), INTENT(in) :: fchar !< variable to be converted
-!INTEGER(kind=int_b), POINTER, OPTIONAL :: pcstr(:) !< puntatore opzionale che può essere allocato per contenere il risultato, dovrà essere deallocato a carico del programma chiamante
 INTEGER(kind=int_b) :: cstr(LEN(fchar)+1)
 
 cstr(1:LEN(fchar)) = TRANSFER(fchar, cstr, LEN(fchar))
-cstr(LEN(fchar)+1) = 0 ! Termino con zero
-!IF (PRESENT(pcstr)) THEN
-!  ALLOCATE(pcstr(LEN(fchar)+1))
-!  pcstr = cstr
-!ENDIF
+cstr(LEN(fchar)+1) = 0 ! zero-terminate
 
 END FUNCTION fchar_to_cstr
 
 
 !> Converts a \a CHARACTER variable into a string which can be
 !! directly passed to a C function requiring a null-terminated \a
-!! char* argument. The result is stored int \a pcstr which is
-!! allocated within the subroutine and has to be deallocated by the
-!! calling procedure.
+!! char* (input/output) argument. The result is stored into \a pcstr
+!! which is allocated within the subroutine and has to be deallocated
+!! by the calling procedure.
 SUBROUTINE fchar_to_cstr_alloc(fchar, pcstr)
 CHARACTER(len=*), INTENT(in) :: fchar !< variable to be converted
 INTEGER(kind=int_b), POINTER :: pcstr(:) !< pointer to a 1-d byte array which will be allocated and, on output, will contain the null-terminated string
 
 ALLOCATE(pcstr(LEN(fchar)+1))
 pcstr(1:LEN(fchar)) = TRANSFER(fchar, pcstr, LEN(fchar))
-pcstr(LEN(fchar)+1) = 0 ! Termino con zero
+pcstr(LEN(fchar)+1) = 0 ! zero-terminate
 
 END SUBROUTINE fchar_to_cstr_alloc
 
@@ -317,9 +333,9 @@ ENDDO
 END FUNCTION cstr_to_fchar
 
 
-!> Convert string to uppercase
+!> Convert a \a CHARACTER variable to uppercase.
 FUNCTION UpperCase ( Input_String ) RESULT ( Output_String )
-CHARACTER( * ), INTENT( IN ) :: Input_String !< strig to convert
+CHARACTER( * ), INTENT( IN ) :: Input_String !< variable to be converted
 CHARACTER( LEN( Input_String ) ) :: Output_String
                                 ! -- Local variables
 INTEGER :: i, n
@@ -335,10 +351,11 @@ DO i = 1, LEN( Output_String )
 END DO
 END FUNCTION UpperCase
 
-!> Convert string to lowercase
+
+!> Convert a \a CHARACTER variable to lowercase.
 FUNCTION LowerCase ( Input_String ) RESULT ( Output_String )
                                 ! -- Argument and result
-CHARACTER( * ), INTENT( IN ) :: Input_String !< strig to convert
+CHARACTER( * ), INTENT( IN ) :: Input_String !< variable to be converted
 CHARACTER( LEN( Input_String ) ) :: Output_String
                                 ! -- Local variables
 INTEGER :: i, n
@@ -355,10 +372,10 @@ END DO
 END FUNCTION LowerCase
 
 
-!> Returns \a input_string aligned to the left (i.e. without leading blanks).
-!! The needed number of trailing blanks is added at the end in order
-!! to keep the length of the resulting string equal to the input
-!! length.
+!> \brief Returns \a input_string aligned to the left,
+!! i.e.\ without leading blanks.  The needed number of trailing
+!! blanks is added at the end in order to keep the length of the
+!! resulting string equal to the input length.
 ELEMENTAL FUNCTION align_left(input_string) RESULT(aligned)
 CHARACTER(len=*), INTENT(in) :: input_string !< string to be aligned
 
@@ -369,10 +386,10 @@ aligned = input_string(f_nblnk(input_string):)
 END FUNCTION align_left
 
 
-!> Returns \a input_string aligned to the right (i.e. without trailing blanks).
-!! The needed number of leading blanks is added at the beginning in
-!! order to keep the length of the resulting string equal to the input
-!! length.
+!> \brief Returns \a input_string aligned to the right,
+!! i.e.\ without trailing blanks. The needed number of leading
+!! blanks is added at the beginning in order to keep the length of the
+!! resulting string equal to the input length.
 ELEMENTAL FUNCTION align_right(input_string) RESULT(aligned)
 CHARACTER(len=*), INTENT(in) :: input_string !< string to be aligned
 
@@ -384,11 +401,11 @@ aligned(LEN(input_string)-l_nblnk(input_string)+1:) = input_string
 END FUNCTION align_right
 
 
-!> Returns \a input_string centered, i.e. with an equal number of 
-!! leading and trailing blanks (±1 if they are odd).  The needed
-!! number of leading blanks is added or removed at the beginning and
-!! at the end in order to keep the length of the resulting string
-!! equal to the input length.
+!> Returns \a input_string centered, i.e.\ with an equal number of 
+!! leading and trailing blanks (±1 if they are odd). The needed
+!! number of leading/trailing blanks is added or removed at the
+!! beginning and/or at the end in order to keep the length of the
+!! resulting string equal to the input length.
 ELEMENTAL FUNCTION align_center(input_string) RESULT(aligned)
 CHARACTER(len=*), INTENT(in) :: input_string !< string to be aligned
 
@@ -606,11 +623,11 @@ ENDDO
 END FUNCTION line_split_new
 
 
-!> Cleanly destroy a \a line_split object, deallocating all the
-!! dynamically allocatd space. Use the generic name \a delete rather
-!! than this specfoc subroutine.
+! Cleanly destroy a \a line_split object, deallocating all the
+! dynamically allocated space. Use the generic name \a delete rather
+! than this specfoc subroutine.
 SUBROUTINE line_split_delete(this)
-TYPE(line_split), INTENT(inout) :: this !< object to be destroyed
+TYPE(line_split), INTENT(inout) :: this ! object to be destroyed
 
 IF (ASSOCIATED(this%paragraph)) DEALLOCATE(this%paragraph)
 IF (ASSOCIATED(this%word_start)) DEALLOCATE(this%word_start)
@@ -691,14 +708,16 @@ RETURN
 END FUNCTION default_columns
 
 
-
-!> remove "special char" from string
-!! return a string cleaned from some "strage" chars.
-!! Without optional values return apha char only
+!> Remove the requested characters from a string.
+!! This function returns a string cleaned from unwanted characters,
+!! either by removing "bad" characters (argument \a badchar) or by
+!! keeping only "good" characters (argument \a goodchar).  If neither
+!! \a badchar nor \a goodchar are provided, it keeps only alphabetic
+!! ASCII characters.
 ELEMENTAL FUNCTION wash_char(in, goodchar,badchar) RESULT(char)
-CHARACTER(len=*),INTENT(in) :: in !< value to be cleaned
-CHARACTER(len=*),INTENT(in),OPTIONAL :: badchar !< optional vector of "no good chars"
-CHARACTER(len=*),INTENT(in),OPTIONAL :: goodchar !< optional vector of "good chars"
+CHARACTER(len=*),INTENT(in) :: in !< string to be cleaned
+CHARACTER(len=*),INTENT(in),OPTIONAL :: badchar !< optional set of "bad" characters
+CHARACTER(len=*),INTENT(in),OPTIONAL :: goodchar !< optional set of "good" characters
 integer,allocatable :: igoodchar(:)
 integer,allocatable :: ibadchar(:)
 
