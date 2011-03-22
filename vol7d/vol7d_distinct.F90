@@ -412,22 +412,24 @@ END FUNCTION index/**/VOL7D_POLY_TYPES
 
 #ifdef ENABLE_SORT
 
+!>\brief Sorts inline into ascending order - Quicksort
+!!  Quicksort chooses a "pivot" in the set, and explores the
+!!  array from both ends, looking for a value > pivot with the
+!!  increasing index, for a value <= pivot with the decreasing
+!!  index, and swapping them when it has found one of each.
+!!  The array is then subdivided in 2 ([3]) subsets:
+!!  { values <= pivot} {pivot} {values > pivot}
+!!  One then call recursively the program to sort each subset.
+!!  When the size of the subarray is small enough, one uses an
+!!  insertion sort that is faster for very small sets.
+
 Subroutine sort/**/VOL7D_POLY_TYPES (XDONT)
+
 !  Sorts XDONT into ascending order - Quicksort
-! __________________________________________________________
-!  Quicksort chooses a "pivot" in the set, and explores the
-!  array from both ends, looking for a value > pivot with the
-!  increasing index, for a value <= pivot with the decreasing
-!  index, and swapping them when it has found one of each.
-!  The array is then subdivided in 2 ([3]) subsets:
-!  { values <= pivot} {pivot} {values > pivot}
-!  One then call recursively the program to sort each subset.
-!  When the size of the subarray is small enough, one uses an
-!  insertion sort that is faster for very small sets.
 !  Michel Olagnon - Apr. 2000
-! __________________________________________________________
 ! _________________________________________________________
-      VOL7D_POLY_TYPE, Dimension (:), Intent (InOut) :: XDONT
+
+VOL7D_POLY_TYPE, Dimension (:), Intent (InOut) :: XDONT !> vector to sort inline
 ! __________________________________________________________
 !
 !

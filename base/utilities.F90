@@ -15,6 +15,11 @@
 
 ! You should have received a copy of the GNU General Public License
 ! along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+
+
+!> This module defines usefull general purpose function and subroutine
+!!\ingroup base
 #include "config.h"
 MODULE utilities
 USE file_utilities
@@ -51,6 +56,16 @@ INTERFACE index
    index_datetime !, index_c
 END INTERFACE
 
+!>\brief Sorts inline into ascending order.
+!!  Quicksort chooses a "pivot" in the set, and explores the
+!!  array from both ends, looking for a value > pivot with the
+!!  increasing index, for a value <= pivot with the decreasing
+!!  index, and swapping them when it has found one of each.
+!!  The array is then subdivided in 2 ([3]) subsets:
+!!  { values <= pivot} {pivot} {values > pivot}
+!!  One then call recursively the program to sort each subset.
+!!  When the size of the subarray is small enough, one uses an
+!!  insertion sort that is faster for very small sets.
 INTERFACE sort
   MODULE PROCEDURE sort_i, sort_r, sort_d, &
    sort_datetime, sort_c
