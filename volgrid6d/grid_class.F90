@@ -877,13 +877,13 @@ IF (EditionNumber == 2) THEN
   CASE(2) ! iau65
     CALL set_val(this, ellips_smaj_axis=6378160.0D0, ellips_flatt=1.0D0/297.0D0)
   CASE(3,7) ! ellipsoidal generic
-    CALL grib_get(gaid, 'scaleFactorOfMajorAxisOfOblateSpheroidEarth', is)
-    CALL grib_get(gaid, 'scaledValueOfMajorAxisOfOblateSpheroidEarth', iv)
+    CALL grib_get(gaid, 'scaleFactorOfEarthMajorAxis', is)
+    CALL grib_get(gaid, 'scaledValueOfEarthMajorAxis', iv)
     r1 = DBLE(iv) / 10**is
-    CALL grib_get(gaid, 'scaleFactorOfMinorAxisOfOblateSpheroidEarth', is)
-    CALL grib_get(gaid, 'scaledValueOfMinorAxisOfOblateSpheroidEarth', iv)
+    CALL grib_get(gaid, 'scaleFactorOfEarthMinorAxis', is)
+    CALL grib_get(gaid, 'scaledValueOfEarthMinorAxis', iv)
     r2 = DBLE(iv) / 10**is
-    IF (EditionNumber == 3) THEN ! km->m
+    IF (shapeofearth == 3) THEN ! km->m
       r1 = r1*1000.0D0
       r2 = r2*1000.0D0
     ENDIF
@@ -1227,10 +1227,10 @@ IF (EditionNumber == 2) THEN
 
   CALL grib_set_missing(gaid, 'scaleFactorOfRadiusOfSphericalEarth')
   CALL grib_set_missing(gaid, 'scaledValueOfRadiusOfSphericalEarth')
-  CALL grib_set_missing(gaid, 'scaleFactorOfMajorAxisOfOblateSpheroidEarth')
-  CALL grib_set_missing(gaid, 'scaledValueOfMajorAxisOfOblateSpheroidEarth')
-  CALL grib_set_missing(gaid, 'scaleFactorOfMinorAxisOfOblateSpheroidEarth')
-  CALL grib_set_missing(gaid, 'scaledValueOfMinorAxisOfOblateSpheroidEarth')
+  CALL grib_set_missing(gaid, 'scaleFactorOfEarthMajorAxis')
+  CALL grib_set_missing(gaid, 'scaledValueOfEarthMajorAxis')
+  CALL grib_set_missing(gaid, 'scaleFactorOfEarthMinorAxis')
+  CALL grib_set_missing(gaid, 'scaledValueOfEarthMinorAxis')
 
   SELECT CASE(ellips_type)
   CASE(ellips_grs80) ! iag-grs80
@@ -1254,11 +1254,11 @@ IF (EditionNumber == 2) THEN
       ELSE ! ellipsoidal generic
         CALL grib_set(gaid, 'shapeOfTheEarth', 3)
         r2 = r1*(1.0D0 - f)
-        CALL grib_set(gaid, 'scaleFactorOfMajorAxisOfOblateSpheroidEarth', 5)
-        CALL grib_set(gaid, 'scaledValueOfMajorAxisOfOblateSpheroidEarth', &
+        CALL grib_set(gaid, 'scaleFactorOfEarthMajorAxis', 5)
+        CALL grib_set(gaid, 'scaledValueOfEarthMajorAxis', &
          INT(r1*100.0D0))
-        CALL grib_set(gaid, 'scaleFactorOfMinorAxisOfOblateSpheroidEarth', 5)
-        CALL grib_set(gaid, 'scaledValueOfMinorAxisOfOblateSpheroidEarth', &
+        CALL grib_set(gaid, 'scaleFactorOfEarthMinorAxis', 5)
+        CALL grib_set(gaid, 'scaledValueOfEarthMinorAxis', &
          INT(r2*100.0D0))
       ENDIF
     ENDIF

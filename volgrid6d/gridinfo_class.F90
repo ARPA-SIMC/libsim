@@ -622,8 +622,10 @@ IF (EditionNumber == 1 .OR. EditionNumber == 2) THEN
       CALL grib_get(gaid,'indicatorOfUnitForTimeRange',unit)
       CALL gribtr_to_second(unit,p2,p2)
       this = this + timedelta_new(msec=p2*1000)
-    ELSE IF (status == GRIB_SUCCESS .AND. ttimeincr == 2) THEN ! usual case
-    ELSE
+    ELSE IF ((status == GRIB_SUCCESS .AND. ttimeincr == 2) .OR. &
+     status /= GRIB_SUCCESS) THEN ! usual case
+! do nothing
+    ELSE ! valid but unsupported typeOfTimeIncrement
       CALL l4f_log(L4F_ERROR,'typeOfTimeIncrement '//t2c(ttimeincr)// &
        ' not supported')
       CALL raise_error()
