@@ -17,7 +17,7 @@
 ! along with this program.  If not, see <http://www.gnu.org/licenses/>.
 MODULE vol7d_csv
 USE vol7d_class
-USE vol7d_utilities
+USE utilities
 USE file_utilities
 IMPLICIT NONE
 

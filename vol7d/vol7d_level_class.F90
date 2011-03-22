@@ -137,6 +137,10 @@ INTERFACE index
   MODULE PROCEDURE index_level
 END INTERFACE
 
+INTERFACE sort
+  MODULE PROCEDURE sort_level
+END INTERFACE
+
 !>Print object
 INTERFACE display
   MODULE PROCEDURE display_level
@@ -424,6 +428,7 @@ END FUNCTION vol7d_level_lesv
 ! Definisce le funzioni count_distinct e pack_distinct
 #define VOL7D_POLY_TYPE TYPE(vol7d_level)
 #define VOL7D_POLY_TYPES _level
+#define ENABLE_SORT
 #include "vol7d_distinct.F90"
 #undef VOL7D_POLY_TYPE
 #undef VOL7D_POLY_TYPES

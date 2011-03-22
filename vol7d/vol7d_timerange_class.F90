@@ -139,6 +139,10 @@ INTERFACE index
   MODULE PROCEDURE index_timerange
 END INTERFACE
 
+INTERFACE sort
+  MODULE PROCEDURE sort_timerange
+END INTERFACE
+
 !>Print object
 INTERFACE display
   MODULE PROCEDURE display_timerange
@@ -433,6 +437,7 @@ END FUNCTION vol7d_timerange_lesv
 ! Definisce le funzioni count_distinct e pack_distinct
 #define VOL7D_POLY_TYPE TYPE(vol7d_timerange)
 #define VOL7D_POLY_TYPES _timerange
+#define ENABLE_SORT
 #include "vol7d_distinct.F90"
 #undef VOL7D_POLY_TYPE
 #undef VOL7D_POLY_TYPES

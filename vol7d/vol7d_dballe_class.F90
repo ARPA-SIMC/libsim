@@ -73,7 +73,7 @@ MODULE vol7d_dballe_class
 
 USE char_utilities
 USE vol7d_class
-USE vol7d_utilities
+USE utilities
 use log4fortran
 
 IMPLICIT NONE
@@ -993,11 +993,15 @@ call vol7d_alloc (vol7dtmp, &
 ! "ndativarattrd=",ndativarattrd, "ndativarattrc=",ndativarattrc
 ! print*,"ho fatto alloc"
 
-
 vol7dtmp%ana=pack_distinct(buffer%ana, nana, back=.TRUE.)
 vol7dtmp%time=pack_distinct(buffer%time, ntime, back=.TRUE.)
+call sort(vol7dtmp%time)
+
 vol7dtmp%timerange=pack_distinct(buffer%timerange, ntimerange, back=.TRUE.)
+call sort(vol7dtmp%timerange)
+
 vol7dtmp%level=pack_distinct(buffer%level, nlevel, back=.TRUE.)
+call sort(vol7dtmp%level)
 
 if(ldegnet)then
   vol7dtmp%network(1)=set_network
@@ -2959,8 +2963,11 @@ call vol7d_alloc (vol7dtmp, &
 
 
 vol7dtmp%ana=pack_distinct(bufferana(:na)%ana, nana, back=.TRUE.)
+call sort(buffer(:nd)%time)
 vol7dtmp%time=pack_distinct(buffer(:nd)%time, ntime, back=.TRUE.)
+call sort(buffer(:nd)%timerange)
 vol7dtmp%timerange=pack_distinct(buffer(:nd)%timerange, ntimerange, back=.TRUE.)
+call sort(buffer(:nd)%level)
 vol7dtmp%level=pack_distinct(buffer(:nd)%level, nlevel, back=.TRUE.)
 
 if(ldegnet)then

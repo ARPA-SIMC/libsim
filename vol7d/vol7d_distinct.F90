@@ -3,6 +3,9 @@
 ! Davide Cesari <dcesari@arpa.emr.it>
 ! Paolo Patruno <ppatruno@arpa.emr.it>
 
+! sort from public domain utilities http://www.fortran-2000.com :
+! Michel Olagnon - Apr. 2000
+
 ! This program is free software; you can redistribute it and/or
 ! modify it under the terms of the GNU General Public License as
 ! published by the Free Software Foundation; either version 2 of 
@@ -403,4 +406,152 @@ ELSE
 ENDIF
 
 END FUNCTION index/**/VOL7D_POLY_TYPES
+
+#endif
+
+
+#ifdef ENABLE_SORT
+
+Subroutine sort/**/VOL7D_POLY_TYPES (XDONT)
+!  Sorts XDONT into ascending order - Quicksort
+! __________________________________________________________
+!  Quicksort chooses a "pivot" in the set, and explores the
+!  array from both ends, looking for a value > pivot with the
+!  increasing index, for a value <= pivot with the decreasing
+!  index, and swapping them when it has found one of each.
+!  The array is then subdivided in 2 ([3]) subsets:
+!  { values <= pivot} {pivot} {values > pivot}
+!  One then call recursively the program to sort each subset.
+!  When the size of the subarray is small enough, one uses an
+!  insertion sort that is faster for very small sets.
+!  Michel Olagnon - Apr. 2000
+! __________________________________________________________
+! _________________________________________________________
+      VOL7D_POLY_TYPE, Dimension (:), Intent (InOut) :: XDONT
+! __________________________________________________________
+!
+!
+      Call subsor/**/VOL7D_POLY_TYPES (XDONT, 1, Size (XDONT))
+      Call inssor/**/VOL7D_POLY_TYPES (XDONT)
+      Return
+End Subroutine sort/**/VOL7D_POLY_TYPES
+Recursive Subroutine subsor/**/VOL7D_POLY_TYPES (XDONT, IDEB1, IFIN1)
+!  Sorts XDONT from IDEB1 to IFIN1
+! __________________________________________________________
+      VOL7D_POLY_TYPE, dimension (:), Intent (InOut) :: XDONT
+      Integer, Intent (In) :: IDEB1, IFIN1
+! __________________________________________________________
+      Integer, Parameter :: NINS = 16 ! Max for insertion sort
+      Integer :: ICRS, IDEB, IDCR, IFIN, IMIL
+
+#ifdef VOL7D_POLY_TYPE_AUTO
+      VOL7D_POLY_TYPE_AUTO(XDONT) :: XPIV, XWRK
+#else
+      VOL7D_POLY_TYPE ::   XPIV, XWRK
+#endif
+
+!
+      IDEB = IDEB1
+      IFIN = IFIN1
+!
+!  If we don't have enough values to make it worth while, we leave
+!  them unsorted, and the final insertion sort will take care of them
+!
+      If ((IFIN - IDEB) > NINS) Then
+         IMIL = (IDEB+IFIN) / 2
+!
+!  One chooses a pivot, median of 1st, last, and middle values
+!
+         If (XDONT(IMIL) < XDONT(IDEB)) Then
+            XWRK = XDONT (IDEB)
+            XDONT (IDEB) = XDONT (IMIL)
+            XDONT (IMIL) = XWRK
+         End If
+         If (XDONT(IMIL) > XDONT(IFIN)) Then
+            XWRK = XDONT (IFIN)
+            XDONT (IFIN) = XDONT (IMIL)
+            XDONT (IMIL) = XWRK
+            If (XDONT(IMIL) < XDONT(IDEB)) Then
+               XWRK = XDONT (IDEB)
+               XDONT (IDEB) = XDONT (IMIL)
+               XDONT (IMIL) = XWRK
+            End If
+         End If
+         XPIV = XDONT (IMIL)
+!
+!  One exchanges values to put those > pivot in the end and
+!  those <= pivot at the beginning
+!
+         ICRS = IDEB
+         IDCR = IFIN
+         ECH2: Do
+            Do
+               ICRS = ICRS + 1
+               If (ICRS >= IDCR) Then
+!
+!  the first  >  pivot is IDCR
+!  the last   <= pivot is ICRS-1
+!  Note: If one arrives here on the first iteration, then
+!        the pivot is the maximum of the set, the last value is equal
+!        to it, and one can reduce by one the size of the set to process,
+!        as if XDONT (IFIN) > XPIV
+!
+                  Exit ECH2
+!
+               End If
+               If (XDONT(ICRS) > XPIV) Exit
+            End Do
+            Do
+               If (XDONT(IDCR) <= XPIV) Exit
+               IDCR = IDCR - 1
+               If (ICRS >= IDCR) Then
+!
+!  The last value < pivot is always ICRS-1
+!
+                  Exit ECH2
+               End If
+            End Do
+!
+            XWRK = XDONT (IDCR)
+            XDONT (IDCR) = XDONT (ICRS)
+            XDONT (ICRS) = XWRK
+         End Do ECH2
+!
+!  One now sorts each of the two sub-intervals
+!
+         Call subsor/**/VOL7D_POLY_TYPES (XDONT, IDEB1, ICRS-1)
+         Call subsor/**/VOL7D_POLY_TYPES (XDONT, IDCR, IFIN1)
+      End If
+      Return
+      End Subroutine Subsor/**/VOL7D_POLY_TYPES
+   Subroutine inssor/**/VOL7D_POLY_TYPES  (XDONT)
+!  Sorts XDONT into increasing order (Insertion sort)
+! __________________________________________________________
+      VOL7D_POLY_TYPE, dimension (:), Intent (InOut) :: XDONT
+! __________________________________________________________
+      Integer :: ICRS, IDCR
+
+#ifdef VOL7D_POLY_TYPE_AUTO
+      VOL7D_POLY_TYPE_AUTO(XDONT) :: XWRK
+#else
+      VOL7D_POLY_TYPE :: XWRK
+#endif
+
+!
+      Do ICRS = 2, Size (XDONT)
+         XWRK = XDONT (ICRS)
+         If (XWRK >= XDONT(ICRS-1)) Cycle
+         XDONT (ICRS) = XDONT (ICRS-1)
+         Do IDCR = ICRS - 2, 1, - 1
+            If (XWRK >= XDONT(IDCR)) Exit
+            XDONT (IDCR+1) = XDONT (IDCR)
+         End Do
+         XDONT (IDCR+1) = XWRK
+      End Do
+!
+      Return
+!
+      End Subroutine inssor/**/VOL7D_POLY_TYPES
+!
+
 #endif

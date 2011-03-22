@@ -1,7 +1,7 @@
 lib_LTLIBRARIES = libsim_vol7d.la
 libsim_vol7d_la_SOURCES = vol7d_ana_class.F90 vol7d_level_class.F90 \
  vol7d_network_class.F90 vol7d_timerange_class.F90 \
- vol7d_var_class.F90 vol7d_varvect_class.f90 vol7d_utilities.F90 \
+ vol7d_var_class.F90 vol7d_varvect_class.f90 \
  vol7d_class.F90 vol7d_class_compute.F90
 
 # Opzioni Fortran (-I... sono da considerarsi opzioni fortran
@@ -55,35 +55,35 @@ nodist_include_HEADERS = $(tmpvar:.F90=.mod)
 
 vol7d_varvect_class.$(OBJEXT): vol7d_var_class.$(OBJEXT)
 vol7d_varvect_class.lo: vol7d_var_class.$(OBJEXT)
-vol7d_class.$(OBJEXT): vol7d_utilities.$(OBJEXT) vol7d_ana_class.$(OBJEXT) \
+vol7d_class.$(OBJEXT): vol7d_ana_class.$(OBJEXT) \
  vol7d_timerange_class.$(OBJEXT) vol7d_level_class.$(OBJEXT) \
  vol7d_network_class.$(OBJEXT) vol7d_varvect_class.$(OBJEXT) \
  vol7d_class_type_templ.F90 vol7d_class_desc_templ.F90 vol7d_class_diff.F90 vol7d_class_diff_only.F90
-vol7d_class.lo: vol7d_utilities.$(OBJEXT) vol7d_ana_class.$(OBJEXT) \
+vol7d_class.lo: vol7d_ana_class.$(OBJEXT) \
  vol7d_timerange_class.$(OBJEXT) vol7d_level_class.$(OBJEXT) \
  vol7d_network_class.$(OBJEXT) vol7d_varvect_class.$(OBJEXT) \
  vol7d_class_type_templ.F90 vol7d_class_desc_templ.F90 vol7d_class_diff.F90 vol7d_class_diff_only.F90
 vol7d_class_compute.$(OBJEXT): vol7d_class.$(OBJEXT)
 vol7d_class_compute.lo: vol7d_class.$(OBJEXT)
 if ORSIM
-vol7d_oraclesim_class.$(OBJEXT): vol7d_class.$(OBJEXT) vol7d_utilities.$(OBJEXT) vol7d_oraclesim_class_vartable.F90
-vol7d_oraclesim_class.lo: vol7d_class.$(OBJEXT) vol7d_utilities.$(OBJEXT) vol7d_oraclesim_class_vartable.F90
+vol7d_oraclesim_class.$(OBJEXT): vol7d_class.$(OBJEXT) vol7d_oraclesim_class_vartable.F90
+vol7d_oraclesim_class.lo: vol7d_class.$(OBJEXT) vol7d_oraclesim_class_vartable.F90
 endif
 
 if DBALLE
-vol7d_dballe_class.$(OBJEXT): vol7d_class.$(OBJEXT) vol7d_utilities.$(OBJEXT) \
+vol7d_dballe_class.$(OBJEXT): vol7d_class.$(OBJEXT) \
 vol7d_dballe_class_nana.f90 vol7d_dballe_class_ndati.f90 \
 vol7d_dballe_class_dati.F90 vol7d_dballe_class_datiattr.F90 \
 vol7d_dballe_class_ana.F90 vol7d_dballe_class_anaattr.F90 vol7d_dballe_class_var_du.f90
-vol7d_dballe_class.lo: vol7d_class.$(OBJEXT) vol7d_utilities.$(OBJEXT) \
+vol7d_dballe_class.lo: vol7d_class.$(OBJEXT) \
 vol7d_dballe_class_nana.f90 vol7d_dballe_class_ndati.f90 \
 vol7d_dballe_class_dati.F90 vol7d_dballe_class_datiattr.F90 \
 vol7d_dballe_class_ana.F90 vol7d_dballe_class_anaattr.F90  vol7d_dballe_class_var_du.f90
 endif
 
 if NETCDF
-vol7d_netcdf_class.$(OBJEXT): vol7d_class.$(OBJEXT) vol7d_utilities.$(OBJEXT)
-vol7d_netcdf_class.lo: vol7d_class.$(OBJEXT) vol7d_utilities.$(OBJEXT)
+vol7d_netcdf_class.$(OBJEXT): vol7d_class.$(OBJEXT)
+vol7d_netcdf_class.lo: vol7d_class.$(OBJEXT)
 endif
 
 

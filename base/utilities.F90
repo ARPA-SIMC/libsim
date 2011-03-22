@@ -16,7 +16,7 @@
 ! You should have received a copy of the GNU General Public License
 ! along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "config.h"
-MODULE vol7d_utilities
+MODULE utilities
 USE file_utilities
 USE datetime_class
 USE kinds
@@ -51,6 +51,11 @@ INTERFACE index
    index_datetime !, index_c
 END INTERFACE
 
+INTERFACE sort
+  MODULE PROCEDURE sort_i, sort_r, sort_d, &
+   sort_datetime, sort_c
+END INTERFACE
+
 CONTAINS
 
 
@@ -74,25 +79,33 @@ END FUNCTION firsttrue
 #undef VOL7D_POLY_TYPES
 #define VOL7D_POLY_TYPE INTEGER
 #define VOL7D_POLY_TYPES _i
-#include "vol7d_distinct.F90"
+#define ENABLE_SORT
+#include "../vol7d/vol7d_distinct.F90"
+#undef ENABLE_SORT
 
 #undef VOL7D_POLY_TYPE
 #undef VOL7D_POLY_TYPES
 #define VOL7D_POLY_TYPE REAL
 #define VOL7D_POLY_TYPES _r
-#include "vol7d_distinct.F90"
+#define ENABLE_SORT
+#include "../vol7d/vol7d_distinct.F90"
+#undef ENABLE_SORT
 
 #undef VOL7D_POLY_TYPE
 #undef VOL7D_POLY_TYPES
 #define VOL7D_POLY_TYPE REAL(kind=fp_d)
 #define VOL7D_POLY_TYPES _d
-#include "vol7d_distinct.F90"
+#define ENABLE_SORT
+#include "../vol7d/vol7d_distinct.F90"
+#undef ENABLE_SORT
 
 #undef VOL7D_POLY_TYPE
 #undef VOL7D_POLY_TYPES
 #define VOL7D_POLY_TYPE TYPE(datetime)
 #define VOL7D_POLY_TYPES _datetime
-#include "vol7d_distinct.F90"
+#define ENABLE_SORT
+#include "../vol7d/vol7d_distinct.F90"
+#undef ENABLE_SORT
 
 #define VOL7D_NO_PACK
 #undef VOL7D_POLY_TYPE
@@ -100,8 +113,10 @@ END FUNCTION firsttrue
 #define VOL7D_POLY_TYPE CHARACTER(len=*)
 #define VOL7D_POLY_TYPE_AUTO(var) CHARACTER(len=LEN(var))
 #define VOL7D_POLY_TYPES _c
-#include "vol7d_distinct.F90"
+#define ENABLE_SORT
+#include "../vol7d/vol7d_distinct.F90"
 #undef VOL7D_POLY_TYPE_AUTO
+#undef ENABLE_SORT
 
 SUBROUTINE pack_distinct_c(vect, pack_distinct, mask, back) !RESULT(pack_distinct)
 CHARACTER(len=*),INTENT(in) :: vect(:)
@@ -175,4 +190,4 @@ ENDIF
 END SUBROUTINE pack_distinct_c
 
 
-END MODULE vol7d_utilities
+END MODULE utilities 

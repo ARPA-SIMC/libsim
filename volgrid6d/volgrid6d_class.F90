@@ -47,7 +47,7 @@ USE vol7d_timerange_class
 USE vol7d_level_class
 USE volgrid6d_var_class
 use log4fortran
-USE vol7d_utilities
+USE utilities
 USE grid_id_class
 USE gridinfo_class
 use optional_values
@@ -378,6 +378,7 @@ IF (this%griddim%dim%nx > 0 .and. this%griddim%dim%ny > 0 .and. &
        CALL raise_fatal_error("allocating memory")
      end if
   
+     ! this is not really needed if we can check other flags for a full field missing values
      IF (linivol) this%voldati = rmiss
 
   end if
@@ -393,15 +394,19 @@ IF (this%griddim%dim%nx > 0 .and. this%griddim%dim%ny > 0 .and. &
   end if
 
   IF (linivol) THEN
-    DO i=1 ,SIZE(this%gaid,1)
-      DO ii=1 ,SIZE(this%gaid,2)
-        DO iii=1 ,SIZE(this%gaid,3)
-          DO iiii=1 ,SIZE(this%gaid,4)
-            this%gaid(i,ii,iii,iiii) = grid_id_new() ! optimize?
-          ENDDO
-        ENDDO
-      ENDDO
-    ENDDO
+!!$    DO i=1 ,SIZE(this%gaid,1)
+!!$      DO ii=1 ,SIZE(this%gaid,2)
+!!$        DO iii=1 ,SIZE(this%gaid,3)
+!!$          DO iiii=1 ,SIZE(this%gaid,4)
+!!$            this%gaid(i,ii,iii,iiii) = grid_id_new() ! optimize?
+!!$          ENDDO
+!!$        ENDDO
+!!$      ENDDO
+!!$    ENDDO
+
+
+    this%gaid = grid_id_new()
+
   ENDIF
   
 end if
@@ -1077,8 +1082,14 @@ do i=1,ngrid
    call volgrid6d_alloc(this(i),this(i)%griddim%dim,ntime=ntime,ntimerange=ntimerange,nlevel=nlevel,nvar=nvar)
  
    this(i)%time=pack_distinct(gridinfov%time,ntime,mask=(this(i)%griddim == gridinfov%griddim),back=.true.)
+   call sort(this(i)%time)
+
    this(i)%timerange=pack_distinct(gridinfov%timerange,ntimerange,mask=(this(i)%griddim == gridinfov%griddim),back=.true.)
+   call sort(this(i)%timerange)
+
    this(i)%level=pack_distinct(gridinfov%level,nlevel,mask=(this(i)%griddim == gridinfov%griddim),back=.true.)
+   call sort(this(i)%level)
+
    this(i)%var=pack_distinct(gridinfov%var,nvar,mask=(this(i)%griddim == gridinfov%griddim),back=.true.)
 
 #ifdef DEBUG

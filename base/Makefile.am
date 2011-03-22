@@ -1,6 +1,6 @@
 lib_LTLIBRARIES = libsim_base.la
 libsim_base_la_SOURCES = io_units.F90 kinds.F90 phys_const.f90 missing_values.f90 \
- char_utilities.f90 err_handling.f90 datetime_class.F90 optional_values.f90 file_utilities.F90 \
+ char_utilities.f90 err_handling.f90 datetime_class.F90 optional_values.f90 file_utilities.F90 utilities.F90 \
  geo_coord_class.F90 geo_coord_with_utm_class.F90 geo_grid_class.f90 \
  optionparser_class.F90 \
  simple_stat.f90 geo_proj_class.F90
@@ -28,7 +28,6 @@ missing_values.$(OBJEXT): kinds.$(OBJEXT)
 missing_values.lo: kinds.$(OBJEXT)
 char_utilities.$(OBJEXT): kinds.$(OBJEXT) missing_values.$(OBJEXT)
 char_utilities.lo: kinds.$(OBJEXT) missing_values.$(OBJEXT)
-optional_values.$(OBJEXT): optional_values.$(OBJEXT)
 optional_values.lo: optional_values.$(OBJEXT)
 err_handling.$(OBJEXT): io_units.$(OBJEXT)
 err_handling.lo: io_units.$(OBJEXT)
