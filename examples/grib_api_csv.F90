@@ -43,11 +43,12 @@ TYPE(datetime) :: veriftime
 INTEGER,POINTER :: w_s(:), w_e(:)
 INTEGER :: n, i, j, k, l, np, nv, ncol, gaid, status
 INTEGER :: csv_igaid
+INTEGER :: p1h,p2h
 CHARACTER(len=24) :: csv_time, csv_level, csv_gaid
 CHARACTER(len=12) :: csv_simpletime, csv_simplevertime
+CHARACTER(len=3) :: ch3
 LOGICAL,ALLOCATABLE :: key_mask(:)
 DOUBLE PRECISION :: coord
-
 
 #ifdef DEBUG
 ! expensive checks
@@ -148,8 +149,24 @@ DO l = 1, SIZE(vg6d%time)
                 CALL csv_record_addfield(csvline, vg6d%timerange(k)%timerange)
               CASE('p1')
                 CALL csv_record_addfield(csvline, vg6d%timerange(k)%p1)
+              CASE('p1h')
+                p1h = NINT(vg6d%timerange(k)%p1/3600.)
+                IF (p1h >= 0 .AND. p1h < 1000) THEN
+                  WRITE (ch3,'(i3.3)') p1h
+                  CALL csv_record_addfield(csvline,ch3)
+                ELSE
+                  CALL csv_record_addfield(csvline,p1h)
+                ENDIF
               CASE('p2')
                 CALL csv_record_addfield(csvline, vg6d%timerange(k)%p2)
+              CASE('p2h')
+                p2h = NINT(vg6d%timerange(k)%p2/3600.)
+                IF (p2h >= 0 .AND. p2h < 1000) THEN
+                  WRITE (ch3,'(i3.3)') p2h
+                  CALL csv_record_addfield(csvline,ch3)
+                ELSE
+                  CALL csv_record_addfield(csvline,p2h)
+                ENDIF
               CASE('level1')
                 CALL csv_record_addfield(csvline, vg6d%level(j)%level1)
               CASE('l1')

@@ -13,23 +13,30 @@ B11001,Wind direction,degree,200,2,35,255,1.0,0.0
 B11001,Wind direction,degree,200,200,35,255,1.0,0.0
 B11002,Wind speed,m/s,200,2,36,255,1.0,0.0
 B11002,Wind speed,m/s,200,200,36,255,1.0,0.0
-B11003,U-component of wind,m/s,255,2,33,255,1.0,0.0
+B11003,U-component of wind,m/s,200,200,33,0,1.0,0.0
 B11003,U-component of wind,m/s,200,200,33,255,1.0,0.0
+B11003,U-component of wind,m/s,255,2,33,255,1.0,0.0
 B11003,U-component of wind,m/s,98,128,131,255,1.0,0.0
-B11004,V-component of wind,m/s,255,2,34,255,1.0,0.0
+B11004,V-component of wind,m/s,200,200,34,0,1.0,0.0
 B11004,V-component of wind,m/s,200,200,34,255,1.0,0.0
+B11004,V-component of wind,m/s,255,2,34,255,1.0,0.0
 B11004,V-component of wind,m/s,98,128,132,255,1.0,0.0
 B11005,Omega,Pa/s,255,2,39,255,1.0,0.0
-B11006,W-component of wind,m/s,255,2,40,255,1.0,0.0
 B11006,W-component of wind,m/s,200,200,41,255,1.0,0.0
+B11006,W-component of wind,m/s,255,2,40,255,1.0,0.0
 B11041,Maximum wind gust speed,m/s,200,201,187,255,1.0,0.0
 B11041,Maximum wind gust speed,m/s,78,201,187,255,1.0,0.0
 B11192,W-component of wind-terrain following (invented),m/s,200,200,40,255,1.0,0.0
-B11193,Stability class (invented),numeric,200,200,100,255,1.0,0.0
 B11193,Stability class (invented),numeric,200,2,202,255,1.0,0.0
+B11193,Stability class (invented),numeric,200,200,100,0,1.0,0.0
+B11193,Stability class (invented),numeric,200,200,100,255,1.0,0.0
+B11194,Friction velocity (calmet; invented),m/s,200,200,101,0,1.0,0.0
 B11194,Friction velocity (calmet; invented),m/s,200,200,101,255,1.0,0.0
+B11195,Mixing height (calmet; invented),m,200,200,102,0,1.0,0.0
 B11195,Mixing height (calmet; invented),m,200,200,102,255,1.0,0.0
+B11196,Obukov lenght (calmet; invented),m,200,200,103,0,1.0,0.0
 B11196,Obukov lenght (calmet; invented),m,200,200,103,255,1.0,0.0
+B11197,Convective velocitiy scale (calmet; invented),m/s,200,200,104,0,1.0,0.0
 B11197,Convective velocitiy scale (calmet; invented),m/s,200,200,104,255,1.0,0.0
 B11198,SQRT(2*TKE) (invented),m/s,200,201,152,255,1.0,0.0
 B11198,SQRT(2*TKE) (invented),m/s,78,201,152,255,1.0,0.0
@@ -46,8 +53,9 @@ B11207,Obukov lenght (COSMO; invented),m,200,2,200,255,1.0,0.0
 B12030,Soil Temperature,,255,2,85,255,1.0,0.0
 B12101,Temperature of the snow-surface,K,200,201,203,255,1.0,0.0
 B12101,Temperature of the snow-surface,K,78,201,203,255,1.0,0.0
-B12101,Temperature,K,255,2,11,255,1.0,0.0
+B12101,Temperature,K,200,200,11,0,1.0,0.0
 B12101,Temperature,K,200,200,11,255,1.0,0.0
+B12101,Temperature,K,255,2,11,255,1.0,0.0
 B12101,Temperature,K,98,128,130,255,1.0,0.0
 B12101,Temperature,K,98,128,167,255,1.0,0.0
 B12103,Dew point temperature,,255,2,17,255,1.0,0.0
@@ -60,6 +68,7 @@ B13192,Cloud liquid water content (invented),Kg/Kg,200,201,31,255,1.0,0.0
 B13192,Cloud liquid water content (invented),Kg/Kg,78,201,31,255,1.0,0.0
 B13193,Cloud ice content (invented),Kg/Kg,200,201,33,255,1.0,0.0
 B13193,Cloud ice content (invented),Kg/Kg,78,201,33,255,1.0,0.0
+B13194,Water equivalent of accumulated snow depth (invented),Kg/m**2,200,2,65,255,1.0,0.0
 B13195,Precipitating liquid water (invented),Kg/Kg,200,201,35,255,1.0,0.0
 B13195,Precipitating liquid water (invented),Kg/Kg,78,201,35,255,1.0,0.0
 B13196,Precipitating ice (invented),Kg/Kg,200,201,36,255,1.0,0.0
@@ -76,92 +85,163 @@ B13202,Convective liquid precipitation (invented),Kg/m**2,78,201,113,255,1.0,0.0
 B13203,Convective snowfall (invented),Kg/m**2,255,2,78,255,1.0,0.0
 B13204,Total convective precipitation(liquid+snow; invented),Kg/m**200,200,2,152,255,1.0,0.0
 B13205,Snowfall (grid-scale+convective; invented),Kg/m**2,200,2,153,255,1.0,0.0
-B13194,Water equivalent of accumulated snow depth (invented),Kg/m**2,200,2,65,255,1.0,0.0
 B13206,Soil water content (invented),kg/m^2->Num,255,2,86,255,1.0,0.0
-B14017,Net long-wave radiation flux (surface),W/m^2,255,2,112,255,1.0,0.0
+B14017,Net long-wave radiation flux (surface),W/m^2,200,200,111,0,1.0,0.0
 B14017,Net long-wave radiation flux (surface),W/m^2,200,200,111,255,1.0,0.0
-B14018,Net short-wave radiation flux (surface),W/m^2,255,2,111,255,1.0,0.0
+B14017,Net long-wave radiation flux (surface),W/m^2,255,2,112,255,1.0,0.0
+B14018,Net short-wave radiation flux (surface),W/m^2,200,200,110,0,1.0,0.0
 B14018,Net short-wave radiation flux (surface),W/m^2,200,200,110,255,1.0,0.0
-B14019,Surface Albedo,Percent,255,2,84,255,1.0,0.0
+B14018,Net short-wave radiation flux (surface),W/m^2,255,2,111,255,1.0,0.0
 B14019,Surface Albedo,Percent,200,200,124,255,1.0,0.0
-B14192,Instantenous sensible heat flux (invented),W/m^2,255,2,122,255,1.0,0.0
+B14019,Surface Albedo,Percent,255,2,84,255,1.0,0.0
+B14192,Instantenous sensible heat flux (invented),W/m^2,200,200,113,0,1.0,0.0
 B14192,Instantenous sensible heat flux (invented),W/m^2,200,200,113,255,1.0,0.0
-B14193,Instantenous latent heat flux (invented),W/m^2,255,2,121,255,1.0,0.0
+B14192,Instantenous sensible heat flux (invented),W/m^2,255,2,122,255,1.0,0.0
+B14193,Instantenous latent heat flux (invented),W/m^2,200,200,112,0,1.0,0.0
 B14193,Instantenous latent heat flux (invented),W/m^2,200,200,112,255,1.0,0.0
+B14193,Instantenous latent heat flux (invented),W/m^2,255,2,121,255,1.0,0.0
 B14194,Instantenous direct solar radiation DWD (invented),W/m^2,200,201,22,255,1.0,0.0
 B14194,Instantenous direct solar radiation DWD (invented),W/m^2,78,201,22,255,1.0,0.0
 B14195,Instantenous diffuse solar radiation DWD (invented),W/m^2,200,201,23,255,1.0,0.0
 B14195,Instantenous diffuse solar radiation DWD (invented),W/m^2,78,201,23,255,1.0,0.0
+B15192,NO concentration (invented),ppb,200,200,152,0,0.00000000125,0.0
 B15192,NO concentration (invented),ppb,200,200,152,255,0.00000000125,0.0
+B15192,NO concentration (invented),ppb,201,200,152,0,0.00000000125,0.0
 B15192,NO concentration (invented),ppb,201,200,152,255,0.00000000125,0.0
+B15193,NO2 concentration (invented),ppb,200,200,153,0,0.00000000191,0.0
 B15193,NO2 concentration (invented),ppb,200,200,153,255,0.00000000191,0.0
+B15193,NO2 concentration (invented),ppb,201,200,153,0,0.00000000191,0.0
 B15193,NO2 concentration (invented),ppb,201,200,153,255,0.00000000191,0.0
+B15194,O3 concentration (invented),ppb,200,200,151,0,0.000000002,0.0
 B15194,O3 concentration (invented),ppb,200,200,151,255,0.000000002,0.0
+B15194,O3 concentration (invented),ppb,201,200,151,0,0.000000002,0.0
 B15194,O3 concentration (invented),ppb,201,200,151,255,0.000000002,0.0
+B15195,PM10 concentration (invented),ug/m**3,200,195,1,0,0.000000001,0.0
 B15195,PM10 concentration (invented),ug/m**3,200,195,1,255,0.000000001,0.0
+B15195,PM10 concentration (invented),ug/m**3,200,200,220,0,0.000000001,0.0
 B15195,PM10 concentration (invented),ug/m**3,200,200,220,255,0.000000001,0.0
+B15195,PM10 concentration (invented),ug/m**3,201,200,220,0,0.000000001,0.0
 B15195,PM10 concentration (invented),ug/m**3,201,200,220,255,0.000000001,0.0
+B15196,CO concentration (invented),ppb,200,200,154,0,0.00000000116,0.0
 B15196,CO concentration (invented),ppb,200,200,154,255,0.00000000116,0.0
+B15196,CO concentration (invented),ppb,200,201,154,0,0.00000000116,0.0
 B15196,CO concentration (invented),ppb,200,201,154,255,0.00000000116,0.0
+B15197,SO2 concentration (invented),ppb,200,200,155,0,0.00000000266,0.0
 B15197,SO2 concentration (invented),ppb,200,200,155,255,0.00000000266,0.0
+B15197,SO2 concentration (invented),ppb,200,201,155,0,0.00000000266,0.0
 B15197,SO2 concentration (invented),ppb,200,201,155,255,0.00000000266,0.0
+B15198,PM2.5 concentration (invented),ug/m**3,200,195,3,0,0.000000001,0.0
 B15198,PM2.5 concentration (invented),ug/m**3,200,195,3,255,0.000000001,0.0
+B15198,PM2.5 concentration (invented),ug/m**3,200,200,221,0,0.000000001,0.0
 B15198,PM2.5 concentration (invented),ug/m**3,200,200,221,255,0.000000001,0.0
+B15198,PM2.5 concentration (invented),ug/m**3,201,200,221,0,0.000000001,0.0
 B15198,PM2.5 concentration (invented),ug/m**3,201,200,221,255,0.000000001,0.0
+B15199,NOY concentration (invented),ppb,200,200,153,0,0.00000000191,0.0
 B15199,NOY concentration (invented),ppb,200,200,153,255,0.00000000191,0.0
+B15199,NOY concentration (invented),ppb,200,201,153,0,0.00000000191,0.0
 B15199,NOY concentration (invented),ppb,200,201,153,255,0.00000000191,0.0
+B15200,HCNM concentration (invented),ppb,200,200,153,0,0.00000000191,0.0
 B15200,HCNM concentration (invented),ppb,200,200,153,255,0.00000000191,0.0
+B15200,HCNM concentration (invented),ppb,200,201,153,0,0.00000000191,0.0
 B15200,HCNM concentration (invented),ppb,200,201,153,255,0.00000000191,0.0
+B15201,ALDE concentration (invented),ppb,200,200,153,0,0.00000000191,0.0
 B15201,ALDE concentration (invented),ppb,200,200,153,255,0.00000000191,0.0
+B15201,ALDE concentration (invented),ppb,200,201,153,0,0.00000000191,0.0
 B15201,ALDE concentration (invented),ppb,200,201,153,255,0.00000000191,0.0
+B15202,PM5 concentration (invented),ug/m**3,200,195,2,0,0.000000001,0.0
 B15202,PM5 concentration (invented),ug/m**3,200,195,2,255,0.000000001,0.0
+B15202,PM5 concentration (invented),ug/m**3,200,200,2,0,0.000000001,0.0
 B15202,PM5 concentration (invented),ug/m**3,200,200,2,255,0.000000001,0.0
+B15203,PM1 concentration (invented),ug/m**3,200,195,4,0,0.000000001,0.0
 B15203,PM1 concentration (invented),ug/m**3,200,195,4,255,0.000000001,0.0
+B15203,PM1 concentration (invented),ug/m**3,200,200,232,0,0.000000001,0.0
 B15203,PM1 concentration (invented),ug/m**3,200,200,232,255,0.000000001,0.0
+B15204,PM06 concentration (invented),ug/m**3,200,195,5,0,0.000000001,0.0
 B15204,PM06 concentration (invented),ug/m**3,200,195,5,255,0.000000001,0.0
+B15204,PM06 concentration (invented),ug/m**3,200,200,235,0,0.000000001,0.0
 B15204,PM06 concentration (invented),ug/m**3,200,200,235,255,0.000000001,0.0
+B15205,PM03 concentration (invented),ug/m**3,200,195,6,0,0.000000001,0.0
 B15205,PM03 concentration (invented),ug/m**3,200,195,6,255,0.000000001,0.0
+B15205,PM03 concentration (invented),ug/m**3,200,200,233,0,0.000000001,0.0
 B15205,PM03 concentration (invented),ug/m**3,200,200,233,255,0.000000001,0.0
+B15206,PM015 concentration (invented),ug/m**3,200,195,7,0,0.000000001,0.0
 B15206,PM015 concentration (invented),ug/m**3,200,195,7,255,0.000000001,0.0
+B15206,PM015 concentration (invented),ug/m**3,200,200,236,0,0.000000001,0.0
 B15206,PM015 concentration (invented),ug/m**3,200,200,236,255,0.000000001,0.0
+B15207,PM008 concentration (invented),ug/m**3,200,195,8,0,0.000000001,0.0
 B15207,PM008 concentration (invented),ug/m**3,200,195,8,255,0.000000001,0.0
+B15208,Concentration of primary particulate matter in PM10 (invented),ug/m**3,200,195,9,0,0.000000001,0.0
 B15208,Concentration of primary particulate matter in PM10 (invented),ug/m**3,200,195,9,255,0.000000001,0.0
+B15208,Concentration of primary particulate matter in PM10 (invented),ug/m**3,200,200,241,0,0.000000001,0.0
 B15208,Concentration of primary particulate matter in PM10 (invented),ug/m**3,200,200,241,255,0.000000001,0.0
+B15209,Concentration of sulfate in PM10 (invented),ug/m**3,200,195,10,0,0.000000001,0.0
 B15209,Concentration of sulfate in PM10 (invented),ug/m**3,200,195,10,255,0.000000001,0.0
+B15209,Concentration of sulfate in PM10 (invented),ug/m**3,200,200,242,0,0.000000001,0.0
 B15209,Concentration of sulfate in PM10 (invented),ug/m**3,200,200,242,255,0.000000001,0.0
+B15210,Concentration of nitrate in PM10 (invented),ug/m**3,200,195,11,0,0.000000001,0.0
 B15210,Concentration of nitrate in PM10 (invented),ug/m**3,200,195,11,255,0.000000001,0.0
+B15210,Concentration of nitrate in PM10 (invented),ug/m**3,200,200,243,0,0.000000001,0.0
 B15210,Concentration of nitrate in PM10 (invented),ug/m**3,200,200,243,255,0.000000001,0.0
+B15211,Concentration of ammonium in PM10 (invented),ug/m**3,200,195,12,0,0.000000001,0.0
 B15211,Concentration of ammonium in PM10 (invented),ug/m**3,200,195,12,255,0.000000001,0.0
+B15211,Concentration of ammonium in PM10 (invented),ug/m**3,200,200,244,0,0.000000001,0.0
 B15211,Concentration of ammonium in PM10 (invented),ug/m**3,200,200,244,255,0.000000001,0.0
+B15212,Concentration of black carbon in PM10 (invented),ug/m**3,200,195,13,0,0.000000001,0.0
 B15212,Concentration of black carbon in PM10 (invented),ug/m**3,200,195,13,255,0.000000001,0.0
+B15212,Concentration of black carbon in PM10 (invented),ug/m**3,200,200,245,0,0.000000001,0.0
 B15212,Concentration of black carbon in PM10 (invented),ug/m**3,200,200,245,255,0.000000001,0.0
+B15213,Concentration of organic carbon in PM10 (invented),ug/m**3,200,195,14,0,0.000000001,0.0
 B15213,Concentration of organic carbon in PM10 (invented),ug/m**3,200,195,14,255,0.000000001,0.0
+B15213,Concentration of organic carbon in PM10 (invented),ug/m**3,200,200,246,0,0.000000001,0.0
 B15213,Concentration of organic carbon in PM10 (invented),ug/m**3,200,200,246,255,0.000000001,0.0
+B15214,Concentration of dust in PM10 (invented),ug/m**3,200,195,15,0,0.000000001,0.0
 B15214,Concentration of dust in PM10 (invented),ug/m**3,200,195,15,255,0.000000001,0.0
+B15214,Concentration of dust in PM10 (invented),ug/m**3,200,200,248,0,0.000000001,0.0
 B15214,Concentration of dust in PM10 (invented),ug/m**3,200,200,248,255,0.000000001,0.0
+B15215,Concentration of anthrop. A1D in PM10 (invented),ug/m**3,200,195,16,0,0.000000001,0.0
 B15215,Concentration of anthrop. A1D in PM10 (invented),ug/m**3,200,195,16,255,0.000000001,0.0
+B15215,Concentration of anthrop. A1D in PM10 (invented),ug/m**3,200,200,249,0,0.000000001,0.0
 B15215,Concentration of anthrop. A1D in PM10 (invented),ug/m**3,200,200,249,255,0.000000001,0.0
+B15216,Concentration of anthrop. BmP in PM10 (invented),ug/m**3,200,195,17,0,0.000000001,0.0
 B15216,Concentration of anthrop. BmP in PM10 (invented),ug/m**3,200,195,17,255,0.000000001,0.0
+B15216,Concentration of anthrop. BmP in PM10 (invented),ug/m**3,200,200,250,0,0.000000001,0.0
 B15216,Concentration of anthrop. BmP in PM10 (invented),ug/m**3,200,200,250,255,0.000000001,0.0
+B15217,Concentration of biogenic A1D in PM10 (invented),ug/m**3,200,195,18,0,0.000000001,0.0
 B15217,Concentration of biogenic A1D in PM10 (invented),ug/m**3,200,195,18,255,0.000000001,0.0
+B15217,Concentration of biogenic A1D in PM10 (invented),ug/m**3,200,200,251,0,0.000000001,0.0
 B15217,Concentration of biogenic A1D in PM10 (invented),ug/m**3,200,200,251,255,0.000000001,0.0
+B15218,Concentration of biogenic BmP in PM10 (invented),ug/m**3,200,195,19,0,0.000000001,0.0
 B15218,Concentration of biogenic BmP in PM10 (invented),ug/m**3,200,195,19,255,0.000000001,0.0
+B15218,Concentration of biogenic BmP in PM10 (invented),ug/m**3,200,200,252,0,0.000000001,0.0
 B15218,Concentration of biogenic BmP in PM10 (invented),ug/m**3,200,200,252,255,0.000000001,0.0
+B15219,Concentration of water in PM10 (invented),ug/m**3,200,195,20,0,0.000000001,0.0
 B15219,Concentration of water in PM10 (invented),ug/m**3,200,195,20,255,0.000000001,0.0
+B15219,Concentration of water in PM10 (invented),ug/m**3,200,200,253,0,0.000000001,0.0
 B15219,Concentration of water in PM10 (invented),ug/m**3,200,200,253,255,0.000000001,0.0
+B15220,Concentration of sea salt in PM10 (invented),ug/m**3,200,195,21,0,0.000000001,0.0
 B15220,Concentration of sea salt in PM10 (invented),ug/m**3,200,195,21,255,0.000000001,0.0
+B15220,Concentration of sea salt in PM10 (invented),ug/m**3,200,200,254,0,0.000000001,0.0
 B15220,Concentration of sea salt in PM10 (invented),ug/m**3,200,200,254,255,0.000000001,0.0
+B15221,Concentration of secondary organic aerosol in PM10 (invented),ug/m**3,200,195,30,0,0.000000001,0.0
 B15221,Concentration of secondary organic aerosol in PM10 (invented),ug/m**3,200,195,30,255,0.000000001,0.0
+B15221,Concentration of secondary organic aerosol in PM10 (invented),ug/m**3,200,200,247,0,0.000000001,0.0
 B15221,Concentration of secondary organic aerosol in PM10 (invented),ug/m**3,200,200,247,255,0.000000001,0.0
+B15222,Total concentration of primary aerosol in PM10 (invented),ug/m**3,200,195,31,0,0.000000001,0.0
 B15222,Total concentration of primary aerosol in PM10 (invented),ug/m**3,200,195,31,255,0.000000001,0.0
+B15223,Total concentration of secondary aerosol in PM10 (invented),ug/m**3,200,195,32,0,0.000000001,0.0
 B15223,Total concentration of secondary aerosol in PM10 (invented),ug/m**3,200,195,32,255,0.000000001,0.0
+B15224,Uncertainity in O3 estimate (Pesco; invented),ug/m**3,200,200,95,255,0.000000001,0.0
+B15225,Uncertainity in PM10 estimate (Pesco; invented),ug/m**3,200,200,96,255,0.000000001,0.0
+B15226,Uncertainity in NO2 estimate (Pesco; invented),ug/m**3,200,200,97,255,0.000000001,0.0
+B15227,Uncertainity in PM2.5 estimate (Pesco; invented),ug/m**3,200,200,98,255,0.000000001,0.0
 B20010,Cloud cover DWD,Percent,200,201,29,255,1.0,0.0
 B20010,Cloud cover DWD,Percent,78,201,29,255,1.0,0.0
-B20010,Total cloud cover,Fraction,200,200,114,255,100.0,0.0
-B20010,Total cloud cover,Percent,255,2,71,255,1.0,0.0
+B20010,High cloud cover,Percent,255,2,75,255,1.0,0.0
 B20010,Low cloud cover,Percent,255,2,73,255,1.0,0.0
 B20010,Medium cloud cover,Percent,255,2,74,255,1.0,0.0
-B20010,High cloud cover,Percent,255,2,75,255,1.0,0.0
+B20010,Total cloud cover,Fraction,200,200,114,0,100.0,0.0
+B20010,Total cloud cover,Fraction,200,200,114,255,100.0,0.0
+B20010,Total cloud cover,Percent,255,2,71,255,1.0,0.0
 B22037,Tidal elevation with respect to national land datum,m,255,2,82,255,1.0,0.0
 B22070,Significant wave height,m,200,140,229,255,1.0,0.0
 B22070,Significant wave height,m,255,2,102,255,1.0,0.0
@@ -173,7 +253,3 @@ B23195,Wet deposition of NH4 (invented),mol/m**2,200,200,143,255,1.0,0.0
 B23196,Dry deposition of HNO3 (invented),mol/m**2,200,200,144,255,1.0,0.0
 B23197,Wet deposition of HNO3 (invented),mol/m**2,200,200,145,255,1.0,0.0
 B29192,Land fraction (invented),Percent,255,2,81,255,1.0,0.0
-B15224,Uncertainity in O3 estimate (Pesco; invented),ug/m**3,200,200,95,255,0.000000001,0.0
-B15225,Uncertainity in PM10 estimate (Pesco; invented),ug/m**3,200,200,96,255,0.000000001,0.0
-B15226,Uncertainity in NO2 estimate (Pesco; invented),ug/m**3,200,200,97,255,0.000000001,0.0
-B15227,Uncertainity in PM2.5 estimate (Pesco; invented),ug/m**3,200,200,98,255,0.000000001,0.0

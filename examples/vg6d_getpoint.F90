@@ -161,7 +161,7 @@ CALL optionparser_add(opt, ' ', 'output-td', output_td, 1, help= &
 CALL optionparser_add(opt, ' ', 'output-keys', output_keys, '', help= &
  'keys that have to appear in the output grib_api_csv file, any grib_api key &
  &or ''gacsv:xxx''; xxx can be any of: lon, lat, npoint, isodate, value, &
- &timerange, p1, p2, level1, l1, level2, l2, centre, category, number, discipline, &
+ &timerange, p1, p1h, p2, p2h, level1, l1, level2, l2, centre, category, number, discipline, &
  &simpledate, simpleverdate')
 #endif
 
