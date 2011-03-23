@@ -17,6 +17,9 @@
 !! generating help messages similar to the one found in the Python
 !! library.
 !!
+!! This is an example of use:
+!! \include example_optionparser.F90
+!!
 !! \ingroup base
 MODULE optionparser_class
 USE log4fortran
@@ -56,7 +59,7 @@ END TYPE option
 !!
 !! The class handles both GNU-style long options, introduced by a
 !! double dash \c -- and containing any character except the equal
-!! sign \c == , and the traditional Unix short options, introduced by
+!! sign \c = , and the traditional Unix short options, introduced by
 !! a single dash \c - and containing a single character which can be
 !! any ASCII character except the dash itself.
 !!
@@ -147,32 +150,35 @@ CHARACTER(len=1),INTENT(in) :: short_opt
 CHARACTER(len=*),INTENT(in) :: long_opt
 CHARACTER(len=*) :: default
 CHARACTER(len=*),OPTIONAL :: help
-
 TYPE(option) :: this
 
-INTEGER(kind=int_b) :: dummy(1)
-
-IF (short_opt == '' .AND. long_opt == '') THEN
-! programmer error condition, option empty
-  CALL l4f_log(L4F_ERROR, 'in option, both short and long options empty')
-  CALL raise_error()
-ENDIF
 this%short_opt = short_opt
 this%long_opt = long_opt
 this%opttype = -1
 this%need_arg = .FALSE.
-IF (PRESENT(help)) THEN
-  ALLOCATE(this%help_msg(LEN_TRIM(help) + LEN_TRIM(default) + 1))
-  this%help_msg = fchar_to_cstr(TRIM(help)//TRIM(default))
-ELSE
-  NULLIFY(this%help_msg)
-ENDIF
+NULLIFY(this%help_msg)
 NULLIFY(this%destc)
 NULLIFY(this%desti)
 NULLIFY(this%destr)
 NULLIFY(this%destd)
 NULLIFY(this%destl)
 NULLIFY(this%destcount)
+
+IF (short_opt == '' .AND. long_opt == '') THEN
+#ifdef DEBUG
+! programmer error condition, option empty
+  CALL l4f_log(L4F_ERROR, 'in optionparser, both short and long options empty')
+  CALL raise_fatal_error()
+#else
+  CALL l4f_log(L4F_WARN, 'in optionparser, both short and long options empty')
+#endif
+  RETURN
+ENDIF
+
+IF (PRESENT(help)) THEN
+  ALLOCATE(this%help_msg(LEN_TRIM(help) + LEN_TRIM(default) + 1))
+  this%help_msg = fchar_to_cstr(TRIM(help)//TRIM(default))
+ENDIF
 
 END FUNCTION option_new
 
@@ -207,7 +213,7 @@ CASE(opttype_c)
 !  this%destc(1:this%destclen) = optarg
   IF (LEN_TRIM(optarg) > this%destclen) THEN
     CALL l4f_log(L4F_WARN, &
-     'in option, argument '''//TRIM(optarg)//''' too long, truncated')
+     'in optionparser, argument '''//TRIM(optarg)//''' too long, truncated')
   ENDIF
 CASE(opttype_i)
   READ(optarg,'(I12)',ERR=100)this%desti
@@ -227,11 +233,11 @@ RETURN
 
 100 status = optionparser_err
 CALL l4f_log(L4F_ERROR, &
- 'in option, argument '''//TRIM(optarg)//''' not valid as integer')
+ 'in optionparser, argument '''//TRIM(optarg)//''' not valid as integer')
 RETURN
 102 status = optionparser_err
 CALL l4f_log(L4F_ERROR, &
- 'in option, argument '''//TRIM(optarg)//''' not valid as real')
+ 'in optionparser, argument '''//TRIM(optarg)//''' not valid as real')
 RETURN
 
 END FUNCTION option_found
@@ -323,13 +329,13 @@ CALL delete(this%options)
 END SUBROUTINE optionparser_delete
 
 
-!> Create a new option with a character type argument.
+!> Add a new option with a character type argument.
 !! When parsing will be performed, if the requested option is
 !! encountered, its corresponding compulsory argument will be copied
 !! into the provided destination, truncating it if it is too long. An
 !! optional default value can be provided for the destination. Please
-!! use the generic \a option_new constructor rather than this
-!! particular function.
+!! use the generic \a optionparser_add method rather than this
+!! particular method.
 SUBROUTINE optionparser_add_c(this, short_opt, long_opt, dest, default, help)
 TYPE(optionparser),INTENT(inout) :: this !< \a optionparser object
 CHARACTER(len=1),INTENT(in) :: short_opt !< the short option (may be empty)
@@ -351,6 +357,7 @@ ENDIF
 
 ! common initialisation
 myoption = option_new(short_opt, long_opt, cdefault, help)
+IF (.NOT.c_e(myoption)) RETURN ! error in creating option, ignore it
 
 ! this is needed in order to circumvent a bug in gfortran 4.1.2
 ! in future replace with following line and erase dirty_char_pointer_set
@@ -373,7 +380,7 @@ END SUBROUTINE optionparser_add_c
 !! encountered, its corresponding compulsory argument will be copied
 !! into the provided destination. An optional default value can be
 !! provided for the destination. Please use the generic \a
-!! option_new constructor rather than this particular function.
+!! optionparser_add method rather than this particular method.
 SUBROUTINE optionparser_add_i(this, short_opt, long_opt, dest, default, help)
 TYPE(optionparser),INTENT(inout) :: this !< \a optionparser object
 CHARACTER(len=1),INTENT(in) :: short_opt !< the short option (may be empty)
@@ -394,6 +401,7 @@ ENDIF
 
 ! common initialisation
 myoption = option_new(short_opt, long_opt, cdefault, help)
+IF (.NOT.c_e(myoption)) RETURN ! error in creating option, ignore it
 
 myoption%desti => dest
 IF (PRESENT(default)) myoption%desti = default
@@ -410,7 +418,7 @@ END SUBROUTINE optionparser_add_i
 !! encountered, its corresponding compulsory argument will be copied
 !! into the provided destination. An optional value default can be
 !! provided for the destination. Please use the generic \a
-!! option_new constructor rather than this particular function.
+!! optionparser_add method rather than this particular method.
 SUBROUTINE optionparser_add_r(this, short_opt, long_opt, dest, default, help)
 TYPE(optionparser),INTENT(inout) :: this !< \a optionparser object
 CHARACTER(len=1),INTENT(in) :: short_opt !< the short option (may be empty)
@@ -431,6 +439,7 @@ ENDIF
 
 ! common initialisation
 myoption = option_new(short_opt, long_opt, cdefault, help)
+IF (.NOT.c_e(myoption)) RETURN ! error in creating option, ignore it
 
 myoption%destr => dest
 IF (PRESENT(default)) myoption%destr = default
@@ -447,7 +456,7 @@ END SUBROUTINE optionparser_add_r
 !! encountered, its corresponding compulsory argument will be copied
 !! into the provided destination. An optional default value can be
 !! provided for the destination. Please use the generic \a
-!! option_new constructor rather than this particular function.
+!! optionparser_add method rather than this particular method.
 SUBROUTINE optionparser_add_d(this, short_opt, long_opt, dest, default, help)
 TYPE(optionparser),INTENT(inout) :: this !< \a optionparser object
 CHARACTER(len=1),INTENT(in) :: short_opt !< the short option (may be empty)
@@ -468,6 +477,7 @@ ENDIF
 
 ! common initialisation
 myoption = option_new(short_opt, long_opt, cdefault, help)
+IF (.NOT.c_e(myoption)) RETURN ! error in creating option, ignore it
 
 myoption%destd => dest
 IF (PRESENT(default)) myoption%destd = default
@@ -483,8 +493,8 @@ END SUBROUTINE optionparser_add_d
 !! When parsing will be performed, if the requested option is
 !! encountered, the provided destination will be set to \a
 !! .TRUE. . The provided destination is initially set to \a
-!! .FALSE. . Please use the generic \a option_new constructor
-!! rather than this particular function.
+!! .FALSE. . Please use the generic \a optionparser_add method
+!! rather than this particular method.
 SUBROUTINE optionparser_add_l(this, short_opt, long_opt, dest, help)
 TYPE(optionparser),INTENT(inout) :: this !< \a optionparser object
 CHARACTER(len=1),INTENT(in) :: short_opt !< the short option (may be empty)
@@ -497,6 +507,7 @@ TYPE(option) :: myoption
 
 ! common initialisation
 myoption = option_new(short_opt, long_opt, '', help)
+IF (.NOT.c_e(myoption)) RETURN ! error in creating option, ignore it
 
 myoption%destl => dest
 myoption%destl = .FALSE. ! unconditionally set to false, option can only set it to true
@@ -510,8 +521,8 @@ END SUBROUTINE optionparser_add_l
 
 !> Add a new counter option, without optional argument.
 !! When parsing will be performed, the provided destination will be
-!! incremented by one, starting from \a start, each time the
-!! requested option is encountered.
+!! incremented by one, starting from \a start, each time the requested
+!! option is encountered.
 SUBROUTINE optionparser_add_count(this, short_opt, long_opt, dest, start, help)
 TYPE(optionparser),INTENT(inout) :: this !< \a optionparser object
 CHARACTER(len=1),INTENT(in) :: short_opt !< the short option (may be empty)
@@ -525,6 +536,7 @@ TYPE(option) :: myoption
 
 ! common initialisation
 myoption = option_new(short_opt, long_opt, '', help)
+IF (.NOT.c_e(myoption)) RETURN ! error in creating option, ignore it
 
 myoption%destcount => dest
 IF (PRESENT(start)) myoption%destcount = start
@@ -538,7 +550,8 @@ END SUBROUTINE optionparser_add_count
 
 !> Add a new help option, without optional argument.
 !! When parsing will be performed, the full help message will be
-!! printed if this option is encountered.
+!! printed if this option is encountered. The message can be directly
+!! printed as well by calling the optparser_printhelp method.
 SUBROUTINE optionparser_add_help(this, short_opt, long_opt, help)
 TYPE(optionparser),INTENT(inout) :: this !< \a optionparser object
 CHARACTER(len=1),INTENT(in) :: short_opt !< the short option (may be empty)
@@ -550,6 +563,7 @@ TYPE(option) :: myoption
 
 ! common initialisation
 myoption = option_new(short_opt, long_opt, '', help)
+IF (.NOT.c_e(myoption)) RETURN ! error in creating option, ignore it
 
 myoption%opttype = opttype_help
 myoption%need_arg = .FALSE.
@@ -560,9 +574,9 @@ END SUBROUTINE optionparser_add_help
 
 
 !> This method performs the parsing of the command-line options
-!! which have been previously described when instantiating the
-!! optionparser object \a this. The destination variables set through
-!! the optionparser_add methods are assigned according to the options
+!! which have been previously added using the optionparser_add family
+!! of methods. The destination variables set through the
+!! optionparser_add methods are assigned according to the options
 !! encountered on the command line.  If any optional argument remains
 !! after interpretation of all command-line options, the index of the
 !! first of them is returned in \a nextarg, otherwise \a nextarg is
@@ -593,7 +607,6 @@ DO WHILE(i <= iargc())
       endopt = LEN_TRIM(arg)
     ENDIF
     find_longopt: DO j = 1, this%options%arraysize
-      IF (.NOT. c_e(this%options%array(j))) CYCLE find_longopt
       IF (this%options%array(j)%long_opt == arg(3:endopt)) THEN ! found option
         IF (this%options%array(j)%need_arg) THEN
           IF (indeq /= 0) THEN
@@ -614,11 +627,10 @@ DO WHILE(i <= iargc())
     IF (j > this%options%arraysize) THEN
       status = optionparser_err
       CALL l4f_log(L4F_ERROR, &
-       'in optionparser, option ''--'//TRIM(arg)//''' not valid')
+       'in optionparser, option '''//TRIM(arg)//''' not valid')
     ENDIF
   ELSE IF (arg(1:1) == '-') THEN ! short option
     find_shortopt: DO j = 1, this%options%arraysize
-      IF (.NOT. c_e(this%options%array(j))) CYCLE find_shortopt
       IF (this%options%array(j)%short_opt == arg(2:2)) THEN ! found option
         IF (this%options%array(j)%need_arg) THEN
           IF (LEN_TRIM(arg) > 2) THEN
@@ -639,7 +651,7 @@ DO WHILE(i <= iargc())
     IF (j > this%options%arraysize) THEN
       status = optionparser_err
       CALL l4f_log(L4F_ERROR, &
-       'in optionparser, option ''-'//TRIM(arg)//''' not valid')
+       'in optionparser, option '''//TRIM(arg)//''' not valid')
     ENDIF
   ELSE ! unrecognized = end of options
     EXIT
@@ -694,7 +706,6 @@ ENDIF
 WRITE(*,'(/,A)')'Options:'
 
 DO i = 1, this%options%arraysize ! loop over options
-  IF (.NOT. c_e(this%options%array(i))) CYCLE
 ! print option brief representation
   WRITE(*,'(A)')TRIM(option_format_opt(this%options%array(i)))
 ! print option help

@@ -30,7 +30,7 @@ INTEGER :: optind, optstatus
 INTEGER :: i, iargc
 ! option variables
 CHARACTER(len=80) :: name, extraopt
-INTEGER :: ival
+INTEGER :: nx
 REAL :: xval, yval
 DOUBLE PRECISION :: dval
 LOGICAL :: force, version
@@ -46,10 +46,12 @@ opt = optionparser_new(description_msg= &
 ! add various options
 CALL optionparser_add(opt, 'n', 'name', name, 'defaultname', help= &
  'short and long character option with default value')
+CALL optionparser_add(opt, '', 'nx', nx, 100, help= &
+ 'long integer option with default value')
 CALL optionparser_add(opt, 'x', 'xval', xval, 712., help= &
  'short and long real option with default value')
-xval = rmiss
-CALL optionparser_add(opt, ' ', 'yval', yval, help= &
+xval = rmiss ! preset xval to recognize whether it has been set
+CALL optionparser_add(opt, '', 'yval', yval, help= &
  'long real option without default value')
 CALL optionparser_add(opt, 'd', 'dval', dval, 489.0D0, help=&
  'short and long double precision option with default value, &
@@ -78,19 +80,20 @@ IF (version) THEN ! for help2man
   CALL exit(0)
 ENDIF
 
-! check for errors in the options
+! check for specific errors in the options
 IF (dval <= 0.0D0) THEN
   CALL optionparser_printhelp(opt)
   CALL l4f_log(L4F_ERROR,'dval must be positive!')
   CALL raise_fatal_error()
 ENDIF
 
-! release all the option data structure, data set by options will remain
+! release all the option data structure, the variables set by options will remain
 CALL delete(opt)
 
-! print a report
+! print a report of the options received
 CALL l4f_log(L4F_INFO,'options report:')
 CALL l4f_log(L4F_INFO,'name: '//TRIM(name))
+CALL l4f_log(L4F_INFO,'nx: '//t2c(nx))
 IF (c_e(xval)) THEN
   CALL l4f_log(L4F_INFO,'xval: '//t2c(xval))
 ELSE
@@ -101,7 +104,7 @@ CALL l4f_log(L4F_INFO,'dval: '//t2c(dval))
 CALL l4f_log(L4F_INFO,'force: '//t2c(force))
 CALL l4f_log(L4F_INFO,'verbose: '//t2c(verbose))
 
-
+! parse the remaining optional arguments
 IF (optind <= iargc()) THEN
   CALL l4f_log(L4F_INFO, 'extra arguments provided:')
   DO i = optind, iargc()

@@ -19,7 +19,7 @@ esempio_termolib_LDADD = ../base/libsim_base.la ../termolib/libsim_termolib.la
 log4fortran_SOURCES = log4fortran.f90
 log4fortran_LDADD =  ../log4fortran/liblog4fortran.la ../base/libsim_base.la
 
-example_optionparser_SOURCES = example_optionparser.f90
+example_optionparser_SOURCES = example_optionparser.F90
 example_optionparser_LDADD =  ../log4fortran/liblog4fortran.la ../base/libsim_base.la
 
 example_char_utilities_SOURCES = example_char_utilities.f90
