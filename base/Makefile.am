@@ -28,7 +28,10 @@ missing_values.$(OBJEXT): kinds.$(OBJEXT)
 missing_values.lo: kinds.$(OBJEXT)
 char_utilities.$(OBJEXT): kinds.$(OBJEXT) missing_values.$(OBJEXT)
 char_utilities.lo: kinds.$(OBJEXT) missing_values.$(OBJEXT)
-optional_values.lo: optional_values.$(OBJEXT)
+
+optional_values.$(OBJEXT): missing_values.$(OBJEXT)
+optional_values.lo: missing_values.$(OBJEXT)
+
 err_handling.$(OBJEXT): io_units.$(OBJEXT)
 err_handling.lo: io_units.$(OBJEXT)
 datetime_class.$(OBJEXT): err_handling.$(OBJEXT) missing_values.$(OBJEXT) arrayof_pre.F90 arrayof_post.F90
@@ -52,7 +55,7 @@ geo_transforms.lo: phys_const.$(OBJEXT)
 geo_proj_class.$(OBJEXT): phys_const.$(OBJEXT) missing_values.$(OBJEXT) optional_values.$(OBJEXT)
 geo_proj_class.lo: phys_const.$(OBJEXT) missing_values.$(OBJEXT) optional_values.$(OBJEXT)
 
-check_PROGRAMS = char_utilities_test datetime_test simple_stat_test
+check_PROGRAMS = char_utilities_test datetime_test file_utilities_test simple_stat_test
 TESTS = $(check_PROGRAMS)
 
 char_utilities_test_SOURCES = char_utilities_test.f90
@@ -60,6 +63,9 @@ char_utilities_test_LDADD = libsim_base.la
 
 datetime_test_SOURCES = datetime_test.f90
 datetime_test_LDADD = libsim_base.la 
+
+file_utilities_test_SOURCES = file_utilities_test.f90
+file_utilities_test_LDADD = libsim_base.la 
 
 simple_stat_test_SOURCES = simple_stat_test.f90
 simple_stat_test_LDADD = libsim_base.la

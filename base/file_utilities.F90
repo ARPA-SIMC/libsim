@@ -276,7 +276,7 @@ ELSE
   this%cquote = TRANSFER('"', this%cquote)
 ENDIF
 
-this%cursor = 1
+this%cursor = 0
 this%nfield = 0
 IF (PRESENT(record)) THEN
   l = LEN_TRIM(record)
@@ -289,7 +289,7 @@ IF (PRESENT(record)) THEN
       nfield = nfield + 1
       CALL csv_record_getfield(this)
     ENDDO
-    this%cursor = 1 ! riazzero il cursore
+    this%cursor = 0 ! riazzero il cursore
   ENDIF
 ELSE
   ALLOCATE(this%record(csv_basereclen))
@@ -311,7 +311,7 @@ END SUBROUTINE csv_record_delete
 SUBROUTINE csv_record_rewind(this)
 TYPE(csv_record),INTENT(INOUT) :: this !< object to be rewound
 
-this%cursor = 1
+this%cursor = 0
 this%nfield = 0
 
 END SUBROUTINE csv_record_rewind
@@ -345,7 +345,7 @@ ELSE IF (INDEX(field, TRANSFER(this%csep,field(1:1))) == 0 &
  .AND. .NOT.lquote) THEN ! quote not required
   CALL checkrealloc(this, LEN(field)+1)
   IF (this%nfield > 0) CALL add_byte(this, this%csep) ! add separator if necessary
-  this%record(this%cursor:this%cursor+LEN(field)-1) = TRANSFER(field, this%record)
+  this%record(this%cursor+1:this%cursor+LEN(field)) = TRANSFER(field, this%record)
   this%cursor = this%cursor + LEN(field)
 ELSE ! quote required
   CALL checkrealloc(this, 2*LEN(field)+3) ! worst case """""""""
@@ -365,11 +365,11 @@ CONTAINS
 SUBROUTINE add_char(char)
 CHARACTER(len=1) :: char
 
-this%record(this%cursor) = TRANSFER(char, this%record(1))
 this%cursor = this%cursor+1
-IF (this%record(this%cursor-1) == this%cquote) THEN ! double the quote
-  this%record(this%cursor) = this%cquote
+this%record(this%cursor) = TRANSFER(char, this%record(1))
+IF (this%record(this%cursor) == this%cquote) THEN ! double the quote
   this%cursor = this%cursor+1
+  this%record(this%cursor) = this%cquote
 ENDIF
 
 END SUBROUTINE add_char
@@ -384,7 +384,7 @@ INTEGER, INTENT(in) :: enlarge
 
 INTEGER(KIND=int_b), POINTER :: tmpptr(:)
 
-IF (this%cursor+enlarge > SIZE(this%record)) THEN
+IF (this%cursor+enlarge+1 > SIZE(this%record)) THEN
   ALLOCATE(tmpptr(SIZE(this%record)+MAX(csv_basereclen, enlarge)))
   tmpptr(1:SIZE(this%record)) = this%record(:)
   DEALLOCATE(this%record)
@@ -399,8 +399,8 @@ SUBROUTINE add_byte(this, char)
 TYPE(csv_record),INTENT(INOUT) :: this
 INTEGER(kind=int_b) :: char
 
-this%record(this%cursor) = char
 this%cursor = this%cursor+1
+this%record(this%cursor) = char
 
 END SUBROUTINE add_byte
 
@@ -528,9 +528,10 @@ TYPE(csv_record),INTENT(IN) :: record !< record to be added
 IF (this%csep /= record%csep .OR. this%cquote /= record%cquote) RETURN ! error
 CALL checkrealloc(this, record%cursor)
 IF (this%nfield > 0) CALL add_byte(this, this%csep)
-this%record(this%cursor:this%cursor+record%cursor-2) = &
- record%record(1:record%cursor-1)
-this%cursor = this%cursor + record%cursor-1
+
+this%record(this%cursor+1:this%cursor+record%cursor) = &
+ record%record(1:record%cursor)
+this%cursor = this%cursor + record%cursor
 this%nfield = this%nfield + record%nfield
 
 END SUBROUTINE csv_record_addfield_csv_record
@@ -542,9 +543,9 @@ FUNCTION csv_record_getrecord(this, nfield)
 TYPE(csv_record),INTENT(IN) :: this !< object to be coded, the object is not modified, so that other fields can still be added after the call to ::csv_record_getrecord
 INTEGER, INTENT(out), OPTIONAL :: nfield !< number of fields contained in the record
 
-CHARACTER(len=this%cursor-1) :: csv_record_getrecord
+CHARACTER(len=this%cursor) :: csv_record_getrecord
 
-csv_record_getrecord = TRANSFER(this%record(1:this%cursor-1), csv_record_getrecord)
+csv_record_getrecord = TRANSFER(this%record(1:this%cursor), csv_record_getrecord)
 IF (present(nfield)) nfield = this%nfield
 
 END FUNCTION csv_record_getrecord
@@ -582,7 +583,7 @@ inpre = .TRUE.
 inpost = .FALSE.
 firstquote = .FALSE.
 
-DO i = this%cursor, SIZE(this%record)
+DO i = this%cursor+1, SIZE(this%record)
   IF (inpre) THEN ! sono nel preludio, butto via gli spazi
     IF (is_space_b(this%record(i))) THEN
       CYCLE
@@ -628,7 +629,8 @@ DO i = this%cursor, SIZE(this%record)
   ENDIF
 ENDDO
 
-this%cursor = MIN(i + 1, SIZE(this%record) + 1)
+!this%cursor = MIN(i + 1, SIZE(this%record) + 1)
+this%cursor = MIN(i, SIZE(this%record) + 1)
 IF (PRESENT(flen)) flen = ofcursor ! restituisco la lunghezza
 IF (PRESENT(field)) THEN ! controllo overflow di field
   IF (ofcursor > LEN(field)) THEN
