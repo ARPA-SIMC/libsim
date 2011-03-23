@@ -243,7 +243,7 @@ end subroutine display_var_vect
 ! Definisce le funzioni count_distinct e pack_distinct
 #define VOL7D_POLY_TYPE TYPE(vol7d_var)
 #define VOL7D_POLY_TYPES _var
-#include "vol7d_distinct.F90"
+#include "array_utilities_inc.F90"
 #undef VOL7D_POLY_TYPE
 #undef VOL7D_POLY_TYPES
 

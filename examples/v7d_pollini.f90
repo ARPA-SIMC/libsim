@@ -22,7 +22,7 @@ USE file_utilities
 USE vol7d_oraclesim_class
 USE vol7d_class
 USE vol7d_class_compute
-USE utilities
+USE array_utilities
 USE log4fortran
 USE optionparser_class
 IMPLICIT NONE

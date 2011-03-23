@@ -88,7 +88,7 @@ USE optional_values
 USE log4fortran
 USE err_handling
 USE io_units
-USE utilities
+USE array_utilities
 USE vol7d_ana_class
 USE vol7d_timerange_class
 USE vol7d_level_class

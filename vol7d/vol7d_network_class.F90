@@ -217,7 +217,7 @@ END FUNCTION vol7d_network_nesv
 ! Definisce le funzioni count_distinct e pack_distinct
 #define VOL7D_POLY_TYPE TYPE(vol7d_network)
 #define VOL7D_POLY_TYPES _network
-#include "vol7d_distinct.F90"
+#include "array_utilities_inc.F90"
 #undef VOL7D_POLY_TYPE
 #undef VOL7D_POLY_TYPES
 

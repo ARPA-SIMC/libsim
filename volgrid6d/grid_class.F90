@@ -1354,14 +1354,14 @@ END SUBROUTINE griddim_display
 ! Definisce le funzioni count_distinct e pack_distinct
 #define VOL7D_POLY_TYPE TYPE(grid_def)
 #define VOL7D_POLY_TYPES _grid
-#include "../vol7d/vol7d_distinct.F90"
+#include "array_utilities_inc.F90"
 #undef VOL7D_POLY_TYPE
 #undef VOL7D_POLY_TYPES
 
 ! Definisce le funzioni count_distinct e pack_distinct
 #define VOL7D_POLY_TYPE TYPE(griddim_def)
 #define VOL7D_POLY_TYPES _griddim
-#include "../vol7d/vol7d_distinct.F90"
+#include "array_utilities_inc.F90"
 #undef VOL7D_POLY_TYPE
 #undef VOL7D_POLY_TYPES
 

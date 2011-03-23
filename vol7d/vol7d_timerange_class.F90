@@ -438,7 +438,7 @@ END FUNCTION vol7d_timerange_lesv
 #define VOL7D_POLY_TYPE TYPE(vol7d_timerange)
 #define VOL7D_POLY_TYPES _timerange
 #define ENABLE_SORT
-#include "vol7d_distinct.F90"
+#include "array_utilities_inc.F90"
 #undef VOL7D_POLY_TYPE
 #undef VOL7D_POLY_TYPES
 

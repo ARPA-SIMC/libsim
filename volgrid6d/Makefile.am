@@ -19,8 +19,6 @@ libsim_volgrid6d_la_LDFLAGS =
 libsim_volgrid6d_la_LIBADD = ../log4fortran/liblog4fortran.la \
  ../base/libsim_base.la ../vol7d/libsim_vol7d.la
 
-#noinst_HEADERS = ../vol7d/vol7d_distinct.F90
-
 # c'e` una maniera migliore?
 tmpvar = $(libsim_volgrid6d_la_SOURCES:.f90=.mod)
 nodist_include_HEADERS = $(tmpvar:.F90=.mod)
@@ -48,12 +46,12 @@ grid_id_class.o: gdal.$(OBJEXT)
 grid_id_class.lo: gdal.$(OBJEXT)
 endif
 
-grid_class.o: grid_dim_class.$(OBJEXT) grid_rect_class.$(OBJEXT) grid_id_class.$(OBJEXT) ../vol7d/vol7d_distinct.F90
-grid_class.lo: grid_dim_class.$(OBJEXT) grid_rect_class.$(OBJEXT) grid_id_class.$(OBJEXT) ../vol7d/vol7d_distinct.F90
+grid_class.o: grid_dim_class.$(OBJEXT) grid_rect_class.$(OBJEXT) grid_id_class.$(OBJEXT)
+grid_class.lo: grid_dim_class.$(OBJEXT) grid_rect_class.$(OBJEXT) grid_id_class.$(OBJEXT)
 grid_transform_class.o: grid_class.$(OBJEXT) 
 grid_transform_class.lo: grid_class.$(OBJEXT) 
-volgrid6d_var_class.o: ../vol7d/vol7d_distinct.F90
-volgrid6d_var_class.lo: ../vol7d/vol7d_distinct.F90
+volgrid6d_var_class.o:
+volgrid6d_var_class.lo:
 gridinfo_class.o: volgrid6d_var_class.$(OBJEXT) grid_class.$(OBJEXT) grid_id_class.$(OBJEXT)
 gridinfo_class.lo: volgrid6d_var_class.$(OBJEXT) grid_class.$(OBJEXT) grid_id_class.$(OBJEXT)
 volgrid6d_class.o: volgrid6d_var_class.$(OBJEXT) grid_class.$(OBJEXT) grid_transform_class.$(OBJEXT) gridinfo_class.$(OBJEXT) grid_id_class.$(OBJEXT)

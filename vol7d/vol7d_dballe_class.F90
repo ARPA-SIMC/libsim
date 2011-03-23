@@ -73,7 +73,7 @@ MODULE vol7d_dballe_class
 
 USE char_utilities
 USE vol7d_class
-USE utilities
+USE array_utilities
 use log4fortran
 
 IMPLICIT NONE

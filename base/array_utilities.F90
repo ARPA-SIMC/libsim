@@ -21,10 +21,8 @@
 !> This module defines usefull general purpose function and subroutine
 !!\ingroup base
 #include "config.h"
-MODULE utilities
-USE file_utilities
+MODULE array_utilities
 USE datetime_class
-USE kinds
 
 IMPLICIT NONE
 
@@ -95,7 +93,7 @@ END FUNCTION firsttrue
 #define VOL7D_POLY_TYPE INTEGER
 #define VOL7D_POLY_TYPES _i
 #define ENABLE_SORT
-#include "../vol7d/vol7d_distinct.F90"
+#include "array_utilities_inc.F90"
 #undef ENABLE_SORT
 
 #undef VOL7D_POLY_TYPE
@@ -103,15 +101,15 @@ END FUNCTION firsttrue
 #define VOL7D_POLY_TYPE REAL
 #define VOL7D_POLY_TYPES _r
 #define ENABLE_SORT
-#include "../vol7d/vol7d_distinct.F90"
+#include "array_utilities_inc.F90"
 #undef ENABLE_SORT
 
 #undef VOL7D_POLY_TYPE
 #undef VOL7D_POLY_TYPES
-#define VOL7D_POLY_TYPE REAL(kind=fp_d)
+#define VOL7D_POLY_TYPE DOUBLEPRECISION
 #define VOL7D_POLY_TYPES _d
 #define ENABLE_SORT
-#include "../vol7d/vol7d_distinct.F90"
+#include "array_utilities_inc.F90"
 #undef ENABLE_SORT
 
 #undef VOL7D_POLY_TYPE
@@ -119,7 +117,7 @@ END FUNCTION firsttrue
 #define VOL7D_POLY_TYPE TYPE(datetime)
 #define VOL7D_POLY_TYPES _datetime
 #define ENABLE_SORT
-#include "../vol7d/vol7d_distinct.F90"
+#include "array_utilities_inc.F90"
 #undef ENABLE_SORT
 
 #define VOL7D_NO_PACK
@@ -129,7 +127,7 @@ END FUNCTION firsttrue
 #define VOL7D_POLY_TYPE_AUTO(var) CHARACTER(len=LEN(var))
 #define VOL7D_POLY_TYPES _c
 #define ENABLE_SORT
-#include "../vol7d/vol7d_distinct.F90"
+#include "array_utilities_inc.F90"
 #undef VOL7D_POLY_TYPE_AUTO
 #undef ENABLE_SORT
 
@@ -205,4 +203,4 @@ ENDIF
 END SUBROUTINE pack_distinct_c
 
 
-END MODULE utilities 
+END MODULE array_utilities

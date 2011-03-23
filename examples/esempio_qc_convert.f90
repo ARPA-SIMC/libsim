@@ -22,7 +22,6 @@ program leggi
 
 USE vol7d_class
 USE vol7d_dballe_class
-USE utilities
 USE modqccli
 USE io_units
 

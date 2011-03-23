@@ -47,7 +47,7 @@ USE vol7d_timerange_class
 USE vol7d_level_class
 USE volgrid6d_var_class
 use log4fortran
-USE utilities
+USE array_utilities
 USE grid_id_class
 USE gridinfo_class
 use optional_values

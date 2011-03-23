@@ -20,7 +20,6 @@ MODULE vol7d_netcdf_class
 
 USE char_utilities
 USE vol7d_class
-USE utilities
 USE geo_coord_class
 USE datetime_class
 use netcdf
