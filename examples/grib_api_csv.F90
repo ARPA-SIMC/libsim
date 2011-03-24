@@ -24,19 +24,40 @@ USE volgrid6d_class
 USE char_utilities
 USE grid_id_class
 USE log4fortran
+USE optionparser_class
 IMPLICIT NONE
 
 CHARACTER(len=6),PARAMETER :: lnmspc='gacsv:'
+CHARACTER(len=512) :: output_keys
 
 
 CONTAINS
 
 
-SUBROUTINE grib_api_csv_export(v7d, vg6d, iun, keys)
+! add command-line options specific to this module
+SUBROUTINE grib_api_csv_add_options(opt)
+TYPE(optionparser),INTENT(inout) :: opt
+
+CALL optionparser_add(opt, ' ', 'output-keys', output_keys, '', help= &
+ 'keys that have to appear in the output grib_api_csv file, any grib_api key &
+ &or ''gacsv:xxx''; xxx can be any of: lon, lat, npoint, isodate, value, &
+ &timerange, p1, p1h, p2, p2h, level1, l1, level2, l2, centre, category, &
+ &number, discipline, simpledate, simpleverdate')
+! other local command-line options can be added here
+
+END SUBROUTINE grib_api_csv_add_options
+
+
+! if needed, create a routine for checking local options and call it
+!SUBROUTINE grib_api_csv_check_options()
+!
+!END SUBROUTINE grib_api_csv_check_options
+
+
+SUBROUTINE grib_api_csv_export(v7d, vg6d, iun)
 TYPE(vol7d) :: v7d
 TYPE(volgrid6d) :: vg6d
 INTEGER :: iun
-CHARACTER(len=*) :: keys
 
 TYPE(csv_record) :: csvline
 TYPE(datetime) :: veriftime
@@ -95,18 +116,18 @@ IF (SIZE(v7d%dativar%r) /= SIZE(vg6d%var)) THEN
 ENDIF
 #endif
 
-ncol = word_split(keys, w_s, w_e, ',')
+ncol = word_split(output_keys, w_s, w_e, ',')
 ALLOCATE(key_mask(ncol))
 key_mask(:) = .FALSE.
 
 ! write csv header
 CALL init(csvline)
 DO i = 1, ncol
-  IF (keys(w_s(i):MIN(w_e(i),w_s(i)+LEN(lnmspc)-1)) == lnmspc) THEN
+  IF (output_keys(w_s(i):MIN(w_e(i),w_s(i)+LEN(lnmspc)-1)) == lnmspc) THEN
     key_mask(i) = .TRUE.    ! it is a local namespace key, ie. gacsv:*
     w_s(i) = w_s(i) + LEN(lnmspc) ! shift start pointer to skip prefix
   ENDIF
-  CALL csv_record_addfield(csvline, TRIM(keys(w_s(i):w_e(i))))
+  CALL csv_record_addfield(csvline, TRIM(output_keys(w_s(i):w_e(i))))
 ENDDO
 
 WRITE(iun,'(A)')csv_record_getrecord(csvline)
@@ -131,7 +152,7 @@ DO l = 1, SIZE(vg6d%time)
           DO n = 1, ncol
             IF (key_mask(n)) THEN ! the truth is inside me
 ! TODO add keys: iindex, jindex, kindex, var_description
-              SELECT CASE(keys(w_s(n):w_e(n)))
+              SELECT CASE(output_keys(w_s(n):w_e(n)))
               CASE('lon')
                 CALL getval(v7d%ana(np)%coord, lon=coord)
                 CALL csv_record_addfield_miss(csvline, coord)
@@ -189,17 +210,17 @@ DO l = 1, SIZE(vg6d%time)
                 CALL csv_record_addfield(csvline, csv_simplevertime)
               CASE default
                 CALL l4f_category_log(vg6d%category,L4F_WARN, &
-                 "requested gacsv key "//TRIM(keys(w_s(n):w_e(n)))//" undefined")
+                 "requested gacsv key "//TRIM(output_keys(w_s(n):w_e(n)))//" undefined")
                 CALL csv_record_addfield(csvline, '')
               END SELECT
 
             ELSE ! the truth is in grib_api
 ! TODO handle non integer type in grib_api
-              CALL grib_get(gaid, keys(w_s(n):w_e(n)), csv_igaid, status)
+              CALL grib_get(gaid, output_keys(w_s(n):w_e(n)), csv_igaid, status)
               IF (status /= GRIB_SUCCESS) THEN
                 csv_igaid = imiss
                 CALL l4f_category_log(vg6d%category,L4F_WARN, &
-                 "requested grib_api key "//TRIM(keys(w_s(n):w_e(n)))// &
+                 "requested grib_api key "//TRIM(output_keys(w_s(n):w_e(n)))// &
                  " not found in message")
               ENDIF
               CALL csv_record_addfield_miss(csvline, csv_igaid)

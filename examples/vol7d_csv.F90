@@ -170,6 +170,11 @@ IF (csv_header > 0) THEN ! Main header line
 ! write the header line
   WRITE(iun,'(A)')csv_record_getrecord(csvline)
   CALL delete(csvline)
+
+  DO i = 1, SIZE(csv_desdata)
+    CALL delete(csv_desdata(i))
+  ENDDO
+
 ENDIF ! csv_header > 0
 
 DO i = 1, SIZE(csv_desdata)
@@ -266,6 +271,12 @@ loop7d: DO WHILE(.TRUE.)
   IF (i == 0) EXIT loop7d ! all counters have reached the end
 
 END DO loop7d
+
+DO i = 1, SIZE(csv_desdata)
+  CALL delete(csv_desdata(i))
+  CALL delete(csv_anadesdata(i))
+ENDDO
+IF (ASSOCIATED(mapper)) DEALLOCATE(mapper)
 
 CONTAINS
 

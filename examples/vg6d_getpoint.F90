@@ -39,9 +39,6 @@ INTEGER :: optind, optstatus
 CHARACTER(len=12) :: coord_format, output_format
 CHARACTER(len=512) :: a_name, coord_file, input_file, output_file, &
  network_list, variable_list
-#ifdef HAVE_LIBGRIBAPI
-CHARACTER(len=512) :: output_keys
-#endif
 INTEGER :: category, ier, i, iun, iargc
 character(len=network_name_len) :: network
 type(volgrid6d),pointer :: volgrid(:)
@@ -157,12 +154,9 @@ CALL optionparser_add(opt, ' ', 'output-td', output_td, 1, help= &
  'time definition for output vol7d volume, 0 for reference time (more suitable for &
  &presenting forecast data) and 1 for verification time (more suitable for &
  &comparing forecasts with observations)')
+
 #ifdef HAVE_LIBGRIBAPI
-CALL optionparser_add(opt, ' ', 'output-keys', output_keys, '', help= &
- 'keys that have to appear in the output grib_api_csv file, any grib_api key &
- &or ''gacsv:xxx''; xxx can be any of: lon, lat, npoint, isodate, value, &
- &timerange, p1, p1h, p2, p2h, level1, l1, level2, l2, centre, category, number, discipline, &
- &simpledate, simpleverdate')
+CALL grib_api_csv_add_options(opt) ! add options specific to grib_api_csv output
 #endif
 
 ! help options
@@ -313,7 +307,7 @@ ELSE IF (output_format == 'grib_api_csv') THEN
     OPEN(iun, file=output_file, form='FORMATTED', access='SEQUENTIAL')
   ENDIF
 ! TODO handle volgrid array
-  CALL grib_api_csv_export(v7d_out, volgrid(1), iun, output_keys)
+  CALL grib_api_csv_export(v7d_out, volgrid(1), iun)
   IF (output_file /= '-') CLOSE(iun)
 
 #endif

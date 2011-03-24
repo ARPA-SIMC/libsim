@@ -564,8 +564,6 @@ DO ninput = optind, iargc()-1
 
 #endif
 
-CALL delete(opt) ! check whether I can already get rid of this stuff now
-
 #ifdef HAVE_ORSIM
   ELSE IF (input_format == 'orsim') THEN
     IF (.NOT.ALLOCATED(nl) .OR. (.NOT.ALLOCATED(vl) .AND. .NOT.ALLOCATED(avl))) THEN
@@ -607,6 +605,8 @@ CALL delete(opt) ! check whether I can already get rid of this stuff now
   CALL delete(v7dtmp)
 
 ENDDO
+
+CALL delete(opt) ! check whether I can already get rid of this stuff now
 
 ! displaying/processing
 #ifdef HAVE_DBALLE
