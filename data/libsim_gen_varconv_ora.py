@@ -8,16 +8,17 @@ import sys
 def UniConvTable():
     """Restituisce un dizionario basato sulla tabella di conversione
     delle unita` di misura, presa dai sorgenti di dballe
-    dballe/core/uniconv.gperf di Enrico Zini. La tabella e` incollata
-    cosi` com'e` senza riformattazioni e puo` essere riaggiornata al
+    wreport/trunk/wreport/uniconv.gperf di Enrico Zini. La tabella e`
+    incollata cosi` com'e` senza riformattazioni salvo convertire
+    -273.15001f -> -273.1500 & c. e puo` essere riaggiornata quasi al
     suo posto"""
 
     uniconvtable = {}
     uniconvsrc = """
-"K->C",				1,	-273.15
-"C->K",				1,	273.15
-"K->C/10",			10,	-2731.5
-"C/10->K",			0.1,	273.15
+"K->C",				1,	-273.1500
+"C->K",				1,	273.1500
+"K->C/10",			10,	-2731.500
+"C/10->K",			0.1,	273.1500
 "C->C/10",			10,	0
 "C/10->C",			0.1,	0
 "YEARS->YEAR",			1,	0
@@ -97,9 +98,13 @@ def UniConvTable():
 "GPM->MGP",			1,		0
 "MGP->GPM",			1,		0
 "GPM->m**2/s**2",		9.80665,	0
+"GPM->M**2/S**2",		9.80665,	0
 "MGP->m**2/s**2",		9.80665,	0
+"MGP->M**2/S**2",		9.80665,	0
 "m**2/s**2->GPM",		0.101971621,	0
+"M**2/S**2->GPM",		0.101971621,	0
 "m**2/s**2->MGP",		0.101971621,	0
+"M**2/S**2->MGP",		0.101971621,	0
 "cal/s/cm**2->W/M**2",		41868,		0
 "cal/h/cm**2->W/M**2",		11.63,		0
 """
@@ -165,7 +170,7 @@ EXIT;
     return oratable
 
 
-def UnitFromDballe(file="/usr/share/dballe/dballe.txt"):
+def UnitFromDballe(file="/usr/share/wreport/dballe.txt"):
     """Legge un file in formato dballe.txt e restituisce un
     dizionario (con chiave codice blocal) di dizionari con le chiavi:
     - "unit1"

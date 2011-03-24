@@ -390,6 +390,12 @@ TYPE(timedelta) :: dt1, stepvero
 INTEGER(kind=int_ll) :: tmpmsec
 
 
+IF (SIZE(itime) == 0) THEN ! avoid segmentation fault in case of empty volume
+  ALLOCATE(otime(0), map_tr(0), map_trc(0,0), count_trc(0,0))
+  otimerange = vol7d_timerange_miss
+  RETURN
+ENDIF
+
 ! useful timeranges
 tr_mask(:) = itimerange(:)%timerange == tri .AND. itimerange(:)%p2 /= imiss &
  .AND. itimerange(:)%p2 /= 0 .AND. itimerange(:)%p1 == 0
@@ -797,6 +803,12 @@ TYPE(datetime) :: lstart, lend, tmptime
 INTEGER(kind=int_ll) :: tmpmsec
 
 
+IF (SIZE(itime) == 0) THEN ! avoid segmentation fault in case of empty volume
+  ALLOCATE(otime(0), itime_start(0), itime_end(0))
+  otimerange = vol7d_timerange_miss
+  RETURN
+ENDIF
+
 ! compute lstart = the start time (not the end) of the first
 ! processing interval
 usestart = PRESENT(start) ! treat datetime_miss as .NOT.PRESENT()
@@ -1196,18 +1208,10 @@ TYPE(datetime),INTENT(in),OPTIONAL :: stopp
 TYPE(datetime) :: counter, lstart, lstop
 INTEGER :: i, naddtime
 
-CALL vol7d_smart_sort(this, lsort_time=.TRUE.)
-IF (PRESENT(start)) THEN
-  lstart = start
-ELSE
-  lstart = this%time(1)
-ENDIF
-IF (PRESENT(stopp)) THEN
-  lstop = stopp
-ELSE
-  lstop = this%time(SIZE(this%time))
-ENDIF
-CALL l4f_log(L4F_INFO, 'Time level interval: '//TRIM(to_char(lstart))// &
+CALL safe_start_stop(this, lstart, lstop, start, stopp)
+IF (.NOT. c_e(lstart) .OR. .NOT. c_e(lstop)) RETURN
+
+CALL l4f_log(L4F_INFO, 'vol7d_fill_time: time interval '//TRIM(to_char(lstart))// &
  ' '//TRIM(to_char(lstop)))
 
 ! Count the number of time levels required for completing the series
@@ -1300,17 +1304,11 @@ INTEGER :: n
 LOGICAL, ALLOCATABLE :: time_mask(:)
 TYPE(vol7d) :: v7dtmp
 
-CALL vol7d_smart_sort(this, lsort_time=.TRUE.)
-IF (PRESENT(start)) THEN
-  lstart = start
-ELSE
-  lstart = this%time(1)
-ENDIF
-IF (PRESENT(stopp)) THEN
-  lstop = stopp
-ELSE
-  lstop = this%time(SIZE(this%time))
-ENDIF
+CALL safe_start_stop(this, lstart, lstop, start, stopp)
+IF (.NOT. c_e(lstart) .OR. .NOT. c_e(lstop)) RETURN
+
+CALL l4f_log(L4F_INFO, 'vol7d_fill_time: time interval '//TRIM(to_char(lstart))// &
+ ' '//TRIM(to_char(lstop)))
 
 ALLOCATE(time_mask(SIZE(this%time)))
 time_mask(:) = .TRUE.
@@ -1320,9 +1318,8 @@ DO n = 1, SIZE(this%time)
     time_mask(n) = .FALSE.
   ENDIF
 ENDDO
-IF (ALL(time_mask)) THEN
-  v7dtmp = this ! do not lose time in a simple common case
-  CALL vol7d_fill_time(v7dtmp, that, step, start, stopp)
+IF (ALL(time_mask)) THEN ! do not lose time in a simple common case
+  CALL vol7d_fill_time(this, that, step, start, stopp)
 ELSE
   CALL vol7d_copy(this, v7dtmp, ltime=time_mask)
   CALL vol7d_fill_time(v7dtmp, that, step, start, stopp)
@@ -1330,6 +1327,45 @@ ELSE
 ENDIF
 
 END SUBROUTINE vol7d_regularize_time
+
+
+! private utility routine for checking interval and start-stop times
+! in input missing start-stop values are treated as not present
+! in output missing start-stop values mean "do nothing"
+SUBROUTINE safe_start_stop(this, lstart, lstop, start, stopp)
+TYPE(vol7d),INTENT(inout) :: this
+TYPE(datetime),INTENT(out) :: lstart
+TYPE(datetime),INTENT(out) :: lstop
+TYPE(datetime),INTENT(in),OPTIONAL :: start
+TYPE(datetime),INTENT(in),OPTIONAL :: stopp
+
+lstart = datetime_miss
+lstop = datetime_miss
+! initial safety operation
+CALL vol7d_alloc_vol(this)
+IF (SIZE(this%time) == 0) RETURN ! avoid segmentation fault in case of empty volume
+CALL vol7d_smart_sort(this, lsort_time=.TRUE.)
+
+IF (PRESENT(start)) THEN
+  IF (c_e(start)) THEN
+    lstart = start
+  ELSE
+    lstart = this%time(1)
+  ENDIF
+ELSE
+  lstart = this%time(1)
+ENDIF
+IF (PRESENT(stopp)) THEN
+  IF (c_e(stopp)) THEN
+    lstop = stopp
+  ELSE
+    lstop = this%time(SIZE(this%time))
+  ENDIF
+ELSE
+  lstop = this%time(SIZE(this%time))
+ENDIF
+
+END SUBROUTINE safe_start_stop
 
 
 !> Metodo per normalizzare la coordinata verticale.
