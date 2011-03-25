@@ -357,10 +357,16 @@ end function qcattrvars_new
 
 
 !> Remove data under the predefined grade of confidence.
-!! If  keep_attr is omitted all the attributes will be deleted after peeling
-SUBROUTINE vol7d_peeling(this, keep_attr)
-TYPE(vol7d),INTENT(INOUT)  :: this !< object to peeling
-CHARACTER(len=*),INTENT(in),OPTIONAL :: keep_attr(:)!< Btable descriptor for attribute to retain
+!! If neither \a keep_attr nor \a delete_attr are passed, all the
+!! attributes will be deleted after peeling; if \a keep_attr is
+!! provided, only attributed listed in \a keep_attr will be kept in
+!! output, (\a delete_attr will be ignored); if \a delete_attr is
+!! provided, attributed listed in \a delete_attr will be deleted from
+!! output.
+SUBROUTINE vol7d_peeling(this, keep_attr, delete_attr)
+TYPE(vol7d),INTENT(INOUT)  :: this !< object that has to be peeled
+CHARACTER(len=*),INTENT(in),OPTIONAL :: keep_attr(:) !< Btable of attributes that should be kept after removing data
+CHARACTER(len=*),INTENT(in),OPTIONAL :: delete_attr(:) !< Btable of attributes that should be deleted after removing data
 
 integer :: inddativar,inddatiattr,inddativarattr
 integer :: indqcattrvars
@@ -493,7 +499,7 @@ do indqcattrvars =1,nqcattrvars
   end if
 end do
 
-IF (.NOT.PRESENT(keep_attr)) THEN ! destroy all attributes
+IF (.NOT.PRESENT(keep_attr) .AND. .NOT.PRESENT(delete_attr)) THEN ! destroy all attributes
   IF (ASSOCIATED(this%voldatiattrr)) DEALLOCATE(this%voldatiattrr)
   IF (ASSOCIATED(this%voldatiattrd)) DEALLOCATE(this%voldatiattrd)
   IF (ASSOCIATED(this%voldatiattri)) DEALLOCATE(this%voldatiattri)
@@ -503,19 +509,28 @@ IF (.NOT.PRESENT(keep_attr)) THEN ! destroy all attributes
   CALL delete(this%datiattr)
   CALL delete(this%dativarattr)
 
-ELSE ! set to missing non requested attributes and reform
-  CALL missify_var(this%datiattr%r)
-  CALL missify_var(this%datiattr%d)
-  CALL missify_var(this%datiattr%i)
-  CALL missify_var(this%datiattr%b)
-  CALL missify_var(this%datiattr%c)
+ELSE IF (PRESENT(keep_attr)) THEN ! set to missing non requested attributes and reform
+  CALL keep_var(this%datiattr%r)
+  CALL keep_var(this%datiattr%d)
+  CALL keep_var(this%datiattr%i)
+  CALL keep_var(this%datiattr%b)
+  CALL keep_var(this%datiattr%c)
+  CALL vol7d_reform(this, miss=.TRUE.)
+
+ELSE IF (PRESENT(delete_attr)) THEN ! set to missing requested attributes and reform
+
+  CALL delete_var(this%datiattr%r)
+  CALL delete_var(this%datiattr%d)
+  CALL delete_var(this%datiattr%i)
+  CALL delete_var(this%datiattr%b)
+  CALL delete_var(this%datiattr%c)
   CALL vol7d_reform(this, miss=.TRUE.)
 
 ENDIF
 
 CONTAINS
 
-SUBROUTINE missify_var(var)
+SUBROUTINE keep_var(var)
 TYPE(vol7d_var),POINTER :: var(:)
 
 INTEGER :: i
@@ -528,7 +543,22 @@ IF (ASSOCIATED(var)) THEN
   ENDDO
 ENDIF
 
-END SUBROUTINE missify_var
+END SUBROUTINE keep_var
+
+SUBROUTINE delete_var(var)
+TYPE(vol7d_var),POINTER :: var(:)
+
+INTEGER :: i
+
+IF (ASSOCIATED(var)) THEN
+  DO i = 1, SIZE(var)
+    IF (ANY(var(i)%btable == delete_attr(:))) THEN ! n.b. ANY((//)) = .FALSE.
+      var(i) = vol7d_var_miss
+    ENDIF
+  ENDDO
+ENDIF
+
+END SUBROUTINE delete_var
 
 END SUBROUTINE vol7d_peeling
 

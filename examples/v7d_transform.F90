@@ -387,7 +387,8 @@ IF (LEN_TRIM(attribute_list) > 0) THEN
   DEALLOCATE(w_s, w_e)
 
   IF (.NOT.disable_qc) THEN ! add qc variables not specified yet to alqc
-
+! al is the list of attributes requested by the user
+! alqc is al completed by the attributes required by qc
     DO i = 1, nqcattrvars
       IF (ALL(qcattrvarsbtables(i) /= al(:))) THEN
         n = n + 1
@@ -405,19 +406,23 @@ IF (LEN_TRIM(attribute_list) > 0) THEN
     ENDDO
 
   ELSE ! duplicate al
-
+! al is the list of attributes requested by the user
+! alqc is the same list
     ALLOCATE(alqc(n))
     alqc(1:SIZE(al)) = al(:)
 
   ENDIF
 
 ELSE ! no attributes requested
-
   ALLOCATE(al(0)) ! an empty al is required for safety
   IF (.NOT.disable_qc) THEN ! set alqc to qc variables
+! al is empty
+! alqc is the list of the attributes required by qc
     ALLOCATE(alqc(nqcattrvars))
     alqc(:) = qcattrvarsbtables(:)
   ELSE ! an empty alqc is required for safety
+! al is empty
+! alqc is empty
     ALLOCATE(alqc(0))
   ENDIF
 
@@ -583,12 +588,11 @@ DO ninput = optind, iargc()-1
     ELSE
       set_network_obj = vol7d_network_miss
     ENDIF
-    IF (SIZE(vl) > 0) THEN
+    IF (SIZE(vl) > 0) THEN ! data requested
       CALL import(v7d_osim, vl, nl, timei=s_d, timef=e_d, anavar=avl, attr=alqc, &
        set_network=set_network_obj)
-    ELSE
-      CALL import(v7d_osim, nl, anavar=avl, &
-       set_network=set_network_obj)
+    ELSE ! ana requested
+      CALL import(v7d_osim, nl, anavar=avl, set_network=set_network_obj)
     ENDIF
     v7dtmp = v7d_osim%vol7d
     CALL init(v7d_osim%vol7d) ! nullify without deallocating
@@ -617,7 +621,21 @@ IF (ldisplay) CALL display(v7d)
 
 
 ! apply quality control data removing
-IF (.NOT.disable_qc) CALL vol7d_peeling(v7d, keep_attr=al)
+IF (.NOT.disable_qc) THEN
+#ifdef HAVE_ORSIM
+  IF (input_format == 'orsim') THEN ! no attributes means no attributes!
+    CALL vol7d_peeling(v7d, keep_attr=al)
+  ELSE
+#endif
+    IF (SIZE(al) == 0) THEN ! no attributes means all attributes!
+      CALL vol7d_peeling(v7d, delete_attr=al)
+    ELSE
+      CALL vol7d_peeling(v7d, keep_attr=al)
+    ENDIF
+#ifdef HAVE_ORSIM
+  ENDIF
+#endif
+ENDIF
 
 ! conversion to real required in these cases
 IF ((c_e(istat_proc) .AND. c_e(ostat_proc)) .OR. pre_trans_type /= '' .OR. &
