@@ -16,6 +16,18 @@
 ! You should have received a copy of the GNU General Public License
 ! along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+
+! to translate from C and use here ......
+!#define NC_ERR_READ(nc_status) \
+!    if (nc_status != NC_NOERR) { \
+!        fprintf(stderr, \
+!            "%s: Error reading netCDF file at line %d : %s \n",  ProgName, __LINE__, nc_strerror(nc_status) \
+!        ); \
+!    exit(1);\
+!    }
+
+
+
 MODULE vol7d_netcdf_class
 
 USE char_utilities

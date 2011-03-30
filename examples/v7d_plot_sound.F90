@@ -144,7 +144,7 @@ call import (v7d_dba)
 
 call l4f_category_log(category,L4F_INFO,"importato vol7d")
 
-call vol7d_reform(v7d_dba%vol7d,sort=.true.)
+!call vol7d_reform(v7d_dba%vol7d,sort=.true.)
 
 !call vol7d_normalize_vcoord(v7d_dba%vol7d)
 
@@ -195,7 +195,6 @@ do ana=1, size(v7d_dba%vol7d%ana)
 
         call init(v7d_profile)
         call vol7d_normalize_vcoord(v7d_dba%vol7d,v7d_profile,ana,time,timerange,network)
-
 
         call plot_vertical_plofiles(plot,v7d_profile,1,1,1,1,&
          tcolor=tcolor(ic),tdcolor=tdcolor(ic),&
