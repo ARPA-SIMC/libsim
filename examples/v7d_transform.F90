@@ -638,8 +638,11 @@ IF (.NOT.disable_qc) THEN
 ENDIF
 
 ! conversion to real required in these cases
-IF ((c_e(istat_proc) .AND. c_e(ostat_proc)) .OR. pre_trans_type /= '' .OR. &
- (post_trans_type /= '' .AND. output_template /= '')) THEN
+IF ((c_e(istat_proc) .AND. c_e(ostat_proc)) .OR. pre_trans_type /= '' &
+#ifdef HAVE_LIBGRIBAPI
+ .OR. (post_trans_type /= '' .AND. output_template /= '') &
+#endif
+ ) THEN
 
   lconvr=.false.
   IF (ASSOCIATED(v7d%dativar%d)) THEN
@@ -771,14 +774,24 @@ ELSE IF (output_format == 'csv') THEN
   CALL delete(v7d)
 
 #ifdef HAVE_DBALLE
-ELSE IF (output_format == 'BUFR' .OR. output_format == 'CREX') THEN
-  IF (output_file == '-') THEN
-    CALL l4f_category_log(category, L4F_INFO, 'trying /dev/stdout as stdout unit.')
-    output_file='/dev/stdout'
+ELSE IF (output_format == 'BUFR' .OR. output_format == 'CREX' .OR. output_format == 'dba') THEN
+  IF (output_format == 'BUFR' .OR. output_format == 'CREX') THEN
+    IF (output_file == '-') THEN
+      CALL l4f_category_log(category, L4F_INFO, 'trying /dev/stdout as stdout unit.')
+      output_file='/dev/stdout'
+    ENDIF
+    file=.TRUE.
+
+  ELSE IF (output_format == 'dba') THEN
+    CALL parse_dba_access_info(output_file, dsn, user, password)
+    file=.FALSE.
   ENDIF
+
   IF (output_template == '') output_template = 'generic'
-  CALL init(v7d_dba_out, filename=output_file, FORMAT=output_format, file=.TRUE., &
-   WRITE=.TRUE., wipe=.TRUE.)
+! check whether wipe=file is reasonable
+  CALL init(v7d_dba_out, filename=output_file, FORMAT=output_format, &
+   dsn=dsn, user=user, password=password, file=file, WRITE=.TRUE., wipe=file)
+
   v7d_dba_out%vol7d = v7d
   CALL init(v7d) ! nullify without deallocating
   CALL export(v7d_dba_out, template=output_template)

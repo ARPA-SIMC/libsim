@@ -497,8 +497,8 @@ IF (c_e(this) .AND. c_e(file_id)) THEN
 #ifdef HAVE_LIBGRIBAPI
   IF (this%driver == grid_id_grib_api .AND. file_id%driver == grid_id_grib_api) &
    CALL grib_write(this%gaid, file_id%gaid, ier) ! log ier?
-ENDIF
 #endif
+ENDIF
 #ifdef HAVE_LIBGDAL
 IF (this%driver == grid_id_gdal .AND. file_id%driver == grid_id_gdal) THEN
   ! not implemented, log?
