@@ -446,6 +446,13 @@ ddat=dmiss
 bdat=ibmiss
 cdat=cmiss
 
+!ntime = MIN(SIZE(this%time),nprint)
+!ntimerange = MIN(SIZE(this%timerange),nprint)
+!nlevel = MIN(SIZE(this%level),nprint)
+!nnetwork = MIN(SIZE(this%network),nprint)
+!nana = MIN(SIZE(this%ana),nprint)
+
+IF (SIZE(this%ana) > 0 .AND. SIZE(this%network) > 0) THEN
 if (associated(this%volanai)) then
   do i=1,size(this%anavar%i)
     idat=this%volanai(1,i,1)
@@ -485,6 +492,7 @@ if (associated(this%volanac)) then
   end do
 end if
 cdat=cmiss
+ENDIF
 
 print*,"---- data vector ----"
 print*,""
@@ -505,6 +513,8 @@ ddat=dmiss
 bdat=ibmiss
 cdat=cmiss
 
+IF (SIZE(this%ana) > 0 .AND. SIZE(this%network) > 0 .AND. size(this%time) > 0 &
+ .AND. size(this%level) > 0 .AND. size(this%timerange) > 0) THEN
 if (associated(this%voldatii)) then
   do i=1,size(this%dativar%i)
     idat=this%voldatii(1,1,1,1,i,1)
@@ -544,7 +554,7 @@ if (associated(this%voldatic)) then
   end do
 end if
 cdat=cmiss
-
+ENDIF
 
 print*,"<<<<<<<<<<<<<<<<<<< END vol7d object >>>>>>>>>>>>>>>>>>>>"
 
