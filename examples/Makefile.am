@@ -123,7 +123,7 @@ esempio_geo_coordvect_LDADD =  ../base/libsim_base.la
 endif
 
 if GRIBAPI
-noinst_PROGRAMS += example_vg6d_1 example_vg6d_2 example_vg6d_3 example_vg6d_4 example_vg6d_5
+noinst_PROGRAMS += example_vg6d_1 example_vg6d_2 example_vg6d_3 example_vg6d_4 example_vg6d_5 example_vg6d_9
 
 example_vg6d_1_SOURCES = example_vg6d_1.f90
 example_vg6d_1_LDADD = ../volgrid6d/libsim_volgrid6d.la ../base/libsim_base.la ../vol7d/libsim_vol7d.la ../log4fortran/liblog4fortran.la
@@ -139,6 +139,9 @@ example_vg6d_4_LDADD = ../volgrid6d/libsim_volgrid6d.la ../base/libsim_base.la .
 
 example_vg6d_5_SOURCES = example_vg6d_5.f90
 example_vg6d_5_LDADD = ../volgrid6d/libsim_volgrid6d.la ../base/libsim_base.la ../vol7d/libsim_vol7d.la ../log4fortran/liblog4fortran.la
+
+example_vg6d_9_SOURCES = example_vg6d_9.f90
+example_vg6d_9_LDADD = ../volgrid6d/libsim_volgrid6d.la ../base/libsim_base.la ../vol7d/libsim_vol7d.la ../log4fortran/liblog4fortran.la
 
 if DBALLE
 noinst_PROGRAMS += example_vg6d_6 example_vg6d_7 example_vg6d_8

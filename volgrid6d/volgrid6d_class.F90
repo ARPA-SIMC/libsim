@@ -3116,4 +3116,7 @@ end module volgrid6d_class
 !! \brief Programma trasformazione da volgrid6d a vol7d
 
 !>\example example_vg6d_7.f90
-!! \brief Programma trasformazione da vol7d a volgrid7d
+!! \brief Programma trasformazione da vol7d a volgrid6d
+
+!>\example example_vg6d_9.f90
+!! \brief  Example to create a grib editionNumber = 2 file from data generated in memory using a grib_api template
