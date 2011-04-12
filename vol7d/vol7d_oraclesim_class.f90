@@ -88,7 +88,7 @@ TYPE(attr_builder) :: dataattr_builder(6) = (/ & ! types: rdibc
 ! tabella reti e anagrafica
 TYPE(vol7d) :: netana(oraclesim_netmax)
 LOGICAL :: networktable(oraclesim_netmax) = .FALSE.
-INTEGER, PARAMETER :: netana_nvarr=2, netana_nvari=1, netana_nvarc=2
+INTEGER, PARAMETER :: netana_nvarr=3, netana_nvari=1, netana_nvarc=2
 
 PRIVATE
 PUBLIC vol7d_oraclesim, init, delete, import!, oraclesim_netmax
@@ -249,7 +249,7 @@ END SUBROUTINE vol7d_oraclesim_delete
 !! </TABLE>
 !!
 !! Le variabili di anagrafica attualmente disponibili sono:
-!!  - 'B07001' station height (reale)
+!!  - 'B07030' station height (reale)
 !!  - 'B07031' barometer height (reale)
 !!  - 'B01192' Oracle station id (intero)
 !!  - 'B01019' station name (carattere)
@@ -327,8 +327,7 @@ INTEGER(kind=int_b) :: msg(256)
 LOGICAL :: lanar(netana_nvarr), lanai(netana_nvari), lanac(netana_nvarc), &
  full_qcinfo
 ! per attributi
-INTEGER :: attr_in_ind(SIZE(dataattr_builder)), &
- attr_out_ind(SIZE(dataattr_builder)), nda_type(5)
+INTEGER :: attr_out_ind(SIZE(dataattr_builder)), nda_type(5)
 
 CALL getval(timei, simpledate=datai)
 CALL getval(timef, simpledate=dataf)
@@ -385,26 +384,20 @@ CALL l4f_log(L4F_INFO, 'in oraclesim_class, nvar='//to_char(nvar))
 
 ! Controllo gli attributi richiesti
 ! inizializzo a 0 attributi
-attr_in_ind(:) = 0
 attr_out_ind(:) = 0
 nda_type(:) = 0
 ! controllo cosa e` stato richiesto
 IF (PRESENT(attr)) THEN
-  DO i = 1, SIZE(attr)
-    DO j = 1, SIZE(dataattr_builder)
+  DO j = 1, SIZE(dataattr_builder)
+    DO i = 1, SIZE(attr)
       IF (attr(i) == dataattr_builder(j)%btable .OR. &
-       attr(i) == dataattr_builder(j)%btable(2:)) THEN
+       attr(i) == dataattr_builder(j)%btable(2:) .OR. attr(i) == '*') THEN
         nda_type(dataattr_builder(j)%vartype) = &
          nda_type(dataattr_builder(j)%vartype) + 1
-        attr_in_ind(j) = i
         attr_out_ind(j) = nda_type(dataattr_builder(j)%vartype)
         EXIT
       ENDIF
     ENDDO
-    IF (j > SIZE(dataattr_builder)) THEN
-      CALL l4f_log(L4F_WARN, 'attributo variabile oraclesim '//TRIM(attr(i))// &
-       ' non valido, lo ignoro')
-    ENDIF
   ENDDO
 ENDIF
 ! B33192, B33196, B33197 allow full qc, update when necessary
@@ -611,22 +604,22 @@ DO i = 1, nvar
 
 ! Creo le variabili degli attributi
   DO j = 1, SIZE(dataattr_builder)
-    IF (attr_in_ind(j) > 0 .AND. attr_out_ind(j) > 0) THEN
+    IF (attr_out_ind(j) > 0) THEN
       IF (dataattr_builder(j)%vartype == 1) THEN
         CALL init(v7dtmp%datiattr%r(attr_out_ind(j)), &
-         attr(attr_in_ind(j)), unit='NUMERIC', scalefactor=0)
+         dataattr_builder(j)%btable, unit='NUMERIC', scalefactor=0)
       ELSE IF (dataattr_builder(j)%vartype == 2) THEN
         CALL init(v7dtmp%datiattr%d(attr_out_ind(j)), &
-         attr(attr_in_ind(j)), unit='NUMERIC', scalefactor=0)
+         dataattr_builder(j)%btable, unit='NUMERIC', scalefactor=0)
       ELSE IF (dataattr_builder(j)%vartype == 3) THEN
         CALL init(v7dtmp%datiattr%i(attr_out_ind(j)), &
-         attr(attr_in_ind(j)), unit='NUMERIC', scalefactor=0)
+         dataattr_builder(j)%btable, unit='NUMERIC', scalefactor=0)
       ELSE IF (dataattr_builder(j)%vartype == 4) THEN
         CALL init(v7dtmp%datiattr%b(attr_out_ind(j)), &
-         attr(attr_in_ind(j)), unit='NUMERIC', scalefactor=0)
+         dataattr_builder(j)%btable, unit='NUMERIC', scalefactor=0)
       ELSE IF (dataattr_builder(j)%vartype == 5) THEN
         CALL init(v7dtmp%datiattr%c(attr_out_ind(j)), &
-         attr(attr_in_ind(j)), unit='CCITTIA5', scalefactor=0)
+         dataattr_builder(j)%btable, unit='CCITTIA5', scalefactor=0)
       ENDIF
     ENDIF
   ENDDO
@@ -705,7 +698,7 @@ END SUBROUTINE vol7d_oraclesim_importvvns
 !! vol7d_class::vol7d::volanar, vol7d_class::vol7d::volanac se il
 !! parametro \a anavar viene fornito. Le variabili di anagrafica
 !! attualmente disponibili sono:
-!!  - 'B07001' station height (reale)
+!!  - 'B07030' station height (reale)
 !!  - 'B07031' barometer height (reale)
 !!  - 'B01192' Oracle station id (intero)
 !!  - 'B01019' station name (carattere)
@@ -900,8 +893,10 @@ CALL vol7d_alloc(netana(netid), nnetwork=1, nana=nana, &
  nanavarr=netana_nvarr, nanavari=netana_nvari, nanavarc=netana_nvarc)
 CALL vol7d_alloc_vol(netana(netid))
 
-CALL init(netana(netid)%anavar%r(1), btable='B07001', unit='M') ! station height
+CALL init(netana(netid)%anavar%r(1), btable='B07030', unit='M') ! station height
 CALL init(netana(netid)%anavar%r(2), btable='B07031', unit='M') ! barometer height
+! la prossima riga dovra` essere eliminata ad avvenuta transizione a dballe 5.5
+CALL init(netana(netid)%anavar%r(3), btable='B07001', unit='M') ! station height
 CALL init(netana(netid)%anavar%i(1), btable='B01192', unit='NUMERIC', &
  scalefactor=0) ! Oracle station id
 CALL init(netana(netid)%anavar%c(1), btable='B01019', unit='CCITTIA5', &
@@ -918,6 +913,9 @@ IF (i /= 0) THEN
   CALL l4f_log(L4F_FATAL, 'in oraclesim_getanavol, '//TRIM(cstr_to_fchar(msg)))
   CALL raise_fatal_error()
 ENDIF
+! la prossima riga dovra` essere eliminata ad avvenuta transizione a dballe 5.5
+! modificare congiuntamente anche netana_nvarr=2
+netana(netid)%volanar(:,3,1) = netana(netid)%volanar(:,1,1)
 
 ismiss = .FALSE.
 DO i = 1, nana

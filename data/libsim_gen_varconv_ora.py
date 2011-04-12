@@ -133,6 +133,7 @@ def UnitFromOracle():
     - "description"
     """
     oratable = []
+    pollprevhack = {}
     query = """
 set lines 350
 set pages 10000
@@ -140,13 +141,14 @@ set verify off
 set feed off
 set heading off
 set colsep ','
-col IDENT format 999
+col IDENT format 9999
 --col BLOCAL format A6
 --v.UMIS_CODICE_AUSILIARIO
 SELECT v.IDENTNR IDENT, v.BLOCAL_NEW BLOCAL, v.UMIS_CODICE_PRINCIPALE,
        v.UMIS_CODICE_AUSILIARIO, u.ABBREVIAZIONE, v.DESCRIZIONE
 FROM MET_VARIABILI_DEFINITE v, MET_UNITA_MISURA u
-WHERE v.BLOCAL_NEW != ' ' AND v.BLOCAL_NEW IS NOT NULL AND v.UMIS_CODICE_PRINCIPALE = u.CODICE
+--WHERE v.BLOCAL_NEW != ' ' AND v.BLOCAL_NEW IS NOT NULL AND v.UMIS_CODICE_PRINCIPALE = u.CODICE
+WHERE ((v.BLOCAL_NEW != ' ' AND v.BLOCAL_NEW IS NOT NULL) OR (v.IDENTNR >= 1360 AND v.IDENTNR <= 1402)) AND v.UMIS_CODICE_PRINCIPALE = u.CODICE
 ORDER BY IDENTNR;
 EXIT;
 """
@@ -165,8 +167,22 @@ EXIT;
                          "umis_ausil": row[3].rstrip(),
                          "umis_abbr": row[4].rstrip(),
                          "description": row[5]})
+
+        if oratable[-1]["oracleid"] >= 360 and oratable[-1]["oracleid"] <= 402:
+            pollprevhack[oratable[-1]["oracleid"]] = oratable[-1]
     
     sqlplus.wait()
+    for row,ind in zip(oratable,range(len(oratable))):
+        if row["blocal"] == "":
+            if row["oracleid"] >= 1360 and row["oracleid"] <= 1402:
+                try:
+                    tmp = pollprevhack[row["oracleid"]-1000]["blocal"]
+                    oratable[ind]["blocal"] = tmp
+                except:
+                    print "Error:, the table has changed, please modify",sys.argv[0]
+                    raise
+            else:
+                print "Strange situation"
     return oratable
 
 
