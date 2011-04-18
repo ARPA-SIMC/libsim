@@ -44,11 +44,12 @@ INTEGER :: licsv_column(SIZE(icsv_column))
 LOGICAL :: no_miss, no_missa, anaonly, different
 CHARACTER(len=50) :: desdata(7)
 TYPE(csv_record) :: csvline, csv_desdata(7), csv_anadesdata(7)
-INTEGER :: i, i1, i2, i3, i4, i5, i6, i7, nv, ndvar
+INTEGER :: i, i1, i2, i3, i4, i5, i6, i7, nv, ndvar, nav, ndv
 INTEGER,POINTER :: w_s(:), w_e(:)
 TYPE(vol7d_var_mapper),POINTER :: mapper(:)
 LOGICAL :: analine
 
+NULLIFY(mapper)
 CALL vol7d_alloc_vol(v7d) ! be safe
 
 ! Filter requested variables
@@ -89,6 +90,19 @@ IF (SIZE(v7d%time) == 0 .AND. SIZE(v7d%level) == 0 .AND. &
 ELSE
   anaonly = .FALSE.
 ENDIF
+
+nav = COUNT(mapper(:)%cat == 'av')
+ndv = COUNT(mapper(:)%cat == 'dv')
+IF ((ndv > 0 .AND. &
+ (SIZE(v7d%ana) == 0 .OR. SIZE(v7d%network) == 0 .OR. &
+ SIZE(v7d%time) == 0 .OR. SIZE(v7d%level) == 0 .OR. &
+ SIZE(v7d%timerange) == 0)) .OR. &
+ (nav > 0 .AND. &
+ (SIZE(v7d%ana) == 0 .OR. SIZE(v7d%network) == 0))) THEN
+  IF (ASSOCIATED(mapper)) DEALLOCATE(mapper)
+  RETURN ! unexpectedly empty volume
+ENDIF
+  
 
 ! For column reordering
 icsv_colstart(:) = 1

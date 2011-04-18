@@ -138,7 +138,7 @@ ELSE
      step, start, frac_valid, other=other, stat_proc_input=stat_proc_input)
     CALL vol7d_recompute_stat_proc_diff(this, that2, stat_proc, &
      step, full_steps, other=other1)
-    CALL vol7d_append(other, other1, sort=.TRUE.)
+    CALL vol7d_merge(other, other1, sort=.TRUE.)
   ELSE
     CALL vol7d_recompute_stat_proc_agg(this, that1, stat_proc, &
      step, start, frac_valid, stat_proc_input=stat_proc_input)

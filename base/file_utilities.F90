@@ -649,10 +649,12 @@ LOGICAL,INTENT(IN) :: check_space
 CHARACTER(len=*),INTENT(OUT),OPTIONAL :: field
 INTEGER,INTENT(OUT),OPTIONAL :: ier
 
+CHARACTER(len=1) :: dummy ! this prevents a memory leak in TRANSFER()???
+
 ocursor = ocursor + 1
 IF (PRESENT(field)) THEN
   IF (ocursor <= LEN(field)) THEN
-    field(ocursor:ocursor) = TRANSFER(char, field)
+    field(ocursor:ocursor) = TRANSFER(char, dummy)
   ENDIF
 ENDIF
 IF (check_space) THEN

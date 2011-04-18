@@ -100,9 +100,9 @@ NULLIFY(poly)
 !questa chiamata prende dal launcher il nome univoco
 CALL l4f_launcher(a_name,a_name_force="v7d_transform")
 !init di log4fortran
-ier=l4f_init()
+ier = l4f_init()
 !imposta a_name
-category=l4f_category_get(a_name//".main")
+category = l4f_category_get(a_name//".main")
 
 !!$now = datetime_new(now=datetime_utc)
 !!$CALL getval(now, year=yy, month=mm, day=dd)
@@ -878,6 +878,8 @@ ELSE IF (input_format == 'orsim') THEN
   CALL delete(v7d_osim)
 #endif
 ENDIF
+
+ier = l4f_fini()
 
 CONTAINS
 
