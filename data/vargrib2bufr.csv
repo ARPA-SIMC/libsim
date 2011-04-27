@@ -67,7 +67,7 @@ B12103,Dew point temperature,,98,128,168,255,1.0,0.0
 B13001,Specific humidity,Kg/Kg,255,2,51,255,1.0,0.0
 B13003,Relative humidity,Percent,255,2,52,255,1.0,0.0
 B13011,Total precipitation,Kg/m**2,255,2,61,255,1.0,0.0
-B13011,Total precipitation,m,98,128,228,255,0.001,0.0
+B13011,Total precipitation,m,98,128,228,255,1000.,0.0
 B13130,Large scale snow (invented),Kg/m**2,98,128,144,255,1.0,0.0
 B13192,Cloud liquid water content (invented),Kg/Kg,200,201,31,255,1.0,0.0
 B13192,Cloud liquid water content (invented),Kg/Kg,78,201,31,255,1.0,0.0
