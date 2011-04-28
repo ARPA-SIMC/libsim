@@ -119,6 +119,11 @@ INTERFACE OPERATOR (<=)
   MODULE PROCEDURE vol7d_timerange_le, vol7d_timerange_lesv
 END INTERFACE
 
+! da documentare in inglese assieme al resto
+INTERFACE c_e
+  MODULE PROCEDURE vol7d_timerange_c_e
+END INTERFACE
+
 INTERFACE count_distinct
   MODULE PROCEDURE count_distinct_timerange
 END INTERFACE
@@ -432,6 +437,13 @@ DO i = 1, SIZE(that)
 ENDDO
 
 END FUNCTION vol7d_timerange_lesv
+
+
+FUNCTION vol7d_timerange_c_e(this) RESULT(c_e)
+TYPE(vol7d_timerange),INTENT(IN) :: this
+LOGICAL :: c_e
+c_e = this /= vol7d_timerange_miss
+END FUNCTION vol7d_timerange_c_e
 
 
 ! Definisce le funzioni count_distinct e pack_distinct

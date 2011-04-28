@@ -56,8 +56,11 @@ TYPE(vol7d_network), ALLOCATABLE :: nl(:)
 CHARACTER(len=10), ALLOCATABLE :: vl(:), avl(:), al(:), alqc(:)
 CHARACTER(len=23) :: start_date, end_date
 CHARACTER(len=19) :: start_date_default, end_date_default
+CHARACTER(len=20) :: levelc, timerangec
 TYPE(datetime) :: now, s_d, e_d
-INTEGER :: iun, ier, i, j, n, ninput, yy, mm, dd, iargc
+TYPE(vol7d_level) :: level
+TYPE(vol7d_timerange) :: timerange
+INTEGER :: iun, ier, i, j, n, ninput, yy, mm, dd, iargc, i1, i2, i3, i4
 INTEGER,POINTER :: w_s(:), w_e(:)
 TYPE(vol7d) :: v7d, v7d_coord, v7dtmp, v7d_comp1, v7d_comp2, v7d_comp3
 TYPE(geo_coordvect),POINTER :: poly(:)
@@ -186,12 +189,19 @@ CALL optionparser_add(opt, ' ', 'attribute-list', attribute_list, '', help= &
  'if input-format is of database type, list of data attributes to be extracted &
  &in the form of a comma-separated list of B-table alphanumeric codes, &
  &e.g. ''B33196,B33197''')
+CALL optionparser_add(opt, ' ', 'level', levelc, ',,,', help= &
+ 'if input-format is of database type, vertical level to be extracted &
+ &in the form level1,l1,level2,l2 empty fields indicate missing data, &
+&default is all levels in database')
+CALL optionparser_add(opt, ' ', 'timerange', timerangec, ',,', help= &
+ 'if input-format is of database type, timerange to be extracted &
+ &in the form timerange,p1,p2 empty fields indicate missing data, &
+ &default is all timeranges in database')
 CALL optionparser_add(opt, ' ', 'set-network', set_network, '', help= &
  'if input-format is of database type, collapse all the input data into a single &
  &pseudo-network with the given name, empty for keeping the original networks')
 CALL optionparser_add(opt, ' ', 'disable-qc', disable_qc, help= &
  'desable data removing based on SIMC quality control.')
-
 
 ! option for displaying/processing
 CALL optionparser_add(opt, 'd', 'display', ldisplay, help= &
@@ -438,6 +448,35 @@ ELSE
   c_s = datetime_miss
 ENDIF
 
+! check level
+CALL init(argparse, levelc, ',', nfield=n)
+IF (n < 4) THEN
+  CALL l4f_category_log(category, L4F_ERROR, &
+   'error in command-line parameters, wrong syntax for --level: ' &
+   //TRIM(levelc))
+  CALL raise_fatal_error()
+ENDIF
+CALL csv_record_getfield(argparse, i1)
+CALL csv_record_getfield(argparse, i2)
+CALL csv_record_getfield(argparse, i3)
+CALL csv_record_getfield(argparse, i4)
+CALL init(level, level1=i1, l1=i2, level2=i3, l2=i4)
+CALL delete(argparse)
+
+! check timerange
+CALL init(argparse, timerangec, ',', nfield=n)
+IF (n < 3) THEN
+  CALL l4f_category_log(category, L4F_ERROR, &
+   'error in command-line parameters, wrong syntax for --timerange: ' &
+   //TRIM(timerangec))
+  CALL raise_fatal_error()
+ENDIF
+CALL csv_record_getfield(argparse, i1)
+CALL csv_record_getfield(argparse, i2)
+CALL csv_record_getfield(argparse, i3)
+CALL init(timerange, timerange=i1, p1=i2, p2=i3)
+CALL delete(argparse)
+
 ! check comp_stat_proc
 istat_proc = imiss
 ostat_proc = imiss
@@ -454,8 +493,8 @@ IF (comp_stat_proc /= '') THEN
   IF (.NOT.c_e(istat_proc) .OR. .NOT.c_e(ostat_proc)) THEN
     CALL l4f_category_log(category, L4F_ERROR, &
      'error in command-line parameters, wrong syntax for --comp-stat-proc: ' &
-     //comp_stat_proc)
-    CALL EXIT(1)
+     //TRIM(comp_stat_proc))
+    CALL raise_fatal_error()
   ENDIF
 ENDIF
 
@@ -589,8 +628,9 @@ DO ninput = optind, iargc()-1
       set_network_obj = vol7d_network_miss
     ENDIF
     IF (SIZE(vl) > 0) THEN ! data requested
-      CALL import(v7d_osim, vl, nl, timei=s_d, timef=e_d, anavar=avl, attr=alqc, &
-       set_network=set_network_obj)
+      CALL import(v7d_osim, vl, nl, timei=s_d, timef=e_d, &
+       level=level, timerange=timerange, &
+       anavar=avl, attr=alqc, set_network=set_network_obj)
     ELSE ! ana requested
       CALL import(v7d_osim, nl, anavar=avl, set_network=set_network_obj)
     ENDIF

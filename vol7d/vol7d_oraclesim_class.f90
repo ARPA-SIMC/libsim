@@ -351,11 +351,11 @@ DO nvin = 1, SIZE(var)
     IF (vartable_s(nvbt)%varbt == var(nvin)) THEN
 
       IF (PRESENT(level))THEN
-        IF (vartable_db(nvbt)%level /= level) CYCLE
+        IF (c_e(level) .AND. vartable_db(nvbt)%level /= level) CYCLE
       END IF
 
       IF (PRESENT(timerange))THEN
-        IF (vartable_db(nvbt)%timerange /= timerange) CYCLE
+        IF (c_e(timerange) .AND. vartable_db(nvbt)%timerange /= timerange) CYCLE
       END IF
 
       found = .TRUE.
