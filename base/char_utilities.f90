@@ -652,7 +652,9 @@ END FUNCTION line_split_get_nlines
 
 
 !> Return the \a nline -th line obtained after splitting. If \a nline
-!! is out of range, a missing value is returned.
+!! is out of range, a missing value is returned. The line is always
+!! left-aligned and it is padded with trailing blanks up to the
+!! requested line length.
 FUNCTION line_split_get_line(this, nline) RESULT(line)
 TYPE(line_split), INTENT(in) :: this !< object initialised with the line to be splitted
 INTEGER, INTENT(in) :: nline !< index of the line to be returned

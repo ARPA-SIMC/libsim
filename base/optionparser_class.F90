@@ -698,7 +698,7 @@ IF (ASSOCIATED(this%description_msg)) THEN
   WRITE(*,'()')
   help_line = line_split_new(cstr_to_fchar(this%description_msg), ncols)
   DO j = 1, line_split_get_nlines(help_line)
-    WRITE(*,'(A)')line_split_get_line(help_line,j)
+    WRITE(*,'(A)')TRIM(line_split_get_line(help_line,j))
   ENDDO
   CALL delete(help_line)
 ENDIF
