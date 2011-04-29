@@ -685,7 +685,7 @@ ncols = default_columns()
 IF (ASSOCIATED(this%usage_msg)) THEN
   help_line = line_split_new(cstr_to_fchar(this%usage_msg), ncols)
   DO j = 1, line_split_get_nlines(help_line)
-    WRITE(*,'(A)')line_split_get_line(help_line,j)
+    WRITE(*,'(A)')TRIM(line_split_get_line(help_line,j))
   ENDDO
   CALL delete(help_line)
 ELSE
@@ -712,7 +712,7 @@ DO i = 1, this%options%arraysize ! loop over options
   IF (ASSOCIATED(this%options%array(i)%help_msg)) THEN
     help_line = line_split_new(cstr_to_fchar(this%options%array(i)%help_msg), ncols-indent)
     DO j = 1, line_split_get_nlines(help_line)
-      WRITE(*,'(T10,A)')line_split_get_line(help_line,j)
+      WRITE(*,'(T10,A)')TRIM(line_split_get_line(help_line,j))
     ENDDO
     CALL delete(help_line)
   ENDIF
