@@ -1043,15 +1043,14 @@ if (present(var).and. present(varkind))then
   end do
 else if (present(var))then
 
-  if (any(c_e(var)))then
-    do i=1, nvar
-      call init (vol7dtmp%dativar%c(i), btable=var(i))
-    end do
+  do i=1, nvar
+    call init (vol7dtmp%dativar%c(i), btable=var(i))
+  end do
 
-  else
+else
 
-    vol7dtmp%dativar%c=pack_distinct(buffer%dativar, ndativarc, back=.TRUE.)
-  end if
+    vol7dtmp%dativar%c=pack_distinct(buffer%dativar, ndativarc, back=.TRUE.,mask=(buffer%dativar%btable /= DBA_MVC))
+
 end if
 
 
@@ -1294,12 +1293,17 @@ if (lattr) then
 
   allocate  (this%data_id( nana, ntime, nlevel, ntimerange, nnetwork),stat=istat)
   if (istat/= 0) THEN
-  CALL l4f_category_log(this%category,L4F_ERROR,'cannot allocate ' &
-   //TRIM(to_char(nana*ntime*nlevel*ntimerange*nnetwork))//' data_id elements')
-  CALL raise_fatal_error()
-ENDIF
+    CALL l4f_category_log(this%category,L4F_ERROR,'cannot allocate ' &
+     //TRIM(to_char(nana*ntime*nlevel*ntimerange*nnetwork))//' data_id elements')
+    CALL raise_fatal_error()
+    
+  ENDIF
 
-this%data_id=DBA_MVI
+  this%data_id=DBA_MVI
+
+else
+
+  nullify(this%data_id)
 
 end if
 
@@ -1375,6 +1379,7 @@ do i =1, N
    end if
 
    if(c_e(buffer(i)%datoc)) then
+
      inddativar = firsttrue(buffer(i)%dativar == vol7dtmp%dativar%c)
      vol7dtmp%voldatic( &
       indana,indtime,indlevel,indtimerange,inddativar,indnetwork &
