@@ -1,5 +1,7 @@
  // Copyright (C) 2011  ARPA-SIM <urpsim@smr.arpa.emr.it>
  // authors:
+
+ // Emanuele Di Giacomo <edigiacomo@arpa.emr.it>
  // Davide Cesari <dcesari@arpa.emr.it>
  // Paolo Patruno <ppatruno@arpa.emr.it>
 
