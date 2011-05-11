@@ -19,7 +19,9 @@ PROGRAM vg6d_transform
 #include "config.h"
 use log4fortran
 use volgrid6d_class
+#ifdef VAPOR
 use volgrid6d_vapor_class
+#endif
 use grid_class
 use grid_transform_class
 use grid_id_class
