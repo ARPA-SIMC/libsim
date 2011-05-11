@@ -42,12 +42,12 @@ type(transform_def) :: trans
 
 integer :: nx,ny,component_flag,npx,npy
 doubleprecision :: xmin, xmax, ymin, ymax
-INTEGER :: ix, iy, fx, fy
+INTEGER :: ix, iy, fx, fy, time_definition
 doubleprecision :: latitude_south_pole,longitude_south_pole,angle_rotation
 character(len=80) :: proj_type,trans_type,sub_type
 
 doubleprecision ::x,y,lon,lat
-logical :: c2agrid
+logical :: c2agrid, decode
 type(optionparser) :: opt
 INTEGER :: optind, optstatus
 integer :: iargc
@@ -81,7 +81,7 @@ opt = optionparser_new(description_msg= &
 CALL optionparser_add(opt, 'v', 'trans-type', trans_type, 'inter', help= &
  'transformation type: ''inter'' for interpolation, ''boxinter'' for &
  &statistical interpolation on boxes, ''zoom'' for zooming, &
- &''boxregrid'' for resolution reduction, ''none'' for no operation')
+ &''boxregrid'' for resolution reduction, ''metamorphosis'' for change in format only')
 CALL optionparser_add(opt, 'z', 'sub-type', sub_type, 'near', help= &
  'transformation subtype, for inter: ''near'', ''bilin'', &
  &for ''boxinter'' and ''boxregrid'': ''average'', ''max'', ''min'', &
@@ -166,9 +166,17 @@ CALL optionparser_add(opt, 't', 'component-flag', component_flag, &
                                 ! &Any other character indicates to keep the &
                                 ! &corresponding original scanning mode value')
 
+
+
+CALL optionparser_add(opt, ' ', 'time-definition', time_definition, 0, help= &
+ 'time definition for inport volume, 0 for reference time (more suitable for &
+ &presenting forecast data) and 1 for verification time (more suitable for &
+ &comparing forecasts with observations)')
+
+
                                 ! display option
 CALL optionparser_add(opt, ' ', 'display', ldisplay, help= &
- 'briefly display the data volume imported, warning: this option is incompatible &
+ 'briefly display the data volume imported and exported, warning: this option is incompatible &
  &with output on stdout.')
                                 ! help options
 CALL optionparser_add_help(opt, 'h', 'help', help='show an help message and exit')
@@ -246,19 +254,25 @@ IF (trans_type == 'inter' .OR. trans_type == 'boxinter') THEN ! griddim_out need
 
 ENDIF
 
-CALL import(volgrid,filename=infile,decode=.FALSE.,categoryappend="input")
+IF (trans_type == 'metamorphosis') THEN 
+  decode=.true.
+else
+  decode=.false.
+endif
+
+CALL import(volgrid,filename=infile,decode=decode, time_definition=time_definition, categoryappend="input")
 if (c2agrid) call vg6d_c2a(volgrid)
 IF (ldisplay) THEN
   IF (ASSOCIATED(volgrid)) THEN
     DO i = 1,SIZE(volgrid)
       PRINT*,'input grid >>>>>>>>>>>>>>>>>>>>'
-      CALL display(volgrid(i)%griddim)
+      CALL display(volgrid(i))
     ENDDO
   ENDIF
 ENDIF
 
 
-IF (trans_type == 'none') THEN  ! export with no operation
+IF (trans_type == 'metamorphosis') THEN  ! export with no operation
 
   call write_to_file_out(volgrid)
 
@@ -278,8 +292,10 @@ else
      volgrid6d_out=volgrid_out,clone=.TRUE.,categoryappend="transformed")
 
     IF (ldisplay) THEN ! done here in order to print final ellipsoid
-      PRINT*,'output grid >>>>>>>>>>>>>>>>>>>>'
-      IF (ASSOCIATED(volgrid_out)) CALL display(volgrid_out(1)%griddim)
+      DO i = 1,SIZE(volgrid)
+        PRINT*,'output grid >>>>>>>>>>>>>>>>>>>>'
+        IF (ASSOCIATED(volgrid_out)) CALL display(volgrid_out(1))
+      END DO
     ENDIF
 
   ELSE
@@ -320,14 +336,14 @@ IF (i == 3) THEN ! template requested (grib_api:template_file:output_file)
   IF (c_e(gaid_template)) THEN
     CALL export (myvolgrid, filename=outfile(w_s(1):w_e(1))//':'// &
      outfile(w_s(3):w_e(3)), gaid_template=gaid_template, &
-     categoryappend="noop_export_tmpl")
+     categoryappend="export_tmpl")
   ELSE
     CALL l4f_category_log(category,L4F_FATAL, &
      "opening output template "//TRIM(outfile))
     CALL raise_fatal_error()
   ENDIF
 
-ELSE ! simple export
+ELSE
 
   if (output_format == "grib_api") then 
 #ifdef HAVE_LIBGRIBAPI
@@ -342,8 +358,10 @@ ELSE ! simple export
 
 #ifdef VAPOR
     do i =1,size(myvolgrid)
-      call export (myvolgrid(i),normalize=.True.,time_definition=1,&
-       filename=trim(outfile)//t2c(i)//".vdf")
+      CALL l4f_category_log(category,L4F_INFO, &
+       "exporting to vapor vdf file: "//trim(outfile)//"_"//t2c(i)//".vdf")
+      call export (myvolgrid(i),normalize=.True.,&
+       filename=trim(outfile)//"_"//t2c(i)//".vdf")
     end do
 #else
     CALL l4f_category_log(category,L4F_FATAL, &
@@ -361,7 +379,7 @@ ELSE ! simple export
 
 ENDIF
 
-CALL l4f_category_log(category,L4F_INFO,"end")
+CALL l4f_category_log(category,L4F_INFO,"end export")
 
 DEALLOCATE(w_s, w_e)
 

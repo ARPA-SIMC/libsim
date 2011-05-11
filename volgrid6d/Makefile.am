@@ -36,10 +36,11 @@ endif
 
 
 # c'e` una maniera migliore?
-tmpvar90 = $(libsim_volgrid6d_la_SOURCES:.f90=.mod)
-tmpvar = $(libsim_volgrid6d_la_SOURCES:vdf4f_c.cpp=)
-tmpvar03 = $(tmpvar:.f03=.mod)
-nodist_include_HEADERS = $(tmpvar90:.F90=.mod) $(tmpvar03:.F03=.mod)
+tmpvar = $(libsim_volgrid6d_la_SOURCES:.f90=.mod)
+tmpvar1 = $(tmpvar:.f03=.mod)
+tmpvar2 = $(tmpvar1:.F03=.mod)
+tmpvar3 = $(tmpvar2:vdf4f_c.cpp=)
+nodist_include_HEADERS = $(tmpvar3:.F90=.mod)
 
 if GRIBAPI
 libsim_volgrid6d_la_LIBADD += $(GRIBAPI_LIBS)

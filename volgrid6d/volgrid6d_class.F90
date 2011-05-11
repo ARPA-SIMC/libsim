@@ -1016,11 +1016,12 @@ end subroutine export_to_gridinfo
 !! dimension descriptors in each of the objects are allocated and
 !! assigned within the method according to the data contained in \a
 !! gridinfo.
-SUBROUTINE import_from_gridinfovv (this, gridinfov, clone, decode, categoryappend)
+SUBROUTINE import_from_gridinfovv (this, gridinfov, clone, decode, time_definition, categoryappend)
 TYPE(volgrid6d),POINTER :: this(:) !< object in which to import
 type(gridinfo_def),intent(in) :: gridinfov(:) !< gridinfo array object to be imported
 LOGICAL , INTENT(in),OPTIONAL :: clone !< if provided and \c .TRUE. , clone the gaid's from \a gridinfo to \a this
 LOGICAL,INTENT(in),OPTIONAL :: decode !< if provided and \a .FALSE. the data volume in the elements of \a this is not allocated and successive work will be performed on grid_id's
+INTEGER,INTENT(IN),OPTIONAL :: time_definition !< 0=time is reference time; 1=time is validity time
 character(len=*),INTENT(in),OPTIONAL :: categoryappend !< append this suffix to log4fortran namespace category
 
 integer :: i,j
@@ -1056,9 +1057,9 @@ if (stallo /=0)then
 end if
 do i=1,ngrid
    if (present(categoryappend))then
-      call init (this(i), categoryappend=trim(categoryappend)//"-"//to_char(ngrid))
+      call init (this(i), time_definition=time_definition, categoryappend=trim(categoryappend)//"-"//to_char(ngrid))
    else
-      call init (this(i), categoryappend=to_char(ngrid))
+      call init (this(i), time_definition=time_definition, categoryappend=to_char(ngrid))
    end if
 end do
 
@@ -1261,10 +1262,11 @@ end subroutine export_to_gridinfovv
 !! temporary \a gridinfo object, importing it into the \a volgrid6d
 !! object cloning the gaid's and then destroying the gridinfo, so it
 !! works similarly to vogrid6d_class::import_from_gridinfovv() method.
-SUBROUTINE volgrid6d_import_from_file(this, filename, decode, categoryappend)
+SUBROUTINE volgrid6d_import_from_file(this, filename, decode, time_definition, categoryappend)
 TYPE(volgrid6d),POINTER :: this(:) !< object in which to import
 CHARACTER(len=*),INTENT(in) :: filename !< name of file from which to import
 LOGICAL,INTENT(in),OPTIONAL :: decode !< if provided and \a .FALSE. the data volume in the elements of \a this is not allocated and successive work will be performed on grid_id's
+INTEGER,INTENT(IN),OPTIONAL :: time_definition !< 0=time is reference time; 1=time is validity time
 character(len=*),INTENT(in),OPTIONAL :: categoryappend !< append this suffix to log4fortran namespace category
 
 type(gridinfo_def),pointer :: gridinfo(:)
@@ -1286,7 +1288,7 @@ CALL import(gridinfo, filename=filename, categoryappend=categoryappend)
 IF (ASSOCIATED(gridinfo)) THEN
 
   CALL import(this, gridinfo, clone=.TRUE., decode=decode, &
-   categoryappend=categoryappend)
+   time_definition=time_definition, categoryappend=categoryappend)
 
   CALL l4f_category_log(category,L4F_INFO,"deleting gridinfo")
   DO ngrib = 1, SIZE(gridinfo)
