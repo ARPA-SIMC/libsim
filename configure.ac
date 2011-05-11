@@ -142,9 +142,29 @@ fi
 AM_CONDITIONAL(ORSIM, test "x$enableval" = "xyes")
 
 
-AC_ARG_ENABLE(gdal, AC_HELP_STRING([--disable-gdal],
+AC_LANG_PUSH(Fortran)dnl Do the following checks in Fortran
+AC_FC_SRCEXT(f90)dnl and use .f90 extension
+
+
+dnl check for Fortran 2003 ISO_C_BINDING intrinsic module
+AC_COMPILE_IFELSE(
+[AC_LANG_PROGRAM(,[[       USE, INTRINSIC :: iso_c_binding]])],
+                          [AC_MSG_RESULT([Fortran 2003 C bindings found!])]
+                          f2003_iso_c=yes,
+                          [AC_MSG_ERROR([Fortran 2003 C bindings not found!])]
+                          f2003_iso_c=no
+)
+
+
+AC_LANG_POP(Fortran)dnl Do the following checks in C
+
+
+AC_ARG_ENABLE(gdal, AC_HELP_STRING([--enable-gdal],
   [enable gdal support]),,[enableval=no])dnl default disable
 if test "x$enableval" = "xyes"; then
+  if test "x$f2003_iso_c" = "xno"; then
+  AC_MSG_ERROR([gdal supports requires a fortran compiler with iso_c_binding])
+  fi
   AC_CHECK_LIB([gdal], [GDALOpen],
     AC_MSG_RESULT([gdal code included])
     AC_DEFINE(HAVE_LIBGDAL, 1, [Enable gdal code])
@@ -158,7 +178,6 @@ AM_CONDITIONAL(GDAL, test "x$enableval" = "xyes")
 
 
 AC_LANG_PUSH(Fortran)dnl Do the following checks in Fortran
-AC_FC_SRCEXT(f90)dnl and use .f90 extension
 
 
 AC_ARG_ENABLE(shapelib, AC_HELP_STRING([--disable-shapelib],
