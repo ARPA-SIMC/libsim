@@ -19,6 +19,7 @@ PROGRAM vg6d_transform
 #include "config.h"
 use log4fortran
 use volgrid6d_class
+use volgrid6d_vapor_class
 use grid_class
 use grid_transform_class
 use grid_id_class
@@ -48,22 +49,22 @@ logical :: c2agrid
 type(optionparser) :: opt
 INTEGER :: optind, optstatus
 integer :: iargc
-!CHARACTER(len=3) :: set_scmode
+                                !CHARACTER(len=3) :: set_scmode
 LOGICAL :: version, ldisplay
 INTEGER,POINTER :: w_s(:), w_e(:)
 TYPE(grid_file_id) :: file_template
 TYPE(grid_id) :: gaid_template
 
-!questa chiamata prende dal launcher il nome univoco
+                                !questa chiamata prende dal launcher il nome univoco
 call l4f_launcher(a_name,a_name_force="volgrid6dtransform")
 
-!init di log4fortran
+                                !init di log4fortran
 ier=l4f_init()
 
-!imposta a_name
+                                !imposta a_name
 category=l4f_category_get(a_name//".main")
 
-! define the option parser
+                                ! define the option parser
 opt = optionparser_new(description_msg= &
  'Grib to grib transformation application. It reads grib edition 1 and 2 &
  &and zooms, interpolates or regrids data according to optional parameters. &
@@ -74,7 +75,7 @@ opt = optionparser_new(description_msg= &
  &are imported, even with empty combinations, and more memory will be required', &
  usage_msg='Usage: vg6d_transform [options] inputfile outputfile')
 
-! define command-line options
+                                ! define command-line options
 CALL optionparser_add(opt, 'v', 'trans-type', trans_type, 'inter', help= &
  'transformation type: ''inter'' for interpolation, ''boxinter'' for &
  &statistical interpolation on boxes, ''zoom'' for zooming, &
@@ -132,15 +133,18 @@ CALL optionparser_add(opt, 'g', 'npy', npy, 4, help= &
 output_template = ''
 CALL optionparser_add(opt, ' ', 'output-format', output_format, &
 #ifdef HAVE_LIBGRIBAPI
- 'grib_api', &
+'grib_api', &
 #else
- '', &
+'', &
 #endif
- help='format of output file, in the form ''name[:template]''&
+help='format of output file, in the form ''name[:template]''&
 #ifdef HAVE_LIBGRIBAPI
  &; ''grib_api'' for gridded output in grib format, template is the &
  &path name of a grib file in which the first message defines the output grid and &
  &is used as a template for the output grib messages&
+#endif
+#ifdef VAPOR
+ &; ''vapor'' for gridded output in vdf format&
 #endif
  &; if this option includes a template, --type &
  &argument &c. are ignored, otherwise --type &c. define the output grid')
@@ -152,23 +156,23 @@ CALL optionparser_add(opt, 'e', 'a-grid', c2agrid, help= &
 CALL optionparser_add(opt, 't', 'component-flag', component_flag, &
  0, help='wind component flag in interpolated grid (0/1)')
 
-!CALL optionparser_add(opt, ' ', 'set-scmode', set_scmode, 'xxx', &
-! help='set output grid scanning mode to a particular standard value: &
-! &3 binary digits indicating respectively iScansNegatively, jScansPositively and &
-! &jPointsAreConsecutive (grib_api jargon), 0 for false, 1 for true, &
-! &000 for ECMWF-like grids, 010 for COSMO and Cartesian-like grids. &
-! &Any other character indicates to keep the &
-! &corresponding original scanning mode value')
+                                !CALL optionparser_add(opt, ' ', 'set-scmode', set_scmode, 'xxx', &
+                                ! help='set output grid scanning mode to a particular standard value: &
+                                ! &3 binary digits indicating respectively iScansNegatively, jScansPositively and &
+                                ! &jPointsAreConsecutive (grib_api jargon), 0 for false, 1 for true, &
+                                ! &000 for ECMWF-like grids, 010 for COSMO and Cartesian-like grids. &
+                                ! &Any other character indicates to keep the &
+                                ! &corresponding original scanning mode value')
 
-! display option
+                                ! display option
 CALL optionparser_add(opt, ' ', 'display', ldisplay, help= &
  'briefly display the data volume imported, warning: this option is incompatible &
  &with output on stdout.')
-! help options
+                                ! help options
 CALL optionparser_add_help(opt, 'h', 'help', help='show an help message and exit')
 CALL optionparser_add(opt, ' ', 'version', version, help='show version and exit')
 
-! parse options and check for errors
+                                ! parse options and check for errors
 CALL optionparser_parse(opt, optind, optstatus)
 
 IF (optstatus == optionparser_help) THEN
@@ -211,9 +215,9 @@ IF (trans_type == 'inter' .OR. trans_type == 'boxinter') THEN ! griddim_out need
 
   i = word_split(output_format, w_s, w_e, ':')
   IF (i >= 2) THEN ! grid from a grib template
-!  output_template = output_format(w_s(2):w_e(2))
-!  output_format(w_e(1)+1:) = ' '
-! open grib template file and import first message
+                                !  output_template = output_format(w_s(2):w_e(2))
+                                !  output_format(w_e(1)+1:) = ' '
+                                ! open grib template file and import first message
     file_template = grid_file_id_new(output_format, 'r')
     gaid_template = grid_id_new(file_template)
     IF (c_e(gaid_template)) THEN
@@ -254,33 +258,13 @@ ENDIF
 
 IF (trans_type == 'none') THEN  ! export with no operation
 
-  i = word_split(outfile, w_s, w_e, ':')
+  call write_to_file_out(volgrid)
 
-  IF (i == 3) THEN ! template requested (grib_api:template_file:output_file)
-    file_template = grid_file_id_new(outfile(w_s(1):w_e(2)), 'r')
-    gaid_template = grid_id_new(file_template)
-    IF (c_e(gaid_template)) THEN
-      CALL export (volgrid, filename=outfile(w_s(1):w_e(1))//':'// &
-       outfile(w_s(3):w_e(3)), gaid_template=gaid_template, &
-       categoryappend="noop_export_tmpl")
-    ELSE
-      CALL l4f_category_log(category,L4F_FATAL, &
-       "opening output template "//TRIM(outfile))
-      CALL raise_fatal_error()
-    ENDIF
-
-  ELSE ! simple export
-    CALL export(volgrid,filename=outfile,categoryappend="noop_export")
-
-  ENDIF
-  CALL l4f_category_log(category,L4F_INFO,"end")
-
-  DEALLOCATE(w_s, w_e)
   if (associated(volgrid)) call delete (volgrid)
 
 else
 
- ! transformation object
+                                ! transformation object
   CALL init(trans, trans_type=trans_type, sub_type=sub_type, &
    ix=ix, iy=iy, fx=fx, fy=fy, &
    ilon=ilon, ilat=ilat, flon=flon, flat=flat, npx=npx, npy=npy, &
@@ -306,26 +290,8 @@ else
   IF (ASSOCIATED(volgrid)) CALL delete(volgrid)
 
 
-! export
-  i = word_split(outfile, w_s, w_e, ':')
+  call write_to_file_out(volgrid_out)
 
-  IF (i == 3) THEN ! template requested (grib_api:template_file:output_file)
-    file_template = grid_file_id_new(outfile(w_s(1):w_e(2)), 'r')
-    gaid_template = grid_id_new(file_template)
-    IF (c_e(gaid_template)) THEN
-      CALL export (volgrid_out, filename=outfile(w_s(1):w_e(1))//':'// &
-       outfile(w_s(3):w_e(3)), gaid_template=gaid_template, &
-       categoryappend="export_tmpl")
-    ELSE
-      CALL l4f_category_log(category,L4F_FATAL, &
-       "opening output template "//TRIM(outfile))
-      CALL raise_fatal_error()
-    ENDIF
-
-  ELSE ! simple export
-    CALL export(volgrid_out,filename=outfile,categoryappend="export")
-
-  ENDIF
   CALL delete (volgrid_out)
 
 ENDIF
@@ -333,8 +299,72 @@ ENDIF
 CALL l4f_category_log(category,L4F_INFO,"end")
 
 
-!chiudo il logger
+                                !chiudo il logger
 call l4f_category_delete(category)
 ier=l4f_fini()
+
+contains
+
+
+subroutine write_to_file_out(myvolgrid)
+
+type (volgrid6d),pointer  :: myvolgrid(:)
+
+i = word_split(outfile, w_s, w_e, ':')
+
+IF (i == 3) THEN ! template requested (grib_api:template_file:output_file)
+  file_template = grid_file_id_new(outfile(w_s(1):w_e(2)), 'r')
+  gaid_template = grid_id_new(file_template)
+  IF (c_e(gaid_template)) THEN
+    CALL export (myvolgrid, filename=outfile(w_s(1):w_e(1))//':'// &
+     outfile(w_s(3):w_e(3)), gaid_template=gaid_template, &
+     categoryappend="noop_export_tmpl")
+  ELSE
+    CALL l4f_category_log(category,L4F_FATAL, &
+     "opening output template "//TRIM(outfile))
+    CALL raise_fatal_error()
+  ENDIF
+
+ELSE ! simple export
+
+  if (output_format == "grib_api") then 
+#ifdef HAVE_LIBGRIBAPI
+    CALL export(myvolgrid,filename=outfile,categoryappend="exporttofilegrib")
+#else
+    CALL l4f_category_log(category,L4F_FATAL, &
+     "export to grib_api disabled at compile time")
+    CALL raise_fatal_error()
+#endif
+
+  else if (output_format == "vapor") then 
+
+#ifdef VAPOR
+    do i =1,size(myvolgrid)
+      call export (myvolgrid(i),normalize=.True.,time_definition=1,&
+       filename=trim(outfile)//t2c(i)//".vdf")
+    end do
+#else
+    CALL l4f_category_log(category,L4F_FATAL, &
+     "export to vapor vdf file disabled at compile time")
+    CALL raise_fatal_error()
+#endif
+
+  else
+    CALL l4f_category_log(category,L4F_FATAL, &
+     "output format unknown: "//trim(output_format))
+    CALL raise_fatal_error()
+
+  end if
+
+
+ENDIF
+
+CALL l4f_category_log(category,L4F_INFO,"end")
+
+DEALLOCATE(w_s, w_e)
+
+end subroutine write_to_file_out
+
+
 
 END PROGRAM vg6d_transform

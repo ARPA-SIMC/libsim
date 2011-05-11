@@ -163,7 +163,7 @@ AC_ARG_ENABLE(gdal, AC_HELP_STRING([--enable-gdal],
   [enable gdal support]),,[enableval=no])dnl default disable
 if test "x$enableval" = "xyes"; then
   if test "x$f2003_iso_c" = "xno"; then
-  AC_MSG_ERROR([gdal supports requires a fortran compiler with iso_c_binding])
+  AC_MSG_ERROR([gdal support requires a fortran compiler with iso_c_binding])
   fi
   AC_CHECK_LIB([gdal], [GDALOpen],
     AC_MSG_RESULT([gdal code included])
@@ -175,6 +175,27 @@ else
   AC_MSG_RESULT([gdal code not included])
 fi
 AM_CONDITIONAL(GDAL, test "x$enableval" = "xyes")
+
+
+
+AC_ARG_ENABLE(vapor, AC_HELP_STRING([--enable-vapor],
+  [enable vapor support]),,[enableval=no])dnl default disable
+if test "x$enableval" = "xyes"; then
+  if test "x$f2003_iso_c" = "xno"; then
+    AC_MSG_ERROR([VAPOR support requires a fortran compiler with iso_c_binding])
+  fi
+  AC_PROG_CXX()
+  AC_MSG_RESULT([vapor code included])
+  AC_DEFINE(VAPOR, 1, [Enable vapor code])
+  VAPOR_CPPFLAGS="-I/usr/include/vapor -I/usr/include/netcdf"
+  AC_SUBST(VAPOR_CPPFLAGS)
+  VAPOR_LIBS="-lvdf -lcommon -lnetcdf -lexpat -lproj -lrt"
+  AC_SUBST(VAPOR_LIBS)
+else
+  AC_MSG_RESULT([vapor code not included])
+fi
+AM_CONDITIONAL(VAPOR, test "x$enableval" = "xyes")
+
 
 
 AC_LANG_PUSH(Fortran)dnl Do the following checks in Fortran
