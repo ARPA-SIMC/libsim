@@ -11,6 +11,7 @@ AC_SUBST(LIBSIM_VERSION_INFO)
 AC_LANG([C])
 AC_C_BIGENDIAN
 AC_CHECK_SIZEOF(void *)
+AC_CHECK_SIZEOF(size_t)
 
 if test "x$ac_cv_sizeof_void_p" = "x1"; then
   sizeof_ptr_c="int_b"

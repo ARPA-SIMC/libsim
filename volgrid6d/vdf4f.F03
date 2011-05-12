@@ -16,6 +16,7 @@
 ! You should have received a copy of the GNU General Public License
 ! along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+#include "config.h"
 
 module vdf4f
 
@@ -125,15 +126,52 @@ public vdf4f_write, create_metadata, set_num_timesteps, set_variables_names, &
  vdf4f_set_map_projection, write_metadata, destroy_metadata_c, destroy_writer_c, get_err_msg
 
 !> interface to different architectures (cast some type)
-interface vdf4f_write
 
-#ifdef AMD64
+interface vdf4f_write
+#if SIZEOF_SIZE_T == 8
   module procedure vdf4f_write_amd64
 #endif
-
   module procedure vdf4f_write_i386
-
 end interface
+
+
+interface create_metadata
+#if SIZEOF_SIZE_T == 8
+  module procedure create_metadata_amd64
+#endif
+  module procedure create_metadata_i386
+end interface
+
+
+interface set_num_timesteps
+#if SIZEOF_SIZE_T == 8
+  module procedure set_num_timesteps_amd64
+#endif
+  module procedure set_num_timesteps_i386
+end interface
+
+interface set_variables_names
+#if SIZEOF_SIZE_T == 8
+  module procedure set_variables_names_amd64
+#endif
+  module procedure set_variables_names_i386
+end interface
+
+interface vdf4f_set_ts_comment
+#if SIZEOF_SIZE_T == 8
+  module procedure vdf4f_set_ts_comment_amd64
+#endif
+  module procedure vdf4f_set_ts_comment_i386
+end interface
+
+
+interface vdf4f_set_v_comment
+#if SIZEOF_SIZE_T == 8
+  module procedure vdf4f_set_v_comment_amd64
+#endif
+  module procedure vdf4f_set_v_comment_i386
+end interface
+
 
 contains
 
@@ -204,18 +242,34 @@ end function vdf4f_write_amd64
 
 
 
-Integer Function create_metadata(xyzdim)
+Integer Function create_metadata_i386(xyzdim)
 Integer(C_SIZE_T),intent(in)  :: xyzdim(3)
-create_metadata = create_metadata_c(xyzdim)
-End Function create_metadata
+create_metadata_i386 = create_metadata_c(xyzdim)
+End Function create_metadata_i386
 
-Integer Function set_num_timesteps(ntime )
+Integer Function create_metadata_amd64(xyzdim)
+Integer,intent(in)  :: xyzdim(3)
+
+Integer(C_SIZE_T)  :: xyzdim_c(3)
+xyzdim_c=xyzdim
+create_metadata_amd64 = create_metadata_c(xyzdim_c)
+End Function create_metadata_amd64
+
+
+Integer Function set_num_timesteps_i386(ntime )
 Integer(C_SIZE_T), Intent(IN), VALUE :: ntime
-set_num_timesteps = set_num_timesteps_c(ntime)
-end Function set_num_timesteps
+set_num_timesteps_i386 = set_num_timesteps_c(ntime)
+end Function set_num_timesteps_i386
+
+Integer Function set_num_timesteps_amd64(ntime )
+Integer, Intent(IN) :: ntime
+Integer(C_SIZE_T) :: ntime_c
+ntime_c=ntime
+set_num_timesteps_amd64 = set_num_timesteps_c(ntime_c)
+end Function set_num_timesteps_amd64
 
 
-Integer Function set_variables_names(nvar, varnames)
+Integer Function set_variables_names_i386(nvar, varnames)
 Integer(C_SIZE_T), Intent(IN), VALUE :: nvar
 Character(len=*), Intent(IN) :: varnames(nvar)
 
@@ -228,9 +282,29 @@ do i=1, nvar
   varnames_c(i)=trim(varnames(i))//char(0)
 end do
 
-set_variables_names = set_variables_names_c(nvar, varnames_c, len_c)
+set_variables_names_i386 = set_variables_names_c(nvar, varnames_c, len_c)
 
-end Function set_variables_names
+end Function set_variables_names_i386
+
+Integer Function set_variables_names_amd64(nvar, varnames)
+Integer :: nvar
+Integer(C_SIZE_T) :: nvar_c
+Character(len=*), Intent(IN) :: varnames(nvar)
+
+integer(C_SIZE_T)  :: len_c
+Character(len=LEN(varnames)+1)    :: varnames_c(nvar)
+integer :: i
+
+len_c=LEN(varnames)+1
+do i=1, nvar
+  varnames_c(i)=trim(varnames(i))//char(0)
+end do
+
+nvar_c=nvar
+
+set_variables_names_amd64 = set_variables_names_c(nvar_c, varnames_c, len_c)
+
+end Function set_variables_names_amd64
 
 
 Integer function vdf4f_set_comment(comment)
@@ -238,18 +312,39 @@ Character(len=*),intent(in)    :: comment
 vdf4f_set_comment = vdf4f_set_comment_c(trim(comment)//char(0))
 end function vdf4f_set_comment
 
-Integer function vdf4f_set_ts_comment(ts,comment)
+Integer function vdf4f_set_ts_comment_i386(ts,comment)
 Integer(C_SIZE_T), Intent(IN), VALUE :: ts
 Character(len=*),intent(in)    :: comment
-vdf4f_set_ts_comment = vdf4f_set_ts_comment_c(ts,trim(comment)//char(0))
-end function vdf4f_set_ts_comment
+vdf4f_set_ts_comment_i386 = vdf4f_set_ts_comment_c(ts,trim(comment)//char(0))
+end function vdf4f_set_ts_comment_i386
 
-Integer function vdf4f_set_v_comment(ts,var,comment)
+
+Integer function vdf4f_set_ts_comment_amd64(ts,comment)
+Integer :: ts
+Integer(C_SIZE_T) :: ts_c
+Character(len=*),intent(in)    :: comment
+ts_c=ts
+vdf4f_set_ts_comment_amd64 = vdf4f_set_ts_comment_c(ts_c,trim(comment)//char(0))
+end function vdf4f_set_ts_comment_amd64
+
+
+Integer function vdf4f_set_v_comment_i386(ts,var,comment)
 Integer(C_SIZE_T), Intent(IN), VALUE :: ts
 Character(len=*),intent(in)    :: var
 Character(len=*),intent(in)    :: comment
-vdf4f_set_v_comment = vdf4f_set_v_comment_c(ts, trim(var)//char(0), trim(comment)//char(0))
-end function vdf4f_set_v_comment
+vdf4f_set_v_comment_i386 = vdf4f_set_v_comment_c(ts, trim(var)//char(0), trim(comment)//char(0))
+end function vdf4f_set_v_comment_i386
+
+Integer function vdf4f_set_v_comment_amd64(ts,var,comment)
+Integer :: ts
+Integer(C_SIZE_T) :: ts_c
+Character(len=*),intent(in)    :: var
+Character(len=*),intent(in)    :: comment
+
+ts_c=ts
+
+vdf4f_set_v_comment_amd64 = vdf4f_set_v_comment_c(ts_c, trim(var)//char(0), trim(comment)//char(0))
+end function vdf4f_set_v_comment_amd64
 
 Integer function vdf4f_set_grid_extents(extents)
 Doubleprecision, Intent(IN) :: extents(6)
