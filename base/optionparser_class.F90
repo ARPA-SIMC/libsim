@@ -21,6 +21,8 @@
 !! \include example_optionparser.F90
 !!
 !! \ingroup base
+#include "config.h"
+
 MODULE optionparser_class
 USE log4fortran
 USE err_handling
@@ -48,6 +50,7 @@ END TYPE option
 #define ARRAYOF_ORIGTYPE TYPE(option)
 #define ARRAYOF_TYPE arrayof_option
 #define ARRAYOF_ORIGDESTRUCTOR(x) CALL option_delete(x)
+#define ARRAYOF_PRIVATE 1
 #include "arrayof_pre_nodoc.F90"
 ! from arrayof
 !PUBLIC insert, append, remove, packarray
@@ -146,7 +149,7 @@ CONTAINS
 
 ! Constructor for the option class
 FUNCTION option_new(short_opt, long_opt, default, help) RESULT(this)
-CHARACTER(len=1),INTENT(in) :: short_opt
+CHARACTER(len=*),INTENT(in) :: short_opt
 CHARACTER(len=*),INTENT(in) :: long_opt
 CHARACTER(len=*) :: default
 CHARACTER(len=*),OPTIONAL :: help
@@ -338,7 +341,7 @@ END SUBROUTINE optionparser_delete
 !! particular method.
 SUBROUTINE optionparser_add_c(this, short_opt, long_opt, dest, default, help)
 TYPE(optionparser),INTENT(inout) :: this !< \a optionparser object
-CHARACTER(len=1),INTENT(in) :: short_opt !< the short option (may be empty)
+CHARACTER(len=*),INTENT(in) :: short_opt !< the short option (may be empty)
 CHARACTER(len=*),INTENT(in) :: long_opt !< the long option (may be empty)
 CHARACTER(len=*),TARGET :: dest !< the destination of the option parse result
 CHARACTER(len=*),OPTIONAL :: default !< the default value to give to dest if option is not found
@@ -383,7 +386,7 @@ END SUBROUTINE optionparser_add_c
 !! optionparser_add method rather than this particular method.
 SUBROUTINE optionparser_add_i(this, short_opt, long_opt, dest, default, help)
 TYPE(optionparser),INTENT(inout) :: this !< \a optionparser object
-CHARACTER(len=1),INTENT(in) :: short_opt !< the short option (may be empty)
+CHARACTER(len=*),INTENT(in) :: short_opt !< the short option (may be empty)
 CHARACTER(len=*),INTENT(in) :: long_opt !< the long option (may be empty)
 INTEGER,TARGET :: dest !< the destination of the option parse result
 INTEGER,OPTIONAL :: default !< the default value to give to dest if option is not found
@@ -421,7 +424,7 @@ END SUBROUTINE optionparser_add_i
 !! optionparser_add method rather than this particular method.
 SUBROUTINE optionparser_add_r(this, short_opt, long_opt, dest, default, help)
 TYPE(optionparser),INTENT(inout) :: this !< \a optionparser object
-CHARACTER(len=1),INTENT(in) :: short_opt !< the short option (may be empty)
+CHARACTER(len=*),INTENT(in) :: short_opt !< the short option (may be empty)
 CHARACTER(len=*),INTENT(in) :: long_opt !< the long option (may be empty)
 REAL,TARGET :: dest !< the destination of the option parse result
 REAL,OPTIONAL :: default !< the default value to give to dest if option is not found
@@ -459,7 +462,7 @@ END SUBROUTINE optionparser_add_r
 !! optionparser_add method rather than this particular method.
 SUBROUTINE optionparser_add_d(this, short_opt, long_opt, dest, default, help)
 TYPE(optionparser),INTENT(inout) :: this !< \a optionparser object
-CHARACTER(len=1),INTENT(in) :: short_opt !< the short option (may be empty)
+CHARACTER(len=*),INTENT(in) :: short_opt !< the short option (may be empty)
 CHARACTER(len=*),INTENT(in) :: long_opt !< the long option (may be empty)
 DOUBLE PRECISION,TARGET :: dest !< the destination of the option parse result
 DOUBLE PRECISION,OPTIONAL :: default !< the default value to give to dest if option is not found
@@ -497,7 +500,7 @@ END SUBROUTINE optionparser_add_d
 !! rather than this particular method.
 SUBROUTINE optionparser_add_l(this, short_opt, long_opt, dest, help)
 TYPE(optionparser),INTENT(inout) :: this !< \a optionparser object
-CHARACTER(len=1),INTENT(in) :: short_opt !< the short option (may be empty)
+CHARACTER(len=*),INTENT(in) :: short_opt !< the short option (may be empty)
 CHARACTER(len=*),INTENT(in) :: long_opt !< the long option (may be empty)
 LOGICAL,TARGET :: dest !< the destination of the option parse result
 CHARACTER(len=*),OPTIONAL :: help !< the help message that will be formatted and pretty-printed on screen
@@ -525,7 +528,7 @@ END SUBROUTINE optionparser_add_l
 !! option is encountered.
 SUBROUTINE optionparser_add_count(this, short_opt, long_opt, dest, start, help)
 TYPE(optionparser),INTENT(inout) :: this !< \a optionparser object
-CHARACTER(len=1),INTENT(in) :: short_opt !< the short option (may be empty)
+CHARACTER(len=*),INTENT(in) :: short_opt !< the short option (may be empty)
 CHARACTER(len=*),INTENT(in) :: long_opt !< the long option (may be empty)
 INTEGER,TARGET :: dest !< the destination of the option parse result
 INTEGER,OPTIONAL :: start !< initial value for \a dest 
@@ -554,7 +557,7 @@ END SUBROUTINE optionparser_add_count
 !! printed as well by calling the optparser_printhelp method.
 SUBROUTINE optionparser_add_help(this, short_opt, long_opt, help)
 TYPE(optionparser),INTENT(inout) :: this !< \a optionparser object
-CHARACTER(len=1),INTENT(in) :: short_opt !< the short option (may be empty)
+CHARACTER(len=*),INTENT(in) :: short_opt !< the short option (may be empty)
 CHARACTER(len=*),INTENT(in) :: long_opt !< the long option (may be empty)
 CHARACTER(len=*),OPTIONAL :: help !< the help message that will be formatted and pretty-printed on screen
 

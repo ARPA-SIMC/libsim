@@ -16,6 +16,7 @@
 !  - \c ARRAYOF_TYPE the name of the "arrayed" derived type, containing a 1-d array of ARRAYOF_ORIGTYPE, if undefined it will be \a arrayof_ARRAYOF_ORIGTYPE
 !  - \c ARRAYOF_ORIGDESTRUCTOR(x) the instruction required in order to "destroy" an object of \c ARRAYOF_ORIGTYPE when the ::remove method is called, optional, if undefined no destructor is called
 !  - \c ARRAYOF_ORIGEQ to be defined if ARRAYOF_ORIGTYPE supports the == operator, in that case the *_unique method are defined for the array
+!  - \c ARRAYOF_PRIVATE to be defined if the array type is not going to be PUBLIC
 !
 ! The template comes in 2 parts, one to be included in the
 ! declaration part of the module (before \c CONTAINS) and the second
@@ -50,7 +51,9 @@ INTERFACE packarray
   MODULE PROCEDURE ARRAYOF_TYPE/**/_packarray
 END INTERFACE
 
+#ifndef ARRAYOF_PRIVATE
 PUBLIC ARRAYOF_TYPE, ARRAYOF_TYPE/**/_new
+#endif
 
 PRIVATE array_of_alloc, &
  ARRAYOF_TYPE/**/_insert, ARRAYOF_TYPE/**/_insert_array, &
