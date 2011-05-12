@@ -47,7 +47,7 @@ doubleprecision :: latitude_south_pole,longitude_south_pole,angle_rotation
 character(len=80) :: proj_type,trans_type,sub_type
 
 doubleprecision ::x,y,lon,lat
-logical :: c2agrid, decode
+LOGICAL :: extrap, c2agrid, decode
 type(optionparser) :: opt
 INTEGER :: optind, optstatus
 integer :: iargc
@@ -86,6 +86,9 @@ CALL optionparser_add(opt, 'z', 'sub-type', sub_type, 'near', help= &
  'transformation subtype, for inter: ''near'', ''bilin'', &
  &for ''boxinter'' and ''boxregrid'': ''average'', ''max'', ''min'', &
  &for zoom: ''index'', ''coord'', ''coordbb''')
+CALL optionparser_add(opt, ' ', 'extrap', extrap, help= &
+ 'enable extrapolation outside input grid, it works only for ''inter'' &
+ &transformations, use with care')
 
 CALL optionparser_add(opt, 'u', 'type', proj_type, 'regular_ll', help= &
  'projection and parameters of interpolated grid: it is a string &
@@ -281,7 +284,7 @@ IF (trans_type == 'metamorphosis') THEN  ! export with no operation
 else
 
                                 ! transformation object
-  CALL init(trans, trans_type=trans_type, sub_type=sub_type, &
+  CALL init(trans, trans_type=trans_type, sub_type=sub_type, extrap=extrap, &
    ix=ix, iy=iy, fx=fx, fy=fy, &
    ilon=ilon, ilat=ilat, flon=flon, flat=flat, npx=npx, npy=npy, &
    percentile=0.5D0, &

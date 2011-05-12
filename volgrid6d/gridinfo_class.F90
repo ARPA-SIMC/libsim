@@ -478,6 +478,7 @@ CHARACTER(len=*),INTENT(in),OPTIONAL :: categoryappend !< append this suffix to 
 INTEGER :: i, category
 CHARACTER(len=512) :: a_name
 TYPE(grid_file_id) :: output_file
+TYPE(grid_id) :: valid_grid_id
 
 IF (PRESENT(categoryappend)) THEN
   CALL l4f_launcher(a_name,a_name_append= &
@@ -492,25 +493,35 @@ CALL l4f_category_log(category,L4F_DEBUG, &
  "exporting to file "//TRIM(filename)//" "//TRIM(to_char(SIZE(this)))//" fields")
 #endif
 
-IF (SIZE(this) > 0) THEN
+valid_grid_id = grid_id_new()
+DO i = 1, SIZE(this) ! find a valid grid_id in this
+  IF (c_e(this(i)%gaid)) THEN
+    valid_grid_id = this(i)%gaid
+    EXIT
+  ENDIF
+ENDDO
 
-  ! open file
-  output_file = grid_file_id_new(filename, 'w', from_grid_id=this(1)%gaid)
+IF (c_e(valid_grid_id)) THEN ! a valid grid_id has been found
+! open file
+  output_file = grid_file_id_new(filename, 'w', from_grid_id=valid_grid_id)
   IF (c_e(output_file)) THEN
     DO i = 1, SIZE(this)
       CALL export(this(i)) ! export information to gaid
       CALL export(this(i)%gaid, output_file) ! export gaid to file
     ENDDO
-    ! close file
+! close file
     CALL delete(output_file)
-
   ELSE
     CALL l4f_category_log(category,L4F_ERROR,"opening file "//TRIM(filename))
     CALL raise_error()
-  ENDIF ! filename opened
-ELSE
-  CALL l4f_category_log(category,L4F_WARN,"empty gridinfo object, file not created")
-ENDIF ! SIZE(this)
+  ENDIF
+ELSE ! no valid grid_id has been found
+  CALL l4f_category_log(category,L4F_ERROR, &
+   "gridinfo object of size "//t2c(SIZE(this)))
+  CALL l4f_category_log(category,L4F_ERROR, &
+   "no valid grid id found when exporting to file "//TRIM(filename))
+  CALL raise_error()
+ENDIF
 
 !chiudo il logger
 CALL l4f_category_delete(category)

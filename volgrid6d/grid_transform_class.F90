@@ -163,7 +163,7 @@ TYPE transform_def
 
   CHARACTER(len=80) :: trans_type ! type of transformation, can be \c 'zoom', \c 'boxregrid', \c 'inter', \c 'vertint' ...
   CHARACTER(len=80) :: sub_type ! subtype of transformation, can be \c 'linear'
-  logical :: external ! enable elaboration outside data bounding box
+  logical :: extrap ! enable elaboration outside data bounding box
 
   type(rect_ind) :: rect_ind ! rectangle information by index
   type(rect_coo) :: rect_coo ! rectangle information by coordinates
@@ -248,7 +248,7 @@ CONTAINS
 SUBROUTINE transform_init(this, trans_type, sub_type, &
  ix, iy, fx, fy, ilon, ilat, flon, flat, &
  npx, npy, boxdx, boxdy, percentile, &
- external, time_definition, &
+ extrap, time_definition, &
  input_levtype, input_coordvar, output_levtype, categoryappend)
 TYPE(transform_def),INTENT(out) :: this !< transformation object
 CHARACTER(len=*) :: trans_type !< type of transformation, can be \c 'zoom', \c 'boxregrid', \c 'interp', \c 'vertint' ...
@@ -266,7 +266,7 @@ INTEGER,INTENT(IN),OPTIONAL :: npy !< number of points to average along y direct
 DOUBLEPRECISION,INTENT(in),OPTIONAL :: boxdx !< longitudinal/x extension of the box for box interpolation, default the target x grid step (unimplemented !)
 DOUBLEPRECISION,INTENT(in),OPTIONAL :: boxdy !< latitudinal/y extension of the box for box interpolation, default the target y grid step (unimplemented !)
 DOUBLEPRECISION,INTENT(in),OPTIONAL :: percentile !< percentile [0,1] of the distribution of points in the box to use as interpolated value, if missing, the average is used
-LOGICAL,INTENT(IN),OPTIONAL :: external !< activate external area interpolation (for interpolation) (unimplemented !)
+LOGICAL,INTENT(IN),OPTIONAL :: extrap !< activate extrapolation outside input domain (use with care!)
 INTEGER,INTENT(IN),OPTIONAL :: time_definition !< time definition for output vol7d object 0=time is reference time ; 1=time is validity time
 TYPE(vol7d_level),INTENT(IN),OPTIONAL :: input_levtype !< type of vertical level of input data to be vertically interpolated (only type of first and second surface are used, level values are ignored)
 TYPE(vol7d_var),INTENT(IN),OPTIONAL :: input_coordvar !< variable that defines the vertical coordinate in the input volume for vertical interpolation, if missing, the value of the vertical level defined with \a input_levtype is used
@@ -281,7 +281,7 @@ this%category=l4f_category_get(a_name)
 this%trans_type = trans_type
 this%sub_type = sub_type
 
-CALL optio(external,this%external)
+CALL optio(extrap,this%extrap)
 
 call optio(ix,this%rect_ind%ix)
 call optio(iy,this%rect_ind%iy)
@@ -540,7 +540,7 @@ this%box_info%npy=imiss
 
 this%sub_type=cmiss
 
-this%external=.false.
+this%extrap=.false.
 
 !chiudo il logger
 call l4f_category_delete(this%category)
@@ -638,7 +638,7 @@ IF (this%trans%trans_type == 'vertint') THEN
 ! code up to this point may be common for all vertint?
 
     ALLOCATE(this%inter_index_z(no), this%inter_zp(no))
-    IF (this%trans%external .AND. ni > 0) THEN
+    IF (this%trans%extrap .AND. ni > 0) THEN
 ! set to first input point (extrapolate to constant value)
       this%inter_index_z(:) = 1
       this%inter_zp(:) = 1.0D0
@@ -659,7 +659,7 @@ IF (this%trans%trans_type == 'vertint') THEN
           EXIT ! exit in any case
         ENDIF
       ENDDO
-      IF (i > ni .AND. this%trans%external .AND. ni > 0) THEN
+      IF (i > ni .AND. this%trans%extrap .AND. ni > 0) THEN
 ! set to last input point (extrapolate to constant value)
         this%inter_index_z(j) = ni - 1
         this%inter_zp(j) = 0.0D0
@@ -920,12 +920,10 @@ ELSE IF (this%trans%trans_type == 'inter') THEN
     ALLOCATE(this%inter_index_x(this%outnx,this%outny), &
      this%inter_index_y(this%outnx,this%outny))
 
-    CALL find_index(in,this%trans%sub_type,&
-     nx=this%innx, ny=this%inny ,&
-     xmin=xmin, xmax=xmax,&
-     ymin=ymin, ymax=ymax,&
-     lon=out%dim%lon,lat=out%dim%lat,&
-     index_x=this%inter_index_x,index_y=this%inter_index_y)
+    CALL find_index(in, this%trans%sub_type, &
+     this%innx, this%inny, xmin, xmax, ymin, ymax, &
+     out%dim%lon, out%dim%lat, this%trans%extrap, &
+     this%inter_index_x, this%inter_index_y)
 
     IF ( this%trans%sub_type == 'bilin' ) THEN
       ALLOCATE(this%inter_x(this%innx,this%inny), &
@@ -969,13 +967,11 @@ ELSE IF (this%trans%trans_type == 'boxinter') THEN
 
 ! compute coordinates of input grid in geo system
   CALL unproj(in) ! TODO costringe a dichiarare in INTENT(inout), si puo` evitare?
-! use find_index in the opposite way as before
-  CALL find_index(out,'near',&
-   nx=this%outnx, ny=this%outny ,&
-   xmin=xmin, xmax=xmax,&
-   ymin=ymin, ymax=ymax,&
-   lon=in%dim%lon, lat=in%dim%lat,&
-   index_x=this%inter_index_x, index_y=this%inter_index_y)
+! use find_index in the opposite way, here extrap does not make sense
+  CALL find_index(out, 'near', &
+   this%outnx, this%outny, xmin, xmax, ymin, ymax, &
+   in%dim%lon, in%dim%lat, .FALSE., &
+   this%inter_index_x, this%inter_index_y)
 
 ELSE
 
@@ -1058,12 +1054,10 @@ IF (this%trans%trans_type == 'inter') THEN
 
     CALL getval(v7d_out%ana(:)%coord,lon=lon,lat=lat)
 
-    CALL find_index(in,this%trans%sub_type,&
-     nx=this%innx, ny=this%inny, &
-     xmin=xmin, xmax=xmax, &
-     ymin=ymin, ymax=ymax, &
-     lon=lon, lat=lat, &
-     index_x=this%inter_index_x(:,1), index_y=this%inter_index_y(:,1))
+    CALL find_index(in, this%trans%sub_type,&
+     this%innx, this%inny, xmin, xmax, ymin, ymax, &
+     lon, lat, this%trans%extrap, &
+     this%inter_index_x(:,1), this%inter_index_y(:,1))
 
 ! To print the original coordinate
 !    CALL unproj(in)
@@ -1333,13 +1327,11 @@ ELSE IF (this%trans%trans_type == 'boxinter') THEN
 
 ! get coordinates of input grid in geo system
   CALL getval(v7d_in%ana(:)%coord,lon=lon,lat=lat)
-! use find_index in the opposite way
+! use find_index in the opposite way, here extrap does not make sense
   CALL find_index(out,'near',&
-   nx=this%outnx, ny=this%outny ,&
-   xmin=xmin, xmax=xmax,&
-   ymin=ymin, ymax=ymax,&
-   lon=lon, lat=lat,&
-   index_x=this%inter_index_x(:,1), index_y=this%inter_index_y(:,1))
+   this%outnx, this%outny , xmin, xmax, ymin, ymax, &
+   lon, lat, .FALSE., &
+   this%inter_index_x(:,1), this%inter_index_y(:,1))
 
 ELSE
 
@@ -2082,59 +2074,54 @@ end function hbilin
 
 
 ! Locate index of requested point
-elemental subroutine find_index(this,inter_type,&
- nx,ny, xmin, xmax, ymin,ymax,&
- lon,lat,index_x,index_y)
+ELEMENTAL SUBROUTINE find_index(this, inter_type, nx, ny, xmin, xmax, ymin, ymax, &
+ lon, lat, extrap, index_x, index_y)
+TYPE(griddim_def),INTENT(in) :: this ! griddim object (from grid)
+CHARACTER(len=*),INTENT(in) :: inter_type ! interpolation type (determine wich point is requested)
+INTEGER,INTENT(in) :: nx,ny ! dimension (to grid)
+DOUBLE PRECISION,INTENT(in) :: xmin, xmax, ymin, ymax ! extreme coordinate (to grid)
+DOUBLE PRECISION,INTENT(in) :: lon,lat ! target coordinate
+LOGICAL,INTENT(in) :: extrap ! extrapolate
+INTEGER,INTENT(out) :: index_x,index_y ! index of point requested
 
-type(griddim_def),intent(in) :: this ! griddim object (from grid)
-character(len=*),intent(in) :: inter_type ! interpolation type (determine wich point is requested)
-! dimension (to grid)
-integer,intent(in) :: nx,ny 
-! extreme coordinate (to grid)
-doubleprecision,intent(in) :: xmin, xmax, ymin, ymax
-! target coordinate
-doubleprecision,intent(in) :: lon,lat
-! index of point requested
-integer,optional,intent(out) :: index_x,index_y 
+INTEGER :: lnx, lny
+DOUBLE PRECISION :: x,y
 
-doubleprecision :: x,y
+IF (inter_type == "near") THEN
 
-if (inter_type == "near") then
+  CALL proj(this,lon,lat,x,y)
+  index_x = NINT((x-xmin)/((xmax-xmin)/DBLE(nx-1)))+1
+  index_y = NINT((y-ymin)/((ymax-ymin)/DBLE(ny-1)))+1
+  lnx = nx
+  lny = ny
 
-  call proj(this,lon,lat,x,y)
+ELSE IF (inter_type == "bilin") THEN
 
-  if (present(index_x))then
-    index_x=nint((x-xmin)/((xmax-xmin)/dble(nx-1)))+1
-    if ( index_x < 1 .or. index_x > nx ) index_x=imiss
-  end if
+  CALL proj(this,lon,lat,x,y)
+  index_x = (x-xmin)/((xmax-xmin)/DBLE(nx-1))+1
+  index_y = (y-ymin)/((ymax-ymin)/DBLE(ny-1))+1
+  lnx = nx-1
+  lny = ny-1
 
-  if (present(index_y))then
-    index_y=nint((y-ymin)/((ymax-ymin)/dble(ny-1)))+1
-    if ( index_y < 1 .or. index_y > ny ) index_y=imiss
-  end if
+ELSE
 
-else if (inter_type == "bilin") then
+  index_x=imiss
+  index_y=imiss
+  RETURN
 
-  call proj(this,lon,lat,x,y)
+ENDIF
 
-  if (present(index_x))then
-    index_x=(x-xmin)/((xmax-xmin)/dble(nx-1))+1
-    if ( index_x < 1 .or. index_x+1 > nx ) index_x=imiss
-  end if
+IF (extrap) THEN ! trim indices outside grid for extrapolation
+  index_x = MAX(index_x, 1)
+  index_y = MAX(index_y, 1)
+  index_x = MIN(index_x, lnx)
+  index_y = MIN(index_y, lny)
+ELSE ! nullify indices outside grid
+  IF (index_x < 1 .OR. index_x > lnx) index_x = imiss
+  IF (index_y < 1 .OR. index_y > lny) index_y = imiss
+ENDIF
 
-  if (present(index_y))then
-    index_y=(y-ymin)/((ymax-ymin)/dble(ny-1))+1
-    if ( index_y < 1 .or. index_y+1 > ny ) index_y=imiss
-  end if
-
-else
-
-  if (present(index_x)) index_x=imiss
-  if (present(index_y)) index_y=imiss
-
-end if
-
-end subroutine find_index
+END SUBROUTINE find_index
 
 
 END MODULE grid_transform_class

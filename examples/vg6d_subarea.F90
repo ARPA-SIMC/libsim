@@ -51,6 +51,7 @@ CHARACTER(len=3) :: set_scmode
 LOGICAL :: version, ldisplay
 
 doubleprecision ::x,y,lon,lat
+LOGICAL :: extrap
 TYPE(optionparser) :: opt
 INTEGER :: optind, optstatus
 INTEGER :: iargc
@@ -77,6 +78,9 @@ CALL optionparser_add(opt, 'z', 'sub-type', sub_type, 'near', help= &
  'transformation subtype, for inter: ''near'', ''bilin'', &
  &for ''boxinter'' and ''boxregrid'': ''average'', ''max'', ''min'', &
  &for zoom: ''index'', ''coord'', ''coordbb''')
+CALL optionparser_add(opt, ' ', 'extrap', extrap, help= &
+ 'enable extrapolation outside input grid, it works only for ''inter'' &
+ &transformations, use with care')
 
 CALL optionparser_add(opt, 'u', 'type', type, 'regular_ll', help= &
  'type of interpolated grid: ''regular_ll'', ''rotated_ll''')
@@ -205,7 +209,7 @@ if(trans_type == 'inter')then
 
 end if
 
-call init(trans, trans_type=trans_type, sub_type=sub_type, &
+CALL init(trans, trans_type=trans_type, sub_type=sub_type, extrap=extrap, &
  ix=ix, iy=iy, fx=fx, fy=fy, &
  ilon=ilon, ilat=ilat, flon=flon, flat=flat, npx=npx, npy=npy, &
  percentile=0.5D0, categoryappend="transformation")
