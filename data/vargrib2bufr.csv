@@ -9,6 +9,7 @@ B10007,Height,m,200,200,8,255,1.0,0.0
 B10007,Height,,98,128,129,255,1.0,0.0
 B10008,Geopotential,,255,2,6,255,1.0,0.0
 B10009,Geopotential height,,255,2,7,255,1.0,0.0
+B10033,Height isoterme 0,,255,2,73,255,1.0,0.0
 B10051,Pressure reduced to mean sea level,,255,2,2,255,1.0,0.0
 B10051,Pressure reduced to mean sea level,Pa,98,128,151,255,1.0,0.0
 B11001,Wind direction,degree,200,2,35,255,1.0,0.0
@@ -63,12 +64,19 @@ B12101,Temperature,K,255,2,11,255,1.0,0.0
 B12101,Temperature,K,98,128,130,255,1.0,0.0
 B12101,Temperature,K,98,128,167,255,1.0,0.0
 B12103,Dew point temperature,,255,2,17,255,1.0,0.0
-B12103,Dew point temperature,,98,128,168,255,1.0,0.0
+B12103,Dew point temperature,K,98,128,168,255,1.0,0.0
 B13001,Specific humidity,Kg/Kg,255,2,51,255,1.0,0.0
 B13003,Relative humidity,Percent,255,2,52,255,1.0,0.0
 B13011,Total precipitation,Kg/m**2,255,2,61,255,1.0,0.0
 B13011,Total precipitation,m,98,128,228,255,1000.,0.0
+B13128,Cloud water content (invented),Kg/Kg,78,201,31,255,1.0,0.0
+B13128,Cloud water content (invented),Kg/Kg,200,201,31,255,1.0,0.0
+B13129,Cloud ice content (invented),Kg/Kg,78,201,33,255,1.0,0.0
+B13129,Cloud ice content (invented),Kg/Kg,200,201,33,255,1.0,0.0
 B13130,Large scale snow (invented),Kg/m**2,98,128,144,255,1.0,0.0
+B13130,Water equivalent of accumulated snow depth (invented),Kg/m**2,255,2,65,255,1.0,0.0
+B13130,Convective snow (invented),Kg/m**2,255,2,78,255,1.0,0.0
+B13130,Large scale snow (invented),Kg/m**2,255,2,79,255,1.0,00.
 B13192,Cloud liquid water content (invented),Kg/Kg,200,201,31,255,1.0,0.0
 B13192,Cloud liquid water content (invented),Kg/Kg,78,201,31,255,1.0,0.0
 B13193,Cloud ice content (invented),Kg/Kg,200,201,33,255,1.0,0.0
@@ -88,6 +96,7 @@ B13201,Grid-scale snowfall (invented),Kg/m**2,255,2,79,255,1.0,0.0
 B13202,Convective liquid precipitation (invented),Kg/m**2,200,201,113,255,1.0,0.0
 B13202,Convective liquid precipitation (invented),Kg/m**2,78,201,113,255,1.0,0.0
 B13203,Convective snowfall (invented),Kg/m**2,255,2,78,255,1.0,0.0
+B13203,Soil water content (invented),kg/m^2->Num,255,2,86,255,1.0,0.0
 B13204,Total convective precipitation(liquid+snow; invented),Kg/m**200,200,2,152,255,1.0,0.0
 B13205,Snowfall (grid-scale+convective; invented),Kg/m**2,200,2,153,255,1.0,0.0
 B13206,Soil water content (invented),kg/m^2->Num,255,2,86,255,1.0,0.0
@@ -242,8 +251,11 @@ B15227,Uncertainity in PM2.5 estimate (Pesco; invented),ug/m**3,200,200,98,255,0
 B20010,Cloud cover DWD,Percent,200,201,29,255,1.0,0.0
 B20010,Cloud cover DWD,Percent,78,201,29,255,1.0,0.0
 B20010,High cloud cover,Percent,255,2,75,255,1.0,0.0
+B20010,High cloud cover ECMWF,Percent,98,128,188,255,1.0,0.0
 B20010,Low cloud cover,Percent,255,2,73,255,1.0,0.0
+B20010,Low cloud cover ECMWF,Percent,98,128,186,255,1.0,0.0
 B20010,Medium cloud cover,Percent,255,2,74,255,1.0,0.0
+B20010,Medium cloud cover ECMWF,Percent,98,128,187,255,1.0,0.0
 B20010,Total cloud cover,Fraction,200,200,114,0,100.0,0.0
 B20010,Total cloud cover,Fraction,200,200,114,255,100.0,0.0
 B20010,Total cloud cover,Percent,255,2,71,255,1.0,0.0
