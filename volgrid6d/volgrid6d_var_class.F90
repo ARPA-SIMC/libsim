@@ -110,8 +110,8 @@ integer,INTENT(in),OPTIONAL :: centre !< centre
 integer,INTENT(in),OPTIONAL :: category !< grib2: category / grib1: grib table version number
 integer,INTENT(in),OPTIONAL :: number !< parameter number
 integer,INTENT(in),OPTIONAL :: discipline !< grib2: discipline
-CHARACTER(len=65),INTENT(in),OPTIONAL :: description !< textual description of the variable
-CHARACTER(len=24),INTENT(in),OPTIONAL :: unit !< textual description of the variable's unit
+CHARACTER(len=*),INTENT(in),OPTIONAL :: description !< textual description of the variable
+CHARACTER(len=*),INTENT(in),OPTIONAL :: unit !< textual description of the variable's unit
 
 TYPE(volgrid6d_var) :: this !< object to be initialised
 
@@ -130,8 +130,8 @@ integer,INTENT(in),OPTIONAL :: centre !< centre
 integer,INTENT(in),OPTIONAL :: category !< grib2: categoria / grib1: grib table version number
 integer,INTENT(in),OPTIONAL :: number !< parameter number
 integer,INTENT(in),OPTIONAL :: discipline !< grib2: disciplina
-CHARACTER(len=65),INTENT(in),OPTIONAL :: description !< descrizione testuale della variabile (opzionale)
-CHARACTER(len=24),INTENT(in),OPTIONAL :: unit !< descrizione testuale dell'unità di misura (opzionale)
+CHARACTER(len=*),INTENT(in),OPTIONAL :: description !< descrizione testuale della variabile (opzionale)
+CHARACTER(len=*),INTENT(in),OPTIONAL :: unit !< descrizione testuale dell'unità di misura (opzionale)
 
 IF (PRESENT(centre)) THEN
   this%centre = centre

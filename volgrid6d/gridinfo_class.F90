@@ -1762,7 +1762,7 @@ else if (this%timerange%timerange == 2 )then
 !      this%var%number=187
 !      this%timerange%timerange=205
 !    ENDIF
-    IF (this%var == volgrid6d_var_new(255,201,187,255)) THEN
+    IF (this%var == volgrid6d_var_new(this%var%centre,201,187,255)) THEN
       this%timerange%timerange=205
     ENDIF
 

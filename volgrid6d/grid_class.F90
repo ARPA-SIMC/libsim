@@ -366,7 +366,7 @@ END SUBROUTINE griddim_unproj_internal
 !> Query the object content.
 SUBROUTINE griddim_get_val(this, nx, ny, &
  xmin, xmax, ymin, ymax, dx, dy, component_flag, &
- proj_type, lov, zone, xoff, yoff, &
+ proj, proj_type, lov, zone, xoff, yoff, &
  longitude_south_pole, latitude_south_pole, angle_rotation, &
  longitude_stretch_pole, latitude_stretch_pole, stretch_factor, &
  latin1, latin2, lad, projection_center_flag, &
@@ -380,6 +380,7 @@ DOUBLE PRECISION,INTENT(out),OPTIONAL :: dx, dy !< grid steps in x and y directi
 !> Resolved u- and v- components of vector quantities relative to 0=the easterly and northerly directions
 !! 1=the defined grid in the direction of increasing x and y (or i and j) coordinates respectively (0=north, 128=south)
 INTEGER,INTENT(out),OPTIONAL :: component_flag
+TYPE(geo_proj),INTENT(out),OPTIONAL :: proj !< the complete projection object associated
 CHARACTER(len=*),INTENT(out),OPTIONAL :: proj_type !< type of projection
 DOUBLE PRECISION,INTENT(out),OPTIONAL :: lov !< line of view, also known as reference longitude or orientation of the grid (polar projections)
 INTEGER,INTENT(out),OPTIONAL :: zone !< Earth zone (mainly for UTM), sets lov to the correct zone central meridian
@@ -401,6 +402,8 @@ INTEGER,INTENT(out),OPTIONAL :: ellips_type !< number in the interval [1,nellips
 
 IF (PRESENT(nx)) nx = this%dim%nx
 IF (PRESENT(ny)) ny = this%dim%ny
+
+IF (PRESENT(proj)) proj = this%grid%proj
 
 CALL get_val(this%grid%proj, proj_type=proj_type, lov=lov, zone=zone, &
  xoff=xoff, yoff=yoff, &

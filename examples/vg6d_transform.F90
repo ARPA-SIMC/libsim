@@ -81,7 +81,8 @@ opt = optionparser_new(description_msg= &
 CALL optionparser_add(opt, 'v', 'trans-type', trans_type, 'inter', help= &
  'transformation type: ''inter'' for interpolation, ''boxinter'' for &
  &statistical interpolation on boxes, ''zoom'' for zooming, &
- &''boxregrid'' for resolution reduction, ''metamorphosis'' for change in format only')
+ &''boxregrid'' for resolution reduction, empty for no transformation &
+ &(input/output only)')
 CALL optionparser_add(opt, 'z', 'sub-type', sub_type, 'near', help= &
  'transformation subtype, for inter: ''near'', ''bilin'', &
  &for ''boxinter'' and ''boxregrid'': ''average'', ''max'', ''min'', &
@@ -172,7 +173,7 @@ CALL optionparser_add(opt, 't', 'component-flag', component_flag, &
 
 
 CALL optionparser_add(opt, ' ', 'time-definition', time_definition, 0, help= &
- 'time definition for inport volume, 0 for reference time (more suitable for &
+ 'time definition for import volume, 0 for reference time (more suitable for &
  &presenting forecast data) and 1 for verification time (more suitable for &
  &comparing forecasts with observations)')
 
@@ -224,40 +225,36 @@ CALL delete(opt)
 call l4f_category_log(category,L4F_INFO,"transforming from file:"//trim(infile))
 call l4f_category_log(category,L4F_INFO,"transforming to   file:"//trim(outfile))
 
-IF (trans_type == 'inter' .OR. trans_type == 'boxinter') THEN ! griddim_out needed
-
-  i = word_split(output_format, w_s, w_e, ':')
-  IF (i >= 2) THEN ! grid from a grib template
-                                !  output_template = output_format(w_s(2):w_e(2))
-                                !  output_format(w_e(1)+1:) = ' '
-                                ! open grib template file and import first message
-    file_template = grid_file_id_new(output_format, 'r')
-    gaid_template = grid_id_new(file_template)
-    IF (c_e(gaid_template)) THEN
-      CALL import(griddim_out, gaid_template)
-      CALL delete(gaid_template)
-      CALL delete(file_template)
-    ELSE
-      CALL l4f_category_log(category,L4F_ERROR, &
-       'cannot read any grib message from template file '//TRIM(output_format))
-      CALL raise_fatal_error()
-    ENDIF
+i = word_split(output_format, w_s, w_e, ':')
+IF (i >= 2) THEN ! grid from a grib template
+!  output_template = output_format(w_s(2):w_e(2))
+!  output_format(w_e(1)+1:) = ' '
+! open grib template file and import first message
+  file_template = grid_file_id_new(output_format, 'r')
+  gaid_template = grid_id_new(file_template)
+  IF (c_e(gaid_template)) THEN
+    CALL import(griddim_out, gaid_template)
+    CALL delete(gaid_template)
+    CALL delete(file_template)
   ELSE
-    CALL init(griddim_out,&
-     proj_type=proj_type,nx=nx,ny=ny, &
-     xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, component_flag=component_flag, &
-     latitude_south_pole=latitude_south_pole, &
-     longitude_south_pole=longitude_south_pole, angle_rotation=angle_rotation, &
-     categoryappend="requested_grid") ! explicit parameters for the grid
-
+    CALL l4f_category_log(category,L4F_ERROR, &
+     'cannot read any grib message from template file '//TRIM(output_format))
+    CALL raise_fatal_error()
   ENDIF
-  DEALLOCATE(w_s, w_e)
-
-  CALL griddim_unproj(griddim_out)
+ELSE
+  CALL init(griddim_out,&
+   proj_type=proj_type,nx=nx,ny=ny, &
+   xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, component_flag=component_flag, &
+   latitude_south_pole=latitude_south_pole, &
+   longitude_south_pole=longitude_south_pole, angle_rotation=angle_rotation, &
+   categoryappend="requested_grid") ! explicit parameters for the grid
 
 ENDIF
+DEALLOCATE(w_s, w_e)
 
-IF (trans_type == 'metamorphosis') THEN 
+CALL griddim_unproj(griddim_out)
+
+IF (output_format == "vapor") THEN 
   decode=.true.
 else
   decode=.false.
@@ -275,45 +272,35 @@ IF (ldisplay) THEN
 ENDIF
 
 
-IF (trans_type == 'metamorphosis') THEN  ! export with no operation
+IF (trans_type ==  'metamorphosis' .AND. output_format == "vapor") THEN ! export with no operation
 
-  call write_to_file_out(volgrid)
-
-  if (associated(volgrid)) call delete (volgrid)
+  CALL write_to_file_out(volgrid)
+  IF (ASSOCIATED(volgrid)) CALL delete(volgrid)
 
 else
 
-                                ! transformation object
+! transformation object
   CALL init(trans, trans_type=trans_type, sub_type=sub_type, extrap=extrap, &
    ix=ix, iy=iy, fx=fx, fy=fy, &
    ilon=ilon, ilat=ilat, flon=flon, flat=flat, npx=npx, npy=npy, &
    percentile=0.5D0, &
    categoryappend="transformation")
 
-  IF (trans_type == 'inter' .OR. trans_type == 'boxinter') THEN
-    CALL transform(trans,griddim_out,volgrid6d_in=volgrid, &
-     volgrid6d_out=volgrid_out,clone=.TRUE.,categoryappend="transformed")
+  CALL transform(trans,griddim_out,volgrid6d_in=volgrid, &
+   volgrid6d_out=volgrid_out,clone=.TRUE.,categoryappend="transformed")
 
-    IF (ldisplay) THEN ! done here in order to print final ellipsoid
-      DO i = 1,SIZE(volgrid)
-        PRINT*,'output grid >>>>>>>>>>>>>>>>>>>>'
-        IF (ASSOCIATED(volgrid_out)) CALL display(volgrid_out(1))
-      END DO
-    ENDIF
-
-  ELSE
-    CALL transform(trans,volgrid6d_in=volgrid, volgrid6d_out=volgrid_out, &
-     clone=.TRUE.,categoryappend="transformed")
-
+  IF (ldisplay) THEN ! done here in order to print final ellipsoid
+    DO i = 1,SIZE(volgrid)
+      PRINT*,'output grid >>>>>>>>>>>>>>>>>>>>'
+      IF (ASSOCIATED(volgrid_out)) CALL display(volgrid_out(1))
+    END DO
   ENDIF
 
   CALL l4f_category_log(category,L4F_INFO,"transformation completed")
   IF (ASSOCIATED(volgrid)) CALL delete(volgrid)
 
-
-  call write_to_file_out(volgrid_out)
-
-  CALL delete (volgrid_out)
+  CALL write_to_file_out(volgrid_out)
+  CALL delete(volgrid_out)
 
 ENDIF
 
@@ -348,7 +335,7 @@ IF (i == 3) THEN ! template requested (grib_api:template_file:output_file)
 
 ELSE
 
-  if (output_format == "grib_api") then 
+  if (output_format(1:8) == "grib_api") then 
 #ifdef HAVE_LIBGRIBAPI
     CALL export(myvolgrid,filename=outfile,categoryappend="exporttofilegrib")
 #else

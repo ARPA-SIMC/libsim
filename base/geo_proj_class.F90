@@ -109,6 +109,13 @@ INTERFACE OPERATOR (==)
   MODULE PROCEDURE geo_proj_eq
 END INTERFACE
 
+!> Logical inequality operators for objects of the classes \a geo_proj.
+!! They are all defined as \c ELEMENTAL thus work also on arrays of
+!! any shape.
+INTERFACE OPERATOR (/=)
+  MODULE PROCEDURE geo_proj_ne
+END INTERFACE
+
 INTEGER,PARAMETER :: nellips = 41 !< number of predefine ellipsoids
 
 ! queste costanti vanno usate per specificare l'ellissoide da usare per
@@ -249,7 +256,7 @@ DOUBLE PRECISION,PARAMETER,PRIVATE :: k0=0.9996D0 ! scale factor at central meri
 PRIVATE
 PUBLIC geo_proj, geo_proj_rotated, geo_proj_stretched, geo_proj_polar, geo_proj_ellips, &
  geo_proj_new, delete, copy, get_val, set_val, &
- write_unit, read_unit, display, proj, unproj, OPERATOR(==)
+ write_unit, read_unit, display, proj, unproj, OPERATOR(==), OPERATOR(/=)
 
 
 CONTAINS
@@ -690,7 +697,6 @@ END SUBROUTINE geo_proj_unproj
 
 ELEMENTAL FUNCTION geo_proj_eq(this, that) RESULT(eq)
 TYPE(geo_proj),INTENT(in) :: this, that
-
 LOGICAL :: eq
 
 eq = this%proj_type == that%proj_type .AND. this%xoff == that%xoff .AND. &
@@ -708,6 +714,15 @@ eq = this%proj_type == that%proj_type .AND. this%xoff == that%xoff .AND. &
  this%ellips%f == that%ellips%f .AND. this%ellips%a == that%ellips%a
 
 END FUNCTION geo_proj_eq
+
+
+ELEMENTAL FUNCTION geo_proj_ne(this, that) RESULT(ne)
+TYPE(geo_proj),INTENT(in) :: this, that
+LOGICAL :: ne
+
+ne = .NOT. (this == that)
+
+END FUNCTION geo_proj_ne
 
 ! =====================
 ! == transformations ==

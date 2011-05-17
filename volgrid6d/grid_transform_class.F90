@@ -98,6 +98,7 @@
 MODULE grid_transform_class
 USE vol7d_class
 USE err_handling
+USE geo_proj_class
 USE grid_class
 USE grid_dim_class
 USE optional_values
@@ -501,6 +502,8 @@ ELSE IF (this%trans_type == 'metamorphosis') THEN
   endif
 
 
+ELSE IF (this%trans_type == '' .OR. this%trans_type == 'none') THEN
+
 ELSE
 
   CALL l4f_category_log(this%category,L4F_ERROR,'trans_type '// &
@@ -735,11 +738,11 @@ TYPE(griddim_def),INTENT(inout) :: in !< griddim object to transform
 TYPE(griddim_def),INTENT(inout) :: out !< griddim object defining target grid (input or output depending on type of transformation)
 CHARACTER(len=*),INTENT(in),OPTIONAL :: categoryappend !< append this suffix to log4fortran namespace category
 
-INTEGER :: nx, ny, i, j
+INTEGER :: nx, ny, i, j, cf_i, cf_o
 DOUBLE PRECISION :: xmin, xmax, ymin, ymax, steplon, steplat, &
  xmin_new, ymin_new, ellips_smaj_axis, ellips_flatt
-doubleprecision :: l1, l2
-
+DOUBLE PRECISION :: l1, l2
+TYPE(geo_proj) :: proj_in, proj_out
 
 CALL grid_transform_init_common(this, trans, categoryappend)
 
@@ -820,7 +823,7 @@ IF (this%trans%trans_type == 'zoom') THEN
   ELSE
 
     CALL l4f_category_log(this%category,L4F_WARN, &
-     'init_grid_transform zoom sub_type '//TRIM(this%trans%sub_type) &
+     'grid_transform_init zoom sub_type '//TRIM(this%trans%sub_type) &
      //' not supported')
     this%valid = .FALSE.
     RETURN
@@ -861,9 +864,7 @@ IF (this%trans%trans_type == 'zoom') THEN
   this%outnx=out%dim%nx
   this%outny=out%dim%ny
 
-  call set_val (out,&
-   xmin = xmin,  xmax = xmax, &
-   ymin = ymin,  ymax = ymax )
+  CALL set_val(out, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax)
 
 ELSE IF (this%trans%trans_type == 'boxregrid') THEN
 
@@ -907,9 +908,27 @@ ELSE IF (this%trans%trans_type == 'inter') THEN
 
 ! set increments in new grid in order for all the baraque to work
   CALL griddim_setsteps(out, out%dim%nx, out%dim%ny)
-! set output component_flag equal to input
-  CALL get_val(in, component_flag=i)
-  CALL set_val(out, component_flag=i)
+! check component flag
+  CALL get_val(in, proj=proj_in, component_flag=cf_i)
+  CALL get_val(out, proj=proj_out, component_flag=cf_o)
+  IF (proj_in == proj_out) THEN
+! same projection: set output component flag equal to input regardless
+! of its value
+    CALL set_val(out, component_flag=cf_i)
+  ELSE
+! different projection, interpolation possible only with vector data
+! referred to geograpical axes
+    IF (cf_i == 1) THEN
+      CALL l4f_category_log(this%category,L4F_WARN, &
+       'trying to interpolate a grid with component flag 1 to a grid on a different projection')
+      CALL l4f_category_log(this%category,L4F_WARN, &
+       'vector fields will probably be wrong')
+!      this%valid = .FALSE.
+!      RETURN
+    ELSE
+      CALL set_val(out, component_flag=cf_i)
+    ENDIF
+  ENDIF
 
   IF (this%trans%sub_type == 'near' .OR. this%trans%sub_type == 'bilin' ) THEN
     
@@ -972,6 +991,16 @@ ELSE IF (this%trans%trans_type == 'boxinter') THEN
    this%outnx, this%outny, xmin, xmax, ymin, ymax, &
    in%dim%lon, in%dim%lat, .FALSE., &
    this%inter_index_x, this%inter_index_y)
+
+ELSE IF (this%trans%trans_type == '' .OR. this%trans%trans_type == 'none') THEN
+
+  CALL copy(in,out)
+
+  CALL get_val(in, nx=nx, ny=ny)
+  this%innx = nx
+  this%inny = ny
+  this%outnx = nx
+  this%outny = ny
 
 ELSE
 
@@ -1900,6 +1929,10 @@ ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
     ENDDO
     
   ENDIF
+
+ELSE IF (this%trans%trans_type == '' .OR. this%trans%trans_type == 'none') THEN
+
+  field_out(:,:,:) = field_in(:,:,:)
 
 ENDIF
 

@@ -38,22 +38,21 @@
 !! Example of transformation from vol7d to volgrid6d \include example_vg6d_7.f90
 !!
 !!\ingroup volgrid6d
-module volgrid6d_class
-
+MODULE volgrid6d_class
+USE geo_proj_class
 USE grid_class
 USE grid_transform_class
 USE datetime_class
 USE vol7d_timerange_class
 USE vol7d_level_class
 USE volgrid6d_var_class
-use log4fortran
+USE log4fortran
 USE array_utilities
 USE grid_id_class
 USE gridinfo_class
-use optional_values
-use vol7d_class
-use file_utilities
-
+USE optional_values
+USE vol7d_class
+USE file_utilities
 IMPLICIT NONE
 
 character (len=255),parameter:: subcategory="volgrid6d_class"
@@ -1503,8 +1502,10 @@ LOGICAL,INTENT(in),OPTIONAL :: clone !< if provided and \a .TRUE. , clone the \a
 LOGICAL,INTENT(in),OPTIONAL :: decode !< if provided and \a .FALSE. the data volume is not allocated, but work is performed on grid_id's
 CHARACTER(len=*),INTENT(in),OPTIONAL :: categoryappend !< append this suffix to log4fortran namespace category
 
-type(grid_transform) :: grid_trans
-integer :: ntime, ntimerange, nlevel, nvar
+TYPE(grid_transform) :: grid_trans
+INTEGER :: ntime, ntimerange, nlevel, nvar, component_flag, cf_out
+TYPE(geo_proj) :: proj_in, proj_out
+CHARACTER(len=80) :: trans_type
 
 #ifdef DEBUG
 call l4f_category_log(volgrid6d_in%category, L4F_DEBUG, "start volgrid6d_transform")
@@ -1522,23 +1523,34 @@ if (associated(volgrid6d_in%var)) nvar=size(volgrid6d_in%var)
 
 IF (ntime == 0 .OR. ntimerange == 0 .OR. nlevel == 0 .OR. nvar == 0) THEN
   CALL l4f_category_log(volgrid6d_in%category, L4F_ERROR, &
-   "trying to transform an incomplete volgrid6d object")
+   "trying to transform an incomplete volgrid6d object, ntime="//t2c(ntime)// &
+   ' ntimerange='//t2c(ntimerange)//' nlevel='//t2c(nlevel)//' nvar='//t2c(nvar))
   CALL init(volgrid6d_out) ! initialize to empty
   CALL raise_error()
   RETURN
 ENDIF
 
+CALL get_val(this, trans_type=trans_type)
 
-! Ensure wind components are referred to geographical system
-call vg6d_wind_unrot(volgrid6d_in)
+! store desired output component flag and unrotate if necessary
+cf_out = imiss
+IF (PRESENT(griddim) .AND. (trans_type == 'inter' .OR. trans_type == 'boxinter')) THEN ! improve condition!!
+  CALL get_val(volgrid6d_in%griddim, proj=proj_in)
+  CALL get_val(griddim, component_flag=cf_out, proj=proj_out)
+! if different projections wind components must be referred to geographical system
+  IF (proj_in /= proj_out) CALL vg6d_wind_unrot(volgrid6d_in)
+ELSE IF (PRESENT(griddim)) THEN ! just get component_flag, the rest is rubbish
+  CALL get_val(griddim, component_flag=cf_out)
+ENDIF
 
-call init(volgrid6d_out, griddim, categoryappend=categoryappend)
-call init(grid_trans, this, in=volgrid6d_in%griddim, out=volgrid6d_out%griddim, &
+CALL init(volgrid6d_out, griddim, categoryappend=categoryappend)
+CALL init(grid_trans, this, in=volgrid6d_in%griddim, out=volgrid6d_out%griddim, &
  categoryappend=categoryappend)
 
-IF (c_e(grid_trans)) THEN
+IF (c_e(grid_trans)) THEN ! transformation is valid
 
-  CALL volgrid6d_alloc(volgrid6d_out, griddim%dim, ntime, nlevel, ntimerange, nvar)
+  CALL volgrid6d_alloc(volgrid6d_out, ntime=ntime, nlevel=nlevel, &
+   ntimerange=ntimerange, nvar=nvar)
 ! decode status is copied from input, check whether grib_api requires
 ! clone=.TRUE. in these cases
   CALL volgrid6d_alloc_vol(volgrid6d_out, decode=ASSOCIATED(volgrid6d_in%voldati))
@@ -1546,7 +1558,14 @@ IF (c_e(grid_trans)) THEN
 !ensure unproj was called
 !call griddim_unproj(volgrid6d_out%griddim)
 
-  CALL compute(grid_trans, volgrid6d_in, volgrid6d_out,clone)
+  CALL compute(grid_trans, volgrid6d_in, volgrid6d_out, clone)
+
+  IF (cf_out == 0) THEN ! unrotated components are desired
+    CALL wind_unrot(volgrid6d_out) ! unrotate if necessary
+  ELSE IF (cf_out == 1) THEN ! rotated components are desired
+    CALL wind_rot(volgrid6d_out) ! rotate if necessary
+  ENDIF
+
 ELSE
 ! should log with grid_trans%category, but it is private
   CALL l4f_category_log(volgrid6d_in%category, L4F_ERROR, &
