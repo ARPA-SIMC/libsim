@@ -78,7 +78,7 @@ opt = optionparser_new(description_msg= &
  usage_msg='Usage: vg6d_transform [options] inputfile outputfile')
 
                                 ! define command-line options
-CALL optionparser_add(opt, 'v', 'trans-type', trans_type, 'inter', help= &
+CALL optionparser_add(opt, 'v', 'trans-type', trans_type, '', help= &
  'transformation type: ''inter'' for interpolation, ''boxinter'' for &
  &statistical interpolation on boxes, ''zoom'' for zooming, &
  &''boxregrid'' for resolution reduction, empty for no transformation &
@@ -278,7 +278,7 @@ IF (ldisplay) THEN
 ENDIF
 
 
-IF (trans_type ==  'metamorphosis' .AND. output_format == "vapor") THEN ! export with no operation
+IF (trans_type ==  '') THEN ! export with no operation
 
   CALL write_to_file_out(volgrid)
   IF (ASSOCIATED(volgrid)) CALL delete(volgrid)
