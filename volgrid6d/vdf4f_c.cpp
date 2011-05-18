@@ -168,7 +168,7 @@ int create_metadata_c(size_t xyzdim[3])
   int nliftingcoef = 1;
   int mbsfirst = 1;
   
-  /* creazione del metadata */
+  /* create metadata */
 
   __md = new VAPoR::MetadataVDC(xyzdim, num_transforms, bs, nfiltercoef,
 				nliftingcoef, mbsfirst);
@@ -197,7 +197,7 @@ int destroy_writer_c()
 int set_num_timesteps_c(size_t ntime )
 {
 	
-  /* numero di timesteps */
+  /* timesteps number */
 
   if ((__md->SetNumTimeSteps(ntime)) < 0) {
     return -1;
@@ -210,7 +210,7 @@ int set_num_timesteps_c(size_t ntime )
 int set_variables_names_c(size_t nvar, char varnames[], size_t len )
 {
 
-  /* inserisco i nomi delle variabili 3D */
+  /* insert variable name 3D */
 
   if (set_variable_names(varnames, len, nvar) != 0) {
     return -1;
@@ -238,12 +238,14 @@ int write_metadata_c(char filename[])
 int vdf4f_write_c(float *volume,
 		  size_t xyzdim[3], size_t ntime , size_t nvar , 
 		  char varnames[], size_t len ,
-		  char filename[])
+		  char filename[], int rzscan)
 {
-  float *slice;
-  size_t i, j, k;
+  float *slice, *reverseslice, *myslice ;
+  size_t i, j, k, xydim ;
   
-  /* creo il writer per i valori a partire dal metadata appena creato */
+  xydim = xyzdim[0] * xyzdim[1] ;
+
+  /* create writer starting from metadata already done */
   __wr = new VAPoR::WaveletBlock3DBufWriter(filename);
   if ((VAPoR::MetadataVDC::GetErrCode())) {
     return -1;
@@ -251,31 +253,40 @@ int vdf4f_write_c(float *volume,
   
   slice = volume ;
   
-  /* per ogni variabile: */
+  /* each variable */
   for (i = 0; i < nvar; i++) {
-    /* per ogni timestep */
+    /* each timestep */
     for (j = 0; j < ntime; j++) {
-      /* preparo il writer per la scrittura della
-       * i-esima variabile a j-esimo timestep */
+      /* prepare writer to write 
+       * i variable at j timestep */
       	    
       if ((__wr->OpenVariableWrite(j, varnames+(i*len), -1)) < 0) {
 	return -1;
       }
       
-      /* passo al writer le slice della i-esima variabile
-       * al j-esimo timestep lungo tutto l'asse Z */
+
+      reverseslice = slice + (xydim * (xyzdim[2] - 1)) ;
+
+      /* slice for i variable
+       * at j timestep */
       for (k = 0 ; k < xyzdim[2] ; k++) {
 
+	if ( rzscan ) {
+	  myslice = reverseslice ;
+	    }
+	else{
+	  myslice = slice ;
+	}
 
-	if (( __wr->WriteSlice(slice)) < 0) {
+	if (( __wr->WriteSlice(myslice)) < 0) {
 	  return -1;
 	}
 	
-	slice += xyzdim[0] * xyzdim[1] ;
+	slice += xydim ;
+	reverseslice -= xydim ;
 	
       }
-      /* chiudo la scrittura sulla i-esima variabile
-       * al j-esimo timestep */
+      /* close */
       __wr->CloseVariable();
     }
   }

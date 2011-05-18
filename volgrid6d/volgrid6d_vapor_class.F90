@@ -45,10 +45,11 @@ contains
 
 !>\brief Write on file Volgrid6d volume in vdf format for vapor.
 !! Write bg6d volume in wavelet vapor file.
-subroutine volgrid6d_export_to_vapor (this,normalize,filename,filename_auto)
+subroutine volgrid6d_export_to_vapor (this,normalize,rzscan,filename,filename_auto)
 
 TYPE(volgrid6d),INTENT(IN) :: this !< volume volgrid6d to write
 logical,intent(in) :: normalize !<  if true normalize variables to v7d (dballe) standard
+logical,intent(in),optional :: rzscan      !<  if true reverse Z (level) order in vdf export
 character(len=*),intent(in),optional :: filename !< file name to write
 character(len=*),intent(out),optional :: filename_auto !< generated  file name if "filename" is missing
 
@@ -64,12 +65,18 @@ TYPE(vol7d_var),allocatable :: varbufr(:)
 type(vol7d_var),pointer :: dballevar(:)
 CHARACTER(len=255) :: proj_type,mapprojection
 
-integer :: zone
+integer :: zone, irzscan
 DOUBLE PRECISION :: xoff, yoff, ellips_smaj_axis, ellips_flatt
 
 call l4f_category_log(this%category,L4F_DEBUG,"export to vapor")
 
 call vol7d_dballe_import_dballevar(dballevar)
+
+if (optio_log(rzscan)) then
+  irzscan=1
+else
+  irzscan=0
+end if
 
 ntime=imiss
 ntimerange=imiss
@@ -160,7 +167,7 @@ if (c_e(ntime) .and. c_e(ntimerange) .and. c_e(nlevel) .and. c_e(nvar)) then
       end do
     end if
 
-    if (this%time_definition == 0) then
+    if (this%time_definition == 1) then
       ntimera=ntime
       allocate(tsdescriptions(ntimera))
 
@@ -250,14 +257,15 @@ if (c_e(ntime) .and. c_e(ntimerange) .and. c_e(nlevel) .and. c_e(nvar)) then
     if(ier==0) ier = write_metadata(lfilename)
     call l4f_category_log(this%category,L4F_DEBUG,"VDF: call vdf4f_write")
 
-    if (this%time_definition == 0) then
+    if (this%time_definition == 1) then
 
       if (ntimerange /= 1) then
         call l4f_category_log(this%category,L4F_WARN,"VDF: writing only fisth timerange, there are:"//t2c(ntimerange))
       end if
 
       call l4f_category_log(this%category,L4F_INFO,"scan VDF (vapor file) for times")
-      if(ier==0) ier = vdf4f_write(this%voldati(:,:,:,:,1,:), xyzdim, ntime, nvar, varnames, lfilename)  
+      if(ier==0) ier = vdf4f_write(this%voldati(:,:,:,:,1,:), xyzdim, ntime, nvar, varnames, lfilename, &
+       irzscan)  
 
     else
 
@@ -266,7 +274,8 @@ if (c_e(ntime) .and. c_e(ntimerange) .and. c_e(nlevel) .and. c_e(nvar)) then
       end if
 
       call l4f_category_log(this%category,L4F_INFO,"scan VDF (vapor file) for timeranges")
-      if(ier==0) ier = vdf4f_write(this%voldati(:,:,:,1,:,:), xyzdim, ntimerange, nvar, varnames, lfilename)  
+      if(ier==0) ier = vdf4f_write(this%voldati(:,:,:,1,:,:), xyzdim, ntimerange, nvar, varnames, lfilename, &
+       irzscan)  
 
     end if
 

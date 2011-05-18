@@ -52,7 +52,7 @@ type(optionparser) :: opt
 INTEGER :: optind, optstatus
 integer :: iargc
                                 !CHARACTER(len=3) :: set_scmode
-LOGICAL :: version, ldisplay
+LOGICAL :: version, ldisplay, rzscan
 INTEGER,POINTER :: w_s(:), w_e(:)
 TYPE(grid_file_id) :: file_template
 TYPE(grid_id) :: gaid_template
@@ -182,6 +182,12 @@ CALL optionparser_add(opt, ' ', 'time-definition', time_definition, 0, help= &
 CALL optionparser_add(opt, ' ', 'display', ldisplay, help= &
  'briefly display the data volume imported and exported, warning: this option is incompatible &
  &with output on stdout.')
+
+#ifdef VAPOR
+CALL optionparser_add(opt, ' ', 'reverse-vapor-z-order', rzscan, help= &
+ 'reverse the scan order for Z (level) coordinate during export to vdf files for vapor.')
+#endif
+
                                 ! help options
 CALL optionparser_add_help(opt, 'h', 'help', help='show an help message and exit')
 CALL optionparser_add(opt, ' ', 'version', version, help='show version and exit')
@@ -350,7 +356,7 @@ ELSE
     do i =1,size(myvolgrid)
       CALL l4f_category_log(category,L4F_INFO, &
        "exporting to vapor vdf file: "//trim(outfile)//"_"//t2c(i)//".vdf")
-      call export (myvolgrid(i),normalize=.True.,&
+      call export (myvolgrid(i),normalize=.True.,rzscan=rzscan,&
        filename=trim(outfile)//"_"//t2c(i)//".vdf")
     end do
 #else

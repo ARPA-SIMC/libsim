@@ -92,7 +92,7 @@ Interface
   Character(C_CHAR), Intent(IN) :: filename
   end function write_metadata_c
 
-  Function vdf4f_write_c(volume, xyzdim, ntime,nvar,varnames,len, filename) BIND(C)
+  Function vdf4f_write_c(volume, xyzdim, ntime,nvar,varnames,len, filename, rzscan) BIND(C)
   import
   Integer(C_SIZE_T), Intent(IN) :: xyzdim(3)
   Integer(C_SIZE_T), Intent(IN), VALUE :: ntime
@@ -101,6 +101,7 @@ Interface
   Character(C_CHAR), Intent(IN) :: varnames(nvar)
   Integer(C_SIZE_T), Intent(IN), VALUE :: len
   Character(C_CHAR), Intent(IN) :: filename
+  Integer(C_INT),     Intent(IN), VALUE :: rzscan
   Integer(C_INT) :: vdf4f_write_c
   End Function vdf4f_write_c
 
@@ -175,13 +176,14 @@ end interface
 
 contains
 
-integer function vdf4f_write_i386(volume, xyzdim, ntime,nvar,varnames, filename)
+integer function vdf4f_write_i386(volume, xyzdim, ntime,nvar,varnames, filename, rzscan)
 
 Real,intent(in)     :: volume(:,:,:,:,:)
 Integer(C_SIZE_T),intent(in)  :: xyzdim(3)
 integer(C_SIZE_T),intent(in) ::  nvar, ntime
 Character(len=*),intent(in)    :: varnames(nvar)
 Character(len=*),intent(in)    :: filename
+Integer, intent(in) ::  rzscan
 
 
 !nteger(C_SIZE_T)  :: nvar_c
@@ -200,14 +202,15 @@ do i=1, nvar
   varnames_c(i)=trim(varnames(i))//char(0)
 end do
 
-vdf4f_write_i386 = vdf4f_write_c(volume, xyzdim, ntime, nvar, varnames_c, len_c, trim(filename)//char(0))
+vdf4f_write_i386 = vdf4f_write_c(volume, xyzdim, ntime, nvar, varnames_c, len_c, &
+ trim(filename)//char(0),rzscan)
 
 return 
 
 end function vdf4f_write_i386
 
 
-integer function vdf4f_write_amd64(volume, xyzdim, ntime,nvar,varnames, filename)
+integer function vdf4f_write_amd64(volume, xyzdim, ntime,nvar,varnames, filename,rzscan)
 
 
 Real,intent(in)     :: volume(:,:,:,:,:)
@@ -215,6 +218,7 @@ Integer,intent(in)  :: xyzdim(3)
 Integer,intent(in)  :: nvar,ntime
 Character(len=*),intent(in)    :: varnames(nvar)
 Character(len=*),intent(in)    :: filename
+integer, intent(in) ::  rzscan
 
 
 Integer(C_SIZE_T)  :: nvar_c
@@ -234,7 +238,8 @@ do i=1, nvar
   varnames_c(i)=trim(varnames(i))//char(0)
 end do
 
-vdf4f_write_amd64 = vdf4f_write_c(volume, xyzdim_c, ntime_c, nvar_c, varnames_c, len_c, trim(filename)//char(0))
+vdf4f_write_amd64 = vdf4f_write_c(volume, xyzdim_c, ntime_c, nvar_c, varnames_c, len_c, &
+ trim(filename)//char(0), rzscan)
 
 return 
 

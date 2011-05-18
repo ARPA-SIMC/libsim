@@ -28,6 +28,13 @@ libsim_volgrid6d_la_LIBADD = ../log4fortran/liblog4fortran.la \
 
 if VAPOR
 libsim_volgrid6d_la_SOURCES += vdf4f_c.cpp vdf4f.F03 volgrid6d_vapor_class.F90
+
+vdf4f.o: vdf4f_c.$(OBJEXT)
+volgrid6d_vapor_class.o: vdf4f.$(OBJEXT)
+
+vdf4f.lo: vdf4f_c.$(OBJEXT)
+volgrid6d_vapor_class.lo: vdf4f.$(OBJEXT)
+
 AM_CPPFLAGS += $(VAPOR_CPPFLAGS)
 libsim_volgrid6d_la_LDFLAGS += $(VAPOR_LDFLAGS)
 libsim_volgrid6d_la_LIBADD += $(VAPOR_LIBS)

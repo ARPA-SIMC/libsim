@@ -107,7 +107,7 @@ extern "C" {
 
   int vdf4f_write_c(float *volume,
 		size_t xyzdim[3], size_t ntime ,size_t nvar , 
-		  char varnames[], size_t len, char filename[]);
+		    char varnames[], size_t len, char filename[], int rzscan);
 
 /**
  * destroy_writer() - destroy writer
