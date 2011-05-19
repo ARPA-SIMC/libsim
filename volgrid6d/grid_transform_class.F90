@@ -88,11 +88,14 @@
 !!    - sub_type='percentile' the function used is a requested
 !!      percentile of the input points distribution.
 !!  - trans_type='metamorphosis' the output points and values are the
-!!    same as the input ones but the data structure is changed from
-!!    grid to sparse points (grid-to-sparse points)
+!!    same as the input ones but either the component flag of the
+!!    output grid is changed, keeping the same projection and grid, or
+!!    the underlying data structure is changed from grid to sparse
+!!    points (grid-to-grid and grid-to-sparse points)
 !!    - sub_type='all' all the input points are kept in the output
 !!    - sub_type='coordbb' the input points which lie in the provided
-!!      lon/lat bounding box are kept in the output.
+!!      lon/lat bounding box are kept in the output (grid-to-sparse
+!!      points only).
 !!
 !! \ingroup volgrid6d
 MODULE grid_transform_class
@@ -500,9 +503,6 @@ ELSE IF (this%trans_type == 'metamorphosis') THEN
      TRIM(this%sub_type)//' is wrong')
     CALL raise_fatal_error()
   endif
-
-
-ELSE IF (this%trans_type == '' .OR. this%trans_type == 'none') THEN
 
 ELSE
 
@@ -992,7 +992,7 @@ ELSE IF (this%trans%trans_type == 'boxinter') THEN
    in%dim%lon, in%dim%lat, .FALSE., &
    this%inter_index_x, this%inter_index_y)
 
-ELSE IF (this%trans%trans_type == '' .OR. this%trans%trans_type == 'none') THEN
+ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
 
   CALL copy(in,out)
 

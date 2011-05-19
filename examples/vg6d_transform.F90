@@ -81,12 +81,14 @@ opt = optionparser_new(description_msg= &
 CALL optionparser_add(opt, 'v', 'trans-type', trans_type, 'none', help= &
  'transformation type: ''inter'' for interpolation, ''boxinter'' for &
  &statistical interpolation on boxes, ''zoom'' for zooming, &
- &''boxregrid'' for resolution reduction, ''none'' for no transformation &
- &(input/output only)')
+ &''boxregrid'' for resolution reduction, ''metamorphosis'' for &
+ &keeping the same grid but changing e.g. the component flag, &
+ &''none'' for no transformation (input/output only)')
 CALL optionparser_add(opt, 'z', 'sub-type', sub_type, 'near', help= &
  'transformation subtype, for inter: ''near'', ''bilin'', &
- &for ''boxinter'' and ''boxregrid'': ''average'', ''max'', ''min'', &
- &for zoom: ''index'', ''coord'', ''coordbb''')
+ &for boxinter and boxregrid: ''average'', ''max'', ''min'', &
+ &for zoom: ''index'', ''coord'', ''coordbb'', &
+ &for metamorphosis: ''all''')
 CALL optionparser_add(opt, ' ', 'extrap', extrap, help= &
  'enable extrapolation outside input grid, it works only for ''inter'' &
  &transformations, use with care')
