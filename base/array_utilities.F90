@@ -29,26 +29,31 @@ IMPLICIT NONE
 ! la routine per i char non puo' essere sviluppata in macro perche` si deve scrivere diversa
 !cosi' esiste la function count_distinctc (senza _ ) e la subroutine pack_distinctc qui ivi scritte
 
+!> to document
 INTERFACE count_distinct
   MODULE PROCEDURE count_distinct_i, count_distinct_r, count_distinct_d, &
    count_distinct_datetime, count_distinct_c
 END INTERFACE
 
+!> to document
 INTERFACE pack_distinct
   MODULE PROCEDURE pack_distinct_i, pack_distinct_r, pack_distinct_d, &
    pack_distinct_datetime !, pack_distinct_c
 END INTERFACE
 
+!> to document
 INTERFACE map_distinct
   MODULE PROCEDURE map_distinct_i, map_distinct_r, map_distinct_d, &
    map_distinct_datetime, map_distinct_c
 END INTERFACE
 
+!> to document
 INTERFACE map_inv_distinct
   MODULE PROCEDURE map_inv_distinct_i, map_inv_distinct_r, map_inv_distinct_d, &
    map_inv_distinct_datetime, map_inv_distinct_c
 END INTERFACE
 
+!> Find the firsth or last index of an element in a vector equal to the values provided
 INTERFACE index
   MODULE PROCEDURE index_i, index_r, index_d, &
    index_datetime !, index_c
