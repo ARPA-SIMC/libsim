@@ -118,30 +118,37 @@ INTERFACE OPERATOR (<=)
 END INTERFACE
 
 ! da documentare in inglese assieme al resto
+!> to be documented
 INTERFACE c_e
   MODULE PROCEDURE vol7d_level_c_e
 END INTERFACE
 
+!> to be documented
 INTERFACE count_distinct
   MODULE PROCEDURE count_distinct_level
 END INTERFACE
 
+!> to be documented
 INTERFACE pack_distinct
   MODULE PROCEDURE pack_distinct_level
 END INTERFACE
 
+!> to be documented
 INTERFACE map_distinct
   MODULE PROCEDURE map_distinct_level
 END INTERFACE
 
+!> to be documented
 INTERFACE map_inv_distinct
   MODULE PROCEDURE map_inv_distinct_level
 END INTERFACE
 
+!> to be documented
 INTERFACE index
   MODULE PROCEDURE index_level
 END INTERFACE
 
+!> to be documented
 INTERFACE sort
   MODULE PROCEDURE sort_level
 END INTERFACE

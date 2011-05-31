@@ -73,22 +73,27 @@ INTERFACE OPERATOR (/=)
   MODULE PROCEDURE vol7d_network_ne, vol7d_network_nesv
 END INTERFACE
 
+!> to be documented
 INTERFACE count_distinct
   MODULE PROCEDURE count_distinct_network
 END INTERFACE
 
+!> to be documented
 INTERFACE pack_distinct
   MODULE PROCEDURE pack_distinct_network
 END INTERFACE
 
+!> to be documented
 INTERFACE map_distinct
   MODULE PROCEDURE map_distinct_network
 END INTERFACE
 
+!> to be documented
 INTERFACE map_inv_distinct
   MODULE PROCEDURE map_inv_distinct_network
 END INTERFACE
 
+!> to be documented
 INTERFACE index
   MODULE PROCEDURE index_network
 END INTERFACE

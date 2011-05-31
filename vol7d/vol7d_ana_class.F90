@@ -86,22 +86,27 @@ INTERFACE write_unit
   MODULE PROCEDURE vol7d_ana_write_unit, vol7d_ana_vect_write_unit
 END INTERFACE
 
+!> to be documented
 INTERFACE count_distinct
   MODULE PROCEDURE count_distinct_ana
 END INTERFACE
 
+!> to be documented
 INTERFACE pack_distinct
   MODULE PROCEDURE pack_distinct_ana
 END INTERFACE
 
+!> to be documented
 INTERFACE map_distinct
   MODULE PROCEDURE map_distinct_ana
 END INTERFACE
 
+!> to be documented
 INTERFACE map_inv_distinct
   MODULE PROCEDURE map_inv_distinct_ana
 END INTERFACE
 
+!> to be documented
 INTERFACE index
   MODULE PROCEDURE index_ana
 END INTERFACE
