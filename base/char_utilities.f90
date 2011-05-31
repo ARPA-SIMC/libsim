@@ -108,6 +108,72 @@ END INTERFACE
 PRIVATE line_split_delete
 
 
+!> Tries to match the given string with the pattern
+!! Result:
+!!     .true. if the entire string matches the pattern, .false.
+!!     otherwise
+!! Note:
+!!     Trailing blanks are ignored
+!!
+!! provides a string matching method known as glob matching: it is used
+!! for instance under UNIX, Linux and DOS to select files whose names
+!! match a certain pattern - strings like "*.f90" describe all file
+!! swhose names end in ".f90".
+!!
+!! The method implemented in the module is somewhat simplified than the
+!! full glob matching possible under UNIX: it does not support
+!! character classes.
+!!
+!! Glob patterns are intended to match the entire string. In this
+!! implementation, however, trailing blanks in both the string and the
+!! pattern are ignored, so that it is a bit easier to use in Fortran.
+!!
+!! The module supports both "*" and "?" as wild cards, where "*" means
+!! any sequence of characters, including zero and "?" means a single
+!! character. If you need to match the characters "*" or "?", then
+!! precede them with a backslash ("\"). If you need to match a
+!! backslash, you will need to use two:
+!!
+!! 	
+!!    match = string_match( "c:\somedir" "c:\\*" )
+!!
+!! will return .true., while:
+!!
+!!    match = string_match( "c:\somedir" "c:\*" )
+!!
+!! will not match, as the backslash "escapes" the asterisk, which then becomes an ordinary character. 
+!!
+!! BUGS
+!!
+!! The matching algorithm is not flawless:
+!!
+!!    * Patterns like "e* *" may fail, because trailing blanks are
+!!      removed. The string "e " ought to match this pattern, but
+!!      because only the substring "e" will be considered, the
+!!      trailing blank that is necessary for matching between the two
+!!      asterisks is removed from the matching process.
+!!
+!!      The test program contains a case that should fail on this, but it does not, oddly enough.
+!!
+!!    * Patterns like "b*ba" fail on a string like "babababa" because
+!!      the algorithm finds an early match (the substring at 3:4) for
+!!      the last literal substring "ba" in the pattern. It should
+!!      instead skip over that substring and search for the substring
+!!      7:8.
+!!
+!!      There are two ways to deal with this:
+!!
+!!          o Insert an extra character at the end, which does not occur anywhere in the pattern.
+!!
+!!          o If the match fails, continue at a point after the position of the literal substring where matching failed. 
+!!
+!!      The second is probably the way to go, but it may be a bit slower. 
+INTERFACE match
+  MODULE PROCEDURE string_match, string_match_v
+END INTERFACE
+
+PRIVATE string_match, string_match_v
+
 CONTAINS
 
 ! Version with integer argument, please use the generic \a to_char
@@ -793,5 +859,175 @@ end if
 
 
 END FUNCTION wash_char
+
+
+! derived by http://sourceforge.net/projects/flibs
+!
+! globmatch.f90 --
+!     Match strings according to (simplified) glob patterns
+!
+!     The pattern matching is limited to literals, * and ?
+!     (character classes are not supported). A backslash escapes
+!     any character.
+!
+!     $Id: globmatch.f90,v 1.5 2006/03/26 19:03:53 arjenmarkus Exp $
+!!$Copyright (c) 2008, Arjen Markus
+!!$
+!!$All rights reserved.
+!!$
+!!$Redistribution and use in source and binary forms, with or without modification,
+!!$are permitted provided that the following conditions are met:
+!!$
+!!$Redistributions of source code must retain the above copyright notice,
+!!$this list of conditions and the following disclaimer.
+!!$Redistributions in binary form must reproduce the above copyright notice,
+!!$this list of conditions and the following disclaimer in the documentation
+!!$and/or other materials provided with the distribution.
+!!$Neither the name of the author nor the names of the contributors
+!!$may be used to endorse or promote products derived from this software
+!!$without specific prior written permission.
+!!$THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+!!$"AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+!!$THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+!!$ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE
+!!$FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+!!$DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+!!$SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+!!$CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+!!$OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+!!$OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+!
+
+!> Tries to match the given string with the pattern (vector version)
+!! Result:
+!!     .true. if the entire string matches the pattern, .false.
+!!     otherwise
+!! Note:
+!!     Trailing blanks are ignored
+!!
+logical function string_match_v( string, pattern ) result(match)
+character(len=*), intent(in) :: string(:) !< String to be examined
+character(len=*), intent(in) :: pattern !< Glob pattern to be used for the matching
+logical                      :: match(size(string))
+
+integer :: i
+
+do i =1,size(string)
+  match(i)=string_match(string(i),pattern)
+end do
+
+end function string_match_v
+
+!> Tries to match the given string with the pattern
+!! Result:
+!!     .true. if the entire string matches the pattern, .false.
+!!     otherwise
+!! Note:
+!!     Trailing blanks are ignored
+!!
+recursive function string_match( string, pattern ) result(match)
+    character(len=*), intent(in) :: string !< String to be examined
+    character(len=*), intent(in) :: pattern !< Glob pattern to be used for the matching
+    logical                      :: match
+
+    character(len=1), parameter :: backslash = '\\'
+    character(len=1), parameter :: star      = '*'
+    character(len=1), parameter :: question  = '?'
+
+    character(len=len(pattern))  :: literal
+    integer                      :: ptrim
+    integer                      :: p
+    integer                      :: k
+    integer                      :: ll
+    integer                      :: method
+    integer                      :: start
+    integer                      :: strim
+
+    match  = .false.
+    method = 0
+    ptrim  = len_trim( pattern )
+    strim  = len_trim( string )
+    p      = 1
+    ll     = 0
+    start  = 1
+
+    !
+    ! Split off a piece of the pattern
+    !
+    do while ( p <= ptrim )
+        select case ( pattern(p:p) )
+            case( star )
+                if ( ll .ne. 0 ) exit
+                method = 1
+            case( question )
+                if ( ll .ne. 0 ) exit
+                method = 2
+                start  = start + 1
+            case( backslash )
+                p  = p + 1
+                ll = ll + 1
+                literal(ll:ll) = pattern(p:p)
+            case default
+                ll = ll + 1
+                literal(ll:ll) = pattern(p:p)
+        end select
+
+        p = p + 1
+    enddo
+
+    !
+    ! Now look for the literal string (if any!)
+    !
+    if ( method == 0 ) then
+        !
+        ! We are at the end of the pattern, and of the string?
+        !
+        if ( strim == 0 .and. ptrim == 0 ) then
+            match = .true.
+        else
+            !
+            ! The string matches a literal part?
+            !
+            if ( ll > 0 ) then
+                if ( string(start:min(strim,start+ll-1)) == literal(1:ll) ) then
+                    start = start + ll
+                    match = string_match( string(start:), pattern(p:) )
+                endif
+            endif
+        endif
+    endif
+
+    if ( method == 1 ) then
+        !
+        ! Scan the whole of the remaining string ...
+        !
+        if ( ll == 0 ) then
+            match = .true.
+        else
+            do while ( start <= strim )
+                k     = index( string(start:), literal(1:ll) )
+                if ( k > 0 ) then
+                    start = start + k + ll - 1
+                    match = string_match( string(start:), pattern(p:) )
+                    if ( match ) then
+                        exit
+                    endif
+                endif
+
+                start = start + 1
+            enddo
+        endif
+    endif
+
+    if ( method == 2 .and. ll > 0 ) then
+        !
+        ! Scan the whole of the remaining string ...
+        !
+        if ( string(start:min(strim,start+ll-1)) == literal(1:ll) ) then
+            match = string_match( string(start+ll:), pattern(p:) )
+        endif
+    endif
+    return
+end function string_match
 
 END MODULE char_utilities
