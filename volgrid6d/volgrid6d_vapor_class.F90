@@ -20,6 +20,7 @@ module volgrid6d_vapor_class
 
 use log4fortran
 USE volgrid6d_class
+USE volgrid6d_var_class
 use vol7d_class
 use vol7d_dballe_class
 use missing_values
@@ -124,19 +125,13 @@ if (c_e(ntime) .and. c_e(ntimerange) .and. c_e(nlevel) .and. c_e(nvar)) then
 
                                 ! Rescale valid data according to variable conversion table
       IF (ASSOCIATED(c_func)) THEN
+
         DO ivar = 1, nvar
-          if (c_func(ivar)%a /= conv_func_miss%a .or. c_func(ivar)%b /= conv_func_miss%b )then
-            WHERE(this%voldati(:,:,:,:,:,ivar) /= rmiss)
-              this%voldati(:,:,:,:,:,ivar) = &
-               this%voldati(:,:,:,:,:,ivar)*c_func(ivar)%a + c_func(ivar)%b
-            END WHERE
-          else
-            this%voldati(:,:,:,:,:,ivar)=rmiss
-          end if
+          this%voldati(:,:,:,:,:,ivar) = convert(c_func(ivar),this%voldati(:,:,:,:,:,ivar))
         ENDDO
         DEALLOCATE(c_func)
+
       ENDIF
-      
 
       do ivar=1,nvar
         
