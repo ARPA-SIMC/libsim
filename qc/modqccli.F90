@@ -81,6 +81,7 @@ use geo_coord_class
 use file_utilities
 use log4fortran
 use char_utilities
+use array_utilities
 #ifdef HAVE_DBALLE
 use vol7d_dballe_class
 #endif
@@ -138,11 +139,16 @@ contains
 !>\brief Init del controllo di qualità climatico.
 !!Effettua la lettura dei file e altre operazioni di inizializzazione.
 
-subroutine qccliinit(qccli,v7d,var,data_id_in,macropath,climapath,categoryappend)
+subroutine qccliinit(qccli,v7d,var, timei, timef, coordmin, coordmax, data_id_in,macropath,climapath,categoryappend)
 
 type(qcclitype),intent(in out) :: qccli !< Oggetto per il controllo climatico
 type (vol7d),intent(in),target:: v7d !< Il volume Vol7d da controllare
 character(len=*),INTENT(in) :: var(:)!< variabili da importare secondo la tabella B locale o relativi alias
+!> coordinate minime e massime che definiscono il 
+!! rettangolo di estrazione per l'importazione
+TYPE(geo_coord),INTENT(inout),optional :: coordmin,coordmax 
+!>estremi temporali (inizio e fine) dell'estrazione per l'importazione
+TYPE(datetime),INTENT(in),optional :: timei, timef
 integer,intent(in),optional,target:: data_id_in(:,:,:,:,:) !< Indici dei dati in DB
 character(len=512),intent(in),optional :: macropath !< file delle macroaree
 character(len=512),intent(in),optional :: climapath !< file con il volume del clima
@@ -184,7 +190,8 @@ if (present(climapath))then
   filepath=climapath
 else
 #ifdef HAVE_DBALLE
- filepath=get_package_filepath('climaprec.bufr', filetype_data)
+! filepath=get_package_filepath('climaprec.bufr', filetype_data)
+ filepath="none.dba"
 #else
  filepath=get_package_filepath('climaprec.v7d', filetype_data)
 #endif
@@ -207,9 +214,20 @@ case("v7d")
 case("bufr")
   call init(v7d_dballetmp,file=.true.,filename=filepath,categoryappend=trim(a_name)//".clima")
   !call import(v7d_dballetmp)
-  call import(v7d_dballetmp,var=var,varkind=(/("r",i=1,size(var))/))
+  call import(v7d_dballetmp,var=var,coordmin=coordmin, coordmax=coordmax, timei=timei, timef=timef, &
+   varkind=(/("r",i=1,size(var))/),attr=(/"*B33192"/),attrkind=(/"b"/))
   call copy(v7d_dballetmp%vol7d,qccli%clima)
   call delete(v7d_dballetmp)
+
+
+case("dba")
+  call init(v7d_dballetmp,dsn="qccli",user="qc",password="qc",write=.false.,file=.false.,categoryappend=trim(a_name)//".clima")
+  !call import(v7d_dballetmp)
+  call import(v7d_dballetmp,var=var,coordmin=coordmin, coordmax=coordmax, timei=timei, timef=timef, &
+   varkind=(/("r",i=1,size(var))/),attr=(/"*B33192"/),attrkind=(/"b"/))
+  call copy(v7d_dballetmp%vol7d,qccli%clima)
+  call delete(v7d_dballetmp)
+
 #endif
 
 case default
@@ -342,20 +360,21 @@ integer,intent(in),optional :: perc   !< Percentile soglia da usare nel controll
 
 
 CHARACTER(len=vol7d_ana_lenident) :: ident
-REAL(kind=fp_geo) :: lat,lon
+!REAL(kind=fp_geo) :: lat,lon
 integer :: imese
                                 !local
 integer :: i,j,indtbattrin,indtbattrout,i1,i2,i3,i4,i5,i6
 logical :: anamaskl(size(qccli%v7d%ana)), timemaskl(size(qccli%v7d%time)), levelmaskl(size(qccli%v7d%level)), &
  timerangemaskl(size(qccli%v7d%timerange)), varmaskl(size(qccli%v7d%dativar%r)), networkmaskl(size(qccli%v7d%network)) 
 
-integer :: indana ,indanavar, indtime ,indlevel ,indtimerange ,inddativarr, indnetwork
+integer :: indana , indanavar, indtime ,indlevel ,indtimerange ,inddativarr, indnetwork
 integer :: indcana,           indctime,indclevel,indctimerange,indcdativarr,indcnetwork
 real :: datoqui,climaqui
 integer :: altezza,iarea,lperc
+!integer, allocatable :: indcanav(:)
 
 
-TYPE(vol7d_ana)  :: ana
+!TYPE(vol7d_ana)  :: ana
 TYPE(datetime)   :: time
 TYPE(vol7d_level):: level
 type(vol7d_var)  :: anavar
@@ -370,13 +389,13 @@ else
 end if
 
 if (present(tbattrin))then
-  indtbattrin = firsttrue(qccli%v7d%dativarattr%r(:)%btable == tbattrin)
+  indtbattrin = index(qccli%v7d%dativarattr%r(:)%btable, tbattrin)
 else
   indtbattrin=1
 end if
 
 if (present(tbattrout))then
-  indtbattrout = firsttrue(qccli%v7d%dativarattr%r(:)%btable == tbattrout)
+  indtbattrout = index(qccli%v7d%dativarattr%r(:)%btable, tbattrout)
 else
   indtbattrout=2
 end if
@@ -438,83 +457,95 @@ ENDDO
 do indana=1,size(qccli%v7d%ana)
 
   iarea= supermacroa(qccli%in_macroa(indana))
-
-  do  indnetwork=1,size(qccli%v7d%network)
+  write(ident,'("BOX-",i2.2,"??")')iarea   ! macro-area
+                                !lat=0.0d0
+                                !lon=0.0d0
+                                !write(ident,'("BOX-",2i2.2)')iarea,lperc   ! macro-area e percentile
+                                !call init(ana,lat=lat,lon=lon,ident=ident)
+              
+                                !allocate (indcanav(count(match(qccli%clima%ana(:)%ident,ident))))
+                                !indcanav=match(qccli%clima%ana(:)%ident,ident))))
+  
+  do indnetwork=1,size(qccli%v7d%network)
     do indlevel=1,size(qccli%v7d%level)
       do indtimerange=1,size(qccli%v7d%timerange)
         do inddativarr=1,size(qccli%v7d%dativar%r)
-
           do indtime=1,size(qccli%v7d%time)
             if (anamaskl(indana).and.timemaskl(indtime).and.levelmaskl(indlevel).and. &
              timerangemaskl(indtimerange).and.varmaskl(inddativarr).and.networkmaskl(indnetwork).and.&
              c_e(qccli%v7d%voldatir(indana,indtime,indlevel,indtimerange,inddativarr,indnetwork)))then
               if( invalidated(qccli%v7d%voldatiattrb&
                (indana,indtime,indlevel,indtimerange,inddativarr,indnetwork,indtbattrin))) cycle
-              
-              lat=0.0d0
-              lon=0.0d0
-              write(ident,'("BOX-",2i2.2)')iarea,lperc   ! macro-area e percentile
-              call init(ana,lat=lat,lon=lon,ident=ident)
-
+                            
               CALL getval(qccli%v7d%time(indtime), month=imese)
               call init(time, year=1001, month=imese, day=1, hour=00,minute=00)
               call init(anavar,"B07001" )
-              indanavar        = firsttrue(qccli%v7d%anavar%i  == anavar)
-
+              indanavar        = index(qccli%v7d%anavar%i, anavar)
+              
               if (indanavar <=0 )cycle
               altezza= qccli%v7d%volanai(indana,indanavar,indnetwork)
               call cli_level(altezza,level)
-
+              
               indcnetwork      = 1
-              indcana          = firsttrue(qccli%clima%ana     == ana)
-              indctime         = firsttrue(time                              == qccli%clima%time)
-              indclevel        = firsttrue(level                             == qccli%clima%level)
-              indctimerange    = firsttrue(qccli%v7d%timerange(indtimerange) == qccli%clima%timerange)
+              
+                                !indcana          = firsttrue(qccli%clima%ana     == ana)
+              
+              indctime         = index(qccli%clima%time                  ,  time)
+              indclevel        = index(qccli%clima%level                 ,  level)
+              indctimerange    = index(qccli%clima%timerange             ,  qccli%v7d%timerange(indtimerange))
+              
+                                ! attenzione attenzione TODO
+                                ! se leggo da bufr il default è char e non reale
 
-! attenzione attenzione TODO
-! se leggo da bufr il default è char e non reale
-
-              indcdativarr     = firsttrue(qccli%v7d%dativar%r(inddativarr)  == qccli%clima%dativar%r)
-
-              !print *,"dato  ",qccli%v7d%timerange(indtimerange) 
-              !print *,"clima ",qccli%clima%timerange
-              !call l4f_log(L4F_DEBUG,"Index:"// to_char(indcana)//to_char(indctime)//to_char(indclevel)//&
-              ! to_char(indctimerange)//to_char(indcdativarr)//to_char(indcnetwork))
-
-              if (indcana <= 0 .or. indctime <= 0 .or. indclevel <= 0 .or. indctimerange <= 0 .or. indcdativarr <= 0 &
+              indcdativarr     = index(qccli%clima%dativar%r, qccli%v7d%dativar%r(inddativarr))
+              
+                                !print *,"dato  ",qccli%v7d%timerange(indtimerange) 
+                                !print *,"clima ",qccli%clima%timerange
+                                !call l4f_log(L4F_DEBUG,"Index:"// to_char(indcana)//to_char(indctime)//to_char(indclevel)//&
+                                ! to_char(indctimerange)//to_char(indcdativarr)//to_char(indcnetwork))
+              
+                                !if (indcana <= 0 .or. indctime <= 0 .or. indclevel <= 0 .or. indctimerange <= 0 .or. indcdativarr <= 0 &
+                                ! .or. indcnetwork <= 0 ) cycle
+              if (indctime <= 0 .or. indclevel <= 0 .or. indctimerange <= 0 .or. indcdativarr <= 0 &
                .or. indcnetwork <= 0 ) cycle
-
+              
+              
               datoqui = qccli%v7d%voldatir  (indana ,indtime ,indlevel ,indtimerange ,inddativarr, indnetwork )
-              climaqui= qccli%clima%voldatir(indcana,indctime,indclevel,indctimerange,indcdativarr,indcnetwork)
+              
+              if (c_e(datoqui)) then
 
-              if (c_e(climaqui).and. c_e(datoqui))then
-
-                call l4f_log (L4F_DEBUG,"macroarea,iarea,mese,altezza,level "//&
-                 trim(to_char(qccli%in_macroa(indana)))//" "//trim(to_char(iarea))&
-                 //" "//trim(to_char(imese))//" "//trim(to_char(altezza))//" "//trim(to_char(level)))
-
-                call l4f_log (L4F_DEBUG,"data: "//trim(to_char(datoqui))//" ;clima: "//trim(to_char(climaqui)))
-
-                if ( datoqui > climaqui) then
-
-                  !ATTENZIONE TODO : inddativarr È UNA GRANDE SEMPLIFICAZIONE NON VERA SE TIPI DI DATO DIVERSI !!!!
-                  
-                  qccli%v7d%voldatiattrb(indana,indtime,indlevel,indtimerange,inddativarr,indnetwork,indtbattrout)=100-lperc
-
-                else
-                  
-                  !ATTENZIONE TODO : inddativarr È UNA GRANDE SEMPLIFICAZIONE NON VERA SE TIPI DI DATO DIVERSI !!!!
-
-                  qccli%v7d%voldatiattrb(indana,indtime,indlevel,indtimerange,inddativarr,indnetwork,indtbattrout)=lperc
-                  
-                end if
- 
-                if ( associated ( qccli%data_id_in)) then
-                  call l4f_log (L4F_DEBUG,"id: "//trim(to_char(qccli%data_id_in(indana,indtime,indlevel,indtimerange,indnetwork))))
-                  qccli%data_id_out(indana,indtime,indlevel,indtimerange,indnetwork)=&
-                   qccli%data_id_in(indana,indtime,indlevel,indtimerange,indnetwork)
-                end if
                 
+                !where (match(qccli%clima%ana(:)%ident,ident).and. &
+                ! c_e(qccli%clima%voldatir(indcana,indctime,indclevel,indctimerange,indcdativarr,indcnetwork)))
+                  
+                  call l4f_log (L4F_DEBUG,"macroarea,iarea,mese,altezza,level "//&
+                   trim(to_char(qccli%in_macroa(indana)))//" "//trim(to_char(iarea))&
+                   //" "//trim(to_char(imese))//" "//trim(to_char(altezza))//" "//trim(to_char(level)))
+                  
+                  call l4f_log (L4F_DEBUG,"data: "//trim(to_char(datoqui))//" ;clima: "//trim(to_char(climaqui)))
+                  
+                  if ( datoqui > climaqui) then
+                    
+                                !ATTENZIONE TODO : inddativarr È UNA GRANDE SEMPLIFICAZIONE NON VERA SE TIPI DI DATO DIVERSI !!!!
+                    
+                    qccli%v7d%voldatiattrb(indana,indtime,indlevel,indtimerange,inddativarr,indnetwork,indtbattrout)=100-lperc
+                    
+                  else
+                    
+                                !ATTENZIONE TODO : inddativarr È UNA GRANDE SEMPLIFICAZIONE NON VERA SE TIPI DI DATO DIVERSI !!!!
+                    
+                    qccli%v7d%voldatiattrb(indana,indtime,indlevel,indtimerange,inddativarr,indnetwork,indtbattrout)=lperc
+                    
+                  end if
+                  
+                  if ( associated ( qccli%data_id_in)) then
+                    call l4f_log (L4F_DEBUG,"id: "//trim(to_char(&
+                     qccli%data_id_in(indana,indtime,indlevel,indtimerange,indnetwork))))
+                    qccli%data_id_out(indana,indtime,indlevel,indtimerange,indnetwork)=&
+                     qccli%data_id_in(indana,indtime,indlevel,indtimerange,indnetwork)
+                  end if
+                  
+                !end where
               end if
             end if
           end do
@@ -583,8 +614,6 @@ end subroutine cli_level_generate
 !!$end subroutine qccli_validate
 
 
-
-
 !> Rielabora le macroarea facendole Valentine/Elements thinking
 integer function supermacroa(macroa)
 
@@ -597,22 +626,13 @@ if (macroa == 1 .or. macroa == 2 .or. macroa == 4 ) supermacroa=3
 if (macroa == 3 .or. macroa == 5 .or. macroa == 6 ) supermacroa=2
 if (macroa == 7 .or. macroa == 8 ) supermacroa=1
 
-end function supermacroa
-
-
-
-
-
 !!$  ! rielabora le macroarea facendole Valentine thinking
 !!$
 !!$  if (qccli%in_macroa(indana) == 1 .or. qccli%in_macroa(indana) == 2 .or. qccli%in_macroa(indana) == 4 ) iarea=3
 !!$  if (qccli%in_macroa(indana) == 3 .or. qccli%in_macroa(indana) == 5 .or.  qccli%in_macroa(indana) == 6 ) iarea=2
 !!$  if (qccli%in_macroa(indana) == 7 .or.  qccli%in_macroa(indana) == 8 ) iarea=1
 
-
-
-
-
+end function supermacroa
 
 end module modqccli
 

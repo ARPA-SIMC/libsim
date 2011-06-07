@@ -91,7 +91,9 @@ call l4f_category_log(category,L4F_INFO,"end data import")
 call l4f_category_log(category,L4F_INFO,"start QC")
 
                                 ! chiamiamo il "costruttore" per il Q.C.
-call init(v7dqccli,v7ddballe%vol7d,var,v7ddballe%data_id,categoryappend="base")
+
+call init(v7dqccli,v7ddballe%vol7d,var,timei=ti,timef=tf,coordmin=coordmin,coordmax=coordmax,&
+ data_id_in=v7ddballe%data_id,categoryappend="base")
 
 call display(v7dqccli%clima)
 
