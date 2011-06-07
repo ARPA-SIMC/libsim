@@ -22,7 +22,6 @@
 !!\ingroup base
 #include "config.h"
 MODULE array_utilities
-USE datetime_class
 
 IMPLICIT NONE
 
@@ -32,31 +31,30 @@ IMPLICIT NONE
 !> to document
 INTERFACE count_distinct
   MODULE PROCEDURE count_distinct_i, count_distinct_r, count_distinct_d, &
-   count_distinct_datetime, count_distinct_c
+   count_distinct_c
 END INTERFACE
 
 !> to document
 INTERFACE pack_distinct
   MODULE PROCEDURE pack_distinct_i, pack_distinct_r, pack_distinct_d, &
-   pack_distinct_datetime !, pack_distinct_c
+   pack_distinct_c
 END INTERFACE
 
 !> to document
 INTERFACE map_distinct
   MODULE PROCEDURE map_distinct_i, map_distinct_r, map_distinct_d, &
-   map_distinct_datetime, map_distinct_c
+   map_distinct_c
 END INTERFACE
 
 !> to document
 INTERFACE map_inv_distinct
   MODULE PROCEDURE map_inv_distinct_i, map_inv_distinct_r, map_inv_distinct_d, &
-   map_inv_distinct_datetime, map_inv_distinct_c
+   map_inv_distinct_c
 END INTERFACE
 
 !> Find the firsth or last index of an element in a vector equal to the values provided
 INTERFACE index
-  MODULE PROCEDURE index_i, index_r, index_d, &
-   index_datetime !, index_c
+  MODULE PROCEDURE index_i, index_r, index_d, index_c
 END INTERFACE
 
 !>\brief Sorts inline into ascending order.
@@ -70,8 +68,7 @@ END INTERFACE
 !!  When the size of the subarray is small enough, one uses an
 !!  insertion sort that is faster for very small sets.
 INTERFACE sort
-  MODULE PROCEDURE sort_i, sort_r, sort_d, &
-   sort_datetime, sort_c
+  MODULE PROCEDURE sort_i, sort_r, sort_d, sort_c
 END INTERFACE
 
 CONTAINS
@@ -113,14 +110,6 @@ END FUNCTION firsttrue
 #undef VOL7D_POLY_TYPES
 #define VOL7D_POLY_TYPE DOUBLEPRECISION
 #define VOL7D_POLY_TYPES _d
-#define ENABLE_SORT
-#include "array_utilities_inc.F90"
-#undef ENABLE_SORT
-
-#undef VOL7D_POLY_TYPE
-#undef VOL7D_POLY_TYPES
-#define VOL7D_POLY_TYPE TYPE(datetime)
-#define VOL7D_POLY_TYPES _datetime
 #define ENABLE_SORT
 #include "array_utilities_inc.F90"
 #undef ENABLE_SORT

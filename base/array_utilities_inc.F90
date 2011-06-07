@@ -351,7 +351,6 @@ ENDIF
 END FUNCTION map_inv_distinct/**/VOL7D_POLY_TYPES
 
 
-#ifndef VOL7D_NO_PACK
 !> Cerca l'indice del primo o ultimo elemento di vect uguale a search
 FUNCTION index/**/VOL7D_POLY_TYPES(vect, search, mask, back) &
  RESULT(index_)
@@ -407,7 +406,6 @@ ENDIF
 
 END FUNCTION index/**/VOL7D_POLY_TYPES
 
-#endif
 
 
 #ifdef ENABLE_SORT

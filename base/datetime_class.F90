@@ -100,6 +100,7 @@ INTEGER(KIND=int_ll),PARAMETER :: &
  unsec=62135596800_int_ll ! differenza tra 01/01/1970 e 01/01/0001 (sec, per unixtime)
 
 PRIVATE
+
 PUBLIC datetime, datetime_miss, datetime_utc, datetime_local, &
  datetime_min, datetime_max, &
  datetime_new, init, delete, getval, to_char, &
@@ -109,7 +110,8 @@ PUBLIC datetime, datetime_miss, datetime_utc, datetime_local, &
  OPERATOR(*), OPERATOR(/), mod, abs, &
  timedelta, timedelta_miss, timedelta_new, timedelta_0, &
  timedelta_min, timedelta_max, timedelta_getamsec, timedelta_depop, &
- display, c_e
+ display, c_e, &
+ count_distinct, pack_distinct, map_distinct, map_inv_distinct, index, sort
 
 !> Costruttori per le classi datetime e timedelta. Devono essere richiamati
 !! per tutti gli oggetti di questo tipo definiti in un programma
@@ -278,6 +280,45 @@ END INTERFACE
 !> Missing check
 INTERFACE c_e
   MODULE PROCEDURE c_e_datetime
+END INTERFACE
+
+!> to document
+INTERFACE count_distinct
+  MODULE PROCEDURE   count_distinct_datetime
+END INTERFACE
+
+!> to document
+INTERFACE pack_distinct
+  MODULE PROCEDURE    pack_distinct_datetime
+END INTERFACE
+
+!> to document
+INTERFACE map_distinct
+  MODULE PROCEDURE   map_distinct_datetime
+END INTERFACE
+
+!> to document
+INTERFACE map_inv_distinct
+  MODULE PROCEDURE  map_inv_distinct_datetime
+END INTERFACE
+
+!> Find the firsth or last index of an element in a vector equal to the values provided
+INTERFACE index
+  MODULE PROCEDURE  index_datetime
+END INTERFACE
+
+!>\brief Sorts inline into ascending order.
+!!  Quicksort chooses a "pivot" in the set, and explores the
+!!  array from both ends, looking for a value > pivot with the
+!!  increasing index, for a value <= pivot with the decreasing
+!!  index, and swapping them when it has found one of each.
+!!  The array is then subdivided in 2 ([3]) subsets:
+!!  { values <= pivot} {pivot} {values > pivot}
+!!  One then call recursively the program to sort each subset.
+!!  When the size of the subarray is small enough, one uses an
+!!  insertion sort that is faster for very small sets.
+INTERFACE sort
+  MODULE PROCEDURE  sort_datetime
 END INTERFACE
 
 
@@ -1701,6 +1742,15 @@ ELSE
  bisextilis = 1
 ENDIF
 END FUNCTION bisextilis
+
+
+#undef VOL7D_POLY_TYPE
+#undef VOL7D_POLY_TYPES
+#define VOL7D_POLY_TYPE TYPE(datetime)
+#define VOL7D_POLY_TYPES _datetime
+#define ENABLE_SORT
+#include "array_utilities_inc.F90"
+#undef ENABLE_SORT
 
 END MODULE datetime_class
 
