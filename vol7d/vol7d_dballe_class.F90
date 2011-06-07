@@ -519,6 +519,7 @@ integer :: nanavar ,indanavar,indanaattr,indanavarattr,nanavarattr
 
 REAL(kind=fp_geo) :: lat,lon
 CHARACTER(len=vol7d_ana_lenident) :: ident
+CHARACTER(len=10),allocatable :: lvar(:)
 !INTEGER(kind=int_b)::attrdatib
 
 integer :: ndativarr,     ndativari,     ndativarb,     ndativard,     ndativarc
@@ -545,6 +546,7 @@ type(record),ALLOCATABLE :: buffer(:),bufferana(:)
 
 !!!  CALL print_info('Estratte dall''archivio '//TRIM(to_char(nobs)) // ' osservazioni')
 
+CALL l4f_category_log(this%category,L4F_DEBUG,'inizio')
 
 IF (PRESENT(set_network)) THEN
    ldegnet = .TRUE.
@@ -553,8 +555,15 @@ ELSE
 ENDIF
 
 IF (PRESENT(attr)) THEN
-   lattr = .TRUE.
+  if (any(c_e(attr)))then
+    CALL l4f_category_log(this%category,L4F_DEBUG,'lattr true')
+    lattr = .TRUE.
+  else
+    CALL l4f_category_log(this%category,L4F_DEBUG,'lattr false')
+   lattr = .FALSE.
+ end if
 ELSE
+    CALL l4f_category_log(this%category,L4F_DEBUG,'lattr false')
    lattr = .FALSE.
 ENDIF
 
@@ -564,10 +573,20 @@ ELSE
    lanaattr = .FALSE.
 ENDIF
 
+IF (PRESENT(var)) THEN
+   allocate(lvar(size(var)))
+   lvar=var
+ELSE
+   allocate(lvar(0))
+ENDIF
+
+
 call idba_unsetall(this%handle)
 
+CALL l4f_category_log(this%category,L4F_DEBUG,'unsetall')
+
 if(present(network))call idba_set (this%handle,"rep_memo",network%name)
-call idba_set (this%handle,"mobile",0)
+!call idba_set (this%handle,"mobile",0)
 !print*,"network,mobile",network%name,0
 
 if(ldegnet)call idba_set (this%handle,"query","best")
@@ -575,6 +594,7 @@ if(ldegnet)call idba_set (this%handle,"query","best")
 if (present(coordmin)) then
 !  CALL geo_coord_to_geo(coordmin)
   CALL getval(coordmin, lat=lat,lon=lon)
+  CALL l4f_category_log(this%category,L4F_DEBUG,'query coordmin:'//t2c(lon)//t2c(lat))
   call idba_set(this%handle,"lonmin",lon)
   call idba_set(this%handle,"latmin",lat)
 end if
@@ -582,12 +602,14 @@ end if
 if (present(coordmax)) then
 !  CALL geo_coord_to_geo(coordmax)
   CALL getval(coordmax, lat=lat,lon=lon)
+  CALL l4f_category_log(this%category,L4F_DEBUG,'query coordmax:'//t2c(lon)//t2c(lat))
   call idba_set(this%handle,"lonmax",lon)
   call idba_set(this%handle,"latmax",lat)
 end if
 
 if (present(timei)) then
   if (c_e(timei)) then
+    CALL l4f_category_log(this%category,L4F_DEBUG,'query timei:'//to_char(timei))
     CALL getval(timei, year=year, month=month, day=day, hour=hour, minute=minute)
     call idba_setdatemin(this%handle,year,month,day,hour,minute,0)
                                 !print *,"datemin",year,month,day,hour,minute,0
@@ -596,6 +618,7 @@ end if
 
 if (present(timef)) then
   if (c_e(timef)) then
+    CALL l4f_category_log(this%category,L4F_DEBUG,'query timef:'//to_char(timef))
     CALL getval(timef, year=year, month=month, day=day, hour=hour, minute=minute)
     call idba_setdatemax(this%handle,year,month,day,hour,minute,0)
                                 !print *,"datemax",year,month,day,hour,minute,0
@@ -605,36 +628,42 @@ end if
 
 nvar=0
 
-if (present (var)) then
+if (any(c_e(lvar))) then
 
-  IF (SIZE(var) > maxvarlist) THEN
-    CALL l4f_category_log(this%category,L4F_ERROR,"too many variables requested: "//t2c(SIZE(var)))
+  IF (SIZE(lvar) > maxvarlist) THEN
+    CALL l4f_category_log(this%category,L4F_ERROR,"too many variables requested: "//t2c(SIZE(lvar)))
     call raise_fatal_error()
   ENDIF
 
                                 ! creo la stringa con l'elenco
   varlist = ''
-  DO i = 1, SIZE(var)
+  DO i = 1, SIZE(lvar)
     nvar = nvar + 1
     IF (nvar > 1) varlist(LEN_TRIM(varlist)+1:) = ',' 
-    varlist(LEN_TRIM(varlist)+1:) = TRIM(var(i))
+    varlist(LEN_TRIM(varlist)+1:) = TRIM(lvar(i))
   ENDDO
                                 !print *,"varlist",varlist
+
+  CALL l4f_category_log(this%category,L4F_DEBUG,'query varlist:'//t2c(SIZE(lvar))//":"//varlist)
   
   if (varlist /= '' ) call idba_set(this%handle, "varlist",varlist )
 
 end if
 
 if (present(timerange))then
-   call idba_settimerange(this%handle, timerange%timerange, timerange%p1, timerange%p2)
+  CALL l4f_category_log(this%category,L4F_DEBUG,'query timerange:'//to_char(timerange))
+  call idba_settimerange(this%handle, timerange%timerange, timerange%p1, timerange%p2)
 end if
 
 if (present(level))then
-   call idba_setlevel(this%handle, level%level1, level%l1,level%level2, level%l2)
+  CALL l4f_category_log(this%category,L4F_DEBUG,'query level:'//to_char(level))
+  call idba_setlevel(this%handle, level%level1, level%l1,level%level2, level%l2)
 end if
 
 call idba_voglioquesto (this%handle,N)
 !print*,"numero di dati ",N
+CALL l4f_category_log(this%category,L4F_DEBUG,'numero di dati:'//t2c(n))
+
 
 !ora che so quanti dati ho alloco la memoria per buffer
 allocate(buffer(N),stat=istat)
@@ -666,8 +695,8 @@ do i=1,N
   buffer(i)%datod=DBA_MVD
   buffer(i)%datoc=DBA_MVC
   
-  if (present(var).and. present(varkind))then
-    ii=( firsttrue(var == btable))
+  if (any(c_e(lvar)).and. present(varkind))then
+    ii= index(lvar, btable)
     if (ii > 0)then
                                 !print*, "indici",ii, btable,(varkind(ii))
       if(varkind(ii) == "r") call idba_enq (this%handle,btable,buffer(i)%dator)
@@ -787,7 +816,7 @@ do i=1,N_ana
   
 
   if (present(anavar).and. present(anavarkind))then
-    ii=( firsttrue(anavar == btable))
+    ii= index(anavar, btable)
     if (ii > 0)then
                                 !print*, "indici",ii, btable,(varkind(ii))
       if(anavarkind(ii) == "r") call idba_enq (this%handle_staz,btable,bufferana(i)%dator)
@@ -826,12 +855,8 @@ end do
 
 ! ---------------->   anagrafica fine
 
-if (.not. present(var))then
+if (.not. any(c_e(lvar)))then
   nvar = count_distinct(buffer%dativar, back=.TRUE.)
-else
-  if (.not. any(c_e(var)))then
-    nvar = count_distinct(buffer%dativar, back=.TRUE.)
-  end if
 end if
 
 nana = count_distinct(buffer%ana, back=.TRUE.)
@@ -1011,7 +1036,7 @@ end if
 
 !print*,"reti presenti", vol7dtmp%network%name,buffer%network%name
 
-if (present(var).and. present(varkind))then
+if (any(c_e(lvar)).and. present(varkind))then
 
   ir=0
   ii=0
@@ -1041,12 +1066,10 @@ if (present(var).and. present(varkind))then
       call init (vol7dtmp%dativar%c(ic), btable=var(i))  
     end if
   end do
-else if (present(var))then
-
-  do i=1, nvar
-    call init (vol7dtmp%dativar%c(i), btable=var(i))
-  end do
-
+else if (any(c_e(lvar)))then
+    do i=1, nvar
+      call init (vol7dtmp%dativar%c(i), btable=var(i))
+    end do
 else
 
     vol7dtmp%dativar%c=pack_distinct(buffer%dativar, ndativarc, back=.TRUE.,mask=(buffer%dativar%btable /= DBA_MVC))
@@ -1055,7 +1078,7 @@ end if
 
 
 
-if ( present(attrkind).and. present(attr).and. present(var))then
+if ( present(attrkind).and. present(attr).and. any(c_e(lvar)))then
 
     ir=0
     ii=0
@@ -1063,39 +1086,39 @@ if ( present(attrkind).and. present(attr).and. present(var))then
     id=0
     ic=0
 
-  do i=1,size(var)
+  do i=1,size(lvar)
   
     if ( ndativarattrr > 0 )then
       ir=ir+1
-      call init (vol7dtmp%dativarattr%r(ir), btable=var(i))
+      call init (vol7dtmp%dativarattr%r(ir), btable=lvar(i))
     end if
 
     if ( ndativarattri > 0 )then
       ii=ii+1
-      call init (vol7dtmp%dativarattr%i(ii), btable=var(i))
+      call init (vol7dtmp%dativarattr%i(ii), btable=lvar(i))
     end if
 
     if ( ndativarattrb > 0 )then
       ib=ib+1
-      call init (vol7dtmp%dativarattr%b(ib), btable=var(i))
+      call init (vol7dtmp%dativarattr%b(ib), btable=lvar(i))
     end if
 
     if ( ndativarattrd > 0 )then
       id=id+1
-      call init (vol7dtmp%dativarattr%d(id), btable=var(i))
+      call init (vol7dtmp%dativarattr%d(id), btable=lvar(i))
     end if
 
     if ( ndativarattrc > 0 )then
       ic=ic+1
-      call init (vol7dtmp%dativarattr%c(ic), btable=var(i))
+      call init (vol7dtmp%dativarattr%c(ic), btable=lvar(i))
     end if
 
   end do
 
-else  if (present(attr).and.present(var))then
+else  if (present(attr).and. any(c_e(lvar)))then
 
-  do i=1,size(var)
-    if ( ndativarattrc > 0 )call init (vol7dtmp%dativarattr%c(i), btable=var(i))
+  do i=1,size(lvar)
+    if ( ndativarattrc > 0 )call init (vol7dtmp%dativarattr%c(i), btable=lvar(i))
   end do
 
 else if (associated(vol7dtmp%dativarattr%c).and. associated(vol7dtmp%dativar%c)) then
@@ -1105,7 +1128,7 @@ else if (associated(vol7dtmp%dativarattr%c).and. associated(vol7dtmp%dativar%c))
 end if
 
 
-if (present(attrkind).and. present(attr))then
+if (present(attrkind).and. lattr)then
 
   ir=0
   ii=0

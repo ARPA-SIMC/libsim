@@ -595,6 +595,7 @@ DO ninput = optind, iargc()-1
         CALL import(v7d_dba, vl, attr=alqc, timei=s_d, timef=e_d)
       ENDIF
     ELSE
+
       IF (ANY(c_e(nl))) THEN ! no attributes requested, use the default (get all attr?)
         CALL import(v7d_dba, vl, nl, timei=s_d, timef=e_d)
       ELSE
