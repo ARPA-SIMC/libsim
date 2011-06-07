@@ -196,5 +196,21 @@ ENDIF
 
 END SUBROUTINE pack_distinct_c
 
+!> Return the index of the array only where the mask is true  
+FUNCTION map(mask)  RESULT(mapidx)
+LOGICAL,INTENT(in) :: mask(:)
+INTEGER :: mapidx(count(mask))
+
+INTEGER :: i,j
+
+j=0
+
+do i=1, size(mask)
+
+  J=j+1
+  if (mask(i)) mapidx(j)=i
+
+end do
+END FUNCTION map
 
 END MODULE array_utilities
