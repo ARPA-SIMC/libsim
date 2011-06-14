@@ -203,6 +203,7 @@ CALL delete(opt)
 call l4f_category_log(category,L4F_INFO,"transforming from file:"//trim(input_file))
 call l4f_category_log(category,L4F_INFO,"transforming to   file:"//trim(output_file))
 
+CALL init(v7d_coord)
 IF (c_e(coord_file)) THEN
   IF (coord_format == 'native') THEN
     CALL import(v7d_coord, filename=coord_file)
@@ -237,7 +238,6 @@ IF (c_e(coord_file)) THEN
   ENDIF
 ELSE
 
-  CALL init(v7d_coord)
   IF (trans_type == 'inter') THEN ! set coordinates for interpolation
     CALL vol7d_alloc(v7d_coord, nana=1)
     CALL vol7d_alloc_vol(v7d_coord)

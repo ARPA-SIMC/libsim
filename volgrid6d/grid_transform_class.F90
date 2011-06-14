@@ -1053,7 +1053,7 @@ TYPE(vol7d),INTENT(inout) :: v7d_out !< vol7d object with the coordinates of the
 TYPE(geo_coordvect),INTENT(inout),OPTIONAL :: poly(:) !< array of polygons indicating areas over which to interpolate (for transformation type 'polyinter')
 character(len=*),INTENT(in),OPTIONAL :: categoryappend !< append this suffix to log4fortran namespace category
 
-INTEGER :: nx, ny, i, j, n
+INTEGER :: nx, ny, i, j, n, nprev
 DOUBLE PRECISION :: xmin, xmax, ymin, ymax, steplon, steplat,xmin_new, ymin_new
 doubleprecision,pointer :: lon(:),lat(:)
 integer :: ix,iy
@@ -1134,23 +1134,32 @@ ELSE IF (this%trans%trans_type == 'polyinter') THEN
 ! compute coordinates of input grid in geo system
   CALL unproj(in) ! TODO costringe a dichiarare in INTENT(inout), si puo` evitare?
 
-! compute coordinates of polygons in geo system
-!  DO n = 1, SIZE(poly)
-!    CALL to_geo(poly(n))
-!  ENDDO
-
+  nprev = 1
+!$OMP PARALLEL DEFAULT(SHARED)
+!$OMP DO PRIVATE(j, i, point) FIRSTPRIVATE(nprev)
   DO j = 1, this%inny
-    DO i = 1, this%innx
+    inside_x: DO i = 1, this%innx
       CALL init(point, lon=in%dim%lon(i,j), lat=in%dim%lat(i,j))
-      DO n = 1, SIZE(poly)
+
+      DO n = nprev, SIZE(poly) ! optimize starting from last matched polygon
         IF (inside(point, poly(n))) THEN ! stop at the first matching polygon
           this%inter_index_x(i,j) = n
-          EXIT
+          nprev = n
+          CYCLE inside_x
         ENDIF
       ENDDO
-!      CALL delete(point) ! speedup
-    ENDDO
+      DO n = nprev-1, 1, -1 ! test the other polygons
+        IF (inside(point, poly(n))) THEN ! stop at the first matching polygon
+          this%inter_index_x(i,j) = n
+          nprev = n
+          CYCLE inside_x
+        ENDIF
+      ENDDO
+
+!     CALL delete(point) ! speedup
+    ENDDO inside_x
   ENDDO
+!$OMP END PARALLEL
 
   this%outnx=SIZE(poly)
   this%outny=1
