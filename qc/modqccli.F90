@@ -471,6 +471,13 @@ do indana=1,size(qccli%v7d%ana)
       do indtimerange=1,size(qccli%v7d%timerange)
         do inddativarr=1,size(qccli%v7d%dativar%r)
           do indtime=1,size(qccli%v7d%time)
+!!$
+!!$  forall (indnetwork=1:size(qccli%v7d%network), &
+!!$   indlevel=1:size(qccli%v7d%level), &
+!!$   indtimerange=1:size(qccli%v7d%timerange), &
+!!$   inddativarr=1:size(qccli%v7d%dativar%r), &
+!!$   indtime=1:size(qccli%v7d%time))
+
             if (anamaskl(indana).and.timemaskl(indtime).and.levelmaskl(indlevel).and. &
              timerangemaskl(indtimerange).and.varmaskl(inddativarr).and.networkmaskl(indnetwork).and.&
              c_e(qccli%v7d%voldatir(indana,indtime,indlevel,indtimerange,inddativarr,indnetwork)))then
@@ -553,6 +560,7 @@ do indana=1,size(qccli%v7d%ana)
       end do
     end do
   end do
+!!$          end forall
 end do
 
 return
