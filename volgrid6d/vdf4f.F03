@@ -199,11 +199,11 @@ integer :: i
 
 len_c=LEN(varnames)+1
 do i=1, nvar
-  varnames_c(i)=trim(varnames(i))//char(0)
+  varnames_c(i)=trim(varnames(i))//char(0)    ! future : C_NULL_CHAR
 end do
 
 vdf4f_write_i386 = vdf4f_write_c(volume, xyzdim, ntime, nvar, varnames_c, len_c, &
- trim(filename)//char(0),rzscan)
+ trim(filename)//char(0),rzscan)     ! future : C_NULL_CHAR
 
 return 
 
@@ -235,11 +235,11 @@ xyzdim_c=xyzdim
 
 len_c=LEN(varnames)+1
 do i=1, nvar
-  varnames_c(i)=trim(varnames(i))//char(0)
+  varnames_c(i)=trim(varnames(i))//char(0)     ! future : C_NULL_CHAR
 end do
 
 vdf4f_write_amd64 = vdf4f_write_c(volume, xyzdim_c, ntime_c, nvar_c, varnames_c, len_c, &
- trim(filename)//char(0), rzscan)
+ trim(filename)//char(0), rzscan)     ! future : C_NULL_CHAR
 
 return 
 
@@ -284,7 +284,7 @@ integer :: i
 
 len_c=LEN(varnames)+1
 do i=1, nvar
-  varnames_c(i)=trim(varnames(i))//char(0)
+  varnames_c(i)=trim(varnames(i))//char(0)     ! future : C_NULL_CHAR
 end do
 
 set_variables_names_i386 = set_variables_names_c(nvar, varnames_c, len_c)
@@ -302,7 +302,7 @@ integer :: i
 
 len_c=LEN(varnames)+1
 do i=1, nvar
-  varnames_c(i)=trim(varnames(i))//char(0)
+  varnames_c(i)=trim(varnames(i))//char(0)    ! future : C_NULL_CHAR
 end do
 
 nvar_c=nvar
@@ -314,13 +314,13 @@ end Function set_variables_names_amd64
 
 Integer function vdf4f_set_comment(comment)
 Character(len=*),intent(in)    :: comment
-vdf4f_set_comment = vdf4f_set_comment_c(trim(comment)//char(0))
+vdf4f_set_comment = vdf4f_set_comment_c(trim(comment)//char(0))    ! future : C_NULL_CHAR
 end function vdf4f_set_comment
 
 Integer function vdf4f_set_ts_comment_i386(ts,comment)
 Integer(C_SIZE_T), Intent(IN), VALUE :: ts
 Character(len=*),intent(in)    :: comment
-vdf4f_set_ts_comment_i386 = vdf4f_set_ts_comment_c(ts,trim(comment)//char(0))
+vdf4f_set_ts_comment_i386 = vdf4f_set_ts_comment_c(ts,trim(comment)//char(0))    ! future : C_NULL_CHAR
 end function vdf4f_set_ts_comment_i386
 
 
@@ -329,7 +329,7 @@ Integer :: ts
 Integer(C_SIZE_T) :: ts_c
 Character(len=*),intent(in)    :: comment
 ts_c=ts
-vdf4f_set_ts_comment_amd64 = vdf4f_set_ts_comment_c(ts_c,trim(comment)//char(0))
+vdf4f_set_ts_comment_amd64 = vdf4f_set_ts_comment_c(ts_c,trim(comment)//char(0))    ! future : C_NULL_CHAR
 end function vdf4f_set_ts_comment_amd64
 
 
@@ -337,7 +337,7 @@ Integer function vdf4f_set_v_comment_i386(ts,var,comment)
 Integer(C_SIZE_T), Intent(IN), VALUE :: ts
 Character(len=*),intent(in)    :: var
 Character(len=*),intent(in)    :: comment
-vdf4f_set_v_comment_i386 = vdf4f_set_v_comment_c(ts, trim(var)//char(0), trim(comment)//char(0))
+vdf4f_set_v_comment_i386 = vdf4f_set_v_comment_c(ts, trim(var)//char(0), trim(comment)//char(0))     ! future : C_NULL_CHAR
 end function vdf4f_set_v_comment_i386
 
 Integer function vdf4f_set_v_comment_amd64(ts,var,comment)
@@ -348,7 +348,7 @@ Character(len=*),intent(in)    :: comment
 
 ts_c=ts
 
-vdf4f_set_v_comment_amd64 = vdf4f_set_v_comment_c(ts_c, trim(var)//char(0), trim(comment)//char(0))
+vdf4f_set_v_comment_amd64 = vdf4f_set_v_comment_c(ts_c, trim(var)//char(0), trim(comment)//char(0))    ! future : C_NULL_CHAR
 end function vdf4f_set_v_comment_amd64
 
 Integer function vdf4f_set_grid_extents(extents)
@@ -358,17 +358,17 @@ end function vdf4f_set_grid_extents
 
 Integer function vdf4f_set_coord_system_type(coordsystemtype)
 Character(len=*), Intent(IN) :: coordsystemtype
-vdf4f_set_coord_system_type = vdf4f_set_coord_system_type_c(trim(coordsystemtype)//char(0))
+vdf4f_set_coord_system_type = vdf4f_set_coord_system_type_c(trim(coordsystemtype)//char(0))    ! future : C_NULL_CHAR
 end function vdf4f_set_coord_system_type
 
 Integer function vdf4f_set_grid_type(gridtype)
 Character(len=*), Intent(IN) :: gridtype
-vdf4f_set_grid_type = vdf4f_set_grid_type_c(trim(gridtype)//char(0))
+vdf4f_set_grid_type = vdf4f_set_grid_type_c(trim(gridtype)//char(0))    ! future : C_NULL_CHAR
 end function vdf4f_set_grid_type
 
 Integer function vdf4f_set_map_projection(mapprojection)
 Character(len=*), Intent(IN) :: mapprojection
-vdf4f_set_map_projection = vdf4f_set_map_projection_c(trim(mapprojection)//char(0))
+vdf4f_set_map_projection = vdf4f_set_map_projection_c(trim(mapprojection)//char(0))    ! future : C_NULL_CHAR
 end function vdf4f_set_map_projection
 
 
@@ -391,7 +391,7 @@ end function get_err_msg
 
 Integer  function write_metadata(filename)
 Character(len=*), Intent(IN) :: filename
-write_metadata = write_metadata_c(trim(filename)//char(0))
+write_metadata = write_metadata_c(trim(filename)//char(0))    ! future : C_NULL_CHAR
 end function write_metadata
 
 end module vdf4f
