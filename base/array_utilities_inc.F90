@@ -19,7 +19,7 @@
 ! You should have received a copy of the GNU General Public License
 ! along with this program.  If not, see <http://www.gnu.org/licenses/>.
 !> conta gli elementi distinti in vect
-FUNCTION count_distinct/**/VOL7D_POLY_TYPES(vect, mask, back) RESULT(count_distinct)
+pure FUNCTION count_distinct/**/VOL7D_POLY_TYPES(vect, mask, back) RESULT(count_distinct)
 VOL7D_POLY_TYPE,INTENT(in) :: vect(:)
 LOGICAL,INTENT(in),OPTIONAL :: mask(:), back
 INTEGER :: count_distinct
@@ -94,7 +94,7 @@ END FUNCTION count_distinct/**/VOL7D_POLY_TYPES
 
 #ifndef VOL7D_NO_PACK
 !> compatta gli elementi distinti di vect in un array
-FUNCTION pack_distinct/**/VOL7D_POLY_TYPES(vect, dim, mask, back) &
+pure FUNCTION pack_distinct/**/VOL7D_POLY_TYPES(vect, dim, mask, back) &
  RESULT(pack_distinct)
 VOL7D_POLY_TYPE,INTENT(in) :: vect(:)
 INTEGER,INTENT(in) :: dim
@@ -170,7 +170,7 @@ END FUNCTION pack_distinct/**/VOL7D_POLY_TYPES
 #endif
 
 !> map distinct
-FUNCTION map_distinct/**/VOL7D_POLY_TYPES(vect, mask, back) RESULT(map_distinct)
+pure FUNCTION map_distinct/**/VOL7D_POLY_TYPES(vect, mask, back) RESULT(map_distinct)
 VOL7D_POLY_TYPE,INTENT(in) :: vect(:)
 LOGICAL,INTENT(in),OPTIONAL :: mask(:), back
 INTEGER :: map_distinct(SIZE(vect))
@@ -266,7 +266,7 @@ END FUNCTION map_distinct/**/VOL7D_POLY_TYPES
 
 
 !> map inv distinct
-FUNCTION map_inv_distinct/**/VOL7D_POLY_TYPES(vect, dim, mask, back) &
+pure FUNCTION map_inv_distinct/**/VOL7D_POLY_TYPES(vect, dim, mask, back) &
  RESULT(map_inv_distinct)
 VOL7D_POLY_TYPE,INTENT(in) :: vect(:)
 INTEGER,INTENT(in) :: dim
@@ -352,7 +352,7 @@ END FUNCTION map_inv_distinct/**/VOL7D_POLY_TYPES
 
 
 !> Cerca l'indice del primo o ultimo elemento di vect uguale a search
-FUNCTION index/**/VOL7D_POLY_TYPES(vect, search, mask, back) &
+pure FUNCTION index/**/VOL7D_POLY_TYPES(vect, search, mask, back) &
  RESULT(index_)
 VOL7D_POLY_TYPE,INTENT(in) :: vect(:), search
 LOGICAL,INTENT(in),OPTIONAL :: mask(:), back
