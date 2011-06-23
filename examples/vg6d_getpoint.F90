@@ -21,6 +21,7 @@ use log4fortran
 use volgrid6d_class
 use grid_class
 use grid_transform_class
+use gridinfo_class
 #ifdef HAVE_DBALLE
 USE vol7d_dballe_class
 #endif
@@ -40,17 +41,19 @@ CHARACTER(len=12) :: coord_format, output_format
 CHARACTER(len=512) :: a_name, coord_file, input_file, output_file, &
  network_list, variable_list
 INTEGER :: category, ier, i, iun, iargc
-character(len=network_name_len) :: network
-type(volgrid6d),pointer :: volgrid(:)
-type(transform_def) :: trans
-type(vol7d) :: v7d_coord
-type(vol7d) :: v7d_out
+CHARACTER(len=network_name_len) :: network
+TYPE(volgrid6d),POINTER :: volgrid(:)
+TYPE(gridinfo_def),POINTER :: maskgrid(:)
+REAL,ALLOCATABLE :: maskfield(:,:)
+TYPE(transform_def) :: trans
+TYPE(vol7d) :: v7d_coord
+TYPE(vol7d) :: v7d_out
 #ifdef HAVE_DBALLE
 TYPE(vol7d_dballe) :: v7d_ana, v7d_dba_out
 #endif
-TYPE(geo_coordvect),POINTER :: poly(:)
+TYPE(geo_coordvect),POINTER :: poly(:) => NULL()
 doubleprecision :: lon, lat
-doubleprecision ::  ilon,ilat,flon,flat
+doubleprecision :: ilon,ilat,flon,flat
 character(len=80) :: output_template,trans_type,sub_type
 INTEGER :: output_td
 LOGICAL :: version, ldisplay
@@ -221,15 +224,37 @@ IF (c_e(coord_file)) THEN
 
 #ifdef HAVE_LIBSHP_FORTRAN
   ELSE IF (coord_format == 'shp') THEN
-    NULLIFY(poly)
     CALL import(poly, shpfile=coord_file)
     IF (.NOT.ASSOCIATED(poly)) THEN
       CALL l4f_category_log(category, L4F_ERROR, &
        'error importing shapefile '//TRIM(coord_file))
-      CALL EXIT(1)
+      CALL raise_fatal_error()
     ENDIF
 
 #endif
+
+#ifdef HAVE_LIBGRIBAPI
+  ELSE IF (coord_format == 'grib_api') THEN
+    CALL import(maskgrid, coord_file, categoryappend='maskgrid')
+    IF (.NOT.ASSOCIATED(maskgrid)) THEN
+      CALL l4f_category_log(category, L4F_ERROR, &
+       'error importing mask grid file '//TRIM(coord_file))
+      CALL raise_fatal_error()
+    ENDIF
+    IF (SIZE(maskgrid) < 1) THEN
+      CALL l4f_category_log(category, L4F_ERROR, &
+       'error importing mask grid file '//TRIM(coord_file))
+      CALL raise_fatal_error()
+    ENDIF
+    CALL import(maskgrid(1))
+    PRINT*,maskgrid(1)%griddim%dim%nx, maskgrid(1)%griddim%dim%ny
+    ALLOCATE(maskfield(maskgrid(1)%griddim%dim%nx, maskgrid(1)%griddim%dim%ny))
+    maskfield(:,:) = decode_gridinfo(maskgrid(1))
+    CALL delete(maskgrid(1))
+    DEALLOCATE(maskgrid)
+
+#endif
+
   ELSE
     CALL l4f_category_log(category, L4F_ERROR, &
      'error in command-line parameters, format '// &
@@ -264,12 +289,12 @@ CALL import(volgrid, filename=input_file, decode=.FALSE., categoryappend="input 
 
 IF (ldisplay) CALL display(volgrid)
 
-if (c2agrid) call vg6d_c2a(volgrid)
+IF (c2agrid) CALL vg6d_c2a(volgrid)
 
-call transform(trans, volgrid6d_in=volgrid, vol7d_out=v7d_out, v7d=v7d_coord, &
- poly=poly, networkname=network, categoryappend="transform")
+CALL transform(trans, volgrid6d_in=volgrid, vol7d_out=v7d_out, v7d=v7d_coord, &
+ poly=poly, maskgrid=maskfield, networkname=network, categoryappend="transform")
 
-call l4f_category_log(category,L4F_INFO,"transformation done")
+CALL l4f_category_log(category,L4F_INFO,"transformation completed")
 
 ! output
 IF (output_format == 'native') THEN

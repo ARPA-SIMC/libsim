@@ -48,6 +48,7 @@
 !!      provided lon/lat bounding box
 !!    - sub_type='index' the bounds of the zoomed/extended area are
 !!      defined by grid indices.
+!!
 !!  - trans_type='boxregrid' regrids the input data grid on a new grid
 !!    in which the value at every point is the result of a function
 !!    computed over \a npx X \a npy points of the original grid,
@@ -56,6 +57,7 @@
 !!    - sub_type='average' the function used is the average.
 !!    - sub_type='max' the function used is the maximum
 !!    - sub_type='min' the function used is the minimum
+!!
 !!  - trans_type='inter' interpolates the input data on a new set of
 !!    points
 !!    - sub_type='near' the interpolated value is that of the nearest
@@ -67,6 +69,7 @@
 !!      linear interpolation of the 3 surrounding input points
 !!      individuated by means of a triangulation procedure (sparse
 !!      points-to-grid, sparse points-to-sparse points).
+!!
 !!  - trans_type='boxinter' computes data on a new grid in which the
 !!    value at every point is the result of a function computed over
 !!    those input points that lie inside the output point grid box
@@ -76,9 +79,10 @@
 !!    - sub_type='min' the function used is the minimum
 !!    - sub_type='percentile' the function used is a requested
 !!      percentile of the input points distribution.
-!!  - trans_type='polyinter' computes data on a new set of points in
-!!    which the value at every point is the result of a function
-!!    computed over those input points that lie inside an arbitrary
+!!
+!!  - trans_type='polyinter' computes data on a new set of points, for
+!!    each of which the value is the result of a function computed
+!!    over those input points that lie inside a corresponding
 !!    georoferenced polygon; the output point coordinates are defined
 !!    as the centroids of the polygons (grid-to-sparse points and
 !!    sparse points-to-sparse points)
@@ -87,15 +91,39 @@
 !!    - sub_type='min' the function used is the minimum
 !!    - sub_type='percentile' the function used is a requested
 !!      percentile of the input points distribution.
-!!  - trans_type='metamorphosis' the output points and values are the
-!!    same as the input ones but either the component flag of the
-!!    output grid is changed, keeping the same projection and grid, or
-!!    the underlying data structure is changed from grid to sparse
-!!    points (grid-to-grid and grid-to-sparse points)
+!!
+!!  - trans_type='maskinter' takes a 2D field on the same grid as the
+!!    input points, it divides it in a number of classes according to
+!!    its values and every class is used as a mask for interpolation;
+!!    data are thus computed on a new set of points, the number of
+!!    which is equal to the number of classes, and for each of which
+!!    the value is the result of a function computed over those input
+!!    points belonging to the corresponding class; the output point
+!!    coordinates are defined as the centroids of the set of points belonging
+!!    to the class (grid-to-sparse points)
+!!    - sub_type='average' the function used is the average
+!!    - sub_type='max' the function used is the maximum
+!!    - sub_type='min' the function used is the minimum
+!!    - sub_type='percentile' the function used is a requested
+!!      percentile of the input points distribution.
+!!
+!!  - trans_type='maskgen' generates a mask field, on the same grid as
+!!    the input, suitable to be used for 'maskinter' interpolation;
+!!    the output mask field contains, at each point, integer values
+!!    from 1 to the number of polygons provided, computed according to
+!!    the polygon in which every point lies. The parameter sub_type is
+!!    ininfluent at the moment (grid-to-grid).
+!!
+!!  - trans_type='metamorphosis' the output points and the values are
+!!    the same as the input ones, possibly a subset, but something
+!!    exterior in the data may change, e.g. the component flag of the
+!!    output grid or the underlying data structure, as from grid to
+!!    sparse points (grid-to-grid, grid-to-sparse points, sparse
+!!    points-to-sparse points)
 !!    - sub_type='all' all the input points are kept in the output
 !!    - sub_type='coordbb' the input points which lie in the provided
-!!      lon/lat bounding box are kept in the output (grid-to-sparse
-!!      points only).
+!!      lon/lat bounding box are kept in the output (grid-to-sparse or
+!!      sparse points-to-sparse points).
 !!
 !! \ingroup volgrid6d
 MODULE grid_transform_class
@@ -445,7 +473,8 @@ ELSE IF (this%trans_type == 'inter') THEN
     CALL raise_fatal_error()
   endif
 
-ELSE IF (this%trans_type == 'boxinter' .OR. this%trans_type == 'polyinter')THEN
+ELSE IF (this%trans_type == 'boxinter' .OR. this%trans_type == 'polyinter' &
+  .OR. this%trans_type == 'maskinter')THEN
 
   IF (this%sub_type == 'average') THEN
     this%stat_info%percentile = rmiss
@@ -469,6 +498,8 @@ ELSE IF (this%trans_type == 'boxinter' .OR. this%trans_type == 'polyinter')THEN
     CALL raise_fatal_error()
   ENDIF
 
+ELSE IF (this%trans_type == 'maskgen')THEN
+! nothing to do here
 ELSE IF (this%trans_type == 'vertint') THEN
 
   IF (this%vertint%input_levtype == vol7d_level_miss) THEN
@@ -714,35 +745,36 @@ END SUBROUTINE make_vert_coord
 
 
 !> Constructor for a \a grid_transform object, defining a particular
-!! grid-to-grid transformation.
-!! It defines an object describing a transformation from one
-!! rectangular grid to another; the abstract type of transformation is
-!! described in the transformation object \a trans (type
-!! transform_def) which must have been properly initialised. The
-!! additional information required here is the description of the
-!! input grid \a in (type griddim_def), the description of the output
-!! grid \a out (type griddim_def as well). The description of the
-!! output grid must be initialized for interpolating type
-!! transformations ('inter' and 'boxinter'), while it is generated by
-!! this constructor and returned in output for 'zoom' and 'boxregrid'
-!! transformations.
+!! grid-to-grid transformation.  It defines an object describing a
+!! transformation from one rectangular grid to another; the abstract
+!! type of transformation is described in the transformation object \a
+!! trans (type transform_def) which must have been properly
+!! initialised. The additional information required here is the
+!! description of the input grid \a in (type griddim_def), the
+!! description of the output grid \a out (type griddim_def as
+!! well). The description of the output grid must be initialized for
+!! interpolating type transformations ('inter' and 'boxinter'), while
+!! it is generated by this constructor and returned in output for
+!! 'zoom', 'boxregrid' and 'maskgen' transformations.
 !!
 !! The generated \a grid_transform object is specific to the input and
 !! output grids involved. The function \a c_e can be used in order to
 !! check whether the object has been successfully initialised, if the
 !! result is \a .FALSE., it should not be used further on.
-SUBROUTINE grid_transform_init(this, trans, in, out, categoryappend)
+SUBROUTINE grid_transform_init(this, trans, in, out, poly, categoryappend)
 TYPE(grid_transform),INTENT(out) :: this !< grid_transformation object
 TYPE(transform_def),INTENT(in) :: trans !< transformation object
 TYPE(griddim_def),INTENT(inout) :: in !< griddim object to transform
 TYPE(griddim_def),INTENT(inout) :: out !< griddim object defining target grid (input or output depending on type of transformation)
+TYPE(geo_coordvect),INTENT(inout),OPTIONAL :: poly(:) !< array of polygons indicating areas over which to interpolate (for transformation type 'maskgen')
 CHARACTER(len=*),INTENT(in),OPTIONAL :: categoryappend !< append this suffix to log4fortran namespace category
 
-INTEGER :: nx, ny, i, j, cf_i, cf_o
+INTEGER :: nx, ny, i, j, n, cf_i, cf_o, nprev
 DOUBLE PRECISION :: xmin, xmax, ymin, ymax, steplon, steplat, &
  xmin_new, ymin_new, ellips_smaj_axis, ellips_flatt
 DOUBLE PRECISION :: l1, l2
 TYPE(geo_proj) :: proj_in, proj_out
+TYPE(geo_coord) :: point
 
 CALL grid_transform_init_common(this, trans, categoryappend)
 
@@ -992,15 +1024,63 @@ ELSE IF (this%trans%trans_type == 'boxinter') THEN
    in%dim%lon, in%dim%lat, .FALSE., &
    this%inter_index_x, this%inter_index_y)
 
+
+ELSE IF (this%trans%trans_type == 'maskgen') THEN
+
+  IF (.NOT.PRESENT(poly)) THEN
+    CALL l4f_category_log(this%category,L4F_ERROR, &
+     'grid_transform_init poly argument missing for maskgen transformation')
+    CALL raise_fatal_error()
+  ENDIF
+
+  CALL get_val(in, nx=this%innx, ny=this%inny)
+! unlike before, here index arrays must have the shape of input grid
+  ALLOCATE(this%inter_index_x(this%innx,this%inny), &
+   this%inter_index_y(this%innx,this%inny))
+  this%inter_index_x(:,:) = imiss
+  this%inter_index_y(:,:) = 1
+
+! compute coordinates of input grid in geo system
+  CALL unproj(in) ! TODO costringe a dichiarare in INTENT(inout), si puo` evitare?
+
+  nprev = 1
+!$OMP PARALLEL DEFAULT(SHARED)
+!$OMP DO PRIVATE(j, i, n, point) FIRSTPRIVATE(nprev)
+  DO j = 1, this%inny
+    inside_x: DO i = 1, this%innx
+      CALL init(point, lon=in%dim%lon(i,j), lat=in%dim%lat(i,j))
+
+      DO n = nprev, SIZE(poly) ! optimize starting from last matched polygon
+        IF (inside(point, poly(n))) THEN ! stop at the first matching polygon
+          this%inter_index_x(i,j) = n
+          nprev = n
+          CYCLE inside_x
+        ENDIF
+      ENDDO
+      DO n = nprev-1, 1, -1 ! test the other polygons
+        IF (inside(point, poly(n))) THEN ! stop at the first matching polygon
+          this%inter_index_x(i,j) = n
+          nprev = n
+          CYCLE inside_x
+        ENDIF
+      ENDDO
+
+!     CALL delete(point) ! speedup
+    ENDDO inside_x
+  ENDDO
+!$OMP END PARALLEL
+
+  this%outnx = this%innx
+  this%outny = this%inny
+  CALL copy(in,out)
+
 ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
 
   CALL copy(in,out)
 
-  CALL get_val(in, nx=nx, ny=ny)
-  this%innx = nx
-  this%inny = ny
-  this%outnx = nx
-  this%outny = ny
+  CALL get_val(in, nx=this%innx, ny=this%inny)
+  this%outnx = this%innx
+  this%outny = this%inny
 
 ELSE
 
@@ -1034,6 +1114,14 @@ END SUBROUTINE grid_transform_init
 !!    argument which returns the coordinates of the target points
 !!    (polygons' centroids)
 !!
+!!  - for 'maskinter' transformation, this is a two dimensional real
+!!    value (\a maskgrid argument), which, together with the \a
+!!    nmaskclass and \a dmaskclass arguments (both optional with
+!!    defaults), divides the input grid in \a nmaskclass subareas
+!!    according to the values of \a maskinter, and, in this case, \a
+!!    v7d_out is an output argument which returns the coordinates of
+!!    the target points (subareas' centroids)
+!!
 !!  - for 'metamorphosis' transformation, no target point information
 !!    has to be provided in input (it is calculated on the basis of
 !!    output grid), and, as for 'polyinter', this information is
@@ -1045,18 +1133,24 @@ END SUBROUTINE grid_transform_init
 !! initialised, if the result is \a .FALSE., it should not be used
 !! further on.
 SUBROUTINE grid_transform_grid_vol7d_init(this, trans, in, v7d_out, poly, &
- categoryappend)
+ maskgrid, nmaskclass, startmaskclass, dmaskclass, categoryappend)
 TYPE(grid_transform),INTENT(out) :: this !< grid_transformation object
 TYPE(transform_def),INTENT(in) :: trans !< transformation object
 TYPE(griddim_def),INTENT(inout) :: in !< griddim object to transform
 TYPE(vol7d),INTENT(inout) :: v7d_out !< vol7d object with the coordinates of the sparse points to be used as transformation target (input or output depending on type of transformation)
 TYPE(geo_coordvect),INTENT(inout),OPTIONAL :: poly(:) !< array of polygons indicating areas over which to interpolate (for transformation type 'polyinter')
-character(len=*),INTENT(in),OPTIONAL :: categoryappend !< append this suffix to log4fortran namespace category
+REAL,INTENT(in),OPTIONAL :: maskgrid(:,:) !< 2D field to be used for defining subareas according to its values, it must have the same shape as the field to be interpolated (for transformation type 'maskinter')
+INTEGER,INTENT(in),OPTIONAL :: nmaskclass !< number of classes (and thus potential subareas) over which the interval covered by \a maskgrid has to be divided
+REAL,INTENT(in),OPTIONAL :: startmaskclass !< this is the start of the interval covered by \a maskgrid which defines a single class (subarea)
+REAL,INTENT(in),OPTIONAL :: dmaskclass !< if \a nmaskclass is not provided, this is the subinterval of the interval covered by \a maskgrid which defines a single class (subarea)
+CHARACTER(len=*),INTENT(in),OPTIONAL :: categoryappend !< append this suffix to log4fortran namespace category
 
-INTEGER :: nx, ny, i, j, n, nprev
-DOUBLE PRECISION :: xmin, xmax, ymin, ymax, steplon, steplat,xmin_new, ymin_new
-doubleprecision,pointer :: lon(:),lat(:)
-integer :: ix,iy
+INTEGER :: nx, ny, i, j, n, nprev, lnmaskclass
+DOUBLE PRECISION :: xmin, xmax, ymin, ymax, steplon, steplat, xmin_new, ymin_new
+DOUBLE PRECISION,POINTER :: lon(:), lat(:)
+REAL :: lstartmaskclass, ldmaskclass, mmin, mmax
+REAL,ALLOCATABLE :: lbound_class(:)
+INTEGER :: ix, iy
 TYPE(geo_coord) :: point
 
 
@@ -1136,7 +1230,7 @@ ELSE IF (this%trans%trans_type == 'polyinter') THEN
 
   nprev = 1
 !$OMP PARALLEL DEFAULT(SHARED)
-!$OMP DO PRIVATE(j, i, point) FIRSTPRIVATE(nprev)
+!$OMP DO PRIVATE(j, i, n, point) FIRSTPRIVATE(nprev)
   DO j = 1, this%inny
     inside_x: DO i = 1, this%innx
       CALL init(point, lon=in%dim%lon(i,j), lat=in%dim%lat(i,j))
@@ -1172,6 +1266,102 @@ ELSE IF (this%trans%trans_type == 'polyinter') THEN
     CALL init(v7d_out%ana(n), lon=stat_average(lon), lat=stat_average(lat))
     DEALLOCATE(lon, lat)
   ENDDO
+
+ELSE IF (this%trans%trans_type == 'maskinter') THEN
+
+  IF (.NOT.PRESENT(maskgrid)) THEN
+    CALL l4f_category_log(this%category,L4F_ERROR, &
+     'grid_transform_init maskgrid argument missing for maskinter transformation')
+    CALL raise_fatal_error()
+  ENDIF
+
+  CALL get_val(in, nx=this%innx, ny=this%inny)
+  IF (this%innx /= SIZE(maskgrid,1) .OR. this%inny /= SIZE(maskgrid,2)) THEN
+    CALL l4f_category_log(this%category,L4F_ERROR, &
+     'grid_transform_init mask non conformal with input field')
+    CALL l4f_category_log(this%category,L4F_ERROR, &
+     'mask: '//t2c(SIZE(maskgrid,1))//'x'//t2c(SIZE(maskgrid,2))// &
+     ' input field:'//t2c(this%innx)//'x'//t2c(this%inny))
+    CALL raise_fatal_error()
+  ENDIF
+! unlike before, here index arrays must have the shape of input grid
+  ALLOCATE(this%inter_index_x(this%innx,this%inny), &
+   this%inter_index_y(this%innx,this%inny))
+  this%inter_index_x(:,:) = imiss
+  this%inter_index_y(:,:) = 1
+
+  mmin = MINVAL(maskgrid, mask=c_e(maskgrid))
+  mmax = MAXVAL(maskgrid, mask=c_e(maskgrid))
+
+  lnmaskclass = optio_l(nmaskclass)
+  lstartmaskclass = optio_r(startmaskclass)
+  ldmaskclass = optio_r(dmaskclass)
+! safety checks
+  IF (c_e(lnmaskclass)) THEN
+    lnmaskclass = MAX(lnmaskclass, 2)
+  ENDIF
+  IF (c_e(ldmaskclass)) THEN
+    IF (dmaskclass == 0.0) THEN
+      CALL l4f_category_log(this%category,L4F_ERROR, &
+       'dmaskclass, if provided, must be nonzero')
+      CALL raise_fatal_error()
+    ENDIF
+  ENDIF
+
+  IF (c_e(lstartmaskclass) .AND. c_e(ldmaskclass) .AND. c_e(lnmaskclass)) THEN
+! nothing to do
+  ELSE IF (c_e(lnmaskclass)) THEN
+    ldmaskclass = (mmax-mmin)/(lnmaskclass-1)
+    lstartmaskclass = mmin-0.5*ldmaskclass
+  ELSE
+    IF (.NOT.c_e(ldmaskclass)) THEN
+      ldmaskclass = 1.0
+    ENDIF
+    lnmaskclass = (mmax - mmin + 0.5*ldmaskclass)/ldmaskclass + 1.0
+    lstartmaskclass = mmin-0.5*ldmaskclass
+  ENDIF
+! assign limits for each class
+  ALLOCATE(lbound_class(lnmaskclass+1))
+  lbound_class(:) = (/(lstartmaskclass+REAL(n)*ldmaskclass,n=0,lnmaskclass)/)
+#ifdef DEBUG
+  CALL l4f_category_log(this%category,L4F_DEBUG, &
+   "maskinter parameters n,start,step: "// &
+   t2c(lnmaskclass)//','//t2c(lstartmaskclass)//','//t2c(ldmaskclass))
+#endif
+
+! compute coordinates of input grid in geo system
+  CALL unproj(in) ! TODO costringe a dichiarare in INTENT(inout), si puo` evitare?
+
+!$OMP PARALLEL DEFAULT(SHARED)
+!$OMP DO PRIVATE(j, i, n)
+  DO j = 1, this%inny
+    DO i = 1, this%innx
+      IF (c_e(maskgrid(i,j))) THEN
+        DO n = lnmaskclass, 1, -1
+          IF (maskgrid(i,j) > lbound_class(n)) THEN
+            this%inter_index_x(i,j) = n
+            EXIT
+          ENDIF
+        ENDDO
+      ENDIF
+    ENDDO
+  ENDDO
+!$OMP END PARALLEL
+
+  DEALLOCATE(lbound_class)
+  this%outnx=lnmaskclass
+  this%outny=1
+  CALL vol7d_alloc(v7d_out, nana=lnmaskclass)
+
+! setup output point list, equal to average of polygon points
+! warning, in case of concave areas points may coincide!
+  DO n = 1, lnmaskclass
+    CALL init(v7d_out%ana(n), &
+     lon=stat_average(PACK(in%dim%lon(:,:), &
+     mask=(this%inter_index_x(:,:) == n))), &
+     lat=stat_average(PACK(in%dim%lat(:,:), &
+     mask=(this%inter_index_x(:,:) == n))))
+   ENDDO
 
 ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
 
@@ -1840,7 +2030,8 @@ ELSE IF (this%trans%trans_type == 'inter') THEN
 
   ENDIF
 ELSE IF (this%trans%trans_type == 'boxinter' &
- .OR. this%trans%trans_type == 'polyinter') THEN
+ .OR. this%trans%trans_type == 'polyinter' &
+ .OR. this%trans%trans_type == 'maskinter') THEN
 
   IF (this%trans%sub_type == 'average') THEN
     
@@ -1924,6 +2115,16 @@ ELSE IF (this%trans%trans_type == 'boxinter' &
 
   ENDIF
 
+
+ELSE IF (this%trans%trans_type == 'maskgen') THEN
+
+  DO k = 1, innz
+    WHERE(c_e(this%inter_index_x(:,:)))
+      field_out(:,:,k) = REAL(this%inter_index_x(:,:))
+    ELSEWHERE
+      field_out(:,:,k) = rmiss
+    END WHERE
+  ENDDO
 
 ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
 

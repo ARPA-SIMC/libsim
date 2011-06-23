@@ -28,11 +28,13 @@ use grid_id_class
 use err_handling
 use char_utilities
 use optionparser_class
+USE geo_coord_class
 
 implicit none
 
 integer :: category,ier,i,nana
-CHARACTER(len=512):: a_name, infile, outfile, output_format, output_template
+CHARACTER(len=12) :: coord_format
+CHARACTER(len=512):: a_name, coord_file, input_file, output_file, output_format, output_template
 type (volgrid6d),pointer  :: volgrid(:),volgrid_out(:)
 
 doubleprecision ::  ilon,ilat,flon,flat
@@ -46,24 +48,25 @@ INTEGER :: ix, iy, fx, fy, time_definition
 doubleprecision :: latitude_south_pole,longitude_south_pole,angle_rotation
 character(len=80) :: proj_type,trans_type,sub_type
 
+TYPE(geo_coordvect),POINTER :: poly(:) => NULL()
 doubleprecision ::x,y,lon,lat
 LOGICAL :: extrap, c2agrid, decode
 type(optionparser) :: opt
 INTEGER :: optind, optstatus
 integer :: iargc
-                                !CHARACTER(len=3) :: set_scmode
+!CHARACTER(len=3) :: set_scmode
 LOGICAL :: version, ldisplay, rzscan
 INTEGER,POINTER :: w_s(:), w_e(:)
 TYPE(grid_file_id) :: file_template
 TYPE(grid_id) :: gaid_template
 
-                                !questa chiamata prende dal launcher il nome univoco
+!questa chiamata prende dal launcher il nome univoco
 call l4f_launcher(a_name,a_name_force="volgrid6dtransform")
 
-                                !init di log4fortran
+!init di log4fortran
 ier=l4f_init()
 
-                                !imposta a_name
+!imposta a_name
 category=l4f_category_get(a_name//".main")
 
                                 ! define the option parser
@@ -138,6 +141,13 @@ CALL optionparser_add(opt, 'f', 'npx', npx, 4, help= &
 CALL optionparser_add(opt, 'g', 'npy', npy, 4, help= &
  'number of nodes along x axis on input grid, over which to apply function for boxregrid')
 
+coord_file=cmiss
+#ifdef HAVE_LIBSHP_FORTRAN
+CALL optionparser_add(opt, 'c', 'coord-file', coord_file, help= &
+ 'file in shp format with coordinates of polygons, required for maskgen transformation')
+coord_format = 'shp' ! no other formats for now, no argument defined
+#endif
+
 output_template = ''
 CALL optionparser_add(opt, ' ', 'output-format', output_format, &
 #ifdef HAVE_LIBGRIBAPI
@@ -209,7 +219,7 @@ IF (version) THEN
 ENDIF
 
 if ( optind <= iargc()) then
-  call getarg(optind, infile)
+  call getarg(optind, input_file)
   optind=optind+1
 else
   call optionparser_printhelp(opt)
@@ -220,7 +230,7 @@ else
 end if
 
 if ( optind <= iargc()) then
-  call getarg(optind, outfile)
+  call getarg(optind, output_file)
   optind=optind+1
 else
   call optionparser_printhelp(opt)
@@ -230,8 +240,18 @@ end if
 
 CALL delete(opt)
 
-call l4f_category_log(category,L4F_INFO,"transforming from file:"//trim(infile))
-call l4f_category_log(category,L4F_INFO,"transforming to   file:"//trim(outfile))
+call l4f_category_log(category,L4F_INFO,"transforming from file:"//trim(input_file))
+call l4f_category_log(category,L4F_INFO,"transforming to   file:"//trim(output_file))
+#ifdef HAVE_LIBSHP_FORTRAN
+IF (coord_format == 'shp') THEN
+  CALL import(poly, shpfile=coord_file)
+  IF (.NOT.ASSOCIATED(poly)) THEN
+    CALL l4f_category_log(category, L4F_ERROR, &
+     'error importing shapefile '//TRIM(coord_file))
+    CALL raise_fatal_error()
+  ENDIF
+ENDIF
+#endif
 
 i = word_split(output_format, w_s, w_e, ':')
 IF (i >= 2) THEN ! grid from a grib template
@@ -268,7 +288,7 @@ else
   decode=.false.
 endif
 
-CALL import(volgrid,filename=infile,decode=decode, time_definition=time_definition, categoryappend="input")
+CALL import(volgrid,filename=input_file,decode=decode, time_definition=time_definition, categoryappend="input")
 if (c2agrid) call vg6d_c2a(volgrid)
 IF (ldisplay) THEN
   IF (ASSOCIATED(volgrid)) THEN
@@ -294,8 +314,8 @@ else
    percentile=0.5D0, &
    categoryappend="transformation")
 
-  CALL transform(trans,griddim_out,volgrid6d_in=volgrid, &
-   volgrid6d_out=volgrid_out,clone=.TRUE.,categoryappend="transformed")
+  CALL transform(trans, griddim_out, volgrid6d_in=volgrid, &
+   volgrid6d_out=volgrid_out, poly=poly, clone=.TRUE., categoryappend="transform")
 
   IF (ldisplay) THEN ! done here in order to print final ellipsoid
     DO i = 1,SIZE(volgrid)
@@ -326,18 +346,18 @@ subroutine write_to_file_out(myvolgrid)
 
 type (volgrid6d),pointer  :: myvolgrid(:)
 
-i = word_split(outfile, w_s, w_e, ':')
+i = word_split(output_file, w_s, w_e, ':')
 
 IF (i == 3) THEN ! template requested (grib_api:template_file:output_file)
-  file_template = grid_file_id_new(outfile(w_s(1):w_e(2)), 'r')
+  file_template = grid_file_id_new(output_file(w_s(1):w_e(2)), 'r')
   gaid_template = grid_id_new(file_template)
   IF (c_e(gaid_template)) THEN
-    CALL export (myvolgrid, filename=outfile(w_s(1):w_e(1))//':'// &
-     outfile(w_s(3):w_e(3)), gaid_template=gaid_template, &
+    CALL export (myvolgrid, filename=output_file(w_s(1):w_e(1))//':'// &
+     output_file(w_s(3):w_e(3)), gaid_template=gaid_template, &
      categoryappend="export_tmpl")
   ELSE
     CALL l4f_category_log(category,L4F_FATAL, &
-     "opening output template "//TRIM(outfile))
+     "opening output template "//TRIM(output_file))
     CALL raise_fatal_error()
   ENDIF
 
@@ -345,7 +365,7 @@ ELSE
 
   if (output_format(1:8) == "grib_api") then 
 #ifdef HAVE_LIBGRIBAPI
-    CALL export(myvolgrid,filename=outfile,categoryappend="exporttofilegrib")
+    CALL export(myvolgrid,filename=output_file,categoryappend="exporttofilegrib")
 #else
     CALL l4f_category_log(category,L4F_FATAL, &
      "export to grib_api disabled at compile time")
@@ -357,9 +377,9 @@ ELSE
 #ifdef VAPOR
     do i =1,size(myvolgrid)
       CALL l4f_category_log(category,L4F_INFO, &
-       "exporting to vapor vdf file: "//trim(outfile)//"_"//t2c(i)//".vdf")
+       "exporting to vapor vdf file: "//trim(output_file)//"_"//t2c(i)//".vdf")
       call export (myvolgrid(i),normalize=.True.,rzscan=rzscan,&
-       filename=trim(outfile)//"_"//t2c(i)//".vdf")
+       filename=trim(output_file)//"_"//t2c(i)//".vdf")
     end do
 #else
     CALL l4f_category_log(category,L4F_FATAL, &
