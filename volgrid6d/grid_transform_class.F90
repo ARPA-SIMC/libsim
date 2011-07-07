@@ -516,7 +516,7 @@ ELSE IF (this%trans_type == 'vertint') THEN
 
 ELSE IF (this%trans_type == 'metamorphosis') THEN
 
-  if (this%sub_type == 'all')then
+  if (this%sub_type == 'all' .OR. this%sub_type == 'poly')then
 ! nothing to do here
   else if (this%sub_type == 'coordbb')then
 
@@ -1145,12 +1145,11 @@ REAL,INTENT(in),OPTIONAL :: startmaskclass !< this is the start of the interval 
 REAL,INTENT(in),OPTIONAL :: dmaskclass !< if \a nmaskclass is not provided, this is the subinterval of the interval covered by \a maskgrid which defines a single class (subarea)
 CHARACTER(len=*),INTENT(in),OPTIONAL :: categoryappend !< append this suffix to log4fortran namespace category
 
-INTEGER :: nx, ny, i, j, n, nprev, lnmaskclass
+INTEGER :: ix, iy, n, nprev, lnmaskclass
 DOUBLE PRECISION :: xmin, xmax, ymin, ymax, steplon, steplat, xmin_new, ymin_new
 DOUBLE PRECISION,POINTER :: lon(:), lat(:)
 REAL :: lstartmaskclass, ldmaskclass, mmin, mmax
 REAL,ALLOCATABLE :: lbound_class(:)
-INTEGER :: ix, iy
 TYPE(geo_coord) :: point
 
 
@@ -1160,21 +1159,15 @@ IF (this%trans%trans_type == 'inter') THEN
 
   IF (this%trans%sub_type == 'near' .OR. this%trans%sub_type == 'bilin' ) THEN
 
-    CALL get_val(in, nx=nx, ny=ny)
-    this%innx=nx
-    this%inny=ny
-
-    this%outnx=SIZE(v7d_out%ana)
-    this%outny=1
+    CALL get_val(in, nx=this%innx, ny=this%inny)
+    this%outnx = SIZE(v7d_out%ana)
+    this%outny = 1
 
     ALLOCATE (this%inter_index_x(this%outnx,this%outny),&
      this%inter_index_y(this%outnx,this%outny))
     ALLOCATE(lon(this%outnx),lat(this%outnx))
 
-    CALL get_val(in, &
-     xmin=xmin, xmax=xmax,&
-     ymin=ymin, ymax=ymax)
-
+    CALL get_val(in, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax)
     CALL getval(v7d_out%ana(:)%coord,lon=lon,lat=lat)
 
     CALL find_index(in, this%trans%sub_type,&
@@ -1192,11 +1185,8 @@ IF (this%trans%trans_type == 'inter') THEN
       ALLOCATE(this%inter_xp(this%outnx,this%outny),this%inter_yp(this%outnx,this%outny))
 
       CALL griddim_gen_coord(in, this%inter_x, this%inter_y)
-
-      CALL proj(in,&
-       RESHAPE(lon,(/SIZE(lon),1/)),RESHAPE(lat,(/SIZE(lat),1/)),&
+      CALL proj(in, RESHAPE(lon,(/SIZE(lon),1/)),RESHAPE(lat,(/SIZE(lat),1/)),&
        this%inter_xp,this%inter_yp)
-
     ENDIF
 
     DEALLOCATE(lon,lat)
@@ -1230,21 +1220,21 @@ ELSE IF (this%trans%trans_type == 'polyinter') THEN
 
   nprev = 1
 !$OMP PARALLEL DEFAULT(SHARED)
-!$OMP DO PRIVATE(j, i, n, point) FIRSTPRIVATE(nprev)
-  DO j = 1, this%inny
-    inside_x: DO i = 1, this%innx
-      CALL init(point, lon=in%dim%lon(i,j), lat=in%dim%lat(i,j))
+!$OMP DO PRIVATE(iy, ix, n, point) FIRSTPRIVATE(nprev)
+  DO iy = 1, this%inny
+    inside_x: DO ix = 1, this%innx
+      CALL init(point, lon=in%dim%lon(ix,iy), lat=in%dim%lat(ix,iy))
 
       DO n = nprev, SIZE(poly) ! optimize starting from last matched polygon
         IF (inside(point, poly(n))) THEN ! stop at the first matching polygon
-          this%inter_index_x(i,j) = n
+          this%inter_index_x(ix,iy) = n
           nprev = n
           CYCLE inside_x
         ENDIF
       ENDDO
       DO n = nprev-1, 1, -1 ! test the other polygons
         IF (inside(point, poly(n))) THEN ! stop at the first matching polygon
-          this%inter_index_x(i,j) = n
+          this%inter_index_x(ix,iy) = n
           nprev = n
           CYCLE inside_x
         ENDIF
@@ -1255,8 +1245,8 @@ ELSE IF (this%trans%trans_type == 'polyinter') THEN
   ENDDO
 !$OMP END PARALLEL
 
-  this%outnx=SIZE(poly)
-  this%outny=1
+  this%outnx = SIZE(poly)
+  this%outny = 1
   CALL vol7d_alloc(v7d_out, nana=SIZE(poly))
 
 ! setup output point list, equal to average of polygon points
@@ -1334,12 +1324,12 @@ ELSE IF (this%trans%trans_type == 'maskinter') THEN
 
 !$OMP PARALLEL DEFAULT(SHARED)
 !$OMP DO PRIVATE(j, i, n)
-  DO j = 1, this%inny
-    DO i = 1, this%innx
-      IF (c_e(maskgrid(i,j))) THEN
+  DO iy = 1, this%inny
+    DO ix = 1, this%innx
+      IF (c_e(maskgrid(ix,iy))) THEN
         DO n = lnmaskclass, 1, -1
-          IF (maskgrid(i,j) > lbound_class(n)) THEN
-            this%inter_index_x(i,j) = n
+          IF (maskgrid(ix,iy) > lbound_class(n)) THEN
+            this%inter_index_x(ix,iy) = n
             EXIT
           ENDIF
         ENDDO
@@ -1349,8 +1339,8 @@ ELSE IF (this%trans%trans_type == 'maskinter') THEN
 !$OMP END PARALLEL
 
   DEALLOCATE(lbound_class)
-  this%outnx=lnmaskclass
-  this%outny=1
+  this%outnx = lnmaskclass
+  this%outny = 1
   CALL vol7d_alloc(v7d_out, nana=lnmaskclass)
 
 ! setup output point list, equal to average of polygon points
@@ -1367,31 +1357,26 @@ ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
 
   IF (this%trans%sub_type == 'all' ) THEN
 
-    CALL get_val(in, nx=nx, ny=ny)
-    this%innx=nx
-    this%inny=ny
-    this%outnx=nx*ny
-    this%outny=1
-    CALL vol7d_alloc(v7d_out, nana=nx*ny)
-
 ! compute coordinates of input grid in geo system
     CALL unproj(in) ! TODO costringe a dichiarare in INTENT(inout), si puo` evitare?
-    do iy=1,this%inny
-      do ix=1,this%innx
+    CALL get_val(in, nx=this%innx, ny=this%inny)
+    this%outnx = this%innx*this%inny
+    this%outny = 1
+    CALL vol7d_alloc(v7d_out, nana=this%outnx)
+
+    DO iy=1,this%inny
+      DO ix=1,this%innx
         CALL init(v7d_out%ana((iy-1)*this%innx+ix), &
          lon=in%dim%lon(ix,iy),lat=in%dim%lat(ix,iy))
-      end do
-    end do
+      ENDDO
+    ENDDO
 
   ELSE IF (this%trans%sub_type == 'coordbb' ) THEN
 
 ! compute coordinates of input grid in geo system
     CALL unproj(in)
-    CALL get_val(in, nx=nx, ny=ny)
-    this%innx=nx
-    this%inny=ny
-
-    ALLOCATE(this%point_mask(nx,ny))
+    CALL get_val(in, nx=this%innx, ny=this%inny)
+    ALLOCATE(this%point_mask(this%innx,this%inny))
     this%point_mask(:,:) = .FALSE.
 
 ! count and mark points falling into requested bounding-box
@@ -1411,7 +1396,6 @@ ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
     ENDDO
 
     IF (this%outnx <= 0) THEN
-
       CALL l4f_category_log(this%category,L4F_ERROR, &
        "metamorphosis coordbb: no points inside bounding box "//&
        TRIM(to_char(this%trans%rect_coo%ilon))//","// &
@@ -1421,26 +1405,71 @@ ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
       this%valid = .FALSE.
       RETURN
       !CALL raise_fatal_error() ! really fatal error?
-
     ENDIF
 
     CALL vol7d_alloc(v7d_out, nana=this%outnx)
 
 ! collect coordinates of points falling into requested bounding-box
     n = 0
-    metamorphosis_coordbb: DO iy = 1, this%inny
+    DO iy = 1, this%inny
       DO ix = 1, this%innx
-!        IF (geo_coord_inside_rectang()
-        IF (in%dim%lon(ix,iy) > this%trans%rect_coo%ilon .AND. &
-         in%dim%lon(ix,iy) < this%trans%rect_coo%flon .AND. &
-         in%dim%lat(ix,iy) > this%trans%rect_coo%ilat .AND. &
-         in%dim%lat(ix,iy) < this%trans%rect_coo%flat) THEN ! improve!
+        IF (this%point_mask(ix,iy)) THEN
           n = n + 1
-          IF (n > this%outnx) EXIT metamorphosis_coordbb ! useless safety check
           CALL init(v7d_out%ana(n),lon=in%dim%lon(ix,iy),lat=in%dim%lat(ix,iy))
         ENDIF
       ENDDO
-    ENDDO metamorphosis_coordbb
+    ENDDO
+
+  ELSE IF (this%trans%sub_type == 'poly' ) THEN
+
+    IF (.NOT.PRESENT(poly)) THEN
+      CALL l4f_category_log(this%category,L4F_ERROR, &
+       'grid_transform_init poly argument missing for poly subtype')
+      CALL raise_fatal_error()
+    ENDIF
+
+! compute coordinates of input grid in geo system
+    CALL unproj(in)
+    CALL get_val(in, nx=this%innx, ny=this%inny)
+    ALLOCATE(this%point_mask(this%innx,this%inny))
+    this%point_mask(:,:) = .FALSE.
+
+! count and mark points falling into requested polygon
+    this%outnx = 0
+    this%outny = 1
+!$OMP PARALLEL DEFAULT(SHARED)
+!$OMP DO PRIVATE(iy, ix, point)
+    DO iy = 1, this%inny
+      DO ix = 1, this%innx
+        CALL init(point, lon=in%dim%lon(ix,iy), lat=in%dim%lat(ix,iy))
+        IF (inside(point, poly(1))) THEN
+          this%outnx = this%outnx + 1
+          this%point_mask(ix,iy) = .TRUE.
+        ENDIF
+!     CALL delete(point) ! speedup
+      ENDDO
+    ENDDO
+!$OMP END PARALLEL
+
+    IF (this%outnx <= 0) THEN
+      CALL l4f_category_log(this%category,L4F_ERROR, &
+       "metamorphosis poly: no points inside first polygon")
+      this%valid = .FALSE.
+      RETURN
+      !CALL raise_fatal_error() ! really fatal error?
+    ENDIF
+
+    CALL vol7d_alloc(v7d_out, nana=this%outnx)
+! collect coordinates of points falling into requested polygon
+    n = 0
+    DO iy = 1, this%inny
+      DO ix = 1, this%innx
+        IF (this%point_mask(ix,iy)) THEN
+          n = n + 1
+          CALL init(v7d_out%ana(n),lon=in%dim%lon(ix,iy),lat=in%dim%lat(ix,iy))
+        ENDIF
+      ENDDO
+    ENDDO
 
   ELSE
 
@@ -2132,7 +2161,7 @@ ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
 
     field_out(:,:,:) = RESHAPE(field_in(:,:,:), (/this%outnx,this%outny,innz/))
 
-  ELSE IF (this%trans%sub_type == 'coordbb') THEN
+  ELSE IF (this%trans%sub_type == 'coordbb' .OR. this%trans%sub_type == 'poly') THEN
 
     DO k = 1, innz
       field_out(:,1,k) = PACK(field_in(:,:,k), this%point_mask(:,:))
