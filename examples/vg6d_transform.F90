@@ -311,11 +311,11 @@ else
   CALL init(trans, trans_type=trans_type, sub_type=sub_type, extrap=extrap, &
    ix=ix, iy=iy, fx=fx, fy=fy, &
    ilon=ilon, ilat=ilat, flon=flon, flat=flat, npx=npx, npy=npy, &
-   percentile=0.5D0, &
+   poly=poly, percentile=0.5D0, &
    categoryappend="transformation")
 
   CALL transform(trans, griddim_out, volgrid6d_in=volgrid, &
-   volgrid6d_out=volgrid_out, poly=poly, clone=.TRUE., categoryappend="transform")
+   volgrid6d_out=volgrid_out, clone=.TRUE., categoryappend="transform")
 
   IF (ldisplay) THEN ! done here in order to print final ellipsoid
     DO i = 1,SIZE(volgrid)

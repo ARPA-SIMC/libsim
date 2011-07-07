@@ -124,6 +124,9 @@
 !!    - sub_type='coordbb' the input points which lie in the provided
 !!      lon/lat bounding box are kept in the output (grid-to-sparse or
 !!      sparse points-to-sparse points).
+!!    - sub_type='poly' the input points which lie in the first
+!!      polygon of the provided polygon list are kept in the output
+!!      (grid-to-sparse or sparse points-to-sparse points).
 !!
 !! \ingroup volgrid6d
 MODULE grid_transform_class
@@ -199,7 +202,8 @@ TYPE transform_def
 
   type(rect_ind) :: rect_ind ! rectangle information by index
   type(rect_coo) :: rect_coo ! rectangle information by coordinates
-  type(area_info) :: area_info ! 
+  TYPE(area_info) :: area_info ! 
+  TYPE(geo_coordvect),POINTER :: poly(:) => NULL() ! polygon information
   type(stat_info) :: stat_info ! 
   type(box_info) :: box_info ! boxregrid specification
   type(vertint) :: vertint ! vertical interpolation specification
@@ -279,7 +283,7 @@ CONTAINS
 !! by the transformation type and subtype chosen have to be present.
 SUBROUTINE transform_init(this, trans_type, sub_type, &
  ix, iy, fx, fy, ilon, ilat, flon, flat, &
- npx, npy, boxdx, boxdy, percentile, &
+ npx, npy, boxdx, boxdy, poly, percentile, &
  extrap, time_definition, &
  input_levtype, input_coordvar, output_levtype, categoryappend)
 TYPE(transform_def),INTENT(out) :: this !< transformation object
@@ -297,6 +301,7 @@ INTEGER,INTENT(IN),OPTIONAL :: npx !< number of points to average along x direct
 INTEGER,INTENT(IN),OPTIONAL :: npy !< number of points to average along y direction (for boxregrid)
 DOUBLEPRECISION,INTENT(in),OPTIONAL :: boxdx !< longitudinal/x extension of the box for box interpolation, default the target x grid step (unimplemented !)
 DOUBLEPRECISION,INTENT(in),OPTIONAL :: boxdy !< latitudinal/y extension of the box for box interpolation, default the target y grid step (unimplemented !)
+TYPE(geo_coordvect),OPTIONAL,TARGET :: poly(:) !< array of polygons indicating areas over which to interpolate (for transformations 'polyinter' or 'metamorphosis:poly')
 DOUBLEPRECISION,INTENT(in),OPTIONAL :: percentile !< percentile [0,1] of the distribution of points in the box to use as interpolated value, if missing, the average is used
 LOGICAL,INTENT(IN),OPTIONAL :: extrap !< activate extrapolation outside input domain (use with care!)
 INTEGER,INTENT(IN),OPTIONAL :: time_definition !< time definition for output vol7d object 0=time is reference time ; 1=time is validity time
@@ -327,6 +332,7 @@ call optio(flat,this%rect_coo%flat)
 
 CALL optio(boxdx,this%area_info%boxdx)
 CALL optio(boxdy,this%area_info%boxdy)
+IF (PRESENT(poly)) this%poly => poly
 CALL optio(percentile,this%stat_info%percentile)
 
 CALL optio(npx,this%box_info%npx)
@@ -476,6 +482,13 @@ ELSE IF (this%trans_type == 'inter') THEN
 ELSE IF (this%trans_type == 'boxinter' .OR. this%trans_type == 'polyinter' &
   .OR. this%trans_type == 'maskinter')THEN
 
+  IF (this%trans_type == 'polyinter') THEN
+    IF (.NOT.ASSOCIATED(this%poly)) THEN
+      CALL l4f_category_log(this%category,L4F_ERROR,"polyinter: poly parameter missing")
+      CALL raise_fatal_error()
+    ENDIF
+  ENDIF
+
   IF (this%sub_type == 'average') THEN
     this%stat_info%percentile = rmiss
   ELSE IF (this%sub_type == 'max') THEN
@@ -499,7 +512,12 @@ ELSE IF (this%trans_type == 'boxinter' .OR. this%trans_type == 'polyinter' &
   ENDIF
 
 ELSE IF (this%trans_type == 'maskgen')THEN
-! nothing to do here
+
+  IF (.NOT.ASSOCIATED(this%poly)) THEN
+    CALL l4f_category_log(this%category,L4F_ERROR,"maskgen: poly parameter missing")
+    CALL raise_fatal_error()
+  ENDIF
+
 ELSE IF (this%trans_type == 'vertint') THEN
 
   IF (this%vertint%input_levtype == vol7d_level_miss) THEN
@@ -516,24 +534,31 @@ ELSE IF (this%trans_type == 'vertint') THEN
 
 ELSE IF (this%trans_type == 'metamorphosis') THEN
 
-  if (this%sub_type == 'all' .OR. this%sub_type == 'poly')then
+  IF (this%sub_type == 'all') THEN
 ! nothing to do here
-  else if (this%sub_type == 'coordbb')then
+  ELSE IF (this%sub_type == 'coordbb')THEN
 
-    if (c_e(this%rect_coo%ilon) .and. c_e(this%rect_coo%ilat) .and. &
-        c_e(this%rect_coo%flon) .and. c_e(this%rect_coo%flat)) then ! coordinates given
-    else
+    IF (c_e(this%rect_coo%ilon) .AND. c_e(this%rect_coo%ilat) .AND. &
+     c_e(this%rect_coo%flon) .AND. c_e(this%rect_coo%flat)) THEN ! coordinates given
+    ELSE
 
-      call l4f_category_log(this%category,L4F_ERROR,"metamorphosis: coordbb parameters missing")
-      call raise_fatal_error()
+      CALL l4f_category_log(this%category,L4F_ERROR,"metamorphosis: coordbb parameters missing")
+      CALL raise_fatal_error()
         
-    end if
+    ENDIF
 
-  else
+  ELSE IF (this%sub_type == 'poly')THEN
+
+    IF (.NOT.ASSOCIATED(this%poly)) THEN
+      CALL l4f_category_log(this%category,L4F_ERROR,"metamorphosis:poly: poly parameter missing")
+      CALL raise_fatal_error()
+    ENDIF
+
+  ELSE
     CALL l4f_category_log(this%category,L4F_ERROR,'metamorphosis: sub_type '// &
      TRIM(this%sub_type)//' is wrong')
     CALL raise_fatal_error()
-  endif
+  ENDIF
 
 ELSE
 
@@ -761,12 +786,11 @@ END SUBROUTINE make_vert_coord
 !! output grids involved. The function \a c_e can be used in order to
 !! check whether the object has been successfully initialised, if the
 !! result is \a .FALSE., it should not be used further on.
-SUBROUTINE grid_transform_init(this, trans, in, out, poly, categoryappend)
+SUBROUTINE grid_transform_init(this, trans, in, out, categoryappend)
 TYPE(grid_transform),INTENT(out) :: this !< grid_transformation object
 TYPE(transform_def),INTENT(in) :: trans !< transformation object
 TYPE(griddim_def),INTENT(inout) :: in !< griddim object to transform
 TYPE(griddim_def),INTENT(inout) :: out !< griddim object defining target grid (input or output depending on type of transformation)
-TYPE(geo_coordvect),INTENT(inout),OPTIONAL :: poly(:) !< array of polygons indicating areas over which to interpolate (for transformation type 'maskgen')
 CHARACTER(len=*),INTENT(in),OPTIONAL :: categoryappend !< append this suffix to log4fortran namespace category
 
 INTEGER :: nx, ny, i, j, n, cf_i, cf_o, nprev
@@ -1027,12 +1051,6 @@ ELSE IF (this%trans%trans_type == 'boxinter') THEN
 
 ELSE IF (this%trans%trans_type == 'maskgen') THEN
 
-  IF (.NOT.PRESENT(poly)) THEN
-    CALL l4f_category_log(this%category,L4F_ERROR, &
-     'grid_transform_init poly argument missing for maskgen transformation')
-    CALL raise_fatal_error()
-  ENDIF
-
   CALL get_val(in, nx=this%innx, ny=this%inny)
 ! unlike before, here index arrays must have the shape of input grid
   ALLOCATE(this%inter_index_x(this%innx,this%inny), &
@@ -1050,15 +1068,15 @@ ELSE IF (this%trans%trans_type == 'maskgen') THEN
     inside_x: DO i = 1, this%innx
       CALL init(point, lon=in%dim%lon(i,j), lat=in%dim%lat(i,j))
 
-      DO n = nprev, SIZE(poly) ! optimize starting from last matched polygon
-        IF (inside(point, poly(n))) THEN ! stop at the first matching polygon
+      DO n = nprev, SIZE(this%trans%poly) ! optimize starting from last matched polygon
+        IF (inside(point, this%trans%poly(n))) THEN ! stop at the first matching polygon
           this%inter_index_x(i,j) = n
           nprev = n
           CYCLE inside_x
         ENDIF
       ENDDO
       DO n = nprev-1, 1, -1 ! test the other polygons
-        IF (inside(point, poly(n))) THEN ! stop at the first matching polygon
+        IF (inside(point, this%trans%poly(n))) THEN ! stop at the first matching polygon
           this%inter_index_x(i,j) = n
           nprev = n
           CYCLE inside_x
@@ -1109,13 +1127,14 @@ END SUBROUTINE grid_transform_init
 !!    vol7d object (\a v7d_out argument, input), which must have been
 !!    initialized with the coordinates of desired sparse points
 !!
-!!  - for 'polyinter' transformation, this is a list of polygons (\a
-!!    poly argument), and, in this case, \a v7d_out is an output
-!!    argument which returns the coordinates of the target points
-!!    (polygons' centroids)
+!!  - for 'polyinter' transformation, no target point information has
+!!    to be provided in input (it is calculated on the basis of input
+!!    grid and \a trans object), and the coordinates of the target
+!!    points (polygons' centroids) are returned in output in \a
+!!    v7d_out argument
 !!
 !!  - for 'maskinter' transformation, this is a two dimensional real
-!!    value (\a maskgrid argument), which, together with the \a
+!!    field (\a maskgrid argument), which, together with the \a
 !!    nmaskclass and \a dmaskclass arguments (both optional with
 !!    defaults), divides the input grid in \a nmaskclass subareas
 !!    according to the values of \a maskinter, and, in this case, \a
@@ -1124,21 +1143,21 @@ END SUBROUTINE grid_transform_init
 !!
 !!  - for 'metamorphosis' transformation, no target point information
 !!    has to be provided in input (it is calculated on the basis of
-!!    output grid), and, as for 'polyinter', this information is
-!!    returned in output in \a v7d_out argument.
+!!    input grid and \a trans object), and, as for 'polyinter', this
+!!    information is returned in output in \a v7d_out argument.
 !!
 !! The generated \a grid_transform object is specific to the grid and
 !! sparse point list provided or computed. The function \a c_e can be
 !! used in order to check whether the object has been successfully
 !! initialised, if the result is \a .FALSE., it should not be used
 !! further on.
-SUBROUTINE grid_transform_grid_vol7d_init(this, trans, in, v7d_out, poly, &
+SUBROUTINE grid_transform_grid_vol7d_init(this, trans, in, v7d_out, &
  maskgrid, nmaskclass, startmaskclass, dmaskclass, categoryappend)
 TYPE(grid_transform),INTENT(out) :: this !< grid_transformation object
 TYPE(transform_def),INTENT(in) :: trans !< transformation object
 TYPE(griddim_def),INTENT(inout) :: in !< griddim object to transform
 TYPE(vol7d),INTENT(inout) :: v7d_out !< vol7d object with the coordinates of the sparse points to be used as transformation target (input or output depending on type of transformation)
-TYPE(geo_coordvect),INTENT(inout),OPTIONAL :: poly(:) !< array of polygons indicating areas over which to interpolate (for transformation type 'polyinter')
+!TYPE(geo_coordvect),INTENT(inout),OPTIONAL :: poly(:) !< array of polygons indicating areas over which to interpolate (for transformation type 'polyinter')
 REAL,INTENT(in),OPTIONAL :: maskgrid(:,:) !< 2D field to be used for defining subareas according to its values, it must have the same shape as the field to be interpolated (for transformation type 'maskinter')
 INTEGER,INTENT(in),OPTIONAL :: nmaskclass !< number of classes (and thus potential subareas) over which the interval covered by \a maskgrid has to be divided
 REAL,INTENT(in),OPTIONAL :: startmaskclass !< this is the start of the interval covered by \a maskgrid which defines a single class (subarea)
@@ -1202,12 +1221,6 @@ IF (this%trans%trans_type == 'inter') THEN
 
 ELSE IF (this%trans%trans_type == 'polyinter') THEN
 
-  IF (.NOT.PRESENT(poly)) THEN
-    CALL l4f_category_log(this%category,L4F_ERROR, &
-     'grid_transform_init poly argument missing for polyinter transformation')
-    CALL raise_fatal_error()
-  ENDIF
-
   CALL get_val(in, nx=this%innx, ny=this%inny)
 ! unlike before, here index arrays must have the shape of input grid
   ALLOCATE(this%inter_index_x(this%innx,this%inny), &
@@ -1225,15 +1238,15 @@ ELSE IF (this%trans%trans_type == 'polyinter') THEN
     inside_x: DO ix = 1, this%innx
       CALL init(point, lon=in%dim%lon(ix,iy), lat=in%dim%lat(ix,iy))
 
-      DO n = nprev, SIZE(poly) ! optimize starting from last matched polygon
-        IF (inside(point, poly(n))) THEN ! stop at the first matching polygon
+      DO n = nprev, SIZE(this%trans%poly) ! optimize starting from last matched polygon
+        IF (inside(point, this%trans%poly(n))) THEN ! stop at the first matching polygon
           this%inter_index_x(ix,iy) = n
           nprev = n
           CYCLE inside_x
         ENDIF
       ENDDO
       DO n = nprev-1, 1, -1 ! test the other polygons
-        IF (inside(point, poly(n))) THEN ! stop at the first matching polygon
+        IF (inside(point, this%trans%poly(n))) THEN ! stop at the first matching polygon
           this%inter_index_x(ix,iy) = n
           nprev = n
           CYCLE inside_x
@@ -1245,14 +1258,14 @@ ELSE IF (this%trans%trans_type == 'polyinter') THEN
   ENDDO
 !$OMP END PARALLEL
 
-  this%outnx = SIZE(poly)
+  this%outnx = SIZE(this%trans%poly)
   this%outny = 1
-  CALL vol7d_alloc(v7d_out, nana=SIZE(poly))
+  CALL vol7d_alloc(v7d_out, nana=SIZE(this%trans%poly))
 
 ! setup output point list, equal to average of polygon points
 ! warning, in case of concave areas points may coincide!
-  DO n = 1, SIZE(poly)
-    CALL getval(poly(n), lon=lon, lat=lat)
+  DO n = 1, SIZE(this%trans%poly)
+    CALL getval(this%trans%poly(n), lon=lon, lat=lat)
     CALL init(v7d_out%ana(n), lon=stat_average(lon), lat=stat_average(lat))
     DEALLOCATE(lon, lat)
   ENDDO
@@ -1422,12 +1435,6 @@ ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
 
   ELSE IF (this%trans%sub_type == 'poly' ) THEN
 
-    IF (.NOT.PRESENT(poly)) THEN
-      CALL l4f_category_log(this%category,L4F_ERROR, &
-       'grid_transform_init poly argument missing for poly subtype')
-      CALL raise_fatal_error()
-    ENDIF
-
 ! compute coordinates of input grid in geo system
     CALL unproj(in)
     CALL get_val(in, nx=this%innx, ny=this%inny)
@@ -1442,7 +1449,7 @@ ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
     DO iy = 1, this%inny
       DO ix = 1, this%innx
         CALL init(point, lon=in%dim%lon(ix,iy), lat=in%dim%lat(ix,iy))
-        IF (inside(point, poly(1))) THEN
+        IF (inside(point, this%trans%poly(1))) THEN
           this%outnx = this%outnx + 1
           this%point_mask(ix,iy) = .TRUE.
         ENDIF
@@ -1612,34 +1619,41 @@ END SUBROUTINE grid_transform_vol7d_grid_init
 !! sparse points in the form of a \a vol7d object (parameter \a
 !! v7d_in), which can be the same volume that will be successively
 !! used for interpolation, or a volume with just the same coordinate
-!! data, and the information about the target sparse points over which
-!! the transformation should take place:
+!! data, and, if required by the transformation type, the information
+!! about the target sparse points over which the transformation should
+!! take place:
 !!
 !!  - for 'inter' transformation, this is provided in the form of a
 !!    vol7d object (\a v7d_out argument, input), which must have been
 !!    initialized with the coordinates of desired sparse points
 !!
-!!  - for 'polyinter' transformation, this is a list of polygons (\a
-!!    poly argument), and, in this case, \a v7d_out is an output
-!!    argument which returns the coordinates of the target points
-!!    (polygons' centroids)
+!!  - for 'polyinter' transformation, no target point information has
+!!    to be provided in input (it is calculated on the basis of input
+!!    grid and \a trans object), and the coordinates of the target
+!!    points (polygons' centroids) are returned in output in \a
+!!    v7d_out argument
+!!
+!!  - for 'metamorphosis' transformation, no target point information
+!!    has to be provided in input (it is calculated on the basis of
+!!    input grid and \a trans object), and, as for 'polyinter', this
+!!    information is returned in output in \a v7d_out argument.
 !!
 !! The generated \a grid_transform object is specific to the input and
 !! output sparse point lists provided or computed. The function \a c_e
 !! can be used in order to check whether the object has been
 !! successfully initialised, if the result is \a .FALSE., it should
 !! not be used further on.
-SUBROUTINE grid_transform_vol7d_vol7d_init(this, trans, v7d_in, v7d_out, poly, &
+SUBROUTINE grid_transform_vol7d_vol7d_init(this, trans, v7d_in, v7d_out, &
  categoryappend)
 TYPE(grid_transform),INTENT(out) :: this !< grid_transformation object
 TYPE(transform_def),INTENT(in) :: trans !< transformation object
 TYPE(vol7d),INTENT(in) :: v7d_in !< vol7d object with the coordinates of the sparse point to be used as input (only information about coordinates is used)
 TYPE(vol7d),INTENT(inout) :: v7d_out !< vol7d object with the coordinates of the sparse points to be used as transformation target (input or output depending on type of transformation, when output, it must have been initialised anyway)
-TYPE(geo_coordvect),INTENT(inout),OPTIONAL :: poly(:) !< array of polygons indicating areas over which to interpolate (for transformation type 'polyinter')
-character(len=*),INTENT(in),OPTIONAL :: categoryappend !< append this suffix to log4fortran namespace category
+CHARACTER(len=*),INTENT(in),OPTIONAL :: categoryappend !< append this suffix to log4fortran namespace category
 
 INTEGER :: i, n
 DOUBLE PRECISION,POINTER :: lon(:), lat(:)
+TYPE(geo_coord) :: point
 
 
 CALL grid_transform_init_common(this, trans, categoryappend)
@@ -1672,13 +1686,6 @@ IF (this%trans%trans_type == 'inter') THEN
 
 ELSE IF (this%trans%trans_type == 'polyinter') THEN
 
-  IF (.NOT.PRESENT(poly)) THEN
-    CALL l4f_category_log(this%category,L4F_ERROR, &
-     'grid_transform_init poly argument missing for polyinter transformation')
-    this%valid = .FALSE.
-    RETURN
-  ENDIF
-
   this%innx=SIZE(v7d_in%ana)
   this%inny=1
 ! unlike before, here index arrays must have the shape of input grid
@@ -1687,28 +1694,23 @@ ELSE IF (this%trans%trans_type == 'polyinter') THEN
   this%inter_index_x(:,:) = imiss
   this%inter_index_y(:,:) = 1
 
-! compute coordinates of polygons in geo system
-!  DO n = 1, SIZE(poly)
-!    CALL to_geo(poly(n))
-!  ENDDO
-
   DO i = 1, SIZE(v7d_in%ana)
-    DO n = 1, SIZE(poly)
-      IF (inside(v7d_in%ana(i)%coord, poly(n))) THEN ! stop at the first matching polygon
+    DO n = 1, SIZE(this%trans%poly)
+      IF (inside(v7d_in%ana(i)%coord, this%trans%poly(n))) THEN ! stop at the first matching polygon
         this%inter_index_x(i,1) = n
         EXIT
       ENDIF
     ENDDO
   ENDDO
 
-  this%outnx=SIZE(poly)
+  this%outnx=SIZE(this%trans%poly)
   this%outny=1
-  CALL vol7d_alloc(v7d_out, nana=SIZE(poly))
+  CALL vol7d_alloc(v7d_out, nana=SIZE(this%trans%poly))
 
 ! setup output point list, equal to average of polygon points
 ! warning, in case of concave areas points may coincide!
-  DO n = 1, SIZE(poly)
-    CALL getval(poly(n), lon=lon, lat=lat)
+  DO n = 1, SIZE(this%trans%poly)
+    CALL getval(this%trans%poly(n), lon=lon, lat=lat)
     CALL init(v7d_out%ana(n), lon=stat_average(lon), lat=stat_average(lat))
     DEALLOCATE(lon, lat)
   ENDDO
@@ -1727,8 +1729,8 @@ ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
   ELSE IF (this%trans%sub_type == 'coordbb' ) THEN
 
 ! compute coordinates of input grid in geo system
-    this%innx=SIZE(v7d_in%ana)
-    this%inny=1
+    this%innx = SIZE(v7d_in%ana)
+    this%inny = 1
 
     ALLOCATE(this%point_mask(this%innx,this%inny))
     this%point_mask(:,:) = .FALSE.
@@ -1751,7 +1753,7 @@ ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
 
     IF (this%outnx <= 0) THEN
       CALL l4f_category_log(this%category,L4F_ERROR, &
-       "metamorphosis coordbb: no points inside bounding box "//&
+       "metamorphosis:coordbb: no points inside bounding box "//&
        TRIM(to_char(this%trans%rect_coo%ilon))//","// &
        TRIM(to_char(this%trans%rect_coo%flon))//","// &
        TRIM(to_char(this%trans%rect_coo%ilat))//","// &
@@ -1765,6 +1767,49 @@ ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
     CALL vol7d_alloc(v7d_out, nana=this%outnx)
 
 ! collect coordinates of points falling into requested bounding-box
+    n = 0
+    DO i = 1, this%innx
+      IF (this%point_mask(i,1)) THEN
+        n = n + 1
+        CALL init(v7d_out%ana(n),lon=lon(i),lat=lat(i))
+      ENDIF
+    ENDDO
+    DEALLOCATE(lon, lat)
+
+  ELSE IF (this%trans%sub_type == 'poly' ) THEN
+
+! compute coordinates of input grid in geo system
+    this%innx = SIZE(v7d_in%ana)
+    this%inny = 1
+
+    ALLOCATE(this%point_mask(this%innx,this%inny))
+    this%point_mask(:,:) = .FALSE.
+    ALLOCATE(lon(this%innx),lat(this%innx))
+
+! count and mark points falling into requested polygon
+    this%outnx = 0
+    this%outny = 1
+    CALL getval(v7d_in%ana(:)%coord,lon=lon,lat=lat)
+    DO i = 1, this%innx
+      CALL init(point, lon=lon(i), lat=lat(i))
+      IF (inside(point, this%trans%poly(1))) THEN
+        this%outnx = this%outnx + 1
+        this%point_mask(i,1) = .TRUE.
+      ENDIF
+!     CALL delete(point) ! speedup
+    ENDDO
+
+    IF (this%outnx <= 0) THEN
+      CALL l4f_category_log(this%category,L4F_ERROR, &
+       "metamorphosis:poly: no points inside first polygon")
+      this%valid = .FALSE.
+      RETURN
+      !CALL raise_fatal_error() ! really fatal error?
+    ENDIF
+
+    CALL vol7d_alloc(v7d_out, nana=this%outnx)
+
+! collect coordinates of points falling into requested polygon
     n = 0
     DO i = 1, this%innx
       IF (this%point_mask(i,1)) THEN

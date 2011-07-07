@@ -283,7 +283,7 @@ ENDIF
 
 ! trasformation object
 CALL init(trans, trans_type=trans_type, sub_type=sub_type, &
- ilon=ilon, ilat=ilat, flon=flon, flat=flat, &
+ ilon=ilon, ilat=ilat, flon=flon, flat=flat, poly=poly, &
  categoryappend="transformation", time_definition=output_td)
 CALL import(volgrid, filename=input_file, decode=.FALSE., categoryappend="input volume")
 
@@ -292,7 +292,7 @@ IF (ldisplay) CALL display(volgrid)
 IF (c2agrid) CALL vg6d_c2a(volgrid)
 
 CALL transform(trans, volgrid6d_in=volgrid, vol7d_out=v7d_out, v7d=v7d_coord, &
- poly=poly, maskgrid=maskfield, networkname=network, categoryappend="transform")
+ maskgrid=maskfield, networkname=network, categoryappend="transform")
 
 CALL l4f_category_log(category,L4F_INFO,"transformation completed")
 

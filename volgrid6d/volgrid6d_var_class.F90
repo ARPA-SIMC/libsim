@@ -595,7 +595,7 @@ res = .NOT.(this == that)
 END FUNCTION conv_func_ne
 
 
-!< Apply the conversion function \a this to \a values.
+!> Apply the conversion function \a this to \a values.
 !! The numerical conversion (only linear at the moment) defined by the
 !! \a conv_func object \a this is applied to the \a values argument;
 !! the converted result is stored in place; missing values remain
@@ -603,7 +603,7 @@ END FUNCTION conv_func_ne
 !! conv_func_miss) the values are unchanged. The method is \c
 !! ELEMENTAL, thus \a values can be also an array of any shape.
 ELEMENTAL SUBROUTINE conv_func_compute(this, values)
-TYPE(conv_func),intent(in) :: this !< object defining the conversion function
+TYPE(conv_func),INTENT(in) :: this !< object defining the conversion function
 REAL,INTENT(inout) :: values !< value to be converted in place
 
 IF (this /= conv_func_miss) THEN
@@ -613,7 +613,7 @@ ENDIF
 END SUBROUTINE conv_func_compute
 
 
-!< Return a copy of \a values converted by applying the conversion
+!> Return a copy of \a values converted by applying the conversion
 !! function \a this.  The numerical conversion (only linear at the
 !! moment) defined by the \a conv_func object \a this is applied to
 !! the \a values argument and the converted result is returned;
@@ -651,17 +651,6 @@ INTEGER,POINTER :: xind(:), yind(:) !< output arrays of indices pointing to matc
 TYPE(vol7d_var) :: varbufr(SIZE(this))
 TYPE(conv_func),POINTER :: c_func(:)
 INTEGER :: i, nv, counts(SIZE(vol7d_var_horcomp))
-!IF (.NOT. ALLOCATED(conv_fwd)) CALL vg6d_v7d_var_conv_setup()
-!if (conv_fwd(iu)%c_func%a /= conv_fwd(iv)%c_func%a .or. &
-! conv_fwd(iu)%c_func%b /= conv_fwd(iv)%c_func%b) then
-!    CALL l4f_category_log(this%category,L4F_WARN, &
-!   "u and v wind components seem alien, conversion factors different")
-!  call l4f_category_log(this%category,L4F_WARN, &
-!   "converting units of u and v wind components")
-!  mustconvert = .TRUE.
-!ELSE
-!  mustconvert = .FALSE.
-!ENDIF
 
 NULLIFY(xind, yind)
 counts(:) = 0
@@ -727,10 +716,7 @@ INTEGER :: i
 TYPE(vol7d_var) :: varbufr
 
 varbufr = convert(this)
-is_hor_comp = .FALSE.
-DO i = 1, SIZE(vol7d_var_horcomp)
-  IF (varbufr == vol7d_var_horcomp(i)) is_hor_comp = .TRUE.
-ENDDO
+is_hor_comp = ANY(varbufr == vol7d_var_horcomp(:))
 
 END FUNCTION volgrid6d_var_is_hor_comp
 

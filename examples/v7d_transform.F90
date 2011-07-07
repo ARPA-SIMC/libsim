@@ -63,7 +63,7 @@ TYPE(vol7d_timerange) :: timerange
 INTEGER :: iun, ier, i, j, n, ninput, yy, mm, dd, iargc, i1, i2, i3, i4
 INTEGER,POINTER :: w_s(:), w_e(:)
 TYPE(vol7d) :: v7d, v7d_coord, v7dtmp, v7d_comp1, v7d_comp2, v7d_comp3
-TYPE(geo_coordvect),POINTER :: poly(:)
+TYPE(geo_coordvect),POINTER :: poly(:) => NULL()
 DOUBLE PRECISION ::  ilon, ilat, flon, flat
 TYPE(transform_def) :: trans
 #ifdef HAVE_DBALLE
@@ -99,7 +99,6 @@ TYPE(gridinfo_def),POINTER :: gridinfo(:)
 character(len=160) :: post_trans_type
 #endif
 
-NULLIFY(poly)
 !questa chiamata prende dal launcher il nome univoco
 CALL l4f_launcher(a_name,a_name_force="v7d_transform")
 !init di log4fortran
@@ -518,7 +517,6 @@ IF (c_e(coord_file)) THEN
 #endif
 #ifdef HAVE_LIBSHP_FORTRAN
   ELSE IF (coord_format == 'shp') THEN
-    NULLIFY(poly)
     CALL import(poly, shpfile=coord_file)
     IF (.NOT.ASSOCIATED(poly)) THEN
       CALL l4f_category_log(category, L4F_ERROR, &
@@ -710,16 +708,17 @@ ENDIF
 IF (pre_trans_type /= '') THEN
   n = word_split(pre_trans_type, w_s, w_e, ':')
   IF (n >= 2) THEN ! syntax is correct
-    CALL init(trans, trans_type=pre_trans_type(w_s(1):w_e(1)), &
-     ilon=ilon, ilat=ilat, flon=flon, flat=flat, &
-     sub_type=pre_trans_type(w_s(2):w_e(2)), categoryappend="transformation1")
     IF (ASSOCIATED(poly)) THEN ! improve
-      CALL transform(trans, vol7d_in=v7d, vol7d_out=v7d_comp1, v7d=v7d_coord, &
-       poly=poly, categoryappend="transform1")
+      CALL init(trans, trans_type=pre_trans_type(w_s(1):w_e(1)), &
+       ilon=ilon, ilat=ilat, flon=flon, flat=flat, poly=poly, &
+       sub_type=pre_trans_type(w_s(2):w_e(2)), categoryappend="transformation1")
     ELSE
-      CALL transform(trans, vol7d_in=v7d, vol7d_out=v7d_comp1, v7d=v7d_coord, &
-       categoryappend="transform1")
+      CALL init(trans, trans_type=pre_trans_type(w_s(1):w_e(1)), &
+       ilon=ilon, ilat=ilat, flon=flon, flat=flat, &
+       sub_type=pre_trans_type(w_s(2):w_e(2)), categoryappend="transformation1")
     ENDIF
+    CALL transform(trans, vol7d_in=v7d, vol7d_out=v7d_comp1, v7d=v7d_coord, &
+     categoryappend="transform1")
     CALL delete(trans)
   ELSE ! syntax is wrong
     CALL init(v7d_comp1)

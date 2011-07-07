@@ -1464,13 +1464,12 @@ end SUBROUTINE volgrid6d_transform_compute
 !! is created internally and it does not require preliminary
 !! initialisation.
 SUBROUTINE volgrid6d_transform(this, griddim, volgrid6d_in, volgrid6d_out, &
- poly, clone, decode, categoryappend)
+ clone, decode, categoryappend)
 TYPE(transform_def),INTENT(in) :: this !< object specifying the abstract transformation
 TYPE(griddim_def),INTENT(in),OPTIONAL :: griddim !< griddim specifying the output grid (required by most transformation types)
 ! TODO ripristinare intent(in) dopo le opportune modifiche in grid_class.F90
 TYPE(volgrid6d),INTENT(inout) :: volgrid6d_in !< object to be transformed, it is not modified, despite the INTENT(inout)
 TYPE(volgrid6d),INTENT(out) :: volgrid6d_out !< transformed object, it does not need initialisation
-TYPE(geo_coordvect),INTENT(inout),OPTIONAL :: poly(:) !< array of polygons indicating a list of areas over which transformation has to be done (required by some transformation types)
 LOGICAL,INTENT(in),OPTIONAL :: clone !< if provided and \a .TRUE. , clone the \a gaid's from \a volgrid6d_in to \a volgrid6d_out 
 LOGICAL,INTENT(in),OPTIONAL :: decode !< if provided and \a .FALSE. the data volume is not allocated, but work is performed on grid_id's
 CHARACTER(len=*),INTENT(in),OPTIONAL :: categoryappend !< append this suffix to log4fortran namespace category
@@ -1518,7 +1517,7 @@ ENDIF
 
 CALL init(volgrid6d_out, griddim, categoryappend=categoryappend)
 CALL init(grid_trans, this, in=volgrid6d_in%griddim, out=volgrid6d_out%griddim, &
- poly=poly, categoryappend=categoryappend)
+ categoryappend=categoryappend)
 
 IF (c_e(grid_trans)) THEN ! transformation is valid
 
@@ -1560,13 +1559,12 @@ END SUBROUTINE volgrid6d_transform
 !! to the transformation type, the output array may have of one or
 !! more \a volgrid6d elements on different grids.
 SUBROUTINE volgrid6dv_transform(this, griddim, volgrid6d_in, volgrid6d_out, &
- poly, clone, decode, categoryappend)
+ clone, decode, categoryappend)
 TYPE(transform_def),INTENT(in) :: this !< object specifying the abstract transformation
 TYPE(griddim_def),INTENT(in),OPTIONAL :: griddim !< griddim specifying the output grid (required by most transformation types)
 ! TODO ripristinare intent(in) dopo le opportune modifiche in grid_class.F90
 TYPE(volgrid6d),INTENT(inout) :: volgrid6d_in(:) !< object to be transformed, it is an array of volgrid6d objects, each of which will be transformed, it is not modified, despite the INTENT(inout)
 TYPE(volgrid6d),POINTER :: volgrid6d_out(:) !< transformed object, it is a non associated pointer to an array of volgrid6d objects which will be allocated by the method
-TYPE(geo_coordvect),INTENT(inout),OPTIONAL :: poly(:) !< array of polygons indicating a list of areas over which transformation has to be done (required by some transformation types)
 LOGICAL,INTENT(in),OPTIONAL :: clone !< if provided and \a .TRUE. , clone the \a gaid's from \a volgrid6d_in to \a volgrid6d_out 
 LOGICAL,INTENT(in),OPTIONAL :: decode !< if provided and \a .FALSE. the data volume is not allocated, but work is performed on grid_id's
 CHARACTER(len=*),INTENT(in),OPTIONAL :: categoryappend !< append this suffix to log4fortran namespace category
@@ -1582,7 +1580,7 @@ end if
 
 do i=1,size(volgrid6d_in)
   call transform (this, griddim, volgrid6d_in(i), volgrid6d_out(i), &
-   poly, clone, decode=decode, categoryappend=categoryappend)
+   clone, decode=decode, categoryappend=categoryappend)
 end do
 
 END SUBROUTINE volgrid6dv_transform
@@ -1758,8 +1756,9 @@ CHARACTER(len=*),INTENT(in),OPTIONAL :: categoryappend !< append this suffix to 
 type(grid_transform) :: grid_trans
 INTEGER :: ntime, ntimerange, nlevel, nvar, nana, time_definition, nnetwork, stallo
 INTEGER :: itime, itimerange, nx, ny, iana, inetwork
-type(datetime),allocatable ::validitytime(:,:)
-type(vol7d) :: v7d_locana
+TYPE(datetime),ALLOCATABLE :: validitytime(:,:)
+TYPE(vol7d) :: v7d_locana
+CHARACTER(len=80) :: trans_type
 
 #ifdef DEBUG
 call l4f_category_log(volgrid6d_in%category,L4F_DEBUG,"start volgrid6d_v7d_transform")
@@ -1821,7 +1820,7 @@ end if
 if (associated(volgrid6d_in%level)) nlevel=size(volgrid6d_in%level)
 if (associated(volgrid6d_in%var)) nvar=size(volgrid6d_in%var)
 
-CALL init(grid_trans, this, volgrid6d_in%griddim, v7d_locana, poly=poly, &
+CALL init(grid_trans, this, volgrid6d_in%griddim, v7d_locana, &
  maskgrid=maskgrid, categoryappend=categoryappend)
 CALL init (vol7d_out,time_definition=time_definition)
 
@@ -1832,14 +1831,15 @@ IF (c_e(grid_trans)) THEN
    ntimerange=ntimerange, ndativarr=nvar, nnetwork=nnetwork)
   vol7d_out%ana = v7d_locana%ana
 
-  IF (PRESENT(poly)) THEN ! in case of polygon create output station id
+  CALL get_val(this, trans_type=trans_type)
+  IF (trans_type == 'polyinter') THEN ! in case of polygon create output station id
     CALL vol7d_alloc(vol7d_out, nanavari=1)
     CALL init(vol7d_out%anavar%i(1), 'B01192')
   ENDIF
 
   CALL vol7d_alloc_vol(vol7d_out)
 
-  IF (PRESENT(poly)) THEN ! in case of polygon create output station id
+  IF (trans_type == 'polyinter') THEN ! in case of polygon create output station id
     DO inetwork = 1, nnetwork
       vol7d_out%volanai(:,1,inetwork) = (/(iana,iana=1,nana)/)
     ENDDO
@@ -1866,13 +1866,12 @@ END SUBROUTINE volgrid6d_v7d_transform
 !! require preliminary initialisation. The transformation performed on
 !! each element of the input \a volgrid6d array object is merged into
 !! a single \a vol7d output object.
-SUBROUTINE volgrid6dv_v7d_transform(this, volgrid6d_in, vol7d_out, v7d, poly, &
+SUBROUTINE volgrid6dv_v7d_transform(this, volgrid6d_in, vol7d_out, v7d, &
  maskgrid, networkname, categoryappend)
 TYPE(transform_def),INTENT(in) :: this !< object specifying the abstract transformation
 TYPE(volgrid6d),INTENT(inout) :: volgrid6d_in(:) !< object to be transformed, it is an array of volgrid6d objects, each of which will be transformed, it is not modified, despite the INTENT(inout)
 TYPE(vol7d),INTENT(out) :: vol7d_out !< transformed object, it does not need initialisation
 TYPE(vol7d),INTENT(in),OPTIONAL :: v7d !< object containing a list of points over which transformation has to be done (required by some transformation types)
-TYPE(geo_coordvect),INTENT(inout),OPTIONAL :: poly(:) !< array of polygons indicating a list of areas over which transformation has to be done (required by some transformation types)
 REAL,INTENT(in),OPTIONAL :: maskgrid(:,:) !< 2D field to be used for defining subareas according to its values, it must have the same shape as the field to be interpolated (for transformation type 'maskinter')
 CHARACTER(len=*),OPTIONAL,INTENT(in) :: networkname !< set the output network name in vol7d_out (default='generic')
 CHARACTER(len=*),INTENT(in),OPTIONAL :: categoryappend !< append this suffix to log4fortran namespace category
@@ -1885,7 +1884,7 @@ CALL init(v7dtmp)
 CALL init(vol7d_out)
 
 DO i=1,SIZE(volgrid6d_in)
-  CALL transform(this, volgrid6d_in(i), v7dtmp, v7d=v7d, poly=poly, &
+  CALL transform(this, volgrid6d_in(i), v7dtmp, v7d=v7d, &
    maskgrid=maskgrid, networkname=networkname, categoryappend=categoryappend)
   CALL vol7d_append(vol7d_out, v7dtmp)
 ENDDO
@@ -2093,13 +2092,11 @@ END SUBROUTINE v7d_v7d_transform_compute
 !! is created and destroyed internally. The output transformed object
 !! is created internally and it does not require preliminary
 !! initialisation.
-SUBROUTINE v7d_v7d_transform(this, vol7d_in, vol7d_out, v7d, poly, &
- categoryappend)
+SUBROUTINE v7d_v7d_transform(this, vol7d_in, vol7d_out, v7d, categoryappend)
 TYPE(transform_def),INTENT(in) :: this !< object specifying the abstract transformation
 TYPE(vol7d),INTENT(inout) :: vol7d_in !< object to be transformed, it is not modified, despite the INTENT(inout)
 TYPE(vol7d),INTENT(out) :: vol7d_out !< transformed object, it does not need initialisation
 TYPE(vol7d),INTENT(in),OPTIONAL :: v7d !< object containing a list of points over which transformation has to be done (required by some transformation types)
-TYPE(geo_coordvect),INTENT(inout),OPTIONAL :: poly(:) !< array of polygons indicating a list of areas over which transformation has to be done (required by some transformation types)
 CHARACTER(len=*),INTENT(in),OPTIONAL :: categoryappend !< append this suffix to log4fortran namespace category
 
 INTEGER :: nvar, iana, inetwork
@@ -2113,8 +2110,7 @@ IF (ASSOCIATED(vol7d_in%dativar%r)) nvar=SIZE(vol7d_in%dativar%r)
 CALL init(v7d_locana)
 IF (PRESENT(v7d)) v7d_locana = v7d
 
-CALL init(grid_trans, this, vol7d_in, v7d_locana, poly=poly, &
- categoryappend=categoryappend)
+CALL init(grid_trans, this, vol7d_in, v7d_locana, categoryappend=categoryappend)
 ! if this init is successful, I am sure that v7d_locana%ana is associated
 
 CALL init(vol7d_out, time_definition=vol7d_in%time_definition)
@@ -2126,7 +2122,6 @@ IF (c_e(grid_trans)) THEN! .AND. nvar > 0) THEN
    nlevel=SIZE(vol7d_in%level), nnetwork=SIZE(vol7d_in%network), ndativarr=nvar)
   vol7d_out%ana = v7d_locana%ana
 
-!  IF (PRESENT(poly)) THEN ! in case of polygon create output station id
   CALL get_val(this, trans_type=trans_type)
   IF (trans_type == 'polyinter') THEN ! in case of polygon create output station id
     CALL vol7d_alloc(vol7d_out, nanavari=1)
@@ -2135,14 +2130,13 @@ IF (c_e(grid_trans)) THEN! .AND. nvar > 0) THEN
 
   CALL vol7d_alloc_vol(vol7d_out)
 
-  IF (PRESENT(poly)) THEN ! in case of polygon create output station id
+  IF (trans_type == 'polyinter') THEN ! in case of polygon create output station id
     DO inetwork = 1, SIZE(vol7d_in%network)
       vol7d_out%volanai(:,1,inetwork) = (/(iana,iana=1,SIZE(v7d_locana%ana))/)
     ENDDO
   ENDIF
 
   CALL compute(grid_trans, vol7d_in, vol7d_out)
-!ELSE how to signal error status? c_e(vol7d_out)
 ENDIF
 
 CALL delete (grid_trans)
