@@ -1832,14 +1832,16 @@ IF (c_e(grid_trans)) THEN
   vol7d_out%ana = v7d_locana%ana
 
   CALL get_val(this, trans_type=trans_type)
-  IF (trans_type == 'polyinter') THEN ! in case of polygon create output station id
+  IF (trans_type == 'polyinter' .OR. trans_type == 'maskinter' .OR. &
+   trans_type == 'metamorphosis' ) THEN ! create output station id
     CALL vol7d_alloc(vol7d_out, nanavari=1)
     CALL init(vol7d_out%anavar%i(1), 'B01192')
   ENDIF
 
   CALL vol7d_alloc_vol(vol7d_out)
 
-  IF (trans_type == 'polyinter') THEN ! in case of polygon create output station id
+  IF (trans_type == 'polyinter' .OR. trans_type == 'maskinter' .OR. &
+   trans_type == 'metamorphosis' ) THEN ! create output station id
     DO inetwork = 1, nnetwork
       vol7d_out%volanai(:,1,inetwork) = (/(iana,iana=1,nana)/)
     ENDDO
@@ -2123,14 +2125,16 @@ IF (c_e(grid_trans)) THEN! .AND. nvar > 0) THEN
   vol7d_out%ana = v7d_locana%ana
 
   CALL get_val(this, trans_type=trans_type)
-  IF (trans_type == 'polyinter') THEN ! in case of polygon create output station id
+  IF (trans_type == 'polyinter' .OR. trans_type == 'maskinter' .OR. &
+   trans_type == 'metamorphosis' ) THEN ! create output station id
     CALL vol7d_alloc(vol7d_out, nanavari=1)
     CALL init(vol7d_out%anavar%i(1), 'B01192')
   ENDIF
 
   CALL vol7d_alloc_vol(vol7d_out)
 
-  IF (trans_type == 'polyinter') THEN ! in case of polygon create output station id
+  IF (trans_type == 'polyinter' .OR. trans_type == 'maskinter' .OR. &
+   trans_type == 'metamorphosis' ) THEN ! create output station id
     DO inetwork = 1, SIZE(vol7d_in%network)
       vol7d_out%volanai(:,1,inetwork) = (/(iana,iana=1,SIZE(v7d_locana%ana))/)
     ENDDO

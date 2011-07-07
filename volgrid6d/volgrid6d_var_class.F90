@@ -129,7 +129,7 @@ END INTERFACE
 !! They are all defined as \c ELEMENTAL thus work also on arrays of
 !! any shape.
 INTERFACE OPERATOR (/=)
-  MODULE PROCEDURE volgrid6d_var_ne, conv_func_eq
+  MODULE PROCEDURE volgrid6d_var_ne, conv_func_ne
 END INTERFACE
 
 INTERFACE count_distinct
