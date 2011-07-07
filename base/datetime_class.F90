@@ -99,20 +99,6 @@ INTEGER,PARAMETER :: &
 INTEGER(KIND=int_ll),PARAMETER :: &
  unsec=62135596800_int_ll ! differenza tra 01/01/1970 e 01/01/0001 (sec, per unixtime)
 
-PRIVATE
-
-PUBLIC datetime, datetime_miss, datetime_utc, datetime_local, &
- datetime_min, datetime_max, &
- datetime_new, init, delete, getval, to_char, &
- read_unit, write_unit, &
- OPERATOR(==), OPERATOR(/=), OPERATOR(>), OPERATOR(<), &
- OPERATOR(>=), OPERATOR(<=), OPERATOR(+), OPERATOR(-), &
- OPERATOR(*), OPERATOR(/), mod, abs, &
- timedelta, timedelta_miss, timedelta_new, timedelta_0, &
- timedelta_min, timedelta_max, timedelta_getamsec, timedelta_depop, &
- display, c_e, &
- count_distinct, pack_distinct, map_distinct, map_inv_distinct, index, sort
-
 !> Costruttori per le classi datetime e timedelta. Devono essere richiamati
 !! per tutti gli oggetti di questo tipo definiti in un programma
 !! tranne i casi in cui un oggetto viene creato per assegnazione.
@@ -238,10 +224,11 @@ INTERFACE OPERATOR (/)
   MODULE PROCEDURE timedelta_divint, timedelta_divtd
 END INTERFACE
 
-!> Operatore di resto della divisione. Sono definite le combinazioni:
+!> Operatore di resto della divisione.
+!! Sono definite le combinazioni:
 !! - \a MOD(\a timedelta, \a timedelta) = \a timedelta
-!! - \a MOD(\a datetime, \a timedelta) = \a timedelta
-!! .
+!! - \a MOD(\a datetime, \a timedelta) = \a timedelta.
+!! 
 !! Sono definite solo per intervalli "puri"
 !! La seconda combinazione ha senso principalmente con intervalli di
 !! 1 minuto, 1 ora o
@@ -251,7 +238,7 @@ INTERFACE mod
   MODULE PROCEDURE timedelta_mod, datetime_timedelta_mod
 END INTERFACE
 
-!> Operatore di valore assoluto di un intervallo:
+!> Operatore di valore assoluto di un intervallo.
 !! - \a ABS(\a timedelta) = \a timedelta
 INTERFACE abs
   MODULE PROCEDURE timedelta_abs
@@ -275,7 +262,6 @@ END INTERFACE
 INTERFACE display
   MODULE PROCEDURE display_datetime, display_timedelta
 END INTERFACE
-
 
 !> Missing check
 INTERFACE c_e
@@ -302,23 +288,14 @@ INTERFACE map_inv_distinct
   MODULE PROCEDURE  map_inv_distinct_datetime
 END INTERFACE
 
-!> Find the firsth or last index of an element in a vector equal to the values provided
+!> Index method.
 INTERFACE index
-  MODULE PROCEDURE  index_datetime
+  MODULE PROCEDURE index_datetime
 END INTERFACE
 
-!>\brief Sorts inline into ascending order.
-!!  Quicksort chooses a "pivot" in the set, and explores the
-!!  array from both ends, looking for a value > pivot with the
-!!  increasing index, for a value <= pivot with the decreasing
-!!  index, and swapping them when it has found one of each.
-!!  The array is then subdivided in 2 ([3]) subsets:
-!!  { values <= pivot} {pivot} {values > pivot}
-!!  One then call recursively the program to sort each subset.
-!!  When the size of the subarray is small enough, one uses an
-!!  insertion sort that is faster for very small sets.
+!> Sort method.
 INTERFACE sort
-  MODULE PROCEDURE  sort_datetime
+  MODULE PROCEDURE sort_datetime
 END INTERFACE
 
 
@@ -330,6 +307,19 @@ END INTERFACE
 PUBLIC insert, append, remove, packarray
 PUBLIC insert_unique, append_unique
 
+PRIVATE
+
+PUBLIC datetime, datetime_miss, datetime_utc, datetime_local, &
+ datetime_min, datetime_max, &
+ datetime_new, init, delete, getval, to_char, &
+ read_unit, write_unit, &
+ OPERATOR(==), OPERATOR(/=), OPERATOR(>), OPERATOR(<), &
+ OPERATOR(>=), OPERATOR(<=), OPERATOR(+), OPERATOR(-), &
+ OPERATOR(*), OPERATOR(/), mod, abs, &
+ timedelta, timedelta_miss, timedelta_new, timedelta_0, &
+ timedelta_min, timedelta_max, timedelta_getamsec, timedelta_depop, &
+ display, c_e, &
+ count_distinct, pack_distinct, map_distinct, map_inv_distinct, index, sort
 
 CONTAINS
 
