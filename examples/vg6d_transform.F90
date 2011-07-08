@@ -243,7 +243,7 @@ CALL delete(opt)
 call l4f_category_log(category,L4F_INFO,"transforming from file:"//trim(input_file))
 call l4f_category_log(category,L4F_INFO,"transforming to   file:"//trim(output_file))
 #ifdef HAVE_LIBSHP_FORTRAN
-IF (coord_format == 'shp') THEN
+IF (coord_format == 'shp' .AND. c_e(coord_file)) THEN
   CALL import(poly, shpfile=coord_file)
   IF (.NOT.ASSOCIATED(poly)) THEN
     CALL l4f_category_log(category, L4F_ERROR, &

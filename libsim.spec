@@ -1,7 +1,7 @@
 Summary: libsim: librerie di utilità in Fortran 90
 Name: libsim
-Version: 4.0.0
-Release: 847
+Version: 4.2.0
+Release: 933
 License: GPL2+
 Group: Applications/Meteo
 URL: http://www.arpa.emr.it/sim
@@ -9,7 +9,7 @@ Packager: Davide Cesari <dcesari@arpa.emr.it>
 Source: %{name}-%{version}.tar.gz
 BuildRoot: /var/tmp/%{name}-buildroot
 BuildRequires: shapelib-fortran-devel oracle-instantclient-devel libemos libdballef-devel >= 4.0.19 grib_api-devel >= 1.8.0
-Requires: libdballef4 >= 4.0.19 grib_api >= 1.8.0 libgrib1
+Requires: libdballef4 >= 4.0.19 grib_api >= 1.8.0 libgrib1 grib_api-def_simc >= 1.9.5 
 
 #temporaneo
 %if 0%{?fedora} < 9
@@ -48,7 +48,7 @@ tipo vol7d.
 %setup -q
 
 %build
-%configure FC=gfortran FCFLAGS="-I/usr/include/ -I%{_fmoddir}" ORA_VER=oracle/11.2/client --enable-dwdgrib1 --enable-f2003-features
+%configure FC=gfortran FCFLAGS="-I/usr/include/ -I%{_fmoddir}" ORA_VER=oracle/11.2/client --enable-dwdgrib1 --enable-f2003-features --enable-vapor
 make 
 
 %install
@@ -71,6 +71,7 @@ mv $RPM_BUILD_ROOT%{_includedir}/*.mod $RPM_BUILD_ROOT%{_fmoddir}
 %{_bindir}/*
 %{_datadir}/%{name}/*
 #%{_docdir}/%{name}/*
+%{_includedir}/vdf4f_c.h
 %doc examples/*.f90
 %{_mandir}/man1
 
