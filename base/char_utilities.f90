@@ -905,7 +905,7 @@ END FUNCTION wash_char
 !! Note:
 !!     Trailing blanks are ignored
 !!
-logical function string_match_v( string, pattern ) result(match)
+function string_match_v( string, pattern ) result(match)
 character(len=*), intent(in) :: string(:) !< String to be examined
 character(len=*), intent(in) :: pattern !< Glob pattern to be used for the matching
 logical                      :: match(size(string))

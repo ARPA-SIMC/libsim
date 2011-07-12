@@ -36,8 +36,7 @@ END INTERFACE
 
 !> to document
 INTERFACE pack_distinct
-  MODULE PROCEDURE pack_distinct_i, pack_distinct_r, pack_distinct_d, &
-   pack_distinct_c
+  MODULE PROCEDURE pack_distinct_i, pack_distinct_r, pack_distinct_d
 END INTERFACE
 
 !> to document

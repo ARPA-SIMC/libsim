@@ -247,7 +247,6 @@ IF (c_e(coord_file)) THEN
       CALL raise_fatal_error()
     ENDIF
     CALL import(maskgrid(1))
-    PRINT*,maskgrid(1)%griddim%dim%nx, maskgrid(1)%griddim%dim%ny
     ALLOCATE(maskfield(maskgrid(1)%griddim%dim%nx, maskgrid(1)%griddim%dim%ny))
     maskfield(:,:) = decode_gridinfo(maskgrid(1))
     CALL delete(maskgrid(1))
