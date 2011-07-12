@@ -2494,10 +2494,11 @@ END FUNCTION open_dballe_file
 
 
 
-subroutine v7d_dballe_error_handler(category)
+FUNCTION v7d_dballe_error_handler(category)
+INTEGER :: category
+INTEGER :: v7d_dballe_error_handler
 
-integer :: category
-character(len=1000) :: message,buf
+CHARACTER(len=1000) :: message, buf
 
 call idba_error_message(message)
 call l4f_category_log(category,L4F_ERROR,message)
@@ -2511,10 +2512,10 @@ call l4f_category_log(category,L4F_INFO,trim(buf))
 
 CALL raise_fatal_error("dballe: "//message)
 
-
+v7d_dballe_error_handler = 0
 return
 
-end subroutine v7d_dballe_error_handler
+END FUNCTION v7d_dballe_error_handler
 
 
 
@@ -2539,8 +2540,8 @@ CHARACTER(len=*),INTENT(in),OPTIONAL :: varkind(:),attrkind(:),anavarkind(:),ana
 logical,intent(in),optional :: anaonly
 
 !TYPE(vol7d) :: v7d
-CHARACTER(len=SIZE(var)*7) :: varlist
-CHARACTER(len=SIZE(attr)*8) :: starvarlist
+!CHARACTER(len=SIZE(var)*7) :: varlist
+!CHARACTER(len=SIZE(attr)*8) :: starvarlist
 CHARACTER(len=6) :: btable
 CHARACTER(len=7) ::starbtable
 
