@@ -256,7 +256,7 @@ INTEGER :: voldim(vol7d_maxdim_ad)
 CALL vol7d_nullify/**/VOL7D_POLY_TYPES(vol1dp, vol2dp, vol3dp)
 
 IF (ASSOCIATED(this%volana/**/VOL7D_POLY_TYPES)) THEN
-  voldim(1:SIZE(SHAPE((this%volana/**/VOL7D_POLY_TYPES)))) = SHAPE(this%volana/**/VOL7D_POLY_TYPES)
+  voldim(1:SIZE(SHAPE(this%volana/**/VOL7D_POLY_TYPES))) = SHAPE(this%volana/**/VOL7D_POLY_TYPES)
   voldim(SIZE(SHAPE(this%volana/**/VOL7D_POLY_TYPES))+1:) = 1
 
 ! Senza questo controllo l'eseguibile abortisce se compilato con PGI e -C
@@ -309,7 +309,7 @@ INTEGER :: voldim(vol7d_maxdim_ad)
 CALL vol7d_nullify/**/VOL7D_POLY_TYPES(vol1dp, vol2dp, vol3dp, vol4dp)
 
 IF (ASSOCIATED(this%volanaattr/**/VOL7D_POLY_TYPES)) THEN
-  voldim(1:SIZE(SHAPE((this%volanaattr/**/VOL7D_POLY_TYPES)))) = SHAPE(this%volanaattr/**/VOL7D_POLY_TYPES)
+  voldim(1:SIZE(SHAPE(this%volanaattr/**/VOL7D_POLY_TYPES))) = SHAPE(this%volanaattr/**/VOL7D_POLY_TYPES)
   voldim(SIZE(SHAPE(this%volanaattr/**/VOL7D_POLY_TYPES))+1:) = 1
 
 ! Senza questo controllo l'eseguibile abortisce se compilato con PGI e -C
@@ -365,7 +365,7 @@ CALL vol7d_nullify/**/VOL7D_POLY_TYPES(vol1dp, vol2dp, vol3dp, vol4dp, &
  vol5dp, vol6dp)
 
 IF (ASSOCIATED(this%voldati/**/VOL7D_POLY_TYPES)) THEN
-  voldim(1:SIZE(SHAPE((this%voldati/**/VOL7D_POLY_TYPES)))) = SHAPE(this%voldati/**/VOL7D_POLY_TYPES)
+  voldim(1:SIZE(SHAPE(this%voldati/**/VOL7D_POLY_TYPES))) = SHAPE(this%voldati/**/VOL7D_POLY_TYPES)
   voldim(SIZE(SHAPE(this%voldati/**/VOL7D_POLY_TYPES))+1:) = 1
 
 ! Senza questo controllo l'eseguibile abortisce se compilato con PGI e -C
@@ -422,7 +422,7 @@ CALL vol7d_nullify/**/VOL7D_POLY_TYPES(vol1dp, vol2dp, vol3dp, vol4dp, &
  vol5dp, vol6dp, vol7dp)
 
 IF (ASSOCIATED(this%voldatiattr/**/VOL7D_POLY_TYPES)) THEN
-  voldim(1:SIZE(SHAPE((this%voldatiattr/**/VOL7D_POLY_TYPES)))) = SHAPE(this%voldatiattr/**/VOL7D_POLY_TYPES)
+  voldim(1:SIZE(SHAPE(this%voldatiattr/**/VOL7D_POLY_TYPES))) = SHAPE(this%voldatiattr/**/VOL7D_POLY_TYPES)
 !  voldim(SIZE(SHAPE(this%voldatiattr/**/VOL7D_POLY_TYPES))+1:) = 1
 
 ! Senza questo controllo l'eseguibile abortisce se compilato con PGI e -C
