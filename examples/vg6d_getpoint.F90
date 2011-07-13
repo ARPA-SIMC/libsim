@@ -112,7 +112,7 @@ CALL optionparser_add(opt, 'z', 'sub-type', sub_type, 'bilin', help= &
  'transformation subtype, for inter: ''near'', ''bilin'',&
  & for metamorphosis: ''all'', ''coordbb''&
 #ifdef HAVE_LIBSHP_FORTRAN
- &, for ''polyinter'': ''average'', ''max'', ''min''&
+ &, for ''polyinter'': ''average'', ''stddev'', ''max'', ''min''&
 #endif
 &')
 

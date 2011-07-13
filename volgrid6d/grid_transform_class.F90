@@ -75,6 +75,7 @@
 !!    those input points that lie inside the output point grid box
 !!    (grid-to-grid and sparse points-to-grid)
 !!    - sub_type='average' the function used is the average
+!!    - sub_type='stddev' the function used is the standard deviation.
 !!    - sub_type='max' the function used is the maximum
 !!    - sub_type='min' the function used is the minimum
 !!    - sub_type='percentile' the function used is a requested
@@ -87,6 +88,7 @@
 !!    as the centroids of the polygons (grid-to-sparse points and
 !!    sparse points-to-sparse points)
 !!    - sub_type='average' the function used is the average
+!!    - sub_type='stddev' the function used is the standard deviation.
 !!    - sub_type='max' the function used is the maximum
 !!    - sub_type='min' the function used is the minimum
 !!    - sub_type='percentile' the function used is a requested
@@ -99,9 +101,10 @@
 !!    which is equal to the number of classes, and for each of which
 !!    the value is the result of a function computed over those input
 !!    points belonging to the corresponding class; the output point
-!!    coordinates are defined as the centroids of the set of points belonging
-!!    to the class (grid-to-sparse points)
+!!    coordinates are defined as the centroids of the set of points
+!!    belonging to the class (grid-to-sparse points)
 !!    - sub_type='average' the function used is the average
+!!    - sub_type='stddev' the function used is the standard deviation.
 !!    - sub_type='max' the function used is the maximum
 !!    - sub_type='min' the function used is the minimum
 !!    - sub_type='percentile' the function used is a requested
@@ -122,11 +125,14 @@
 !!    points-to-sparse points)
 !!    - sub_type='all' all the input points are kept in the output
 !!    - sub_type='coordbb' the input points which lie in the provided
-!!      lon/lat bounding box are kept in the output (grid-to-sparse or
-!!      sparse points-to-sparse points).
+!!      lon/lat bounding box are kept in the output (grid-to-sparse
+!!      points or sparse points-to-sparse points).
 !!    - sub_type='poly' the input points which lie in the first
 !!      polygon of the provided polygon list are kept in the output
-!!      (grid-to-sparse or sparse points-to-sparse points).
+!!      (grid-to-sparse points or sparse points-to-sparse points).
+!!    - sub_type='mask' the input points which belong to the first
+!!      class defined by a mask field, as for trans_type='maskinter'
+!!      are kept in the output (grid-to-sparse points).
 !!
 !! \ingroup volgrid6d
 MODULE grid_transform_class
@@ -302,7 +308,7 @@ INTEGER,INTENT(IN),OPTIONAL :: npy !< number of points to average along y direct
 DOUBLEPRECISION,INTENT(in),OPTIONAL :: boxdx !< longitudinal/x extension of the box for box interpolation, default the target x grid step (unimplemented !)
 DOUBLEPRECISION,INTENT(in),OPTIONAL :: boxdy !< latitudinal/y extension of the box for box interpolation, default the target y grid step (unimplemented !)
 TYPE(geo_coordvect),OPTIONAL,TARGET :: poly(:) !< array of polygons indicating areas over which to interpolate (for transformations 'polyinter' or 'metamorphosis:poly')
-DOUBLEPRECISION,INTENT(in),OPTIONAL :: percentile !< percentile [0,1] of the distribution of points in the box to use as interpolated value, if missing, the average is used
+DOUBLEPRECISION,INTENT(in),OPTIONAL :: percentile !< percentile [0,100.] of the distribution of points in the box to use as interpolated value for 'percentile' subtype
 LOGICAL,INTENT(IN),OPTIONAL :: extrap !< activate extrapolation outside input domain (use with care!)
 INTEGER,INTENT(IN),OPTIONAL :: time_definition !< time definition for output vol7d object 0=time is reference time ; 1=time is validity time
 TYPE(vol7d_level),INTENT(IN),OPTIONAL :: input_levtype !< type of vertical level of input data to be vertically interpolated (only type of first and second surface are used, level values are ignored)
@@ -489,7 +495,7 @@ ELSE IF (this%trans_type == 'boxinter' .OR. this%trans_type == 'polyinter' &
     ENDIF
   ENDIF
 
-  IF (this%sub_type == 'average') THEN
+  IF (this%sub_type == 'average' .OR. this%sub_type == 'stddev') THEN
     this%stat_info%percentile = rmiss
   ELSE IF (this%sub_type == 'max') THEN
     this%stat_info%percentile = 101.
@@ -554,6 +560,8 @@ ELSE IF (this%trans_type == 'metamorphosis') THEN
       CALL raise_fatal_error()
     ENDIF
 
+  ELSE IF (this%sub_type == 'mask')THEN
+! nothing to do here
   ELSE
     CALL l4f_category_log(this%category,L4F_ERROR,'metamorphosis: sub_type '// &
      TRIM(this%sub_type)//' is wrong')
@@ -1143,8 +1151,11 @@ END SUBROUTINE grid_transform_init
 !!
 !!  - for 'metamorphosis' transformation, no target point information
 !!    has to be provided in input (it is calculated on the basis of
-!!    input grid and \a trans object), and, as for 'polyinter', this
-!!    information is returned in output in \a v7d_out argument.
+!!    input grid and \a trans object), except for 'mask' subtype, for
+!!    which the same information as for 'maskinter' transformation has
+!!    to be provided; in all the cases, as for 'polyinter', the
+!!    information about target points is returned in output in \a
+!!    v7d_out argument.
 !!
 !! The generated \a grid_transform object is specific to the grid and
 !! sparse point list provided or computed. The function \a c_e can be
@@ -1293,50 +1304,14 @@ ELSE IF (this%trans%trans_type == 'maskinter') THEN
   this%inter_index_x(:,:) = imiss
   this%inter_index_y(:,:) = 1
 
-  mmin = MINVAL(maskgrid, mask=c_e(maskgrid))
-  mmax = MAXVAL(maskgrid, mask=c_e(maskgrid))
-
-  lnmaskclass = optio_l(nmaskclass)
-  lstartmaskclass = optio_r(startmaskclass)
-  ldmaskclass = optio_r(dmaskclass)
-! safety checks
-  IF (c_e(lnmaskclass)) THEN
-    lnmaskclass = MAX(lnmaskclass, 2)
-  ENDIF
-  IF (c_e(ldmaskclass)) THEN
-    IF (dmaskclass == 0.0) THEN
-      CALL l4f_category_log(this%category,L4F_ERROR, &
-       'dmaskclass, if provided, must be nonzero')
-      CALL raise_fatal_error()
-    ENDIF
-  ENDIF
-
-  IF (c_e(lstartmaskclass) .AND. c_e(ldmaskclass) .AND. c_e(lnmaskclass)) THEN
-! nothing to do
-  ELSE IF (c_e(lnmaskclass)) THEN
-    ldmaskclass = (mmax-mmin)/(lnmaskclass-1)
-    lstartmaskclass = mmin-0.5*ldmaskclass
-  ELSE
-    IF (.NOT.c_e(ldmaskclass)) THEN
-      ldmaskclass = 1.0
-    ENDIF
-    lnmaskclass = (mmax - mmin + 0.5*ldmaskclass)/ldmaskclass + 1.0
-    lstartmaskclass = mmin-0.5*ldmaskclass
-  ENDIF
-! assign limits for each class
-  ALLOCATE(lbound_class(lnmaskclass+1))
-  lbound_class(:) = (/(lstartmaskclass+REAL(n)*ldmaskclass,n=0,lnmaskclass)/)
-#ifdef DEBUG
-  CALL l4f_category_log(this%category,L4F_DEBUG, &
-   "maskinter parameters n,start,step: "// &
-   t2c(lnmaskclass)//','//t2c(lstartmaskclass)//','//t2c(ldmaskclass))
-#endif
+! generate the classes according to parameters and mask
+  CALL gen_mask_class()
 
 ! compute coordinates of input grid in geo system
   CALL unproj(in) ! TODO costringe a dichiarare in INTENT(inout), si puo` evitare?
 
 !$OMP PARALLEL DEFAULT(SHARED)
-!$OMP DO PRIVATE(j, i, n)
+!$OMP DO PRIVATE(iy, ix, n)
   DO iy = 1, this%inny
     DO ix = 1, this%innx
       IF (c_e(maskgrid(ix,iy))) THEN
@@ -1478,6 +1453,70 @@ ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
       ENDDO
     ENDDO
 
+
+  ELSE IF (this%trans%sub_type == 'mask' ) THEN
+
+    IF (.NOT.PRESENT(maskgrid)) THEN
+      CALL l4f_category_log(this%category,L4F_ERROR, &
+       'grid_transform_init maskgrid argument missing for metamorphosis:mask transformation')
+      CALL raise_fatal_error()
+    ENDIF
+
+! compute coordinates of input grid in geo system
+    CALL unproj(in)
+    CALL get_val(in, nx=this%innx, ny=this%inny)
+    IF (this%innx /= SIZE(maskgrid,1) .OR. this%inny /= SIZE(maskgrid,2)) THEN
+      CALL l4f_category_log(this%category,L4F_ERROR, &
+       'grid_transform_init mask non conformal with input field')
+      CALL l4f_category_log(this%category,L4F_ERROR, &
+       'mask: '//t2c(SIZE(maskgrid,1))//'x'//t2c(SIZE(maskgrid,2))// &
+       ' input field:'//t2c(this%innx)//'x'//t2c(this%inny))
+      CALL raise_fatal_error()
+    ENDIF
+
+! generate the classes according to parameters and mask
+    CALL gen_mask_class()
+
+  this%outnx = 0
+  this%outny = 1
+
+!$OMP PARALLEL DEFAULT(SHARED)
+!$OMP DO PRIVATE(iy, ix, n)
+    DO iy = 1, this%inny
+      DO ix = 1, this%innx
+        IF (c_e(maskgrid(ix,iy))) THEN
+          IF (maskgrid(ix,iy) > lbound_class(1) .AND. &
+           maskgrid(ix,iy) <= lbound_class(2)) THEN
+            this%outnx = this%outnx + 1
+            this%point_mask(ix,iy) = .TRUE.
+          ENDIF
+        ENDIF
+      ENDDO
+    ENDDO
+!$OMP END PARALLEL
+
+    DEALLOCATE(lbound_class)
+
+    IF (this%outnx <= 0) THEN
+      CALL l4f_category_log(this%category,L4F_ERROR, &
+       "metamorphosis mask: no points inside first class")
+      this%valid = .FALSE.
+      RETURN
+      !CALL raise_fatal_error() ! really fatal error?
+    ENDIF
+
+    CALL vol7d_alloc(v7d_out, nana=this%outnx)
+! collect coordinates of points falling into requested polygon
+    n = 0
+    DO iy = 1, this%inny
+      DO ix = 1, this%innx
+        IF (this%point_mask(ix,iy)) THEN
+          n = n + 1
+          CALL init(v7d_out%ana(n),lon=in%dim%lon(ix,iy),lat=in%dim%lat(ix,iy))
+        ENDIF
+      ENDDO
+    ENDDO
+
   ELSE
 
     CALL l4f_category_log(this%category,L4F_WARN, &
@@ -1495,6 +1534,51 @@ ELSE
   this%valid = .FALSE.
 
 ENDIF
+
+CONTAINS
+
+SUBROUTINE gen_mask_class()
+
+mmin = MINVAL(maskgrid, mask=c_e(maskgrid))
+mmax = MAXVAL(maskgrid, mask=c_e(maskgrid))
+
+lnmaskclass = optio_l(nmaskclass)
+lstartmaskclass = optio_r(startmaskclass)
+ldmaskclass = optio_r(dmaskclass)
+! safety checks
+IF (c_e(lnmaskclass)) THEN
+  lnmaskclass = MAX(lnmaskclass, 2)
+ENDIF
+IF (c_e(ldmaskclass)) THEN
+  IF (dmaskclass == 0.0) THEN
+    CALL l4f_category_log(this%category,L4F_ERROR, &
+     'dmaskclass, if provided, must be nonzero')
+    CALL raise_fatal_error()
+  ENDIF
+ENDIF
+
+IF (c_e(lstartmaskclass) .AND. c_e(ldmaskclass) .AND. c_e(lnmaskclass)) THEN
+! nothing to do
+ELSE IF (c_e(lnmaskclass)) THEN
+  ldmaskclass = (mmax-mmin)/(lnmaskclass-1)
+  lstartmaskclass = mmin-0.5*ldmaskclass
+ELSE
+  IF (.NOT.c_e(ldmaskclass)) THEN
+    ldmaskclass = 1.0
+  ENDIF
+  lnmaskclass = (mmax - mmin + 0.5*ldmaskclass)/ldmaskclass + 1.0
+  lstartmaskclass = mmin-0.5*ldmaskclass
+ENDIF
+! assign limits for each class
+ALLOCATE(lbound_class(lnmaskclass+1))
+lbound_class(:) = (/(lstartmaskclass+REAL(n)*ldmaskclass,n=0,lnmaskclass)/)
+#ifdef DEBUG
+CALL l4f_category_log(this%category,L4F_DEBUG, &
+ "maskinter parameters n,start,step: "// &
+ t2c(lnmaskclass)//','//t2c(lstartmaskclass)//','//t2c(ldmaskclass))
+#endif
+
+END SUBROUTINE gen_mask_class
 
 END SUBROUTINE grid_transform_grid_vol7d_init
 
@@ -2132,6 +2216,20 @@ ELSE IF (this%trans%trans_type == 'boxinter' &
       END WHERE
     ENDDO
     DEALLOCATE(nval)
+
+  ELSE IF (this%trans%sub_type == 'stddev') THEN
+
+    DO k = 1, innz
+      DO j = 1, this%outny
+        DO i = 1, this%outnx
+! da paura
+          field_out(i:i,j,k) = stat_stddev( &
+           RESHAPE(field_in(:,:,k), (/SIZE(field_in(:,:,k))/)), &
+           mask=RESHAPE((this%inter_index_x == i .AND. &
+           this%inter_index_y == j), (/SIZE(field_in(:,:,k))/)))
+        ENDDO
+      ENDDO
+    ENDDO
 
   ELSE IF (this%trans%sub_type == 'max') THEN
 

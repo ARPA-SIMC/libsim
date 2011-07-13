@@ -246,7 +246,7 @@ CALL optionparser_add(opt, ' ', 'pre-trans-type', pre_trans_type, '', help= &
  &''inter'' for interpolation, with subtypes ''near'', ''linear'', ''bilin''&
 #ifdef HAVE_LIBSHP_FORTRAN
  &; ''polyinter'' for statistical processing within given polygons, &
- &with subtype ''average'', ''max'', ''min''&
+ &with subtype ''average'', ''stddev'', ''max'', ''min''&
 #endif
  &; ''metamorphosis'' with subtype ''coordbb'' for selecting only data &
  &within a given bounding box&
@@ -257,7 +257,7 @@ CALL optionparser_add(opt, ' ', 'post-trans-type', post_trans_type, '', help= &
  &other computations, in the form ''trans-type:subtype''; &
  &''inter'' for interpolation, with subtype ''linear''; &
  &''boxinter'' for statistical processing within output grid box, &
- &with subtype ''average''; &
+ &with subtype ''average'', ''stddev'', ''max'', ''min''; &
  &empty for no transformation; this option is compatible with output &
  &on gridded format only (see output-format)')
 #endif

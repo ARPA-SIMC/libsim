@@ -26,38 +26,87 @@ MODULE simple_stat
 USE missing_values
 IMPLICIT NONE
 
-!> Generic interface to the average function.
+!> Compute the average of the random variable provided,
+!! taking into account missing data. The result is of type \a REAL or
+!! \a DOUBLE \a PRECISION according to the type of \a sample.
+!!
+!! REAL or DOUBLE PRECISION FUNCTION stat_average()
+!! \param sample(:) REAL,INTENT(in) or DOUBLE PRECISION,INTENT(in) the variable to be averaged
+!! \param mask(:) LOGICAL,OPTIONAL,INTENT(in) additional mask to be and'ed with missing values
 INTERFACE stat_average
   MODULE PROCEDURE stat_averager, stat_averaged
 END INTERFACE
 
-!> Generic interface to the variance function.
+!> Compute the variance of the random variable provided, taking into
+!! account missing data.  The average can be returned as an optional
+!! parameter since it is computed anyway. The result is of type \a REAL or
+!! \a DOUBLE \a PRECISION according to the type of \a sample.
+!!
+!! REAL or DOUBLE PRECISION FUNCTION stat_variance()
+!! \param sample(:) REAL,INTENT(in) or DOUBLE PRECISION,INTENT(in) the variable for which variance has to be computed
+!! \param average REAL,OPTIONAL,INTENT(out) the average of the variable can optionally be returned
+!! \param mask(:) LOGICAL,OPTIONAL,INTENT(in) additional mask to be and'ed with missing values
 INTERFACE stat_variance
   MODULE PROCEDURE stat_variancer, stat_varianced
 END INTERFACE
 
-!> Generic interface to the linear correlation function.
+!> Compute the standard deviation of the random variable provided, taking into
+!! account missing data.  The average can be returned as an optional
+!! parameter since it is computed anyway. The result is of type \a REAL or
+!! \a DOUBLE \a PRECISION according to the type of \a sample.
+!!
+!! REAL or DOUBLE PRECISION FUNCTION stat_stddev()
+!! \param sample(:) REAL,INTENT(in) or DOUBLE PRECISION,INTENT(in) the variable for which standard deviation has to be computed
+!! \param average REAL,OPTIONAL,INTENT(out) the average of the variable can optionally be returned
+!! \param mask(:) LOGICAL,OPTIONAL,INTENT(in) additional mask to be and'ed with missing values
+INTERFACE stat_stddev
+  MODULE PROCEDURE stat_stddevr, stat_stddevd
+END INTERFACE
+
+!> Compute the linear correlation coefficient between the two random
+!! variables provided, taking into account missing data. Data are
+!! considered missing when at least one variable has a missing value.
+!! The average and the variance of each variable can be returned as
+!! optional parameters since they are computed anyway. The result is
+!! of type \a REAL or \a DOUBLE \a PRECISION according to the type of
+!! \a sample1 and \a sample2.
+!!
+!! REAL or DOUBLE PRECISION FUNCTION stat_linear_corr()
+!! \param sample1(:) REAL,INTENT(in) or DOUBLE PRECISION,INTENT(in) the first variable
+!! \param sample2(:) REAL,INTENT(in) or DOUBLE PRECISION,INTENT(in) the second variable
+!! \param average1 REAL,OPTIONAL,INTENT(out) the average of the first variable can optionally be returned
+!! \param average2 REAL,OPTIONAL,INTENT(out) the average of the second variable can optionally be returned
+!! \param variance1 REAL,OPTIONAL,INTENT(out) the variance of the first variable can optionally be returned
+!! \param variance2 REAL,OPTIONAL,INTENT(out) the variance of the second variable can optionally be returned
+!! \param mask(:) LOGICAL,OPTIONAL,INTENT(in) additional mask to be and'ed with missing values
 INTERFACE stat_linear_corr
   MODULE PROCEDURE stat_linear_corrr, stat_linear_corrd
 END INTERFACE
 
-!> Generic interface to the percentile function.
+!> Compute a set of percentiles for a random variable.
+!! The result is a 1-d array of the same size as the array of
+!! percentile values provided. Percentiles are computed by linear
+!! interpolation. The result is of type \a REAL or \a DOUBLE \a
+!! PRECISION according to the type of \a sample.
+!!
+!! REAL or DOUBLE PRECISION FUNCTION stat_percentile()
+!! \param sample(:) REAL,INTENT(in) or DOUBLE PRECISION,INTENT(in) the variable for which percentiles have to be computed
+!! \param perc_vals(:) REAL,INTENT(in) or DOUBLE PRECISION,INTENT(in) the percentiles values to be computed, between 0. and 100.
+!! \param mask(:) LOGICAL,OPTIONAL,INTENT(in) additional mask to be and'ed with missing values
 INTERFACE stat_percentile
   MODULE PROCEDURE stat_percentiler, stat_percentiled
 END INTERFACE
 
 PRIVATE
-PUBLIC stat_average, stat_variance, stat_linear_corr, stat_percentile
+PUBLIC stat_average, stat_variance, stat_stddev, stat_linear_corr, stat_percentile
 
 CONTAINS
 
 
-!> Compute the average of the real random variable provided,
-!! taking into account missing data.
 FUNCTION stat_averager(sample, mask, nomiss) RESULT(average)
-REAL, INTENT(in) :: sample(:) !< the variable to be averaged
-LOGICAL, OPTIONAL, INTENT(in) :: mask(:) !< additional mask to be and'ed with missing values
-LOGICAL, OPTIONAL, INTENT(in) :: nomiss !< informs that the sample does not contain missing data (for speedup, unused)
+REAL,INTENT(in) :: sample(:)
+LOGICAL,OPTIONAL,INTENT(in) :: mask(:)
+LOGICAL,OPTIONAL,INTENT(in) :: nomiss ! informs that the sample does not contain missing data (for speedup, unused)
 
 REAL :: average
 
@@ -78,12 +127,10 @@ ENDIF
 END FUNCTION stat_averager
 
 
-!> Compute the average of the double precision random variable provided,
-!! taking into account missing data.
 FUNCTION stat_averaged(sample, mask, nomiss) RESULT(average)
-DOUBLE PRECISION, INTENT(in) :: sample(:) !< the variable to be averaged
-LOGICAL, OPTIONAL, INTENT(in) :: mask(:) !< additional mask to be and'ed with missing values
-LOGICAL, OPTIONAL, INTENT(in) :: nomiss !< informs that the sample does not contain missing data (for speedup, unused)
+DOUBLE PRECISION,INTENT(in) :: sample(:)
+LOGICAL,OPTIONAL,INTENT(in) :: mask(:)
+LOGICAL,OPTIONAL,INTENT(in) :: nomiss ! informs that the sample does not contain missing data (for speedup, unused)
 
 DOUBLE PRECISION :: average
 
@@ -104,14 +151,11 @@ ENDIF
 END FUNCTION stat_averaged
 
 
-!> Compute the variance of the real random variable provided, taking into
-!! account missing data.  The average can be returned as an optional
-!! parameter since it is computed anyway.
 FUNCTION stat_variancer(sample, average, mask, nomiss) RESULT(variance)
-REAL, INTENT(in) :: sample(:) !< the variable for which variance has to be computed
-REAL, OPTIONAL, INTENT(out) :: average !< the average of the variable can optionally be returned
-LOGICAL, OPTIONAL, INTENT(in) :: mask(:) !< additional mask to be and'ed with missing values
-LOGICAL, OPTIONAL, INTENT(in) :: nomiss !< informs that the sample does not contain missing data (for speedup, unused)
+REAL,INTENT(in) :: sample(:)
+REAL,OPTIONAL,INTENT(out) :: average
+LOGICAL,OPTIONAL,INTENT(in) :: mask(:)
+LOGICAL,OPTIONAL,INTENT(in) :: nomiss
 
 REAL :: variance
 
@@ -134,6 +178,10 @@ IF (sample_count > 0) THEN
   ENDDO
 !  variance = SUM(sample**2, mask=sample_mask)/sample_count - laverage
   variance = variance/sample_count - laverage**2
+!  IF (sample_count > 1) THEN ! do we need this correction?
+!    variance = variance*REAL(sample_count,kind=KIND(variance))/ &
+!     REAL(sample_count-1,kind=KIND(variance))
+!  ENDIF
 ELSE
   IF (PRESENT(average)) average = rmiss
   variance = rmiss
@@ -142,14 +190,11 @@ ENDIF
 END FUNCTION stat_variancer
 
 
-!> Compute the variance of the double precision random variable provided, taking into
-!! account missing data.  The average can be returned as an optional
-!! parameter since it is computed anyway.
 FUNCTION stat_varianced(sample, average, mask, nomiss) RESULT(variance)
-DOUBLE PRECISION, INTENT(in) :: sample(:) !< the variable for which variance has to be computed
-DOUBLE PRECISION, OPTIONAL, INTENT(out) :: average !< the average of the variable can optionally be returned
-LOGICAL, OPTIONAL, INTENT(in) :: mask(:) !< additional mask to be and'ed with missing values
-LOGICAL, OPTIONAL, INTENT(in) :: nomiss !< informs that the sample does not contain missing data (for speedup, unused)
+DOUBLE PRECISION,INTENT(in) :: sample(:)
+DOUBLE PRECISION,OPTIONAL,INTENT(out) :: average
+LOGICAL,OPTIONAL,INTENT(in) :: mask(:)
+LOGICAL,OPTIONAL,INTENT(in) :: nomiss
 
 DOUBLE PRECISION :: variance
 
@@ -172,6 +217,10 @@ IF (sample_count > 0) THEN
   ENDDO
 !  variance = SUM(sample**2, mask=sample_mask)/sample_count - laverage
   variance = variance/sample_count - laverage**2
+!  IF (sample_count > 1) THEN ! do we need this correction?
+!    variance = variance*REAL(sample_count,kind=KIND(variance))/ &
+!     REAL(sample_count-1,kind=KIND(variance))
+!  ENDIF
 ELSE
   IF (PRESENT(average)) average = dmiss
   variance = dmiss
@@ -180,21 +229,44 @@ ENDIF
 END FUNCTION stat_varianced
 
 
-!> Compute the linear correlation coefficient between the two real random
-!! variables provided, taking into account missing data. Data are
-!! considered missing when at least one variable has a missing value.
-!! The average and the variance of each variable can be returned as
-!! optional parameters since they are computed anyway.
+FUNCTION stat_stddevr(sample, average, mask, nomiss) RESULT(stddev)
+REAL,INTENT(in) :: sample(:)
+REAL,OPTIONAL,INTENT(out) :: average
+LOGICAL,OPTIONAL,INTENT(in) :: mask(:)
+LOGICAL,OPTIONAL,INTENT(in) :: nomiss
+
+REAL :: stddev
+
+stddev = stat_variance(sample, average, mask, nomiss)
+IF (c_e(stddev) .AND. stddev > 0.0) stddev = SQRT(stddev)
+
+END FUNCTION stat_stddevr
+
+
+FUNCTION stat_stddevd(sample, average, mask, nomiss) RESULT(stddev)
+DOUBLE PRECISION,INTENT(in) :: sample(:)
+DOUBLE PRECISION,OPTIONAL,INTENT(out) :: average
+LOGICAL,OPTIONAL,INTENT(in) :: mask(:)
+LOGICAL,OPTIONAL,INTENT(in) :: nomiss
+
+DOUBLE PRECISION :: stddev
+
+stddev = stat_variance(sample, average, mask, nomiss)
+IF (c_e(stddev) .AND. stddev > 0.0) stddev = SQRT(stddev)
+
+END FUNCTION stat_stddevd
+
+
 FUNCTION stat_linear_corrr(sample1, sample2, average1, average2, &
  variance1, variance2, mask, nomiss) RESULT(linear_corr)
-REAL, INTENT(in) :: sample1(:) !< the first variable
-REAL, INTENT(in) :: sample2(:) !< the second variable
-REAL, OPTIONAL, INTENT(out) :: average1 !< the average of the first variable can optionally be returned
-REAL, OPTIONAL, INTENT(out) :: average2 !< the average of the second variable can optionally be returned
-REAL, OPTIONAL, INTENT(out) :: variance1 !< the variance of the first variable can optionally be returned
-REAL, OPTIONAL, INTENT(out) :: variance2 !< the variance of the second variable can optionally be returned
-LOGICAL, OPTIONAL, INTENT(in) :: mask(:) !< additional mask to be and'ed with missing values
-LOGICAL, OPTIONAL, INTENT(in) :: nomiss !< informs that the sample does not contain missing data (for speedup, unused)
+REAL,INTENT(in) :: sample1(:)
+REAL,INTENT(in) :: sample2(:)
+REAL,OPTIONAL,INTENT(out) :: average1
+REAL,OPTIONAL,INTENT(out) :: average2
+REAL,OPTIONAL,INTENT(out) :: variance1
+REAL,OPTIONAL,INTENT(out) :: variance2
+LOGICAL,OPTIONAL,INTENT(in) :: mask(:)
+LOGICAL,OPTIONAL,INTENT(in) :: nomiss
 
 REAL :: linear_corr
 
@@ -252,21 +324,16 @@ ENDIF
 END FUNCTION stat_linear_corrr
 
 
-!> Compute the linear correlation coefficient between the two double precision random
-!! variables provided, taking into account missing data. Data are
-!! considered missing when at least one variable has a missing value.
-!! The average and the variance of each variable can be returned as
-!! optional parameters since they are computed anyway.
 FUNCTION stat_linear_corrd(sample1, sample2, average1, average2, &
  variance1, variance2, mask, nomiss) RESULT(linear_corr)
-DOUBLE PRECISION, INTENT(in) :: sample1(:) !< the first variable
-DOUBLE PRECISION, INTENT(in) :: sample2(:) !< the second variable
-DOUBLE PRECISION, OPTIONAL, INTENT(out) :: average1 !< the average of the first variable can optionally be returned
-DOUBLE PRECISION, OPTIONAL, INTENT(out) :: average2 !< the average of the second variable can optionally be returned
-DOUBLE PRECISION, OPTIONAL, INTENT(out) :: variance1 !< the variance of the first variable can optionally be returned
-DOUBLE PRECISION, OPTIONAL, INTENT(out) :: variance2 !< the variance of the second variable can optionally be returned
-LOGICAL, OPTIONAL, INTENT(in) :: mask(:) !< additional mask to be and'ed with missing values
-LOGICAL, OPTIONAL, INTENT(in) :: nomiss !< informs that the sample does not contain missing data (for speedup, unused)
+DOUBLE PRECISION, INTENT(in) :: sample1(:)
+DOUBLE PRECISION, INTENT(in) :: sample2(:)
+DOUBLE PRECISION, OPTIONAL, INTENT(out) :: average1
+DOUBLE PRECISION, OPTIONAL, INTENT(out) :: average2
+DOUBLE PRECISION, OPTIONAL, INTENT(out) :: variance1
+DOUBLE PRECISION, OPTIONAL, INTENT(out) :: variance2
+LOGICAL, OPTIONAL, INTENT(in) :: mask(:)
+LOGICAL, OPTIONAL, INTENT(in) :: nomiss
 
 DOUBLE PRECISION :: linear_corr
 
@@ -324,14 +391,11 @@ ENDIF
 END FUNCTION stat_linear_corrd
 
 
-!> Compute a set of percentiles for a real random variable.
-!! The result is a vector of the same size as the vector of percentile
-!! values provided. Percentiles are computed by linear interpolation.
 FUNCTION stat_percentiler(sample, perc_vals, mask, nomiss) RESULT(percentile)
-REAL, INTENT(in) :: sample(:) !< the variable for which percentiles are to be computed
-REAL, INTENT(in) :: perc_vals(:) !< the percentiles values to be computed, between 0. and 100.
-LOGICAL, OPTIONAL, INTENT(in) :: mask(:) !< additional mask to be and'ed with missing values
-LOGICAL, OPTIONAL, INTENT(in) :: nomiss !< informs that the sample does not contain missing data (for speedup, unused)
+REAL,INTENT(in) :: sample(:)
+REAL,INTENT(in) :: perc_vals(:)
+LOGICAL,OPTIONAL,INTENT(in) :: mask(:)
+LOGICAL,OPTIONAL,INTENT(in) :: nomiss
 
 REAL :: percentile(SIZE(perc_vals))
 
@@ -375,15 +439,11 @@ ENDDO
 END FUNCTION stat_percentiler
 
 
-!> Compute a set of percentiles for a double precision random variable.
-!! The result is a vector of the same size as the vector of percentile
-!! values provided. Percentiles are computed by linear interpolation.
 FUNCTION stat_percentiled(sample, perc_vals, mask, nomiss) RESULT(percentile) !, bin
-DOUBLE PRECISION, INTENT(in) :: sample(:) !< the variable for which percentiles are to be computed
-DOUBLE PRECISION, INTENT(in) :: perc_vals(:) !< the percentiles values to be computed, between 0. and 100.
-LOGICAL, OPTIONAL, INTENT(in) :: mask(:) !< additional mask to be and'ed with missing values
-LOGICAL, OPTIONAL, INTENT(in) :: nomiss !< informs that the sample does not contain missing data (for speedup, unused)
-!INTEGER, OPTIONAL, INTENT(out) :: bin(:) !< optionally return the number of points of sample included between percentile i and i+1, works only if \a perc_vals(:) is in ascending order, should be dimensioned to \a SIZE(perc_vals())-1
+DOUBLE PRECISION, INTENT(in) :: sample(:)
+DOUBLE PRECISION, INTENT(in) :: perc_vals(:)
+LOGICAL, OPTIONAL, INTENT(in) :: mask(:)
+LOGICAL, OPTIONAL, INTENT(in) :: nomiss
 
 DOUBLE PRECISION :: percentile(SIZE(perc_vals))
 
@@ -421,9 +481,6 @@ DO j = 1, SIZE(perc_vals)
 ! compute linearly interpolated percentile
     percentile(j) = lsample(iindex)*(REAL(iindex+1, kind=KIND(rindex))-rindex) &
      + lsample(iindex+1)*(rindex-REAL(iindex, kind=KIND(rindex)))
-!    IF (PRESENT(bin) .AND. j > 1) THEN
-!      bin(j-1) = iindex - oindex
-!    ENDIF
     oindex = iindex
   ELSE
     percentile(j) = dmiss

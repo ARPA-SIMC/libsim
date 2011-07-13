@@ -89,7 +89,7 @@ CALL optionparser_add(opt, 'v', 'trans-type', trans_type, 'none', help= &
  &''none'' for no transformation (input/output only)')
 CALL optionparser_add(opt, 'z', 'sub-type', sub_type, 'near', help= &
  'transformation subtype, for inter: ''near'', ''bilin'', &
- &for boxinter and boxregrid: ''average'', ''max'', ''min'', &
+ &for boxinter and boxregrid: ''average'', ''stddev'', ''max'', ''min'', &
  &for zoom: ''index'', ''coord'', ''coordbb'', &
  &for metamorphosis: ''all''')
 CALL optionparser_add(opt, ' ', 'extrap', extrap, help= &
