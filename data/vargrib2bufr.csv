@@ -68,7 +68,7 @@ B12103,Dew point temperature,K,98,128,168,255,1.0,0.0
 B13001,Specific humidity,Kg/Kg,255,2,51,255,1.0,0.0
 B13003,Relative humidity,Percent,255,2,52,255,1.0,0.0
 B13011,Total precipitation,Kg/m**2,255,2,61,255,1.0,0.0
-B13011,Total precipitation,m,98,128,228,255,1000.,0.0
+B13011,Total precipitation,m->Kg/m**2,98,128,228,255,1000.,0.0
 B13128,Cloud water content (invented),Kg/Kg,78,201,31,255,1.0,0.0
 B13128,Cloud water content (invented),Kg/Kg,200,201,31,255,1.0,0.0
 B13129,Cloud ice content (invented),Kg/Kg,78,201,33,255,1.0,0.0
@@ -260,10 +260,17 @@ B20010,Total cloud cover,Fraction,200,200,114,0,100.0,0.0
 B20010,Total cloud cover,Fraction,200,200,114,255,100.0,0.0
 B20010,Total cloud cover,Percent,255,2,71,255,1.0,0.0
 B20010,Total cloud cover,Percent,98,128,164,255,1.0,0.0
+B22001,Direction of waves,degree true,200,140,230,255,1.0,0.0
+B22001,Direction of waves,degree true,98,140,230,255,1.0,0.0
 B22037,Tidal elevation with respect to national land datum,m,255,2,82,255,1.0,0.0
-B22070,Significant wave height,m,200,140,229,255,1.0,0.0
+B22062,Salinity,kg/kg->per mille?,255,2,88,255,1000.,0.0
 B22070,Significant wave height,m,255,2,102,255,1.0,0.0
+B22070,Significant wave height,m,200,140,229,255,1.0,0.0
 B22070,Significant wave height,m,98,140,229,255,1.0,0.0
+B22071,Spectral peak wave period,s,200,140,231,255,1.0,0.0
+B22071,Spectral peak wave period,s,98,140,231,255,1.0,0.0
+B22074,Average wave period,s,200,140,232,255,1.0,0.0
+B22074,Average wave period,s,98,140,232,255,1.0,0.0
 B23192,Dry deposition of H2SO4 (invented),mol/m**2,200,200,140,255,1.0,0.0
 B23193,Wet deposition of H2SO4 (invented),mol/m**2,200,200,141,255,1.0,0.0
 B23194,Dry deposition of NH4 (invented),mol/m**2,200,200,142,255,1.0,0.0
