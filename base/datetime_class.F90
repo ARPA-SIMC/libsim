@@ -426,7 +426,7 @@ ELSE IF (PRESENT(unixtime)) THEN ! secondi dal 01/01/1970 (unix)
 
 ELSE IF (PRESENT(isodate)) THEN ! formato iso YYYY-MM-DD hh:mm:ss.msc
 
-  if (c_e(isodate)) then
+  IF (c_e(isodate) .AND. LEN_TRIM(isodate) > 0) THEN
     datebuf(1:23) = '0001-01-01 00:00:00.000'
     datebuf(1:MIN(LEN(isodate),23)) = isodate(1:MIN(LEN(isodate),23))
     READ(datebuf,'(I4,1X,I2,1X,I2,1X,I2,1X,I2,1X,I2,1X,I3)', err=100) &
@@ -440,12 +440,12 @@ ELSE IF (PRESENT(isodate)) THEN ! formato iso YYYY-MM-DD hh:mm:ss.msc
     CALL l4f_log(L4F_ERROR, 'isodate '//TRIM(isodate)//' not valid')
     CALL raise_error()
     RETURN
-  else
+  ELSE
     this = datetime_miss
-  end if
+  ENDIF
 
 ELSE IF (PRESENT(simpledate)) THEN ! formato YYYYMMDDhhmmssmsc
-  if (c_e(simpledate))then
+  IF (c_e(simpledate) .AND. LEN_TRIM(simpledate) > 0)THEN
     datebuf(1:17) = '00010101000000000'
     datebuf(1:MIN(LEN(simpledate),17)) = simpledate(1:MIN(LEN(simpledate),17))
     READ(datebuf,'(I4.4,5I2.2,I3.3)', err=120) &
@@ -459,9 +459,9 @@ ELSE IF (PRESENT(simpledate)) THEN ! formato YYYYMMDDhhmmssmsc
     CALL l4f_log(L4F_ERROR, 'simpledate '//TRIM(simpledate)//' not valid')
     CALL raise_error()
     RETURN
-  else
+  ELSE
     this = datetime_miss
-  end if
+  ENDIF
 
 
 ELSE IF (PRESENT(oraclesimdate)) THEN ! formato YYYYMMDDhhmm

@@ -159,7 +159,7 @@ CALL optionparser_add(opt, ' ', 'coord-format', coord_format, &
 #else
  'native', &
 #endif 
- & help='format of input file with coordinates, ''native'' for vol7d native binary file &
+ & help='format of input file with coordinates, ''native'' for vol7d native binary file&
 #ifdef HAVE_DBALLE
  &, ''BUFR'' for BUFR file, ''CREX'' for CREX file&
 #endif
@@ -169,9 +169,9 @@ CALL optionparser_add(opt, ' ', 'coord-format', coord_format, &
  &')
 
 ! input database options
-CALL optionparser_add(opt, 's', 'start-date', start_date, cmiss, help= &
+CALL optionparser_add(opt, 's', 'start-date', start_date, '', help= &
  'if input-format is of database type, initial date for extracting data')
-CALL optionparser_add(opt, 'e', 'end-date', end_date, cmiss, help= &
+CALL optionparser_add(opt, 'e', 'end-date', end_date, '', help= &
  'if input-format is of database type, final date for extracting data')
 CALL optionparser_add(opt, 'n', 'network-list', network_list, '', help= &
  'if input-format is of database type, list of station networks to be extracted &
@@ -321,6 +321,8 @@ CALL optionparser_add(opt, ' ', 'csv-skip-miss', obso, help= &
 
 ! help options
 CALL optionparser_add_help(opt, 'h', 'help', help='show an help message and exit')
+CALL optionparser_add_html(opt, ' ', 'html-form', help= &
+ &'print the options as an html form')
 CALL optionparser_add(opt, ' ', 'version', version, help='show version and exit')
 
 ! parse options and check for errors
@@ -328,6 +330,8 @@ CALL optionparser_parse(opt, optind, optstatus)
 
 IF (optstatus == optionparser_help) THEN
   CALL exit(0) ! generate a clean manpage
+ELSE IF (optstatus == optionparser_html) THEN
+  CALL exit(0) ! generate a clean form
 ELSE IF (optstatus == optionparser_err) THEN
   CALL l4f_category_log(category,L4F_ERROR,'in command-line parameters')
   CALL raise_fatal_error()

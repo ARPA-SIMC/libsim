@@ -33,18 +33,19 @@ IMPLICIT NONE
 
 ! private class
 TYPE option
-  CHARACTER(len=1) :: short_opt
-  CHARACTER(len=80) :: long_opt
-  INTEGER :: opttype
-  LOGICAL :: need_arg
-  CHARACTER(len=1),POINTER :: destc
-  INTEGER :: destclen
-  INTEGER,POINTER :: desti
-  REAL,POINTER :: destr
-  DOUBLE PRECISION, POINTER :: destd
-  LOGICAL,POINTER :: destl
-  INTEGER,POINTER :: destcount
-  INTEGER(kind=int_b),POINTER :: help_msg(:)
+  CHARACTER(len=1) :: short_opt=''
+  CHARACTER(len=80) :: long_opt=''
+  INTEGER :: opttype=-1
+  LOGICAL :: need_arg=.FALSE.
+  LOGICAL :: has_default=.FALSE.
+  CHARACTER(len=1),POINTER :: destc=>NULL()
+  INTEGER :: destclen=0
+  INTEGER,POINTER :: desti=>NULL()
+  REAL,POINTER :: destr=>NULL()
+  DOUBLE PRECISION, POINTER :: destd=>NULL()
+  LOGICAL,POINTER :: destl=>NULL()
+  INTEGER,POINTER :: destcount=>NULL()
+  INTEGER(kind=int_b),POINTER :: help_msg(:)=>NULL()
 END TYPE option
 
 #define ARRAYOF_ORIGTYPE TYPE(option)
@@ -130,17 +131,20 @@ END INTERFACE
 
 
 INTEGER,PARAMETER :: opttype_c = 1, opttype_i = 2, opttype_r = 3, &
- opttype_d = 4, opttype_l = 5, opttype_count = 6, opttype_help = 7
+ opttype_d = 4, opttype_l = 5, opttype_count = 6, opttype_help = 7, &
+ opttype_html = 8
 
 INTEGER,PARAMETER :: optionparser_ok = 0 !< constants indicating the status returned by optionparser_parse, status of parsing: OK
-INTEGER,PARAMETER :: optionparser_help = 1 !< status of parsing: help has been requested
-INTEGER,PARAMETER :: optionparser_err = 2 !< status of parsing: an error was encountered
+INTEGER,PARAMETER :: optionparser_html = 1 !< status of parsing: html form has been requested
+INTEGER,PARAMETER :: optionparser_help = 2 !< status of parsing: help has been requested
+INTEGER,PARAMETER :: optionparser_err = 3 !< status of parsing: an error was encountered
+
 
 PRIVATE
 PUBLIC optionparser, optionparser_new, delete, optionparser_add, &
- optionparser_add_count, optionparser_add_help, &
- optionparser_parse, optionparser_printhelp, &
- optionparser_ok, optionparser_err, optionparser_help
+ optionparser_add_count, optionparser_add_help, optionparser_add_html, &
+ optionparser_parse, optionparser_printhelp, optionparser_printhtml, &
+ optionparser_ok, optionparser_html, optionparser_help, optionparser_err
 
 
 CONTAINS
@@ -155,17 +159,17 @@ CHARACTER(len=*) :: default
 CHARACTER(len=*),OPTIONAL :: help
 TYPE(option) :: this
 
-this%short_opt = short_opt
-this%long_opt = long_opt
-this%opttype = -1
-this%need_arg = .FALSE.
-NULLIFY(this%help_msg)
-NULLIFY(this%destc)
-NULLIFY(this%desti)
-NULLIFY(this%destr)
-NULLIFY(this%destd)
-NULLIFY(this%destl)
-NULLIFY(this%destcount)
+!this%short_opt = short_opt
+!this%long_opt = long_opt
+!this%opttype = -1
+!this%need_arg = .FALSE.
+!NULLIFY(this%help_msg)
+!NULLIFY(this%destc)
+!NULLIFY(this%desti)
+!NULLIFY(this%destr)
+!NULLIFY(this%destd)
+!NULLIFY(this%destl)
+!NULLIFY(this%destcount)
 
 IF (short_opt == '' .AND. long_opt == '') THEN
 #ifdef DEBUG
@@ -178,10 +182,13 @@ IF (short_opt == '' .AND. long_opt == '') THEN
   RETURN
 ENDIF
 
+this%short_opt = short_opt
+this%long_opt = long_opt
 IF (PRESENT(help)) THEN
   ALLOCATE(this%help_msg(LEN_TRIM(help) + LEN_TRIM(default) + 1))
   this%help_msg = fchar_to_cstr(TRIM(help)//TRIM(default))
 ENDIF
+this%has_default = (LEN_TRIM(default) > 0)
 
 END FUNCTION option_new
 
@@ -230,6 +237,8 @@ CASE(opttype_count)
   this%destcount = this%destcount + 1
 CASE(opttype_help)
   status = optionparser_help
+CASE(opttype_html)
+  status = optionparser_html
 END SELECT
 
 RETURN
@@ -286,6 +295,97 @@ IF (this%long_opt /= '') THEN
 ENDIF  
 
 END FUNCTION option_format_opt
+
+
+SUBROUTINE option_format_html(this)
+TYPE(option),INTENT(in) :: this
+
+CHARACTER(len=80) :: opt_name, opt_id, opt_default ! check len of default
+
+IF (.NOT.c_e(this)) RETURN
+IF (this%long_opt == '') THEN
+  opt_name = this%short_opt
+  opt_id = 'short_opt_'//this%short_opt
+ELSE
+  opt_name = this%long_opt
+  opt_id = this%long_opt
+ENDIF
+
+SELECT CASE(this%opttype)
+CASE(opttype_c)
+  CALL option_format_html_openspan('text')
+
+  IF (this%has_default .AND. ASSOCIATED(this%destc) .AND. this%destclen > 0) THEN
+!    opt_default = TRANSFER(this%destc(1:MIN(LEN(opt_default),this%destclen)), &
+!     opt_default) ! improve
+    opt_default = ''
+    WRITE(*,'(A)')' value="'//TRIM(opt_default)//'"'
+  ENDIF
+  CALL option_format_html_help()
+  CALL option_format_html_closespan()
+
+CASE(opttype_i,opttype_r,opttype_d)
+  CALL option_format_html_openspan('text')
+  IF (this%has_default) THEN
+    SELECT CASE(this%opttype)
+    CASE(opttype_i)
+      WRITE(*,'(3A)')' value="',t2c(this%desti),'"'
+    CASE(opttype_r)
+      WRITE(*,'(3A)')' value="',t2c(this%destr),'"'
+    CASE(opttype_d)
+      WRITE(*,'(3A)')' value="',t2c(this%destd),'"'
+    END SELECT
+  ENDIF
+  CALL option_format_html_help()
+  CALL option_format_html_closespan()
+
+CASE(opttype_l)
+  CALL option_format_html_openspan('checkbox')
+  CALL option_format_html_help()
+  CALL option_format_html_closespan()
+
+CASE(opttype_count)
+END SELECT
+
+
+CONTAINS
+
+SUBROUTINE option_format_html_openspan(formtype)
+CHARACTER(len=*),INTENT(in) :: formtype
+
+WRITE(*,'(A)')'<span id="span_'//TRIM(opt_id)//'">'//TRIM(opt_name)//':'
+! size=? maxlen=?
+WRITE(*,'(A)')'<input id="'//TRIM(opt_id)//'" type="'//formtype// &
+ '" name="'//TRIM(opt_id)//'" '
+
+END SUBROUTINE option_format_html_openspan
+
+SUBROUTINE option_format_html_closespan()
+
+WRITE(*,'(A)')'/></span>'
+
+END SUBROUTINE option_format_html_closespan
+
+SUBROUTINE option_format_html_help()
+INTEGER :: j
+TYPE(line_split) :: help_line
+CHARACTER(len=20) :: form
+
+IF (ASSOCIATED(this%help_msg)) THEN
+  WRITE(*,'(A,$)')' title="'
+
+  help_line = line_split_new(cstr_to_fchar(this%help_msg), 80)
+  form = '(A,'' '')'
+  DO j = 1, line_split_get_nlines(help_line)
+    IF (j == line_split_get_nlines(help_line)) form = '(A,''"'',$)'
+    WRITE(*,form)TRIM(line_split_get_line(help_line,j)) ! lines should be properly quoted here
+  ENDDO
+
+ENDIF
+
+END SUBROUTINE option_format_html_help
+
+END SUBROUTINE option_format_html
 
 
 FUNCTION option_c_e(this) RESULT(c_e)
@@ -576,6 +676,32 @@ i = arrayof_option_append(this%options, myoption)
 END SUBROUTINE optionparser_add_help
 
 
+!> Add a new html option, without optional argument.
+!! When parsing will be performed, the set of program options in form
+!! of an html form will be printed if this option is encountered. The
+!! form can be directly printed as well by calling the
+!! optparser_printhtml method.
+SUBROUTINE optionparser_add_html(this, short_opt, long_opt, help)
+TYPE(optionparser),INTENT(inout) :: this !< \a optionparser object
+CHARACTER(len=*),INTENT(in) :: short_opt !< the short option (may be empty)
+CHARACTER(len=*),INTENT(in) :: long_opt !< the long option (may be empty)
+CHARACTER(len=*),OPTIONAL :: help !< the help message that will be formatted and pretty-printed on screen
+
+INTEGER :: i
+TYPE(option) :: myoption
+
+! common initialisation
+myoption = option_new(short_opt, long_opt, '', help)
+IF (.NOT.c_e(myoption)) RETURN ! error in creating option, ignore it
+
+myoption%opttype = opttype_html
+myoption%need_arg = .FALSE.
+
+i = arrayof_option_append(this%options, myoption)
+
+END SUBROUTINE optionparser_add_html
+
+
 !> This method performs the parsing of the command-line options
 !! which have been previously added using the optionparser_add family
 !! of methods. The destination variables set through the
@@ -663,9 +789,12 @@ DO WHILE(i <= iargc())
 ENDDO
 
 nextarg = i
-IF (status == optionparser_err .OR. status == optionparser_help) THEN
+SELECT CASE(status)
+CASE(optionparser_err, optionparser_help)
   CALL optionparser_printhelp(this)
-ENDIF
+CASE(optionparser_html)
+  CALL optionparser_printhtml(this)
+END SELECT
 
 END SUBROUTINE optionparser_parse
 
@@ -722,6 +851,23 @@ DO i = 1, this%options%arraysize ! loop over options
 ENDDO
 
 END SUBROUTINE optionparser_printhelp
+
+
+!> Print on stdout an html form reflecting the command line options set up.
+!! It can be called by the user program and it is called anyway if the
+!! program has been called with the html option set.
+SUBROUTINE optionparser_printhtml(this)
+TYPE(optionparser),INTENT(inout) :: this !< \a optionparser object with correctly initialised options
+
+INTEGER :: i
+
+DO i = 1, this%options%arraysize ! loop over options
+  CALL option_format_html(this%options%array(i))
+ENDDO
+
+WRITE(*,'(A)')'<input TYPE="submit" VALUE="runprogram" />'
+
+END SUBROUTINE optionparser_printhtml
 
 
 SUBROUTINE dirty_char_pointer_set(from, to)
