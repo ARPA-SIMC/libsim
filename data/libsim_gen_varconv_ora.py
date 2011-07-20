@@ -122,7 +122,7 @@ def UniConvTable():
     return uniconvtable
 
 
-def UnitFromOracle():
+def UnitFromOracle(hack=True, allvar=False):
     """Restituisce una lista (ordinata per oracleid crescente) di dizionari,
     estratti dal db oracle, con le chiavi:
     - "oracleid"
@@ -148,7 +148,8 @@ SELECT v.IDENTNR IDENT, v.BLOCAL_NEW BLOCAL, v.UMIS_CODICE_PRINCIPALE,
        v.UMIS_CODICE_AUSILIARIO, u.ABBREVIAZIONE, v.DESCRIZIONE
 FROM MET_VARIABILI_DEFINITE v, MET_UNITA_MISURA u
 --WHERE v.BLOCAL_NEW != ' ' AND v.BLOCAL_NEW IS NOT NULL AND v.UMIS_CODICE_PRINCIPALE = u.CODICE
-WHERE ((v.BLOCAL_NEW != ' ' AND v.BLOCAL_NEW IS NOT NULL) OR (v.IDENTNR >= 1360 AND v.IDENTNR <= 1402)) AND v.UMIS_CODICE_PRINCIPALE = u.CODICE
+--WHERE ((v.BLOCAL_NEW != ' ' AND v.BLOCAL_NEW IS NOT NULL) OR (v.IDENTNR >= 1360 AND v.IDENTNR <= 1402)) AND v.UMIS_CODICE_PRINCIPALE = u.CODICE
+WHERE v.UMIS_CODICE_PRINCIPALE = u.CODICE
 ORDER BY IDENTNR;
 EXIT;
 """
@@ -157,10 +158,15 @@ EXIT;
     sqlplus.stdin.write(query)
     for row in csv.reader(sqlplus.stdout, delimiter=","):
         if len(row) != 6: continue
+        if row[1].rstrip() == '' and not allvar and \
+                (int(row[0]) < 1360 or int(row[0]) > 1402 or not hack): continue
 # sporca conversione per il transiente
-        if row[1].rstrip() == 'B10061': row[1] = 'B10060'
-        if row[1].rstrip() == 'B12001': row[1] = 'B12101'
-        if row[1].rstrip() == 'B12003': row[1] = 'B12103'
+        if hack:
+            if row[1].rstrip() == 'B10061': row[1] = 'B10060'
+            elif row[1].rstrip() == 'B12001': row[1] = 'B12101'
+            elif row[1].rstrip() == 'B12003': row[1] = 'B12103'
+            elif row[1].rstrip() == 'B22042': row[1] = 'B22043'
+            elif row[1].rstrip() == 'B10009': row[1] = 'B10008'
         oratable.append({"oracleid": int(row[0]),
                          "blocal": row[1].rstrip(),
                          "umis_princ": row[2].rstrip(),
@@ -172,17 +178,16 @@ EXIT;
             pollprevhack[oratable[-1]["oracleid"]] = oratable[-1]
     
     sqlplus.wait()
-    for row,ind in zip(oratable,range(len(oratable))):
-        if row["blocal"] == "":
-            if row["oracleid"] >= 1360 and row["oracleid"] <= 1402:
-                try:
-                    tmp = pollprevhack[row["oracleid"]-1000]["blocal"]
-                    oratable[ind]["blocal"] = tmp
-                except:
-                    print "Error:, the table has changed, please modify",sys.argv[0]
-                    raise
-            else:
-                print "Strange situation"
+    if hack:
+        for row,ind in zip(oratable,range(len(oratable))):
+            if row["blocal"] == "":
+                if row["oracleid"] >= 1360 and row["oracleid"] <= 1402:
+                    try:
+                        tmp = pollprevhack[row["oracleid"]-1000]["blocal"]
+                        oratable[ind]["blocal"] = tmp
+                    except:
+                        print "Error:, the table has changed, please modify",sys.argv[0]
+                        raise
     return oratable
 
 
@@ -201,13 +206,18 @@ def UnitFromDballe(file="/usr/share/wreport/dballe.txt"):
 
 
 # main
+fortran = False
+hack = True
+allvar = False
+for arg in sys.argv[1:]:
+    if arg == "-f": fortran = True # fortran format
+    elif arg == "-n": hack = False # do not apply hacks
+    elif arg == "-a": allvar = True # print all vars, including those w/o B
+
 # riempi le tabelle
 zinitable = UniConvTable()
-oratable = UnitFromOracle()
+oratable = UnitFromOracle(hack, allvar)
 dbatable = UnitFromDballe()
-fortran = False
-if len(sys.argv) > 1:
-    if sys.argv[1] == "-f": fortran = True
 
 if fortran:
     print "ALLOCATE(vartable_s(%d))" % (oratable[-1]["oracleid"],)
