@@ -1,7 +1,7 @@
 lib_LTLIBRARIES = libsim_base.la
 libsim_base_la_SOURCES = io_units.F90 kinds.F90 phys_const.f90 missing_values.f90 \
  char_utilities.f90 err_handling.f90 datetime_class.F90 array_utilities.F90 optional_values.f90 file_utilities.F90 \
- geo_coord_class.F90 geo_coord_with_utm_class.F90 geo_grid_class.f90 \
+ geo_coord_class.F90 \
  optionparser_class.F90 \
  simple_stat.f90 geo_proj_class.F90
 
@@ -16,6 +16,10 @@ endif
 
 if SHP
 libsim_base_la_LIBADD += $(SHP_LIBS)
+endif
+
+if GRIB
+libsim_base_la_SOURCES += geo_coord_with_utm_class.F90 geo_grid_class.f90
 endif
 
 noinst_HEADERS = arrayof_pre.F90 arrayof_post.F90 array_utilities_inc.F90 arrayof_pre_nodoc.F90 arrayof_post_nodoc.F90 
