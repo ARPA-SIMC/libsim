@@ -561,7 +561,7 @@ IF (SIZE(field,1) /= this%griddim%dim%nx &
  .OR. SIZE(field,2) /= this%griddim%dim%ny) THEN
   CALL l4f_category_log(this%category,L4F_ERROR, &
    'gridinfo_encode: field and gridinfo object non conformal, field: ' &
-   //TRIM(to_char(SIZE(field,1)))//'X'//TRIM(to_char(SIZE(field,1)))//', nx,ny:' &
+   //TRIM(to_char(SIZE(field,1)))//'X'//TRIM(to_char(SIZE(field,2)))//', nx,ny:' &
    //TRIM(to_char(this%griddim%dim%nx))//'X'//TRIM(to_char(this%griddim%dim%ny)))
   CALL raise_error()
   RETURN
