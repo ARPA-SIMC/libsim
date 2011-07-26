@@ -234,13 +234,13 @@ subroutine display_level(this)
 
 TYPE(vol7d_level),INTENT(in) :: this
 
-print*,to_char(this)
+print*,trim(to_char(this))
 
 end subroutine display_level
 
 
 
-character(len=80) function to_char_level(this)
+character(len=255) function to_char_level(this)
 
 TYPE(vol7d_level),INTENT(in) :: this
 
