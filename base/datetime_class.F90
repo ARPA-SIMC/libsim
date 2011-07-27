@@ -122,6 +122,28 @@ INTERFACE to_char
   MODULE PROCEDURE datetime_to_char, timedelta_to_char
 END INTERFACE
 
+
+!> Functions that return a trimmed CHARACTER representation of the
+!! input variable. The functions are analogous to \a to_char but they
+!! return representation of the input in a CHARACTER with a variable
+!! length, which needs not to be trimmed before use. The optional
+!! format here is not accepted and these functions are not \a
+!! ELEMENTAL so they work only on scalar arguments.
+!!
+!! \param in (datetime or timedelta) value to be represented as CHARACTER
+!!
+!! Example of use:
+!! \code
+!! USE datetime_class
+!! type(datetime) :: t
+!! ...
+!! WRITE(*,*)'The value provided is, '//t2c(t)'
+!! ...
+!! \endcode
+INTERFACE t2c
+  MODULE PROCEDURE trim_datetime_to_char, trim_timedelta_to_char
+END INTERFACE
+
 !> Operatore logico di uguaglianza tra oggetti della stessa classe.
 !! Funziona anche per 
 !! confronti di tipo array-array (qualsiasi n. di dimensioni) e di tipo
@@ -311,7 +333,7 @@ PRIVATE
 
 PUBLIC datetime, datetime_miss, datetime_utc, datetime_local, &
  datetime_min, datetime_max, &
- datetime_new, init, delete, getval, to_char, &
+ datetime_new, init, delete, getval, to_char, t2c, &
  read_unit, write_unit, &
  OPERATOR(==), OPERATOR(/=), OPERATOR(>), OPERATOR(<), &
  OPERATOR(>=), OPERATOR(<=), OPERATOR(+), OPERATOR(-), &
@@ -510,7 +532,7 @@ END SUBROUTINE datetime_delete
 !! modalità desiderate. Qualsiasi combinazione dei parametri
 !! opzionali è consentita. \a oraclesimedate è
 !! obsoleto, usare piuttosto \a simpledate.
-SUBROUTINE datetime_getval(this, year, month, day, hour, minute, msec, &
+pure SUBROUTINE datetime_getval(this, year, month, day, hour, minute, msec, &
  unixtime, isodate, simpledate, oraclesimdate)
 TYPE(datetime),INTENT(IN) :: this !< oggetto di cui restituire il valore
 INTEGER,INTENT(OUT),OPTIONAL :: year !< anno
@@ -558,8 +580,8 @@ IF (PRESENT(year) .OR. PRESENT(month) .OR. PRESENT(day) .OR. PRESENT(hour) &
       simpledate = cmiss
     ENDIF
     IF (PRESENT(oraclesimdate)) THEN
-      CALL l4f_log(L4F_WARN, 'in datetime_getval, parametro oraclesimdate '// &
-       'obsoleto, usare piuttosto simpledate')
+!!$      CALL l4f_log(L4F_WARN, 'in datetime_getval, parametro oraclesimdate '// &
+!!$       'obsoleto, usare piuttosto simpledate')
       oraclesimdate=cmiss
     ENDIF
     IF (PRESENT(unixtime)) THEN
@@ -599,8 +621,8 @@ IF (PRESENT(year) .OR. PRESENT(month) .OR. PRESENT(day) .OR. PRESENT(hour) &
       simpledate = datebuf(1:MIN(LEN(simpledate),17))
     ENDIF
     IF (PRESENT(oraclesimdate)) THEN
-      CALL l4f_log(L4F_WARN, 'in datetime_getval, parametro oraclesimdate '// &
-       'obsoleto, usare piuttosto simpledate')
+!!$      CALL l4f_log(L4F_WARN, 'in datetime_getval, parametro oraclesimdate '// &
+!!$       'obsoleto, usare piuttosto simpledate')
       WRITE(oraclesimdate, '(I4.4,4I2.2)') lyear, lmonth, lday, lhour, lminute
     ENDIF
     IF (PRESENT(unixtime)) THEN
@@ -615,7 +637,7 @@ END SUBROUTINE datetime_getval
 
 !> Restituisce una rappresentazione carattere stampabile di un oggetto
 !! \a datetime.
-FUNCTION datetime_to_char(this) RESULT(char)
+elemental FUNCTION datetime_to_char(this) RESULT(char)
 TYPE(datetime),INTENT(IN) :: this
 
 CHARACTER(len=23) :: char
@@ -623,6 +645,17 @@ CHARACTER(len=23) :: char
 CALL getval(this, isodate=char)
 
 END FUNCTION datetime_to_char
+
+
+FUNCTION trim_datetime_to_char(in) RESULT(char)
+TYPE(datetime),INTENT(IN) :: in ! value to be represented as CHARACTER
+
+CHARACTER(len=len_trim(datetime_to_char(in))) :: char
+
+char=datetime_to_char(in)
+
+END FUNCTION trim_datetime_to_char
+
 
 
 SUBROUTINE display_datetime(this)
@@ -1112,7 +1145,7 @@ END SUBROUTINE timedelta_delete
 !! modalità desiderate. Qualsiasi combinazione dei parametri
 !! opzionali è consentita. \a oraclesimedate è
 !! obsoleto, usare piuttosto \a simpledate.
-SUBROUTINE timedelta_getval(this, year, month, amonth, day, hour, minute, msec, &
+pure SUBROUTINE timedelta_getval(this, year, month, amonth, day, hour, minute, msec, &
  ahour, aminute, amsec, isodate, simpledate, oraclesimdate)
 TYPE(timedelta),INTENT(IN) :: this !< oggetto di cui restituire il valore
 INTEGER,INTENT(OUT),OPTIONAL :: year !< anni, /=0 solo per intervalli "popolari"
@@ -1178,8 +1211,8 @@ IF (PRESENT(simpledate)) THEN
   simpledate = datebuf(1:MIN(LEN(simpledate),17))
 ENDIF
 IF (PRESENT(oraclesimdate)) THEN
-  CALL l4f_log(L4F_WARN, 'in timedelta_getval, parametro oraclesimdate '// &
-   'obsoleto, usare piuttosto simpledate')
+!!$  CALL l4f_log(L4F_WARN, 'in timedelta_getval, parametro oraclesimdate '// &
+!!$   'obsoleto, usare piuttosto simpledate')
   WRITE(oraclesimdate, '(I8.8,2I2.2)') this%iminuti/86400000_int_ll, &
    MOD(this%iminuti/3600000_int_ll, 24_int_ll), MOD(this%iminuti/60000_int_ll, 60_int_ll)
 ENDIF
@@ -1189,7 +1222,7 @@ END SUBROUTINE timedelta_getval
 
 !> Restituisce una rappresentazione carattere stampabile di un oggetto
 !! \a timedelta.
-FUNCTION timedelta_to_char(this) RESULT(char)
+elemental FUNCTION timedelta_to_char(this) RESULT(char)
 TYPE(timedelta),INTENT(IN) :: this
 
 CHARACTER(len=23) :: char
@@ -1197,6 +1230,16 @@ CHARACTER(len=23) :: char
 CALL getval(this, isodate=char)
 
 END FUNCTION timedelta_to_char
+
+
+FUNCTION trim_timedelta_to_char(in) RESULT(char)
+TYPE(timedelta),INTENT(IN) :: in ! value to be represented as CHARACTER
+
+CHARACTER(len=len_trim(timedelta_to_char(in))) :: char
+
+char=timedelta_to_char(in)
+
+END FUNCTION trim_timedelta_to_char
 
 
 !> Restituisce il valore in millisecondi totali di un oggetto \a timedelta.
@@ -1551,7 +1594,7 @@ DEALLOCATE(dateiso)
 END SUBROUTINE timedelta_vect_write_unit
 
 
-SUBROUTINE jeladata5(iday,imonth,iyear,ihour,imin,iminuti)
+elemental SUBROUTINE jeladata5(iday,imonth,iyear,ihour,imin,iminuti)
 
 !!omstart JELADATA5
 !     SUBROUTINE JELADATA5(IDAY,IMONTH,IYEAR,IHOUR,IMIN,
@@ -1568,16 +1611,17 @@ SUBROUTINE jeladata5(iday,imonth,iyear,ihour,imin,iminuti)
 !     IMINUTI           I*4     MINUTI AD INIZIARE DALLE ORE 00 DEL 1/1/1
 !!OMEND
 
-INTEGER :: iday, imonth, iyear, ihour, imin, iminuti
+INTEGER,intent(in) :: iday, imonth, iyear, ihour, imin
+INTEGER,intent(out) :: iminuti
 
 iminuti = ndays(iday,imonth,iyear)*1440+(ihour*60)+imin
 
 END SUBROUTINE jeladata5
 
 
-SUBROUTINE jeladata5_1(iday,imonth,iyear,ihour,imin,imsec,imillisec)
-INTEGER :: iday, imonth, iyear, ihour, imin, imsec
-INTEGER(KIND=int_ll) :: imillisec
+elemental SUBROUTINE jeladata5_1(iday,imonth,iyear,ihour,imin,imsec,imillisec)
+INTEGER,intent(in) :: iday, imonth, iyear, ihour, imin, imsec
+INTEGER(KIND=int_ll),intent(out) :: imillisec
 
 imillisec = INT(ndays(iday,imonth,iyear)*1440+(ihour*60)+imin, KIND=int_ll)*60000 &
  + imsec
@@ -1585,33 +1629,8 @@ imillisec = INT(ndays(iday,imonth,iyear)*1440+(ihour*60)+imin, KIND=int_ll)*6000
 END SUBROUTINE jeladata5_1
 
 
-SUBROUTINE seconds_until_date(year, month, day, hour, minute, second, asecond)
-INTEGER, INTENT(in) :: year, month, day, hour, minute, second
-INTEGER(kind=dateint), INTENT(out) :: asecond
 
-asecond = ndays(day,month,year)*sec_in_day + hour*sec_in_hour + &
- minute*sec_in_min + second
-
-END SUBROUTINE seconds_until_date
-
-
-SUBROUTINE date_until_seconds(asecond, year, month, day, hour, minute, second)
-INTEGER(kind=dateint), INTENT(in) :: asecond
-INTEGER, INTENT(out) :: year, month, day, hour, minute, second
-
-INTEGER :: aday
-
-second = MOD(asecond, sec_in_min)
-minute = MOD(asecond, sec_in_hour)/sec_in_min
-hour = MOD(asecond, sec_in_day)/sec_in_hour
-aday = asecond/sec_in_day
-! IF (MOD(iminuti,1440) < 0) igiorno = igiorno-1 !?
-CALL ndyin(aday, day, month, year)
-
-END SUBROUTINE date_until_seconds
-
-
-SUBROUTINE jeladata6(iday, imonth, iyear, ihour, imin, iminuti)
+elemental SUBROUTINE jeladata6(iday, imonth, iyear, ihour, imin, iminuti)
 
 !!omstart JELADATA6
 !     SUBROUTINE JELADATA6(IDAY,IMONTH,IYEAR,IHOUR,IMIN,
@@ -1630,7 +1649,10 @@ SUBROUTINE jeladata6(iday, imonth, iyear, ihour, imin, iminuti)
 !!OMEND
 
 
-INTEGER :: iday, imonth, iyear, ihour, imin, iminuti, igiorno
+INTEGER,intent(in)  :: iminuti
+INTEGER,intent(out) :: iday, imonth, iyear, ihour, imin
+
+INTEGER ::igiorno
 
 imin = MOD(iminuti,60)
 ihour = MOD(iminuti,1440)/60
@@ -1641,7 +1663,7 @@ CALL ndyin(igiorno,iday,imonth,iyear)
 END SUBROUTINE jeladata6
 
 
-SUBROUTINE jeladata6_1(iday, imonth, iyear, ihour, imin, imsec, imillisec)
+elemental SUBROUTINE jeladata6_1(iday, imonth, iyear, ihour, imin, imsec, imillisec)
 INTEGER(KIND=int_ll), INTENT(IN) :: imillisec
 INTEGER, INTENT(OUT) :: iday, imonth, iyear, ihour, imin, imsec
 
@@ -1659,7 +1681,7 @@ CALL ndyin(igiorno,iday,imonth,iyear)
 END SUBROUTINE jeladata6_1
 
 
-SUBROUTINE ndyin(ndays,igg,imm,iaa)
+elemental SUBROUTINE ndyin(ndays,igg,imm,iaa)
 
 !!OMSTART NDYIN
 !     SUBROUTINE NDYIN(NDAYS,IGG,IMM,IAA)
@@ -1668,30 +1690,34 @@ SUBROUTINE ndyin(ndays,igg,imm,iaa)
 !
 !!omend
 
-INTEGER :: ndays, igg, imm, iaa, n
+INTEGER,intent(in) :: ndays
+INTEGER,intent(out) :: igg, imm, iaa
+integer :: n,lndays
 
-n = ndays/d400
-ndays = ndays - n*d400
+lndays=ndays
+
+n = lndays/d400
+lndays = lndays - n*d400
 iaa = year0 + n*400
-n = MIN(ndays/d100, 3)
-ndays = ndays - n*d100
+n = MIN(lndays/d100, 3)
+lndays = lndays - n*d100
 iaa = iaa + n*100
-n = ndays/d4
-ndays = ndays - n*d4
+n = lndays/d4
+lndays = lndays - n*d4
 iaa = iaa + n*4
-n = MIN(ndays/d1, 3)
-ndays = ndays - n*d1
+n = MIN(lndays/d1, 3)
+lndays = lndays - n*d1
 iaa = iaa + n
 n = bisextilis(iaa)
 DO imm = 1, 12
-  IF (ndays < ianno(imm+1,n)) EXIT
+  IF (lndays < ianno(imm+1,n)) EXIT
 ENDDO
-igg = ndays+1-ianno(imm,n) ! +1 perche' il mese parte da 1
+igg = lndays+1-ianno(imm,n) ! +1 perche' il mese parte da 1
 
 END SUBROUTINE ndyin
 
 
-FUNCTION ndays(igg,imm,iaa)
+integer elemental FUNCTION ndays(igg,imm,iaa)
 
 !!OMSTART NDAYS
 !     FUNCTION NDAYS(IGG,IMM,IAA)
@@ -1708,7 +1734,7 @@ FUNCTION ndays(igg,imm,iaa)
 !
 !!omend
 
-INTEGER :: ndays, igg, imm, iaa
+INTEGER, intent(in) :: igg, imm, iaa
 
 INTEGER :: lmonth, lyear
 
@@ -1722,7 +1748,7 @@ ndays = ndays-1 + 365*(lyear-year0) + (lyear-year0)/4 - (lyear-year0)/100 + &
 END FUNCTION ndays
 
 
-FUNCTION bisextilis(annum)
+elemental FUNCTION bisextilis(annum)
 INTEGER,INTENT(in) :: annum
 INTEGER :: bisextilis
 
