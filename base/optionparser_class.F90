@@ -186,7 +186,14 @@ this%short_opt = short_opt
 this%long_opt = long_opt
 IF (PRESENT(help)) THEN
   ALLOCATE(this%help_msg(LEN_TRIM(help) + LEN_TRIM(default) + 1))
-  this%help_msg = fchar_to_cstr(TRIM(help)//TRIM(default))
+
+! do not work for ifort
+!  this%help_msg = fchar_to_cstr(TRIM(help)//TRIM(default))
+
+this%help_msg(1:SIZE(this%help_msg)-1) = TRANSFER(TRIM(help)//TRIM(default), &
+ this%help_msg, SIZE(this%help_msg)-1)
+this%help_msg(SIZE(this%help_msg)) = 0 ! zero-terminate
+
 ENDIF
 this%has_default = (LEN_TRIM(default) > 0)
 
