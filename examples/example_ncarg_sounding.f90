@@ -20,8 +20,8 @@
 program example_ncarg_sounding
 
 use log4fortran
-USE vol7d_dballe_class
 USE vol7d_class
+USE vol7d_dballe_class
 USE ncar_plot_class
 
 implicit none

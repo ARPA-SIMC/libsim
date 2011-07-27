@@ -116,21 +116,21 @@ category = l4f_category_get(a_name//".main")
 ! define the option parser
 opt = optionparser_new(description_msg= &
  'Vol7d transformation application, it imports a vol7d volume of sparse point data &
- &from a native vol7d file&
+ &from a native vol7d file'&
 #ifdef HAVE_DBALLE
- &, from a dbAll.e database, from a BUFR/CREX file&
+ //', from a dbAll.e database, from a BUFR/CREX file'&
 #endif
 #ifdef HAVE_ORSIM
- &, from SIM Oracle database&
+ //', from SIM Oracle database'&
 #endif
- & and exports it into a native v7d file&
+ //' and exports it into a native v7d file'&
 #ifdef HAVE_DBALLE
- &, into a BUFR/CREX file&
+ //', into a BUFR/CREX file'&
 #endif
 #ifdef HAVE_LIBGRIBAPI
- &, into a GRIB file&
+ //', into a GRIB file'&
 #endif
- &, or into a configurable formatted csv file. &
+ //', or into a configurable formatted csv file. &
  &If input-format is of file type, inputfile ''-'' indicates stdin, &
  &if input-format is of database type, inputfile specifies &
  &database access info in the form user/password@dsn, &
@@ -140,15 +140,15 @@ opt = optionparser_new(description_msg= &
 
 ! options for defining input
 CALL optionparser_add(opt, ' ', 'input-format', input_format, 'native', help= &
- 'format of input, ''native'' for vol7d native binary file&
+ 'format of input, ''native'' for vol7d native binary file'&
 #ifdef HAVE_DBALLE
- &, ''BUFR'' for BUFR file with generic template, ''CREX'' for CREX file&
- &, ''dba'' for dballe database&
+ //', ''BUFR'' for BUFR file with generic template, ''CREX'' for CREX file&
+ &, ''dba'' for dballe database'&
 #endif
 #ifdef HAVE_ORSIM
- &, ''orsim'' for SIM Oracle database&
+ //', ''orsim'' for SIM Oracle database'&
 #endif
- &')
+ )
 CALL optionparser_add(opt, 'c', 'coord-file', coord_file, help= &
  'file with coordinates of interpolation points, required if a geographical &
  &transformation is requested')
@@ -159,14 +159,14 @@ CALL optionparser_add(opt, ' ', 'coord-format', coord_format, &
 #else
  'native', &
 #endif 
- & help='format of input file with coordinates, ''native'' for vol7d native binary file&
+ & help='format of input file with coordinates, ''native'' for vol7d native binary file'&
 #ifdef HAVE_DBALLE
- &, ''BUFR'' for BUFR file, ''CREX'' for CREX file&
+ //', ''BUFR'' for BUFR file, ''CREX'' for CREX file'&
 #endif
 #ifdef HAVE_LIBSHP_FORTRAN
- &, ''shp'' for shapefile (interpolation on polygons)&
+ //', ''shp'' for shapefile (interpolation on polygons)'&
 #endif
- &')
+ )
 
 ! input database options
 CALL optionparser_add(opt, 's', 'start-date', start_date, '', help= &
@@ -243,12 +243,12 @@ CALL optionparser_add(opt, ' ', 'comp-sort', comp_sort, help= &
 CALL optionparser_add(opt, ' ', 'pre-trans-type', pre_trans_type, '', help= &
  'transformation type (sparse points to sparse points) to be applied before &
  &other computations, in the form ''trans-type:subtype''; &
- &''inter'' for interpolation, with subtypes ''near'', ''linear'', ''bilin''&
+ &''inter'' for interpolation, with subtypes ''near'', ''linear'', ''bilin'''&
 #ifdef HAVE_LIBSHP_FORTRAN
- &; ''polyinter'' for statistical processing within given polygons, &
- &with subtype ''average'', ''stddev'', ''max'', ''min''&
+ //'; ''polyinter'' for statistical processing within given polygons, '&
+ 'with subtype ''average'', ''stddev'', ''max'', ''min'''&
 #endif
- &; ''metamorphosis'' with subtype ''coordbb'' for selecting only data &
+ //'; ''metamorphosis'' with subtype ''coordbb'' for selecting only data &
  &within a given bounding box&
  &; empty for no transformation')
 #ifdef HAVE_LIBGRIBAPI
@@ -275,18 +275,18 @@ CALL optionparser_add(opt, ' ', 'flat', flat, 60.D0, help= &
 output_template = ''
 CALL optionparser_add(opt, ' ', 'output-format', output_format, 'native', help= &
  'format of output file, in the form ''name[:template]''; ''native'' for vol7d &
- &native binary format (no template to be specified)&
+ &native binary format (no template to be specified)'&
 #ifdef HAVE_DBALLE
- &; ''BUFR'' and ''CREX'' for corresponding formats, with template in the form &
+ //'; ''BUFR'' and ''CREX'' for corresponding formats, with template in the form &
  &''category.subcategory.localcategory'' or as an alias like ''synop'', ''metar'', &
- &''temp'', ''generic'', empty for ''generic''&
+ &''temp'', ''generic'', empty for ''generic'''&
 #endif
 #ifdef HAVE_LIBGRIBAPI
- &; ''grib_api'' for gridded output in grib format, template (required) is the &
+ //'; ''grib_api'' for gridded output in grib format, template (required) is the &
  &path name of a grib file in which the first message defines the output grid and &
- &is used as a template for the output grib messages, (see also post-trans-type)&
+ &is used as a template for the output grib messages, (see also post-trans-type)'&
 #endif
- &; csv for formatted csv format (no template to be specified)')
+ //'; csv for formatted csv format (no template to be specified)')
 
 ! options for configuring csv output
 CALL optionparser_add(opt, ' ', 'csv-volume', csv_volume, 'all', help= &

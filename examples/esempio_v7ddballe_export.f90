@@ -18,8 +18,8 @@
 PROGRAM v7ddballe_export
 ! Programma di esempio di lettura da file e scrittura nell'archivio DB-all.e
 
-USE vol7d_dballe_class
 USE vol7d_class
+USE vol7d_dballe_class
 
 IMPLICIT NONE
 

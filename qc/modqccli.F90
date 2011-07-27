@@ -74,10 +74,9 @@
 
 module modqccli
 
-
-use modqc
-use vol7d_class
 use geo_coord_class
+use vol7d_class
+use modqc
 use file_utilities
 use log4fortran
 use char_utilities

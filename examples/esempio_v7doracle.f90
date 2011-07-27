@@ -18,8 +18,8 @@
 PROGRAM v7doracle
 ! Programma di esempio di estrazione dall'archivio Oracle del SIM
 USE datetime_class
-USE vol7d_oraclesim_class
 USE vol7d_class
+USE vol7d_oraclesim_class
 
 IMPLICIT NONE
 

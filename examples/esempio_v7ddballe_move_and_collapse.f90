@@ -19,8 +19,8 @@ PROGRAM v7ddballe_move_and_collapse
 ! Example program to reduce to one the dimensions of levels and time without loss of data
 ! read from in.bufr and write to out.bufr
 
-USE vol7d_dballe_class
 USE vol7d_class
+USE vol7d_dballe_class
 
 IMPLICIT NONE
 

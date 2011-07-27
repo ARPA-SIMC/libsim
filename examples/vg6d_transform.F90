@@ -155,16 +155,16 @@ CALL optionparser_add(opt, ' ', 'output-format', output_format, &
 #else
 '', &
 #endif
-help='format of output file, in the form ''name[:template]''&
+help='format of output file, in the form ''name[:template]'''&
 #ifdef HAVE_LIBGRIBAPI
- &; ''grib_api'' for gridded output in grib format, template is the &
+ //'; ''grib_api'' for gridded output in grib format, template is the &
  &path name of a grib file in which the first message defines the output grid and &
- &is used as a template for the output grib messages&
+ &is used as a template for the output grib messages'&
 #endif
 #ifdef VAPOR
- &; ''vapor'' for gridded output in vdf format&
+ //'; ''vapor'' for gridded output in vdf format'&
 #endif
- &; if this option includes a template, --type &
+ //'; if this option includes a template, --type &
  &argument &c. are ignored, otherwise --type &c. define the output grid')
 
 CALL optionparser_add(opt, 'e', 'a-grid', c2agrid, help= &

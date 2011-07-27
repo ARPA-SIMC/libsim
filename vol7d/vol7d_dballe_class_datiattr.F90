@@ -23,7 +23,7 @@
                                 !print *,ind,ndatiattr/**/VOL7D_POLY_TYPES
 
 
-ind = this%vol7d%dativar%/**/VOL7D_POLY_TYPES_V/**/(iiiii)%/**/VOL7D_POLY_TYPES
+ind = this%vol7d%dativar% VOL7D_POLY_TYPES_V/**/(iiiii)% VOL7D_POLY_TYPES
 #ifdef DEBUG
 CALL l4f_category_log(this%category,L4F_DEBUG,&
      "attr " // to_char(iiiii)//"  "//to_char(ind))
@@ -37,12 +37,12 @@ if (ind > 0) then
 
 #ifdef DEBUG
          CALL l4f_category_log(this%category,L4F_DEBUG,&
-              "attr "//to_char(this%vol7d%datiattr%/**/VOL7D_POLY_TYPES/**/(inddatiattr)%btable)//" : "//&
+              "attr "//to_char(this%vol7d%datiattr% VOL7D_POLY_TYPES(inddatiattr)%btable)//" : "//&
               to_char(this%vol7d%voldatiattr/**/VOL7D_POLY_TYPES/**/(i,ii,iii,iiii,ind,iiiiii,inddatiattr)))
 #endif
 
 
-        call idba_set (this%handle, this%vol7d%datiattr%/**/VOL7D_POLY_TYPES/**/(inddatiattr)%btable,&
+        call idba_set (this%handle, this%vol7d%datiattr% VOL7D_POLY_TYPES/**/(inddatiattr)%btable,&
          this%vol7d%voldatiattr/**/VOL7D_POLY_TYPES/**/(i,ii,iii,iiii,ind,iiiiii,inddatiattr))
         writeattr=.true.
       end if

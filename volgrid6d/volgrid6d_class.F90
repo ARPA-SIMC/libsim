@@ -39,19 +39,19 @@
 !!
 !!\ingroup volgrid6d
 MODULE volgrid6d_class
+USE vol7d_level_class
+USE vol7d_timerange_class
+USE vol7d_class
+USE grid_transform_class
 USE geo_proj_class
 USE grid_class
-USE grid_transform_class
 USE datetime_class
-USE vol7d_timerange_class
-USE vol7d_level_class
 USE volgrid6d_var_class
 USE log4fortran
 USE array_utilities
 USE grid_id_class
 USE gridinfo_class
 USE optional_values
-USE vol7d_class
 !USE file_utilities
 IMPLICIT NONE
 

@@ -20,9 +20,9 @@
 PROGRAM v7d_plot_sound
 
 use log4fortran
+USE vol7d_class
 USE vol7d_dballe_class
 USE vol7d_class_compute
-USE vol7d_class
 USE ncar_plot_class
 USE optionparser_class
 USE err_handling

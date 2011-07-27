@@ -1,7 +1,7 @@
 if GRIB
 lib_LTLIBRARIES = libsim_grib.la
 libsim_grib_la_SOURCES =
-AM_FCFLAGS = -I../base
+AM_FCFLAGS = -I../base -I../log4fortran
 libsim_grib_la_LIBADD = ../base/libsim_base.la 
 
 if VERSIONINFO

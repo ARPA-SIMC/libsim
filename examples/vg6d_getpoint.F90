@@ -18,6 +18,7 @@
 PROGRAM vg6d_getpoint
 #include "config.h"
 use log4fortran
+USE vol7d_class
 use volgrid6d_class
 use grid_class
 use grid_transform_class
@@ -28,7 +29,6 @@ USE vol7d_dballe_class
 #ifdef HAVE_LIBGRIBAPI
 USE grib_api_csv
 #endif
-USE vol7d_class
 use optionparser_class
 USE io_units
 USE geo_coord_class
@@ -71,11 +71,11 @@ category=l4f_category_get(a_name//".main")
 ! define the option parser
 opt = optionparser_new(description_msg= &
  'Grib to sparse points transformation application. It reads grib edition 1 and 2, &
- &interpolates data over specified points and exports data into a native v7d file&
+ &interpolates data over specified points and exports data into a native v7d file'&
 #ifdef HAVE_DBALLE
- &, or into a BUFR/CREX file&
+ //', or into a BUFR/CREX file'&
 #endif
- &.', usage_msg='Usage: vg6d_getpoint [options] inputfile outputfile')
+ //'.', usage_msg='Usage: vg6d_getpoint [options] inputfile outputfile')
 
 ! define command-line options
 ! options for transformation
@@ -93,28 +93,28 @@ CALL optionparser_add(opt, ' ', 'coord-format', coord_format, &
 #else
 'native', &
 #endif 
-& help='format of input file with coordinates, ''native'' for vol7d native binary file &
+& help='format of input file with coordinates, ''native'' for vol7d native binary file '&
 #ifdef HAVE_DBALLE
- &, ''BUFR'' for BUFR file, ''CREX'' for CREX file&
+ //', ''BUFR'' for BUFR file, ''CREX'' for CREX file'&
 #endif
 #ifdef HAVE_LIBSHP_FORTRAN
- &, ''shp'' for shapefile (interpolation on polygons)&
+ //', ''shp'' for shapefile (interpolation on polygons)'&
 #endif
- &')
+ )
 CALL optionparser_add(opt, 'v', 'trans-type', trans_type, 'inter', help= &
  'transformation type, ''inter'' for interpolation, ''metamorphosis'' &
- &for keeping the same data but changing the container from grib to v7d&
+ &for keeping the same data but changing the container from grib to v7d'&
 #ifdef HAVE_LIBSHP_FORTRAN
- &, ''polyinter'' for statistical processing within given polygons&
+ //', ''polyinter'' for statistical processing within given polygons'&
 #endif
- &')
+ )
 CALL optionparser_add(opt, 'z', 'sub-type', sub_type, 'bilin', help= &
  'transformation subtype, for inter: ''near'', ''bilin'',&
- & for metamorphosis: ''all'', ''coordbb''&
+ & for metamorphosis: ''all'', ''coordbb'''&
 #ifdef HAVE_LIBSHP_FORTRAN
- &, for ''polyinter'': ''average'', ''stddev'', ''max'', ''min''&
+ //', for ''polyinter'': ''average'', ''stddev'', ''max'', ''min'''&
 #endif
-&')
+)
 
 CALL optionparser_add(opt, 'a', 'ilon', ilon, 0.0D0, help= &
  'longitude of the southwestern bounding box corner')
@@ -140,14 +140,14 @@ CALL optionparser_add(opt, 'f', 'output-format', output_format, &
 #else
 'native', &
 #endif 
-& help='format of output file, ''native'' for vol7d native binary format&
+& help='format of output file, ''native'' for vol7d native binary format'&
 #ifdef HAVE_DBALLE
- &, ''BUFR'' for BUFR with generic template, ''CREX'' for CREX format&
+ //', ''BUFR'' for BUFR with generic template, ''CREX'' for CREX format'&
 #endif
 #ifdef HAVE_LIBGRIBAPI
- &, ''grib_api_csv'' for an ASCII csv file with grib_api keys as columns&
+ //', ''grib_api_csv'' for an ASCII csv file with grib_api keys as columns'&
 #endif
- &')
+ )
 #ifdef HAVE_DBALLE
 CALL optionparser_add(opt, 't', 'output-template', output_template, 'generic', help= &
  'output template for BUFR/CREX, in the form ''category.subcategory.localcategory'',&

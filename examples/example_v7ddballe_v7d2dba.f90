@@ -18,9 +18,9 @@
 PROGRAM v7ddballe_2bufr
 ! Programma di esempio di estrazione e scrittura dall'archivio DB-all.e
 USE datetime_class
-USE vol7d_dballe_class
-USE vol7d_class
 USE log4fortran
+USE vol7d_class
+USE vol7d_dballe_class
 
 IMPLICIT NONE
 

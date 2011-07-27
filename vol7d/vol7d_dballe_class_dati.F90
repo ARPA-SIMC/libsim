@@ -34,31 +34,31 @@ do iiiii=1,ndativar/**/VOL7D_POLY_TYPES_V
   if (.not.lvar/**/VOL7D_POLY_TYPES_V/**/(iiiii)) cycle
   if (.not.c_e(this%vol7d%voldati/**/VOL7D_POLY_TYPES_V(i,ii,iii,iiii,iiiii,iiiiii))) cycle
     
-  !print*,"scrivo",this%vol7d%dativar%/**/VOL7D_POLY_TYPES_V(iiiii)%btable,&
+  !print*,"scrivo",this%vol7d%dativar% VOL7D_POLY_TYPES_V(iiiii)%btable,&
   ! this%vol7d%voldati/**/VOL7D_POLY_TYPES_V(i,ii,iii,iiii,iiiii,iiiiii)
 
   if (lattr_only) then
                                 !print*,i,ii,iii,iiii,iiiiii
                                 !print*,"context_id -->",this%data_id(i,ii,iii,iiii,iiiiii)
     if (.not. c_e(this%data_id(i,ii,iii,iiii,iiiiii))) cycle
-    if (.not. c_e(this%vol7d%dativar%/**/VOL7D_POLY_TYPES_V(iiiii)%btable )) cycle
+    if (.not. c_e(this%vol7d%dativar% VOL7D_POLY_TYPES_V(iiiii)%btable )) cycle
 
     !print*,"*context_id",this%data_id(i,ii,iii,iiii,iiiiii)
-    !print*,"*var_related",this%vol7d%dativar%/**/VOL7D_POLY_TYPES_V(iiiii)%btable
+    !print*,"*var_related",this%vol7d%dativar% VOL7D_POLY_TYPES_V(iiiii)%btable
 
     call idba_set (this%handle,"*context_id",this%data_id(i,ii,iii,iiii,iiiiii))
-    call idba_set (this%handle,"*var_related",this%vol7d%dativar%/**/VOL7D_POLY_TYPES_V(iiiii)%btable )
+    call idba_set (this%handle,"*var_related",this%vol7d%dativar% VOL7D_POLY_TYPES_V(iiiii)%btable )
 
   else
 
 
 #ifdef DEBUG
      CALL l4f_category_log(this%category,L4F_DEBUG,"setto: "&
-          //to_char(this%vol7d%dativar%/**/VOL7D_POLY_TYPES_V(iiiii)%btable)//' '// &
+          //to_char(this%vol7d%dativar% VOL7D_POLY_TYPES_V(iiiii)%btable)//' '// &
           to_char(this%vol7d%voldati/**/VOL7D_POLY_TYPES_V(i,ii,iii,iiii,iiiii,iiiiii)))
 #endif
 
-    call idba_set (this%handle,this%vol7d%dativar%/**/VOL7D_POLY_TYPES_V(iiiii)%btable , &
+    call idba_set (this%handle,this%vol7d%dativar% VOL7D_POLY_TYPES_V(iiiii)%btable , &
      this%vol7d%voldati/**/VOL7D_POLY_TYPES_V(i,ii,iii,iiii,iiiii,iiiiii))
     write =.true.
 
@@ -101,8 +101,8 @@ do iiiii=1,ndativar/**/VOL7D_POLY_TYPES_V
       call idba_critica (this%handle)
     end if
       
-    !print*,"unset",this%vol7d%dativar%/**/VOL7D_POLY_TYPES_V(iiiii)%btable 
-    call idba_unset (this%handle,this%vol7d%dativar%/**/VOL7D_POLY_TYPES_V(iiiii)%btable )
+    !print*,"unset",this%vol7d%dativar% VOL7D_POLY_TYPES_V(iiiii)%btable 
+    call idba_unset (this%handle,this%vol7d%dativar% VOL7D_POLY_TYPES_V(iiiii)%btable )
     
   end if
   

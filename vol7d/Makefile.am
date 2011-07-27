@@ -43,9 +43,9 @@ endif
 noinst_HEADERS = vol7d_class_type_templ.F90 vol7d_class_desc_templ.F90 \
 vol7d_oraclesim_class_vartable.F90 \
 vol7d_class_diff.F90 vol7d_class_diff_only.F90 \
-vol7d_dballe_class_nana.f90 vol7d_dballe_class_ndati.f90 \
+vol7d_dballe_class_nana.F90 vol7d_dballe_class_ndati.F90 \
 vol7d_dballe_class_dati.F90 vol7d_dballe_class_datiattr.F90 \
-vol7d_dballe_class_ana.F90 vol7d_dballe_class_anaattr.F90 vol7d_dballe_class_var_du.f90
+vol7d_dballe_class_ana.F90 vol7d_dballe_class_anaattr.F90 vol7d_dballe_class_var_du.F90
 
 # c'e` una maniera migliore?
 tmpvar1 = $(libsim_vol7d_la_SOURCES:oraclesim.c=)
@@ -72,13 +72,13 @@ endif
 
 if DBALLE
 vol7d_dballe_class.$(OBJEXT): vol7d_class.$(OBJEXT) \
-vol7d_dballe_class_nana.f90 vol7d_dballe_class_ndati.f90 \
+vol7d_dballe_class_nana.F90 vol7d_dballe_class_ndati.F90 \
 vol7d_dballe_class_dati.F90 vol7d_dballe_class_datiattr.F90 \
-vol7d_dballe_class_ana.F90 vol7d_dballe_class_anaattr.F90 vol7d_dballe_class_var_du.f90
+vol7d_dballe_class_ana.F90 vol7d_dballe_class_anaattr.F90 vol7d_dballe_class_var_du.F90
 vol7d_dballe_class.lo: vol7d_class.$(OBJEXT) \
-vol7d_dballe_class_nana.f90 vol7d_dballe_class_ndati.f90 \
+vol7d_dballe_class_nana.F90 vol7d_dballe_class_ndati.F90 \
 vol7d_dballe_class_dati.F90 vol7d_dballe_class_datiattr.F90 \
-vol7d_dballe_class_ana.F90 vol7d_dballe_class_anaattr.F90  vol7d_dballe_class_var_du.f90
+vol7d_dballe_class_ana.F90 vol7d_dballe_class_anaattr.F90  vol7d_dballe_class_var_du.F90
 endif
 
 if NETCDF
