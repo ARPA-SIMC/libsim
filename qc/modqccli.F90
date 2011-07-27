@@ -575,16 +575,16 @@ do indana=1,size(qccli%v7d%ana)
 !!$                   //" "//trim(to_char(mese))//" "//trim(to_char(altezza))//" "//trim(to_char(level)))
 !!$                  
 
-!!  TODO gestire gli estremi ....
-
-                    if ( datoqui >= climaquii .and. datoqui < climaquif ) then
+                    if ( (datoqui >= climaquii .and. datoqui < climaquif) .or. &
+                         (indcana == 1 .and. datoqui < climaquif) .or. &
+                         (indcana == size(qccli%clima%ana)-1 .and. datoqui >= climaquii) ) then
                     
 #ifdef DEBUG
                       if(qccli%clima%voldatiattrb(indcana,indctime,indclevel,indctimerange,indcdativarr,indcnetwork,1) < 10 )then
-                        call l4f_log (L4F_INFO,"data ndi:                   "//t2c(datoqui)//"->"//&
+                        call l4f_log (L4F_DEBUG,"data ndi:                   "//t2c(datoqui)//"->"//&
                          t2c(qccli%clima%voldatiattrb(indcana,indctime,indclevel,indctimerange,indcdativarr,indcnetwork,1))&
                          //" : "//t2c(qccli%v7d%time(indtime)))
-                        call l4f_log (L4F_INFO,"percentile: "//t2c(indcana)//":"//t2c(qccli%clima%ana(indcana)% ident)//&
+                        call l4f_log (L4F_DEBUG,"percentile: "//t2c(indcana)//":"//t2c(qccli%clima%ana(indcana)% ident)//&
                          " : "//t2c(climaquii)//" - "//t2c(climaquif)//" : "//t2c(qccli%clima%time(indctime))) 
                       end if
 #endif

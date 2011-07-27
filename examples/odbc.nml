@@ -1,5 +1,0 @@
- $odbc
-   database='test1',
-   user='test',
-   password=''
- $end
