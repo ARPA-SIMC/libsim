@@ -51,11 +51,11 @@ category=l4f_category_get(a_name//".main")
 ! Define what you want to QC
 !------------------------------------------------------------------------
 
-var=(/"B13011"/)                ! variables to elaborate
+var=(/"B12101"/)                ! variables to elaborate
 
                                 ! Definisco le date iniziale e finale
-CALL init(ti, year=2009, month=05, day=1, hour=00)
-CALL init(tf, year=2009, month=12, day=30, hour=00)
+CALL init(ti, year=2011, month=05, day=1, hour=00)
+CALL init(tf, year=2011, month=05, day=30, hour=00)
 
 !------------------------------------------------------------------------
 ! read the namelist to define DSN
@@ -81,7 +81,7 @@ CALL init(v7ddballe,dsn=database,user=user,password=password,write=.true.,wipe=.
 call l4f_category_log(category,L4F_INFO,"start data import")
 
 CALL import(v7ddballe,var=var,varkind=(/("r",i=1,size(var))/),&
- anavar=(/"B07001"/),anavarkind=(/"i"/),&
+ anavar=(/"B07030"/),anavarkind=(/"r"/),&
  attr=(/"*B33196","*B33192"/),attrkind=(/"b","b"/)&
  ,timei=ti,timef=tf,coordmin=coordmin,coordmax=coordmax)
 
@@ -93,9 +93,12 @@ call l4f_category_log(category,L4F_INFO,"start QC")
                                 ! chiamiamo il "costruttore" per il Q.C.
 
 call init(v7dqccli,v7ddballe%vol7d,var,timei=ti,timef=tf,coordmin=coordmin,coordmax=coordmax,&
- data_id_in=v7ddballe%data_id,categoryappend="base")
+ data_id_in=v7ddballe%data_id, dsn="test", user="test", categoryappend="base")
+! data_id_in=v7ddballe%data_id, dsn="qccli", user="qc", password="qc", categoryappend="base")
 
+print *,"ecco"
 call display(v7dqccli%clima)
+print *,"fine"
 
 call alloc(v7dqccli)
 
@@ -106,6 +109,8 @@ call quaconcli(v7dqccli)
 call l4f_category_log(category,L4F_INFO,"end QC")
 
 call l4f_category_log(category,L4F_INFO,"start export data")
+
+call display(v7ddballe%vol7d)
 
 CALL export(v7ddballe,attr_only=.true.)
 
