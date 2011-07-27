@@ -35,9 +35,22 @@ string  = 'teztit' ; pattern = 'tez*t*t'
 write(*,*) 'String: ', string, '- pattern: ', pattern, ' - match: ', &
  match(string,pattern)
 
-!
-! Two pattern match problems that might pose difficulties
-!
+string  = 'BOX-0108BOX-0308' ; pattern = 'BOX-0108BOX-03*'
+write(*,*) 'String: ', string, '- pattern: ', pattern, ' - match: ', &
+ match(string,pattern)
+
+
+print *,"Two pattern match problems that might pose difficulties"
+
+
+string  = 'BOX-0108BOX-0308' ; pattern = 'BOX-0108BOX-03??'
+write(*,*) 'String: ', trim(string), '- pattern: ', trim(pattern), ' - match: ', &
+ match(trim(string),trim(pattern))
+
+string  = 'BOX-0108BOX-030' ; pattern = 'BOX-0108BOX-03?'
+write(*,*) 'String: ', trim(string), '- pattern: ', trim(pattern), ' - match: ', &
+ match(trim(string),trim(pattern))
+
 string  = 'abcde ' ; pattern = '*e *'
 write(*,*) 'String: ', string, '- pattern: ', pattern, ' - match: ', &
  match(string(1:6),pattern)
