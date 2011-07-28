@@ -103,6 +103,7 @@ TYPE optionparser
   PRIVATE
   INTEGER(kind=int_b),POINTER :: usage_msg(:), description_msg(:)
   TYPE(arrayof_option) :: options
+  LOGICAL :: httpmode=.FALSE.
 END TYPE optionparser
 
 
@@ -159,18 +160,6 @@ CHARACTER(len=*) :: default
 CHARACTER(len=*),OPTIONAL :: help
 TYPE(option) :: this
 
-!this%short_opt = short_opt
-!this%long_opt = long_opt
-!this%opttype = -1
-!this%need_arg = .FALSE.
-!NULLIFY(this%help_msg)
-!NULLIFY(this%destc)
-!NULLIFY(this%desti)
-!NULLIFY(this%destr)
-!NULLIFY(this%destd)
-!NULLIFY(this%destl)
-!NULLIFY(this%destcount)
-
 IF (short_opt == '' .AND. long_opt == '') THEN
 #ifdef DEBUG
 ! programmer error condition, option empty
@@ -185,15 +174,7 @@ ENDIF
 this%short_opt = short_opt
 this%long_opt = long_opt
 IF (PRESENT(help)) THEN
-  ALLOCATE(this%help_msg(LEN_TRIM(help) + LEN_TRIM(default) + 1))
-
-! do not work for ifort
-!  this%help_msg = fchar_to_cstr(TRIM(help)//TRIM(default))
-
-this%help_msg(1:SIZE(this%help_msg)-1) = TRANSFER(TRIM(help)//TRIM(default), &
- this%help_msg, SIZE(this%help_msg)-1)
-this%help_msg(SIZE(this%help_msg)) = 0 ! zero-terminate
-
+  CALL fchar_to_cstr_alloc(TRIM(help)//TRIM(default), this%help_msg)
 ENDIF
 this%has_default = (LEN_TRIM(default) > 0)
 
@@ -705,6 +686,7 @@ myoption%opttype = opttype_html
 myoption%need_arg = .FALSE.
 
 i = arrayof_option_append(this%options, myoption)
+this%httpmode = .TRUE. ! program may run as a web application
 
 END SUBROUTINE optionparser_add_html
 
