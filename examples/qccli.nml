@@ -1,13 +1,16 @@
  $odbc
-   database='test1',
+   dsnc='test',
+   userc='test',
+   passwordc=''
+   dsn='test1',
    user='test',
    password=''
  $end
 
  $minmax
-   years=2011, months=05, days=1,
-   years=2011, months=05, daye=15,
-   lons=9.16, lats=43.70,
+   years=2011, months=05, days=10, hours=6,
+   yeare=2011, monthe=05, daye=10, houre=18,
+   lons=9.16,  lats=43.70,
    lone=12.84, late=45.2
  $end
 

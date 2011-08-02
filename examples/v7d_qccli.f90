@@ -37,11 +37,12 @@ type(vol7d_dballe) :: v7ddballe
 
 integer, parameter :: maxvar=10
 character(len=6) :: var(maxvar)=cmiss   ! variables to elaborate
-character(len=19) :: database='test',user='test',password=''
-integer :: years=2011,months=5,days=1,hours=00,yeare=2011,monthe=05,daye=2,houre=00,nvar=0
-doubleprecision :: lons=9.16_fp_geo,lats=43.70_fp_geo,lone=12.84_fp_geo,late=45.2_fp_geo
+character(len=19) :: dsn='test1',user='test',password=''
+character(len=19) :: dsnc='test',userc='test',passwordc=''
+integer :: years=imiss,months=imiss,days=imiss,hours=imiss,yeare=imiss,monthe=imiss,daye=imiss,houre=imiss,nvar=0
+doubleprecision :: lons=dmiss,lats=dmiss,lone=dmiss,late=dmiss
 
-namelist /odbc/   database,user,password       ! namelist to define DSN
+namelist /odbc/   dsn,user,password,dsnc,userc,passwordc       ! namelist to define DSN
 namelist /minmax/ years,months,days,hours,lons,lats,yeare,monthe,daye,houre,lone,late
 namelist /varlist/ var
 
@@ -74,21 +75,12 @@ close(10)
 ! Define what you want to QC
 !------------------------------------------------------------------------
 
-
 nvar=count(c_e(var))
 
 if (nvar == 0) then
-  var(1)="B12101"
-  nvar=1
+    call l4f_category_log(category,L4F_ERROR,"0 variables defined")
+    call raise_error()
 end if
-
-print *,"elaborate: ",(var(i)," ",i=1,nvar)
-
-!!$if (nvar > maxvar )then
-!!$    call l4f_category_log(category,L4F_ERROR,"max number of variable to QC is: "//t2c(maxvar))
-!!$    call raise_error()
-!!$end if
-
                                 ! Definisco le date iniziale e finale
 CALL init(ti, year=years, month=months, day=days, hour=hours)
 CALL init(tf, year=yeare, month=monthe, day=daye, hour=houre)
@@ -97,14 +89,22 @@ CALL init(coordmin,lat=lats,lon=lons)
 CALL init(coordmax,lat=late,lon=lone)
 
 
+!------------------------------------------------------------------------
 call l4f_category_log(category,L4F_INFO,"QC on "//t2c(nvar)//" variables")
-
-
+do i=1,nvar
+  call l4f_category_log(category,L4F_INFO,"QC on "//var(i)//" variable")
+enddo
+if (c_e(lons)) call l4f_category_log(category,L4F_INFO,"QC on "//t2c(lons)//" lon min value")
+if (c_e(lone)) call l4f_category_log(category,L4F_INFO,"QC on "//t2c(lone)//" lon max value")
+if (c_e(lats)) call l4f_category_log(category,L4F_INFO,"QC on "//t2c(lats)//" lat min value")
+if (c_e(late)) call l4f_category_log(category,L4F_INFO,"QC on "//t2c(late)//" lat max value")
+if (c_e(ti))   call l4f_category_log(category,L4F_INFO,"QC on "//t2c(ti)//" datetime min value")
+if (c_e(tf))   call l4f_category_log(category,L4F_INFO,"QC on "//t2c(tf)//" datetime max value")
 !------------------------------------------------------------------------
 
 
                                 ! Chiamo il costruttore della classe vol7d_dballe per il mio oggetto in import
-CALL init(v7ddballe,dsn=database,user=user,password=password,write=.true.,wipe=.false.,categoryappend="QCtarget")
+CALL init(v7ddballe,dsn=dsn,user=user,password=password,write=.true.,wipe=.false.,categoryappend="QCtarget")
 
 call l4f_category_log(category,L4F_INFO,"start data import")
 
@@ -113,16 +113,14 @@ CALL import(v7ddballe,var=var(:nvar),varkind=(/("r",i=1,nvar)/),&
  attr=(/"*B33196","*B33192"/),attrkind=(/"b","b"/)&
  ,timei=ti,timef=tf,coordmin=coordmin,coordmax=coordmax)
 
-call display(v7ddballe%vol7d)
+!call display(v7ddballe%vol7d)
 call l4f_category_log(category,L4F_INFO,"end data import")
 
 call l4f_category_log(category,L4F_INFO,"start QC")
 
                                 ! chiamiamo il "costruttore" per il Q.C.
-
 call init(v7dqccli,v7ddballe%vol7d,var(:nvar),timei=ti,timef=tf,coordmin=coordmin,coordmax=coordmax,&
- data_id_in=v7ddballe%data_id, dsn="test", user="test", categoryappend="base")
-! data_id_in=v7ddballe%data_id, dsn="qccli", user="qc", password="qc", categoryappend="base")
+ data_id_in=v7ddballe%data_id, dsn=dsnc, user=userc, categoryappend="clima")
 
 !call display(v7dqccli%clima)
 
@@ -132,11 +130,10 @@ call l4f_category_log(category,L4F_INFO,"start climat QC")
 
 call quaconcli(v7dqccli)
 
-call l4f_category_log(category,L4F_INFO,"end QC")
-
+call l4f_category_log(category,L4F_INFO,"end climat QC")
 call l4f_category_log(category,L4F_INFO,"start export data")
 
-call display(v7ddballe%vol7d)
+!call display(v7ddballe%vol7d)
 
 CALL export(v7ddballe,attr_only=.true.)
 

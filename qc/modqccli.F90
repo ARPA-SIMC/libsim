@@ -167,7 +167,8 @@ character(len=512) :: ldsn
 character(len=512) :: luser
 character(len=512) :: lpassword
 TYPE(datetime) :: ltimei, ltimef
-integer :: yeari, yearf, month, day, hour, minute, msec
+integer :: yeari, yearf, monthi, monthf, dayi, dayf,&
+ houri, minutei, mseci, hourf, minutef, msecf
 #endif
  
 integer :: istat,iuni,i,j
@@ -202,16 +203,27 @@ call init(qccli%clima)
 call optio(climapath,filepath)
 
 #ifdef HAVE_DBALLE
-call getval  (timei, yeari, month, day, hour, minute, msec) 
-call init(ltimei, 1001, month, day, hour, minute, msec) 
 
-call getval  (timef, yearf, month, day, hour, minute, msec) 
-call init(ltimef, 1001, month, day, hour, minute, msec) 
+ltimei=datetime_miss
+ltimef=datetime_miss
+if (present (timei)) ltimei=timei
+if (present (timef)) ltimef=timef
+ 
+call getval  (ltimei+timedelta_new(minute=30), yeari, monthi, dayi, houri, minutei, mseci)
+call getval  (ltimef+timedelta_new(minute=30), yearf, monthf, dayf, hourf, minutef, msecf)
 
-! if you span years I real all the climat dataset (should be optimized)
-if ( yeari /= yearf ) then
+if ( yeari == yearf .and. monthi == monthf .and. dayi == dayf) then
+
+  call init(ltimei, 1001, monthi, 1, houri, minutei, mseci) 
+  call init(ltimef, 1001, monthf, 1, hourf, minutef, msecf) 
+  ltimei = ltimei +timedelta_new(minute=30)
+  ltimef = ltimef +timedelta_new(minute=30)
+
+else
+                                ! if you span years or months or days I read all the climat dataset (should be optimized not so easy)
   ltimei=datetime_miss
   ltimef=datetime_miss
+
 end if
 
 call optio(dsn,ldsn)
