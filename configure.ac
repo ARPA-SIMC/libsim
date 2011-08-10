@@ -33,6 +33,8 @@ if test "x$enableval" = "xyes"; then
 AC_DEFINE(F2003_FEATURES, 1, [Enable some F2003 features])
 fi
 
+AC_PROG_CXX()
+
 dnl Locate Fortran 90 compiler among these if not specified
 AC_PROG_FC([gfortran pgf90 ifort g95 xlf90 f90])
 F77=$FC
@@ -185,7 +187,6 @@ if test "x$enableval" = "xyes"; then
   if test "x$f2003_iso_c" = "xno"; then
     AC_MSG_ERROR([VAPOR support requires a fortran compiler with iso_c_binding])
   fi
-  AC_PROG_CXX()
   AC_MSG_RESULT([vapor code included])
   AC_DEFINE(VAPOR, 1, [Enable vapor code])
   VAPOR_CPPFLAGS="-I/usr/include/vapor -I/usr/include/netcdf"
