@@ -21,7 +21,7 @@ end subroutine register_pentolone
 
 integer function  bolli(bin,bout,in,out)
   CHARACTER(len=10),intent(in) :: bin(npar) !< table B  WMO
-  CHARACTER(len=10),intent(out) :: bout(npar) !<  table B  WMO
+  CHARACTER(len=10),intent(in) :: bout(npar) !<  table B  WMO
   real, intent(in) :: in(npar)
   real, intent(out) :: out(npar)
 
@@ -46,7 +46,7 @@ end function bolli_def
 
 integer function mescola(bin,bout,in,out)
   CHARACTER(len=10),intent(in) :: bin(npar) !< table B  WMO
-  CHARACTER(len=10),intent(out) :: bout(npar) !<  table B  WMO
+  CHARACTER(len=10),intent(in) :: bout(npar) !<  table B  WMO
   real, intent(in) :: in(npar)
   real, intent(out) :: out(npar)
 
@@ -71,7 +71,7 @@ end function mescola_def
 
 integer function friggi(bin,bout,in,out)
   CHARACTER(len=10),intent(in) :: bin(npar) !< table B  WMO
-  CHARACTER(len=10),intent(out) :: bout(npar) !<  table B  WMO
+  CHARACTER(len=10),intent(in) :: bout(npar) !<  table B  WMO
   real, intent(in) :: in(npar)
   real, intent(out) :: out(npar)
 
@@ -97,11 +97,11 @@ end function friggi_def
 
 integer function gira(bin,bout,in,out)
   CHARACTER(len=10),intent(in) :: bin(npar) !< table B  WMO
-  CHARACTER(len=10),intent(out) :: bout(npar) !<  table B  WMO
+  CHARACTER(len=10),intent(in) :: bout(npar) !<  table B  WMO
   real, intent(in) :: in(npar)
   real, intent(out) :: out(npar)
 
-  out(1)=2.
+  out(1)=4.
   gira=0
 
 end function gira

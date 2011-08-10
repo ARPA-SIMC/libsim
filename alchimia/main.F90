@@ -10,7 +10,7 @@ type(fnds) :: vfn(nfunc),myvfn(nmaxfunc)
 integer :: i
 
 character(len=10), allocatable:: mybin(:),mybout(:)
-real :: myin(5)=1.,myout(1)=rmiss
+real :: myin(6)=0.,myout(1)=rmiss
 
 call init(vfn)
 call register_pentolone(vfn)

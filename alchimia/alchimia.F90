@@ -13,7 +13,7 @@ abstract interface
   integer function elabora(bbin,bbout,iin,oout)
   import 
   CHARACTER(len=10),intent(in) :: bbin(npar) !< table B  WMO
-  CHARACTER(len=10),intent(out) :: bbout(npar) !<  table B  WMO
+  CHARACTER(len=10),intent(in) :: bbout(npar) !<  table B  WMO
   real, intent(in) :: iin(npar)
   real, intent(out) :: oout(npar)
   end function elabora
@@ -286,9 +286,15 @@ integer :: status,i
 
 do i=size(mayvfn),1,-1
 
-  status= mayvfn(i)%fn(mayvfn(i)%bin,mayvfn(i)%bout,myin,myout)
-  !if (status /= 0 ) call raise_error("error on function: "//trim(mayvfn(i)%name))
-  if (status /= 0 ) print *,"error on function: "//trim(mayvfn(i)%name)
+  if (c_e(mayvfn(i))) then
+    status= mayvfn(i)%fn(mayvfn(i)%bin,mayvfn(i)%bout,myin,myout)
+    !if (status /= 0 ) call raise_error("error on function: "//trim(mayvfn(i)%name))
+    if (status /= 0 ) print *,"error on function: "//trim(mayvfn(i)%name)
+    !  stop 2
+    print *,"make",i,mayvfn(i)%bin,mayvfn(i)%bout
+    print *,"    ",myin,myout
+
+  end if
 
 end do
 
