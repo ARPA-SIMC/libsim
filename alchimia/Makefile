@@ -16,7 +16,7 @@ FC=gfortran
 PROGRAMS=main
 
 
-OBJECTS=kinds.o missing_values.o optional_values.o alchimia.o pentolone.o forno.o 
+OBJECTS=kinds.o missing_values.o optional_values.o alchimia.o pentolone.o forno.o
 #OBJECTS=alchimia.o pentolone.o  forno.o 
 
 
@@ -24,21 +24,18 @@ all  : $(PROGRAMS)
 
 $(PROGRAMS)  : $(OBJECTS)
 
-pentolone.o forno.o : alchimia.o
+pentolone.o forno.o mini.o: alchimia.o
 
 clean :
 	$(RM) $(PROGRAMS) $(addsuffix .o,$(PROGRAMS))  $(OBJECTS)
 
 
 %.o: %.f90
-	export LD_LIBRARY_PATH=/opt/gcc-4.6-20101016/lib/
 	$(FC) -c $(FFLAGS) $<
 
 %.o: %.F90
-	export LD_LIBRARY_PATH=/opt/gcc-4.6-20101016/lib/
 	$(FC) -c $(FFLAGS) $<
 
 %: %.o
-	export LD_LIBRARY_PATH=/opt/gcc-4.6-20101016/lib/
 	$(FC)  -o $@ $< $(LDFLAGS) $(OBJECTS) $(LDLIBS)
 

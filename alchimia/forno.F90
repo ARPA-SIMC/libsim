@@ -4,14 +4,11 @@ USE alchimia
 
 IMPLICIT NONE
 
-integer, parameter :: forno_nfunc=4
-
-
 contains
 
 subroutine register_forno(vfn)
 
-  type(fnds),intent(inout) :: vfn(:)
+  type(fndsv),intent(inout) :: vfn
 
   call fnregister(vfn,inforna_def())
   call fnregister(vfn,rosola_def())
@@ -21,16 +18,14 @@ subroutine register_forno(vfn)
 end subroutine register_forno
 
 
-integer function  inforna(bin,bout,in,out)
-  CHARACTER(len=10),intent(in) :: bin(npar) !< table B  WMO
-  CHARACTER(len=10),intent(in) :: bout(npar) !<  table B  WMO
-  real, intent(in) :: in(npar)
-  real, intent(out) :: out(npar)
+subroutine  inforna(bin,bout,in,out)
+  CHARACTER(len=10),intent(in) :: bin(:) !< table B  WMO
+  CHARACTER(len=10),intent(in) :: bout(:) !<  table B  WMO
+  real, intent(in) :: in(:,:)
+  real, intent(out) :: out(:,:)
 
-  out(1)=5.
-  inforna=0
-
- end function inforna
+  out=5.
+end subroutine inforna
 
 type(fnds) function inforna_def()
   call init(inforna_def,"inforna",&
@@ -40,16 +35,15 @@ end function inforna_def
 
 
 
-integer function rosola(bin,bout,in,out)
-  CHARACTER(len=10),intent(in) :: bin(npar) !< table B  WMO
-  CHARACTER(len=10),intent(in) :: bout(npar) !<  table B  WMO
-  real, intent(in) :: in(npar)
-  real, intent(out) :: out(npar)
+subroutine rosola(bin,bout,in,out)
+  CHARACTER(len=10),intent(in) :: bin(:) !< table B  WMO
+  CHARACTER(len=10),intent(in) :: bout(:) !<  table B  WMO
+  real, intent(in) :: in(:,:)
+  real, intent(out) :: out(:,:)
 
-  out(1)=6.
-  rosola=0
+  out=6.
 
-end function rosola
+end subroutine rosola
 
 type(fnds) function rosola_def()
   call init(rosola_def,"rosola",&
@@ -58,16 +52,15 @@ type(fnds) function rosola_def()
 end function rosola_def
 
 
-integer function ripassa(bin,bout,in,out)
-  CHARACTER(len=10),intent(in) :: bin(npar) !< table B  WMO
-  CHARACTER(len=10),intent(in) :: bout(npar) !<  table B  WMO
-  real, intent(in) :: in(npar)
-  real, intent(out) :: out(npar)
+subroutine ripassa(bin,bout,in,out)
+  CHARACTER(len=10),intent(in) :: bin(:) !< table B  WMO
+  CHARACTER(len=10),intent(in) :: bout(:) !<  table B  WMO
+  real, intent(in) :: in(:,:)
+  real, intent(out) :: out(:,:)
 
-  out(1)=7.
-  ripassa=0
+  out=7.
 
-end function ripassa
+end subroutine ripassa
 
 type(fnds) function ripassa_def()
   call init(ripassa_def,"ripassa",&
@@ -76,16 +69,15 @@ type(fnds) function ripassa_def()
 end function ripassa_def
 
 
-integer function brucia(bin,bout,in,out)
-  CHARACTER(len=10),intent(in) :: bin(npar) !< table B  WMO
-  CHARACTER(len=10),intent(in) :: bout(npar) !<  table B  WMO
-  real, intent(in) :: in(npar)
-  real, intent(out) :: out(npar)
+subroutine brucia(bin,bout,in,out)
+  CHARACTER(len=10),intent(in) :: bin(:) !< table B  WMO
+  CHARACTER(len=10),intent(in) :: bout(:) !<  table B  WMO
+  real, intent(in) :: in(:,:)
+  real, intent(out) :: out(:,:)
 
-  out(1)=8.
-  brucia=0
+  out=8.
 
-end function brucia
+end subroutine brucia
 
 type(fnds) function brucia_def()
   call init(brucia_def,"brucia",&

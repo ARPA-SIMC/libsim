@@ -4,47 +4,34 @@ USE forno
 USE pentolone
 
 IMPLICIT NONE
-
-integer, parameter :: nfunc=pentolone_nfunc+forno_nfunc
-type(fnds) :: vfn(nfunc),myvfn(nmaxfunc)
 integer :: i
-
+integer, parameter :: ndat=100
+type(fndsv) :: vfn,myvfn
 character(len=10), allocatable:: mybin(:),mybout(:)
-real :: myin(6)=0.,myout(1)=rmiss
+real,allocatable :: myin(:,:),myout(:,:)
 
-call init(vfn)
 call register_pentolone(vfn)
 call register_forno(vfn)
-call init(myvfn)
 
-!!$print *, "in"
-!!$do i =1,size(vfn)
-!!$   if (c_e(vfn(i)))  print *,vfn(i)
-!!$end do
-
-allocate(mybin(6),mybout(1))
-mybin  = [character(len=10)::"acqua","olio","patate","sale","pollo","mais"]
-mybout = [character (len=10) :: "pole.pata."]
-!!$mybin  = (/"acqua     ","olio      ","patate    ","sale      ","pollo     ","mais      "/)
-!!$mybout = (/"pole.pata."/)
+mybin  = [character(len=10)::"acqua","olio","patate","sale","pollo","mais","gommosa"]
+mybout = [character (len=10) :: "pole.pata.","lesso"]
 
 print *,"Ho a disposizione:  ",mybin
 print *,"Devo preparare:     ",mybout
 
-
-if (oracle(mybin,mybout,vfn,myvfn)) then
-
-  print *, "Ecco la ricetta:"
-  do i =size(myvfn),1,-1
-    if (c_e(myvfn(i)))  call display(myvfn(i))
-  end do
-
-  call make(myvfn,mybin,mybout,myin,myout)
-
-else
-
+if (.not. oracle(mybin,mybout,vfn,myvfn)) then
   print*, " non riesco a fare ",mybout
-
+  stop 3
 end if
+
+call display(myvfn)
+print *,"mi occorrono ",myvfn%nout," variabili in piu"
+
+
+allocate(myin(ndat,size(mybin)))
+myin=1.5
+allocate(myout(ndat,myvfn%nout))
+myout=rmiss
+call make(myvfn,mybin,mybout,myin,myout)
 
 end program cucina

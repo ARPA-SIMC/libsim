@@ -3,13 +3,11 @@ module pentolone
 USE alchimia
 IMPLICIT NONE
 
-integer, parameter :: pentolone_nfunc=4
-
 contains
 
 subroutine register_pentolone(vfn)
 
-  type(fnds),intent(inout) :: vfn(:)
+  type(fndsv),intent(inout) :: vfn
 
   call fnregister(vfn,bolli_def())
   call fnregister(vfn,mescola_def())
@@ -19,16 +17,15 @@ subroutine register_pentolone(vfn)
 end subroutine register_pentolone
 
 
-integer function  bolli(bin,bout,in,out)
-  CHARACTER(len=10),intent(in) :: bin(npar) !< table B  WMO
-  CHARACTER(len=10),intent(in) :: bout(npar) !<  table B  WMO
-  real, intent(in) :: in(npar)
-  real, intent(out) :: out(npar)
+subroutine  bolli(bin,bout,in,out)
+  CHARACTER(len=10),intent(in) :: bin(:) !< table B  WMO
+  CHARACTER(len=10),intent(in) :: bout(:) !<  table B  WMO
+  real, intent(in) :: in(:,:)
+  real, intent(out) :: out(:,:)
 
-  out(1)=1.
-  bolli=0
+  out=1.
 
-end function bolli
+end subroutine bolli
 
 type(fnds) function bolli_def()
 
@@ -38,29 +35,28 @@ type(fnds) function bolli_def()
 !!$
   call init(bolli_def,"bolli",&
        [character(len=10) :: "pollo","gommosa"],&
-       [character(len=10) :: "brodo"],0,func=bolli)
+       [character(len=10) :: "brodo","lesso"],0,func=bolli)
        ![character(len=10) :: "brodo"],0)
 
 end function bolli_def
 
 
-integer function mescola(bin,bout,in,out)
-  CHARACTER(len=10),intent(in) :: bin(npar) !< table B  WMO
-  CHARACTER(len=10),intent(in) :: bout(npar) !<  table B  WMO
-  real, intent(in) :: in(npar)
-  real, intent(out) :: out(npar)
+subroutine mescola(bin,bout,in,out)
+  CHARACTER(len=10),intent(in) :: bin(:) !< table B  WMO
+  CHARACTER(len=10),intent(in) :: bout(:) !<  table B  WMO
+  real, intent(in) :: in(:,:)
+  real, intent(out) :: out(:,:)
 
-  out(1)=2.
-  mescola=0
+  out=2.
 
-end function mescola
+end subroutine mescola
 
 
 type(fnds) function mescola_def()
 
   call init(mescola_def,"mescola",&
        [character(len=10) :: "mais","sale","acqua"],&
-       [character(len=10) :: "polenta"],0,func=mescola)
+       [character(len=10) :: "polenta","sudore"],0,func=mescola)
 !!$
 !!$  call init(mescola_def,"mescola",&
 !!$       (/"mais      ","sale      ","acqua     "/),&
@@ -69,16 +65,15 @@ type(fnds) function mescola_def()
 end function mescola_def
 
 
-integer function friggi(bin,bout,in,out)
-  CHARACTER(len=10),intent(in) :: bin(npar) !< table B  WMO
-  CHARACTER(len=10),intent(in) :: bout(npar) !<  table B  WMO
-  real, intent(in) :: in(npar)
-  real, intent(out) :: out(npar)
+subroutine friggi(bin,bout,in,out)
+  CHARACTER(len=10),intent(in) :: bin(:) !< table B  WMO
+  CHARACTER(len=10),intent(in) :: bout(:) !<  table B  WMO
+  real, intent(in) :: in(:,:)
+  real, intent(out) :: out(:,:)
 
-  out(1)=3.
-  friggi=0
+  out=3.
 
-end function friggi
+end subroutine friggi
 
 
 type(fnds) function friggi_def()
@@ -95,16 +90,15 @@ end function friggi_def
 
 
 
-integer function gira(bin,bout,in,out)
-  CHARACTER(len=10),intent(in) :: bin(npar) !< table B  WMO
-  CHARACTER(len=10),intent(in) :: bout(npar) !<  table B  WMO
-  real, intent(in) :: in(npar)
-  real, intent(out) :: out(npar)
+subroutine gira(bin,bout,in,out)
+  CHARACTER(len=10),intent(in) :: bin(:) !< table B  WMO
+  CHARACTER(len=10),intent(in) :: bout(:) !<  table B  WMO
+  real, intent(in) :: in(:,:)
+  real, intent(out) :: out(:,:)
 
-  out(1)=4.
-  gira=0
+  out=4.
 
-end function gira
+end subroutine gira
 
 
 type(fnds) function gira_def()
@@ -115,6 +109,7 @@ type(fnds) function gira_def()
 !!$  call init(gira_def,"gira",&
 !!$       (/"mais      ","sale      "/),&
 !!$       (/"broda     "/),0)
+
 
 end function gira_def
 
