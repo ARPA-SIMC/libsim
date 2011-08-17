@@ -4,13 +4,27 @@ libsim_termolib_la_SOURCES =  termolib.f90
 AM_FCFLAGS = -I../base
 libsim_termolib_la_LIBADD = ../base/libsim_base.la
 
+if ALCHIMIA
+
+libsim_termolib_la_SOURCES +=  termo.F03
+# Opzioni Fortran (-I... sono da considerarsi opzioni fortran
+# e non del preprocessore perche' servono per USE e non per #include)
+AM_FCFLAGS += -I../alchimia
+libsim_termolib_la_LIBADD += ../alchimia/libsim_alchimia.la
+
+endif
+
+
 if VERSIONINFO
 libsim_termolib_la_LDFLAGS = -version-info @LIBSIM_VERSION_INFO@
 endif
 
+
 # c'e` una maniera migliore?
 tmpvar = $(libsim_termolib_la_SOURCES:.f90=.mod)
-nodist_include_HEADERS = $(tmpvar:.F90=.mod)
+tmpvar1 = $(tmpvar:.f03=.mod)
+tmpvar2 = $(tmpvar1:.F03=.mod)
+nodist_include_HEADERS = $(tmpvar2:.F90=.mod)
 
 
 mostlyclean-compile:

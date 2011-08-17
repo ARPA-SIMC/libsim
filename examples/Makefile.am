@@ -182,10 +182,15 @@ vg6d_subarea_LDADD = ../volgrid6d/libsim_volgrid6d.la ../base/libsim_base.la ../
 endif
 
 if ALCHIMIA
-noinst_PROGRAMS += example_alchimia
+noinst_PROGRAMS += example_alchimia example_alchimiavg6d
 
 example_alchimia_SOURCES = example_alchimia.f03
-example_alchimia_LDADD = ../alchimia/libsim_alchimia.la  ../volgrid6d/libsim_volgrid6d.la ../base/libsim_base.la ../vol7d/libsim_vol7d.la ../log4fortran/liblog4fortran.la
+example_alchimia_LDADD = ../alchimia/libsim_alchimia.la  ../log4fortran/liblog4fortran.la
+
+
+example_alchimiavg6d_SOURCES = example_alchimiavg6d.f03
+example_alchimiavg6d_LDADD = ../alchimia/libsim_alchimia.la  ../volgrid6d/libsim_volgrid6d.la ../base/libsim_base.la ../vol7d/libsim_vol7d.la ../termolib/libsim_termolib.la ../log4fortran/liblog4fortran.la
+
 endif
 
 

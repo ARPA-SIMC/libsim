@@ -11,13 +11,13 @@ libsim_alchimia_la_SOURCES = alchimia.F03 pentolone.F03 forno.F03
 
 # Opzioni Fortran (-I... sono da considerarsi opzioni fortran
 # e non del preprocessore perche' servono per USE e non per #include)
-AM_FCFLAGS = -I../log4fortran -I../base -I../vol7d -I../volgrid6d
+AM_FCFLAGS = -I../log4fortran -I../base
 # Opzioni linker
 AM_LDFLAGS =
 libsim_alchimia_la_LDFLAGS =
 # Librerie aggiuntive
 libsim_alchimia_la_LIBADD = ../log4fortran/liblog4fortran.la \
- ../base/libsim_base.la ../vol7d/libsim_vol7d.la ../volgrid6d/libsim_volgrid6d.la
+ ../base/libsim_base.la 
 
 
 # c'e` una maniera migliore?

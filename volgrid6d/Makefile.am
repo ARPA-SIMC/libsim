@@ -42,6 +42,13 @@ include_HEADERS += vdf4f_c.h
 endif
 
 
+if ALCHIMIA
+libsim_volgrid6d_la_SOURCES += volgrid6d_alchimia_class.F03
+AM_FCFLAGS += -I../alchimia
+libsim_volgrid6d_la_LIBADD += ../alchimia/libsim_alchimia.la
+endif
+
+
 # c'e` una maniera migliore?
 tmpvar = $(libsim_volgrid6d_la_SOURCES:.f90=.mod)
 tmpvar1 = $(tmpvar:.f03=.mod)
