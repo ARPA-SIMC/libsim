@@ -17,9 +17,11 @@ subroutine register_pentolone(vfn)
 end subroutine register_pentolone
 
 
-subroutine  bolli(bin,bout,in,out)
-  CHARACTER(len=10),intent(in) :: bin(:) !< table B  WMO
-  CHARACTER(len=10),intent(in) :: bout(:) !<  table B  WMO
+subroutine  bolli(mybin,mybout,bin,bout,in,out)
+  CHARACTER(len=10),intent(in) :: mybin(:)  !< vector table B  WMO input  in user's data
+  CHARACTER(len=10),intent(in) :: mybout(:) !< vector table B  WMO output in user's data
+  CHARACTER(len=10),intent(in) :: bin(:)    !< vector table B  WMO input used by function
+  CHARACTER(len=10),intent(in) :: bout(:)   !< vector table B  WMO output used by function
   real, intent(in) :: in(:,:)
   real, intent(out) :: out(:,:)
 
@@ -41,9 +43,11 @@ type(fnds) function bolli_def()
 end function bolli_def
 
 
-subroutine mescola(bin,bout,in,out)
-  CHARACTER(len=10),intent(in) :: bin(:) !< table B  WMO
-  CHARACTER(len=10),intent(in) :: bout(:) !<  table B  WMO
+subroutine mescola(mybin,mybout,bin,bout,in,out)
+  CHARACTER(len=10),intent(in) :: mybin(:)  !< vector table B  WMO input  in user's data
+  CHARACTER(len=10),intent(in) :: mybout(:) !< vector table B  WMO output in user's data
+  CHARACTER(len=10),intent(in) :: bin(:)    !< vector table B  WMO input used by function
+  CHARACTER(len=10),intent(in) :: bout(:)   !< vector table B  WMO output used by function
   real, intent(in) :: in(:,:)
   real, intent(out) :: out(:,:)
 
@@ -65,9 +69,11 @@ type(fnds) function mescola_def()
 end function mescola_def
 
 
-subroutine friggi(bin,bout,in,out)
-  CHARACTER(len=10),intent(in) :: bin(:) !< table B  WMO
-  CHARACTER(len=10),intent(in) :: bout(:) !<  table B  WMO
+subroutine friggi(mybin,mybout,bin,bout,in,out)
+  CHARACTER(len=10),intent(in) :: mybin(:)  !< vector table B  WMO input  in user's data
+  CHARACTER(len=10),intent(in) :: mybout(:) !< vector table B  WMO output in user's data
+  CHARACTER(len=10),intent(in) :: bin(:)    !< vector table B  WMO input used by function
+  CHARACTER(len=10),intent(in) :: bout(:)   !< vector table B  WMO output used by function
   real, intent(in) :: in(:,:)
   real, intent(out) :: out(:,:)
 
@@ -90,9 +96,11 @@ end function friggi_def
 
 
 
-subroutine gira(bin,bout,in,out)
-  CHARACTER(len=10),intent(in) :: bin(:) !< table B  WMO
-  CHARACTER(len=10),intent(in) :: bout(:) !<  table B  WMO
+subroutine gira(mybin,mybout,bin,bout,in,out)
+  CHARACTER(len=10),intent(in) :: mybin(:)  !< vector table B  WMO input  in user's data
+  CHARACTER(len=10),intent(in) :: mybout(:) !< vector table B  WMO output in user's data
+  CHARACTER(len=10),intent(in) :: bin(:)    !< vector table B  WMO input used by function
+  CHARACTER(len=10),intent(in) :: bout(:)   !< vector table B  WMO output used by function
   real, intent(in) :: in(:,:)
   real, intent(out) :: out(:,:)
 

@@ -199,6 +199,19 @@ fi
 AM_CONDITIONAL(VAPOR, test "x$enableval" = "xyes")
 
 
+AC_ARG_ENABLE(alchimia, AC_HELP_STRING([--enable-alchimia],
+  [enable derived variables]),,[enableval=no])dnl default disable
+if test "x$enableval" = "xyes"; then
+  if test "x$f2003_iso_c" = "xno"; then
+    AC_MSG_ERROR([ALCHIMIA support requires a fortran compiler with 2003 features])
+  fi
+  AC_MSG_RESULT([alchimia code included])
+  AC_DEFINE(ALCHIMIA, 1, [Enable alchimia code])
+else
+  AC_MSG_RESULT([alchimia code not included])
+fi
+AM_CONDITIONAL(ALCHIMIA, test "x$enableval" = "xyes")
+
 
 AC_LANG_PUSH(Fortran)dnl Do the following checks in Fortran
 
@@ -408,6 +421,7 @@ doc/Doxyfile
 doc/Makefile
 log4fortran/Makefile
 graphics/Makefile
+alchimia/Makefile
 ])
 
 AC_OUTPUT

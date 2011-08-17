@@ -129,7 +129,7 @@ END INTERFACE
 private
 
 PUBLIC volgrid6d,init,delete,export,import,compute,transform, &
- wind_rot,wind_unrot,vg6d_c2a,display
+ wind_rot,wind_unrot,vg6d_c2a,display,volgrid6d_alloc,volgrid6d_alloc_vol
 
 
 CONTAINS

@@ -1,4 +1,4 @@
-AM_FCFLAGS = -I../base -I../grib -I../volgrid6d -I../vol7d -I../qc -I../termolib -I../log4fortran  -I../graphics
+AM_FCFLAGS = -I../base -I../grib -I../volgrid6d -I../vol7d -I../qc -I../termolib -I../log4fortran  -I../graphics -I../alchimia
 EXTRA_DIST = log4crc
 bin_PROGRAMS =
 
@@ -181,6 +181,14 @@ vg6d_subarea_SOURCES = vg6d_subarea.F90
 vg6d_subarea_LDADD = ../volgrid6d/libsim_volgrid6d.la ../base/libsim_base.la ../vol7d/libsim_vol7d.la ../log4fortran/liblog4fortran.la
 endif
 
+if ALCHIMIA
+noinst_PROGRAMS += example_alchimia
+
+example_alchimia_SOURCES = example_alchimia.f03
+example_alchimia_LDADD = ../alchimia/libsim_alchimia.la  ../volgrid6d/libsim_volgrid6d.la ../base/libsim_base.la ../vol7d/libsim_vol7d.la ../log4fortran/liblog4fortran.la
+endif
+
+
 if HELP2MAN
 
 man_MANS = v7d_transform.1 vg6d_getpoint.1 vg6d_transform.1
@@ -193,6 +201,7 @@ if NCARG
 man_MANS += v7d_plot_sound.1
 endif
 endif
+
 
 %.1: %
 	help2man --name=$< --section=1 --no-info --output=$@ ./$<
