@@ -2,6 +2,7 @@ module volgrid6d_alchimia_class
 
 USE volgrid6d_class
 USE alchimia
+USE grid_id_class
 
 implicit NONE
 
@@ -19,7 +20,7 @@ type(fndsv),intent(inout) :: mayvfn
 character(len=*),intent(in) :: mybin(:),mybout(:)
 type(volgrid6d),intent(in) :: vg6din
 type(volgrid6d),intent(out) :: vg6dout
-integer :: i,nx,ny,nlevel,ntime,ntimerange,nvar,nvarin,ilevel,itime,itimerange
+integer :: i,nx,ny,nlevel,ntime,ntimerange,nvar,nvarin,ilevel,itime,itimerange,ivar,ivarin,ivarout
 real,allocatable :: myin(:,:),myout(:,:)
 
 nx=size(vg6din%voldati,1)
@@ -49,6 +50,14 @@ do i=size(mayvfn%fnds),1,-1
           myout=rmiss
           call mayvfn%fnds(i)%fn(mybin,mybout,mayvfn%fnds(i)%bin,mayvfn%fnds(i)%bout,myin,myout)
           vg6dout%voldati(:,:,ilevel,itime,itimerange,:)=reshape(myout,(/nx,ny,nvar/))
+          do ivar=1, size(mayvfn%fnds(i)%bout)
+            ivarin  = index(mybin,mayvfn%fnds(i)%bin(1))
+            ivarout = index(mybout,mayvfn%fnds(i)%bout(ivar))
+            call copy (vg6din%gaid(ilevel,itime,itimerange,ivarin), vg6dout%gaid(ilevel,itime,itimerange,ivarout))
+
+            call grib_set(grid_id_get_gaid(vg6dout%gaid(ilevel,itime,itimerange,ivarout)),"bitsPerValue",24)
+
+          end do
         end do
       end do
     end do

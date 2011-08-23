@@ -479,7 +479,7 @@ convert = volgrid6d_var_miss
 IF (PRESENT(c_func)) c_func = conv_func_miss
 
 CALL l4f_log(L4F_WARN, 'varbufr2vargrib: variable '// &
- varbufr%btable//" : "//trim(varbufr%description)//" : "//trim(varbufr%unit)// &
+ trim(varbufr%btable)//" : "//trim(varbufr%description)//" : "//trim(varbufr%unit)// &
  ' not found in table')
 
 END FUNCTION varbufr2vargrib_convert

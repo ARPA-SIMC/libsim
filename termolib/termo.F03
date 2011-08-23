@@ -27,14 +27,14 @@ subroutine  t_p2pt(mybin,mybout,bin,bout,in,out)
   real, intent(in) :: in(:,:)
   real, intent(out) :: out(:,:)
 
-  out(:,1)=o(in(:,1),in(:,2))
+  out(:,index(mybout,bout(1)))=o(in(:,index(mybin,bin(1))),in(:,index(mybin,bin(2))))
 
 end subroutine t_p2pt
 
 type(fnds) function t_p2pt_def()
   call init(t_p2pt_def,"t_p2pt",&
-       [character(len=10) :: "B12002","B10004"],&
-       [character(len=10) :: "B12103"],0,func=t_p2pt)
+       [character(len=10) :: "B12101","B10004"],&
+       [character(len=10) :: "B12192"],0,func=t_p2pt)
 end function t_p2pt_def
 
 end module termo
