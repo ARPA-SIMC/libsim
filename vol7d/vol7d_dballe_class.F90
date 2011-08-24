@@ -77,9 +77,6 @@ USE array_utilities
 use log4fortran
 
 IMPLICIT NONE
-PRIVATE
-PUBLIC vol7d_dballe, init, delete, import, export, vol7d_dballe_set_var_du, &
- vol7d_dballe_import_dballevar
 
 include "dballef.h"
 
@@ -167,7 +164,9 @@ type record
 
 END TYPE record
 
-
+PRIVATE
+PUBLIC vol7d_dballe, init, delete, import, export, vol7d_dballe_set_var_du, &
+ vol7d_dballe_import_dballevar
 
 CONTAINS
 

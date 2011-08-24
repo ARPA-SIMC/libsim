@@ -27,7 +27,7 @@ subroutine  t_p2pt(mybin,mybout,bin,bout,in,out)
   real, intent(in) :: in(:,:)
   real, intent(out) :: out(:,:)
 
-  out(:,index(mybout,bout(1)))=o(in(:,index(mybin,bin(1))),in(:,index(mybin,bin(2))))
+  out(:,index(mybout,bout(1)))=o(in(:,index(mybin,bin(1))),in(:,index(mybin,bin(2)))/100.)
 
 end subroutine t_p2pt
 

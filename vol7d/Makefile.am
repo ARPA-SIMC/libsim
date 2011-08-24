@@ -47,6 +47,12 @@ vol7d_dballe_class_nana.F90 vol7d_dballe_class_ndati.F90 \
 vol7d_dballe_class_dati.F90 vol7d_dballe_class_datiattr.F90 \
 vol7d_dballe_class_ana.F90 vol7d_dballe_class_anaattr.F90 vol7d_dballe_class_var_du.F90
 
+if ALCHIMIA
+libsim_vol7d_la_SOURCES += vol7d_alchimia_class.F03
+AM_FCFLAGS += -I../alchimia
+libsim_vol7d_la_LIBADD += ../alchimia/libsim_alchimia.la
+endif
+
 # c'e` una maniera migliore?
 tmpvar1 = $(libsim_vol7d_la_SOURCES:oraclesim.c=)
 tmpvar = $(tmpvar1:.f90=.mod)

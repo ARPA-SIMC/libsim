@@ -55,7 +55,9 @@ do i=size(mayvfn%fnds),1,-1
             ivarout = index(mybout,mayvfn%fnds(i)%bout(ivar))
             call copy (vg6din%gaid(ilevel,itime,itimerange,ivarin), vg6dout%gaid(ilevel,itime,itimerange,ivarout))
 
+#ifdef HAVE_LIBGRIBAPI
             call grib_set(grid_id_get_gaid(vg6dout%gaid(ilevel,itime,itimerange,ivarout)),"bitsPerValue",24)
+#endif
 
           end do
         end do
