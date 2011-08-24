@@ -68,8 +68,8 @@
 !!\todo Bisognerebbe validare il volume sottoposto al controllo per vedere se ha i requisiti.
 !!\todo La lettura da file formato bufr non funziona non gestendo la lettura degli attributi.
 !!
-!! Programma Esempio del controllo climatico per le precipitazioni:
-!! \include  esempio_qccli.f90
+!! Programma Esempio del controllo climatico:
+!! \include  v7d_qccli.f90
 
 
 module modqccli
