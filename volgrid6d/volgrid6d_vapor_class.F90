@@ -48,8 +48,8 @@ contains
 !! Write bg6d volume in wavelet vapor file.
 subroutine volgrid6d_export_to_vapor (this,normalize,rzscan,filename,filename_auto)
 
-TYPE(volgrid6d),INTENT(IN) :: this !< volume volgrid6d to write
-logical,intent(in) :: normalize !<  if true normalize variables to v7d (dballe) standard
+TYPE(volgrid6d),INTENT(INOUT) :: this !< volume volgrid6d to write
+logical,intent(in) :: normalize !<  if true normalize variables to v7d (dballe) standard changing this in output
 logical,intent(in),optional :: rzscan      !<  if true reverse Z (level) order in vdf export
 character(len=*),intent(in),optional :: filename !< file name to write
 character(len=*),intent(out),optional :: filename_auto !< generated  file name if "filename" is missing
@@ -126,6 +126,7 @@ if (c_e(ntime) .and. c_e(ntimerange) .and. c_e(nlevel) .and. c_e(nvar)) then
                                 ! Rescale valid data according to variable conversion table
       IF (ASSOCIATED(c_func)) THEN
 
+        call l4f_category_log(this%category,L4F_INFO,"normalize is activated, so the volume data are changed in output")
         DO ivar = 1, nvar
           this%voldati(:,:,:,:,:,ivar) = convert(c_func(ivar),this%voldati(:,:,:,:,:,ivar))
         ENDDO
