@@ -97,7 +97,7 @@ print *,"mi occorrono ",myvfn%nout," variabili in piu"
 
 call make(myvfn,mybin,mybout,myin%vol7d,myout%vol7d)
 
-myout%vol7d%dativar%r(:)%btable=mybout
+!myout%vol7d%dativar%r(:)%btable=mybout
 
 call export(myout,template="generic")
 

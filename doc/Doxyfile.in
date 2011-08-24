@@ -474,7 +474,7 @@ WARN_LOGFILE           =
 # directories like "/usr/src/myproject". Separate the files or directories 
 # with spaces.
 
-INPUT                  = @srcdir@ @top_srcdir@/base @top_srcdir@/vol7d @top_srcdir@/grib @top_srcdir@/qc @top_srcdir@/log4fortran @top_srcdir@/volgrid6d
+INPUT                  = @srcdir@ @top_srcdir@/base @top_srcdir@/vol7d @top_srcdir@/grib @top_srcdir@/qc @top_srcdir@/log4fortran @top_srcdir@/volgrid6d @top_srcdir@/alchimia
 
 #INPUT = @top_srcdir@/src/main @top_srcdir@/doc/general @top_srcdir@/src/datatypes/Mesh.F90 @top_srcdir@/src/utils
 
@@ -485,7 +485,7 @@ INPUT                  = @srcdir@ @top_srcdir@/base @top_srcdir@/vol7d @top_srcd
 # *.c *.cc *.cxx *.cpp *.c++ *.java *.ii *.ixx *.ipp *.i++ *.inl *.h *.hh *.hxx 
 # *.hpp *.h++ *.idl *.odl *.cs *.php *.php3 *.inc *.m *.mm *.py
 
-FILE_PATTERNS          = *.dox *.f90 *.F90
+FILE_PATTERNS          = *.dox *.f90 *.F90 *.f03 *.F03
 
 # The RECURSIVE tag can be used to turn specify whether or not subdirectories 
 # should be searched for input files as well. Possible values are YES and NO. 
@@ -556,7 +556,7 @@ INPUT_FILTER           =
 # info on how filters are used. If FILTER_PATTERNS is empty, INPUT_FILTER 
 # is applied to all files.
 
-FILTER_PATTERNS        = *.F90=./fpp
+FILTER_PATTERNS        = *.F90=./fpp *.F03=./fpp
 #FILTER_PATTERNS        = *.F90="cpp -lang-fortran -traditional-cpp -D_LANGUAGE_FORTRAN"
 
 # If the FILTER_SOURCE_FILES tag is set to YES, the input filter (if set using 
