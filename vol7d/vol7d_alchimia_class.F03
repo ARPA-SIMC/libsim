@@ -10,7 +10,7 @@ interface make
 end interface
 
 private
-public make
+public make , alchemy
 
 contains
 
@@ -103,5 +103,77 @@ end do
 deallocate (myin)
 
 end subroutine make_v7d
+
+
+
+subroutine alchemy(myin,vfn,mybout,myout)
+
+character(len=10),intent(in) :: mybout(:)
+type(fndsv),intent(in) :: vfn
+type(vol7d),intent(inout) :: myin
+type(vol7d),intent(out) :: myout
+
+integer :: i,ivar,nbin,nbinn
+type(fndsv) :: myvfn
+character(len=10), allocatable:: mybin(:)
+character(len=255) :: filenamein,filenameout
+
+nbin=0
+
+if (associated(myin%dativar%r)) nbin = nbin + size(myin%dativar%r)
+if (associated(myin%dativar%i)) nbin = nbin + size(myin%dativar%i)
+if (associated(myin%dativar%d)) nbin = nbin + size(myin%dativar%d)
+if (associated(myin%dativar%b)) nbin = nbin + size(myin%dativar%b)
+if (associated(myin%dativar%c)) nbin = nbin + size(myin%dativar%c)
+
+allocate (mybin(nbin))
+
+print*, nbin
+
+nbin=0
+if (associated(myin%dativar%r)) then
+  nbinn=nbin+size(myin%dativar%r)
+  mybin(nbin+1:nbinn) = myin%dativar%r(:)%btable
+  nbin=nbinn
+end if
+
+if (associated(myin%dativar%i)) then
+  nbinn=nbin+size(myin%dativar%i)
+  mybin(nbin+1:nbinn) = myin%dativar%i(:)%btable
+  nbin=nbinn
+end if
+
+if (associated(myin%dativar%d)) then
+  nbinn=nbin+size(myin%dativar%d)
+  mybin(nbin+1:nbinn) = myin%dativar%d(:)%btable
+  nbin=nbinn
+end if
+
+if (associated(myin%dativar%b)) then
+  nbinn=nbin+size(myin%dativar%b)
+  mybin(nbin+1:nbinn) = myin%dativar%b(:)%btable
+  nbin=nbinn
+end if
+
+if (associated(myin%dativar%c)) then
+  nbinn=nbin+size(myin%dativar%c)
+  mybin(nbin+1:nbinn) = myin%dativar%c(:)%btable
+end if
+
+print *,"Ho a disposizione:  ",mybin
+print *,"Devo preparare:     ",mybout
+
+if (.not. oracle(mybin,mybout,vfn,myvfn)) then
+  print*, " non riesco a fare ",mybout
+  stop 3
+end if
+
+call display(myvfn)
+print *,"mi occorrono ",myvfn%nout," variabili in piu"
+
+call make(myvfn,mybin,mybout,myin,myout)
+
+end subroutine alchemy
+
 
 end module vol7d_alchimia_class
