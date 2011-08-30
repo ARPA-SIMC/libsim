@@ -3,6 +3,7 @@ module volgrid6d_alchimia_class
 USE volgrid6d_class
 USE alchimia
 USE grid_id_class
+USE array_utilities
 
 implicit NONE
 
@@ -51,8 +52,8 @@ do i=size(mayvfn%fnds),1,-1
           call mayvfn%fnds(i)%fn(mybin,mybout,mayvfn%fnds(i)%bin,mayvfn%fnds(i)%bout,myin,myout)
           vg6dout%voldati(:,:,ilevel,itime,itimerange,:)=reshape(myout,(/nx,ny,nvar/))
           do ivar=1, size(mayvfn%fnds(i)%bout)
-            ivarin  = index(mybin,mayvfn%fnds(i)%bin(1))
-            ivarout = index(mybout,mayvfn%fnds(i)%bout(ivar))
+            ivarin  = index_c(mybin,mayvfn%fnds(i)%bin(1))
+            ivarout = index_c(mybout,mayvfn%fnds(i)%bout(ivar))
             call copy (vg6din%gaid(ilevel,itime,itimerange,ivarin), vg6dout%gaid(ilevel,itime,itimerange,ivarout))
 
 #ifdef HAVE_LIBGRIBAPI

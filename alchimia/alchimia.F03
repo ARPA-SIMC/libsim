@@ -95,7 +95,7 @@ end interface
 !!$PUBLIC insert, append, remove, packarray
 !!$PUBLIC insert_unique, append_unique
 private
-public fndsv,make,init,c_e,display,delete,fnregister,oracle
+public fnds,fndsv,make,init,c_e,display,delete,fnregister,oracle
 
 contains
 

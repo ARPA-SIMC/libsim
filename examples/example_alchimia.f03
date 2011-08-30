@@ -3,6 +3,7 @@ program cucina
 USE alchimia
 USE forno
 USE pentolone
+USE missing_values
 
 IMPLICIT NONE
 integer :: i
