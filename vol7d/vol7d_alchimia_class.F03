@@ -9,8 +9,12 @@ interface make
    module procedure  make_v7d
 end interface
 
+interface alchemy
+   module procedure  alchemy_v7d
+end interface
+
 private
-public make , alchemy
+public make, alchemy
 
 contains
 
@@ -106,7 +110,7 @@ end subroutine make_v7d
 
 
 
-subroutine alchemy(myin,vfn,mybout,myout)
+subroutine alchemy_v7d(myin,vfn,mybout,myout)
 
 character(len=10),intent(in) :: mybout(:)
 type(fndsv),intent(in) :: vfn
@@ -127,8 +131,6 @@ if (associated(myin%dativar%b)) nbin = nbin + size(myin%dativar%b)
 if (associated(myin%dativar%c)) nbin = nbin + size(myin%dativar%c)
 
 allocate (mybin(nbin))
-
-print*, nbin
 
 nbin=0
 if (associated(myin%dativar%r)) then
@@ -173,7 +175,7 @@ print *,"mi occorrono ",myvfn%nout," variabili in piu"
 
 call make(myvfn,mybin,mybout,myin,myout)
 
-end subroutine alchemy
+end subroutine alchemy_v7d
 
 
 end module vol7d_alchimia_class

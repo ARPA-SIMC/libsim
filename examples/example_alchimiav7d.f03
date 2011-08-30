@@ -8,7 +8,6 @@ USE vol7d_alchimia_class
 USE vol7d_var_class
 use log4fortran
 
-
 IMPLICIT NONE
 type(fndsv) :: vfn
 character(len=10), allocatable:: mybout(:)

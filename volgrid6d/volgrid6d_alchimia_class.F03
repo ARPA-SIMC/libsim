@@ -4,6 +4,8 @@ USE volgrid6d_class
 USE alchimia
 USE grid_id_class
 USE array_utilities
+USE volgrid6d_var_class
+USE vol7d_var_class
 
 implicit NONE
 
@@ -11,8 +13,12 @@ interface make
    module procedure  make_vg6d
 end interface
 
+interface alchemy
+   module procedure  alchemy_vg6d
+end interface
+
 private
-public make
+public make, alchemy
 
 contains
 
@@ -68,5 +74,83 @@ do i=size(mayvfn%fnds),1,-1
 end do
 
 end subroutine make_vg6d
+
+
+subroutine alchemy_vg6d(myin,vfn,mybout,myout)
+
+character(len=10),intent(in) :: mybout(:)
+type(fndsv),intent(in) :: vfn
+type(volgrid6d),intent(inout) :: myin(:)
+type(volgrid6d),intent(out),pointer ::myout(:)
+
+
+integer :: i,nvar,ivar
+type(fndsv) :: myvfn
+character(len=10), allocatable:: mybin(:)
+TYPE(vol7d_var),allocatable :: varv7d(:)
+TYPE(volgrid6d_var),allocatable :: varvg6d(:)
+TYPE(conv_func), pointer :: c_func(:)
+
+
+allocate(myout(size(myin)))
+
+do i=1,size(myin)
+
+  nvar=size(myin(i)%var)
+  allocate(varv7d(nvar))
+  CALL vargrib2varbufr(myin(i)%var, varv7d, c_func)
+
+  print *,"varv7d"
+  print *,varv7d
+
+  IF (ASSOCIATED(c_func)) THEN
+    DO ivar = 1, nvar
+      myin(i)%voldati(:,:,:,:,:,ivar) = convert(c_func(ivar),myin(i)%voldati(:,:,:,:,:,ivar))
+    ENDDO
+  ENDIF
+  DEALLOCATE(c_func)
+
+  mybin=varv7d(:)%btable
+  deallocate(varv7d)
+
+  print *,"Ho a disposizione:  ",mybin
+  print *,"Devo preparare:     ",mybout
+
+  if (.not. oracle(mybin,mybout,vfn,myvfn)) then
+    print*, " non riesco a fare ",mybout
+    stop 3
+  end if
+
+  call display(myvfn)
+  print *,"mi occorrono ",myvfn%nout," variabili in piu"
+
+  call make(myvfn,mybin,mybout,myin(i),myout(i))
+
+  nvar=size(mybout)
+  allocate (varv7d(nvar))
+  allocate(varvg6d(nvar))
+  
+  do ivar = 1, nvar
+    call init(varv7d(ivar),mybout(ivar))
+  end DO
+
+  CALL varbufr2vargrib(varv7d, varvg6d, c_func)
+
+  IF (ASSOCIATED(c_func)) THEN
+    DO ivar = 1, nvar
+      myout(i)%voldati(:,:,:,:,:,ivar) = convert(c_func(ivar),myout(i)%voldati(:,:,:,:,:,ivar))
+    ENDDO
+  ENDIF
+  myout(i)%var=varvg6d
+  DEALLOCATE(c_func)
+  deallocate (varv7d)
+
+  print *,"varvg6d"
+  print *,varvg6d
+
+  
+end do
+
+end subroutine alchemy_vg6d
 
 end module volgrid6d_alchimia_class
