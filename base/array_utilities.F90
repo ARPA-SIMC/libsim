@@ -53,7 +53,7 @@ END INTERFACE
 
 !> Find the firsth or last index of an element in a vector equal to the values provided
 INTERFACE index
-  MODULE PROCEDURE index_i, index_r, index_d, index_c
+  MODULE PROCEDURE index_i, index_r, index_d
 END INTERFACE
 
 !>\brief Sorts inline into ascending order.
@@ -69,6 +69,11 @@ END INTERFACE
 INTERFACE sort
   MODULE PROCEDURE sort_i, sort_r, sort_d, sort_c
 END INTERFACE
+
+private
+public sort, index ,index_c
+public count_distinct, pack_distinct, map_distinct, map_inv_distinct, firsttrue
+public pack_distinct_c, map
 
 CONTAINS
 
