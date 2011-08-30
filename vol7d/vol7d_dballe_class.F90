@@ -695,7 +695,7 @@ do i=1,N
   buffer(i)%datoc=DBA_MVC
   
   if (any(c_e(lvar)).and. present(varkind))then
-    ii= index(lvar, btable)
+    ii= index_c(lvar, btable)
     if (ii > 0)then
                                 !print*, "indici",ii, btable,(varkind(ii))
       if(varkind(ii) == "r") call idba_enq (this%handle,btable,buffer(i)%dator)
@@ -815,7 +815,7 @@ do i=1,N_ana
   
 
   if (present(anavar).and. present(anavarkind))then
-    ii= index(anavar, btable)
+    ii= index_c(anavar, btable)
     if (ii > 0)then
                                 !print*, "indici",ii, btable,(varkind(ii))
       if(anavarkind(ii) == "r") call idba_enq (this%handle_staz,btable,bufferana(i)%dator)

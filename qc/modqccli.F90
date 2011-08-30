@@ -446,13 +446,13 @@ ENDDO
 
 
 if (present(tbattrin))then
-  indtbattrin = index(qccli%v7d%dativarattr%r(:)%btable, tbattrin)
+  indtbattrin = index_c(qccli%v7d%dativarattr%r(:)%btable, tbattrin)
 else
   indtbattrin=1
 end if
 
 if (present(tbattrout))then
-  indtbattrout = index(qccli%v7d%dativarattr%r(:)%btable, tbattrout)
+  indtbattrout = index_c(qccli%v7d%dativarattr%r(:)%btable, tbattrout)
 else
   indtbattrout=2
 end if
