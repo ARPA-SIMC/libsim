@@ -65,7 +65,9 @@ LOGICAL :: version, ldisplay, rzscan
 INTEGER,POINTER :: w_s(:), w_e(:)
 TYPE(grid_file_id) :: file_template
 TYPE(grid_id) :: gaid_template
+#ifdef ALCHIMIA
 type(fndsv) :: vfn
+#endif
 
 !questa chiamata prende dal launcher il nome univoco
 call l4f_launcher(a_name,a_name_force="volgrid6dtransform")
