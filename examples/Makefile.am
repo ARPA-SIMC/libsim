@@ -173,7 +173,12 @@ endif
 vg6d_getpoint_LDADD = ../volgrid6d/libsim_volgrid6d.la  ../vol7d/libsim_vol7d.la ../base/libsim_base.la ../log4fortran/liblog4fortran.la
 
 vg6d_transform_SOURCES = vg6d_transform.F90
+
 vg6d_transform_LDADD = ../volgrid6d/libsim_volgrid6d.la ../base/libsim_base.la ../vol7d/libsim_vol7d.la ../log4fortran/liblog4fortran.la
+
+if ALCHIMIA
+vg6d_transform_LDADD += ../alchimia/libsim_alchimia.la ../termolib/libsim_termolib.la  
+endif
 
 if GRIBAPI
 bin_PROGRAMS += vg6d_subarea

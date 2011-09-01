@@ -29,13 +29,19 @@ use err_handling
 use char_utilities
 use optionparser_class
 USE geo_coord_class
+#ifdef ALCHIMIA
+USE alchimia
+use volgrid6d_alchimia_class
+USE termo
+#endif
 
 implicit none
 
-integer :: category,ier,i,nana
-CHARACTER(len=12) :: coord_format
+integer :: category,ier,i,n,nana
+CHARACTER(len=12) :: coord_format, output_variable_list
+CHARACTER(len=10), ALLOCATABLE :: vl(:)
 CHARACTER(len=512):: a_name, coord_file, input_file, output_file, output_format, output_template
-type (volgrid6d),pointer  :: volgrid(:),volgrid_out(:)
+type (volgrid6d),pointer  :: volgrid(:),volgrid_out(:),volgrid_tmp(:)
 
 doubleprecision ::  ilon,ilat,flon,flat
 
@@ -59,6 +65,7 @@ LOGICAL :: version, ldisplay, rzscan
 INTEGER,POINTER :: w_s(:), w_e(:)
 TYPE(grid_file_id) :: file_template
 TYPE(grid_id) :: gaid_template
+type(fndsv) :: vfn
 
 !questa chiamata prende dal launcher il nome univoco
 call l4f_launcher(a_name,a_name_force="volgrid6dtransform")
@@ -68,6 +75,11 @@ ier=l4f_init()
 
 !imposta a_name
 category=l4f_category_get(a_name//".main")
+
+
+#ifdef ALCHIMIA
+call register_termo(vfn)
+#endif
 
                                 ! define the option parser
 opt = optionparser_new(description_msg= &
@@ -143,7 +155,7 @@ CALL optionparser_add(opt, 'g', 'npy', npy, 4, help= &
 
 coord_file=cmiss
 #ifdef HAVE_LIBSHP_FORTRAN
-CALL optionparser_add(opt, 'c', 'coord-file', coord_file, help= &
+CALL optionparser_add(opt, ' ', 'coord-file', coord_file, help= &
  'file in shp format with coordinates of polygons, required for maskgen transformation')
 coord_format = 'shp' ! no other formats for now, no argument defined
 #endif
@@ -200,6 +212,14 @@ CALL optionparser_add(opt, ' ', 'reverse-vapor-z-order', rzscan, help= &
  'reverse the scan order for Z (level) coordinate during export to vdf files for vapor.')
 #endif
 
+#ifdef ALCHIMIA
+CALL optionparser_add(opt, '', 'output-variable-list', output_variable_list, '', help= &
+ 'list of data variables you require in output; if they are not in input they will be computed if possible. &
+ &The output_variable_list is expressed in the form of a comma-separated list of B-table alphanumeric codes, &
+ &e.g. ''B13011,B12101''')
+#endif
+
+
                                 ! help options
 CALL optionparser_add_help(opt, 'h', 'help', help='show an help message and exit')
 CALL optionparser_add(opt, ' ', 'version', version, help='show version and exit')
@@ -237,6 +257,16 @@ else
   call l4f_category_log(category,L4F_ERROR,'output file missing')
   call raise_fatal_error()
 end if
+
+! generate variable lists
+IF (LEN_TRIM(output_variable_list) > 0) THEN
+  n = word_split(output_variable_list, w_s, w_e, ',')
+  ALLOCATE(vl(n))
+  DO i = 1, n
+    vl(i) = output_variable_list(w_s(i):w_e(i))
+  ENDDO
+  DEALLOCATE(w_s, w_e)
+ENDIF
 
 CALL delete(opt)
 
@@ -323,6 +353,16 @@ else
       IF (ASSOCIATED(volgrid_out)) CALL display(volgrid_out(1))
     END DO
   ENDIF
+
+
+#ifdef ALCHIMIA
+      if (ASSOCIATED(volgrid_out) .and. output_variable_list /= " ") then
+        call alchemy(volgrid_out,vfn,vl,volgrid_tmp)
+        CALL delete(volgrid_out)
+        volgrid_out = volgrid_tmp
+      end if
+#endif
+
 
   CALL l4f_category_log(category,L4F_INFO,"transformation completed")
   IF (ASSOCIATED(volgrid)) CALL delete(volgrid)
