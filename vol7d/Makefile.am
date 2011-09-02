@@ -54,10 +54,11 @@ libsim_vol7d_la_LIBADD += ../alchimia/libsim_alchimia.la
 endif
 
 # c'e` una maniera migliore?
-tmpvar1 = $(libsim_vol7d_la_SOURCES:oraclesim.c=)
-tmpvar = $(tmpvar1:.f90=.mod)
-#tmpvar = $(libsim_vol7d_la_SOURCES:.f90=.mod)
-nodist_include_HEADERS = $(tmpvar:.F90=.mod)
+tmpvar = $(libsim_alchimia_la_SOURCES:.f90=.mod)
+tmpvar1 = $(tmpvar:.f03=.mod)
+tmpvar2 = $(tmpvar1:.F03=.mod)
+tmpvar3 = $(tmpvar2:vdf4f_c.cpp=)
+nodist_include_HEADERS = $(tmpvar3:.F90=.mod)
 
 vol7d_varvect_class.$(OBJEXT): vol7d_var_class.$(OBJEXT)
 vol7d_varvect_class.lo: vol7d_var_class.$(OBJEXT)
