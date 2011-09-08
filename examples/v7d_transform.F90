@@ -57,7 +57,6 @@ CHARACTER(len=8) :: input_format, coord_format
 
 CHARACTER(len=512) :: input_file, output_file, output_format, output_template, &
  network_list, variable_list, anavariable_list, attribute_list, coord_file, output_variable_list
-CHARACTER(len=10), ALLOCATABLE :: vl(:)
 CHARACTER(len=160) :: pre_trans_type
 TYPE(vol7d_network), ALLOCATABLE :: nl(:)
 CHARACTER(len=10), ALLOCATABLE :: vl(:), avl(:), al(:), alqc(:)
