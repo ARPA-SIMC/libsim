@@ -38,9 +38,9 @@ USE termo
 implicit none
 
 integer :: category,ier,i,n,nana
-CHARACTER(len=12) :: coord_format, output_variable_list
+CHARACTER(len=12) :: coord_format
 CHARACTER(len=10), ALLOCATABLE :: vl(:)
-CHARACTER(len=512):: a_name, coord_file, input_file, output_file, output_format, output_template
+CHARACTER(len=512):: a_name, coord_file, input_file, output_file, output_format, output_template, output_variable_list
 type (volgrid6d),pointer  :: volgrid(:),volgrid_out(:),volgrid_tmp(:)
 
 doubleprecision ::  ilon,ilat,flon,flat

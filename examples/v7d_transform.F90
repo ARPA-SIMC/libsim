@@ -42,6 +42,12 @@ USE geo_coord_class
 USE vol7d_csv
 USE modqc
 !USE ISO_FORTRAN_ENV
+#ifdef ALCHIMIA
+USE alchimia
+use vol7d_alchimia_class
+USE termo
+#endif
+
 IMPLICIT NONE
 
 TYPE(optionparser) :: opt
@@ -50,7 +56,8 @@ TYPE(csv_record) :: argparse
 CHARACTER(len=8) :: input_format, coord_format
 
 CHARACTER(len=512) :: input_file, output_file, output_format, output_template, &
- network_list, variable_list, anavariable_list, attribute_list, coord_file
+ network_list, variable_list, anavariable_list, attribute_list, coord_file, output_variable_list
+CHARACTER(len=10), ALLOCATABLE :: vl(:)
 CHARACTER(len=160) :: pre_trans_type
 TYPE(vol7d_network), ALLOCATABLE :: nl(:)
 CHARACTER(len=10), ALLOCATABLE :: vl(:), avl(:), al(:), alqc(:)
@@ -98,6 +105,9 @@ TYPE(volgrid6d) :: vg6d
 TYPE(gridinfo_def),POINTER :: gridinfo(:)
 character(len=160) :: post_trans_type
 #endif
+#ifdef ALCHIMIA
+type(fndsv) :: vfn
+#endif
 
 !questa chiamata prende dal launcher il nome univoco
 CALL l4f_launcher(a_name,a_name_force="v7d_transform")
@@ -105,6 +115,10 @@ CALL l4f_launcher(a_name,a_name_force="v7d_transform")
 ier = l4f_init()
 !imposta a_name
 category = l4f_category_get(a_name//".main")
+
+#ifdef ALCHIMIA
+call register_termo(vfn)
+#endif
 
 !!$now = datetime_new(now=datetime_utc)
 !!$CALL getval(now, year=yy, month=mm, day=dd)
@@ -319,6 +333,13 @@ CALL optionparser_add(opt, ' ', 'comp-discard', obso, help= &
 CALL optionparser_add(opt, ' ', 'csv-skip-miss', obso, help= &
  'obsolete option, use --csv-keep-miss with opposite meaning')
 
+#ifdef ALCHIMIA
+CALL optionparser_add(opt, '', 'output-variable-list', output_variable_list, '', help= &
+ 'list of data variables you require in output; if they are not in input they will be computed if possible. &
+ &The output_variable_list is expressed in the form of a comma-separated list of B-table alphanumeric codes, &
+ &e.g. ''B13011,B12101''')
+#endif
+
 ! help options
 CALL optionparser_add_help(opt, 'h', 'help', help='show an help message and exit')
 CALL optionparser_add_html(opt, ' ', 'html-form', help= &
@@ -440,6 +461,18 @@ ELSE ! no attributes requested
   ENDIF
 
 ENDIF
+
+
+! generate variable lists
+IF (LEN_TRIM(output_variable_list) > 0) THEN
+  n = word_split(output_variable_list, w_s, w_e, ',')
+  ALLOCATE(vl(n))
+  DO i = 1, n
+    vl(i) = output_variable_list(w_s(i):w_e(i))
+  ENDDO
+  DEALLOCATE(w_s, w_e)
+ENDIF
+
 
 ! time-related arguments
 s_d = datetime_new(isodate=start_date)
@@ -793,6 +826,18 @@ ENDIF
 IF (comp_sort) THEN
   CALL vol7d_smart_sort(v7d, lsort_time=.TRUE., lsort_timerange=.TRUE., lsort_level=.TRUE.)
 ENDIF
+
+
+
+#ifdef ALCHIMIA
+if (ASSOCIATED(vo7d) .and. output_variable_list /= " ") then
+  call alchemy(vol7d,vfn,vl,v7d_tmp)
+  CALL delete(vol7d)
+  vol7d = vol7d_tmp
+end if
+#endif
+
+
 
 ! output
 IF (output_format == 'native') THEN

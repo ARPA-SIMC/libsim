@@ -117,6 +117,10 @@ bin_PROGRAMS += v7d_transform
 v7d_transform_SOURCES = vol7d_csv.F90 v7d_transform.F90
 v7d_transform_LDADD = ../base/libsim_base.la ../vol7d/libsim_vol7d.la ../qc/libsim_qc.la ../volgrid6d/libsim_volgrid6d.la ../log4fortran/liblog4fortran.la
 
+if ALCHIMIA
+v7d_transform_LDADD += ../alchimia/libsim_alchimia.la ../termolib/libsim_termolib.la  
+endif
+
 if SHP
 if GRIB
 noinst_PROGRAMS += esempio_geo_coordvect
