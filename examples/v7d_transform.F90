@@ -829,10 +829,10 @@ ENDIF
 
 
 #ifdef ALCHIMIA
-if (ASSOCIATED(vo7d) .and. output_variable_list /= " ") then
-  call alchemy(vol7d,vfn,vl,v7d_tmp)
-  CALL delete(vol7d)
-  vol7d = vol7d_tmp
+if (output_variable_list /= " ") then
+  call alchemy(v7d,vfn,vl,v7dtmp)
+  CALL delete(v7d)
+  v7d = v7dtmp
 end if
 #endif
 
