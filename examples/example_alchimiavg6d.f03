@@ -9,6 +9,7 @@ use log4fortran
 IMPLICIT NONE
 
 type(fndsv) :: vfn
+type(fndsv),allocatable :: vfnoracle(:)
 character(len=10), allocatable:: mybout(:)
 type(volgrid6d),pointer :: myin(:),myout(:)
 
@@ -36,7 +37,9 @@ call register_termo(vfn)
 
 CALL import(myin,filename=filenamein,decode=.true., time_definition=0, categoryappend="input")
 
-call alchemy(myin,vfn,mybout,myout)
+if (alchemy(myin,vfn,mybout,myout,copy=.true.,vfnoracle=vfnoracle) /= 0) stop 1
+
+call display(vfnoracle)
 
 call export(myout,filenameout)
 

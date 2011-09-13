@@ -9,7 +9,7 @@ USE vol7d_var_class
 use log4fortran
 
 IMPLICIT NONE
-type(fndsv) :: vfn
+type(fndsv) :: vfn,vfnoracle
 character(len=10), allocatable:: mybout(:)
 type(vol7d_dballe) :: myin,myout
 character(len=255) :: filenamein,filenameout
@@ -40,7 +40,9 @@ call init(myout,filename=filenameout, file=.true., write=.true., wipe=.true., ca
 !CALL import(myin,var=(/"B12101","B10004"/),varkind=(/"r","r"/))
 CALL import(myin)
 
-call alchemy(myin%vol7d,vfn,mybout,myout%vol7d)
+if (alchemy(myin%vol7d,vfn,mybout,myout%vol7d,copy=.true.,vfnoracle=vfnoracle) /= 0 ) stop 1
+
+call display(vfnoracle)
 
 call export(myout,template="generic")
 
