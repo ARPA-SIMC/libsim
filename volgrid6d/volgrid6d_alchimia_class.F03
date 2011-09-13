@@ -102,7 +102,7 @@ integer function alchemy_vg6d(myin,vfn,mybout,myout,copy,vfnoracle)
 
 character(len=10),intent(in) :: mybout(:)
 type(fndsv),intent(in) :: vfn
-type(volgrid6d),intent(inout) :: myin(:)
+type(volgrid6d),intent(in) :: myin(:)
 type(volgrid6d),intent(out),pointer ::myout(:)
 logical,intent(in),optional :: copy !< if .true. the copy functions are localy added to vfn (you can have input variable copyed to output)
 type(fndsv),intent(out),optional,allocatable :: vfnoracle(:)
