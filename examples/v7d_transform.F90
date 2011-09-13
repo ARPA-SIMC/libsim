@@ -105,7 +105,8 @@ TYPE(gridinfo_def),POINTER :: gridinfo(:)
 character(len=160) :: post_trans_type
 #endif
 #ifdef ALCHIMIA
-type(fndsv) :: vfn
+type(fndsv) :: vfn,vfnoracle
+!character(len=10), allocatable:: mybin(:)
 #endif
 
 !questa chiamata prende dal launcher il nome univoco
@@ -115,9 +116,6 @@ ier = l4f_init()
 !imposta a_name
 category = l4f_category_get(a_name//".main")
 
-#ifdef ALCHIMIA
-call register_termo(vfn)
-#endif
 
 !!$now = datetime_new(now=datetime_utc)
 !!$CALL getval(now, year=yy, month=mm, day=dd)
@@ -827,15 +825,24 @@ IF (comp_sort) THEN
 ENDIF
 
 
-
 #ifdef ALCHIMIA
 if (output_variable_list /= " ") then
-  call alchemy(v7d,vfn,vl,v7dtmp)
-  CALL delete(v7d)
-  v7d = v7dtmp
+
+  call register_termo(vfn)
+  !call v7d_all_var(v7d,mybin)
+  !call register_copy(vfn,mybin)
+  !deallocate(mybin)
+
+  if (alchemy(v7d,vfn,vl,v7dtmp,copy=.true., vfnoracle=vfnoracle) == 0 ) then
+    call display(vfnoracle)
+    CALL delete(v7d)
+    v7d = v7dtmp
+  else
+    CALL l4f_category_log(category, L4F_ERROR, 'Cannot make variable you have requested')
+    CALL raise_fatal_error()
+  end if
 end if
 #endif
-
 
 
 ! output
@@ -966,6 +973,13 @@ ELSE IF (input_format == 'orsim') THEN
   CALL delete(v7d_osim)
 #endif
 ENDIF
+
+
+#ifdef ALCHIMIA
+call delete(vfn)
+call delete(vfnoracle)
+#endif
+
 
 ier = l4f_fini()
 

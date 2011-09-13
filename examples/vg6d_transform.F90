@@ -67,6 +67,7 @@ TYPE(grid_file_id) :: file_template
 TYPE(grid_id) :: gaid_template
 #ifdef ALCHIMIA
 type(fndsv) :: vfn
+type(fndsv),allocatable :: vfnoracle(:)
 #endif
 
 !questa chiamata prende dal launcher il nome univoco
@@ -78,10 +79,6 @@ ier=l4f_init()
 !imposta a_name
 category=l4f_category_get(a_name//".main")
 
-
-#ifdef ALCHIMIA
-call register_termo(vfn)
-#endif
 
                                 ! define the option parser
 opt = optionparser_new(description_msg= &
@@ -314,30 +311,23 @@ DEALLOCATE(w_s, w_e)
 
 CALL griddim_unproj(griddim_out)
 
-IF (output_format == "vapor") THEN 
+IF (output_format == "vapor" .or. output_variable_list /= " " .or. c2agrid) THEN 
   decode=.true.
 else
   decode=.false.
 endif
 
 CALL import(volgrid,filename=input_file,decode=decode, time_definition=time_definition, categoryappend="input")
+
 if (c2agrid) call vg6d_c2a(volgrid)
-IF (ldisplay) THEN
-  IF (ASSOCIATED(volgrid)) THEN
-    DO i = 1,SIZE(volgrid)
-      PRINT*,'input grid >>>>>>>>>>>>>>>>>>>>'
-      CALL display(volgrid(i))
-    ENDDO
-  ENDIF
+
+IF (ldisplay .and. ASSOCIATED(volgrid)) THEN
+  PRINT*,'input grid >>>>>>>>>>>>>>>>>>>>'
+  CALL display(volgrid)
 ENDIF
 
 
-IF (trans_type ==  'none') THEN ! export with no operation
-
-  CALL write_to_file_out(volgrid)
-  IF (ASSOCIATED(volgrid)) CALL delete(volgrid)
-
-else
+IF (trans_type /=  'none') THEN ! transform
 
 ! transformation object
   CALL init(trans, trans_type=trans_type, sub_type=sub_type, extrap=extrap, &
@@ -349,33 +339,51 @@ else
   CALL transform(trans, griddim_out, volgrid6d_in=volgrid, &
    volgrid6d_out=volgrid_out, clone=.TRUE., categoryappend="transform")
 
-  IF (ldisplay) THEN ! done here in order to print final ellipsoid
-    DO i = 1,SIZE(volgrid)
-      PRINT*,'output grid >>>>>>>>>>>>>>>>>>>>'
-      IF (ASSOCIATED(volgrid_out)) CALL display(volgrid_out(1))
-    END DO
-  ENDIF
+  CALL l4f_category_log(category,L4F_INFO,"transformation completed")
 
+else
+  
+  volgrid_out => volgrid
+
+end IF
 
 #ifdef ALCHIMIA
-      if (ASSOCIATED(volgrid_out) .and. output_variable_list /= " ") then
-        call alchemy(volgrid_out,vfn,vl,volgrid_tmp)
-        CALL delete(volgrid_out)
-        volgrid_out = volgrid_tmp
-      end if
+if (ASSOCIATED(volgrid_out) .and. output_variable_list /= " ") then
+
+  call register_termo(vfn)
+  
+  if ( alchemy(volgrid_out,vfn,vl,volgrid_tmp,copy=.true.,vfnoracle=vfnoracle) == 0 ) then
+    call display(vfnoracle)
+    CALL delete(volgrid_out)
+    volgrid_out => volgrid_tmp
+  else
+    CALL l4f_category_log(category, L4F_ERROR, 'Cannot make variable you have requested')
+    CALL raise_fatal_error()
+  end if
+
+  CALL l4f_category_log(category,L4F_INFO,"alchemy completed")
+  
+end if
 #endif
 
 
-  CALL l4f_category_log(category,L4F_INFO,"transformation completed")
-  IF (ASSOCIATED(volgrid)) CALL delete(volgrid)
-
-  CALL write_to_file_out(volgrid_out)
-  CALL delete(volgrid_out)
-
+IF (ldisplay .and. ASSOCIATED(volgrid_out)) THEN ! done here in order to print final ellipsoid
+  PRINT*,'output grid >>>>>>>>>>>>>>>>>>>>'
+  CALL display(volgrid_out)
 ENDIF
 
-CALL l4f_category_log(category,L4F_INFO,"end")
+! export
+CALL write_to_file_out(volgrid_out)
 
+IF (ASSOCIATED(volgrid)) CALL delete(volgrid)
+IF (ASSOCIATED(volgrid_out)) CALL delete(volgrid_out)
+
+#ifdef ALCHIMIA
+call delete(vfn)
+call delete(vfnoracle)
+#endif
+
+CALL l4f_category_log(category,L4F_INFO,"end")
 
                                 !chiudo il logger
 call l4f_category_delete(category)

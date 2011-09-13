@@ -26,6 +26,8 @@ module alchimia
 USE missing_values
 use array_utilities
 USE optional_values
+USE log4fortran
+USE char_utilities
 
 IMPLICIT NONE
 
@@ -73,7 +75,7 @@ end interface
 
 !> show on the screen the fnds and fndsv structure
 interface display
-   module procedure fn_display,fnv_display
+   module procedure fn_display, fnv_display, vfnv_display
 end interface
 
 !> Delete fndsv
@@ -95,9 +97,43 @@ end interface
 !!$PUBLIC insert, append, remove, packarray
 !!$PUBLIC insert_unique, append_unique
 private
-public fnds,fndsv,make,init,c_e,display,delete,fnregister,oracle
+public fnds,fndsv,make,init,c_e,display,delete,fnregister,oracle,register_copy
 
 contains
+
+
+!> Register the copy function to be able to copy input variables to output if requested
+subroutine register_copy(vfn,bin)
+
+  type(fndsv),intent(inout) :: vfn !< vector of function descriptors into register 
+  CHARACTER(len=10),intent(in) :: bin(:)  !< vector table B  WMO input  in user's data
+  integer :: i
+
+  do i=1, size(bin)
+    call fnregister(vfn,alchimia_copy_def(bin(i)))
+  end do
+
+end subroutine register_copy
+
+subroutine  alchimia_copy(mybin,mybout,bin,bout,in,out)
+  CHARACTER(len=10),intent(in) :: mybin(:)  !< vector table B  WMO input  in user's data
+  CHARACTER(len=10),intent(in) :: mybout(:) !< vector table B  WMO output in user's data
+  CHARACTER(len=10),intent(in) :: bin(:)    !< vector table B  WMO input used by function
+  CHARACTER(len=10),intent(in) :: bout(:)   !< vector table B  WMO output used by function
+  real, intent(in) :: in(:,:)
+  real, intent(out) :: out(:,:)
+
+  out(:,index_c(mybout,bout(1)))=in(:,index_c(mybin,bin(1)))
+
+end subroutine alchimia_copy
+
+type(fnds) function alchimia_copy_def(bvar)
+  CHARACTER(len=10),intent(in) :: bvar
+
+  call init(alchimia_copy_def,"copy"//bvar,&
+       [character(len=10) :: bvar],&
+       [character(len=10) :: bvar],0,func=alchimia_copy)
+end function alchimia_copy_def
 
 !> Inizialize a function object
 subroutine fn_init(fn,name,bin,bout,priority,order,func)
@@ -138,7 +174,7 @@ end subroutine fn_init
 
 
 !> Delete a vector of function object reinizializing it
-subroutine fnv_delete(fnv)
+elemental subroutine fnv_delete(fnv)
 type(fndsv),intent(inout) :: fnv
 type(fndsv) :: fn
 
@@ -178,6 +214,8 @@ if (present(fn))then
   if (present(order)) vfn%fnds(nfn+1)%order = order
   
   vfn%nout=vfn%nout+size(fn%bout)
+
+  CALL l4f_log(L4F_DEBUG, 'fnregister: adding function object '//trim(fn%name)//' with order '//t2c(vfn%nout))
 
 end if
 
@@ -219,6 +257,19 @@ do i = count(c_e(fnv%fnds)),1,-1
 end do
 end subroutine fnv_display
 
+
+!> Display vector function objects on screen
+subroutine vfnv_display(vfnv)
+type(fndsv),intent(in) :: vfnv(:) !< vector function object to display
+integer :: i
+
+do i = 1, size(vfnv)
+  print*,">> Solution number:",i
+  call display(vfnv(i))
+end do
+end subroutine vfnv_display
+
+
 !> This function like a oracle say you how to abtain what you want.
 !! Startin fron desciption of input and output and a vector of available functions
 !! provide you the road to execute for make the output
@@ -243,9 +294,9 @@ integer,save :: order,num
 character(len=10) :: newbin(nmaxb), newbout(nmaxb), tmpbin(nmaxb)
 
 
-! delte only on the main call
+! delete only on the main call
 if (.not. optio_log(recurse)) then
-  !print *,"cancello"
+  CALL l4f_log(L4F_DEBUG, "oracle: delete and register")
   call delete(maybefn)
   call delete(usefullfn)
   call fnregister(maybefn)
@@ -253,8 +304,7 @@ if (.not. optio_log(recurse)) then
   order=0
 end if
 
-!print *,"oracle",order
-
+CALL l4f_log(L4F_DEBUG, "oracle: order "//t2c(order))
 newbin=cmiss
 newbin(:size(mybin))=mybin
 newbout=cmiss
@@ -271,11 +321,11 @@ do i =1, count(c_e(vfn%fnds))
    foundin = .true.
    do J = 1, count(c_e(vfn%fnds(i)%bin(:)))
       if (.not. any(vfn%fnds(i)%bin(j) == newbin)) foundin = .false.
-!!$      print *,"confronto: ",vfn(i)%bin(j)
-!!$      print *,"con: ",mybin
+!!$      print *,"compare: ",vfn(i)%bin(j)
+!!$      print *,"with: ",mybin
    end do
    if (foundin) then
-     !print *,"registro  ",vfn%fnds(i)%name
+     CALL l4f_log(L4F_DEBUG, "oracle: register  "//trim(vfn%fnds(i)%name))
      call fnregister(maybefn,vfn%fnds(i),order)
      do k=1,size(vfn%fnds(i)%bout)
        tmpbin(firsttrue(.not. c_e(tmpbin)))=vfn%fnds(i)%bout(k)
@@ -317,14 +367,14 @@ if (allfoundout) then
 !!$    if (c_e(maybefn(i)))  print *,maybefn(i)
 !!$  end do
 
-   ! toglie i rami secchi
+   ! remove dry branch
    newbout=cmiss
    newbout(:size(mybout))=mybout
    tmpbin=cmiss
 
    do i = count(c_e(maybefn%fnds)),1,-1
      if (maybefn%fnds(i)%order /= order) then
-       !print *,"change order",maybefn(i)%order
+       CALL l4f_log(L4F_DEBUG, "oracle: change order "//t2c(maybefn%fnds(i)%order))
        order=maybefn%fnds(i)%order
        iin=count(c_e(tmpbin))
        iout=count(c_e(newbout))
@@ -332,14 +382,14 @@ if (allfoundout) then
        tmpbin=cmiss
      end if
 
-     !print *,"cerco:",newbout(:firsttrue(.not. c_e(newbout)))
+     !print *,"search:",newbout(:firsttrue(.not. c_e(newbout)))
 
      foundout = .false.
      do j=1, count(c_e(newbout))
        if (any(maybefn%fnds(i)%bout(:) == newbout(j))) foundout = .true.
      end do
      if (foundout) then
-       !print *,"altroregistro  ",maybefn%fnds(i)%name
+       CALL l4f_log(L4F_DEBUG, "oracle: other register  "// trim(maybefn%fnds(i)%name))
        call fnregister(mayvfn,maybefn%fnds(i),order)
        do k=1,count(c_e(maybefn%fnds(i)%bin))
          tmpbin(firsttrue(.not. c_e(tmpbin)))=maybefn%fnds(i)%bin(k)

@@ -76,23 +76,26 @@ end do
 end subroutine make_vg6d
 
 
-subroutine alchemy_vg6d(myin,vfn,mybout,myout)
+integer function alchemy_vg6d(myin,vfn,mybout,myout,copy,vfnoracle)
 
 character(len=10),intent(in) :: mybout(:)
 type(fndsv),intent(in) :: vfn
 type(volgrid6d),intent(inout) :: myin(:)
 type(volgrid6d),intent(out),pointer ::myout(:)
+logical,intent(in),optional :: copy !< if .true. the copy functions are localy added to vfn (you can have input variable copyed to output)
+type(fndsv),intent(out),optional,allocatable :: vfnoracle(:)
 
-
-integer :: i,nvar,ivar
-type(fndsv) :: myvfn
+integer :: i,j,nvar,ivar
+type(fndsv) :: myvfn,vfntmp
 character(len=10), allocatable:: mybin(:)
 TYPE(vol7d_var),allocatable :: varv7d(:)
 TYPE(volgrid6d_var),allocatable :: varvg6d(:)
 TYPE(conv_func), pointer :: c_func(:)
 
+alchemy_vg6d=0
 
 allocate(myout(size(myin)))
+if (present(vfnoracle)) allocate (vfnoracle(size(myin)))
 
 do i=1,size(myin)
 
@@ -100,8 +103,8 @@ do i=1,size(myin)
   allocate(varv7d(nvar))
   CALL vargrib2varbufr(myin(i)%var, varv7d, c_func)
 
-  print *,"varv7d"
-  print *,varv7d
+  !print *,"varv7d"
+  !print *,varv7d
 
   IF (ASSOCIATED(c_func)) THEN
     DO ivar = 1, nvar
@@ -113,16 +116,28 @@ do i=1,size(myin)
   mybin=varv7d(:)%btable
   deallocate(varv7d)
 
-  print *,"Ho a disposizione:  ",mybin
-  print *,"Devo preparare:     ",mybout
+  vfntmp=vfn
+  if (optio_log(copy)) call register_copy(vfntmp,mybin)
 
-  if (.not. oracle(mybin,mybout,vfn,myvfn)) then
-    print*, " non riesco a fare ",mybout
-    stop 3
+
+  do j=1,size(mybin)
+    call l4f_log(L4F_INFO,"alchemy_vg6d: I have:   "//mybin(j))
+  end do
+
+  do j=1,size(mybout)
+    call l4f_log(L4F_INFO,"alchemy_vg6d: To make:  "//mybout(j))
+  end do
+
+  if (.not. oracle(mybin,mybout,vfntmp,myvfn)) then
+     call l4f_log(L4F_WARN,"alchemy_vg6d: I cannot make your request")
+    alchemy_vg6d = 1
+    return
   end if
 
-  call display(myvfn)
-  print *,"mi occorrono ",myvfn%nout," variabili in piu"
+  vfnoracle(i)=myvfn
+
+  !call display(myvfn)
+  call l4f_log(L4F_INFO,"alchemy_vg6d: I need "//t2c(myvfn%nout)//" more variables")
 
   call make(myvfn,mybin,mybout,myin(i),myout(i))
 
@@ -145,12 +160,14 @@ do i=1,size(myin)
   DEALLOCATE(c_func)
   deallocate (varv7d)
 
-  print *,"varvg6d"
-  print *,varvg6d
+  call delete(myvfn)
+  call delete(vfntmp)
 
-  
+  !print *,"varvg6d"
+  !print *,varvg6d
+
 end do
 
-end subroutine alchemy_vg6d
+end function alchemy_vg6d
 
 end module volgrid6d_alchimia_class

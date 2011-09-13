@@ -2,6 +2,7 @@ module vol7d_alchimia_class
 
 USE vol7d_class
 USE alchimia
+USE log4fortran
 
 implicit NONE
 
@@ -14,7 +15,7 @@ interface alchemy
 end interface
 
 private
-public make, alchemy
+public make, alchemy, v7d_all_var
 
 contains
 
@@ -109,18 +110,11 @@ deallocate (myin)
 end subroutine make_v7d
 
 
+subroutine v7d_all_var(myin,mybin)
 
-subroutine alchemy_v7d(myin,vfn,mybout,myout)
-
-character(len=10),intent(in) :: mybout(:)
-type(fndsv),intent(in) :: vfn
-type(vol7d),intent(inout) :: myin
-type(vol7d),intent(out) :: myout
-
-integer :: i,ivar,nbin,nbinn
-type(fndsv) :: myvfn
+type(vol7d),intent(in) :: myin
 character(len=10), allocatable:: mybin(:)
-character(len=255) :: filenamein,filenameout
+integer :: nbin,nbinn
 
 nbin=0
 
@@ -162,20 +156,56 @@ if (associated(myin%dativar%c)) then
   mybin(nbin+1:nbinn) = myin%dativar%c(:)%btable
 end if
 
-print *,"Ho a disposizione:  ",mybin
-print *,"Devo preparare:     ",mybout
 
-if (.not. oracle(mybin,mybout,vfn,myvfn)) then
-  print*, " non riesco a fare ",mybout
-  stop 3
+end subroutine v7d_all_var
+
+
+integer function  alchemy_v7d(myin,vfn,mybout,myout,copy,vfnoracle)
+
+character(len=10),intent(in) :: mybout(:)
+type(fndsv),intent(in) :: vfn
+type(vol7d),intent(inout) :: myin
+type(vol7d),intent(out) :: myout
+logical,intent(in),optional :: copy !< if .true. the copy functions are localy added to vfn (you can have input variable copyed to output)
+type(fndsv),intent(out),optional :: vfnoracle
+
+integer :: i
+type(fndsv) :: vfntmp, myvfn
+character(len=10), allocatable:: mybin(:)
+character(len=255) :: filenamein,filenameout
+
+alchemy_v7d = 0
+
+call v7d_all_var(myin,mybin)
+
+vfntmp=vfn
+if (optio_log(copy)) call register_copy(vfntmp,mybin)
+
+do i=1,size(mybin)
+  call l4f_log(L4F_INFO,"alchemy_v7d: I have:   "//mybin(i))
+end do
+
+do i=1,size(mybout)
+  call l4f_log(L4F_INFO,"alchemy_v7d: To make:  "//mybout(i))
+end do
+
+if (.not. oracle(mybin,mybout,vfntmp,myvfn)) then
+  call l4f_log(L4F_WARN,"alchemy_v7d: I cannot make your request")
+  alchemy_v7d = 1
+  return
 end if
 
-call display(myvfn)
-print *,"mi occorrono ",myvfn%nout," variabili in piu"
+!call display(myvfn)
+call l4f_log(L4F_INFO,"alchemy_v7d: I need "//t2c(myvfn%nout)//" more variables")
 
 call make(myvfn,mybin,mybout,myin,myout)
 
-end subroutine alchemy_v7d
+if (present(vfnoracle)) vfnoracle=myvfn
+
+call delete(myvfn)
+call delete(vfntmp)
+
+end function alchemy_v7d
 
 
 end module vol7d_alchimia_class
