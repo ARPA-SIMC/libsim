@@ -22,19 +22,21 @@ public make, alchemy
 
 contains
 
-subroutine make_vg6d(mayvfn,mybin,mybout,vg6din,vg6dout)
+subroutine make_vg6d(mayvfn,mybin,mybout,vg6din,vg6dout,c_func)
 type(fndsv),intent(inout) :: mayvfn
 character(len=*),intent(in) :: mybin(:),mybout(:)
 type(volgrid6d),intent(in) :: vg6din
 type(volgrid6d),intent(out) :: vg6dout
-integer :: i,nx,ny,nlevel,ntime,ntimerange,nvar,nvarin,ilevel,itime,itimerange,ivar,ivarin,ivarout
-real,allocatable :: myin(:,:),myout(:,:)
+TYPE(conv_func), pointer :: c_func(:)
 
-nx=size(vg6din%voldati,1)
-ny=size(vg6din%voldati,2)
-nlevel=size(vg6din%voldati,3)
-ntime=size(vg6din%voldati,4)
-ntimerange=size(vg6din%voldati,5)
+integer :: i,nx,ny,nlevel,ntime,ntimerange,nvar,nvarin,ilevel,itime,itimerange,ivar,ivarin,ivarout
+real,allocatable :: myin(:,:),myout(:,:),myminivol(:,:,:)
+
+nx=vg6din%griddim%dim%nx
+ny=vg6din%griddim%dim%ny
+nlevel=size(vg6din%level)
+ntime=size(vg6din%time)
+ntimerange=size(vg6din%timerange)
 nvarin=size(mybin)
 nvar=size(mybout)
 
@@ -53,7 +55,24 @@ do i=size(mayvfn%fnds),1,-1
     do ilevel=1,nlevel
       do itime=1,ntime
         do itimerange=1,ntimerange
-          myin=reshape(vg6din%voldati(:,:,ilevel,itime,itimerange,:),(/nx*ny,nvarin/))
+
+          if ( .not. ASSOCIATED(vg6din%voldati)) then
+            ALLOCATE(myminivol(vg6din%griddim%dim%nx,vg6din%griddim%dim%ny,nvarin))
+            do ivar=1,nvarin
+              CALL grid_id_decode_data(vg6din%gaid(ilevel,itime,itimerange,ivar), myminivol(:,:,ivar))
+            end do
+            myin=reshape(myminivol,(/nx*ny,nvarin/))
+            deallocate(myminivol)
+          else
+            myin=reshape(vg6din%voldati(:,:,ilevel,itime,itimerange,:),(/nx*ny,nvarin/))
+          end if
+
+          IF (ASSOCIATED(c_func)) THEN
+            DO ivar = 1, nvarin
+              myin(:,ivar) = convert(c_func(ivar),myin(:,ivar))
+            ENDDO
+          ENDIF
+
           myout=rmiss
           call mayvfn%fnds(i)%fn(mybin,mybout,mayvfn%fnds(i)%bin,mayvfn%fnds(i)%bout,myin,myout)
           vg6dout%voldati(:,:,ilevel,itime,itimerange,:)=reshape(myout,(/nx,ny,nvar/))
@@ -63,7 +82,10 @@ do i=size(mayvfn%fnds),1,-1
             call copy (vg6din%gaid(ilevel,itime,itimerange,ivarin), vg6dout%gaid(ilevel,itime,itimerange,ivarout))
 
 #ifdef HAVE_LIBGRIBAPI
-            call grib_set(grid_id_get_gaid(vg6dout%gaid(ilevel,itime,itimerange,ivarout)),"bitsPerValue",24)
+            if (.not. match(mayvfn%fnds(i)%name,"copy*")) then
+              !print*,"force bit number to 24"
+              call grib_set(grid_id_get_gaid(vg6dout%gaid(ilevel,itime,itimerange,ivarout)),"bitsPerValue",24)
+            end if
 #endif
 
           end do
@@ -106,13 +128,6 @@ do i=1,size(myin)
   !print *,"varv7d"
   !print *,varv7d
 
-  IF (ASSOCIATED(c_func)) THEN
-    DO ivar = 1, nvar
-      myin(i)%voldati(:,:,:,:,:,ivar) = convert(c_func(ivar),myin(i)%voldati(:,:,:,:,:,ivar))
-    ENDDO
-  ENDIF
-  DEALLOCATE(c_func)
-
   mybin=varv7d(:)%btable
   deallocate(varv7d)
 
@@ -139,7 +154,7 @@ do i=1,size(myin)
   !call display(myvfn)
   call l4f_log(L4F_INFO,"alchemy_vg6d: I need "//t2c(myvfn%nout)//" more variables")
 
-  call make(myvfn,mybin,mybout,myin(i),myout(i))
+  call make(myvfn,mybin,mybout,myin(i),myout(i),c_func)
 
   nvar=size(mybout)
   allocate (varv7d(nvar))
@@ -149,6 +164,7 @@ do i=1,size(myin)
     call init(varv7d(ivar),mybout(ivar))
   end DO
 
+  DEALLOCATE(c_func)
   CALL varbufr2vargrib(varv7d, varvg6d, c_func)
 
   IF (ASSOCIATED(c_func)) THEN

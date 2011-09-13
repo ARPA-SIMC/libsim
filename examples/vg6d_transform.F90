@@ -311,7 +311,8 @@ DEALLOCATE(w_s, w_e)
 
 CALL griddim_unproj(griddim_out)
 
-IF (output_format == "vapor" .or. output_variable_list /= " " .or. c2agrid) THEN 
+!other opertions have proper decode inside
+IF (output_format == "vapor") THEN 
   decode=.true.
 else
   decode=.false.
