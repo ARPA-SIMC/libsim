@@ -132,34 +132,44 @@ INTERFACE OPERATOR (/=)
   MODULE PROCEDURE volgrid6d_var_ne, conv_func_ne
 END INTERFACE
 
+!> to be documented
 INTERFACE count_distinct
   MODULE PROCEDURE count_distinct_var6d
 END INTERFACE
 
+!> to be documented
 INTERFACE pack_distinct
   MODULE PROCEDURE pack_distinct_var6d
 END INTERFACE
 
+!> to be documented
 INTERFACE map_distinct
   MODULE PROCEDURE map_distinct_var6d
 END INTERFACE
 
+!> to be documented
 INTERFACE map_inv_distinct
   MODULE PROCEDURE map_inv_distinct_var6d
 END INTERFACE
 
+!> to be documented
 INTERFACE index
   MODULE PROCEDURE index_var6d
 END INTERFACE
 
+!> \brief display on the screen a brief content of object
 INTERFACE display
   MODULE PROCEDURE display_volgrid6d_var
 END INTERFACE
 
+!> Apply the conversion function \a this to \a values.
+!! function version
 INTERFACE compute
   MODULE PROCEDURE conv_func_compute
 END INTERFACE
 
+!> Apply the conversion function \a this to \a values.
+!! subroutine version
 INTERFACE convert
   MODULE PROCEDURE varbufr2vargrib_convert, vargrib2varbufr_convert, conv_func_convert
 END INTERFACE
@@ -607,7 +617,9 @@ TYPE(conv_func),INTENT(in) :: this !< object defining the conversion function
 REAL,INTENT(inout) :: values !< value to be converted in place
 
 IF (this /= conv_func_miss) THEN
-  IF (values /= rmiss) values = values*this%a + this%b
+  IF (c_e(values)) values = values*this%a + this%b
+ELSE
+  values=rmiss
 ENDIF
 
 END SUBROUTINE conv_func_compute

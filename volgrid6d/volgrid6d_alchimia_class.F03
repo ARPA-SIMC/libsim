@@ -69,8 +69,10 @@ do i=size(mayvfn%fnds),1,-1
 
           IF (ASSOCIATED(c_func)) THEN
             DO ivar = 1, nvarin
-              myin(:,ivar) = convert(c_func(ivar),myin(:,ivar))
+                call compute(c_func(ivar),myin(:,ivar))
             ENDDO
+          else
+            myin=rmiss
           ENDIF
 
           myout=rmiss
@@ -169,7 +171,7 @@ do i=1,size(myin)
 
   IF (ASSOCIATED(c_func)) THEN
     DO ivar = 1, nvar
-      myout(i)%voldati(:,:,:,:,:,ivar) = convert(c_func(ivar),myout(i)%voldati(:,:,:,:,:,ivar))
+      call compute(c_func(ivar),myout(i)%voldati(:,:,:,:,:,ivar))
     ENDDO
   ENDIF
   myout(i)%var=varvg6d

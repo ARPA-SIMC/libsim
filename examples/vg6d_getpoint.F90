@@ -57,7 +57,7 @@ doubleprecision :: ilon,ilat,flon,flat
 character(len=80) :: output_template,trans_type,sub_type
 INTEGER :: output_td
 LOGICAL :: version, ldisplay
-logical :: c2agrid
+logical :: c2agrid, noconvert
 
 !questa chiamata prende dal launcher il nome univoco
 call l4f_launcher(a_name,a_name_force="getpoint")
@@ -132,7 +132,6 @@ CALL optionparser_add(opt, 'e', 'a-grid', c2agrid, help= &
  'interpolate U/V points of an Arakawa C grid on the corresponding T points &
  &of an Arakawa A grid')
 
-
 ! options for defining output
 CALL optionparser_add(opt, 'f', 'output-format', output_format, &
 #ifdef HAVE_DBALLE
@@ -163,11 +162,17 @@ CALL grib_api_csv_add_options(opt) ! add options specific to grib_api_csv output
 #endif
 
 ! help options
-CALL optionparser_add(opt, 'd', 'display', ldisplay, help= &
+CALL optionparser_add(opt, 'g', 'display', ldisplay, help= &
  'briefly display the data volume imported and exported, &
  &warning: this option is incompatible with output on stdout.')
 CALL optionparser_add_help(opt, 'h', 'help', help='show an help message and exit')
 CALL optionparser_add(opt, ' ', 'version', version, help='show version and exit')
+
+
+CALL optionparser_add(opt, 'i', 'noconvert', noconvert, help= &
+ 'do not convert values fron grib definition to standard vol7d model data, &
+ &this option set vol7d variables to missing so is not possible to export to some formats, &
+ &usefull with --output-format=grib_api_csv option.')
 
 ! parse options and check for errors
 CALL optionparser_parse(opt, optind, optstatus)
@@ -291,7 +296,7 @@ IF (ldisplay) CALL display(volgrid)
 IF (c2agrid) CALL vg6d_c2a(volgrid)
 
 CALL transform(trans, volgrid6d_in=volgrid, vol7d_out=v7d_out, v7d=v7d_coord, &
- maskgrid=maskfield, networkname=network, categoryappend="transform")
+ maskgrid=maskfield, networkname=network, noconvert=noconvert, categoryappend="transform")
 
 CALL l4f_category_log(category,L4F_INFO,"transformation completed")
 

@@ -1873,13 +1873,14 @@ END SUBROUTINE volgrid6d_v7d_transform
 !! each element of the input \a volgrid6d array object is merged into
 !! a single \a vol7d output object.
 SUBROUTINE volgrid6dv_v7d_transform(this, volgrid6d_in, vol7d_out, v7d, &
- maskgrid, networkname, categoryappend)
+ maskgrid, networkname, noconvert, categoryappend)
 TYPE(transform_def),INTENT(in) :: this !< object specifying the abstract transformation
 TYPE(volgrid6d),INTENT(inout) :: volgrid6d_in(:) !< object to be transformed, it is an array of volgrid6d objects, each of which will be transformed, it is not modified, despite the INTENT(inout)
 TYPE(vol7d),INTENT(out) :: vol7d_out !< transformed object, it does not need initialisation
 TYPE(vol7d),INTENT(in),OPTIONAL :: v7d !< object containing a list of points over which transformation has to be done (required by some transformation types)
 REAL,INTENT(in),OPTIONAL :: maskgrid(:,:) !< 2D field to be used for defining subareas according to its values, it must have the same shape as the field to be interpolated (for transformation type 'maskinter')
 CHARACTER(len=*),OPTIONAL,INTENT(in) :: networkname !< set the output network name in vol7d_out (default='generic')
+LOGICAL,OPTIONAL,INTENT(in) :: noconvert !< do not try to match variable and convert values during transform
 CHARACTER(len=*),INTENT(in),OPTIONAL :: categoryappend !< append this suffix to log4fortran namespace category
 
 integer :: i
@@ -1891,7 +1892,7 @@ CALL init(vol7d_out)
 
 DO i=1,SIZE(volgrid6d_in)
   CALL transform(this, volgrid6d_in(i), v7dtmp, v7d=v7d, &
-   maskgrid=maskgrid, networkname=networkname, categoryappend=categoryappend)
+   maskgrid=maskgrid, networkname=networkname, noconvert=noconvert, categoryappend=categoryappend)
   CALL vol7d_append(vol7d_out, v7dtmp)
 ENDDO
 
