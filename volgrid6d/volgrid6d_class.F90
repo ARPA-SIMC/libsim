@@ -1589,11 +1589,13 @@ END SUBROUTINE volgrid6dv_transform
 ! \brief Calcola i nuovi dati secondo la trasformazione specificata
 !
 ! Deve essere fornito l'oggetto di trasformazione e oggetti completi
-SUBROUTINE volgrid6d_v7d_transform_compute(this, volgrid6d_in, vol7d_out, networkname)
+SUBROUTINE volgrid6d_v7d_transform_compute(this, volgrid6d_in, vol7d_out, &
+ networkname, noconvert)
 TYPE(grid_transform),INTENT(in) :: this ! oggetto di trasformazione per grigliato
 type(volgrid6d), INTENT(in) :: volgrid6d_in ! oggetto da trasformare
 type(vol7d), INTENT(inout) :: vol7d_out ! oggetto trasformato
 CHARACTER(len=*),OPTIONAL,INTENT(in) :: networkname ! imposta il network in vol7d_out (default='generic')
+LOGICAL,OPTIONAL,INTENT(in) :: noconvert !< do not try to match variable and convert values during transform
 
 INTEGER :: nntime, nana, ntime, ntimerange, nlevel, nvar, stallo
 INTEGER :: itime, itimerange, ilevel, ivar, inetwork
@@ -1661,7 +1663,8 @@ if (associated(volgrid6d_in%level))then
   vol7d_out%level=volgrid6d_in%level
 end if
 
-if (associated(volgrid6d_in%var))then
+nullify(c_func)
+if (associated(volgrid6d_in%var) .AND. .NOT.optio_log(noconvert))then
   nvar=size(volgrid6d_in%var)
   CALL vargrib2varbufr(volgrid6d_in%var, vol7d_out%dativar%r, c_func)
 end if
@@ -1743,7 +1746,7 @@ end SUBROUTINE volgrid6d_v7d_transform_compute
 !! is created internally and it does not require preliminary
 !! initialisation.
 SUBROUTINE volgrid6d_v7d_transform(this, volgrid6d_in, vol7d_out, v7d, poly, &
- maskgrid, networkname, categoryappend)
+ maskgrid, networkname, noconvert, categoryappend)
 TYPE(transform_def),INTENT(in) :: this !< object specifying the abstract transformation
 TYPE(volgrid6d),INTENT(inout) :: volgrid6d_in !< object to be transformed, it is not modified, despite the INTENT(inout)
 TYPE(vol7d),INTENT(out) :: vol7d_out !< transformed object, it does not need initialisation
@@ -1751,6 +1754,7 @@ TYPE(vol7d),INTENT(in),OPTIONAL :: v7d !< object containing a list of points ove
 TYPE(geo_coordvect),INTENT(inout),OPTIONAL :: poly(:) !< array of polygons indicating a list of areas over which transformation has to be done (required by some transformation types)
 REAL,INTENT(in),OPTIONAL :: maskgrid(:,:) !< 2D field to be used for defining subareas according to its values, it must have the same shape as the field to be interpolated (for transformation type 'maskinter')
 CHARACTER(len=*),OPTIONAL,INTENT(in) :: networkname !< set the output network name in vol7d_out (default='generic')
+LOGICAL,OPTIONAL,INTENT(in) :: noconvert !< do not try to match variable and convert values during transform
 CHARACTER(len=*),INTENT(in),OPTIONAL :: categoryappend !< append this suffix to log4fortran namespace category
 
 type(grid_transform) :: grid_trans
@@ -1847,7 +1851,7 @@ IF (c_e(grid_trans)) THEN
     ENDDO
   ENDIF
 
-  CALL compute(grid_trans, volgrid6d_in, vol7d_out, networkname)
+  CALL compute(grid_trans, volgrid6d_in, vol7d_out, networkname, noconvert)
 !ELSE how to signal error status? c_e(vol7d_out)
 ENDIF
 
