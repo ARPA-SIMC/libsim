@@ -341,6 +341,7 @@ IF (trans_type /=  'none') THEN ! transform
    volgrid6d_out=volgrid_out, clone=.TRUE., categoryappend="transform")
 
   CALL l4f_category_log(category,L4F_INFO,"transformation completed")
+  IF (ASSOCIATED(volgrid)) CALL delete(volgrid)
 
 else
   
@@ -358,6 +359,8 @@ if (ASSOCIATED(volgrid_out) .and. output_variable_list /= " ") then
     CALL delete(volgrid_out)
     volgrid_out => volgrid_tmp
   else
+    print *,"Impossible solution"
+    call display(vfnoracle)
     CALL l4f_category_log(category, L4F_ERROR, 'Cannot make variable you have requested')
     CALL raise_fatal_error()
   end if
@@ -376,7 +379,6 @@ ENDIF
 ! export
 CALL write_to_file_out(volgrid_out)
 
-IF (ASSOCIATED(volgrid)) CALL delete(volgrid)
 IF (ASSOCIATED(volgrid_out)) CALL delete(volgrid_out)
 
 #ifdef ALCHIMIA
