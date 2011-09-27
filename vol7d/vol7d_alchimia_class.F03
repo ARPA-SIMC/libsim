@@ -192,15 +192,20 @@ end do
 if (.not. oracle(mybin,mybout,vfntmp,myvfn)) then
   call l4f_log(L4F_WARN,"alchemy_v7d: I cannot make your request")
   alchemy_v7d = 1
+  if(.not. shoppinglist(mybout,vfntmp,myvfn)) then
+    call l4f_log(L4F_WARN,"shoppinglist: return error status")
+    alchemy_v7d = 2
+    if (present(vfnoracle)) vfnoracle=myvfn
+  end if
+
   return
+
 end if
 
 !call display(myvfn)
 call l4f_log(L4F_INFO,"alchemy_v7d: I need "//t2c(myvfn%nout)//" more variables")
 
 call make(myvfn,mybin,mybout,myin,myout)
-
-if (present(vfnoracle)) vfnoracle=myvfn
 
 call delete(myvfn)
 call delete(vfntmp)

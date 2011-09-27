@@ -107,7 +107,7 @@ type(fndsv),intent(in) :: vfn
 type(volgrid6d),intent(in) :: myin(:)
 type(volgrid6d),intent(out),pointer ::myout(:)
 logical,intent(in),optional :: copy !< if .true. the copy functions are localy added to vfn (you can have input variable copyed to output)
-type(fndsv),intent(out),optional,allocatable :: vfnoracle(:)
+type(fndsv),intent(out),optional :: vfnoracle
 
 integer :: i,j,nvar,ivar
 type(fndsv) :: myvfn,vfntmp
@@ -119,7 +119,6 @@ TYPE(conv_func), pointer :: c_func(:)
 alchemy_vg6d=0
 
 allocate(myout(size(myin)))
-if (present(vfnoracle)) allocate (vfnoracle(size(myin)))
 
 do i=1,size(myin)
 
@@ -146,13 +145,17 @@ do i=1,size(myin)
   end do
 
   if (.not. oracle(mybin,mybout,vfntmp,myvfn)) then
-     call l4f_log(L4F_WARN,"alchemy_vg6d: I cannot make your request")
+    call l4f_log(L4F_WARN,"alchemy_vg6d: I cannot make your request")
     alchemy_vg6d = 1
+    if(.not. shoppinglist(mybout,vfntmp,myvfn)) then
+      call l4f_log(L4F_WARN,"shoppinglist: return error status")
+      alchemy_vg6d = 2
+      if (present(vfnoracle))vfnoracle=myvfn
+    end if
     return
   end if
 
-  vfnoracle(i)=myvfn
-
+  
   !call display(myvfn)
   call l4f_log(L4F_INFO,"alchemy_vg6d: I need "//t2c(myvfn%nout)//" more variables")
 

@@ -40,7 +40,17 @@ call init(myout,filename=filenameout, file=.true., write=.true., wipe=.true., ca
 !CALL import(myin,var=(/"B12101","B10004"/),varkind=(/"r","r"/))
 CALL import(myin)
 
-if (alchemy(myin%vol7d,vfn,mybout,myout%vol7d,copy=.true.,vfnoracle=vfnoracle) /= 0 ) stop 1
+if (alchemy(myin%vol7d,vfn,mybout,myout%vol7d,copy=.true.,vfnoracle=vfnoracle) /= 0 ) then
+  print*, "I cannot make ",mybout
+  
+  if (.not. shoppinglist(mybout,vfn,vfnoracle)) then
+    print*, " error shoppinglist"
+    stop 2
+  else
+        call display(compile_sl(vfnoracle))
+    stop 3
+  end if
+end if
 
 call display(vfnoracle)
 

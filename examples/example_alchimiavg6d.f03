@@ -9,7 +9,7 @@ use log4fortran
 IMPLICIT NONE
 
 type(fndsv) :: vfn
-type(fndsv),allocatable :: vfnoracle(:)
+type(fndsv),allocatable :: vfnoracle
 character(len=10), allocatable:: mybout(:)
 type(volgrid6d),pointer :: myin(:),myout(:)
 
@@ -37,7 +37,17 @@ call register_termo(vfn)
 
 CALL import(myin,filename=filenamein,decode=.true., time_definition=0, categoryappend="input")
 
-if (alchemy(myin,vfn,mybout,myout,copy=.true.,vfnoracle=vfnoracle) /= 0) stop 1
+if (alchemy(myin,vfn,mybout,myout,copy=.true.,vfnoracle=vfnoracle) /= 0) then
+  print*, "I cannot make ",mybout
+  
+  if (.not. shoppinglist(mybout,vfn,vfnoracle)) then
+    print*, " error shoppinglist"
+    stop 2
+  else
+        call display(compile_sl(vfnoracle))
+    stop 3
+  end if
+end if
 
 call display(vfnoracle)
 

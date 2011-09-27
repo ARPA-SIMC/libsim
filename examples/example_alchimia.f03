@@ -10,7 +10,6 @@ IMPLICIT NONE
 integer :: i
 integer, parameter :: ndat=100
 type(fndsv) :: vfn,myvfn
-type(shoplists) :: sl
 character(len=10), allocatable:: mybin(:),mybout(:)
 real,allocatable :: myin(:,:),myout(:,:)
 integer :: category,ier
@@ -41,13 +40,12 @@ print *,"I have to prepare:     ",mybout
 if (.not. oracle(mybin,mybout,vfn,myvfn)) then
   print*, "I cannot make ",mybout
 
-  if (.not. shoppinglist(mybout,vfn,myvfn,sl)) then
+  if (.not. shoppinglist(mybout,vfn,myvfn)) then
     print*, " error shoppinglist"
     stop 2
   else
-    do i=1,maxval(myvfn%fnds(:)%order)
-      call display(myvfn,i)
-    end do
+        call display(myvfn)
+        call display(compile_sl(myvfn))
     stop 3
   end if
 end if

@@ -60,6 +60,16 @@ type fndsv
   type(fnds),allocatable :: fnds(:)
 end type fndsv
 
+!> shoplist are list of variables
+type shoplist
+  CHARACTER(len=10),allocatable :: bvar(:) !< table B  WMO
+end type shoplist
+
+!> Vector of shoplists that are list of variables
+type shoplists
+  type(shoplist),allocatable :: shoplist(:)
+end type shoplists
+
 !>Check missing values for fnds 
 interface c_e
    module procedure c_e_fn
@@ -75,7 +85,7 @@ end interface
 
 !> show on the screen the fnds and fndsv structure
 interface display
-   module procedure fn_display, fnv_display, vfnv_display
+   module procedure fn_display, fnv_display, vfnv_display, fnv_display_byorder, sl_display
 end interface
 
 !> Delete fndsv
@@ -98,9 +108,9 @@ end interface
 !!$PUBLIC insert_unique, append_unique
 private
 public fnds,fndsv,make,init,c_e,display,delete,fnregister,oracle,register_copy
+public shoppinglist, shoplists, compile_sl
 
 contains
-
 
 !> Register the copy function to be able to copy input variables to output if requested
 subroutine register_copy(vfn,bin)
@@ -215,7 +225,7 @@ if (present(fn))then
   
   vfn%nout=vfn%nout+size(fn%bout)
 
-  CALL l4f_log(L4F_DEBUG, 'fnregister: adding function object '//trim(fn%name)//' with order '//t2c(vfn%nout))
+  CALL l4f_log(L4F_DEBUG, 'fnregister: adding function object '//trim(fn%name)//' ; nout '//t2c(vfn%nout))
 
 end if
 
@@ -236,12 +246,29 @@ equal_fn= this%name == that%name
 
 end function equal_fn
 
+
+
+!> Display shopping lists on screen
+subroutine sl_display(sl)
+type(shoplists),intent(in) :: sl !< shopping lists to display
+
+integer :: i
+
+do i = 1, size(sl%shoplist)
+  print *,"shopping list : ",i
+  print *,"varlist       : ",sl%shoplist(i)%bvar
+  print *,""
+end do
+
+end subroutine sl_display
+
+
 !> Display function objects on screen
 subroutine fn_display(fn)
 type(fnds),intent(in) :: fn !< function object to display
-
-print *,fn%name," : ",fn%bin(:count(c_e(fn%bin)))
-print *,"get      : ",fn%bout(:count(c_e(fn%bout)))
+print *,"function : ",fn%name,"  order :",fn%order
+print *,"input    : ",fn%bin (:count(c_e(fn%bin)))
+print *,"output   : ",fn%bout(:count(c_e(fn%bout)))
 print *,""
 
 end subroutine fn_display
@@ -251,11 +278,33 @@ subroutine fnv_display(fnv)
 type(fndsv),intent(in) :: fnv !< vector function object to display
 integer :: i
 
-print *, "Here we have the solution:"
+print *,"-------------------------------------------------"
+print *, "Here the function tree:"
 do i = count(c_e(fnv%fnds)),1,-1
   call display(fnv%fnds(i))
 end do
+print *,"-------------------------------------------------"
 end subroutine fnv_display
+
+
+
+!> Display vector function objects on screen delected by order
+subroutine fnv_display_byorder(fnv,order)
+type(fndsv),intent(in) :: fnv !< vector function object to display
+integer,intent(in) :: order !< level for recursice search of functions
+ 
+integer :: i
+
+print *,"-------------------------------------------------"
+print *, "Here the function tree for order: ",order
+do i = count(c_e(fnv%fnds)),1,-1
+  if (fnv%fnds(i)%order == order ) then
+    call display(fnv%fnds(i))
+  end if
+end do
+print *,"-------------------------------------------------"
+end subroutine fnv_display_byorder
+
 
 
 !> Display vector function objects on screen
@@ -263,21 +312,25 @@ subroutine vfnv_display(vfnv)
 type(fndsv),intent(in) :: vfnv(:) !< vector function object to display
 integer :: i
 
+print *,">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"
 do i = 1, size(vfnv)
-  print*,">> Solution number:",i
+  print*,">> Function tree number:",i
   call display(vfnv(i))
 end do
+print *,"<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<"
 end subroutine vfnv_display
 
 
+
 !> This function like a oracle say you how to abtain what you want.
-!! Startin fron desciption of input and output and a vector of available functions
-!! provide you the road to execute for make the output
-recursive logical function oracle(mybin,mybout,vfn,mayvfn,recurse) result(stat)
+!! Starting from desciption of input and output and a vector of available functions
+!! provide to you the road to execute for make the output
+recursive logical function oracle(mybin,mybout,vfn,myvfn,recurse) result(stat)
 type(fndsv),intent(in) :: vfn !< vector function object available
 character(len=*),intent(in) :: mybin(:)  !< standard table B description of input
 character(len=*),intent(in) :: mybout(:) !< standard table B description of output
-type(fndsv),intent(out) :: mayvfn        !< vector function object that solve the problem
+type(fndsv),intent(out) :: myvfn        !< vector function object that solve the problem
+logical,optional :: recurse !< set to .true. when called in recurse
 
 type(fndsv),save :: usefullfn,maybefn
 
@@ -289,7 +342,6 @@ type(fndsv),save :: usefullfn,maybefn
 
 integer :: i,j,k,iin,iout
 logical :: allfoundout, foundout, somefoundin, foundin
-logical,optional :: recurse
 integer,save :: order,num
 character(len=10) :: newbin(nmaxb), newbout(nmaxb), tmpbin(nmaxb)
 
@@ -299,8 +351,10 @@ if (.not. optio_log(recurse)) then
   CALL l4f_log(L4F_DEBUG, "oracle: delete and register")
   call delete(maybefn)
   call delete(usefullfn)
+  call delete(myvfn)
   call fnregister(maybefn)
   call fnregister(usefullfn)
+  call fnregister(myvfn)
   order=0
 end if
 
@@ -390,7 +444,7 @@ if (allfoundout) then
      end do
      if (foundout) then
        CALL l4f_log(L4F_DEBUG, "oracle: other register  "// trim(maybefn%fnds(i)%name))
-       call fnregister(mayvfn,maybefn%fnds(i),order)
+       call fnregister(myvfn,maybefn%fnds(i),order)
        do k=1,count(c_e(maybefn%fnds(i)%bin))
          tmpbin(firsttrue(.not. c_e(tmpbin)))=maybefn%fnds(i)%bin(k)
        end do
@@ -401,7 +455,7 @@ if (allfoundout) then
 
 else
 
-   stat=oracle(newbin,mybout,vfn,mayvfn,.true.)
+   stat=oracle(newbin,mybout,vfn,myvfn,.true.)
 
 end if
 
@@ -413,6 +467,78 @@ if (.not. optio_log(recurse)) then
 end if
 
 end function oracle
+
+
+!> This function try to suggest you some road to obtain the variable you want.
+!! Starting from desciption of output and a vector of available functions
+!! provide to you some possible starting points.
+recursive logical function shoppinglist(mybout,vfn,myvfn, recurse) result(stat)
+type(fndsv),intent(in) :: vfn !< vector function object available
+character(len=*),intent(in) :: mybout(:) !< standard table B description of output
+type(fndsv),intent(inout) :: myvfn        !< vector function object that solve the problem
+logical,optional :: recurse !< set to .true. when called in recurse
+
+integer :: i,j,k
+logical ::  somefoundout
+integer,save :: order
+character(len=10) :: newbout(nmaxb)
+
+stat = .true.
+newbout=cmiss
+
+! delete only on the main call
+if (.not. optio_log(recurse)) then
+  CALL l4f_log(L4F_DEBUG, "shoppinglist: main call (delete and register)")
+
+  call delete(myvfn)
+  call fnregister(myvfn)
+  order=0
+  newbout(:size(mybout))=mybout
+
+else
+
+  CALL l4f_log(L4F_DEBUG, "shoppinglist: sub call; order:"//t2c(order))
+
+  !print*,pack(newbout,c_e(newbout))
+
+  do i=1, count(c_e(myvfn%fnds(:)))
+    !print*,"order:",myvfn%fnds(i)%order, order
+    if (myvfn%fnds(i)%order == order) then
+      do k=1,size(myvfn%fnds(i)%bin(:))
+        newbout(firsttrue(.not. c_e(newbout)))=myvfn%fnds(i)%bin(k)
+      end do
+    end if
+  end do
+
+end if
+
+!print*,pack(newbout,c_e(newbout))
+
+! order is level to put functions
+order=order+1
+somefoundout = .false.
+
+CALL l4f_log(L4F_DEBUG, "oracle: order "//t2c(order))
+
+!search for functions outputing my output
+do i =1, count(c_e(vfn%fnds))
+  !call display(vfn%fnds(i)) 
+  do j = 1, count(c_e(vfn%fnds(i)%bout(:)))
+    if (any(vfn%fnds(i)%bout(j) == newbout)) then
+      CALL l4f_log(L4F_DEBUG, "shoppinglist: register  "//trim(vfn%fnds(i)%name))
+      call fnregister(myvfn,vfn%fnds(i),order)
+      somefoundout = .true.
+    end if
+  end do
+end do
+
+!check if we can work anymore
+if (.not. somefoundout) return
+
+stat=shoppinglist(mybout,vfn,myvfn,.true.)
+
+end function shoppinglist
+
 
 !> Execute the function to obtain what you have requested to oracle.
 !! This is a sample only routine for the cousine test case.
@@ -435,6 +561,54 @@ end do
 
 end subroutine makev
 
+
+
+
+!> Produce a vector of list of variables usefull for produce your request.
+function  compile_sl(myvfn)        
+
+type(shoplists) :: compile_sl
+type(fndsv),intent(in) :: myvfn       !< vector function object that solve the problem
+
+integer :: i,j,k,nshoplist,nvar,nfunc,indfunc,indvar
+CHARACTER(len=10),allocatable :: bvartmp(:)
+
+indfunc=0
+nshoplist=(maxval(myvfn%fnds(:)%order))
+allocate (compile_sl%shoplist(nshoplist))
+
+nvar=1
+
+do i=1,nshoplist
+  nfunc=count(myvfn%fnds(:)%order==i)
+  allocate(compile_sl%shoplist(i)%bvar(nvar-1))
+  if (i > 1) then
+    compile_sl%shoplist(i)%bvar = compile_sl%shoplist(i-1)%bvar
+    do j = indfunc+1, indfunc+nfunc
+      do k = 1, size(myvfn%fnds(j)%bout)
+        indvar=index_c(compile_sl%shoplist(i)%bvar,myvfn%fnds(j)%bout(k))
+        if (indvar > 0) compile_sl%shoplist(i)%bvar(indvar)=cmiss
+      end do
+    end do
+  end if
+  do j = indfunc+1, indfunc+nfunc
+    do k = 1, size(myvfn%fnds(j)%bin)
+      if (index_c(compile_sl%shoplist(i)%bvar,myvfn%fnds(j)%bin(k)) > 0 ) cycle
+      allocate(bvartmp(nvar))
+      bvartmp(:nvar-1)=compile_sl%shoplist(i)%bvar
+      call move_alloc(from=bvartmp ,to=compile_sl%shoplist(i)%bvar)
+      compile_sl%shoplist(i)%bvar(nvar)=myvfn%fnds(j)%bin(k)
+      nvar=nvar+1
+    end do
+  end do
+  indfunc=indfunc+nfunc
+end do
+
+do i=1,nshoplist
+  compile_sl%shoplist(i)%bvar=pack(compile_sl%shoplist(i)%bvar,c_e(compile_sl%shoplist(i)%bvar))
+end do
+
+end function compile_sl
 
 end module alchimia
 

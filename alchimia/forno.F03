@@ -34,7 +34,7 @@ end subroutine inforna
 
 type(fnds) function inforna_def()
   call init(inforna_def,"inforna",&
-       [character(len=10) :: "farina","lievito"],&
+       [character(len=10) :: "farina","lievito","acqua","sale"],&
        [character(len=10) :: "pane"],0,func=inforna)
 end function inforna_def
 

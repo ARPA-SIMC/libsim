@@ -839,6 +839,12 @@ if (output_variable_list /= " ") then
     v7d = v7dtmp
   else
     CALL l4f_category_log(category, L4F_ERROR, 'Cannot make variable you have requested')
+
+    if (.not. shoppinglist(vl,vfn,vfnoracle)) then
+      CALL l4f_category_log(category, L4F_ERROR, 'shoppinglist: generic error')
+    else
+      call display(compile_sl(vfnoracle))
+    end if
     CALL raise_fatal_error()
   end if
 end if

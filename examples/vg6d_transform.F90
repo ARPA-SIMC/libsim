@@ -67,7 +67,7 @@ TYPE(grid_file_id) :: file_template
 TYPE(grid_id) :: gaid_template
 #ifdef ALCHIMIA
 type(fndsv) :: vfn
-type(fndsv),allocatable :: vfnoracle(:)
+type(fndsv) :: vfnoracle
 #endif
 
 !questa chiamata prende dal launcher il nome univoco
@@ -362,6 +362,12 @@ if (ASSOCIATED(volgrid_out) .and. output_variable_list /= " ") then
     print *,"Impossible solution"
     call display(vfnoracle)
     CALL l4f_category_log(category, L4F_ERROR, 'Cannot make variable you have requested')
+
+    if (.not. shoppinglist(vl,vfn,vfnoracle)) then
+      CALL l4f_category_log(category, L4F_ERROR, 'shoppinglist: generic error')
+    else
+      call display(compile_sl(vfnoracle))
+    end if
     CALL raise_fatal_error()
   end if
 
