@@ -19,7 +19,6 @@ libsim_alchimia_la_LDFLAGS =
 libsim_alchimia_la_LIBADD = ../log4fortran/liblog4fortran.la \
  ../base/libsim_base.la 
 
-
 # c'e` una maniera migliore?
 tmpvar = $(libsim_alchimia_la_SOURCES:.f90=.mod)
 tmpvar1 = $(tmpvar:.f03=.mod)

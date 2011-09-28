@@ -1,9 +1,12 @@
 module vol7d_alchimia_class
+#include "config.h"
 
 USE vol7d_class
 USE alchimia
 USE log4fortran
-
+#ifdef HAVE_DBALLE
+USE vol7d_dballe_class
+#endif
 implicit NONE
 
 interface make
@@ -15,20 +18,47 @@ interface alchemy
 end interface
 
 private
-public make, alchemy, v7d_all_var
+public make, alchemy, v7d_all_var, sl_display_pretty
 
 contains
+
+
+function pretty_var(var)
+CHARACTER(len=80) :: pretty_var
+character(len=*) :: var
+
+integer :: ind
+
+#ifdef HAVE_DBALLE
+type(vol7d_var),pointer :: dballevar(:)
+
+call vol7d_dballe_import_dballevar(dballevar)
+ind=index_c(dballevar(:)%btable,var)
+
+if (ind > 0 )then
+  pretty_var=dballevar(ind)%description
+else
+  pretty_var=var
+end if
+#else
+
+pretty_var=var
+
+#endif
+end function pretty_var
+
 
 subroutine make_v7d(mayvfn,mybin,mybout,v7din,v7dout)
 type(fndsv),intent(inout) :: mayvfn
 character(len=*),intent(in) :: mybin(:),mybout(:)
 type(vol7d),intent(inout) :: v7din
 type(vol7d),intent(out) :: v7dout
-integer :: i,nana,nlevel,ntime,ntimerange,nvarin,nvarout,nnetwork
+integer :: i,j,nana,nlevel,ntime,ntimerange,nvarin,nvarout,nnetwork
 integer :: ilevel,itime,itimerange,inetwork,ivar,ind
 type(vol7d_var) :: var
 real,allocatable :: myin(:,:)
 character(len=1) :: type
+character(len=10) :: newbout(mayvfn%nout)
 
 nana=size(v7din%ana)
 ntime=size(v7din%time)
@@ -36,7 +66,7 @@ nlevel=size(v7din%level)
 ntimerange=size(v7din%timerange)
 nnetwork=size(v7din%network)
 nvarin=size(mybin)
-nvarout=size(mybout)
+nvarout=mayvfn%nout
 
 call copy (v7din,v7dout,&
  ldativarr=(/.false./),&
@@ -47,8 +77,21 @@ call copy (v7din,v7dout,&
 
 call vol7d_alloc(v7dout, ndativarr=nvarout)
 
+newbout=cmiss
+do i=1, size(mayvfn%fnds)
+  if (c_e(mayvfn%fnds(i))) then
+    do j=1, size(mayvfn%fnds(i)%bout)
+      if (c_e(mayvfn%fnds(i)%bout(j))) then
+        if (index_c(newbout,mayvfn%fnds(i)%bout(j)) <= 0) then
+          newbout(index_c(newbout,cmiss)) = mayvfn%fnds(i)%bout(j)
+        end if
+      end if
+    end do
+  end if
+end do
+
 do ivar=1,nvarout
-  call init(v7dout%dativar%r(ivar),btable=mybout(ivar))
+  call init(v7dout%dativar%r(ivar),btable=newbout(ivar))
 end do
 
 call vol7d_alloc_vol(v7dout,inivol=.true.)
@@ -94,7 +137,7 @@ do i=size(mayvfn%fnds),1,-1
 
             end do
 
-            call mayvfn%fnds(i)%fn(mybin,mybout,mayvfn%fnds(i)%bin,mayvfn%fnds(i)%bout,&
+            call mayvfn%fnds(i)%fn(mybin,newbout,mayvfn%fnds(i)%bin,mayvfn%fnds(i)%bout,&
              myin,&
              v7dout%voldatir(:,ilevel,itime,itimerange,:,inetwork))
 
@@ -192,18 +235,18 @@ end do
 if (.not. oracle(mybin,mybout,vfntmp,myvfn)) then
   call l4f_log(L4F_WARN,"alchemy_v7d: I cannot make your request")
   alchemy_v7d = 1
-  if(.not. shoppinglist(mybout,vfntmp,myvfn)) then
+  if(.not. shoppinglist(mybout,vfntmp,myvfn,copy=optio_log(copy))) then
     call l4f_log(L4F_WARN,"shoppinglist: return error status")
     alchemy_v7d = 2
-    if (present(vfnoracle)) vfnoracle=myvfn
   end if
-
+  if (present(vfnoracle)) vfnoracle=myvfn
   return
-
 end if
 
+if (present(vfnoracle)) vfnoracle=myvfn
+
 !call display(myvfn)
-call l4f_log(L4F_INFO,"alchemy_v7d: I need "//t2c(myvfn%nout)//" more variables")
+call l4f_log(L4F_INFO,"alchemy_v7d: I need "//t2c(myvfn%nout)//" variables")
 
 call make(myvfn,mybin,mybout,myin,myout)
 
@@ -211,6 +254,23 @@ call delete(myvfn)
 call delete(vfntmp)
 
 end function alchemy_v7d
+
+
+!> Display shopping lists on screen more pretty than simple display
+subroutine sl_display_pretty(sl)
+type(shoplists),intent(in) :: sl !< shopping lists to display
+
+integer :: i,j
+
+do i = 1, size(sl%shoplist)
+  print *,"shopping list : ",i
+  do j=1,size(sl%shoplist(i)%bvar)
+    print *,"required var  : ",sl%shoplist(i)%bvar(j)," -> ",pretty_var(sl%shoplist(i)%bvar(j))
+  end do
+  print *,""
+end do
+
+end subroutine sl_display_pretty
 
 
 end module vol7d_alchimia_class

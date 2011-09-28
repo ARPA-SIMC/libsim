@@ -29,8 +29,11 @@ type(volgrid6d),intent(in) :: vg6din
 type(volgrid6d),intent(out) :: vg6dout
 TYPE(conv_func), pointer :: c_func(:)
 
-integer :: i,nx,ny,nlevel,ntime,ntimerange,nvar,nvarin,ilevel,itime,itimerange,ivar,ivarin,ivarout
+integer :: i,j,nx,ny,nlevel,ntime,ntimerange,nvar,nvarin,ilevel,itime,itimerange,ivar,ivarin,ivarout
 real,allocatable :: myin(:,:),myout(:,:),myminivol(:,:,:)
+character(len=10) :: newbout(mayvfn%nout)
+TYPE(vol7d_var),allocatable :: varv7d(:)
+TYPE(volgrid6d_var),allocatable :: varvg6d(:)
 
 nx=vg6din%griddim%dim%nx
 ny=vg6din%griddim%dim%ny
@@ -38,7 +41,20 @@ nlevel=size(vg6din%level)
 ntime=size(vg6din%time)
 ntimerange=size(vg6din%timerange)
 nvarin=size(mybin)
-nvar=size(mybout)
+nvar=mayvfn%nout
+
+newbout=cmiss
+do i=1, size(mayvfn%fnds)
+  if (c_e(mayvfn%fnds(i))) then
+    do j=1, size(mayvfn%fnds(i)%bout)
+      if (c_e(mayvfn%fnds(i)%bout(j))) then
+        if (index_c(newbout,mayvfn%fnds(i)%bout(j)) <= 0) then
+          newbout(index_c(newbout,cmiss)) = mayvfn%fnds(i)%bout(j)
+        end if
+      end if
+    end do
+  end if
+end do
 
 allocate(myout(nx*ny,nvar))
 
@@ -76,11 +92,11 @@ do i=size(mayvfn%fnds),1,-1
           ENDIF
 
           myout=rmiss
-          call mayvfn%fnds(i)%fn(mybin,mybout,mayvfn%fnds(i)%bin,mayvfn%fnds(i)%bout,myin,myout)
+          call mayvfn%fnds(i)%fn(mybin,newbout,mayvfn%fnds(i)%bin,mayvfn%fnds(i)%bout,myin,myout)
           vg6dout%voldati(:,:,ilevel,itime,itimerange,:)=reshape(myout,(/nx,ny,nvar/))
           do ivar=1, size(mayvfn%fnds(i)%bout)
             ivarin  = index_c(mybin,mayvfn%fnds(i)%bin(1))
-            ivarout = index_c(mybout,mayvfn%fnds(i)%bout(ivar))
+            ivarout = index_c(newbout,mayvfn%fnds(i)%bout(ivar))
             call copy (vg6din%gaid(ilevel,itime,itimerange,ivarin), vg6dout%gaid(ilevel,itime,itimerange,ivarout))
 
 #ifdef HAVE_LIBGRIBAPI
@@ -97,6 +113,25 @@ do i=size(mayvfn%fnds),1,-1
   end if
 end do
 
+allocate (varv7d(nvar))
+allocate(varvg6d(nvar))
+
+do ivar = 1, nvar
+  call init(varv7d(ivar),newbout(ivar))
+end DO
+
+DEALLOCATE(c_func)
+CALL varbufr2vargrib(varv7d, varvg6d, c_func)
+
+IF (ASSOCIATED(c_func)) THEN
+  DO ivar = 1, nvar
+    call compute(c_func(ivar),vg6dout%voldati(:,:,:,:,:,ivar))
+  ENDDO
+ENDIF
+vg6dout%var=varvg6d
+DEALLOCATE(c_func)
+deallocate (varv7d)
+
 end subroutine make_vg6d
 
 
@@ -112,9 +147,8 @@ type(fndsv),intent(out),optional :: vfnoracle
 integer :: i,j,nvar,ivar
 type(fndsv) :: myvfn,vfntmp
 character(len=10), allocatable:: mybin(:)
-TYPE(vol7d_var),allocatable :: varv7d(:)
-TYPE(volgrid6d_var),allocatable :: varvg6d(:)
 TYPE(conv_func), pointer :: c_func(:)
+TYPE(vol7d_var),allocatable :: varv7d(:)
 
 alchemy_vg6d=0
 
@@ -147,39 +181,20 @@ do i=1,size(myin)
   if (.not. oracle(mybin,mybout,vfntmp,myvfn)) then
     call l4f_log(L4F_WARN,"alchemy_vg6d: I cannot make your request")
     alchemy_vg6d = 1
-    if(.not. shoppinglist(mybout,vfntmp,myvfn)) then
+    if(.not. shoppinglist(mybout,vfntmp,myvfn,copy=optio_log(copy))) then
       call l4f_log(L4F_WARN,"shoppinglist: return error status")
       alchemy_vg6d = 2
-      if (present(vfnoracle))vfnoracle=myvfn
     end if
+    if (present(vfnoracle))vfnoracle=myvfn
     return
   end if
 
+  if (present(vfnoracle))vfnoracle=myvfn
   
   !call display(myvfn)
   call l4f_log(L4F_INFO,"alchemy_vg6d: I need "//t2c(myvfn%nout)//" more variables")
 
   call make(myvfn,mybin,mybout,myin(i),myout(i),c_func)
-
-  nvar=size(mybout)
-  allocate (varv7d(nvar))
-  allocate(varvg6d(nvar))
-  
-  do ivar = 1, nvar
-    call init(varv7d(ivar),mybout(ivar))
-  end DO
-
-  DEALLOCATE(c_func)
-  CALL varbufr2vargrib(varv7d, varvg6d, c_func)
-
-  IF (ASSOCIATED(c_func)) THEN
-    DO ivar = 1, nvar
-      call compute(c_func(ivar),myout(i)%voldati(:,:,:,:,:,ivar))
-    ENDDO
-  ENDIF
-  myout(i)%var=varvg6d
-  DEALLOCATE(c_func)
-  deallocate (varv7d)
 
   call delete(myvfn)
   call delete(vfntmp)

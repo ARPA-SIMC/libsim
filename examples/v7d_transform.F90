@@ -59,7 +59,7 @@ CHARACTER(len=512) :: input_file, output_file, output_format, output_template, &
  network_list, variable_list, anavariable_list, attribute_list, coord_file, output_variable_list
 CHARACTER(len=160) :: pre_trans_type
 TYPE(vol7d_network), ALLOCATABLE :: nl(:)
-CHARACTER(len=10), ALLOCATABLE :: vl(:), avl(:), al(:), alqc(:)
+CHARACTER(len=10), ALLOCATABLE :: vl(:), avl(:), al(:), alqc(:),vl_alc(:)
 CHARACTER(len=23) :: start_date, end_date
 CHARACTER(len=19) :: start_date_default, end_date_default
 CHARACTER(len=20) :: levelc, timerangec
@@ -463,9 +463,9 @@ ENDIF
 ! generate variable lists
 IF (LEN_TRIM(output_variable_list) > 0) THEN
   n = word_split(output_variable_list, w_s, w_e, ',')
-  ALLOCATE(vl(n))
+  ALLOCATE(vl_alc(n))
   DO i = 1, n
-    vl(i) = output_variable_list(w_s(i):w_e(i))
+    vl_alc(i) = output_variable_list(w_s(i):w_e(i))
   ENDDO
   DEALLOCATE(w_s, w_e)
 ENDIF
@@ -829,22 +829,21 @@ ENDIF
 if (output_variable_list /= " ") then
 
   call register_termo(vfn)
-  !call v7d_all_var(v7d,mybin)
-  !call register_copy(vfn,mybin)
-  !deallocate(mybin)
 
-  if (alchemy(v7d,vfn,vl,v7dtmp,copy=.true., vfnoracle=vfnoracle) == 0 ) then
+  if (alchemy(v7d,vfn,vl_alc,v7dtmp,copy=.true., vfnoracle=vfnoracle) == 0 ) then
     call display(vfnoracle)
     CALL delete(v7d)
     v7d = v7dtmp
   else
     CALL l4f_category_log(category, L4F_ERROR, 'Cannot make variable you have requested')
 
-    if (.not. shoppinglist(vl,vfn,vfnoracle)) then
+    if (.not. shoppinglist(vl,vfn,vfnoracle,copy=.false.)) then
       CALL l4f_category_log(category, L4F_ERROR, 'shoppinglist: generic error')
     else
-      call display(compile_sl(vfnoracle))
+      call sl_display_pretty(compile_sl(vfnoracle))
+      IF (ldisplay ) call display(vfn)
     end if
+    CALL l4f_category_log(category, L4F_ERROR, 'Exit for error')
     CALL raise_fatal_error()
   end if
 end if

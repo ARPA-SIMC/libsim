@@ -247,16 +247,15 @@ equal_fn= this%name == that%name
 end function equal_fn
 
 
-
 !> Display shopping lists on screen
 subroutine sl_display(sl)
 type(shoplists),intent(in) :: sl !< shopping lists to display
 
-integer :: i
+integer :: i,j
 
 do i = 1, size(sl%shoplist)
   print *,"shopping list : ",i
-  print *,"varlist       : ",sl%shoplist(i)%bvar
+    print *,"varlist       : ",sl%shoplist(i)%bvar
   print *,""
 end do
 
@@ -266,7 +265,15 @@ end subroutine sl_display
 !> Display function objects on screen
 subroutine fn_display(fn)
 type(fnds),intent(in) :: fn !< function object to display
-print *,"function : ",fn%name,"  order :",fn%order
+if (c_e(fn%order) .and. c_e(fn%priority)) then
+  print *,"function : ",fn%name,"  order :",fn%order,"  priority :",fn%priority
+else if (c_e(fn%order)) then
+  print *,"function : ",fn%name,"  order :",fn%order
+else if (c_e(fn%priority)) then
+  print *,"function : ",fn%name,"  priority :",fn%priority
+else
+  print *,"function : ",fn%name
+end if
 print *,"input    : ",fn%bin (:count(c_e(fn%bin)))
 print *,"output   : ",fn%bout(:count(c_e(fn%bout)))
 print *,""
@@ -277,6 +284,8 @@ end subroutine fn_display
 subroutine fnv_display(fnv)
 type(fndsv),intent(in) :: fnv !< vector function object to display
 integer :: i
+
+if (.not. allocated(fnv%fnds))return
 
 print *,"-------------------------------------------------"
 print *, "Here the function tree:"
@@ -472,12 +481,14 @@ end function oracle
 !> This function try to suggest you some road to obtain the variable you want.
 !! Starting from desciption of output and a vector of available functions
 !! provide to you some possible starting points.
-recursive logical function shoppinglist(mybout,vfn,myvfn, recurse) result(stat)
+recursive logical function shoppinglist(mybout,vfn,myvfn, copy, recurse) result(stat)
 type(fndsv),intent(in) :: vfn !< vector function object available
 character(len=*),intent(in) :: mybout(:) !< standard table B description of output
 type(fndsv),intent(inout) :: myvfn        !< vector function object that solve the problem
-logical,optional :: recurse !< set to .true. when called in recurse
+logical,intent(in),optional :: copy !< if .true. the copy functions are localy added to vfn (you can have input variable copyed to output)
+logical,intent(in),optional :: recurse !< set to .true. when called in recurse
 
+type(fndsv) :: vfntmp
 integer :: i,j,k
 logical ::  somefoundout
 integer,save :: order
@@ -485,6 +496,7 @@ character(len=10) :: newbout(nmaxb)
 
 stat = .true.
 newbout=cmiss
+vfntmp=vfn
 
 ! delete only on the main call
 if (.not. optio_log(recurse)) then
@@ -494,6 +506,8 @@ if (.not. optio_log(recurse)) then
   call fnregister(myvfn)
   order=0
   newbout(:size(mybout))=mybout
+
+  if (optio_log(copy)) call register_copy(vfntmp,mybout)
 
 else
 
@@ -518,15 +532,15 @@ end if
 order=order+1
 somefoundout = .false.
 
-CALL l4f_log(L4F_DEBUG, "oracle: order "//t2c(order))
+CALL l4f_log(L4F_DEBUG, "shoppinglist: order "//t2c(order))
 
 !search for functions outputing my output
-do i =1, count(c_e(vfn%fnds))
-  !call display(vfn%fnds(i)) 
-  do j = 1, count(c_e(vfn%fnds(i)%bout(:)))
-    if (any(vfn%fnds(i)%bout(j) == newbout)) then
-      CALL l4f_log(L4F_DEBUG, "shoppinglist: register  "//trim(vfn%fnds(i)%name))
-      call fnregister(myvfn,vfn%fnds(i),order)
+do i =1, count(c_e(vfntmp%fnds))
+  !call display(vfntmp%fnds(i)) 
+  do j = 1, count(c_e(vfntmp%fnds(i)%bout(:)))
+    if (any(vfntmp%fnds(i)%bout(j) == newbout)) then
+      CALL l4f_log(L4F_DEBUG, "shoppinglist: register  "//trim(vfntmp%fnds(i)%name))
+      call fnregister(myvfn,vfntmp%fnds(i),order)
       somefoundout = .true.
     end if
   end do
@@ -535,7 +549,13 @@ end do
 !check if we can work anymore
 if (.not. somefoundout) return
 
-stat=shoppinglist(mybout,vfn,myvfn,.true.)
+stat=shoppinglist(mybout,vfntmp,myvfn,copy=optio_log(copy), recurse=.true.)
+
+! delete on exit only on the main call
+if (.not. optio_log(recurse)) then
+  call delete(vfntmp)
+  order=0
+end if
 
 end function shoppinglist
 
@@ -575,6 +595,7 @@ CHARACTER(len=10),allocatable :: bvartmp(:)
 
 indfunc=0
 nshoplist=(maxval(myvfn%fnds(:)%order))
+nshoplist=max(0,nshoplist)
 allocate (compile_sl%shoplist(nshoplist))
 
 nvar=1

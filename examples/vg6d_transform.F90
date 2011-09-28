@@ -32,6 +32,7 @@ USE geo_coord_class
 #ifdef ALCHIMIA
 USE alchimia
 use volgrid6d_alchimia_class
+use vol7d_alchimia_class
 USE termo
 #endif
 
@@ -360,14 +361,15 @@ if (ASSOCIATED(volgrid_out) .and. output_variable_list /= " ") then
     volgrid_out => volgrid_tmp
   else
     print *,"Impossible solution"
-    call display(vfnoracle)
     CALL l4f_category_log(category, L4F_ERROR, 'Cannot make variable you have requested')
 
-    if (.not. shoppinglist(vl,vfn,vfnoracle)) then
+    if (.not. shoppinglist(vl,vfn,vfnoracle,copy=.false.)) then
       CALL l4f_category_log(category, L4F_ERROR, 'shoppinglist: generic error')
     else
-      call display(compile_sl(vfnoracle))
+      call sl_display_pretty(compile_sl(vfnoracle))
+      IF (ldisplay ) call display(vfn)
     end if
+    CALL l4f_category_log(category, L4F_ERROR, 'Exit for error')
     CALL raise_fatal_error()
   end if
 

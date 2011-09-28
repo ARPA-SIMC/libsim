@@ -41,7 +41,6 @@ type(fnds) function t_p2pt_def()
 end function t_p2pt_def
 
 
-
 subroutine  dd_ff2u_v(mybin,mybout,bin,bout,in,out)
   CHARACTER(len=10),intent(in) :: mybin(:)  !< vector table B  WMO input  in user's data
   CHARACTER(len=10),intent(in) :: mybout(:) !< vector table B  WMO output in user's data
