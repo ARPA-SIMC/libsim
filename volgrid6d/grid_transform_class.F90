@@ -2255,18 +2255,20 @@ ELSE IF (this%trans%trans_type == 'boxinter' &
   ELSE IF (this%trans%sub_type == 'min') THEN
 
     field_out(:,:,:) = rmiss
-    DO j = 1, this%inny
-      DO i = 1, this%innx
-        IF (c_e(this%inter_index_x(i,j)) .AND. c_e(this%inter_index_y(i,j))) THEN
-          IF (c_e(field_out(this%inter_index_x(i,j),this%inter_index_y(i,j),k))) THEN
-            field_out(this%inter_index_x(i,j),this%inter_index_y(i,j),k) = &
-             MIN(field_out(this%inter_index_x(i,j),this%inter_index_y(i,j),k), &
-             field_in(i,j,k))
-          ELSE
-            field_out(this%inter_index_x(i,j),this%inter_index_y(i,j),k) = &
-             field_in(i,j,k)
+    DO k = 1, innz
+      DO j = 1, this%inny
+        DO i = 1, this%innx
+          IF (c_e(this%inter_index_x(i,j)) .AND. c_e(this%inter_index_y(i,j))) THEN
+            IF (c_e(field_out(this%inter_index_x(i,j),this%inter_index_y(i,j),k))) THEN
+              field_out(this%inter_index_x(i,j),this%inter_index_y(i,j),k) = &
+               MIN(field_out(this%inter_index_x(i,j),this%inter_index_y(i,j),k), &
+               field_in(i,j,k))
+            ELSE
+              field_out(this%inter_index_x(i,j),this%inter_index_y(i,j),k) = &
+               field_in(i,j,k)
+            ENDIF
           ENDIF
-        ENDIF
+        ENDDO
       ENDDO
     ENDDO
 
