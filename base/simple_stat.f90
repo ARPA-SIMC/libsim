@@ -24,6 +24,7 @@
 !! \ingroup base
 MODULE simple_stat
 USE missing_values
+use array_utilities
 IMPLICIT NONE
 
 !> Compute the average of the random variable provided,
@@ -98,7 +99,7 @@ INTERFACE stat_percentile
 END INTERFACE
 
 PRIVATE
-PUBLIC stat_average, stat_variance, stat_stddev, stat_linear_corr, stat_percentile
+PUBLIC stat_average, stat_variance, stat_stddev, stat_linear_corr, stat_percentile, NormalizedDensityIndex
 
 CONTAINS
 
@@ -408,21 +409,36 @@ sample_mask = (sample /= rmiss)
 IF (PRESENT(mask)) sample_mask = sample_mask .AND. mask
 sample_count = COUNT(sample_mask)
 IF (sample_count == 0) RETURN ! particular case
-lsample(1:sample_count) = PACK(sample, mask=sample_mask)
+
+if (sample_count == size(sample)) then
+  lsample=sample
+else
+  lsample(1:sample_count) = PACK(sample, mask=sample_mask)
+end if
+
 IF (sample_count == 1) THEN ! other particular case
   percentile(:) = lsample(1)
   RETURN
 ENDIF
 
+! here we have a problem
+! this sort is very fast but with a lot of equal values it is very slow and fails
+
+call sort(lsample(1:sample_count))
+
+
+! here we have a problem
+! this sort is very very slow
 ! sort
-DO j = 2, sample_count
-  v = lsample(j)
-  DO i = j-1, 1, -1
-    IF (v >= lsample(i)) EXIT
-    lsample(i+1) = lsample(i)
-  ENDDO
-  lsample(i+1) = v
-ENDDO
+!!$DO j = 2, sample_count
+!!$  v = lsample(j)
+!!$  DO i = j-1, 1, -1
+!!$    IF (v >= lsample(i)) EXIT
+!!$    lsample(i+1) = lsample(i)
+!!$  ENDDO
+!!$  lsample(i+1) = v
+!!$ENDDO
+
 
 DO j = 1, SIZE(perc_vals)
   IF (perc_vals(j) >= 0. .AND. perc_vals(j) <= 100.) THEN
@@ -489,5 +505,341 @@ ENDDO
 
 END FUNCTION stat_percentiled
 
+
+!!$ Calcolo degli NDI calcolati
+!!$
+!!$ Gli NDI vengono calcolati all’interno degli intervalli dei percentili.
+!!$ Questo significa che il numero di NDI è pari al numero di percentili
+!!$ non degeneri meno 1; il metodo di calcolo è il seguente:
+!!$
+!!$ si calcola il Density Index (DI) per ogni intervallo di percentili
+!!$ come rapporto fra quanti intervalli di percentile vengono utilizzati
+!!$ per definire la larghezza dell’intervallo, più di uno se si hanno
+!!$ percentili degeneri, e la larghezza dell’intervallo stesso.
+!!$
+!!$ Si calcola il valore dell’ADI (Actual Density Index) dividendo i DI
+!!$ ottenuti in intervalli aventi percentili degeneri per il numero di
+!!$ intervalli che hanno contribuito a definire quell’intervallo.
+!!$
+!!$ si calcola il valore del 50-esimo percentile dei valori degli ADI
+!!$ precedentemente ottenuti;
+!!$
+!!$ si divide il valore degli ADI per il 50-percentile degli ADI in
+!!$ maniera tale da normalizzarli ottenendo così gli NADI (Normalized
+!!$ Actual Density Index) calcolati
+!!$
+!!$ Si sommano i NADI relativi ad intervalli di percentili degeneri
+!!$ ottenendo gli NDI
+
+
+
+!!$! Sobroutine calculating the number of NDI values
+!!$SUBROUTINE NOFNDI_old(npclint, pcl0, pclint, pcl100, nndi) 
+!!$
+!!$INTEGER, INTENT(IN) :: npclint !< number of pclint
+!!$REAL, INTENT(IN) :: pcl0     !< the 0-th percentile = min(sample)
+!!$REAL, DIMENSION(npclint), INTENT(IN) :: pclint !< the percentiles between the 0-th percentile and the 100-th percentile
+!!$REAL, INTENT(IN) :: pcl100   !< the 100-th percentile = max(sample)
+!!$INTEGER, INTENT(OUT) :: nndi     !< number of NDI
+!!$
+!!$REAL, DIMENSION(:), allocatable :: pcl      !< array inglobing in itself pcl0, pclint and pcl100 
+!!$INTEGER :: &
+!!$     npcl,&
+!!$     ipclint,&! integer loop variable on npclint
+!!$     ipcl, &  ! integer loop variable on npcl=2+npclint
+!!$     npcl_act ! number of non redundant values in pcl equal to the number of 
+!!$              ! pcl_act values                                     
+!!$
+!!$! Calculation of npcl
+!!$npcl=SIZE(pclint)+2
+!!$
+!!$! Allocation of pcl and its initialisation
+!!$ALLOCATE(pcl(npcl))
+!!$pcl(1)=pcl0
+!!$DO ipclint=1,npclint
+!!$  pcl(ipclint+1)=pclint(ipclint)
+!!$ENDDO
+!!$pcl(SIZE(pclint)+2)=pcl100
+!!$
+!!$IF ( ANY(pcl == rmiss) ) THEN
+!!$  
+!!$  nndi=0
+!!$  
+!!$ELSE
+!!$  
+!!$                                ! Calculation of npcl_act
+!!$  npcl_act=1
+!!$  DO ipcl=2,npcl
+!!$    IF (pcl(ipcl) /= pcl(ipcl-1)) THEN
+!!$      npcl_act=npcl_act+1
+!!$    ENDIF
+!!$  ENDDO
+!!$  
+!!$                                ! Definition of number of ndi that is the wanted output value
+!!$  nndi=npcl_act-1
+!!$      
+!!$ENDIF
+!!$
+!!$
+!!$END SUBROUTINE NOFNDI_old
+!!$
+!!$
+!!$
+!!$! Sobroutine calculating the ndi values
+!!$SUBROUTINE NDIC_old(npclint, pcl0, pclint, pcl100, nndi, ndi, limbins) 
+!!$
+!!$INTEGER, INTENT(IN) :: npclint !< number of pclint
+!!$REAL, INTENT(IN) :: pcl0   !< the 0-th percentile = min(sample)  
+!!$REAL, DIMENSION(npclint), INTENT(IN) ::  pclint  !< the percentiles between the 0-th percentile and the 100-th percentile
+!!$REAL, INTENT(IN) :: pcl100 !< the 100-th percentile = max(sample)
+!!$INTEGER, INTENT(IN) ::  nndi      !< number of ndi 
+!!$REAL, DIMENSION(nndi), INTENT(OUT) ::  ndi       !< ndi that I want to calculate
+!!$REAL, DIMENSION(nndi+1), INTENT(OUT) :: limbins   !< ndi that I want to calculate
+!!$    
+!!$REAL, DIMENSION(:), allocatable :: &
+!!$     pcl, &      ! array inglobing in itself pcl0, pclint and pcl100 
+!!$     pcl_act, &  ! actual values of pcls removing redundat information
+!!$     ranges, &   ! distances between the different pcl_act(s)
+!!$     di, &       ! density indexes
+!!$     adi, &      ! actual density indexes
+!!$     nadi        ! normalized actual density indexes                      
+!!$
+!!$INTEGER, DIMENSION(:), allocatable ::  weights     ! weights = number of redundance times of a certain values
+!!$                                                   ! in pcl values
+!!$
+!!$REAL, DIMENSION(1) :: &
+!!$ perc_vals, & ! perc_vals contains the percentile position (0-100)
+!!$ med          ! mediana value
+!!$
+!!$REAL, DIMENSION(:), allocatable :: infopclval
+!!$INTEGER, DIMENSION(:), allocatable :: infopclnum
+!!$
+!!$INTEGER :: &
+!!$ nbins,&       ! number of intervals
+!!$ ibins,&       ! integer loop variable on nbins_act
+!!$ nbins_act,&   ! number of non redundant intervals
+!!$ ibins_act,&   ! integer loop variable on nbins_act
+!!$ ipclint,&     ! integer loop variable on npclint
+!!$ npcl, &       ! number of percentiles 
+!!$ ipcl, &       ! integer loop variable on npcl
+!!$ npcl_act,&    ! number of non redundant percentiles
+!!$ ipcl_act,&    ! integer loop variable on npcl_act
+!!$ npclplus, &   ! plus number information
+!!$ ncount        ! number of redundant percentiles values
+!!$    
+!!$
+!!$! Actual number of percentiles
+!!$npcl=SIZE(pclint)+2
+!!$    
+!!$! Allocation of infopclval and infopclnum
+!!$ALLOCATE(infopclval(npcl))
+!!$ALLOCATE(infopclnum(npcl))
+!!$infopclval(:)=0
+!!$infopclnum(:)=0
+!!$    
+!!$! Allocation of pcl
+!!$ALLOCATE(pcl(npcl))
+!!$! and storing of pcl values
+!!$pcl(1)=pcl0
+!!$DO ipclint=1,npclint
+!!$  pcl(ipclint+1)=pclint(ipclint)
+!!$ENDDO
+!!$pcl(SIZE(pclint)+2)=pcl100
+!!$
+!!$                                ! Calculation of non redundant values of percentiles    
+!!$
+!!$npcl_act=1
+!!$infopclval(1) = pcl(1)
+!!$infopclnum(1) = 1
+!!$
+!!$DO ipcl=2,npcl
+!!$  infopclval(ipcl) = pcl(ipcl)
+!!$  IF ( pcl(ipcl) /= pcl(ipcl-1) ) THEN
+!!$    npcl_act = npcl_act + 1
+!!$  ENDIF
+!!$  infopclnum(ipcl) = npcl_act
+!!$ENDDO
+!!$
+!!$                                ! Allocation of pcl_act
+!!$ALLOCATE(pcl_act(npcl_act))
+!!$                                ! and storing in pcl_act of percentiles values
+!!$DO ipcl_act=1,npcl_act
+!!$  DO ipcl=1,npcl
+!!$    IF (ipcl_act == infopclnum(ipcl)) THEN
+!!$      pcl_act(ipcl_act) = pcl(ipcl)
+!!$      CYCLE
+!!$    ENDIF
+!!$  ENDDO
+!!$ENDDO
+!!$
+!!$
+!!$                                ! Allocation of ranges, weights and di and their initialisation
+!!$ALLOCATE(ranges(npcl_act-1))
+!!$ALLOCATE(weights(npcl_act-1))
+!!$ALLOCATE(di(npcl_act-1))
+!!$ranges(:)=0
+!!$di(:)=0
+!!$weights(:)=0
+!!$
+!!$                                ! Definition of nbins_act
+!!$nbins_act=npcl_act-1
+!!$                                ! Cycle on ibins_act for calculating ranges and weights
+!!$                                ! and consequently the di values
+!!$DO ibins_act=1,nbins_act
+!!$  ranges(ibins_act)=pcl_act(ibins_act+1) - pcl_act(ibins_act)
+!!$
+!!$  IF ( pcl_act(ibins_act+1) ==  pcl_act(npcl_act) ) THEN
+!!$    weights(ibins_act) =  COUNT( ibins_act == infopclnum ) + &
+!!$     COUNT( ibins_act+1 == infopclnum ) - 1
+!!$  ELSE
+!!$    weights(ibins_act) =  COUNT ( ibins_act == infopclnum )
+!!$  ENDIF
+!!$  di(ibins_act) = weights(ibins_act)/ranges(ibins_act)
+!!$ENDDO
+!!$    
+!!$                                ! Allocation of adi and its initialisation
+!!$ALLOCATE(adi(npcl-1))
+!!$adi(:)=0
+!!$npclplus=0
+!!$DO ibins_act=1,nbins_act
+!!$  ncount=weights(ibins_act)
+!!$                                ! Calculation of adi
+!!$  DO ibins=npclplus + 1,npclplus + ncount
+!!$    adi(ibins)=di(ibins_act)/ncount
+!!$  ENDDO
+!!$  npclplus=npclplus+ncount
+!!$ENDDO
+!!$    
+!!$                                ! Mediana calculation for perc_vals
+!!$perc_vals(1)=50
+!!$med = stat_percentile(sample=adi, perc_vals=perc_vals)
+!!$                                ! Allocation of nadi and its initialisation 
+!!$ALLOCATE(nadi(npcl-1))
+!!$nadi(:)=0
+!!$                                ! Definition of values of nadi
+!!$nadi(:) = adi(:)/med(1)
+!!$
+!!$                                ! Initialisation of ndi
+!!$ndi(:)=0
+!!$                                ! Calculation of the ndi values
+!!$ipcl_act=1
+!!$nbins=npcl-1
+!!$DO ibins=1,nbins
+!!$  ndi(ipcl_act)=nadi(ibins)+ndi(ipcl_act)
+!!$  IF ( ( pcl(ibins+1) /= pcl(ibins) ) .AND. &
+!!$   ( pcl(ibins+1) /= pcl(npcl) ) ) THEN
+!!$    ipcl_act=ipcl_act+1
+!!$  ENDIF
+!!$ENDDO
+!!$
+!!$DO ipcl_act=1,npcl_act
+!!$  limbins(ipcl_act)=pcl_act(ipcl_act)
+!!$ENDDO
+!!$
+!!$                                ! Deallocation part
+!!$DEALLOCATE(infopclval)
+!!$DEALLOCATE(infopclnum)
+!!$DEALLOCATE(pcl)
+!!$DEALLOCATE(pcl_act)
+!!$DEALLOCATE(ranges)
+!!$DEALLOCATE(weights)
+!!$DEALLOCATE(di)
+!!$DEALLOCATE(adi)
+!!$DEALLOCATE(nadi)
+!!$
+!!$END SUBROUTINE NDIC_old
+!!$
+!!$
+!!$!> Calculate the number of NDI values
+!!$SUBROUTINE NOFNDI(pcl, nndi) 
+!!$
+!!$REAL, DIMENSION(:), INTENT(IN) :: pcl !< the percentiles between the 0-th percentile and the 100-th percentile
+!!$INTEGER, INTENT(OUT) :: nndi     !< number of NDI
+!!$
+!!$IF ( ANY(pcl == rmiss) ) then
+!!$  nndi=0
+!!$else
+!!$  nndi=count_distinct(pcl)-1
+!!$end IF
+!!$
+!!$END SUBROUTINE NOFNDI
+
+
+recursive subroutine compute_ndi(ndi,med,delta)
+real,intent(inout) :: ndi(:)
+real,intent(in) :: med
+real,intent(inout) :: delta(:)
+
+integer :: i
+
+!check divide by 0
+if (any(delta <= tiny(0.0)) .and. .not. all(delta <= tiny(0.0))) then
+
+! from left
+  do i=2,size(delta)
+    if (delta(i) <= tiny(0.0)) delta(i) = delta(i-1)
+  end do
+
+! from right
+  do i=size(delta)-1,1,-1
+    if (delta(i) <= tiny(0.0)) delta(i) = delta(i+1)
+  end do
+end if
+
+! one more step
+if (any(delta <= tiny(0.0)) .and. .not. all(delta <= tiny(0.0))) then
+  call compute_ndi(ndi,med,delta)
+end if
+
+! compute
+ndi = 1./(2.*med*delta*float(size(delta)))
+
+!check NaN
+if (any(isnan(ndi)) .and. .not. all(isnan(ndi))) then
+
+! from left
+  do i=2,size(delta)
+    if (isnan(ndi(i))) delta(i) = delta(i-1)
+  end do
+  
+! recompute
+  ndi = 1./(2.*med*delta*float(size(delta)))
+
+  if (any(isnan(ndi)) .and. .not. all(isnan(ndi))) then
+
+! from right
+    do i=size(delta)-1,1,-1
+      if (isnan(ndi(i))) delta(i) = delta(i+1)
+    end do
+
+! one more step
+    call compute_ndi(ndi,med,delta)
+  end if
+end if
+
+end subroutine compute_ndi
+
+!> Compute Normalized Density Index
+SUBROUTINE NormalizedDensityIndex(rnum, perc_vals, ndi, limbins)
+
+REAL, DIMENSION(:), INTENT(IN)  :: rnum  !< data to analize
+REAL, DIMENSION(:), INTENT(IN)  :: perc_vals  !<the percentiles values to be computed, between 0. and 100.
+REAL, DIMENSION(:), INTENT(OUT) :: ndi       !< ndi that I want to calculate
+REAL, DIMENSION(:), INTENT(OUT) :: limbins   !< ndi that I want to calculate
+    
+REAL, DIMENSION(size(ndi)) :: delta
+real    :: med(1)
+integer :: i
+
+limbins = stat_percentile(rnum,perc_vals)
+med = stat_percentile(sample=limbins, perc_vals=(/50./)) ! Mediana calculation for 50 percentile
+
+do i=1,size(delta)
+  delta(i) =limbins(i+1)-limbins(i)
+end do
+
+call compute_ndi(ndi,med(1),delta)
+
+END SUBROUTINE NormalizedDensityIndex
 
 END MODULE simple_stat

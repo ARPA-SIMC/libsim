@@ -2,10 +2,13 @@ AM_FCFLAGS = -I../base -I../grib -I../volgrid6d -I../vol7d -I../qc -I../termolib
 EXTRA_DIST = log4crc
 bin_PROGRAMS =
 
-noinst_PROGRAMS = esempio_file_utilities esempio_v7d esempio_v7d_compute esempio_termolib log4fortran example_optionparser example_char_utilities
+noinst_PROGRAMS = esempio_file_utilities esempio_v7d esempio_v7d_compute esempio_termolib log4fortran example_optionparser example_char_utilities example_simple_stat
 
 esempio_file_utilities_SOURCES = esempio_file_utilities.f90
 esempio_file_utilities_LDADD = ../base/libsim_base.la
+
+example_simple_stat_SOURCES = example_simple_stat.f90
+example_simple_stat_LDADD = ../base/libsim_base.la
 
 esempio_v7d_SOURCES = esempio_v7d.f90
 esempio_v7d_LDADD = ../base/libsim_base.la ../vol7d/libsim_vol7d.la ../log4fortran/liblog4fortran.la
