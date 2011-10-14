@@ -34,7 +34,7 @@ CONTAINS
 
 
 !> General-purpose method for computing a statistical processing on
-!! data in a vol7d object. already processed with the same statistical
+!! data in a vol7d object already processed with the same statistical
 !! processing, on a different time interval specified by \a step and
 !! \a start.  This method tries to apply all the suitable specialized
 !! statistical processing methods according to the input and output

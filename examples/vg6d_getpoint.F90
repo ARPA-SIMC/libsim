@@ -161,18 +161,17 @@ CALL optionparser_add(opt, ' ', 'output-td', output_td, 1, help= &
 CALL grib_api_csv_add_options(opt) ! add options specific to grib_api_csv output
 #endif
 
+CALL optionparser_add(opt, 'i', 'noconvert', noconvert, help= &
+ 'do not convert values fron grib definition to standard vol7d model data, &
+ &this option sets vol7d variables to missing so it is not possible to export &
+ &to some formats, useful with --output-format=grib_api_csv option.')
+
 ! help options
 CALL optionparser_add(opt, 'g', 'display', ldisplay, help= &
  'briefly display the data volume imported and exported, &
  &warning: this option is incompatible with output on stdout.')
 CALL optionparser_add_help(opt, 'h', 'help', help='show an help message and exit')
 CALL optionparser_add(opt, ' ', 'version', version, help='show version and exit')
-
-
-CALL optionparser_add(opt, 'i', 'noconvert', noconvert, help= &
- 'do not convert values fron grib definition to standard vol7d model data, &
- &this option set vol7d variables to missing so is not possible to export to some formats, &
- &usefull with --output-format=grib_api_csv option.')
 
 ! parse options and check for errors
 CALL optionparser_parse(opt, optind, optstatus)
