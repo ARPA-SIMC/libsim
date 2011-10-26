@@ -354,7 +354,7 @@ TYPE(gridinfo_def),POINTER :: this(:) !< gridinfo array object which will be all
 CHARACTER(len=*),INTENT(in) :: filename !< name of file to open and import, in the form [driver:]pathname
 CHARACTER(len=*),INTENT(in),OPTIONAL :: categoryappend !< append this suffix to log4fortran namespace category
 
-INTEGER :: lunit, ngrid, stallo, category, gaid, iret
+INTEGER :: ngrid, stallo, category
 CHARACTER(len=512) :: a_name
 TYPE(grid_file_id) :: input_file
 TYPE(grid_id) :: input_grid
@@ -438,7 +438,7 @@ TYPE(gridinfo_def),INTENT(inout) :: this !< gridinfo object
 INTEGER :: gaid
 #endif
 #ifdef HAVE_LIBGDAL
-TYPE(gdalrasterbandh) :: gdalid
+!TYPE(gdalrasterbandh) :: gdalid
 #endif
 
 #ifdef DEBUG
@@ -1235,6 +1235,12 @@ else if (ltype == 141) then
 else if (ltype == 160) then
   ltype1=160
   scalev1=l1
+else if (ltype == 200) then ! entire atmosphere
+  ltype1=1
+  ltype2=8
+else if (ltype == 210) then ! entire ocean
+  ltype1=1
+  ltype2=9
 else
 
   call l4f_log(L4F_ERROR,'level_g1_to_g2: GRIB1 level '//TRIM(to_char(ltype)) &
@@ -1309,6 +1315,42 @@ else if (ltype1 == 106 .and. ltype2 == 106) then
   ltype = 112
   l1 = rescale1(scalef1-2,scalev1)!*100
   l2 = rescale1(scalef2-2,scalev2)!*100
+else if (ltype1 == 107 .and. ltype2 == 255) then ! isentropic
+  ltype = 113
+  l1 = rescale2(scalef1,scalev1)
+  l2 = 0
+else if (ltype1 == 107 .and. ltype2 == 107) then
+  ltype = 114
+  l1 = rescale1(scalef1,scalev1)
+  l2 = rescale1(scalef2,scalev2)
+else if (ltype1 == 108 .and. ltype2 == 255) then ! pressure diff to ground
+  ltype = 115
+  l1 = rescale2(scalef1+2,scalev1)!/100
+  l2 = 0
+else if (ltype1 == 108 .and. ltype2 == 108) then
+  ltype = 116
+  l1 = rescale1(scalef1+2,scalev1)!/100
+  l2 = rescale1(scalef2+2,scalev2)!/100
+else if (ltype1 == 109 .and. ltype2 == 255) then ! potential vorticity surf
+  ltype = 117
+  l1 = rescale2(scalef1+9,scalev1)!/10**9
+  l2 = 0
+else if (ltype1 == 111 .and. ltype2 == 255) then ! eta level
+  ltype = 119
+  l1 = rescale2(scalef1-2,scalev1)!*100
+  l2 = 0
+else if (ltype1 == 111 .and. ltype2 == 111) then
+  ltype = 120
+  l1 = rescale1(scalef1-4,scalev1)!*10000
+  l2 = rescale1(scalef2-4,scalev2)!*10000
+else if (ltype1 == 160 .and. ltype2 == 255) then ! depth below sea
+  ltype = 160
+  l1 = rescale2(scalef1,scalev1)
+  l2 = 0
+else if (ltype1 == 1 .and. ltype2 == 8) then ! entire atmosphere
+  ltype = 200
+else if (ltype1 == 1 .and. ltype2 == 9) then ! entire ocean
+  ltype = 201
 else ! mi sono rotto per ora
 
   ltype = 255

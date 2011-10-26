@@ -995,7 +995,7 @@ LOGICAL,INTENT(in),OPTIONAL :: decode !< if provided and \a .FALSE. the data vol
 INTEGER,INTENT(IN),OPTIONAL :: time_definition !< 0=time is reference time; 1=time is validity time
 character(len=*),INTENT(in),OPTIONAL :: categoryappend !< append this suffix to log4fortran namespace category
 
-INTEGER :: i, j, stallo
+INTEGER :: i, stallo
 integer :: ngrid,ntime,ntimerange,nlevel,nvar
 integer :: category
 character(len=512) :: a_name
@@ -1240,11 +1240,9 @@ LOGICAL,INTENT(in),OPTIONAL :: decode !< if provided and \a .FALSE. the data vol
 INTEGER,INTENT(IN),OPTIONAL :: time_definition !< 0=time is reference time; 1=time is validity time
 character(len=*),INTENT(in),OPTIONAL :: categoryappend !< append this suffix to log4fortran namespace category
 
-type(gridinfo_def),pointer :: gridinfo(:)
-integer::ngrib,gaid,iret,category,lunit,ier
-character(len=254) :: arg,lfilename
-
-character(len=512) :: a_name
+TYPE(gridinfo_def),POINTER :: gridinfo(:)
+INTEGER :: ngrib, category
+CHARACTER(len=512) :: a_name
 
 if (present(categoryappend))then
    call l4f_launcher(a_name,a_name_append= &
@@ -1475,7 +1473,7 @@ LOGICAL,INTENT(in),OPTIONAL :: decode !< if provided and \a .FALSE. the data vol
 CHARACTER(len=*),INTENT(in),OPTIONAL :: categoryappend !< append this suffix to log4fortran namespace category
 
 TYPE(grid_transform) :: grid_trans
-INTEGER :: ntime, ntimerange, nlevel, nvar, component_flag, cf_out
+INTEGER :: ntime, ntimerange, nlevel, nvar, cf_out
 TYPE(geo_proj) :: proj_in, proj_out
 CHARACTER(len=80) :: trans_type
 
@@ -1598,7 +1596,7 @@ CHARACTER(len=*),OPTIONAL,INTENT(in) :: networkname ! imposta il network in vol7
 LOGICAL,OPTIONAL,INTENT(in) :: noconvert !< do not try to match variable and convert values during transform
 
 INTEGER :: nntime, nana, ntime, ntimerange, nlevel, nvar, stallo
-INTEGER :: itime, itimerange, ilevel, ivar, inetwork
+INTEGER :: itime, itimerange, ivar, inetwork
 REAL,ALLOCATABLE :: voldatir_out(:,:,:)
 TYPE(conv_func),POINTER :: c_func(:)
 TYPE(datetime),ALLOCATABLE :: validitytime(:,:)
@@ -1745,13 +1743,12 @@ end SUBROUTINE volgrid6d_v7d_transform_compute
 !! is created and destroyed internally. The output transformed object
 !! is created internally and it does not require preliminary
 !! initialisation.
-SUBROUTINE volgrid6d_v7d_transform(this, volgrid6d_in, vol7d_out, v7d, poly, &
+SUBROUTINE volgrid6d_v7d_transform(this, volgrid6d_in, vol7d_out, v7d, &
  maskgrid, networkname, noconvert, categoryappend)
 TYPE(transform_def),INTENT(in) :: this !< object specifying the abstract transformation
 TYPE(volgrid6d),INTENT(inout) :: volgrid6d_in !< object to be transformed, it is not modified, despite the INTENT(inout)
 TYPE(vol7d),INTENT(out) :: vol7d_out !< transformed object, it does not need initialisation
 TYPE(vol7d),INTENT(in),OPTIONAL :: v7d !< object containing a list of points over which transformation has to be done (required by some transformation types)
-TYPE(geo_coordvect),INTENT(inout),OPTIONAL :: poly(:) !< array of polygons indicating a list of areas over which transformation has to be done (required by some transformation types)
 REAL,INTENT(in),OPTIONAL :: maskgrid(:,:) !< 2D field to be used for defining subareas according to its values, it must have the same shape as the field to be interpolated (for transformation type 'maskinter')
 CHARACTER(len=*),OPTIONAL,INTENT(in) :: networkname !< set the output network name in vol7d_out (default='generic')
 LOGICAL,OPTIONAL,INTENT(in) :: noconvert !< do not try to match variable and convert values during transform
@@ -1759,7 +1756,7 @@ CHARACTER(len=*),INTENT(in),OPTIONAL :: categoryappend !< append this suffix to 
 
 type(grid_transform) :: grid_trans
 INTEGER :: ntime, ntimerange, nlevel, nvar, nana, time_definition, nnetwork, stallo
-INTEGER :: itime, itimerange, nx, ny, iana, inetwork
+INTEGER :: itime, itimerange, iana, inetwork
 TYPE(datetime),ALLOCATABLE :: validitytime(:,:)
 TYPE(vol7d) :: v7d_locana
 CHARACTER(len=80) :: trans_type
@@ -1908,7 +1905,7 @@ type(vol7d), INTENT(in) :: vol7d_in ! oggetto da trasformare
 type(volgrid6d), INTENT(out) :: volgrid6d_out ! oggetto trasformato 
 CHARACTER(len=*),OPTIONAL,INTENT(in) :: networkname ! seleziona il network da exportare da vol7d (default=1)
 
-integer :: nana, ntime, ntimerange, nlevel, nvar, nnetwork
+integer :: nana, ntime, ntimerange, nlevel, nvar
 integer :: itime, itimerange, ivar, inetwork
 
 REAL,POINTER :: voldatiout(:,:,:)
@@ -2560,7 +2557,6 @@ type(volgrid6d),intent(inout) :: this ! object containing fields to be translate
 integer,intent(in) :: cgrid ! in C grid (Arakawa) we have 0=T,1=U,2=V points
 
 INTEGER :: i, j, k, iv, stallo
-TYPE(vol7d_var),ALLOCATABLE :: varbufr(:)
 REAL,ALLOCATABLE :: tmp_arr(:,:)
 REAL,POINTER :: voldatiuv(:,:)
 
