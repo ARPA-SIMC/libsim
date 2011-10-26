@@ -407,8 +407,77 @@ ENDIF
 END FUNCTION index/**/VOL7D_POLY_TYPES
 
 
-
 #ifdef ENABLE_SORT
+
+! TODO
+
+!!$Da Wikipedia, l'enciclopedia libera.
+!!$Il merge sort   un algoritmo di ordinamento abbastanza rapido che utilizza un processo di risoluzione ricorsivo.
+!!$Raffigurazione grafica delle versioni iterativa e ricorsiva dell'algoritmo merge sort.
+!!$
+!!$L'idea alla base del merge sort   il procedimento Divide et Impera, che consiste nella suddivisione del problema in sottoproblemi via via pi  piccoli.
+!!$
+!!$Il merge sort opera quindi dividendo l'insieme da ordinare in due met  e procedendo all'ordinamento delle medesime ricorsivamente. Quando si sono divise tutte le met  si procede alla loro fusione (merge appunto) costruendo un insieme ordinato.
+!!$
+!!$L'algoritmo fu inventato da John von Neumann nel 1945.
+!!$
+!!$ Pseudocodice [modifica]
+!!$
+!!$ merge (a[], left, center, right)  
+!!$    i   left
+!!$    j   center + 1
+!!$    k   0
+!!$ 
+!!$    while ((i <= center) && (j <= right)) do
+!!$       if (a[i] <= a[j])
+!!$        then
+!!$          b[k]   a[i]
+!!$          i   i + 1
+!!$        else
+!!$           b[k]   a[j]
+!!$           j   j + 1  
+!!$       k   k + 1
+!!$    end while
+!!$ 
+!!$    while (i <= center) do
+!!$          b[k]   a[i]
+!!$          i   i + 1
+!!$          k   k + 1
+!!$    end while
+!!$ 
+!!$    while (j <= right) do
+!!$          b[k]   a[j] 
+!!$          j   j + 1
+!!$         k   k + 1
+!!$    end while
+!!$ 
+!!$    for k   left to right do
+!!$        a[k]   b[k - left]
+!!$ 
+!!$ mergesort (a[], left, right)
+!!$    if (left < right) then
+!!$        center   (left + right) / 2
+!!$        mergesort(a, left, center)
+!!$        mergesort(a, center+1, right)
+!!$        merge(a, left, center, right)
+!!$
+
+!!$Bottom-up merge sort
+!!$
+!!$Bottom-up merge sort is a non-recursive variant of the merge sort, in which the array is sorted by a sequence of passes. During each pass, the array is divided into blocks of size m\,. (Initially, m=1\,). Every two adjacent blocks are merged (as in normal merge sort), and the next pass is made with a twice larger value of m\,.
+!!$
+!!$In pseudo-code:
+!!$
+!!$Input: array a[] indexed from 0 to n-1.
+!!$
+!!$m = 1
+!!$while m < n do
+!!$    i = 0
+!!$    while i < n-m do
+!!$        merge subarrays a[i..i+m-1] and a[i+m .. min(i+2*m-1,n-1)] in-place.
+!!$        i = i + 2 * m
+!!$    m = m * 2
+!!$
 
 !>\brief Sorts inline into ascending order - Quicksort
 !!  Quicksort chooses a "pivot" in the set, and explores the

@@ -765,80 +765,209 @@ END FUNCTION stat_percentiled
 !!$END SUBROUTINE NOFNDI
 
 
-recursive subroutine compute_ndi(ndi,med,delta)
-real,intent(inout) :: ndi(:)
-real,intent(in) :: med
-real,intent(inout) :: delta(:)
 
+!!$!example to manage exceptions
+!!$
+!!$use,intrinsic :: IEEE_EXCEPTIONS
+!!$
+!!$logical fail_o,fail_zero
+!!$
+!!$a=10.
+!!$b=tiny(0.)
+!!$
+!!$call safe_divide(a,b,c,fail_o,fail_zero)
+!!$
+!!$print*,fail_o,fail_zero
+!!$print *,a,b,c
+!!$
+!!$b=0.
+!!$call safe_divide(a,b,c,fail_o,fail_zero)
+!!$
+!!$print*,fail_o,fail_zero
+!!$print *,a,b,c
+!!$
+!!$contains
+!!$
+!!$subroutine safe_divide(a, b, c, fail_o,fail_zero)
+!!$
+!!$real a, b, c
+!!$logical fail_o,fail_zero
+!!$type(IEEE_STATUS_TYPE) status
+!!$! save the current floating-point environment, turn halting for
+!!$! divide-by-zero off, and clear any previous divide-by-zero flag
+!!$call IEEE_GET_STATUS(status)
+!!$call IEEE_SET_HALTING_MODE(IEEE_DIVIDE_BY_ZERO, .false.)
+!!$call IEEE_SET_HALTING_MODE(ieee_overflow, .false.)
+!!$
+!!$call IEEE_SET_FLAG(ieee_overflow, .false.)
+!!$call IEEE_SET_FLAG(IEEE_DIVIDE_BY_ZERO, .false.)
+!!$! perform the operation
+!!$c = a/b
+!!$! determine if a failure occurred and restore the floating-point environment
+!!$call IEEE_GET_FLAG(ieee_overflow, fail_o)
+!!$call IEEE_GET_FLAG(IEEE_DIVIDE_BY_ZERO, fail_zero)
+!!$call IEEE_SET_STATUS(status)
+!!$end subroutine safe_divide
+!!$end program 
+!!$
+
+
+! here you have to adopt the example above in the code below the use the wrong logic isnan()
+
+!!$!check NaN
+!!$if (any(isnan(di)) .and. .not. all(isnan(di))) then
+!!$
+!!$! from left
+!!$  do i=2,size(delta)
+!!$    if (isnan(di(i)) .and. .not. isnan(di(i-1))) then
+!!$      delta(i) = delta(i-1)
+!!$      w(i)     = w(i) + w(i-1)
+!!$    end if
+!!$  end do
+!!$  
+!!$! recompute
+!!$  print *,"WW=",w
+!!$  di = w/delta 
+!!$
+!!$  if (any(isnan(di)) .and. .not. all(isnan(di))) then
+!!$
+!!$! from right
+!!$    do i=size(delta)-1,1,-1
+!!$      if (isnan(di(i)) .and. .not. isnan(di(i+1))) then
+!!$        delta(i) = delta(i+1)
+!!$        w(i)     = w(i) + w(i+1)
+!!$      end if
+!!$    end do
+!!$
+!!$! one more step
+!!$    call DensityIndex(di,perc_vals,limbins)
+!!$  end if
+!!$end if
+
+
+subroutine DensityIndex_old(di,perc_vals,limbins)
+real,intent(inout)          :: di(:)
+real,intent(in)             :: perc_vals(:)
+real,intent(in)             :: limbins(:)
+
+real :: delta(size(di)),w(size(di))
+integer :: i
+
+do i=1,size(delta)
+  delta(i) = limbins(i+1)   - limbins(i)
+  w(i)     = perc_vals(i+1) - perc_vals(i)
+end do
+
+di=rmiss
+
+if ( .not. all(delta == 0.)) then
+  call DensityIndex_recurse(delta,w)
+  di = w/delta 
+end if
+
+end subroutine DensityIndex_old
+
+recursive subroutine DensityIndex_recurse(delta,w)
+real :: delta(:),w(:)
 integer :: i
 
 !check divide by 0
-if (any(delta <= tiny(0.0)) .and. .not. all(delta <= tiny(0.0))) then
+if (any(delta == 0.0)) then
 
 ! from left
   do i=2,size(delta)
-    if (delta(i) <= tiny(0.0)) delta(i) = delta(i-1)
+    if (delta(i) == 0.0 .and. delta(i-1) > 0.0 ) then
+      delta(i) = delta(i-1)
+      w(i)     = w(i) + w(i-1)
+    end if
   end do
 
 ! from right
   do i=size(delta)-1,1,-1
-    if (delta(i) <= tiny(0.0)) delta(i) = delta(i+1)
+    if (delta(i) == 0.0 .and. delta(i+1) > 0.0 )then
+      delta(i) = delta(i+1)
+      w(i)     = w(i) + w(i+1)
+    end if
   end do
+
 end if
 
 ! one more step
-if (any(delta <= tiny(0.0)) .and. .not. all(delta <= tiny(0.0))) then
-  call compute_ndi(ndi,med,delta)
+if (any(delta == 0.0)) then
+  call DensityIndex_recurse(delta,w)
 end if
 
-! compute
-ndi = 1./(2.*med*delta*float(size(delta)))
+end subroutine DensityIndex_recurse
 
-!check NaN
-if (any(isnan(ndi)) .and. .not. all(isnan(ndi))) then
 
-! from left
-  do i=2,size(delta)
-    if (isnan(ndi(i))) delta(i) = delta(i-1)
-  end do
-  
-! recompute
-  ndi = 1./(2.*med*delta*float(size(delta)))
 
-  if (any(isnan(ndi)) .and. .not. all(isnan(ndi))) then
+subroutine DensityIndex(di,nlimbins,occu,rnum,limbins)
+real,intent(out)                :: di(:)
+real,intent(out)                :: nlimbins(:)
+integer,intent(out)             :: occu(:)
+REAL, DIMENSION(:), INTENT(IN)  :: rnum  !< data to analize
+real,intent(in)                 :: limbins(:)
 
-! from right
-    do i=size(delta)-1,1,-1
-      if (isnan(ndi(i))) delta(i) = delta(i+1)
-    end do
+real :: delta,nnum(size(rnum))
+integer :: i,k,w,sample_count
+logical :: sample_mask(size(rnum))
 
-! one more step
-    call compute_ndi(ndi,med,delta)
+nlimbins=rmiss               ! compute unique limits
+nlimbins(1)=limbins(1)
+k=1
+do i=2,size(limbins)
+  if (limbins(i) /= limbins(k)) then
+    k=k+1
+    nlimbins(k)= limbins(i)
   end if
-end if
+end do
 
-end subroutine compute_ndi
+di=rmiss
+if (k == 1) return
+
+sample_mask = (rnum /= rmiss)        ! remove missing values
+sample_count = COUNT(sample_mask)
+IF (sample_count == 0) RETURN 
+nnum(1:sample_count) = PACK(rnum, mask=sample_mask)
+
+do i=1,k-2                           ! compute occorrence and density index
+  occu(i)=count(nnum>=nlimbins(i) .and. nnum<nlimbins(i+1))
+  di(i) = float(occu(i)) / (nlimbins(i+1) - nlimbins(i))
+end do
+
+i=k-1                  ! the last if is <=
+occu(i)=count(nnum>=nlimbins(i) .and. nnum<=nlimbins(i+1))
+di(i) = float(occu(i)) / (nlimbins(i+1) - nlimbins(i))
+
+end subroutine DensityIndex
+
 
 !> Compute Normalized Density Index
-SUBROUTINE NormalizedDensityIndex(rnum, perc_vals, ndi, limbins)
+SUBROUTINE NormalizedDensityIndex(rnum, perc_vals, ndi, nlimbins)
 
 REAL, DIMENSION(:), INTENT(IN)  :: rnum  !< data to analize
 REAL, DIMENSION(:), INTENT(IN)  :: perc_vals  !<the percentiles values to be computed, between 0. and 100.
-REAL, DIMENSION(:), INTENT(OUT) :: ndi       !< ndi that I want to calculate
-REAL, DIMENSION(:), INTENT(OUT) :: limbins   !< ndi that I want to calculate
+REAL, DIMENSION(:), INTENT(OUT) :: ndi       !< normalized density index
+REAL, DIMENSION(:), INTENT(OUT) :: nlimbins   !< the extreme values of data taken in account for ndi computation
     
-REAL, DIMENSION(size(ndi)) :: delta
-real    :: med(1)
-integer :: i
+REAL, DIMENSION(size(ndi)) :: di
+INTEGER, DIMENSION(size(ndi)) :: occu
+REAL, DIMENSION(size(nlimbins)) :: limbins
+real    :: med(1),diw(size(rnum))
+integer :: i,k
 
-limbins = stat_percentile(rnum,perc_vals)
-med = stat_percentile(sample=limbins, perc_vals=(/50./)) ! Mediana calculation for 50 percentile
+ndi=rmiss
+limbins = stat_percentile(rnum,perc_vals)     ! compute percentile
+call DensityIndex(di,nlimbins,occu,rnum,limbins)
 
-do i=1,size(delta)
-  delta(i) =limbins(i+1)-limbins(i)
+diw=rmiss                                     !weighted density index
+k=1
+do i=1,size(occu)
+  diw(k:k+occu(i))=di(i)
+  k=occu(i)+1
 end do
-
-call compute_ndi(ndi,med(1),delta)
+med = stat_percentile(sample=diw, perc_vals=(/50./)) ! Mediana calculation for density index
+ndi(:count(c_e(di))) = min(pack(di,mask=c_e(di))/med(1),1.0)
 
 END SUBROUTINE NormalizedDensityIndex
 
