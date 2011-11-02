@@ -115,7 +115,7 @@ subroutine init_ncar_plot(this,wkid,wstype,conid,file,PSTYPE,ORIENT,COLOR)
 
 type(ncar_plot),intent(out) :: this
 integer,intent(in),optional :: wkid  !< (def= 1)
-integer,intent(in),optional :: wstype!< (def= 8 PS)
+integer,intent(in),optional :: wstype!< (def= 8 X11)
 integer,intent(in),optional :: conid !< (def= 2)
 character(len=*),optional :: file    !< Names for the PostScript output files can be assigned to override the default names; The default file names of PostScript output from NCAR GKS are of the form gmetaXX.YY, where "XX" is the workstation ID and "YY" is either "ps", "eps", or" epsi", as appropriate
 character(len=*),optional :: PSTYPE  !< can be one of 'PS', 'EPS', or 'EPSI'
