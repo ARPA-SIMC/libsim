@@ -13,6 +13,10 @@ example_simple_stat_LDADD = ../base/libsim_base.la
 example_space_utilities_SOURCES = example_space_utilities.F90
 example_space_utilities_LDADD = ../base/libsim_base.la
 
+if NCARG
+example_space_utilities_LDADD += ../graphics/libsim_graphics.la ../base/libsim_base.la ../vol7d/libsim_vol7d.la  ../log4fortran/liblog4fortran.la ../termolib/libsim_termolib.la
+endif
+
 esempio_v7d_SOURCES = esempio_v7d.f90
 esempio_v7d_LDADD = ../base/libsim_base.la ../vol7d/libsim_vol7d.la ../log4fortran/liblog4fortran.la
 
@@ -87,8 +91,6 @@ bin_PROGRAMS += v7d_plot_sound
 
 v7d_plot_sound_SOURCES = v7d_plot_sound.F90
 v7d_plot_sound_LDADD = ../graphics/libsim_graphics.la ../base/libsim_base.la ../vol7d/libsim_vol7d.la  ../log4fortran/liblog4fortran.la ../termolib/libsim_termolib.la
-
-example_space_utilities_LDADD += ../graphics/libsim_graphics.la ../base/libsim_base.la ../vol7d/libsim_vol7d.la  ../log4fortran/liblog4fortran.la ../termolib/libsim_termolib.la
 
 endif
 
