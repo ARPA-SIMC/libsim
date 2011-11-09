@@ -94,10 +94,13 @@ v7d_plot_sound_LDADD = ../graphics/libsim_graphics.la ../base/libsim_base.la ../
 
 endif
 
-bin_PROGRAMS += v7d_qccli
+bin_PROGRAMS += v7d_qccli v7d_qcspa
 
-v7d_qccli_SOURCES = v7d_qccli.f90
+v7d_qccli_SOURCES = v7d_qccli.f90 
 v7d_qccli_LDADD = ../base/libsim_base.la ../vol7d/libsim_vol7d.la ../log4fortran/liblog4fortran.la ../qc/libsim_qc.la
+
+v7d_qcspa_SOURCES = v7d_qcspa.f90 
+v7d_qcspa_LDADD = ../base/libsim_base.la ../vol7d/libsim_vol7d.la ../log4fortran/liblog4fortran.la ../qc/libsim_qc.la
 
 esempio_qc_convert_SOURCES = esempio_qc_convert.f90
 esempio_qc_convert_LDADD = ../base/libsim_base.la ../vol7d/libsim_vol7d.la ../log4fortran/liblog4fortran.la ../qc/libsim_qc.la

@@ -76,7 +76,72 @@ use char_utilities
 
 implicit none
 
+type :: triangles
+  integer,pointer ::  ipt(:), ipl(:)
+  integer :: nt,nl,ndp
+end type triangles
+
+!> Distructor for triangles.
+!! delete triangles
+INTERFACE delete
+  MODULE PROCEDURE triangles_delete
+END INTERFACE
+
+INTERFACE triangles_compute
+  MODULE PROCEDURE triangles_compute_r, triangles_compute_d
+END INTERFACE
+
+private
+public triangles, triangles_new, delete, triangles_compute 
+
+
 contains
+
+!> initialize triangles
+function triangles_new(ndp) result(this)
+type(triangles) :: this !< triangle sto initialize
+integer,intent(in) :: ndp !< number of station to triangulate
+
+this%nt=imiss
+this%nl=imiss
+
+call delete (this)
+
+allocate(this%ipt(6*ndp-15), this%ipl(6*ndp))
+
+end function triangles_new
+
+
+!> delete triangles
+subroutine triangles_delete(this)
+type(triangles) :: this !< triangles to delete
+
+if (associated(this%ipt)) deallocate(this%ipt)
+if (associated(this%ipl)) deallocate(this%ipl)
+
+this%nt=imiss
+this%nl=imiss
+
+end subroutine triangles_delete
+
+
+integer function triangles_compute_r (XD,YD,tri)
+real,intent(in)  ::  XD(:) !< ARRAY OF DIMENSION NDP CONTAINING THE X COORDINATES OF THE DATA POINTS
+real,intent(in)  ::  YD(:) !< ARRAY OF DIMENSION NDP CONTAINING THE Y COORDINATES OF THE DATA POINTS.
+type (triangles),intent(out) :: tri !< computed triangles
+
+triangles_compute_r = CONTNG_simc (dble(XD),dble(YD),tri%NT,tri%IPT,tri%NL,tri%IPL)
+
+end function triangles_compute_r
+
+integer function triangles_compute_d (XD,YD,tri)
+double precision,intent(in)  ::  XD(:) !< ARRAY OF DIMENSION NDP CONTAINING THE X COORDINATES OF THE DATA POINTS
+double precision,intent(in)  ::  YD(:) !< ARRAY OF DIMENSION NDP CONTAINING THE Y COORDINATES OF THE DATA POINTS.
+type (triangles),intent(out) :: tri !< computed triangles
+
+triangles_compute_d = CONTNG_simc (XD,YD,tri%NT,tri%IPT,tri%NL,tri%IPL)
+
+end function triangles_compute_d
 
 
 !> THIS SUBROUTINE PERFORMS TRIANGULATION.
@@ -94,8 +159,8 @@ contains
 !! return 2 if ALL DATA ARE COLLINEAR DATA POINTS
 integer function CONTNG_simc (XD,YD,NT,IPT,NL,IPL)
 
-real,intent(in)  ::  XD(:) !< ARRAY OF DIMENSION NDP CONTAINING THE X COORDINATES OF THE DATA POINTS
-real,intent(in)  ::  YD(:) !<ARRAY OF DIMENSION NDP CONTAINING THE Y COORDINATES OF THE DATA POINTS.
+double precision,intent(in)  ::  XD(:) !< ARRAY OF DIMENSION NDP CONTAINING THE X COORDINATES OF THE DATA POINTS
+double precision,intent(in)  ::  YD(:) !< ARRAY OF DIMENSION NDP CONTAINING THE Y COORDINATES OF THE DATA POINTS.
 integer, intent(out) :: NT !< NUMBER OF TRIANGLES
 integer, intent(out) :: NL !< NUMBER OF BORDER LINE SEGMENTS
 !> ARRAY OF DIMENSION 6*NDP-15, WHERE THE POINT
@@ -119,11 +184,11 @@ integer,intent(out) :: IPL(:)
 !!$C           WORK AREA.
 integer :: IWL(18*size(xd)), IWP(size(xd))
 
-REAL  :: WK(size(xd))
+double precision  :: WK(size(xd))
 integer    ::   ITF(2), NREP=100
 real       :: RATIO=1.0E-6
-REAL :: AR,ARMN,ARMX,DSQ12,DSQI,DSQMN,DSQMX,DX,DX21,DXMN,DXMX,DY,DY21,DYMN,DYMX
-REAL :: X1,XDMP,Y1,YDMP
+double precision :: AR,ARMN,ARMX,DSQ12,DSQI,DSQMN,DSQMX,DX,DX21,DXMN,DXMX,DY,DY21,DYMN,DYMX
+double precision :: X1,XDMP,Y1,YDMP
 integer :: ilf,IP,IP1,IP1P1,IP2,IP3,IPL1,IPL2,IPLJ1,IPLJ2,IPMN1,IPMN2,IPT1,IPT2,IPT3
 INTEGER :: IPTI,IPTI1,IPTI2,IREP,IT,IT1T3,IT2T3,ITS,ITT3
 INTEGER :: ILFT2,ITT3R,JLT3,JP,JP1,JP2,JP2T3,JP3T3,JPC,JPMN,JPMX,JWL,JWL1
@@ -134,6 +199,10 @@ logical :: err
  !
  ! PRELIMINARY PROCESSING
  !
+
+NT = imiss
+NL = imiss
+
 CONTNG_simc=0
 ndp=size(xd)
 NDPM1 = NDP-1
@@ -504,14 +573,14 @@ RETURN
 
 contains
 
-real function     DSQF(U1,V1,U2,V2)
-REAL,intent(in) :: U1,V1,U2,V2
+double precision function     DSQF(U1,V1,U2,V2)
+double precision,intent(in) :: U1,V1,U2,V2
 
 DSQF = (U2-U1)**2+(V2-V1)**2
 end function DSQF
 
-real function  SIDE(U1,V1,U2,V2,U3,V3)
-REAL,intent(in):: U1,V1,U2,V2,U3,V3
+double precision function  SIDE(U1,V1,U2,V2,U3,V3)
+double precision,intent(in):: U1,V1,U2,V2,U3,V3
 
 SIDE = (V3-V1)*(U2-U1)-(U3-U1)*(V2-V1)
 end function SIDE
@@ -526,15 +595,15 @@ end function CONTNG_simc
 !! NEEDED, AND 0 (ZERO) OTHERWISE.
 INTEGER FUNCTION CONXCH_simc (X,Y,I1,I2,I3,I4)
 
-real,intent(in) ::  X(:), Y(:) !< ARRAYS CONTAINING THE COORDINATES OF THE DATA POINTS
+double precision,intent(in) ::  X(:), Y(:) !< ARRAYS CONTAINING THE COORDINATES OF THE DATA POINTS
 !> POINT NUMBERS OF FOUR POINTS P1,P2,P3, AND P4 THAT FORM A QUADRILATERAL
 !!                   WITH P3 AND P4 CONNECTED DIADONALLY.
 integer,intent(in) :: I1,I2,I3,I4 
 
-real ::  X0(4), Y0(4)
-real :: C2SQ,C1SQ,A3SQ,B2SQ,B3SQ,A1SQ,A4SQ,B1SQ,B4SQ,A2SQ,C4SQ,C3SQ
+double precision ::  X0(4), Y0(4)
+double precision :: C2SQ,C1SQ,A3SQ,B2SQ,B3SQ,A1SQ,A4SQ,B1SQ,B4SQ,A2SQ,C4SQ,C3SQ
 integer :: IDX
-real :: S1SQ,S2SQ,S3SQ,S4SQ,U1,U2,U3,U4
+double precision :: S1SQ,S2SQ,S3SQ,S4SQ,U1,U2,U3,U4
 
 EQUIVALENCE     (C2SQ,C1SQ),(A3SQ,B2SQ),(B3SQ,A1SQ),(A4SQ,B1SQ), &
  (B4SQ,A2SQ),(C4SQ,C3SQ)

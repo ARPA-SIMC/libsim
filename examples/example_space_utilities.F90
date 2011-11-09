@@ -2,6 +2,7 @@
 
 use space_utilities
 use log4fortran
+use char_utilities
 #ifdef HAVE_LIBNCARG
 USE ncar_plot_class
 #endif
@@ -13,9 +14,10 @@ integer :: k,i
 
 integer,parameter :: ndp=10000
 real, DIMENSION(ndp) :: x,y 
-integer ::  ipt(6*ndp-15), ipl(6*ndp),nt,nl,status
+integer ::  status
 character(len=512):: a_name
 INTEGER :: category, ier
+type(triangles) :: tri
 
 #ifdef HAVE_LIBNCARG
 type(ncar_plot) :: plot
@@ -40,34 +42,40 @@ call random_seed(put=seed)
 call random_number(x)
 call random_number(y)
 
-status = contng_simc(x,y,nt,ipt,nl,ipl)
+tri=triangles_new(ndp)
+
+status = triangles_compute(x,y,tri)
 call l4f_category_log(category,L4F_INFO,"contng status="//t2c(status))
 
-call l4f_category_log(category,L4F_INFO,"number of triangles="//t2c(nt))
+call l4f_category_log(category,L4F_INFO,"number of triangles="//t2c(tri%nt))
 
 #ifdef HAVE_LIBNCARG
-call l4f_category_log(category,L4F_INFO,"start plot")
 
+call l4f_category_log(category,L4F_INFO,"start plot")
 call init(plot,PSTYPE='PS', ORIENT='LANDSCAPE',COLOR='COLOR',file="example_space_utilities.ps")
 
-do k=1,nt
+!call triangle_plot(tri)
+
+do k=1,tri%nt
   i=k*3
   call gpl (4,(/&
-   x(ipt(i-2)),&
-   x(ipt(i-1)),&
-   x(ipt(i)),&
-   x(ipt(i-2))&
+   x(tri%ipt(i-2)),&
+   x(tri%ipt(i-1)),&
+   x(tri%ipt(i)),&
+   x(tri%ipt(i-2))&
    /),(/&
-   y(ipt(i-2)),&
-   y(ipt(i-1)),&
-   y(ipt(i)),&
-   y(ipt(i-2))&
+   y(tri%ipt(i-2)),&
+   y(tri%ipt(i-1)),&
+   y(tri%ipt(i)),&
+   y(tri%ipt(i-2))&
    /))
 end do
 
 call delete(plot)
 
 #endif
+
+call delete(tri)
 
 call l4f_category_log(category,L4F_INFO,"terminated")
 !chiudo il logger
