@@ -25,13 +25,13 @@ INTEGER :: un, i
 INTEGER(kind=ptr_c) :: shphandle
 CHARACTER(len=512) :: filesim
 
-filesim=get_package_filepath('polipciv4.dat', filetype_data)
-
-CALL import(macroa, shpfilesim=filesim)
+!filesim=get_package_filepath('polipciv4.dat', filetype_data)
+CALL IMPORT(macroa, shpfile='sottobacini_adb', proj=proj_utm, fuso=32, &
+ elliss=elliss_intl)
 DO i = 1, SIZE(macroa)
-  CALL to_utm(macroa(i), fuso=32, elliss=elliss_intl)
+  CALL to_geo(macroa(i))
 ENDDO
 
-CALL export(macroa, shpfile='macroraree_er')
+CALL export(macroa, shpfile='sottobacini_adb_geo', proj=proj_geo)
 
 END PROGRAM esempio_geo_coordvect
