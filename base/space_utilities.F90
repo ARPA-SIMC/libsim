@@ -77,8 +77,8 @@ use char_utilities
 implicit none
 
 type :: triangles
-  integer,pointer ::  ipt(:), ipl(:)
-  integer :: nt,nl,ndp
+  integer,pointer ::  ipt(:) => null(), ipl(:) => null()
+  integer :: nt=imiss,nl=imiss
 end type triangles
 
 !> Distructor for triangles.
@@ -102,13 +102,14 @@ function triangles_new(ndp) result(this)
 type(triangles) :: this !< triangle sto initialize
 integer,intent(in) :: ndp !< number of station to triangulate
 
-this%nt=imiss
-this%nl=imiss
-
-call delete (this)
+! those are done by type definition
+!this%nt=imiss
+!this%nl=imiss
+!nullify(this%ipt,this%ipl)
 
 allocate(this%ipt(6*ndp-15), this%ipl(6*ndp))
 
+return
 end function triangles_new
 
 
@@ -128,7 +129,7 @@ end subroutine triangles_delete
 integer function triangles_compute_r (XD,YD,tri)
 real,intent(in)  ::  XD(:) !< ARRAY OF DIMENSION NDP CONTAINING THE X COORDINATES OF THE DATA POINTS
 real,intent(in)  ::  YD(:) !< ARRAY OF DIMENSION NDP CONTAINING THE Y COORDINATES OF THE DATA POINTS.
-type (triangles),intent(out) :: tri !< computed triangles
+type (triangles),intent(inout) :: tri !< computed triangles
 
 triangles_compute_r = CONTNG_simc (dble(XD),dble(YD),tri%NT,tri%IPT,tri%NL,tri%IPL)
 

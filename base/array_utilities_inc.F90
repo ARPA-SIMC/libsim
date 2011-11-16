@@ -411,6 +411,10 @@ END FUNCTION index/**/VOL7D_POLY_TYPES
 
 ! TODO
 
+!! The pack distinct should be optimized when sort is available
+!! first sort and after remove the next element if equal
+!! rewriting is possible inline
+
 !!$Da Wikipedia, l'enciclopedia libera.
 !!$Il merge sort   un algoritmo di ordinamento abbastanza rapido che utilizza un processo di risoluzione ricorsivo.
 !!$Raffigurazione grafica delle versioni iterativa e ricorsiva dell'algoritmo merge sort.

@@ -536,6 +536,7 @@ do indana=1,size(qccli%v7d%ana)
               call init(time, year=1001, month=mese, day=1, hour=ora, minute=00)
 
               call init(anavar,"B07030" )
+              indanavar = -1
               if (associated (qccli%v7d%anavar%r)) then
                 indanavar        = index(qccli%v7d%anavar%r, anavar)
               end if

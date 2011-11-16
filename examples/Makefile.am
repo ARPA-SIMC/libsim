@@ -15,6 +15,7 @@ example_space_utilities_LDADD = ../base/libsim_base.la
 
 if NCARG
 example_space_utilities_LDADD += ../graphics/libsim_graphics.la ../base/libsim_base.la ../vol7d/libsim_vol7d.la  ../log4fortran/liblog4fortran.la ../termolib/libsim_termolib.la
+
 endif
 
 esempio_v7d_SOURCES = esempio_v7d.f90
@@ -99,8 +100,12 @@ bin_PROGRAMS += v7d_qccli v7d_qcspa
 v7d_qccli_SOURCES = v7d_qccli.f90 
 v7d_qccli_LDADD = ../base/libsim_base.la ../vol7d/libsim_vol7d.la ../log4fortran/liblog4fortran.la ../qc/libsim_qc.la
 
-v7d_qcspa_SOURCES = v7d_qcspa.f90 
+v7d_qcspa_SOURCES = v7d_qcspa.F90 
 v7d_qcspa_LDADD = ../base/libsim_base.la ../vol7d/libsim_vol7d.la ../log4fortran/liblog4fortran.la ../qc/libsim_qc.la
+
+if NCARG
+v7d_qcspa_LDADD += ../graphics/libsim_graphics.la ../termolib/libsim_termolib.la
+endif
 
 esempio_qc_convert_SOURCES = esempio_qc_convert.f90
 esempio_qc_convert_LDADD = ../base/libsim_base.la ../vol7d/libsim_vol7d.la ../log4fortran/liblog4fortran.la ../qc/libsim_qc.la

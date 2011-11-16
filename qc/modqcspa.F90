@@ -60,9 +60,9 @@
 !! a) Tutte le stazioni attorno alla stazione in esame hanno, con essa, 
 !! un gradiente superiore a 
 !!
-!! 	ISOGLIA/DIST + GRADMAX
+!! 	SOGLIA/DIST + GRADMAX
 !!
-!! dove ISOGLIA e GRADMAX sono parametri passati in input e DIST e` la 
+!! dove SOGLIA e GRADMAX sono parametri passati in input e DIST e` la 
 !! distanza sulla terra tra la stazione in esame e la stazione sulla 
 !! poligonale che viene utilizzata.
 !!
@@ -114,12 +114,13 @@ character (len=255),parameter:: subcategory="QCspa"
 
 !>\brief Oggetto principale per il controllo di qualità
 type :: qcspatype
-  type (vol7d),pointer :: v7d !< Volume dati da controllare
+  type (vol7d),pointer :: v7d => null() !< Volume dati da controllare
   type (vol7d) :: clima !< Clima di tutte le variabili da controllare
-  integer,pointer :: data_id_in(:,:,:,:,:) !< Indici dati del DB in input
-  integer,pointer :: data_id_out(:,:,:,:,:) !< Indici dati del DB in output
+  integer,pointer :: data_id_in(:,:,:,:,:) => null()  !< Indici dati del DB in input
+  integer,pointer :: data_id_out(:,:,:,:,:) => null() !< Indici dati del DB in output
   integer :: category !< log4fortran
   integer :: ndp !< number of points
+  double precision,pointer :: x(:) => null(), y(:) => null()
   type (triangles) :: tri !< triangles
 end type qcspatype
 
@@ -285,6 +286,8 @@ end if
 
 qcspa%ndp=size(qcspa%v7d%ana)
 
+allocate(qcspa%x(qcspa%ndp),qcspa%y(qcspa%ndp))
+
 return
 end subroutine qcspainit
 
@@ -319,7 +322,6 @@ INTEGER,INTENT(in),OPTIONAL :: ellips_type !< number in the interval [1,nellips]
 integer :: status
 TYPE(geo_proj) :: geoproj
 REAL(kind=fp_geo) :: lat(size(qcspa%v7d%ana)),lon(size(qcspa%v7d%ana))
-Double precision :: x(size(qcspa%v7d%ana)), y(size(qcspa%v7d%ana))
 CHARACTER(len=80) :: proj_type_l ! local type of projection
 double precision :: lov_l, latin1_l,latin2_l
 integer :: projection_center_flag_l
@@ -347,10 +349,10 @@ geoproj = geo_proj_new(proj_type, lov_l, zone, xoff, yoff, &
 
 call getval(qcspa%v7d%ana%coord, lon, lat)
 
-call proj(geoproj,lon,lat,x,y)
+call proj(geoproj,lon,lat,qcspa%x,qcspa%y)
 
 !triangulate
-status = triangles_compute(x,y,qcspa%tri)
+status = triangles_compute(qcspa%x,qcspa%y,qcspa%tri)
 
 !qcspa%nt,qcspa%ipt,qcspa%nl,qcspa%ipl)
 
@@ -422,6 +424,8 @@ type(qcspatype),intent(in out) :: qcspa !< Oggetto per l controllo climatico
 
 if (associated(qcspa%data_id_out))  deallocate (qcspa%data_id_out)
 call delete(qcspa%tri)
+if (associated(qcspa%x)) deallocate(qcspa%x)
+if (associated(qcspa%y)) deallocate(qcspa%y)
 
 end subroutine qcspadealloc
 
@@ -463,7 +467,6 @@ logical ,intent(in),optional :: timerangemask(:) !< filtro sui timerange
 logical ,intent(in),optional :: varmask(:) !< Filtro sulle variabili
 logical ,intent(in),optional :: networkmask(:) !< Filtro sui network
 
-
 CHARACTER(len=vol7d_ana_lenident) :: ident
 !REAL(kind=fp_geo) :: lat,lon
 integer :: mese, ora
@@ -474,16 +477,19 @@ logical :: anamaskl(size(qcspa%v7d%ana)), timemaskl(size(qcspa%v7d%time)), level
 
 integer :: indana , indanavar, indtime ,indlevel ,indtimerange ,inddativarr, indnetwork
 integer :: indcana,           indctime,indclevel,indctimerange,indcdativarr,indcnetwork
-real :: datoqui,climaquii,climaquif, altezza
+real :: datoqui,datola,climaquii,climaquif, altezza,datila(size(qcspa%v7d%time))
 integer :: iarea
 !integer, allocatable :: indcanav(:)
-
 
 !TYPE(vol7d_ana)  :: ana
 TYPE(datetime)   :: time, nintime
 TYPE(vol7d_level):: level
 type(vol7d_var)  :: anavar
+type(timedelta) :: deltato,deltat 
 
+integer :: ivert(50),flag,i,isegno,it,itrov,iv,ivb,kk,iindtime
+double precision :: discol=300000.d0,dist,grad,gradsoglia=1.d0,gradmax=100.d0
+real :: soglia=1.
 
 !call qcspa_validate (qcspa)
 
@@ -581,6 +587,7 @@ call qcspatri(qcspa)
               call init(time, year=1001, month=mese, day=1, hour=ora, minute=00)
 
               call init(anavar,"B07031" )
+              indanavar = 0
               if (associated (qcspa%v7d%anavar%r)) then
                 indanavar        = index(qcspa%v7d%anavar%r, anavar)
               end if
@@ -616,54 +623,182 @@ call qcspatri(qcspa)
               
               if (c_e(datoqui)) then
 
-                do indcana=1,size(qcspa%clima%ana)-1
+                                !	ITROV e` il numero di triangoli in cui e` presente il dato
+                ITROV=0
+                                !		cicla per tutti i triangoli
+                DO IT=1,qcspa%tri%NT
+                                !			se la stazione considerata e` in prima posizione
+                                !			merorizza gli altri due vertici
+                  IF(qcspa%tri%IPT(3*IT-2).EQ.INDANA)THEN
+                    ITROV=ITROV+1
+                    IVERT(2*ITROV)=qcspa%tri%IPT(3*IT)
+                    IVERT(2*ITROV-1)=qcspa%tri%IPT(3*IT-1)
+                    cycle
+                  END IF
+                                !			se la stazione considerata e` in seconda posizione
+                                !			merorizza gli altri due vertici
+                  IF(qcspa%tri%IPT(3*IT-1).EQ.INDANA)THEN
+                    ITROV=ITROV+1
+                    IVERT(2*ITROV)=qcspa%tri%IPT(3*IT)
+                    IVERT(2*ITROV-1)=qcspa%tri%IPT(3*IT-2)
+                    cycle
+                  END IF
+                                !			se la stazione considerata e` in terza posizione
+                                !			merorizza gli altri due vertici
+                  IF(qcspa%tri%IPT(3*IT).EQ.INDANA)THEN
+                    ITROV=ITROV+1
+                    IVERT(2*ITROV)=qcspa%tri%IPT(3*IT-1)
+                    IVERT(2*ITROV-1)=qcspa%tri%IPT(3*IT-2)
+                    cycle
+                  END IF
+                END DO
+                                !	ITROV ora diviene il numero di vertici nell'intorno
+                                !	della stazione trovati
+                ITROV=ITROV*2
+                
+                                !	TYPE*,'NUMERO VERTICI',ITROV
+                                !	TYPE*,'VERTICI TROVATI = ',IVERT
+                
+                                !	ordina i vettori dei vertici secondo valori decrescenti
 
-                  climaquii=qcspa%clima%voldatir(indcana  ,indctime,indclevel,indctimerange,indcdativarr,indcnetwork)
-                  climaquif=qcspa%clima%voldatir(indcana+1,indctime,indclevel,indctimerange,indcdativarr,indcnetwork)
+                call sort(ivert(:itrov))
+                
+!!$  DO I=1,ITROV-1
+!!$    DO KK=I+1,ITROV
+!!$      IF(IVERT(I).LT.IVERT(KK))THEN
+!!$        IC=IVERT(KK)
+!!$        IVERT(KK)=IVERT(I)
+!!$        IVERT(I)=IC
+!!$      ENDIF
+!!$    END DO
+!!$  END DO
+                                !	toglie i valori doppi dal vettore dei vertici
+                IV=1
+                DO KK=2,ITROV
+                  IF(IVERT(IV).NE.IVERT(KK))THEN
+                    IV=IV+1
+                    IVERT(IV)=IVERT(KK)
+                  ENDIF
+                END DO
+                IF (IV.GT.ITROV)IV=ITROV
+                
+                                !	TYPE*,'NUMERO VERTICI puliti',IV
+                                !	TYPE*,'VERTICI PULITI = ',IVERT
+                
+                                !	inizia il controllo sulla stazione testando i gradienti
+                                !	TYPE*,'STAZIONE  ',INDANA
+                ISEGNO=0
+                IVB=0
+                DO I=1, IV
+                                !	TYPE *,VAL(ivert(I)),' DA I'
 
-!!$                  call l4f_log (L4F_INFO,"ident: "//qcspa%clima%ana(indcana)%ident//ident)
+                  !find the nearest data in time
+                  datola = qcspa%v7d%voldatir  (ivert(i) ,indtime ,indlevel ,indtimerange ,inddativarr, indnetwork )
+                  datila = qcspa%v7d%voldatir  (ivert(i) ,: ,indlevel ,indtimerange ,inddativarr, indnetwork )
+                  if (.not. c_e(datola)) then
+                    deltato=timedelta_miss
+                    do iindtime=1,size(qcspa%v7d%time)
+                      if (c_e(datila(iindtime)))then
+                        if (iindtime < indtime) then
+                          deltat=qcspa%v7d%time(indtime)-qcspa%v7d%time(iindtime)
+                        else if (iindtime > indtime) then
+                          deltat=qcspa%v7d%time(iindtime)-qcspa%v7d%time(indtime)
+                        else
+                          cycle
+                        end if
+                        if (deltat < deltato) datola = datila(iindtime)
+                      end if
+                    end do
+                  end if
 
-                  if ( match(qcspa%clima%ana(indcana)%ident,ident) .and. c_e(climaquii) .and. c_e(climaquif)) then
-
+                  IF(.NOT.C_E(datola)) cycle
+                                !	distanza tra le due stazioni
+                  dist = DISTANZA (qcspa%x(INDANA),qcspa%y(INDANA),qcspa%x(IVERT(I)),qcspa%y(IVERT(I)))
+                  IF (DIST.EQ.0.)THEN
+                    call l4f_category_log(qcspa%category,L4F_ERROR,"distance from two station == 0.")
+                    call raise_error()
+                  END IF
+                                !	    modifica 23/9/1998
+                                !           se la distanza supera xx, stazioni scorrelate - salta -
+                  
+                  IF (DIST.GT.DISCOL) cycle
+                  IVB=IVB+1
+                                !	valore del gradiente nella direzione delle due stazioni
+                  GRAD=(datoqui-datola)/DIST
+                  GRADSOGLIA=SOGLIA/DIST
+                                !	se il gradiente e` piu` piccolo di gradmax la stazione e`
+                                !	considerata buona
+                  IF(ABS(GRAD).LT.GRADSOGLIA+GRADMAX) then
+                    isegno=0                  !vicino coerente
+                    exit                      !esco dal ciclo
+                  else IF (GRAD.GT.0.)then
+                    ISEGNO=ISEGNO+1           ! se il gradiente cattivo e` positivo incrementa il contatore di segni
+                  else
+                    ISEGNO=ISEGNO-1           ! se il gradiente cattivo e` negativo decrementa il contatore di segni
+                  end if
+                END DO
+                
+                IF(IVB.EQ.0) cycle      !NESSUN CONTROLLO
+                
+                                !	se tutti i gradienti cattivi sono dello stesso segno dato errato
+                IF (ABS(ISEGNO).EQ.IVB)THEN
+                  FLAG=1
+                                !	dato considerato errato
+                                !	TYPE *,'DATO CONSIDERATO ERRATO'
+                                !	TYPE *,'STAZIONE ',INDANA,'   VALORE ',VAL(INDANA)
+                                !	TYPE *,'  LAT ',LAT(INDANA),'  LONG ',LON(INDANA)
+                                !	scrive dato errato in vettore dati errati
+                ELSE
+                  FLAG=-1
+                END IF
+                
+                
+!!$                do indcana=1,size(qcspa%clima%ana)-1
+!!$
+!!$                  climaquii=qcspa%clima%voldatir(indcana  ,indctime,indclevel,indctimerange,indcdativarr,indcnetwork)
+!!$                  climaquif=qcspa%clima%voldatir(indcana+1,indctime,indclevel,indctimerange,indcdativarr,indcnetwork)
+!!$
+                call l4f_log (L4F_INFO,"ident: "//qcspa%clima%ana(indcana)%ident//ident)
+!!$
+!!$                  if ( match(qcspa%clima%ana(indcana)%ident,ident) .and. c_e(climaquii) .and. c_e(climaquif)) then
+!!$
+                
 !!$                    print *, "son qua",trim(qcspa%clima%ana(indcana)%ident),trim(ident)
 !!$                where (match(qcspa%clima%ana(:)%ident,ident).and. &
 !!$                 c_e(qcspa%clima%voldatir(indcana,indctime,indclevel,indctimerange,indcdativarr,indcnetwork)))
 !!$                  call l4f_log (L4F_INFO,"macroarea,iarea,mese,altezza,level "//&
 !!$                   trim(to_char(qcspa%in_macroa(indana)))//" "//trim(to_char(iarea))&
 !!$                   //" "//trim(to_char(mese))//" "//trim(to_char(altezza))//" "//trim(to_char(level)))
-!!$                  
-
-                    if ( (datoqui >= climaquii .and. datoqui < climaquif) .or. &
-                         (indcana == 1 .and. datoqui < climaquif) .or. &
-                         (indcana == size(qcspa%clima%ana)-1 .and. datoqui >= climaquii) ) then
+                  
+!!$
+!!$                    if ( (datoqui >= climaquii .and. datoqui < climaquif) .or. &
+!!$                         (indcana == 1 .and. datoqui < climaquif) .or. &
+!!$                         (indcana == size(qcspa%clima%ana)-1 .and. datoqui >= climaquii) ) then
                     
 #ifdef DEBUG
-                      if(qcspa%clima%voldatiattrb(indcana,indctime,indclevel,indctimerange,indcdativarr,indcnetwork,1) < 10 )then
-                        call l4f_log (L4F_DEBUG,"data ndi:                   "//t2c(datoqui)//"->"//&
-                         t2c(qcspa%clima%voldatiattrb(indcana,indctime,indclevel,indctimerange,indcdativarr,indcnetwork,1))&
-                         //" : "//t2c(qcspa%v7d%time(indtime)))
-                        call l4f_log (L4F_DEBUG,"limits: "//t2c(indcana)//":"//t2c(qcspa%clima%ana(indcana)% ident)//&
-                         " : "//t2c(climaquii)//" - "//t2c(climaquif)//" : "//t2c(qcspa%clima%time(indctime))) 
-                      end if
+!!$                      if(qcspa%clima%voldatiattrb(indcana,indctime,indclevel,indctimerange,indcdativarr,indcnetwork,1) < 10 )then
+!!$                        call l4f_log (L4F_DEBUG,"data ndi:                   "//t2c(datoqui)//"->"//&
+!!$                         t2c(qcspa%clima%voldatiattrb(indcana,indctime,indclevel,indctimerange,indcdativarr,indcnetwork,1))&
+!!$                         //" : "//t2c(qcspa%v7d%time(indtime)))
+!!$                        call l4f_log (L4F_DEBUG,"limits: "//t2c(indcana)//":"//t2c(qcspa%clima%ana(indcana)% ident)//&
+!!$                         " : "//t2c(climaquii)//" - "//t2c(climaquif)//" : "//t2c(qcspa%clima%time(indctime))) 
+!!$                      end if
 #endif
                   
                       !ATTENZIONE TODO : inddativarr È UNA GRANDE SEMPLIFICAZIONE NON VERA SE TIPI DI DATO DIVERSI !!!!
-                      qcspa%v7d%voldatiattrb(indana,indtime,indlevel,indtimerange,inddativarr,indnetwork,indtbattrout)=&
-                      qcspa%clima%voldatiattrb(indcana  ,indctime,indclevel,indctimerange,indcdativarr,indcnetwork,1)
-                    
+!                      qcspa%v7d%voldatiattrb(indana,indtime,indlevel,indtimerange,inddativarr,indnetwork,indtbattrout)=&
+!                      qcspa%clima%voldatiattrb(indcana  ,indctime,indclevel,indctimerange,indcdativarr,indcnetwork,1)
+                qcspa%v7d%voldatiattrb(indana,indtime,indlevel,indtimerange,inddativarr,indnetwork,indtbattrout)=flag
                   
-                      if ( associated ( qcspa%data_id_in)) then
+                if ( associated ( qcspa%data_id_in)) then
 #ifdef DEBUG
-                        call l4f_log (L4F_DEBUG,"id: "//t2c(&
-                         qcspa%data_id_in(indana,indtime,indlevel,indtimerange,indnetwork)))
+                  call l4f_log (L4F_DEBUG,"id: "//t2c(&
+                   qcspa%data_id_in(indana,indtime,indlevel,indtimerange,indnetwork)))
 #endif
-                        qcspa%data_id_out(indana,indtime,indlevel,indtimerange,indnetwork)=&
-                         qcspa%data_id_in(indana,indtime,indlevel,indtimerange,indnetwork)
-                      end if
-                    end if
+                  qcspa%data_id_out(indana,indtime,indlevel,indtimerange,indnetwork)=&
+                   qcspa%data_id_in(indana,indtime,indlevel,indtimerange,indnetwork)
+                end if
 !!$                end where
-                  end if
-                end do
               end if
             end if
           end do
@@ -678,163 +813,17 @@ end do
 !!$print *,qcspa%v7d%voldatiattrb(:,:,:,:,:,:,indtbattrout)
 !!$print*,"fine risultato"
 
-
 return
 
+contains
+
+elemental double precision function DISTANZA (x1,y1,x2,y2)
+double precision, intent(in) :: x1,y1,x2,y2
 
 
+distanza = sqrt((x2-x1)**2 + (y2-y1)**2)
 
-
-
-
-
-
-
-
-
-
-
-!!$C	cicla con tutte le stazioni
-!!$	DO ISTAZ=1,K
-!!$	  IF(.NOT.J_C_E(IVAL(ISTAZ)).OR..not.vf(FLAG(ISTAZ)))GOTO 557
-!!$C	ITROV e` il numero di triangoli in cui e` presente il dato
-!!$	  ITROV=0
-!!$C		cicla per tutti i triangoli
-!!$	  DO IT=1,NT
-!!$C			se la stazione considerata e` in prima posizione
-!!$C			merorizza gli altri due vertici
-!!$	    IF(IPT(3*IT-2).EQ.ISTAZ)THEN
-!!$	      ITROV=ITROV+1
-!!$	      IVERT(2*ITROV)=IPT(3*IT)
-!!$	      IVERT(2*ITROV-1)=IPT(3*IT-1)
-!!$	      GOTO 888
-!!$	    END IF
-!!$
-!!$C			se la stazione considerata e` in seconda posizione
-!!$C			merorizza gli altri due vertici
-!!$	    IF(IPT(3*IT-1).EQ.ISTAZ)THEN
-!!$	      ITROV=ITROV+1
-!!$	      IVERT(2*ITROV)=IPT(3*IT)
-!!$	      IVERT(2*ITROV-1)=IPT(3*IT-2)
-!!$	      GOTO 888
-!!$	    END IF
-!!$
-!!$C			se la stazione considerata e` in terza posizione
-!!$C			merorizza gli altri due vertici
-!!$	    IF(IPT(3*IT).EQ.ISTAZ)THEN
-!!$	      ITROV=ITROV+1
-!!$	      IVERT(2*ITROV)=IPT(3*IT-1)
-!!$	      IVERT(2*ITROV-1)=IPT(3*IT-2)
-!!$	      GOTO 888
-!!$	    END IF
-!!$888	  END DO
-!!$
-!!$C	ITROV ora diviene il numero di vertici nell'intorno
-!!$C	della stazione trovati
-!!$	  ITROV=ITROV*2
-!!$
-!!$C	TYPE*,'NUMERO VERTICI',ITROV
-!!$C	TYPE*,'VERTICI TROVATI = ',IVERT
-!!$
-!!$C	ordina i vettori dei vertici secondo valori decrescenti
-!!$	  DO I=1,ITROV-1
-!!$	    DO KK=I+1,ITROV
-!!$	      IF(IVERT(I).LT.IVERT(KK))THEN
-!!$		IC=IVERT(KK)
-!!$		IVERT(KK)=IVERT(I)
-!!$		IVERT(I)=IC
-!!$	      ENDIF
-!!$	    END DO
-!!$	  END DO
-!!$
-!!$C	TYPE*,'NUMERO VERTICI',ITROV
-!!$C	TYPE*,'VERTICI ORDINATI = ',IVERT
-!!$
-!!$C	toglie i valori doppi dal vettore dei vertici
-!!$	  IV=1
-!!$	  DO KK=2,ITROV
-!!$C	TYPE *,IVAL(KK),' DA KK'
-!!$	    IF(IVERT(IV).NE.IVERT(KK))THEN
-!!$	      IV=IV+1			!	solo se e` presente il dato
-!!$	      IVERT(IV)=IVERT(KK)
-!!$	    ENDIF		
-!!$	  END DO
-!!$	  IF (IV.GT.ITROV)IV=ITROV
-!!$
-!!$C	TYPE*,'NUMERO VERTICI puliti',IV
-!!$c	TYPE*,'VERTICI PULITI = ',IVERT
-!!$
-!!$C	inizia il controllo sulla stazione testando i gradienti
-!!$C	TYPE*,'STAZIONE  ',ISTAZ
-!!$	  ISEGNO=0
-!!$	  IVB=0
-!!$	  DO I=1, IV
-!!$C	TYPE *,IVAL(ivert(I)),' DA I'
-!!$	  IF(.NOT.J_C_E(IVAL(ivert(I))).OR..not.vf(FLAG(IVERT(I))))GOTO 556
-!!$C	distanza tra le due stazioni
-!!$	    CALL DISTANZA (LAT(ISTAZ),LON(ISTAZ),
-!!$	1	LAT(IVERT(I)),LON(IVERT(I)),DIST)
-!!$	    IF (DIST.EQ.0.)THEN
-!!$	      IER=-3
-!!$C	      TYPE*,'ERRORE VALUTAZIONE STAZIONE= ',ISTAZ
-!!$C	      TYPE*,'DISTANZA CALCOLATA =0.'
-!!$	      GOTO 556
-!!$	    END IF
-!!$cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-!!$C	    modifica 23/9/1998
-!!$c           se la distanza supera xx, stazioni scorrelate - salta -
-!!$
-!!$	    IF (DIST.GT.DISCOL)GOTO 556
-!!$cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-!!$
-!!$	    IVB=IVB+1
-!!$C	differenza tra i dati delle due stazioni
-!!$	    DELTA=FLOAT(IVAL(IVERT(I)))-FLOAT(IVAL(ISTAZ))
-!!$C	valore del gradiente nella direzione delle due stazioni
-!!$	    GRAD=DELTA/DIST
-!!$	    GRADSOGLIA=FLOAT(ISOGLIA)/DIST
-!!$C	se il gradiente e` piu` piccolo di gradmax la stazione e`
-!!$C	considerata buona
-!!$	    IF(ABS(GRAD).LT.GRADSOGLIA+GRADMAX)GOTO 555	!cerca dato 
-!!$							!vicino coerente
-!!$							!esco dal ciclo
-!!$
-!!$C	se il gradiente cattivo e` negativo decrementa il contatore di segni
-!!$	    ISEGNO=ISEGNO-1
-!!$C	se il gradiente cattivo e` positivo incrementa il contatore di segni
-!!$	    IF (GRAD.GT.0.)ISEGNO=ISEGNO+2
-!!$556	  END DO
-!!$
-!!$	IF(IVB.EQ.0) GOTO 557		!NESSUN CONTROLLO
-!!$
-!!$C	se tutti i gradienti cattivi sono dello stesso segno dato errato
-!!$	  IF (ABS(ISEGNO).EQ.IVB)THEN
-!!$	    FLAG(ISTAZ)=FLAG(ISTAZ)+1
-!!$	    IN=IN+1
-!!$C	dato considerato errato
-!!$C	TYPE *,'DATO CONSIDERATO ERRATO'
-!!$C	TYPE *,'STAZIONE ',ISTAZ,'   VALORE ',IVAL(ISTAZ)
-!!$C	TYPE *,'  LAT ',LAT(ISTAZ),'  LONG ',LON(ISTAZ)
-!!$C	scrive dato errato in vettore dati errati
-!!$	  ELSE
-!!$555	    FLAG(ISTAZ)=FLAG(ISTAZ)-1
-!!$	    IB=IB+1
-!!$	  END IF
-!!$
-!!$557	END DO
-
-
-
-
-
-
-
-
-
-
-
-
-
+end function DISTANZA
 
 end subroutine quaconspa
 

@@ -17,11 +17,16 @@
 ! along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ! Example program to quality control data with climatological values
 
+#include "config.h"
+
 program esempio_qcspa
 
 use log4fortran
 use modqcspa
 use vol7d_dballe_class
+#ifdef HAVE_LIBNCARG
+USE ncar_plot_class
+#endif
 
 implicit none
 
@@ -30,10 +35,12 @@ character(len=512):: a_name
 
                                 !tipi derivati.
 TYPE(geo_coord)    :: coordmin, coordmax 
-TYPE(datetime)     :: ti, tf
+TYPE(datetime)     :: time,ti, tf, timei, timef
 type(qcspatype)    :: v7dqcspa
 type(vol7d_dballe) :: v7ddballe
-
+#ifdef HAVE_LIBNCARG
+type(ncar_plot) :: plot
+#endif
 
 integer, parameter :: maxvar=10
 character(len=6) :: var(maxvar)=cmiss   ! variables to elaborate
@@ -41,6 +48,7 @@ character(len=19) :: dsn='test1',user='test',password=''
 character(len=19) :: dsnc='test',userc='test',passwordc=''
 integer :: years=imiss,months=imiss,days=imiss,hours=imiss,yeare=imiss,monthe=imiss,daye=imiss,houre=imiss,nvar=0
 doubleprecision :: lons=dmiss,lats=dmiss,lone=dmiss,late=dmiss
+integer :: year, month, day, hour
 
 namelist /odbc/   dsn,user,password,dsnc,userc,passwordc       ! namelist to define DSN
 namelist /minmax/ years,months,days,hours,lons,lats,yeare,monthe,daye,houre,lone,late
@@ -103,44 +111,62 @@ if (c_e(tf))   call l4f_category_log(category,L4F_INFO,"QC on "//t2c(tf)//" date
 !------------------------------------------------------------------------
 
 
+!timei=ti
+time=ti+timedelta_new(minute=30)
+CALL getval(time,year, month, day, hour)
+call init(time,  year, month, day, hour, minute=00, msec=00)
+!if (time < timei) time=time+timedelta_new(hour=1)
+!timef=tf
+!if (time > timef) time=timei
+
+DO WHILE(time <= tf)
+  timei = time - timedelta_new(minute=30)
+  timef = time + timedelta_new(minute=30)
+  time  = time + timedelta_new(hour=1)
+
                                 ! Chiamo il costruttore della classe vol7d_dballe per il mio oggetto in import
-CALL init(v7ddballe,dsn=dsn,user=user,password=password,write=.true.,wipe=.false.,categoryappend="QCtarget")
+  CALL init(v7ddballe,dsn=dsn,user=user,password=password,write=.true.,wipe=.false.,categoryappend="QCtarget"//t2c(time))
+  call l4f_category_log(category,L4F_INFO,"start data import")
 
-call l4f_category_log(category,L4F_INFO,"start data import")
+  CALL import(v7ddballe,var=var(:nvar),varkind=(/("r",i=1,nvar)/),&
+   anavar=(/"B07030"/),anavarkind=(/"r"/),&
+   attr=(/"*B33196","*B33192"/),attrkind=(/"b","b"/)&
+   ,timei=ti,timef=tf,coordmin=coordmin,coordmax=coordmax)
+  
+  !call display(v7ddballe%vol7d)
+  call l4f_category_log(category,L4F_INFO,"end data import")
 
-CALL import(v7ddballe,var=var(:nvar),varkind=(/("r",i=1,nvar)/),&
- anavar=(/"B07030"/),anavarkind=(/"r"/),&
- attr=(/"*B33196","*B33192"/),attrkind=(/"b","b"/)&
- ,timei=ti,timef=tf,coordmin=coordmin,coordmax=coordmax)
-
-!call display(v7ddballe%vol7d)
-call l4f_category_log(category,L4F_INFO,"end data import")
-
-call l4f_category_log(category,L4F_INFO,"start QC")
+  call l4f_category_log(category,L4F_INFO,"start QC")
 
                                 ! chiamiamo il "costruttore" per il Q.C.
-call init(v7dqcspa,v7ddballe%vol7d,var(:nvar),timei=ti,timef=tf,coordmin=coordmin,coordmax=coordmax,&
- data_id_in=v7ddballe%data_id, dsn=dsnc, user=userc, categoryappend="space")
+  call init(v7dqcspa,v7ddballe%vol7d,var(:nvar),timei=ti,timef=tf,coordmin=coordmin,coordmax=coordmax,&
+   data_id_in=v7ddballe%data_id, dsn=dsnc, user=userc, categoryappend="space")
+  !call display(v7dqcspa%clima)
 
-!call display(v7dqcspa%clima)
+  call alloc(v7dqcspa)
 
-call alloc(v7dqcspa)
+  call l4f_category_log(category,L4F_INFO,"start spatial QC")
+  call quaconspa(v7dqcspa)
 
-call l4f_category_log(category,L4F_INFO,"start spatial QC")
+#ifdef HAVE_LIBNCARG
+  call l4f_category_log(category,L4F_INFO,"start plot")
+  call init(plot,PSTYPE='PS', ORIENT='LANDSCAPE',COLOR='COLOR',file="v7d_qcspa.ps")
+  call plot_triangles(plot,v7dqcspa%x,v7dqcspa%y,v7dqcspa%tri,logo="SIMC")
+  call delete(plot)
+#endif
 
-call quaconspa(v7dqcspa)
+  call l4f_category_log(category,L4F_INFO,"end spatial QC")
+  call l4f_category_log(category,L4F_INFO,"start export data")
+  !call display(v7ddballe%vol7d)
 
-call l4f_category_log(category,L4F_INFO,"end spatial QC")
-call l4f_category_log(category,L4F_INFO,"start export data")
+  CALL export(v7ddballe,attr_only=.true.)
 
-!call display(v7ddballe%vol7d)
+  call l4f_category_log(category,L4F_INFO,"end export data")
 
-CALL export(v7ddballe,attr_only=.true.)
+  call delete(v7dqcspa)
+  call delete(v7ddballe)
 
-call l4f_category_log(category,L4F_INFO,"end export data")
-
-call delete(v7dqcspa)
-call delete(v7ddballe)
+end do
 
 !close logger
 call l4f_category_delete(category)

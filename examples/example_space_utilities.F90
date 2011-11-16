@@ -53,24 +53,7 @@ call l4f_category_log(category,L4F_INFO,"number of triangles="//t2c(tri%nt))
 
 call l4f_category_log(category,L4F_INFO,"start plot")
 call init(plot,PSTYPE='PS', ORIENT='LANDSCAPE',COLOR='COLOR',file="example_space_utilities.ps")
-
-!call triangle_plot(tri)
-
-do k=1,tri%nt
-  i=k*3
-  call gpl (4,(/&
-   x(tri%ipt(i-2)),&
-   x(tri%ipt(i-1)),&
-   x(tri%ipt(i)),&
-   x(tri%ipt(i-2))&
-   /),(/&
-   y(tri%ipt(i-2)),&
-   y(tri%ipt(i-1)),&
-   y(tri%ipt(i)),&
-   y(tri%ipt(i-2))&
-   /))
-end do
-
+call plot_triangles(plot,x,y,tri,"SIMC")
 call delete(plot)
 
 #endif
