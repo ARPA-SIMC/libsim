@@ -13,7 +13,7 @@ integer,dimension(:),allocatable :: seed
 integer :: k,i
 
 integer,parameter :: ndp=10000
-real, DIMENSION(ndp) :: x,y 
+double precision, DIMENSION(ndp) :: x,y 
 integer ::  status
 character(len=512):: a_name
 INTEGER :: category, ier
