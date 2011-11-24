@@ -99,7 +99,7 @@ contains
 
 !> initialize triangles
 function triangles_new(ndp) result(this)
-type(triangles) :: this !< triangle sto initialize
+type(triangles) :: this !< triangles to initialize
 integer,intent(in) :: ndp !< number of station to triangulate
 
 ! those are done by type definition
@@ -107,8 +107,12 @@ integer,intent(in) :: ndp !< number of station to triangulate
 !this%nl=imiss
 !nullify(this%ipt,this%ipl)
 
-allocate(this%ipt(6*ndp-15), this%ipl(6*ndp))
-
+if (c_e(ndp) .and. ndp >= 3)then
+  allocate(this%ipt(6*ndp-15), this%ipl(6*ndp))
+else
+  this%nt=0
+  this%nl=0
+end if
 return
 end function triangles_new
 
@@ -131,17 +135,19 @@ real,intent(in)  ::  XD(:) !< ARRAY OF DIMENSION NDP CONTAINING THE X COORDINATE
 real,intent(in)  ::  YD(:) !< ARRAY OF DIMENSION NDP CONTAINING THE Y COORDINATES OF THE DATA POINTS.
 type (triangles),intent(inout) :: tri !< computed triangles
 
-triangles_compute_r = CONTNG_simc (dble(XD),dble(YD),tri%NT,tri%IPT,tri%NL,tri%IPL)
-
+if (tri%nt /= 0) then
+  triangles_compute_r = CONTNG_simc (dble(XD),dble(YD),tri%NT,tri%IPT,tri%NL,tri%IPL)
+end if
 end function triangles_compute_r
 
 integer function triangles_compute_d (XD,YD,tri)
 double precision,intent(in)  ::  XD(:) !< ARRAY OF DIMENSION NDP CONTAINING THE X COORDINATES OF THE DATA POINTS
 double precision,intent(in)  ::  YD(:) !< ARRAY OF DIMENSION NDP CONTAINING THE Y COORDINATES OF THE DATA POINTS.
-type (triangles),intent(out) :: tri !< computed triangles
+type (triangles),intent(inout) :: tri !< computed triangles
 
-triangles_compute_d = CONTNG_simc (XD,YD,tri%NT,tri%IPT,tri%NL,tri%IPL)
-
+if (tri%nt /= 0) then
+  triangles_compute_d = CONTNG_simc (XD,YD,tri%NT,tri%IPT,tri%NL,tri%IPL)
+end if
 end function triangles_compute_d
 
 

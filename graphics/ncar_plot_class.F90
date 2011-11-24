@@ -217,20 +217,22 @@ integer :: i,k
 
 call set_color("foreground")
 
-do k=1,tri%nt
-  i=k*3
-  call gpl (4,(/&
-   x(tri%ipt(i-2)),&
-   x(tri%ipt(i-1)),&
-   x(tri%ipt(i)),&
-   x(tri%ipt(i-2))&
-   /),(/&
-   y(tri%ipt(i-2)),&
-   y(tri%ipt(i-1)),&
-   y(tri%ipt(i)),&
-   y(tri%ipt(i-2))&
-   /))
-end do
+if (c_e(tri%nt))then
+  do k=1,tri%nt
+    i=k*3
+    call gpl (4,(/&
+     x(tri%ipt(i-2)),&
+     x(tri%ipt(i-1)),&
+     x(tri%ipt(i)),&
+     x(tri%ipt(i-2))&
+     /),(/&
+     y(tri%ipt(i-2)),&
+     y(tri%ipt(i-1)),&
+     y(tri%ipt(i)),&
+     y(tri%ipt(i-2))&
+     /))
+  end do
+end if
 
 !write logo
 

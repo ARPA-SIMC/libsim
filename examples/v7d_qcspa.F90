@@ -35,7 +35,7 @@ character(len=512):: a_name
 
                                 !tipi derivati.
 TYPE(geo_coord)    :: coordmin, coordmax 
-TYPE(datetime)     :: time,ti, tf, timei, timef
+TYPE(datetime)     :: time,ti, tf, timei, timef, timeiqc, timefqc
 type(qcspatype)    :: v7dqcspa
 type(vol7d_dballe) :: v7ddballe
 #ifdef HAVE_LIBNCARG
@@ -47,7 +47,7 @@ character(len=6) :: var(maxvar)=cmiss   ! variables to elaborate
 character(len=19) :: dsn='test1',user='test',password=''
 character(len=19) :: dsnc='test',userc='test',passwordc=''
 integer :: years=imiss,months=imiss,days=imiss,hours=imiss,yeare=imiss,monthe=imiss,daye=imiss,houre=imiss,nvar=0
-doubleprecision :: lons=dmiss,lats=dmiss,lone=dmiss,late=dmiss
+doubleprecision :: lons=dmiss,lats=dmiss,lone=dmiss,late=dmiss,lon,lat
 integer :: year, month, day, hour
 
 namelist /odbc/   dsn,user,password,dsnc,userc,passwordc       ! namelist to define DSN
@@ -92,10 +92,18 @@ end if
                                 ! Definisco le date iniziale e finale
 CALL init(ti, year=years, month=months, day=days, hour=hours)
 CALL init(tf, year=yeare, month=monthe, day=daye, hour=houre)
+print *,"time extreme"
+call display(ti)
+call display(tf)
+
                                 ! Define coordinate box
 CALL init(coordmin,lat=lats,lon=lons)
 CALL init(coordmax,lat=late,lon=lone)
 
+call getval(coordmin,lon=lon,lat=lat)
+print*,"lon lat minumum",lon,lat
+call getval(coordmax,lon=lon,lat=lat)
+print*,"lon lat maximum",lon,lat
 
 !------------------------------------------------------------------------
 call l4f_category_log(category,L4F_INFO,"QC on "//t2c(nvar)//" variables")
@@ -119,10 +127,17 @@ call init(time,  year, month, day, hour, minute=00, msec=00)
 !timef=tf
 !if (time > timef) time=timei
 
-DO WHILE(time <= tf)
+#ifdef HAVE_LIBNCARG
+  call l4f_category_log(category,L4F_INFO,"start plot")
+  call init(plot,PSTYPE='PS', ORIENT='LANDSCAPE',COLOR='COLOR',file="v7d_qcspa.ps")
+#endif
+DO WHILE (time <= tf)
   timei = time - timedelta_new(minute=30)
   timef = time + timedelta_new(minute=30)
-  time  = time + timedelta_new(hour=1)
+  timeiqc = time - timedelta_new(minute=15)
+  timefqc = time + timedelta_new(minute=15)
+  time  = time + timedelta_new(minute=30)
+  call l4f_category_log(category,L4F_INFO,"elaborate from "//t2c(timeiqc)//" to "//t2c(timefqc))
 
                                 ! Chiamo il costruttore della classe vol7d_dballe per il mio oggetto in import
   CALL init(v7ddballe,dsn=dsn,user=user,password=password,write=.true.,wipe=.false.,categoryappend="QCtarget"//t2c(time))
@@ -131,9 +146,9 @@ DO WHILE(time <= tf)
   CALL import(v7ddballe,var=var(:nvar),varkind=(/("r",i=1,nvar)/),&
    anavar=(/"B07030"/),anavarkind=(/"r"/),&
    attr=(/"*B33196","*B33192"/),attrkind=(/"b","b"/)&
-   ,timei=ti,timef=tf,coordmin=coordmin,coordmax=coordmax)
+   ,timei=timei,timef=timef,coordmin=coordmin,coordmax=coordmax)
   
-  !call display(v7ddballe%vol7d)
+  call display(v7ddballe%vol7d)
   call l4f_category_log(category,L4F_INFO,"end data import")
 
   call l4f_category_log(category,L4F_INFO,"start QC")
@@ -146,16 +161,15 @@ DO WHILE(time <= tf)
   call alloc(v7dqcspa)
 
   call l4f_category_log(category,L4F_INFO,"start spatial QC")
-  call quaconspa(v7dqcspa)
+  call quaconspa(v7dqcspa,noborder=.true.,timemask= ( v7dqcspa%v7d%time >= timeiqc .and. v7dqcspa%v7d%time <= timefqc ))
+  call l4f_category_log(category,L4F_INFO,"end spatial QC")
 
 #ifdef HAVE_LIBNCARG
   call l4f_category_log(category,L4F_INFO,"start plot")
-  call init(plot,PSTYPE='PS', ORIENT='LANDSCAPE',COLOR='COLOR',file="v7d_qcspa.ps")
   call plot_triangles(plot,v7dqcspa%x,v7dqcspa%y,v7dqcspa%tri,logo="SIMC")
-  call delete(plot)
+  call frame()
 #endif
 
-  call l4f_category_log(category,L4F_INFO,"end spatial QC")
   call l4f_category_log(category,L4F_INFO,"start export data")
   !call display(v7ddballe%vol7d)
 
@@ -167,6 +181,10 @@ DO WHILE(time <= tf)
   call delete(v7ddballe)
 
 end do
+
+#ifdef HAVE_LIBNCARG
+  call delete(plot)
+#endif
 
 !close logger
 call l4f_category_delete(category)
