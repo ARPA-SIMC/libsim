@@ -13,7 +13,7 @@ integer,dimension(:),allocatable :: seed
 integer :: k,i
 
 integer,parameter :: ndp=10000
-double precision, DIMENSION(ndp) :: x,y 
+type(xy), DIMENSION(ndp) :: co 
 integer ::  status
 character(len=512):: a_name
 INTEGER :: category, ier
@@ -39,12 +39,12 @@ call random_seed(size=k)
 allocate (seed(k))
 seed=5
 call random_seed(put=seed)
-call random_number(x)
-call random_number(y)
+call random_number(co%x)
+call random_number(co%y)
 
 tri=triangles_new(ndp)
 
-status = triangles_compute(x,y,tri)
+status = triangles_compute(co,tri)
 call l4f_category_log(category,L4F_INFO,"contng status="//t2c(status))
 
 call l4f_category_log(category,L4F_INFO,"number of triangles="//t2c(tri%nt))
@@ -53,7 +53,7 @@ call l4f_category_log(category,L4F_INFO,"number of triangles="//t2c(tri%nt))
 
 call l4f_category_log(category,L4F_INFO,"start plot")
 call init(plot,PSTYPE='PS', ORIENT='LANDSCAPE',COLOR='COLOR',file="example_space_utilities.ps")
-call plot_triangles(plot,x,y,tri,"SIMC")
+call plot_triangles(plot,co,tri,"SIMC")
 call delete(plot)
 
 #endif

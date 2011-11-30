@@ -112,7 +112,7 @@ type :: qcspatype
   integer,pointer :: data_id_out(:,:,:,:,:) => null() !< Indici dati del DB in output
   integer :: category !< log4fortran
   integer :: ndp !< number of points
-  double precision,pointer :: x(:) => null(), y(:) => null()
+  type(xy),pointer :: co(:) => null()
   type (triangles) :: tri !< triangles
 end type qcspatype
 
@@ -341,12 +341,12 @@ call getval(qcspa%v7d%ana%coord, lon, lat)
 
 !print*,"size",size(lon),size(lat)
 !print*,lat,lon
-call proj(geoproj,lon,lat,qcspa%x,qcspa%y)
+call proj(geoproj,lon,lat,qcspa%co%x,qcspa%co%y)
 !print*,"size x y ",size(qcspa%x),size(qcspa%y)
 !print*,qcspa%x,qcspa%y
 
 !triangulate
-status = triangles_compute(qcspa%x,qcspa%y,qcspa%tri)
+status = triangles_compute(qcspa%co,qcspa%tri)
 
 !qcspa%nt,qcspa%ipt,qcspa%nl,qcspa%ipl)
 
@@ -396,7 +396,7 @@ end if
 
 if (c_e(qcspa%ndp))then
   qcspa%tri = triangles_new(qcspa%ndp)
-  allocate(qcspa%x(qcspa%ndp),qcspa%y(qcspa%ndp))
+  allocate(qcspa%co(qcspa%ndp))
 end if
 
 end subroutine qcspaalloc
@@ -419,8 +419,7 @@ type(qcspatype),intent(in out) :: qcspa !< Oggetto per l controllo climatico
 
 if (associated(qcspa%data_id_out))  deallocate (qcspa%data_id_out)
 call delete(qcspa%tri)
-if (associated(qcspa%x)) deallocate(qcspa%x)
-if (associated(qcspa%y)) deallocate(qcspa%y)
+if (associated(qcspa%co)) deallocate(qcspa%co)
 
 end subroutine qcspadealloc
 
@@ -542,10 +541,9 @@ endif
 
 qcspa%v7d%voldatiattrb(:,:,:,:,:,:,indtbattrout)=ibmiss
 
+call qcspatri(qcspa)
 
 do indana=1,size(qcspa%v7d%ana)
-
-  call qcspatri(qcspa)
 
                                 !  iarea= supermacroa(qcspa%in_macroa(indana))
   iarea= 1
@@ -711,7 +709,7 @@ do indana=1,size(qcspa%v7d%ana)
 
               IF(.NOT.C_E(datola)) cycle
                                 !	distanza tra le due stazioni
-              dist = DISTANZA (qcspa%x(INDANA),qcspa%y(INDANA),qcspa%x(IVERT(I)),qcspa%y(IVERT(I)))
+              dist = DISTANZA (qcspa%co(INDANA),qcspa%co(IVERT(I)))
               IF (DIST.EQ.0.)THEN
                 call l4f_category_log(qcspa%category,L4F_ERROR,"distance from two station == 0.")
                 call raise_error()
@@ -732,7 +730,7 @@ do indana=1,size(qcspa%v7d%ana)
             IF(IVB < 3) cycle      ! do nothing if valid gradients < 3
                                    
             IF (ipos == ivb .or. ineg == ivb)THEN  ! se tutti i gradienti sono dello stesso segno
-              write(10,*)gradmin
+              write(11,*)gradmin
               FLAG=50_int_b
             ELSE
               FLAG=100_int_b
@@ -801,11 +799,11 @@ return
 
 contains
 
-elemental double precision function DISTANZA (x1,y1,x2,y2)
-double precision, intent(in) :: x1,y1,x2,y2
+elemental double precision function DISTANZA (co1,co2)
+type(xy), intent(in) :: co1,co2
 
 
-distanza = sqrt((x2-x1)**2 + (y2-y1)**2)
+distanza = sqrt((co2%x-co1%x)**2 + (co2%y-co1%y)**2)
 
 end function DISTANZA
 

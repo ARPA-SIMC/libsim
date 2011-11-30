@@ -81,6 +81,10 @@ type :: triangles
   integer :: nt=imiss,nl=imiss
 end type triangles
 
+type :: xy
+  double precision :: x,y
+end type xy
+
 !> Distructor for triangles.
 !! delete triangles
 INTERFACE delete
@@ -88,11 +92,11 @@ INTERFACE delete
 END INTERFACE
 
 INTERFACE triangles_compute
-  MODULE PROCEDURE triangles_compute_r, triangles_compute_d
+  MODULE PROCEDURE triangles_compute_r, triangles_compute_d, triangles_compute_c
 END INTERFACE
 
 private
-public triangles, triangles_new, delete, triangles_compute 
+public triangles, triangles_new, delete, triangles_compute, xy
 
 
 contains
@@ -134,9 +138,12 @@ integer function triangles_compute_r (XD,YD,tri)
 real,intent(in)  ::  XD(:) !< ARRAY OF DIMENSION NDP CONTAINING THE X COORDINATES OF THE DATA POINTS
 real,intent(in)  ::  YD(:) !< ARRAY OF DIMENSION NDP CONTAINING THE Y COORDINATES OF THE DATA POINTS.
 type (triangles),intent(inout) :: tri !< computed triangles
+type (xy) :: co(size(xd))
 
 if (tri%nt /= 0) then
-  triangles_compute_r = CONTNG_simc (dble(XD),dble(YD),tri%NT,tri%IPT,tri%NL,tri%IPL)
+  co%x=dble(XD)
+  co%y=dble(YD)
+  triangles_compute_r = CONTNG_simc (co,tri%NT,tri%IPT,tri%NL,tri%IPL)
 end if
 end function triangles_compute_r
 
@@ -144,11 +151,23 @@ integer function triangles_compute_d (XD,YD,tri)
 double precision,intent(in)  ::  XD(:) !< ARRAY OF DIMENSION NDP CONTAINING THE X COORDINATES OF THE DATA POINTS
 double precision,intent(in)  ::  YD(:) !< ARRAY OF DIMENSION NDP CONTAINING THE Y COORDINATES OF THE DATA POINTS.
 type (triangles),intent(inout) :: tri !< computed triangles
+type (xy) :: co(size(xd))
 
 if (tri%nt /= 0) then
-  triangles_compute_d = CONTNG_simc (XD,YD,tri%NT,tri%IPT,tri%NL,tri%IPL)
+  co%x=XD
+  co%y=YD
+  triangles_compute_d = CONTNG_simc (co,tri%NT,tri%IPT,tri%NL,tri%IPL)
 end if
 end function triangles_compute_d
+
+integer function triangles_compute_c (co,tri)
+type (xy),intent(in) :: co(:)
+type (triangles),intent(inout) :: tri !< computed triangles
+
+if (tri%nt /= 0) then
+  triangles_compute_c = CONTNG_simc (co,tri%NT,tri%IPT,tri%NL,tri%IPL)
+end if
+end function triangles_compute_c
 
 
 !> THIS SUBROUTINE PERFORMS TRIANGULATION.
@@ -164,10 +183,9 @@ end function triangles_compute_d
 !! Return 0 if all right
 !! return 1 if IDENTICAL INPUT DATA POINTS FOUND
 !! return 2 if ALL DATA ARE COLLINEAR DATA POINTS
-integer function CONTNG_simc (XD,YD,NT,IPT,NL,IPL)
+integer function CONTNG_simc (co,NT,IPT,NL,IPL)
 
-double precision,intent(in)  ::  XD(:) !< ARRAY OF DIMENSION NDP CONTAINING THE X COORDINATES OF THE DATA POINTS
-double precision,intent(in)  ::  YD(:) !< ARRAY OF DIMENSION NDP CONTAINING THE Y COORDINATES OF THE DATA POINTS.
+type (xy), intent(in)  ::  co(:) !< ARRAY OF DIMENSION NDP CONTAINING THE COORDINATES OF THE DATA POINTS
 integer, intent(out) :: NT !< NUMBER OF TRIANGLES
 integer, intent(out) :: NL !< NUMBER OF BORDER LINE SEGMENTS
 !> ARRAY OF DIMENSION 6*NDP-15, WHERE THE POINT
@@ -189,19 +207,22 @@ integer,intent(out) :: IPL(:)
 !!$C           INTERNALLY AS A WORK AREA,
 !!$C     WK  = ARRAY OF DIMENSION NDP USED INTERNALLY AS A
 !!$C           WORK AREA.
-integer :: IWL(18*size(xd)), IWP(size(xd))
+integer :: IWL(18*size(co)), IWP(size(co))
 
-double precision  :: WK(size(xd))
+double precision  :: WK(size(co))
 integer    ::   ITF(2), NREP=100
 real       :: RATIO=1.0E-6
 double precision :: AR,ARMN,ARMX,DSQ12,DSQI,DSQMN,DSQMX,DX,DX21,DXMN,DXMX,DY,DY21,DYMN,DYMX
-double precision :: X1,XDMP,Y1,YDMP
+double precision :: X1,Y1
 integer :: ilf,IP,IP1,IP1P1,IP2,IP3,IPL1,IPL2,IPLJ1,IPLJ2,IPMN1,IPMN2,IPT1,IPT2,IPT3
 INTEGER :: IPTI,IPTI1,IPTI2,IREP,IT,IT1T3,IT2T3,ITS,ITT3
 INTEGER :: ILFT2,ITT3R,JLT3,JP,JP1,JP2,JP2T3,JP3T3,JPC,JPMN,JPMX,JWL,JWL1
 INTEGER :: JWL1MN,NDP,NDPM1,NL0,NLF,NLFC,NLFT2,NLN,NLNT3,NLT3,NSH,NSHT3,NT0,NTF
 INTEGER :: NTT3,NTT3P3
 logical :: err
+
+integer ::i,mloc(size(co)-1),mlocall(1),mlocv(1)
+type(xy) :: dmp
 
  !
  ! PRELIMINARY PROCESSING
@@ -211,39 +232,71 @@ NT = imiss
 NL = imiss
 
 CONTNG_simc=0
-ndp=size(xd)
+ndp=size(co)
 NDPM1 = NDP-1
  !
  ! DETERMINES THE CLOSEST PAIR OF DATA POINTS AND THEIR MIDPOINT.
  !
-DSQMN = DSQF(XD(1),YD(1),XD(2),YD(2))
-IPMN1 = 1
-IPMN2 = 2
-DO  IP1=1,NDPM1
-  X1 = XD(IP1)
-  Y1 = YD(IP1)
-  IP1P1 = IP1+1
-  DO  IP2=IP1P1,NDP
-    DSQI = DSQF(X1,Y1,XD(IP2),YD(IP2))
 
-    IF (DSQI == 0.) then
- !
- !  ERROR, IDENTICAL INPUT DATA POINTS
- !
-      call l4f_log(L4F_ERROR,"CONTNG-IDENTICAL INPUT DATA POINTS FOUND AT "//t2c(ip1)//" AND"//t2c(ip2))
-      CONTNG_simc=1
-      RETURN
-    end IF
+call l4f_log(L4F_DEBUG,"start triangulation")
 
-    IF (DSQI .GE. DSQMN) CYCLE
-    DSQMN = DSQI
-    IPMN1 = IP1
-    IPMN2 = IP2
-  end DO
-end DO
+do i=1,size(co)-1
+  mlocv=minloc(vdsqf(co(i),co(i+1:)))+i
+  mloc(i)=mlocv(1)
+end do
+
+mlocall=minloc((/(vdsqf(co(i),co(mloc(i))),i=1,size(mloc))/))
+
+DSQMN = vdsqf(co(mlocall(1)),co(mloc(mlocall(1))))
+IPMN1 = mlocall(1)
+IPMN2 = mloc(mlocall(1))
+
+call l4f_log(L4F_DEBUG,"end triangulation closest pair")
+!!$print *, DSQMN, IPMN1, IPMN2
+
+IF (DSQMN == 0.) then
+   !
+   !  ERROR, IDENTICAL INPUT DATA POINTS
+   !
+  call l4f_log(L4F_ERROR,"CONTNG-IDENTICAL INPUT DATA POINTS FOUND")
+  CONTNG_simc=1
+  RETURN
+end IF
+
+!!$call l4f_log(L4F_DEBUG,"start your")
+!!$
+!!$DSQMN = DSQF(XD(1),YD(1),XD(2),YD(2))
+!!$IPMN1 = 1
+!!$IPMN2 = 2
+!!$DO  IP1=1,NDPM1
+!!$  X1 = XD(IP1)
+!!$  Y1 = YD(IP1)
+!!$  IP1P1 = IP1+1
+!!$  DO  IP2=IP1P1,NDP
+!!$    DSQI = DSQF(X1,Y1,XD(IP2),YD(IP2))
+!!$
+!!$    IF (DSQI == 0.) then
+!!$ !
+!!$ !  ERROR, IDENTICAL INPUT DATA POINTS
+!!$ !
+!!$      call l4f_log(L4F_ERROR,"CONTNG-IDENTICAL INPUT DATA POINTS FOUND AT "//t2c(ip1)//" AND"//t2c(ip2))
+!!$      CONTNG_simc=1
+!!$      RETURN
+!!$    end IF
+!!$
+!!$    IF (DSQI .GE. DSQMN) CYCLE
+!!$    DSQMN = DSQI
+!!$    IPMN1 = IP1
+!!$    IPMN2 = IP2
+!!$  end DO
+!!$end DO
+!!$
+!!$call l4f_log(L4F_DEBUG,"end your")
+!!$print *, DSQMN, IPMN1, IPMN2
+
 DSQ12 = DSQMN
-XDMP = (XD(IPMN1)+XD(IPMN2))/2.0
-YDMP = (YD(IPMN1)+YD(IPMN2))/2.0
+DMP%x = (co(IPMN1)%x+co(IPMN2)%x)/2.0
+DMP%y = (co(IPMN1)%y+co(IPMN2)%y)/2.0
  !
  ! SORTS THE OTHER (NDP-2) DATA POINTS IN ASCENDING ORDER OF
  ! DISTANCE FROM THE MIDPOINT AND STORES THE SORTED DATA POINT
@@ -254,7 +307,7 @@ DO  IP1=1,NDP
   IF (IP1.EQ.IPMN1 .OR. IP1.EQ.IPMN2) cycle
   JP1 = JP1+1
   IWP(JP1) = IP1
-  WK(JP1) = DSQF(XDMP,YDMP,XD(IP1),YD(IP1))
+  WK(JP1) = vDSQF(DMP,co(IP1))
 end DO
 DO  JP1=3,NDPM1
   DSQMN = WK(JP1)
@@ -269,26 +322,29 @@ DO  JP1=3,NDPM1
   IWP(JPMN) = ITS
   WK(JPMN) = WK(JP1)
 end DO
+
+call l4f_log(L4F_DEBUG,"end triangulation sort")
+
  !
  ! IF NECESSARY, MODIFIES THE ORDERING IN SUCH A WAY THAT THE
  ! FIRST THREE DATA POINTS ARE NOT COLLINEAR.
  !
 AR = DSQ12*RATIO
-X1 = XD(IPMN1)
-Y1 = YD(IPMN1)
-DX21 = XD(IPMN2)-X1
-DY21 = YD(IPMN2)-Y1
+X1 = co(IPMN1)%x
+Y1 = co(IPMN1)%y
+DX21 = co(IPMN2)%x-X1
+DY21 = co(IPMN2)%y-Y1
 
 err=.true.
 DO  JP=3,NDP
   IP = IWP(JP)
-  IF (ABS((YD(IP)-Y1)*DX21-(XD(IP)-X1)*DY21) .GT. AR) then
+  IF (ABS((co(IP)%y-Y1)*DX21-(co(IP)%x-X1)*DY21) .GT. AR) then
     err=.false.
     exit
   end IF
 end DO
 if (err) then
-  call l4f_log(L4F_ERROR,"CONTNG - ALL COLLINEAR DATA POINTS")
+  call l4f_log(L4F_DEBUG,"CONTNG - ALL COLLINEAR DATA POINTS")
   CONTNG_simc=2
   return
 end if
@@ -301,6 +357,7 @@ IF (JP /= 3) then
   end DO
   IWP(3) = IP
 end IF
+call l4f_log(L4F_DEBUG,"end triangulation collinear")
 
  !
  ! FORMS THE FIRST TRIANGLE.  STORES POINT NUMBERS OF THE VER-
@@ -311,7 +368,7 @@ end IF
 IP1 = IPMN1
 IP2 = IPMN2
 IP3 = IWP(3)
-IF (SIDE(XD(IP1),YD(IP1),XD(IP2),YD(IP2),XD(IP3),YD(IP3)) < 10.0) then
+IF (SIDE(co(IP1),co(IP2),co(IP3)) < 10.0) then
   IP1 = IPMN2
   IP2 = IPMN1
 end IF
@@ -332,20 +389,23 @@ IPL(6) = 1
 IPL(7) = IP3
 IPL(8) = IP1
 IPL(9) = 1
+
+call l4f_log(L4F_DEBUG,"end triangulation first triangle")
+
  !
  ! ADDS THE REMAINING (NDP-3) DATA POINTS, ONE BY ONE.
  !
 L400 : DO  JP1=4,NDP
   IP1 = IWP(JP1)
-  X1 = XD(IP1)
-  Y1 = YD(IP1)
+  X1 = co(IP1)%x
+  Y1 = co(IP1)%y
  !
  ! - DETERMINES THE VISIBLE BORDER LINE SEGMENTS.
  !
   IP2 = IPL(1)
   JPMN = 1
-  DXMN = XD(IP2)-X1
-  DYMN = YD(IP2)-Y1
+  DXMN = co(IP2)%x-X1
+  DYMN = co(IP2)%y-Y1
   DSQMN = DXMN**2+DYMN**2
   ARMN = DSQMN*RATIO
   JPMX = 1
@@ -355,8 +415,8 @@ L400 : DO  JP1=4,NDP
   ARMX = ARMN
   DO  JP2=2,NL0
     IP2 = IPL(3*JP2-2)
-    DX = XD(IP2)-X1
-    DY = YD(IP2)-Y1
+    DX = co(IP2)%x-X1
+    DY = co(IP2)%y-Y1
     AR = DY*DXMN-DX*DYMN
     IF (AR <= ARMN) then
       DSQI = DX**2+DY**2
@@ -446,7 +506,7 @@ L400 : DO  JP1=4,NDP
  !
  ! - - CHECKS IF THE EXCHANGE IS NECESSARY.
  !
-300 IF (CONXCH_simc(XD,YD,IP1,IPTI,IPL1,IPL2) .EQ. 0) cycle L310
+300 IF (CONXCH_simc(co%X,co%Y,IP1,IPTI,IPL1,IPL2) .EQ. 0) cycle L310
  !
  ! - - MODIFIES THE IPT ARRAY WHEN NECESSARY.
  !
@@ -514,7 +574,7 @@ L400 : DO  JP1=4,NDP
  !
  ! - - CHECKS IF THE EXCHANGE IS NECESSARY.
  !
-350   IF (CONXCH_simc(XD,YD,IPTI1,IPTI2,IPL1,IPL2) .EQ. 0) cycle L370
+350   IF (CONXCH_simc(co%X,co%Y,IPTI1,IPTI2,IPL1,IPL2) .EQ. 0) cycle L370
  !
  ! - - MODIFIES THE IPT ARRAY WHEN NECESSARY.
  !
@@ -562,6 +622,9 @@ L400 : DO  JP1=4,NDP
     NLF = JWL/2
   end DO
 end DO L400
+
+call l4f_log(L4F_DEBUG,"end triangulation appending")
+
  !
  ! REARRANGE THE IPT ARRAY SO THAT THE VERTEXES OF EACH TRIANGLE
  ! ARE LISTED COUNTER-CLOCKWISE.
@@ -570,26 +633,46 @@ DO  ITT3=3,NTT3,3
   IP1 = IPT(ITT3-2)
   IP2 = IPT(ITT3-1)
   IP3 = IPT(ITT3)
-  IF (SIDE(XD(IP1),YD(IP1),XD(IP2),YD(IP2),XD(IP3),YD(IP3)) .GE. 10.0) cycle
+  IF (SIDE(co(IP1),co(IP2),co(IP3)) .GE. 10.0) cycle
   IPT(ITT3-2) = IP2
   IPT(ITT3-1) = IP1
 end DO
+call l4f_log(L4F_DEBUG,"end triangulation rearranging")
+
 NT = NT0
 NL = NL0
+
+call l4f_log(L4F_DEBUG,"end triangulation")
+
 RETURN
 
 contains
 
-double precision function     DSQF(U1,V1,U2,V2)
-double precision,intent(in) :: U1,V1,U2,V2
+!!$double precision function     DSQF(U1,V1,U2,V2)
+!!$double precision,intent(in) :: U1,V1,U2,V2
+!!$
+!!$DSQF = (U2-U1)**2+(V2-V1)**2
+!!$end function DSQF
 
-DSQF = (U2-U1)**2+(V2-V1)**2
-end function DSQF
 
-double precision function  SIDE(U1,V1,U2,V2,U3,V3)
-double precision,intent(in):: U1,V1,U2,V2,U3,V3
+elemental double precision function vDSQF(co1,co2)
+type(xy),intent(in) :: co1,co2
 
-SIDE = (V3-V1)*(U2-U1)-(U3-U1)*(V2-V1)
+vDSQF = (co2%x-co1%x)**2+(co2%y-co1%y)**2
+if (vdsqf == 0.d0) vdsqf = huge(vdsqf)
+end function VDSQF
+
+
+!!$double precision function  SIDE(U1,V1,U2,V2,U3,V3)
+!!$double precision,intent(in):: U1,V1,U2,V2,U3,V3
+!!$
+!!$SIDE = (V3-V1)*(U2-U1)-(U3-U1)*(V2-V1)
+!!$end function SIDE
+
+double precision function  SIDE(co1,co2,co3)
+type(xy),intent(in):: co1,co2,co3
+
+SIDE = (co3%y-co1%y)*(co2%x-co1%x)-(co3%x-co1%x)*(co2%y-co1%y)
 end function SIDE
 
 end function CONTNG_simc

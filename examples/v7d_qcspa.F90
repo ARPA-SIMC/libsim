@@ -166,7 +166,7 @@ DO WHILE (time <= tf)
 
 #ifdef HAVE_LIBNCARG
   call l4f_category_log(category,L4F_INFO,"start plot")
-  call plot_triangles(plot,v7dqcspa%x,v7dqcspa%y,v7dqcspa%tri,logo="SIMC")
+  call plot_triangles(plot,v7dqcspa%co,v7dqcspa%tri,logo="SIMC")
   call frame()
 #endif
 
