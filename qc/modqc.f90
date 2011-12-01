@@ -470,7 +470,7 @@ end function peeledci
 subroutine init_qcattrvars(this)
 
 type(qcattrvars),intent(inout) :: this
-integer :: i,j
+integer :: i
 
 this%btables(:) =qcattrvarsbtables
 do i =1, nqcattrvars
@@ -513,7 +513,7 @@ do indqcattrvars =1,nqcattrvars
 
     !byte attributes !
 
-    if (inddatiattr > 0) then  ! solo se c'Ã¨ l'attributo
+    if (inddatiattr > 0) then  ! solo se c'è l'attributo
 
       if (associated(this%dativar%r)) then
       do inddativar=1,size(this%dativar%r)   ! per tutte le variabili reali

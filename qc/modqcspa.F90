@@ -473,6 +473,7 @@ logical :: anamaskl(size(qcspa%v7d%ana)), timemaskl(size(qcspa%v7d%time)), level
 integer :: indana , indanavar, indtime ,indlevel ,indtimerange ,inddativarr, indnetwork
 integer :: indcana,           indctime,indclevel,indctimerange,indcdativarr,indcnetwork
 real :: datoqui,datola,climaquii,climaquif, altezza,datila(size(qcspa%v7d%time))
+logical :: datilainvalidated(size(qcspa%v7d%time))
 integer :: iarea
                                 !integer, allocatable :: indcanav(:)
 
@@ -576,7 +577,10 @@ do indana=1,size(qcspa%v7d%ana)
              c_e(qcspa%v7d%voldatir(indana,indtime,indlevel,indtimerange,inddativarr,indnetwork))) cycle
 
             if( invalidated(qcspa%v7d%voldatiattrb&
-             (indana,indtime,indlevel,indtimerange,inddativarr,indnetwork,indtbattrin))) cycle
+             (indana,indtime,indlevel,indtimerange,inddativarr,indnetwork,indtbattrin))) then
+              call l4f_category_log(qcspa%category,L4F_WARN,"It's better to do a peeling to v7d before spatial QC")
+              cycle
+            end if
 
             nintime=qcspa%v7d%time(indtime)+timedelta_new(minute=30)
             CALL getval(nintime, month=mese, hour=ora)
@@ -616,6 +620,9 @@ do indana=1,size(qcspa%v7d%ana)
 
             datoqui = qcspa%v7d%voldatir  (indana ,indtime ,indlevel ,indtimerange ,inddativarr, indnetwork )
             if (.not. c_e(datoqui)) cycle
+            ! temprary check !!!!!!!!!!!!!!!!!!!!!!!!!!!   remove it
+            if (datoqui < 950. .or. datoqui > 1050. ) cycle
+            ! !!!!!!!!!!!!!
 
             if (optio_log(noborder) .and. any(indana == qcspa%tri%ipl(:3*qcspa%tri%nl:3))) cycle
 
@@ -689,12 +696,22 @@ do indana=1,size(qcspa%v7d%ana)
             gradmin=huge(gradmin)
             DO I=1, IV
                                 !find the nearest data in time
+
               datola = qcspa%v7d%voldatir  (ivert(i) ,indtime ,indlevel ,indtimerange ,inddativarr, indnetwork )
               datila = qcspa%v7d%voldatir  (ivert(i) ,: ,indlevel ,indtimerange ,inddativarr, indnetwork )
-              if (.not. c_e(datola)) then
+              datilainvalidated = invalidated(qcspa%v7d%voldatiattrb&
+               (ivert(i),:,indlevel,indtimerange,inddativarr,indnetwork,indtbattrin))
+
+              if( invalidated(qcspa%v7d%voldatiattrb&
+               (ivert(i),indtime,indlevel,indtimerange,inddativarr,indnetwork,indtbattrin))) then
+                call l4f_category_log(qcspa%category,L4F_WARN,"It's better to do a peeling to v7d before spatial QC")
+              end if
+              
+              if (.not. c_e(datola) .or. invalidated(qcspa%v7d%voldatiattrb&
+               (ivert(i),indtime,indlevel,indtimerange,inddativarr,indnetwork,indtbattrin))) then
                 deltato=timedelta_miss
                 do iindtime=1,size(qcspa%v7d%time)
-                  if (c_e(datila(iindtime)))then
+                  if (c_e(datila(iindtime)) .and. .not. datilainvalidated(iindtime))then
                     if (iindtime < indtime) then
                       deltat=qcspa%v7d%time(indtime)-qcspa%v7d%time(iindtime)
                     else if (iindtime > indtime) then
@@ -706,8 +723,12 @@ do indana=1,size(qcspa%v7d%ana)
                   end if
                 end do
               end if
-
+              
               IF(.NOT.C_E(datola)) cycle
+                                ! temprary check !!!!!!!!!!!!!!!!!!!!!!!!!!!   remove it
+              if (datola < 950. .or. datola > 1050. ) cycle
+                                ! !!!!!!!!!!!!!
+
                                 !	distanza tra le due stazioni
               dist = DISTANZA (qcspa%co(INDANA),qcspa%co(IVERT(I)))
               IF (DIST.EQ.0.)THEN

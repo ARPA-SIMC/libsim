@@ -110,6 +110,7 @@ type :: qcclitype
 
   type (vol7d),pointer :: v7d !< Volume dati da controllare
   type (vol7d) :: clima !< Clima di tutte le variabili da controllare
+  type (vol7d) :: extreme !< Valori estremi di tutte le variabili da controllare
   integer,pointer :: data_id_in(:,:,:,:,:) !< Indici dati del DB in input
   integer,pointer :: data_id_out(:,:,:,:,:) !< Indici dati del DB in output
   integer, pointer :: in_macroa(:) !< Maacroarea di appartenenza delle stazioni
@@ -139,9 +140,10 @@ contains
 !>\brief Init del controllo di qualità climatico.
 !!Effettua la lettura dei file e altre operazioni di inizializzazione.
 
-subroutine qccliinit(qccli,v7d,var, timei, timef, coordmin, coordmax, data_id_in,macropath,climapath,&
+subroutine qccliinit(qccli,v7d,var, timei, timef, coordmin, coordmax, data_id_in,&
+ macropath, climapath, extremepath, &
 #ifdef HAVE_DBALLE
- dsn,user,password,&
+ dsncli,dsnextreme,user,password,&
 #endif
 categoryappend)
 
@@ -156,23 +158,29 @@ TYPE(datetime),INTENT(in),optional :: timei, timef
 integer,intent(in),optional,target:: data_id_in(:,:,:,:,:) !< Indici dei dati in DB
 character(len=*),intent(in),optional :: macropath !< file delle macroaree
 character(len=*),intent(in),optional :: climapath !< file con il volume del clima
+character(len=*),intent(in),optional :: extremepath !< file con il volume del clima
 character(len=*),INTENT(in),OPTIONAL :: categoryappend !< appennde questo suffisso al namespace category di log4fortran
 
 #ifdef HAVE_DBALLE
-type (vol7d_dballe) :: v7d_dballetmp
-character(len=*),intent(in),optional :: dsn
+type (vol7d_dballe) :: v7d_dballecli
+character(len=*),intent(in),optional :: dsncli
 character(len=*),intent(in),optional :: user
 character(len=*),intent(in),optional :: password
-character(len=512) :: ldsn
+character(len=512) :: ldsncli
 character(len=512) :: luser
 character(len=512) :: lpassword
+type (vol7d_dballe) :: v7d_dballeextreme
+character(len=*),intent(in),optional :: dsnextreme
+character(len=512) :: ldsnextreme
 TYPE(datetime) :: ltimei, ltimef
 integer :: yeari, yearf, monthi, monthf, dayi, dayf,&
  houri, minutei, mseci, hourf, minutef, msecf
 #endif
  
-integer :: istat,iuni,i,j
+integer :: iuni,i
 character(len=512) :: filepath
+character(len=512) :: filepathclima
+character(len=512) :: filepathextreme
 character(len=512) :: a_name
 
 
@@ -200,7 +208,8 @@ end if
 CALL import(qccli%macroa, shpfilesim=filepath)
 call init(qccli%clima)
 
-call optio(climapath,filepath)
+call optio(climapath,filepathclima)
+call optio(extremepath,filepathextreme)
 
 #ifdef HAVE_DBALLE
 
@@ -226,61 +235,108 @@ else
 
 end if
 
-call optio(dsn,ldsn)
+call optio(dsncli,ldsncli)
 call optio(user,luser)
 call optio(password,lpassword)
 
-if (c_e(filepath) .and. (c_e(ldsn).or.c_e(luser).or.c_e(lpassword))) then
-  call l4f_category_log(qccli%category,L4F_ERROR,"climapath and dba option defined together")
-  call raise_error("climapath and dba option defined together")
+if ((c_e(filepathclima) .or. c_e (filepathextreme)) .and. (c_e(ldsncli).or.c_e(luser).or.c_e(lpassword))) then
+  call l4f_category_log(qccli%category,L4F_ERROR,"climapath or extremepath defined together with dba options")
+  call raise_error()
 end if
 
-if (.not. c_e(ldsn)) then
+if (.not. c_e(ldsncli)) then
 
 #endif
 
-  if (.not. c_e(filepath)) then
-
-                                ! bufr import do not support attributes so it do not work for now
-                                ! filepath=get_package_filepath('climaprec.bufr', filetype_data)
-                                ! filepath="climaprec.bufr"
-                                !#else
-    filepath=get_package_filepath('climaprec.v7d', filetype_data)
-
+  if (.not. c_e(filepathclima)) then
+    filepathclima=get_package_filepath('climaprec.v7d', filetype_data)
   end if
 
-  select case (trim(lowercase(suffixname(filepath))))
+  select case (trim(lowercase(suffixname(filepathclima))))
 
   case("v7d")
     iuni=getunit()
-    call import(qccli%clima,filename=filepath,unit=iuni)
+    call import(qccli%clima,filename=filepathclima,unit=iuni)
     close (unit=iuni)
 
 #ifdef HAVE_DBALLE
   case("bufr")
-    call init(v7d_dballetmp,file=.true.,filename=filepath,categoryappend=trim(a_name)//".clima")
-                                !call import(v7d_dballetmp)
-    call import(v7d_dballetmp,var=var,coordmin=coordmin, coordmax=coordmax, timei=ltimei, timef=ltimef, &
+    call init(v7d_dballecli,file=.true.,filename=filepathclima,categoryappend=trim(a_name)//".clima")
+                                !call import(v7d_dballecli)
+    call import(v7d_dballecli,var=var,coordmin=coordmin, coordmax=coordmax, timei=ltimei, timef=ltimef, &
      varkind=(/("r",i=1,size(var))/),attr=(/"*B33192"/),attrkind=(/"b"/))
-    call copy(v7d_dballetmp%vol7d,qccli%clima)
-    call delete(v7d_dballetmp)
+    call copy(v7d_dballecli%vol7d,qccli%clima)
+    call delete(v7d_dballecli)
 #endif
 
   case default
-    call l4f_category_log(qccli%category,L4F_ERROR,"file type not supported (user .v7d or .bufr suffix only): "//trim(filepath))
-    call raise_error("file type not supported (user .v7d or .bufr suffix only): "//trim(filepath))
+    call l4f_category_log(qccli%category,L4F_ERROR,&
+     "file type not supported (user .v7d or .bufr suffix only): "//trim(filepathclima))
+    call raise_error()
   end select
 
 #ifdef HAVE_DBALLE
 else
 
-  call l4f_category_log(qccli%category,L4F_DEBUG,"init v7d_dballetmp")
-  call init(v7d_dballetmp,dsn=dsn,user=user,password=password,write=.false.,file=.false.,categoryappend=trim(a_name)//".clima")
-  call l4f_category_log(qccli%category,L4F_DEBUG,"import v7d_dballetmp")
-  call import(v7d_dballetmp,var=var,coordmin=coordmin, coordmax=coordmax, timei=ltimei, timef=ltimef, &
+  call l4f_category_log(qccli%category,L4F_DEBUG,"init v7d_dballecli")
+  call init(v7d_dballecli,dsn=ldsncli,user=luser,password=lpassword,write=.false.,&
+   file=.false.,categoryappend=trim(a_name)//".clima")
+  call l4f_category_log(qccli%category,L4F_DEBUG,"import v7d_dballecli")
+  call import(v7d_dballecli,var=var,coordmin=coordmin, coordmax=coordmax, timei=ltimei, timef=ltimef, &
    varkind=(/("r",i=1,size(var))/),attr=(/"*B33192"/),attrkind=(/"b"/))
-  call copy(v7d_dballetmp%vol7d,qccli%clima)
-  call delete(v7d_dballetmp)
+  call copy(v7d_dballecli%vol7d,qccli%clima)
+  call delete(v7d_dballecli)
+
+end if
+#endif
+
+
+#ifdef HAVE_DBALLE
+
+call optio(dsnextreme,ldsnextreme)
+
+if (.not. c_e(ldsnextreme)) then
+
+#endif
+
+  if (.not. c_e(filepathextreme)) then
+    filepathextreme=get_package_filepath('climaprec.v7d', filetype_data)
+  end if
+
+  select case (trim(lowercase(suffixname(filepathextreme))))
+
+  case("v7d")
+    iuni=getunit()
+    call import(qccli%clima,filename=filepathextreme,unit=iuni)
+    close (unit=iuni)
+
+#ifdef HAVE_DBALLE
+  case("bufr")
+    call init(v7d_dballeextreme,file=.true.,filename=filepathextreme,categoryappend=trim(a_name)//".clima")
+                                !call import(v7d_dballeextreme)
+    call import(v7d_dballeextreme,var=var,coordmin=coordmin, coordmax=coordmax, timei=ltimei, timef=ltimef, &
+     varkind=(/("r",i=1,size(var))/),attr=(/"*B33192"/),attrkind=(/"b"/))
+    call copy(v7d_dballeextreme%vol7d,qccli%clima)
+    call delete(v7d_dballeextreme)
+#endif
+
+  case default
+    call l4f_category_log(qccli%category,L4F_ERROR,&
+     "file type not supported (user .v7d or .bufr suffix only): "//trim(filepathextreme))
+    call raise_error()
+  end select
+
+#ifdef HAVE_DBALLE
+else
+
+  call l4f_category_log(qccli%category,L4F_DEBUG,"init v7d_dballeextreme")
+  call init(v7d_dballeextreme,dsn=ldsnextreme,user=luser,password=lpassword,&
+   write=.false.,file=.false.,categoryappend=trim(a_name)//".clima")
+  call l4f_category_log(qccli%category,L4F_DEBUG,"import v7d_dballeextreme")
+  call import(v7d_dballeextreme,var=var,coordmin=coordmin, coordmax=coordmax, timei=ltimei, timef=ltimef, &
+   varkind=(/("r",i=1,size(var))/),attr=(/"*B33192"/),attrkind=(/"b"/))
+  call copy(v7d_dballeextreme%vol7d,qccli%clima)
+  call delete(v7d_dballeextreme)
 
 end if
 #endif
@@ -296,7 +352,7 @@ subroutine qcclialloc(qccli)
 
 type(qcclitype),intent(in out) :: qccli !< Oggetto per il controllo climatico
 
-integer :: istat,istatt,nv
+integer :: istatt
 integer :: sh(5)
 
 ! se ti sei dimenticato di deallocare ci penso io
@@ -373,8 +429,6 @@ subroutine qcclidelete(qccli)
                                 ! decostruttore a mezzo
 type(qcclitype),intent(in out) :: qccli !< Oggetto per l controllo climatico
 
-integer :: istat
-
 call qcclidealloc(qccli)
 
 call delete(qccli%clima)
@@ -413,7 +467,7 @@ CHARACTER(len=vol7d_ana_lenident) :: ident
 !REAL(kind=fp_geo) :: lat,lon
 integer :: mese, ora
                                 !local
-integer :: i,j,indtbattrin,indtbattrout,i1,i2,i3,i4,i5,i6
+integer :: i,j,indtbattrin,indtbattrout
 logical :: anamaskl(size(qccli%v7d%ana)), timemaskl(size(qccli%v7d%time)), levelmaskl(size(qccli%v7d%level)), &
  timerangemaskl(size(qccli%v7d%timerange)), varmaskl(size(qccli%v7d%dativar%r)), networkmaskl(size(qccli%v7d%network)) 
 

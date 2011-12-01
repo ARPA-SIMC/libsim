@@ -1,5 +1,6 @@
  $odbc
-   dsnc='test',
+   dsnc='test1',
+   dsne='test2',
    userc='test',
    passwordc=''
    dsn='test1',

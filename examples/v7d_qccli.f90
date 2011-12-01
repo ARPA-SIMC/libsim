@@ -37,12 +37,12 @@ type(vol7d_dballe) :: v7ddballe
 
 integer, parameter :: maxvar=10
 character(len=6) :: var(maxvar)=cmiss   ! variables to elaborate
-character(len=19) :: dsn='test1',user='test',password=''
-character(len=19) :: dsnc='test',userc='test',passwordc=''
+character(len=19) :: dsn='test',user='test',password=''
+character(len=19) :: dsnc='test1', dsne="test2", userc='test',passwordc=''
 integer :: years=imiss,months=imiss,days=imiss,hours=imiss,yeare=imiss,monthe=imiss,daye=imiss,houre=imiss,nvar=0
 doubleprecision :: lons=dmiss,lats=dmiss,lone=dmiss,late=dmiss
 
-namelist /odbc/   dsn,user,password,dsnc,userc,passwordc       ! namelist to define DSN
+namelist /odbc/   dsn,user,password,dsnc,dsne,userc,passwordc       ! namelist to define DSN
 namelist /minmax/ years,months,days,hours,lons,lats,yeare,monthe,daye,houre,lone,late
 namelist /varlist/ var
 
@@ -119,8 +119,10 @@ call l4f_category_log(category,L4F_INFO,"end data import")
 call l4f_category_log(category,L4F_INFO,"start QC")
 
                                 ! chiamiamo il "costruttore" per il Q.C.
-call init(v7dqccli,v7ddballe%vol7d,var(:nvar),timei=ti,timef=tf,coordmin=coordmin,coordmax=coordmax,&
- data_id_in=v7ddballe%data_id, dsn=dsnc, user=userc, categoryappend="clima")
+call init(v7dqccli,v7ddballe%vol7d,var(:nvar), &
+ timei=ti,timef=tf,coordmin=coordmin,coordmax=coordmax, &
+ data_id_in=v7ddballe%data_id, dsncli=dsnc, dsnextreme=dsne, &
+ user=userc, categoryappend="clima")
 
 !call display(v7dqccli%clima)
 
