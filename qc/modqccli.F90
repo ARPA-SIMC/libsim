@@ -448,13 +448,13 @@ end subroutine qcclidelete
 !!vengono assegnate le opportune confidenze.
 
 
-SUBROUTINE quaconcli (qccli,tbattrin,tbattrout,&
+SUBROUTINE quaconcli (qccli,battrinv,tbattrout,&
  anamask,timemask,levelmask,timerangemask,varmask,networkmask)
 
 
 type(qcclitype),intent(in out) :: qccli !< Oggetto per il controllo di qualità
-character (len=10) ,intent(in),optional :: tbattrin !< attributo con la confidenza in input
-character (len=10) ,intent(in),optional :: tbattrout !< attributo con la confidenza in output
+character (len=10) ,intent(in),optional :: battrinv !< attributo invalidated in input/output
+character (len=10) ,intent(in),optional :: tbattrout !< attributo con la confidenza climatologica in output
 logical ,intent(in),optional :: anamask(:) !< Filtro sulle anagrafiche
 logical ,intent(in),optional :: timemask(:) !< Filtro sul tempo
 logical ,intent(in),optional :: levelmask(:) !< Filtro sui livelli
@@ -467,7 +467,7 @@ CHARACTER(len=vol7d_ana_lenident) :: ident
 !REAL(kind=fp_geo) :: lat,lon
 integer :: mese, ora
                                 !local
-integer :: i,j,indtbattrin,indtbattrout
+integer :: i,j,indbattrinv,indtbattrout
 logical :: anamaskl(size(qccli%v7d%ana)), timemaskl(size(qccli%v7d%time)), levelmaskl(size(qccli%v7d%level)), &
  timerangemaskl(size(qccli%v7d%timerange)), varmaskl(size(qccli%v7d%dativar%r)), networkmaskl(size(qccli%v7d%network)) 
 
@@ -499,19 +499,19 @@ DO i = 1, SIZE(qccli%v7d%ana)
 ENDDO
 
 
-if (present(tbattrin))then
-  indtbattrin = index_c(qccli%v7d%dativarattr%r(:)%btable, tbattrin)
+if (present(battrinv))then
+  indbattrinv = index_c(qccli%v7d%dativarattr%r(:)%btable, battrinv)
 else
-  indtbattrin=1
+  indbattrinv = index_c(qccli%v7d%dativarattr%r(:)%btable, '*B33196')
 end if
 
 if (present(tbattrout))then
   indtbattrout = index_c(qccli%v7d%dativarattr%r(:)%btable, tbattrout)
 else
-  indtbattrout=2
+  indtbattrout =  index_c(qccli%v7d%dativarattr%r(:)%btable, '*B33192')
 end if
 
-if (indtbattrin <=0 .or. indtbattrout <= 0 ) then
+if ( indtbattrout <= 0 ) then
 
   call l4f_category_log(qccli%category,L4F_ERROR,"error finding attribute index in/out")
   call raise_error("error finding attribute index in/out")
@@ -582,8 +582,11 @@ do indana=1,size(qccli%v7d%ana)
             if (anamaskl(indana).and.timemaskl(indtime).and.levelmaskl(indlevel).and. &
              timerangemaskl(indtimerange).and.varmaskl(inddativarr).and.networkmaskl(indnetwork).and.&
              c_e(qccli%v7d%voldatir(indana,indtime,indlevel,indtimerange,inddativarr,indnetwork)))then
-              if( invalidated(qccli%v7d%voldatiattrb&
-               (indana,indtime,indlevel,indtimerange,inddativarr,indnetwork,indtbattrin))) cycle
+
+              if (indbattrinv > 0) then
+                if( invalidated(qccli%v7d%voldatiattrb&
+                 (indana,indtime,indlevel,indtimerange,inddativarr,indnetwork,indbattrinv))) cycle
+              end if
 
               nintime=qccli%v7d%time(indtime)+timedelta_new(minute=30)
               CALL getval(nintime, month=mese, hour=ora)

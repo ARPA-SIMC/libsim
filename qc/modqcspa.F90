@@ -276,8 +276,6 @@ else
 end if
 #endif
 
-qcspa%ndp=size(qcspa%v7d%ana)
-
 return
 end subroutine qcspainit
 
@@ -394,7 +392,8 @@ if (associated(qcspa%data_id_in))then
   end if
 end if
 
-if (c_e(qcspa%ndp))then
+if (associated(qcspa%v7d%ana))then
+  qcspa%ndp=size(qcspa%v7d%ana)
   qcspa%tri = triangles_new(qcspa%ndp)
   allocate(qcspa%co(qcspa%ndp))
 end if
@@ -447,14 +446,15 @@ end subroutine qcspadelete
 !>\brief Controllo di Qualità spaziale.
 !!Questo è il vero e proprio controllo di qualità spaziale.
 
-SUBROUTINE quaconspa (qcspa,noborder,tbattrin,tbattrout,&
+SUBROUTINE quaconspa (qcspa,noborder,battrinv,battrcli,battrout,&
  anamask,timemask,levelmask,timerangemask,varmask,networkmask)
 
 
 type(qcspatype),intent(in out) :: qcspa !< Oggetto per il controllo di qualità
 logical,intent(in),optional :: noborder !< Exclude border from QC
-character (len=10) ,intent(in),optional :: tbattrin !< attributo con la confidenza in input
-character (len=10) ,intent(in),optional :: tbattrout !< attributo con la confidenza in output
+character (len=10) ,intent(in),optional :: battrinv !< attributo invalidated in input
+character (len=10) ,intent(in),optional :: battrcli !< attributo con la confidenza climatologica in input
+character (len=10) ,intent(in),optional :: battrout !< attributo con la confidenza spaziale in output
 logical ,intent(in),optional :: anamask(:) !< Filtro sulle anagrafiche
 logical ,intent(in),optional :: timemask(:) !< Filtro sul tempo
 logical ,intent(in),optional :: levelmask(:) !< Filtro sui livelli
@@ -466,14 +466,13 @@ CHARACTER(len=vol7d_ana_lenident) :: ident
                                 !REAL(kind=fp_geo) :: lat,lon
 integer :: mese, ora
                                 !local
-integer :: indtbattrin,indtbattrout
+integer :: indbattrinv,indbattrcli,indbattrout
 logical :: anamaskl(size(qcspa%v7d%ana)), timemaskl(size(qcspa%v7d%time)), levelmaskl(size(qcspa%v7d%level)), &
  timerangemaskl(size(qcspa%v7d%timerange)), varmaskl(size(qcspa%v7d%dativar%r)), networkmaskl(size(qcspa%v7d%network)) 
 
 integer :: indana , indanavar, indtime ,indlevel ,indtimerange ,inddativarr, indnetwork
 integer :: indcana,           indctime,indclevel,indctimerange,indcdativarr,indcnetwork
 real :: datoqui,datola,climaquii,climaquif, altezza,datila(size(qcspa%v7d%time))
-logical :: datilainvalidated(size(qcspa%v7d%time))
 integer :: iarea
                                 !integer, allocatable :: indcanav(:)
 
@@ -490,22 +489,29 @@ integer (kind=int_b) :: flag
 
                                 !call qcspa_validate (qcspa)
 
-if (present(tbattrin))then
-  indtbattrin = index_c(qcspa%v7d%dativarattr%r(:)%btable, tbattrin)
+if (present(battrinv))then
+  indbattrinv = index_c(qcspa%v7d%datiattr%b(:)%btable, battrinv)
 else
-  indtbattrin=1
+  indbattrinv = index_c(qcspa%v7d%datiattr%b(:)%btable, '*B33196')
 end if
 
-if (present(tbattrout))then
-  indtbattrout = index_c(qcspa%v7d%dativarattr%r(:)%btable, tbattrout)
+if (present(battrcli))then
+  indbattrcli = index_c(qcspa%v7d%datiattr%b(:)%btable, battrcli)
 else
-  indtbattrout=2
+  indbattrcli = index_c(qcspa%v7d%datiattr%b(:)%btable, '*B33192')
 end if
 
-if (indtbattrin <=0 .or. indtbattrout <= 0 ) then
+if (present(battrout))then
+  indbattrout = index_c(qcspa%v7d%datiattr%b(:)%btable, battrout)
+else
+  indbattrout = index_c(qcspa%v7d%datiattr%b(:)%btable, '*B33194')
+end if
 
-  call l4f_category_log(qcspa%category,L4F_ERROR,"error finding attribute index in/out")
-  call raise_error("error finding attribute index in/out")
+!if (indbattrinv <=0 .or. indbattrcli <= 0 .or. indbattrout <= 0 ) then
+if (indbattrout <= 0 ) then
+
+  call l4f_category_log(qcspa%category,L4F_ERROR,"error finding attribute index for output")
+  call raise_error()
 
 end if
 
@@ -540,7 +546,7 @@ else
   networkmaskl = .true.
 endif
 
-qcspa%v7d%voldatiattrb(:,:,:,:,:,:,indtbattrout)=ibmiss
+qcspa%v7d%voldatiattrb(:,:,:,:,:,:,indbattrout)=ibmiss
 
 call qcspatri(qcspa)
 
@@ -576,11 +582,26 @@ do indana=1,size(qcspa%v7d%ana)
              timerangemaskl(indtimerange).and.varmaskl(inddativarr).and.networkmaskl(indnetwork).and.&
              c_e(qcspa%v7d%voldatir(indana,indtime,indlevel,indtimerange,inddativarr,indnetwork))) cycle
 
-            if( invalidated(qcspa%v7d%voldatiattrb&
-             (indana,indtime,indlevel,indtimerange,inddativarr,indnetwork,indtbattrin))) then
-              call l4f_category_log(qcspa%category,L4F_WARN,"It's better to do a peeling to v7d before spatial QC")
-              cycle
+
+            datoqui = qcspa%v7d%voldatir  (indana ,indtime ,indlevel ,indtimerange ,inddativarr, indnetwork )
+
+            if (indbattrinv > 0) then
+              if( invalidated(qcspa%v7d%voldatiattrb&
+               (indana,indtime,indlevel,indtimerange,inddativarr,indnetwork,indbattrinv))) then
+                call l4f_category_log(qcspa%category,L4F_WARN,"It's better to do a reform on ana to v7d before spatial QC")
+                cycle
+              end if
             end if
+
+            if (indbattrcli > 0) then
+              if( .not. vd(qcspa%v7d%voldatiattrb&
+               (indana,indtime,indlevel,indtimerange,inddativarr,indnetwork,indbattrcli))) then
+                call l4f_category_log(qcspa%category,L4F_WARN,"It's better to do a reform on ana to v7d before spatial QC")
+                cycle
+              end if
+            end if
+
+            if (.not. c_e(datoqui)) cycle
 
             nintime=qcspa%v7d%time(indtime)+timedelta_new(minute=30)
             CALL getval(nintime, month=mese, hour=ora)
@@ -617,12 +638,6 @@ do indana=1,size(qcspa%v7d%ana)
             !! .or. indcnetwork <= 0 ) cycle
             !if (indctime <= 0 .or. indclevel <= 0 .or. indctimerange <= 0 .or. indcdativarr <= 0 &
             ! .or. indcnetwork <= 0 ) cycle
-
-            datoqui = qcspa%v7d%voldatir  (indana ,indtime ,indlevel ,indtimerange ,inddativarr, indnetwork )
-            if (.not. c_e(datoqui)) cycle
-            ! temprary check !!!!!!!!!!!!!!!!!!!!!!!!!!!   remove it
-            if (datoqui < 950. .or. datoqui > 1050. ) cycle
-            ! !!!!!!!!!!!!!
 
             if (optio_log(noborder) .and. any(indana == qcspa%tri%ipl(:3*qcspa%tri%nl:3))) cycle
 
@@ -699,19 +714,11 @@ do indana=1,size(qcspa%v7d%ana)
 
               datola = qcspa%v7d%voldatir  (ivert(i) ,indtime ,indlevel ,indtimerange ,inddativarr, indnetwork )
               datila = qcspa%v7d%voldatir  (ivert(i) ,: ,indlevel ,indtimerange ,inddativarr, indnetwork )
-              datilainvalidated = invalidated(qcspa%v7d%voldatiattrb&
-               (ivert(i),:,indlevel,indtimerange,inddativarr,indnetwork,indtbattrin))
 
-              if( invalidated(qcspa%v7d%voldatiattrb&
-               (ivert(i),indtime,indlevel,indtimerange,inddativarr,indnetwork,indtbattrin))) then
-                call l4f_category_log(qcspa%category,L4F_WARN,"It's better to do a peeling to v7d before spatial QC")
-              end if
-              
-              if (.not. c_e(datola) .or. invalidated(qcspa%v7d%voldatiattrb&
-               (ivert(i),indtime,indlevel,indtimerange,inddativarr,indnetwork,indtbattrin))) then
+              if (.not. c_e(datola))then
                 deltato=timedelta_miss
                 do iindtime=1,size(qcspa%v7d%time)
-                  if (c_e(datila(iindtime)) .and. .not. datilainvalidated(iindtime))then
+                  if (c_e(datila(iindtime)))then
                     if (iindtime < indtime) then
                       deltat=qcspa%v7d%time(indtime)-qcspa%v7d%time(iindtime)
                     else if (iindtime > indtime) then
@@ -725,10 +732,6 @@ do indana=1,size(qcspa%v7d%ana)
               end if
               
               IF(.NOT.C_E(datola)) cycle
-                                ! temprary check !!!!!!!!!!!!!!!!!!!!!!!!!!!   remove it
-              if (datola < 950. .or. datola > 1050. ) cycle
-                                ! !!!!!!!!!!!!!
-
                                 !	distanza tra le due stazioni
               dist = DISTANZA (qcspa%co(INDANA),qcspa%co(IVERT(I)))
               IF (DIST.EQ.0.)THEN
@@ -791,9 +794,9 @@ do indana=1,size(qcspa%v7d%ana)
 #endif
 
                                 !ATTENZIONE TODO : inddativarr È UNA GRANDE SEMPLIFICAZIONE NON VERA SE TIPI DI DATO DIVERSI !!!!
-                                !                      qcspa%v7d%voldatiattrb(indana,indtime,indlevel,indtimerange,inddativarr,indnetwork,indtbattrout)=&
+                                !                      qcspa%v7d%voldatiattrb(indana,indtime,indlevel,indtimerange,inddativarr,indnetwork,indbattrout)=&
                                 !                      qcspa%clima%voldatiattrb(indcana  ,indctime,indclevel,indctimerange,indcdativarr,indcnetwork,1)
-            qcspa%v7d%voldatiattrb(indana,indtime,indlevel,indtimerange,inddativarr,indnetwork,indtbattrout)=flag
+            qcspa%v7d%voldatiattrb(indana,indtime,indlevel,indtimerange,inddativarr,indnetwork,indbattrout)=flag
 
             if ( associated ( qcspa%data_id_in)) then
 #ifdef DEBUG
@@ -813,7 +816,7 @@ do indana=1,size(qcspa%v7d%ana)
 end do
 
 !!$print*,"risultato"
-!!$print *,qcspa%v7d%voldatiattrb(:,:,:,:,:,:,indtbattrout)
+!!$print *,qcspa%v7d%voldatiattrb(:,:,:,:,:,:,indbattrout)
 !!$print*,"fine risultato"
 
 return

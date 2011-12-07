@@ -1591,7 +1591,8 @@ SUBROUTINE vol7d_reform(this, sort, unique, miss, &
  lanavarattrr, lanavarattrd, lanavarattri, lanavarattrb, lanavarattrc, &
  ldativarr, ldativard, ldativari, ldativarb, ldativarc, &
  ldatiattrr, ldatiattrd, ldatiattri, ldatiattrb, ldatiattrc, &
- ldativarattrr, ldativarattrd, ldativarattri, ldativarattrb, ldativarattrc)
+ ldativarattrr, ldativarattrd, ldativarattri, ldativarattrb, ldativarattrc&
+ ,purgeana)
 TYPE(vol7d),INTENT(INOUT) :: this !< oggetto da riformare
 LOGICAL,INTENT(IN),OPTIONAL :: sort !< if present and \a .TRUE., sort all the sortable dimensions
 LOGICAL,INTENT(IN),OPTIONAL :: unique !< se fornito e uguale a \c .TRUE., gli eventuali elementi duplicati nei descrittori dell'oggetto iniziale verranno collassati in un unico elemento (con eventuale perdita dei dati relativi agli elementi duplicati)
@@ -1619,8 +1620,11 @@ LOGICAL,INTENT(in),OPTIONAL :: &
  ldativarr(:), ldativard(:), ldativari(:), ldativarb(:), ldativarc(:), &
  ldatiattrr(:), ldatiattrd(:), ldatiattri(:), ldatiattrb(:), ldatiattrc(:), &
  ldativarattrr(:), ldativarattrd(:), ldativarattri(:), ldativarattrb(:), ldativarattrc(:)
+LOGICAL,INTENT(IN),OPTIONAL :: purgeana !< if true remove ana with all data missing
 
 TYPE(vol7d) :: v7dtmp
+logical,allocatable :: llana(:)
+integer :: i
 
 CALL vol7d_copy(this, v7dtmp, sort, unique, miss, &
  lsort_time, lsort_timerange, lsort_level, &
@@ -1631,9 +1635,26 @@ CALL vol7d_copy(this, v7dtmp, sort, unique, miss, &
  ldativarr, ldativard, ldativari, ldativarb, ldativarc, &
  ldatiattrr, ldatiattrd, ldatiattri, ldatiattrb, ldatiattrc, &
  ldativarattrr, ldativarattrd, ldativarattri, ldativarattrb, ldativarattrc)
-! destroy old volume and assign new volume to this
+
+! destroy old volume
 CALL delete(this)
-this = v7dtmp
+
+if (optio_log(purgeana)) then
+  allocate(llana(size(v7dtmp%ana)))
+  llana =.false.
+  do i =1,size(v7dtmp%ana)
+    if (associated(v7dtmp%voldatii)) llana(i)= llana(i) .or. any(c_e(v7dtmp%voldatii(i,:,:,:,:,:)))
+    if (associated(v7dtmp%voldatir)) llana(i)= llana(i) .or. any(c_e(v7dtmp%voldatir(i,:,:,:,:,:)))
+    if (associated(v7dtmp%voldatid)) llana(i)= llana(i) .or. any(c_e(v7dtmp%voldatid(i,:,:,:,:,:)))
+    if (associated(v7dtmp%voldatib)) llana(i)= llana(i) .or. any(c_e(v7dtmp%voldatib(i,:,:,:,:,:)))
+    if (associated(v7dtmp%voldatic)) llana(i)= llana(i) .or. any(c_e(v7dtmp%voldatic(i,:,:,:,:,:)))
+  end do
+  CALL vol7d_copy(v7dtmp, this,lana=llana)
+  CALL delete(v7dtmp)
+  deallocate(llana)
+else
+  this=v7dtmp
+end if
 
 END SUBROUTINE vol7d_reform
 
@@ -2474,7 +2495,7 @@ doubleprecision,intent(in) :: voldat
 type(vol7d_var),intent(in) :: var
 
 if (c_e(voldat))then
-  integerdatd=voldat*10d0**var%scalefactor
+  integerdatd=nint(voldat*10d0**var%scalefactor)
 else
   integerdatd=imiss
 end if
@@ -2488,7 +2509,7 @@ real,intent(in) :: voldat
 type(vol7d_var),intent(in) :: var
 
 if (c_e(voldat))then
-  integerdatr=voldat*10d0**var%scalefactor
+  integerdatr=nint(voldat*10d0**var%scalefactor)
 else
   integerdatr=imiss
 end if
@@ -2568,7 +2589,7 @@ doubleprecision,intent(in) :: voldat
 type(vol7d_var),intent(in) :: var
 
 if (c_e(voldat))then
-  realdatd=voldat
+  realdatd=real(voldat)
 else
   realdatd=rmiss
 end if
@@ -2674,7 +2695,7 @@ TYPE(vol7d),intent(inout) :: v7d !< data in form of character in this object wil
 
 integer,intent(in) :: indana,indtime,indlevel,indtimerange,indnetwork !< source coordinate of the data
 integer,intent(in) :: indananew,indtimenew,indlevelnew,indtimerangenew,indnetworknew !< destination coordinate of data
-integer :: inddativar,inddatiattr,inddativarattr
+integer :: inddativar,inddativarattr
 
 
 do inddativar=1,size(v7d%dativar%c)

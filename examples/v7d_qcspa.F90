@@ -22,6 +22,7 @@
 program esempio_qcspa
 
 use log4fortran
+use modqc
 use modqcspa
 use vol7d_dballe_class
 #ifdef HAVE_LIBNCARG
@@ -145,14 +146,26 @@ DO WHILE (time <= tf)
 
   CALL import(v7ddballe,var=var(:nvar),varkind=(/("r",i=1,nvar)/),&
    anavar=(/"B07030"/),anavarkind=(/"r"/),&
-   attr=(/"*B33196","*B33192"/),attrkind=(/"b","b"/)&
+   attr=(/"*B33196","*B33192","*B33194"/),attrkind=(/"b","b","b"/)&
    ,timei=timei,timef=timef,coordmin=coordmin,coordmax=coordmax)
   
-  call display(v7ddballe%vol7d)
+  !call display(v7ddballe%vol7d)
   call l4f_category_log(category,L4F_INFO,"end data import")
+  call l4f_category_log(category,L4F_INFO, "input N staz="//t2c(size(v7ddballe%vol7d%ana)))
+
+  call l4f_category_log(category,L4F_INFO,"start peeling")
+
+  !elimina i dati con gross error
+  qcpar=qcpartype(0)
+  call vol7d_peeling(v7ddballe%vol7d,v7ddballe%data_id,keep_attr=(/"*B33194"/),purgeana=.true.)
+  !print *,"========================================================================================="
+  !print *,"=============================================== after peeling ==========================="
+  !print *,"========================================================================================="
+  !call display(v7ddballe%vol7d)
+
+  call l4f_category_log(category,L4F_INFO, "filtered N staz="//t2c(size(v7ddballe%vol7d%ana)))
 
   call l4f_category_log(category,L4F_INFO,"start QC")
-
                                 ! chiamiamo il "costruttore" per il Q.C.
   call init(v7dqcspa,v7ddballe%vol7d,var(:nvar),timei=ti,timef=tf,coordmin=coordmin,coordmax=coordmax,&
    data_id_in=v7ddballe%data_id, dsn=dsnc, user=userc, categoryappend="space")
@@ -160,6 +173,7 @@ DO WHILE (time <= tf)
 
   call alloc(v7dqcspa)
 
+  ! spatial QC
   call l4f_category_log(category,L4F_INFO,"start spatial QC")
   call quaconspa(v7dqcspa,noborder=.true.,timemask= ( v7dqcspa%v7d%time >= timeiqc .and. v7dqcspa%v7d%time <= timefqc ))
   call l4f_category_log(category,L4F_INFO,"end spatial QC")

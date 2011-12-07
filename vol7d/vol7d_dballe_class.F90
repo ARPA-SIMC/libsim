@@ -1401,7 +1401,6 @@ do i =1, N
    end if
 
    if(c_e(buffer(i)%datoc)) then
-
      inddativar = firsttrue(buffer(i)%dativar == vol7dtmp%dativar%c)
      vol7dtmp%voldatic( &
       indana,indtime,indlevel,indtimerange,inddativar,indnetwork &
