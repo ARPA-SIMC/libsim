@@ -21,7 +21,9 @@ PROGRAM v7d_plot_sound
 
 use log4fortran
 USE vol7d_class
+#ifdef HAVE_DBALLE
 USE vol7d_dballe_class
+#endif
 USE vol7d_class_compute
 USE ncar_plot_class
 USE optionparser_class
@@ -33,13 +35,17 @@ type(optionparser) :: opt
 INTEGER :: optind, optstatus, category, ier
 logical :: version
 integer :: wstype,ic
-character(len=512):: a_name, infile, outfile, PSTYPE, ORIENT, COLOR
+CHARACTER(len=8) :: input_format
+character(len=512):: a_name, input_file, outfile, PSTYPE, ORIENT, COLOR
 character(len=100) :: nomogram, logo
+#ifdef HAVE_DBALLE
 TYPE(vol7d_dballe) :: v7d_dba
-TYPE(vol7d) :: v7d_profile
+#endif
+CHARACTER(len=32) :: dsn, user, password
+TYPE(vol7d) :: v7dtmp, v7d_profile
 type(ncar_plot) :: plot
 integer :: time,ana,timerange,network
-logical ::  packtimerange,changepg=.false.,distinct
+LOGICAL :: file, ldisplay, packtimerange, changepg=.FALSE., distinct
 character(len=20) :: tcolor(4)=(/'brown','red  ','black','tan  '/)
 character(len=20) :: tdcolor(4)=(/'orange      ','forest Green','cyan        ','yellow      '/)
 character(len=20) :: ucolor(4)=(/'sky blue    ','blue        ','blue magenta','magenta     '/)
@@ -56,11 +62,26 @@ category=l4f_category_get(a_name//".main")
 
 ! define the option parser
 opt = optionparser_new(description_msg= &
- 'Program for plotting an Herlofson diagram from a BUFR/CREX file. Different &
- &output formats, either on file or on screen, are supported.', &
+ 'Program for plotting an Herlofson diagram from one or more &
+ &atmospheric vertical profiles imported from a vol7d native file'&
+#ifdef HAVE_DBALLE
+ //', from a dbAll.e database, from a BUFR/CREX file'&
+#endif
+ //'. Different output formats, either on file or on screen, are supported.', &
  usage_msg='Usage: v7d_plot_sound [options] inputfile outputfile')
-
 wstype = imiss
+CALL optionparser_add(opt, ' ', 'input-format', input_format, &
+#ifdef HAVE_DBALLE
+'BUFR', &
+#else
+'native', &
+#endif
+&  help='format of input, ''native'' for vol7d native binary file'&
+#ifdef HAVE_DBALLE
+ //', ''BUFR'' for BUFR file with generic template, ''CREX'' for CREX file&
+ &, ''dba'' for dballe database'&
+#endif
+ )
 CALL optionparser_add(opt, 'w', 'wstype', wstype, help= &
  'workstation type (see NCAR GKS manuals, e.g. 8=X11 display), if &
  &omitted (default), then postscript is chosen, see pstype option')
@@ -80,6 +101,9 @@ CALL optionparser_add(opt, 't', 'packtimerange', packtimerange, help= &
  &in title and legend')
 CALL optionparser_add(opt, 'd', 'distinct', distinct, help= &
  'put every plot on a distinct page')
+CALL optionparser_add(opt, ' ', 'display', ldisplay, help= &
+ 'briefly display the data volume imported, warning: this option is incompatible &
+ &with output on stdout.')
 
 ! help options
 CALL optionparser_add_help(opt, 'h', 'help', help='show an help message and exit')
@@ -116,7 +140,7 @@ IF (color/='COLOR' .AND. color/='MONOCHROME')THEN
 ENDIF
 
 IF (optind <= iargc()) THEN
-  CALL getarg(optind, infile)
+  CALL getarg(optind, input_file)
   optind=optind+1
 ELSE
   CALL optionparser_printhelp(opt)
@@ -135,20 +159,58 @@ ENDIF
 
 CALL delete(opt)
 
-! Chiamo il costruttore della classe vol7d_dballe per il mio oggetto in import
-CALL init(v7d_dba,file=.true.,write=.false.,filename=infile,&
- categoryappend="importBUFR",format="BUFR")
+IF (input_format == 'native') THEN
+  IF (input_file == '-') THEN ! stdin_unit does not work with unformatted
+    CALL l4f_category_log(category, L4F_INFO, 'trying /dev/stdin as stdin unit.')
+    input_file='/dev/stdin'
+  ENDIF
+  CALL import(v7dtmp, filename=input_file)
+
+#ifdef HAVE_DBALLE
+ELSE IF (input_format == 'BUFR' .OR. input_format == 'CREX' .OR. input_format == 'dba') THEN
+
+!    IF (.NOT.ALLOCATED(nl)) THEN
+!      allocate (nl(0))
+!    ENDIF
+!
+!    IF( .NOT.ALLOCATED(vl)) THEN
+!      allocate (vl(0))
+!    ENDIF
+
+  IF (input_format == 'BUFR' .OR. input_format == 'CREX') THEN
+
+    IF (input_file == '-') THEN
+      CALL l4f_category_log(category, L4F_INFO, 'trying /dev/stdin as stdin unit.')
+      input_file='/dev/stdin'
+    ENDIF
+    file=.TRUE.
+
+  ELSE IF (input_format == 'dba') THEN
+    CALL parse_dba_access_info(input_file, dsn, user, password)
+    file=.FALSE.
+  ENDIF
+ 
+  CALL init(v7d_dba, filename=input_file, FORMAT=input_format, &
+   dsn=dsn, user=user, password=password, file=file, categoryappend="importBUFR")
 
 !call import (v7d_dba,var=(/"B12101","B12103","B11001","B11002"/),varkind=(/"d","d","d","d"/))
-call import (v7d_dba)
+  CALL import(v7d_dba)
+
+  v7dtmp = v7d_dba%vol7d
+  CALL init(v7d_dba%vol7d) ! nullify without deallocating
+  CALL delete(v7d_dba)
+
+#endif
+
+ENDIF
 
 call l4f_category_log(category,L4F_INFO,"importato vol7d")
 
-!call vol7d_reform(v7d_dba%vol7d,sort=.true.)
+!call vol7d_reform(v7dtmp,sort=.true.)
 
-!call vol7d_normalize_vcoord(v7d_dba%vol7d)
+!call vol7d_normalize_vcoord(v7dtmp)
 
-call display(v7d_dba%vol7d)
+IF (ldisplay) CALL display(v7dtmp)
 
 if ( c_e(wstype))then
   call init(plot,file=outfile,wstype=wstype)
@@ -156,10 +218,10 @@ else
   call init(plot,file=outfile,PSTYPE=pstype, ORIENT=orient,COLOR=color)
 end if
 
-do ana=1, size(v7d_dba%vol7d%ana)
-  do time=1, size(v7d_dba%vol7d%time)
+do ana=1, size(v7dtmp%ana)
+  do time=1, size(v7dtmp%time)
     ic=0
-    do network=1,size(v7d_dba%vol7d%network)
+    do network=1,size(v7dtmp%network)
 
       if (packtimerange) then
         ic=mod(ic,4)+1       ! cicle over 4 color
@@ -171,12 +233,12 @@ do ana=1, size(v7d_dba%vol7d%ana)
         end if
 
         if (ic == 1)  then
-          call plot_vp_title (plot,v7d_dba%vol7d,ana,time,1,network,color=tcolor(ic))  !solo primo titolo
+          call plot_vp_title (plot,v7dtmp,ana,time,1,network,color=tcolor(ic))  !solo primo titolo
           call plot_herlofson(plot,logo=logo,nomogramma=nomogram)
         end if
       end if
 
-      do timerange=1, size(v7d_dba%vol7d%timerange)
+      do timerange=1, size(v7dtmp%timerange)
 
         if (.not. packtimerange) then
           ic=mod(ic,4)+1       ! cicle over 4 color
@@ -188,13 +250,13 @@ do ana=1, size(v7d_dba%vol7d%ana)
           end if
 
           if (ic == 1)  then
-            call plot_vp_title (plot,v7d_dba%vol7d,ana,time,timerange,network,color=tcolor(ic))  !solo primo titolo
+            call plot_vp_title (plot,v7dtmp,ana,time,timerange,network,color=tcolor(ic))  !solo primo titolo
             call plot_herlofson(plot,logo=logo,nomogramma=nomogram)
           end if
         end if
 
         call init(v7d_profile)
-        call vol7d_normalize_vcoord(v7d_dba%vol7d,v7d_profile,ana,time,timerange,network)
+        call vol7d_normalize_vcoord(v7dtmp,v7d_profile,ana,time,timerange,network)
 
         call plot_vertical_plofiles(plot,v7d_profile,1,1,1,1,&
          tcolor=tcolor(ic),tdcolor=tdcolor(ic),&
@@ -216,7 +278,7 @@ end do
 
 call delete(plot)
 
-call delete (v7d_dba)
+call delete(v7dtmp)
 
 call l4f_category_log(category,L4F_INFO,"terminated")
 
@@ -224,5 +286,37 @@ call l4f_category_log(category,L4F_INFO,"terminated")
 !chiudo il logger
 call l4f_category_delete(category)
 ier=l4f_fini()
+
+CONTAINS
+
+SUBROUTINE parse_dba_access_info(string, dsn, user, password)
+CHARACTER(len=*),INTENT(in) :: string
+CHARACTER(len=*),INTENT(out) :: dsn
+CHARACTER(len=*),INTENT(out) :: user
+CHARACTER(len=*),INTENT(out) :: password
+
+INTEGER :: bar, at
+
+IF (string == '-' .OR. string == '') THEN
+  dsn = cmiss
+  user = cmiss
+  password = cmiss
+ELSE
+  bar = INDEX(string, '/')
+  at = INDEX(string, '@')
+  IF (bar > 0 .AND. at > bar) THEN
+    user = string(:bar-1)
+    password = string(bar+1:at-1)
+    dsn = string(at+1:)
+  ELSE
+    CALL optionparser_printhelp(opt)
+    CALL l4f_category_log(category, L4F_ERROR, &
+     'error in command-line parameters, database access info '// &
+     TRIM(string)//' not valid.')
+    CALL EXIT(1)
+  ENDIF
+ENDIF
+
+END SUBROUTINE parse_dba_access_info
 
 END PROGRAM v7d_plot_sound

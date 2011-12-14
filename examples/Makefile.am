@@ -45,6 +45,14 @@ esempio_regrib_SOURCES = esempio_regrib.f90
 esempio_regrib_LDADD = ../base/libsim_base.la ../grib/libsim_grib.la
 endif
 
+# v7d_plot_sound can work without dballe
+if NCARG
+bin_PROGRAMS += v7d_plot_sound
+
+v7d_plot_sound_SOURCES = v7d_plot_sound.F90
+v7d_plot_sound_LDADD = ../graphics/libsim_graphics.la ../base/libsim_base.la ../vol7d/libsim_vol7d.la  ../log4fortran/liblog4fortran.la ../termolib/libsim_termolib.la
+
+endif
 
 if DBALLE
 noinst_PROGRAMS += esempio_v7ddballe esempio_v7ddballe_multi esempio_v7ddballe_import_export esempio_v7ddballe_export esempio_qc_convert example_v7ddballe_v7d2dba esempio_v7ddballe_move_and_collapse
@@ -81,17 +89,12 @@ esempio_v7dnetcdf_SOURCES = esempio_v7dnetcdf.f90
 esempio_v7dnetcdf_LDADD = ../base/libsim_base.la ../vol7d/libsim_vol7d.la  ../log4fortran/liblog4fortran.la
 endif
 
+# example_ncarg_sounding cannnot work without dballe
 if NCARG
 noinst_PROGRAMS += example_ncarg_sounding
 
 example_ncarg_sounding_SOURCES = example_ncarg_sounding.f90
 example_ncarg_sounding_LDADD = ../graphics/libsim_graphics.la ../base/libsim_base.la ../vol7d/libsim_vol7d.la  ../log4fortran/liblog4fortran.la ../termolib/libsim_termolib.la
-
-
-bin_PROGRAMS += v7d_plot_sound
-
-v7d_plot_sound_SOURCES = v7d_plot_sound.F90
-v7d_plot_sound_LDADD = ../graphics/libsim_graphics.la ../base/libsim_base.la ../vol7d/libsim_vol7d.la  ../log4fortran/liblog4fortran.la ../termolib/libsim_termolib.la
 
 endif
 
