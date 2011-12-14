@@ -158,9 +158,6 @@ DO WHILE (time <= tf)
   !elimina i dati con gross error
   qcpar=qcpartype(0)
   call vol7d_peeling(v7ddballe%vol7d,v7ddballe%data_id,keep_attr=(/"*B33194"/),purgeana=.true.)
-  !print *,"========================================================================================="
-  !print *,"=============================================== after peeling ==========================="
-  !print *,"========================================================================================="
   !call display(v7ddballe%vol7d)
 
   call l4f_category_log(category,L4F_INFO, "filtered N staz="//t2c(size(v7ddballe%vol7d%ana)))
@@ -170,6 +167,7 @@ DO WHILE (time <= tf)
   call init(v7dqcspa,v7ddballe%vol7d,var(:nvar),timei=ti,timef=tf,coordmin=coordmin,coordmax=coordmax,&
    data_id_in=v7ddballe%data_id, dsn=dsnc, user=userc, categoryappend="space")
   !call display(v7dqcspa%clima)
+  !call display(v7dqcspa%extreme)
 
   call alloc(v7dqcspa)
 
@@ -180,7 +178,7 @@ DO WHILE (time <= tf)
 
 #ifdef HAVE_LIBNCARG
   call l4f_category_log(category,L4F_INFO,"start plot")
-  call plot_triangles(plot,v7dqcspa%co,v7dqcspa%tri,logo="SIMC")
+  call plot_triangles(plot,v7dqcspa%co,v7dqcspa%tri,logo="Time: "//t2c(timeiqc)//" to "//t2c(timefqc))
   call frame()
 #endif
 

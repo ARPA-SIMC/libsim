@@ -19,7 +19,7 @@
 !! Procedure per il controllo di qualitÃ .
 !! Al momento Ã¨ implementato solo il controllo di qualitÃ  climatico.
 
-
+#include "config.h"
 !> Utilities and defines for quality control.
 !! 
 !! Concise, high-value definitions of Data Quality by expert users,
@@ -186,8 +186,8 @@ end interface
 
 !> Remove data under a defined grade of confidence.
 interface peeled
-  module procedure peeledrb, peeleddb, peeledbb, peeledib,peeledcb &
-   ,peeledri, peeleddi, peeledbi, peeledii,peeledci
+  module procedure peeledrb, peeleddb, peeledbb, peeledib,peeledcb
+!   ,peeledri, peeleddi, peeledbi, peeledii,peeledci
 end interface
 
 
@@ -205,7 +205,7 @@ private
 
 public vd, init, qcattrvars_new, invalidated, peeled, vol7d_peeling
 public qcattrvars, nqcattrvars, qcattrvarsbtables
-public qcpar, qcpartype, qcsummaryflagi, qcsummaryflagb
+public qcpar, qcpartype, qcsummaryflagb ! ,qcsummaryflagi
 
 contains
 
@@ -269,29 +269,29 @@ return
 end function invalidatedb
 
 
+!!$!> Check data validity based on multiple confidences.
+!!$!! Compute final decision boolean flag
+!!$ELEMENTAL LOGICAL FUNCTION qcsummaryflagi(flaginv, flag1, flag2, flag3)
+!!$integer,intent(in),optional :: flaginv
+!!$integer,intent(in),optional :: flag1
+!!$integer,intent(in),optional :: flag2
+!!$integer,intent(in),optional :: flag3
+!!$
+!!$qcsummaryflagi = .NOT.invalidated(optio_l(flaginv)) .AND. &
+!!$ vd(optio_l(flag1)) .AND. vd(optio_l(flag2)) .AND. vd(optio_l(flag3))
+!!$
+!!$END FUNCTION qcsummaryflagi
+
+
 !> Check data validity based on multiple confidences.
 !! Compute final decision boolean flag
-ELEMENTAL LOGICAL FUNCTION qcsummaryflagi(flaginv, flag1, flag2, flag3)
-integer,intent(in),optional :: flaginv
-integer,intent(in),optional :: flag1
-integer,intent(in),optional :: flag2
-integer,intent(in),optional :: flag3
-
-qcsummaryflagi = .NOT.invalidated(optio_l(flaginv)) .AND. &
- vd(optio_l(flag1)) .AND. vd(optio_l(flag2)) .AND. vd(optio_l(flag3))
-
-END FUNCTION qcsummaryflagi
-
-
-!> Check data validity based on multiple confidences.
-!! Compute final decision boolean flag
-ELEMENTAL LOGICAL FUNCTION qcsummaryflagb(flaginv, flag1, flag2, flag3)
-integer(kind=int_b),intent(in),optional :: flaginv
+ELEMENTAL LOGICAL FUNCTION qcsummaryflagb(flag0, flag1, flag2, flag3)
+integer(kind=int_b),intent(in),optional :: flag0
 integer(kind=int_b),intent(in),optional :: flag1
 integer(kind=int_b),intent(in),optional :: flag2
 integer(kind=int_b),intent(in),optional :: flag3
 
-qcsummaryflagb = .NOT.invalidated(optio_b(flaginv)) .AND. &
+qcsummaryflagb = .NOT.invalidated(optio_b(flag0)) .AND. &
  vd(optio_b(flag1)) .AND. vd(optio_b(flag2)) .AND. vd(optio_b(flag3))
 
 END FUNCTION qcsummaryflagb
@@ -299,176 +299,312 @@ END FUNCTION qcsummaryflagb
 
 ! byte attributes below
 
-elemental real function peeledrb(data,flaginv,flag1,flag2,flag3)
+function peeledrb(data,flag0,flag1,flag2,flag3)
 
-real, intent(in) :: data
-integer(kind=int_b), intent(in),optional :: flaginv
-integer(kind=int_b), intent(in),optional :: flag1
-integer(kind=int_b), intent(in),optional :: flag2
-integer(kind=int_b), intent(in),optional :: flag3
+real, intent(in) :: data(:,:,:,:,:)
+integer(kind=int_b), intent(in),optional,pointer :: flag0(:,:,:,:,:)
+integer(kind=int_b), intent(in),optional,pointer :: flag1(:,:,:,:,:)
+integer(kind=int_b), intent(in),optional,pointer :: flag2(:,:,:,:,:)
+integer(kind=int_b), intent(in),optional,pointer :: flag3(:,:,:,:,:)
+real :: peeledrb(size(data,1),size(data,2),size(data,3),size(data,4),size(data,5))
 
-if (qcsummaryflagb(flaginv,flag1,flag2,flag3)) then
-  peeledrb=data
-else
-  peeledrb=rmiss
-end if
+integer(kind=int_b) :: flag0l
+integer(kind=int_b) :: flag1l
+integer(kind=int_b) :: flag2l
+integer(kind=int_b) :: flag3l
+
+integer :: i,j,k,l,m
+
+
+do m=1,size(data,5)
+  do l=1,size(data,4)
+    do k=1,size(data,3)
+      do j=1,size(data,2)
+        do i=1,size(data,1)
+          
+          if (associated(flag0))then
+            flag0l=flag0(i,j,k,l,m)
+          else
+            flag0l=ibmiss
+          end if
+
+          if (associated(flag1))then
+            flag1l=flag1(i,j,k,l,m)
+          else
+            flag1l=ibmiss
+          end if
+
+          if (associated(flag2))then
+            flag2l=flag2(i,j,k,l,m)
+          else
+            flag2l=ibmiss
+          end if
+
+          if (associated(flag3))then
+            flag3l=flag3(i,j,k,l,m)
+          else
+            flag3l=ibmiss
+          end if
+
+          if (qcsummaryflagb(flag0l,flag1l,flag2l,flag3l)) then
+            peeledrb(i,j,k,l,m)=data(i,j,k,l,m)
+          else
+            peeledrb(i,j,k,l,m)=rmiss
+          end if
+
+        end do
+      end do
+    end do
+  end do
+end do
 
 end function peeledrb
 
-elemental real(kind=fp_d) function peeleddb(data,flaginv,flag1,flag2,flag3)
+function peeleddb(data,flag0,flag1,flag2,flag3)
 
-real(kind=fp_d), intent(in) :: data
-integer(kind=int_b), intent(in),optional :: flaginv
-integer(kind=int_b), intent(in),optional :: flag1
-integer(kind=int_b), intent(in),optional :: flag2
-integer(kind=int_b), intent(in),optional :: flag3
+real(kind=fp_d), intent(in) :: data(:,:,:,:,:)
+integer(kind=int_b), intent(in),optional,pointer :: flag0(:,:,:,:,:)
+integer(kind=int_b), intent(in),optional,pointer :: flag1(:,:,:,:,:)
+integer(kind=int_b), intent(in),optional,pointer :: flag2(:,:,:,:,:)
+integer(kind=int_b), intent(in),optional,pointer :: flag3(:,:,:,:,:)
+real(kind=fp_d) :: peeleddb(size(data,1),size(data,2),size(data,3),size(data,4),size(data,5))
 
-if (qcsummaryflagb(flaginv,flag1,flag2,flag3)) then
-  peeleddb=data
-else
-  peeleddb=dmiss
-end if
+integer(kind=int_b) :: flag0l
+integer(kind=int_b) :: flag1l
+integer(kind=int_b) :: flag2l
+integer(kind=int_b) :: flag3l
+
+integer :: i,j,k,l,m
+
+do m=1,size(data,5)
+  do l=1,size(data,4)
+    do k=1,size(data,3)
+      do j=1,size(data,2)
+        do i=1,size(data,1)
+          
+          if (associated(flag0))then
+            flag0l=flag0(i,j,k,l,m)
+          else
+            flag0l=ibmiss
+          end if
+
+          if (associated(flag1))then
+            flag1l=flag1(i,j,k,l,m)
+          else
+            flag1l=ibmiss
+          end if
+
+          if (associated(flag2))then
+            flag2l=flag2(i,j,k,l,m)
+          else
+            flag2l=ibmiss
+          end if
+
+          if (associated(flag3))then
+            flag3l=flag3(i,j,k,l,m)
+          else
+            flag3l=ibmiss
+          end if
+
+          if (qcsummaryflagb(flag0l,flag1l,flag2l,flag3l)) then
+            peeleddb(i,j,k,l,m)=data(i,j,k,l,m)
+          else
+            peeleddb(i,j,k,l,m)=dmiss
+          end if
+
+        end do
+      end do
+    end do
+  end do
+end do
 
 end function peeleddb
 
+function peeledib(data,flag0,flag1,flag2,flag3)
 
-elemental integer function peeledib(data,flaginv,flag1,flag2,flag3)
+integer, intent(in) :: data(:,:,:,:,:)
+integer(kind=int_b), intent(in),optional,pointer :: flag0(:,:,:,:,:)
+integer(kind=int_b), intent(in),optional,pointer :: flag1(:,:,:,:,:)
+integer(kind=int_b), intent(in),optional,pointer :: flag2(:,:,:,:,:)
+integer(kind=int_b), intent(in),optional,pointer :: flag3(:,:,:,:,:)
+integer :: peeledib(size(data,1),size(data,2),size(data,3),size(data,4),size(data,5))
 
-integer, intent(in) :: data
-integer(kind=int_b), intent(in),optional :: flaginv
-integer(kind=int_b), intent(in),optional :: flag1
-integer(kind=int_b), intent(in),optional :: flag2
-integer(kind=int_b), intent(in),optional :: flag3
+integer(kind=int_b) :: flag0l
+integer(kind=int_b) :: flag1l
+integer(kind=int_b) :: flag2l
+integer(kind=int_b) :: flag3l
 
-if (qcsummaryflagb(flaginv,flag1,flag2,flag3)) then
-  peeledib=data
-else
-  peeledib=imiss
-end if
+integer :: i,j,k,l,m
+
+
+do m=1,size(data,5)
+  do l=1,size(data,4)
+    do k=1,size(data,3)
+      do j=1,size(data,2)
+        do i=1,size(data,1)
+          
+          if (associated(flag0))then
+            flag0l=flag0(i,j,k,l,m)
+          else
+            flag0l=ibmiss
+          end if
+
+          if (associated(flag1))then
+            flag1l=flag1(i,j,k,l,m)
+          else
+            flag1l=ibmiss
+          end if
+
+          if (associated(flag2))then
+            flag2l=flag2(i,j,k,l,m)
+          else
+            flag2l=ibmiss
+          end if
+
+          if (associated(flag3))then
+            flag3l=flag3(i,j,k,l,m)
+          else
+            flag3l=ibmiss
+          end if
+
+          if (qcsummaryflagb(flag0l,flag1l,flag2l,flag3l)) then
+            peeledib(i,j,k,l,m)=data(i,j,k,l,m)
+          else
+            peeledib(i,j,k,l,m)=imiss
+          end if
+
+        end do
+      end do
+    end do
+  end do
+end do
 
 end function peeledib
 
 
-elemental integer(kind=int_b) function peeledbb(data,flaginv,flag1,flag2,flag3)
+function peeledbb(data,flag0,flag1,flag2,flag3)
 
-integer(kind=int_b), intent(in) :: data
-integer(kind=int_b), intent(in),optional :: flaginv
-integer(kind=int_b), intent(in),optional :: flag1
-integer(kind=int_b), intent(in),optional :: flag2
-integer(kind=int_b), intent(in),optional :: flag3
+integer(kind=int_b), intent(in) :: data(:,:,:,:,:)
+integer(kind=int_b), intent(in),optional,pointer :: flag0(:,:,:,:,:)
+integer(kind=int_b), intent(in),optional,pointer :: flag1(:,:,:,:,:)
+integer(kind=int_b), intent(in),optional,pointer :: flag2(:,:,:,:,:)
+integer(kind=int_b), intent(in),optional,pointer :: flag3(:,:,:,:,:)
+integer(kind=int_b) :: peeledbb(size(data,1),size(data,2),size(data,3),size(data,4),size(data,5))
 
-if (qcsummaryflagb(flaginv,flag1,flag2,flag3)) then
-  peeledbb=data
-else
-  peeledbb=ibmiss
-end if
+integer(kind=int_b) :: flag0l
+integer(kind=int_b) :: flag1l
+integer(kind=int_b) :: flag2l
+integer(kind=int_b) :: flag3l
+
+integer :: i,j,k,l,m
+
+
+do m=1,size(data,5)
+  do l=1,size(data,4)
+    do k=1,size(data,3)
+      do j=1,size(data,2)
+        do i=1,size(data,1)
+          
+          if (associated(flag0))then
+            flag0l=flag0(i,j,k,l,m)
+          else
+            flag0l=ibmiss
+          end if
+
+          if (associated(flag1))then
+            flag1l=flag1(i,j,k,l,m)
+          else
+            flag1l=ibmiss
+          end if
+
+          if (associated(flag2))then
+            flag2l=flag2(i,j,k,l,m)
+          else
+            flag2l=ibmiss
+          end if
+
+          if (associated(flag3))then
+            flag3l=flag3(i,j,k,l,m)
+          else
+            flag3l=ibmiss
+          end if
+
+          if (qcsummaryflagb(flag0l,flag1l,flag2l,flag3l)) then
+            peeledbb(i,j,k,l,m)=data(i,j,k,l,m)
+          else
+            peeledbb(i,j,k,l,m)=ibmiss
+          end if
+
+        end do
+      end do
+    end do
+  end do
+end do
 
 end function peeledbb
 
 
-elemental character(len=vol7d_cdatalen) function peeledcb(data,flaginv,flag1,flag2,flag3)
 
-character(len=vol7d_cdatalen), intent(in) :: data
-integer(kind=int_b), intent(in),optional :: flaginv
-integer(kind=int_b), intent(in),optional :: flag1
-integer(kind=int_b), intent(in),optional :: flag2
-integer(kind=int_b), intent(in),optional :: flag3
+function peeledcb(data,flag0,flag1,flag2,flag3)
 
-if (qcsummaryflagb(flaginv,flag1,flag2,flag3)) then
-  peeledcb=data
-else
-  peeledcb=cmiss
-end if
+character(len=vol7d_cdatalen), intent(in) :: data(:,:,:,:,:)
+integer(kind=int_b), intent(in),optional,pointer :: flag0(:,:,:,:,:)
+integer(kind=int_b), intent(in),optional,pointer :: flag1(:,:,:,:,:)
+integer(kind=int_b), intent(in),optional,pointer :: flag2(:,:,:,:,:)
+integer(kind=int_b), intent(in),optional,pointer :: flag3(:,:,:,:,:)
+character(len=vol7d_cdatalen)  :: peeledcb(size(data,1),size(data,2),size(data,3),size(data,4),size(data,5))
+
+integer(kind=int_b) :: flag0l
+integer(kind=int_b) :: flag1l
+integer(kind=int_b) :: flag2l
+integer(kind=int_b) :: flag3l
+
+integer :: i,j,k,l,m
+
+
+do m=1,size(data,5)
+  do l=1,size(data,4)
+    do k=1,size(data,3)
+      do j=1,size(data,2)
+        do i=1,size(data,1)
+          
+          if (associated(flag0))then
+            flag0l=flag0(i,j,k,l,m)
+          else
+            flag0l=ibmiss
+          end if
+
+          if (associated(flag1))then
+            flag1l=flag1(i,j,k,l,m)
+          else
+            flag1l=ibmiss
+          end if
+
+          if (associated(flag2))then
+            flag2l=flag2(i,j,k,l,m)
+          else
+            flag2l=ibmiss
+          end if
+
+          if (associated(flag3))then
+            flag3l=flag3(i,j,k,l,m)
+          else
+            flag3l=ibmiss
+          end if
+
+          if (qcsummaryflagb(flag0l,flag1l,flag2l,flag3l)) then
+            peeledcb(i,j,k,l,m)=data(i,j,k,l,m)
+          else
+            peeledcb(i,j,k,l,m)=cmiss
+          end if
+
+        end do
+      end do
+    end do
+  end do
+end do
 
 end function peeledcb
-
-
-! integer attributes below
-! here flaginv is not optional
-
-elemental real function peeledri(data,flaginv,flag1,flag2,flag3)
-
-real, intent(in) :: data
-integer, intent(in) :: flaginv
-integer, intent(in),optional :: flag1
-integer, intent(in),optional :: flag2
-integer, intent(in),optional :: flag3
-
-if (qcsummaryflagi(flaginv,flag1,flag2,flag3)) then
-  peeledri=data
-else
-  peeledri=rmiss
-end if
-
-end function peeledri
-
-elemental real(kind=fp_d) function peeleddi(data,flaginv,flag1,flag2,flag3)
-
-real(kind=fp_d), intent(in) :: data
-integer, intent(in) :: flaginv
-integer, intent(in),optional :: flag1
-integer, intent(in),optional :: flag2
-integer, intent(in),optional :: flag3
-
-if (qcsummaryflagi(flaginv,flag1,flag2,flag3)) then
-  peeleddi=data
-else
-  peeleddi=dmiss
-end if
-
-end function peeleddi
-
-
-elemental integer function peeledii(data,flaginv,flag1,flag2,flag3)
-
-integer, intent(in) :: data
-integer, intent(in) :: flaginv
-integer, intent(in),optional :: flag1
-integer, intent(in),optional :: flag2
-integer, intent(in),optional :: flag3
-
-if (qcsummaryflagi(flaginv,flag1,flag2,flag3)) then
-  peeledii=data
-else
-  peeledii=imiss
-end if
-
-end function peeledii
-
-
-elemental integer(kind=int_b) function peeledbi(data,flaginv,flag1,flag2,flag3)
-
-integer(kind=int_b), intent(in) :: data
-integer, intent(in) :: flaginv
-integer, intent(in),optional :: flag1
-integer, intent(in),optional :: flag2
-integer, intent(in),optional :: flag3
-
-if (qcsummaryflagi(flaginv,flag1,flag2,flag3)) then
-  peeledbi=data
-else
-  peeledbi=ibmiss
-end if
-
-end function peeledbi
-
-
-elemental character(len=vol7d_cdatalen) function peeledci(data,flaginv,flag1,flag2,flag3)
-
-character(len=vol7d_cdatalen), intent(in) :: data
-integer, intent(in) :: flaginv
-integer, intent(in),optional :: flag1
-integer, intent(in),optional :: flag2
-integer, intent(in),optional :: flag3
-
-if (qcsummaryflagi(flaginv,flag1,flag2,flag3)) then
-  peeledci=data
-else
-  peeledci=cmiss
-end if
-
-end function peeledci
-
 
 
 subroutine init_qcattrvars(this)
@@ -508,8 +644,8 @@ logical,intent(in),optional :: purgeana !< if true remove ana with all data miss
 
 integer :: inddativar,inddatiattrinv,inddatiattrcli,inddatiattrtem,inddatiattrspa,inddativarattr
 type(qcattrvars) :: attrvars
-integer :: invi,clii,temi,spai
-INTEGER(kind=int_b)  :: invb,clib,temb,spab
+!!$integer,pointer :: invi(:,:,:,:,:),clii(:,:,:,:,:),temi(:,:,:,:,:),spai(:,:,:,:,:)
+INTEGER(kind=int_b),pointer :: invb(:,:,:,:,:),clib(:,:,:,:,:),temb(:,:,:,:,:),spab(:,:,:,:,:)
 
 call init(attrvars)
 
@@ -520,25 +656,25 @@ if (associated(this%datiattr%b)) then
   inddatiattrtem = firsttrue(attrvars%vars(3) == this%datiattr%b) !indice attributo
   inddatiattrspa = firsttrue(attrvars%vars(4) == this%datiattr%b) !indice attributo
 
-  invb=ibmiss
-  clib=ibmiss
-  temb=ibmiss
-  spab=ibmiss
-
-!!$  if (inddatiattrinv > 0) invb = this%voldatiattrb(:,:,:,:,inddativarattr,:,inddatiattrinv)
-!!$  if (inddatiattrcli > 0) clib = this%voldatiattrb(:,:,:,:,inddativarattr,:,inddatiattrcli)
-!!$  if (inddatiattrtem > 0) temb = this%voldatiattrb(:,:,:,:,inddativarattr,:,inddatiattrtem)
-!!$  if (inddatiattrspa > 0) spab = this%voldatiattrb(:,:,:,:,inddativarattr,:,inddatiattrspa)
-
-
                                 !byte attributes !
 
-  if (c_e(invb) .or. c_e(clib) .or. c_e(temb) .or. c_e(spab) ) then  ! solo se c'è l'attributo
+  if (inddatiattrinv > 0 .or. inddatiattrcli > 0 .or. inddatiattrtem > 0 .or. inddatiattrspa > 0 ) then  ! solo se c'è l'attributo
 
     if (associated(this%dativar%r)) then
       do inddativar=1,size(this%dativar%r)   ! per tutte le variabili reali
         inddativarattr  = this%dativar%r(inddativar)%b
+
         if (inddativarattr > 0) then         ! se la variabile ha quell'attributo (byte)
+          nullify(invb)
+          nullify(clib)
+          nullify(temb)
+          nullify(spab)
+          
+          if (inddatiattrinv > 0) invb => this%voldatiattrb(:,:,:,:,inddativarattr,:,inddatiattrinv)
+          if (inddatiattrcli > 0) clib => this%voldatiattrb(:,:,:,:,inddativarattr,:,inddatiattrcli)
+          if (inddatiattrtem > 0) temb => this%voldatiattrb(:,:,:,:,inddativarattr,:,inddatiattrtem)
+          if (inddatiattrspa > 0) spab => this%voldatiattrb(:,:,:,:,inddativarattr,:,inddatiattrspa)
+
           this%voldatir(:,:,:,:,inddativar,:) = peeled(this%voldatir(:,:,:,:,inddativar,:), &
            invb,clib,temb,spab)
         end if
@@ -549,6 +685,16 @@ if (associated(this%datiattr%b)) then
       do inddativar=1,size(this%dativar%d)
         inddativarattr  = this%dativar%d(inddativar)%b
         if (inddativarattr > 0) then
+          nullify(invb)
+          nullify(clib)
+          nullify(temb)
+          nullify(spab)
+          
+          if (inddatiattrinv > 0) invb => this%voldatiattrb(:,:,:,:,inddativarattr,:,inddatiattrinv)
+          if (inddatiattrcli > 0) clib => this%voldatiattrb(:,:,:,:,inddativarattr,:,inddatiattrcli)
+          if (inddatiattrtem > 0) temb => this%voldatiattrb(:,:,:,:,inddativarattr,:,inddatiattrtem)
+          if (inddatiattrspa > 0) spab => this%voldatiattrb(:,:,:,:,inddativarattr,:,inddatiattrspa)
+
           this%voldatid(:,:,:,:,inddativar,:) = peeled(this%voldatid(:,:,:,:,inddativar,:), &
            invb,clib,temb,spab)
         end if
@@ -559,6 +705,16 @@ if (associated(this%datiattr%b)) then
       do inddativar=1,size(this%dativar%i)
         inddativarattr  = this%dativar%i(inddativar)%b
         if (inddativarattr > 0) then
+          nullify(invb)
+          nullify(clib)
+          nullify(temb)
+          nullify(spab)
+          
+          if (inddatiattrinv > 0) invb => this%voldatiattrb(:,:,:,:,inddativarattr,:,inddatiattrinv)
+          if (inddatiattrcli > 0) clib => this%voldatiattrb(:,:,:,:,inddativarattr,:,inddatiattrcli)
+          if (inddatiattrtem > 0) temb => this%voldatiattrb(:,:,:,:,inddativarattr,:,inddatiattrtem)
+          if (inddatiattrspa > 0) spab => this%voldatiattrb(:,:,:,:,inddativarattr,:,inddatiattrspa)
+
           this%voldatii(:,:,:,:,inddativar,:) = peeled(this%voldatii(:,:,:,:,inddativar,:), &
            invb,clib,temb,spab)
         end if
@@ -569,6 +725,16 @@ if (associated(this%datiattr%b)) then
       do inddativar=1,size(this%dativar%b)
         inddativarattr  = this%dativar%b(inddativar)%b
         if (inddativarattr > 0) then
+          nullify(invb)
+          nullify(clib)
+          nullify(temb)
+          nullify(spab)
+          
+          if (inddatiattrinv > 0) invb => this%voldatiattrb(:,:,:,:,inddativarattr,:,inddatiattrinv)
+          if (inddatiattrcli > 0) clib => this%voldatiattrb(:,:,:,:,inddativarattr,:,inddatiattrcli)
+          if (inddatiattrtem > 0) temb => this%voldatiattrb(:,:,:,:,inddativarattr,:,inddatiattrtem)
+          if (inddatiattrspa > 0) spab => this%voldatiattrb(:,:,:,:,inddativarattr,:,inddatiattrspa)
+
           this%voldatib(:,:,:,:,inddativar,:) = peeled(this%voldatib(:,:,:,:,inddativar,:), &
            invb,clib,temb,spab)
         end if
@@ -579,6 +745,16 @@ if (associated(this%datiattr%b)) then
       do inddativar=1,size(this%dativar%c)
         inddativarattr  = this%dativar%c(inddativar)%b
         if (inddativarattr > 0) then
+          nullify(invb)
+          nullify(clib)
+          nullify(temb)
+          nullify(spab)
+          
+          if (inddatiattrinv > 0) invb => this%voldatiattrb(:,:,:,:,inddativarattr,:,inddatiattrinv)
+          if (inddatiattrcli > 0) clib => this%voldatiattrb(:,:,:,:,inddativarattr,:,inddatiattrcli)
+          if (inddatiattrtem > 0) temb => this%voldatiattrb(:,:,:,:,inddativarattr,:,inddatiattrtem)
+          if (inddatiattrspa > 0) spab => this%voldatiattrb(:,:,:,:,inddativarattr,:,inddatiattrspa)
+
           this%voldatic(:,:,:,:,inddativar,:) = peeled(this%voldatic(:,:,:,:,inddativar,:), &
            invb,clib,temb,spab)
         end if
@@ -588,82 +764,116 @@ if (associated(this%datiattr%b)) then
   end if
 end if
 
-if (associated(this%datiattr%i)) then
-
-  inddatiattrinv = firsttrue(attrvars%vars(1) == this%datiattr%i) !indice attributo
-  inddatiattrcli = firsttrue(attrvars%vars(2) == this%datiattr%i) !indice attributo
-  inddatiattrtem = firsttrue(attrvars%vars(3) == this%datiattr%i) !indice attributo
-  inddatiattrspa = firsttrue(attrvars%vars(4) == this%datiattr%i) !indice attributo
-
-  invi=imiss
-  clii=imiss
-  temi=imiss
-  spai=imiss
-
-!!$  if (inddatiattrinv > 0) invi = this%voldatiattri(:,:,:,:,inddativarattr,:,inddatiattrinv)
-!!$  if (inddatiattrcli > 0) clii = this%voldatiattri(:,:,:,:,inddativarattr,:,inddatiattrcli)
-!!$  if (inddatiattrtem > 0) temi = this%voldatiattri(:,:,:,:,inddativarattr,:,inddatiattrtem)
-!!$  if (inddatiattrspa > 0) spai = this%voldatiattri(:,:,:,:,inddativarattr,:,inddatiattrspa)
-
-
-
-                                !integer attributes !
-
-  if (c_e(invi) .or. c_e(clii) .or. c_e(temi) .or. c_e(spai)) then  ! solo se c'è l'attributo
-
-    if (associated(this%dativar%r)) then
-      do inddativar=1,size(this%dativar%r)   ! per tutte le variabili reali
-        inddativarattr  = this%dativar%r(inddativar)%i
-        if (inddativarattr > 0) then         ! se la variabile ha quell'attributo (integer)
-          this%voldatir(:,:,:,:,inddativar,:) = peeled(this%voldatir(:,:,:,:,inddativar,:), &
-           invi,clii,temi,spai)
-        end if
-      end do
-    endif
-
-    if (associated(this%dativar%d)) then
-      do inddativar=1,size(this%dativar%d)
-        inddativarattr  = this%dativar%d(inddativar)%i
-        if (inddativarattr > 0) then
-          this%voldatid(:,:,:,:,inddativar,:) = peeled(this%voldatid(:,:,:,:,inddativar,:), &
-           invi,clii,temi,spai)
-        end if
-      end do
-    endif
-
-    if (associated(this%dativar%i)) then
-      do inddativar=1,size(this%dativar%i)
-        inddativarattr  = this%dativar%i(inddativar)%i
-        if (inddativarattr > 0) then
-          this%voldatii(:,:,:,:,inddativar,:) = peeled(this%voldatii(:,:,:,:,inddativar,:), &
-           invi,clii,temi,spai)
-        end if
-      end do
-    endif
-
-    if (associated(this%dativar%b)) then
-      do inddativar=1,size(this%dativar%b)
-        inddativarattr  = this%dativar%b(inddativar)%i
-        if (inddativarattr > 0) then
-          this%voldatib(:,:,:,:,inddativar,:) = peeled(this%voldatib(:,:,:,:,inddativar,:), &
-           invi,clii,temi,spai)
-        end if
-      end do
-    endif
-
-    if (associated(this%dativar%c)) then
-      do inddativar=1,size(this%dativar%c)
-        inddativarattr  = this%dativar%c(inddativar)%i
-        if (inddativarattr > 0) then
-          this%voldatic(:,:,:,:,inddativar,:) = peeled(this%voldatic(:,:,:,:,inddativar,:), &
-           invi,clii,temi,spai)
-        end if
-      end do
-    endif
-
-  end if
-
-end if
+!!$if (associated(this%datiattr%i)) then
+!!$
+!!$  inddatiattrinv = firsttrue(attrvars%vars(1) == this%datiattr%i) !indice attributo
+!!$  inddatiattrcli = firsttrue(attrvars%vars(2) == this%datiattr%i) !indice attributo
+!!$  inddatiattrtem = firsttrue(attrvars%vars(3) == this%datiattr%i) !indice attributo
+!!$  inddatiattrspa = firsttrue(attrvars%vars(4) == this%datiattr%i) !indice attributo
+!!$
+!!$                                !integer attributes !
+!!$
+!!$  if (inddatiattrinv > 0 .or. inddatiattrcli > 0 .or. inddatiattrtem > 0 .or. inddatiattrspa > 0 ) then  ! solo se c'è l'attributo
+!!$
+!!$    if (associated(this%dativar%r)) then
+!!$      do inddativar=1,size(this%dativar%r)   ! per tutte le variabili reali
+!!$        inddativarattr  = this%dativar%r(inddativar)%i
+!!$        if (inddativarattr > 0) then         ! se la variabile ha quell'attributo (integer)
+!!$          nullify(invi)
+!!$          nullify(clii)
+!!$          nullify(temi)
+!!$          nullify(spai)
+!!$          
+!!$          if (inddatiattrinv > 0) invi => this%voldatiattri(:,:,:,:,inddativarattr,:,inddatiattrinv)
+!!$          if (inddatiattrcli > 0) clii => this%voldatiattri(:,:,:,:,inddativarattr,:,inddatiattrcli)
+!!$          if (inddatiattrtem > 0) temi => this%voldatiattri(:,:,:,:,inddativarattr,:,inddatiattrtem)
+!!$          if (inddatiattrspa > 0) spai => this%voldatiattri(:,:,:,:,inddativarattr,:,inddatiattrspa)
+!!$
+!!$          this%voldatir(:,:,:,:,inddativar,:) = peeled(this%voldatir(:,:,:,:,inddativar,:), &
+!!$           invi,clii,temi,spai)
+!!$        end if
+!!$      end do
+!!$    endif
+!!$
+!!$    if (associated(this%dativar%d)) then
+!!$      do inddativar=1,size(this%dativar%d)
+!!$        inddativarattr  = this%dativar%d(inddativar)%i
+!!$        if (inddativarattr > 0) then
+!!$          nullify(invi)
+!!$          nullify(clii)
+!!$          nullify(temi)
+!!$          nullify(spai)
+!!$          
+!!$          if (inddatiattrinv > 0) invi => this%voldatiattri(:,:,:,:,inddativarattr,:,inddatiattrinv)
+!!$          if (inddatiattrcli > 0) clii => this%voldatiattri(:,:,:,:,inddativarattr,:,inddatiattrcli)
+!!$          if (inddatiattrtem > 0) temi => this%voldatiattri(:,:,:,:,inddativarattr,:,inddatiattrtem)
+!!$          if (inddatiattrspa > 0) spai => this%voldatiattri(:,:,:,:,inddativarattr,:,inddatiattrspa)
+!!$          this%voldatid(:,:,:,:,inddativar,:) = peeled(this%voldatid(:,:,:,:,inddativar,:), &
+!!$           invi,clii,temi,spai)
+!!$        end if
+!!$      end do
+!!$    endif
+!!$
+!!$    if (associated(this%dativar%i)) then
+!!$      do inddativar=1,size(this%dativar%i)
+!!$        inddativarattr  = this%dativar%i(inddativar)%i
+!!$        if (inddativarattr > 0) then
+!!$          nullify(invi)
+!!$          nullify(clii)
+!!$          nullify(temi)
+!!$          nullify(spai)
+!!$          
+!!$          if (inddatiattrinv > 0) invi => this%voldatiattri(:,:,:,:,inddativarattr,:,inddatiattrinv)
+!!$          if (inddatiattrcli > 0) clii => this%voldatiattri(:,:,:,:,inddativarattr,:,inddatiattrcli)
+!!$          if (inddatiattrtem > 0) temi => this%voldatiattri(:,:,:,:,inddativarattr,:,inddatiattrtem)
+!!$          if (inddatiattrspa > 0) spai => this%voldatiattri(:,:,:,:,inddativarattr,:,inddatiattrspa)
+!!$          this%voldatii(:,:,:,:,inddativar,:) = peeled(this%voldatii(:,:,:,:,inddativar,:), &
+!!$           invi,clii,temi,spai)
+!!$        end if
+!!$      end do
+!!$    endif
+!!$
+!!$    if (associated(this%dativar%b)) then
+!!$      do inddativar=1,size(this%dativar%b)
+!!$        inddativarattr  = this%dativar%b(inddativar)%i
+!!$        if (inddativarattr > 0) then
+!!$          nullify(invi)
+!!$          nullify(clii)
+!!$          nullify(temi)
+!!$          nullify(spai)
+!!$          
+!!$          if (inddatiattrinv > 0) invi => this%voldatiattri(:,:,:,:,inddativarattr,:,inddatiattrinv)
+!!$          if (inddatiattrcli > 0) clii => this%voldatiattri(:,:,:,:,inddativarattr,:,inddatiattrcli)
+!!$          if (inddatiattrtem > 0) temi => this%voldatiattri(:,:,:,:,inddativarattr,:,inddatiattrtem)
+!!$          if (inddatiattrspa > 0) spai => this%voldatiattri(:,:,:,:,inddativarattr,:,inddatiattrspa)
+!!$          this%voldatib(:,:,:,:,inddativar,:) = peeled(this%voldatib(:,:,:,:,inddativar,:), &
+!!$           invi,clii,temi,spai)
+!!$        end if
+!!$      end do
+!!$    endif
+!!$
+!!$    if (associated(this%dativar%c)) then
+!!$      do inddativar=1,size(this%dativar%c)
+!!$        inddativarattr  = this%dativar%c(inddativar)%i
+!!$        if (inddativarattr > 0) then
+!!$          nullify(invi)
+!!$          nullify(clii)
+!!$          nullify(temi)
+!!$          nullify(spai)
+!!$          
+!!$          if (inddatiattrinv > 0) invi => this%voldatiattri(:,:,:,:,inddativarattr,:,inddatiattrinv)
+!!$          if (inddatiattrcli > 0) clii => this%voldatiattri(:,:,:,:,inddativarattr,:,inddatiattrcli)
+!!$          if (inddatiattrtem > 0) temi => this%voldatiattri(:,:,:,:,inddativarattr,:,inddatiattrtem)
+!!$          if (inddatiattrspa > 0) spai => this%voldatiattri(:,:,:,:,inddativarattr,:,inddatiattrspa)
+!!$          this%voldatic(:,:,:,:,inddativar,:) = peeled(this%voldatic(:,:,:,:,inddativar,:), &
+!!$           invi,clii,temi,spai)
+!!$        end if
+!!$      end do
+!!$    endif
+!!$
+!!$  end if
+!!$
+!!$end if
 
 IF (.NOT.PRESENT(keep_attr) .AND. .NOT.PRESENT(delete_attr) .and. .not. optio_log(preserve)) THEN ! destroy all attributes
   IF (ASSOCIATED(this%voldatiattrr)) DEALLOCATE(this%voldatiattrr)
@@ -706,7 +916,7 @@ ENDIF
 CONTAINS
 
 
-!> Like vol7d_reform but manage data_id with less options
+!> Like vol7d_reform but manage data_id and have less options
 subroutine qc_reform(this,data_id,miss, purgeana)
 TYPE(vol7d),INTENT(INOUT)  :: this !< object that has to be reformed
 integer,INTENT(inout),pointer,OPTIONAL :: data_id(:,:,:,:,:) !< data ID to use with dballe DB (for fast write of attributes)
@@ -727,9 +937,15 @@ if (optio_log(purgeana)) then
     if (associated(this%voldatid)) llana(i)= llana(i) .or. any(c_e(this%voldatid(i,:,:,:,:,:)))
     if (associated(this%voldatib)) llana(i)= llana(i) .or. any(c_e(this%voldatib(i,:,:,:,:,:)))
     if (associated(this%voldatic)) llana(i)= llana(i) .or. any(c_e(this%voldatic(i,:,:,:,:,:)))
+
+#ifdef DEBUG
+    if (.not. llana(i)) call l4f_log(L4F_DEBUG,"remove station"//t2c(i))
+#endif
+
   end do
 
   nana=count(llana)
+
   allocate(data_idtmp(nana,size(data_id,2),size(data_id,3),size(data_id,4),size(data_id,5)))
 
   allocate(anaind(nana))

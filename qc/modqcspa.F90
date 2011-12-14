@@ -135,7 +135,7 @@ end interface
 
 contains
 
-!>\brief Init del controllo di qualità climatico.
+!>\brief Init del controllo di qualità spaziale.
 !!Effettua la lettura dei file e altre operazioni di inizializzazione.
 
 subroutine qcspainit(qcspa,v7d,var, timei, timef, coordmin, coordmax, data_id_in,climapath,&
@@ -144,7 +144,7 @@ subroutine qcspainit(qcspa,v7d,var, timei, timef, coordmin, coordmax, data_id_in
 #endif
 categoryappend)
 
-type(qcspatype),intent(in out) :: qcspa !< Oggetto per il controllo climatico
+type(qcspatype),intent(in out) :: qcspa !< Oggetto per il controllo spaziale
 type (vol7d),intent(in),target:: v7d !< Il volume Vol7d da controllare
 character(len=*),INTENT(in) :: var(:)!< variabili da importare secondo la tabella B locale o relativi alias
 !> coordinate minime e massime che definiscono il 
@@ -249,7 +249,7 @@ if (.not. c_e(ldsn)) then
 
 #ifdef HAVE_DBALLE
   case("bufr")
-    call init(v7d_dballetmp,file=.true.,filename=filepath,categoryappend=trim(a_name)//".clima")
+    call init(v7d_dballetmp,file=.true.,filename=filepath,categoryappend=trim(a_name)//".spatial")
                                 !call import(v7d_dballetmp)
     call import(v7d_dballetmp,var=var,coordmin=coordmin, coordmax=coordmax, timei=ltimei, timef=ltimef, &
      varkind=(/("r",i=1,size(var))/),attr=(/"*B33192"/),attrkind=(/"b"/))
@@ -266,7 +266,7 @@ if (.not. c_e(ldsn)) then
 else
 
   call l4f_category_log(qcspa%category,L4F_DEBUG,"init v7d_dballetmp")
-  call init(v7d_dballetmp,dsn=dsn,user=user,password=password,write=.false.,file=.false.,categoryappend=trim(a_name)//".clima")
+  call init(v7d_dballetmp,dsn=dsn,user=user,password=password,write=.false.,file=.false.,categoryappend=trim(a_name)//".spatial")
   call l4f_category_log(qcspa%category,L4F_DEBUG,"import v7d_dballetmp")
   call import(v7d_dballetmp,var=var,coordmin=coordmin, coordmax=coordmax, timei=ltimei, timef=ltimef, &
    varkind=(/("r",i=1,size(var))/),attr=(/"*B33192"/),attrkind=(/"b"/))

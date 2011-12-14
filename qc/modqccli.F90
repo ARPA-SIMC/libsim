@@ -307,7 +307,7 @@ if (.not. c_e(ldsnextreme)) then
 
   case("v7d")
     iuni=getunit()
-    call import(qccli%clima,filename=filepathextreme,unit=iuni)
+    call import(qccli%extreme,filename=filepathextreme,unit=iuni)
     close (unit=iuni)
 
 #ifdef HAVE_DBALLE
@@ -316,7 +316,7 @@ if (.not. c_e(ldsnextreme)) then
                                 !call import(v7d_dballeextreme)
     call import(v7d_dballeextreme,var=var,coordmin=coordmin, coordmax=coordmax, timei=ltimei, timef=ltimef, &
      varkind=(/("r",i=1,size(var))/),attr=(/"*B33192"/),attrkind=(/"b"/))
-    call copy(v7d_dballeextreme%vol7d,qccli%clima)
+    call copy(v7d_dballeextreme%vol7d,qccli%extreme)
     call delete(v7d_dballeextreme)
 #endif
 
@@ -335,7 +335,7 @@ else
   call l4f_category_log(qccli%category,L4F_DEBUG,"import v7d_dballeextreme")
   call import(v7d_dballeextreme,var=var,coordmin=coordmin, coordmax=coordmax, timei=ltimei, timef=ltimef, &
    varkind=(/("r",i=1,size(var))/),attr=(/"*B33192"/),attrkind=(/"b"/))
-  call copy(v7d_dballeextreme%vol7d,qccli%clima)
+  call copy(v7d_dballeextreme%vol7d,qccli%extreme)
   call delete(v7d_dballeextreme)
 
 end if
@@ -473,7 +473,7 @@ logical :: anamaskl(size(qccli%v7d%ana)), timemaskl(size(qccli%v7d%time)), level
 
 integer :: indana , indanavar, indtime ,indlevel ,indtimerange ,inddativarr, indnetwork
 integer :: indcana,           indctime,indclevel,indctimerange,indcdativarr,indcnetwork
-real :: datoqui,climaquii,climaquif, altezza
+real :: datoqui,climaquii,climaquif, altezza, extremequii,extremequif
 integer :: iarea
 !integer, allocatable :: indcanav(:)
 
@@ -628,14 +628,38 @@ do indana=1,size(qccli%v7d%ana)
               
               if (c_e(datoqui)) then
 
-                do indcana=1,size(qccli%clima%ana)-1
+                if (associated(qccli%extreme%voldatir)) then
+                  extremequii=qccli%extreme%voldatir(1,1,indclevel,indctimerange,indcdativarr,indcnetwork)
+                  extremequif=qccli%extreme%voldatir(2,1,indclevel,indctimerange,indcdativarr,indcnetwork)
+                else
+                  extremequii=rmiss
+                  extremequif=rmiss
+                end if
 
-                  climaquii=qccli%clima%voldatir(indcana  ,indctime,indclevel,indctimerange,indcdativarr,indcnetwork)
-                  climaquif=qccli%clima%voldatir(indcana+1,indctime,indclevel,indctimerange,indcdativarr,indcnetwork)
+                if ( (datoqui <= extremequii .or. extremequif <= datoqui) .and. c_e(extremequii) .and. c_e(extremequif) ) then
+                                ! make gross error check
+
+                                !ATTENZIONE TODO : inddativarr È UNA GRANDE SEMPLIFICAZIONE NON VERA SE TIPI DI DATO DIVERSI !!!!
+                  qccli%v7d%voldatiattrb(indana,indtime,indlevel,indtimerange,inddativarr,indnetwork,indtbattrout)=0
+
+                else if (.not. vd(qccli%v7d%voldatiattrb(indana,indtime,indlevel,indtimerange,&
+                 inddativarr,indnetwork,indtbattrout))) then
+
+                                ! gross error check allready done
+#ifdef DEBUG
+                          call l4f_log (L4F_DEBUG,"skip station for a preceding gross error check flagged bad")
+#endif
+                else
+
+                                !climat check
+                  do indcana=1,size(qccli%clima%ana)-1
+
+                    climaquii=qccli%clima%voldatir(indcana  ,indctime,indclevel,indctimerange,indcdativarr,indcnetwork)
+                    climaquif=qccli%clima%voldatir(indcana+1,indctime,indclevel,indctimerange,indcdativarr,indcnetwork)
 
 !!$                  call l4f_log (L4F_INFO,"ident: "//qccli%clima%ana(indcana)%ident//ident)
 
-                  if ( match(qccli%clima%ana(indcana)%ident,ident) .and. c_e(climaquii) .and. c_e(climaquif)) then
+                    if ( match(qccli%clima%ana(indcana)%ident,ident) .and. c_e(climaquii) .and. c_e(climaquif)) then
 
 !!$                    print *, "son qua",trim(qccli%clima%ana(indcana)%ident),trim(ident)
 !!$                where (match(qccli%clima%ana(:)%ident,ident).and. &
@@ -645,37 +669,38 @@ do indana=1,size(qccli%v7d%ana)
 !!$                   //" "//trim(to_char(mese))//" "//trim(to_char(altezza))//" "//trim(to_char(level)))
 !!$                  
 
-                    if ( (datoqui >= climaquii .and. datoqui < climaquif) .or. &
-                         (indcana == 1 .and. datoqui < climaquif) .or. &
-                         (indcana == size(qccli%clima%ana)-1 .and. datoqui >= climaquii) ) then
+                      if ( (datoqui >= climaquii .and. datoqui < climaquif) .or. &
+                       (indcana == 1 .and. datoqui < climaquif) .or. &
+                       (indcana == size(qccli%clima%ana)-1 .and. datoqui >= climaquii) ) then
                     
 #ifdef DEBUG
-                      if(qccli%clima%voldatiattrb(indcana,indctime,indclevel,indctimerange,indcdativarr,indcnetwork,1) < 10 )then
-                        call l4f_log (L4F_DEBUG,"data ndi:                   "//t2c(datoqui)//"->"//&
-                         t2c(qccli%clima%voldatiattrb(indcana,indctime,indclevel,indctimerange,indcdativarr,indcnetwork,1))&
-                         //" : "//t2c(qccli%v7d%time(indtime)))
-                        call l4f_log (L4F_DEBUG,"limits: "//t2c(indcana)//":"//t2c(qccli%clima%ana(indcana)% ident)//&
-                         " : "//t2c(climaquii)//" - "//t2c(climaquif)//" : "//t2c(qccli%clima%time(indctime))) 
-                      end if
+                        if(qccli%clima%voldatiattrb(indcana,indctime,indclevel,indctimerange,indcdativarr,indcnetwork,1) < 10 )then
+                          call l4f_log (L4F_DEBUG,"data ndi:                   "//t2c(datoqui)//"->"//&
+                           t2c(qccli%clima%voldatiattrb(indcana,indctime,indclevel,indctimerange,indcdativarr,indcnetwork,1))&
+                           //" : "//t2c(qccli%v7d%time(indtime)))
+                          call l4f_log (L4F_DEBUG,"limits: "//t2c(indcana)//":"//t2c(qccli%clima%ana(indcana)% ident)//&
+                           " : "//t2c(climaquii)//" - "//t2c(climaquif)//" : "//t2c(qccli%clima%time(indctime))) 
+                        end if
 #endif
                   
-                      !ATTENZIONE TODO : inddativarr È UNA GRANDE SEMPLIFICAZIONE NON VERA SE TIPI DI DATO DIVERSI !!!!
-                      qccli%v7d%voldatiattrb(indana,indtime,indlevel,indtimerange,inddativarr,indnetwork,indtbattrout)=&
-                      qccli%clima%voldatiattrb(indcana  ,indctime,indclevel,indctimerange,indcdativarr,indcnetwork,1)
-                    
-                  
-                      if ( associated ( qccli%data_id_in)) then
+                                !ATTENZIONE TODO : inddativarr È UNA GRANDE SEMPLIFICAZIONE NON VERA SE TIPI DI DATO DIVERSI !!!!
+                        qccli%v7d%voldatiattrb(indana,indtime,indlevel,indtimerange,inddativarr,indnetwork,indtbattrout)=&
+                         qccli%clima%voldatiattrb(indcana  ,indctime,indclevel,indctimerange,indcdativarr,indcnetwork,1)
+                        
+                        
+                        if ( associated ( qccli%data_id_in)) then
 #ifdef DEBUG
-                        call l4f_log (L4F_DEBUG,"id: "//t2c(&
-                         qccli%data_id_in(indana,indtime,indlevel,indtimerange,indnetwork)))
+                          call l4f_log (L4F_DEBUG,"id: "//t2c(&
+                           qccli%data_id_in(indana,indtime,indlevel,indtimerange,indnetwork)))
 #endif
-                        qccli%data_id_out(indana,indtime,indlevel,indtimerange,indnetwork)=&
-                         qccli%data_id_in(indana,indtime,indlevel,indtimerange,indnetwork)
+                          qccli%data_id_out(indana,indtime,indlevel,indtimerange,indnetwork)=&
+                           qccli%data_id_in(indana,indtime,indlevel,indtimerange,indnetwork)
+                        end if
                       end if
-                    end if
 !!$                end where
-                  end if
-                end do
+                    end if
+                  end do
+                end if
               end if
             end if
           end do
