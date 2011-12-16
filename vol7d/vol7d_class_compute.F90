@@ -1414,6 +1414,7 @@ case("d")
   where (that%level%level1 == 105.and.that%level%level2 == 105 .and. c_e(that%voldatid(1,1,:,1,ind,1)))
     that%level%level1 = 100
     that%level%l1 = integerdat(that%voldatid(1,1,:,1,ind,1),that%dativar%d(ind))*10
+    that%level%l1 = that%voldatid(1,1,:,1,ind,1)
     that%level%level2 = imiss
     that%level%l2 = imiss
   end where
@@ -1422,7 +1423,7 @@ case("r")
 
   where (that%level%level1 == 105.and.that%level%level2 == 105 .and. c_e(that%voldatir(1,1,:,1,ind,1)))
     that%level%level1 = 100
-    that%level%l1 = integerdat(that%voldatir(1,1,:,1,ind,1),that%dativar%r(ind))*10
+    that%level%l1 = that%voldatir(1,1,:,1,ind,1)
     that%level%level2 = imiss
     that%level%l2 = imiss
   end where
