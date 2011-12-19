@@ -32,7 +32,7 @@ USE err_handling
 implicit none
 
 type(optionparser) :: opt
-INTEGER :: optind, optstatus, category, ier
+INTEGER :: iargc, optind, optstatus, category, ier
 logical :: version
 integer :: wstype,ic
 CHARACTER(len=8) :: input_format

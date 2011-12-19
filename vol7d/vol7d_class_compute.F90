@@ -1413,7 +1413,7 @@ case("d")
   
   where (that%level%level1 == 105.and.that%level%level2 == 105 .and. c_e(that%voldatid(1,1,:,1,ind,1)))
     that%level%level1 = 100
-    that%level%l1 = integerdat(that%voldatid(1,1,:,1,ind,1),that%dativar%d(ind))*10
+    that%level%l1 = realdat(that%voldatid(1,1,:,1,ind,1),that%dativar%d(ind))
     that%level%l1 = that%voldatid(1,1,:,1,ind,1)
     that%level%level2 = imiss
     that%level%l2 = imiss
@@ -1423,7 +1423,7 @@ case("r")
 
   where (that%level%level1 == 105.and.that%level%level2 == 105 .and. c_e(that%voldatir(1,1,:,1,ind,1)))
     that%level%level1 = 100
-    that%level%l1 = that%voldatir(1,1,:,1,ind,1)
+    that%level%l1 = realdat(that%voldatir(1,1,:,1,ind,1),that%dativar%r(ind))
     that%level%level2 = imiss
     that%level%l2 = imiss
   end where
@@ -1432,7 +1432,7 @@ case("i")
     
   where (that%level%level1 == 105.and.that%level%level2 == 105 .and. c_e(that%voldatii(1,1,:,1,ind,1)))
     that%level%level1 = 100
-    that%level%l1 = integerdat(that%voldatii(1,1,:,1,ind,1),that%dativar%i(ind))*10
+    that%level%l1 = realdat(that%voldatii(1,1,:,1,ind,1),that%dativar%i(ind))
     that%level%level2 = imiss
     that%level%l2 = imiss
   end where
@@ -1441,7 +1441,7 @@ case("b")
 
   where (that%level%level1 == 105.and.that%level%level2 == 105 .and. c_e(that%voldatib(1,1,:,1,ind,1)))
     that%level%level1 = 100
-    that%level%l1 = integerdat(that%voldatib(1,1,:,1,ind,1),that%dativar%b(ind))*10
+    that%level%l1 = realdat(that%voldatib(1,1,:,1,ind,1),that%dativar%b(ind))
     that%level%level2 = imiss
     that%level%l2 = imiss
   end where
@@ -1450,7 +1450,7 @@ case("c")
 
   where (that%level%level1 == 105.and.that%level%level2 == 105 .and. c_e(that%voldatic(1,1,:,1,ind,1)))
     that%level%level1 = 100
-    that%level%l1 = integerdat(that%voldatic(1,1,:,1,ind,1),that%dativar%c(ind))*10
+    that%level%l1 = realdat(that%voldatic(1,1,:,1,ind,1),that%dativar%c(ind))
     that%level%level2 = imiss
     that%level%l2 = imiss
   end where
