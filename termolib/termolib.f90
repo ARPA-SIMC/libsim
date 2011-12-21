@@ -2424,5 +2424,22 @@ end function SI_TT
 
 !_________________________________________________________________
 
+
+!> stima la classe di stabilita' a partire dagli output LM/LAMA.
+!! Per le ore diurne, usa Bowen 1983 (vento e radiazione solare)
+!! Per le ore notturne, usa Reuter 1970 modificato (vento e radiazione IR)
+elemental real function pgt (ff,swd,lwb)
+real,intent(in) ::  ff,swd,lwb
+
+if(.not. c_e(ff) .or. .not. c_e(swd) .or. .not. c_e(lwb) )then 
+  pgt=rmiss 
+  return
+end if
+
+pgt=1.
+
+return
+end function PGT
+
 end module termolib
 

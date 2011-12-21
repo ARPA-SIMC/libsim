@@ -19,6 +19,7 @@ subroutine register_termo(vfn)
   call fnregister(vfn,dd_ff2u_v_def())
   call fnregister(vfn,u_v2dd_ff_def())
   call fnregister(vfn,r_t2td_def())
+  call fnregister(vfn,ff_swd_lwb2pgt_def())
 
 end subroutine register_termo
 
@@ -100,6 +101,25 @@ type(fnds) function r_t2td_def()
    [character(len=10) :: "B13003","B12101"],&
    [character(len=10) :: "B12103"],0,func=r_t2td)
 end function r_t2td_def
+
+
+subroutine  ff_swd_lwb2pgt(mybin,mybout,bin,bout,in,out)
+CHARACTER(len=10),intent(in) :: mybin(:)  !< vector table B  WMO input  in user's data
+CHARACTER(len=10),intent(in) :: mybout(:) !< vector table B  WMO output in user's data
+CHARACTER(len=10),intent(in) :: bin(:)    !< vector table B  WMO input used by function
+CHARACTER(len=10),intent(in) :: bout(:)   !< vector table B  WMO output used by function
+real, intent(in) :: in(:,:)
+real, intent(out) :: out(:,:)
+
+out(:,index_c(mybout,bout(1)))= pgt(in (:,index_c(mybin ,bin (1))),in (:,index_c(mybin ,bin (2))),in (:,index_c(mybin ,bin (3))))
+
+end subroutine ff_swd_lwb2pgt
+
+type(fnds) function ff_swd_lwb2pgt_def()
+call init(ff_swd_lwb2pgt_def,"ff_swd_lwb2pgt",&
+ [character(len=10) :: "B11002","B14018","B14017"],&
+ [character(len=10) :: "B11193"],0,func=ff_swd_lwb2pgt)
+end function ff_swd_lwb2pgt_def
 
 
 ! TODO
