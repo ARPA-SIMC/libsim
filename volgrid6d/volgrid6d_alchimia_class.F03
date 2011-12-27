@@ -92,6 +92,9 @@ do i=size(mayvfn%fnds),1,-1
           ENDIF
 
           myout=rmiss
+          print *,mayvfn%fnds(i)%name
+          print *,mybin
+          print *,newbout
           call mayvfn%fnds(i)%fn(mybin,newbout,mayvfn%fnds(i)%bin,mayvfn%fnds(i)%bout,myin,myout)
           vg6dout%voldati(:,:,ilevel,itime,itimerange,:)=reshape(myout,(/nx,ny,nvar/))
           do ivar=1, size(mayvfn%fnds(i)%bout)
@@ -191,7 +194,7 @@ do i=1,size(myin)
 
   if (present(vfnoracle))vfnoracle=myvfn
   
-  !call display(myvfn)
+  call display(myvfn)
   call l4f_log(L4F_INFO,"alchemy_vg6d: I need "//t2c(myvfn%nout)//" more variables")
 
   call make(myvfn,mybin,mybout,myin(i),myout(i),c_func)

@@ -328,7 +328,7 @@ END SUBROUTINE vol7d_dballe_init
 !! var e network sono scalari.
 
 SUBROUTINE vol7d_dballe_importvsns(this, var, network, coordmin, coordmax, timei, timef,level,timerange, set_network,&
- attr,anavar,anaattr, varkind,attrkind,anavarkind,anaattrkind,anaonly)
+ attr,anavar,anaattr, varkind,attrkind,anavarkind,anaattrkind)
 TYPE(vol7d_dballe),INTENT(inout) :: this  !< oggetto vol7d_dballe
 CHARACTER(len=*),INTENT(in) :: var  !< variabile da importare secondo la tabella B locale o relativi alias
 !> coordinate minime e massime che definiscono il 
@@ -377,7 +377,6 @@ CHARACTER(len=*),INTENT(in),OPTIONAL :: anavarkind(:)
 !! - "d" = double precision
 !! - "c" = character 
 CHARACTER(len=*),INTENT(in),OPTIONAL :: anaattrkind(:)
-logical,intent(in),optional :: anaonly !< imposta importazione della sola anagrafica 
 
 CALL import(this, (/var/), network, coordmin, coordmax, timei, timef,level,timerange, set_network,&
  attr,anavar,anaattr, varkind,attrkind,anavarkind,anaattrkind)
@@ -545,7 +544,9 @@ type(record),ALLOCATABLE :: buffer(:),bufferana(:)
 
 !!!  CALL print_info('Estratte dall''archivio '//TRIM(to_char(nobs)) // ' osservazioni')
 
+#ifdef DEBUG
 CALL l4f_category_log(this%category,L4F_DEBUG,'inizio')
+#endif        
 
 IF (PRESENT(set_network)) THEN
    ldegnet = .TRUE.
@@ -555,14 +556,20 @@ ENDIF
 
 IF (PRESENT(attr)) THEN
   if (any(c_e(attr)))then
+#ifdef DEBUG
     CALL l4f_category_log(this%category,L4F_DEBUG,'lattr true')
+#endif
     lattr = .TRUE.
   else
+#ifdef DEBUG
     CALL l4f_category_log(this%category,L4F_DEBUG,'lattr false')
+#endif
    lattr = .FALSE.
  end if
 ELSE
+#ifdef DEBUG
     CALL l4f_category_log(this%category,L4F_DEBUG,'lattr false')
+#endif
    lattr = .FALSE.
 ENDIF
 
@@ -582,7 +589,9 @@ ENDIF
 
 call idba_unsetall(this%handle)
 
-CALL l4f_category_log(this%category,L4F_DEBUG,'unsetall')
+#ifdef DEBUG
+CALL l4f_category_log(this%category,L4F_DEBUG,'unsetall handle')
+#endif
 
 if(present(network))call idba_set (this%handle,"rep_memo",network%name)
 !call idba_set (this%handle,"mobile",0)
@@ -593,7 +602,10 @@ if(ldegnet)call idba_set (this%handle,"query","best")
 if (present(coordmin)) then
 !  CALL geo_coord_to_geo(coordmin)
   CALL getval(coordmin, lat=lat,lon=lon)
+
+#ifdef DEBUG
   CALL l4f_category_log(this%category,L4F_DEBUG,'query coordmin:'//t2c(lon)//t2c(lat))
+#endif
   call idba_set(this%handle,"lonmin",lon)
   call idba_set(this%handle,"latmin",lat)
 end if
@@ -601,14 +613,18 @@ end if
 if (present(coordmax)) then
 !  CALL geo_coord_to_geo(coordmax)
   CALL getval(coordmax, lat=lat,lon=lon)
+#ifdef DEBUG
   CALL l4f_category_log(this%category,L4F_DEBUG,'query coordmax:'//t2c(lon)//t2c(lat))
+#endif
   call idba_set(this%handle,"lonmax",lon)
   call idba_set(this%handle,"latmax",lat)
 end if
 
 if (present(timei)) then
   if (c_e(timei)) then
+#ifdef DEBUG
     CALL l4f_category_log(this%category,L4F_DEBUG,'query timei:'//to_char(timei))
+#endif
     CALL getval(timei, year=year, month=month, day=day, hour=hour, minute=minute)
     call idba_setdatemin(this%handle,year,month,day,hour,minute,0)
                                 !print *,"datemin",year,month,day,hour,minute,0
@@ -617,7 +633,9 @@ end if
 
 if (present(timef)) then
   if (c_e(timef)) then
+#ifdef DEBUG
     CALL l4f_category_log(this%category,L4F_DEBUG,'query timef:'//to_char(timef))
+#endif
     CALL getval(timef, year=year, month=month, day=day, hour=hour, minute=minute)
     call idba_setdatemax(this%handle,year,month,day,hour,minute,0)
                                 !print *,"datemax",year,month,day,hour,minute,0
@@ -643,26 +661,32 @@ if (any(c_e(lvar))) then
   ENDDO
                                 !print *,"varlist",varlist
 
+#ifdef DEBUG
   CALL l4f_category_log(this%category,L4F_DEBUG,'query varlist:'//t2c(SIZE(lvar))//":"//varlist)
-  
+#endif  
   if (varlist /= '' ) call idba_set(this%handle, "varlist",varlist )
 
 end if
 
 if (present(timerange))then
+#ifdef DEBUG
   CALL l4f_category_log(this%category,L4F_DEBUG,'query timerange:'//to_char(timerange))
+#endif
   call idba_settimerange(this%handle, timerange%timerange, timerange%p1, timerange%p2)
 end if
 
 if (present(level))then
+#ifdef DEBUG
   CALL l4f_category_log(this%category,L4F_DEBUG,'query level:'//to_char(level))
+#endif
   call idba_setlevel(this%handle, level%level1, level%l1,level%level2, level%l2)
 end if
 
 call idba_voglioquesto (this%handle,N)
 !print*,"numero di dati ",N
+#ifdef DEBUG
 CALL l4f_category_log(this%category,L4F_DEBUG,'numero di dati:'//t2c(n))
-
+#endif
 
 !ora che so quanti dati ho alloco la memoria per buffer
 allocate(buffer(N),stat=istat)
@@ -736,6 +760,9 @@ end do
 !ora legge tutti i dati di anagrafica e li mette in bufferana
 
 call idba_unsetall(this%handle_staz)
+#ifdef DEBUG
+CALL l4f_category_log(this%category,L4F_DEBUG,'unsetall handle_staz')
+#endif
 
 if(present(network))call idba_set (this%handle_staz,"rep_memo",network%name)
 call idba_set (this%handle_staz,"mobile",0)
@@ -1417,6 +1444,9 @@ do i =1, N
      this%data_id(indana,indtime,indlevel,indtimerange,indnetwork)=buffer(i)%data_id
 
      call idba_unsetall (this%handle)
+#ifdef DEBUG
+     CALL l4f_category_log(this%category,L4F_DEBUG,'unsetall handle')
+#endif
      call idba_set (this%handle,"*context_id",buffer(i)%data_id)
      call idba_set (this%handle,"*var_related",buffer(i)%dativar%btable)
      !per ogni dato ora lavoro sugli attributi
@@ -1550,6 +1580,9 @@ do i =1, N_ana
 
    if (lanaattr)then
 
+#ifdef DEBUG
+     CALL l4f_category_log(this%category,L4F_DEBUG,'unsetall handle_staz')
+#endif
      call idba_unsetall (this%handle_staz)
      call idba_set (this%handle_staz,"*context_id",bufferana(i)%data_id)
      call idba_set (this%handle_staz,"*var_related",bufferana(i)%dativar%btable)
@@ -1945,9 +1978,10 @@ do iii=1, nnetwork
 
 !      CALL geo_coord_to_geo(this%vol7d%ana(i)%coord)
       CALL getval(this%vol7d%ana(i)%coord, lat=lat,lon=lon)
-
       call idba_unsetall (this%handle)
-
+#ifdef DEBUG
+      CALL l4f_category_log(this%category,L4F_DEBUG,'unsetall handle')
+#endif
       call idba_setcontextana (this%handle)
 
       call idba_set (this%handle,"lat",lat)
@@ -2017,18 +2051,33 @@ do iii=1, nnetwork
 
       do ii=1,nanavarr
         if (c_e(this%vol7d%anavar%r(ii)%btable))call idba_unset (this%handle,this%vol7d%anavar%r(ii)%btable )
+#ifdef DEBUG
+        call l4f_category_log(this%category,L4F_DEBUG,"unset ana: "//this%vol7d%anavar%r(ii)%btable)
+#endif
       end do
       do ii=1,nanavari
         if (c_e(this%vol7d%anavar%i(ii)%btable))call idba_unset (this%handle,this%vol7d%anavar%i(ii)%btable )
+#ifdef DEBUG
+        call l4f_category_log(this%category,L4F_DEBUG,"unset ana: "//this%vol7d%anavar%i(ii)%btable)
+#endif
       end do
       do ii=1,nanavarb
         if (c_e(this%vol7d%anavar%b(ii)%btable))call idba_unset (this%handle,this%vol7d%anavar%b(ii)%btable )
+#ifdef DEBUG
+        call l4f_category_log(this%category,L4F_DEBUG,"unset ana: "//this%vol7d%anavar%b(ii)%btable)
+#endif
       end do
       do ii=1,nanavard
         if (c_e(this%vol7d%anavar%d(ii)%btable))call idba_unset (this%handle,this%vol7d%anavar%d(ii)%btable )
+#ifdef DEBUG
+        call l4f_category_log(this%category,L4F_DEBUG,"unset ana: "//this%vol7d%anavar%d(ii)%btable)
+#endif
       end do
       do ii=1,nanavarc
         if (c_e(this%vol7d%anavar%c(ii)%btable))call idba_unset (this%handle,this%vol7d%anavar%c(ii)%btable )
+#ifdef DEBUG
+        call l4f_category_log(this%category,L4F_DEBUG,"unset ana: "//this%vol7d%anavar%c(ii)%btable)
+#endif
       end do
 
 
@@ -2058,6 +2107,9 @@ do i=1, nstaz
                                 !>\todo optimize setting and unsetting in the right place
 
       call idba_unsetall (this%handle)
+#ifdef DEBUG
+      CALL l4f_category_log(this%category,L4F_DEBUG,'unsetall handle')
+#endif        
 
       CALL getval(this%vol7d%time(ii), year=year, month=month, day=day, hour=hour, minute=minute)
       call idba_setdate (this%handle,year,month,day,hour,minute,0)
@@ -2085,6 +2137,10 @@ do i=1, nstaz
           call idba_set (this%handle,"mobile",0)
         end if
       else
+#ifdef DEBUG
+          call l4f_category_log(this%category,L4F_DEBUG,"specify ana_id: "&
+           //to_char(ana_id(i,iiiiii)))
+#endif
         call idba_set (this%handle,"ana_id",ana_id(i,iiiiii))
       end if
 
@@ -2164,6 +2220,18 @@ call l4f_category_log(this%category,L4F_DEBUG,"macro tipo c")
 
 
           if (write) then
+
+            if (.not. this%file)then
+
+!!!!!!!!!!! workaround to dballe fortran api bug
+! TODO remove this duplicated set of ana_id
+#ifdef DEBUG
+              call l4f_category_log(this%category,L4F_DEBUG,"rispecify ana_id: "&
+               //to_char(ana_id(i,iiiiii)))
+#endif
+              call idba_set (this%handle,"ana_id",ana_id(i,iiiiii))
+            end if
+
                                 !print*,"eseguo una main prendilo"
 #ifdef DEBUG
             call l4f_category_log(this%category,L4F_DEBUG,"eseguo una main prendilo sui dati")
@@ -2174,18 +2242,33 @@ call l4f_category_log(this%category,L4F_DEBUG,"macro tipo c")
           
           do iiiii=1,ndativarr
             if(c_e(this%vol7d%dativar%r(iiiii)%btable))call idba_unset (this%handle,this%vol7d%dativar%r(iiiii)%btable )
+#ifdef DEBUG
+            call l4f_category_log(this%category,L4F_DEBUG,"unset dati: "//this%vol7d%dativar%r(iiiii)%btable)
+#endif
           end do
           do iiiii=1,ndativari
             if(c_e(this%vol7d%dativar%i(iiiii)%btable))call idba_unset (this%handle,this%vol7d%dativar%i(iiiii)%btable )
+#ifdef DEBUG
+            call l4f_category_log(this%category,L4F_DEBUG,"unset dati: "//this%vol7d%dativar%i(iiiii)%btable)
+#endif
           end do
           do iiiii=1,ndativarb
             if(c_e(this%vol7d%dativar%b(iiiii)%btable))call idba_unset (this%handle,this%vol7d%dativar%b(iiiii)%btable )
+#ifdef DEBUG
+            call l4f_category_log(this%category,L4F_DEBUG,"unset dati: "//this%vol7d%dativar%b(iiiii)%btable)
+#endif
           end do
           do iiiii=1,ndativard
             if(c_e(this%vol7d%dativar%d(iiiii)%btable))call idba_unset (this%handle,this%vol7d%dativar%d(iiiii)%btable )
+#ifdef DEBUG
+            call l4f_category_log(this%category,L4F_DEBUG,"unset dati: "//this%vol7d%dativar%d(iiiii)%btable)
+#endif
           end do
           do iiiii=1,ndativarc
             if(c_e(this%vol7d%dativar%c(iiiii)%btable))call idba_unset (this%handle,this%vol7d%dativar%c(iiiii)%btable )
+#ifdef DEBUG
+            call l4f_category_log(this%category,L4F_DEBUG,"unset dati: "//this%vol7d%dativar%c(iiiii)%btable)
+#endif
           end do
           
           
@@ -2541,9 +2624,8 @@ logical,intent(in),optional :: anaonly
 !CHARACTER(len=SIZE(var)*7) :: varlist
 !CHARACTER(len=SIZE(attr)*8) :: starvarlist
 CHARACTER(len=6) :: btable
-CHARACTER(len=7) ::starbtable
 
-LOGICAL ::  ldegnet, lattr, lanaattr,lanaonly
+LOGICAL ::  ldegnet, lanaonly
 integer :: year,month,day,hour,minute,sec
 integer :: rlevel1, rl1,rlevel2, rl2
 integer :: rtimerange, p1, p2
@@ -2552,12 +2634,10 @@ integer :: indana,indtime,indlevel,indtimerange,inddativar,indnetwork
 
 
 integer :: nana,ntime,ntimerange,nlevel,nnetwork
-TYPE(vol7d_var) :: var_tmp
 TYPE(vol7d_network),ALLOCATABLE :: networktmp(:)
 
-INTEGER :: i,ii, iii,n,n_ana,nn,nvarattr,istat,indattr,na,nd
-integer :: nvar ,inddatiattr,inddativarattr
-integer :: nanavar ,indanavar,indanaattr,indanavarattr,nanavarattr
+INTEGER :: i,ii, n, na, nd
+integer :: nvar, nanavar ,indanavar
 
 REAL(kind=fp_geo) :: lat,lon,latmin,latmax,lonmin,lonmax
 CHARACTER(len=vol7d_ana_lenident) :: ident
@@ -2609,6 +2689,9 @@ if (present(attr) .or. present(anaattr) .or. present(attrkind) .or. present(anaa
 end if
 
 call idba_unsetall(this%handle)
+#ifdef DEBUG
+CALL l4f_category_log(this%category,L4F_DEBUG,'unsetall handle')
+#endif        
 
 N=1
 nd=0

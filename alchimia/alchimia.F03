@@ -46,7 +46,7 @@ abstract interface
 end interface
 
 type fnds
-   CHARACTER(len=10) :: name=cmiss
+   CHARACTER(len=50) :: name=cmiss
    CHARACTER(len=10),allocatable :: bin(:) !< table B  WMO
    CHARACTER(len=10),allocatable :: bout(:) !<  table B  WMO
    integer :: priority

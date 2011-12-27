@@ -21,13 +21,15 @@
 
 !if (associated(this%vol7d%voldati/**/VOL7D_POLY_TYPES_V)) then
 
+#ifdef DEBUG
 call l4f_category_log(this%category,L4F_DEBUG,"ndativar*: "//to_char(ndativar/**/VOL7D_POLY_TYPES_V))
+#endif
 
 do iiiii=1,ndativar/**/VOL7D_POLY_TYPES_V
 
-   call l4f_category_log(this%category,L4F_DEBUG,"ndativar*: "//&
-    to_char(ndativar/**/VOL7D_POLY_TYPES_V ))
 #ifdef DEBUG
+  call l4f_category_log(this%category,L4F_DEBUG,"ndativar*: "//&
+   to_char(ndativar/**/VOL7D_POLY_TYPES_V ))
   call l4f_category_log(this%category,L4F_DEBUG,"indice iiiii: "//to_char(iiiii))
 #endif
   

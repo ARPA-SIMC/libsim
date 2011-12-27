@@ -126,11 +126,14 @@ INTERFACE display
   MODULE PROCEDURE display_volgrid6d,display_volgrid6dv
 END INTERFACE
 
+type(vol7d_level) :: almost_equal_levels(2)=(/vol7d_level(105,2,imiss,imiss),vol7d_level(105,10,imiss,imiss)/)
+type(vol7d_timerange) :: almost_equal_timeranges(2)=(/vol7d_timerange(254,imiss,imiss),vol7d_timerange(3,0,3600)/)
+
 private
 
 PUBLIC volgrid6d,init,delete,export,import,compute,transform, &
  wind_rot,wind_unrot,vg6d_c2a,display,volgrid6d_alloc,volgrid6d_alloc_vol
-
+PUBLIC almost_equal_levels, almost_equal_timeranges
 
 CONTAINS
 
@@ -309,7 +312,7 @@ LOGICAL,INTENT(in),OPTIONAL :: ini !< if provided and \c .TRUE., for each dimens
 LOGICAL,INTENT(in),OPTIONAL :: inivol !< if provided and \c .FALSE., the allocated volumes will not be initialized to missing values
 LOGICAL,INTENT(in),OPTIONAL :: decode !< if provided and \c .FALSE., the \a this%voldati volume is not allocated, only \a this%gaid
 
-INTEGER :: i, ii, iii, iiii, stallo
+INTEGER :: stallo
 LOGICAL :: linivol,ldecode
 
 #ifdef DEBUG
@@ -778,12 +781,11 @@ end subroutine volgrid6d_read_from_file
 !! descriptor contained in \a gridinfo if it is missing in \a volgrid,
 !! otherwise it is checked and the object is rejected if grids do not
 !! match.
-SUBROUTINE import_from_gridinfo(this, gridinfo, force, clone, categoryappend)
+SUBROUTINE import_from_gridinfo(this, gridinfo, force, clone)
 TYPE(volgrid6d),INTENT(out) :: this !< object in which to import
 type(gridinfo_def),intent(in) :: gridinfo !< gridinfo object to be imported
 LOGICAL,INTENT(in),OPTIONAL :: force !< if provided and \c .TRUE., the gridinfo is forced into an empty element of \a this, if required and possible
 LOGICAL , INTENT(in),OPTIONAL :: clone !< if provided and \c .TRUE. , clone the gaid's from \a gridinfo to \a this
-character(len=*),INTENT(in),OPTIONAL :: categoryappend !< append this suffix to log4fortran namespace category
 
 character(len=255)   :: type
 integer :: ilevel,itime,itimerange,ivar
@@ -1086,7 +1088,7 @@ do i=1,size(gridinfov)
    "to volgrid6d index: "//to_char(index(this%griddim,gridinfov(i)%griddim)))
 
   CALL import (this(index(this%griddim,gridinfov(i)%griddim)), &
-   gridinfov(i),clone=clone,categoryappend=categoryappend)
+   gridinfov(i),clone=clone)
 
 end do
 
@@ -1469,7 +1471,7 @@ TYPE(griddim_def),INTENT(in),OPTIONAL :: griddim !< griddim specifying the outpu
 TYPE(volgrid6d),INTENT(inout) :: volgrid6d_in !< object to be transformed, it is not modified, despite the INTENT(inout)
 TYPE(volgrid6d),INTENT(out) :: volgrid6d_out !< transformed object, it does not need initialisation
 LOGICAL,INTENT(in),OPTIONAL :: clone !< if provided and \a .TRUE. , clone the \a gaid's from \a volgrid6d_in to \a volgrid6d_out 
-LOGICAL,INTENT(in),OPTIONAL :: decode !< if provided and \a .FALSE. the data volume is not allocated, but work is performed on grid_id's
+LOGICAL,INTENT(in),OPTIONAL :: decode !< if provided and \a .FALSE. the data volume is not allocated, but work is performed on grid_id's( NOT USED !)
 CHARACTER(len=*),INTENT(in),OPTIONAL :: categoryappend !< append this suffix to log4fortran namespace category
 
 TYPE(grid_transform) :: grid_trans
@@ -2210,7 +2212,7 @@ LOGICAL :: rot ! if .true. rotate else unrotate
 
 INTEGER :: i, j, k, l, a11, a12, a21, a22, stallo
 double precision,pointer :: rot_mat(:,:,:)
-double precision,allocatable :: tmp_arr(:,:)
+real,allocatable :: tmp_arr(:,:)
 REAL,POINTER :: voldatiu(:,:), voldativ(:,:)
 INTEGER,POINTER :: iu(:), iv(:)
 
@@ -2267,10 +2269,10 @@ DO l = 1, SIZE(iu)
 
 ! multiply wind components by rotation matrix
         WHERE(voldatiu /= rmiss .AND. voldativ /= rmiss)
-          tmp_arr(:,:) = voldatiu(:,:)*rot_mat(:,:,a11) + &
-           voldativ(:,:)*rot_mat(:,:,a12)
-          voldativ(:,:) = voldatiu(:,:)*rot_mat(:,:,a21) + &
-           voldativ(:,:)*rot_mat(:,:,a22)
+          tmp_arr(:,:) = real(voldatiu(:,:)*rot_mat(:,:,a11) + &
+           voldativ(:,:)*rot_mat(:,:,a12))
+          voldativ(:,:) = real(voldatiu(:,:)*rot_mat(:,:,a21) + &
+           voldativ(:,:)*rot_mat(:,:,a22))
           voldatiu(:,:) = tmp_arr(:,:)
         END WHERE
 ! convert units backward
@@ -2735,12 +2737,23 @@ print*,"--------------------------------------------------------------"
 end subroutine display_volgrid6dv
 
 
-
-subroutine vg6d_rounding(vg6din,vg6dout,level,timerange)
-type(volgrid6d),intent(in) :: vg6din
-type(volgrid6d),intent(out) :: vg6dout
-type(vol7d_level),intent(in),optional :: level(:)
-type(vol7d_timerange),intent(in),optional :: timerange(:)
+!> Reduce some dimensions (level and timerage) for semplification (rounding).
+!! You can use this for simplify and use variables in computation like alchimia
+!! where fields have to be on the same coordinate
+!! examples:
+!! means in time for short periods and istantaneous values
+!! 2 meter and surface levels
+!! If there are data on more then one almost equal levels or timeranges, the first var present (at least one point)
+!! will be taken (order is by icreasing var index).
+!! You can use predefined values for classic semplification
+!! almost_equal_levels and almost_equal_timeranges
+!! The level or timerange in output will be defined by the first element of level and timerange list
+subroutine vg6d_rounding(vg6din,vg6dout,level,timerange,merge)
+type(volgrid6d),intent(in) :: vg6din  !< input volume
+type(volgrid6d),intent(out) :: vg6dout !> output volume
+type(vol7d_level),intent(in),optional :: level(:) !< almost equal level list
+type(vol7d_timerange),intent(in),optional :: timerange(:) !< almost equal timerange list
+logical,intent(in),optional :: merge !< if there are data on more then one almost equal levels or timeranges will be merged POINT BY POINT with priority for the fird data found ordered by icreasing var index
 
 integer :: ilevel,itimerange
 
@@ -2760,16 +2773,20 @@ if (present(timerange))then
   end do
 end if
 
-call vg6d_reduce(vg6din,vg6dout)
+call vg6d_reduce(vg6din,vg6dout,merge)
 
 end subroutine vg6d_rounding
 
+!> Reduce some dimensions (level and timerage).
+!! You can pass a volume with duplicated levels and timeranges; you get unique levels and timeranges in output.
+!! If there are data on equal levels or timeranges, the first var present (at least one point)
+!! will be taken (order is by icreasing var index).
 subroutine vg6d_reduce(vg6din,vg6dout,merge)
-type(volgrid6d),intent(in) :: vg6din
-type(volgrid6d),intent(out) :: vg6dout
-logical,intent(in),optional :: merge
+type(volgrid6d),intent(in) :: vg6din  !< input volume
+type(volgrid6d),intent(out) :: vg6dout   !< output volume
+logical,intent(in),optional :: merge !< if there are data on equal levels or timeranges will be merged POINT BY POINT with priority for the fird data found ordered by icreasing var index
 
-integer :: i,j,nlevel,ntime,ntimerange,nvar,ilevel,itimerange,ivar,indl,indt,itime
+integer :: nlevel,ntime,ntimerange,nvar,ilevel,itimerange,ivar,indl,indt,itime
 
 nlevel=count_distinct(vg6din%level,back=.true.)
 ntime=size(vg6din%time)
@@ -2792,13 +2809,15 @@ do ilevel=1,size(vg6din%level)
 
       if ( ASSOCIATED(vg6din%voldati)) then
 
-        if (optio_log(merge)) then
-          
-          !! TODO merge present data
-          vg6dout%voldati(:,:,indl,:,indt,ivar)=vg6din%voldati(:,:,ilevel,:,itimerange,ivar)
-          
+        if (optio_log(merge)) then          
+          !! merge present data point by point
+          where (.not. c_e(vg6dout%voldati(:,:,indl,:,indt,ivar))) 
+            vg6dout%voldati(:,:,indl,:,indt,ivar)=vg6din%voldati(:,:,ilevel,:,itimerange,ivar)
+          end where
         else
-          vg6dout%voldati(:,:,indl,:,indt,ivar)=vg6din%voldati(:,:,ilevel,:,itimerange,ivar)
+          if (.not. any(c_e(vg6dout%voldati(:,:,indl,:,indt,ivar))))then
+            vg6dout%voldati(:,:,indl,:,indt,ivar)=vg6din%voldati(:,:,ilevel,:,itimerange,ivar)
+          end if
         end if
       end if
       
