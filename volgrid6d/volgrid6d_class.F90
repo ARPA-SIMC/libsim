@@ -2769,7 +2769,7 @@ type(volgrid6d),intent(in) :: vg6din
 type(volgrid6d),intent(out) :: vg6dout
 logical,intent(in),optional :: merge
 
-integer :: i,j,nlevel,ntime,ntimerange,nvar,ilevel,itimerange,ivar,indl,indt
+integer :: i,j,nlevel,ntime,ntimerange,nvar,ilevel,itimerange,ivar,indl,indt,itime
 
 nlevel=count_distinct(vg6din%level,back=.true.)
 ntime=size(vg6din%time)
@@ -2792,7 +2792,7 @@ do ilevel=1,size(vg6din%level)
 
       if ( ASSOCIATED(vg6din%voldati)) then
 
-        if (optio_l(merge)) then
+        if (optio_log(merge)) then
           
           !! TODO merge present data
           vg6dout%voldati(:,:,indl,:,indt,ivar)=vg6din%voldati(:,:,ilevel,:,itimerange,ivar)
