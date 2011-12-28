@@ -56,6 +56,7 @@ end type fnds
 
 !> Vector of function to transform the input to alchimia module
 type fndsv
+  integer :: nin = imiss
   integer :: nout = imiss
   type(fnds),allocatable :: fnds(:)
 end type fndsv
@@ -206,6 +207,7 @@ type(fndsv) :: vfntmp
 
 if (.not. allocated(vfn%fnds))then
   allocate(vfn%fnds(0))
+  vfn%nin=0
   vfn%nout=0
 end if
 
@@ -223,6 +225,7 @@ if (present(fn))then
   vfn%fnds(nfn+1)=fn
   if (present(order)) vfn%fnds(nfn+1)%order = order
   
+  vfn%nin=vfn%nin+size(fn%bin)
   vfn%nout=vfn%nout+size(fn%bout)
 
   CALL l4f_log(L4F_DEBUG, 'fnregister: adding function object '//trim(fn%name)//' ; nout '//t2c(vfn%nout))
@@ -251,7 +254,7 @@ end function equal_fn
 subroutine sl_display(sl)
 type(shoplists),intent(in) :: sl !< shopping lists to display
 
-integer :: i,j
+integer :: i
 
 do i = 1, size(sl%shoplist)
   print *,"shopping list : ",i
@@ -297,7 +300,7 @@ end subroutine fnv_display
 
 
 
-!> Display vector function objects on screen delected by order
+!> Display vector function objects on screen selected by order
 subroutine fnv_display_byorder(fnv,order)
 type(fndsv),intent(in) :: fnv !< vector function object to display
 integer,intent(in) :: order !< level for recursice search of functions
@@ -568,11 +571,28 @@ character(len=*),intent(in) :: mybin(:)   !< standard table B description of inp
 character(len=*),intent(in) :: mybout(:)  !< standard table B description of output
 real,intent(in) :: myin(:,:)  !< data input (ndata,nparameters)
 real,intent(out) :: myout(:,:)!< data output (ndata,nparameters)
-integer :: i
+integer :: i,j
+character(len=10) :: newbout(mayvfn%nout)
+
+
+newbout=cmiss
+do i=1, size(mayvfn%fnds)
+  if (c_e(mayvfn%fnds(i))) then
+    do j=1, size(mayvfn%fnds(i)%bout)
+      if (c_e(mayvfn%fnds(i)%bout(j))) then
+        if (index_c(newbout,mayvfn%fnds(i)%bout(j)) <= 0) then
+          newbout(index_c(newbout,cmiss)) = mayvfn%fnds(i)%bout(j)
+        end if
+      end if
+    end do
+  end if
+end do
 
 do i=size(mayvfn%fnds),1,-1
   if (c_e(mayvfn%fnds(i))) then
-    call mayvfn%fnds(i)%fn(mybin,mybout,mayvfn%fnds(i)%bin,mayvfn%fnds(i)%bout,myin,myout)
+    print *,"name:",mayvfn%fnds(i)%name,"order:",mayvfn%fnds(i)%order
+
+    call mayvfn%fnds(i)%fn(mybin,newbout,mayvfn%fnds(i)%bin,mayvfn%fnds(i)%bout,myin,myout)
     !print *,"make",i,mayvfn%fnds(i)%bin,mayvfn%fnds(i)%bout
   end if
 end do

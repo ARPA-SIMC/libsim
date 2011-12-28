@@ -38,7 +38,7 @@ USE termo
 
 implicit none
 
-integer :: category,ier,i,n,nana
+integer :: category,ier,i,n
 CHARACTER(len=12) :: coord_format
 CHARACTER(len=10), ALLOCATABLE :: vl(:)
 CHARACTER(len=512):: a_name, coord_file, input_file, output_file, output_format, output_template, output_variable_list
@@ -56,7 +56,6 @@ doubleprecision :: latitude_south_pole,longitude_south_pole,angle_rotation
 character(len=80) :: proj_type,trans_type,sub_type
 
 TYPE(geo_coordvect),POINTER :: poly(:) => NULL()
-doubleprecision ::x,y,lon,lat
 LOGICAL :: extrap, c2agrid, decode
 type(optionparser) :: opt
 INTEGER :: optind, optstatus
@@ -67,8 +66,7 @@ INTEGER,POINTER :: w_s(:), w_e(:)
 TYPE(grid_file_id) :: file_template
 TYPE(grid_id) :: gaid_template
 #ifdef ALCHIMIA
-type(fndsv) :: vfn
-type(fndsv) :: vfnoracle
+type(fndsv) :: vfn, vfnoracle
 #endif
 
 !questa chiamata prende dal launcher il nome univoco

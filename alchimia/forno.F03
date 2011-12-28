@@ -1,7 +1,7 @@
 module forno
 
 USE alchimia
-
+USE array_utilities
 IMPLICIT NONE
 
 private
@@ -28,6 +28,14 @@ subroutine  inforna(mybin,mybout,bin,bout,in,out)
   CHARACTER(len=10),intent(in) :: bout(:)   !< vector table B  WMO output used by function
   real, intent(in) :: in(:,:)
   real, intent(out) :: out(:,:)
+  integer :: i
+
+  do i=1,size(bin)
+    if (index_c(mybin,bin(i)) == 0) print *,"not in bin : ",bin(i)
+  end do
+  do i=1,size(bout)
+    if (index_c(mybout,bout(i)) == 0) print *,"not in bout: ",bout(i)
+  end do
 
   out=5.
 end subroutine inforna
@@ -47,6 +55,14 @@ subroutine rosola(mybin,mybout,bin,bout,in,out)
   CHARACTER(len=10),intent(in) :: bout(:)   !< vector table B  WMO output used by function
   real, intent(in) :: in(:,:)
   real, intent(out) :: out(:,:)
+  integer :: i
+
+  do i=1,size(bin)
+    if (index_c(mybin,bin(i)) == 0) print *,"not in bin : ",bin(i)
+  end do
+  do i=1,size(bout)
+    if (index_c(mybout,bout(i)) == 0) print *,"not in bout: ",bout(i)
+  end do
 
   out=6.
 
@@ -66,6 +82,14 @@ subroutine ripassa(mybin,mybout,bin,bout,in,out)
   CHARACTER(len=10),intent(in) :: bout(:)   !< vector table B  WMO output used by function
   real, intent(in) :: in(:,:)
   real, intent(out) :: out(:,:)
+  integer :: i
+
+  do i=1,size(bin)
+    if (index_c(mybin,bin(i)) == 0) print *,"not in bin : ",bin(i)
+  end do
+  do i=1,size(bout)
+    if (index_c(mybout,bout(i)) == 0) print *,"not in bout: ",bout(i)
+  end do
 
   out=7.
 
@@ -85,6 +109,14 @@ subroutine brucia(mybin,mybout,bin,bout,in,out)
   CHARACTER(len=10),intent(in) :: bout(:)   !< vector table B  WMO output used by function
   real, intent(in) :: in(:,:)
   real, intent(out) :: out(:,:)
+  integer :: i
+
+  do i=1,size(bin)
+    if (index_c(mybin,bin(i)) == 0) print *,"not in bin : ",bin(i)
+  end do
+  do i=1,size(bout)
+    if (index_c(mybout,bout(i)) == 0) print *,"not in bout: ",bout(i)
+  end do
 
   out=8.
 

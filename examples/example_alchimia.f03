@@ -7,7 +7,6 @@ USE missing_values
 USE log4fortran
 
 IMPLICIT NONE
-integer :: i
 integer, parameter :: ndat=100
 type(fndsv) :: vfn,myvfn
 character(len=10), allocatable:: mybin(:),mybout(:)
@@ -28,11 +27,11 @@ category=l4f_category_get(a_name//".main")
 call register_pentolone(vfn)
 call register_forno(vfn)
 
-!mybin  = [character(len=10)::"acqua","olio","patate","sale","pollo","mais","gommosa"]
-!mybout = [character (len=10) :: "pole.pata.","lesso"]
-
 mybin  = [character(len=10)::"acqua","olio","patate","sale","pollo","mais","gommosa"]
-mybout = [character (len=10) :: "pole.pata.","pane"]
+mybout = [character (len=10) :: "pole.pata.","lesso"]
+
+!mybin  = [character(len=10)::"acqua","olio","patate","sale","pollo","mais","gommosa"]
+!mybout = [character (len=10) :: "pole.pata.","pane"]
 
 print *,"I have:  ",mybin
 print *,"I have to prepare:     ",mybout
@@ -52,7 +51,6 @@ end if
 
 call display(myvfn)
 print *,"I need ",myvfn%nout," more variables"
-
 
 allocate(myin(ndat,size(mybin)))
 myin=1.5

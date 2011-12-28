@@ -8,8 +8,7 @@ use log4fortran
 
 IMPLICIT NONE
 
-type(fndsv) :: vfn
-type(fndsv),allocatable :: vfnoracle
+type(fndsv) :: vfn, vfnoracle
 character(len=10), allocatable:: mybout(:)
 type(volgrid6d),pointer :: myin(:),myout(:)
 
@@ -37,6 +36,8 @@ call register_termo(vfn)
 
 CALL import(myin,filename=filenamein,decode=.true., time_definition=0, categoryappend="input")
 
+call display(myin)
+
 if (alchemy(myin,vfn,mybout,myout,copy=.true.,vfnoracle=vfnoracle) /= 0) then
   print*, "I cannot make ",mybout
   
@@ -52,6 +53,7 @@ end if
 call display(vfnoracle)
 
 call export(myout,filenameout)
+call display(myout)
 
 call delete(myout)
 call delete(myin)

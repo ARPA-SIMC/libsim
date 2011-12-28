@@ -1,6 +1,7 @@
 module pentolone
 
 USE alchimia
+USE array_utilities
 IMPLICIT NONE
 
 contains
@@ -24,6 +25,14 @@ subroutine  bolli(mybin,mybout,bin,bout,in,out)
   CHARACTER(len=10),intent(in) :: bout(:)   !< vector table B  WMO output used by function
   real, intent(in) :: in(:,:)
   real, intent(out) :: out(:,:)
+  integer :: i
+
+  do i=1,size(bin)
+    if (index_c(mybin,bin(i)) == 0) print *,"not in bin : ",bin(i)
+  end do
+  do i=1,size(bout)
+    if (index_c(mybout,bout(i)) == 0) print *,"not in bout: ",bout(i)
+  end do
 
   out=1.
 
@@ -50,6 +59,14 @@ subroutine mescola(mybin,mybout,bin,bout,in,out)
   CHARACTER(len=10),intent(in) :: bout(:)   !< vector table B  WMO output used by function
   real, intent(in) :: in(:,:)
   real, intent(out) :: out(:,:)
+  integer :: i
+
+  do i=1,size(bin)
+    if (index_c(mybin,bin(i)) == 0) print *,"not in bin : ",bin(i)
+  end do
+  do i=1,size(bout)
+    if (index_c(mybout,bout(i)) == 0) print *,"not in bout: ",bout(i)
+  end do
 
   out=2.
 
@@ -76,6 +93,14 @@ subroutine friggi(mybin,mybout,bin,bout,in,out)
   CHARACTER(len=10),intent(in) :: bout(:)   !< vector table B  WMO output used by function
   real, intent(in) :: in(:,:)
   real, intent(out) :: out(:,:)
+  integer :: i
+
+  do i=1,size(bin)
+    if (index_c(mybin,bin(i)) == 0) print *,"not in bin : ",bin(i)
+  end do
+  do i=1,size(bout)
+    if (index_c(mybout,bout(i)) == 0) print *,"not in bout: ",bout(i)
+  end do
 
   out=3.
 
@@ -103,6 +128,14 @@ subroutine gira(mybin,mybout,bin,bout,in,out)
   CHARACTER(len=10),intent(in) :: bout(:)   !< vector table B  WMO output used by function
   real, intent(in) :: in(:,:)
   real, intent(out) :: out(:,:)
+  integer :: i
+
+  do i=1,size(bin)
+    if (index_c(mybin,bin(i)) == 0) print *,"not in bin : ",bin(i)
+  end do
+  do i=1,size(bout)
+    if (index_c(mybout,bout(i)) == 0) print *,"not in bout: ",bout(i)
+  end do
 
   out=4.
 
