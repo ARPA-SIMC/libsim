@@ -63,20 +63,6 @@ end do
 
 nvarin=count(c_e(newbout))
 
-!add other required variables in input for function
-do i=1, size(mayvfn%fnds)
-  if (c_e(mayvfn%fnds(i))) then
-    do j=1, size(mayvfn%fnds(i)%bin)
-      if (c_e(mayvfn%fnds(i)%bin(j))) then
-        if (index_c(newbout,mayvfn%fnds(i)%bin(j)) <= 0) then
-          newbout(index_c(newbout,cmiss)) = mayvfn%fnds(i)%bin(j)
-        end if
-      end if
-    end do
-  end if
-end do
-
-
 !add output variables
 do i=1, size(mayvfn%fnds)
   if (c_e(mayvfn%fnds(i))) then
@@ -147,8 +133,10 @@ do ilevel=1,nlevel
   do itime=1,ntime
     do itimerange=1,ntimerange
       do i=size(mayvfn%fnds),1,-1
-        if (c_e(mayvfn%fnds(i))) then
-
+        if (c_e(mayvfn%fnds(i)) .and.mayvfn%fnds(i)%name(:4) /= "copy" ) then
+#ifdef DEBUG
+          call l4f_log(L4F_DEBUG,"execute function: "//mayvfn%fnds(i)%name)
+#endif
           myin=reshape(vg6dout%voldati(:,:,ilevel,itime,itimerange,:),(/nx*ny,nvar/))
 
           IF (ASSOCIATED(c_funcgb)) THEN
@@ -174,13 +162,16 @@ do ilevel=1,nlevel
 
           vg6dout%voldati(:,:,ilevel,itime,itimerange,:)=reshape(myout,(/nx,ny,nvar/))
 
+          !search gaid to clone starting fron input function variables
           do ivar=1, size(mayvfn%fnds(i)%bout)
             do j=1,size(mayvfn%fnds(i)%bin)
-              ivarin  = index_c(mybin,mayvfn%fnds(i)%bin(j))
+              ivarin  = index_c(mybin,mayvfn%fnds(i)%bin(j)) ! search in original fields
+              if (ivarin > 0) ivarin = index_c(newbout,mybin(ivarin)) ! if found i get it from already cloned ones in putput volume
               if (ivarin > 0) exit
             end do
-            if (ivarin == 0) ivarin=firsttrue(c_e(vg6dout%gaid(ilevel,itime,itimerange,:)))
+            if (ivarin == 0) ivarin=firsttrue(c_e(vg6dout%gaid(ilevel,itime,itimerange,:))) ! if not found is enought from one present variables
             ivarout = index_c(newbout,mayvfn%fnds(i)%bout(ivar))
+
             call copy (vg6dout%gaid(ilevel,itime,itimerange,ivarin), vg6dout%gaid(ilevel,itime,itimerange,ivarout))
 
 #ifdef HAVE_LIBGRIBAPI

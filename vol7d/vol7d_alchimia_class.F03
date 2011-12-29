@@ -54,19 +54,16 @@ character(len=*),intent(in) :: mybin(:),mybout(:)
 type(vol7d),intent(inout) :: v7din
 type(vol7d),intent(out) :: v7dout
 integer :: i,j,nana,nlevel,ntime,ntimerange,nvarin,nvarout,nnetwork
-integer :: ilevel,itime,itimerange,inetwork,ivar,ind
+integer :: ilevel,itime,itimerange,inetwork,ivar,ind,ivarin,ivarout
 type(vol7d_var) :: var
-real,allocatable :: myin(:,:)
 character(len=1) :: type
-character(len=10) :: newbout(mayvfn%nout)
+character(len=10) :: newbout(mayvfn%nout+mayvfn%nin)
 
 nana=size(v7din%ana)
 ntime=size(v7din%time)
 nlevel=size(v7din%level)
 ntimerange=size(v7din%timerange)
 nnetwork=size(v7din%network)
-nvarin=size(mybin)
-nvarout=mayvfn%nout
 
 call copy (v7din,v7dout,&
  ldativarr=(/.false./),&
@@ -75,9 +72,27 @@ call copy (v7din,v7dout,&
  ldativarb=(/.false./),&
  ldativarc=(/.false./))
 
-call vol7d_alloc(v7dout, ndativarr=nvarout)
+!we have to make a new volume with var required in input function plus var for output
 
+!star with input variables
 newbout=cmiss
+
+do i=1, size(mayvfn%fnds)
+  if (c_e(mayvfn%fnds(i))) then
+    do j=1, size(mayvfn%fnds(i)%bin)
+      if (c_e(mayvfn%fnds(i)%bin(j))) then
+        if (index_c(mybin,mayvfn%fnds(i)%bin(j)) <= 0)cycle 
+        if (index_c(newbout,mayvfn%fnds(i)%bin(j)) <= 0) then
+          newbout(index_c(newbout,cmiss)) = mayvfn%fnds(i)%bin(j)
+        end if
+      end if
+    end do
+  end if
+end do
+
+nvarin=count(c_e(newbout))
+
+!add output variables
 do i=1, size(mayvfn%fnds)
   if (c_e(mayvfn%fnds(i))) then
     do j=1, size(mayvfn%fnds(i)%bout)
@@ -90,55 +105,69 @@ do i=1, size(mayvfn%fnds)
   end if
 end do
 
+nvarout=count(c_e(newbout))
+
+call vol7d_alloc(v7dout, ndativarr=nvarout)
+
 do ivar=1,nvarout
   call init(v7dout%dativar%r(ivar),btable=newbout(ivar))
 end do
 
 call vol7d_alloc_vol(v7dout,inivol=.true.)
 
-allocate (myin(nana,nvarin))
+! now I copy the needed input variables from input volume to output 
+! converting to real values
+
+do ivar=1,nvarin
+
+  ivarin  = index_c(mybin,newbout(ivar))
+  ivarout = ivar
+
+  call init(var, btable=newbout(ivarin))
+  
+  type=cmiss
+  ind = index(v7din%dativar, var, type=type)
+            
+  select case (type)
+              
+  case("d")
+    v7dout%voldatir(:,:,:,:,ivarout,:)= &
+         realdat(v7din%voldatid(:,:,:,:,ind,:),v7din%dativar%d(ind))
+  case("r")
+    v7dout%voldatir(:,:,:,:,ivarout,:)= &
+         realdat(v7din%voldatir(:,:,:,:,ind,:),v7din%dativar%r(ind))
+  case("i")
+    v7dout%voldatir(:,:,:,:,ivarout,:)= &
+         realdat(v7din%voldatii(:,:,:,:,ind,:),v7din%dativar%i(ind))
+  case("b")
+    v7dout%voldatir(:,:,:,:,ivarout,:)= &
+         realdat(v7din%voldatib(:,:,:,:,ind,:),v7din%dativar%b(ind))
+  case("c")
+    v7dout%voldatir(:,:,:,:,ivarout,:)= &
+         realdat(v7din%voldatic(:,:,:,:,ind,:),v7din%dativar%c(ind))
+              
+  case default
+    v7dout%voldatir(:,:,:,:,ivarout,:)=rmiss
+              
+  end select
+end do
+
 
 do i=size(mayvfn%fnds),1,-1
-  if (c_e(mayvfn%fnds(i))) then
+  if (c_e(mayvfn%fnds(i)) .and.mayvfn%fnds(i)%name(:4) /= "copy" ) then
+
+#ifdef DEBUG
+    call l4f_log(L4F_DEBUG,"execute function: "//mayvfn%fnds(i)%name)
+#endif
+
     do ilevel=1,nlevel
       do itime=1,ntime
         do itimerange=1,ntimerange
           do inetwork=1,nnetwork
             v7dout%voldatir(:,itime,ilevel,itimerange,:,inetwork)=rmiss
 
-            do ivar=1,nvarin
-              call init(var, btable=mybin(ivar))
-
-              type=cmiss
-              ind = index(v7din%dativar, var, type=type)
-
-              select case (type)
-
-              case("d")
-                myin(:,ivar)=realdat(v7din%voldatid(:,itime,ilevel,itimerange,ind,inetwork),v7din%dativar%d(ind))
-                                                           
-              case("r")                                    
-                myin(:,ivar)=realdat(v7din%voldatir(:,itime,ilevel,itimerange,ind,inetwork),v7din%dativar%r(ind))
-                                                           
-              case("i")                                    
-                myin(:,ivar)=realdat(v7din%voldatii(:,itime,ilevel,itimerange,ind,inetwork),v7din%dativar%i(ind))
-                                                           
-              case("b")                                    
-                myin(:,ivar)=realdat(v7din%voldatib(:,itime,ilevel,itimerange,ind,inetwork),v7din%dativar%b(ind))
-                                                           
-              case("c")                                    
-                myin(:,ivar)=realdat(v7din%voldatic(:,itime,ilevel,itimerange,ind,inetwork),v7din%dativar%c(ind))
-                
-              case default
-                
-                myin(:,ivar)=rmiss
-
-              end select
-
-            end do
-
-            call mayvfn%fnds(i)%fn(mybin,newbout,mayvfn%fnds(i)%bin,mayvfn%fnds(i)%bout,&
-             myin,&
+            call mayvfn%fnds(i)%fn(newbout,newbout,mayvfn%fnds(i)%bin,mayvfn%fnds(i)%bout,&
+             v7dout%voldatir(:,ilevel,itime,itimerange,:,inetwork),&
              v7dout%voldatir(:,ilevel,itime,itimerange,:,inetwork))
 
           end do
@@ -148,7 +177,6 @@ do i=size(mayvfn%fnds),1,-1
   end if
 end do
 
-deallocate (myin)
 
 end subroutine make_v7d
 
@@ -215,7 +243,6 @@ type(fndsv),intent(out),optional :: vfnoracle
 integer :: i
 type(fndsv) :: vfntmp, myvfn
 character(len=10), allocatable:: mybin(:)
-character(len=255) :: filenamein,filenameout
 
 alchemy_v7d = 0
 
