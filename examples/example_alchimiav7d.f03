@@ -40,6 +40,8 @@ call init(myout,filename=filenameout, file=.true., write=.true., wipe=.true., ca
 !CALL import(myin,var=(/"B12101","B10004"/),varkind=(/"r","r"/))
 CALL import(myin)
 
+call display(myin%vol7d)
+
 if (alchemy(myin%vol7d,vfn,mybout,myout%vol7d,copy=.true.,vfnoracle=vfnoracle) /= 0 ) then
   print*, "I cannot make ",mybout
   
@@ -54,6 +56,7 @@ end if
 
 call display(vfnoracle)
 
+call display(myout%vol7d)
 call export(myout,template="generic")
 
 call delete(myout)

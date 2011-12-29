@@ -123,11 +123,11 @@ do ivar=1,nvarin
   ivarin  = index_c(mybin,newbout(ivar))
   ivarout = ivar
 
-  call init(var, btable=newbout(ivarin))
+  call init(var, btable=newbout(ivarout))
   
   type=cmiss
   ind = index(v7din%dativar, var, type=type)
-            
+
   select case (type)
               
   case("d")
@@ -164,12 +164,9 @@ do i=size(mayvfn%fnds),1,-1
       do itime=1,ntime
         do itimerange=1,ntimerange
           do inetwork=1,nnetwork
-            v7dout%voldatir(:,itime,ilevel,itimerange,:,inetwork)=rmiss
-
             call mayvfn%fnds(i)%fn(newbout,newbout,mayvfn%fnds(i)%bin,mayvfn%fnds(i)%bout,&
              v7dout%voldatir(:,ilevel,itime,itimerange,:,inetwork),&
              v7dout%voldatir(:,ilevel,itime,itimerange,:,inetwork))
-
           end do
         end do
       end do
