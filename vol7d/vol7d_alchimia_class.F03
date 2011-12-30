@@ -154,7 +154,7 @@ end do
 
 
 do i=size(mayvfn%fnds),1,-1
-  if (c_e(mayvfn%fnds(i)) .and.mayvfn%fnds(i)%name(:4) /= "copy" ) then
+  if (c_e(mayvfn%fnds(i)) .and. .not. match(mayvfn%fnds(i)%name,"copy*") ) then
 
 #ifdef DEBUG
     call l4f_log(L4F_DEBUG,"execute function: "//mayvfn%fnds(i)%name)

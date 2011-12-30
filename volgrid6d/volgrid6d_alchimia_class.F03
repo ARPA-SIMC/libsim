@@ -133,7 +133,7 @@ do ilevel=1,nlevel
   do itime=1,ntime
     do itimerange=1,ntimerange
       do i=size(mayvfn%fnds),1,-1
-        if (c_e(mayvfn%fnds(i)) .and.mayvfn%fnds(i)%name(:4) /= "copy" ) then
+        if (c_e(mayvfn%fnds(i)) .and. .not. match(mayvfn%fnds(i)%name,"copy*") ) then
 #ifdef DEBUG
           call l4f_log(L4F_DEBUG,"execute function: "//mayvfn%fnds(i)%name)
 #endif
@@ -147,7 +147,7 @@ do ilevel=1,nlevel
             myin=rmiss
           ENDIF
 
-          myout=rmiss
+          myout=myin
 
           call mayvfn%fnds(i)%fn(newbout,newbout,mayvfn%fnds(i)%bin,mayvfn%fnds(i)%bout,myin,myout)
 
