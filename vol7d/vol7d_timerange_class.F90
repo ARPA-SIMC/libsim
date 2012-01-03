@@ -119,6 +119,15 @@ INTERFACE OPERATOR (<=)
   MODULE PROCEDURE vol7d_timerange_le, vol7d_timerange_lesv
 END INTERFACE
 
+
+!> Logical almost equality operators for objects of the class \a
+!! vol7d_timerange
+!! If one component is missing it is not used in comparison
+INTERFACE OPERATOR (.almosteq.)
+  MODULE PROCEDURE vol7d_timerange_almost_eq
+END INTERFACE
+
+
 ! da documentare in inglese assieme al resto
 !> to be documented
 INTERFACE c_e
@@ -295,6 +304,21 @@ ELSE
 ENDIF
 
 END FUNCTION vol7d_timerange_eq
+
+
+elemental FUNCTION vol7d_timerange_almost_eq(this, that) RESULT(res)
+TYPE(vol7d_timerange),INTENT(IN) :: this, that
+LOGICAL :: res
+
+IF (.not. c_e(this%timerange) .or. .not. c_e(that%timerange) .or. this%timerange == that%timerange .AND. &
+    this%p1 == that%p1 .AND. &
+    this%p2 == that%p2) THEN
+  res = .TRUE.
+ELSE
+  res = .FALSE.
+ENDIF
+
+END FUNCTION vol7d_timerange_almost_eq
 
 
 FUNCTION vol7d_timerange_eqsv(this, that) RESULT(res)

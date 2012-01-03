@@ -126,13 +126,34 @@ INTERFACE display
   MODULE PROCEDURE display_volgrid6d,display_volgrid6dv
 END INTERFACE
 
-type(vol7d_level) :: almost_equal_levels(2)=(/vol7d_level(105,2,imiss,imiss),vol7d_level(105,10,imiss,imiss)/)
-type(vol7d_timerange) :: almost_equal_timeranges(2)=(/vol7d_timerange(254,imiss,imiss),vol7d_timerange(3,0,3600)/)
+!> Reduce some dimensions (level and timerage) for semplification (rounding).
+!! You can use this for simplify and use variables in computation like alchimia
+!! where fields have to be on the same coordinate
+!! examples:
+!! means in time for short periods and istantaneous values
+!! 2 meter and surface levels
+!! If there are data on more then one almost equal levels or timeranges, the first var present (at least one point)
+!! will be taken (order is by icreasing var index).
+!! You can use predefined values for classic semplification
+!! almost_equal_levels and almost_equal_timeranges
+!! The level or timerange in output will be defined by the first element of level and timerange list
+INTERFACE rounding
+  MODULE PROCEDURE vg6d_rounding, vg6dv_rounding
+END INTERFACE
+
+type(vol7d_level) :: almost_equal_levels(3)=(/&
+ vol7d_level(  1,imiss,imiss,imiss),&
+ vol7d_level(103,imiss,imiss,imiss),&
+ vol7d_level(106,imiss,imiss,imiss)/)
+type(vol7d_timerange) :: almost_equal_timeranges(2)=(/&
+ vol7d_timerange(254,0,imiss),&
+ vol7d_timerange(3,0,3600)/)
 
 private
 
 PUBLIC volgrid6d,init,delete,export,import,compute,transform, &
  wind_rot,wind_unrot,vg6d_c2a,display,volgrid6d_alloc,volgrid6d_alloc_vol
+PUBLIC rounding, vg6d_reduce
 PUBLIC almost_equal_levels, almost_equal_timeranges
 
 CONTAINS
@@ -2738,6 +2759,26 @@ end subroutine display_volgrid6dv
 
 
 !> Reduce some dimensions (level and timerage) for semplification (rounding).
+!! Vector version of vg6dv_rounding
+subroutine vg6dv_rounding(vg6din,vg6dout,level,timerange,nostatproc,merge)
+type(volgrid6d),intent(in) :: vg6din(:)  !< input volume
+type(volgrid6d),intent(out),pointer :: vg6dout(:) !> output volume
+type(vol7d_level),intent(in),optional :: level(:) !< almost equal level list
+type(vol7d_timerange),intent(in),optional :: timerange(:) !< almost equal timerange list
+logical,intent(in),optional :: merge !< if there are data on more then one almost equal levels or timeranges will be merged POINT BY POINT with priority for the fird data found ordered by icreasing var index
+logical,intent(in),optional :: nostatproc !< do not take in account statistical processing code in timerange and P2
+
+integer :: i
+
+allocate(vg6dout(size(vg6din)))
+
+do i = 1, size(vg6din)
+  call vg6d_rounding(vg6din(i),vg6dout(i),level,timerange,nostatproc,merge)
+end do
+
+end subroutine vg6dv_rounding
+
+!> Reduce some dimensions (level and timerage) for semplification (rounding).
 !! You can use this for simplify and use variables in computation like alchimia
 !! where fields have to be on the same coordinate
 !! examples:
@@ -2748,84 +2789,128 @@ end subroutine display_volgrid6dv
 !! You can use predefined values for classic semplification
 !! almost_equal_levels and almost_equal_timeranges
 !! The level or timerange in output will be defined by the first element of level and timerange list
-subroutine vg6d_rounding(vg6din,vg6dout,level,timerange,merge)
+subroutine vg6d_rounding(vg6din,vg6dout,level,timerange,nostatproc,merge)
 type(volgrid6d),intent(in) :: vg6din  !< input volume
 type(volgrid6d),intent(out) :: vg6dout !> output volume
 type(vol7d_level),intent(in),optional :: level(:) !< almost equal level list
 type(vol7d_timerange),intent(in),optional :: timerange(:) !< almost equal timerange list
 logical,intent(in),optional :: merge !< if there are data on more then one almost equal levels or timeranges will be merged POINT BY POINT with priority for the fird data found ordered by icreasing var index
+logical,intent(in),optional :: nostatproc !< do not take in account statistical processing code in timerange and P2
 
 integer :: ilevel,itimerange
+type(vol7d_level) :: roundlevel(size(vg6din%level)) 
+type(vol7d_timerange) :: roundtimerange(size(vg6din%timerange))
+
+roundlevel=vg6din%level
 
 if (present(level))then
-  do ilevel = 1, size(vg6dout%level)
-    if ((any(vg6dout%level(ilevel) == level))) then
-      vg6dout%level(ilevel)=level(1)
+  do ilevel = 1, size(vg6din%level)
+    if ((any(vg6din%level(ilevel) .almosteq. level))) then
+      roundlevel(ilevel)=level(1)
     end if
   end do
 end if
+
+roundtimerange=vg6din%timerange
 
 if (present(timerange))then
-  do itimerange = 1, size(vg6dout%timerange)
-    if ((any(vg6dout%timerange(itimerange) == timerange))) then
-      vg6dout%timerange(itimerange)=timerange(1)
+  do itimerange = 1, size(vg6din%timerange)
+    if ((any(vg6din%timerange(itimerange) .almosteq. timerange))) then
+      roundtimerange(itimerange)=timerange(1)
     end if
   end do
 end if
 
-call vg6d_reduce(vg6din,vg6dout,merge)
+if (optio_log(nostatproc)) then
+  roundtimerange(:)%timerange=254
+  roundtimerange(:)%p2=imiss
+end if
+
+
+call vg6d_reduce(vg6din,vg6dout,roundlevel,roundtimerange,merge)
 
 end subroutine vg6d_rounding
 
 !> Reduce some dimensions (level and timerage).
-!! You can pass a volume with duplicated levels and timeranges; you get unique levels and timeranges in output.
+!! You can pass a volume and specify duplicated levels and timeranges in roundlevel and roundtimerange;
+!! you get unique levels and timeranges in output.
 !! If there are data on equal levels or timeranges, the first var present (at least one point)
 !! will be taken (order is by icreasing var index).
-subroutine vg6d_reduce(vg6din,vg6dout,merge)
+!! you can specify merge and if there are data on equal levels or timeranges will be merged POINT BY POINT 
+!! with priority for the first data found ordered by icreasing var index (require to decode all the data)
+!! Data are decoded only if needed so the output should be with or without voldata allocated
+subroutine vg6d_reduce(vg6din,vg6dout,roundlevel,roundtimerange,merge)
 type(volgrid6d),intent(in) :: vg6din  !< input volume
 type(volgrid6d),intent(out) :: vg6dout   !< output volume
-logical,intent(in),optional :: merge !< if there are data on equal levels or timeranges will be merged POINT BY POINT with priority for the fird data found ordered by icreasing var index
+type(vol7d_level),intent(in) :: roundlevel(:) !< new level list to use for rounding
+type(vol7d_timerange),intent(in) :: roundtimerange(:) !< new timerange list to use for rounding
+logical,intent(in),optional :: merge !< if there are data on equal levels or timeranges will be merged POINT BY POINT with priority for the first data found ordered by icreasing var index (require to decode all the data)
 
-integer :: nlevel,ntime,ntimerange,nvar,ilevel,itimerange,ivar,indl,indt,itime
+integer :: nlevel,ntime,ntimerange,nvar,ilevel,itimerange,ivar,indl,indt,itime,nx,ny
+real,allocatable :: vol2d(:,:)
 
-nlevel=count_distinct(vg6din%level,back=.true.)
+nx=vg6din%griddim%dim%nx
+ny=vg6din%griddim%dim%ny
+nlevel=count_distinct(roundlevel,back=.true.)
 ntime=size(vg6din%time)
-ntimerange=count_distinct(vg6din%timerange,back=.true.)
+ntimerange=count_distinct(roundtimerange,back=.true.)
 nvar=size(vg6din%var)
 
 call init(vg6dout, vg6din%griddim, vg6din%time_definition, categoryappend="generated by vg6d_reduce")
 call volgrid6d_alloc(vg6dout, vg6din%griddim%dim, ntime, nlevel, ntimerange, nvar)
-call volgrid6d_alloc_vol(vg6dout,inivol=.true.)
+
+if ( ASSOCIATED(vg6din%voldati) .or. optio_log(merge)) then          
+  call volgrid6d_alloc_vol(vg6dout,inivol=.true.,decode=.true.)
+  allocate(vol2d(nx,ny))
+else
+  call volgrid6d_alloc_vol(vg6dout,inivol=.true.,decode=.false.)
+end if
 
 vg6dout%time=vg6din%time
-vg6dout%timerange=pack_distinct(vg6din%timerange,ntimerange,back=.true.)
-vg6dout%level=pack_distinct(vg6din%level,nlevel,back=.true.)
+vg6dout%var=vg6din%var
+vg6dout%timerange=pack_distinct(roundtimerange,ntimerange,back=.true.)
+vg6dout%level=pack_distinct(roundlevel,nlevel,back=.true.)
 
 do ilevel=1,size(vg6din%level)
+  indl=index(vg6dout%level,roundlevel(ilevel))
   do itimerange=1,size(vg6din%timerange)
-    indt=index(vg6dout%timerange,vg6din%timerange(itimerange))
-    indl=index(vg6dout%level,vg6din%level(ilevel))
+    indt=index(vg6dout%timerange,roundtimerange(itimerange))
     do ivar=1, nvar
+      do itime=1,ntime
 
-      if ( ASSOCIATED(vg6din%voldati)) then
+        if ( ASSOCIATED(vg6din%voldati)) then
+          vol2d=vg6din%voldati(:,:,ilevel,itime,itimerange,ivar)
+        end if
 
         if (optio_log(merge)) then          
+
+          if ( .not. ASSOCIATED(vg6din%voldati)) then
+            CALL grid_id_decode_data(vg6din%gaid(ilevel,itime,itimerange,ivar), vol2d)
+          end if
+
           !! merge present data point by point
-          where (.not. c_e(vg6dout%voldati(:,:,indl,:,indt,ivar))) 
-            vg6dout%voldati(:,:,indl,:,indt,ivar)=vg6din%voldati(:,:,ilevel,:,itimerange,ivar)
+          where (.not. c_e(vg6dout%voldati(:,:,indl,itime,indt,ivar))) 
+          
+            vg6dout%voldati(:,:,indl,itime,indt,ivar)=vol2d
+          
           end where
-        else
-          if (.not. any(c_e(vg6dout%voldati(:,:,indl,:,indt,ivar))))then
-            vg6dout%voldati(:,:,indl,:,indt,ivar)=vg6din%voldati(:,:,ilevel,:,itimerange,ivar)
+        else if ( ASSOCIATED(vg6din%voldati)) then
+          if (.not. any(c_e(vg6dout%voldati(:,:,indl,itime,indt,ivar))))then
+            vg6dout%voldati(:,:,indl,itime,indt,ivar)=vol2d
           end if
         end if
-      end if
       
-      call copy (vg6din%gaid(ilevel,itime,itimerange,ivar), vg6dout%gaid(ilevel,itime,itimerange,ivar))
-
+        if (c_e(vg6din%gaid(ilevel,itime,itimerange,ivar)).and. .not. c_e(vg6dout%gaid(indl,itime,indt,ivar)))then
+          call copy (vg6din%gaid(ilevel,itime,itimerange,ivar), vg6dout%gaid(indl,itime,indt,ivar))
+        end if
+      end do
     end do
   end do
 end do
+
+if ( ASSOCIATED(vg6din%voldati) .or. optio_log(merge)) then          
+  deallocate(vol2d)
+end if
 
 end subroutine vg6d_reduce
 

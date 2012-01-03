@@ -117,6 +117,15 @@ INTERFACE OPERATOR (<=)
   MODULE PROCEDURE vol7d_level_le, vol7d_level_lesv
 END INTERFACE
 
+
+!> Logical almost equality operators for objects of the class \a
+!! vol7d_level
+!! If one component is missing it is not used in comparison
+INTERFACE OPERATOR (.almosteq.)
+  MODULE PROCEDURE vol7d_level_almost_eq
+END INTERFACE
+
+
 ! da documentare in inglese assieme al resto
 !> to be documented
 INTERFACE c_e
@@ -278,6 +287,22 @@ ELSE
 ENDIF
 
 END FUNCTION vol7d_level_eq
+
+
+elemental FUNCTION vol7d_level_almost_eq(this, that) RESULT(res)
+TYPE(vol7d_level),INTENT(IN) :: this, that
+LOGICAL :: res
+
+IF ( .not. c_e(this%level1) .or. .not. c_e(that%level1) .or. this%level1 == that%level1 .AND. &
+     .not. c_e(this%level2) .or. .not. c_e(that%level2) .or. this%level2 == that%level2 .AND. &
+     .not. c_e(this%l1) .or. .not. c_e(that%l1) .or. this%l1 == that%l1 .AND. &
+     .not. c_e(this%l2) .or. .not. c_e(that%l2) .or. this%l2 == that%l2) THEN
+  res = .TRUE.
+ELSE
+  res = .FALSE.
+ENDIF
+
+END FUNCTION vol7d_level_almost_eq
 
 
 FUNCTION vol7d_level_eqsv(this, that) RESULT(res)

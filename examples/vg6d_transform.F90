@@ -56,7 +56,7 @@ doubleprecision :: latitude_south_pole,longitude_south_pole,angle_rotation
 character(len=80) :: proj_type,trans_type,sub_type
 
 TYPE(geo_coordvect),POINTER :: poly(:) => NULL()
-LOGICAL :: extrap, c2agrid, decode
+LOGICAL :: extrap, c2agrid, decode, round
 type(optionparser) :: opt
 INTEGER :: optind, optstatus
 integer :: iargc
@@ -150,6 +150,10 @@ CALL optionparser_add(opt, 'f', 'npx', npx, 4, help= &
  'number of nodes along x axis on input grid, over which to apply function for boxregrid')
 CALL optionparser_add(opt, 'g', 'npy', npy, 4, help= &
  'number of nodes along x axis on input grid, over which to apply function for boxregrid')
+
+CALL optionparser_add(opt, ' ', 'rounding', round, help= &
+ 'simplifies volume, merging similar levels and timeranges')
+
 
 coord_file=cmiss
 #ifdef HAVE_LIBSHP_FORTRAN
@@ -347,6 +351,12 @@ else
   volgrid_out => volgrid
 
 end IF
+
+if (round .and. ASSOCIATED(volgrid_out)) then
+  call rounding(volgrid_out,volgrid_tmp,level=almost_equal_levels,nostatproc=.true.)
+  CALL delete(volgrid_out)
+  volgrid_out => volgrid_tmp
+end if
 
 #ifdef ALCHIMIA
 if (ASSOCIATED(volgrid_out) .and. output_variable_list /= " ") then
