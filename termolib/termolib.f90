@@ -2425,18 +2425,75 @@ end function SI_TT
 !_________________________________________________________________
 
 
-!> stima la classe di stabilita' a partire dagli output LM/LAMA.
+!> stima la classe di stabilita' a partire da velocita' del vento, 
+!! radiazione solare incirdente e radiazione infrarossa netta.
 !! Per le ore diurne, usa Bowen 1983 (vento e radiazione solare)
 !! Per le ore notturne, usa Reuter 1970 modificato (vento e radiazione IR)
 elemental real function pgt (ff,swd,lwb)
 real,intent(in) ::  ff,swd,lwb
 
+integer :: cl_ff,cl_rad,kc
+
+! Tabelle per calcolo PGT diurna (secondo Bowen 1983)
+INTEGER, PARAMETER :: ncrd = 4
+INTEGER, PARAMETER :: ncfd = 5
+REAL, PARAMETER :: class_rad_day(0:ncrd) = &
+  (/HUGE(0.),925.,675.,175.,-HUGE(0.)/)
+REAL, PARAMETER :: class_ff_day(0:ncfd) = &
+  (/-HUGE(0.),2.,3.,5.,6.,HUGE(0.)/)
+INTEGER, PARAMETER :: ipgt_day(ncrd,ncfd) = RESHAPE((/ &
+  1,1,2,4, &
+  1,2,3,4, &
+  2,2,3,4, &
+  3,3,4,4, &
+  3,4,4,4  &
+  /),(/ncrd,ncfd/))  
+
+! Tabelle per calcolo PGT notturna (secondo Reuter 1970)
+INTEGER, PARAMETER :: ncrn = 3
+INTEGER, PARAMETER :: ncfn = 6
+REAL, PARAMETER :: class_rad_nig(0:ncrn) = &
+  (/-HUGE(0.),-70.,-6.5,HUGE(0.)/)
+REAL, PARAMETER :: class_ff_nig(0:ncfn) = &
+  (/0.,2.,3.,4.,5.,7.,HUGE(0.)/)
+INTEGER, PARAMETER :: ipgt_nig(ncrn,ncfn) = RESHAPE((/ &
+  6,6,4, &
+  6,5,4, &
+  5,4,4, &
+  5,4,4, &
+  5,4,4, &
+  4,4,4  &
+  /),(/ncrn,ncfn/))  
+
+! Se ci sono dati mancanti in input, il calcolo e' impossibile
 if(.not. c_e(ff) .or. .not. c_e(swd) .or. .not. c_e(lwb) )then 
   pgt=rmiss 
   return
 end if
 
-pgt=1.
+! Calcolo la classe di stabilita'
+cl_ff = 0
+cl_rad = 0
+
+if (swd > 5.) then                                      ! condizioni diurne
+  do kc = 1,ncfd
+    if (ff > class_ff_day(kc-1) .AND. ff <= class_ff_day(kc)) cl_ff = kc
+  enddo
+  do kc = 1,ncrd
+    if (swd >= class_rad_day(kc) .AND. swd < class_rad_day(kc-1)) cl_rad = kc
+  enddo
+  pgt = ipgt_day(cl_rad,cl_ff)
+
+else                                                    ! condizioni notturne
+  do kc = 1,ncfn
+    if (ff > class_ff_nig(kc-1) .AND. ff <= class_ff_nig(kc)) cl_ff = kc
+  enddo
+  do kc = 1,ncrn
+    if (lwb > class_rad_nig(kc-1) .AND. lwb <= class_rad_nig(kc)) cl_rad = kc
+  enddo
+  pgt = ipgt_nig(cl_rad,cl_ff)
+
+endif
 
 return
 end function PGT
