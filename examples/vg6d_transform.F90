@@ -29,6 +29,7 @@ use err_handling
 use char_utilities
 use optionparser_class
 USE geo_coord_class
+USE vol7d_level_class
 #ifdef ALCHIMIA
 USE alchimia
 use volgrid6d_alchimia_class

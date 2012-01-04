@@ -106,7 +106,7 @@ ELSE IF (stat_proc == 254) THEN
 
 ! compute length of cumulation step in seconds
   CALL getval(step, amsec=msteps)
-  steps = msteps/1000_int_ll
+  steps = int(msteps/1000_int_ll)
 
   IF (ANY(this%timerange(:)%p2 == steps)) THEN ! data is ready
     CALL vol7d_decompute_stat_proc(this, that, step, other, stat_proc_input)
@@ -519,8 +519,8 @@ TYPE(vol7d),INTENT(inout),OPTIONAL :: other !< optional volume that, on exit, is
 !INTEGER,INTENT(in),OPTIONAL :: stat_proc_input !< to be used with care, type of statistical processing of data that has to be processed (from grib2 table), only data having timerange of this type will be recomputed, the actual statistical processing performed and which will appear in the output volume, is however determined by \a stat_proc argument
 
 INTEGER :: tri, itr, iw, iwn, i, i1, i3, i5, i6
-REAL,ALLOCATABLE :: stepmsec(:)
-INTEGER(kind=int_ll) :: dmsec, stepmseci
+INTEGER(kind=int_ll),ALLOCATABLE :: stepmsec(:)
+INTEGER(kind=int_ll) :: dmsec
 TYPE(datetime) :: w_start, w_end
 TYPE(timedelta) :: sub_step, lmax_step
 TYPE(vol7d_timerange) :: otimerange
@@ -581,8 +581,7 @@ CALL vol7d_merge(that, v7dtmp)
 ! compute step length taking into account "pop" intervals
 ALLOCATE(stepmsec(SIZE(that%time)))
 DO i = 1, SIZE(that%time)
-  CALL getval(that%time(i)-(that%time(i)-step), amsec=stepmseci)
-  stepmsec(i) = stepmseci
+  CALL getval(that%time(i)-(that%time(i)-step), amsec=stepmsec(i))
 ENDDO
 
 ! finally perform computations
@@ -627,7 +626,7 @@ IF (ASSOCIATED(this%voldatir)) THEN
               IF (lweighted) THEN ! we should optimize for the unweighted case 
 ! compute relative weight
                 CALL getval(sub_step, amsec=dmsec)
-                weightr(iw) = REAL(dmsec)/stepmsec(i)
+                weightr(iw) = REAL(dmsec)/REAL(stepmsec(i))
               ENDIF
 ! next becomes current
               iw = iwn
@@ -720,7 +719,7 @@ IF (ASSOCIATED(this%voldatid)) THEN
               IF (lweighted) THEN ! we should optimize for the unweighted case 
 ! compute relative weight
                 CALL getval(sub_step, amsec=dmsec)
-                weightd(iw) = DBLE(dmsec)/stepmsec(i)
+                weightd(iw) = DBLE(dmsec)/DBLE(stepmsec(i))
               ENDIF
 ! next becomes current
               iw = iwn
@@ -901,7 +900,7 @@ CALL vol7d_alloc_vol(this)
 
 ! compute length of cumulation step in seconds
 CALL getval(step, amsec=msteps)
-steps = msteps/1000_int_ll
+steps = int(msteps/1000_int_ll)
 
 ! filter requested data
 CALL vol7d_copy(this, that, miss=.FALSE., sort=.FALSE., unique=.FALSE., &
@@ -957,7 +956,7 @@ TYPE(timedelta),INTENT(in) :: step !< length of the step over which the statisti
 LOGICAL,INTENT(in),OPTIONAL :: full_steps !< if provided and \a .TRUE., process only data having processing interval (p2) equal to a multiplier of \a step
 TYPE(vol7d),INTENT(out),OPTIONAL :: other !< optional volume that, on exit, is going to contain the data that did not contribute to the statistical processing
 
-INTEGER :: i1, i2, i3, i4, i5, i6, i, j, k, l, nitr, steps
+INTEGER :: i1, i3, i5, i6, i, j, k, l, nitr, steps
 INTEGER(kind=int_ll) :: msteps
 INTEGER,ALLOCATABLE :: map_tr(:,:,:,:,:), f(:)
 LOGICAL :: useful
@@ -975,7 +974,7 @@ CALL vol7d_alloc_vol(this)
 
 ! compute length of cumulation step in seconds
 CALL getval(step, amsec=msteps)
-steps = msteps/1000_int_ll
+steps = int(msteps/1000_int_ll)
 
 ! create a mask of suitable timeranges
 ALLOCATE(mask_timerange(SIZE(this%timerange)))
@@ -1413,8 +1412,8 @@ case("d")
   
   where (that%level%level1 == 105.and.that%level%level2 == 105 .and. c_e(that%voldatid(1,1,:,1,ind,1)))
     that%level%level1 = 100
-    that%level%l1 = realdat(that%voldatid(1,1,:,1,ind,1),that%dativar%d(ind))
-    that%level%l1 = that%voldatid(1,1,:,1,ind,1)
+    that%level%l1 = int(realdat(that%voldatid(1,1,:,1,ind,1),that%dativar%d(ind)))
+    that%level%l1 = int(that%voldatid(1,1,:,1,ind,1))
     that%level%level2 = imiss
     that%level%l2 = imiss
   end where
@@ -1423,7 +1422,7 @@ case("r")
 
   where (that%level%level1 == 105.and.that%level%level2 == 105 .and. c_e(that%voldatir(1,1,:,1,ind,1)))
     that%level%level1 = 100
-    that%level%l1 = realdat(that%voldatir(1,1,:,1,ind,1),that%dativar%r(ind))
+    that%level%l1 = int(realdat(that%voldatir(1,1,:,1,ind,1),that%dativar%r(ind)))
     that%level%level2 = imiss
     that%level%l2 = imiss
   end where
@@ -1432,7 +1431,7 @@ case("i")
     
   where (that%level%level1 == 105.and.that%level%level2 == 105 .and. c_e(that%voldatii(1,1,:,1,ind,1)))
     that%level%level1 = 100
-    that%level%l1 = realdat(that%voldatii(1,1,:,1,ind,1),that%dativar%i(ind))
+    that%level%l1 = int(realdat(that%voldatii(1,1,:,1,ind,1),that%dativar%i(ind)))
     that%level%level2 = imiss
     that%level%l2 = imiss
   end where
@@ -1441,7 +1440,7 @@ case("b")
 
   where (that%level%level1 == 105.and.that%level%level2 == 105 .and. c_e(that%voldatib(1,1,:,1,ind,1)))
     that%level%level1 = 100
-    that%level%l1 = realdat(that%voldatib(1,1,:,1,ind,1),that%dativar%b(ind))
+    that%level%l1 = int(realdat(that%voldatib(1,1,:,1,ind,1),that%dativar%b(ind)))
     that%level%level2 = imiss
     that%level%l2 = imiss
   end where
@@ -1450,7 +1449,7 @@ case("c")
 
   where (that%level%level1 == 105.and.that%level%level2 == 105 .and. c_e(that%voldatic(1,1,:,1,ind,1)))
     that%level%level1 = 100
-    that%level%l1 = realdat(that%voldatic(1,1,:,1,ind,1),that%dativar%c(ind))
+    that%level%l1 = int(realdat(that%voldatic(1,1,:,1,ind,1),that%dativar%c(ind)))
     that%level%level2 = imiss
     that%level%l2 = imiss
   end where
@@ -1465,15 +1464,14 @@ deallocate(lnetwork)
 END SUBROUTINE vol7d_normalize_vcoord
 
 
-!> Metodo per calcolare variabili derivate.
-!! TO DO !!
-SUBROUTINE vol7d_compute_var(this,that,var)
-TYPE(vol7d),INTENT(INOUT)  :: this !< oggetto da normalizzare
-TYPE(vol7d),INTENT(OUT) :: that !< oggetto normalizzato
-
-character(len=1) :: type
-integer :: ind
-TYPE(vol7d_var),intent(in) ::  var
+!!$!> Metodo per calcolare variabili derivate.
+!!$!! TO DO !!
+!!$SUBROUTINE vol7d_compute_var(this,that,var)
+!!$TYPE(vol7d),INTENT(INOUT)  :: this !< oggetto da normalizzare
+!!$TYPE(vol7d),INTENT(OUT) :: that !< oggetto normalizzato
+!!$
+!!$character(len=1) :: type
+!!$TYPE(vol7d_var),intent(in) ::  var
 
 
 !!$call init(var, btable="B10004")    ! Pressure
@@ -1529,9 +1527,9 @@ TYPE(vol7d_var),intent(in) ::  var
 !!$    
 !!$end select
 
-
-END SUBROUTINE vol7d_compute_var
-
+!!$
+!!$END SUBROUTINE vol7d_compute_var
+!!$
 
 ! get start of period, end of period and reference time from time,
 ! timerange, according to time_definition.
@@ -1605,9 +1603,9 @@ ENDIF
 
 IF (time /= datetime_miss) THEN
   CALL getval(p1, amsec=dmsec) ! end of period
-  timerange%p1 = dmsec/1000_int_ll
+  timerange%p1 = int(dmsec/1000_int_ll)
   CALL getval(p2, amsec=dmsec) ! length of period
-  timerange%p2 = dmsec/1000_int_ll
+  timerange%p2 = int(dmsec/1000_int_ll)
 ELSE
   timerange%p1 = imiss
   timerange%p2 = imiss

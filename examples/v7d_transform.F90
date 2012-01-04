@@ -87,7 +87,7 @@ INTEGER :: category
 
 ! for computing
 LOGICAL :: comp_regularize, comp_average, comp_cumulate, comp_keep, comp_sort, obso
-LOGICAL :: file, lconvr
+LOGICAL :: file, lconvr, round
 CHARACTER(len=13) :: comp_stat_proc
 CHARACTER(len=23) :: comp_step, comp_start
 INTEGER :: istat_proc, ostat_proc
@@ -336,6 +336,9 @@ CALL optionparser_add(opt, '', 'output-variable-list', output_variable_list, '',
  &The output_variable_list is expressed in the form of a comma-separated list of B-table alphanumeric codes, &
  &e.g. ''B13011,B12101''')
 #endif
+
+CALL optionparser_add(opt, ' ', 'rounding', round, help= &
+ 'simplifies volume, merging similar levels and timeranges')
 
 ! help options
 CALL optionparser_add_help(opt, 'h', 'help', help='show an help message and exit')
@@ -823,6 +826,13 @@ ENDIF
 IF (comp_sort) THEN
   CALL vol7d_smart_sort(v7d, lsort_time=.TRUE., lsort_timerange=.TRUE., lsort_level=.TRUE.)
 ENDIF
+
+
+if (round) then
+  call rounding(v7d,v7dtmp,level=almost_equal_levels,nostatproc=.true.)
+  CALL delete(v7d)
+  v7d= v7dtmp
+end if
 
 
 #ifdef ALCHIMIA

@@ -178,10 +178,17 @@ END INTERFACE
 #define ARRAYOF_TYPE arrayof_vol7d_timerange
 #define ARRAYOF_ORIGEQ 1
 #include "arrayof_pre.F90"
+
+
+type(vol7d_timerange) :: almost_equal_timeranges(2)=(/&
+ vol7d_timerange(254,0,imiss),&
+ vol7d_timerange(3,0,3600)/)
+
+
 ! from arrayof
 PUBLIC insert, append, remove, packarray
 PUBLIC insert_unique, append_unique
-
+PUBLIC almost_equal_timeranges
 
 CONTAINS
 

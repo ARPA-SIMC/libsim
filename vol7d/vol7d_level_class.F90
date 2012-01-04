@@ -172,6 +172,11 @@ INTERFACE to_char
   MODULE PROCEDURE to_char_level
 END INTERFACE
 
+type(vol7d_level) :: almost_equal_levels(3)=(/&
+ vol7d_level(  1,imiss,imiss,imiss),&
+ vol7d_level(103,imiss,imiss,imiss),&
+ vol7d_level(106,imiss,imiss,imiss)/)
+
 
 CONTAINS
 

@@ -249,6 +249,23 @@ INTERFACE c_e
   MODULE PROCEDURE vol7d_c_e
 END INTERFACE
 
+!> Reduce some dimensions (level and timerage) for semplification (rounding).
+!! You can use this for simplify and use variables in computation like alchimia
+!! where fields have to be on the same coordinate
+!! It return real or character data only: if input is charcter data only it return character otherwise il return
+!! all the data converted to real.
+!! examples:
+!! means in time for short periods and istantaneous values
+!! 2 meter and surface levels
+!! If there are data on more then one almost equal levels or timeranges, the first var present (at least one point)
+!! will be taken (order is by icreasing var index).
+!! You can use predefined values for classic semplification
+!! almost_equal_levels and almost_equal_timeranges
+!! The level or timerange in output will be defined by the first element of level and timerange list
+INTERFACE rounding
+  MODULE PROCEDURE v7d_rounding
+END INTERFACE
+
 !!$INTERFACE get_volana
 !!$  MODULE PROCEDURE vol7d_get_volanar, vol7d_get_volanad, vol7d_get_volanai, &
 !!$   vol7d_get_volanab, vol7d_get_volanac
@@ -1983,8 +2000,6 @@ END SUBROUTINE vol7d_diff_only
 !! Se non viene fornito il nome file viene utilizzato un file di default con nome pari al nome del programma in 
 !! esecuzione con postfisso ".v7d".
 !! Come parametro opzionale c'è la description che insieme alla data corrente viene inserita nell'header del file.
-
-
 subroutine vol7d_write_on_file (this,unit,description,filename,filename_auto)
 
 TYPE(vol7d),INTENT(IN) :: this !< volume vol7d da scrivere 
@@ -2700,10 +2715,9 @@ integer :: inddativar,inddativarattr
 
 do inddativar=1,size(v7d%dativar%c)
 
-  if (c_e(&
-   v7d%voldatic &
-   (indana,indtime,indlevel,indtimerange,inddativar,indnetwork)  &
-   )) then
+  if (c_e(v7d%voldatic(indana,indtime,indlevel,indtimerange,inddativar,indnetwork)) .and. &
+    .not. c_e(v7d%voldatic(indananew,indtimenew,indlevelnew,indtimerangenew,inddativar,indnetworknew))&
+   ) then
 
                                 ! dati
     v7d%voldatic &
@@ -2769,6 +2783,222 @@ end do
 
 end subroutine move_datac
 
+!> Move data for all variables from one coordinate in the real volume to other.
+!! Only not missing data will be copyed and all attributes will be moved together.
+!! Usefull to colapse data spread in more indices (level or time or ....).
+!! After the move is possible to set to missing some descriptor and make a copy with miss=.true. 
+!! to obtain a new vol7d with less data shape.
+subroutine move_datar (v7d,&
+ indana,indtime,indlevel,indtimerange,indnetwork,&
+ indananew,indtimenew,indlevelnew,indtimerangenew,indnetworknew)
+
+TYPE(vol7d),intent(inout) :: v7d !< data in form of character in this object will be moved
+
+integer,intent(in) :: indana,indtime,indlevel,indtimerange,indnetwork !< source coordinate of the data
+integer,intent(in) :: indananew,indtimenew,indlevelnew,indtimerangenew,indnetworknew !< destination coordinate of data
+integer :: inddativar,inddativarattr
+
+
+do inddativar=1,size(v7d%dativar%r)
+
+  if (c_e(v7d%voldatir(indana,indtime,indlevel,indtimerange,inddativar,indnetwork)) .and. &
+    .not. c_e(v7d%voldatir(indananew,indtimenew,indlevelnew,indtimerangenew,inddativar,indnetworknew))&
+   ) then
+
+                                ! dati
+    v7d%voldatir &
+     (indananew,indtimenew,indlevelnew,indtimerangenew,inddativar,indnetworknew) = &
+     v7d%voldatir &
+     (indana,indtime,indlevel,indtimerange,inddativar,indnetwork)
+
+
+                                ! attributi
+    if (associated (v7d%dativarattr%i)) then
+      inddativarattr  = index(v7d%dativarattr%i,v7d%dativar%r(inddativar))
+      if (inddativarattr > 0 ) then
+        v7d%voldatiattri &
+         (indananew,indtimenew,indlevelnew,indtimerangenew,inddativarattr,indnetworknew,:) = &
+         v7d%voldatiattri &
+         (indana,indtime,indlevel,indtimerange,inddativarattr,indnetwork,:)
+      end if
+    end if
+
+    if (associated (v7d%dativarattr%r)) then
+      inddativarattr  = index(v7d%dativarattr%r,v7d%dativar%r(inddativar))
+      if (inddativarattr > 0 ) then
+        v7d%voldatiattrr &
+         (indananew,indtimenew,indlevelnew,indtimerangenew,inddativarattr,indnetworknew,:) = &
+         v7d%voldatiattrr &
+         (indana,indtime,indlevel,indtimerange,inddativarattr,indnetwork,:)
+      end if
+    end if
+
+    if (associated (v7d%dativarattr%d)) then
+      inddativarattr  = index(v7d%dativarattr%d,v7d%dativar%r(inddativar))
+      if (inddativarattr > 0 ) then
+        v7d%voldatiattrd &
+         (indananew,indtimenew,indlevelnew,indtimerangenew,inddativarattr,indnetworknew,:) = &
+         v7d%voldatiattrd &
+         (indana,indtime,indlevel,indtimerange,inddativarattr,indnetwork,:)
+      end if
+    end if
+
+    if (associated (v7d%dativarattr%b)) then
+      inddativarattr  = index(v7d%dativarattr%b,v7d%dativar%r(inddativar))
+      if (inddativarattr > 0 ) then
+        v7d%voldatiattrb &
+         (indananew,indtimenew,indlevelnew,indtimerangenew,inddativarattr,indnetworknew,:) = &
+         v7d%voldatiattrb &
+         (indana,indtime,indlevel,indtimerange,inddativarattr,indnetwork,:)
+      end if
+    end if
+
+    if (associated (v7d%dativarattr%c)) then
+      inddativarattr  = index(v7d%dativarattr%c,v7d%dativar%r(inddativar))
+      if (inddativarattr > 0 ) then
+          v7d%voldatiattrc &
+           (indananew,indtimenew,indlevelnew,indtimerangenew,inddativarattr,indnetworknew,:) = &
+           v7d%voldatiattrc &
+           (indana,indtime,indlevel,indtimerange,inddativarattr,indnetwork,:)
+      end if
+    end if
+
+  end if
+
+end do
+
+end subroutine move_datar
+
+
+!> Reduce some dimensions (level and timerage) for semplification (rounding).
+!! You can use this for simplify and use variables in computation like alchimia
+!! where fields have to be on the same coordinate
+!! It return real or character data only: if input is charcter data only it return character otherwise il return
+!! all the data converted to real.
+!! examples:
+!! means in time for short periods and istantaneous values
+!! 2 meter and surface levels
+!! If there are data on more then one almost equal levels or timeranges, the first var present (at least one point)
+!! will be taken (order is by icreasing var index).
+!! You can use predefined values for classic semplification
+!! almost_equal_levels and almost_equal_timeranges
+!! The level or timerange in output will be defined by the first element of level and timerange list
+subroutine v7d_rounding(v7din,v7dout,level,timerange,nostatproc)
+type(vol7d),intent(inout) :: v7din  !< input volume
+type(vol7d),intent(out) :: v7dout !> output volume
+type(vol7d_level),intent(in),optional :: level(:) !< almost equal level list
+type(vol7d_timerange),intent(in),optional :: timerange(:) !< almost equal timerange list
+!logical,intent(in),optional :: merge !< if there are data on more then one almost equal levels or timeranges
+!! will be merged POINT BY POINT with priority for the fird data found ordered by icreasing var index
+logical,intent(in),optional :: nostatproc !< do not take in account statistical processing code in timerange and P2
+
+integer :: nana,nlevel,ntime,ntimerange,nnetwork,nbin
+integer :: iana,ilevel,itimerange,indl,indt,itime,inetwork
+type(vol7d_level) :: roundlevel(size(v7din%level)) 
+type(vol7d_timerange) :: roundtimerange(size(v7din%timerange))
+type(vol7d) :: v7d_tmp
+
+
+nbin=0
+
+if (associated(v7din%dativar%r)) nbin = nbin + size(v7din%dativar%r)
+if (associated(v7din%dativar%i)) nbin = nbin + size(v7din%dativar%i)
+if (associated(v7din%dativar%d)) nbin = nbin + size(v7din%dativar%d)
+if (associated(v7din%dativar%b)) nbin = nbin + size(v7din%dativar%b)
+
+call init(v7d_tmp)
+
+roundlevel=v7din%level
+
+if (present(level))then
+  do ilevel = 1, size(v7din%level)
+    if ((any(v7din%level(ilevel) .almosteq. level))) then
+      roundlevel(ilevel)=level(1)
+    end if
+  end do
+end if
+
+roundtimerange=v7din%timerange
+
+if (present(timerange))then
+  do itimerange = 1, size(v7din%timerange)
+    if ((any(v7din%timerange(itimerange) .almosteq. timerange))) then
+      roundtimerange(itimerange)=timerange(1)
+    end if
+  end do
+end if
+
+!set istantaneous values everywere
+!preserve p1 for forecast time
+if (optio_log(nostatproc)) then
+  roundtimerange(:)%timerange=254
+  roundtimerange(:)%p2=imiss
+end if
+
+
+nana=size(v7din%ana)
+nlevel=count_distinct(roundlevel,back=.true.)
+ntime=size(v7din%time)
+ntimerange=count_distinct(roundtimerange,back=.true.)
+nnetwork=size(v7din%network)
+
+call init(v7d_tmp)
+
+if (nbin == 0) then
+  call copy(v7din,v7d_tmp)
+else
+  call vol7d_convr(v7din,v7d_tmp)
+end if
+
+v7d_tmp%level=roundlevel
+v7d_tmp%timerange=roundtimerange
+
+do ilevel=1, size(v7d_tmp%level)
+  indl=index(v7d_tmp%level,roundlevel(ilevel))
+  do itimerange=1,size(v7d_tmp%timerange)
+    indt=index(v7d_tmp%timerange,roundtimerange(itimerange))
+
+    if (indl /= ilevel .or. indt /= itimerange) then
+
+      do iana=1, nana
+        do itime=1,ntime
+          do inetwork=1,nnetwork
+            
+            if (nbin > 0) then
+              call move_datar (v7d_tmp,&
+               iana,itime,ilevel,itimerange,inetwork,&
+               iana,itime,indl,indt,inetwork)
+            else
+              call move_datac (v7d_tmp,&
+               iana,itime,ilevel,itimerange,inetwork,&
+               iana,itime,indl,indt,inetwork)
+            end if
+            
+          end do
+        end do
+      end do
+      
+    end if
+
+  end do
+end do
+
+! set to missing level and time > nlevel
+do  ilevel=nlevel+1,size(v7d_tmp%level)
+  call init (v7d_tmp%level(ilevel))
+end do
+
+do  itimerange=ntimerange+1,size(v7d_tmp%timerange)
+  call init (v7d_tmp%timerange(itimerange))
+end do
+
+!copy with remove
+call copy(v7d_tmp,v7dout,miss=.true.)
+CALL delete (v7d_tmp)
+
+!call display(v7dout)
+
+end subroutine v7d_rounding
 
 
 END MODULE vol7d_class

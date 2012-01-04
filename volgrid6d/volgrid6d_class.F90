@@ -141,20 +141,11 @@ INTERFACE rounding
   MODULE PROCEDURE vg6d_rounding, vg6dv_rounding
 END INTERFACE
 
-type(vol7d_level) :: almost_equal_levels(3)=(/&
- vol7d_level(  1,imiss,imiss,imiss),&
- vol7d_level(103,imiss,imiss,imiss),&
- vol7d_level(106,imiss,imiss,imiss)/)
-type(vol7d_timerange) :: almost_equal_timeranges(2)=(/&
- vol7d_timerange(254,0,imiss),&
- vol7d_timerange(3,0,3600)/)
-
 private
 
 PUBLIC volgrid6d,init,delete,export,import,compute,transform, &
  wind_rot,wind_unrot,vg6d_c2a,display,volgrid6d_alloc,volgrid6d_alloc_vol
 PUBLIC rounding, vg6d_reduce
-PUBLIC almost_equal_levels, almost_equal_timeranges
 
 CONTAINS
 
@@ -2794,7 +2785,8 @@ type(volgrid6d),intent(in) :: vg6din  !< input volume
 type(volgrid6d),intent(out) :: vg6dout !> output volume
 type(vol7d_level),intent(in),optional :: level(:) !< almost equal level list
 type(vol7d_timerange),intent(in),optional :: timerange(:) !< almost equal timerange list
-logical,intent(in),optional :: merge !< if there are data on more then one almost equal levels or timeranges will be merged POINT BY POINT with priority for the fird data found ordered by icreasing var index
+logical,intent(in),optional :: merge !< if there are data on more then one almost equal levels or timeranges
+!! will be merged POINT BY POINT with priority for the fird data found ordered by icreasing var index
 logical,intent(in),optional :: nostatproc !< do not take in account statistical processing code in timerange and P2
 
 integer :: ilevel,itimerange
@@ -2821,6 +2813,8 @@ if (present(timerange))then
   end do
 end if
 
+!set istantaneous values everywere
+!preserve p1 for forecast time
 if (optio_log(nostatproc)) then
   roundtimerange(:)%timerange=254
   roundtimerange(:)%p2=imiss
