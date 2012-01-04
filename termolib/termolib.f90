@@ -2482,7 +2482,7 @@ if (swd > 5.) then                                      ! condizioni diurne
   do kc = 1,ncrd
     if (swd >= class_rad_day(kc) .AND. swd < class_rad_day(kc-1)) cl_rad = kc
   enddo
-  pgt = ipgt_day(cl_rad,cl_ff)
+  pgt = REAL(ipgt_day(cl_rad,cl_ff))
 
 else                                                    ! condizioni notturne
   do kc = 1,ncfn
@@ -2491,7 +2491,7 @@ else                                                    ! condizioni notturne
   do kc = 1,ncrn
     if (lwb > class_rad_nig(kc-1) .AND. lwb <= class_rad_nig(kc)) cl_rad = kc
   enddo
-  pgt = ipgt_nig(cl_rad,cl_ff)
+  pgt = REAL(ipgt_nig(cl_rad,cl_ff))
 
 endif
 
