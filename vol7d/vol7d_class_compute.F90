@@ -27,7 +27,7 @@
 MODULE vol7d_class_compute
 USE datetime_class
 USE vol7d_class
-
+USE simple_stat
 IMPLICIT NONE
 
 CONTAINS
