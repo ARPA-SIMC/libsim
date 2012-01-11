@@ -1479,7 +1479,7 @@ res = this%iminuti/that%iminuti
 END FUNCTION timedelta_divtd
 
 
-FUNCTION timedelta_mod(this, that) RESULT(res)
+elemental FUNCTION timedelta_mod(this, that) RESULT(res)
 TYPE(timedelta),INTENT(IN) :: this, that
 TYPE(timedelta) :: res
 
@@ -1489,7 +1489,7 @@ res%month = 0
 END FUNCTION timedelta_mod
 
 
-FUNCTION datetime_timedelta_mod(this, that) RESULT(res)
+elemental FUNCTION datetime_timedelta_mod(this, that) RESULT(res)
 TYPE(datetime),INTENT(IN) :: this
 TYPE(timedelta),INTENT(IN) :: that
 TYPE(timedelta) :: res

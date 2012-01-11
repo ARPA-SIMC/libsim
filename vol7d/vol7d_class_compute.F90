@@ -1197,12 +1197,13 @@ END SUBROUTINE vol7d_recompute_stat_proc_diff
 !! richiesto. Attenzione, se necessario la dimensione tempo (vettore
 !! \a this%time del volume \a this ) viene riordinata, come effetto
 !! collaterale della chiamata.
-SUBROUTINE vol7d_fill_time(this, that, step, start, stopp)
+SUBROUTINE vol7d_fill_time(this, that, step, start, stopp, fill_data)
 TYPE(vol7d),INTENT(inout) :: this
 TYPE(vol7d),INTENT(inout) :: that
 TYPE(timedelta),INTENT(in) :: step
 TYPE(datetime),INTENT(in),OPTIONAL :: start
 TYPE(datetime),INTENT(in),OPTIONAL :: stopp
+logical,optional :: fill_data !< if .true. fill data values with nearest in time (inside step)
 
 TYPE(datetime) :: counter, lstart, lstop
 INTEGER :: i, naddtime
@@ -1269,11 +1270,17 @@ IF (naddtime > 0) THEN
     counter = counter + step
   ENDDO naddadd
 
+!! ? why sort all dimension ?
+!!  CALL vol7d_append(that, this, lsort_time=.TRUE.)
   CALL vol7d_append(that, this, sort=.TRUE.)
 
 ELSE
-  CALL vol7d_copy(this, that)
+!! ? why sort all dimension ?
+!!  CALL vol7d_copy(this, that, lsort_time=.TRUE.)
+  CALL vol7d_copy(this, that, sort=.TRUE.)
 ENDIF
+
+if (optio_log(fill_data)) call vol7d_fill_data(that, step, start, stopp)
 
 END SUBROUTINE vol7d_fill_time
 
@@ -1291,12 +1298,13 @@ END SUBROUTINE vol7d_fill_time
 !! chiamante se il suo contenuto non è più richiesto. Attenzione, se
 !! necessario, la dimensione tempo (vettore \a this%time del volume \a
 !! this ) viene riordinata, come effetto collaterale della chiamata.
-SUBROUTINE vol7d_regularize_time(this, that, step, start, stopp)
+SUBROUTINE vol7d_regularize_time(this, that, step, start, stopp, fill_data)
 TYPE(vol7d),INTENT(inout) :: this
 TYPE(vol7d),INTENT(inout) :: that
 TYPE(timedelta),INTENT(in) :: step
 TYPE(datetime),INTENT(in),OPTIONAL :: start
 TYPE(datetime),INTENT(in),OPTIONAL :: stopp
+logical,optional :: fill_data !< if .true. fill data values with nearest in time (inside step)
 
 TYPE(datetime) :: lstart, lstop
 INTEGER :: n
@@ -1318,15 +1326,105 @@ DO n = 1, SIZE(this%time)
   ENDIF
 ENDDO
 IF (ALL(time_mask)) THEN ! do not lose time in a simple common case
-  CALL vol7d_fill_time(this, that, step, start, stopp)
+  CALL vol7d_fill_time(this, that, step, start, stopp, fill_data)
 ELSE
   CALL vol7d_copy(this, v7dtmp, ltime=time_mask)
-  CALL vol7d_fill_time(v7dtmp, that, step, start, stopp)
+  CALL vol7d_fill_time(v7dtmp, that, step, start, stopp, fill_data)
   CALL delete(v7dtmp) ! must be cleaned in this case
 ENDIF
 
 END SUBROUTINE vol7d_regularize_time
 
+
+!> Fill data volume
+!! Nearest data in time is set in the time coordinate.
+!! Take in account istantaneous values only.
+SUBROUTINE vol7d_fill_data(this, step, start, stopp, tollerance)
+TYPE(vol7d),INTENT(inout) :: this !< data volume to elaborate
+TYPE(timedelta),INTENT(in) :: step !< interval in time where to fill data
+TYPE(datetime),INTENT(in),OPTIONAL :: start !< start time where to fill
+TYPE(datetime),INTENT(in),OPTIONAL :: stopp !< stop time where to fill
+TYPE(timedelta),INTENT(in),optional :: tollerance !< tollerance in time to find data to fill (excluding extreme) (default to step)
+
+TYPE(datetime) :: lstart, lstop
+integer :: indana , indtime ,indlevel ,indtimerange ,inddativarr, indnetwork, iindtime
+type(timedelta) :: deltato,deltat, ltollerance
+
+CALL safe_start_stop(this, lstart, lstop, start, stopp)
+IF (.NOT. c_e(lstart) .OR. .NOT. c_e(lstop)) RETURN
+
+CALL l4f_log(L4F_INFO, 'vol7d_fill_data: time interval '//TRIM(to_char(lstart))// &
+ ' '//TRIM(to_char(lstop)))
+
+if (present(tollerance))then
+  ltollerance=tollerance
+else
+  ltollerance=step/2
+end if
+
+do indtime=1,size(this%time)
+  
+  IF (this%time(indtime) < lstart .OR. this%time(indtime) > lstop .OR. &
+   MOD(this%time(indtime) - lstart, step) /= timedelta_0) cycle
+  do indtimerange=1,size(this%timerange)
+    if (this%timerange(indtimerange)%timerange /= 254) cycle
+    do indnetwork=1,size(this%network)
+      do inddativarr=1,size(this%dativar%r)
+        do indlevel=1,size(this%level)
+          do indana=1,size(this%ana)
+            
+                                !find the nearest data in time if data is missing
+            if (.not. c_e(this%voldatir(indana, indtime, indlevel, indtimerange, inddativarr, indnetwork)))then
+              deltato=timedelta_miss
+
+              !do iindtime=max(indtime-20,1),min(indtime+20,size(this%time)) !check on a chunk: 20 should be enought
+              
+              do iindtime=indtime+1,size(this%time) !check forward
+
+                if (c_e(this%voldatir  (indana, iindtime, indlevel, indtimerange, inddativarr, indnetwork )))then
+                    deltat=this%time(iindtime)-this%time(indtime)
+
+                  if  (deltat >= ltollerance) exit
+                  
+                  if (deltat < deltato) then
+                    this%voldatir(indana, indtime, indlevel, indtimerange, inddativarr, indnetwork) = &
+                     this%voldatir(indana, iindtime, indlevel, indtimerange, inddativarr, indnetwork)
+                    deltato=deltat
+                  end if
+                end if
+              end do
+
+              do iindtime=indtime-1,1,-1 !check backward
+
+                if (c_e(this%voldatir  (indana, iindtime, indlevel, indtimerange, inddativarr, indnetwork )))then
+                  if (iindtime < indtime) then
+                    deltat=this%time(indtime)-this%time(iindtime)
+                  else if (iindtime > indtime) then
+                    deltat=this%time(iindtime)-this%time(indtime)
+                  else
+                    cycle
+                  end if
+
+                  if  (deltat >= ltollerance) exit
+                  
+                  if (deltat < deltato) then
+                    this%voldatir(indana, indtime, indlevel, indtimerange, inddativarr, indnetwork) = &
+                     this%voldatir(indana, iindtime, indlevel, indtimerange, inddativarr, indnetwork)
+                    deltato=deltat
+                  end if
+                end if
+              end do
+
+            end if
+          end do
+        end do
+      end do
+    end do
+  end do
+end do
+
+END SUBROUTINE vol7d_fill_data
+            
 
 ! private utility routine for checking interval and start-stop times
 ! in input missing start-stop values are treated as not present
@@ -1613,5 +1711,65 @@ ENDIF
 
 END SUBROUTINE time_timerange_set_period
 
+
+
+SUBROUTINE vol7d_compute_NormalizedDensityIndex(this, that, stat_proc, &
+ step, start, stopp, perc_vals)
+TYPE(vol7d),INTENT(inout) :: this !< volume providing data to be computed, it is not modified by the method, apart from performing a \a vol7d_alloc_vol on it
+TYPE(vol7d),INTENT(out) :: that !< output volume which will contain the computed data
+INTEGER,INTENT(in) :: stat_proc !< type of statistical processing to be computed (from grib2 table)
+TYPE(timedelta),INTENT(in) :: step !< length of the step over which the statistical processing is performed
+TYPE(datetime),INTENT(in),OPTIONAL :: start !< start of statistical processing interval
+TYPE(datetime),INTENT(in),OPTIONAL :: stopp  !< end of statistical processing interval
+real,intent(in) :: perc_vals(:) !< percentile values to use in compute, between 0. and 100.
+
+!INTEGER,INTENT(in),OPTIONAL :: stat_proc_input !< to be used with care, type of statistical processing of data that has to be processed (from grib2 table), only data having timerange of this type will be recomputed, the actual statistical processing performed and which will appear in the output volume, is however determined by \a stat_proc argument
+
+integer :: itr
+integer :: indana , indtime ,indlevel ,indtimerange ,inddativarr, indnetwork
+LOGICAL,ALLOCATABLE :: mask_time(:)
+TYPE(datetime) :: lstart, lstop
+REAL, DIMENSION(:),allocatable ::  ndi,limbins
+
+! initial check
+itr = index(this%timerange(:), vol7d_timerange_new(stat_proc, 0, 0))
+IF (itr <= 0) THEN
+  CALL l4f_log(L4F_WARN, &
+   'vol7d_compute, no timeranges suitable for statistical processing NormalizedDensityIndex')
+  RETURN
+ENDIF
+
+CALL safe_start_stop(this, lstart, lstop, start, stopp)
+IF (.NOT. c_e(lstart) .OR. .NOT. c_e(lstop)) RETURN
+
+allocate (ndi(size(perc_vals)-1),limbins(size(perc_vals)))
+allocate (mask_time(size(this%time)))
+
+!CALL init(that, time_definition=this%time_definition)
+!CALL vol7d_alloc_vol(this)
+
+mask_time=(this%time < lstart .OR. this%time(indtime) > lstop .OR. MOD(this%time - lstart, step) /= timedelta_0)
+
+!TODO how to use this mask ??? without copy??
+
+do indtimerange=1,size(this%timerange)
+  do inddativarr=1,size(this%dativar%r)
+    do indlevel=1,size(this%level)
+      
+      call NormalizedDensityIndex (&
+       reshape(this%voldatir(:,:, indlevel, indtimerange, inddativarr,:),(/1/)),&
+       perc_vals, ndi, limbins) 
+      
+      print *, ndi
+      print *, limbins
+
+    end do
+  end do
+end do
+
+deallocate (ndi,limbins,mask_time)
+
+
+end SUBROUTINE vol7d_compute_NormalizedDensityIndex
 
 END MODULE vol7d_class_compute

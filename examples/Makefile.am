@@ -50,7 +50,7 @@ if NCARG
 bin_PROGRAMS += v7d_plot_sound
 
 v7d_plot_sound_SOURCES = v7d_plot_sound.F90
-v7d_plot_sound_LDADD = ../graphics/libsim_graphics.la ../base/libsim_base.la ../vol7d/libsim_vol7d.la  ../log4fortran/liblog4fortran.la ../termolib/libsim_termolib.la
+v7d_plot_sound_LDADD = ../graphics/libsim_graphics.la  ../vol7d/libsim_vol7d.la  ../log4fortran/liblog4fortran.la ../termolib/libsim_termolib.la ../base/libsim_base.la
 
 endif
 

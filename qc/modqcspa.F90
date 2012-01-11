@@ -726,7 +726,10 @@ do indana=1,size(qcspa%v7d%ana)
                     else
                       cycle
                     end if
-                    if (deltat < deltato) datola = datila(iindtime)
+                    if (deltat < deltato) then
+                      datola = datila(iindtime)
+                      deltato = deltat
+                    end if
                   end if
                 end do
               end if

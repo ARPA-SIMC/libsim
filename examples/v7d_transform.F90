@@ -86,7 +86,7 @@ CHARACTER(len=512):: a_name
 INTEGER :: category
 
 ! for computing
-LOGICAL :: comp_regularize, comp_average, comp_cumulate, comp_keep, comp_sort, obso
+LOGICAL :: comp_regularize, comp_average, comp_cumulate, comp_keep, comp_sort, comp_fill_data, obso
 LOGICAL :: file, lconvr, round
 CHARACTER(len=13) :: comp_stat_proc
 CHARACTER(len=23) :: comp_step, comp_start
@@ -249,6 +249,8 @@ CALL optionparser_add(opt, ' ', 'comp-frac-valid', comp_frac_valid, 1., help= &
  &statistically processed value acceptable')
 CALL optionparser_add(opt, ' ', 'comp-sort', comp_sort, help= &
  'sort all sortable dimensions of the volume after the computations')
+CALL optionparser_add(opt, ' ', 'comp-fill-data', comp_fill_data, help= &
+ 'fill missing istantaneous data with nearest in time inside comp-step (require comp-regularize')
 
 ! option for interpolation processing
 CALL optionparser_add(opt, ' ', 'pre-trans-type', pre_trans_type, '', help= &
@@ -534,6 +536,13 @@ IF (comp_stat_proc /= '') THEN
   ENDIF
 ENDIF
 
+! check comp_fill_data
+if (comp_fill_data .and. .not. comp_regularize) then
+  CALL l4f_category_log(category, L4F_ERROR, &
+   'error in command-line parameters, comp-fill-data without comp-regularize')
+  CALL raise_fatal_error()
+ENDIF
+
 
 CALL init(v7d_coord)
 ! import coord_file
@@ -776,7 +785,7 @@ ENDIF
 
 IF (comp_regularize) THEN
   CALL init(v7d_comp1)
-  CALL vol7d_regularize_time(v7d, v7d_comp1, c_i, c_s)
+  CALL vol7d_regularize_time(v7d, v7d_comp1, c_i, c_s, fill_data=comp_fill_data)
   CALL delete(v7d)
   v7d = v7d_comp1
 ENDIF
@@ -813,7 +822,7 @@ IF (c_e(istat_proc) .AND. c_e(ostat_proc)) THEN
   CALL delete(v7d)
   v7d = v7d_comp3
 
-! merge the tho computed fields
+! merge the two computed fields
   IF (.NOT. comp_keep) THEN ! the user is not interested in the other volume
     CALL delete(v7d)
     v7d = v7d_comp1
