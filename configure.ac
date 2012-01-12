@@ -27,6 +27,10 @@ fi
 AC_DEFINE_UNQUOTED(SIZEOF_PTR_C, $sizeof_ptr_c,
  [Fortran KIND defining an INTEGER containing a C pointer])
 
+AC_ARG_ENABLE(examples, AC_HELP_STRING([--enable-examples],
+  [enable build of examples]), , [enableval=no])dnl default disable
+AM_CONDITIONAL(EXAMPLES, test "x$enableval" = "xyes")
+
 AC_ARG_ENABLE(f2003-features, AC_HELP_STRING([--enable-f2003-features],
   [enable some F2003 features]), , [enableval=no])dnl default disable
 if test "x$enableval" = "xyes"; then
@@ -413,6 +417,7 @@ base/Makefile
 grib/Makefile
 vol7d/Makefile
 volgrid6d/Makefile
+bin/Makefile
 examples/Makefile
 data/Makefile
 qc/Makefile
