@@ -200,8 +200,8 @@ ltimef=datetime_miss
 if (present (timei)) ltimei=timei
 if (present (timef)) ltimef=timef
  
-call getval  (ltimei+timedelta_new(minute=30), yeari, monthi, dayi, houri, minutei, mseci)
-call getval  (ltimef+timedelta_new(minute=30), yearf, monthf, dayf, hourf, minutef, msecf)
+CALL getval(ltimei+timedelta_new(minute=30), year=yeari, month=monthi, day=dayi, hour=houri, minute=minutei, msec=mseci)
+call getval(ltimef+timedelta_new(minute=30), year=yearf, month=monthf, day=dayf, hour=hourf, minute=minutef, msec=msecf)
 
 if ( yeari == yearf .and. monthi == monthf .and. dayi == dayf) then
 

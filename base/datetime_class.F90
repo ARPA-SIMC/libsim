@@ -546,7 +546,7 @@ CHARACTER(len=*),INTENT(OUT),OPTIONAL :: isodate !< data completa nel formato \c
 CHARACTER(len=*),INTENT(OUT),OPTIONAL :: simpledate !< data completa nel formato \c AAAAMMGGhhmmssmsc , la variabile può essere più corta di 17 caratteri, in tal caso conterrà solo ciò che vi cape, da preferire rispetto a \a oraclesimdate
 CHARACTER(len=12),INTENT(OUT),OPTIONAL :: oraclesimdate !< data parziale nel formato \c AAAAMMGGhhmm
 
-INTEGER :: lyear, lmonth, lday, lhour, lminute, lmsec, ier
+INTEGER :: lyear, lmonth, lday, lhour, lminute, lmsec
 CHARACTER(len=23) :: datebuf
 
 IF (PRESENT(year) .OR. PRESENT(month) .OR. PRESENT(day) .OR. PRESENT(hour) &
@@ -1145,8 +1145,9 @@ END SUBROUTINE timedelta_delete
 !! modalità desiderate. Qualsiasi combinazione dei parametri
 !! opzionali è consentita. \a oraclesimedate è
 !! obsoleto, usare piuttosto \a simpledate.
-pure SUBROUTINE timedelta_getval(this, year, month, amonth, day, hour, minute, msec, &
- ahour, aminute, amsec, isodate, simpledate, oraclesimdate)
+PURE SUBROUTINE timedelta_getval(this, year, month, amonth, &
+ day, hour, minute, sec, msec, &
+ ahour, aminute, asec, amsec, isodate, simpledate, oraclesimdate)
 TYPE(timedelta),INTENT(IN) :: this !< oggetto di cui restituire il valore
 INTEGER,INTENT(OUT),OPTIONAL :: year !< anni, /=0 solo per intervalli "popolari"
 INTEGER,INTENT(OUT),OPTIONAL :: month !< mesi modulo 12, /=0 solo per intervalli "popolari"
@@ -1154,19 +1155,24 @@ INTEGER,INTENT(OUT),OPTIONAL :: amonth !< mesi totali, /=0 solo per intervalli "
 INTEGER,INTENT(OUT),OPTIONAL :: day !< giorni totali
 INTEGER,INTENT(OUT),OPTIONAL :: hour !< ore modulo 24
 INTEGER,INTENT(OUT),OPTIONAL :: minute !< minuti modulo 60
+INTEGER,INTENT(OUT),OPTIONAL :: sec !< secondi modulo 60
 INTEGER,INTENT(OUT),OPTIONAL :: msec !< millisecondi modulo 1000
 INTEGER,INTENT(OUT),OPTIONAL :: ahour !< ore totali
 INTEGER,INTENT(OUT),OPTIONAL :: aminute !< minuti totali
+INTEGER,INTENT(OUT),OPTIONAL :: asec !< secondi totali
 INTEGER(kind=int_ll),INTENT(OUT),OPTIONAL :: amsec !< millisecondi totali
 CHARACTER(len=*),INTENT(OUT),OPTIONAL :: isodate !< intervallo totale nel formato \c GGGGGGGGGG \c hh:mm:ss.msc  (simil-ISO), la variabile può essere più corta di 23 caratteri, in tal caso conterrà solo ciò che vi cape
 CHARACTER(len=*),INTENT(OUT),OPTIONAL :: simpledate  !< intervallo totale nel formato \c GGGGGGGGhhmmssmsc , la variabile può essere più corta di 17 caratteri, in tal caso conterrà solo ciò che vi cape, da preferire rispetto a \a oraclesimdate
 CHARACTER(len=12),INTENT(OUT),OPTIONAL :: oraclesimdate !< intervallo totale nel formato \c GGGGGGGGhhmm
 
-INTEGER :: lyear, lmonth, lday, lhour, lminute, ier
+!INTEGER :: lyear, lmonth, lday, lhour, lminute
 CHARACTER(len=23) :: datebuf
 
 IF (PRESENT(amsec)) THEN 
   amsec = this%iminuti
+ENDIF
+IF (PRESENT(asec)) THEN 
+  asec = this%iminuti/1000_int_ll
 ENDIF
 IF (PRESENT(aminute)) THEN 
   aminute = this%iminuti/60000_int_ll
@@ -1175,7 +1181,10 @@ IF (PRESENT(ahour)) THEN
   ahour = this%iminuti/3600000_int_ll
 ENDIF
 IF (PRESENT(msec)) THEN 
-  msec = MOD(this%iminuti, 60000_int_ll)
+  msec = MOD(this%iminuti, 1000_int_ll)
+ENDIF
+IF (PRESENT(sec)) THEN 
+  sec = MOD(this%iminuti/1000_int_ll, 60_int_ll)
 ENDIF
 IF (PRESENT(minute)) THEN 
   minute = MOD(this%iminuti/60000_int_ll, 60_int_ll)

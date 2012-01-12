@@ -129,14 +129,22 @@ END FUNCTION ARRAYOF_TYPE/**/_append_unique
 
 
 
-SUBROUTINE ARRAYOF_TYPE/**/_remove(this, nelem, pos, nodestroy)
+SUBROUTINE ARRAYOF_TYPE/**/_remove(this, nelem, pos &
+#ifdef ARRAYOF_ORIGDESTRUCTOR
+ , nodestroy &
+#endif
+)
 TYPE(ARRAYOF_TYPE) :: this
 INTEGER, INTENT(in), OPTIONAL :: nelem
 INTEGER, INTENT(in), OPTIONAL :: pos
+#ifdef ARRAYOF_ORIGDESTRUCTOR
 LOGICAL, INTENT(in), OPTIONAL :: nodestroy
+#endif
 
 INTEGER :: i, n, p
+#ifdef ARRAYOF_ORIGDESTRUCTOR
 LOGICAL :: destroy
+#endif
 
 IF (this%arraysize <= 0) RETURN ! nothing to do
 IF (PRESENT(nelem)) THEN ! explicit size
@@ -180,12 +188,22 @@ END SUBROUTINE ARRAYOF_TYPE/**/_remove
 
 
 
-SUBROUTINE ARRAYOF_TYPE/**/_delete(this, nodestroy)
+SUBROUTINE ARRAYOF_TYPE/**/_delete(this, &
+#ifdef ARRAYOF_ORIGDESTRUCTOR
+ nodestroy, &
+#endif
+ nodealloc)
 TYPE(ARRAYOF_TYPE) :: this
+#ifdef ARRAYOF_ORIGDESTRUCTOR
 LOGICAL, INTENT(in), OPTIONAL :: nodestroy
+#endif
+LOGICAL, INTENT(in), OPTIONAL :: nodealloc
 
+#ifdef ARRAYOF_ORIGDESTRUCTOR
 INTEGER :: i
 LOGICAL :: destroy
+#endif
+LOGICAL :: dealloc
 
 #ifdef DEBUG
 !PRINT*,'ARRAYOF: destroying ',this%arraysize
@@ -204,7 +222,13 @@ IF (ASSOCIATED(this%array)) THEN
   ENDIF
 #endif
 ! free the space
-  DEALLOCATE(this%array)
+  dealloc = .TRUE.
+  IF (PRESENT(nodealloc)) THEN
+    dealloc = .NOT.nodealloc
+  ENDIF
+  IF (dealloc) THEN
+    DEALLOCATE(this%array)
+  ENDIF
 ENDIF
 ! give empty values
 this=ARRAYOF_TYPE/**/_new()

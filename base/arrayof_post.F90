@@ -129,14 +129,22 @@ END FUNCTION ARRAYOF_TYPE/**/_append_unique
 
 !> Method for removing elements of the array at a desired position.
 !! If necessary, the array is reallocated to reduce space.
-SUBROUTINE ARRAYOF_TYPE/**/_remove(this, nelem, pos, nodestroy)
+SUBROUTINE ARRAYOF_TYPE/**/_remove(this, nelem, pos &
+#ifdef ARRAYOF_ORIGDESTRUCTOR
+ , nodestroy &
+#endif
+)
 TYPE(ARRAYOF_TYPE) :: this !< array object in which an element has to be removed
 INTEGER, INTENT(in), OPTIONAL :: nelem !< number of elements to remove, if not provided, a single element is removed
 INTEGER, INTENT(in), OPTIONAL :: pos !< position of the element to be removed, if it is out of range, it is clipped, if it is not provided, objects are removed at the end
+#ifdef ARRAYOF_ORIGDESTRUCTOR
 LOGICAL, INTENT(in), OPTIONAL :: nodestroy !< if provided and \c .TRUE. , the destructor possibily defined for the ARRAYOF_ORIGTYPE is not called for every deleted object, may be useful if the objects to be deleted have been copied to another instance of ARRAYOF_TYPE and continue their life there
+#endif
 
 INTEGER :: i, n, p
+#ifdef ARRAYOF_ORIGDESTRUCTOR
 LOGICAL :: destroy
+#endif
 
 IF (this%arraysize <= 0) RETURN ! nothing to do
 IF (PRESENT(nelem)) THEN ! explicit size
@@ -180,12 +188,23 @@ END SUBROUTINE ARRAYOF_TYPE/**/_remove
 !> Destructor for finalizing an array object.  If defined, calls the
 !! destructor for every element of the array object;
 !! finally it deallocates all the space occupied.
-SUBROUTINE ARRAYOF_TYPE/**/_delete(this, nodestroy)
+SUBROUTINE ARRAYOF_TYPE/**/_delete(this, &
+#ifdef ARRAYOF_ORIGDESTRUCTOR
+ nodestroy, &
+#endif
+ nodealloc)
 TYPE(ARRAYOF_TYPE) :: this !< array object to be destroyed
+#ifdef ARRAYOF_ORIGDESTRUCTOR
 LOGICAL, INTENT(in), OPTIONAL :: nodestroy !< if provided and \c .TRUE. , the destructor possibily defined for the ARRAYOF_ORIGTYPE is not called for every deleted object, may be useful if the objects to be deleted have been copied to another instance of ARRAYOF_TYPE and continue their life there
+#endif
+LOGICAL, INTENT(in), OPTIONAL :: nodealloc !< if provided and \c .TRUE. , the space reserved for the array is not deallocated, thus the values are retained, while the array pointer is nullified, this means that the caller must have previously assigned the pointer contents this%array to another pointer to prevent memory leaks
 
+
+#ifdef ARRAYOF_ORIGDESTRUCTOR
 INTEGER :: i
 LOGICAL :: destroy
+#endif
+LOGICAL :: dealloc
 
 #ifdef DEBUG
 !PRINT*,'ARRAYOF: destroying ',this%arraysize
@@ -204,7 +223,13 @@ IF (ASSOCIATED(this%array)) THEN
   ENDIF
 #endif
 ! free the space
-  DEALLOCATE(this%array)
+  dealloc = .TRUE.
+  IF (PRESENT(nodealloc)) THEN
+    dealloc = .NOT.nodealloc
+  ENDIF
+  IF (dealloc) THEN
+    DEALLOCATE(this%array)
+  ENDIF
 ENDIF
 ! give empty values
 this=ARRAYOF_TYPE/**/_new()

@@ -317,7 +317,7 @@ TYPE(vol7d_network),INTENT(in),OPTIONAL :: set_network
 
 TYPE(vol7d) :: v7dtmp, v7dtmp2, v7dtmpana
 TYPE(datetime) :: odatetime
-INTEGER :: i, j, k, nvar, nobs, nobso, ntime, nana, nvout, nvin, nvbt, netid
+INTEGER :: i, j, k, nvar, nobs, nobso, ntime, nana, nvin, nvbt, netid
 CHARACTER(len=12),ALLOCATABLE :: tmtmp(:)
 CHARACTER(len=12) :: datai, dataf
 INTEGER,ALLOCATABLE :: anatmp(:), vartmp(:), mapdatao(:), mapstazo(:), varlist(:)
@@ -715,7 +715,7 @@ CHARACTER(len=*),INTENT(in),OPTIONAL :: anavar(:) !< lista delle variabili di an
 TYPE(vol7d_network),INTENT(in),OPTIONAL :: set_network !< se fornito, collassa tutte le reti nell'unica rete indicata, eliminando le eventuali stazioni comuni a reti diverse
 
 TYPE(vol7d) :: v7dtmpana
-INTEGER :: i, j, nvout, netid
+INTEGER :: i, j, netid
 LOGICAL :: lanar(netana_nvarr), lanai(netana_nvari), lanac(netana_nvarc)
 
 
@@ -875,7 +875,6 @@ REAL(kind=fp_geo),ALLOCATABLE :: tmpll(:,:)
 INTEGER(kind=int_b),ALLOCATABLE :: tmpname(:,:), tmpnet(:,:)
 INTEGER(kind=int_b) :: msg(256)
 LOGICAL :: ismiss
-INTEGER :: q1, q2! eliminare
 
 IF (networktable(netid)) RETURN ! gia` fatto
 networktable(netid) = .TRUE.
