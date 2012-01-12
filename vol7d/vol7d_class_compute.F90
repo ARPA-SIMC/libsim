@@ -90,7 +90,6 @@ TYPE(vol7d),INTENT(inout),OPTIONAL :: other !< optional volume that, on exit, is
 
 TYPE(vol7d) :: that1, that2, other1
 INTEGER :: steps
-INTEGER(kind=int_ll) :: msteps
 
 IF (stat_proc_input == 254) THEN
   CALL l4f_log(L4F_INFO, 'computing statistical processing by aggregation '//&
@@ -105,8 +104,7 @@ ELSE IF (stat_proc == 254) THEN
    TRIM(to_char(stat_proc_input))//':'//TRIM(to_char(stat_proc)))
 
 ! compute length of cumulation step in seconds
-  CALL getval(step, amsec=msteps)
-  steps = int(msteps/1000_int_ll)
+  CALL getval(step, asec=steps)
 
   IF (ANY(this%timerange(:)%p2 == steps)) THEN ! data is ready
     CALL vol7d_decompute_stat_proc(this, that, step, other, stat_proc_input)
@@ -887,7 +885,6 @@ TYPE(vol7d),INTENT(inout),OPTIONAL :: other !< optional volume that, on exit, is
 INTEGER,INTENT(in),OPTIONAL :: stat_proc_input !< type of statistical processing of data that has to be processed (from grib2 table), if not provided, averaged data (statistical processing = 0) is processed
 
 INTEGER :: i, tri, steps
-INTEGER(kind=int_ll) :: msteps
 
 
 IF (PRESENT(stat_proc_input)) THEN
@@ -899,8 +896,7 @@ ENDIF
 CALL vol7d_alloc_vol(this)
 
 ! compute length of cumulation step in seconds
-CALL getval(step, amsec=msteps)
-steps = int(msteps/1000_int_ll)
+CALL getval(step, asec=steps)
 
 ! filter requested data
 CALL vol7d_copy(this, that, miss=.FALSE., sort=.FALSE., unique=.FALSE., &
@@ -957,14 +953,8 @@ LOGICAL,INTENT(in),OPTIONAL :: full_steps !< if provided and \a .TRUE., process 
 TYPE(vol7d),INTENT(out),OPTIONAL :: other !< optional volume that, on exit, is going to contain the data that did not contribute to the statistical processing
 
 INTEGER :: i1, i3, i5, i6, i, j, k, l, nitr, steps
-INTEGER(kind=int_ll) :: msteps
-INTEGER,ALLOCATABLE :: map_tr(:,:,:,:,:), f(:)
-LOGICAL :: useful
-LOGICAL,ALLOCATABLE :: mask_timerange(:)
-TYPE(datetime) :: pstart1, pstart2, pend1, pend2, reftime1, reftime2, tmptime
-TYPE(vol7d_timerange) :: tmptimerange
-TYPE(arrayof_datetime) :: otime
-TYPE(arrayof_vol7d_timerange) :: otimerange
+INTEGER,POINTER :: map_tr(:,:,:,:,:), f(:)
+LOGICAL,POINTER :: mask_timerange(:)
 TYPE(vol7d) :: v7dtmp
 
 
@@ -973,107 +963,27 @@ CALL init(that, time_definition=this%time_definition)
 CALL vol7d_alloc_vol(this)
 
 ! compute length of cumulation step in seconds
-CALL getval(step, amsec=msteps)
-steps = int(msteps/1000_int_ll)
+CALL getval(step, asec=steps)
 
-! create a mask of suitable timeranges
-ALLOCATE(mask_timerange(SIZE(this%timerange)))
-mask_timerange(:) = this%timerange(:)%timerange == stat_proc &
- .AND. this%timerange(:)%p1 /= imiss .AND. this%timerange(:)%p2 /= imiss &
- .AND. this%timerange(:)%p1 >= 0 &
- .AND. this%timerange(:)%p2 > 0
+CALL recompute_stat_proc_diff_common(this%time, this%timerange, stat_proc, step, &
+ nitr, that%time, that%timerange, map_tr, f, mask_timerange, &
+ this%time_definition, full_steps)
 
-IF (optio_log(full_steps) .AND. steps /= 0) THEN ! keep only timeranges defining intervals ending at integer steps, check better steps /= 0
-  mask_timerange(:) = mask_timerange(:) .AND. (MOD(this%timerange(:)%p2, steps) == 0)
-ENDIF
-nitr = COUNT(mask_timerange)
-ALLOCATE(f(nitr))
-j = 1
-DO i = 1, nitr
-  DO WHILE(.NOT.mask_timerange(j))
-    j = j + 1
-  ENDDO
-  f(i) = j
-  j = j + 1
-ENDDO
-
-ALLOCATE(map_tr(nitr, SIZE(this%time), nitr, SIZE(this%time), 2))
-map_tr(:,:,:,:,:) = imiss
-otime = arrayof_datetime_new()
-otimerange = arrayof_vol7d_timerange_new()
-
-! scan through all possible combinations of time and timerange
-DO l = 1, SIZE(this%time)
-  DO k = 1, nitr
-    CALL time_timerange_get_period(this%time(l), this%timerange(f(k)), &
-     this%time_definition, pstart2, pend2, reftime2)
-
-    DO j = 1, SIZE(this%time)
-      DO i = 1, nitr
-        useful = .FALSE.
-        CALL time_timerange_get_period(this%time(j), this%timerange(f(i)), &
-         this%time_definition, pstart1, pend1, reftime1)
-        tmptimerange = vol7d_timerange_new(timerange=stat_proc)
-
-        IF (reftime2 == pend2 .AND. reftime1 == pend1) THEN ! analysis
-          IF (pstart2 == pstart1 .AND. pend2 > pend1) THEN ! =-|
-            CALL time_timerange_set_period(tmptime, tmptimerange, &
-             that%time_definition, pend1, pend2, reftime2)
-            useful = .TRUE.
-
-          ELSE IF (pstart2 < pstart1 .AND. pend2 == pend1) THEN ! -=|
-            CALL time_timerange_set_period(tmptime, tmptimerange, &
-             that%time_definition, pstart2, pstart1, pstart1)
-            useful = .TRUE.
-          ENDIF
-
-        ELSE IF (reftime2 == reftime1) THEN ! forecast, same reftime
-          IF (pstart2 == pstart1 .AND. pend2 > pend1) THEN ! |=-
-            CALL time_timerange_set_period(tmptime, tmptimerange, &
-             that%time_definition, pend1, pend2, reftime2)
-            useful = .TRUE.
-
-          ELSE IF (pstart2 < pstart1 .AND. pend2 == pend1) THEN ! |-=
-            CALL time_timerange_set_period(tmptime, tmptimerange, &
-             that%time_definition, pstart2, pstart1, reftime2)
-            useful = .TRUE.
-          ENDIF
-
-        ENDIF
-        useful = useful .AND. tmptime /= datetime_miss .AND. &
-         tmptimerange /= vol7d_timerange_miss .AND. tmptimerange%p2 == steps
-
-        IF (useful) THEN ! add otime, otimerange
-          map_tr(i,j,k,l,1) = append_unique(otime, tmptime)
-          map_tr(i,j,k,l,2) = append_unique(otimerange, tmptimerange)
-        ENDIF
-      ENDDO
-    ENDDO
-  ENDDO
-ENDDO
-
-CALL packarray(otime)
-CALL packarray(otimerange)
-that%time => otime%array
-that%timerange => otimerange%array
-
-! create the new volume template keeping timeranges already satisfying
-! the requirements; this may create undesired times, e.g. when
-! processing model analyses with increasing reference time and
-! increasing timerange
-mask_timerange(:) = mask_timerange(:) .AND. this%timerange(:)%p2 == steps
-IF (ANY(mask_timerange(:))) THEN
+IF (ANY(mask_timerange)) THEN
+! copy the timeranges already satisfying the requested step
   CALL vol7d_copy(this, v7dtmp, miss=.FALSE., sort=.FALSE., unique=.FALSE., &
-   ltimerange=(mask_timerange(:) .AND. this%timerange(:)%p2 == steps))
-! merge output so far created with template
+   ltimerange=mask_timerange(:))
+! merge output created so far with template
   CALL vol7d_merge(that, v7dtmp, lanasimple=.TRUE.)
   CALL delete(v7dtmp)
 ENDIF
 
 #ifdef DEBUG
 CALL l4f_log(L4F_INFO, &
- 'vol7d_recompute_stat_proc_diff, map_tr: '//TRIM(to_char(SIZE(map_tr)))//', '// &
- TRIM(to_char(COUNT(c_e(map_tr)))))
+ 'vol7d_recompute_stat_proc_diff, map_tr: '//t2c((SIZE(map_tr)))//', '// &
+ t2c(COUNT(c_e(map_tr))))
+CALL l4f_log(L4F_INFO, &
+ 'vol7d_recompute_stat_proc_diff, mask_tr: '//t2c(nitr))
 #endif
 
 IF (ASSOCIATED(this%voldatir)) THEN
@@ -1179,6 +1089,120 @@ ENDIF
 END SUBROUTINE makeother
 
 END SUBROUTINE vol7d_recompute_stat_proc_diff
+
+
+SUBROUTINE recompute_stat_proc_diff_common(itime, itimerange, stat_proc, step, &
+ nitr, otime, otimerange, map_tr, f, mask_timerange, time_definition, full_steps)
+TYPE(datetime),INTENT(in) :: itime(:)
+TYPE(vol7d_timerange),INTENT(in) :: itimerange(:)
+INTEGER,INTENT(in) :: stat_proc
+TYPE(timedelta),INTENT(in) :: step
+INTEGER,INTENT(out) :: nitr
+TYPE(datetime),POINTER :: otime(:)
+TYPE(vol7d_timerange),POINTER :: otimerange(:)
+INTEGER,POINTER :: map_tr(:,:,:,:,:), f(:)
+LOGICAL,POINTER :: mask_timerange(:)
+INTEGER,INTENT(in),OPTIONAL :: time_definition
+LOGICAL,INTENT(in),OPTIONAL :: full_steps
+
+INTEGER :: i, j, k, l
+INTEGER :: steps
+LOGICAL :: useful
+TYPE(datetime) :: pstart1, pstart2, pend1, pend2, reftime1, reftime2, tmptime
+TYPE(vol7d_timerange) :: tmptimerange
+TYPE(arrayof_datetime) :: a_otime
+TYPE(arrayof_vol7d_timerange) :: a_otimerange
+
+! compute length of cumulation step in seconds
+CALL getval(step, asec=steps)
+
+! create a mask of suitable timeranges
+ALLOCATE(mask_timerange(SIZE(itimerange)))
+mask_timerange(:) = itimerange(:)%timerange == stat_proc &
+ .AND. itimerange(:)%p1 /= imiss .AND. itimerange(:)%p2 /= imiss &
+ .AND. itimerange(:)%p1 >= 0 &
+ .AND. itimerange(:)%p2 > 0
+
+IF (optio_log(full_steps) .AND. steps /= 0) THEN ! keep only timeranges defining intervals ending at integer steps, check better steps /= 0
+  mask_timerange(:) = mask_timerange(:) .AND. (MOD(itimerange(:)%p2, steps) == 0)
+ENDIF
+nitr = COUNT(mask_timerange)
+ALLOCATE(f(nitr))
+j = 1
+DO i = 1, nitr
+  DO WHILE(.NOT.mask_timerange(j))
+    j = j + 1
+  ENDDO
+  f(i) = j
+  j = j + 1
+ENDDO
+
+ALLOCATE(map_tr(nitr, SIZE(itime), nitr, SIZE(itime), 2))
+map_tr(:,:,:,:,:) = imiss
+a_otime = arrayof_datetime_new()
+a_otimerange = arrayof_vol7d_timerange_new()
+
+! scan through all possible combinations of time and timerange
+DO l = 1, SIZE(itime)
+  DO k = 1, nitr
+    CALL time_timerange_get_period(itime(l), itimerange(f(k)), &
+     time_definition, pstart2, pend2, reftime2)
+
+    DO j = 1, SIZE(itime)
+      DO i = 1, nitr
+        useful = .FALSE.
+        CALL time_timerange_get_period(itime(j), itimerange(f(i)), &
+         time_definition, pstart1, pend1, reftime1)
+        tmptimerange = vol7d_timerange_new(timerange=stat_proc)
+
+        IF (reftime2 == pend2 .AND. reftime1 == pend1) THEN ! analysis
+          IF (pstart2 == pstart1 .AND. pend2 > pend1) THEN ! =-|
+            CALL time_timerange_set_period(tmptime, tmptimerange, &
+             time_definition, pend1, pend2, reftime2)
+            useful = .TRUE.
+
+          ELSE IF (pstart2 < pstart1 .AND. pend2 == pend1) THEN ! -=|
+            CALL time_timerange_set_period(tmptime, tmptimerange, &
+             time_definition, pstart2, pstart1, pstart1)
+            useful = .TRUE.
+          ENDIF
+
+        ELSE IF (reftime2 == reftime1) THEN ! forecast, same reftime
+          IF (pstart2 == pstart1 .AND. pend2 > pend1) THEN ! |=-
+            CALL time_timerange_set_period(tmptime, tmptimerange, &
+             time_definition, pend1, pend2, reftime2)
+            useful = .TRUE.
+
+          ELSE IF (pstart2 < pstart1 .AND. pend2 == pend1) THEN ! |-=
+            CALL time_timerange_set_period(tmptime, tmptimerange, &
+             time_definition, pstart2, pstart1, reftime2)
+            useful = .TRUE.
+          ENDIF
+
+        ENDIF
+        useful = useful .AND. tmptime /= datetime_miss .AND. &
+         tmptimerange /= vol7d_timerange_miss .AND. tmptimerange%p2 == steps
+
+        IF (useful) THEN ! add a_otime, a_otimerange
+          map_tr(i,j,k,l,1) = append_unique(a_otime, tmptime)
+          map_tr(i,j,k,l,2) = append_unique(a_otimerange, tmptimerange)
+        ENDIF
+      ENDDO
+    ENDDO
+  ENDDO
+ENDDO
+
+CALL packarray(a_otime)
+CALL packarray(a_otimerange)
+otime => a_otime%array
+otimerange => a_otimerange%array
+! delete local objects keeping the contents
+CALL delete(a_otime, nodealloc=.TRUE.)
+CALL delete(a_otimerange, nodealloc=.TRUE.)
+
+mask_timerange(:) = mask_timerange(:) .AND. itimerange(:)%p2 == steps
+
+END SUBROUTINE recompute_stat_proc_diff_common
 
 
 !> Riempimento dei buchi temporali in un volume.
