@@ -61,12 +61,11 @@ CHARACTER(len=160) :: pre_trans_type
 TYPE(vol7d_network), ALLOCATABLE :: nl(:)
 CHARACTER(len=10), ALLOCATABLE :: vl(:), avl(:), al(:), alqc(:),vl_alc(:)
 CHARACTER(len=23) :: start_date, end_date
-CHARACTER(len=19) :: start_date_default, end_date_default
 CHARACTER(len=20) :: levelc, timerangec
-TYPE(datetime) :: now, s_d, e_d
+TYPE(datetime) :: s_d, e_d
 TYPE(vol7d_level) :: level
 TYPE(vol7d_timerange) :: timerange
-INTEGER :: iun, ier, i, j, n, ninput, yy, mm, dd, iargc, i1, i2, i3, i4
+INTEGER :: iun, ier, i, n, ninput, iargc, i1, i2, i3, i4
 INTEGER,POINTER :: w_s(:), w_e(:)
 TYPE(vol7d) :: v7d, v7d_coord, v7dtmp, v7d_comp1, v7d_comp2, v7d_comp3
 TYPE(geo_coordvect),POINTER :: poly(:) => NULL()
@@ -86,12 +85,12 @@ CHARACTER(len=512):: a_name
 INTEGER :: category
 
 ! for computing
-LOGICAL :: comp_regularize, comp_average, comp_cumulate, comp_keep, comp_sort, comp_fill_data, obso
+LOGICAL :: comp_regularize, comp_keep, comp_sort, comp_fill_data, obso
 LOGICAL :: file, lconvr, round
 CHARACTER(len=13) :: comp_stat_proc
 CHARACTER(len=23) :: comp_step, comp_start
 INTEGER :: istat_proc, ostat_proc
-TYPE(timedelta) :: c_i, comp_max_step
+TYPE(timedelta) :: c_i
 TYPE(datetime) :: c_s
 REAL :: comp_frac_valid
 
@@ -115,14 +114,6 @@ CALL l4f_launcher(a_name,a_name_force="v7d_transform")
 ier = l4f_init()
 !imposta a_name
 category = l4f_category_get(a_name//".main")
-
-
-!!$now = datetime_new(now=datetime_utc)
-!!$CALL getval(now, year=yy, month=mm, day=dd)
-!!$CALL getval(datetime_new(year=yy, month=mm, day=dd)-timedelta_new(day=1), &
-!!$ isodate=start_date_default)
-!!$CALL getval(datetime_new(year=yy, month=mm, day=dd), isodate=end_date_default)
-
 
 ! define the option parser
 opt = optionparser_new(description_msg= &
