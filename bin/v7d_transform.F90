@@ -776,7 +776,7 @@ ENDIF
 
 IF (comp_regularize) THEN
   CALL init(v7d_comp1)
-  CALL vol7d_regularize_time(v7d, v7d_comp1, c_i, c_s, fill_data=comp_fill_data)
+  CALL vol7d_filter_time(v7d, v7d_comp1, c_i, c_s, fill_data=comp_fill_data)
   CALL delete(v7d)
   v7d = v7d_comp1
 ENDIF

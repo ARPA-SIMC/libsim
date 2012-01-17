@@ -22,12 +22,12 @@
 !! date assolute e di intervalli temporali.
 !! Entrambe le classi hanno le componenti di tipo \c PRIVATE, per
 !! cui non possono essere manipolate direttamente ma solo tramite i
-!! relativi metodi.  Attualmente la precisione massima consentita è di un
+!! relativi metodi.  Attualmente la precisione massima consentita ï¿½ di un
 !! minuto, mentre l'estensione delle date rappresentabili va dall'anno 1
 !! all'anno 4074 d.C. circa, ipotizzando un calendario gregoriano per
 !! tutto il periodo.  Questo fatto implica che le date precedenti
 !! all'introduzione del calendario gregoriano avranno discrepanze di uno
-!! o più giorni rispetto alle date storiche "vere", ammesso che
+!! o piï¿½ giorni rispetto alle date storiche "vere", ammesso che
 !! qualcuno conosca queste ultime.
 !! \ingroup base
 MODULE datetime_class
@@ -35,6 +35,7 @@ USE kinds
 USE log4fortran
 USE err_handling
 USE missing_values
+USE optional_values
 IMPLICIT NONE
 
 INTEGER, PARAMETER :: dateint=SELECTED_INT_KIND(13)
@@ -46,10 +47,10 @@ TYPE datetime
 END TYPE  datetime
 
 !> Classe che indica un intervallo temporale relativo.
-!! Può assumere anche valori <0. Può assumere  valori "puri", cioè
-!! intervalli temporali di durata fissa, e valori "popolari", cioè
-!! intervalli di durata variabile in unità di mesi e/o anni, o anche
-!! valori misti, cioè mesi/anni + un intervallo fisso; tuttavia negli
+!! Puï¿½ assumere anche valori <0. Puï¿½ assumere  valori "puri", cioï¿½
+!! intervalli temporali di durata fissa, e valori "popolari", cioï¿½
+!! intervalli di durata variabile in unitï¿½ di mesi e/o anni, o anche
+!! valori misti, cioï¿½ mesi/anni + un intervallo fisso; tuttavia negli
 !! ultimi 2 casi le operazioni che si possono effettuare con
 !! oggetti di questa classe sono limitate.
 TYPE timedelta
@@ -57,6 +58,22 @@ TYPE timedelta
   INTEGER(KIND=int_ll) :: iminuti
   INTEGER :: month
 END TYPE timedelta
+
+
+!> Class to specify a cyclic datetime
+!! You need it to specify for example every january in all years or
+!! the same time for all days and so on
+TYPE cyclicdatetime
+  PRIVATE
+  INTEGER :: minute
+  INTEGER :: hour
+  INTEGER :: day
+  INTEGER :: month
+  INTEGER :: year
+END TYPE cyclicdatetime
+
+
+
 
 !> valore mancante per datetime
 TYPE(datetime), PARAMETER :: datetime_miss=datetime(illmiss)
@@ -76,6 +93,8 @@ TYPE(datetime), PARAMETER :: datetime_max=datetime(HUGE(1_int_ll)-1)
 TYPE(timedelta), PARAMETER :: timedelta_min=timedelta(-HUGE(1_int_ll)-1,0)
 !> Minimum valid value for timedelta
 TYPE(timedelta), PARAMETER :: timedelta_max=timedelta(HUGE(1_int_ll)-1,0)
+!> missing value for cyclicdatetime
+TYPE(cyclicdatetime), PARAMETER :: cyclicdatetime_miss=cyclicdatetime(imiss,imiss,imiss,imiss,imiss)
 
 
 INTEGER(kind=dateint), PARAMETER :: &
@@ -147,16 +166,17 @@ END INTERFACE
 !> Operatore logico di uguaglianza tra oggetti della stessa classe.
 !! Funziona anche per 
 !! confronti di tipo array-array (qualsiasi n. di dimensioni) e di tipo
-!! scalare-vettore(1-d) (ma non vettore(1-d)-scalare o tra array con più
+!! scalare-vettore(1-d) (ma non vettore(1-d)-scalare o tra array con piï¿½
 !! di 1 dimensione e scalari).
 INTERFACE OPERATOR (==)
-  MODULE PROCEDURE datetime_eq, datetime_eqsv, timedelta_eq, timedelta_eqsv
+  MODULE PROCEDURE datetime_eq, datetime_eqsv, timedelta_eq, timedelta_eqsv, &
+   cyclicdatetime_eq, cyclicdatetime_datetime_eq, datetime_cyclicdatetime_eq
 END INTERFACE
 
 !> Operatore logico di disuguaglianza tra oggetti della stessa classe.
 !! Funziona anche per 
 !! confronti di tipo array-array (qualsiasi n. di dimensioni) e di tipo
-!! scalare-vettore(1-d) (ma non vettore(1-d)-scalare o tra array con più
+!! scalare-vettore(1-d) (ma non vettore(1-d)-scalare o tra array con piï¿½
 !! di 1 dimensione e scalari).
 INTERFACE OPERATOR (/=)
   MODULE PROCEDURE datetime_ne, datetime_nesv, timedelta_ne, timedelta_nesv
@@ -165,9 +185,9 @@ END INTERFACE
 !> Operatore logico maggiore tra oggetti della stessa classe.
 !! Funziona anche per 
 !! confronti di tipo array-array (qualsiasi n. di dimensioni) e di tipo
-!! scalare-vettore(1-d) (ma non vettore(1-d)-scalare o tra array con più
+!! scalare-vettore(1-d) (ma non vettore(1-d)-scalare o tra array con piï¿½
 !! di 1 dimensione e scalari). Nel caso di valori mancanti il risultato
-!! non è specificato. Il risultato non è altresì specificato nel caso di oggetti
+!! non ï¿½ specificato. Il risultato non ï¿½ altresï¿½ specificato nel caso di oggetti
 !! \a timedelta "popolari" o misti.
 INTERFACE OPERATOR (>)
   MODULE PROCEDURE datetime_gt, datetime_gtsv, timedelta_gt, timedelta_gtsv
@@ -176,9 +196,9 @@ END INTERFACE
 !> Operatore logico minore tra oggetti della stessa classe.
 !! Funziona anche per 
 !! confronti di tipo array-array (qualsiasi n. di dimensioni) e di tipo
-!! scalare-vettore(1-d) (ma non vettore(1-d)-scalare o tra array con più
+!! scalare-vettore(1-d) (ma non vettore(1-d)-scalare o tra array con piï¿½
 !! di 1 dimensione e scalari). Nel caso di valori mancanti il risultato
-!! non è specificato. Il risultato non è altresì specificato nel caso di oggetti
+!! non ï¿½ specificato. Il risultato non ï¿½ altresï¿½ specificato nel caso di oggetti
 !! \a timedelta "popolari" o misti.
 INTERFACE OPERATOR (<)
   MODULE PROCEDURE datetime_lt, datetime_ltsv, timedelta_lt, timedelta_ltsv
@@ -187,9 +207,9 @@ END INTERFACE
 !> Operatore logico maggiore-uguale tra oggetti della stessa classe.
 !! Funziona anche per 
 !! confronti di tipo array-array (qualsiasi n. di dimensioni) e di tipo
-!! scalare-vettore(1-d) (ma non vettore(1-d)-scalare o tra array con più
+!! scalare-vettore(1-d) (ma non vettore(1-d)-scalare o tra array con piï¿½
 !! di 1 dimensione e scalari). Nel caso di valori mancanti il risultato
-!! non è specificato. Il risultato non è altresì specificato nel caso di oggetti
+!! non ï¿½ specificato. Il risultato non ï¿½ altresï¿½ specificato nel caso di oggetti
 !! \a timedelta "popolari" o misti.
 INTERFACE OPERATOR (>=)
   MODULE PROCEDURE datetime_ge, datetime_gesv, timedelta_ge, timedelta_gesv
@@ -198,9 +218,9 @@ END INTERFACE
 !> Operatore logico minore-uguale tra oggetti della stessa classe.
 !! Funziona anche per 
 !! confronti di tipo array-array (qualsiasi n. di dimensioni) e di tipo
-!! scalare-vettore(1-d) (ma non vettore(1-d)-scalare o tra array con più
+!! scalare-vettore(1-d) (ma non vettore(1-d)-scalare o tra array con piï¿½
 !! di 1 dimensione e scalari). Nel caso di valori mancanti il risultato
-!! non è specificato. Il risultato non è altresì specificato nel caso di oggetti
+!! non ï¿½ specificato. Il risultato non ï¿½ altresï¿½ specificato nel caso di oggetti
 !! \a timedelta "popolari" o misti.
 INTERFACE OPERATOR (<=)
   MODULE PROCEDURE datetime_le, datetime_lesv, timedelta_le, timedelta_lesv
@@ -240,8 +260,8 @@ END INTERFACE
 !! - \a timedelta / \a INTEGER = \a timedelta
 !! - \a timedelta / \a timedelta = \a INTEGER
 !! .
-!! La prima combinazione è valida per tutti i tipi di intervallo, mentre la
-!! seconda è definita solo per intervalli "puri".
+!! La prima combinazione ï¿½ valida per tutti i tipi di intervallo, mentre la
+!! seconda ï¿½ definita solo per intervalli "puri".
 INTERFACE OPERATOR (/)
   MODULE PROCEDURE timedelta_divint, timedelta_divtd
 END INTERFACE
@@ -255,7 +275,7 @@ END INTERFACE
 !! La seconda combinazione ha senso principalmente con intervalli di
 !! 1 minuto, 1 ora o
 !! 1 giorno, per calcolare di quanto l'oggetto \a datetime indicato dista
-!! dal minuto, ora o giorno tondo precedente più vicino.
+!! dal minuto, ora o giorno tondo precedente piï¿½ vicino.
 INTERFACE mod
   MODULE PROCEDURE timedelta_mod, datetime_timedelta_mod
 END INTERFACE
@@ -287,7 +307,7 @@ END INTERFACE
 
 !> Missing check
 INTERFACE c_e
-  MODULE PROCEDURE c_e_datetime
+  MODULE PROCEDURE c_e_datetime, c_e_cyclicdatetime
 END INTERFACE
 
 !> to document
@@ -341,7 +361,8 @@ PUBLIC datetime, datetime_miss, datetime_utc, datetime_local, &
  timedelta, timedelta_miss, timedelta_new, timedelta_0, &
  timedelta_min, timedelta_max, timedelta_getamsec, timedelta_depop, &
  display, c_e, &
- count_distinct, pack_distinct, map_distinct, map_inv_distinct, index, sort
+ count_distinct, pack_distinct, map_distinct, map_inv_distinct, index, sort, &
+ cyclicdatetime, cyclicdatetime_new, cyclicdatetime_miss
 
 CONTAINS
 
@@ -352,25 +373,25 @@ CONTAINS
 
 !> Costruisce un oggetto \a datetime con i parametri opzionali forniti.
 !! Se non viene passato nulla lo inizializza a 1/1/1.
-!! Questa è la versione \c FUNCTION, in stile F2003, del costruttore, da preferire
+!! Questa ï¿½ la versione \c FUNCTION, in stile F2003, del costruttore, da preferire
 !! rispetto alla versione \c SUBROUTINE \c init.
 !! Notare che i gruppi di parametri opzionali (\a year, \a month, \a hour,
 !! \a minute, \a msec), (\a unixtime), (\a isodate), (\a simpledate),
-!! (\a oraclesimdate) sono mutualmente escludentesi; \a oraclesimedate è
+!! (\a oraclesimdate) sono mutualmente escludentesi; \a oraclesimedate ï¿½
 !! obsoleto, usare piuttosto \a simpledate.
 FUNCTION datetime_new(year, month, day, hour, minute, msec, &
  unixtime, isodate, simpledate, oraclesimdate, now) RESULT(this)
-INTEGER,INTENT(IN),OPTIONAL :: year !< anno d.C., se è specificato, tutti gli eventuali parametri tranne \a month, \a day, \a hour, \a minute e \a msec sono ignorati; per un problema non risolto, sono ammessi solo anni >0 (d.C.)
-INTEGER,INTENT(IN),OPTIONAL :: month !< mese, default=1 se è specificato \a year; può assumere anche valori <1 o >12, l'oggetto finale si aggiusta coerentemente
-INTEGER,INTENT(IN),OPTIONAL :: day !< mese, default=1 se è specificato \a year; può anch'esso assumere valori fuori dai limiti canonici
-INTEGER,INTENT(IN),OPTIONAL :: hour !< ore, default=0 se è specificato \a year; può anch'esso assumere valori fuori dai limiti canonici
-INTEGER,INTENT(IN),OPTIONAL :: minute !< minuti, default=0 se è specificato \a year; può anch'esso assumere valori fuori dai limiti canonici
-INTEGER,INTENT(IN),OPTIONAL :: msec !< millisecondi, default=0 se è specificato \a year; può anch'esso assumere valori fuori dai limiti canonici
-INTEGER(kind=int_ll),INTENT(IN),OPTIONAL :: unixtime !< inizializza l'oggetto a \a unixtime secondi dopo il 1/1/1970 (convenzione UNIX, notare che il parametro deve essere un intero a 8 byte), se è presente tutto il resto è ignorato
-CHARACTER(len=*),INTENT(IN),OPTIONAL :: isodate !< inizializza l'oggetto ad una data espressa nel formato \c AAAA-MM-GG \c hh:mm:ss.msc, un sottoinsieme del formato noto come \a ISO, la parte iniziale \c AAAA-MM-GG è obbligatoria, il resto è opzionale
-CHARACTER(len=*),INTENT(IN),OPTIONAL :: simpledate !< inizializza l'oggetto ad una data espressa nel formato \c AAAAMMGGhhmmssmsc, la parte iniziale \c AAAAMMGG è obbligatoria, il resto è opzionale, da preferire rispetto a \a oraclesimdate
+INTEGER,INTENT(IN),OPTIONAL :: year !< anno d.C., se ï¿½ specificato, tutti gli eventuali parametri tranne \a month, \a day, \a hour, \a minute e \a msec sono ignorati; per un problema non risolto, sono ammessi solo anni >0 (d.C.)
+INTEGER,INTENT(IN),OPTIONAL :: month !< mese, default=1 se ï¿½ specificato \a year; puï¿½ assumere anche valori <1 o >12, l'oggetto finale si aggiusta coerentemente
+INTEGER,INTENT(IN),OPTIONAL :: day !< mese, default=1 se ï¿½ specificato \a year; puï¿½ anch'esso assumere valori fuori dai limiti canonici
+INTEGER,INTENT(IN),OPTIONAL :: hour !< ore, default=0 se ï¿½ specificato \a year; puï¿½ anch'esso assumere valori fuori dai limiti canonici
+INTEGER,INTENT(IN),OPTIONAL :: minute !< minuti, default=0 se ï¿½ specificato \a year; puï¿½ anch'esso assumere valori fuori dai limiti canonici
+INTEGER,INTENT(IN),OPTIONAL :: msec !< millisecondi, default=0 se ï¿½ specificato \a year; puï¿½ anch'esso assumere valori fuori dai limiti canonici
+INTEGER(kind=int_ll),INTENT(IN),OPTIONAL :: unixtime !< inizializza l'oggetto a \a unixtime secondi dopo il 1/1/1970 (convenzione UNIX, notare che il parametro deve essere un intero a 8 byte), se ï¿½ presente tutto il resto ï¿½ ignorato
+CHARACTER(len=*),INTENT(IN),OPTIONAL :: isodate !< inizializza l'oggetto ad una data espressa nel formato \c AAAA-MM-GG \c hh:mm:ss.msc, un sottoinsieme del formato noto come \a ISO, la parte iniziale \c AAAA-MM-GG ï¿½ obbligatoria, il resto ï¿½ opzionale
+CHARACTER(len=*),INTENT(IN),OPTIONAL :: simpledate !< inizializza l'oggetto ad una data espressa nel formato \c AAAAMMGGhhmmssmsc, la parte iniziale \c AAAAMMGG ï¿½ obbligatoria, il resto ï¿½ opzionale, da preferire rispetto a \a oraclesimdate
 CHARACTER(len=12),INTENT(IN),OPTIONAL :: oraclesimdate !< inizializza l'oggetto ad una data espressa nel formato \c AAAAMMGGhhmm, come nelle routine per l'accesso al db Oracle del SIM.
-INTEGER,INTENT(IN),OPTIONAL :: now !< inizializza l'oggetto all'istante corrente, se \a è \a datetime_utc inizializza con l'ora UTC (preferibile), se è \a datetime_local usa l'ora locale
+INTEGER,INTENT(IN),OPTIONAL :: now !< inizializza l'oggetto all'istante corrente, se \a ï¿½ \a datetime_utc inizializza con l'ora UTC (preferibile), se ï¿½ \a datetime_local usa l'ora locale
 
 TYPE(datetime) :: this !< oggetto da inizializzare
 
@@ -383,22 +404,22 @@ END FUNCTION datetime_new
 !! Se non viene passato nulla lo inizializza a 1/1/1.
 !! Notare che i gruppi di parametri opzionali (\a year, \a month, \a hour,
 !! \a minute, \a msec), (\a unixtime), (\a isodate), (\a simpledate),
-!! (\a oraclesimdate) sono mutualmente escludentesi; \a oraclesimedate è
+!! (\a oraclesimdate) sono mutualmente escludentesi; \a oraclesimedate ï¿½
 !! obsoleto, usare piuttosto \a simpledate.
 RECURSIVE SUBROUTINE datetime_init(this, year, month, day, hour, minute, msec, &
  unixtime, isodate, simpledate, oraclesimdate, now)
 TYPE(datetime),INTENT(INOUT) :: this !< oggetto da inizializzare
-INTEGER,INTENT(IN),OPTIONAL :: year !< anno d.C., se è specificato, tutti gli eventuali parametri tranne \a month, \a day, \a hour e \a minute sono ignorati; per un problema non risolto, sono ammessi solo anni >0 (d.C.)
-INTEGER,INTENT(IN),OPTIONAL :: month !< mese, default=1 se è specificato \a year; può assumere anche valori <1 o >12, l'oggetto finale si aggiusta coerentemente
-INTEGER,INTENT(IN),OPTIONAL :: day !< mese, default=1 se è specificato \a year; può anch'esso assumere valori fuori dai limiti canonici
-INTEGER,INTENT(IN),OPTIONAL :: hour !< ore, default=0 se è specificato \a year; può anch'esso assumere valori fuori dai limiti canonici
-INTEGER,INTENT(IN),OPTIONAL :: minute !< minuti, default=0 se è specificato \a year; può anch'esso assumere valori fuori dai limiti canonici
-INTEGER,INTENT(IN),OPTIONAL :: msec !< millisecondi, default=0 se è specificato \a year; può anch'esso assumere valori fuori dai limiti canonici
+INTEGER,INTENT(IN),OPTIONAL :: year !< anno d.C., se ï¿½ specificato, tutti gli eventuali parametri tranne \a month, \a day, \a hour e \a minute sono ignorati; per un problema non risolto, sono ammessi solo anni >0 (d.C.)
+INTEGER,INTENT(IN),OPTIONAL :: month !< mese, default=1 se ï¿½ specificato \a year; puï¿½ assumere anche valori <1 o >12, l'oggetto finale si aggiusta coerentemente
+INTEGER,INTENT(IN),OPTIONAL :: day !< mese, default=1 se ï¿½ specificato \a year; puï¿½ anch'esso assumere valori fuori dai limiti canonici
+INTEGER,INTENT(IN),OPTIONAL :: hour !< ore, default=0 se ï¿½ specificato \a year; puï¿½ anch'esso assumere valori fuori dai limiti canonici
+INTEGER,INTENT(IN),OPTIONAL :: minute !< minuti, default=0 se ï¿½ specificato \a year; puï¿½ anch'esso assumere valori fuori dai limiti canonici
+INTEGER,INTENT(IN),OPTIONAL :: msec !< millisecondi, default=0 se ï¿½ specificato \a year; puï¿½ anch'esso assumere valori fuori dai limiti canonici
 INTEGER(kind=int_ll),INTENT(IN),OPTIONAL :: unixtime !< inizializza l'oggetto a \a unixtime secondi dopo il 1/1/1970 (convenzione UNIX, notare che il parametro deve essere un intero a 8 byte)
-CHARACTER(len=*),INTENT(IN),OPTIONAL :: isodate !< inizializza l'oggetto ad una data espressa nel formato \c AAAA-MM-GG \c hh:mm:ss.msc, un sottoinsieme del formato noto come \a ISO, la parte iniziale \c AAAA-MM-GG è obbligatoria, il resto è opzionale
-CHARACTER(len=*),INTENT(IN),OPTIONAL :: simpledate !< inizializza l'oggetto ad una data espressa nel formato \c AAAAMMGGhhmmssmsc, la parte iniziale \c AAAAMMGG è obbligatoria, il resto è opzionale, da preferire rispetto a \a oraclesimdate
+CHARACTER(len=*),INTENT(IN),OPTIONAL :: isodate !< inizializza l'oggetto ad una data espressa nel formato \c AAAA-MM-GG \c hh:mm:ss.msc, un sottoinsieme del formato noto come \a ISO, la parte iniziale \c AAAA-MM-GG ï¿½ obbligatoria, il resto ï¿½ opzionale
+CHARACTER(len=*),INTENT(IN),OPTIONAL :: simpledate !< inizializza l'oggetto ad una data espressa nel formato \c AAAAMMGGhhmmssmsc, la parte iniziale \c AAAAMMGG ï¿½ obbligatoria, il resto ï¿½ opzionale, da preferire rispetto a \a oraclesimdate
 CHARACTER(len=12),INTENT(IN),OPTIONAL :: oraclesimdate !< inizializza l'oggetto ad una data espressa nel formato \c AAAAMMGGhhmm, come nelle routine per l'accesso al db Oracle del SIM.
-INTEGER,INTENT(IN),OPTIONAL :: now !< inizializza l'oggetto all'istante corrente, se \a è \a datetime_utc inizializza con l'ora UTC (preferibile), se è \a datetime_local usa l'ora locale
+INTEGER,INTENT(IN),OPTIONAL :: now !< inizializza l'oggetto all'istante corrente, se \a ï¿½ \a datetime_utc inizializza con l'ora UTC (preferibile), se ï¿½ \a datetime_local usa l'ora locale
 
 INTEGER :: lyear, lmonth, lday, lhour, lminute, lsec, lmsec, ier
 INTEGER :: dt(8)
@@ -528,9 +549,9 @@ this%iminuti = imiss
 END SUBROUTINE datetime_delete
 
 
-!> Restituisce il valore di un oggetto \a datetime in una o più
-!! modalità desiderate. Qualsiasi combinazione dei parametri
-!! opzionali è consentita. \a oraclesimedate è
+!> Restituisce il valore di un oggetto \a datetime in una o piï¿½
+!! modalitï¿½ desiderate. Qualsiasi combinazione dei parametri
+!! opzionali ï¿½ consentita. \a oraclesimedate ï¿½
 !! obsoleto, usare piuttosto \a simpledate.
 pure SUBROUTINE datetime_getval(this, year, month, day, hour, minute, msec, &
  unixtime, isodate, simpledate, oraclesimdate)
@@ -542,8 +563,8 @@ INTEGER,INTENT(OUT),OPTIONAL :: hour !< ore
 INTEGER,INTENT(OUT),OPTIONAL :: minute !< minuti
 INTEGER,INTENT(OUT),OPTIONAL :: msec !< millisecondi
 INTEGER(kind=int_ll),INTENT(OUT),OPTIONAL :: unixtime !< secondi a partire dal 1/1/1970
-CHARACTER(len=*),INTENT(OUT),OPTIONAL :: isodate !< data completa nel formato \c AAAA-MM-GG \c hh:mm:ss.msc (simil-ISO), la variabile può essere più corta di 23 caratteri, in tal caso conterrà solo ciò che vi cape
-CHARACTER(len=*),INTENT(OUT),OPTIONAL :: simpledate !< data completa nel formato \c AAAAMMGGhhmmssmsc , la variabile può essere più corta di 17 caratteri, in tal caso conterrà solo ciò che vi cape, da preferire rispetto a \a oraclesimdate
+CHARACTER(len=*),INTENT(OUT),OPTIONAL :: isodate !< data completa nel formato \c AAAA-MM-GG \c hh:mm:ss.msc (simil-ISO), la variabile puï¿½ essere piï¿½ corta di 23 caratteri, in tal caso conterrï¿½ solo ciï¿½ che vi cape
+CHARACTER(len=*),INTENT(OUT),OPTIONAL :: simpledate !< data completa nel formato \c AAAAMMGGhhmmssmsc , la variabile puï¿½ essere piï¿½ corta di 17 caratteri, in tal caso conterrï¿½ solo ciï¿½ che vi cape, da preferire rispetto a \a oraclesimdate
 CHARACTER(len=12),INTENT(OUT),OPTIONAL :: oraclesimdate !< data parziale nel formato \c AAAAMMGGhhmm
 
 INTEGER :: lyear, lmonth, lday, lhour, lminute, lmsec
@@ -974,9 +995,9 @@ END SUBROUTINE datetime_vect_write_unit
 ! ===============
 !> Costruisce un oggetto \a timedelta con i parametri opzionali forniti.
 !! Se non viene passato nulla lo inizializza a intervallo di durata nulla.
-!! L'intervallo ottenuto è pari alla somma dei valori di tutti i parametri
+!! L'intervallo ottenuto ï¿½ pari alla somma dei valori di tutti i parametri
 !! forniti, ovviamente non fornire un parametro equivale a fornirlo =0.
-!! Questa è la versione \c FUNCTION, in stile F2003, del costruttore, da preferire
+!! Questa ï¿½ la versione \c FUNCTION, in stile F2003, del costruttore, da preferire
 !! rispetto alla versione \c SUBROUTINE \c init.
 FUNCTION timedelta_new(year, month, day, hour, minute, msec, &
  isodate, simpledate, oraclesimdate) RESULT (this)
@@ -1000,7 +1021,7 @@ END FUNCTION timedelta_new
 
 !> Costruisce un oggetto \a timedelta con i parametri opzionali forniti.
 !! Se non viene passato nulla lo inizializza a intervallo di durata nulla.
-!! L'intervallo ottenuto è pari alla somma dei valori di tutti i parametri
+!! L'intervallo ottenuto ï¿½ pari alla somma dei valori di tutti i parametri
 !! forniti, ovviamente non fornire un parametro equivale a fornirlo =0.
 SUBROUTINE timedelta_init(this, year, month, day, hour, minute, msec, &
  isodate, simpledate, oraclesimdate)
@@ -1141,9 +1162,9 @@ this%month = 0
 END SUBROUTINE timedelta_delete
 
 
-!> Restituisce il valore di un oggetto \a timedelta in una o più
-!! modalità desiderate. Qualsiasi combinazione dei parametri
-!! opzionali è consentita. \a oraclesimedate è
+!> Restituisce il valore di un oggetto \a timedelta in una o piï¿½
+!! modalitï¿½ desiderate. Qualsiasi combinazione dei parametri
+!! opzionali ï¿½ consentita. \a oraclesimedate ï¿½
 !! obsoleto, usare piuttosto \a simpledate.
 PURE SUBROUTINE timedelta_getval(this, year, month, amonth, &
  day, hour, minute, sec, msec, &
@@ -1161,39 +1182,38 @@ INTEGER,INTENT(OUT),OPTIONAL :: ahour !< ore totali
 INTEGER,INTENT(OUT),OPTIONAL :: aminute !< minuti totali
 INTEGER,INTENT(OUT),OPTIONAL :: asec !< secondi totali
 INTEGER(kind=int_ll),INTENT(OUT),OPTIONAL :: amsec !< millisecondi totali
-CHARACTER(len=*),INTENT(OUT),OPTIONAL :: isodate !< intervallo totale nel formato \c GGGGGGGGGG \c hh:mm:ss.msc  (simil-ISO), la variabile può essere più corta di 23 caratteri, in tal caso conterrà solo ciò che vi cape
-CHARACTER(len=*),INTENT(OUT),OPTIONAL :: simpledate  !< intervallo totale nel formato \c GGGGGGGGhhmmssmsc , la variabile può essere più corta di 17 caratteri, in tal caso conterrà solo ciò che vi cape, da preferire rispetto a \a oraclesimdate
+CHARACTER(len=*),INTENT(OUT),OPTIONAL :: isodate !< intervallo totale nel formato \c GGGGGGGGGG \c hh:mm:ss.msc  (simil-ISO), la variabile puï¿½ essere piï¿½ corta di 23 caratteri, in tal caso conterrï¿½ solo ciï¿½ che vi cape
+CHARACTER(len=*),INTENT(OUT),OPTIONAL :: simpledate  !< intervallo totale nel formato \c GGGGGGGGhhmmssmsc , la variabile puï¿½ essere piï¿½ corta di 17 caratteri, in tal caso conterrï¿½ solo ciï¿½ che vi cape, da preferire rispetto a \a oraclesimdate
 CHARACTER(len=12),INTENT(OUT),OPTIONAL :: oraclesimdate !< intervallo totale nel formato \c GGGGGGGGhhmm
 
-!INTEGER :: lyear, lmonth, lday, lhour, lminute
 CHARACTER(len=23) :: datebuf
 
 IF (PRESENT(amsec)) THEN 
   amsec = this%iminuti
 ENDIF
 IF (PRESENT(asec)) THEN 
-  asec = this%iminuti/1000_int_ll
+  asec = int(this%iminuti/1000_int_ll)
 ENDIF
 IF (PRESENT(aminute)) THEN 
-  aminute = this%iminuti/60000_int_ll
+  aminute = int(this%iminuti/60000_int_ll)
 ENDIF
 IF (PRESENT(ahour)) THEN
-  ahour = this%iminuti/3600000_int_ll
+  ahour = int(this%iminuti/3600000_int_ll)
 ENDIF
 IF (PRESENT(msec)) THEN 
-  msec = MOD(this%iminuti, 1000_int_ll)
+  msec = int(MOD(this%iminuti, 1000_int_ll))
 ENDIF
 IF (PRESENT(sec)) THEN 
-  sec = MOD(this%iminuti/1000_int_ll, 60_int_ll)
+  sec = int(MOD(this%iminuti/1000_int_ll, 60_int_ll))
 ENDIF
 IF (PRESENT(minute)) THEN 
-  minute = MOD(this%iminuti/60000_int_ll, 60_int_ll)
+  minute = int(MOD(this%iminuti/60000_int_ll, 60_int_ll))
 ENDIF
 IF (PRESENT(hour)) THEN
-  hour = MOD(this%iminuti/3600000_int_ll, 24_int_ll)
+  hour = int(MOD(this%iminuti/3600000_int_ll, 24_int_ll))
 ENDIF
 IF (PRESENT(day)) THEN
-  day = this%iminuti/86400000_int_ll
+  day = int(this%iminuti/86400000_int_ll)
 ENDIF
 IF (PRESENT(amonth)) THEN
   amonth = this%month
@@ -1483,7 +1503,7 @@ FUNCTION timedelta_divtd(this, that) RESULT(res)
 TYPE(timedelta),INTENT(IN) :: this, that
 INTEGER :: res
 
-res = this%iminuti/that%iminuti
+res = int(this%iminuti/that%iminuti)
 
 END FUNCTION timedelta_divtd
 
@@ -1678,12 +1698,12 @@ INTEGER, INTENT(OUT) :: iday, imonth, iyear, ihour, imin, imsec
 
 INTEGER :: igiorno
 
-imsec = MOD(imillisec, 60000_int_ll) ! partial msec
+imsec = int(MOD(imillisec, 60000_int_ll)) ! partial msec
 !imin = MOD(imillisec/60000_int_ll, 60)
 !ihour = MOD(imillisec/3600000_int_ll, 24)
-imin = MOD(imillisec, 3600000_int_ll)/60000_int_ll
-ihour = MOD(imillisec, 86400000_int_ll)/3600000_int_ll
-igiorno = imillisec/86400000_int_ll
+imin = int(MOD(imillisec, 3600000_int_ll)/60000_int_ll)
+ihour = int(MOD(imillisec, 86400000_int_ll)/3600000_int_ll)
+igiorno = int(imillisec/86400000_int_ll)
 !IF (MOD(imillisec,1440) < 0) igiorno = igiorno-1 !?!?!?
 CALL ndyin(igiorno,iday,imonth,iyear)
 
@@ -1767,6 +1787,115 @@ ELSE
  bisextilis = 1
 ENDIF
 END FUNCTION bisextilis
+
+
+ELEMENTAL FUNCTION cyclicdatetime_eq(this, that) RESULT(res)
+TYPE(cyclicdatetime),INTENT(IN) :: this, that
+LOGICAL :: res
+
+res = .true.
+if (this%minute /= that%minute) res=.false.
+if (this%hour /= that%hour) res=.false.
+if (this%day /= that%day) res=.false.
+if (this%month /= that%month) res=.false.
+if (this%year /= that%year) res=.false.
+
+END FUNCTION cyclicdatetime_eq
+
+
+ELEMENTAL FUNCTION cyclicdatetime_datetime_eq(this, that) RESULT(res)
+TYPE(cyclicdatetime),INTENT(IN) :: this
+TYPE(datetime),INTENT(IN) :: that
+LOGICAL :: res
+
+integer :: minute,hour,day,month,year
+
+call getval(that,minute=minute,hour=hour,day=day,month=month,year=year)
+
+res = .true.
+if (c_e(this%minute) .and. this%minute /= minute) res=.false.
+if (c_e(this%hour) .and. this%hour /= hour) res=.false.
+if (c_e(this%day) .and. this%day /= day) res=.false.
+if (c_e(this%month) .and. this%month /= month) res=.false.
+if (c_e(this%year) .and. this%year /= year) res=.false.
+
+END FUNCTION cyclicdatetime_datetime_eq
+
+
+ELEMENTAL FUNCTION datetime_cyclicdatetime_eq(this, that) RESULT(res)
+TYPE(datetime),INTENT(IN) :: this
+TYPE(cyclicdatetime),INTENT(IN) :: that
+LOGICAL :: res
+
+integer :: minute,hour,day,month,year
+
+call getval(this,minute=minute,hour=hour,day=day,month=month,year=year)
+
+res = .true.
+if (c_e(that%minute) .and. that%minute /= minute) res=.false.
+if (c_e(that%hour) .and. that%hour /= hour) res=.false.
+if (c_e(that%day) .and. that%day /= day) res=.false.
+if (c_e(that%month) .and. that%month /= month) res=.false.
+if (c_e(that%year) .and. that%year /= year) res=.false.
+
+END FUNCTION datetime_cyclicdatetime_eq
+
+ELEMENTAL FUNCTION c_e_cyclicdatetime(this) result (res)
+TYPE(cyclicdatetime),INTENT(in) :: this
+LOGICAL :: res
+
+res = .not. this == cyclicdatetime_miss 
+
+end FUNCTION c_e_cyclicdatetime
+
+
+!> Costruisce un oggetto \a cyclicdatetime con i parametri opzionali forniti.
+!! Se non viene passato nulla lo inizializza a missing.
+FUNCTION cyclicdatetime_new(year, month, day, hour, minute, chardate) RESULT(this)
+INTEGER,INTENT(IN),OPTIONAL :: year !< anno d.C., sono ammessi solo anni >0 (d.C.)
+INTEGER,INTENT(IN),OPTIONAL :: month !< mese, default=missing
+INTEGER,INTENT(IN),OPTIONAL :: day !< mese, default=missing
+INTEGER,INTENT(IN),OPTIONAL :: hour !< ore, default=missing
+INTEGER,INTENT(IN),OPTIONAL :: minute !< minuti, default=missing
+CHARACTER(len=12),INTENT(IN),OPTIONAL :: chardate !< inizializza l'oggetto ad una data espressa nel formato \c AAAAMMGGhhmm where any doubled char should be // for missing.
+
+integer :: lyear,lmonth,lday,lhour,lminute,ios
+
+
+TYPE(cyclicdatetime) :: this !< oggetto da inizializzare
+
+if (present(chardate)) then
+!  AAAAMMGGhhmm
+  read(chardate(1:4),*,iostat=ios)lyear
+  if (ios /= 0)lyear=imiss
+
+  read(chardate(5:6),*,iostat=ios)lmonth
+  if (ios /= 0)lmonth=imiss
+
+  read(chardate(7:8),*,iostat=ios)lday
+  if (ios /= 0)lday=imiss
+
+  read(chardate(9:10),*,iostat=ios)lhour
+  if (ios /= 0)lhour=imiss
+
+  read(chardate(11:12),*,iostat=ios)lminute
+  if (ios /= 0)lminute=imiss
+
+  this%year=lyear
+  this%month=lmonth
+  this%day=lday
+  this%hour=lhour
+  this%minute=lminute
+else
+  this%year=optio_l(year)
+  this%month=optio_l(month)
+  this%day=optio_l(day)
+  this%hour=optio_l(hour)
+  this%minute=optio_l(minute)
+end if
+
+END FUNCTION cyclicdatetime_new
+
 
 
 #undef VOL7D_POLY_TYPE

@@ -1008,7 +1008,7 @@ if (optio_log(fill_data)) call vol7d_fill_data(that, step, start, stopp)
 END SUBROUTINE vol7d_fill_time
 
 
-!> Regolarizzazione della dimensione tempo in un volume.
+!> Regularize and/or filter time dimension inside a volume.
 !! Questo metodo crea, a partire da un volume originale, un nuovo
 !! volume dati in cui la dimensione tempo contiene tutti e soli gli
 !! istanti tra \a start e \a stopp (o tra il primo e l'ultimo livello
@@ -1021,42 +1021,50 @@ END SUBROUTINE vol7d_fill_time
 !! chiamante se il suo contenuto non è più richiesto. Attenzione, se
 !! necessario, la dimensione tempo (vettore \a this%time del volume \a
 !! this ) viene riordinata, come effetto collaterale della chiamata.
-SUBROUTINE vol7d_regularize_time(this, that, step, start, stopp, fill_data)
+SUBROUTINE vol7d_filter_time(this, that, step, start, stopp, cyclicdt, fill_data)
 TYPE(vol7d),INTENT(inout) :: this
 TYPE(vol7d),INTENT(inout) :: that
 TYPE(timedelta),INTENT(in) :: step
 TYPE(datetime),INTENT(in),OPTIONAL :: start
 TYPE(datetime),INTENT(in),OPTIONAL :: stopp
+TYPE(cyclicdatetime),INTENT(in),OPTIONAL :: cyclicdt
 logical,optional :: fill_data !< if .true. fill data values with nearest in time (inside step)
 
 TYPE(datetime) :: lstart, lstop
-INTEGER :: n
+TYPE(cyclicdatetime) :: lcyclicdt
 LOGICAL, ALLOCATABLE :: time_mask(:)
 TYPE(vol7d) :: v7dtmp
 
 CALL safe_start_stop(this, lstart, lstop, start, stopp)
 IF (.NOT. c_e(lstart) .OR. .NOT. c_e(lstop)) RETURN
 
+
+if (present(cyclicdt)) then
+  lcyclicdt=cyclicdt
+else
+  lcyclicdt=cyclicdatetime_miss
+end if
+
 CALL l4f_log(L4F_INFO, 'vol7d_fill_time: time interval '//TRIM(to_char(lstart))// &
  ' '//TRIM(to_char(lstop)))
 
 ALLOCATE(time_mask(SIZE(this%time)))
-time_mask(:) = .TRUE.
-DO n = 1, SIZE(this%time)
-  IF (this%time(n) < lstart .OR. this%time(n) > lstop .OR. &
-   MOD(this%time(n) - lstart, step) /= timedelta_0) THEN
-    time_mask(n) = .FALSE.
-  ENDIF
-ENDDO
+time_mask = (this%time >= lstart .AND. this%time <= lstop .AND. &
+   MOD(this%time - lstart, step) == timedelta_0 .AND. this%time == lcyclicdt)
+
 IF (ALL(time_mask)) THEN ! do not lose time in a simple common case
   CALL vol7d_fill_time(this, that, step, start, stopp, fill_data)
 ELSE
-  CALL vol7d_copy(this, v7dtmp, ltime=time_mask)
-  CALL vol7d_fill_time(v7dtmp, that, step, start, stopp, fill_data)
+! TODO not optimized; will be better to change the order by vol7d_fill_time and vol7d_copy
+! but vol7d_fill_time need to manage cyclicdatetime
+  CALL vol7d_fill_time(this, v7dtmp, step, start, stopp, fill_data)
+  CALL vol7d_copy(v7dtmp, that, ltime=time_mask)
   CALL delete(v7dtmp) ! must be cleaned in this case
 ENDIF
 
-END SUBROUTINE vol7d_regularize_time
+DEALLOCATE(time_mask)
+
+END SUBROUTINE vol7d_filter_time
 
 
 !> Fill data volume
@@ -1366,7 +1374,7 @@ real,intent(in) :: perc_vals(:) !< percentile values to use in compute, between 
 !INTEGER,INTENT(in),OPTIONAL :: stat_proc_input !< to be used with care, type of statistical processing of data that has to be processed (from grib2 table), only data having timerange of this type will be recomputed, the actual statistical processing performed and which will appear in the output volume, is however determined by \a stat_proc argument
 
 integer :: itr
-integer :: indana , indtime ,indlevel ,indtimerange ,inddativarr, indnetwork
+integer :: indlevel ,indtimerange ,inddativarr
 LOGICAL,ALLOCATABLE :: mask_time(:)
 TYPE(datetime) :: lstart, lstop
 REAL, DIMENSION(:),allocatable ::  ndi,limbins
@@ -1388,9 +1396,11 @@ allocate (mask_time(size(this%time)))
 !CALL init(that, time_definition=this%time_definition)
 !CALL vol7d_alloc_vol(this)
 
-mask_time=(this%time < lstart .OR. this%time(indtime) > lstop .OR. MOD(this%time - lstart, step) /= timedelta_0)
+mask_time=(this%time < lstart .OR. this%time > lstop .OR. MOD(this%time - lstart, step) /= timedelta_0)
 
 !TODO how to use this mask ??? without copy??
+
+call init(that)
 
 do indtimerange=1,size(this%timerange)
   do inddativarr=1,size(this%dativar%r)
