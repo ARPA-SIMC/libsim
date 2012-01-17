@@ -88,10 +88,13 @@ INTEGER :: category
 LOGICAL :: comp_regularize, comp_keep, comp_sort, comp_fill_data, obso
 LOGICAL :: file, lconvr, round
 CHARACTER(len=13) :: comp_stat_proc
+CHARACTER(len=12) :: comp_cyclicdatetime=cmiss
 CHARACTER(len=23) :: comp_step, comp_start
 INTEGER :: istat_proc, ostat_proc
 TYPE(timedelta) :: c_i
 TYPE(datetime) :: c_s
+TYPE(cyclicdatetime) :: cyclicdt
+
 REAL :: comp_frac_valid
 
 ! for grib output
@@ -210,6 +213,12 @@ CALL optionparser_add(opt, 'd', 'display', ldisplay, help= &
  &with output on stdout.')
 CALL optionparser_add(opt, ' ', 'comp-regularize', comp_regularize, help= &
  'regularize the time series keeping only the data at regular time steps')
+
+CALL optionparser_add(opt, ' ', 'comp-cyclicdatetime', comp_cyclicdatetime, help= &
+'date and time in the format \c AAAAMMGGhhmm  where any repeated group of char should be / for missing. &
+&Take in account only selected minute/hour/day/month/year. &
+&You need it to specify for example every january in all years or &
+&the same time for all days and so on')
 
 CALL optionparser_add(opt, ' ', 'comp-stat-proc', comp_stat_proc, '', help= &
  'statistically process data with an operator specified in the form [isp:]osp &
@@ -774,9 +783,12 @@ IF (pre_trans_type /= '') THEN
   CALL init(v7d_comp1) ! detach it
 ENDIF
 
-IF (comp_regularize) THEN
+IF (comp_regularize .or. c_e(comp_cyclicdatetime)) THEN
+
+  cyclicdt=cyclicdatetime_new(chardate=comp_cyclicdatetime)
+
   CALL init(v7d_comp1)
-  CALL vol7d_filter_time(v7d, v7d_comp1, c_i, c_s, fill_data=comp_fill_data)
+  CALL vol7d_filter_time(v7d, v7d_comp1, c_i, c_s, cyclicdt=cyclicdt, fill_data=comp_fill_data)
   CALL delete(v7d)
   v7d = v7d_comp1
 ENDIF

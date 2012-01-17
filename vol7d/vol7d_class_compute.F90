@@ -1012,7 +1012,9 @@ END SUBROUTINE vol7d_fill_time
 !! Questo metodo crea, a partire da un volume originale, un nuovo
 !! volume dati in cui la dimensione tempo contiene tutti e soli gli
 !! istanti tra \a start e \a stopp (o tra il primo e l'ultimo livello
-!! temporale) ad intervalli \a step. Gli eventuali livelli mancanti
+!! temporale) ad intervalli \a step; se specificato cyclicdt solo i 
+!! corrispondenti istanti di tempo vengono ulteriormente selezionati.
+!! Gli eventuali livelli mancanti
 !! vengono aggiunti riempiendo le corrispondenti posizioni dei volumi
 !! dati con valori mancanti. Fa quindi un lavoro simile al metodo
 !! ::vol7d_fill_time ma in più elimina i livelli temporali che non
@@ -1024,10 +1026,13 @@ END SUBROUTINE vol7d_fill_time
 SUBROUTINE vol7d_filter_time(this, that, step, start, stopp, cyclicdt, fill_data)
 TYPE(vol7d),INTENT(inout) :: this
 TYPE(vol7d),INTENT(inout) :: that
-TYPE(timedelta),INTENT(in) :: step
+TYPE(timedelta),INTENT(in),optional :: step
 TYPE(datetime),INTENT(in),OPTIONAL :: start
 TYPE(datetime),INTENT(in),OPTIONAL :: stopp
-TYPE(cyclicdatetime),INTENT(in),OPTIONAL :: cyclicdt
+TYPE(cyclicdatetime),INTENT(in),OPTIONAL :: cyclicdt !< date and time in the format \c AAAAMMGGhhmm 
+!! where any doubled char should be // for missing. 
+!! You need it to specify for example every january in all years or
+!! the same time for all days and so on
 logical,optional :: fill_data !< if .true. fill data values with nearest in time (inside step)
 
 TYPE(datetime) :: lstart, lstop
@@ -1038,19 +1043,21 @@ TYPE(vol7d) :: v7dtmp
 CALL safe_start_stop(this, lstart, lstop, start, stopp)
 IF (.NOT. c_e(lstart) .OR. .NOT. c_e(lstop)) RETURN
 
-
+lcyclicdt=cyclicdatetime_miss
 if (present(cyclicdt)) then
-  lcyclicdt=cyclicdt
-else
-  lcyclicdt=cyclicdatetime_miss
+  if(c_e(cyclicdt)) lcyclicdt=cyclicdt
 end if
 
 CALL l4f_log(L4F_INFO, 'vol7d_fill_time: time interval '//TRIM(to_char(lstart))// &
  ' '//TRIM(to_char(lstop)))
 
 ALLOCATE(time_mask(SIZE(this%time)))
-time_mask = (this%time >= lstart .AND. this%time <= lstop .AND. &
-   MOD(this%time - lstart, step) == timedelta_0 .AND. this%time == lcyclicdt)
+
+time_mask = this%time >= lstart .AND. this%time <= lstop .AND. this%time == lcyclicdt
+
+if (present(step)) then
+  time_mask=time_mask .AND. MOD(this%time - lstart, step) == timedelta_0 
+end if
 
 IF (ALL(time_mask)) THEN ! do not lose time in a simple common case
   CALL vol7d_fill_time(this, that, step, start, stopp, fill_data)

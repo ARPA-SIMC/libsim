@@ -1857,7 +1857,7 @@ INTEGER,INTENT(IN),OPTIONAL :: month !< mese, default=missing
 INTEGER,INTENT(IN),OPTIONAL :: day !< mese, default=missing
 INTEGER,INTENT(IN),OPTIONAL :: hour !< ore, default=missing
 INTEGER,INTENT(IN),OPTIONAL :: minute !< minuti, default=missing
-CHARACTER(len=12),INTENT(IN),OPTIONAL :: chardate !< inizializza l'oggetto ad una data espressa nel formato \c AAAAMMGGhhmm where any doubled char should be // for missing.
+CHARACTER(len=12),INTENT(IN),OPTIONAL :: chardate !< inizializza l'oggetto ad una data espressa nel formato \c AAAAMMGGhhmm where any doubled char should be // for missing. This parameter have priority on others also if set to missing.
 
 integer :: lyear,lmonth,lday,lhour,lminute,ios
 
@@ -1865,21 +1865,29 @@ integer :: lyear,lmonth,lday,lhour,lminute,ios
 TYPE(cyclicdatetime) :: this !< oggetto da inizializzare
 
 if (present(chardate)) then
-!  AAAAMMGGhhmm
-  read(chardate(1:4),*,iostat=ios)lyear
-  if (ios /= 0)lyear=imiss
-
-  read(chardate(5:6),*,iostat=ios)lmonth
-  if (ios /= 0)lmonth=imiss
-
-  read(chardate(7:8),*,iostat=ios)lday
-  if (ios /= 0)lday=imiss
-
-  read(chardate(9:10),*,iostat=ios)lhour
-  if (ios /= 0)lhour=imiss
-
-  read(chardate(11:12),*,iostat=ios)lminute
-  if (ios /= 0)lminute=imiss
+  if (c_e(chardate))then
+                                !  AAAAMMGGhhmm
+    read(chardate(1:4),*,iostat=ios)lyear
+    if (ios /= 0)lyear=imiss
+    
+    read(chardate(5:6),*,iostat=ios)lmonth
+    if (ios /= 0)lmonth=imiss
+    
+    read(chardate(7:8),*,iostat=ios)lday
+    if (ios /= 0)lday=imiss
+    
+    read(chardate(9:10),*,iostat=ios)lhour
+    if (ios /= 0)lhour=imiss
+    
+    read(chardate(11:12),*,iostat=ios)lminute
+    if (ios /= 0)lminute=imiss
+  else
+    lyear=imiss
+    lmonth=imiss
+    lday=imiss
+    lhour=imiss
+    lminute=imiss
+  end if
 
   this%year=lyear
   this%month=lmonth
