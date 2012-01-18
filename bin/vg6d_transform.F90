@@ -19,6 +19,7 @@ PROGRAM vg6d_transform
 #include "config.h"
 use log4fortran
 use volgrid6d_class
+use volgrid6d_class_compute
 #ifdef VAPOR
 use volgrid6d_vapor_class
 #endif
@@ -28,6 +29,7 @@ use grid_id_class
 use err_handling
 use char_utilities
 use optionparser_class
+USE datetime_class
 USE geo_coord_class
 USE vol7d_level_class
 #ifdef ALCHIMIA
@@ -58,9 +60,10 @@ character(len=80) :: proj_type,trans_type,sub_type
 
 TYPE(geo_coordvect),POINTER :: poly(:) => NULL()
 LOGICAL :: extrap, c2agrid, decode, round
-type(optionparser) :: opt
+TYPE(optionparser) :: opt
 INTEGER :: optind, optstatus
-integer :: iargc
+TYPE(csv_record) :: argparse
+INTEGER :: iargc
 !CHARACTER(len=3) :: set_scmode
 LOGICAL :: version, ldisplay, rzscan
 INTEGER,POINTER :: w_s(:), w_e(:)
@@ -69,6 +72,14 @@ TYPE(grid_id) :: gaid_template
 #ifdef ALCHIMIA
 type(fndsv) :: vfn, vfnoracle
 #endif
+
+! for computing
+CHARACTER(len=13) :: comp_stat_proc
+CHARACTER(len=23) :: comp_step, comp_start
+INTEGER :: istat_proc, ostat_proc
+TYPE(timedelta) :: c_i
+TYPE(datetime) :: c_s
+REAL :: comp_frac_valid
 
 !questa chiamata prende dal launcher il nome univoco
 call l4f_launcher(a_name,a_name_force="volgrid6dtransform")
@@ -204,6 +215,26 @@ CALL optionparser_add(opt, ' ', 'time-definition', time_definition, 0, help= &
  &presenting forecast data) and 1 for verification time (more suitable for &
  &comparing forecasts with observations)')
 
+! for computing
+CALL optionparser_add(opt, ' ', 'comp-stat-proc', comp_stat_proc, '', help= &
+ 'statistically process data with an operator specified in the form [isp:]osp &
+ &where isp is the statistical process of input data which has to be processed &
+ &and osp is the statistical process to apply and which will appear in output &
+ &timerange; possible values for isp and osp are 0=average, 1=accumulated, &
+ &2=maximum, 3=minimum, 254=instantaneous, but not all the combinations &
+ &make sense; if isp is not provided it is assumed to be equal to osp')
+
+CALL optionparser_add(opt, ' ', 'comp-step', comp_step, '0000000001 00:00:00.000', help= &
+ 'length of regularization or statistical processing step in the format &
+ &''YYYYMMDDDD hh:mm:ss.msc'', it can be simplified up to the form ''D hh''')
+!CALL optionparser_add(opt, ' ', 'comp-start', comp_start, '', help= &
+! 'start of regularization, or statistical processing interval, an empty value means &
+! &take the initial time step of the available data; the format is the same as for &
+! &--start-date parameter')
+CALL optionparser_add(opt, ' ', 'comp-frac-valid', comp_frac_valid, 1., help= &
+ 'specify the fraction of input data that has to be valid in order to consider a &
+ &statistically processed value acceptable')
+
 
                                 ! display option
 CALL optionparser_add(opt, ' ', 'display', ldisplay, help= &
@@ -269,6 +300,35 @@ IF (LEN_TRIM(output_variable_list) > 0) THEN
     vl(i) = output_variable_list(w_s(i):w_e(i))
   ENDDO
   DEALLOCATE(w_s, w_e)
+ENDIF
+
+! time-related arguments
+c_i = timedelta_new(isodate=comp_step)
+!IF (comp_start /= '') THEN
+!  c_s = datetime_new(isodate=comp_start)
+!ELSE
+c_s = datetime_miss
+!ENDIF
+
+! check comp_stat_proc
+istat_proc = imiss
+ostat_proc = imiss
+IF (comp_stat_proc /= '') THEN
+  CALL init(argparse, comp_stat_proc, ':', nfield=n)
+  IF (n == 1) THEN
+    CALL csv_record_getfield(argparse, ostat_proc)
+    istat_proc = ostat_proc
+  ELSE  IF (n == 2) THEN
+    CALL csv_record_getfield(argparse, istat_proc)
+    CALL csv_record_getfield(argparse, ostat_proc)
+  ENDIF
+  CALL delete(argparse)
+  IF (.NOT.c_e(istat_proc) .OR. .NOT.c_e(ostat_proc)) THEN
+    CALL l4f_category_log(category, L4F_ERROR, &
+     'error in command-line parameters, wrong syntax for --comp-stat-proc: ' &
+     //TRIM(comp_stat_proc))
+    CALL raise_fatal_error()
+  ENDIF
 ENDIF
 
 CALL delete(opt)
@@ -347,16 +407,17 @@ IF (trans_type /=  'none') THEN ! transform
   CALL l4f_category_log(category,L4F_INFO,"transformation completed")
   IF (ASSOCIATED(volgrid)) CALL delete(volgrid)
 
-else
+ELSE
   
   volgrid_out => volgrid
 
-end IF
+ENDIF
 
 if (round .and. ASSOCIATED(volgrid_out)) then
   call rounding(volgrid_out,volgrid_tmp,level=almost_equal_levels,nostatproc=.true.)
   CALL delete(volgrid_out)
   volgrid_out => volgrid_tmp
+  NULLIFY(volgrid_tmp)
 end if
 
 #ifdef ALCHIMIA
@@ -387,6 +448,18 @@ if (ASSOCIATED(volgrid_out) .and. output_variable_list /= " ") then
 end if
 #endif
 
+CALL l4f_category_log(category,L4F_INFO,"thinking about cumulating")
+IF (c_e(ostat_proc) .AND. ASSOCIATED(volgrid_out)) THEN ! necessary?
+  CALL l4f_category_log(category,L4F_INFO,"cumulating")
+  ALLOCATE(volgrid_tmp(SIZE(volgrid_out)))
+  DO i = 1, SIZE(volgrid_out)
+    CALL volgrid6d_recompute_stat_proc_diff(volgrid_out(i), volgrid_tmp(i), &
+     ostat_proc, c_i, full_steps=.TRUE.)
+  ENDDO
+  CALL delete(volgrid_out)
+  volgrid_out => volgrid_tmp
+  NULLIFY(volgrid_tmp)
+ENDIF
 
 IF (ldisplay .and. ASSOCIATED(volgrid_out)) THEN ! done here in order to print final ellipsoid
   PRINT*,'output grid >>>>>>>>>>>>>>>>>>>>'

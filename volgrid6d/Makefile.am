@@ -10,7 +10,7 @@ endif
 
 libsim_volgrid6d_la_SOURCES += grid_id_class.F90 grid_class.F90 \
  grid_transform_class.F90 volgrid6d_var_class.F90 gridinfo_class.F90 \
- volgrid6d_class.F90
+ volgrid6d_class.F90 volgrid6d_class_compute.F90
 
 
 
@@ -89,6 +89,8 @@ gridinfo_class.o: volgrid6d_var_class.$(OBJEXT) grid_class.$(OBJEXT) grid_id_cla
 gridinfo_class.lo: volgrid6d_var_class.$(OBJEXT) grid_class.$(OBJEXT) grid_id_class.$(OBJEXT)
 volgrid6d_class.o: volgrid6d_var_class.$(OBJEXT) grid_class.$(OBJEXT) grid_transform_class.$(OBJEXT) gridinfo_class.$(OBJEXT) grid_id_class.$(OBJEXT)
 volgrid6d_class.lo: volgrid6d_var_class.$(OBJEXT) grid_class.$(OBJEXT) grid_transform_class.$(OBJEXT) gridinfo_class.$(OBJEXT) grid_id_class.$(OBJEXT)
+volgrid6d_class_compute.o: volgrid6d_class.$(OBJEXT)
+volgrid6d_class_compute.lo: volgrid6d_class.$(OBJEXT)
 
 
 mostlyclean-compile:

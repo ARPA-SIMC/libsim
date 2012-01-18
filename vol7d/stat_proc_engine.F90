@@ -15,7 +15,7 @@
 
 ! You should have received a copy of the GNU General Public License
 ! along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
+#include "config.h"
 !> This module contains functions that are only for internal use of
 !! the library. It should not be used by user procedures because it is
 !! subject to change
@@ -267,6 +267,13 @@ map_tr(:,:,:,:,:) = imiss
 a_otime = arrayof_datetime_new()
 a_otimerange = arrayof_vol7d_timerange_new()
 
+mask_timerange(:) = mask_timerange(:) .AND. itimerange(:)%p2 == steps
+DO i = 1, SIZE(mask_timerange)
+  IF (mask_timerange(i)) THEN
+    j = append_unique(a_otimerange, itimerange(i))
+  ENDIF
+ENDDO
+
 ! scan through all possible combinations of time and timerange
 DO l = 1, SIZE(itime)
   DO k = 1, nitr
@@ -326,6 +333,16 @@ CALL delete(a_otime, nodealloc=.TRUE.)
 CALL delete(a_otimerange, nodealloc=.TRUE.)
 
 mask_timerange(:) = mask_timerange(:) .AND. itimerange(:)%p2 == steps
+
+#ifdef DEBUG
+CALL l4f_log(L4F_DEBUG, &
+ 'recompute_stat_proc_diff, map_tr: '//t2c((SIZE(map_tr)))//', '// &
+ t2c(COUNT(c_e(map_tr))))
+CALL l4f_log(L4F_DEBUG, &
+ 'recompute_stat_proc_diff, nitr: '//t2c(nitr))
+CALL l4f_log(L4F_DEBUG, &
+ 'recompute_stat_proc_diff, good timeranges: '//t2c(COUNT(mask_timerange)))
+#endif
 
 END SUBROUTINE recompute_stat_proc_diff_common
 

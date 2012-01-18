@@ -771,34 +771,31 @@ LOGICAL,POINTER :: mask_timerange(:)
 TYPE(vol7d) :: v7dtmp
 
 
-CALL init(that, time_definition=this%time_definition)
 ! be safe
 CALL vol7d_alloc_vol(this)
+! initialise the template of the output volume
+CALL init(that, time_definition=this%time_definition)
 
 ! compute length of cumulation step in seconds
 CALL getval(step, asec=steps)
 
+! compute the statistical processing relations, output time and
+! timerange are defined here
 CALL recompute_stat_proc_diff_common(this%time, this%timerange, stat_proc, step, &
  nitr, that%time, that%timerange, map_tr, f, mask_timerange, &
  this%time_definition, full_steps)
 
-IF (ANY(mask_timerange)) THEN
-! copy the timeranges already satisfying the requested step
-  CALL vol7d_copy(this, v7dtmp, miss=.FALSE., sort=.FALSE., unique=.FALSE., &
-   ltimerange=mask_timerange(:))
+! complete the definition of the empty output template
+CALL vol7d_alloc(that, nana=0, nlevel=0, nnetwork=0)
+CALL vol7d_alloc_vol(that)
+
+! copy the timeranges already satisfying the requested step, if any
+CALL vol7d_copy(this, v7dtmp, miss=.FALSE., sort=.FALSE., unique=.FALSE., &
+ ltimerange=mask_timerange(:))
 ! merge output created so far with template
-  CALL vol7d_merge(that, v7dtmp, lanasimple=.TRUE.)
-  CALL delete(v7dtmp)
-ENDIF
+CALL vol7d_merge(that, v7dtmp, lanasimple=.TRUE., llevelsimple=.TRUE.)
 
-#ifdef DEBUG
-CALL l4f_log(L4F_INFO, &
- 'vol7d_recompute_stat_proc_diff, map_tr: '//t2c((SIZE(map_tr)))//', '// &
- t2c(COUNT(c_e(map_tr))))
-CALL l4f_log(L4F_INFO, &
- 'vol7d_recompute_stat_proc_diff, mask_tr: '//t2c(nitr))
-#endif
-
+! compute statistical processing
 IF (ASSOCIATED(this%voldatir)) THEN
   DO l = 1, SIZE(this%time)
     DO k = 1, nitr
@@ -811,8 +808,6 @@ IF (ASSOCIATED(this%voldatir)) THEN
                   DO i1 = 1, SIZE(this%ana)
                     IF (c_e(this%voldatir(i1,l,i3,f(k),i5,i6)) .AND. &
                      c_e(this%voldatir(i1,j,i3,f(i),i5,i6))) THEN
-!                      IF (.NOT.c_e(that%voldatir( &
-!                       i1,map_tr(i,j,k,l,1),i3,map_tr(i,j,k,l,2),i5,i6))) THEN
 
                       IF (stat_proc == 0) THEN ! average
                         that%voldatir( &
@@ -827,7 +822,6 @@ IF (ASSOCIATED(this%voldatir)) THEN
                          this%voldatir(i1,j,i3,f(i),i5,i6)
                       ENDIF
 
-!                      ENDIF
                     ENDIF
                   ENDDO
                 ENDDO
