@@ -53,6 +53,9 @@ USE grid_id_class
 USE gridinfo_class
 USE optional_values
 !USE file_utilities
+#ifdef HAVE_DBALLE
+USE vol7d_dballe_class
+#endif
 IMPLICIT NONE
 
 character (len=255),parameter:: subcategory="volgrid6d_class"
@@ -144,7 +147,8 @@ END INTERFACE
 private
 
 PUBLIC volgrid6d,init,delete,export,import,compute,transform, &
- wind_rot,wind_unrot,vg6d_c2a,display,volgrid6d_alloc,volgrid6d_alloc_vol
+ wind_rot,wind_unrot,vg6d_c2a,display,volgrid6d_alloc,volgrid6d_alloc_vol, &
+ volgrid_get_vol_2d, volgrid_set_vol_2d, volgrid_get_vol_3d, volgrid_set_vol_3d
 PUBLIC rounding, vg6d_reduce
 
 CONTAINS
@@ -241,7 +245,7 @@ IF (PRESENT(ntime)) THEN
     ALLOCATE(this%time(ntime),stat=stallo)
     if (stallo /=0)then
       call l4f_category_log(this%category,L4F_FATAL,"allocating memory")
-      CALL raise_fatal_error("allocating memory")
+      CALL raise_fatal_error()
     end if
     IF (linit) THEN
       DO i = 1, ntime
@@ -261,7 +265,7 @@ IF (PRESENT(nlevel)) THEN
     ALLOCATE(this%level(nlevel),stat=stallo)
     if (stallo /=0)then
       call l4f_category_log(this%category,L4F_FATAL,"allocating memory")
-      CALL raise_fatal_error("allocating memory")
+      CALL raise_fatal_error()
     end if
     IF (linit) THEN
       DO i = 1, nlevel
@@ -279,7 +283,7 @@ IF (PRESENT(ntimerange)) THEN
     ALLOCATE(this%timerange(ntimerange),stat=stallo)
     if (stallo /=0)then
       call l4f_category_log(this%category,L4F_FATAL,"allocating memory")
-      CALL raise_fatal_error("allocating memory")
+      CALL raise_fatal_error()
     end if
     IF (linit) THEN
       DO i = 1, ntimerange
@@ -297,7 +301,7 @@ IF (PRESENT(nvar)) THEN
     ALLOCATE(this%var(nvar),stat=stallo)
     if (stallo /=0)then
       call l4f_category_log(this%category,L4F_FATAL,"allocating memory")
-      CALL raise_fatal_error("allocating memory")
+      CALL raise_fatal_error()
     end if
     IF (linit) THEN
       DO i = 1, nvar
@@ -325,61 +329,51 @@ LOGICAL,INTENT(in),OPTIONAL :: inivol !< if provided and \c .FALSE., the allocat
 LOGICAL,INTENT(in),OPTIONAL :: decode !< if provided and \c .FALSE., the \a this%voldati volume is not allocated, only \a this%gaid
 
 INTEGER :: stallo
-LOGICAL :: linivol,ldecode
 
 #ifdef DEBUG
 call l4f_category_log(this%category,L4F_DEBUG,"start alloc_vol")
 #endif
-IF (PRESENT(inivol)) THEN
-  linivol = inivol
-ELSE
-  linivol = .TRUE.
-ENDIF
 
-IF (PRESENT(decode)) THEN
-  ldecode = decode
-ELSE
-  ldecode = .TRUE.
-ENDIF
-
-IF (this%griddim%dim%nx > 0 .and. this%griddim%dim%ny > 0 .and. &
- .NOT.ASSOCIATED(this%voldati)) THEN
-! Alloco i descrittori minimi per avere un volume di dati
+IF (this%griddim%dim%nx > 0 .AND. this%griddim%dim%ny > 0) THEN
+! allocate dimension descriptors to a minimal size for having a
+! non-null volume
   IF (.NOT. ASSOCIATED(this%var)) CALL volgrid6d_alloc(this, nvar=1, ini=ini)
   IF (.NOT. ASSOCIATED(this%time)) CALL volgrid6d_alloc(this, ntime=1, ini=ini)
   IF (.NOT. ASSOCIATED(this%level)) CALL volgrid6d_alloc(this, nlevel=1, ini=ini)
   IF (.NOT. ASSOCIATED(this%timerange)) CALL volgrid6d_alloc(this, ntimerange=1, ini=ini)
   
-  if (ldecode) then
-
+  IF (optio_log(decode)) THEN
+    IF (.NOT.ASSOCIATED(this%voldati)) THEN
 #ifdef DEBUG
-     call l4f_category_log(this%category,L4F_DEBUG,"alloc voldati volume")
+      CALL l4f_category_log(this%category,L4F_DEBUG,"alloc voldati volume")
 #endif
 
-     ALLOCATE(this%voldati( this%griddim%dim%nx,this%griddim%dim%ny,&
-      SIZE(this%level), SIZE(this%time), &
-      SIZE(this%timerange), SIZE(this%var)),stat=stallo)
-     if (stallo /=0)then
-       call l4f_category_log(this%category,L4F_FATAL,"allocating memory")
-       CALL raise_fatal_error("allocating memory")
-     end if
+      ALLOCATE(this%voldati(this%griddim%dim%nx,this%griddim%dim%ny,&
+       SIZE(this%level), SIZE(this%time), &
+       SIZE(this%timerange), SIZE(this%var)),stat=stallo)
+      IF (stallo /= 0)THEN
+        CALL l4f_category_log(this%category,L4F_FATAL,"allocating memory")
+        CALL raise_fatal_error()
+      ENDIF
   
-     ! this is not really needed if we can check other flags for a full field missing values
-     IF (linivol) this%voldati = rmiss
+! this is not really needed if we can check other flags for a full
+! field missing values
+      IF (optio_log(inivol)) this%voldati = rmiss
+    ENDIF
+  ENDIF
 
-  end if
-
+  IF (.NOT.ASSOCIATED(this%gaid)) THEN
 #ifdef DEBUG
-  call l4f_category_log(this%category,L4F_DEBUG,"alloc gaid volume")
+    CALL l4f_category_log(this%category,L4F_DEBUG,"alloc gaid volume")
 #endif
-  ALLOCATE(this%gaid(SIZE(this%level), SIZE(this%time), &
-   SIZE(this%timerange), SIZE(this%var)),stat=stallo)
-  if (stallo /=0)then
-    call l4f_category_log(this%category,L4F_FATAL,"allocating memory")
-    CALL raise_fatal_error("allocating memory")
-  end if
+    ALLOCATE(this%gaid(SIZE(this%level), SIZE(this%time), &
+     SIZE(this%timerange), SIZE(this%var)),stat=stallo)
+    IF (stallo /= 0)THEN
+      CALL l4f_category_log(this%category,L4F_FATAL,"allocating memory")
+      CALL raise_fatal_error()
+    ENDIF
 
-  IF (linivol) THEN
+    IF (optio_log(inivol)) THEN
 !!$    DO i=1 ,SIZE(this%gaid,1)
 !!$      DO ii=1 ,SIZE(this%gaid,2)
 !!$        DO iii=1 ,SIZE(this%gaid,3)
@@ -390,13 +384,15 @@ IF (this%griddim%dim%nx > 0 .and. this%griddim%dim%ny > 0 .and. &
 !!$      ENDDO
 !!$    ENDDO
 
-
-    this%gaid = grid_id_new()
-
+      this%gaid = grid_id_new()
+    ENDIF
   ENDIF
   
-end if
-
+ELSE
+  CALL l4f_category_log(this%category,L4F_FATAL,'volgrid6d_alloc_vol: &
+   &trying to allocate a volume with an invalid or unspecified horizontal grid')
+  CALL raise_fatal_error()
+ENDIF
 
 END SUBROUTINE volgrid6d_alloc_vol
 
@@ -1038,7 +1034,7 @@ call l4f_category_log(category,L4F_INFO,&
 allocate(this(ngrid),stat=stallo)
 if (stallo /=0)then
   call l4f_category_log(category,L4F_FATAL,"allocating memory")
-  CALL raise_fatal_error("allocating memory")
+  CALL raise_fatal_error()
 end if
 do i=1,ngrid
    if (present(categoryappend))then
@@ -1131,8 +1127,8 @@ ngridinfo=size(gridinfov)
 
 if (ngridinfo /= size(this%gaid))then
    call l4f_category_log(this%category,L4F_ERROR,&
-        "dimension mismach"//to_char(ngridinfo)//to_char(size(this%gaid)))
-   call raise_error("dimension mismach")
+    "dimension mismatch"//to_char(ngridinfo)//to_char(SIZE(this%gaid)))
+   call raise_error()
 end if
 
 i=0
@@ -1147,10 +1143,13 @@ do itime=1,ntime
       do ivar=1,nvar
         
         i=i+1
-        if (i > ngridinfo) &
-         call raise_error ("errore stranuccio in export_to_gridinfo:"//&
-         "avevo già testato le dimensioni che ora sono sbagliate")
-        call export(this,gridinfov(i),itime,itimerange,ilevel,ivar,gaid_template,clone=clone)
+        IF (i > ngridinfo) THEN
+          CALL l4f_category_log(this%category,L4F_ERROR, &
+           "export_to_gridinfov, strange error, wrong dimensions: " &
+           //t2c(i)//" "//t2c(ngridinfo))
+          CALL raise_error()
+        ENDIF
+        CALL export(this,gridinfov(i),itime,itimerange,ilevel,ivar,gaid_template,clone=clone)
         
       end do
     end do
@@ -1198,7 +1197,7 @@ if (.not. associated(gridinfov))then
   allocate (gridinfov(ngridinfo),stat=stallo)
   if (stallo /=0)then
     call l4f_category_log(category,L4F_FATAL,"allocating memory")
-    CALL raise_fatal_error("allocating memory")
+    CALL raise_fatal_error()
   end if
   do i=1,ngridinfo
      if (present(categoryappend))then
@@ -1212,9 +1211,9 @@ else
    ngridinfoin=size(gridinfov)
 
    if (ngridinfo /= ngridinfoin)then
-      call l4f_category_log(category,L4F_ERROR,&
-           "dimension mismach"//to_char(ngridinfo)//to_char(ngridinfoin))
-      call raise_error("dimension mismach")
+     CALL l4f_category_log(category,L4F_ERROR,&
+      "dimension mismatch"//to_char(ngridinfo)//to_char(ngridinfoin))
+     CALL raise_error()
    end if
    
 end if
@@ -1374,7 +1373,7 @@ END SUBROUTINE volgrid6dv_delete
 ! \brief Calcola i nuovi dati secondo la trasformazione specificata
 !
 ! Deve essere fornito l'oggetto di trasformazione e oggetti completi
-SUBROUTINE volgrid6d_transform_compute(this, volgrid6d_in, volgrid6d_out,clone)
+SUBROUTINE volgrid6d_transform_compute(this, volgrid6d_in, volgrid6d_out, clone)
 TYPE(grid_transform),INTENT(in) :: this ! oggetto di trasformazione per il grigliato
 type(volgrid6d), INTENT(in) :: volgrid6d_in ! oggetto da trasformare
 type(volgrid6d), INTENT(out) :: volgrid6d_out ! oggetto trasformato; deve essere completo (init, alloc, alloc_vol)
@@ -1649,7 +1648,7 @@ if (associated(volgrid6d_in%time))then
     allocate (validitytime(ntime,ntimerange),stat=stallo)
     if (stallo /=0)then
       call l4f_category_log(volgrid6d_in%category,L4F_FATAL,"allocating memory")
-      call raise_fatal_error("allocating memory")
+      call raise_fatal_error()
     end if
 
     do itime=1,ntime
@@ -1692,7 +1691,7 @@ ENDIF
 ALLOCATE(voldatir_out(nana,1,nlevel),stat=stallo)
 if (stallo /=0)then
   call l4f_category_log(volgrid6d_in%category,L4F_FATAL,"allocating memory")
-  call raise_fatal_error("allocating memory")
+  call raise_fatal_error()
 end if
 
 inetwork=1
@@ -1810,7 +1809,7 @@ if (associated(volgrid6d_in%time)) then
     allocate (validitytime(ntime,ntimerange),stat=stallo)
     if (stallo /=0)then
       call l4f_category_log(volgrid6d_in%category,L4F_FATAL,"allocating memory")
-      call raise_fatal_error("allocating memory")
+      call raise_fatal_error()
     end if
 
     do itime=1,ntime
@@ -1867,6 +1866,11 @@ IF (c_e(grid_trans)) THEN
 ENDIF
 
 CALL delete(grid_trans)
+
+#ifdef HAVE_DBALLE
+! set variables to a conformal state
+CALL vol7d_dballe_set_var_du(vol7d_out)
+#endif
 
 IF (.NOT. PRESENT(v7d)) THEN
   CALL delete(v7d_locana)
@@ -2552,7 +2556,7 @@ else
   case default
 
     call l4f_category_log(this%category,L4F_FATAL,"C grid type not known")
-    call raise_fatal_error ("volgrid6d: C grid type not kmow")
+    call raise_fatal_error ()
 
   end select
 

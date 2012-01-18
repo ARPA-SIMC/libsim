@@ -1281,6 +1281,14 @@ ELSE IF (this%trans%trans_type == 'polyinter') THEN
     DEALLOCATE(lon, lat)
   ENDDO
 
+#ifdef DEBUG
+  DO n = 1, SIZE(this%trans%poly)
+    CALL l4f_category_log(this%category, L4F_DEBUG, &
+     'Polygon: '//t2c(n)//' grid points: '// &
+     t2c(COUNT(this%inter_index_x(:,:) == n)))
+  ENDDO
+#endif
+
 ELSE IF (this%trans%trans_type == 'maskinter') THEN
 
   IF (.NOT.PRESENT(maskgrid)) THEN
