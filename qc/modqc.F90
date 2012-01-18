@@ -969,7 +969,7 @@ if (optio_log(purgeana)) then
 
 else
 
-  call vol7d_reform(this,miss)
+  call vol7d_reform(this,miss=miss)
 
 end if
 
