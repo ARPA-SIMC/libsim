@@ -36,6 +36,7 @@ USE log4fortran
 USE err_handling
 USE missing_values
 USE optional_values
+USE char_utilities
 IMPLICIT NONE
 
 INTEGER, PARAMETER :: dateint=SELECTED_INT_KIND(13)
@@ -138,7 +139,7 @@ END INTERFACE
 
 !> Restituiscono il valore dell'oggetto in forma di stringa stampabile.
 INTERFACE to_char
-  MODULE PROCEDURE datetime_to_char, timedelta_to_char
+  MODULE PROCEDURE datetime_to_char, timedelta_to_char, cyclicdatetime_to_char
 END INTERFACE
 
 
@@ -160,7 +161,7 @@ END INTERFACE
 !! ...
 !! \endcode
 INTERFACE t2c
-  MODULE PROCEDURE trim_datetime_to_char, trim_timedelta_to_char
+  MODULE PROCEDURE trim_datetime_to_char, trim_timedelta_to_char, trim_cyclicdatetime_to_char
 END INTERFACE
 
 !> Operatore logico di uguaglianza tra oggetti della stessa classe.
@@ -302,7 +303,7 @@ END INTERFACE
 
 !> Print object
 INTERFACE display
-  MODULE PROCEDURE display_datetime, display_timedelta
+  MODULE PROCEDURE display_datetime, display_timedelta, display_cyclicdatetime
 END INTERFACE
 
 !> Missing check
@@ -362,7 +363,7 @@ PUBLIC datetime, datetime_miss, datetime_utc, datetime_local, &
  timedelta_min, timedelta_max, timedelta_getamsec, timedelta_depop, &
  display, c_e, &
  count_distinct, pack_distinct, map_distinct, map_inv_distinct, index, sort, &
- cyclicdatetime, cyclicdatetime_new, cyclicdatetime_miss
+ cyclicdatetime, cyclicdatetime_new, cyclicdatetime_miss, display_cyclicdatetime
 
 CONTAINS
 
@@ -1182,7 +1183,7 @@ INTEGER,INTENT(OUT),OPTIONAL :: ahour !< ore totali
 INTEGER,INTENT(OUT),OPTIONAL :: aminute !< minuti totali
 INTEGER,INTENT(OUT),OPTIONAL :: asec !< secondi totali
 INTEGER(kind=int_ll),INTENT(OUT),OPTIONAL :: amsec !< millisecondi totali
-CHARACTER(len=*),INTENT(OUT),OPTIONAL :: isodate !< intervallo totale nel formato \c GGGGGGGGGG \c hh:mm:ss.msc  (simil-ISO), la variabile puï¿½ essere piï¿½ corta di 23 caratteri, in tal caso conterrï¿½ solo ciï¿½ che vi cape
+CHARACTER(len=*),INTENT(OUT),OPTIONAL :: isodate !< intervallo totale nel formato \c GGGGGGGGGG \c hh:mm:ss.msc  (simil-ISO), la variabile può essere più corta di 23 caratteri, in tal caso conterrï¿½ solo ciï¿½ che vi cape
 CHARACTER(len=*),INTENT(OUT),OPTIONAL :: simpledate  !< intervallo totale nel formato \c GGGGGGGGhhmmssmsc , la variabile puï¿½ essere piï¿½ corta di 17 caratteri, in tal caso conterrï¿½ solo ciï¿½ che vi cape, da preferire rispetto a \a oraclesimdate
 CHARACTER(len=12),INTENT(OUT),OPTIONAL :: oraclesimdate !< intervallo totale nel formato \c GGGGGGGGhhmm
 
@@ -1865,28 +1866,34 @@ integer :: lyear,lmonth,lday,lhour,lminute,ios
 TYPE(cyclicdatetime) :: this !< oggetto da inizializzare
 
 if (present(chardate)) then
+
+  lyear=imiss
+  lmonth=imiss
+  lday=imiss
+  lhour=imiss
+  lminute=imiss
+
   if (c_e(chardate))then
                                 !  AAAAMMGGhhmm
-    read(chardate(1:4),*,iostat=ios)lyear
+    read(chardate(1:4),'(i4)',iostat=ios)lyear
+    print*,chardate(1:4),ios,lyear
     if (ios /= 0)lyear=imiss
     
-    read(chardate(5:6),*,iostat=ios)lmonth
+    read(chardate(5:6),'(i2)',iostat=ios)lmonth
+    print*,chardate(5:6),ios,lmonth
     if (ios /= 0)lmonth=imiss
     
-    read(chardate(7:8),*,iostat=ios)lday
+    read(chardate(7:8),'(i2)',iostat=ios)lday
+    print*,chardate(7:8),ios,lday
     if (ios /= 0)lday=imiss
     
-    read(chardate(9:10),*,iostat=ios)lhour
+    read(chardate(9:10),'(i2)',iostat=ios)lhour
+    print*,chardate(9:10),ios,lhour
     if (ios /= 0)lhour=imiss
     
-    read(chardate(11:12),*,iostat=ios)lminute
+    read(chardate(11:12),'(i2)',iostat=ios)lminute
+    print*,chardate(11:12),ios,lminute
     if (ios /= 0)lminute=imiss
-  else
-    lyear=imiss
-    lmonth=imiss
-    lday=imiss
-    lhour=imiss
-    lminute=imiss
   end if
 
   this%year=lyear
@@ -1903,6 +1910,38 @@ else
 end if
 
 END FUNCTION cyclicdatetime_new
+
+!> Restituisce una rappresentazione carattere stampabile di un oggetto
+!! \a cyclicdatetime.
+elemental FUNCTION cyclicdatetime_to_char(this) RESULT(char)
+TYPE(cyclicdatetime),INTENT(IN) :: this
+
+CHARACTER(len=80) :: char
+
+char=to_char(this%year)//";"//to_char(this%month)//";"//to_char(this%day)//";"//&
+to_char(this%hour)//";"//to_char(this%minute)
+
+END FUNCTION cyclicdatetime_to_char
+
+
+
+FUNCTION trim_cyclicdatetime_to_char(in) RESULT(char)
+TYPE(cyclicdatetime),INTENT(IN) :: in ! value to be represented as CHARACTER
+
+CHARACTER(len=len_trim(cyclicdatetime_to_char(in))) :: char
+
+char=cyclicdatetime_to_char(in)
+
+END FUNCTION trim_cyclicdatetime_to_char
+
+
+
+SUBROUTINE display_cyclicdatetime(this)
+TYPE(cyclicdatetime),INTENT(in) :: this
+
+print*,"CYCLICDATETIME: ",to_char(this)
+
+end subroutine display_cyclicdatetime
 
 
 

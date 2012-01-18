@@ -987,8 +987,6 @@ IF (naddtime > 0) THEN
     counter = counter + step
   ENDDO naddadd
 
-!! ? why sort all dimension ?
-!!  CALL vol7d_append(that, this, lsort_time=.TRUE.)
   CALL vol7d_append(that, this, sort=.TRUE.)
 
 ELSE
@@ -1008,7 +1006,7 @@ END SUBROUTINE vol7d_fill_time
 !! istanti tra \a start e \a stopp (o tra il primo e l'ultimo livello
 !! temporale) ad intervalli \a step; se specificato cyclicdt solo i 
 !! corrispondenti istanti di tempo vengono ulteriormente selezionati.
-!! Gli eventuali livelli mancanti
+!! Gli eventuali time mancanti
 !! vengono aggiunti riempiendo le corrispondenti posizioni dei volumi
 !! dati con valori mancanti. Fa quindi un lavoro simile al metodo
 !! ::vol7d_fill_time ma in più elimina i livelli temporali che non
@@ -1032,7 +1030,7 @@ logical,optional :: fill_data !< if .true. fill data values with nearest in time
 TYPE(datetime) :: lstart, lstop
 TYPE(cyclicdatetime) :: lcyclicdt
 LOGICAL, ALLOCATABLE :: time_mask(:)
-TYPE(vol7d) :: v7dtmp
+TYPE(vol7d) :: v7dtmp, v7dtmp2
 
 CALL safe_start_stop(this, lstart, lstop, start, stopp)
 IF (.NOT. c_e(lstart) .OR. .NOT. c_e(lstop)) RETURN
@@ -1042,26 +1040,33 @@ if (present(cyclicdt)) then
   if(c_e(cyclicdt)) lcyclicdt=cyclicdt
 end if
 
-CALL l4f_log(L4F_INFO, 'vol7d_fill_time: time interval '//TRIM(to_char(lstart))// &
+CALL l4f_log(L4F_INFO, 'vol7d_filter_time: time interval '//TRIM(to_char(lstart))// &
  ' '//TRIM(to_char(lstop)))
 
 ALLOCATE(time_mask(SIZE(this%time)))
 
+call display(lcyclicdt)
 time_mask = this%time >= lstart .AND. this%time <= lstop .AND. this%time == lcyclicdt
+print *,time_mask
 
 if (present(step)) then
   time_mask=time_mask .AND. MOD(this%time - lstart, step) == timedelta_0 
 end if
+print *,time_mask
 
-IF (ALL(time_mask)) THEN ! do not lose time in a simple common case
-  CALL vol7d_fill_time(this, that, step, start, stopp, fill_data)
-ELSE
-! TODO not optimized; will be better to change the order by vol7d_fill_time and vol7d_copy
-! but vol7d_fill_time need to manage cyclicdatetime
-  CALL vol7d_fill_time(this, v7dtmp, step, start, stopp, fill_data)
-  CALL vol7d_copy(v7dtmp, that, ltime=time_mask)
-  CALL delete(v7dtmp) ! must be cleaned in this case
-ENDIF
+
+!TODO we need to insert cyclicdt in vol7d_fill_time to optimize this
+
+if (all(time_mask)) then
+  CALL vol7d_fill_time(this, v7dtmp2, step, start, stopp, fill_data)
+else
+  CALL vol7d_copy(this,v7dtmp, ltime=time_mask)
+  CALL vol7d_fill_time(v7dtmp, v7dtmp2, step, start, stopp, fill_data)
+  CALL delete(v7dtmp)
+end if
+
+CALL vol7d_copy(v7dtmp2, that, ltime=v7dtmp2%time == lcyclicdt)
+CALL delete(v7dtmp2)
 
 DEALLOCATE(time_mask)
 

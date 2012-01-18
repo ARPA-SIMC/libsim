@@ -2443,7 +2443,7 @@ real,intent(in) :: voldat
 type(vol7d_var),intent(in) :: var
 
 if (c_e(voldat))then
-  doubledatr=voldat
+  doubledatr=dble(voldat)
 else
   doubledatr=dmiss
 end if
@@ -2564,7 +2564,7 @@ type(vol7d_var),intent(in) :: var
 integer:: ier
 
 
-if (c_e(voldat) .and. c_e(var%scalefactor))then
+if (c_e(voldat))then
   read (voldat,*,iostat=ier)integerdatc
   if (ier /= 0)then
     integerdatc=imiss
