@@ -20,6 +20,7 @@ subroutine register_termo(vfn)
   call fnregister(vfn,u_v2dd_ff_def())
   call fnregister(vfn,r_t2td_def())
   call fnregister(vfn,ff_swd_lwb2pgt_def())
+  call fnregister(vfn,p_t2r_def())
 
 end subroutine register_termo
 
@@ -122,6 +123,30 @@ call init(ff_swd_lwb2pgt_def,"ff_swd_lwb2pgt",&
 end function ff_swd_lwb2pgt_def
 
 
+!!$QTORELHUM(Q,PT,T) 
+
+subroutine  p_t2r(mybin,mybout,bin,bout,in,out)
+  CHARACTER(len=10),intent(in) :: mybin(:)  !< vector table B  WMO input  in user's data
+  CHARACTER(len=10),intent(in) :: mybout(:) !< vector table B  WMO output in user's data
+  CHARACTER(len=10),intent(in) :: bin(:)    !< vector table B  WMO input used by function
+  CHARACTER(len=10),intent(in) :: bout(:)   !< vector table B  WMO output used by function
+  real, intent(in) :: in(:,:)
+  real, intent(out) :: out(:,:)
+
+  out(:,index_c(mybout,bout(1)))= QTORELHUM(in (:,index_c(mybin ,bin (1))),&
+   in (:,index_c(mybin ,bin (2)))*100.,in (:,index_c(mybin ,bin (3)))) 
+          
+end subroutine p_t2r
+
+type(fnds) function p_t2r_def()
+  call init(p_t2r_def,"p_t2r",&
+   [character(len=10) :: "B13001","B10004","B12101"],&
+   [character(len=10) :: "B13003"],0,func=p_t2r)
+end function p_t2r_def
+
+
+
+
 ! TODO
 
 !!$OE(TD,TT,PT)
@@ -142,8 +167,6 @@ end function ff_swd_lwb2pgt_def
 !!$FR (T,TD )
 !!$
 !!$W(TD,PT) 
-!!$
-!!$QTORELHUM(Q,PT,T) 
 !!$
 !!$td_pq(p,q)
 !!$
