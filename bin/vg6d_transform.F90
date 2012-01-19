@@ -65,7 +65,10 @@ INTEGER :: optind, optstatus
 TYPE(csv_record) :: argparse
 INTEGER :: iargc
 !CHARACTER(len=3) :: set_scmode
-LOGICAL :: version, ldisplay, rzscan
+LOGICAL :: version, ldisplay
+#ifdef VAPOR
+LOGICAL :: rzscan
+#endif
 INTEGER,POINTER :: w_s(:), w_e(:)
 TYPE(grid_file_id) :: file_template
 TYPE(grid_id) :: gaid_template
@@ -75,11 +78,11 @@ type(fndsv) :: vfn, vfnoracle
 
 ! for computing
 CHARACTER(len=13) :: comp_stat_proc
-CHARACTER(len=23) :: comp_step, comp_start
+CHARACTER(len=23) :: comp_step !, comp_start
 INTEGER :: istat_proc, ostat_proc
 TYPE(timedelta) :: c_i
 TYPE(datetime) :: c_s
-REAL :: comp_frac_valid
+!REAL :: comp_frac_valid
 
 !questa chiamata prende dal launcher il nome univoco
 call l4f_launcher(a_name,a_name_force="volgrid6dtransform")
@@ -200,15 +203,13 @@ CALL optionparser_add(opt, 'e', 'a-grid', c2agrid, help= &
 CALL optionparser_add(opt, 't', 'component-flag', component_flag, &
  0, help='wind component flag in interpolated grid (0/1)')
 
-                                !CALL optionparser_add(opt, ' ', 'set-scmode', set_scmode, 'xxx', &
-                                ! help='set output grid scanning mode to a particular standard value: &
-                                ! &3 binary digits indicating respectively iScansNegatively, jScansPositively and &
-                                ! &jPointsAreConsecutive (grib_api jargon), 0 for false, 1 for true, &
-                                ! &000 for ECMWF-like grids, 010 for COSMO and Cartesian-like grids. &
-                                ! &Any other character indicates to keep the &
-                                ! &corresponding original scanning mode value')
-
-
+!CALL optionparser_add(opt, ' ', 'set-scmode', set_scmode, 'xxx', &
+! help='set output grid scanning mode to a particular standard value: &
+! &3 binary digits indicating respectively iScansNegatively, jScansPositively and &
+! &jPointsAreConsecutive (grib_api jargon), 0 for false, 1 for true, &
+! &000 for ECMWF-like grids, 010 for COSMO and Cartesian-like grids. &
+! &Any other character indicates to keep the &
+! &corresponding original scanning mode value')
 
 CALL optionparser_add(opt, ' ', 'time-definition', time_definition, 0, help= &
  'time definition for import volume, 0 for reference time (more suitable for &
@@ -231,9 +232,9 @@ CALL optionparser_add(opt, ' ', 'comp-step', comp_step, '0000000001 00:00:00.000
 ! 'start of regularization, or statistical processing interval, an empty value means &
 ! &take the initial time step of the available data; the format is the same as for &
 ! &--start-date parameter')
-CALL optionparser_add(opt, ' ', 'comp-frac-valid', comp_frac_valid, 1., help= &
- 'specify the fraction of input data that has to be valid in order to consider a &
- &statistically processed value acceptable')
+!CALL optionparser_add(opt, ' ', 'comp-frac-valid', comp_frac_valid, 1., help= &
+! 'specify the fraction of input data that has to be valid in order to consider a &
+! &statistically processed value acceptable')
 
 
                                 ! display option
@@ -448,9 +449,8 @@ if (ASSOCIATED(volgrid_out) .and. output_variable_list /= " ") then
 end if
 #endif
 
-CALL l4f_category_log(category,L4F_INFO,"thinking about cumulating")
-IF (c_e(ostat_proc) .AND. ASSOCIATED(volgrid_out)) THEN ! necessary?
-  CALL l4f_category_log(category,L4F_INFO,"cumulating")
+IF (c_e(ostat_proc) .AND. ASSOCIATED(volgrid_out)) THEN ! stat_proc
+  CALL l4f_category_log(category,L4F_INFO,"computing stat_proc")
   ALLOCATE(volgrid_tmp(SIZE(volgrid_out)))
   DO i = 1, SIZE(volgrid_out)
     CALL volgrid6d_recompute_stat_proc_diff(volgrid_out(i), volgrid_tmp(i), &

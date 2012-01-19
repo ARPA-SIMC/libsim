@@ -336,6 +336,11 @@ mask_timerange(:) = mask_timerange(:) .AND. itimerange(:)%p2 == steps
 
 #ifdef DEBUG
 CALL l4f_log(L4F_DEBUG, &
+ 'recompute_stat_proc_diff, map_tr: '//t2c((SIZE(map_tr,1)))//', '// &
+ t2c((SIZE(map_tr,2)))//', '// &
+ t2c((SIZE(map_tr,3)))//', '// &
+ t2c((SIZE(map_tr,4))))
+CALL l4f_log(L4F_DEBUG, &
  'recompute_stat_proc_diff, map_tr: '//t2c((SIZE(map_tr)))//', '// &
  t2c(COUNT(c_e(map_tr))))
 CALL l4f_log(L4F_DEBUG, &
