@@ -71,14 +71,15 @@ INTERFACE sort
 END INTERFACE
 
 private
-public sort, index ,index_c
-public count_distinct, pack_distinct, map_distinct, map_inv_distinct, firsttrue
-public pack_distinct_c, map
+PUBLIC sort, index, index_c, &
+ count_distinct, pack_distinct, map_distinct, map_inv_distinct, &
+ firsttrue, lasttrue, pack_distinct_c, map
 
 CONTAINS
 
 
-! Ritorna l'indice del primo elemento vero del vettore logico v
+!> Return the index ot the first true element of the input logical array \a v.
+!! If no \c .TRUE. element are found, it returns 0.
 FUNCTION firsttrue(v) RESULT(i)
 LOGICAL,INTENT(in) :: v(:)
 INTEGER :: i
@@ -89,6 +90,19 @@ ENDDO
 i = 0
 
 END FUNCTION firsttrue
+
+
+!> Return the index ot the last true element of the input logical array \a i.
+!! If no \c .TRUE. element are found, it returns 0.
+FUNCTION lasttrue(v) RESULT(i)
+LOGICAL,INTENT(in) :: v(:)
+INTEGER :: i
+
+DO i = SIZE(v), 1, -1
+  IF (v(i)) RETURN
+ENDDO
+
+END FUNCTION lasttrue
 
 
 ! Definisce le funzioni count_distinct e pack_distinct
@@ -207,14 +221,12 @@ INTEGER :: mapidx(count(mask))
 
 INTEGER :: i,j
 
-j=0
+j = 0
+DO i=1, SIZE(mask)
+  j = j + 1
+  IF (mask(i)) mapidx(j)=i
+ENDDO
 
-do i=1, size(mask)
-
-  J=j+1
-  if (mask(i)) mapidx(j)=i
-
-end do
 END FUNCTION map
 
 END MODULE array_utilities
