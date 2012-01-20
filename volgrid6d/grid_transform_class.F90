@@ -142,6 +142,7 @@ USE geo_proj_class
 USE grid_class
 USE grid_dim_class
 USE optional_values
+USE array_utilities
 USE geo_coord_class
 USE simple_stat
 IMPLICIT NONE
@@ -226,22 +227,28 @@ END TYPE transform_def
 !! be repeated on objects having the same coordinates and grid
 !! projections.
 TYPE grid_transform
-  private
-
+  PRIVATE
   TYPE(transform_def) :: trans ! type of transformation required
-
-  integer :: innx,  inny
-  integer :: outnx, outny
-  integer :: iniox,inioy,infox,infoy,outinx,outiny,outfnx,outfny
-  integer,pointer :: inter_index_x(:,:),inter_index_y(:,:),inter_index_z(:)
-  doubleprecision,pointer :: inter_x(:,:),inter_y(:,:)
-  doubleprecision,pointer :: inter_xp(:,:),inter_yp(:,:),inter_zp(:)
-  LOGICAL,POINTER :: point_mask(:,:)
+  INTEGER :: innx = imiss
+  INTEGER :: inny = imiss
+  INTEGER :: innz = imiss
+  INTEGER :: outnx = imiss
+  INTEGER :: outny = imiss
+  INTEGER :: outnz = imiss
+  INTEGER :: iniox,inioy,infox,infoy,outinx,outiny,outfnx,outfny
+  INTEGER,POINTER :: inter_index_x(:,:) => NULL()
+  INTEGER,POINTER :: inter_index_y(:,:) => NULL()
+  INTEGER,POINTER :: inter_index_z(:) => NULL()
+  DOUBLE PRECISION,POINTER :: inter_x(:,:) => NULL()
+  DOUBLE PRECISION,POINTER :: inter_y(:,:) => NULL()
+  DOUBLE PRECISION,POINTER :: inter_xp(:,:) => NULL()
+  DOUBLE PRECISION,POINTER :: inter_yp(:,:) => NULL()
+  DOUBLE PRECISION,POINTER :: inter_zp(:) => NULL()
+  LOGICAL,POINTER :: point_mask(:,:) => NULL()
 !  type(volgrid6d) :: input_vertcoordvol ! volume which provides the input vertical coordinate if separated from the data volume itself (for vertint) cannot be here because of cross-use, should be an argument of compute
 !  type(vol7d_level), pointer :: output_vertlevlist(:) ! list of vertical levels of output data (for vertint) can be here or an argument of compute, how to do?
-  integer :: category ! category for log4fortran
-  logical :: valid ! the transformation has been successfully initialised
-
+  INTEGER :: category ! category for log4fortran
+  LOGICAL :: valid = .TRUE. ! the transformation has been successfully initialised
 END TYPE grid_transform
 
 
@@ -249,7 +256,7 @@ END TYPE grid_transform
 INTERFACE init
   MODULE PROCEDURE transform_init, grid_transform_init, &
    grid_transform_grid_vol7d_init, grid_transform_vol7d_grid_init, &
-   grid_transform_vol7d_vol7d_init
+   grid_transform_vol7d_vol7d_init, grid_transform_levtype_levtype_init
 END INTERFACE
 
 !> Destructors of the corresponding objects.
@@ -652,7 +659,7 @@ CHARACTER(len=*),INTENT(in),OPTIONAL :: categoryappend !< append this suffix to 
 
 DOUBLE PRECISION :: coord_in(SIZE(lev_in)), coord_out(SIZE(lev_out))
 LOGICAL :: mask_in(SIZE(lev_in)), mask_out(SIZE(lev_out))
-INTEGER :: i, j, ni, no
+INTEGER :: i, j, icache, istart, iend, ostart, oend
 
 
 CALL grid_transform_init_common(this, trans, categoryappend)
@@ -674,6 +681,7 @@ IF (this%trans%trans_type == 'vertint') THEN
        TRIM(to_char(trans%vertint%output_levtype%level2))//')')
       CALL raise_fatal_error()
     ENDIF
+! TODO: here we should check that valid levels are contiguous and ordered
 
     mask_in(:) = (lev_in(:)%level1 == trans%vertint%input_levtype%level1) .AND. &
      (lev_in(:)%level2 == trans%vertint%input_levtype%level2)
@@ -683,55 +691,79 @@ IF (this%trans%trans_type == 'vertint') THEN
     CALL make_vert_coord(lev_in, mask_in, coord_in)
     CALL make_vert_coord(lev_out, mask_out, coord_out)
 ! compute here log of pressure if desired
-    ni = COUNT(mask_in)
-    no = COUNT(mask_out)
+
+!    this%innz = COUNT(mask_in)
+!    this%outnz = COUNT(mask_out)
+    this%innz = SIZE(mask_in)
+    this%outnz = SIZE(mask_out)
+    istart = firsttrue(mask_in)
+    iend = lasttrue(mask_in)
+    ostart = firsttrue(mask_out)
+    oend = lasttrue(mask_out)
 
 ! set valid = .FALSE. here?
-    IF (ni == 0) &
-     CALL l4f_category_log(this%category, L4F_WARN, &
-     'grid_transform_levtype_levtype_init: &
-     &input contains no vertical levels of type ('// &
-     TRIM(to_char(trans%vertint%input_levtype%level1))//','// &
-     TRIM(to_char(trans%vertint%input_levtype%level2))// &
-     ') suitable for interpolation')
-    IF (no == 0) &
-     CALL l4f_category_log(this%category, L4F_WARN, &
-     'grid_transform_levtype_levtype_init: &
-     &output contains no vertical levels of type ('// &
-     TRIM(to_char(trans%vertint%output_levtype%level1))//','// &
-     TRIM(to_char(trans%vertint%output_levtype%level2))// &
-     ') suitable for interpolation')
-
-! code up to this point may be common for all vertint?
-
-    ALLOCATE(this%inter_index_z(no), this%inter_zp(no))
-    IF (this%trans%extrap .AND. ni > 0) THEN
-! set to first input point (extrapolate to constant value)
-      this%inter_index_z(:) = 1
-      this%inter_zp(:) = 1.0D0
-    ELSE
-! do not extrapolate
-      this%inter_index_z(:) = imiss
-      this%inter_zp(:) = dmiss
+    IF (istart == 0) THEN
+      CALL l4f_category_log(this%category, L4F_WARN, &
+       'grid_transform_levtype_levtype_init: &
+       &input contains no vertical levels of type ('// &
+       TRIM(to_char(trans%vertint%input_levtype%level1))//','// &
+       TRIM(to_char(trans%vertint%input_levtype%level2))// &
+       ') suitable for interpolation')
+      this%valid = .FALSE.
+      RETURN
+!      iend = -1 ! for loops
+    ELSE IF (istart == iend) THEN
+      CALL l4f_category_log(this%category, L4F_WARN, &
+       'grid_transform_levtype_levtype_init: &
+       &input contains only 1 vertical level of type ('// &
+       TRIM(to_char(trans%vertint%input_levtype%level1))//','// &
+       TRIM(to_char(trans%vertint%input_levtype%level2))// &
+       ') suitable for interpolation')
+    ENDIF
+    IF (ostart == 0) THEN
+      CALL l4f_category_log(this%category, L4F_WARN, &
+       'grid_transform_levtype_levtype_init: &
+       &output contains no vertical levels of type ('// &
+       TRIM(to_char(trans%vertint%output_levtype%level1))//','// &
+       TRIM(to_char(trans%vertint%output_levtype%level2))// &
+       ') suitable for interpolation')
+      this%valid = .FALSE.
+      RETURN
+!      oend = -1 ! for loops
     ENDIF
 
-    DO j = 1, no
-      DO i = 2, ni
+! code up to this point may be common for all vertint subtypes?
+
+    ALLOCATE(this%inter_index_z(this%outnz), this%inter_zp(this%outnz))
+    this%inter_index_z(:) = imiss
+    this%inter_zp(:) = dmiss
+    IF (this%trans%extrap .AND. istart > 0) THEN
+      WHERE(mask_out)
+! extrapolate down by default
+        this%inter_index_z(:) = istart
+        this%inter_zp(:) = 1.0D0
+      ENDWHERE
+    ENDIF
+
+    icache = istart + 1
+    outlev: DO j = ostart, oend
+      inlev: DO i = icache, iend
         IF (coord_in(i) >= coord_out(j)) THEN
           IF (coord_out(j) >= coord_in(i-1)) THEN
             this%inter_index_z(j) = i - 1
             this%inter_zp(j) = (coord_out(j)-coord_in(i)) / &
              (coord_in(i-1)-coord_in(i)) ! weight for (i-1)
+            icache = i ! speedup next j iteration
           ENDIF
-          EXIT ! exit in any case
+          CYCLE outlev ! found or extrapolated down
         ENDIF
-      ENDDO
-      IF (i > ni .AND. this%trans%extrap .AND. ni > 0) THEN
-! set to last input point (extrapolate to constant value)
-        this%inter_index_z(j) = ni - 1
+      ENDDO inlev
+! if I'm here I must extrapolate up
+      IF (this%trans%extrap .AND. iend > 1) THEN
+        this%inter_index_z(j) = iend - 1
         this%inter_zp(j) = 0.0D0
       ENDIF
-    ENDDO
+    ENDDO outlev
 
   ELSE
 
@@ -804,7 +836,6 @@ CHARACTER(len=*),INTENT(in),OPTIONAL :: categoryappend !< append this suffix to 
 INTEGER :: nx, ny, i, j, n, cf_i, cf_o, nprev
 DOUBLE PRECISION :: xmin, xmax, ymin, ymax, steplon, steplat, &
  xmin_new, ymin_new, ellips_smaj_axis, ellips_flatt
-DOUBLE PRECISION :: l1, l2
 TYPE(geo_proj) :: proj_in, proj_out
 TYPE(geo_coord) :: point
 
@@ -838,7 +869,7 @@ IF (this%trans%trans_type == 'zoom') THEN
 ! mark points falling into requested bounding-box
     DO j = 1, ny
       DO i = 1, nx
-!        IF (geo_coord_inside_rectang()
+!        IF (geo_coord_inside_rectang())
         IF (in%dim%lon(i,j) > this%trans%rect_coo%ilon .AND. &
          in%dim%lon(i,j) < this%trans%rect_coo%flon .AND. &
          in%dim%lat(i,j) > this%trans%rect_coo%ilat .AND. &
@@ -1176,7 +1207,7 @@ REAL,INTENT(in),OPTIONAL :: dmaskclass !< if \a nmaskclass is not provided, this
 CHARACTER(len=*),INTENT(in),OPTIONAL :: categoryappend !< append this suffix to log4fortran namespace category
 
 INTEGER :: ix, iy, n, nprev, lnmaskclass
-DOUBLE PRECISION :: xmin, xmax, ymin, ymax, steplon, steplat, xmin_new, ymin_new
+DOUBLE PRECISION :: xmin, xmax, ymin, ymax
 DOUBLE PRECISION,POINTER :: lon(:), lat(:)
 REAL :: lstartmaskclass, ldmaskclass, mmin, mmax
 REAL,ALLOCATABLE :: lbound_class(:)
@@ -1616,8 +1647,8 @@ TYPE(vol7d),INTENT(in) :: v7d_in !< vol7d object with the coordinates of the spa
 TYPE(griddim_def),INTENT(in) :: out !< griddim object defining target grid
 character(len=*),INTENT(in),OPTIONAL :: categoryappend !< append this suffix to log4fortran namespace category
 
-INTEGER :: nx, ny,i,j
-DOUBLE PRECISION :: xmin, xmax, ymin, ymax, steplon, steplat,xmin_new, ymin_new
+INTEGER :: nx, ny
+DOUBLE PRECISION :: xmin, xmax, ymin, ymax
 doubleprecision,allocatable :: lon(:),lat(:)
 
 
@@ -1940,7 +1971,7 @@ CHARACTER(len=*),INTENT(in),OPTIONAL :: categoryappend
 CHARACTER(len=512) :: a_name
 
 
-this%valid = .TRUE.
+!this%valid = .TRUE.
 CALL l4f_launcher(a_name, a_name_append= &
  TRIM(subcategory)//"."//TRIM(optio_c(categoryappend,255)))
 this%category=l4f_category_get(a_name)
@@ -1950,13 +1981,13 @@ CALL l4f_category_log(this%category,L4F_DEBUG,"start init_grid_transform")
 #endif
 
 this%trans=trans
-NULLIFY(this%inter_index_x)
-NULLIFY(this%inter_index_y)
-NULLIFY(this%inter_x)
-NULLIFY(this%inter_y)
-NULLIFY(this%inter_xp)
-NULLIFY(this%inter_yp)
-NULLIFY(this%point_mask)
+!NULLIFY(this%inter_index_x)
+!NULLIFY(this%inter_index_y)
+!NULLIFY(this%inter_x)
+!NULLIFY(this%inter_y)
+!NULLIFY(this%inter_xp)
+!NULLIFY(this%inter_yp)
+!NULLIFY(this%point_mask)
 
 END SUBROUTINE grid_transform_init_common
 
@@ -1984,12 +2015,14 @@ this%outfny=imiss
 
 if (associated(this%inter_index_x)) deallocate (this%inter_index_x)
 if (associated(this%inter_index_y)) deallocate (this%inter_index_y)
+if (associated(this%inter_index_z)) deallocate (this%inter_index_z)
 
 if (associated(this%inter_x)) deallocate (this%inter_x)
 if (associated(this%inter_y)) deallocate (this%inter_y)
 
 if (associated(this%inter_xp)) deallocate (this%inter_xp)
 if (associated(this%inter_yp)) deallocate (this%inter_yp)
+if (associated(this%inter_zp)) deallocate (this%inter_zp)
 if (associated(this%point_mask)) deallocate (this%point_mask)
 this%valid = .FALSE.
 
@@ -2047,27 +2080,60 @@ innx = SIZE(field_in,1); inny = SIZE(field_in,2); innz = SIZE(field_in,3)
 outnx = SIZE(field_out,1); outny = SIZE(field_out,2); outnz = SIZE(field_out,3)
 
 ! check size of field_in, field_out
-IF (innx /= this%innx .OR. inny /= this%inny) THEN
-  CALL l4f_category_log(this%category,L4F_ERROR,"inconsistent in shape: "//&
-   TRIM(to_char(this%innx))//","//TRIM(to_char(this%inny))//" /= "//&
-   TRIM(to_char(innx))//","//TRIM(to_char(inny)))
-  CALL raise_error()
-  RETURN
-ENDIF
+IF (this%trans%trans_type == 'vertint') THEN ! this%trans%trans_type == 'vertintsparse'
 
-IF (outnx /= this%outnx .OR. outny /= this%outny) THEN
-  CALL l4f_category_log(this%category,L4F_ERROR,"inconsistent out shape: "//&
-   TRIM(to_char(this%outnx))//","//TRIM(to_char(this%outny))//" /= "//&
-   TRIM(to_char(outnx))//","//TRIM(to_char(outny)))
-  CALL raise_error()
-  RETURN
-ENDIF
+  IF (innz /= this%innz) THEN
+    CALL l4f_category_log(this%category,L4F_ERROR,"vertical interpolation")
+    CALL l4f_category_log(this%category,L4F_ERROR,"inconsistent input shape: "//&
+     t2c(this%innz)//" /= "//t2c(innz))
+    CALL raise_error()
+    RETURN
+  ENDIF
 
-IF (innz /= outnz .AND. this%trans%trans_type /= 'vertint') THEN
-  CALL l4f_category_log(this%category,L4F_ERROR,"inconsistent vertical sizes: "//&
-   TRIM(to_char(innz))//" /= "//TRIM(to_char(outnz)))
-  CALL raise_error()
-  RETURN
+  IF (outnz /= this%outnz) THEN
+    CALL l4f_category_log(this%category,L4F_ERROR,"vertical interpolation")
+    CALL l4f_category_log(this%category,L4F_ERROR,"inconsistent output shape: "//&
+     t2c(this%outnz)//" /= "//t2c(outnz))
+    CALL raise_error()
+    RETURN
+  ENDIF
+
+  IF (innx /= outnx .OR. inny /= outny) THEN
+    CALL l4f_category_log(this%category,L4F_ERROR,"vertical interpolation")
+    CALL l4f_category_log(this%category,L4F_ERROR,"inconsistent hor. sizes: "//&
+     t2c(innx)//","//t2c(inny)//" /= "//&
+     t2c(outnx)//","//t2c(outny))
+    CALL raise_error()
+    RETURN
+  ENDIF
+
+ELSE ! horizontal interpolation
+
+  IF (innx /= this%innx .OR. inny /= this%inny) THEN
+    CALL l4f_category_log(this%category,L4F_ERROR,"horizontal interpolation")
+    CALL l4f_category_log(this%category,L4F_ERROR,"inconsistent input shape: "//&
+     t2c(this%innx)//","//t2c(this%inny)//" /= "//&
+     t2c(innx)//","//t2c(inny))
+    CALL raise_error()
+    RETURN
+  ENDIF
+
+  IF (outnx /= this%outnx .OR. outny /= this%outny) THEN
+    CALL l4f_category_log(this%category,L4F_ERROR,"horizontal interpolation")
+    CALL l4f_category_log(this%category,L4F_ERROR,"inconsistent output shape: "//&
+     t2c(this%outnx)//","//t2c(this%outny)//" /= "//&
+     t2c(outnx)//","//t2c(outny))
+    CALL raise_error()
+    RETURN
+  ENDIF
+
+  IF (innz /= outnz) THEN
+    CALL l4f_category_log(this%category,L4F_ERROR,"inconsistent vert. sizes: "//&
+     t2c(innz)//" /= "//t2c(outnz))
+    CALL raise_error()
+    RETURN
+  ENDIF
+
 ENDIF
 
 #ifdef DEBUG
@@ -2322,6 +2388,29 @@ ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
     
   ENDIF
 
+ELSE IF (this%trans%trans_type == 'vertint') THEN
+
+  IF (this%trans%sub_type == 'linear') THEN
+
+    DO k = 1, outnz
+      IF (c_e(this%inter_index_z(k))) THEN
+        z1 = REAL(this%inter_zp(k))
+        z2 = REAL(1.0D0 - this%inter_zp(k))
+        DO j = 1, this%inny
+          DO i = 1, this%innx
+            IF (c_e(field_in(i,j,this%inter_index_z(k))) .AND. &
+             c_e(field_in(i,j,this%inter_index_z(k)+1))) THEN
+              field_out(i,j,k) = &
+               field_in(i,j,this%inter_index_z(k))*z1 + &
+               field_in(i,j,this%inter_index_z(k)+1)*z2
+            ENDIF
+          ENDDO
+        ENDDO
+      ENDIF
+    ENDDO
+
+  ENDIF
+
 ELSE IF (this%trans%trans_type == '' .OR. this%trans%trans_type == 'none') THEN
 
   field_out(:,:,:) = field_in(:,:,:)
@@ -2342,7 +2431,6 @@ REAL, INTENT(in) :: field_in(:,:) !< input array
 REAL, INTENT(out):: field_out(:,:,:) !< output array
 
 real,allocatable :: field_in_p(:),x_in_p(:),y_in_p(:)
-real,allocatable :: x_out(:),y_out(:)
 INTEGER :: inn_p, ier, k
 INTEGER :: innx, inny, innz, outnx, outny, outnz
 
@@ -2475,27 +2563,26 @@ END SUBROUTINE grid_transform_v7d_grid_compute
 !
 !	1	2
 ! _____________________________________________________________
-elemental real function hbilin (z1,z2,z3,z4,x1,y1,x3,y3,xp,yp) result (zp)
+ELEMENTAL FUNCTION hbilin (z1,z2,z3,z4,x1,y1,x3,y3,xp,yp) RESULT(zp)
+REAL,INTENT(in) :: z1,z2,z3,z4 ! Z values on the four points
+DOUBLE PRECISION,INTENT(in):: x1,y1 ! coordinate of the lower left point
+DOUBLE PRECISION,INTENT(in):: x3,y3 ! coordinate of the upper right point
+DOUBLE PRECISION,INTENT(in):: xp,yp ! coordinate of point where interpolate
+REAL :: zp
 
-doubleprecision,intent(in):: x1,y1 ! coordinate of the lower left point
-doubleprecision,intent(in):: x3,y3 ! coordinate of the upper right point
-doubleprecision,intent(in):: xp,yp ! coordinate of point where interpolate
-real,intent(in) :: z1,z2,z3,z4 ! Z values on the four points
-
-doubleprecision :: p1,p2
-real :: z5,z6
+REAL :: p1,p2
+REAL :: z5,z6
 
 
-p2=((yp-y1)/(y3-y1))
-p1=((xp-x1)/(x3-x1))
+p2 = REAL((yp-y1)/(y3-y1))
+p1 = REAL((xp-x1)/(x3-x1))
 
-z5=(z4-z1)*p2+z1
-z6=(z3-z2)*p2+z2
+z5 = (z4-z1)*p2+z1
+z6 = (z3-z2)*p2+z2
 
-zp=(z6-z5)*(p1)+z5
+zp = (z6-z5)*(p1)+z5
       
-
-end function hbilin
+END FUNCTION hbilin
 
 
 ! Locate index of requested point
