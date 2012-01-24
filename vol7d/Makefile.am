@@ -2,7 +2,7 @@ lib_LTLIBRARIES = libsim_vol7d.la
 libsim_vol7d_la_SOURCES = vol7d_ana_class.F90 vol7d_level_class.F90 \
  vol7d_network_class.F90 vol7d_timerange_class.F90 \
  vol7d_var_class.F90 vol7d_varvect_class.f90 \
- vol7d_class.F90 stat_proc_engine.f90 vol7d_class_compute.F90
+ vol7d_class.F90 stat_proc_engine.F90 vol7d_class_compute.F90
 
 # Opzioni Fortran (-I... sono da considerarsi opzioni fortran
 # e non del preprocessore perche' servono per USE e non per #include)
