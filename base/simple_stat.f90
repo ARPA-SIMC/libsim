@@ -963,8 +963,8 @@ call DensityIndex(di,nlimbins,occu,rnum,limbins)
 diw=rmiss                                     !weighted density index
 k=1
 do i=1,size(occu)
-  diw(k:k+occu(i))=di(i)
-  k=occu(i)+1
+  diw(k:k+occu(i)-1)=di(i)
+  k=k+occu(i)
 end do
 med = stat_percentile(sample=diw, perc_vals=(/50./)) ! Mediana calculation for density index
 ndi(:count(c_e(di))) = min(pack(di,mask=c_e(di))/med(1),1.0)
