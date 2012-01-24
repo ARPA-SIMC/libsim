@@ -953,21 +953,32 @@ REAL, DIMENSION(:), INTENT(OUT) :: nlimbins   !< the extreme values of data take
 REAL, DIMENSION(size(ndi)) :: di
 INTEGER, DIMENSION(size(ndi)) :: occu
 REAL, DIMENSION(size(nlimbins)) :: limbins
-real    :: med(1),diw(size(rnum))
-integer :: i,k
+real    :: med
+integer :: i,k,middle
 
 ndi=rmiss
 limbins = stat_percentile(rnum,perc_vals)     ! compute percentile
 call DensityIndex(di,nlimbins,occu,rnum,limbins)
 
-diw=rmiss                                     !weighted density index
-k=1
+! Mediana calculation for density index
+k=0
+middle=count(c_e(rnum))/2
+print *,"middle",middle
 do i=1,size(occu)
-  diw(k:k+occu(i)-1)=di(i)
   k=k+occu(i)
+  print *,k
+  if (k > middle) then
+    if (k > 1 .and. (k - occu(i)) == middle) then
+      med = (di(i-1) + di(i)) / 2.
+    else
+      med = di(i)
+    end if
+    exit
+  end if
 end do
-med = stat_percentile(sample=diw, perc_vals=(/50./)) ! Mediana calculation for density index
-ndi(:count(c_e(di))) = min(pack(di,mask=c_e(di))/med(1),1.0)
+
+!weighted density index
+ndi(:count(c_e(di))) = min(pack(di,mask=c_e(di))/med,1.0)
 
 END SUBROUTINE NormalizedDensityIndex
 
