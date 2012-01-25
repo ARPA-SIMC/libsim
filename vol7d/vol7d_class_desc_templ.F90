@@ -149,7 +149,10 @@ INTEGER,POINTER :: remap1(:), remap2(:)
 
 TYPE(/**/VOL7D_POLY_TYPE),ALLOCATABLE :: varouttmp(:)
 INTEGER,ALLOCATABLE :: remaptmp(:)
-INTEGER :: i, n
+INTEGER :: n
+#ifdef VOL7D_SORT
+INTEGER :: i
+#endif
 LOGICAL av1, av2
 
 av1 = .FALSE.; av2 = .FALSE.
@@ -237,14 +240,16 @@ END SUBROUTINE vol7d_remap2test_/**/VOL7D_POLY_TYPE
 
 SUBROUTINE vol7d_remap1_/**/VOL7D_POLY_TYPE(varin, varout, &
  sort, unique, miss, remap, misslist)
-TYPE(/**/VOL7D_POLY_TYPE),POINTER :: varin(:), varout(:), varoutsort(:)
+TYPE(/**/VOL7D_POLY_TYPE),POINTER :: varin(:), varout(:)
 LOGICAL,INTENT(in) :: sort, unique, miss
 INTEGER,POINTER :: remap(:)
 LOGICAL,INTENT(in),OPTIONAL :: misslist(:)
 
-INTEGER :: i, j, n, r
-INTEGER,POINTER :: remaptmp(:)
+INTEGER :: i, n
+#ifdef VOL7D_SORT
+INTEGER :: j, r
 TYPE(/**/VOL7D_POLY_TYPE) :: v
+#endif
 LOGICAL,ALLOCATABLE :: lmask(:) ! local mask of values to be remapped
 
 NULLIFY(remap, varout)

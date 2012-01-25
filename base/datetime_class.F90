@@ -1876,23 +1876,23 @@ if (present(chardate)) then
   if (c_e(chardate))then
                                 !  AAAAMMGGhhmm
     read(chardate(1:4),'(i4)',iostat=ios)lyear
-    print*,chardate(1:4),ios,lyear
+    !print*,chardate(1:4),ios,lyear
     if (ios /= 0)lyear=imiss
     
     read(chardate(5:6),'(i2)',iostat=ios)lmonth
-    print*,chardate(5:6),ios,lmonth
+    !print*,chardate(5:6),ios,lmonth
     if (ios /= 0)lmonth=imiss
     
     read(chardate(7:8),'(i2)',iostat=ios)lday
-    print*,chardate(7:8),ios,lday
+    !print*,chardate(7:8),ios,lday
     if (ios /= 0)lday=imiss
     
     read(chardate(9:10),'(i2)',iostat=ios)lhour
-    print*,chardate(9:10),ios,lhour
+    !print*,chardate(9:10),ios,lhour
     if (ios /= 0)lhour=imiss
     
     read(chardate(11:12),'(i2)',iostat=ios)lminute
-    print*,chardate(11:12),ios,lminute
+    !print*,chardate(11:12),ios,lminute
     if (ios /= 0)lminute=imiss
   end if
 

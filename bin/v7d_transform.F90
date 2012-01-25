@@ -748,6 +748,7 @@ IF ((c_e(istat_proc) .AND. c_e(ostat_proc)) .OR. pre_trans_type /= '' &
     call vol7d_convr(v7d,v7dtmp)
     call delete(v7d)
     v7d=v7dtmp
+    CALL init(v7dtmp) ! detach it
   end if
 ENDIF
 
@@ -791,6 +792,7 @@ IF (comp_regularize .or. c_e(comp_cyclicdatetime)) THEN
   CALL vol7d_filter_time(v7d, v7d_comp1, c_i, c_s, cyclicdt=cyclicdt, fill_data=comp_fill_data)
   CALL delete(v7d)
   v7d = v7d_comp1
+  CALL init(v7d_comp1) ! detach it
 ENDIF
 
 IF (c_e(istat_proc) .AND. c_e(ostat_proc)) THEN
@@ -816,6 +818,7 @@ IF (c_e(istat_proc) .AND. c_e(ostat_proc)) THEN
     call vol7d_convr(v7d,v7dtmp)
     call delete(v7d)
     v7d=v7dtmp
+    CALL init(v7dtmp) ! detach it
   end if
 
   CALL vol7d_compute_stat_proc(v7d, v7d_comp1, istat_proc, ostat_proc, c_i, c_s, &
@@ -824,11 +827,13 @@ IF (c_e(istat_proc) .AND. c_e(ostat_proc)) THEN
 
   CALL delete(v7d)
   v7d = v7d_comp3
+  CALL init(v7d_comp3) ! detach it
 
 ! merge the two computed fields
   IF (.NOT. comp_keep) THEN ! the user is not interested in the other volume
     CALL delete(v7d)
     v7d = v7d_comp1
+    CALL init(v7d_comp1) ! detach it
   ELSE
     CALL vol7d_merge(v7d, v7d_comp1, sort=.TRUE.)
   ENDIF
@@ -844,6 +849,7 @@ if (round) then
   call rounding(v7d,v7dtmp,level=almost_equal_levels,nostatproc=.true.)
   CALL delete(v7d)
   v7d= v7dtmp
+  CALL init(v7dtmp) ! detach it
 end if
 
 
@@ -856,6 +862,7 @@ if (output_variable_list /= " ") then
     call display(vfnoracle)
     CALL delete(v7d)
     v7d = v7dtmp
+    CALL init(v7dtmp) ! detach it
   else
     CALL l4f_category_log(category, L4F_ERROR, 'Cannot make variable you have requested')
 

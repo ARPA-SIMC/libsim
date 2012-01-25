@@ -473,6 +473,11 @@ DO i = 1, SIZE(that%time)
   CALL getval(that%time(i)-(that%time(i)-step), amsec=stepmsec(i))
 ENDDO
 
+print *,"this"
+call display(this)
+print *,"that"
+call display(that)
+
 ! finally perform computations
 ! warning: mask_time is reused for a different purpose
 IF (ASSOCIATED(this%voldatir)) THEN
@@ -1030,7 +1035,8 @@ logical,optional :: fill_data !< if .true. fill data values with nearest in time
 TYPE(datetime) :: lstart, lstop
 TYPE(cyclicdatetime) :: lcyclicdt
 LOGICAL, ALLOCATABLE :: time_mask(:)
-TYPE(vol7d) :: v7dtmp, v7dtmp2
+TYPE(vol7d) :: v7dtmp2
+integer :: i
 
 CALL safe_start_stop(this, lstart, lstop, start, stopp)
 IF (.NOT. c_e(lstart) .OR. .NOT. c_e(lstop)) RETURN
@@ -1047,25 +1053,45 @@ ALLOCATE(time_mask(SIZE(this%time)))
 
 call display(lcyclicdt)
 time_mask = this%time >= lstart .AND. this%time <= lstop .AND. this%time == lcyclicdt
-print *,time_mask
+
+!call display(step)
 
 if (present(step)) then
   time_mask=time_mask .AND. MOD(this%time - lstart, step) == timedelta_0 
 end if
-print *,time_mask
 
+do i=1,size(time_mask)
+  if (time_mask(i)) call display(this%time(i))
+end do
 
 !TODO we need to insert cyclicdt in vol7d_fill_time to optimize this
 
 if (all(time_mask)) then
   CALL vol7d_fill_time(this, v7dtmp2, step, start, stopp, fill_data)
 else
-  CALL vol7d_copy(this,v7dtmp, ltime=time_mask)
-  CALL vol7d_fill_time(v7dtmp, v7dtmp2, step, start, stopp, fill_data)
-  CALL delete(v7dtmp)
+  CALL vol7d_copy(this,v7dtmp2, ltime=time_mask)
+
+!!$  print *,size(v7dtmp%time)
+!!$  do i=1,size(v7dtmp%time)
+!!$    call display(v7dtmp%time(i))
+!!$  end do
+!!$
+!!$!  CALL vol7d_fill_time(v7dtmp, v7dtmp2, step, start, stopp, fill_data)
+!!$call vol7d_copy (v7dtmp, v7dtmp2)
+!!$  print *,size(v7dtmp2%time)
+!!$  do i=1,size(v7dtmp2%time)
+!!$    call display(v7dtmp2%time(i))
+!!$  end do
+!!$  CALL delete(v7dtmp)
 end if
 
 CALL vol7d_copy(v7dtmp2, that, ltime=v7dtmp2%time == lcyclicdt)
+
+!!$  print *,size(that%time)
+!!$  do i=1,size(that%time)
+!!$    call display(that%time(i))
+!!$  end do
+
 CALL delete(v7dtmp2)
 
 DEALLOCATE(time_mask)

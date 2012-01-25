@@ -845,61 +845,60 @@ END FUNCTION stat_percentiled
 !!$end if
 
 
-subroutine DensityIndex_old(di,perc_vals,limbins)
-real,intent(inout)          :: di(:)
-real,intent(in)             :: perc_vals(:)
-real,intent(in)             :: limbins(:)
-
-real :: delta(size(di)),w(size(di))
-integer :: i
-
-do i=1,size(delta)
-  delta(i) = limbins(i+1)   - limbins(i)
-  w(i)     = perc_vals(i+1) - perc_vals(i)
-end do
-
-di=rmiss
-
-if ( .not. all(delta == 0.)) then
-  call DensityIndex_recurse(delta,w)
-  di = w/delta 
-end if
-
-end subroutine DensityIndex_old
-
-recursive subroutine DensityIndex_recurse(delta,w)
-real :: delta(:),w(:)
-integer :: i
-
-!check divide by 0
-if (any(delta == 0.0)) then
-
-! from left
-  do i=2,size(delta)
-    if (delta(i) == 0.0 .and. delta(i-1) > 0.0 ) then
-      delta(i) = delta(i-1)
-      w(i)     = w(i) + w(i-1)
-    end if
-  end do
-
-! from right
-  do i=size(delta)-1,1,-1
-    if (delta(i) == 0.0 .and. delta(i+1) > 0.0 )then
-      delta(i) = delta(i+1)
-      w(i)     = w(i) + w(i+1)
-    end if
-  end do
-
-end if
-
-! one more step
-if (any(delta == 0.0)) then
-  call DensityIndex_recurse(delta,w)
-end if
-
-end subroutine DensityIndex_recurse
-
-
+!!$subroutine DensityIndex_old(di,perc_vals,limbins)
+!!$real,intent(inout)          :: di(:)
+!!$real,intent(in)             :: perc_vals(:)
+!!$real,intent(in)             :: limbins(:)
+!!$
+!!$real :: delta(size(di)),w(size(di))
+!!$integer :: i
+!!$
+!!$do i=1,size(delta)
+!!$  delta(i) = limbins(i+1)   - limbins(i)
+!!$  w(i)     = perc_vals(i+1) - perc_vals(i)
+!!$end do
+!!$
+!!$di=rmiss
+!!$
+!!$if ( .not. all(delta == 0.)) then
+!!$  call DensityIndex_recurse(delta,w)
+!!$  di = w/delta 
+!!$end if
+!!$
+!!$end subroutine DensityIndex_old
+!!$
+!!$recursive subroutine DensityIndex_recurse(delta,w)
+!!$real :: delta(:),w(:)
+!!$integer :: i
+!!$
+!!$!check divide by 0
+!!$if (any(delta == 0.0)) then
+!!$
+!!$! from left
+!!$  do i=2,size(delta)
+!!$    if (delta(i) == 0.0 .and. delta(i-1) > 0.0 ) then
+!!$      delta(i) = delta(i-1)
+!!$      w(i)     = w(i) + w(i-1)
+!!$    end if
+!!$  end do
+!!$
+!!$! from right
+!!$  do i=size(delta)-1,1,-1
+!!$    if (delta(i) == 0.0 .and. delta(i+1) > 0.0 )then
+!!$      delta(i) = delta(i+1)
+!!$      w(i)     = w(i) + w(i+1)
+!!$    end if
+!!$  end do
+!!$
+!!$end if
+!!$
+!!$! one more step
+!!$if (any(delta == 0.0)) then
+!!$  call DensityIndex_recurse(delta,w)
+!!$end if
+!!$
+!!$end subroutine DensityIndex_recurse
+!!$
 
 subroutine DensityIndex(di,nlimbins,occu,rnum,limbins)
 real,intent(out)                :: di(:)
@@ -963,10 +962,8 @@ call DensityIndex(di,nlimbins,occu,rnum,limbins)
 ! Mediana calculation for density index
 k=0
 middle=count(c_e(rnum))/2
-print *,"middle",middle
 do i=1,size(occu)
   k=k+occu(i)
-  print *,k
   if (k > middle) then
     if (k > 1 .and. (k - occu(i)) == middle) then
       med = (di(i-1) + di(i)) / 2.
