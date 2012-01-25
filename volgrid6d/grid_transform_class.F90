@@ -254,9 +254,10 @@ END TYPE grid_transform
 
 !> Constructors of the corresponding objects.
 INTERFACE init
-  MODULE PROCEDURE transform_init, grid_transform_init, &
+  MODULE PROCEDURE transform_init, grid_transform_levtype_levtype_init, &
+   grid_transform_init, &
    grid_transform_grid_vol7d_init, grid_transform_vol7d_grid_init, &
-   grid_transform_vol7d_vol7d_init, grid_transform_levtype_levtype_init
+   grid_transform_vol7d_vol7d_init
 END INTERFACE
 
 !> Destructors of the corresponding objects.
@@ -650,7 +651,8 @@ END SUBROUTINE transform_get_val
 !! this constructor and returned in output for 'zoom' and 'boxregrid'
 !! transformations. The generated \a grid_transform object is specific
 !! to the input and output grids involved.
-SUBROUTINE grid_transform_levtype_levtype_init(this, trans, lev_in, lev_out, categoryappend)
+SUBROUTINE grid_transform_levtype_levtype_init(this, trans, lev_in, lev_out, &
+ categoryappend)
 TYPE(grid_transform),INTENT(out) :: this !< grid_transformation object
 TYPE(transform_def),INTENT(in) :: trans !< transformation object
 TYPE(vol7d_level),INTENT(in) :: lev_in(:) !< vol7d_level from input object
@@ -663,6 +665,9 @@ INTEGER :: i, j, icache, istart, iend, ostart, oend
 
 
 CALL grid_transform_init_common(this, trans, categoryappend)
+#ifdef DEBUG
+CALL l4f_category_log(this%category, L4F_DEBUG, "grid_transform vertint")
+#endif
 
 IF (this%trans%trans_type == 'vertint') THEN
 
@@ -773,6 +778,7 @@ IF (this%trans%trans_type == 'vertint') THEN
     this%valid = .FALSE.
 
   ENDIF
+ELSE
 
   CALL l4f_category_log(this%category,L4F_WARN, &
    'init_grid_transform trans type '//TRIM(this%trans%trans_type) &
@@ -839,7 +845,11 @@ DOUBLE PRECISION :: xmin, xmax, ymin, ymax, steplon, steplat, &
 TYPE(geo_proj) :: proj_in, proj_out
 TYPE(geo_coord) :: point
 
+
 CALL grid_transform_init_common(this, trans, categoryappend)
+#ifdef DEBUG
+CALL l4f_category_log(this%category, L4F_DEBUG, "grid_transform vg6d-vg6d")
+#endif
 
 ! output ellipsoid has to be the same as for the input (improve)
 CALL get_val(in, ellips_smaj_axis=ellips_smaj_axis, ellips_flatt=ellips_flatt)
@@ -1215,6 +1225,9 @@ TYPE(geo_coord) :: point
 
 
 CALL grid_transform_init_common(this, trans, categoryappend)
+#ifdef DEBUG
+CALL l4f_category_log(this%category, L4F_DEBUG, "grid_transform vg6d-v7d")
+#endif
 
 IF (this%trans%trans_type == 'inter') THEN
 
@@ -1653,6 +1666,9 @@ doubleprecision,allocatable :: lon(:),lat(:)
 
 
 CALL grid_transform_init_common(this, trans, categoryappend)
+#ifdef DEBUG
+CALL l4f_category_log(this%category, L4F_DEBUG, "grid_transform v7d-vg6d")
+#endif
 
 IF (this%trans%trans_type == 'inter') THEN
 
@@ -1780,6 +1796,9 @@ TYPE(geo_coord) :: point
 
 
 CALL grid_transform_init_common(this, trans, categoryappend)
+#ifdef DEBUG
+CALL l4f_category_log(this%category, L4F_DEBUG, "grid_transform v7d-v7d")
+#endif
 
 IF (this%trans%trans_type == 'inter') THEN
 
@@ -2396,8 +2415,8 @@ ELSE IF (this%trans%trans_type == 'vertint') THEN
       IF (c_e(this%inter_index_z(k))) THEN
         z1 = REAL(this%inter_zp(k))
         z2 = REAL(1.0D0 - this%inter_zp(k))
-        DO j = 1, this%inny
-          DO i = 1, this%innx
+        DO j = 1, inny
+          DO i = 1, innx
             IF (c_e(field_in(i,j,this%inter_index_z(k))) .AND. &
              c_e(field_in(i,j,this%inter_index_z(k)+1))) THEN
               field_out(i,j,k) = &

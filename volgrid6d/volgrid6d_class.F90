@@ -158,7 +158,7 @@ CONTAINS
 !! The constructor should be explicitly used only in rare cases,
 !! \a volgrid6d objects are usually created through the \a import
 !! interface.
-SUBROUTINE volgrid6d_init(this,griddim,time_definition,categoryappend)
+SUBROUTINE volgrid6d_init(this, griddim, time_definition, categoryappend)
 TYPE(volgrid6d) :: this !< object to be initialized
 TYPE(griddim_def),OPTIONAL :: griddim !< grid descriptor
 INTEGER,INTENT(IN),OPTIONAL :: time_definition !< 0=time is reference time; 1=time is validity time
@@ -329,10 +329,18 @@ LOGICAL,INTENT(in),OPTIONAL :: inivol !< if provided and \c .FALSE., the allocat
 LOGICAL,INTENT(in),OPTIONAL :: decode !< if provided and \c .FALSE., the \a this%voldati volume is not allocated, only \a this%gaid
 
 INTEGER :: stallo
+LOGICAL :: linivol
+
 
 #ifdef DEBUG
 call l4f_category_log(this%category,L4F_DEBUG,"start alloc_vol")
 #endif
+
+IF (PRESENT(inivol)) THEN ! opposite condition, cannot use optio_log
+  linivol = inivol
+ELSE
+  linivol = .TRUE.
+ENDIF
 
 IF (this%griddim%dim%nx > 0 .AND. this%griddim%dim%ny > 0) THEN
 ! allocate dimension descriptors to a minimal size for having a
@@ -358,7 +366,8 @@ IF (this%griddim%dim%nx > 0 .AND. this%griddim%dim%ny > 0) THEN
   
 ! this is not really needed if we can check other flags for a full
 ! field missing values
-      IF (optio_log(inivol)) this%voldati = rmiss
+      IF (linivol) this%voldati = rmiss
+      this%voldati = rmiss
     ENDIF
   ENDIF
 
@@ -373,7 +382,7 @@ IF (this%griddim%dim%nx > 0 .AND. this%griddim%dim%ny > 0) THEN
       CALL raise_fatal_error()
     ENDIF
 
-    IF (optio_log(inivol)) THEN
+    IF (linivol) THEN
 !!$    DO i=1 ,SIZE(this%gaid,1)
 !!$      DO ii=1 ,SIZE(this%gaid,2)
 !!$        DO iii=1 ,SIZE(this%gaid,3)
@@ -1373,13 +1382,15 @@ END SUBROUTINE volgrid6dv_delete
 ! \brief Calcola i nuovi dati secondo la trasformazione specificata
 !
 ! Deve essere fornito l'oggetto di trasformazione e oggetti completi
-SUBROUTINE volgrid6d_transform_compute(this, volgrid6d_in, volgrid6d_out, clone)
+SUBROUTINE volgrid6d_transform_compute(this, volgrid6d_in, volgrid6d_out, &
+ lev_out, clone)
 TYPE(grid_transform),INTENT(in) :: this ! oggetto di trasformazione per il grigliato
 type(volgrid6d), INTENT(in) :: volgrid6d_in ! oggetto da trasformare
 type(volgrid6d), INTENT(out) :: volgrid6d_out ! oggetto trasformato; deve essere completo (init, alloc, alloc_vol)
-logical , intent(in),optional :: clone ! se fornito e \c .TRUE., clona i gaid da volgrid6d_in a volgrid6d_out
+TYPE(vol7d_level),INTENT(in),OPTIONAL :: lev_out(:) ! vol7d_level object defining target vertical grid
+LOGICAL,INTENT(in),OPTIONAL :: clone ! se fornito e \c .TRUE., clona i gaid da volgrid6d_in a volgrid6d_out
 
-integer :: ntime, ntimerange, nlevel, nvar
+INTEGER :: ntime, ntimerange, inlevel, onlevel, nvar
 integer :: itime, itimerange, ilevel, ivar
 
 REAL,POINTER :: voldatiin(:,:,:), voldatiout(:,:,:)
@@ -1390,7 +1401,8 @@ call l4f_category_log(volgrid6d_in%category,L4F_DEBUG,"start volgrid6d_transform
 
 ntime=0
 ntimerange=0
-nlevel=0
+inlevel=0
+onlevel=0
 nvar=0
 
 if (associated(volgrid6d_in%time))then
@@ -1403,10 +1415,16 @@ if (associated(volgrid6d_in%timerange))then
   volgrid6d_out%timerange=volgrid6d_in%timerange
 end if
 
-if (associated(volgrid6d_in%level))then
-  nlevel=size(volgrid6d_in%level)
+IF (ASSOCIATED(volgrid6d_in%level))THEN
+  inlevel=SIZE(volgrid6d_in%level)
+ENDIF
+IF (PRESENT(lev_out)) THEN
+  onlevel=SIZE(lev_out)
+  volgrid6d_out%level=lev_out
+ELSE IF (ASSOCIATED(volgrid6d_in%level))THEN
+  onlevel=SIZE(volgrid6d_in%level)
   volgrid6d_out%level=volgrid6d_in%level
-end if
+ENDIF
 
 if (associated(volgrid6d_in%var))then
   nvar=size(volgrid6d_in%var)
@@ -1415,33 +1433,47 @@ end if
 ! allocate once for speed
 IF (.NOT.ASSOCIATED(volgrid6d_in%voldati)) THEN
   ALLOCATE(voldatiin(volgrid6d_in%griddim%dim%nx, volgrid6d_in%griddim%dim%ny, &
-   nlevel))
+   inlevel))
 ENDIF
 IF (.NOT.ASSOCIATED(volgrid6d_out%voldati)) THEN
   ALLOCATE(voldatiout(volgrid6d_out%griddim%dim%nx, volgrid6d_out%griddim%dim%ny, &
-   nlevel))
+   onlevel))
 ENDIF
 
 DO ivar=1,nvar
   DO itimerange=1,ntimerange
     DO itime=1,ntime
 
-      DO ilevel=1,nlevel
+      DO ilevel = 1, MIN(inlevel,onlevel)
 ! if present gaid copy it
-        if (c_e(volgrid6d_in%gaid(ilevel,itime,itimerange,ivar)) .and. .not. &
+        IF (c_e(volgrid6d_in%gaid(ilevel,itime,itimerange,ivar)) .AND. .NOT. &
             c_e(volgrid6d_out%gaid(ilevel,itime,itimerange,ivar))) then
 
-          if (optio_log(clone))then
-            call copy(volgrid6d_in%gaid(ilevel,itime,itimerange,ivar),&
+          IF (optio_log(clone)) THEN
+            CALL copy(volgrid6d_in%gaid(ilevel,itime,itimerange,ivar),&
              volgrid6d_out%gaid(ilevel,itime,itimerange,ivar))
 #ifdef DEBUG
-            call l4f_category_log(volgrid6d_in%category,L4F_DEBUG,"cloning gaid")
+            CALL l4f_category_log(volgrid6d_in%category,L4F_DEBUG, &
+             "cloning gaid, level "//t2c(ilevel))
 #endif
-          else
+          ELSE
             volgrid6d_out%gaid(ilevel,itime,itimerange,ivar) = &
              volgrid6d_in%gaid(ilevel,itime,itimerange,ivar)
-          end if
-        end if
+          ENDIF
+        ENDIF
+      ENDDO
+! if out level are more, we have to clone anyway
+      DO ilevel = MIN(inlevel,onlevel) + 1, onlevel
+        IF (c_e(volgrid6d_in%gaid(inlevel,itime,itimerange,ivar)) .AND. .NOT. &
+            c_e(volgrid6d_out%gaid(ilevel,itime,itimerange,ivar))) then
+
+          CALL copy(volgrid6d_in%gaid(inlevel,itime,itimerange,ivar),&
+             volgrid6d_out%gaid(ilevel,itime,itimerange,ivar))
+#ifdef DEBUG
+            CALL l4f_category_log(volgrid6d_in%category,L4F_DEBUG, &
+             "forced cloning gaid, level "//t2c(inlevel)//"->"//t2c(ilevel))
+#endif
+        ENDIF
       ENDDO
 
       CALL volgrid_get_vol_3d(volgrid6d_in, itime, itimerange, ivar, &
@@ -1475,14 +1507,15 @@ end SUBROUTINE volgrid6d_transform_compute
 !! is created internally and it does not require preliminary
 !! initialisation.
 SUBROUTINE volgrid6d_transform(this, griddim, volgrid6d_in, volgrid6d_out, &
- clone, decode, categoryappend)
+ lev_out, clone, decode, categoryappend)
 TYPE(transform_def),INTENT(in) :: this !< object specifying the abstract transformation
 TYPE(griddim_def),INTENT(in),OPTIONAL :: griddim !< griddim specifying the output grid (required by most transformation types)
 ! TODO ripristinare intent(in) dopo le opportune modifiche in grid_class.F90
 TYPE(volgrid6d),INTENT(inout) :: volgrid6d_in !< object to be transformed, it is not modified, despite the INTENT(inout)
 TYPE(volgrid6d),INTENT(out) :: volgrid6d_out !< transformed object, it does not need initialisation
+TYPE(vol7d_level),INTENT(in),OPTIONAL :: lev_out(:) !< vol7d_level object defining target vertical grid
 LOGICAL,INTENT(in),OPTIONAL :: clone !< if provided and \a .TRUE. , clone the \a gaid's from \a volgrid6d_in to \a volgrid6d_out 
-LOGICAL,INTENT(in),OPTIONAL :: decode !< if provided and \a .FALSE. the data volume is not allocated, but work is performed on grid_id's( NOT USED !)
+LOGICAL,INTENT(in),OPTIONAL :: decode !< if provided and \a .FALSE. the data volume is not allocated, but work is performed on grid_id's (NOT USED!)
 CHARACTER(len=*),INTENT(in),OPTIONAL :: categoryappend !< append this suffix to log4fortran namespace category
 
 TYPE(grid_transform) :: grid_trans
@@ -1526,9 +1559,20 @@ ELSE IF (PRESENT(griddim)) THEN ! just get component_flag, the rest is rubbish
   CALL get_val(griddim, component_flag=cf_out)
 ENDIF
 
-CALL init(volgrid6d_out, griddim, categoryappend=categoryappend)
-CALL init(grid_trans, this, in=volgrid6d_in%griddim, out=volgrid6d_out%griddim, &
- categoryappend=categoryappend)
+
+IF (trans_type == 'vertint' .AND. PRESENT(lev_out)) THEN ! improve condition!!
+  CALL init(volgrid6d_out, griddim=volgrid6d_in%griddim, &
+   time_definition=volgrid6d_in%time_definition, categoryappend=categoryappend)
+  nlevel=SIZE(lev_out)
+  CALL init(grid_trans, this, lev_in=volgrid6d_in%level, lev_out=lev_out, &
+   categoryappend=categoryappend)
+ELSE
+  CALL init(volgrid6d_out, griddim=griddim, &
+   time_definition=volgrid6d_in%time_definition, categoryappend=categoryappend)
+  CALL init(grid_trans, this, in=volgrid6d_in%griddim, out=volgrid6d_out%griddim, &
+   categoryappend=categoryappend)
+ENDIF
+
 
 IF (c_e(grid_trans)) THEN ! transformation is valid
 
@@ -1541,7 +1585,16 @@ IF (c_e(grid_trans)) THEN ! transformation is valid
 !ensure unproj was called
 !call griddim_unproj(volgrid6d_out%griddim)
 
-  CALL compute(grid_trans, volgrid6d_in, volgrid6d_out, clone)
+  IF (trans_type == 'vertint') THEN ! improve condition!!
+#ifdef DEBUG
+    CALL l4f_category_log(volgrid6d_in%category, L4F_DEBUG, &
+     "volgrid6d_transform: vertint to "//t2c(nlevel)//" levels")
+#endif
+    CALL compute(grid_trans, volgrid6d_in, volgrid6d_out, lev_out=lev_out, &
+     clone=clone)
+  ELSE
+    CALL compute(grid_trans, volgrid6d_in, volgrid6d_out, clone=clone)
+  ENDIF
 
   IF (cf_out == 0) THEN ! unrotated components are desired
     CALL wind_unrot(volgrid6d_out) ! unrotate if necessary
@@ -1570,12 +1623,13 @@ END SUBROUTINE volgrid6d_transform
 !! to the transformation type, the output array may have of one or
 !! more \a volgrid6d elements on different grids.
 SUBROUTINE volgrid6dv_transform(this, griddim, volgrid6d_in, volgrid6d_out, &
- clone, decode, categoryappend)
+ lev_out, clone, decode, categoryappend)
 TYPE(transform_def),INTENT(in) :: this !< object specifying the abstract transformation
 TYPE(griddim_def),INTENT(in),OPTIONAL :: griddim !< griddim specifying the output grid (required by most transformation types)
 ! TODO ripristinare intent(in) dopo le opportune modifiche in grid_class.F90
 TYPE(volgrid6d),INTENT(inout) :: volgrid6d_in(:) !< object to be transformed, it is an array of volgrid6d objects, each of which will be transformed, it is not modified, despite the INTENT(inout)
 TYPE(volgrid6d),POINTER :: volgrid6d_out(:) !< transformed object, it is a non associated pointer to an array of volgrid6d objects which will be allocated by the method
+TYPE(vol7d_level),INTENT(in),OPTIONAL :: lev_out(:) !< vol7d_level object defining target vertical grid
 LOGICAL,INTENT(in),OPTIONAL :: clone !< if provided and \a .TRUE. , clone the \a gaid's from \a volgrid6d_in to \a volgrid6d_out 
 LOGICAL,INTENT(in),OPTIONAL :: decode !< if provided and \a .FALSE. the data volume is not allocated, but work is performed on grid_id's
 CHARACTER(len=*),INTENT(in),OPTIONAL :: categoryappend !< append this suffix to log4fortran namespace category
@@ -1591,7 +1645,7 @@ end if
 
 do i=1,size(volgrid6d_in)
   call transform (this, griddim, volgrid6d_in(i), volgrid6d_out(i), &
-   clone, decode=decode, categoryappend=categoryappend)
+   lev_out=lev_out, clone=clone, decode=decode, categoryappend=categoryappend)
 end do
 
 END SUBROUTINE volgrid6dv_transform

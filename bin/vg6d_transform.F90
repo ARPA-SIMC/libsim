@@ -41,10 +41,14 @@ USE termo
 
 implicit none
 
-integer :: category,ier,i,n
+INTEGER :: category, ier, i, l, n
 CHARACTER(len=12) :: coord_format
 CHARACTER(len=10), ALLOCATABLE :: vl(:)
-CHARACTER(len=512):: a_name, coord_file, input_file, output_file, output_format, output_template, output_variable_list
+CHARACTER(len=10) :: level_type
+CHARACTER(len=512) :: a_name, coord_file, input_file, output_file, output_format, output_template, output_variable_list, level_list
+INTEGER :: ilevel_type, olevel_type
+TYPE(vol7d_level) :: ilevel, olevel
+TYPE(vol7d_level),ALLOCATABLE :: olevel_list(:)
 type (volgrid6d),pointer  :: volgrid(:),volgrid_out(:),volgrid_tmp(:)
 
 doubleprecision ::  ilon,ilat,flon,flat
@@ -166,9 +170,16 @@ CALL optionparser_add(opt, 'f', 'npx', npx, 4, help= &
 CALL optionparser_add(opt, 'g', 'npy', npy, 4, help= &
  'number of nodes along x axis on input grid, over which to apply function for boxregrid')
 
+CALL optionparser_add(opt, ' ', 'level-type', level_type, '100', help= &
+ 'type of input and output level for vertical interpolation &
+ &in the form [inlev:]outlev, from grib2 table, at the moment &
+ &input and output type must be the same and only single levels are supported')
+CALL optionparser_add(opt, ' ', 'level-list', level_list, '50000,70000,85000,100000', help= &
+ 'list of output levels for vertical interpolation, the unit is determined &
+ &by the value of level-type and taken from grib2 table')
+
 CALL optionparser_add(opt, ' ', 'rounding', round, help= &
  'simplifies volume, merging similar levels and timeranges')
-
 
 coord_file=cmiss
 #ifdef HAVE_LIBSHP_FORTRAN
@@ -311,6 +322,47 @@ c_i = timedelta_new(isodate=comp_step)
 c_s = datetime_miss
 !ENDIF
 
+! check level_type
+ilevel_type = imiss
+olevel_type = imiss
+IF (level_type /= '') THEN
+  CALL init(argparse, level_type, ':', nfield=n)
+  IF (n == 1) THEN
+    CALL csv_record_getfield(argparse, olevel_type)
+    ilevel_type = olevel_type
+  ELSE  IF (n == 2) THEN
+    CALL csv_record_getfield(argparse, ilevel_type)
+    CALL csv_record_getfield(argparse, olevel_type)
+  ENDIF
+  CALL delete(argparse)
+  IF (.NOT.c_e(ilevel_type) .OR. .NOT.c_e(olevel_type)) THEN
+    CALL l4f_category_log(category, L4F_ERROR, &
+     'error in command-line parameters, wrong syntax for --level-type: ' &
+     //TRIM(level_type))
+    CALL raise_fatal_error()
+  ENDIF
+! temporary
+  IF (ilevel_type /= olevel_type) THEN
+    CALL l4f_category_log(category, L4F_ERROR, &
+     'error in command-line parameters, input and output level types must be equal: ' &
+     //TRIM(level_type))
+    CALL raise_fatal_error()
+  ENDIF
+ENDIF
+CALL init(ilevel, ilevel_type)
+CALL init(olevel, olevel_type)
+
+! make level_list
+CALL init(argparse, level_list, ',', nfield=n)
+IF (n > 0 .AND. c_e(olevel_type)) THEN
+  ALLOCATE(olevel_list(n))
+  DO i = 1, n
+    CALL csv_record_getfield(argparse, l)
+    CALL init(olevel_list(i), olevel_type, l)
+  ENDDO
+ENDIF
+CALL delete(argparse)
+
 ! check comp_stat_proc
 istat_proc = imiss
 ostat_proc = imiss
@@ -400,10 +452,12 @@ IF (trans_type /=  'none') THEN ! transform
    ix=ix, iy=iy, fx=fx, fy=fy, &
    ilon=ilon, ilat=ilat, flon=flon, flat=flat, npx=npx, npy=npy, &
    poly=poly, percentile=0.5D0, &
+   input_levtype=ilevel, output_levtype=olevel, &
    categoryappend="transformation")
 
   CALL transform(trans, griddim_out, volgrid6d_in=volgrid, &
-   volgrid6d_out=volgrid_out, clone=.TRUE., categoryappend="transform")
+   volgrid6d_out=volgrid_out, lev_out=olevel_list, clone=.TRUE., &
+   categoryappend="transform")
 
   CALL l4f_category_log(category,L4F_INFO,"transformation completed")
   IF (ASSOCIATED(volgrid)) CALL delete(volgrid)
