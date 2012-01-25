@@ -2000,24 +2000,19 @@ else
   inetwork=1
 end if
 
+! no time_definition conversion implemented, output will be the same as input
 if (associated(vol7d_in%time))then
   ntime=size(vol7d_in%time)
-                                !TODO tramutare in copy
   volgrid6d_out%time=vol7d_in%time
-
-!!! #### convertire reference in validity
-
 end if
 
 if (associated(vol7d_in%timerange))then
   ntimerange=size(vol7d_in%timerange)
-                                !TODO tramutare in copy
   volgrid6d_out%timerange=vol7d_in%timerange
 end if
 
 if (associated(vol7d_in%level))then
   nlevel=size(vol7d_in%level)
-                                !TODO tramutare in copy
   volgrid6d_out%level=vol7d_in%level
 end if
 
@@ -2101,7 +2096,8 @@ IF (nvar <= 0) THEN ! use vol7d category once it will be implemented
 ENDIF
 
 CALL init(grid_trans, this, vol7d_in, griddim, categoryappend=categoryappend)
-CALL init(volgrid6d_out, griddim, categoryappend=categoryappend)
+CALL init(volgrid6d_out, griddim, time_definition=vol7d_in%time_definition, & 
+ categoryappend=categoryappend)
 
 IF (c_e(grid_trans)) THEN
 
