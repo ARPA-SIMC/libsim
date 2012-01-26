@@ -786,14 +786,16 @@ ENDIF
 
 IF (comp_regularize .or. c_e(comp_cyclicdatetime)) THEN
 
-  cyclicdt=cyclicdatetime_new(chardate=comp_cyclicdatetime)
+  cyclicdt = cyclicdatetime_new(chardate=comp_cyclicdatetime)
 
   CALL init(v7d_comp1)
-  CALL vol7d_filter_time(v7d, v7d_comp1, c_i, c_s, cyclicdt=cyclicdt, fill_data=comp_fill_data)
+  CALL vol7d_filter_time(v7d, v7d_comp1, start=c_s, cyclicdt=cyclicdt, &
+   fill_data=comp_fill_data)
   CALL delete(v7d)
   v7d = v7d_comp1
   CALL init(v7d_comp1) ! detach it
 ENDIF
+
 
 IF (c_e(istat_proc) .AND. c_e(ostat_proc)) THEN
   CALL init(v7d_comp1, time_definition=v7d%time_definition)

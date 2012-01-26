@@ -473,11 +473,6 @@ DO i = 1, SIZE(that%time)
   CALL getval(that%time(i)-(that%time(i)-step), amsec=stepmsec(i))
 ENDDO
 
-print *,"this"
-call display(this)
-print *,"that"
-call display(that)
-
 ! finally perform computations
 ! warning: mask_time is reused for a different purpose
 IF (ASSOCIATED(this%voldatir)) THEN
@@ -1051,18 +1046,17 @@ CALL l4f_log(L4F_INFO, 'vol7d_filter_time: time interval '//TRIM(to_char(lstart)
 
 ALLOCATE(time_mask(SIZE(this%time)))
 
-call display(lcyclicdt)
+!call display(lcyclicdt)
 time_mask = this%time >= lstart .AND. this%time <= lstop .AND. this%time == lcyclicdt
 
-!call display(step)
 
 if (present(step)) then
   time_mask=time_mask .AND. MOD(this%time - lstart, step) == timedelta_0 
 end if
 
-do i=1,size(time_mask)
-  if (time_mask(i)) call display(this%time(i))
-end do
+!do i=1,size(time_mask)
+!  if (time_mask(i)) call display(this%time(i))
+!end do
 
 !TODO we need to insert cyclicdt in vol7d_fill_time to optimize this
 
