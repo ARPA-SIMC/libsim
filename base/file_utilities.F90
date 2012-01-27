@@ -332,12 +332,12 @@ LOGICAL :: lquote
 lquote = optio_log(force_quote)
 IF (LEN(field) == 0) THEN ! Particular case to be handled separately
   CALL checkrealloc(this, 1)
-!  IF (this%nfield > 0) THEN
+  IF (this%nfield > 0) THEN
     CALL add_byte(this, this%csep) ! add separator if necessary
-!  ELSE
-!    CALL add_byte(this, this%cquote) ! if first record is empty it should be quoted
-!    CALL add_byte(this, this%cquote) ! in case it is the only one
-!  ENDIF
+  ELSE
+    CALL add_byte(this, this%cquote) ! if first record is empty it should be quoted
+    CALL add_byte(this, this%cquote) ! in case it is the only one
+  ENDIF
 ELSE IF (INDEX(field, TRANSFER(this%csep,field(1:1))) == 0 &
  .AND. INDEX(field, TRANSFER(this%cquote,field(1:1))) == 0 &
  .AND. .NOT.is_space_c(field(1:1)) &

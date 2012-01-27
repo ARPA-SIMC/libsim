@@ -28,6 +28,7 @@ INTEGER :: nfield, ier, icheck, clen
 REAL :: rcheck
 DOUBLE PRECISION :: dcheck
 
+
 PRINT*,'=== Testing file_utilities module ==='
 
 PRINT*,'Checking csv_record writing'
@@ -136,6 +137,46 @@ CALL init(csv_reader, charbuf, nfield=nfield)
 PRINT*,'Checking nfield'
 IF (nfield /= 6) THEN
   PRINT*,'nfield:',nfield
+  CALL EXIT(1)
+ENDIF
+
+PRINT*,'Checking csv_record_getfield with empty charbuf'
+charbuf = ''
+CALL init(csv_reader, charbuf, nfield=nfield)
+PRINT*,'Checking nfield'
+IF (nfield /= 1) THEN
+  PRINT*,'nfield:',nfield
+  CALL EXIT(1)
+ENDIF
+
+CALL csv_record_getfield(csv_reader, ccheck, clen, ier)
+IF (ier /= 0) THEN
+  PRINT*,'Error code:',ier
+  CALL EXIT(1)
+ENDIF
+IF (ccheck /= '') THEN
+  PRINT*,'ccheck:',ccheck(1:clen)
+  CALL EXIT(1)
+ENDIF
+
+CALL delete(csv_reader)
+
+PRINT*,'Checking csv_record_getfield with one empty, quoted record'
+charbuf = '""'
+CALL init(csv_reader, charbuf, nfield=nfield)
+PRINT*,'Checking nfield'
+IF (nfield /= 1) THEN
+  PRINT*,'nfield:',nfield
+  CALL EXIT(1)
+ENDIF
+
+CALL csv_record_getfield(csv_reader, ccheck, clen, ier)
+IF (ier /= 0) THEN
+  PRINT*,'Error code:',ier
+  CALL EXIT(1)
+ENDIF
+IF (ccheck /= '') THEN
+  PRINT*,'ccheck:',ccheck(1:clen)
   CALL EXIT(1)
 ENDIF
 
