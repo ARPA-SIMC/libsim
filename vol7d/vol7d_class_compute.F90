@@ -876,6 +876,8 @@ IF (ASSOCIATED(this%voldatid)) THEN
 ENDIF
 
 ! this should be avoided by sorting descriptors upstream
+! descriptors now are sorted upstream with a dirty and expensive trick
+! but the order may be scrambled in the call to vol7d_merge above
 CALL vol7d_smart_sort(that, lsort_time=.TRUE., lsort_timerange=.TRUE.)
 
 DEALLOCATE(map_tr, f, mask_timerange)
@@ -1031,7 +1033,6 @@ TYPE(datetime) :: lstart, lstop
 TYPE(cyclicdatetime) :: lcyclicdt
 LOGICAL, ALLOCATABLE :: time_mask(:)
 TYPE(vol7d) :: v7dtmp2
-integer :: i
 
 CALL safe_start_stop(this, lstart, lstop, start, stopp)
 IF (.NOT. c_e(lstart) .OR. .NOT. c_e(lstop)) RETURN

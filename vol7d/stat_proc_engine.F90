@@ -230,7 +230,7 @@ LOGICAL,POINTER :: mask_timerange(:)
 INTEGER,INTENT(in),OPTIONAL :: time_definition
 LOGICAL,INTENT(in),OPTIONAL :: full_steps
 
-INTEGER :: i, j, k, l
+INTEGER :: i, j, k, l, dirtyrep
 INTEGER :: steps
 LOGICAL :: useful
 TYPE(datetime) :: pstart1, pstart2, pend1, pend2, reftime1, reftime2, tmptime
@@ -275,57 +275,63 @@ DO i = 1, SIZE(mask_timerange)
 ENDDO
 
 ! scan through all possible combinations of time and timerange
-DO l = 1, SIZE(itime)
-  DO k = 1, nitr
-    CALL time_timerange_get_period(itime(l), itimerange(f(k)), &
-     time_definition, pstart2, pend2, reftime2)
+DO dirtyrep = 1, 2
+  IF (dirtyrep == 2) THEN ! dirty and expensive trick for sorting descriptors
+    CALL packarray(a_otime)
+    CALL packarray(a_otimerange)
+    CALL sort(a_otime%array)
+    CALL sort(a_otimerange%array)
+  ENDIF
+  DO l = 1, SIZE(itime)
+    DO k = 1, nitr
+      CALL time_timerange_get_period(itime(l), itimerange(f(k)), &
+       time_definition, pstart2, pend2, reftime2)
 
-    DO j = 1, SIZE(itime)
-      DO i = 1, nitr
-        useful = .FALSE.
-        CALL time_timerange_get_period(itime(j), itimerange(f(i)), &
-         time_definition, pstart1, pend1, reftime1)
-        tmptimerange = vol7d_timerange_new(timerange=stat_proc)
+      DO j = 1, SIZE(itime)
+        DO i = 1, nitr
+          useful = .FALSE.
+          CALL time_timerange_get_period(itime(j), itimerange(f(i)), &
+           time_definition, pstart1, pend1, reftime1)
+          tmptimerange = vol7d_timerange_new(timerange=stat_proc)
 
-        IF (reftime2 == pend2 .AND. reftime1 == pend1) THEN ! analysis
-          IF (pstart2 == pstart1 .AND. pend2 > pend1) THEN ! =-|
-            CALL time_timerange_set_period(tmptime, tmptimerange, &
-             time_definition, pend1, pend2, reftime2)
-            useful = .TRUE.
+          IF (reftime2 == pend2 .AND. reftime1 == pend1) THEN ! analysis
+            IF (pstart2 == pstart1 .AND. pend2 > pend1) THEN ! =-|
+              CALL time_timerange_set_period(tmptime, tmptimerange, &
+               time_definition, pend1, pend2, reftime2)
+              useful = .TRUE.
 
-          ELSE IF (pstart2 < pstart1 .AND. pend2 == pend1) THEN ! -=|
-            CALL time_timerange_set_period(tmptime, tmptimerange, &
-             time_definition, pstart2, pstart1, pstart1)
-            useful = .TRUE.
+            ELSE IF (pstart2 < pstart1 .AND. pend2 == pend1) THEN ! -=|
+              CALL time_timerange_set_period(tmptime, tmptimerange, &
+               time_definition, pstart2, pstart1, pstart1)
+              useful = .TRUE.
+            ENDIF
+
+          ELSE IF (reftime2 == reftime1) THEN ! forecast, same reftime
+            IF (pstart2 == pstart1 .AND. pend2 > pend1) THEN ! |=-
+              CALL time_timerange_set_period(tmptime, tmptimerange, &
+               time_definition, pend1, pend2, reftime2)
+              useful = .TRUE.
+
+            ELSE IF (pstart2 < pstart1 .AND. pend2 == pend1) THEN ! |-=
+              CALL time_timerange_set_period(tmptime, tmptimerange, &
+               time_definition, pstart2, pstart1, reftime2)
+              useful = .TRUE.
+            ENDIF
+
           ENDIF
+          useful = useful .AND. tmptime /= datetime_miss .AND. &
+           tmptimerange /= vol7d_timerange_miss .AND. tmptimerange%p2 == steps
 
-        ELSE IF (reftime2 == reftime1) THEN ! forecast, same reftime
-          IF (pstart2 == pstart1 .AND. pend2 > pend1) THEN ! |=-
-            CALL time_timerange_set_period(tmptime, tmptimerange, &
-             time_definition, pend1, pend2, reftime2)
-            useful = .TRUE.
-
-          ELSE IF (pstart2 < pstart1 .AND. pend2 == pend1) THEN ! |-=
-            CALL time_timerange_set_period(tmptime, tmptimerange, &
-             time_definition, pstart2, pstart1, reftime2)
-            useful = .TRUE.
+          IF (useful) THEN ! add a_otime, a_otimerange
+            map_tr(i,j,k,l,1) = append_unique(a_otime, tmptime)
+            map_tr(i,j,k,l,2) = append_unique(a_otimerange, tmptimerange)
           ENDIF
-
-        ENDIF
-        useful = useful .AND. tmptime /= datetime_miss .AND. &
-         tmptimerange /= vol7d_timerange_miss .AND. tmptimerange%p2 == steps
-
-        IF (useful) THEN ! add a_otime, a_otimerange
-          map_tr(i,j,k,l,1) = append_unique(a_otime, tmptime)
-          map_tr(i,j,k,l,2) = append_unique(a_otimerange, tmptimerange)
-        ENDIF
+        ENDDO
       ENDDO
     ENDDO
   ENDDO
 ENDDO
 
-CALL packarray(a_otime)
-CALL packarray(a_otimerange)
 otime => a_otime%array
 otimerange => a_otimerange%array
 ! delete local objects keeping the contents
