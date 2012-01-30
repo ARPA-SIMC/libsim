@@ -347,6 +347,10 @@ CALL l4f_log(L4F_DEBUG, &
  'recompute_stat_proc_diff, nitr: '//t2c(nitr))
 CALL l4f_log(L4F_DEBUG, &
  'recompute_stat_proc_diff, good timeranges: '//t2c(COUNT(mask_timerange)))
+CALL l4f_log(L4F_DEBUG, &
+ 'recompute_stat_proc_diff, output times: '//t2c(SIZE(otime)))
+CALL l4f_log(L4F_DEBUG, &
+ 'recompute_stat_proc_diff, output timeranges: '//t2c(SIZE(otimerange)))
 #endif
 
 END SUBROUTINE recompute_stat_proc_diff_common

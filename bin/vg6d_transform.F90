@@ -508,7 +508,7 @@ IF (c_e(ostat_proc) .AND. ASSOCIATED(volgrid_out)) THEN ! stat_proc
   ALLOCATE(volgrid_tmp(SIZE(volgrid_out)))
   DO i = 1, SIZE(volgrid_out)
     CALL volgrid6d_recompute_stat_proc_diff(volgrid_out(i), volgrid_tmp(i), &
-     ostat_proc, c_i, full_steps=.TRUE.)
+     ostat_proc, c_i, full_steps=.TRUE., clone=.TRUE.)
   ENDDO
   CALL delete(volgrid_out)
   volgrid_out => volgrid_tmp

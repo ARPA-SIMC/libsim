@@ -67,7 +67,7 @@ type volgrid6d
   TYPE(vol7d_timerange),pointer :: timerange(:) !< timerange (forecast, analysis, statistically processed) dimension descriptor
   TYPE(vol7d_level),pointer :: level(:) !< vertical level dimension descriptor
   TYPE(volgrid6d_var),pointer :: var(:) !< physical variable dimension descriptor
-  TYPE(grid_id),POINTER :: gaid(:,:,:,:) !< array of grid identificators, carrying information about the driver for importation/exportation from/to file, indices are: (level,time,timerange,var)
+  TYPE(grid_id),POINTER :: gaid(:,:,:,:) !< array of grid identifiers, carrying information about the driver for import/export from/to file, indices are: (level,time,timerange,var)
   REAL,POINTER :: voldati(:,:,:,:,:,:) !< array of data, indices are: (x,y,level,time,timerange,var)
   integer :: time_definition !< time definition; 0=time is reference time ; 1=time is validity time
   integer :: category !< log4fortran category
