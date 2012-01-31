@@ -244,6 +244,8 @@ TYPE grid_transform
   DOUBLE PRECISION,POINTER :: inter_xp(:,:) => NULL()
   DOUBLE PRECISION,POINTER :: inter_yp(:,:) => NULL()
   DOUBLE PRECISION,POINTER :: inter_zp(:) => NULL()
+  DOUBLE PRECISION,POINTER :: vcoord_in(:) => NULL()
+  DOUBLE PRECISION,POINTER :: vcoord_out(:) => NULL()
   LOGICAL,POINTER :: point_mask(:,:) => NULL()
 !  type(volgrid6d) :: input_vertcoordvol ! volume which provides the input vertical coordinate if separated from the data volume itself (for vertint) cannot be here because of cross-use, should be an argument of compute
 !  type(vol7d_level), pointer :: output_vertlevlist(:) ! list of vertical levels of output data (for vertint) can be here or an argument of compute, how to do?
@@ -671,73 +673,72 @@ CALL l4f_category_log(this%category, L4F_DEBUG, "grid_transform vertint")
 
 IF (this%trans%trans_type == 'vertint') THEN
 
-  IF (this%trans%sub_type == 'linear') THEN
+!  IF (this%trans%sub_type == 'linear' .OR. this%trans%sub_type == 'linearsparse') THEN
 
-    IF (trans%vertint%input_levtype%level1 /= trans%vertint%output_levtype%level1 &
-     .OR. &
-     trans%vertint%input_levtype%level2 /= trans%vertint%output_levtype%level2) &
-     THEN
-      CALL l4f_category_log(this%category, L4F_ERROR, &
-       'grid_transform_levtype_levtype_init: input and output level types &
-       &must be the same (for now), ('// &
-       TRIM(to_char(trans%vertint%input_levtype%level1))//','// &
-       TRIM(to_char(trans%vertint%input_levtype%level2))//') /= ('// &
-       TRIM(to_char(trans%vertint%output_levtype%level1))//','// &
-       TRIM(to_char(trans%vertint%output_levtype%level2))//')')
-      CALL raise_fatal_error()
-    ENDIF
+  IF (trans%vertint%input_levtype%level1 /= trans%vertint%output_levtype%level1 &
+   .OR. &
+   trans%vertint%input_levtype%level2 /= trans%vertint%output_levtype%level2) &
+   THEN
+    CALL l4f_category_log(this%category, L4F_ERROR, &
+     'grid_transform_levtype_levtype_init: input and output level types &
+     &must be the same (for now), ('// &
+     TRIM(to_char(trans%vertint%input_levtype%level1))//','// &
+     TRIM(to_char(trans%vertint%input_levtype%level2))//') /= ('// &
+     TRIM(to_char(trans%vertint%output_levtype%level1))//','// &
+     TRIM(to_char(trans%vertint%output_levtype%level2))//')')
+    CALL raise_fatal_error()
+  ENDIF
 ! TODO: here we should check that valid levels are contiguous and ordered
 
-    mask_in(:) = (lev_in(:)%level1 == trans%vertint%input_levtype%level1) .AND. &
-     (lev_in(:)%level2 == trans%vertint%input_levtype%level2)
-    mask_out(:) = (lev_out(:)%level1 == trans%vertint%output_levtype%level1) .AND. &
-     (lev_out(:)%level2 == trans%vertint%output_levtype%level2)
+  mask_in(:) = (lev_in(:)%level1 == trans%vertint%input_levtype%level1) .AND. &
+   (lev_in(:)%level2 == trans%vertint%input_levtype%level2)
+  mask_out(:) = (lev_out(:)%level1 == trans%vertint%output_levtype%level1) .AND. &
+   (lev_out(:)%level2 == trans%vertint%output_levtype%level2)
 
-    CALL make_vert_coord(lev_in, mask_in, coord_in)
-    CALL make_vert_coord(lev_out, mask_out, coord_out)
+  CALL make_vert_coord(lev_in, mask_in, coord_in)
+  CALL make_vert_coord(lev_out, mask_out, coord_out)
 ! compute here log of pressure if desired
 
-!    this%innz = COUNT(mask_in)
-!    this%outnz = COUNT(mask_out)
-    this%innz = SIZE(mask_in)
-    this%outnz = SIZE(mask_out)
-    istart = firsttrue(mask_in)
-    iend = lasttrue(mask_in)
-    ostart = firsttrue(mask_out)
-    oend = lasttrue(mask_out)
+  this%innz = SIZE(mask_in)
+  this%outnz = SIZE(mask_out)
+  istart = firsttrue(mask_in)
+  iend = lasttrue(mask_in)
+  ostart = firsttrue(mask_out)
+  oend = lasttrue(mask_out)
 
 ! set valid = .FALSE. here?
-    IF (istart == 0) THEN
-      CALL l4f_category_log(this%category, L4F_WARN, &
-       'grid_transform_levtype_levtype_init: &
-       &input contains no vertical levels of type ('// &
-       TRIM(to_char(trans%vertint%input_levtype%level1))//','// &
-       TRIM(to_char(trans%vertint%input_levtype%level2))// &
-       ') suitable for interpolation')
-      this%valid = .FALSE.
-      RETURN
+  IF (istart == 0) THEN
+    CALL l4f_category_log(this%category, L4F_WARN, &
+     'grid_transform_levtype_levtype_init: &
+     &input contains no vertical levels of type ('// &
+     TRIM(to_char(trans%vertint%input_levtype%level1))//','// &
+     TRIM(to_char(trans%vertint%input_levtype%level2))// &
+     ') suitable for interpolation')
+    this%valid = .FALSE.
+    RETURN
 !      iend = -1 ! for loops
-    ELSE IF (istart == iend) THEN
-      CALL l4f_category_log(this%category, L4F_WARN, &
-       'grid_transform_levtype_levtype_init: &
-       &input contains only 1 vertical level of type ('// &
-       TRIM(to_char(trans%vertint%input_levtype%level1))//','// &
-       TRIM(to_char(trans%vertint%input_levtype%level2))// &
-       ') suitable for interpolation')
-    ENDIF
-    IF (ostart == 0) THEN
-      CALL l4f_category_log(this%category, L4F_WARN, &
-       'grid_transform_levtype_levtype_init: &
-       &output contains no vertical levels of type ('// &
-       TRIM(to_char(trans%vertint%output_levtype%level1))//','// &
-       TRIM(to_char(trans%vertint%output_levtype%level2))// &
-       ') suitable for interpolation')
-      this%valid = .FALSE.
-      RETURN
+  ELSE IF (istart == iend) THEN
+    CALL l4f_category_log(this%category, L4F_WARN, &
+     'grid_transform_levtype_levtype_init: &
+     &input contains only 1 vertical level of type ('// &
+     TRIM(to_char(trans%vertint%input_levtype%level1))//','// &
+     TRIM(to_char(trans%vertint%input_levtype%level2))// &
+     ') suitable for interpolation')
+  ENDIF
+  IF (ostart == 0) THEN
+    CALL l4f_category_log(this%category, L4F_WARN, &
+     'grid_transform_levtype_levtype_init: &
+     &output contains no vertical levels of type ('// &
+     TRIM(to_char(trans%vertint%output_levtype%level1))//','// &
+     TRIM(to_char(trans%vertint%output_levtype%level2))// &
+     ') suitable for interpolation')
+    this%valid = .FALSE.
+    RETURN
 !      oend = -1 ! for loops
-    ENDIF
+  ENDIF
 
-! code up to this point may be common for all vertint subtypes?
+! end of code common for all vertint subtypes
+  IF (this%trans%sub_type == 'linear') THEN
 
     ALLOCATE(this%inter_index_z(this%outnz), this%inter_zp(this%outnz))
     this%inter_index_z(:) = imiss
@@ -770,6 +771,12 @@ IF (this%trans%trans_type == 'vertint') THEN
       ENDIF
     ENDDO outlev
 
+  ELSE IF (this%trans%sub_type == 'linearsparse') THEN
+! just store vertical coordinates, dirty work is done later
+    ALLOCATE(this%vcoord_in(SIZE(coord_in)),  this%vcoord_out(SIZE(coord_out)))
+    this%vcoord_in(:) = coord_in(:)
+    this%vcoord_out(:) = coord_out(:)
+
   ELSE
 
     CALL l4f_category_log(this%category,L4F_WARN, &
@@ -778,6 +785,7 @@ IF (this%trans%trans_type == 'vertint') THEN
     this%valid = .FALSE.
 
   ENDIF
+
 ELSE
 
   CALL l4f_category_log(this%category,L4F_WARN, &
@@ -2076,11 +2084,13 @@ TYPE(grid_transform),INTENT(in) :: this !< grid_transformation object
 REAL, INTENT(in) :: field_in(:,:,:) !< input array
 REAL, INTENT(out) :: field_out(:,:,:) !< output array
 
-INTEGER :: i, j, k, ii, jj, ie, je, navg
+INTEGER :: i, j, k, ii, jj, ie, je, n, navg, kk, kkcache
 INTEGER,ALLOCATABLE :: nval(:,:)
 real :: z1,z2,z3,z4
 doubleprecision  :: x1,x3,y1,y3,xp,yp
 INTEGER :: innx, inny, innz, outnx, outny, outnz
+DOUBLE PRECISION,ALLOCATABLE :: coord_in(:)
+REAL,ALLOCATABLE :: val_in(:)
 
 
 #ifdef DEBUG
@@ -2428,6 +2438,36 @@ ELSE IF (this%trans%trans_type == 'vertint') THEN
       ENDIF
     ENDDO
 
+  ELSE IF (this%trans%sub_type == 'linearsparse') THEN
+
+    ALLOCATE(coord_in(innz), val_in(innz))
+    DO j = 1, inny
+      DO i = 1, innx
+
+        n = COUNT(c_e(field_in(i,j,:)))
+        IF (n > 1) THEN
+          coord_in(1:n) = PACK(this%vcoord_in(:), mask=c_e(field_in(i,j,:)))
+          val_in(1:n) = PACK(field_in(i,j,:), mask=c_e(field_in(i,j,:)))
+          kkcache = 2
+          outlev: DO k = 1, outnz
+            inlev: DO kk = kkcache, n
+              IF (coord_in(kk) >= this%vcoord_out(k)) THEN
+                IF (this%vcoord_out(k) >= coord_in(kk-1)) THEN
+                  z1 = REAL((this%vcoord_out(k) - coord_in(kk-1))/ &
+                   (coord_in(kk) - coord_in(kk-1)))
+                  z2 = REAL(1.0D0 - z1)
+                  field_out(i,j,k) = val_in(kk-1)*z2 + val_in(kk)*z1
+                  kkcache = kk
+                ENDIF
+                CYCLE outlev
+              ENDIF
+            ENDDO inlev
+          ENDDO outlev
+        ENDIF
+
+      ENDDO
+    ENDDO
+
   ENDIF
 
 ELSE IF (this%trans%trans_type == '' .OR. this%trans%trans_type == 'none') THEN
@@ -2545,8 +2585,9 @@ IF (this%trans%trans_type == 'inter') THEN
 
   ENDIF
 
-ELSE IF (this%trans%trans_type == 'boxinter' &
- .OR. this%trans%trans_type == 'polyinter') THEN ! use the grid-to-grid method
+ELSE IF (this%trans%trans_type == 'boxinter' .OR. &
+ this%trans%trans_type == 'polyinter' .OR. &
+ this%trans%trans_type == 'vertint') THEN ! use the grid-to-grid method
 
   CALL compute(this, &
    RESHAPE(field_in, (/SIZE(field_in,1), 1, SIZE(field_in,2)/)), field_out)
