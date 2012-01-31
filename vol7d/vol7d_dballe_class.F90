@@ -2221,16 +2221,16 @@ call l4f_category_log(this%category,L4F_DEBUG,"macro tipo c")
 
           if (write) then
 
-            if (.not. this%file)then
-
-!!!!!!!!!!! workaround to dballe fortran api bug
-! TODO remove this duplicated set of ana_id
-#ifdef DEBUG
-              call l4f_category_log(this%category,L4F_DEBUG,"rispecify ana_id: "&
-               //to_char(ana_id(i,iiiiii)))
-#endif
-              call idba_set (this%handle,"ana_id",ana_id(i,iiiiii))
-            end if
+!            if (.not. this%file)then
+!
+! !!!!!!!!!!! workaround to dballe fortran api bug
+! ! TODO remove this duplicated set of ana_id
+!#ifdef DEBUG
+!              call l4f_category_log(this%category,L4F_DEBUG,"rispecify ana_id: "&
+!               //to_char(ana_id(i,iiiiii)))
+!#endif
+!              call idba_set (this%handle,"ana_id",ana_id(i,iiiiii))
+!            end if
 
                                 !print*,"eseguo una main prendilo"
 #ifdef DEBUG
