@@ -170,11 +170,11 @@ CALL optionparser_add(opt, 'f', 'npx', npx, 4, help= &
 CALL optionparser_add(opt, 'g', 'npy', npy, 4, help= &
  'number of nodes along x axis on input grid, over which to apply function for boxregrid')
 
-CALL optionparser_add(opt, ' ', 'level-type', level_type, '100', help= &
+CALL optionparser_add(opt, ' ', 'trans-level-type', level_type, '100', help= &
  'type of input and output level for vertical interpolation &
  &in the form [inlev:]outlev, from grib2 table, at the moment &
  &input and output type must be the same and only single levels are supported')
-CALL optionparser_add(opt, ' ', 'level-list', level_list, '50000,70000,85000,100000', help= &
+CALL optionparser_add(opt, ' ', 'trans-level-list', level_list, '50000,70000,85000,100000', help= &
  'list of output levels for vertical interpolation, the unit is determined &
  &by the value of level-type and taken from grib2 table')
 
@@ -337,7 +337,7 @@ IF (level_type /= '') THEN
   CALL delete(argparse)
   IF (.NOT.c_e(ilevel_type) .OR. .NOT.c_e(olevel_type)) THEN
     CALL l4f_category_log(category, L4F_ERROR, &
-     'error in command-line parameters, wrong syntax for --level-type: ' &
+     'error in command-line parameters, wrong syntax for --trans-level-type: ' &
      //TRIM(level_type))
     CALL raise_fatal_error()
   ENDIF

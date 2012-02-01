@@ -2177,7 +2177,8 @@ END SUBROUTINE v7d_v7d_transform_compute
 !! corresponding specifical transformation (\a grid_transform object)
 !! is created and destroyed internally. The output transformed object
 !! is created internally and it does not require preliminary
-!! initialisation.
+!! initialisation. The success of the transformation can be checked
+!! with the \a c_e method: c_e(vol7d_out).
 SUBROUTINE v7d_v7d_transform(this, vol7d_in, vol7d_out, v7d, lev_out, categoryappend)
 TYPE(transform_def),INTENT(in) :: this !< object specifying the abstract transformation
 TYPE(vol7d),INTENT(inout) :: vol7d_in !< object to be transformed, it is not modified, despite the INTENT(inout)
@@ -2196,28 +2197,31 @@ IF (ASSOCIATED(vol7d_in%dativar%r)) nvar=SIZE(vol7d_in%dativar%r)
 
 CALL init(v7d_locana)
 IF (PRESENT(v7d)) v7d_locana = v7d
+CALL init(vol7d_out, time_definition=vol7d_in%time_definition)
 
 CALL get_val(this, trans_type=trans_type)
 
 IF (trans_type == 'vertint') THEN
 
   IF (PRESENT(lev_out)) THEN
-    CALL init(grid_trans, this,  lev_in=vol7d_in%level, lev_out=lev_out, &
+    CALL init(grid_trans, this, lev_in=vol7d_in%level, lev_out=lev_out, &
      categoryappend=categoryappend)
 ! if this init is successful, I am sure that v7d_locana%ana is associated
 
     IF (c_e(grid_trans)) THEN! .AND. nvar > 0) THEN
 
-      CALL init(vol7d_out, time_definition=vol7d_in%time_definition)
-
-      CALL vol7d_alloc(vol7d_out, nana=SIZE(v7d_locana%ana), &
+      CALL vol7d_alloc(vol7d_out, nana=SIZE(vol7d_in%ana), &
        ntime=SIZE(vol7d_in%time), ntimerange=SIZE(vol7d_in%timerange), &
        nlevel=SIZE(lev_out), nnetwork=SIZE(vol7d_in%network), ndativarr=nvar)
-      vol7d_out%ana(:) = v7d_locana%ana(:)
+      vol7d_out%ana(:) = vol7d_in%ana(:)
 
       CALL vol7d_alloc_vol(vol7d_out)
 
       CALL compute(grid_trans, vol7d_in, vol7d_out, lev_out)
+
+    ELSE
+      CALL l4f_log(L4F_ERROR, 'v7d_v7d_transform: transformation not valid')
+      CALL raise_error()
     ENDIF
   ELSE
     CALL l4f_log(L4F_ERROR, &
@@ -2227,12 +2231,12 @@ IF (trans_type == 'vertint') THEN
 
 ELSE  
 
-  CALL init(grid_trans, this, vol7d_in, v7d_locana, categoryappend=categoryappend)
+  CALL init(grid_trans, this, vol7d_in, v7d_locana, &
+   categoryappend=categoryappend)
 ! if this init is successful, I am sure that v7d_locana%ana is associated
 
   IF (c_e(grid_trans)) THEN! .AND. nvar > 0) THEN
 
-    CALL init(vol7d_out, time_definition=vol7d_in%time_definition)
     CALL vol7d_alloc(vol7d_out, nana=SIZE(v7d_locana%ana), &
      ntime=SIZE(vol7d_in%time), ntimerange=SIZE(vol7d_in%timerange), &
      nlevel=SIZE(vol7d_in%level), nnetwork=SIZE(vol7d_in%network), ndativarr=nvar)
@@ -2254,6 +2258,9 @@ ELSE
     ENDIF
 
     CALL compute(grid_trans, vol7d_in, vol7d_out)
+  ELSE
+    CALL l4f_log(L4F_ERROR, 'v7d_v7d_transform: transformation not valid')
+    CALL raise_error()
   ENDIF
 
 ENDIF

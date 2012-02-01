@@ -56,16 +56,20 @@ TYPE(csv_record) :: argparse
 CHARACTER(len=8) :: input_format, coord_format
 
 CHARACTER(len=512) :: input_file, output_file, output_format, output_template, &
- network_list, variable_list, anavariable_list, attribute_list, coord_file, output_variable_list
+ network_list, variable_list, anavariable_list, attribute_list, coord_file, output_variable_list, trans_level_list
 CHARACTER(len=160) :: pre_trans_type
 TYPE(vol7d_network), ALLOCATABLE :: nl(:)
+CHARACTER(len=10) :: trans_level_type
 CHARACTER(len=10), ALLOCATABLE :: vl(:), avl(:), al(:), alqc(:),vl_alc(:)
 CHARACTER(len=23) :: start_date, end_date
 CHARACTER(len=20) :: levelc, timerangec
 TYPE(datetime) :: s_d, e_d
 TYPE(vol7d_level) :: level
 TYPE(vol7d_timerange) :: timerange
-INTEGER :: iun, ier, i, n, ninput, iargc, i1, i2, i3, i4
+INTEGER :: ilevel_type, olevel_type
+TYPE(vol7d_level) :: ilevel, olevel
+TYPE(vol7d_level),ALLOCATABLE :: olevel_list(:)
+INTEGER :: iun, ier, i, l, n, ninput, iargc, i1, i2, i3, i4
 INTEGER,POINTER :: w_s(:), w_e(:)
 TYPE(vol7d) :: v7d, v7d_coord, v7dtmp, v7d_comp1, v7d_comp2, v7d_comp3
 TYPE(geo_coordvect),POINTER :: poly(:) => NULL()
@@ -264,6 +268,15 @@ CALL optionparser_add(opt, ' ', 'pre-trans-type', pre_trans_type, '', help= &
  //'; ''metamorphosis'' with subtype ''coordbb'' for selecting only data &
  &within a given bounding box&
  &; empty for no transformation')
+
+CALL optionparser_add(opt, ' ', 'trans-level-type', trans_level_type, '100', help= &
+ 'type of input and output level for vertical interpolation &
+ &in the form [inlev:]outlev, from grib2 table, at the moment &
+ &input and output type must be the same and only single levels are supported')
+CALL optionparser_add(opt, ' ', 'trans-level-list', trans_level_list, '50000,70000,85000,100000', help= &
+ 'list of output levels for vertical interpolation, the unit is determined &
+ &by the value of level-type and taken from grib2 table')
+
 #ifdef HAVE_LIBGRIBAPI
 CALL optionparser_add(opt, ' ', 'post-trans-type', post_trans_type, '', help= &
  'transformation type (sparse points to grid) to be applied after &
@@ -580,6 +593,47 @@ IF (c_e(coord_file)) THEN
 
 ENDIF
 
+! check level_type
+ilevel_type = imiss
+olevel_type = imiss
+IF (trans_level_type /= '') THEN
+  CALL init(argparse, trans_level_type, ':', nfield=n)
+  IF (n == 1) THEN
+    CALL csv_record_getfield(argparse, olevel_type)
+    ilevel_type = olevel_type
+  ELSE  IF (n == 2) THEN
+    CALL csv_record_getfield(argparse, ilevel_type)
+    CALL csv_record_getfield(argparse, olevel_type)
+  ENDIF
+  CALL delete(argparse)
+  IF (.NOT.c_e(ilevel_type) .OR. .NOT.c_e(olevel_type)) THEN
+    CALL l4f_category_log(category, L4F_ERROR, &
+     'error in command-line parameters, wrong syntax for --trans-level-type: ' &
+     //TRIM(trans_level_type))
+    CALL raise_fatal_error()
+  ENDIF
+! temporary
+  IF (ilevel_type /= olevel_type) THEN
+    CALL l4f_category_log(category, L4F_ERROR, &
+     'error in command-line parameters, input and output level types must be equal: ' &
+     //TRIM(trans_level_type))
+    CALL raise_fatal_error()
+  ENDIF
+ENDIF
+CALL init(ilevel, ilevel_type)
+CALL init(olevel, olevel_type)
+
+! make level_list
+CALL init(argparse, trans_level_list, ',', nfield=n)
+IF (n > 0 .AND. c_e(olevel_type)) THEN
+  ALLOCATE(olevel_list(n))
+  DO i = 1, n
+    CALL csv_record_getfield(argparse, l)
+    CALL init(olevel_list(i), olevel_type, l)
+  ENDDO
+ENDIF
+CALL delete(argparse)
+
 ! check csv-column
 CALL parse_v7d_column(csv_column, icsv_column, '--csv-column', .FALSE.)
 CALL parse_v7d_column(csv_columnorder, icsv_columnorder, '--csv-columnorder', .TRUE.)
@@ -758,14 +812,16 @@ IF (pre_trans_type /= '') THEN
     IF (ASSOCIATED(poly)) THEN ! improve
       CALL init(trans, trans_type=pre_trans_type(w_s(1):w_e(1)), &
        ilon=ilon, ilat=ilat, flon=flon, flat=flat, poly=poly, &
+       input_levtype=ilevel, output_levtype=olevel, &
        sub_type=pre_trans_type(w_s(2):w_e(2)), categoryappend="transformation1")
     ELSE
       CALL init(trans, trans_type=pre_trans_type(w_s(1):w_e(1)), &
        ilon=ilon, ilat=ilat, flon=flon, flat=flat, &
+       input_levtype=ilevel, output_levtype=olevel, &
        sub_type=pre_trans_type(w_s(2):w_e(2)), categoryappend="transformation1")
     ENDIF
     CALL transform(trans, vol7d_in=v7d, vol7d_out=v7d_comp1, v7d=v7d_coord, &
-     categoryappend="transform1")
+     lev_out=olevel_list, categoryappend="transform1")
     CALL delete(trans)
   ELSE ! syntax is wrong
     CALL init(v7d_comp1)

@@ -697,7 +697,6 @@ IF (this%trans%trans_type == 'vertint') THEN
 
   CALL make_vert_coord(lev_in, mask_in, coord_in)
   CALL make_vert_coord(lev_out, mask_out, coord_out)
-! compute here log of pressure if desired
 
   this%innz = SIZE(mask_in)
   this%outnz = SIZE(mask_out)
@@ -798,27 +797,42 @@ ENDIF
 END SUBROUTINE grid_transform_levtype_levtype_init
 
 
-! internal subroutine for computing vertical coordinate values
+! internal subroutine for computing vertical coordinate values, for
+! pressure-based coordinates the logarithm is computed
 SUBROUTINE make_vert_coord(lev, mask, coord)
 TYPE(vol7d_level),INTENT(in) :: lev(:)
-LOGICAL,INTENT(in) :: mask(:)
+LOGICAL,INTENT(inout) :: mask(:)
 DOUBLE PRECISION,INTENT(out) :: coord(:)
 
-!IF (SIZE(mask) /= SIZE(coord)) THEN ! che fare?
+INTEGER :: k
 
-IF (c_e(lev(1)%level2)) THEN ! layer between 2 levels
-  WHERE(mask(:))
-    coord(:) = (lev(:)%l1 + lev(:)%l2)*0.5D0
-  ELSEWHERE
-    coord(:) = dmiss
-  END WHERE
-ELSE
-  WHERE(mask(:))
-    coord(:) = lev(:)%l1
-  ELSEWHERE
-    coord(:) = dmiss
-  END WHERE
+k = firsttrue(mask)
+coord(:) = dmiss
+
+IF (c_e(lev(k)%level2) .AND. lev(k)%level1 == lev(k)%level2) THEN ! layer between 2 levels
+  IF (lev(k)%level1 == 100 .OR. lev(k)%level1 == 108) THEN ! pressure, compute log
+    WHERE(mask(:) .AND. lev(:)%l1 > 0 .AND. lev(:)%l2 > 0)
+      coord(:) = (LOG(DBLE(lev(:)%l1)) + LOG(DBLE(lev(:)%l2)))*0.5D0
+    END WHERE
+  ELSE
+    WHERE(mask(:))
+      coord(:) = (lev(:)%l1 + lev(:)%l2)*0.5D0
+    END WHERE
+  ENDIF
+ELSE ! half level
+  IF (lev(k)%level1 == 100 .OR. lev(k)%level1 == 108) THEN ! pressure, compute log
+    WHERE(mask(:) .AND. lev(:)%l1 > 0)
+      coord(:) = LOG(DBLE(lev(:)%l1))
+    END WHERE
+  ELSE
+    WHERE(mask(:))
+      coord(:) = lev(:)%l1
+    END WHERE
+  ENDIF
 ENDIF
+
+! refine mask
+mask(:) = mask(:) .AND. c_e(coord(:))
 
 END SUBROUTINE make_vert_coord
 
@@ -2109,7 +2123,7 @@ innx = SIZE(field_in,1); inny = SIZE(field_in,2); innz = SIZE(field_in,3)
 outnx = SIZE(field_out,1); outny = SIZE(field_out,2); outnz = SIZE(field_out,3)
 
 ! check size of field_in, field_out
-IF (this%trans%trans_type == 'vertint') THEN ! this%trans%trans_type == 'vertintsparse'
+IF (this%trans%trans_type == 'vertint') THEN ! vertical interpolation
 
   IF (innz /= this%innz) THEN
     CALL l4f_category_log(this%category,L4F_ERROR,"vertical interpolation")
@@ -2157,6 +2171,7 @@ ELSE ! horizontal interpolation
   ENDIF
 
   IF (innz /= outnz) THEN
+    CALL l4f_category_log(this%category,L4F_ERROR,"horizontal interpolation")
     CALL l4f_category_log(this%category,L4F_ERROR,"inconsistent vert. sizes: "//&
      t2c(innz)//" /= "//t2c(outnz))
     CALL raise_error()
@@ -2502,6 +2517,7 @@ field_out(:,:,:) = rmiss
 IF (.NOT.this%valid) THEN
   call l4f_category_log(this%category,L4F_ERROR, &
    "refusing to perform a non valid transformation")
+  call raise_error()
   RETURN
 ENDIF
 
@@ -2509,27 +2525,61 @@ innx = SIZE(field_in,1); inny = 1; innz = SIZE(field_in,2)
 outnx = SIZE(field_out,1); outny = SIZE(field_out,2); outnz = SIZE(field_out,3)
 
 ! check size of field_in, field_out
-IF (innx /= this%innx .OR. inny /= this%inny) THEN
-  CALL l4f_category_log(this%category,L4F_ERROR,"inconsistent in shape: "//&
-   TRIM(to_char(this%innx))//","//TRIM(to_char(this%inny))//" /= "//&
-   TRIM(to_char(innx))//","//TRIM(to_char(inny)))
-  CALL raise_error()
-  RETURN
-end if
+IF (this%trans%trans_type == 'vertint') THEN ! vertical interpolation
 
-IF (outnx /= this%outnx .OR. outny /= this%outny) THEN
-  CALL l4f_category_log(this%category,L4F_ERROR,"inconsistent out shape: "//&
-   TRIM(to_char(this%outnx))//","//TRIM(to_char(this%outny))//" /= "//&
-   TRIM(to_char(outnx))//","//TRIM(to_char(outny)))
-  CALL raise_error()
-  RETURN
-ENDIF
+  IF (innz /= this%innz) THEN
+    CALL l4f_category_log(this%category,L4F_ERROR,"vertical interpolation")
+    CALL l4f_category_log(this%category,L4F_ERROR,"inconsistent input shape: "//&
+     t2c(this%innz)//" /= "//t2c(innz))
+    CALL raise_error()
+    RETURN
+  ENDIF
 
-IF (innz /= outnz .AND. this%trans%trans_type /= 'vertint') THEN
-  CALL l4f_category_log(this%category,L4F_ERROR,"inconsistent vertical sizes: "//&
-   TRIM(to_char(innz))//" /= "//TRIM(to_char(outnz)))
-  CALL raise_error()
-  RETURN
+  IF (outnz /= this%outnz) THEN
+    CALL l4f_category_log(this%category,L4F_ERROR,"vertical interpolation")
+    CALL l4f_category_log(this%category,L4F_ERROR,"inconsistent output shape: "//&
+     t2c(this%outnz)//" /= "//t2c(outnz))
+    CALL raise_error()
+    RETURN
+  ENDIF
+
+  IF (innx /= outnx .OR. inny /= outny) THEN
+    CALL l4f_category_log(this%category,L4F_ERROR,"vertical interpolation")
+    CALL l4f_category_log(this%category,L4F_ERROR,"inconsistent hor. sizes: "//&
+     t2c(innx)//","//t2c(inny)//" /= "//&
+     t2c(outnx)//","//t2c(outny))
+    CALL raise_error()
+    RETURN
+  ENDIF
+
+ELSE ! horizontal interpolation
+
+  IF (innx /= this%innx .OR. inny /= this%inny) THEN
+    CALL l4f_category_log(this%category,L4F_ERROR,"horizontal interpolation")
+    CALL l4f_category_log(this%category,L4F_ERROR,"inconsistent input shape: "//&
+     t2c(this%innx)//","//t2c(this%inny)//" /= "//&
+     t2c(innx)//","//t2c(inny))
+    CALL raise_error()
+    RETURN
+  ENDIF
+
+  IF (outnx /= this%outnx .OR. outny /= this%outny) THEN
+    CALL l4f_category_log(this%category,L4F_ERROR,"horizontal interpolation")
+    CALL l4f_category_log(this%category,L4F_ERROR,"inconsistent output shape: "//&
+     t2c(this%outnx)//","//t2c(this%outny)//" /= "//&
+     t2c(outnx)//","//t2c(outny))
+    CALL raise_error()
+    RETURN
+  ENDIF
+
+  IF (innz /= outnz) THEN
+    CALL l4f_category_log(this%category,L4F_ERROR,"horizontal interpolation")
+    CALL l4f_category_log(this%category,L4F_ERROR,"inconsistent vert. sizes: "//&
+     t2c(innz)//" /= "//t2c(outnz))
+    CALL raise_error()
+    RETURN
+  ENDIF
+
 ENDIF
 
 #ifdef DEBUG
