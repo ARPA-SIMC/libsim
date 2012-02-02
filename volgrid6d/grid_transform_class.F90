@@ -2093,23 +2093,41 @@ END FUNCTION grid_transform_c_e
 !! a 2-d array with shape \a (np,1), which may have to be reshaped and
 !! assigned to the target 1-d array after the subroutine call by means
 !! of the \a RESHAPE() intrinsic function.
-SUBROUTINE grid_transform_compute(this, field_in, field_out)
+SUBROUTINE grid_transform_compute(this, field_in, field_out, var)
 TYPE(grid_transform),INTENT(in) :: this !< grid_transformation object
-REAL, INTENT(in) :: field_in(:,:,:) !< input array
-REAL, INTENT(out) :: field_out(:,:,:) !< output array
+REAL,INTENT(in) :: field_in(:,:,:) !< input array
+REAL,INTENT(out) :: field_out(:,:,:) !< output array
+TYPE(vol7d_var),INTENT(in),OPTIONAL :: var !< physical variable to be interpolated, if provided, some ad-hoc algorithms may be used where possible
 
 INTEGER :: i, j, k, ii, jj, ie, je, n, navg, kk, kkcache
 INTEGER,ALLOCATABLE :: nval(:,:)
-real :: z1,z2,z3,z4
-doubleprecision  :: x1,x3,y1,y3,xp,yp
-INTEGER :: innx, inny, innz, outnx, outny, outnz
+REAL :: z1,z2,z3,z4
+DOUBLE PRECISION  :: x1,x3,y1,y3,xp,yp
+INTEGER :: innx, inny, innz, outnx, outny, outnz, vartype
 DOUBLE PRECISION,ALLOCATABLE :: coord_in(:)
 REAL,ALLOCATABLE :: val_in(:)
-
+! constants for local use
+INTEGER,PARAMETER :: var_ord=0, var_dir360=1, var_press=2
 
 #ifdef DEBUG
-call l4f_category_log(this%category,L4F_DEBUG,"start grid_transform_compute")
+CALL l4f_category_log(this%category,L4F_DEBUG,"start grid_transform_compute")
 #endif
+
+vartype = var_ord
+IF (PRESENT(var)) THEN
+  SELECT CASE(var%btable)
+  CASE('B01012', 'B11001', 'B11043', 'B22001') ! direction, degree true
+    vartype = var_dir360
+#ifdef DEBUG
+    CALL l4f_category_log(this%category,L4F_DEBUG,"interpolating direction")
+#endif
+  CASE('B07004', 'B10004', 'B10051', 'B10060') ! pressure, Pa
+    vartype = var_press
+#ifdef DEBUG
+    CALL l4f_category_log(this%category,L4F_DEBUG,"interpolating pressure")
+#endif
+  END SELECT
+ENDIF
 
 field_out(:,:,:) = rmiss
 
@@ -2440,48 +2458,144 @@ ELSE IF (this%trans%trans_type == 'vertint') THEN
       IF (c_e(this%inter_index_z(k))) THEN
         z1 = REAL(this%inter_zp(k))
         z2 = REAL(1.0D0 - this%inter_zp(k))
-        DO j = 1, inny
-          DO i = 1, innx
-            IF (c_e(field_in(i,j,this%inter_index_z(k))) .AND. &
-             c_e(field_in(i,j,this%inter_index_z(k)+1))) THEN
-              field_out(i,j,k) = &
-               field_in(i,j,this%inter_index_z(k))*z1 + &
-               field_in(i,j,this%inter_index_z(k)+1)*z2
-            ENDIF
+        SELECT CASE(vartype)
+
+        CASE(var_ord)
+          DO j = 1, inny
+            DO i = 1, innx
+              IF (c_e(field_in(i,j,this%inter_index_z(k))) .AND. &
+               c_e(field_in(i,j,this%inter_index_z(k)+1))) THEN
+                field_out(i,j,k) = &
+                 field_in(i,j,this%inter_index_z(k))*z1 + &
+                 field_in(i,j,this%inter_index_z(k)+1)*z2
+              ENDIF
+            ENDDO
           ENDDO
-        ENDDO
+
+        CASE(var_dir360)
+          DO j = 1, inny
+            DO i = 1, innx
+              IF (c_e(field_in(i,j,this%inter_index_z(k))) .AND. &
+               c_e(field_in(i,j,this%inter_index_z(k)+1))) THEN
+                IF (ABS(field_in(i,j,this%inter_index_z(k)) - &
+                 field_in(i,j,this%inter_index_z(k)+1)) > 180.) THEN
+                  field_out(i,j,k) = MOD( &
+                   field_in(i,j,this%inter_index_z(k))*z1 + &
+                   field_in(i,j,this%inter_index_z(k)+1)*z2 + 180., 360.)
+                ELSE
+                  field_out(i,j,k) = &
+                   field_in(i,j,this%inter_index_z(k))*z1 + &
+                   field_in(i,j,this%inter_index_z(k)+1)*z2
+                ENDIF
+
+              ENDIF
+            ENDDO
+          ENDDO
+
+        CASE(var_press)
+          DO j = 1, inny
+            DO i = 1, innx
+              IF (c_e(field_in(i,j,this%inter_index_z(k))) .AND. &
+               c_e(field_in(i,j,this%inter_index_z(k)+1)) .AND. &
+               field_in(i,j,this%inter_index_z(k)) > 0. .AND. &
+               field_in(i,j,this%inter_index_z(k)+1) > 0.) THEN
+                field_out(i,j,k) = EXP( &
+                 LOG(field_in(i,j,this%inter_index_z(k)))*z1 + &
+                 LOG(field_in(i,j,this%inter_index_z(k)+1))*z2)
+              ENDIF
+            ENDDO
+          ENDDO
+
+        END SELECT
+
       ENDIF
     ENDDO
 
   ELSE IF (this%trans%sub_type == 'linearsparse') THEN
 
-    ALLOCATE(coord_in(innz), val_in(innz))
+    ALLOCATE(coord_in(innz),val_in(innz))
     DO j = 1, inny
       DO i = 1, innx
+        SELECT CASE(vartype)
 
-        n = COUNT(c_e(field_in(i,j,:)))
-        IF (n > 1) THEN
-          coord_in(1:n) = PACK(this%vcoord_in(:), mask=c_e(field_in(i,j,:)))
-          val_in(1:n) = PACK(field_in(i,j,:), mask=c_e(field_in(i,j,:)))
-          kkcache = 2
-          outlev: DO k = 1, outnz
-            inlev: DO kk = kkcache, n
-              IF (coord_in(kk) >= this%vcoord_out(k)) THEN
-                IF (this%vcoord_out(k) >= coord_in(kk-1)) THEN
-                  z1 = REAL((this%vcoord_out(k) - coord_in(kk-1))/ &
-                   (coord_in(kk) - coord_in(kk-1)))
-                  z2 = REAL(1.0D0 - z1)
-                  field_out(i,j,k) = val_in(kk-1)*z2 + val_in(kk)*z1
-                  kkcache = kk
+        CASE(var_ord)
+          n = COUNT(c_e(field_in(i,j,:)))
+          IF (n > 1) THEN
+            coord_in(1:n) = PACK(this%vcoord_in(:), mask=c_e(field_in(i,j,:)))
+            val_in(1:n) = PACK(field_in(i,j,:), mask=c_e(field_in(i,j,:)))
+            kkcache = 2
+            outlev1: DO k = 1, outnz
+              inlev1: DO kk = kkcache, n
+                IF (coord_in(kk) >= this%vcoord_out(k)) THEN
+                  IF (this%vcoord_out(k) >= coord_in(kk-1)) THEN
+                    z1 = REAL((this%vcoord_out(k) - coord_in(kk-1))/ &
+                     (coord_in(kk) - coord_in(kk-1)))
+                    z2 = REAL(1.0D0 - z1)
+                    field_out(i,j,k) = val_in(kk-1)*z2 + val_in(kk)*z1
+                    kkcache = kk
+                  ENDIF
+                  CYCLE outlev1
                 ENDIF
-                CYCLE outlev
-              ENDIF
-            ENDDO inlev
-          ENDDO outlev
-        ENDIF
+              ENDDO inlev1
+            ENDDO outlev1
+          ENDIF
+
+        CASE(var_dir360)
+          n = COUNT(c_e(field_in(i,j,:)))
+          IF (n > 1) THEN
+            coord_in(1:n) = PACK(this%vcoord_in(:), mask=c_e(field_in(i,j,:)))
+            val_in(1:n) = PACK(field_in(i,j,:), mask=c_e(field_in(i,j,:)))
+            kkcache = 2
+            outlev2: DO k = 1, outnz
+              inlev2: DO kk = kkcache, n
+                IF (coord_in(kk) >= this%vcoord_out(k)) THEN
+                  IF (this%vcoord_out(k) >= coord_in(kk-1)) THEN
+                    z1 = REAL((this%vcoord_out(k) - coord_in(kk-1))/ &
+                     (coord_in(kk) - coord_in(kk-1)))
+                    z2 = REAL(1.0D0 - z1)
+                    IF (ABS(val_in(kk-1) - val_in(kk)) > 180.) THEN
+                      field_out(i,j,k) = MOD(val_in(kk-1)*z2 + val_in(kk)*z1 + 180., 360.)
+                    ELSE
+                      field_out(i,j,k) = val_in(kk-1)*z2 + val_in(kk)*z1
+                    ENDIF
+                    kkcache = kk
+                  ENDIF
+                  CYCLE outlev2
+                ENDIF
+              ENDDO inlev2
+            ENDDO outlev2
+          ENDIF
+
+        CASE(var_press)
+          n = COUNT(c_e(field_in(i,j,:)) .AND. field_in(i,j,:) > 0.0D0)
+          IF (n > 1) THEN
+            coord_in(1:n) = PACK(this%vcoord_in(:), &
+             mask=c_e(field_in(i,j,:)) .AND. field_in(i,j,:) > 0.0D0)
+            val_in(1:n) = LOG(PACK(field_in(i,j,:), &
+             mask=c_e(field_in(i,j,:))  .AND. field_in(i,j,:) > 0.0D0))
+            kkcache = 2
+            outlev3: DO k = 1, outnz
+              inlev3: DO kk = kkcache, n
+                IF (coord_in(kk) >= this%vcoord_out(k)) THEN
+                  IF (this%vcoord_out(k) >= coord_in(kk-1)) THEN
+                    z1 = REAL((this%vcoord_out(k) - coord_in(kk-1))/ &
+                     (coord_in(kk) - coord_in(kk-1)))
+                    z2 = REAL(1.0D0 - z1)
+                    field_out(i,j,k) = EXP(val_in(kk-1)*z2 + val_in(kk)*z1)
+                    kkcache = kk
+                  ENDIF
+                  CYCLE outlev3
+                ENDIF
+              ENDDO inlev3
+            ENDDO outlev3
+          ENDIF
+
+        END SELECT
 
       ENDDO
     ENDDO
+    DEALLOCATE(coord_in,val_in)
+
 
   ENDIF
 
@@ -2499,10 +2613,11 @@ END SUBROUTINE grid_transform_compute
 !! must have been properly initialised, so that it contains all the
 !! information needed for computing the transformation. This is the
 !! sparse points-to-grid and sparse points-to-sparse points version.
-SUBROUTINE grid_transform_v7d_grid_compute(this, field_in, field_out)
+SUBROUTINE grid_transform_v7d_grid_compute(this, field_in, field_out, var)
 TYPE(grid_transform),INTENT(in) :: this !< grid_tranform object
 REAL, INTENT(in) :: field_in(:,:) !< input array
 REAL, INTENT(out):: field_out(:,:,:) !< output array
+TYPE(vol7d_var),INTENT(in),OPTIONAL :: var !< physical variable to be interpolated, if provided, some ad-hoc algorithms may be used where possible
 
 real,allocatable :: field_in_p(:),x_in_p(:),y_in_p(:)
 INTEGER :: inn_p, ier, k
@@ -2640,7 +2755,7 @@ ELSE IF (this%trans%trans_type == 'boxinter' .OR. &
  this%trans%trans_type == 'vertint') THEN ! use the grid-to-grid method
 
   CALL compute(this, &
-   RESHAPE(field_in, (/SIZE(field_in,1), 1, SIZE(field_in,2)/)), field_out)
+   RESHAPE(field_in, (/SIZE(field_in,1), 1, SIZE(field_in,2)/)), field_out, var)
 
 ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
 

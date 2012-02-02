@@ -1481,7 +1481,7 @@ DO ivar=1,nvar
       IF (ASSOCIATED(volgrid6d_out%voldati)) & ! improve!!!!
        CALL volgrid_get_vol_3d(volgrid6d_out, itime, itimerange, ivar, &
        voldatiout)
-      CALL compute(this, voldatiin, voldatiout)
+      CALL compute(this, voldatiin, voldatiout, convert(volgrid6d_in%var(ivar)))
       CALL volgrid_set_vol_3d(volgrid6d_out, itime, itimerange, ivar, &
        voldatiout)
 
@@ -1653,7 +1653,7 @@ if (stallo /= 0)then
 end if
 
 do i=1,size(volgrid6d_in)
-  call transform (this, griddim, volgrid6d_in(i), volgrid6d_out(i), &
+  call transform(this, griddim, volgrid6d_in(i), volgrid6d_out(i), &
    lev_out=lev_out, clone=clone, decode=decode, categoryappend=categoryappend)
 end do
 
@@ -1774,7 +1774,7 @@ do itime=1,ntime
         CALL volgrid_get_vol_3d(volgrid6d_in, itime, itimerange, ivar, &
          voldatiin)
 
-        CALL compute(this, voldatiin, voldatir_out)
+        CALL compute(this, voldatiin, voldatir_out, vol7d_out%dativar%r(ivar))
 
         if (vol7d_out%time_definition == volgrid6d_in%time_definition) then
           vol7d_out%voldatir(:,itime,:,itimerange,ivar,inetwork)= &
@@ -2042,7 +2042,8 @@ DO ivar=1,nvar
     DO itime=1,ntime
 
       CALL compute(this, &
-       vol7d_in%voldatir(:,itime,:,itimerange,ivar,inetwork), voldatiout)
+       vol7d_in%voldatir(:,itime,:,itimerange,ivar,inetwork), voldatiout, &
+       vol7d_in%dativar%r(ivar))
 
 ! Rescale valid data according to variable conversion table
       IF (ASSOCIATED(c_func)) THEN
@@ -2160,7 +2161,8 @@ IF (ASSOCIATED(vol7d_in%dativar%r)) THEN ! work only when real vars are availabl
 ! dirty trick to make voldatir look like a 2d-array of shape (nana,1)
           CALL compute(this, &
            vol7d_in%voldatir(:,itime,:,itimerange,ivar,inetwork), &
-           vol7d_out%voldatir(:,itime:itime,:,itimerange,ivar,inetwork))
+           vol7d_out%voldatir(:,itime:itime,:,itimerange,ivar,inetwork), &
+           vol7d_in%dativar%r(ivar))
 
         ENDDO
       ENDDO
