@@ -1,6 +1,4 @@
 B10004,Pressure,,255,2,1,255,1.0,0.0
-B10060,Pressure departure,Pa,200,201,139,255,1.0,0.0
-B10060,Pressure departure,Pa,78,201,139,255,1.0,0.0
 B10007,0C Isotherm height,m,200,201,84,255,1.0,0.0
 B10007,0C Isotherm height,m,78,201,84,255,1.0,0.0
 B10007,Height,,255,2,8,255,1.0,0.0
@@ -15,6 +13,8 @@ B10008,Geopotential,,255,2,6,255,1.0,0.0
 B10009,Geopotential height,,255,2,7,255,1.0,0.0
 B10051,Pressure reduced to mean sea level,,255,2,2,255,1.0,0.0
 B10051,Pressure reduced to mean sea level,Pa,98,128,151,255,1.0,0.0
+B10060,Pressure departure,Pa,200,201,139,255,1.0,0.0
+B10060,Pressure departure,Pa,78,201,139,255,1.0,0.0
 B11001,Wind direction,degree,200,2,35,255,1.0,0.0
 B11001,Wind direction,degree,200,200,35,255,1.0,0.0
 B11002,Wind speed,m/s,200,2,36,255,1.0,0.0
