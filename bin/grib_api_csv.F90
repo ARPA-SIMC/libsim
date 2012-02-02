@@ -54,10 +54,11 @@ END SUBROUTINE grib_api_csv_add_options
 !END SUBROUTINE grib_api_csv_check_options
 
 
-SUBROUTINE grib_api_csv_export(v7d, vg6d, iun)
-TYPE(vol7d) :: v7d
-TYPE(volgrid6d) :: vg6d
-INTEGER :: iun
+SUBROUTINE grib_api_csv_export(v7d, vg6d, iun, header)
+TYPE(vol7d),INTENT(in) :: v7d
+TYPE(volgrid6d),INTENT(in) :: vg6d
+INTEGER,INTENT(in) :: iun
+LOGICAL,INTENT(in) :: header
 
 TYPE(csv_record) :: csvline
 TYPE(datetime) :: veriftime
@@ -65,7 +66,7 @@ INTEGER,POINTER :: w_s(:), w_e(:)
 INTEGER :: n, i, j, k, l, np, nv, ncol, gaid, status
 INTEGER :: csv_igaid
 INTEGER :: p1h,p2h
-CHARACTER(len=24) :: csv_time, csv_level, csv_gaid
+CHARACTER(len=24) :: csv_time
 CHARACTER(len=12) :: csv_simpletime, csv_simplevertime
 CHARACTER(len=3) :: ch3
 LOGICAL,ALLOCATABLE :: key_mask(:)
@@ -120,7 +121,6 @@ ncol = word_split(output_keys, w_s, w_e, ',')
 ALLOCATE(key_mask(ncol))
 key_mask(:) = .FALSE.
 
-! write csv header
 CALL init(csvline)
 DO i = 1, ncol
   IF (output_keys(w_s(i):MIN(w_e(i),w_s(i)+LEN(lnmspc)-1)) == lnmspc) THEN
@@ -130,7 +130,9 @@ DO i = 1, ncol
   CALL csv_record_addfield(csvline, TRIM(output_keys(w_s(i):w_e(i))))
 ENDDO
 
-WRITE(iun,'(A)')csv_record_getrecord(csvline)
+IF (header) THEN ! write csv header
+  WRITE(iun,'(A)')csv_record_getrecord(csvline)
+ENDIF
 CALL delete(csvline)
 
 ! write csv body

@@ -304,6 +304,13 @@ else
   call raise_fatal_error()
 end if
 
+if (optind <= iargc()) then
+  call optionparser_printhelp(opt)
+  call l4f_category_log(category,L4F_FATAL, &
+   'extra arguments after input and output file names')
+  call raise_fatal_error()
+end if
+
 ! generate variable lists
 IF (LEN_TRIM(output_variable_list) > 0) THEN
   n = word_split(output_variable_list, w_s, w_e, ',')

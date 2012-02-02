@@ -179,7 +179,7 @@ CALL optionparser_parse(opt, optind, optstatus)
 IF (optstatus == optionparser_help) THEN
   CALL exit(0) ! generate a clean manpage
 ELSE IF (optstatus == optionparser_err) THEN
-  CALL l4f_category_log(category,L4F_ERROR,'in command-line parameters')
+  CALL l4f_category_log(category,L4F_FATAL,'in command-line parameters')
   CALL raise_fatal_error()
 ENDIF
 IF (version) THEN
@@ -192,7 +192,7 @@ if (optind <= iargc()) then
   optind=optind+1
 else
   call optionparser_printhelp(opt)
-  call l4f_category_log(category,L4F_ERROR,'input file missing')
+  call l4f_category_log(category,L4F_FATAL,'input file missing')
   call raise_fatal_error()
 end if
 
@@ -201,7 +201,14 @@ if (optind <= iargc()) then
   optind=optind+1
 else
   call optionparser_printhelp(opt)
-  call l4f_category_log(category,L4F_ERROR,'output file missing')
+  call l4f_category_log(category,L4F_FATAL,'output file missing')
+  call raise_fatal_error()
+end if
+
+if (optind <= iargc()) then
+  call optionparser_printhelp(opt)
+  call l4f_category_log(category,L4F_FATAL, &
+   'extra arguments after input and output file names')
   call raise_fatal_error()
 end if
 
@@ -294,10 +301,12 @@ IF (ldisplay) CALL display(volgrid)
 
 IF (c2agrid) CALL vg6d_c2a(volgrid)
 
-CALL transform(trans, volgrid6d_in=volgrid, vol7d_out=v7d_out, v7d=v7d_coord, &
- maskgrid=maskfield, networkname=network, noconvert=noconvert, categoryappend="transform")
-
-CALL l4f_category_log(category,L4F_INFO,"transformation completed")
+IF (output_format /= 'grib_api_csv') THEN ! otherwise postpone
+  CALL transform(trans, volgrid6d_in=volgrid, vol7d_out=v7d_out, v7d=v7d_coord, &
+   maskgrid=maskfield, networkname=network, noconvert=noconvert, &
+   categoryappend="transform")
+  CALL l4f_category_log(category,L4F_INFO,"transformation completed")
+ENDIF
 
 ! output
 IF (output_format == 'native') THEN
@@ -334,8 +343,13 @@ ELSE IF (output_format == 'grib_api_csv') THEN
     iun = getunit()
     OPEN(iun, file=output_file, form='FORMATTED', access='SEQUENTIAL')
   ENDIF
-! TODO handle volgrid array
-  CALL grib_api_csv_export(v7d_out, volgrid(1), iun)
+
+  DO i = 1, SIZE(volgrid) ! transform one volume at a time
+    CALL transform(trans, volgrid6d_in=volgrid(i), vol7d_out=v7d_out, v7d=v7d_coord, &
+     maskgrid=maskfield, networkname=network, noconvert=noconvert, &
+     categoryappend="transform")
+    CALL grib_api_csv_export(v7d_out, volgrid(i), iun, i == 1)
+  ENDDO
   IF (output_file /= '-') CLOSE(iun)
 
 #endif
