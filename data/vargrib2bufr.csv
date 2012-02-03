@@ -50,7 +50,7 @@ B11198,SQRT(2*TKE) (invented),m/s,200,201,152,255,1.0,0.0
 B11198,SQRT(2*TKE) (invented),m/s,78,201,152,255,1.0,0.0
 B11199,Surface roughness (invented),m,200,200,123,255,1.0,0.0
 B11199,Surface roughness (invented),m,200,200,123,0,1.0,0.0
-B11199,Surface roughness * g (invented),m**2/s**2,255,2,83,255,0.102,0.0
+B11199,Surface roughness in COSMO output (invented),m,255,2,83,255,1.0,0.0
 B11200,U-component of momentum flux (invented),N/m**2,255,2,124,255,1.0,0.0
 B11201,V-component of momentum flux (invented),N/m**2,255,2,125,255,1.0,0.0
 B11202,Friction velocity (diagmet; invented),m/s,200,2,211,255,1.0,0.0
