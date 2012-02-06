@@ -338,3 +338,4 @@ B23195,Wet deposition of NH4 (invented),mol/m**2,200,200,143,255,1.0,0.0
 B23196,Dry deposition of HNO3 (invented),mol/m**2,200,200,144,255,1.0,0.0
 B23197,Wet deposition of HNO3 (invented),mol/m**2,200,200,145,255,1.0,0.0
 B29192,Land fraction (invented),Percent,255,2,81,255,1.0,0.0
+B29192,Land fraction (invented),Percent,200,2,81,255,1.0,0.0
