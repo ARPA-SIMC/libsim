@@ -64,7 +64,7 @@
 !!
 !!\ingroup qc
 
-!> \todo ottimizzare la lettura del clima nel caso il periodo da controllare sia a cavallo di due anni.
+!> \todo ottimizzare la lettura del clima nel caso il periodo da controllare sia a cavallo di due anni o mesi o giorni.
 !!\todo Bisognerebbe validare il volume sottoposto al controllo per vedere se ha i requisiti.
 !!\todo La lettura da file formato bufr non funziona non gestendo la lettura degli attributi.
 !!

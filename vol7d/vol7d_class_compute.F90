@@ -916,19 +916,29 @@ END SUBROUTINE vol7d_recompute_stat_proc_diff
 !! richiesto. Attenzione, se necessario la dimensione tempo (vettore
 !! \a this%time del volume \a this ) viene riordinata, come effetto
 !! collaterale della chiamata.
-SUBROUTINE vol7d_fill_time(this, that, step, start, stopp, fill_data)
+SUBROUTINE vol7d_fill_time(this, that, step, start, stopp, cyclicdt, fill_data)
 TYPE(vol7d),INTENT(inout) :: this
 TYPE(vol7d),INTENT(inout) :: that
 TYPE(timedelta),INTENT(in) :: step
 TYPE(datetime),INTENT(in),OPTIONAL :: start
 TYPE(datetime),INTENT(in),OPTIONAL :: stopp
+TYPE(cyclicdatetime),INTENT(in),OPTIONAL :: cyclicdt !< date and time in the format \c AAAAMMGGhhmm 
+!! where any doubled char should be // for missing. 
+!! You need it to specify for example every january in all years or
+!! the same time for all days and so on
 logical,optional :: fill_data !< if .true. fill data values with nearest in time (inside step)
 
+TYPE(cyclicdatetime) :: lcyclicdt
 TYPE(datetime) :: counter, lstart, lstop
 INTEGER :: i, naddtime
 
 CALL safe_start_stop(this, lstart, lstop, start, stopp)
 IF (.NOT. c_e(lstart) .OR. .NOT. c_e(lstop)) RETURN
+
+lcyclicdt=cyclicdatetime_miss
+if (present(cyclicdt)) then
+  if(c_e(cyclicdt)) lcyclicdt=cyclicdt
+end if
 
 CALL l4f_log(L4F_INFO, 'vol7d_fill_time: time interval '//TRIM(to_char(lstart))// &
  ' '//TRIM(to_char(lstop)))
@@ -943,7 +953,7 @@ naddcount: DO WHILE(counter <= lstop)
     IF (counter < this%time(i)) THEN ! this%time(i) overtook counter
       i = MAX(i-1,1) ! go back if possible
       EXIT
-    ELSE IF (counter == this%time(i)) THEN ! found matching time
+    ELSE IF (counter == this%time(i) .OR. counter == lcyclicdt) THEN ! found matching time
       counter = counter + step
       CYCLE naddcount
     ENDIF
@@ -978,7 +988,7 @@ IF (naddtime > 0) THEN
       IF (counter < this%time(i)) THEN ! this%time(i) overtook counter
         i = MAX(i-1,1) ! go back if possible
         EXIT
-      ELSE IF (counter == this%time(i)) THEN ! found matching time
+      ELSE IF (counter == this%time(i) .OR. counter == lcyclicdt) THEN ! found matching time
         counter = counter + step
         CYCLE naddadd
       ENDIF
@@ -1032,7 +1042,7 @@ logical,optional :: fill_data !< if .true. fill data values with nearest in time
 TYPE(datetime) :: lstart, lstop
 TYPE(cyclicdatetime) :: lcyclicdt
 LOGICAL, ALLOCATABLE :: time_mask(:)
-TYPE(vol7d) :: v7dtmp2
+!TYPE(vol7d) :: v7dtmp2
 
 CALL safe_start_stop(this, lstart, lstop, start, stopp)
 IF (.NOT. c_e(lstart) .OR. .NOT. c_e(lstop)) RETURN
@@ -1059,12 +1069,11 @@ end if
 !  if (time_mask(i)) call display(this%time(i))
 !end do
 
-!TODO we need to insert cyclicdt in vol7d_fill_time to optimize this
 
 if (all(time_mask)) then
-  CALL vol7d_fill_time(this, v7dtmp2, step, start, stopp, fill_data)
+  CALL vol7d_fill_time(this, that, step, start, stopp, cyclicdt, fill_data)
 else
-  CALL vol7d_copy(this,v7dtmp2, ltime=time_mask)
+  CALL vol7d_copy(this,that, ltime=time_mask)
 
 !!$  print *,size(v7dtmp%time)
 !!$  do i=1,size(v7dtmp%time)
@@ -1080,14 +1089,14 @@ else
 !!$  CALL delete(v7dtmp)
 end if
 
-CALL vol7d_copy(v7dtmp2, that, ltime=v7dtmp2%time == lcyclicdt)
+!CALL vol7d_copy(v7dtmp2, that, ltime=v7dtmp2%time == lcyclicdt)
 
 !!$  print *,size(that%time)
 !!$  do i=1,size(that%time)
 !!$    call display(that%time(i))
 !!$  end do
 
-CALL delete(v7dtmp2)
+!CALL delete(v7dtmp2)
 
 DEALLOCATE(time_mask)
 
