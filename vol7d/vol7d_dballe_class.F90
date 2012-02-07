@@ -403,10 +403,21 @@ CHARACTER(len=*),INTENT(in),OPTIONAL :: varkind(:),attrkind(:),anavarkind(:),ana
 
 INTEGER :: i
 
-DO i = 1, SIZE(network)
-  CALL import(this, (/var/), network(i), coordmin, coordmax, timei, timef, level,timerange,set_network,&
- attr,anavar,anaattr, varkind,attrkind,anavarkind,anaattrkind)
-ENDDO
+if (size(network) == 0) then
+
+  CALL import(this, (/var/), coordmin=coordmin, coordmax=coordmax, timei=timei, timef=timef, level=level,&
+   timerange=timerange,set_network=set_network, attr=attr,anavar=anavar,anaattr=anaattr,&
+   varkind=varkind,attrkind=attrkind,anavarkind=anavarkind,anaattrkind=anaattrkind)
+
+else
+
+  DO i = 1, SIZE(network)
+    CALL import(this, (/var/), network(i), coordmin, coordmax, timei, timef, level,timerange,set_network,&
+     attr,anavar,anaattr, varkind,attrkind,anavarkind,anaattrkind)
+  ENDDO
+end if
+
+
 
 END SUBROUTINE vol7d_dballe_importvsnv
 
@@ -429,10 +440,16 @@ CHARACTER(len=*),INTENT(in),OPTIONAL :: varkind(:),attrkind(:),anavarkind(:),ana
 
 INTEGER :: i
 
-DO i = 1, SIZE(network)
-  CALL import(this, var, network(i), coordmin, coordmax, timei, timef, level,timerange,set_network,&
- attr,anavar,anaattr, varkind,attrkind,anavarkind,anaattrkind)
-ENDDO
+if (size(network) == 0 )then
+  CALL import(this,var, coordmin=coordmin, coordmax=coordmax, timei=timei, timef=timef, level=level,&
+   timerange=timerange,set_network=set_network, attr=attr,anavar=anavar,anaattr=anaattr,&
+   varkind=varkind,attrkind=attrkind,anavarkind=anavarkind,anaattrkind=anaattrkind)
+else
+  DO i = 1, SIZE(network)
+    CALL import(this, var, network(i), coordmin, coordmax, timei, timef, level,timerange,set_network,&
+     attr,anavar,anaattr, varkind,attrkind,anavarkind,anaattrkind)
+  ENDDO
+end if
 
 END SUBROUTINE vol7d_dballe_importvvnv
 
@@ -489,6 +506,10 @@ TYPE(vol7d_level),INTENT(in),optional :: level
 TYPE(vol7d_timerange),INTENT(in),optional :: timerange
 CHARACTER(len=*),INTENT(in),OPTIONAL :: attr(:),anavar(:),anaattr(:)
 CHARACTER(len=*),INTENT(in),OPTIONAL :: varkind(:),attrkind(:),anavarkind(:),anaattrkind(:)
+
+TYPE(vol7d_network) :: lnetwork
+TYPE(vol7d_level) :: llevel
+TYPE(vol7d_timerange) :: ltimerange
 
 INTEGER,PARAMETER :: maxvarlist=100
 !TYPE(vol7d) :: v7d
@@ -549,13 +570,17 @@ CALL l4f_category_log(this%category,L4F_DEBUG,'inizio')
 #endif        
 
 IF (PRESENT(set_network)) THEN
-   ldegnet = .TRUE.
+  if (c_e(set_network)) then
+    ldegnet = .TRUE.
+  else
+    ldegnet = .FALSE.
+  end if
 ELSE
-   ldegnet = .FALSE.
+  ldegnet = .FALSE.
 ENDIF
 
 IF (PRESENT(attr)) THEN
-  if (any(c_e(attr)))then
+  if (any(c_e(attr)).and. size(attr) > 0)then
 #ifdef DEBUG
     CALL l4f_category_log(this%category,L4F_DEBUG,'lattr true')
 #endif
@@ -574,9 +599,13 @@ ELSE
 ENDIF
 
 IF (PRESENT(anaattr)) THEN
-   lanaattr = .TRUE.
-ELSE
+  if (size(anaattr) > 0) then
+    lanaattr = .TRUE.
+  else
    lanaattr = .FALSE.
+ end if
+ELSE
+  lanaattr = .FALSE.
 ENDIF
 
 IF (PRESENT(var)) THEN
@@ -586,6 +615,24 @@ ELSE
    allocate(lvar(0))
 ENDIF
 
+if (present(network))  then
+  lnetwork=network
+else
+  call init(lnetwork)
+end if
+
+if (present(level))  then
+  llevel=level
+else
+  call init(llevel)
+end if
+
+if (present(timerange))  then
+  ltimerange=timerange
+else
+  call init(ltimerange)
+end if
+
 
 call idba_unsetall(this%handle)
 
@@ -593,7 +640,7 @@ call idba_unsetall(this%handle)
 CALL l4f_category_log(this%category,L4F_DEBUG,'unsetall handle')
 #endif
 
-if(present(network))call idba_set (this%handle,"rep_memo",network%name)
+if(c_e(lnetwork))call idba_set (this%handle,"rep_memo",network%name)
 !call idba_set (this%handle,"mobile",0)
 !print*,"network,mobile",network%name,0
 
@@ -668,14 +715,14 @@ if (any(c_e(lvar))) then
 
 end if
 
-if (present(timerange))then
+if (c_e(ltimerange))then
 #ifdef DEBUG
   CALL l4f_category_log(this%category,L4F_DEBUG,'query timerange:'//to_char(timerange))
 #endif
   call idba_settimerange(this%handle, timerange%timerange, timerange%p1, timerange%p2)
 end if
 
-if (present(level))then
+if (c_e(llevel))then
 #ifdef DEBUG
   CALL l4f_category_log(this%category,L4F_DEBUG,'query level:'//to_char(level))
 #endif
@@ -764,7 +811,7 @@ call idba_unsetall(this%handle_staz)
 CALL l4f_category_log(this%category,L4F_DEBUG,'unsetall handle_staz')
 #endif
 
-if(present(network))call idba_set (this%handle_staz,"rep_memo",network%name)
+if(c_e(network))call idba_set (this%handle_staz,"rep_memo",network%name)
 call idba_set (this%handle_staz,"mobile",0)
 !print*,"network,mobile",network%name,0
 
@@ -2653,10 +2700,14 @@ integer :: nanavarattrr, nanavarattri, nanavarattrb, nanavarattrd, nanavarattrc
 
 integer :: ir,ib,id,ic
 
-logical :: found
 TYPE(datetime) :: timee
 TYPE(vol7d_level) :: levele
 TYPE(vol7d_timerange) :: timerangee
+
+TYPE(vol7d_network) :: lnetwork
+TYPE(vol7d_level) :: llevel
+TYPE(vol7d_timerange) :: ltimerange
+logical :: lattr
 
 !TYPE(datetime) :: odatetime
 ! nobs, ntime, nana, nvout, nvin, nvbt, &
@@ -2674,19 +2725,53 @@ type(record),pointer :: buffer(:),bufferana(:)
 
 call optio(anaonly,lanaonly)
 
+
 IF (PRESENT(set_network)) THEN
-   ldegnet = .TRUE.
-   call l4f_category_log(this%category,L4F_INFO,&
-    "set_network is not fully implemented in BUFR/CREX import: priority will be ignored")
+  if (c_e(set_network)) then
+    ldegnet = .TRUE.
+    call l4f_category_log(this%category,L4F_INFO,&
+     "set_network is not fully implemented in BUFR/CREX import: priority will be ignored")
+  else
+    ldegnet = .FALSE.
+  end if
 ELSE
-   ldegnet = .FALSE.
+  ldegnet = .FALSE.
 ENDIF
 
+if (present(attr))then
+  if (size(attr) > 0 )then
+    lattr=.true.
+  else
+    lattr=.false.
+  end if
+else
+    lattr=.false.
+end if
 
-if (present(attr) .or. present(anaattr) .or. present(attrkind) .or. present(anaattrkind))then
-  call l4f_category_log(this%category,L4F_ERROR,"attributes not managed in BUFR/CREX import")
+if ( lattr .or. present(anaattr) .or. present(attrkind) .or. present(anaattrkind))then
+  call l4f_category_log(this%category,L4F_ERROR,"attributes not managed in BUFR/CREX import: try --disable-qc when is possible")
   CALL raise_error()
 end if
+
+
+if (present(network))  then
+  lnetwork=network
+else
+  call init(lnetwork)
+end if
+
+if (present(level))  then
+  llevel=level
+else
+  call init(llevel)
+end if
+
+if (present(timerange))  then
+  ltimerange=timerange
+else
+  call init(ltimerange)
+end if
+
 
 call idba_unsetall(this%handle)
 #ifdef DEBUG
@@ -2739,8 +2824,8 @@ do while ( N > 0 )
    
     ! inizio la serie dei test con i parametri richiesti 
 
-    if(present(network)) then
-      if (rep_memo /= network%name) cycle
+    if(c_e(lnetwork)) then
+      if (rep_memo /= lnetwork%name) cycle
     end if
 
 ! in alternativa si trattano insieme
@@ -2777,14 +2862,14 @@ do while ( N > 0 )
       if (c_e(timef) .and. timee > timef) cycle
     end if
 
-    if (present(timerange))then
+    if (c_e(ltimerange))then
       call init(timerangee, timerange%timerange, timerange%p1, timerange%p2)
-      if (timerangee /= timerange) cycle
+      if (timerangee /= ltimerange) cycle
     end if
 
-    if (present(level))then
+    if (c_e(llevel))then
       call  init (levele, rlevel1, rl1,rlevel2, rl2)
-      if (levele /= level) cycle
+      if (levele /= llevel) cycle
     end if
 
 
@@ -2841,16 +2926,6 @@ do while ( N > 0 )
 
       ! ---------------->   anagrafica
 
-      if (present (anavar)) then
-        nanavar=size(anavar)
-        found=.false.
-        DO ii = 1, nanavar
-                                !call l4f_category_log(this%category,L4F_DEBUG,"VARIABILI:"//btable//to_char(var(ii)))
-          if (btable == anavar(ii)) found =.true.
-        end do
-        if (.not. found) cycle
-      end if
-
 
       !ora legge tutti i dati di anagrafica e li mette in bufferana
 
@@ -2861,6 +2936,10 @@ do while ( N > 0 )
       if (btable == "B04004" .or. btable == "B04005" .or. btable == "B04006") cycle
                                 ! network
       if (btable == "B01193" .or. btable == "B01194") cycle
+
+      if (present (anavar)) then
+        if (.not. any(btable == anavar)) btable= DBA_MVC
+      end if
 
       if (.not. lanaonly)then
                                 !salto lat lon e ident
@@ -2978,6 +3057,8 @@ ndativarattrc=0
 
 if (.not. present(anavar))then
   nanavar = count_distinct(bufferana(:na)%dativar, back=.TRUE.,mask=(bufferana(:na)%dativar%btable /= DBA_MVC))
+else
+  nanavar = size(anavar)
 end if
 
 if (present(anavarkind))then

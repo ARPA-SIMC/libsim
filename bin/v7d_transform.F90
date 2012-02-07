@@ -647,6 +647,12 @@ ENDIF
 DEALLOCATE(w_s, w_e)
 
 
+IF (.NOT.ALLOCATED(vl)) ALLOCATE(vl(0)) ! allocate if missing
+IF (.NOT.ALLOCATED(avl)) ALLOCATE(avl(0)) ! allocate if missing
+IF (.NOT.ALLOCATED(al)) ALLOCATE(al(0)) ! allocate if missing
+IF (.NOT.ALLOCATED(nl)) allocate (nl(0))
+IF( .NOT.ALLOCATED(vl)) allocate (vl(0))
+
 ! import data looping on input files
 CALL init(v7d)
 DO ninput = optind, iargc()-1
@@ -661,14 +667,6 @@ DO ninput = optind, iargc()-1
 
 #ifdef HAVE_DBALLE
   ELSE IF (input_format == 'BUFR' .OR. input_format == 'CREX' .OR. input_format == 'dba') THEN
-
-    IF (.NOT.ALLOCATED(nl)) THEN
-      allocate (nl(0))
-    ENDIF
-
-    IF( .NOT.ALLOCATED(vl)) THEN
-      allocate (vl(0))
-    ENDIF
 
     IF (input_format == 'BUFR' .OR. input_format == 'CREX') then
 
@@ -686,21 +684,11 @@ DO ninput = optind, iargc()-1
     CALL init(v7d_dba, filename=input_file, FORMAT=input_format, &
      dsn=dsn, user=user, password=password, file=file)
 
-    IF (SIZE(al) > 0) THEN ! the user asked for attributes, alqc then has to be used
-      IF (ANY(c_e(nl))) THEN
-        CALL import(v7d_dba, vl, nl, attr=alqc, timei=s_d, timef=e_d)
-      ELSE
-        CALL import(v7d_dba, vl, attr=alqc, timei=s_d, timef=e_d)
-      ENDIF
-    ELSE
-
-      IF (ANY(c_e(nl))) THEN ! no attributes requested, use the default (get all attr?)
-        CALL import(v7d_dba, vl, nl, timei=s_d, timef=e_d)
-      ELSE
-        CALL import(v7d_dba, vl, timei=s_d, timef=e_d)
-      ENDIF
-    ENDIF
-
+    CALL import(v7d_dba, vl, nl, &
+     level=level, timerange=timerange, &
+     anavar=avl, attr=alqc, set_network=set_network_obj, &
+     timei=s_d, timef=e_d)
+    
     v7dtmp = v7d_dba%vol7d
     CALL init(v7d_dba%vol7d) ! nullify without deallocating
     CALL delete(v7d_dba)
@@ -718,9 +706,6 @@ DO ninput = optind, iargc()-1
     ENDIF
     CALL parse_dba_access_info(input_file, dsn, user, password)
     CALL init(v7d_osim, dsn=dsn, user=user, password=password, time_definition=0)
-    IF (.NOT.ALLOCATED(vl)) ALLOCATE(vl(0)) ! allocate if missing
-    IF (.NOT.ALLOCATED(avl)) ALLOCATE(avl(0)) ! allocate if missing
-    IF (.NOT.ALLOCATED(al)) ALLOCATE(al(0)) ! allocate if missing
     IF (set_network /= '') THEN
       CALL init(set_network_obj, name=set_network)
     ELSE
