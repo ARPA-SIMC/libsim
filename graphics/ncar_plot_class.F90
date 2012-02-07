@@ -1354,13 +1354,16 @@ end if
 call GSLWSC(2.5)
 call gsln (1)
 
-levT=count(c_e(r_tr).and. r_pr >= ptop)
+
+psat=max(ptop,300.)
+
+levT=count(c_e(r_tr).and. r_pr >= psat)
 if(levT > 1) then
   
   call gpl(levT,&
    pack(x_coord(tmin,tmax,r_tr-t0c,ptop,pdown,r_pr,dim_x,dim_y,ratio,offset_x),&
-   (c_e(r_tr).and. r_pr >= ptop)),&
-   pack(y_coord(r_pr,dim_y,offset_y),(c_e(r_tr).and. r_pr >= ptop)))
+   (c_e(r_tr).and. r_pr >= psat)),&
+   pack(y_coord(r_pr,dim_y,offset_y),(c_e(r_tr).and. r_pr >= psat)))
   
 end if
 
