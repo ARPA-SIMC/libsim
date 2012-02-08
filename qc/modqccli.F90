@@ -41,14 +41,35 @@
 !! \arg livello2(ncli_level) = (/100,250,500,750,1000,1250,1500,1750,2000,2250/)
 !!
 !! Area e percentile vengono utilizzati per costruire l'ident dell'anagrafica del Vol7d del clima.
-!! Il clima infatti è memorizzato su file nel formato binario di Vol7d utilizzando come anno per i 
-!! dati il 1001 e giorno 01; per ora alcuni dati sono nel file clima.v7d.
-!! Se è a disposizione un DataBase tipo DB-All.e definendo un dsn la init tenterà di leggere solo la parte di dati necessaria.
+!! Il clima infatti è memorizzato su file nel formato binario di Vol7d o in database che offre migliori performances se si lavora su brevi periodi.
+!! The minumun pass in time is defined to be 1 hour.
+!! We use conventional values for data to specify wich data was taken in account in compute:
+!! 1001 : yearly one only value
+!! 1002 : dayly mounthly values
+!! 1003 : 10 days period values
+!! 1004 : only mounthly values
+!! The other conventional month, day, hour should be 01 when they are not significative.
+!! 
 !! Ecco come viene definito l'ident del clima:
-!! \arg write(ident,'("BOX-",2i2.2)')iarea,perc   ! macro-area e percentile
-!! Il network utilizzato per il clima è il numero 1000
-!! In questo modo è possibile inserire nel Vol7d del clima qualsiasi parametro per leveltype e timerange.
+!! \arg write(ident,'("BOX-",2i3.3)')iarea,desc   ! macro-area e descrittore
+!! dove iarea è codice del bounding box o cluster e descrittore rappresenta una specifica dei dati.
+!!
+!! Il network utilizzato nel volume del clima descrive le variabili contenute e gli eventuali attributi:
+!! qcclima-perc : percentili  (descrittore in ident rappresenta il valore percentuale del percentile)
+!! qcclima-ndi  : ndi         (descrittore in ident rappresenta il valore ordinale del ndi)
+!!
+!! Il dataset qcclima-perc viene scritto utilizzando come variabile la stessa usata per il calcolo;
+!! il valore scritto rappresenta il valore del percentile. Nessun attributo è necessario.
+!!
+!! Il dataset qcclima-ndi viene scritto utilizzando come variabile la stessa usata per il calcolo;
+!! il valore scritto rappresenta l'estremo inferiore dell'intervallo su cui è calcolato NDI.
+!! Il relativo valore di NDI è riportato come attributo (B33209). L'estremo superiore dell'ultimo NDI non è 
+!! riportato in quanto non utile. 
+!!
+!! In questo modo è possibile inserire nel Vol7d del clima qualsiasi variabile e timerange.
+!!
 !! Il clima viene letto dalla init.
+!! Se è a disposizione un DataBase tipo DB-All.e definendo un dsn la init tenterà di leggere solo la parte di dati necessaria.
 !! Dopo l'allocazione di memoria le successive operazioni svolte da qccli sono principalmente le seguenti:
 !! \arg non trattare in alcun modo i dati invalidati (manualmente)
 !! \arg selezionare i dati per cui è possibile effettuare il controllo (area, variabile,confidenza, etc)
