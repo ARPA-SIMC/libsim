@@ -1397,42 +1397,31 @@ END SUBROUTINE vol7d_normalize_vcoord
 !!$
 
 
-SUBROUTINE vol7d_compute_NormalizedDensityIndex(this, that, stat_proc, &
- step, start, stopp, perc_vals)
+SUBROUTINE vol7d_compute_NormalizedDensityIndex(this, that, perc_vals)
+ !step, start, stopp, 
+ 
 TYPE(vol7d),INTENT(inout) :: this !< volume providing data to be computed, it is not modified by the method, apart from performing a \a vol7d_alloc_vol on it
 TYPE(vol7d),INTENT(out) :: that !< output volume which will contain the computed data
-INTEGER,INTENT(in) :: stat_proc !< type of statistical processing to be computed (from grib2 table)
-TYPE(timedelta),INTENT(in) :: step !< length of the step over which the statistical processing is performed
-TYPE(datetime),INTENT(in),OPTIONAL :: start !< start of statistical processing interval
-TYPE(datetime),INTENT(in),OPTIONAL :: stopp  !< end of statistical processing interval
+!TYPE(timedelta),INTENT(in) :: step !< length of the step over which the statistical processing is performed
+!TYPE(datetime),INTENT(in),OPTIONAL :: start !< start of statistical processing interval
+!TYPE(datetime),INTENT(in),OPTIONAL :: stopp  !< end of statistical processing interval
 real,intent(in) :: perc_vals(:) !< percentile values to use in compute, between 0. and 100.
 
-!INTEGER,INTENT(in),OPTIONAL :: stat_proc_input !< to be used with care, type of statistical processing of data that has to be processed (from grib2 table), only data having timerange of this type will be recomputed, the actual statistical processing performed and which will appear in the output volume, is however determined by \a stat_proc argument
-
-integer :: itr
 integer :: indlevel ,indtimerange ,inddativarr
-LOGICAL,ALLOCATABLE :: mask_time(:)
-TYPE(datetime) :: lstart, lstop
+!LOGICAL,ALLOCATABLE :: mask_time(:)
+!TYPE(datetime) :: lstart, lstop
 REAL, DIMENSION(:),allocatable ::  ndi,limbins
 
-! initial check
-itr = index(this%timerange(:), vol7d_timerange_new(stat_proc, 0, 0))
-IF (itr <= 0) THEN
-  CALL l4f_log(L4F_WARN, &
-   'vol7d_compute, no timeranges suitable for statistical processing NormalizedDensityIndex')
-  RETURN
-ENDIF
-
-CALL safe_start_stop(this, lstart, lstop, start, stopp)
-IF (.NOT. c_e(lstart) .OR. .NOT. c_e(lstop)) RETURN
+!CALL safe_start_stop(this, lstart, lstop, start, stopp)
+!IF (.NOT. c_e(lstart) .OR. .NOT. c_e(lstop)) RETURN
 
 allocate (ndi(size(perc_vals)-1),limbins(size(perc_vals)))
-allocate (mask_time(size(this%time)))
+!allocate (mask_time(size(this%time)))
 
 !CALL init(that, time_definition=this%time_definition)
 !CALL vol7d_alloc_vol(this)
 
-mask_time=(this%time < lstart .OR. this%time > lstop .OR. MOD(this%time - lstart, step) /= timedelta_0)
+!mask_time=(this%time < lstart .OR. this%time > lstop .OR. MOD(this%time - lstart, step) /= timedelta_0)
 
 !TODO how to use this mask ??? without copy??
 
@@ -1442,10 +1431,17 @@ do indtimerange=1,size(this%timerange)
   do inddativarr=1,size(this%dativar%r)
     do indlevel=1,size(this%level)
       
+
+      ! all stations, all times, all networks
       call NormalizedDensityIndex (&
        reshape(this%voldatir(:,:, indlevel, indtimerange, inddativarr,:),(/1/)),&
        perc_vals, ndi, limbins) 
       
+      print *,"------------------"
+      print*, this%timerange(indtimerange)
+      print*, this%level(indlevel)
+      print*, this%dativar%r(inddativarr)
+
       print *, ndi
       print *, limbins
 
@@ -1453,7 +1449,8 @@ do indtimerange=1,size(this%timerange)
   end do
 end do
 
-deallocate (ndi,limbins,mask_time)
+!deallocate (ndi,limbins,mask_time)
+deallocate (ndi,limbins)
 
 
 end SUBROUTINE vol7d_compute_NormalizedDensityIndex

@@ -69,8 +69,8 @@ TYPE cyclicdatetime
   INTEGER :: minute
   INTEGER :: hour
   INTEGER :: day
+  INTEGER :: tendaysp
   INTEGER :: month
-  INTEGER :: year
 END TYPE cyclicdatetime
 
 
@@ -1799,7 +1799,7 @@ if (this%minute /= that%minute) res=.false.
 if (this%hour /= that%hour) res=.false.
 if (this%day /= that%day) res=.false.
 if (this%month /= that%month) res=.false.
-if (this%year /= that%year) res=.false.
+if (this%tendaysp /= that%tendaysp) res=.false.
 
 END FUNCTION cyclicdatetime_eq
 
@@ -1809,16 +1809,18 @@ TYPE(cyclicdatetime),INTENT(IN) :: this
 TYPE(datetime),INTENT(IN) :: that
 LOGICAL :: res
 
-integer :: minute,hour,day,month,year
+integer :: minute,hour,day,month
 
-call getval(that,minute=minute,hour=hour,day=day,month=month,year=year)
+call getval(that,minute=minute,hour=hour,day=day,month=month)
 
 res = .true.
 if (c_e(this%minute) .and. this%minute /= minute) res=.false.
 if (c_e(this%hour) .and. this%hour /= hour) res=.false.
 if (c_e(this%day) .and. this%day /= day) res=.false.
 if (c_e(this%month) .and. this%month /= month) res=.false.
-if (c_e(this%year) .and. this%year /= year) res=.false.
+if (c_e(this%tendaysp)) then
+  if ( this%tendaysp /= min(((day-1)/10) +1,3)) res=.false.
+end if
 
 END FUNCTION cyclicdatetime_datetime_eq
 
@@ -1828,16 +1830,20 @@ TYPE(datetime),INTENT(IN) :: this
 TYPE(cyclicdatetime),INTENT(IN) :: that
 LOGICAL :: res
 
-integer :: minute,hour,day,month,year
+integer :: minute,hour,day,month
 
-call getval(this,minute=minute,hour=hour,day=day,month=month,year=year)
+call getval(this,minute=minute,hour=hour,day=day,month=month)
 
 res = .true.
 if (c_e(that%minute) .and. that%minute /= minute) res=.false.
 if (c_e(that%hour) .and. that%hour /= hour) res=.false.
 if (c_e(that%day) .and. that%day /= day) res=.false.
 if (c_e(that%month) .and. that%month /= month) res=.false.
-if (c_e(that%year) .and. that%year /= year) res=.false.
+
+if (c_e(that%tendaysp)) then
+  if ( that%tendaysp /= min(((day-1)/10) +1,3))  res=.false.
+end if
+
 
 END FUNCTION datetime_cyclicdatetime_eq
 
@@ -1852,57 +1858,57 @@ end FUNCTION c_e_cyclicdatetime
 
 !> Costruisce un oggetto \a cyclicdatetime con i parametri opzionali forniti.
 !! Se non viene passato nulla lo inizializza a missing.
-FUNCTION cyclicdatetime_new(year, month, day, hour, minute, chardate) RESULT(this)
-INTEGER,INTENT(IN),OPTIONAL :: year !< anno d.C., sono ammessi solo anni >0 (d.C.)
+FUNCTION cyclicdatetime_new(tendaysp, month, day, hour, minute, chardate) RESULT(this)
+INTEGER,INTENT(IN),OPTIONAL :: tendaysp !< ten days period in month (1, 2, 3)
 INTEGER,INTENT(IN),OPTIONAL :: month !< mese, default=missing
 INTEGER,INTENT(IN),OPTIONAL :: day !< mese, default=missing
 INTEGER,INTENT(IN),OPTIONAL :: hour !< ore, default=missing
 INTEGER,INTENT(IN),OPTIONAL :: minute !< minuti, default=missing
-CHARACTER(len=12),INTENT(IN),OPTIONAL :: chardate !< inizializza l'oggetto ad una data espressa nel formato \c AAAAMMGGhhmm where any doubled char should be // for missing. This parameter have priority on others also if set to missing.
+CHARACTER(len=9),INTENT(IN),OPTIONAL :: chardate !< inizializza l'oggetto ad una data espressa nel formato \c TMMGGhhmm where any doubled char should be // for missing. This parameter have priority on others also if set to missing.
 
-integer :: lyear,lmonth,lday,lhour,lminute,ios
+integer :: ltendaysp,lmonth,lday,lhour,lminute,ios
 
 
 TYPE(cyclicdatetime) :: this !< oggetto da inizializzare
 
 if (present(chardate)) then
 
-  lyear=imiss
+  ltendaysp=imiss
   lmonth=imiss
   lday=imiss
   lhour=imiss
   lminute=imiss
 
   if (c_e(chardate))then
-                                !  AAAAMMGGhhmm
-    read(chardate(1:4),'(i4)',iostat=ios)lyear
-    !print*,chardate(1:4),ios,lyear
-    if (ios /= 0)lyear=imiss
+                                !  TMMGGhhmm
+    read(chardate(1:1),'(i1)',iostat=ios)ltendaysp
+    !print*,chardate(1:1),ios,ltendaysp
+    if (ios /= 0)ltendaysp=imiss
     
-    read(chardate(5:6),'(i2)',iostat=ios)lmonth
-    !print*,chardate(5:6),ios,lmonth
+    read(chardate(2:3),'(i2)',iostat=ios)lmonth
+    !print*,chardate(2:3),ios,lmonth
     if (ios /= 0)lmonth=imiss
     
-    read(chardate(7:8),'(i2)',iostat=ios)lday
-    !print*,chardate(7:8),ios,lday
+    read(chardate(4:5),'(i2)',iostat=ios)lday
+    !print*,chardate(4:5),ios,lday
     if (ios /= 0)lday=imiss
     
-    read(chardate(9:10),'(i2)',iostat=ios)lhour
-    !print*,chardate(9:10),ios,lhour
+    read(chardate(6:7),'(i2)',iostat=ios)lhour
+    !print*,chardate(6:7),ios,lhour
     if (ios /= 0)lhour=imiss
     
-    read(chardate(11:12),'(i2)',iostat=ios)lminute
-    !print*,chardate(11:12),ios,lminute
+    read(chardate(8:9),'(i2)',iostat=ios)lminute
+    !print*,chardate(8:9),ios,lminute
     if (ios /= 0)lminute=imiss
   end if
 
-  this%year=lyear
+  this%tendaysp=ltendaysp
   this%month=lmonth
   this%day=lday
   this%hour=lhour
   this%minute=lminute
 else
-  this%year=optio_l(year)
+  this%tendaysp=optio_l(tendaysp)
   this%month=optio_l(month)
   this%day=optio_l(day)
   this%hour=optio_l(hour)
@@ -1918,7 +1924,7 @@ TYPE(cyclicdatetime),INTENT(IN) :: this
 
 CHARACTER(len=80) :: char
 
-char=to_char(this%year)//";"//to_char(this%month)//";"//to_char(this%day)//";"//&
+char=to_char(this%tendaysp)//";"//to_char(this%month)//";"//to_char(this%day)//";"//&
 to_char(this%hour)//";"//to_char(this%minute)
 
 END FUNCTION cyclicdatetime_to_char

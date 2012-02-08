@@ -92,10 +92,10 @@ INTEGER :: category
 LOGICAL :: comp_regularize, comp_keep, comp_sort, comp_fill_data, obso
 LOGICAL :: file, lconvr, round
 CHARACTER(len=13) :: comp_stat_proc
-CHARACTER(len=12) :: comp_cyclicdatetime=cmiss
-CHARACTER(len=23) :: comp_step, comp_start
+CHARACTER(len=9) :: comp_cyclicdatetime=cmiss
+CHARACTER(len=23) :: comp_step, fill_step, comp_start
 INTEGER :: istat_proc, ostat_proc
-TYPE(timedelta) :: c_i
+TYPE(timedelta) :: c_i, f_i
 TYPE(datetime) :: c_s
 TYPE(cyclicdatetime) :: cyclicdt
 
@@ -219,8 +219,8 @@ CALL optionparser_add(opt, ' ', 'comp-regularize', comp_regularize, help= &
  'regularize the time series keeping only the data at regular time steps')
 
 CALL optionparser_add(opt, ' ', 'comp-cyclicdatetime', comp_cyclicdatetime, help= &
-'date and time in the format \c AAAAMMGGhhmm  where any repeated group of char should be / for missing. &
-&Take in account only selected minute/hour/day/month/year. &
+'date and time in the format \c TMMGGhhmm  where any repeated group of char should be / for missing. &
+&Take in account only selected year/month/day/hour/minute. &
 &You need it to specify for example every january in all years or &
 &the same time for all days and so on')
 
@@ -254,7 +254,10 @@ CALL optionparser_add(opt, ' ', 'comp-frac-valid', comp_frac_valid, 1., help= &
 CALL optionparser_add(opt, ' ', 'comp-sort', comp_sort, help= &
  'sort all sortable dimensions of the volume after the computations')
 CALL optionparser_add(opt, ' ', 'comp-fill-data', comp_fill_data, help= &
- 'fill missing istantaneous data with nearest in time inside comp-step (require comp-regularize')
+ 'fill missing istantaneous data with nearest in time inside fill-step (require comp-regularize')
+CALL optionparser_add(opt, ' ', 'fill-step', fill_step, '0000000001 00:00:00.000', help= &
+ 'length of filling step in the format &
+ &''YYYYMMDDDD hh:mm:ss.msc'', it can be simplified up to the form ''D hh''')
 
 ! option for interpolation processing
 CALL optionparser_add(opt, ' ', 'pre-trans-type', pre_trans_type, '', help= &
@@ -493,6 +496,8 @@ ENDIF
 s_d = datetime_new(isodate=start_date)
 e_d = datetime_new(isodate=end_date)
 c_i = timedelta_new(isodate=comp_step)
+f_i = timedelta_new(isodate=fill_step)
+
 IF (comp_start /= '') THEN
   c_s = datetime_new(isodate=comp_start)
 ELSE
@@ -830,7 +835,7 @@ IF (comp_regularize .or. c_e(comp_cyclicdatetime)) THEN
   cyclicdt = cyclicdatetime_new(chardate=comp_cyclicdatetime)
 
   CALL init(v7d_comp1)
-  CALL vol7d_filter_time(v7d, v7d_comp1, start=c_s, cyclicdt=cyclicdt, &
+  CALL vol7d_filter_time(v7d, v7d_comp1, step=f_i, start=c_s, cyclicdt=cyclicdt, &
    fill_data=comp_fill_data)
   CALL delete(v7d)
   v7d = v7d_comp1
@@ -881,6 +886,9 @@ IF (c_e(istat_proc) .AND. c_e(ostat_proc)) THEN
     CALL vol7d_merge(v7d, v7d_comp1, sort=.TRUE.)
   ENDIF
 ENDIF
+
+
+
 
 ! sort
 IF (comp_sort) THEN
