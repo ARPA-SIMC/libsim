@@ -28,6 +28,8 @@ USE log4fortran
 USE err_handling
 USE kinds
 USE char_utilities
+USE file_utilities
+USE array_utilities
 IMPLICIT NONE
 
 
@@ -41,9 +43,13 @@ TYPE option
   CHARACTER(len=1),POINTER :: destc=>NULL()
   INTEGER :: destclen=0
   INTEGER,POINTER :: desti=>NULL()
+  TYPE(arrayof_integer),POINTER :: destiarr=>NULL()
   REAL,POINTER :: destr=>NULL()
+  TYPE(arrayof_real),POINTER :: destrarr=>NULL()
   DOUBLE PRECISION, POINTER :: destd=>NULL()
+  TYPE(arrayof_doubleprecision),POINTER :: destdarr=>NULL()
   LOGICAL,POINTER :: destl=>NULL()
+  TYPE(arrayof_logical),POINTER :: destlarr=>NULL()
   INTEGER,POINTER :: destcount=>NULL()
   INTEGER(kind=int_b),POINTER :: help_msg(:)=>NULL()
 END TYPE option
@@ -76,6 +82,11 @@ END TYPE option
 !!  - <tt>-l34.5</tt>
 !!  - <tt>-l 34.5</tt>
 !!
+!! Array options (only for integer, real and double precision) must be
+!! provided as comma-separated values, similarly to a record of a csv
+!! file, an empty field generates a missing value in the resulting
+!! array, the length of the array is not a priori limited.
+!!
 !! Grouping of short options, like \c -xvf is not allowed.  When a
 !! double dash \c -- or an argument (which is not an argument to an
 !! option) not starting by a dash \c - is encountered, the parsing of
@@ -88,17 +99,26 @@ END TYPE option
 !!  - integer (with additional argument)
 !!  - real (with additional argument)
 !!  - double precision (with additional argument)
+!!  - array of integer (with additional argument)
+!!  - array of real (with additional argument)
+!!  - array of double precision (with additional argument)
 !!  - logical (without additional argument)
 !!  - count (without additional argument)
 !!  - help (without additional argument)
 !!
-!! Options are added through the generic optionparser_add method (for
-!! character, integer, floating point or logical options) or through
-!! the specific methods optionparser_add_count, optionparser_add_help
-!! (for count and help options).
+!! Options are added through the generic \a optionparser_add method
+!! (for character, integer, floating point or logical options,
+!! including array variants) or through the specific methods \a
+!! optionparser_add_count, \a optionparser_add_help (for count and
+!! help options).
 !!
 !! The effect of command line parsing is to set some desired variables
 !! according to the information provided on the command line.
+!!
+!! Array options set the values of objects of derived types \a
+!! arrayof_integer, \a arrayof_real and \a arrayof_doubleprecision
+!! which are dynamically growable 1-d arrays defined in the \a
+!! array_utilities module.
 TYPE optionparser
   PRIVATE
   INTEGER(kind=int_b),POINTER :: usage_msg(:), description_msg(:)
@@ -112,7 +132,8 @@ END TYPE optionparser
 !! for a detailed documentation.
 INTERFACE optionparser_add
   MODULE PROCEDURE optionparser_add_c, optionparser_add_i, optionparser_add_r, &
-   optionparser_add_d, optionparser_add_l!?, optionparser_add_count
+   optionparser_add_d, optionparser_add_l, &!?, optionparser_add_count
+   optionparser_add_iarray, optionparser_add_rarray, optionparser_add_darray
 END INTERFACE
 
 INTERFACE c_e
@@ -133,7 +154,9 @@ END INTERFACE
 
 INTEGER,PARAMETER :: opttype_c = 1, opttype_i = 2, opttype_r = 3, &
  opttype_d = 4, opttype_l = 5, opttype_count = 6, opttype_help = 7, &
- opttype_html = 8
+ opttype_html = 8, &
+ opttype_carr = 11, opttype_iarr = 12, opttype_rarr = 13, &
+ opttype_darr = 14, opttype_larr = 15
 
 INTEGER,PARAMETER :: optionparser_ok = 0 !< constants indicating the status returned by optionparser_parse, status of parsing: OK
 INTEGER,PARAMETER :: optionparser_html = 1 !< status of parsing: html form has been requested
@@ -184,8 +207,10 @@ END FUNCTION option_new
 ! Destructor for the \a option class, the memory associated with
 ! the object is freed.
 SUBROUTINE option_delete(this)
-TYPE(option),INTENT(out) :: this ! object to destroy
+TYPE(option),INTENT(inout) :: this ! object to destroy
 
+PRINT*,'deleting option ',this%short_opt,'/',TRIM(this%long_opt)
+IF (.NOT.ASSOCIATED(this%help_msg)) PRINT*,'help not associated'
 IF (ASSOCIATED(this%help_msg)) DEALLOCATE(this%help_msg)
 NULLIFY(this%destc)
 NULLIFY(this%desti)
@@ -200,8 +225,12 @@ END SUBROUTINE option_delete
 FUNCTION option_found(this, optarg) RESULT(status)
 TYPE(option),INTENT(inout) :: this
 CHARACTER(len=*),INTENT(in),OPTIONAL :: optarg
-
 INTEGER :: status
+
+TYPE(csv_record) :: arrparser
+INTEGER :: ibuff
+REAL :: rbuff
+DOUBLE PRECISION :: dbuff
 
 status = optionparser_ok
 
@@ -215,10 +244,37 @@ CASE(opttype_c)
   ENDIF
 CASE(opttype_i)
   READ(optarg,'(I12)',ERR=100)this%desti
+CASE(opttype_iarr)
+  CALL delete(this%destiarr) ! delete default values
+  CALL init(arrparser, optarg)
+  DO WHILE(.NOT.csv_record_end(arrparser))
+    CALL csv_record_getfield(arrparser, ibuff)
+    CALL insert(this%destiarr, ibuff)
+  ENDDO
+  CALL packarray(this%destiarr)
+  CALL delete(arrparser)
 CASE(opttype_r)
   READ(optarg,'(F20.0)',ERR=102)this%destr
+CASE(opttype_rarr)
+  CALL delete(this%destrarr) ! delete default values
+  CALL init(arrparser, optarg)
+  DO WHILE(.NOT.csv_record_end(arrparser))
+    CALL csv_record_getfield(arrparser, rbuff)
+    CALL insert(this%destrarr, rbuff)
+  ENDDO
+  CALL packarray(this%destrarr)
+  CALL delete(arrparser)
 CASE(opttype_d)
   READ(optarg,'(F20.0)',ERR=102)this%destd
+CASE(opttype_darr)
+  CALL delete(this%destdarr) ! delete default values
+  CALL init(arrparser, optarg)
+  DO WHILE(.NOT.csv_record_end(arrparser))
+    CALL csv_record_getfield(arrparser, dbuff)
+    CALL insert(this%destdarr, dbuff)
+  ENDDO
+  CALL packarray(this%destdarr)
+  CALL delete(arrparser)
 CASE(opttype_l)
   this%destl = .TRUE.
 CASE(opttype_count)
@@ -252,15 +308,19 @@ TYPE(option),INTENT(inout) :: this
 
 CHARACTER(len=100) :: format_opt
 
-CHARACTER(len=10) :: argname
+CHARACTER(len=20) :: argname
 
 SELECT CASE(this%opttype)
 CASE(opttype_c)
   argname = 'STRING'
 CASE(opttype_i)
   argname = 'INT'
+CASE(opttype_iarr)
+  argname = 'INT[,INT...]'
 CASE(opttype_r, opttype_d)
   argname = 'REAL'
+CASE(opttype_rarr, opttype_darr)
+  argname = 'REAL[,REAL...]'
 CASE default
   argname = ''
 END SELECT
@@ -269,7 +329,7 @@ format_opt = ''
 IF (this%short_opt /= '') THEN
   format_opt(LEN_TRIM(format_opt)+1:) = ' -'//this%short_opt
   IF (argname /= '') THEN
-    format_opt(LEN_TRIM(format_opt)+1:) = ' '//argname
+    format_opt(LEN_TRIM(format_opt)+1:) = ' '//TRIM(argname)
   ENDIF
 ENDIF
 IF (this%short_opt /= '' .AND. this%long_opt /= '') THEN
@@ -278,7 +338,7 @@ ENDIF
 IF (this%long_opt /= '') THEN
   format_opt(LEN_TRIM(format_opt)+1:) = ' --'//this%long_opt
   IF (argname /= '') THEN
-    format_opt(LEN_TRIM(format_opt)+1:) = '='//argname
+    format_opt(LEN_TRIM(format_opt)+1:) = '='//TRIM(argname)
   ENDIF
 ENDIF  
 
@@ -318,6 +378,7 @@ CASE(opttype_i,opttype_r,opttype_d)
     SELECT CASE(this%opttype)
     CASE(opttype_i)
       WRITE(*,'(3A)')' value="',t2c(this%desti),'"'
+! todo    CASE(opttype_iarr)
     CASE(opttype_r)
       WRITE(*,'(3A)')' value="',t2c(this%destr),'"'
     CASE(opttype_d)
@@ -326,6 +387,8 @@ CASE(opttype_i,opttype_r,opttype_d)
   ENDIF
   CALL option_format_html_help()
   CALL option_format_html_closespan()
+
+! todo CASE(opttype_iarr)
 
 CASE(opttype_l)
   CALL option_format_html_openspan('checkbox')
@@ -504,6 +567,51 @@ i = arrayof_option_append(this%options, myoption)
 END SUBROUTINE optionparser_add_i
 
 
+!> Add a new option with an integer type array argument.
+!! When parsing will be performed, if the requested option is
+!! encountered, its corresponding compulsory argument will be copied
+!! into the provided destination. The argument must be provided in the
+!! form of comma-separated list of values and is stored in an object
+!! of type arrayof_integer (module \a array_utilities). An optional
+!! default value can be provided for the destination. Please use the
+!! generic \a optionparser_add method rather than this particular
+!! method.
+SUBROUTINE optionparser_add_iarray(this, short_opt, long_opt, dest, default, help)
+TYPE(optionparser),INTENT(inout) :: this !< \a optionparser object
+CHARACTER(len=*),INTENT(in) :: short_opt !< the short option (may be empty)
+CHARACTER(len=*),INTENT(in) :: long_opt !< the long option (may be empty)
+TYPE(arrayof_integer),TARGET :: dest !< the destination of the option parse result
+INTEGER,OPTIONAL :: default(:) !< the default value to give to dest if option is not found
+CHARACTER(len=*),OPTIONAL :: help !< the help message that will be formatted and pretty-printed on screen
+
+CHARACTER(LEN=40) :: cdefault
+INTEGER :: i
+TYPE(option) :: myoption
+
+!IF (PRESENT(default)) THEN
+!  cdefault = ' [default='//TRIM(to_char(default))//']'
+!ELSE
+  cdefault = ''
+!ENDIF
+
+! common initialisation
+myoption = option_new(short_opt, long_opt, cdefault, help)
+IF (.NOT.c_e(myoption)) RETURN ! error in creating option, ignore it
+
+myoption%destiarr => dest
+myoption%destiarr = arrayof_integer_new()
+IF (PRESENT(default)) THEN
+  CALL insert(myoption%destiarr, default)
+  CALL packarray(myoption%destiarr)
+ENDIF
+myoption%opttype = opttype_iarr
+myoption%need_arg = .TRUE.
+
+i = arrayof_option_append(this%options, myoption)
+
+END SUBROUTINE optionparser_add_iarray
+
+
 !> Add a new option with a real type argument.
 !! When parsing will be performed, if the requested option is
 !! encountered, its corresponding compulsory argument will be copied
@@ -542,6 +650,51 @@ i = arrayof_option_append(this%options, myoption)
 END SUBROUTINE optionparser_add_r
 
 
+!> Add a new option with a real type array argument.
+!! When parsing will be performed, if the requested option is
+!! encountered, its corresponding compulsory argument will be copied
+!! into the provided destination. The argument must be provided in the
+!! form of comma-separated list of values and is stored in an object
+!! of type arrayof_real (module \a array_utilities). An optional
+!! default value can be provided for the destination. Please use the
+!! generic \a optionparser_add method rather than this particular
+!! method.
+SUBROUTINE optionparser_add_rarray(this, short_opt, long_opt, dest, default, help)
+TYPE(optionparser),INTENT(inout) :: this !< \a optionparser object
+CHARACTER(len=*),INTENT(in) :: short_opt !< the short option (may be empty)
+CHARACTER(len=*),INTENT(in) :: long_opt !< the long option (may be empty)
+TYPE(arrayof_real),TARGET :: dest !< the destination of the option parse result
+REAL,OPTIONAL :: default(:) !< the default value to give to dest if option is not found
+CHARACTER(len=*),OPTIONAL :: help !< the help message that will be formatted and pretty-printed on screen
+
+CHARACTER(LEN=40) :: cdefault
+INTEGER :: i
+TYPE(option) :: myoption
+
+!IF (PRESENT(default)) THEN
+!  cdefault = ' [default='//TRIM(to_char(default))//']'
+!ELSE
+  cdefault = ''
+!ENDIF
+
+! common initialisation
+myoption = option_new(short_opt, long_opt, cdefault, help)
+IF (.NOT.c_e(myoption)) RETURN ! error in creating option, ignore it
+
+myoption%destrarr => dest
+myoption%destrarr = arrayof_real_new()
+IF (PRESENT(default)) THEN
+  CALL insert(myoption%destrarr, default)
+  CALL packarray(myoption%destrarr)
+ENDIF
+myoption%opttype = opttype_rarr
+myoption%need_arg = .TRUE.
+
+i = arrayof_option_append(this%options, myoption)
+
+END SUBROUTINE optionparser_add_rarray
+
+
 !> Add a new option with a double precision type argument.
 !! When parsing will be performed, if the requested option is
 !! encountered, its corresponding compulsory argument will be copied
@@ -578,6 +731,51 @@ myoption%need_arg = .TRUE.
 i = arrayof_option_append(this%options, myoption)
 
 END SUBROUTINE optionparser_add_d
+
+
+!> Add a new option with a double precision type array argument.
+!! When parsing will be performed, if the requested option is
+!! encountered, its corresponding compulsory argument will be copied
+!! into the provided destination. The argument must be provided in the
+!! form of comma-separated list of values and is stored in an object
+!! of type arrayof_doubleprecision (module \a array_utilities). An optional
+!! default value can be provided for the destination. Please use the
+!! generic \a optionparser_add method rather than this particular
+!! method.
+SUBROUTINE optionparser_add_darray(this, short_opt, long_opt, dest, default, help)
+TYPE(optionparser),INTENT(inout) :: this !< \a optionparser object
+CHARACTER(len=*),INTENT(in) :: short_opt !< the short option (may be empty)
+CHARACTER(len=*),INTENT(in) :: long_opt !< the long option (may be empty)
+TYPE(arrayof_doubleprecision),TARGET :: dest !< the destination of the option parse result
+DOUBLE PRECISION,OPTIONAL :: default(:) !< the default value to give to dest if option is not found
+CHARACTER(len=*),OPTIONAL :: help !< the help message that will be formatted and pretty-printed on screen
+
+CHARACTER(LEN=40) :: cdefault
+INTEGER :: i
+TYPE(option) :: myoption
+
+!IF (PRESENT(default)) THEN
+!  cdefault = ' [default='//TRIM(to_char(default))//']'
+!ELSE
+  cdefault = ''
+!ENDIF
+
+! common initialisation
+myoption = option_new(short_opt, long_opt, cdefault, help)
+IF (.NOT.c_e(myoption)) RETURN ! error in creating option, ignore it
+
+myoption%destdarr => dest
+myoption%destdarr = arrayof_doubleprecision_new()
+IF (PRESENT(default)) THEN
+  CALL insert(myoption%destdarr, default)
+  CALL packarray(myoption%destdarr)
+ENDIF
+myoption%opttype = opttype_darr
+myoption%need_arg = .TRUE.
+
+i = arrayof_option_append(this%options, myoption)
+
+END SUBROUTINE optionparser_add_darray
 
 
 !> Add a new logical option, without optional argument.
@@ -794,10 +992,9 @@ END SUBROUTINE optionparser_parse
 SUBROUTINE optionparser_printhelp(this)
 TYPE(optionparser),INTENT(inout) :: this !< \a optionparser object with correctly initialised options
 
-INTEGER :: i, j, n, ncols
+INTEGER :: i, j, ncols
 INTEGER, PARAMETER :: indent = 10
 CHARACTER(len=80) :: buf
-CHARACTER(len=10) :: argname
 TYPE(line_split) :: help_line
 
 ncols = default_columns()

@@ -70,7 +70,38 @@ INTERFACE sort
   MODULE PROCEDURE sort_i, sort_r, sort_d, sort_c
 END INTERFACE
 
-private
+
+#define ARRAYOF_ORIGEQ 1
+
+#define ARRAYOF_ORIGTYPE INTEGER
+#define ARRAYOF_TYPE arrayof_integer
+#include "arrayof_pre.F90"
+
+#undef ARRAYOF_ORIGTYPE
+#undef ARRAYOF_TYPE
+#define ARRAYOF_ORIGTYPE REAL
+#define ARRAYOF_TYPE arrayof_real
+#include "arrayof_pre.F90"
+
+#undef ARRAYOF_ORIGTYPE
+#undef ARRAYOF_TYPE
+#define ARRAYOF_ORIGTYPE DOUBLEPRECISION
+#define ARRAYOF_TYPE arrayof_doubleprecision
+#include "arrayof_pre.F90"
+
+#undef ARRAYOF_ORIGEQ
+
+#undef ARRAYOF_ORIGTYPE
+#undef ARRAYOF_TYPE
+#define ARRAYOF_ORIGTYPE LOGICAL
+#define ARRAYOF_TYPE arrayof_logical
+#include "arrayof_pre.F90"
+
+PRIVATE
+! from arrayof
+PUBLIC insert, append, remove, delete, packarray
+PUBLIC insert_unique, append_unique
+
 PUBLIC sort, index, index_c, &
  count_distinct, pack_distinct, map_distinct, map_inv_distinct, &
  firsttrue, lasttrue, pack_distinct_c, map
@@ -79,9 +110,9 @@ CONTAINS
 
 
 !> Return the index ot the first true element of the input logical array \a v.
-!! If no \c .TRUE. element are found, it returns 0.
+!! If no \c .TRUE. elements are found, it returns 0.
 FUNCTION firsttrue(v) RESULT(i)
-LOGICAL,INTENT(in) :: v(:)
+LOGICAL,INTENT(in) :: v(:) !< logical array to test
 INTEGER :: i
 
 DO i = 1, SIZE(v)
@@ -92,10 +123,10 @@ i = 0
 END FUNCTION firsttrue
 
 
-!> Return the index ot the last true element of the input logical array \a i.
-!! If no \c .TRUE. element are found, it returns 0.
+!> Return the index ot the last true element of the input logical array \a v.
+!! If no \c .TRUE. elements are found, it returns 0.
 FUNCTION lasttrue(v) RESULT(i)
-LOGICAL,INTENT(in) :: v(:)
+LOGICAL,INTENT(in) :: v(:) !< logical array to test
 INTEGER :: i
 
 DO i = SIZE(v), 1, -1
@@ -228,5 +259,33 @@ DO i=1, SIZE(mask)
 ENDDO
 
 END FUNCTION map
+
+#define ARRAYOF_ORIGEQ 1
+
+#undef ARRAYOF_ORIGTYPE
+#undef ARRAYOF_TYPE
+#define ARRAYOF_ORIGTYPE INTEGER
+#define ARRAYOF_TYPE arrayof_integer
+#include "arrayof_post.F90"
+
+#undef ARRAYOF_ORIGTYPE
+#undef ARRAYOF_TYPE
+#define ARRAYOF_ORIGTYPE REAL
+#define ARRAYOF_TYPE arrayof_real
+#include "arrayof_post.F90"
+
+#undef ARRAYOF_ORIGTYPE
+#undef ARRAYOF_TYPE
+#define ARRAYOF_ORIGTYPE DOUBLEPRECISION
+#define ARRAYOF_TYPE arrayof_doubleprecision
+#include "arrayof_post.F90"
+
+#undef ARRAYOF_ORIGEQ
+
+#undef ARRAYOF_ORIGTYPE
+#undef ARRAYOF_TYPE
+#define ARRAYOF_ORIGTYPE LOGICAL
+#define ARRAYOF_TYPE arrayof_logical
+#include "arrayof_post.F90"
 
 END MODULE array_utilities

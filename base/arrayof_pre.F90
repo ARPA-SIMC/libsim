@@ -27,9 +27,9 @@
 
 !> Derived type defining a dynamically extensible array of ARRAYOF_ORIGTYPE elements
 TYPE ARRAYOF_TYPE
-  ARRAYOF_ORIGTYPE, POINTER :: array(:) !< array of ARRAYOF_ORIGTYPE
-  INTEGER :: arraysize !< current logical size of the array; it may be different from the physical size \c SIZE(this&perc;array), and it should be used instead of \c SIZE() intrinsic function in order to evaluate the number of elements assigned to \a array
-  DOUBLE PRECISION :: overalloc !< overallocation factor, values close to 1 determine more calls to the system alloc function (decreased performances) at the advantage of less memory consumption, the default is 2; the results are not affected by the value of this member
+  ARRAYOF_ORIGTYPE, POINTER :: array(:)=>NULL() !< array of ARRAYOF_ORIGTYPE
+  INTEGER :: arraysize=0 !< current logical size of the array; it may be different from the physical size \c SIZE(this&perc;array), and it should be used instead of \c SIZE() intrinsic function in order to evaluate the number of elements assigned to \a array
+  DOUBLE PRECISION :: overalloc=2.0D0 !< overallocation factor, values close to 1 determine more calls to the system alloc function (decreased performances) at the advantage of less memory consumption, the default is 2; the results are not affected by the value of this member
 END TYPE ARRAYOF_TYPE
 
 INTERFACE insert
@@ -56,7 +56,7 @@ END INTERFACE
 PUBLIC ARRAYOF_TYPE, ARRAYOF_TYPE/**/_new
 #endif
 
-PRIVATE array_of_alloc, &
+PRIVATE ARRAYOF_TYPE/**/_alloc, &
  ARRAYOF_TYPE/**/_insert, ARRAYOF_TYPE/**/_insert_array, &
  ARRAYOF_TYPE/**/_append, ARRAYOF_TYPE/**/_remove, &
  ARRAYOF_TYPE/**/_delete, &

@@ -3,9 +3,9 @@
 #endif
 
 !> Constructor for initializing an array object.
-!! It is necessary to construct any array object through
-!! the constructor function before its use, otherwise unpredictable
-!! results may happen.
+!! It is left for compatibility with old code, but it is not
+!! anymore necessary to call the constructor before using
+!! an object of this type.
 FUNCTION ARRAYOF_TYPE/**/_new() RESULT(this)
 TYPE(ARRAYOF_TYPE) :: this !< array object to initialize
 
@@ -46,7 +46,7 @@ this%arraysize = this%arraysize + n
 !PRINT*,'ARRAYOF: inserting ',n,' elements at position ',p
 #endif
 
-CALL array_of_alloc(this) ! ensure to have space
+CALL ARRAYOF_TYPE/**/_alloc(this) ! ensure to have space
 DO i = this%arraysize, p+n, -1 ! push the elements forward starting from p
   this%array(i) = this%array(i-n)
 ENDDO
@@ -79,7 +79,7 @@ INTEGER :: pos
 
 this%arraysize = this%arraysize + 1
 pos = this%arraysize + 1
-CALL array_of_alloc(this)
+CALL ARRAYOF_TYPE/**/_alloc(this)
 this%array(this%arraysize) = content
 
 END FUNCTION ARRAYOF_TYPE/**/_append
@@ -120,7 +120,7 @@ ENDDO
 
 this%arraysize = this%arraysize + 1
 pos = this%arraysize
-CALL array_of_alloc(this)
+CALL ARRAYOF_TYPE/**/_alloc(this)
 this%array(this%arraysize) = content
 
 END FUNCTION ARRAYOF_TYPE/**/_append_unique
@@ -180,7 +180,7 @@ this%arraysize = this%arraysize - n
 DO i = p, this%arraysize ! push the elements backward starting from p
   this%array(i) = this%array(i+n)
 ENDDO
-CALL array_of_alloc(this) ! release space if possible
+CALL ARRAYOF_TYPE/**/_alloc(this) ! release space if possible
 
 END SUBROUTINE ARRAYOF_TYPE/**/_remove
 
@@ -252,13 +252,13 @@ DOUBLE PRECISION :: tmpoveralloc
 #endif
 tmpoveralloc = this%overalloc ! save value
 this%overalloc = 1.0D0
-CALL array_of_alloc(this) ! reallocate exact size
+CALL ARRAYOF_TYPE/**/_alloc(this) ! reallocate exact size
 this%overalloc = tmpoveralloc
 
 END SUBROUTINE ARRAYOF_TYPE/**/_packarray
 
 
-SUBROUTINE array_of_alloc(this)
+SUBROUTINE ARRAYOF_TYPE/**/_alloc(this)
 TYPE(ARRAYOF_TYPE) :: this
 
 ARRAYOF_ORIGTYPE, POINTER :: tmpptr(:)
@@ -286,4 +286,4 @@ ELSE ! need to allocate from scratch
   ALLOCATE(this%array(newsize))
 ENDIF
 
-END SUBROUTINE array_of_alloc
+END SUBROUTINE ARRAYOF_TYPE/**/_alloc

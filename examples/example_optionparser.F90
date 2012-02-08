@@ -21,6 +21,7 @@ USE optionparser_class
 USE missing_values
 USE err_handling
 USE char_utilities
+USE array_utilities
 USE log4fortran
 IMPLICIT NONE
 
@@ -33,9 +34,12 @@ CHARACTER(len=80) :: name, extraopt
 INTEGER :: nx
 REAL :: xval, yval
 DOUBLE PRECISION :: dval
+TYPE(arrayof_integer) :: count_list
+TYPE(arrayof_real) :: value_list
 LOGICAL :: force, version
 INTEGER :: verbose
-
+! other variables
+!INTEGER :: i
 ! define the option parser, for help2man usage_msg should start with
 ! "Usage:"
 opt = optionparser_new(description_msg= &
@@ -56,6 +60,14 @@ CALL optionparser_add(opt, '', 'yval', yval, help= &
 CALL optionparser_add(opt, 'd', 'dval', dval, 489.0D0, help=&
  'short and long double precision option with default value, &
  &this should be a positive number')
+CALL optionparser_add(opt, '', 'count-list', count_list, (/1,2,3/), help= &
+ 'integer array option, a comma-separated list of values can be provided, &
+ &the default is not displayed at the moment although it may exist, &
+ &in this case it is 1,2,3')
+CALL optionparser_add(opt, '', 'value-list', value_list, help= &
+ 'real array option, a comma-separated list of values can be provided, &
+ &the default is not displayed at the moment although it may exist, &
+ &in this case it does not exist')
 CALL optionparser_add(opt, 'f', 'force', force, help= &
  'logical option, it cannot have a default value because it is .FALSE. by design')
 CALL optionparser_add_count(opt, 'v', 'verbose', verbose, help= &
@@ -101,6 +113,14 @@ ELSE
 ENDIF
 CALL l4f_log(L4F_INFO,'yval: '//t2c(yval))
 CALL l4f_log(L4F_INFO,'dval: '//t2c(dval))
+CALL l4f_log(L4F_INFO,'count-list: '//t2c(count_list%arraysize))
+DO i = 1, count_list%arraysize
+  CALL l4f_log(L4F_INFO,t2c(i)//': '//t2c(count_list%array(i)))
+ENDDO
+CALL l4f_log(L4F_INFO,'value-list: '//t2c(value_list%arraysize))
+DO i = 1, value_list%arraysize
+  CALL l4f_log(L4F_INFO,t2c(i)//': '//t2c(value_list%array(i)))
+ENDDO
 CALL l4f_log(L4F_INFO,'force: '//t2c(force))
 CALL l4f_log(L4F_INFO,'verbose: '//t2c(verbose))
 
@@ -112,5 +132,8 @@ IF (optind <= iargc()) THEN
     CALL l4f_log(L4F_INFO, TRIM(extraopt))
   ENDDO
 ENDIF
+
+CALL delete(count_list)
+CALL delete(value_list)
 
 END PROGRAM example_optionparser

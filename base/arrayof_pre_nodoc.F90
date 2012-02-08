@@ -26,9 +26,9 @@
 #endif
 
 TYPE ARRAYOF_TYPE
-  ARRAYOF_ORIGTYPE, POINTER :: array(:)
-  INTEGER :: arraysize
-  DOUBLE PRECISION :: overalloc
+  ARRAYOF_ORIGTYPE, POINTER :: array(:)=>NULL()
+  INTEGER :: arraysize=0
+  DOUBLE PRECISION :: overalloc=2.0D0
 END TYPE ARRAYOF_TYPE
 
 INTERFACE insert
@@ -55,7 +55,7 @@ END INTERFACE
 PUBLIC ARRAYOF_TYPE, ARRAYOF_TYPE/**/_new
 #endif
 
-PRIVATE array_of_alloc, &
+PRIVATE ARRAYOF_TYPE/**/_alloc, &
  ARRAYOF_TYPE/**/_insert, ARRAYOF_TYPE/**/_insert_array, &
  ARRAYOF_TYPE/**/_append, ARRAYOF_TYPE/**/_remove, &
  ARRAYOF_TYPE/**/_delete, &
