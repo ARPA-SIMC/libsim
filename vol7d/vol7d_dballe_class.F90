@@ -147,8 +147,8 @@ type record
   TYPE(vol7d_level) :: level
   TYPE(vol7d_timerange) :: timerange
   TYPE(vol7d_network) :: network
-  TYPE(vol7d_var) ::  dativar
-
+  !TYPE(vol7d_var) ::  dativar
+  CHARACTER(len=10) :: btable
   !! Volumi di valori e attributi per  dati
   REAL :: dator
   REAL(kind=fp_d) :: datod
@@ -798,7 +798,7 @@ do i=1,N
   call init(buffer(i)%level, rlevel1,rl1,rlevel2,rl2)
   call init(buffer(i)%timerange, rtimerange, p1, p2)
   call init(buffer(i)%network, rep_memo)
-  call init(buffer(i)%dativar, btable)
+  buffer(i)%btable = btable
 
 end do
 
@@ -870,7 +870,7 @@ do i=1,N_ana
   bufferana(i)%datob=DBA_MVB
   bufferana(i)%datod=DBA_MVD
   bufferana(i)%datoc=DBA_MVC
-  call init(bufferana(i)%dativar, DBA_MVC)
+  bufferana(i)%btable = DBA_MVC
 
   call idba_dammelo (this%handle_staz,btable)
 
@@ -922,22 +922,26 @@ do i=1,N_ana
   call init(bufferana(i)%level, rlevel1,rl1,rlevel2,rl2)
   call init(bufferana(i)%timerange, rtimerange, p1, p2)
   call init(bufferana(i)%network, rep_memo)
-  call init(bufferana(i)%dativar, btable)
+  bufferana(i)%btable = btable
 
 end do
 
 ! ---------------->   anagrafica fine
 
 if (.not. any(c_e(lvar)))then
-  nvar = count_distinct(buffer%dativar, back=.TRUE.)
+  nvar = count_distinct(buffer%btable, back=.TRUE.)
 end if
 
 nana = count_distinct(buffer%ana, back=.TRUE.)
 ntime = count_distinct(buffer%time, back=.TRUE.)
 ntimerange = count_distinct(buffer%timerange, back=.TRUE.)
 nlevel = count_distinct(buffer%level, back=.TRUE.)
-nnetwork = count_distinct(buffer%network, back=.TRUE.)
-if(ldegnet)nnetwork=1
+
+if(ldegnet) then
+  nnetwork=1
+else
+  nnetwork = count_distinct(buffer%network, back=.TRUE.)
+end if
 
 if (present(varkind))then
   ndativarr= count(varkind == "r")
@@ -998,7 +1002,7 @@ if (ndatiattrc > 0 ) ndativarattrc=ndativarr+ndativari+ndativarb+ndativard+ndati
 ! ---------------->   anagrafica
 
 if (.not. present(anavar))then
-  nanavar = count_distinct(bufferana%dativar, back=.TRUE.,mask=(bufferana%dativar%btable /= DBA_MVC))
+  nanavar = count_distinct(bufferana%btable, back=.TRUE.,mask=(bufferana%btable /= DBA_MVC))
 end if
 
 if (present(anavarkind))then
@@ -1145,7 +1149,10 @@ else if (any(c_e(lvar)))then
     end do
 else
 
-    vol7dtmp%dativar%c=pack_distinct(buffer%dativar, ndativarc, back=.TRUE.,mask=(buffer%dativar%btable /= DBA_MVC))
+  do i=1,ndativarc
+    call init(vol7dtmp%dativar%c(i))
+  end do
+  call pack_distinct_c(buffer%btable, vol7dtmp%dativar%c%btable, back=.TRUE.,mask=(buffer%btable /= DBA_MVC))
 
 end if
 
@@ -1280,7 +1287,10 @@ else if (present(anavar))then
 
 else
 
-  vol7dtmp%anavar%c=pack_distinct(bufferana%dativar, nanavarc, back=.TRUE.,mask=(bufferana%dativar%btable /= DBA_MVC))
+  do i=1,nanavarc
+    call init(vol7dtmp%anavar%c(i))
+  end do
+  call pack_distinct_c(bufferana%btable, vol7dtmp%anavar%c%btable, back=.TRUE.,mask=(bufferana%btable /= DBA_MVC))
 
 end if
 
@@ -1447,35 +1457,35 @@ do i =1, N
    !print *, indana,indtime,indlevel,indtimerange,indnetwork
 
    if(c_e(buffer(i)%dator))then
-     inddativar = firsttrue(buffer(i)%dativar == vol7dtmp%dativar%r)
+     inddativar = firsttrue(buffer(i)%btable == vol7dtmp%dativar%r%btable)
      vol7dtmp%voldatir( &
       indana,indtime,indlevel,indtimerange,inddativar,indnetwork &
       ) = buffer(i)%dator
    end if
 
    if(c_e(buffer(i)%datoi)) then
-     inddativar = firsttrue(buffer(i)%dativar == vol7dtmp%dativar%i)
+     inddativar = firsttrue(buffer(i)%btable == vol7dtmp%dativar%i%btable)
      vol7dtmp%voldatii( &
       indana,indtime,indlevel,indtimerange,inddativar,indnetwork &
       ) = buffer(i)%datoi
    end if
 
    if(c_e(buffer(i)%datob)) then
-     inddativar = firsttrue(buffer(i)%dativar == vol7dtmp%dativar%b)
+     inddativar = firsttrue(buffer(i)%btable == vol7dtmp%dativar%b%btable)
      vol7dtmp%voldatib( &
       indana,indtime,indlevel,indtimerange,inddativar,indnetwork &
       ) = buffer(i)%datob
    end if
 
    if(c_e(buffer(i)%datod)) then
-     inddativar = firsttrue(buffer(i)%dativar == vol7dtmp%dativar%d)
+     inddativar = firsttrue(buffer(i)%btable == vol7dtmp%dativar%d%btable)
      vol7dtmp%voldatid( &
       indana,indtime,indlevel,indtimerange,inddativar,indnetwork &
       ) = buffer(i)%datod
    end if
 
    if(c_e(buffer(i)%datoc)) then
-     inddativar = firsttrue(buffer(i)%dativar == vol7dtmp%dativar%c)
+     inddativar = firsttrue(buffer(i)%btable == vol7dtmp%dativar%c%btable)
      vol7dtmp%voldatic( &
       indana,indtime,indlevel,indtimerange,inddativar,indnetwork &
       ) = buffer(i)%datoc
@@ -1495,11 +1505,11 @@ do i =1, N
      CALL l4f_category_log(this%category,L4F_DEBUG,'unsetall handle')
 #endif
      call idba_set (this%handle,"*context_id",buffer(i)%data_id)
-     call idba_set (this%handle,"*var_related",buffer(i)%dativar%btable)
+     call idba_set (this%handle,"*var_related",buffer(i)%btable)
      !per ogni dato ora lavoro sugli attributi
      call idba_set(this%handle, "*varlist",starvarlist )
      call idba_voglioancora (this%handle,nn)
-     !print*,buffer(i)%dativar%btable," numero attributi",nn
+     !print*,buffer(i)%btable," numero attributi",nn
      
      do ii=1,nn ! Se ho piu` di 1 attributo devo forse trovare l'indice (ii)
        call idba_ancora (this%handle,starbtable)
@@ -1518,21 +1528,21 @@ do i =1, N
 
 !>\todo sostituire qui sotto con struttura case:
            if(attrkind(iii) == "r") then
-             inddativarattr  = firsttrue(buffer(i)%dativar == vol7dtmp%dativarattr%r)
+             inddativarattr  = firsttrue(buffer(i)%btable == vol7dtmp%dativarattr%r%btable)
              inddatiattr = firsttrue(var_tmp == vol7dtmp%datiattr%r)
              call idba_enq (this%handle,starbtable,&
               vol7dtmp%voldatiattrr(indana,indtime,indlevel,indtimerange,&
               inddativarattr,indnetwork,inddatiattr))
            end if
            if(attrkind(iii) == "i") then
-             inddativarattr  = firsttrue(buffer(i)%dativar == vol7dtmp%dativarattr%i)
+             inddativarattr  = firsttrue(buffer(i)%btable == vol7dtmp%dativarattr%i%btable)
              inddatiattr = firsttrue(var_tmp == vol7dtmp%datiattr%i)
              call idba_enq (this%handle,starbtable,&
               vol7dtmp%voldatiattri(indana,indtime,indlevel,indtimerange,&
               inddativarattr,indnetwork,inddatiattr))
            end if
            if(attrkind(iii) == "b") then
-             inddativarattr  = firsttrue(buffer(i)%dativar == vol7dtmp%dativarattr%b)
+             inddativarattr  = firsttrue(buffer(i)%btable == vol7dtmp%dativarattr%b%btable)
              inddatiattr = firsttrue(var_tmp == vol7dtmp%datiattr%b)
              !print *,"indici voldatiattr ",indana,indtime,indlevel,indtimerange,&
               !inddativarattr,indnetwork,inddatiattr
@@ -1541,14 +1551,14 @@ do i =1, N
               inddativarattr,indnetwork,inddatiattr))
            end if
            if(attrkind(iii) == "d") then
-             inddativarattr  = firsttrue(buffer(i)%dativar == vol7dtmp%dativarattr%d)
+             inddativarattr  = firsttrue(buffer(i)%btable == vol7dtmp%dativarattr%d%btable)
              inddatiattr = firsttrue(var_tmp == vol7dtmp%datiattr%d)
              call idba_enq (this%handle,starbtable,&
               vol7dtmp%voldatiattrd(indana,indtime,indlevel,indtimerange,&
               inddativarattr,indnetwork,inddatiattr))
            end if
            if(attrkind(iii) == "c") then
-             inddativarattr  = firsttrue(buffer(i)%dativar == vol7dtmp%dativarattr%c)
+             inddativarattr  = firsttrue(buffer(i)%btable == vol7dtmp%dativarattr%c%btable)
              inddatiattr = firsttrue(var_tmp == vol7dtmp%datiattr%c)
              call idba_enq (this%handle,starbtable,&
               vol7dtmp%voldatiattrc(indana,indtime,indlevel,indtimerange,&
@@ -1556,7 +1566,7 @@ do i =1, N
            end if
          end if
        else         
-         inddativarattr  = firsttrue(buffer(i)%dativar == vol7dtmp%dativarattr%c)
+         inddativarattr  = firsttrue(buffer(i)%btable == vol7dtmp%dativarattr%c%btable)
          inddatiattr = firsttrue(var_tmp == vol7dtmp%datiattr%c)
          call idba_enq (this%handle,starbtable,&
           vol7dtmp%voldatiattrc(indana,indtime,indlevel,indtimerange,&
@@ -1604,23 +1614,23 @@ do i =1, N_ana
    !print *, indana,indtime,indlevel,indtimerange,indnetwork
 
    if(c_e(bufferana(i)%dator))then
-     indanavar = firsttrue(bufferana(i)%dativar == vol7dtmp%anavar%r)
+     indanavar = firsttrue(bufferana(i)%btable == vol7dtmp%anavar%r%btable)
      vol7dtmp%volanar( indana,indanavar,indnetwork ) = bufferana(i)%dator
    end if
    if(c_e(bufferana(i)%datoi))then
-     indanavar = firsttrue(bufferana(i)%dativar == vol7dtmp%anavar%i)
+     indanavar = firsttrue(bufferana(i)%btable == vol7dtmp%anavar%i%btable)
      vol7dtmp%volanai( indana,indanavar,indnetwork ) = bufferana(i)%datoi
    end if
    if(c_e(bufferana(i)%datob))then
-     indanavar = firsttrue(bufferana(i)%dativar == vol7dtmp%anavar%b)
+     indanavar = firsttrue(bufferana(i)%btable == vol7dtmp%anavar%b%btable)
      vol7dtmp%volanab( indana,indanavar,indnetwork ) = bufferana(i)%datob
    end if
    if(c_e(bufferana(i)%datod))then
-     indanavar = firsttrue(bufferana(i)%dativar == vol7dtmp%anavar%d)
+     indanavar = firsttrue(bufferana(i)%btable == vol7dtmp%anavar%d%btable)
      vol7dtmp%volanad( indana,indanavar,indnetwork ) = bufferana(i)%datod
    end if
    if(c_e(bufferana(i)%datoc))then
-     indanavar = firsttrue(bufferana(i)%dativar == vol7dtmp%anavar%c)
+     indanavar = firsttrue(bufferana(i)%btable == vol7dtmp%anavar%c%btable)
      vol7dtmp%volanac( indana,indanavar,indnetwork ) = bufferana(i)%datoc
    end if
 
@@ -1632,7 +1642,7 @@ do i =1, N_ana
 #endif
      call idba_unsetall (this%handle_staz)
      call idba_set (this%handle_staz,"*context_id",bufferana(i)%data_id)
-     call idba_set (this%handle_staz,"*var_related",bufferana(i)%dativar%btable)
+     call idba_set (this%handle_staz,"*var_related",bufferana(i)%btable)
 
      !per ogni dato ora lavoro sugli attributi
      call idba_set(this%handle_staz, "*varlist",starvarlist )
@@ -1655,31 +1665,31 @@ do i =1, N_ana
          if (iii > 0)then
 
            if(anaattrkind(iii) == "r") then
-             indanavarattr  = firsttrue(bufferana(i)%dativar == vol7dtmp%anavarattr%r)
+             indanavarattr  = firsttrue(bufferana(i)%btable == vol7dtmp%anavarattr%r%btable)
              indanaattr = firsttrue(var_tmp == vol7dtmp%anaattr%r)
              call idba_enq (this%handle_staz,starbtable,&
               vol7dtmp%volanaattrr(indana,indanavarattr,indnetwork,indanaattr))
            end if
            if(anaattrkind(iii) == "i") then
-             indanavarattr  = firsttrue(bufferana(i)%dativar == vol7dtmp%anavarattr%i)
+             indanavarattr  = firsttrue(bufferana(i)%btable == vol7dtmp%anavarattr%i%btable)
              indanaattr = firsttrue(var_tmp == vol7dtmp%anaattr%i)
              call idba_enq (this%handle_staz,starbtable,&
               vol7dtmp%volanaattri(indana,indanavarattr,indnetwork,indanaattr))
            end if
            if(anaattrkind(iii) == "b") then
-             indanavarattr  = firsttrue(bufferana(i)%dativar == vol7dtmp%anavarattr%b)
+             indanavarattr  = firsttrue(bufferana(i)%btable == vol7dtmp%anavarattr%b%btable)
              indanaattr = firsttrue(var_tmp == vol7dtmp%anaattr%b)
              call idba_enq (this%handle_staz,starbtable,&
               vol7dtmp%volanaattrb(indana,indanavarattr,indnetwork,indanaattr))
            end if
            if(anaattrkind(iii) == "d") then
-             indanavarattr  = firsttrue(bufferana(i)%dativar == vol7dtmp%anavarattr%d)
+             indanavarattr  = firsttrue(bufferana(i)%btable == vol7dtmp%anavarattr%d%btable)
              indanaattr = firsttrue(var_tmp == vol7dtmp%anaattr%d)
              call idba_enq (this%handle_staz,starbtable,&
               vol7dtmp%volanaattrd(indana,indanavarattr,indnetwork,indanaattr))
            end if
            if(anaattrkind(iii) == "c") then
-             indanavarattr  = firsttrue(bufferana(i)%dativar == vol7dtmp%anavarattr%c)
+             indanavarattr  = firsttrue(bufferana(i)%btable == vol7dtmp%anavarattr%c%btable)
              indanaattr = firsttrue(var_tmp == vol7dtmp%anaattr%c)
              call idba_enq (this%handle_staz,starbtable,&
               vol7dtmp%volanaattrc(indana,indanavarattr,indnetwork,indanaattr))
@@ -1687,7 +1697,7 @@ do i =1, N_ana
 
          end if
        else         
-         indanavarattr  = firsttrue(bufferana(i)%dativar == vol7dtmp%anavarattr%c)
+         indanavarattr  = firsttrue(bufferana(i)%btable == vol7dtmp%anavarattr%c%btable)
          indanaattr = firsttrue(var_tmp == vol7dtmp%anaattr%c)
          call idba_enq (this%handle,starbtable,&
           vol7dtmp%volanaattrc(indana,indanavarattr,indnetwork,indanaattr)) !char is default
@@ -2920,7 +2930,7 @@ do while ( N > 0 )
       call init(buffer(nd)%level, rlevel1,rl1,rlevel2,rl2)
       call init(buffer(nd)%timerange, rtimerange, p1, p2)
       call init(buffer(nd)%network, rep_memo)
-      call init(buffer(nd)%dativar, btable)
+      buffer(nd)%btable = btable
     
     else
 
@@ -2957,7 +2967,7 @@ do while ( N > 0 )
       bufferana(na)%datob=DBA_MVB
       bufferana(na)%datod=DBA_MVD
       bufferana(na)%datoc=DBA_MVC
-      call init(bufferana(na)%dativar, DBA_MVC)
+      bufferana(na)%btable = DBA_MVC
 
 
       if (c_e(btable)) then
@@ -2991,7 +3001,7 @@ do while ( N > 0 )
       call init(bufferana(na)%level, rlevel1,rl1,rlevel2,rl2)
       call init(bufferana(na)%timerange, rtimerange, p1, p2)
       call init(bufferana(na)%network, rep_memo)
-      call init(bufferana(na)%dativar, btable)
+      bufferana(na)%btable = btable
 
     end if
   end do
@@ -3000,10 +3010,10 @@ end do
 ! ---------------->   anagrafica fine
 
 if (.not. present(var))then
-  nvar = count_distinct(buffer(:nd)%dativar, back=.TRUE.)
+  nvar = count_distinct(buffer(:nd)%btable, back=.TRUE.)
 else 
   if ( all(.not. c_e(var))) then
-    nvar = count_distinct(buffer(:nd)%dativar, back=.TRUE.)
+    nvar = count_distinct(buffer(:nd)%btable, back=.TRUE.)
   else
     nvar=count(c_e(var))
   end if
@@ -3056,7 +3066,7 @@ ndativarattrc=0
 ! ---------------->   anagrafica
 
 if (.not. present(anavar))then
-  nanavar = count_distinct(bufferana(:na)%dativar, back=.TRUE.,mask=(bufferana(:na)%dativar%btable /= DBA_MVC))
+  nanavar = count_distinct(bufferana(:na)%btable, back=.TRUE.,mask=(bufferana(:na)%btable /= DBA_MVC))
 else
   nanavar = size(anavar)
 end if
@@ -3207,11 +3217,18 @@ else if (present(var))then
     end do
 
   else
-    vol7dtmp%dativar%c=pack_distinct(buffer(:nd)%dativar, ndativarc, back=.TRUE.)
+
+    do i=1,ndativarc
+      call init(vol7dtmp%dativar%c(i))
+    end do
+    call pack_distinct_c(buffer(:nd)%btable,vol7dtmp%dativar%c%btable, back=.TRUE.)
   end if
 
 else
-  vol7dtmp%dativar%c=pack_distinct(buffer(:nd)%dativar, ndativarc, back=.TRUE.)
+  do i=1,ndativarc
+    call init(vol7dtmp%dativar%c(i))
+  end do
+  call pack_distinct_c(buffer(:nd)%btable,vol7dtmp%dativar%c%btable, back=.TRUE.)
 end if
 
 
@@ -3255,8 +3272,11 @@ else if (present(anavar))then
 
 else
 
-  vol7dtmp%anavar%c=pack_distinct(bufferana(:na)%dativar, nanavarc, back=.TRUE.,&
-   mask=(bufferana(:na)%dativar%btable /= DBA_MVC))
+  do i=1,nanavarc
+    call init(vol7dtmp%anavar%c(i))
+  end do
+  call pack_distinct_c(bufferana(:na)%btable,vol7dtmp%anavar%c%btable, back=.TRUE.,&
+   mask=(bufferana(:na)%btable /= DBA_MVC))
 
 end if
 
@@ -3278,35 +3298,35 @@ do i =1, nd
   !print *, indana,indtime,indlevel,indtimerange,indnetwork
 
   if(c_e(buffer(i)%dator))then
-    inddativar = firsttrue(buffer(i)%dativar == vol7dtmp%dativar%r)
+    inddativar = firsttrue(buffer(i)%btable == vol7dtmp%dativar%r%btable)
     vol7dtmp%voldatir( &
      indana,indtime,indlevel,indtimerange,inddativar,indnetwork &
      ) = buffer(i)%dator
   end if
 
   if(c_e(buffer(i)%datoi)) then
-    inddativar = firsttrue(buffer(i)%dativar == vol7dtmp%dativar%i)
+    inddativar = firsttrue(buffer(i)%btable == vol7dtmp%dativar%i%btable)
     vol7dtmp%voldatii( &
      indana,indtime,indlevel,indtimerange,inddativar,indnetwork &
      ) = buffer(i)%datoi
   end if
 
   if(c_e(buffer(i)%datob)) then
-    inddativar = firsttrue(buffer(i)%dativar == vol7dtmp%dativar%b)
+    inddativar = firsttrue(buffer(i)%btable == vol7dtmp%dativar%b%btable)
     vol7dtmp%voldatib( &
      indana,indtime,indlevel,indtimerange,inddativar,indnetwork &
      ) = buffer(i)%datob
   end if
 
   if(c_e(buffer(i)%datod)) then
-    inddativar = firsttrue(buffer(i)%dativar == vol7dtmp%dativar%d)
+    inddativar = firsttrue(buffer(i)%btable == vol7dtmp%dativar%d%btable)
     vol7dtmp%voldatid( &
      indana,indtime,indlevel,indtimerange,inddativar,indnetwork &
      ) = buffer(i)%datod
   end if
 
   if(c_e(buffer(i)%datoc)) then
-    inddativar = firsttrue(buffer(i)%dativar == vol7dtmp%dativar%c)
+    inddativar = firsttrue(buffer(i)%btable == vol7dtmp%dativar%c%btable)
     vol7dtmp%voldatic( &
      indana,indtime,indlevel,indtimerange,inddativar,indnetwork &
      ) = buffer(i)%datoc
@@ -3332,23 +3352,23 @@ do i =1, Na
    !print *, indana,indtime,indlevel,indtimerange,indnetwork
 
    if(c_e(bufferana(i)%dator))then
-     indanavar = firsttrue(bufferana(i)%dativar == vol7dtmp%anavar%r)
+     indanavar = firsttrue(bufferana(i)%btable == vol7dtmp%anavar%r%btable)
      vol7dtmp%volanar( indana,indanavar,indnetwork ) = bufferana(i)%dator
    end if
    if(c_e(bufferana(i)%datoi))then
-     indanavar = firsttrue(bufferana(i)%dativar == vol7dtmp%anavar%i)
+     indanavar = firsttrue(bufferana(i)%btable == vol7dtmp%anavar%i%btable)
      vol7dtmp%volanai( indana,indanavar,indnetwork ) = bufferana(i)%datoi
    end if
    if(c_e(bufferana(i)%datob))then
-     indanavar = firsttrue(bufferana(i)%dativar == vol7dtmp%anavar%b)
+     indanavar = firsttrue(bufferana(i)%btable == vol7dtmp%anavar%b%btable)
      vol7dtmp%volanab( indana,indanavar,indnetwork ) = bufferana(i)%datob
    end if
    if(c_e(bufferana(i)%datod))then
-     indanavar = firsttrue(bufferana(i)%dativar == vol7dtmp%anavar%d)
+     indanavar = firsttrue(bufferana(i)%btable == vol7dtmp%anavar%d%btable)
      vol7dtmp%volanad( indana,indanavar,indnetwork ) = bufferana(i)%datod
    end if
    if(c_e(bufferana(i)%datoc))then
-     indanavar = firsttrue(bufferana(i)%dativar == vol7dtmp%anavar%c)
+     indanavar = firsttrue(bufferana(i)%btable == vol7dtmp%anavar%c%btable)
      vol7dtmp%volanac( indana,indanavar,indnetwork ) = bufferana(i)%datoc
    end if
 
