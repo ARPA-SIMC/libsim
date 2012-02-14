@@ -658,6 +658,12 @@ IF (.NOT.ALLOCATED(al)) ALLOCATE(al(0)) ! allocate if missing
 IF (.NOT.ALLOCATED(nl)) allocate (nl(0))
 IF( .NOT.ALLOCATED(vl)) allocate (vl(0))
 
+IF (set_network /= '') THEN
+  CALL init(set_network_obj, name=set_network)
+ELSE
+  set_network_obj = vol7d_network_miss
+ENDIF
+
 ! import data looping on input files
 CALL init(v7d)
 DO ninput = optind, iargc()-1
@@ -711,11 +717,6 @@ DO ninput = optind, iargc()-1
     ENDIF
     CALL parse_dba_access_info(input_file, dsn, user, password)
     CALL init(v7d_osim, dsn=dsn, user=user, password=password, time_definition=0)
-    IF (set_network /= '') THEN
-      CALL init(set_network_obj, name=set_network)
-    ELSE
-      set_network_obj = vol7d_network_miss
-    ENDIF
     IF (SIZE(vl) > 0) THEN ! data requested
       CALL import(v7d_osim, vl, nl, timei=s_d, timef=e_d, &
        level=level, timerange=timerange, &
