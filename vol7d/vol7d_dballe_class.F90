@@ -75,6 +75,7 @@ USE char_utilities
 USE vol7d_class
 USE array_utilities
 use log4fortran
+USE geo_coord_class
 
 IMPLICIT NONE
 
@@ -538,7 +539,7 @@ integer :: nanavar ,indanavar,indanaattr,indanavarattr,nanavarattr
 
 REAL(kind=fp_geo) :: lat,lon
 CHARACTER(len=vol7d_ana_lenident) :: ident
-CHARACTER(len=10),allocatable :: lvar(:)
+CHARACTER(len=10),allocatable :: lvar(:), lanavar(:)
 !INTEGER(kind=int_b)::attrdatib
 
 integer :: ndativarr,     ndativari,     ndativarb,     ndativard,     ndativarc
@@ -613,6 +614,13 @@ IF (PRESENT(var)) THEN
    lvar=var
 ELSE
    allocate(lvar(0))
+ENDIF
+
+IF (PRESENT(anavar)) THEN
+   allocate(lanavar(size(anavar)))
+   lanavar=anavar
+ELSE
+   allocate(lanavar(0))
 ENDIF
 
 if (present(network))  then
@@ -811,7 +819,7 @@ call idba_unsetall(this%handle_staz)
 CALL l4f_category_log(this%category,L4F_DEBUG,'unsetall handle_staz')
 #endif
 
-if(c_e(network))call idba_set (this%handle_staz,"rep_memo",network%name)
+if(c_e(lnetwork))call idba_set (this%handle_staz,"rep_memo",lnetwork%name)
 call idba_set (this%handle_staz,"mobile",0)
 !print*,"network,mobile",network%name,0
 
@@ -833,7 +841,7 @@ end if
 
 nanavar=0
 
-if (present (anavar)) then
+if (size (lanavar) > 0 ) then
                                 ! creo la stringa con l'elenco
   varlist = ''
   DO i = 1, SIZE(anavar)
@@ -888,7 +896,7 @@ do i=1,N_ana
                                 ! IF (ind<1) cycle ! non c'e'
   
 
-  if (present(anavar).and. present(anavarkind))then
+  if ( size(anavar) > 0 .and. present(anavarkind))then
     ii= index_c(anavar, btable)
     if (ii > 0)then
                                 !print*, "indici",ii, btable,(varkind(ii))
@@ -1001,7 +1009,7 @@ if (ndatiattrc > 0 ) ndativarattrc=ndativarr+ndativari+ndativarb+ndativard+ndati
 
 ! ---------------->   anagrafica
 
-if (.not. present(anavar))then
+if ( size(anavar) == 0 )then
   nanavar = count_distinct(bufferana%btable, back=.TRUE.,mask=(bufferana%btable /= DBA_MVC))
 end if
 
@@ -1249,7 +1257,7 @@ end if
 
 !-----------------------> anagrafica
 
-if (present(anavar).and. present(anavarkind))then
+if ( size(anavar) > 0 .and. present(anavarkind))then
 
   ir=0
   ii=0
@@ -1279,7 +1287,7 @@ if (present(anavar).and. present(anavarkind))then
       call init (vol7dtmp%anavar%c(ic), btable=anavar(i))  
     end if
   end do
-else if (present(anavar))then
+else if ( size(anavar) > 0 )then
 
   do i=1, nanavar
     call init (vol7dtmp%anavar%c(i), btable=anavar(i))
@@ -1296,7 +1304,7 @@ end if
 
 
 
-if ( present(anaattrkind) .and. present(anaattr) .and. present(anavar))then
+if ( present(anaattrkind) .and. present(anaattr) .and. size(anavar) > 0 )then
 
     ir=0
     ii=0
@@ -1333,7 +1341,7 @@ if ( present(anaattrkind) .and. present(anaattr) .and. present(anavar))then
 
   end do
 
-else  if (present(anaattr) .and. present (anavar))then
+else  if (present(anaattr) .and. size(anavar) > 0 )then
 
   do i=1,size(anavar)
     if ( nanavarattrc > 0 )call init(vol7dtmp%anavarattr%c(i), btable=anavar(i))
@@ -1733,6 +1741,8 @@ call vol7d_dballe_set_var_du(this%vol7d)
 !print *,"I-B",this%vol7d%dativar%i(:)%b 
 !print *,"I-D",this%vol7d%dativar%i(:)%d 
 !print *,"I-C",this%vol7d%dativar%i(:)%c 
+
+deallocate(lvar,lanavar)
 
 
 END SUBROUTINE vol7d_dballe_importvvns_dba
@@ -2850,16 +2860,20 @@ do while ( N > 0 )
 
     if (present(coordmin)) then
 !      CALL geo_coord_to_geo(coordmin)
-      CALL getval(coordmin, lat=latmin,lon=lonmin)
-      if (lonmin > lon) cycle
-      if (latmin > lat) cycle
+      if (c_e(coordmin)) then
+        CALL getval(coordmin, lat=latmin,lon=lonmin)
+        if (lonmin > lon) cycle
+        if (latmin > lat) cycle
+      end if
     end if
 
     if (present(coordmax)) then
 !      CALL geo_coord_to_geo(coordmax)
-      CALL getval(coordmax, lat=latmax,lon=lonmax)
-      if (lonmax < lon) cycle
-      if (latmax < lat) cycle
+      if (c_e(coordmax)) then
+        CALL getval(coordmax, lat=latmax,lon=lonmax)
+        if (lonmax < lon) cycle
+        if (latmax < lat) cycle
+      end if
     end if
 
     call init(timee, year=year, month=month, day=day, hour=hour, minute=minute)
