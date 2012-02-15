@@ -418,7 +418,7 @@ IF (obso) THEN
    'arguments --comp-average --comp-cumulate --csv-skip-miss --comp-discard')
   CALL l4f_category_log(category, L4F_ERROR, &
    'are obsolete, please read help')
-  CALL EXIT(1)
+    CALL raise_fatal_error()
 ENDIF
 
 ! generate network
@@ -603,7 +603,7 @@ IF (c_e(coord_file)) THEN
     IF (.NOT.ASSOCIATED(poly)) THEN
       CALL l4f_category_log(category, L4F_ERROR, &
        'error importing shapefile '//TRIM(coord_file))
-      CALL EXIT(1)
+      CALL raise_fatal_error()
     ENDIF
 
 #endif
@@ -611,7 +611,7 @@ IF (c_e(coord_file)) THEN
     CALL l4f_category_log(category, L4F_ERROR, &
      'error in command-line parameters, format '// &
      TRIM(coord_format)//' in --coord-format not valid or not supported.')
-    CALL EXIT(1)
+      CALL raise_fatal_error()
   ENDIF
 
 ENDIF
@@ -695,14 +695,14 @@ DO ninput = optind, iargc()-1
     if (c_e(coordmin) .or. c_e(coordmax)) then
       CALL l4f_category_log(category, L4F_ERROR, &
        'ielat, ielon, felat, felon not usable with NATIVE source')
-      CALL EXIT(1)
+      CALL raise_fatal_error()
     end if
 
    if (c_e(level) .or. c_e(timerange) .or. size(avl) > 0 .or. size(alqc) > 0 .or. c_e(set_network_obj) &
      .or. c_e(s_d) .or. c_e(e_d)) then
       CALL l4f_category_log(category, L4F_ERROR, &
        'selection options like date, level timerange or others not usable with NATIVE source')
-      CALL EXIT(1)
+      CALL raise_fatal_error()
     end if
 
     IF (input_file == '-') THEN ! stdin_unit does not work with unformatted
@@ -748,7 +748,7 @@ DO ninput = optind, iargc()-1
     if (c_e(coordmin) .or. c_e(coordmax)) then
       CALL l4f_category_log(category, L4F_ERROR, &
        'ielat, ielon, felat, felon not usable with SIM Oracle source')
-      CALL EXIT(1)
+      CALL raise_fatal_error()
     end if
 
     IF (.NOT.ALLOCATED(nl) .OR. (.NOT.ALLOCATED(vl) .AND. .NOT.ALLOCATED(avl))) THEN
@@ -756,7 +756,7 @@ DO ninput = optind, iargc()-1
        'error in command-line parameters, it is necessary to provide --network-list')
       CALL l4f_category_log(category, L4F_ERROR, &
        'and either --variable-list or --anavariable-list with SIM Oracle source')
-      CALL EXIT(1)
+      CALL raise_fatal_error()
     ENDIF
     CALL parse_dba_access_info(input_file, dsn, user, password)
     CALL init(v7d_osim, dsn=dsn, user=user, password=password, time_definition=0)
@@ -778,7 +778,7 @@ DO ninput = optind, iargc()-1
     CALL l4f_category_log(category, L4F_ERROR, &
      'error in command-line parameters, format '// &
      TRIM(input_format)//' in --input-format not valid or not supported.')
-    CALL EXIT(1)
+    CALL raise_fatal_error()
   ENDIF
 
   CALL vol7d_merge(v7d, v7dtmp) ! smart merge in v7d
@@ -1110,7 +1110,7 @@ ELSE IF (output_format /= '') THEN
   CALL l4f_category_log(category, L4F_ERROR, &
    'error in command-line parameters, format '// &
    TRIM(output_format)//' in --output-format not valid or not supported.')
-  CALL EXIT(1)
+  CALL raise_fatal_error()
 ENDIF
 
 ! cleanly close the databases
@@ -1157,7 +1157,7 @@ ELSE
     CALL l4f_category_log(category, L4F_ERROR, &
      'error in command-line parameters, database access info '// &
      TRIM(string)//' not valid.')
-    CALL EXIT(1)
+    CALL raise_fatal_error()
   ENDIF
 ENDIF
 
@@ -1202,7 +1202,7 @@ DO i = 1, MIN(nc, SIZE(icol))
   CASE default
     CALL l4f_category_log(category,L4F_ERROR,'error in command-line parameters, column '// &
      ccol(w_s(i):w_e(i))//' in '//TRIM(par_name)//' not valid.')
-    CALL EXIT(1)
+    CALL raise_fatal_error()
   END SELECT
 ENDDO
 nc = j
