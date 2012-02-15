@@ -144,6 +144,11 @@ INTERFACE inside
   MODULE PROCEDURE geo_coord_inside, geo_coord_inside_rectang
 END INTERFACE
 
+!> Missing check
+INTERFACE c_e
+  MODULE PROCEDURE c_e_geo_coord
+END INTERFACE
+
 CONTAINS
 
 
@@ -727,5 +732,15 @@ DO i = starti, poly%vsize
 ENDDO
 
 END FUNCTION geo_coord_inside
+
+
+ELEMENTAL FUNCTION c_e_geo_coord(this) result (res)
+TYPE(geo_coord),INTENT(in) :: this
+LOGICAL :: res
+
+res = .not. this == geo_coord_miss 
+
+end FUNCTION c_e_geo_coord
+
 
 END MODULE geo_coord_class
