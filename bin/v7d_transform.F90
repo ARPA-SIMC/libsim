@@ -74,6 +74,8 @@ INTEGER,POINTER :: w_s(:), w_e(:)
 TYPE(vol7d) :: v7d, v7d_coord, v7dtmp, v7d_comp1, v7d_comp2, v7d_comp3
 TYPE(geo_coordvect),POINTER :: poly(:) => NULL()
 DOUBLE PRECISION ::  ilon, ilat, flon, flat
+DOUBLE PRECISION ::  ielon, ielat, felon, felat
+TYPE(geo_coord) :: coordmin,coordmax 
 TYPE(transform_def) :: trans
 #ifdef HAVE_DBALLE
 TYPE(vol7d_dballe) :: v7d_dba, v7d_dba_out
@@ -84,7 +86,7 @@ TYPE(vol7d_oraclesim) :: v7d_osim
 TYPE(vol7d_network) :: set_network_obj
 CHARACTER(len=network_name_len) :: set_network
 CHARACTER(len=32) :: dsn, user, password
-LOGICAL :: version, ldisplay, disable_qc
+LOGICAL :: version, ldisplay, disable_qc, comp_qc_ndi, comp_qc_perc
 CHARACTER(len=512):: a_name
 INTEGER :: category
 
@@ -292,13 +294,29 @@ CALL optionparser_add(opt, ' ', 'post-trans-type', post_trans_type, '', help= &
 #endif
 
 CALL optionparser_add(opt, ' ', 'ilon', ilon, 0.0D0, help= &
- 'longitude of the southwestern bounding box corner')
+ 'longitude of the southwestern bounding box corner for pre-transformation')
 CALL optionparser_add(opt, ' ', 'ilat', ilat, 30.D0, help= &
- 'latitude of the southwestern bounding box corner')
+ 'latitude of the southwestern bounding box corner for pre-transformation')
 CALL optionparser_add(opt, ' ', 'flon', flon, 30.D0, help= &
- 'longitude of the northeastern bounding box corner')
+ 'longitude of the northeastern bounding box corner for pre-transformation')
 CALL optionparser_add(opt, ' ', 'flat', flat, 60.D0, help= &
- 'latitude of the northeastern bounding box corner')
+ 'latitude of the northeastern bounding box corner for pre-transformation')
+
+
+CALL optionparser_add(opt, ' ', 'ielon', ielon, dmiss, help= &
+ 'longitude of the southwestern bounding box corner for import')
+CALL optionparser_add(opt, ' ', 'ielat', ielat, dmiss, help= &
+ 'latitude of the southwestern bounding box corner for import')
+CALL optionparser_add(opt, ' ', 'felon', felon, dmiss, help= &
+ 'longitude of the northeastern bounding box corner for import')
+CALL optionparser_add(opt, ' ', 'felat', felat, dmiss, help= &
+ 'latitude of the northeastern bounding box corner for import')
+
+
+CALL optionparser_add(opt, ' ', 'comp-qc-ndi', comp_qc_ndi, help= &
+ 'enable compute of index (NDI) for use by Quality Control.')
+CALL optionparser_add(opt, ' ', 'comp-qc-perc', comp_qc_perc, help= &
+ 'enable compute of index (percentile) for use by Quality Control.')
 
 ! options for defining output
 output_template = ''
@@ -664,12 +682,29 @@ ELSE
   set_network_obj = vol7d_network_miss
 ENDIF
 
+call init(coordmin, lon=ielon, lat=ielat)
+call init(coordmax, lon=felon, lat=felat)
+
 ! import data looping on input files
 CALL init(v7d)
 DO ninput = optind, iargc()-1
   CALL getarg(ninput, input_file)
 
   IF (input_format == 'native') THEN
+
+    if (c_e(coordmin) .or. c_e(coordmax)) then
+      CALL l4f_category_log(category, L4F_ERROR, &
+       'ielat, ielon, felat, felon not usable with NATIVE source')
+      CALL EXIT(1)
+    end if
+
+   if (c_e(level) .or. c_e(timerange) .or. size(avl) > 0 .or. size(alqc) > 0 .or. c_e(set_network_obj) &
+     .or. c_e(s_d) .or. c_e(e_d)) then
+      CALL l4f_category_log(category, L4F_ERROR, &
+       'selection options like date, level timerange or others not usable with NATIVE source')
+      CALL EXIT(1)
+    end if
+
     IF (input_file == '-') THEN ! stdin_unit does not work with unformatted
       CALL l4f_category_log(category, L4F_INFO, 'trying /dev/stdin as stdin unit.')
       input_file='/dev/stdin'
@@ -698,6 +733,7 @@ DO ninput = optind, iargc()-1
     CALL import(v7d_dba, vl, nl, &
      level=level, timerange=timerange, &
      anavar=avl, attr=alqc, set_network=set_network_obj, &
+     coordmin=coordmin, coordmax=coordmax, &
      timei=s_d, timef=e_d)
     
     v7dtmp = v7d_dba%vol7d
@@ -708,6 +744,13 @@ DO ninput = optind, iargc()-1
 
 #ifdef HAVE_ORSIM
   ELSE IF (input_format == 'orsim') THEN
+
+    if (c_e(coordmin) .or. c_e(coordmax)) then
+      CALL l4f_category_log(category, L4F_ERROR, &
+       'ielat, ielon, felat, felon not usable with SIM Oracle source')
+      CALL EXIT(1)
+    end if
+
     IF (.NOT.ALLOCATED(nl) .OR. (.NOT.ALLOCATED(vl) .AND. .NOT.ALLOCATED(avl))) THEN
       CALL l4f_category_log(category, L4F_ERROR, &
        'error in command-line parameters, it is necessary to provide --network-list')
@@ -720,9 +763,12 @@ DO ninput = optind, iargc()-1
     IF (SIZE(vl) > 0) THEN ! data requested
       CALL import(v7d_osim, vl, nl, timei=s_d, timef=e_d, &
        level=level, timerange=timerange, &
+!       coordmin=coordmin, coordmax=coordmax, &
        anavar=avl, attr=alqc, set_network=set_network_obj)
     ELSE ! ana requested
-      CALL import(v7d_osim, nl, anavar=avl, set_network=set_network_obj)
+      CALL import(v7d_osim, nl, anavar=avl, set_network=set_network_obj &
+!       , coordmin=coordmin, coordmax=coordmax &
+       )
     ENDIF
     v7dtmp = v7d_osim%vol7d
     CALL init(v7d_osim%vol7d) ! nullify without deallocating
@@ -772,6 +818,7 @@ IF ((c_e(istat_proc) .AND. c_e(ostat_proc)) .OR. pre_trans_type /= '' &
 #ifdef HAVE_LIBGRIBAPI
  .OR. (post_trans_type /= '' .AND. output_template /= '') &
 #endif
+ .or. comp_fill_data .or. comp_qc_ndi .or. comp_qc_perc &
  ) THEN
 
   lconvr=.false.
@@ -929,6 +976,21 @@ if (output_variable_list /= " ") then
   end if
 end if
 #endif
+
+
+if (comp_qc_ndi) then
+  call vol7d_compute_NormalizedDensityIndex(v7d,v7dtmp, perc_vals=(/(10.*i,i=0,10)/))
+  call delete(v7d)
+  v7d=v7dtmp
+  CALL init(v7dtmp) ! detach it
+end if
+
+if (comp_qc_perc) then
+  call vol7d_compute_percentile(v7d,v7dtmp, perc_vals=(/25.,50.,75./))
+  call delete(v7d)
+  v7d=v7dtmp
+  CALL init(v7dtmp) ! detach it
+end if
 
 
 ! output
