@@ -50,6 +50,7 @@ character(len=20) :: tcolor(4)=(/'brown','red  ','black','tan  '/)
 character(len=20) :: tdcolor(4)=(/'orange      ','forest Green','cyan        ','yellow      '/)
 character(len=20) :: ucolor(4)=(/'sky blue    ','blue        ','blue magenta','magenta     '/)
 character(len=20) :: wcolor(4)=(/'black     ','violet    ','light gray','dark gray '/)
+character(len=10) :: addonvar
 
 !questa chiamata prende dal launcher il nome univoco
 call l4f_launcher(a_name,a_name_force="readtemp")
@@ -104,6 +105,9 @@ CALL optionparser_add(opt, 'd', 'distinct', distinct, help= &
 CALL optionparser_add(opt, ' ', 'display', ldisplay, help= &
  'briefly display the data volume imported, warning: this option is incompatible &
  &with output on stdout.')
+addonvar=cmiss
+CALL optionparser_add(opt, ' ', 'addon-var', addonvar, help= &
+ 'addition variable to plot with ortogonal vertical axes.')
 
 ! help options
 CALL optionparser_add_help(opt, 'h', 'help', help='show an help message and exit')
@@ -260,7 +264,7 @@ do ana=1, size(v7dtmp%ana)
 
         call plot_vertical_plofiles(plot,v7d_profile,1,1,1,1,&
          tcolor=tcolor(ic),tdcolor=tdcolor(ic),&
-         ucolor=ucolor(ic),wcolor=wcolor(ic))
+         ucolor=ucolor(ic),wcolor=wcolor(ic),addonvar=addonvar)
 
         call plot_vp_legend (plot,v7d_profile,1,1,1,1,&
          tcolor=tcolor(ic),tdcolor=tdcolor(ic),ucolor=ucolor(ic),wcolor=wcolor(ic),position=ic) ! legenda

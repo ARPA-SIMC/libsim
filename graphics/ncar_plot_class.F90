@@ -258,7 +258,7 @@ real function x2ncar(x,mn,mx)
 double precision, intent(in):: x
 type(xy),intent(in) :: mn, mx
 
-x2ncar=(x-mn%x)/(mx%x-mn%x)
+x2ncar=real((x-mn%x)/(mx%x-mn%x))
 
 end function x2ncar
 
@@ -266,7 +266,7 @@ real function y2ncar(y,mn,mx)
 double precision, intent(in):: y
 type(xy),intent(in) :: mn, mx
 
-y2ncar=(y-mn%y)/(mx%y-mn%y)
+y2ncar=real((y-mn%y)/(mx%y-mn%y))
 
 end function y2ncar
 
@@ -902,7 +902,7 @@ end subroutine ncar_plot_herlofson
 !! dell'atmosfera su di un nomogramma di Herlofson ( detto anche skew-T) 
 !! 
 subroutine ncar_plot_vertical_profiles (this,v7d,ana,time,timerange,network,&
- tcolor,tdcolor,ucolor,wcolor)
+ tcolor,tdcolor,ucolor,wcolor,acolor,addonvar)
 
 
 type(ncar_plot),intent(in)  :: this
@@ -911,7 +911,8 @@ integer,intent(in)          :: ana
 integer,intent(in)          :: time
 integer,intent(in)          :: timerange
 integer,intent(in)          :: network
-character (len=*),intent(in),optional :: tcolor,tdcolor,ucolor,wcolor
+character (len=*),intent(in),optional :: tcolor,tdcolor,ucolor,wcolor,acolor
+character (len=*),intent(in),optional :: addonvar
 
 TYPE(vol7d_var) ::  var
 
@@ -919,11 +920,12 @@ integer                     :: l,levP,levT,ind
 
 real,dimension(300)         :: xx,yy
 real,allocatable            :: r_tt(:),r_pr(:),r_tr(:),r_ur(:),r_dd(:),r_ff(:),&
-                               u(:),v(:),r_uq(:)
+                               u(:),v(:),r_uq(:), a_var(:)
 real                        :: ratio,xww,yww
 real                        :: psat
 character(len=1)            :: type
 character(len=40)           :: color
+real                        :: avmin,avmax
 
 
 ratio=real(this%uy-this%ly)/real(this%ux-this%lx)
@@ -946,6 +948,49 @@ ratio=real(this%uy-this%ly)/real(this%ux-this%lx)
 levP=count(v7d%level%level1 == 100 .and. v7d%level%level2 == imiss)
 allocate (r_pr(levP))
 r_pr=pack(v7d%level%l1,v7d%level%level1 == 100 .and. v7d%level%level2 == imiss)/100.
+
+
+
+!addon var vector
+
+call init(var, btable=addonvar)    ! optional variable to add
+allocate(a_var(levP))
+a_var=rmiss
+
+type=cmiss
+!type="i"
+ind = index(v7d%dativar, var, type=type)
+
+!if( ind /= 0 ) then
+  select case (type)
+
+  case("d")
+    a_var=pack(realdat(v7d%voldatid(ana,time,:,timerange,ind,network),v7d%dativar%d(ind)),&
+     (v7d%level%level1 == 100.and.v7d%level%level2 == imiss))
+
+  case("r")
+    a_var=pack(realdat(v7d%voldatir(ana,time,:,timerange,ind,network),v7d%dativar%r(ind)),&
+     (v7d%level%level1 == 100.and.v7d%level%level2 == imiss))
+
+  case("i")
+    a_var=pack(realdat(v7d%voldatii(ana,time,:,timerange,ind,network),v7d%dativar%i(ind)),&
+     (v7d%level%level1 == 100.and.v7d%level%level2 == imiss))
+    
+  case("b")
+    a_var=pack(realdat(v7d%voldatib(ana,time,:,timerange,ind,network),v7d%dativar%b(ind)),&
+     (v7d%level%level1 == 100.and.v7d%level%level2 == imiss))
+
+  case("c")
+    a_var=pack(realdat(v7d%voldatic(ana,time,:,timerange,ind,network),v7d%dativar%c(ind)),&
+     (v7d%level%level1 == 100.and.v7d%level%level2 == imiss))
+
+  case default
+    
+    a_var=rmiss
+
+  end select
+!end if
+
 
 !vettore temperature
 
@@ -1322,6 +1367,34 @@ end if
 !!$    end if
 !!$  end if
 !!$enddo
+
+
+
+! draw addon var
+if (present (acolor))then
+  call set_color(trim(optio_c(acolor,40)))
+else
+  call set_color("orange")
+end if
+call GSLWSC(3.)
+call gsln (1)
+
+levT=count(c_e(a_var).and. r_pr >= ptop)
+if(levT > 1) then
+  
+  avmin= minval(a_var)
+  avmax= maxval(a_var)
+  avmin=avmin - (avmax-avmin)/4.
+  avmax=avmax + (avmax-avmin)/10.
+
+
+  call gpl(levT,&
+
+   pack(x_acoord(avmin,avmax,a_var,dim_x,offset_x),&
+   (c_e(a_var).and. r_pr >= ptop)),&
+   pack(y_coord(r_pr,dim_y,offset_y),(c_e(a_var).and. r_pr >= ptop)))
+  
+end if
 
 
 ! disegno la temperatura
@@ -1771,6 +1844,32 @@ end if
 return 
 
 end function x_coord
+
+
+
+
+!
+! x coordinate for addon var that il allways ortogonal
+!
+elemental real function x_acoord (tmin,tmax,t,dim_x,offset_x)
+
+real,intent(in) :: tmin,tmax,t,dim_x,offset_x
+
+real :: xx
+
+if(c_e(t))then
+    
+  xx=(t-tmin)/(tmax-tmin)*dim_x
+  x_acoord=xx+offset_x
+  
+else
+
+  x_acoord=rmiss
+
+end if
+return 
+
+end function x_acoord
 
 
 
