@@ -1513,12 +1513,13 @@ TYPE(griddim_def),INTENT(in),OPTIONAL :: griddim !< griddim specifying the outpu
 ! TODO ripristinare intent(in) dopo le opportune modifiche in grid_class.F90
 TYPE(volgrid6d),INTENT(inout) :: volgrid6d_in !< object to be transformed, it is not modified, despite the INTENT(inout)
 TYPE(volgrid6d),INTENT(out) :: volgrid6d_out !< transformed object, it does not need initialisation
-TYPE(vol7d_level),INTENT(in),OPTIONAL :: lev_out(:) !< vol7d_level object defining target vertical grid, for vertical interpolations
+TYPE(vol7d_level),INTENT(in),OPTIONAL,TARGET :: lev_out(:) !< vol7d_level object defining target vertical grid, for vertical interpolations
 LOGICAL,INTENT(in),OPTIONAL :: clone !< if provided and \a .TRUE. , clone the \a gaid's from \a volgrid6d_in to \a volgrid6d_out 
 LOGICAL,INTENT(in),OPTIONAL :: decode !< if provided and \a .FALSE. the data volume is not allocated, but work is performed on grid_id's (NOT USED!)
 CHARACTER(len=*),INTENT(in),OPTIONAL :: categoryappend !< append this suffix to log4fortran namespace category
 
 TYPE(grid_transform) :: grid_trans
+TYPE(vol7d_level),POINTER :: llev_out(:)
 INTEGER :: ntime, ntimerange, nlevel, nvar, cf_out
 TYPE(geo_proj) :: proj_in, proj_out
 CHARACTER(len=80) :: trans_type
@@ -1564,9 +1565,13 @@ IF (trans_type == 'vertint') THEN
   IF (PRESENT(lev_out)) THEN
     CALL init(volgrid6d_out, griddim=volgrid6d_in%griddim, &
      time_definition=volgrid6d_in%time_definition, categoryappend=categoryappend)
-    nlevel=SIZE(lev_out)
     CALL init(grid_trans, this, lev_in=volgrid6d_in%level, lev_out=lev_out, &
-     categoryappend=categoryappend)
+     lev_out_auto=llev_out, categoryappend=categoryappend)
+!    IF (.NOT.ASSOCIATED(llev_out)) THEN
+!      ALLOCATE(llev_out(SIZE(lev_out)))
+!      llev_out (:) = lev_out(:)
+!    ENDIF
+    nlevel = SIZE(llev_out)
   ELSE
     CALL l4f_category_log(volgrid6d_in%category, L4F_ERROR, &
      'volgrid6d_transform: vertint requested but lev_out not provided')
@@ -1599,8 +1604,9 @@ IF (c_e(grid_trans)) THEN ! transformation is valid
     CALL l4f_category_log(volgrid6d_in%category, L4F_DEBUG, &
      "volgrid6d_transform: vertint to "//t2c(nlevel)//" levels")
 #endif
-    CALL compute(grid_trans, volgrid6d_in, volgrid6d_out, lev_out=lev_out, &
+    CALL compute(grid_trans, volgrid6d_in, volgrid6d_out, lev_out=llev_out, &
      clone=clone)
+    DEALLOCATE(llev_out)
   ELSE
     CALL compute(grid_trans, volgrid6d_in, volgrid6d_out, clone=clone)
   ENDIF
@@ -2191,6 +2197,7 @@ CHARACTER(len=*),INTENT(in),OPTIONAL :: categoryappend !< append this suffix to 
 
 INTEGER :: nvar, iana, inetwork
 TYPE(grid_transform) :: grid_trans
+TYPE(vol7d_level),POINTER :: llev_out(:)
 TYPE(vol7d) :: v7d_locana
 CHARACTER(len=80) :: trans_type
 
@@ -2207,20 +2214,20 @@ IF (trans_type == 'vertint') THEN
 
   IF (PRESENT(lev_out)) THEN
     CALL init(grid_trans, this, lev_in=vol7d_in%level, lev_out=lev_out, &
-     categoryappend=categoryappend)
+     lev_out_auto=llev_out, categoryappend=categoryappend)
 ! if this init is successful, I am sure that v7d_locana%ana is associated
 
     IF (c_e(grid_trans)) THEN! .AND. nvar > 0) THEN
 
       CALL vol7d_alloc(vol7d_out, nana=SIZE(vol7d_in%ana), &
        ntime=SIZE(vol7d_in%time), ntimerange=SIZE(vol7d_in%timerange), &
-       nlevel=SIZE(lev_out), nnetwork=SIZE(vol7d_in%network), ndativarr=nvar)
+       nlevel=SIZE(llev_out), nnetwork=SIZE(vol7d_in%network), ndativarr=nvar)
       vol7d_out%ana(:) = vol7d_in%ana(:)
 
       CALL vol7d_alloc_vol(vol7d_out)
 
-      CALL compute(grid_trans, vol7d_in, vol7d_out, lev_out)
-
+      CALL compute(grid_trans, vol7d_in, vol7d_out, llev_out)
+      DEALLOCATE(llev_out)
     ELSE
       CALL l4f_log(L4F_ERROR, 'v7d_v7d_transform: transformation not valid')
       CALL raise_error()

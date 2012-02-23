@@ -174,7 +174,7 @@ CALL optionparser_add(opt, ' ', 'coord-format', coord_format, &
 #ifdef HAVE_DBALLE
  //', ''BUFR'' for BUFR file, ''CREX'' for CREX file'&
 #endif
-#ifdef HAVE_LIBSHP_FORTRAN
+#ifdef HAVE_SHAPELIB
  //', ''shp'' for shapefile (interpolation on polygons)'&
 #endif
  )
@@ -266,7 +266,7 @@ CALL optionparser_add(opt, ' ', 'pre-trans-type', pre_trans_type, '', help= &
  'transformation type (sparse points to sparse points) to be applied before &
  &other computations, in the form ''trans-type:subtype''; &
  &''inter'' for interpolation, with subtypes ''near'', ''linear'', ''bilin'''&
-#ifdef HAVE_LIBSHP_FORTRAN
+#ifdef HAVE_SHAPELIB
  //'; ''polyinter'' for statistical processing within given polygons, &
  &with subtype ''average'', ''stddev'', ''max'', ''min'''&
 #endif
@@ -597,7 +597,7 @@ IF (c_e(coord_file)) THEN
     CALL delete(v7d_dba)
 
 #endif
-#ifdef HAVE_LIBSHP_FORTRAN
+#ifdef HAVE_SHAPELIB
   ELSE IF (coord_format == 'shp') THEN
     CALL import(poly, shpfile=coord_file)
     IF (.NOT.ASSOCIATED(poly)) THEN

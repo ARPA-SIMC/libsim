@@ -654,16 +654,21 @@ END SUBROUTINE transform_get_val
 !! transformations. The generated \a grid_transform object is specific
 !! to the input and output grids involved.
 SUBROUTINE grid_transform_levtype_levtype_init(this, trans, lev_in, lev_out, &
- categoryappend)
+ lev_out_auto, coord_3d_in, copy, categoryappend)
 TYPE(grid_transform),INTENT(out) :: this !< grid_transformation object
 TYPE(transform_def),INTENT(in) :: trans !< transformation object
 TYPE(vol7d_level),INTENT(in) :: lev_in(:) !< vol7d_level from input object
 TYPE(vol7d_level),INTENT(in) :: lev_out(:) !< vol7d_level object defining target vertical grid
+TYPE(vol7d_level),POINTER :: lev_out_auto(:) !< vol7d_level object defining autocomputed target vertical grid
+REAL,INTENT(in),OPTIONAL,TARGET :: coord_3d_in(:,:,:)
+LOGICAL,OPTIONAL :: copy
 CHARACTER(len=*),INTENT(in),OPTIONAL :: categoryappend !< append this suffix to log4fortran namespace category
 
-DOUBLE PRECISION :: coord_in(SIZE(lev_in)), coord_out(SIZE(lev_out))
-LOGICAL :: mask_in(SIZE(lev_in)), mask_out(SIZE(lev_out))
-INTEGER :: i, j, icache, istart, iend, ostart, oend
+DOUBLE PRECISION :: coord_in(SIZE(lev_in))
+DOUBLE PRECISION,ALLOCATABLE :: coord_out(:)
+LOGICAL :: mask_in(SIZE(lev_in))
+LOGICAL,ALLOCATABLE :: mask_out(:)
+INTEGER :: i, j, icache, inused, istart, iend, ostart, oend
 
 
 CALL grid_transform_init_common(this, trans, categoryappend)
@@ -671,37 +676,117 @@ CALL grid_transform_init_common(this, trans, categoryappend)
 CALL l4f_category_log(this%category, L4F_DEBUG, "grid_transform vertint")
 #endif
 
+NULLIFY(lev_out_auto)
+
 IF (this%trans%trans_type == 'vertint') THEN
 
-!  IF (this%trans%sub_type == 'linear' .OR. this%trans%sub_type == 'linearsparse') THEN
+!  IF (PRESENT(lev_in)) THEN
+!    IF (lev_in
+!    verttype = 0
+!  ENDIF
+  
+  IF (c_e(trans%vertint%input_levtype%level2) .AND. &
+   trans%vertint%input_levtype%level1 /= trans%vertint%input_levtype%level2) THEN
+    CALL l4f_category_log(this%category, L4F_ERROR, &
+     'grid_transform_levtype_levtype_init: input upper and lower surface &
+     &must be of the same type')
+    this%valid = .FALSE.
+    RETURN
+  ENDIF
+  IF (c_e(trans%vertint%output_levtype%level2) .AND. &
+   trans%vertint%output_levtype%level1 /= trans%vertint%output_levtype%level2) THEN
+    CALL l4f_category_log(this%category, L4F_ERROR, &
+     'grid_transform_levtype_levtype_init: output upper and lower surface &
+     &must be of the same type')
+    this%valid = .FALSE.
+    RETURN
+  ENDIF
 
-  IF (trans%vertint%input_levtype%level1 /= trans%vertint%output_levtype%level1 &
-   .OR. &
-   trans%vertint%input_levtype%level2 /= trans%vertint%output_levtype%level2) &
-   THEN
+  IF (trans%vertint%input_levtype%level1 /= trans%vertint%output_levtype%level1) THEN
     CALL l4f_category_log(this%category, L4F_ERROR, &
      'grid_transform_levtype_levtype_init: input and output level types &
-     &must be the same (for now), ('// &
-     TRIM(to_char(trans%vertint%input_levtype%level1))//','// &
-     TRIM(to_char(trans%vertint%input_levtype%level2))//') /= ('// &
-     TRIM(to_char(trans%vertint%output_levtype%level1))//','// &
-     TRIM(to_char(trans%vertint%output_levtype%level2))//')')
-    CALL raise_fatal_error()
+     &must be the same (for now), '// &
+     TRIM(to_char(trans%vertint%input_levtype%level1))//'/='// &
+     TRIM(to_char(trans%vertint%output_levtype%level1)))
+    this%valid = .FALSE.
+    RETURN
   ENDIF
 ! TODO: here we should check that valid levels are contiguous and ordered
 
   mask_in(:) = (lev_in(:)%level1 == trans%vertint%input_levtype%level1) .AND. &
    (lev_in(:)%level2 == trans%vertint%input_levtype%level2)
-  mask_out(:) = (lev_out(:)%level1 == trans%vertint%output_levtype%level1) .AND. &
-   (lev_out(:)%level2 == trans%vertint%output_levtype%level2)
-
   CALL make_vert_coord(lev_in, mask_in, coord_in)
-  CALL make_vert_coord(lev_out, mask_out, coord_out)
-
-  this%innz = SIZE(mask_in)
-  this%outnz = SIZE(mask_out)
+  this%innz = SIZE(lev_in)
   istart = firsttrue(mask_in)
   iend = lasttrue(mask_in)
+  inused = iend - istart + 1
+  IF (inused /= COUNT(mask_in)) THEN
+    CALL l4f_category_log(this%category, L4F_ERROR, &
+     'grid_transform_levtype_levtype_init: input levels badly sorted '//&
+     t2c(inused)//'/'//t2c(COUNT(mask_in)))
+    this%valid = .FALSE.
+    RETURN
+  ENDIF
+
+  IF (SIZE(lev_out) > 0) THEN
+    ALLOCATE(mask_out(SIZE(lev_out)), coord_out(SIZE(lev_out)))
+    mask_out(:) = (lev_out(:)%level1 == trans%vertint%output_levtype%level1) .AND. &
+     (lev_out(:)%level2 == trans%vertint%output_levtype%level2)
+    CALL make_vert_coord(lev_out, mask_out, coord_out)
+    ALLOCATE(lev_out_auto(SIZE(lev_out)))
+    lev_out_auto(:) = lev_out(:)
+  ELSE
+    IF (c_e(trans%vertint%input_levtype%level2) .AND. &
+     .NOT.c_e(trans%vertint%output_levtype%level2)) THEN ! full -> half
+      IF (trans%vertint%output_levtype%level1 == 105) THEN
+        ALLOCATE(lev_out_auto(inused-1))
+        CALL l4f_category_log(this%category,L4F_INFO, &
+         'grid_transform_levtype_levtype_init: autogenerating '//t2c(inused-1) &
+         //'/'//t2c(iend-istart)//' output levels (f->h)')
+        DO i = istart, iend - 1
+          CALL init(lev_out_auto(i-istart+1), trans%vertint%input_levtype%level1, &
+           lev_in(i)%l2)
+        ENDDO
+      ELSE
+        CALL l4f_category_log(this%category, L4F_ERROR, &
+         'grid_transform_levtype_levtype_init: automatic generation of output levels &
+         &available only for hybrid levels')
+        this%valid = .FALSE.
+        RETURN
+      ENDIF
+    ELSE IF (.NOT.c_e(trans%vertint%input_levtype%level2) .AND. &
+     c_e(trans%vertint%output_levtype%level2)) THEN ! half -> full
+      ALLOCATE(lev_out_auto(inused-1))
+      IF (trans%vertint%output_levtype%level1 == 105) THEN
+        CALL l4f_category_log(this%category,L4F_INFO, &
+         'grid_transform_levtype_levtype_init: autogenerating '//t2c(inused-1) &
+         //'/'//t2c(iend-istart)//' output levels (h->f)')
+        DO i = istart, iend - 1
+          CALL init(lev_out_auto(i-istart+1), trans%vertint%input_levtype%level1, &
+           lev_in(i)%l1, trans%vertint%input_levtype%level1, &
+           lev_in(i)%l1+1)
+        ENDDO
+      ELSE
+        CALL l4f_category_log(this%category, L4F_ERROR, &
+         'grid_transform_levtype_levtype_init: automatic generation of output levels &
+         &available only for hybrid levels')
+        this%valid = .FALSE.
+        RETURN
+      ENDIF
+    ELSE
+      CALL l4f_category_log(this%category, L4F_ERROR, &
+       'grid_transform_levtype_levtype_init: strange situation'// &
+       to_char(c_e(trans%vertint%input_levtype%level2))//' '// &
+       to_char(c_e(trans%vertint%output_levtype%level2)))
+      this%valid = .FALSE.
+      RETURN
+    ENDIF
+    ALLOCATE(coord_out(inused-1), mask_out(inused-1))
+    mask_out(:) = .TRUE.
+    CALL make_vert_coord(lev_out_auto, mask_out, coord_out)
+  ENDIF
+
+  this%outnz = SIZE(mask_out)
   ostart = firsttrue(mask_out)
   oend = lasttrue(mask_out)
 
@@ -770,11 +855,14 @@ IF (this%trans%trans_type == 'vertint') THEN
       ENDIF
     ENDDO outlev
 
+    DEALLOCATE(coord_out, mask_out)
+
   ELSE IF (this%trans%sub_type == 'linearsparse') THEN
 ! just store vertical coordinates, dirty work is done later
     ALLOCATE(this%vcoord_in(SIZE(coord_in)),  this%vcoord_out(SIZE(coord_out)))
     this%vcoord_in(:) = coord_in(:)
     this%vcoord_out(:) = coord_out(:)
+    DEALLOCATE(coord_out, mask_out)
 
   ELSE
 
@@ -807,6 +895,7 @@ DOUBLE PRECISION,INTENT(out) :: coord(:)
 INTEGER :: k
 
 k = firsttrue(mask)
+IF (k <= 0) RETURN
 coord(:) = dmiss
 
 IF (c_e(lev(k)%level2) .AND. lev(k)%level1 == lev(k)%level2) THEN ! layer between 2 levels

@@ -97,21 +97,21 @@ CALL optionparser_add(opt, ' ', 'coord-format', coord_format, &
 #ifdef HAVE_DBALLE
  //', ''BUFR'' for BUFR file, ''CREX'' for CREX file'&
 #endif
-#ifdef HAVE_LIBSHP_FORTRAN
+#ifdef HAVE_SHAPELIB
  //', ''shp'' for shapefile (interpolation on polygons)'&
 #endif
  )
 CALL optionparser_add(opt, 'v', 'trans-type', trans_type, 'inter', help= &
  'transformation type, ''inter'' for interpolation, ''metamorphosis'' &
  &for keeping the same data but changing the container from grib to v7d'&
-#ifdef HAVE_LIBSHP_FORTRAN
+#ifdef HAVE_SHAPELIB
  //', ''polyinter'' for statistical processing within given polygons'&
 #endif
  )
 CALL optionparser_add(opt, 'z', 'sub-type', sub_type, 'bilin', help= &
  'transformation subtype, for inter: ''near'', ''bilin'',&
  & for metamorphosis: ''all'', ''coordbb'''&
-#ifdef HAVE_LIBSHP_FORTRAN
+#ifdef HAVE_SHAPELIB
  //', for ''polyinter'': ''average'', ''stddev'', ''max'', ''min'''&
 #endif
 )
@@ -233,7 +233,7 @@ IF (c_e(coord_file)) THEN
     CALL delete(v7d_ana)
 #endif
 
-#ifdef HAVE_LIBSHP_FORTRAN
+#ifdef HAVE_SHAPELIB
   ELSE IF (coord_format == 'shp') THEN
     CALL import(poly, shpfile=coord_file)
     IF (.NOT.ASSOCIATED(poly)) THEN

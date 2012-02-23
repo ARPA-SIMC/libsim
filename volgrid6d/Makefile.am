@@ -4,10 +4,6 @@ libsim_volgrid6d_la_SOURCES = grid_dim_class.F90 grid_rect_class.F90
 include_HEADERS =
 AM_CPPFLAGS =
 
-if GDAL
-libsim_volgrid6d_la_SOURCES += gdal.f90
-endif
-
 libsim_volgrid6d_la_SOURCES += grid_id_class.F90 grid_class.F90 \
  grid_transform_class.F90 volgrid6d_var_class.F90 gridinfo_class.F90 \
  volgrid6d_class.F90 volgrid6d_class_compute.F90
@@ -61,7 +57,8 @@ libsim_volgrid6d_la_LIBADD += $(GRIBAPI_LIBS)
 endif
 
 if GDAL
-libsim_volgrid6d_la_LIBADD += $(GDAL_LIBS)
+# improve in configure.ac
+libsim_volgrid6d_la_LIBADD += $(GDAL_LIBS) -lfortrangis
 endif
 
 if NGMATH
@@ -72,11 +69,6 @@ endif
 
 if VERSIONINFO
 libsim_volgrid6d_la_LDFLAGS += -version-info @LIBSIM_VERSION_INFO@
-endif
-
-if GDAL
-grid_id_class.o: gdal.$(OBJEXT)
-grid_id_class.lo: gdal.$(OBJEXT)
 endif
 
 grid_class.o: grid_dim_class.$(OBJEXT) grid_rect_class.$(OBJEXT) grid_id_class.$(OBJEXT)

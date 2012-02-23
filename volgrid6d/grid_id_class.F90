@@ -925,8 +925,10 @@ REAL,INTENT(out) :: field(:,:) ! array of decoded values
 TYPE(gdaldataseth) :: hds
 REAL(kind=c_double) :: geotrans(6), invgeotrans(6)
 REAL :: vector(SIZE(field)), gdalmiss
-INTEGER :: ix1, iy1, ix2, iy2, ixs, iys, ord(2), ier
+REAL,ALLOCATABLE :: buffer(:,:)
+INTEGER :: ix1, iy1, ix2, iy2, ixs, iys, ord(2), ier, ierv(1)
 INTEGER(kind=c_int) :: nrx, nry
+LOGICAL :: must_trans
 
 
 nrx =  gdalgetrasterbandxsize(gdalid)
@@ -974,6 +976,8 @@ IF (geotrans(3) == 0.0_c_double .AND. geotrans(5) == 0.0_c_double) THEN
   nrx = SIZE(field,1)
   nry = SIZE(field,2)
   ord = (/1,2/)
+  must_trans = .FALSE.
+  ALLOCATE(buffer(nrx,nry))
 
 ELSE IF (geotrans(2) == 0.0_c_double .AND. geotrans(6) == 0.0_c_double) THEN
 ! transformation is anti-diagonal, transposing required
@@ -998,6 +1002,9 @@ ELSE IF (geotrans(2) == 0.0_c_double .AND. geotrans(6) == 0.0_c_double) THEN
   nrx = SIZE(field,2)
   nry = SIZE(field,1)
   ord = (/2,1/)
+  must_trans = .TRUE.
+  ALLOCATE(buffer(nry,nrx))
+
 ELSE ! transformation is a rotation, not supported
   CALL l4f_log(L4F_ERROR, 'gdal geotransform is a generic rotation, not supported')
   CALL raise_error()
@@ -1006,17 +1013,19 @@ ELSE ! transformation is a rotation, not supported
 ENDIF
 
 ! read data from file
-ier = gdalrasterio_float32(gdalid, GF_Read, 0_c_int, 0_c_int, nrx, nry, vector, nrx, nry)
+!ier = gdalrasterio_float32(gdalid, GF_Read, 0_c_int, 0_c_int, nrx, nry, vector, nrx, nry)
+ier = gdalrasterio_f(gdalid, GF_Read, 0_c_int, 0_c_int, buffer)
 
 IF (ier /= 0) THEN ! error in read
   CALL l4f_log(L4F_ERROR, 'gdal error in reading with gdal driver')
   CALL raise_error()
-  vector(:) = rmiss
+!  vector(:) = rmiss
+  buffer(:,:) = rmiss
   RETURN
 ELSE
 ! set missing value if necessary
-  gdalmiss = gdalgetrasternodatavalue(gdalid, ier)
-  IF (ier /= 0) THEN ! success -> there are missing values
+  gdalmiss = gdalgetrasternodatavalue(gdalid, ierv)
+  IF (ierv(1) /= 0) THEN ! success -> there are missing values
 #ifdef DEBUG
   CALL l4f_log(L4F_INFO, 'gdal missing data value: '//TRIM(to_char(gdalmiss)))
 #endif
@@ -1032,8 +1041,15 @@ ELSE
 ENDIF
 
 ! reshape the field
-field(ix1:ix2:ixs,iy1:iy2:iys) = &
- RESHAPE(vector, (/SIZE(field,1),SIZE(field,2)/), ORDER=ord)
+!field(ix1:ix2:ixs,iy1:iy2:iys) = &
+! RESHAPE(vector, (/SIZE(field,1),SIZE(field,2)/), ORDER=ord)
+IF (must_trans) THEN
+  field(ix1:ix2:ixs,iy1:iy2:iys) = TRANSPOSE(buffer)
+ELSE
+  field(ix1:ix2:ixs,iy1:iy2:iys) = buffer(:,:)
+ENDIF
+
+DEALLOCATE(buffer)
 
 END SUBROUTINE grid_id_decode_data_gdal
 #endif

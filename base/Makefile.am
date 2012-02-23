@@ -15,12 +15,8 @@ if VERSIONINFO
 libsim_base_la_LDFLAGS = -version-info @LIBSIM_VERSION_INFO@
 endif
 
-if SHP
-libsim_base_la_LIBADD += $(SHP_LIBS)
-endif
-
-if GRIB
-libsim_base_la_SOURCES += geo_coord_with_utm_class.F90 geo_grid_class.f90
+if SHAPELIB
+libsim_base_la_LIBADD += $(SHAPELIB_LIBS)
 endif
 
 noinst_HEADERS = arrayof_pre.F90 arrayof_post.F90 array_utilities_inc.F90 arrayof_pre_nodoc.F90 arrayof_post_nodoc.F90 
@@ -47,10 +43,6 @@ array_utilities.$(OBJEXT): datetime_class.$(OBJEXT)
 array_utilities.lo: datetime_class.$(OBJEXT)
 geo_coord_class.$(OBJEXT): kinds.$(OBJEXT) missing_values.$(OBJEXT) phys_const.$(OBJEXT)
 geo_coord_class.lo: kinds.$(OBJEXT) missing_values.$(OBJEXT) phys_const.$(OBJEXT)
-geo_coord_with_utm_class.$(OBJEXT): kinds.$(OBJEXT) missing_values.$(OBJEXT) phys_const.$(OBJEXT)
-geo_coord_with_utm_class.lo: kinds.$(OBJEXT) missing_values.$(OBJEXT) phys_const.$(OBJEXT)
-geo_grid_class.$(OBJEXT): kinds.$(OBJEXT) missing_values.$(OBJEXT) char_utilities.$(OBJEXT) err_handling.$(OBJEXT) geo_coord_with_utm_class.$(OBJEXT)
-geo_grid_class.lo: kinds.$(OBJEXT) missing_values.$(OBJEXT) char_utilities.$(OBJEXT) err_handling.$(OBJEXT) geo_coord_with_utm_class.$(OBJEXT)
 optionparser_class.$(OBJEXT): err_handling.$(OBJEXT) kinds.$(OBJEXT) char_utilities.$(OBJEXT)
 optionparser_class.lo: err_handling.$(OBJEXT) kinds.$(OBJEXT) char_utilities.$(OBJEXT)
 simple_stat.$(OBJEXT): missing_values.$(OBJEXT) array_utilities.$(OBJEXT)

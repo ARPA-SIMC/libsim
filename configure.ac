@@ -165,26 +165,6 @@ AC_COMPILE_IFELSE(
 
 AC_LANG_POP(Fortran)dnl Do the following checks in C
 
-
-AC_ARG_ENABLE(gdal, AC_HELP_STRING([--enable-gdal],
-  [enable gdal support]),,[enableval=no])dnl default disable
-if test "x$enableval" = "xyes"; then
-  if test "x$f2003_iso_c" = "xno"; then
-  AC_MSG_ERROR([gdal support requires a fortran compiler with iso_c_binding])
-  fi
-  AC_CHECK_LIB([gdal], [GDALOpen],
-    AC_MSG_RESULT([gdal code included])
-    AC_DEFINE(HAVE_LIBGDAL, 1, [Enable gdal code])
-    GDAL_LIBS="-lgdal"
-    AC_SUBST(GDAL_LIBS),
-    AC_MSG_ERROR([gdal library not found]),)
-else
-  AC_MSG_RESULT([gdal code not included])
-fi
-AM_CONDITIONAL(GDAL, test "x$enableval" = "xyes")
-
-
-
 AC_ARG_ENABLE(vapor, AC_HELP_STRING([--enable-vapor],
   [enable vapor support]),,[enableval=no])dnl default disable
 if test "x$enableval" = "xyes"; then
@@ -202,7 +182,6 @@ else
 fi
 AM_CONDITIONAL(VAPOR, test "x$enableval" = "xyes")
 
-
 AC_ARG_ENABLE(alchimia, AC_HELP_STRING([--enable-alchimia],
   [enable derived variables]),,[enableval=no])dnl default disable
 if test "x$enableval" = "xyes"; then
@@ -219,54 +198,38 @@ AM_CONDITIONAL(ALCHIMIA, test "x$enableval" = "xyes")
 
 AC_LANG_PUSH(Fortran)dnl Do the following checks in Fortran
 
-
 AC_ARG_ENABLE(shapelib, AC_HELP_STRING([--disable-shapelib],
   [disable shapelib support]),,[enableval=yes])dnl default enable
 if test "x$enableval" = "xyes"; then
-AC_CHECK_LIB([shp-fortran], [shpopen],
- AC_MSG_RESULT([shapelib code included])
- SHP_LIBS="-lshp-fortran -lshp"
- AC_SUBST(SHP_LIBS)
- AC_DEFINE(HAVE_LIBSHP_FORTRAN, 1, [Enable shp-fortran]),
- AC_MSG_ERROR([fortran bindings to shp library not found]), [-lshp] )
+  AC_COMPILE_IFELSE(
+  [AC_LANG_PROGRAM(,[[       USE shapelib]])],
+   [AC_MSG_RESULT([shapelib C bindings found!])]
+   SHAPELIB_LIBS="-lfortrangis -lshp"
+   AC_SUBST(SHAPELIB_LIBS)
+   AC_DEFINE(HAVE_SHAPELIB, 1, [Enable shapelib]),
+   [AC_MSG_ERROR([shapelib C bindings not found!])]
+  )
 else
-AC_MSG_RESULT([shapelib code not included])
+  AC_MSG_RESULT([shapelib code not included])
 fi
-AM_CONDITIONAL(SHP, test "x$enableval" = "xyes")
+AM_CONDITIONAL(SHAPELIB, test "x$enableval" = "xyes")
 
-enablegrib=no
-AC_ARG_ENABLE(emoslib, AC_HELP_STRING([--disable-emoslib],
-  [disable grib support with ECMWF emos library]),,[enableval=yes])dnl default enable
+AC_ARG_ENABLE(gdal, AC_HELP_STRING([--enable-gdal],
+  [enable gdal support]),,[enableval=no])dnl default disable
 if test "x$enableval" = "xyes"; then
-AC_CHECK_LIB([emos], [gribex],
- AC_MSG_RESULT([ECMWF emos code included])
-  EMOS_LIBS="-lemos"
-  AC_SUBST(EMOS_LIBS),
- AC_MSG_ERROR([ECMWF emos library not found]))
+  AC_COMPILE_IFELSE(
+  [AC_LANG_PROGRAM(,[[       USE gdal]])],
+   [AC_MSG_RESULT([gdal C bindings found!])]
+   GDAL_LIBS="-lfortrangis -lgdal"
+   AC_SUBST(GDAL_LIBS)
+   AC_DEFINE(HAVE_GDAL, 1, [Enable gdal]),
+   [AC_MSG_ERROR([gdal C bindings not found!])]
+  )
 else
-AC_MSG_RESULT([ECMWF emos code not included])
+  AC_MSG_RESULT([gdal code not included])
 fi
-AM_CONDITIONAL(EMOS, test "x$enableval" = "xyes")
-if test "x$enableval" = "xyes"; then
-enablegrib=yes
-fi
+AM_CONDITIONAL(GDAL, test "x$enableval" = "xyes")
 
-AC_ARG_ENABLE(dwdgrib1, AC_HELP_STRING([--enable-dwdgrib1],
-  [enable grib support with DWD grib1 library]),,[enableval=no])dnl default disable
-if test "x$enableval" = "xyes"; then
-AC_CHECK_LIB([grib1], [grbin1],
- AC_MSG_RESULT([DWD grib1 code included])
-  DWDGRIB1_LIBS="-lgrib1"
-  AC_SUBST(DWDGRIB1_LIBS),
- AC_MSG_ERROR([DWD grib1 library not found]))
-else
-AC_MSG_RESULT([DWD grib1 code not included])
-fi
-AM_CONDITIONAL(DWDGRIB1, test "x$enableval" = "xyes")
-if test "x$enableval" = "xyes"; then
-enablegrib=yes
-fi
-AM_CONDITIONAL(GRIB, test "x$enablegrib" = "xyes")
 
 AC_ARG_ENABLE(dballe, AC_HELP_STRING([--disable-dballe],
   [disable dballe support]),,[enableval=yes])dnl default enable
@@ -414,7 +377,6 @@ AC_SUBST(pkgdocdir)
 AC_CONFIG_FILES([
 Makefile
 base/Makefile
-grib/Makefile
 vol7d/Makefile
 volgrid6d/Makefile
 bin/Makefile

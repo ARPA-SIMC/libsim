@@ -32,8 +32,8 @@ USE char_utilities
 USE missing_values
 !USE doubleprecision_phys_const
 USE file_utilities
-#ifdef HAVE_LIBSHP_FORTRAN
-USE shplib
+#ifdef HAVE_SHAPELIB
+USE shapelib
 !, ONLY: shpobject, shpreadobject, shpdestroyobject, shpwriteobject, &
 ! shpcreatesimpleobject
 #endif
@@ -438,18 +438,24 @@ ENDIF
 END SUBROUTINE geo_coordvect_getval
 
 
-SUBROUTINE geo_coordvect_import(this, unitsim, shphandle, nshp)
+SUBROUTINE geo_coordvect_import(this, unitsim, &
+#ifdef HAVE_SHAPELIB
+ shphandle, &
+#endif
+ nshp)
 TYPE(geo_coordvect), INTENT(OUT) :: this
 INTEGER,OPTIONAL,INTENT(IN) :: unitsim
-INTEGER(kind=ptr_c),OPTIONAL,INTENT(IN) :: shphandle
+#ifdef HAVE_SHAPELIB
+TYPE(shpfileobject),OPTIONAL,INTENT(INOUT) :: shphandle
+#endif
 INTEGER,OPTIONAL,INTENT(IN) :: nshp
 
 REAL(kind=fp_geo),ALLOCATABLE :: llon(:), llat(:)
 REAL(kind=fp_geo) :: lv1,lv2,lv3,lv4,lproj
 INTEGER :: i, lvsize
 CHARACTER(len=40) :: lname
-#ifdef HAVE_LIBSHP_FORTRAN
-TYPE(shpobject),POINTER :: shpobj
+#ifdef HAVE_SHAPELIB
+TYPE(shpobject) :: shpobj
 #endif
 
 IF (PRESENT(unitsim)) THEN
@@ -472,12 +478,11 @@ IF (PRESENT(unitsim)) THEN
   RETURN
 10 CALL raise_error('nella lettura del file '//TRIM(to_char(unitsim)))
   DEALLOCATE(llon, llat) ! End of file, ritorno un oggetto non assegnato
+#ifdef HAVE_SHAPELIB
 ELSE IF (PRESENT(shphandle) .AND. PRESENT(nshp)) THEN
-#ifdef HAVE_LIBSHP_FORTRAN
-  NULLIFY(shpobj)
   ! Leggo l'oggetto shape
-  shpobj => shpreadobject(shphandle, nshp)
-  IF (ASSOCIATED(shpobj)) THEN
+  shpobj = shpreadobject(shphandle, nshp)
+  IF (.NOT.shpisnull(shpobj)) THEN
     ! Lo inserisco nel mio oggetto
     CALL init(this, lon=REAL(shpobj%padfx,kind=fp_geo), &
      lat=REAL(shpobj%padfy,kind=fp_geo))
@@ -492,16 +497,22 @@ ENDIF
 END SUBROUTINE geo_coordvect_import
 
 
-SUBROUTINE geo_coordvect_export(this, unitsim, shphandle, nshp)
+SUBROUTINE geo_coordvect_export(this, unitsim, &
+#ifdef HAVE_SHAPELIB
+ shphandle, &
+#endif
+ nshp)
 TYPE(geo_coordvect), INTENT(INOUT) :: this
 INTEGER,OPTIONAL,INTENT(IN) :: unitsim
-INTEGER(kind=ptr_c),OPTIONAL,INTENT(IN) :: shphandle
+#ifdef HAVE_SHAPELIB
+TYPE(shpfileobject),OPTIONAL,INTENT(INOUT) :: shphandle
+#endif
 INTEGER,OPTIONAL,INTENT(IN) :: nshp
 
 INTEGER :: i, lnshp, lproj
 CHARACTER(len=40) :: lname
-#ifdef HAVE_LIBSHP_FORTRAN
-TYPE(shpobject),POINTER :: shpobj
+#ifdef HAVE_SHAPELIB
+TYPE(shpobject) :: shpobj
 #endif
 
 IF (PRESENT(unitsim)) THEN
@@ -514,20 +525,18 @@ IF (PRESENT(unitsim)) THEN
     CALL raise_warning('oggetto geo_coordvect vuoto, non scrivo niente in '// &
      TRIM(to_char(unitsim)))
   ENDIF
+#ifdef HAVE_SHAPELIB
 ELSE IF (PRESENT(shphandle)) THEN
-#ifdef HAVE_LIBSHP_FORTRAN
   IF (PRESENT(nshp)) THEN
     lnshp = nshp
   ELSE
     lnshp = -1 ! -1 = append
   ENDIF
-  NULLIFY(shpobj)
   ! Creo l'oggetto shape inizializzandolo con il mio oggetto
-
-  shpobj => shpcreatesimpleobject(this%vtype, this%vsize, &
+  shpobj = shpcreatesimpleobject(this%vtype, this%vsize, &
    REAL(this%ll(1:this%vsize,1),kind=fp_d), &
    REAL(this%ll(1:this%vsize,2),kind=fp_d))
-  IF (ASSOCIATED(shpobj)) THEN
+  IF (.NOT.shpisnull(shpobj)) THEN
     ! Lo scrivo nello shapefile
     i=shpwriteobject(shphandle, lnshp, shpobj)
     CALL shpdestroyobject(shpobj)
@@ -563,10 +572,10 @@ CHARACTER(len=*),INTENT(in),OPTIONAL :: shpfile !< nome delllo shapefile, il par
 REAL(kind=fp_geo),ALLOCATABLE :: llon(:), llat(:)
 REAL(kind=fp_geo) :: inu
 REAL(kind=fp_d) :: minb(4), maxb(4)
-INTEGER :: i, u, ns, lvsize, shptype
+INTEGER :: i, u, ns, lvsize, shptype, dbfnf, dbfnr
 CHARACTER(len=40) :: lname
-#ifdef HAVE_LIBSHP_FORTRAN
-INTEGER(kind=ptr_c) :: shphandle
+#ifdef HAVE_SHAPELIB
+TYPE(shpfileobject) :: shphandle
 #endif
 
 NULLIFY(this)
@@ -599,13 +608,13 @@ IF (PRESENT(shpfilesim)) THEN
   RETURN
 
 ELSE IF (PRESENT(shpfile)) THEN
-#ifdef HAVE_LIBSHP_FORTRAN
+#ifdef HAVE_SHAPELIB
   shphandle = shpopen(TRIM(shpfile), 'rb')
-  IF (shphandle == 0) THEN
+  IF (shpfileisnull(shphandle)) THEN
     CALL raise_error('Impossibile aprire lo shapefile '//trim(shpfile))
     RETURN
   ENDIF
-  CALL shpgetinfo(shphandle, ns, shptype, minb, maxb) ! Ottengo le info sul file
+  CALL shpgetinfo(shphandle, ns, shptype, minb, maxb, dbfnf, dbfnr) ! Ottengo le info sul file
   IF (ns > 0) THEN ! Alloco e leggo il mio oggetto
     ALLOCATE(this(ns))
     this(:)%vtype = shptype
@@ -637,11 +646,11 @@ LOGICAL,INTENT(in),OPTIONAL :: append !< se è presente e vale \c .TRUE. , ::expo
 REAL(kind=fp_geo),ALLOCATABLE :: llon(:), llat(:)
 REAL(kind=fp_geo) :: lv1,lv2,lv3,lv4
 REAL(kind=fp_d) :: minb(4), maxb(4)
-INTEGER :: i, u, ns, shptype
+INTEGER :: i, u, ns, shptype, dbfnf, dbfnr
 CHARACTER(len=40) :: lname
 LOGICAL :: lappend
-#ifdef HAVE_LIBSHP_FORTRAN
-INTEGER(kind=ptr_c) :: shphandle
+#ifdef HAVE_SHAPELIB
+TYPE(shpfileobject) :: shphandle
 #endif
 
 IF (PRESENT(append)) THEN
@@ -665,20 +674,20 @@ IF (PRESENT(shpfilesim)) THEN
   CALL raise_error('Impossibile aprire il file '//TRIM(shpfile))
   RETURN
 ELSE IF (PRESENT(shpfile)) THEN
-#ifdef HAVE_LIBSHP_FORTRAN
+#ifdef HAVE_SHAPELIB
   IF (lappend) THEN
     shphandle = shpopen(TRIM(shpfile), 'r+b')
-    IF (shphandle == 0) THEN ! shpopen funziona solo su file esistenti
+    IF (shpfileisnull(shphandle)) THEN ! shpopen funziona solo su file esistenti
       shphandle = shpcreate(TRIM(shpfile), geo_coordvect_polygon)
     ENDIF
   ELSE
     shphandle = shpcreate(TRIM(shpfile), geo_coordvect_polygon)
   ENDIF
-  IF (shphandle == 0) THEN
+  IF (shpfileisnull(shphandle)) THEN
     CALL raise_error('Impossibile aprire lo shapefile '//TRIM(shpfile))
     RETURN
   ENDIF
-  CALL shpgetinfo(shphandle, ns, shptype, minb, maxb) ! Ottengo le info sul file
+  CALL shpgetinfo(shphandle, ns, shptype, minb, maxb, dbfnf, dbfnr) ! Ottengo le info sul file
   DO i = 1, SIZE(this)
     IF (i > ns .OR. lappend) THEN ! Append shape
       CALL export(this(i), shphandle=shphandle)

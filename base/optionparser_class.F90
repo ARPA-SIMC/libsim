@@ -209,7 +209,6 @@ END FUNCTION option_new
 SUBROUTINE option_delete(this)
 TYPE(option),INTENT(inout) :: this ! object to destroy
 
-PRINT*,'deleting option ',this%short_opt,'/',TRIM(this%long_opt)
 IF (.NOT.ASSOCIATED(this%help_msg)) PRINT*,'help not associated'
 IF (ASSOCIATED(this%help_msg)) DEALLOCATE(this%help_msg)
 NULLIFY(this%destc)
