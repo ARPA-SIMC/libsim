@@ -916,7 +916,7 @@ character (len=*),intent(in),optional :: addonvar
 
 TYPE(vol7d_var) ::  var
 
-integer                     :: l,levP,levT,ind
+integer                     :: l,levP,levT,ind,almin(1),almax(1)
 
 real,dimension(300)         :: xx,yy
 real,allocatable            :: r_tt(:),r_pr(:),r_tr(:),r_ur(:),r_dd(:),r_ff(:),&
@@ -925,6 +925,7 @@ real                        :: ratio,xww,yww
 real                        :: psat
 character(len=1)            :: type
 character(len=40)           :: color
+character(len=9)            :: label
 real                        :: avmin,avmax
 
 
@@ -1382,10 +1383,12 @@ call gsln (1)
 levT=count(c_e(a_var).and. r_pr >= ptop)
 if(levT > 1) then
   
-  avmin= minval(a_var)
-  avmax= maxval(a_var)
+  almin= minloc(a_var,(c_e(a_var).and. r_pr >= ptop))
+  almax= maxloc(a_var,(c_e(a_var).and. r_pr >= ptop))
+  avmin= a_var(almin(1))
+  avmax= a_var(almax(1))
   avmin=avmin - (avmax-avmin)/4.
-  avmax=avmax + (avmax-avmin)/10.
+  avmax=avmax + (avmax-avmin)/6.
 
 
   call gpl(levT,&
@@ -1393,6 +1396,14 @@ if(levT > 1) then
    pack(x_acoord(avmin,avmax,a_var,dim_x,offset_x),&
    (c_e(a_var).and. r_pr >= ptop)),&
    pack(y_coord(r_pr,dim_y,offset_y),(c_e(a_var).and. r_pr >= ptop)))
+  
+  write(label,"(es9.2)") a_var(almin(1))
+  call gtx ( x_acoord(avmin,avmax,a_var(almin(1)),dim_x,offset_x)+0.07, &
+             y_coord(r_pr(almin(1)),dim_y,offset_y), trim(label))
+
+  write(label,"(es9.2)") a_var(almax(1))
+  call gtx ( x_acoord(avmin,avmax,a_var(almax(1)),dim_x,offset_x)+0.07, &
+             y_coord(r_pr(almax(1)),dim_y,offset_y), trim(label))
   
 end if
 
@@ -1662,7 +1673,7 @@ end subroutine ncar_plot_vp_title
 
 
 subroutine ncar_plot_vp_legend (this,v7d,ana,time,timerange,network,&
- tcolor,tdcolor,ucolor,wcolor,position)
+ addonvar,tcolor,tdcolor,ucolor,wcolor,acolor,position)
 
 
 type(ncar_plot),intent(in)  :: this
@@ -1671,11 +1682,14 @@ integer,intent(in)          :: ana
 integer,intent(in)          :: time
 integer,intent(in)          :: timerange
 integer,intent(in)          :: network
-character(len=*),optional   :: tcolor,tdcolor,ucolor,wcolor
+character(len=*),optional   :: tcolor,tdcolor,ucolor,wcolor,acolor
 integer,optional            :: position
+character (len=*),intent(in),optional :: addonvar
 
-integer                     :: lposition
-character(len=100)          :: label,ltcolor,ltdcolor,lucolor,lwcolor
+TYPE(vol7d_var) ::  var
+integer                     :: lposition, ind
+character(len=100)          :: label,ltcolor,ltdcolor,lucolor,lwcolor,lacolor
+character(len=1)            :: type
 
 
 if (present(tcolor))then
@@ -1702,6 +1716,12 @@ else
   lwcolor='blue'
 end if
 
+if (present(acolor))then
+  lacolor=acolor
+else
+  lacolor='blue'
+end if
+
 if (present(position))then
   lposition=position
 else
@@ -1724,14 +1744,45 @@ call gtx (0.01+(0.23*(lposition-1)),0.94,trim(label))
 
 label="(TD) "//trim(to_char(v7d%timerange(timerange)))
 call set_color(trim(ltdcolor))
-call gtx (0.01+(0.23*(lposition-1)),0.92,trim(label))
+call gtx (0.01+(0.23*(lposition-1)),0.925,trim(label))
 
 call set_color(trim(lucolor))
-call gtx (0.01+(0.23*(lposition-1)),0.90,trim("(Umid)"))
+call gtx (0.01+(0.23*(lposition-1)),0.91,trim("(Umid)"))
 
 call set_color(trim(lwcolor))
-call gtx (0.01+(0.23*(lposition-1)),0.88,trim("(Wind)"))
+call gtx (0.01+(0.23*(lposition-1)),0.895,trim("(Wind)"))
 
+if (present(addonvar))then
+
+  call init(var,btable=addonvar)
+
+
+  type=cmiss
+  ind=index(v7d%dativar, var, type=type)
+
+  select case (type)
+
+  case("d")
+    var=v7d%dativar%d(ind)
+  case("r")
+    var=v7d%dativar%r(ind)
+  case("i")
+    var=v7d%dativar%i(ind)
+  case("b")
+    var=v7d%dativar%b(ind)
+  case("c")
+    var=v7d%dativar%c(ind)
+  case default
+    call init(var)
+    label=addonvar
+  end select
+
+  if (c_e(var%description))then
+    label=trim(var%description)//" : "//var%unit
+  end if
+  call set_color(trim(lacolor))
+  call gtx (0.01+(0.23*(lposition-1)),0.88,trim(label))
+end if
 
 return
 

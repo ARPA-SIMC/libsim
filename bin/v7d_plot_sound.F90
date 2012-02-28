@@ -50,6 +50,7 @@ character(len=20) :: tcolor(4)=(/'brown','red  ','black','tan  '/)
 character(len=20) :: tdcolor(4)=(/'orange      ','forest Green','cyan        ','yellow      '/)
 character(len=20) :: ucolor(4)=(/'sky blue    ','blue        ','blue magenta','magenta     '/)
 character(len=20) :: wcolor(4)=(/'black     ','violet    ','light gray','dark gray '/)
+character(len=20) :: acolor(4)=(/'black     ','violet    ','light gray','dark gray '/)
 character(len=10) :: addonvar
 
 !questa chiamata prende dal launcher il nome univoco
@@ -264,10 +265,10 @@ do ana=1, size(v7dtmp%ana)
 
         call plot_vertical_plofiles(plot,v7d_profile,1,1,1,1,&
          tcolor=tcolor(ic),tdcolor=tdcolor(ic),&
-         ucolor=ucolor(ic),wcolor=wcolor(ic),addonvar=addonvar)
+         ucolor=ucolor(ic),wcolor=wcolor(ic),acolor=acolor(ic),addonvar=addonvar)
 
-        call plot_vp_legend (plot,v7d_profile,1,1,1,1,&
-         tcolor=tcolor(ic),tdcolor=tdcolor(ic),ucolor=ucolor(ic),wcolor=wcolor(ic),position=ic) ! legenda
+        call plot_vp_legend (plot,v7d_profile,1,1,1,1,addonvar=addonvar,&
+         tcolor=tcolor(ic),tdcolor=tdcolor(ic),ucolor=ucolor(ic),wcolor=wcolor(ic),acolor=acolor(ic),position=ic) ! legenda
         call delete(v7d_profile)
         if (ic == 4 )changepg=.true.
         if (distinct) then
