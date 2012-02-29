@@ -1387,8 +1387,8 @@ if(levT > 1) then
   almax= maxloc(a_var,(c_e(a_var).and. r_pr >= ptop))
   avmin= a_var(almin(1))
   avmax= a_var(almax(1))
-  avmin=avmin - (avmax-avmin)/4.
-  avmax=avmax + (avmax-avmin)/6.
+  avmin=avmin - (avmax-avmin)/3.5
+  avmax=avmax + (avmax-avmin)/5.
 
 
   call gpl(levT,&
@@ -1398,11 +1398,11 @@ if(levT > 1) then
    pack(y_coord(r_pr,dim_y,offset_y),(c_e(a_var).and. r_pr >= ptop)))
   
   write(label,"(es9.2)") a_var(almin(1))
-  call gtx ( x_acoord(avmin,avmax,a_var(almin(1)),dim_x,offset_x)+0.07, &
+  call gtx ( x_acoord(avmin,avmax,a_var(almin(1)),dim_x,offset_x)+0.01, &
              y_coord(r_pr(almin(1)),dim_y,offset_y), trim(label))
 
   write(label,"(es9.2)") a_var(almax(1))
-  call gtx ( x_acoord(avmin,avmax,a_var(almax(1)),dim_x,offset_x)+0.07, &
+  call gtx ( x_acoord(avmin,avmax,a_var(almax(1)),dim_x,offset_x)+0.01, &
              y_coord(r_pr(almax(1)),dim_y,offset_y), trim(label))
   
 end if
