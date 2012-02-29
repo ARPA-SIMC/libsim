@@ -308,7 +308,7 @@ END INTERFACE
 
 !> Missing check
 INTERFACE c_e
-  MODULE PROCEDURE c_e_datetime, c_e_cyclicdatetime
+  MODULE PROCEDURE c_e_datetime, c_e_timedelta, c_e_cyclicdatetime
 END INTERFACE
 
 !> to document
@@ -1622,6 +1622,15 @@ ENDIF
 DEALLOCATE(dateiso)
 
 END SUBROUTINE timedelta_vect_write_unit
+
+
+ELEMENTAL FUNCTION c_e_timedelta(this) result (res)
+TYPE(timedelta),INTENT(in) :: this
+LOGICAL :: res
+
+res = .not. this == timedelta_miss 
+
+end FUNCTION c_e_timedelta
 
 
 elemental SUBROUTINE jeladata5(iday,imonth,iyear,ihour,imin,iminuti)

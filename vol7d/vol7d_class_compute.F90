@@ -910,13 +910,13 @@ END SUBROUTINE vol7d_recompute_stat_proc_diff
 !! intervalli \a step interi a partire dall'inizio, oppure quelli che
 !! giacciono fuori dall'intervallo \a start:stop non vengono toccati e
 !! quindi rimangono immutati nel volume finale (si veda anche la
-!! descrizione di ::vol7d_regularize_time). Il volume originale non
+!! descrizione di ::vol7d_filter_time). Il volume originale non
 !! viene modificato e quindi dovrà essere distrutto da parte del
 !! programma chiamante se il suo contenuto non è più
 !! richiesto. Attenzione, se necessario la dimensione tempo (vettore
 !! \a this%time del volume \a this ) viene riordinata, come effetto
 !! collaterale della chiamata.
-SUBROUTINE vol7d_fill_time(this, that, step, start, stopp, cyclicdt, fill_data)
+SUBROUTINE vol7d_fill_time(this, that, step, start, stopp, cyclicdt)
 TYPE(vol7d),INTENT(inout) :: this
 TYPE(vol7d),INTENT(inout) :: that
 TYPE(timedelta),INTENT(in) :: step
@@ -926,14 +926,13 @@ TYPE(cyclicdatetime),INTENT(in),OPTIONAL :: cyclicdt !< date and time in the for
 !! where any doubled char should be // for missing. 
 !! You need it to specify for example every january in all years or
 !! the same time for all days and so on
-logical,optional :: fill_data !< if .true. fill data values with nearest in time (inside step)
 
 TYPE(cyclicdatetime) :: lcyclicdt
 TYPE(datetime) :: counter, lstart, lstop
 INTEGER :: i, naddtime
 
 CALL safe_start_stop(this, lstart, lstop, start, stopp)
-IF (.NOT. c_e(lstart) .OR. .NOT. c_e(lstop)) RETURN
+IF (.NOT. c_e(lstart) .OR. .NOT. c_e(lstop) .OR. .NOT. c_e(step)) RETURN
 
 lcyclicdt=cyclicdatetime_miss
 if (present(cyclicdt)) then
@@ -953,7 +952,7 @@ naddcount: DO WHILE(counter <= lstop)
     IF (counter < this%time(i)) THEN ! this%time(i) overtook counter
       i = MAX(i-1,1) ! go back if possible
       EXIT
-    ELSE IF (counter == this%time(i) .OR. counter == lcyclicdt) THEN ! found matching time
+    ELSE IF (counter == this%time(i) .OR. .NOT. counter == lcyclicdt) THEN ! found matching time
       counter = counter + step
       CYCLE naddcount
     ENDIF
@@ -988,7 +987,7 @@ IF (naddtime > 0) THEN
       IF (counter < this%time(i)) THEN ! this%time(i) overtook counter
         i = MAX(i-1,1) ! go back if possible
         EXIT
-      ELSE IF (counter == this%time(i) .OR. counter == lcyclicdt) THEN ! found matching time
+      ELSE IF (counter == this%time(i) .OR. .NOT. counter == lcyclicdt) THEN ! found matching time
         counter = counter + step
         CYCLE naddadd
       ENDIF
@@ -1007,37 +1006,31 @@ ELSE
   CALL vol7d_copy(this, that, sort=.TRUE.)
 ENDIF
 
-if (optio_log(fill_data)) call vol7d_fill_data(that, step, start, stopp)
 
 END SUBROUTINE vol7d_fill_time
 
 
-!> Regularize and/or filter time dimension inside a volume.
+!> Filter time dimension inside a volume.
 !! Questo metodo crea, a partire da un volume originale, un nuovo
-!! volume dati in cui la dimensione tempo contiene tutti e soli gli
+!! volume dati in cui la dimensione tempo contiene solo gli
 !! istanti tra \a start e \a stopp (o tra il primo e l'ultimo livello
 !! temporale) ad intervalli \a step; se specificato cyclicdt solo i 
 !! corrispondenti istanti di tempo vengono ulteriormente selezionati.
-!! Gli eventuali time mancanti
-!! vengono aggiunti riempiendo le corrispondenti posizioni dei volumi
-!! dati con valori mancanti. Fa quindi un lavoro simile al metodo
-!! ::vol7d_fill_time ma in più elimina i livelli temporali che non
-!! soddisfano la condizione richiesta.  Il volume originale non viene
+!! Il volume originale non viene
 !! modificato e quindi dovrà essere distrutto da parte del programma
 !! chiamante se il suo contenuto non è più richiesto. Attenzione, se
 !! necessario, la dimensione tempo (vettore \a this%time del volume \a
 !! this ) viene riordinata, come effetto collaterale della chiamata.
-SUBROUTINE vol7d_filter_time(this, that, step, start, stopp, cyclicdt, fill_data)
+SUBROUTINE vol7d_filter_time(this, that, step, start, stopp, cyclicdt)
 TYPE(vol7d),INTENT(inout) :: this
 TYPE(vol7d),INTENT(inout) :: that
-TYPE(timedelta),INTENT(in),optional :: step
+TYPE(timedelta),INTENT(in),optional :: step !< missing value admitted
 TYPE(datetime),INTENT(in),OPTIONAL :: start
 TYPE(datetime),INTENT(in),OPTIONAL :: stopp
 TYPE(cyclicdatetime),INTENT(in),OPTIONAL :: cyclicdt !< date and time in the format \c AAAAMMGGhhmm 
 !! where any doubled char should be // for missing. 
 !! You need it to specify for example every january in all years or
 !! the same time for all days and so on
-logical,optional :: fill_data !< if .true. fill data values with nearest in time (inside step)
 
 TYPE(datetime) :: lstart, lstop
 TYPE(cyclicdatetime) :: lcyclicdt
@@ -1062,41 +1055,13 @@ time_mask = this%time >= lstart .AND. this%time <= lstop .AND. this%time == lcyc
 
 
 if (present(step)) then
-  time_mask=time_mask .AND. MOD(this%time - lstart, step) == timedelta_0 
+  if (c_e(step)) then
+    time_mask=time_mask .AND. MOD(this%time - lstart, step) == timedelta_0 
+  end if
 end if
 
-!do i=1,size(time_mask)
-!  if (time_mask(i)) call display(this%time(i))
-!end do
 
-
-if (all(time_mask)) then
-  CALL vol7d_fill_time(this, that, step, start, stopp, cyclicdt, fill_data)
-else
-  CALL vol7d_copy(this,that, ltime=time_mask)
-
-!!$  print *,size(v7dtmp%time)
-!!$  do i=1,size(v7dtmp%time)
-!!$    call display(v7dtmp%time(i))
-!!$  end do
-!!$
-!!$!  CALL vol7d_fill_time(v7dtmp, v7dtmp2, step, start, stopp, fill_data)
-!!$call vol7d_copy (v7dtmp, v7dtmp2)
-!!$  print *,size(v7dtmp2%time)
-!!$  do i=1,size(v7dtmp2%time)
-!!$    call display(v7dtmp2%time(i))
-!!$  end do
-!!$  CALL delete(v7dtmp)
-end if
-
-!CALL vol7d_copy(v7dtmp2, that, ltime=v7dtmp2%time == lcyclicdt)
-
-!!$  print *,size(that%time)
-!!$  do i=1,size(that%time)
-!!$    call display(that%time(i))
-!!$  end do
-
-!CALL delete(v7dtmp2)
+CALL vol7d_copy(this,that, ltime=time_mask)
 
 DEALLOCATE(time_mask)
 
@@ -1106,16 +1071,16 @@ END SUBROUTINE vol7d_filter_time
 !> Fill data volume
 !! Nearest data in time is set in the time coordinate.
 !! Take in account istantaneous values only.
-SUBROUTINE vol7d_fill_data(this, step, start, stopp, tollerance)
+SUBROUTINE vol7d_fill_data(this, step, start, stopp, tolerance)
 TYPE(vol7d),INTENT(inout) :: this !< data volume to elaborate
 TYPE(timedelta),INTENT(in) :: step !< interval in time where to fill data
 TYPE(datetime),INTENT(in),OPTIONAL :: start !< start time where to fill
 TYPE(datetime),INTENT(in),OPTIONAL :: stopp !< stop time where to fill
-TYPE(timedelta),INTENT(in),optional :: tollerance !< tollerance in time to find data to fill (excluding extreme) (default to step)
+TYPE(timedelta),INTENT(in),optional :: tolerance !< tolerance in time to find data to fill (excluding extreme) (default to step)
 
 TYPE(datetime) :: lstart, lstop
 integer :: indana , indtime ,indlevel ,indtimerange ,inddativarr, indnetwork, iindtime
-type(timedelta) :: deltato,deltat, ltollerance
+type(timedelta) :: deltato,deltat, ltolerance
 
 CALL safe_start_stop(this, lstart, lstop, start, stopp)
 IF (.NOT. c_e(lstart) .OR. .NOT. c_e(lstop)) RETURN
@@ -1123,11 +1088,13 @@ IF (.NOT. c_e(lstart) .OR. .NOT. c_e(lstop)) RETURN
 CALL l4f_log(L4F_INFO, 'vol7d_fill_data: time interval '//TRIM(to_char(lstart))// &
  ' '//TRIM(to_char(lstop)))
 
-if (present(tollerance))then
-  ltollerance=tollerance
-else
-  ltollerance=step/2
+
+ltolerance=step/2
+
+if (present(tolerance))then
+  if (c_e(tolerance)) ltolerance=tolerance
 end if
+
 
 do indtime=1,size(this%time)
   
@@ -1151,7 +1118,7 @@ do indtime=1,size(this%time)
                 if (c_e(this%voldatir  (indana, iindtime, indlevel, indtimerange, inddativarr, indnetwork )))then
                     deltat=this%time(iindtime)-this%time(indtime)
 
-                  if  (deltat >= ltollerance) exit
+                  if  (deltat >= ltolerance) exit
                   
                   if (deltat < deltato) then
                     this%voldatir(indana, indtime, indlevel, indtimerange, inddativarr, indnetwork) = &
@@ -1172,7 +1139,7 @@ do indtime=1,size(this%time)
                     cycle
                   end if
 
-                  if  (deltat >= ltollerance) exit
+                  if  (deltat >= ltolerance) exit
                   
                   if (deltat < deltato) then
                     this%voldatir(indana, indtime, indlevel, indtimerange, inddativarr, indnetwork) = &

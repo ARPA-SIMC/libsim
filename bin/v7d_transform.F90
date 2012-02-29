@@ -91,14 +91,14 @@ CHARACTER(len=512):: a_name
 INTEGER :: category
 
 ! for computing
-LOGICAL :: comp_regularize, comp_keep, comp_sort, comp_fill_data, obso
+LOGICAL :: comp_filter_time, comp_keep, comp_sort, comp_fill_data, obso
 LOGICAL :: file, lconvr, round
 CHARACTER(len=13) :: comp_stat_proc
 CHARACTER(len=9) :: comp_cyclicdatetime=cmiss
-CHARACTER(len=23) :: comp_step, fill_step, comp_start
+CHARACTER(len=23) :: comp_step, comp_fill_tolerance, comp_start, comp_stop
 INTEGER :: istat_proc, ostat_proc
-TYPE(timedelta) :: c_i, f_i
-TYPE(datetime) :: c_s
+TYPE(timedelta) :: c_i, f_t
+TYPE(datetime) :: c_s, comp_e
 TYPE(cyclicdatetime) :: cyclicdt
 
 REAL :: comp_frac_valid
@@ -217,8 +217,8 @@ CALL optionparser_add(opt, ' ', 'disable-qc', disable_qc, help= &
 CALL optionparser_add(opt, 'd', 'display', ldisplay, help= &
  'briefly display the data volume imported, warning: this option is incompatible &
  &with output on stdout.')
-CALL optionparser_add(opt, ' ', 'comp-regularize', comp_regularize, help= &
- 'regularize the time series keeping only the data at regular time steps')
+CALL optionparser_add(opt, ' ', 'comp-filter-time', comp_filter_time, help= &
+ 'filter the time series keeping only the data selected by comp-start comp-end comp-step comp-cyclicdatetime')
 
 CALL optionparser_add(opt, ' ', 'comp-cyclicdatetime', comp_cyclicdatetime, help= &
 'date and time in the format \c TMMGGhhmm  where any repeated group of char should be / for missing. &
@@ -247,6 +247,10 @@ CALL optionparser_add(opt, ' ', 'comp-start', comp_start, '', help= &
  'start of regularization, or statistical processing interval, an empty value means &
  &take the initial time step of the available data; the format is the same as for &
  &--start-date parameter')
+CALL optionparser_add(opt, ' ', 'comp-stop', comp_stop, '', help= &
+ 'stop of filter interval, an empty value means &
+ &take the ending time step of the available data; the format is the same as for &
+ &--start-date parameter')
 CALL optionparser_add(opt, ' ', 'comp-keep', comp_keep, help= &
  'keep the data that are not the result of the requested statistical processing, &
  &merging them with the result of the processing')
@@ -256,8 +260,8 @@ CALL optionparser_add(opt, ' ', 'comp-frac-valid', comp_frac_valid, 1., help= &
 CALL optionparser_add(opt, ' ', 'comp-sort', comp_sort, help= &
  'sort all sortable dimensions of the volume after the computations')
 CALL optionparser_add(opt, ' ', 'comp-fill-data', comp_fill_data, help= &
- 'fill missing istantaneous data with nearest in time inside fill-step (require comp-regularize')
-CALL optionparser_add(opt, ' ', 'fill-step', fill_step, '0000000001 00:00:00.000', help= &
+ 'fill missing istantaneous data with nearest in time inside fill-step')
+CALL optionparser_add(opt, ' ', 'comp-fill-tolerance', comp_fill_tolerance, '0000000001 00:00:00.000', help= &
  'length of filling step in the format &
  &''YYYYMMDDDD hh:mm:ss.msc'', it can be simplified up to the form ''D hh''')
 
@@ -514,12 +518,18 @@ ENDIF
 s_d = datetime_new(isodate=start_date)
 e_d = datetime_new(isodate=end_date)
 c_i = timedelta_new(isodate=comp_step)
-f_i = timedelta_new(isodate=fill_step)
+f_t = timedelta_new(isodate=comp_fill_tolerance)
 
 IF (comp_start /= '') THEN
   c_s = datetime_new(isodate=comp_start)
 ELSE
   c_s = datetime_miss
+ENDIF
+
+IF (comp_stop /= '') THEN
+  comp_e = datetime_new(isodate=comp_stop)
+ELSE
+  comp_e = datetime_miss
 ENDIF
 
 ! check level
@@ -571,14 +581,6 @@ IF (comp_stat_proc /= '') THEN
     CALL raise_fatal_error()
   ENDIF
 ENDIF
-
-! check comp_fill_data
-if (comp_fill_data .and. .not. comp_regularize) then
-  CALL l4f_category_log(category, L4F_ERROR, &
-   'error in command-line parameters, comp-fill-data without comp-regularize')
-  CALL raise_fatal_error()
-ENDIF
-
 
 CALL init(v7d_coord)
 ! import coord_file
@@ -793,8 +795,10 @@ CALL delete(opt) ! check whether I can already get rid of this stuff now
 CALL vol7d_dballe_set_var_du(v7d)
 #endif
 
-IF (ldisplay) CALL display(v7d)
-
+IF (ldisplay) then
+  print*," >>>>> Input Volume <<<<<"
+  CALL display(v7d)
+end IF
 
 ! apply quality control data removing
 IF (.NOT.disable_qc) THEN
@@ -878,13 +882,30 @@ IF (pre_trans_type /= '') THEN
   CALL init(v7d_comp1) ! detach it
 ENDIF
 
-IF (comp_regularize .or. c_e(comp_cyclicdatetime)) THEN
+
+
+IF (comp_fill_data ) THEN
 
   cyclicdt = cyclicdatetime_new(chardate=comp_cyclicdatetime)
 
   CALL init(v7d_comp1)
-  CALL vol7d_filter_time(v7d, v7d_comp1, step=f_i, start=c_s, cyclicdt=cyclicdt, &
-   fill_data=comp_fill_data)
+  CALL vol7d_fill_time(v7d, v7d_comp1, step=c_i, start=c_s, stopp=comp_e, cyclicdt=cyclicdt)
+  CALL delete(v7d)
+  v7d = v7d_comp1
+  CALL init(v7d_comp1) ! detach it
+
+  CALL vol7d_fill_data(v7d, step=c_i, start=c_s, stopp=comp_e, tolerance=f_t)
+
+ENDIF
+
+
+
+IF (comp_filter_time ) THEN
+
+  cyclicdt = cyclicdatetime_new(chardate=comp_cyclicdatetime)
+
+  CALL init(v7d_comp1)
+  CALL vol7d_filter_time(v7d, v7d_comp1, step=c_i, start=c_s, stopp=comp_e, cyclicdt=cyclicdt)
   CALL delete(v7d)
   v7d = v7d_comp1
   CALL init(v7d_comp1) ! detach it
@@ -992,6 +1013,10 @@ if (comp_qc_perc) then
   CALL init(v7dtmp) ! detach it
 end if
 
+if (ldisplay) then
+  print*," >>>>> Output Volume <<<<<"
+  CALL display(v7d)
+end if
 
 ! output
 IF (output_format == 'native') THEN
