@@ -52,8 +52,8 @@ TYPE(vol7d) :: v7d_out
 TYPE(vol7d_dballe) :: v7d_ana, v7d_dba_out
 #endif
 TYPE(geo_coordvect),POINTER :: poly(:) => NULL()
-doubleprecision :: lon, lat
-doubleprecision :: ilon,ilat,flon,flat
+DOUBLE PRECISION :: lon, lat
+DOUBLE PRECISION :: ilon, ilat, flon, flat, radius
 character(len=80) :: output_template,trans_type,sub_type
 INTEGER :: output_td
 LOGICAL :: version, ldisplay
@@ -79,7 +79,7 @@ opt = optionparser_new(description_msg= &
 
 ! define command-line options
 ! options for transformation
-CALL optionparser_add(opt, 'a', 'lon', lon, 0.D0, help= &
+CALL optionparser_add(opt, 'a', 'lon', lon, 10.D0, help= &
  'longitude of single interpolation point, alternative to --coord-file')
 CALL optionparser_add(opt, 'b', 'lat', lat, 45.D0, help= &
  'latitude of single interpolation point, alternative to --coord-file')
@@ -124,6 +124,10 @@ CALL optionparser_add(opt, 'c', 'flon', flon, 30.D0, help= &
  'longitude of the northeastern bounding box corner')
 CALL optionparser_add(opt, 'd', 'flat', flat, 60.D0, help= &
  'latitude of the northeastern bounding box corner')
+radius = dmiss
+CALL optionparser_add(opt, ' ', 'radius', radius, help= &
+ 'radius of stencil in gridpoint units, fractionary values accepted, &
+ &for ''stencilinter'' interpolation')
 
 CALL optionparser_add(opt, 'n', 'network', network, 'generic', help= &
  'string identifying network for output data')
@@ -273,7 +277,7 @@ IF (c_e(coord_file)) THEN
   ENDIF
 ELSE
 
-  IF (trans_type == 'inter') THEN ! set coordinates for interpolation
+  IF (trans_type == 'inter' .OR. trans_type == 'stencilinter') THEN ! set coordinates for interpolation
     CALL vol7d_alloc(v7d_coord, nana=1)
     CALL vol7d_alloc_vol(v7d_coord)
     CALL init(v7d_coord%ana(1), lat=lat, lon=lon)
@@ -293,7 +297,7 @@ ENDIF
 
 ! trasformation object
 CALL init(trans, trans_type=trans_type, sub_type=sub_type, &
- ilon=ilon, ilat=ilat, flon=flon, flat=flat, poly=poly, &
+ ilon=ilon, ilat=ilat, flon=flon, flat=flat, poly=poly, radius=radius, &
  categoryappend="transformation", time_definition=output_td)
 CALL import(volgrid, filename=input_file, decode=.FALSE., categoryappend="input volume")
 

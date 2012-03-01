@@ -59,7 +59,7 @@
 !!    - sub_type='min' the function used is the minimum
 !!
 !!  - trans_type='inter' interpolates the input data on a new set of
-!!    points
+!!    specified points
 !!    - sub_type='near' the interpolated value is that of the nearest
 !!      input point (grid-to-grid, grid-to-sparse point)
 !!    - sub_type='bilin' the interpolated value is computed as a
@@ -84,11 +84,24 @@
 !!  - trans_type='polyinter' computes data on a new set of points, for
 !!    each of which the value is the result of a function computed
 !!    over those input points that lie inside a corresponding
-!!    georoferenced polygon; the output point coordinates are defined
-!!    as the centroids of the polygons (grid-to-sparse points and
-!!    sparse points-to-sparse points)
+!!    georoferenced polygon; polygons cannot overlap each other; the
+!!    output point coordinates are defined as the centroids of the
+!!    polygons (grid-to-sparse points and sparse points-to-sparse
+!!    points)
 !!    - sub_type='average' the function used is the average
 !!    - sub_type='stddev' the function used is the standard deviation.
+!!    - sub_type='max' the function used is the maximum
+!!    - sub_type='min' the function used is the minimum
+!!    - sub_type='percentile' the function used is a requested
+!!      percentile of the input points distribution.
+!!
+!!  - trans_type='stencilinter' computes data on a new set of
+!!    specified points, for each of which the value is the result of a
+!!    function computed over the input grid points forming a circular
+!!    stencil centered on the nearest input grid point, with radius \a
+!!    radius in input grid point units; stencils can overlap each
+!!    other (grid-to-grid and grid-to-sparse points)
+!!    - sub_type='average' the function used is the average
 !!    - sub_type='max' the function used is the maximum
 !!    - sub_type='min' the function used is the minimum
 !!    - sub_type='percentile' the function used is a requested
@@ -153,6 +166,7 @@ CHARACTER(len=255),PARAMETER:: subcategory="grid_transform_class"
 TYPE area_info
   double precision :: boxdx ! longitudinal/x extension of the box for box interpolation, default the target x grid step
   double precision :: boxdy ! latitudinal/y extension of the box for box interpolation, default the target y grid step
+  double precision :: radius ! radius in gridpoints for stencil interpolation
 END TYPE area_info
 
 ! information for statistical processing of interpoland data
@@ -247,6 +261,7 @@ TYPE grid_transform
   DOUBLE PRECISION,POINTER :: vcoord_in(:) => NULL()
   DOUBLE PRECISION,POINTER :: vcoord_out(:) => NULL()
   LOGICAL,POINTER :: point_mask(:,:) => NULL()
+  LOGICAL,POINTER :: stencil(:,:) => NULL()
 !  type(volgrid6d) :: input_vertcoordvol ! volume which provides the input vertical coordinate if separated from the data volume itself (for vertint) cannot be here because of cross-use, should be an argument of compute
 !  type(vol7d_level), pointer :: output_vertlevlist(:) ! list of vertical levels of output data (for vertint) can be here or an argument of compute, how to do?
   INTEGER :: category ! category for log4fortran
@@ -299,7 +314,7 @@ CONTAINS
 !! by the transformation type and subtype chosen have to be present.
 SUBROUTINE transform_init(this, trans_type, sub_type, &
  ix, iy, fx, fy, ilon, ilat, flon, flat, &
- npx, npy, boxdx, boxdy, poly, percentile, &
+ npx, npy, boxdx, boxdy, radius, poly, percentile, &
  extrap, time_definition, &
  input_levtype, input_coordvar, output_levtype, categoryappend)
 TYPE(transform_def),INTENT(out) :: this !< transformation object
@@ -317,6 +332,7 @@ INTEGER,INTENT(IN),OPTIONAL :: npx !< number of points to average along x direct
 INTEGER,INTENT(IN),OPTIONAL :: npy !< number of points to average along y direction (for boxregrid)
 DOUBLEPRECISION,INTENT(in),OPTIONAL :: boxdx !< longitudinal/x extension of the box for box interpolation, default the target x grid step (unimplemented !)
 DOUBLEPRECISION,INTENT(in),OPTIONAL :: boxdy !< latitudinal/y extension of the box for box interpolation, default the target y grid step (unimplemented !)
+DOUBLEPRECISION,INTENT(in),OPTIONAL :: radius !< radius of stencil in grid points (also fractionary values) for stencil interpolation
 TYPE(geo_coordvect),OPTIONAL,TARGET :: poly(:) !< array of polygons indicating areas over which to interpolate (for transformations 'polyinter' or 'metamorphosis:poly')
 DOUBLEPRECISION,INTENT(in),OPTIONAL :: percentile !< percentile [0,100.] of the distribution of points in the box to use as interpolated value for 'percentile' subtype
 LOGICAL,INTENT(IN),OPTIONAL :: extrap !< activate extrapolation outside input domain (use with care!)
@@ -348,6 +364,7 @@ call optio(flat,this%rect_coo%flat)
 
 CALL optio(boxdx,this%area_info%boxdx)
 CALL optio(boxdy,this%area_info%boxdy)
+CALL optio(radius,this%area_info%radius)
 IF (PRESENT(poly)) this%poly => poly
 CALL optio(percentile,this%stat_info%percentile)
 
@@ -496,11 +513,18 @@ ELSE IF (this%trans_type == 'inter') THEN
   endif
 
 ELSE IF (this%trans_type == 'boxinter' .OR. this%trans_type == 'polyinter' &
-  .OR. this%trans_type == 'maskinter')THEN
+  .OR. this%trans_type == 'maskinter' .OR. this%trans_type == 'stencilinter')THEN
 
   IF (this%trans_type == 'polyinter') THEN
     IF (.NOT.ASSOCIATED(this%poly)) THEN
       CALL l4f_category_log(this%category,L4F_ERROR,"polyinter: poly parameter missing")
+      CALL raise_fatal_error()
+    ENDIF
+  ENDIF
+
+  IF (this%trans_type == 'stencilinter') THEN
+    IF (.NOT.c_e(this%area_info%radius)) THEN
+      CALL l4f_category_log(this%category,L4F_ERROR,"stencilinter: radius parameter missing")
       CALL raise_fatal_error()
     ENDIF
   ENDIF
@@ -950,9 +974,10 @@ TYPE(griddim_def),INTENT(inout) :: in !< griddim object to transform
 TYPE(griddim_def),INTENT(inout) :: out !< griddim object defining target grid (input or output depending on type of transformation)
 CHARACTER(len=*),INTENT(in),OPTIONAL :: categoryappend !< append this suffix to log4fortran namespace category
 
-INTEGER :: nx, ny, i, j, n, cf_i, cf_o, nprev
+INTEGER :: nx, ny, i, j, ix, iy, n, nm, nr, cf_i, cf_o, nprev, &
+ xnmin, xnmax, ynmin, ynmax
 DOUBLE PRECISION :: xmin, xmax, ymin, ymax, steplon, steplat, &
- xmin_new, ymin_new, ellips_smaj_axis, ellips_flatt
+ xmin_new, ymin_new, ellips_smaj_axis, ellips_flatt, r2
 TYPE(geo_proj) :: proj_in, proj_out
 TYPE(geo_coord) :: point
 
@@ -1122,29 +1147,7 @@ ELSE IF (this%trans%trans_type == 'boxregrid') THEN
   
 ELSE IF (this%trans%trans_type == 'inter') THEN
 
-! set increments in new grid in order for all the baraque to work
-  CALL griddim_setsteps(out, out%dim%nx, out%dim%ny)
-! check component flag
-  CALL get_val(in, proj=proj_in, component_flag=cf_i)
-  CALL get_val(out, proj=proj_out, component_flag=cf_o)
-  IF (proj_in == proj_out) THEN
-! same projection: set output component flag equal to input regardless
-! of its value
-    CALL set_val(out, component_flag=cf_i)
-  ELSE
-! different projection, interpolation possible only with vector data
-! referred to geograpical axes
-    IF (cf_i == 1) THEN
-      CALL l4f_category_log(this%category,L4F_WARN, &
-       'trying to interpolate a grid with component flag 1 to a grid on a different projection')
-      CALL l4f_category_log(this%category,L4F_WARN, &
-       'vector fields will probably be wrong')
-!      this%valid = .FALSE.
-!      RETURN
-    ELSE
-      CALL set_val(out, component_flag=cf_i)
-    ENDIF
-  ENDIF
+  CALL outgrid_setup() ! common setup for grid-generatig methods
 
   IF (this%trans%sub_type == 'near' .OR. this%trans%sub_type == 'bilin' ) THEN
     
@@ -1184,6 +1187,7 @@ ELSE IF (this%trans%trans_type == 'inter') THEN
 
 ELSE IF (this%trans%trans_type == 'boxinter') THEN
 
+  CALL outgrid_setup() ! common setup for grid-generatig methods
   CALL get_val(in, nx=this%innx, ny=this%inny)
   CALL get_val(out, nx=this%outnx, ny=this%outny, &
    xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax)
@@ -1208,6 +1212,59 @@ ELSE IF (this%trans%trans_type == 'boxinter') THEN
    in%dim%lon, in%dim%lat, .FALSE., &
    this%inter_index_x, this%inter_index_y)
 
+ELSE IF (this%trans%trans_type == 'stencilinter') THEN
+
+  CALL outgrid_setup() ! common setup for grid-generatig methods
+! from inter:near
+  CALL get_val(in, nx=this%innx, ny=this%inny, &
+   xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax)
+  CALL get_val(out, nx=this%outnx, ny=this%outny)
+
+  ALLOCATE (this%inter_index_x(this%outnx,this%outny), &
+   this%inter_index_y(this%outnx,this%outny))
+
+  CALL find_index(in, 'near', &
+   this%innx, this%inny, xmin, xmax, ymin, ymax, &
+   out%dim%lon, out%dim%lat, this%trans%extrap, &
+   this%inter_index_x, this%inter_index_y)
+
+! define the stencil mask
+  nr = INT(this%trans%area_info%radius) ! integer radius
+  n = nr*2+1 ! n. of points
+  nm = nr + 1 ! becomes index of center
+  r2 = this%trans%area_info%radius**2
+  ALLOCATE(this%stencil(n,n))
+  this%stencil(:,:) = .TRUE.
+  DO iy = 1, n
+    DO ix = 1, n
+      IF ((ix-nm)**2+(iy-nm)**2 > r2) this%stencil(ix,iy) = .FALSE.
+    ENDDO
+  ENDDO
+
+! set to missing the elements of inter_index too close to the domain
+! borders
+  xnmin = nr + 1
+  xnmax = this%innx - nr
+  ynmin = nr + 1
+  ynmax = this%inny - nr
+  DO iy = 1, this%outny
+    DO ix = 1, this%outnx
+      IF (this%inter_index_x(ix,iy) < xnmin .OR. &
+       this%inter_index_x(ix,iy) > xnmax .OR. &
+       this%inter_index_y(ix,iy) < ynmin .OR. &
+       this%inter_index_y(ix,iy) > ynmax) THEN
+        this%inter_index_x(ix,iy) = imiss
+        this%inter_index_y(ix,iy) = imiss
+      ENDIF
+    ENDDO
+  ENDDO
+
+#ifdef DEBUG
+  CALL l4f_category_log(this%category, L4F_DEBUG, &
+   'stencilinter: stencil size '//t2c(n*n))
+  CALL l4f_category_log(this%category, L4F_DEBUG, &
+   'stencilinter: stencil points '//t2c(COUNT(this%stencil)))
+#endif
 
 ELSE IF (this%trans%trans_type == 'maskgen') THEN
 
@@ -1269,6 +1326,38 @@ ELSE
 
 ENDIF
 
+CONTAINS
+
+! local subroutine to be called by all methods interpolating to a new
+! grid, no parameters passed, used as a macro to avoid repeating code
+SUBROUTINE outgrid_setup()
+
+! set increments in new grid in order for all the baraque to work
+CALL griddim_setsteps(out, out%dim%nx, out%dim%ny)
+! check component flag
+CALL get_val(in, proj=proj_in, component_flag=cf_i)
+CALL get_val(out, proj=proj_out, component_flag=cf_o)
+IF (proj_in == proj_out) THEN
+! same projection: set output component flag equal to input regardless
+! of its value
+  CALL set_val(out, component_flag=cf_i)
+ELSE
+! different projection, interpolation possible only with vector data
+! referred to geograpical axes
+  IF (cf_i == 1) THEN
+    CALL l4f_category_log(this%category,L4F_WARN, &
+     'trying to interpolate a grid with component flag 1 to a grid on a different projection')
+    CALL l4f_category_log(this%category,L4F_WARN, &
+     'vector fields will probably be wrong')
+!      this%valid = .FALSE.
+!      RETURN
+  ELSE
+    CALL set_val(out, component_flag=cf_i)
+  ENDIF
+ENDIF
+
+END SUBROUTINE outgrid_setup
+
 END SUBROUTINE grid_transform_init
 
 
@@ -1327,8 +1416,8 @@ REAL,INTENT(in),OPTIONAL :: startmaskclass !< this is the start of the interval 
 REAL,INTENT(in),OPTIONAL :: dmaskclass !< if \a nmaskclass is not provided, this is the subinterval of the interval covered by \a maskgrid which defines a single class (subarea)
 CHARACTER(len=*),INTENT(in),OPTIONAL :: categoryappend !< append this suffix to log4fortran namespace category
 
-INTEGER :: ix, iy, n, nprev, lnmaskclass
-DOUBLE PRECISION :: xmin, xmax, ymin, ymax
+INTEGER :: ix, iy, n, nm, nr, nprev, lnmaskclass, xnmin, xnmax, ynmin, ynmax
+DOUBLE PRECISION :: xmin, xmax, ymin, ymax, r2
 DOUBLE PRECISION,POINTER :: lon(:), lat(:)
 REAL :: lstartmaskclass, ldmaskclass, mmin, mmax
 REAL,ALLOCATABLE :: lbound_class(:)
@@ -1443,6 +1532,65 @@ ELSE IF (this%trans%trans_type == 'polyinter') THEN
      t2c(COUNT(this%inter_index_x(:,:) == n)))
   ENDDO
 #endif
+
+ELSE IF (this%trans%trans_type == 'stencilinter') THEN
+  
+! from inter:near
+  CALL get_val(in, nx=this%innx, ny=this%inny)
+  this%outnx = SIZE(v7d_out%ana)
+  this%outny = 1
+
+  ALLOCATE (this%inter_index_x(this%outnx,this%outny),&
+   this%inter_index_y(this%outnx,this%outny))
+  ALLOCATE(lon(this%outnx),lat(this%outnx))
+
+  CALL get_val(in, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax)
+  CALL getval(v7d_out%ana(:)%coord,lon=lon,lat=lat)
+
+  CALL find_index(in, 'near',&
+   this%innx, this%inny, xmin, xmax, ymin, ymax, &
+   lon, lat, this%trans%extrap, &
+   this%inter_index_x(:,1), this%inter_index_y(:,1))
+
+! define the stencil mask
+  nr = INT(this%trans%area_info%radius) ! integer radius
+  n = nr*2+1 ! n. of points
+  nm = nr + 1 ! becomes index of center
+  r2 = this%trans%area_info%radius**2
+  ALLOCATE(this%stencil(n,n))
+  this%stencil(:,:) = .TRUE.
+  DO iy = 1, n
+    DO ix = 1, n
+      IF ((ix-nm)**2+(iy-nm)**2 > r2) this%stencil(ix,iy) = .FALSE.
+    ENDDO
+  ENDDO
+
+! set to missing the elements of inter_index too close to the domain
+! borders
+  xnmin = nr + 1
+  xnmax = this%innx - nr
+  ynmin = nr + 1
+  ynmax = this%inny - nr
+  DO iy = 1, this%outny
+    DO ix = 1, this%outnx
+      IF (this%inter_index_x(ix,iy) < xnmin .OR. &
+       this%inter_index_x(ix,iy) > xnmax .OR. &
+       this%inter_index_y(ix,iy) < ynmin .OR. &
+       this%inter_index_y(ix,iy) > ynmax) THEN
+        this%inter_index_x(ix,iy) = imiss
+        this%inter_index_y(ix,iy) = imiss
+      ENDIF
+    ENDDO
+  ENDDO
+
+#ifdef DEBUG
+  CALL l4f_category_log(this%category, L4F_DEBUG, &
+   'stencilinter: stencil size '//t2c(n*n))
+  CALL l4f_category_log(this%category, L4F_DEBUG, &
+   'stencilinter: stencil points '//t2c(COUNT(this%stencil)))
+#endif
+
+  DEALLOCATE(lon,lat)
 
 ELSE IF (this%trans%trans_type == 'maskinter') THEN
 
@@ -1582,8 +1730,10 @@ ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
 ! count and mark points falling into requested polygon
     this%outnx = 0
     this%outny = 1
+
+! this OMP block has to be checked
 !$OMP PARALLEL DEFAULT(SHARED)
-!$OMP DO PRIVATE(iy, ix, point)
+!$OMP DO PRIVATE(iy, ix, point) REDUCTION(+:this%outnx)
     DO iy = 1, this%inny
       DO ix = 1, this%innx
         CALL init(point, lon=in%dim%lon(ix,iy), lat=in%dim%lat(ix,iy))
@@ -1643,8 +1793,9 @@ ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
   this%outnx = 0
   this%outny = 1
 
+! this OMP block has to be checked
 !$OMP PARALLEL DEFAULT(SHARED)
-!$OMP DO PRIVATE(iy, ix, n)
+!$OMP DO PRIVATE(iy, ix) REDUCTION(+:this%outnx)
     DO iy = 1, this%inny
       DO ix = 1, this%innx
         IF (c_e(maskgrid(ix,iy))) THEN
@@ -1729,7 +1880,7 @@ ELSE
   IF (.NOT.c_e(ldmaskclass)) THEN
     ldmaskclass = 1.0
   ENDIF
-  lnmaskclass = (mmax - mmin + 0.5*ldmaskclass)/ldmaskclass + 1.0
+  lnmaskclass = INT((mmax - mmin + 0.5*ldmaskclass)/ldmaskclass + 1.0)
   lstartmaskclass = mmin-0.5*ldmaskclass
 ENDIF
 ! assign limits for each class
@@ -2188,7 +2339,7 @@ REAL,INTENT(in) :: field_in(:,:,:) !< input array
 REAL,INTENT(out) :: field_out(:,:,:) !< output array
 TYPE(vol7d_var),INTENT(in),OPTIONAL :: var !< physical variable to be interpolated, if provided, some ad-hoc algorithms may be used where possible
 
-INTEGER :: i, j, k, ii, jj, ie, je, n, navg, kk, kkcache
+INTEGER :: i, j, k, ii, jj, ie, je, n, navg, kk, kkcache, i1, i2, j1, j2, np, ns
 INTEGER,ALLOCATABLE :: nval(:,:)
 REAL :: z1,z2,z3,z4
 DOUBLE PRECISION  :: x1,x3,y1,y3,xp,yp
@@ -2302,8 +2453,6 @@ IF (this%trans%trans_type == 'zoom') THEN
 
 ELSE IF (this%trans%trans_type == 'boxregrid') THEN
 
-  field_out(:,:,:) = rmiss
-
   IF (this%trans%sub_type == 'average') THEN
     DO k = 1, innz
       jj = 0
@@ -2371,21 +2520,20 @@ ELSE IF (this%trans%trans_type == 'inter') THEN
       DO j = 1, this%outny 
         DO i = 1, this%outnx 
 
-          if (c_e(this%inter_index_x(i,j)) .and. c_e(this%inter_index_y(i,j)))&
-           field_out(i,j,k) = &
+          IF (c_e(this%inter_index_x(i,j))) field_out(i,j,k) = &
            field_in(this%inter_index_x(i,j),this%inter_index_y(i,j),k)
 
         ENDDO
       ENDDO
     ENDDO
 
-  else if (this%trans%sub_type == 'bilin') THEN
+  ELSE IF (this%trans%sub_type == 'bilin') THEN
     
     DO k = 1, innz
       DO j = 1, this%outny 
         DO i = 1, this%outnx 
 
-          IF (c_e(this%inter_index_x(i,j)) .AND. c_e(this%inter_index_y(i,j)))THEN
+          IF (c_e(this%inter_index_x(i,j))) THEN
 
             z1=field_in(this%inter_index_x(i,j),this%inter_index_y(i,j),k)
             z2=field_in(this%inter_index_x(i,j)+1,this%inter_index_y(i,j),k)
@@ -2404,8 +2552,8 @@ ELSE IF (this%trans%trans_type == 'inter') THEN
 
               field_out(i,j,k) = hbilin (z1,z2,z3,z4,x1,y1,x3,y3,xp,yp)
 
-            END IF
-          END IF
+            ENDIF
+          ENDIF
 
         ENDDO
       ENDDO
@@ -2458,7 +2606,6 @@ ELSE IF (this%trans%trans_type == 'boxinter' &
 
   ELSE IF (this%trans%sub_type == 'max') THEN
 
-    field_out(:,:,:) = rmiss
     DO k = 1, innz
       DO j = 1, this%inny
         DO i = 1, this%innx
@@ -2479,7 +2626,6 @@ ELSE IF (this%trans%trans_type == 'boxinter' &
 
   ELSE IF (this%trans%sub_type == 'min') THEN
 
-    field_out(:,:,:) = rmiss
     DO k = 1, innz
       DO j = 1, this%inny
         DO i = 1, this%innx
@@ -2514,14 +2660,110 @@ ELSE IF (this%trans%trans_type == 'boxinter' &
 
   ENDIF
 
+ELSE IF (this%trans%trans_type == 'stencilinter') THEN
+  np = SIZE(this%stencil,1)/2
+  ns = SIZE(this%stencil)
+
+  IF (this%trans%sub_type == 'average') THEN
+    
+!$OMP PARALLEL DEFAULT(SHARED)
+!$OMP DO PRIVATE(i, j, k, i1, i2, j1, j2, n)
+    DO k = 1, innz
+      DO j = 1, this%outny
+        DO i = 1, this%outnx
+          IF (c_e(this%inter_index_x(i,j))) THEN
+            i1 = this%inter_index_x(i,j) - np
+            i2 = this%inter_index_x(i,j) + np
+            j1 = this%inter_index_y(i,j) - np
+            j2 = this%inter_index_y(i,j) + np
+            n = COUNT(field_in(i1:i2,j1:j2,k) /= rmiss .AND. this%stencil(:,:))
+            IF (n > 0) THEN
+              field_out(i,j,k) = SUM(field_in(i1:i2,j1:j2,k), &
+               mask=field_in(i1:i2,j1:j2,k) /= rmiss .AND. this%stencil(:,:))/n
+            ENDIF
+          ENDIF
+        ENDDO
+      ENDDO
+    ENDDO
+!$OMP END PARALLEL
+          
+  ELSE IF (this%trans%sub_type == 'max') THEN
+
+!$OMP PARALLEL DEFAULT(SHARED)
+!$OMP DO PRIVATE(i, j, k, i1, i2, j1, j2, n)
+    DO k = 1, innz
+      DO j = 1, this%outny
+        DO i = 1, this%outnx
+          IF (c_e(this%inter_index_x(i,j))) THEN
+            i1 = this%inter_index_x(i,j) - np
+            i2 = this%inter_index_x(i,j) + np
+            j1 = this%inter_index_y(i,j) - np
+            j2 = this%inter_index_y(i,j) + np
+            n = COUNT(field_in(i1:i2,j1:j2,k) /= rmiss .AND. this%stencil(:,:))
+            IF (n > 0) THEN
+              field_out(i,j,k) = MAXVAL(field_in(i1:i2,j1:j2,k), &
+               mask=field_in(i1:i2,j1:j2,k) /= rmiss .AND. this%stencil(:,:))
+            ENDIF
+          ENDIF
+        ENDDO
+      ENDDO
+    ENDDO
+!$OMP END PARALLEL
+
+  ELSE IF (this%trans%sub_type == 'min') THEN
+
+!$OMP PARALLEL DEFAULT(SHARED)
+!$OMP DO PRIVATE(i, j, k, i1, i2, j1, j2, n)
+    DO k = 1, innz
+      DO j = 1, this%outny
+        DO i = 1, this%outnx
+          IF (c_e(this%inter_index_x(i,j))) THEN
+            i1 = this%inter_index_x(i,j) - np
+            i2 = this%inter_index_x(i,j) + np
+            j1 = this%inter_index_y(i,j) - np
+            j2 = this%inter_index_y(i,j) + np
+            n = COUNT(field_in(i1:i2,j1:j2,k) /= rmiss .AND. this%stencil(:,:))
+            IF (n > 0) THEN
+              field_out(i,j,k) = MINVAL(field_in(i1:i2,j1:j2,k), &
+               mask=field_in(i1:i2,j1:j2,k) /= rmiss .AND. this%stencil(:,:))
+            ENDIF
+          ENDIF
+        ENDDO
+      ENDDO
+    ENDDO
+!$OMP END PARALLEL
+
+  ELSE IF (this%trans%sub_type == 'percentile') THEN
+
+!$OMP PARALLEL DEFAULT(SHARED)
+!$OMP DO PRIVATE(i, j, k, i1, i2, j1, j2)
+    DO k = 1, innz
+      DO j = 1, this%outny
+        DO i = 1, this%outnx
+          IF (c_e(this%inter_index_x(i,j))) THEN
+            i1 = this%inter_index_x(i,j) - np
+            i2 = this%inter_index_x(i,j) + np
+            j1 = this%inter_index_y(i,j) - np
+            j2 = this%inter_index_y(i,j) + np
+! da paura
+            field_out(i:i,j,k) = stat_percentile( &
+             RESHAPE(field_in(i1:i2,j1:j2,k), (/ns/)), &
+             (/REAL(this%trans%stat_info%percentile)/), &
+             mask=RESHAPE(field_in(i1:i2,j1:j2,k) /= rmiss .AND. &
+             this%stencil(:,:), (/ns/)))
+          ENDIF
+        ENDDO
+      ENDDO
+    ENDDO
+!$OMP END PARALLEL
+          
+  ENDIF
 
 ELSE IF (this%trans%trans_type == 'maskgen') THEN
 
   DO k = 1, innz
     WHERE(c_e(this%inter_index_x(:,:)))
       field_out(:,:,k) = REAL(this%inter_index_x(:,:))
-    ELSEWHERE
-      field_out(:,:,k) = rmiss
     END WHERE
   ENDDO
 
@@ -2924,8 +3166,8 @@ IF (inter_type == "near") THEN
 ELSE IF (inter_type == "bilin") THEN
 
   CALL proj(this,lon,lat,x,y)
-  index_x = (x-xmin)/((xmax-xmin)/DBLE(nx-1))+1
-  index_y = (y-ymin)/((ymax-ymin)/DBLE(ny-1))+1
+  index_x = INT((x-xmin)/((xmax-xmin)/DBLE(nx-1)))+1
+  index_y = INT((y-ymin)/((ymax-ymin)/DBLE(ny-1)))+1
   lnx = nx-1
   lny = ny-1
 
@@ -2943,8 +3185,10 @@ IF (extrap) THEN ! trim indices outside grid for extrapolation
   index_x = MIN(index_x, lnx)
   index_y = MIN(index_y, lny)
 ELSE ! nullify indices outside grid
-  IF (index_x < 1 .OR. index_x > lnx) index_x = imiss
-  IF (index_y < 1 .OR. index_y > lny) index_y = imiss
+  IF (index_x < 1 .OR. index_x > lnx .OR. index_y < 1 .OR. index_y > lny) THEN
+    index_x = imiss
+    index_y = imiss
+  ENDIF
 ENDIF
 
 END SUBROUTINE find_index

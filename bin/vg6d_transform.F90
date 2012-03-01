@@ -50,9 +50,8 @@ CHARACTER(len=512) :: a_name, coord_file, input_file, output_file, output_format
 TYPE(arrayof_integer) :: trans_level_type, trans_level_list, trans_botlevel_list
 TYPE(vol7d_level) :: ilevel, olevel
 TYPE(vol7d_level),ALLOCATABLE :: olevel_list(:)
-type (volgrid6d),pointer  :: volgrid(:),volgrid_out(:),volgrid_tmp(:)
-
-doubleprecision ::  ilon,ilat,flon,flat
+TYPE (volgrid6d),POINTER  :: volgrid(:),volgrid_out(:),volgrid_tmp(:)
+DOUBLE PRECISION :: ilon, ilat, flon, flat, radius
 
 type(griddim_def) :: griddim_out
 type(transform_def) :: trans
@@ -165,6 +164,10 @@ CALL optionparser_add(opt, ' ', 'fx', fx, 31, help= &
  'x-index of the northeastern zooming corner')
 CALL optionparser_add(opt, ' ', 'fy', fy, 31, help= &
  'y-index of the northeastern zooming corner')
+radius = dmiss
+CALL optionparser_add(opt, ' ', 'radius', radius, help= &
+ 'radius of stencil in gridpoint units, fractionary values accepted, &
+ &for ''stencilinter'' interpolation')
 
 CALL optionparser_add(opt, 'f', 'npx', npx, 4, help= &
  'number of nodes along x axis on input grid, over which to apply function for boxregrid')
@@ -456,7 +459,7 @@ IF (trans_type /=  'none') THEN ! transform
   CALL init(trans, trans_type=trans_type, sub_type=sub_type, extrap=extrap, &
    ix=ix, iy=iy, fx=fx, fy=fy, &
    ilon=ilon, ilat=ilat, flon=flon, flat=flat, npx=npx, npy=npy, &
-   poly=poly, percentile=0.5D0, &
+   radius=radius, poly=poly, percentile=0.5D0, &
    input_levtype=ilevel, output_levtype=olevel, &
    categoryappend="transformation")
 
