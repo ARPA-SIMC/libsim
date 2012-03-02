@@ -2572,8 +2572,7 @@ ELSE IF (this%trans%trans_type == 'boxinter' &
       nval(:,:) = 0
       DO j = 1, this%inny
         DO i = 1, this%innx
-          IF (c_e(this%inter_index_x(i,j)) .AND. c_e(this%inter_index_y(i,j)) &
-           .AND. c_e(field_in(i,j,k))) THEN
+          IF (c_e(this%inter_index_x(i,j)) .AND. c_e(field_in(i,j,k))) THEN
             field_out(this%inter_index_x(i,j),this%inter_index_y(i,j),k) = &
              field_out(this%inter_index_x(i,j),this%inter_index_y(i,j),k) + &
              field_in(i,j,k)
@@ -2609,7 +2608,7 @@ ELSE IF (this%trans%trans_type == 'boxinter' &
     DO k = 1, innz
       DO j = 1, this%inny
         DO i = 1, this%innx
-          IF (c_e(this%inter_index_x(i,j)) .AND. c_e(this%inter_index_y(i,j))) THEN
+          IF (c_e(this%inter_index_x(i,j)) .AND. c_e(field_in(i,j,k))) THEN
             IF (c_e(field_out(this%inter_index_x(i,j),this%inter_index_y(i,j),k))) THEN
               field_out(this%inter_index_x(i,j),this%inter_index_y(i,j),k) = &
                MAX(field_out(this%inter_index_x(i,j),this%inter_index_y(i,j),k), &
@@ -2629,7 +2628,7 @@ ELSE IF (this%trans%trans_type == 'boxinter' &
     DO k = 1, innz
       DO j = 1, this%inny
         DO i = 1, this%innx
-          IF (c_e(this%inter_index_x(i,j)) .AND. c_e(this%inter_index_y(i,j))) THEN
+          IF (c_e(this%inter_index_x(i,j)) .AND. c_e(field_in(i,j,k))) THEN
             IF (c_e(field_out(this%inter_index_x(i,j),this%inter_index_y(i,j),k))) THEN
               field_out(this%inter_index_x(i,j),this%inter_index_y(i,j),k) = &
                MIN(field_out(this%inter_index_x(i,j),this%inter_index_y(i,j),k), &

@@ -694,18 +694,18 @@ DO ninput = optind, iargc()-1
 
   IF (input_format == 'native') THEN
 
-    if (c_e(coordmin) .or. c_e(coordmax)) then
+    IF (c_e(coordmin) .OR. c_e(coordmax)) THEN
       CALL l4f_category_log(category, L4F_ERROR, &
-       'ielat, ielon, felat, felon not usable with NATIVE source')
+       '--ielat, --ielon, --felat, --felon not usable with native source')
       CALL raise_fatal_error()
-    end if
+    ENDIF
 
-   if (c_e(level) .or. c_e(timerange) .or. size(avl) > 0 .or. size(alqc) > 0 .or. c_e(set_network_obj) &
-     .or. c_e(s_d) .or. c_e(e_d)) then
+    IF (c_e(level) .OR. c_e(timerange) .OR. SIZE(avl) > 0 .OR. SIZE(al) > 0 &
+     .OR. c_e(set_network_obj) .OR. c_e(s_d) .OR. c_e(e_d)) THEN
       CALL l4f_category_log(category, L4F_ERROR, &
-       'selection options like date, level timerange or others not usable with NATIVE source')
+       'selection options like date, level timerange or others not usable with native source')
       CALL raise_fatal_error()
-    end if
+    ENDIF
 
     IF (input_file == '-') THEN ! stdin_unit does not work with unformatted
       CALL l4f_category_log(category, L4F_INFO, 'trying /dev/stdin as stdin unit.')
@@ -749,7 +749,7 @@ DO ninput = optind, iargc()-1
 
     if (c_e(coordmin) .or. c_e(coordmax)) then
       CALL l4f_category_log(category, L4F_ERROR, &
-       'ielat, ielon, felat, felon not usable with SIM Oracle source')
+       '--ielat, --ielon, --felat, --felon not usable with SIM Oracle source')
       CALL raise_fatal_error()
     end if
 
