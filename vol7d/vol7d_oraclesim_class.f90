@@ -1070,7 +1070,7 @@ INTEGER :: v3
 IF (cflag(1) == ICHAR('0') .OR. cflag(1) == ICHAR('1')) THEN
   IF (valore3(1) /= ICHAR(' ')) THEN
     cval = cstr_to_fchar(valore3)
-    READ(v3,'(I8)',end=100,err=100)cval
+    READ(cval,'(I8)',end=100,err=100)v3
     IF (v3 < 0) valore1 = rmiss
   ENDIF
 ELSE IF (cflag(1) == ICHAR('2')) THEN
