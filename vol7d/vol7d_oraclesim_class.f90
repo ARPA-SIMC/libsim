@@ -88,7 +88,7 @@ TYPE(attr_builder) :: dataattr_builder(6) = (/ & ! types: rdibc
 ! tabella reti e anagrafica
 TYPE(vol7d) :: netana(oraclesim_netmax)
 LOGICAL :: networktable(oraclesim_netmax) = .FALSE.
-INTEGER, PARAMETER :: netana_nvarr=3, netana_nvari=1, netana_nvarc=2
+INTEGER, PARAMETER :: netana_nvarr=2, netana_nvari=1, netana_nvarc=2
 
 PRIVATE
 PUBLIC vol7d_oraclesim, init, delete, import!, oraclesim_netmax
@@ -895,7 +895,7 @@ CALL vol7d_alloc_vol(netana(netid))
 CALL init(netana(netid)%anavar%r(1), btable='B07030', unit='M') ! station height
 CALL init(netana(netid)%anavar%r(2), btable='B07031', unit='M') ! barometer height
 ! la prossima riga dovra` essere eliminata ad avvenuta transizione a dballe 5.5
-CALL init(netana(netid)%anavar%r(3), btable='B07001', unit='M') ! station height
+!CALL init(netana(netid)%anavar%r(3), btable='B07001', unit='M') ! station height
 CALL init(netana(netid)%anavar%i(1), btable='B01192', unit='NUMERIC', &
  scalefactor=0) ! Oracle station id
 CALL init(netana(netid)%anavar%c(1), btable='B01019', unit='CCITTIA5', &

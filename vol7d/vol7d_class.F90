@@ -311,7 +311,7 @@ CONTAINS
 !! uno stato indefinito.
 SUBROUTINE vol7d_init(this,time_definition)
 TYPE(vol7d),intent(out) :: this !< oggetto da inizializzare
-integer,INTENT(IN),OPTIONAL :: time_definition !< 0=time is reference time ; 1=time is validity time
+integer,INTENT(IN),OPTIONAL :: time_definition !< 0=time is reference time ; 1=time is validity time (default=1)
 
 CALL init(this%anavar)
 CALL init(this%anaattr)
@@ -402,6 +402,13 @@ CHARACTER(len=vol7d_cdatalen) :: cdat
 
 
 print*,"<<<<<<<<<<<<<<<<<<< vol7d object >>>>>>>>>>>>>>>>>>>>"
+if (this%time_definition == 0) then
+  print*,"TIME DEFINITION: time is reference time"
+else if (this%time_definition == 1) then
+  print*,"TIME DEFINITION: time is validity time"
+else
+  print*,"Time definition have a wrong walue:", this%time_definition
+end if
 
 IF (ASSOCIATED(this%network))then
   print*,"---- network vector ----"
