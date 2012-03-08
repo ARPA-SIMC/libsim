@@ -894,8 +894,6 @@ CALL vol7d_alloc_vol(netana(netid))
 
 CALL init(netana(netid)%anavar%r(1), btable='B07030', unit='M') ! station height
 CALL init(netana(netid)%anavar%r(2), btable='B07031', unit='M') ! barometer height
-! la prossima riga dovra` essere eliminata ad avvenuta transizione a dballe 5.5
-!CALL init(netana(netid)%anavar%r(3), btable='B07001', unit='M') ! station height
 CALL init(netana(netid)%anavar%i(1), btable='B01192', unit='NUMERIC', &
  scalefactor=0) ! Oracle station id
 CALL init(netana(netid)%anavar%c(1), btable='B01019', unit='CCITTIA5', &
@@ -912,9 +910,6 @@ IF (i /= 0) THEN
   CALL l4f_log(L4F_FATAL, 'in oraclesim_getanavol, '//TRIM(cstr_to_fchar(msg)))
   CALL raise_fatal_error()
 ENDIF
-! la prossima riga dovra` essere eliminata ad avvenuta transizione a dballe 5.5
-! modificare congiuntamente anche netana_nvarr=2
-netana(netid)%volanar(:,3,1) = netana(netid)%volanar(:,1,1)
 
 ismiss = .FALSE.
 DO i = 1, nana
