@@ -84,6 +84,11 @@ INTERFACE OPERATOR (/=)
 END INTERFACE
 
 !> to be documented
+INTERFACE c_e
+  MODULE PROCEDURE vol7d_var_c_e
+END INTERFACE
+
+!> to be documented
 INTERFACE count_distinct
   MODULE PROCEDURE count_distinct_var
 END INTERFACE
@@ -123,7 +128,6 @@ CONTAINS
 !! tramite costruttore, ma solo direttamente.
 elemental SUBROUTINE vol7d_var_init(this, btable, description, unit, scalefactor)
 TYPE(vol7d_var),INTENT(INOUT) :: this !< oggetto da inizializzare
-!INTEGER,INTENT(in),OPTIONAL :: btable
 CHARACTER(len=*),INTENT(in),OPTIONAL :: btable !< codice della variabile
 CHARACTER(len=*),INTENT(in),OPTIONAL :: description !< descrizione della variabile
 CHARACTER(len=*),INTENT(in),OPTIONAL :: unit !< unità di misura
@@ -161,6 +165,19 @@ this%b = -1
 this%c = -1
 
 END SUBROUTINE vol7d_var_init
+
+
+ELEMENTAL FUNCTION vol7d_var_new(btable, description, unit, scalefactor) RESULT(this)
+CHARACTER(len=*),INTENT(in),OPTIONAL :: btable !< codice della variabile
+CHARACTER(len=*),INTENT(in),OPTIONAL :: description !< descrizione della variabile
+CHARACTER(len=*),INTENT(in),OPTIONAL :: unit !< unità di misura
+INTEGER,INTENT(in),OPTIONAL :: scalefactor !< decimali nella rappresentazione intera e character
+
+TYPE(vol7d_var) :: this
+
+CALL init(this,btable, description, unit, scalefactor)
+
+END FUNCTION vol7d_var_new
 
 
 !> Distrugge l'oggetto in maniera pulita, assegnandogli un valore mancante.
@@ -243,6 +260,11 @@ end do
 
 end subroutine display_var_vect
 
+FUNCTION vol7d_var_c_e(this) RESULT(c_e)
+TYPE(vol7d_var),INTENT(IN) :: this
+LOGICAL :: c_e
+c_e = this /= vol7d_var_miss
+END FUNCTION vol7d_var_c_e
 
 
 ! Definisce le funzioni count_distinct e pack_distinct

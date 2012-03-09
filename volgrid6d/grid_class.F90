@@ -93,6 +93,13 @@ INTERFACE OPERATOR (==)
   MODULE PROCEDURE grid_eq, griddim_eq
 END INTERFACE
 
+!> Logical inequality operators for objects of the classes \a grid_def,
+!! and \a griddim_def. They are all defined as \c
+!! ELEMENTAL thus work also on arrays of any shape.
+INTERFACE OPERATOR (/=)
+  MODULE PROCEDURE grid_ne, griddim_ne
+END INTERFACE
+
 !> Constructors of the corresponding objects.
 INTERFACE init
   MODULE PROCEDURE griddim_init
@@ -186,9 +193,9 @@ PUBLIC proj, unproj, griddim_unproj, griddim_gen_coord, &
  griddim_zoom_coord, griddim_setsteps, griddim_def, grid_def, grid_dim
 PUBLIC init, delete, copy
 public get_val,set_val,write_unit,read_unit,display
-public operator(==),count_distinct,pack_distinct,map_distinct,map_inv_distinct,index
-public wind_unrot
-PUBLIC import,export
+PUBLIC OPERATOR(==),OPERATOR(/=)
+PUBLIC count_distinct, pack_distinct, map_distinct, map_inv_distinct,index
+PUBLIC wind_unrot, import, export
 
 CONTAINS
 
@@ -567,6 +574,24 @@ res = this%grid == that%grid .AND. &
  this%dim == that%dim
 
 END FUNCTION griddim_eq
+
+
+ELEMENTAL FUNCTION grid_ne(this, that) RESULT(res)
+TYPE(grid_def),INTENT(IN) :: this, that
+LOGICAL :: res
+
+res = .NOT.(this == that)
+
+END FUNCTION grid_ne
+
+
+ELEMENTAL FUNCTION griddim_ne(this, that) RESULT(res)
+TYPE(griddim_def),INTENT(IN) :: this, that
+LOGICAL :: res
+
+res = .NOT.(this == that)
+
+END FUNCTION griddim_ne
 
 
 !> Import a griddim object from a grid_id object associated to a

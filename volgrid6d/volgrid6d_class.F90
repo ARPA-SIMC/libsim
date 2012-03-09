@@ -1507,20 +1507,24 @@ end SUBROUTINE volgrid6d_transform_compute
 !! is created internally and it does not require preliminary
 !! initialisation.
 SUBROUTINE volgrid6d_transform(this, griddim, volgrid6d_in, volgrid6d_out, &
- lev_out, clone, decode, categoryappend)
+ lev_out, clone, volgrid6d_coord_in, decode, categoryappend)
 TYPE(transform_def),INTENT(in) :: this !< object specifying the abstract transformation
 TYPE(griddim_def),INTENT(in),OPTIONAL :: griddim !< griddim specifying the output grid (required by most transformation types)
 ! TODO ripristinare intent(in) dopo le opportune modifiche in grid_class.F90
 TYPE(volgrid6d),INTENT(inout) :: volgrid6d_in !< object to be transformed, it is not modified, despite the INTENT(inout)
 TYPE(volgrid6d),INTENT(out) :: volgrid6d_out !< transformed object, it does not need initialisation
 TYPE(vol7d_level),INTENT(in),OPTIONAL,TARGET :: lev_out(:) !< vol7d_level object defining target vertical grid, for vertical interpolations
+TYPE(volgrid6d),INTENT(in),OPTIONAL :: volgrid6d_coord_in !< object providing time constant input vertical coordinate for some kind of vertical interpolations
 LOGICAL,INTENT(in),OPTIONAL :: clone !< if provided and \a .TRUE. , clone the \a gaid's from \a volgrid6d_in to \a volgrid6d_out 
 LOGICAL,INTENT(in),OPTIONAL :: decode !< if provided and \a .FALSE. the data volume is not allocated, but work is performed on grid_id's (NOT USED!)
 CHARACTER(len=*),INTENT(in),OPTIONAL :: categoryappend !< append this suffix to log4fortran namespace category
 
 TYPE(grid_transform) :: grid_trans
 TYPE(vol7d_level),POINTER :: llev_out(:)
-INTEGER :: ntime, ntimerange, nlevel, nvar, cf_out
+TYPE(vol7d_level) :: output_levtype
+TYPE(vol7d_var) :: vcoord_var
+INTEGER :: i, ntime, ntimerange, nlevel, nvar, var_coord_in, cf_out, &
+ nxc, nyc, nxi, nyi
 TYPE(geo_proj) :: proj_in, proj_out
 CHARACTER(len=80) :: trans_type
 
@@ -1563,14 +1567,105 @@ ENDIF
 
 IF (trans_type == 'vertint') THEN
   IF (PRESENT(lev_out)) THEN
+
+! if volgrid6d_coord_out provided and allocated, check that it fits
+    var_coord_in = imiss
+    IF (PRESENT(volgrid6d_coord_in)) THEN
+      IF (ASSOCIATED(volgrid6d_coord_in%voldati)) THEN
+
+! strictly 1 time and 1 timerange
+        IF (SIZE(volgrid6d_coord_in%voldati,4) /= 1 .OR. &
+         SIZE(volgrid6d_coord_in%voldati,5) /= 1) THEN
+          CALL l4f_category_log(volgrid6d_in%category, L4F_ERROR, &
+           'volume providing constant input vertical coordinate must have &
+           &only 1 time and 1 timerange')
+          CALL raise_error()
+          RETURN
+        ENDIF
+
+! the levels must be the same as for input data
+! TODO: try to match equal levels in a more flexible way
+        IF (SIZE(volgrid6d_coord_in%level) /= SIZE(volgrid6d_in%level)) THEN
+! number is different
+          CALL l4f_category_log(volgrid6d_in%category, L4F_ERROR, &
+           'volume providing constant input vertical coordinate must have &
+           &the same number of vertical levels as the input '//&
+           t2c(SIZE(volgrid6d_coord_in%level))//' '//t2c(SIZE(volgrid6d_in%level)))
+          CALL raise_error()
+          RETURN
+          IF (ANY(volgrid6d_coord_in%level /= volgrid6d_in%level)) THEN
+! some levels are different
+            DO i = 1, SIZE(volgrid6d_coord_in%level)
+              IF (volgrid6d_coord_in%level(i) /= volgrid6d_in%level(i)) THEN
+                CALL l4f_category_log(volgrid6d_in%category, L4F_ERROR, &
+                 'level '//t2c(i)//' is different')
+                CALL display(volgrid6d_coord_in%level(i))
+                CALL display(volgrid6d_in%level(i))
+              ENDIF
+            ENDDO
+            CALL raise_error()
+            RETURN
+          ENDIF
+        ENDIF
+
+! search for variable providing vertical coordinate
+        CALL get_val(this, output_levtype=output_levtype)
+        vcoord_var = vol7d_var_new(vol7d_level_to_var(output_levtype))
+        IF (.NOT.c_e(vcoord_var)) THEN
+          CALL l4f_category_log(volgrid6d_in%category, L4F_ERROR, &
+           'requested output level type '//t2c(output_levtype%level1)// &
+           ' does not correspond to any known physical variable for &
+           &providing vertical coordinate')
+          CALL raise_error()
+          RETURN
+        ENDIF
+
+        DO i = 1, SIZE(volgrid6d_coord_in%var)
+          IF (convert(volgrid6d_coord_in%var(i)) == vcoord_var) THEN
+            var_coord_in = i
+            EXIT
+          ENDIF
+        ENDDO
+
+        IF (.NOT.c_e(var_coord_in)) THEN
+          CALL l4f_category_log(volgrid6d_in%category, L4F_ERROR, &
+           'volume providing constant input vertical coordinate contains no &
+           &variables matching output level type '//t2c(output_levtype%level1))
+          CALL raise_error()
+          RETURN
+        ENDIF
+
+! this is too strict (component flag and so on)
+!        IF (volgrid6d_coord_in%griddim /= volgrid6d_in%griddim) THEN
+        CALL get_val(volgrid6d_coord_in%griddim, nx=nxc, ny=nyc)
+        CALL get_val(volgrid6d_in%griddim, nx=nxi, ny=nyi)
+        IF (nxc /= nxi .OR. nyc /= nyi) THEN
+          CALL l4f_category_log(volgrid6d_in%category, L4F_ERROR, &
+           'volume providing constant input vertical coordinate must have &
+           &the same grid as the input')
+          CALL l4f_category_log(volgrid6d_in%category, L4F_ERROR, &
+           'vertical coordinate: '//t2c(nxc)//'x'//t2c(nyc)// &
+           ', input volume: '//t2c(nxi)//'x'//t2c(nyi))
+          CALL raise_error()
+          RETURN
+        ENDIF
+
+      ENDIF
+    ENDIF
+
     CALL init(volgrid6d_out, griddim=volgrid6d_in%griddim, &
      time_definition=volgrid6d_in%time_definition, categoryappend=categoryappend)
-    CALL init(grid_trans, this, lev_in=volgrid6d_in%level, lev_out=lev_out, &
-     lev_out_auto=llev_out, categoryappend=categoryappend)
-!    IF (.NOT.ASSOCIATED(llev_out)) THEN
-!      ALLOCATE(llev_out(SIZE(lev_out)))
-!      llev_out (:) = lev_out(:)
-!    ENDIF
+    IF (c_e(var_coord_in)) THEN
+      CALL init(grid_trans, this, lev_in=volgrid6d_in%level, lev_out=lev_out, &
+       coord_3d_in=volgrid6d_coord_in%voldati(:,:,:,1,1,var_coord_in), &
+       categoryappend=categoryappend)
+    ELSE
+      CALL init(grid_trans, this, lev_in=volgrid6d_in%level, lev_out=lev_out, &
+       categoryappend=categoryappend)
+    ENDIF
+
+    CALL get_val(grid_trans, output_level_auto=llev_out) ! get levels if auto-generated
+    IF (.NOT.ASSOCIATED(llev_out)) llev_out => lev_out
     nlevel = SIZE(llev_out)
   ELSE
     CALL l4f_category_log(volgrid6d_in%category, L4F_ERROR, &
@@ -1606,7 +1701,6 @@ IF (c_e(grid_trans)) THEN ! transformation is valid
 #endif
     CALL compute(grid_trans, volgrid6d_in, volgrid6d_out, lev_out=llev_out, &
      clone=clone)
-    DEALLOCATE(llev_out)
   ELSE
     CALL compute(grid_trans, volgrid6d_in, volgrid6d_out, clone=clone)
   ENDIF
@@ -1638,13 +1732,14 @@ END SUBROUTINE volgrid6d_transform
 !! to the transformation type, the output array may have of one or
 !! more \a volgrid6d elements on different grids.
 SUBROUTINE volgrid6dv_transform(this, griddim, volgrid6d_in, volgrid6d_out, &
- lev_out, clone, decode, categoryappend)
+ lev_out, volgrid6d_coord_in, clone, decode, categoryappend)
 TYPE(transform_def),INTENT(in) :: this !< object specifying the abstract transformation
 TYPE(griddim_def),INTENT(in),OPTIONAL :: griddim !< griddim specifying the output grid (required by most transformation types)
 ! TODO ripristinare intent(in) dopo le opportune modifiche in grid_class.F90
 TYPE(volgrid6d),INTENT(inout) :: volgrid6d_in(:) !< object to be transformed, it is an array of volgrid6d objects, each of which will be transformed, it is not modified, despite the INTENT(inout)
 TYPE(volgrid6d),POINTER :: volgrid6d_out(:) !< transformed object, it is a non associated pointer to an array of volgrid6d objects which will be allocated by the method
 TYPE(vol7d_level),INTENT(in),OPTIONAL :: lev_out(:) !< vol7d_level object defining target vertical grid
+TYPE(volgrid6d),INTENT(in),OPTIONAL :: volgrid6d_coord_in !< object providing time constant input vertical coordinate for some kind of vertical interpolations
 LOGICAL,INTENT(in),OPTIONAL :: clone !< if provided and \a .TRUE. , clone the \a gaid's from \a volgrid6d_in to \a volgrid6d_out 
 LOGICAL,INTENT(in),OPTIONAL :: decode !< if provided and \a .FALSE. the data volume is not allocated, but work is performed on grid_id's
 CHARACTER(len=*),INTENT(in),OPTIONAL :: categoryappend !< append this suffix to log4fortran namespace category
@@ -1660,7 +1755,8 @@ end if
 
 do i=1,size(volgrid6d_in)
   call transform(this, griddim, volgrid6d_in(i), volgrid6d_out(i), &
-   lev_out=lev_out, clone=clone, decode=decode, categoryappend=categoryappend)
+   lev_out=lev_out, volgrid6d_coord_in=volgrid6d_coord_in, &
+   clone=clone, decode=decode, categoryappend=categoryappend)
 end do
 
 END SUBROUTINE volgrid6dv_transform
@@ -2192,7 +2288,7 @@ TYPE(transform_def),INTENT(in) :: this !< object specifying the abstract transfo
 TYPE(vol7d),INTENT(inout) :: vol7d_in !< object to be transformed, it is not modified, despite the INTENT(inout)
 TYPE(vol7d),INTENT(out) :: vol7d_out !< transformed object, it does not need initialisation
 TYPE(vol7d),INTENT(in),OPTIONAL :: v7d !< object containing a list of points over which transformation has to be done (required by some transformation types)
-TYPE(vol7d_level),INTENT(in),OPTIONAL :: lev_out(:) !< vol7d_level object defining target vertical grid, for vertical interpolations
+TYPE(vol7d_level),INTENT(in),OPTIONAL,TARGET :: lev_out(:) !< vol7d_level object defining target vertical grid, for vertical interpolations
 CHARACTER(len=*),INTENT(in),OPTIONAL :: categoryappend !< append this suffix to log4fortran namespace category
 
 INTEGER :: nvar, iana, inetwork
@@ -2214,7 +2310,10 @@ IF (trans_type == 'vertint') THEN
 
   IF (PRESENT(lev_out)) THEN
     CALL init(grid_trans, this, lev_in=vol7d_in%level, lev_out=lev_out, &
-     lev_out_auto=llev_out, categoryappend=categoryappend)
+     categoryappend=categoryappend)
+    CALL get_val(grid_trans, output_level_auto=llev_out) ! get levels if auto-generated
+    IF (.NOT.associated(llev_out)) llev_out => lev_out
+
 ! if this init is successful, I am sure that v7d_locana%ana is associated
 
     IF (c_e(grid_trans)) THEN! .AND. nvar > 0) THEN
@@ -2227,7 +2326,6 @@ IF (trans_type == 'vertint') THEN
       CALL vol7d_alloc_vol(vol7d_out)
 
       CALL compute(grid_trans, vol7d_in, vol7d_out, llev_out)
-      DEALLOCATE(llev_out)
     ELSE
       CALL l4f_log(L4F_ERROR, 'v7d_v7d_transform: transformation not valid')
       CALL raise_error()

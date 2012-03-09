@@ -50,7 +50,8 @@ CHARACTER(len=512) :: a_name, coord_file, input_file, output_file, output_format
 TYPE(arrayof_integer) :: trans_level_type, trans_level_list, trans_botlevel_list
 TYPE(vol7d_level) :: ilevel, olevel
 TYPE(vol7d_level),ALLOCATABLE :: olevel_list(:)
-TYPE (volgrid6d),POINTER  :: volgrid(:),volgrid_out(:),volgrid_tmp(:)
+TYPE(volgrid6d),POINTER  :: volgrid(:), volgrid_coord_tmp(:), volgrid_out(:), volgrid_tmp(:)
+TYPE(volgrid6d)  :: volgrid_coord
 DOUBLE PRECISION :: ilon, ilat, flon, flat, radius
 
 type(griddim_def) :: griddim_out
@@ -201,10 +202,23 @@ CALL optionparser_add(opt, ' ', 'rounding', round, help= &
  'simplifies volume, merging similar levels and timeranges')
 
 coord_file=cmiss
-#ifdef HAVE_SHAPELIB
+#if defined (HAVE_SHAPELIB) || defined (HAVE_LIBGRIBAPI)
 CALL optionparser_add(opt, ' ', 'coord-file', coord_file, help= &
- 'file in shp format with coordinates of polygons, required for maskgen transformation')
-coord_format = 'shp' ! no other formats for now, no argument defined
+#ifdef HAVE_SHAPELIB
+ 'file in shp format with coordinates of polygons, required for maskgen transformation' &
+#endif
+#if defined (HAVE_SHAPELIB) && defined (HAVE_LIBGRIBAPI)
+ //' or '// &
+#endif
+#ifdef HAVE_LIBGRIBAPI
+ 'file in grib format providing vertical coordinate of input data for vertical interpolation' &
+#endif
+ )
+#endif
+coord_format=cmiss
+#if defined (HAVE_SHAPELIB) || defined (HAVE_LIBGRIBAPI)
+CALL optionparser_add(opt, ' ', 'coord-format', coord_format, help= &
+ 'format of coord file (shp or grib_api)')
 #endif
 
 output_template = ''
@@ -407,6 +421,31 @@ IF (coord_format == 'shp' .AND. c_e(coord_file)) THEN
 ENDIF
 #endif
 
+CALL init(volgrid_coord)
+#ifdef HAVE_LIBGRIBAPI
+IF (coord_format == 'grib_api' .AND. c_e(coord_file)) THEN
+  CALL import(volgrid_coord_tmp, filename=coord_file, decode=.TRUE., &
+   time_definition=time_definition, categoryappend="input_coord")
+  CALL init(volgrid_coord)
+  IF (ASSOCIATED(volgrid_coord_tmp)) THEN
+    IF (SIZE(volgrid_coord_tmp) == 1) THEN ! assign the volume and cleanup
+      volgrid_coord = volgrid_coord_tmp(1)
+      CALL init(volgrid_coord_tmp(1))
+      DEALLOCATE(volgrid_coord_tmp)
+    ELSE ! zero or >1 different grids obtained
+      CALL l4f_category_log(category, L4F_ERROR, &
+       'error importing volgrid6d coord_file '//TRIM(coord_file)//', '// &
+       t2c(SIZE(volgrid_coord_tmp))//' different grids obtained instead of 1')
+      CALL raise_fatal_error()
+    ENDIF
+  ELSE ! error in importing
+    CALL l4f_category_log(category, L4F_ERROR, &
+     'error importing volgrid6d coord_file '//TRIM(coord_file))
+    CALL raise_fatal_error()
+  ENDIF
+ENDIF
+#endif
+
 i = word_split(output_format, w_s, w_e, ':')
 IF (i >= 2) THEN ! grid from a grib template
 !  output_template = output_format(w_s(2):w_e(2))
@@ -464,8 +503,8 @@ IF (trans_type /=  'none') THEN ! transform
    categoryappend="transformation")
 
   CALL transform(trans, griddim_out, volgrid6d_in=volgrid, &
-   volgrid6d_out=volgrid_out, lev_out=olevel_list, clone=.TRUE., &
-   categoryappend="transform")
+   volgrid6d_out=volgrid_out, lev_out=olevel_list, volgrid6d_coord_in=volgrid_coord, &
+   clone=.TRUE., categoryappend="transform")
 
   CALL l4f_category_log(category,L4F_INFO,"transformation completed")
   IF (ASSOCIATED(volgrid)) CALL delete(volgrid)

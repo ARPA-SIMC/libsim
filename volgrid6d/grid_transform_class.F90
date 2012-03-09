@@ -249,6 +249,7 @@ TYPE grid_transform
   INTEGER :: outnx = imiss
   INTEGER :: outny = imiss
   INTEGER :: outnz = imiss
+  INTEGER :: levshift = imiss
   INTEGER :: iniox,inioy,infox,infoy,outinx,outiny,outfnx,outfny
   INTEGER,POINTER :: inter_index_x(:,:) => NULL()
   INTEGER,POINTER :: inter_index_y(:,:) => NULL()
@@ -262,8 +263,11 @@ TYPE grid_transform
   DOUBLE PRECISION,POINTER :: vcoord_out(:) => NULL()
   LOGICAL,POINTER :: point_mask(:,:) => NULL()
   LOGICAL,POINTER :: stencil(:,:) => NULL()
+  REAL,POINTER :: coord_3d_in(:,:,:) => NULL()
+
 !  type(volgrid6d) :: input_vertcoordvol ! volume which provides the input vertical coordinate if separated from the data volume itself (for vertint) cannot be here because of cross-use, should be an argument of compute
 !  type(vol7d_level), pointer :: output_vertlevlist(:) ! list of vertical levels of output data (for vertint) can be here or an argument of compute, how to do?
+  TYPE(vol7d_level),POINTER :: output_level_auto(:) => NULL() ! array of auto-generated levels, stored for successive query
   INTEGER :: category ! category for log4fortran
   LOGICAL :: valid = .TRUE. ! the transformation has been successfully initialised
 END TYPE grid_transform
@@ -284,7 +288,7 @@ END INTERFACE
 
 !> Method for returning the contents of the object.
 INTERFACE get_val
-  MODULE PROCEDURE transform_get_val
+  MODULE PROCEDURE transform_get_val, grid_transform_get_val
 END INTERFACE
 
 !> Compute the output data array from input data array according to
@@ -650,15 +654,23 @@ END SUBROUTINE transform_delete
 
 
 !> Method for returning the contents of the object.
-SUBROUTINE transform_get_val(this, time_definition, trans_type, sub_type)
+SUBROUTINE transform_get_val(this, time_definition, trans_type, sub_type, &
+ input_levtype, output_levtype)
 type(transform_def),intent(in) :: this !< object to examine
 INTEGER,INTENT(out),OPTIONAL :: time_definition !< 0=time is reference time, 1=time is validity time
 CHARACTER(len=*),INTENT(out),OPTIONAL :: trans_type !< type of transformation
 CHARACTER(len=*),INTENT(out),OPTIONAL :: sub_type !< subtype of transformation
+TYPE(vol7d_level),INTENT(out),OPTIONAL :: input_levtype
+!< type of vertical level of input data (only type of first and second surface are used, level values are ignored)
+TYPE(vol7d_level),INTENT(out),OPTIONAL :: output_levtype
+!< type of vertical level of output data (only type of first and second surface are used, level values are ignored)
 
 IF (PRESENT(time_definition)) time_definition=this%time_definition
 IF (PRESENT(trans_type)) trans_type = this%trans_type
 IF (PRESENT(sub_type)) sub_type = this%sub_type
+IF (PRESENT(input_levtype)) input_levtype = this%vertint%input_levtype
+IF (PRESENT(output_levtype)) output_levtype = this%vertint%output_levtype
+
 
 END SUBROUTINE transform_get_val
 
@@ -678,14 +690,12 @@ END SUBROUTINE transform_get_val
 !! transformations. The generated \a grid_transform object is specific
 !! to the input and output grids involved.
 SUBROUTINE grid_transform_levtype_levtype_init(this, trans, lev_in, lev_out, &
- lev_out_auto, coord_3d_in, copy, categoryappend)
+ coord_3d_in, categoryappend)
 TYPE(grid_transform),INTENT(out) :: this !< grid_transformation object
 TYPE(transform_def),INTENT(in) :: trans !< transformation object
 TYPE(vol7d_level),INTENT(in) :: lev_in(:) !< vol7d_level from input object
 TYPE(vol7d_level),INTENT(in) :: lev_out(:) !< vol7d_level object defining target vertical grid
-TYPE(vol7d_level),POINTER :: lev_out_auto(:) !< vol7d_level object defining autocomputed target vertical grid
 REAL,INTENT(in),OPTIONAL,TARGET :: coord_3d_in(:,:,:)
-LOGICAL,OPTIONAL :: copy
 CHARACTER(len=*),INTENT(in),OPTIONAL :: categoryappend !< append this suffix to log4fortran namespace category
 
 DOUBLE PRECISION :: coord_in(SIZE(lev_in))
@@ -700,42 +710,26 @@ CALL grid_transform_init_common(this, trans, categoryappend)
 CALL l4f_category_log(this%category, L4F_DEBUG, "grid_transform vertint")
 #endif
 
-NULLIFY(lev_out_auto)
-
 IF (this%trans%trans_type == 'vertint') THEN
 
-!  IF (PRESENT(lev_in)) THEN
-!    IF (lev_in
-!    verttype = 0
-!  ENDIF
-  
   IF (c_e(trans%vertint%input_levtype%level2) .AND. &
    trans%vertint%input_levtype%level1 /= trans%vertint%input_levtype%level2) THEN
     CALL l4f_category_log(this%category, L4F_ERROR, &
-     'grid_transform_levtype_levtype_init: input upper and lower surface &
-     &must be of the same type')
+     'vertint: input upper and lower surface must be of the same type, '// &
+     t2c(trans%vertint%input_levtype%level1)//'/='// &
+     t2c(trans%vertint%input_levtype%level2))
     this%valid = .FALSE.
     RETURN
   ENDIF
   IF (c_e(trans%vertint%output_levtype%level2) .AND. &
    trans%vertint%output_levtype%level1 /= trans%vertint%output_levtype%level2) THEN
     CALL l4f_category_log(this%category, L4F_ERROR, &
-     'grid_transform_levtype_levtype_init: output upper and lower surface &
-     &must be of the same type')
+     'vertint: output upper and lower surface must be of the same type'// &
+     t2c(trans%vertint%output_levtype%level1)//'/='// &
+     t2c(trans%vertint%output_levtype%level2))
     this%valid = .FALSE.
     RETURN
   ENDIF
-
-  IF (trans%vertint%input_levtype%level1 /= trans%vertint%output_levtype%level1) THEN
-    CALL l4f_category_log(this%category, L4F_ERROR, &
-     'grid_transform_levtype_levtype_init: input and output level types &
-     &must be the same (for now), '// &
-     TRIM(to_char(trans%vertint%input_levtype%level1))//'/='// &
-     TRIM(to_char(trans%vertint%output_levtype%level1)))
-    this%valid = .FALSE.
-    RETURN
-  ENDIF
-! TODO: here we should check that valid levels are contiguous and ordered
 
   mask_in(:) = (lev_in(:)%level1 == trans%vertint%input_levtype%level1) .AND. &
    (lev_in(:)%level2 == trans%vertint%input_levtype%level2)
@@ -752,24 +746,70 @@ IF (this%trans%trans_type == 'vertint') THEN
     RETURN
   ENDIF
 
-  IF (SIZE(lev_out) > 0) THEN
+  IF (trans%vertint%input_levtype%level1 /= trans%vertint%output_levtype%level1) THEN
+#ifdef DEBUG
+    CALL l4f_category_log(this%category, L4F_DEBUG, &
+     'vertint: different input and output level types '// &
+     t2c(trans%vertint%input_levtype%level1)//' '// &
+     t2c(trans%vertint%output_levtype%level1))
+#endif
+
+    ALLOCATE(mask_out(SIZE(lev_out)), this%vcoord_out(SIZE(lev_out)))
+    mask_out(:) = (lev_out(:)%level1 == trans%vertint%output_levtype%level1) .AND. &
+     (lev_out(:)%level2 == trans%vertint%output_levtype%level2)
+    CALL make_vert_coord(lev_out, mask_out, this%vcoord_out)
+    this%outnz = SIZE(mask_out)
+    DEALLOCATE(mask_out)
+
+    IF (.NOT.PRESENT(coord_3d_in)) THEN
+! the next check is going to be relaxed to allow taking vertical
+! coord_3d_in from the volume within the compute method
+      CALL l4f_category_log(this%category, L4F_ERROR, &
+       'vertint: different input and output level types &
+       &require coord_3d_in input vertical coordinate argument')
+      this%valid = .FALSE.
+      RETURN
+    ENDIF
+    IF (SIZE(coord_3d_in,3) /= inused) THEN
+      CALL l4f_category_log(this%category, L4F_ERROR, &
+       'vertint: vertical size of coord_3d_in (vertical coordinate) &
+       &different from number of input levels suitable for interpolation')
+      CALL l4f_category_log(this%category, L4F_ERROR, &
+       'coord_3d_in: '//t2c(SIZE(coord_3d_in,3))// &
+       ', input levels for interpolation: '//t2c(inused))
+      this%valid = .FALSE.
+      RETURN
+    ENDIF
+
+    this%coord_3d_in => coord_3d_in
+    this%levshift = istart-1
+
+  ELSE
+! TODO: here we should check that valid levels are contiguous and ordered
+
+#ifdef DEBUG
+    CALL l4f_category_log(this%category, L4F_DEBUG, &
+     'vertint: equal input and output level types '// &
+     t2c(trans%vertint%input_levtype%level1))
+#endif
+
+  IF (SIZE(lev_out) > 0) THEN ! output level list provided
     ALLOCATE(mask_out(SIZE(lev_out)), coord_out(SIZE(lev_out)))
     mask_out(:) = (lev_out(:)%level1 == trans%vertint%output_levtype%level1) .AND. &
      (lev_out(:)%level2 == trans%vertint%output_levtype%level2)
     CALL make_vert_coord(lev_out, mask_out, coord_out)
-    ALLOCATE(lev_out_auto(SIZE(lev_out)))
-    lev_out_auto(:) = lev_out(:)
-  ELSE
+
+  ELSE ! output level list not provided, try to autogenerate
     IF (c_e(trans%vertint%input_levtype%level2) .AND. &
      .NOT.c_e(trans%vertint%output_levtype%level2)) THEN ! full -> half
       IF (trans%vertint%output_levtype%level1 == 105) THEN
-        ALLOCATE(lev_out_auto(inused-1))
+        ALLOCATE(this%output_level_auto(inused-1))
         CALL l4f_category_log(this%category,L4F_INFO, &
          'grid_transform_levtype_levtype_init: autogenerating '//t2c(inused-1) &
          //'/'//t2c(iend-istart)//' output levels (f->h)')
         DO i = istart, iend - 1
-          CALL init(lev_out_auto(i-istart+1), trans%vertint%input_levtype%level1, &
-           lev_in(i)%l2)
+          CALL init(this%output_level_auto(i-istart+1), &
+           trans%vertint%input_levtype%level1, lev_in(i)%l2)
         ENDDO
       ELSE
         CALL l4f_category_log(this%category, L4F_ERROR, &
@@ -780,13 +820,13 @@ IF (this%trans%trans_type == 'vertint') THEN
       ENDIF
     ELSE IF (.NOT.c_e(trans%vertint%input_levtype%level2) .AND. &
      c_e(trans%vertint%output_levtype%level2)) THEN ! half -> full
-      ALLOCATE(lev_out_auto(inused-1))
+      ALLOCATE(this%output_level_auto(inused-1))
       IF (trans%vertint%output_levtype%level1 == 105) THEN
         CALL l4f_category_log(this%category,L4F_INFO, &
          'grid_transform_levtype_levtype_init: autogenerating '//t2c(inused-1) &
          //'/'//t2c(iend-istart)//' output levels (h->f)')
         DO i = istart, iend - 1
-          CALL init(lev_out_auto(i-istart+1), trans%vertint%input_levtype%level1, &
+          CALL init(this%output_level_auto(i-istart+1), trans%vertint%input_levtype%level1, &
            lev_in(i)%l1, trans%vertint%input_levtype%level1, &
            lev_in(i)%l1+1)
         ENDDO
@@ -807,7 +847,7 @@ IF (this%trans%trans_type == 'vertint') THEN
     ENDIF
     ALLOCATE(coord_out(inused-1), mask_out(inused-1))
     mask_out(:) = .TRUE.
-    CALL make_vert_coord(lev_out_auto, mask_out, coord_out)
+    CALL make_vert_coord(this%output_level_auto, mask_out, coord_out)
   ENDIF
 
   this%outnz = SIZE(mask_out)
@@ -865,8 +905,8 @@ IF (this%trans%trans_type == 'vertint') THEN
         IF (coord_in(i) >= coord_out(j)) THEN
           IF (coord_out(j) >= coord_in(i-1)) THEN
             this%inter_index_z(j) = i - 1
-            this%inter_zp(j) = (coord_out(j)-coord_in(i)) / &
-             (coord_in(i-1)-coord_in(i)) ! weight for (i-1)
+            this%inter_zp(j) = (coord_out(j)-coord_in(i-1)) / &
+             (coord_in(i)-coord_in(i-1)) ! weight for (i)
             icache = i ! speedup next j iteration
           ENDIF
           CYCLE outlev ! found or extrapolated down
@@ -897,6 +937,8 @@ IF (this%trans%trans_type == 'vertint') THEN
 
   ENDIF
 
+  ENDIF ! levels are different
+!ELSE IF (this%trans%trans_type == 'verttrans') THEN
 ELSE
 
   CALL l4f_category_log(this%category,L4F_WARN, &
@@ -916,30 +958,38 @@ TYPE(vol7d_level),INTENT(in) :: lev(:)
 LOGICAL,INTENT(inout) :: mask(:)
 DOUBLE PRECISION,INTENT(out) :: coord(:)
 
+INTEGER,PARAMETER :: height(5)=(/102,103,106,117,160/) ! improve, from gridinfo_class
 INTEGER :: k
+DOUBLE PRECISION :: fact
 
 k = firsttrue(mask)
 IF (k <= 0) RETURN
 coord(:) = dmiss
 
+IF (ANY(lev(k)%level1 == height)) THEN ! improve with a conversion table somewhere
+  fact = 1.0D-3
+ELSE
+  fact = 1.0D0
+ENDIF
+
 IF (c_e(lev(k)%level2) .AND. lev(k)%level1 == lev(k)%level2) THEN ! layer between 2 levels
   IF (lev(k)%level1 == 100 .OR. lev(k)%level1 == 108) THEN ! pressure, compute log
     WHERE(mask(:) .AND. lev(:)%l1 > 0 .AND. lev(:)%l2 > 0)
-      coord(:) = (LOG(DBLE(lev(:)%l1)) + LOG(DBLE(lev(:)%l2)))*0.5D0
+      coord(:) = (LOG(DBLE(lev(:)%l1)*fact) + LOG(DBLE(lev(:)%l2)*fact))*0.5D0
     END WHERE
   ELSE
     WHERE(mask(:))
-      coord(:) = (lev(:)%l1 + lev(:)%l2)*0.5D0
+      coord(:) = (lev(:)%l1 + lev(:)%l2)*fact*0.5D0
     END WHERE
   ENDIF
 ELSE ! half level
   IF (lev(k)%level1 == 100 .OR. lev(k)%level1 == 108) THEN ! pressure, compute log
     WHERE(mask(:) .AND. lev(:)%l1 > 0)
-      coord(:) = LOG(DBLE(lev(:)%l1))
+      coord(:) = LOG(DBLE(lev(:)%l1)*fact)
     END WHERE
   ELSE
     WHERE(mask(:))
-      coord(:) = lev(:)%l1
+      coord(:) = lev(:)%l1*fact
     END WHERE
   ENDIF
 ENDIF
@@ -2304,13 +2354,27 @@ if (associated(this%inter_y)) deallocate (this%inter_y)
 if (associated(this%inter_xp)) deallocate (this%inter_xp)
 if (associated(this%inter_yp)) deallocate (this%inter_yp)
 if (associated(this%inter_zp)) deallocate (this%inter_zp)
+if (associated(this%vcoord_in)) deallocate (this%vcoord_in)
+if (associated(this%vcoord_out)) deallocate (this%vcoord_out)
 if (associated(this%point_mask)) deallocate (this%point_mask)
+if (associated(this%stencil)) deallocate (this%stencil)
+if (associated(this%output_level_auto)) deallocate (this%output_level_auto)
 this%valid = .FALSE.
 
 ! close the logger
 call l4f_category_delete(this%category)
 
 END SUBROUTINE grid_transform_delete
+
+
+!> Method for returning the contents of the object.
+SUBROUTINE grid_transform_get_val(this, output_level_auto)
+TYPE(grid_transform),INTENT(in) :: this !< object to examine
+TYPE(vol7d_level),POINTER,OPTIONAL :: output_level_auto(:) !< array of auto-generated output levels
+
+IF (PRESENT(output_level_auto)) output_level_auto => this%output_level_auto
+
+END SUBROUTINE grid_transform_get_val
 
 
 !> Returns \a .TRUE. if, after \a init , the corresponding \a grid_transform
@@ -2339,7 +2403,8 @@ REAL,INTENT(in) :: field_in(:,:,:) !< input array
 REAL,INTENT(out) :: field_out(:,:,:) !< output array
 TYPE(vol7d_var),INTENT(in),OPTIONAL :: var !< physical variable to be interpolated, if provided, some ad-hoc algorithms may be used where possible
 
-INTEGER :: i, j, k, ii, jj, ie, je, n, navg, kk, kkcache, i1, i2, j1, j2, np, ns
+INTEGER :: i, j, k, ii, jj, ie, je, n, navg, kk, kkcache, kkup, kkdown, kfound, &
+ inused, i1, i2, j1, j2, np, ns
 INTEGER,ALLOCATABLE :: nval(:,:)
 REAL :: z1,z2,z3,z4
 DOUBLE PRECISION  :: x1,x3,y1,y3,xp,yp
@@ -2352,6 +2417,15 @@ INTEGER,PARAMETER :: var_ord=0, var_dir360=1, var_press=2
 #ifdef DEBUG
 CALL l4f_category_log(this%category,L4F_DEBUG,"start grid_transform_compute")
 #endif
+
+field_out(:,:,:) = rmiss
+
+IF (.NOT.this%valid) THEN
+  call l4f_category_log(this%category,L4F_ERROR, &
+   "refusing to perform a non valid transformation")
+  RETURN
+ENDIF
+
 
 vartype = var_ord
 IF (PRESENT(var)) THEN
@@ -2367,14 +2441,6 @@ IF (PRESENT(var)) THEN
     CALL l4f_category_log(this%category,L4F_DEBUG,"interpolating pressure")
 #endif
   END SELECT
-ENDIF
-
-field_out(:,:,:) = rmiss
-
-IF (.NOT.this%valid) THEN
-  call l4f_category_log(this%category,L4F_ERROR, &
-   "refusing to perform a non valid transformation")
-  RETURN
 ENDIF
 
 innx = SIZE(field_in,1); inny = SIZE(field_in,2); innz = SIZE(field_in,3)
@@ -2439,9 +2505,9 @@ ELSE ! horizontal interpolation
 ENDIF
 
 #ifdef DEBUG
-  call l4f_category_log(this%category,L4F_DEBUG, &
-   "start grid_transform_compute "//TRIM(this%trans%trans_type)//':'// &
-   TRIM(this%trans%sub_type))
+call l4f_category_log(this%category,L4F_DEBUG, &
+ "start grid_transform_compute "//TRIM(this%trans%trans_type)//':'// &
+ TRIM(this%trans%sub_type))
 #endif
 
 IF (this%trans%trans_type == 'zoom') THEN
@@ -2528,7 +2594,7 @@ ELSE IF (this%trans%trans_type == 'inter') THEN
     ENDDO
 
   ELSE IF (this%trans%sub_type == 'bilin') THEN
-    
+
     DO k = 1, innz
       DO j = 1, this%outny 
         DO i = 1, this%outnx 
@@ -2565,7 +2631,7 @@ ELSE IF (this%trans%trans_type == 'boxinter' &
  .OR. this%trans%trans_type == 'maskinter') THEN
 
   IF (this%trans%sub_type == 'average') THEN
-    
+
     ALLOCATE(nval(this%outnx, this%outny))
     field_out(:,:,:) = 0.0
     DO k = 1, innz
@@ -2664,7 +2730,7 @@ ELSE IF (this%trans%trans_type == 'stencilinter') THEN
   ns = SIZE(this%stencil)
 
   IF (this%trans%sub_type == 'average') THEN
-    
+
 !$OMP PARALLEL DEFAULT(SHARED)
 !$OMP DO PRIVATE(i, j, k, i1, i2, j1, j2, n)
     DO k = 1, innz
@@ -2685,7 +2751,7 @@ ELSE IF (this%trans%trans_type == 'stencilinter') THEN
       ENDDO
     ENDDO
 !$OMP END PARALLEL
-          
+
   ELSE IF (this%trans%sub_type == 'max') THEN
 
 !$OMP PARALLEL DEFAULT(SHARED)
@@ -2755,7 +2821,7 @@ ELSE IF (this%trans%trans_type == 'stencilinter') THEN
       ENDDO
     ENDDO
 !$OMP END PARALLEL
-          
+
   ENDIF
 
 ELSE IF (this%trans%trans_type == 'maskgen') THEN
@@ -2777,69 +2843,127 @@ ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
     DO k = 1, innz
       field_out(:,1,k) = PACK(field_in(:,:,k), this%point_mask(:,:))
     ENDDO
-    
+
   ENDIF
 
 ELSE IF (this%trans%trans_type == 'vertint') THEN
 
   IF (this%trans%sub_type == 'linear') THEN
 
-    DO k = 1, outnz
-      IF (c_e(this%inter_index_z(k))) THEN
-        z1 = REAL(this%inter_zp(k))
-        z2 = REAL(1.0D0 - this%inter_zp(k))
-        SELECT CASE(vartype)
+    IF (ASSOCIATED(this%inter_index_z)) THEN
 
-        CASE(var_ord)
-          DO j = 1, inny
-            DO i = 1, innx
-              IF (c_e(field_in(i,j,this%inter_index_z(k))) .AND. &
-               c_e(field_in(i,j,this%inter_index_z(k)+1))) THEN
-                field_out(i,j,k) = &
-                 field_in(i,j,this%inter_index_z(k))*z1 + &
-                 field_in(i,j,this%inter_index_z(k)+1)*z2
-              ENDIF
-            ENDDO
-          ENDDO
+      DO k = 1, outnz
+        IF (c_e(this%inter_index_z(k))) THEN
+          z1 = REAL(this%inter_zp(k)) ! weight for k+1
+          z2 = REAL(1.0D0 - this%inter_zp(k)) ! weight for k
+          SELECT CASE(vartype)
 
-        CASE(var_dir360)
-          DO j = 1, inny
-            DO i = 1, innx
-              IF (c_e(field_in(i,j,this%inter_index_z(k))) .AND. &
-               c_e(field_in(i,j,this%inter_index_z(k)+1))) THEN
-                IF (ABS(field_in(i,j,this%inter_index_z(k)) - &
-                 field_in(i,j,this%inter_index_z(k)+1)) > 180.) THEN
-                  field_out(i,j,k) = MOD( &
-                   field_in(i,j,this%inter_index_z(k))*z1 + &
-                   field_in(i,j,this%inter_index_z(k)+1)*z2 + 180., 360.)
-                ELSE
+          CASE(var_ord)
+            DO j = 1, inny
+              DO i = 1, innx
+                IF (c_e(field_in(i,j,this%inter_index_z(k))) .AND. &
+                 c_e(field_in(i,j,this%inter_index_z(k)+1))) THEN
                   field_out(i,j,k) = &
-                   field_in(i,j,this%inter_index_z(k))*z1 + &
-                   field_in(i,j,this%inter_index_z(k)+1)*z2
+                   field_in(i,j,this%inter_index_z(k))*z2 + &
+                   field_in(i,j,this%inter_index_z(k)+1)*z1
                 ENDIF
+              ENDDO
+            ENDDO
+
+          CASE(var_dir360)
+            DO j = 1, inny
+              DO i = 1, innx
+                IF (c_e(field_in(i,j,this%inter_index_z(k))) .AND. &
+                 c_e(field_in(i,j,this%inter_index_z(k)+1))) THEN
+                  field_out(i,j,k) = &
+                   interp_var_360(field_in(i,j,this%inter_index_z(k)), &
+                   field_in(i,j,this%inter_index_z(k)+1), z1, z2)
+                ENDIF
+              ENDDO
+            ENDDO
+
+          CASE(var_press)
+            DO j = 1, inny
+              DO i = 1, innx
+                IF (c_e(field_in(i,j,this%inter_index_z(k))) .AND. &
+                 c_e(field_in(i,j,this%inter_index_z(k)+1)) .AND. &
+                 field_in(i,j,this%inter_index_z(k)) > 0. .AND. &
+                 field_in(i,j,this%inter_index_z(k)+1) > 0.) THEN
+                  field_out(i,j,k) = EXP( &
+                   LOG(field_in(i,j,this%inter_index_z(k)))*z2 + &
+                   LOG(field_in(i,j,this%inter_index_z(k)+1))*z1)
+                ENDIF
+              ENDDO
+            ENDDO
+
+          END SELECT
+
+        ENDIF
+      ENDDO
+
+    ELSE ! use coord_3d_in
+
+! I should check associated(this%coord_3d_in), but I trust this%valid
+
+      inused = SIZE(this%coord_3d_in,3)
+      IF (inused < 2) RETURN ! to avoid algorithm failure
+      kkcache = 1
+
+      DO k = 1, outnz
+        IF (.NOT.c_e(this%vcoord_out(k))) CYCLE
+        DO j = 1, inny
+          DO i = 1, innx
+            kfound = imiss
+            DO kk = 1, MAX(inused-kkcache-1, kkcache) ! +-1
+              kkup = kkcache + kk
+              kkdown = kkcache - kk + 1
+
+              IF (kkdown >= 1) THEN ! search down
+                IF (this%vcoord_out(k) >= &
+                 MIN(this%coord_3d_in(i,j,kkdown), this%coord_3d_in(i,j,kkdown+1)) .AND. &
+                 this%vcoord_out(k) < &
+                 MAX(this%coord_3d_in(i,j,kkdown), this%coord_3d_in(i,j,kkdown+1))) THEN
+                  kkcache = kkdown
+                  kfound = kkcache + this%levshift
+                  EXIT ! kk
+                ENDIF
+              ENDIF
+              IF (kkup < inused) THEN ! search up
+                IF (this%vcoord_out(k) >= &
+                 MIN(this%coord_3d_in(i,j,kkup), this%coord_3d_in(i,j,kkup+1)) .AND. &
+                 this%vcoord_out(k) < &
+                 MAX(this%coord_3d_in(i,j,kkup), this%coord_3d_in(i,j,kkup+1))) THEN
+                  kkcache = kkup
+                  kfound = kkcache + this%levshift
+                  EXIT ! kk
+                ENDIF
+              ENDIF
+
+            ENDDO
+
+            IF (c_e(kfound)) THEN
+              IF (c_e(field_in(i,j,kfound)) .AND. c_e(field_in(i,j,kfound+1))) THEN
+                z1 = REAL((this%vcoord_out(k) - this%coord_3d_in(i,j,kfound))/ &
+                 (this%coord_3d_in(i,j,kfound+1) - this%coord_3d_in(i,j,kfound)))
+                z2 = 1.0 - z1
+                SELECT CASE(vartype)
+
+                CASE(var_ord)
+                  field_out(i,j,k) = field_in(i,j,kfound)*z2 + field_in(i,j,kfound+1)*z1
+                CASE(var_dir360)
+                  field_out(i,j,k) = &
+                   interp_var_360(field_in(i,j,kfound), field_in(i,j,kfound+1), z1, z2)
+                CASE(var_press)
+                  field_out(i,j,k) = EXP(LOG(field_in(i,j,kfound))*z2 + &
+                   LOG(field_in(i,j,kfound+1))*z1)
+                END SELECT
 
               ENDIF
-            ENDDO
-          ENDDO
-
-        CASE(var_press)
-          DO j = 1, inny
-            DO i = 1, innx
-              IF (c_e(field_in(i,j,this%inter_index_z(k))) .AND. &
-               c_e(field_in(i,j,this%inter_index_z(k)+1)) .AND. &
-               field_in(i,j,this%inter_index_z(k)) > 0. .AND. &
-               field_in(i,j,this%inter_index_z(k)+1) > 0.) THEN
-                field_out(i,j,k) = EXP( &
-                 LOG(field_in(i,j,this%inter_index_z(k)))*z1 + &
-                 LOG(field_in(i,j,this%inter_index_z(k)+1))*z2)
-              ENDIF
-            ENDDO
-          ENDDO
-
-        END SELECT
-
-      ENDIF
-    ENDDO
+            ENDIF
+          ENDDO ! i
+        ENDDO ! j
+      ENDDO ! k
+    ENDIF
 
   ELSE IF (this%trans%sub_type == 'linearsparse') THEN
 
@@ -2855,12 +2979,13 @@ ELSE IF (this%trans%trans_type == 'vertint') THEN
             val_in(1:n) = PACK(field_in(i,j,:), mask=c_e(field_in(i,j,:)))
             kkcache = 2
             outlev1: DO k = 1, outnz
+              IF (.NOT.c_e(this%vcoord_out(k))) CYCLE outlev1
               inlev1: DO kk = kkcache, n
                 IF (coord_in(kk) >= this%vcoord_out(k)) THEN
                   IF (this%vcoord_out(k) >= coord_in(kk-1)) THEN
                     z1 = REAL((this%vcoord_out(k) - coord_in(kk-1))/ &
                      (coord_in(kk) - coord_in(kk-1)))
-                    z2 = REAL(1.0D0 - z1)
+                    z2 = 1.0 - z1
                     field_out(i,j,k) = val_in(kk-1)*z2 + val_in(kk)*z1
                     kkcache = kk
                   ENDIF
@@ -2877,17 +3002,15 @@ ELSE IF (this%trans%trans_type == 'vertint') THEN
             val_in(1:n) = PACK(field_in(i,j,:), mask=c_e(field_in(i,j,:)))
             kkcache = 2
             outlev2: DO k = 1, outnz
+              IF (.NOT.c_e(this%vcoord_out(k))) CYCLE outlev2
               inlev2: DO kk = kkcache, n
                 IF (coord_in(kk) >= this%vcoord_out(k)) THEN
                   IF (this%vcoord_out(k) >= coord_in(kk-1)) THEN
                     z1 = REAL((this%vcoord_out(k) - coord_in(kk-1))/ &
                      (coord_in(kk) - coord_in(kk-1)))
-                    z2 = REAL(1.0D0 - z1)
-                    IF (ABS(val_in(kk-1) - val_in(kk)) > 180.) THEN
-                      field_out(i,j,k) = MOD(val_in(kk-1)*z2 + val_in(kk)*z1 + 180., 360.)
-                    ELSE
-                      field_out(i,j,k) = val_in(kk-1)*z2 + val_in(kk)*z1
-                    ENDIF
+                    z2 = 1.0 - z1
+                    field_out(i,j,k) = &
+                     interp_var_360(val_in(kk-1), val_in(kk), z1, z2)
                     kkcache = kk
                   ENDIF
                   CYCLE outlev2
@@ -2905,12 +3028,13 @@ ELSE IF (this%trans%trans_type == 'vertint') THEN
              mask=c_e(field_in(i,j,:))  .AND. field_in(i,j,:) > 0.0D0))
             kkcache = 2
             outlev3: DO k = 1, outnz
+              IF (.NOT.c_e(this%vcoord_out(k))) CYCLE outlev3
               inlev3: DO kk = kkcache, n
                 IF (coord_in(kk) >= this%vcoord_out(k)) THEN
                   IF (this%vcoord_out(k) >= coord_in(kk-1)) THEN
                     z1 = REAL((this%vcoord_out(k) - coord_in(kk-1))/ &
                      (coord_in(kk) - coord_in(kk-1)))
-                    z2 = REAL(1.0D0 - z1)
+                    z2 = 1.0 - z1
                     field_out(i,j,k) = EXP(val_in(kk-1)*z2 + val_in(kk)*z1)
                     kkcache = kk
                   ENDIF
@@ -2934,6 +3058,25 @@ ELSE IF (this%trans%trans_type == '' .OR. this%trans%trans_type == 'none') THEN
   field_out(:,:,:) = field_in(:,:,:)
 
 ENDIF
+
+
+CONTAINS
+
+
+! internal function for interpolating directions from 0 to 360 degree
+! hope it is inlined by the compiler
+FUNCTION interp_var_360(v1, v2, w1, w2)
+REAL,INTENT(in) :: v1, v2, w1, w2
+REAL :: interp_var_360
+
+IF (ABS(v1 - v2) > 180.) THEN
+  interp_var_360 = MOD(v1*w2 + v2*w1 + 180., 360.)
+ELSE
+  interp_var_360 = v1*w2 + v2*w1
+ENDIF
+
+END FUNCTION interp_var_360
+
 
 END SUBROUTINE grid_transform_compute
 

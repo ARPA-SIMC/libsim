@@ -177,6 +177,21 @@ type(vol7d_level) :: almost_equal_levels(3)=(/&
  vol7d_level(103,imiss,imiss,imiss),&
  vol7d_level(106,imiss,imiss,imiss)/)
 
+TYPE level_var
+  INTEGER :: level
+  CHARACTER(len=10) :: btable
+END TYPE level_var
+
+! Conversion table from GRIB2 vertical level codes to corresponding
+! BUFR B table variables, no unit conversion provided since there is
+! no need up to now
+TYPE(level_var),PARAMETER :: level_var_converter(4) = (/ &
+ level_var(20, 'B12101'), & ! isothermal (K)
+ level_var(100, 'B10004'), & ! isobaric (Pa)
+ level_var(102, 'B10007'), & ! height over sea level (m)
+ level_var(107, 'B12192') /) ! isentropical (K)
+
+PRIVATE level_var, level_var_converter
 
 CONTAINS
 
@@ -481,6 +496,24 @@ END FUNCTION vol7d_level_c_e
 #include "array_utilities_inc.F90"
 #undef VOL7D_POLY_TYPE
 #undef VOL7D_POLY_TYPES
+
+
+FUNCTION vol7d_level_to_var(level) RESULT(btable)
+TYPE(vol7d_level),INTENT(in) :: level
+CHARACTER(len=10) :: btable
+
+INTEGER :: i
+
+DO i = 1, SIZE(level_var_converter)
+  IF (level_var_converter(i)%level == level%level1) THEN
+    btable = level_var_converter(i)%btable
+    RETURN
+  ENDIF
+ENDDO
+
+btable = cmiss
+
+END FUNCTION vol7d_level_to_var
 
 
 END MODULE vol7d_level_class
