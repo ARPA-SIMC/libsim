@@ -704,6 +704,11 @@ REAL,intent(in) :: field(:,:) !< data array to be encoded
 
 #ifdef HAVE_LIBGRIBAPI
 IF (this%driver == grid_id_grib_api) THEN
+
+!  call display(this,"parameter")
+!  print *,minval(field,c_e(field)),maxval(field,c_e(field))
+!  print *,"-----------------------"
+
   IF (c_e(this%gaid)) CALL grid_id_encode_data_gribapi(this%gaid, field)
 ENDIF
 #endif
@@ -765,10 +770,10 @@ call grib_get(gaid,'numberOfValues',numberOfValues)
 if (numberOfPoints /= SIZE(field))then
 !if (numberOfValues /= SIZE(field))then
 
-  CALL l4f_log(L4F_ERROR, 'grib_api numberOfPoints and grid size different')
-  CALL l4f_log(L4F_ERROR, 'grib_api numberOfPoints: ' &
+  CALL l4f_log(L4F_ERROR, 'grid_id_decode_data_gribapi numberOfPoints and grid size different')
+  CALL l4f_log(L4F_ERROR, 'grid_id_decode_data_gribapi numberOfPoints: ' &
    //TRIM(to_char(numberOfPoints))//', nx,ny:'&
-   //TRIM(to_char(SIZE(field,1)))//'X'//TRIM(to_char(SIZE(field,2))))
+   //TRIM(to_char(SIZE(field,1)))//' x '//TRIM(to_char(SIZE(field,2))))
   call raise_error()
   field(:,:) = rmiss
   RETURN

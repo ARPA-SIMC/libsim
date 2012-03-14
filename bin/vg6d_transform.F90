@@ -484,13 +484,12 @@ endif
 
 CALL import(volgrid,filename=input_file,decode=decode, time_definition=time_definition, categoryappend="input")
 
-if (c2agrid) call vg6d_c2a(volgrid)
-
 IF (ldisplay .and. ASSOCIATED(volgrid)) THEN
   PRINT*,'input grid >>>>>>>>>>>>>>>>>>>>'
   CALL display(volgrid)
 ENDIF
 
+if (c2agrid) call vg6d_c2a(volgrid)
 
 IF (trans_type /=  'none') THEN ! transform
 
@@ -531,6 +530,7 @@ if (ASSOCIATED(volgrid_out) .and. output_variable_list /= " ") then
     call display(vfnoracle)
     CALL delete(volgrid_out)
     volgrid_out => volgrid_tmp
+    NULLIFY(volgrid_tmp)
   else
     print *,"Impossible solution"
     CALL l4f_category_log(category, L4F_ERROR, 'Cannot make variable you have requested')

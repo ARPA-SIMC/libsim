@@ -326,11 +326,10 @@ SUBROUTINE volgrid6d_alloc_vol(this, ini, inivol, decode)
 TYPE(volgrid6d),INTENT(inout) :: this !< object whose decriptors should be allocated
 LOGICAL,INTENT(in),OPTIONAL :: ini !< if provided and \c .TRUE., for each dimension descriptor not yet allocated and allocated here the constructor is called without extra parameters, thus initializing the element as missing value
 LOGICAL,INTENT(in),OPTIONAL :: inivol !< if provided and \c .FALSE., the allocated volumes will not be initialized to missing values
-LOGICAL,INTENT(in),OPTIONAL :: decode !< if provided and \c .FALSE., the \a this%voldati volume is not allocated, only \a this%gaid
+LOGICAL,INTENT(in),OPTIONAL :: decode !< if provided and \c .TRUE., the \a this%voldati volume is allocated, otherwise only \a this%gaid will be allocated
 
 INTEGER :: stallo
 LOGICAL :: linivol
-
 
 #ifdef DEBUG
 call l4f_category_log(this%category,L4F_DEBUG,"start alloc_vol")
@@ -747,9 +746,9 @@ end if
 read(unit=lunit)ldescription
 read(unit=lunit)ltarray
 
-print *,"Info: reading volgrid6d from file: "//trim(lfilename)
-print *,"Info: description: ",trim(ldescription)
-print *,"Info: written on ",ltarray
+call l4f_log(L4F_INFO,"Info: reading volgrid6d from file: "//trim(lfilename))
+call l4f_log(L4F_INFO,"Info: description: "//trim(ldescription))
+!call l4f_log("Info: written on ",ltarray)
 
 if (present(description))description=ldescription
 if (present(tarray))tarray=ltarray
