@@ -68,6 +68,7 @@ CHARACTER(len=255) :: proj_type,mapprojection
 
 integer :: zone, irzscan
 DOUBLE PRECISION :: xoff, yoff, ellips_smaj_axis, ellips_flatt
+DOUBLE PRECISION :: longitude_south_pole, latitude_south_pole, angle_rotation
 
 call l4f_category_log(this%category,L4F_DEBUG,"export to vapor")
 
@@ -185,25 +186,44 @@ if (c_e(ntime) .and. c_e(ntimerange) .and. c_e(nlevel) .and. c_e(nvar)) then
     extents(6)=1.d0
     call get_val (this%griddim, proj_type=proj_type)
 
+!    Alan Norton Wed, 11 May 2011 11:04:36 -0600 
+!    We do not currently support lat-lon or rotated lat-lon; the only supported 
+!    projections are lambert, polar stereographic, and mercator.
+!    I do expect that we will support lat-lon in our next release.
+
+!    VAPOR Release Notes
+!    Version 2.1.0
+!    New Features
+!    Support is provided for rotated lat-lon (Cassini) transform, as used by WRF-ARW version 3.
+
     select case (proj_type)
     case ("regular_ll")
 
-      call l4f_category_log(this%category,L4F_INFO,"VDF: proj support this projection: "//trim(proj_type))
-      mapprojection = "+proj=latlon"
+      call l4f_category_log(this%category,L4F_INFO,"VDF: probably vapor do not support this projection ?: "//trim(proj_type))
+      mapprojection = "+proj=latlon +ellps=sphere"
 
     case ("rotated_ll")
 
-      call l4f_category_log(this%category,L4F_WARN,"VDF: proj do not support this projection: "//trim(proj_type))
-      call l4f_category_log(this%category,L4F_WARN,"VDF: you have to considerate it as rotated coordinates")
+      !call l4f_category_log(this%category,L4F_WARN,"VDF: vapor and proj do not support this projection: "//trim(proj_type))
+      !call l4f_category_log(this%category,L4F_WARN,"VDF: you have to considerate it as rotated coordinates")
 
-      !call get_val (this%griddim, proj_type, longitude_south_pole, latitude_south_pole, angle_rotation)
+      call l4f_category_log(this%category,L4F_INFO,"VDF: vapor probably support this projection: "//trim(proj_type))
+
+      call get_val (this%griddim, longitude_south_pole=longitude_south_pole,&
+       latitude_south_pole=latitude_south_pole, angle_rotation=angle_rotation)
       !write (mapprojection,*)"-m 57.295779506 +proj=ob_tran +o_proj=latlon +o_lat_p=",32.5"," +o_lon_p=",0"," +lon_0=",10
-      mapprojection = "+proj=latlon"
+      !mapprojection = "+proj=latlon"
 
+      !cassini or rotated lat/lon  
+      mapprojection = "+proj=ob_tran +o_proj=latlong +o_lat_p="//t2c(latitude_south_pole)//&
+       "d +o_lon_p="//t2c(longitude_south_pole)//&
+       "d +lon_0="//t2c(longitude_south_pole)//"d +ellps=sphere"
+
+      call l4f_category_log(this%category,L4F_INFO,"VDF: projection parameter "//mapprojection)
 
     case ("UTM")
       
-      call l4f_category_log(this%category,L4F_INFO,"VDF: proj support this projection: "//trim(proj_type))
+      call l4f_category_log(this%category,L4F_WARN,"VDF: vapor do not support this projection: "//trim(proj_type))
       call get_val (this%griddim, xmin=extents(1),ymin=extents(2), xmax=extents(4) , ymax=extents(5),&
        zone=zone, xoff=xoff, yoff=yoff,  ellips_smaj_axis=ellips_smaj_axis, ellips_flatt=ellips_flatt)
 
@@ -217,7 +237,8 @@ if (c_e(ntime) .and. c_e(ntimerange) .and. c_e(nlevel) .and. c_e(nvar)) then
 
     case default
 
-      call l4f_category_log(this%category,L4F_WARN,"VDF: proj or vdf export do not support this projection: "//trim(proj_type))
+      call l4f_category_log(this%category,L4F_WARN,&
+       "VDF: proj or vdf (vapor) export do not support this projection: "//trim(proj_type))
       mapprojection = cmiss
 
     end select
@@ -253,11 +274,14 @@ if (c_e(ntime) .and. c_e(ntimerange) .and. c_e(nlevel) .and. c_e(nvar)) then
     if(ier==0) ier = write_metadata(lfilename)
     call l4f_category_log(this%category,L4F_DEBUG,"VDF: call vdf4f_write")
 
+
     if (this%time_definition == 1) then
 
       if (ntimerange /= 1) then
-        call l4f_category_log(this%category,L4F_WARN,"VDF: writing only fisth timerange, there are:"//t2c(ntimerange))
+        call l4f_category_log(this%category,L4F_WARN,"VDF: writing only first timerange, there are:"//t2c(ntimerange))
       end if
+
+      call fill_underground_missing_values(this%voldati(:,:,:,:,1,:))
 
       call l4f_category_log(this%category,L4F_INFO,"scan VDF (vapor file) for times")
       if(ier==0) ier = vdf4f_write(this%voldati(:,:,:,:,1,:), xyzdim, ntime, nvar, varnames, lfilename, &
@@ -268,6 +292,8 @@ if (c_e(ntime) .and. c_e(ntimerange) .and. c_e(nlevel) .and. c_e(nvar)) then
       if (ntime /= 1) then
         call l4f_category_log(this%category,L4F_WARN,"VDF: writing only fisth time, there are:"//t2c(ntime))
       end if
+
+      call fill_underground_missing_values(this%voldati(:,:,:,1,:,:))
 
       call l4f_category_log(this%category,L4F_INFO,"scan VDF (vapor file) for timeranges")
       if(ier==0) ier = vdf4f_write(this%voldati(:,:,:,1,:,:), xyzdim, ntimerange, nvar, varnames, lfilename, &
@@ -301,6 +327,45 @@ else
   call l4f_category_log(this%category,L4F_WARN,"volume with some dimensions to 0: not exported to vdf")
 
 end if
+
+contains 
+
+!Vapor does not (yet) have support for missing values.  I recommend that 
+!you choose a particular floating point value that is different from all 
+!normal values, and write that value wherever you find the missing 
+!value.  You can then make that value map to full transparency when you 
+!encounter it in volume rendering.
+!Huge values are OK, but be sure that the values you use are valid 
+!floating point numbers.  Note also that when these values are displayed 
+!at lowered refinement levels, they will be averaged with nearby values.
+!-Alan Norton
+
+!> fill missing data with the nearest present upper data (in the same column) 
+subroutine fill_underground_missing_values(voldati)
+real,intent(inout) :: voldati(:,:,:,:,:)
+
+integer :: x,y,z,tim,var
+
+do x=1,size(voldati,1)
+  do y=1,size(voldati,2)
+    do tim=1,size(voldati,4)
+      do var=1,size(voldati,5)
+        do z=1,size(voldati,3)
+
+          if (.not. c_e(voldati(x,y,z,tim,var))) then
+            voldati(x,y,z,tim,var)=voldati(x,y,firsttrue(c_e(voldati(x,y,:,tim,var))),tim,var)
+          else
+            exit
+          end if
+
+        end do
+      end do
+    end do
+  end do
+end do
+
+
+end subroutine fill_underground_missing_values
 
 end subroutine volgrid6d_export_to_vapor
 
