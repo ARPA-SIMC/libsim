@@ -108,7 +108,7 @@ REAL :: comp_frac_valid
 TYPE(grid_file_id) :: ifile, ofile
 TYPE(grid_id) :: gaid
 TYPE(griddim_def) :: grid_out
-TYPE(volgrid6d) :: vg6d
+TYPE(volgrid6d) :: vg6d(1)
 TYPE(gridinfo_def),POINTER :: gridinfo(:)
 character(len=160) :: post_trans_type
 #endif
@@ -1085,11 +1085,12 @@ ELSE IF (output_format == 'grib_api') THEN
 ! use the message  as a template for defining the grid
         CALL import(grid_out, gaid)
 ! interpolate sparse data over the requested grid
-        CALL transform(trans, grid_out, v7d, vg6d, categoryappend="transform2")
+        CALL transform(trans, grid_out, v7d, vg6d(1), categoryappend="transform2")
 ! TODO check here whether the transformation succeeded
 ! serialize the interpolated volume into a gridinfo object keeping the
 ! same grib template used for the grid
-        CALL export((/vg6d/), gridinfo, gaid_template=gaid)
+        CALL export(vg6d, gridinfo, gaid_template=gaid)
+        CALL delete(vg6d(1))
 
         IF (ASSOCIATED(gridinfo)) THEN
 ! export to output grib file

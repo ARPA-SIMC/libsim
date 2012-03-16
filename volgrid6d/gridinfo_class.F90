@@ -220,7 +220,7 @@ END SUBROUTINE gridinfo_init
 !> Destructor, it releases every information associated with the object.
 !! It releases memory and deletes the category for logging.
 SUBROUTINE gridinfo_delete(this)
-TYPE(gridinfo_def),intent(out) :: this !< object to be deleted
+TYPE(gridinfo_def),intent(inout) :: this !< object to be deleted
 
 #ifdef DEBUG
 call l4f_category_log(this%category,L4F_DEBUG,"start delete_gridinfo" )

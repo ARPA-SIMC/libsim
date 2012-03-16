@@ -623,10 +623,9 @@ END SUBROUTINE transform_init
 !! It releases any memory and data associated to the \a transform_def
 !! object \a this, the logger category will be deleted too.
 SUBROUTINE transform_delete(this)
-TYPE(transform_def),INTENT(out) :: this !< transformation object
+TYPE(transform_def),INTENT(inout) :: this !< transformation object
 
 this%trans_type=cmiss
-
 this%sub_type=cmiss
 
 this%rect_ind%ix=imiss
@@ -639,17 +638,13 @@ this%rect_coo%ilat=dmiss
 this%rect_coo%flon=dmiss
 this%rect_coo%flat=dmiss
 
-this%sub_type=cmiss
-
 this%box_info%npx=imiss
 this%box_info%npy=imiss
 
-this%sub_type=cmiss
-
-this%extrap=.false.
+this%extrap=.FALSE.
 
 !chiudo il logger
-call l4f_category_delete(this%category)
+CALL l4f_category_delete(this%category)
 
 END SUBROUTINE transform_delete
 

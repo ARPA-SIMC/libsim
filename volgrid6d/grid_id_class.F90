@@ -72,18 +72,33 @@ USE log4fortran
 USE err_handling
 IMPLICIT NONE
 
+INTEGER,PARAMETER :: grid_id_nodriver = 0 !< constants to be used for associating an object to a driver: no type specified
+INTEGER,PARAMETER :: grid_id_grib_api = 1 !< type grib_api specified
+INTEGER,PARAMETER :: grid_id_gdal = 2 !< type gdal specified
+
+#if defined HAVE_LIBGRIBAPI
+INTEGER,PARAMETER :: grid_id_default = grid_id_grib_api !< default driver if none specified in constructor
+#elif defined HAVE_LIBGDAL
+INTEGER,PARAMETER :: grid_id_default = grid_id_gdal !< default driver if none specified in constructor
+#else
+INTEGER,PARAMETER :: grid_id_default = grid_id_nodriver !< default driver if none specified in constructor
+#endif
+
+CHARACTER(len=12),PARAMETER :: driverlist(0:2) = &
+ (/'no_driver   ','grib_api    ','gdal        '/)
+
 !> Derived type associated to a file-like object containing many
 !! blocks/messages/records/bands of gridded data.
 TYPE grid_file_id
 PRIVATE
 #ifdef HAVE_LIBGRIBAPI
-  INTEGER :: gaid
+INTEGER :: gaid=imiss
 #endif
 #ifdef HAVE_LIBGDAL
-  TYPE(gdaldataseth) :: gdalid
-  INTEGER :: nlastband
+TYPE(gdaldataseth) :: gdalid
+INTEGER :: nlastband=0
 #endif
-  INTEGER :: driver
+INTEGER :: driver=grid_id_default
 END TYPE grid_file_id
 
 
@@ -91,29 +106,15 @@ END TYPE grid_file_id
 !! data coming from a file-like object.
 TYPE grid_id
 PRIVATE
+INTEGER :: nodriverid=imiss
 #ifdef HAVE_LIBGRIBAPI
-  INTEGER :: gaid
+INTEGER :: gaid=imiss
 #endif
 #ifdef HAVE_LIBGDAL
-  TYPE(gdalrasterbandh) :: gdalid
+TYPE(gdalrasterbandh) :: gdalid
 #endif
-  INTEGER :: driver
+INTEGER :: driver=grid_id_default
 END TYPE grid_id
-
-INTEGER,PARAMETER :: grid_id_notype = imiss !< constants to be used for associating an object to a driver: no type specified
-INTEGER,PARAMETER :: grid_id_grib_api = 1 !< type grib_api specified
-INTEGER,PARAMETER :: grid_id_gdal = 2 !< type gdal specified
-
-CHARACTER(len=12),PARAMETER :: driverlist(0:2) = &
- (/'none        ','grib_api    ','gdal        '/)
-
-#if defined HAVE_LIBGRIBAPI
-INTEGER,PARAMETER :: grid_id_default = grid_id_grib_api !< default driver if none specified in constructor
-#elif defined HAVE_LIBGDAL
-INTEGER,PARAMETER :: grid_id_default = grid_id_gdal !< default driver if none specified in constructor
-#else
-INTEGER,PARAMETER :: grid_id_default = grid_id_notype !< default driver if none specified in constructor
-#endif
 
 !> Constructors for the corresponding classes in SUBROUTINE form.
 !! It is alternative to the *_new function constructors.

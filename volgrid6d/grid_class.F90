@@ -267,7 +267,7 @@ END SUBROUTINE griddim_init
 
 !> Destroy a \a griddim_def object.
 SUBROUTINE griddim_delete(this)
-TYPE(griddim_def) :: this !< object to be destroyed
+TYPE(griddim_def),INTENT(inout) :: this !< object to be destroyed
 
 CALL delete(this%dim)
 CALL delete(this%grid%proj)

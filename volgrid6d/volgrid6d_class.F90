@@ -542,7 +542,7 @@ END SUBROUTINE volgrid_set_vol_3d
 !! associated with the object. It should be called also for objects
 !! crated through the \a import interface.
 SUBROUTINE volgrid6d_delete(this)
-TYPE(volgrid6d) :: this
+TYPE(volgrid6d),INTENT(inout) :: this
 
 INTEGER :: i, ii, iii, iiii
 
