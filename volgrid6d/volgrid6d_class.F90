@@ -45,6 +45,7 @@ USE vol7d_class
 USE grid_transform_class
 USE geo_proj_class
 USE grid_class
+USE grid_dim_class
 USE datetime_class
 USE volgrid6d_var_class
 USE log4fortran
@@ -941,16 +942,15 @@ call l4f_category_log(this%category,L4F_DEBUG,"export_to_gridinfo")
 
 usetemplate = .FALSE.
 
-gaid = grid_id_new()
-if (present(gaid_template)) then
-  call copy(gaid_template, gaid)
+IF (PRESENT(gaid_template)) THEN
+  CALL copy(gaid_template, gaid)
   usetemplate = c_e(gaid)
 #ifdef DEBUG
-  call l4f_category_log(this%category,L4F_DEBUG,"template cloned to a new gaid")
+  CALL l4f_category_log(this%category,L4F_DEBUG,"template cloned to a new gaid")
 #endif
-else
+ELSE
   gaid = gridinfo%gaid ! is this really a good thing? (gridinfo was intent(out))!
-end if
+ENDIF
 
 
 if (.not.c_e(gaid)) then
@@ -1118,8 +1118,8 @@ end subroutine import_from_gridinfovv
 !!
 !! Dalla struttura volgrid6d organizzata nella sua forma multidimensionale viene esportato
 !! a un  vettore di oggetti gridinfo l'intero contenuto.
-subroutine export_to_gridinfov(this,gridinfov,gaid_template,clone)
-TYPE(volgrid6d),INTENT(in) :: this !< Volume volgrid6d da exportare
+SUBROUTINE export_to_gridinfov(this, gridinfov, gaid_template, clone)
+TYPE(volgrid6d),INTENT(inout) :: this !< Volume volgrid6d da exportare
 type(gridinfo_def),intent(out) :: gridinfov(:) !< vettore gridinfo 
 TYPE(grid_id),INTENT(in),OPTIONAL :: gaid_template !< eventuale template sul quale sovrascrivere i descrittori dimenticandosi del'eventuale grib originale
 logical,intent(in),optional :: clone !< se fornito e \c .TRUE., clona i gaid to gridinfo
@@ -1128,16 +1128,21 @@ integer :: i,itime,itimerange,ilevel,ivar
 integer :: ngridinfo,ntime,ntimerange,nlevel,nvar
 
 #ifdef DEBUG
-call l4f_category_log(this%category,L4F_DEBUG,"start export_to_gridinfov")
+CALL l4f_category_log(this%category,L4F_DEBUG,"start export_to_gridinfov")
 #endif
 
 ngridinfo=size(gridinfov)
 
-if (ngridinfo /= size(this%gaid))then
-   call l4f_category_log(this%category,L4F_ERROR,&
-    "dimension mismatch"//to_char(ngridinfo)//to_char(SIZE(this%gaid)))
-   call raise_error()
-end if
+IF (ngridinfo /= SIZE(this%gaid)) THEN
+  CALL l4f_category_log(this%category,L4F_ERROR,&
+   "dimension mismatch"//to_char(ngridinfo)//to_char(SIZE(this%gaid)))
+  CALL raise_error()
+ENDIF
+
+! this is necessary in order not to repeatedly and uselessly copy the
+! same array of coordinates for each 2d grid during export, the
+! side-effect is that the computed projection in this is lost
+CALL dealloc(this%griddim%dim)
 
 i=0
 ntime=size(this%time)
@@ -1172,8 +1177,9 @@ end subroutine export_to_gridinfov
 !! Dalla struttura volgrid6d organizzata nella sua forma multidimensionale viene esportato
 !! a un  vettore di oggetti gridinfo l'intero contenuto.
 !! l'imput a vettore permette la gestione di qualsiasi mix di dati
-subroutine export_to_gridinfovv(this,gridinfov,gaid_template,clone,categoryappend)
-TYPE(volgrid6d),INTENT(in) :: this(:)      !< vettore volume volgrid6d da exportare
+SUBROUTINE export_to_gridinfovv(this, gridinfov, gaid_template, clone, &
+ categoryappend)
+TYPE(volgrid6d),INTENT(inout) :: this(:) !< vettore volume volgrid6d da exportare
 type(gridinfo_def),pointer :: gridinfov(:) !< vettore gridinfo in cui exportare
 TYPE(grid_id),INTENT(in),OPTIONAL :: gaid_template !< eventuale template sul quale sovrascrivere i descrittori dimenticandosi del'eventuale grib originale
 logical,intent(in),optional :: clone !< se fornito e \c .TRUE., clona i gaid to gridinfo
@@ -1316,8 +1322,9 @@ TYPE(grid_id),INTENT(in),OPTIONAL :: gaid_template !< grib id template; se forni
 character(len=*),INTENT(in),OPTIONAL :: categoryappend !< appende questo suffisso al namespace category di log4fortran
 
 TYPE(gridinfo_def),POINTER :: gridinfo(:)
+INTEGER :: i
 INTEGER :: category
-character(len=512) :: a_name
+CHARACTER(len=512) :: a_name
 
 IF (PRESENT(categoryappend)) THEN
   CALL l4f_launcher(a_name,a_name_append=TRIM(subcategory)//"."//TRIM(categoryappend))
@@ -1336,9 +1343,13 @@ call l4f_category_log(category,L4F_INFO,"writing volgrid6d to grib file: "//trim
 if ( associated(this))then
 
   CALL export(this, gridinfo, gaid_template=gaid_template, clone=.TRUE.)
-! check that gridinfo is associated?
-  CALL export(gridinfo, filename)
-  DEALLOCATE(gridinfo)
+  IF (ASSOCIATED(gridinfo)) THEN
+    CALL export(gridinfo, filename)
+    DO i = 1, SIZE(gridinfo)
+      CALL delete(gridinfo(i))
+    ENDDO
+    DEALLOCATE(gridinfo)
+  ENDIF
 
 else
 
@@ -1390,7 +1401,7 @@ TYPE(vol7d_level),INTENT(in),OPTIONAL :: lev_out(:) ! vol7d_level object definin
 LOGICAL,INTENT(in),OPTIONAL :: clone ! se fornito e \c .TRUE., clona i gaid da volgrid6d_in a volgrid6d_out
 
 INTEGER :: ntime, ntimerange, inlevel, onlevel, nvar
-integer :: itime, itimerange, ilevel, ivar
+INTEGER :: itime, itimerange, ilevel, ivar, levshift, levused
 
 REAL,POINTER :: voldatiin(:,:,:), voldatiout(:,:,:)
 
@@ -1439,14 +1450,20 @@ IF (.NOT.ASSOCIATED(volgrid6d_out%voldati)) THEN
    onlevel))
 ENDIF
 
+CALL get_val(this, levshift=levshift, levused=levused)
 DO ivar=1,nvar
   DO itimerange=1,ntimerange
     DO itime=1,ntime
-
+! skip empty columns where possible, improve
+      IF (c_e(levshift) .AND. c_e(levused)) THEN
+        IF (.NOT.ANY(c_e( &
+         volgrid6d_in%gaid(levshift+1:levshift+levused,itime,itimerange,ivar) &
+         ))) CYCLE
+      ENDIF
       DO ilevel = 1, MIN(inlevel,onlevel)
 ! if present gaid copy it
         IF (c_e(volgrid6d_in%gaid(ilevel,itime,itimerange,ivar)) .AND. .NOT. &
-            c_e(volgrid6d_out%gaid(ilevel,itime,itimerange,ivar))) then
+         c_e(volgrid6d_out%gaid(ilevel,itime,itimerange,ivar))) THEN
 
           IF (optio_log(clone)) THEN
             CALL copy(volgrid6d_in%gaid(ilevel,itime,itimerange,ivar),&
@@ -1464,13 +1481,13 @@ DO ivar=1,nvar
 ! if out level are more, we have to clone anyway
       DO ilevel = MIN(inlevel,onlevel) + 1, onlevel
         IF (c_e(volgrid6d_in%gaid(inlevel,itime,itimerange,ivar)) .AND. .NOT. &
-            c_e(volgrid6d_out%gaid(ilevel,itime,itimerange,ivar))) then
+         c_e(volgrid6d_out%gaid(ilevel,itime,itimerange,ivar))) then
 
           CALL copy(volgrid6d_in%gaid(inlevel,itime,itimerange,ivar),&
-             volgrid6d_out%gaid(ilevel,itime,itimerange,ivar))
+           volgrid6d_out%gaid(ilevel,itime,itimerange,ivar))
 #ifdef DEBUG
-            CALL l4f_category_log(volgrid6d_in%category,L4F_DEBUG, &
-             "forced cloning gaid, level "//t2c(inlevel)//"->"//t2c(ilevel))
+          CALL l4f_category_log(volgrid6d_in%category,L4F_DEBUG, &
+           "forced cloning gaid, level "//t2c(inlevel)//"->"//t2c(ilevel))
 #endif
         ENDIF
       ENDDO
@@ -1483,7 +1500,6 @@ DO ivar=1,nvar
       CALL compute(this, voldatiin, voldatiout, convert(volgrid6d_in%var(ivar)))
       CALL volgrid_set_vol_3d(volgrid6d_out, itime, itimerange, ivar, &
        voldatiout)
-
     ENDDO
   ENDDO
 ENDDO
@@ -1496,7 +1512,7 @@ IF (.NOT.ASSOCIATED(volgrid6d_out%voldati)) THEN
 ENDIF
 
 
-end SUBROUTINE volgrid6d_transform_compute
+END SUBROUTINE volgrid6d_transform_compute
 
 
 !> Performs the specified abstract transformation on the data provided.

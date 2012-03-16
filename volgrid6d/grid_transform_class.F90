@@ -250,6 +250,7 @@ TYPE grid_transform
   INTEGER :: outny = imiss
   INTEGER :: outnz = imiss
   INTEGER :: levshift = imiss
+  INTEGER :: levused = imiss
   INTEGER :: iniox,inioy,infox,infoy,outinx,outiny,outfnx,outfny
   INTEGER,POINTER :: inter_index_x(:,:) => NULL()
   INTEGER,POINTER :: inter_index_y(:,:) => NULL()
@@ -745,6 +746,8 @@ IF (this%trans%trans_type == 'vertint') THEN
     this%valid = .FALSE.
     RETURN
   ENDIF
+  this%levshift = istart-1
+  this%levused = inused
 
   IF (trans%vertint%input_levtype%level1 /= trans%vertint%output_levtype%level1) THEN
 #ifdef DEBUG
@@ -782,7 +785,6 @@ IF (this%trans%trans_type == 'vertint') THEN
     ENDIF
 
     this%coord_3d_in => coord_3d_in
-    this%levshift = istart-1
 
   ELSE
 ! TODO: here we should check that valid levels are contiguous and ordered
@@ -2368,11 +2370,15 @@ END SUBROUTINE grid_transform_delete
 
 
 !> Method for returning the contents of the object.
-SUBROUTINE grid_transform_get_val(this, output_level_auto)
+SUBROUTINE grid_transform_get_val(this, output_level_auto, levshift, levused)
 TYPE(grid_transform),INTENT(in) :: this !< object to examine
 TYPE(vol7d_level),POINTER,OPTIONAL :: output_level_auto(:) !< array of auto-generated output levels
+INTEGER,INTENT(out),OPTIONAL :: levshift !< shift between input and output levels for vertint
+INTEGER,INTENT(out),OPTIONAL :: levused !< number of input levels used for vertint
 
 IF (PRESENT(output_level_auto)) output_level_auto => this%output_level_auto
+IF (PRESENT(levshift)) levshift = this%levshift
+IF (PRESENT(levused)) levused = this%levused
 
 END SUBROUTINE grid_transform_get_val
 
