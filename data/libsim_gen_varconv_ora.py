@@ -158,8 +158,9 @@ EXIT;
     sqlplus.stdin.write(query)
     for row in csv.reader(sqlplus.stdout, delimiter=","):
         if len(row) != 6: continue
-        if row[1].rstrip() == '' and not allvar and \
-                (int(row[0]) < 1360 or int(row[0]) > 1402 or not hack): continue
+#        if row[1].rstrip() == '' and not allvar and \
+#                (int(row[0]) < 1360 or int(row[0]) > 1402 or not hack): continue
+        if row[1].rstrip() == '' and not allvar: continue
 # sporca conversione per il transiente
         if hack:
             if row[1].rstrip() == 'B10061': row[1] = 'B10060'
@@ -178,16 +179,16 @@ EXIT;
             pollprevhack[oratable[-1]["oracleid"]] = oratable[-1]
     
     sqlplus.wait()
-    if hack:
-        for row,ind in zip(oratable,range(len(oratable))):
-            if row["blocal"] == "":
-                if row["oracleid"] >= 1360 and row["oracleid"] <= 1402:
-                    try:
-                        tmp = pollprevhack[row["oracleid"]-1000]["blocal"]
-                        oratable[ind]["blocal"] = tmp
-                    except:
-                        print "Error:, the table has changed, please modify",sys.argv[0]
-                        raise
+    # if hack:
+    #     for row,ind in zip(oratable,range(len(oratable))):
+    #         if row["blocal"] == "":
+    #             if row["oracleid"] >= 1360 and row["oracleid"] <= 1402:
+    #                 try:
+    #                     tmp = pollprevhack[row["oracleid"]-1000]["blocal"]
+    #                     oratable[ind]["blocal"] = tmp
+    #                 except:
+    #                     print "Error:, the table has changed, please modify",sys.argv[0]
+    #                     raise
     return oratable
 
 
