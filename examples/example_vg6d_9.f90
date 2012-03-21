@@ -35,9 +35,9 @@ USE datetime_class
 
 implicit none
 
-integer :: category,ier,i
+integer :: category,ier
 character(len=512):: a_name,filename="out.grib"
-TYPE(gridinfo_def) :: gridinfo
+TYPE(arrayof_gridinfo) :: gridinfo
 
 type(griddim_def) :: griddim
 
@@ -73,22 +73,23 @@ call init(date_time,year=2011, month=04, day=12, hour=12, minute=00, msec=00)
 call init(timerange, timerange=4, p1=3600, p2=900)
 call init(level, level1=105, l1=200, level2=imiss, l2=imiss)
 call init(var,centre=200, category=3, number=61, discipline=4)
-call init (gridinfo, gaid_template, griddim, date_time, timerange, level, var, clone=.false., categoryappend='inventato')
+CALL insert(gridinfo, nelem=1)
+call init(gridinfo%array(1), gaid_template, griddim, date_time, timerange, level, var, clone=.false., categoryappend='inventato')
 
 ! here you can change the default template
-call grib_set(grid_id_get_gaid(gridinfo%gaid),"generatingProcessIdentifier",178)
+call grib_set(grid_id_get_gaid(gridinfo%array(1)%gaid),"generatingProcessIdentifier",178)
 
 !encode the data
-call encode_gridinfo (gridinfo, field)
+call encode_gridinfo(gridinfo%array(1), field)
 
 call display(gridinfo)
 call l4f_category_log(category,L4F_INFO,"export to GRIB")
 
-CALL export((/gridinfo/), filename=filename, categoryappend="gridinfo scritto")
+CALL export(gridinfo, filename=filename, categoryappend="gridinfo scritto")
 
 call l4f_category_log(category,L4F_INFO,"end")
 
-call delete (gridinfo)
+call delete(gridinfo)
 
 ! close logger
 call l4f_category_delete(category)

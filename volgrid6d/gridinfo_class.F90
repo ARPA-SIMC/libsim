@@ -135,11 +135,20 @@ INTERFACE encode_gridinfo
   MODULE PROCEDURE gridinfo_encode_data
 END INTERFACE
 
+#define ARRAYOF_ORIGTYPE TYPE(gridinfo_def)
+#define ARRAYOF_TYPE arrayof_gridinfo
+#define ARRAYOF_ORIGDESTRUCTOR(x) CALL delete(x)
+#include "arrayof_pre.F90"
+! from arrayof
+PUBLIC insert, append, remove, packarray
+
 PRIVATE
 PUBLIC gridinfo_def,init,delete,import,export,clone
 PUBLIC display,decode_gridinfo,encode_gridinfo
 
 CONTAINS
+
+#include "arrayof_post.F90"
 
 !> Constructor, it creates a new instance of the object.
 !! All the additional parameters are optional and they will be
@@ -271,24 +280,23 @@ END SUBROUTINE gridinfo_display
 !> The same as gridinfo_display(), but it receives an array of
 !! gridinfo objects.
 SUBROUTINE gridinfov_display(this, namespace)
-TYPE(gridinfo_def),INTENT(in) :: this(:) !< object to display
+TYPE(arrayof_gridinfo),INTENT(in) :: this !< object to display
 CHARACTER (len=*),OPTIONAL :: namespace !< grib_api namespace of the keys to search for, all the keys if empty, default "ls"
 
 INTEGER :: i
 
 PRINT*,"----------------------- gridinfo array -----------------------"
 
-do i=1, size(this)
+DO i = 1, this%arraysize
 
 #ifdef DEBUG
-  CALL l4f_category_log(this(i)%category,L4F_DEBUG, &
-   "displaying gridinfo array, element "//TRIM(to_char(i)))
+  CALL l4f_category_log(this%array(i)%category,L4F_DEBUG, &
+   "displaying gridinfo array, element "//t2c(i))
 #endif
+  CALL display(this%array(i), namespace)
 
-  call display(this(i), namespace)
-
-end do
-print*,"--------------------------------------------------------------"
+ENDDO
+PRINT*,"--------------------------------------------------------------"
 
 END SUBROUTINE gridinfov_display
 
@@ -343,18 +351,19 @@ IF (gdalassociated(gdalid)) CALL gridinfo_import_gdal(this, gdalid)
 END SUBROUTINE gridinfo_import
 
 
-!> Import a gridinfo array from a file. It receives a pointer to an array of
-!! gridinfo objects which will be allocated to a size equal to the
-!! number of gridded messages/bands found in the file provided and it
-!! will be filled with all the data found. In case of error, the
-!! gridinfo object will not be allocated, so the success can be tested
-!! with \a ASSOCIATED(this).
+!> Import an array of gridinfo from a file. It receives a (possibly unallocated)
+!! array of gridinfo objects which will be extended by a number of
+!! elements equal to the number of gridded messages/bands found in the
+!! file provided and it will be filled with all the data found. In
+!! case of error, the gridinfo object will not be allocated, so the
+!! success can be tested by checking \a this%arraysize.
 SUBROUTINE gridinfo_import_from_file(this, filename, categoryappend)
-TYPE(gridinfo_def),POINTER :: this(:) !< gridinfo array object which will be allocated and into which data will be imported
+TYPE(arrayof_gridinfo) :: this !< array of gridinfo objects which will be allocated/extended and into which data will be imported
 CHARACTER(len=*),INTENT(in) :: filename !< name of file to open and import, in the form [driver:]pathname
 CHARACTER(len=*),INTENT(in),OPTIONAL :: categoryappend !< append this suffix to log4fortran namespace category
 
-INTEGER :: ngrid, stallo, category
+type(gridinfo_def) :: gridinfol
+INTEGER :: ngrid, category
 CHARACTER(len=512) :: a_name
 TYPE(grid_file_id) :: input_file
 TYPE(grid_id) :: input_grid
@@ -371,55 +380,31 @@ category=l4f_category_get(a_name)
 CALL l4f_category_log(category,L4F_DEBUG,"import from file")
 #endif
 
-NULLIFY(this)
-
 input_file = grid_file_id_new(filename, 'r')
 
-if(c_e(input_file)) then
-  ngrid = grid_file_id_count(input_file)
-else
-  CALL l4f_category_log(category,L4F_ERROR, &
-   "error opening file: "//TRIM(filename))  
-  CALL raise_error()
-  RETURN
-end if
+ngrid = 0
+DO WHILE(.TRUE.)
+  input_grid = grid_id_new(input_file)
+  IF (.NOT. c_e(input_grid)) EXIT
+
+  CALL l4f_category_log(category,L4F_INFO,"import gridinfo")
+  ngrid = ngrid + 1
+  CALL init(gridinfol, gaid=input_grid, &
+   categoryappend=TRIM(categoryappend)//TRIM(to_char(ngrid)))
+  CALL import(gridinfol)
+  CALL insert(this, gridinfol)
+! gridinfol is intentionally not destroyed, since now it lives into this
+ENDDO
+
+CALL packarray(this)
 
 CALL l4f_category_log(category,L4F_INFO, &
- "found "//TRIM(to_char(ngrid))//" messages/bands in file "//TRIM(filename))
+ "gridinfo_import, "//t2c(ngrid)//" messages/bands imported from file "// &
+ TRIM(filename))
 
-IF (ngrid > 0) THEN
-
-  ALLOCATE (this(ngrid),stat=stallo)
-  IF (stallo == 0) THEN
-
-    ngrid = 0
-    DO WHILE(.TRUE.)
-      input_grid = grid_id_new(input_file)
-      IF (.NOT. c_e(input_grid)) EXIT
-      IF (ngrid == SIZE(this)) EXIT
-
-      CALL l4f_category_log(category,L4F_INFO,"import gridinfo")
-      ngrid = ngrid + 1
-      CALL init(this(ngrid), gaid=input_grid, &
-       categoryappend=TRIM(categoryappend)//TRIM(to_char(ngrid)))
-      CALL import(this(ngrid))
-! input_grid is intentionally not destroyed, since now it lives into this
-    ENDDO
-
-  ELSE
-
-    NULLIFY(this)
-
-    CALL l4f_category_log(category,L4F_ERROR,"allocating memory")
-    CALL raise_error()
-
-  ENDIF
-
-ENDIF
-
-! attenzione, modificare:!!!!
+! close file
 CALL delete(input_file)
-!chiudo il logger
+! close logger
 CALL l4f_category_delete(category)
 
 END SUBROUTINE gridinfo_import_from_file
@@ -465,13 +450,13 @@ ENDIF
 END SUBROUTINE gridinfo_export
 
 
-!> Export a gridinfo array to a file. It receives an array of
-!! gridinfo objects which will be exported to the given file. The
-!! driver for writing to file is chosen according to the gaid
-!! associated to the first gridinfo elements, and it must be the same
-!! for all the elements.
+!> Export an arrayof_gridinfo object to a file.
+!! It receives an \a arrayof_gridinfo object which will be exported to
+!! the given file. The driver for writing to file is chosen according
+!! to the gaid associated to the first gridinfo element, and it must
+!! be the same for all the elements.
 SUBROUTINE gridinfo_export_to_file(this, filename, categoryappend)
-TYPE(gridinfo_def) :: this(:) !< gridinfo array object which will be written to file
+TYPE(arrayof_gridinfo) :: this !< array of gridinfo objects which will be written to file
 CHARACTER(len=*),INTENT(in) :: filename !< name of file to open and import, in the form [driver:]pathname
 CHARACTER(len=*),INTENT(in),OPTIONAL :: categoryappend !< append this suffix to log4fortran namespace category
 
@@ -490,13 +475,13 @@ category=l4f_category_get(a_name)
 
 #ifdef DEBUG
 CALL l4f_category_log(category,L4F_DEBUG, &
- "exporting to file "//TRIM(filename)//" "//TRIM(to_char(SIZE(this)))//" fields")
+ "exporting to file "//TRIM(filename)//" "//t2c(this%arraysize)//" fields")
 #endif
 
 valid_grid_id = grid_id_new()
-DO i = 1, SIZE(this) ! find a valid grid_id in this
-  IF (c_e(this(i)%gaid)) THEN
-    valid_grid_id = this(i)%gaid
+DO i = 1, this%arraysize ! find a valid grid_id in this
+  IF (c_e(this%array(i)%gaid)) THEN
+    valid_grid_id = this%array(i)%gaid
     EXIT
   ENDIF
 ENDDO
@@ -505,9 +490,9 @@ IF (c_e(valid_grid_id)) THEN ! a valid grid_id has been found
 ! open file
   output_file = grid_file_id_new(filename, 'w', from_grid_id=valid_grid_id)
   IF (c_e(output_file)) THEN
-    DO i = 1, SIZE(this)
-      CALL export(this(i)) ! export information to gaid
-      CALL export(this(i)%gaid, output_file) ! export gaid to file
+    DO i = 1, this%arraysize
+      CALL export(this%array(i)) ! export information to gaid
+      CALL export(this%array(i)%gaid, output_file) ! export gaid to file
     ENDDO
 ! close file
     CALL delete(output_file)
@@ -517,7 +502,7 @@ IF (c_e(valid_grid_id)) THEN ! a valid grid_id has been found
   ENDIF
 ELSE ! no valid grid_id has been found
   CALL l4f_category_log(category,L4F_ERROR, &
-   "gridinfo object of size "//t2c(SIZE(this)))
+   "gridinfo object of size "//t2c(this%arraysize))
   CALL l4f_category_log(category,L4F_ERROR, &
    "no valid grid id found when exporting to file "//TRIM(filename))
   CALL raise_error()

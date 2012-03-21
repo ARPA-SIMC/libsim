@@ -42,12 +42,10 @@ INTEGER,INTENT(in) :: iun
 
 INTEGER :: licsv_column(SIZE(icsv_column))
 LOGICAL :: no_miss, no_missa, anaonly, different
-CHARACTER(len=50) :: desdata(7)
 TYPE(csv_record) :: csvline, csv_desdata(7), csv_anadesdata(7)
-INTEGER :: i, i1, i2, i3, i4, i5, i6, i7, nv, ndvar, nav, ndv
+INTEGER :: i, i1, i2, i3, i4, i5, i6, nv, ndvar, nav, ndv
 INTEGER,POINTER :: w_s(:), w_e(:)
 TYPE(vol7d_var_mapper),POINTER :: mapper(:)
-LOGICAL :: analine
 
 NULLIFY(mapper)
 CALL vol7d_alloc_vol(v7d) ! be safe
@@ -387,7 +385,6 @@ LOGICAL,INTENT(in) :: analine
 
 REAL(kind=fp_geo) :: l1, l2
 CHARACTER(len=128) :: charbuffer
-CHARACTER(len=20) :: tmpbuf
 
 CALL csv_record_rewind(csv_desdata)
 

@@ -38,12 +38,11 @@ implicit none
 TYPE(optionparser) :: opt
 INTEGER :: optind, optstatus
 CHARACTER(len=12) :: coord_format, output_format
-CHARACTER(len=512) :: a_name, coord_file, input_file, output_file, &
- network_list, variable_list
+CHARACTER(len=512) :: a_name, coord_file, input_file, output_file
 INTEGER :: category, ier, i, iun, iargc
 CHARACTER(len=network_name_len) :: network
 TYPE(volgrid6d),POINTER :: volgrid(:)
-TYPE(gridinfo_def),POINTER :: maskgrid(:)
+TYPE(arrayof_gridinfo) :: maskgrid
 REAL,ALLOCATABLE :: maskfield(:,:)
 TYPE(transform_def) :: trans
 TYPE(vol7d) :: v7d_coord
@@ -251,21 +250,15 @@ IF (c_e(coord_file)) THEN
 #ifdef HAVE_LIBGRIBAPI
   ELSE IF (coord_format == 'grib_api') THEN
     CALL import(maskgrid, coord_file, categoryappend='maskgrid')
-    IF (.NOT.ASSOCIATED(maskgrid)) THEN
+    IF (maskgrid%arraysize < 1) THEN
       CALL l4f_category_log(category, L4F_ERROR, &
        'error importing mask grid file '//TRIM(coord_file))
       CALL raise_fatal_error()
     ENDIF
-    IF (SIZE(maskgrid) < 1) THEN
-      CALL l4f_category_log(category, L4F_ERROR, &
-       'error importing mask grid file '//TRIM(coord_file))
-      CALL raise_fatal_error()
-    ENDIF
-    CALL import(maskgrid(1))
-    ALLOCATE(maskfield(maskgrid(1)%griddim%dim%nx, maskgrid(1)%griddim%dim%ny))
-    maskfield(:,:) = decode_gridinfo(maskgrid(1))
-    CALL delete(maskgrid(1))
-    DEALLOCATE(maskgrid)
+    CALL import(maskgrid%array(1))
+    ALLOCATE(maskfield(maskgrid%array(1)%griddim%dim%nx, maskgrid%array(1)%griddim%dim%ny))
+    maskfield(:,:) = decode_gridinfo(maskgrid%array(1))
+    CALL delete(maskgrid)
 
 #endif
 

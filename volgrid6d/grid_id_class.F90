@@ -208,14 +208,10 @@ TYPE(grid_file_id) :: this
 
 INTEGER :: n, imode, ier
 
-#ifdef HAVE_LIBGRIBAPI
-this%gaid = imiss
-#endif
 #ifdef HAVE_LIBGDAL
 CALL gdalnullify(this%gdalid)
-this%nlastband = 0
 #endif
-this%driver = grid_id_default ! start with default
+
 IF (filename == '' .OR. .NOT.c_e(filename)) RETURN
 
 n = INDEX(filename,':')
@@ -305,6 +301,7 @@ this%gaid = imiss
 #ifdef HAVE_LIBGDAL
 IF (this%driver == grid_id_gdal) THEN
   IF (gdalassociated(this%gdalid)) CALL gdalclose(this%gdalid)
+  this%nlastband = 0
 ENDIF
 CALL gdalnullify(this%gdalid)
 #endif
@@ -381,9 +378,6 @@ TYPE(grid_id) :: this
 
 INTEGER :: ier
 
-#ifdef HAVE_LIBGRIBAPI
-this%gaid = imiss
-#endif
 #ifdef HAVE_LIBGDAL
 CALL gdalnullify(this%gdalid)
 #endif

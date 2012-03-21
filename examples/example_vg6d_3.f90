@@ -27,8 +27,8 @@ implicit none
 
 integer :: category,ier
 character(len=512):: a_name
-type (gridinfo_def),pointer :: gridinfo(:),gridinfoout(:)
-type (volgrid6d),pointer  :: volgrid(:)
+type(arrayof_gridinfo) :: gridinfoin, gridinfoout
+type(volgrid6d),pointer  :: volgrid(:)
 
 TYPE(grid_file_id) :: ifile
 TYPE(grid_id) :: gaid, gaid_template
@@ -50,9 +50,10 @@ ifile = grid_file_id_new('../data/in.grb','r')
 ngrib = grid_file_id_count(ifile)
 
 call l4f_category_log(category,L4F_INFO,&
-         "Numero totale di grib: "//to_char(ngrib))
+ "Numero totale di grib: "//to_char(ngrib))
 
-ALLOCATE(gridinfo(ngrib))
+! aggiungo ngrib elementi vuoti
+CALL insert(gridinfoin, nelem=ngrib)
 
 ngrib=0
 
@@ -61,25 +62,22 @@ DO WHILE (.TRUE.)
   gaid = grid_id_new(ifile)
   IF (.NOT.c_e(gaid)) EXIT
 
-  CALL l4f_category_log(category,L4F_INFO,"import gridinfo")
+  CALL l4f_category_log(category,L4F_INFO,"import gridinfoin")
   ngrib = ngrib + 1
-  CALL init (gridinfo(ngrib), gaid=gaid, categoryappend=TRIM(to_char(ngrib)))
-  CALL import(gridinfo(ngrib))
+  CALL init (gridinfoin%array(ngrib), gaid=gaid, categoryappend=TRIM(to_char(ngrib)))
+  CALL import(gridinfoin%array(ngrib))
 ENDDO
 
 call delete(ifile)
-
-call display(gridinfo)
+call display(gridinfoin)
 
 call l4f_category_log(category,L4F_INFO,"import")
 
-call import(volgrid, gridinfo, categoryappend="volume di test")
+call import(volgrid, gridinfoin, categoryappend="volume di test")
 
-call l4f_category_log(category,L4F_INFO,"delete gridinfo")
+call l4f_category_log(category,L4F_INFO,"delete gridinfoin")
 
-DO ngrib = 1, SIZE(gridinfo)
-  call delete(gridinfo(ngrib))
-ENDDO
+CALL delete(gridinfoin)
 
 ! qui posso fare tutti i conti possibili
 
@@ -91,13 +89,12 @@ call export(volgrid, gridinfoout, gaid_template=gaid_template)
 
 ifile = grid_file_id_new('out.grb','w')
 
-do ngrib=1,size(gridinfoout)
+do ngrib=1,gridinfoout%arraysize
    !     write the new message to a file
 
-   if(c_e(gridinfoout(ngrib)%gaid)) then
-      call export(gridinfoout(ngrib))
-      call export(gridinfoout(ngrib)%gaid,ifile)
-      call delete(gridinfoout(ngrib))
+   if(c_e(gridinfoout%array(ngrib)%gaid)) then
+      call export(gridinfoout%array(ngrib))
+      call export(gridinfoout%array(ngrib)%gaid,ifile)
    end if
 end do
 
@@ -105,8 +102,7 @@ call delete(ifile)
 
 call l4f_category_log(category,L4F_INFO,"terminato")
 
-deallocate(gridinfo)
-deallocate(gridinfoout)
+call delete(gridinfoout)
 
 !chiudo il logger
 call l4f_category_delete(category)

@@ -27,12 +27,10 @@ USE grid_id_class
 
 implicit none
 
-integer :: category,ier,i
+integer :: category,ier
 character(len=512):: a_name,filename="out.bufr"
 type (volgrid6d),pointer  :: volgrid(:)
 type(transform_def) :: trans
-type(vol7d_ana) :: ana(3)
-type(vol7d) :: vol7d_in
 TYPE(vol7d_dballe) :: v7d_import
 type(griddim_def) :: griddim_out
 

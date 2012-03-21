@@ -697,7 +697,7 @@ subroutine volgrid6d_read_from_file (this,unit,filename,description,tarray,filen
 
 TYPE(volgrid6d),INTENT(OUT) :: this !< Volume volgrid6d da leggere
 integer,intent(inout),optional :: unit !< unità su cui è stato aperto un file; se =0 rielaborato internamente (default = elaborato internamente con getunit)
-character(len=*),INTENT(in),optional :: filename !< nome del file eventualmente da aprire (default = (nome dell'eseguibile)//.v7d )
+character(len=*),INTENT(in),optional :: filename !< nome del file eventualmente da aprire (default = nome dell'eseguibile.v7d)
 character(len=*),intent(out),optional :: filename_auto !< nome del file generato se "filename" è omesso
 character(len=*),INTENT(out),optional :: description !< descrizione del volume letto
 integer,intent(out),optional :: tarray(8) !< vettore come definito da "date_and_time" della data di scrittura del volume
@@ -780,7 +780,7 @@ end subroutine volgrid6d_read_from_file
 
 
 !> Import a single \a gridinfo object into a \a volgrid6d object.
-!! This methods import a single gridded field from a \a gridinfo
+!! This methods imports a single gridded field from a \a gridinfo
 !! object into a \a volgrid6d object, inseting it into the
 !! multidimensional structure of volgrid6d. The volgrid6d object must
 !! have been already initialized and the dimensions specified with
@@ -921,16 +921,20 @@ end if
 end subroutine import_from_gridinfo
 
 
-!> \brief export  from volgrid6d object to gridinfo
-!!
-!! Dalla struttura volgrid6d organizzata nella sua forma multidimensionale viene esportato, specificando l'elemento richiesto,
-!! a un  oggetto gridinfo che al suo interno contiene un id di un grib delle grib_api e/o una sua sufficiente descrizione.
-subroutine export_to_gridinfo(this,gridinfo,itime,itimerange,ilevel,ivar,gaid_template,clone)
-TYPE(volgrid6d),INTENT(in) :: this !< Volume volgrid6d da leggere
-type(gridinfo_def),intent(inout) :: gridinfo !< gridinfo 
-integer :: itime,itimerange,ilevel,ivar
-TYPE(grid_id),INTENT(in),OPTIONAL :: gaid_template !< eventuale template sul quale sovrascrivere i descrittori dimenticandosi del'eventuale grib originale
-logical,intent(in),optional :: clone !< se fornito e \c .TRUE., clona i gaid to gridinfo
+!> Export a single grid of a \a volgrid6d object to a \a gridinfo_def object.
+!! A single 2d slice of a \a volgrid6d at a specified location is
+!! written into a \a gridinfo_def object, including the \a grid_id
+!! which can be used for the successive export to file.
+SUBROUTINE export_to_gridinfo(this, gridinfo, itime, itimerange, ilevel, ivar, &
+ gaid_template, clone)
+TYPE(volgrid6d),INTENT(in) :: this !< volume to be exported
+TYPE(gridinfo_def),INTENT(inout) :: gridinfo !< output gridinfo_def object
+INTEGER :: itime !< index within \a this of the element to be exported for the time dimension
+INTEGER :: itimerange !< index within \a this of the element to be exported for the timerange dimension
+INTEGER :: ilevel !< index within \a this of the element to be exported for the vertical level dimension
+INTEGER :: ivar !< index within \a this of the element to be exported for the variable dimension
+TYPE(grid_id),INTENT(in),OPTIONAL :: gaid_template !< \a grid_id template to be used for output data replacing the one contained in \a this
+LOGICAL,INTENT(in),OPTIONAL :: clone !< if provided and \c .TRUE., clone the grid_id included in \a this rather than making a shallow copy
 
 TYPE(grid_id) :: gaid
 LOGICAL :: usetemplate
@@ -971,7 +975,6 @@ if (.not.c_e(gaid)) then
   end if
 end if
 
-
 call init(gridinfo,gaid,&
  this%griddim,&
  this%time(itime),&
@@ -980,10 +983,10 @@ call init(gridinfo,gaid,&
  this%var(ivar))
 
 ! reset the gridinfo, bad but necessary at this point for encoding the field
-call export(gridinfo%griddim, gridinfo%gaid)
+CALL export(gridinfo%griddim, gridinfo%gaid)
 ! encode the field
 IF (ASSOCIATED(this%voldati)) THEN
- CALL encode_gridinfo(gridinfo, this%voldati(:,:,ilevel,itime,itimerange,ivar))
+  CALL encode_gridinfo(gridinfo, this%voldati(:,:,ilevel,itime,itimerange,ivar))
 ELSE IF (usetemplate) THEN ! field must be forced into template in this case
   NULLIFY(voldati)
   CALL volgrid_get_vol_2d(this, ilevel, itime, itimerange, ivar, voldati)
@@ -991,23 +994,23 @@ ELSE IF (usetemplate) THEN ! field must be forced into template in this case
   DEALLOCATE(voldati)
 ENDIF
 
-end subroutine export_to_gridinfo
+END SUBROUTINE export_to_gridinfo
 
 
 !> Import an array of \a gridinfo objects into an array of \a
 !! volgrid6d objects.
-!! This method imports an array of gridded fields from a \a gridinfo
-!! object into a suitable number of \a volgrid6d objects. The number
-!! of \a volgrid6d allocated is determined by the number of different
-!! grids encountered in \a gridinfo.  Unlike the import for a single
-!! \a gridinfo, here the \a volgrid6d object is a non-associated
-!! pointer to a 1-d array of uninitialized objects, and all the
-!! dimension descriptors in each of the objects are allocated and
-!! assigned within the method according to the data contained in \a
-!! gridinfo.
-SUBROUTINE import_from_gridinfovv (this, gridinfov, clone, decode, time_definition, categoryappend)
+!! This method imports an array of gridded fields from an \a
+!! arrayof_gridinfo object into a suitable number of \a volgrid6d
+!! objects. The number of \a volgrid6d allocated is determined by the
+!! number of different grids encountered in \a arrayof_gridinfo.
+!! Unlike the import for a single \a gridinfo, here the \a volgrid6d
+!! object is a non-associated pointer to a 1-d array of uninitialized
+!! objects, and all the dimension descriptors in each of the objects
+!! are allocated and assigned within the method according to the data
+!! contained in \a gridinfov.
+SUBROUTINE import_from_gridinfovv(this, gridinfov, clone, decode, time_definition, categoryappend)
 TYPE(volgrid6d),POINTER :: this(:) !< object in which to import
-type(gridinfo_def),intent(in) :: gridinfov(:) !< gridinfo array object to be imported
+TYPE(arrayof_gridinfo),INTENT(in) :: gridinfov !< array of gridinfo objects to be imported
 LOGICAL , INTENT(in),OPTIONAL :: clone !< if provided and \c .TRUE. , clone the gaid's from \a gridinfo to \a this
 LOGICAL,INTENT(in),OPTIONAL :: decode !< if provided and \a .FALSE. the data volume in the elements of \a this is not allocated and successive work will be performed on grid_id's
 INTEGER,INTENT(IN),OPTIONAL :: time_definition !< 0=time is reference time; 1=time is validity time
@@ -1020,9 +1023,9 @@ character(len=512) :: a_name
 
 ! category temporanea (altrimenti non possiamo loggare)
 if (present(categoryappend))then
-   call l4f_launcher(a_name,a_name_append=trim(subcategory)//"."//trim(categoryappend))
+  call l4f_launcher(a_name,a_name_append=trim(subcategory)//"."//trim(categoryappend))
 else
-   call l4f_launcher(a_name,a_name_append=trim(subcategory))
+  call l4f_launcher(a_name,a_name_append=trim(subcategory))
 endif
 category=l4f_category_get(a_name)
 
@@ -1030,114 +1033,112 @@ category=l4f_category_get(a_name)
 call l4f_category_log(category,L4F_DEBUG,"start import_from_gridinfovv")
 #endif
 
-!type(gridinfo_def),allocatable :: gridinfovtmp(:)
-!allocate(gridinfovtmp(size(gridinfov)))
-!gridinfovtmp=(this%griddim(i) == gridinfov%griddim(j))
-!deallocate(gridinfovtmp)
+ngrid=count_distinct(gridinfov%array(1:gridinfov%arraysize)%griddim,back=.true.)
+CALL l4f_category_log(category,L4F_INFO,&
+ "numero delle aree differenti: "//t2c(ngrid))
 
-ngrid=count_distinct(gridinfov%griddim,back=.true.)
-call l4f_category_log(category,L4F_INFO,&
-     "numero delle aree differenti: "//to_char(ngrid))
-
-allocate(this(ngrid),stat=stallo)
-if (stallo /=0)then
-  call l4f_category_log(category,L4F_FATAL,"allocating memory")
+ALLOCATE(this(ngrid),stat=stallo)
+IF (stallo /= 0)THEN
+  CALL l4f_category_log(category,L4F_FATAL,"allocating memory")
   CALL raise_fatal_error()
-end if
-do i=1,ngrid
-   if (present(categoryappend))then
-      call init (this(i), time_definition=time_definition, categoryappend=trim(categoryappend)//"-"//to_char(ngrid))
-   else
-      call init (this(i), time_definition=time_definition, categoryappend=to_char(ngrid))
-   end if
-end do
+ENDIF
+DO i = 1, ngrid
+  IF (PRESENT(categoryappend))THEN
+    CALL init(this(i), time_definition=time_definition, categoryappend=TRIM(categoryappend)//"-"//to_char(ngrid))
+  ELSE
+    CALL init(this(i), time_definition=time_definition, categoryappend=to_char(ngrid))
+  ENDIF
+ENDDO
 
-this(:)%griddim=pack_distinct(gridinfov%griddim,ngrid,back=.true.)
+this(:)%griddim=pack_distinct(gridinfov%array(1:gridinfov%arraysize)%griddim, &
+ ngrid, back=.TRUE.)
 
 
-do i=1,ngrid
-   ntime = count_distinct(gridinfov%time,mask=(this(i)%griddim == gridinfov%griddim),back=.true.)
-   ntimerange = count_distinct(gridinfov%timerange,mask=(this(i)%griddim == gridinfov%griddim),back=.true.)
-   nlevel = count_distinct(gridinfov%level,mask=(this(i)%griddim == gridinfov%griddim),back=.true.)
-   nvar = count_distinct(gridinfov%var,mask=(this(i)%griddim == gridinfov%griddim),back=.true.)
-   
-
-!   CALL l4f_category_log(this(i)%category,L4F_DEBUG,'volgrid6d_alloc '//TRIM(to_char(nlevel))//' '//TRIM(to_char(nvar)))
-!   call init (this(i),this(i)%griddim, categoryappend)
-
-#ifdef DEBUG
-   call l4f_category_log(this(i)%category,L4F_DEBUG,"alloc volgrid6d index: "//trim(to_char(i)))
-#endif
- 
-   call volgrid6d_alloc(this(i),this(i)%griddim%dim,ntime=ntime,ntimerange=ntimerange,nlevel=nlevel,nvar=nvar)
- 
-   this(i)%time=pack_distinct(gridinfov%time,ntime,mask=(this(i)%griddim == gridinfov%griddim),back=.true.)
-   call sort(this(i)%time)
-
-   this(i)%timerange=pack_distinct(gridinfov%timerange,ntimerange,mask=(this(i)%griddim == gridinfov%griddim),back=.true.)
-   call sort(this(i)%timerange)
-
-   this(i)%level=pack_distinct(gridinfov%level,nlevel,mask=(this(i)%griddim == gridinfov%griddim),back=.true.)
-   call sort(this(i)%level)
-
-   this(i)%var=pack_distinct(gridinfov%var,nvar,mask=(this(i)%griddim == gridinfov%griddim),back=.true.)
+DO i = 1, ngrid
+  ntime = count_distinct(gridinfov%array(1:gridinfov%arraysize)%time, &
+   mask=(this(i)%griddim == gridinfov%array(1:gridinfov%arraysize)%griddim),&
+   back=.TRUE.)
+  ntimerange = count_distinct(gridinfov%array(1:gridinfov%arraysize)%timerange, &
+   mask=(this(i)%griddim == gridinfov%array(1:gridinfov%arraysize)%griddim), &
+   back=.TRUE.)
+  nlevel = count_distinct(gridinfov%array(1:gridinfov%arraysize)%level, &
+   mask=(this(i)%griddim == gridinfov%array(1:gridinfov%arraysize)%griddim), &
+   back=.TRUE.)
+  nvar = count_distinct(gridinfov%array(1:gridinfov%arraysize)%var, &
+   mask=(this(i)%griddim == gridinfov%array(1:gridinfov%arraysize)%griddim), &
+   back=.TRUE.)
 
 #ifdef DEBUG
-   call l4f_category_log(this(i)%category,L4F_DEBUG,"alloc_vol volgrid6d index: "//trim(to_char(i)))
+  CALL l4f_category_log(this(i)%category,L4F_DEBUG,"alloc volgrid6d index: "//t2c(1))
 #endif
-   CALL volgrid6d_alloc_vol(this(i), decode=decode)
 
-end do
+  CALL volgrid6d_alloc(this(i),this(i)%griddim%dim,ntime=ntime, &
+   ntimerange=ntimerange,nlevel=nlevel,nvar=nvar)
 
+  this(i)%time=pack_distinct(gridinfov%array(1:gridinfov%arraysize)%time, ntime, &
+   mask=(this(i)%griddim == gridinfov%array(1:gridinfov%arraysize)%griddim), &
+   back=.TRUE.)
+  CALL sort(this(i)%time)
 
-do i=1,size(gridinfov)
+  this(i)%timerange=pack_distinct(gridinfov%array(1:gridinfov%arraysize)%timerange, &
+   ntimerange, mask=(this(i)%griddim == gridinfov%array(1:gridinfov%arraysize)%griddim), &
+   back=.TRUE.)
+  CALL sort(this(i)%timerange)
 
-!   call display(gridinfov(i)%griddim)
-!   call display(this(index(this%griddim,gridinfov(i)%griddim))%griddim)
+  this(i)%level=pack_distinct(gridinfov%array(1:gridinfov%arraysize)%level, &
+   nlevel,mask=(this(i)%griddim == gridinfov%array(1:gridinfov%arraysize)%griddim), &
+   back=.TRUE.)
+  CALL sort(this(i)%level)
 
-!  print *,"lavoro sull'area: ",index(this%griddim,gridinfov(i)%griddim)
+  this(i)%var=pack_distinct(gridinfov%array(1:gridinfov%arraysize)%var, nvar, &
+   mask=(this(i)%griddim == gridinfov%array(1:gridinfov%arraysize)%griddim), &
+   back=.TRUE.)
 
 #ifdef DEBUG
-  call l4f_category_log(category,L4F_DEBUG,"import from gridinfov index: "//trim(to_char(i)))
+  CALL l4f_category_log(this(i)%category,L4F_DEBUG,"alloc_vol volgrid6d index: "//t2c(1))
 #endif
-  call l4f_category_log(category,L4F_INFO,&
-   "to volgrid6d index: "//to_char(index(this%griddim,gridinfov(i)%griddim)))
+  CALL volgrid6d_alloc_vol(this(i), decode=decode)
 
-  CALL import (this(index(this%griddim,gridinfov(i)%griddim)), &
-   gridinfov(i),clone=clone)
-
-end do
-
-                                !chiudo il logger temporaneo
-call l4f_category_delete(category)
-
-end subroutine import_from_gridinfovv
+ENDDO
 
 
-!> \brief export  from volgrid6d object to a vector of gridinfo
-!!
-!! Dalla struttura volgrid6d organizzata nella sua forma multidimensionale viene esportato
-!! a un  vettore di oggetti gridinfo l'intero contenuto.
+DO i = 1, gridinfov%arraysize
+
+#ifdef DEBUG
+  CALL l4f_category_log(category,L4F_DEBUG,"import from gridinfov index: "//t2c(i))
+#endif
+  CALL l4f_category_log(category,L4F_INFO, &
+   "to volgrid6d index: "//t2c(index(this%griddim, gridinfov%array(i)%griddim)))
+
+  CALL import (this(index(this%griddim, gridinfov%array(i)%griddim)), &
+   gridinfov%array(i), clone=clone)
+
+ENDDO
+
+!chiudo il logger temporaneo
+CALL l4f_category_delete(category)
+
+END SUBROUTINE import_from_gridinfovv
+
+
+!> Export a \a volgrid6d object to an \a arrayof_gridinfo object.
+!! The multidimensional \a volgrid6d structure is serialized into a
+!! one-dimensional array of gridinfo_def objects, which is allocated
+!! to the proper size if not already allocated, or it is extended
+!! keeping the old data if any.
 SUBROUTINE export_to_gridinfov(this, gridinfov, gaid_template, clone)
-TYPE(volgrid6d),INTENT(inout) :: this !< Volume volgrid6d da exportare
-type(gridinfo_def),intent(out) :: gridinfov(:) !< vettore gridinfo 
-TYPE(grid_id),INTENT(in),OPTIONAL :: gaid_template !< eventuale template sul quale sovrascrivere i descrittori dimenticandosi del'eventuale grib originale
-logical,intent(in),optional :: clone !< se fornito e \c .TRUE., clona i gaid to gridinfo
+TYPE(volgrid6d),INTENT(inout) :: this !< volume to be exported
+TYPE(arrayof_gridinfo),INTENT(inout) :: gridinfov !< output array of gridinfo_def objects
+TYPE(grid_id),INTENT(in),OPTIONAL :: gaid_template !< \a grid_id template to be used for output data replacing the one contained in \a this
+LOGICAL,INTENT(in),OPTIONAL :: clone !< if provided and \c .TRUE., clone the grid_id included in \a this rather than making a shallow copy
 
-integer :: i,itime,itimerange,ilevel,ivar
-integer :: ngridinfo,ntime,ntimerange,nlevel,nvar
+INTEGER :: i ,itime, itimerange, ilevel, ivar
+INTEGER :: ntime, ntimerange, nlevel, nvar
+TYPE(gridinfo_def) :: gridinfol
 
 #ifdef DEBUG
 CALL l4f_category_log(this%category,L4F_DEBUG,"start export_to_gridinfov")
 #endif
-
-ngridinfo=size(gridinfov)
-
-IF (ngridinfo /= SIZE(this%gaid)) THEN
-  CALL l4f_category_log(this%category,L4F_ERROR,&
-   "dimension mismatch"//to_char(ngridinfo)//to_char(SIZE(this%gaid)))
-  CALL raise_error()
-ENDIF
 
 ! this is necessary in order not to repeatedly and uselessly copy the
 ! same array of coordinates for each 2d grid during export, the
@@ -1150,107 +1151,52 @@ ntimerange=size(this%timerange)
 nlevel=size(this%level)
 nvar=size(this%var)
 
-do itime=1,ntime
-  do itimerange=1,ntimerange
-    do ilevel=1,nlevel
-      do ivar=1,nvar
-        
-        i=i+1
-        IF (i > ngridinfo) THEN
-          CALL l4f_category_log(this%category,L4F_ERROR, &
-           "export_to_gridinfov, strange error, wrong dimensions: " &
-           //t2c(i)//" "//t2c(ngridinfo))
-          CALL raise_error()
+DO itime=1,ntime
+  DO itimerange=1,ntimerange
+    DO ilevel=1,nlevel
+      DO ivar=1,nvar
+
+        CALL init(gridinfol)
+        CALL export(this, gridinfol, itime, itimerange, ilevel, ivar, &
+         gaid_template=gaid_template, clone=clone)
+        IF (c_e(gridinfol%gaid)) THEN
+          CALL insert(gridinfov, gridinfol)
+        ELSE
+          CALL delete(gridinfol)
         ENDIF
-        CALL export(this,gridinfov(i),itime,itimerange,ilevel,ivar,gaid_template,clone=clone)
         
-      end do
-    end do
-  end do
-end do
+      ENDDO
+    ENDDO
+  ENDDO
+ENDDO
 
-end subroutine export_to_gridinfov
-
-
-!> \brief export  from a vector of volgrid6d object to a vector of gridinfo
-!!
-!! Dalla struttura volgrid6d organizzata nella sua forma multidimensionale viene esportato
-!! a un  vettore di oggetti gridinfo l'intero contenuto.
-!! l'imput a vettore permette la gestione di qualsiasi mix di dati
-SUBROUTINE export_to_gridinfovv(this, gridinfov, gaid_template, clone, &
- categoryappend)
-TYPE(volgrid6d),INTENT(inout) :: this(:) !< vettore volume volgrid6d da exportare
-type(gridinfo_def),pointer :: gridinfov(:) !< vettore gridinfo in cui exportare
-TYPE(grid_id),INTENT(in),OPTIONAL :: gaid_template !< eventuale template sul quale sovrascrivere i descrittori dimenticandosi del'eventuale grib originale
-logical,intent(in),optional :: clone !< se fornito e \c .TRUE., clona i gaid to gridinfo
-character(len=*),INTENT(in),OPTIONAL :: categoryappend !< appende questo suffisso al namespace category di log4fortran
-
-INTEGER :: i,igrid,ngrid,start,END,ngridinfo,ngridinfoin,stallo
-integer :: category
-character(len=512) :: a_name
+END SUBROUTINE export_to_gridinfov
 
 
-! category temporanea (altrimenti non possiamo loggare)
-if (present(categoryappend))then
-   call l4f_launcher(a_name,a_name_append=trim(subcategory)//"."//trim(categoryappend))
-else
-   call l4f_launcher(a_name,a_name_append=trim(subcategory))
-endif
-category=l4f_category_get(a_name)
+!> Export an array of \a volgrid6d objects to an \a arrayof_gridinfo object.
+!! The multidimensional \a volgrid6d structures are serialized into a
+!! one-dimensional array of gridinfo_def objects, which is allocated
+!! to the proper size if not already allocated, or it is extended
+!! keeping the old data if any.
+SUBROUTINE export_to_gridinfovv(this, gridinfov, gaid_template, clone)
+!, &
+! categoryappend)
+TYPE(volgrid6d),INTENT(inout) :: this(:) !< volume array to be exported
+TYPE(arrayof_gridinfo),INTENT(inout) :: gridinfov !< output array of gridinfo_def objects
+TYPE(grid_id),INTENT(in),OPTIONAL :: gaid_template !< \a grid_id template to be used for output data replacing the one contained in \a this
+LOGICAL,INTENT(in),OPTIONAL :: clone !< if provided and \c .TRUE., clone the grid_id included in \a this rather than making a shallow copy
 
-ngrid=size(this)
+INTEGER :: i
 
-ngridinfo=0
-if (.not. associated(gridinfov))then
-  do igrid=1,ngrid
-
-    ngridinfo=ngridinfo+size(this(igrid)%gaid)
-
-  end do
-  
-  allocate (gridinfov(ngridinfo),stat=stallo)
-  if (stallo /=0)then
-    call l4f_category_log(category,L4F_FATAL,"allocating memory")
-    CALL raise_fatal_error()
-  end if
-  do i=1,ngridinfo
-     if (present(categoryappend))then
-        call init(gridinfov(i),categoryappend=trim(categoryappend)//"-"//to_char(i))
-     else
-        call init(gridinfov(i),categoryappend=to_char(i))
-     end if
-  enddo
-else
-
-   ngridinfoin=size(gridinfov)
-
-   if (ngridinfo /= ngridinfoin)then
-     CALL l4f_category_log(category,L4F_ERROR,&
-      "dimension mismatch"//to_char(ngridinfo)//to_char(ngridinfoin))
-     CALL raise_error()
-   end if
-   
-end if
-
-
-end=0
-do igrid=1,ngrid
-
-  start=end+1
-  end=end+size(this(igrid)%gaid)
-
+DO i = 1, SIZE(this)
 #ifdef DEBUG
-  call l4f_category_log(this(igrid)%category,L4F_DEBUG,"export to gridinfo grid index: "//&
-   trim(to_char(igrid))//" from "//trim(to_char(start))//" to "//trim(to_char(end)))
+  CALL l4f_category_log(this(i)%category,L4F_DEBUG, &
+   "export_to_gridinfovv grid index: "//t2c(i))
 #endif
-  call export(this(igrid),gridinfov(start:end),gaid_template,clone=clone)
+  CALL export(this(i), gridinfov, gaid_template=gaid_template, clone=clone)
+ENDDO
 
-end do
-
-                                !chiudo il logger
-call l4f_category_delete(category)
-  
-end subroutine export_to_gridinfovv
+END SUBROUTINE export_to_gridinfovv
 
 
 !> Import the content of a supported file (like grib or gdal-supported
@@ -1267,62 +1213,52 @@ LOGICAL,INTENT(in),OPTIONAL :: decode !< if provided and \a .FALSE. the data vol
 INTEGER,INTENT(IN),OPTIONAL :: time_definition !< 0=time is reference time; 1=time is validity time
 character(len=*),INTENT(in),OPTIONAL :: categoryappend !< append this suffix to log4fortran namespace category
 
-TYPE(gridinfo_def),POINTER :: gridinfo(:)
-INTEGER :: ngrib, category
+TYPE(arrayof_gridinfo) :: gridinfo
+INTEGER :: category
 CHARACTER(len=512) :: a_name
 
-if (present(categoryappend))then
-   call l4f_launcher(a_name,a_name_append= &
-    trim(subcategory)//"."//trim(categoryappend))
-else
-   call l4f_launcher(a_name,a_name_append=trim(subcategory))
-endif
+IF (PRESENT(categoryappend))THEN
+  CALL l4f_launcher(a_name,a_name_append= &
+   TRIM(subcategory)//"."//TRIM(categoryappend))
+ELSE
+  CALL l4f_launcher(a_name,a_name_append=TRIM(subcategory))
+ENDIF
 category=l4f_category_get(a_name)
 
 CALL import(gridinfo, filename=filename, categoryappend=categoryappend)
   
-IF (ASSOCIATED(gridinfo)) THEN
+IF (gridinfo%arraysize > 0) THEN
 
   CALL import(this, gridinfo, clone=.TRUE., decode=decode, &
    time_definition=time_definition, categoryappend=categoryappend)
 
   CALL l4f_category_log(category,L4F_INFO,"deleting gridinfo")
-  DO ngrib = 1, SIZE(gridinfo)
-    CALL delete(gridinfo(ngrib))
-  ENDDO
-  DEALLOCATE(gridinfo)
+  CALL delete(gridinfo)
 
 ELSE
-
-  CALL l4f_category_log(category,L4F_INFO,"file does not contains grib")
-
+  CALL l4f_category_log(category,L4F_INFO,"file does not contains gridded data")
 ENDIF
 
-!chiudo il logger
+! close logger
 CALL l4f_category_delete(category)
 
 END SUBROUTINE volgrid6d_import_from_file
 
 
-!> \brief exporta a un file grib
-!!
-!! Questo è un metodo di alto livello.  Da un vettore di oggetti
-!! volgrid6d, descrittori e dati vengono exportati a un file grib. Un
-!! eventuale template determinerà molte delle informazione contenute
-!! nel grib; altrimenti verranno utilizzati i gaid interni a volgrid6d
-!! per mantenere le informazioni del grib le piu' coerenti
-!! possibili. Ogni oggetto necessario viene inizializzato e allocato
-!! automaticamente.
+!> High level method for exporting a volume array to file.
+!! All the information contained into an array of \a volgrid6d
+!! objects, i.e. dimension descriptors and data, is exported to a file
+!! using the proper output driver (typically grib_api for grib
+!! format). If a template is provided, it will determine the
+!! characteristic of the output file, otherwise the \a grid_id
+!! descriptors contained in the volgrid6d object will be used
 SUBROUTINE volgrid6d_export_to_file(this, filename, gaid_template, categoryappend)
-TYPE(volgrid6d),pointer :: this(:) !< Volumi volgrid6d da exportare
-!> nome del file eventualmente da aprire (default = (nome dell'eseguibile)//.v7d );
-!! se = "" viene restituito in output
-character(len=*),INTENT(in) :: filename 
-TYPE(grid_id),INTENT(in),OPTIONAL :: gaid_template !< grib id template; se fornito ignora l'eventuale gaid di volgrid6d utilizzando il template al suo posto
-character(len=*),INTENT(in),OPTIONAL :: categoryappend !< appende questo suffisso al namespace category di log4fortran
+TYPE(volgrid6d) :: this(:) !< volume(s) to be exported
+CHARACTER(len=*),INTENT(in) :: filename !< output file name
+TYPE(grid_id),INTENT(in),OPTIONAL :: gaid_template !< template for the output file, if provided the grid_id information stored in the volgrid6d objects will be ignored
+character(len=*),INTENT(in),OPTIONAL :: categoryappend !< append this suffix to log4fortran namespace category
 
-TYPE(gridinfo_def),POINTER :: gridinfo(:)
-INTEGER :: i
+TYPE(arrayof_gridinfo) :: gridinfo
 INTEGER :: category
 CHARACTER(len=512) :: a_name
 
@@ -1331,57 +1267,45 @@ IF (PRESENT(categoryappend)) THEN
 ELSE
   CALL l4f_launcher(a_name,a_name_append=TRIM(subcategory))
 ENDIF
-
 category=l4f_category_get(a_name)
 
 #ifdef DEBUG
-call l4f_category_log(category,L4F_DEBUG,"start export to file")
+CALL l4f_category_log(category,L4F_DEBUG,"start export to file")
 #endif
 
-call l4f_category_log(category,L4F_INFO,"writing volgrid6d to grib file: "//trim(filename))
+CALL l4f_category_log(category,L4F_INFO,"writing volgrid6d to grib file: "//TRIM(filename))
 
-if ( associated(this))then
-
+!IF (ASSOCIATED(this)) THEN
   CALL export(this, gridinfo, gaid_template=gaid_template, clone=.TRUE.)
-  IF (ASSOCIATED(gridinfo)) THEN
+  IF (gridinfo%arraysize > 0) THEN
     CALL export(gridinfo, filename)
-    DO i = 1, SIZE(gridinfo)
-      CALL delete(gridinfo(i))
-    ENDDO
-    DEALLOCATE(gridinfo)
+    CALL delete(gridinfo)
   ENDIF
+!ELSE
+!  CALL l4f_category_log(category,L4F_INFO,"volume volgrid6d is not associated")
+!ENDIF
 
-else
-
-  call l4f_category_log(category,L4F_INFO,"volume volgrid6d is not associated: return")
-  return
-  
-end if
-
-!chiudo il logger
-call l4f_category_delete(category)
+! close logger
+CALL l4f_category_delete(category)
 
 END SUBROUTINE volgrid6d_export_to_file
 
 
-!> \brief destructor
-!!
-!! delete vector of volgrid6d object
-!! relase memory and delete category for logging
+!> Array destructor for \a volgrid6d class.
+!! Delete an array of \a volgrid6d objects and deallocate the array
+!! itself.
 SUBROUTINE volgrid6dv_delete(this)
 TYPE(volgrid6d),POINTER :: this(:) !< vector of volgrid6d object
 
-integer :: i
+INTEGER :: i
 
 IF (ASSOCIATED(this)) THEN
-  DO i=1,SIZE(this)
-
+  DO i = 1, SIZE(this)
 #ifdef DEBUG
     CALL l4f_category_log(this(i)%category,L4F_DEBUG, &
      "delete volgrid6d vector index: "//TRIM(to_char(i)))
 #endif
     CALL delete(this(i))
-
   ENDDO
   DEALLOCATE(this)
 ENDIF
@@ -1389,9 +1313,7 @@ ENDIF
 END SUBROUTINE volgrid6dv_delete
 
 
-! \brief Calcola i nuovi dati secondo la trasformazione specificata
-!
-! Deve essere fornito l'oggetto di trasformazione e oggetti completi
+! Internal method for performing grid to grid computations
 SUBROUTINE volgrid6d_transform_compute(this, volgrid6d_in, volgrid6d_out, &
  lev_out, clone)
 TYPE(grid_transform),INTENT(in) :: this ! oggetto di trasformazione per il grigliato
@@ -1777,9 +1699,7 @@ end do
 END SUBROUTINE volgrid6dv_transform
 
 
-! \brief Calcola i nuovi dati secondo la trasformazione specificata
-!
-! Deve essere fornito l'oggetto di trasformazione e oggetti completi
+! Internal method for performing grid to sparse point computations
 SUBROUTINE volgrid6d_v7d_transform_compute(this, volgrid6d_in, vol7d_out, &
  networkname, noconvert)
 TYPE(grid_transform),INTENT(in) :: this ! oggetto di trasformazione per grigliato
@@ -2094,9 +2014,7 @@ ENDDO
 END SUBROUTINE volgrid6dv_v7d_transform
 
 
-! \brief Calcola i nuovi dati secondo la trasformazione specificata
-!
-! Deve essere fornito l'oggetto di trasformazione e oggetti completi
+! Internal method for performing sparse point to grid computations
 SUBROUTINE v7d_volgrid6d_transform_compute(this, vol7d_in, volgrid6d_out, networkname)
 TYPE(grid_transform),INTENT(in) :: this ! oggetto di trasformazione per grigliato
 type(vol7d), INTENT(in) :: vol7d_in ! oggetto da trasformare
@@ -2248,9 +2166,7 @@ CALL delete(grid_trans)
 END SUBROUTINE v7d_volgrid6d_transform
 
 
-! \brief Calcola i nuovi dati secondo la trasformazione specificata
-!
-! Deve essere fornito l'oggetto di trasformazione e oggetti completi
+! Internal method for performing sparse point to sparse point computations
 SUBROUTINE v7d_v7d_transform_compute(this, vol7d_in, vol7d_out, lev_out)
 TYPE(grid_transform),INTENT(in) :: this ! oggetto di trasformazione per grigliato
 type(vol7d), INTENT(in) :: vol7d_in ! oggetto da trasformare

@@ -26,7 +26,7 @@ implicit none
 
 integer :: category,ier
 character(len=512):: a_name
-type(gridinfo_def),allocatable :: gridinfo(:)
+type(arrayof_gridinfo) :: gridinfo
 
 TYPE(grid_file_id) :: ifile
 TYPE(grid_id) :: gaid
@@ -59,7 +59,8 @@ CALL delete(ifile)
 CALL l4f_category_log(category,L4F_INFO,&
  "Numero totale di grib: "//to_char(ngrib))
 
-allocate(gridinfo(ngrib))
+! aggiungo ngrib elementi vuoti
+CALL insert(gridinfo, nelem=ngrib)
 
 ngrib=0
 
@@ -71,22 +72,16 @@ DO WHILE (.TRUE.)
 
   CALL l4f_category_log(category,L4F_INFO,"import grib")
   ngrib = ngrib + 1
-  CALL init(gridinfo(ngrib),gaid=gaid)
-  CALL import(gridinfo(ngrib))
+  CALL init (gridinfo%array(ngrib), gaid=gaid)
+  CALL import(gridinfo%array(ngrib))
 ENDDO
 
-
 call delete(ifile)
-call display (gridinfo)
+call display(gridinfo)
 
-
-do ngrib=1,size(gridinfo)
-   call delete (gridinfo(ngrib))
-enddo
+CALL delete(gridinfo)
 
 call l4f_category_log(category,L4F_INFO,"terminato ")
-
-deallocate(gridinfo)
 
 !chiudo il logger
 call l4f_category_delete(category)

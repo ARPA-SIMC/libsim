@@ -105,11 +105,10 @@ REAL :: comp_frac_valid
 
 ! for grib output
 #ifdef HAVE_LIBGRIBAPI
-TYPE(grid_file_id) :: ifile, ofile
+TYPE(grid_file_id) :: ifile
 TYPE(grid_id) :: gaid
 TYPE(griddim_def) :: grid_out
 TYPE(volgrid6d) :: vg6d(1)
-TYPE(gridinfo_def),POINTER :: gridinfo(:)
 character(len=160) :: post_trans_type
 #endif
 #ifdef ALCHIMIA
@@ -1086,27 +1085,11 @@ ELSE IF (output_format == 'grib_api') THEN
         CALL import(grid_out, gaid)
 ! interpolate sparse data over the requested grid
         CALL transform(trans, grid_out, v7d, vg6d(1), categoryappend="transform2")
-! TODO check here whether the transformation succeeded
-! serialize the interpolated volume into a gridinfo object keeping the
-! same grib template used for the grid
-        CALL export(vg6d, gridinfo, gaid_template=gaid)
+! TODO check here whether the transformation succeeded export the
+! interpolated volume to file keeping the same grib template used for
+! the grid
+        CALL export(vg6d, output_file, gaid_template=gaid)
         CALL delete(vg6d(1))
-
-        IF (ASSOCIATED(gridinfo)) THEN
-! export to output grib file
-          ofile = grid_file_id_new(output_file, 'w')
-          DO i = 1, SIZE(gridinfo)
-            CALL export(gridinfo(i))
-            CALL export(gridinfo(i)%gaid, ofile)
-            CALL delete(gridinfo(i))
-          ENDDO
-          CALL delete(ofile)
-
-        ELSE ! export to gridinfo failed
-          CALL l4f_category_log(category,L4F_ERROR, &
-           'export of transformed volume to grib failed')
-        ENDIF
-        CALL delete(ifile)
 
       ELSE
         CALL l4f_category_log(category,L4F_ERROR, &

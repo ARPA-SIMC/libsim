@@ -30,12 +30,9 @@ implicit none
 integer :: category,ier
 character(len=512):: a_name,infile='../data/in.grb',outfile='out.grb'
 type (gridinfo_def) :: gridinfo
-character:: ch
 type(grid_file_id) :: ifile,ofile
 type(grid_id) :: gaid
-!integer                            ::  iret
 
-integer :: ix,iy,fx,fy,iox,ioy,fox,foy,inx,iny,fnx,fny,newx,newy
 doubleprecision ::  ilon=0.,ilat=30.,flon=30.,flat=60.
 REAL, ALLOCATABLE :: field(:,:,:),fieldz(:,:,:)
 type(griddim_def) :: griddim_out
@@ -46,8 +43,6 @@ integer :: nx=30,ny=30,component_flag=0
 doubleprecision :: xmin=0., xmax=30., ymin=30., ymax=60.
 doubleprecision :: latitude_south_pole=-32.5,longitude_south_pole=10.,angle_rotation=0.
 character(len=80) :: type='regular_ll',trans_type='inter',sub_type='near'
-
-doubleprecision ::x,y,lon,lat
 
 
 !questa chiamata prende dal launcher il nome univoco
