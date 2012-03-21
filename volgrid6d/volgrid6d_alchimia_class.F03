@@ -42,12 +42,13 @@ public make, alchemy
 
 contains
 
-subroutine make_vg6d(mayvfn,mybin,mybout,vg6din,vg6dout)
+subroutine make_vg6d(mayvfn,mybin,mybout,vg6din,vg6dout,allvarcomputed)
 type(fndsv),intent(inout) :: mayvfn
 character(len=*),intent(in) :: mybin(:),mybout(:)
 type(volgrid6d),intent(in) :: vg6din
 type(volgrid6d),intent(out) :: vg6dout
 TYPE(conv_func), pointer :: c_funcgb(:),c_funcbg(:)
+logical, optional :: allvarcomputed !< do not delete in the output the gaid of all variables used for compute
 
 integer :: i,j,nx,ny,nlevel,ntime,ntimerange,nvar,nvarin
 integer :: ilevel,itime,itimerange,ivar,ivarin,ivarout
@@ -132,6 +133,7 @@ do ivar=1, nvar
         else
           vg6dout%voldati(:,:,ilevel,itime,itimerange,ivarout)=vg6din%voldati(:,:,ilevel,itime,itimerange,ivarin)
         end if
+
         call copy (vg6din%gaid(ilevel,itime,itimerange,ivarin), vg6dout%gaid(ilevel,itime,itimerange,ivarout))
 
 !        print *,&
@@ -202,14 +204,23 @@ do ilevel=1,nlevel
             if (ivarin == 0) ivarin=firsttrue(c_e(vg6dout%gaid(ilevel,itime,itimerange,:))) ! if not found is enought from one present variables
             ivarout = index_c(newbout,mayvfn%fnds(i)%bout(ivar))
 
-            call copy (vg6dout%gaid(ilevel,itime,itimerange,ivarin), vg6dout%gaid(ilevel,itime,itimerange,ivarout))
+            if (ivarin > 0 .and. ivarout > 0 )then
+
+              !print *, "DDD search",newbout(ivarout)
+              !print *, "DDD index",index_c(mybout,newbout(ivarout))
+              !if ( index_c(mybout,newbout(ivarout)) > 0)then
+
+                call copy (vg6dout%gaid(ilevel,itime,itimerange,ivarin), vg6dout%gaid(ilevel,itime,itimerange,ivarout))
 
 #ifdef HAVE_LIBGRIBAPI
-            if (.not. match(mayvfn%fnds(i)%name,"copy*")) then
-              !print*,"force bit number to 24"
-              call grib_set(grid_id_get_gaid(vg6dout%gaid(ilevel,itime,itimerange,ivarout)),"bitsPerValue",24)
-            end if
+                if (c_e(grid_id_get_gaid(vg6dout%gaid(ilevel,itime,itimerange,ivarout)))) then
+                                !if (.not. match(mayvfn%fnds(i)%name,"copy*")) then
+                                !print*,"force bit number to 24"
+                  call grib_set(grid_id_get_gaid(vg6dout%gaid(ilevel,itime,itimerange,ivarout)),"bitsPerValue",24)
+                end if
 #endif
+              !end if
+            end if
           end do
         end if
       end do
@@ -218,6 +229,20 @@ do ilevel=1,nlevel
 end do
 
 
+if (.not. optio_log(allvarcomputed)) then
+  do ivar=1, nvar
+    if (index_c(mybout,newbout(ivar)) <= 0) then
+      do ilevel=1,nlevel
+        do itime=1,ntime
+          do itimerange=1,ntimerange
+            call delete(vg6dout%gaid(ilevel,itime,itimerange,ivar))
+          end do
+        end do
+      end do
+    end if
+  end do
+end if
+
 DEALLOCATE(c_funcgb)
 DEALLOCATE(c_funcbg)
 deallocate (varv7d,varvg6d)
@@ -225,14 +250,15 @@ deallocate (varv7d,varvg6d)
 end subroutine make_vg6d
 
 
-integer function alchemy_vg6d(myin,vfn,mybout,myout,copy,vfnoracle)
+integer function alchemy_vg6d(myin,vfn,mybout,myout,copy,vfnoracle,allvarcomputed)
 
-character(len=10),intent(in) :: mybout(:)
+character(len=*),intent(in) :: mybout(:)
 type(fndsv),intent(in) :: vfn
 type(volgrid6d),intent(in) :: myin(:)
 type(volgrid6d),intent(out),pointer ::myout(:)
 logical,intent(in),optional :: copy !< if .true. the copy functions are localy added to vfn (you can have input variable copyed to output)
 type(fndsv),intent(out),optional :: vfnoracle
+logical, optional :: allvarcomputed !< do not delete in the output the gaid of all variables used for compute
 
 integer :: i,j,nvar
 type(fndsv) :: myvfn,vfntmp
@@ -283,10 +309,10 @@ do i=1,size(myin)
 
   if (present(vfnoracle))vfnoracle=myvfn
   
-  call display(myvfn)
+  !call display(myvfn)
   call l4f_log(L4F_INFO,"alchemy_vg6d: I need "//t2c(myvfn%nout)//" more variables")
 
-  call make(myvfn,mybin,mybout,myin(i),myout(i))
+  call make(myvfn,mybin,mybout,myin(i),myout(i), allvarcomputed)
 
   call delete(myvfn)
   call delete(vfntmp)
