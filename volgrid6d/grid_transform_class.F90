@@ -156,7 +156,7 @@ USE grid_class
 USE grid_dim_class
 USE optional_values
 USE array_utilities
-USE geo_coord_class
+USE georef_coord_class
 USE simple_stat
 IMPLICIT NONE
 
@@ -224,7 +224,7 @@ TYPE transform_def
   type(rect_ind) :: rect_ind ! rectangle information by index
   type(rect_coo) :: rect_coo ! rectangle information by coordinates
   TYPE(area_info) :: area_info ! 
-  TYPE(geo_coordvect),POINTER :: poly(:) => NULL() ! polygon information
+  TYPE(arrayof_georef_coord_array) :: poly ! polygon information
   type(stat_info) :: stat_info ! 
   type(box_info) :: box_info ! boxregrid specification
   type(vertint) :: vertint ! vertical interpolation specification
@@ -338,7 +338,7 @@ INTEGER,INTENT(IN),OPTIONAL :: npy !< number of points to average along y direct
 DOUBLEPRECISION,INTENT(in),OPTIONAL :: boxdx !< longitudinal/x extension of the box for box interpolation, default the target x grid step (unimplemented !)
 DOUBLEPRECISION,INTENT(in),OPTIONAL :: boxdy !< latitudinal/y extension of the box for box interpolation, default the target y grid step (unimplemented !)
 DOUBLEPRECISION,INTENT(in),OPTIONAL :: radius !< radius of stencil in grid points (also fractionary values) for stencil interpolation
-TYPE(geo_coordvect),OPTIONAL,TARGET :: poly(:) !< array of polygons indicating areas over which to interpolate (for transformations 'polyinter' or 'metamorphosis:poly')
+TYPE(arrayof_georef_coord_array),OPTIONAL :: poly !< array of polygons indicating areas over which to interpolate (for transformations 'polyinter' or 'metamorphosis:poly')
 DOUBLEPRECISION,INTENT(in),OPTIONAL :: percentile !< percentile [0,100.] of the distribution of points in the box to use as interpolated value for 'percentile' subtype
 LOGICAL,INTENT(IN),OPTIONAL :: extrap !< activate extrapolation outside input domain (use with care!)
 INTEGER,INTENT(IN),OPTIONAL :: time_definition !< time definition for output vol7d object 0=time is reference time ; 1=time is validity time
@@ -370,7 +370,7 @@ call optio(flat,this%rect_coo%flat)
 CALL optio(boxdx,this%area_info%boxdx)
 CALL optio(boxdy,this%area_info%boxdy)
 CALL optio(radius,this%area_info%radius)
-IF (PRESENT(poly)) this%poly => poly
+IF (PRESENT(poly)) this%poly = poly
 CALL optio(percentile,this%stat_info%percentile)
 
 CALL optio(npx,this%box_info%npx)
@@ -521,8 +521,8 @@ ELSE IF (this%trans_type == 'boxinter' .OR. this%trans_type == 'polyinter' &
   .OR. this%trans_type == 'maskinter' .OR. this%trans_type == 'stencilinter')THEN
 
   IF (this%trans_type == 'polyinter') THEN
-    IF (.NOT.ASSOCIATED(this%poly)) THEN
-      CALL l4f_category_log(this%category,L4F_ERROR,"polyinter: poly parameter missing")
+    IF (this%poly%arraysize <= 0) THEN
+      CALL l4f_category_log(this%category,L4F_ERROR,"polyinter: poly parameter missing or empty")
       CALL raise_fatal_error()
     ENDIF
   ENDIF
@@ -558,8 +558,8 @@ ELSE IF (this%trans_type == 'boxinter' .OR. this%trans_type == 'polyinter' &
 
 ELSE IF (this%trans_type == 'maskgen')THEN
 
-  IF (.NOT.ASSOCIATED(this%poly)) THEN
-    CALL l4f_category_log(this%category,L4F_ERROR,"maskgen: poly parameter missing")
+  IF (this%poly%arraysize <= 0) THEN
+    CALL l4f_category_log(this%category,L4F_ERROR,"maskgen: poly parameter missing or empty")
     CALL raise_fatal_error()
   ENDIF
 
@@ -594,8 +594,8 @@ ELSE IF (this%trans_type == 'metamorphosis') THEN
 
   ELSE IF (this%sub_type == 'poly')THEN
 
-    IF (.NOT.ASSOCIATED(this%poly)) THEN
-      CALL l4f_category_log(this%category,L4F_ERROR,"metamorphosis:poly: poly parameter missing")
+    IF (this%poly%arraysize <= 0) THEN
+      CALL l4f_category_log(this%category,L4F_ERROR,"metamorphosis:poly: poly parameter missing or empty")
       CALL raise_fatal_error()
     ENDIF
 
@@ -1026,7 +1026,7 @@ INTEGER :: nx, ny, i, j, ix, iy, n, nm, nr, cf_i, cf_o, nprev, &
 DOUBLE PRECISION :: xmin, xmax, ymin, ymax, steplon, steplat, &
  xmin_new, ymin_new, ellips_smaj_axis, ellips_flatt, r2
 TYPE(geo_proj) :: proj_in, proj_out
-TYPE(geo_coord) :: point
+TYPE(georef_coord) :: point
 
 
 CALL grid_transform_init_common(this, trans, categoryappend)
@@ -1330,17 +1330,17 @@ ELSE IF (this%trans%trans_type == 'maskgen') THEN
 !$OMP DO PRIVATE(j, i, n, point) FIRSTPRIVATE(nprev)
   DO j = 1, this%inny
     inside_x: DO i = 1, this%innx
-      CALL init(point, lon=in%dim%lon(i,j), lat=in%dim%lat(i,j))
+      point = georef_coord_new(x=in%dim%lon(i,j), y=in%dim%lat(i,j))
 
-      DO n = nprev, SIZE(this%trans%poly) ! optimize starting from last matched polygon
-        IF (inside(point, this%trans%poly(n))) THEN ! stop at the first matching polygon
+      DO n = nprev, this%trans%poly%arraysize ! optimize starting from last matched polygon
+        IF (inside(point, this%trans%poly%array(n))) THEN ! stop at the first matching polygon
           this%inter_index_x(i,j) = n
           nprev = n
           CYCLE inside_x
         ENDIF
       ENDDO
       DO n = nprev-1, 1, -1 ! test the other polygons
-        IF (inside(point, this%trans%poly(n))) THEN ! stop at the first matching polygon
+        IF (inside(point, this%trans%poly%array(n))) THEN ! stop at the first matching polygon
           this%inter_index_x(i,j) = n
           nprev = n
           CYCLE inside_x
@@ -1456,7 +1456,6 @@ TYPE(grid_transform),INTENT(out) :: this !< grid_transformation object
 TYPE(transform_def),INTENT(in) :: trans !< transformation object
 TYPE(griddim_def),INTENT(inout) :: in !< griddim object to transform
 TYPE(vol7d),INTENT(inout) :: v7d_out !< vol7d object with the coordinates of the sparse points to be used as transformation target (input or output depending on type of transformation)
-!TYPE(geo_coordvect),INTENT(inout),OPTIONAL :: poly(:) !< array of polygons indicating areas over which to interpolate (for transformation type 'polyinter')
 REAL,INTENT(in),OPTIONAL :: maskgrid(:,:) !< 2D field to be used for defining subareas according to its values, it must have the same shape as the field to be interpolated (for transformation type 'maskinter')
 INTEGER,INTENT(in),OPTIONAL :: nmaskclass !< number of classes (and thus potential subareas) over which the interval covered by \a maskgrid has to be divided
 REAL,INTENT(in),OPTIONAL :: startmaskclass !< this is the start of the interval covered by \a maskgrid which defines a single class (subarea)
@@ -1465,10 +1464,11 @@ CHARACTER(len=*),INTENT(in),OPTIONAL :: categoryappend !< append this suffix to 
 
 INTEGER :: ix, iy, n, nm, nr, nprev, lnmaskclass, xnmin, xnmax, ynmin, ynmax
 DOUBLE PRECISION :: xmin, xmax, ymin, ymax, r2
-DOUBLE PRECISION,POINTER :: lon(:), lat(:)
+!DOUBLE PRECISION,POINTER :: lon(:), lat(:)
+DOUBLE PRECISION,ALLOCATABLE :: lon(:), lat(:)
 REAL :: lstartmaskclass, ldmaskclass, mmin, mmax
 REAL,ALLOCATABLE :: lbound_class(:)
-TYPE(geo_coord) :: point
+TYPE(georef_coord) :: point
 
 
 CALL grid_transform_init_common(this, trans, categoryappend)
@@ -1538,17 +1538,17 @@ ELSE IF (this%trans%trans_type == 'polyinter') THEN
 !$OMP DO PRIVATE(iy, ix, n, point) FIRSTPRIVATE(nprev)
   DO iy = 1, this%inny
     inside_x: DO ix = 1, this%innx
-      CALL init(point, lon=in%dim%lon(ix,iy), lat=in%dim%lat(ix,iy))
+      point = georef_coord_new(x=in%dim%lon(ix,iy), y=in%dim%lat(ix,iy))
 
-      DO n = nprev, SIZE(this%trans%poly) ! optimize starting from last matched polygon
-        IF (inside(point, this%trans%poly(n))) THEN ! stop at the first matching polygon
+      DO n = nprev, this%trans%poly%arraysize ! optimize starting from last matched polygon
+        IF (inside(point, this%trans%poly%array(n))) THEN ! stop at the first matching polygon
           this%inter_index_x(ix,iy) = n
           nprev = n
           CYCLE inside_x
         ENDIF
       ENDDO
       DO n = nprev-1, 1, -1 ! test the other polygons
-        IF (inside(point, this%trans%poly(n))) THEN ! stop at the first matching polygon
+        IF (inside(point, this%trans%poly%array(n))) THEN ! stop at the first matching polygon
           this%inter_index_x(ix,iy) = n
           nprev = n
           CYCLE inside_x
@@ -1560,20 +1560,20 @@ ELSE IF (this%trans%trans_type == 'polyinter') THEN
   ENDDO
 !$OMP END PARALLEL
 
-  this%outnx = SIZE(this%trans%poly)
+  this%outnx = this%trans%poly%arraysize
   this%outny = 1
-  CALL vol7d_alloc(v7d_out, nana=SIZE(this%trans%poly))
+  CALL vol7d_alloc(v7d_out, nana=this%outnx)
 
 ! setup output point list, equal to average of polygon points
 ! warning, in case of concave areas points may coincide!
-  DO n = 1, SIZE(this%trans%poly)
-    CALL getval(this%trans%poly(n), lon=lon, lat=lat)
+  DO n = 1, this%trans%poly%arraysize
+    CALL getval(this%trans%poly%array(n), x=lon, y=lat)
     CALL init(v7d_out%ana(n), lon=stat_average(lon), lat=stat_average(lat))
-    DEALLOCATE(lon, lat)
+!    DEALLOCATE(lon, lat)
   ENDDO
 
 #ifdef DEBUG
-  DO n = 1, SIZE(this%trans%poly)
+  DO n = 1, this%trans%poly%arraysize
     CALL l4f_category_log(this%category, L4F_DEBUG, &
      'Polygon: '//t2c(n)//' grid points: '// &
      t2c(COUNT(this%inter_index_x(:,:) == n)))
@@ -1783,8 +1783,8 @@ ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
 !$OMP DO PRIVATE(iy, ix, point) REDUCTION(+:this%outnx)
     DO iy = 1, this%inny
       DO ix = 1, this%innx
-        CALL init(point, lon=in%dim%lon(ix,iy), lat=in%dim%lat(ix,iy))
-        IF (inside(point, this%trans%poly(1))) THEN
+        point = georef_coord_new(x=in%dim%lon(ix,iy), y=in%dim%lat(ix,iy))
+        IF (inside(point, this%trans%poly%array(1))) THEN
           this%outnx = this%outnx + 1
           this%point_mask(ix,iy) = .TRUE.
         ENDIF
@@ -1971,7 +1971,7 @@ character(len=*),INTENT(in),OPTIONAL :: categoryappend !< append this suffix to 
 
 INTEGER :: nx, ny
 DOUBLE PRECISION :: xmin, xmax, ymin, ymax
-doubleprecision,allocatable :: lon(:),lat(:)
+DOUBLE PRECISION,ALLOCATABLE :: lon(:),lat(:)
 
 
 CALL grid_transform_init_common(this, trans, categoryappend)
@@ -2100,8 +2100,10 @@ TYPE(vol7d),INTENT(inout) :: v7d_out !< vol7d object with the coordinates of the
 CHARACTER(len=*),INTENT(in),OPTIONAL :: categoryappend !< append this suffix to log4fortran namespace category
 
 INTEGER :: i, n
-DOUBLE PRECISION,POINTER :: lon(:), lat(:)
-TYPE(geo_coord) :: point
+DOUBLE PRECISION,ALLOCATABLE :: lon(:), lat(:)
+! temporary, improve!!!!
+DOUBLE PRECISION :: lon1, lat1
+TYPE(georef_coord) :: point
 
 
 CALL grid_transform_init_common(this, trans, categoryappend)
@@ -2146,24 +2148,28 @@ ELSE IF (this%trans%trans_type == 'polyinter') THEN
   this%inter_index_y(:,:) = 1
 
   DO i = 1, SIZE(v7d_in%ana)
-    DO n = 1, SIZE(this%trans%poly)
-      IF (inside(v7d_in%ana(i)%coord, this%trans%poly(n))) THEN ! stop at the first matching polygon
+! temporary, improve!!!!
+    CALL getval(v7d_in%ana(i)%coord,lon=lon1,lat=lat1)
+    point = georef_coord_new(x=lon1, y=lat1)
+
+    DO n = 1, this%trans%poly%arraysize
+      IF (inside(point, this%trans%poly%array(n))) THEN ! stop at the first matching polygon
         this%inter_index_x(i,1) = n
         EXIT
       ENDIF
     ENDDO
   ENDDO
 
-  this%outnx=SIZE(this%trans%poly)
+  this%outnx=this%trans%poly%arraysize
   this%outny=1
-  CALL vol7d_alloc(v7d_out, nana=SIZE(this%trans%poly))
+  CALL vol7d_alloc(v7d_out, nana=this%outnx)
 
 ! setup output point list, equal to average of polygon points
 ! warning, in case of concave areas points may coincide!
-  DO n = 1, SIZE(this%trans%poly)
-    CALL getval(this%trans%poly(n), lon=lon, lat=lat)
+  DO n = 1, this%trans%poly%arraysize
+    CALL getval(this%trans%poly%array(n), x=lon, y=lat)
     CALL init(v7d_out%ana(n), lon=stat_average(lon), lat=stat_average(lat))
-    DEALLOCATE(lon, lat)
+!    DEALLOCATE(lon, lat)
   ENDDO
 
 ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
@@ -2240,10 +2246,11 @@ ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
 ! count and mark points falling into requested polygon
     this%outnx = 0
     this%outny = 1
-    CALL getval(v7d_in%ana(:)%coord,lon=lon,lat=lat)
     DO i = 1, this%innx
-      CALL init(point, lon=lon(i), lat=lat(i))
-      IF (inside(point, this%trans%poly(1))) THEN
+! temporary, improve!!!!
+      CALL getval(v7d_in%ana(i)%coord,lon=lon1,lat=lat1)
+      point = georef_coord_new(x=lon1, y=lat1)
+      IF (inside(point, this%trans%poly%array(1))) THEN
         this%outnx = this%outnx + 1
         this%point_mask(i,1) = .TRUE.
       ENDIF
@@ -2265,10 +2272,12 @@ ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
     DO i = 1, this%innx
       IF (this%point_mask(i,1)) THEN
         n = n + 1
-        CALL init(v7d_out%ana(n),lon=lon(i),lat=lat(i))
+! temporary, improve!!!!
+        CALL getval(v7d_in%ana(i)%coord,lon=lon1,lat=lat1)
+        CALL init(v7d_out%ana(n),lon=lon1,lat=lat1)
       ENDIF
     ENDDO
-    DEALLOCATE(lon, lat)
+!    DEALLOCATE(lon, lat)
 
   ELSE
 

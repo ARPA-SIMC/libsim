@@ -1,9 +1,9 @@
 lib_LTLIBRARIES = libsim_base.la
 libsim_base_la_SOURCES = io_units.F90 kinds.F90 phys_const.f90 missing_values.f90 \
  char_utilities.f90 err_handling.f90 optional_values.f90 datetime_class.F90 array_utilities.F90 file_utilities.F90 \
- geo_coord_class.F90 \
+ geo_proj_class.F90 geo_coord_class.F90 georef_coord_class.F90 \
  optionparser_class.F90 \
- simple_stat.f90 geo_proj_class.F90 \
+ simple_stat.f90 \
  space_utilities.F90
 
 # Opzioni Fortran (-I... sono da considerarsi opzioni fortran
@@ -41,16 +41,18 @@ file_utilities.$(OBJEXT): kinds.$(OBJEXT) char_utilities.$(OBJEXT) missing_value
 file_utilities.lo: kinds.$(OBJEXT) char_utilities.$(OBJEXT) missing_values.$(OBJEXT) err_handling.$(OBJEXT) optional_values.$(OBJEXT)
 array_utilities.$(OBJEXT): datetime_class.$(OBJEXT)
 array_utilities.lo: datetime_class.$(OBJEXT)
+geo_proj_class.$(OBJEXT): phys_const.$(OBJEXT) missing_values.$(OBJEXT) optional_values.$(OBJEXT)
+geo_proj_class.lo: phys_const.$(OBJEXT) missing_values.$(OBJEXT) optional_values.$(OBJEXT)
 geo_coord_class.$(OBJEXT): kinds.$(OBJEXT) missing_values.$(OBJEXT) phys_const.$(OBJEXT)
 geo_coord_class.lo: kinds.$(OBJEXT) missing_values.$(OBJEXT) phys_const.$(OBJEXT)
+georef_coord_class.$(OBJEXT): err_handling.$(OBJEXT) missing_values.$(OBJEXT) optional_values.$(OBJEXT) geo_proj_class.$(OBJEXT)
+georef_coord_class.lo: err_handling.$(OBJEXT) missing_values.$(OBJEXT) optional_values.$(OBJEXT) geo_proj_class.$(OBJEXT)
 optionparser_class.$(OBJEXT): err_handling.$(OBJEXT) kinds.$(OBJEXT) char_utilities.$(OBJEXT)
 optionparser_class.lo: err_handling.$(OBJEXT) kinds.$(OBJEXT) char_utilities.$(OBJEXT)
 simple_stat.$(OBJEXT): missing_values.$(OBJEXT) array_utilities.$(OBJEXT)
 simple_stat.lo: missing_values.$(OBJEXT) array_utilities.$(OBJEXT)
 geo_transforms.$(OBJEXT): phys_const.$(OBJEXT)
 geo_transforms.lo: phys_const.$(OBJEXT)
-geo_proj_class.$(OBJEXT): phys_const.$(OBJEXT) missing_values.$(OBJEXT) optional_values.$(OBJEXT)
-geo_proj_class.lo: phys_const.$(OBJEXT) missing_values.$(OBJEXT) optional_values.$(OBJEXT)
 
 check_PROGRAMS = char_utilities_test datetime_test file_utilities_test simple_stat_test
 TESTS = $(check_PROGRAMS)

@@ -31,7 +31,7 @@ use char_utilities
 USE array_utilities
 use optionparser_class
 USE datetime_class
-USE geo_coord_class
+USE georef_coord_class
 USE vol7d_level_class
 #ifdef ALCHIMIA
 USE alchimia
@@ -63,7 +63,7 @@ INTEGER :: ix, iy, fx, fy, time_definition
 doubleprecision :: latitude_south_pole,longitude_south_pole,angle_rotation
 character(len=80) :: proj_type,trans_type,sub_type
 
-TYPE(geo_coordvect),POINTER :: poly(:) => NULL()
+TYPE(arrayof_georef_coord_array) :: poly
 LOGICAL :: extrap, c2agrid, decode, round
 TYPE(optionparser) :: opt
 INTEGER :: optind, optstatus
@@ -412,8 +412,8 @@ call l4f_category_log(category,L4F_INFO,"transforming from file:"//trim(input_fi
 call l4f_category_log(category,L4F_INFO,"transforming to   file:"//trim(output_file))
 #ifdef HAVE_SHAPELIB
 IF (coord_format == 'shp' .AND. c_e(coord_file)) THEN
-  CALL import(poly, shpfile=coord_file)
-  IF (.NOT.ASSOCIATED(poly)) THEN
+  CALL import(poly, coord_file)
+  IF (poly%arraysize <= 0) THEN
     CALL l4f_category_log(category, L4F_ERROR, &
      'error importing shapefile '//TRIM(coord_file))
     CALL raise_fatal_error()

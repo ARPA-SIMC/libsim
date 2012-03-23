@@ -74,6 +74,13 @@ if NCARG
 man_MANS += v7d_plot_sound.1
 endif
 
+# improve
+if GRIBAPI
+if SHAPELIB
+check_SCRIPTS = getpoint_transform_test.sh
+TESTS = $(check_SCRIPTS)
+endif
+endif
 
 %.1: %
 	help2man --name=$< --section=1 --no-info --output=$@ ./$<

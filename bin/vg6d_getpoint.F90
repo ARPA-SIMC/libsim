@@ -31,7 +31,7 @@ USE grib_api_csv
 #endif
 use optionparser_class
 USE io_units
-USE geo_coord_class
+USE georef_coord_class
 
 implicit none
 
@@ -50,7 +50,7 @@ TYPE(vol7d) :: v7d_out
 #ifdef HAVE_DBALLE
 TYPE(vol7d_dballe) :: v7d_ana, v7d_dba_out
 #endif
-TYPE(geo_coordvect),POINTER :: poly(:) => NULL()
+TYPE(arrayof_georef_coord_array) :: poly
 DOUBLE PRECISION :: lon, lat
 DOUBLE PRECISION :: ilon, ilat, flon, flat, radius
 character(len=80) :: output_template,trans_type,sub_type
@@ -238,8 +238,8 @@ IF (c_e(coord_file)) THEN
 
 #ifdef HAVE_SHAPELIB
   ELSE IF (coord_format == 'shp') THEN
-    CALL import(poly, shpfile=coord_file)
-    IF (.NOT.ASSOCIATED(poly)) THEN
+    CALL import(poly, coord_file)
+    IF (poly%arraysize <= 0) THEN
       CALL l4f_category_log(category, L4F_ERROR, &
        'error importing shapefile '//TRIM(coord_file))
       CALL raise_fatal_error()

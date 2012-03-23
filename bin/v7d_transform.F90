@@ -38,7 +38,7 @@ USE gridinfo_class
 #endif
 USE grid_transform_class
 use volgrid6d_class
-USE geo_coord_class
+USE georef_coord_class
 USE vol7d_csv
 USE modqc
 !USE ISO_FORTRAN_ENV
@@ -72,7 +72,7 @@ TYPE(vol7d_level),ALLOCATABLE :: olevel_list(:)
 INTEGER :: iun, ier, i, l, n, ninput, iargc, i1, i2, i3, i4
 INTEGER,POINTER :: w_s(:), w_e(:)
 TYPE(vol7d) :: v7d, v7d_coord, v7dtmp, v7d_comp1, v7d_comp2, v7d_comp3
-TYPE(geo_coordvect),POINTER :: poly(:) => NULL()
+TYPE(arrayof_georef_coord_array) :: poly
 DOUBLE PRECISION ::  ilon, ilat, flon, flat
 DOUBLE PRECISION ::  ielon, ielat, felon, felat
 TYPE(geo_coord) :: coordmin,coordmax 
@@ -600,8 +600,8 @@ IF (c_e(coord_file)) THEN
 #endif
 #ifdef HAVE_SHAPELIB
   ELSE IF (coord_format == 'shp') THEN
-    CALL import(poly, shpfile=coord_file)
-    IF (.NOT.ASSOCIATED(poly)) THEN
+    CALL import(poly, coord_file)
+    IF (poly%arraysize <= 0) THEN
       CALL l4f_category_log(category, L4F_ERROR, &
        'error importing shapefile '//TRIM(coord_file))
       CALL raise_fatal_error()
@@ -850,17 +850,18 @@ ENDIF
 IF (pre_trans_type /= '') THEN
   n = word_split(pre_trans_type, w_s, w_e, ':')
   IF (n >= 2) THEN ! syntax is correct
-    IF (ASSOCIATED(poly)) THEN ! improve
+!    IF (poly%arraysize <= 0) THEN ! improve
+! if/elseprobably not needed anymore, delete!!!
       CALL init(trans, trans_type=pre_trans_type(w_s(1):w_e(1)), &
        ilon=ilon, ilat=ilat, flon=flon, flat=flat, poly=poly, &
        input_levtype=ilevel, output_levtype=olevel, &
        sub_type=pre_trans_type(w_s(2):w_e(2)), categoryappend="transformation1")
-    ELSE
-      CALL init(trans, trans_type=pre_trans_type(w_s(1):w_e(1)), &
-       ilon=ilon, ilat=ilat, flon=flon, flat=flat, &
-       input_levtype=ilevel, output_levtype=olevel, &
-       sub_type=pre_trans_type(w_s(2):w_e(2)), categoryappend="transformation1")
-    ENDIF
+!    ELSE
+!      CALL init(trans, trans_type=pre_trans_type(w_s(1):w_e(1)), &
+!       ilon=ilon, ilat=ilat, flon=flon, flat=flat, &
+!       input_levtype=ilevel, output_levtype=olevel, &
+!       sub_type=pre_trans_type(w_s(2):w_e(2)), categoryappend="transformation1")
+!    ENDIF
     CALL transform(trans, vol7d_in=v7d, vol7d_out=v7d_comp1, v7d=v7d_coord, &
      lev_out=olevel_list, categoryappend="transform1")
     CALL delete(trans)

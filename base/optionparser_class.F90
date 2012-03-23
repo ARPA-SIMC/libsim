@@ -1055,6 +1055,32 @@ WRITE(*,'(A)')'<input TYPE="submit" VALUE="runprogram" />'
 END SUBROUTINE optionparser_printhtml
 
 
+SUBROUTINE optionparser_make_completion(this)
+TYPE(optionparser),INTENT(in) :: this !< \a optionparser object with correctly initialised options
+
+INTEGER :: i
+CHARACTER(len=512) :: buf
+
+CALL getarg(0, buf)
+
+WRITE(*,'(A/A/A)')'_'//TRIM(buf)//'()','{','local cur'
+
+WRITE(*,'(A/A/A/A)')'COMPREPLY=()','cur=${COMP_WORDS[COMP_CWORD]}', &
+ 'case "$cur" in','-*)'
+
+!-*)
+!    COMPREPLY=( $( compgen -W 
+DO i = 1, this%options%arraysize ! loop over options
+  IF (this%options%array(i)%need_arg) THEN
+  ENDIF
+ENDDO
+
+WRITE(*,'(A/A/A)')'esac','return 0','}'
+
+END SUBROUTINE optionparser_make_completion
+
+
+
 SUBROUTINE dirty_char_pointer_set(from, to)
 CHARACTER(len=1),POINTER :: from
 CHARACTER(len=1),TARGET :: to
