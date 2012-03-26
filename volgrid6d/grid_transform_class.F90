@@ -34,6 +34,12 @@
 !! coefficients which are computed only once at the time of defining
 !! the \a grid_transform object.
 !!
+!! This module performs tranformations at a relatively low-level, on
+!! 2d/3d sections of data, and it is meant primarily for use by higher
+!! level methods in \a volgrid6d_class, which operate on full volumes
+!! of physically determined quantities; however it is possible to use
+!! it in a stand-alone way as well.
+!!
 !! Different abstract transformations are supported, defined by the
 !! parameter \a trans_type, and its corresponding \a sub_type:
 !!
@@ -255,6 +261,7 @@ TYPE grid_transform
   INTEGER,POINTER :: inter_index_x(:,:) => NULL()
   INTEGER,POINTER :: inter_index_y(:,:) => NULL()
   INTEGER,POINTER :: inter_index_z(:) => NULL()
+  INTEGER,POINTER :: point_index(:,:) => NULL()
   DOUBLE PRECISION,POINTER :: inter_x(:,:) => NULL()
   DOUBLE PRECISION,POINTER :: inter_y(:,:) => NULL()
   DOUBLE PRECISION,POINTER :: inter_xp(:,:) => NULL()
@@ -1771,8 +1778,8 @@ ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
 ! compute coordinates of input grid in geo system
     CALL unproj(in)
     CALL get_val(in, nx=this%innx, ny=this%inny)
-    ALLOCATE(this%point_mask(this%innx,this%inny))
-    this%point_mask(:,:) = .FALSE.
+    ALLOCATE(this%point_index(this%innx,this%inny))
+    this%point_index(:,:) = imiss
 
 ! count and mark points falling into requested polygon
     this%outnx = 0
@@ -1780,14 +1787,17 @@ ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
 
 ! this OMP block has to be checked
 !$OMP PARALLEL DEFAULT(SHARED)
-!$OMP DO PRIVATE(iy, ix, point) REDUCTION(+:this%outnx)
+!$OMP DO PRIVATE(iy, ix, point, n) REDUCTION(+:this%outnx)
     DO iy = 1, this%inny
       DO ix = 1, this%innx
         point = georef_coord_new(x=in%dim%lon(ix,iy), y=in%dim%lat(ix,iy))
-        IF (inside(point, this%trans%poly%array(1))) THEN
-          this%outnx = this%outnx + 1
-          this%point_mask(ix,iy) = .TRUE.
-        ENDIF
+        DO n = 1, this%trans%poly%arraysize
+          IF (inside(point, this%trans%poly%array(n))) THEN ! stop at the first matching polygon
+            this%outnx = this%outnx + 1
+            this%point_index(ix,iy) = n
+            EXIT
+          ENDIF
+        ENDDO
 !     CALL delete(point) ! speedup
       ENDDO
     ENDDO
@@ -1795,10 +1805,9 @@ ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
 
     IF (this%outnx <= 0) THEN
       CALL l4f_category_log(this%category,L4F_ERROR, &
-       "metamorphosis poly: no points inside first polygon")
+       "metamorphosis poly: no points inside polygons")
       this%valid = .FALSE.
       RETURN
-      !CALL raise_fatal_error() ! really fatal error?
     ENDIF
 
     CALL vol7d_alloc(v7d_out, nana=this%outnx)
@@ -1806,7 +1815,7 @@ ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
     n = 0
     DO iy = 1, this%inny
       DO ix = 1, this%innx
-        IF (this%point_mask(ix,iy)) THEN
+        IF (c_e(this%point_index(ix,iy))) THEN
           n = n + 1
           CALL init(v7d_out%ana(n),lon=in%dim%lon(ix,iy),lat=in%dim%lat(ix,iy))
         ENDIF
@@ -2235,13 +2244,11 @@ ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
 
   ELSE IF (this%trans%sub_type == 'poly' ) THEN
 
-! compute coordinates of input grid in geo system
     this%innx = SIZE(v7d_in%ana)
     this%inny = 1
 
-    ALLOCATE(this%point_mask(this%innx,this%inny))
-    this%point_mask(:,:) = .FALSE.
-    ALLOCATE(lon(this%innx),lat(this%innx))
+    ALLOCATE(this%point_index(this%innx,this%inny))
+    this%point_index(:,:) = imiss
 
 ! count and mark points falling into requested polygon
     this%outnx = 0
@@ -2250,19 +2257,21 @@ ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
 ! temporary, improve!!!!
       CALL getval(v7d_in%ana(i)%coord,lon=lon1,lat=lat1)
       point = georef_coord_new(x=lon1, y=lat1)
-      IF (inside(point, this%trans%poly%array(1))) THEN
-        this%outnx = this%outnx + 1
-        this%point_mask(i,1) = .TRUE.
-      ENDIF
+      DO n = 1, this%trans%poly%arraysize
+        IF (inside(point, this%trans%poly%array(n))) THEN ! stop at the first matching polygon
+          this%outnx = this%outnx + 1
+          this%point_index(i,1) = n
+          EXIT
+        ENDIF
+      ENDDO
 !     CALL delete(point) ! speedup
     ENDDO
 
     IF (this%outnx <= 0) THEN
       CALL l4f_category_log(this%category,L4F_ERROR, &
-       "metamorphosis:poly: no points inside first polygon")
+       "metamorphosis:poly: no points inside polygons")
       this%valid = .FALSE.
       RETURN
-      !CALL raise_fatal_error() ! really fatal error?
     ENDIF
 
     CALL vol7d_alloc(v7d_out, nana=this%outnx)
@@ -2270,14 +2279,13 @@ ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
 ! collect coordinates of points falling into requested polygon
     n = 0
     DO i = 1, this%innx
-      IF (this%point_mask(i,1)) THEN
+      IF (c_e(this%point_index(i,1))) THEN
         n = n + 1
 ! temporary, improve!!!!
         CALL getval(v7d_in%ana(i)%coord,lon=lon1,lat=lat1)
         CALL init(v7d_out%ana(n),lon=lon1,lat=lat1)
       ENDIF
     ENDDO
-!    DEALLOCATE(lon, lat)
 
   ELSE
 
@@ -2353,6 +2361,7 @@ this%outfny=imiss
 if (associated(this%inter_index_x)) deallocate (this%inter_index_x)
 if (associated(this%inter_index_y)) deallocate (this%inter_index_y)
 if (associated(this%inter_index_z)) deallocate (this%inter_index_z)
+if (associated(this%point_index)) deallocate (this%point_index)
 
 if (associated(this%inter_x)) deallocate (this%inter_x)
 if (associated(this%inter_y)) deallocate (this%inter_y)
@@ -2374,13 +2383,24 @@ END SUBROUTINE grid_transform_delete
 
 
 !> Method for returning the contents of the object.
-SUBROUTINE grid_transform_get_val(this, output_level_auto, levshift, levused)
+!! Only a few selected memebrs of \a grid_transform object can be
+!! queried, this is mainly for use by \a volgrid6d_class, rather than
+!! for public use.
+SUBROUTINE grid_transform_get_val(this, output_level_auto, point_index, &
+ levshift, levused)
 TYPE(grid_transform),INTENT(in) :: this !< object to examine
 TYPE(vol7d_level),POINTER,OPTIONAL :: output_level_auto(:) !< array of auto-generated output levels
+INTEGER,INTENT(out),ALLOCATABLE,OPTIONAL :: point_index(:) !< array of indices indicating the polygon to which every output point has been assigned, if applicable
 INTEGER,INTENT(out),OPTIONAL :: levshift !< shift between input and output levels for vertint
 INTEGER,INTENT(out),OPTIONAL :: levused !< number of input levels used for vertint
 
 IF (PRESENT(output_level_auto)) output_level_auto => this%output_level_auto
+IF (PRESENT(point_index)) THEN
+  IF (ASSOCIATED(this%point_index)) THEN
+!    ALLOCATE(point_index(COUNT(c_e(this%point_index))))
+    point_index = PACK(this%point_index, c_e(this%point_index))
+  ENDIF
+ENDIF
 IF (PRESENT(levshift)) levshift = this%levshift
 IF (PRESENT(levused)) levused = this%levused
 
@@ -2848,10 +2868,18 @@ ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
 
     field_out(:,:,:) = RESHAPE(field_in(:,:,:), (/this%outnx,this%outny,innz/))
 
-  ELSE IF (this%trans%sub_type == 'coordbb' .OR. this%trans%sub_type == 'poly') THEN
+  ELSE IF (this%trans%sub_type == 'coordbb') THEN
 
     DO k = 1, innz
+! this is to sparse-points only, so field_out(:,1,k) is acceptable
       field_out(:,1,k) = PACK(field_in(:,:,k), this%point_mask(:,:))
+    ENDDO
+
+  ELSE IF (this%trans%sub_type == 'poly') THEN
+
+    DO k = 1, innz
+! this is to sparse-points only, so field_out(:,1,k) is acceptable
+      field_out(:,1,k) = PACK(field_in(:,:,k), c_e(this%point_index(:,:)))
     ENDDO
 
   ENDIF
@@ -3235,24 +3263,32 @@ IF (this%trans%trans_type == 'inter') THEN
 
 ELSE IF (this%trans%trans_type == 'boxinter' .OR. &
  this%trans%trans_type == 'polyinter' .OR. &
- this%trans%trans_type == 'vertint') THEN ! use the grid-to-grid method
+ this%trans%trans_type == 'vertint' .OR. &
+ this%trans%trans_type == 'metamorphosis') THEN ! use the grid-to-grid method
 
   CALL compute(this, &
    RESHAPE(field_in, (/SIZE(field_in,1), 1, SIZE(field_in,2)/)), field_out, var)
 
-ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
-
-  IF (this%trans%sub_type == 'all') THEN
-
-    field_out(:,:,:) = RESHAPE(field_in(:,:), (/this%outnx,this%outny,innz/))
-
-  ELSE IF (this%trans%sub_type == 'coordbb') THEN
-
-    DO k = 1, innz
-      field_out(:,1,k) = PACK(field_in(:,k), this%point_mask(:,1))
-    ENDDO
-
-  ENDIF
+! check that it works then remove!!!!
+!ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
+!
+!  IF (this%trans%sub_type == 'all') THEN
+!
+!    field_out(:,:,:) = RESHAPE(field_in(:,:), (/this%outnx,this%outny,innz/))
+!
+!  ELSE IF (this%trans%sub_type == 'coordbb') THEN
+!
+!    DO k = 1, innz
+!      field_out(:,1,k) = PACK(field_in(:,k), this%point_mask(:,1))
+!    ENDDO
+!
+!  ELSE IF (this%trans%sub_type == 'poly') THEN
+!
+!    DO k = 1, innz
+!      field_out(:,1,k) = PACK(field_in(:,k), c_e(this%point_index(:,1)))
+!    ENDDO
+!
+!  ENDIF
 
 ENDIF
 

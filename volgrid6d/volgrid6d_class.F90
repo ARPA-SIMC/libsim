@@ -1871,6 +1871,7 @@ type(grid_transform) :: grid_trans
 INTEGER :: ntime, ntimerange, nlevel, nvar, nana, time_definition, nnetwork, stallo
 INTEGER :: itime, itimerange, iana, inetwork
 TYPE(datetime),ALLOCATABLE :: validitytime(:,:)
+INTEGER,ALLOCATABLE :: point_index(:)
 TYPE(vol7d) :: v7d_locana
 CHARACTER(len=80) :: trans_type
 
@@ -1956,9 +1957,18 @@ IF (c_e(grid_trans)) THEN
 
   IF (trans_type == 'polyinter' .OR. trans_type == 'maskinter' .OR. &
    trans_type == 'metamorphosis' ) THEN ! create output station id
-    DO inetwork = 1, nnetwork
+
+    CALL get_val(grid_trans, point_index=point_index)
+    IF (ALLOCATED(point_index)) THEN
+      DO inetwork = 1, nnetwork
+        vol7d_out%volanai(:,1,inetwork) = point_index(:)
+      ENDDO
+    ELSE
+      DO inetwork = 1, nnetwork
       vol7d_out%volanai(:,1,inetwork) = (/(iana,iana=1,nana)/)
-    ENDDO
+      ENDDO
+    ENDIF
+
   ENDIF
 
   CALL compute(grid_trans, volgrid6d_in, vol7d_out, networkname, noconvert)
@@ -2225,6 +2235,7 @@ CHARACTER(len=*),INTENT(in),OPTIONAL :: categoryappend !< append this suffix to 
 INTEGER :: nvar, iana, inetwork
 TYPE(grid_transform) :: grid_trans
 TYPE(vol7d_level),POINTER :: llev_out(:)
+INTEGER,ALLOCATABLE :: point_index(:)
 TYPE(vol7d) :: v7d_locana
 CHARACTER(len=80) :: trans_type
 
@@ -2290,9 +2301,17 @@ ELSE
 
     IF (trans_type == 'polyinter' .OR. trans_type == 'maskinter' .OR. &
      trans_type == 'metamorphosis' ) THEN ! create output station id
-      DO inetwork = 1, SIZE(vol7d_in%network)
-        vol7d_out%volanai(:,1,inetwork) = (/(iana,iana=1,SIZE(v7d_locana%ana))/)
-      ENDDO
+
+      CALL get_val(grid_trans, point_index=point_index)
+      IF (ALLOCATED(point_index)) THEN
+        DO inetwork = 1, SIZE(vol7d_in%network)
+          vol7d_out%volanai(:,1,inetwork) = point_index(:)
+        ENDDO
+      ELSE
+        DO inetwork = 1, SIZE(vol7d_in%network)
+          vol7d_out%volanai(:,1,inetwork) = (/(iana,iana=1,SIZE(v7d_locana%ana))/)
+        ENDDO
+      ENDIF
     ENDIF
 
     CALL compute(grid_trans, vol7d_in, vol7d_out)
