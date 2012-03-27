@@ -73,6 +73,8 @@ INTEGER :: iun, ier, i, l, n, ninput, iargc, i1, i2, i3, i4
 INTEGER,POINTER :: w_s(:), w_e(:)
 TYPE(vol7d) :: v7d, v7d_coord, v7dtmp, v7d_comp1, v7d_comp2, v7d_comp3
 TYPE(arrayof_georef_coord_array) :: poly
+DOUBLE PRECISION,ALLOCATABLE :: lon_array(:), lat_array(:)
+INTEGER :: polytopo
 DOUBLE PRECISION ::  ilon, ilat, flon, flat
 DOUBLE PRECISION ::  ielon, ielat, felon, felat
 TYPE(geo_coord) :: coordmin,coordmax 
@@ -171,10 +173,10 @@ CALL optionparser_add(opt, ' ', 'coord-format', coord_format, &
 #endif 
  & help='format of input file with coordinates, ''native'' for vol7d native binary file'&
 #ifdef HAVE_DBALLE
- //', ''BUFR'' for BUFR file, ''CREX'' for CREX file'&
+ //', ''BUFR'' for BUFR file, ''CREX'' for CREX file (sparse points)'&
 #endif
 #ifdef HAVE_SHAPELIB
- //', ''shp'' for shapefile (interpolation on polygons)'&
+ //', ''shp'' for shapefile (sparse points or polygons)'&
 #endif
  )
 
@@ -605,6 +607,21 @@ IF (c_e(coord_file)) THEN
       CALL l4f_category_log(category, L4F_ERROR, &
        'error importing shapefile '//TRIM(coord_file))
       CALL raise_fatal_error()
+    ENDIF
+    CALL getval(poly%array(1), topo=polytopo)
+    IF (polytopo == georef_coord_array_point) THEN ! topology suitable for sparse points
+      CALL vol7d_alloc(v7d_coord, nana=poly%arraysize)
+      CALL vol7d_alloc_vol(v7d_coord)
+      DO i = 1, poly%arraysize
+        CALL getval(poly%array(i), x=lon_array,y=lat_array) ! improve!!!!
+        CALL init(v7d_coord%ana(i), lon=lon_array(1), lat=lat_array(1))
+      ENDDO
+      CALL delete(poly)
+      CALL l4f_category_log(category,L4F_INFO, &
+       'shapefile '//TRIM(coord_file)//' interpreted as sparse point list')
+    ELSE ! topology suitable for polygons, nothing to do
+      CALL l4f_category_log(category,L4F_INFO, &
+       'shapefile '//TRIM(coord_file)//' interpreted as polygon list')
     ENDIF
 
 #endif

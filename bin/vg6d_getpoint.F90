@@ -96,10 +96,10 @@ CALL optionparser_add(opt, ' ', 'coord-format', coord_format, &
 #endif 
 & help='format of input file with coordinates, ''native'' for vol7d native binary file '&
 #ifdef HAVE_DBALLE
- //', ''BUFR'' for BUFR file, ''CREX'' for CREX file'&
+ //', ''BUFR'' for BUFR file, ''CREX'' for CREX file (sparse points)'&
 #endif
 #ifdef HAVE_SHAPELIB
- //', ''shp'' for shapefile (interpolation on polygons)'&
+ //', ''shp'' for shapefile (sparse points or polygons)'&
 #endif
  )
 CALL optionparser_add(opt, 'v', 'trans-type', trans_type, 'inter', help= &
