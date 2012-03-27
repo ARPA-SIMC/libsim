@@ -456,19 +456,18 @@ res = ASSOCIATED(this%coord) ! incomplete but reasonable
 END FUNCTION georef_coord_array_c_e
 
 
-!> Restituisce il valore di uno o più componenti di un oggetto \a georef_coord_array.
-!! Qualsiasi combinazione dei parametri opzionali è consentita; se
-!! il tipo di coordinata richiesta non è stato inizializzato né calcolato,
-!! restituisce il corrispondente valore mancante.
-!! Se forniti, i parametri \a x, \a y, \a utme, \a utmn devono essere
-!! dichiarati come puntatori che vengono
-!! allocati dalla \a getval stessa e che devono poi essere
-!! deallocati esplicitamente dal programma chiamante.
-SUBROUTINE georef_coord_array_getval(this, x, y)
-TYPE(georef_coord_array),INTENT(in) :: this !< oggetto di cui restituire i componenti
-DOUBLE PRECISION,OPTIONAL,ALLOCATABLE,INTENT(out) :: x(:)
-DOUBLE PRECISION,OPTIONAL,ALLOCATABLE,INTENT(out) :: y(:)
+!> Query a \a georef_coord_array object.
+!! This is the correct way to retrieve the contents of a \a
+!! georef_coord_array object, since its members are declared as \a
+!! PRIVATE.
+SUBROUTINE georef_coord_array_getval(this, x, y, topo, proj)
+TYPE(georef_coord_array),INTENT(in) :: this !< object to query
+DOUBLE PRECISION,OPTIONAL,ALLOCATABLE,INTENT(out) :: x(:) !< x-coordinate
+DOUBLE PRECISION,OPTIONAL,ALLOCATABLE,INTENT(out) :: y(:) !< y-coordinate
 ! allocatable per vedere di nascosto l'effetto che fa
+INTEGER,OPTIONAL,INTENT(out) :: topo !< topology associated with the coordinates
+TYPE(geo_proj),OPTIONAL,INTENT(out) :: proj !< geographical projection
+
 
 IF (PRESENT(x)) THEN
   IF (ASSOCIATED(this%coord)) THEN
@@ -480,6 +479,8 @@ IF (PRESENT(y)) THEN
     y = this%coord%y
   ENDIF
 ENDIF
+IF (PRESENT(topo)) topo = this%topo
+IF (PRESENT(proj)) proj = this%proj ! warning proj has no missing value yet
 
 END SUBROUTINE georef_coord_array_getval
 

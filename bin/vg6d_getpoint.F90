@@ -52,6 +52,8 @@ TYPE(vol7d_dballe) :: v7d_ana, v7d_dba_out
 #endif
 TYPE(arrayof_georef_coord_array) :: poly
 DOUBLE PRECISION :: lon, lat
+DOUBLE PRECISION,ALLOCATABLE :: lon_array(:), lat_array(:)
+INTEGER :: polytopo
 DOUBLE PRECISION :: ilon, ilat, flon, flat, radius
 character(len=80) :: output_template,trans_type,sub_type
 INTEGER :: output_td
@@ -244,6 +246,21 @@ IF (c_e(coord_file)) THEN
        'error importing shapefile '//TRIM(coord_file))
       CALL raise_fatal_error()
     ENDIF
+    CALL getval(poly%array(1), topo=polytopo)
+    IF (polytopo == georef_coord_array_point) THEN ! topology suitable for sparse points
+      CALL vol7d_alloc(v7d_coord, nana=poly%arraysize)
+      CALL vol7d_alloc_vol(v7d_coord)
+      DO i = 1, poly%arraysize
+        CALL getval(poly%array(i), x=lon_array,y=lat_array) ! improve!!!!
+        CALL init(v7d_coord%ana(i), lon=lon_array(1), lat=lat_array(1))
+      ENDDO
+      CALL delete(poly)
+      CALL l4f_category_log(category,L4F_INFO, &
+       'shapefile '//TRIM(coord_file)//' interpreted as sparse point list')
+    ELSE ! topology suitable for polygons, nothing to do
+      CALL l4f_category_log(category,L4F_INFO, &
+       'shapefile '//TRIM(coord_file)//' interpreted as polygon list')
+    ENDIF
 
 #endif
 
@@ -268,14 +285,12 @@ IF (c_e(coord_file)) THEN
      TRIM(coord_format)//' in --coord-format not valid or not supported.')
     CALL EXIT(1)
   ENDIF
-ELSE
+ENDIF
 
-  IF (trans_type == 'inter' .OR. trans_type == 'stencilinter') THEN ! set coordinates for interpolation
-    CALL vol7d_alloc(v7d_coord, nana=1)
-    CALL vol7d_alloc_vol(v7d_coord)
-    CALL init(v7d_coord%ana(1), lat=lat, lon=lon)
-  ENDIF
-
+IF (.NOT.c_e(v7d_coord)) THEN ! fallback, initialise v7d_coord from single point
+  CALL vol7d_alloc(v7d_coord, nana=1)
+  CALL vol7d_alloc_vol(v7d_coord)
+  CALL init(v7d_coord%ana(1), lat=lat, lon=lon)
 ENDIF
 
 IF (ldisplay) CALL display(v7d_coord)
