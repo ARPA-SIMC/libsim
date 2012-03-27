@@ -93,7 +93,7 @@ CHARACTER(len=512):: a_name
 INTEGER :: category
 
 ! for computing
-LOGICAL :: comp_filter_time, comp_keep, comp_sort, comp_fill_data, obso
+LOGICAL :: comp_filter_time, comp_keep, comp_sort, comp_fill_data, comp_full_steps
 LOGICAL :: file, lconvr, round
 CHARACTER(len=13) :: comp_stat_proc
 CHARACTER(len=9) :: comp_cyclicdatetime=cmiss
@@ -235,12 +235,6 @@ CALL optionparser_add(opt, ' ', 'comp-stat-proc', comp_stat_proc, '', help= &
  &2=maximum, 3=minimum, 254=instantaneous, but not all the combinations &
  &make sense; if isp is not provided it is assumed to be equal to osp')
 
-CALL optionparser_add(opt, ' ', 'comp-average', obso, help= &
- 'recompute average of averaged fields on a different time step, &
- &obsolete, use --comp-stat-proc 0 instead')
-CALL optionparser_add(opt, ' ', 'comp-cumulate', obso, help= &
- 'recompute cumulation of accumulated fields on a different time step, &
- &obsolete, use --comp-stat-proc 1 instead')
 CALL optionparser_add(opt, ' ', 'comp-step', comp_step, '0000000001 00:00:00.000', help= &
  'length of regularization or statistical processing step in the format &
  &''YYYYMMDDDD hh:mm:ss.msc'', it can be simplified up to the form ''D hh''')
@@ -255,6 +249,10 @@ CALL optionparser_add(opt, ' ', 'comp-stop', comp_stop, '', help= &
 CALL optionparser_add(opt, ' ', 'comp-keep', comp_keep, help= &
  'keep the data that are not the result of the requested statistical processing, &
  &merging them with the result of the processing')
+CALL optionparser_add(opt, ' ', 'comp-full-steps', comp_full_steps, help= &
+ 'compute statistical processing by differences only on intervals with forecast &
+ &time equal to a multiple of comp-step, otherwise all reasonable combinations &
+ &of forecast times are computed')
 CALL optionparser_add(opt, ' ', 'comp-frac-valid', comp_frac_valid, 1., help= &
  'specify the fraction of input data that has to be valid in order to consider a &
  &statistically processed value acceptable')
@@ -365,12 +363,6 @@ CALL optionparser_add(opt, ' ', 'csv-keep-miss', csv_keep_miss, help= &
 CALL optionparser_add(opt, ' ', 'csv-norescale', csv_no_rescale, help= &
  'do not rescale in output integer variables according to their scale factor')
 
-! obsolete options
-CALL optionparser_add(opt, ' ', 'comp-discard', obso, help= &
- 'obsolete option, use --comp-keep with opposite meaning')
-CALL optionparser_add(opt, ' ', 'csv-skip-miss', obso, help= &
- 'obsolete option, use --csv-keep-miss with opposite meaning')
-
 #ifdef ALCHIMIA
 CALL optionparser_add(opt, '', 'output-variable-list', output_variable_list, '', help= &
  'list of data variables you require in output; if they are not in input they will be computed if possible. &
@@ -415,16 +407,6 @@ ELSE IF (i < 1) THEN
   CALL raise_fatal_error()
 ENDIF
 CALL getarg(iargc(), output_file)
-
-! check obsolete arguments
-IF (obso) THEN
-  CALL optionparser_printhelp(opt)
-  CALL l4f_category_log(category, L4F_ERROR, &
-   'arguments --comp-average --comp-cumulate --csv-skip-miss --comp-discard')
-  CALL l4f_category_log(category, L4F_ERROR, &
-   'are obsolete, please read help')
-    CALL raise_fatal_error()
-ENDIF
 
 ! generate network
 IF (LEN_TRIM(network_list) > 0) THEN
@@ -956,7 +938,7 @@ IF (c_e(istat_proc) .AND. c_e(ostat_proc)) THEN
   end if
 
   CALL vol7d_compute_stat_proc(v7d, v7d_comp1, istat_proc, ostat_proc, c_i, c_s, &
-   full_steps=.TRUE., frac_valid=comp_frac_valid, &
+   full_steps=comp_full_steps, frac_valid=comp_frac_valid, &
    max_step=timedelta_depop(c_i)/10, weighted=.TRUE., other=v7d_comp3)
 
   CALL delete(v7d)
@@ -972,8 +954,6 @@ IF (c_e(istat_proc) .AND. c_e(ostat_proc)) THEN
     CALL vol7d_merge(v7d, v7d_comp1, sort=.TRUE.)
   ENDIF
 ENDIF
-
-
 
 
 ! sort

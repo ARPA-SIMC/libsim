@@ -85,6 +85,7 @@ type(fndsv) :: vfn, vfnoracle
 CHARACTER(len=13) :: comp_stat_proc
 CHARACTER(len=23) :: comp_step !, comp_start
 INTEGER :: istat_proc, ostat_proc
+LOGICAL :: comp_full_steps
 TYPE(timedelta) :: c_i
 TYPE(datetime) :: c_s
 !REAL :: comp_frac_valid
@@ -280,8 +281,12 @@ CALL optionparser_add(opt, ' ', 'comp-step', comp_step, '0000000001 00:00:00.000
 ! 'specify the fraction of input data that has to be valid in order to consider a &
 ! &statistically processed value acceptable')
 
+CALL optionparser_add(opt, ' ', 'comp-full-steps', comp_full_steps, help= &
+ 'compute statistical processing by differences only on intervals with forecast &
+ &time equal to a multiple of comp-step, otherwise all reasonable combinations &
+ &of forecast times are computed')
 
-                                ! display option
+! display option
 CALL optionparser_add(opt, ' ', 'display', ldisplay, help= &
  'briefly display the data volume imported and exported, warning: this option is incompatible &
  &with output on stdout.')
@@ -555,7 +560,7 @@ IF (c_e(ostat_proc) .AND. ASSOCIATED(volgrid_out)) THEN ! stat_proc
   ALLOCATE(volgrid_tmp(SIZE(volgrid_out)))
   DO i = 1, SIZE(volgrid_out)
     CALL volgrid6d_recompute_stat_proc_diff(volgrid_out(i), volgrid_tmp(i), &
-     ostat_proc, c_i, full_steps=.TRUE., clone=.TRUE.)
+     ostat_proc, c_i, full_steps=comp_full_steps, clone=.TRUE.)
   ENDDO
   CALL delete(volgrid_out)
   volgrid_out => volgrid_tmp
