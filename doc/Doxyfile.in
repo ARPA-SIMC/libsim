@@ -157,12 +157,13 @@ JAVADOC_AUTOBRIEF      = YES
 
 MULTILINE_CPP_IS_BRIEF = NO
 
-# If the DETAILS_AT_TOP tag is set to YES then Doxygen 
-# will output the detailed description near the top, like JavaDoc.
-# If set to NO, the detailed description appears after the member 
-# documentation.
-
-DETAILS_AT_TOP         = NO
+#OBSOLETE
+## If the DETAILS_AT_TOP tag is set to YES then Doxygen 
+## will output the detailed description near the top, like JavaDoc.
+## If set to NO, the detailed description appears after the member 
+## documentation.
+#
+#DETAILS_AT_TOP         = NO
 
 # If the INHERIT_DOCS tag is set to YES (the default) then an undocumented 
 # member inherits the documentation from any documented member that it 
@@ -204,11 +205,12 @@ OPTIMIZE_OUTPUT_FOR_C  = NO
 
 OPTIMIZE_OUTPUT_JAVA   = NO
 
-# Set the OPTIMIZE_OUTPUT_FORTRAN tag to YES if your project consists of Fortran 
-# sources only. Doxygen will then generate output that is more tailored for Fortran. 
-# For instance, namespaces will be presented as modules
-
-OPTIMIZE_OUTPUT_FORTRAN= YES
+#OBSOLETE
+## Set the OPTIMIZE_OUTPUT_FORTRAN tag to YES if your project consists of Fortran 
+## sources only. Doxygen will then generate output that is more tailored for Fortran. 
+## For instance, namespaces will be presented as modules
+#
+#OPTIMIZE_OUTPUT_FORTRAN= YES
 
 # If you use STL classes (i.e. std::string, std::vector, etc.) but do not want to 
 # include (a tag file for) the STL sources as input, then you should 
@@ -520,7 +522,7 @@ EXCLUDE_PATTERNS       = vol7d_class_desc_templ.F90 vol7d_class_diff.F90 vol7d_c
 # directories that contain example code fragments that are included (see 
 # the \include command).
 
-EXAMPLE_PATH           = @top_srcdir@/examples
+EXAMPLE_PATH           = @top_srcdir@/examples @top_srcdir@/bin
 
 # If the value of the EXAMPLE_PATH tag contains directories, you can use the 
 # EXAMPLE_PATTERNS tag to specify one or more wildcard pattern (like *.cpp 
