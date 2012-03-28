@@ -18,9 +18,11 @@
 
 #include "config.h"
 
-!> \defgroup alchimia Libsim package, alchimia library.
+!> \defgroup alchimia_class Libsim package, alchimia library.
+!! Generate new variabile using functions libraries
+
 !> This module defines objects and methods for generate derivate variables.
-!!\ingroup alchimia
+!!\ingroup alchimia_class
 module alchimia
 
 USE missing_values
