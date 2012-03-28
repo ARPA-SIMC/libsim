@@ -347,8 +347,6 @@ END INTERFACE
 #define ARRAYOF_ORIGEQ 1
 #include "arrayof_pre.F90"
 ! from arrayof
-PUBLIC insert, append, remove, packarray
-PUBLIC insert_unique, append_unique
 
 PRIVATE
 
@@ -364,6 +362,9 @@ PUBLIC datetime, datetime_miss, datetime_utc, datetime_local, &
  display, c_e, &
  count_distinct, pack_distinct, map_distinct, map_inv_distinct, index, sort, &
  cyclicdatetime, cyclicdatetime_new, cyclicdatetime_miss, display_cyclicdatetime
+PUBLIC insert, append, remove, packarray
+PUBLIC insert_unique, append_unique
+PUBLIC cyclicdatetime_to_conventional
 
 CONTAINS
 
@@ -380,8 +381,8 @@ CONTAINS
 !! \a minute, \a msec), (\a unixtime), (\a isodate), (\a simpledate),
 !! (\a oraclesimdate) sono mutualmente escludentesi; \a oraclesimedate �
 !! obsoleto, usare piuttosto \a simpledate.
-FUNCTION datetime_new(year, month, day, hour, minute, msec, &
- unixtime, isodate, simpledate, oraclesimdate, now) RESULT(this)
+elemental FUNCTION datetime_new(year, month, day, hour, minute, msec, &
+ unixtime, isodate, simpledate, oraclesimdate) RESULT(this)
 INTEGER,INTENT(IN),OPTIONAL :: year !< anno d.C., se � specificato, tutti gli eventuali parametri tranne \a month, \a day, \a hour, \a minute e \a msec sono ignorati; per un problema non risolto, sono ammessi solo anni >0 (d.C.)
 INTEGER,INTENT(IN),OPTIONAL :: month !< mese, default=1 se � specificato \a year; pu� assumere anche valori <1 o >12, l'oggetto finale si aggiusta coerentemente
 INTEGER,INTENT(IN),OPTIONAL :: day !< mese, default=1 se � specificato \a year; pu� anch'esso assumere valori fuori dai limiti canonici
@@ -392,12 +393,11 @@ INTEGER(kind=int_ll),INTENT(IN),OPTIONAL :: unixtime !< inizializza l'oggetto a 
 CHARACTER(len=*),INTENT(IN),OPTIONAL :: isodate !< inizializza l'oggetto ad una data espressa nel formato \c AAAA-MM-GG \c hh:mm:ss.msc, un sottoinsieme del formato noto come \a ISO, la parte iniziale \c AAAA-MM-GG � obbligatoria, il resto � opzionale
 CHARACTER(len=*),INTENT(IN),OPTIONAL :: simpledate !< inizializza l'oggetto ad una data espressa nel formato \c AAAAMMGGhhmmssmsc, la parte iniziale \c AAAAMMGG � obbligatoria, il resto � opzionale, da preferire rispetto a \a oraclesimdate
 CHARACTER(len=12),INTENT(IN),OPTIONAL :: oraclesimdate !< inizializza l'oggetto ad una data espressa nel formato \c AAAAMMGGhhmm, come nelle routine per l'accesso al db Oracle del SIM.
-INTEGER,INTENT(IN),OPTIONAL :: now !< inizializza l'oggetto all'istante corrente, se \a � \a datetime_utc inizializza con l'ora UTC (preferibile), se � \a datetime_local usa l'ora locale
 
 TYPE(datetime) :: this !< oggetto da inizializzare
 
-CALL datetime_init(this, year, month, day, hour, minute, msec, &
- unixtime, isodate, simpledate, oraclesimdate, now)
+CALL datetime_init_elemental(this, year, month, day, hour, minute, msec, &
+ unixtime, isodate, simpledate, oraclesimdate)
 
 END FUNCTION datetime_new
 
@@ -407,7 +407,7 @@ END FUNCTION datetime_new
 !! \a minute, \a msec), (\a unixtime), (\a isodate), (\a simpledate),
 !! (\a oraclesimdate) sono mutualmente escludentesi; \a oraclesimedate �
 !! obsoleto, usare piuttosto \a simpledate.
-RECURSIVE SUBROUTINE datetime_init(this, year, month, day, hour, minute, msec, &
+SUBROUTINE datetime_init(this, year, month, day, hour, minute, msec, &
  unixtime, isodate, simpledate, oraclesimdate, now)
 TYPE(datetime),INTENT(INOUT) :: this !< oggetto da inizializzare
 INTEGER,INTENT(IN),OPTIONAL :: year !< anno d.C., se � specificato, tutti gli eventuali parametri tranne \a month, \a day, \a hour e \a minute sono ignorati; per un problema non risolto, sono ammessi solo anni >0 (d.C.)
@@ -542,7 +542,131 @@ ENDIF
 END SUBROUTINE datetime_init
 
 
-SUBROUTINE datetime_delete(this)
+!> ELEMENTAL Costruisce un oggetto \a datetime con i parametri opzionali forniti.
+!! Se non viene passato nulla lo inizializza a 1/1/1.
+!! Notare che i gruppi di parametri opzionali (\a year, \a month, \a hour,
+!! \a minute, \a msec), (\a unixtime), (\a isodate), (\a simpledate),
+!! (\a oraclesimdate) sono mutualmente escludentesi; \a oraclesimedate �
+!! obsoleto, usare piuttosto \a simpledate.
+elemental SUBROUTINE datetime_init_elemental(this, year, month, day, hour, minute, msec, &
+ unixtime, isodate, simpledate, oraclesimdate)
+TYPE(datetime),INTENT(INOUT) :: this !< oggetto da inizializzare
+INTEGER,INTENT(IN),OPTIONAL :: year !< anno d.C., se � specificato, tutti gli eventuali parametri tranne \a month, \a day, \a hour e \a minute sono ignorati; per un problema non risolto, sono ammessi solo anni >0 (d.C.)
+INTEGER,INTENT(IN),OPTIONAL :: month !< mese, default=1 se � specificato \a year; pu� assumere anche valori <1 o >12, l'oggetto finale si aggiusta coerentemente
+INTEGER,INTENT(IN),OPTIONAL :: day !< mese, default=1 se � specificato \a year; pu� anch'esso assumere valori fuori dai limiti canonici
+INTEGER,INTENT(IN),OPTIONAL :: hour !< ore, default=0 se � specificato \a year; pu� anch'esso assumere valori fuori dai limiti canonici
+INTEGER,INTENT(IN),OPTIONAL :: minute !< minuti, default=0 se � specificato \a year; pu� anch'esso assumere valori fuori dai limiti canonici
+INTEGER,INTENT(IN),OPTIONAL :: msec !< millisecondi, default=0 se � specificato \a year; pu� anch'esso assumere valori fuori dai limiti canonici
+INTEGER(kind=int_ll),INTENT(IN),OPTIONAL :: unixtime !< inizializza l'oggetto a \a unixtime secondi dopo il 1/1/1970 (convenzione UNIX, notare che il parametro deve essere un intero a 8 byte)
+CHARACTER(len=*),INTENT(IN),OPTIONAL :: isodate !< inizializza l'oggetto ad una data espressa nel formato \c AAAA-MM-GG \c hh:mm:ss.msc, un sottoinsieme del formato noto come \a ISO, la parte iniziale \c AAAA-MM-GG � obbligatoria, il resto � opzionale
+CHARACTER(len=*),INTENT(IN),OPTIONAL :: simpledate !< inizializza l'oggetto ad una data espressa nel formato \c AAAAMMGGhhmmssmsc, la parte iniziale \c AAAAMMGG � obbligatoria, il resto � opzionale, da preferire rispetto a \a oraclesimdate
+CHARACTER(len=12),INTENT(IN),OPTIONAL :: oraclesimdate !< inizializza l'oggetto ad una data espressa nel formato \c AAAAMMGGhhmm, come nelle routine per l'accesso al db Oracle del SIM.
+
+INTEGER :: lyear, lmonth, lday, lhour, lminute, lsec, lmsec, ier
+CHARACTER(len=23) :: datebuf
+
+IF (PRESENT(year)) THEN ! anno/mese/giorno, ecc.
+  lyear = year
+  IF (PRESENT(month)) THEN
+    lmonth = month
+  ELSE
+    lmonth = 1
+  ENDIF
+  IF (PRESENT(day)) THEN
+    lday = day
+  ELSE
+    lday = 1
+  ENDIF
+  IF (PRESENT(hour)) THEN
+    lhour = hour
+  ELSE
+    lhour = 0
+  ENDIF
+  IF (PRESENT(minute)) THEN
+    lminute = minute
+  ELSE
+    lminute = 0
+  ENDIF
+  IF (PRESENT(msec)) THEN
+    lmsec = msec
+  ELSE
+    lmsec = 0
+  ENDIF
+
+  if (c_e(lday) .and. c_e(lmonth) .and. c_e(lyear) .and. c_e(lhour) &
+   .and. c_e(lminute) .and. c_e(lmsec)) then
+    CALL jeladata5_1(lday, lmonth, lyear, lhour, lminute, lmsec, this%iminuti)
+  else
+    this=datetime_miss
+  end if
+
+ELSE IF (PRESENT(unixtime)) THEN ! secondi dal 01/01/1970 (unix)
+  if (c_e(unixtime)) then
+    this%iminuti = (unixtime + unsec)*1000
+  else
+    this=datetime_miss    
+  end if
+
+ELSE IF (PRESENT(isodate)) THEN ! formato iso YYYY-MM-DD hh:mm:ss.msc
+
+  IF (c_e(isodate) .AND. LEN_TRIM(isodate) > 0) THEN
+    datebuf(1:23) = '0001-01-01 00:00:00.000'
+    datebuf(1:MIN(LEN(isodate),23)) = isodate(1:MIN(LEN(isodate),23))
+    READ(datebuf,'(I4,1X,I2,1X,I2,1X,I2,1X,I2,1X,I2,1X,I3)', err=100) &
+     lyear, lmonth, lday, lhour, lminute, lsec, lmsec
+    lmsec = lmsec + lsec*1000
+    CALL jeladata5_1(lday, lmonth, lyear, lhour, lminute, lmsec, this%iminuti)
+    RETURN
+    
+100 CONTINUE ! condizione di errore in isodate
+    CALL delete(this)
+    RETURN
+  ELSE
+    this = datetime_miss
+  ENDIF
+
+ELSE IF (PRESENT(simpledate)) THEN ! formato YYYYMMDDhhmmssmsc
+  IF (c_e(simpledate) .AND. LEN_TRIM(simpledate) > 0)THEN
+    datebuf(1:17) = '00010101000000000'
+    datebuf(1:MIN(LEN(simpledate),17)) = simpledate(1:MIN(LEN(simpledate),17))
+    READ(datebuf,'(I4.4,5I2.2,I3.3)', err=120) &
+     lyear, lmonth, lday, lhour, lminute, lsec, lmsec
+    lmsec = lmsec + lsec*1000
+    CALL jeladata5_1(lday, lmonth, lyear, lhour, lminute, lmsec, this%iminuti)
+    RETURN
+
+120 CONTINUE ! condizione di errore in simpledate
+    CALL delete(this)
+    RETURN
+  ELSE
+    this = datetime_miss
+  ENDIF
+
+
+ELSE IF (PRESENT(oraclesimdate)) THEN ! formato YYYYMMDDhhmm
+
+  if(c_e(oraclesimdate))then
+    !!CALL l4f_log(L4F_WARN, 'in datetime_init, parametro oraclesimdate '// &
+    !! 'obsoleto, usare piuttosto simpledate')
+    READ(oraclesimdate,'(I4,4I2)', iostat=ier) lyear, lmonth, lday, lhour, lminute
+    IF (ier /= 0) THEN
+      CALL delete(this)
+      RETURN
+    ENDIF
+    CALL jeladata5_1(lday,lmonth,lyear,lhour,lminute,0,this%iminuti)
+  else
+    this = datetime_miss
+  end if
+
+ELSE
+  this = datetime_miss
+ENDIF
+
+END SUBROUTINE datetime_init_elemental
+
+
+
+elemental SUBROUTINE datetime_delete(this)
 TYPE(datetime),INTENT(INOUT) :: this
 
 this%iminuti = imiss
@@ -1937,6 +2061,59 @@ char=to_char(this%tendaysp)//";"//to_char(this%month)//";"//to_char(this%day)//"
 to_char(this%hour)//";"//to_char(this%minute)
 
 END FUNCTION cyclicdatetime_to_char
+
+
+!> Restituisce una rappresentazione convenzionale in forma datetime
+!! \a cyclicdatetime.
+!! year=1001 : yearly values (no other time dependence)
+!! year=1002 : dayly  values of a specified month (depends by day and month)
+!! year=1003 : 10 day period of a specified month (depends by day(1,11,21) and month)
+!! year=1004 : mounthly values (depend by month)
+!! The other conventional month hour and minute should be 01 when they are not significative, day should be 1 or, if year=1003 is used, 1,11 or 21.
+FUNCTION cyclicdatetime_to_conventional(this,dt) RESULT(dtc)
+TYPE(cyclicdatetime),INTENT(IN) :: this !< cycliddatetime to use in compute
+TYPE(datetime),intent(in) :: dt !< datetime to use in compute
+
+TYPE(datetime) :: dtc
+
+integer :: tendaysp,month,day
+
+dtc = datetime_miss 
+
+! dt required
+if ( .not. c_e(dt)) return
+
+! if not equal somethings is wrong !
+if (.not. this == dt ) return
+
+! no cyclicdatetime present -> year=1001 : yearly values (no other time dependence)
+if ( .not. c_e(this)) then
+  dtc=datetime_new(year=1001, month=1, day=1, hour=1, minute=1)
+  return
+end if
+
+! minute and hour present -> not good for conventional datetime
+if (c_e(this%minute)) return
+if (c_e(this%hour)) return
+! day, month and tendaysp present -> no good
+if (c_e(this%day) .and. c_e(this%month) .and. c_e(this%tendaysp)) return
+
+call getval(dt,day=day,month=month)
+
+if (c_e(this%day) .and. c_e(this%month)) then
+  dtc=datetime_new(year=1002, month=month, day=day, hour=1, minute=1)
+else if (c_e(this%tendaysp) .and. c_e(this%month)) then
+  tendaysp = min(((day-1)/10) +1,3)
+  day=tendaysp*10+1
+  dtc=datetime_new(year=1003, month=month, day=day, hour=1, minute=1)
+else if (c_e(this%month)) then
+  dtc=datetime_new(year=1004, month=month, day=1, hour=1, minute=1)
+else if (c_e(this%day)) then
+  ! only day present -> no good
+  return
+end if
+
+END FUNCTION cyclicdatetime_to_conventional
 
 
 
