@@ -99,12 +99,8 @@ B13203,Convective snowfall (invented),Kg/m**2,255,2,78,255,1.0,0.0
 B13204,Total convective precipitation(liquid+snow; invented),Kg/m**200,200,2,152,255,1.0,0.0
 B13205,Snowfall (grid-scale+convective; invented),Kg/m**2,200,2,153,255,1.0,0.0
 B13206,Soil water content (invented),kg/m^2->Num,255,2,86,255,1.0,0.0
-B14017,Net long-wave radiation flux (surface),W/m^2,200,200,111,0,1.0,0.0
-B14017,Net long-wave radiation flux (surface),W/m^2,200,200,111,255,1.0,0.0
-B14017,Net long-wave radiation flux (surface),W/m^2,255,2,112,255,1.0,0.0
-B14018,Net short-wave radiation flux (surface),W/m^2,200,200,110,0,1.0,0.0
-B14018,Net short-wave radiation flux (surface),W/m^2,200,200,110,255,1.0,0.0
-B14018,Net short-wave radiation flux (surface),W/m^2,255,2,111,255,1.0,0.0
+B14018,Incoming short-wave radiation flux (surface),W/m^2,200,200,80,255,1.0,0.0
+B14018,Incoming short-wave radiation flux (surface),W/m^2,200,200,80,0,1.0,0.0
 B14019,Surface Albedo,Fraction,200,200,124,255,100.,0.0
 B14019,Surface Albedo,Fraction,200,200,124,0,100.,0.0
 B14019,Surface Albedo,Percent,255,2,84,255,1.0,0.0
@@ -118,6 +114,12 @@ B14194,Instantenous direct solar radiation DWD (invented),W/m^2,200,201,22,255,1
 B14194,Instantenous direct solar radiation DWD (invented),W/m^2,78,201,22,255,1.0,0.0
 B14195,Instantenous diffuse solar radiation DWD (invented),W/m^2,200,201,23,255,1.0,0.0
 B14195,Instantenous diffuse solar radiation DWD (invented),W/m^2,78,201,23,255,1.0,0.0
+B14196,Net long-wave radiation flux (surface),W/m^2,200,200,111,0,1.0,0.0
+B14196,Net long-wave radiation flux (surface),W/m^2,200,200,111,255,1.0,0.0
+B14196,Net long-wave radiation flux (surface),W/m^2,255,2,112,255,1.0,0.0
+B14197,Net short-wave radiation flux (surface),W/m^2,200,200,110,0,1.0,0.0
+B14197,Net short-wave radiation flux (surface),W/m^2,200,200,110,255,1.0,0.0
+B14197,Net short-wave radiation flux (surface),W/m^2,255,2,111,255,1.0,0.0
 B15192,NO concentration (invented),ppb,200,200,152,0,0.00000000125,0.0
 B15192,NO concentration (invented),ppb,200,200,152,255,0.00000000125,0.0
 B15192,NO concentration (invented),ppb,201,200,152,0,0.00000000125,0.0
