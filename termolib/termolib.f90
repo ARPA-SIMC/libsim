@@ -349,7 +349,7 @@ end function TW
 
 !--------------------------------------------------------------------------
 
-elemental real function TVIR(TD,TT,PT)
+elemental real function TVIR(TD,T,P)
 
 !  Calcola la Temperatura virtuale dell'aria secondo la formula: 
 ! 
@@ -365,18 +365,20 @@ elemental real function TVIR(TD,TT,PT)
 !  Input : 
 !  TD        real  Temperatura di rugiada                   (K.) 
 !  T         real  Temperatura dell' aria                   (K.) 
-!  PT        real  Pressione dell' aria                     (hPa) 
+!  P        real  Pressione dell' aria                     (hPa) 
 ! 
 !  Output : 
 !  TVIR      real  Temperatura virtuale                     (K.) 
 !  TVIR =  rmiss  Se non e' possibile calcolarla 
 !----------------------------------------------------------------------------
 
-  real,intent(in)::td,tt,pt
+  real,intent(in)::td,t,p
 
-  if( c_e(td) .and. c_e(tt) .and. c_e(pt) )then 
+  if( c_e(td) .and. c_e(t) .and. c_e(p) )then 
 
-    TVIR = (1 + 0.00061 * USPEC(td , pt ) ) *tt 
+    TVIR = tvir2 (t, USPEC(td , p ) ) 
+
+!    TVIR = (1 + 0.00061 * USPEC(td , p ) ) *t 
 
   else
 
@@ -387,6 +389,31 @@ elemental real function TVIR(TD,TT,PT)
 
   return 
 end function TVIR
+
+
+!>  Calcola la Temperatura virtuale dell'aria secondo la formula: 
+!!  TVIR = (1+0.00061*Q)*T 
+!!  (K.) 
+elemental real function TVIR2(T,q)
+
+real,intent(in) :: t !< specific humidity (gr/Kg) 
+real,intent(in) :: q !< temperature (K)
+
+
+if( c_e(t) .and. c_e(q) )then 
+
+  TVIR2 = (1 + 0.00061 * q ) * t
+
+else
+
+  TVIR2=rmiss 
+
+end if
+
+
+return 
+end function TVIR2
+
 
 !--------------------------------------------------------------------------
 !
@@ -640,7 +667,7 @@ REAL,intent(in) :: e
 !! so now there is a test to give missing value
 
 
-REAL :: ale, t
+REAL :: ale
 REAL, PARAMETER :: es0=6.11, aw=7.567*2.3025851, bw=239.7-t0c, &
  awn=7.744*2.3025851, bwn=245.2-t0c
 
@@ -657,6 +684,29 @@ ENDIF
 
 END FUNCTION tesat
 
+
+
+!-----------------------------------------------------------------
+
+
+!> compute air density from virtual temperature and pressure
+elemental real function AIRDEN(tv,p) 
+real,intent(in) :: tv  !< virtual temperature (K)
+real,intent(in) :: p   !< pressure (Pa)
+
+if( c_e(tv) .and. c_e(p) )then 
+
+  airden = p / (rd *tv)
+  
+else
+  
+  airden=rmiss
+  
+end if
+
+return 
+end function AIRDEN
+ 
 
 !-----------------------------------------------------------------------------
 !
@@ -890,7 +940,7 @@ real function cape (pt,tt,np,lfc,eql)
   integer,intent(in)::np
   real,intent(in),dimension(np)::tt,pt
   real,intent(in)::lfc,eql
-  real::tamb,tlcl,pres1,pres2
+  real::tlcl,pres1,pres2
   real::tamb_upp,tamb_low,temp_upp,temp_low
 
   if ( pt(1) <= pt (np) .or. pt(1) < 0 .or. tt(1) < 0 )then
@@ -970,7 +1020,7 @@ real function cin (pt,tt,td,np)
   parameter (strato=50.)
   real,intent(in),dimension(np)::tt,pt,td
   real,dimension(np)::aw
-  real::lcl,eql,tamb,tlcl,pres1,pres2,samix,tmed
+  real::pres1,pres2,samix,tmed
   real::tamb_upp,tamb_low,tadi_upp,tadi_low,t_iso
   integer::flag,k
 
@@ -2426,7 +2476,7 @@ end function SI_TT
 
 
 !> stima la classe di stabilita' a partire da velocita' del vento, 
-!! radiazione solare incirdente e radiazione infrarossa netta.
+!! radiazione solare incidente e radiazione infrarossa netta.
 !! Per le ore diurne, usa Bowen 1983 (vento e radiazione solare)
 !! Per le ore notturne, usa Reuter 1970 modificato (vento e radiazione IR)
 elemental real function pgt (ff,swd,lwb)
