@@ -21,6 +21,9 @@ subroutine register_termo(vfn)
   call fnregister(vfn,r_t2td_def())
   call fnregister(vfn,ff_swd_lwb2pgt_def())
   call fnregister(vfn,p_t2r_def())
+  call fnregister(vfn,swb_alb2swd_def())
+  call fnregister(vfn,swd_alb2swb_def())
+
 
 end subroutine register_termo
 
@@ -114,13 +117,57 @@ real, intent(out) :: out(:,:)
 
 out(:,index_c(mybout,bout(1)))= pgt(in (:,index_c(mybin ,bin (1))),in (:,index_c(mybin ,bin (2))),in (:,index_c(mybin ,bin (3))))
 
+print *, "TEST  in -------->>>>",in (1,index_c(mybin ,bin (1))),&
+ in (1,index_c(mybin ,bin (2))),&
+ in (1,index_c(mybin ,bin (3)))
+print *, "TEST     -------->>>>",out(1,index_c(mybout,bout(1)))
+
+
 end subroutine ff_swd_lwb2pgt
 
 type(fnds) function ff_swd_lwb2pgt_def()
 call init(ff_swd_lwb2pgt_def,"ff_swd_lwb2pgt",&
- [character(len=10) :: "B11002","B14018","B14017"],&
+ [character(len=10) :: "B11002","B14018","B14196"],&
  [character(len=10) :: "B11193"],0,func=ff_swd_lwb2pgt)
 end function ff_swd_lwb2pgt_def
+
+
+subroutine  swd_alb2swb(mybin,mybout,bin,bout,in,out)
+CHARACTER(len=10),intent(in) :: mybin(:)  !< vector table B  WMO input  in user's data
+CHARACTER(len=10),intent(in) :: mybout(:) !< vector table B  WMO output in user's data
+CHARACTER(len=10),intent(in) :: bin(:)    !< vector table B  WMO input used by function
+CHARACTER(len=10),intent(in) :: bout(:)   !< vector table B  WMO output used by function
+real, intent(in) :: in(:,:)
+real, intent(out) :: out(:,:)
+
+out(:,index_c(mybout,bout(1)))= swbudget(in (:,index_c(mybin ,bin (1))),in (:,index_c(mybin ,bin (2))))
+
+end subroutine swd_alb2swb
+
+type(fnds) function swd_alb2swb_def()
+call init(swd_alb2swb_def,"swd_alb2swb",&
+ [character(len=10) :: "B14018","B14019"],&
+ [character(len=10) :: "B14197"],0,func=swd_alb2swb)
+end function swd_alb2swb_def
+
+
+subroutine  swb_alb2swd(mybin,mybout,bin,bout,in,out)
+CHARACTER(len=10),intent(in) :: mybin(:)  !< vector table B  WMO input  in user's data
+CHARACTER(len=10),intent(in) :: mybout(:) !< vector table B  WMO output in user's data
+CHARACTER(len=10),intent(in) :: bin(:)    !< vector table B  WMO input used by function
+CHARACTER(len=10),intent(in) :: bout(:)   !< vector table B  WMO output used by function
+real, intent(in) :: in(:,:)
+real, intent(out) :: out(:,:)
+
+out(:,index_c(mybout,bout(1)))= swdown(in (:,index_c(mybin ,bin (1))),in (:,index_c(mybin ,bin (2))))
+
+end subroutine swb_alb2swd
+
+type(fnds) function swb_alb2swd_def()
+call init(swb_alb2swd_def,"swb_alb2swd",&
+ [character(len=10) :: "B14197","B14019"],&
+ [character(len=10) :: "B14018"],0,func=swb_alb2swd)
+end function swb_alb2swd_def
 
 
 !!$QTORELHUM(Q,PT,T) 

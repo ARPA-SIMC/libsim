@@ -1767,13 +1767,13 @@ real function AVVEZ (P1,DD1,FF1,P2,DD2,FF2,ALAT)
     VVT=V2-V1 
  
 ! Calcolo le componenti del vento medio 
-    UVM=(U2+U1)/2.	
-    VVM=(V2+V1)/2. 
+    UVM=(U2+U1)/2.
+    VVM=(V2+V1)/2.
  
 ! Calcolo il valore del termine avvettivo 
     GRAD=UVT*VVM-VVT*UVM 
     AVVEZ=A/B*GRAD 
-    AVVEZ=AVVEZ*3600.			! in Kelvin/ore 
+    AVVEZ=AVVEZ*3600.            ! in Kelvin/ore 
 
   else
 
@@ -2205,8 +2205,8 @@ real function SI_SW(PT,T,TD,NT,PW,FF,DD,NW)
 
   if(t850 < -900 .or. t500 < -900 .or. td850 < -900.or. &
        &ff850 < 0 .or. ff500 < 0 .or. dd850 < 0 .or. dd500 < 0)then
-	SI_SW=rmiss
-        return
+    SI_SW=rmiss
+    return
   end if
 
   ff850=ff850*convff 
@@ -2497,6 +2497,37 @@ endif
 
 return
 end function PGT
+
+
+
+!> short wave radiation budget from incoming short wave radiation and albedo
+elemental real function swbudget (swd,alb)
+real,intent(in) :: swd !< incoming short wave radiation (W/m**2)
+real,intent(in) :: alb !< albedo (%)
+
+if (c_e(alb) .and. c_e(swd)) then
+  swbudget = swd*(1. - max(min(alb,100.),0.) /100.)
+else
+  swbudget=rmiss
+end if
+
+
+end function swbudget
+
+
+!> incoming short wave radiation from short wave radiation budget and albedo
+elemental real function swdown (swb,alb)
+real,intent(in) :: swb !< incoming short wave radiation (W/m**2)
+real,intent(in) :: alb !< albedo (%)
+
+if (c_e(alb) .and. c_e(swb) .and. alb < 100.) then
+  swdown = swb/(1.- max(min(alb,100.),0.)/100.)
+else
+  swdown=rmiss
+end if
+
+end function swdown
+
 
 end module termolib
 
