@@ -840,6 +840,6 @@ end subroutine quaconspa
 end module modqcspa
 
 
-!> \example esempio_qcspa.f90
-!! Un programma esempio del modulo qcspa
+!> \example v7d_qcspa.F90
+!! Sample program for module qcspa
 

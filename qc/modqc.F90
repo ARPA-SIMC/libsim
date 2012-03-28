@@ -67,88 +67,88 @@
 !! http://creativecommons.org/licenses/by-sa/3.0/deed.it
 !!  L'ambito statistico
 !! 
-!! Nel secondo caso la situazione √® modificata in quanto interviene un
+!! Nel secondo caso la situazione Ë modificata in quanto interviene un
 !! elemento nuovo, ovvero il caso. Si supponga di avere una moneta
 !! recante due facce contrassegnate con testa e croce. Volendo verificare
 !! l'ipotesi di bilanciamento della moneta si eseguono 20 lanci e si
 !! contano quelli che danno esito testa. La conseguenza del bilanciamento
 !! consiste nell'osservare un valore di teste attorno a 10. Tuttavia
-!! anche in ipotesi di bilanciamento non si pu√≤ escludere di osservare 20
-!! teste. D'altronde, l'ipotesi di bilanciamento √® logicamente
+!! anche in ipotesi di bilanciamento non si puÚ escludere di osservare 20
+!! teste. D'altronde, l'ipotesi di bilanciamento Ë logicamente
 !! compatibile con un numero di teste variante da 0 a 20. In tale
 !! contesto una qualsiasi decisione in merito all'ipotesi da verificare
 !! comporta un rischio di errore. Ad esempio rigettare l'ipotesi di
 !! bilanciamento della moneta avendo osservato 20 teste su 20 lanci
 !! comporta il rischio di prendere una decisione errata. Nel procedere
 !! alla verifica dell'ipotesi di bilanciamento della moneta, si ricorre a
-!! una variabile casuale X. Tale variabile casuale X √® una variabile
+!! una variabile casuale X. Tale variabile casuale X Ë una variabile
 !! aleatoria discreta con distribuzione binomiale B(20; 0,5), dove 20
-!! indica il numero di lanci e 0,5 la probabilit√† che si verifichi
+!! indica il numero di lanci e 0,5 la probabilit‡ che si verifichi
 !! l'evento "testa".
 !! 
 !! Il risultato sperimentale si deve quindi confrontare con tale
-!! distribuzione: quanto √® distante tale risultato dal valore medio della
+!! distribuzione: quanto Ë distante tale risultato dal valore medio della
 !! distribuzione B(20; 0,5)? Per rispondere alla domanda si deve
 !! individuare un valore caratteristico della distribuzione B(20;
-!! 0,5). Nel nostro caso tale valore caratteristico √® il valore medio
+!! 0,5). Nel nostro caso tale valore caratteristico Ë il valore medio
 !! 20/2 = 10. Per valutare la distanza tra il valore sperimentale e
-!! quello atteso si valuta la probabilit√† di ottenere un valore
-!! sperimentale lontano dal valore medio di B(20; 0,5), oss√¨a nel caso
+!! quello atteso si valuta la probabilit‡ di ottenere un valore
+!! sperimentale lontano dal valore medio di B(20; 0,5), ossia nel caso
 !! che dal nostro esperimento risulti X=15 (15 teste dopo 20 lanci), si
 !! calcola P{|X-10|>=15-10} quindi P{X<=5 oppure X>=15}=0,041.
 !! 
-!! Quindi, usando una moneta ben bilanciata, la probabilit√† di ottenere
-!! un numero di teste X >= 15 (oppure X <= 5) dopo 20 lanci √® pari a
-!! 0,041 ossia al 4,1%. Giudicando bassa tale probabilit√† si rifiuter√†
+!! Quindi, usando una moneta ben bilanciata, la probabilit‡ di ottenere
+!! un numero di teste X >= 15 (oppure X <= 5) dopo 20 lanci Ë pari a
+!! 0,041 ossia al 4,1%. Giudicando bassa tale probabilit‡ si rifiuter‡
 !! l'ipotesi di bilanciamento della moneta in esame, accettando quindi il
 !! rischio del 4,1% di compiere un errore nel rifiutarla. Di solito, il
-!! valore della probabilit√† adottato per rifiutare l'ipotesi nulla √® <
-!! 0,05. Tale valore √® detto livello di significativit√† ed √® definibile
-!! come segue: il livello di significativit√† sotto l'ipotesi nulla √® la
-!! probabilit√† di cadere nella zona di rifiuto quando l'ipotesi nulla √®
-!! vera. Tale livello di significativit√† si indica convenzionalmente con
-!! Œ±. Il livello di significativit√† osservato Œ± del test per il quale si
-!! rifiuterebbe l'ipotesi nulla √® detto valore-p (p-value). Riprendendo
-!! l'esempio sopra riportato il valore-p √® pari a 0,041. Adottando
-!! nell'esempio Œ± = 0,05, si rifiuter√† l'ipotesi se
+!! valore della probabilit‡ adottato per rifiutare l'ipotesi nulla Ë <
+!! 0,05. Tale valore Ë detto livello di significativit‡ ed Ë definibile
+!! come segue: il livello di significativit‡ sotto l'ipotesi nulla Ë la
+!! probabilit‡ di cadere nella zona di rifiuto quando l'ipotesi nulla Ë
+!! vera. Tale livello di significativit‡ si indica convenzionalmente con
+!! Œ±. Il livello di significativit‡ osservato Œ± del test per il quale si
+!! rifiuterebbe l'ipotesi nulla Ë detto valore-p (p-value). Riprendendo
+!! l'esempio sopra riportato il valore-p Ë pari a 0,041. Adottando
+!! nell'esempio Œ± = 0,05, si rifiuter‡ l'ipotesi se
 !! P{|X-10|>=x}<0,05. Tale condizione si raggiunge appunto se X<6 oppure
 !! X>14. Tale insieme di valori si definisce convenzionalmente come
 !! regione di rifiuto. Viceversa l'insieme { 6,7...14} si definisce regione
-!! di accettazione. In questo modo si √® costruita una regola di
+!! di accettazione. In questo modo si Ë costruita una regola di
 !! comportamento per verificare l'ipotesi di bilanciamento della
 !! moneta. Tale regola definisce il test statistico.
 !! 
 !! In termini tecnici l'ipotesi da verificare si chiama ipotesi nulla e
 !! si indica con H0, mentre l'ipotesi alternativa con H1. Nel caso della
-!! moneta, se p √® la probabilit√† di ottenere testa in un lancio la
+!! moneta, se p Ë la probabilit‡ di ottenere testa in un lancio la
 !! verifica di ipotesi si traduce nel seguente sistema:
 !! 
 !!     H_0: p = \frac{1}{2}
 !!     H_1: p \ne \frac{1}{2}
 !! 
-!! Come gi√† osservato, il modo di condurre un test statistico comporta un
+!! Come gi‡ osservato, il modo di condurre un test statistico comporta un
 !! rischio di errore. Nella pratica statistica si individuano due tipi di
 !! errori:
 !! 
-!!    1. rifiutare H0 quando √® vera, errore di primo tipo (Œ±) (o errore di prima specie);
-!!    2. accettare H0 quando √® falsa, errore di secondo tipo (Œ≤) (o errore di seconda specie).
+!!    1. rifiutare H0 quando Ë vera, errore di primo tipo (Œ±) (o errore di prima specie);
+!!    2. accettare H0 quando Ë falsa, errore di secondo tipo (Œ≤) (o errore di seconda specie).
 !! 
-!! Tornando all'esempio della moneta in cui la regione di accettazione √®
-!! data dall'insieme di valori {6..14}, la probabilit√† di rifiutare H0
-!! quando √® vera √® stato calcolato pari a 0,041.Tale probabilit√†
+!! Tornando all'esempio della moneta in cui la regione di accettazione Ë
+!! data dall'insieme di valori {6..14}, la probabilit‡ di rifiutare H0
+!! quando Ë vera Ë stato calcolato pari a 0,041.Tale probabilit‡
 !! rappresenta il rischio di incorrere in un errore di primo tipo e si
-!! indica con Œ±. Per valutare la probabilit√† di un errore di secondo tipo
-!! √® necessario specificare un valore di p in caso di verit√† di H1. Si
-!! supponga che p=0,80, in tal caso la distribuzione di X √® una
+!! indica con Œ±. Per valutare la probabilit‡ di un errore di secondo tipo
+!! Ë necessario specificare un valore di p in caso di verit‡ di H1. Si
+!! supponga che p=0,80, in tal caso la distribuzione di X Ë una
 !! B(20;0,80)
 !! 
-!! Con tale distribuzione di probabilit√†, l'errore di tipo 2 si calcola
-!! sommando le probabilit√† relative ai valori di X della zona di
-!! accettazione. Si trova quindi che la probabilit√† cercata √® pari a
-!! circa 0,20. Tale probabilit√† quantifica il rischio di incorrere
+!! Con tale distribuzione di probabilit‡, l'errore di tipo 2 si calcola
+!! sommando le probabilit‡ relative ai valori di X della zona di
+!! accettazione. Si trova quindi che la probabilit‡ cercata Ë pari a
+!! circa 0,20. Tale probabilit‡ quantifica il rischio di incorrere
 !! nell'errore di tipo 2. e si indica convenzionalmente con Œ≤. La
-!! quantit√† 1-Œ≤ si chiama potenza del test ed esprime quindi la capacit√†
-!! di un test statistico riconoscere la falsit√† di H0 quando questa √®
+!! quantit‡ 1-Œ≤ si chiama potenza del test ed esprime quindi la capacit‡
+!! di un test statistico riconoscere la falsit‡ di H0 quando questa Ë
 !! effettivamente falsa. La potenza del test trova applicazione nella
 !! pratica statistica in fase di pianificazione di un esperimento.
 !!

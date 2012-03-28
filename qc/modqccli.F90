@@ -24,7 +24,7 @@
 !! Il clima (NDI per percentili) sono suddivisi per macroarea, altezza dal livello del mare e mese, giorno e ora dell'anno.
 !!
 !! definizione delle macroaree:
-!! le macroaree sono tre bsate sulle macroaree definite piu'
+!! le macroaree sono tre basate sulle macroaree definite piu'
 !! generalmente al SIM; queste prime macroaree sono definite dal file di
 !! default polipciv4.dat. Attribuendo una numerazione che parte da Sud e Est e scorre prima verso Nord
 !! le nuove aree vengono cosi' definite:
@@ -43,15 +43,15 @@
 !! Area e percentile vengono utilizzati per costruire l'ident dell'anagrafica del Vol7d del clima.
 !! Il clima infatti è memorizzato su file nel formato binario di Vol7d o in database che offre migliori performances se si lavora su brevi periodi.
 !! The minumun pass in time is defined to be 1 hour.
-!! We use conventional values for data to specify wich data was taken in account in compute:
-!! 1001 : yearly one only value
-!! 1002 : dayly mounthly values
-!! 1003 : 10 days period values
-!! 1004 : only mounthly values
-!! The other conventional month, day, hour should be 01 when they are not significative.
+!! The following conventional code values are used to specify which data was taken into account in the  computation:
+!! year=1001 : yearly values (no other time dependence)
+!! year=1002 : dayly  values of a specified month (depends by day and month)
+!! year=1003 : 10 day period of a specified month (depends by day(1,11,21) and month)
+!! year=1004 : mounthly values (depend by month)
+!! The other conventional month hour and minute should be 01 when they are not significative, day should be 1 or, if year=1003 is used, 1,11 or 21.
 !! 
 !! Ecco come viene definito l'ident del clima:
-!! \arg write(ident,'("BOX-",2i3.3)')iarea,desc   ! macro-area e descrittore
+!! \arg write(ident,'("BOX",2i3.3)')iarea,desc   ! macro-area e descrittore
 !! dove iarea è codice del bounding box o cluster e descrittore rappresenta una specifica dei dati.
 !!
 !! Il network utilizzato nel volume del clima descrive le variabili contenute e gli eventuali attributi:
@@ -819,6 +819,6 @@ end function supermacroa
 end module modqccli
 
 
-!> \example esempio_qccli.f90
-!! Un programma esempio del modulo qccli
+!> \example v7d_qccli.f90
+!! Sample program for module qccli
 

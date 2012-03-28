@@ -259,7 +259,7 @@ CALL optionparser_add(opt, ' ', 'comp-frac-valid', comp_frac_valid, 1., help= &
 CALL optionparser_add(opt, ' ', 'comp-sort', comp_sort, help= &
  'sort all sortable dimensions of the volume after the computations')
 CALL optionparser_add(opt, ' ', 'comp-fill-data', comp_fill_data, help= &
- 'fill missing istantaneous data with nearest in time inside fill-step')
+ 'fill missing istantaneous data with nearest in time inside comp-fill-tolerance')
 CALL optionparser_add(opt, ' ', 'comp-fill-tolerance', comp_fill_tolerance, '0000000001 00:00:00.000', help= &
  'length of filling step in the format &
  &''YYYYMMDDDD hh:mm:ss.msc'', it can be simplified up to the form ''D hh''')
@@ -407,6 +407,26 @@ ELSE IF (i < 1) THEN
   CALL raise_fatal_error()
 ENDIF
 CALL getarg(iargc(), output_file)
+
+
+if (comp_qc_ndi .and. comp_qc_perc) then
+  CALL optionparser_printhelp(opt)
+  CALL l4f_category_log(category, L4F_ERROR, &
+   'arguments --comp_qc_ndi and --comp_qc_perc')
+  CALL l4f_category_log(category, L4F_ERROR, &
+   'are exclusive')
+  CALL raise_fatal_error()
+end if
+
+if ((comp_qc_ndi .or. comp_qc_perc) .and. comp_stat_proc /= "") then
+  CALL optionparser_printhelp(opt)
+  CALL l4f_category_log(category, L4F_ERROR, &
+   'arguments --comp_qc_ndi and --comp_qc_perc')
+  CALL l4f_category_log(category, L4F_ERROR, &
+   'cannot be used together with --comp-stat-proc')
+  CALL raise_fatal_error()
+end if
+
 
 ! generate network
 IF (LEN_TRIM(network_list) > 0) THEN
@@ -882,10 +902,9 @@ IF (pre_trans_type /= '') THEN
 ENDIF
 
 
+cyclicdt = cyclicdatetime_new(chardate=comp_cyclicdatetime)
 
 IF (comp_fill_data ) THEN
-
-  cyclicdt = cyclicdatetime_new(chardate=comp_cyclicdatetime)
 
   CALL init(v7d_comp1)
   CALL vol7d_fill_time(v7d, v7d_comp1, step=c_i, start=c_s, stopp=comp_e, cyclicdt=cyclicdt)
@@ -900,8 +919,6 @@ ENDIF
 
 
 IF (comp_filter_time ) THEN
-
-  cyclicdt = cyclicdatetime_new(chardate=comp_cyclicdatetime)
 
   CALL init(v7d_comp1)
   CALL vol7d_filter_time(v7d, v7d_comp1, step=c_i, start=c_s, stopp=comp_e, cyclicdt=cyclicdt)
@@ -997,14 +1014,13 @@ end if
 
 
 if (comp_qc_ndi) then
-  call vol7d_compute_NormalizedDensityIndex(v7d,v7dtmp, perc_vals=(/(10.*i,i=0,10)/))
+  call vol7d_compute_NormalizedDensityIndex(v7d,v7dtmp, perc_vals=(/(10.*i,i=0,10)/),cyclicdt=cyclicdt)
   call delete(v7d)
   v7d=v7dtmp
   CALL init(v7dtmp) ! detach it
-end if
 
-if (comp_qc_perc) then
-  call vol7d_compute_percentile(v7d,v7dtmp, perc_vals=(/25.,50.,75./))
+else if (comp_qc_perc) then
+  call vol7d_compute_percentile(v7d,v7dtmp, perc_vals=(/25.,50.,75./),cyclicdt=cyclicdt)
   call delete(v7d)
   v7d=v7dtmp
   CALL init(v7dtmp) ! detach it
