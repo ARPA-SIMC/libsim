@@ -41,19 +41,19 @@ IMPLICIT NONE
 
 INTEGER, PARAMETER :: dateint=SELECTED_INT_KIND(13)
 
-!> Classe che indica un istante temporale assoluto.
+!> Class for expressing an absolute time value.
 TYPE datetime
   PRIVATE
   INTEGER(KIND=int_ll) :: iminuti
 END TYPE  datetime
 
-!> Classe che indica un intervallo temporale relativo.
-!! Pu� assumere anche valori <0. Pu� assumere  valori "puri", cio�
-!! intervalli temporali di durata fissa, e valori "popolari", cio�
-!! intervalli di durata variabile in unit� di mesi e/o anni, o anche
-!! valori misti, cio� mesi/anni + un intervallo fisso; tuttavia negli
-!! ultimi 2 casi le operazioni che si possono effettuare con
-!! oggetti di questa classe sono limitate.
+!> Class for expressing a relative time interval.
+!! It can take also negative values. According to how it is
+!! initilasied, it can indicate an interval of fixed duration, or a
+!! "calendar" interval of variable duration in units of months and/or
+!! years or even a mix of the two, however, in the latter two cases
+!! the operations that can be made with objects of this class are
+!! restricted.
 TYPE timedelta
   PRIVATE
   INTEGER(KIND=int_ll) :: iminuti
@@ -61,9 +61,9 @@ TYPE timedelta
 END TYPE timedelta
 
 
-!> Class to specify a cyclic datetime
-!! You need it to specify for example every january in all years or
-!! the same time for all days and so on
+!> Class for expressing a cyclic datetime.
+!! It can be used to specify, for example, every January in all years
+!! or the same time for all days and so on.
 TYPE cyclicdatetime
   PRIVATE
   INTEGER :: minute
@@ -72,8 +72,6 @@ TYPE cyclicdatetime
   INTEGER :: tendaysp
   INTEGER :: month
 END TYPE cyclicdatetime
-
-
 
 
 !> valore mancante per datetime
@@ -170,7 +168,7 @@ END INTERFACE
 !! scalare-vettore(1-d) (ma non vettore(1-d)-scalare o tra array con pi�
 !! di 1 dimensione e scalari).
 INTERFACE OPERATOR (==)
-  MODULE PROCEDURE datetime_eq, datetime_eqsv, timedelta_eq, timedelta_eqsv, &
+  MODULE PROCEDURE datetime_eq, timedelta_eq, &
    cyclicdatetime_eq, cyclicdatetime_datetime_eq, datetime_cyclicdatetime_eq
 END INTERFACE
 
@@ -180,7 +178,7 @@ END INTERFACE
 !! scalare-vettore(1-d) (ma non vettore(1-d)-scalare o tra array con pi�
 !! di 1 dimensione e scalari).
 INTERFACE OPERATOR (/=)
-  MODULE PROCEDURE datetime_ne, datetime_nesv, timedelta_ne, timedelta_nesv
+  MODULE PROCEDURE datetime_ne, timedelta_ne
 END INTERFACE
 
 !> Operatore logico maggiore tra oggetti della stessa classe.
@@ -191,7 +189,7 @@ END INTERFACE
 !! non � specificato. Il risultato non � altres� specificato nel caso di oggetti
 !! \a timedelta "popolari" o misti.
 INTERFACE OPERATOR (>)
-  MODULE PROCEDURE datetime_gt, datetime_gtsv, timedelta_gt, timedelta_gtsv
+  MODULE PROCEDURE datetime_gt, timedelta_gt
 END INTERFACE
 
 !> Operatore logico minore tra oggetti della stessa classe.
@@ -202,7 +200,7 @@ END INTERFACE
 !! non � specificato. Il risultato non � altres� specificato nel caso di oggetti
 !! \a timedelta "popolari" o misti.
 INTERFACE OPERATOR (<)
-  MODULE PROCEDURE datetime_lt, datetime_ltsv, timedelta_lt, timedelta_ltsv
+  MODULE PROCEDURE datetime_lt, timedelta_lt
 END INTERFACE
 
 !> Operatore logico maggiore-uguale tra oggetti della stessa classe.
@@ -213,7 +211,7 @@ END INTERFACE
 !! non � specificato. Il risultato non � altres� specificato nel caso di oggetti
 !! \a timedelta "popolari" o misti.
 INTERFACE OPERATOR (>=)
-  MODULE PROCEDURE datetime_ge, datetime_gesv, timedelta_ge, timedelta_gesv
+  MODULE PROCEDURE datetime_ge, timedelta_ge
 END INTERFACE
 
 !> Operatore logico minore-uguale tra oggetti della stessa classe.
@@ -224,7 +222,7 @@ END INTERFACE
 !! non � specificato. Il risultato non � altres� specificato nel caso di oggetti
 !! \a timedelta "popolari" o misti.
 INTERFACE OPERATOR (<=)
-  MODULE PROCEDURE datetime_le, datetime_lesv, timedelta_le, timedelta_lesv
+  MODULE PROCEDURE datetime_le, timedelta_le
 END INTERFACE
 
 !> Operatore di somma per datetime e timedelta. Solo alcune combinazioni
@@ -313,22 +311,22 @@ END INTERFACE
 
 !> to document
 INTERFACE count_distinct
-  MODULE PROCEDURE   count_distinct_datetime
+  MODULE PROCEDURE count_distinct_datetime
 END INTERFACE
 
 !> to document
 INTERFACE pack_distinct
-  MODULE PROCEDURE    pack_distinct_datetime
+  MODULE PROCEDURE pack_distinct_datetime
 END INTERFACE
 
 !> to document
 INTERFACE map_distinct
-  MODULE PROCEDURE   map_distinct_datetime
+  MODULE PROCEDURE map_distinct_datetime
 END INTERFACE
 
 !> to document
 INTERFACE map_inv_distinct
-  MODULE PROCEDURE  map_inv_distinct_datetime
+  MODULE PROCEDURE map_inv_distinct_datetime
 END INTERFACE
 
 !> Index method.
@@ -352,7 +350,7 @@ PRIVATE
 
 PUBLIC datetime, datetime_miss, datetime_utc, datetime_local, &
  datetime_min, datetime_max, &
- datetime_new, init, delete, getval, to_char, t2c, &
+ datetime_new, datetime_new_now, init, delete, getval, to_char, t2c, &
  read_unit, write_unit, &
  OPERATOR(==), OPERATOR(/=), OPERATOR(>), OPERATOR(<), &
  OPERATOR(>=), OPERATOR(<=), OPERATOR(+), OPERATOR(-), &
@@ -373,33 +371,130 @@ CONTAINS
 ! == datetime ==
 ! ==============
 
-!> Costruisce un oggetto \a datetime con i parametri opzionali forniti.
-!! Se non viene passato nulla lo inizializza a 1/1/1.
-!! Questa � la versione \c FUNCTION, in stile F2003, del costruttore, da preferire
-!! rispetto alla versione \c SUBROUTINE \c init.
-!! Notare che i gruppi di parametri opzionali (\a year, \a month, \a hour,
-!! \a minute, \a msec), (\a unixtime), (\a isodate), (\a simpledate),
-!! (\a oraclesimdate) sono mutualmente escludentesi; \a oraclesimedate �
-!! obsoleto, usare piuttosto \a simpledate.
-elemental FUNCTION datetime_new(year, month, day, hour, minute, msec, &
- unixtime, isodate, simpledate, oraclesimdate) RESULT(this)
-INTEGER,INTENT(IN),OPTIONAL :: year !< anno d.C., se � specificato, tutti gli eventuali parametri tranne \a month, \a day, \a hour, \a minute e \a msec sono ignorati; per un problema non risolto, sono ammessi solo anni >0 (d.C.)
-INTEGER,INTENT(IN),OPTIONAL :: month !< mese, default=1 se � specificato \a year; pu� assumere anche valori <1 o >12, l'oggetto finale si aggiusta coerentemente
-INTEGER,INTENT(IN),OPTIONAL :: day !< mese, default=1 se � specificato \a year; pu� anch'esso assumere valori fuori dai limiti canonici
-INTEGER,INTENT(IN),OPTIONAL :: hour !< ore, default=0 se � specificato \a year; pu� anch'esso assumere valori fuori dai limiti canonici
-INTEGER,INTENT(IN),OPTIONAL :: minute !< minuti, default=0 se � specificato \a year; pu� anch'esso assumere valori fuori dai limiti canonici
-INTEGER,INTENT(IN),OPTIONAL :: msec !< millisecondi, default=0 se � specificato \a year; pu� anch'esso assumere valori fuori dai limiti canonici
-INTEGER(kind=int_ll),INTENT(IN),OPTIONAL :: unixtime !< inizializza l'oggetto a \a unixtime secondi dopo il 1/1/1970 (convenzione UNIX, notare che il parametro deve essere un intero a 8 byte), se � presente tutto il resto � ignorato
-CHARACTER(len=*),INTENT(IN),OPTIONAL :: isodate !< inizializza l'oggetto ad una data espressa nel formato \c AAAA-MM-GG \c hh:mm:ss.msc, un sottoinsieme del formato noto come \a ISO, la parte iniziale \c AAAA-MM-GG � obbligatoria, il resto � opzionale
-CHARACTER(len=*),INTENT(IN),OPTIONAL :: simpledate !< inizializza l'oggetto ad una data espressa nel formato \c AAAAMMGGhhmmssmsc, la parte iniziale \c AAAAMMGG � obbligatoria, il resto � opzionale, da preferire rispetto a \a oraclesimdate
-CHARACTER(len=12),INTENT(IN),OPTIONAL :: oraclesimdate !< inizializza l'oggetto ad una data espressa nel formato \c AAAAMMGGhhmm, come nelle routine per l'accesso al db Oracle del SIM.
+!> Initialize a \a datetime object according to the provided arguments
+!! If no arguments are passed a missing object is created.  Notice
+!! that the optional parameter groups (\a year, \a month, \a hour, \a
+!! minute, \a msec), (\a unixtime), (\a isodate), (\a simpledate) are
+!! mutually exclusive, the results are not guaranteed if arguments of
+!! different groups are present.
+ELEMENTAL FUNCTION datetime_new(year, month, day, hour, minute, msec, &
+ unixtime, isodate, simpledate) RESULT(this)
+INTEGER,INTENT(IN),OPTIONAL :: year !< year a.C.; for reasons not yet investigated, only years >0 (a.C.) are allowed
+INTEGER,INTENT(IN),OPTIONAL :: month !< month, default=1 if \a year is present, it can also be outside the interval 1-12, the function behaves reasonably in that case
+INTEGER,INTENT(IN),OPTIONAL :: day !< day, default=1 if \a year is present, it can have non canonical values too
+INTEGER,INTENT(IN),OPTIONAL :: hour !< hours, default=0 if \a year is present, it can have non canonical values too
+INTEGER,INTENT(IN),OPTIONAL :: minute !< minutes, default=0 if \a year is present, it can have non canonical values too
+INTEGER,INTENT(IN),OPTIONAL :: msec !< milliseconds, default=0 if \a year is present, it can have non canonical values too
+INTEGER(kind=int_ll),INTENT(IN),OPTIONAL :: unixtime !< initialize the object to \a unixtime seconds after 1/1/1970, UNIX convention, notice that this is an 8-byte integer
+CHARACTER(len=*),INTENT(IN),OPTIONAL :: isodate !< initialize the object to a date expressed as a string \c YYYY-MM-DD \c hh:mm:ss.msc, (iso format), the initial part YYYY-MM-DD is compulsory, the remaining part is optional
+CHARACTER(len=*),INTENT(IN),OPTIONAL :: simpledate !< initialize the object to a date expressed as a string \c YYYYMMDDhh:mm:ss.msc, (iso format), the initial part YYYYMMDD is compulsory, the remaining part is optional
 
-TYPE(datetime) :: this !< oggetto da inizializzare
+TYPE(datetime) :: this
+INTEGER :: lyear, lmonth, lday, lhour, lminute, lsec, lmsec, ier
+CHARACTER(len=23) :: datebuf
 
-CALL datetime_init_elemental(this, year, month, day, hour, minute, msec, &
- unixtime, isodate, simpledate, oraclesimdate)
+IF (PRESENT(year)) THEN ! anno/mese/giorno, ecc.
+  lyear = year
+  IF (PRESENT(month)) THEN
+    lmonth = month
+  ELSE
+    lmonth = 1
+  ENDIF
+  IF (PRESENT(day)) THEN
+    lday = day
+  ELSE
+    lday = 1
+  ENDIF
+  IF (PRESENT(hour)) THEN
+    lhour = hour
+  ELSE
+    lhour = 0
+  ENDIF
+  IF (PRESENT(minute)) THEN
+    lminute = minute
+  ELSE
+    lminute = 0
+  ENDIF
+  IF (PRESENT(msec)) THEN
+    lmsec = msec
+  ELSE
+    lmsec = 0
+  ENDIF
+
+  if (c_e(lday) .and. c_e(lmonth) .and. c_e(lyear) .and. c_e(lhour) &
+   .and. c_e(lminute) .and. c_e(lmsec)) then
+    CALL jeladata5_1(lday, lmonth, lyear, lhour, lminute, lmsec, this%iminuti)
+  else
+    this=datetime_miss
+  end if
+
+ELSE IF (PRESENT(unixtime)) THEN ! secondi dal 01/01/1970 (unix)
+  if (c_e(unixtime)) then
+    this%iminuti = (unixtime + unsec)*1000
+  else
+    this=datetime_miss    
+  end if
+
+ELSE IF (PRESENT(isodate)) THEN ! formato iso YYYY-MM-DD hh:mm:ss.msc
+
+  IF (c_e(isodate) .AND. LEN_TRIM(isodate) > 0) THEN
+    datebuf(1:23) = '0001-01-01 00:00:00.000'
+    datebuf(1:MIN(LEN(isodate),23)) = isodate(1:MIN(LEN(isodate),23))
+    READ(datebuf,'(I4,1X,I2,1X,I2,1X,I2,1X,I2,1X,I2,1X,I3)', err=100) &
+     lyear, lmonth, lday, lhour, lminute, lsec, lmsec
+    lmsec = lmsec + lsec*1000
+    CALL jeladata5_1(lday, lmonth, lyear, lhour, lminute, lmsec, this%iminuti)
+    RETURN
+    
+100 CONTINUE ! condizione di errore in isodate
+    CALL delete(this)
+    RETURN
+  ELSE
+    this = datetime_miss
+  ENDIF
+
+ELSE IF (PRESENT(simpledate)) THEN ! formato YYYYMMDDhhmmssmsc
+  IF (c_e(simpledate) .AND. LEN_TRIM(simpledate) > 0)THEN
+    datebuf(1:17) = '00010101000000000'
+    datebuf(1:MIN(LEN(simpledate),17)) = simpledate(1:MIN(LEN(simpledate),17))
+    READ(datebuf,'(I4.4,5I2.2,I3.3)', err=120) &
+     lyear, lmonth, lday, lhour, lminute, lsec, lmsec
+    lmsec = lmsec + lsec*1000
+    CALL jeladata5_1(lday, lmonth, lyear, lhour, lminute, lmsec, this%iminuti)
+    RETURN
+
+120 CONTINUE ! condizione di errore in simpledate
+    CALL delete(this)
+    RETURN
+  ELSE
+    this = datetime_miss
+  ENDIF
+
+ELSE
+  this = datetime_miss
+ENDIF
 
 END FUNCTION datetime_new
+
+
+!> Initialize a datetime object with the current system time.
+FUNCTION datetime_new_now(now) RESULT(this)
+INTEGER,INTENT(IN) :: now !< select the time for initialisation, \a datetime_utc for UTC (preferred) or \a datetime_local for local time
+TYPE(datetime) :: this
+
+INTEGER :: dt(8)
+
+IF (c_e(now)) THEN
+  CALL DATE_AND_TIME(values=dt)
+  IF (now /= datetime_local) dt(6) = dt(6) - dt(4) ! back to UTC
+  CALL init(this, year=dt(1), month=dt(2), day=dt(3), hour=dt(5), minute=dt(6), &
+   msec=dt(7)*1000+dt(8))
+ELSE
+  this = datetime_miss
+ENDIF
+
+END FUNCTION datetime_new_now
+
 
 !> Costruisce un oggetto \a datetime con i parametri opzionali forniti.
 !! Se non viene passato nulla lo inizializza a 1/1/1.
@@ -422,254 +517,20 @@ CHARACTER(len=*),INTENT(IN),OPTIONAL :: simpledate !< inizializza l'oggetto ad u
 CHARACTER(len=12),INTENT(IN),OPTIONAL :: oraclesimdate !< inizializza l'oggetto ad una data espressa nel formato \c AAAAMMGGhhmm, come nelle routine per l'accesso al db Oracle del SIM.
 INTEGER,INTENT(IN),OPTIONAL :: now !< inizializza l'oggetto all'istante corrente, se \a � \a datetime_utc inizializza con l'ora UTC (preferibile), se � \a datetime_local usa l'ora locale
 
-INTEGER :: lyear, lmonth, lday, lhour, lminute, lsec, lmsec, ier
-INTEGER :: dt(8)
-CHARACTER(len=23) :: datebuf
-
-IF (PRESENT(year)) THEN ! anno/mese/giorno, ecc.
-  lyear = year
-  IF (PRESENT(month)) THEN
-    lmonth = month
-  ELSE
-    lmonth = 1
-  ENDIF
-  IF (PRESENT(day)) THEN
-    lday = day
-  ELSE
-    lday = 1
-  ENDIF
-  IF (PRESENT(hour)) THEN
-    lhour = hour
-  ELSE
-    lhour = 0
-  ENDIF
-  IF (PRESENT(minute)) THEN
-    lminute = minute
-  ELSE
-    lminute = 0
-  ENDIF
-  IF (PRESENT(msec)) THEN
-    lmsec = msec
-  ELSE
-    lmsec = 0
-  ENDIF
-
-  if (c_e(lday) .and. c_e(lmonth) .and. c_e(lyear) .and. c_e(lhour) &
-   .and. c_e(lminute) .and. c_e(lmsec)) then
-    CALL jeladata5_1(lday, lmonth, lyear, lhour, lminute, lmsec, this%iminuti)
-  else
-    this=datetime_miss
-  end if
-
-ELSE IF (PRESENT(unixtime)) THEN ! secondi dal 01/01/1970 (unix)
-  if (c_e(unixtime)) then
-    this%iminuti = (unixtime + unsec)*1000
-  else
-    this=datetime_miss    
-  end if
-
-ELSE IF (PRESENT(isodate)) THEN ! formato iso YYYY-MM-DD hh:mm:ss.msc
-
-  IF (c_e(isodate) .AND. LEN_TRIM(isodate) > 0) THEN
-    datebuf(1:23) = '0001-01-01 00:00:00.000'
-    datebuf(1:MIN(LEN(isodate),23)) = isodate(1:MIN(LEN(isodate),23))
-    READ(datebuf,'(I4,1X,I2,1X,I2,1X,I2,1X,I2,1X,I2,1X,I3)', err=100) &
-     lyear, lmonth, lday, lhour, lminute, lsec, lmsec
-    lmsec = lmsec + lsec*1000
-    CALL jeladata5_1(lday, lmonth, lyear, lhour, lminute, lmsec, this%iminuti)
-    RETURN
-    
-100 CONTINUE ! condizione di errore in isodate
-    CALL delete(this)
-    CALL l4f_log(L4F_ERROR, 'isodate '//TRIM(isodate)//' not valid')
-    CALL raise_error()
-    RETURN
-  ELSE
-    this = datetime_miss
-  ENDIF
-
-ELSE IF (PRESENT(simpledate)) THEN ! formato YYYYMMDDhhmmssmsc
-  IF (c_e(simpledate) .AND. LEN_TRIM(simpledate) > 0)THEN
-    datebuf(1:17) = '00010101000000000'
-    datebuf(1:MIN(LEN(simpledate),17)) = simpledate(1:MIN(LEN(simpledate),17))
-    READ(datebuf,'(I4.4,5I2.2,I3.3)', err=120) &
-     lyear, lmonth, lday, lhour, lminute, lsec, lmsec
-    lmsec = lmsec + lsec*1000
-    CALL jeladata5_1(lday, lmonth, lyear, lhour, lminute, lmsec, this%iminuti)
-    RETURN
-
-120 CONTINUE ! condizione di errore in simpledate
-    CALL delete(this)
-    CALL l4f_log(L4F_ERROR, 'simpledate '//TRIM(simpledate)//' not valid')
-    CALL raise_error()
-    RETURN
-  ELSE
-    this = datetime_miss
-  ENDIF
-
-
-ELSE IF (PRESENT(oraclesimdate)) THEN ! formato YYYYMMDDhhmm
-
-  if(c_e(oraclesimdate))then
-    CALL l4f_log(L4F_WARN, 'in datetime_init, parametro oraclesimdate '// &
-     'obsoleto, usare piuttosto simpledate')
-    READ(oraclesimdate,'(I4,4I2)', iostat=ier) lyear, lmonth, lday, lhour, lminute
-    IF (ier /= 0) THEN
-      CALL delete(this)
-      CALL l4f_log(L4F_ERROR, 'oraclesimdate '//TRIM(oraclesimdate)//' not valid')
-      CALL raise_error()
-      RETURN
-    ENDIF
-    CALL jeladata5_1(lday,lmonth,lyear,lhour,lminute,0,this%iminuti)
-  else
-    this = datetime_miss
-  end if
-
-ELSE IF (PRESENT(now)) THEN
-  if(c_e(now))then
-    CALL DATE_AND_TIME(values=dt)
-    IF (now /= datetime_local) dt(6) = dt(6) - dt(4) ! back to UTC
-    CALL init(this, year=dt(1), month=dt(2), day=dt(3), hour=dt(5), minute=dt(6), &
-     msec=dt(7)*1000+dt(8))
-  else
-    this = datetime_miss
-  end if
-
+IF (PRESENT(now)) THEN
+  this = datetime_new(now)
 ELSE
-  this = datetime_miss
+  this = datetime_new(year, month, day, hour, minute, msec, &
+   unixtime, isodate, simpledate)
 ENDIF
 
 END SUBROUTINE datetime_init
 
 
-!> ELEMENTAL Costruisce un oggetto \a datetime con i parametri opzionali forniti.
-!! Se non viene passato nulla lo inizializza a 1/1/1.
-!! Notare che i gruppi di parametri opzionali (\a year, \a month, \a hour,
-!! \a minute, \a msec), (\a unixtime), (\a isodate), (\a simpledate),
-!! (\a oraclesimdate) sono mutualmente escludentesi; \a oraclesimedate �
-!! obsoleto, usare piuttosto \a simpledate.
-elemental SUBROUTINE datetime_init_elemental(this, year, month, day, hour, minute, msec, &
- unixtime, isodate, simpledate, oraclesimdate)
-TYPE(datetime),INTENT(INOUT) :: this !< oggetto da inizializzare
-INTEGER,INTENT(IN),OPTIONAL :: year !< anno d.C., se � specificato, tutti gli eventuali parametri tranne \a month, \a day, \a hour e \a minute sono ignorati; per un problema non risolto, sono ammessi solo anni >0 (d.C.)
-INTEGER,INTENT(IN),OPTIONAL :: month !< mese, default=1 se � specificato \a year; pu� assumere anche valori <1 o >12, l'oggetto finale si aggiusta coerentemente
-INTEGER,INTENT(IN),OPTIONAL :: day !< mese, default=1 se � specificato \a year; pu� anch'esso assumere valori fuori dai limiti canonici
-INTEGER,INTENT(IN),OPTIONAL :: hour !< ore, default=0 se � specificato \a year; pu� anch'esso assumere valori fuori dai limiti canonici
-INTEGER,INTENT(IN),OPTIONAL :: minute !< minuti, default=0 se � specificato \a year; pu� anch'esso assumere valori fuori dai limiti canonici
-INTEGER,INTENT(IN),OPTIONAL :: msec !< millisecondi, default=0 se � specificato \a year; pu� anch'esso assumere valori fuori dai limiti canonici
-INTEGER(kind=int_ll),INTENT(IN),OPTIONAL :: unixtime !< inizializza l'oggetto a \a unixtime secondi dopo il 1/1/1970 (convenzione UNIX, notare che il parametro deve essere un intero a 8 byte)
-CHARACTER(len=*),INTENT(IN),OPTIONAL :: isodate !< inizializza l'oggetto ad una data espressa nel formato \c AAAA-MM-GG \c hh:mm:ss.msc, un sottoinsieme del formato noto come \a ISO, la parte iniziale \c AAAA-MM-GG � obbligatoria, il resto � opzionale
-CHARACTER(len=*),INTENT(IN),OPTIONAL :: simpledate !< inizializza l'oggetto ad una data espressa nel formato \c AAAAMMGGhhmmssmsc, la parte iniziale \c AAAAMMGG � obbligatoria, il resto � opzionale, da preferire rispetto a \a oraclesimdate
-CHARACTER(len=12),INTENT(IN),OPTIONAL :: oraclesimdate !< inizializza l'oggetto ad una data espressa nel formato \c AAAAMMGGhhmm, come nelle routine per l'accesso al db Oracle del SIM.
-
-INTEGER :: lyear, lmonth, lday, lhour, lminute, lsec, lmsec, ier
-CHARACTER(len=23) :: datebuf
-
-IF (PRESENT(year)) THEN ! anno/mese/giorno, ecc.
-  lyear = year
-  IF (PRESENT(month)) THEN
-    lmonth = month
-  ELSE
-    lmonth = 1
-  ENDIF
-  IF (PRESENT(day)) THEN
-    lday = day
-  ELSE
-    lday = 1
-  ENDIF
-  IF (PRESENT(hour)) THEN
-    lhour = hour
-  ELSE
-    lhour = 0
-  ENDIF
-  IF (PRESENT(minute)) THEN
-    lminute = minute
-  ELSE
-    lminute = 0
-  ENDIF
-  IF (PRESENT(msec)) THEN
-    lmsec = msec
-  ELSE
-    lmsec = 0
-  ENDIF
-
-  if (c_e(lday) .and. c_e(lmonth) .and. c_e(lyear) .and. c_e(lhour) &
-   .and. c_e(lminute) .and. c_e(lmsec)) then
-    CALL jeladata5_1(lday, lmonth, lyear, lhour, lminute, lmsec, this%iminuti)
-  else
-    this=datetime_miss
-  end if
-
-ELSE IF (PRESENT(unixtime)) THEN ! secondi dal 01/01/1970 (unix)
-  if (c_e(unixtime)) then
-    this%iminuti = (unixtime + unsec)*1000
-  else
-    this=datetime_miss    
-  end if
-
-ELSE IF (PRESENT(isodate)) THEN ! formato iso YYYY-MM-DD hh:mm:ss.msc
-
-  IF (c_e(isodate) .AND. LEN_TRIM(isodate) > 0) THEN
-    datebuf(1:23) = '0001-01-01 00:00:00.000'
-    datebuf(1:MIN(LEN(isodate),23)) = isodate(1:MIN(LEN(isodate),23))
-    READ(datebuf,'(I4,1X,I2,1X,I2,1X,I2,1X,I2,1X,I2,1X,I3)', err=100) &
-     lyear, lmonth, lday, lhour, lminute, lsec, lmsec
-    lmsec = lmsec + lsec*1000
-    CALL jeladata5_1(lday, lmonth, lyear, lhour, lminute, lmsec, this%iminuti)
-    RETURN
-    
-100 CONTINUE ! condizione di errore in isodate
-    CALL delete(this)
-    RETURN
-  ELSE
-    this = datetime_miss
-  ENDIF
-
-ELSE IF (PRESENT(simpledate)) THEN ! formato YYYYMMDDhhmmssmsc
-  IF (c_e(simpledate) .AND. LEN_TRIM(simpledate) > 0)THEN
-    datebuf(1:17) = '00010101000000000'
-    datebuf(1:MIN(LEN(simpledate),17)) = simpledate(1:MIN(LEN(simpledate),17))
-    READ(datebuf,'(I4.4,5I2.2,I3.3)', err=120) &
-     lyear, lmonth, lday, lhour, lminute, lsec, lmsec
-    lmsec = lmsec + lsec*1000
-    CALL jeladata5_1(lday, lmonth, lyear, lhour, lminute, lmsec, this%iminuti)
-    RETURN
-
-120 CONTINUE ! condizione di errore in simpledate
-    CALL delete(this)
-    RETURN
-  ELSE
-    this = datetime_miss
-  ENDIF
-
-
-ELSE IF (PRESENT(oraclesimdate)) THEN ! formato YYYYMMDDhhmm
-
-  if(c_e(oraclesimdate))then
-    !!CALL l4f_log(L4F_WARN, 'in datetime_init, parametro oraclesimdate '// &
-    !! 'obsoleto, usare piuttosto simpledate')
-    READ(oraclesimdate,'(I4,4I2)', iostat=ier) lyear, lmonth, lday, lhour, lminute
-    IF (ier /= 0) THEN
-      CALL delete(this)
-      RETURN
-    ENDIF
-    CALL jeladata5_1(lday,lmonth,lyear,lhour,lminute,0,this%iminuti)
-  else
-    this = datetime_miss
-  end if
-
-ELSE
-  this = datetime_miss
-ENDIF
-
-END SUBROUTINE datetime_init_elemental
-
-
-
-elemental SUBROUTINE datetime_delete(this)
+ELEMENTAL SUBROUTINE datetime_delete(this)
 TYPE(datetime),INTENT(INOUT) :: this
 
-this%iminuti = imiss
+this%iminuti = illmiss
 
 END SUBROUTINE datetime_delete
 
@@ -678,7 +539,7 @@ END SUBROUTINE datetime_delete
 !! modalit� desiderate. Qualsiasi combinazione dei parametri
 !! opzionali � consentita. \a oraclesimedate �
 !! obsoleto, usare piuttosto \a simpledate.
-pure SUBROUTINE datetime_getval(this, year, month, day, hour, minute, msec, &
+PURE SUBROUTINE datetime_getval(this, year, month, day, hour, minute, msec, &
  unixtime, isodate, simpledate, oraclesimdate)
 TYPE(datetime),INTENT(IN) :: this !< oggetto di cui restituire il valore
 INTEGER,INTENT(OUT),OPTIONAL :: year !< anno
@@ -840,20 +701,7 @@ res = this%iminuti == that%iminuti
 END FUNCTION datetime_eq
 
 
-FUNCTION datetime_eqsv(this, that) RESULT(res)
-TYPE(datetime),INTENT(IN) :: this, that(:)
-LOGICAL :: res(SIZE(that))
-
-INTEGER :: i
-
-DO i = 1, SIZE(that)
-  res(i) = this == that(i)
-ENDDO
-
-END FUNCTION datetime_eqsv
-
-
-elemental FUNCTION datetime_ne(this, that) RESULT(res)
+ELEMENTAL FUNCTION datetime_ne(this, that) RESULT(res)
 TYPE(datetime),INTENT(IN) :: this, that
 LOGICAL :: res
 
@@ -862,20 +710,7 @@ res = .NOT.(this == that)
 END FUNCTION datetime_ne
 
 
-FUNCTION datetime_nesv(this, that) RESULT(res)
-TYPE(datetime),INTENT(IN) :: this, that(:)
-LOGICAL :: res(SIZE(that))
-
-INTEGER :: i
-
-DO i = 1, SIZE(that)
-  res(i) = .NOT.(this == that(i))
-ENDDO
-
-END FUNCTION datetime_nesv
-
-
-elemental FUNCTION datetime_gt(this, that) RESULT(res)
+ELEMENTAL FUNCTION datetime_gt(this, that) RESULT(res)
 TYPE(datetime),INTENT(IN) :: this, that
 LOGICAL :: res
 
@@ -884,20 +719,7 @@ res = this%iminuti > that%iminuti
 END FUNCTION datetime_gt
 
 
-FUNCTION datetime_gtsv(this, that) RESULT(res)
-TYPE(datetime),INTENT(IN) :: this, that(:)
-LOGICAL :: res(SIZE(that))
-
-INTEGER :: i
-
-DO i = 1, SIZE(that)
-  res(i) = this > that(i)
-ENDDO
-
-END FUNCTION datetime_gtsv
-
-
-elemental FUNCTION datetime_lt(this, that) RESULT(res)
+ELEMENTAL FUNCTION datetime_lt(this, that) RESULT(res)
 TYPE(datetime),INTENT(IN) :: this, that
 LOGICAL :: res
 
@@ -906,20 +728,7 @@ res = this%iminuti < that%iminuti
 END FUNCTION datetime_lt
 
 
-FUNCTION datetime_ltsv(this, that) RESULT(res)
-TYPE(datetime),INTENT(IN) :: this, that(:)
-LOGICAL :: res(SIZE(that))
-
-INTEGER :: i
-
-DO i = 1, SIZE(that)
-  res(i) = this < that(i)
-ENDDO
-
-END FUNCTION datetime_ltsv
-
-
-elemental FUNCTION datetime_ge(this, that) RESULT(res)
+ELEMENTAL FUNCTION datetime_ge(this, that) RESULT(res)
 TYPE(datetime),INTENT(IN) :: this, that
 LOGICAL :: res
 
@@ -934,20 +743,7 @@ ENDIF
 END FUNCTION datetime_ge
 
 
-FUNCTION datetime_gesv(this, that) RESULT(res)
-TYPE(datetime),INTENT(IN) :: this, that(:)
-LOGICAL :: res(SIZE(that))
-
-INTEGER :: i
-
-DO i = 1, SIZE(that)
-  res(i) = this >= that(i)
-ENDDO
-
-END FUNCTION datetime_gesv
-
-
-elemental FUNCTION datetime_le(this, that) RESULT(res)
+ELEMENTAL FUNCTION datetime_le(this, that) RESULT(res)
 TYPE(datetime),INTENT(IN) :: this, that
 LOGICAL :: res
 
@@ -960,19 +756,6 @@ ELSE
 ENDIF
 
 END FUNCTION datetime_le
-
-
-FUNCTION datetime_lesv(this, that) RESULT(res)
-TYPE(datetime),INTENT(IN) :: this, that(:)
-LOGICAL :: res(SIZE(that))
-
-INTEGER :: i
-
-DO i = 1, SIZE(that)
-  res(i) = this <= that(i)
-ENDDO
-
-END FUNCTION datetime_lesv
 
 
 FUNCTION datetime_add(this, that) RESULT(res)
@@ -1436,20 +1219,7 @@ res = (this%iminuti == that%iminuti .AND. this%month == that%month)
 END FUNCTION timedelta_eq
 
 
-FUNCTION timedelta_eqsv(this, that) RESULT(res)
-TYPE(timedelta),INTENT(IN) :: this, that(:)
-LOGICAL :: res(SIZE(that))
-
-INTEGER :: i
-
-DO i = 1, SIZE(that)
-  res(i) = this == that(i)
-ENDDO
-
-END FUNCTION timedelta_eqsv
-
-
-elemental FUNCTION timedelta_ne(this, that) RESULT(res)
+ELEMENTAL FUNCTION timedelta_ne(this, that) RESULT(res)
 TYPE(timedelta),INTENT(IN) :: this, that
 LOGICAL :: res
 
@@ -1458,20 +1228,7 @@ res = .NOT.(this == that)
 END FUNCTION timedelta_ne
 
 
-FUNCTION timedelta_nesv(this, that) RESULT(res)
-TYPE(timedelta),INTENT(IN) :: this, that(:)
-LOGICAL :: res(SIZE(that))
-
-INTEGER :: i
-
-DO i = 1, SIZE(that)
-  res(i) = .NOT.(this == that(i))
-ENDDO
-
-END FUNCTION timedelta_nesv
-
-
-elemental FUNCTION timedelta_gt(this, that) RESULT(res)
+ELEMENTAL FUNCTION timedelta_gt(this, that) RESULT(res)
 TYPE(timedelta),INTENT(IN) :: this, that
 LOGICAL :: res
 
@@ -1480,20 +1237,7 @@ res = this%iminuti > that%iminuti
 END FUNCTION timedelta_gt
 
 
-FUNCTION timedelta_gtsv(this, that) RESULT(res)
-TYPE(timedelta),INTENT(IN) :: this, that(:)
-LOGICAL :: res(SIZE(that))
-
-INTEGER :: i
-
-DO i = 1, SIZE(that)
-  res(i) = this > that(i)
-ENDDO
-
-END FUNCTION timedelta_gtsv
-
-
-elemental FUNCTION timedelta_lt(this, that) RESULT(res)
+ELEMENTAL FUNCTION timedelta_lt(this, that) RESULT(res)
 TYPE(timedelta),INTENT(IN) :: this, that
 LOGICAL :: res
 
@@ -1502,20 +1246,7 @@ res = this%iminuti < that%iminuti
 END FUNCTION timedelta_lt
 
 
-FUNCTION timedelta_ltsv(this, that) RESULT(res)
-TYPE(timedelta),INTENT(IN) :: this, that(:)
-LOGICAL :: res(SIZE(that))
-
-INTEGER :: i
-
-DO i = 1, SIZE(that)
-  res(i) = this < that(i)
-ENDDO
-
-END FUNCTION timedelta_ltsv
-
-
-elemental FUNCTION timedelta_ge(this, that) RESULT(res)
+ELEMENTAL FUNCTION timedelta_ge(this, that) RESULT(res)
 TYPE(timedelta),INTENT(IN) :: this, that
 LOGICAL :: res
 
@@ -1528,19 +1259,6 @@ ELSE
 ENDIF
 
 END FUNCTION timedelta_ge
-
-
-FUNCTION timedelta_gesv(this, that) RESULT(res)
-TYPE(timedelta),INTENT(IN) :: this, that(:)
-LOGICAL :: res(SIZE(that))
-
-INTEGER :: i
-
-DO i = 1, SIZE(that)
-  res(i) = this >= that(i)
-ENDDO
-
-END FUNCTION timedelta_gesv
 
 
 elemental FUNCTION timedelta_le(this, that) RESULT(res)
@@ -1558,20 +1276,7 @@ ENDIF
 END FUNCTION timedelta_le
 
 
-FUNCTION timedelta_lesv(this, that) RESULT(res)
-TYPE(timedelta),INTENT(IN) :: this, that(:)
-LOGICAL :: res(SIZE(that))
-
-INTEGER :: i
-
-DO i = 1, SIZE(that)
-  res(i) = this <= that(i)
-ENDDO
-
-END FUNCTION timedelta_lesv
-
-
-FUNCTION timedelta_add(this, that) RESULT(res)
+ELEMENTAL FUNCTION timedelta_add(this, that) RESULT(res)
 TYPE(timedelta),INTENT(IN) :: this, that
 TYPE(timedelta) :: res
 
@@ -1581,7 +1286,7 @@ res%month = this%month + that%month
 END FUNCTION timedelta_add
 
 
-FUNCTION timedelta_sub(this, that) RESULT(res)
+ELEMENTAL FUNCTION timedelta_sub(this, that) RESULT(res)
 TYPE(timedelta),INTENT(IN) :: this, that
 TYPE(timedelta) :: res
 
@@ -1591,7 +1296,7 @@ res%month = this%month - that%month
 END FUNCTION timedelta_sub
 
 
-FUNCTION timedelta_mult(this, n) RESULT(res)
+ELEMENTAL FUNCTION timedelta_mult(this, n) RESULT(res)
 TYPE(timedelta),INTENT(IN) :: this
 INTEGER,INTENT(IN) :: n
 TYPE(timedelta) :: res
@@ -1602,7 +1307,7 @@ res%month = this%month*n
 END FUNCTION timedelta_mult
 
 
-FUNCTION timedelta_tlum(n, this) RESULT(res)
+ELEMENTAL FUNCTION timedelta_tlum(n, this) RESULT(res)
 INTEGER,INTENT(IN) :: n
 TYPE(timedelta),INTENT(IN) :: this
 TYPE(timedelta) :: res
@@ -1613,7 +1318,7 @@ res%month = this%month*n
 END FUNCTION timedelta_tlum
 
 
-FUNCTION timedelta_divint(this, n) RESULT(res)
+ELEMENTAL FUNCTION timedelta_divint(this, n) RESULT(res)
 TYPE(timedelta),INTENT(IN) :: this
 INTEGER,INTENT(IN) :: n
 TYPE(timedelta) :: res
@@ -1624,7 +1329,7 @@ res%month = this%month/n
 END FUNCTION timedelta_divint
 
 
-FUNCTION timedelta_divtd(this, that) RESULT(res)
+ELEMENTAL FUNCTION timedelta_divtd(this, that) RESULT(res)
 TYPE(timedelta),INTENT(IN) :: this, that
 INTEGER :: res
 
@@ -1643,7 +1348,7 @@ res%month = 0
 END FUNCTION timedelta_mod
 
 
-elemental FUNCTION datetime_timedelta_mod(this, that) RESULT(res)
+ELEMENTAL FUNCTION datetime_timedelta_mod(this, that) RESULT(res)
 TYPE(datetime),INTENT(IN) :: this
 TYPE(timedelta),INTENT(IN) :: that
 TYPE(timedelta) :: res
@@ -1658,7 +1363,7 @@ ENDIF
 END FUNCTION datetime_timedelta_mod
 
 
-FUNCTION timedelta_abs(this) RESULT(res)
+ELEMENTAL FUNCTION timedelta_abs(this) RESULT(res)
 TYPE(timedelta),INTENT(IN) :: this
 TYPE(timedelta) :: res
 

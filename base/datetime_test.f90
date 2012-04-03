@@ -20,14 +20,10 @@ PROGRAM datetime_test
 USE datetime_class
 IMPLICIT NONE
 
-TYPE(datetime) :: dt1, dt2, dt3
-TYPE(timedelta) :: td1, td2
-INTEGER :: dtim, i, ii, y, m ,d, h, mm
-!INTEGER(kind=int_ll) :: un, ir1, ir2
-INTEGER :: un, ir1, ir2
-CHARACTER(len=12) :: dtc
+TYPE(datetime) :: dt1, dt2
+TYPE(timedelta) :: td1
+INTEGER :: i
 CHARACTER(len=24) :: dtlong
-LOGICAL :: err
 
 PRINT*,'=== Testing datetime_class module ==='
 
@@ -77,8 +73,8 @@ CALL getval(dt1, simpledate=dtlong)
 IF (dtlong(1:17) /= '20001201000000000') CALL EXIT(1)
 
 PRINT*,'Testing now'
-dt1 = datetime_new(now=datetime_utc)
-dt2 = datetime_new(now=datetime_local)
+dt1 = datetime_new_now(datetime_utc)
+dt2 = datetime_new_now(datetime_local)
 CALL getval(dt1, isodate=dtlong)
 WRITE(*,'(A,A)')'UTC time is: ',dtlong
 CALL getval(dt2, isodate=dtlong)

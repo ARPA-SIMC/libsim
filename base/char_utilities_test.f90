@@ -29,7 +29,6 @@ REAL :: rcheck
 DOUBLE PRECISION :: dcheck
 INTEGER, POINTER :: ws(:), we(:)
 TYPE(line_split) :: longline
-INTEGER :: i
 
 PRINT*,'=== Testing char_utilities module ==='
 
