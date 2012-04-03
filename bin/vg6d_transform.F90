@@ -480,8 +480,8 @@ DEALLOCATE(w_s, w_e)
 
 CALL griddim_unproj(griddim_out)
 
-!other opertions have proper decode inside
-IF (output_format == "vapor") THEN 
+!other operations have proper decode inside
+IF (output_format == "vapor") THEN
   decode=.true.
 else
   decode=.false.
@@ -606,7 +606,7 @@ IF (i == 3) THEN ! template requested (grib_api:template_file:output_file)
      categoryappend="export_tmpl")
   ELSE
     CALL l4f_category_log(category,L4F_FATAL, &
-     "opening output template "//TRIM(output_file))
+     "opening output template "//output_file(w_s(1):w_e(2)))
     CALL raise_fatal_error()
   ENDIF
 

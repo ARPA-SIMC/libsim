@@ -1453,7 +1453,7 @@ TYPE(volgrid6d),INTENT(out) :: volgrid6d_out !< transformed object, it does not 
 TYPE(vol7d_level),INTENT(in),OPTIONAL,TARGET :: lev_out(:) !< vol7d_level object defining target vertical grid, for vertical interpolations
 TYPE(volgrid6d),INTENT(in),OPTIONAL :: volgrid6d_coord_in !< object providing time constant input vertical coordinate for some kind of vertical interpolations
 LOGICAL,INTENT(in),OPTIONAL :: clone !< if provided and \a .TRUE. , clone the \a gaid's from \a volgrid6d_in to \a volgrid6d_out
-LOGICAL,INTENT(in),OPTIONAL :: decode !< if provided and \a .FALSE. the data volume is not allocated, but work is performed on grid_id's (NOT USED!)
+LOGICAL,INTENT(in),OPTIONAL :: decode !< if provided and \a .FALSE. the data volume is not allocated, but work is performed on grid_id's if possible
 CHARACTER(len=*),INTENT(in),OPTIONAL :: categoryappend !< append this suffix to log4fortran namespace category
 
 TYPE(grid_transform) :: grid_trans
@@ -1461,9 +1461,10 @@ TYPE(vol7d_level),POINTER :: llev_out(:)
 TYPE(vol7d_level) :: output_levtype
 TYPE(vol7d_var) :: vcoord_var
 INTEGER :: i, ntime, ntimerange, nlevel, nvar, var_coord_in, cf_out, &
- nxc, nyc, nxi, nyi
+ nxc, nyc, nxi, nyi, i3, i4, i5, i6
 TYPE(geo_proj) :: proj_in, proj_out
 CHARACTER(len=80) :: trans_type
+LOGICAL :: ldecode
 
 #ifdef DEBUG
 call l4f_category_log(volgrid6d_in%category, L4F_DEBUG, "start volgrid6d_transform")
@@ -1624,9 +1625,23 @@ IF (c_e(grid_trans)) THEN ! transformation is valid
 
   CALL volgrid6d_alloc(volgrid6d_out, ntime=ntime, nlevel=nlevel, &
    ntimerange=ntimerange, nvar=nvar)
-! decode status is copied from input, check whether grib_api requires
-! clone=.TRUE. in these cases
-  CALL volgrid6d_alloc_vol(volgrid6d_out, decode=ASSOCIATED(volgrid6d_in%voldati))
+
+! decode status is copied from input, and reset if gaidreadonly
+  ldecode = ASSOCIATED(volgrid6d_in%voldati) ! .OR. decode
+  decode_loop: DO i6 = 1,nvar
+    DO i5 = 1, ntimerange
+      DO i4 = 1, ntime
+        DO i3 = 1, nlevel
+          IF (c_e(volgrid6d_in%gaid(i3,i4,i5,i6))) THEN
+            ldecode = ldecode .OR. grid_id_readonly(volgrid6d_in%gaid(i3,i4,i5,i6))
+            EXIT decode_loop
+          ENDIF
+        ENDDO
+      ENDDO
+    ENDDO
+  ENDDO decode_loop
+
+  CALL volgrid6d_alloc_vol(volgrid6d_out, decode=ldecode)
 
 !ensure unproj was called
 !call griddim_unproj(volgrid6d_out%griddim)

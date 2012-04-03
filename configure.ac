@@ -222,7 +222,7 @@ if test "x$enableval" = "xyes"; then
    [AC_MSG_RESULT([gdal C bindings found!])]
    GDAL_LIBS="-lfortrangis -lgdal"
    AC_SUBST(GDAL_LIBS)
-   AC_DEFINE(HAVE_GDAL, 1, [Enable gdal]),
+   AC_DEFINE(HAVE_LIBGDAL, 1, [Enable gdal]),
    [AC_MSG_ERROR([gdal C bindings not found!])]
   )
 else

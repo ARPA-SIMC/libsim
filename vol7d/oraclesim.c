@@ -98,6 +98,21 @@ a.dset_stam_identnr = s.identnr) AND a.vard_identnr";
 static char *query3 = (char *)
   " ORDER BY dset_istante_wmo_fine,dset_stam_identnr";
 
+/* candidata query moderna
+
+SELECT TO_CHAR(a.dset_istante_wmo_fine,'YYYYMMDDHH24MI'),
+a.dset_stam_identnr,a.vard_identnr,
+NVL(a.valore_principale,1.0E+15),NVL(a.valore_ausiliario,1.0E+15),
+NVL(a.valore_chiaro, ' '),LPAD(NVL(a.flag,'000000000'), 9, '0'),
+s.gsta_identnr FROM vm a, met_stazioni_misura s WHERE
+a.dset_istante_wmo_fine >= sysdate -1 AND a.dset_istante_wmo_fine <=
+sysdate and a.vard_identnr in (select va.identnr from
+met_variabili_definite va where va.blocal_new = 'B13011' ) AND
+a.dset_stam_identnr = s.identnr;
+
+*/
+
+
 /* Struttura per ricordare una connessione oracle e fare login una volta sola. */
 typedef struct _OracleDbConnection 
 {

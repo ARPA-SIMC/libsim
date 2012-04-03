@@ -620,7 +620,8 @@ IF (c_e(gaid)) CALL griddim_import_gribapi(this, gaid)
 #endif
 #ifdef HAVE_LIBGDAL
 gdalid = grid_id_get_gdalid(ingrid_id)
-IF (gdalassociated(gdalid)) CALL griddim_import_gdal(this, gdalid)
+IF (gdalassociated(gdalid)) CALL griddim_import_gdal(this, gdalid, &
+ grid_id_get_gdal_options(ingrid_id))
 #endif
 
 END SUBROUTINE griddim_import_grid_id
@@ -664,7 +665,7 @@ USE grib_api
 TYPE(griddim_def),INTENT(inout) :: this ! griddim object
 INTEGER, INTENT(in) :: gaid ! grib_api id of the grib loaded in memory to import
 
-DOUBLE PRECISION :: loFirst, loLast, laFirst, laLast, x1, y1, lov
+DOUBLE PRECISION :: loFirst, loLast, laFirst, laLast, x1, y1
 INTEGER :: EditionNumber, iScansNegatively, jScansPositively, zone, datum, reflon
 
 ! Generic keys
@@ -890,7 +891,7 @@ TYPE(griddim_def),INTENT(inout) :: this
 INTEGER,INTENT(in) :: gaid
 
 INTEGER :: shapeofearth, iv, is
-DOUBLE PRECISION :: r1, r2, f
+DOUBLE PRECISION :: r1, r2
 
 IF (EditionNumber == 2) THEN
   CALL grib_get(gaid, 'shapeOfTheEarth', shapeofearth)
@@ -1246,7 +1247,7 @@ SUBROUTINE griddim_export_ellipsoid(this, gaid)
 TYPE(griddim_def),INTENT(in) :: this
 INTEGER,INTENT(in) :: gaid
 
-INTEGER :: ellips_type, iv, is
+INTEGER :: ellips_type
 DOUBLE PRECISION :: r1, r2, f
 
 CALL get_val(this, ellips_smaj_axis=r1, ellips_flatt=f, ellips_type=ellips_type)
@@ -1318,42 +1319,69 @@ END SUBROUTINE griddim_export_gribapi
 
 #ifdef HAVE_LIBGDAL
 ! gdal driver
-SUBROUTINE griddim_import_gdal(this, gdalid)
+SUBROUTINE griddim_import_gdal(this, gdalid, gdal_options)
 USE gdal
 TYPE(griddim_def),INTENT(inout) :: this ! griddim object
 TYPE(gdalrasterbandh),INTENT(in) :: gdalid ! gdal rasterband pointer
+TYPE(gdal_file_id_options),INTENT(in) :: gdal_options
 
 TYPE(gdaldataseth) :: hds
-REAL(kind=c_double) :: geotrans(6), invgeotrans(6), x1, y1, x2, y2
+REAL(kind=c_double) :: geotrans(6) !, invgeotrans(6), x1, y1, x2, y2
+INTEGER(kind=c_int) :: offsetx, offsety
 INTEGER :: ier
 
 hds = gdalgetbanddataset(gdalid) ! go back to dataset
 ier = gdalgetgeotransform(hds, geotrans)
-! get grid corners
-CALL gdalapplygeotransform(geotrans, 0.5_c_double, 0.5_c_double, x1, y1)
-CALL gdalapplygeotransform(geotrans, gdalgetrasterbandxsize(gdalid)-0.5_c_double, &
- gdalgetrasterbandysize(gdalid)-0.5_c_double, x2, y2)
 
-IF (geotrans(3) == 0.0_c_double .AND. geotrans(5) == 0.0_c_double) THEN
-! transformation is diagonal, no transposing
-  this%dim%nx =  gdalgetrasterbandxsize(gdalid)
-  this%dim%ny =  gdalgetrasterbandysize(gdalid)
-  this%grid%grid%xmin = MIN(x1, x2)
-  this%grid%grid%xmax = MAX(x1, x2)
-  this%grid%grid%ymin = MIN(y1, y2)
-  this%grid%grid%ymax = MAX(y1, y2)
-
-ELSE IF (geotrans(2) == 0.0_c_double .AND. geotrans(6) == 0.0_c_double) THEN
-! transformation is anti-diagonal, transposing will have to be done
-  this%dim%nx =  gdalgetrasterbandysize(gdalid)
-  this%dim%ny =  gdalgetrasterbandxsize(gdalid)
-  this%grid%grid%xmin = MIN(y1, y2)
-  this%grid%grid%xmax = MAX(y1, y2)
-  this%grid%grid%ymin = MIN(x1, x2)
-  this%grid%grid%ymax = MAX(x1, x2)
-
-ELSE ! transformation is a rotation, not supported
+IF (ier /= 0) THEN
+  CALL l4f_category_log(this%category, L4F_ERROR, &
+   'griddim_import_gdal: error in accessing gdal dataset')
+  CALL raise_error()
+  RETURN
 ENDIF
+IF (geotrans(3) /= 0.0_c_double .OR. geotrans(5) /= 0.0_c_double) THEN ! dataset has not a diagonal transformation
+  CALL l4f_category_log(this%category, L4F_ERROR, &
+   'griddim_import_gdal: dataset has a non-diagonal transformation matrix, unsupported')
+  CALL raise_error()
+  RETURN
+ENDIF
+
+CALL gdaldatasetbbsize_f(hds, gdal_options%xmin, gdal_options%ymin, &
+ gdal_options%xmax, gdal_options%ymax, &
+ this%dim%nx, this%dim%ny, offsetx, offsety, &
+ this%grid%grid%xmin, this%grid%grid%ymin, this%grid%grid%xmax, this%grid%grid%ymax)
+
+IF (this%dim%nx == 0 .OR. this%dim%ny == 0) THEN
+  CALL l4f_category_log(this%category, L4F_WARN, &
+   'griddim_import_gdal: requested bounding box '//t2c(gdal_options%xmin)//','// &
+   t2c(gdal_options%ymin)//','//t2c(gdal_options%xmax)//','//&
+   t2c(gdal_options%ymax)//' determines an empty dataset '// &
+   t2c(this%dim%nx)//'x'//t2c(this%dim%ny))
+ENDIF
+
+! get grid corners
+!CALL gdalapplygeotransform(geotrans, 0.5_c_double, 0.5_c_double, x1, y1)
+!CALL gdalapplygeotransform(geotrans, gdalgetrasterbandxsize(gdalid)-0.5_c_double, &
+! gdalgetrasterbandysize(gdalid)-0.5_c_double, x2, y2)
+
+!IF (geotrans(3) == 0.0_c_double .AND. geotrans(5) == 0.0_c_double) THEN ! transformation is diagonal, no transposing
+!  this%dim%nx = gdalgetrasterbandxsize(gdalid)
+!  this%dim%ny = gdalgetrasterbandysize(gdalid)
+!  this%grid%grid%xmin = MIN(x1, x2)
+!  this%grid%grid%xmax = MAX(x1, x2)
+!  this%grid%grid%ymin = MIN(y1, y2)
+!  this%grid%grid%ymax = MAX(y1, y2)
+!ELSE IF (geotrans(2) == 0.0_c_double .AND. geotrans(6) == 0.0_c_double) THEN ! transformation is anti-diagonal, transposing will have to be done
+!
+!  this%dim%nx = gdalgetrasterbandysize(gdalid)
+!  this%dim%ny = gdalgetrasterbandxsize(gdalid)
+!  this%grid%grid%xmin = MIN(y1, y2)
+!  this%grid%grid%xmax = MAX(y1, y2)
+!  this%grid%grid%ymin = MIN(x1, x2)
+!  this%grid%grid%ymax = MAX(x1, x2)
+!
+!ELSE ! transformation is a rotation, not supported
+!ENDIF
 
 this%grid%proj%proj_type = 'regular_ll' ! forced, only one supported (check?)
 
@@ -1475,7 +1503,6 @@ TYPE(griddim_def),INTENT(in) :: this
 DOUBLE PRECISION,INTENT(in) :: ilon,ilat,flon,flat
 INTEGER,INTENT(out) :: ix, iy, fx, fy
 
-DOUBLE PRECISION :: dx, dy
 DOUBLE PRECISION :: ix1, iy1, fx1, fy1
 INTEGER :: lix, liy, lfx, lfy
 

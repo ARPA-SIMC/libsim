@@ -68,11 +68,12 @@ USE gdal
 USE missing_values
 USE optional_values
 USE char_utilities
+USE file_utilities
 USE log4fortran
 USE err_handling
 IMPLICIT NONE
 
-INTEGER,PARAMETER :: grid_id_nodriver = 0 !< constants to be used for associating an object to a driver: no type specified
+INTEGER,PARAMETER :: grid_id_no_driver = 0 !< constants to be used for associating an object to a driver: no type specified
 INTEGER,PARAMETER :: grid_id_grib_api = 1 !< type grib_api specified
 INTEGER,PARAMETER :: grid_id_gdal = 2 !< type gdal specified
 
@@ -81,11 +82,24 @@ INTEGER,PARAMETER :: grid_id_default = grid_id_grib_api !< default driver if non
 #elif defined HAVE_LIBGDAL
 INTEGER,PARAMETER :: grid_id_default = grid_id_gdal !< default driver if none specified in constructor
 #else
-INTEGER,PARAMETER :: grid_id_default = grid_id_nodriver !< default driver if none specified in constructor
+INTEGER,PARAMETER :: grid_id_default = grid_id_no_driver !< default driver if none specified in constructor
 #endif
 
 CHARACTER(len=12),PARAMETER :: driverlist(0:2) = &
  (/'no_driver   ','grib_api    ','gdal        '/)
+
+#ifdef HAVE_LIBGDAL
+!> Derived type containing driver-specific options for gdal.
+!! It is initialised when opening the file/dataset with the
+!! constructor grid_file_id_new with the information provided in the
+!! driver string.
+TYPE gdal_file_id_options
+  DOUBLE PRECISION :: xmin=dmiss !< bounding box of the area to import from the dataset
+  DOUBLE PRECISION :: ymin=dmiss !< bounding box of the area to import from the dataset
+  DOUBLE PRECISION :: xmax=dmiss !< bounding box of the area to import from the dataset
+  DOUBLE PRECISION :: ymax=dmiss !< bounding box of the area to import from the dataset
+END TYPE gdal_file_id_options
+#endif
 
 !> Derived type associated to a file-like object containing many
 !! blocks/messages/records/bands of gridded data.
@@ -97,6 +111,8 @@ INTEGER :: gaid=imiss
 #ifdef HAVE_LIBGDAL
 TYPE(gdaldataseth) :: gdalid
 INTEGER :: nlastband=0
+TYPE(gdal_file_id_options) :: gdal_options
+TYPE(grid_file_id),POINTER :: file_id_copy=>NULL()
 #endif
 INTEGER :: driver=grid_id_default
 END TYPE grid_file_id
@@ -112,6 +128,7 @@ INTEGER :: gaid=imiss
 #endif
 #ifdef HAVE_LIBGDAL
 TYPE(gdalrasterbandh) :: gdalid
+TYPE(grid_file_id),POINTER :: file_id=>NULL()
 #endif
 INTEGER :: driver=grid_id_default
 END TYPE grid_id
@@ -172,7 +189,7 @@ INTERFACE display
 END INTERFACE
 
 PRIVATE grid_file_id_delete, grid_id_delete, grid_id_copy, &
- grid_id_c_e, grid_file_id_c_e, grid_id_display
+ grid_id_c_e, grid_file_id_c_e, grid_id_c_e_v, grid_file_id_c_e_v, grid_id_display
 
 CONTAINS
 
@@ -191,14 +208,16 @@ END SUBROUTINE grid_file_id_init
 
 !> Constructor for the \a grid_file_id class. It opens the associated
 !! file(s); the driver to be used for file access is selected
-!! according to the \a filename argument, to the optional argument
-!! \a driver, or to the optional argument \a from_grid_id, with increasing
-!! priority. If \a driver and \a from_grid_id are not provided and
-!! \a filename does not contain driver information, a default is
-!! chosen. If filename is an empty string or missing value, the object
-!! will be empty, the same will happen in case the file cannot be
-!! successfully opened. This condition can be tested with the function
-!! \a c_e() .
+!! according to the \a filename argument, to the optional argument \a
+!! driver, or to the optional argument \a from_grid_id, with
+!! increasing priority. If \a driver and \a from_grid_id are not
+!! provided and \a filename does not contain driver information, a
+!! default is chosen. If filename is an empty string or missing value,
+!! the object will be empty, the same will happen in case the file
+!! cannot be successfully opened. This condition can be tested with
+!! the function \a c_e() . The driver string provided with the
+!! filename can also contain driver-specific options separated by
+!! commas, e.g. \c 'gdal,8,44,10,46:globe.dat'.
 FUNCTION grid_file_id_new(filename, mode, driver, from_grid_id) RESULT(this)
 CHARACTER(len=*),INTENT(in) :: filename !< name of file containing gridded data, in the format [driver:]pathname
 CHARACTER(len=*),INTENT(in) :: mode !< access mode for file, 'r' or 'w'
@@ -206,7 +225,12 @@ INTEGER,INTENT(in),OPTIONAL :: driver !< select the driver that will be associat
 TYPE(grid_id),INTENT(in),OPTIONAL :: from_grid_id !< select the driver as the one associated to the provided grid_id object
 TYPE(grid_file_id) :: this
 
-INTEGER :: n, imode, ier
+INTEGER :: n, ier
+#ifdef HAVE_LIBGDAL
+INTEGER :: imode
+#endif
+TYPE(csv_record) :: driveropts
+CHARACTER(len=12) :: drivername
 
 #ifdef HAVE_LIBGDAL
 CALL gdalnullify(this%gdalid)
@@ -216,16 +240,23 @@ IF (filename == '' .OR. .NOT.c_e(filename)) RETURN
 
 n = INDEX(filename,':')
 IF (n > 1) THEN ! override with driver from filename
+  CALL init(driveropts, filename(:n-1))
+  CALL csv_record_getfield(driveropts, drivername)
 #ifdef HAVE_LIBGRIBAPI
-  IF (filename(1:n-1) == 'grib_api') THEN
+  IF (drivername == 'grib_api') THEN
     this%driver = grid_id_grib_api
   ENDIF
 #endif
 #ifdef HAVE_LIBGDAL
-  IF (filename(1:n-1) == 'gdal') THEN
+  IF (drivername == 'gdal') THEN
     this%driver = grid_id_gdal
+    CALL csv_record_getfield(driveropts, this%gdal_options%xmin)
+    CALL csv_record_getfield(driveropts, this%gdal_options%ymin)
+    CALL csv_record_getfield(driveropts, this%gdal_options%xmax)
+    CALL csv_record_getfield(driveropts, this%gdal_options%ymax)
   ENDIF
 #endif
+  CALL delete(driveropts)
 ENDIF
 IF (PRESENT(driver)) THEN ! override with driver
   this%driver = driver
@@ -249,6 +280,9 @@ IF (this%driver == grid_id_gdal) THEN
   ENDIF
   CALL gdalallregister()
   this%gdalid = gdalopen(TRIM(filename(n+1:))//C_NULL_CHAR, imode)
+! dirty trick, with gdal I have to keep a copy of the file_id, memory leak
+  ALLOCATE(this%file_id_copy)
+  this%file_id_copy = this
 ENDIF
 #endif
 
@@ -300,7 +334,8 @@ this%gaid = imiss
 #endif
 #ifdef HAVE_LIBGDAL
 IF (this%driver == grid_id_gdal) THEN
-  IF (gdalassociated(this%gdalid)) CALL gdalclose(this%gdalid)
+! dirty trick, with gdal I have to keep the file open
+!  IF (gdalassociated(this%gdalid)) CALL gdalclose(this%gdalid)
   this%nlastband = 0
 ENDIF
 CALL gdalnullify(this%gdalid)
@@ -370,10 +405,12 @@ END SUBROUTINE grid_id_init
 !! are through a grib_api template file name (\a grib_api_template
 !! argument) or through a grib_api integer id obtained directly from
 !! grib_api calls (\a grib_api_id argument).
-FUNCTION grid_id_new(from_grid_file_id, grib_api_template, grib_api_id) RESULT(this)
-TYPE(grid_file_id),INTENT(inout),OPTIONAL :: from_grid_file_id !< file object from which grid object has to be created
+FUNCTION grid_id_new(from_grid_file_id, grib_api_template, grib_api_id, &
+ no_driver_id) RESULT(this)
+TYPE(grid_file_id),INTENT(inout),OPTIONAL,TARGET :: from_grid_file_id !< file object from which grid object has to be created
 CHARACTER(len=*),INTENT(in),OPTIONAL :: grib_api_template !< grib_api template file from which grid_object has to be created
 INTEGER,INTENT(in),OPTIONAL :: grib_api_id !< grib_api id obtained directly from a \a grib_get subroutine call
+INTEGER,INTENT(in),OPTIONAL :: no_driver_id
 TYPE(grid_id) :: this
 
 INTEGER :: ier
@@ -383,7 +420,8 @@ CALL gdalnullify(this%gdalid)
 #endif
 
 IF (PRESENT(from_grid_file_id)) THEN
-this%driver = from_grid_file_id%driver
+  this%driver = from_grid_file_id%driver ! take driver from file_id
+
 #ifdef HAVE_LIBGRIBAPI
   IF (this%driver == grid_id_grib_api) THEN
     IF (c_e(from_grid_file_id%gaid)) THEN
@@ -394,11 +432,15 @@ this%driver = from_grid_file_id%driver
 #endif
 #ifdef HAVE_LIBGDAL
   IF (this%driver == grid_id_gdal) THEN
-    IF (gdalassociated(from_grid_file_id%gdalid)) THEN
-      IF (from_grid_file_id%nlastband < gdalgetrastercount(from_grid_file_id%gdalid)) THEN
+    IF (gdalassociated(from_grid_file_id%gdalid) .AND. &
+     ASSOCIATED(from_grid_file_id%file_id_copy)) THEN
+      IF (from_grid_file_id%nlastband < &
+       gdalgetrastercount(from_grid_file_id%gdalid)) THEN ! anything to read?
         from_grid_file_id%nlastband = from_grid_file_id%nlastband + 1
         this%gdalid = &
          gdalgetrasterband(from_grid_file_id%gdalid, from_grid_file_id%nlastband)
+        this%file_id => from_grid_file_id%file_id_copy ! for gdal remember copy of file_id
+
       ENDIF
     ENDIF
   ENDIF
@@ -413,6 +455,9 @@ ELSE IF (PRESENT(grib_api_id)) THEN
   this%driver = grid_id_grib_api
   this%gaid = grib_api_id
 #endif
+ELSE IF (PRESENT(no_driver_id)) THEN
+  this%driver = grid_id_no_driver
+  this%nodriverid = no_driver_id
 ENDIF
 
 END FUNCTION grid_id_new
@@ -425,6 +470,7 @@ END FUNCTION grid_id_new
 SUBROUTINE grid_id_delete(this)
 TYPE(grid_id),INTENT(inout) :: this !< object to be deleted
 
+this%nodriverid = imiss
 #ifdef HAVE_LIBGRIBAPI
 IF (this%driver == grid_id_grib_api) THEN
   IF (c_e(this%gaid)) CALL grib_release(this%gaid)
@@ -433,11 +479,23 @@ this%gaid = imiss
 #endif
 #ifdef HAVE_LIBGDAL
 CALL gdalnullify(this%gdalid)
+NULLIFY(this%file_id)
 #endif
 
 this%driver = imiss
 
 END SUBROUTINE grid_id_delete
+
+
+!> Check whether the grid_id object is readonly (.TRUE.) or allows
+!! writing bands (.FALSE.)
+FUNCTION grid_id_readonly(this) RESULT(readonly)
+TYPE(grid_id),INTENT(in) :: this !< object to test
+LOGICAL :: readonly
+
+readonly = this%driver /= grid_id_grib_api
+
+END FUNCTION grid_id_readonly
 
 
 !> Performs a "deep" copy of the \a grid_id object when possible.
@@ -447,12 +505,9 @@ END SUBROUTINE grid_id_delete
 !! initialized before the call.
 SUBROUTINE grid_id_copy(this, that)
 TYPE(grid_id),INTENT(in) :: this !< source object
-TYPE(grid_id),INTENT(inout) :: that !< destination object, it must not be initialized
+TYPE(grid_id),INTENT(out) :: that !< destination object, it must not be initialized
 
-INTEGER :: gaid
-
-that = grid_id_new()
-that%driver = this%driver
+that = this ! start with a shallow copy
 
 #ifdef HAVE_LIBGRIBAPI
 IF (this%driver == grid_id_grib_api) THEN
@@ -464,7 +519,11 @@ ENDIF
 #endif
 #ifdef HAVE_LIBGDAL
 IF (this%driver == grid_id_gdal) THEN
-  that%gdalid = this%gdalid ! better idea?
+  IF (c_e(this)) THEN
+!   that = grid_id_new(no_driver_id=1)
+!    that%gdalid = this%gdalid ! better idea?
+!    that%file_id => this%file_id
+  ENDIF
 ENDIF
 #endif
 
@@ -515,6 +574,9 @@ IF (this%driver == grid_id_gdal) THEN
   grid_id_c_e = gdalassociated(this%gdalid)
 ENDIF
 #endif
+IF (this%driver == grid_id_no_driver) THEN
+  grid_id_c_e = c_e(this%nodriverid)
+ENDIF
 
 END FUNCTION grid_id_c_e
 
@@ -659,6 +721,22 @@ TYPE(grid_id),INTENT(in) :: this !< object to query
 TYPE(gdalrasterbandh) :: gdalid
 gdalid = this%gdalid
 END FUNCTION grid_id_get_gdalid
+
+!> Returns an object with driver-specific options associated to the grid_id
+!! provided, available only for gdal.
+FUNCTION grid_id_get_gdal_options(this) RESULT(gdal_options)
+TYPE(grid_id),INTENT(in) :: this !< object to query
+TYPE(gdal_file_id_options) :: gdal_options
+
+TYPE(gdal_file_id_options) :: gdal_options_local
+
+IF (ASSOCIATED(this%file_id)) THEN
+  gdal_options = this%file_id%gdal_options
+ELSE
+  gdal_options = gdal_options_local ! empty object
+ENDIF
+
+END FUNCTION grid_id_get_gdal_options
 #endif
 
 
@@ -681,7 +759,7 @@ ENDIF
 #ifdef HAVE_LIBGDAL
 ! subarea?
 IF (gdalassociated(this%gdalid)) THEN
-  CALL grid_id_decode_data_gdal(this%gdalid, field)
+  CALL grid_id_decode_data_gdal(this%gdalid, field, this%file_id%gdal_options)
   done = .TRUE.
 ENDIF
 #endif
@@ -822,8 +900,7 @@ REAL,intent(in) :: field(:,:) ! data array to be encoded
 INTEGER :: EditionNumber
 INTEGER :: alternativeRowScanning, iScansNegatively, &
  jScansPositively, jPointsAreConsecutive
-INTEGER :: nx, ny
-INTEGER :: x1, x2, xs, y1, y2, ys, ord(2)
+INTEGER :: x1, x2, xs, y1, y2, ys
 
 
 call grib_get(gaid,'GRIBEditionNumber',EditionNumber)
@@ -918,40 +995,22 @@ END SUBROUTINE grid_id_encode_data_gribapi
 
 
 #ifdef HAVE_LIBGDAL
-SUBROUTINE grid_id_decode_data_gdal(gdalid, field)
+SUBROUTINE grid_id_decode_data_gdal(gdalid, field, gdal_options)
 TYPE(gdalrasterbandh),INTENT(in) :: gdalid ! gdal id
 REAL,INTENT(out) :: field(:,:) ! array of decoded values
+TYPE(gdal_file_id_options),INTENT(in) :: gdal_options
 
 TYPE(gdaldataseth) :: hds
-REAL(kind=c_double) :: geotrans(6), invgeotrans(6)
-REAL :: vector(SIZE(field)), gdalmiss
+REAL(kind=c_double) :: geotrans(6), dummy1, dummy2, dummy3, dummy4
+REAL :: gdalmiss
 REAL,ALLOCATABLE :: buffer(:,:)
 INTEGER :: ix1, iy1, ix2, iy2, ixs, iys, ord(2), ier, ierv(1)
 INTEGER(kind=c_int) :: nrx, nry
 LOGICAL :: must_trans
 
 
-nrx =  gdalgetrasterbandxsize(gdalid)
-nry =  gdalgetrasterbandysize(gdalid)
-
-if (nrx*nry /= (SIZE(field)))then
-
-  CALL l4f_log(L4F_ERROR, 'gdal raster band and gridinfo size different')
-  CALL l4f_log(L4F_ERROR, 'gdal rasterband: ' &
-   //TRIM(to_char(nrx))//'X'//TRIM(to_char(nry))//', nx,ny:' &
-   //TRIM(to_char(SIZE(field,1)))//'X'//TRIM(to_char(SIZE(field,2))))
-  CALL raise_error()
-  field(:,:) = rmiss
-  RETURN
-
-end if
-
 hds = gdalgetbanddataset(gdalid) ! go back to dataset
 ier = gdalgetgeotransform(hds, geotrans)
-! get grid corners
-!CALL gdalapplygeotransform(geotrans, 0.5_c_double, 0.5_c_double, x1, y1)
-!CALL gdalapplygeotransform(geotrans, &
-! SIZE(field,1)-0.5_c_double, SIZE(field,2)-0.5_c_double, x2, y2)
 
 IF (geotrans(3) == 0.0_c_double .AND. geotrans(5) == 0.0_c_double) THEN
 ! transformation is diagonal, no transposing
@@ -977,10 +1036,10 @@ IF (geotrans(3) == 0.0_c_double .AND. geotrans(5) == 0.0_c_double) THEN
   nry = SIZE(field,2)
   ord = (/1,2/)
   must_trans = .FALSE.
-  ALLOCATE(buffer(nrx,nry))
+!  ALLOCATE(buffer(nrx,nry))
 
 ELSE IF (geotrans(2) == 0.0_c_double .AND. geotrans(6) == 0.0_c_double) THEN
-! transformation is anti-diagonal, transposing required
+! transformation is anti-diagonal, transposing required this should not happen
   IF (geotrans(3) > 0.0_c_double) THEN
     ix1 = 1 
     ix2 = SIZE(field,1)
@@ -1003,7 +1062,7 @@ ELSE IF (geotrans(2) == 0.0_c_double .AND. geotrans(6) == 0.0_c_double) THEN
   nry = SIZE(field,1)
   ord = (/2,1/)
   must_trans = .TRUE.
-  ALLOCATE(buffer(nry,nrx))
+!  ALLOCATE(buffer(nry,nrx))
 
 ELSE ! transformation is a rotation, not supported
   CALL l4f_log(L4F_ERROR, 'gdal geotransform is a generic rotation, not supported')
@@ -1013,43 +1072,48 @@ ELSE ! transformation is a rotation, not supported
 ENDIF
 
 ! read data from file
-!ier = gdalrasterio_float32(gdalid, GF_Read, 0_c_int, 0_c_int, nrx, nry, vector, nrx, nry)
-ier = gdalrasterio_f(gdalid, GF_Read, 0_c_int, 0_c_int, buffer)
+CALL gdalrastersimpleread_f(gdalid, gdal_options%xmin, gdal_options%ymin, &
+ gdal_options%xmax, gdal_options%ymax, buffer, dummy1, dummy2, dummy3, dummy4)
 
-IF (ier /= 0) THEN ! error in read
+IF (.NOT.ALLOCATED(buffer)) THEN ! error in read
   CALL l4f_log(L4F_ERROR, 'gdal error in reading with gdal driver')
   CALL raise_error()
-!  vector(:) = rmiss
-  buffer(:,:) = rmiss
+  field(:,:) = rmiss
   RETURN
-ELSE
+ENDIF
+
+IF (SIZE(buffer) /= (SIZE(field)))THEN
+  CALL l4f_log(L4F_ERROR, 'gdal raster band and gridinfo size different')
+  CALL l4f_log(L4F_ERROR, 'gdal rasterband: ' &
+   //t2c(SIZE(buffer,1))//'X'//t2c(SIZE(buffer,2))//', nx,ny:' &
+   //t2c(SIZE(field,ord(1)))//'X'//t2c(SIZE(field,ord(2))))
+  CALL raise_error()
+  field(:,:) = rmiss
+  RETURN
+ENDIF
+
 ! set missing value if necessary
-  gdalmiss = gdalgetrasternodatavalue(gdalid, ierv)
-  IF (ierv(1) /= 0) THEN ! success -> there are missing values
+gdalmiss = REAL(gdalgetrasternodatavalue(gdalid, ierv))
+IF (ierv(1) /= 0) THEN ! success -> there are missing values
 #ifdef DEBUG
   CALL l4f_log(L4F_INFO, 'gdal missing data value: '//TRIM(to_char(gdalmiss)))
 #endif
-    WHERE(vector(:) == gdalmiss)
-      vector(:) = rmiss
-    END WHERE
-  ELSE
+  WHERE(buffer(:,:) == gdalmiss)
+    buffer(:,:) = rmiss
+  END WHERE
+ELSE
 #ifdef DEBUG
   CALL l4f_log(L4F_INFO, 'gdal no missing data found in band')
 #endif
-
-  ENDIF
 ENDIF
 
 ! reshape the field
-!field(ix1:ix2:ixs,iy1:iy2:iys) = &
-! RESHAPE(vector, (/SIZE(field,1),SIZE(field,2)/), ORDER=ord)
 IF (must_trans) THEN
   field(ix1:ix2:ixs,iy1:iy2:iys) = TRANSPOSE(buffer)
 ELSE
   field(ix1:ix2:ixs,iy1:iy2:iys) = buffer(:,:)
 ENDIF
 
-DEALLOCATE(buffer)
 
 END SUBROUTINE grid_id_decode_data_gdal
 #endif
