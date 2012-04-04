@@ -73,10 +73,10 @@ endif
 
 grid_class.o: grid_dim_class.$(OBJEXT) grid_rect_class.$(OBJEXT) grid_id_class.$(OBJEXT)
 grid_class.lo: grid_dim_class.$(OBJEXT) grid_rect_class.$(OBJEXT) grid_id_class.$(OBJEXT)
-grid_transform_class.o: grid_class.$(OBJEXT) 
-grid_transform_class.lo: grid_class.$(OBJEXT) 
-volgrid6d_var_class.o:
-volgrid6d_var_class.lo:
+grid_transform_class.o: grid_class.$(OBJEXT)
+grid_transform_class.lo: grid_class.$(OBJEXT)
+volgrid6d_var_class.o: grid_id_class.$(OBJEXT)
+volgrid6d_var_class.lo: grid_id_class.$(OBJEXT)
 gridinfo_class.o: volgrid6d_var_class.$(OBJEXT) grid_class.$(OBJEXT) grid_id_class.$(OBJEXT)
 gridinfo_class.lo: volgrid6d_var_class.$(OBJEXT) grid_class.$(OBJEXT) grid_id_class.$(OBJEXT)
 volgrid6d_class.o: volgrid6d_var_class.$(OBJEXT) grid_class.$(OBJEXT) grid_transform_class.$(OBJEXT) gridinfo_class.$(OBJEXT) grid_id_class.$(OBJEXT)

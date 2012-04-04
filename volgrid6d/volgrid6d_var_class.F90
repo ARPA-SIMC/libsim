@@ -33,6 +33,7 @@ USE missing_values
 USE err_handling
 USE vol7d_var_class
 USE file_utilities
+USE grid_id_class
 
 IMPLICIT NONE
 
@@ -434,10 +435,11 @@ END FUNCTION vargrib2varbufr_convert
 !! the calling procedure. If a conversion is not successful, the
 !! corresponding output variable is set to \a volgrid6d_var_miss and
 !! the conversion function to \a conv_func_miss.
-SUBROUTINE varbufr2vargrib(varbufr, vargrib, c_func)
+SUBROUTINE varbufr2vargrib(varbufr, vargrib, c_func, grid_id_template)
 TYPE(vol7d_var),INTENT(in) :: varbufr(:) !< array of input bufr-like variables
 TYPE(volgrid6d_var),INTENT(out) :: vargrib(:) !< array of output grib-like variables
 TYPE(conv_func),POINTER :: c_func(:) !< pointer to an array of the corresponding \a conv_func objects, allocated in the method
+TYPE(grid_id),INTENT(in),OPTIONAL :: grid_id_template !< a template (typically grib_api) to which data will be finally exported, it helps in improving variable conversion
 
 INTEGER :: i, n, stallo
 
@@ -449,7 +451,7 @@ IF (stallo /= 0) THEN
 ENDIF
 
 DO i = 1, n
-  vargrib(i) = convert(varbufr(i), c_func(i))
+  vargrib(i) = convert(varbufr(i), c_func(i), grid_id_template)
 ENDDO
 
 END SUBROUTINE varbufr2vargrib
@@ -468,17 +470,46 @@ END SUBROUTINE varbufr2vargrib
 !! conversion is not successful, the output variable is set to \a
 !! volgrid6d_var_miss and the conversion function to \a
 !! conv_func_miss.
-FUNCTION varbufr2vargrib_convert(varbufr, c_func) RESULT(convert)
+FUNCTION varbufr2vargrib_convert(varbufr, c_func, grid_id_template) RESULT(convert)
 TYPE(vol7d_var),INTENT(in) :: varbufr !< input bufr-like variable
 TYPE(conv_func),INTENT(out),OPTIONAL :: c_func !< corresponding \a conv_func object
+TYPE(grid_id),INTENT(in),OPTIONAL :: grid_id_template !< a template (typically grib_api) to which data will be finally exported, it helps in improving variable conversion
 TYPE(volgrid6d_var) :: convert
 
 INTEGER :: i
+#ifdef HAVE_LIBGRIBAPI
+INTEGER :: gaid, editionnumber, category, centre
+#endif
 
 IF (.NOT. ALLOCATED(conv_bwd)) CALL vg6d_v7d_var_conv_setup()
 
+#ifdef HAVE_LIBGRIBAPI
+editionnumber=255; category=255; centre=255
+#endif
+IF (PRESENT(grid_id_template)) THEN
+#ifdef HAVE_LIBGRIBAPI
+  gaid = grid_id_get_gaid(grid_id_template)
+  CALL grib_get(gaid, 'GRIBEditionNumber', editionnumber)
+  IF (editionnumber == 1) THEN
+    CALL grib_get(gaid,'gribTablesVersionNo',category)
+  ENDIF
+  CALL grib_get(gaid,'centre',centre)
+#endif
+ENDIF
+
 DO i = 1, SIZE(conv_bwd)
   IF (varbufr == conv_bwd(i)%v7d_var) THEN
+#ifdef HAVE_LIBGRIBAPI
+    IF (editionnumber /= 255) THEN ! further check required (gaid present)
+      IF (editionnumber == 1) THEN
+        IF (conv_bwd(i)%vg6d_var%discipline /= 255) CYCLE ! wrong edition
+      ELSE IF (editionnumber == 2) THEN
+        IF (conv_bwd(i)%vg6d_var%discipline == 255) CYCLE ! wrong edition
+      ENDIF
+      IF (conv_bwd(i)%vg6d_var%centre /= 255 .AND. &
+       conv_bwd(i)%vg6d_var%centre /= centre) CYCLE ! wrong centre
+    ENDIF
+#endif
     convert = conv_bwd(i)%vg6d_var
     IF (PRESENT(c_func)) c_func = conv_bwd(i)%c_func
     RETURN
@@ -724,7 +755,6 @@ FUNCTION volgrid6d_var_is_hor_comp(this) RESULT(is_hor_comp)
 TYPE(volgrid6d_var),INTENT(in) :: this !< volgrid6d_var object (grib variable) to test
 LOGICAL :: is_hor_comp
 
-INTEGER :: i
 TYPE(vol7d_var) :: varbufr
 
 varbufr = convert(this)

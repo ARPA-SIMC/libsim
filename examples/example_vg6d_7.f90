@@ -78,7 +78,7 @@ call import (v7d_import,var=(/"B12101"/),varkind=(/"r"/))
 call display(v7d_import%vol7d)
 
 call l4f_category_log(category,L4F_INFO,"trasformato")
-call transform(trans,griddim_out, vol7d_in=v7d_import%vol7d, volgrid6d_out=volgrid(1), categoryappend="trasform->")
+call transform(trans,griddim_out, vol7d_in=v7d_import%vol7d, volgrid6d_out=volgrid(1), gaid_template=gaid_template, categoryappend="trasform->")
 
 call l4f_category_log(category,L4F_INFO,"export to GRIB")
 CALL export(volgrid, 'examp[le_v7d.grb', gaid_template=gaid_template,&

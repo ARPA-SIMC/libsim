@@ -985,7 +985,9 @@ if (EditionNumber == 1)then
 
 else if (EditionNumber == 2)then
 
-  call grib_set(gaid,'centre',this%centre)
+! this must be changed to 65535!!!!
+  IF (this%centre /= 255) & ! if centre missing (coming from bufr), keep template
+   CALL grib_set(gaid,'centre',this%centre)
   call grib_set(gaid,'discipline',this%discipline)
   call grib_set(gaid,'parameterCategory',this%category)
   call grib_set(gaid,'parameterNumber',this%number)

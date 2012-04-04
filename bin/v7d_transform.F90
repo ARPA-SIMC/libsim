@@ -1098,7 +1098,8 @@ ELSE IF (output_format == 'grib_api') THEN
 ! use the message  as a template for defining the grid
         CALL import(grid_out, gaid)
 ! interpolate sparse data over the requested grid
-        CALL transform(trans, grid_out, v7d, vg6d(1), categoryappend="transform2")
+        CALL transform(trans, grid_out, v7d, vg6d(1), gaid_template=gaid, &
+         categoryappend="transform2")
 ! TODO check here whether the transformation succeeded export the
 ! interpolated volume to file keeping the same grib template used for
 ! the grid

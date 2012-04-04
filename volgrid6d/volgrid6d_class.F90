@@ -2040,11 +2040,12 @@ END SUBROUTINE volgrid6dv_v7d_transform
 
 
 ! Internal method for performing sparse point to grid computations
-SUBROUTINE v7d_volgrid6d_transform_compute(this, vol7d_in, volgrid6d_out, networkname)
+SUBROUTINE v7d_volgrid6d_transform_compute(this, vol7d_in, volgrid6d_out, networkname, gaid_template)
 TYPE(grid_transform),INTENT(in) :: this ! oggetto di trasformazione per grigliato
 type(vol7d), INTENT(in) :: vol7d_in ! oggetto da trasformare
 type(volgrid6d), INTENT(out) :: volgrid6d_out ! oggetto trasformato 
 CHARACTER(len=*),OPTIONAL,INTENT(in) :: networkname ! seleziona il network da exportare da vol7d (default=1)
+TYPE(grid_id),OPTIONAL,INTENT(in) :: gaid_template ! a template (typically grib_api) to which data will be finally exported, to improve variable conversion
 
 integer :: nana, ntime, ntimerange, nlevel, nvar
 integer :: itime, itimerange, ivar, inetwork
@@ -2087,7 +2088,7 @@ end if
 
 if (associated(vol7d_in%dativar%r))then
   nvar=size(vol7d_in%dativar%r)
-  CALL varbufr2vargrib(vol7d_in%dativar%r, volgrid6d_out%var, c_func)
+  CALL varbufr2vargrib(vol7d_in%dativar%r, volgrid6d_out%var, c_func, gaid_template)
 end if
 
 nana=SIZE(vol7d_in%voldatir, 1)
@@ -2100,6 +2101,10 @@ ENDIF
 DO ivar=1,nvar
   DO itimerange=1,ntimerange
     DO itime=1,ntime
+
+      IF (ASSOCIATED(volgrid6d_out%voldati)) & ! improve!!!!
+       CALL volgrid_get_vol_3d(volgrid6d_out, itime, itimerange, ivar, &
+       voldatiout)
 
       CALL compute(this, &
        vol7d_in%voldatir(:,itime,:,itimerange,ivar,inetwork), voldatiout, &
@@ -2134,13 +2139,14 @@ END SUBROUTINE v7d_volgrid6d_transform_compute
 !! is created internally and it does not require preliminary
 !! initialisation.
 SUBROUTINE v7d_volgrid6d_transform(this, griddim, vol7d_in, volgrid6d_out, &
- networkname, categoryappend)
+ networkname, gaid_template, categoryappend)
 TYPE(transform_def),INTENT(in) :: this !< object specifying the abstract transformation
 TYPE(griddim_def),INTENT(in),OPTIONAL :: griddim !< griddim specifying the output grid (required by most transformation types)
 ! TODO ripristinare intent(in) dopo le opportune modifiche in grid_class.F90
 TYPE(vol7d),INTENT(inout) :: vol7d_in !< object to be transformed, it is not modified, despite the INTENT(inout)
 TYPE(volgrid6d),INTENT(out) :: volgrid6d_out !< transformed object, it does not need initialisation
 CHARACTER(len=*),OPTIONAL,INTENT(in) :: networkname  !< select the network to be processed from the \a vol7d input object, default the first network
+TYPE(grid_id),OPTIONAL,INTENT(in) :: gaid_template !< a template (typically grib_api) to which data will be finally exported, it helps in improving variable conversion
 CHARACTER(len=*),INTENT(in),OPTIONAL :: categoryappend !< append this suffix to log4fortran namespace category
 
 type(grid_transform) :: grid_trans
@@ -2173,10 +2179,10 @@ IF (c_e(grid_trans)) THEN
 
   CALL volgrid6d_alloc(volgrid6d_out, griddim%dim, ntime=ntime, nlevel=nlevel, &
    ntimerange=ntimerange, nvar=nvar)
-! how to specify decode here?
-  CALL volgrid6d_alloc_vol(volgrid6d_out)
+! can I avoid decode=.TRUE. here, using gaid_template?
+  CALL volgrid6d_alloc_vol(volgrid6d_out, decode=.TRUE.)
 
-  CALL compute(grid_trans, vol7d_in, volgrid6d_out, networkname)
+  CALL compute(grid_trans, vol7d_in, volgrid6d_out, networkname, gaid_template)
 
   CALL vg6d_wind_rot(volgrid6d_out)
 ELSE
