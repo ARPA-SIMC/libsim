@@ -1100,10 +1100,7 @@ ELSE IF (output_format == 'grib_api') THEN
 ! interpolate sparse data over the requested grid
         CALL transform(trans, grid_out, v7d, vg6d(1), gaid_template=gaid, &
          categoryappend="transform2")
-! TODO check here whether the transformation succeeded export the
-! interpolated volume to file keeping the same grib template used for
-! the grid
-        CALL export(vg6d, output_file) !, gaid_template=gaid)
+        CALL export(vg6d, output_file) ! gaid_template here not necessary
         CALL delete(vg6d(1))
 
       ELSE

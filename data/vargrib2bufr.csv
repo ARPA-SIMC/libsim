@@ -91,6 +91,8 @@ B13003,Relative humidity,Percent,255,2,52,255,1.0,0.0
 B13011,Total precipitation,Kg/m**2,255,1,52,0,1.0,0.0
 B13011,Total precipitation,Kg/m**2,255,2,61,255,1.0,0.0
 B13011,Total precipitation,m->Kg/m**2,98,128,228,255,1000.,0.0
+B13033,Evaporation/Evapotranspiration,Kg/m**2,255,0,6,2,1.0,0.0
+B13033,Evaporation/Evapotranspiration,Kg/m**2,255,1,40,0,1.0,0.0
 B13130,Large scale snow (invented),Kg/m**2,98,128,144,255,1.0,0.0
 B13130,Water equivalent of accumulated snow depth (invented),Kg/m**2,255,1,60,0,1.0,0.0
 B13130,Water equivalent of accumulated snow depth (invented),Kg/m**2,255,2,65,255,1.0,0.0
@@ -121,6 +123,7 @@ B14018,Incoming short-wave radiation flux (surface),W/m^2,200,200,80,0,1.0,0.0
 B14019,Surface Albedo,Fraction,200,200,124,255,100.,0.0
 B14019,Surface Albedo,Fraction,200,200,124,0,100.,0.0
 B14019,Surface Albedo,Percent,255,2,84,255,1.0,0.0
+B14021,Global solar radiation,W/m^2,255,4,7,0,1.0,0.0
 B14192,Instantaneous sensible heat flux (invented),W/m^2,255,0,11,0,1.0,0.0
 B14192,Instantaneous sensible heat flux (invented),W/m^2,255,2,122,255,1.0,0.0
 B14192,Instantaneous sensible heat flux (invented),W/m^2,200,200,113,0,1.0,0.0

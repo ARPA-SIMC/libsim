@@ -838,7 +838,7 @@ TYPE(datetime) :: reftime ! reference time of data, used for coding correct end 
 
 INTEGER :: EditionNumber, tri, unit, p1_g1, p2_g1, p1, p2
 
-call grib_get(gaid,'GRIBEditionNumber',EditionNumber)
+CALL grib_get(gaid,'GRIBEditionNumber',EditionNumber)
 
 IF (EditionNumber == 1 ) THEN
 ! Convert vol7d_timerange members to grib1 with reasonable time unit
@@ -850,7 +850,7 @@ IF (EditionNumber == 1 ) THEN
   CALL grib_set(gaid,'P2',p2_g1)
   CALL grib_set(gaid,'indicatorOfUnitOfTimeRange',unit)
 
-else if (EditionNumber == 2) then
+ELSE IF (EditionNumber == 2) THEN
 
   IF (this%timerange == 254) THEN ! point in time -> template 4.0
     CALL grib_set(gaid,'productDefinitionTemplateNumber', 0)
@@ -860,7 +860,8 @@ else if (EditionNumber == 2) then
     CALL grib_set(gaid,'indicatorOfUnitOfTimeRange',unit)
     CALL grib_set(gaid,'forecastTime',p1)
 
-  ELSE IF (this%timerange >= 0 .AND. this%timerange <= 9) THEN
+  ELSE IF (this%timerange >= 0 .AND. this%timerange <= 9 .OR. &
+   this%timerange >= 200 .AND. this%timerange <= 205) THEN
 ! statistically processed -> template 4.8
     CALL grib_set(gaid,'productDefinitionTemplateNumber', 8)
 
@@ -891,6 +892,12 @@ else if (EditionNumber == 2) then
       CALL grib_set(gaid,'indicatorOfUnitForTimeRange',unit)
       CALL grib_set(gaid,'lengthOfTimeRange',p2)
 
+! warn about local use
+      IF (this%timerange >= 200 .AND. this%timerange <= 205) THEN
+        CALL l4f_log(L4F_WARN, &
+         'coding in grib2 a nonstandard typeOfStatisticalProcessing '// &
+         t2c(this%timerange))
+      ENDIF
     ELSE ! bad timerange
       CALL l4f_log(L4F_ERROR, &
        'Timerange with 0>p1>p2 cannot be exported in grib2')
