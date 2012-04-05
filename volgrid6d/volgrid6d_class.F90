@@ -1453,7 +1453,7 @@ TYPE(volgrid6d),INTENT(out) :: volgrid6d_out !< transformed object, it does not 
 TYPE(vol7d_level),INTENT(in),OPTIONAL,TARGET :: lev_out(:) !< vol7d_level object defining target vertical grid, for vertical interpolations
 TYPE(volgrid6d),INTENT(in),OPTIONAL :: volgrid6d_coord_in !< object providing time constant input vertical coordinate for some kind of vertical interpolations
 LOGICAL,INTENT(in),OPTIONAL :: clone !< if provided and \a .TRUE. , clone the \a gaid's from \a volgrid6d_in to \a volgrid6d_out
-LOGICAL,INTENT(in),OPTIONAL :: decode !< if provided and \a .FALSE. the data volume is not allocated, but work is performed on grid_id's if possible
+LOGICAL,INTENT(in),OPTIONAL :: decode !< determine whether the data in \a volgrid6d_out should be decoded or remain coded in gaid, if not provided, the decode status is taken from \a volgrid6d_in
 CHARACTER(len=*),INTENT(in),OPTIONAL :: categoryappend !< append this suffix to log4fortran namespace category
 
 TYPE(grid_transform) :: grid_trans
@@ -1626,8 +1626,12 @@ IF (c_e(grid_trans)) THEN ! transformation is valid
   CALL volgrid6d_alloc(volgrid6d_out, ntime=ntime, nlevel=nlevel, &
    ntimerange=ntimerange, nvar=nvar)
 
-! decode status is copied from input, and reset if gaidreadonly
-  ldecode = ASSOCIATED(volgrid6d_in%voldati) ! .OR. decode
+  IF (PRESENT(decode)) THEN ! explicitly set decode status
+    ldecode = decode
+  ELSE ! take it from input
+    ldecode = ASSOCIATED(volgrid6d_in%voldati)
+  ENDIF
+! force decode if gaid is readonly
   decode_loop: DO i6 = 1,nvar
     DO i5 = 1, ntimerange
       DO i4 = 1, ntime
@@ -1640,6 +1644,13 @@ IF (c_e(grid_trans)) THEN ! transformation is valid
       ENDDO
     ENDDO
   ENDDO decode_loop
+
+  IF (PRESENT(decode)) THEN
+    IF (ldecode.NEQV.decode) THEN
+      CALL l4f_category_log(volgrid6d_in%category, L4F_WARN, &
+     'volgrid6d_transform: decode status forced to .TRUE. because driver does not allow copy')
+    ENDIF
+  ENDIF
 
   CALL volgrid6d_alloc_vol(volgrid6d_out, decode=ldecode)
 
@@ -2041,14 +2052,14 @@ END SUBROUTINE volgrid6dv_v7d_transform
 
 ! Internal method for performing sparse point to grid computations
 SUBROUTINE v7d_volgrid6d_transform_compute(this, vol7d_in, volgrid6d_out, networkname, gaid_template)
-TYPE(grid_transform),INTENT(in) :: this ! oggetto di trasformazione per grigliato
-type(vol7d), INTENT(in) :: vol7d_in ! oggetto da trasformare
-type(volgrid6d), INTENT(out) :: volgrid6d_out ! oggetto trasformato 
-CHARACTER(len=*),OPTIONAL,INTENT(in) :: networkname ! seleziona il network da exportare da vol7d (default=1)
-TYPE(grid_id),OPTIONAL,INTENT(in) :: gaid_template ! a template (typically grib_api) to which data will be finally exported, to improve variable conversion
+TYPE(grid_transform),INTENT(in) :: this ! object specifying the specific transformation
+type(vol7d), INTENT(in) :: vol7d_in ! object to be transformed
+type(volgrid6d), INTENT(out) :: volgrid6d_out ! transformed object
+CHARACTER(len=*),OPTIONAL,INTENT(in) :: networkname ! select the network to be processed from the \a vol7d input object, default the first network
+TYPE(grid_id),OPTIONAL,INTENT(in) :: gaid_template ! the template (typically grib_api) to be associated with output data, it also helps in improving variable conversion
 
 integer :: nana, ntime, ntimerange, nlevel, nvar
-integer :: itime, itimerange, ivar, inetwork
+INTEGER :: ilevel, itime, itimerange, ivar, inetwork
 
 REAL,POINTER :: voldatiout(:,:,:)
 type(vol7d_network) :: network
@@ -2102,19 +2113,30 @@ DO ivar=1,nvar
   DO itimerange=1,ntimerange
     DO itime=1,ntime
 
+! clone the gaid template where I have data
+      IF (PRESENT(gaid_template)) THEN
+        DO ilevel = 1, nlevel
+          IF (ANY(c_e(vol7d_in%voldatir(:,itime,ilevel,itimerange,ivar,inetwork)))) THEN
+            CALL copy(gaid_template, volgrid6d_out%gaid(ilevel,itime,itimerange,ivar))
+          ELSE
+            volgrid6d_out%gaid(ilevel,itime,itimerange,ivar) = grid_id_new()
+          ENDIF
+        ENDDO
+      ENDIF
+
+! get data
       IF (ASSOCIATED(volgrid6d_out%voldati)) & ! improve!!!!
        CALL volgrid_get_vol_3d(volgrid6d_out, itime, itimerange, ivar, &
        voldatiout)
-
+! do the interpolation
       CALL compute(this, &
        vol7d_in%voldatir(:,itime,:,itimerange,ivar,inetwork), voldatiout, &
        vol7d_in%dativar%r(ivar))
-
-! Rescale valid data according to variable conversion table
+! rescale valid data according to variable conversion table
       IF (ASSOCIATED(c_func)) THEN
         CALL compute(c_func(ivar), voldatiout(:,:,:))
       ENDIF
-
+! put data
       CALL volgrid_set_vol_3d(volgrid6d_out, itime, itimerange, ivar, &
        voldatiout)
 
@@ -2146,7 +2168,7 @@ TYPE(griddim_def),INTENT(in),OPTIONAL :: griddim !< griddim specifying the outpu
 TYPE(vol7d),INTENT(inout) :: vol7d_in !< object to be transformed, it is not modified, despite the INTENT(inout)
 TYPE(volgrid6d),INTENT(out) :: volgrid6d_out !< transformed object, it does not need initialisation
 CHARACTER(len=*),OPTIONAL,INTENT(in) :: networkname  !< select the network to be processed from the \a vol7d input object, default the first network
-TYPE(grid_id),OPTIONAL,INTENT(in) :: gaid_template !< a template (typically grib_api) to which data will be finally exported, it helps in improving variable conversion
+TYPE(grid_id),OPTIONAL,INTENT(in) :: gaid_template !< the template (typically grib_api) to be associated with output data, it also helps in improving variable conversion
 CHARACTER(len=*),INTENT(in),OPTIONAL :: categoryappend !< append this suffix to log4fortran namespace category
 
 type(grid_transform) :: grid_trans

@@ -1103,7 +1103,7 @@ ELSE IF (output_format == 'grib_api') THEN
 ! TODO check here whether the transformation succeeded export the
 ! interpolated volume to file keeping the same grib template used for
 ! the grid
-        CALL export(vg6d, output_file, gaid_template=gaid)
+        CALL export(vg6d, output_file) !, gaid_template=gaid)
         CALL delete(vg6d(1))
 
       ELSE
