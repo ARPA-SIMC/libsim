@@ -75,6 +75,22 @@ return
 end function optio_s
 
 
+
+!> Return the optional value if present, otherwise return missing value.
+elemental integer(kind=int_l) function optio_i(var)
+
+integer(kind=int_l),intent(in),optional  :: var !< variable to be checked
+
+if (present(var))then
+  optio_i=var
+else
+  optio_i=imiss
+end if
+
+return
+end function optio_i
+
+
 !> Return the optional value if present, otherwise return missing value.
 elemental integer(kind=int_l) function optio_l(var)
 
