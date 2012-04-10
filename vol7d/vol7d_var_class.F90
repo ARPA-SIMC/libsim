@@ -40,11 +40,11 @@ TYPE vol7d_var
   CHARACTER(len=24) :: unit !< descrizione testuale dell'unità di misura (opzionale)
   integer :: scalefactor !< numero di decimali nella rappresentazione intera o character (opzionale)
 
-  INTEGER :: r !< indice della variabile di dati reale che possiede l'attributo corrente
-  INTEGER :: d !< indice della variabile di dati a doppia precisione che possiede l'attributo corrente
-  INTEGER :: i !< indice della variabile di dati intera che possiede l'attributo corrente
-  INTEGER :: b !< indice della variabile di dati byte che possiede l'attributo corrente
-  INTEGER :: c !< indice della variabile di dati carattere che possiede l'attributo corrente
+  INTEGER :: r !< indice della variabile nel volume degli attributi reali
+  INTEGER :: d !< indice della variabile nel volume degli attributi double precision
+  INTEGER :: i !< indice della variabile nel volume degli attributi integer
+  INTEGER :: b !< indice della variabile nel volume degli attributi byte
+  INTEGER :: c !< indice della variabile nel volume degli attributi character
 END TYPE  vol7d_var
 
 !> Valore mancante per vol7d_var.
