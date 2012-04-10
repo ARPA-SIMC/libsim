@@ -1359,7 +1359,6 @@ END SUBROUTINE vol7d_normalize_vcoord
 
 
 SUBROUTINE vol7d_compute_NormalizedDensityIndex(this, that, perc_vals,cyclicdt)
- !step, start, stopp, 
  
 TYPE(vol7d),INTENT(inout) :: this !< volume providing data to be computed, it is not modified by the method, apart from performing a \a vol7d_alloc_vol on it
 TYPE(vol7d),INTENT(out) :: that !< output volume which will contain the computed data
@@ -1369,70 +1368,130 @@ TYPE(vol7d),INTENT(out) :: that !< output volume which will contain the computed
 real,intent(in) :: perc_vals(:) !< percentile values to use in compute, between 0. and 100.
 TYPE(cyclicdatetime),INTENT(in) :: cyclicdt !< cyclic date and time
 
-integer ::area
-integer :: indlevel ,indtimerange ,inddativarr
-!LOGICAL,ALLOCATABLE :: mask_time(:)
-!TYPE(datetime) :: lstart, lstop
+integer :: indana,indtime,indvar,indnetwork,indlevel ,indtimerange ,inddativarr, indattr
+integer :: i,j,narea
+TYPE(vol7d_var) ::  var
+character(len=vol7d_ana_lenident) :: ident
+character(len=1)            :: type
+integer :: areav(size(this%ana))
+logical,allocatable :: mask(:,:,:)
+integer,allocatable :: area(:)
 REAL, DIMENSION(:),allocatable ::  ndi,limbins
-character(len=10) :: ident
-integer :: i
 
-!CALL safe_start_stop(this, lstart, lstop, start, stopp)
-!IF (.NOT. c_e(lstart) .OR. .NOT. c_e(lstop)) RETURN
 
 allocate (ndi(size(perc_vals)-1),limbins(size(perc_vals)))
-!allocate (mask_time(size(this%time)))
+CALL init(that, time_definition=this%time_definition)
+call init(var, btable="B01192")    ! MeteoDB station ID that here is the number of area
 
-!CALL init(that, time_definition=this%time_definition)
-!CALL vol7d_alloc_vol(this)
+type=cmiss
+indvar = index(this%anavar, var, type=type)
+indnetwork=1
 
-!mask_time=(this%time < lstart .OR. this%time > lstop .OR. MOD(this%time - lstart, step) /= timedelta_0)
+!if( ind /= 0 ) then
+  select case (type)
+  case("d")
+    areav=integerdat(this%volanad(:,indvar,indnetwork),this%anavar%d(indvar))
+  case("r")
+    areav=integerdat(this%volanar(:,indvar,indnetwork),this%anavar%r(indvar))
+  case("i")
+    areav=integerdat(this%volanai(:,indvar,indnetwork),this%anavar%i(indvar))
+  case("b")
+    areav=integerdat(this%volanab(:,indvar,indnetwork),this%anavar%b(indvar))
+  case("c")
+    areav=integerdat(this%volanac(:,indvar,indnetwork),this%anavar%c(indvar))
+  case default
+    areav=imiss
+  end select
+!end if
 
-!TODO how to use this mask ??? without copy??
+narea=count_distinct(areav)
+allocate(area(narea))
+area=pack_distinct(areav,narea)
+call vol7d_alloc(that,nana=narea*(size(perc_vals)-1))
 
-call init(that)
+do i=1,narea
+  do j=1,size(perc_vals)-1
+    write(ident,'("BOX",2i3.3)')area(i),nint(perc_vals(j))
+    call init(that%ana((j-1)*narea+i),ident=ident,lat=0d0,lon=0d0)
+    !area((j-1)*narea+i)=area(i)
+    !percentile((j-1)*narea+i)=perc_vals(j)
+  end do
+end do
 
-!call vol7d_alloc(that, ndativarr=nvarout)
-call vol7d_alloc(that)
+do i=1,size(that%ana)
+  call display(that%ana(i))
+end do
+
+call vol7d_alloc(that,nlevel=size(this%level), ntimerange=size(this%timerange), &
+ ndativarr=size(this%dativar%r), nnetwork=1,ntime=1,ndativarattrr=size(this%dativar%r),ndatiattrr=1)
+
+that%level=this%level
+that%timerange=this%timerange
+that%dativar%r=this%dativar%r
+that%dativarattr%r=that%dativar%r
+call init(that%datiattr%r(1), btable="B33209")    ! NDI order number
+that%time(1)=cyclicdatetime_to_conventional(cyclicdt,this%time(firsttrue(this%time == cyclicdt)))
+
+call l4f_log(L4F_INFO,"vol7d_compute_percentile conventional datetime "//to_char(that%time(1)))
+call init(that%network(1),name="qcclima-ndi")
+
 call vol7d_alloc_vol(that,inivol=.true.)
 
-do indtimerange=1,size(this%timerange)
-  do inddativarr=1,size(this%dativar%r)
-    do indlevel=1,size(this%level)
-      
-      ! all stations, all times, all networks
-      call NormalizedDensityIndex (&
-       reshape(this%voldatir(:,:, indlevel, indtimerange, inddativarr,:),&
-       (/size(this%voldatir(:,:, indlevel, indtimerange, inddativarr,:))/)),&
-       perc_vals, ndi, limbins) 
-      
-      print *,"------- ndi limbins -----------"
-      call display( this%timerange(indtimerange))
-      call display( this%level(indlevel))
-      call display( this%dativar%r(inddativarr))
+allocate (mask(size(this%ana),size(this%time),size(this%network)))
 
-      print *, ndi
-      print *, limbins
+indtime=1
+indnetwork=1
+indattr=1
+do inddativarr=1,size(this%dativar%r)
+  do indtimerange=1,size(this%timerange)
+    do indlevel=1,size(this%level)            ! all stations, all times, all networks
+      do i=1,narea
 
-      do i=1,size(ndi)
-        write(ident,'("BOX",2i3.3)')area,nint(ndi(i)*1000.)
-        
-!        call init(that%ana(i),ident=ident)
+                                !this%voldatir(indana, indtime, indlevel, indtimerange, inddativarr, indnetwork)
 
+        !create mask only with valid time
+        mask = spread(spread((this%time == cyclicdt ),1,size(this%ana)),3,size(this%network))
+        !delete in mask different area
+        do j=1, size(mask,1)
+          if (areav(j) /= area(i)) mask(j,:,:) =.false.
+        end do
+
+        ! we want more than 30% data present
+        if (count (mask .and. c_e(this%voldatir(:,:, indlevel, indtimerange, inddativarr,:))) / &
+            count (mask) < 0.30) cycle
+
+        call NormalizedDensityIndex (&
+         pack(this%voldatir(:,:, indlevel, indtimerange, inddativarr,:), &
+         mask=mask), &
+         perc_vals, ndi, limbins) 
+
+        print *,"------- ndi limbins -----------"
+        call display( this%timerange(indtimerange))
+        call display( this%level(indlevel))
+        call display( this%dativar%r(inddativarr))
+        print *, ndi
+        print *, limbins
+
+        do j=1,size(perc_vals)-1
+          indana=((j-1)*narea+i)
+          that%voldatir(indana, indtime, indlevel, indtimerange, inddativarr, indnetwork)=&
+           limbins(j)
+
+          ! this is a special case where inddativarr = inddativarr becouse we have anly real variables and attributes
+          that%voldatiattrr(indana, indtime, indlevel, indtimerange, inddativarr, indnetwork,indattr)=&
+           ndi(j)
+
+        end do
       end do
-
     end do
   end do
 end do
 
-!deallocate (ndi,limbins,mask_time)
-deallocate (ndi,limbins)
-
+deallocate (ndi,limbins,mask,area)
 
 end SUBROUTINE vol7d_compute_NormalizedDensityIndex
 
 SUBROUTINE vol7d_compute_percentile(this, that, perc_vals,cyclicdt)
- !step, start, stopp, 
  
 TYPE(vol7d),INTENT(inout) :: this !< volume providing data to be computed, it is not modified by the method, apart from performing a \a vol7d_alloc_vol on it
 TYPE(vol7d),INTENT(out) :: that !< output volume which will contain the computed data
@@ -1453,18 +1512,9 @@ logical,allocatable :: mask(:,:,:)
 integer,allocatable :: area(:)
 
 allocate (perc(size(perc_vals)))
-!allocate (mask_time(size(this%time)))
-
-!! year=1001 : yearly values (no other time dependence)
-!! year=1002 : dayly  values of a specified month (depends by day and month)
-!! year=1003 : 10 day period of a specified month (depends by day(1,11,21) and month)
-!! year=1004 : mounthly values (depend by month)
-!! The other conventional month hour and minute should be 01 when they are not significative, day should be 1 or, if year=1003 is used, 1,11 or 21.
-
-
 CALL init(that, time_definition=this%time_definition)
-
 call init(var, btable="B01192")    ! MeteoDB station ID that here is the number of area
+
 type=cmiss
 indvar = index(this%anavar, var, type=type)
 indnetwork=1
@@ -1494,7 +1544,7 @@ call vol7d_alloc(that,nana=narea*size(perc_vals))
 do i=1,narea
   do j=1,size(perc_vals)
     write(ident,'("BOX",2i3.3)')area(i),nint(perc_vals(j))
-    call init(that%ana((j-1)*narea+i),ident=ident)
+    call init(that%ana((j-1)*narea+i),ident=ident,lat=0d0,lon=0d0)
     !area((j-1)*narea+i)=area(i)
     !percentile((j-1)*narea+i)=perc_vals(j)
   end do
@@ -1514,10 +1564,12 @@ that%time(1)=cyclicdatetime_to_conventional(cyclicdt,this%time(firsttrue(this%ti
 call l4f_log(L4F_INFO,"vol7d_compute_percentile conventional datetime "//to_char(that%time(1)))
 call init(that%network(1),name="qcclima-perc")
 
-call vol7d_alloc_vol(that)
+call vol7d_alloc_vol(that,inivol=.true.)
 
 allocate (mask(size(this%ana),size(this%time),size(this%network)))
 
+indtime=1
+indnetwork=1
 do inddativarr=1,size(this%dativar%r)
   do indtimerange=1,size(this%timerange)
     do indlevel=1,size(this%level)            ! all stations, all times, all networks
@@ -1532,6 +1584,10 @@ do inddativarr=1,size(this%dativar%r)
           if (areav(j) /= area(i)) mask(j,:,:) =.false.
         end do
 
+        ! we want more than 30% data present
+        if (count (mask .and. c_e(this%voldatir(:,:, indlevel, indtimerange, inddativarr,:))) / &
+            count (mask) < 0.30) cycle
+
         perc= stat_percentile (&
          pack(this%voldatir(:,:, indlevel, indtimerange, inddativarr,:), &
          mask=mask), &
@@ -1543,8 +1599,6 @@ do inddativarr=1,size(this%dativar%r)
         call display( this%dativar%r(inddativarr))
         print *, perc
 
-        indtime=1
-        indnetwork=1
         do j=1,size(perc_vals)
           indana=((j-1)*narea+i)
           that%voldatir(indana, indtime, indlevel, indtimerange, inddativarr, indnetwork)=&

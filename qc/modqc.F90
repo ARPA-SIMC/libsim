@@ -160,6 +160,7 @@ use missing_values
 use optional_values
 use vol7d_class
 
+
 implicit none
 
 
@@ -186,19 +187,22 @@ end interface
 
 !> Remove data under a defined grade of confidence.
 interface peeled
-  module procedure peeledrb, peeleddb, peeledbb, peeledib,peeledcb
-!   ,peeledri, peeleddi, peeledbi, peeledii,peeledci
+  module procedure peeledrb, peeleddb, peeledbb, peeledib,peeledcb &
+                  ,peeledri, peeleddi, peeledbi, peeledii,peeledci &
+                  ,peeledrr, peeleddr, peeledbr, peeledir,peeledcr &
+                  ,peeledrd, peeleddd, peeledbd, peeledid,peeledcd &
+                  ,peeledrc, peeleddc, peeledbc, peeledic,peeledcc
 end interface
 
 
 !> Check data validity based on single confidence
 interface vd
-  module procedure vdi,vdb
+  module procedure vdi,vdb,vdr,vdd,vdc
 end interface
 
 !> Test di dato invalidato
 interface invalidated
-  module procedure invalidatedi,invalidatedb
+  module procedure invalidatedi,invalidatedb,invalidatedr,invalidatedd,invalidatedc
 end interface
 
 private
@@ -209,402 +213,184 @@ public qcpar, qcpartype, qcsummaryflagb ! ,qcsummaryflagi
 
 contains
 
-!> Test di validit‡† di dati integer
-elemental logical function vdi(flag)
-
-integer,intent(in)  :: flag !< confidenza
-      
-if(flag <= qcpar%att .and. c_e(flag))then
-  vdi=.false.
-else
-  vdi=.true.
-end if
 
-return
-end function vdi
-
-
-!> Test di validit√† di dati byte
-elemental logical function vdb(flag)
-
-integer (kind=int_b),intent(in) :: flag !< confidenza
-      
-if(flag <= qcpar%att .and. c_e(flag))then
-  vdb=.false.
-else
-  vdb=.true.
-end if
-
-return
-end function vdb
-
-
-!> Test di dato invalidato intero
-elemental logical function invalidatedi(flag)
-
-integer,intent(in)  :: flag !< attributo di invalidazione del dato
-      
-if(c_e(flag))then
-  invalidatedi=.true.
-else
-  invalidatedi=.false.
-end if
-
-return
-end function invalidatedi
-
-
-!> Test di dato invalidato byte
-elemental logical function invalidatedb(flag)
-
-integer (kind=int_b),intent(in) :: flag !< attributo di invalidazione del dato
-      
-if(c_e(flag))then
-  invalidatedb=.true.
-else
-  invalidatedb=.false.
-end if
-
-return
-end function invalidatedb
-
-
-!!$!> Check data validity based on multiple confidences.
-!!$!! Compute final decision boolean flag
-!!$ELEMENTAL LOGICAL FUNCTION qcsummaryflagi(flaginv, flag1, flag2, flag3)
-!!$integer,intent(in),optional :: flaginv
-!!$integer,intent(in),optional :: flag1
-!!$integer,intent(in),optional :: flag2
-!!$integer,intent(in),optional :: flag3
-!!$
-!!$qcsummaryflagi = .NOT.invalidated(optio_l(flaginv)) .AND. &
-!!$ vd(optio_l(flag1)) .AND. vd(optio_l(flag2)) .AND. vd(optio_l(flag3))
-!!$
-!!$END FUNCTION qcsummaryflagi
-
-
-!> Check data validity based on multiple confidences.
-!! Compute final decision boolean flag
-ELEMENTAL LOGICAL FUNCTION qcsummaryflagb(flag0, flag1, flag2, flag3)
-integer(kind=int_b),intent(in),optional :: flag0
-integer(kind=int_b),intent(in),optional :: flag1
-integer(kind=int_b),intent(in),optional :: flag2
-integer(kind=int_b),intent(in),optional :: flag3
-
-qcsummaryflagb = .NOT.invalidated(optio_b(flag0)) .AND. &
- vd(optio_b(flag1)) .AND. vd(optio_b(flag2)) .AND. vd(optio_b(flag3))
-
-END FUNCTION qcsummaryflagb
-
-
-! byte attributes below
-
-function peeledrb(data,flag0,flag1,flag2,flag3)
-
-real, intent(in) :: data(:,:,:,:,:)
-integer(kind=int_b), intent(in),optional,pointer :: flag0(:,:,:,:,:)
-integer(kind=int_b), intent(in),optional,pointer :: flag1(:,:,:,:,:)
-integer(kind=int_b), intent(in),optional,pointer :: flag2(:,:,:,:,:)
-integer(kind=int_b), intent(in),optional,pointer :: flag3(:,:,:,:,:)
-real :: peeledrb(size(data,1),size(data,2),size(data,3),size(data,4),size(data,5))
-
-integer(kind=int_b) :: flag0l
-integer(kind=int_b) :: flag1l
-integer(kind=int_b) :: flag2l
-integer(kind=int_b) :: flag3l
-
-integer :: i,j,k,l,m
-
-
-do m=1,size(data,5)
-  do l=1,size(data,4)
-    do k=1,size(data,3)
-      do j=1,size(data,2)
-        do i=1,size(data,1)
-          
-          if (associated(flag0))then
-            flag0l=flag0(i,j,k,l,m)
-          else
-            flag0l=ibmiss
-          end if
-
-          if (associated(flag1))then
-            flag1l=flag1(i,j,k,l,m)
-          else
-            flag1l=ibmiss
-          end if
-
-          if (associated(flag2))then
-            flag2l=flag2(i,j,k,l,m)
-          else
-            flag2l=ibmiss
-          end if
-
-          if (associated(flag3))then
-            flag3l=flag3(i,j,k,l,m)
-          else
-            flag3l=ibmiss
-          end if
-
-          if (qcsummaryflagb(flag0l,flag1l,flag2l,flag3l)) then
-            peeledrb(i,j,k,l,m)=data(i,j,k,l,m)
-          else
-            peeledrb(i,j,k,l,m)=rmiss
-          end if
-
-        end do
-      end do
-    end do
-  end do
-end do
-
-end function peeledrb
-
-function peeleddb(data,flag0,flag1,flag2,flag3)
-
-real(kind=fp_d), intent(in) :: data(:,:,:,:,:)
-integer(kind=int_b), intent(in),optional,pointer :: flag0(:,:,:,:,:)
-integer(kind=int_b), intent(in),optional,pointer :: flag1(:,:,:,:,:)
-integer(kind=int_b), intent(in),optional,pointer :: flag2(:,:,:,:,:)
-integer(kind=int_b), intent(in),optional,pointer :: flag3(:,:,:,:,:)
-real(kind=fp_d) :: peeleddb(size(data,1),size(data,2),size(data,3),size(data,4),size(data,5))
-
-integer(kind=int_b) :: flag0l
-integer(kind=int_b) :: flag1l
-integer(kind=int_b) :: flag2l
-integer(kind=int_b) :: flag3l
-
-integer :: i,j,k,l,m
-
-do m=1,size(data,5)
-  do l=1,size(data,4)
-    do k=1,size(data,3)
-      do j=1,size(data,2)
-        do i=1,size(data,1)
-          
-          if (associated(flag0))then
-            flag0l=flag0(i,j,k,l,m)
-          else
-            flag0l=ibmiss
-          end if
-
-          if (associated(flag1))then
-            flag1l=flag1(i,j,k,l,m)
-          else
-            flag1l=ibmiss
-          end if
-
-          if (associated(flag2))then
-            flag2l=flag2(i,j,k,l,m)
-          else
-            flag2l=ibmiss
-          end if
-
-          if (associated(flag3))then
-            flag3l=flag3(i,j,k,l,m)
-          else
-            flag3l=ibmiss
-          end if
-
-          if (qcsummaryflagb(flag0l,flag1l,flag2l,flag3l)) then
-            peeleddb(i,j,k,l,m)=data(i,j,k,l,m)
-          else
-            peeleddb(i,j,k,l,m)=dmiss
-          end if
-
-        end do
-      end do
-    end do
-  end do
-end do
-
-end function peeleddb
-
-function peeledib(data,flag0,flag1,flag2,flag3)
-
-integer, intent(in) :: data(:,:,:,:,:)
-integer(kind=int_b), intent(in),optional,pointer :: flag0(:,:,:,:,:)
-integer(kind=int_b), intent(in),optional,pointer :: flag1(:,:,:,:,:)
-integer(kind=int_b), intent(in),optional,pointer :: flag2(:,:,:,:,:)
-integer(kind=int_b), intent(in),optional,pointer :: flag3(:,:,:,:,:)
-integer :: peeledib(size(data,1),size(data,2),size(data,3),size(data,4),size(data,5))
-
-integer(kind=int_b) :: flag0l
-integer(kind=int_b) :: flag1l
-integer(kind=int_b) :: flag2l
-integer(kind=int_b) :: flag3l
-
-integer :: i,j,k,l,m
-
-
-do m=1,size(data,5)
-  do l=1,size(data,4)
-    do k=1,size(data,3)
-      do j=1,size(data,2)
-        do i=1,size(data,1)
-          
-          if (associated(flag0))then
-            flag0l=flag0(i,j,k,l,m)
-          else
-            flag0l=ibmiss
-          end if
-
-          if (associated(flag1))then
-            flag1l=flag1(i,j,k,l,m)
-          else
-            flag1l=ibmiss
-          end if
-
-          if (associated(flag2))then
-            flag2l=flag2(i,j,k,l,m)
-          else
-            flag2l=ibmiss
-          end if
-
-          if (associated(flag3))then
-            flag3l=flag3(i,j,k,l,m)
-          else
-            flag3l=ibmiss
-          end if
-
-          if (qcsummaryflagb(flag0l,flag1l,flag2l,flag3l)) then
-            peeledib(i,j,k,l,m)=data(i,j,k,l,m)
-          else
-            peeledib(i,j,k,l,m)=imiss
-          end if
-
-        end do
-      end do
-    end do
-  end do
-end do
-
-end function peeledib
-
-
-function peeledbb(data,flag0,flag1,flag2,flag3)
-
-integer(kind=int_b), intent(in) :: data(:,:,:,:,:)
-integer(kind=int_b), intent(in),optional,pointer :: flag0(:,:,:,:,:)
-integer(kind=int_b), intent(in),optional,pointer :: flag1(:,:,:,:,:)
-integer(kind=int_b), intent(in),optional,pointer :: flag2(:,:,:,:,:)
-integer(kind=int_b), intent(in),optional,pointer :: flag3(:,:,:,:,:)
-integer(kind=int_b) :: peeledbb(size(data,1),size(data,2),size(data,3),size(data,4),size(data,5))
-
-integer(kind=int_b) :: flag0l
-integer(kind=int_b) :: flag1l
-integer(kind=int_b) :: flag2l
-integer(kind=int_b) :: flag3l
-
-integer :: i,j,k,l,m
-
-
-do m=1,size(data,5)
-  do l=1,size(data,4)
-    do k=1,size(data,3)
-      do j=1,size(data,2)
-        do i=1,size(data,1)
-          
-          if (associated(flag0))then
-            flag0l=flag0(i,j,k,l,m)
-          else
-            flag0l=ibmiss
-          end if
-
-          if (associated(flag1))then
-            flag1l=flag1(i,j,k,l,m)
-          else
-            flag1l=ibmiss
-          end if
-
-          if (associated(flag2))then
-            flag2l=flag2(i,j,k,l,m)
-          else
-            flag2l=ibmiss
-          end if
-
-          if (associated(flag3))then
-            flag3l=flag3(i,j,k,l,m)
-          else
-            flag3l=ibmiss
-          end if
-
-          if (qcsummaryflagb(flag0l,flag1l,flag2l,flag3l)) then
-            peeledbb(i,j,k,l,m)=data(i,j,k,l,m)
-          else
-            peeledbb(i,j,k,l,m)=ibmiss
-          end if
-
-        end do
-      end do
-    end do
-  end do
-end do
-
-end function peeledbb
-
-
-
-function peeledcb(data,flag0,flag1,flag2,flag3)
-
-character(len=vol7d_cdatalen), intent(in) :: data(:,:,:,:,:)
-integer(kind=int_b), intent(in),optional,pointer :: flag0(:,:,:,:,:)
-integer(kind=int_b), intent(in),optional,pointer :: flag1(:,:,:,:,:)
-integer(kind=int_b), intent(in),optional,pointer :: flag2(:,:,:,:,:)
-integer(kind=int_b), intent(in),optional,pointer :: flag3(:,:,:,:,:)
-character(len=vol7d_cdatalen)  :: peeledcb(size(data,1),size(data,2),size(data,3),size(data,4),size(data,5))
-
-integer(kind=int_b) :: flag0l
-integer(kind=int_b) :: flag1l
-integer(kind=int_b) :: flag2l
-integer(kind=int_b) :: flag3l
-
-integer :: i,j,k,l,m
-
-
-do m=1,size(data,5)
-  do l=1,size(data,4)
-    do k=1,size(data,3)
-      do j=1,size(data,2)
-        do i=1,size(data,1)
-          
-          if (associated(flag0))then
-            flag0l=flag0(i,j,k,l,m)
-          else
-            flag0l=ibmiss
-          end if
-
-          if (associated(flag1))then
-            flag1l=flag1(i,j,k,l,m)
-          else
-            flag1l=ibmiss
-          end if
-
-          if (associated(flag2))then
-            flag2l=flag2(i,j,k,l,m)
-          else
-            flag2l=ibmiss
-          end if
-
-          if (associated(flag3))then
-            flag3l=flag3(i,j,k,l,m)
-          else
-            flag3l=ibmiss
-          end if
-
-          if (qcsummaryflagb(flag0l,flag1l,flag2l,flag3l)) then
-            peeledcb(i,j,k,l,m)=data(i,j,k,l,m)
-          else
-            peeledcb(i,j,k,l,m)=cmiss
-          end if
-
-        end do
-      end do
-    end do
-  end do
-end do
-
-end function peeledcb
+! peeled routines
+
+#undef VOL7D_POLY_SUBTYPE
+#undef VOL7D_POLY_SUBTYPES
+#undef VOL7D_POLY_ISC
+#define VOL7D_POLY_SUBTYPE REAL
+#define VOL7D_POLY_SUBTYPES r
+
+#undef VOL7D_POLY_TYPE
+#undef VOL7D_POLY_TYPES
+#undef VOL7D_POLY_ISC
+#define VOL7D_POLY_TYPE REAL
+#define VOL7D_POLY_TYPES r
+#include "modqc_peeled_include.F90"
+#include "modqc_peel_util_include.F90"
+#undef VOL7D_POLY_TYPE
+#undef VOL7D_POLY_TYPES
+#define VOL7D_POLY_TYPE DOUBLE PRECISION
+#define VOL7D_POLY_TYPES d
+#include "modqc_peeled_include.F90"
+#include "modqc_peel_util_include.F90"
+#undef VOL7D_POLY_TYPE
+#undef VOL7D_POLY_TYPES
+#define VOL7D_POLY_TYPE INTEGER
+#define VOL7D_POLY_TYPES i
+#include "modqc_peeled_include.F90"
+#include "modqc_peel_util_include.F90"
+#undef VOL7D_POLY_TYPE
+#undef VOL7D_POLY_TYPES
+#define VOL7D_POLY_TYPE INTEGER(kind=int_b)
+#define VOL7D_POLY_TYPES b
+#include "modqc_peeled_include.F90"
+#include "modqc_peel_util_include.F90"
+#undef VOL7D_POLY_TYPE
+#undef VOL7D_POLY_TYPES
+#define VOL7D_POLY_TYPE CHARACTER(len=vol7d_cdatalen)
+#define VOL7D_POLY_TYPES c
+#define VOL7D_POLY_ISC = 1
+#include "modqc_peeled_include.F90"
+#include "modqc_peel_util_include.F90"
+
+
+#undef VOL7D_POLY_SUBTYPE
+#undef VOL7D_POLY_SUBTYPES
+#undef VOL7D_POLY_ISC
+#define VOL7D_POLY_SUBTYPE DOUBLE PRECISION
+#define VOL7D_POLY_SUBTYPES d
+
+#undef VOL7D_POLY_TYPE
+#undef VOL7D_POLY_TYPES
+#define VOL7D_POLY_TYPE REAL
+#define VOL7D_POLY_TYPES r
+#include "modqc_peeled_include.F90"
+#undef VOL7D_POLY_TYPE
+#undef VOL7D_POLY_TYPES
+#define VOL7D_POLY_TYPE DOUBLE PRECISION
+#define VOL7D_POLY_TYPES d
+#include "modqc_peeled_include.F90"
+#undef VOL7D_POLY_TYPE
+#undef VOL7D_POLY_TYPES
+#define VOL7D_POLY_TYPE INTEGER
+#define VOL7D_POLY_TYPES i
+#include "modqc_peeled_include.F90"
+#undef VOL7D_POLY_TYPE
+#undef VOL7D_POLY_TYPES
+#define VOL7D_POLY_TYPE INTEGER(kind=int_b)
+#define VOL7D_POLY_TYPES b
+#include "modqc_peeled_include.F90"
+#undef VOL7D_POLY_TYPE
+#undef VOL7D_POLY_TYPES
+#define VOL7D_POLY_TYPE CHARACTER(len=vol7d_cdatalen)
+#define VOL7D_POLY_TYPES c
+#include "modqc_peeled_include.F90"
+
+
+#undef VOL7D_POLY_SUBTYPE
+#undef VOL7D_POLY_SUBTYPES
+#undef VOL7D_POLY_ISC
+#define VOL7D_POLY_SUBTYPE INTEGER
+#define VOL7D_POLY_SUBTYPES i
+
+#undef VOL7D_POLY_TYPE
+#undef VOL7D_POLY_TYPES
+#define VOL7D_POLY_TYPE REAL
+#define VOL7D_POLY_TYPES r
+#include "modqc_peeled_include.F90"
+#undef VOL7D_POLY_TYPE
+#undef VOL7D_POLY_TYPES
+#define VOL7D_POLY_TYPE DOUBLE PRECISION
+#define VOL7D_POLY_TYPES d
+#include "modqc_peeled_include.F90"
+#undef VOL7D_POLY_TYPE
+#undef VOL7D_POLY_TYPES
+#define VOL7D_POLY_TYPE INTEGER
+#define VOL7D_POLY_TYPES i
+#include "modqc_peeled_include.F90"
+#undef VOL7D_POLY_TYPE
+#undef VOL7D_POLY_TYPES
+#define VOL7D_POLY_TYPE INTEGER(kind=int_b)
+#define VOL7D_POLY_TYPES b
+#include "modqc_peeled_include.F90"
+#undef VOL7D_POLY_TYPE
+#undef VOL7D_POLY_TYPES
+#define VOL7D_POLY_TYPE CHARACTER(len=vol7d_cdatalen)
+#define VOL7D_POLY_TYPES c
+#define VOL7D_POLY_ISC = 1
+#include "modqc_peeled_include.F90"
+
+
+#undef VOL7D_POLY_SUBTYPE
+#undef VOL7D_POLY_SUBTYPES
+#undef VOL7D_POLY_ISC
+#define VOL7D_POLY_SUBTYPE INTEGER(kind=int_b)
+#define VOL7D_POLY_SUBTYPES b
+
+#undef VOL7D_POLY_TYPE
+#undef VOL7D_POLY_TYPES
+#define VOL7D_POLY_TYPE REAL
+#define VOL7D_POLY_TYPES r
+#include "modqc_peeled_include.F90"
+#undef VOL7D_POLY_TYPE
+#undef VOL7D_POLY_TYPES
+#define VOL7D_POLY_TYPE DOUBLE PRECISION
+#define VOL7D_POLY_TYPES d
+#include "modqc_peeled_include.F90"
+#undef VOL7D_POLY_TYPE
+#undef VOL7D_POLY_TYPES
+#define VOL7D_POLY_TYPE INTEGER
+#define VOL7D_POLY_TYPES i
+#include "modqc_peeled_include.F90"
+#undef VOL7D_POLY_TYPE
+#undef VOL7D_POLY_TYPES
+#define VOL7D_POLY_TYPE INTEGER(kind=int_b)
+#define VOL7D_POLY_TYPES b
+#include "modqc_peeled_include.F90"
+#undef VOL7D_POLY_TYPE
+#undef VOL7D_POLY_TYPES
+#define VOL7D_POLY_TYPE CHARACTER(len=vol7d_cdatalen)
+#define VOL7D_POLY_TYPES c
+#define VOL7D_POLY_ISC = 1
+#include "modqc_peeled_include.F90"
+
+
+
+#undef VOL7D_POLY_SUBTYPE
+#undef VOL7D_POLY_SUBTYPES
+#undef VOL7D_POLY_ISC
+#define VOL7D_POLY_SUBTYPE CHARACTER(len=vol7d_cdatalen)
+#define VOL7D_POLY_SUBTYPES c
+
+#undef VOL7D_POLY_TYPE
+#undef VOL7D_POLY_TYPES
+#define VOL7D_POLY_TYPE REAL
+#define VOL7D_POLY_TYPES r
+#include "modqc_peeled_include.F90"
+#undef VOL7D_POLY_TYPE
+#undef VOL7D_POLY_TYPES
+#define VOL7D_POLY_TYPE DOUBLE PRECISION
+#define VOL7D_POLY_TYPES d
+#include "modqc_peeled_include.F90"
+#undef VOL7D_POLY_TYPE
+#undef VOL7D_POLY_TYPES
+#define VOL7D_POLY_TYPE INTEGER
+#define VOL7D_POLY_TYPES i
+#include "modqc_peeled_include.F90"
+#undef VOL7D_POLY_TYPE
+#undef VOL7D_POLY_TYPES
+#define VOL7D_POLY_TYPE INTEGER(kind=int_b)
+#define VOL7D_POLY_TYPES b
+#include "modqc_peeled_include.F90"
+#undef VOL7D_POLY_TYPE
+#undef VOL7D_POLY_TYPES
+#define VOL7D_POLY_TYPE CHARACTER(len=vol7d_cdatalen)
+#define VOL7D_POLY_TYPES c
+#define VOL7D_POLY_ISC = 1
+#include "modqc_peeled_include.F90"
+
 
 
 subroutine init_qcattrvars(this)
@@ -644,236 +430,182 @@ logical,intent(in),optional :: purgeana !< if true remove ana with all data miss
 
 integer :: inddativar,inddatiattrinv,inddatiattrcli,inddatiattrtem,inddatiattrspa,inddativarattr
 type(qcattrvars) :: attrvars
-!!$integer,pointer :: invi(:,:,:,:,:),clii(:,:,:,:,:),temi(:,:,:,:,:),spai(:,:,:,:,:)
-INTEGER(kind=int_b),pointer :: invb(:,:,:,:,:),clib(:,:,:,:,:),temb(:,:,:,:,:),spab(:,:,:,:,:)
+
+INTEGER(kind=int_b),pointer :: invbb(:,:,:,:,:),clibb(:,:,:,:,:),tembb(:,:,:,:,:),spabb(:,:,:,:,:)
+INTEGER,pointer             :: invbi(:,:,:,:,:),clibi(:,:,:,:,:),tembi(:,:,:,:,:),spabi(:,:,:,:,:)
+REAL,pointer                :: invbr(:,:,:,:,:),clibr(:,:,:,:,:),tembr(:,:,:,:,:),spabr(:,:,:,:,:)
+DOUBLE PRECISION,pointer    :: invbd(:,:,:,:,:),clibd(:,:,:,:,:),tembd(:,:,:,:,:),spabd(:,:,:,:,:)
+CHARACTER(len=vol7d_cdatalen),pointer :: invbc(:,:,:,:,:),clibc(:,:,:,:,:),tembc(:,:,:,:,:),spabc(:,:,:,:,:)
+
+call l4f_log(L4F_INFO,'starting peeling')
 
 call init(attrvars)
 
+! generate code per i vari tipi di dati di v7d
+! tramite un template e il preprocessore
 
-if (associated(this%datiattr%b)) then
-  inddatiattrinv = firsttrue(attrvars%vars(1) == this%datiattr%b) !indice attributo
-  inddatiattrcli = firsttrue(attrvars%vars(2) == this%datiattr%b) !indice attributo
-  inddatiattrtem = firsttrue(attrvars%vars(3) == this%datiattr%b) !indice attributo
-  inddatiattrspa = firsttrue(attrvars%vars(4) == this%datiattr%b) !indice attributo
 
-                                !byte attributes !
+#undef VOL7D_POLY_SUBTYPE
+#undef VOL7D_POLY_SUBTYPES
+#define VOL7D_POLY_SUBTYPE REAL
+#define VOL7D_POLY_SUBTYPES r
 
-  if (inddatiattrinv > 0 .or. inddatiattrcli > 0 .or. inddatiattrtem > 0 .or. inddatiattrspa > 0 ) then  ! solo se c'Ë l'attributo
+#undef VOL7D_POLY_TYPE
+#undef VOL7D_POLY_TYPES
+#define VOL7D_POLY_TYPE REAL
+#define VOL7D_POLY_TYPES r
+#include "modqc_peeling_include.F90"
+#undef VOL7D_POLY_TYPE
+#undef VOL7D_POLY_TYPES
+#define VOL7D_POLY_TYPE DOUBLE PRECISION
+#define VOL7D_POLY_TYPES d
+#include "modqc_peeling_include.F90"
+#undef VOL7D_POLY_TYPE
+#undef VOL7D_POLY_TYPES
+#define VOL7D_POLY_TYPE INTEGER
+#define VOL7D_POLY_TYPES i
+#include "modqc_peeling_include.F90"
+#undef VOL7D_POLY_TYPE
+#undef VOL7D_POLY_TYPES
+#define VOL7D_POLY_TYPE INTEGER(kind=int_b)
+#define VOL7D_POLY_TYPES b
+#include "modqc_peeling_include.F90"
+#undef VOL7D_POLY_TYPE
+#undef VOL7D_POLY_TYPES
+#define VOL7D_POLY_TYPE CHARACTER(len=vol7d_cdatalen)
+#define VOL7D_POLY_TYPES c
+#include "modqc_peeling_include.F90"
 
-    if (associated(this%dativar%r)) then
-      do inddativar=1,size(this%dativar%r)   ! per tutte le variabili reali
-        inddativarattr  = this%dativar%r(inddativar)%b
 
-        if (inddativarattr > 0) then         ! se la variabile ha quell'attributo (byte)
-          nullify(invb)
-          nullify(clib)
-          nullify(temb)
-          nullify(spab)
-          
-          if (inddatiattrinv > 0) invb => this%voldatiattrb(:,:,:,:,inddativarattr,:,inddatiattrinv)
-          if (inddatiattrcli > 0) clib => this%voldatiattrb(:,:,:,:,inddativarattr,:,inddatiattrcli)
-          if (inddatiattrtem > 0) temb => this%voldatiattrb(:,:,:,:,inddativarattr,:,inddatiattrtem)
-          if (inddatiattrspa > 0) spab => this%voldatiattrb(:,:,:,:,inddativarattr,:,inddatiattrspa)
+#undef VOL7D_POLY_SUBTYPE
+#undef VOL7D_POLY_SUBTYPES
+#define VOL7D_POLY_SUBTYPE DOUBLE PRECISION
+#define VOL7D_POLY_SUBTYPES d
 
-          this%voldatir(:,:,:,:,inddativar,:) = peeled(this%voldatir(:,:,:,:,inddativar,:), &
-           invb,clib,temb,spab)
-        end if
-      end do
-    endif
+#undef VOL7D_POLY_TYPE
+#undef VOL7D_POLY_TYPES
+#define VOL7D_POLY_TYPE REAL
+#define VOL7D_POLY_TYPES r
+#include "modqc_peeling_include.F90"
+#undef VOL7D_POLY_TYPE
+#undef VOL7D_POLY_TYPES
+#define VOL7D_POLY_TYPE DOUBLE PRECISION
+#define VOL7D_POLY_TYPES d
+#include "modqc_peeling_include.F90"
+#undef VOL7D_POLY_TYPE
+#undef VOL7D_POLY_TYPES
+#define VOL7D_POLY_TYPE INTEGER
+#define VOL7D_POLY_TYPES i
+#include "modqc_peeling_include.F90"
+#undef VOL7D_POLY_TYPE
+#undef VOL7D_POLY_TYPES
+#define VOL7D_POLY_TYPE INTEGER(kind=int_b)
+#define VOL7D_POLY_TYPES b
+#include "modqc_peeling_include.F90"
+#undef VOL7D_POLY_TYPE
+#undef VOL7D_POLY_TYPES
+#define VOL7D_POLY_TYPE CHARACTER(len=vol7d_cdatalen)
+#define VOL7D_POLY_TYPES c
+#include "modqc_peeling_include.F90"
 
-    if (associated(this%dativar%d)) then
-      do inddativar=1,size(this%dativar%d)
-        inddativarattr  = this%dativar%d(inddativar)%b
-        if (inddativarattr > 0) then
-          nullify(invb)
-          nullify(clib)
-          nullify(temb)
-          nullify(spab)
-          
-          if (inddatiattrinv > 0) invb => this%voldatiattrb(:,:,:,:,inddativarattr,:,inddatiattrinv)
-          if (inddatiattrcli > 0) clib => this%voldatiattrb(:,:,:,:,inddativarattr,:,inddatiattrcli)
-          if (inddatiattrtem > 0) temb => this%voldatiattrb(:,:,:,:,inddativarattr,:,inddatiattrtem)
-          if (inddatiattrspa > 0) spab => this%voldatiattrb(:,:,:,:,inddativarattr,:,inddatiattrspa)
 
-          this%voldatid(:,:,:,:,inddativar,:) = peeled(this%voldatid(:,:,:,:,inddativar,:), &
-           invb,clib,temb,spab)
-        end if
-      end do
-    endif
+#undef VOL7D_POLY_SUBTYPE
+#undef VOL7D_POLY_SUBTYPES
+#define VOL7D_POLY_SUBTYPE INTEGER
+#define VOL7D_POLY_SUBTYPES i
 
-    if (associated(this%dativar%i)) then
-      do inddativar=1,size(this%dativar%i)
-        inddativarattr  = this%dativar%i(inddativar)%b
-        if (inddativarattr > 0) then
-          nullify(invb)
-          nullify(clib)
-          nullify(temb)
-          nullify(spab)
-          
-          if (inddatiattrinv > 0) invb => this%voldatiattrb(:,:,:,:,inddativarattr,:,inddatiattrinv)
-          if (inddatiattrcli > 0) clib => this%voldatiattrb(:,:,:,:,inddativarattr,:,inddatiattrcli)
-          if (inddatiattrtem > 0) temb => this%voldatiattrb(:,:,:,:,inddativarattr,:,inddatiattrtem)
-          if (inddatiattrspa > 0) spab => this%voldatiattrb(:,:,:,:,inddativarattr,:,inddatiattrspa)
+#undef VOL7D_POLY_TYPE
+#undef VOL7D_POLY_TYPES
+#define VOL7D_POLY_TYPE REAL
+#define VOL7D_POLY_TYPES r
+#include "modqc_peeling_include.F90"
+#undef VOL7D_POLY_TYPE
+#undef VOL7D_POLY_TYPES
+#define VOL7D_POLY_TYPE DOUBLE PRECISION
+#define VOL7D_POLY_TYPES d
+#include "modqc_peeling_include.F90"
+#undef VOL7D_POLY_TYPE
+#undef VOL7D_POLY_TYPES
+#define VOL7D_POLY_TYPE INTEGER
+#define VOL7D_POLY_TYPES i
+#include "modqc_peeling_include.F90"
+#undef VOL7D_POLY_TYPE
+#undef VOL7D_POLY_TYPES
+#define VOL7D_POLY_TYPE INTEGER(kind=int_b)
+#define VOL7D_POLY_TYPES b
+#include "modqc_peeling_include.F90"
+#undef VOL7D_POLY_TYPE
+#undef VOL7D_POLY_TYPES
+#define VOL7D_POLY_TYPE CHARACTER(len=vol7d_cdatalen)
+#define VOL7D_POLY_TYPES c
+#include "modqc_peeling_include.F90"
 
-          this%voldatii(:,:,:,:,inddativar,:) = peeled(this%voldatii(:,:,:,:,inddativar,:), &
-           invb,clib,temb,spab)
-        end if
-      end do
-    endif
 
-    if (associated(this%dativar%b)) then
-      do inddativar=1,size(this%dativar%b)
-        inddativarattr  = this%dativar%b(inddativar)%b
-        if (inddativarattr > 0) then
-          nullify(invb)
-          nullify(clib)
-          nullify(temb)
-          nullify(spab)
-          
-          if (inddatiattrinv > 0) invb => this%voldatiattrb(:,:,:,:,inddativarattr,:,inddatiattrinv)
-          if (inddatiattrcli > 0) clib => this%voldatiattrb(:,:,:,:,inddativarattr,:,inddatiattrcli)
-          if (inddatiattrtem > 0) temb => this%voldatiattrb(:,:,:,:,inddativarattr,:,inddatiattrtem)
-          if (inddatiattrspa > 0) spab => this%voldatiattrb(:,:,:,:,inddativarattr,:,inddatiattrspa)
+#undef VOL7D_POLY_SUBTYPE
+#undef VOL7D_POLY_SUBTYPES
+#define VOL7D_POLY_SUBTYPE INTEGER(kind=int_b)
+#define VOL7D_POLY_SUBTYPES b
 
-          this%voldatib(:,:,:,:,inddativar,:) = peeled(this%voldatib(:,:,:,:,inddativar,:), &
-           invb,clib,temb,spab)
-        end if
-      end do
-    endif
+#undef VOL7D_POLY_TYPE
+#undef VOL7D_POLY_TYPES
+#define VOL7D_POLY_TYPE REAL
+#define VOL7D_POLY_TYPES r
+#include "modqc_peeling_include.F90"
+#undef VOL7D_POLY_TYPE
+#undef VOL7D_POLY_TYPES
+#define VOL7D_POLY_TYPE DOUBLE PRECISION
+#define VOL7D_POLY_TYPES d
+#include "modqc_peeling_include.F90"
+#undef VOL7D_POLY_TYPE
+#undef VOL7D_POLY_TYPES
+#define VOL7D_POLY_TYPE INTEGER
+#define VOL7D_POLY_TYPES i
+#include "modqc_peeling_include.F90"
+#undef VOL7D_POLY_TYPE
+#undef VOL7D_POLY_TYPES
+#define VOL7D_POLY_TYPE INTEGER(kind=int_b)
+#define VOL7D_POLY_TYPES b
+#include "modqc_peeling_include.F90"
+#undef VOL7D_POLY_TYPE
+#undef VOL7D_POLY_TYPES
+#define VOL7D_POLY_TYPE CHARACTER(len=vol7d_cdatalen)
+#define VOL7D_POLY_TYPES c
+#include "modqc_peeling_include.F90"
 
-    if (associated(this%dativar%c)) then
-      do inddativar=1,size(this%dativar%c)
-        inddativarattr  = this%dativar%c(inddativar)%b
-        if (inddativarattr > 0) then
-          nullify(invb)
-          nullify(clib)
-          nullify(temb)
-          nullify(spab)
-          
-          if (inddatiattrinv > 0) invb => this%voldatiattrb(:,:,:,:,inddativarattr,:,inddatiattrinv)
-          if (inddatiattrcli > 0) clib => this%voldatiattrb(:,:,:,:,inddativarattr,:,inddatiattrcli)
-          if (inddatiattrtem > 0) temb => this%voldatiattrb(:,:,:,:,inddativarattr,:,inddatiattrtem)
-          if (inddatiattrspa > 0) spab => this%voldatiattrb(:,:,:,:,inddativarattr,:,inddatiattrspa)
 
-          this%voldatic(:,:,:,:,inddativar,:) = peeled(this%voldatic(:,:,:,:,inddativar,:), &
-           invb,clib,temb,spab)
-        end if
-      end do
-    endif
 
-  end if
-end if
+#undef VOL7D_POLY_SUBTYPE
+#undef VOL7D_POLY_SUBTYPES
+#define VOL7D_POLY_SUBTYPE CHARACTER(len=vol7d_cdatalen)
+#define VOL7D_POLY_SUBTYPES c
 
-!!$if (associated(this%datiattr%i)) then
-!!$
-!!$  inddatiattrinv = firsttrue(attrvars%vars(1) == this%datiattr%i) !indice attributo
-!!$  inddatiattrcli = firsttrue(attrvars%vars(2) == this%datiattr%i) !indice attributo
-!!$  inddatiattrtem = firsttrue(attrvars%vars(3) == this%datiattr%i) !indice attributo
-!!$  inddatiattrspa = firsttrue(attrvars%vars(4) == this%datiattr%i) !indice attributo
-!!$
-!!$                                !integer attributes !
-!!$
-!!$  if (inddatiattrinv > 0 .or. inddatiattrcli > 0 .or. inddatiattrtem > 0 .or. inddatiattrspa > 0 ) then  ! solo se c'Ë l'attributo
-!!$
-!!$    if (associated(this%dativar%r)) then
-!!$      do inddativar=1,size(this%dativar%r)   ! per tutte le variabili reali
-!!$        inddativarattr  = this%dativar%r(inddativar)%i
-!!$        if (inddativarattr > 0) then         ! se la variabile ha quell'attributo (integer)
-!!$          nullify(invi)
-!!$          nullify(clii)
-!!$          nullify(temi)
-!!$          nullify(spai)
-!!$          
-!!$          if (inddatiattrinv > 0) invi => this%voldatiattri(:,:,:,:,inddativarattr,:,inddatiattrinv)
-!!$          if (inddatiattrcli > 0) clii => this%voldatiattri(:,:,:,:,inddativarattr,:,inddatiattrcli)
-!!$          if (inddatiattrtem > 0) temi => this%voldatiattri(:,:,:,:,inddativarattr,:,inddatiattrtem)
-!!$          if (inddatiattrspa > 0) spai => this%voldatiattri(:,:,:,:,inddativarattr,:,inddatiattrspa)
-!!$
-!!$          this%voldatir(:,:,:,:,inddativar,:) = peeled(this%voldatir(:,:,:,:,inddativar,:), &
-!!$           invi,clii,temi,spai)
-!!$        end if
-!!$      end do
-!!$    endif
-!!$
-!!$    if (associated(this%dativar%d)) then
-!!$      do inddativar=1,size(this%dativar%d)
-!!$        inddativarattr  = this%dativar%d(inddativar)%i
-!!$        if (inddativarattr > 0) then
-!!$          nullify(invi)
-!!$          nullify(clii)
-!!$          nullify(temi)
-!!$          nullify(spai)
-!!$          
-!!$          if (inddatiattrinv > 0) invi => this%voldatiattri(:,:,:,:,inddativarattr,:,inddatiattrinv)
-!!$          if (inddatiattrcli > 0) clii => this%voldatiattri(:,:,:,:,inddativarattr,:,inddatiattrcli)
-!!$          if (inddatiattrtem > 0) temi => this%voldatiattri(:,:,:,:,inddativarattr,:,inddatiattrtem)
-!!$          if (inddatiattrspa > 0) spai => this%voldatiattri(:,:,:,:,inddativarattr,:,inddatiattrspa)
-!!$          this%voldatid(:,:,:,:,inddativar,:) = peeled(this%voldatid(:,:,:,:,inddativar,:), &
-!!$           invi,clii,temi,spai)
-!!$        end if
-!!$      end do
-!!$    endif
-!!$
-!!$    if (associated(this%dativar%i)) then
-!!$      do inddativar=1,size(this%dativar%i)
-!!$        inddativarattr  = this%dativar%i(inddativar)%i
-!!$        if (inddativarattr > 0) then
-!!$          nullify(invi)
-!!$          nullify(clii)
-!!$          nullify(temi)
-!!$          nullify(spai)
-!!$          
-!!$          if (inddatiattrinv > 0) invi => this%voldatiattri(:,:,:,:,inddativarattr,:,inddatiattrinv)
-!!$          if (inddatiattrcli > 0) clii => this%voldatiattri(:,:,:,:,inddativarattr,:,inddatiattrcli)
-!!$          if (inddatiattrtem > 0) temi => this%voldatiattri(:,:,:,:,inddativarattr,:,inddatiattrtem)
-!!$          if (inddatiattrspa > 0) spai => this%voldatiattri(:,:,:,:,inddativarattr,:,inddatiattrspa)
-!!$          this%voldatii(:,:,:,:,inddativar,:) = peeled(this%voldatii(:,:,:,:,inddativar,:), &
-!!$           invi,clii,temi,spai)
-!!$        end if
-!!$      end do
-!!$    endif
-!!$
-!!$    if (associated(this%dativar%b)) then
-!!$      do inddativar=1,size(this%dativar%b)
-!!$        inddativarattr  = this%dativar%b(inddativar)%i
-!!$        if (inddativarattr > 0) then
-!!$          nullify(invi)
-!!$          nullify(clii)
-!!$          nullify(temi)
-!!$          nullify(spai)
-!!$          
-!!$          if (inddatiattrinv > 0) invi => this%voldatiattri(:,:,:,:,inddativarattr,:,inddatiattrinv)
-!!$          if (inddatiattrcli > 0) clii => this%voldatiattri(:,:,:,:,inddativarattr,:,inddatiattrcli)
-!!$          if (inddatiattrtem > 0) temi => this%voldatiattri(:,:,:,:,inddativarattr,:,inddatiattrtem)
-!!$          if (inddatiattrspa > 0) spai => this%voldatiattri(:,:,:,:,inddativarattr,:,inddatiattrspa)
-!!$          this%voldatib(:,:,:,:,inddativar,:) = peeled(this%voldatib(:,:,:,:,inddativar,:), &
-!!$           invi,clii,temi,spai)
-!!$        end if
-!!$      end do
-!!$    endif
-!!$
-!!$    if (associated(this%dativar%c)) then
-!!$      do inddativar=1,size(this%dativar%c)
-!!$        inddativarattr  = this%dativar%c(inddativar)%i
-!!$        if (inddativarattr > 0) then
-!!$          nullify(invi)
-!!$          nullify(clii)
-!!$          nullify(temi)
-!!$          nullify(spai)
-!!$          
-!!$          if (inddatiattrinv > 0) invi => this%voldatiattri(:,:,:,:,inddativarattr,:,inddatiattrinv)
-!!$          if (inddatiattrcli > 0) clii => this%voldatiattri(:,:,:,:,inddativarattr,:,inddatiattrcli)
-!!$          if (inddatiattrtem > 0) temi => this%voldatiattri(:,:,:,:,inddativarattr,:,inddatiattrtem)
-!!$          if (inddatiattrspa > 0) spai => this%voldatiattri(:,:,:,:,inddativarattr,:,inddatiattrspa)
-!!$          this%voldatic(:,:,:,:,inddativar,:) = peeled(this%voldatic(:,:,:,:,inddativar,:), &
-!!$           invi,clii,temi,spai)
-!!$        end if
-!!$      end do
-!!$    endif
-!!$
-!!$  end if
-!!$
-!!$end if
+#undef VOL7D_POLY_TYPE
+#undef VOL7D_POLY_TYPES
+#define VOL7D_POLY_TYPE REAL
+#define VOL7D_POLY_TYPES r
+#include "modqc_peeling_include.F90"
+#undef VOL7D_POLY_TYPE
+#undef VOL7D_POLY_TYPES
+#define VOL7D_POLY_TYPE DOUBLE PRECISION
+#define VOL7D_POLY_TYPES d
+#include "modqc_peeling_include.F90"
+#undef VOL7D_POLY_TYPE
+#undef VOL7D_POLY_TYPES
+#define VOL7D_POLY_TYPE INTEGER
+#define VOL7D_POLY_TYPES i
+#include "modqc_peeling_include.F90"
+#undef VOL7D_POLY_TYPE
+#undef VOL7D_POLY_TYPES
+#define VOL7D_POLY_TYPE INTEGER(kind=int_b)
+#define VOL7D_POLY_TYPES b
+#include "modqc_peeling_include.F90"
+#undef VOL7D_POLY_TYPE
+#undef VOL7D_POLY_TYPES
+#define VOL7D_POLY_TYPE CHARACTER(len=vol7d_cdatalen)
+#define VOL7D_POLY_TYPES c
+#include "modqc_peeling_include.F90"
+
+
 
 IF (.NOT.PRESENT(keep_attr) .AND. .NOT.PRESENT(delete_attr) .and. .not. optio_log(preserve)) THEN ! destroy all attributes
   IF (ASSOCIATED(this%voldatiattrr)) DEALLOCATE(this%voldatiattrr)
@@ -982,11 +714,15 @@ TYPE(vol7d_var),intent(inout),POINTER :: var(:)
 INTEGER :: i
 
 IF (ASSOCIATED(var)) THEN
-  DO i = 1, SIZE(var)
-    IF (ALL(var(i)%btable /= keep_attr(:))) THEN ! n.b. ALL((//)) = .TRUE.
-      var(i)%btable = vol7d_var_miss%btable
-    ENDIF
-  ENDDO
+  if (size(var) == 0) then
+    var%btable = vol7d_var_miss%btable
+  else
+    DO i = 1, SIZE(var)
+      IF (ALL(var(i)%btable /= keep_attr(:))) THEN ! n.b. ALL((//)) = .TRUE.
+        var(i)%btable = vol7d_var_miss%btable
+      ENDIF
+    ENDDO
+  end if
 ENDIF
 
 END SUBROUTINE keep_var
@@ -997,11 +733,15 @@ TYPE(vol7d_var),intent(inout),POINTER :: var(:)
 INTEGER :: i
 
 IF (ASSOCIATED(var)) THEN
-  DO i = 1, SIZE(var)
-    IF (ANY(var(i)%btable == delete_attr(:))) THEN ! n.b. ANY((//)) = .FALSE.
-      var(i) = vol7d_var_miss
-    ENDIF
-  ENDDO
+  if (size(var) == 0) then
+    var%btable = vol7d_var_miss%btable
+  else
+    DO i = 1, SIZE(var)
+      IF (ANY(var(i)%btable == delete_attr(:))) THEN ! n.b. ANY((//)) = .FALSE.
+        var(i) = vol7d_var_miss
+      ENDIF
+    ENDDO
+  end if
 ENDIF
 
 END SUBROUTINE delete_var

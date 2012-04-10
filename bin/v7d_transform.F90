@@ -820,19 +820,7 @@ end IF
 
 ! apply quality control data removing
 IF (.NOT.disable_qc) THEN
-#ifdef HAVE_ORSIM
-  IF (input_format == 'orsim') THEN ! no attributes means no attributes!
-    CALL vol7d_peeling(v7d, keep_attr=al)
-  ELSE
-#endif
-    IF (SIZE(al) == 0) THEN ! no attributes means all attributes!
-      CALL vol7d_peeling(v7d, delete_attr=al)
-    ELSE
-      CALL vol7d_peeling(v7d, keep_attr=al)
-    ENDIF
-#ifdef HAVE_ORSIM
-  ENDIF
-#endif
+  CALL vol7d_peeling(v7d, keep_attr=al)
 ENDIF
 
 ! conversion to real required in these cases
