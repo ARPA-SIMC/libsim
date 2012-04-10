@@ -31,13 +31,13 @@ if (associated(this%datiattr%/**/VOL7D_POLY_TYPES)) then
                                 !print *, "ELABORO this%dativarattr%&
                                 ! & VOL7D_POLY_TYPES &
                                 ! &",inddatiattrinv, inddatiattrcli, inddatiattrtem, inddatiattrspa 
-      print *, "dimensione dativarattr",size(this%dativarattr%/**/VOL7D_POLY_TYPES)
+                                !print *, "dimensione dativarattr",size(this%dativarattr%/**/VOL7D_POLY_TYPES)
       
       if (associated(this%dativar%/**/VOL7D_POLY_SUBTYPES)) then
                                 !print *, "ELABORO this%dativar%&
                                 ! & VOL7D_POLY_SUBTYPES &
                                 ! &"
-        print *, "dimensione dativar ",size(this%dativar%/**/VOL7D_POLY_SUBTYPES)
+                                !print *, "dimensione dativar ",size(this%dativar%/**/VOL7D_POLY_SUBTYPES)
         
         do inddativar=1,size(this%dativar%/**/VOL7D_POLY_SUBTYPES)   ! per tutte le variabili /**/VOL7D_POLY_SUBTYPES
           

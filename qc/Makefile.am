@@ -8,6 +8,8 @@ if VERSIONINFO
 libsim_qc_la_LDFLAGS = -version-info @LIBSIM_VERSION_INFO@
 endif
 
+noinst_HEADERS = modqc_peeled_include.F90  modqc_peeling_include.F90  modqc_peel_util_include.F90
+
 # c'e` una maniera migliore?
 tmpvar = $(libsim_qc_la_SOURCES:.f90=.mod)
 nodist_include_HEADERS = $(tmpvar:.F90=.mod)
