@@ -1358,7 +1358,7 @@ END SUBROUTINE vol7d_normalize_vcoord
 !!$
 
 
-SUBROUTINE vol7d_compute_NormalizedDensityIndex(this, that, perc_vals,cyclicdt)
+SUBROUTINE vol7d_compute_NormalizedDensityIndex(this, that, perc_vals,cyclicdt,presentperc)
  
 TYPE(vol7d),INTENT(inout) :: this !< volume providing data to be computed, it is not modified by the method, apart from performing a \a vol7d_alloc_vol on it
 TYPE(vol7d),INTENT(out) :: that !< output volume which will contain the computed data
@@ -1367,6 +1367,7 @@ TYPE(vol7d),INTENT(out) :: that !< output volume which will contain the computed
 !TYPE(datetime),INTENT(in),OPTIONAL :: stopp  !< end of statistical processing interval
 real,intent(in) :: perc_vals(:) !< percentile values to use in compute, between 0. and 100.
 TYPE(cyclicdatetime),INTENT(in) :: cyclicdt !< cyclic date and time
+real,optional :: presentperc !< percentual of data present for compute (default=0.3)
 
 integer :: indana,indtime,indvar,indnetwork,indlevel ,indtimerange ,inddativarr, indattr
 integer :: i,j,narea
@@ -1377,7 +1378,14 @@ integer :: areav(size(this%ana))
 logical,allocatable :: mask(:,:,:)
 integer,allocatable :: area(:)
 REAL, DIMENSION(:),allocatable ::  ndi,limbins
+real ::  lpresentperc
 
+lpresentperc=0.3
+if (present(presentperc)) then
+  if (c_e(presentperc)) then
+    lpresentperc=presentperc
+  end if
+end if
 
 allocate (ndi(size(perc_vals)-1),limbins(size(perc_vals)))
 CALL init(that, time_definition=this%time_definition)
@@ -1457,8 +1465,15 @@ do inddativarr=1,size(this%dativar%r)
         end do
 
         ! we want more than 30% data present
-        if (count (mask .and. c_e(this%voldatir(:,:, indlevel, indtimerange, inddativarr,:))) / &
-            count (mask) < 0.30) cycle
+
+        !print*,"-------------------------------------------------------------"
+        !print*,"Dati presenti:", count (mask .and. c_e(this%voldatir(:,:, indlevel, indtimerange, inddativarr,:)))
+        !print*,"Dati attesi:", count (mask)
+
+        if ((float(count (mask .and. c_e(this%voldatir(:,:, indlevel, indtimerange, inddativarr,:)))) / &
+            float(count (mask))) < lpresentperc) cycle
+        !print*,"compute"
+        !print*,"-------------------------------------------------------------"
 
         call NormalizedDensityIndex (&
          pack(this%voldatir(:,:, indlevel, indtimerange, inddativarr,:), &
@@ -1491,7 +1506,7 @@ deallocate (ndi,limbins,mask,area)
 
 end SUBROUTINE vol7d_compute_NormalizedDensityIndex
 
-SUBROUTINE vol7d_compute_percentile(this, that, perc_vals,cyclicdt)
+SUBROUTINE vol7d_compute_percentile(this, that, perc_vals,cyclicdt,presentperc)
  
 TYPE(vol7d),INTENT(inout) :: this !< volume providing data to be computed, it is not modified by the method, apart from performing a \a vol7d_alloc_vol on it
 TYPE(vol7d),INTENT(out) :: that !< output volume which will contain the computed data
@@ -1500,7 +1515,7 @@ TYPE(vol7d),INTENT(out) :: that !< output volume which will contain the computed
 !TYPE(datetime),INTENT(in),OPTIONAL :: stopp  !< end of statistical processing interval
 real,intent(in) :: perc_vals(:) !< percentile values to use in compute, between 0. and 100.
 TYPE(cyclicdatetime),INTENT(in) :: cyclicdt !< cyclic date and time
-
+real,optional :: presentperc !< percentual of data present for compute (default='0.3)
 
 integer :: indana,indtime,indvar,indnetwork,indlevel ,indtimerange ,inddativarr,i,j,narea
 REAL, DIMENSION(:),allocatable ::  perc
@@ -1510,6 +1525,14 @@ character(len=1)            :: type
 integer :: areav(size(this%ana))
 logical,allocatable :: mask(:,:,:)
 integer,allocatable :: area(:)
+real :: lpresentperc
+
+lpresentperc=0.3
+if (present(presentperc)) then
+  if (c_e(presentperc)) then
+    lpresentperc=presentperc
+  end if
+end if
 
 allocate (perc(size(perc_vals)))
 CALL init(that, time_definition=this%time_definition)
@@ -1585,8 +1608,10 @@ do inddativarr=1,size(this%dativar%r)
         end do
 
         ! we want more than 30% data present
-        if (count (mask .and. c_e(this%voldatir(:,:, indlevel, indtimerange, inddativarr,:))) / &
-            count (mask) < 0.30) cycle
+        if ((float(count & 
+         (mask .and. c_e(this%voldatir(:,:, indlevel, indtimerange, inddativarr,:)))&
+        ) / &
+        float(count (mask))) < lpresentperc) cycle
 
         perc= stat_percentile (&
          pack(this%voldatir(:,:, indlevel, indtimerange, inddativarr,:), &
