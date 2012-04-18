@@ -1217,6 +1217,8 @@ TYPE(arrayof_gridinfo) :: gridinfo
 INTEGER :: category
 CHARACTER(len=512) :: a_name
 
+NULLIFY(this)
+
 IF (PRESENT(categoryappend))THEN
   CALL l4f_launcher(a_name,a_name_append= &
    TRIM(subcategory)//"."//TRIM(categoryappend))

@@ -307,7 +307,14 @@ ENDIF
 CALL init(trans, trans_type=trans_type, sub_type=sub_type, &
  ilon=ilon, ilat=ilat, flon=flon, flat=flat, poly=poly, radius=radius, &
  categoryappend="transformation", time_definition=output_td)
+
+! import input volume
 CALL import(volgrid, filename=input_file, decode=.FALSE., categoryappend="input volume")
+IF (.NOT.ASSOCIATED(volgrid)) THEN
+  CALL l4f_category_log(category, L4F_ERROR, &
+   'error importing input volume from file '//TRIM(input_file))
+  CALL raise_fatal_error()
+ENDIF
 
 IF (ldisplay) CALL display(volgrid)
 

@@ -487,14 +487,21 @@ else
   decode=.false.
 endif
 
-CALL import(volgrid,filename=input_file,decode=decode, time_definition=time_definition, categoryappend="input")
+! import input volume
+CALL import(volgrid, filename=input_file, decode=decode, &
+ time_definition=time_definition, categoryappend="input_volume")
+IF (.NOT.ASSOCIATED(volgrid)) THEN
+  CALL l4f_category_log(category, L4F_ERROR, &
+   'error importing input volume from file '//TRIM(input_file))
+  CALL raise_fatal_error()
+ENDIF
 
-IF (ldisplay .and. ASSOCIATED(volgrid)) THEN
+IF (ldisplay) THEN
   PRINT*,'input grid >>>>>>>>>>>>>>>>>>>>'
   CALL display(volgrid)
 ENDIF
 
-if (c2agrid) call vg6d_c2a(volgrid)
+IF (c2agrid) CALL vg6d_c2a(volgrid)
 
 IF (trans_type /=  'none') THEN ! transform
 
@@ -511,7 +518,7 @@ IF (trans_type /=  'none') THEN ! transform
    clone=.TRUE., categoryappend="transform")
 
   CALL l4f_category_log(category,L4F_INFO,"transformation completed")
-  IF (ASSOCIATED(volgrid)) CALL delete(volgrid)
+  CALL delete(volgrid)
 
 ELSE
   
