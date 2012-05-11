@@ -37,6 +37,7 @@ def UniConvTable():
 "S->SECOND",			1,	0
 "sec->S",			1,	0
 "S->sec",			1,	0
+"minuti->S",                    60,     0
 "G/G->KG/KG",			1,	0
 "KG/KG->G/G",			1,	0
 "G/M**3->KG/M**3",		0.001,	0
