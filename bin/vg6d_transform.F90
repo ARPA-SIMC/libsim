@@ -537,7 +537,8 @@ end if
 if (ASSOCIATED(volgrid_out) .and. output_variable_list /= " ") then
 
   call register_termo(vfn)
-  
+  IF (ldisplay ) call display(vfn)
+
   if ( alchemy(volgrid_out,vfn,vl,volgrid_tmp,copy=.true.,vfnoracle=vfnoracle) == 0 ) then
     call display(vfnoracle)
     CALL delete(volgrid_out)
