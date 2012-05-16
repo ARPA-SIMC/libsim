@@ -648,7 +648,7 @@ call idba_unsetall(this%handle)
 CALL l4f_category_log(this%category,L4F_DEBUG,'unsetall handle')
 #endif
 
-if(c_e(lnetwork))call idba_set (this%handle,"rep_memo",network%name)
+if(c_e(lnetwork))call idba_set (this%handle,"rep_memo",lnetwork%name)
 !call idba_set (this%handle,"mobile",0)
 !print*,"network,mobile",network%name,0
 
@@ -844,10 +844,10 @@ nanavar=0
 if (size (lanavar) > 0 ) then
                                 ! creo la stringa con l'elenco
   varlist = ''
-  DO i = 1, SIZE(anavar)
+  DO i = 1, SIZE(lanavar)
     nanavar = nanavar + 1
     IF (nanavar > 1) varlist(LEN_TRIM(varlist)+1:) = ',' 
-    varlist(LEN_TRIM(varlist)+1:) = TRIM(anavar(i))
+    varlist(LEN_TRIM(varlist)+1:) = TRIM(lanavar(i))
   ENDDO
                                 !print *,"varlist",varlist
   call idba_set(this%handle_staz, "varlist",varlist )
@@ -896,7 +896,7 @@ do i=1,N_ana
                                 ! IF (ind<1) cycle ! non c'e'
   
 
-  if ( size(anavar) > 0 .and. present(anavarkind))then
+  if ( size(lanavar) > 0 .and. present(anavarkind))then
     ii= index_c(anavar, btable)
     if (ii > 0)then
                                 !print*, "indici",ii, btable,(varkind(ii))
@@ -1211,7 +1211,7 @@ else  if (present(attr).and. any(c_e(lvar)))then
 
 else if (associated(vol7dtmp%dativarattr%c).and. associated(vol7dtmp%dativar%c)) then
 
-      vol7dtmp%dativarattr%c(1)=vol7dtmp%dativar%c(1)
+      vol7dtmp%dativarattr%c=vol7dtmp%dativar%c
 
 end if
 
@@ -1525,9 +1525,7 @@ do i =1, N
        indattr = firsttrue(attr == starbtable)
        IF (indattr<1) cycle ! non c'e'
 
-
        call init (var_tmp, btable=starbtable)
-
 
        if (present(attrkind))then
          iii=( firsttrue(attr == starbtable))
@@ -1573,7 +1571,14 @@ do i =1, N
               inddativarattr,indnetwork,inddatiattr))
            end if
          end if
-       else         
+       else
+
+         print *,"variabile",buffer(i)%btable
+         print *,"attributo",var_tmp%btable
+
+         print *,"dativarattr",vol7dtmp%dativarattr%c%btable
+         print *,"datiattr",vol7dtmp%datiattr%c%btable
+
          inddativarattr  = firsttrue(buffer(i)%btable == vol7dtmp%dativarattr%c%btable)
          inddatiattr = firsttrue(var_tmp == vol7dtmp%datiattr%c)
          call idba_enq (this%handle,starbtable,&
@@ -2841,7 +2846,7 @@ do while ( N > 0 )
     call idba_enq (this%handle,"lat",   lat)
     call idba_enq (this%handle,"lon",   lon)
     call idba_enq (this%handle,"ident",ident)
-   
+
     ! inizio la serie dei test con i parametri richiesti 
 
     if(c_e(lnetwork)) then
@@ -2961,13 +2966,15 @@ do while ( N > 0 )
                                 ! network
       if (btable == "B01193" .or. btable == "B01194") cycle
 
+
       if (present (anavar)) then
-        if (.not. any(btable == anavar)) btable= DBA_MVC
+        if (any(c_e(anavar)) .and. (all(btable /= anavar)))  btable=DBA_MVC
       end if
+
 
       if (.not. lanaonly)then
                                 !salto lat lon e ident
-        if (btable == "B05001" .or. btable == "B06001" .or. btable == "B01011") btable= DBA_MVC
+        if (btable == "B05001" .or. btable == "B06001" .or. btable == "B01011") btable=DBA_MVC
 
       end if
 
@@ -3000,11 +3007,6 @@ do while ( N > 0 )
                                 !print*,"dato anagrafica",btable," ",bufferana(na)%dator
         end if
       end if
-                                !recupero i dati di anagrafica
-      call idba_enq (this%handle,"lat",   lat)
-      call idba_enq (this%handle,"lon",   lon)
-      call idba_enq (this%handle,"ident",ident)
-   
                                 !bufferizzo il contesto
                                 !print *,"lat,lon",lat,lon
                                 !print*,year,month,day,hour,minute,sec
@@ -3289,9 +3291,11 @@ else
   do i=1,nanavarc
     call init(vol7dtmp%anavar%c(i))
   end do
-  call pack_distinct_c(bufferana(:na)%btable,vol7dtmp%anavar%c%btable, back=.TRUE.,&
-   mask=(bufferana(:na)%btable /= DBA_MVC))
 
+  if (nanavarc > 0) then ! we can have only lat lon and ident and not btables at all (so here we can get a strange segfault)
+    call pack_distinct_c(bufferana(:na)%btable,vol7dtmp%anavar%c%btable, back=.TRUE.,&
+     mask=(bufferana(:na)%btable /= DBA_MVC))
+  end if
 end if
 
 !-----------------------> anagrafica fine
