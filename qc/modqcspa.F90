@@ -40,8 +40,8 @@
 !! Esse potrebbero eventualmente essere escluse dal controllo, opzione 
 !! attualmente non in uso.
 !!
-!! Le coordinate delle stazioni vengono proiettate secondo le specifiche
-!! passate al metodo init.
+!! Le coordinate delle stazioni vengono proiettate su un piano 
+!! secondo le specifiche passate al metodo init.
 !!
 !! ATTENDIBILITÀ DEL DATO
 !!
@@ -259,7 +259,7 @@ if (.not. c_e(ldsn)) then
 
   case default
     call l4f_category_log(qcspa%category,L4F_ERROR,"file type not supported (user .v7d or .bufr suffix only): "//trim(filepath))
-    call raise_error("file type not supported (user .v7d or .bufr suffix only): "//trim(filepath))
+    call raise_error("file type not supported (use .v7d or .bufr suffix only): "//trim(filepath))
   end select
 
 #ifdef HAVE_DBALLE
@@ -755,7 +755,7 @@ do indana=1,size(qcspa%v7d%ana)
             END DO
 
             IF(IVB < 3) cycle      ! do nothing if valid gradients < 3
-                                   
+
             IF (ipos == ivb .or. ineg == ivb)THEN  ! se tutti i gradienti sono dello stesso segno
               write(11,*)gradmin
               FLAG=50_int_b

@@ -55,8 +55,9 @@
 !! dove iarea è codice del bounding box o cluster e descrittore rappresenta una specifica dei dati.
 !!
 !! Il network utilizzato nel volume del clima descrive le variabili contenute e gli eventuali attributi:
-!! qcclima-perc : percentili  (descrittore in ident rappresenta il valore percentuale del percentile)
-!! qcclima-ndi  : ndi         (descrittore in ident rappresenta il valore ordinale del ndi)
+!! qcclima-perc     : percentili  (descrittore in ident rappresenta il valore percentuale del percentile)
+!! qcclima-ndi      : ndi         (descrittore in ident rappresenta il valore ordinale del ndi)
+!! qcclima-extreme  : estremi assoluti         (descrittore in ident = 1 -> minimo; =2 -> massimo)
 !!
 !! Il dataset qcclima-perc viene scritto utilizzando come variabile la stessa usata per il calcolo;
 !! il valore scritto rappresenta il valore del percentile. Nessun attributo è necessario.
@@ -92,6 +93,11 @@
 !! Programma Esempio del controllo climatico:
 !! \include  v7d_qccli.f90
 
+!! README
+!! di fatto sono necessari due file v7d o due dsn : uno per il clima e uno per gli estremi del gross error check.
+!! Nel volume extreme di devono essere due stazioni (differente ident) uno per il valore minimo e uno per il valore massimo.
+!! esiste uno switch hright2level per attivare le alteze convenzionali
+!! bisogna gestire bene le aree e non supporre che ci sia e sia =1
 
 module modqccli
 
@@ -134,7 +140,7 @@ type :: qcclitype
   type (vol7d) :: extreme !< Valori estremi di tutte le variabili da controllare
   integer,pointer :: data_id_in(:,:,:,:,:) !< Indici dati del DB in input
   integer,pointer :: data_id_out(:,:,:,:,:) !< Indici dati del DB in output
-  integer, pointer :: in_macroa(:) !< Maacroarea di appartenenza delle stazioni
+  integer, pointer :: in_macroa(:) !< Macroarea di appartenenza delle stazioni
   TYPE(geo_coordvect),POINTER :: macroa(:) !< serie di coordinate che definiscono le macroaree
   integer :: category !< log4fortran
 end type qcclitype
@@ -461,16 +467,37 @@ return
 end subroutine qcclidelete
 
 
+
+!!!!!!!!!!!!!!   TODO !!!!!!!!!!!!!!!!!!!!!!!!!!
+
+!> Modulo 1: Calcolo dei parametri di normalizzazione dei dati
+!! I parametri di normalizzazione sono il 25°, il 50° e il 75° percentile 
+!! (p25,p50,p75)
+!! Tali parametri verranno calcolati per ogni mese, per ogni ora, per ogni area.
+!! Modulo 2: Normalizzazione dati
+!! Ciascun dato D verrà normalizzato come segue:
+!! DN = (D-p50)*2/(p75-p25)
+!! dove DN è il valore normalizzato.
+!! La scelta dei parametri di normalizzazione dipende dal mese, dall'ora, 
+!! dall'area.
+
+!!$SUBROUTINE vol7d_normalize_data(this, that )
+!!$
+!!$ 
+!!$TYPE(vol7d),INTENT(inout) :: this !< volume providing data to be computed, it is not modified by the method, apart from performing a \a vol7d_alloc_vol on it
+!!$TYPE(vol7d),INTENT(out) :: that !< output volume which will contain the computed data
+!!$
+!!$end SUBROUTINE vol7d_normalize_data
+
+
 !>\brief Controllo di Qualità climatico.
 !!Questo è il vero e proprio controllo di qualità climatico.
 !!Avendo a disposizione un volume dati climatico 
 !!contenente i percentili suddivisi per area, altezza sul livello
 !!del mare, per mese dell'anno viene selezionato il percentile e sulla base di questo 
 !!vengono assegnate le opportune confidenze.
-
-
 SUBROUTINE quaconcli (qccli,battrinv,tbattrout,&
- anamask,timemask,levelmask,timerangemask,varmask,networkmask)
+ anamask,timemask,levelmask,timerangemask,varmask,networkmask,height2level)
 
 
 type(qcclitype),intent(in out) :: qccli !< Oggetto per il controllo di qualità
@@ -482,6 +509,7 @@ logical ,intent(in),optional :: levelmask(:) !< Filtro sui livelli
 logical ,intent(in),optional :: timerangemask(:) !< filtro sui timerange
 logical ,intent(in),optional :: varmask(:) !< Filtro sulle variabili
 logical ,intent(in),optional :: networkmask(:) !< Filtro sui network
+logical ,intent(in),optional :: height2level   !< use conventional level starting from station height
 
 
 CHARACTER(len=vol7d_ana_lenident) :: ident
@@ -495,11 +523,11 @@ logical :: anamaskl(size(qccli%v7d%ana)), timemaskl(size(qccli%v7d%time)), level
 integer :: indana , indanavar, indtime ,indlevel ,indtimerange ,inddativarr, indnetwork
 integer :: indcana,           indctime,indclevel,indctimerange,indcdativarr,indcnetwork
 real :: datoqui,climaquii,climaquif, altezza, extremequii,extremequif
-integer :: iarea
+integer :: iarea,desc
 !integer, allocatable :: indcanav(:)
 
 
-!TYPE(vol7d_ana)  :: ana
+TYPE(vol7d_ana)  :: ana
 TYPE(datetime)   :: time, nintime
 TYPE(vol7d_level):: level
 type(vol7d_var)  :: anavar
@@ -576,7 +604,7 @@ qccli%v7d%voldatiattrb(:,:,:,:,:,:,indtbattrout)=ibmiss
 do indana=1,size(qccli%v7d%ana)
 
   iarea= supermacroa(qccli%in_macroa(indana))
-  write(ident,'("BOX-",i2.2,"*")')iarea   ! macro-area
+!  write(ident,'("BOX",2i3.3,"*")')iarea,desc   ! macro-area e descrittore
                                 !lat=0.0d0
                                 !lon=0.0d0
                                 !write(ident,'("BOX-",2i2.2)')iarea,lperc   ! macro-area e percentile
@@ -619,8 +647,15 @@ do indana=1,size(qccli%v7d%ana)
                 indanavar        = index(qccli%v7d%anavar%r, anavar)
               end if
               if (indanavar <= 0 )cycle
-              altezza= qccli%v7d%volanar(indana,indanavar,indnetwork)
-              call cli_level(altezza,level)
+
+              ! use conventional level starting from station height
+              if (optio_log(height2level)) then
+                altezza= qccli%v7d%volanar(indana,indanavar,indnetwork)
+                call cli_level(altezza,level)
+              else
+                level=qccli%v7d%level(indlevel)
+              end if
+
 
               indcnetwork      = 1
               
@@ -649,12 +684,24 @@ do indana=1,size(qccli%v7d%ana)
               
               if (c_e(datoqui)) then
 
+                ! find extreme in volume
+                extremequii=rmiss
+                extremequif=rmiss
                 if (associated(qccli%extreme%voldatir)) then
-                  extremequii=qccli%extreme%voldatir(1,1,indclevel,indctimerange,indcdativarr,indcnetwork)
-                  extremequif=qccli%extreme%voldatir(2,1,indclevel,indctimerange,indcdativarr,indcnetwork)
-                else
-                  extremequii=rmiss
-                  extremequif=rmiss
+                  desc=1  ! minimum
+                  write(ident,'("BOX",2i3.3,"*")')iarea,desc   ! macro-area e descrittore
+                  call init(ana,ident=ident)
+                  indcana=index(qccli%extreme%ana,ana)
+                  if (indcana > 0 )then
+                    extremequii=qccli%extreme%voldatir(indcana,1,indclevel,indctimerange,indcdativarr,indcnetwork)
+                  end if
+                  desc=2  ! maximum
+                  write(ident,'("BOX",2i3.3,"*")')iarea,desc   ! macro-area e descrittore
+                  call init(ana,ident=ident)
+                  indcana=index(qccli%extreme%ana,ana)
+                  if (indcana > 0 )then
+                    extremequif=qccli%extreme%voldatir(indcana,1,indclevel,indctimerange,indcdativarr,indcnetwork)
+                  end if
                 end if
 
                 if ( (datoqui <= extremequii .or. extremequif <= datoqui) .and. c_e(extremequii) .and. c_e(extremequif) ) then
@@ -673,14 +720,28 @@ do indana=1,size(qccli%v7d%ana)
                 else
 
                                 !climat check
-                  do indcana=1,size(qccli%clima%ana)-1
+                  do desc=1,size(qccli%clima%ana)-1
 
-                    climaquii=qccli%clima%voldatir(indcana  ,indctime,indclevel,indctimerange,indcdativarr,indcnetwork)
-                    climaquif=qccli%clima%voldatir(indcana+1,indctime,indclevel,indctimerange,indcdativarr,indcnetwork)
+                    climaquii=rmiss
+                    climaquif=rmiss
+
+                    write(ident,'("BOX",2i3.3,"*")')iarea,desc   ! macro-area e descrittore
+                    call init(ana,ident=ident)
+                    indcana=index(qccli%clima%ana,ana)
+                    if (indcana > 0 )then
+                      climaquii=qccli%clima%voldatir(indcana,indctime,indclevel,indctimerange,indcdativarr,indcnetwork)
+                    end if
+
+                    write(ident,'("BOX",2i3.3,"*")')iarea,desc+1   ! macro-area e descrittore
+                    call init(ana,ident=ident)
+                    indcana=index(qccli%clima%ana,ana)
+                    if (indcana > 0 )then
+                      climaquif=qccli%clima%voldatir(indcana,indctime,indclevel,indctimerange,indcdativarr,indcnetwork)
+                    end if
 
 !!$                  call l4f_log (L4F_INFO,"ident: "//qccli%clima%ana(indcana)%ident//ident)
-
-                    if ( match(qccli%clima%ana(indcana)%ident,ident) .and. c_e(climaquii) .and. c_e(climaquif)) then
+                    !if ( match(qccli%clima%ana(indcana)%ident,ident) .and. c_e(climaquii) .and. c_e(climaquif)) then
+                    if ( c_e(climaquii) .and. c_e(climaquif )) then
 
 !!$                    print *, "son qua",trim(qccli%clima%ana(indcana)%ident),trim(ident)
 !!$                where (match(qccli%clima%ana(:)%ident,ident).and. &

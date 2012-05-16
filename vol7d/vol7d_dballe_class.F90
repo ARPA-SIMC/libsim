@@ -1573,12 +1573,6 @@ do i =1, N
          end if
        else
 
-         print *,"variabile",buffer(i)%btable
-         print *,"attributo",var_tmp%btable
-
-         print *,"dativarattr",vol7dtmp%dativarattr%c%btable
-         print *,"datiattr",vol7dtmp%datiattr%c%btable
-
          inddativarattr  = firsttrue(buffer(i)%btable == vol7dtmp%dativarattr%c%btable)
          inddatiattr = firsttrue(var_tmp == vol7dtmp%datiattr%c)
          call idba_enq (this%handle,starbtable,&
