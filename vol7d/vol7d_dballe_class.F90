@@ -3238,7 +3238,9 @@ else
   do i=1,ndativarc
     call init(vol7dtmp%dativar%c(i))
   end do
-  call pack_distinct_c(buffer(:nd)%btable,vol7dtmp%dativar%c%btable, back=.TRUE.)
+  if (ndativarc > 0) then
+    call pack_distinct_c(buffer(:nd)%btable,vol7dtmp%dativar%c%btable, back=.TRUE.)
+  end if
 end if
 
 
@@ -3340,8 +3342,8 @@ do i =1, nd
   if(c_e(buffer(i)%datoc)) then
     inddativar = firsttrue(buffer(i)%btable == vol7dtmp%dativar%c%btable)
     vol7dtmp%voldatic( &
-     indana,indtime,indlevel,indtimerange,inddativar,indnetwork &
-     ) = buffer(i)%datoc
+       indana,indtime,indlevel,indtimerange,inddativar,indnetwork &
+       ) = buffer(i)%datoc
   end if
   
 end do
@@ -3379,9 +3381,11 @@ do i =1, Na
      indanavar = firsttrue(bufferana(i)%btable == vol7dtmp%anavar%d%btable)
      vol7dtmp%volanad( indana,indanavar,indnetwork ) = bufferana(i)%datod
    end if
-   if(c_e(bufferana(i)%datoc))then
-     indanavar = firsttrue(bufferana(i)%btable == vol7dtmp%anavar%c%btable)
-     vol7dtmp%volanac( indana,indanavar,indnetwork ) = bufferana(i)%datoc
+   if (nanavarc > 0) then 
+     if(c_e(bufferana(i)%datoc))then
+       indanavar = firsttrue(bufferana(i)%btable == vol7dtmp%anavar%c%btable)
+       vol7dtmp%volanac( indana,indanavar,indnetwork ) = bufferana(i)%datoc
+     end if
    end if
 
  end do
