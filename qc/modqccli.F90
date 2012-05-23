@@ -298,7 +298,7 @@ if (.not. c_e(ldsncli)) then
 
   case default
     call l4f_category_log(qccli%category,L4F_ERROR,&
-     "file type not supported (user .v7d or .bufr suffix only): "//trim(filepathclima))
+     "file type not supported (use .v7d or .bufr suffix only): "//trim(filepathclima))
     call raise_error()
   end select
 
@@ -327,7 +327,7 @@ if (.not. c_e(ldsnextreme)) then
 #endif
 
   if (.not. c_e(filepathextreme)) then
-    filepathextreme=get_package_filepath('climaprec.v7d', filetype_data)
+    filepathextreme=get_package_filepath('qcclima-extreme.v7d', filetype_data)
   end if
 
   select case (trim(lowercase(suffixname(filepathextreme))))
@@ -339,7 +339,7 @@ if (.not. c_e(ldsnextreme)) then
 
 #ifdef HAVE_DBALLE
   case("bufr")
-    call init(v7d_dballeextreme,file=.true.,filename=filepathextreme,categoryappend=trim(a_name)//".clima")
+    call init(v7d_dballeextreme,file=.true.,filename=filepathextreme,categoryappend=trim(a_name)//".climaextreme")
                                 !call import(v7d_dballeextreme)
     call import(v7d_dballeextreme,var=var,coordmin=coordmin, coordmax=coordmax, timei=ltimei, timef=ltimef, &
      varkind=(/("r",i=1,size(var))/),attr=(/"*B33192"/),attrkind=(/"b"/))
@@ -358,7 +358,7 @@ else
 
   call l4f_category_log(qccli%category,L4F_DEBUG,"init v7d_dballeextreme")
   call init(v7d_dballeextreme,dsn=ldsnextreme,user=luser,password=lpassword,&
-   write=.false.,file=.false.,categoryappend=trim(a_name)//".clima")
+   write=.false.,file=.false.,categoryappend=trim(a_name)//".climaextreme")
   call l4f_category_log(qccli%category,L4F_DEBUG,"import v7d_dballeextreme")
   call import(v7d_dballeextreme,var=var,coordmin=coordmin, coordmax=coordmax, timei=ltimei, timef=ltimef, &
    varkind=(/("r",i=1,size(var))/),attr=(/"*B33192"/),attrkind=(/"b"/))
@@ -473,21 +473,136 @@ end subroutine qcclidelete
 !> Modulo 1: Calcolo dei parametri di normalizzazione dei dati
 !! I parametri di normalizzazione sono il 25°, il 50° e il 75° percentile 
 !! (p25,p50,p75)
+!!oppure  (p15.87,p50.,p84.13)
 !! Tali parametri verranno calcolati per ogni mese, per ogni ora, per ogni area.
 !! Modulo 2: Normalizzazione dati
 !! Ciascun dato D verrà normalizzato come segue:
 !! DN = (D-p50)*2/(p75-p25)
+!! oppure DN = (D-p50)*2/(p16-p84)
 !! dove DN è il valore normalizzato.
 !! La scelta dei parametri di normalizzazione dipende dal mese, dall'ora, 
 !! dall'area.
 
-!!$SUBROUTINE vol7d_normalize_data(this, that )
-!!$
-!!$ 
-!!$TYPE(vol7d),INTENT(inout) :: this !< volume providing data to be computed, it is not modified by the method, apart from performing a \a vol7d_alloc_vol on it
-!!$TYPE(vol7d),INTENT(out) :: that !< output volume which will contain the computed data
-!!$
-!!$end SUBROUTINE vol7d_normalize_data
+SUBROUTINE vol7d_normalize_data(this, clima, height2level)
+
+ 
+TYPE(vol7d),INTENT(inout) :: this !< volume providing data to be computed, it is not modified by the method,
+                                  !!apart from performing a \a vol7d_alloc_vol on it
+TYPE(vol7d),INTENT(in) :: clima !< volume providing percentile
+logical ,intent(in),optional :: height2level   !< use conventional level starting from station height
+
+
+real :: datoqui, altezza, extremequif, extremequii
+integer :: indana , indanavar, indtime ,indlevel ,indtimerange ,inddativarr, indnetwork
+integer :: indcana,           indctime,indclevel,indctimerange,indcdativarr,indcnetwork
+integer :: indbattrinv
+TYPE(vol7d_ana)  :: ana
+TYPE(datetime)   :: time, nintime
+TYPE(vol7d_level):: level
+type(vol7d_var)  :: anavar
+integer :: mese, ora, desc
+
+
+do indana=1,size(this%ana)
+
+!  iarea= supermacroa(qccli%in_macroa(indana))
+
+  do indnetwork=1,size(this%network)
+    do indlevel=1,size(this%level)
+      do indtimerange=1,size(this%timerange)
+        do inddativarr=1,size(this%dativar%r)
+          do indtime=1,size(this%time)
+
+            datoqui = this%voldatir  (indana ,indtime ,indlevel ,indtimerange ,inddativarr, indnetwork )
+              
+            if (c_e(datoqui)) then
+
+              if (indbattrinv > 0) then
+                if( invalidated(this%voldatiattrb&
+                 (indana,indtime,indlevel,indtimerange,inddativarr,indnetwork,indbattrinv))) cycle
+              end if
+
+              nintime=this%time(indtime)+timedelta_new(minute=30)
+              CALL getval(nintime, month=mese, hour=ora)
+              call init(time, year=1001, month=mese, day=1, hour=ora, minute=00)
+
+              call init(anavar,"B07030" )
+              indanavar = -1
+              if (associated (this%anavar%r)) then
+                indanavar        = index(this%anavar%r, anavar)
+              end if
+              if (indanavar <= 0 )cycle
+
+              ! use conventional level starting from station height
+              if (optio_log(height2level)) then
+                altezza= this%volanar(indana,indanavar,indnetwork)
+                call cli_level(altezza,level)
+              else
+                level=this%level(indlevel)
+              end if
+
+
+              indcnetwork      = 1
+              
+                                !indcana          = firsttrue(qccli%clima%ana     == ana)
+              
+              indctime         = index(clima%time                  ,  time)
+              indclevel        = index(clima%level                 ,  level)
+              indctimerange    = index(clima%timerange             ,  this%timerange(indtimerange))
+              
+                                ! attenzione attenzione TODO
+                                ! se leggo da bufr il default è char e non reale
+
+              indcdativarr     = index(clima%dativar%r, this%dativar%r(inddativarr))
+              
+!!$                                print *,"dato  ",qccli%v7d%timerange(indtimerange) 
+!!$                                print *,"clima ",qccli%clima%timerange
+!!$                                call l4f_log(L4F_INFO,"Index:"// to_char(indcana)//to_char(indctime)//to_char(indclevel)//&
+!!$                                 to_char(indctimerange)//to_char(indcdativarr)//to_char(indcnetwork))
+              
+                                !if (indcana <= 0 .or. indctime <= 0 .or. indclevel <= 0 .or. indctimerange <= 0 .or. indcdativarr <= 0 &
+                                ! .or. indcnetwork <= 0 ) cycle
+              if (indctime <= 0 .or. indclevel <= 0 .or. indctimerange <= 0 .or. indcdativarr <= 0 &
+               .or. indcnetwork <= 0 ) cycle
+              
+
+                                ! find extreme in volume
+              extremequii=rmiss
+              extremequif=rmiss
+              if (associated(clima%voldatir)) then
+                desc=25  ! minimum
+!                write(ident,'("BOX",2i3.3,"*")')iarea,desc   ! macro-area e descrittore
+!                call init(ana,ident=ident)
+                indcana=index(clima%ana,ana)
+                if (indcana > 0 )then
+                  extremequii=clima%voldatir(indcana,1,indclevel,indctimerange,indcdativarr,indcnetwork)
+                end if
+                desc=75  ! maximum
+!                write(ident,'("BOX",2i3.3,"*")')iarea,desc   ! macro-area e descrittore
+!                call init(ana,ident=ident)
+                indcana=index(clima%ana,ana)
+                if (indcana > 0 )then
+                  extremequif=clima%voldatir(indcana,1,indclevel,indctimerange,indcdativarr,indcnetwork)
+                end if
+              end if
+              
+              if ( c_e(extremequii) .and. c_e(extremequif) ) then
+                                ! normalize
+                
+                                !ATTENZIONE TODO
+                this%voldatir  (indana ,indtime ,indlevel ,indtimerange ,inddativarr, indnetwork ) = datoqui ! meno diviso ..... 
+
+              end if
+            end if
+          end do
+        end do
+      end do
+    end do
+  end do
+end do
+
+
+end SUBROUTINE vol7d_normalize_data
 
 
 !>\brief Controllo di Qualità climatico.
