@@ -85,7 +85,9 @@ TYPE gridinfo_def
   INTEGER :: category !< log4fortran category
 END TYPE gridinfo_def
 
-INTEGER, PARAMETER :: cosmo_centre(3) = (/78,80,200/) ! emission centers using COSMO
+INTEGER, PARAMETER :: &
+ cosmo_centre(3) = (/78,80,200/), & ! emission centres using COSMO coding
+ ecmwf_centre(1) = (/98/) ! emission centres using ECMWF coding
 
 !> Constructor, it creates a new instance of the object.
 INTERFACE init
@@ -1756,6 +1758,34 @@ ELSE IF (this%timerange%timerange == 206) THEN ! COSMO-nudging
     ENDIF ! grib1 & COSMO
   ENDIF ! p2
 ENDIF ! timerange 
+
+IF (this%var%discipline == 255 .AND. &
+ ANY(this%var%centre == ecmwf_centre)) THEN ! grib1 & ECMWF
+
+  IF (this%var%category == 128) THEN ! table 128
+
+    IF (this%var%number == 142 .OR. & ! large scale precipitation
+     this%var%number == 143 .OR. & ! convective precipitation
+     this%var%number == 144 .OR. & ! total snow
+     this%var%number == 228) THEN ! total precipitation
+      this%timerange%timerange = 1 ! accumulated
+      this%timerange%p2 = this%timerange%p1 ! length of period = forecast time
+
+    ELSE IF (this%var%number == 165 .OR. & ! 10m U
+     this%var%number == 166) THEN ! 10m V
+
+      this%level%level1 = 103
+      this%level%l1 = 10000 ! 10m
+
+    ELSE IF (this%var%number == 167 .OR. & ! 2m T
+     this%var%number == 168) THEN ! 2m Td
+
+      this%level%level1 = 103
+      this%level%l1 = 2000 ! 2m
+
+    ENDIF
+  ENDIF ! table 128
+ENDIF ! grib1 & ECMWF
 
 END SUBROUTINE normalize_gridinfo
 
