@@ -1492,9 +1492,9 @@ do inddativarr=1,size(this%dativar%r)
           that%voldatir(indana, indtime, indlevel, indtimerange, inddativarr, indnetwork)=&
            limbins(j)
 
-          ! this is a special case where inddativarr = inddativarr becouse we have anly real variables and attributes
+          ! this is a special case where inddativarr = inddativarr becouse we have only real variables and attributes
           that%voldatiattrr(indana, indtime, indlevel, indtimerange, inddativarr, indnetwork,indattr)=&
-           ndi(j)
+           ndi(j) *  100.
 
         end do
       end do

@@ -41,6 +41,7 @@ use volgrid6d_class
 USE georef_coord_class
 USE vol7d_csv
 USE modqc
+USE modqccli
 !USE ISO_FORTRAN_ENV
 #ifdef ALCHIMIA
 USE alchimia
@@ -53,10 +54,11 @@ IMPLICIT NONE
 TYPE(optionparser) :: opt
 INTEGER :: optind, optstatus
 TYPE(csv_record) :: argparse
-CHARACTER(len=8) :: input_format, coord_format
+CHARACTER(len=8) :: input_format, coord_format, clima_format
 
-CHARACTER(len=512) :: input_file, output_file, output_format, output_template, &
- network_list, variable_list, anavariable_list, attribute_list, coord_file, output_variable_list, trans_level_list
+CHARACTER(len=512) :: input_file, input_file_clima, output_file, output_format, output_template, &
+ network_list, variable_list, anavariable_list, attribute_list, coord_file,&
+ clima_file, output_variable_list, trans_level_list
 CHARACTER(len=160) :: pre_trans_type
 TYPE(vol7d_network), ALLOCATABLE :: nl(:)
 CHARACTER(len=10) :: trans_level_type
@@ -71,7 +73,7 @@ TYPE(vol7d_level) :: ilevel, olevel
 TYPE(vol7d_level),ALLOCATABLE :: olevel_list(:)
 INTEGER :: iun, ier, i, l, n, ninput, iargc, i1, i2, i3, i4
 INTEGER,POINTER :: w_s(:), w_e(:)
-TYPE(vol7d) :: v7d, v7d_coord, v7dtmp, v7d_comp1, v7d_comp2, v7d_comp3
+TYPE(vol7d) :: v7d, v7d_coord, v7dtmp, v7d_comp1, v7d_comp2, v7d_comp3, v7d_clima
 TYPE(arrayof_georef_coord_array) :: poly
 DOUBLE PRECISION,ALLOCATABLE :: lon_array(:), lat_array(:)
 INTEGER :: polytopo
@@ -80,7 +82,7 @@ DOUBLE PRECISION ::  ielon, ielat, felon, felat
 TYPE(geo_coord) :: coordmin,coordmax 
 TYPE(transform_def) :: trans
 #ifdef HAVE_DBALLE
-TYPE(vol7d_dballe) :: v7d_dba, v7d_dba_out
+TYPE(vol7d_dballe) :: v7d_dba, v7d_dba_out, v7d_dba_clima
 #endif
 #ifdef HAVE_ORSIM
 TYPE(vol7d_oraclesim) :: v7d_osim
@@ -177,6 +179,21 @@ CALL optionparser_add(opt, ' ', 'coord-format', coord_format, &
 #endif
 #ifdef HAVE_SHAPELIB
  //', ''shp'' for shapefile (sparse points or polygons)'&
+#endif
+ )
+
+CALL optionparser_add(opt, ' ', 'clima-file', clima_file, help= &
+ 'file with percentile, required for normalize data before NDI compute')
+clima_file=cmiss
+CALL optionparser_add(opt, ' ', 'clima-format', clima_format, &
+#ifdef HAVE_DBALLE
+ 'BUFR', &
+#else
+ 'native', &
+#endif 
+ & help='format of input file with coordinates, ''native'' for vol7d native binary file'&
+#ifdef HAVE_DBALLE
+ //', ''BUFR'' for BUFR file, ''CREX'' for CREX file (sparse points)'&
 #endif
  )
 
@@ -1002,6 +1019,41 @@ end if
 
 
 if (comp_qc_ndi) then
+
+
+  IF (c_e(clima_file)) THEN
+                                ! import percentile file
+    CALL init(v7d_clima)
+    IF (clima_format == 'native') THEN
+      CALL import(v7d_clima, filename=input_file_clima)
+      
+#ifdef HAVE_DBALLE
+    ELSE IF (clima_format == 'BUFR' .OR. clima_format == 'CREX') THEN
+      CALL init(v7d_dba_clima, filename=clima_file, format=clima_format, file=.TRUE., &
+       write=.FALSE., categoryappend="clima")
+      CALL import(v7d_dba_clima)
+      v7d_clima = v7d_dba_clima%vol7d
+                                ! destroy v7d_dba without deallocating the contents passed to v7d
+      CALL init(v7d_dba_clima%vol7d)
+      CALL delete(v7d_dba_clima)
+    
+#endif
+    ELSE
+      CALL l4f_category_log(category, L4F_ERROR, &
+       'error in command-line parameters, format '// &
+       TRIM(coord_format)//' in --coord-format not valid or not supported.')
+      CALL raise_fatal_error()
+    ENDIF
+    
+    call vol7d_normalize_data(v7d, v7d_clima, height2level=.false.)
+    call delete(v7d_clima)
+
+  else
+
+    CALL l4f_category_log(category, L4F_WARN, 'compute Normalized Density Index without normalize data')
+
+  ENDIF
+
   call vol7d_compute_NormalizedDensityIndex(v7d,v7dtmp, perc_vals=(/(10.*i,i=0,10)/),cyclicdt=cyclicdt)
   call delete(v7d)
   v7d=v7dtmp
@@ -1009,6 +1061,7 @@ if (comp_qc_ndi) then
 
 else if (comp_qc_perc) then
   call vol7d_compute_percentile(v7d,v7dtmp, perc_vals=(/25.,50.,75./),cyclicdt=cyclicdt)
+!  call vol7d_compute_percentile(v7d,v7dtmp, perc_vals=(/15.87,50.,84.13/),cyclicdt=cyclicdt)
   call delete(v7d)
   v7d=v7dtmp
   CALL init(v7dtmp) ! detach it

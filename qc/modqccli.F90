@@ -483,16 +483,15 @@ end subroutine qcclidelete
 !! La scelta dei parametri di normalizzazione dipende dal mese, dall'ora, 
 !! dall'area.
 
-SUBROUTINE vol7d_normalize_data(this, clima, height2level)
-
+SUBROUTINE vol7d_normalize_data(this, clima, height2level, battrinv)
  
 TYPE(vol7d),INTENT(inout) :: this !< volume providing data to be computed, it is not modified by the method,
                                   !!apart from performing a \a vol7d_alloc_vol on it
 TYPE(vol7d),INTENT(in) :: clima !< volume providing percentile
 logical ,intent(in),optional :: height2level   !< use conventional level starting from station height
+character (len=10) ,intent(in),optional :: battrinv !< attributo invalidated in input/output
 
-
-real :: datoqui, altezza, extremequif, extremequii
+real :: datoqui, altezza, perc25, perc50,perc75
 integer :: indana , indanavar, indtime ,indlevel ,indtimerange ,inddativarr, indnetwork
 integer :: indcana,           indctime,indclevel,indctimerange,indcdativarr,indcnetwork
 integer :: indbattrinv
@@ -502,6 +501,14 @@ TYPE(vol7d_level):: level
 type(vol7d_var)  :: anavar
 integer :: mese, ora, desc
 
+indbattrinv=0
+if (associated(this%dativarattr%r))then
+  if (present(battrinv))then
+    indbattrinv = index_c(this%dativarattr%r(:)%btable, battrinv)
+  else
+    indbattrinv = index_c(this%dativarattr%r(:)%btable, '*B33196')
+  end if
+end if
 
 do indana=1,size(this%ana)
 
@@ -566,31 +573,41 @@ do indana=1,size(this%ana)
                .or. indcnetwork <= 0 ) cycle
               
 
-                                ! find extreme in volume
-              extremequii=rmiss
-              extremequif=rmiss
+                                ! find percentile in volume
+              perc25=rmiss
+              perc50=rmiss
+              perc75=rmiss
+
               if (associated(clima%voldatir)) then
-                desc=25  ! minimum
+                desc=25
 !                write(ident,'("BOX",2i3.3,"*")')iarea,desc   ! macro-area e descrittore
 !                call init(ana,ident=ident)
                 indcana=index(clima%ana,ana)
                 if (indcana > 0 )then
-                  extremequii=clima%voldatir(indcana,1,indclevel,indctimerange,indcdativarr,indcnetwork)
+                  perc25=clima%voldatir(indcana,1,indclevel,indctimerange,indcdativarr,indcnetwork)
                 end if
-                desc=75  ! maximum
-!                write(ident,'("BOX",2i3.3,"*")')iarea,desc   ! macro-area e descrittore
-!                call init(ana,ident=ident)
+                desc=50
+                                !                write(ident,'("BOX",2i3.3,"*")')iarea,desc   ! macro-area e descrittore
+                                !                call init(ana,ident=ident)
                 indcana=index(clima%ana,ana)
                 if (indcana > 0 )then
-                  extremequif=clima%voldatir(indcana,1,indclevel,indctimerange,indcdativarr,indcnetwork)
+                  perc50=clima%voldatir(indcana,1,indclevel,indctimerange,indcdativarr,indcnetwork)
+                end if
+              
+                desc=75
+                                !                write(ident,'("BOX",2i3.3,"*")')iarea,desc   ! macro-area e descrittore
+                                !                call init(ana,ident=ident)
+                indcana=index(clima%ana,ana)
+                if (indcana > 0 )then
+                  perc75=clima%voldatir(indcana,1,indclevel,indctimerange,indcdativarr,indcnetwork)
                 end if
               end if
               
-              if ( c_e(extremequii) .and. c_e(extremequif) ) then
+              if ( c_e(perc25) .and. c_e(perc50) .and. c_e(perc75) ) then
                                 ! normalize
-                
-                                !ATTENZIONE TODO
-                this%voldatir  (indana ,indtime ,indlevel ,indtimerange ,inddativarr, indnetwork ) = datoqui ! meno diviso ..... 
+
+                datoqui = (datoqui - perc50) / (perc75 - perc25) + base_value(this%dativar%r(inddativarr)%btable)
+                this%voldatir  (indana ,indtime ,indlevel ,indtimerange ,inddativarr, indnetwork ) = datoqui
 
               end if
             end if
@@ -601,6 +618,28 @@ do indana=1,size(this%ana)
   end do
 end do
 
+contains
+
+real function base_value(btable)
+character (len=10) ,intent(in):: btable
+
+character (len=10)  :: btables(1)     =(/"B12101"/)
+real                :: base_values(1) =(/273.15  /)
+integer :: ind
+
+ind = index_c(btables,btable)
+
+if (ind > 0) then
+  base_value = base_values(ind)
+else
+  call l4f_log(L4F_WARN,"vol7d_normalize_data: variable "//btable//" do not have base value")
+  base_value = 0.
+end if
+
+return 
+
+
+end function base_value
 
 end SUBROUTINE vol7d_normalize_data
 
@@ -637,7 +676,7 @@ logical :: anamaskl(size(qccli%v7d%ana)), timemaskl(size(qccli%v7d%time)), level
 
 integer :: indana , indanavar, indtime ,indlevel ,indtimerange ,inddativarr, indnetwork
 integer :: indcana,           indctime,indclevel,indctimerange,indcdativarr,indcnetwork
-real :: datoqui,climaquii,climaquif, altezza, extremequii,extremequif
+real :: datoqui,climaquii,climaquif, altezza, extremequii,extremequif,mediana
 integer :: iarea,desc
 !integer, allocatable :: indcanav(:)
 
@@ -663,10 +702,13 @@ DO i = 1, SIZE(qccli%v7d%ana)
 ENDDO
 
 
-if (present(battrinv))then
-  indbattrinv = index_c(qccli%v7d%dativarattr%r(:)%btable, battrinv)
-else
-  indbattrinv = index_c(qccli%v7d%dativarattr%r(:)%btable, '*B33196')
+indbattrinv=0
+if (associated(qccli%v7d%dativarattr%r))then
+  if (present(battrinv))then
+    indbattrinv = index_c(qccli%v7d%dativarattr%r(:)%btable, battrinv)
+  else
+    indbattrinv = index_c(qccli%v7d%dativarattr%r(:)%btable, '*B33196')
+  end if
 end if
 
 if (present(tbattrout))then
@@ -749,7 +791,14 @@ do indana=1,size(qccli%v7d%ana)
 
               if (indbattrinv > 0) then
                 if( invalidated(qccli%v7d%voldatiattrb&
-                 (indana,indtime,indlevel,indtimerange,inddativarr,indnetwork,indbattrinv))) cycle
+                 (indana,indtime,indlevel,indtimerange,inddativarr,indnetwork,indbattrinv))) then
+
+                                ! gross error check allready done
+#ifdef DEBUG
+                  call l4f_log (L4F_DEBUG,"qccli: skip station for a preceding invalidated flag")
+#endif
+                  cycle
+                end if
               end if
 
               nintime=qccli%v7d%time(indtime)+timedelta_new(minute=30)
@@ -803,14 +852,23 @@ do indana=1,size(qccli%v7d%ana)
                 extremequii=rmiss
                 extremequif=rmiss
                 if (associated(qccli%extreme%voldatir)) then
-                  desc=1  ! minimum
+                  desc=25  ! minimum
                   write(ident,'("BOX",2i3.3,"*")')iarea,desc   ! macro-area e descrittore
                   call init(ana,ident=ident)
                   indcana=index(qccli%extreme%ana,ana)
                   if (indcana > 0 )then
                     extremequii=qccli%extreme%voldatir(indcana,1,indclevel,indctimerange,indcdativarr,indcnetwork)
                   end if
-                  desc=2  ! maximum
+
+                  desc=50  ! mediana
+                  write(ident,'("BOX",2i3.3,"*")')iarea,desc   ! macro-area e descrittore
+                  call init(ana,ident=ident)
+                  indcana=index(qccli%extreme%ana,ana)
+                  if (indcana > 0 )then
+                    mediana=qccli%extreme%voldatir(indcana,1,indclevel,indctimerange,indcdativarr,indcnetwork)
+                  end if
+
+                  desc=75  ! maximum
                   write(ident,'("BOX",2i3.3,"*")')iarea,desc   ! macro-area e descrittore
                   call init(ana,ident=ident)
                   indcana=index(qccli%extreme%ana,ana)
@@ -819,10 +877,19 @@ do indana=1,size(qccli%v7d%ana)
                   end if
                 end if
 
-                if ( (datoqui <= extremequii .or. extremequif <= datoqui) .and. c_e(extremequii) .and. c_e(extremequif) ) then
+
+                if ( .not. c_e(extremequii) .or. .not. c_e(extremequif) .or. .not. c_e(mediana)) cycle
+                
+                extremequii=mediana - (extremequif - extremequii) *1.3 * 3.  ! 1.3 to go to standard deviation and 3 to make 3 sigma 
+                extremequif=mediana + (extremequif - extremequii) *1.3 * 3.  ! 1.3 to go to standard deviation and 3 to make 3 sigma 
+
+                if ( datoqui <= extremequii .or. extremequif <= datoqui ) then
                                 ! make gross error check
 
                                 !ATTENZIONE TODO : inddativarr È UNA GRANDE SEMPLIFICAZIONE NON VERA SE TIPI DI DATO DIVERSI !!!!
+#ifdef DEBUG
+                          call l4f_log (L4F_DEBUG,"qccli: gross error check flag set to bad")
+#endif
                   qccli%v7d%voldatiattrb(indana,indtime,indlevel,indtimerange,inddativarr,indnetwork,indtbattrout)=0
 
                 else if (.not. vd(qccli%v7d%voldatiattrb(indana,indtime,indlevel,indtimerange,&
@@ -830,7 +897,7 @@ do indana=1,size(qccli%v7d%ana)
 
                                 ! gross error check allready done
 #ifdef DEBUG
-                          call l4f_log (L4F_DEBUG,"skip station for a preceding gross error check flagged bad")
+                          call l4f_log (L4F_DEBUG,"qccli: skip station for a preceding gross error check flagged bad")
 #endif
                 else
 
@@ -882,9 +949,9 @@ do indana=1,size(qccli%v7d%ana)
                   
                                 !ATTENZIONE TODO : inddativarr È UNA GRANDE SEMPLIFICAZIONE NON VERA SE TIPI DI DATO DIVERSI !!!!
                         qccli%v7d%voldatiattrb(indana,indtime,indlevel,indtimerange,inddativarr,indnetwork,indtbattrout)=&
-                         qccli%clima%voldatiattrb(indcana  ,indctime,indclevel,indctimerange,indcdativarr,indcnetwork,1)
-                        
-                        
+                         max (qccli%clima%voldatiattrb(indcana  ,indctime,indclevel,indctimerange,indcdativarr,indcnetwork,1)&
+                         ,1_int_b) ! 0 reserved for gross error check
+              
                         if ( associated ( qccli%data_id_in)) then
 #ifdef DEBUG
                           call l4f_log (L4F_DEBUG,"id: "//t2c(&
