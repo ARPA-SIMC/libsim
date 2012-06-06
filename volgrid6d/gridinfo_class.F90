@@ -757,12 +757,17 @@ if (EditionNumber == 1)then
 
 else if (EditionNumber == 2)then
 
-  call grib_set(gaid,'typeOfFirstFixedSurface',ltype1)
-  call grib_set(gaid,'scaleFactorOfFirstFixedSurface',scalef1)
-  call grib_set(gaid,'scaledValueOfFirstFixedSurface',scalev1)
+  CALL grib_set(gaid,'typeOfFirstFixedSurface',ltype1)
+  IF (.NOT.c_e(scalef1) .OR. .NOT.c_e(scalev1)) THEN ! code missing values correctly
+    CALL grib_set_missing(gaid,'scaleFactorOfFirstFixedSurface')
+    CALL grib_set_missing(gaid,'scaledValueOfFirstFixedSurface')
+  ELSE
+    CALL grib_set(gaid,'scaleFactorOfFirstFixedSurface',scalef1)
+    CALL grib_set(gaid,'scaledValueOfFirstFixedSurface',scalev1)
+  ENDIF
 
   CALL grib_set(gaid,'typeOfSecondFixedSurface',ltype2)
-  IF (ltype2 == 255) THEN ! code missing values correctly
+  IF (ltype2 == 255 .OR. .NOT.c_e(scalef2) .OR. .NOT.c_e(scalev2)) THEN ! code missing values correctly
     CALL grib_set_missing(gaid,'scaleFactorOfSecondFixedSurface')
     CALL grib_set_missing(gaid,'scaledValueOfSecondFixedSurface')
   ELSE
