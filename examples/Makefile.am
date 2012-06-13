@@ -3,7 +3,10 @@ if EXAMPLES
 AM_FCFLAGS = -I../base -I../grib -I../volgrid6d -I../vol7d -I../qc -I../termolib -I../log4fortran  -I../graphics -I../alchimia
 EXTRA_DIST = log4crc
 
-noinst_PROGRAMS = esempio_file_utilities esempio_v7d esempio_v7d_compute esempio_termolib log4fortran example_optionparser example_char_utilities example_simple_stat example_space_utilities
+noinst_PROGRAMS = esempio_file_utilities esempio_v7d esempio_v7d_compute esempio_termolib log4fortran example_optionparser example_char_utilities example_simple_stat example_space_utilities example_for2r
+
+example_for2r_SOURCES = example_for2r.f90
+example_for2r_LDADD = ../base/libsim_base.la
 
 esempio_file_utilities_SOURCES = esempio_file_utilities.f90
 esempio_file_utilities_LDADD = ../base/libsim_base.la

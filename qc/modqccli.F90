@@ -26,7 +26,7 @@
 !! definizione delle macroaree:
 !! le macroaree sono tre basate sulle macroaree definite piu'
 !! generalmente al SIM; queste prime macroaree sono definite dal file di
-!! default polipciv4.dat. Attribuendo una numerazione che parte da Sud e Est e scorre prima verso Nord
+!! default macroaree_er.shp. Attribuendo una numerazione che parte da Sud e Est e scorre prima verso Nord
 !! le nuove aree vengono cosi' definite:
 !!  \arg area clima  1 -> macroarea SIM  7,8
 !!  \arg area clima  2 -> macroarea SIM  3,5,6
@@ -44,11 +44,15 @@
 !! Il clima infatti è memorizzato su file nel formato binario di Vol7d o in database che offre migliori performances se si lavora su brevi periodi.
 !! The minumun pass in time is defined to be 1 hour.
 !! The following conventional code values are used to specify which data was taken into account in the  computation:
-!! year=1001 : yearly values (no other time dependence)
-!! year=1002 : dayly  values of a specified month (depends by day and month)
+!! year=1001 : dayly  values of a specified month (depends by day and month)
+!! year=1002 : dayly,hourly  values of a specified month (depends by day and month and hour)
 !! year=1003 : 10 day period of a specified month (depends by day(1,11,21) and month)
-!! year=1004 : mounthly values (depend by month)
-!! The other conventional month hour and minute should be 01 when they are not significative, day should be 1 or, if year=1003 is used, 1,11 or 21.
+!! year=1004 : 10 day period of a specified month,hourly (depends by day(1,11,21) and month and hour)
+!! year=1005 : mounthly values (depend by month)
+!! year=1006 : mounthly,hourly values (depend by month and hour)
+!! year=1007 : yearly values (no other time dependence)
+!! year=1008 : yearly,hourly values (depend by year and hour)
+!! The other conventional month hour and minute should be 01 when they are not significative, day should be 1 or, if year=1003 or year=1004 is used, 1,11 or 21.
 !! 
 !! Ecco come viene definito l'ident del clima:
 !! \arg write(ident,'("BOX",2i3.3)')iarea,desc   ! macro-area e descrittore
@@ -229,10 +233,10 @@ end if
 if (present(macropath))then
   filepath=macropath
 else
- filepath=get_package_filepath('polipciv4.dat', filetype_data)
+ filepath=get_package_filepath('macroaree_er.shp', filetype_data)
 end if
 
-CALL import(qccli%macroa, shpfilesim=filepath)
+CALL import(qccli%macroa, shpfile=filepath)
 call init(qccli%clima)
 
 call optio(climapath,filepathclima)
@@ -245,15 +249,17 @@ ltimef=datetime_miss
 if (present (timei)) ltimei=timei
 if (present (timef)) ltimef=timef
  
-CALL getval(ltimei+timedelta_new(minute=30), year=yeari, month=monthi, day=dayi, hour=houri, minute=minutei, msec=mseci)
-call getval(ltimef+timedelta_new(minute=30), year=yearf, month=monthf, day=dayf, hour=hourf, minute=minutef, msec=msecf)
+ltimei=ltimei+timedelta_new(minute=30)
+ltimef=ltimef+timedelta_new(minute=30)
+CALL getval(ltimei, year=yeari, month=monthi, day=dayi, hour=houri, minute=minutei, msec=mseci)
+call getval(ltimef, year=yearf, month=monthf, day=dayf, hour=hourf, minute=minutef, msec=msecf)
 
 if ( yeari == yearf .and. monthi == monthf .and. dayi == dayf) then
 
-  call init(ltimei, 1001, monthi, 1, houri, minutei, mseci) 
-  call init(ltimef, 1001, monthf, 1, hourf, minutef, msecf) 
-  ltimei = ltimei +timedelta_new(minute=30)
-  ltimef = ltimef +timedelta_new(minute=30)
+!  call init(ltimei, 1001, monthi, 1, houri, minutei, mseci) 
+!  call init(ltimef, 1001, monthf, 1, hourf, minutef, msecf) 
+  ltimei=cyclicdatetime_to_conventional(cyclicdatetime_new(month=monthi, hour=houri))
+  ltimef=cyclicdatetime_to_conventional(cyclicdatetime_new(month=monthf, hour=hourf))
 
 else
                                 ! if you span years or months or days I read all the climat dataset (should be optimized not so easy)
@@ -531,7 +537,9 @@ do indana=1,size(this%ana)
 
               nintime=this%time(indtime)+timedelta_new(minute=30)
               CALL getval(nintime, month=mese, hour=ora)
-              call init(time, year=1001, month=mese, day=1, hour=ora, minute=00)
+
+              time=cyclicdatetime_to_conventional(cyclicdatetime_new(month=mese, hour=ora))
+              !call init(time, year=1001, month=mese, day=1, hour=ora, minute=01)
 
               call init(anavar,"B07030" )
               indanavar = -1
@@ -803,7 +811,9 @@ do indana=1,size(qccli%v7d%ana)
 
               nintime=qccli%v7d%time(indtime)+timedelta_new(minute=30)
               CALL getval(nintime, month=mese, hour=ora)
-              call init(time, year=1001, month=mese, day=1, hour=ora, minute=00)
+
+              time=cyclicdatetime_to_conventional(cyclicdatetime_new(month=mese, hour=ora))
+              !call init(time, year=1001, month=mese, day=1, hour=ora, minute=00)
 
               call init(anavar,"B07030" )
               indanavar = -1

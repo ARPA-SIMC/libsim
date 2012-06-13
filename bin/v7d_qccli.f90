@@ -37,8 +37,8 @@ type(vol7d_dballe) :: v7ddballe
 
 integer, parameter :: maxvar=10
 character(len=6) :: var(maxvar)=cmiss   ! variables to elaborate
-character(len=19) :: dsn='test',user='test',password=''
-character(len=19) :: dsnc='test1', dsne="test2", userc='test',passwordc=''
+character(len=80) :: dsn='test',user='test',password=''
+character(len=80) :: dsnc='test1', dsne="test2", userc='test',passwordc=''
 integer :: years=imiss,months=imiss,days=imiss,hours=imiss,yeare=imiss,monthe=imiss,daye=imiss,houre=imiss,nvar=0
 doubleprecision :: lons=dmiss,lats=dmiss,lone=dmiss,late=dmiss
 

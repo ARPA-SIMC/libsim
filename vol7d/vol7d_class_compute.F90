@@ -1438,7 +1438,7 @@ that%timerange=this%timerange
 that%dativar%r=this%dativar%r
 that%dativarattr%r=that%dativar%r
 call init(that%datiattr%r(1), btable="B33209")    ! NDI order number
-that%time(1)=cyclicdatetime_to_conventional(cyclicdt,this%time(firsttrue(this%time == cyclicdt)))
+that%time(1)=cyclicdatetime_to_conventional(cyclicdt)
 
 call l4f_log(L4F_INFO,"vol7d_compute_percentile conventional datetime "//to_char(that%time(1)))
 call init(that%network(1),name="qcclima-ndi")
@@ -1536,13 +1536,14 @@ end if
 
 allocate (perc(size(perc_vals)))
 CALL init(that, time_definition=this%time_definition)
+
 call init(var, btable="B01192")    ! MeteoDB station ID that here is the number of area
 
 type=cmiss
 indvar = index(this%anavar, var, type=type)
-indnetwork=1
+indnetwork=min(1,size(this%network))
 
-!if( ind /= 0 ) then
+if( indvar > 0 .and. indnetwork > 0 ) then
   select case (type)
   case("d")
     areav=integerdat(this%volanad(:,indvar,indnetwork),this%anavar%d(indvar))
@@ -1557,7 +1558,9 @@ indnetwork=1
   case default
     areav=imiss
   end select
-!end if
+else
+  areav=imiss
+end if
 
 narea=count_distinct(areav)
 allocate(area(narea))
@@ -1583,7 +1586,7 @@ call vol7d_alloc(that,nlevel=size(this%level), ntimerange=size(this%timerange), 
 that%level=this%level
 that%timerange=this%timerange
 that%dativar%r=this%dativar%r
-that%time(1)=cyclicdatetime_to_conventional(cyclicdt,this%time(firsttrue(this%time == cyclicdt)))
+that%time(1)=cyclicdatetime_to_conventional(cyclicdt)
 call l4f_log(L4F_INFO,"vol7d_compute_percentile conventional datetime "//to_char(that%time(1)))
 call init(that%network(1),name="qcclima-perc")
 

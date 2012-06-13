@@ -1160,7 +1160,10 @@ else
   do i=1,ndativarc
     call init(vol7dtmp%dativar%c(i))
   end do
-  call pack_distinct_c(buffer%btable, vol7dtmp%dativar%c%btable, back=.TRUE.,mask=(buffer%btable /= DBA_MVC))
+
+  if (ndativarc > 0) then 
+    call pack_distinct_c(buffer%btable, vol7dtmp%dativar%c%btable, back=.TRUE.,mask=(buffer%btable /= DBA_MVC))
+  end if
 
 end if
 
@@ -1298,8 +1301,9 @@ else
   do i=1,nanavarc
     call init(vol7dtmp%anavar%c(i))
   end do
-  call pack_distinct_c(bufferana%btable, vol7dtmp%anavar%c%btable, back=.TRUE.,mask=(bufferana%btable /= DBA_MVC))
-
+  if (nanavarc > 0) then
+    call pack_distinct_c(bufferana%btable, vol7dtmp%anavar%c%btable, back=.TRUE.,mask=(bufferana%btable /= DBA_MVC))
+  end if
 end if
 
 

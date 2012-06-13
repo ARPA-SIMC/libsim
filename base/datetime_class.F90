@@ -390,7 +390,7 @@ CHARACTER(len=*),INTENT(IN),OPTIONAL :: isodate !< initialize the object to a da
 CHARACTER(len=*),INTENT(IN),OPTIONAL :: simpledate !< initialize the object to a date expressed as a string \c YYYYMMDDhh:mm:ss.msc, (iso format), the initial part YYYYMMDD is compulsory, the remaining part is optional
 
 TYPE(datetime) :: this
-INTEGER :: lyear, lmonth, lday, lhour, lminute, lsec, lmsec, ier
+INTEGER :: lyear, lmonth, lday, lhour, lminute, lsec, lmsec
 CHARACTER(len=23) :: datebuf
 
 IF (PRESENT(year)) THEN ! anno/mese/giorno, ecc.
@@ -1770,53 +1770,53 @@ END FUNCTION cyclicdatetime_to_char
 
 !> Restituisce una rappresentazione convenzionale in forma datetime
 !! \a cyclicdatetime.
-!! year=1001 : yearly values (no other time dependence)
-!! year=1002 : dayly  values of a specified month (depends by day and month)
+!! The following conventional code values are used to specify which data was taken into account in the  computation:
+!! year=1001 : dayly  values of a specified month (depends by day and month)
+!! year=1002 : dayly,hourly  values of a specified month (depends by day and month and hour)
 !! year=1003 : 10 day period of a specified month (depends by day(1,11,21) and month)
-!! year=1004 : mounthly values (depend by month)
-!! The other conventional month hour and minute should be 01 when they are not significative, day should be 1 or, if year=1003 is used, 1,11 or 21.
-FUNCTION cyclicdatetime_to_conventional(this,dt) RESULT(dtc)
+!! year=1004 : 10 day period of a specified month,hourly (depends by day(1,11,21) and month and hour)
+!! year=1005 : mounthly values (depend by month)
+!! year=1006 : mounthly,hourly values (depend by month and hour)
+!! year=1007 : yearly values (no other time dependence)
+!! year=1008 : yearly,hourly values (depend by year and hour)
+!! The other conventional month hour and minute should be 01 when they are not significative, day should be 1 or, if year=1003 or year=1004 is used, 1,11 or 21.
+FUNCTION cyclicdatetime_to_conventional(this) RESULT(dtc)
 TYPE(cyclicdatetime),INTENT(IN) :: this !< cycliddatetime to use in compute
-TYPE(datetime),intent(in) :: dt !< datetime to use in compute
 
 TYPE(datetime) :: dtc
 
-integer :: tendaysp,month,day
+integer :: year,month,day,hour
 
 dtc = datetime_miss 
 
-! dt required
-if ( .not. c_e(dt)) return
-
-! if not equal somethings is wrong !
-if (.not. this == dt ) return
-
 ! no cyclicdatetime present -> year=1001 : yearly values (no other time dependence)
 if ( .not. c_e(this)) then
-  dtc=datetime_new(year=1001, month=1, day=1, hour=1, minute=1)
+  dtc=datetime_new(year=1007, month=1, day=1, hour=1, minute=1)
   return
 end if
 
-! minute and hour present -> not good for conventional datetime
+! minute present -> not good for conventional datetime
 if (c_e(this%minute)) return
-if (c_e(this%hour)) return
 ! day, month and tendaysp present -> no good
 if (c_e(this%day) .and. c_e(this%month) .and. c_e(this%tendaysp)) return
 
-call getval(dt,day=day,month=month)
-
 if (c_e(this%day) .and. c_e(this%month)) then
-  dtc=datetime_new(year=1002, month=month, day=day, hour=1, minute=1)
+  dtc=datetime_new(year=1001, month=this%month, day=this%day, hour=1, minute=1)
 else if (c_e(this%tendaysp) .and. c_e(this%month)) then
-  tendaysp = min(((day-1)/10) +1,3)
-  day=tendaysp*10+1
-  dtc=datetime_new(year=1003, month=month, day=day, hour=1, minute=1)
+  day=(this%tendaysp-1)*10+1
+  dtc=datetime_new(year=1003, month=this%month, day=day, hour=1, minute=1)
 else if (c_e(this%month)) then
-  dtc=datetime_new(year=1004, month=month, day=1, hour=1, minute=1)
+  dtc=datetime_new(year=1005, month=this%month, day=1, hour=1, minute=1)
 else if (c_e(this%day)) then
   ! only day present -> no good
   return
 end if
+
+if (c_e(this%hour)) then
+  call getval(dtc,year=year,month=month,day=day,hour=hour)
+  dtc=datetime_new(year=year+1,month=month,day=day,hour=this%hour,minute=1)
+end if
+
 
 END FUNCTION cyclicdatetime_to_conventional
 

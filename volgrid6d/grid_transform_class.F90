@@ -1804,10 +1804,10 @@ ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
 !$OMP END PARALLEL
 
     IF (this%outnx <= 0) THEN
-      CALL l4f_category_log(this%category,L4F_ERROR, &
+      CALL l4f_category_log(this%category,L4F_INFO, &
        "metamorphosis poly: no points inside polygons")
-      this%valid = .FALSE.
-      RETURN
+!      this%valid = .FALSE.
+!      RETURN
     ENDIF
 
     CALL vol7d_alloc(v7d_out, nana=this%outnx)
@@ -2268,10 +2268,10 @@ ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
     ENDDO
 
     IF (this%outnx <= 0) THEN
-      CALL l4f_category_log(this%category,L4F_ERROR, &
+      CALL l4f_category_log(this%category,L4F_INFO, &
        "metamorphosis:poly: no points inside polygons")
-      this%valid = .FALSE.
-      RETURN
+!      this%valid = .FALSE.
+!      RETURN
     ENDIF
 
     CALL vol7d_alloc(v7d_out, nana=this%outnx)

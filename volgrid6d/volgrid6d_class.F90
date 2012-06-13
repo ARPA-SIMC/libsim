@@ -2285,6 +2285,7 @@ TYPE(vol7d) :: v7d_locana
 CHARACTER(len=80) :: trans_type
 
 CALL vol7d_alloc_vol(vol7d_in) ! be safe
+nvar=0
 IF (ASSOCIATED(vol7d_in%dativar%r)) nvar=SIZE(vol7d_in%dativar%r)
 
 CALL init(v7d_locana)
@@ -2358,7 +2359,6 @@ ELSE
         ENDDO
       ENDIF
     ENDIF
-
     CALL compute(grid_trans, vol7d_in, vol7d_out)
   ELSE
     CALL l4f_log(L4F_ERROR, 'v7d_v7d_transform: transformation not valid')
