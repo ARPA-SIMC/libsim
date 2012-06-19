@@ -17,7 +17,7 @@
 ! along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ! Example program to quality control data with climatological values
 
-program esempio_qccli
+program v7d_qccli
 
 use log4fortran
 use modqccli
@@ -38,11 +38,11 @@ type(vol7d_dballe) :: v7ddballe
 integer, parameter :: maxvar=10
 character(len=6) :: var(maxvar)=cmiss   ! variables to elaborate
 character(len=80) :: dsn='test',user='test',password=''
-character(len=80) :: dsnc='test1', dsne="test2", userc='test',passwordc=''
+character(len=80) :: dsnc='test1', dsne="test2", userc='test',passwordc='', macropath=cmiss
 integer :: years=imiss,months=imiss,days=imiss,hours=imiss,yeare=imiss,monthe=imiss,daye=imiss,houre=imiss,nvar=0
 doubleprecision :: lons=dmiss,lats=dmiss,lone=dmiss,late=dmiss
 
-namelist /odbc/   dsn,user,password,dsnc,dsne,userc,passwordc       ! namelist to define DSN
+namelist /odbc/   dsn,user,password,dsnc,dsne,userc,passwordc,macropath       ! namelist to define DSN
 namelist /minmax/ years,months,days,hours,lons,lats,yeare,monthe,daye,houre,lone,late
 namelist /varlist/ var
 
@@ -50,7 +50,7 @@ namelist /varlist/ var
 ier=l4f_init()
 
 ! unique name from launcher
-call l4f_launcher(a_name,a_name_force="esempio_qccli")
+call l4f_launcher(a_name,a_name_force="v7d_qccli")
 
 ! set a_name
 category=l4f_category_get(a_name//".main")
@@ -113,7 +113,8 @@ CALL import(v7ddballe,var=var(:nvar),varkind=(/("r",i=1,nvar)/),&
  attr=(/"*B33196","*B33192"/),attrkind=(/"b","b"/)&
  ,timei=ti,timef=tf,coordmin=coordmin,coordmax=coordmax)
 
-!call display(v7ddballe%vol7d)
+print *,"data input:"
+call display(v7ddballe%vol7d)
 call l4f_category_log(category,L4F_INFO,"end data import")
 
 call l4f_category_log(category,L4F_INFO,"start QC")
@@ -122,9 +123,10 @@ call l4f_category_log(category,L4F_INFO,"start QC")
 call init(v7dqccli,v7ddballe%vol7d,var(:nvar), &
  timei=ti,timef=tf,coordmin=coordmin,coordmax=coordmax, &
  data_id_in=v7ddballe%data_id, dsncli=dsnc, dsnextreme=dsne, &
- user=userc, categoryappend="clima")
+ user=userc, password=passwordc, macropath=macropath, categoryappend="clima")
 
-!call display(v7dqccli%clima)
+print *,"data extreme:"
+call display(v7dqccli%extreme)
 
 call alloc(v7dqccli)
 
@@ -148,4 +150,4 @@ call delete(v7ddballe)
 call l4f_category_delete(category)
 ier=l4f_fini()
 
-end program esempio_qccli
+end program v7d_qccli
