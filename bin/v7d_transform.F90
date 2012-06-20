@@ -361,14 +361,15 @@ CALL optionparser_add(opt, ' ', 'csv-volume', csv_volume, 'all', help= &
  &''ana'' for station volumes only or ''data'' for data volumes only')
 CALL optionparser_add(opt, ' ', 'csv-column', csv_column, &
  'time,timerange,ana,level,network', help= &
- 'list of columns (excluding variables) that have to appear in csv output: &
- &a comma-separated combination of ''time,timerange,level,ana,network'' &
+ 'list of columns that have to appear in csv output: &
+ &a comma-separated selection of ''time,timerange,level,ana,network,var,value'' &
  &in the desired order')
 CALL optionparser_add(opt, ' ', 'csv-columnorder', csv_columnorder, &
  'time,timerange,ana,level,network', help= &
- 'order of looping on columns (excluding variables) that have to appear in &
- &csv output, the format is the same as for the --csv-column parameter &
- &but here all the column identifiers have to be present')
+ 'order of looping on columns that have to appear in csv output: &
+ &a comma-separated selection of ''time,timerange,level,ana,network,var'' &
+ &in the desired order, all the identifiers must be present, except ''var'', &
+ which, if present, selects the DB-All.e format with one variable per line')
 CALL optionparser_add(opt, ' ', 'csv-variable', csv_variable, 'all', help= &
  'list of variables that have to appear in the data columns of csv output: &
  &''all'' or a comma-separated list of B-table alphanumeric codes, e.g. &

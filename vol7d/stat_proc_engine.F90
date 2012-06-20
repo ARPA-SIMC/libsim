@@ -387,9 +387,7 @@ TYPE(arrayof_integer) :: a_dtratio
 LOGICAL,ALLOCATABLE :: mask_timerange(:) ! improve !!!!
 
 ! compute length of cumulation step in seconds
-CALL getval(step, asec=steps)
-!? CALL getval(timedelta_depop(step), asec=steps)
-! steps == 0???
+CALL getval(timedelta_depop(step), asec=steps)
 
 ! create a mask of suitable timeranges
 ALLOCATE(mask_timerange(SIZE(itimerange)))
@@ -435,7 +433,7 @@ CALL l4f_log(L4F_DEBUG, &
 #endif
 
 IF (SIZE(itime) == 0 .OR. COUNT(mask_timerange) == 0) THEN ! avoid segmentation fault in case of empty volume
-  ALLOCATE(otime(0), otimerange(0), dtratio(0), map_ttr(0,0,0)) !itime_start(0), itime_end(0))
+  ALLOCATE(otime(0), otimerange(0), dtratio(0), map_ttr(0,0,0))
   RETURN
 ENDIF
 
@@ -536,8 +534,6 @@ do_itimerange: DO l = 1, SIZE(itimerange)
          time_definition, pstart2, pend2, reftime2)
         IF (lforecast) THEN
           IF (reftime1 /= reftime2) CYCLE do_otime
-!        ELSE
-!          IF (reftime) !?
         ENDIF
 
         IF (pstart1 >= pstart2 .AND. pend1 <= pend2 .AND. &
