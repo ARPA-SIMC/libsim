@@ -116,7 +116,7 @@ ELSE
     CALL l4f_category_log(this%category, L4F_INFO, &
      'recomputing statistically processed data by aggregation '// &
      TRIM(to_char(stat_proc_input))//':'//TRIM(to_char(stat_proc)))
-    CALL volgrid6d_recompute_stat_proc_agg(this, that, stat_proc, step, start, &
+    CALL volgrid6d_recompute_stat_proc_agg_exp(this, that, stat_proc, step, start, &
      frac_valid, clone)
   ENDIF
 
@@ -166,6 +166,123 @@ END SUBROUTINE volgrid6d_compute_stat_proc
 !! volume will not carry all the information about the processing
 !! which has been done, in the previous case, for example, the
 !! temperatures will simply look like monthly average temperatures.
+SUBROUTINE volgrid6d_recompute_stat_proc_agg_exp(this, that, stat_proc, step, start, frac_valid, clone)
+TYPE(volgrid6d),INTENT(inout) :: this !< volume providing data to be recomputed, it is not modified by the method, apart from performing a \a volgrid6d_alloc_vol on it
+TYPE(volgrid6d),INTENT(out) :: that !< output volume which will contain the recomputed data
+INTEGER,INTENT(in) :: stat_proc !< type of statistical processing to be recomputed (from grib2 table), only data having timerange of this type will be recomputed and will appear in the output volume
+TYPE(timedelta),INTENT(in) :: step !< length of the step over which the statistical processing is performed
+TYPE(datetime),INTENT(in),OPTIONAL :: start !< start of statistical processing interval
+REAL,INTENT(in),OPTIONAL :: frac_valid !< minimum fraction of valid data required for considering acceptable a recomputed value, default=1.
+LOGICAL , INTENT(in),OPTIONAL :: clone !< if provided and \c .TRUE. , clone the gaid's from \a this to \a that
+
+INTEGER :: tri
+INTEGER i, j, k, l, n, n1, i3, i6
+INTEGER,POINTER :: map_ttr(:,:,:)
+INTEGER,POINTER :: dtratio(:)
+REAL :: lfrac_valid
+LOGICAL :: lclone
+REAL,POINTER :: voldatiin(:,:), voldatiout(:,:)
+
+
+NULLIFY(voldatiin, voldatiout)
+tri = stat_proc
+IF (PRESENT(frac_valid)) THEN
+  lfrac_valid = frac_valid
+ELSE
+  lfrac_valid = 1.0
+ENDIF
+
+CALL init(that)
+! be safe
+CALL volgrid6d_alloc_vol(this)
+
+! when volume is not decoded it is better to clone anyway to avoid
+! overwriting fields
+lclone = optio_log(clone) .OR. .NOT.ASSOCIATED(this%voldati)
+! initialise the output volume
+CALL init(that, griddim=this%griddim, time_definition=this%time_definition)
+CALL volgrid6d_alloc(that, dim=this%griddim%dim, ntimerange=1, &
+ nlevel=SIZE(this%level), nvar=SIZE(this%var), ini=.FALSE.)
+that%level = this%level
+that%var = this%var
+
+CALL recompute_stat_proc_agg_common_exp(this%time, this%timerange, stat_proc, tri, &
+ step, this%time_definition, that%time, that%timerange, map_ttr, dtratio, start)
+
+CALL volgrid6d_alloc_vol(that, decode=ASSOCIATED(this%voldati))
+
+do_otimerange: DO j = 1, SIZE(that%timerange)
+  do_otime: DO i = 1, SIZE(that%time)
+
+    DO n = 1, SIZE(dtratio)
+      IF (dtratio(n) <= 0) CYCLE ! safety check
+
+      DO i6 = 1, SIZE(this%var)
+        DO i3 = 1, SIZE(this%level)
+          CALL volgrid_get_vol_2d(that, i3, i, j, i6, voldatiout)
+
+          n1 = 0
+          DO l = 1, SIZE(this%timerange)
+            DO k = 1, SIZE(this%time)
+              IF (map_ttr(k,l,1) == i .AND. map_ttr(k,l,2) == j .AND. &
+               map_ttr(k,l,3) == dtratio(n)) THEN ! useful combination
+                CALL volgrid_get_vol_2d(this, i3, k, l, i6, voldatiin)
+
+                IF (n1 == 0) THEN ! first time
+                  voldatiout = voldatiin
+                  IF (lclone) THEN
+                    CALL copy(this%gaid(i3,k,l,i6), that%gaid(i3,i,j,i6))
+                  ELSE
+                    that%gaid(i3,i,j,i6) = this%gaid(i3,k,l,i6)
+                  ENDIF
+
+                ELSE ! second or more time
+                  SELECT CASE(stat_proc)
+                  CASE (0, 1) ! average, cumulation
+                    WHERE(c_e(voldatiin(:,:)) .AND. c_e(voldatiout(:,:)))
+                      voldatiout(:,:) = voldatiout(:,:) + voldatiin(:,:)
+                    ELSEWHERE
+                      voldatiout(:,:) = rmiss
+                    END WHERE
+                  CASE(2) ! maximum
+                    WHERE(c_e(voldatiin(:,:)) .AND. c_e(voldatiout(:,:)))
+                      voldatiout(:,:) = MAX(voldatiout(:,:), voldatiin(:,:))
+                    ELSEWHERE
+                      voldatiout(:,:) = rmiss
+                    END WHERE
+                  CASE(3) ! minimum
+                    WHERE(c_e(voldatiin(:,:)) .AND. c_e(voldatiout(:,:)))
+                      voldatiout(:,:) = MIN(voldatiout(:,:), voldatiin(:,:))
+                    ELSEWHERE
+                      voldatiout(:,:) = rmiss
+                    END WHERE
+                  END SELECT
+
+                ENDIF ! first time
+                n1 = n1 + 1
+              ENDIF ! useful combination
+            ENDDO
+          ENDDO
+          IF (n1 == dtratio(n)) THEN ! success
+            IF (stat_proc == 0) THEN ! average
+              WHERE(c_e(voldatiout(:,:)))
+                voldatiout(:,:) = voldatiout(:,:)/n
+              END WHERE
+            ENDIF
+            CALL volgrid_set_vol_2d(that, i3, i, j, i6, voldatiout)
+          ENDIF
+
+        ENDDO ! level
+      ENDDO ! var
+    ENDDO ! dtratio
+  ENDDO do_otime
+ENDDO do_otimerange
+
+DEALLOCATE(dtratio, map_ttr)
+
+END SUBROUTINE volgrid6d_recompute_stat_proc_agg_exp
+
+
 SUBROUTINE volgrid6d_recompute_stat_proc_agg(this, that, stat_proc, step, start, frac_valid, clone)
 TYPE(volgrid6d),INTENT(inout) :: this !< volume providing data to be recomputed, it is not modified by the method, apart from performing a \a volgrid6d_alloc_vol on it
 TYPE(volgrid6d),INTENT(out) :: that !< output volume which will contain the recomputed data
@@ -211,7 +328,7 @@ ENDIF
 lclone = optio_log(clone) .OR. .NOT.ASSOCIATED(this%voldati)
 ! initialise the output volume
 CALL init(that, griddim=this%griddim, time_definition=this%time_definition)
-CALL volgrid6d_alloc(that, dim=this%griddim%dim, ntimerange=1, &
+CALL volgrid6d_alloc(that, dim=this%griddim%dim, & !ntimerange=1, &
  nlevel=SIZE(this%level), nvar=SIZE(this%var), ini=.FALSE.)
 that%level = this%level
 that%var = this%var

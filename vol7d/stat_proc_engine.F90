@@ -362,6 +362,199 @@ CALL l4f_log(L4F_DEBUG, &
 END SUBROUTINE recompute_stat_proc_diff_common
 
 
+! common operations for statistical processing by aggregation, experimental
+SUBROUTINE recompute_stat_proc_agg_common_exp(itime, itimerange, stat_proc, tri, &
+ step, time_definition, otime, otimerange, map_ttr, dtratio, start)
+TYPE(datetime),INTENT(in) :: itime(:)
+TYPE(vol7d_timerange),INTENT(in) :: itimerange(:)
+INTEGER,INTENT(in) :: stat_proc
+INTEGER,INTENT(in) :: tri
+TYPE(timedelta),INTENT(in) :: step
+INTEGER,INTENT(in) :: time_definition
+TYPE(datetime),POINTER :: otime(:)
+TYPE(vol7d_timerange),POINTER :: otimerange(:)
+INTEGER,POINTER :: map_ttr(:,:,:)
+INTEGER,POINTER :: dtratio(:)
+TYPE(datetime),INTENT(in),OPTIONAL :: start
+
+INTEGER :: i, j, k, l, na, nf
+INTEGER :: steps, p1, maxp1, minp2
+LOGICAL :: lforecast
+TYPE(datetime) :: lstart, lend, pstart1, pstart2, pend1, pend2, reftime1, reftime2, tmptime
+TYPE(arrayof_datetime) :: a_otime
+TYPE(arrayof_vol7d_timerange) :: a_otimerange
+TYPE(arrayof_integer) :: a_dtratio
+LOGICAL,ALLOCATABLE :: mask_timerange(:) ! improve !!!!
+
+! compute length of cumulation step in seconds
+CALL getval(step, asec=steps)
+!? CALL getval(timedelta_depop(step), asec=steps)
+! steps == 0???
+
+! create a mask of suitable timeranges
+ALLOCATE(mask_timerange(SIZE(itimerange)))
+mask_timerange(:) = itimerange(:)%timerange == tri &
+ .AND. itimerange(:)%p1 /= imiss .AND. itimerange(:)%p2 /= imiss &
+ .AND. itimerange(:)%p1 >= 0 &
+ .AND. itimerange(:)%p2 > 0 &
+ .AND. MOD(steps, itimerange(:)%p2) == 0
+
+#ifdef DEBUG
+CALL l4f_log(L4F_DEBUG, &
+ 'recompute_stat_proc_agg, number of useful timeranges before choosing analysis/forecast: '// &
+ t2c(COUNT(mask_timerange)))
+#endif
+
+! euristically determine whether we are dealing with an
+! analysis/observation or a forecast dataset
+na = COUNT(itimerange(:)%timerange == tri .AND. &
+ itimerange(:)%p1 == 0 .AND. itimerange(:)%p2 > 0)
+nf = COUNT(itimerange(:)%timerange == tri .AND. &
+ itimerange(:)%p1 > 0 .AND. itimerange(:)%p2 > 0)
+lforecast = nf >= na
+#ifdef DEBUG
+CALL l4f_log(L4F_DEBUG, &
+ 'recompute_stat_proc_agg, na: '//t2c(na)//', nf: '//t2c(nf))
+#endif
+
+! keep only timeranges of one type (really necessary?)
+IF (lforecast) THEN
+  mask_timerange(:) = mask_timerange(:) .AND. itimerange(:)%p1 > 0
+  CALL l4f_log(L4F_INFO, &
+   'recompute_stat_proc_agg, processing in forecast mode')
+ELSE
+  mask_timerange(:) = mask_timerange(:) .AND. itimerange(:)%p1 == 0
+  CALL l4f_log(L4F_INFO, &
+   'recompute_stat_proc_agg, processing in analysis mode')
+ENDIF
+
+#ifdef DEBUG
+CALL l4f_log(L4F_DEBUG, &
+ 'recompute_stat_proc_agg, number of useful timeranges: '// &
+ t2c(COUNT(mask_timerange)))
+#endif
+
+IF (SIZE(itime) == 0 .OR. COUNT(mask_timerange) == 0) THEN ! avoid segmentation fault in case of empty volume
+  ALLOCATE(otime(0), otimerange(0), dtratio(0), map_ttr(0,0,0)) !itime_start(0), itime_end(0))
+  RETURN
+ENDIF
+
+! determine start and end of processing period
+lstart = datetime_miss
+IF (PRESENT(start)) lstart = start
+IF (lstart == datetime_miss) THEN
+  lstart = itime(1)
+ENDIF
+lend = itime(SIZE(itime))
+! correct them
+maxp1 = MAXVAL(itimerange(:)%p1, mask=mask_timerange)
+minp2 = MINVAL(itimerange(:)%p2, mask=mask_timerange)
+IF (time_definition == 0) THEN ! shift forward end of period if reference time
+  lend = lend + timedelta_new(msec=1000*maxp1)
+ELSE ! shift backward start of period if verification time
+  lstart = lstart - timedelta_new(msec=1000*minp2)
+  lstart = lstart - (MOD(lstart, step)) ! round to step, check the - sign!!!
+ENDIF
+#ifdef DEBUG
+CALL l4f_log(L4F_DEBUG, &
+ 'recompute_stat_proc_agg, processing period: '//t2c(lstart)//' - '//t2c(lend))
+#endif
+
+! create output time and timerange lists
+a_otime = arrayof_datetime_new()
+a_otimerange = arrayof_vol7d_timerange_new()
+
+IF (lforecast) THEN ! forecast mode
+  IF (time_definition == 0) THEN ! reference time
+    CALL insert(a_otime, itime)
+
+    DO p1 = steps, maxp1, steps ! 0, maxp1, steps??
+      CALL insert_unique(a_otimerange, vol7d_timerange_new(stat_proc, p1, steps))
+    ENDDO
+
+  ELSE ! verification time
+    tmptime = lstart + step
+    DO WHILE(tmptime <= lend)
+      CALL insert_unique(a_otime, tmptime)
+      tmptime = tmptime + step
+    ENDDO
+    DO p1 = steps, maxp1, steps
+      CALL insert_unique(a_otimerange, vol7d_timerange_new(stat_proc, p1, steps))
+    ENDDO
+
+  ENDIF
+
+ELSE ! analysis mode
+  tmptime = lstart + step
+  DO WHILE(tmptime <= lend)
+    CALL insert_unique(a_otime, tmptime)
+    tmptime = tmptime + step
+  ENDDO
+  CALL insert_unique(a_otimerange, vol7d_timerange_new(stat_proc, 0, steps))
+
+ENDIF
+
+! count the possible i/o interval ratios
+DO k = 1, SIZE(itimerange)
+  CALL insert_unique(a_dtratio, steps/itimerange(k)%p2) ! guaranteed to be integer
+ENDDO
+
+CALL packarray(a_otime)
+CALL packarray(a_otimerange)
+CALL packarray(a_dtratio)
+otime => a_otime%array
+otimerange => a_otimerange%array
+dtratio => a_dtratio%array
+CALL sort(otime)
+CALL sort(otimerange)
+CALL sort(dtratio)
+! delete local objects keeping the contents
+CALL delete(a_otime, nodealloc=.TRUE.)
+CALL delete(a_otimerange, nodealloc=.TRUE.)
+CALL delete(a_dtratio, nodealloc=.TRUE.)
+
+#ifdef DEBUG
+CALL l4f_log(L4F_DEBUG, &
+ 'recompute_stat_proc_agg, output time and timerange: '//&
+ t2c(SIZE(otime))//', '//t2c(size(otimerange)))
+CALL l4f_log(L4F_DEBUG, &
+ 'recompute_stat_proc_agg, found '//t2c(size(dtratio))// &
+ ' possible aggregation ratios, from '// &
+ t2c(dtratio(1))//' to '//t2c(dtratio(SIZE(dtratio))))
+#endif
+
+ALLOCATE(map_ttr(SIZE(itime),SIZE(itimerange),3))
+map_ttr(:,:,:) = imiss
+do_itimerange: DO l = 1, SIZE(itimerange)
+  IF (.NOT.mask_timerange(l)) CYCLE do_itimerange
+  do_itime: DO k = 1, SIZE(itime)
+  CALL time_timerange_get_period(itime(k), itimerange(l), &
+   time_definition, pstart1, pend1, reftime1)
+    do_otimerange: DO j = 1, SIZE(otimerange)
+      do_otime: DO i = 1, SIZE(otime)
+        CALL time_timerange_get_period(otime(i), otimerange(j), &
+         time_definition, pstart2, pend2, reftime2)
+        IF (lforecast) THEN
+          IF (reftime1 /= reftime2) CYCLE do_otime
+!        ELSE
+!          IF (reftime) !?
+        ENDIF
+
+        IF (pstart1 >= pstart2 .AND. pend1 <= pend2 .AND. &
+         MOD(pstart1-pstart2, pend1-pstart1) == timedelta_0) THEN ! useful
+          map_ttr(k,l,1) = i
+          map_ttr(k,l,2) = j
+          map_ttr(k,l,3) = steps/itimerange(l)%p2 ! guaranteed to be integer
+          CYCLE do_itime
+        ENDIF
+      ENDDO do_otime
+    ENDDO do_otimerange
+  ENDDO do_itime
+ENDDO do_itimerange
+
+END SUBROUTINE recompute_stat_proc_agg_common_exp
+
+
 ! get start of period, end of period and reference time from time,
 ! timerange, according to time_definition.
 SUBROUTINE time_timerange_get_period(time, timerange, time_definition, &

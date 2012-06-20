@@ -72,9 +72,9 @@ vol7d_class.lo: vol7d_ana_class.$(OBJEXT) \
  vol7d_network_class.$(OBJEXT) vol7d_varvect_class.$(OBJEXT) \
  vol7d_class_type_templ.F90 vol7d_class_desc_templ.F90 vol7d_class_diff.F90 vol7d_class_diff_only.F90
 stat_proc_engine.$(OBJEXT): vol7d_class.$(OBJEXT)
-stat_proc_engine.lo: vol7d_class.$(OBJEXT) stat_proc_engine.$(OBJEXT)
+stat_proc_engine.lo: vol7d_class.$(OBJEXT)
 vol7d_class_compute.$(OBJEXT): vol7d_class.$(OBJEXT) stat_proc_engine.$(OBJEXT)
-vol7d_class_compute.lo: vol7d_class.$(OBJEXT)
+vol7d_class_compute.lo: vol7d_class.$(OBJEXT) stat_proc_engine.$(OBJEXT)
 if ORSIM
 vol7d_oraclesim_class.$(OBJEXT): vol7d_class.$(OBJEXT) vol7d_oraclesim_class_vartable.F90
 vol7d_oraclesim_class.lo: vol7d_class.$(OBJEXT) vol7d_oraclesim_class_vartable.F90
