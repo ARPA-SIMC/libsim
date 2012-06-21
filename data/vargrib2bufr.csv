@@ -70,7 +70,13 @@ B11204,Obukov length (diagmet; invented),m,200,2,210,255,1.0,0.0
 B11205,Convective velocitiy scale (diagmet; invented),m/s,200,2,213,255,1.0,0.0
 B11206,Friction velocity (COSMO; invented),m/s,200,2,201,255,1.0,0.0
 B11207,Obukov length (COSMO; invented),m,200,2,200,255,1.0,0.0
-B12030,Soil Temperature,,255,2,85,255,1.0,0.0
+B12030,Soil Temperature,K,255,2,85,255,1.0,0.0
+B12030,Soil Temperature,K,200,201,197,255,1.0,0.0
+B12030,Soil Temperature,K,78,201,197,255,1.0,0.0
+B12030,Soil Temperature level 1 IFS,K,98,128,139,255,1.0,0.0
+B12030,Soil Temperature level 2 IFS,K,98,128,170,255,1.0,0.0
+B12030,Soil Temperature level 3 IFS,K,98,128,183,255,1.0,0.0
+B12030,Soil Temperature level 4 IFS,K,98,128,236,255,1.0,0.0
 B12101,Temperature of the snow-surface,K,200,201,203,255,1.0,0.0
 B12101,Temperature of the snow-surface,K,78,201,203,255,1.0,0.0
 B12101,Temperature,K,255,0,0,0,1.0,0.0
@@ -119,7 +125,17 @@ B13202,Convective liquid precipitation (invented),Kg/m**2,78,201,113,255,1.0,0.0
 B13203,Convective snowfall (invented),Kg/m**2,255,2,78,255,1.0,0.0
 B13204,Total convective precipitation(liquid+snow; invented),Kg/m**200,200,2,152,255,1.0,0.0
 B13205,Snowfall (grid-scale+convective; invented),Kg/m**2,200,2,153,255,1.0,0.0
-B13206,Soil water content (invented),kg/m^2->Num,255,2,86,255,1.0,0.0
+B13206,Soil water content (invented),kg/m**2,255,2,86,255,1.0,0.0
+B13206,Soil water content (invented),kg/m**2,200,201,198,255,1.0,0.0
+B13206,Soil water content (invented),kg/m**2,78,201,198,255,1.0,0.0
+B13206,Soil water content level 1 IFS Cy48 (invented),m/7cm->kg/m**2,98,128,140,255,1000.,0.0
+B13206,Soil water content level 2 IFS Cy48 (invented),m/7cm->kg/m**2,98,128,171,255,2000.,0.0
+B13206,Soil water content level 3 IFS Cy48 (invented),m/7cm->kg/m**2,98,128,184,255,11285.7,0.0
+B13206,Soil water content level 4 IFS Cy48 (invented),m/7cm->kg/m**2,98,128,237,255,27000.,0.0
+B13206,Soil water content level 1 IFS TESSEL (invented),m**3/m**3->kg/m**2,98,128,39,255,70.,0.0
+B13206,Soil water content level 2 IFS TESSEL (invented),m**3/m**3->kg/m**2,98,128,40,255,210.,0.0
+B13206,Soil water content level 3 IFS TESSEL (invented),m**3/m**3->kg/m**2,98,128,41,255,720.7,0.0
+B13206,Soil water content level 4 IFS TESSEL (invented),m**3/m**3->kg/m**2,98,128,42,255,1890.,0.0
 B13212,Leaf wetness duration (invented),s,200,0,192,2,1.0,0.0
 B14018,Incoming short-wave radiation flux (surface),W/m^2,200,200,80,255,1.0,0.0
 B14018,Incoming short-wave radiation flux (surface),W/m^2,200,200,80,0,1.0,0.0

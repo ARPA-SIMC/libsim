@@ -369,7 +369,7 @@ CALL optionparser_add(opt, ' ', 'csv-columnorder', csv_columnorder, &
  'order of looping on columns that have to appear in csv output: &
  &a comma-separated selection of ''time,timerange,level,ana,network,var'' &
  &in the desired order, all the identifiers must be present, except ''var'', &
- which, if present, selects the DB-All.e format with one variable per line')
+ &which, if present, selects the DB-All.e format with one variable per line')
 CALL optionparser_add(opt, ' ', 'csv-variable', csv_variable, 'all', help= &
  'list of variables that have to appear in the data columns of csv output: &
  &''all'' or a comma-separated list of B-table alphanumeric codes, e.g. &
