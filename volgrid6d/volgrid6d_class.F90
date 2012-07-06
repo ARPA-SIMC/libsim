@@ -1044,9 +1044,9 @@ IF (stallo /= 0)THEN
 ENDIF
 DO i = 1, ngrid
   IF (PRESENT(categoryappend))THEN
-    CALL init(this(i), time_definition=time_definition, categoryappend=TRIM(categoryappend)//"-"//to_char(ngrid))
+    CALL init(this(i), time_definition=time_definition, categoryappend=TRIM(categoryappend)//"-vol"//to_char(i))
   ELSE
-    CALL init(this(i), time_definition=time_definition, categoryappend=to_char(ngrid))
+    CALL init(this(i), time_definition=time_definition, categoryappend="vol"//to_char(i))
   ENDIF
 ENDDO
 
@@ -1069,7 +1069,7 @@ DO i = 1, ngrid
    back=.TRUE.)
 
 #ifdef DEBUG
-  CALL l4f_category_log(this(i)%category,L4F_DEBUG,"alloc volgrid6d index: "//t2c(1))
+  CALL l4f_category_log(this(i)%category,L4F_DEBUG,"alloc volgrid6d index: "//t2c(i))
 #endif
 
   CALL volgrid6d_alloc(this(i),this(i)%griddim%dim,ntime=ntime, &
@@ -1095,7 +1095,7 @@ DO i = 1, ngrid
    back=.TRUE.)
 
 #ifdef DEBUG
-  CALL l4f_category_log(this(i)%category,L4F_DEBUG,"alloc_vol volgrid6d index: "//t2c(1))
+  CALL l4f_category_log(this(i)%category,L4F_DEBUG,"alloc_vol volgrid6d index: "//t2c(i))
 #endif
   CALL volgrid6d_alloc_vol(this(i), decode=decode)
 
@@ -1106,9 +1106,9 @@ DO i = 1, gridinfov%arraysize
 
 #ifdef DEBUG
   CALL l4f_category_log(category,L4F_DEBUG,"import from gridinfov index: "//t2c(i))
-#endif
   CALL l4f_category_log(category,L4F_INFO, &
    "to volgrid6d index: "//t2c(index(this%griddim, gridinfov%array(i)%griddim)))
+#endif
 
   CALL import (this(index(this%griddim, gridinfov%array(i)%griddim)), &
    gridinfov%array(i), clone=clone)
@@ -1508,7 +1508,7 @@ ENDIF
 IF (trans_type == 'vertint') THEN
   IF (PRESENT(lev_out)) THEN
 
-! if volgrid6d_coord_out provided and allocated, check that it fits
+! if volgrid6d_coord_in provided and allocated, check that it fits
     var_coord_in = imiss
     IF (PRESENT(volgrid6d_coord_in)) THEN
       IF (ASSOCIATED(volgrid6d_coord_in%voldati)) THEN
@@ -1529,8 +1529,10 @@ IF (trans_type == 'vertint') THEN
 ! number is different
           CALL l4f_category_log(volgrid6d_in%category, L4F_ERROR, &
            'volume providing constant input vertical coordinate must have &
-           &the same number of vertical levels as the input '//&
-           t2c(SIZE(volgrid6d_coord_in%level))//' '//t2c(SIZE(volgrid6d_in%level)))
+           &the same number of vertical levels as the input')
+          CALL l4f_category_log(volgrid6d_in%category, L4F_ERROR, &
+           'coord levels: '//t2c(SIZE(volgrid6d_coord_in%level))//&
+           ', input levels: '//t2c(SIZE(volgrid6d_in%level)))
           CALL raise_error()
           RETURN
           IF (ANY(volgrid6d_coord_in%level /= volgrid6d_in%level)) THEN

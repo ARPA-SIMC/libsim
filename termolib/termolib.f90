@@ -2579,5 +2579,21 @@ end if
 end function swdown
 
 
+!> Omega from temperature, pressure and vertical velocity; pressure
+!! tendency term and humidity in density are neglected.
+ELEMENTAL REAL FUNCTION omega_simple(t, p, w)
+REAL,intent(in) :: t !< temperature (K)
+REAL,intent(in) :: p !< pressure (Pa)
+REAL,INTENT(in) :: w !< geometrical vertical velocity (m/s)
+
+IF (c_e(t) .AND. c_e(p) .AND. c_e(w)) THEN
+  omega_simple = -w*rd*t*gearth/p ! check the units
+ELSE
+  omega_simple = rmiss
+ENDIF
+
+END FUNCTION omega_simple
+
+
 end module termolib
 

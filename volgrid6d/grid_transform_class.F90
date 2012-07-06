@@ -306,7 +306,7 @@ INTERFACE compute
 END INTERFACE
 
 !> Returns \a .TRUE. if, after \a init , the corresponding \a grid_transform
-!! object has been correctly initilised.
+!! object has been correctly initialised.
 INTERFACE c_e
   MODULE PROCEDURE grid_transform_c_e
 END INTERFACE
@@ -705,6 +705,7 @@ DOUBLE PRECISION :: coord_in(SIZE(lev_in))
 DOUBLE PRECISION,ALLOCATABLE :: coord_out(:)
 LOGICAL :: mask_in(SIZE(lev_in))
 LOGICAL,ALLOCATABLE :: mask_out(:)
+LOGICAL :: dolog
 INTEGER :: i, j, icache, inused, istart, iend, ostart, oend
 
 
@@ -736,7 +737,7 @@ IF (this%trans%trans_type == 'vertint') THEN
 
   mask_in(:) = (lev_in(:)%level1 == trans%vertint%input_levtype%level1) .AND. &
    (lev_in(:)%level2 == trans%vertint%input_levtype%level2)
-  CALL make_vert_coord(lev_in, mask_in, coord_in)
+  CALL make_vert_coord(lev_in, mask_in, coord_in, dolog)
   this%innz = SIZE(lev_in)
   istart = firsttrue(mask_in)
   iend = lasttrue(mask_in)
@@ -762,7 +763,7 @@ IF (this%trans%trans_type == 'vertint') THEN
     ALLOCATE(mask_out(SIZE(lev_out)), this%vcoord_out(SIZE(lev_out)))
     mask_out(:) = (lev_out(:)%level1 == trans%vertint%output_levtype%level1) .AND. &
      (lev_out(:)%level2 == trans%vertint%output_levtype%level2)
-    CALL make_vert_coord(lev_out, mask_out, this%vcoord_out)
+    CALL make_vert_coord(lev_out, mask_out, this%vcoord_out, dolog)
     this%outnz = SIZE(mask_out)
     DEALLOCATE(mask_out)
 
@@ -787,6 +788,13 @@ IF (this%trans%trans_type == 'vertint') THEN
     ENDIF
 
     this%coord_3d_in => coord_3d_in
+    IF (dolog) THEN
+      WHERE(c_e(this%coord_3d_in) .AND. this%coord_3d_in > 0.0)
+        this%coord_3d_in = LOG(this%coord_3d_in)
+      ELSE WHERE
+        this%coord_3d_in = rmiss
+      END WHERE
+    ENDIF
 
   ELSE
 ! TODO: here we should check that valid levels are contiguous and ordered
@@ -801,7 +809,7 @@ IF (this%trans%trans_type == 'vertint') THEN
     ALLOCATE(mask_out(SIZE(lev_out)), coord_out(SIZE(lev_out)))
     mask_out(:) = (lev_out(:)%level1 == trans%vertint%output_levtype%level1) .AND. &
      (lev_out(:)%level2 == trans%vertint%output_levtype%level2)
-    CALL make_vert_coord(lev_out, mask_out, coord_out)
+    CALL make_vert_coord(lev_out, mask_out, coord_out, dolog)
 
   ELSE ! output level list not provided, try to autogenerate
     IF (c_e(trans%vertint%input_levtype%level2) .AND. &
@@ -851,7 +859,7 @@ IF (this%trans%trans_type == 'vertint') THEN
     ENDIF
     ALLOCATE(coord_out(inused-1), mask_out(inused-1))
     mask_out(:) = .TRUE.
-    CALL make_vert_coord(this%output_level_auto, mask_out, coord_out)
+    CALL make_vert_coord(this%output_level_auto, mask_out, coord_out, dolog)
   ENDIF
 
   this%outnz = SIZE(mask_out)
@@ -957,15 +965,17 @@ END SUBROUTINE grid_transform_levtype_levtype_init
 
 ! internal subroutine for computing vertical coordinate values, for
 ! pressure-based coordinates the logarithm is computed
-SUBROUTINE make_vert_coord(lev, mask, coord)
+SUBROUTINE make_vert_coord(lev, mask, coord, dolog)
 TYPE(vol7d_level),INTENT(in) :: lev(:)
 LOGICAL,INTENT(inout) :: mask(:)
 DOUBLE PRECISION,INTENT(out) :: coord(:)
+LOGICAL,INTENT(out) :: dolog
 
 INTEGER,PARAMETER :: height(5)=(/102,103,106,117,160/) ! improve, from gridinfo_class
 INTEGER :: k
 DOUBLE PRECISION :: fact
 
+dolog = .FALSE.
 k = firsttrue(mask)
 IF (k <= 0) RETURN
 coord(:) = dmiss
@@ -981,6 +991,7 @@ IF (c_e(lev(k)%level2) .AND. lev(k)%level1 == lev(k)%level2) THEN ! layer betwee
     WHERE(mask(:) .AND. lev(:)%l1 > 0 .AND. lev(:)%l2 > 0)
       coord(:) = (LOG(DBLE(lev(:)%l1)*fact) + LOG(DBLE(lev(:)%l2)*fact))*0.5D0
     END WHERE
+    dolog = .TRUE.
   ELSE
     WHERE(mask(:))
       coord(:) = (lev(:)%l1 + lev(:)%l2)*fact*0.5D0
@@ -991,6 +1002,7 @@ ELSE ! half level
     WHERE(mask(:) .AND. lev(:)%l1 > 0)
       coord(:) = LOG(DBLE(lev(:)%l1)*fact)
     END WHERE
+    dolog = .TRUE.
   ELSE
     WHERE(mask(:))
       coord(:) = lev(:)%l1*fact
@@ -2997,6 +3009,7 @@ ELSE IF (this%trans%trans_type == 'vertint') THEN
                 END SELECT
 
               ENDIF
+            ELSE
             ENDIF
           ENDDO ! i
         ENDDO ! j

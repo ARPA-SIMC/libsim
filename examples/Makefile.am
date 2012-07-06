@@ -5,9 +5,6 @@ EXTRA_DIST = log4crc
 
 noinst_PROGRAMS = esempio_file_utilities esempio_v7d esempio_v7d_compute esempio_termolib log4fortran example_optionparser example_char_utilities example_simple_stat example_space_utilities example_for2r
 
-example_for2r_SOURCES = example_for2r.f90
-example_for2r_LDADD = ../base/libsim_base.la
-
 esempio_file_utilities_SOURCES = esempio_file_utilities.f90
 esempio_file_utilities_LDADD = ../base/libsim_base.la
 
@@ -16,6 +13,9 @@ example_simple_stat_LDADD = ../base/libsim_base.la
 
 example_space_utilities_SOURCES = example_space_utilities.F90
 example_space_utilities_LDADD = ../base/libsim_base.la
+
+example_for2r_SOURCES = example_for2r.f90
+example_for2r_LDADD = ../base/libsim_base.la
 
 if NCARG
 example_space_utilities_LDADD += ../graphics/libsim_graphics.la ../base/libsim_base.la ../vol7d/libsim_vol7d.la  ../log4fortran/liblog4fortran.la ../termolib/libsim_termolib.la

@@ -489,11 +489,13 @@ editionnumber=255; category=255; centre=255
 IF (PRESENT(grid_id_template)) THEN
 #ifdef HAVE_LIBGRIBAPI
   gaid = grid_id_get_gaid(grid_id_template)
-  CALL grib_get(gaid, 'GRIBEditionNumber', editionnumber)
-  IF (editionnumber == 1) THEN
-    CALL grib_get(gaid,'gribTablesVersionNo',category)
+  IF (c_e(gaid)) THEN
+    CALL grib_get(gaid, 'GRIBEditionNumber', editionnumber)
+    IF (editionnumber == 1) THEN
+      CALL grib_get(gaid,'gribTablesVersionNo',category)
+    ENDIF
+    CALL grib_get(gaid,'centre',centre)
   ENDIF
-  CALL grib_get(gaid,'centre',centre)
 #endif
 ENDIF
 

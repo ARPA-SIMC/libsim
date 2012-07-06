@@ -56,6 +56,7 @@ real,allocatable :: myin(:,:),myout(:,:)
 character(len=10) :: newbout(mayvfn%nout+mayvfn%nin)
 TYPE(vol7d_var),allocatable :: varv7d(:)
 TYPE(volgrid6d_var),allocatable :: varvg6d(:)
+TYPE(grid_id) :: gaid_template
 
 nx=vg6din%griddim%dim%nx
 ny=vg6din%griddim%dim%ny
@@ -135,6 +136,10 @@ do ivar=1, nvar
         end if
 
         call copy (vg6din%gaid(ilevel,itime,itimerange,ivarin), vg6dout%gaid(ilevel,itime,itimerange,ivarout))
+! save the first valid gaid for helping successive variable conversion
+        IF (.NOT.c_e(gaid_template) .AND. &
+         c_e(vg6din%gaid(ilevel,itime,itimerange,ivarin))) &
+         gaid_template = vg6din%gaid(ilevel,itime,itimerange,ivarin)
 
 !        print *,&
 !         minval(vg6dout%voldati(:,:,ilevel,itime,itimerange,ivarout),&
@@ -153,7 +158,7 @@ do ivar = nvarin+1, nvar
   call init(varv7d(ivar),newbout(ivar))
 end DO
 
-CALL varbufr2vargrib(varv7d(nvarin+1:), varvg6d(nvarin+1:), c_funcbg)
+CALL varbufr2vargrib(varv7d(nvarin+1:), varvg6d(nvarin+1:), c_funcbg, gaid_template)
 
 vg6dout%time=vg6din%time
 vg6dout%timerange=vg6din%timerange

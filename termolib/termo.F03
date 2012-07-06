@@ -23,6 +23,7 @@ subroutine register_termo(vfn)
   call fnregister(vfn,p_t2r_def())
   call fnregister(vfn,swb_alb2swd_def())
   call fnregister(vfn,swd_alb2swb_def())
+  call fnregister(vfn,t_p_w2omega_def())
 
 
 end subroutine register_termo
@@ -192,6 +193,24 @@ type(fnds) function p_t2r_def()
 end function p_t2r_def
 
 
+subroutine t_p_w2omega(mybin,mybout,bin,bout,in,out)
+  CHARACTER(len=10),intent(in) :: mybin(:)  !< vector table B  WMO input  in user's data
+  CHARACTER(len=10),intent(in) :: mybout(:) !< vector table B  WMO output in user's data
+  CHARACTER(len=10),intent(in) :: bin(:)    !< vector table B  WMO input used by function
+  CHARACTER(len=10),intent(in) :: bout(:)   !< vector table B  WMO output used by function
+  real, intent(in) :: in(:,:)
+  real, intent(out) :: out(:,:)
+
+  out(:,index_c(mybout,bout(1))) = omega_simple(in(:,index_c(mybin,bin(1))), &
+   in(:,index_c(mybin,bin(2))), in(:,index_c(mybin,bin(3)))) 
+          
+end subroutine t_p_w2omega
+
+type(fnds) function t_p_w2omega_def()
+  call init(t_p_w2omega_def,"t_p_w2omega", &
+   [character(len=10) :: "B12101","B10004","B11006"], &
+   [character(len=10) :: "B11005"],0,func=t_p_w2omega)
+end function t_p_w2omega_def
 
 
 ! TODO

@@ -391,8 +391,13 @@ DO WHILE(.TRUE.)
 
   CALL l4f_category_log(category,L4F_INFO,"import gridinfo")
   ngrid = ngrid + 1
-  CALL init(gridinfol, gaid=input_grid, &
-   categoryappend=TRIM(categoryappend)//TRIM(to_char(ngrid)))
+  IF (PRESENT(categoryappend)) THEN
+    CALL init(gridinfol, gaid=input_grid, &
+     categoryappend=TRIM(categoryappend)//"-msg"//TRIM(to_char(ngrid)))
+  ELSE
+    CALL init(gridinfol, gaid=input_grid, &
+     categoryappend="msg"//TRIM(to_char(ngrid)))
+  ENDIF
   CALL import(gridinfol)
   CALL insert(this, gridinfol)
 ! gridinfol is intentionally not destroyed, since now it lives into this
