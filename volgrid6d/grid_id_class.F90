@@ -918,7 +918,7 @@ if (EditionNumber == 2) then
 else if( EditionNumber /= 1) then
 
   call l4f_log(L4F_ERROR, &
-   "grib_api GribEditionNumber not supported: "//TRIM(to_char(EditionNumber)))
+   "grib_api GribEditionNumber not supported: "//t2c(EditionNumber))
   call raise_error()
   RETURN
 
@@ -953,29 +953,29 @@ ELSE
 ENDIF
 
 
-if (any(field== rmiss)) then
+if (any(field == rmiss)) then
 
   call grib_set(gaid,'missingValue',rmiss)
-  
-  call grib_get(gaid,'editionNumber',editionNumber);
   if (editionNumber == 1) then
-                                ! enable bitmap in a grib1
+! enable bitmap in a grib1
+! grib_api 1.9.9 goes into an infinite loop with second order packing here
+    CALL grib_set(gaid,'packingType','grid_simple')
     call grib_set(gaid,"bitmapPresent",1)
   else
-                                ! enable bitmap in a grib2
+! enable bitmap in a grib2
     call grib_set(gaid,"bitMapIndicator",0)
   endif
 
 else
 
-  call grib_get(gaid,'editionNumber',editionNumber);
   if (editionNumber == 1) then
-                                ! enable bitmap in a grib1
+! enable bitmap in a grib1
     call grib_set(gaid,"bitmapPresent",0)
   else
-                                ! enable bitmap in a grib2
+! enable bitmap in a grib2
     call grib_set(gaid,"bitMapIndicator",1)
   endif
+  CALL l4f_log(L4F_INFO,"cinco.4")
 
 end if
 
