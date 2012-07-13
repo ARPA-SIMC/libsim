@@ -551,7 +551,7 @@ elemental real function QTORELHUM(Q,PT,T)
 
   if( c_e(q) .and. c_e(pt) .and. c_e(t) )then 
 
-    QTORELHUM= q * (pt-c1*ESAT(t)) / (eps0*ESAT(t))*100. 
+    QTORELHUM= q * (pt/100.-c1*ESAT(t)) / (eps0*ESAT(t))*100. 
     if (QTORELHUM  < 0.)QTORELHUM=0.
     
   else

@@ -181,8 +181,10 @@ subroutine  p_t2r(mybin,mybout,bin,bout,in,out)
   real, intent(in) :: in(:,:)
   real, intent(out) :: out(:,:)
 
+!  out(:,index_c(mybout,bout(1)))= QTORELHUM(in (:,index_c(mybin ,bin (1))),&
+!   in (:,index_c(mybin ,bin (2)))*100.,in (:,index_c(mybin ,bin (3)))) 
   out(:,index_c(mybout,bout(1)))= QTORELHUM(in (:,index_c(mybin ,bin (1))),&
-   in (:,index_c(mybin ,bin (2)))*100.,in (:,index_c(mybin ,bin (3)))) 
+   in (:,index_c(mybin ,bin (2))),in (:,index_c(mybin ,bin (3)))) 
           
 end subroutine p_t2r
 

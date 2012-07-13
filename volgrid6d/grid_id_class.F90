@@ -816,7 +816,7 @@ if (EditionNumber == 2) then
   call grib_get(gaid,'alternativeRowScanning',alternativeRowScanning)
   if (alternativeRowScanning /= 0)then
     call l4f_log(L4F_ERROR, "grib_api alternativeRowScanning not supported: " &
-     //TRIM(to_char(alternativeRowScanning)))
+     //t2c(alternativeRowScanning))
     call raise_error()
     field(:,:) = rmiss
     RETURN
@@ -825,7 +825,7 @@ if (EditionNumber == 2) then
 else if (EditionNumber /= 1) then
 
   CALL l4f_log(L4F_ERROR, &
-   "grib_api GribEditionNumber not supported: "//TRIM(to_char(EditionNumber)))
+   "grib_api GribEditionNumber not supported: "//t2c(EditionNumber))
   call raise_error()
   field(:,:) = rmiss
   RETURN
@@ -836,30 +836,43 @@ call grib_get(gaid,'iScansNegatively',iScansNegatively)
 call grib_get(gaid,'jScansPositively',jScansPositively)
 call grib_get(gaid,'jPointsAreConsecutive',jPointsAreConsecutive)
 
-call grib_set(gaid,'missingValue',rmiss)
 call grib_get(gaid,'numberOfPoints',numberOfPoints)
 call grib_get(gaid,'numberOfValues',numberOfValues)
 
-if (numberOfPoints /= SIZE(field))then
-!if (numberOfValues /= SIZE(field))then
-
+IF (numberOfPoints /= SIZE(field)) THEN
   CALL l4f_log(L4F_ERROR, 'grid_id_decode_data_gribapi numberOfPoints and grid size different')
   CALL l4f_log(L4F_ERROR, 'grid_id_decode_data_gribapi numberOfPoints: ' &
-   //TRIM(to_char(numberOfPoints))//', nx,ny:'&
-   //TRIM(to_char(SIZE(field,1)))//' x '//TRIM(to_char(SIZE(field,2))))
-  call raise_error()
+   //t2c(numberOfPoints)//', nx,ny:'&
+   //t2c(SIZE(field,1))//' x '//t2c(SIZE(field,2)))
+  CALL raise_error()
   field(:,:) = rmiss
   RETURN
+ENDIF
 
-end if
-
-                            !     get data values
+! get data values
 #ifdef DEBUG
 call l4f_log(L4F_INFO,'grib_api number of values: '//to_char(numberOfValues))
 call l4f_log(L4F_INFO,'grib_api number of points: '//to_char(numberOfPoints))
 #endif
 
+CALL grib_set(gaid,'missingValue',rmiss)
 CALL grib_get(gaid,'values',vector)
+! suspect bug in grib_api, when all field is missing it is set to zero
+IF (numberOfValues == 0) vector = rmiss
+
+#ifdef DEBUG
+CALL l4f_log(L4F_DEBUG, 'grib_api, decoded field in interval: '// &
+ t2c(MINVAL(vector,mask=c_e(vector)))//' '//t2c(MAXVAL(vector,mask=c_e(vector))))
+CALL l4f_log(L4F_DEBUG, 'grib_api, decoded field with number of missing: '// &
+ t2c(COUNT(.NOT.c_e(vector))))
+#endif
+
+IF (numberOfValues /= COUNT(c_e(vector))) THEN
+  CALL l4f_log(L4F_WARN, 'grid_id_decode_data_gribapi numberOfValues and valid data count different')
+  CALL l4f_log(L4F_WARN, 'grid_id_decode_data_gribapi numberOfValues: ' &
+   //t2c(numberOfValues)//', valid data: '//t2c(COUNT(c_e(vector))))
+!  CALL raise_warning()
+ENDIF
 
 ! Transfer data field changing scanning mode to 64
 IF (iScansNegatively  == 0) THEN
@@ -975,13 +988,17 @@ else
 ! enable bitmap in a grib2
     call grib_set(gaid,"bitMapIndicator",1)
   endif
-  CALL l4f_log(L4F_INFO,"cinco.4")
 
 end if
 
-
 !TODO: gestire il caso TUTTI dati mancanti
 
+#ifdef DEBUG
+CALL l4f_log(L4F_DEBUG, 'grib_api, coding field in interval: '// &
+ t2c(MINVAL(field,mask=c_e(field)))//' '//t2c(MAXVAL(field,mask=c_e(field))))
+CALL l4f_log(L4F_DEBUG, 'grib_api, coding field with number of missing: '// &
+ t2c(COUNT(.NOT.c_e(field))))
+#endif
 IF ( jPointsAreConsecutive == 0) THEN
   CALL grib_set(gaid,'values', RESHAPE(field(x1:x2:xs,y1:y2:ys), &
    (/SIZE(field)/)))
