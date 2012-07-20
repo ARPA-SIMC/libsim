@@ -21,7 +21,7 @@ Date,Time range,P1,P2,Longitude,Latitude,Level1,L1,Level2,L2,Report,B12101,B1000
 EOF
 
 diff $tmpfile.check.csv $tmpfile.csv
-rm -f $tmpfile.???
+rm -f $tmpfile.check.csv $tmpfile.csv
 echo "vg6d_getpoint with nearest point test passed"
 
 # vg6d_getpoint with polygons test
@@ -45,5 +45,5 @@ Date,Time range,P1,P2,Longitude,Latitude,Level1,L1,Level2,L2,Report,B01192,B1210
 EOF
 
 diff $tmpfile.check.csv $tmpfile.csv
-rm -f $tmpfile.???
+rm -f $tmpfile.check.csv $tmpfile.csv
 echo "vg6d_getpoint with polygons test passed"

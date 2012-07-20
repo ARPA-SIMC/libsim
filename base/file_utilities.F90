@@ -78,7 +78,16 @@ END INTERFACE
 !> Methods for successively obtaining the fields of a \a csv_record object.
 !! The generic name \c csv_record_getfield with parameters of the
 !! desired type should be used instead of the specific names, the
-!! compiler will select the proper subroutine.
+!! compiler will select the proper subroutine. If the optiona argument
+!! \a ier is not provided the subroutines will log warning and error
+!! messages and possibly stop the program in case of error, otherwise
+!! nothing is signalled and the returned error code has the following
+!! meaning:
+!!
+!! \li 0 success
+!! \li 1 field too long for being contained in the string provided (warning, a truncated value is returned anyway)
+!! \li 2 attempt to read past end of record (error, a missing value is returned)
+!! \li 3 conversion to the required type impossible (error, a missing value is returned)
 INTERFACE csv_record_getfield
   MODULE PROCEDURE csv_record_getfield_char, csv_record_getfield_int, &
    csv_record_getfield_real, csv_record_getfield_double
@@ -154,7 +163,7 @@ FUNCTION get_package_filepath(filename, filetype) RESULT(path)
 CHARACTER(len=*), INTENT(in) :: filename !< name of the file to be searched, it must be a relative path name
 INTEGER, INTENT(in) :: filetype !< type of file, the constants \a ::filetype_data or \a ::filetype_config have to be used
 
-INTEGER :: i, j
+INTEGER :: j
 CHARACTER(len=512) :: path
 LOGICAL :: exist
 
@@ -560,22 +569,27 @@ SUBROUTINE csv_record_getfield_char(this, field, flen, ier)
 TYPE(csv_record),INTENT(INOUT) :: this !< object to be decoded
 CHARACTER(len=*),INTENT(OUT),OPTIONAL :: field !< contents of the field, if not provided, the field pointer is increased only; if the variable is not long enough, a warning is printed and the part that fits is returned;
 !< the variable is space-terminated anyway, so the \a flen parameter has to be used in order to evaluate possible significant trailing spaces
-INTEGER,INTENT(OUT),OPTIONAL :: flen !< actual length of the field including trailing blaks, it is correctly computed also when \a field is not provided or too short
+INTEGER,INTENT(OUT),OPTIONAL :: flen !< actual length of the field including trailing blanks, it is correctly computed also when \a field is not provided or too short
 INTEGER,INTENT(OUT),OPTIONAL :: ier!< error code, 0 = OK, 1 = \a field too short, 2 = end of record
 
 LOGICAL :: inquote, inpre, inpost, firstquote
-INTEGER :: i, ocursor, ofcursor, lier
+INTEGER :: i, ocursor, ofcursor
 
-IF (PRESENT(field)) field = ''
-IF (PRESENT(ier)) ier = 0
+! check end of record
 IF (csv_record_end(this)) THEN
-  IF (PRESENT(ier)) ier = 2
-  CALL l4f_log(L4F_ERROR, &
-   'in csv_record_getfield, attempt to read past end of record')
-  CALL raise_error()
+  IF (PRESENT(field)) field = cmiss
+  IF (PRESENT(ier))THEN
+    ier = 2
+  ELSE
+    CALL l4f_log(L4F_ERROR, &
+     'in csv_record_getfield, attempt to read past end of record')
+    CALL raise_error()
+  ENDIF
   RETURN
 ENDIF
-lier = 0
+! start decoding
+IF (PRESENT(field)) field = ''
+IF (PRESENT(ier)) ier = 0
 ocursor = 0
 ofcursor = 0
 inquote = .FALSE.
@@ -599,7 +613,7 @@ DO i = this%cursor+1, SIZE(this%record)
     ELSE IF (this%record(i) == this%csep) THEN ! ,: fine campo
       EXIT
     ELSE ! carattere normale, elimina "trailing blanks"
-      CALL add_char(this%record(i), .TRUE., field, ier)
+      CALL add_char(this%record(i), .TRUE., field)
       CYCLE
     ENDIF
   ELSE ! dentro " "
@@ -608,20 +622,20 @@ DO i = this%cursor+1, SIZE(this%record)
         firstquote = .TRUE.
         CYCLE
       ELSE ! carattere normale
-        CALL add_char(this%record(i), .FALSE., field, ier)
+        CALL add_char(this%record(i), .FALSE., field)
         CYCLE
       ENDIF
     ELSE ! il precedente e` "
       firstquote = .FALSE.
       IF (this%record(i) == this%cquote) THEN ! ": sequenza ""
-        CALL add_char(this%cquote, .FALSE., field, ier)
+        CALL add_char(this%cquote, .FALSE., field)
         CYCLE
       ELSE ! carattere normale: e` terminata " "
         inquote = .FALSE.
         IF (this%record(i) == this%csep) THEN ! , fine campo
           EXIT
         ELSE ! carattere normale, elimina "trailing blanks"
-          CALL add_char(this%record(i), .TRUE., field, ier)
+          CALL add_char(this%record(i), .TRUE., field)
           CYCLE
         ENDIF
       ENDIF
@@ -629,30 +643,31 @@ DO i = this%cursor+1, SIZE(this%record)
   ENDIF
 ENDDO
 
-!this%cursor = MIN(i + 1, SIZE(this%record) + 1)
 this%cursor = MIN(i, SIZE(this%record) + 1)
 IF (PRESENT(flen)) flen = ofcursor ! restituisco la lunghezza
 IF (PRESENT(field)) THEN ! controllo overflow di field
   IF (ofcursor > LEN(field)) THEN
-    IF (PRESENT(ier)) ier = 1
-    CALL l4f_log(L4F_WARN, &
-     'in csv_record_getfield, CHARACTER variable too short for field: '// &
-     TRIM(to_char(LEN(field)))//'/'//TRIM(to_char(ocursor)))
+    IF (PRESENT(ier)) THEN
+      ier = 1
+    ELSE
+      CALL l4f_log(L4F_WARN, &
+       'in csv_record_getfield, CHARACTER variable too short for field: '// &
+       TRIM(to_char(LEN(field)))//'/'//TRIM(to_char(ocursor)))
+    ENDIF
   ENDIF
 ENDIF
 
 CONTAINS
 
-SUBROUTINE add_char(char, check_space, field, ier)
+SUBROUTINE add_char(char, check_space, field)
 INTEGER(kind=int_b) :: char
 LOGICAL,INTENT(IN) :: check_space
 CHARACTER(len=*),INTENT(OUT),OPTIONAL :: field
-INTEGER,INTENT(OUT),OPTIONAL :: ier
 
 CHARACTER(len=1) :: dummy ! this prevents a memory leak in TRANSFER()???
 
 ocursor = ocursor + 1
-IF (PRESENT(field)) THEN
+ IF (PRESENT(field)) THEN
   IF (ocursor <= LEN(field)) THEN
     field(ocursor:ocursor) = TRANSFER(char, dummy)
   ENDIF
@@ -676,25 +691,27 @@ END SUBROUTINE csv_record_getfield_char
 SUBROUTINE csv_record_getfield_int(this, field, ier)
 TYPE(csv_record),INTENT(INOUT) :: this !< object to be decoded
 INTEGER,INTENT(OUT) :: field !< value of the field, = \a imiss if conversion fails
-INTEGER,INTENT(OUT),OPTIONAL :: ier !< error code, 0 = OK, 1 = cannot convert to integer, 2 = end of record
+INTEGER,INTENT(OUT),OPTIONAL :: ier !< error code, 0 = OK, 2 = end of record, 3 = cannot convert to integer
 
 CHARACTER(len=32) :: cfield
 INTEGER :: lier
 
-CALL csv_record_getfield(this, field=cfield, ier=lier)
-IF (lier == 0 .AND. LEN_TRIM(cfield) /= 0) THEN
+CALL csv_record_getfield(this, field=cfield, ier=ier)
+IF (c_e(cfield) .AND. LEN_TRIM(cfield) /= 0) THEN
   READ(cfield, '(I32)', iostat=lier) field
   IF (lier /= 0) THEN
-    lier = 1 ! standardize
     field = imiss
-    CALL l4f_log(L4F_ERROR, &
-     'in csv_record_getfield, invalid integer field: '//TRIM(cfield))
-    CALL raise_error()
+    IF (.NOT.PRESENT(ier)) THEN
+      CALL l4f_log(L4F_ERROR, &
+       'in csv_record_getfield, invalid integer field: '//TRIM(cfield))
+      CALL raise_error()
+    ELSE
+      ier = 3 ! conversion error
+    ENDIF
   ENDIF
 ELSE
   field = imiss
 ENDIF
-IF (PRESENT(ier)) ier = lier
 
 END SUBROUTINE csv_record_getfield_int
 
@@ -702,30 +719,32 @@ END SUBROUTINE csv_record_getfield_int
 !> Returns next field from the record \a this as a \c REAL variable.
 !! The field pointer is advanced to the next field.
 !! If all the fields have already been interpreted or the field cannot be
-!! interpreted as an integer, or if it is longer than 32 characters,
+!! interpreted as a real, or if it is longer than 32 characters,
 !! it returns a missing value.
 SUBROUTINE csv_record_getfield_real(this, field, ier)
 TYPE(csv_record),INTENT(INOUT) :: this !< object to be decoded
 REAL,INTENT(OUT) :: field !< value of the field, = \a rmiss if conversion fails
-INTEGER,INTENT(OUT),OPTIONAL :: ier!< error code, 0 = OK, 1 = cannot convert to integer, 2 = end of record
+INTEGER,INTENT(OUT),OPTIONAL :: ier !< error code, 0 = OK, 2 = end of record, 3 = cannot convert to real
 
 CHARACTER(len=32) :: cfield
 INTEGER :: lier
 
-CALL csv_record_getfield(this, field=cfield, ier=lier)
-IF (lier == 0 .AND. LEN_TRIM(cfield) /= 0) THEN
+CALL csv_record_getfield(this, field=cfield, ier=ier)
+IF (c_e(cfield) .AND. LEN_TRIM(cfield) /= 0) THEN
   READ(cfield, '(F32.0)', iostat=lier) field
   IF (lier /= 0) THEN
-    lier = 1 ! standardize
     field = rmiss
-    CALL l4f_log(L4F_ERROR, &
-     'in csv_record_getfield, invalid real field: '//TRIM(cfield))
-    CALL raise_error()
+    IF (.NOT.PRESENT(ier)) THEN
+      CALL l4f_log(L4F_ERROR, &
+       'in csv_record_getfield, invalid real field: '//TRIM(cfield))
+      CALL raise_error()
+    ELSE
+      ier = 3 ! conversion error
+    ENDIF
   ENDIF
 ELSE
   field = rmiss
 ENDIF
-IF (PRESENT(ier)) ier = lier
 
 END SUBROUTINE csv_record_getfield_real
 
@@ -733,30 +752,32 @@ END SUBROUTINE csv_record_getfield_real
 !> Returns next field from the record \a this as a \c DOUBLE PRECISION variable.
 !! The field pointer is advanced to the next field.
 !! If all the fields have already been interpreted or the field cannot be
-!! interpreted as an integer, or if it is longer than 32 characters,
+!! interpreted as double, or if it is longer than 32 characters,
 !! it returns a missing value.
 SUBROUTINE csv_record_getfield_double(this, field, ier)
 TYPE(csv_record),INTENT(INOUT) :: this !< object to be decoded
 DOUBLE PRECISION,INTENT(OUT) :: field !< value of the field, = \a dmiss if conversion fails
-INTEGER,INTENT(OUT),OPTIONAL :: ier!< error code, 0 = OK, 1 = cannot convert to integer, 2 = end of record
+INTEGER,INTENT(OUT),OPTIONAL :: ier !< error code, 0 = OK, 2 = end of record, 3 = cannot convert to double
 
 CHARACTER(len=32) :: cfield
 INTEGER :: lier
 
-CALL csv_record_getfield(this, field=cfield, ier=lier)
-IF (lier == 0 .AND. LEN_TRIM(cfield) /= 0) THEN
+CALL csv_record_getfield(this, field=cfield, ier=ier)
+IF (c_e(cfield) .AND. LEN_TRIM(cfield) /= 0) THEN
   READ(cfield, '(F32.0)', iostat=lier) field
   IF (lier /= 0) THEN
-    lier = 1 ! standardize
     field = dmiss
-    CALL l4f_log(L4F_ERROR, &
-     'in csv_record_getfield, invalid double precision field: '//TRIM(cfield))
-    CALL raise_error()
+    IF (.NOT.PRESENT(ier)) THEN
+      CALL l4f_log(L4F_ERROR, &
+       'in csv_record_getfield, invalid double precision field: '//TRIM(cfield))
+      CALL raise_error()
+    ELSE
+      ier = 3 ! conversion error
+    ENDIF
   ENDIF
 ELSE
   field = dmiss
 ENDIF
-IF (PRESENT(ier)) ier = lier
 
 END SUBROUTINE csv_record_getfield_double
 
