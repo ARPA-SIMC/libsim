@@ -3246,13 +3246,18 @@ IF (this%trans%trans_type == 'inter') THEN
         x_in_p(1:inn_p) = PACK(this%inter_xp(:,1), c_e(field_in(:,k)))
         y_in_p(1:inn_p) = PACK(this%inter_yp(:,1), c_e(field_in(:,k)))
 
-        CALL NATGRIDS(inn_p, x_in_p, y_in_p, field_in_p, & ! (1:inn_p) omitted
+        IF (.NOT.this%trans%extrap) THEN
+          CALL nnseti('ext', 0) ! 0 = no extrapolation
+          CALL nnsetr('nul', rmiss)
+        ENDIF
+
+        CALL natgrids(inn_p, x_in_p, y_in_p, field_in_p, & ! (1:inn_p) omitted
          this%outnx, this%outny, REAL(this%inter_x(:,1)), & ! no f90 interface
          REAL(this%inter_y(1,:)), field_out(1,1,k), ier)
 
         IF (ier /= 0) THEN
           CALL l4f_category_log(this%category,L4F_ERROR, &
-           "Error return from NATGRIDD = "//TRIM(to_char(ier)))
+           "Error code from NCAR natgrids: "//t2c(ier))
           CALL raise_error()
           EXIT
         ENDIF ! exit loop to deallocate
