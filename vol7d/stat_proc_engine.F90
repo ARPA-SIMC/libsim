@@ -378,7 +378,7 @@ INTEGER,POINTER :: dtratio(:)
 TYPE(datetime),INTENT(in),OPTIONAL :: start
 
 INTEGER :: i, j, k, l, na, nf
-INTEGER :: steps, p1, maxp1, minp2
+INTEGER :: steps, p1, maxp1, minp2, minp1mp2
 LOGICAL :: lforecast
 TYPE(datetime) :: lstart, lend, pstart1, pstart2, pend1, pend2, reftime1, reftime2, tmptime
 TYPE(arrayof_datetime) :: a_otime
@@ -447,9 +447,11 @@ lend = itime(SIZE(itime))
 ! correct them
 maxp1 = MAXVAL(itimerange(:)%p1, mask=mask_timerange)
 minp2 = MINVAL(itimerange(:)%p2, mask=mask_timerange)
-IF (time_definition == 0) THEN ! shift forward end of period if reference time
+minp1mp2 = MINVAL(itimerange(:)%p1 - itimerange(:)%p2, mask=mask_timerange)
+IF (time_definition == 0) THEN ! reference time
+  lstart = lstart + timedelta_new(msec=1000*minp1mp2)
   lend = lend + timedelta_new(msec=1000*maxp1)
-ELSE ! shift backward start of period if verification time
+ELSE ! verification time
   lstart = lstart - timedelta_new(msec=1000*minp2)
   lstart = lstart - (MOD(lstart, step)) ! round to step, check the - sign!!!
 ENDIF
@@ -466,7 +468,7 @@ IF (lforecast) THEN ! forecast mode
   IF (time_definition == 0) THEN ! reference time
     CALL insert(a_otime, itime)
 
-    DO p1 = steps, maxp1, steps ! 0, maxp1, steps??
+    DO p1 = steps, maxp1, steps
       CALL insert_unique(a_otimerange, vol7d_timerange_new(stat_proc, p1, steps))
     ENDDO
 
