@@ -89,7 +89,7 @@ TYPE(vol7d_oraclesim) :: v7d_osim
 #endif
 TYPE(vol7d_network) :: set_network_obj
 CHARACTER(len=network_name_len) :: set_network
-CHARACTER(len=32) :: dsn, user, password
+CHARACTER(len=512) :: dsn, user, password
 LOGICAL :: version, ldisplay, disable_qc, comp_qc_ndi, comp_qc_perc
 CHARACTER(len=512):: a_name
 INTEGER :: category
@@ -1042,7 +1042,7 @@ if (comp_qc_ndi) then
     ELSE
       CALL l4f_category_log(category, L4F_ERROR, &
        'error in command-line parameters, format '// &
-       TRIM(coord_format)//' in --coord-format not valid or not supported.')
+       TRIM(coord_format)//' in --clima-format not valid or not supported.')
       CALL raise_fatal_error()
     ENDIF
     
