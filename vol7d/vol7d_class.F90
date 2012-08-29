@@ -2274,7 +2274,7 @@ integer :: nana, ntime, ntimerange, nlevel, nnetwork, &
  nanavarattrr, nanavarattri, nanavarattrb, nanavarattrd, nanavarattrc
 
 character(len=254) :: ldescription,lfilename,arg
-integer :: ltarray(8),lunit
+integer :: ltarray(8),lunit,ios
 logical :: opened,exist
 
 
@@ -2318,7 +2318,16 @@ end if
 
 
 call init(this)
-read(unit=lunit)ldescription
+read(unit=lunit,iostat=ios)ldescription
+
+if (ios < 0) then   !  A negative value indicates that the End of File or End of Record
+  call vol7d_alloc (this)
+  call vol7d_alloc_vol (this)
+  if (present(description))description=ldescription
+  if (present(tarray))tarray=ltarray
+  if (.not. present(unit)) close(unit=lunit)
+end if
+
 read(unit=lunit)ltarray
 
 CALL l4f_log(L4F_INFO, 'Reading vol7d from file')
