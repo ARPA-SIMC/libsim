@@ -83,12 +83,15 @@ TYPE(geo_coord) :: coordmin,coordmax
 TYPE(transform_def) :: trans
 #ifdef HAVE_DBALLE
 TYPE(vol7d_dballe) :: v7d_dba, v7d_dba_out, v7d_dba_clima
+integer :: yeari, yearf, monthi, monthf
+TYPE(datetime) :: clitimei, clitimef
 #endif
 #ifdef HAVE_ORSIM
 TYPE(vol7d_oraclesim) :: v7d_osim
 #endif
 TYPE(vol7d_network) :: set_network_obj
 CHARACTER(len=network_name_len) :: set_network
+TYPE(vol7d_network)  :: clinetwork
 CHARACTER(len=512) :: dsn, user, password
 LOGICAL :: version, ldisplay, disable_qc, comp_qc_ndi, comp_qc_perc
 CHARACTER(len=512):: a_name
@@ -191,7 +194,7 @@ CALL optionparser_add(opt, ' ', 'clima-format', clima_format, &
 #else
  'native', &
 #endif 
- & help='format of input file with coordinates, ''native'' for vol7d native binary file'&
+ & help='format of input file with clima: ''native'' for vol7d native binary file'&
 #ifdef HAVE_DBALLE
  //', ''BUFR'' for BUFR file, ''CREX'' for CREX file (sparse points)'&
 #endif
@@ -999,7 +1002,7 @@ if (output_variable_list /= " ") then
   call register_termo(vfn)
 
   if (alchemy(v7d,vfn,vl_alc,v7dtmp,copy=.true., vfnoracle=vfnoracle) == 0 ) then
-    call display(vfnoracle)
+    IF (ldisplay) call display(vfnoracle)
     CALL delete(v7d)
     v7d = v7dtmp
     CALL init(v7dtmp) ! detach it
@@ -1030,22 +1033,68 @@ if (comp_qc_ndi) then
       
 #ifdef HAVE_DBALLE
     ELSE IF (clima_format == 'BUFR' .OR. clima_format == 'CREX') THEN
-      CALL init(v7d_dba_clima, filename=clima_file, format=clima_format, file=.TRUE., &
-       write=.FALSE., categoryappend="clima")
-      CALL import(v7d_dba_clima)
-      v7d_clima = v7d_dba_clima%vol7d
+      file=.TRUE.
+
+    ELSE IF (clima_format == 'dba') THEN
+      CALL parse_dba_access_info(clima_file, dsn, user, password)
+      file=.FALSE.
+    
+    CALL init(v7d_dba_clima, filename=clima_file, format=clima_format, file=file, &
+     dsn=dsn, user=user, password=password,write=.FALSE., categoryappend="clima")
+
+
+    call init(clinetwork,"qcclima-perc")
+
+    clitimei=v7d%time(1)
+    clitimef=v7d%time(size(v7d%time))
+ 
+    clitimei=clitimei+timedelta_new(minute=30)
+    clitimef=clitimef+timedelta_new(minute=30)
+    CALL getval(clitimei, year=yeari, month=monthi)
+    call getval(clitimef, year=yearf, month=monthf)
+    
+    if ( yeari == yearf .and. monthi == monthf ) then
+      clitimei=cyclicdatetime_to_conventional(cyclicdatetime_new(month=monthi))
+      clitimef=cyclicdatetime_to_conventional(cyclicdatetime_new(month=monthf))
+    else
+      ! if you span years or months I read all the climat dataset (should be optimized not so easy)
+      clitimei=datetime_miss
+      clitimef=datetime_miss
+    end if
+
+!!$    print *,"DATE CLIMA"
+!!$    call display(clitimei)
+!!$    call display(clitimef)
+
+    if (size(vl) == 0) then
+      CALL l4f_category_log(category, L4F_ERROR, &
+       'you have to specify --variable-list= when data will be normalized for NDI compute')
+      CALL raise_fatal_error()
+    end if
+
+    !coordmin=coordmin, coordmax=coordmax,   ( not included and not will be ) 
+    call import(v7d_dba_clima,var=vl, timei=clitimei, timef=clitimef, &
+     varkind=(/("r",i=1,size(vl))/),attr=(/"*B33209"/),attrkind=(/"b"/),network=clinetwork)
+
+    v7d_clima = v7d_dba_clima%vol7d
                                 ! destroy v7d_dba without deallocating the contents passed to v7d
-      CALL init(v7d_dba_clima%vol7d)
-      CALL delete(v7d_dba_clima)
+    CALL init(v7d_dba_clima%vol7d)
+    CALL delete(v7d_dba_clima)
     
 #endif
     ELSE
       CALL l4f_category_log(category, L4F_ERROR, &
        'error in command-line parameters, format '// &
-       TRIM(coord_format)//' in --clima-format not valid or not supported.')
+       TRIM(clima_format)//' in --clima-format not valid or not supported.')
       CALL raise_fatal_error()
     ENDIF
-    
+
+  
+    IF (ldisplay) then
+      print*," >>>>> Input Clima <<<<<"
+      call display(v7d_clima)
+    end IF
+
     call vol7d_normalize_data(v7d, v7d_clima, height2level=.false.)
     call delete(v7d_clima)
 

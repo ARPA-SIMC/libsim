@@ -228,6 +228,7 @@ qccli%height2level=optio_log(height2level)
 call init(coordmin)
 call init(coordmax)
 
+!  mmm... I am not sure here .... this will be removed
 if (qccli%height2level) then
   if (present(coordmin)) lcoordmin=coordmin
   if (present(coordmax)) lcoordmax=coordmax
@@ -347,10 +348,17 @@ call delete(ltimef)
 
 if ( yeari == yearf .and. monthi == monthf ) then
 
-!  call init(ltimei, 1001, monthi, 1, houri, minutei, mseci) 
-!  call init(ltimef, 1001, monthf, 1, hourf, minutef, msecf) 
-  ltimei=cyclicdatetime_to_conventional(cyclicdatetime_new(month=monthi, hour=houri))
-  ltimef=cyclicdatetime_to_conventional(cyclicdatetime_new(month=monthf, hour=hourf))
+  if ( dayi == dayf .and. houri == hourf .and. minutei == minutef .and. mseci == msecf ) then
+
+    ltimei=cyclicdatetime_to_conventional(cyclicdatetime_new(month=monthi, hour=houri))
+    ltimef=cyclicdatetime_to_conventional(cyclicdatetime_new(month=monthf, hour=hourf))
+
+  else
+
+    ltimei=cyclicdatetime_to_conventional(cyclicdatetime_new(month=monthi, hour=00))
+    ltimef=cyclicdatetime_to_conventional(cyclicdatetime_new(month=monthf, hour=23))
+
+  end if
 
 else
                                 ! if you span years or months or days I read all the climat dataset (should be optimized not so easy)
@@ -829,8 +837,10 @@ do indana=1,size(qccli%v7d%ana)
         do inddativarr=1,size(qccli%v7d%dativar%r)
           do indtime=1,size(qccli%v7d%time)
 
-!!$            call l4f_log(L4F_INFO,"Index:"// t2c(indana)//t2c(indnetwork)//t2c(indlevel)//&
-!!$             t2c(indtimerange)//t2c(inddativarr)//t2c(indtime))
+            call l4f_log(L4F_INFO,"Index:"// t2c(indana)//t2c(indnetwork)//t2c(indlevel)//&
+             t2c(indtimerange)//t2c(inddativarr)//t2c(indtime))
+
+!!$            print *,"elaboro data : "//t2c(qccli%v7d%time(indtime))
 !!$
 !!$  forall (indnetwork=1:size(qccli%v7d%network), &
 !!$   indlevel=1:size(qccli%v7d%level), &
@@ -859,6 +869,8 @@ do indana=1,size(qccli%v7d%ana)
 
               time=cyclicdatetime_to_conventional(cyclicdatetime_new(month=mese, hour=ora))
               !call init(time, year=1001, month=mese, day=1, hour=ora, minute=00)
+
+!!$              print *,"data convenzionale per percentili: ",t2c(time)
 
               call init(anavar,"B07030" )
               indanavar = -1
@@ -902,7 +914,7 @@ do indana=1,size(qccli%v7d%ana)
 !!$              call display(time)
 !!$              call display(level)
 !!$              call display(qccli%v7d%timerange(indtimerange))
-!!$              print *,indctime,indclevel,indctimerange,indcdativarr,indcnetwork
+!!$              print *,"indici percentili",indctime,indclevel,indctimerange,indcdativarr,indcnetwork
               if (indctime <= 0 .or. indclevel <= 0 .or. indctimerange <= 0 .or. indcdativarr <= 0 &
                .or. indcnetwork <= 0 ) cycle
               
@@ -960,7 +972,7 @@ do indana=1,size(qccli%v7d%ana)
                   end if
                 end if
 
-!                print *, datoqui,"clima ->",perc25,perc50,perc75
+!!$                print *, datoqui,"clima ->",perc25,perc50,perc75
 
                 if ( .not. c_e(perc25) .or. .not. c_e(perc50) .or. .not. c_e(perc75)) cycle
 
@@ -1019,6 +1031,7 @@ do indana=1,size(qccli%v7d%ana)
                   indcdativarr     = index(qccli%clima%dativar%r, qccli%v7d%dativar%r(inddativarr))
 
 
+!!$                  print *,"indici clima", indctime, indclevel, indctimerange, indcdativarr, indcnetwork
                   if (indctime <= 0 .or. indclevel <= 0 .or. indctimerange <= 0 .or. indcdativarr <= 0 &
                    .or. indcnetwork <= 0 ) cycle
 
@@ -1029,7 +1042,7 @@ do indana=1,size(qccli%v7d%ana)
                     climaquii=rmiss
                     climaquif=rmiss
 
-                    write(ident,'("BOX",2i3.3)')3,desc*10   ! macro-area e descrittore
+                    write(ident,'("BOX",2i3.3)')0,desc*10   ! macro-area e descrittore
                     call init(ana,ident=ident,lat=0d0,lon=0d0)
                     indcana=index(qccli%clima%ana,ana)
 !                    call display(ana)
@@ -1038,7 +1051,7 @@ do indana=1,size(qccli%v7d%ana)
                       climaquii=qccli%clima%voldatir(indcana,indctime,indclevel,indctimerange,indcdativarr,indcnetwork)
                     end if
 
-                    write(ident,'("BOX",2i3.3)')3,(desc+1)*10   ! macro-area e descrittore
+                    write(ident,'("BOX",2i3.3)')0,(desc+1)*10   ! macro-area e descrittore
                     call init(ana,ident=ident,lat=0d0,lon=0d0)
                     indcana=index(qccli%clima%ana,ana)
                     if (indcana > 0 )then
@@ -1086,7 +1099,7 @@ do indana=1,size(qccli%v7d%ana)
 #ifdef DEBUG
                           call l4f_log (L4F_DEBUG,"qccli: clima check "//t2c(datoqui)//" confidence: "//&
                            t2c(max (qccli%clima%voldatiattrb(indcana  ,indctime,indclevel,indctimerange,indcdativarr,indcnetwork,1)&
-                           , 1_int_b)))
+                           , 1_int_b)) //" : "//t2c(qccli%v7d%time(indtime)))
 #endif
 
               

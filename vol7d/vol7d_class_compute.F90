@@ -1426,9 +1426,9 @@ do i=1,narea
   end do
 end do
 
-do i=1,size(that%ana)
-  call display(that%ana(i))
-end do
+!!$do i=1,size(that%ana)
+!!$  call display(that%ana(i))
+!!$end do
 
 call vol7d_alloc(that,nlevel=size(this%level), ntimerange=size(this%timerange), &
  ndativarr=size(this%dativar%r), nnetwork=1,ntime=1,ndativarattrr=size(this%dativar%r),ndatiattrr=1)
@@ -1480,12 +1480,12 @@ do inddativarr=1,size(this%dativar%r)
          mask=mask), &
          perc_vals, ndi, limbins) 
 
-        print *,"------- ndi limbins -----------"
-        call display( this%timerange(indtimerange))
-        call display( this%level(indlevel))
-        call display( this%dativar%r(inddativarr))
-        print *, ndi
-        print *, limbins
+!!$        print *,"------- ndi limbins -----------"
+!!$        call display( this%timerange(indtimerange))
+!!$        call display( this%level(indlevel))
+!!$        call display( this%dativar%r(inddativarr))
+!!$        print *, ndi
+!!$        print *, limbins
 
         do j=1,size(perc_vals)-1
           indana=((j-1)*narea+i)
@@ -1576,9 +1576,9 @@ do i=1,narea
   end do
 end do
 
-do i=1,size(that%ana)
-  call display(that%ana(i))
-end do
+!!$do i=1,size(that%ana)
+!!$  call display(that%ana(i))
+!!$end do
 
 call vol7d_alloc(that,nlevel=size(this%level), ntimerange=size(this%timerange), &
  ndativarr=size(this%dativar%r), nnetwork=1,ntime=1)
@@ -1621,11 +1621,11 @@ do inddativarr=1,size(this%dativar%r)
          mask=mask), &
          perc_vals)
 
-        print *,"------- percentile -----------"
-        call display( this%timerange(indtimerange))
-        call display( this%level(indlevel))
-        call display( this%dativar%r(inddativarr))
-        print *, perc
+!!$        print *,"------- percentile -----------"
+!!$        call display( this%timerange(indtimerange))
+!!$        call display( this%level(indlevel))
+!!$        call display( this%dativar%r(inddativarr))
+!!$        print *, perc
 
         do j=1,size(perc_vals)
           indana=((j-1)*narea+i)
