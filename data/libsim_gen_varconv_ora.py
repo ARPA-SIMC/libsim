@@ -108,8 +108,8 @@ def UniConvTable():
 "M**2/S**2->MGP",		0.101971621,	0
 "cal/s/cm**2->W/M**2",		41868,		0
 "cal/h/cm**2->W/M**2",		11.63,		0
+"Mj/m**2->J/M**2",		1000000,	0
 """
-
 # problemi di dballe:
 # (45.,-22.5?) 230,B11001,ottavi->DEGREE TRUE,1.0,0.0
 # ci metto una pezza temporanea

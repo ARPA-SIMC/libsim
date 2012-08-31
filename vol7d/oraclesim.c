@@ -333,7 +333,7 @@ int gettab(OracleDbConnection *dbconnid, int *var, int nvar, int *net) {
 	   OCIBindByName(dbconnid->stmthp, &dbconnid->bnd1p,
 			 dbconnid->errhp, (text *) ":net",
 			 -1, (dvoid *) net,
-			 (sword) sizeof(*var), SQLT_INT, (dvoid *) NULL,
+			 (sword) sizeof(*net), SQLT_INT, (dvoid *) NULL,
 			 (ub2 *) 0, (ub2 *) 0, (ub4) 0, (ub4 *) 0,
 			 OCI_DEFAULT));
 
