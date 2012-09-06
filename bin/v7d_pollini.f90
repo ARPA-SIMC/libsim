@@ -127,7 +127,7 @@ nstazf = COUNT(file_stazioni /= '')
 IF (nfam /= nvar) THEN
   CALL l4f_category_log(category, L4F_FATAL, &
    'Numero famiglie e numero variabili non coincidono: '// &
-   TRIM(to_char(nfam))//' '//TRIM(to_char(nvar))//'.')
+   t2c(nfam)//' '//t2c(nvar)//'.')
 ENDIF
 IF (ANY(variabili(1:nvar) == '')) THEN
   CALL l4f_category_log(category, L4F_FATAL, &
@@ -144,7 +144,7 @@ ENDIF
 IF (nstaz /= nstazf) THEN
   CALL l4f_category_log(category, L4F_FATAL, &
    'Numero stazioni e numero file stazione non coincidono: '// &
-   TRIM(to_char(nstaz))//' '//TRIM(to_char(nstazf))//'.')
+   t2c(nstaz)//' '//t2c(nstazf)//'.')
 ENDIF
 IF (ANY(stazioni(1:nstaz) == 0)) THEN
   CALL l4f_category_log(category, L4F_FATAL, &
@@ -160,8 +160,8 @@ nfam = count_distinct(famiglie(1:nvar), back=.TRUE.)
 CALL l4f_category_log(category,L4F_INFO, &
  'Periodo richiesto: '//to_char(data_inizio)//' - '//to_char(data_fine))
 CALL l4f_category_log(category,L4F_INFO, &
- 'Richieste '//TRIM(to_char(nvar))//' variabili per '// &
- TRIM(to_char(nfam))//' famiglie diverse.')
+ 'Richieste '//t2c(nvar)//' variabili per '// &
+ t2c(nfam)//' famiglie diverse.')
 ALLOCATE(famptr(nvar))
 famptr(:) = map_distinct(famiglie(1:nvar), back=.TRUE.)
 
@@ -173,7 +173,7 @@ CALL init(db_v7d)
 ! estraggo i dati
 CALL import(db_v7d, variabili(1:nvar), (/network/), &
  datetime_new(isodate=data_inizio), datetime_new(isodate=data_fine), &
- anavar=(/'B01192'/), timerange=vol7d_timerange_new(0,0,86400))
+ anavar=(/'B01192'/), timerange=vol7d_timerange_new(0,86400,86400))
 
 dtfill = timedelta_new(day=1)
 CALL vol7d_fill_time(db_v7d%vol7d, v7d_fill, dtfill, datetime_new(isodate=data_inizio), datetime_new(isodate=data_fine))
