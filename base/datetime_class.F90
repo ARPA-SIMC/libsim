@@ -518,7 +518,7 @@ CHARACTER(len=12),INTENT(IN),OPTIONAL :: oraclesimdate !< inizializza l'oggetto 
 INTEGER,INTENT(IN),OPTIONAL :: now !< inizializza l'oggetto all'istante corrente, se \a � \a datetime_utc inizializza con l'ora UTC (preferibile), se � \a datetime_local usa l'ora locale
 
 IF (PRESENT(now)) THEN
-  this = datetime_new(now)
+  this = datetime_new_now(now)
 ELSE
   this = datetime_new(year, month, day, hour, minute, msec, &
    unixtime, isodate, simpledate)
