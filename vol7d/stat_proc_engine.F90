@@ -496,7 +496,8 @@ ENDIF
 
 ! count the possible i/o interval ratios
 DO k = 1, SIZE(itimerange)
-  CALL insert_unique(a_dtratio, steps/itimerange(k)%p2) ! guaranteed to be integer
+  IF (itimerange(k)%p2 /= 0) &
+   CALL insert_unique(a_dtratio, steps/itimerange(k)%p2) ! guaranteed to be integer
 ENDDO
 
 CALL packarray(a_otime)
