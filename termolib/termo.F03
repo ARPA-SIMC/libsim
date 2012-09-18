@@ -20,7 +20,8 @@ subroutine register_termo(vfn)
   call fnregister(vfn,u_v2dd_ff_def())
   call fnregister(vfn,r_t2td_def())
   call fnregister(vfn,ff_swd_lwb2pgt_def())
-  call fnregister(vfn,p_t2r_def())
+  call fnregister(vfn,q_p_t2r_def())
+  call fnregister(vfn,t_td2r_def())
   call fnregister(vfn,swb_alb2swd_def())
   call fnregister(vfn,swd_alb2swb_def())
   call fnregister(vfn,t_p_w2omega_def())
@@ -173,7 +174,7 @@ end function swb_alb2swd_def
 
 !!$QTORELHUM(Q,PT,T) 
 
-subroutine  p_t2r(mybin,mybout,bin,bout,in,out)
+subroutine  q_p_t2r(mybin,mybout,bin,bout,in,out)
   CHARACTER(len=10),intent(in) :: mybin(:)  !< vector table B  WMO input  in user's data
   CHARACTER(len=10),intent(in) :: mybout(:) !< vector table B  WMO output in user's data
   CHARACTER(len=10),intent(in) :: bin(:)    !< vector table B  WMO input used by function
@@ -186,13 +187,33 @@ subroutine  p_t2r(mybin,mybout,bin,bout,in,out)
   out(:,index_c(mybout,bout(1)))= QTORELHUM(in (:,index_c(mybin ,bin (1))),&
    in (:,index_c(mybin ,bin (2))),in (:,index_c(mybin ,bin (3)))) 
           
-end subroutine p_t2r
+end subroutine q_p_t2r
 
-type(fnds) function p_t2r_def()
-  call init(p_t2r_def,"p_t2r",&
+type(fnds) function q_p_t2r_def()
+  call init(q_p_t2r_def,"q_p_t2r",&
    [character(len=10) :: "B13001","B10004","B12101"],&
-   [character(len=10) :: "B13003"],0,func=p_t2r)
-end function p_t2r_def
+   [character(len=10) :: "B13003"],0,func=q_p_t2r)
+end function q_p_t2r_def
+
+
+subroutine  t_td2r(mybin,mybout,bin,bout,in,out)
+  CHARACTER(len=10),intent(in) :: mybin(:)  !< vector table B  WMO input  in user's data
+  CHARACTER(len=10),intent(in) :: mybout(:) !< vector table B  WMO output in user's data
+  CHARACTER(len=10),intent(in) :: bin(:)    !< vector table B  WMO input used by function
+  CHARACTER(len=10),intent(in) :: bout(:)   !< vector table B  WMO output used by function
+  real, intent(in) :: in(:,:)
+  real, intent(out) :: out(:,:)
+
+  out(:,index_c(mybout,bout(1))) = fr(in (:,index_c(mybin ,bin (1))),&
+   in (:,index_c(mybin ,bin (2))))
+          
+end subroutine t_td2r
+
+type(fnds) function t_td2r_def()
+  call init(t_td2r_def,"t_td2r",&
+   [character(len=10) :: "B12101","B12103"],&
+   [character(len=10) :: "B13003"],0,func=t_td2r)
+end function t_td2r_def
 
 
 subroutine t_p_w2omega(mybin,mybout,bin,bout,in,out)
@@ -204,7 +225,7 @@ subroutine t_p_w2omega(mybin,mybout,bin,bout,in,out)
   real, intent(out) :: out(:,:)
 
   out(:,index_c(mybout,bout(1))) = omega_simple(in(:,index_c(mybin,bin(1))), &
-   in(:,index_c(mybin,bin(2))), in(:,index_c(mybin,bin(3)))) 
+   in(:,index_c(mybin,bin(2))), in(:,index_c(mybin,bin(3))))
           
 end subroutine t_p_w2omega
 
