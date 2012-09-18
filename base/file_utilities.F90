@@ -38,8 +38,8 @@ CHARACTER(len=128), PARAMETER :: prefix = PREFIX
 INTEGER, PARAMETER, PRIVATE :: nftype = 2
 CHARACTER(len=10), PARAMETER, PRIVATE :: &
  preflist(2,nftype) = RESHAPE((/ &
- '/usr      ', '/usr/local', &
- '          ', '/usr/local'/), &
+ '/usr/local', '/usr      ', &
+ '/usr/local', '          '/), &
  (/2,nftype/))
 CHARACTER(len=6), PARAMETER, PRIVATE :: &
  postfix(nftype) = (/ '/share', '/etc  ' /)
