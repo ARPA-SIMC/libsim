@@ -3235,7 +3235,9 @@ else if (present(var))then
     do i=1,ndativarc
       call init(vol7dtmp%dativar%c(i))
     end do
-    call pack_distinct_c(buffer(:nd)%btable,vol7dtmp%dativar%c%btable, back=.TRUE.)
+    if (ndativarc > 0) then
+      call pack_distinct_c(buffer(:nd)%btable,vol7dtmp%dativar%c%btable, back=.TRUE.)
+    end if
   end if
 
 else
