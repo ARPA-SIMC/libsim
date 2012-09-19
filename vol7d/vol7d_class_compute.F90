@@ -1367,7 +1367,7 @@ TYPE(vol7d),INTENT(out) :: that !< output volume which will contain the computed
 !TYPE(datetime),INTENT(in),OPTIONAL :: stopp  !< end of statistical processing interval
 real,intent(in) :: perc_vals(:) !< percentile values to use in compute, between 0. and 100.
 TYPE(cyclicdatetime),INTENT(in) :: cyclicdt !< cyclic date and time
-real,optional :: presentperc !< percentual of data present for compute (default=0.3)
+real,optional :: presentperc !< rate of data present for compute on expected values (default=0.3)
 
 integer :: indana,indtime,indvar,indnetwork,indlevel ,indtimerange ,inddativarr, indattr
 integer :: i,j,narea
@@ -1437,10 +1437,10 @@ that%level=this%level
 that%timerange=this%timerange
 that%dativar%r=this%dativar%r
 that%dativarattr%r=that%dativar%r
-call init(that%datiattr%r(1), btable="B33209")    ! NDI order number
+call init(that%datiattr%r(1), btable="*B33209")    ! NDI order number
 that%time(1)=cyclicdatetime_to_conventional(cyclicdt)
 
-call l4f_log(L4F_INFO,"vol7d_compute_percentile conventional datetime "//to_char(that%time(1)))
+call l4f_log(L4F_INFO,"vol7d_compute_ndi conventional datetime "//to_char(that%time(1)))
 call init(that%network(1),name="qcclima-ndi")
 
 call vol7d_alloc_vol(that,inivol=.true.)
@@ -1466,26 +1466,30 @@ do inddativarr=1,size(this%dativar%r)
 
         ! we want more than 30% data present
 
-        !print*,"-------------------------------------------------------------"
-        !print*,"Dati presenti:", count (mask .and. c_e(this%voldatir(:,:, indlevel, indtimerange, inddativarr,:)))
-        !print*,"Dati attesi:", count (mask)
+!!$        print*,"-------------------------------------------------------------"
+!!$        print*,"Dati presenti:", count (mask .and. c_e(this%voldatir(:,:, indlevel, indtimerange, inddativarr,:)))
+!!$        print*,"Dati attesi:", count (mask)
 
         if ((float(count (mask .and. c_e(this%voldatir(:,:, indlevel, indtimerange, inddativarr,:)))) / &
             float(count (mask))) < lpresentperc) cycle
-        !print*,"compute"
-        !print*,"-------------------------------------------------------------"
+!!$        print*,"compute"
+!!$        print*,"-------------------------------------------------------------"
 
         call NormalizedDensityIndex (&
          pack(this%voldatir(:,:, indlevel, indtimerange, inddativarr,:), &
          mask=mask), &
          perc_vals, ndi, limbins) 
 
-!!$        print *,"------- ndi limbins -----------"
-!!$        call display( this%timerange(indtimerange))
-!!$        call display( this%level(indlevel))
-!!$        call display( this%dativar%r(inddativarr))
-!!$        print *, ndi
-!!$        print *, limbins
+        print *,"------- ndi limbins -----------"
+        print *,"min: ",minval(pack(this%voldatir(:,:, indlevel, indtimerange, inddativarr,:),&
+         mask=mask.and.c_e(this%voldatir(:,:, indlevel, indtimerange, inddativarr,:))))
+        print *,"max: ",maxval(pack(this%voldatir(:,:, indlevel, indtimerange, inddativarr,:),&
+         mask=mask.and.c_e(this%voldatir(:,:, indlevel, indtimerange, inddativarr,:))))
+        call display( this%timerange(indtimerange))
+        call display( this%level(indlevel))
+        call display( this%dativar%r(inddativarr))
+        print *, ndi
+        print *, limbins
 
         do j=1,size(perc_vals)-1
           indana=((j-1)*narea+i)
@@ -1493,6 +1497,9 @@ do inddativarr=1,size(this%dativar%r)
            limbins(j)
 
           ! this is a special case where inddativarr = inddativarr becouse we have only real variables and attributes
+!!$          print*," "
+!!$          print *,"indici",indana, indtime, indlevel, indtimerange, inddativarr, indnetwork,indattr
+!!$          print *, ndi(j) *  100.
           that%voldatiattrr(indana, indtime, indlevel, indtimerange, inddativarr, indnetwork,indattr)=&
            ndi(j) *  100.
 
