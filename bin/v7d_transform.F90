@@ -56,7 +56,7 @@ INTEGER :: optind, optstatus
 TYPE(csv_record) :: argparse
 CHARACTER(len=8) :: input_format, coord_format, clima_format
 
-CHARACTER(len=512) :: input_file, input_file_clima, output_file, output_format, output_template, &
+CHARACTER(len=512) :: input_file, output_file, output_format, output_template, &
  network_list, variable_list, anavariable_list, attribute_list, coord_file,&
  clima_file, output_variable_list, trans_level_list
 CHARACTER(len=160) :: pre_trans_type
@@ -609,8 +609,11 @@ ENDIF
 CALL init(v7d_coord)
 ! import coord_file
 IF (c_e(coord_file)) THEN
+
+  coord_file=get_package_filepath(coord_file, filetype_data)
+
   IF (coord_format == 'native') THEN
-    CALL import(v7d_coord, filename=input_file)
+    CALL import(v7d_coord, filename=coord_file)
 
 #ifdef HAVE_DBALLE
   ELSE IF (coord_format == 'BUFR' .OR. coord_format == 'CREX') THEN
@@ -1026,10 +1029,13 @@ if (comp_qc_ndi) then
 
 
   IF (c_e(clima_file)) THEN
+
+    clima_file=get_package_filepath(clima_file, filetype_data)
+
                                 ! import percentile file
     CALL init(v7d_clima)
     IF (clima_format == 'native') THEN
-      CALL import(v7d_clima, filename=input_file_clima)
+      CALL import(v7d_clima, filename=clima_file)
       
 #ifdef HAVE_DBALLE
     ELSE IF (clima_format == 'BUFR' .OR. clima_format == 'CREX') THEN
@@ -1104,7 +1110,8 @@ if (comp_qc_ndi) then
 
   ENDIF
 
-  call vol7d_compute_NormalizedDensityIndex(v7d,v7dtmp, perc_vals=(/(10.*i,i=0,10)/),cyclicdt=cyclicdt)
+  call vol7d_compute_NormalizedDensityIndex(v7d,v7dtmp, perc_vals=(/(10.*i,i=0,10)/),cyclicdt=cyclicdt&
+   ,presentperc=.1)
   call delete(v7d)
   v7d=v7dtmp
   CALL init(v7dtmp) ! detach it

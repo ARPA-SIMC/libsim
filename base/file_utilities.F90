@@ -155,9 +155,12 @@ END FUNCTION getunit
 
 !> Looks for a specific file for the libsim package.
 !! It searches in different directories in the following order:
+!!  - current working directory
 !!  - directory specified by the environmental variabile \c LIBSIM_DATA for data files or \c LIBSIM_CONFIG for configuration files, if defined
-!!  - directory \c /usr/share/libsim for data files or \c /etc/libsim for configuration files
-!!  - directory \c /usr/local/share/libsim for data files or \c /usr/local/etc/libsim for configuration files.
+!!  - directory \c /usr/local/share/libsim for data files or \c /usr/local/etc/libsim for configuration files
+!!  - directory \c /usr/share/libsim for data files or \c /etc/libsim for configuration files.
+!! filename prefixed by "cwd:" or "share:" force search in current working directory or other  package paths respectively
+!! default is everywhere for data files and  package paths only for config files
 !! It returns the full path to the existing file or an empty string if not found.
 FUNCTION get_package_filepath(filename, filetype) RESULT(path)
 CHARACTER(len=*), INTENT(in) :: filename !< name of the file to be searched, it must be a relative path name
@@ -165,7 +168,7 @@ INTEGER, INTENT(in) :: filetype !< type of file, the constants \a ::filetype_dat
 
 INTEGER :: j
 CHARACTER(len=512) :: path
-LOGICAL :: exist
+LOGICAL :: exist,cwd,share
 
 !IF (package_name == ' ') THEN
 !  CALL getarg(0, package_name)
@@ -179,50 +182,68 @@ IF (filetype < 1 .OR. filetype > nftype) THEN
   RETURN
 ENDIF
 
-! try with environment variable
-CALL getenv(TRIM(uppercase(package_name))//'_'//TRIM(filetypename(filetype)), path)
-IF (path /= ' ') THEN
+share = filename(:6) == "share:"
+cwd = filename(:4) == "cwd:"
 
-  path(LEN_TRIM(path)+1:) = '/'//filename
+if ( .not. share .and. .not. cwd .and. filetype == filetype_data) then
+  share=.true.
+  cwd=.true.
+end if
+
+if (cwd) then
+                                ! try with current dir
+  path = filename
   INQUIRE(file=path, exist=exist)
   IF (exist) THEN
-    CALL l4f_log(L4F_INFO, 'package file '//TRIM(path)//' found')
+    CALL l4f_log(L4F_INFO, 'local file '//TRIM(path)//' found')
     RETURN
   ENDIF
-ENDIF
+end if
 
-! try with install prefix
-path = TRIM(prefix)//TRIM(postfix(filetype)) &
- //'/'//TRIM(package_name)//'/'//filename
-INQUIRE(file=path, exist=exist)
-IF (exist) THEN
-  CALL l4f_log(L4F_INFO, 'package file '//TRIM(path)//' found')
-  RETURN
-ENDIF
+if (share .or. filetype == filetype_config) then
 
-! try with default install prefix
-DO j = 1, SIZE(preflist,1)
-  IF (preflist(j,filetype) == ' ') EXIT
-  path = TRIM(preflist(j,filetype))//TRIM(postfix(filetype)) &
+                                ! try with environment variable
+  CALL getenv(TRIM(uppercase(package_name))//'_'//TRIM(filetypename(filetype)), path)
+  IF (path /= ' ') THEN
+    
+    path(LEN_TRIM(path)+1:) = '/'//filename
+    INQUIRE(file=path, exist=exist)
+    IF (exist) THEN
+      CALL l4f_log(L4F_INFO, 'package file '//TRIM(path)//' found')
+      RETURN
+    ENDIF
+  ENDIF
+
+                                ! try with install prefix
+  path = TRIM(prefix)//TRIM(postfix(filetype)) &
    //'/'//TRIM(package_name)//'/'//filename
   INQUIRE(file=path, exist=exist)
   IF (exist) THEN
     CALL l4f_log(L4F_INFO, 'package file '//TRIM(path)//' found')
     RETURN
   ENDIF
-ENDDO
-CALL l4f_log(L4F_ERROR, 'package file '//TRIM(filename)//' not found')
-CALL raise_error()
-path = ''
+  
+                                ! try with default install prefix
+  DO j = 1, SIZE(preflist,1)
+    IF (preflist(j,filetype) == ' ') EXIT
+    path = TRIM(preflist(j,filetype))//TRIM(postfix(filetype)) &
+     //'/'//TRIM(package_name)//'/'//filename
+    INQUIRE(file=path, exist=exist)
+    IF (exist) THEN
+      CALL l4f_log(L4F_INFO, 'package file '//TRIM(path)//' found')
+      RETURN
+    ENDIF
+  ENDDO
+  CALL l4f_log(L4F_ERROR, 'package file '//TRIM(filename)//' not found')
+  CALL raise_error()
+  path = ''
+end if
 
 END FUNCTION get_package_filepath
 
 
 !> Opens a specific file for the libsim package.
-!! It searches in different directories in the following order:
-!!  - directory specified by the environmental variabile \c LIBSIM_DATA for data files or \c LIBSIM_CONFIG for configuration files, if defined
-!!  - directory \c /usr/share/libsim for data files or \c /etc/libsim for configuration files
-!!  - directory \c /usr/local/share/libsim for data files or \c /usr/local/etc/libsim for configuration files
+!! It searches in different directories using get_package_filepath to locate the file. 
 !! It returns the unit number associated to the file found and successfully opened,
 !! or -1 if the file does not exist or an error occurred while opening it.
 FUNCTION open_package_file(filename, filetype) RESULT(unit)
