@@ -245,7 +245,13 @@ if (present(data_id_in))then
   qccli%data_id_in => data_id_in
 end if
 
-filepath=get_package_filepath('macroaree_er.shp', filetype_data)
+if (qccli%height2level) then
+                                !shape file for Emilia Romagna clima !
+  filepath=get_package_filepath('macroaree_er.shp', filetype_data)
+else
+                                !shape file for Europa clima !
+  filepath=get_package_filepath('ens_v8_ll', filetype_data)
+end if
 
 if (present(macropath))then
   if (c_e(macropath)) then
@@ -837,9 +843,10 @@ do indana=1,size(qccli%v7d%ana)
         do inddativarr=1,size(qccli%v7d%dativar%r)
           do indtime=1,size(qccli%v7d%time)
 
-            call l4f_log(L4F_INFO,"Index:"// t2c(indana)//t2c(indnetwork)//t2c(indlevel)//&
+#ifdef DEBUG
+            call l4f_log(L4F_DEBUG,"Index:"// t2c(indana)//t2c(indnetwork)//t2c(indlevel)//&
              t2c(indtimerange)//t2c(inddativarr)//t2c(indtime))
-
+#endif
 !!$            print *,"elaboro data : "//t2c(qccli%v7d%time(indtime))
 !!$
 !!$  forall (indnetwork=1:size(qccli%v7d%network), &
@@ -872,15 +879,15 @@ do indana=1,size(qccli%v7d%ana)
 
 !!$              print *,"data convenzionale per percentili: ",t2c(time)
 
-              call init(anavar,"B07030" )
-              indanavar = -1
-              if (associated (qccli%v7d%anavar%r)) then
-                indanavar        = index(qccli%v7d%anavar%r, anavar)
-              end if
-              if (indanavar <= 0 )cycle
-
               ! use conventional level starting from station height
               if (qccli%height2level) then
+                call init(anavar,"B07030" )
+                indanavar = -1
+                if (associated (qccli%v7d%anavar%r)) then
+                  indanavar        = index(qccli%v7d%anavar%r, anavar)
+                end if
+                if (indanavar <= 0 )cycle
+
                 altezza= qccli%v7d%volanar(indana,indanavar,indnetwork)
                 call cli_level(altezza,level)
               else
@@ -900,7 +907,7 @@ do indana=1,size(qccli%v7d%ana)
               
 !!$                                print *,"dato  ",qccli%v7d%timerange(indtimerange) 
 !!$                                print *,"clima ",qccli%clima%timerange
-!!$                                call l4f_log(L4F_INFO,"Index:"// to_char(indcana)//to_char(indctime)//to_char(indclevel)//&
+!!$                                call l4f_log(L4F_INFO,"Index:"// to_char(indctime)//to_char(indclevel)//&
 !!$                                 to_char(indctimerange)//to_char(indcdativarr)//to_char(indcnetwork))
               
                                 !if (indcana <= 0 .or. indctime <= 0 .or. indclevel <= 0 .or. indctimerange <= 0 .or. indcdativarr <= 0 &
@@ -914,7 +921,7 @@ do indana=1,size(qccli%v7d%ana)
 !!$              call display(time)
 !!$              call display(level)
 !!$              call display(qccli%v7d%timerange(indtimerange))
-!!$              print *,"indici percentili",indctime,indclevel,indctimerange,indcdativarr,indcnetwork
+              print *,"indici percentili",indctime,indclevel,indctimerange,indcdativarr,indcnetwork
               if (indctime <= 0 .or. indclevel <= 0 .or. indctimerange <= 0 .or. indcdativarr <= 0 &
                .or. indcnetwork <= 0 ) cycle
               
@@ -945,8 +952,8 @@ do indana=1,size(qccli%v7d%ana)
                   write(ident,'("BOX",2i3.3)')iarea,desc   ! macro-area e descrittore
                   call init(ana,ident=ident,lat=latc,lon=lonc)
                   indcana=index(qccli%extreme%ana,ana)
-!                  call display(ana)
-!                  print *,"indcana 25 ",indcana
+                  call display(ana)
+                  print *,"indcana 25 ",indcana
                   if (indcana > 0 )then
                     perc25=qccli%extreme%voldatir(indcana,indctime,indclevel,indctimerange,indcdativarr,indcnetwork)
                   end if
@@ -955,8 +962,8 @@ do indana=1,size(qccli%v7d%ana)
                   write(ident,'("BOX",2i3.3)')iarea,desc   ! macro-area e descrittore
                   call init(ana,ident=ident,lat=latc,lon=lonc)
                   indcana=index(qccli%extreme%ana,ana)
-!                  call display(ana)
-!                  print *,"indcana 50 ",indcana
+                  call display(ana)
+                  print *,"indcana 50 ",indcana
                   if (indcana > 0 )then
                     perc50=qccli%extreme%voldatir(indcana,indctime,indclevel,indctimerange,indcdativarr,indcnetwork)
                   end if
@@ -965,22 +972,24 @@ do indana=1,size(qccli%v7d%ana)
                   write(ident,'("BOX",2i3.3)')iarea,desc   ! macro-area e descrittore
                   call init(ana,ident=ident,lat=latc,lon=lonc)
                   indcana=index(qccli%extreme%ana,ana)
-!                  call display(ana)
-!                  print *,"indcana 75 ",indcana
+                  call display(ana)
+                  print *,"indcana 75 ",indcana
                   if (indcana > 0 )then
                     perc75=qccli%extreme%voldatir(indcana,indctime,indclevel,indctimerange,indcdativarr,indcnetwork)
                   end if
                 end if
 
-!!$                print *, datoqui,"clima ->",perc25,perc50,perc75
+                print *, datoqui,"clima ->",perc25,perc50,perc75
 
                 if ( .not. c_e(perc25) .or. .not. c_e(perc50) .or. .not. c_e(perc75)) cycle
 
-                extremequii=perc50 - (perc75 - perc25) *1.3 * 3.  ! 1.3 to go to standard deviation and 3 to make 3 sigma 
-                extremequif=perc50 + (perc75 - perc25) *1.3 * 3.  ! 1.3 to go to standard deviation and 3 to make 3 sigma 
+                                !http://it.wikipedia.org/wiki/Funzione_di_ripartizione_della_variabile_casuale_normale
+                                ! 3.65 for 0.01% each side ( 0.02% total )
+                extremequii=perc50 - (perc75 - perc25) *1.3 * 3.65  ! 1.3 to go to standard deviation and 3.65 to make 3.65 sigma 
+                extremequif=perc50 + (perc75 - perc25) *1.3 * 3.65  ! 1.3 to go to standard deviation and 3.65 to make 3.65 sigma 
 
 #ifdef DEBUG
-                call l4f_log (L4F_DEBUG,"qccli: gross error check "//t2c(extremequii)//">"//t2c(datoqui)//"<"//t2c(extremequif))
+                call l4f_log (L4F_INFO,"qccli: gross error check "//t2c(extremequii)//">"//t2c(datoqui)//"<"//t2c(extremequif))
 #endif
 
 
@@ -989,7 +998,7 @@ do indana=1,size(qccli%v7d%ana)
 
                                 !ATTENZIONE TODO : inddativarr È UNA GRANDE SEMPLIFICAZIONE NON VERA SE TIPI DI DATO DIVERSI !!!!
 #ifdef DEBUG
-                          call l4f_log (L4F_DEBUG,"qccli: gross error check flag set to bad")
+                          call l4f_log (L4F_INFO,"qccli: gross error check flag set to bad")
 #endif
                   qccli%v7d%voldatiattrb(indana,indtime,indlevel,indtimerange,inddativarr,indnetwork,indtbattrout)=0
 
