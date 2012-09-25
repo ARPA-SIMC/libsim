@@ -73,7 +73,8 @@ TYPE(vol7d_level) :: ilevel, olevel
 TYPE(vol7d_level),ALLOCATABLE :: olevel_list(:)
 INTEGER :: iun, ier, i, l, n, ninput, iargc, i1, i2, i3, i4
 INTEGER,POINTER :: w_s(:), w_e(:)
-TYPE(vol7d) :: v7d, v7d_coord, v7dtmp, v7d_comp1, v7d_comp2, v7d_comp3, v7d_clima
+TYPE(vol7d) :: v7d, v7d_coord, v7dtmp, v7d_comp1, v7d_comp2, v7d_comp3
+TYPE(qcclitype) :: qccli
 TYPE(arrayof_georef_coord_array) :: poly
 DOUBLE PRECISION,ALLOCATABLE :: lon_array(:), lat_array(:)
 INTEGER :: polytopo
@@ -1030,63 +1031,33 @@ if (comp_qc_ndi) then
 
   IF (c_e(clima_file)) THEN
 
-    clima_file=get_package_filepath(clima_file, filetype_data)
-
                                 ! import percentile file
-    CALL init(v7d_clima)
-    IF (clima_format == 'native') THEN
-      CALL import(v7d_clima, filename=clima_file)
-      
+IF (clima_format == 'native') THEN
+!!$
+!!$      clima_file=get_package_filepath(clima_file, filetype_data)
+!!$      CALL import(v7d_clima, filename=clima_file)
+  CALL l4f_category_log(category, L4F_ERROR, &
+   'error in command-line parameters, format '// &
+   TRIM(clima_format)//' in --clima-format native not valid or not supported.')
+  CALL raise_fatal_error()
+ 
 #ifdef HAVE_DBALLE
     ELSE IF (clima_format == 'BUFR' .OR. clima_format == 'CREX') THEN
       file=.TRUE.
+      clima_file=get_package_filepath(clima_file, filetype_data)
 
     ELSE IF (clima_format == 'dba') THEN
       CALL parse_dba_access_info(clima_file, dsn, user, password)
       file=.FALSE.
     
-    CALL init(v7d_dba_clima, filename=clima_file, format=clima_format, file=file, &
-     dsn=dsn, user=user, password=password,write=.FALSE., categoryappend="clima")
-
-
     call init(clinetwork,"qcclima-perc")
 
-    clitimei=v7d%time(1)
-    clitimef=v7d%time(size(v7d%time))
- 
-    clitimei=clitimei+timedelta_new(minute=30)
-    clitimef=clitimef+timedelta_new(minute=30)
-    CALL getval(clitimei, year=yeari, month=monthi)
-    call getval(clitimef, year=yearf, month=monthf)
-    
-    if ( yeari == yearf .and. monthi == monthf ) then
-      clitimei=cyclicdatetime_to_conventional(cyclicdatetime_new(month=monthi))
-      clitimef=cyclicdatetime_to_conventional(cyclicdatetime_new(month=monthf))
-    else
-      ! if you span years or months I read all the climat dataset (should be optimized not so easy)
-      clitimei=datetime_miss
-      clitimef=datetime_miss
-    end if
-
-!!$    print *,"DATE CLIMA"
-!!$    call display(clitimei)
-!!$    call display(clitimef)
-
-    if (size(vl) == 0) then
+     if (size(vl) == 0) then
       CALL l4f_category_log(category, L4F_ERROR, &
        'you have to specify --variable-list= when data will be normalized for NDI compute')
       CALL raise_fatal_error()
     end if
 
-    !coordmin=coordmin, coordmax=coordmax,   ( not included and not will be ) 
-    call import(v7d_dba_clima,var=vl, timei=clitimei, timef=clitimef, &
-     varkind=(/("r",i=1,size(vl))/),attr=(/"*B33209"/),attrkind=(/"b"/),network=clinetwork)
-
-    v7d_clima = v7d_dba_clima%vol7d
-                                ! destroy v7d_dba without deallocating the contents passed to v7d
-    CALL init(v7d_dba_clima%vol7d)
-    CALL delete(v7d_dba_clima)
-    
 #endif
     ELSE
       CALL l4f_category_log(category, L4F_ERROR, &
@@ -1095,14 +1066,22 @@ if (comp_qc_ndi) then
       CALL raise_fatal_error()
     ENDIF
 
+
+    call init(qccli,v7d,vl,climapath=clima_file, &
+#ifdef HAVE_DBALLE
+     dsncli=dsn,user=user,password=password,&
+#endif
+     height2level=.false.,categoryappend="qc normalize")
+
+
   
     IF (ldisplay) then
       print*," >>>>> Input Clima <<<<<"
-      call display(v7d_clima)
+      call display(qccli%clima)
     end IF
 
-    call vol7d_normalize_data(v7d, v7d_clima, height2level=.false.)
-    call delete(v7d_clima)
+    call vol7d_normalize_data(qccli)
+    call delete(qccli)
 
   else
 

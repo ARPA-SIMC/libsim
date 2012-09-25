@@ -247,10 +247,10 @@ end if
 
 if (qccli%height2level) then
                                 !shape file for Emilia Romagna clima !
-  filepath=get_package_filepath('macroaree_er.shp', filetype_data)
+  filepath=get_package_filepath('share:macroaree_er.shp', filetype_data)
 else
                                 !shape file for Europa clima !
-  filepath=get_package_filepath('ens_v8_ll', filetype_data)
+  filepath=get_package_filepath('share:ens_v8_ll.shp', filetype_data)
 end if
 
 if (present(macropath))then
@@ -541,15 +541,13 @@ end subroutine qcclidelete
 !! La scelta dei parametri di normalizzazione dipende dal mese, dall'ora, 
 !! dall'area.
 
-SUBROUTINE vol7d_normalize_data(this, clima, height2level, battrinv)
+SUBROUTINE vol7d_normalize_data(qccli, height2level, battrinv)
  
-TYPE(vol7d),INTENT(inout) :: this !< volume providing data to be computed, it is not modified by the method,
-                                  !!apart from performing a \a vol7d_alloc_vol on it
-TYPE(vol7d),INTENT(in) :: clima !< volume providing percentile
+TYPE(qcclitype),INTENT(inout) :: qccli !< volume providing data to be computed, it is modified by the method
 logical ,intent(in),optional :: height2level   !< use conventional level starting from station height
 character (len=10) ,intent(in),optional :: battrinv !< attributo invalidated in input/output
 
-real :: datoqui, altezza, perc25, perc50,perc75
+real :: datoqui, perc25, perc50,perc75
 integer :: indana , indanavar, indtime ,indlevel ,indtimerange ,inddativarr, indnetwork
 integer :: indcana,           indctime,indclevel,indctimerange,indcdativarr,indcnetwork
 integer :: indbattrinv
@@ -557,37 +555,40 @@ TYPE(vol7d_ana)  :: ana
 TYPE(datetime)   :: time, nintime
 TYPE(vol7d_level):: level
 type(vol7d_var)  :: anavar
-integer :: mese, ora, desc
+integer :: mese, ora, desc, iarea
+CHARACTER(len=vol7d_ana_lenident) :: ident
+
 
 indbattrinv=0
-if (associated(this%dativarattr%b))then
+if (associated(qccli%v7d%dativarattr%b))then
   if (present(battrinv))then
-    indbattrinv = index_c(this%dativarattr%b(:)%btable, battrinv)
+    indbattrinv = index_c(qccli%v7d%dativarattr%b(:)%btable, battrinv)
   else
-    indbattrinv = index_c(this%dativarattr%b(:)%btable, '*B33196')
+    indbattrinv = index_c(qccli%v7d%dativarattr%b(:)%btable, '*B33196')
   end if
 end if
 
-do indana=1,size(this%ana)
+do indana=1,size(qccli%v7d%ana)
 
 !  iarea= supermacroa(qccli%in_macroa(indana))
+  iarea= qccli%in_macroa(indana)
 
-  do indnetwork=1,size(this%network)
-    do indlevel=1,size(this%level)
-      do indtimerange=1,size(this%timerange)
-        do inddativarr=1,size(this%dativar%r)
-          do indtime=1,size(this%time)
+  do indnetwork=1,size(qccli%v7d%network)
+    do indlevel=1,size(qccli%v7d%level)
+      do indtimerange=1,size(qccli%v7d%timerange)
+        do inddativarr=1,size(qccli%v7d%dativar%r)
+          do indtime=1,size(qccli%v7d%time)
 
-            datoqui = this%voldatir  (indana ,indtime ,indlevel ,indtimerange ,inddativarr, indnetwork )
+            datoqui = qccli%v7d%voldatir  (indana ,indtime ,indlevel ,indtimerange ,inddativarr, indnetwork )
               
             if (c_e(datoqui)) then
 
               if (indbattrinv > 0) then
-                if( invalidated(this%voldatiattrb&
+                if( invalidated(qccli%v7d%voldatiattrb&
                  (indana,indtime,indlevel,indtimerange,inddativarr,indnetwork,indbattrinv))) cycle
               end if
 
-              nintime=this%time(indtime)+timedelta_new(minute=30)
+              nintime=qccli%v7d%time(indtime)+timedelta_new(minute=30)
               CALL getval(nintime, month=mese, hour=ora)
 
               time=cyclicdatetime_to_conventional(cyclicdatetime_new(month=mese, hour=ora))
@@ -595,32 +596,37 @@ do indana=1,size(this%ana)
 
               call init(anavar,"B07030" )
               indanavar = -1
-              if (associated (this%anavar%r)) then
-                indanavar        = index(this%anavar%r, anavar)
+              if (associated (qccli%v7d%anavar%r)) then
+                indanavar        = index(qccli%v7d%anavar%r, anavar)
               end if
               if (indanavar <= 0 )cycle
 
-              ! use conventional level starting from station height
+!!!!!  TODO !
               if (optio_log(height2level)) then
-                altezza= this%volanar(indana,indanavar,indnetwork)
-                call cli_level(altezza,level)
-              else
-                level=this%level(indlevel)
+                call raise_fatal_error("height2level not managed in vol7d_normalize_data")
               end if
+!!$              ! use conventional level starting from station height
+!!$              if (optio_log(height2level)) then
+!!$                altezza= this%volanar(indana,indanavar,indnetwork)
+!!$                call cli_level(altezza,level)
+!!$              else
+!!$                level=this%level(indlevel)
+!!$              end if
 
+              level=qccli%v7d%level(indlevel)
 
               indcnetwork      = 1
               
                                 !indcana          = firsttrue(qccli%clima%ana     == ana)
               
-              indctime         = index(clima%time                  ,  time)
-              indclevel        = index(clima%level                 ,  level)
-              indctimerange    = index(clima%timerange             ,  this%timerange(indtimerange))
+              indctime         = index(qccli%clima%time                  ,  time)
+              indclevel        = index(qccli%clima%level                 ,  level)
+              indctimerange    = index(qccli%clima%timerange             ,  qccli%v7d%timerange(indtimerange))
               
                                 ! attenzione attenzione TODO
                                 ! se leggo da bufr il default è char e non reale
 
-              indcdativarr     = index(clima%dativar%r, this%dativar%r(inddativarr))
+              indcdativarr     = index(qccli%clima%dativar%r, qccli%v7d%dativar%r(inddativarr))
               
 !!$                                print *,"dato  ",qccli%v7d%timerange(indtimerange) 
 !!$                                print *,"clima ",qccli%clima%timerange
@@ -638,36 +644,38 @@ do indana=1,size(this%ana)
               perc50=rmiss
               perc75=rmiss
 
-              if (associated(clima%voldatir)) then
+              if (associated(qccli%clima%voldatir)) then
                 desc=25
-!                write(ident,'("BOX",2i3.3)')iarea,desc   ! macro-area e descrittore
-!                call init(ana,ident=ident)
-                indcana=index(clima%ana,ana)
+                write(ident,'("BOX",2i3.3)')iarea,desc   ! macro-area e descrittore
+                call init(ana,ident=ident)
+                indcana=index(qccli%clima%ana,ana)
                 if (indcana > 0 )then
-                  perc25=clima%voldatir(indcana,1,indclevel,indctimerange,indcdativarr,indcnetwork)
+                  perc25=qccli%clima%voldatir(indcana,1,indclevel,indctimerange,indcdativarr,indcnetwork)
                 end if
                 desc=50
-                                !                write(ident,'("BOX",2i3.3)')iarea,desc   ! macro-area e descrittore
-                                !                call init(ana,ident=ident)
-                indcana=index(clima%ana,ana)
+                write(ident,'("BOX",2i3.3)')iarea,desc   ! macro-area e descrittore
+                call init(ana,ident=ident)
+                indcana=index(qccli%clima%ana,ana)
                 if (indcana > 0 )then
-                  perc50=clima%voldatir(indcana,1,indclevel,indctimerange,indcdativarr,indcnetwork)
+                  perc50=qccli%clima%voldatir(indcana,1,indclevel,indctimerange,indcdativarr,indcnetwork)
                 end if
               
                 desc=75
-                                !                write(ident,'("BOX",2i3.3)')iarea,desc   ! macro-area e descrittore
-                                !                call init(ana,ident=ident)
-                indcana=index(clima%ana,ana)
+                write(ident,'("BOX",2i3.3)')iarea,desc   ! macro-area e descrittore
+                call init(ana,ident=ident)
+                indcana=index(qccli%clima%ana,ana)
                 if (indcana > 0 )then
-                  perc75=clima%voldatir(indcana,1,indclevel,indctimerange,indcdativarr,indcnetwork)
+                  perc75=qccli%clima%voldatir(indcana,1,indclevel,indctimerange,indcdativarr,indcnetwork)
                 end if
               end if
               
+              call l4f_log(L4F_DEBUG,"vol7d_normalize_data perc25 perc50 perc75: "//t2c(perc25)//t2c(perc50)//t2c(perc75))
+
               if ( c_e(perc25) .and. c_e(perc50) .and. c_e(perc75) ) then
                                 ! normalize
 
-                datoqui = (datoqui - perc50) / (perc75 - perc25) + base_value(this%dativar%r(inddativarr)%btable)
-                this%voldatir  (indana ,indtime ,indlevel ,indtimerange ,inddativarr, indnetwork ) = datoqui
+                datoqui = (datoqui - perc50) / (perc75 - perc25) + base_value(qccli%v7d%dativar%r(inddativarr)%btable)
+                qccli%v7d%voldatir  (indana ,indtime ,indlevel ,indtimerange ,inddativarr, indnetwork ) = datoqui
 
               end if
             end if
@@ -815,11 +823,14 @@ qccli%v7d%voldatiattrb(:,:,:,:,:,:,indtbattrout)=ibmiss
 
 do indana=1,size(qccli%v7d%ana)
 
-  if (qccli%height2level) then
-    iarea= supermacroa(qccli%in_macroa(indana))
-  else
-    iarea= qccli%in_macroa(indana)
-  end if
+!  if (qccli%height2level) then
+!    iarea= supermacroa(qccli%in_macroa(indana))
+!  else
+  iarea= qccli%in_macroa(indana)
+
+  if (.not. c_e(iarea)) cycle
+
+!  end if
 !  write(ident,'("BOX",2i3.3)')iarea,desc   ! macro-area e descrittore
                                 !lat=0.0d0
                                 !lon=0.0d0
@@ -921,7 +932,7 @@ do indana=1,size(qccli%v7d%ana)
 !!$              call display(time)
 !!$              call display(level)
 !!$              call display(qccli%v7d%timerange(indtimerange))
-              print *,"indici percentili",indctime,indclevel,indctimerange,indcdativarr,indcnetwork
+!!$              print *,"indici percentili",indctime,indclevel,indctimerange,indcdativarr,indcnetwork
               if (indctime <= 0 .or. indclevel <= 0 .or. indctimerange <= 0 .or. indcdativarr <= 0 &
                .or. indcnetwork <= 0 ) cycle
               
@@ -952,8 +963,6 @@ do indana=1,size(qccli%v7d%ana)
                   write(ident,'("BOX",2i3.3)')iarea,desc   ! macro-area e descrittore
                   call init(ana,ident=ident,lat=latc,lon=lonc)
                   indcana=index(qccli%extreme%ana,ana)
-                  call display(ana)
-                  print *,"indcana 25 ",indcana
                   if (indcana > 0 )then
                     perc25=qccli%extreme%voldatir(indcana,indctime,indclevel,indctimerange,indcdativarr,indcnetwork)
                   end if
@@ -962,8 +971,8 @@ do indana=1,size(qccli%v7d%ana)
                   write(ident,'("BOX",2i3.3)')iarea,desc   ! macro-area e descrittore
                   call init(ana,ident=ident,lat=latc,lon=lonc)
                   indcana=index(qccli%extreme%ana,ana)
-                  call display(ana)
-                  print *,"indcana 50 ",indcana
+!!$                  call display(ana)
+!!$                  print *,"indcana 50 ",indcana
                   if (indcana > 0 )then
                     perc50=qccli%extreme%voldatir(indcana,indctime,indclevel,indctimerange,indcdativarr,indcnetwork)
                   end if
@@ -972,16 +981,14 @@ do indana=1,size(qccli%v7d%ana)
                   write(ident,'("BOX",2i3.3)')iarea,desc   ! macro-area e descrittore
                   call init(ana,ident=ident,lat=latc,lon=lonc)
                   indcana=index(qccli%extreme%ana,ana)
-                  call display(ana)
-                  print *,"indcana 75 ",indcana
                   if (indcana > 0 )then
                     perc75=qccli%extreme%voldatir(indcana,indctime,indclevel,indctimerange,indcdativarr,indcnetwork)
                   end if
                 end if
 
-                print *, datoqui,"clima ->",perc25,perc50,perc75
-
                 if ( .not. c_e(perc25) .or. .not. c_e(perc50) .or. .not. c_e(perc75)) cycle
+
+                print *, "datoqui: ",datoqui,"clima ->",perc25,perc50,perc75
 
                                 !http://it.wikipedia.org/wiki/Funzione_di_ripartizione_della_variabile_casuale_normale
                                 ! 3.65 for 0.01% each side ( 0.02% total )
@@ -1201,6 +1208,7 @@ end subroutine cli_level_generate
 
 
 !> Rielabora le macroarea facendole Valentine/Elements thinking
+!> OBSOLETA
 integer function supermacroa(macroa)
 
 integer, intent(in) :: macroa 
