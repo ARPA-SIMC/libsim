@@ -165,6 +165,7 @@ END FUNCTION getunit
 FUNCTION get_package_filepath(filename, filetype) RESULT(path)
 CHARACTER(len=*), INTENT(in) :: filename !< name of the file to be searched, it must be a relative path name
 INTEGER, INTENT(in) :: filetype !< type of file, the constants \a ::filetype_data or \a ::filetype_config have to be used
+character(len=len(filename)) :: lfilename
 
 INTEGER :: j
 CHARACTER(len=512) :: path
@@ -185,6 +186,10 @@ ENDIF
 share = filename(:6) == "share:"
 cwd = filename(:4) == "cwd:"
 
+lfilename=filename
+if (share) lfilename=filename(7:)
+if (cwd) lfilename=filename(5:)
+
 if ( .not. share .and. .not. cwd .and. filetype == filetype_data) then
   share=.true.
   cwd=.true.
@@ -192,7 +197,8 @@ end if
 
 if (cwd) then
                                 ! try with current dir
-  path = filename
+  path = lfilename
+  CALL l4f_log(L4F_debug, 'inquire local file '//TRIM(path))
   INQUIRE(file=path, exist=exist)
   IF (exist) THEN
     CALL l4f_log(L4F_INFO, 'local file '//TRIM(path)//' found')
@@ -206,7 +212,8 @@ if (share .or. filetype == filetype_config) then
   CALL getenv(TRIM(uppercase(package_name))//'_'//TRIM(filetypename(filetype)), path)
   IF (path /= ' ') THEN
     
-    path(LEN_TRIM(path)+1:) = '/'//filename
+    path(LEN_TRIM(path)+1:) = '/'//lfilename
+    CALL l4f_log(L4F_debug, 'inquire package file '//TRIM(path))
     INQUIRE(file=path, exist=exist)
     IF (exist) THEN
       CALL l4f_log(L4F_INFO, 'package file '//TRIM(path)//' found')
@@ -216,7 +223,8 @@ if (share .or. filetype == filetype_config) then
 
                                 ! try with install prefix
   path = TRIM(prefix)//TRIM(postfix(filetype)) &
-   //'/'//TRIM(package_name)//'/'//filename
+   //'/'//TRIM(package_name)//'/'//lfilename
+  CALL l4f_log(L4F_debug, 'inquire package file '//TRIM(path))
   INQUIRE(file=path, exist=exist)
   IF (exist) THEN
     CALL l4f_log(L4F_INFO, 'package file '//TRIM(path)//' found')
@@ -227,16 +235,19 @@ if (share .or. filetype == filetype_config) then
   DO j = 1, SIZE(preflist,1)
     IF (preflist(j,filetype) == ' ') EXIT
     path = TRIM(preflist(j,filetype))//TRIM(postfix(filetype)) &
-     //'/'//TRIM(package_name)//'/'//filename
+     //'/'//TRIM(package_name)//'/'//lfilename
+    CALL l4f_log(L4F_debug, 'inquire package file '//TRIM(path))
     INQUIRE(file=path, exist=exist)
     IF (exist) THEN
       CALL l4f_log(L4F_INFO, 'package file '//TRIM(path)//' found')
       RETURN
     ENDIF
   ENDDO
-  CALL l4f_log(L4F_ERROR, 'package file '//TRIM(filename)//' not found')
+
+  CALL l4f_log(L4F_ERROR, 'package file '//TRIM(lfilename)//' not found')
   CALL raise_error()
   path = ''
+
 end if
 
 END FUNCTION get_package_filepath
