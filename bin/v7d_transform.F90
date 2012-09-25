@@ -1117,7 +1117,7 @@ if (comp_qc_ndi) then
   CALL init(v7dtmp) ! detach it
 
 else if (comp_qc_perc) then
-  call vol7d_compute_percentile(v7d,v7dtmp, perc_vals=(/25.,50.,75./),cyclicdt=cyclicdt)
+  call vol7d_compute_percentile(v7d,v7dtmp, perc_vals=(/25.,50.,75./),cyclicdt=cyclicdt,presentperc=.1)
 !  call vol7d_compute_percentile(v7d,v7dtmp, perc_vals=(/15.87,50.,84.13/),cyclicdt=cyclicdt)
   call delete(v7d)
   v7d=v7dtmp
