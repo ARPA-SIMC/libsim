@@ -348,7 +348,7 @@ else
 end if
 #endif
 
-
+#ifdef HAVE_DBALLE
 call delete(ltimei)
 call delete(ltimef)
 
@@ -372,8 +372,6 @@ else
   ltimef=datetime_miss
 
 end if
-
-#ifdef HAVE_DBALLE
 
 call init(network,"qcclima-perc")
 call optio(dsnextreme,ldsnextreme)
@@ -422,10 +420,10 @@ else
   call delete(v7d_dballeextreme)
 
 end if
-#endif
 
 call delete(ltimei)
 call delete(ltimef)
+#endif
 
 return
 end subroutine qccliinit

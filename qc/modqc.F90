@@ -187,11 +187,11 @@ end interface
 
 !> Remove data under a defined grade of confidence.
 interface peeled
-  module procedure peeledrb, peeleddb, peeledbb, peeledib,peeledcb &
-                  ,peeledri, peeleddi, peeledbi, peeledii,peeledci &
-                  ,peeledrr, peeleddr, peeledbr, peeledir,peeledcr &
-                  ,peeledrd, peeleddd, peeledbd, peeledid,peeledcd &
-                  ,peeledrc, peeleddc, peeledbc, peeledic,peeledcc
+  module procedure peeledrb, peeleddb, peeledbb, peeledib, peeledcb &
+                  ,peeledri, peeleddi, peeledbi, peeledii, peeledci &
+                  ,peeledrr, peeleddr, peeledbr, peeledir, peeledcr &
+                  ,peeledrd, peeleddd, peeledbd, peeledid, peeledcd &
+                  ,peeledrc, peeleddc, peeledbc, peeledic, peeledcc
 end interface
 
 
@@ -215,7 +215,6 @@ contains
 
 
 ! peeled routines
-
 #undef VOL7D_POLY_SUBTYPE
 #undef VOL7D_POLY_SUBTYPES
 #undef VOL7D_POLY_ISC
@@ -225,33 +224,43 @@ contains
 #undef VOL7D_POLY_TYPE
 #undef VOL7D_POLY_TYPES
 #undef VOL7D_POLY_ISC
+#undef VOL7D_POLY_TYPES_SUBTYPES
 #define VOL7D_POLY_TYPE REAL
 #define VOL7D_POLY_TYPES r
+#define VOL7D_POLY_TYPES_SUBTYPES rr
 #include "modqc_peeled_include.F90"
 #include "modqc_peel_util_include.F90"
 #undef VOL7D_POLY_TYPE
 #undef VOL7D_POLY_TYPES
+#undef VOL7D_POLY_TYPES_SUBTYPES
 #define VOL7D_POLY_TYPE DOUBLE PRECISION
 #define VOL7D_POLY_TYPES d
+#define VOL7D_POLY_TYPES_SUBTYPES dr
 #include "modqc_peeled_include.F90"
 #include "modqc_peel_util_include.F90"
 #undef VOL7D_POLY_TYPE
 #undef VOL7D_POLY_TYPES
+#undef VOL7D_POLY_TYPES_SUBTYPES
 #define VOL7D_POLY_TYPE INTEGER
 #define VOL7D_POLY_TYPES i
+#define VOL7D_POLY_TYPES_SUBTYPES ir
 #include "modqc_peeled_include.F90"
 #include "modqc_peel_util_include.F90"
 #undef VOL7D_POLY_TYPE
 #undef VOL7D_POLY_TYPES
+#undef VOL7D_POLY_TYPES_SUBTYPES
 #define VOL7D_POLY_TYPE INTEGER(kind=int_b)
 #define VOL7D_POLY_TYPES b
+#define VOL7D_POLY_TYPES_SUBTYPES br
 #include "modqc_peeled_include.F90"
 #include "modqc_peel_util_include.F90"
 #undef VOL7D_POLY_TYPE
 #undef VOL7D_POLY_TYPES
+#undef VOL7D_POLY_TYPES_SUBTYPES
 #define VOL7D_POLY_TYPE CHARACTER(len=vol7d_cdatalen)
 #define VOL7D_POLY_TYPES c
 #define VOL7D_POLY_ISC = 1
+#define VOL7D_POLY_TYPES_SUBTYPES cr
 #include "modqc_peeled_include.F90"
 #include "modqc_peel_util_include.F90"
 
@@ -264,28 +273,38 @@ contains
 
 #undef VOL7D_POLY_TYPE
 #undef VOL7D_POLY_TYPES
+#undef VOL7D_POLY_TYPES_SUBTYPES
 #define VOL7D_POLY_TYPE REAL
 #define VOL7D_POLY_TYPES r
+#define VOL7D_POLY_TYPES_SUBTYPES rd
 #include "modqc_peeled_include.F90"
 #undef VOL7D_POLY_TYPE
 #undef VOL7D_POLY_TYPES
+#undef VOL7D_POLY_TYPES_SUBTYPES
 #define VOL7D_POLY_TYPE DOUBLE PRECISION
 #define VOL7D_POLY_TYPES d
+#define VOL7D_POLY_TYPES_SUBTYPES dd
 #include "modqc_peeled_include.F90"
 #undef VOL7D_POLY_TYPE
 #undef VOL7D_POLY_TYPES
+#undef VOL7D_POLY_TYPES_SUBTYPES
 #define VOL7D_POLY_TYPE INTEGER
 #define VOL7D_POLY_TYPES i
+#define VOL7D_POLY_TYPES_SUBTYPES id
 #include "modqc_peeled_include.F90"
 #undef VOL7D_POLY_TYPE
 #undef VOL7D_POLY_TYPES
+#undef VOL7D_POLY_TYPES_SUBTYPES
 #define VOL7D_POLY_TYPE INTEGER(kind=int_b)
 #define VOL7D_POLY_TYPES b
+#define VOL7D_POLY_TYPES_SUBTYPES bd
 #include "modqc_peeled_include.F90"
 #undef VOL7D_POLY_TYPE
 #undef VOL7D_POLY_TYPES
+#undef VOL7D_POLY_TYPES_SUBTYPES
 #define VOL7D_POLY_TYPE CHARACTER(len=vol7d_cdatalen)
 #define VOL7D_POLY_TYPES c
+#define VOL7D_POLY_TYPES_SUBTYPES cd
 #include "modqc_peeled_include.F90"
 
 
@@ -297,29 +316,39 @@ contains
 
 #undef VOL7D_POLY_TYPE
 #undef VOL7D_POLY_TYPES
+#undef VOL7D_POLY_TYPES_SUBTYPES
 #define VOL7D_POLY_TYPE REAL
 #define VOL7D_POLY_TYPES r
+#define VOL7D_POLY_TYPES_SUBTYPES ri
 #include "modqc_peeled_include.F90"
 #undef VOL7D_POLY_TYPE
 #undef VOL7D_POLY_TYPES
+#undef VOL7D_POLY_TYPES_SUBTYPES
 #define VOL7D_POLY_TYPE DOUBLE PRECISION
 #define VOL7D_POLY_TYPES d
+#define VOL7D_POLY_TYPES_SUBTYPES di
 #include "modqc_peeled_include.F90"
 #undef VOL7D_POLY_TYPE
 #undef VOL7D_POLY_TYPES
+#undef VOL7D_POLY_TYPES_SUBTYPES
 #define VOL7D_POLY_TYPE INTEGER
 #define VOL7D_POLY_TYPES i
+#define VOL7D_POLY_TYPES_SUBTYPES ii
 #include "modqc_peeled_include.F90"
 #undef VOL7D_POLY_TYPE
 #undef VOL7D_POLY_TYPES
+#undef VOL7D_POLY_TYPES_SUBTYPES
 #define VOL7D_POLY_TYPE INTEGER(kind=int_b)
 #define VOL7D_POLY_TYPES b
+#define VOL7D_POLY_TYPES_SUBTYPES bi
 #include "modqc_peeled_include.F90"
 #undef VOL7D_POLY_TYPE
 #undef VOL7D_POLY_TYPES
+#undef VOL7D_POLY_TYPES_SUBTYPES
 #define VOL7D_POLY_TYPE CHARACTER(len=vol7d_cdatalen)
 #define VOL7D_POLY_TYPES c
 #define VOL7D_POLY_ISC = 1
+#define VOL7D_POLY_TYPES_SUBTYPES ci
 #include "modqc_peeled_include.F90"
 
 
@@ -331,31 +360,40 @@ contains
 
 #undef VOL7D_POLY_TYPE
 #undef VOL7D_POLY_TYPES
+#undef VOL7D_POLY_TYPES_SUBTYPES
 #define VOL7D_POLY_TYPE REAL
 #define VOL7D_POLY_TYPES r
+#define VOL7D_POLY_TYPES_SUBTYPES rb
 #include "modqc_peeled_include.F90"
 #undef VOL7D_POLY_TYPE
 #undef VOL7D_POLY_TYPES
+#undef VOL7D_POLY_TYPES_SUBTYPES
 #define VOL7D_POLY_TYPE DOUBLE PRECISION
 #define VOL7D_POLY_TYPES d
+#define VOL7D_POLY_TYPES_SUBTYPES db
 #include "modqc_peeled_include.F90"
 #undef VOL7D_POLY_TYPE
 #undef VOL7D_POLY_TYPES
+#undef VOL7D_POLY_TYPES_SUBTYPES
 #define VOL7D_POLY_TYPE INTEGER
 #define VOL7D_POLY_TYPES i
+#define VOL7D_POLY_TYPES_SUBTYPES ib
 #include "modqc_peeled_include.F90"
 #undef VOL7D_POLY_TYPE
 #undef VOL7D_POLY_TYPES
+#undef VOL7D_POLY_TYPES_SUBTYPES
 #define VOL7D_POLY_TYPE INTEGER(kind=int_b)
 #define VOL7D_POLY_TYPES b
+#define VOL7D_POLY_TYPES_SUBTYPES bb
 #include "modqc_peeled_include.F90"
 #undef VOL7D_POLY_TYPE
 #undef VOL7D_POLY_TYPES
+#undef VOL7D_POLY_TYPES_SUBTYPES
 #define VOL7D_POLY_TYPE CHARACTER(len=vol7d_cdatalen)
 #define VOL7D_POLY_TYPES c
 #define VOL7D_POLY_ISC = 1
+#define VOL7D_POLY_TYPES_SUBTYPES cb
 #include "modqc_peeled_include.F90"
-
 
 
 #undef VOL7D_POLY_SUBTYPE
@@ -366,31 +404,40 @@ contains
 
 #undef VOL7D_POLY_TYPE
 #undef VOL7D_POLY_TYPES
+#undef VOL7D_POLY_TYPES_SUBTYPES
 #define VOL7D_POLY_TYPE REAL
 #define VOL7D_POLY_TYPES r
+#define VOL7D_POLY_TYPES_SUBTYPES rc
 #include "modqc_peeled_include.F90"
 #undef VOL7D_POLY_TYPE
 #undef VOL7D_POLY_TYPES
+#undef VOL7D_POLY_TYPES_SUBTYPES
 #define VOL7D_POLY_TYPE DOUBLE PRECISION
 #define VOL7D_POLY_TYPES d
+#define VOL7D_POLY_TYPES_SUBTYPES dc
 #include "modqc_peeled_include.F90"
 #undef VOL7D_POLY_TYPE
 #undef VOL7D_POLY_TYPES
+#undef VOL7D_POLY_TYPES_SUBTYPES
 #define VOL7D_POLY_TYPE INTEGER
 #define VOL7D_POLY_TYPES i
+#define VOL7D_POLY_TYPES_SUBTYPES ic
 #include "modqc_peeled_include.F90"
 #undef VOL7D_POLY_TYPE
 #undef VOL7D_POLY_TYPES
+#undef VOL7D_POLY_TYPES_SUBTYPES
 #define VOL7D_POLY_TYPE INTEGER(kind=int_b)
 #define VOL7D_POLY_TYPES b
+#define VOL7D_POLY_TYPES_SUBTYPES bc
 #include "modqc_peeled_include.F90"
 #undef VOL7D_POLY_TYPE
 #undef VOL7D_POLY_TYPES
+#undef VOL7D_POLY_TYPES_SUBTYPES
 #define VOL7D_POLY_TYPE CHARACTER(len=vol7d_cdatalen)
 #define VOL7D_POLY_TYPES c
 #define VOL7D_POLY_ISC = 1
+#define VOL7D_POLY_TYPES_SUBTYPES cc
 #include "modqc_peeled_include.F90"
-
 
 
 subroutine init_qcattrvars(this)
