@@ -91,7 +91,7 @@ TYPE(vol7d_oraclesim) :: v7d_osim
 TYPE(vol7d_network) :: set_network_obj
 CHARACTER(len=network_name_len) :: set_network
 CHARACTER(len=512) :: dsn, user, password
-LOGICAL :: version, ldisplay, disable_qc, comp_qc_ndi, comp_qc_perc
+LOGICAL :: version, ldisplay, disable_qc, comp_qc_ndi, comp_qc_perc, comp_qc_area_er
 CHARACTER(len=512):: a_name
 INTEGER :: category
 
@@ -339,6 +339,8 @@ CALL optionparser_add(opt, ' ', 'comp-qc-ndi', comp_qc_ndi, help= &
  'enable compute of index (NDI) for use by Quality Control.')
 CALL optionparser_add(opt, ' ', 'comp-qc-perc', comp_qc_perc, help= &
  'enable compute of index (percentile) for use by Quality Control.')
+CALL optionparser_add(opt, ' ', 'comp-qc-area-er', comp_qc_area_er, help= &
+ 'enable compute of quality control index (percentile/NDI) only over Emila Romagna area.')
 
 ! options for defining output
 output_template = ''
@@ -1071,7 +1073,7 @@ if (comp_qc_ndi .or. comp_qc_perc) then
 #ifdef HAVE_DBALLE
    dsncli=dsn,user=user,password=password,&
 #endif
-   height2level=.true.,categoryappend="QC")
+   height2level=comp_qc_area_er,categoryappend="QC")
 
   IF (ldisplay) then
     print*," >>>>> Input Clima <<<<<"
@@ -1084,7 +1086,7 @@ end if
 
 if (comp_qc_ndi) then
   
-  call vol7d_compute_NormalizedDensityIndex(v7d,v7dtmp, perc_vals=(/(10.*i,i=0,10)/),cyclicdt=cyclicdt&
+  call qc_compute_NormalizedDensityIndex(qccli,v7dtmp, perc_vals=(/(10.*i,i=0,10)/),cyclicdt=cyclicdt&
    ,presentperc=.1)
   
 else if (comp_qc_perc) then
