@@ -213,7 +213,7 @@ if (share .or. filetype == filetype_config) then
   IF (path /= ' ') THEN
     
     path(LEN_TRIM(path)+1:) = '/'//lfilename
-    CALL l4f_log(L4F_debug, 'inquire package file '//TRIM(path))
+    CALL l4f_log(L4F_debug, 'inquire env package file '//TRIM(path))
     INQUIRE(file=path, exist=exist)
     IF (exist) THEN
       CALL l4f_log(L4F_INFO, 'package file '//TRIM(path)//' found')
@@ -224,7 +224,7 @@ if (share .or. filetype == filetype_config) then
                                 ! try with install prefix
   path = TRIM(prefix)//TRIM(postfix(filetype)) &
    //'/'//TRIM(package_name)//'/'//lfilename
-  CALL l4f_log(L4F_debug, 'inquire package file '//TRIM(path))
+  CALL l4f_log(L4F_debug, 'inquire install package file '//TRIM(path))
   INQUIRE(file=path, exist=exist)
   IF (exist) THEN
     CALL l4f_log(L4F_INFO, 'package file '//TRIM(path)//' found')
@@ -244,9 +244,9 @@ if (share .or. filetype == filetype_config) then
     ENDIF
   ENDDO
 
-  CALL l4f_log(L4F_ERROR, 'package file '//TRIM(lfilename)//' not found')
-  CALL raise_error()
-  path = ''
+  CALL l4f_log(L4F_INFO, 'package file '//TRIM(lfilename)//' not found')
+!  CALL raise_error()
+  path = cmiss
 
 end if
 
