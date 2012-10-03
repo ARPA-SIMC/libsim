@@ -112,6 +112,7 @@ use file_utilities
 use log4fortran
 use char_utilities
 use datetime_class
+use simple_stat
 !use array_utilities
 !use io_units
 #ifdef HAVE_DBALLE
@@ -225,14 +226,14 @@ qccli%category=l4f_category_get(a_name)
 
 qccli%height2level=optio_log(height2level)
 
-call init(coordmin)
-call init(coordmax)
+call init(lcoordmin)
+call init(lcoordmax)
 
-!  mmm... I am not sure here .... this will be removed
-if (qccli%height2level) then
-  if (present(coordmin)) lcoordmin=coordmin
-  if (present(coordmax)) lcoordmax=coordmax
-end if
+!!$!  mmm... I am not sure here .... this will be removed
+!!$if (qccli%height2level) then
+!!$  if (present(coordmin)) lcoordmin=coordmin
+!!$  if (present(coordmax)) lcoordmax=coordmax
+!!$end if
 
 nullify ( qccli%in_macroa )
 nullify ( qccli%data_id_in )
@@ -402,9 +403,12 @@ if (.not. c_e(ldsnextreme)) then
 #endif
 
   case default
-    call l4f_category_log(qccli%category,L4F_ERROR,&
-     "file type not supported (user .v7d or .bufr suffix only): "//trim(filepathextreme))
-    call raise_error()
+
+    if (c_e(filepathextreme)) then
+      call l4f_category_log(qccli%category,L4F_ERROR,&
+       "file type not supported (user .v7d or .bufr suffix only): "//trim(filepathextreme))
+      call raise_error()
+    end if
   end select
 
 #ifdef HAVE_DBALLE
@@ -569,6 +573,13 @@ end if
 do indana=1,size(qccli%v7d%ana)
 
 !  iarea= supermacroa(qccli%in_macroa(indana))
+
+  if (.not. associated (qccli%in_macroa)) then
+    call l4f_category_log(qccli%category,L4F_WARN,"macroarea data not iniziatized: normalize data not possible")
+!    call raise_fatal_error()
+    return
+  end if
+
   iarea= qccli%in_macroa(indana)
 
   do indnetwork=1,size(qccli%v7d%network)
@@ -601,7 +612,8 @@ do indana=1,size(qccli%v7d%ana)
 
 !!!!!  TODO !
               if (optio_log(height2level)) then
-                call raise_fatal_error("height2level not managed in vol7d_normalize_data")
+                call l4f_category_log(qccli%category,L4F_ERROR,"height2level not managed in vol7d_normalize_data")
+                call raise_fatal_error()
               end if
 !!$              ! use conventional level starting from station height
 !!$              if (optio_log(height2level)) then
@@ -699,7 +711,7 @@ ind = index_c(btables,btable)
 if (ind > 0) then
   base_value = base_values(ind)
 else
-  call l4f_log(L4F_WARN,"vol7d_normalize_data: variable "//btable//" do not have base value")
+  call l4f_log(L4F_WARN,"modqccli_base_value: variable "//btable//" do not have base value")
   base_value = 0.
 end if
 
@@ -1225,6 +1237,332 @@ if (macroa == 7 .or. macroa == 8 ) supermacroa=1
 !!$  if (qccli%in_macroa(indana) == 7 .or.  qccli%in_macroa(indana) == 8 ) iarea=1
 
 end function supermacroa
+
+
+SUBROUTINE qc_compute_percentile(this, that, perc_vals,cyclicdt,presentperc, presentnumb)
+ 
+TYPE(qcclitype),INTENT(inout) :: this !< volume providing data to be computed, it is not modified by the method, apart from performing a \a vol7d_alloc_vol on it
+TYPE(vol7d),INTENT(out) :: that !< output volume which will contain the computed data
+!TYPE(timedelta),INTENT(in) :: step !< length of the step over which the statistical processing is performed
+!TYPE(datetime),INTENT(in),OPTIONAL :: start !< start of statistical processing interval
+!TYPE(datetime),INTENT(in),OPTIONAL :: stopp  !< end of statistical processing interval
+real,intent(in) :: perc_vals(:) !< percentile values to use in compute, between 0. and 100.
+TYPE(cyclicdatetime),INTENT(in) :: cyclicdt !< cyclic date and time
+real, optional :: presentperc !< percentual of data present for compute (default='0.3)
+integer, optional :: presentnumb !< number of data present for compute (default='100)
+!!$logical, optional :: height2level   !< use conventional level starting from station height
+
+integer :: indana,indtime,indvar,indnetwork,indlevel ,indtimerange ,inddativarr,i,j,k,iana,narea
+
+REAL, DIMENSION(:),allocatable ::  perc
+TYPE(vol7d_var) ::  var
+character(len=vol7d_ana_lenident) :: ident
+character(len=1)            :: type
+integer :: areav(size(this%v7d%ana)),iclv(size(this%v7d%ana))
+real :: height
+logical,allocatable :: mask(:,:,:),maskplus(:,:,:)
+integer,allocatable :: area(:)
+real :: lpresentperc
+integer :: lpresentnumb
+
+lpresentperc=.3
+lpresentnumb=imiss
+
+if (present(presentnumb)) then
+  if (c_e(presentnumb)) then
+    lpresentnumb=presentnumb
+  end if
+end if
+
+
+if (present(presentperc)) then
+  if (c_e(presentperc)) then
+    lpresentperc=presentperc
+  end if
+end if
+
+allocate (perc(size(perc_vals)))
+CALL init(that, time_definition=this%v7d%time_definition)
+
+call init(var, btable="B01192")    ! MeteoDB station ID that here is the number of area
+
+type=cmiss
+indvar = index(this%v7d%anavar, var, type=type)
+indnetwork=min(1,size(this%v7d%network))
+
+if( indvar > 0 .and. indnetwork > 0 ) then
+  select case (type)
+  case("d")
+    areav=integerdat(this%v7d%volanad(:,indvar,indnetwork),this%v7d%anavar%d(indvar))
+  case("r")
+    areav=integerdat(this%v7d%volanar(:,indvar,indnetwork),this%v7d%anavar%r(indvar))
+  case("i")
+    areav=integerdat(this%v7d%volanai(:,indvar,indnetwork),this%v7d%anavar%i(indvar))
+  case("b")
+    areav=integerdat(this%v7d%volanab(:,indvar,indnetwork),this%v7d%anavar%b(indvar))
+  case("c")
+    areav=integerdat(this%v7d%volanac(:,indvar,indnetwork),this%v7d%anavar%c(indvar))
+  case default
+    areav=imiss
+  end select
+else
+  areav=imiss
+end if
+
+narea=count_distinct(areav)
+allocate(area(narea))
+area=pack_distinct(areav,narea)
+if (this%height2level) then
+  call vol7d_alloc(that,nana=narea*size(perc_vals)*cli_nlevel)
+else
+  call vol7d_alloc(that,nana=narea*size(perc_vals))
+endif
+
+#ifdef DEBUG
+CALL l4f_category_log(this%category,L4F_DEBUG, 'displaying this')
+CALL display(this%v7d)
+#endif
+
+if (this%height2level) then
+
+  call init(var, btable="B07030")    ! height
+  
+  type=cmiss
+  indvar = index(this%v7d%anavar, var, type=type)
+  indnetwork=min(1,size(this%v7d%network))
+
+  
+!!$#ifdef DEBUG
+!!$  CALL l4f_log(L4F_DEBUG, 'SIZE this anavar r '//t2c(SIZE(this%v7d%anavar%r)))
+!!$  if (ASSOCIATED(this%anavar%r)) then
+!!$    CALL l4f_log(L4F_DEBUG, 'SIZE this anavar r '//t2c(SIZE(this%anavar%r)))
+!!$    CALL l4f_log(L4F_DEBUG, 'SIZE this anavar r btable '//t2c(this%anavar%r(SIZE(this%anavar%r))%btable))
+!!$  endif
+!!$  CALL l4f_log(L4F_DEBUG, 'SIZE this anavar i '//t2c(SIZE(this%anavar%i)))
+!!$  if (ASSOCIATED(this%anavar%i)) then
+!!$    CALL l4f_log(L4F_DEBUG, 'SIZE this anavar i '//t2c(SIZE(this%anavar%i)))
+!!$    CALL l4f_log(L4F_DEBUG, 'SIZE this anavar i btable '//t2c(this%anavar%i(SIZE(this%anavar%i))%btable))
+!!$  endif
+!!$  CALL l4f_log(L4F_DEBUG, 'SIZE this anavar d '//t2c(SIZE(this%anavar%d)))
+!!$  if (ASSOCIATED(this%anavar%d)) then
+!!$    CALL l4f_log(L4F_DEBUG, 'SIZE this anavar d '//t2c(SIZE(this%anavar%d)))
+!!$    CALL l4f_log(L4F_DEBUG, 'SIZE this anavar d btable '//t2c(this%anavar%d(SIZE(this%anavar%d))%btable))
+!!$  endif
+!!$  CALL l4f_log(L4F_DEBUG, 'SIZE this anavar b '//t2c(SIZE(this%anavar%b)))
+!!$  if (ASSOCIATED(this%anavar%b)) then
+!!$    CALL l4f_log(L4F_DEBUG, 'SIZE this anavar b '//t2c(SIZE(this%anavar%b)))
+!!$    CALL l4f_log(L4F_DEBUG, 'SIZE this anavar b btable '//t2c(this%anavar%d(SIZE(this%anavar%b))%btable))
+!!$  endif
+!!$  CALL l4f_log(L4F_DEBUG, 'SIZE this anavar c '//t2c(SIZE(this%anavar%c)))
+!!$  if (ASSOCIATED(this%anavar%c)) then
+!!$    CALL l4f_log(L4F_DEBUG, 'SIZE this anavar c '//t2c(SIZE(this%anavar%c)))
+!!$    CALL l4f_log(L4F_DEBUG, 'SIZE this anavar c btable '//t2c(this%anavar%c(SIZE(this%anavar%c))%btable))
+!!$  endif
+!!$  CALL l4f_log(L4F_DEBUG, 'indvar has value '//t2c(indvar))
+!!$  CALL l4f_log(L4F_DEBUG, 'indnetwork has value '//t2c(indnetwork))
+!!$#endif
+
+  do k=1,size(this%v7d%ana)
+    
+    if( indvar > 0 .and. indnetwork > 0 ) then
+      select case (type)
+      case("d")
+        height=integerdat(this%v7d%volanad(k,indvar,indnetwork),this%v7d%anavar%d(indvar))
+      case("r")
+        height=integerdat(this%v7d%volanar(k,indvar,indnetwork),this%v7d%anavar%r(indvar))
+      case ("i")
+        height=integerdat(this%v7d%volanai(k,indvar,indnetwork),this%v7d%anavar%i(indvar))
+      case("b")
+        height=integerdat(this%v7d%volanab(k,indvar,indnetwork),this%v7d%anavar%b(indvar))
+      case("c")
+        height=integerdat(this%v7d%volanac(k,indvar,indnetwork),this%v7d%anavar%c(indvar))
+      case default
+        height=imiss
+      end select
+    else
+      height=imiss
+    end if
+
+    if (c_e(height)) then
+      iclv(k)=firsttrue(cli_level1 <= height .and. height <= cli_level2 )
+    else
+      iclv(k)=imiss
+    endif
+
+#ifdef DEBUG
+    CALL l4f_log(L4F_DEBUG, 'height has value '//t2c(height))
+    CALL l4f_log(L4F_DEBUG, 'for k having number '//t2c(k)//&
+       ' iclv has value '//t2c(iclv(k)))
+#endif
+  end do
+
+
+endif
+
+do i=1,narea
+  do j=1,size(perc_vals)
+    if (this%height2level) then
+       do k=1,cli_nlevel
+         write(ident,'("BOX",i1.1,i2.2,i3.3)')area(i),k,nint(perc_vals(j))
+         call init(that%ana((k-1)*size(perc_vals)*narea + (j-1)*narea + i),ident=ident,lat=0d0,lon=0d0)
+       enddo
+    else
+         write(ident,'("BOX",2i3.3)')area(i),nint(perc_vals(j))
+    call init(that%ana((j-1)*narea+i),ident=ident,lat=0d0,lon=0d0)
+    endif
+    !area((j-1)*narea+i)=area(i)
+    !percentile((j-1)*narea+i)=perc_vals(j)
+  end do
+end do
+
+!!$do i=1,size(that%ana)
+!!$  call display(that%ana(i))
+!!$end do
+
+#ifdef DEBUG
+CALL l4f_category_log(this%category, L4F_DEBUG, 'nana has value '//t2c(SIZE(this%v7d%ana)))
+CALL l4f_category_log(this%category, L4F_DEBUG, 'lpresentperc has value '//t2c(lpresentperc))
+CALL l4f_category_log(this%category, L4F_DEBUG, 'lpresentnumb has value '//t2c(lpresentnumb))
+#endif
+
+
+call vol7d_alloc(that,nlevel=size(this%v7d%level), ntimerange=size(this%v7d%timerange), &
+ ndativarr=size(this%v7d%dativar%r), nnetwork=1,ntime=1)
+
+that%level=this%v7d%level
+that%timerange=this%v7d%timerange
+that%dativar%r=this%v7d%dativar%r
+that%time(1)=cyclicdatetime_to_conventional(cyclicdt)
+call l4f_category_log(this%category, L4F_INFO,"vol7d_compute_percentile conventional datetime "//to_char(that%time(1)))
+call init(that%network(1),name="qcclima-perc")
+
+call vol7d_alloc_vol(that,inivol=.true.)
+
+allocate (mask(size(this%v7d%ana),size(this%v7d%time),size(this%v7d%network)))
+
+indtime=1
+indnetwork=1
+do inddativarr=1,size(this%v7d%dativar%r)
+#ifdef DEBUG
+  CALL l4f_category_log(this%category, L4F_DEBUG, 'SIZE(inddativarr) has value '//t2c(size(this%v7d%dativar%r)))
+#endif
+  do indtimerange=1,size(this%v7d%timerange)
+#ifdef DEBUG
+    CALL l4f_category_log(this%category, L4F_DEBUG, 'SIZE(indtimerange) has value '//t2c(size(this%v7d%timerange)))
+#endif
+    do indlevel=1,size(this%v7d%level)            ! all stations, all times, all networks
+#ifdef DEBUG
+      CALL l4f_category_log(this%category, L4F_DEBUG, 'SIZE(indlevel) has value '//t2c(size(this%v7d%level)))
+#endif
+      do i=1,narea
+#ifdef DEBUG
+        CALL l4f_category_log(this%category, L4F_DEBUG, 'narea has value '//t2c(narea))
+#endif
+       
+
+                                !this%v7d%voldatir(indana, indtime, indlevel, indtimerange, inddativarr, indnetwork)
+
+        !create mask only with valid time
+        mask = spread(spread((this%v7d%time == cyclicdt ),1,size(this%v7d%ana)),3,size(this%v7d%network))
+        !delete in mask different area
+        do j=1, size(mask,1)
+
+          if (areav(j) /= area(i)) mask(j,:,:) =.false.
+
+        end do
+
+        if (this%height2level) then
+          allocate (maskplus(size(this%v7d%ana),size(this%v7d%time),size(this%v7d%network)))
+          do k=1,cli_nlevel
+#ifdef DEBUG
+            CALL l4f_category_log(this%category, L4F_DEBUG, 'k has value '//t2c(k))
+#endif
+
+            do iana=1,size(mask,1)
+              if (iclv(iana)  /= k) maskplus(iana,:,:) =.false.
+              if (iclv(iana)  == k) maskplus(iana,:,:) = mask(iana,:,:)
+            enddo
+              
+                                ! we want more than 30% data present and a number of data bigger than 100 (default)
+            
+            if &
+             ( c_e(lpresentperc) .and. ((float(count & 
+             (maskplus .and. c_e(this%v7d%voldatir(:,:, indlevel, indtimerange, inddativarr,:)))&
+             ) / &
+             float(count (maskplus))) < lpresentperc)) &
+             cycle
+            
+            if &
+             ( c_e(lpresentnumb) .and. (count & 
+             (maskplus .and. c_e(this%v7d%voldatir(:,:, indlevel, indtimerange, inddativarr,:))) < lpresentnumb)&
+             ) &
+             cycle
+            
+            perc= stat_percentile (&
+             pack(this%v7d%voldatir(:,:, indlevel, indtimerange, inddativarr,:), &
+             mask=maskplus), &
+             perc_vals)
+
+!!$        print *,"------- percentile -----------"
+!!$        call display( this%v7d%timerange(indtimerange))
+!!$        call display( this%v7d%level(indlevel))
+!!$        call display( this%v7d%dativar%r(inddativarr))
+
+            do j=1,size(perc_vals)              
+              indana=(k-1)*size(perc_vals)*narea + (j-1)*narea + i
+              that%voldatir(indana, indtime, indlevel, indtimerange, inddativarr, indnetwork)=&
+               perc(j)
+            enddo
+            
+          enddo
+          deallocate(maskplus)
+        else
+            
+#ifdef DEBUG
+          CALL l4f_category_log(this%category, L4F_DEBUG, 'count has value '//t2c(count & 
+           (mask .and. c_e(this%v7d%voldatir(:,:, indlevel, indtimerange, inddativarr,:)))))
+#endif
+
+                                ! we want more than 30% data present and a number of data bigger than 100 (default)
+          if &
+           ( c_e(lpresentperc) .and. ((float(count & 
+           (mask .and. c_e(this%v7d%voldatir(:,:, indlevel, indtimerange, inddativarr,:)))&
+           ) / &
+           float(count (mask))) < lpresentperc)) &
+           cycle
+          
+          if &
+           ( c_e(lpresentnumb) .and. (count & 
+           (mask .and. c_e(this%v7d%voldatir(:,:, indlevel, indtimerange, inddativarr,:))) < lpresentnumb)&
+           ) &
+           cycle
+          
+          
+          perc= stat_percentile (&
+           pack(this%v7d%voldatir(:,:, indlevel, indtimerange, inddativarr,:), &
+           mask=mask), &
+           perc_vals)
+            
+!!$        print *,"------- percentile -----------"
+!!$        call display( this%v7d%timerange(indtimerange))
+!!$        call display( this%v7d%level(indlevel))
+!!$        call display( this%v7d%dativar%r(inddativarr))
+
+          do j=1,size(perc_vals)
+            indana=((j-1)*narea+i)
+            that%voldatir(indana, indtime, indlevel, indtimerange, inddativarr, indnetwork)=&
+             perc(j)
+          enddo
+        endif
+      end do
+    end do
+  end do
+end do
+
+deallocate (perc,mask,area)
+
+end SUBROUTINE qc_compute_percentile
+
 
 end module modqccli
 

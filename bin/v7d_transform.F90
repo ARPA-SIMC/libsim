@@ -40,7 +40,7 @@ USE grid_transform_class
 use volgrid6d_class
 USE georef_coord_class
 USE vol7d_csv
-USE modqc
+!USE modqc
 USE modqccli
 !USE ISO_FORTRAN_ENV
 #ifdef ALCHIMIA
@@ -83,16 +83,13 @@ DOUBLE PRECISION ::  ielon, ielat, felon, felat
 TYPE(geo_coord) :: coordmin,coordmax 
 TYPE(transform_def) :: trans
 #ifdef HAVE_DBALLE
-TYPE(vol7d_dballe) :: v7d_dba, v7d_dba_out, v7d_dba_clima
-integer :: yeari, yearf, monthi, monthf
-TYPE(datetime) :: clitimei, clitimef
+TYPE(vol7d_dballe) :: v7d_dba, v7d_dba_out
 #endif
 #ifdef HAVE_ORSIM
 TYPE(vol7d_oraclesim) :: v7d_osim
 #endif
 TYPE(vol7d_network) :: set_network_obj
 CHARACTER(len=network_name_len) :: set_network
-TYPE(vol7d_network)  :: clinetwork
 CHARACTER(len=512) :: dsn, user, password
 LOGICAL :: version, ldisplay, disable_qc, comp_qc_ndi, comp_qc_perc
 CHARACTER(len=512):: a_name
@@ -187,7 +184,8 @@ CALL optionparser_add(opt, ' ', 'coord-format', coord_format, &
  )
 
 CALL optionparser_add(opt, ' ', 'clima-file', clima_file, help= &
- 'file with percentile, required for normalize data before NDI compute')
+ 'file with percentile, required for normalize data before NDI compute.' &
+ //' Default is reading installed files in system path')
 clima_file=cmiss
 CALL optionparser_add(opt, ' ', 'clima-format', clima_format, &
 #ifdef HAVE_DBALLE
@@ -1026,38 +1024,28 @@ end if
 #endif
 
 
-if (comp_qc_ndi) then
-
+if (comp_qc_ndi .or. comp_qc_perc) then
 
   IF (c_e(clima_file)) THEN
-
                                 ! import percentile file
-IF (clima_format == 'native') THEN
+    IF (clima_format == 'native') THEN
 !!$
 !!$      clima_file=get_package_filepath(clima_file, filetype_data)
 !!$      CALL import(v7d_clima, filename=clima_file)
-  CALL l4f_category_log(category, L4F_ERROR, &
-   'error in command-line parameters, format '// &
-   TRIM(clima_format)//' in --clima-format native not valid or not supported.')
-  CALL raise_fatal_error()
+      CALL l4f_category_log(category, L4F_ERROR, &
+       'error in command-line parameters, format '// &
+       TRIM(clima_format)//' in --clima-format native not valid or not supported.')
+      CALL raise_fatal_error()
  
 #ifdef HAVE_DBALLE
     ELSE IF (clima_format == 'BUFR' .OR. clima_format == 'CREX') THEN
       file=.TRUE.
       clima_file=get_package_filepath(clima_file, filetype_data)
-
+      
     ELSE IF (clima_format == 'dba') THEN
       CALL parse_dba_access_info(clima_file, dsn, user, password)
       file=.FALSE.
-    
-    call init(clinetwork,"qcclima-perc")
-
-     if (size(vl) == 0) then
-      CALL l4f_category_log(category, L4F_ERROR, &
-       'you have to specify --variable-list= when data will be normalized for NDI compute')
-      CALL raise_fatal_error()
-    end if
-
+          
 #endif
     ELSE
       CALL l4f_category_log(category, L4F_ERROR, &
@@ -1065,42 +1053,53 @@ IF (clima_format == 'native') THEN
        TRIM(clima_format)//' in --clima-format not valid or not supported.')
       CALL raise_fatal_error()
     ENDIF
-
-
-    call init(qccli,v7d,vl,climapath=clima_file, &
-#ifdef HAVE_DBALLE
-     dsncli=dsn,user=user,password=password,&
-#endif
-     height2level=.false.,categoryappend="qc normalize")
-
-
-  
-    IF (ldisplay) then
-      print*," >>>>> Input Clima <<<<<"
-      call display(qccli%clima)
-    end IF
-
-    call vol7d_normalize_data(qccli)
-    call delete(qccli)
-
+    
   else
-
-    CALL l4f_category_log(category, L4F_WARN, 'compute Normalized Density Index without normalize data')
-
+    
+    CALL l4f_category_log(category, L4F_INFO, 'compute Percentile/Normalized Density Index with library data files')
+    
   ENDIF
 
+
+  if (size(vl) == 0) then
+    CALL l4f_category_log(category, L4F_ERROR, &
+     'you have to specify --variable-list= when data will be normalized for Percentile/NDI compute')
+    CALL raise_fatal_error()
+  end if
+    
+  call init(qccli,v7d,vl,climapath=clima_file, &
+#ifdef HAVE_DBALLE
+   dsncli=dsn,user=user,password=password,&
+#endif
+   height2level=.true.,categoryappend="QC")
+
+  IF (ldisplay) then
+    print*," >>>>> Input Clima <<<<<"
+    call display(qccli%clima)
+  end IF
+
+  call vol7d_normalize_data(qccli)
+    
+end if
+
+if (comp_qc_ndi) then
+  
   call vol7d_compute_NormalizedDensityIndex(v7d,v7dtmp, perc_vals=(/(10.*i,i=0,10)/),cyclicdt=cyclicdt&
    ,presentperc=.1)
-  call delete(v7d)
-  v7d=v7dtmp
-  CALL init(v7dtmp) ! detach it
-
+  
 else if (comp_qc_perc) then
-  call vol7d_compute_percentile(v7d,v7dtmp, perc_vals=(/25.,50.,75./),cyclicdt=cyclicdt,presentperc=.1)
+  call qc_compute_percentile(qccli,v7dtmp, perc_vals=(/25.,50.,75./),cyclicdt=cyclicdt,presentperc=.1)
 !  call vol7d_compute_percentile(v7d,v7dtmp, perc_vals=(/15.87,50.,84.13/),cyclicdt=cyclicdt)
+
+end if
+
+if (comp_qc_ndi .or. comp_qc_perc) then
+
   call delete(v7d)
   v7d=v7dtmp
   CALL init(v7dtmp) ! detach it
+  call delete(qccli)
+
 end if
 
 if (ldisplay) then

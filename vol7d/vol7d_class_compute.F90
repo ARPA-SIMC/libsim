@@ -1358,7 +1358,7 @@ END SUBROUTINE vol7d_normalize_vcoord
 !!$
 
 
-SUBROUTINE vol7d_compute_NormalizedDensityIndex(this, that, perc_vals,cyclicdt,presentperc)
+SUBROUTINE vol7d_compute_NormalizedDensityIndex(this, that, perc_vals,cyclicdt,presentperc, presentnumb)
  
 TYPE(vol7d),INTENT(inout) :: this !< volume providing data to be computed, it is not modified by the method, apart from performing a \a vol7d_alloc_vol on it
 TYPE(vol7d),INTENT(out) :: that !< output volume which will contain the computed data
@@ -1368,6 +1368,7 @@ TYPE(vol7d),INTENT(out) :: that !< output volume which will contain the computed
 real,intent(in) :: perc_vals(:) !< percentile values to use in compute, between 0. and 100.
 TYPE(cyclicdatetime),INTENT(in) :: cyclicdt !< cyclic date and time
 real,optional :: presentperc !< rate of data present for compute on expected values (default=0.3)
+integer,optional :: presentnumb  !< number of data present for compute (default=100)
 
 integer :: indana,indtime,indvar,indnetwork,indlevel ,indtimerange ,inddativarr, indattr
 integer :: i,j,narea
@@ -1379,8 +1380,19 @@ logical,allocatable :: mask(:,:,:)
 integer,allocatable :: area(:)
 REAL, DIMENSION(:),allocatable ::  ndi,limbins
 real ::  lpresentperc
+integer ::  lpresentnumb
 
-lpresentperc=0.3
+
+lpresentperc=.3
+lpresentnumb=imiss
+
+if (present(presentnumb)) then
+  if (c_e(presentnumb)) then
+    lpresentnumb=presentnumb
+  end if
+end if
+
+
 if (present(presentperc)) then
   if (c_e(presentperc)) then
     lpresentperc=presentperc
@@ -1470,8 +1482,12 @@ do inddativarr=1,size(this%dativar%r)
 !!$        print*,"Dati presenti:", count (mask .and. c_e(this%voldatir(:,:, indlevel, indtimerange, inddativarr,:)))
 !!$        print*,"Dati attesi:", count (mask)
 
-        if ((float(count (mask .and. c_e(this%voldatir(:,:, indlevel, indtimerange, inddativarr,:)))) / &
-            float(count (mask))) < lpresentperc) cycle
+        if ( &
+        ((float(count (mask .and. c_e(this%voldatir(:,:, indlevel, indtimerange, inddativarr,:)))) / &
+            float(count (mask))) < lpresentperc) &
+          .OR. &
+        (count (mask .and. c_e(this%voldatir(:,:, indlevel, indtimerange, inddativarr,:))) < lpresentnumb) ) &
+         cycle
 !!$        print*,"compute"
 !!$        print*,"-------------------------------------------------------------"
 
@@ -1513,139 +1529,5 @@ deallocate (ndi,limbins,mask,area)
 
 end SUBROUTINE vol7d_compute_NormalizedDensityIndex
 
-SUBROUTINE vol7d_compute_percentile(this, that, perc_vals,cyclicdt,presentperc)
- 
-TYPE(vol7d),INTENT(inout) :: this !< volume providing data to be computed, it is not modified by the method, apart from performing a \a vol7d_alloc_vol on it
-TYPE(vol7d),INTENT(out) :: that !< output volume which will contain the computed data
-!TYPE(timedelta),INTENT(in) :: step !< length of the step over which the statistical processing is performed
-!TYPE(datetime),INTENT(in),OPTIONAL :: start !< start of statistical processing interval
-!TYPE(datetime),INTENT(in),OPTIONAL :: stopp  !< end of statistical processing interval
-real,intent(in) :: perc_vals(:) !< percentile values to use in compute, between 0. and 100.
-TYPE(cyclicdatetime),INTENT(in) :: cyclicdt !< cyclic date and time
-real,optional :: presentperc !< percentual of data present for compute (default='0.3)
-
-integer :: indana,indtime,indvar,indnetwork,indlevel ,indtimerange ,inddativarr,i,j,narea
-REAL, DIMENSION(:),allocatable ::  perc
-TYPE(vol7d_var) ::  var
-character(len=vol7d_ana_lenident) :: ident
-character(len=1)            :: type
-integer :: areav(size(this%ana))
-logical,allocatable :: mask(:,:,:)
-integer,allocatable :: area(:)
-real :: lpresentperc
-
-lpresentperc=0.3
-if (present(presentperc)) then
-  if (c_e(presentperc)) then
-    lpresentperc=presentperc
-  end if
-end if
-
-allocate (perc(size(perc_vals)))
-CALL init(that, time_definition=this%time_definition)
-
-call init(var, btable="B01192")    ! MeteoDB station ID that here is the number of area
-
-type=cmiss
-indvar = index(this%anavar, var, type=type)
-indnetwork=min(1,size(this%network))
-
-if( indvar > 0 .and. indnetwork > 0 ) then
-  select case (type)
-  case("d")
-    areav=integerdat(this%volanad(:,indvar,indnetwork),this%anavar%d(indvar))
-  case("r")
-    areav=integerdat(this%volanar(:,indvar,indnetwork),this%anavar%r(indvar))
-  case("i")
-    areav=integerdat(this%volanai(:,indvar,indnetwork),this%anavar%i(indvar))
-  case("b")
-    areav=integerdat(this%volanab(:,indvar,indnetwork),this%anavar%b(indvar))
-  case("c")
-    areav=integerdat(this%volanac(:,indvar,indnetwork),this%anavar%c(indvar))
-  case default
-    areav=imiss
-  end select
-else
-  areav=imiss
-end if
-
-narea=count_distinct(areav)
-allocate(area(narea))
-area=pack_distinct(areav,narea)
-call vol7d_alloc(that,nana=narea*size(perc_vals))
-
-do i=1,narea
-  do j=1,size(perc_vals)
-    write(ident,'("BOX",2i3.3)')area(i),nint(perc_vals(j))
-    call init(that%ana((j-1)*narea+i),ident=ident,lat=0d0,lon=0d0)
-    !area((j-1)*narea+i)=area(i)
-    !percentile((j-1)*narea+i)=perc_vals(j)
-  end do
-end do
-
-!!$do i=1,size(that%ana)
-!!$  call display(that%ana(i))
-!!$end do
-
-call vol7d_alloc(that,nlevel=size(this%level), ntimerange=size(this%timerange), &
- ndativarr=size(this%dativar%r), nnetwork=1,ntime=1)
-
-that%level=this%level
-that%timerange=this%timerange
-that%dativar%r=this%dativar%r
-that%time(1)=cyclicdatetime_to_conventional(cyclicdt)
-call l4f_log(L4F_INFO,"vol7d_compute_percentile conventional datetime "//to_char(that%time(1)))
-call init(that%network(1),name="qcclima-perc")
-
-call vol7d_alloc_vol(that,inivol=.true.)
-
-allocate (mask(size(this%ana),size(this%time),size(this%network)))
-
-indtime=1
-indnetwork=1
-do inddativarr=1,size(this%dativar%r)
-  do indtimerange=1,size(this%timerange)
-    do indlevel=1,size(this%level)            ! all stations, all times, all networks
-      do i=1,narea
-
-                                !this%voldatir(indana, indtime, indlevel, indtimerange, inddativarr, indnetwork)
-
-        !create mask only with valid time
-        mask = spread(spread((this%time == cyclicdt ),1,size(this%ana)),3,size(this%network))
-        !delete in mask different area
-        do j=1, size(mask,1)
-          if (areav(j) /= area(i)) mask(j,:,:) =.false.
-        end do
-
-        ! we want more than 30% data present
-        if ((float(count & 
-         (mask .and. c_e(this%voldatir(:,:, indlevel, indtimerange, inddativarr,:)))&
-        ) / &
-        float(count (mask))) < lpresentperc) cycle
-
-        perc= stat_percentile (&
-         pack(this%voldatir(:,:, indlevel, indtimerange, inddativarr,:), &
-         mask=mask), &
-         perc_vals)
-
-!!$        print *,"------- percentile -----------"
-!!$        call display( this%timerange(indtimerange))
-!!$        call display( this%level(indlevel))
-!!$        call display( this%dativar%r(inddativarr))
-!!$        print *, perc
-
-        do j=1,size(perc_vals)
-          indana=((j-1)*narea+i)
-          that%voldatir(indana, indtime, indlevel, indtimerange, inddativarr, indnetwork)=&
-           perc(j)
-        end do
-      end do
-    end do
-  end do
-end do
-
-deallocate (perc,mask,area)
-
-end SUBROUTINE vol7d_compute_percentile
 
 END MODULE vol7d_class_compute
