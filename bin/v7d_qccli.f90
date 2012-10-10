@@ -132,8 +132,6 @@ call display(v7dqccli%extreme)
 print *,"data clima:"
 call display(v7dqccli%clima)
 
-call alloc(v7dqccli)
-
 call l4f_category_log(category,L4F_INFO,"start climat QC")
 
 call quaconcli(v7dqccli)

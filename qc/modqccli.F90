@@ -213,7 +213,7 @@ integer :: yeari, yearf, monthi, monthf, dayi, dayf,&
  houri, minutei, mseci, hourf, minutef, msecf
 #endif
  
-integer :: iuni,i
+integer :: iuni,i,j
 character(len=512) :: filepath
 character(len=512) :: filepathclima
 character(len=512) :: filepathextreme
@@ -273,15 +273,20 @@ call init(network,"qcclima-ndi")
 
 ltimei=datetime_miss
 ltimef=datetime_miss
-if (present (timei)) ltimei=timei
-if (present (timef)) ltimef=timef
- 
-ltimei=ltimei+timedelta_new(minute=30)
-ltimef=ltimef+timedelta_new(minute=30)
-CALL getval(ltimei, year=yeari, month=monthi, day=dayi, hour=houri, minute=minutei, msec=mseci)
+if (present (timei)) then
+  ltimei=timei
+  ltimei=ltimei+timedelta_new(minute=30)
+end if
+
+if (present (timef)) then
+  ltimef=timef
+  ltimef=ltimef+timedelta_new(minute=30)
+end if
+
+call getval(ltimei, year=yeari, month=monthi, day=dayi, hour=houri, minute=minutei, msec=mseci)
 call getval(ltimef, year=yearf, month=monthf, day=dayf, hour=hourf, minute=minutef, msec=msecf)
 
-if ( yeari == yearf .and. monthi == monthf ) then
+if (  c_e(yeari) .and. c_e(yearf) .and. yeari == yearf .and. monthi == monthf ) then
 
 !  call init(ltimei, 1001, monthi, 1, houri, minutei, mseci) 
 !  call init(ltimef, 1001, monthf, 1, hourf, minutef, msecf) 
@@ -309,31 +314,38 @@ if (.not. c_e(ldsncli)) then
 #endif
 
   if (.not. c_e(filepathclima)) then
-    filepathclima=get_package_filepath('climaprec.v7d', filetype_data)
+    filepathclima=get_package_filepath('qcclima-perc.v7d', filetype_data)
   end if
 
-  select case (trim(lowercase(suffixname(filepathclima))))
+  if (c_e(filepathclima))then
 
-  case("v7d")
-    iuni=getunit()
-    call import(qccli%clima,filename=filepathclima,unit=iuni)
-    close (unit=iuni)
+    select case (trim(lowercase(suffixname(filepathclima))))
+
+    case("v7d")
+      iuni=getunit()
+      call import(qccli%clima,filename=filepathclima,unit=iuni)
+      close (unit=iuni)
 
 #ifdef HAVE_DBALLE
-  case("bufr")
-    call init(v7d_dballecli,file=.true.,filename=filepathclima,categoryappend=trim(a_name)//".clima")
+    case("bufr")
+      call init(v7d_dballecli,file=.true.,filename=filepathclima,categoryappend=trim(a_name)//".clima")
                                 !call import(v7d_dballecli)
-    call import(v7d_dballecli,var=var,coordmin=lcoordmin, coordmax=lcoordmax, timei=ltimei, timef=ltimef, &
-     varkind=(/("r",i=1,size(var))/),attr=(/"*B33209"/),attrkind=(/"b"/),network=network)
-    call copy(v7d_dballecli%vol7d,qccli%clima)
-    call delete(v7d_dballecli)
+      call import(v7d_dballecli,var=var,coordmin=lcoordmin, coordmax=lcoordmax, timei=ltimei, timef=ltimef, &
+       varkind=(/("r",i=1,size(var))/),attr=(/"*B33209"/),attrkind=(/"b"/),network=network)
+      call copy(v7d_dballecli%vol7d,qccli%clima)
+      call delete(v7d_dballecli)
 #endif
 
-  case default
-    call l4f_category_log(qccli%category,L4F_ERROR,&
-     "file type not supported (use .v7d or .bufr suffix only): "//trim(filepathclima))
-    call raise_error()
-  end select
+    case default
+      call l4f_category_log(qccli%category,L4F_ERROR,&
+       "file type not supported (use .v7d or .bufr suffix only): "//trim(filepathclima))
+      call raise_error()
+    end select
+
+  else
+    call l4f_category_log(qccli%category,L4F_WARN,"clima volume not iniziatized: QC will not be possible")
+!    call raise_fatal_error()
+  end if
 
 #ifdef HAVE_DBALLE
 else
@@ -354,7 +366,7 @@ end if
 call delete(ltimei)
 call delete(ltimef)
 
-if ( yeari == yearf .and. monthi == monthf ) then
+if ( c_e(yeari) .and. c_e(yearf) .and. yeari == yearf .and. monthi == monthf ) then
 
   if ( dayi == dayf .and. houri == hourf .and. minutei == minutef .and. mseci == msecf ) then
 
@@ -386,31 +398,39 @@ if (.not. c_e(ldsnextreme)) then
     filepathextreme=get_package_filepath('qcclima-extreme.v7d', filetype_data)
   end if
 
-  select case (trim(lowercase(suffixname(filepathextreme))))
+  if (c_e(filepathextreme)) then
 
-  case("v7d")
-    iuni=getunit()
-    call import(qccli%extreme,filename=filepathextreme,unit=iuni)
-    close (unit=iuni)
+    select case (trim(lowercase(suffixname(filepathextreme))))
+
+    case("v7d")
+      iuni=getunit()
+      call import(qccli%extreme,filename=filepathextreme,unit=iuni)
+      close (unit=iuni)
 
 #ifdef HAVE_DBALLE
-  case("bufr")
-    call init(v7d_dballeextreme,file=.true.,filename=filepathextreme,categoryappend=trim(a_name)//".climaextreme")
+    case("bufr")
+      call init(v7d_dballeextreme,file=.true.,filename=filepathextreme,categoryappend=trim(a_name)//".climaextreme")
                                 !call import(v7d_dballeextreme)
-    call import(v7d_dballeextreme,var=var,coordmin=lcoordmin, coordmax=lcoordmax, timei=ltimei, timef=ltimef, &
-     varkind=(/("r",i=1,size(var))/),attr=(/"*B33192"/),attrkind=(/"b"/),network=network)
-    call copy(v7d_dballeextreme%vol7d,qccli%extreme)
-    call delete(v7d_dballeextreme)
+      call import(v7d_dballeextreme,var=var,coordmin=lcoordmin, coordmax=lcoordmax, timei=ltimei, timef=ltimef, &
+       varkind=(/("r",i=1,size(var))/),attr=(/"*B33192"/),attrkind=(/"b"/),network=network)
+      call copy(v7d_dballeextreme%vol7d,qccli%extreme)
+      call delete(v7d_dballeextreme)
 #endif
 
-  case default
+    case default
 
-    if (c_e(filepathextreme)) then
-      call l4f_category_log(qccli%category,L4F_ERROR,&
-       "file type not supported (user .v7d or .bufr suffix only): "//trim(filepathextreme))
-      call raise_error()
-    end if
-  end select
+      if (c_e(filepathextreme)) then
+        call l4f_category_log(qccli%category,L4F_ERROR,&
+         "file type not supported (user .v7d or .bufr suffix only): "//trim(filepathextreme))
+        call raise_error()
+      end if
+    end select
+
+  else
+    call l4f_category_log(qccli%category,L4F_WARN,"extreme volume not iniziatized: QC or normalize data will not be possible")
+!    call raise_fatal_error()
+  end if
+
 
 #ifdef HAVE_DBALLE
 else
@@ -419,6 +439,7 @@ else
   call init(v7d_dballeextreme,dsn=ldsnextreme,user=luser,password=lpassword,&
    write=.false.,file=.false.,categoryappend=trim(a_name)//".climaextreme")
   call l4f_category_log(qccli%category,L4F_DEBUG,"import v7d_dballeextreme")
+
   call import(v7d_dballeextreme,var=var,coordmin=lcoordmin, coordmax=lcoordmax, timei=ltimei, timef=ltimef, &
    varkind=(/("r",i=1,size(var))/),attr=(/"*B33192"/),attrkind=(/"b"/),network=network)
   call copy(v7d_dballeextreme%vol7d,qccli%extreme)
@@ -429,6 +450,22 @@ end if
 call delete(ltimei)
 call delete(ltimef)
 #endif
+
+
+call qcclialloc(qccli)
+
+
+! valuto in quale macroarea sono le stazioni
+qccli%in_macroa = imiss
+
+DO i = 1, SIZE(qccli%v7d%ana)
+  DO j = 1, SIZE(qccli%macroa)
+    IF (inside(qccli%v7d%ana(i)%coord, qccli%macroa(j))) THEN
+      qccli%in_macroa(i) = j
+      EXIT
+    ENDIF
+  ENDDO
+ENDDO
 
 return
 end subroutine qccliinit
@@ -605,17 +642,17 @@ do indana=1,size(qccli%v7d%ana)
               time=cyclicdatetime_to_conventional(cyclicdatetime_new(month=mese, hour=ora))
               !call init(time, year=1001, month=mese, day=1, hour=ora, minute=01)
 
-              call init(anavar,"B07030" )
-              indanavar = -1
-              if (associated (qccli%v7d%anavar%r)) then
-                indanavar        = index(qccli%v7d%anavar%r, anavar)
-              end if
-              if (indanavar <= 0 )cycle
+!!$              call init(anavar,"B07030" )
+!!$              indanavar = -1
+!!$              if (associated (qccli%v7d%anavar%r)) then
+!!$                indanavar        = index(qccli%v7d%anavar%r, anavar)
+!!$              end if
+!!$              if (indanavar <= 0 )cycle
 
 !!!!!  TODO !
               if (qccli%height2level) then
                 call l4f_category_log(qccli%category,L4F_ERROR,"height2level not managed in vol7d_normalize_data")
-                call raise_fatal_error()
+!                call raise_fatal_error()
               end if
 !!$              ! use conventional level starting from station height
 !!$              if (optio_log(height2level)) then
@@ -629,19 +666,19 @@ do indana=1,size(qccli%v7d%ana)
 
               indcnetwork      = 1
               
-                                !indcana          = firsttrue(qccli%clima%ana     == ana)
+                                !indcana          = firsttrue(qccli%extreme%ana     == ana)
               
-              indctime         = index(qccli%clima%time                  ,  time)
-              indclevel        = index(qccli%clima%level                 ,  level)
-              indctimerange    = index(qccli%clima%timerange             ,  qccli%v7d%timerange(indtimerange))
+              indctime         = index(qccli%extreme%time                  ,  time)
+              indclevel        = index(qccli%extreme%level                 ,  level)
+              indctimerange    = index(qccli%extreme%timerange             ,  qccli%v7d%timerange(indtimerange))
               
                                 ! attenzione attenzione TODO
                                 ! se leggo da bufr il default è char e non reale
 
-              indcdativarr     = index(qccli%clima%dativar%r, qccli%v7d%dativar%r(inddativarr))
+              indcdativarr     = index(qccli%extreme%dativar%r, qccli%v7d%dativar%r(inddativarr))
               
-!!$                                print *,"dato  ",qccli%v7d%timerange(indtimerange) 
-!!$                                print *,"clima ",qccli%clima%timerange
+                                print *,"dato  ",qccli%v7d%timerange(indtimerange) 
+                                print *,"extreme ",qccli%extreme%timerange
 !!$                                call l4f_log(L4F_INFO,"Index:"// to_char(indcana)//to_char(indctime)//to_char(indclevel)//&
 !!$                                 to_char(indctimerange)//to_char(indcdativarr)//to_char(indcnetwork))
               
@@ -656,28 +693,33 @@ do indana=1,size(qccli%v7d%ana)
               perc50=rmiss
               perc75=rmiss
 
-              if (associated(qccli%clima%voldatir)) then
+              if (associated(qccli%extreme%voldatir)) then
                 desc=25
                 write(ident,'("#",i2.2,2i3.3)')0,iarea,desc   ! macro-area e descrittore
-                call init(ana,ident=ident)
-                indcana=index(qccli%clima%ana,ana)
+                call init(ana,lat=0.0_fp_geo,lon=0.0_fp_geo,ident=ident)
+                print *,qccli%extreme%ana%ident,ana%ident
+                call display(qccli%extreme%ana(1))
+                call display(ana)
+                indcana=index(qccli%extreme%ana,ana)
+                call l4f_log(L4F_INFO,"Index25:"// to_char(indcana)//to_char(indctime)//to_char(indclevel)//&
+                 to_char(indctimerange)//to_char(indcdativarr)//to_char(indcnetwork))
                 if (indcana > 0 )then
-                  perc25=qccli%clima%voldatir(indcana,1,indclevel,indctimerange,indcdativarr,indcnetwork)
+                  perc25=qccli%extreme%voldatir(indcana,indctime,indclevel,indctimerange,indcdativarr,indcnetwork)
                 end if
                 desc=50
                 write(ident,'("#",i2.2,2i3.3)')0,iarea,desc   ! macro-area e descrittore
-                call init(ana,ident=ident)
-                indcana=index(qccli%clima%ana,ana)
+                call init(ana,lat=0.d0,lon=0.d0,ident=ident)
+                indcana=index(qccli%extreme%ana,ana)
                 if (indcana > 0 )then
-                  perc50=qccli%clima%voldatir(indcana,1,indclevel,indctimerange,indcdativarr,indcnetwork)
+                  perc50=qccli%extreme%voldatir(indcana,indctime,indclevel,indctimerange,indcdativarr,indcnetwork)
                 end if
               
                 desc=75
                 write(ident,'("#",i2.2,2i3.3)')0,iarea,desc   ! macro-area e descrittore
-                call init(ana,ident=ident)
-                indcana=index(qccli%clima%ana,ana)
+                call init(ana,lat=0.d0,lon=0.d0,ident=ident)
+                indcana=index(qccli%extreme%ana,ana)
                 if (indcana > 0 )then
-                  perc75=qccli%clima%voldatir(indcana,1,indclevel,indctimerange,indcdativarr,indcnetwork)
+                  perc75=qccli%extreme%voldatir(indcana,indctime,indclevel,indctimerange,indcdativarr,indcnetwork)
                 end if
               end if
               
@@ -752,7 +794,7 @@ CHARACTER(len=vol7d_ana_lenident) :: ident
 REAL(kind=fp_geo) :: latc,lonc
 integer :: mese, ora
                                 !local
-integer :: i,j,indbattrinv,indtbattrout
+integer :: indbattrinv,indtbattrout
 logical :: anamaskl(size(qccli%v7d%ana)), timemaskl(size(qccli%v7d%time)), levelmaskl(size(qccli%v7d%level)), &
  timerangemaskl(size(qccli%v7d%timerange)), varmaskl(size(qccli%v7d%dativar%r)), networkmaskl(size(qccli%v7d%network)) 
 
@@ -770,19 +812,6 @@ TYPE(vol7d_level):: level
 type(vol7d_var)  :: anavar
 
 !call qccli_validate (qccli)
-
-! valuto in quale macroarea sono le stazioni
-qccli%in_macroa = imiss
-
-DO i = 1, SIZE(qccli%v7d%ana)
-  DO j = 1, SIZE(qccli%macroa)
-    IF (inside(qccli%v7d%ana(i)%coord, qccli%macroa(j))) THEN
-      qccli%in_macroa(i) = j
-      EXIT
-    ENDIF
-  ENDDO
-ENDDO
-
 
 indbattrinv=0
 if (associated(qccli%v7d%datiattr%b))then

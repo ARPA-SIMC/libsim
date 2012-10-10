@@ -54,11 +54,11 @@ IMPLICIT NONE
 TYPE(optionparser) :: opt
 INTEGER :: optind, optstatus
 TYPE(csv_record) :: argparse
-CHARACTER(len=8) :: input_format, coord_format, clima_format
+CHARACTER(len=8) :: input_format, coord_format, extreme_format
 
 CHARACTER(len=512) :: input_file, output_file, output_format, output_template, &
  network_list, variable_list, anavariable_list, attribute_list, coord_file,&
- clima_file, output_variable_list, trans_level_list
+ extreme_file, output_variable_list, trans_level_list
 CHARACTER(len=160) :: pre_trans_type
 TYPE(vol7d_network), ALLOCATABLE :: nl(:)
 CHARACTER(len=10) :: trans_level_type
@@ -183,17 +183,17 @@ CALL optionparser_add(opt, ' ', 'coord-format', coord_format, &
 #endif
  )
 
-CALL optionparser_add(opt, ' ', 'clima-file', clima_file, help= &
+CALL optionparser_add(opt, ' ', 'extreme-file', extreme_file, help= &
  'file with percentile, required for normalize data before NDI compute.' &
  //' Default is reading installed files in system path')
-clima_file=cmiss
-CALL optionparser_add(opt, ' ', 'clima-format', clima_format, &
+extreme_file=cmiss
+CALL optionparser_add(opt, ' ', 'extreme-format', extreme_format, &
 #ifdef HAVE_DBALLE
  'BUFR', &
 #else
  'native', &
 #endif 
- & help='format of input file with clima: ''native'' for vol7d native binary file'&
+ & help='format of input file for extreme: ''native'' for vol7d native binary file'&
 #ifdef HAVE_DBALLE
  //', ''BUFR'' for BUFR file, ''CREX'' for CREX file (sparse points)'&
 #endif
@@ -1028,31 +1028,34 @@ end if
 
 if (comp_qc_ndi .or. comp_qc_perc) then
 
-  IF (c_e(clima_file)) THEN
+  dsn=cmiss
+  user=cmiss
+  password=cmiss
+
+  IF (c_e(extreme_file)) THEN
                                 ! import percentile file
-    IF (clima_format == 'native') THEN
+    IF (extreme_format == 'native') THEN
 !!$
 !!$      clima_file=get_package_filepath(clima_file, filetype_data)
 !!$      CALL import(v7d_clima, filename=clima_file)
       CALL l4f_category_log(category, L4F_ERROR, &
        'error in command-line parameters, format '// &
-       TRIM(clima_format)//' in --clima-format native not valid or not supported.')
+       TRIM(extreme_format)//' in --extreme-format native not valid or not supported.')
       CALL raise_fatal_error()
  
 #ifdef HAVE_DBALLE
-    ELSE IF (clima_format == 'BUFR' .OR. clima_format == 'CREX') THEN
-      file=.TRUE.
-      clima_file=get_package_filepath(clima_file, filetype_data)
+    ELSE IF (extreme_format == 'BUFR' .OR. extreme_format == 'CREX') THEN
+      extreme_file=get_package_filepath(extreme_file, filetype_data)
       
-    ELSE IF (clima_format == 'dba') THEN
-      CALL parse_dba_access_info(clima_file, dsn, user, password)
-      file=.FALSE.
+    ELSE IF (extreme_format == 'dba') THEN
+      CALL parse_dba_access_info(extreme_file, dsn, user, password)
+      extreme_file=cmiss
           
 #endif
     ELSE
       CALL l4f_category_log(category, L4F_ERROR, &
        'error in command-line parameters, format '// &
-       TRIM(clima_format)//' in --clima-format not valid or not supported.')
+       TRIM(extreme_format)//' in --extreme-format not valid or not supported.')
       CALL raise_fatal_error()
     ENDIF
     
@@ -1069,19 +1072,35 @@ if (comp_qc_ndi .or. comp_qc_perc) then
     CALL raise_fatal_error()
   end if
     
-  call init(qccli,v7d,vl,climapath=clima_file, &
+  call init(qccli,v7d,vl,extremepath=extreme_file,timei=c_s,timef=comp_e, &
 #ifdef HAVE_DBALLE
-   dsncli=dsn,user=user,password=password,&
+   dsnextreme=dsn,user=user,password=password,&
 #endif
    height2level=comp_qc_area_er,categoryappend="QC")
 
   IF (ldisplay) then
-    print*," >>>>> Input Clima <<<<<"
-    call display(qccli%clima)
+    print*," >>>>> Input Extreme <<<<<"
+    call display(qccli%extreme)
   end IF
 
   call vol7d_normalize_data(qccli)
-    
+  
+  print*," >>>>> Normalized Data <<<<<"
+  call display(qccli%v7d)
+
+  output_file="ciccio.bufr"
+  CALL init(v7d_dba_out, filename=output_file, FORMAT="BUFR", &
+    file=.true., WRITE=.TRUE., wipe=.true.)
+
+! TODO
+!!!
+  v7d_dba_out%vol7d = qccli%v7d
+  CALL export(v7d_dba_out)
+  CALL delete(v7d_dba_out)
+
+  stop 7
+!!!
+
 end if
 
 if (comp_qc_ndi) then
