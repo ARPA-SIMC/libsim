@@ -149,6 +149,11 @@ INTERFACE c_e
   MODULE PROCEDURE c_e_geo_coord
 END INTERFACE
 
+!>Print object
+INTERFACE display
+  MODULE PROCEDURE display_geo_coord
+END INTERFACE
+
 CONTAINS
 
 
@@ -750,6 +755,15 @@ LOGICAL :: res
 res = .not. this == geo_coord_miss 
 
 end FUNCTION c_e_geo_coord
+
+subroutine display_geo_coord(this)
+TYPE(geo_coord),INTENT(in) :: this
+doubleprecision :: lon,lat
+
+call getval(this,lon=lon,lat=lat)
+print*,"GEO_COORD: Lon=",lon," Lat=",lat
+
+end subroutine display_geo_coord
 
 
 END MODULE geo_coord_class
