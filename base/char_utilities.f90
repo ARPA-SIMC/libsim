@@ -26,13 +26,8 @@ USE kinds
 USE missing_values
 IMPLICIT NONE
 
-CHARACTER( * ), PRIVATE, PARAMETER :: LOWER_CASE = 'abcdefghijklmnopqrstuvwxyz'
-CHARACTER( * ), PRIVATE, PARAMETER :: UPPER_CASE = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
-
-PRIVATE int_to_char, byte_to_char, char_to_char, &
-   real_to_char, double_to_char, logical_to_char
-PRIVATE trim_int_to_char, trim_byte_to_char, trim_char_to_char, &
-   trim_real_to_char, trim_double_to_char, trim_logical_to_char
+CHARACTER(len=*),PARAMETER :: LOWER_CASE = 'abcdefghijklmnopqrstuvwxyz'
+CHARACTER(len=*),PARAMETER :: UPPER_CASE = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
 
 !> Set of functions that return a CHARACTER representation of the
 !! input variable. The functions use a default format suitable to
@@ -59,13 +54,32 @@ PRIVATE trim_int_to_char, trim_byte_to_char, trim_char_to_char, &
 !! ...
 !! \endcode
 INTERFACE to_char
-  MODULE PROCEDURE int_to_char, byte_to_char, char_to_char, &
+  MODULE PROCEDURE int_to_char, byte_to_char, &
    real_to_char, double_to_char, logical_to_char
+END INTERFACE
+
+!> Set of functions that return a CHARACTER representation of the
+!! input variable with a special treatment for the case of missing value.
+!! The functions use a default format suitable to reasonably represent
+!! the input variable.  The return value may be quite long, in order
+!! to take into account all possible cases, so it is suggested to trim
+!! the result with the intrinsic function \a TRIM() before using
+!! it. The length of the \a miss argument must be rerasonable in order
+!! not to get truncated. The functions are \a ELEMENTAL, so they can
+!! be applied to arrays of any shape. The return value is of type \a
+!! CHARACTER with a predefined length depending on the type of the
+!! input.
+!!
+!! \param in (any INTEGER or REAL basic type) value to be represented as CHARACTER
+!! \param miss CHARACTER(len=*),INTENT(in) character replacement for missing value
+INTERFACE to_char_miss
+  MODULE PROCEDURE int_to_char_miss, byte_to_char_miss, char_to_char_miss, &
+   real_to_char_miss, double_to_char_miss
 END INTERFACE
 
 !> Set of functions that return a trimmed CHARACTER representation of the
 !! input variable. The functions are analogous to \a to_char but they
-!! return representation of the input in a CHARACTER with a variable
+!! return a representation of the input in a CHARACTER with a variable
 !! length, which needs not to be trimmed before use. The optional
 !! format here is not accepted and these functions are not \a
 !! ELEMENTAL so they work only on scalar arguments.
@@ -81,8 +95,19 @@ END INTERFACE
 !! ...
 !! \endcode
 INTERFACE t2c
-  MODULE PROCEDURE trim_int_to_char, trim_byte_to_char, trim_char_to_char, &
+  MODULE PROCEDURE trim_int_to_char, trim_byte_to_char, &
    trim_real_to_char, trim_double_to_char, trim_logical_to_char
+END INTERFACE
+
+!> Set of functions that return a trimmed CHARACTER representation of the
+!! input variable with a special treatment for the case of missing value.
+!! The functions are analogous to \a to_char_miss but they return
+!! representation of the input in a CHARACTER with a variable length,
+!! which needs not to be trimmed before use. These functions are not
+!! \a ELEMENTAL so they work only on scalar arguments.
+INTERFACE t2c_miss
+  MODULE PROCEDURE trim_int_to_char_miss, trim_byte_to_char_miss, &
+   trim_char_to_char_miss, trim_real_to_char_miss, trim_double_to_char_miss
 END INTERFACE
 
 !> Class that allows splitting a long line into shorter lines of equal
@@ -104,8 +129,6 @@ END TYPE line_split
 INTERFACE delete
   MODULE PROCEDURE line_split_delete
 END INTERFACE
-
-PRIVATE line_split_delete
 
 
 !> Tries to match the given string with the pattern
@@ -172,7 +195,13 @@ INTERFACE match
   MODULE PROCEDURE string_match, string_match_v
 END INTERFACE
 
-PRIVATE string_match, string_match_v
+PRIVATE
+PUBLIC line_split
+PUBLIC to_char, to_char_miss, t2c, t2c_miss, delete, match, &
+ fchar_to_cstr, fchar_to_cstr_alloc, cstr_to_fchar, UpperCase, LowerCase, &
+ align_left, align_right, align_center, l_nblnk, f_nblnk, word_split, &
+ line_split_new, line_split_get_nlines, line_split_get_line, &
+ suffixname, default_columns, wash_char
 
 CONTAINS
 
@@ -181,7 +210,6 @@ CONTAINS
 ELEMENTAL FUNCTION int_to_char(in, form) RESULT(char)
 INTEGER,INTENT(in) :: in ! value to be represented as CHARACTER
 CHARACTER(len=*),INTENT(in),OPTIONAL :: form ! optional format
-
 CHARACTER(len=11) :: char
 
 IF (PRESENT(form)) THEN
@@ -193,14 +221,37 @@ ENDIF
 END FUNCTION int_to_char
 
 
+ELEMENTAL FUNCTION int_to_char_miss(in, miss) RESULT(char)
+INTEGER,INTENT(in) :: in ! value to be represented as CHARACTER
+CHARACTER(len=*),INTENT(in) :: miss ! replacement for missing value
+CHARACTER(len=11) :: char
+
+IF (c_e(in)) THEN
+  char = int_to_char(in)
+ELSE
+  char = miss
+ENDIF
+
+END FUNCTION int_to_char_miss
+
+
 FUNCTION trim_int_to_char(in) RESULT(char)
 INTEGER,INTENT(in) :: in ! value to be represented as CHARACTER
+CHARACTER(len=LEN_TRIM(int_to_char(in))) :: char
 
-CHARACTER(len=len_trim(int_to_char(in))) :: char
-
-char=int_to_char(in)
+char = int_to_char(in)
 
 END FUNCTION trim_int_to_char
+
+
+FUNCTION trim_int_to_char_miss(in, miss) RESULT(char)
+INTEGER,INTENT(in) :: in ! value to be represented as CHARACTER
+CHARACTER(len=*),INTENT(in) :: miss
+CHARACTER(len=LEN_TRIM(int_to_char_miss(in,miss))) :: char
+
+char = int_to_char_miss(in, miss)
+
+END FUNCTION trim_int_to_char_miss
 
 
 ! Version with 1-byte integer argument, please use the generic \a to_char
@@ -208,7 +259,6 @@ END FUNCTION trim_int_to_char
 ELEMENTAL FUNCTION byte_to_char(in, form) RESULT(char)
 INTEGER(kind=int_b),INTENT(in) :: in ! value to be represented as CHARACTER
 CHARACTER(len=*),INTENT(in),OPTIONAL :: form ! optional format
-
 CHARACTER(len=4) :: char
 
 IF (PRESENT(form)) THEN
@@ -220,46 +270,83 @@ ENDIF
 END FUNCTION byte_to_char
 
 
+ELEMENTAL FUNCTION byte_to_char_miss(in, miss) RESULT(char)
+INTEGER(kind=int_b),INTENT(in) :: in ! value to be represented as CHARACTER
+CHARACTER(len=*),INTENT(in) :: miss ! replacement for missing value
+
+CHARACTER(len=4) :: char
+
+IF (c_e(in)) THEN
+  char = byte_to_char(in)
+ELSE
+  char = miss
+ENDIF
+
+END FUNCTION byte_to_char_miss
+
+
 FUNCTION trim_byte_to_char(in) RESULT(char)
 INTEGER(kind=int_b),INTENT(in) :: in ! value to be represented as CHARACTER
+CHARACTER(len=LEN_TRIM(byte_to_char(in))) :: char
 
-CHARACTER(len=len_trim(byte_to_char(in))) :: char
-
-char=byte_to_char(in)
+char = byte_to_char(in)
 
 END FUNCTION trim_byte_to_char
+
+
+FUNCTION trim_byte_to_char_miss(in, miss) RESULT(char)
+INTEGER(kind=int_b),INTENT(in) :: in ! value to be represented as CHARACTER
+CHARACTER(len=*),INTENT(in) :: miss ! replacement for missing value
+CHARACTER(len=LEN_TRIM(byte_to_char_miss(in,miss))) :: char
+
+char = byte_to_char_miss(in, miss)
+
+END FUNCTION trim_byte_to_char_miss
 
 
 ! Version with character argument, please use the generic \a to_char
 ! rather than this function directly. It is almost useless, just
 ! provided for completeness.
-FUNCTION char_to_char(in, form) result(char)
+!PURE FUNCTION char_to_char(in) result(char)
+!CHARACTER(len=*),INTENT(in) :: in ! value to be represented as CHARACTER
+!CHARACTER(len=LEN_TRIM(in)) :: char
+!
+!char = TRIM(in)
+!
+!END FUNCTION char_to_char
+
+
+PURE FUNCTION char_to_char_miss(in, miss) RESULT(char)
 CHARACTER(len=*),INTENT(in) :: in ! value to be represented as CHARACTER
-CHARACTER(len=*),INTENT(in),OPTIONAL :: form ! optional format
+CHARACTER(len=*),INTENT(in) :: miss ! replacement for missing value
+CHARACTER(len=MAX(LEN_TRIM(in),LEN_TRIM(miss))) :: char
 
-CHARACTER(len=LEN_TRIM(in)) :: char
-!fortran 2003
-!CHARACTER(len=:),allocatable :: char
-
-IF (PRESENT(form)) THEN
-  WRITE(char,form) in
-ELSE
+IF (c_e(in)) THEN
   char = TRIM(in)
+ELSE
+  char = TRIM(miss)
 ENDIF
 
-END FUNCTION char_to_char
+END FUNCTION char_to_char_miss
 
 
-FUNCTION trim_char_to_char(in) result(char)
+!FUNCTION trim_char_to_char(in) result(char)
+!CHARACTER(len=*),INTENT(in) :: in ! value to be represented as CHARACTER
+!CHARACTER(len=LEN_TRIM(in)) :: char
+!
+!char = char_to_char(in)
+!
+!END FUNCTION trim_char_to_char
+
+
+FUNCTION trim_char_to_char_miss(in, miss) RESULT(char)
 CHARACTER(len=*),INTENT(in) :: in ! value to be represented as CHARACTER
+CHARACTER(len=*),INTENT(in) :: miss ! replacement for missing valu
+CHARACTER(len=LEN_TRIM(char_to_char_miss(in,miss))) :: char
 
-CHARACTER(len=LEN_TRIM(in)) :: char
-!fortran 2003
-!CHARACTER(len=:),allocatable :: char
+char = char_to_char_miss(in, miss)
 
-char = char_to_char(in)
-
-END FUNCTION trim_char_to_char
+END FUNCTION trim_char_to_char_miss
 
 
 ! Version with single precision real argument, please use the generic
@@ -267,8 +354,9 @@ END FUNCTION trim_char_to_char
 ELEMENTAL FUNCTION real_to_char(in, form) RESULT(char)
 REAL,INTENT(in) :: in ! value to be represented as CHARACTER
 CHARACTER(len=*),INTENT(in),OPTIONAL :: form ! optional format
+CHARACTER(len=15) :: char
 
-CHARACTER(len=15) :: char, tmpchar
+CHARACTER(len=15) :: tmpchar
 
 IF (PRESENT(form)) THEN
   WRITE(char,form) in
@@ -280,14 +368,37 @@ ENDIF
 END FUNCTION real_to_char
 
 
+ELEMENTAL FUNCTION real_to_char_miss(in, miss) RESULT(char)
+REAL,INTENT(in) :: in ! value to be represented as CHARACTER
+CHARACTER(len=*),INTENT(in) :: miss ! replacement for missing value
+CHARACTER(len=15) :: char
+
+IF (c_e(in)) THEN
+  char = real_to_char(in)
+ELSE
+  char = miss
+ENDIF
+
+END FUNCTION real_to_char_miss
+
+
 FUNCTION trim_real_to_char(in) RESULT(char)
 REAL,INTENT(in) :: in ! value to be represented as CHARACTER
-
 CHARACTER(len=len_trim(real_to_char(in))) :: char
 
-char=real_to_char(in)
+char = real_to_char(in)
 
 END FUNCTION trim_real_to_char
+
+
+FUNCTION trim_real_to_char_miss(in, miss) RESULT(char)
+REAL,INTENT(in) :: in ! value to be represented as CHARACTER
+CHARACTER(len=*),INTENT(in) :: miss ! replacement for missing value
+CHARACTER(len=LEN_TRIM(real_to_char_miss(in,miss))) :: char
+
+char=real_to_char_miss(in, miss)
+
+END FUNCTION trim_real_to_char_miss
 
 
 ! Version with double precision real argument, please use the generic
@@ -295,8 +406,9 @@ END FUNCTION trim_real_to_char
 ELEMENTAL FUNCTION double_to_char(in, form) RESULT(char)
 DOUBLE PRECISION,INTENT(in) :: in ! value to be represented as CHARACTER
 CHARACTER(len=*),INTENT(in),OPTIONAL :: form ! optional format
+CHARACTER(len=24) :: char
 
-CHARACTER(len=24) :: char, tmpchar
+CHARACTER(len=24) :: tmpchar
 
 IF (PRESENT(form)) THEN
   WRITE(char,form) in
@@ -307,6 +419,23 @@ ENDIF
 
 END FUNCTION double_to_char
 
+
+ELEMENTAL FUNCTION double_to_char_miss(in, miss) RESULT(char)
+DOUBLE PRECISION,INTENT(in) :: in ! value to be represented as CHARACTER
+CHARACTER(len=*),INTENT(in) :: miss ! replacement for missing value
+
+CHARACTER(len=24) :: char, tmpchar
+
+IF (c_e(in)) THEN
+  WRITE(tmpchar,'(G24.17)') in
+  char = align_left(tmpchar)
+ELSE
+  char = miss
+ENDIF
+
+END FUNCTION double_to_char_miss
+
+
 FUNCTION trim_double_to_char(in) RESULT(char)
 DOUBLE PRECISION,INTENT(in) :: in ! value to be represented as CHARACTER
 CHARACTER(len=len_trim(double_to_char(in))) :: char
@@ -316,19 +445,28 @@ char=double_to_char(in)
 END FUNCTION trim_double_to_char
 
 
+FUNCTION trim_double_to_char_miss(in, miss) RESULT(char)
+DOUBLE PRECISION,INTENT(in) :: in ! value to be represented as CHARACTER
+CHARACTER(len=*),INTENT(in) :: miss ! replacement for missing value
+CHARACTER(len=LEN_TRIM(double_to_char_miss(in,miss))) :: char
+
+char=double_to_char_miss(in, miss)
+
+END FUNCTION trim_double_to_char_miss
+
+
 ! Version with logical argument, please use the generic \a to_char
 ! rather than this function directly.
 ELEMENTAL FUNCTION logical_to_char(in, form) RESULT(char)
 LOGICAL,INTENT(in) :: in ! value to be represented as CHARACTER
 CHARACTER(len=*),INTENT(in),OPTIONAL :: form ! optional format
-
 CHARACTER(len=1) :: char
 
-!IF (PRESENT(form)) THEN
-!  WRITE(char,form) in
-!ELSE
-WRITE(char,'(L1)') in
-!ENDIF
+IF (PRESENT(form)) THEN
+  WRITE(char,form) in
+ELSE
+  WRITE(char,'(L1)') in
+ENDIF
 
 END FUNCTION logical_to_char
 
@@ -338,11 +476,7 @@ LOGICAL,INTENT(in) :: in ! value to be represented as CHARACTER
 
 CHARACTER(len=1) :: char
 
-!IF (PRESENT(form)) THEN
-!  WRITE(char,form) in
-!ELSE
 WRITE(char,'(L1)') in
-!ENDIF
 
 END FUNCTION trim_logical_to_char
 
@@ -438,7 +572,7 @@ END DO
 END FUNCTION LowerCase
 
 
-!> \brief Returns \a input_string aligned to the left,
+!> Returns \a input_string aligned to the left,
 !! i.e.\ without leading blanks.  The needed number of trailing
 !! blanks is added at the end in order to keep the length of the
 !! resulting string equal to the input length.
@@ -452,7 +586,7 @@ aligned = input_string(f_nblnk(input_string):)
 END FUNCTION align_left
 
 
-!> \brief Returns \a input_string aligned to the right,
+!> Returns \a input_string aligned to the right,
 !! i.e.\ without trailing blanks. The needed number of leading
 !! blanks is added at the beginning in order to keep the length of the
 !! resulting string equal to the input length.
@@ -717,7 +851,7 @@ ENDIF
 END FUNCTION line_split_get_nlines
 
 
-!> Return the \a nline -th line obtained after splitting. If \a nline
+!> Return the \a nline-th line obtained after splitting. If \a nline
 !! is out of range, a missing value is returned. The line is always
 !! left-aligned and it is padded with trailing blanks up to the
 !! requested line length.
@@ -733,21 +867,6 @@ ELSE
 ENDIF
 
 END FUNCTION line_split_get_line
-
-
-!> Return the suffix of a filename.
-FUNCTION suffixname ( Input_String ) RESULT ( Output_String )
-! -- Argument and result
-CHARACTER( * ), INTENT( IN ) :: Input_String !< string to be interpreted as a filename
-CHARACTER( LEN( Input_String ) ) :: Output_String
-! -- Local variables
-INTEGER :: i
-
-Output_String=""
-i = index (input_string,".",back=.True.)
-if (i > 0 .and. i < len(Input_String)) Output_String= Input_String(i+1:)
-
-END FUNCTION Suffixname
 
 
 !> Return the number of columns in the terminal, if available it is
@@ -776,13 +895,28 @@ RETURN
 END FUNCTION default_columns
 
 
+!> Return the suffix of a filename.
+FUNCTION suffixname ( Input_String ) RESULT ( Output_String )
+! -- Argument and result
+CHARACTER( * ), INTENT( IN ) :: Input_String !< string to be interpreted as a filename
+CHARACTER( LEN( Input_String ) ) :: Output_String
+! -- Local variables
+INTEGER :: i
+
+Output_String=""
+i = index (input_string,".",back=.True.)
+if (i > 0 .and. i < len(Input_String)) Output_String= Input_String(i+1:)
+
+END FUNCTION Suffixname
+
+
 !> Remove the requested characters from a string.
 !! This function returns a string cleaned from unwanted characters,
 !! either by removing "bad" characters (argument \a badchar) or by
 !! keeping only "good" characters (argument \a goodchar).  If neither
 !! \a badchar nor \a goodchar are provided, it keeps only alphabetic
 !! ASCII characters.
-ELEMENTAL FUNCTION wash_char(in, goodchar,badchar) RESULT(char)
+ELEMENTAL FUNCTION wash_char(in, goodchar, badchar) RESULT(char)
 CHARACTER(len=*),INTENT(in) :: in !< string to be cleaned
 CHARACTER(len=*),INTENT(in),OPTIONAL :: badchar !< optional set of "bad" characters
 CHARACTER(len=*),INTENT(in),OPTIONAL :: goodchar !< optional set of "good" characters
@@ -898,16 +1032,12 @@ END FUNCTION wash_char
 !!$OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 !
 
-!> Tries to match the given string with the pattern (vector version)
-!! Result:
-!!     .true. if the entire string matches the pattern, .false.
-!!     otherwise
-!! Note:
-!!     Trailing blanks are ignored
-!!
+!> Tries to match the given string with the pattern (array version).
+!! Returns \a .TRUE. if the entire string matches the pattern, \a
+!! .FALSE. otherwise. Note: trailing blanks are ignored.
 function string_match_v( string, pattern ) result(match)
-character(len=*), intent(in) :: string(:) !< String to be examined
-character(len=*), intent(in) :: pattern !< Glob pattern to be used for the matching
+character(len=*), intent(in) :: string(:) !< string to be examined
+character(len=*), intent(in) :: pattern !< glob pattern to be used for the matching
 logical                      :: match(size(string))
 
 integer :: i
@@ -918,13 +1048,10 @@ end do
 
 end function string_match_v
 
-!> Tries to match the given string with the pattern
-!! Result:
-!!     .true. if the entire string matches the pattern, .false.
-!!     otherwise
-!! Note:
-!!     Trailing blanks are ignored
-!!
+
+!> Tries to match the given string with the pattern.
+!! Returns \a .TRUE. if the entire string matches the pattern, \a
+!! .FALSE. otherwise. Note: trailing blanks are ignored.
 recursive function string_match( string, pattern ) result(match)
     character(len=*), intent(in) :: string !< String to be examined
     character(len=*), intent(in) :: pattern !< Glob pattern to be used for the matching

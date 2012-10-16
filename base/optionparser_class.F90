@@ -547,7 +547,7 @@ INTEGER :: i
 TYPE(option) :: myoption
 
 IF (PRESENT(default)) THEN
-  cdefault = ' [default='//TRIM(to_char(default))//']'
+  cdefault = ' [default='//t2c(default)//']'
 ELSE
   cdefault = ''
 ENDIF
@@ -630,7 +630,7 @@ INTEGER :: i
 TYPE(option) :: myoption
 
 IF (PRESENT(default)) THEN
-  cdefault = ' [default='//TRIM(to_char(default))//']'
+  cdefault = ' [default='//t2c(default)//']'
 ELSE
   cdefault = ''
 ENDIF

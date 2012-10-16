@@ -158,7 +158,7 @@ ENDIF
 ! conto le famiglie diverse
 nfam = count_distinct(famiglie(1:nvar), back=.TRUE.)
 CALL l4f_category_log(category,L4F_INFO, &
- 'Periodo richiesto: '//to_char(data_inizio)//' - '//to_char(data_fine))
+ 'Periodo richiesto: '//TRIM(data_inizio)//' - '//TRIM(data_fine))
 CALL l4f_category_log(category,L4F_INFO, &
  'Richieste '//t2c(nvar)//' variabili per '// &
  t2c(nfam)//' famiglie diverse.')

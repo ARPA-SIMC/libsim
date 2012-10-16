@@ -177,7 +177,7 @@ LOGICAL :: exist,cwd,share
 
 IF (filetype < 1 .OR. filetype > nftype) THEN
   path = ''
-  CALL l4f_log(L4F_ERROR, 'package file type '//TRIM(to_char(filetype))// &
+  CALL l4f_log(L4F_ERROR, 'package file type '//t2c(filetype)// &
    ' not valid')
   CALL raise_error()
   RETURN
@@ -361,10 +361,9 @@ END SUBROUTINE csv_record_rewind
 !> Add a field from a \c CHARACTER variable to the csv record \a this.
 !! The field will be quoted if necessary.
 !! \todo Improve the trailing blank quoting.
-SUBROUTINE csv_record_addfield_char(this, field, form, force_quote)
+SUBROUTINE csv_record_addfield_char(this, field, force_quote)
 TYPE(csv_record),INTENT(INOUT) :: this !< object where to add field
 CHARACTER(len=*),INTENT(IN) :: field !< field to be added
-CHARACTER(len=*),INTENT(in),OPTIONAL :: form !< optional format, ignored by now
 LOGICAL, INTENT(in), OPTIONAL :: force_quote !< if provided and \c .TRUE. , the field will be quoted even if not necessary
 
 INTEGER :: i
@@ -449,17 +448,12 @@ END SUBROUTINE add_byte
 !> Add a field from a \c CHARACTER variable to the csv record \a this.
 !! The field will be quoted if necessary. A missing value is inserted
 !! as an empty field.
-SUBROUTINE csv_record_addfield_char_miss(this, field, form, force_quote)
+SUBROUTINE csv_record_addfield_char_miss(this, field, force_quote)
 TYPE(csv_record),INTENT(INOUT) :: this !< object where to add field
 CHARACTER(len=*),INTENT(IN) :: field !< field to be added
-CHARACTER(len=*),INTENT(in),OPTIONAL :: form !< optional format, ignored by now
 LOGICAL, INTENT(in), OPTIONAL :: force_quote !< if provided and \c .TRUE. , the field will be quoted even if not necessary
 
-IF (c_e(field)) THEN
-  CALL csv_record_addfield(this, field, form, force_quote=force_quote)
-ELSE
-  CALL csv_record_addfield(this, '')
-ENDIF
+CALL csv_record_addfield(this, t2c_miss(field, ''), force_quote=force_quote)
 
 END SUBROUTINE csv_record_addfield_char_miss
 
@@ -472,7 +466,11 @@ INTEGER,INTENT(IN) :: field !< field to be added
 CHARACTER(len=*),INTENT(in),OPTIONAL :: form !< optional format
 LOGICAL, INTENT(in), OPTIONAL :: force_quote !< if provided and \c .TRUE. , the field will be quoted even if not necessary
 
-CALL csv_record_addfield(this, TRIM(to_char(field, form)), force_quote=force_quote)
+IF (PRESENT(form)) THEN
+  CALL csv_record_addfield(this, TRIM(to_char(field, form)), force_quote=force_quote)
+ELSE
+  CALL csv_record_addfield(this, t2c(field), force_quote=force_quote)
+ENDIF
 
 END SUBROUTINE csv_record_addfield_int
 
@@ -480,17 +478,12 @@ END SUBROUTINE csv_record_addfield_int
 !> Add a field from an \c INTEGER variable to the csv record \a this.
 !! The field will be quoted if necessary. A missing value is inserted
 !! as an empty field.
-SUBROUTINE csv_record_addfield_int_miss(this, field, form, force_quote)
+SUBROUTINE csv_record_addfield_int_miss(this, field, force_quote)
 TYPE(csv_record),INTENT(INOUT) :: this !< object where to add field
 INTEGER,INTENT(IN) :: field !< field to be added
-CHARACTER(len=*),INTENT(in),OPTIONAL :: form !< optional format
 LOGICAL, INTENT(in), OPTIONAL :: force_quote !< if provided and \c .TRUE. , the field will be quoted even if not necessary
 
-IF (c_e(field)) THEN
-  CALL csv_record_addfield(this, TRIM(to_char(field, form)), force_quote=force_quote)
-ELSE
-  CALL csv_record_addfield(this, '')
-ENDIF
+CALL csv_record_addfield(this, t2c_miss(field, ''), force_quote=force_quote)
 
 END SUBROUTINE csv_record_addfield_int_miss
 
@@ -503,7 +496,11 @@ REAL,INTENT(IN) :: field !< field to be added
 CHARACTER(len=*),INTENT(in),OPTIONAL :: form !< optional format
 LOGICAL, INTENT(in), OPTIONAL :: force_quote !< if provided and \c .TRUE. , the field will be quoted even if not necessary
 
-CALL csv_record_addfield(this, TRIM(to_char(field, form)), force_quote=force_quote)
+IF (PRESENT(form)) THEN
+  CALL csv_record_addfield(this, TRIM(to_char(field, form)), force_quote=force_quote)
+ELSE
+  CALL csv_record_addfield(this, t2c(field), force_quote=force_quote)
+ENDIF
 
 END SUBROUTINE csv_record_addfield_real
 
@@ -511,17 +508,12 @@ END SUBROUTINE csv_record_addfield_real
 !> Add a field from a \c REAL variable to the csv record \a this.
 !! The field will be quoted if necessary. A missing value is inserted
 !! as an empty field.
-SUBROUTINE csv_record_addfield_real_miss(this, field, form, force_quote)
+SUBROUTINE csv_record_addfield_real_miss(this, field, force_quote)
 TYPE(csv_record),INTENT(INOUT) :: this !< object where to add field
 REAL,INTENT(IN) :: field !< field to be added
-CHARACTER(len=*),INTENT(in),OPTIONAL :: form !< optional format
 LOGICAL, INTENT(in), OPTIONAL :: force_quote !< if provided and \c .TRUE. , the field will be quoted even if not necessary
 
-IF (c_e(field)) THEN
-  CALL csv_record_addfield(this, TRIM(to_char(field, form)), force_quote=force_quote)
-ELSE
-  CALL csv_record_addfield(this, '')
-ENDIF
+CALL csv_record_addfield(this, t2c_miss(field, ''), force_quote=force_quote)
 
 END SUBROUTINE csv_record_addfield_real_miss
 
@@ -534,7 +526,11 @@ DOUBLE PRECISION,INTENT(IN) :: field !< field to be added
 CHARACTER(len=*),INTENT(in),OPTIONAL :: form !< optional format
 LOGICAL, INTENT(in), OPTIONAL :: force_quote !< if provided and \c .TRUE. , the field will be quoted even if not necessary
 
-CALL csv_record_addfield(this, TRIM(to_char(field, form)), force_quote=force_quote)
+IF (PRESENT(form)) THEN
+  CALL csv_record_addfield(this, TRIM(to_char(field, form)), force_quote=force_quote)
+ELSE
+  CALL csv_record_addfield(this, t2c(field), force_quote=force_quote)
+ENDIF
 
 END SUBROUTINE csv_record_addfield_double
 
@@ -542,17 +538,12 @@ END SUBROUTINE csv_record_addfield_double
 !> Add a field from a \c DOUBLE PRECISION variable to the csv record \a this.
 !! The field will be quoted if necessary. A missing value is inserted
 !! as an empty field.
-SUBROUTINE csv_record_addfield_double_miss(this, field, form, force_quote)
+SUBROUTINE csv_record_addfield_double_miss(this, field, force_quote)
 TYPE(csv_record),INTENT(INOUT) :: this !< object where to add field
 DOUBLE PRECISION,INTENT(IN) :: field !< field to be added
-CHARACTER(len=*),INTENT(in),OPTIONAL :: form !< optional format
 LOGICAL, INTENT(in), OPTIONAL :: force_quote !< if provided and \c .TRUE. , the field will be quoted even if not necessary
 
-IF (c_e(field)) THEN
-  CALL csv_record_addfield(this, TRIM(to_char(field, form)), force_quote=force_quote)
-ELSE
-  CALL csv_record_addfield(this, '')
-ENDIF
+CALL csv_record_addfield(this, t2c_miss(field, ''), force_quote=force_quote)
 
 END SUBROUTINE csv_record_addfield_double_miss
 
@@ -684,7 +675,7 @@ IF (PRESENT(field)) THEN ! controllo overflow di field
     ELSE
       CALL l4f_log(L4F_WARN, &
        'in csv_record_getfield, CHARACTER variable too short for field: '// &
-       TRIM(to_char(LEN(field)))//'/'//TRIM(to_char(ocursor)))
+       t2c(LEN(field))//'/'//t2c(ocursor))
     ENDIF
   ENDIF
 ENDIF

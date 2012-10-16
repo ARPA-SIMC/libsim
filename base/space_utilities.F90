@@ -70,10 +70,9 @@
 !!\ingroup base
 
 module space_utilities
-
 use log4fortran
 use char_utilities
-
+use missing_values
 implicit none
 
 type :: triangles

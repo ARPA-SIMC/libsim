@@ -113,7 +113,7 @@ if (ncconventions == "CF-1.1") then
 else if (ncconventions /= "CF-1.1 vol7d") then
 
   call l4f_category_log(category,L4F_FATAL,"ncconventions not supported: "// &
-   trim(to_char(ncconventions)))
+   trim(ncconventions))
   call raise_fatal_error()
 end if
 
@@ -639,7 +639,7 @@ category=l4f_category_get(a_name)
 
 if (ncconventions /= "CF-1.1") then
 
-  call l4f_category_log(category,L4F_INFO,"ncconventions not supported: "// to_char(ncconventions))
+  call l4f_category_log(category,L4F_INFO,"ncconventions not supported: "//TRIM(ncconventions))
   call exit(1)
 end if
 
