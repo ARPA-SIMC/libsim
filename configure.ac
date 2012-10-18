@@ -36,6 +36,7 @@ AC_ARG_ENABLE(f2003-features, AC_HELP_STRING([--enable-f2003-features],
 if test "x$enableval" = "xyes"; then
 AC_DEFINE(F2003_FEATURES, 1, [Enable some F2003 features])
 fi
+AM_CONDITIONAL(F2003_FEATURES, test "x$enableval" = "xyes")
 
 AC_PROG_CXX()
 

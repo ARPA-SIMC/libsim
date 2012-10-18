@@ -32,8 +32,11 @@ endif
 
 if NETCDF
 libsim_vol7d_la_SOURCES += vol7d_netcdf_class.f90
-# AM_FCFLAGS +=
 libsim_vol7d_la_LIBADD += $(NETCDF_LIBS)
+endif
+
+if F2003_FEATURES
+libsim_vol7d_la_SOURCES += vol7d_serialize_class.F03 vol7d_serialize_csv_class.F03
 endif
 
 if VERSIONINFO
@@ -96,6 +99,10 @@ vol7d_netcdf_class.$(OBJEXT): vol7d_class.$(OBJEXT)
 vol7d_netcdf_class.lo: vol7d_class.$(OBJEXT)
 endif
 
+if F2003_FEATURES
+vol7d_serialize_csv_class.$(OBJEXT): vol7d_serialize_class.$(OBJEXT)
+vol7d_serialize_csv_class.lo: vol7d_serialize_class.$(OBJEXT)
+endif
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT) *.mod

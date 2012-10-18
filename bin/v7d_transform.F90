@@ -39,7 +39,11 @@ USE gridinfo_class
 USE grid_transform_class
 use volgrid6d_class
 USE georef_coord_class
+#ifdef F2003_FEATURES
+USE vol7d_serialize_csv_class
+#else
 USE vol7d_csv
+#endif
 !USE modqc
 USE modqccli
 !USE ISO_FORTRAN_ENV
@@ -115,6 +119,9 @@ TYPE(grid_id) :: gaid
 TYPE(griddim_def) :: grid_out
 TYPE(volgrid6d) :: vg6d(1)
 character(len=160) :: post_trans_type
+#endif
+#ifdef F2003_FEATURES
+TYPE(vol7d_serialize_csv) :: v7d_csv
 #endif
 #ifdef ALCHIMIA
 type(fndsv) :: vfn,vfnoracle
@@ -359,6 +366,10 @@ CALL optionparser_add(opt, ' ', 'output-format', output_format, 'native', help= 
 #endif
  //'; csv for formatted csv format (no template to be specified)')
 
+#ifdef F2003_FEATURES
+! setup options for csv
+CALL v7d_csv%vol7d_serialize_optionparser(opt, 'csv')
+#else
 ! options for configuring csv output
 CALL optionparser_add(opt, ' ', 'csv-volume', csv_volume, 'all', help= &
  'vol7d volumes to be output to csv: ''all'' for all volumes, &
@@ -384,6 +395,7 @@ CALL optionparser_add(opt, ' ', 'csv-keep-miss', csv_keep_miss, help= &
  'keep records containing only missing values in csv output')
 CALL optionparser_add(opt, ' ', 'csv-norescale', csv_no_rescale, help= &
  'do not rescale in output integer variables according to their scale factor')
+#endif
 
 #ifdef ALCHIMIA
 CALL optionparser_add(opt, '', 'output-variable-list', output_variable_list, '', help= &
@@ -702,9 +714,14 @@ IF (n > 0 .AND. c_e(olevel_type)) THEN
 ENDIF
 CALL delete(argparse)
 
+#ifdef F2003_FEATURES
+! parse csv options
+CALL v7d_csv%vol7d_serialize_parse()
+#else
 ! check csv-column
 CALL parse_v7d_column(csv_column, icsv_column, '--csv-column', .FALSE.)
 CALL parse_v7d_column(csv_columnorder, icsv_columnorder, '--csv-columnorder', .TRUE.)
+#endif
 
 ! check output format/template
 n = word_split(output_format, w_s, w_e, ':')
@@ -1088,6 +1105,7 @@ if (comp_qc_ndi .or. comp_qc_perc) then
   print*," >>>>> Normalized Data <<<<<"
   call display(qccli%v7d)
 
+#ifdef HAVE_DBALLE
   output_file="ciccio.bufr"
   CALL init(v7d_dba_out, filename=output_file, FORMAT="BUFR", &
     file=.true., WRITE=.TRUE., wipe=.true.)
@@ -1100,6 +1118,7 @@ if (comp_qc_ndi .or. comp_qc_perc) then
 
   stop 7
 !!!
+#endif
 
 end if
 
@@ -1141,13 +1160,20 @@ IF (output_format == 'native') THEN
   CALL delete(v7d)
 
 ELSE IF (output_format == 'csv') THEN
+#ifdef F2003_FEATURES
+  CALL v7d_csv%vol7d_serialize_setup(v7d)
+#endif
   IF (output_file == '-') THEN
     iun = stdout_unit
   ELSE
     iun = getunit()
     OPEN(iun, file=output_file, form='FORMATTED', access='SEQUENTIAL')
   ENDIF
+#ifdef F2003_FEATURES
+  CALL v7d_csv%vol7d_serialize_export(iun)
+#else
   CALL csv_export(v7d, iun)
+#endif
   IF (output_file /= '-') CLOSE(iun)
   CALL delete(v7d)
 
@@ -1282,6 +1308,7 @@ ENDIF
 END SUBROUTINE parse_dba_access_info
 
 
+#ifndef F2003_FEATURES
 SUBROUTINE parse_v7d_column(ccol, icol, par_name, check_all)
 CHARACTER(len=*),INTENT(in) :: ccol
 INTEGER,INTENT(out) :: icol(:)
@@ -1341,6 +1368,7 @@ IF (check_all) THEN
 ENDIF
 
 END SUBROUTINE parse_v7d_column
+#endif
 
 END PROGRAM v7d_transform
 
