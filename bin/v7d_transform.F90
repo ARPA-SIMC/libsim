@@ -41,6 +41,7 @@ use volgrid6d_class
 USE georef_coord_class
 #ifdef F2003_FEATURES
 USE vol7d_serialize_csv_class
+USE vol7d_serialize_geojson_class
 #else
 USE vol7d_csv
 #endif
@@ -122,6 +123,7 @@ character(len=160) :: post_trans_type
 #endif
 #ifdef F2003_FEATURES
 TYPE(vol7d_serialize_csv) :: v7d_csv
+TYPE(vol7d_serialize_geojson) :: v7d_geojson
 #endif
 #ifdef ALCHIMIA
 type(fndsv) :: vfn,vfnoracle
@@ -151,6 +153,9 @@ opt = optionparser_new(description_msg= &
 #endif
 #ifdef HAVE_LIBGRIBAPI
  //', into a GRIB file'&
+#endif
+#ifdef F2003_FEATURES
+ //', into a configurable geojson file'&
 #endif
  //', or into a configurable formatted csv file. &
  &If input-format is of file type, inputfile ''-'' indicates stdin, &
@@ -364,11 +369,15 @@ CALL optionparser_add(opt, ' ', 'output-format', output_format, 'native', help= 
  &path name of a grib file in which the first message defines the output grid and &
  &is used as a template for the output grib messages, (see also post-trans-type)'&
 #endif
- //'; csv for formatted csv format (no template to be specified)')
+#ifdef F2003_FEATURES
+ //'; ''geojson'' for geojson format (no template to be specified)'&
+#endif
+ //'; ''csv'' for formatted csv format (no template to be specified)')
 
 #ifdef F2003_FEATURES
-! setup options for csv
+! setup options for csv and geojson
 CALL v7d_csv%vol7d_serialize_optionparser(opt, 'csv')
+CALL v7d_geojson%vol7d_serialize_optionparser(opt, 'geojson')
 #else
 ! options for configuring csv output
 CALL optionparser_add(opt, ' ', 'csv-volume', csv_volume, 'all', help= &
@@ -715,8 +724,9 @@ ENDIF
 CALL delete(argparse)
 
 #ifdef F2003_FEATURES
-! parse csv options
-CALL v7d_csv%vol7d_serialize_parse()
+! parse csv and geojson options
+CALL v7d_csv%vol7d_serialize_parse(category)
+CALL v7d_geojson%vol7d_serialize_parse(category)
 #else
 ! check csv-column
 CALL parse_v7d_column(csv_column, icsv_column, '--csv-column', .FALSE.)
@@ -1176,6 +1186,20 @@ ELSE IF (output_format == 'csv') THEN
 #endif
   IF (output_file /= '-') CLOSE(iun)
   CALL delete(v7d)
+
+#ifdef F2003_FEATURES
+ELSE IF (output_format == 'geojson') THEN
+  CALL v7d_geojson%vol7d_serialize_setup(v7d)
+  IF (output_file == '-') THEN
+    iun = stdout_unit
+  ELSE
+    iun = getunit()
+    OPEN(iun, file=output_file, form='FORMATTED', access='SEQUENTIAL')
+  ENDIF
+  CALL v7d_geojson%vol7d_serialize_export(iun)
+  IF (output_file /= '-') CLOSE(iun)
+  CALL delete(v7d)
+#endif
 
 #ifdef HAVE_DBALLE
 ELSE IF (output_format == 'BUFR' .OR. output_format == 'CREX' .OR. output_format == 'dba') THEN

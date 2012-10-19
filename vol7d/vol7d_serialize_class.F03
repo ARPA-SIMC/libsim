@@ -48,11 +48,11 @@ TYPE vol7d_serialize
   CHARACTER(len=512),PUBLIC :: column='time,timerange,ana,level,network'
   CHARACTER(len=512),PUBLIC :: loop='time,timerange,ana,level,network'
   CHARACTER(len=512),PUBLIC :: variable='all'
-  character(len=5),PUBLIC :: ext = 'ser'
+  CHARACTER(len=8),PUBLIC :: ext = 'ser'
   LOGICAL,PUBLIC :: keep_miss=.FALSE.
   LOGICAL,PUBLIC :: no_rescale=.FALSE.
-  LOGICAL,PUBLIC :: cachedesc=.FALSE. !.TRUE. !.FALSE.
-  LOGICAL :: anaonly ! needed?
+  LOGICAL,PUBLIC :: cachedesc=.FALSE.
+  LOGICAL :: anaonly=.FALSE.
   INTEGER :: ndvar=5
   INTEGER :: icolumn(7), looporder(6), loopinvorder(6), &
    loopstart(6), loopend(6)
@@ -159,7 +159,11 @@ CONTAINS
 !! to a program.
 !! An initialised object of the optionparser class is used for adding
 !! the relevant options, an extension is provided for formatting the
-!! options and the help messages.
+!! options and the help messages. Alternatively the configurable
+!! options can be set directly since the corresponding members in the
+!! \a vol7d_serialize class are PUBLIC. In both cases the \a
+!! vol7d_serialize_parse method must be successively called in order
+!! to process the configurable options.
 SUBROUTINE vol7d_serialize_optionparser(this, opt, ext)
 CLASS(vol7d_serialize),INTENT(inout) :: this
 TYPE(optionparser),INTENT(inout) :: opt
@@ -199,6 +203,8 @@ END SUBROUTINE vol7d_serialize_optionparser
 !! It must be called after the call to optionparser_parse in order to
 !! validate the options relevant to vol7d_serialize, in case of errors
 !! the raise_error subroutine is called, with possible program abort.
+!! It should be called also in case the configurable parameters are
+!! set directly rather than through command-line.
 SUBROUTINE vol7d_serialize_parse(this, category)
 CLASS(vol7d_serialize),INTENT(inout) :: this !< object having undorgone the vol7d_serialize_optionparser method
 INTEGER,INTENT(in),OPTIONAL :: category !< log4fortran category for logging error messages
@@ -288,15 +294,15 @@ SUBROUTINE vol7d_serialize_set_callback(this, vol7d_ana_callback, &
  vol7d_var_callback, vol7d_val_callback, vol7d_value_var_callback, &
  vol7d_value_attr_callback)
 CLASS(vol7d_serialize),INTENT(inout) :: this
-PROCEDURE(default_vol7d_ana_header_callback),POINTER,INTENT(in),OPTIONAL :: vol7d_ana_callback
-PROCEDURE(default_vol7d_time_header_callback),POINTER,INTENT(in),OPTIONAL :: vol7d_time_callback
-PROCEDURE(default_vol7d_level_header_callback),POINTER,INTENT(in),OPTIONAL :: vol7d_level_callback
-PROCEDURE(default_vol7d_timerange_header_callback),POINTER,INTENT(in),OPTIONAL :: vol7d_timerange_callback
-PROCEDURE(default_vol7d_network_header_callback),POINTER,INTENT(in),OPTIONAL :: vol7d_network_callback
-PROCEDURE(default_vol7d_var_header_callback),POINTER,INTENT(in),OPTIONAL :: vol7d_var_callback
-PROCEDURE(default_vol7d_val_header_callback),POINTER,INTENT(in),OPTIONAL :: vol7d_val_callback
-PROCEDURE(default_vol7d_value_var_header_callback),POINTER,INTENT(in),OPTIONAL :: vol7d_value_var_callback
-PROCEDURE(default_vol7d_value_attr_header_callback),POINTER,INTENT(in),OPTIONAL :: vol7d_value_attr_callback
+PROCEDURE(default_vol7d_ana_header_callback),OPTIONAL :: vol7d_ana_callback
+PROCEDURE(default_vol7d_time_header_callback),OPTIONAL :: vol7d_time_callback
+PROCEDURE(default_vol7d_level_header_callback),OPTIONAL :: vol7d_level_callback
+PROCEDURE(default_vol7d_timerange_header_callback),OPTIONAL :: vol7d_timerange_callback
+PROCEDURE(default_vol7d_network_header_callback),OPTIONAL :: vol7d_network_callback
+PROCEDURE(default_vol7d_var_header_callback),OPTIONAL :: vol7d_var_callback
+PROCEDURE(default_vol7d_val_header_callback),OPTIONAL :: vol7d_val_callback
+PROCEDURE(default_vol7d_value_var_header_callback),OPTIONAL :: vol7d_value_var_callback
+PROCEDURE(default_vol7d_value_attr_header_callback),OPTIONAL :: vol7d_value_attr_callback
 
 IF (PRESENT(vol7d_ana_callback)) this%vol7d_ana_callback => vol7d_ana_callback
 IF (PRESENT(vol7d_time_callback)) this%vol7d_time_callback => vol7d_time_callback
@@ -318,18 +324,18 @@ SUBROUTINE vol7d_serialize_iterline_set_callback(this, vol7d_ana_callback, &
  vol7d_valued_callback, vol7d_valuei_callback, vol7d_valueb_callback, &
  vol7d_valuec_callback)
 CLASS(vol7d_serialize_iterline),INTENT(inout) :: this
-PROCEDURE(default_vol7d_ana_callback),POINTER,INTENT(in),OPTIONAL :: vol7d_ana_callback
-PROCEDURE(default_vol7d_time_callback),POINTER,INTENT(in),OPTIONAL :: vol7d_time_callback
-PROCEDURE(default_vol7d_level_callback),POINTER,INTENT(in),OPTIONAL :: vol7d_level_callback
-PROCEDURE(default_vol7d_timerange_callback),POINTER,INTENT(in),OPTIONAL :: vol7d_timerange_callback
-PROCEDURE(default_vol7d_network_callback),POINTER,INTENT(in),OPTIONAL :: vol7d_network_callback
-PROCEDURE(default_vol7d_var_callback),POINTER,INTENT(in),OPTIONAL :: vol7d_var_callback
-PROCEDURE(default_vol7d_attr_callback),POINTER,INTENT(in),OPTIONAL :: vol7d_attr_callback
-PROCEDURE(default_vol7d_valuer_callback),POINTER,INTENT(in),OPTIONAL :: vol7d_valuer_callback
-PROCEDURE(default_vol7d_valued_callback),POINTER,INTENT(in),OPTIONAL :: vol7d_valued_callback
-PROCEDURE(default_vol7d_valuei_callback),POINTER,INTENT(in),OPTIONAL :: vol7d_valuei_callback
-PROCEDURE(default_vol7d_valueb_callback),POINTER,INTENT(in),OPTIONAL :: vol7d_valueb_callback
-PROCEDURE(default_vol7d_valuec_callback),POINTER,INTENT(in),OPTIONAL :: vol7d_valuec_callback
+PROCEDURE(default_vol7d_ana_callback),OPTIONAL :: vol7d_ana_callback
+PROCEDURE(default_vol7d_time_callback),OPTIONAL :: vol7d_time_callback
+PROCEDURE(default_vol7d_level_callback),OPTIONAL :: vol7d_level_callback
+PROCEDURE(default_vol7d_timerange_callback),OPTIONAL :: vol7d_timerange_callback
+PROCEDURE(default_vol7d_network_callback),OPTIONAL :: vol7d_network_callback
+PROCEDURE(default_vol7d_var_callback),OPTIONAL :: vol7d_var_callback
+PROCEDURE(default_vol7d_attr_callback),OPTIONAL :: vol7d_attr_callback
+PROCEDURE(default_vol7d_valuer_callback),OPTIONAL :: vol7d_valuer_callback
+PROCEDURE(default_vol7d_valued_callback),OPTIONAL :: vol7d_valued_callback
+PROCEDURE(default_vol7d_valuei_callback),OPTIONAL :: vol7d_valuei_callback
+PROCEDURE(default_vol7d_valueb_callback),OPTIONAL :: vol7d_valueb_callback
+PROCEDURE(default_vol7d_valuec_callback),OPTIONAL :: vol7d_valuec_callback
 
 IF (PRESENT(vol7d_ana_callback)) this%vol7d_ana_callback => vol7d_ana_callback
 IF (PRESENT(vol7d_time_callback)) this%vol7d_time_callback => vol7d_time_callback
@@ -529,24 +535,18 @@ ENDIF ! first iteration
     this%analine = .FALSE.
     IF (.NOT.this%ser%keep_miss) THEN ! check whether the line has valid data
       IF (var_mapper_miss(this%ser%mapper, this%ser%v7d, &
-       this%i1, this%i2, this%i3, this%i4, this%i6, .FALSE.)) CYCLE
+       this%i1, this%i2, this%i3, this%i4, this%i6, this%ser%anaonly)) CYCLE
     ENDIF
   ELSE ! one variable per line
     this%i5 = this%loopind(this%ser%loopinvorder(vol7d_var_d))
-    IF (this%ser%mapper(this%i5)%cat(1:1) == 'a') THEN ! ana line
-      this%analine = .TRUE.
+    this%analine = (this%ser%mapper(this%i5)%cat(1:1) == 'a')
 ! do not repeat ana variables for every data entry
+    IF (this%analine) THEN
       IF (this%i2 /= 1 .OR. this%i3 /= 1 .OR. this%i4 /= 1) CYCLE
-      IF (.NOT.this%ser%keep_miss) THEN ! check whether the line has valid data
-        IF (var_mapper_miss(this%ser%mapper(this%i5:this%i5), this%ser%v7d, &
-         this%i1, this%i2, this%i3, this%i4, this%i6, this%analine)) CYCLE
-      ENDIF
-    ELSE
-      this%analine = .FALSE.
-      IF (.NOT.this%ser%keep_miss) THEN ! check whether the line has valid data
-        IF (var_mapper_miss(this%ser%mapper(this%i5:this%i5), this%ser%v7d, &
-         this%i1, this%i2, this%i3, this%i4, this%i6, this%analine)) CYCLE
-      ENDIF
+    ENDIF
+    IF (.NOT.this%ser%keep_miss) THEN ! check whether the line has valid data
+      IF (var_mapper_miss(this%ser%mapper(this%i5:this%i5), this%ser%v7d, &
+       this%i1, this%i2, this%i3, this%i4, this%i6, this%analine)) CYCLE
     ENDIF
   ENDIF
 
@@ -1241,61 +1241,61 @@ DO ind = 1, SIZE(mapper)
 
   SELECT CASE(mapper(ind)%cat)
   CASE('av')
-    SELECT CASE(mapper(ind)%typ)
-    CASE('r')
-      miss = miss .AND. .NOT.c_e(v7d%volanar(i1, varind, i6))
-    CASE('d')
-      miss = miss .AND. .NOT.c_e(v7d%volanad(i1, varind, i6))
-    CASE('i')
-      miss = miss .AND. .NOT.c_e(v7d%volanai(i1, varind, i6))
-    CASE('b')
-      miss = miss .AND. .NOT.c_e(v7d%volanab(i1, varind, i6))
-    CASE('c')
-      miss = miss .AND. .NOT.c_e(v7d%volanac(i1, varind, i6))
-    END SELECT
+    IF (analine) THEN
+      SELECT CASE(mapper(ind)%typ)
+      CASE('r')
+        miss = miss .AND. .NOT.c_e(v7d%volanar(i1, varind, i6))
+      CASE('d')
+        miss = miss .AND. .NOT.c_e(v7d%volanad(i1, varind, i6))
+      CASE('i')
+        miss = miss .AND. .NOT.c_e(v7d%volanai(i1, varind, i6))
+      CASE('b')
+        miss = miss .AND. .NOT.c_e(v7d%volanab(i1, varind, i6))
+      CASE('c')
+        miss = miss .AND. .NOT.c_e(v7d%volanac(i1, varind, i6))
+      END SELECT
+    ENDIF
   CASE('aa')
+    IF (analine) THEN
+      SELECT CASE(mapper(ind)%typ)
+      CASE('r')
+        miss = miss .AND. .NOT.c_e(v7d%volanaattrr(i1, varind, i6, attrind))
+      CASE('d')
+        miss = miss .AND. .NOT.c_e(v7d%volanaattrd(i1, varind, i6, attrind))
+      CASE('i')
+        miss = miss .AND. .NOT.c_e(v7d%volanaattri(i1, varind, i6, attrind))
+      CASE('b')
+        miss = miss .AND. .NOT.c_e(v7d%volanaattrb(i1, varind, i6, attrind))
+      CASE('c')
+        miss = miss .AND. .NOT.c_e(v7d%volanaattrc(i1, varind, i6, attrind))
+      END SELECT
+    ENDIF
+  CASE('dv')
     SELECT CASE(mapper(ind)%typ)
     CASE('r')
-      miss = miss .AND. .NOT.c_e(v7d%volanaattrr(i1, varind, i6, attrind))
+      miss = miss .AND. .NOT.c_e(v7d%voldatir(i1, i2, i3, i4, varind, i6))
     CASE('d')
-      miss = miss .AND. .NOT.c_e(v7d%volanaattrd(i1, varind, i6, attrind))
+      miss = miss .AND. .NOT.c_e(v7d%voldatid(i1, i2, i3, i4, varind, i6))
     CASE('i')
-      miss = miss .AND. .NOT.c_e(v7d%volanaattri(i1, varind, i6, attrind))
+      miss = miss .AND. .NOT.c_e(v7d%voldatii(i1, i2, i3, i4, varind, i6))
     CASE('b')
-      miss = miss .AND. .NOT.c_e(v7d%volanaattrb(i1, varind, i6, attrind))
+      miss = miss .AND. .NOT.c_e(v7d%voldatib(i1, i2, i3, i4, varind, i6))
     CASE('c')
-      miss = miss .AND. .NOT.c_e(v7d%volanaattrc(i1, varind, i6, attrind))
+      miss = miss .AND. .NOT.c_e(v7d%voldatic(i1, i2, i3, i4, varind, i6))
     END SELECT
-  CASE('dv')
-    IF (.NOT.analine) THEN
-      SELECT CASE(mapper(ind)%typ)
-      CASE('r')
-        miss = miss .AND. .NOT.c_e(v7d%voldatir(i1, i2, i3, i4, varind, i6))
-      CASE('d')
-        miss = miss .AND. .NOT.c_e(v7d%voldatid(i1, i2, i3, i4, varind, i6))
-      CASE('i')
-        miss = miss .AND. .NOT.c_e(v7d%voldatii(i1, i2, i3, i4, varind, i6))
-      CASE('b')
-        miss = miss .AND. .NOT.c_e(v7d%voldatib(i1, i2, i3, i4, varind, i6))
-      CASE('c')
-        miss = miss .AND. .NOT.c_e(v7d%voldatic(i1, i2, i3, i4, varind, i6))
-      END SELECT
-    ENDIF
   CASE('da')
-    IF (.NOT.analine) THEN
-      SELECT CASE(mapper(ind)%typ)
-      CASE('r')
-        miss = miss .AND. .NOT.c_e(v7d%voldatiattrr(i1, i2, i3, i4, varind, i6, attrind))
-      CASE('d')
-        miss = miss .AND. .NOT.c_e(v7d%voldatiattrd(i1, i2, i3, i4, varind, i6, attrind))
-      CASE('i')
-        miss = miss .AND. .NOT.c_e(v7d%voldatiattri(i1, i2, i3, i4, varind, i6, attrind))
-      CASE('b')
-        miss = miss .AND. .NOT.c_e(v7d%voldatiattrb(i1, i2, i3, i4, varind, i6, attrind))
-      CASE('c')
-        miss = miss .AND. .NOT.c_e(v7d%voldatiattrc(i1, i2, i3, i4, varind, i6, attrind))
-      END SELECT
-    ENDIF
+    SELECT CASE(mapper(ind)%typ)
+    CASE('r')
+      miss = miss .AND. .NOT.c_e(v7d%voldatiattrr(i1, i2, i3, i4, varind, i6, attrind))
+    CASE('d')
+      miss = miss .AND. .NOT.c_e(v7d%voldatiattrd(i1, i2, i3, i4, varind, i6, attrind))
+    CASE('i')
+      miss = miss .AND. .NOT.c_e(v7d%voldatiattri(i1, i2, i3, i4, varind, i6, attrind))
+    CASE('b')
+      miss = miss .AND. .NOT.c_e(v7d%voldatiattrb(i1, i2, i3, i4, varind, i6, attrind))
+    CASE('c')
+      miss = miss .AND. .NOT.c_e(v7d%voldatiattrc(i1, i2, i3, i4, varind, i6, attrind))
+    END SELECT
   END SELECT
   IF (.NOT.miss) RETURN ! shortcut
 ENDDO
