@@ -1,3 +1,20 @@
+! Copyright (C) 2010  ARPA-SIM <urpsim@smr.arpa.emr.it>
+! authors:
+! Davide Cesari <dcesari@arpa.emr.it>
+! Paolo Patruno <ppatruno@arpa.emr.it>
+
+! This program is free software; you can redistribute it and/or
+! modify it under the terms of the GNU General Public License as
+! published by the Free Software Foundation; either version 2 of 
+! the License, or (at your option) any later version.
+
+! This program is distributed in the hope that it will be useful,
+! but WITHOUT ANY WARRANTY; without even the implied warranty of
+! MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+! GNU General Public License for more details.
+
+! You should have received a copy of the GNU General Public License
+! along with this program.  If not, see <http://www.gnu.org/licenses/>.
 MODULE vol7d_serialize_geojson_class
 USE,INTRINSIC :: iso_c_binding
 USE vol7d_class
@@ -12,7 +29,6 @@ TYPE,EXTENDS(vol7d_serialize) :: vol7d_serialize_geojson
   CONTAINS
   PROCEDURE :: vol7d_serialize_optionparser
   PROCEDURE :: vol7d_serialize_parse
-  PROCEDURE :: vol7d_serialize_setup
   PROCEDURE :: vol7d_serialize_export
 END TYPE vol7d_serialize_geojson
 
@@ -26,22 +42,23 @@ CLASS(vol7d_serialize_geojson),INTENT(inout) :: this
 TYPE(optionparser),INTENT(inout),OPTIONAL :: opt
 CHARACTER(len=*),INTENT(in),OPTIONAL :: ext
 
+IF (PRESENT(ext)) THEN
+  this%ext = ext
+ELSE
+  this%ext = 'geojson'
+ENDIF
+
 ! reset unconditionally some parameters
 this%column='ana,time,timerange,level,network,var,value'
 this%loop='time,timerange,level,var,ana,network'
-IF (PRESENT(ext)) THEN
-  this%ext='geojson'
-ELSE
-  this%ext='geojson'
-ENDIF
 
-! the only configuration parameter:
+! the generic method is not called since everything has a predefined
+! configuration
+! add a specific parameter
 IF (present(opt)) &
  CALL optionparser_add(opt, ' ', TRIM(this%ext)//'-variant', this%variant, &
  this%variant, &
  help='variant of geojson output, accepted values are ''simple'' and ''rich''')
-! the original method is not called since the everything has a fixed
-! configuration
 
 END SUBROUTINE vol7d_serialize_optionparser
 
@@ -63,19 +80,6 @@ ENDIF
 CALL this%vol7d_serialize%vol7d_serialize_parse(category)
 
 END SUBROUTINE vol7d_serialize_parse
-
-
-SUBROUTINE vol7d_serialize_setup(this, v7d)
-CLASS(vol7d_serialize_geojson),INTENT(inout) :: this
-TYPE(vol7d),INTENT(inout),TARGET :: v7d
-
-! force configuration
-!this%column='ana,time,timerange,level,network,var,value'
-!this%loop='time,timerange,level,var,ana,network'
-! call original method
-CALL this%vol7d_serialize%vol7d_serialize_setup(v7d)
-
-END SUBROUTINE vol7d_serialize_setup
 
 
 SUBROUTINE vol7d_serialize_export(this, iun)

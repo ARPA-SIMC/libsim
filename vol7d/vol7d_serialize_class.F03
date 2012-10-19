@@ -15,6 +15,7 @@
 
 ! You should have received a copy of the GNU General Public License
 ! along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 !> Extension of vol7d_class for serializing the contents of a volume.
 !! This module defines a class which allows to iterate over all the
 !! elements of a vol7d object and call specific callbacks for every
@@ -34,8 +35,8 @@ USE log4fortran
 IMPLICIT NONE
 
 TYPE vol7d_var_mapper
-  CHARACTER(len=2) :: cat
-  CHARACTER(len=1) :: typ
+  INTEGER :: cat
+  INTEGER :: typ
   INTEGER :: i5, i7
 END TYPE vol7d_var_mapper
 
@@ -44,14 +45,13 @@ END TYPE vol7d_var_mapper
 !! Configurable components are PUBLIC, while the others are PRIVATE and undocumented.
 TYPE vol7d_serialize
   PRIVATE
-!  CHARACTER(len=8),PUBLIC :: volume='all'
-  CHARACTER(len=512),PUBLIC :: column='time,timerange,ana,level,network'
-  CHARACTER(len=512),PUBLIC :: loop='time,timerange,ana,level,network'
-  CHARACTER(len=512),PUBLIC :: variable='all'
-  CHARACTER(len=8),PUBLIC :: ext = 'ser'
-  LOGICAL,PUBLIC :: keep_miss=.FALSE.
-  LOGICAL,PUBLIC :: no_rescale=.FALSE.
-  LOGICAL,PUBLIC :: cachedesc=.FALSE.
+  CHARACTER(len=512),PUBLIC :: column='time,timerange,ana,level,network' !< columns that appear in output
+  CHARACTER(len=512),PUBLIC :: loop='time,timerange,ana,level,network' !< order of looping on vol7d descriptors, var is optional, all the others are compulsory
+  CHARACTER(len=512),PUBLIC :: variable='all' !< list of variables to output, or 'all'
+  CHARACTER(len=8),PUBLIC :: ext = 'ser' !< extension to use for command-line arguments
+  LOGICAL,PUBLIC :: keep_miss=.FALSE. !< keep in output the elements with all missing data
+  LOGICAL,PUBLIC :: no_rescale=.FALSE. !< do not rescale integer values in output
+  LOGICAL,PUBLIC :: cachedesc=.FALSE. !< cache descriptors that do not change from one line to the next
   LOGICAL :: anaonly=.FALSE.
   INTEGER :: ndvar=5
   INTEGER :: icolumn(7), looporder(6), loopinvorder(6), &
@@ -154,7 +154,6 @@ PUBLIC vol7d_serialize, vol7d_serialize_iterline, vol7d_serialize_itercol
 
 CONTAINS
 
-
 !> Method for adding the standard vol7d_serialize command-line options
 !! to a program.
 !! An initialised object of the optionparser class is used for adding
@@ -166,35 +165,39 @@ CONTAINS
 !! to process the configurable options.
 SUBROUTINE vol7d_serialize_optionparser(this, opt, ext)
 CLASS(vol7d_serialize),INTENT(inout) :: this
-TYPE(optionparser),INTENT(inout) :: opt
+TYPE(optionparser),INTENT(inout),OPTIONAL :: opt
 CHARACTER(len=*),INTENT(in),OPTIONAL :: ext
 
 IF (PRESENT(ext)) this%ext = ext
 
+IF (PRESENT(opt)) THEN
 !CALL optionparser_add(opt, ' ', TRIM(this%ext)//'-volume', this%volume, &
 ! this%volume, help= &
 ! 'vol7d volumes to be output to csv: ''all'' for all volumes, &
 ! &''ana'' for station volumes only or ''data'' for data volumes only')
-CALL optionparser_add(opt, ' ', TRIM(this%ext)//'-column', this%column, &
- this%column, help= &
- 'list of columns that have to appear in csv output: &
- &a comma-separated selection of ''time,timerange,level,ana,network,var,value'' &
- &in the desired order')
-CALL optionparser_add(opt, ' ', TRIM(this%ext)//'-loop', this%loop, &
- this%loop, help= &
- 'order of looping on descriptors in csv output: &
- &a comma-separated selection of ''time,timerange,level,ana,network,var'' &
- &in the desired order, all the identifiers must be present, except ''var'', &
- &which, if present, enables looping on variables and attributes as well')
-CALL optionparser_add(opt, ' ', TRIM(this%ext)//'-variable', this%variable, &
- this%variable, help= &
- 'list of variables that have to appear in the data columns of csv output: &
- &''all'' or a comma-separated list of B-table alphanumeric codes, e.g. &
- &''B10004,B12101'' in the desired order')
-CALL optionparser_add(opt, ' ', TRIM(this%ext)//'-keep-miss', this%keep_miss, help= &
- 'keep records containing only missing values in csv output, normally they are discarded')
-CALL optionparser_add(opt, ' ', TRIM(this%ext)//'-norescale', this%no_rescale, help= &
- 'do not rescale in output integer variables according to their scale factor')
+  CALL optionparser_add(opt, ' ', TRIM(this%ext)//'-column', this%column, &
+   this%column, help= &
+   'list of columns that have to appear in csv output: &
+   &a comma-separated selection of ''time,timerange,level,ana,network,var,value'' &
+   &in the desired order')
+  CALL optionparser_add(opt, ' ', TRIM(this%ext)//'-loop', this%loop, &
+   this%loop, help= &
+   'order of looping on descriptors in csv output: &
+   &a comma-separated selection of ''time,timerange,level,ana,network,var'' &
+   &in the desired order, all the identifiers must be present, except ''var'', &
+   &which, if present, enables looping on variables and attributes as well')
+  CALL optionparser_add(opt, ' ', TRIM(this%ext)//'-variable', this%variable, &
+   this%variable, help= &
+   'list of variables that have to appear in the data columns of csv output: &
+   &''all'' or a comma-separated list of B-table alphanumeric codes, e.g. &
+   &''B10004,B12101'' in the desired order')
+  CALL optionparser_add(opt, ' ', TRIM(this%ext)//'-keep-miss', this%keep_miss, &
+   help='keep records containing only missing values in csv output, &
+   &normally they are discarded')
+  CALL optionparser_add(opt, ' ', TRIM(this%ext)//'-norescale', this%no_rescale, &
+   help='do not rescale in output integer variables according to their &
+   &scale factor')
+ENDIF
 
 END SUBROUTINE vol7d_serialize_optionparser
 
@@ -396,8 +399,8 @@ ENDIF
 this%anaonly = SIZE(v7d%time) == 0 .AND. SIZE(v7d%level) == 0 .AND. &
  SIZE(v7d%timerange) == 0
 
-nav = COUNT(this%mapper(:)%cat == 'av')
-ndv = COUNT(this%mapper(:)%cat == 'dv')
+nav = COUNT(this%mapper(:)%cat == 1)
+ndv = COUNT(this%mapper(:)%cat == 3)
 IF ((ndv > 0 .AND. &
  (SIZE(v7d%ana) == 0 .OR. SIZE(v7d%network) == 0 .OR. &
  SIZE(v7d%time) == 0 .OR. SIZE(v7d%level) == 0 .OR. &
@@ -522,7 +525,6 @@ ELSE ! following iterations
   ENDIF
 ENDIF ! first iteration
 
-
 ! set indices, use pointers?
   this%i1 = this%loopind(this%ser%loopinvorder(vol7d_ana_d))
   this%i2 = this%loopind(this%ser%loopinvorder(vol7d_time_d))
@@ -539,7 +541,7 @@ ENDIF ! first iteration
     ENDIF
   ELSE ! one variable per line
     this%i5 = this%loopind(this%ser%loopinvorder(vol7d_var_d))
-    this%analine = (this%ser%mapper(this%i5)%cat(1:1) == 'a')
+    this%analine = (this%ser%mapper(this%i5)%cat <= 2)
 ! do not repeat ana variables for every data entry
     IF (this%analine) THEN
       IF (this%i2 /= 1 .OR. this%i3 /= 1 .OR. this%i4 /= 1) CYCLE
@@ -710,65 +712,65 @@ varind = this%ser%mapper(ind)%i5
 attrind = this%ser%mapper(ind)%i7
 
 SELECT CASE(this%ser%mapper(ind)%cat)
-CASE('av')
+CASE(1)
   SELECT CASE(this%ser%mapper(ind)%typ)
-  CASE('r')
+  CASE(1)
     CALL this%ser%vol7d_value_var_callback(this%ser%v7d%anavar%r(varind), 'r', genericptr)
-  CASE('d')
+  CASE(2)
     CALL this%ser%vol7d_value_var_callback(this%ser%v7d%anavar%d(varind), 'd', genericptr)
-  CASE('i')
+  CASE(3)
     CALL this%ser%vol7d_value_var_callback(this%ser%v7d%anavar%i(varind), 'i', genericptr)
-  CASE('b')
+  CASE(4)
     CALL this%ser%vol7d_value_var_callback(this%ser%v7d%anavar%b(varind), 'b', genericptr)
-  CASE('c')
+  CASE(5)
     CALL this%ser%vol7d_value_var_callback(this%ser%v7d%anavar%c(varind), 'c', genericptr)
   END SELECT
-CASE('aa')
+CASE(2)
   SELECT CASE(this%ser%mapper(ind)%typ)
-  CASE('r')
+  CASE(1)
     CALL this%ser%vol7d_value_attr_callback(this%ser%v7d%anavarattr%r(varind), &
      this%ser%v7d%anaattr%r(attrind), 'r', genericptr)
-  CASE('d')
+  CASE(2)
     CALL this%ser%vol7d_value_attr_callback(this%ser%v7d%anavarattr%d(varind), &
      this%ser%v7d%anaattr%d(attrind), 'd', genericptr)
-  CASE('i')
+  CASE(3)
     CALL this%ser%vol7d_value_attr_callback(this%ser%v7d%anavarattr%i(varind), &
      this%ser%v7d%anaattr%i(attrind), 'i', genericptr)
-  CASE('b')
+  CASE(4)
     CALL this%ser%vol7d_value_attr_callback(this%ser%v7d%anavarattr%b(varind), &
      this%ser%v7d%anaattr%b(attrind), 'b', genericptr)
-  CASE('c')
+  CASE(5)
     CALL this%ser%vol7d_value_attr_callback(this%ser%v7d%anavarattr%c(varind), &
      this%ser%v7d%anaattr%c(attrind), 'c', genericptr)
   END SELECT
-CASE('dv')
+CASE(3)
   SELECT CASE(this%ser%mapper(ind)%typ)
-  CASE('r')
+  CASE(1)
     CALL this%ser%vol7d_value_var_callback(this%ser%v7d%dativar%r(varind), 'r', genericptr)
-  CASE('d')
+  CASE(2)
     CALL this%ser%vol7d_value_var_callback(this%ser%v7d%dativar%d(varind), 'd', genericptr)
-  CASE('i')
+  CASE(3)
     CALL this%ser%vol7d_value_var_callback(this%ser%v7d%dativar%i(varind), 'i', genericptr)
-  CASE('b')
+  CASE(4)
     CALL this%ser%vol7d_value_var_callback(this%ser%v7d%dativar%b(varind), 'b', genericptr)
-  CASE('c')
+  CASE(5)
     CALL this%ser%vol7d_value_var_callback(this%ser%v7d%dativar%c(varind), 'c', genericptr)
   END SELECT
-CASE('da')
+CASE(4)
   SELECT CASE(this%ser%mapper(ind)%typ)
-  CASE('r')
+  CASE(1)
     CALL this%ser%vol7d_value_attr_callback(this%ser%v7d%dativarattr%r(varind), &
      this%ser%v7d%datiattr%r(attrind), 'r', genericptr)
-  CASE('d')
+  CASE(2)
     CALL this%ser%vol7d_value_attr_callback(this%ser%v7d%dativarattr%d(varind), &
      this%ser%v7d%datiattr%d(attrind), 'd', genericptr)
-  CASE('i')
+  CASE(3)
     CALL this%ser%vol7d_value_attr_callback(this%ser%v7d%dativarattr%i(varind), &
      this%ser%v7d%datiattr%i(attrind), 'i', genericptr)
-  CASE('b')
+  CASE(4)
     CALL this%ser%vol7d_value_attr_callback(this%ser%v7d%dativarattr%b(varind), &
      this%ser%v7d%datiattr%b(attrind), 'b', genericptr)
-  CASE('c')
+  CASE(5)
     CALL this%ser%vol7d_value_attr_callback(this%ser%v7d%dativarattr%c(varind), &
      this%ser%v7d%datiattr%c(attrind), 'c', genericptr)
   END SELECT
@@ -915,65 +917,65 @@ CASE(vol7d_var_d)
   varind = this%ser%mapper(ind)%i5
   attrind = this%ser%mapper(ind)%i7
   SELECT CASE(this%ser%mapper(ind)%cat)
-  CASE('av')
+  CASE(1)
     SELECT CASE(this%ser%mapper(ind)%typ)
-    CASE('r')
+    CASE(1)
       CALL this%line%vol7d_var_callback(this%ser%v7d%anavar%r(varind), genericptr)
-    CASE('d')
+    CASE(2)
       CALL this%line%vol7d_var_callback(this%ser%v7d%anavar%d(varind), genericptr)
-    CASE('i')
+    CASE(3)
       CALL this%line%vol7d_var_callback(this%ser%v7d%anavar%i(varind), genericptr)
-    CASE('b')
+    CASE(4)
       CALL this%line%vol7d_var_callback(this%ser%v7d%anavar%b(varind), genericptr)
-    CASE('c')
+    CASE(5)
       CALL this%line%vol7d_var_callback(this%ser%v7d%anavar%c(varind), genericptr)
   END SELECT
-  CASE('aa')
+  CASE(2)
     SELECT CASE(this%ser%mapper(ind)%typ)
-    CASE('r')
+    CASE(1)
       CALL this%line%vol7d_attr_callback(this%ser%v7d%anavarattr%r(varind), &
        this%ser%v7d%anaattr%r(attrind), genericptr)
-    CASE('d')
+    CASE(2)
       CALL this%line%vol7d_attr_callback(this%ser%v7d%anavarattr%d(varind), &
        this%ser%v7d%anaattr%d(attrind), genericptr)
-    CASE('i')
+    CASE(3)
       CALL this%line%vol7d_attr_callback(this%ser%v7d%anavarattr%i(varind), &
        this%ser%v7d%anaattr%i(attrind), genericptr)
-    CASE('b')
+    CASE(4)
       CALL this%line%vol7d_attr_callback(this%ser%v7d%anavarattr%b(varind), &
        this%ser%v7d%anaattr%b(attrind), genericptr)
-    CASE('c')
+    CASE(5)
       CALL this%line%vol7d_attr_callback(this%ser%v7d%anavarattr%c(varind), &
        this%ser%v7d%anaattr%c(attrind), genericptr)
   END SELECT
-  CASE('dv')
+  CASE(3)
     SELECT CASE(this%ser%mapper(ind)%typ)
-    CASE('r')
+    CASE(1)
       CALL this%line%vol7d_var_callback(this%ser%v7d%dativar%r(varind), genericptr)
-    CASE('d')
+    CASE(2)
       CALL this%line%vol7d_var_callback(this%ser%v7d%dativar%d(varind), genericptr)
-    CASE('i')
+    CASE(3)
       CALL this%line%vol7d_var_callback(this%ser%v7d%dativar%i(varind), genericptr)
-    CASE('b')
+    CASE(4)
       CALL this%line%vol7d_var_callback(this%ser%v7d%dativar%b(varind), genericptr)
-    CASE('c')
+    CASE(5)
       CALL this%line%vol7d_var_callback(this%ser%v7d%dativar%c(varind), genericptr)
   END SELECT
-  CASE('da')
+  CASE(4)
     SELECT CASE(this%ser%mapper(ind)%typ)
-    CASE('r')
+    CASE(1)
       CALL this%line%vol7d_attr_callback(this%ser%v7d%dativarattr%r(varind), &
        this%ser%v7d%datiattr%r(attrind), genericptr)
-    CASE('d')
+    CASE(2)
       CALL this%line%vol7d_attr_callback(this%ser%v7d%dativarattr%d(varind), &
        this%ser%v7d%datiattr%d(attrind), genericptr)
-    CASE('i')
+    CASE(3)
       CALL this%line%vol7d_attr_callback(this%ser%v7d%dativarattr%i(varind), &
        this%ser%v7d%datiattr%i(attrind), genericptr)
-    CASE('b')
+    CASE(4)
       CALL this%line%vol7d_attr_callback(this%ser%v7d%dativarattr%b(varind), &
        this%ser%v7d%datiattr%b(attrind), genericptr)
-    CASE('c')
+    CASE(5)
       CALL this%line%vol7d_attr_callback(this%ser%v7d%dativarattr%c(varind), &
        this%ser%v7d%datiattr%c(attrind), genericptr)
     END SELECT
@@ -1141,74 +1143,74 @@ ALLOCATE(mapper(n))
 n = 0
 
 IF (ASSOCIATED(v7d%anavar%r)) THEN
-  CALL set_mapper('av', 'r', 1, SIZE(v7d%anavar%r))
+  CALL set_mapper(1, 1, 1, SIZE(v7d%anavar%r))
 ENDIF
 IF (ASSOCIATED(v7d%anavar%d)) THEN
-  CALL set_mapper('av', 'd', 1, SIZE(v7d%anavar%d))
+  CALL set_mapper(1, 2, 1, SIZE(v7d%anavar%d))
 ENDIF
 IF (ASSOCIATED(v7d%anavar%i)) THEN
-  CALL set_mapper('av', 'i', 1, SIZE(v7d%anavar%i))
+  CALL set_mapper(1, 3, 1, SIZE(v7d%anavar%i))
 ENDIF
 IF (ASSOCIATED(v7d%anavar%b)) THEN
-  CALL set_mapper('av', 'b', 1, SIZE(v7d%anavar%b))
+  CALL set_mapper(1, 4, 1, SIZE(v7d%anavar%b))
 ENDIF
 IF (ASSOCIATED(v7d%anavar%c)) THEN
-  CALL set_mapper('av', 'c', 1, SIZE(v7d%anavar%c))
+  CALL set_mapper(1, 5, 1, SIZE(v7d%anavar%c))
 ENDIF
 
 IF (ASSOCIATED(v7d%anaattr%r) .AND. ASSOCIATED(v7d%anavarattr%r)) THEN
-  CALL set_mapper('aa', 'r', SIZE(v7d%anaattr%r), SIZE(v7d%anavarattr%r))
+  CALL set_mapper(2, 1, SIZE(v7d%anaattr%r), SIZE(v7d%anavarattr%r))
 ENDIF
 IF (ASSOCIATED(v7d%anaattr%d) .AND. ASSOCIATED(v7d%anavarattr%d)) THEN
-  CALL set_mapper('aa', 'd', SIZE(v7d%anaattr%d), SIZE(v7d%anavarattr%d))
+  CALL set_mapper(2, 2, SIZE(v7d%anaattr%d), SIZE(v7d%anavarattr%d))
 ENDIF
 IF (ASSOCIATED(v7d%anaattr%i) .AND. ASSOCIATED(v7d%anavarattr%i)) THEN
-  CALL set_mapper('aa', 'i', SIZE(v7d%anaattr%i), SIZE(v7d%anavarattr%i))
+  CALL set_mapper(2, 3, SIZE(v7d%anaattr%i), SIZE(v7d%anavarattr%i))
 ENDIF
 IF (ASSOCIATED(v7d%anaattr%b) .AND. ASSOCIATED(v7d%anavarattr%b)) THEN
-  CALL set_mapper('aa', 'b', SIZE(v7d%anaattr%b), SIZE(v7d%anavarattr%b))
+  CALL set_mapper(2, 4, SIZE(v7d%anaattr%b), SIZE(v7d%anavarattr%b))
 ENDIF
 IF (ASSOCIATED(v7d%anaattr%c) .AND. ASSOCIATED(v7d%anavarattr%c)) THEN
-  CALL set_mapper('aa', 'c', SIZE(v7d%anaattr%c), SIZE(v7d%anavarattr%c))
+  CALL set_mapper(2, 5, SIZE(v7d%anaattr%c), SIZE(v7d%anavarattr%c))
 ENDIF
 
 IF (ASSOCIATED(v7d%dativar%r)) THEN
-  CALL set_mapper('dv', 'r', 1, SIZE(v7d%dativar%r))
+  CALL set_mapper(3, 1, 1, SIZE(v7d%dativar%r))
 ENDIF
 IF (ASSOCIATED(v7d%dativar%d)) THEN
-  CALL set_mapper('dv', 'd', 1, SIZE(v7d%dativar%d))
+  CALL set_mapper(3, 2, 1, SIZE(v7d%dativar%d))
 ENDIF
 IF (ASSOCIATED(v7d%dativar%i)) THEN
-  CALL set_mapper('dv', 'i', 1, SIZE(v7d%dativar%i))
+  CALL set_mapper(3, 3, 1, SIZE(v7d%dativar%i))
 ENDIF
 IF (ASSOCIATED(v7d%dativar%b)) THEN
-  CALL set_mapper('dv', 'b', 1, SIZE(v7d%dativar%b))
+  CALL set_mapper(3, 4, 1, SIZE(v7d%dativar%b))
 ENDIF
 IF (ASSOCIATED(v7d%dativar%c)) THEN
-  CALL set_mapper('dv', 'c', 1, SIZE(v7d%dativar%c))
+  CALL set_mapper(3, 5, 1, SIZE(v7d%dativar%c))
 ENDIF
 
 IF (ASSOCIATED(v7d%datiattr%r) .AND. ASSOCIATED(v7d%dativarattr%r)) THEN
-  CALL set_mapper('da', 'r', SIZE(v7d%datiattr%r), SIZE(v7d%dativarattr%r))
+  CALL set_mapper(4, 1, SIZE(v7d%datiattr%r), SIZE(v7d%dativarattr%r))
 ENDIF
 IF (ASSOCIATED(v7d%datiattr%d) .AND. ASSOCIATED(v7d%dativarattr%d)) THEN
-  CALL set_mapper('da', 'd', SIZE(v7d%datiattr%d), SIZE(v7d%dativarattr%d))
+  CALL set_mapper(4, 2, SIZE(v7d%datiattr%d), SIZE(v7d%dativarattr%d))
 ENDIF
 IF (ASSOCIATED(v7d%datiattr%i) .AND. ASSOCIATED(v7d%dativarattr%i)) THEN
-  CALL set_mapper('da', 'i', SIZE(v7d%datiattr%i), SIZE(v7d%dativarattr%i))
+  CALL set_mapper(4, 3, SIZE(v7d%datiattr%i), SIZE(v7d%dativarattr%i))
 ENDIF
 IF (ASSOCIATED(v7d%datiattr%b) .AND. ASSOCIATED(v7d%dativarattr%b)) THEN
-  CALL set_mapper('da', 'b', SIZE(v7d%datiattr%b), SIZE(v7d%dativarattr%b))
+  CALL set_mapper(4, 4, SIZE(v7d%datiattr%b), SIZE(v7d%dativarattr%b))
 ENDIF
 IF (ASSOCIATED(v7d%datiattr%c) .AND. ASSOCIATED(v7d%dativarattr%c)) THEN
-  CALL set_mapper('da', 'c', SIZE(v7d%datiattr%c), SIZE(v7d%dativarattr%c))
+  CALL set_mapper(4, 5, SIZE(v7d%datiattr%c), SIZE(v7d%dativarattr%c))
 ENDIF
 
 CONTAINS
 
 SUBROUTINE set_mapper(cat, typ, s1, s2)
-CHARACTER(len=2),INTENT(in) :: cat
-CHARACTER(len=1),INTENT(in) :: typ
+INTEGER,INTENT(in) :: cat
+INTEGER,INTENT(in) :: typ
 INTEGER,INTENT(in) :: s1, s2
 
 INTEGER :: i, j, n1
@@ -1240,60 +1242,60 @@ DO ind = 1, SIZE(mapper)
   attrind = mapper(ind)%i7
 
   SELECT CASE(mapper(ind)%cat)
-  CASE('av')
+  CASE(1)
     IF (analine) THEN
       SELECT CASE(mapper(ind)%typ)
-      CASE('r')
+      CASE(1)
         miss = miss .AND. .NOT.c_e(v7d%volanar(i1, varind, i6))
-      CASE('d')
+      CASE(2)
         miss = miss .AND. .NOT.c_e(v7d%volanad(i1, varind, i6))
-      CASE('i')
+      CASE(3)
         miss = miss .AND. .NOT.c_e(v7d%volanai(i1, varind, i6))
-      CASE('b')
+      CASE(4)
         miss = miss .AND. .NOT.c_e(v7d%volanab(i1, varind, i6))
-      CASE('c')
+      CASE(5)
         miss = miss .AND. .NOT.c_e(v7d%volanac(i1, varind, i6))
       END SELECT
     ENDIF
-  CASE('aa')
+  CASE(2)
     IF (analine) THEN
       SELECT CASE(mapper(ind)%typ)
-      CASE('r')
+      CASE(1)
         miss = miss .AND. .NOT.c_e(v7d%volanaattrr(i1, varind, i6, attrind))
-      CASE('d')
+      CASE(2)
         miss = miss .AND. .NOT.c_e(v7d%volanaattrd(i1, varind, i6, attrind))
-      CASE('i')
+      CASE(3)
         miss = miss .AND. .NOT.c_e(v7d%volanaattri(i1, varind, i6, attrind))
-      CASE('b')
+      CASE(4)
         miss = miss .AND. .NOT.c_e(v7d%volanaattrb(i1, varind, i6, attrind))
-      CASE('c')
+      CASE(5)
         miss = miss .AND. .NOT.c_e(v7d%volanaattrc(i1, varind, i6, attrind))
       END SELECT
     ENDIF
-  CASE('dv')
+  CASE(3)
     SELECT CASE(mapper(ind)%typ)
-    CASE('r')
+    CASE(1)
       miss = miss .AND. .NOT.c_e(v7d%voldatir(i1, i2, i3, i4, varind, i6))
-    CASE('d')
+    CASE(2)
       miss = miss .AND. .NOT.c_e(v7d%voldatid(i1, i2, i3, i4, varind, i6))
-    CASE('i')
+    CASE(3)
       miss = miss .AND. .NOT.c_e(v7d%voldatii(i1, i2, i3, i4, varind, i6))
-    CASE('b')
+    CASE(4)
       miss = miss .AND. .NOT.c_e(v7d%voldatib(i1, i2, i3, i4, varind, i6))
-    CASE('c')
+    CASE(5)
       miss = miss .AND. .NOT.c_e(v7d%voldatic(i1, i2, i3, i4, varind, i6))
     END SELECT
-  CASE('da')
+  CASE(4)
     SELECT CASE(mapper(ind)%typ)
-    CASE('r')
+    CASE(1)
       miss = miss .AND. .NOT.c_e(v7d%voldatiattrr(i1, i2, i3, i4, varind, i6, attrind))
-    CASE('d')
+    CASE(2)
       miss = miss .AND. .NOT.c_e(v7d%voldatiattrd(i1, i2, i3, i4, varind, i6, attrind))
-    CASE('i')
+    CASE(3)
       miss = miss .AND. .NOT.c_e(v7d%voldatiattri(i1, i2, i3, i4, varind, i6, attrind))
-    CASE('b')
+    CASE(4)
       miss = miss .AND. .NOT.c_e(v7d%voldatiattrb(i1, i2, i3, i4, varind, i6, attrind))
-    CASE('c')
+    CASE(5)
       miss = miss .AND. .NOT.c_e(v7d%voldatiattrc(i1, i2, i3, i4, varind, i6, attrind))
     END SELECT
   END SELECT
@@ -1314,94 +1316,94 @@ varind = this%ser%mapper(ind)%i5
 attrind = this%ser%mapper(ind)%i7
 
 SELECT CASE(this%ser%mapper(ind)%cat)
-CASE('av')
+CASE(1)
   SELECT CASE(this%ser%mapper(ind)%typ)
-  CASE('r')
+  CASE(1)
     CALL this%line%vol7d_valuer_callback(this%ser%v7d%volanar( &
      this%line%i1, varind, this%line%i6), &
      this%ser%v7d%anavar%r(varind), genericptr)
-  CASE('d')
+  CASE(2)
     CALL this%line%vol7d_valued_callback(this%ser%v7d%volanad( &
      this%line%i1, varind, this%line%i6), &
      this%ser%v7d%anavar%d(varind), genericptr)
-  CASE('i')
+  CASE(3)
     CALL this%line%vol7d_valuei_callback(this%ser%v7d%volanai( &
      this%line%i1, varind, this%line%i6), &
      this%ser%v7d%anavar%i(varind), genericptr)
-  CASE('b')
+  CASE(4)
     CALL this%line%vol7d_valueb_callback(this%ser%v7d%volanab( &
      this%line%i1, varind, this%line%i6), &
      this%ser%v7d%anavar%b(varind), genericptr)
-  CASE('c')
+  CASE(5)
     CALL this%line%vol7d_valuec_callback(this%ser%v7d%volanac( &
      this%line%i1, varind, this%line%i6), &
      this%ser%v7d%anavar%c(varind), genericptr)
   END SELECT
-CASE('aa')
+CASE(2)
   SELECT CASE(this%ser%mapper(ind)%typ)
-  CASE('r')
+  CASE(1)
     CALL this%line%vol7d_valuer_callback(this%ser%v7d%volanaattrr( &
      this%line%i1, varind, this%line%i6, attrind), &
      this%ser%v7d%anaattr%r(attrind), genericptr)
-  CASE('d')
+  CASE(2)
     CALL this%line%vol7d_valued_callback(this%ser%v7d%volanaattrd( &
      this%line%i1, varind, this%line%i6, attrind), &
      this%ser%v7d%anaattr%d(attrind), genericptr)
-  CASE('i')
+  CASE(3)
     CALL this%line%vol7d_valuei_callback(this%ser%v7d%volanaattri( &
      this%line%i1, varind, this%line%i6, attrind), &
      this%ser%v7d%anaattr%i(attrind), genericptr)
-  CASE('b')
+  CASE(4)
     CALL this%line%vol7d_valueb_callback(this%ser%v7d%volanaattrb( &
      this%line%i1, varind, this%line%i6, attrind), &
      this%ser%v7d%anaattr%b(attrind), genericptr)
-  CASE('c')
+  CASE(5)
     CALL this%line%vol7d_valuec_callback(this%ser%v7d%volanaattrc( &
      this%line%i1, varind, this%line%i6, attrind), &
      this%ser%v7d%anaattr%c(attrind), genericptr)
   END SELECT
-CASE('dv')
+CASE(3)
   SELECT CASE(this%ser%mapper(ind)%typ)
-  CASE('r')
+  CASE(1)
     CALL this%line%vol7d_valuer_callback(this%ser%v7d%voldatir( &
      this%line%i1, this%line%i2, this%line%i3, this%line%i4, varind, this%line%i6), &
      this%ser%v7d%dativar%r(varind), genericptr)
-  CASE('d')
+  CASE(2)
     CALL this%line%vol7d_valued_callback(this%ser%v7d%voldatid( &
      this%line%i1, this%line%i2, this%line%i3, this%line%i4, varind, this%line%i6), &
      this%ser%v7d%dativar%d(varind), genericptr)
-  CASE('i')
+  CASE(3)
     CALL this%line%vol7d_valuei_callback(this%ser%v7d%voldatii( &
      this%line%i1, this%line%i2, this%line%i3, this%line%i4, varind, this%line%i6), &
      this%ser%v7d%dativar%i(varind), genericptr)
-  CASE('b')
+  CASE(4)
     CALL this%line%vol7d_valueb_callback(this%ser%v7d%voldatib( &
      this%line%i1, this%line%i2, this%line%i3, this%line%i4, varind, this%line%i6), &
      this%ser%v7d%dativar%b(varind), genericptr)
-  CASE('c')
+  CASE(5)
     CALL this%line%vol7d_valuec_callback(this%ser%v7d%voldatic( &
      this%line%i1, this%line%i2, this%line%i3, this%line%i4, varind, this%line%i6), &
      this%ser%v7d%dativar%c(varind), genericptr)
   END SELECT
-CASE('da')
+CASE(4)
   SELECT CASE(this%ser%mapper(ind)%typ)
-  CASE('r')
+  CASE(1)
     CALL this%line%vol7d_valuer_callback(this%ser%v7d%voldatiattrr( &
      this%line%i1, this%line%i2, this%line%i3, this%line%i4, varind, this%line%i6, attrind), &
      this%ser%v7d%datiattr%r(varind), genericptr)
-  CASE('d')
+  CASE(2)
     CALL this%line%vol7d_valued_callback(this%ser%v7d%voldatiattrd( &
      this%line%i1, this%line%i2, this%line%i3, this%line%i4, varind, this%line%i6, attrind), &
      this%ser%v7d%datiattr%i(varind), genericptr)
-  CASE('i')
+  CASE(3)
     CALL this%line%vol7d_valuei_callback(this%ser%v7d%voldatiattri( &
      this%line%i1, this%line%i2, this%line%i3, this%line%i4, varind, this%line%i6, attrind), &
      this%ser%v7d%datiattr%d(varind), genericptr)
-  CASE('b')
+  CASE(4)
     CALL this%line%vol7d_valueb_callback(this%ser%v7d%voldatiattrb( &
      this%line%i1, this%line%i2, this%line%i3, this%line%i4, varind, this%line%i6, attrind), &
      this%ser%v7d%datiattr%b(varind), genericptr)
-  CASE('c')
+  CASE(5)
     CALL this%line%vol7d_valuec_callback(this%ser%v7d%voldatiattrc( &
      this%line%i1, this%line%i2, this%line%i3, this%line%i4, varind, this%line%i6, attrind), &
      this%ser%v7d%datiattr%c(varind), genericptr)

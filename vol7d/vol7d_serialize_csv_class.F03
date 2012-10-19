@@ -1,3 +1,20 @@
+! Copyright (C) 2010  ARPA-SIM <urpsim@smr.arpa.emr.it>
+! authors:
+! Davide Cesari <dcesari@arpa.emr.it>
+! Paolo Patruno <ppatruno@arpa.emr.it>
+
+! This program is free software; you can redistribute it and/or
+! modify it under the terms of the GNU General Public License as
+! published by the Free Software Foundation; either version 2 of 
+! the License, or (at your option) any later version.
+
+! This program is distributed in the hope that it will be useful,
+! but WITHOUT ANY WARRANTY; without even the implied warranty of
+! MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+! GNU General Public License for more details.
+
+! You should have received a copy of the GNU General Public License
+! along with this program.  If not, see <http://www.gnu.org/licenses/>.
 MODULE vol7d_serialize_csv_class
 USE,INTRINSIC :: iso_c_binding
 USE vol7d_serialize_class
@@ -18,15 +35,25 @@ CONTAINS
 
 SUBROUTINE vol7d_serialize_optionparser(this, opt, ext)
 CLASS(vol7d_serialize_csv),INTENT(inout) :: this
-TYPE(optionparser),INTENT(inout) :: opt
-CHARACTER(len=*) :: ext
+TYPE(optionparser),INTENT(inout),OPTIONAL :: opt
+CHARACTER(len=*),OPTIONAL :: ext
 
+IF (PRESENT(ext)) THEN
+  this%ext = ext
+ELSE
+  this%ext = 'csv'
+ENDIF
+
+! reset unconditionally some parameters
+this%vol7d_Serialize%cachedesc = .TRUE.
+
+! call the generic method
 CALL this%vol7d_serialize%vol7d_serialize_optionparser(opt, ext)
-CALL optionparser_add(opt, ' ', 'csv-header', this%csv_header, 2, help= &
+! add a specific parameter
+IF (present(opt)) &
+ CALL optionparser_add(opt, ' ', 'csv-header', this%csv_header, 2, help= &
  'write 0 to 2 header lines at the beginning of csv output')
 
-this%vol7d_Serialize%variable = 'all'
-this%vol7d_Serialize%cachedesc = .TRUE.
 
 END SUBROUTINE vol7d_serialize_optionparser
 
