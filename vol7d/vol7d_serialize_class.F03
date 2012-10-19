@@ -1319,11 +1319,11 @@ CASE('av')
   CASE('r')
     CALL this%line%vol7d_valuer_callback(this%ser%v7d%volanar( &
      this%line%i1, varind, this%line%i6), &
-     genericptr)
+     this%ser%v7d%anavar%r(varind), genericptr)
   CASE('d')
     CALL this%line%vol7d_valued_callback(this%ser%v7d%volanad( &
      this%line%i1, varind, this%line%i6), &
-     genericptr)
+     this%ser%v7d%anavar%d(varind), genericptr)
   CASE('i')
     CALL this%line%vol7d_valuei_callback(this%ser%v7d%volanai( &
      this%line%i1, varind, this%line%i6), &
@@ -1342,11 +1342,11 @@ CASE('aa')
   CASE('r')
     CALL this%line%vol7d_valuer_callback(this%ser%v7d%volanaattrr( &
      this%line%i1, varind, this%line%i6, attrind), &
-     genericptr)
+     this%ser%v7d%anaattr%r(attrind), genericptr)
   CASE('d')
     CALL this%line%vol7d_valued_callback(this%ser%v7d%volanaattrd( &
      this%line%i1, varind, this%line%i6, attrind), &
-     genericptr)
+     this%ser%v7d%anaattr%d(attrind), genericptr)
   CASE('i')
     CALL this%line%vol7d_valuei_callback(this%ser%v7d%volanaattri( &
      this%line%i1, varind, this%line%i6, attrind), &
@@ -1365,11 +1365,11 @@ CASE('dv')
   CASE('r')
     CALL this%line%vol7d_valuer_callback(this%ser%v7d%voldatir( &
      this%line%i1, this%line%i2, this%line%i3, this%line%i4, varind, this%line%i6), &
-     genericptr)
+     this%ser%v7d%dativar%r(varind), genericptr)
   CASE('d')
     CALL this%line%vol7d_valued_callback(this%ser%v7d%voldatid( &
      this%line%i1, this%line%i2, this%line%i3, this%line%i4, varind, this%line%i6), &
-     genericptr)
+     this%ser%v7d%dativar%d(varind), genericptr)
   CASE('i')
     CALL this%line%vol7d_valuei_callback(this%ser%v7d%voldatii( &
      this%line%i1, this%line%i2, this%line%i3, this%line%i4, varind, this%line%i6), &
@@ -1388,15 +1388,15 @@ CASE('da')
   CASE('r')
     CALL this%line%vol7d_valuer_callback(this%ser%v7d%voldatiattrr( &
      this%line%i1, this%line%i2, this%line%i3, this%line%i4, varind, this%line%i6, attrind), &
-     genericptr)
+     this%ser%v7d%datiattr%r(varind), genericptr)
   CASE('d')
     CALL this%line%vol7d_valued_callback(this%ser%v7d%voldatiattrd( &
      this%line%i1, this%line%i2, this%line%i3, this%line%i4, varind, this%line%i6, attrind), &
-     genericptr)
+     this%ser%v7d%datiattr%i(varind), genericptr)
   CASE('i')
     CALL this%line%vol7d_valuei_callback(this%ser%v7d%voldatiattri( &
      this%line%i1, this%line%i2, this%line%i3, this%line%i4, varind, this%line%i6, attrind), &
-     this%ser%v7d%datiattr%i(varind), genericptr)
+     this%ser%v7d%datiattr%d(varind), genericptr)
   CASE('b')
     CALL this%line%vol7d_valueb_callback(this%ser%v7d%voldatiattrb( &
      this%line%i1, this%line%i2, this%line%i3, this%line%i4, varind, this%line%i6, attrind), &
@@ -1411,8 +1411,9 @@ END SELECT
 END SUBROUTINE call_value_callback
 
 
-SUBROUTINE default_vol7d_valuer_callback(valu, genericptr)
+SUBROUTINE default_vol7d_valuer_callback(valu, var, genericptr)
 REAL,INTENT(in) :: valu
+TYPE(vol7d_var),INTENT(in) :: var
 TYPE(c_ptr),VALUE :: genericptr
 
 CHARACTER(len=64),POINTER :: col
@@ -1427,8 +1428,9 @@ ENDIF
 END SUBROUTINE default_vol7d_valuer_callback
 
 
-SUBROUTINE default_vol7d_valued_callback(valu, genericptr)
+SUBROUTINE default_vol7d_valued_callback(valu, var, genericptr)
 DOUBLE PRECISION,INTENT(in) :: valu
+TYPE(vol7d_var),INTENT(in) :: var
 TYPE(c_ptr),VALUE :: genericptr
 
 CHARACTER(len=64),POINTER :: col

@@ -5,7 +5,7 @@ USE optionparser_class
 IMPLICIT NONE
 
 TYPE,EXTENDS(vol7d_serialize) :: vol7d_serialize_csv
-  INTEGER :: csv_header=2
+  INTEGER :: csv_header=1
   CONTAINS
   PROCEDURE :: vol7d_serialize_optionparser
   PROCEDURE :: vol7d_serialize_export
@@ -41,8 +41,12 @@ INTEGER :: i
 TYPE(vol7d_serialize_iterline) :: linei
 TYPE(vol7d_serialize_itercol) :: coli
 
-i = 0
-line = ''
+
+! old header to be erased in the future
+IF (this%csv_header >= 2) WRITE(iun,'(A)')'written by v7d_transform'
+
+! make csv header and count columns
+i = 0; line = ''
 coli = this%vol7d_serialize_itercol_new()
 DO WHILE(coli%next())
   i = i + 1
@@ -51,13 +55,14 @@ DO WHILE(coli%next())
   ENDIF
   CALL coli%export(C_LOC(line(LEN_TRIM(line)+1:LEN_TRIM(line)+1)))
 END DO
-WRITE(iun,'(A)')TRIM(line)
+
+IF (this%csv_header >= 1) WRITE(iun,'(A)')TRIM(line)
 ALLOCATE(col(i))
 
+! loop over lines
 linei = this%vol7d_serialize_iterline_new()
 DO WHILE(linei%next())
-  i = 0
-  line = ''
+  i = 0; line = ''
   coli = linei%vol7d_serialize_itercol_new()
   DO WHILE(coli%next())
     i = i + 1
