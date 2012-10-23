@@ -281,10 +281,10 @@ if (quifile) then
   this%file=.true.
 
 #ifdef DEBUG
-  call l4f_category_log(this%category,L4F_DEBUG,"handle from idba_messaggi: "//to_char(this%handle))
-  call l4f_category_log(this%category,L4F_DEBUG,"filename: "//to_char(lfilename))
-  call l4f_category_log(this%category,L4F_DEBUG,"mode: "//to_char(mode))
-  call l4f_category_log(this%category,L4F_DEBUG,"format: "//to_char(lformat))
+  call l4f_category_log(this%category,L4F_DEBUG,"handle from idba_messaggi: "//t2c(this%handle))
+  call l4f_category_log(this%category,L4F_DEBUG,"filename: "//t2c(lfilename))
+  call l4f_category_log(this%category,L4F_DEBUG,"mode: "//t2c(mode))
+  call l4f_category_log(this%category,L4F_DEBUG,"format: "//t2c(lformat))
 #endif
 
 else
@@ -2064,7 +2064,7 @@ do iii=1, nnetwork
       if ( c_e(this%vol7d%ana(i)%ident)) then
 #ifdef DEBUG
          call l4f_category_log(this%category,L4F_DEBUG,"I have found a mobile station! ident: "//&
-          to_char(this%vol7d%ana(i)%ident))
+          this%vol7d%ana(i)%ident)
 #endif
          call idba_set (this%handle,"ident",this%vol7d%ana(i)%ident)
          call idba_set (this%handle,"mobile",1)
@@ -2201,7 +2201,7 @@ do i=1, nstaz
           call idba_set (this%handle,"mobile",1)
 #ifdef DEBUG
           call l4f_category_log(this%category,L4F_DEBUG,"there is a mobile station! identity: "&
-           //to_char(this%vol7d%ana(i)%ident))
+           //this%vol7d%ana(i)%ident)
 #endif
         else
           call idba_set (this%handle,"mobile",0)

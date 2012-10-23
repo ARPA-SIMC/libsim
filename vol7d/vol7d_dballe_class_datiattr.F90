@@ -37,8 +37,8 @@ if (ind > 0) then
 
 #ifdef DEBUG
          CALL l4f_category_log(this%category,L4F_DEBUG,&
-              "attr "//to_char(this%vol7d%datiattr% VOL7D_POLY_TYPES(inddatiattr)%btable)//" : "//&
-              to_char(this%vol7d%voldatiattr/**/VOL7D_POLY_TYPES/**/(i,ii,iii,iiii,ind,iiiiii,inddatiattr)))
+              "attr "//this%vol7d%datiattr%/**/VOL7D_POLY_TYPES/**/(inddatiattr)%btable//" : "//&
+              t2c(this%vol7d%voldatiattr/**/VOL7D_POLY_TYPES/**/(i,ii,iii,iiii,ind,iiiiii,inddatiattr)))
 #endif
 
 

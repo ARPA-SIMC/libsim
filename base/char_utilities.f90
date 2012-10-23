@@ -1057,7 +1057,7 @@ recursive function string_match( string, pattern ) result(match)
     character(len=*), intent(in) :: pattern !< Glob pattern to be used for the matching
     logical                      :: match
 
-    character(len=1), parameter :: backslash = '\\'
+    character(len=1), parameter :: backslash = '\'
     character(len=1), parameter :: star      = '*'
     character(len=1), parameter :: question  = '?'
 
