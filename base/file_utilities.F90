@@ -453,7 +453,7 @@ TYPE(csv_record),INTENT(INOUT) :: this !< object where to add field
 CHARACTER(len=*),INTENT(IN) :: field !< field to be added
 LOGICAL, INTENT(in), OPTIONAL :: force_quote !< if provided and \c .TRUE. , the field will be quoted even if not necessary
 
-CALL csv_record_addfield(this, t2c_miss(field, ''), force_quote=force_quote)
+CALL csv_record_addfield(this, t2c(field, ''), force_quote=force_quote)
 
 END SUBROUTINE csv_record_addfield_char_miss
 
@@ -483,7 +483,7 @@ TYPE(csv_record),INTENT(INOUT) :: this !< object where to add field
 INTEGER,INTENT(IN) :: field !< field to be added
 LOGICAL, INTENT(in), OPTIONAL :: force_quote !< if provided and \c .TRUE. , the field will be quoted even if not necessary
 
-CALL csv_record_addfield(this, t2c_miss(field, ''), force_quote=force_quote)
+CALL csv_record_addfield(this, t2c(field, ''), force_quote=force_quote)
 
 END SUBROUTINE csv_record_addfield_int_miss
 
@@ -513,7 +513,7 @@ TYPE(csv_record),INTENT(INOUT) :: this !< object where to add field
 REAL,INTENT(IN) :: field !< field to be added
 LOGICAL, INTENT(in), OPTIONAL :: force_quote !< if provided and \c .TRUE. , the field will be quoted even if not necessary
 
-CALL csv_record_addfield(this, t2c_miss(field, ''), force_quote=force_quote)
+CALL csv_record_addfield(this, t2c(field, ''), force_quote=force_quote)
 
 END SUBROUTINE csv_record_addfield_real_miss
 
@@ -543,7 +543,7 @@ TYPE(csv_record),INTENT(INOUT) :: this !< object where to add field
 DOUBLE PRECISION,INTENT(IN) :: field !< field to be added
 LOGICAL, INTENT(in), OPTIONAL :: force_quote !< if provided and \c .TRUE. , the field will be quoted even if not necessary
 
-CALL csv_record_addfield(this, t2c_miss(field, ''), force_quote=force_quote)
+CALL csv_record_addfield(this, t2c(field, ''), force_quote=force_quote)
 
 END SUBROUTINE csv_record_addfield_double_miss
 

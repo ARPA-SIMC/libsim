@@ -1026,10 +1026,10 @@ TYPE(c_ptr),VALUE :: genericptr
 CHARACTER(len=64),POINTER :: col
 
 CALL C_F_POINTER(genericptr, col)
-col = t2c_miss(level%level1, '')//','// &
- t2c_miss(level%l1, '')//','// &
- t2c_miss(level%level2, '')//','// &
- t2c_miss(level%l2, '')
+col = t2c(level%level1, '')//','// &
+ t2c(level%l1, '')//','// &
+ t2c(level%level2, '')//','// &
+ t2c(level%l2, '')
 
 END SUBROUTINE default_vol7d_level_callback
 
@@ -1041,8 +1041,8 @@ TYPE(c_ptr),VALUE :: genericptr
 CHARACTER(len=64),POINTER :: col
 
 CALL C_F_POINTER(genericptr, col)
-col = t2c_miss(timerange%timerange, '')//','// &
- t2c_miss(timerange%p1, '')//','//t2c_miss(timerange%p2, '')
+col = t2c(timerange%timerange, '')//','// &
+ t2c(timerange%p1, '')//','//t2c(timerange%p2, '')
 
 END SUBROUTINE default_vol7d_timerange_callback
 

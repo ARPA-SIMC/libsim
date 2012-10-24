@@ -57,12 +57,16 @@ AC_DEFINE(DEBUG, 1, [Enable debugging mode])
 fi
 
 dnl options to be added compulsorily for particular compilers
+dnl -fbackslash required in char_utilities.f90 for '\\'
 case "$FC" in
   *xlf*)
 # -qextname: external names with underscore
 # -WF,-C!: remove C comments from preprocessed (Fortran) code
   FCFLAGS="$FCFLAGS -qextname -WF,-C!"
 #  FCFLAGS="$FCFLAGS -qextname -F "'$(abs_top_builddir)/portability/xlf.cfg'
+;;
+  *gfortran*)
+  FCFLAGS="$FCFLAGS -fbackslash"
 ;;
 esac
 

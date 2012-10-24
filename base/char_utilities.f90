@@ -30,19 +30,26 @@ CHARACTER(len=*),PARAMETER :: LOWER_CASE = 'abcdefghijklmnopqrstuvwxyz'
 CHARACTER(len=*),PARAMETER :: UPPER_CASE = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
 
 !> Set of functions that return a CHARACTER representation of the
-!! input variable. The functions use a default format suitable to
-!! reasonably represent the input variable, or a user-defined format
-!! provided with the optional variable \a form.  The return value may
-!! be quite long, in order to take into account all possible cases, so
-!! it is suggested to trim the result with the intrinsic function \a
-!! TRIM() before using it. Be warned that no check is performed on the
+!! input variable. The return value is of type \a CHARACTER with a
+!! predefined length depending on the type of the input. The functions
+!! use a default format suitable to reasonably represent the input
+!! variable, or a user-defined format provided with the optional
+!! variable \a form.  The \a miss optional value, if provided,
+!! replaces the output representation in case the input is missing
+!! according to the definitions in \a missing_values module. The
+!! length of the \a miss parameter should not exceed the length of the
+!! maximum representable value of the provided type, otherwise it may
+!! be truncated. For numerical types, the return value may be quite
+!! long, in order to take into account all possible cases, so it is
+!! suggested to trim the result with the intrinsic function \a TRIM()
+!! before using it. Be warned that no check is performed on the
 !! optional format \a form, so a runtime error may occur if it is
 !! syntactically wrong or not suitable to the data type provided.  The
 !! functions are \a ELEMENTAL, so they can be applied to arrays of any
-!! shape. The return value is of type \a CHARACTER with a predefined
-!! length depending on the type of the input.
+!! shape.
 !!
-!! \param in (any INTEGER or REAL basic type) value to be represented as CHARACTER
+!! \param in (any type of INTEGER, REAL or CHARACTER) value to be represented as CHARACTER
+!! \param miss CHARACTER(len=*),INTENT(in),OPTIONAL optional character replacement for missing value
 !! \param form CHARACTER(len=*),INTENT(in),OPTIONAL optional format
 !!
 !! Example of use:
@@ -55,27 +62,10 @@ CHARACTER(len=*),PARAMETER :: UPPER_CASE = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
 !! \endcode
 INTERFACE to_char
   MODULE PROCEDURE int_to_char, byte_to_char, &
-   real_to_char, double_to_char, logical_to_char
+   real_to_char, double_to_char, logical_to_char, &
+   char_to_char, char_to_char_miss
 END INTERFACE
 
-!> Set of functions that return a CHARACTER representation of the
-!! input variable with a special treatment for the case of missing value.
-!! The functions use a default format suitable to reasonably represent
-!! the input variable.  The return value may be quite long, in order
-!! to take into account all possible cases, so it is suggested to trim
-!! the result with the intrinsic function \a TRIM() before using
-!! it. The length of the \a miss argument must be rerasonable in order
-!! not to get truncated. The functions are \a ELEMENTAL, so they can
-!! be applied to arrays of any shape. The return value is of type \a
-!! CHARACTER with a predefined length depending on the type of the
-!! input.
-!!
-!! \param in (any INTEGER or REAL basic type) value to be represented as CHARACTER
-!! \param miss CHARACTER(len=*),INTENT(in) character replacement for missing value
-INTERFACE to_char_miss
-  MODULE PROCEDURE int_to_char_miss, byte_to_char_miss, char_to_char_miss, &
-   real_to_char_miss, double_to_char_miss
-END INTERFACE
 
 !> Set of functions that return a trimmed CHARACTER representation of the
 !! input variable. The functions are analogous to \a to_char but they
@@ -84,7 +74,8 @@ END INTERFACE
 !! format here is not accepted and these functions are not \a
 !! ELEMENTAL so they work only on scalar arguments.
 !!
-!! \param in (any INTEGER or REAL basic type) value to be represented as CHARACTER
+!! \param in (any type of INTEGER, REAL or CHARACTER) value to be represented as CHARACTER
+!! \param miss CHARACTER(len=*),INTENT(in),OPTIONAL optional character replacement for missing value
 !!
 !! Example of use:
 !! \code
@@ -95,20 +86,13 @@ END INTERFACE
 !! ...
 !! \endcode
 INTERFACE t2c
-  MODULE PROCEDURE trim_int_to_char, trim_byte_to_char, &
-   trim_real_to_char, trim_double_to_char, trim_logical_to_char
+  MODULE PROCEDURE trim_int_to_char, trim_int_to_char_miss, &
+   trim_byte_to_char, trim_byte_to_char_miss, &
+   trim_real_to_char, trim_real_to_char_miss, &
+   trim_double_to_char, trim_double_to_char_miss, trim_logical_to_char, &
+   trim_char_to_char, trim_char_to_char_miss
 END INTERFACE
 
-!> Set of functions that return a trimmed CHARACTER representation of the
-!! input variable with a special treatment for the case of missing value.
-!! The functions are analogous to \a to_char_miss but they return
-!! representation of the input in a CHARACTER with a variable length,
-!! which needs not to be trimmed before use. These functions are not
-!! \a ELEMENTAL so they work only on scalar arguments.
-INTERFACE t2c_miss
-  MODULE PROCEDURE trim_int_to_char_miss, trim_byte_to_char_miss, &
-   trim_char_to_char_miss, trim_real_to_char_miss, trim_double_to_char_miss
-END INTERFACE
 
 !> Class that allows splitting a long line into shorter lines of equal
 !! length at the occurrence of a specific character (typically a blank
@@ -197,7 +181,7 @@ END INTERFACE
 
 PRIVATE
 PUBLIC line_split
-PUBLIC to_char, to_char_miss, t2c, t2c_miss, delete, match, &
+PUBLIC to_char, t2c, delete, match, &
  fchar_to_cstr, fchar_to_cstr_alloc, cstr_to_fchar, UpperCase, LowerCase, &
  align_left, align_right, align_center, l_nblnk, f_nblnk, word_split, &
  line_split_new, line_split_get_nlines, line_split_get_line, &
@@ -207,99 +191,96 @@ CONTAINS
 
 ! Version with integer argument, please use the generic \a to_char
 ! rather than this function directly.
-ELEMENTAL FUNCTION int_to_char(in, form) RESULT(char)
+ELEMENTAL FUNCTION int_to_char(in, miss, form) RESULT(char)
 INTEGER,INTENT(in) :: in ! value to be represented as CHARACTER
+CHARACTER(len=*),INTENT(in),OPTIONAL :: miss ! replacement for missing value
 CHARACTER(len=*),INTENT(in),OPTIONAL :: form ! optional format
 CHARACTER(len=11) :: char
 
-IF (PRESENT(form)) THEN
-  WRITE(char,form) in
+IF (PRESENT(miss)) THEN
+  IF (.NOT.c_e(in)) THEN
+    char = miss
+  ELSE
+    IF (PRESENT(form)) THEN
+      WRITE(char,form)in
+    ELSE
+      WRITE(char,'(I0)')in
+    ENDIF
+  ENDIF
 ELSE
-  WRITE(char,'(I0)') in
+  IF (PRESENT(form)) THEN
+    WRITE(char,form)in
+  ELSE
+    WRITE(char,'(I0)')in
+  ENDIF
 ENDIF
 
 END FUNCTION int_to_char
 
 
-ELEMENTAL FUNCTION int_to_char_miss(in, miss) RESULT(char)
-INTEGER,INTENT(in) :: in ! value to be represented as CHARACTER
-CHARACTER(len=*),INTENT(in) :: miss ! replacement for missing value
-CHARACTER(len=11) :: char
-
-IF (c_e(in)) THEN
-  char = int_to_char(in)
-ELSE
-  char = miss
-ENDIF
-
-END FUNCTION int_to_char_miss
-
-
 FUNCTION trim_int_to_char(in) RESULT(char)
 INTEGER,INTENT(in) :: in ! value to be represented as CHARACTER
-CHARACTER(len=LEN_TRIM(int_to_char(in))) :: char
+CHARACTER(len=LEN_TRIM(to_char(in))) :: char
 
-char = int_to_char(in)
+char = to_char(in)
 
 END FUNCTION trim_int_to_char
 
 
 FUNCTION trim_int_to_char_miss(in, miss) RESULT(char)
 INTEGER,INTENT(in) :: in ! value to be represented as CHARACTER
-CHARACTER(len=*),INTENT(in) :: miss
-CHARACTER(len=LEN_TRIM(int_to_char_miss(in,miss))) :: char
+CHARACTER(len=*),INTENT(in) :: miss ! replacement for missing value
+CHARACTER(len=LEN_TRIM(to_char(in,miss=miss))) :: char
 
-char = int_to_char_miss(in, miss)
+char = to_char(in, miss=miss)
 
 END FUNCTION trim_int_to_char_miss
 
 
 ! Version with 1-byte integer argument, please use the generic \a to_char
 ! rather than this function directly.
-ELEMENTAL FUNCTION byte_to_char(in, form) RESULT(char)
+ELEMENTAL FUNCTION byte_to_char(in, miss, form) RESULT(char)
 INTEGER(kind=int_b),INTENT(in) :: in ! value to be represented as CHARACTER
+CHARACTER(len=*),INTENT(in),OPTIONAL :: miss ! replacement for missing value
 CHARACTER(len=*),INTENT(in),OPTIONAL :: form ! optional format
-CHARACTER(len=4) :: char
+CHARACTER(len=11) :: char
 
-IF (PRESENT(form)) THEN
-  WRITE(char,form) in
+IF (PRESENT(miss)) THEN
+  IF (.NOT.c_e(in)) THEN
+    char = miss
+  ELSE
+    IF (PRESENT(form)) THEN
+      WRITE(char,form)in
+    ELSE
+      WRITE(char,'(I0)')in
+    ENDIF
+  ENDIF
 ELSE
-  WRITE(char,'(I0)') in
+  IF (PRESENT(form)) THEN
+    WRITE(char,form)in
+  ELSE
+    WRITE(char,'(I0)')in
+  ENDIF
 ENDIF
 
 END FUNCTION byte_to_char
 
 
-ELEMENTAL FUNCTION byte_to_char_miss(in, miss) RESULT(char)
-INTEGER(kind=int_b),INTENT(in) :: in ! value to be represented as CHARACTER
-CHARACTER(len=*),INTENT(in) :: miss ! replacement for missing value
-
-CHARACTER(len=4) :: char
-
-IF (c_e(in)) THEN
-  char = byte_to_char(in)
-ELSE
-  char = miss
-ENDIF
-
-END FUNCTION byte_to_char_miss
-
-
 FUNCTION trim_byte_to_char(in) RESULT(char)
 INTEGER(kind=int_b),INTENT(in) :: in ! value to be represented as CHARACTER
-CHARACTER(len=LEN_TRIM(byte_to_char(in))) :: char
+CHARACTER(len=LEN_TRIM(to_char(in))) :: char
 
-char = byte_to_char(in)
+char = to_char(in)
 
 END FUNCTION trim_byte_to_char
 
 
-FUNCTION trim_byte_to_char_miss(in, miss) RESULT(char)
+FUNCTION trim_byte_to_char_miss(in,miss) RESULT(char)
 INTEGER(kind=int_b),INTENT(in) :: in ! value to be represented as CHARACTER
 CHARACTER(len=*),INTENT(in) :: miss ! replacement for missing value
-CHARACTER(len=LEN_TRIM(byte_to_char_miss(in,miss))) :: char
+CHARACTER(len=LEN_TRIM(to_char(in,miss=miss))) :: char
 
-char = byte_to_char_miss(in, miss)
+char = to_char(in, miss=miss)
 
 END FUNCTION trim_byte_to_char_miss
 
@@ -307,36 +288,36 @@ END FUNCTION trim_byte_to_char_miss
 ! Version with character argument, please use the generic \a to_char
 ! rather than this function directly. It is almost useless, just
 ! provided for completeness.
-!PURE FUNCTION char_to_char(in) result(char)
-!CHARACTER(len=*),INTENT(in) :: in ! value to be represented as CHARACTER
-!CHARACTER(len=LEN_TRIM(in)) :: char
-!
-!char = TRIM(in)
-!
-!END FUNCTION char_to_char
+ELEMENTAL FUNCTION char_to_char(in) RESULT(char)
+CHARACTER(len=*),INTENT(in) :: in ! value to be represented as CHARACTER
+CHARACTER(len=LEN(in)) :: char
+
+char = in
+
+END FUNCTION char_to_char
 
 
-PURE FUNCTION char_to_char_miss(in, miss) RESULT(char)
+ELEMENTAL FUNCTION char_to_char_miss(in, miss) RESULT(char)
 CHARACTER(len=*),INTENT(in) :: in ! value to be represented as CHARACTER
 CHARACTER(len=*),INTENT(in) :: miss ! replacement for missing value
-CHARACTER(len=MAX(LEN_TRIM(in),LEN_TRIM(miss))) :: char
+CHARACTER(len=MAX(LEN(in),LEN(miss))) :: char
 
 IF (c_e(in)) THEN
-  char = TRIM(in)
+  char = in
 ELSE
-  char = TRIM(miss)
+  char = miss
 ENDIF
 
 END FUNCTION char_to_char_miss
 
 
-!FUNCTION trim_char_to_char(in) result(char)
-!CHARACTER(len=*),INTENT(in) :: in ! value to be represented as CHARACTER
-!CHARACTER(len=LEN_TRIM(in)) :: char
-!
-!char = char_to_char(in)
-!
-!END FUNCTION trim_char_to_char
+FUNCTION trim_char_to_char(in) result(char)
+CHARACTER(len=*),INTENT(in) :: in ! value to be represented as CHARACTER
+CHARACTER(len=LEN_TRIM(in)) :: char
+
+char = TRIM(in)
+
+END FUNCTION trim_char_to_char
 
 
 FUNCTION trim_char_to_char_miss(in, miss) RESULT(char)
@@ -351,40 +332,40 @@ END FUNCTION trim_char_to_char_miss
 
 ! Version with single precision real argument, please use the generic
 ! \a to_char rather than this function directly.
-ELEMENTAL FUNCTION real_to_char(in, form) RESULT(char)
+ELEMENTAL FUNCTION real_to_char(in, miss, form) RESULT(char)
 REAL,INTENT(in) :: in ! value to be represented as CHARACTER
+CHARACTER(len=*),INTENT(in),OPTIONAL :: miss ! replacement for missing value
 CHARACTER(len=*),INTENT(in),OPTIONAL :: form ! optional format
 CHARACTER(len=15) :: char
 
 CHARACTER(len=15) :: tmpchar
 
-IF (PRESENT(form)) THEN
-  WRITE(char,form) in
+IF (PRESENT(miss)) THEN
+  IF (.NOT.c_e(in)) THEN
+    char = miss
+  ELSE
+    IF (PRESENT(form)) THEN
+      WRITE(char,form)in
+    ELSE
+      WRITE(tmpchar,'(G15.9)') in
+      char = align_left(tmpchar)
+    ENDIF
+  ENDIF
 ELSE
-  WRITE(tmpchar,'(G15.9)') in
-  char = align_left(tmpchar)
+  IF (PRESENT(form)) THEN
+    WRITE(char,form)in
+  ELSE
+    WRITE(tmpchar,'(G15.9)') in
+    char = align_left(tmpchar)
+  ENDIF
 ENDIF
 
 END FUNCTION real_to_char
 
 
-ELEMENTAL FUNCTION real_to_char_miss(in, miss) RESULT(char)
-REAL,INTENT(in) :: in ! value to be represented as CHARACTER
-CHARACTER(len=*),INTENT(in) :: miss ! replacement for missing value
-CHARACTER(len=15) :: char
-
-IF (c_e(in)) THEN
-  char = real_to_char(in)
-ELSE
-  char = miss
-ENDIF
-
-END FUNCTION real_to_char_miss
-
-
 FUNCTION trim_real_to_char(in) RESULT(char)
 REAL,INTENT(in) :: in ! value to be represented as CHARACTER
-CHARACTER(len=len_trim(real_to_char(in))) :: char
+CHARACTER(len=LEN_TRIM(to_char(in))) :: char
 
 char = real_to_char(in)
 
@@ -394,51 +375,49 @@ END FUNCTION trim_real_to_char
 FUNCTION trim_real_to_char_miss(in, miss) RESULT(char)
 REAL,INTENT(in) :: in ! value to be represented as CHARACTER
 CHARACTER(len=*),INTENT(in) :: miss ! replacement for missing value
-CHARACTER(len=LEN_TRIM(real_to_char_miss(in,miss))) :: char
+CHARACTER(len=LEN_TRIM(to_char(in,miss=miss))) :: char
 
-char=real_to_char_miss(in, miss)
+char = real_to_char(in, miss=miss)
 
 END FUNCTION trim_real_to_char_miss
 
 
 ! Version with double precision real argument, please use the generic
 ! \a to_char rather than this function directly.
-ELEMENTAL FUNCTION double_to_char(in, form) RESULT(char)
+ELEMENTAL FUNCTION double_to_char(in, miss, form) RESULT(char)
 DOUBLE PRECISION,INTENT(in) :: in ! value to be represented as CHARACTER
+CHARACTER(len=*),INTENT(in),OPTIONAL :: miss ! replacement for missing value
 CHARACTER(len=*),INTENT(in),OPTIONAL :: form ! optional format
 CHARACTER(len=24) :: char
 
 CHARACTER(len=24) :: tmpchar
 
-IF (PRESENT(form)) THEN
-  WRITE(char,form) in
+IF (PRESENT(miss)) THEN
+  IF (.NOT.c_e(in)) THEN
+    char = miss
+  ELSE
+    IF (PRESENT(form)) THEN
+      WRITE(char,form)in
+    ELSE
+      WRITE(tmpchar,'(G24.17)') in
+      char = align_left(tmpchar)
+    ENDIF
+  ENDIF
 ELSE
-  WRITE(tmpchar,'(G24.17)') in
-  char = align_left(tmpchar)
+  IF (PRESENT(form)) THEN
+    WRITE(char,form)in
+  ELSE
+    WRITE(tmpchar,'(G24.17)') in
+    char = align_left(tmpchar)
+  ENDIF
 ENDIF
 
 END FUNCTION double_to_char
 
 
-ELEMENTAL FUNCTION double_to_char_miss(in, miss) RESULT(char)
-DOUBLE PRECISION,INTENT(in) :: in ! value to be represented as CHARACTER
-CHARACTER(len=*),INTENT(in) :: miss ! replacement for missing value
-
-CHARACTER(len=24) :: char, tmpchar
-
-IF (c_e(in)) THEN
-  WRITE(tmpchar,'(G24.17)') in
-  char = align_left(tmpchar)
-ELSE
-  char = miss
-ENDIF
-
-END FUNCTION double_to_char_miss
-
-
 FUNCTION trim_double_to_char(in) RESULT(char)
 DOUBLE PRECISION,INTENT(in) :: in ! value to be represented as CHARACTER
-CHARACTER(len=len_trim(double_to_char(in))) :: char
+CHARACTER(len=LEN_TRIM(to_char(in))) :: char
 
 char=double_to_char(in)
 
@@ -448,9 +427,9 @@ END FUNCTION trim_double_to_char
 FUNCTION trim_double_to_char_miss(in, miss) RESULT(char)
 DOUBLE PRECISION,INTENT(in) :: in ! value to be represented as CHARACTER
 CHARACTER(len=*),INTENT(in) :: miss ! replacement for missing value
-CHARACTER(len=LEN_TRIM(double_to_char_miss(in,miss))) :: char
+CHARACTER(len=LEN_TRIM(to_char(in,miss=miss))) :: char
 
-char=double_to_char_miss(in, miss)
+char=double_to_char(in, miss=miss)
 
 END FUNCTION trim_double_to_char_miss
 
@@ -1057,7 +1036,9 @@ recursive function string_match( string, pattern ) result(match)
     character(len=*), intent(in) :: pattern !< Glob pattern to be used for the matching
     logical                      :: match
 
-    character(len=1), parameter :: backslash = '\'
+! '\\' without -fbackslash generates a warning on gfortran, '\'
+! crashes doxygen, so we choose '\\' and -fbackslash in configure.ac
+    character(len=1), parameter :: backslash = '\\'
     character(len=1), parameter :: star      = '*'
     character(len=1), parameter :: question  = '?'
 

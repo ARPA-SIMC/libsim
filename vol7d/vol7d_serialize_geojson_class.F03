@@ -137,7 +137,7 @@ CALL C_F_POINTER(genericptr, iun)
 
 CALL getval(ana%coord, lon=l1, lat=l2)
 WRITE(iun,'(A)')'"geometry": {"type": "Point",	"coordinates": [ '
-WRITE(iun,'(A)') t2c_miss(l1, 'null')//', '//t2c_miss(l2, 'null')
+WRITE(iun,'(A)') t2c(l1, 'null')//', '//t2c(l2, 'null')
 WRITE(iun,'(A)')' ] }, "properties": {'
 
 END SUBROUTINE vol7d_ana_callback_gj
@@ -171,10 +171,10 @@ INTEGER,POINTER :: iun
 CALL C_F_POINTER(genericptr, iun)
 
 WRITE(iun,'(A,/,A,/,A,/,A)') &
- '"level.t1": '//t2c_miss(level%level1,'null')//',', &
- '"level.l1": '//t2c_miss(level%l1,'null')//',', &
- '"level.t2": '//t2c_miss(level%level2,'null')//',', &
- '"level.l2": '//t2c_miss(level%l2,'null')//','
+ '"level.t1": '//t2c(level%level1,'null')//',', &
+ '"level.l1": '//t2c(level%l1,'null')//',', &
+ '"level.t2": '//t2c(level%level2,'null')//',', &
+ '"level.l2": '//t2c(level%l2,'null')//','
 
 END SUBROUTINE vol7d_level_callback_gj
 
@@ -188,9 +188,9 @@ INTEGER,POINTER :: iun
 CALL C_F_POINTER(genericptr, iun)
 
 WRITE(iun,'(A,/,A,/,A)') &
- '"trange.type": '//t2c_miss(timerange%timerange,'null')//',', &
- '"trange.p1": '//t2c_miss(timerange%p1,'null')//',', &
- '"trange.p2": '//t2c_miss(timerange%p2,'null')//','
+ '"trange.type": '//t2c(timerange%timerange,'null')//',', &
+ '"trange.p1": '//t2c(timerange%p1,'null')//',', &
+ '"trange.p2": '//t2c(timerange%p2,'null')//','
 
 END SUBROUTINE vol7d_timerange_callback_gj
 
@@ -256,7 +256,7 @@ INTEGER,POINTER :: iun
 
 CALL C_F_POINTER(genericptr, iun)
 
-WRITE(iun,'(A)')'"value": '//t2c_miss(valu, 'null') !//','
+WRITE(iun,'(A)')'"value": '//t2c(valu, 'null') !//','
 
 END SUBROUTINE vol7d_valuer_callback_gj
 
@@ -270,7 +270,7 @@ INTEGER,POINTER :: iun
 
 CALL C_F_POINTER(genericptr, iun)
 
-WRITE(iun,'(A)')'"value": '//t2c_miss(valu, 'null') !//','
+WRITE(iun,'(A)')'"value": '//t2c(valu, 'null') !//','
 
 END SUBROUTINE vol7d_valued_callback_gj
 
