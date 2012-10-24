@@ -1104,36 +1104,23 @@ if (comp_qc_ndi .or. comp_qc_perc) then
    dsnextreme=dsn,user=user,password=password,&
 #endif
    height2level=comp_qc_area_er,categoryappend="QC")
-
+  
   IF (ldisplay) then
     print*," >>>>> Input Extreme <<<<<"
     call display(qccli%extreme)
   end IF
+end if
+
+
+if (comp_qc_ndi) then
 
   call vol7d_normalize_data(qccli)
   
-  print*," >>>>> Normalized Data <<<<<"
-  call display(qccli%v7d)
+  IF (ldisplay) then
+    print*," >>>>> Normalized Data <<<<<"
+    call display(qccli%v7d)
+  end IF
 
-#ifdef HAVE_DBALLE
-  output_file="ciccio.bufr"
-  CALL init(v7d_dba_out, filename=output_file, FORMAT="BUFR", &
-    file=.true., WRITE=.TRUE., wipe=.true.)
-
-! TODO
-!!!
-  v7d_dba_out%vol7d = qccli%v7d
-  CALL export(v7d_dba_out)
-  CALL delete(v7d_dba_out)
-
-  stop 7
-!!!
-#endif
-
-end if
-
-if (comp_qc_ndi) then
-  
   call qc_compute_NormalizedDensityIndex(qccli,v7dtmp, perc_vals=(/(10.*i,i=0,10)/),cyclicdt=cyclicdt&
    ,presentperc=.1)
   

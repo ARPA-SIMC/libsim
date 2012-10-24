@@ -106,7 +106,7 @@
 
 module modqccli
 
-use geo_coord_class
+use georef_coord_class
 use vol7d_class
 use modqc
 use file_utilities
@@ -147,7 +147,7 @@ type :: qcclitype
   integer,pointer :: data_id_in(:,:,:,:,:) !< Indici dati del DB in input
   integer,pointer :: data_id_out(:,:,:,:,:) !< Indici dati del DB in output
   integer, pointer :: in_macroa(:) !< Macroarea di appartenenza delle stazioni
-  TYPE(geo_coordvect),POINTER :: macroa(:) !< serie di coordinate che definiscono le macroaree
+  TYPE(arrayof_georef_coord_array) :: macroa !< serie di coordinate che definiscono le macroaree
   integer :: category !< log4fortran
   logical :: height2level   !< use conventional level starting from station height
 
@@ -221,6 +221,10 @@ character(len=512) :: a_name
 TYPE(geo_coord) :: lcoordmin,lcoordmax 
 TYPE(vol7d_network)  :: network
 
+! temporary, improve!!!!
+DOUBLE PRECISION :: lon, lat
+TYPE(georef_coord) :: point
+
 
 call l4f_launcher(a_name,a_name_append=trim(subcategory)//"."//trim(categoryappend))
 qccli%category=l4f_category_get(a_name)
@@ -249,7 +253,7 @@ end if
 
 if (qccli%height2level) then
                                 !shape file for Emilia Romagna clima !
-  filepath=get_package_filepath('share:macroaree_er.shp', filetype_data)
+  filepath=get_package_filepath('share:sup_macroaree.shp', filetype_data)
 else
                                 !shape file for Europa clima !
   filepath=get_package_filepath('share:ens_v8_ll.shp', filetype_data)
@@ -314,7 +318,7 @@ if (.not. c_e(ldsncli)) then
 #endif
 
   if (.not. c_e(filepathclima)) then
-    filepathclima=get_package_filepath('qcclima-perc.v7d', filetype_data)
+    filepathclima=get_package_filepath('qcclima-ndi.v7d', filetype_data)
   end if
 
   if (c_e(filepathclima))then
@@ -429,6 +433,7 @@ if (.not. c_e(ldsnextreme)) then
   else
     call l4f_category_log(qccli%category,L4F_WARN,"extreme volume not iniziatized: QC or normalize data will not be possible")
 !    call raise_fatal_error()
+    call init(qccli%extreme)
   end if
 
 
@@ -456,16 +461,27 @@ call qcclialloc(qccli)
 
 
 ! valuto in quale macroarea sono le stazioni
+
+!!$IF (qccli%macroa%arraysize <= 0) THEN
+!!$  CALL l4f_category_log(qccli%category,L4F_ERROR,"maskgen: poly parameter missing or empty")
+!!$  CALL raise_fatal_error()
+!!$ENDIF
+
 qccli%in_macroa = imiss
 
 DO i = 1, SIZE(qccli%v7d%ana)
-  DO j = 1, SIZE(qccli%macroa)
-    IF (inside(qccli%v7d%ana(i)%coord, qccli%macroa(j))) THEN
+! temporary, improve!!!!
+  CALL getval(qccli%v7d%ana(i)%coord,lon=lon,lat=lat)
+  point = georef_coord_new(x=lon, y=lat)
+  DO j = 1, qccli%macroa%arraysize
+    IF (inside(point, qccli%macroa%array(j))) THEN
       qccli%in_macroa(i) = j
       EXIT
     ENDIF
   ENDDO
 ENDDO
+
+
 
 return
 end subroutine qccliinit
@@ -586,15 +602,19 @@ SUBROUTINE vol7d_normalize_data(qccli, battrinv)
 TYPE(qcclitype),INTENT(inout) :: qccli !< volume providing data to be computed, it is modified by the method
 character (len=10) ,intent(in),optional :: battrinv !< attributo invalidated in input/output
 
-real :: datoqui, perc25, perc50,perc75
+real :: datoqui, datoout, perc25, perc50,perc75
 integer :: indana , indanavar, indtime ,indlevel ,indtimerange ,inddativarr, indnetwork
-integer :: indcana,           indctime,indclevel,indctimerange,indcdativarr,indcnetwork
+integer :: indcana, indvar,indctime,indclevel,indctimerange,indcdativarr,indcnetwork
 integer :: indbattrinv
+integer :: iclv(size(qccli%v7d%ana))
+real :: height
+character(len=1)            :: type
+TYPE(vol7d_var) ::  var
 TYPE(vol7d_ana)  :: ana
 TYPE(datetime)   :: time, nintime
 TYPE(vol7d_level):: level
 type(vol7d_var)  :: anavar
-integer :: mese, ora, desc, iarea, clev
+integer :: mese, ora, desc, iarea, clev, k
 character(len=1) ::  canc = "#"
 
 CHARACTER(len=vol7d_ana_lenident) :: ident
@@ -609,7 +629,55 @@ if (associated(qccli%v7d%dativarattr%b))then
   end if
 end if
 
+
+
+if (qccli%height2level) then
+
+  call init(var, btable="B07030")    ! height
+  
+  type=cmiss
+  indvar = index(qccli%v7d%anavar, var, type=type)
+!!$  print*,"indvar ",indvar
+  indnetwork=min(1,size(qccli%v7d%network))
+!!$  print*,"indnetwork ",indnetwork
+  
+  do indana=1,size(qccli%v7d%ana)
+    
+    if( indvar > 0 .and. indnetwork > 0 ) then
+      select case (type)
+      case("d")
+        height=int(realdat(qccli%v7d%volanad(indana,indvar,indnetwork),qccli%v7d%anavar%d(indvar)))
+      case("r")
+        height=int(realdat(qccli%v7d%volanar(indana,indvar,indnetwork),qccli%v7d%anavar%r(indvar)))
+      case ("i")
+        height=int(realdat(qccli%v7d%volanai(indana,indvar,indnetwork),qccli%v7d%anavar%i(indvar)))
+      case("b")
+        height=int(realdat(qccli%v7d%volanab(indana,indvar,indnetwork),qccli%v7d%anavar%b(indvar)))
+      case("c")
+        height=int(realdat(qccli%v7d%volanac(indana,indvar,indnetwork),qccli%v7d%anavar%c(indvar)))
+      case default
+        height=imiss
+      end select
+    else
+      height=imiss
+    end if
+    
+    if (c_e(height)) then
+      iclv(indana)=firsttrue(cli_level1 <= height .and. height <= cli_level2 )
+    else
+      iclv(indana)=imiss
+    endif
+    
+    call l4f_category_log(qccli%category,L4F_DEBUG, 'height has value '//t2c(height))
+    call l4f_category_log(qccli%category,L4F_DEBUG, 'for indana having number '//t2c(indana)//&
+     ' iclv has value '//t2c(iclv(indana)))
+
+  end do
+
+endif
+
 do indana=1,size(qccli%v7d%ana)
+
 
 !  iarea= supermacroa(qccli%in_macroa(indana))
 
@@ -642,26 +710,6 @@ do indana=1,size(qccli%v7d%ana)
               time=cyclicdatetime_to_conventional(cyclicdatetime_new(month=mese, hour=ora))
               !call init(time, year=1001, month=mese, day=1, hour=ora, minute=01)
 
-!!$              call init(anavar,"B07030" )
-!!$              indanavar = -1
-!!$              if (associated (qccli%v7d%anavar%r)) then
-!!$                indanavar        = index(qccli%v7d%anavar%r, anavar)
-!!$              end if
-!!$              if (indanavar <= 0 )cycle
-
-!!!!!  TODO !
-              if (qccli%height2level) then
-                call l4f_category_log(qccli%category,L4F_ERROR,"height2level not managed in vol7d_normalize_data")
-!                call raise_fatal_error()
-              end if
-!!$              ! use conventional level starting from station height
-!!$              if (optio_log(height2level)) then
-!!$                altezza= this%volanar(indana,indanavar,indnetwork)
-!!$                call cli_level(altezza,level)
-!!$              else
-!!$                level=this%level(indlevel)
-!!$              end if
-
               level=qccli%v7d%level(indlevel)
 
               indcnetwork      = 1
@@ -677,8 +725,8 @@ do indana=1,size(qccli%v7d%ana)
 
               indcdativarr     = index(qccli%extreme%dativar%r, qccli%v7d%dativar%r(inddativarr))
               
-                                print *,"dato  ",qccli%v7d%timerange(indtimerange) 
-                                print *,"extreme ",qccli%extreme%timerange
+!!$                                print *,"dato  ",qccli%v7d%timerange(indtimerange) 
+!!$                                print *,"extreme ",qccli%extreme%timerange
 !!$                                call l4f_log(L4F_INFO,"Index:"// to_char(indcana)//to_char(indctime)//to_char(indclevel)//&
 !!$                                 to_char(indctimerange)//to_char(indcdativarr)//to_char(indcnetwork))
               
@@ -689,48 +737,112 @@ do indana=1,size(qccli%v7d%ana)
               
 
                                 ! find percentile in volume
+
+
+
               perc25=rmiss
               perc50=rmiss
               perc75=rmiss
 
-              if (associated(qccli%extreme%voldatir)) then
-                desc=25
-                write(ident,'("#",i2.2,2i3.3)')0,iarea,desc   ! macro-area e descrittore
-                call init(ana,lat=0.0_fp_geo,lon=0.0_fp_geo,ident=ident)
-                print *,qccli%extreme%ana%ident,ana%ident
-                call display(qccli%extreme%ana(1))
-                call display(ana)
-                indcana=index(qccli%extreme%ana,ana)
-                call l4f_log(L4F_INFO,"Index25:"// to_char(indcana)//to_char(indctime)//to_char(indclevel)//&
-                 to_char(indctimerange)//to_char(indcdativarr)//to_char(indcnetwork))
-                if (indcana > 0 )then
-                  perc25=qccli%extreme%voldatir(indcana,indctime,indclevel,indctimerange,indcdativarr,indcnetwork)
-                end if
-                desc=50
-                write(ident,'("#",i2.2,2i3.3)')0,iarea,desc   ! macro-area e descrittore
-                call init(ana,lat=0.d0,lon=0.d0,ident=ident)
-                indcana=index(qccli%extreme%ana,ana)
-                if (indcana > 0 )then
-                  perc50=qccli%extreme%voldatir(indcana,indctime,indclevel,indctimerange,indcdativarr,indcnetwork)
-                end if
-              
-                desc=75
-                write(ident,'("#",i2.2,2i3.3)')0,iarea,desc   ! macro-area e descrittore
-                call init(ana,lat=0.d0,lon=0.d0,ident=ident)
-                indcana=index(qccli%extreme%ana,ana)
-                if (indcana > 0 )then
-                  perc75=qccli%extreme%voldatir(indcana,indctime,indclevel,indctimerange,indcdativarr,indcnetwork)
-                end if
-              end if
-              
-              call l4f_log(L4F_DEBUG,"vol7d_normalize_data perc25 perc50 perc75: "//t2c(perc25)//t2c(perc50)//t2c(perc75))
+              if (qccli%height2level) then
+                call l4f_category_log(qccli%category,L4F_DEBUG,"MIAO")
+                if (associated(qccli%extreme%voldatir)) then
+                  
+                  datoout=datoqui
 
-              if ( c_e(perc25) .and. c_e(perc50) .and. c_e(perc75) ) then
+                  desc=25
+                  write(ident,'("#",i2.2,2i3.3)')iclv(indana),iarea,desc   ! macro-area e descrittore
+                  call init(ana,lat=0.0_fp_geo,lon=0.0_fp_geo,ident=ident)
+!!$                  print *,iclv(indana),qccli%extreme%ana%ident,ana%ident
+                  indcana=index(qccli%extreme%ana,ana)
+!!$                  call l4f_log(L4F_INFO,"Index25:"//to_char(iclv(indana))//to_char(indcana)//&
+!!$                   to_char(indctime)//to_char(indclevel)//&
+!!$                   to_char(indctimerange)//to_char(indcdativarr)//to_char(indcnetwork))
+                  if (indcana > 0 )then
+                    perc25=qccli%extreme%voldatir(indcana,indctime,indclevel,indctimerange,indcdativarr,indcnetwork)
+                  end if
+                  
+                  desc=50
+                  write(ident,'("#",i2.2,2i3.3)')iclv(indana),iarea,desc   ! macro-area e descrittore
+                  call init(ana,lat=0.d0,lon=0.d0,ident=ident)
+!!$                  print *,iclv(indana),qccli%extreme%ana%ident,ana%ident
+                  indcana=index(qccli%extreme%ana,ana)
+                  call l4f_log(L4F_INFO,"Index50:"//to_char(iclv(indana))//to_char(indcana)//&
+                   to_char(indctime)//to_char(indclevel)//&
+                   to_char(indctimerange)//to_char(indcdativarr)//to_char(indcnetwork))
+                  if (indcana > 0 )then
+                    perc50=qccli%extreme%voldatir(indcana,indctime,indclevel,indctimerange,indcdativarr,indcnetwork)
+                  end if
+                  
+                  desc=75
+                  write(ident,'("#",i2.2,2i3.3)')iclv(indana),iarea,desc   ! macro-area e descrittore
+                  call init(ana,lat=0.d0,lon=0.d0,ident=ident)
+!!$                  print *,iclv(indana),qccli%extreme%ana%ident,ana%ident
+                  indcana=index(qccli%extreme%ana,ana)
+                  call l4f_log(L4F_INFO,"Index75:"//to_char(iclv(indana))//to_char(indcana)//&
+                   to_char(indctime)//to_char(indclevel)//&
+                   to_char(indctimerange)//to_char(indcdativarr)//to_char(indcnetwork))
+                  if (indcana > 0 )then
+                    perc75=qccli%extreme%voldatir(indcana,indctime,indclevel,indctimerange,indcdativarr,indcnetwork)
+                  end if
+                    
+                  if ( c_e(perc25) .and. c_e(perc50) .and. c_e(perc75) ) then
                                 ! normalize
+                    
+                    call l4f_log(L4F_DEBUG,"dato qui ini: "//t2c(datoout))
+                    datoout = (datoout - perc50) / (perc75 - perc25) + base_value(qccli%v7d%dativar%r(inddativarr)%btable)
+                    call l4f_log(L4F_DEBUG,"dato qui out: "//t2c(datoout))
+                    qccli%v7d%voldatir  (indana ,indtime ,indlevel ,indtimerange ,inddativarr, indnetwork ) = datoout
+                    
+                  endif
+                  
 
-                datoqui = (datoqui - perc50) / (perc75 - perc25) + base_value(qccli%v7d%dativar%r(inddativarr)%btable)
-                qccli%v7d%voldatir  (indana ,indtime ,indlevel ,indtimerange ,inddativarr, indnetwork ) = datoqui
+                endif
 
+              else
+
+                call l4f_category_log(qccli%category,L4F_DEBUG,"BAU")
+                
+                if (associated(qccli%extreme%voldatir)) then
+                  desc=25
+                  write(ident,'("#",i2.2,2i3.3)')0,iarea,desc   ! macro-area e descrittore
+                  call init(ana,lat=0.0_fp_geo,lon=0.0_fp_geo,ident=ident)
+                  !print *,qccli%extreme%ana%ident,ana%ident
+                  indcana=index(qccli%extreme%ana,ana)
+!!$                  call l4f_log(L4F_INFO,"Index25:"// to_char(indcana)//to_char(indctime)//to_char(indclevel)//&
+!!$                   to_char(indctimerange)//to_char(indcdativarr)//to_char(indcnetwork))
+                  if (indcana > 0 )then
+                    perc25=qccli%extreme%voldatir(indcana,indctime,indclevel,indctimerange,indcdativarr,indcnetwork)
+                  end if
+                  
+                  desc=50
+                  write(ident,'("#",i2.2,2i3.3)')0,iarea,desc   ! macro-area e descrittore
+                  call init(ana,lat=0.d0,lon=0.d0,ident=ident)
+                  indcana=index(qccli%extreme%ana,ana)
+                  if (indcana > 0 )then
+                    perc50=qccli%extreme%voldatir(indcana,indctime,indclevel,indctimerange,indcdativarr,indcnetwork)
+                  end if
+                  
+                  desc=75
+                  write(ident,'("#",i2.2,2i3.3)')0,iarea,desc   ! macro-area e descrittore
+                  call init(ana,lat=0.d0,lon=0.d0,ident=ident)
+                  indcana=index(qccli%extreme%ana,ana)
+                  if (indcana > 0 )then
+                    perc75=qccli%extreme%voldatir(indcana,indctime,indclevel,indctimerange,indcdativarr,indcnetwork)
+                  end if
+                end if
+                
+                call l4f_log(L4F_DEBUG,"vol7d_normalize_data perc25 perc50 perc75: "//t2c(perc25)//t2c(perc50)//t2c(perc75))
+                
+                if ( c_e(perc25) .and. c_e(perc50) .and. c_e(perc75) ) then
+                                ! normalize
+                  
+                  call l4f_log(L4F_DEBUG,"dato qui ini: "//t2c(datoqui))
+                  datoqui = (datoqui - perc50) / (perc75 - perc25) + base_value(qccli%v7d%dativar%r(inddativarr)%btable)
+                  call l4f_log(L4F_DEBUG,"dato qui out: "//t2c(datoqui))
+                  qccli%v7d%voldatir  (indana ,indtime ,indlevel ,indtimerange ,inddativarr, indnetwork ) = datoqui
+                  
+                endif
               end if
             end if
           end do
@@ -1035,7 +1147,7 @@ do indana=1,size(qccli%v7d%ana)
 
                 if ( .not. c_e(perc25) .or. .not. c_e(perc50) .or. .not. c_e(perc75)) cycle
 
-                print *, "datoqui: ",datoqui,"clima ->",perc25,perc50,perc75
+!!$                print *, "datoqui: ",datoqui,"clima ->",perc25,perc50,perc75
 
                                 !http://it.wikipedia.org/wiki/Funzione_di_ripartizione_della_variabile_casuale_normale
                                 ! 3.65 for 0.01% each side ( 0.02% total )
@@ -1144,7 +1256,7 @@ do indana=1,size(qccli%v7d%ana)
                           call l4f_log (L4F_DEBUG,"data ndi:                   "//t2c(datoqui)//"->"//&
                            t2c(qccli%clima%voldatiattrb(indcana,indctime,indclevel,indctimerange,indcdativarr,indcnetwork,1))&
                            //" : "//t2c(qccli%v7d%time(indtime)))
-                          call l4f_log (L4F_DEBUG,"limits: "//t2c(indcana)//":"//TRIM(qccli%clima%ana(indcana)% ident)//&
+                          call l4f_log (L4F_DEBUG,"limits: "//t2c(indcana)//":"//qccli%clima%ana(indcana)% ident//&
                            " : "//t2c(climaquii)//" - "//t2c(climaquif)//" : "//t2c(qccli%clima%time(indctime))) 
                         end if
 #endif
@@ -1355,11 +1467,6 @@ else
   call vol7d_alloc(that,nana=narea*size(perc_vals))
 endif
 
-#ifdef DEBUG
-CALL l4f_category_log(this%category,L4F_DEBUG, 'displaying this')
-CALL display(this%v7d)
-#endif
-
 if (this%height2level) then
 
   call init(var, btable="B07030")    ! height
@@ -1404,15 +1511,15 @@ if (this%height2level) then
     if( indvar > 0 .and. indnetwork > 0 ) then
       select case (type)
       case("d")
-        height=integerdat(this%v7d%volanad(k,indvar,indnetwork),this%v7d%anavar%d(indvar))
+        height=int(realdat(this%v7d%volanad(k,indvar,indnetwork),this%v7d%anavar%d(indvar)))
       case("r")
-        height=integerdat(this%v7d%volanar(k,indvar,indnetwork),this%v7d%anavar%r(indvar))
+        height=int(realdat(this%v7d%volanar(k,indvar,indnetwork),this%v7d%anavar%r(indvar)))
       case ("i")
-        height=integerdat(this%v7d%volanai(k,indvar,indnetwork),this%v7d%anavar%i(indvar))
+        height=int(realdat(this%v7d%volanai(k,indvar,indnetwork),this%v7d%anavar%i(indvar)))
       case("b")
-        height=integerdat(this%v7d%volanab(k,indvar,indnetwork),this%v7d%anavar%b(indvar))
+        height=int(realdat(this%v7d%volanab(k,indvar,indnetwork),this%v7d%anavar%b(indvar)))
       case("c")
-        height=integerdat(this%v7d%volanac(k,indvar,indnetwork),this%v7d%anavar%c(indvar))
+        height=int(realdat(this%v7d%volanac(k,indvar,indnetwork),this%v7d%anavar%c(indvar)))
       case default
         height=imiss
       end select
@@ -1705,16 +1812,16 @@ do inddativarr=1,size(this%v7d%dativar%r)
          mask=mask), &
          perc_vals, ndi, limbins)
 
-        print *,"------- ndi limbins -----------"
-        print *,"min: ",minval(pack(this%v7d%voldatir(:,:, indlevel, indtimerange, inddativarr,:),&
-         mask=mask.and.c_e(this%v7d%voldatir(:,:, indlevel, indtimerange, inddativarr,:))))
-        print *,"max: ",maxval(pack(this%v7d%voldatir(:,:, indlevel, indtimerange, inddativarr,:),&
-         mask=mask.and.c_e(this%v7d%voldatir(:,:, indlevel, indtimerange, inddativarr,:))))
-        call display( this%v7d%timerange(indtimerange))
-        call display( this%v7d%level(indlevel))
-        call display( this%v7d%dativar%r(inddativarr))
-        print *, ndi
-        print *, limbins
+!!$        print *,"------- ndi limbins -----------"
+!!$        print *,"min: ",minval(pack(this%v7d%voldatir(:,:, indlevel, indtimerange, inddativarr,:),&
+!!$         mask=mask.and.c_e(this%v7d%voldatir(:,:, indlevel, indtimerange, inddativarr,:))))
+!!$        print *,"max: ",maxval(pack(this%v7d%voldatir(:,:, indlevel, indtimerange, inddativarr,:),&
+!!$         mask=mask.and.c_e(this%v7d%voldatir(:,:, indlevel, indtimerange, inddativarr,:))))
+!!$        call display( this%v7d%timerange(indtimerange))
+!!$        call display( this%v7d%level(indlevel))
+!!$        call display( this%v7d%dativar%r(inddativarr))
+!!$        print *, ndi
+!!$        print *, limbins
 
         do j=1,size(perc_vals)-1
           indana=((j-1)*narea+i)
