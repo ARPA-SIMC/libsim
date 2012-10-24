@@ -282,9 +282,9 @@ if (quifile) then
 
 #ifdef DEBUG
   call l4f_category_log(this%category,L4F_DEBUG,"handle from idba_messaggi: "//t2c(this%handle))
-  call l4f_category_log(this%category,L4F_DEBUG,"filename: "//t2c(lfilename))
-  call l4f_category_log(this%category,L4F_DEBUG,"mode: "//t2c(mode))
-  call l4f_category_log(this%category,L4F_DEBUG,"format: "//t2c(lformat))
+  call l4f_category_log(this%category,L4F_DEBUG,"filename: "//trim(lfilename))
+  call l4f_category_log(this%category,L4F_DEBUG,"mode: "//trim(mode))
+  call l4f_category_log(this%category,L4F_DEBUG,"format: "//trim(lformat))
 #endif
 
 else

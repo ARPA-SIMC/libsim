@@ -55,9 +55,9 @@ do iiiii=1,ndativar/**/VOL7D_POLY_TYPES_V
 
 
 #ifdef DEBUG
-     CALL l4f_category_log(this%category,L4F_DEBUG,"setto: "&
-          //this%vol7d%dativar% VOL7D_POLY_TYPES_V(iiiii)%btable//' '// &
-          to_char(this%vol7d%voldati/**/VOL7D_POLY_TYPES_V(i,ii,iii,iiii,iiiii,iiiiii)))
+!!$     CALL l4f_category_log(this%category,L4F_DEBUG,"setto: "&
+!!$          //this%vol7d%dativar%/**/VOL7D_POLY_TYPES_V(iiiii)%btable//' '// &
+!!$          to_char(this%vol7d%voldati/**/VOL7D_POLY_TYPES_V(i,ii,iii,iiii,iiiii,iiiiii)))
 #endif
 
     call idba_set (this%handle,this%vol7d%dativar% VOL7D_POLY_TYPES_V(iiiii)%btable , &
