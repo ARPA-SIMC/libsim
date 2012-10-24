@@ -19,6 +19,7 @@
 MODULE geo_proj_class
 USE doubleprecision_phys_const
 USE missing_values
+USE char_utilities
 USE optional_values
 IMPLICIT NONE
 
@@ -44,7 +45,7 @@ TYPE geo_proj_ellips
 END TYPE geo_proj_ellips
 
 TYPE geo_proj
-  CHARACTER(len=80) :: proj_type ! the projection type
+  CHARACTER(len=80) :: proj_type=cmiss ! the projection type
   DOUBLE PRECISION :: xoff, yoff ! offsets in x and y wrt origin, aka false easting and northing resp.
   DOUBLE PRECISION :: lov ! line of view (or central meridian, reference longitude, orientation of the grid)
   TYPE(geo_proj_rotated) :: rotated
@@ -73,6 +74,11 @@ END INTERFACE
 !> Method for setting the contents of the object.
 INTERFACE set_val
   MODULE PROCEDURE geo_proj_set_val
+END INTERFACE
+
+!> Method for testing the existence of the object.
+INTERFACE c_e
+  MODULE PROCEDURE geo_proj_c_e
 END INTERFACE
 
 !> Write the object on a formatted or unformatted file.
@@ -254,8 +260,9 @@ DOUBLE PRECISION, PARAMETER, PRIVATE :: &
 DOUBLE PRECISION,PARAMETER,PRIVATE :: k0=0.9996D0 ! scale factor at central meridian (check whether this is correct and constant)
 
 PRIVATE
-PUBLIC geo_proj, geo_proj_rotated, geo_proj_stretched, geo_proj_polar, geo_proj_ellips, &
- geo_proj_new, delete, copy, get_val, set_val, &
+PUBLIC geo_proj, geo_proj_rotated, geo_proj_stretched, geo_proj_polar, &
+ geo_proj_ellips, &
+ geo_proj_new, delete, copy, get_val, set_val, c_e, &
  write_unit, read_unit, display, proj, unproj, OPERATOR(==), OPERATOR(/=)
 
 
@@ -515,6 +522,15 @@ ENDIF
 END SUBROUTINE geo_proj_set_val
 
 
+FUNCTION geo_proj_c_e(this) RESULT(c_e)
+TYPE(geo_proj),INTENT(in) :: this
+LOGICAL :: c_e
+
+c_e = this%proj_type /= cmiss
+
+END FUNCTION geo_proj_c_e
+
+
 !> This method reads from a Fortran file unit the contents of the
 !! object \a this.  The record to be read must have been written with
 !! the ::write_unit method.  The method works both on formatted and
@@ -558,11 +574,8 @@ END SUBROUTINE geo_proj_write_unit
 SUBROUTINE geo_proj_display(this)
 TYPE(geo_proj),INTENT(in) :: this
 
-IF (c_e(this%proj_type)) THEN
-  PRINT*,"<<<<<<<<<<<<<<< ",TRIM(this%proj_type)," >>>>>>>>>>>>>>>>"
-ELSE
-  PRINT*,"<<<<<<<<<<<<<<< undefined projection >>>>>>>>>>>>>>>>"
-ENDIF
+PRINT*,"<<<<<<<<<<<<<<< ",t2c(this%proj_type,"undefined projection"), &
+ " >>>>>>>>>>>>>>>>"
 
 IF (c_e(this%xoff) .AND. this%xoff /= 0.0D0) THEN
   PRINT*,"False easting",this%xoff
