@@ -1145,6 +1145,8 @@ if (comp_qc_ndi) then
   end IF
 end if
 
+call init(qccli%extreme)
+call init(qccli%clima)
 
 if (ldisplay) then
   print*," >>>>> Output Volume <<<<<"

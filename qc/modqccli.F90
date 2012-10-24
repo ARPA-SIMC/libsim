@@ -572,11 +572,8 @@ type(qcclitype),intent(in out) :: qccli !< Oggetto per l controllo climatico
 
 call qcclidealloc(qccli)
 
-
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!    TODO   !!!!!!!!!!!
-!QUI CI DOVREBBERO STARE MA PROBLEMI IN V7D_TRANSFORM
-!call delete(qccli%clima)
-!call delete(qccli%extreme)
+call delete(qccli%clima)
+call delete(qccli%extreme)
 
 !delete logger
 call l4f_category_delete(qccli%category)
@@ -1417,22 +1414,6 @@ integer,allocatable :: area(:)
 real :: lpresentperc
 integer :: lpresentnumb
 
-!!$lpresentperc=rmiss
-!!$lpresentnumb=imiss
-!!$
-!!$if (present(presentnumb)) then
-!!$  if (c_e(presentnumb)) then
-!!$    lpresentnumb=presentnumb
-!!$  end if
-!!$end if
-!!$
-!!$
-!!$if (present(presentperc)) then
-!!$  if (c_e(presentperc)) then
-!!$    lpresentperc=presentperc
-!!$  end if
-!!$end if
-
 lpresentperc=optio_r(presentperc)
 lpresentnumb=optio_i(presentnumb)
 
@@ -1706,22 +1687,6 @@ real ::  lpresentperc
 integer ::  lpresentnumb
 
 
-!!$lpresentperc=.3
-!!$lpresentnumb=imiss
-!!$
-!!$if (present(presentnumb)) then
-!!$  if (c_e(presentnumb)) then
-!!$    lpresentnumb=presentnumb
-!!$  end if
-!!$end if
-!!$
-!!$
-!!$if (present(presentperc)) then
-!!$  if (c_e(presentperc)) then
-!!$    lpresentperc=presentperc
-!!$  end if
-!!$end if
-
 lpresentperc=optio_r(presentperc)
 lpresentnumb=optio_i(presentnumb)
 
@@ -1805,17 +1770,9 @@ do inddativarr=1,size(this%v7d%dativar%r)
 
         ! we want more than 30% data present
 
-        print*,"-------------------------------------------------------------"
-        print*,"Dati presenti:", count (mask .and. c_e(this%v7d%voldatir(:,:, indlevel, indtimerange, inddativarr,:)))
-        print*,"Dati attesi:", count (mask)
-
-!!$        if ( &
-!!$        ((float(count 
-!!$        (mask .and. c_e(this%v7d%voldatir(:,:, indlevel, indtimerange, inddativarr,:)))) / &
-!!$            float(count (mask))) < lpresentperc) &
-!!$          .OR. &
-!!$        (count (mask .and. c_e(this%v7d%voldatir(:,:, indlevel, indtimerange, inddativarr,:))) < lpresentnumb) ) &
-!!$         cycle
+!!$        print*,"-------------------------------------------------------------"
+!!$        print*,"Dati presenti:", count (mask .and. c_e(this%v7d%voldatir(:,:, indlevel, indtimerange, inddativarr,:)))
+!!$        print*,"Dati attesi:", count (mask)
 
         if &
          ( c_e(lpresentperc) .and. ((float(count &
@@ -1836,16 +1793,16 @@ do inddativarr=1,size(this%v7d%dativar%r)
          mask=mask), &
          perc_vals, ndi, limbins)
 
-        print *,"------- ndi limbins -----------"
-        print *,"min: ",minval(pack(this%v7d%voldatir(:,:, indlevel, indtimerange, inddativarr,:),&
-         mask=mask.and.c_e(this%v7d%voldatir(:,:, indlevel, indtimerange, inddativarr,:))))
-        print *,"max: ",maxval(pack(this%v7d%voldatir(:,:, indlevel, indtimerange, inddativarr,:),&
-         mask=mask.and.c_e(this%v7d%voldatir(:,:, indlevel, indtimerange, inddativarr,:))))
-        call display( this%v7d%timerange(indtimerange))
-        call display( this%v7d%level(indlevel))
-        call display( this%v7d%dativar%r(inddativarr))
-        print *, ndi
-        print *, limbins
+!!$        print *,"------- ndi limbins -----------"
+!!$        print *,"min: ",minval(pack(this%v7d%voldatir(:,:, indlevel, indtimerange, inddativarr,:),&
+!!$         mask=mask.and.c_e(this%v7d%voldatir(:,:, indlevel, indtimerange, inddativarr,:))))
+!!$        print *,"max: ",maxval(pack(this%v7d%voldatir(:,:, indlevel, indtimerange, inddativarr,:),&
+!!$         mask=mask.and.c_e(this%v7d%voldatir(:,:, indlevel, indtimerange, inddativarr,:))))
+!!$        call display( this%v7d%timerange(indtimerange))
+!!$        call display( this%v7d%level(indlevel))
+!!$        call display( this%v7d%dativar%r(inddativarr))
+!!$        print *, ndi
+!!$        print *, limbins
 
         do j=1,size(perc_vals)-1
           indana=((j-1)*narea+i)
@@ -1853,9 +1810,9 @@ do inddativarr=1,size(this%v7d%dativar%r)
            limbins(j)
 
           ! this is a special case where inddativarr = inddativarr becouse we have only real variables and attributes
-          print*," "
-          print *,"indici",indana, indtime, indlevel, indtimerange, inddativarr, indnetwork,indattr
-          print *, ndi(j) *  100.
+!!$          print*," "
+!!$          print *,"indici",indana, indtime, indlevel, indtimerange, inddativarr, indnetwork,indattr
+!!$          print *, ndi(j) *  100.
           this%clima%voldatiattrr(indana, indtime, indlevel, indtimerange, inddativarr, indnetwork,indattr)=&
            ndi(j) *  100.
 
