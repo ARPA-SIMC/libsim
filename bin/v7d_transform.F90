@@ -452,14 +452,14 @@ ENDIF
 CALL getarg(iargc(), output_file)
 
 
-if (comp_qc_ndi .and. comp_qc_perc) then
-  CALL optionparser_printhelp(opt)
-  CALL l4f_category_log(category, L4F_ERROR, &
-   'arguments --comp_qc_ndi and --comp_qc_perc')
-  CALL l4f_category_log(category, L4F_ERROR, &
-   'are exclusive')
-  CALL raise_fatal_error()
-end if
+!!$if (comp_qc_ndi .and. comp_qc_perc) then
+!!$  CALL optionparser_printhelp(opt)
+!!$  CALL l4f_category_log(category, L4F_ERROR, &
+!!$   'arguments --comp_qc_ndi and --comp_qc_perc')
+!!$  CALL l4f_category_log(category, L4F_ERROR, &
+!!$   'are exclusive')
+!!$  CALL raise_fatal_error()
+!!$end if
 
 if ((comp_qc_ndi .or. comp_qc_perc) .and. comp_stat_proc /= "") then
   CALL optionparser_printhelp(opt)
@@ -1110,7 +1110,19 @@ if (comp_qc_ndi .or. comp_qc_perc) then
     call display(qccli%extreme)
   end IF
 end if
+  
+if (comp_qc_perc) then
+  call qc_compute_percentile(qccli, perc_vals=(/25.,50.,75./),cyclicdt=cyclicdt,presentperc=.3,presentnumb=100)
+!  call vol7d_compute_percentile(v7d,v7dtmp, perc_vals=(/15.87,50.,84.13/),cyclicdt=cyclicdt)
+  call delete(v7d)
+  v7d=qccli%extreme
 
+  IF (ldisplay) then
+    print*," >>>>> Percentile Data <<<<<"
+    call display(v7d)
+  end IF
+
+end if
 
 if (comp_qc_ndi) then
 
@@ -1121,23 +1133,18 @@ if (comp_qc_ndi) then
     call display(qccli%v7d)
   end IF
 
-  call qc_compute_NormalizedDensityIndex(qccli,v7dtmp, perc_vals=(/(10.*i,i=0,10)/),cyclicdt=cyclicdt&
-   ,presentperc=.1)
-  
-else if (comp_qc_perc) then
-  call qc_compute_percentile(qccli,v7dtmp, perc_vals=(/25.,50.,75./),cyclicdt=cyclicdt,presentperc=.1)
-!  call vol7d_compute_percentile(v7d,v7dtmp, perc_vals=(/15.87,50.,84.13/),cyclicdt=cyclicdt)
-
-end if
-
-if (comp_qc_ndi .or. comp_qc_perc) then
+  call qc_compute_NormalizedDensityIndex(qccli, perc_vals=(/(10.*i,i=0,10)/),cyclicdt=cyclicdt&
+   ,presentperc=.3,presentnumb=100)
 
   call delete(v7d)
-  v7d=v7dtmp
-  CALL init(v7dtmp) ! detach it
-  call delete(qccli)
+  v7d=qccli%clima
 
+  IF (ldisplay) then
+    print*," >>>>> Normalized Density Index Data <<<<<"
+    call display(v7d)
+  end IF
 end if
+
 
 if (ldisplay) then
   print*," >>>>> Output Volume <<<<<"
@@ -1283,6 +1290,9 @@ call delete(vfn)
 call delete(vfnoracle)
 #endif
 
+if (comp_qc_ndi .or. comp_qc_perc) then
+  call delete(qccli)
+end if
 
 ier = l4f_fini()
 

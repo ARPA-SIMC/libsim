@@ -147,7 +147,6 @@ type :: qcclitype
   integer,pointer :: data_id_in(:,:,:,:,:) !< Indici dati del DB in input
   integer,pointer :: data_id_out(:,:,:,:,:) !< Indici dati del DB in output
   integer, pointer :: in_macroa(:) !< Macroarea di appartenenza delle stazioni
-  TYPE(arrayof_georef_coord_array) :: macroa !< serie di coordinate che definiscono le macroaree
   integer :: category !< log4fortran
   logical :: height2level   !< use conventional level starting from station height
 
@@ -224,6 +223,7 @@ TYPE(vol7d_network)  :: network
 ! temporary, improve!!!!
 DOUBLE PRECISION :: lon, lat
 TYPE(georef_coord) :: point
+TYPE(arrayof_georef_coord_array) :: macroa !< serie di coordinate che definiscono le macroaree
 
 
 call l4f_launcher(a_name,a_name_append=trim(subcategory)//"."//trim(categoryappend))
@@ -265,8 +265,7 @@ if (present(macropath))then
   end if
 end if
 
-CALL import(qccli%macroa, shpfile=filepath)
-call init(qccli%clima)
+CALL import(macroa, shpfile=filepath)
 
 call optio(climapath,filepathclima)
 call optio(extremepath,filepathextreme)
@@ -348,6 +347,7 @@ if (.not. c_e(ldsncli)) then
 
   else
     call l4f_category_log(qccli%category,L4F_WARN,"clima volume not iniziatized: QC will not be possible")
+    call init(qccli%clima)
 !    call raise_fatal_error()
   end if
 
@@ -462,7 +462,7 @@ call qcclialloc(qccli)
 
 ! valuto in quale macroarea sono le stazioni
 
-!!$IF (qccli%macroa%arraysize <= 0) THEN
+!!$IF (macroa%arraysize <= 0) THEN
 !!$  CALL l4f_category_log(qccli%category,L4F_ERROR,"maskgen: poly parameter missing or empty")
 !!$  CALL raise_fatal_error()
 !!$ENDIF
@@ -473,15 +473,15 @@ DO i = 1, SIZE(qccli%v7d%ana)
 ! temporary, improve!!!!
   CALL getval(qccli%v7d%ana(i)%coord,lon=lon,lat=lat)
   point = georef_coord_new(x=lon, y=lat)
-  DO j = 1, qccli%macroa%arraysize
-    IF (inside(point, qccli%macroa%array(j))) THEN
+  DO j = 1, macroa%arraysize
+    IF (inside(point, macroa%array(j))) THEN
       qccli%in_macroa(i) = j
       EXIT
     ENDIF
   ENDDO
 ENDDO
 
-
+call delete(macroa)
 
 return
 end subroutine qccliinit
@@ -572,7 +572,11 @@ type(qcclitype),intent(in out) :: qccli !< Oggetto per l controllo climatico
 
 call qcclidealloc(qccli)
 
-call delete(qccli%clima)
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!    TODO   !!!!!!!!!!!
+!QUI CI DOVREBBERO STARE MA PROBLEMI IN V7D_TRANSFORM
+!call delete(qccli%clima)
+!call delete(qccli%extreme)
 
 !delete logger
 call l4f_category_delete(qccli%category)
@@ -1388,17 +1392,16 @@ if (macroa == 7 .or. macroa == 8 ) supermacroa=1
 end function supermacroa
 
 
-SUBROUTINE qc_compute_percentile(this, that, perc_vals,cyclicdt,presentperc, presentnumb)
+SUBROUTINE qc_compute_percentile(this, perc_vals,cyclicdt,presentperc, presentnumb)
  
-TYPE(qcclitype),INTENT(inout) :: this !< volume providing data to be computed, it is not modified by the method, apart from performing a \a vol7d_alloc_vol on it
-TYPE(vol7d),INTENT(out) :: that !< output volume which will contain the computed data
+TYPE(qcclitype),INTENT(inout) :: this !< volume providing data to be computed and output data. Input data are not modified by the method, apart from performing a \a vol7d_alloc_vol on it
 !TYPE(timedelta),INTENT(in) :: step !< length of the step over which the statistical processing is performed
 !TYPE(datetime),INTENT(in),OPTIONAL :: start !< start of statistical processing interval
 !TYPE(datetime),INTENT(in),OPTIONAL :: stopp  !< end of statistical processing interval
 real,intent(in) :: perc_vals(:) !< percentile values to use in compute, between 0. and 100.
 TYPE(cyclicdatetime),INTENT(in) :: cyclicdt !< cyclic date and time
-real, optional :: presentperc !< percentual of data present for compute (default='0.3)
-integer, optional :: presentnumb !< number of data present for compute (default='100)
+real, optional :: presentperc !< percentual of data present for compute (default=not used)
+integer, optional :: presentnumb !< number of data present for compute (default=not used)
 !!$logical, optional :: height2level   !< use conventional level starting from station height
 
 integer :: indana,indtime,indvar,indnetwork,indlevel ,indtimerange ,inddativarr,i,j,k,iana,narea
@@ -1414,24 +1417,29 @@ integer,allocatable :: area(:)
 real :: lpresentperc
 integer :: lpresentnumb
 
-lpresentperc=.3
-lpresentnumb=imiss
+!!$lpresentperc=rmiss
+!!$lpresentnumb=imiss
+!!$
+!!$if (present(presentnumb)) then
+!!$  if (c_e(presentnumb)) then
+!!$    lpresentnumb=presentnumb
+!!$  end if
+!!$end if
+!!$
+!!$
+!!$if (present(presentperc)) then
+!!$  if (c_e(presentperc)) then
+!!$    lpresentperc=presentperc
+!!$  end if
+!!$end if
 
-if (present(presentnumb)) then
-  if (c_e(presentnumb)) then
-    lpresentnumb=presentnumb
-  end if
-end if
-
-
-if (present(presentperc)) then
-  if (c_e(presentperc)) then
-    lpresentperc=presentperc
-  end if
-end if
+lpresentperc=optio_r(presentperc)
+lpresentnumb=optio_i(presentnumb)
 
 allocate (perc(size(perc_vals)))
-CALL init(that, time_definition=this%v7d%time_definition)
+
+call delete(this%extreme)
+CALL init(this%extreme, time_definition=this%v7d%time_definition)
 
 call init(var, btable="B01192")    ! MeteoDB station ID that here is the number of area
 
@@ -1462,9 +1470,9 @@ narea=count_distinct(areav)
 allocate(area(narea))
 area=pack_distinct(areav,narea)
 if (this%height2level) then
-  call vol7d_alloc(that,nana=narea*size(perc_vals)*cli_nlevel)
+  call vol7d_alloc(this%extreme,nana=narea*size(perc_vals)*cli_nlevel)
 else
-  call vol7d_alloc(that,nana=narea*size(perc_vals))
+  call vol7d_alloc(this%extreme,nana=narea*size(perc_vals))
 endif
 
 if (this%height2level) then
@@ -1548,12 +1556,12 @@ do i=1,narea
     if (this%height2level) then
       do k=1,cli_nlevel
         write(ident,'("#",i2.2,2i3.3)')k,area(i),nint(perc_vals(j))
-        call init(that%ana((k-1)*size(perc_vals)*narea + (j-1)*narea + i),ident=ident,lat=0d0,lon=0d0)
+        call init(this%extreme%ana((k-1)*size(perc_vals)*narea + (j-1)*narea + i),ident=ident,lat=0d0,lon=0d0)
       enddo
     else
       k=0
       write(ident,'("#",i2.2,2i3.3)')k,area(i),nint(perc_vals(j))
-      call init(that%ana((j-1)*narea+i),ident=ident,lat=0d0,lon=0d0)
+      call init(this%extreme%ana((j-1)*narea+i),ident=ident,lat=0d0,lon=0d0)
     endif
   end do
 end do
@@ -1569,17 +1577,17 @@ CALL l4f_category_log(this%category, L4F_DEBUG, 'lpresentnumb has value '//t2c(l
 #endif
 
 
-call vol7d_alloc(that,nlevel=size(this%v7d%level), ntimerange=size(this%v7d%timerange), &
+call vol7d_alloc(this%extreme,nlevel=size(this%v7d%level), ntimerange=size(this%v7d%timerange), &
  ndativarr=size(this%v7d%dativar%r), nnetwork=1,ntime=1)
 
-that%level=this%v7d%level
-that%timerange=this%v7d%timerange
-that%dativar%r=this%v7d%dativar%r
-that%time(1)=cyclicdatetime_to_conventional(cyclicdt)
-call l4f_category_log(this%category, L4F_INFO,"vol7d_compute_percentile conventional datetime "//to_char(that%time(1)))
-call init(that%network(1),name="qcclima-perc")
+this%extreme%level=this%v7d%level
+this%extreme%timerange=this%v7d%timerange
+this%extreme%dativar%r=this%v7d%dativar%r
+this%extreme%time(1)=cyclicdatetime_to_conventional(cyclicdt)
+call l4f_category_log(this%category, L4F_INFO,"vol7d_compute_percentile conventional datetime "//to_char(this%extreme%time(1)))
+call init(this%extreme%network(1),name="qcclima-perc")
 
-call vol7d_alloc_vol(that,inivol=.true.)
+call vol7d_alloc_vol(this%extreme,inivol=.true.)
 
 allocate (mask(size(this%v7d%ana),size(this%v7d%time),size(this%v7d%network)))
 
@@ -1663,7 +1671,7 @@ perc= stat_percentile (&
 
 do j=1,size(perc_vals)              
   indana=(k-1)*size(perc_vals)*narea + (j-1)*narea + i
-  that%voldatir(indana, indtime, indlevel, indtimerange, inddativarr, indnetwork)=&
+  this%extreme%voldatir(indana, indtime, indlevel, indtimerange, inddativarr, indnetwork)=&
    perc(j)
 enddo
 
@@ -1674,17 +1682,16 @@ end subroutine sub_perc
 end SUBROUTINE qc_compute_percentile
 
 
-SUBROUTINE qc_compute_NormalizedDensityIndex(this, that, perc_vals,cyclicdt,presentperc, presentnumb)
+SUBROUTINE qc_compute_NormalizedDensityIndex(this, perc_vals,cyclicdt,presentperc, presentnumb)
  
-TYPE(qcclitype),INTENT(inout) :: this !< volume providing data to be computed, it is not modified by the method, apart from performing a \a vol7d_alloc_vol on it
-TYPE(vol7d),INTENT(out) :: that !< output volume which will contain the computed data
+TYPE(qcclitype),INTENT(inout) :: this !< volume providing data to be computed and output data. Input data are not modified by the method, apart from performing a \a vol7d_alloc_vol on it
 !TYPE(timedelta),INTENT(in) :: step !< length of the step over which the statistical processing is performed
 !TYPE(datetime),INTENT(in),OPTIONAL :: start !< start of statistical processing interval
 !TYPE(datetime),INTENT(in),OPTIONAL :: stopp  !< end of statistical processing interval
 real,intent(in) :: perc_vals(:) !< percentile values to use in compute, between 0. and 100.
 TYPE(cyclicdatetime),INTENT(in) :: cyclicdt !< cyclic date and time
-real,optional :: presentperc !< rate of data present for compute on expected values (default=0.3)
-integer,optional :: presentnumb  !< number of data present for compute (default=100)
+real,optional :: presentperc !< rate of data present for compute on expected values (default=not used)
+integer,optional :: presentnumb  !< number of data present for compute (default= not used)
 
 integer :: indana,indtime,indvar,indnetwork,indlevel ,indtimerange ,inddativarr, indattr
 integer :: i,j,narea
@@ -1699,24 +1706,28 @@ real ::  lpresentperc
 integer ::  lpresentnumb
 
 
-lpresentperc=.3
-lpresentnumb=imiss
+!!$lpresentperc=.3
+!!$lpresentnumb=imiss
+!!$
+!!$if (present(presentnumb)) then
+!!$  if (c_e(presentnumb)) then
+!!$    lpresentnumb=presentnumb
+!!$  end if
+!!$end if
+!!$
+!!$
+!!$if (present(presentperc)) then
+!!$  if (c_e(presentperc)) then
+!!$    lpresentperc=presentperc
+!!$  end if
+!!$end if
 
-if (present(presentnumb)) then
-  if (c_e(presentnumb)) then
-    lpresentnumb=presentnumb
-  end if
-end if
-
-
-if (present(presentperc)) then
-  if (c_e(presentperc)) then
-    lpresentperc=presentperc
-  end if
-end if
+lpresentperc=optio_r(presentperc)
+lpresentnumb=optio_i(presentnumb)
 
 allocate (ndi(size(perc_vals)-1),limbins(size(perc_vals)))
-CALL init(that, time_definition=this%v7d%time_definition)
+call delete(this%clima)
+CALL init(this%clima, time_definition=this%v7d%time_definition)
 call init(var, btable="B01192")    ! MeteoDB station ID that here is the number of area
 
 type=cmiss
@@ -1743,12 +1754,12 @@ indnetwork=1
 narea=count_distinct(areav)
 allocate(area(narea))
 area=pack_distinct(areav,narea)
-call vol7d_alloc(that,nana=narea*(size(perc_vals)-1))
+call vol7d_alloc(this%clima,nana=narea*(size(perc_vals)-1))
 
 do i=1,narea
   do j=1,size(perc_vals)-1
     write(ident,'("#",i2.2,2i3.3)')0,area(i),nint(perc_vals(j))
-    call init(that%ana((j-1)*narea+i),ident=ident,lat=0d0,lon=0d0)
+    call init(this%clima%ana((j-1)*narea+i),ident=ident,lat=0d0,lon=0d0)
     !area((j-1)*narea+i)=area(i)
     !percentile((j-1)*narea+i)=perc_vals(j)
   end do
@@ -1758,20 +1769,20 @@ end do
 !!$  call display(that%ana(i))
 !!$end do
 
-call vol7d_alloc(that,nlevel=size(this%v7d%level), ntimerange=size(this%v7d%timerange), &
+call vol7d_alloc(this%clima,nlevel=size(this%v7d%level), ntimerange=size(this%v7d%timerange), &
  ndativarr=size(this%v7d%dativar%r), nnetwork=1,ntime=1,ndativarattrr=size(this%v7d%dativar%r),ndatiattrr=1)
 
-that%level=this%v7d%level
-that%timerange=this%v7d%timerange
-that%dativar%r=this%v7d%dativar%r
-that%dativarattr%r=that%dativar%r
-call init(that%datiattr%r(1), btable="*B33209")    ! NDI order number
-that%time(1)=cyclicdatetime_to_conventional(cyclicdt)
+this%clima%level=this%v7d%level
+this%clima%timerange=this%v7d%timerange
+this%clima%dativar%r=this%v7d%dativar%r
+this%clima%dativarattr%r=this%clima%dativar%r
+call init(this%clima%datiattr%r(1), btable="*B33209")    ! NDI order number
+this%clima%time(1)=cyclicdatetime_to_conventional(cyclicdt)
 
-call l4f_category_log(this%category,L4F_INFO,"vol7d_compute_ndi conventional datetime "//to_char(that%time(1)))
-call init(that%network(1),name="qcclima-ndi")
+call l4f_category_log(this%category,L4F_INFO,"vol7d_compute_ndi conventional datetime "//to_char(this%clima%time(1)))
+call init(this%clima%network(1),name="qcclima-ndi")
 
-call vol7d_alloc_vol(that,inivol=.true.)
+call vol7d_alloc_vol(this%clima,inivol=.true.)
 
 allocate (mask(size(this%v7d%ana),size(this%v7d%time),size(this%v7d%network)))
 
@@ -1794,45 +1805,58 @@ do inddativarr=1,size(this%v7d%dativar%r)
 
         ! we want more than 30% data present
 
-!!$        print*,"-------------------------------------------------------------"
-!!$        print*,"Dati presenti:", count (mask .and. c_e(this%v7d%voldatir(:,:, indlevel, indtimerange, inddativarr,:)))
-!!$        print*,"Dati attesi:", count (mask)
+        print*,"-------------------------------------------------------------"
+        print*,"Dati presenti:", count (mask .and. c_e(this%v7d%voldatir(:,:, indlevel, indtimerange, inddativarr,:)))
+        print*,"Dati attesi:", count (mask)
 
-        if ( &
-        ((float(count (mask .and. c_e(this%v7d%voldatir(:,:, indlevel, indtimerange, inddativarr,:)))) / &
-            float(count (mask))) < lpresentperc) &
-          .OR. &
-        (count (mask .and. c_e(this%v7d%voldatir(:,:, indlevel, indtimerange, inddativarr,:))) < lpresentnumb) ) &
+!!$        if ( &
+!!$        ((float(count 
+!!$        (mask .and. c_e(this%v7d%voldatir(:,:, indlevel, indtimerange, inddativarr,:)))) / &
+!!$            float(count (mask))) < lpresentperc) &
+!!$          .OR. &
+!!$        (count (mask .and. c_e(this%v7d%voldatir(:,:, indlevel, indtimerange, inddativarr,:))) < lpresentnumb) ) &
+!!$         cycle
+
+        if &
+         ( c_e(lpresentperc) .and. ((float(count &
+         (mask .and. c_e(this%v7d%voldatir(:,:, indlevel, indtimerange, inddativarr,:)))) / &
+         float(count (mask))) < lpresentperc)) &
          cycle
-!!$        print*,"compute"
-!!$        print*,"-------------------------------------------------------------"
+
+        if &
+         ( c_e(lpresentnumb) .and. (count & 
+         (mask .and. c_e(this%v7d%voldatir(:,:, indlevel, indtimerange, inddativarr,:))) < lpresentnumb) ) &
+         cycle
+        
+        print*,"compute"
+        print*,"-------------------------------------------------------------"
 
         call NormalizedDensityIndex (&
          pack(this%v7d%voldatir(:,:, indlevel, indtimerange, inddativarr,:), &
          mask=mask), &
          perc_vals, ndi, limbins)
 
-!!$        print *,"------- ndi limbins -----------"
-!!$        print *,"min: ",minval(pack(this%v7d%voldatir(:,:, indlevel, indtimerange, inddativarr,:),&
-!!$         mask=mask.and.c_e(this%v7d%voldatir(:,:, indlevel, indtimerange, inddativarr,:))))
-!!$        print *,"max: ",maxval(pack(this%v7d%voldatir(:,:, indlevel, indtimerange, inddativarr,:),&
-!!$         mask=mask.and.c_e(this%v7d%voldatir(:,:, indlevel, indtimerange, inddativarr,:))))
-!!$        call display( this%v7d%timerange(indtimerange))
-!!$        call display( this%v7d%level(indlevel))
-!!$        call display( this%v7d%dativar%r(inddativarr))
-!!$        print *, ndi
-!!$        print *, limbins
+        print *,"------- ndi limbins -----------"
+        print *,"min: ",minval(pack(this%v7d%voldatir(:,:, indlevel, indtimerange, inddativarr,:),&
+         mask=mask.and.c_e(this%v7d%voldatir(:,:, indlevel, indtimerange, inddativarr,:))))
+        print *,"max: ",maxval(pack(this%v7d%voldatir(:,:, indlevel, indtimerange, inddativarr,:),&
+         mask=mask.and.c_e(this%v7d%voldatir(:,:, indlevel, indtimerange, inddativarr,:))))
+        call display( this%v7d%timerange(indtimerange))
+        call display( this%v7d%level(indlevel))
+        call display( this%v7d%dativar%r(inddativarr))
+        print *, ndi
+        print *, limbins
 
         do j=1,size(perc_vals)-1
           indana=((j-1)*narea+i)
-          that%voldatir(indana, indtime, indlevel, indtimerange, inddativarr, indnetwork)=&
+          this%clima%voldatir(indana, indtime, indlevel, indtimerange, inddativarr, indnetwork)=&
            limbins(j)
 
           ! this is a special case where inddativarr = inddativarr becouse we have only real variables and attributes
-!!$          print*," "
-!!$          print *,"indici",indana, indtime, indlevel, indtimerange, inddativarr, indnetwork,indattr
-!!$          print *, ndi(j) *  100.
-          that%voldatiattrr(indana, indtime, indlevel, indtimerange, inddativarr, indnetwork,indattr)=&
+          print*," "
+          print *,"indici",indana, indtime, indlevel, indtimerange, inddativarr, indnetwork,indattr
+          print *, ndi(j) *  100.
+          this%clima%voldatiattrr(indana, indtime, indlevel, indtimerange, inddativarr, indnetwork,indattr)=&
            ndi(j) *  100.
 
         end do
