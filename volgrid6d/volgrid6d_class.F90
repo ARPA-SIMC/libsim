@@ -1976,30 +1976,54 @@ IF (c_e(grid_trans)) THEN
    ntimerange=ntimerange, ndativarr=nvar, nnetwork=nnetwork)
   vol7d_out%ana = v7d_locana%ana
 
-  CALL get_val(this, trans_type=trans_type)
-  IF (trans_type == 'polyinter' .OR. trans_type == 'maskinter' .OR. &
-   trans_type == 'metamorphosis' ) THEN ! create output station id
+  CALL get_val(grid_trans, point_index=point_index)
+  IF (ALLOCATED(point_index)) THEN
+! check that size(point_index) == nana?
     CALL vol7d_alloc(vol7d_out, nanavari=1)
     CALL init(vol7d_out%anavar%i(1), 'B01192')
   ENDIF
 
   CALL vol7d_alloc_vol(vol7d_out)
 
-  IF (trans_type == 'polyinter' .OR. trans_type == 'maskinter' .OR. &
-   trans_type == 'metamorphosis' ) THEN ! create output station id
-
-    CALL get_val(grid_trans, point_index=point_index)
-    IF (ALLOCATED(point_index)) THEN
-      DO inetwork = 1, nnetwork
-        vol7d_out%volanai(:,1,inetwork) = point_index(:)
-      ENDDO
-    ELSE
-      DO inetwork = 1, nnetwork
-      vol7d_out%volanai(:,1,inetwork) = (/(iana,iana=1,nana)/)
-      ENDDO
-    ENDIF
-
+  IF (ALLOCATED(point_index)) THEN
+    DO inetwork = 1, nnetwork
+      vol7d_out%volanai(:,1,inetwork) = point_index(:)
+    ENDDO
   ENDIF
+
+
+!  CALL get_val(this, trans_type=trans_type)
+!  IF (trans_type == 'polyinter' .OR. trans_type == 'maskinter' .OR. &
+!   trans_type == 'metamorphosis' ) THEN ! create output station id
+!    CALL vol7d_alloc(vol7d_out, nanavari=1)
+!    CALL init(vol7d_out%anavar%i(1), 'B01192')
+!  ENDIF
+!
+!  CALL vol7d_alloc_vol(vol7d_out)
+!
+!  IF (trans_type == 'polyinter' .OR. trans_type == 'maskinter' .OR. &
+!   trans_type == 'metamorphosis' ) THEN ! create output station id
+!
+!    CALL get_val(grid_trans, point_index=point_index)
+!    IF (ALLOCATED(point_index)) THEN
+!      DO inetwork = 1, nnetwork
+!        vol7d_out%volanai(:,1,inetwork) = point_index(:)
+!      ENDDO
+!#ifdef DEBUG
+!      CALL l4f_category_log(volgrid6d_in%category,L4F_INFO, &
+!       "point_index retrieved with size "//t2c(SIZE(point_index)))
+!#endif
+!    ELSE
+!      DO inetwork = 1, nnetwork
+!        vol7d_out%volanai(:,1,inetwork) = (/(iana,iana=1,nana)/)
+!      ENDDO
+!#ifdef DEBUG
+!      CALL l4f_category_log(volgrid6d_in%category,L4F_INFO, &
+!       "point_index not retrieved, replaced with size "//t2c(nana))
+!#endif
+!    ENDIF
+!
+!  ENDIF
 
   CALL compute(grid_trans, volgrid6d_in, vol7d_out, networkname, noconvert)
 !ELSE how to signal error status? c_e(vol7d_out)

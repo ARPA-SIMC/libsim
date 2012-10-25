@@ -146,12 +146,14 @@
 !!    - sub_type='coordbb' the input points which lie in the provided
 !!      lon/lat bounding box are kept in the output (grid-to-sparse
 !!      points or sparse points-to-sparse points).
-!!    - sub_type='poly' the input points which lie in the first
-!!      polygon of the provided polygon list are kept in the output
-!!      (grid-to-sparse points or sparse points-to-sparse points).
-!!    - sub_type='mask' the input points which belong to the first
-!!      class defined by a mask field, as for trans_type='maskinter'
-!!      are kept in the output (grid-to-sparse points).
+!!    - sub_type='poly' the input points which lie in any of the
+!!      polygons provided are kept in the output; points are marked
+!!      with the number of polygon they belong to (grid-to-sparse
+!!      points or sparse points-to-sparse points).
+!!    - sub_type='mask' the input points which belong to any valid
+!!      class defined by a mask field, as for trans_type='maskinter',
+!!      are kept in the output; points are marked with the number of
+!!      the class they belong to (grid-to-sparse points).
 !!
 !! \ingroup volgrid6d
 MODULE grid_transform_class
@@ -1854,12 +1856,14 @@ ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
        ' input field:'//t2c(this%innx)//'x'//t2c(this%inny))
       CALL raise_fatal_error()
     ENDIF
+    ALLOCATE(this%point_index(this%innx,this%inny))
+    this%point_index(:,:) = imiss
 
 ! generate the classes according to parameters and mask
     CALL gen_mask_class()
 
-  this%outnx = 0
-  this%outny = 1
+    this%outnx = 0
+    this%outny = 1
 
 ! this OMP block has to be checked
 !$OMP PARALLEL DEFAULT(SHARED)
@@ -1867,11 +1871,13 @@ ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
     DO iy = 1, this%inny
       DO ix = 1, this%innx
         IF (c_e(maskgrid(ix,iy))) THEN
-          IF (maskgrid(ix,iy) > lbound_class(1) .AND. &
-           maskgrid(ix,iy) <= lbound_class(2)) THEN
-            this%outnx = this%outnx + 1
-            this%point_mask(ix,iy) = .TRUE.
-          ENDIF
+          DO n = lnmaskclass, 1, -1
+            IF (maskgrid(ix,iy) > lbound_class(n)) THEN
+              this%outnx = this%outnx + 1
+              this%point_index(ix,iy) = n
+              EXIT
+            ENDIF
+          ENDDO
         ENDIF
       ENDDO
     ENDDO
@@ -1886,13 +1892,19 @@ ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
       RETURN
       !CALL raise_fatal_error() ! really fatal error?
     ENDIF
-
+#ifdef DEBUG
+    DO n = 1, lnmaskclass
+      CALL l4f_category_log(this%category,L4F_INFO, &
+       "points in class "//t2c(n)//": "// &
+       t2c(COUNT(this%point_index(:,:) == n)))
+    ENDDO
+#endif
     CALL vol7d_alloc(v7d_out, nana=this%outnx)
 ! collect coordinates of points falling into requested polygon
     n = 0
     DO iy = 1, this%inny
       DO ix = 1, this%innx
-        IF (this%point_mask(ix,iy)) THEN
+        IF (c_e(this%point_index(ix,iy))) THEN
           n = n + 1
           CALL init(v7d_out%ana(n),lon=in%dim%lon(ix,iy),lat=in%dim%lat(ix,iy))
         ENDIF
@@ -2282,8 +2294,6 @@ ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
     IF (this%outnx <= 0) THEN
       CALL l4f_category_log(this%category,L4F_INFO, &
        "metamorphosis:poly: no points inside polygons")
-!      this%valid = .FALSE.
-!      RETURN
     ENDIF
 
     CALL vol7d_alloc(v7d_out, nana=this%outnx)
@@ -2409,8 +2419,7 @@ INTEGER,INTENT(out),OPTIONAL :: levused !< number of input levels used for verti
 IF (PRESENT(output_level_auto)) output_level_auto => this%output_level_auto
 IF (PRESENT(point_index)) THEN
   IF (ASSOCIATED(this%point_index)) THEN
-!    ALLOCATE(point_index(COUNT(c_e(this%point_index))))
-    point_index = PACK(this%point_index, c_e(this%point_index))
+    point_index = PACK(this%point_index(:,:), c_e(this%point_index))
   ENDIF
 ENDIF
 IF (PRESENT(levshift)) levshift = this%levshift
@@ -2887,7 +2896,7 @@ ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
       field_out(:,1,k) = PACK(field_in(:,:,k), this%point_mask(:,:))
     ENDDO
 
-  ELSE IF (this%trans%sub_type == 'poly') THEN
+  ELSE IF (this%trans%sub_type == 'poly' .OR. this%trans%sub_type == 'mask') THEN
 
     DO k = 1, innz
 ! this is to sparse-points only, so field_out(:,1,k) is acceptable
