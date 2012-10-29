@@ -1495,7 +1495,8 @@ CALL get_val(this, trans_type=trans_type)
 
 ! store desired output component flag and unrotate if necessary
 cf_out = imiss
-IF (PRESENT(griddim) .AND. (trans_type == 'inter' .OR. trans_type == 'boxinter')) THEN ! improve condition!!
+IF (PRESENT(griddim) .AND. (trans_type == 'inter' .OR. trans_type == 'boxinter' &
+ .OR. trans_type == 'stencilinter')) THEN ! improve condition!!
   CALL get_val(volgrid6d_in%griddim, proj=proj_in)
   CALL get_val(griddim, component_flag=cf_out, proj=proj_out)
 ! if different projections wind components must be referred to geographical system
@@ -1990,41 +1991,6 @@ IF (c_e(grid_trans)) THEN
       vol7d_out%volanai(:,1,inetwork) = point_index(:)
     ENDDO
   ENDIF
-
-
-!  CALL get_val(this, trans_type=trans_type)
-!  IF (trans_type == 'polyinter' .OR. trans_type == 'maskinter' .OR. &
-!   trans_type == 'metamorphosis' ) THEN ! create output station id
-!    CALL vol7d_alloc(vol7d_out, nanavari=1)
-!    CALL init(vol7d_out%anavar%i(1), 'B01192')
-!  ENDIF
-!
-!  CALL vol7d_alloc_vol(vol7d_out)
-!
-!  IF (trans_type == 'polyinter' .OR. trans_type == 'maskinter' .OR. &
-!   trans_type == 'metamorphosis' ) THEN ! create output station id
-!
-!    CALL get_val(grid_trans, point_index=point_index)
-!    IF (ALLOCATED(point_index)) THEN
-!      DO inetwork = 1, nnetwork
-!        vol7d_out%volanai(:,1,inetwork) = point_index(:)
-!      ENDDO
-!#ifdef DEBUG
-!      CALL l4f_category_log(volgrid6d_in%category,L4F_INFO, &
-!       "point_index retrieved with size "//t2c(SIZE(point_index)))
-!#endif
-!    ELSE
-!      DO inetwork = 1, nnetwork
-!        vol7d_out%volanai(:,1,inetwork) = (/(iana,iana=1,nana)/)
-!      ENDDO
-!#ifdef DEBUG
-!      CALL l4f_category_log(volgrid6d_in%category,L4F_INFO, &
-!       "point_index not retrieved, replaced with size "//t2c(nana))
-!#endif
-!    ENDIF
-!
-!  ENDIF
-
   CALL compute(grid_trans, volgrid6d_in, vol7d_out, networkname, noconvert)
 !ELSE how to signal error status? c_e(vol7d_out)
 ENDIF
@@ -2363,27 +2329,19 @@ ELSE
      nlevel=SIZE(vol7d_in%level), nnetwork=SIZE(vol7d_in%network), ndativarr=nvar)
     vol7d_out%ana = v7d_locana%ana
 
-    IF (trans_type == 'polyinter' .OR. trans_type == 'maskinter' .OR. &
-     trans_type == 'metamorphosis' ) THEN ! create output station id
+    CALL get_val(grid_trans, point_index=point_index)
+
+    IF (ALLOCATED(point_index)) THEN
       CALL vol7d_alloc(vol7d_out, nanavari=1)
       CALL init(vol7d_out%anavar%i(1), 'B01192')
     ENDIF
 
     CALL vol7d_alloc_vol(vol7d_out)
 
-    IF (trans_type == 'polyinter' .OR. trans_type == 'maskinter' .OR. &
-     trans_type == 'metamorphosis' ) THEN ! create output station id
-
-      CALL get_val(grid_trans, point_index=point_index)
-      IF (ALLOCATED(point_index)) THEN
-        DO inetwork = 1, SIZE(vol7d_in%network)
-          vol7d_out%volanai(:,1,inetwork) = point_index(:)
-        ENDDO
-      ELSE
-        DO inetwork = 1, SIZE(vol7d_in%network)
-          vol7d_out%volanai(:,1,inetwork) = (/(iana,iana=1,SIZE(v7d_locana%ana))/)
-        ENDDO
-      ENDIF
+    IF (ALLOCATED(point_index)) THEN
+      DO inetwork = 1, SIZE(vol7d_in%network)
+        vol7d_out%volanai(:,1,inetwork) = point_index(:)
+      ENDDO
     ENDIF
     CALL compute(grid_trans, vol7d_in, vol7d_out)
   ELSE

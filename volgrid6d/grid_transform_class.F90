@@ -1722,27 +1722,31 @@ ELSE IF (this%trans%trans_type == 'maskinter') THEN
 
 ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
 
+! common to all metamorphosis subtypes
+! compute coordinates of input grid in geo system
+  CALL unproj(in) ! TODO costringe a dichiarare in INTENT(inout), si puo` evitare?
+  CALL get_val(in, nx=this%innx, ny=this%inny)
+! allocate index array
+  ALLOCATE(this%point_index(this%innx,this%inny))
+  this%point_index(:,:) = imiss
+
   IF (this%trans%sub_type == 'all' ) THEN
 
-! compute coordinates of input grid in geo system
-    CALL unproj(in) ! TODO costringe a dichiarare in INTENT(inout), si puo` evitare?
-    CALL get_val(in, nx=this%innx, ny=this%inny)
     this%outnx = this%innx*this%inny
     this%outny = 1
     CALL vol7d_alloc(v7d_out, nana=this%outnx)
 
+    n = 0
     DO iy=1,this%inny
       DO ix=1,this%innx
         CALL init(v7d_out%ana((iy-1)*this%innx+ix), &
          lon=in%dim%lon(ix,iy),lat=in%dim%lat(ix,iy))
+        this%point_index(ix,iy) = n
       ENDDO
     ENDDO
 
   ELSE IF (this%trans%sub_type == 'coordbb' ) THEN
 
-! compute coordinates of input grid in geo system
-    CALL unproj(in)
-    CALL get_val(in, nx=this%innx, ny=this%inny)
     ALLOCATE(this%point_mask(this%innx,this%inny))
     this%point_mask(:,:) = .FALSE.
 
@@ -1758,6 +1762,7 @@ ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
          in%dim%lat(ix,iy) < this%trans%rect_coo%flat) THEN ! improve!
           this%outnx = this%outnx + 1
           this%point_mask(ix,iy) = .TRUE.
+          this%point_index(ix,iy) = this%outnx
         ENDIF
       ENDDO
     ENDDO
@@ -1788,12 +1793,6 @@ ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
     ENDDO
 
   ELSE IF (this%trans%sub_type == 'poly' ) THEN
-
-! compute coordinates of input grid in geo system
-    CALL unproj(in)
-    CALL get_val(in, nx=this%innx, ny=this%inny)
-    ALLOCATE(this%point_index(this%innx,this%inny))
-    this%point_index(:,:) = imiss
 
 ! count and mark points falling into requested polygon
     this%outnx = 0
@@ -1845,9 +1844,6 @@ ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
       CALL raise_fatal_error()
     ENDIF
 
-! compute coordinates of input grid in geo system
-    CALL unproj(in)
-    CALL get_val(in, nx=this%innx, ny=this%inny)
     IF (this%innx /= SIZE(maskgrid,1) .OR. this%inny /= SIZE(maskgrid,2)) THEN
       CALL l4f_category_log(this%category,L4F_ERROR, &
        'grid_transform_init mask non conformal with input field')
@@ -1856,8 +1852,6 @@ ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
        ' input field:'//t2c(this%innx)//'x'//t2c(this%inny))
       CALL raise_fatal_error()
     ENDIF
-    ALLOCATE(this%point_index(this%innx,this%inny))
-    this%point_index(:,:) = imiss
 
 ! generate the classes according to parameters and mask
     CALL gen_mask_class()
@@ -2207,20 +2201,18 @@ ELSE IF (this%trans%trans_type == 'polyinter') THEN
 
 ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
 
+! common to all metamorphosis subtypes
+  this%innx = SIZE(v7d_in%ana)
+  this%inny = 1
+
   IF (this%trans%sub_type == 'all' ) THEN
 
-    this%innx=SIZE(v7d_in%ana)
-    this%inny=1
-    this%outnx=SIZE(v7d_in%ana)
-    this%outny=1
+    this%outnx = SIZE(v7d_in%ana)
+    this%outny = 1
     CALL vol7d_alloc(v7d_out, nana=SIZE(v7d_in%ana))
     v7d_out%ana = v7d_in%ana
 
   ELSE IF (this%trans%sub_type == 'coordbb' ) THEN
-
-! compute coordinates of input grid in geo system
-    this%innx = SIZE(v7d_in%ana)
-    this%inny = 1
 
     ALLOCATE(this%point_mask(this%innx,this%inny))
     this%point_mask(:,:) = .FALSE.
@@ -2268,12 +2260,8 @@ ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
 
   ELSE IF (this%trans%sub_type == 'poly' ) THEN
 
-    this%innx = SIZE(v7d_in%ana)
-    this%inny = 1
-
     ALLOCATE(this%point_index(this%innx,this%inny))
     this%point_index(:,:) = imiss
-
 ! count and mark points falling into requested polygon
     this%outnx = 0
     this%outny = 1
@@ -2416,10 +2404,17 @@ INTEGER,INTENT(out),ALLOCATABLE,OPTIONAL :: point_index(:) !< array of indices i
 INTEGER,INTENT(out),OPTIONAL :: levshift !< shift between input and output levels for vertint
 INTEGER,INTENT(out),OPTIONAL :: levused !< number of input levels used for vertint
 
+INTEGER :: i
+
 IF (PRESENT(output_level_auto)) output_level_auto => this%output_level_auto
 IF (PRESENT(point_index)) THEN
   IF (ASSOCIATED(this%point_index)) THEN
+! metamorphosis, index is computed from input origin of output point
     point_index = PACK(this%point_index(:,:), c_e(this%point_index))
+  ELSE IF (this%trans%trans_type == 'polyinter' .OR. &
+   this%trans%trans_type == 'maskinter') THEN
+! other cases, index is order of output pint
+    point_index = (/(i,i=1,this%outnx)/)
   ENDIF
 ENDIF
 IF (PRESENT(levshift)) levshift = this%levshift
