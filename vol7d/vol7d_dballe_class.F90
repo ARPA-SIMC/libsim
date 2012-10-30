@@ -2646,22 +2646,33 @@ END FUNCTION open_dballe_file
 
 
 FUNCTION v7d_dballe_error_handler(category)
-INTEGER :: category
+INTEGER :: category, code, l4f_level
 INTEGER :: v7d_dballe_error_handler
 
 CHARACTER(len=1000) :: message, buf
 
+code = idba_error_code()
+
+! check if "Value outside acceptable domain"
+if (code == 13 ) then
+  l4f_level=L4F_WARN
+else
+  l4f_level=L4F_ERROR
+end if
+
 call idba_error_message(message)
-call l4f_category_log(category,L4F_ERROR,message)
+call l4f_category_log(category,l4f_level,message)
 
 call idba_error_context(buf)
 
-call l4f_category_log(category,L4F_INFO,trim(buf))
+call l4f_category_log(category,l4f_level,trim(buf))
 
 call idba_error_details(buf)
 call l4f_category_log(category,L4F_INFO,trim(buf))
 
-CALL raise_fatal_error("dballe: "//message)
+
+! if "Value outside acceptable domain" do not raise error
+if (l4f_level == L4F_ERROR ) CALL raise_fatal_error("dballe: "//message)
 
 v7d_dballe_error_handler = 0
 return
