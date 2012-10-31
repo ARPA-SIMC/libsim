@@ -836,12 +836,13 @@ else if (.not. (this%griddim == gridinfo%griddim ))then
 
 end if
 
-! Cerco gli indici del campo da inserire, li invento se necessario
+! Cerco gli indici del campo da inserire, se non trovo metto nel primo missing
 ilevel = index(this%level, gridinfo%level)
 IF (ilevel == 0 .AND. lforce) THEN
   ilevel = index(this%level, vol7d_level_miss)
   IF (ilevel /= 0) this%level(ilevel) = gridinfo%level
 ENDIF
+
 IF (ilevel == 0) THEN
   CALL l4f_category_log(this%category,L4F_ERROR, &
    "volgrid6d: level not valid for volume, gridinfo rejected")
