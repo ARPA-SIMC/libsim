@@ -162,8 +162,8 @@ int vdf4f_set_grid_permutation_c(long permutation[3])
 int create_metadata_c(size_t xyzdim[3])
 {
 
-  size_t num_transforms = 2;
-  size_t bs[3] = { 2, 2, 2};
+  size_t num_transforms = 0;
+  const size_t bs[3] = { 2, 2, 2};
   int nfiltercoef = 1;
   int nliftingcoef = 1;
   int mbsfirst = 1;

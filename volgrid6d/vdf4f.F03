@@ -191,7 +191,7 @@ Integer, intent(in) ::  rzscan
 !nteger(C_SIZE_T)  :: ntime_c
 integer(C_SIZE_T)  :: len_c
 Character(len=LEN(varnames)+1)    :: varnames_c(nvar)
-integer :: i
+integer(C_SIZE_T) :: i
 
 !var_c=nvar
 !time_c=ntime
@@ -280,7 +280,7 @@ Character(len=*), Intent(IN) :: varnames(nvar)
 
 integer(C_SIZE_T)  :: len_c
 Character(len=LEN(varnames)+1)    :: varnames_c(nvar)
-integer :: i
+integer(C_SIZE_T) :: i
 
 len_c=LEN(varnames)+1
 do i=1, nvar
