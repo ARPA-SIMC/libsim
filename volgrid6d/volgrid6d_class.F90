@@ -799,7 +799,7 @@ end subroutine volgrid6d_read_from_file
 !! otherwise it is checked and the object is rejected if grids do not
 !! match.
 SUBROUTINE import_from_gridinfo(this, gridinfo, force, clone)
-TYPE(volgrid6d),INTENT(out) :: this !< object in which to import
+TYPE(volgrid6d),INTENT(inout) :: this !< object in which to import
 type(gridinfo_def),intent(in) :: gridinfo !< gridinfo object to be imported
 LOGICAL,INTENT(in),OPTIONAL :: force !< if provided and \c .TRUE., the gridinfo is forced into an empty element of \a this, if required and possible
 LOGICAL , INTENT(in),OPTIONAL :: clone !< if provided and \c .TRUE. , clone the gaid's from \a gridinfo to \a this
@@ -1320,7 +1320,7 @@ SUBROUTINE volgrid6d_transform_compute(this, volgrid6d_in, volgrid6d_out, &
  lev_out, clone)
 TYPE(grid_transform),INTENT(in) :: this ! oggetto di trasformazione per il grigliato
 type(volgrid6d), INTENT(in) :: volgrid6d_in ! oggetto da trasformare
-type(volgrid6d), INTENT(out) :: volgrid6d_out ! oggetto trasformato; deve essere completo (init, alloc, alloc_vol)
+type(volgrid6d), INTENT(inout) :: volgrid6d_out ! oggetto trasformato; deve essere completo (init, alloc, alloc_vol)
 TYPE(vol7d_level),INTENT(in),OPTIONAL :: lev_out(:) ! vol7d_level object defining target vertical grid, for vertical interpolations
 LOGICAL,INTENT(in),OPTIONAL :: clone ! se fornito e \c .TRUE., clona i gaid da volgrid6d_in a volgrid6d_out
 
@@ -2048,7 +2048,7 @@ END SUBROUTINE volgrid6dv_v7d_transform
 SUBROUTINE v7d_volgrid6d_transform_compute(this, vol7d_in, volgrid6d_out, networkname, gaid_template)
 TYPE(grid_transform),INTENT(in) :: this ! object specifying the specific transformation
 type(vol7d), INTENT(in) :: vol7d_in ! object to be transformed
-type(volgrid6d), INTENT(out) :: volgrid6d_out ! transformed object
+type(volgrid6d), INTENT(inout) :: volgrid6d_out ! transformed object
 CHARACTER(len=*),OPTIONAL,INTENT(in) :: networkname ! select the network to be processed from the \a vol7d input object, default the first network
 TYPE(grid_id),OPTIONAL,INTENT(in) :: gaid_template ! the template (typically grib_api) to be associated with output data, it also helps in improving variable conversion
 
@@ -2217,7 +2217,7 @@ END SUBROUTINE v7d_volgrid6d_transform
 SUBROUTINE v7d_v7d_transform_compute(this, vol7d_in, vol7d_out, lev_out)
 TYPE(grid_transform),INTENT(in) :: this ! oggetto di trasformazione per grigliato
 type(vol7d), INTENT(in) :: vol7d_in ! oggetto da trasformare
-type(vol7d), INTENT(out) :: vol7d_out ! oggetto trasformato
+type(vol7d), INTENT(inout) :: vol7d_out ! oggetto trasformato
 TYPE(vol7d_level),INTENT(in),OPTIONAL :: lev_out(:) ! vol7d_level object defining target vertical grid, for vertical interpolations
 
 INTEGER :: itime, itimerange, ivar, inetwork
