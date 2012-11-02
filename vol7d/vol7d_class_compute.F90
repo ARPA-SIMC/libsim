@@ -768,6 +768,7 @@ TYPE(vol7d),INTENT(out),OPTIONAL :: other !< optional volume that, on exit, is g
 INTEGER :: i1, i3, i5, i6, i, j, k, l, nitr, steps
 INTEGER,POINTER :: map_tr(:,:,:,:,:), f(:)
 LOGICAL,POINTER :: mask_timerange(:)
+LOGICAL,ALLOCATABLE :: mask_time(:)
 TYPE(vol7d) :: v7dtmp
 
 
@@ -789,11 +790,19 @@ CALL recompute_stat_proc_diff_common(this%time, this%timerange, stat_proc, step,
 CALL vol7d_alloc(that, nana=0, nlevel=0, nnetwork=0)
 CALL vol7d_alloc_vol(that)
 
-! copy the timeranges already satisfying the requested step, if any
+ALLOCATE(mask_time(SIZE(this%time)))
+DO l = 1, SIZE(this%time)
+  mask_time(l) = ANY(this%time(l) == that%time(:))
+ENDDO
+! create template for the output volume, keep all ana, level, network
+! and variables; copy only the timeranges already satisfying the
+! requested step, if any and only the times already existing in the
+! output
 CALL vol7d_copy(this, v7dtmp, miss=.FALSE., sort=.FALSE., unique=.FALSE., &
- ltimerange=mask_timerange(:))
+ ltimerange=mask_timerange(:), ltime=mask_time(:))
 ! merge output created so far with template
 CALL vol7d_merge(that, v7dtmp, lanasimple=.TRUE., llevelsimple=.TRUE.)
+DEALLOCATE(mask_time)
 
 ! compute statistical processing
 IF (ASSOCIATED(this%voldatir)) THEN
