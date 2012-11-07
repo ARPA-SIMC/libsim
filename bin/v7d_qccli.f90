@@ -122,7 +122,7 @@ call l4f_category_log(category,L4F_INFO,"start QC")
 
                                 ! chiamiamo il "costruttore" per il Q.C.
 call init(v7dqccli,v7ddballe%vol7d,var(:nvar), &
- timei=ti,timef=tf,coordmin=coordmin,coordmax=coordmax, &
+ timei=ti,timef=tf, &
  data_id_in=v7ddballe%data_id, dsncli=dsnc, dsnextreme=dsne, &
  user=userce, password=passwordce, macropath=macropath, height2level=height2level, categoryappend="clima")
 

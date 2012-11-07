@@ -1133,8 +1133,11 @@ if (comp_qc_ndi) then
     call display(qccli%v7d)
   end IF
 
+!!$  call qc_compute_NormalizedDensityIndex(qccli, perc_vals=(/(10.*i,i=0,10)/),cyclicdt=cyclicdt&
+!!$   ,presentperc=.3,presentnumb=100,data_normalized=.true. )
+
   call qc_compute_NormalizedDensityIndex(qccli, perc_vals=(/(10.*i,i=0,10)/),cyclicdt=cyclicdt&
-   ,presentperc=.3,presentnumb=100)
+   ,data_normalized=.true. )
 
   call delete(v7d)
   v7d=qccli%clima
