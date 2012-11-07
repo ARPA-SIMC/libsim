@@ -31,6 +31,8 @@ IMPLICIT NONE
 
 !real :: clima(9,12,10,3,3,1)
 
+integer,parameter :: cli_nsuperarea=3
+
 character(len=2) :: minuti(3)
 character(len=1) :: area(3)
 integer :: iarea,iper
@@ -43,7 +45,7 @@ integer :: iana, itime, ilevel, itimerange, idativarr, inetwork
 integer,parameter :: ntimerange=3 ,nperc=9
 TYPE(vol7d) :: v7d
 TYPE(vol7d_dballe) :: v7d_dballe
-TYPE(vol7d_ana) :: ana(cli_nsuperarea)
+!TYPE(vol7d_ana) :: ana(cli_nsuperarea)
 TYPE(datetime) :: time
 TYPE(vol7d_level) :: level(cli_nlevel)
 TYPE(vol7d_timerange) :: timerange(ntimerange)
