@@ -157,6 +157,14 @@ example_alchimiav7d_LDADD = ../alchimia/libsim_alchimia.la  ../vol7d/libsim_vol7
 endif
 endif
 
+if VAPOR
+noinst_PROGRAMS += example_vapor_interface
+
+example_vapor_interface_SOURCES = example_vapor_interface.F03
+example_vapor_interface_LDADD = ../volgrid6d/libsim_volgrid6d.la
+
+endif
+
 # EXAMPLES
 endif
 
