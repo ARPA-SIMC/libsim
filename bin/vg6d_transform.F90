@@ -563,12 +563,12 @@ if (ASSOCIATED(volgrid_out) .and. output_variable_list /= " ") then
 end if
 #endif
 
-IF (c_e(ostat_proc) .AND. ASSOCIATED(volgrid_out)) THEN ! stat_proc
+IF (c_e(istat_proc) .AND. c_e(ostat_proc) .AND. ASSOCIATED(volgrid_out)) THEN ! stat_proc
   CALL l4f_category_log(category,L4F_INFO,"computing stat_proc")
   ALLOCATE(volgrid_tmp(SIZE(volgrid_out)))
   DO i = 1, SIZE(volgrid_out)
     CALL volgrid6d_compute_stat_proc(volgrid_out(i), volgrid_tmp(i), &
-     ostat_proc, ostat_proc, c_i, full_steps=comp_full_steps, clone=.TRUE.)
+     istat_proc, ostat_proc, c_i, full_steps=comp_full_steps, clone=.TRUE.)
   ENDDO
   CALL delete(volgrid_out)
   volgrid_out => volgrid_tmp

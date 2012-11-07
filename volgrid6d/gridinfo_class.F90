@@ -1827,6 +1827,30 @@ IF (this%var%discipline == 255 .AND. &
       this%level%l1 = 1000
       this%level%l1 = 2890
 
+    ELSE IF (this%var%number == 121 .AND. &
+     (this%timerange%timerange == 254 .OR. this%timerange%timerange == 205)) THEN ! MX2T6
+      this%timerange%timerange = 2 ! max
+      this%timerange%p2 = 21600 ! length of period = 6 hours
+      this%var%number=167 ! set to T2m, it could be 130 T as well
+      this%level%level1 = 103
+      this%level%l1 = 2000 ! 2m
+
+    ELSE IF (this%var%number == 122 .AND. &
+     (this%timerange%timerange == 254 .OR. this%timerange%timerange == 205)) THEN ! MN2T6
+      this%timerange%timerange = 3 ! min
+      this%timerange%p2 = 21600 ! length of period = 6 hours
+      this%var%number=1
+      this%var%number=167 ! set to T2m, it could be 130 T as well
+      this%level%level1 = 103
+      this%level%l1 = 2000 ! 2m
+
+    ELSE IF (this%var%number == 123 .AND. &
+      (this%timerange%timerange == 254 .OR. this%timerange%timerange == 205)) THEN ! 10FG6
+      this%timerange%timerange = 2 ! max
+      this%timerange%p2 = 21600 ! length of period = 6 hours
+      this%level%level1 = 103
+      this%level%l1 = 10000 ! 10m
+
     ENDIF
   ENDIF ! table 128
 ENDIF ! grib1 & ECMWF
@@ -1842,30 +1866,40 @@ END SUBROUTINE normalize_gridinfo
 ! extreme parameter; if parameter is not recognized, the max or min
 ! statistical processing is kept (with possible error conditions
 ! later).
-subroutine unnormalize_gridinfo(this)
+SUBROUTINE unnormalize_gridinfo(this)
 TYPE(gridinfo_def),intent(inout) :: this
 
-if (this%timerange%timerange == 3 )then
+IF (this%timerange%timerange == 3) THEN ! min
 
-! tmin
-  if (this%var == volgrid6d_var_new(255,2,11,255)) then
+  IF (this%var == volgrid6d_var_new(255,2,11,255)) THEN ! tmin
     this%var%number=16
     this%timerange%timerange=205
-    return
-  end if
 
-else if (this%timerange%timerange == 2 )then
+  ELSE IF (ANY(this%var%centre == ecmwf_centre)) THEN ! ECMWF
+    IF (this%var == volgrid6d_var_new(this%var%centre,128,167,255)) THEN ! tmin
+      this%var%number=122
+      this%timerange%timerange=205
 
-! tmax
-  if (this%var == volgrid6d_var_new(255,2,11,255)) then
+    ENDIF
+  ENDIF
+ELSE IF (this%timerange%timerange == 2) THEN ! max
+
+  IF (this%var == volgrid6d_var_new(255,2,11,255)) THEN ! tmax
     this%var%number=15
     this%timerange%timerange=205
-    return
-  end if
 
-  IF (ANY(this%var%centre == cosmo_centre)) THEN ! grib1 & COSMO
+  ELSE IF (ANY(this%var%centre == ecmwf_centre)) THEN ! ECMWF
+    IF (this%var == volgrid6d_var_new(this%var%centre,128,167,255)) THEN ! tmax
+      this%var%number=121
+      this%timerange%timerange=205
 
-! wind 
+    ELSE IF(this%var == volgrid6d_var_new(this%var%centre,128,123,255)) THEN ! uvmax
+      this%timerange%timerange=205
+
+    ENDIF
+  ELSE IF (ANY(this%var%centre == cosmo_centre)) THEN ! grib1 & COSMO
+
+! wind
 ! it is accepted to keep 187 since it is wind gust, not max wind
 !    IF (this%var == volgrid6d_var_new(255,2,32,255)) THEN
 !      this%var%category=201
@@ -1876,11 +1910,13 @@ else if (this%timerange%timerange == 2 )then
       this%timerange%timerange=205
     ENDIF
 
+ELSE IF (this%var%discipline == 255 .AND. &
+ ANY(this%var%centre == ecmwf_centre)) THEN ! grib1 & ECMWF
   ENDIF
 
 end if
 
-end subroutine unnormalize_gridinfo
+END SUBROUTINE unnormalize_gridinfo
 #endif
 
 
