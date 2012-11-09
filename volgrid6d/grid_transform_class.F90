@@ -1225,7 +1225,7 @@ ELSE IF (this%trans%trans_type == 'inter') THEN
   
     ALLOCATE(this%inter_index_x(this%outnx,this%outny), &
      this%inter_index_y(this%outnx,this%outny))
-
+    CALL unproj(out)
     CALL find_index(in, this%trans%sub_type, &
      this%innx, this%inny, xmin, xmax, ymin, ymax, &
      out%dim%lon, out%dim%lat, this%trans%extrap, &
@@ -1290,7 +1290,7 @@ ELSE IF (this%trans%trans_type == 'stencilinter') THEN
 
   ALLOCATE (this%inter_index_x(this%outnx,this%outny), &
    this%inter_index_y(this%outnx,this%outny))
-
+  CALL unproj(out)
   CALL find_index(in, 'near', &
    this%innx, this%inny, xmin, xmax, ymin, ymax, &
    out%dim%lon, out%dim%lat, this%trans%extrap, &

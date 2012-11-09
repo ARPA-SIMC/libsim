@@ -1901,11 +1901,10 @@ CHARACTER(len=*),INTENT(in),OPTIONAL :: categoryappend !< append this suffix to 
 
 type(grid_transform) :: grid_trans
 INTEGER :: ntime, ntimerange, nlevel, nvar, nana, time_definition, nnetwork, stallo
-INTEGER :: itime, itimerange, iana, inetwork
+INTEGER :: itime, itimerange, inetwork
 TYPE(datetime),ALLOCATABLE :: validitytime(:,:)
 INTEGER,ALLOCATABLE :: point_index(:)
 TYPE(vol7d) :: v7d_locana
-CHARACTER(len=80) :: trans_type
 
 #ifdef DEBUG
 call l4f_category_log(volgrid6d_in%category,L4F_DEBUG,"start volgrid6d_v7d_transform")
@@ -2270,7 +2269,7 @@ TYPE(vol7d),INTENT(in),OPTIONAL :: v7d !< object containing a list of points ove
 TYPE(vol7d_level),INTENT(in),OPTIONAL,TARGET :: lev_out(:) !< vol7d_level object defining target vertical grid, for vertical interpolations
 CHARACTER(len=*),INTENT(in),OPTIONAL :: categoryappend !< append this suffix to log4fortran namespace category
 
-INTEGER :: nvar, iana, inetwork
+INTEGER :: nvar, inetwork
 TYPE(grid_transform) :: grid_trans
 TYPE(vol7d_level),POINTER :: llev_out(:)
 INTEGER,ALLOCATABLE :: point_index(:)
