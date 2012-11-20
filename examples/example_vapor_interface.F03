@@ -23,19 +23,36 @@ use vdf4f
 implicit none
 
 character(len=255) :: lfilename="vg6d.vdf", mapprojection
-integer,parameter :: ntime=3, nlevel=20, nvar=2, nx=100, ny=150
+integer,parameter :: ntime=2, nlevel=50, nvar=2, nx=50, ny=50
 logical :: exist
-integer :: ier, xyzdim(3),ivar,i,j
+integer :: ier, xyzdim(3)
 character(len=255) :: varnames(nvar),vardescriptions(nvar),tsdescriptions(ntime)
 doubleprecision :: extents(6)
 integer ::  irzscan=0 !<  if true reverse Z (level) order in vdf export
-real :: voldati(nx,ny,nlevel,ntime,nvar)
+real,allocatable :: voldati(:,:,:,:,:)
+integer :: ix,iy,ilevel,itime,ivar,i,j
+
+allocate (voldati(nx,ny,nlevel,ntime,nvar))
 
 inquire(file=lfilename,EXIST=exist)
 if (exist) then
   print *,"file exist; cannot open new file: "//trim(lfilename)
   CALL exit(1)
 end if
+
+
+do ix=1,nx
+  do iy=1,ny
+    do ilevel=1,nlevel
+      do itime=1,ntime
+        do ivar=1,nvar
+          voldati(ix,iy,ilevel,itime,ivar)=ix+iy+ilevel+itime
+        end do
+      end do
+    end do
+  end do
+end do
+
 
 print *,"writing on file: "//trim(lfilename)
 
