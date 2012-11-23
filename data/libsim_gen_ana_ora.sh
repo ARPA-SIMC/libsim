@@ -68,7 +68,7 @@ col MACROAREA          format A3
 --col NOME               format A22
 SELECT NVL(st.identnr,-9999) STAZID, 
        NVL(pm.y_lat_cent,-99.9999999) YLAT, NVL(pm.x_long_cent,-99.9999999) XLONG,
-       NVL(st.z_quota_pozzetto,-9999) QPOZZ, NVL(st.z_quota_stazione,-9999) QSTAZ,
+       NVL(st.z_quota_pozzetto,-9998) QPOZZ, NVL(st.z_quota_stazione,-9998) QSTAZ,
        '''' || RPAD(NVL(pm.macrobacino,'0'),1) || '''' MACROAREA,
        '''' || REPLACE(REPLACE(SUBSTR(NVL(st.nome,'NULL'),1,20),'''', ''''''), '"') || '''' NOME
   FROM met_stazioni_misura st,
