@@ -713,7 +713,7 @@ INTEGER :: i
 TYPE(option) :: myoption
 
 IF (PRESENT(default)) THEN
-  cdefault = ' [default='//TRIM(align_left(to_char(default,form='(G15.9)')))//']'
+  cdefault = ' [default='//TRIM(ADJUSTL(to_char(default,form='(G15.9)')))//']'
 ELSE
   cdefault = ''
 ENDIF

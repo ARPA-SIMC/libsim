@@ -21,6 +21,7 @@
 !! the use of CHARACTER variables, and text handling in general.
 !!
 !! \ingroup base
+#include "config.h"
 MODULE char_utilities
 USE kinds
 USE missing_values
@@ -183,7 +184,7 @@ PRIVATE
 PUBLIC line_split
 PUBLIC to_char, t2c, delete, match, &
  fchar_to_cstr, fchar_to_cstr_alloc, cstr_to_fchar, UpperCase, LowerCase, &
- align_left, align_right, align_center, l_nblnk, f_nblnk, word_split, &
+ align_center, l_nblnk, f_nblnk, word_split, &
  line_split_new, line_split_get_nlines, line_split_get_line, &
  suffixname, default_columns, wash_char
 
@@ -288,7 +289,7 @@ END FUNCTION trim_byte_to_char_miss
 ! Version with character argument, please use the generic \a to_char
 ! rather than this function directly. It is almost useless, just
 ! provided for completeness.
-ELEMENTAL FUNCTION char_to_char(in) RESULT(char)
+ELEMENTAL_UNLESSXLF FUNCTION char_to_char(in) RESULT(char)
 CHARACTER(len=*),INTENT(in) :: in ! value to be represented as CHARACTER
 CHARACTER(len=LEN(in)) :: char
 
@@ -297,7 +298,7 @@ char = in
 END FUNCTION char_to_char
 
 
-ELEMENTAL FUNCTION char_to_char_miss(in, miss) RESULT(char)
+ELEMENTAL_UNLESSXLF FUNCTION char_to_char_miss(in, miss) RESULT(char)
 CHARACTER(len=*),INTENT(in) :: in ! value to be represented as CHARACTER
 CHARACTER(len=*),INTENT(in) :: miss ! replacement for missing value
 CHARACTER(len=MAX(LEN(in),LEN(miss))) :: char
@@ -348,7 +349,7 @@ IF (PRESENT(miss)) THEN
       WRITE(char,form)in
     ELSE
       WRITE(tmpchar,'(G15.9)') in
-      char = align_left(tmpchar)
+      char = ADJUSTL(tmpchar)
     ENDIF
   ENDIF
 ELSE
@@ -356,7 +357,7 @@ ELSE
     WRITE(char,form)in
   ELSE
     WRITE(tmpchar,'(G15.9)') in
-    char = align_left(tmpchar)
+    char = ADJUSTL(tmpchar)
   ENDIF
 ENDIF
 
@@ -400,7 +401,7 @@ IF (PRESENT(miss)) THEN
       WRITE(char,form)in
     ELSE
       WRITE(tmpchar,'(G24.17)') in
-      char = align_left(tmpchar)
+      char = ADJUSTL(tmpchar)
     ENDIF
   ENDIF
 ELSE
@@ -408,7 +409,7 @@ ELSE
     WRITE(char,form)in
   ELSE
     WRITE(tmpchar,'(G24.17)') in
-    char = align_left(tmpchar)
+    char = ADJUSTL(tmpchar)
   ENDIF
 ENDIF
 
@@ -551,41 +552,12 @@ END DO
 END FUNCTION LowerCase
 
 
-!> Returns \a input_string aligned to the left,
-!! i.e.\ without leading blanks.  The needed number of trailing
-!! blanks is added at the end in order to keep the length of the
-!! resulting string equal to the input length.
-ELEMENTAL FUNCTION align_left(input_string) RESULT(aligned)
-CHARACTER(len=*), INTENT(in) :: input_string !< string to be aligned
-
-CHARACTER(len=LEN(input_string)) :: aligned
-
-aligned = input_string(f_nblnk(input_string):)
-
-END FUNCTION align_left
-
-
-!> Returns \a input_string aligned to the right,
-!! i.e.\ without trailing blanks. The needed number of leading
-!! blanks is added at the beginning in order to keep the length of the
-!! resulting string equal to the input length.
-ELEMENTAL FUNCTION align_right(input_string) RESULT(aligned)
-CHARACTER(len=*), INTENT(in) :: input_string !< string to be aligned
-
-CHARACTER(len=LEN(input_string)) :: aligned
-
-aligned = ''
-aligned(LEN(input_string)-l_nblnk(input_string)+1:) = input_string
-
-END FUNCTION align_right
-
-
 !> Returns \a input_string centered, i.e.\ with an equal number of 
 !! leading and trailing blanks (±1 if they are odd). The needed
 !! number of leading/trailing blanks is added or removed at the
 !! beginning and/or at the end in order to keep the length of the
 !! resulting string equal to the input length.
-ELEMENTAL FUNCTION align_center(input_string) RESULT(aligned)
+ELEMENTAL_UNLESSXLF FUNCTION align_center(input_string) RESULT(aligned)
 CHARACTER(len=*), INTENT(in) :: input_string !< string to be aligned
 
 CHARACTER(len=LEN(input_string)) :: aligned
@@ -895,7 +867,7 @@ END FUNCTION Suffixname
 !! keeping only "good" characters (argument \a goodchar).  If neither
 !! \a badchar nor \a goodchar are provided, it keeps only alphabetic
 !! ASCII characters.
-ELEMENTAL FUNCTION wash_char(in, goodchar, badchar) RESULT(char)
+ELEMENTAL_UNLESSXLF FUNCTION wash_char(in, goodchar, badchar) RESULT(char)
 CHARACTER(len=*),INTENT(in) :: in !< string to be cleaned
 CHARACTER(len=*),INTENT(in),OPTIONAL :: badchar !< optional set of "bad" characters
 CHARACTER(len=*),INTENT(in),OPTIONAL :: goodchar !< optional set of "good" characters

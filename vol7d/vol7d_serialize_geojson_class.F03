@@ -33,9 +33,17 @@ TYPE,EXTENDS(vol7d_serialize) :: vol7d_serialize_geojson
 END TYPE vol7d_serialize_geojson
 
 PRIVATE
-PUBLIC vol7d_serialize_geojson
+PUBLIC vol7d_serialize_geojson, vol7d_serialize_geojson_new
 
 CONTAINS
+
+FUNCTION vol7d_serialize_geojson_new() RESULT(this)
+TYPE(vol7d_serialize_geojson) :: this
+
+this%vol7d_serialize = vol7d_serialize_new()
+
+END FUNCTION vol7d_serialize_geojson_new
+
 
 SUBROUTINE vol7d_serialize_optionparser(this, opt, ext)
 CLASS(vol7d_serialize_geojson),INTENT(inout) :: this

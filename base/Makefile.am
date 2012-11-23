@@ -1,6 +1,6 @@
 lib_LTLIBRARIES = libsim_base.la
 libsim_base_la_SOURCES = for2r.f90 io_units.F90 kinds.F90 phys_const.f90 missing_values.f90 \
- char_utilities.f90 err_handling.f90 optional_values.f90 datetime_class.F90 array_utilities.F90 file_utilities.F90 \
+ char_utilities.F90 err_handling.f90 optional_values.f90 datetime_class.F90 array_utilities.F90 file_utilities.F90 \
  geo_proj_class.F90 geo_coord_class.F90 georef_coord_class.F90 \
  optionparser_class.F90 \
  simple_stat.f90 \

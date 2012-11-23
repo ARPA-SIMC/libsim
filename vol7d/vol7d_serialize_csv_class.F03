@@ -29,14 +29,22 @@ TYPE,EXTENDS(vol7d_serialize) :: vol7d_serialize_csv
 END TYPE vol7d_serialize_csv
 
 PRIVATE
-PUBLIC vol7d_serialize_csv
+PUBLIC vol7d_serialize_csv, vol7d_serialize_csv_new
 
 CONTAINS
+
+FUNCTION vol7d_serialize_csv_new() RESULT(this)
+TYPE(vol7d_serialize_csv) :: this
+
+this%vol7d_serialize = vol7d_serialize_new()
+
+END FUNCTION vol7d_serialize_csv_new
+
 
 SUBROUTINE vol7d_serialize_optionparser(this, opt, ext)
 CLASS(vol7d_serialize_csv),INTENT(inout) :: this
 TYPE(optionparser),INTENT(inout),OPTIONAL :: opt
-CHARACTER(len=*),OPTIONAL :: ext
+CHARACTER(len=*),INTENT(in),OPTIONAL :: ext
 
 IF (PRESENT(ext)) THEN
   this%ext = ext
@@ -64,6 +72,7 @@ INTEGER,INTENT(in) :: iun
 
 CHARACTER(len=64),TARGET,ALLOCATABLE :: col(:)
 CHARACTER(len=512),TARGET :: line
+CHARACTER(len=1),POINTER :: pline
 INTEGER :: i
 TYPE(vol7d_serialize_iterline) :: linei
 TYPE(vol7d_serialize_itercol) :: coli
@@ -80,7 +89,9 @@ DO WHILE(coli%next())
   IF (i /= 1) THEN
     line(LEN_TRIM(line)+1:) = ','
   ENDIF
-  CALL coli%export(C_LOC(line(LEN_TRIM(line)+1:LEN_TRIM(line)+1)))
+! use double pointer to avoid ICE on IBM xlf compiler
+  pline => line(LEN_TRIM(line)+1:LEN_TRIM(line)+1)
+  CALL coli%export(C_LOC(pline))
 END DO
 
 IF (this%csv_header >= 1) WRITE(iun,'(A)')TRIM(line)

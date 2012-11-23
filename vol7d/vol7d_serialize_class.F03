@@ -58,24 +58,15 @@ TYPE vol7d_serialize
    loopstart(6), loopend(6)
   TYPE(vol7d_var_mapper),ALLOCATABLE :: mapper(:)
   TYPE(vol7d),POINTER :: v7d=>NULL()
-  PROCEDURE(default_vol7d_ana_header_callback),NOPASS,POINTER :: vol7d_ana_callback => &
-   default_vol7d_ana_header_callback
-  PROCEDURE(default_vol7d_time_header_callback),NOPASS,POINTER :: vol7d_time_callback => &
-   default_vol7d_time_header_callback
-  PROCEDURE(default_vol7d_level_header_callback),NOPASS,POINTER :: vol7d_level_callback => &
-   default_vol7d_level_header_callback
-  PROCEDURE(default_vol7d_timerange_header_callback),NOPASS,POINTER :: vol7d_timerange_callback => &
-   default_vol7d_timerange_header_callback
-  PROCEDURE(default_vol7d_network_header_callback),NOPASS,POINTER :: vol7d_network_callback => &
-   default_vol7d_network_header_callback
-  PROCEDURE(default_vol7d_var_header_callback),NOPASS,POINTER :: vol7d_var_callback => &
-   default_vol7d_var_header_callback
-  PROCEDURE(default_vol7d_val_header_callback),NOPASS,POINTER :: vol7d_val_callback => &
-   default_vol7d_val_header_callback
-  PROCEDURE(default_vol7d_value_var_header_callback),NOPASS,POINTER :: vol7d_value_var_callback => &
-   default_vol7d_value_var_header_callback
-  PROCEDURE(default_vol7d_value_attr_header_callback),NOPASS,POINTER :: vol7d_value_attr_callback => &
-   default_vol7d_value_attr_header_callback
+  PROCEDURE(default_vol7d_ana_header_callback),NOPASS,POINTER :: vol7d_ana_callback
+  PROCEDURE(default_vol7d_time_header_callback),NOPASS,POINTER :: vol7d_time_callback
+  PROCEDURE(default_vol7d_level_header_callback),NOPASS,POINTER :: vol7d_level_callback
+  PROCEDURE(default_vol7d_timerange_header_callback),NOPASS,POINTER :: vol7d_timerange_callback
+  PROCEDURE(default_vol7d_network_header_callback),NOPASS,POINTER :: vol7d_network_callback
+  PROCEDURE(default_vol7d_var_header_callback),NOPASS,POINTER :: vol7d_var_callback
+  PROCEDURE(default_vol7d_val_header_callback),NOPASS,POINTER :: vol7d_val_callback
+  PROCEDURE(default_vol7d_value_var_header_callback),NOPASS,POINTER :: vol7d_value_var_callback
+  PROCEDURE(default_vol7d_value_attr_header_callback),NOPASS,POINTER :: vol7d_value_attr_callback
   CONTAINS
   PROCEDURE :: vol7d_serialize_optionparser
   PROCEDURE :: vol7d_serialize_parse
@@ -98,30 +89,18 @@ TYPE vol7d_serialize_iterline
   INTEGER :: i1, i2, i3, i4, i5, i6
   INTEGER :: lastind(6)=0
   LOGICAL :: analine
-  PROCEDURE(default_vol7d_ana_callback),NOPASS,POINTER :: vol7d_ana_callback => &
-   default_vol7d_ana_callback
-  PROCEDURE(default_vol7d_time_callback),NOPASS,POINTER :: vol7d_time_callback => &
-   default_vol7d_time_callback
-  PROCEDURE(default_vol7d_level_callback),NOPASS,POINTER :: vol7d_level_callback => &
-   default_vol7d_level_callback
-  PROCEDURE(default_vol7d_timerange_callback),NOPASS,POINTER :: vol7d_timerange_callback => &
-   default_vol7d_timerange_callback
-  PROCEDURE(default_vol7d_network_callback),NOPASS,POINTER :: vol7d_network_callback => &
-   default_vol7d_network_callback
-  PROCEDURE(default_vol7d_var_callback),NOPASS,POINTER :: vol7d_var_callback => &
-   default_vol7d_var_callback
-  PROCEDURE(default_vol7d_attr_callback),NOPASS,POINTER :: vol7d_attr_callback => &
-   default_vol7d_attr_callback
-  PROCEDURE(default_vol7d_valuer_callback),NOPASS,POINTER :: vol7d_valuer_callback => &
-   default_vol7d_valuer_callback
-  PROCEDURE(default_vol7d_valued_callback),NOPASS,POINTER :: vol7d_valued_callback => &
-   default_vol7d_valued_callback
-  PROCEDURE(default_vol7d_valuei_callback),NOPASS,POINTER :: vol7d_valuei_callback => &
-   default_vol7d_valuei_callback
-  PROCEDURE(default_vol7d_valueb_callback),NOPASS,POINTER :: vol7d_valueb_callback => &
-   default_vol7d_valueb_callback
-  PROCEDURE(default_vol7d_valuec_callback),NOPASS,POINTER :: vol7d_valuec_callback => &
-   default_vol7d_valuec_callback
+  PROCEDURE(default_vol7d_ana_callback),NOPASS,POINTER :: vol7d_ana_callback
+  PROCEDURE(default_vol7d_time_callback),NOPASS,POINTER :: vol7d_time_callback
+  PROCEDURE(default_vol7d_level_callback),NOPASS,POINTER :: vol7d_level_callback
+  PROCEDURE(default_vol7d_timerange_callback),NOPASS,POINTER :: vol7d_timerange_callback
+  PROCEDURE(default_vol7d_network_callback),NOPASS,POINTER :: vol7d_network_callback
+  PROCEDURE(default_vol7d_var_callback),NOPASS,POINTER :: vol7d_var_callback
+  PROCEDURE(default_vol7d_attr_callback),NOPASS,POINTER :: vol7d_attr_callback
+  PROCEDURE(default_vol7d_valuer_callback),NOPASS,POINTER :: vol7d_valuer_callback
+  PROCEDURE(default_vol7d_valued_callback),NOPASS,POINTER :: vol7d_valued_callback
+  PROCEDURE(default_vol7d_valuei_callback),NOPASS,POINTER :: vol7d_valuei_callback
+  PROCEDURE(default_vol7d_valueb_callback),NOPASS,POINTER :: vol7d_valueb_callback
+  PROCEDURE(default_vol7d_valuec_callback),NOPASS,POINTER :: vol7d_valuec_callback
   CONTAINS
   PROCEDURE :: vol7d_serialize_iterline_set_callback
   PROCEDURE,PRIVATE :: vol7d_serialize_iterline_next
@@ -150,9 +129,32 @@ TYPE vol7d_serialize_itercol
 END TYPE vol7d_serialize_itercol
 
 PRIVATE
-PUBLIC vol7d_serialize, vol7d_serialize_iterline, vol7d_serialize_itercol
+PUBLIC vol7d_serialize, vol7d_serialize_new, &
+ vol7d_serialize_iterline, vol7d_serialize_itercol
 
 CONTAINS
+
+!> Constructor for the vol7d_serialize class.
+!! It has to be called when creating a new object for the sole purpose
+!! of initializing the callbacks to default, which cannot be done
+!! implicitly until a F2008 compiler is available.
+FUNCTION vol7d_serialize_new() RESULT(this)
+TYPE(vol7d_serialize) :: this
+
+! these cannot be done in the class definition until F2008 pointer
+! initialization
+this%vol7d_ana_callback => default_vol7d_ana_header_callback
+this%vol7d_time_callback => default_vol7d_time_header_callback
+this%vol7d_level_callback => default_vol7d_level_header_callback
+this%vol7d_timerange_callback => default_vol7d_timerange_header_callback
+this%vol7d_network_callback => default_vol7d_network_header_callback
+this%vol7d_var_callback => default_vol7d_var_header_callback
+this%vol7d_val_callback => default_vol7d_val_header_callback
+this%vol7d_value_var_callback => default_vol7d_value_var_header_callback
+this%vol7d_value_attr_callback => default_vol7d_value_attr_header_callback
+
+END FUNCTION vol7d_serialize_new
+
 
 !> Method for adding the standard vol7d_serialize command-line options
 !! to a program.
@@ -488,6 +490,20 @@ TYPE(vol7d_serialize_iterline) :: iterator
 
 iterator%ser => this
 iterator%loopind(:) = this%loopstart(:)
+! these cannot be done in the class definition until F2008 pointer
+! initialization
+iterator%vol7d_ana_callback => default_vol7d_ana_callback
+iterator%vol7d_time_callback => default_vol7d_time_callback
+iterator%vol7d_level_callback => default_vol7d_level_callback
+iterator%vol7d_timerange_callback => default_vol7d_timerange_callback
+iterator%vol7d_network_callback => default_vol7d_network_callback
+iterator%vol7d_var_callback => default_vol7d_var_callback
+iterator%vol7d_attr_callback => default_vol7d_attr_callback
+iterator%vol7d_valuer_callback => default_vol7d_valuer_callback
+iterator%vol7d_valued_callback => default_vol7d_valued_callback
+iterator%vol7d_valuei_callback => default_vol7d_valuei_callback
+iterator%vol7d_valueb_callback => default_vol7d_valueb_callback
+iterator%vol7d_valuec_callback => default_vol7d_valuec_callback
 
 END FUNCTION vol7d_serialize_iterline_new
 

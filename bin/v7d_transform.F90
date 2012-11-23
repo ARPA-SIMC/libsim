@@ -45,9 +45,10 @@ USE vol7d_serialize_geojson_class
 #else
 USE vol7d_csv
 #endif
-!USE modqc
+USE modqc
+#ifdef HAVE_SHAPELIB
 USE modqccli
-!USE ISO_FORTRAN_ENV
+#endif
 #ifdef ALCHIMIA
 USE alchimia
 use vol7d_alchimia_class
@@ -79,7 +80,9 @@ TYPE(vol7d_level),ALLOCATABLE :: olevel_list(:)
 INTEGER :: iun, ier, i, l, n, ninput, iargc, i1, i2, i3, i4
 INTEGER,POINTER :: w_s(:), w_e(:)
 TYPE(vol7d) :: v7d, v7d_coord, v7dtmp, v7d_comp1, v7d_comp2, v7d_comp3
+#ifdef HAVE_SHAPELIB
 TYPE(qcclitype) :: qccli
+#endif
 TYPE(arrayof_georef_coord_array) :: poly
 DOUBLE PRECISION,ALLOCATABLE :: lon_array(:), lat_array(:)
 INTEGER :: polytopo
@@ -376,6 +379,8 @@ CALL optionparser_add(opt, ' ', 'output-format', output_format, 'native', help= 
 
 #ifdef F2003_FEATURES
 ! setup options for csv and geojson
+v7d_csv = vol7d_serialize_csv_new()
+v7d_geojson = vol7d_serialize_geojson_new()
 CALL v7d_csv%vol7d_serialize_optionparser(opt, 'csv')
 CALL v7d_geojson%vol7d_serialize_optionparser(opt, 'geojson')
 #else
@@ -1053,6 +1058,7 @@ end if
 #endif
 
 
+#ifdef HAVE_SHAPELIB
 if (comp_qc_ndi .or. comp_qc_perc) then
 
   dsn=cmiss
@@ -1150,6 +1156,7 @@ end if
 
 call init(qccli%extreme)
 call init(qccli%clima)
+#endif
 
 if (ldisplay) then
   print*," >>>>> Output Volume <<<<<"
@@ -1295,9 +1302,11 @@ call delete(vfn)
 call delete(vfnoracle)
 #endif
 
+#ifdef HAVE_SHAPELIB
 if (comp_qc_ndi .or. comp_qc_perc) then
   call delete(qccli)
 end if
+#endif
 
 ier = l4f_fini()
 

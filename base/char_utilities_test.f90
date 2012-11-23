@@ -73,14 +73,14 @@ IF (f_nblnk('1234', ' ') /= 1 .OR. f_nblnk(' 12345',' ') /= 2) CALL EXIT(1)
 PRINT*,'Checking f_nblnk degenerated'
 IF (f_nblnk('    ') /= 5 .OR. f_nblnk('') /= 1) CALL EXIT(1)
 
-PRINT*,'Checking align_left'
-IF (align_left('  ciao') /= 'ciao  ' .OR. align_left('ciao  ') /= 'ciao  ') CALL EXIT(1)
-PRINT*,'Checking align_left degenerated'
-IF (align_left('') /= '' .OR. align_left('  ') /= '  ') CALL EXIT(1)
-PRINT*,'Checking align_right'
-IF (align_right('  ciao') /= '  ciao' .OR. align_right('ciao  ') /= '  ciao') CALL EXIT(1)
-PRINT*,'Checking align_right degenerated'
-IF (align_right('') /= '' .OR. align_right('  ') /= '  ') CALL EXIT(1)
+!PRINT*,'Checking align_left'
+!IF (align_left('  ciao') /= 'ciao  ' .OR. align_left('ciao  ') /= 'ciao  ') CALL EXIT(1)
+!PRINT*,'Checking align_left degenerated'
+!IF (align_left('') /= '' .OR. align_left('  ') /= '  ') CALL EXIT(1)
+!PRINT*,'Checking align_right'
+!IF (align_right('  ciao') /= '  ciao' .OR. align_right('ciao  ') /= '  ciao') CALL EXIT(1)
+!PRINT*,'Checking align_right degenerated'
+!IF (align_right('') /= '' .OR. align_right('  ') /= '  ') CALL EXIT(1)
 PRINT*,'Checking align_center even'
 IF (align_center('  ciao') /= ' ciao ' .OR. align_center('ciao  ') /= ' ciao ') CALL EXIT(1)
 PRINT*,'Checking align_center odd'

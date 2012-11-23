@@ -56,6 +56,7 @@ fi
 AC_DEFINE(DEBUG, 1, [Enable debugging mode])
 fi
 
+ELEMENTAL_UNLESSXLF=ELEMENTAL
 dnl options to be added compulsorily for particular compilers
 dnl -fbackslash required in char_utilities.f90 for '\\'
 case "$FC" in
@@ -64,12 +65,14 @@ case "$FC" in
 # -WF,-C!: remove C comments from preprocessed (Fortran) code
   FCFLAGS="$FCFLAGS -qextname -WF,-C!"
 #  FCFLAGS="$FCFLAGS -qextname -F "'$(abs_top_builddir)/portability/xlf.cfg'
+  ELEMENTAL_UNLESSXLF="PURE"
 ;;
   *gfortran*)
   FCFLAGS="$FCFLAGS -fbackslash"
 ;;
 esac
 
+AC_DEFINE_UNQUOTED(ELEMENTAL_UNLESSXLF, $ELEMENTAL_UNLESSXLF, [Disable some elemental functions on xlf])
 
 AC_ARG_ENABLE(log4c, AC_HELP_STRING([--disable-log4c],
   [disable use of log4c package]), , [enableval=yes])dnl default enable
