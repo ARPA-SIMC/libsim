@@ -81,7 +81,7 @@ endif
 # improve
 if GRIBAPI
 if SHAPELIB
-check_SCRIPTS = getpoint_transform_test.sh
+dist_check_SCRIPTS = getpoint_transform_test.sh
 TESTS = $(check_SCRIPTS)
 endif
 endif
