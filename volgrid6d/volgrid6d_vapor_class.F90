@@ -183,7 +183,8 @@ if (c_e(ntime) .and. c_e(ntimerange) .and. c_e(nlevel) .and. c_e(nvar)) then
     !extents=(/-0.5d0, -14.d0 ,   0.d0, 2.563d0, -11.25d0,  1.d0/)
     call get_val (this%griddim, xmin=extents(1),ymin=extents(2), xmax=extents(4) , ymax=extents(5))
     extents(3)=0.d0
-    extents(6)=1.d0
+    extents(6)=10.d0
+
     call get_val (this%griddim, proj_type=proj_type)
 
 !    Alan Norton Wed, 11 May 2011 11:04:36 -0600 
@@ -202,6 +203,13 @@ if (c_e(ntime) .and. c_e(ntimerange) .and. c_e(nlevel) .and. c_e(nvar)) then
       call l4f_category_log(this%category,L4F_INFO,"VDF: probably vapor do not support this projection ?: "//trim(proj_type))
       mapprojection = "+proj=latlon +ellps=sphere"
 
+      extents(1)=extents(1)*111177.d0
+      extents(2)=extents(2)*111177.d0
+      extents(3)=extents(3)*100000.d0
+      extents(4)=extents(4)*111177.d0
+      extents(5)=extents(5)*111177.d0
+      extents(6)=extents(6)*100000.d0
+
     case ("rotated_ll")
 
       !call l4f_category_log(this%category,L4F_WARN,"VDF: vapor and proj do not support this projection: "//trim(proj_type))
@@ -215,11 +223,21 @@ if (c_e(ntime) .and. c_e(ntimerange) .and. c_e(nlevel) .and. c_e(nvar)) then
       !mapprojection = "+proj=latlon"
 
       !cassini or rotated lat/lon  
-      mapprojection = "+proj=ob_tran +o_proj=latlong +o_lat_p="//t2c(latitude_south_pole)//&
-       "d +o_lon_p="//t2c(longitude_south_pole)//&
-       "d +lon_0="//t2c(longitude_south_pole)//"d +ellps=sphere"
 
-      call l4f_category_log(this%category,L4F_INFO,"VDF: projection parameter "//mapprojection)
+      if (angle_rotation /= 0. ) then
+        call l4f_category_log(this%category,L4F_ERROR,"angle_rotation /= 0 not supported in vapor (proj)")
+        call raise_error()
+      end if
+
+      mapprojection = "+proj=ob_tran +o_proj=latlong +o_lat_p="//t2c(-latitude_south_pole)//&
+       "d +o_lon_p=0d +lon_0="//t2c(longitude_south_pole)//"d +ellps=sphere"
+
+      extents(1)=extents(1)*111177.d0
+      extents(2)=extents(2)*111177.d0
+      extents(3)=extents(3)*100000.d0
+      extents(4)=extents(4)*111177.d0
+      extents(5)=extents(5)*111177.d0
+      extents(6)=extents(6)*100000.d0
 
     case ("UTM")
       
@@ -243,6 +261,7 @@ if (c_e(ntime) .and. c_e(ntimerange) .and. c_e(nlevel) .and. c_e(nvar)) then
 
     end select
 
+    call l4f_category_log(this%category,L4F_INFO,"VDF: projection parameter "//mapprojection)
     call l4f_category_log(this%category,L4F_DEBUG,"VDF: call create_metadata")
     ier = create_metadata(xyzdim)
     call l4f_category_log(this%category,L4F_DEBUG,"VDF: call set_num_timesteps")
@@ -344,7 +363,7 @@ contains
 subroutine fill_underground_missing_values(voldati)
 real,intent(inout) :: voldati(:,:,:,:,:)
 
-integer :: x,y,z,tim,var
+integer :: x,y,z,tim,var,zz
 
 do x=1,size(voldati,1)
   do y=1,size(voldati,2)
@@ -353,7 +372,13 @@ do x=1,size(voldati,1)
         do z=1,size(voldati,3)
 
           if (.not. c_e(voldati(x,y,z,tim,var))) then
-            voldati(x,y,z,tim,var)=voldati(x,y,firsttrue(c_e(voldati(x,y,:,tim,var))),tim,var)
+            zz=firsttrue(c_e(voldati(x,y,:,tim,var)))
+            if (zz > 0 ) then 
+              voldati(x,y,z,tim,var)=voldati(x,y,firsttrue(c_e(voldati(x,y,:,tim,var))),tim,var)
+            else
+              call l4f_log(L4F_WARN,"fill_underground_missing_values: there are missing values only in the full coloumn")
+              exit
+            end if
           else
             exit
           end if
