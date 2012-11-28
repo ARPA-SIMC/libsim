@@ -966,8 +966,6 @@ call DensityIndex(di,nlimbins,occu,rnum,limbins)
 k=0
 middle=count(c_e(rnum))/2
 
-print *,"size(c_e(occu))",size(c_e(occu))
-
 do i=1,count(c_e(occu))
   k=k+occu(i)
   if (k > middle) then

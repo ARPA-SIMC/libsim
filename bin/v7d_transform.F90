@@ -257,7 +257,7 @@ CALL optionparser_add(opt, ' ', 'comp-filter-time', comp_filter_time, help= &
 
 CALL optionparser_add(opt, ' ', 'comp-cyclicdatetime', comp_cyclicdatetime, help= &
 'date and time in the format \c TMMGGhhmm  where any repeated group of char should be / for missing. &
-&Take in account only selected year/month/day/hour/minute. &
+&Take in account only selected ten_days_period/month/day/hour/minute. &
 &You need it to specify for example every january in all years or &
 &the same time for all days and so on')
 
@@ -1118,15 +1118,13 @@ if (comp_qc_ndi .or. comp_qc_perc) then
 end if
   
 if (comp_qc_perc) then
-  call qc_compute_percentile(qccli, perc_vals=(/25.,50.,75./),cyclicdt=cyclicdt,presentperc=.3)
+  call qc_compute_percentile(qccli, perc_vals=(/25.,50.,75./),cyclicdt=cyclicdt)
 !  call qc_compute_percentile(qccli, perc_vals=(/25.,50.,75./),cyclicdt=cyclicdt,presentperc=.3,presentnumb=100)
 !  call vol7d_compute_percentile(v7d,v7dtmp, perc_vals=(/15.87,50.,84.13/),cyclicdt=cyclicdt)
-  call delete(v7d)
-  call vol7d_copy(qccli%extreme,v7d)
 
   IF (ldisplay) then
     print*," >>>>> Percentile Data <<<<<"
-    call display(v7d)
+    call display(qccli%extreme)
   end IF
 
 end if
@@ -1146,16 +1144,26 @@ if (comp_qc_ndi) then
   call qc_compute_NormalizedDensityIndex(qccli, perc_vals=(/(10.*i,i=0,10)/),cyclicdt=cyclicdt&
    ,data_normalized=.true. )
 
-  call delete(v7d)
-  call vol7d_copy(qccli%clima,v7d)
 
   IF (ldisplay) then
     print*," >>>>> Normalized Density Index Data <<<<<"
-    call display(v7d)
+    call display(qccli%v7d)
   end IF
 end if
 
-call delete(qccli)
+if ( comp_qc_ndi ) then
+  call delete(v7d)
+  call vol7d_copy(qccli%clima,v7d)
+else
+  if (comp_qc_perc) then
+    call delete(v7d)
+    call vol7d_copy(qccli%extreme,v7d)
+  end if
+end if
+
+if (comp_qc_ndi .or. comp_qc_perc) then
+  call delete(qccli)
+end if
 
 #endif
 
@@ -1303,11 +1311,6 @@ call delete(vfn)
 call delete(vfnoracle)
 #endif
 
-#ifdef HAVE_SHAPELIB
-if (comp_qc_ndi .or. comp_qc_perc) then
-  call delete(qccli)
-end if
-#endif
 
 ier = l4f_fini()
 

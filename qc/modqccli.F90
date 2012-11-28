@@ -462,19 +462,21 @@ call qcclialloc(qccli)
 !!$  CALL raise_fatal_error()
 !!$ENDIF
 
-qccli%in_macroa = imiss
+if (associated(qccli%in_macroa)) then
+  qccli%in_macroa = imiss
 
-DO i = 1, SIZE(qccli%v7d%ana)
-! temporary, improve!!!!
-  CALL getval(qccli%v7d%ana(i)%coord,lon=lon,lat=lat)
-  point = georef_coord_new(x=lon, y=lat)
-  DO j = 1, macroa%arraysize
-    IF (inside(point, macroa%array(j))) THEN
-      qccli%in_macroa(i) = j
-      EXIT
-    ENDIF
+  DO i = 1, SIZE(qccli%v7d%ana)
+                                ! temporary, improve!!!!
+    CALL getval(qccli%v7d%ana(i)%coord,lon=lon,lat=lat)
+    point = georef_coord_new(x=lon, y=lat)
+    DO j = 1, macroa%arraysize
+      IF (inside(point, macroa%array(j))) THEN
+        qccli%in_macroa(i) = j
+        EXIT
+      ENDIF
+    ENDDO
   ENDDO
-ENDDO
+end if
 
 call delete(macroa)
 
@@ -609,8 +611,10 @@ TYPE(vol7d_var) ::  var
 TYPE(vol7d_ana)  :: ana
 TYPE(datetime)   :: time, nintime
 TYPE(vol7d_level):: level
-integer :: mese, ora, desc, iarea, clev, k
-character(len=1) ::  canc = "#"
+integer :: mese, ora, desc, iarea, k
+
+integer :: clev
+character(len=1) ::  mycanc, canc = "#"
 
 CHARACTER(len=vol7d_ana_lenident) :: ident
 
@@ -624,6 +628,13 @@ CHARACTER(len=vol7d_ana_lenident) :: ident
 !!$  end if
 !!$end if
 
+
+if (.not. associated(qccli%extreme%voldatir))then 
+  call l4f_category_log(qccli%category,L4F_WARN,"extreme data not associated: normalize data not possible")
+  qccli%v7d%voldatir=rmiss
+                                ! call raise_fatal_error()
+  return
+end if
 
 
 if (qccli%height2level) then
@@ -710,7 +721,7 @@ do indana=1,size(qccli%v7d%ana)
             indcnetwork      = 1
               
                                 !indcana          = firsttrue(qccli%extreme%ana     == ana)
-              
+
             indctime         = index(qccli%extreme%time                  ,  time)
             indclevel        = index(qccli%extreme%level                 ,  level)
             indctimerange    = index(qccli%extreme%timerange             ,  qccli%v7d%timerange(indtimerange))
@@ -722,8 +733,8 @@ do indana=1,size(qccli%v7d%ana)
               
 !!$                                print *,"dato  ",qccli%v7d%timerange(indtimerange) 
 !!$                                print *,"extreme ",qccli%extreme%timerange
-!!$                                call l4f_log(L4F_INFO,"Index:"// to_char(indcana)//to_char(indctime)//to_char(indclevel)//&
-!!$                                 to_char(indctimerange)//to_char(indcdativarr)//to_char(indcnetwork))
+                                call l4f_log(L4F_DEBUG,"Index:"// to_char(indcana)//to_char(indctime)//to_char(indclevel)//&
+                                 to_char(indctimerange)//to_char(indcdativarr)//to_char(indcnetwork))
               
                                 !if (indcana <= 0 .or. indctime <= 0 .or. indclevel <= 0 .or. indctimerange <= 0 .or. indcdativarr <= 0 &
                                 ! .or. indcnetwork <= 0 ) cycle
@@ -808,9 +819,11 @@ do indana=1,size(qccli%v7d%ana)
   end do
 
   read  (qccli%v7d%ana(indana)%ident,'(a1,i2.2,2i3.3)') canc, clev, iarea, desc
-  clev=0
-  iarea=0
-  write (qccli%v7d%ana(indana)%ident,'(a1,i2.2,2i3.3)') canc, clev, iarea, desc
+  if (mycanc == canc) then
+    clev=0
+    iarea=0
+    write (qccli%v7d%ana(indana)%ident,'(a1,i2.2,2i3.3)') canc, clev, iarea, desc
+  end if
 
 end do
 
