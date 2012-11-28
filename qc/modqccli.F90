@@ -1180,9 +1180,9 @@ do indana=1,size(qccli%v7d%ana)
 
                                 ! normalize wihout call the subroutine to be more fast and do not change data volume 
 
-                  print *," --------> ",perc25,perc50,perc75,base_value(qccli%v7d%dativar%r(inddativarr)%btable)
+                  !print *," --------> ",perc25,perc50,perc75,base_value(qccli%v7d%dativar%r(inddativarr)%btable)
                   datoqui = (datoqui - perc50) / (perc75 - perc25) + base_value(qccli%v7d%dativar%r(inddativarr)%btable)
-                  print *,"normalizzato=",datoqui
+                  !print *,"normalizzato=",datoqui
 
                   ! start to compare with clima dataset (NDI)
                   call init(network,"qcclima-ndi")
@@ -1404,7 +1404,7 @@ character(len=vol7d_ana_lenident) :: ident
 character(len=1)            :: type
 integer :: areav(size(this%v7d%ana)),iclv(size(this%v7d%ana))
 real :: height
-logical,allocatable :: mask(:,:,:),maskplus(:,:,:)
+logical,allocatable :: mask(:,:,:),maskplus(:,:,:), maskarea(:)
 integer,allocatable :: area(:)
 real :: lpresentperc
 integer :: lpresentnumb
@@ -1442,9 +1442,12 @@ else
   areav=imiss
 end if
 
-narea=count_distinct(areav)
+allocate(maskarea(size(this%v7d%ana)))
+maskarea(:)= areav(:) /= imiss
+narea=count_distinct(areav,maskarea)
 allocate(area(narea))
-area=pack_distinct(areav,narea)
+area=pack_distinct(areav,narea,maskarea)
+deallocate(maskarea)
 if (this%height2level) then
   call vol7d_alloc(this%extreme,nana=narea*size(perc_vals)*cli_nlevel)
 else
@@ -1677,7 +1680,7 @@ TYPE(vol7d_var) ::  var
 character(len=vol7d_ana_lenident) :: ident
 character(len=1)            :: type
 integer :: areav(size(this%v7d%ana)),iclv(size(this%v7d%ana))
-logical,allocatable :: mask(:,:,:),maskplus(:,:,:)
+logical,allocatable :: mask(:,:,:),maskplus(:,:,:), maskarea(:)
 integer,allocatable :: area(:)
 REAL, DIMENSION(:),allocatable ::  ndi,limbins
 real ::  lpresentperc
@@ -1716,9 +1719,13 @@ if (.NOT.(lnorm)) then
   end select
 !end if
 
-  narea=count_distinct(areav)
+  allocate(maskarea(size(this%v7d%ana)))
+  maskarea(:)= areav(:) /= imiss
+  narea=count_distinct(areav,maskarea)
   allocate(area(narea))
-  area=pack_distinct(areav,narea)
+  area=pack_distinct(areav,narea,maskarea)
+  deallocate(maskarea)
+
   if (this%height2level) then
     call vol7d_alloc(this%clima,nana=narea*(size(perc_vals)-1)*cli_nlevel)
   else
@@ -1907,9 +1914,8 @@ if &
  ) &
  return
 
-
-print*,"compute"
-print*,"-------------------------------------------------------------"
+!print*,"compute"
+!print*,"-------------------------------------------------------------"
 
 call NormalizedDensityIndex (&
  pack(this%v7d%voldatir(:,:, indlevel, indtimerange, inddativarr,:), &
@@ -1921,7 +1927,7 @@ do j=1,size(perc_vals)-1
   this%clima%voldatir(indana, indtime, indlevel, indtimerange, inddativarr, indnetwork)=&
    limbins(j)
   this%clima%voldatiattrr(indana, indtime, indlevel, indtimerange, inddativarr, indnetwork,indattr)=&
-   ndi(j) *  100.
+   ndi(j)*100
 end do
   
 end subroutine sub_ndi

@@ -1118,10 +1118,11 @@ if (comp_qc_ndi .or. comp_qc_perc) then
 end if
   
 if (comp_qc_perc) then
-  call qc_compute_percentile(qccli, perc_vals=(/25.,50.,75./),cyclicdt=cyclicdt,presentperc=.3,presentnumb=100)
+  call qc_compute_percentile(qccli, perc_vals=(/25.,50.,75./),cyclicdt=cyclicdt,presentperc=.3)
+!  call qc_compute_percentile(qccli, perc_vals=(/25.,50.,75./),cyclicdt=cyclicdt,presentperc=.3,presentnumb=100)
 !  call vol7d_compute_percentile(v7d,v7dtmp, perc_vals=(/15.87,50.,84.13/),cyclicdt=cyclicdt)
   call delete(v7d)
-  v7d=qccli%extreme
+  call vol7d_copy(qccli%extreme,v7d)
 
   IF (ldisplay) then
     print*," >>>>> Percentile Data <<<<<"
@@ -1146,7 +1147,7 @@ if (comp_qc_ndi) then
    ,data_normalized=.true. )
 
   call delete(v7d)
-  v7d=qccli%clima
+  call vol7d_copy(qccli%clima,v7d)
 
   IF (ldisplay) then
     print*," >>>>> Normalized Density Index Data <<<<<"
@@ -1154,8 +1155,8 @@ if (comp_qc_ndi) then
   end IF
 end if
 
-call init(qccli%extreme)
-call init(qccli%clima)
+call delete(qccli)
+
 #endif
 
 if (ldisplay) then

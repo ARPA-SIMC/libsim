@@ -911,8 +911,11 @@ real :: delta,nnum(size(rnum))
 integer :: i,k,w,sample_count
 logical :: sample_mask(size(rnum))
 
-nlimbins=rmiss               ! compute unique limits
-nlimbins(1)=limbins(1)
+di=rmiss
+occu=imiss
+nlimbins=rmiss
+
+nlimbins(1)=limbins(1)               ! compute unique limits
 k=1
 do i=2,size(limbins)
   if (limbins(i) /= limbins(k)) then
@@ -962,7 +965,10 @@ call DensityIndex(di,nlimbins,occu,rnum,limbins)
 ! Mediana calculation for density index
 k=0
 middle=count(c_e(rnum))/2
-do i=1,size(occu)
+
+print *,"size(c_e(occu))",size(c_e(occu))
+
+do i=1,count(c_e(occu))
   k=k+occu(i)
   if (k > middle) then
     if (k > 1 .and. (k - occu(i)) == middle) then

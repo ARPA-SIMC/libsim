@@ -165,6 +165,8 @@ type record
 
 END TYPE record
 
+type(vol7d_var),allocatable,private :: blocal(:) ! cache of dballe.txt
+
 PRIVATE
 PUBLIC vol7d_dballe, init, delete, import, export, vol7d_dballe_set_var_du, &
  vol7d_dballe_import_dballevar
@@ -897,7 +899,7 @@ do i=1,N_ana
   
 
   if ( size(lanavar) > 0 .and. present(anavarkind))then
-    ii= index_c(anavar, btable)
+    ii= index_c(lanavar, btable)
     if (ii > 0)then
                                 !print*, "indici",ii, btable,(varkind(ii))
       if(anavarkind(ii) == "r") call idba_enq (this%handle_staz,btable,bufferana(i)%dator)
@@ -1009,7 +1011,7 @@ if (ndatiattrc > 0 ) ndativarattrc=ndativarr+ndativari+ndativarb+ndativard+ndati
 
 ! ---------------->   anagrafica
 
-if ( size(anavar) == 0 )then
+if ( size(lanavar) == 0 )then
   nanavar = count_distinct(bufferana%btable, back=.TRUE.,mask=(bufferana%btable /= DBA_MVC))
 end if
 
@@ -1260,7 +1262,7 @@ end if
 
 !-----------------------> anagrafica
 
-if ( size(anavar) > 0 .and. present(anavarkind))then
+if ( size(lanavar) > 0 .and. present(anavarkind))then
 
   ir=0
   ii=0
@@ -1290,7 +1292,7 @@ if ( size(anavar) > 0 .and. present(anavarkind))then
       call init (vol7dtmp%anavar%c(ic), btable=anavar(i))  
     end if
   end do
-else if ( size(anavar) > 0 )then
+else if ( size(lanavar) > 0 )then
 
   do i=1, nanavar
     call init (vol7dtmp%anavar%c(i), btable=anavar(i))
@@ -2414,7 +2416,6 @@ END SUBROUTINE vol7d_dballe_delete
 subroutine vol7d_dballe_import_dballevar(this)
 
 type(vol7d_var),pointer :: this(:)
-type(vol7d_var),allocatable,save :: blocal(:)
 INTEGER :: i,un,n
 
 IF (associated(this)) return
@@ -2561,6 +2562,9 @@ call vol7d_dballe_import_dballevar(dballevar)
 #define VOL7D_POLY_TYPES_V c
 #include "vol7d_dballe_class_var_du.F90"
 #undef VOL7D_POLY_TYPES_V
+
+
+deallocate(dballevar)
 
 return
 
