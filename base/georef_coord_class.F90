@@ -143,6 +143,7 @@ END INTERFACE
 #define ARRAYOF_ORIGTYPE TYPE(georef_coord_array)
 #define ARRAYOF_TYPE arrayof_georef_coord_array
 !define ARRAYOF_ORIGEQ 0
+#define ARRAYOF_ORIGDESTRUCTOR(x) CALL delete(x)
 #include "arrayof_pre.F90"
 ! from arrayof
 PUBLIC insert, append, remove, packarray
