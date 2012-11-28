@@ -503,8 +503,8 @@ IF (.NOT.shpisnull(shpobj)) THEN
   IF (shpobj%nparts > 1 .AND. ASSOCIATED(shpobj%panpartstart)) THEN
     ALLOCATE(this%parts(size(shpobj%panpartstart)))
     this%parts(:) = shpobj%panpartstart(:)
-    CALL shpdestroyobject(shpobj)
   ENDIF
+  CALL shpdestroyobject(shpobj)
 ENDIF
 
 
@@ -576,6 +576,8 @@ IF (ns > 0) THEN ! allocate and read the object
 ENDIF
 
 CALL shpclose(shphandle)
+! pack object to save memory
+CALL packarray(this)
 
 END SUBROUTINE arrayof_georef_coord_array_import
 
