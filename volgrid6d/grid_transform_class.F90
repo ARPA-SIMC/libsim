@@ -3376,8 +3376,8 @@ IF (inter_type == "near") THEN
 ELSE IF (inter_type == "bilin") THEN
 
   CALL proj(this,lon,lat,x,y)
-  index_x = INT((x-xmin)/((xmax-xmin)/DBLE(nx-1)))+1
-  index_y = INT((y-ymin)/((ymax-ymin)/DBLE(ny-1)))+1
+  index_x = FLOOR((x-xmin)/((xmax-xmin)/DBLE(nx-1)))+1
+  index_y = FLOOR((y-ymin)/((ymax-ymin)/DBLE(ny-1)))+1
   lnx = nx-1
   lny = ny-1
 
