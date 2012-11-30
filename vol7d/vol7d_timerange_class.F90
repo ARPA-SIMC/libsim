@@ -57,72 +57,50 @@ INTERFACE delete
   MODULE PROCEDURE vol7d_timerange_delete
 END INTERFACE
 
-!> Operatore logico di uguaglianza tra oggetti della classe vol7d_timerange.
-!! Funziona anche per 
-!! confronti di tipo array-array (qualsiasi n. di dimensioni) e di tipo
-!! scalare-vettore(1-d) (ma non vettore(1-d)-scalare o tra array con più
-!! di 1 dimensione e scalari).
+!> Logical equality operator for objects of \a vol7d_timerange class.
+!! It is defined as \a ELEMENTAL thus it works also with conformal arrays
+!! of any shape.
 INTERFACE OPERATOR (==)
-  MODULE PROCEDURE vol7d_timerange_eq, vol7d_timerange_eqsv
+  MODULE PROCEDURE vol7d_timerange_eq
 END INTERFACE
 
-!> Operatore logico di disuguaglianza tra oggetti della classe vol7d_timerange.
-!! Funziona anche per 
-!! confronti di tipo array-array (qualsiasi n. di dimensioni) e di tipo
-!! scalare-vettore(1-d) (ma non vettore(1-d)-scalare o tra array con più
-!! di 1 dimensione e scalari).
+!> Logical inequality operator for objects of \a vol7d_timerange class.
+!! It is defined as \a ELEMENTAL thus it works also with conformal arrays
+!! of any shape.
 INTERFACE OPERATOR (/=)
-  MODULE PROCEDURE vol7d_timerange_ne, vol7d_timerange_nesv
+  MODULE PROCEDURE vol7d_timerange_ne
 END INTERFACE
 
-!> Operatore logico maggiore tra oggetti della classe vol7d_timerange.
-!! Funziona anche per 
-!! confronti di tipo array-array (qualsiasi n. di dimensioni) e di tipo
-!! scalare-vettore(1-d) (ma non vettore(1-d)-scalare o tra array con più
-!! di 1 dimensione e scalari).
-!! Il confronto è fatto sui valori di \a timerange e, a parità di \a timerange,
-!! su \a p1 e \a p2 se definiti.
+!> Logical greater-than operator for objects of \a vol7d_timerange class.
+!! It is defined as \a ELEMENTAL thus it works also with conformal arrays
+!! of any shape.
 INTERFACE OPERATOR (>)
-  MODULE PROCEDURE vol7d_timerange_gt, vol7d_timerange_gtsv
+  MODULE PROCEDURE vol7d_timerange_gt
 END INTERFACE
 
-!> Operatore logico minore tra oggetti della classe vol7d_timerange.
-!! Funziona anche per 
-!! confronti di tipo array-array (qualsiasi n. di dimensioni) e di tipo
-!! scalare-vettore(1-d) (ma non vettore(1-d)-scalare o tra array con più
-!! di 1 dimensione e scalari).
-!! Il confronto è fatto sui valori di \a timerange e, a parità di \a timerange,
-!! su \a p1 e \a p2 se definiti.
+!> Logical less-than operator for objects of \a vol7d_timerange class.
+!! It is defined as \a ELEMENTAL thus it works also with conformal arrays
+!! of any shape.
 INTERFACE OPERATOR (<)
-  MODULE PROCEDURE vol7d_timerange_lt, vol7d_timerange_ltsv
+  MODULE PROCEDURE vol7d_timerange_lt
 END INTERFACE
 
-!> Operatore logico maggiore-uguale tra oggetti della classe vol7d_timerange.
-!! Funziona anche per 
-!! confronti di tipo array-array (qualsiasi n. di dimensioni) e di tipo
-!! scalare-vettore(1-d) (ma non vettore(1-d)-scalare o tra array con più
-!! di 1 dimensione e scalari).
-!! Il confronto è fatto sui valori di \a timerange e, a parità di \a timerange,
-!! su \a p1 e \a p2 se definiti.
+!> Logical greater-equal operator for objects of \a vol7d_timerange class.
+!! It is defined as \a ELEMENTAL thus it works also with conformal arrays
+!! of any shape.
 INTERFACE OPERATOR (>=)
-  MODULE PROCEDURE vol7d_timerange_ge, vol7d_timerange_gesv
+  MODULE PROCEDURE vol7d_timerange_ge
 END INTERFACE
 
-!> Operatore logico minore-uguale tra oggetti della classe vol7d_timerange.
-!! Funziona anche per 
-!! confronti di tipo array-array (qualsiasi n. di dimensioni) e di tipo
-!! scalare-vettore(1-d) (ma non vettore(1-d)-scalare o tra array con più
-!! di 1 dimensione e scalari).
-!! Il confronto è fatto sui valori di \a timerange e, a parità di \a timerange,
-!! su \a p1 e \a p2 se definiti.
+!> Logical less-equal operator for objects of \a vol7d_timerange class.
+!! It is defined as \a ELEMENTAL thus it works also with conformal arrays
+!! of any shape.
 INTERFACE OPERATOR (<=)
-  MODULE PROCEDURE vol7d_timerange_le, vol7d_timerange_lesv
+  MODULE PROCEDURE vol7d_timerange_le
 END INTERFACE
 
-
-!> Logical almost equality operators for objects of the class \a
-!! vol7d_timerange
-!! If one component is missing it is not used in comparison
+!> Logical almost equality operator for objects of \a vol7d_timerange class.
+!! If one component is missing it is not used in comparison.
 INTERFACE OPERATOR (.almosteq.)
   MODULE PROCEDURE vol7d_timerange_almost_eq
 END INTERFACE
@@ -299,21 +277,18 @@ return
 end function to_char_timerange
 
 
-elemental FUNCTION vol7d_timerange_eq(this, that) RESULT(res)
+ELEMENTAL FUNCTION vol7d_timerange_eq(this, that) RESULT(res)
 TYPE(vol7d_timerange),INTENT(IN) :: this, that
 LOGICAL :: res
 
-IF (this%timerange == that%timerange .AND. &
- this%p1 == that%p1 .AND. this%p2 == that%p2) THEN
-  res = .TRUE.
-ELSE
-  res = .FALSE.
-ENDIF
+res = &
+ this%timerange == that%timerange .AND. &
+ this%p1 == that%p1 .AND. this%p2 == that%p2
 
 END FUNCTION vol7d_timerange_eq
 
 
-elemental FUNCTION vol7d_timerange_almost_eq(this, that) RESULT(res)
+ELEMENTAL FUNCTION vol7d_timerange_almost_eq(this, that) RESULT(res)
 TYPE(vol7d_timerange),INTENT(IN) :: this, that
 LOGICAL :: res
 
@@ -328,20 +303,7 @@ ENDIF
 END FUNCTION vol7d_timerange_almost_eq
 
 
-FUNCTION vol7d_timerange_eqsv(this, that) RESULT(res)
-TYPE(vol7d_timerange),INTENT(IN) :: this, that(:)
-LOGICAL :: res(SIZE(that))
-
-INTEGER :: i
-
-DO i = 1, SIZE(that)
-  res(i) = this == that(i)
-ENDDO
-
-END FUNCTION vol7d_timerange_eqsv
-
-
-elemental FUNCTION vol7d_timerange_ne(this, that) RESULT(res)
+ELEMENTAL FUNCTION vol7d_timerange_ne(this, that) RESULT(res)
 TYPE(vol7d_timerange),INTENT(IN) :: this, that
 LOGICAL :: res
 
@@ -350,20 +312,7 @@ res = .NOT.(this == that)
 END FUNCTION vol7d_timerange_ne
 
 
-FUNCTION vol7d_timerange_nesv(this, that) RESULT(res)
-TYPE(vol7d_timerange),INTENT(IN) :: this, that(:)
-LOGICAL :: res(SIZE(that))
-
-INTEGER :: i
-
-DO i = 1, SIZE(that)
-  res(i) = .NOT.(this == that(i))
-ENDDO
-
-END FUNCTION vol7d_timerange_nesv
-
-
-elemental FUNCTION vol7d_timerange_gt(this, that) RESULT(res)
+ELEMENTAL FUNCTION vol7d_timerange_gt(this, that) RESULT(res)
 TYPE(vol7d_timerange),INTENT(IN) :: this, that
 LOGICAL :: res
 
@@ -379,20 +328,7 @@ ENDIF
 END FUNCTION vol7d_timerange_gt
 
 
-FUNCTION vol7d_timerange_gtsv(this, that) RESULT(res)
-TYPE(vol7d_timerange),INTENT(IN) :: this, that(:)
-LOGICAL :: res(SIZE(that))
-
-INTEGER :: i
-
-DO i = 1, SIZE(that)
-  res(i) = this > that(i)
-ENDDO
-
-END FUNCTION vol7d_timerange_gtsv
-
-
-elemental FUNCTION vol7d_timerange_lt(this, that) RESULT(res)
+ELEMENTAL FUNCTION vol7d_timerange_lt(this, that) RESULT(res)
 TYPE(vol7d_timerange),INTENT(IN) :: this, that
 LOGICAL :: res
 
@@ -408,20 +344,7 @@ ENDIF
 END FUNCTION vol7d_timerange_lt
 
 
-FUNCTION vol7d_timerange_ltsv(this, that) RESULT(res)
-TYPE(vol7d_timerange),INTENT(IN) :: this, that(:)
-LOGICAL :: res(SIZE(that))
-
-INTEGER :: i
-
-DO i = 1, SIZE(that)
-  res(i) = this < that(i)
-ENDDO
-
-END FUNCTION vol7d_timerange_ltsv
-
-
-elemental FUNCTION vol7d_timerange_ge(this, that) RESULT(res)
+ELEMENTAL FUNCTION vol7d_timerange_ge(this, that) RESULT(res)
 TYPE(vol7d_timerange),INTENT(IN) :: this, that
 LOGICAL :: res
 
@@ -436,20 +359,7 @@ ENDIF
 END FUNCTION vol7d_timerange_ge
 
 
-FUNCTION vol7d_timerange_gesv(this, that) RESULT(res)
-TYPE(vol7d_timerange),INTENT(IN) :: this, that(:)
-LOGICAL :: res(SIZE(that))
-
-INTEGER :: i
-
-DO i = 1, SIZE(that)
-  res(i) = this >= that(i)
-ENDDO
-
-END FUNCTION vol7d_timerange_gesv
-
-
-elemental FUNCTION vol7d_timerange_le(this, that) RESULT(res)
+ELEMENTAL FUNCTION vol7d_timerange_le(this, that) RESULT(res)
 TYPE(vol7d_timerange),INTENT(IN) :: this, that
 LOGICAL :: res
 
@@ -464,20 +374,7 @@ ENDIF
 END FUNCTION vol7d_timerange_le
 
 
-FUNCTION vol7d_timerange_lesv(this, that) RESULT(res)
-TYPE(vol7d_timerange),INTENT(IN) :: this, that(:)
-LOGICAL :: res(SIZE(that))
-
-INTEGER :: i
-
-DO i = 1, SIZE(that)
-  res(i) = this <= that(i)
-ENDDO
-
-END FUNCTION vol7d_timerange_lesv
-
-
-FUNCTION vol7d_timerange_c_e(this) RESULT(c_e)
+ELEMENTAL FUNCTION vol7d_timerange_c_e(this) RESULT(c_e)
 TYPE(vol7d_timerange),INTENT(IN) :: this
 LOGICAL :: c_e
 c_e = this /= vol7d_timerange_miss

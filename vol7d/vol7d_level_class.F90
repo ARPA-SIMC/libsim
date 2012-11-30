@@ -55,68 +55,55 @@ INTERFACE delete
   MODULE PROCEDURE vol7d_level_delete
 END INTERFACE
 
-!> Operatore logico di uguaglianza tra oggetti della classe vol7d_level.
-!! Funziona anche per 
-!! confronti di tipo array-array (qualsiasi n. di dimensioni) e di tipo
-!! scalare-vettore(1-d) (ma non vettore(1-d)-scalare o tra array con più
-!! di 1 dimensione e scalari).
+!> Logical equality operator for objects of \a vol7d_level class.
+!! It is defined as \a ELEMENTAL thus it works also with conformal arrays
+!! of any shape.
 INTERFACE OPERATOR (==)
-  MODULE PROCEDURE vol7d_level_eq, vol7d_level_eqsv
+  MODULE PROCEDURE vol7d_level_eq
 END INTERFACE
 
-!> Operatore logico di disuguaglianza tra oggetti della classe vol7d_level.
-!! Funziona anche per 
-!! confronti di tipo array-array (qualsiasi n. di dimensioni) e di tipo
-!! scalare-vettore(1-d) (ma non vettore(1-d)-scalare o tra array con più
-!! di 1 dimensione e scalari).
+!> Logical inequality operator for objects of \a vol7d_level class.
+!! It is defined as \a ELEMENTAL thus it works also with conformal arrays
+!! of any shape.
 INTERFACE OPERATOR (/=)
-  MODULE PROCEDURE vol7d_level_ne, vol7d_level_nesv
+  MODULE PROCEDURE vol7d_level_ne
 END INTERFACE
 
-!> Operatore logico maggiore tra oggetti della classe vol7d_level.
-!! Funziona anche per 
-!! confronti di tipo array-array (qualsiasi n. di dimensioni) e di tipo
-!! scalare-vettore(1-d) (ma non vettore(1-d)-scalare o tra array con più
-!! di 1 dimensione e scalari).
-!! Il confronto è fatto sui valori di \a level e, a parità di \a level,
-!! su \a l1 e \a l2 se definiti.
+!> Logical greater-than operator for objects of \a vol7d_level class.
+!! It is defined as \a ELEMENTAL thus it works also with conformal arrays
+!! of any shape.
+!! Comparison is performed first on \a level, then, then on \l1, then
+!! on \l2 if defined.
 INTERFACE OPERATOR (>)
-  MODULE PROCEDURE vol7d_level_gt, vol7d_level_gtsv
+  MODULE PROCEDURE vol7d_level_gt
 END INTERFACE
 
-!> Operatore logico minore tra oggetti della classe vol7d_level.
-!! Funziona anche per 
-!! confronti di tipo array-array (qualsiasi n. di dimensioni) e di tipo
-!! scalare-vettore(1-d) (ma non vettore(1-d)-scalare o tra array con più
-!! di 1 dimensione e scalari).
-!! Il confronto è fatto sui valori di \a level e, a parità di \a level,
-!! su \a l1 e \a l2 se definiti.
+!> Logical less-than operator for objects of \a vol7d_level class.
+!! It is defined as \a ELEMENTAL thus it works also with conformal arrays
+!! of any shape.
+!! Comparison is performed first on \a level, then, then on \l1, then
+!! on \l2 if defined.
 INTERFACE OPERATOR (<)
-  MODULE PROCEDURE vol7d_level_lt, vol7d_level_ltsv
+  MODULE PROCEDURE vol7d_level_lt
 END INTERFACE
 
-!> Operatore logico maggiore-uguale tra oggetti della classe vol7d_level.
-!! Funziona anche per 
-!! confronti di tipo array-array (qualsiasi n. di dimensioni) e di tipo
-!! scalare-vettore(1-d) (ma non vettore(1-d)-scalare o tra array con più
-!! di 1 dimensione e scalari).
-!! Il confronto è fatto sui valori di \a level e, a parità di \a level,
-!! su \a l1 e \a l2 se definiti.
+!> Logical greater-equal operator for objects of \a vol7d_level class.
+!! It is defined as \a ELEMENTAL thus it works also with conformal arrays
+!! of any shape.
+!! Comparison is performed first on \a level, then, then on \l1, then
+!! on \l2 if defined.
 INTERFACE OPERATOR (>=)
-  MODULE PROCEDURE vol7d_level_ge, vol7d_level_gesv
+  MODULE PROCEDURE vol7d_level_ge
 END INTERFACE
 
-!> Operatore logico minore-uguale tra oggetti della classe vol7d_level.
-!! Funziona anche per 
-!! confronti di tipo array-array (qualsiasi n. di dimensioni) e di tipo
-!! scalare-vettore(1-d) (ma non vettore(1-d)-scalare o tra array con più
-!! di 1 dimensione e scalari).
-!! Il confronto è fatto sui valori di \a level e, a parità di \a level,
-!! su \a l1 e \a l2 se definiti.
+!> Logical less-equal operator for objects of \a vol7d_level class.
+!! It is defined as \a ELEMENTAL thus it works also with conformal arrays
+!! of any shape.
+!! Comparison is performed first on \a level, then, then on \l1, then
+!! on \l2 if defined.
 INTERFACE OPERATOR (<=)
-  MODULE PROCEDURE vol7d_level_le, vol7d_level_lesv
+  MODULE PROCEDURE vol7d_level_le
 END INTERFACE
-
 
 !> Logical almost equality operators for objects of the class \a
 !! vol7d_level
@@ -293,23 +280,28 @@ to_char_level="LEVEL: "//&
 end function to_char_level
 
 
-elemental FUNCTION vol7d_level_eq(this, that) RESULT(res)
+ELEMENTAL FUNCTION vol7d_level_eq(this, that) RESULT(res)
 TYPE(vol7d_level),INTENT(IN) :: this, that
 LOGICAL :: res
 
-IF ( &
+res = &
  this%level1 == that%level1 .AND. &
  this%level2 == that%level2 .AND. &
- this%l1 == that%l1 .AND. this%l2 == that%l2) THEN
-  res = .TRUE.
-ELSE
-  res = .FALSE.
-ENDIF
+ this%l1 == that%l1 .AND. this%l2 == that%l2
 
 END FUNCTION vol7d_level_eq
 
 
-elemental FUNCTION vol7d_level_almost_eq(this, that) RESULT(res)
+ELEMENTAL FUNCTION vol7d_level_ne(this, that) RESULT(res)
+TYPE(vol7d_level),INTENT(IN) :: this, that
+LOGICAL :: res
+
+res = .NOT.(this == that)
+
+END FUNCTION vol7d_level_ne
+
+
+ELEMENTAL FUNCTION vol7d_level_almost_eq(this, that) RESULT(res)
 TYPE(vol7d_level),INTENT(IN) :: this, that
 LOGICAL :: res
 
@@ -325,42 +317,7 @@ ENDIF
 END FUNCTION vol7d_level_almost_eq
 
 
-FUNCTION vol7d_level_eqsv(this, that) RESULT(res)
-TYPE(vol7d_level),INTENT(IN) :: this, that(:)
-LOGICAL :: res(SIZE(that))
-
-INTEGER :: i
-
-DO i = 1, SIZE(that)
-  res(i) = this == that(i)
-ENDDO
-
-END FUNCTION vol7d_level_eqsv
-
-
-elemental FUNCTION vol7d_level_ne(this, that) RESULT(res)
-TYPE(vol7d_level),INTENT(IN) :: this, that
-LOGICAL :: res
-
-res = .NOT.(this == that)
-
-END FUNCTION vol7d_level_ne
-
-
-FUNCTION vol7d_level_nesv(this, that) RESULT(res)
-TYPE(vol7d_level),INTENT(IN) :: this, that(:)
-LOGICAL :: res(SIZE(that))
-
-INTEGER :: i
-
-DO i = 1, SIZE(that)
-  res(i) = .NOT.(this == that(i))
-ENDDO
-
-END FUNCTION vol7d_level_nesv
-
-
-elemental FUNCTION vol7d_level_gt(this, that) RESULT(res)
+ELEMENTAL FUNCTION vol7d_level_gt(this, that) RESULT(res)
 TYPE(vol7d_level),INTENT(IN) :: this, that
 LOGICAL :: res
 
@@ -380,20 +337,7 @@ ENDIF
 END FUNCTION vol7d_level_gt
 
 
-FUNCTION vol7d_level_gtsv(this, that) RESULT(res)
-TYPE(vol7d_level),INTENT(IN) :: this, that(:)
-LOGICAL :: res(SIZE(that))
-
-INTEGER :: i
-
-DO i = 1, SIZE(that)
-  res(i) = this > that(i)
-ENDDO
-
-END FUNCTION vol7d_level_gtsv
-
-
-elemental FUNCTION vol7d_level_lt(this, that) RESULT(res)
+ELEMENTAL FUNCTION vol7d_level_lt(this, that) RESULT(res)
 TYPE(vol7d_level),INTENT(IN) :: this, that
 LOGICAL :: res
 
@@ -413,20 +357,7 @@ ENDIF
 END FUNCTION vol7d_level_lt
 
 
-FUNCTION vol7d_level_ltsv(this, that) RESULT(res)
-TYPE(vol7d_level),INTENT(IN) :: this, that(:)
-LOGICAL :: res(SIZE(that))
-
-INTEGER :: i
-
-DO i = 1, SIZE(that)
-  res(i) = this < that(i)
-ENDDO
-
-END FUNCTION vol7d_level_ltsv
-
-
-elemental FUNCTION vol7d_level_ge(this, that) RESULT(res)
+ELEMENTAL FUNCTION vol7d_level_ge(this, that) RESULT(res)
 TYPE(vol7d_level),INTENT(IN) :: this, that
 LOGICAL :: res
 
@@ -441,20 +372,7 @@ ENDIF
 END FUNCTION vol7d_level_ge
 
 
-FUNCTION vol7d_level_gesv(this, that) RESULT(res)
-TYPE(vol7d_level),INTENT(IN) :: this, that(:)
-LOGICAL :: res(SIZE(that))
-
-INTEGER :: i
-
-DO i = 1, SIZE(that)
-  res(i) = this >= that(i)
-ENDDO
-
-END FUNCTION vol7d_level_gesv
-
-
-elemental FUNCTION vol7d_level_le(this, that) RESULT(res)
+ELEMENTAL FUNCTION vol7d_level_le(this, that) RESULT(res)
 TYPE(vol7d_level),INTENT(IN) :: this, that
 LOGICAL :: res
 
@@ -469,20 +387,7 @@ ENDIF
 END FUNCTION vol7d_level_le
 
 
-FUNCTION vol7d_level_lesv(this, that) RESULT(res)
-TYPE(vol7d_level),INTENT(IN) :: this, that(:)
-LOGICAL :: res(SIZE(that))
-
-INTEGER :: i
-
-DO i = 1, SIZE(that)
-  res(i) = this <= that(i)
-ENDDO
-
-END FUNCTION vol7d_level_lesv
-
-
-FUNCTION vol7d_level_c_e(this) RESULT(c_e)
+ELEMENTAL FUNCTION vol7d_level_c_e(this) RESULT(c_e)
 TYPE(vol7d_level),INTENT(IN) :: this
 LOGICAL :: c_e
 c_e = this /= vol7d_level_miss
