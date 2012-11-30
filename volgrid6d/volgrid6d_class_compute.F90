@@ -109,13 +109,13 @@ ELSE
   IF (dtstep < dtmax) THEN
     CALL l4f_category_log(this%category, L4F_INFO, &
      'recomputing statistically processed data by difference '// &
-     TRIM(to_char(stat_proc_input))//':'//TRIM(to_char(stat_proc)))
+     t2c(stat_proc_input)//':'//t2c(stat_proc))
     CALL  volgrid6d_recompute_stat_proc_diff(this, that, stat_proc, step, &
-     full_steps, clone)
+     full_steps, start, clone)
   ELSE
     CALL l4f_category_log(this%category, L4F_INFO, &
      'recomputing statistically processed data by aggregation '// &
-     TRIM(to_char(stat_proc_input))//':'//TRIM(to_char(stat_proc)))
+     t2c(stat_proc_input)//':'//t2c(stat_proc))
     CALL volgrid6d_recompute_stat_proc_agg_exp(this, that, stat_proc, step, start, &
      frac_valid, clone)
   ENDIF
@@ -462,13 +462,14 @@ END SUBROUTINE volgrid6d_recompute_stat_proc_agg
 !!
 !! Input volume may have any value of \a this%time_definition, and
 !! that value will be conserved in the output volume.
-SUBROUTINE volgrid6d_recompute_stat_proc_diff(this, that, stat_proc, step, full_steps, clone)
+SUBROUTINE volgrid6d_recompute_stat_proc_diff(this, that, stat_proc, step, full_steps, start, clone)
 TYPE(volgrid6d),INTENT(inout) :: this !< volume providing data to be recomputed, it is not modified by the method, apart from performing a \a volgrid6d_alloc_vol on it
 TYPE(volgrid6d),INTENT(out) :: that !< output volume which will contain the recomputed data
 INTEGER,INTENT(in) :: stat_proc !< type of statistical processing to be recomputed (from grib2 table), only data having timerange of this type will be recomputed and will appear in the output volume
 TYPE(timedelta),INTENT(in) :: step !< length of the step over which the statistical processing is performed
-LOGICAL,INTENT(in),OPTIONAL :: full_steps !< if provided and \a .TRUE., process only data having processing interval (p2) equal to a multiplier of \a step
-LOGICAL , INTENT(in),OPTIONAL :: clone !< if provided and \c .TRUE. , clone the gaid's from \a this to \a that
+LOGICAL,INTENT(in),OPTIONAL :: full_steps !< if provided and \a .TRUE., process only data having processing interval (p2) equal to a multiple of \a step
+TYPE(datetime),INTENT(in),OPTIONAL :: start !< if provided, together with \a full_steps, processes data on intervals starting at \a start +- an integer amount of \a step intervals
+LOGICAL,INTENT(in),OPTIONAL :: clone !< if provided and \c .TRUE. , clone the gaid's from \a this to \a that
 INTEGER :: i3, i4, i6, i, j, k, l, nitr, steps
 INTEGER,POINTER :: map_tr(:,:,:,:,:), f(:)
 REAL,POINTER :: voldatiin1(:,:), voldatiin2(:,:), voldatiout(:,:)
@@ -495,7 +496,7 @@ CALL getval(step, asec=steps)
 ! timerange are defined here
 CALL recompute_stat_proc_diff_common(this%time, this%timerange, stat_proc, step, &
  nitr, that%time, that%timerange, map_tr, f, mask_timerange, &
- this%time_definition, full_steps)
+ this%time_definition, full_steps, start)
 
 ! complete the definition of the output volume
 CALL volgrid6d_alloc_vol(that, decode=ASSOCIATED(this%voldati))

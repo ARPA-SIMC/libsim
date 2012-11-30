@@ -83,7 +83,7 @@ type(fndsv) :: vfn, vfnoracle
 
 ! for computing
 CHARACTER(len=13) :: comp_stat_proc
-CHARACTER(len=23) :: comp_step !, comp_start
+CHARACTER(len=23) :: comp_step, comp_start
 INTEGER :: istat_proc, ostat_proc
 LOGICAL :: comp_full_steps
 TYPE(timedelta) :: c_i
@@ -256,10 +256,14 @@ CALL optionparser_add(opt, 't', 'component-flag', component_flag, &
 ! &Any other character indicates to keep the &
 ! &corresponding original scanning mode value')
 
-CALL optionparser_add(opt, ' ', 'time-definition', time_definition, 0, help= &
- 'time definition for import volume, 0 for reference time (more suitable for &
- &presenting forecast data) and 1 for verification time (more suitable for &
- &comparing forecasts with observations)')
+! this option has been commented because it is not handled in
+! volgrid_class, it makes sense only in vg6d_getpoint for determining
+! the time_definition of output v7d volume
+time_definition = 0
+!CALL optionparser_add(opt, ' ', 'time-definition', time_definition, 0, help= &
+! 'time definition for import volume, 0 for reference time (more suitable for &
+! &presenting forecast data) and 1 for verification time (more suitable for &
+! &comparing forecasts with observations)')
 
 ! for computing
 CALL optionparser_add(opt, ' ', 'comp-stat-proc', comp_stat_proc, '', help= &
@@ -273,10 +277,10 @@ CALL optionparser_add(opt, ' ', 'comp-stat-proc', comp_stat_proc, '', help= &
 CALL optionparser_add(opt, ' ', 'comp-step', comp_step, '0000000001 00:00:00.000', help= &
  'length of regularization or statistical processing step in the format &
  &''YYYYMMDDDD hh:mm:ss.msc'', it can be simplified up to the form ''D hh''')
-!CALL optionparser_add(opt, ' ', 'comp-start', comp_start, '', help= &
-! 'start of regularization, or statistical processing interval, an empty value means &
-! &take the initial time step of the available data; the format is the same as for &
-! &--start-date parameter')
+
+CALL optionparser_add(opt, ' ', 'comp-start', comp_start, '', help= &
+ 'start of statistical processing interval, an empty value means &
+ &take the initial time step of the available data; the format is YYYY-MM-DD HH:MM')
 !CALL optionparser_add(opt, ' ', 'comp-frac-valid', comp_frac_valid, 1., help= &
 ! 'specify the fraction of input data that has to be valid in order to consider a &
 ! &statistically processed value acceptable')
@@ -361,11 +365,11 @@ ENDIF
 
 ! time-related arguments
 c_i = timedelta_new(isodate=comp_step)
-!IF (comp_start /= '') THEN
-!  c_s = datetime_new(isodate=comp_start)
-!ELSE
-c_s = datetime_miss
-!ENDIF
+IF (comp_start /= '') THEN
+  c_s = datetime_new(isodate=comp_start)
+ELSE
+  c_s = datetime_miss
+ENDIF
 
 ! make ilevel and olevel
 DO WHILE(trans_level_type%arraysize < 4) ! complete up to 4 elements
@@ -568,7 +572,7 @@ IF (c_e(istat_proc) .AND. c_e(ostat_proc) .AND. ASSOCIATED(volgrid_out)) THEN ! 
   ALLOCATE(volgrid_tmp(SIZE(volgrid_out)))
   DO i = 1, SIZE(volgrid_out)
     CALL volgrid6d_compute_stat_proc(volgrid_out(i), volgrid_tmp(i), &
-     istat_proc, ostat_proc, c_i, full_steps=comp_full_steps, clone=.TRUE.)
+     istat_proc, ostat_proc, c_i, full_steps=comp_full_steps, start=c_s, clone=.TRUE.)
   ENDDO
   CALL delete(volgrid_out)
   volgrid_out => volgrid_tmp

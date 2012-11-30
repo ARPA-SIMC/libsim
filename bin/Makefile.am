@@ -67,8 +67,15 @@ vg6d_subarea_SOURCES = vg6d_subarea.F90
 vg6d_subarea_LDADD = ../volgrid6d/libsim_volgrid6d.la ../base/libsim_base.la ../vol7d/libsim_vol7d.la ../log4fortran/liblog4fortran.la
 endif
 
-if HELP2MAN
+# improve
+if GRIBAPI
+if SHAPELIB
+dist_check_SCRIPTS = getpoint_transform_test.sh
+TESTS = $(dist_check_SCRIPTS)
+endif
+endif
 
+if HELP2MAN
 man_MANS = v7d_transform.1 vg6d_getpoint.1 vg6d_transform.1
 
 if GRIBAPI
@@ -78,17 +85,8 @@ if NCARG
 man_MANS += v7d_plot_sound.1
 endif
 
-# improve
-if GRIBAPI
-if SHAPELIB
-dist_check_SCRIPTS = getpoint_transform_test.sh
-TESTS = $(check_SCRIPTS)
-endif
-endif
-
 %.1: %
 	help2man --name=$< --section=1 --no-info --output=$@ ./$<
-
 endif
 
 mostlyclean-compile:
