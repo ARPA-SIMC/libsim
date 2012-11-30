@@ -217,7 +217,8 @@ END SUBROUTINE compute_stat_proc_agg_common
 
 ! common operations for statistical processing by differences
 SUBROUTINE recompute_stat_proc_diff_common(itime, itimerange, stat_proc, step, &
- nitr, otime, otimerange, map_tr, f, mask_timerange, time_definition, full_steps)
+ nitr, otime, otimerange, map_tr, f, mask_timerange, time_definition, full_steps, &
+ start)
 TYPE(datetime),INTENT(in) :: itime(:)
 TYPE(vol7d_timerange),INTENT(in) :: itimerange(:)
 INTEGER,INTENT(in) :: stat_proc
@@ -227,11 +228,12 @@ TYPE(datetime),POINTER :: otime(:)
 TYPE(vol7d_timerange),POINTER :: otimerange(:)
 INTEGER,POINTER :: map_tr(:,:,:,:,:), f(:)
 LOGICAL,POINTER :: mask_timerange(:)
-INTEGER,INTENT(in),OPTIONAL :: time_definition
+INTEGER,INTENT(in) :: time_definition
 LOGICAL,INTENT(in),OPTIONAL :: full_steps
+TYPE(datetime),INTENT(in),OPTIONAL :: start
 
 INTEGER :: i, j, k, l, dirtyrep
-INTEGER :: steps
+INTEGER :: steps, deltas
 LOGICAL :: useful
 TYPE(datetime) :: pstart1, pstart2, pend1, pend2, reftime1, reftime2, tmptime
 TYPE(vol7d_timerange) :: tmptimerange
@@ -241,6 +243,13 @@ TYPE(arrayof_vol7d_timerange) :: a_otimerange
 ! compute length of cumulation step in seconds
 CALL getval(step, asec=steps)
 
+deltas = 0
+IF (PRESENT(start)) THEN
+  IF (SIZE(itime) > 1 .AND. c_e(start)) THEN ! security check
+    CALL getval(start-itime(1), asec=deltas)
+  ENDIF
+ENDIF
+  
 ! create a mask of suitable timeranges
 ALLOCATE(mask_timerange(SIZE(itimerange)))
 mask_timerange(:) = itimerange(:)%timerange == stat_proc &
@@ -249,7 +258,7 @@ mask_timerange(:) = itimerange(:)%timerange == stat_proc &
  .AND. itimerange(:)%p2 > 0
 
 IF (optio_log(full_steps) .AND. steps /= 0) THEN ! keep only timeranges defining intervals ending at integer steps, check better steps /= 0
-  mask_timerange(:) = mask_timerange(:) .AND. (MOD(itimerange(:)%p2, steps) == 0)
+  mask_timerange(:) = mask_timerange(:) .AND. (MOD(itimerange(:)%p2-deltas, steps) == 0)
 ENDIF
 nitr = COUNT(mask_timerange)
 ALLOCATE(f(nitr))
@@ -378,7 +387,7 @@ INTEGER,POINTER :: dtratio(:)
 TYPE(datetime),INTENT(in),OPTIONAL :: start
 
 INTEGER :: i, j, k, l, na, nf
-INTEGER :: steps, p1, maxp1, minp2, minp1mp2
+INTEGER :: steps, p1, maxp1, minp2, minp1mp2, dstart
 LOGICAL :: lforecast
 TYPE(datetime) :: lstart, lend, pstart1, pstart2, pend1, pend2, reftime1, reftime2, tmptime
 TYPE(arrayof_datetime) :: a_otime
@@ -468,7 +477,10 @@ IF (lforecast) THEN ! forecast mode
   IF (time_definition == 0) THEN ! reference time
     CALL insert(a_otime, itime)
 
-    DO p1 = steps, maxp1, steps
+! apply start shift to timerange, not to reftime
+    CALL getval(lstart-itime(1), asec=dstart)
+    dstart = MAX(0, dstart)
+    DO p1 = steps + dstart, maxp1, steps
       CALL insert_unique(a_otimerange, vol7d_timerange_new(stat_proc, p1, steps))
     ENDDO
 
