@@ -263,11 +263,11 @@ if (c_e(ntime) .and. c_e(ntimerange) .and. c_e(nlevel) .and. c_e(nvar)) then
 
     call l4f_category_log(this%category,L4F_INFO,"VDF: projection parameter "//mapprojection)
     call l4f_category_log(this%category,L4F_DEBUG,"VDF: call create_metadata")
-    ier = create_metadata(xyzdim)
+    ier = vdf4f_create_metadata(xyzdim)
     call l4f_category_log(this%category,L4F_DEBUG,"VDF: call set_num_timesteps")
-    if(ier==0) ier = set_num_timesteps(ntimera)
+    if(ier==0) ier = vdf4f_set_num_timesteps(ntimera)
     call l4f_category_log(this%category,L4F_DEBUG,"VDF: call set_variables_names")
-    if(ier==0) ier = set_variables_names(nvar, varnames)
+    if(ier==0) ier = vdf4f_set_variables_names(nvar, varnames)
 
     call l4f_category_log(this%category,L4F_DEBUG,"VDF: call set_v_comment")
     call l4f_category_log(this%category,L4F_DEBUG,"VDF: call set_ts_comment")
@@ -290,7 +290,7 @@ if (c_e(ntime) .and. c_e(ntimerange) .and. c_e(nlevel) .and. c_e(nvar)) then
      
     !!!!  if(ier==0) int vdf4f_set_grid_permutation(long permutation[3]);
     call l4f_category_log(this%category,L4F_DEBUG,"VDF: call write_metadata")
-    if(ier==0) ier = write_metadata(lfilename)
+    if(ier==0) ier = vdf4f_write_metadata(lfilename)
     call l4f_category_log(this%category,L4F_DEBUG,"VDF: call vdf4f_write")
 
 
@@ -321,7 +321,7 @@ if (c_e(ntime) .and. c_e(ntimerange) .and. c_e(nlevel) .and. c_e(nvar)) then
     end if
 
     if (ier /= 0) then
-      call l4f_category_log(this%category,L4F_ERROR,"export to vdf: "//get_err_msg())
+      call l4f_category_log(this%category,L4F_ERROR,"export to vdf: "//vdf4f_get_err_msg())
     end if
 
     !todo: check if all are allocated

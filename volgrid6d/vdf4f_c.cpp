@@ -46,6 +46,53 @@ int set_variable_names(char *names, size_t len, size_t n)
 	return 0;
 }
 
+
+int set_variables_2d_xy(char *names, size_t len, size_t n)
+{
+	std::vector<std::string> v;
+	size_t i;
+	char *p;
+
+	p=names;
+
+	for (i = 0; i < n; i++) {
+	  v.push_back(p);
+	  p+=len;
+	}
+	if ((i = __md->SetVariables2DXY(v)) < 0) {
+	  return i;
+	}
+	return 0;
+}
+
+
+int set_missing_value_c(double missingv )
+{
+	
+  /* missing value */
+
+  if ((__md->SetMissingValue(missingv)) < 0) {
+    return -1;
+  }
+  return 0;
+
+}
+
+
+int get_missing_value_c(double missingv)
+{
+	
+  /* get missing value */
+
+ if (__md->GetMissingValue().size() == 1) {
+   missingv= __md->GetMissingValue()[0] ;
+  return 0;
+  }
+  return -1;
+}
+
+
+
 // those are called by fortran
 
 int vdf4f_set_comment_c(char *comment)
@@ -219,6 +266,18 @@ int set_variables_names_c(size_t nvar, char varnames[], size_t len )
   
 }
 
+int set_variables_2d_xy_c(size_t nvar, char varnames[], size_t len )
+{
+
+  /* insert variable name 2D */
+
+  if (set_variables_2d_xy(varnames, len, nvar) != 0) {
+    return -1;
+  }
+  return 0;
+  
+}
+
 
 int write_metadata_c(char filename[])
 {
@@ -284,6 +343,56 @@ int vdf4f_write_c(float *volume,
 	
 	slice += xydim ;
 	reverseslice -= xydim ;
+	
+      }
+      /* close */
+      __wr->CloseVariable();
+    }
+  }
+
+  return 0;
+}
+
+
+
+int vdf4f_write_2d_xy_c(float *volume,
+		  size_t xyzdim[2], size_t ntime , size_t nvar , 
+		  char varnames[], size_t len ,
+		  char filename[] )
+{
+  float *slice, *reverseslice, *myslice ;
+  size_t i, j, k, xydim ;
+  
+  xydim = xyzdim[0] * xyzdim[1] ;
+
+  /* create writer starting from metadata already done */
+  __wr = new VAPoR::WaveletBlock3DBufWriter(filename);
+  if ((VAPoR::MetadataVDC::GetErrCode())) {
+    return -1;
+  }
+  
+  slice = volume ;
+  
+  /* each variable */
+  for (i = 0; i < nvar; i++) {
+    /* each timestep */
+    for (j = 0; j < ntime; j++) {
+      /* prepare writer to write 
+       * i variable at j timestep */
+      	    
+      if ((__wr->OpenVariableWrite(j, varnames+(i*len), -1)) < 0) {
+	return -1;
+      }
+      
+      /* slice for i variable
+       * at j timestep */
+      for (k = 0 ; k < xyzdim[2] ; k++) {
+
+	if (( __wr->WriteRegion(slice)) < 0) {
+	  return -1;
+	}
+	
+	slice += xydim ;
 	
       }
       /* close */

@@ -119,12 +119,24 @@ Interface
   Integer(C_SIZE_T), Intent(OUT) :: len
   end function get_err_msg_c
 
+  Integer(C_INT) function set_missing_value_c(missingv ) BIND(C)
+  import
+  Real(C_DOUBLE),  Intent(IN) :: missingv 
+  end function set_missing_value_c
+
+  Integer(C_INT) function get_missing_value_c(missingv ) BIND(C)
+  import
+  Real(C_DOUBLE),  Intent(OUT) :: missingv 
+  end function get_missing_value_c
+
 End Interface
 
-public vdf4f_write, create_metadata, set_num_timesteps, set_variables_names, &
+public vdf4f_write, vdf4f_create_metadata, vdf4f_set_num_timesteps, vdf4f_set_variables_names, &
  vdf4f_set_comment, vdf4f_set_ts_comment, vdf4f_set_v_comment, vdf4f_set_grid_extents, &
  vdf4f_set_coord_system_type, vdf4f_set_grid_type, &
- vdf4f_set_map_projection, write_metadata, destroy_metadata_c, destroy_writer_c, get_err_msg
+ vdf4f_set_map_projection, vdf4f_write_metadata, destroy_metadata_c, destroy_writer_c, vdf4f_get_err_msg, &
+ vdf4f_set_missing_value,  vdf4f_get_missing_value
+
 
 !> interface to different architectures (cast some type)
 
@@ -136,7 +148,7 @@ interface vdf4f_write
 end interface
 
 
-interface create_metadata
+interface vdf4f_create_metadata
 #if SIZEOF_SIZE_T == 8
   module procedure create_metadata_amd64
 #endif
@@ -144,14 +156,14 @@ interface create_metadata
 end interface
 
 
-interface set_num_timesteps
+interface vdf4f_set_num_timesteps
 #if SIZEOF_SIZE_T == 8
   module procedure set_num_timesteps_amd64
 #endif
   module procedure set_num_timesteps_i386
 end interface
 
-interface set_variables_names
+interface vdf4f_set_variables_names
 #if SIZEOF_SIZE_T == 8
   module procedure set_variables_names_amd64
 #endif
@@ -172,7 +184,6 @@ interface vdf4f_set_v_comment
 #endif
   module procedure vdf4f_set_v_comment_i386
 end interface
-
 
 contains
 
@@ -372,10 +383,10 @@ vdf4f_set_map_projection = vdf4f_set_map_projection_c(trim(mapprojection)//char(
 end function vdf4f_set_map_projection
 
 
-function get_err_msg()
+function vdf4f_get_err_msg()
 
 integer, parameter :: lenfun=255
-character(len=lenfun) :: get_err_msg
+character(len=lenfun) :: vdf4f_get_err_msg
 Integer(C_SIZE_T) :: len
 Character(len=lenfun) :: errmsg
 
@@ -383,15 +394,26 @@ integer :: ier
 
 len = lenfun
 ier = get_err_msg_c(errmsg,len)
-get_err_msg=errmsg(:min(len,lenfun))
+vdf4f_get_err_msg=errmsg(:min(len,lenfun))
 
 return 
-end function get_err_msg
+end function vdf4f_get_err_msg
 
 
-Integer  function write_metadata(filename)
+Integer  function vdf4f_write_metadata(filename)
 Character(len=*), Intent(IN) :: filename
-write_metadata = write_metadata_c(trim(filename)//char(0))    ! future : C_NULL_CHAR
-end function write_metadata
+vdf4f_write_metadata = write_metadata_c(trim(filename)//char(0))    ! future : C_NULL_CHAR
+end function vdf4f_write_metadata
+
+
+Integer function vdf4f_set_missing_value(missingv)
+doubleprecision,  Intent(IN) :: missingv 
+vdf4f_set_missing_value = set_missing_value_c(missingv)
+end function vdf4f_set_missing_value
+
+Integer function vdf4f_get_missing_value(missingv)
+doubleprecision,  Intent(OUT) :: missingv 
+vdf4f_get_missing_value = set_missing_value_c(missingv)
+end function vdf4f_get_missing_value
 
 end module vdf4f

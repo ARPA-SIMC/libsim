@@ -19,6 +19,7 @@
 program example_vapor_interface
 
 use vdf4f
+use missing_values
 
 implicit none
 
@@ -27,7 +28,7 @@ integer,parameter :: ntime=2, nlevel=50, nvar=2, nx=50, ny=50
 logical :: exist
 integer :: ier, xyzdim(3)
 character(len=255) :: varnames(nvar),vardescriptions(nvar),tsdescriptions(ntime)
-doubleprecision :: extents(6)
+doubleprecision :: extents(6),vdfmiss
 integer ::  irzscan=0 !<  if true reverse Z (level) order in vdf export
 real,allocatable :: voldati(:,:,:,:,:)
 integer :: ix,iy,ilevel,itime,ivar,i,j
@@ -46,7 +47,11 @@ do ix=1,nx
     do ilevel=1,nlevel
       do itime=1,ntime
         do ivar=1,nvar
-          voldati(ix,iy,ilevel,itime,ivar)=ix+iy+ilevel+itime
+          if (ix > nx/2 .and. iy > ny/2 .and. ilevel > nlevel/2 ) then 
+            voldati(ix,iy,ilevel,itime,ivar)=ix+iy+ilevel+itime
+          else
+            voldati(ix,iy,ilevel,itime,ivar)=rmiss
+          end if
         end do
       end do
     end do
@@ -71,42 +76,50 @@ end do
 extents=(/-0.5d0, -14.d0 ,   0.d0, 2.563d0, -11.25d0,  1.d0/)
 mapprojection = "+proj=latlon +ellps=sphere"
 
-print*,"VDF: call create_metadata"
-ier = create_metadata(xyzdim)
-print*,"VDF: call set_num_timesteps"
-if(ier==0) ier = set_num_timesteps(ntime)
-print*,"VDF: call set_variables_names"
-if(ier==0) ier = set_variables_names(nvar, varnames)
+if(ier==0) print*,"VDF: call vdf4f_create_metadata"
+ier = vdf4f_create_metadata(xyzdim)
+!if(ier==0) ier = vdf4f_set_missing_value(dble(rmiss))
+if(ier==0) ier = vdf4f_set_missing_value(1000.d0)
+ier=0
+
+if(ier==0) print*,"VDF: call vdf4f_set_num_timesteps"
+if(ier==0) ier = vdf4f_set_num_timesteps(ntime)
+if(ier==0) print*,"VDF: call vdf4f_set_variables_names"
+if(ier==0) ier = vdf4f_set_variables_names(nvar, varnames)
 
 do i=1,ntime
-  print*,"VDF: call set_ts_comment"
+  if(ier==0) print*,"VDF: call vdf4f_set_ts_comment"
   if(ier==0) ier = vdf4f_set_ts_comment(i-1,tsdescriptions(i))
   do j=1,nvar
-    print*,"VDF: call set_v_comment"
+    print*,"VDF: call vdf4f_set_v_comment"
     if(ier==0) ier = vdf4f_set_v_comment(i-1,varnames(j),vardescriptions(j))
   end do
 end do
 
-print *,"VDF: call vdf4f_set_comment"
+if(ier==0) print *,"VDF: call vdf4f_set_comment"
 if(ier==0) ier = vdf4f_set_comment("vogrid6d exported")
-print *,"VDF: call vdf4f_set_grid_extent"
+if(ier==0) print *,"VDF: call vdf4f_set_grid_extent"
 if(ier==0) ier = vdf4f_set_grid_extents(extents=extents)
                                 ! if(ier==0) ier = vdf4f_set_coord_system_type(coordsystemtype="spherical")
 if(ier==0) ier = vdf4f_set_coord_system_type(coordsystemtype="cartesian")
 if(ier==0) ier = vdf4f_set_grid_type(gridtype="regular")
 if(ier==0) ier = vdf4f_set_map_projection(mapprojection=mapprojection)
-
                                 ! if(ier==0) int vdf4f_set_grid_permutation(long permutation[3]);
-print*,"VDF: call write_metadata"
-if(ier==0) ier = write_metadata(lfilename)
+if(ier==0) print*,"VDF: call vdf4f_write_metadata"
+if(ier==0) ier = vdf4f_write_metadata(lfilename)
 
-print*,"VDF: call vdf4f_write"
-print*,"scan VDF (vapor file) for times"
+if(ier==0) print*,"VDF: call vdf4f_write"
+if(ier==0) print*,"scan VDF (vapor file) for times"
 if(ier==0) ier = vdf4f_write(voldati, xyzdim, ntime, nvar, varnames, lfilename, irzscan)  
 if (ier /= 0) then
-  print*,"ERROR exporting to vdf: "//get_err_msg()
+  print*,"ERROR exporting to vdf: "//vdf4f_get_err_msg()
   CALL exit(1)
 end if
+
+if(ier==0) ier = vdf4f_get_missing_value(vdfmiss)
+!if(ier==0) print *,"vdfmiss:",vdfmiss,dble(rmiss),rmiss
+if(ier==0) print *,"vdfmiss:",vdfmiss,dble(1000.),1000.
+ier=0
 
 ier = destroy_metadata_c()
 ier = destroy_writer_c()
