@@ -3242,7 +3242,7 @@ IF (this%trans%trans_type == 'inter') THEN
       inn_p = COUNT(c_e(field_in(:,k)))
 
       CALL l4f_category_log(this%category,L4F_INFO, &
-       "Number of sparse data points: "//TRIM(to_char(inn_p)))
+       "Number of sparse data points: "//t2c(inn_p)//','//t2c(SIZE(field_in(:,k))))
 
       IF (inn_p > 2) THEN
 

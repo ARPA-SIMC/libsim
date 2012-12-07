@@ -55,22 +55,18 @@ INTERFACE delete
   MODULE PROCEDURE vol7d_network_delete
 END INTERFACE
 
-!> Operatore logico di uguaglianza tra oggetti della classe vol7d_network.
-!! Funziona anche per 
-!! confronti di tipo array-array (qualsiasi n. di dimensioni) e di tipo
-!! scalare-vettore(1-d) (ma non vettore(1-d)-scalare o tra array con più
-!! di 1 dimensione e scalari).
+!> Logical equality operator for objects of \a vol7d_network class.
+!! It is defined as \a ELEMENTAL thus it works also with conformal arrays
+!! of any shape.
 INTERFACE OPERATOR (==)
-  MODULE PROCEDURE vol7d_network_eq, vol7d_network_eqsv
+  MODULE PROCEDURE vol7d_network_eq
 END INTERFACE
 
-!> Operatore logico di disuguaglianza tra oggetti della classe vol7d_network.
-!! Funziona anche per 
-!! confronti di tipo array-array (qualsiasi n. di dimensioni) e di tipo
-!! scalare-vettore(1-d) (ma non vettore(1-d)-scalare o tra array con più
-!! di 1 dimensione e scalari).
+!> Logical inequality operator for objects of \a vol7d_network class.
+!! It is defined as \a ELEMENTAL thus it works also with conformal arrays
+!! of any shape.
 INTERFACE OPERATOR (/=)
-  MODULE PROCEDURE vol7d_network_ne, vol7d_network_nesv
+  MODULE PROCEDURE vol7d_network_ne
 END INTERFACE
 
 !> to be documented
@@ -116,11 +112,26 @@ END INTERFACE
 CONTAINS
 
 !> Inizializza un oggetto \a vol7d_network con i parametri opzionali forniti.
+!! Questa è la versione \c FUNCTION, in stile F2003, del costruttore, da preferire
+!! rispetto alla versione \c SUBROUTINE \c init.
+!! Se non viene passato nessun parametro opzionale l'oggetto è
+!! inizializzato a valore mancante.
+FUNCTION vol7d_network_new(name) RESULT(this)
+CHARACTER(len=*),INTENT(in),OPTIONAL :: name !< Mnemonic alias for type of report
+
+TYPE(vol7d_network) :: this !< oggetto da inizializzare
+
+CALL init(this, name)
+
+END FUNCTION vol7d_network_new
+
+
+!> Inizializza un oggetto \a vol7d_network con i parametri opzionali forniti.
 !! Se non viene passato nessun parametro opzionale l'oggetto è
 !! inizializzato a valore mancante.
 SUBROUTINE vol7d_network_init(this, name)
 TYPE(vol7d_network),INTENT(INOUT) :: this !< oggetto da inizializzare
-character(len=*),INTENT(in),optional :: name !<  Mnemonic alias for type of report
+CHARACTER(len=*),INTENT(in),OPTIONAL :: name !< Mnemonic alias for type of report
 
 IF (PRESENT(name)) THEN
   this%name = lowercase(name)
@@ -170,53 +181,22 @@ return
 end function to_char_network
 
 
-
-elemental FUNCTION vol7d_network_eq(this, that) RESULT(res)
+ELEMENTAL FUNCTION vol7d_network_eq(this, that) RESULT(res)
 TYPE(vol7d_network),INTENT(IN) :: this, that
 LOGICAL :: res
 
-IF (this%name == that%name) THEN
-  res = .TRUE.
-ELSE
-  res = .FALSE.
-ENDIF
+res = (this%name == that%name)
 
 END FUNCTION vol7d_network_eq
 
 
-FUNCTION vol7d_network_eqsv(this, that) RESULT(res)
-TYPE(vol7d_network),INTENT(IN) :: this, that(:)
-LOGICAL :: res(SIZE(that))
-
-INTEGER :: i
-
-DO i = 1, SIZE(that)
-  res(i) = this == that(i)
-ENDDO
-
-END FUNCTION vol7d_network_eqsv
-
-
-elemental FUNCTION vol7d_network_ne(this, that) RESULT(res)
+ELEMENTAL FUNCTION vol7d_network_ne(this, that) RESULT(res)
 TYPE(vol7d_network),INTENT(IN) :: this, that
 LOGICAL :: res
 
 res = .NOT.(this == that)
 
 END FUNCTION vol7d_network_ne
-
-
-FUNCTION vol7d_network_nesv(this, that) RESULT(res)
-TYPE(vol7d_network),INTENT(IN) :: this, that(:)
-LOGICAL :: res(SIZE(that))
-
-INTEGER :: i
-
-DO i = 1, SIZE(that)
-  res(i) = .NOT.(this == that(i))
-ENDDO
-
-END FUNCTION vol7d_network_nesv
 
 
 ! Definisce le funzioni count_distinct e pack_distinct
