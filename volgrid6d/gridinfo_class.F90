@@ -1590,7 +1590,21 @@ END SUBROUTINE second_to_gribtr
 SUBROUTINE normalize_gridinfo(this)
 TYPE(gridinfo_def),intent(inout) :: this
 
-IF (this%timerange%timerange == 205) THEN ! point in time interval
+IF (this%timerange%timerange == 254) THEN ! instantaneous
+
+!tmin
+  IF (this%var == volgrid6d_var_new(255,2,16,255)) THEN
+    this%var%number=11
+    RETURN
+  ENDIF
+
+!tmax
+  IF (this%var == volgrid6d_var_new(255,2,15,255)) THEN
+    this%var%number=11
+    RETURN
+  ENDIF
+
+ELSE IF (this%timerange%timerange == 205) THEN ! point in time interval
 
 !tmin
   IF (this%var == volgrid6d_var_new(255,2,16,255)) THEN
