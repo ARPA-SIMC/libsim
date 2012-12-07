@@ -81,8 +81,6 @@ B12030,Soil Temperature level 1 IFS,K,98,128,139,255,1.0,0.0
 B12030,Soil Temperature level 2 IFS,K,98,128,170,255,1.0,0.0
 B12030,Soil Temperature level 3 IFS,K,98,128,183,255,1.0,0.0
 B12030,Soil Temperature level 4 IFS,K,98,128,236,255,1.0,0.0
-B12101,Temperature of the snow-surface,K,200,201,203,255,1.0,0.0
-B12101,Temperature of the snow-surface,K,78,201,203,255,1.0,0.0
 B12101,Temperature,K,255,0,0,0,1.0,0.0
 B12101,Temperature,K,255,2,11,255,1.0,0.0
 B12101,Temperature,K,200,200,11,0,1.0,0.0
@@ -92,6 +90,8 @@ B12101,Temperature,K,98,128,167,255,1.0,0.0
 B12103,Dew point temperature,K,255,0,6,0,1.0,0.0
 B12103,Dew point temperature,K,255,2,17,255,1.0,0.0
 B12103,Dew point temperature,K,98,128,168,255,1.0,0.0
+B12131,Temperature of the snow-surface,K,200,201,203,255,1.0,0.0
+B12131,Temperature of the snow-surface,K,78,201,203,255,1.0,0.0
 B12192,Potential Temperature,K,255,0,2,0,1.0,0.0
 B12192,Potential Temperature,K,255,2,13,255,1.0,0.0
 B12192,Potential Temperature,K,98,128,3,255,1.0,0.0
