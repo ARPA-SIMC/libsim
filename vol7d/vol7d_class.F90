@@ -1299,11 +1299,12 @@ END SUBROUTINE vol7d_set_attr_ind
 !! Il secondo volume viene accodato al primo e poi distrutto, si veda
 !! quindi la descrizione di ::vol7d_append.  Se uno degli oggetti \a
 !! this o \a that sono vuoti non perde tempo inutile,
-SUBROUTINE vol7d_merge(this, that, sort, &
+SUBROUTINE vol7d_merge(this, that, sort, bestdata, &
  ltimesimple, ltimerangesimple, llevelsimple, lanasimple)
 TYPE(vol7d),INTENT(INOUT) :: this !< primo oggetto in ingresso, alla fine conterrà il risultato della fusione
 TYPE(vol7d),INTENT(INOUT) :: that !< secondo oggetto in ingresso, alla fine sarà distrutto
 LOGICAL,INTENT(IN),OPTIONAL :: sort !< se fornito e uguale a \c .TRUE., i descrittori che supportano un ordinamento (operatori > e/o <) risulteranno ordinati in ordine crescente nell'oggetto finale
+LOGICAL,INTENT(in),OPTIONAL :: bestdata !< if provided and \a .TRUE. in case of overlapping volumes keep valid data where available, or data from the second volume if both valid
 LOGICAL,INTENT(IN),OPTIONAL :: ltimesimple, ltimerangesimple, llevelsimple, lanasimple ! experimental, please do not use outside the library now
 
 TYPE(vol7d) :: v7d_clean
@@ -1314,7 +1315,7 @@ IF (.NOT.c_e(this)) THEN ! speedup
   CALL init(v7d_clean)
   that = v7d_clean ! destroy that without deallocating
 ELSE ! Append that to this and destroy that
-  CALL vol7d_append(this, that, sort, &
+  CALL vol7d_append(this, that, sort, bestdata, &
    ltimesimple, ltimerangesimple, llevelsimple, lanasimple)
   CALL delete(that)
 ENDIF
@@ -1350,7 +1351,7 @@ END SUBROUTINE vol7d_merge
 !! \todo il parametro \a that è dichiarato \a INOUT perché la vol7d_alloc_vol
 !! può modificarlo, bisognerebbe implementare una vol7d_check_vol che restituisca
 !! errore anziché usare la vol7d_alloc_vol.
-SUBROUTINE vol7d_append(this, that, sort, &
+SUBROUTINE vol7d_append(this, that, sort, bestdata, &
  ltimesimple, ltimerangesimple, llevelsimple, lanasimple, lnetworksimple)
 TYPE(vol7d),INTENT(INOUT) :: this !< primo oggetto in ingresso, a cui sarà accodato il secondo
 TYPE(vol7d),INTENT(INOUT) :: that !< secondo oggetto in ingresso, non viene modificato dal metodo
@@ -1358,11 +1359,12 @@ LOGICAL,INTENT(IN),OPTIONAL :: sort !< se fornito e uguale a \c .TRUE., i descri
 ! experimental, please do not use outside the library now, they force the use
 ! of a simplified mapping algorithm which is valid only whene the dimension
 ! content is the same in both volumes , or when one of them is empty
+LOGICAL,INTENT(in),OPTIONAL :: bestdata !< if provided and \a .TRUE. in case of overlapping volumes keep valid data where available, or data from the second volume if both valid
 LOGICAL,INTENT(IN),OPTIONAL :: ltimesimple, ltimerangesimple, llevelsimple, lanasimple, lnetworksimple
 
 
 TYPE(vol7d) :: v7dtmp
-LOGICAL :: lsort
+LOGICAL :: lsort, lbestdata
 INTEGER,POINTER :: remapt1(:), remapt2(:), remaptr1(:), remaptr2(:), &
  remapl1(:), remapl2(:), remapa1(:), remapa2(:), remapn1(:), remapn2(:)
 
@@ -1385,6 +1387,7 @@ CALL vol7d_alloc_vol(that)
 
 CALL init(v7dtmp, time_definition=this%time_definition)
 CALL optio(sort, lsort)
+CALL optio(bestdata, lbestdata)
 
 ! Calcolo le mappature tra volumi vecchi e volume nuovo
 ! I puntatori remap* vengono tutti o allocati o nullificati
@@ -1427,19 +1430,19 @@ ENDIF
 ! Faccio la fusione fisica dei volumi
 CALL vol7d_merge_finalr(this, that, v7dtmp, &
  remapa1, remapa2, remapt1, remapt2, remapl1, remapl2, &
- remaptr1, remaptr2, remapn1, remapn2)
+ remaptr1, remaptr2, remapn1, remapn2, lbestdata)
 CALL vol7d_merge_finald(this, that, v7dtmp, &
  remapa1, remapa2, remapt1, remapt2, remapl1, remapl2, &
- remaptr1, remaptr2, remapn1, remapn2)
+ remaptr1, remaptr2, remapn1, remapn2, lbestdata)
 CALL vol7d_merge_finali(this, that, v7dtmp, &
  remapa1, remapa2, remapt1, remapt2, remapl1, remapl2, &
- remaptr1, remaptr2, remapn1, remapn2)
+ remaptr1, remaptr2, remapn1, remapn2, lbestdata)
 CALL vol7d_merge_finalb(this, that, v7dtmp, &
  remapa1, remapa2, remapt1, remapt2, remapl1, remapl2, &
- remaptr1, remaptr2, remapn1, remapn2)
+ remaptr1, remaptr2, remapn1, remapn2, lbestdata)
 CALL vol7d_merge_finalc(this, that, v7dtmp, &
  remapa1, remapa2, remapt1, remapt2, remapl1, remapl2, &
- remaptr1, remaptr2, remapn1, remapn2)
+ remaptr1, remaptr2, remapn1, remapn2, lbestdata)
 
 ! Dealloco i vettori di rimappatura
 IF (ASSOCIATED(remapt1)) DEALLOCATE(remapt1)
@@ -2100,12 +2103,12 @@ if (present(filename_auto))filename_auto=lfilename
 
 inquire(unit=lunit,opened=opened)
 if (.not. opened) then 
-  inquire(file=lfilename, EXIST=exist)
-  IF (exist) THEN
-    CALL l4f_log(L4F_FATAL, &
-     'in vol7d_write_on_file, file exists, cannot open file '//TRIM(lfilename))
-    CALL raise_fatal_error()
-  ENDIF
+!  inquire(file=lfilename, EXIST=exist)
+!  IF (exist) THEN
+!    CALL l4f_log(L4F_FATAL, &
+!     'in vol7d_write_on_file, file exists, cannot open file '//TRIM(lfilename))
+!    CALL raise_fatal_error()
+!  ENDIF
   OPEN(unit=lunit, file=lfilename, form='UNFORMATTED', access=stream_if_possible)
   CALL l4f_log(L4F_INFO, 'opened: '//TRIM(lfilename))
 end if

@@ -17,11 +17,12 @@
 ! along with this program.  If not, see <http://www.gnu.org/licenses/>.
 SUBROUTINE vol7d_merge_final/**/VOL7D_POLY_TYPES(this, that, v7dtmp, &
  remapa1, remapa2, remapt1, remapt2, remapl1, remapl2, &
- remaptr1, remaptr2, remapn1, remapn2)
+ remaptr1, remaptr2, remapn1, remapn2, bestdata)
 TYPE(vol7d),INTENT(inout) :: this, that
 TYPE(vol7d),INTENT(inout) :: v7dtmp
 INTEGER,INTENT(in) :: remapa1(:), remapa2(:), remapt1(:), remapt2(:), &
  remapl1(:), remapl2(:), remaptr1(:), remaptr2(:), remapn1(:), remapn2(:)
+LOGICAL,INTENT(in) :: bestdata
 
 INTEGER,POINTER :: remapv1(:), remapv2(:), remapva1(:), remapva2(:)
 
@@ -38,9 +39,17 @@ IF (ASSOCIATED(v7dtmp%anavar%/**/VOL7D_POLY_TYPES)) THEN
     DEALLOCATE(remapv1)
   ENDIF
   IF (ASSOCIATED(remapv2)) THEN
-    IF (SIZE(remapv2) > 0) &
-    v7dtmp%volana/**/VOL7D_POLY_TYPES(remapa2(:),remapv2(:),remapn2(:)) = &
-     that%volana/**/VOL7D_POLY_TYPES(:,:,:)
+    IF (SIZE(remapv2) > 0) THEN
+      IF (bestdata) THEN
+        WHERE (c_e(that%volana/**/VOL7D_POLY_TYPES))
+          v7dtmp%volana/**/VOL7D_POLY_TYPES(remapa2(:),remapv2(:),remapn2(:)) = &
+           that%volana/**/VOL7D_POLY_TYPES(:,:,:)
+        END WHERE
+      ELSE
+        v7dtmp%volana/**/VOL7D_POLY_TYPES(remapa2(:),remapv2(:),remapn2(:)) = &
+         that%volana/**/VOL7D_POLY_TYPES(:,:,:)
+      ENDIF
+    ENDIF
     DEALLOCATE(remapv2)
   ENDIF
 ENDIF
@@ -67,11 +76,20 @@ IF (ASSOCIATED(v7dtmp%anaattr%/**/VOL7D_POLY_TYPES) .AND. &
     DEALLOCATE(remapva1)
   ENDIF
   IF (ASSOCIATED(remapv2) .AND. ASSOCIATED(remapva2)) THEN
-    IF (SIZE(remapv2) > 0 .AND. SIZE(remapva2) > 0) &
-    v7dtmp%volanaattr/**/VOL7D_POLY_TYPES &
-     (remapa2(:),remapva2(:),remapn2(:),remapv2(:)) = &
-     that%volanaattr/**/VOL7D_POLY_TYPES(:,:,:,:)
-    DEALLOCATE(remapv2)
+    IF (SIZE(remapv2) > 0 .AND. SIZE(remapva2) > 0) THEN
+      IF (bestdata) THEN
+        WHERE (c_e(that%volanaattr/**/VOL7D_POLY_TYPES))
+          v7dtmp%volanaattr/**/VOL7D_POLY_TYPES &
+           (remapa2(:),remapva2(:),remapn2(:),remapv2(:)) = &
+           that%volanaattr/**/VOL7D_POLY_TYPES(:,:,:,:)
+        END WHERE
+      ELSE
+        v7dtmp%volanaattr/**/VOL7D_POLY_TYPES &
+         (remapa2(:),remapva2(:),remapn2(:),remapv2(:)) = &
+         that%volanaattr/**/VOL7D_POLY_TYPES(:,:,:,:)
+      ENDIF
+    ENDIF
+    DEALLOCATE(remapv2, remapva2)
   ELSE IF (ASSOCIATED(remapv2)) THEN
     DEALLOCATE(remapv2)
   ELSE IF (ASSOCIATED(remapva2)) THEN
@@ -93,10 +111,19 @@ IF (ASSOCIATED(v7dtmp%dativar%/**/VOL7D_POLY_TYPES)) THEN
     DEALLOCATE(remapv1)
   ENDIF
   IF (ASSOCIATED(remapv2)) THEN
-    IF (SIZE(remapv2) > 0) &
-    v7dtmp%voldati/**/VOL7D_POLY_TYPES &
-     (remapa2(:),remapt2(:),remapl2(:),remaptr2(:),remapv2(:),remapn2(:)) = &
-     that%voldati/**/VOL7D_POLY_TYPES(:,:,:,:,:,:)
+    IF (SIZE(remapv2) > 0) THEN
+      IF (bestdata) THEN
+        WHERE (c_e(that%voldati/**/VOL7D_POLY_TYPES))
+          v7dtmp%voldati/**/VOL7D_POLY_TYPES &
+           (remapa2(:),remapt2(:),remapl2(:),remaptr2(:),remapv2(:),remapn2(:)) = &
+           that%voldati/**/VOL7D_POLY_TYPES(:,:,:,:,:,:)
+        END WHERE
+      ELSE
+        v7dtmp%voldati/**/VOL7D_POLY_TYPES &
+         (remapa2(:),remapt2(:),remapl2(:),remaptr2(:),remapv2(:),remapn2(:)) = &
+         that%voldati/**/VOL7D_POLY_TYPES(:,:,:,:,:,:)
+      ENDIF
+    ENDIF
     DEALLOCATE(remapv2)
   ENDIF
 ENDIF
@@ -123,11 +150,20 @@ IF (ASSOCIATED(v7dtmp%datiattr%/**/VOL7D_POLY_TYPES) .AND. &
     DEALLOCATE(remapva1)
   ENDIF
   IF (ASSOCIATED(remapv2) .AND. ASSOCIATED(remapva2)) THEN
-    IF (SIZE(remapv2) > 0 .AND. SIZE(remapva2) > 0) &
-    v7dtmp%voldatiattr/**/VOL7D_POLY_TYPES &
-     (remapa2(:),remapt2(:),remapl2(:),remaptr2(:),remapva2(:),remapn2(:),remapv2(:)) = &
-     that%voldatiattr/**/VOL7D_POLY_TYPES(:,:,:,:,:,:,:)
-    DEALLOCATE(remapv2)
+    IF (SIZE(remapv2) > 0 .AND. SIZE(remapva2) > 0) THEN
+      IF (bestdata) THEN
+        WHERE (c_e(that%voldatiattr/**/VOL7D_POLY_TYPES))
+          v7dtmp%voldatiattr/**/VOL7D_POLY_TYPES &
+           (remapa2(:),remapt2(:),remapl2(:),remaptr2(:),remapva2(:),remapn2(:),remapv2(:)) = &
+           that%voldatiattr/**/VOL7D_POLY_TYPES(:,:,:,:,:,:,:)
+        END WHERE
+      ELSE
+        v7dtmp%voldatiattr/**/VOL7D_POLY_TYPES &
+         (remapa2(:),remapt2(:),remapl2(:),remaptr2(:),remapva2(:),remapn2(:),remapv2(:)) = &
+         that%voldatiattr/**/VOL7D_POLY_TYPES(:,:,:,:,:,:,:)
+      ENDIF
+    ENDIF
+    DEALLOCATE(remapv2, remapva2)
   ELSE IF (ASSOCIATED(remapv2)) THEN
     DEALLOCATE(remapv2)
   ELSE IF (ASSOCIATED(remapva2)) THEN
