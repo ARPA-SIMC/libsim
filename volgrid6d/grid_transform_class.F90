@@ -2566,23 +2566,45 @@ IF (this%trans%trans_type == 'zoom') THEN
 ELSE IF (this%trans%trans_type == 'boxregrid') THEN
 
   IF (this%trans%sub_type == 'average') THEN
-    DO k = 1, innz
-      jj = 0
-      DO j = 1, this%inny - this%trans%box_info%npy + 1, this%trans%box_info%npy
-        je = j+this%trans%box_info%npy-1
-        jj = jj+1
-        ii = 0
-        DO i = 1, this%innx - this%trans%box_info%npx + 1, this%trans%box_info%npx
-          ie = i+this%trans%box_info%npx-1
-          ii = ii+1
-          navg = COUNT(field_in(i:ie,j:je,k) /= rmiss)
-          IF (navg > 0) THEN
-            field_out(ii,jj,k) = SUM(field_in(i:ie,j:je,k)/navg, &
-             MASK=(field_in(i:ie,j:je,k) /= rmiss))
-          ENDIF
+    IF (vartype == var_dir360) THEN
+      DO k = 1, innz
+        jj = 0
+        DO j = 1, this%inny - this%trans%box_info%npy + 1, this%trans%box_info%npy
+          je = j+this%trans%box_info%npy-1
+          jj = jj+1
+          ii = 0
+          DO i = 1, this%innx - this%trans%box_info%npx + 1, this%trans%box_info%npx
+            ie = i+this%trans%box_info%npx-1
+            ii = ii+1
+            navg = COUNT(field_in(i:ie,j:je,k) /= rmiss)
+            IF (navg > 0) THEN
+              field_out(ii,jj,k) = find_prevailing_direction(field_in(i:ie,j:je,k), &
+               0.0, 360.0, 5.0)
+            ENDIF
+          ENDDO
         ENDDO
       ENDDO
-    ENDDO
+
+    ELSE
+      DO k = 1, innz
+        jj = 0
+        DO j = 1, this%inny - this%trans%box_info%npy + 1, this%trans%box_info%npy
+          je = j+this%trans%box_info%npy-1
+          jj = jj+1
+          ii = 0
+          DO i = 1, this%innx - this%trans%box_info%npx + 1, this%trans%box_info%npx
+            ie = i+this%trans%box_info%npx-1
+            ii = ii+1
+            navg = COUNT(field_in(i:ie,j:je,k) /= rmiss)
+            IF (navg > 0) THEN
+              field_out(ii,jj,k) = SUM(field_in(i:ie,j:je,k)/navg, &
+               MASK=(field_in(i:ie,j:je,k) /= rmiss))
+            ENDIF
+          ENDDO
+        ENDDO
+      ENDDO
+
+    ENDIF
 
   ELSE IF (this%trans%sub_type == 'max') THEN
     DO k = 1, innz
@@ -2678,28 +2700,41 @@ ELSE IF (this%trans%trans_type == 'boxinter' &
 
   IF (this%trans%sub_type == 'average') THEN
 
-    ALLOCATE(nval(this%outnx, this%outny))
-    field_out(:,:,:) = 0.0
-    DO k = 1, innz
-      nval(:,:) = 0
-      DO j = 1, this%inny
-        DO i = 1, this%innx
-          IF (c_e(this%inter_index_x(i,j)) .AND. c_e(field_in(i,j,k))) THEN
-            field_out(this%inter_index_x(i,j),this%inter_index_y(i,j),k) = &
-             field_out(this%inter_index_x(i,j),this%inter_index_y(i,j),k) + &
-             field_in(i,j,k)
-            nval(this%inter_index_x(i,j),this%inter_index_y(i,j)) = &
-             nval(this%inter_index_x(i,j),this%inter_index_y(i,j)) + 1
-          ENDIF
+    IF (vartype == var_dir360) THEN
+      DO k = 1, innz
+        DO j = 1, this%outny
+          DO i = 1, this%outnx
+            field_out(i,j,k) = find_prevailing_direction(field_in(:,:,k), &
+             0.0, 360.0, 5.0, &
+             mask=this%inter_index_x(:,:) == i .AND. this%inter_index_y(:,:) == j)
+          ENDDO
         ENDDO
       ENDDO
-      WHERE (nval(:,:) /= 0)
-        field_out(:,:,k) = field_out(:,:,k)/nval(:,:)
-      ELSEWHERE
-        field_out(:,:,k) = rmiss
-      END WHERE
-    ENDDO
-    DEALLOCATE(nval)
+
+    ELSE
+      ALLOCATE(nval(this%outnx, this%outny))
+      field_out(:,:,:) = 0.0
+      DO k = 1, innz
+        nval(:,:) = 0
+        DO j = 1, this%inny
+          DO i = 1, this%innx
+            IF (c_e(this%inter_index_x(i,j)) .AND. c_e(field_in(i,j,k))) THEN
+              field_out(this%inter_index_x(i,j),this%inter_index_y(i,j),k) = &
+               field_out(this%inter_index_x(i,j),this%inter_index_y(i,j),k) + &
+               field_in(i,j,k)
+              nval(this%inter_index_x(i,j),this%inter_index_y(i,j)) = &
+               nval(this%inter_index_x(i,j),this%inter_index_y(i,j)) + 1
+            ENDIF
+          ENDDO
+        ENDDO
+        WHERE (nval(:,:) /= 0)
+          field_out(:,:,k) = field_out(:,:,k)/nval(:,:)
+        ELSEWHERE
+          field_out(:,:,k) = rmiss
+        END WHERE
+      ENDDO
+      DEALLOCATE(nval)
+    ENDIF
 
   ELSE IF (this%trans%sub_type == 'stddev') THEN
 
@@ -2777,26 +2812,46 @@ ELSE IF (this%trans%trans_type == 'stencilinter') THEN
 
   IF (this%trans%sub_type == 'average') THEN
 
-!$OMP PARALLEL DEFAULT(SHARED)
-!$OMP DO PRIVATE(i, j, k, i1, i2, j1, j2, n)
-    DO k = 1, innz
-      DO j = 1, this%outny
-        DO i = 1, this%outnx
-          IF (c_e(this%inter_index_x(i,j))) THEN
-            i1 = this%inter_index_x(i,j) - np
-            i2 = this%inter_index_x(i,j) + np
-            j1 = this%inter_index_y(i,j) - np
-            j2 = this%inter_index_y(i,j) + np
-            n = COUNT(field_in(i1:i2,j1:j2,k) /= rmiss .AND. this%stencil(:,:))
-            IF (n > 0) THEN
-              field_out(i,j,k) = SUM(field_in(i1:i2,j1:j2,k), &
-               mask=field_in(i1:i2,j1:j2,k) /= rmiss .AND. this%stencil(:,:))/n
+    IF (vartype == var_dir360) THEN
+      DO k = 1, innz
+        DO j = 1, this%outny
+          DO i = 1, this%outnx
+            IF (c_e(this%inter_index_x(i,j))) THEN
+              i1 = this%inter_index_x(i,j) - np
+              i2 = this%inter_index_x(i,j) + np
+              j1 = this%inter_index_y(i,j) - np
+              j2 = this%inter_index_y(i,j) + np
+              field_out(i,j,k) = find_prevailing_direction(field_in(i1:i2,j1:j2,k), &
+               0.0, 360.0, 5.0, &
+               mask=this%stencil(:,:)) ! simpler and equivalent form
+!               mask=field_in(i1:i2,j1:j2,k) /= rmiss .AND. this%stencil(:,:))
             ENDIF
-          ENDIF
+          ENDDO
         ENDDO
       ENDDO
-    ENDDO
+
+    ELSE
+!$OMP PARALLEL DEFAULT(SHARED)
+!$OMP DO PRIVATE(i, j, k, i1, i2, j1, j2, n)
+      DO k = 1, innz
+        DO j = 1, this%outny
+          DO i = 1, this%outnx
+            IF (c_e(this%inter_index_x(i,j))) THEN
+              i1 = this%inter_index_x(i,j) - np
+              i2 = this%inter_index_x(i,j) + np
+              j1 = this%inter_index_y(i,j) - np
+              j2 = this%inter_index_y(i,j) + np
+              n = COUNT(field_in(i1:i2,j1:j2,k) /= rmiss .AND. this%stencil(:,:))
+              IF (n > 0) THEN
+                field_out(i,j,k) = SUM(field_in(i1:i2,j1:j2,k), &
+                 mask=field_in(i1:i2,j1:j2,k) /= rmiss .AND. this%stencil(:,:))/n
+              ENDIF
+            ENDIF
+          ENDDO
+        ENDDO
+      ENDDO
 !$OMP END PARALLEL
+    ENDIF
 
   ELSE IF (this%trans%sub_type == 'max') THEN
 
@@ -3131,6 +3186,42 @@ ELSE
 ENDIF
 
 END FUNCTION interp_var_360
+
+
+RECURSIVE FUNCTION find_prevailing_direction(v1, l, h, res, mask) RESULT(prev)
+REAL,INTENT(in) :: v1(:,:)
+REAL,INTENT(in) :: l, h, res
+LOGICAL,INTENT(in),OPTIONAL :: mask(:,:)
+REAL :: prev
+
+REAL :: m
+INTEGER :: nh, nl
+!REAL,PARAMETER :: res = 1.0
+
+m = (l + h)/2.
+IF ((h - l) <= res) THEN
+  prev = m
+  RETURN
+ENDIF
+
+IF (PRESENT(mask)) THEN
+  nl = COUNT(v1 >= l .AND. v1 < m .AND. mask)
+  nh = COUNT(v1 >= m .AND. v1 < h .AND. mask)
+ELSE
+  nl = COUNT(v1 >= l .AND. v1 < m)
+  nh = COUNT(v1 >= m .AND. v1 < h)
+ENDIF
+IF (nh > nl) THEN
+  prev = find_prevailing_direction(v1, m, h, res)
+ELSE IF (nl > nh) THEN
+  prev = find_prevailing_direction(v1, l, m, res)
+ELSE IF (nl == 0 .AND. nh == 0) THEN
+  prev = rmiss
+ELSE
+  prev = m
+ENDIF
+
+END FUNCTION find_prevailing_direction
 
 
 END SUBROUTINE grid_transform_compute
