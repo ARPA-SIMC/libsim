@@ -49,8 +49,8 @@ georef_coord_class.$(OBJEXT): err_handling.$(OBJEXT) missing_values.$(OBJEXT) op
 georef_coord_class.lo: err_handling.$(OBJEXT) missing_values.$(OBJEXT) optional_values.$(OBJEXT) geo_proj_class.$(OBJEXT)
 optionparser_class.$(OBJEXT): err_handling.$(OBJEXT) kinds.$(OBJEXT) char_utilities.$(OBJEXT)
 optionparser_class.lo: err_handling.$(OBJEXT) kinds.$(OBJEXT) char_utilities.$(OBJEXT)
-simple_stat.$(OBJEXT): missing_values.$(OBJEXT) array_utilities.$(OBJEXT)
-simple_stat.lo: missing_values.$(OBJEXT) array_utilities.$(OBJEXT)
+simple_stat.$(OBJEXT): missing_values.$(OBJEXT) optional_values.$(OBJEXT) array_utilities.$(OBJEXT)
+simple_stat.lo: missing_values.$(OBJEXT) optional_values.$(OBJEXT) array_utilities.$(OBJEXT)
 geo_transforms.$(OBJEXT): phys_const.$(OBJEXT)
 geo_transforms.lo: phys_const.$(OBJEXT)
 

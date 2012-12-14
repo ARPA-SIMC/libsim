@@ -24,7 +24,8 @@
 !! \ingroup base
 MODULE simple_stat
 USE missing_values
-use array_utilities
+USE optional_values
+USE array_utilities
 IMPLICIT NONE
 
 !> Compute the average of the random variable provided,
@@ -34,6 +35,7 @@ IMPLICIT NONE
 !! REAL or DOUBLE PRECISION FUNCTION stat_average()
 !! \param sample(:) REAL,INTENT(in) or DOUBLE PRECISION,INTENT(in) the variable to be averaged
 !! \param mask(:) LOGICAL,OPTIONAL,INTENT(in) additional mask to be and'ed with missing values
+!! \param nomiss LOGICAL,OPTIONAL,INTENT(in) if provided and \a .TRUE. it disables all the checks for missing data and empty sample and enables the use of a fast algorithm
 INTERFACE stat_average
   MODULE PROCEDURE stat_averager, stat_averaged
 END INTERFACE
@@ -45,8 +47,9 @@ END INTERFACE
 !!
 !! REAL or DOUBLE PRECISION FUNCTION stat_variance()
 !! \param sample(:) REAL,INTENT(in) or DOUBLE PRECISION,INTENT(in) the variable for which variance has to be computed
-!! \param average REAL,OPTIONAL,INTENT(out) the average of the variable can optionally be returned
+!! \param average REAL,OPTIONAL,INTENT(out) or DOUBLE PRECISION,OPTIONAL,INTENT(out) the average of the variable can optionally be returned
 !! \param mask(:) LOGICAL,OPTIONAL,INTENT(in) additional mask to be and'ed with missing values
+!! \param nomiss LOGICAL,OPTIONAL,INTENT(in) if provided and \a .TRUE. it disables all the checks for missing data and empty sample and enables the use of a fast algorithm
 INTERFACE stat_variance
   MODULE PROCEDURE stat_variancer, stat_varianced
 END INTERFACE
@@ -58,8 +61,9 @@ END INTERFACE
 !!
 !! REAL or DOUBLE PRECISION FUNCTION stat_stddev()
 !! \param sample(:) REAL,INTENT(in) or DOUBLE PRECISION,INTENT(in) the variable for which standard deviation has to be computed
-!! \param average REAL,OPTIONAL,INTENT(out) the average of the variable can optionally be returned
+!! \param average REAL,OPTIONAL,INTENT(out) or DOUBLE PRECISION,OPTIONAL,INTENT(out) the average of the variable can optionally be returned
 !! \param mask(:) LOGICAL,OPTIONAL,INTENT(in) additional mask to be and'ed with missing values
+!! \param nomiss LOGICAL,OPTIONAL,INTENT(in) if provided and \a .TRUE. it disables all the checks for missing data and empty sample and enables the use of a fast algorithm
 INTERFACE stat_stddev
   MODULE PROCEDURE stat_stddevr, stat_stddevd
 END INTERFACE
@@ -75,13 +79,31 @@ END INTERFACE
 !! REAL or DOUBLE PRECISION FUNCTION stat_linear_corr()
 !! \param sample1(:) REAL,INTENT(in) or DOUBLE PRECISION,INTENT(in) the first variable
 !! \param sample2(:) REAL,INTENT(in) or DOUBLE PRECISION,INTENT(in) the second variable
-!! \param average1 REAL,OPTIONAL,INTENT(out) the average of the first variable can optionally be returned
-!! \param average2 REAL,OPTIONAL,INTENT(out) the average of the second variable can optionally be returned
-!! \param variance1 REAL,OPTIONAL,INTENT(out) the variance of the first variable can optionally be returned
-!! \param variance2 REAL,OPTIONAL,INTENT(out) the variance of the second variable can optionally be returned
+!! \param average1 REAL,OPTIONAL,INTENT(out) or DOUBLE PRECISION,OPTIONAL,INTENT(out) the average of the first variable can optionally be returned
+!! \param average2 REAL,OPTIONAL,INTENT(out) or DOUBLE PRECISION,OPTIONAL,INTENT(out) the average of the second variable can optionally be returned
+!! \param variance1 REAL,OPTIONAL,INTENT(out) or DOUBLE PRECISION,OPTIONAL,INTENT(out) the variance of the first variable can optionally be returned
+!! \param variance2 REAL,OPTIONAL,INTENT(out) or DOUBLE PRECISION,OPTIONAL,INTENT(out) the variance of the second variable can optionally be returned
 !! \param mask(:) LOGICAL,OPTIONAL,INTENT(in) additional mask to be and'ed with missing values
 INTERFACE stat_linear_corr
   MODULE PROCEDURE stat_linear_corrr, stat_linear_corrd
+END INTERFACE
+
+!> Compute the linear regression coefficients between the two random
+!! variables provided, taking into account missing data. Data are
+!! considered missing when at least one variable has a missing value.
+!! The regression is computed using the method of linear least
+!! squares. The input and output parameters are either \a REAL or \a
+!! DOUBLE \a PRECISION.
+!!
+!! SUBROUTINE stat_linear_regression()
+!! \param sample1(:) REAL,INTENT(in) or DOUBLE PRECISION,INTENT(in) the first variable
+!! \param sample2(:) REAL,INTENT(in) or DOUBLE PRECISION,INTENT(in) the second variable
+!! \param alpha0 REAL,INTENT(out) or DOUBLE PRECISION,INTENT(out) the 0-th order coefficient of the regression computed
+!! \param alpha1 REAL,INTENT(out) or DOUBLE PRECISION,INTENT(out) the first order coefficient of the regression computed
+!! \param mask(:) LOGICAL,OPTIONAL,INTENT(in) additional mask to be and'ed with missing values
+!! \param nomiss LOGICAL,OPTIONAL,INTENT(in) if provided and \a .TRUE. it disables all the checks for missing data and empty sample and enables the use of a fast algorithm
+INTERFACE stat_linear_regression
+  MODULE PROCEDURE stat_linear_regressionr, stat_linear_regressiond
 END INTERFACE
 
 !> Compute a set of percentiles for a random variable.
@@ -99,7 +121,8 @@ INTERFACE stat_percentile
 END INTERFACE
 
 PRIVATE
-PUBLIC stat_average, stat_variance, stat_stddev, stat_linear_corr, stat_percentile, NormalizedDensityIndex
+PUBLIC stat_average, stat_variance, stat_stddev, stat_linear_corr, &
+ stat_linear_regression, stat_percentile, NormalizedDensityIndex
 
 CONTAINS
 
@@ -114,15 +137,19 @@ REAL :: average
 INTEGER :: sample_count
 LOGICAL :: sample_mask(SIZE(sample))
 
-sample_mask = (sample /= rmiss)
-IF (PRESENT(mask)) sample_mask = sample_mask .AND. mask
-sample_count = COUNT(sample_mask)
-
-IF (sample_count > 0) THEN
-! compute average
-  average = SUM(sample, mask=sample_mask)/sample_count
+IF (optio_log(nomiss)) THEN
+  average = SUM(sample)/SIZE(sample)
 ELSE
-  average = rmiss
+  sample_mask = (sample /= rmiss)
+  IF (PRESENT(mask)) sample_mask = sample_mask .AND. mask
+  sample_count = COUNT(sample_mask)
+
+  IF (sample_count > 0) THEN
+! compute average
+    average = SUM(sample, mask=sample_mask)/sample_count
+  ELSE
+    average = rmiss
+  ENDIF
 ENDIF
 
 END FUNCTION stat_averager
@@ -138,15 +165,19 @@ DOUBLE PRECISION :: average
 INTEGER :: sample_count
 LOGICAL :: sample_mask(SIZE(sample))
 
-sample_mask = (sample /= dmiss)
-IF (PRESENT(mask)) sample_mask = sample_mask .AND. mask
-sample_count = COUNT(sample_mask)
-
-IF (sample_count > 0) THEN
-! compute average
-  average = SUM(sample, mask=sample_mask)/sample_count
+IF (optio_log(nomiss)) THEN
+  average = SUM(sample)/SIZE(sample)
 ELSE
-  average = dmiss
+  sample_mask = (sample /= dmiss)
+  IF (PRESENT(mask)) sample_mask = sample_mask .AND. mask
+  sample_count = COUNT(sample_mask)
+
+  IF (sample_count > 0) THEN
+! compute average
+    average = SUM(sample, mask=sample_mask)/sample_count
+  ELSE
+    average = dmiss
+  ENDIF
 ENDIF
 
 END FUNCTION stat_averaged
@@ -164,28 +195,36 @@ REAL :: laverage
 INTEGER :: sample_count, i
 LOGICAL :: sample_mask(SIZE(sample))
 
-sample_mask = (sample /= rmiss)
-IF (PRESENT(mask)) sample_mask = sample_mask .AND. mask
-sample_count = COUNT(sample_mask)
-
-IF (sample_count > 0) THEN
+IF (optio_log(nomiss)) THEN
 ! compute average
-  laverage = SUM(sample, mask=sample_mask)/sample_count
+  average = SUM(sample)/SIZE(sample)
   IF (PRESENT(average)) average = laverage
+  variance = SUM(sample**2)/SIZE(sample) - laverage**2
+
+ELSE
+  sample_mask = (sample /= rmiss)
+  IF (PRESENT(mask)) sample_mask = sample_mask .AND. mask
+  sample_count = COUNT(sample_mask)
+
+  IF (sample_count > 0) THEN
+! compute average
+    laverage = SUM(sample, mask=sample_mask)/sample_count
+    IF (PRESENT(average)) average = laverage
 ! compute sum of squares and variance
-  variance = 0.
-  DO i = 1, SIZE(sample)
-    IF (sample_mask(i)) variance = variance + sample(i)**2
-  ENDDO
-!  variance = SUM(sample**2, mask=sample_mask)/sample_count - laverage
-  variance = variance/sample_count - laverage**2
+    variance = 0.
+    DO i = 1, SIZE(sample)
+      IF (sample_mask(i)) variance = variance + sample(i)**2
+    ENDDO
+    variance = variance/sample_count - laverage**2
 !  IF (sample_count > 1) THEN ! do we need this correction?
 !    variance = variance*REAL(sample_count,kind=KIND(variance))/ &
 !     REAL(sample_count-1,kind=KIND(variance))
 !  ENDIF
-ELSE
-  IF (PRESENT(average)) average = rmiss
-  variance = rmiss
+  ELSE
+    IF (PRESENT(average)) average = rmiss
+    variance = rmiss
+  ENDIF
+
 ENDIF
 
 END FUNCTION stat_variancer
@@ -203,28 +242,36 @@ DOUBLE PRECISION :: laverage
 INTEGER :: sample_count, i
 LOGICAL :: sample_mask(SIZE(sample))
 
-sample_mask = (sample /= dmiss)
-IF (PRESENT(mask)) sample_mask = sample_mask .AND. mask
-sample_count = COUNT(sample_mask)
-
-IF (sample_count > 0) THEN
+IF (optio_log(nomiss)) THEN
 ! compute average
-  laverage = SUM(sample, mask=sample_mask)/sample_count
+  average = SUM(sample)/SIZE(sample)
   IF (PRESENT(average)) average = laverage
+  variance = SUM(sample**2)/SIZE(sample) - laverage**2
+
+ELSE
+  sample_mask = (sample /= dmiss)
+  IF (PRESENT(mask)) sample_mask = sample_mask .AND. mask
+  sample_count = COUNT(sample_mask)
+
+  IF (sample_count > 0) THEN
+! compute average
+    laverage = SUM(sample, mask=sample_mask)/sample_count
+    IF (PRESENT(average)) average = laverage
 ! compute sum of squares and variance
-  variance = 0.
-  DO i = 1, SIZE(sample)
-    IF (sample_mask(i)) variance = variance + sample(i)**2
-  ENDDO
-!  variance = SUM(sample**2, mask=sample_mask)/sample_count - laverage
-  variance = variance/sample_count - laverage**2
+    variance = 0.
+    DO i = 1, SIZE(sample)
+      IF (sample_mask(i)) variance = variance + sample(i)**2
+    ENDDO
+    variance = variance/sample_count - laverage**2
 !  IF (sample_count > 1) THEN ! do we need this correction?
 !    variance = variance*REAL(sample_count,kind=KIND(variance))/ &
 !     REAL(sample_count-1,kind=KIND(variance))
 !  ENDIF
-ELSE
-  IF (PRESENT(average)) average = dmiss
-  variance = dmiss
+  ELSE
+    IF (PRESENT(average)) average = dmiss
+    variance = dmiss
+  ENDIF
+
 ENDIF
 
 END FUNCTION stat_varianced
@@ -392,44 +439,115 @@ ENDIF
 END FUNCTION stat_linear_corrd
 
 
+SUBROUTINE stat_linear_regressionr(sample1, sample2, alpha0, alpha1, mask)
+REAL,INTENT(in) :: sample1(:)
+REAL,INTENT(in) :: sample2(:)
+REAL,INTENT(out) :: alpha0
+REAL,INTENT(out) :: alpha1
+LOGICAL,OPTIONAL,INTENT(in) :: mask(:)
+
+REAL :: laverage1, laverage2
+INTEGER :: sample_count
+LOGICAL :: sample_mask(SIZE(sample1))
+
+IF (SIZE(sample1) /= SIZE(sample2)) THEN
+  alpha0 = rmiss
+  alpha1 = rmiss
+  RETURN
+ENDIF
+
+sample_mask = (sample1 /= rmiss .AND. sample2 /= rmiss)
+IF (PRESENT(mask)) sample_mask = sample_mask .AND. mask
+sample_count = COUNT(sample_mask)
+
+IF (sample_count > 0) THEN
+  laverage1 = SUM(sample1, mask=sample_mask)/sample_count
+  laverage2 = SUM(sample2, mask=sample_mask)/sample_count
+  alpha1 = SUM((sample1-laverage1)*(sample2-laverage2), mask=sample_mask)/ &
+   SUM((sample1-laverage1)**2, mask=sample_mask)
+  alpha0 = laverage1 - alpha1*laverage2
+
+ELSE
+  alpha0 = rmiss
+  alpha1 = rmiss
+ENDIF
+
+END SUBROUTINE stat_linear_regressionr
+
+
+SUBROUTINE stat_linear_regressiond(sample1, sample2, alpha0, alpha1, mask)
+DOUBLE PRECISION,INTENT(in) :: sample1(:)
+DOUBLE PRECISION,INTENT(in) :: sample2(:)
+DOUBLE PRECISION,INTENT(out) :: alpha0
+DOUBLE PRECISION,INTENT(out) :: alpha1
+LOGICAL,OPTIONAL,INTENT(in) :: mask(:)
+
+DOUBLE PRECISION :: laverage1, laverage2
+INTEGER :: sample_count
+LOGICAL :: sample_mask(SIZE(sample1))
+
+IF (SIZE(sample1) /= SIZE(sample2)) THEN
+  alpha0 = dmiss
+  alpha1 = dmiss
+  RETURN
+ENDIF
+
+sample_mask = (sample1 /= dmiss .AND. sample2 /= dmiss)
+IF (PRESENT(mask)) sample_mask = sample_mask .AND. mask
+sample_count = COUNT(sample_mask)
+
+IF (sample_count > 0) THEN
+  laverage1 = SUM(sample1, mask=sample_mask)/sample_count
+  laverage2 = SUM(sample2, mask=sample_mask)/sample_count
+  alpha1 = SUM((sample1-laverage1)*(sample2-laverage2), mask=sample_mask)/ &
+   SUM((sample1-laverage1)**2, mask=sample_mask)
+  alpha0 = laverage1 - alpha1*laverage2
+
+ELSE
+  alpha0 = dmiss
+  alpha1 = dmiss
+ENDIF
+
+END SUBROUTINE stat_linear_regressiond
+
+
 FUNCTION stat_percentiler(sample, perc_vals, mask, nomiss) RESULT(percentile)
 REAL,INTENT(in) :: sample(:)
 REAL,INTENT(in) :: perc_vals(:)
 LOGICAL,OPTIONAL,INTENT(in) :: mask(:)
 LOGICAL,OPTIONAL,INTENT(in) :: nomiss
-
 REAL :: percentile(SIZE(perc_vals))
 
-REAL :: lsample(SIZE(sample)), v, rindex
-INTEGER :: sample_count, i, j, iindex
+REAL :: lsample(SIZE(sample)), rindex
+INTEGER :: sample_count, j, iindex
 LOGICAL :: sample_mask(SIZE(sample))
 
-percentile(:) = rmiss
-sample_mask = (sample /= rmiss)
-IF (PRESENT(mask)) sample_mask = sample_mask .AND. mask
-sample_count = COUNT(sample_mask)
-IF (sample_count == 0) RETURN ! particular case
 
-if (sample_count == size(sample)) then
-  lsample=sample
-else
+percentile(:) = rmiss
+IF (.NOT.optio_log(nomiss)) THEN
+  sample_mask = (sample /= rmiss)
+  IF (PRESENT(mask)) sample_mask = sample_mask .AND. mask
+  sample_count = COUNT(sample_mask)
+  IF (sample_count == 0) RETURN ! particular case
+ELSE
+  sample_count = SIZE(sample)
+ENDIF
+
+IF (sample_count == SIZE(sample)) THEN
+  lsample = sample
+ELSE
   lsample(1:sample_count) = PACK(sample, mask=sample_mask)
-end if
+ENDIF
 
 IF (sample_count == 1) THEN ! other particular case
   percentile(:) = lsample(1)
   RETURN
 ENDIF
 
-! here we have a problem
 ! this sort is very fast but with a lot of equal values it is very slow and fails
+CALL sort(lsample(1:sample_count))
 
-call sort(lsample(1:sample_count))
-
-
-! here we have a problem
 ! this sort is very very slow
-! sort
 !!$DO j = 2, sample_count
 !!$  v = lsample(j)
 !!$  DO i = j-1, 1, -1
@@ -438,7 +556,6 @@ call sort(lsample(1:sample_count))
 !!$  ENDDO
 !!$  lsample(i+1) = v
 !!$ENDDO
-
 
 DO j = 1, SIZE(perc_vals)
   IF (perc_vals(j) >= 0. .AND. perc_vals(j) <= 100.) THEN
@@ -455,51 +572,61 @@ ENDDO
 END FUNCTION stat_percentiler
 
 
-FUNCTION stat_percentiled(sample, perc_vals, mask, nomiss) RESULT(percentile) !, bin
+FUNCTION stat_percentiled(sample, perc_vals, mask, nomiss) RESULT(percentile)
 DOUBLE PRECISION, INTENT(in) :: sample(:)
 DOUBLE PRECISION, INTENT(in) :: perc_vals(:)
 LOGICAL, OPTIONAL, INTENT(in) :: mask(:)
 LOGICAL, OPTIONAL, INTENT(in) :: nomiss
-
 DOUBLE PRECISION :: percentile(SIZE(perc_vals))
 
-DOUBLE PRECISION :: lsample(SIZE(sample)), v, rindex
-INTEGER :: sample_count, i, j, iindex, oindex
+DOUBLE PRECISION :: lsample(SIZE(sample)), rindex
+INTEGER :: sample_count, j, iindex
 LOGICAL :: sample_mask(SIZE(sample))
 
+
 percentile(:) = dmiss
-sample_mask = (sample /= dmiss)
-IF (PRESENT(mask)) sample_mask = sample_mask .AND. mask
-sample_count = COUNT(sample_mask)
-IF (sample_count == 0) RETURN ! particular case
-lsample(1:sample_count) = PACK(sample, mask=sample_mask)
+IF (.NOT.optio_log(nomiss)) THEN
+  sample_mask = (sample /= dmiss)
+  IF (PRESENT(mask)) sample_mask = sample_mask .AND. mask
+  sample_count = COUNT(sample_mask)
+  IF (sample_count == 0) RETURN ! particular case
+ELSE
+  sample_count = SIZE(sample)
+ENDIF
+
+IF (sample_count == SIZE(sample)) THEN
+  lsample = sample
+ELSE
+  lsample(1:sample_count) = PACK(sample, mask=sample_mask)
+ENDIF
+
 IF (sample_count == 1) THEN ! other particular case
   percentile(:) = lsample(1)
   RETURN
 ENDIF
 
-! sort
-DO j = 2, sample_count
-  v = lsample(j)
-  DO i = j-1, 1, -1
-    IF (v >= lsample(i)) EXIT
-    lsample(i+1) = lsample(i)
-  ENDDO
-  lsample(i+1) = v
-ENDDO
+! this sort is very fast but with a lot of equal values it is very slow and fails
+CALL sort(lsample(1:sample_count))
+
+! this sort is very very slow
+!DO j = 2, sample_count
+!  v = lsample(j)
+!  DO i = j-1, 1, -1
+!    IF (v >= lsample(i)) EXIT
+!    lsample(i+1) = lsample(i)
+!  ENDDO
+!  lsample(i+1) = v
+!ENDDO
 
 DO j = 1, SIZE(perc_vals)
   IF (perc_vals(j) >= 0.D0 .AND. perc_vals(j) <= 100.D0) THEN
 ! compute real index of requested percentile in sample
-    rindex = REAL(sample_count-1, kind=KIND(rindex))*perc_vals(j)/100.+1.
+    rindex = REAL(sample_count-1, kind=KIND(rindex))*perc_vals(j)/100.D0+1.D0
 ! compute integer index of previous element in sample, beware of corner cases
     iindex = MIN(MAX(INT(rindex), 1), sample_count-1)
 ! compute linearly interpolated percentile
     percentile(j) = lsample(iindex)*(REAL(iindex+1, kind=KIND(rindex))-rindex) &
      + lsample(iindex+1)*(rindex-REAL(iindex, kind=KIND(rindex)))
-    oindex = iindex
-  ELSE
-    percentile(j) = dmiss
   ENDIF
 ENDDO
 
@@ -907,8 +1034,8 @@ integer,intent(out)             :: occu(:)
 REAL, DIMENSION(:), INTENT(IN)  :: rnum  !< data to analize
 real,intent(in)                 :: limbins(:)
 
-real :: delta,nnum(size(rnum))
-integer :: i,k,w,sample_count
+real :: nnum(size(rnum))
+integer :: i,k,sample_count
 logical :: sample_mask(size(rnum))
 
 di=rmiss

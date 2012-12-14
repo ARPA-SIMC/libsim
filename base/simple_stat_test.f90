@@ -68,6 +68,16 @@ PRINT*,'correlation: ',val1
 PRINT*,'averages and variances: ', opt1, opt2, opt3, opt4
 IF (ABS(val1+1.) > epsy) CALL EXIT(1)
 
+PRINT*,'Checking linear regression'
+CALL stat_linear_regression(s1, s2, val1, val2)
+PRINT*,'regression coefficients: ',val1,val2
+IF (ABS(val1-15.) > epsy .OR. ABS(val2+1.) > epsy) CALL EXIT(1)
+
+PRINT*,'Checking linear regression with missing data'
+CALL stat_linear_regression(s3, s4, val1, val2)
+PRINT*,'regression coefficients: ',val1,val2
+IF (ABS(val1-15.) > epsy .OR. ABS(val2+1.) > epsy) CALL EXIT(1)
+
 PRINT*,'Checking percentiles'
 valv = stat_percentile(s2, (/0.,25.,50.,75.,100./))
 PRINT*,'percentiles: ',valv
