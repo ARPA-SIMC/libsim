@@ -190,9 +190,9 @@ end if
  ! call init(this%var)          
 
 if(present(time_definition)) then
-  this%time_definition=time_definition
+  this%time_definition = time_definition
 else
-    this%time_definition=0  !default to reference time
+  this%time_definition = 0 !default to reference time
 end if
 
 nullify (this%time,this%timerange,this%level,this%var)
@@ -804,9 +804,10 @@ type(gridinfo_def),intent(in) :: gridinfo !< gridinfo object to be imported
 LOGICAL,INTENT(in),OPTIONAL :: force !< if provided and \c .TRUE., the gridinfo is forced into an empty element of \a this, if required and possible
 LOGICAL , INTENT(in),OPTIONAL :: clone !< if provided and \c .TRUE. , clone the gaid's from \a gridinfo to \a this
 
-character(len=255)   :: type
-integer :: ilevel,itime,itimerange,ivar
-logical :: lforce
+CHARACTER(len=255) :: type
+INTEGER :: ilevel, itime, itimerange, ivar
+LOGICAL :: lforce
+TYPE(datetime) :: correctedtime
 
 if (present(force)) then
   lforce = force
@@ -850,10 +851,13 @@ IF (ilevel == 0) THEN
   RETURN
 ENDIF
 
-itime = index(this%time, gridinfo%time)
+correctedtime = gridinfo%time
+IF (this%time_definition == 1) correctedtime = correctedtime + &
+ timedelta_new(msec=gridinfo%timerange%p1*1000)
+itime = index(this%time, correctedtime)
 IF (itime == 0 .AND. lforce) THEN
   itime = index(this%time, datetime_miss)
-  IF (itime /= 0) this%time(itime) = gridinfo%time
+  IF (itime /= 0) this%time(itime) = correctedtime
 ENDIF
 IF (itime == 0) THEN
   CALL l4f_category_log(this%category,L4F_ERROR, &
@@ -940,6 +944,7 @@ LOGICAL,INTENT(in),OPTIONAL :: clone !< if provided and \c .TRUE., clone the gri
 TYPE(grid_id) :: gaid
 LOGICAL :: usetemplate
 REAL,POINTER :: voldati(:,:)
+TYPE(datetime) :: correctedtime
 
 #ifdef DEBUG
 call l4f_category_log(this%category,L4F_DEBUG,"export_to_gridinfo")
@@ -976,9 +981,16 @@ if (.not.c_e(gaid)) then
   end if
 end if
 
+IF (this%time_definition == 1) THEN
+  correctedtime = this%time(itime) - &
+   timedelta_new(msec=this%timerange(itimerange)%p1*1000)
+ELSE
+  correctedtime = this%time(itime)
+ENDIF
+
 call init(gridinfo,gaid,&
  this%griddim,&
- this%time(itime),&
+ correctedtime,&
  this%timerange(itimerange),&
  this%level(ilevel),&
  this%var(ivar))
@@ -1018,9 +1030,10 @@ INTEGER,INTENT(IN),OPTIONAL :: time_definition !< 0=time is reference time; 1=ti
 character(len=*),INTENT(in),OPTIONAL :: categoryappend !< append this suffix to log4fortran namespace category
 
 INTEGER :: i, stallo
-integer :: ngrid,ntime,ntimerange,nlevel,nvar
-integer :: category
-character(len=512) :: a_name
+INTEGER :: ngrid, ntime, ntimerange, nlevel, nvar
+INTEGER :: category
+CHARACTER(len=512) :: a_name
+TYPE(datetime),ALLOCATABLE :: correctedtime(:)
 
 ! category temporanea (altrimenti non possiamo loggare)
 if (present(categoryappend))then
@@ -1054,9 +1067,21 @@ ENDDO
 this(:)%griddim=pack_distinct(gridinfov%array(1:gridinfov%arraysize)%griddim, &
  ngrid, back=.TRUE.)
 
+! create time corrected for time_definition
+ALLOCATE(correctedtime(gridinfov%arraysize))
+correctedtime(:) = gridinfov%array(1:gridinfov%arraysize)%time
+IF (PRESENT(time_definition)) THEN
+  IF (time_definition == 1) THEN
+    DO i = 1, gridinfov%arraysize
+      correctedtime(i) = correctedtime(i) + &
+       timedelta_new(msec=gridinfov%array(i)%timerange%p1*1000)
+    ENDDO
+  ENDIF
+ENDIF
 
 DO i = 1, ngrid
-  ntime = count_distinct(gridinfov%array(1:gridinfov%arraysize)%time, &
+! ntime = count_distinct(gridinfov%array(1:gridinfov%arraysize)%time, &
+  ntime = count_distinct(correctedtime, &
    mask=(this(i)%griddim == gridinfov%array(1:gridinfov%arraysize)%griddim),&
    back=.TRUE.)
   ntimerange = count_distinct(gridinfov%array(1:gridinfov%arraysize)%timerange, &
@@ -1076,7 +1101,8 @@ DO i = 1, ngrid
   CALL volgrid6d_alloc(this(i),this(i)%griddim%dim,ntime=ntime, &
    ntimerange=ntimerange,nlevel=nlevel,nvar=nvar)
 
-  this(i)%time=pack_distinct(gridinfov%array(1:gridinfov%arraysize)%time, ntime, &
+! this(i)%time=pack_distinct(gridinfov%array(1:gridinfov%arraysize)%time, ntime, &
+  this(i)%time=pack_distinct(correctedtime, ntime, &
    mask=(this(i)%griddim == gridinfov%array(1:gridinfov%arraysize)%griddim), &
    back=.TRUE.)
   CALL sort(this(i)%time)
@@ -1102,6 +1128,7 @@ DO i = 1, ngrid
 
 ENDDO
 
+DEALLOCATE(correctedtime)
 
 DO i = 1, gridinfov%arraysize
 
