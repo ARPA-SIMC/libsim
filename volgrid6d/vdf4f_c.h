@@ -24,6 +24,7 @@ extern "C" {
   int vdf4f_set_grid_extents_c(double extents[6]);
   //int vdf4f_set_grid_permutation_c(long permutation[3]);
   int create_metadata_c(size_t xyzdim[3]);
+  int create_writer_c(char filename[]);
   int destroy_metadata_c();
   int destroy_writer_c();
   int set_num_timesteps_c(size_t ntime );
@@ -32,14 +33,12 @@ extern "C" {
   int write_metadata_c(char filename[]);
   int vdf4f_write_c(float *volume,
 		  size_t xyzdim[3], size_t ntime , size_t nvar , 
-		  char varnames[], size_t len ,
-		  char filename[], int rzscan);
+		    char varnames[], size_t len, int rzscan);
   int vdf4f_write_2d_xy_c(float *volume,
-		  size_t xyzdim[2], size_t ntime , size_t nvar , 
-		  char varnames[], size_t len ,
-		  char filename[] );
+		  size_t xydim[2], size_t ntime , size_t nvar , 
+			  char varnames[], size_t len );
   int set_missing_value_c(double missingv );
-  int get_missing_value_c(double missingv);
+  int get_missing_value_c(double* missingv);
   int get_err_msg_c(char *errmsg, size_t *len );
 
 
@@ -48,8 +47,3 @@ extern "C" {
 #endif
 
 #endif
-
-
-
-
-

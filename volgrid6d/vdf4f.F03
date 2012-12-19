@@ -34,6 +34,11 @@ Interface
   Integer(C_SIZE_T), Intent(IN) :: xyzdim(3)
   End Function create_metadata_c
 
+  Integer(C_INT) Function create_writer_c(filename) BIND(C)
+  import
+  Character(C_CHAR), Intent(IN) :: filename
+  End Function create_writer_c
+
   Integer(C_INT) Function set_num_timesteps_c(ntime ) BIND(C)
   import
   Integer(C_SIZE_T), Intent(IN), VALUE :: ntime
@@ -92,7 +97,7 @@ Interface
   Character(C_CHAR), Intent(IN) :: filename
   end function write_metadata_c
 
-  Function vdf4f_write_c(volume, xyzdim, ntime,nvar,varnames,len, filename, rzscan) BIND(C)
+  Integer(C_INT) Function vdf4f_write_c(volume, xyzdim, ntime,nvar,varnames,len, rzscan) BIND(C)
   import
   Integer(C_SIZE_T), Intent(IN) :: xyzdim(3)
   Integer(C_SIZE_T), Intent(IN), VALUE :: ntime
@@ -100,9 +105,7 @@ Interface
   Real(C_FLOAT),  Intent(IN) :: volume(xyzdim(1),xyzdim(2),xyzdim(3),ntime,nvar)
   Character(C_CHAR), Intent(IN) :: varnames(nvar)
   Integer(C_SIZE_T), Intent(IN), VALUE :: len
-  Character(C_CHAR), Intent(IN) :: filename
   Integer(C_INT),     Intent(IN), VALUE :: rzscan
-  Integer(C_INT) :: vdf4f_write_c
   End Function vdf4f_write_c
 
   Integer(C_INT) function destroy_metadata_c() BIND(C)
@@ -121,7 +124,7 @@ Interface
 
   Integer(C_INT) function set_missing_value_c(missingv ) BIND(C)
   import
-  Real(C_DOUBLE),  Intent(IN) :: missingv 
+  Real(C_DOUBLE), VALUE :: missingv 
   end function set_missing_value_c
 
   Integer(C_INT) function get_missing_value_c(missingv ) BIND(C)
@@ -129,14 +132,31 @@ Interface
   Real(C_DOUBLE),  Intent(OUT) :: missingv 
   end function get_missing_value_c
 
+  Integer(C_INT) Function set_variables_2d_xy_c(nvar, varnames, len ) BIND(C)
+  import
+  Integer(C_SIZE_T), Intent(IN), VALUE :: nvar
+  Character(C_CHAR), Intent(IN) :: varnames(nvar)
+  Integer(C_SIZE_T), Intent(IN), VALUE :: len
+  end Function set_variables_2d_xy_c
+
+
+  Integer(C_INT) Function vdf4f_write_2d_xy_c(volume, xydim, ntime,nvar,varnames,len) BIND(C)
+  import
+  Integer(C_SIZE_T), Intent(IN) :: xydim(2)
+  Integer(C_SIZE_T), Intent(IN), VALUE :: ntime
+  Integer(C_SIZE_T), Intent(IN), VALUE :: nvar
+  Real(C_FLOAT),  Intent(IN) :: volume(xydim(1),xydim(2),ntime,nvar)
+  Character(C_CHAR), Intent(IN) :: varnames(nvar)
+  Integer(C_SIZE_T), Intent(IN), VALUE :: len
+  End Function vdf4f_write_2d_xy_c
+
 End Interface
 
-public vdf4f_write, vdf4f_create_metadata, vdf4f_set_num_timesteps, vdf4f_set_variables_names, &
+public vdf4f_write, vdf4f_create_metadata, vdf4f_create_writer, vdf4f_set_num_timesteps, vdf4f_set_variables_names, &
  vdf4f_set_comment, vdf4f_set_ts_comment, vdf4f_set_v_comment, vdf4f_set_grid_extents, &
  vdf4f_set_coord_system_type, vdf4f_set_grid_type, &
  vdf4f_set_map_projection, vdf4f_write_metadata, destroy_metadata_c, destroy_writer_c, vdf4f_get_err_msg, &
- vdf4f_set_missing_value,  vdf4f_get_missing_value
-
+ vdf4f_set_missing_value,  vdf4f_get_missing_value, vdf4f_set_variables_2d_xy, vdf4f_write_2d_xy
 
 !> interface to different architectures (cast some type)
 
@@ -185,50 +205,63 @@ interface vdf4f_set_v_comment
   module procedure vdf4f_set_v_comment_i386
 end interface
 
+interface vdf4f_set_variables_2d_xy
+#if SIZEOF_SIZE_T == 8
+  module procedure set_variables_2d_xy_amd64
+#endif
+  module procedure set_variables_2d_xy_i386
+end interface
+
+
+interface vdf4f_write_2d_xy
+#if SIZEOF_SIZE_T == 8
+  module procedure vdf4f_write_2d_xy_amd64
+#endif
+  module procedure vdf4f_write_2d_xy_i386
+end interface vdf4f_write_2d_xy
+
+
 contains
 
-integer function vdf4f_write_i386(volume, xyzdim, ntime,nvar,varnames, filename, rzscan)
+integer function vdf4f_write_i386(volume, xyzdim, ntime,nvar,varnames, rzscan)
 
 Real,intent(in)     :: volume(:,:,:,:,:)
 Integer(C_SIZE_T),intent(in)  :: xyzdim(3)
 integer(C_SIZE_T),intent(in) ::  nvar, ntime
 Character(len=*),intent(in)    :: varnames(nvar)
-Character(len=*),intent(in)    :: filename
 Integer, intent(in) ::  rzscan
 
 
-!nteger(C_SIZE_T)  :: nvar_c
-!nteger(C_SIZE_T)  :: xyzdim_c(3)
-!nteger(C_SIZE_T)  :: ntime_c
+!integer(C_SIZE_T)  :: nvar_c
+!integer(C_SIZE_T)  :: xyzdim_c(3)
+!integer(C_SIZE_T)  :: ntime_c
 integer(C_SIZE_T)  :: len_c
 Character(len=LEN(varnames)+1)    :: varnames_c(nvar)
 integer(C_SIZE_T) :: i
 
-!var_c=nvar
-!time_c=ntime
-!yzdim_c=xyzdim
+!nvar_c=nvar
+!ntime_c=ntime
+!xyzdim_c=xyzdim
 
 len_c=LEN(varnames)+1
 do i=1, nvar
   varnames_c(i)=trim(varnames(i))//char(0)    ! future : C_NULL_CHAR
 end do
 
-vdf4f_write_i386 = vdf4f_write_c(volume, xyzdim, ntime, nvar, varnames_c, len_c, &
- trim(filename)//char(0),rzscan)     ! future : C_NULL_CHAR
+vdf4f_write_i386 = vdf4f_write_c(volume, xyzdim, ntime, nvar, varnames_c, len_c, rzscan)
 
 return 
 
 end function vdf4f_write_i386
 
 
-integer function vdf4f_write_amd64(volume, xyzdim, ntime,nvar,varnames, filename,rzscan)
+integer function vdf4f_write_amd64(volume, xyzdim, ntime,nvar,varnames,rzscan)
 
 
 Real,intent(in)     :: volume(:,:,:,:,:)
 Integer,intent(in)  :: xyzdim(3)
 Integer,intent(in)  :: nvar,ntime
 Character(len=*),intent(in)    :: varnames(nvar)
-Character(len=*),intent(in)    :: filename
 integer, intent(in) ::  rzscan
 
 
@@ -249,8 +282,7 @@ do i=1, nvar
   varnames_c(i)=trim(varnames(i))//char(0)     ! future : C_NULL_CHAR
 end do
 
-vdf4f_write_amd64 = vdf4f_write_c(volume, xyzdim_c, ntime_c, nvar_c, varnames_c, len_c, &
- trim(filename)//char(0), rzscan)     ! future : C_NULL_CHAR
+vdf4f_write_amd64 = vdf4f_write_c(volume, xyzdim_c, ntime_c, nvar_c, varnames_c, len_c, rzscan)
 
 return 
 
@@ -265,12 +297,16 @@ End Function create_metadata_i386
 
 Integer Function create_metadata_amd64(xyzdim)
 Integer,intent(in)  :: xyzdim(3)
-
 Integer(C_SIZE_T)  :: xyzdim_c(3)
 xyzdim_c=xyzdim
 create_metadata_amd64 = create_metadata_c(xyzdim_c)
 End Function create_metadata_amd64
 
+
+Integer  function vdf4f_create_writer(filename)
+Character(len=*), Intent(IN) :: filename
+vdf4f_create_writer = create_writer_c(trim(filename)//char(0))    ! future : C_NULL_CHAR
+end function vdf4f_create_writer
 
 Integer Function set_num_timesteps_i386(ntime )
 Integer(C_SIZE_T), Intent(IN), VALUE :: ntime
@@ -413,7 +449,107 @@ end function vdf4f_set_missing_value
 
 Integer function vdf4f_get_missing_value(missingv)
 doubleprecision,  Intent(OUT) :: missingv 
-vdf4f_get_missing_value = set_missing_value_c(missingv)
+vdf4f_get_missing_value = get_missing_value_c(missingv)
 end function vdf4f_get_missing_value
+
+
+Integer Function set_variables_2d_xy_i386(nvar, varnames)
+Integer(C_SIZE_T), Intent(IN), VALUE :: nvar
+Character(len=*), Intent(IN) :: varnames(nvar)
+
+integer(C_SIZE_T)  :: len_c
+Character(len=LEN(varnames)+1)    :: varnames_c(nvar)
+integer(C_SIZE_T) :: i
+
+len_c=LEN(varnames)+1
+do i=1, nvar
+  varnames_c(i)=trim(varnames(i))//char(0)     ! future : C_NULL_CHAR
+end do
+
+set_variables_2d_xy_i386 = set_variables_2d_xy_c(nvar, varnames_c, len_c)
+
+end Function set_variables_2d_xy_i386
+
+Integer Function set_variables_2d_xy_amd64(nvar, varnames)
+Integer :: nvar
+Integer(C_SIZE_T) :: nvar_c
+Character(len=*), Intent(IN) :: varnames(nvar)
+
+integer(C_SIZE_T)  :: len_c
+Character(len=LEN(varnames)+1)    :: varnames_c(nvar)
+integer :: i
+
+len_c=LEN(varnames)+1
+do i=1, nvar
+  varnames_c(i)=trim(varnames(i))//char(0)    ! future : C_NULL_CHAR
+end do
+
+nvar_c=nvar
+
+set_variables_2d_xy_amd64 = set_variables_2d_xy_c(nvar_c, varnames_c, len_c)
+
+end Function set_variables_2d_xy_amd64
+
+
+
+integer function vdf4f_write_2d_xy_i386(volume, xydim, ntime,nvar,varnames)
+
+Real,intent(in)     :: volume(:,:,:,:)
+Integer(C_SIZE_T),intent(in)  :: xydim(2)
+integer(C_SIZE_T),intent(in) ::  nvar, ntime
+Character(len=*),intent(in)    :: varnames(nvar)
+
+!integer(C_SIZE_T)  :: nvar_c
+!integer(C_SIZE_T)  :: xydim_c(2)
+!integer(C_SIZE_T)  :: ntime_c
+integer(C_SIZE_T)  :: len_c
+Character(len=LEN(varnames)+1)    :: varnames_c(nvar)
+integer(C_SIZE_T) :: i
+
+!nvar_c=nvar
+!ntime_c=ntime
+!xydim_c=xydim
+
+len_c=LEN(varnames)+1
+do i=1, nvar
+  varnames_c(i)=trim(varnames(i))//char(0)    ! future : C_NULL_CHAR
+end do
+
+vdf4f_write_2d_xy_i386 = vdf4f_write_2d_xy_c(volume, xydim, ntime, nvar, varnames_c, len_c)
+
+return 
+
+end function vdf4f_write_2d_xy_i386
+
+
+integer function vdf4f_write_2d_xy_amd64(volume, xydim, ntime,nvar,varnames)
+
+Real,intent(in)     :: volume(:,:,:,:)
+Integer,intent(in)  :: xydim(2)
+Integer,intent(in)  :: nvar,ntime
+Character(len=*),intent(in)    :: varnames(nvar)
+
+Integer(C_SIZE_T)  :: nvar_c
+Integer(C_SIZE_T)  :: xydim_c(2)
+Integer(C_SIZE_T)  :: ntime_c
+Integer(C_SIZE_T)  :: len_c
+Character(len=LEN(varnames)+1) :: varnames_c(nvar)
+integer :: i
+
+nvar_c=nvar
+ntime_c=ntime
+xydim_c=xydim
+
+len_c=LEN(varnames)+1
+do i=1, nvar
+  varnames_c(i)=trim(varnames(i))//char(0)     ! future : C_NULL_CHAR
+end do
+
+vdf4f_write_2d_xy_amd64 = vdf4f_write_2d_xy_c(volume, xydim_c, ntime_c, nvar_c, varnames_c, len_c)
+
+return 
+
+end function vdf4f_write_2d_xy_amd64
+
 
 end module vdf4f

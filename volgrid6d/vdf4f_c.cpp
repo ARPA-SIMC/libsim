@@ -21,17 +21,19 @@
 #include "vdf4f_c.h"
 #include <vapor/Metadata.h>
 #include <vapor/WaveletBlock3DBufWriter.h>
+#include <vapor/WaveletBlock3DRegionWriter.h>
 #include <stdlib.h>
 #include <string.h>
 #include <vector>
 
 static VAPoR::MetadataVDC *__md = NULL;
 static VAPoR::WaveletBlock3DBufWriter *__wr = NULL;
+static VAPoR::WaveletBlock3DRegionWriter *__wr2d = NULL;
 
 int set_variable_names(char *names, size_t len, size_t n)
 {
 	std::vector<std::string> v;
-	size_t i;
+	int i;
 	char *p;
 
 	p=names;
@@ -50,7 +52,7 @@ int set_variable_names(char *names, size_t len, size_t n)
 int set_variables_2d_xy(char *names, size_t len, size_t n)
 {
 	std::vector<std::string> v;
-	size_t i;
+	int i;
 	char *p;
 
 	p=names;
@@ -79,13 +81,13 @@ int set_missing_value_c(double missingv )
 }
 
 
-int get_missing_value_c(double missingv)
+int get_missing_value_c(double* missingv)
 {
 	
   /* get missing value */
 
- if (__md->GetMissingValue().size() == 1) {
-   missingv= __md->GetMissingValue()[0] ;
+ if (__wr->GetMissingValue().size() == 1) {
+   *missingv= __wr->GetMissingValue()[0] ;
   return 0;
   }
   return -1;
@@ -98,7 +100,7 @@ int get_missing_value_c(double missingv)
 int vdf4f_set_comment_c(char *comment)
 {
 
-	size_t i;
+	int i;
 
 	if ((i = __md->SetComment(comment)) < 0) {
 	  return -1;
@@ -110,7 +112,7 @@ int vdf4f_set_comment_c(char *comment)
 int vdf4f_set_ts_comment_c( size_t ts, char *comment)
 {
 
-	size_t i;
+	int i;
 
 	if ((i = __md->SetTSComment(ts,comment)) < 0) {
 	  return -1;
@@ -121,7 +123,7 @@ int vdf4f_set_ts_comment_c( size_t ts, char *comment)
 int vdf4f_set_v_comment_c( size_t ts, char *var, char *comment)
 {
 
-	size_t i;
+	int i;
 
 	if ((i = __md->SetVComment(ts,var,comment)) < 0) {
 	  return -1;
@@ -133,7 +135,7 @@ int vdf4f_set_v_comment_c( size_t ts, char *var, char *comment)
 int vdf4f_set_coord_system_type_c(char *coordsystemtype)
 {
 
-	size_t i;
+	int i;
 
 	if ((i = __md->SetCoordSystemType(coordsystemtype)) < 0) {
 	  return -1;
@@ -145,7 +147,7 @@ int vdf4f_set_coord_system_type_c(char *coordsystemtype)
 int vdf4f_set_grid_type_c(char *gridtype)
 {
 
-	size_t i;
+	int i;
 
 	if ((i = __md->SetGridType(gridtype)) < 0) {
 	  return -1;
@@ -157,7 +159,7 @@ int vdf4f_set_grid_type_c(char *gridtype)
 int vdf4f_set_map_projection_c(char *mapprojection)
 {
 
-	size_t i;
+	int i;
 
 	if ((i = __md->SetMapProjection(mapprojection)) < 0) {
 	  return -1;
@@ -169,7 +171,7 @@ int vdf4f_set_map_projection_c(char *mapprojection)
 int vdf4f_set_grid_extents_c(double extents[6])
 {
 
-	size_t i;
+	int i;
 	std::vector<double> v;
 
 	for (i = 0; i < 6; i++) {
@@ -234,10 +236,35 @@ int destroy_metadata_c()
 	return 0;
 }
 
+
+int create_writer_c(char filename[])
+{
+
+/* create writer starting from metadata already done */
+  __wr = new VAPoR::WaveletBlock3DBufWriter(filename);
+  if ((VAPoR::MetadataVDC::GetErrCode())) {
+    __wr = NULL;
+    return -1;
+  }
+
+  __wr2d = new VAPoR::WaveletBlock3DRegionWriter(filename);
+  if ((VAPoR::MetadataVDC::GetErrCode())) {
+    __wr = NULL;
+    return -1;
+  }
+
+  return 0;
+}
+
+
 int destroy_writer_c()
 {
 	delete __wr;
         __wr = NULL;
+
+	delete __wr2d;
+        __wr2d = NULL;
+
 	return 0;
 }
 
@@ -296,20 +323,13 @@ int write_metadata_c(char filename[])
 
 int vdf4f_write_c(float *volume,
 		  size_t xyzdim[3], size_t ntime , size_t nvar , 
-		  char varnames[], size_t len ,
-		  char filename[], int rzscan)
+		  char varnames[], size_t len, int rzscan)
 {
   float *slice, *reverseslice, *myslice ;
   size_t i, j, k, xydim ;
   
   xydim = xyzdim[0] * xyzdim[1] ;
 
-  /* create writer starting from metadata already done */
-  __wr = new VAPoR::WaveletBlock3DBufWriter(filename);
-  if ((VAPoR::MetadataVDC::GetErrCode())) {
-    return -1;
-  }
-  
   slice = volume ;
   
   /* each variable */
@@ -356,21 +376,14 @@ int vdf4f_write_c(float *volume,
 
 
 int vdf4f_write_2d_xy_c(float *volume,
-		  size_t xyzdim[2], size_t ntime , size_t nvar , 
-		  char varnames[], size_t len ,
-		  char filename[] )
+		  size_t xydim[2], size_t ntime , size_t nvar , 
+		  char varnames[], size_t len )
 {
-  float *slice, *reverseslice, *myslice ;
-  size_t i, j, k, xydim ;
+  float *slice ;
+  size_t i, j, k, xydimtot ;
   
-  xydim = xyzdim[0] * xyzdim[1] ;
+  xydimtot = xydim[0] * xydim[1] ;
 
-  /* create writer starting from metadata already done */
-  __wr = new VAPoR::WaveletBlock3DBufWriter(filename);
-  if ((VAPoR::MetadataVDC::GetErrCode())) {
-    return -1;
-  }
-  
   slice = volume ;
   
   /* each variable */
@@ -380,23 +393,24 @@ int vdf4f_write_2d_xy_c(float *volume,
       /* prepare writer to write 
        * i variable at j timestep */
       	    
-      if ((__wr->OpenVariableWrite(j, varnames+(i*len), -1)) < 0) {
+      if ((__wr2d->OpenVariableWrite(j, varnames+(i*len), -1)) < 0) {
+	printf ("OpenVariableWrite error\n");
 	return -1;
       }
       
+      //printf ("%s\n",varnames+(i*len));
+
       /* slice for i variable
        * at j timestep */
-      for (k = 0 ; k < xyzdim[2] ; k++) {
-
-	if (( __wr->WriteRegion(slice)) < 0) {
-	  return -1;
-	}
-	
-	slice += xydim ;
-	
+      if (( __wr2d->WriteRegion(slice)) < 0) {
+	printf("WriteRegion error\n");
+	return -1;
       }
+	
+      slice += xydimtot ;
+	
       /* close */
-      __wr->CloseVariable();
+      __wr2d->CloseVariable();
     }
   }
 

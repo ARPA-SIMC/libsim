@@ -303,8 +303,8 @@ if (c_e(ntime) .and. c_e(ntimerange) .and. c_e(nlevel) .and. c_e(nvar)) then
       call fill_underground_missing_values(this%voldati(:,:,:,:,1,:))
 
       call l4f_category_log(this%category,L4F_INFO,"scan VDF (vapor file) for times")
-      if(ier==0) ier = vdf4f_write(this%voldati(:,:,:,:,1,:), xyzdim, ntime, nvar, varnames, lfilename, &
-       irzscan)  
+      if(ier==0) ier = vdf4f_create_writer(lfilename)
+      if(ier==0) ier = vdf4f_write(this%voldati(:,:,:,:,1,:), xyzdim, ntime, nvar, varnames, irzscan)  
 
     else
 
@@ -315,8 +315,8 @@ if (c_e(ntime) .and. c_e(ntimerange) .and. c_e(nlevel) .and. c_e(nvar)) then
       call fill_underground_missing_values(this%voldati(:,:,:,1,:,:))
 
       call l4f_category_log(this%category,L4F_INFO,"scan VDF (vapor file) for timeranges")
-      if(ier==0) ier = vdf4f_write(this%voldati(:,:,:,1,:,:), xyzdim, ntimerange, nvar, varnames, lfilename, &
-       irzscan)  
+      if(ier==0) ier = vdf4f_create_writer(lfilename)
+      if(ier==0) ier = vdf4f_write(this%voldati(:,:,:,1,:,:), xyzdim, ntimerange, nvar, varnames, irzscan)  
 
     end if
 
