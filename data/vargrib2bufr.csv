@@ -172,7 +172,11 @@ B14197,Net short-wave radiation flux (surface),W/m^2,200,200,110,255,1.0,0.0
 B14197,Net short-wave radiation flux (surface),W/m^2,255,2,111,255,1.0,0.0
 B14197,Net short-wave radiation flux (surface),W/m^2,255,4,9,0,1.0,0.0
 B14198,Downward short-wave radiation flux (surface),W/m^2,255,4,7,0,1.0,0.0
+B14198,Downward short-wave radiation flux (surface),W/m^2,200,200,115,0,1.0,0.0
+B14198,Downward short-wave radiation flux (surface),W/m^2,200,200,115,255,1.0,0.0
 B14199,Upward short-wave radiation flux (surface),W/m^2,255,4,8,0,1.0,0.0
+B14199,Upward short-wave radiation flux (surface),W/m^2,200,200,116,0,1.0,0.0
+B14199,Upward short-wave radiation flux (surface),W/m^2,200,200,116,255,1.0,0.0
 B14200,Downward long-wave radiation flux (surface),W/m^2,255,5,3,0,1.0,0.0
 B14201,Upward long-wave radiation flux (surface),W/m^2,255,5,4,0,1.0,0.0
 B15192,NO concentration (invented),ppb,200,200,152,0,0.00000000125,0.0
