@@ -857,13 +857,13 @@ end function base_value
 !!contenente i percentili suddivisi per area, altezza sul livello
 !!del mare, per mese dell'anno viene selezionato il percentile e sulla base di questo 
 !!vengono assegnate le opportune confidenze.
-SUBROUTINE quaconcli (qccli,battrinv,tbattrout,&
+SUBROUTINE quaconcli (qccli,battrinv,battrout,&
  anamask,timemask,levelmask,timerangemask,varmask,networkmask)
 
 
 type(qcclitype),intent(in out) :: qccli !< Oggetto per il controllo di qualità
 character (len=10) ,intent(in),optional :: battrinv !< attributo invalidated in input/output
-character (len=10) ,intent(in),optional :: tbattrout !< attributo con la confidenza climatologica in output
+character (len=10) ,intent(in),optional :: battrout !< attributo con la confidenza climatologica in output
 logical ,intent(in),optional :: anamask(:) !< Filtro sulle anagrafiche
 logical ,intent(in),optional :: timemask(:) !< Filtro sul tempo
 logical ,intent(in),optional :: levelmask(:) !< Filtro sui livelli
@@ -875,7 +875,7 @@ CHARACTER(len=vol7d_ana_lenident) :: ident
 REAL(kind=fp_geo) :: latc,lonc
 integer :: mese, ora
                                 !local
-integer :: indbattrinv,indtbattrout
+integer :: indbattrinv,indbattrout
 logical :: anamaskl(size(qccli%v7d%ana)), timemaskl(size(qccli%v7d%time)), levelmaskl(size(qccli%v7d%level)), &
  timerangemaskl(size(qccli%v7d%timerange)), varmaskl(size(qccli%v7d%dativar%r)), networkmaskl(size(qccli%v7d%network)) 
 
@@ -906,16 +906,24 @@ if (associated(qccli%v7d%datiattr%b))then
   end if
 end if
 
-if (present(tbattrout))then
-  indtbattrout = index_c(qccli%v7d%datiattr%b(:)%btable, tbattrout)
-else
-  indtbattrout =  index_c(qccli%v7d%datiattr%b(:)%btable, '*B33192')
+if ( indbattrinv <= 0 ) then
+
+  call l4f_category_log(qccli%category,L4F_ERROR,"error finding attribute index in/out *B33196")
+  call raise_error("error finding attribute index in/out *B33196")
+
 end if
 
-if ( indtbattrout <= 0 ) then
 
-  call l4f_category_log(qccli%category,L4F_ERROR,"error finding attribute index in/out")
-  call raise_error("error finding attribute index in/out")
+if (present(battrout))then
+  indbattrout = index_c(qccli%v7d%datiattr%b(:)%btable, battrout)
+else
+  indbattrout =  index_c(qccli%v7d%datiattr%b(:)%btable, '*B33192')
+end if
+
+if ( indbattrout <= 0 ) then
+
+  call l4f_category_log(qccli%category,L4F_ERROR,"error finding attribute index in/out *B33192")
+  call raise_error("error finding attribute index in/out *B33192")
 
 end if
 
@@ -950,7 +958,7 @@ else
   networkmaskl = .true.
 endif
 
-qccli%v7d%voldatiattrb(:,:,:,:,:,:,indtbattrout)=ibmiss
+qccli%v7d%voldatiattrb(:,:,:,:,:,:,indbattrout)=ibmiss
 
 do indana=1,size(qccli%v7d%ana)
 
@@ -1058,9 +1066,9 @@ do indana=1,size(qccli%v7d%ana)
 #endif
                 end do
 
-              else
-                level=qccli%v7d%level(indlevel)
               end if
+
+              level=qccli%v7d%level(indlevel)
 
               call init(network,"qcclima-perc")
 
@@ -1168,9 +1176,9 @@ do indana=1,size(qccli%v7d%ana)
 
                                 !ATTENZIONE TODO : inddativarr È UNA GRANDE SEMPLIFICAZIONE NON VERA SE TIPI DI DATO DIVERSI !!!!
 #ifdef DEBUG
-                          call l4f_log (L4F_INFO,"qccli: gross error check flag set to bad")
+                          call l4f_log (L4F_DEBUG,"qccli: gross error check flag set to bad")
 #endif
-                  qccli%v7d%voldatiattrb(indana,indtime,indlevel,indtimerange,inddativarr,indnetwork,indtbattrout)=0
+                  qccli%v7d%voldatiattrb(indana,indtime,indlevel,indtimerange,inddativarr,indnetwork,indbattrinv)=0
 
                   if ( associated ( qccli%data_id_in)) then
 #ifdef DEBUG
@@ -1183,7 +1191,7 @@ do indana=1,size(qccli%v7d%ana)
 
 
                 else if (.not. vd(qccli%v7d%voldatiattrb(indana,indtime,indlevel,indtimerange,&
-                 inddativarr,indnetwork,indtbattrout))) then
+                 inddativarr,indnetwork,indbattrout))) then
 
                                 ! gross error check allready done
 #ifdef DEBUG
@@ -1273,7 +1281,7 @@ do indana=1,size(qccli%v7d%ana)
                          ,indctime,indclevel,indctimerange,indcdativarr,indcnetwork,1))) then
 
                                 !ATTENZIONE TODO : inddativarr È UNA GRANDE SEMPLIFICAZIONE NON VERA SE TIPI DI DATO DIVERSI !!!!
-                          qccli%v7d%voldatiattrb(indana,indtime,indlevel,indtimerange,inddativarr,indnetwork,indtbattrout)=&
+                          qccli%v7d%voldatiattrb(indana,indtime,indlevel,indtimerange,inddativarr,indnetwork,indbattrout)=&
                            max (qccli%clima%voldatiattrb&
                            (indcana,indctime,indclevel,indctimerange,indcdativarr,indcnetwork,1)&
                            , 1_int_b) ! 0 reserved for gross error check
@@ -1312,7 +1320,7 @@ do indana=1,size(qccli%v7d%ana)
 end do
 
 !!$print*,"risultato"
-!!$print *,qccli%v7d%voldatiattrb(:,:,:,:,:,:,indtbattrout)
+!!$print *,qccli%v7d%voldatiattrb(:,:,:,:,:,:,indbattrout)
 !!$print*,"fine risultato"
 
 
