@@ -23,7 +23,7 @@ extern "C" {
   int vdf4f_set_map_projection_c(char *mapprojection);
   int vdf4f_set_grid_extents_c(double extents[6]);
   //int vdf4f_set_grid_permutation_c(long permutation[3]);
-  int create_metadata_c(size_t xyzdim[3]);
+  int create_metadata_c(size_t xyzdim[3], int vdctype);
   int create_writer_c(char filename[]);
   int destroy_metadata_c();
   int destroy_writer_c();

@@ -22,13 +22,14 @@
 #include <vapor/Metadata.h>
 #include <vapor/WaveletBlock3DBufWriter.h>
 #include <vapor/WaveletBlock3DRegionWriter.h>
+#include <vapor/WaveCodecIO.h>
 #include <stdlib.h>
 #include <string.h>
 #include <vector>
 
 static VAPoR::MetadataVDC *__md = NULL;
-static VAPoR::WaveletBlock3DBufWriter *__wr = NULL;
-static VAPoR::WaveletBlock3DRegionWriter *__wr2d = NULL;
+//static VAPoR::WaveletBlock3DBufWriter *__wr = NULL;
+static VAPoR::VDFIOBase *__wr = NULL;
 
 int set_variable_names(char *names, size_t len, size_t n)
 {
@@ -208,19 +209,89 @@ int vdf4f_set_grid_permutation_c(long permutation[3])
 
 */
 
-int create_metadata_c(size_t xyzdim[3])
+int create_metadata_c(size_t xyzdim[3], int vdctype)
+
+/*
+VDC Type I
+
+In a type I data collection each netCDF file contains the wavelet coefficients associated with a 
+single wavelet transformation pass applied to a single field variable, at a single time step. 
+For example, applying two transformation passes to the variable, vx, from the first time step in 
+a data collection would result in the generation of three netCDF files with the extensions .nc0, .nc1, and .nc2.
+ The first file, .nc0, contains the wavelet coefficients necessary to reconstruct vx at its coarsest 
+approximation level (1/4 the original grid resolution along each coordinate axes). 
+The .nc1 file provides the wavelet coefficients necessary to reconstruct the vx variable at ½ the original resolution, etc.
+
+VDC Type II
+
+A type II data collection is more complicated than a type I, but offers higher quality compression for 
+a given storage budget. In a type II collection field data again undergo a wavelet transformation. 
+The resulting wavelet coefficients are than sorted into a small number of ordered groups. 
+The original data can be exactly reconstructed (up to floating point round-off) from the coefficients 
+in all the groups, or an approximation of the data can be generated from a subset of the groups. 
+As with type I collections the lowest order, but most information containing group, is stored in a 
+netCDF file with the extention .nc0. The next most information containing group is stored in a netCDF
+ file with the extension .nc1, and so on.
+
+VDC Type I or II?
+
+There are tradeoffs when deciding whether to use a type I or type II VDC encoding. 
+Each available approximation in a type I VDC coresponds to a level in a hierarchical represenation 
+of the sampling grid. Sample values at successively coarser grids are constructed by averaging 
+neighboring grid points from parent grids. By virtue of containing fewer grid points a coarsened 
+grid requires less space (both on disk and in when stored in memory), less IO bandwidth, and less 
+computation when any data processing operators are applied. A type II collection examines each 
+wavelet coefficient and groups it based on its information content in terms of the L2 error norm. 
+Thus for a given number of wavelet coefficients the type II representation is guaranteed to provide 
+the highest quality reconstruction based on the L2 error. However, type II collections require storage 
+overhead to address the wavelet coefficients. Hence, a type II VDC will be larger than a type I VDC if 
+all coefficients are kept.
+
+A VDC, type I or II, is considered valid even if finer approximation levels are missing. 
+In the above examples, the user may choose to store the .nc2 coefficients off line in order to save space. 
+Furthermore, a VDC is valid even if entire time steps or variables are not present on disk. 
+The goal of supporting incomplete VDCs is to provide the user the flexibility needed to manage very large data sets.  
+Hence a minimal valid VDC consists only of a metadata .vdf file, and no field data.
+*/
+
 {
 
   size_t num_transforms = 0;
-  const size_t bs[3] = { 2, 2, 2};
+  const size_t bs[3] = { 64, 64, 64};
   int nfiltercoef = 1;
   int nliftingcoef = 1;
   int mbsfirst = 1;
   
+  vector <size_t> cratios;
+  cratios.push_back(1);
+  cratios.push_back(10);
+  cratios.push_back(100);
+  //cratios.push_back(500);
+  string wname;
+  string wmode;
+
+  wmode="symh";
+  wname="bior3.3";
+    
   /* create metadata */
 
-  __md = new VAPoR::MetadataVDC(xyzdim, num_transforms, bs, nfiltercoef,
-				nliftingcoef, mbsfirst);
+  if (vdctype == 1) {
+
+    __md = new VAPoR::MetadataVDC(xyzdim, num_transforms, bs, nfiltercoef,
+  				nliftingcoef, mbsfirst);
+  }
+  else if  (vdctype == 2) {
+
+    __md = new VAPoR::MetadataVDC(xyzdim, bs, cratios, wname,wmode);
+
+  }
+  else {
+
+    __md = NULL;
+    return -1;
+
+  }
+
   if ((VAPoR::MetadataVDC::GetErrCode())) {
     __md = NULL;
     return -1;
@@ -240,15 +311,13 @@ int destroy_metadata_c()
 int create_writer_c(char filename[])
 {
 
+  // todo : manage type 1 vdc
 /* create writer starting from metadata already done */
-  __wr = new VAPoR::WaveletBlock3DBufWriter(filename);
-  if ((VAPoR::MetadataVDC::GetErrCode())) {
-    __wr = NULL;
-    return -1;
-  }
+  //__wr = new VAPoR::WaveletBlock3DBufWriter(filename);
+  __wr = new VAPoR::WaveCodecIO(filename);
+ 
 
-  __wr2d = new VAPoR::WaveletBlock3DRegionWriter(filename);
-  if ((VAPoR::MetadataVDC::GetErrCode())) {
+ if ((VAPoR::MetadataVDC::GetErrCode())) {
     __wr = NULL;
     return -1;
   }
@@ -261,9 +330,6 @@ int destroy_writer_c()
 {
 	delete __wr;
         __wr = NULL;
-
-	delete __wr2d;
-        __wr2d = NULL;
 
 	return 0;
 }
@@ -338,8 +404,8 @@ int vdf4f_write_c(float *volume,
     for (j = 0; j < ntime; j++) {
       /* prepare writer to write 
        * i variable at j timestep */
-      	    
-      if ((__wr->OpenVariableWrite(j, varnames+(i*len), -1)) < 0) {
+      //cerr << "check: " <<      	     varnames+(i*len) << endl;
+      if ((__wr->OpenVariableWrite(j, varnames+(i*len), -1,-1)) < 0) {
 	return -1;
       }
       
@@ -358,7 +424,7 @@ int vdf4f_write_c(float *volume,
 	}
 
 	if (( __wr->WriteSlice(myslice)) < 0) {
-	  return -1;
+	  return -2;
 	}
 	
 	slice += xydim ;
@@ -393,7 +459,7 @@ int vdf4f_write_2d_xy_c(float *volume,
       /* prepare writer to write 
        * i variable at j timestep */
       	    
-      if ((__wr2d->OpenVariableWrite(j, varnames+(i*len), -1)) < 0) {
+      if ((__wr->OpenVariableWrite(j, varnames+(i*len), -1, -1)) < 0) {
 	printf ("OpenVariableWrite error\n");
 	return -1;
       }
@@ -402,7 +468,7 @@ int vdf4f_write_2d_xy_c(float *volume,
 
       /* slice for i variable
        * at j timestep */
-      if (( __wr2d->WriteRegion(slice)) < 0) {
+      if (( __wr->WriteRegion(slice)) < 0) {
 	printf("WriteRegion error\n");
 	return -1;
       }
@@ -410,7 +476,7 @@ int vdf4f_write_2d_xy_c(float *volume,
       slice += xydimtot ;
 	
       /* close */
-      __wr2d->CloseVariable();
+      __wr->CloseVariable();
     }
   }
 

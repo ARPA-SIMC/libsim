@@ -263,7 +263,7 @@ if (c_e(ntime) .and. c_e(ntimerange) .and. c_e(nlevel) .and. c_e(nvar)) then
 
     call l4f_category_log(this%category,L4F_INFO,"VDF: projection parameter "//mapprojection)
     call l4f_category_log(this%category,L4F_DEBUG,"VDF: call create_metadata")
-    ier = vdf4f_create_metadata(xyzdim)
+    ier = vdf4f_create_metadata(xyzdim,vdctype=1)
     call l4f_category_log(this%category,L4F_DEBUG,"VDF: call set_num_timesteps")
     if(ier==0) ier = vdf4f_set_num_timesteps(ntimera)
     call l4f_category_log(this%category,L4F_DEBUG,"VDF: call set_variables_names")

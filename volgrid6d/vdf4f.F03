@@ -29,9 +29,10 @@ private
 Interface
 
 
-  Integer(C_INT) Function create_metadata_c(xyzdim) BIND(C)
+  Integer(C_INT) Function create_metadata_c(xyzdim,vdctype) BIND(C)
   import
   Integer(C_SIZE_T), Intent(IN) :: xyzdim(3)
+  Integer(C_INT),    Intent(IN), VALUE :: vdctype
   End Function create_metadata_c
 
   Integer(C_INT) Function create_writer_c(filename) BIND(C)
@@ -290,16 +291,19 @@ end function vdf4f_write_amd64
 
 
 
-Integer Function create_metadata_i386(xyzdim)
+Integer Function create_metadata_i386(xyzdim, vdctype)
 Integer(C_SIZE_T),intent(in)  :: xyzdim(3)
-create_metadata_i386 = create_metadata_c(xyzdim)
+Integer(C_INT), Intent(IN), VALUE :: vdctype
+
+create_metadata_i386 = create_metadata_c(xyzdim, vdctype)
 End Function create_metadata_i386
 
-Integer Function create_metadata_amd64(xyzdim)
+Integer Function create_metadata_amd64(xyzdim, vdctype)
 Integer,intent(in)  :: xyzdim(3)
+Integer(C_INT), Intent(IN), VALUE :: vdctype
 Integer(C_SIZE_T)  :: xyzdim_c(3)
 xyzdim_c=xyzdim
-create_metadata_amd64 = create_metadata_c(xyzdim_c)
+create_metadata_amd64 = create_metadata_c(xyzdim_c,vdctype)
 End Function create_metadata_amd64
 
 
