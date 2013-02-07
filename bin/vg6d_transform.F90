@@ -507,7 +507,7 @@ ENDIF
 
 IF (c2agrid) CALL vg6d_c2a(volgrid)
 
-IF (trans_type /=  'none') THEN ! transform
+IF (trans_type /= 'none') THEN ! transform
 
 ! transformation object
   CALL init(trans, trans_type=trans_type, sub_type=sub_type, extrap=extrap, &

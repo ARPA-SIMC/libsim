@@ -31,7 +31,7 @@ implicit none
 
 integer :: category,ier
 character(len=512):: a_name,infile='in.grb',outfile='out.grb'
-type (gridinfo_def) :: gridinfo
+TYPE(gridinfo_def) :: gridinfo
 TYPE(grid_file_id) :: ifile,ofile
 TYPE(grid_id) :: input_grid_id
 INTEGER :: gaid
@@ -192,27 +192,29 @@ CALL delete(opt)
 call l4f_category_log(category,L4F_INFO,"transforming from file:"//trim(infile))
 call l4f_category_log(category,L4F_INFO,"transforming to   file:"//trim(outfile))
 
-if(trans_type == 'inter')then
+IF (trans_type == 'inter') THEN
 
-  call init(griddim_out, proj_type=type, nx=nx, ny=ny, &
+  CALL init(griddim_out, proj_type=type, nx=nx, ny=ny, &
    xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, &
    component_flag=component_flag, latitude_south_pole=latitude_south_pole, &
    longitude_south_pole=longitude_south_pole, angle_rotation=angle_rotation, &
    categoryappend="requested_grid")
 
-  call griddim_unproj(griddim_out)
+  CALL griddim_unproj(griddim_out)
 
   IF (ldisplay) THEN
     PRINT*,'output grid >>>>>>>>>>>>>>>>>>>>'
     CALL display(griddim_out)
   ENDIF
 
-end if
+ENDIF
 
-CALL init(trans, trans_type=trans_type, sub_type=sub_type, extrap=extrap, &
- ix=ix, iy=iy, fx=fx, fy=fy, &
- ilon=ilon, ilat=ilat, flon=flon, flat=flat, npx=npx, npy=npy, &
- percentile=0.5D0, categoryappend="transformation")
+IF (trans_type /= 'none') THEN ! transform
+  CALL init(trans, trans_type=trans_type, sub_type=sub_type, extrap=extrap, &
+   ix=ix, iy=iy, fx=fx, fy=fy, &
+   ilon=ilon, ilat=ilat, flon=flon, flat=flat, npx=npx, npy=npy, &
+   percentile=0.5D0, categoryappend="transformation")
+ENDIF
 
 ifile = grid_file_id_new(infile,'r')
 ofile = grid_file_id_new(outfile,'w')
@@ -223,43 +225,35 @@ DO WHILE (.TRUE.)
     EXIT
   ENDIF
 
-  call l4f_category_log(category,L4F_INFO,"import gridinfo")
-
-  call init(gridinfo, gaid=input_grid_id, categoryappend="imported")
-  call import(gridinfo)
-
+  CALL l4f_category_log(category,L4F_INFO,"importing gridinfo")
+  CALL init(gridinfo, gaid=input_grid_id, categoryappend="imported")
+  CALL import(gridinfo)
   IF (ldisplay) THEN
     CALL display(gridinfo,namespace="ls")
   ENDIF
+  CALL l4f_category_log(category,L4F_INFO,"gridinfo imported")
 
-  call l4f_category_log(category,L4F_INFO,"import")
+  ALLOCATE(field(gridinfo%griddim%dim%nx,gridinfo%griddim%dim%ny,1))
+  field(:,:,1) = decode_gridinfo(gridinfo)
 
-  ALLOCATE (field(gridinfo%griddim%dim%nx,gridinfo%griddim%dim%ny,1))
+  IF (trans_type /= 'none') THEN ! transform
+    CALL init(grid_trans, trans, in=gridinfo%griddim, out=griddim_out, &
+     categoryappend="gridtransformed")
+    IF (ldisplay) THEN
+      CALL display(griddim_out)
+    ENDIF
 
-  field(:,:,1)=decode_gridinfo(gridinfo)
+    ALLOCATE (fieldz(griddim_out%dim%nx,griddim_out%dim%ny,1))
+    CALL compute(grid_trans, field, fieldz)
+    CALL delete(grid_trans)
+    CALL delete(gridinfo%griddim)
+    CALL copy(griddim_out, gridinfo%griddim, categoryappend="cloned")
 
-  call init(grid_trans, trans, in=gridinfo%griddim, out=griddim_out,&
-   categoryappend="gridtransformed")
+  ELSE
 
-  IF (ldisplay) THEN
-    CALL display(griddim_out)
+    fieldz = field
+
   ENDIF
-
-  ALLOCATE (fieldz(griddim_out%dim%nx,griddim_out%dim%ny,1))
-
-  call compute(grid_trans, field, fieldz)
-
-  call delete(gridinfo%griddim)
-  call copy(griddim_out,gridinfo%griddim,categoryappend="cloned")
-
-! oppure per mantenere il vecchio gridinfo
-!   call clone(gridinfo , gridinfo_out)
-!   call delete(gridinfo_out%griddim)
-!   call copy(griddim_out,gridinfo_out%griddim)
-
-! per bug della grib_api
-!   call grib_release(gridinfo%gaid)
-!   call grib_new_from_template(gridinfo%gaid,"regular_ll_pl_grib1")
 
 ! set scanning mode if grib_api
   IF (grid_id_get_driver(gridinfo%gaid) == 'grib_api') THEN
@@ -282,21 +276,22 @@ DO WHILE (.TRUE.)
   ENDIF
 
   CALL encode_gridinfo(gridinfo, fieldz(:,:,1))
-  call export(gridinfo)
+  CALL export(gridinfo)
   IF (ldisplay) THEN
     CALL display(gridinfo,namespace="ls")
   ENDIF
 
   CALL export(gridinfo%gaid, ofile)
 
-  call delete(grid_trans)
-  call delete(gridinfo)
+  CALL delete(gridinfo)
   DEALLOCATE(field, fieldz)
 
-end do
+ENDDO
 
-call delete(trans)
-call delete(griddim_out)
+IF (trans_type /= 'none') THEN ! transform
+  CALL delete(trans)
+  CALL delete(griddim_out)
+ENDIF
 
 call delete(ifile)
 call delete(ofile)
@@ -304,7 +299,7 @@ call delete(ofile)
 call l4f_category_log(category,L4F_INFO,"end")
 
 ! Close the logger
-call l4f_category_delete(category)
+CALL l4f_category_delete(category)
 ier=l4f_fini()
 
 END PROGRAM vg6d_subarea

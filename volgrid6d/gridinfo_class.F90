@@ -246,7 +246,7 @@ call delete(this%var)
 #ifdef DEBUG
 call l4f_category_log(this%category,L4F_DEBUG,"delete gaid" )
 #endif
-CALL delete(this%gaid) 
+CALL delete(this%gaid)
 
 !chiudo il logger
 call l4f_category_delete(this%category)
