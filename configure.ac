@@ -330,10 +330,12 @@ AC_ARG_ENABLE(netcdf, AC_HELP_STRING([--disable-netcdf],
   [disable netcdf support]),,[enableval=yes])dnl default enable
 if test "x$enableval" = "xyes"; then
   AC_CHECK_LIB([netcdff], [nf_inq_libvers],
-    AC_MSG_RESULT([netcdf code included])
     NETCDF_LIBS="-lnetcdff -lnetcdf"
-    AC_SUBST(NETCDF_LIBS),
-    AC_MSG_ERROR([netcdf library not found]),[-lnetcdf])
+    AC_SUBST(NETCDF_LIBS)
+    AC_DEFINE(HAVE_LIBNETCDF, 1, [Enable netcdf code])
+    AC_MSG_RESULT([netcdf code included]),
+    AC_MSG_ERROR([netcdf library not found]),
+    [-lnetcdff -lnetcdf])
 else
   AC_MSG_RESULT([netcdf code not included])
 fi

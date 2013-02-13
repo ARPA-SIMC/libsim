@@ -17,6 +17,7 @@
 ! along with this program.  If not, see <http://www.gnu.org/licenses/>.
 PROGRAM v7d_transform
 #include "config.h"
+
 USE log4fortran
 USE char_utilities
 USE file_utilities
@@ -32,6 +33,9 @@ USE vol7d_oraclesim_class
 USE vol7d_dballe_class
 #endif
 #ifdef HAVE_LIBGRIBAPI
+#ifdef HAVE_LIBNETCDF
+USE vol7d_netcdf_class
+#endif
 USE grid_id_class
 USE grid_class
 USE gridinfo_class
@@ -159,6 +163,9 @@ opt = optionparser_new(description_msg= &
 #endif
 #ifdef F2003_FEATURES
  //', into a configurable geojson file'&
+#endif
+#ifdef HAVE_LIBNETCDF
+ //', into a netcdf file'&
 #endif
  //', or into a configurable formatted csv file. &
  &If input-format is of file type, inputfile ''-'' indicates stdin, &
@@ -371,6 +378,9 @@ CALL optionparser_add(opt, ' ', 'output-format', output_format, 'native', help= 
  //'; ''grib_api'' for gridded output in grib format, template (required) is the &
  &path name of a grib file in which the first message defines the output grid and &
  &is used as a template for the output grib messages, (see also post-trans-type)'&
+#endif
+#ifdef HAVE_LIBNETCDF
+ //', ''netcdf'' for netcdf file following cf convenction 1.1 '&
 #endif
 #ifdef F2003_FEATURES
  //'; ''geojson'' for geojson format (no template to be specified)'&
@@ -1287,6 +1297,11 @@ ELSE IF (output_format == 'grib_api') THEN
     CALL raise_fatal_error()
   ENDIF
 
+#endif
+
+#ifdef HAVE_LIBNETCDF
+ELSE IF (output_format == 'netcdf') THEN
+    CALL export(v7d, filename=output_file, ncconventions="CF-1.1 vol7d")
 #endif
 
 ELSE IF (output_format /= '') THEN
