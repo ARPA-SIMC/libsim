@@ -308,6 +308,26 @@ int destroy_metadata_c()
 }
 
 
+int create_metadata_from_file_c(char filename[])
+{
+
+  // todo : manage type 1 vdc
+/* create writer starting from metadata already done */
+  //__wr = new VAPoR::WaveletBlock3DBufWriter(filename);
+
+  __md = new VAPoR::MetadataVDC(filename);
+ 
+
+ if ((VAPoR::MetadataVDC::GetErrCode())) {
+    __md = NULL;
+    return -1;
+  }
+
+  return 0;
+}
+
+
+
 int create_writer_c(char filename[])
 {
 

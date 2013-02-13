@@ -145,8 +145,6 @@ if(ier==0) print*,"VDF: call vdf4f_set_num_timesteps"
 if(ier==0) ier = vdf4f_set_num_timesteps(ntime)
 if(ier==0) print*,"VDF: call vdf4f_set_variables_names"
 if(ier==0) ier = vdf4f_set_variables_names(nvar, varnames)
-if(ier==0) print*,"VDF: call vdf4f_set_variables_2d_xy"
-if(ier==0) ier = vdf4f_set_variables_2d_xy(nvar2d, varnames2d)
 
 do i=1,ntime
   if(ier==0) print*,"VDF: call vdf4f_set_ts_comment"
@@ -181,6 +179,22 @@ if(ier==0) print*,"VDF: call vdf4f_create_writer"
 if(ier==0) ier = vdf4f_create_writer(lfilename)
 if(ier==0) print*,"VDF: call vdf4f_write"
 if(ier==0) ier = vdf4f_write(voldati, xyzdim, ntime, nvar, varnames, irzscan)  
+
+if(ier==0) ier = destroy_writer_c()
+
+if(ier==0) print*,"VDF: call vdf4f_create_metadata_from_file"
+if(ier==0) ier = vdf4f_create_metadata_from_file(lfilename)
+
+if(ier==0) print*,"VDF: call vdf4f_set_variables_2d_xy"
+if(ier==0) ier = vdf4f_set_variables_2d_xy(nvar2d, varnames2d)
+
+if(ier==0) print*,"VDF: call vdf4f_write_metadata"
+if(ier==0) ier = vdf4f_write_metadata(lfilename)
+if(ier==0) ier = destroy_metadata_c()
+
+
+if(ier==0) print*,"VDF: call vdf4f_create_writer"
+if(ier==0) ier = vdf4f_create_writer(lfilename)
 
 if(ier==0) print*,"VDF: call vdf4f_write_2d_xy"
 if(ier==0) ier = vdf4f_write_2d_xy(voldati2d, xyzdim(:2), ntime, nvar2d, varnames2d)

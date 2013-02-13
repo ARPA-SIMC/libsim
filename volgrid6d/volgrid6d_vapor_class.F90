@@ -45,28 +45,29 @@ public export
 contains
 
 !>\brief Write on file Volgrid6d volume in vdf format for vapor.
-!! Write bg6d volume in wavelet vapor file.
-subroutine volgrid6d_export_to_vapor (this,normalize,rzscan,filename,filename_auto)
+!! Write vg6d volume in wavelet vapor file.
+subroutine volgrid6d_export_to_vapor (this,normalize,rzscan,filename,filename_auto,reusevdf)
 
 TYPE(volgrid6d),INTENT(INOUT) :: this !< volume volgrid6d to write
 logical,intent(in) :: normalize !<  if true normalize variables to v7d (dballe) standard changing this in output
 logical,intent(in),optional :: rzscan      !<  if true reverse Z (level) order in vdf export
 character(len=*),intent(in),optional :: filename !< file name to write
 character(len=*),intent(out),optional :: filename_auto !< generated  file name if "filename" is missing
+logical,intent(in),optional :: reusevdf      !<  if true reuse and modify an existing vdf file appendig data to a vapor data collection during export to vapor.')
 
 character(len=254) :: lfilename
 integer :: ntime, ntimerange, ntimera, nlevel, nvar
 logical :: exist
-integer :: ier, xyzdim(3),ivar,i,j,retstat
+integer :: ier, xyzdim(3),ivar,i,j
 character(len=255),allocatable :: varnames(:),vardescriptions(:),tsdescriptions(:)
-doubleprecision :: extents(6)
+doubleprecision :: extents(6),vdfmiss=rmiss
 
 TYPE(conv_func), pointer :: c_func(:)
 TYPE(vol7d_var),allocatable :: varbufr(:)
 type(vol7d_var),pointer :: dballevar(:)
 CHARACTER(len=255) :: proj_type,mapprojection
 
-integer :: zone, irzscan
+integer :: zone, irzscan, indele
 DOUBLE PRECISION :: xoff, yoff, ellips_smaj_axis, ellips_flatt
 DOUBLE PRECISION :: longitude_south_pole, latitude_south_pole, angle_rotation
 
@@ -97,7 +98,13 @@ if (present(filename_auto))filename_auto=lfilename
 
 
 inquire(file=lfilename,EXIST=exist)
-if (exist) then
+
+if (optio_log(reusevdf)) then
+  if (.not. exist) then
+    call l4f_category_log(this%category,L4F_ERROR,"file do not exist; cannot reuse file: "//trim(lfilename))
+    CALL raise_error()
+  end if
+else if (exist) then
   call l4f_category_log(this%category,L4F_ERROR,"file exist; cannot open new file: "//trim(lfilename))
   CALL raise_error()
 end if
@@ -135,6 +142,7 @@ if (c_e(ntime) .and. c_e(ntimerange) .and. c_e(nlevel) .and. c_e(nvar)) then
 
       ENDIF
 
+      indele=imiss
       do ivar=1,nvar
         
         j=firsttrue(varbufr(ivar)%btable == dballevar(:)%btable)
@@ -148,13 +156,23 @@ if (c_e(ntime) .and. c_e(ntimerange) .and. c_e(nlevel) .and. c_e(nvar)) then
           vardescriptions(ivar) = trim(varbufr(ivar)%description)//"_"//trim(varbufr(ivar)%unit)
           !vardescriptions(ivar) = "V"//wash_char(trim(varbufr(ivar)%description)//"_"//trim(varbufr(ivar)%unit))
 
+          if (varnames(ivar) == "B10007") then
+            indele=ivar
+
+            if (nlevel > 1) then
+              varnames(indele) = "ELEVATION"
+            else
+              varnames(indele) = "HGT"
+            end if
+          end if
+
         else
 
           varnames(ivar) = "Vnotnormalized_"//t2c(ivar)
           vardescriptions(ivar) = "None"
           
         end if
-      
+
       end do
     else
 
@@ -182,6 +200,7 @@ if (c_e(ntime) .and. c_e(ntimerange) .and. c_e(nlevel) .and. c_e(nvar)) then
 
     !extents=(/-0.5d0, -14.d0 ,   0.d0, 2.563d0, -11.25d0,  1.d0/)
     call get_val (this%griddim, xmin=extents(1),ymin=extents(2), xmax=extents(4) , ymax=extents(5))
+
     extents(3)=0.d0
     extents(6)=10.d0
 
@@ -261,74 +280,120 @@ if (c_e(ntime) .and. c_e(ntimerange) .and. c_e(nlevel) .and. c_e(nvar)) then
 
     end select
 
-    call l4f_category_log(this%category,L4F_INFO,"VDF: projection parameter "//mapprojection)
-    call l4f_category_log(this%category,L4F_DEBUG,"VDF: call create_metadata")
-    ier = vdf4f_create_metadata(xyzdim,vdctype=1)
-    call l4f_category_log(this%category,L4F_DEBUG,"VDF: call set_num_timesteps")
-    if(ier==0) ier = vdf4f_set_num_timesteps(ntimera)
-    call l4f_category_log(this%category,L4F_DEBUG,"VDF: call set_variables_names")
-    if(ier==0) ier = vdf4f_set_variables_names(nvar, varnames)
+    ier=0
+    if(ier==0) call l4f_category_log(this%category,L4F_INFO,"VDF: projection parameter "//mapprojection)
 
-    call l4f_category_log(this%category,L4F_DEBUG,"VDF: call set_v_comment")
-    call l4f_category_log(this%category,L4F_DEBUG,"VDF: call set_ts_comment")
+    if (reusevdf) then
+      if(ier==0) call l4f_category_log(this%category,L4F_DEBUG,"VDF: call create_metadata_from_file")
+      ier = vdf4f_create_metadata_from_file(lfilename)
+    else
+      if(ier==0) call l4f_category_log(this%category,L4F_DEBUG,"VDF: call create_metadata")
+      ier = vdf4f_create_metadata(xyzdim,vdctype=2)
     
-    do i=1,ntimera
-      if(ier==0) ier = vdf4f_set_ts_comment(i-1,tsdescriptions(i))
-      do j=1,nvar
-        if(ier==0) ier = vdf4f_set_v_comment(i-1,varnames(j),vardescriptions(j))
+      if(ier==0) call l4f_category_log(this%category,L4F_DEBUG,"VDF: call set_missing_value")
+      if(ier==0) ier = vdf4f_set_missing_value(vdfmiss)
+
+      if(ier==0) call l4f_category_log(this%category,L4F_DEBUG,"VDF: call set_num_timesteps")
+      if(ier==0) ier = vdf4f_set_num_timesteps(ntimera)
+
+      if(ier==0) call l4f_category_log(this%category,L4F_DEBUG,"VDF: call vdf4f_set_comment")
+      if(ier==0) ier = vdf4f_set_comment("vogrid6d exported")
+      !if(ier==0) ier = vdf4f_set_coord_system_type(coordsystemtype="spherical")
+      if(ier==0) ier = vdf4f_set_coord_system_type(coordsystemtype="cartesian")
+
+      if (c_e(indele)) then 
+        if(ier==0) call l4f_category_log(this%category,L4F_INFO,"VDF: ELEVATION (B10007) found: setting gridtype to layered")
+        extents(6) = maxval (this%voldati(:,:,:,:,:,indele),c_e(this%voldati(:,:,:,:,:,indele)))
+        if(ier==0) ier = vdf4f_set_grid_type(gridtype="layered")
+      else
+        if(ier==0) ier = vdf4f_set_grid_type(gridtype="regular")
+      end if
+      
+      if(ier==0) ier = vdf4f_set_grid_extents(extents=extents)
+      if(ier==0) ier = vdf4f_set_map_projection(mapprojection=mapprojection)
+
+      !!!!  if(ier==0) int vdf4f_set_grid_permutation(long permutation[3]);
+
+    end if
+
+    if (nlevel > 1) then
+
+      if(ier==0) call l4f_category_log(this%category,L4F_DEBUG,"VDF: call set_variables_names")
+      if(ier==0) ier = vdf4f_set_variables_names(nvar, varnames)
+
+
+      if(ier==0) call l4f_category_log(this%category,L4F_DEBUG,"VDF: call set_v_comment")
+      if(ier==0) call l4f_category_log(this%category,L4F_DEBUG,"VDF: call set_ts_comment")
+    
+      do i=1,ntimera
+        if(ier==0) ier = vdf4f_set_ts_comment(i-1,tsdescriptions(i))
+        do j=1,nvar
+          if(ier==0) ier = vdf4f_set_v_comment(i-1,varnames(j),vardescriptions(j))
+        end do
       end do
-    end do
 
+    else
 
-    call l4f_category_log(this%category,L4F_DEBUG,"VDF: call vdf4f_set_comment")
-    if(ier==0) ier = vdf4f_set_comment("vogrid6d exported")
-    if(ier==0) ier = vdf4f_set_grid_extents(extents=extents)
-    !if(ier==0) ier = vdf4f_set_coord_system_type(coordsystemtype="spherical")
-    if(ier==0) ier = vdf4f_set_coord_system_type(coordsystemtype="cartesian")
-    if(ier==0) ier = vdf4f_set_grid_type(gridtype="regular")
-    if(ier==0) ier = vdf4f_set_map_projection(mapprojection=mapprojection)
-     
-    !!!!  if(ier==0) int vdf4f_set_grid_permutation(long permutation[3]);
-    call l4f_category_log(this%category,L4F_DEBUG,"VDF: call write_metadata")
+      do ivar=1,nvar
+        varnames(ivar)="XYD_"//varnames(ivar)
+      end do
+      if(ier==0) call l4f_category_log(this%category,L4F_DEBUG,"VDF: call vdf4f_set_variables_2d_xy")
+      if(ier==0) ier = vdf4f_set_variables_2d_xy(nvar, varnames)
+
+    end if
+
+    if(ier==0) call l4f_category_log(this%category,L4F_DEBUG,"VDF: call write_metadata")
     if(ier==0) ier = vdf4f_write_metadata(lfilename)
-    call l4f_category_log(this%category,L4F_DEBUG,"VDF: call vdf4f_write")
 
+    if(ier==0) ier = destroy_metadata_c()
+    ! end metadata section
+
+    ! start data section
+
+    if(ier==0) call l4f_category_log(this%category,L4F_DEBUG,"VDF: call vdf4f_create_writer")
+    if(ier==0) ier = vdf4f_create_writer(lfilename)
 
     if (this%time_definition == 1) then
 
       if (ntimerange /= 1) then
-        call l4f_category_log(this%category,L4F_WARN,"VDF: writing only first timerange, there are:"//t2c(ntimerange))
+        if(ier==0) call l4f_category_log(this%category,L4F_WARN,"VDF: writing only first timerange, there are:"//t2c(ntimerange))
       end if
 
-      call fill_underground_missing_values(this%voldati(:,:,:,:,1,:))
+      if (.not. c_e(indele)) call fill_underground_missing_values(this%voldati(:,:,:,:,1,:))
+      if(ier==0) call l4f_category_log(this%category,L4F_INFO,"scan VDF (vapor file) for times")
 
-      call l4f_category_log(this%category,L4F_INFO,"scan VDF (vapor file) for times")
-      if(ier==0) ier = vdf4f_create_writer(lfilename)
-      if(ier==0) ier = vdf4f_write(this%voldati(:,:,:,:,1,:), xyzdim, ntime, nvar, varnames, irzscan)  
+      if (nlevel > 1) then
+        if(ier==0) call l4f_category_log(this%category,L4F_DEBUG,"VDF: call vdf4f_write")
+        if(ier==0) ier = vdf4f_write(this%voldati(:,:,:,:,1,:), xyzdim, ntime, nvar, varnames, irzscan)  
+      else
+        if(ier==0) call l4f_category_log(this%category,L4F_DEBUG,"VDF: call vdf4f_write_2d_xy")
+        if(ier==0) ier = vdf4f_write_2d_xy(this%voldati(:,:,1,:,1,:), xyzdim(:2), ntime, nvar ,varnames)
+      end if
 
     else
 
       if (ntime /= 1) then
-        call l4f_category_log(this%category,L4F_WARN,"VDF: writing only fisth time, there are:"//t2c(ntime))
+        if(ier==0) call l4f_category_log(this%category,L4F_WARN,"VDF: writing only fisth time, there are:"//t2c(ntime))
       end if
 
-      call fill_underground_missing_values(this%voldati(:,:,:,1,:,:))
+      if (.not. c_e(indele)) call fill_underground_missing_values(this%voldati(:,:,:,1,:,:))
+      if(ier==0) call l4f_category_log(this%category,L4F_INFO,"scan VDF (vapor file) for timeranges")
 
-      call l4f_category_log(this%category,L4F_INFO,"scan VDF (vapor file) for timeranges")
-      if(ier==0) ier = vdf4f_create_writer(lfilename)
-      if(ier==0) ier = vdf4f_write(this%voldati(:,:,:,1,:,:), xyzdim, ntimerange, nvar, varnames, irzscan)  
+      if (nlevel > 1) then
+        if(ier==0) call l4f_category_log(this%category,L4F_DEBUG,"VDF: call vdf4f_write")
+        if(ier==0) ier = vdf4f_write(this%voldati(:,:,:,1,:,:), xyzdim, ntimerange, nvar, varnames, irzscan)  
+      else
+        if(ier==0) call l4f_category_log(this%category,L4F_DEBUG,"VDF: call vdf4f_write_2d_xy")
+        if(ier==0) ier = vdf4f_write_2d_xy(this%voldati(:,:,1,1,:,:), xyzdim(:2), ntime, nvar, varnames)
+      end if
 
     end if
 
-    if (ier /= 0) then
-      call l4f_category_log(this%category,L4F_ERROR,"export to vdf: "//vdf4f_get_err_msg())
-    end if
+    if (ier /= 0) call l4f_category_log(this%category,L4F_ERROR,"export to vdf: "//vdf4f_get_err_msg())
 
     !todo: check if all are allocated
     deallocate(varnames,vardescriptions,tsdescriptions,varbufr)
-
-    retstat = destroy_metadata_c()
-    retstat = destroy_writer_c()
+    if (ier==0) ier = destroy_writer_c()
 
     if (ier /= 0) then
       call l4f_category_log(this%category,L4F_ERROR,"exporting to vdf")
@@ -376,7 +441,7 @@ do x=1,size(voldati,1)
             if (zz > 0 ) then 
               voldati(x,y,z,tim,var)=voldati(x,y,firsttrue(c_e(voldati(x,y,:,tim,var))),tim,var)
             else
-              call l4f_log(L4F_WARN,"fill_underground_missing_values: there are missing values only in the full coloumn")
+              call l4f_log(L4F_WARN,"fill_underground_missing_values: there are only missing values in the full coloumn")
               exit
             end if
           else

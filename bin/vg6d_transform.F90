@@ -72,7 +72,7 @@ INTEGER :: iargc
 !CHARACTER(len=3) :: set_scmode
 LOGICAL :: version, ldisplay
 #ifdef VAPOR
-LOGICAL :: rzscan
+LOGICAL :: rzscan,reusevdf
 #endif
 INTEGER,POINTER :: w_s(:), w_e(:)
 TYPE(grid_file_id) :: file_template
@@ -298,6 +298,9 @@ CALL optionparser_add(opt, ' ', 'display', ldisplay, help= &
 #ifdef VAPOR
 CALL optionparser_add(opt, ' ', 'reverse-vapor-z-order', rzscan, help= &
  'reverse the scan order for Z (level) coordinate during export to vdf files for vapor.')
+
+CALL optionparser_add(opt, ' ', 'reuse-vapor-vdf-file', reusevdf, help= &
+ 'reuse and modify an existing vdf file appendig data to a vapor data collection during export to vapor.')
 #endif
 
 #ifdef ALCHIMIA
@@ -640,7 +643,7 @@ ELSE
       CALL l4f_category_log(category,L4F_INFO, &
        "exporting to vapor vdf file: "//trim(output_file)//"_"//t2c(i)//".vdf")
       call export (myvolgrid(i),normalize=.True.,rzscan=rzscan,&
-       filename=trim(output_file)//"_"//t2c(i)//".vdf")
+       filename=trim(output_file)//"_"//t2c(i)//".vdf",reusevdf=reusevdf)
     end do
 #else
     CALL l4f_category_log(category,L4F_FATAL, &

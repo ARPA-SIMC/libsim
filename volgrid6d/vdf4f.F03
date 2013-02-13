@@ -40,6 +40,11 @@ Interface
   Character(C_CHAR), Intent(IN) :: filename
   End Function create_writer_c
 
+  Integer(C_INT) Function create_metadata_from_file_c(filename) BIND(C)
+  import
+  Character(C_CHAR), Intent(IN) :: filename
+  End Function create_metadata_from_file_c
+
   Integer(C_INT) Function set_num_timesteps_c(ntime ) BIND(C)
   import
   Integer(C_SIZE_T), Intent(IN), VALUE :: ntime
@@ -153,7 +158,8 @@ Interface
 
 End Interface
 
-public vdf4f_write, vdf4f_create_metadata, vdf4f_create_writer, vdf4f_set_num_timesteps, vdf4f_set_variables_names, &
+public vdf4f_write, vdf4f_create_metadata, vdf4f_create_metadata_from_file, vdf4f_create_writer,&
+ vdf4f_set_num_timesteps, vdf4f_set_variables_names, &
  vdf4f_set_comment, vdf4f_set_ts_comment, vdf4f_set_v_comment, vdf4f_set_grid_extents, &
  vdf4f_set_coord_system_type, vdf4f_set_grid_type, &
  vdf4f_set_map_projection, vdf4f_write_metadata, destroy_metadata_c, destroy_writer_c, vdf4f_get_err_msg, &
@@ -306,6 +312,10 @@ xyzdim_c=xyzdim
 create_metadata_amd64 = create_metadata_c(xyzdim_c,vdctype)
 End Function create_metadata_amd64
 
+Integer  function vdf4f_create_metadata_from_file(filename)
+Character(len=*), Intent(IN) :: filename
+vdf4f_create_metadata_from_file = create_metadata_from_file_c(trim(filename)//char(0))    ! future : C_NULL_CHAR
+end function vdf4f_create_metadata_from_file
 
 Integer  function vdf4f_create_writer(filename)
 Character(len=*), Intent(IN) :: filename
