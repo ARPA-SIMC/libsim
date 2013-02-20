@@ -158,12 +158,6 @@ if (c_e(ntime) .and. c_e(ntimerange) .and. c_e(nlevel) .and. c_e(nvar)) then
 
           if (varnames(ivar) == "B10007") then
             indele=ivar
-
-            if (nlevel > 1) then
-              varnames(indele) = "ELEVATION"
-            else
-              varnames(indele) = "HGT"
-            end if
           end if
 
         else
@@ -318,6 +312,8 @@ if (c_e(ntime) .and. c_e(ntimerange) .and. c_e(nlevel) .and. c_e(nvar)) then
 
     if (nlevel > 1) then
 
+      if (c_e(indele)) varnames(indele) = "ELEVATION"
+
       if(ier==0) call l4f_category_log(this%category,L4F_DEBUG,"VDF: call set_variables_names")
       if(ier==0) ier = vdf4f_set_variables_names(nvar, varnames)
 
@@ -335,8 +331,11 @@ if (c_e(ntime) .and. c_e(ntimerange) .and. c_e(nlevel) .and. c_e(nvar)) then
     else
 
       do ivar=1,nvar
-        varnames(ivar)="XYD_"//varnames(ivar)
+        varnames(ivar)="XY_"//t2c(varnames(ivar))
       end do
+
+      if (c_e(indele)) varnames(indele) = "HGT"
+
       if(ier==0) call l4f_category_log(this%category,L4F_DEBUG,"VDF: call vdf4f_set_variables_2d_xy")
       if(ier==0) ier = vdf4f_set_variables_2d_xy(nvar, varnames)
 
@@ -368,6 +367,7 @@ if (c_e(ntime) .and. c_e(ntimerange) .and. c_e(nlevel) .and. c_e(nvar)) then
       else
         if(ier==0) call l4f_category_log(this%category,L4F_DEBUG,"VDF: call vdf4f_write_2d_xy")
         if(ier==0) ier = vdf4f_write_2d_xy(this%voldati(:,:,1,:,1,:), xyzdim(:2), ntime, nvar ,varnames)
+
       end if
 
     else
@@ -384,7 +384,8 @@ if (c_e(ntime) .and. c_e(ntimerange) .and. c_e(nlevel) .and. c_e(nvar)) then
         if(ier==0) ier = vdf4f_write(this%voldati(:,:,:,1,:,:), xyzdim, ntimerange, nvar, varnames, irzscan)  
       else
         if(ier==0) call l4f_category_log(this%category,L4F_DEBUG,"VDF: call vdf4f_write_2d_xy")
-        if(ier==0) ier = vdf4f_write_2d_xy(this%voldati(:,:,1,1,:,:), xyzdim(:2), ntime, nvar, varnames)
+        if(ier==0) ier = vdf4f_write_2d_xy(this%voldati(:,:,1,1,:,:), xyzdim(:2), ntimerange, nvar, varnames)
+
       end if
 
     end if
