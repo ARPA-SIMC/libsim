@@ -266,7 +266,7 @@ do_otimerange: DO j = 1, SIZE(that%timerange)
           IF (n1 == dtratio(n)) THEN ! success
             IF (stat_proc == 0) THEN ! average
               WHERE(c_e(voldatiout(:,:)))
-                voldatiout(:,:) = voldatiout(:,:)/n
+                voldatiout(:,:) = voldatiout(:,:)/n1
               END WHERE
             ENDIF
             CALL volgrid_set_vol_2d(that, i3, i, j, i6, voldatiout)
