@@ -101,10 +101,26 @@ ELSE IF (stat_proc == 254) THEN
    'statistical processing to instantaneous data not implemented for gridded fields')
   CALL raise_error()
 
+ELSE IF (stat_proc_input /= stat_proc) THEN
+  CALL l4f_category_log(this%category, L4F_ERROR, &
+   'statistical processing with different input and output values makes sense only for instantaneous data')
+  CALL raise_error()
+
+ELSE IF (COUNT(this%timerange(:)%timerange == stat_proc) == 0) THEN
+  CALL l4f_category_log(this%category, L4F_ERROR, &
+   'no timeranges of the desired statistical processing type '//t2c(stat_proc)//' available')
+  CALL raise_error()
+
 ELSE
 ! euristically determine whether aggregation or difference is more suitable
-  dtmax = MAXVAL(this%timerange(:)%p2)
+  dtmax = MAXVAL(this%timerange(:)%p2, &
+   mask=(this%timerange(:)%timerange == stat_proc))
   CALL getval(step, asec=dtstep)
+
+#ifdef DEBUG
+  CALL l4f_category_log(this%category, L4F_DEBUG, &
+   'stat_proc='//t2c(stat_proc)//' dtmax='//t2c(dtmax)//' dtstep='//t2c(dtstep))
+#endif
 
   IF (dtstep < dtmax) THEN
     CALL l4f_category_log(this%category, L4F_INFO, &
