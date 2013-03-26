@@ -153,7 +153,7 @@ IF (lunit == 0) THEN
     CALL raise_fatal_error()
   END IF
 
-  CALL check( "0",nf90_create(lfilename, nf90_clobber, lunit) )
+  CALL nccheck( "0",nf90_create(lfilename, nf90_clobber, lunit) )
   CALL l4f_category_log(category,L4F_INFO, "opened "//TRIM(lfilename))
 
 END IF
@@ -220,140 +220,140 @@ nanavarattrc=size(this%anavarattr%c)
 !write(unit=lunit)tarray
 
 
-!call check( "0Conventions",nf90_put_att(lunit, NF90_GLOBAL ,"Conventions",ncconventions))
-call check( "0Conventions",nf90_put_att(lunit, NF90_GLOBAL ,"Conventions","CF-1.1"))
-call check( "0title",nf90_put_att(lunit, NF90_GLOBAL ,"title", ldescription))
+!call nccheck( "0Conventions",nf90_put_att(lunit, NF90_GLOBAL ,"Conventions",ncconventions))
+call nccheck( "0Conventions",nf90_put_att(lunit, NF90_GLOBAL ,"Conventions","CF-1.1"))
+call nccheck( "0title",nf90_put_att(lunit, NF90_GLOBAL ,"title", ldescription))
 
 
-call check( "1",nf90_def_dim(lunit,"ana", nana, ana_dimid) )
-call check( "2",nf90_def_dim(lunit,"ident_len",vol7d_ana_lenident , ident_len_dimid) )
+call nccheck( "1",nf90_def_dim(lunit,"ana", nana, ana_dimid) )
+call nccheck( "2",nf90_def_dim(lunit,"ident_len",vol7d_ana_lenident , ident_len_dimid) )
 
-call check( "3",nf90_def_dim(lunit,"time", ntime, time_dimid) )
+call nccheck( "3",nf90_def_dim(lunit,"time", ntime, time_dimid) )
 
-call check( "4",nf90_def_dim(lunit,"timerange", ntimerange, timerange_dimid) )
-call check( "5",nf90_def_dim(lunit,"timerange_vdim", 3, timerange_vdim_dimid) )
+call nccheck( "4",nf90_def_dim(lunit,"timerange", ntimerange, timerange_dimid) )
+call nccheck( "5",nf90_def_dim(lunit,"timerange_vdim", 3, timerange_vdim_dimid) )
 
-call check( "6",nf90_def_dim(lunit,"level", nlevel, level_dimid) )
-call check( "7",nf90_def_dim(lunit,"level_vdim", 4, level_vdim_dimid) )
+call nccheck( "6",nf90_def_dim(lunit,"level", nlevel, level_dimid) )
+call nccheck( "7",nf90_def_dim(lunit,"level_vdim", 4, level_vdim_dimid) )
 
-call check( "8",nf90_def_dim(lunit,"network_name", nnetwork, network_dimid) )
-call check( "9",nf90_def_dim(lunit,"network_name_len",network_name_len, network_name_len_dimid) )
+call nccheck( "8",nf90_def_dim(lunit,"network_name", nnetwork, network_dimid) )
+call nccheck( "9",nf90_def_dim(lunit,"network_name_len",network_name_len, network_name_len_dimid) )
 
-call check( "10",nf90_def_dim(lunit,"var_vdim",3, var_vdim_dimid) )
-call check( "11",nf90_def_dim(lunit,"var_len",65, var_len_dimid) )
-
-
-if (nanavarr > 0) call check( "a1",nf90_def_dim(lunit,"anavarr", nanavarr, anavarr_dimid) )
-if (nanavari > 0) call check( "a2",nf90_def_dim(lunit,"anavari", nanavari, anavari_dimid) )
-if (nanavarb > 0) call check( "a3",nf90_def_dim(lunit,"anavarb", nanavarb, anavarb_dimid) )
-if (nanavard > 0) call check( "a4",nf90_def_dim(lunit,"anavard", nanavard, anavard_dimid) )
-if (nanavarc > 0) call check( "a5",nf90_def_dim(lunit,"anavarc", nanavarc, anavarc_dimid) )
-call check( "a6",nf90_def_dim(lunit,"anavarc_len",vol7d_cdatalen, anavarc_len_dimid) )
+call nccheck( "10",nf90_def_dim(lunit,"var_vdim",3, var_vdim_dimid) )
+call nccheck( "11",nf90_def_dim(lunit,"var_len",65, var_len_dimid) )
 
 
-if (ndativarr > 0) call check( "d1",nf90_def_dim(lunit,"dativarr", ndativarr, dativarr_dimid) )
-if (ndativari > 0) call check( "d2",nf90_def_dim(lunit,"dativari", ndativari, dativari_dimid) )
-if (ndativarb > 0) call check( "d3",nf90_def_dim(lunit,"dativarb", ndativarb, dativarb_dimid) )
-if (ndativard > 0) call check( "d4",nf90_def_dim(lunit,"dativard", ndativard, dativard_dimid) )
-if (ndativarc > 0) call check( "d5",nf90_def_dim(lunit,"dativarc", ndativarc, dativarc_dimid) )
-call check( "d6",nf90_def_dim(lunit,"dativarc_len",vol7d_cdatalen, dativarc_len_dimid) )
+if (nanavarr > 0) call nccheck( "a1",nf90_def_dim(lunit,"anavarr", nanavarr, anavarr_dimid) )
+if (nanavari > 0) call nccheck( "a2",nf90_def_dim(lunit,"anavari", nanavari, anavari_dimid) )
+if (nanavarb > 0) call nccheck( "a3",nf90_def_dim(lunit,"anavarb", nanavarb, anavarb_dimid) )
+if (nanavard > 0) call nccheck( "a4",nf90_def_dim(lunit,"anavard", nanavard, anavard_dimid) )
+if (nanavarc > 0) call nccheck( "a5",nf90_def_dim(lunit,"anavarc", nanavarc, anavarc_dimid) )
+call nccheck( "a6",nf90_def_dim(lunit,"anavarc_len",vol7d_cdatalen, anavarc_len_dimid) )
+
+
+if (ndativarr > 0) call nccheck( "d1",nf90_def_dim(lunit,"dativarr", ndativarr, dativarr_dimid) )
+if (ndativari > 0) call nccheck( "d2",nf90_def_dim(lunit,"dativari", ndativari, dativari_dimid) )
+if (ndativarb > 0) call nccheck( "d3",nf90_def_dim(lunit,"dativarb", ndativarb, dativarb_dimid) )
+if (ndativard > 0) call nccheck( "d4",nf90_def_dim(lunit,"dativard", ndativard, dativard_dimid) )
+if (ndativarc > 0) call nccheck( "d5",nf90_def_dim(lunit,"dativarc", ndativarc, dativarc_dimid) )
+call nccheck( "d6",nf90_def_dim(lunit,"dativarc_len",vol7d_cdatalen, dativarc_len_dimid) )
 
 ! ripetere per datiattr anavar anaattr -- dativarattr anavarattr
 
 
-call check( "10",nf90_def_var(lunit, "ana_lat", NF90_DOUBLE, ana_dimid, ana_lat_varid) )
-call check( "10long_name",nf90_put_att(lunit,ana_lat_varid  ,"long_name","latitude") )
-call check( "10units",nf90_put_att(lunit,ana_lat_varid  ,"units","degrees_north") )
-call check( "10standard_name",nf90_put_att(lunit,ana_lat_varid  ,"standard_name","latitude") )
-call check( "10fillvalue",nf90_put_att(lunit,ana_lat_varid  ,"_FillValue",dmiss) )
-call check( "10missing_value",nf90_put_att(lunit,ana_lat_varid  ,"missing_value",dmiss) )
+call nccheck( "10",nf90_def_var(lunit, "ana_lat", NF90_DOUBLE, ana_dimid, ana_lat_varid) )
+call nccheck( "10long_name",nf90_put_att(lunit,ana_lat_varid  ,"long_name","latitude") )
+call nccheck( "10units",nf90_put_att(lunit,ana_lat_varid  ,"units","degrees_north") )
+call nccheck( "10standard_name",nf90_put_att(lunit,ana_lat_varid  ,"standard_name","latitude") )
+call nccheck( "10fillvalue",nf90_put_att(lunit,ana_lat_varid  ,"_FillValue",dmiss) )
+call nccheck( "10missing_value",nf90_put_att(lunit,ana_lat_varid  ,"missing_value",dmiss) )
 
-call check( "11",nf90_def_var(lunit, "ana_lon", NF90_DOUBLE, ana_dimid, ana_lon_varid) )
-call check( "11long_name",nf90_put_att(lunit,ana_lon_varid  ,"long_name","longitude") )
-call check( "11units",nf90_put_att(lunit,ana_lon_varid  ,"units","degrees_east") )
-call check( "11standard_name",nf90_put_att(lunit,ana_lon_varid  ,"standard_name","longitude") )
-call check( "11fillvalue",nf90_put_att(lunit,ana_lon_varid  ,"_FillValue",dmiss) )
-call check( "11missing_value",nf90_put_att(lunit,ana_lon_varid  ,"missing_value",dmiss) )
+call nccheck( "11",nf90_def_var(lunit, "ana_lon", NF90_DOUBLE, ana_dimid, ana_lon_varid) )
+call nccheck( "11long_name",nf90_put_att(lunit,ana_lon_varid  ,"long_name","longitude") )
+call nccheck( "11units",nf90_put_att(lunit,ana_lon_varid  ,"units","degrees_east") )
+call nccheck( "11standard_name",nf90_put_att(lunit,ana_lon_varid  ,"standard_name","longitude") )
+call nccheck( "11fillvalue",nf90_put_att(lunit,ana_lon_varid  ,"_FillValue",dmiss) )
+call nccheck( "11missing_value",nf90_put_att(lunit,ana_lon_varid  ,"missing_value",dmiss) )
 
-call check( "12",nf90_def_var(lunit, "ana_ident", NF90_CHAR, (/ ident_len_dimid,ana_dimid/), ana_ident_varid) )
-!call check( "12ident",nf90_put_att(lunit,ana_ident_varid  ,"long_name","ana_ident") )
-call check( "12fillvalue",nf90_put_att(lunit,ana_ident_varid  ,"_FillValue",cmiss) )
-call check( "12missing_value",nf90_put_att(lunit,ana_ident_varid  ,"missing_value",cmiss) )
+call nccheck( "12",nf90_def_var(lunit, "ana_ident", NF90_CHAR, (/ ident_len_dimid,ana_dimid/), ana_ident_varid) )
+!call nccheck( "12ident",nf90_put_att(lunit,ana_ident_varid  ,"long_name","ana_ident") )
+call nccheck( "12fillvalue",nf90_put_att(lunit,ana_ident_varid  ,"_FillValue",cmiss) )
+call nccheck( "12missing_value",nf90_put_att(lunit,ana_ident_varid  ,"missing_value",cmiss) )
 
-call check( "13",nf90_def_var(lunit, "time", NF90_INT, time_dimid, time_iminuti_varid) )
-call check( "1313",nf90_put_att(lunit,time_iminuti_varid, "units","minute since "//isodate) )
-call check( "13fillvalue",nf90_put_att(lunit,time_iminuti_varid  ,"_FillValue",imiss) )
-call check( "13missing_value",nf90_put_att(lunit,time_iminuti_varid  ,"missing_value",imiss) )
+call nccheck( "13",nf90_def_var(lunit, "time", NF90_INT, time_dimid, time_iminuti_varid) )
+call nccheck( "1313",nf90_put_att(lunit,time_iminuti_varid, "units","minute since "//isodate) )
+call nccheck( "13fillvalue",nf90_put_att(lunit,time_iminuti_varid  ,"_FillValue",imiss) )
+call nccheck( "13missing_value",nf90_put_att(lunit,time_iminuti_varid  ,"missing_value",imiss) )
 
-call check( "14",nf90_def_var(lunit, "timerange", NF90_INT, (/timerange_vdim_dimid,timerange_dimid/), timerange_vect_varid) )
-call check( "14fillvalue",nf90_put_att(lunit, timerange_vect_varid ,"_FillValue",imiss) )
-call check( "14missing_value",nf90_put_att(lunit, timerange_vect_varid ,"missing_value",imiss) )
+call nccheck( "14",nf90_def_var(lunit, "timerange", NF90_INT, (/timerange_vdim_dimid,timerange_dimid/), timerange_vect_varid) )
+call nccheck( "14fillvalue",nf90_put_att(lunit, timerange_vect_varid ,"_FillValue",imiss) )
+call nccheck( "14missing_value",nf90_put_att(lunit, timerange_vect_varid ,"missing_value",imiss) )
 
-call check( "15",nf90_def_var(lunit, "level", NF90_INT, (/level_vdim_dimid,level_dimid/), level_vect_varid) )
-call check( "15fillvalue",nf90_put_att(lunit,level_vect_varid  ,"_FillValue",imiss) )
-call check( "15missing_value",nf90_put_att(lunit,level_vect_varid  ,"missing_value",imiss) )
+call nccheck( "15",nf90_def_var(lunit, "level", NF90_INT, (/level_vdim_dimid,level_dimid/), level_vect_varid) )
+call nccheck( "15fillvalue",nf90_put_att(lunit,level_vect_varid  ,"_FillValue",imiss) )
+call nccheck( "15missing_value",nf90_put_att(lunit,level_vect_varid  ,"missing_value",imiss) )
 
-call check( "16",nf90_def_var(lunit, "network_name", NF90_CHAR,(/ network_name_len_dimid,network_dimid/), network_name_varid) )
-call check( "16fillvalue",nf90_put_att(lunit,network_name_varid  ,"_FillValue",cmiss) )
-call check( "16missing_value",nf90_put_att(lunit,network_name_varid  ,"missing_value",cmiss) )
+call nccheck( "16",nf90_def_var(lunit, "network_name", NF90_CHAR,(/ network_name_len_dimid,network_dimid/), network_name_varid) )
+call nccheck( "16fillvalue",nf90_put_att(lunit,network_name_varid  ,"_FillValue",cmiss) )
+call nccheck( "16missing_value",nf90_put_att(lunit,network_name_varid  ,"missing_value",cmiss) )
 
 
 ! anagrafica
 
 if (nanavarr > 0)then
-   call check( "a81" ,nf90_def_var(lunit,"anavarr",NF90_CHAR,&
+   call nccheck( "a81" ,nf90_def_var(lunit,"anavarr",NF90_CHAR,&
         (/var_len_dimid ,var_vdim_dimid,anavarr_dimid/),anavarr_varid ))
-   call check( "a81fillvalue",nf90_put_att(lunit,anavarr_varid ,"_FillValue",cmiss) )
-   call check( "a81missing_value",nf90_put_att(lunit,anavarr_varid ,"missing_value",cmiss) )
+   call nccheck( "a81fillvalue",nf90_put_att(lunit,anavarr_varid ,"_FillValue",cmiss) )
+   call nccheck( "a81missing_value",nf90_put_att(lunit,anavarr_varid ,"missing_value",cmiss) )
 
-   call check( "a82" ,nf90_def_var(lunit,"volanavarr",NF90_REAL,&
+   call nccheck( "a82" ,nf90_def_var(lunit,"volanavarr",NF90_REAL,&
         (/ana_dimid,anavarr_dimid,network_dimid/),volanavarr_varid ))
-   call check( "a82fillvalue",nf90_put_att(lunit,volanavarr_varid  ,"_FillValue",rmiss) )
-   call check( "a82missing_value",nf90_put_att(lunit,volanavarr_varid  ,"missing_value",rmiss) )
+   call nccheck( "a82fillvalue",nf90_put_att(lunit,volanavarr_varid  ,"_FillValue",rmiss) )
+   call nccheck( "a82missing_value",nf90_put_att(lunit,volanavarr_varid  ,"missing_value",rmiss) )
 end if
 if (nanavari > 0) then
-   call check( "a83" ,nf90_def_var(lunit,"anavari",NF90_CHAR,&
+   call nccheck( "a83" ,nf90_def_var(lunit,"anavari",NF90_CHAR,&
         (/var_len_dimid,var_vdim_dimid ,anavari_dimid/),anavari_varid ))
-   call check( "a83fillvalue",nf90_put_att(lunit,anavari_varid ,"_FillValue",cmiss) )
-   call check( "a83missing_value",nf90_put_att(lunit,anavari_varid ,"missing_value",cmiss) )
+   call nccheck( "a83fillvalue",nf90_put_att(lunit,anavari_varid ,"_FillValue",cmiss) )
+   call nccheck( "a83missing_value",nf90_put_att(lunit,anavari_varid ,"missing_value",cmiss) )
 
-   call check( "a84" ,nf90_def_var(lunit,"volanavari",NF90_INT,&
+   call nccheck( "a84" ,nf90_def_var(lunit,"volanavari",NF90_INT,&
         (/ana_dimid,anavari_dimid,network_dimid/),volanavari_varid ))
-   call check( "a84fillvalue",nf90_put_att(lunit,volanavari_varid  ,"_FillValue",imiss) )
-   call check( "a84missing_value",nf90_put_att(lunit,volanavari_varid  ,"missing_value",imiss) )
+   call nccheck( "a84fillvalue",nf90_put_att(lunit,volanavari_varid  ,"_FillValue",imiss) )
+   call nccheck( "a84missing_value",nf90_put_att(lunit,volanavari_varid  ,"missing_value",imiss) )
 end if
 if (nanavard > 0) then
-   call check( "a85" ,nf90_def_var(lunit,"anavard",NF90_CHAR,&
+   call nccheck( "a85" ,nf90_def_var(lunit,"anavard",NF90_CHAR,&
         (/var_len_dimid,var_vdim_dimid ,anavard_dimid/),anavard_varid ))
-   call check( "a85fillvalue",nf90_put_att(lunit,anavard_varid ,"_FillValue",cmiss) )
-   call check( "a85missing_value",nf90_put_att(lunit,anavard_varid ,"missing_value",cmiss) )
+   call nccheck( "a85fillvalue",nf90_put_att(lunit,anavard_varid ,"_FillValue",cmiss) )
+   call nccheck( "a85missing_value",nf90_put_att(lunit,anavard_varid ,"missing_value",cmiss) )
 
-   call check( "a86" ,nf90_def_var(lunit,"volanavard",NF90_DOUBLE,&
+   call nccheck( "a86" ,nf90_def_var(lunit,"volanavard",NF90_DOUBLE,&
         (/ana_dimid,anavard_dimid,network_dimid/),volanavard_varid ))
-   call check( "a86fillvalue",nf90_put_att(lunit,volanavard_varid  ,"_FillValue",dmiss) )
-   call check( "a86missing_value",nf90_put_att(lunit,volanavard_varid  ,"missing_value",dmiss) )
+   call nccheck( "a86fillvalue",nf90_put_att(lunit,volanavard_varid  ,"_FillValue",dmiss) )
+   call nccheck( "a86missing_value",nf90_put_att(lunit,volanavard_varid  ,"missing_value",dmiss) )
 end if
 if (nanavarb > 0) then
-   call check( "a87" ,nf90_def_var(lunit,"anavarb",NF90_CHAR,&
+   call nccheck( "a87" ,nf90_def_var(lunit,"anavarb",NF90_CHAR,&
         (/var_len_dimid,var_vdim_dimid ,anavarb_dimid/),anavarb_varid ))
-   call check( "a87fillvalue",nf90_put_att(lunit,anavarb_varid ,"_FillValue",cmiss) )
-   call check( "a87missing_value",nf90_put_att(lunit,anavarb_varid ,"missing_value",cmiss) )
+   call nccheck( "a87fillvalue",nf90_put_att(lunit,anavarb_varid ,"_FillValue",cmiss) )
+   call nccheck( "a87missing_value",nf90_put_att(lunit,anavarb_varid ,"missing_value",cmiss) )
 
-   call check( "a88" ,nf90_def_var(lunit,"volanavarb",NF90_BYTE,&
+   call nccheck( "a88" ,nf90_def_var(lunit,"volanavarb",NF90_BYTE,&
         (/ana_dimid,anavarb_dimid,network_dimid/),volanavarb_varid ))
-   call check( "a88fillvalue",nf90_put_att(lunit,volanavarb_varid  ,"_FillValue",ibmiss) )
-   call check( "a88missing_value",nf90_put_att(lunit,volanavarb_varid  ,"missing_value",ibmiss) )
+   call nccheck( "a88fillvalue",nf90_put_att(lunit,volanavarb_varid  ,"_FillValue",ibmiss) )
+   call nccheck( "a88missing_value",nf90_put_att(lunit,volanavarb_varid  ,"missing_value",ibmiss) )
 end if
 if (nanavarc > 0) then 
-   call check( "a89" ,nf90_def_var(lunit,"anavarc",NF90_CHAR,&
+   call nccheck( "a89" ,nf90_def_var(lunit,"anavarc",NF90_CHAR,&
         (/var_len_dimid,var_vdim_dimid ,anavarc_dimid/),anavarc_varid ))
-   call check( "a89fillvalue",nf90_put_att(lunit,anavarc_varid ,"_FillValue",cmiss) )
-   call check( "a89missing_value",nf90_put_att(lunit,anavarc_varid ,"missing_value",cmiss) )
+   call nccheck( "a89fillvalue",nf90_put_att(lunit,anavarc_varid ,"_FillValue",cmiss) )
+   call nccheck( "a89missing_value",nf90_put_att(lunit,anavarc_varid ,"missing_value",cmiss) )
 
-   call check( "a90" ,nf90_def_var(lunit,"volanavarc",NF90_CHAR,&
+   call nccheck( "a90" ,nf90_def_var(lunit,"volanavarc",NF90_CHAR,&
         (/anavarc_len_dimid,ana_dimid,anavarc_dimid,network_dimid/),volanavarc_varid ))
-   call check( "a90fillvalue",nf90_put_att(lunit,volanavarc_varid  ,"_FillValue",cmiss) )
-   call check( "a90missing_value",nf90_put_att(lunit,volanavarc_varid  ,"missing_value",cmiss) )
+   call nccheck( "a90fillvalue",nf90_put_att(lunit,volanavarc_varid  ,"_FillValue",cmiss) )
+   call nccheck( "a90missing_value",nf90_put_att(lunit,volanavarc_varid  ,"missing_value",cmiss) )
 end if
 
 
@@ -361,77 +361,77 @@ end if
 ! dati
 
 if (ndativarr > 0) then
-   call check( "d81" ,nf90_def_var(lunit,"dativarr",NF90_CHAR,&
+   call nccheck( "d81" ,nf90_def_var(lunit,"dativarr",NF90_CHAR,&
         (/var_len_dimid,var_vdim_dimid ,dativarr_dimid/),dativarr_varid ))
-   call check( "d8fillvalue",nf90_put_att(lunit,dativarr_varid, "_FillValue",cmiss) )
-   call check( "d8missing_value",nf90_put_att(lunit,dativarr_varid, "missing_value",cmiss) )
+   call nccheck( "d8fillvalue",nf90_put_att(lunit,dativarr_varid, "_FillValue",cmiss) )
+   call nccheck( "d8missing_value",nf90_put_att(lunit,dativarr_varid, "missing_value",cmiss) )
 
-   call check( "d82" ,nf90_def_var(lunit,"voldativarr",NF90_REAL,&
+   call nccheck( "d82" ,nf90_def_var(lunit,"voldativarr",NF90_REAL,&
         (/ana_dimid,time_dimid,level_dimid,timerange_dimid,dativarr_dimid,network_dimid/),voldativarr_varid ))
-   call check( "d82fillvalue",nf90_put_att(lunit,voldativarr_varid , "_FillValue",rmiss) )
-   call check( "d82missing_value",nf90_put_att(lunit,voldativarr_varid , "missing_value",rmiss) )
+   call nccheck( "d82fillvalue",nf90_put_att(lunit,voldativarr_varid , "_FillValue",rmiss) )
+   call nccheck( "d82missing_value",nf90_put_att(lunit,voldativarr_varid , "missing_value",rmiss) )
 end if
 if (ndativari > 0) then
-   call check( "d83" ,nf90_def_var(lunit,"dativari",NF90_CHAR,&
+   call nccheck( "d83" ,nf90_def_var(lunit,"dativari",NF90_CHAR,&
         (/var_len_dimid,var_vdim_dimid ,dativari_dimid/),dativari_varid ))
-   call check( "d83fillvalue",nf90_put_att(lunit,dativari_varid, "_FillValue",cmiss) )
-   call check( "d83missing_value",nf90_put_att(lunit,dativari_varid, "missing_value",cmiss) )
+   call nccheck( "d83fillvalue",nf90_put_att(lunit,dativari_varid, "_FillValue",cmiss) )
+   call nccheck( "d83missing_value",nf90_put_att(lunit,dativari_varid, "missing_value",cmiss) )
 
-   call check( "d84" ,nf90_def_var(lunit,"voldativari",NF90_INT,&
+   call nccheck( "d84" ,nf90_def_var(lunit,"voldativari",NF90_INT,&
         (/ana_dimid,time_dimid,level_dimid,timerange_dimid,dativari_dimid,network_dimid/),voldativari_varid ))
-   call check( "d84fillvalue",nf90_put_att(lunit,voldativari_varid , "_FillValue",imiss) )
-   call check( "d84missing_value",nf90_put_att(lunit,voldativari_varid , "missing_value",imiss) )
+   call nccheck( "d84fillvalue",nf90_put_att(lunit,voldativari_varid , "_FillValue",imiss) )
+   call nccheck( "d84missing_value",nf90_put_att(lunit,voldativari_varid , "missing_value",imiss) )
 end if
 if (ndativard > 0) then
-   call check( "d85" ,nf90_def_var(lunit,"dativard",NF90_CHAR,&
+   call nccheck( "d85" ,nf90_def_var(lunit,"dativard",NF90_CHAR,&
         (/var_len_dimid,var_vdim_dimid ,dativard_dimid/),dativard_varid ))
-   call check( "d85fillvalue",nf90_put_att(lunit,dativard_varid, "_FillValue",cmiss) )
-   call check( "d85missing_value",nf90_put_att(lunit,dativard_varid, "missing_value",cmiss) )
+   call nccheck( "d85fillvalue",nf90_put_att(lunit,dativard_varid, "_FillValue",cmiss) )
+   call nccheck( "d85missing_value",nf90_put_att(lunit,dativard_varid, "missing_value",cmiss) )
 
-   call check( "d86" ,nf90_def_var(lunit,"voldativard",NF90_DOUBLE,&
+   call nccheck( "d86" ,nf90_def_var(lunit,"voldativard",NF90_DOUBLE,&
         (/ana_dimid,time_dimid,level_dimid,timerange_dimid,dativard_dimid,network_dimid/),voldativard_varid ))
-   call check( "d86fillvalue",nf90_put_att(lunit,voldativard_varid , "_FillValue",dmiss) )
-   call check( "d86missing_value",nf90_put_att(lunit,voldativard_varid , "missing_value",dmiss) )
+   call nccheck( "d86fillvalue",nf90_put_att(lunit,voldativard_varid , "_FillValue",dmiss) )
+   call nccheck( "d86missing_value",nf90_put_att(lunit,voldativard_varid , "missing_value",dmiss) )
 end if
 if (ndativarb > 0) then
-   call check( "d87" ,nf90_def_var(lunit,"dativarb",NF90_CHAR,&
+   call nccheck( "d87" ,nf90_def_var(lunit,"dativarb",NF90_CHAR,&
         (/var_len_dimid,var_vdim_dimid ,dativarb_dimid/),dativarb_varid ))
-   call check( "d87fillvalue",nf90_put_att(lunit,dativarb_varid, "_FillValue",cmiss) )
-   call check( "d87missing_value",nf90_put_att(lunit,dativarb_varid, "missing_value",cmiss) )
+   call nccheck( "d87fillvalue",nf90_put_att(lunit,dativarb_varid, "_FillValue",cmiss) )
+   call nccheck( "d87missing_value",nf90_put_att(lunit,dativarb_varid, "missing_value",cmiss) )
 
-   call check( "d88" ,nf90_def_var(lunit,"voldativarb",NF90_BYTE,&
+   call nccheck( "d88" ,nf90_def_var(lunit,"voldativarb",NF90_BYTE,&
         (/ana_dimid,time_dimid,level_dimid,timerange_dimid,dativarb_dimid,network_dimid/),voldativarb_varid ))
-   call check( "d88fillvalue",nf90_put_att(lunit,voldativarb_varid , "_FillValue",ibmiss) )
-   call check( "d88missing_value",nf90_put_att(lunit,voldativarb_varid , "missing_value",ibmiss) )
+   call nccheck( "d88fillvalue",nf90_put_att(lunit,voldativarb_varid , "_FillValue",ibmiss) )
+   call nccheck( "d88missing_value",nf90_put_att(lunit,voldativarb_varid , "missing_value",ibmiss) )
 end if
 if (ndativarc > 0) then
-   call check( "d89" ,nf90_def_var(lunit,"dativarc",NF90_CHAR,&
+   call nccheck( "d89" ,nf90_def_var(lunit,"dativarc",NF90_CHAR,&
         (/var_len_dimid,var_vdim_dimid ,dativarc_dimid/),dativarc_varid ))
-   call check( "d89fillvalue",nf90_put_att(lunit,dativarc_varid, "_FillValue",cmiss) )
-   call check( "d89missing_value",nf90_put_att(lunit,dativarc_varid, "missing_value",cmiss) )
+   call nccheck( "d89fillvalue",nf90_put_att(lunit,dativarc_varid, "_FillValue",cmiss) )
+   call nccheck( "d89missing_value",nf90_put_att(lunit,dativarc_varid, "missing_value",cmiss) )
 
-   call check( "d90" ,nf90_def_var(lunit,"voldativarc",NF90_CHAR,&
+   call nccheck( "d90" ,nf90_def_var(lunit,"voldativarc",NF90_CHAR,&
         (/dativarc_len_dimid,ana_dimid,time_dimid,level_dimid,timerange_dimid,dativarc_dimid,network_dimid/),voldativarc_varid ))
-   call check( "d90fillvalue",nf90_put_att(lunit,voldativarc_varid , "_FillValue",cmiss) )
-   call check( "d90missing_value",nf90_put_att(lunit,voldativarc_varid , "missing_value",cmiss) )
+   call nccheck( "d90fillvalue",nf90_put_att(lunit,voldativarc_varid , "_FillValue",cmiss) )
+   call nccheck( "d90missing_value",nf90_put_att(lunit,voldativarc_varid , "missing_value",cmiss) )
 end if
 
 ! end definition
-call check("22", nf90_enddef(lunit) )
+call nccheck("22", nf90_enddef(lunit) )
 
 
-if (associated(this%ana))       call check("23", nf90_put_var(lunit, ana_lat_varid, getlat(this%ana(:)%coord)))
-if (associated(this%ana))       call check("24", nf90_put_var(lunit, ana_lon_varid, getlon(this%ana(:)%coord)))
+if (associated(this%ana))       call nccheck("23", nf90_put_var(lunit, ana_lat_varid, getlat(this%ana(:)%coord)))
+if (associated(this%ana))       call nccheck("24", nf90_put_var(lunit, ana_lon_varid, getlon(this%ana(:)%coord)))
 
-if (associated(this%ana))       call check("25", nf90_put_var(lunit, ana_ident_varid, this%ana(:)%ident))
+if (associated(this%ana))       call nccheck("25", nf90_put_var(lunit, ana_ident_varid, this%ana(:)%ident))
 
-if (associated(this%time))      call check("26", nf90_put_var(lunit, time_iminuti_varid   , &
+if (associated(this%time))      call nccheck("26", nf90_put_var(lunit, time_iminuti_varid   , &
  int(timedelta_getamsec(this%time-timeref)/60000)))
 
 if (associated(this%level)) then
   do i=1,nlevel
 
-    call check("27", nf90_put_var(lunit, level_vect_varid,&
+    call nccheck("27", nf90_put_var(lunit, level_vect_varid,&
      (/this%level(i)%level1,&
      this%level(i)%l1,&
      this%level(i)%level2,&
@@ -442,7 +442,7 @@ end if
 
 if (associated(this%timerange)) then
   do i=1,ntimerange
-    call check( "28",nf90_put_var(lunit, timerange_vect_varid,&
+    call nccheck( "28",nf90_put_var(lunit, timerange_vect_varid,&
      (/this%timerange(i)%timerange,&
      this%timerange(i)%p1,&
      this%timerange(i)%p2/),&
@@ -451,7 +451,7 @@ if (associated(this%timerange)) then
 end if
 
 if (associated(this%network)) then
-    call check( "29",nf90_put_var(lunit, network_name_varid,this%network(:)%name))
+    call nccheck( "29",nf90_put_var(lunit, network_name_varid,this%network(:)%name))
 end if
 
 
@@ -462,7 +462,7 @@ do i=1,nanavarr
       varchar(1)= this%anavar%r(i)%description
       varchar(2)= this%anavar%r(i)%unit
       varchar(3)= this%anavar%r(i)%btable
-      call check( "a291",nf90_put_var(lunit, anavarr_varid,&
+      call nccheck( "a291",nf90_put_var(lunit, anavarr_varid,&
        varchar&
        ,start=(/1,1,i/),count=(/65,3,1/)))
    end if
@@ -473,7 +473,7 @@ do i=1,nanavari
       varchar(1)= this%anavar%i(i)%description
       varchar(2)= this%anavar%i(i)%unit
       varchar(3)= this%anavar%i(i)%btable
-      call check( "a292",nf90_put_var(lunit, anavari_varid,&
+      call nccheck( "a292",nf90_put_var(lunit, anavari_varid,&
       varchar&
       ,start=(/1,1,i/),count=(/65,3,1/)))
    end if
@@ -484,7 +484,7 @@ do i=1,nanavard
       varchar(1)= this%anavar%d(i)%description
       varchar(2)= this%anavar%d(i)%unit
       varchar(3)= this%anavar%d(i)%btable
-      call check( "a293",nf90_put_var(lunit, anavard_varid,&
+      call nccheck( "a293",nf90_put_var(lunit, anavard_varid,&
        varchar&
        ,start=(/1,1,i/),count=(/65,3,1/)))
    end if
@@ -495,7 +495,7 @@ do i=1,nanavarb
       varchar(1)= this%anavar%b(i)%description
       varchar(2)= this%anavar%b(i)%unit
       varchar(3)= this%anavar%b(i)%btable
-      call check( "a294",nf90_put_var(lunit, anavarb_varid,&
+      call nccheck( "a294",nf90_put_var(lunit, anavarb_varid,&
        varchar&
        ,start=(/1,1,i/),count=(/65,3,1/)))
    end if
@@ -506,7 +506,7 @@ do i=1,nanavarc
       varchar(1)= this%anavar%c(i)%description
       varchar(2)= this%anavar%c(i)%unit
       varchar(3)= this%anavar%c(i)%btable
-      call check( "a295",nf90_put_var(lunit, anavarc_varid,&
+      call nccheck( "a295",nf90_put_var(lunit, anavarc_varid,&
        varchar&
        ,start=(/1,1,i/),count=(/65,3,1/)))
    end if
@@ -521,7 +521,7 @@ do i=1,ndativarr
      varchar(1)=this%dativar%r(i)%description
      varchar(2)=this%dativar%r(i)%unit
      varchar(3)=this%dativar%r(i)%btable
-      call check( "a291",nf90_put_var(lunit, dativarr_varid,&
+      call nccheck( "a291",nf90_put_var(lunit, dativarr_varid,&
        varchar&
       ,start=(/1,1,i/),count=(/65,3,1/)))
    end if
@@ -532,7 +532,7 @@ do i=1,ndativari
      varchar(1)=this%dativar%i(i)%description
      varchar(2)=this%dativar%i(i)%unit
      varchar(3)=this%dativar%i(i)%btable
-      call check( "a292",nf90_put_var(lunit, dativari_varid,&
+      call nccheck( "a292",nf90_put_var(lunit, dativari_varid,&
        varchar&
        ,start=(/1,1,i/),count=(/65,3,1/)))
    end if
@@ -543,7 +543,7 @@ do i=1,ndativard
      varchar(1)=this%dativar%d(i)%description
      varchar(2)=this%dativar%d(i)%unit
      varchar(3)=this%dativar%d(i)%btable
-      call check( "a293",nf90_put_var(lunit, dativard_varid,&
+      call nccheck( "a293",nf90_put_var(lunit, dativard_varid,&
        varchar&
        ,start=(/1,1,i/),count=(/65,3,1/)))
    end if
@@ -554,7 +554,7 @@ do i=1,ndativarb
      varchar(1)=this%dativar%b(i)%description
      varchar(2)=this%dativar%b(i)%unit
      varchar(3)=this%dativar%b(i)%btable
-      call check( "a294",nf90_put_var(lunit, dativarb_varid,&
+      call nccheck( "a294",nf90_put_var(lunit, dativarb_varid,&
        varchar&
        ,start=(/1,1,i/),count=(/65,3,1/)))
    end if
@@ -565,7 +565,7 @@ do i=1,ndativarc
      varchar(1)=this%dativar%c(i)%description
      varchar(2)=this%dativar%c(i)%unit
      varchar(3)=this%dativar%c(i)%btable
-      call check( "a295",nf90_put_var(lunit, dativarc_varid,&
+      call nccheck( "a295",nf90_put_var(lunit, dativarc_varid,&
        varchar&
        ,start=(/1,1,i/),count=(/65,3,1/)))
    end if
@@ -573,20 +573,20 @@ end do
 
 
 !!$if (associated(this%volanar))      write(unit=lunit)this%volanar
-if (associated(this%volanar))call check("a231", nf90_put_var(lunit,volanavarr_varid,this%volanar))
-if (associated(this%volanai))call check("a232", nf90_put_var(lunit,volanavari_varid,this%volanai))
-if (associated(this%volanad))call check("a233", nf90_put_var(lunit,volanavard_varid,this%volanad))
-if (associated(this%volanab))call check("a234", nf90_put_var(lunit,volanavarb_varid,this%volanab))
-if (associated(this%volanac))call check("a235", nf90_put_var(lunit,volanavarc_varid,this%volanac))
+if (associated(this%volanar))call nccheck("a231", nf90_put_var(lunit,volanavarr_varid,this%volanar))
+if (associated(this%volanai))call nccheck("a232", nf90_put_var(lunit,volanavari_varid,this%volanai))
+if (associated(this%volanad))call nccheck("a233", nf90_put_var(lunit,volanavard_varid,this%volanad))
+if (associated(this%volanab))call nccheck("a234", nf90_put_var(lunit,volanavarb_varid,this%volanab))
+if (associated(this%volanac))call nccheck("a235", nf90_put_var(lunit,volanavarc_varid,this%volanac))
 
 
-if (associated(this%voldatir))call check("d231", nf90_put_var(lunit,voldativarr_varid,this%voldatir))
-if (associated(this%voldatii))call check("d232", nf90_put_var(lunit,voldativari_varid,this%voldatii))
-if (associated(this%voldatid))call check("d233", nf90_put_var(lunit,voldativard_varid,this%voldatid))
-if (associated(this%voldatib))call check("d234", nf90_put_var(lunit,voldativarb_varid,this%voldatib))
-if (associated(this%voldatic))call check("d235", nf90_put_var(lunit,voldativarc_varid,this%voldatic))
+if (associated(this%voldatir))call nccheck("d231", nf90_put_var(lunit,voldativarr_varid,this%voldatir))
+if (associated(this%voldatii))call nccheck("d232", nf90_put_var(lunit,voldativari_varid,this%voldatii))
+if (associated(this%voldatid))call nccheck("d233", nf90_put_var(lunit,voldativard_varid,this%voldatid))
+if (associated(this%voldatib))call nccheck("d234", nf90_put_var(lunit,voldativarb_varid,this%voldatib))
+if (associated(this%voldatic))call nccheck("d235", nf90_put_var(lunit,voldativarc_varid,this%voldatic))
 
-if (.not. present(ncunit)) call check("90", nf90_close(lunit) )
+if (.not. present(ncunit)) call nccheck("90", nf90_close(lunit) )
 
 end subroutine vol7d_netcdf_export
 
@@ -648,7 +648,7 @@ end subroutine vol7d_netcdf_export_CF
 
 
 
-subroutine check(stringa,status)
+subroutine nccheck(stringa,status)
 integer, intent ( in) :: status
 character (len=*) :: stringa
 
@@ -657,7 +657,7 @@ if(status /= nf90_noerr) then
   print *, trim(nf90_strerror(status))
   stop "Stopped"
 end if
-end subroutine check
+end subroutine nccheck
 
 
 end MODULE vol7d_netcdf_class
