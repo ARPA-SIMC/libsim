@@ -683,10 +683,15 @@ if (qccli%height2level) then
 endif
 
 
-
-
 if (.not. associated (qccli%in_macroa)) then
   call l4f_category_log(qccli%category,L4F_WARN,"macroarea data not iniziatized: normalize data not possible")
+  qccli%v7d%voldatir=rmiss
+  ! call raise_fatal_error()
+  return
+end if
+
+if (.not. associated(qccli%extreme%voldatir)) then
+  call l4f_category_log(qccli%category,L4F_WARN,"qccli%extreme%voldatir not iniziatized: normalize data not possible")
   qccli%v7d%voldatir=rmiss
   ! call raise_fatal_error()
   return
@@ -751,7 +756,6 @@ do indana=1,size(qccli%v7d%ana)
             perc50=rmiss
             perc75=rmiss
 
-            if (.not. associated(qccli%extreme%voldatir)) cycle
 
             if (qccli%height2level) then
               k=iclv(indana)
@@ -761,6 +765,12 @@ do indana=1,size(qccli%v7d%ana)
             
             desc=25
             write(ident,'("#",i2.2,2i3.3)')k,iarea,desc   ! macro-area e descrittore
+
+!!$            if (indana == 1996 .and. indtime == 855 .and. indlevel == 1 .and. indtimerange==1 &
+!!$             .and. inddativarr==1 .and. indnetwork==1 ) then
+!!$              call l4f_category_log(qccli%category,L4F_WARN,"mmmmmmmmmmmmm: "//t2c(datoqui)//ident)
+!!$            end if
+
             call init(ana,lat=0.0_fp_geo,lon=0.0_fp_geo,ident=ident)
             indcana=index(qccli%extreme%ana,ana)
             call l4f_log(L4F_DEBUG,"Index25:"//to_char(k)//to_char(indcana)//&
@@ -795,7 +805,8 @@ do indana=1,size(qccli%v7d%ana)
                indctimerange,indcdativarr,indcnetwork)
             end if
             
-            if ( c_e(perc25) .and. c_e(perc50) .and. c_e(perc75) ) then
+            if ( c_e(perc25) .and. c_e(perc50) .and. c_e(perc75) .and. &
+             ABS( perc75 - perc25 ) >= SPACING( MAX(ABS(perc75),ABS(perc25))))then
                                 ! normalize
               
               call l4f_log(L4F_DEBUG,"dato qui ini: "//t2c(datoqui))
