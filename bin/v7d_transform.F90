@@ -62,7 +62,7 @@ USE termo
 IMPLICIT NONE
 
 TYPE(optionparser) :: opt
-INTEGER :: optind, optstatus
+INTEGER :: optind, optstatus, status
 TYPE(csv_record) :: argparse
 CHARACTER(len=8) :: input_format, coord_format, extreme_format
 
@@ -697,6 +697,14 @@ IF (c_e(coord_file)) THEN
 
 ENDIF
 
+#ifdef DEBUG
+status=check(v7d_coord)
+if ( status /= 0 ) then
+  CALL l4f_category_log(category,L4F_ERROR,'check coord failed; status:'//t2c(status))
+  CALL raise_fatal_error()
+end if
+#endif
+
 ! check level_type
 ilevel_type = imiss
 olevel_type = imiss
@@ -872,6 +880,14 @@ DO ninput = optind, iargc()-1
   CALL delete(v7dtmp)
 
 ENDDO
+
+#ifdef DEBUG
+status=check(qccli%v7d)
+if ( status /= 0 ) then
+  CALL l4f_category_log(category,L4F_ERROR,'check v7d input failed; status:'//t2c(status))
+  CALL raise_fatal_error()
+end if
+#endif
 
 CALL delete(opt) ! check whether I can already get rid of this stuff now
 
@@ -1125,6 +1141,14 @@ if (comp_qc_ndi .or. comp_qc_perc) then
     print*," >>>>> Input Extreme <<<<<"
     call display(qccli%extreme)
   end IF
+
+#ifdef DEBUG
+  status=check(qccli%extreme)
+  if ( status /= 0 ) then
+    CALL l4f_category_log(category,L4F_ERROR,'check extreme failed; status:'//t2c(status))
+    CALL raise_fatal_error()
+  end if
+#endif
 end if
   
 if (comp_qc_perc) then
@@ -1140,7 +1164,6 @@ if (comp_qc_perc) then
 end if
 
 if (comp_qc_ndi) then
-
   call vol7d_normalize_data(qccli)
   
   IF (ldisplay) then
