@@ -522,13 +522,12 @@ REAL :: lsample(SIZE(sample)), rindex
 INTEGER :: sample_count, j, iindex
 LOGICAL :: sample_mask(SIZE(sample))
 
-
 percentile(:) = rmiss
 IF (.NOT.optio_log(nomiss)) THEN
-  sample_mask = (sample /= rmiss)
+  sample_mask = c_e(sample)
   IF (PRESENT(mask)) sample_mask = sample_mask .AND. mask
   sample_count = COUNT(sample_mask)
-  IF (sample_count == 0) RETURN ! particular case
+  IF (sample_count == 0) RETURN ! special case
 ELSE
   sample_count = SIZE(sample)
 ENDIF
@@ -539,10 +538,11 @@ ELSE
   lsample(1:sample_count) = PACK(sample, mask=sample_mask)
 ENDIF
 
-IF (sample_count == 1) THEN ! other particular case
+IF (sample_count == 1) THEN ! other special case
   percentile(:) = lsample(1)
   RETURN
 ENDIF
+
 
 ! this sort is very fast but with a lot of equal values it is very slow and fails
 CALL sort(lsample(1:sample_count))
@@ -564,8 +564,10 @@ DO j = 1, SIZE(perc_vals)
 ! compute integer index of previous element in sample, beware of corner cases
     iindex = MIN(MAX(INT(rindex), 1), sample_count-1)
 ! compute linearly interpolated percentile
+
     percentile(j) = lsample(iindex)*(REAL(iindex+1, kind=KIND(rindex))-rindex) &
      + lsample(iindex+1)*(rindex-REAL(iindex, kind=KIND(rindex)))
+
   ENDIF
 ENDDO
 
@@ -1087,6 +1089,7 @@ integer :: i,k,middle
 
 ndi=rmiss
 limbins = stat_percentile(rnum,perc_vals)     ! compute percentile
+
 call DensityIndex(di,nlimbins,occu,rnum,limbins)
 
 ! Mediana calculation for density index
