@@ -249,6 +249,13 @@ INTERFACE c_e
   MODULE PROCEDURE vol7d_c_e
 END INTERFACE
 
+!> Check for problems
+!! return 0 if all check passed
+!! print diagnostics with log4f
+INTERFACE check
+  MODULE PROCEDURE vol7d_check
+END INTERFACE
+
 !> Reduce some dimensions (level and timerage) for semplification (rounding).
 !! You can use this for simplify and use variables in computation like alchimia
 !! where fields have to be on the same coordinate
@@ -296,7 +303,7 @@ PRIVATE vol7d_get_volr, vol7d_get_vold, vol7d_get_voli, vol7d_get_volb, &
  vol7d_nullifyr, vol7d_nullifyd, vol7d_nullifyi, vol7d_nullifyb, vol7d_nullifyc, &
  vol7d_init, vol7d_delete, vol7d_write_on_file, vol7d_read_from_file, &
  vol7d_check_alloc_ana,  vol7d_check_alloc_dati, vol7d_display, dat_display,dat_vect_display, &
- to_char_dat
+ to_char_dat, vol7d_check
 
 PRIVATE doubledatd,doubledatr,doubledati,doubledatb,doubledatc
 
@@ -386,6 +393,98 @@ CALL delete(this%datiattr)
 CALL delete(this%dativarattr)
 
 END SUBROUTINE vol7d_delete
+
+
+
+integer function vol7d_check(this)
+TYPE(vol7d),intent(in) :: this !< object to check
+integer :: i,j,k,l,m,n
+
+vol7d_check=0
+
+if (associated(this%voldatii)) then
+do i = 1,size(this%voldatii,1)
+  do j = 1,size(this%voldatii,2)
+    do k = 1,size(this%voldatii,3)
+      do l = 1,size(this%voldatii,4)
+        do m = 1,size(this%voldatii,5)
+          do n = 1,size(this%voldatii,6)
+            if (this%voldatii(i,j,k,l,m,n) /= this%voldatii(i,j,k,l,m,n) ) then
+              CALL l4f_log(L4F_warn,"check: abnormal value at voldatii("&
+               //t2c(i)//","//t2c(j)//","//t2c(k)//","//t2c(l)//","//t2c(m)//","//t2c(n)//",)")
+              vol7d_check=1
+            end if
+          end do
+        end do
+      end do
+    end do
+  end do
+end do
+end if
+
+
+if (associated(this%voldatir)) then
+do i = 1,size(this%voldatir,1)
+  do j = 1,size(this%voldatir,2)
+    do k = 1,size(this%voldatir,3)
+      do l = 1,size(this%voldatir,4)
+        do m = 1,size(this%voldatir,5)
+          do n = 1,size(this%voldatir,6)
+            if (this%voldatir(i,j,k,l,m,n) /= this%voldatir(i,j,k,l,m,n) ) then
+              CALL l4f_log(L4F_warn,"check: abnormal value at voldatir("&
+               //t2c(i)//","//t2c(j)//","//t2c(k)//","//t2c(l)//","//t2c(m)//","//t2c(n)//",)")
+              vol7d_check=2
+            end if
+          end do
+        end do
+      end do
+    end do
+  end do
+end do
+end if
+
+if (associated(this%voldatid)) then
+do i = 1,size(this%voldatid,1)
+  do j = 1,size(this%voldatid,2)
+    do k = 1,size(this%voldatid,3)
+      do l = 1,size(this%voldatid,4)
+        do m = 1,size(this%voldatid,5)
+          do n = 1,size(this%voldatid,6)
+            if (this%voldatid(i,j,k,l,m,n) /= this%voldatid(i,j,k,l,m,n) ) then
+              CALL l4f_log(L4F_warn,"check: abnormal value at voldatid("&
+               //t2c(i)//","//t2c(j)//","//t2c(k)//","//t2c(l)//","//t2c(m)//","//t2c(n)//",)")
+              vol7d_check=3
+            end if
+          end do
+        end do
+      end do
+    end do
+  end do
+end do
+end if
+
+if (associated(this%voldatib)) then
+do i = 1,size(this%voldatib,1)
+  do j = 1,size(this%voldatib,2)
+    do k = 1,size(this%voldatib,3)
+      do l = 1,size(this%voldatib,4)
+        do m = 1,size(this%voldatib,5)
+          do n = 1,size(this%voldatib,6)
+            if (this%voldatib(i,j,k,l,m,n) /= this%voldatib(i,j,k,l,m,n) ) then
+              CALL l4f_log(L4F_warn,"check: abnormal value at voldatib("&
+               //t2c(i)//","//t2c(j)//","//t2c(k)//","//t2c(l)//","//t2c(m)//","//t2c(n)//",)")
+              vol7d_check=4
+            end if
+          end do
+        end do
+      end do
+    end do
+  end do
+end do
+end if
+
+end function vol7d_check
+
 
 
 !TODO da completare ! aborta se i volumi sono allocati a dimensione 0
