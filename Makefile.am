@@ -1,3 +1,5 @@
+ACLOCAL_AMFLAGS = -I m4
+
 EXTRA_DIST = libsim.spec portability/conv_cpp.sh portability/README_aix AUTHORS
 
 # Execute make in subdirs

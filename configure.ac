@@ -4,6 +4,7 @@ AC_INIT(libsim, 5.0.1, [dcesari@arpa.emr.it])
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_SRCDIR([configure.ac])
 AM_INIT_AUTOMAKE([foreign])
+AC_CONFIG_MACRO_DIR([m4])
 
 LIBSIM_VERSION_INFO=`echo $VERSION | awk -F. '{ printf "%d:%d:%d", $1+$2, $3, $2 }'`
 AC_SUBST(LIBSIM_VERSION_INFO)
@@ -242,12 +243,18 @@ AM_CONDITIONAL(GDAL, test "x$enableval" = "xyes")
 AC_ARG_ENABLE(dballe, AC_HELP_STRING([--disable-dballe],
   [disable dballe support]),,[enableval=yes])dnl default enable
 if test "x$enableval" = "xyes"; then
-AC_MSG_RESULT([dballe code included])
-DBALLE_LIBS="-ldballef -ldballe -lcnf -lodbc -lm"
-AC_SUBST(DBALLE_LIBS)
-AC_DEFINE(HAVE_DBALLE, 1, [Enable dballe])
+  PKG_CHECK_EXISTS([libdballef >= 4.0], [enableval=yes], [enableval=no])
+  if test "x$enableval" = "xyes"; then
+    AC_MSG_RESULT([dballe code requested and found])
+    PKG_CHECK_MODULES(DBALLE, [libdballef >= 4.0])
+    AC_DEFINE(HAVE_DBALLE, 1, [Enable dballe])
+    dnl DBALLE_LIBS="-ldballef -ldballe -lcnf -lodbc -lm"
+    dnl AC_SUBST(DBALLE_LIBS)
+  else
+    AC_MSG_WARN([dballe code requested but not found])
+  fi
 else
-AC_MSG_RESULT([dballe code not included])
+  AC_MSG_RESULT([dballe code not included])
 fi
 AM_CONDITIONAL(DBALLE, test "x$enableval" = "xyes")
 
