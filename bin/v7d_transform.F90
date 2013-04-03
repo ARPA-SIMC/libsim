@@ -370,8 +370,7 @@ CALL optionparser_add(opt, ' ', 'output-format', output_format, 'native', help= 
  'format of output file, in the form ''name[:template]''; ''native'' for vol7d &
  &native binary format (no template to be specified)'&
 #ifdef HAVE_DBALLE
- //'; ''BUFR'' and ''CREX'' for corresponding formats, with template in the form &
- &''category.subcategory.localcategory'' or as an alias like ''synop'', ''metar'', &
+ //'; ''BUFR'' and ''CREX'' for corresponding formats, with template as an alias like ''synop'', ''metar'', &
  &''temp'', ''generic'', empty for ''generic'''&
 #endif
 #ifdef HAVE_LIBGRIBAPI

@@ -154,8 +154,7 @@ CALL optionparser_add(opt, 'f', 'output-format', output_format, &
  )
 #ifdef HAVE_DBALLE
 CALL optionparser_add(opt, 't', 'output-template', output_template, 'generic', help= &
- 'output template for BUFR/CREX, in the form ''category.subcategory.localcategory'',&
-& or an alias like ''synop'', ''metar'', ''temp'', ''generic''')
+ 'output template for BUFR/CREX, as alias like ''synop'', ''metar'', ''temp'', ''generic''')
 #endif
 CALL optionparser_add(opt, ' ', 'output-td', output_td, 1, help= &
  'time definition for output vol7d volume, 0 for reference time (more suitable for &
