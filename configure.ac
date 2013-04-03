@@ -243,10 +243,10 @@ AM_CONDITIONAL(GDAL, test "x$enableval" = "xyes")
 AC_ARG_ENABLE(dballe, AC_HELP_STRING([--disable-dballe],
   [disable dballe support]),,[enableval=yes])dnl default enable
 if test "x$enableval" = "xyes"; then
-  PKG_CHECK_EXISTS([libdballef >= 4.0], [enableval=yes], [enableval=no])
+  PKG_CHECK_EXISTS([libdballef >= 6.0], [enableval=yes], [enableval=no])
   if test "x$enableval" = "xyes"; then
     AC_MSG_RESULT([dballe code requested and found])
-    PKG_CHECK_MODULES(DBALLE, [libdballef >= 4.0])
+    PKG_CHECK_MODULES(DBALLE, [libdballef >= 6.0])
     AC_DEFINE(HAVE_DBALLE, 1, [Enable dballe])
     dnl DBALLE_LIBS="-ldballef -ldballe -lcnf -lodbc -lm"
     dnl AC_SUBST(DBALLE_LIBS)
