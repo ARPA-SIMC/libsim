@@ -2117,7 +2117,7 @@ do iii=1, nnetwork
       call idba_prendilo (this%handle)
 
       if (.not. this%file ) then
-        call idba_enq (this%handle,"ana_id",ana_id(i,iii))
+        call idba_enq (this%handle,"*ana_id",ana_id(i,iii))
       end if
 
 
