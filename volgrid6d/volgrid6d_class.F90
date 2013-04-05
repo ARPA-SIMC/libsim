@@ -1896,7 +1896,7 @@ deallocate(voldatir_out)
 IF (.NOT.ASSOCIATED(volgrid6d_in%voldati)) THEN
   DEALLOCATE(voldatiin)
 ENDIF
-if (vol7d_out%time_definition /= volgrid6d_in%time_definition) deallocate(validitytime)
+if (allocated(validitytime)) deallocate(validitytime)
 
 ! Rescale valid data according to variable conversion table
 IF (ASSOCIATED(c_func)) THEN

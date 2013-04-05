@@ -623,7 +623,7 @@ IF (EditionNumber == 1 .OR. EditionNumber == 2) THEN
     IF (status == GRIB_SUCCESS .AND. ttimeincr == 1) THEN
       CALL grib_get(gaid,'lengthOfTimeRange',p2) 
       CALL grib_get(gaid,'indicatorOfUnitForTimeRange',unit)
-      CALL gribtr_to_second(unit,p2,p2)
+      CALL gribtr_to_second(unit,p2,p2,EditionNumber)
       this = this + timedelta_new(msec=p2*1000)
     ELSE IF ((status == GRIB_SUCCESS .AND. ttimeincr == 2) .OR. &
      status /= GRIB_SUCCESS) THEN ! usual case
@@ -813,13 +813,13 @@ ELSE IF (EditionNumber == 2) THEN
   
   CALL grib_get(gaid,'forecastTime',p1)
   CALL grib_get(gaid,'indicatorOfUnitOfTimeRange',unit)
-  CALL gribtr_to_second(unit,p1,p1)
+  CALL gribtr_to_second(unit,p1,p1,EditionNumber)
   call grib_get(gaid,'typeOfStatisticalProcessing',statproc,status)
 
   IF (status == GRIB_SUCCESS .AND. statproc >= 0 .AND. statproc <= 9) THEN ! statistically processed
     CALL grib_get(gaid,'lengthOfTimeRange',p2) 
     CALL grib_get(gaid,'indicatorOfUnitForTimeRange',unit)
-    CALL gribtr_to_second(unit,p2,p2)
+    CALL gribtr_to_second(unit,p2,p2,EditionNumber)
 
 ! for forecast-like timeranges p1 has to be shifted to the end of interval
     CALL grib_get(gaid,'typeOfTimeIncrement',ttimeincr)
@@ -867,7 +867,7 @@ ELSE IF (EditionNumber == 2) THEN
   IF (this%timerange == 254) THEN ! point in time -> template 4.0
     CALL grib_set(gaid,'productDefinitionTemplateNumber', 0)
 ! Set reasonable time unit
-    CALL second_to_gribtr(this%p1,p1,unit)
+    CALL second_to_gribtr(this%p1,p1,unit,EditionNumber)
 ! Set the native keys
     CALL grib_set(gaid,'indicatorOfUnitOfTimeRange',unit)
     CALL grib_set(gaid,'forecastTime',p1)
@@ -879,7 +879,7 @@ ELSE IF (EditionNumber == 2) THEN
 
     IF (this%p1 >= this%p2) THEN ! forecast-like
 ! Set reasonable time unit
-      CALL second_to_gribtr(this%p1-this%p2,p1,unit)
+      CALL second_to_gribtr(this%p1-this%p2,p1,unit,EditionNumber)
       CALL grib_set(gaid,'indicatorOfUnitOfTimeRange',unit)
       CALL grib_set(gaid,'forecastTime',p1)
       CALL code_endoftimeinterval(reftime+timedelta_new(msec=this%p2*1000))
@@ -887,13 +887,13 @@ ELSE IF (EditionNumber == 2) THEN
 ! forecast time is incremented
       CALL grib_set(gaid,'typeOfStatisticalProcessing',this%timerange)
       CALL grib_set(gaid,'typeOfTimeIncrement',2)
-      CALL second_to_gribtr(this%p2,p2,unit)
+      CALL second_to_gribtr(this%p2,p2,unit,EditionNumber)
       CALL grib_set(gaid,'indicatorOfUnitForTimeRange',unit)
       CALL grib_set(gaid,'lengthOfTimeRange',p2)
 
     ELSE IF (this%p1 == 0) THEN ! analysis-like
 ! Set reasonable time unit
-      CALL second_to_gribtr(this%p2,p2,unit) ! use p2 (change initial time)
+      CALL second_to_gribtr(this%p2,p2,unit,EditionNumber) ! use p2 (change initial time)
       CALL grib_set(gaid,'indicatorOfUnitOfTimeRange',unit)
       CALL grib_set(gaid,'forecastTime',0)
       CALL code_endoftimeinterval(reftime)
@@ -1402,28 +1402,28 @@ INTEGER,INTENT(out) :: statproc, p1, p2
 
 IF (tri == 0 .OR. tri == 1 .OR. tri == 10) THEN ! point in time
   statproc = 254
-  CALL gribtr_to_second(unit, p1_g1, p1)
+  CALL gribtr_to_second(unit, p1_g1, p1, 2)
   p2 = 0
 ELSE IF (tri == 2) THEN ! somewhere between p1 and p2, not good for grib2 standard
   statproc = 205
-  CALL gribtr_to_second(unit, p2_g1, p1)
-  CALL gribtr_to_second(unit, p2_g1-p1_g1, p2)
+  CALL gribtr_to_second(unit, p2_g1, p1, 2)
+  CALL gribtr_to_second(unit, p2_g1-p1_g1, p2, 2)
 ELSE IF (tri == 3) THEN ! average
   statproc = 0
-  CALL gribtr_to_second(unit, p2_g1, p1)
-  CALL gribtr_to_second(unit, p2_g1-p1_g1, p2)
+  CALL gribtr_to_second(unit, p2_g1, p1, 2)
+  CALL gribtr_to_second(unit, p2_g1-p1_g1, p2, 2)
 ELSE IF (tri == 4) THEN ! accumulation
   statproc = 1
-  CALL gribtr_to_second(unit, p2_g1, p1)
-  CALL gribtr_to_second(unit, p2_g1-p1_g1, p2)
+  CALL gribtr_to_second(unit, p2_g1, p1, 2)
+  CALL gribtr_to_second(unit, p2_g1-p1_g1, p2, 2)
 ELSE IF (tri == 5) THEN ! difference
   statproc = 4
-  CALL gribtr_to_second(unit, p2_g1, p1)
-  CALL gribtr_to_second(unit, p2_g1-p1_g1, p2)
+  CALL gribtr_to_second(unit, p2_g1, p1, 2)
+  CALL gribtr_to_second(unit, p2_g1-p1_g1, p2, 2)
 ELSE IF (tri == 13) THEN ! COSMO-nudging, use a temporary value then normalize
   statproc = 206 ! check if 206 is legal!
   p1 = 0 ! analysis regardless of p2_g1
-  CALL gribtr_to_second(unit, p2_g1-p1_g1, p2)
+  CALL gribtr_to_second(unit, p2_g1-p1_g1, p2, 2)
 ELSE
   call l4f_log(L4F_ERROR,'timerange_g1_to_g2: GRIB1 timerange '//TRIM(to_char(tri)) &
    //' cannot be converted to GRIB2.')
@@ -1456,30 +1456,30 @@ INTEGER :: ptmp
 
 IF (statproc == 0) THEN ! average
   tri = 3
-  CALL second_to_gribtr(p1, p2_g1, unit)    ! here and after make sure that
-  CALL second_to_gribtr(p1-p2, p1_g1, unit) ! unit is the same between calls
+  CALL second_to_gribtr(p1, p2_g1, unit, 1)    ! here and after make sure that
+  CALL second_to_gribtr(p1-p2, p1_g1, unit, 1) ! unit is the same between calls
 ELSE IF (statproc == 1) THEN ! accumulation
   tri = 4
-  CALL second_to_gribtr(p1, p2_g1, unit)
-  CALL second_to_gribtr(p1-p2, p1_g1, unit)
+  CALL second_to_gribtr(p1, p2_g1, unit, 1)
+  CALL second_to_gribtr(p1-p2, p1_g1, unit, 1)
 ELSE IF (statproc == 4) THEN ! difference
   tri = 5
-  CALL second_to_gribtr(p1, p2_g1, unit)
-  CALL second_to_gribtr(p1-p2, p1_g1, unit)
+  CALL second_to_gribtr(p1, p2_g1, unit, 1)
+  CALL second_to_gribtr(p1-p2, p1_g1, unit, 1)
 ELSE IF (statproc == 205) THEN ! point in time interval, not good for grib2 standard
   tri = 2
-  CALL second_to_gribtr(p1, p2_g1, unit)
-  CALL second_to_gribtr(p1-p2, p1_g1, unit)
+  CALL second_to_gribtr(p1, p2_g1, unit, 1)
+  CALL second_to_gribtr(p1-p2, p1_g1, unit, 1)
 ELSE IF (statproc == 206) THEN ! COSMO-nudging (statistical processing in the past)
 ! this should never happen (at least from COSMO grib1), since 206 is
 ! converted to something else in normalize_gridinfo; now a negative
 ! p1_g1 is set, it will be corrected in the next section
   tri = 13
-  CALL second_to_gribtr(p1, p2_g1, unit)
-  CALL second_to_gribtr(p1-p2, p1_g1, unit)
+  CALL second_to_gribtr(p1, p2_g1, unit, 1)
+  CALL second_to_gribtr(p1-p2, p1_g1, unit, 1)
 ELSE IF (statproc == 254) THEN ! point in time
   tri = 0
-  CALL second_to_gribtr(p1, p1_g1, unit)
+  CALL second_to_gribtr(p1, p1_g1, unit, 1)
   p2_g1 = 0
 ELSE
   call l4f_log(L4F_ERROR,'timerange_g2_to_g1: GRIB2 statisticalprocessing ' &
@@ -1510,24 +1510,25 @@ END SUBROUTINE timerange_g2_to_g1_unit
 !10      3 hours
 !11      6 hours
 !12      12 hours
-
-! attenzione, in COSMO:
+! in COSMO, grib1:
 !13 = 15 minuti
 !14 = 30 minuti
-
-!but somewere :
+! in grib2:
 !13      Second
 
-SUBROUTINE gribtr_to_second(unit, valuein, valueout)
+SUBROUTINE gribtr_to_second(unit, valuein, valueout, edition)
 INTEGER,INTENT(in) :: unit, valuein
 INTEGER,INTENT(out) :: valueout
+INTEGER,INTENT(in) :: edition
 
-INTEGER,PARAMETER :: unitlist(0:14)=(/60,3600,86400,2592000,31536000, &
- 315360000,946080000,imiss,imiss,imiss,10800,21600,43200,900,1800/)
+INTEGER,PARAMETER :: unitlist(0:14,2)=RESHAPE((/ &
+ 60,3600,86400,2592000,31536000,315360000,946080000,imiss,imiss,imiss,10800,21600,43200,900,1800, &
+ 60,3600,86400,2592000,31536000,315360000,946080000,imiss,imiss,imiss,10800,21600,43200,1,imiss &
+ /), (/15,2/))
 
-IF (unit >= 0 .AND. unit <= 14) THEN
-  IF (c_e(unitlist(unit))) THEN
-    valueout = valuein*unitlist(unit)
+IF ((edition == 1 .OR. edition == 2) .AND. (unit >= 0 .AND. unit <= 14)) THEN
+  IF (c_e(unitlist(unit,edition))) THEN
+    valueout = valuein*unitlist(unit,edition)
   ELSE
     valueout = imiss
   ENDIF
@@ -1539,9 +1540,10 @@ END SUBROUTINE gribtr_to_second
 
 
 ! improve to limit the values to 255 if possible
-SUBROUTINE second_to_gribtr(valuein, valueout, unit)
+SUBROUTINE second_to_gribtr(valuein, valueout, unit, edition)
 INTEGER,INTENT(in) :: valuein
 INTEGER,INTENT(out) :: valueout, unit
+INTEGER,INTENT(in) :: edition
 
 IF (valuein == imiss) THEN
   valueout = imiss
@@ -1553,10 +1555,11 @@ ELSE IF (MOD(valuein,60) == 0) THEN ! then minutes
   valueout = valuein/60
   unit = 0
 
-  IF (valueout > 255) THEN ! 15 minutes
+! COSMO extensions
+  IF (edition == 1 .AND. valueout > 255) THEN ! try 15 minutes
     valueout = valuein/900
     unit = 13
-    IF (valueout > 255) THEN ! 30 minutes
+    IF (valueout > 255) THEN ! try 30 minutes
       valueout = valuein/1800
       unit = 14
     END IF
@@ -1564,11 +1567,13 @@ ELSE IF (MOD(valuein,60) == 0) THEN ! then minutes
 
 ELSE ! seconds (not supported in grib1!)
 
-  call l4f_log(L4F_ERROR,'timerange unit seconds not supported on grib edition 1')
-  CALL raise_error()
-
-!!$  valueout = valuein
-!!$  unit = 13
+  IF (edition == 1) THEN
+    CALL l4f_log(L4F_ERROR,'timerange unit seconds not supported on grib edition 1')
+    CALL raise_error()
+  ELSE
+    valueout = valuein
+    unit = 13
+  ENDIF
 ENDIF
 
 END SUBROUTINE second_to_gribtr
