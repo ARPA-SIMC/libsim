@@ -1819,32 +1819,32 @@ IF (this%var%discipline == 255 .AND. &
     ELSE IF (this%var%number == 39 .OR. this%var%number == 139 .OR. this%var%number == 140) THEN ! SWVL1,STL1,SWL1
       this%level%level1 = 106 ! below surface
       this%level%l1 = 0
-      this%level%l1 = 70 ! 7cm
+      this%level%l2 = 70 ! 7cm
 
     ELSE IF (this%var%number == 40 .OR. this%var%number == 170) THEN ! SWVL2,STL2 (STL2 wrong before 2000)
       this%level%level1 = 106 ! below surface
       this%level%l1 = 70
-      this%level%l1 = 280
+      this%level%l2 = 280
 
     ELSE IF (this%var%number == 171) THEN ! SWL2
       this%level%level1 = 106 ! below surface
       this%level%l1 = 70
-      this%level%l1 = 210
+      this%level%l2 = 210
 
     ELSE IF (this%var%number == 41 .OR. this%var%number == 183) THEN ! SWVL3,STL3 (STL3 wrong before 2000)
       this%level%level1 = 106 ! below surface
       this%level%l1 = 280
-      this%level%l1 = 1000
+      this%level%l2 = 1000
 
     ELSE IF (this%var%number == 184) THEN ! SWL3
       this%level%level1 = 106 ! below surface
       this%level%l1 = 210
-      this%level%l1 = 1000
+      this%level%l2 = 1000
 
     ELSE IF (this%var%number == 42 .OR. this%var%number == 236 .OR. this%var%number == 237) THEN ! SWVL4,STL4,SWL4
       this%level%level1 = 106 ! below surface
       this%level%l1 = 1000
-      this%level%l1 = 2890
+      this%level%l2 = 2890
 
     ELSE IF (this%var%number == 121 .AND. &
      (this%timerange%timerange == 254 .OR. this%timerange%timerange == 205)) THEN ! MX2T6
