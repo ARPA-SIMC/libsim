@@ -880,13 +880,6 @@ DO ninput = optind, iargc()-1
 
 ENDDO
 
-#ifdef DEBUG
-status=check(qccli%v7d)
-if ( status /= 0 ) then
-  CALL l4f_category_log(category,L4F_ERROR,'check v7d input failed; status:'//t2c(status))
-  CALL raise_fatal_error()
-end if
-#endif
 
 CALL delete(opt) ! check whether I can already get rid of this stuff now
 
@@ -1141,7 +1134,14 @@ if (comp_qc_ndi .or. comp_qc_perc) then
     call display(qccli%extreme)
   end IF
 
+
 #ifdef DEBUG
+  status=check(qccli%v7d)
+  if ( status /= 0 ) then
+    CALL l4f_category_log(category,L4F_ERROR,'check v7d input failed; status:'//t2c(status))
+    CALL raise_fatal_error()
+  end if
+
   status=check(qccli%extreme)
   if ( status /= 0 ) then
     CALL l4f_category_log(category,L4F_ERROR,'check extreme failed; status:'//t2c(status))
