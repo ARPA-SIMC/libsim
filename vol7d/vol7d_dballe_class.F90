@@ -176,7 +176,7 @@ CONTAINS
 
 !>\brief  inizializza l'oggetto
 SUBROUTINE vol7d_dballe_init(this,dsn,user,password,write,wipe,repinfo,&
- filename,format,file,categoryappend)
+ filename,format,file,categoryappend,time_definition)
 
 
 TYPE(vol7d_dballe),INTENT(out) :: this !< l'oggetto da inizializzare
@@ -190,6 +190,7 @@ character(len=*),intent(inout),optional :: filename !< nome del file su cui scri
 character(len=*),intent(in),optional :: format !< the file format. It can be "BUFR" or "CREX". (default="BUFR")
 logical,INTENT(in),OPTIONAL :: file !< switch to use file or data base ( default=.false )
 character(len=*),INTENT(in),OPTIONAL :: categoryappend !< appennde questo suffisso al namespace category di log4fortran
+integer,INTENT(in),OPTIONAL :: time_definition !< 0=time is reference time ; 1=time is validity time (default=1) 
 
 character(len=1):: mode ! the open mode ("r" for read, "w" for write or create, "a" append) (comandato da "write", default="r" )
 
@@ -214,7 +215,10 @@ this%category=l4f_category_get(a_name)
 nullify(this%data_id)
 
 !TODO: quando scrivo bisogna gestire questo che non è da fare ?
-CALL init(this%vol7d)
+CALL init(this%vol7d,time_definition=time_definition)
+
+print *,"------------------"
+call display(this%vol7d)
 
                                 ! impostiamo la gestione dell'errore
 call idba_error_set_callback(0,v7d_dballe_error_handler, &
@@ -810,6 +814,10 @@ do i=1,N
   call init(buffer(i)%network, rep_memo)
   buffer(i)%btable = btable
 
+                                ! take in account time_definition
+  if (this%vol7d%time_definition == 0) buffer(i)%time = buffer(i)%time - &
+   timedelta_new(msec=buffer(i)%timerange%p1*1000)
+
 end do
 
 ! ---------------->   anagrafica
@@ -1073,7 +1081,7 @@ if (nanaattrc > 0 ) nanavarattrc=nanavarr+nanavari+nanavarb+nanavard+nanavarc
 ! ---------------->   anagrafica fine
 
 
-CALL init(vol7dtmp)
+CALL init(vol7dtmp,time_definition=this%vol7d%time_definition)
 
 !print*,"ho fatto init"
 
@@ -2957,12 +2965,17 @@ do while ( N > 0 )
                                 !print*,year,month,day,hour,minute,sec
                                 !print*,btable,dato,buffer(nd)%datiattrb
   
+
       call init(buffer(nd)%ana,lat=lat,lon=lon,ident=ident)
       call init(buffer(nd)%time, year=year, month=month, day=day, hour=hour, minute=minute)
       call init(buffer(nd)%level, rlevel1,rl1,rlevel2,rl2)
       call init(buffer(nd)%timerange, rtimerange, p1, p2)
       call init(buffer(nd)%network, rep_memo)
       buffer(nd)%btable = btable
+
+      ! take in account time_definition
+      IF (this%vol7d%time_definition == 0) buffer(nd)%time = buffer(nd)%time - &
+       timedelta_new(msec=buffer(nd)%timerange%p1*1000)
     
     else
 
@@ -3134,7 +3147,7 @@ nanavarattrc=0
 ! ---------------->   anagrafica fine
 
 
-CALL init(vol7dtmp)
+CALL init(vol7dtmp,time_definition=this%vol7d%time_definition)
 
 if (lanaonly)then
 

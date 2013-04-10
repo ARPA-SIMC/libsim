@@ -259,11 +259,11 @@ CALL optionparser_add(opt, 't', 'component-flag', component_flag, &
 ! this option has been commented because it is not handled in
 ! volgrid_class, it makes sense only in vg6d_getpoint for determining
 ! the time_definition of output v7d volume
-time_definition = 0
-!CALL optionparser_add(opt, ' ', 'time-definition', time_definition, 0, help= &
-! 'time definition for import volume, 0 for reference time (more suitable for &
-! &presenting forecast data) and 1 for verification time (more suitable for &
-! &comparing forecasts with observations)')
+!time_definition = 0
+CALL optionparser_add(opt, ' ', 'time-definition', time_definition, 0, help= &
+ 'time definition for import volume, 0 for reference time (more suitable for &
+ &presenting forecast data) and 1 for verification time (more suitable for &
+ &comparing forecasts with observations)')
 
 ! for computing
 CALL optionparser_add(opt, ' ', 'comp-stat-proc', comp_stat_proc, '', help= &

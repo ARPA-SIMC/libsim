@@ -40,6 +40,7 @@ character(len=512):: a_name, input_file, outfile, PSTYPE, ORIENT, COLOR
 character(len=100) :: nomogram, logo
 #ifdef HAVE_DBALLE
 TYPE(vol7d_dballe) :: v7d_dba
+INTEGER :: time_definition
 #endif
 CHARACTER(len=32) :: dsn, user, password
 TYPE(vol7d) :: v7dtmp, v7d_profile
@@ -84,6 +85,14 @@ CALL optionparser_add(opt, ' ', 'input-format', input_format, &
  &, ''dba'' for dballe database'&
 #endif
  )
+
+#ifdef HAVE_DBALLE
+CALL optionparser_add(opt, ' ', 'time-definition', time_definition, 1, help= &
+ 'time definition for vol7d volume, 0 for reference time (more suitable for &
+ &presenting forecast data) and 1 for verification time (more suitable for &
+ &comparing forecasts with observations)')
+#endif
+
 CALL optionparser_add(opt, 'w', 'wstype', wstype, help= &
  'workstation type (see NCAR GKS manuals, e.g. 8=X11 display), if &
  &omitted (default), then postscript is chosen, see pstype option')
@@ -196,7 +205,8 @@ ELSE IF (input_format == 'BUFR' .OR. input_format == 'CREX' .OR. input_format ==
   ENDIF
  
   CALL init(v7d_dba, filename=input_file, FORMAT=input_format, &
-   dsn=dsn, user=user, password=password, file=file, categoryappend="importBUFR")
+   dsn=dsn, user=user, password=password, file=file, &
+   time_definition=time_definition, categoryappend="importBUFR")
 
 !call import (v7d_dba,var=(/"B12101","B12103","B11001","B11002"/),varkind=(/"d","d","d","d"/))
   CALL import(v7d_dba)
