@@ -33,7 +33,7 @@ implicit none
 
 real :: Q,acin,acape,altstaz,c_liftd,con_lev,eql_ii,fcl,h_zero,rhstaz,tamb
 real :: s_li,s_k,s_u,p_zero,ur,s_sw ,s_sh,SAMIX, s_tt,teta,tas,TAS_lift
-real :: Tete,TLCL,Tww,Tv,zz
+real :: Tete,tetetete,TLCL,Tww,Tv,zz
 integer :: ict,k
 
 !      leggo i dati osservati
@@ -42,7 +42,6 @@ integer :: ict,k
   parameter(npoint=300)
   real,dimension(npoint)::pp,tt,dd,dir,for,alt
   real,dimension(npoint)::ao,aw
-  real::llc
   INTEGER::unit,ier
 
 !apertura file di output :
@@ -86,8 +85,8 @@ integer :: ict,k
 
   altstaz=103    !altezza pozzetto barometrico di Milano Linate
 
-  write(22,'(''    pres    temp      td      u%       q    teta   tetae'',&
-       &''      tw   tvirt       z'')')
+  write(22,'(''    pres    temp      td      u%       q   teta    tetae'',&
+       &''  tetae2      tw   tvirt       z'')')
 
   do k=1,ict
          
@@ -97,9 +96,10 @@ integer :: ict,k
      Q=W(dd(k) ,Pp(k) )
      teta= o(tt(k),pp(k) ) -t0c
      Tete=(Oe(dd(k) ,Tt(k) ,Pp(k) ))-t0c
+     Tetetete=(OOee(dd(k) ,Tt(k) ,Pp(k) ))-t0c
      Tww=(Tw(dd(k) ,Tt(k) ,Pp(k) ))-T0c
      Tv=(Tvir(dd(k) ,Tt(k) ,Pp(k) ))-T0c
-     write(22,22)pp(k),tt(k)-t0c,dd(k)-t0c,ur,q,teta,tete,tww,tv,zz
+     write(22,22)pp(k),tt(k)-t0c,dd(k)-t0c,ur,q,teta,tete,tetetete,tww,tv,zz
 
   end do
 
@@ -150,7 +150,7 @@ integer :: ict,k
       write(22,*)' altezza zero termico    : ',h_zero
       write(22,*)' pressione zero termico  : ',p_zero
 
- 22   format(10(1x,f7.1))
+ 22   format(10(1x,f7.2))
 
 
       stop

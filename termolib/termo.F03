@@ -15,6 +15,7 @@ subroutine register_termo(vfn)
 
   type(fndsv),intent(inout) :: vfn
 
+  call fnregister(vfn,td_t_p2ept_def())
   call fnregister(vfn,t_p2pt_def())
   call fnregister(vfn,dd_ff2u_v_def())
   call fnregister(vfn,u_v2dd_ff_def())
@@ -29,6 +30,19 @@ subroutine register_termo(vfn)
 
 end subroutine register_termo
 
+subroutine  td_t_p2ept(mybin,mybout,bin,bout,in,out)
+  CHARACTER(len=10),intent(in) :: mybin(:)  !< vector table B  WMO input  in user's data
+  CHARACTER(len=10),intent(in) :: mybout(:) !< vector table B  WMO output in user's data
+  CHARACTER(len=10),intent(in) :: bin(:)    !< vector table B  WMO input used by function
+  CHARACTER(len=10),intent(in) :: bout(:)   !< vector table B  WMO output used by function
+  real, intent(in) :: in(:,:)
+  real, intent(out) :: out(:,:)
+
+  out(:,index_c(mybout,bout(1)))=ooee(in(:,index_c(mybin,bin(1))),in(:,index_c(mybin,bin(2))),in(:,index_c(mybin,bin(3)))/100.)
+
+end subroutine td_t_p2ept
+
+
 subroutine  t_p2pt(mybin,mybout,bin,bout,in,out)
   CHARACTER(len=10),intent(in) :: mybin(:)  !< vector table B  WMO input  in user's data
   CHARACTER(len=10),intent(in) :: mybout(:) !< vector table B  WMO output in user's data
@@ -40,6 +54,14 @@ subroutine  t_p2pt(mybin,mybout,bin,bout,in,out)
   out(:,index_c(mybout,bout(1)))=o(in(:,index_c(mybin,bin(1))),in(:,index_c(mybin,bin(2)))/100.)
 
 end subroutine t_p2pt
+
+
+type(fnds) function td_t_p2ept_def()
+  call init(td_t_p2ept_def,"td_t_p2ept",&
+       [character(len=10) :: "B12103","B12101","B10004"],&
+       [character(len=10) :: "B12193"],0,func=td_t_p2ept)
+end function td_t_p2ept_def
+
 
 type(fnds) function t_p2pt_def()
   call init(t_p2pt_def,"t_p2pt",&

@@ -46,15 +46,85 @@ CONTAINS
 !
 !------------------------------------------------------------------------------
 
+
+elemental real function TL(t,td)  
+
+! compute the temperature of lifted condensation level
+!
+! inpt   t     real   mean temperature of layer                [K]
+! input  td    real   dew point temperature of layer           [K]
+! output TL    reale  temperature of lifted condensation level [K]
+!
+!! reference: Monthly Weather Review
+!! David Bolton, 1980
+!! "The Computation of Equivalent Potential Temperature"
+!! formula (15)
+!!
+!----------------------------------------------------------------------------
+
+real,intent(in) :: t,td
+
+if( c_e(t) .and. c_e(td) .and. td > 0.)then 
+  
+  tl= 1./(1./(td-56.)+log(t/td)/800.) + 56.
+
+else
+  tl=rmiss
+end if
+
+end function TL
+
+
+elemental real function OOEE(TD,T,P)
+
+! Compute    Pseudo(-Adiabatic) Equivalent  Potential Temperature 
+!  
+!  Usage : x = OOEE (TD,T,P) 
+! 
+!  Input : 
+!  TD       real   Temperatura di rugiada                            (K.) 
+!  T        real   Temperatura dell'aria                             (K.) 
+!  P        real   Pressione aria                                    (hPa) 
+! 
+!  Output : 
+!  OE       real    Pseudo-Equivalent Potential Temperature          (K.) 
+!
+!! reference: Monthly Weather Review
+!! David Bolton, 1980
+!! "The Computation of Equivalent Potential Temperature"
+!! formula (43)
+!------------------------------------------------------------------------------
+
+real,intent(in)::td,t,p
+real :: ttll                    ! the lifting condensation level
+real :: r                     ! mixing ratio 
+if( c_e(td) .and. c_e(t) .and. c_e(p) )then 
+  
+  ttll=tl(t,td)
+  r=W(td,p)
+  ooee=t * (1000./p)**(0.2854*(1.-0.28e-3*r)) * exp((3.376/ttll - 0.00254) * r*(1.+0.81*1.e-3*r))
+  
+else
+  
+  ooee=rmiss 
+  
+end if
+
+return 
+
+end function OOEE
+
+
 elemental real function OE(TD,TT,PT)
 
-! Calcola la  Temperatura  Equivalente  Potenziale Adiabatica , dapprima trova 
+! Calcola la  Temperatura  Pseudo(-Adiabatica) Equivalente  Potenziale  ,
+! dapprima trova 
 ! la pressione  di saturazione, riporta la satura alla   1000   hPa e trova la 
 ! temperatura di bulbo bagnato potenziale,risale fino a che l'adiabatica 
 ! satura coincide con l'adiabatica secca per poi  tornare alla 1000 hPa lungo
 ! un'adiabatica secca -  varia di alcuni decimali rispetto alla temperatura
-! pseudo-equivalente potenziale calcolata riportando alla 1000 hPa la 
-! temperatura equivalente isobarica le due temperature differiscono di
+! equivalente potenziale calcolata riportando alla 1000 hPa la 
+! temperatura equivalente isobarica; le due temperature differiscono di
 ! alcuni decimali poiche' utilizzando il processo adiabatico l'acqua perduta
 ! per evaporazione del vapore viene persa alla
 ! temperatura presente in atmosfera al livello in cui coincidono adiabatica 
