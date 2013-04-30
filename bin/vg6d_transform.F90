@@ -58,8 +58,8 @@ type(griddim_def) :: griddim_out
 type(transform_def) :: trans
 
 integer :: nx,ny,component_flag,npx,npy
-doubleprecision :: xmin, xmax, ymin, ymax
-INTEGER :: ix, iy, fx, fy, time_definition
+doubleprecision :: xmin, xmax, ymin, ymax, xoff, yoff
+INTEGER :: ix, iy, fx, fy, time_definition, utm_zone
 doubleprecision :: latitude_south_pole,longitude_south_pole,angle_rotation
 character(len=80) :: proj_type,trans_type,sub_type
 
@@ -75,8 +75,8 @@ LOGICAL :: version, ldisplay
 LOGICAL :: rzscan,reusevdf
 #endif
 INTEGER,POINTER :: w_s(:), w_e(:)
-TYPE(grid_file_id) :: file_template
-TYPE(grid_id) :: gaid_template
+TYPE(grid_file_id) :: file_grid
+TYPE(grid_id) :: gaid_grid
 #ifdef ALCHIMIA
 type(fndsv) :: vfn, vfnoracle
 #endif
@@ -102,13 +102,16 @@ category=l4f_category_get(a_name//".main")
 
                                 ! define the option parser
 opt = optionparser_new(description_msg= &
- 'Grib to grib transformation application. It reads grib edition 1 and 2 &
+ 'Gridded-field to gridded-field transformation application. &
+ &It reads grib edition 1 and 2 and gdal-supported formats &
  &and zooms, interpolates or regrids data according to optional parameters. &
- &The whole grib data file is read and organized in memory, transformed, and &
- &written on output. So it is possible to perform multi-field elaborations &
+ &The whole input data file is read and organized in memory, transformed, and &
+ &written on output. So it is possible to perform multi-field processing &
  &like wind component transformation, but memory constraints limit the number &
- &of input fields. More different date, timeranges, levels and parameters &
- &are imported, even with empty combinations, and more memory will be required', &
+ &of input fields. The output file is specified in the form &
+ &[output_driver:[output_template:]]pathname, when output_driver is grib_api, &
+ &output_template may specify a file contaning a grib message &
+ &to be used as a template for the output file.', &
  usage_msg='Usage: vg6d_transform [options] inputfile outputfile')
 
                                 ! define command-line options
@@ -135,13 +138,19 @@ CALL optionparser_add(opt, 'i', 'nx', nx, 31, help= &
 CALL optionparser_add(opt, 'l', 'ny', ny, 31, help= &
  'number of nodes along y axis on interpolated grid')
 CALL optionparser_add(opt, 'm', 'x-min', xmin, 0.0D0, help= &
- 'x coordinate of the lower left corner of interpolated grid')
+ 'x coordinate of the lower left corner of interpolated grid (degrees or meters)')
 CALL optionparser_add(opt, 'o', 'y-min', ymin, 30.0D0, help= &
- 'y coordinate of the lower left corner of interpolated grid')
+ 'y coordinate of the lower left corner of interpolated grid (degrees or meters)')
 CALL optionparser_add(opt, 'n', 'x-max', xmax, 30.0D0, help= &
- 'x coordinate of the upper right corner of interpolated grid')
+ 'x coordinate of the upper right corner of interpolated grid (degrees or meters)')
 CALL optionparser_add(opt, 'p', 'y-max', ymax, 60.0D0, help= &
- 'y coordinate of the upper right corner of interpolated grid')
+ 'y coordinate of the upper right corner of interpolated grid (degrees or meters)')
+CALL optionparser_add(opt, 'n', 'x-off', xoff, 0.0D0, help= &
+ 'x coordinate offset (also known as false easting) in interpolated grid')
+CALL optionparser_add(opt, 'p', 'y-off', yoff, 0.0D0, help= &
+ 'y coordinate offset (also known as false northing) in interpolated grid')
+CALL optionparser_add(opt, ' ', 'utm-zone', utm_zone, 32, help= &
+ 'zone number for UTM projections')
 
 CALL optionparser_add(opt, 'q', 'latitude-south-pole', latitude_south_pole, &
  -32.5D0, help='latitude of south pole for rotated grid')
@@ -229,16 +238,16 @@ CALL optionparser_add(opt, ' ', 'output-format', output_format, &
 #else
 '', &
 #endif
-help='format of output file, in the form ''name[:template]'''&
+help='format of output file, in the form ''name[:grid_definition]'''&
 #ifdef HAVE_LIBGRIBAPI
- //'; ''grib_api'' for gridded output in grib format, template is the &
- &path name of a grib file in which the first message defines the output grid and &
- &is used as a template for the output grib messages'&
+ //'; ''grib_api'' for gridded output in grib format, grid_definition is the &
+ &path name of a grib file in which the first message is used as a template &
+ &for defining the output grid and'&
 #endif
 #ifdef VAPOR
  //'; ''vapor'' for gridded output in vdf format'&
 #endif
- //'; if this option includes a template, --type &
+ //'; if this option includes a grid_definition, --type &
  &argument &c. are ignored, otherwise --type &c. define the output grid')
 
 CALL optionparser_add(opt, 'e', 'a-grid', c2agrid, help= &
@@ -460,15 +469,13 @@ ENDIF
 
 i = word_split(output_format, w_s, w_e, ':')
 IF (i >= 2) THEN ! grid from a grib template
-!  output_template = output_format(w_s(2):w_e(2))
-!  output_format(w_e(1)+1:) = ' '
 ! open grib template file and import first message
-  file_template = grid_file_id_new(output_format, 'r')
-  gaid_template = grid_id_new(file_template)
-  IF (c_e(gaid_template)) THEN
-    CALL import(griddim_out, gaid_template)
-    CALL delete(gaid_template)
-    CALL delete(file_template)
+  file_grid = grid_file_id_new(output_format, 'r')
+  gaid_grid = grid_id_new(file_grid)
+  IF (c_e(gaid_grid)) THEN
+    CALL import(griddim_out, gaid_grid)
+    CALL delete(gaid_grid)
+    CALL delete(file_grid)
   ELSE
     CALL l4f_category_log(category,L4F_ERROR, &
      'cannot read any grib message from template file '//TRIM(output_format))
@@ -476,7 +483,7 @@ IF (i >= 2) THEN ! grid from a grib template
   ENDIF
 ELSE
   CALL init(griddim_out,&
-   proj_type=proj_type,nx=nx,ny=ny, &
+   proj_type=proj_type,nx=nx,ny=ny, zone=utm_zone, xoff=xoff, yoff=yoff, &
    xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, component_flag=component_flag, &
    latitude_south_pole=latitude_south_pole, &
    longitude_south_pole=longitude_south_pole, angle_rotation=angle_rotation, &
@@ -606,9 +613,11 @@ ier=l4f_fini()
 contains
 
 
-subroutine write_to_file_out(myvolgrid)
+SUBROUTINE write_to_file_out(myvolgrid)
+TYPE(volgrid6d),POINTER :: myvolgrid(:)
 
-type (volgrid6d),pointer  :: myvolgrid(:)
+TYPE(grid_file_id) :: file_template
+TYPE(grid_id) :: gaid_template
 
 i = word_split(output_file, w_s, w_e, ':')
 
@@ -618,7 +627,7 @@ IF (i == 3) THEN ! template requested (grib_api:template_file:output_file)
   IF (c_e(gaid_template)) THEN
     CALL export (myvolgrid, filename=output_file(w_s(1):w_e(1))//':'// &
      output_file(w_s(3):w_e(3)), gaid_template=gaid_template, &
-     categoryappend="export_tmpl")
+     categoryappend="exportgrib_tmpl")
   ELSE
     CALL l4f_category_log(category,L4F_FATAL, &
      "opening output template "//output_file(w_s(1):w_e(2)))
@@ -629,7 +638,7 @@ ELSE
 
   if (output_format(1:8) == "grib_api") then 
 #ifdef HAVE_LIBGRIBAPI
-    CALL export(myvolgrid,filename=output_file,categoryappend="exporttofilegrib")
+    CALL export(myvolgrid,filename=output_file,categoryappend="exportgrib")
 #else
     CALL l4f_category_log(category,L4F_FATAL, &
      "export to grib_api disabled at compile time")
@@ -665,8 +674,7 @@ CALL l4f_category_log(category,L4F_INFO,"end export")
 
 DEALLOCATE(w_s, w_e)
 
-end subroutine write_to_file_out
-
+END SUBROUTINE write_to_file_out
 
 
 END PROGRAM vg6d_transform
