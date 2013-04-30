@@ -493,14 +493,13 @@ END FUNCTION index/**/VOL7D_POLY_TYPES
 !!  One then call recursively the program to sort each subset.
 !!  When the size of the subarray is small enough, one uses an
 !!  insertion sort that is faster for very small sets.
-
 Subroutine sort/**/VOL7D_POLY_TYPES (XDONT)
 
 !  Sorts XDONT into ascending order - Quicksort
 !  Michel Olagnon - Apr. 2000
 ! _________________________________________________________
 
-VOL7D_POLY_TYPE, Dimension (:), Intent (InOut) :: XDONT !> vector to sort inline
+VOL7D_POLY_TYPE, Dimension (:), Intent (InOut) :: XDONT !< vector to sort inline
 ! __________________________________________________________
 !
 !

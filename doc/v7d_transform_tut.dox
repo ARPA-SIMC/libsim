@@ -291,7 +291,7 @@ BUFR file:
 
 \code
 v7d_transform --input-format=native --output-format=BUFR \
- --comp-stat-proc 1:1 --comp-step='01 00' --comp-start='2010-02-01 00:00' \
+ --comp-stat-proc=1:1 --comp-step='01 00' --comp-start='2010-02-01 00:00' \
  prec.v7d prec_1d.bufr
 \endcode
 
@@ -303,7 +303,7 @@ binary file:
 v7d_transform --input-format=orsim --output-format=native \
  --start-date='2010-02-01 00:00' --end-date='2010-04-01 00:00' \
  --network-list=FIDUPO --variable-list=B12101 \
- --comp-stat-proc 254:2 --comp-step='01 00' --comp-start='2010-02-01 00:00' \
+ --comp-stat-proc=254:2 --comp-step='01 00' --comp-start='2010-02-01 00:00' \
  - tempmax.v7d
 \endcode
 
@@ -312,7 +312,7 @@ the average of maximum temperatures on monthly intervals:
 
 \code
 v7d_transform --input-format=native --output-format=csv \
- --comp-stat-proc 2:0 --comp-step='010000 00' --comp-start='2010-02-01 00:00' \
+ --comp-stat-proc=2:0 --comp-step='010000 00' --comp-start='2010-02-01 00:00' \
  tempmax.v7d tempavg.csv
 \endcode
 
