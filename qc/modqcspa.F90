@@ -252,7 +252,7 @@ if (.not. c_e(ldsn)) then
     call init(v7d_dballetmp,file=.true.,filename=filepath,categoryappend=trim(a_name)//".spatial")
                                 !call import(v7d_dballetmp)
     call import(v7d_dballetmp,var=var,coordmin=coordmin, coordmax=coordmax, timei=ltimei, timef=ltimef, &
-     varkind=(/("r",i=1,size(var))/),attr=(/"*B33192"/),attrkind=(/"b"/))
+     varkind=(/("r",i=1,size(var))/),attr=(/qcattrvarsbtables(2)/),attrkind=(/"b"/))
     call copy(v7d_dballetmp%vol7d,qcspa%clima)
     call delete(v7d_dballetmp)
 #endif
@@ -269,7 +269,7 @@ else
   call init(v7d_dballetmp,dsn=dsn,user=user,password=password,write=.false.,file=.false.,categoryappend=trim(a_name)//".spatial")
   call l4f_category_log(qcspa%category,L4F_DEBUG,"import v7d_dballetmp")
   call import(v7d_dballetmp,var=var,coordmin=coordmin, coordmax=coordmax, timei=ltimei, timef=ltimef, &
-   varkind=(/("r",i=1,size(var))/),attr=(/"*B33192"/),attrkind=(/"b"/))
+   varkind=(/("r",i=1,size(var))/),attr=(/qcattrvarsbtables(2)/),attrkind=(/"b"/))
   call copy(v7d_dballetmp%vol7d,qcspa%clima)
   call delete(v7d_dballetmp)
 
@@ -492,19 +492,19 @@ integer (kind=int_b) :: flag
 if (present(battrinv))then
   indbattrinv = index_c(qcspa%v7d%datiattr%b(:)%btable, battrinv)
 else
-  indbattrinv = index_c(qcspa%v7d%datiattr%b(:)%btable, '*B33196')
+  indbattrinv = index_c(qcspa%v7d%datiattr%b(:)%btable, qcattrvarsbtables(1))
 end if
 
 if (present(battrcli))then
   indbattrcli = index_c(qcspa%v7d%datiattr%b(:)%btable, battrcli)
 else
-  indbattrcli = index_c(qcspa%v7d%datiattr%b(:)%btable, '*B33192')
+  indbattrcli = index_c(qcspa%v7d%datiattr%b(:)%btable, qcattrvarsbtables(2))
 end if
 
 if (present(battrout))then
   indbattrout = index_c(qcspa%v7d%datiattr%b(:)%btable, battrout)
 else
-  indbattrout = index_c(qcspa%v7d%datiattr%b(:)%btable, '*B33194')
+  indbattrout = index_c(qcspa%v7d%datiattr%b(:)%btable, qcattrvarsbtables(4))
 end if
 
 !if (indbattrinv <=0 .or. indbattrcli <= 0 .or. indbattrout <= 0 ) then

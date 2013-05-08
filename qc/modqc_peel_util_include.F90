@@ -1,5 +1,5 @@
 
-!> Data validity check
+!> Data validity check for confidence
 elemental logical function vd/**/VOL7D_POLY_TYPES (flag)
 
 /**/VOL7D_POLY_TYPE ,intent(in)  :: flag !< confidenza
@@ -10,6 +10,19 @@ vd/**/VOL7D_POLY_TYPES = .not. (realdat(flag,vol7d_var_new("B33192",scalefactor=
 
 return
 end function vd/**/VOL7D_POLY_TYPES
+
+
+!> Data gross error check
+elemental logical function vdge/**/VOL7D_POLY_TYPES (flag)
+
+/**/VOL7D_POLY_TYPE ,intent(in)  :: flag !< confidenza
+      
+
+vdge/**/VOL7D_POLY_TYPES = .not. (realdat(flag,vol7d_var_new("B33192",scalefactor=0)) == qcpar%gross_error .and. c_e(flag))
+
+
+return
+end function vdge/**/VOL7D_POLY_TYPES
 
 
 !> Data invalidated check

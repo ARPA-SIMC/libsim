@@ -111,7 +111,7 @@ call l4f_category_log(category,L4F_INFO,"start data import")
 
 CALL import(v7ddballe,var=var(:nvar),varkind=(/("r",i=1,nvar)/),&
  anavar=(/"B07030"/),anavarkind=(/"r"/),&
- attr=(/"*B33196","*B33192"/),attrkind=(/"b","b"/)&
+ attr=qcattrvarsbtables(1:2),attrkind=(/"b","b"/)&
  ,timei=ti,timef=tf,coordmin=coordmin,coordmax=coordmax)
 
 print *,"data input:"

@@ -166,11 +166,12 @@ implicit none
 
 !> Definisce il livello di attendibilità per i dati validi
 type :: qcpartype
-  integer (kind=int_b):: att
+  integer (kind=int_b):: att !< confidence for "*B33192"
+  integer (kind=int_b):: gross_error ! special valuer for "*B33192" when gross error check failed
 end type qcpartype
 
-!> Per dafault i dati con confidenza inferiore o uguale a 30 vengono scartati
-type(qcpartype)  :: qcpar=qcpartype(30)
+!> Default data with confidence less or equal 10 are rejected
+type(qcpartype)  :: qcpar=qcpartype(10_int_b,0_int_b)
 
 integer, parameter :: nqcattrvars=4
 CHARACTER(len=10),parameter :: qcattrvarsbtables(nqcattrvars)=(/"*B33196","*B33192","*B33193","*B33194"/)
@@ -200,6 +201,11 @@ interface vd
   module procedure vdi,vdb,vdr,vdd,vdc
 end interface
 
+!> Check data validity based on gross error check
+interface vdge
+  module procedure vdgei,vdgeb,vdger,vdged,vdgec
+end interface
+
 !> Test di dato invalidato
 interface invalidated
   module procedure invalidatedi,invalidatedb,invalidatedr,invalidatedd,invalidatedc
@@ -207,7 +213,7 @@ end interface
 
 private
 
-public vd, init, qcattrvars_new, invalidated, peeled, vol7d_peeling
+public vd, vdge, init, qcattrvars_new, invalidated, peeled, vol7d_peeling
 public qcattrvars, nqcattrvars, qcattrvarsbtables
 public qcpar, qcpartype, qcsummaryflagb ! ,qcsummaryflagi
 

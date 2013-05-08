@@ -411,7 +411,7 @@ if (.not. c_e(ldsnextreme)) then
       call init(v7d_dballeextreme,file=.true.,filename=filepathextreme,categoryappend=trim(a_name)//".climaextreme")
                                 !call import(v7d_dballeextreme)
       call import(v7d_dballeextreme,var=var,coordmin=lcoordmin, coordmax=lcoordmax, timei=ltimei, timef=ltimef, &
-       varkind=(/("r",i=1,size(var))/),attr=(/"*B33192"/),attrkind=(/"b"/),network=network)
+       varkind=(/("r",i=1,size(var))/),attr=(/qcattrvarsbtables(2)/),attrkind=(/"b"/),network=network)
       call copy(v7d_dballeextreme%vol7d,qccli%extreme)
       call delete(v7d_dballeextreme)
 #endif
@@ -441,7 +441,7 @@ else
   call l4f_category_log(qccli%category,L4F_DEBUG,"import v7d_dballeextreme")
 
   call import(v7d_dballeextreme,var=var,coordmin=lcoordmin, coordmax=lcoordmax, timei=ltimei, timef=ltimef, &
-   varkind=(/("r",i=1,size(var))/),attr=(/"*B33192"/),attrkind=(/"b"/),network=network)
+   varkind=(/("r",i=1,size(var))/),attr=(/qcattrvarsbtables(2)/),attrkind=(/"b"/),network=network)
   call copy(v7d_dballeextreme%vol7d,qccli%extreme)
   call delete(v7d_dballeextreme)
 
@@ -580,8 +580,6 @@ end subroutine qcclidelete
 
 
 
-!!!!!!!!!!!!!!   TODO !!!!!!!!!!!!!!!!!!!!!!!!!!
-
 !> Modulo 1: Calcolo dei parametri di normalizzazione dei dati
 !! I parametri di normalizzazione sono il 25°, il 50° e il 75° percentile 
 !! (p25,p50,p75)
@@ -594,7 +592,6 @@ end subroutine qcclidelete
 !! dove DN è il valore normalizzato.
 !! La scelta dei parametri di normalizzazione dipende dal mese, dall'ora, 
 !! dall'area.
-
 SUBROUTINE vol7d_normalize_data(qccli)
  
 TYPE(qcclitype),INTENT(inout) :: qccli !< volume providing data to be computed, it is modified by the method
@@ -624,7 +621,7 @@ CHARACTER(len=vol7d_ana_lenident) :: ident
 !!$  if (present(battrinv))then
 !!$    indbattrinv = index_c(qccli%v7d%dativarattr%b(:)%btable, battrinv)
 !!$  else
-!!$    indbattrinv = index_c(qccli%v7d%dativarattr%b(:)%btable, '*B33196')
+!!$    indbattrinv = index_c(qccli%v7d%dativarattr%b(:)%btable, qcattrvarsbtables(1))
 !!$  end if
 !!$end if
 
@@ -913,14 +910,14 @@ if (associated(qccli%v7d%datiattr%b))then
   if (present(battrinv))then
     indbattrinv = index_c(qccli%v7d%datiattr%b(:)%btable, battrinv)
   else
-    indbattrinv = index_c(qccli%v7d%datiattr%b(:)%btable, '*B33196')
+    indbattrinv = index_c(qccli%v7d%datiattr%b(:)%btable, qcattrvarsbtables(1))
   end if
 end if
 
 if ( indbattrinv <= 0 ) then
 
-  call l4f_category_log(qccli%category,L4F_ERROR,"error finding attribute index in/out *B33196")
-  call raise_error("error finding attribute index in/out *B33196")
+  call l4f_category_log(qccli%category,L4F_ERROR,"error finding attribute index in/out "//qcattrvarsbtables(1))
+  call raise_error("error finding attribute index in/out "//qcattrvarsbtables(1))
 
 end if
 
@@ -928,13 +925,13 @@ end if
 if (present(battrout))then
   indbattrout = index_c(qccli%v7d%datiattr%b(:)%btable, battrout)
 else
-  indbattrout =  index_c(qccli%v7d%datiattr%b(:)%btable, '*B33192')
+  indbattrout =  index_c(qccli%v7d%datiattr%b(:)%btable, qcattrvarsbtables(2))
 end if
 
 if ( indbattrout <= 0 ) then
 
-  call l4f_category_log(qccli%category,L4F_ERROR,"error finding attribute index in/out *B33192")
-  call raise_error("error finding attribute index in/out *B33192")
+  call l4f_category_log(qccli%category,L4F_ERROR,"error finding attribute index in/out "//qcattrvarsbtables(2))
+  call raise_error("error finding attribute index in/out "//qcattrvarsbtables(2))
 
 end if
 
@@ -1189,7 +1186,7 @@ do indana=1,size(qccli%v7d%ana)
 #ifdef DEBUG
                           call l4f_log (L4F_DEBUG,"qccli: gross error check flag set to bad")
 #endif
-                  qccli%v7d%voldatiattrb(indana,indtime,indlevel,indtimerange,inddativarr,indnetwork,indbattrinv)=0
+                  qccli%v7d%voldatiattrb(indana,indtime,indlevel,indtimerange,inddativarr,indnetwork,indbattrout)=qcpar%gross_error
 
                   if ( associated ( qccli%data_id_in)) then
 #ifdef DEBUG
@@ -1201,7 +1198,7 @@ do indana=1,size(qccli%v7d%ana)
                   end if
 
 
-                else if (.not. vd(qccli%v7d%voldatiattrb(indana,indtime,indlevel,indtimerange,&
+                else if (.not. vdge(qccli%v7d%voldatiattrb(indana,indtime,indlevel,indtimerange,&
                  inddativarr,indnetwork,indbattrout))) then
 
                                 ! gross error check allready done
@@ -1271,23 +1268,12 @@ do indana=1,size(qccli%v7d%ana)
 !!$                   //" "//trim(to_char(mese))//" "//trim(to_char(altezza))//" "//trim(to_char(level)))
 !!$                  
 
-!                      print*,"ndi=",climaquii,datoqui,climaquif
+!!$                      print*,"ndi=",climaquii,datoqui,climaquif
 
-                      if ( (datoqui >= climaquii .and. datoqui < climaquif) .or. &
-                       (indcana == 1 .and. datoqui < climaquii) .or. &
-                       (indcana == size(qccli%clima%ana)-1 .and. datoqui >= climaquif) ) then
+                      if ( (climaquii <= datoqui.and. datoqui < climaquif) .or. &
+                       (desc == 1 .and. datoqui < climaquii) .or. &
+                       (desc == size(qccli%clima%ana)-1 .and. datoqui >= climaquif) ) then
                     
-#ifdef DEBUG
-                        if(qccli%clima%voldatiattrb(indcana,indctime,indclevel,indctimerange,indcdativarr,indcnetwork,1) < 110 )then
-                          call l4f_log (L4F_DEBUG,"data ndi:                   "//t2c(datoqui)//"->"//&
-                           t2c(qccli%clima%voldatiattrb(indcana,indctime,indclevel,indctimerange,indcdativarr,indcnetwork,1))&
-                           //" : "//t2c(qccli%v7d%time(indtime)))
-                          call l4f_log (L4F_DEBUG,"limits: "//t2c(indcana)//":"//qccli%clima%ana(indcana)% ident//&
-                           " : "//t2c(climaquii)//" - "//t2c(climaquif)//" : "//t2c(qccli%clima%time(indctime))) 
-                        end if
-#endif
-                  
-
                         if (c_e(qccli%clima%voldatiattrb(indcana  &
                          ,indctime,indclevel,indctimerange,indcdativarr,indcnetwork,1))) then
 
@@ -1297,12 +1283,15 @@ do indana=1,size(qccli%v7d%ana)
                            (indcana,indctime,indclevel,indctimerange,indcdativarr,indcnetwork,1)&
                            , 1_int_b) ! 0 reserved for gross error check
 
-
 #ifdef DEBUG
+                          call l4f_log (L4F_DEBUG,"data ndi:                   "//t2c(datoqui)//"->"//&
+                           t2c(qccli%clima%voldatiattrb(indcana,indctime,indclevel,indctimerange,indcdativarr,indcnetwork,1))&
+                           //" : "//t2c(qccli%v7d%time(indtime)))
+                          call l4f_log (L4F_DEBUG,"limits: "//t2c(indcana)//":"//qccli%clima%ana(indcana)%ident//&
+                           " : "//t2c(climaquii)//" - "//t2c(climaquif)//" : "//t2c(qccli%clima%time(indctime))) 
                           call l4f_log (L4F_DEBUG,"qccli: clima check "//t2c(datoqui)//" confidence: "//&
-                           t2c(max (qccli%clima%voldatiattrb&
-                           (indcana,indctime,indclevel,indctimerange,indcdativarr,indcnetwork,1)&
-                           , 1_int_b)) //" : "//t2c(qccli%v7d%time(indtime)))
+                           t2c(qccli%v7d%voldatiattrb(indana,indtime,indlevel,indtimerange,inddativarr,indnetwork,indbattrout))&
+                          //" : "//t2c(qccli%v7d%time(indtime)))
 #endif
 
               
