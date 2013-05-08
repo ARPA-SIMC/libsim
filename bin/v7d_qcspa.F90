@@ -146,7 +146,7 @@ DO WHILE (time <= tf)
 
   CALL import(v7ddballe,var=var(:nvar),varkind=(/("r",i=1,nvar)/),&
    anavar=(/"B07030"/),anavarkind=(/"r"/),&
-   attr=(/"*B33196","*B33192","*B33194"/),attrkind=(/"b","b","b"/)&
+   attr=(/qcattrvarsbtables(1),qcattrvarsbtables(2),qcattrvarsbtables(4)/),attrkind=(/"b","b","b"/)&
    ,timei=timei,timef=timef,coordmin=coordmin,coordmax=coordmax)
   
   !call display(v7ddballe%vol7d)
@@ -155,9 +155,9 @@ DO WHILE (time <= tf)
 
   call l4f_category_log(category,L4F_INFO,"start peeling")
 
-  !elimina i dati con gross error
-  qcpar=qcpartype(0)
-  call vol7d_peeling(v7ddballe%vol7d,v7ddballe%data_id,keep_attr=(/"*B33194"/),purgeana=.true.)
+  !remove data invalidated and gross error only
+  qcpar=qcpartype(0_int_b,0_int_b,0_int_b)
+  call vol7d_peeling(v7ddballe%vol7d,v7ddballe%data_id,keep_attr=(/qcattrvarsbtables(4)/),purgeana=.true.)
   !call display(v7ddballe%vol7d)
 
   call l4f_category_log(category,L4F_INFO, "filtered N staz="//t2c(size(v7ddballe%vol7d%ana)))
