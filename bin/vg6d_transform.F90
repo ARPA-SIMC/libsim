@@ -124,7 +124,7 @@ CALL optionparser_add(opt, 'v', 'trans-type', trans_type, 'none', help= &
 CALL optionparser_add(opt, 'z', 'sub-type', sub_type, 'near', help= &
  'transformation subtype, for inter: ''near'', ''bilin'', &
  &for boxinter and boxregrid: ''average'', ''stddev'', ''max'', ''min'', &
- &for zoom: ''index'', ''coord'', ''coordbb'', &
+ &for zoom: ''index'', ''coord'', ''coordbb'', ''projcoord'', &
  &for metamorphosis: ''all''')
 CALL optionparser_add(opt, ' ', 'extrap', extrap, help= &
  'enable extrapolation outside input grid, it works only for ''inter'' &
@@ -309,7 +309,7 @@ CALL optionparser_add(opt, ' ', 'reverse-vapor-z-order', rzscan, help= &
  'reverse the scan order for Z (level) coordinate during export to vdf files for vapor.')
 
 CALL optionparser_add(opt, ' ', 'reuse-vapor-vdf-file', reusevdf, help= &
- 'reuse and modify an existing vdf file appendig data to a vapor data collection during export to vapor.')
+ 'reuse and modify an existing vdf file appending data to a vapor data collection during export to vapor.')
 #endif
 
 #ifdef ALCHIMIA

@@ -190,9 +190,10 @@ END INTERFACE
 PRIVATE
 
 PUBLIC proj, unproj, griddim_unproj, griddim_gen_coord, &
- griddim_zoom_coord, griddim_setsteps, griddim_def, grid_def, grid_dim
+ griddim_zoom_coord, griddim_zoom_projcoord, &
+ griddim_setsteps, griddim_def, grid_def, grid_dim
 PUBLIC init, delete, copy
-public get_val,set_val,write_unit,read_unit,display
+PUBLIC get_val,set_val,write_unit,read_unit,display
 PUBLIC OPERATOR(==),OPERATOR(/=)
 PUBLIC count_distinct, pack_distinct, map_distinct, map_inv_distinct,index
 PUBLIC wind_unrot, import, export
@@ -1497,19 +1498,31 @@ ENDDO
 END SUBROUTINE griddim_wind_unrot
 
 
+! compute zoom indices from geographical zoom coordinates
 SUBROUTINE griddim_zoom_coord(this, ilon, ilat, flon, flat, ix, iy, fx, fy)
 TYPE(griddim_def),INTENT(in) :: this
-!TYPE(grid_dim),INTENT(in) :: dim
-DOUBLE PRECISION,INTENT(in) :: ilon,ilat,flon,flat
+DOUBLE PRECISION,INTENT(in) :: ilon, ilat, flon, flat
 INTEGER,INTENT(out) :: ix, iy, fx, fy
 
 DOUBLE PRECISION :: ix1, iy1, fx1, fy1
-INTEGER :: lix, liy, lfx, lfy
-
 
 ! compute projected coordinates of vertices of desired lonlat rectangle
 CALL proj(this, ilon, ilat, ix1, iy1)
 CALL proj(this, flon, flat, fx1, fy1)
+
+CALL griddim_zoom_projcoord(this, ix1, iy1, fx1, fy1, ix, iy, fx, fy)
+
+END SUBROUTINE griddim_zoom_coord
+
+
+! compute zoom indices from projected zoom coordinates
+SUBROUTINE griddim_zoom_projcoord(this, ix1, iy1, fx1, fy1, ix, iy, fx, fy)
+TYPE(griddim_def),INTENT(in) :: this
+DOUBLE PRECISION,INTENT(in) :: ix1, iy1, fx1, fy1
+INTEGER,INTENT(out) :: ix, iy, fx, fy
+
+INTEGER :: lix, liy, lfx, lfy
+
 ! compute projected indices
 lix = NINT((ix1-this%grid%grid%xmin)/this%grid%grid%dx) + 1
 liy = NINT((iy1-this%grid%grid%ymin)/this%grid%grid%dy) + 1
@@ -1521,7 +1534,7 @@ fx = MAX(lix, lfx)
 iy = MIN(liy, lfy)
 fy = MAX(liy, lfy)
 
-END SUBROUTINE griddim_zoom_coord
+END SUBROUTINE griddim_zoom_projcoord
 
 
 END MODULE grid_class

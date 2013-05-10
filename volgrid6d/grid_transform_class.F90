@@ -52,6 +52,8 @@
 !!    - sub_type='coordbb' the bounds of the zoomed/extended area are
 !!      computed so to contain all the input points which lie in the
 !!      provided lon/lat bounding box
+!!    - sub_type='projcoord' the corners of the zoomed/extended area
+!!      are defined by projected coordinates
 !!    - sub_type='index' the bounds of the zoomed/extended area are
 !!      defined by grid indices.
 !!
@@ -411,7 +413,7 @@ end if
 
 IF (this%trans_type == 'zoom') THEN
 
-  if (this%sub_type == 'coord')then
+  if (this%sub_type == 'coord' .OR. this%sub_type == 'projcoord')then
 
     if (c_e(this%rect_coo%ilon) .and. c_e(this%rect_coo%ilat) .and. &
         c_e(this%rect_coo%flon) .and. c_e(this%rect_coo%flat)) then ! coordinates given
@@ -1069,9 +1071,15 @@ IF (this%trans%trans_type == 'zoom') THEN
      this%trans%rect_ind%ix, this%trans%rect_ind%iy, &
      this%trans%rect_ind%fx, this%trans%rect_ind%fy)
 
-!    this%trans%sub_type = 'index'
+  ELSE IF (this%trans%sub_type == 'projcoord') THEN
 
-  else if (this%trans%sub_type == 'coordbb') THEN
+    CALL griddim_zoom_projcoord(in, &
+     this%trans%rect_coo%ilon, this%trans%rect_coo%ilat,&
+     this%trans%rect_coo%flon, this%trans%rect_coo%flat,&
+     this%trans%rect_ind%ix, this%trans%rect_ind%iy, &
+     this%trans%rect_ind%fx, this%trans%rect_ind%fy)
+
+  ELSE IF (this%trans%sub_type == 'coordbb') THEN
 
 ! compute coordinates of input grid in geo system
     CALL unproj(in)
