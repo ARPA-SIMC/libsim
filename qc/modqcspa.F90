@@ -74,7 +74,7 @@
 !!
 !!\ingroup qc
 
-!> \todo ottimizzare la lettura del clima nel caso il periodo da controllare sia a cavallo di due anni.
+!> \todo ottimizzare la lettura degli extreme nel caso il periodo da controllare sia a cavallo di due anni.
 !!\todo Bisognerebbe validare il volume sottoposto al controllo per vedere se ha i requisiti.
 !!
 !! Programma Esempio del controllo spaziale :
@@ -107,7 +107,7 @@ character (len=255),parameter:: subcategory="QCspa"
 !>\brief Oggetto principale per il controllo di qualità
 type :: qcspatype
   type (vol7d),pointer :: v7d => null() !< Volume dati da controllare
-  type (vol7d) :: clima !< Clima di tutte le variabili da controllare
+  type (vol7d) :: extreme !< Extreme di tutte le variabili da controllare
   integer,pointer :: data_id_in(:,:,:,:,:) => null()  !< Indici dati del DB in input
   integer,pointer :: data_id_out(:,:,:,:,:) => null() !< Indici dati del DB in output
   integer :: category !< log4fortran
@@ -138,9 +138,9 @@ contains
 !>\brief Init del controllo di qualità spaziale.
 !!Effettua la lettura dei file e altre operazioni di inizializzazione.
 
-subroutine qcspainit(qcspa,v7d,var, timei, timef, coordmin, coordmax, data_id_in,climapath,&
+subroutine qcspainit(qcspa,v7d,var, timei, timef, coordmin, coordmax, data_id_in,extremepath,&
 #ifdef HAVE_DBALLE
- dsn,user,password,&
+ dsne,usere,passworde,&
 #endif
 categoryappend)
 
@@ -153,14 +153,14 @@ TYPE(geo_coord),INTENT(inout),optional :: coordmin,coordmax
 !>estremi temporali (inizio e fine) dell'estrazione per l'importazione
 TYPE(datetime),INTENT(in),optional :: timei, timef
 integer,intent(in),optional,target:: data_id_in(:,:,:,:,:) !< Indici dei dati in DB
-character(len=*),intent(in),optional :: climapath !< file con il volume del clima
+character(len=*),intent(in),optional :: extremepath !< file con il volume del extreme
 character(len=*),INTENT(in),OPTIONAL :: categoryappend !< appennde questo suffisso al namespace category di log4fortran
 
 #ifdef HAVE_DBALLE
 type (vol7d_dballe) :: v7d_dballetmp
-character(len=*),intent(in),optional :: dsn
-character(len=*),intent(in),optional :: user
-character(len=*),intent(in),optional :: password
+character(len=*),intent(in),optional :: dsne
+character(len=*),intent(in),optional :: usere
+character(len=*),intent(in),optional :: passworde
 character(len=512) :: ldsn
 character(len=512) :: luser
 character(len=512) :: lpassword
@@ -189,9 +189,9 @@ if (present(data_id_in))then
   qcspa%data_id_in => data_id_in
 end if
 
-call init(qcspa%clima)
+call init(qcspa%extreme)
 
-call optio(climapath,filepath)
+call optio(extremepath,filepath)
 
 #ifdef HAVE_DBALLE
 
@@ -217,13 +217,13 @@ else
 
 end if
 
-call optio(dsn,ldsn)
-call optio(user,luser)
-call optio(password,lpassword)
+call optio(dsne,ldsn)
+call optio(usere,luser)
+call optio(passworde,lpassword)
 
 if (c_e(filepath) .and. (c_e(ldsn).or.c_e(luser).or.c_e(lpassword))) then
-  call l4f_category_log(qcspa%category,L4F_ERROR,"climapath and dba option defined together")
-  call raise_error("climapath and dba option defined together")
+  call l4f_category_log(qcspa%category,L4F_ERROR,"extremepath and dba option defined together")
+  call raise_error("extremepath and dba option defined together")
 end if
 
 if (.not. c_e(ldsn)) then
@@ -236,7 +236,7 @@ if (.not. c_e(ldsn)) then
                                 ! filepath=get_package_filepath('climaprec.bufr', filetype_data)
                                 ! filepath="climaprec.bufr"
                                 !#else
-    filepath=get_package_filepath('climaprec.v7d', filetype_data)
+    filepath=get_package_filepath('qcclima-extreme.v7d', filetype_data)
 
   end if
 
@@ -244,7 +244,7 @@ if (.not. c_e(ldsn)) then
 
   case("v7d")
     iuni=getunit()
-    call import(qcspa%clima,filename=filepath,unit=iuni)
+    call import(qcspa%extreme,filename=filepath,unit=iuni)
     close (unit=iuni)
 
 #ifdef HAVE_DBALLE
@@ -253,7 +253,7 @@ if (.not. c_e(ldsn)) then
                                 !call import(v7d_dballetmp)
     call import(v7d_dballetmp,var=var,coordmin=coordmin, coordmax=coordmax, timei=ltimei, timef=ltimef, &
      varkind=(/("r",i=1,size(var))/),attr=(/qcattrvarsbtables(2)/),attrkind=(/"b"/))
-    call copy(v7d_dballetmp%vol7d,qcspa%clima)
+    call copy(v7d_dballetmp%vol7d,qcspa%extreme)
     call delete(v7d_dballetmp)
 #endif
 
@@ -266,11 +266,11 @@ if (.not. c_e(ldsn)) then
 else
 
   call l4f_category_log(qcspa%category,L4F_DEBUG,"init v7d_dballetmp")
-  call init(v7d_dballetmp,dsn=dsn,user=user,password=password,write=.false.,file=.false.,categoryappend=trim(a_name)//".spatial")
+  call init(v7d_dballetmp,dsn=ldsn,user=luser,password=lpassword,write=.false.,file=.false.,categoryappend=trim(a_name)//".spatial")
   call l4f_category_log(qcspa%category,L4F_DEBUG,"import v7d_dballetmp")
   call import(v7d_dballetmp,var=var,coordmin=coordmin, coordmax=coordmax, timei=ltimei, timef=ltimef, &
    varkind=(/("r",i=1,size(var))/),attr=(/qcattrvarsbtables(2)/),attrkind=(/"b"/))
-  call copy(v7d_dballetmp%vol7d,qcspa%clima)
+  call copy(v7d_dballetmp%vol7d,qcspa%extreme)
   call delete(v7d_dballetmp)
 
 end if
@@ -350,7 +350,7 @@ status = triangles_compute(qcspa%co,qcspa%tri)
 
 if (status /= 0) then
   call l4f_category_log(qcspa%category,L4F_ERROR,"contng error status="//t2c(status))
-  !call raise_error("climapath and dba option defined together")
+  !call raise_error()
 end if
 
 end subroutine qcspatri
@@ -432,7 +432,7 @@ type(qcspatype),intent(in out) :: qcspa !< Oggetto per l controllo climatico
 
 call qcspadealloc(qcspa)
 
-call delete(qcspa%clima)
+call delete(qcspa%extreme)
 
 qcspa%ndp=imiss
 
@@ -470,16 +470,14 @@ integer :: indbattrinv,indbattrcli,indbattrout
 logical :: anamaskl(size(qcspa%v7d%ana)), timemaskl(size(qcspa%v7d%time)), levelmaskl(size(qcspa%v7d%level)), &
  timerangemaskl(size(qcspa%v7d%timerange)), varmaskl(size(qcspa%v7d%dativar%r)), networkmaskl(size(qcspa%v7d%network)) 
 
-integer :: indana , indanavar, indtime ,indlevel ,indtimerange ,inddativarr, indnetwork
-integer :: indcana,           indctime,indclevel,indctimerange,indcdativarr,indcnetwork
-real :: datoqui,datola,climaquii,climaquif, altezza,datila(size(qcspa%v7d%time))
+integer :: indana ,  indtime ,indlevel ,indtimerange ,inddativarr, indnetwork
+real :: datoqui,datola,datila(size(qcspa%v7d%time))
 integer :: iarea
                                 !integer, allocatable :: indcanav(:)
 
                                 !TYPE(vol7d_ana)  :: ana
 TYPE(datetime)   :: time, nintime
 TYPE(vol7d_level):: level
-type(vol7d_var)  :: anavar
 type(timedelta) :: deltato,deltat 
 
 integer :: ivert(50),i,ipos,ineg,it,itrov,iv,ivb,kk,iindtime
@@ -548,6 +546,9 @@ endif
 
 qcspa%v7d%voldatiattrb(:,:,:,:,:,:,indbattrout)=ibmiss
 
+!! TODO devo chiamare questa ma non ho ancor l'oggetto giusto
+!!call vol7d_normalize_data(qccli)
+
 call qcspatri(qcspa)
 
 do indana=1,size(qcspa%v7d%ana)
@@ -585,23 +586,27 @@ do indana=1,size(qcspa%v7d%ana)
 
             datoqui = qcspa%v7d%voldatir  (indana ,indtime ,indlevel ,indtimerange ,inddativarr, indnetwork )
 
+            if (.not. c_e(datoqui)) cycle
+
+            ! invalidated
             if (indbattrinv > 0) then
               if( invalidated(qcspa%v7d%voldatiattrb&
                (indana,indtime,indlevel,indtimerange,inddativarr,indnetwork,indbattrinv))) then
-                call l4f_category_log(qcspa%category,L4F_WARN,"It's better to do a reform on ana to v7d before spatial QC")
+                call l4f_category_log(qcspa%category,L4F_WARN,&
+                 "It's better to do a reform on ana to v7d after peeling, before spatial QC")
                 cycle
               end if
             end if
 
+            ! gross error check
             if (indbattrcli > 0) then
-              if( .not. vd(qcspa%v7d%voldatiattrb&
+              if( .not. vdge(qcspa%v7d%voldatiattrb&
                (indana,indtime,indlevel,indtimerange,inddativarr,indnetwork,indbattrcli))) then
-                call l4f_category_log(qcspa%category,L4F_WARN,"It's better to do a reform on ana to v7d before spatial QC")
+                call l4f_category_log(qcspa%category,L4F_WARN,&
+                 "It's better to do a reform on ana to v7d after peeling, before spatial QC")
                 cycle
               end if
             end if
-
-            if (.not. c_e(datoqui)) cycle
 
             nintime=qcspa%v7d%time(indtime)+timedelta_new(minute=30)
             CALL getval(nintime, month=mese, hour=ora)
@@ -711,25 +716,50 @@ do indana=1,size(qcspa%v7d%ana)
             gradmin=huge(gradmin)
             DO I=1, IV
                                 !find the nearest data in time
-
               datola = qcspa%v7d%voldatir  (ivert(i) ,indtime ,indlevel ,indtimerange ,inddativarr, indnetwork )
+
+                                ! invalidated
+              if (indbattrinv > 0) then
+                if( invalidated(qcspa%v7d%voldatiattrb&
+                 (ivert(i),indtime,indlevel,indtimerange,inddativarr,indnetwork,indbattrinv))) then
+                  datola=rmiss
+                end if
+              end if
+
+                                ! gross error check
+              if (indbattrcli > 0) then
+                if( .not. vdge(qcspa%v7d%voldatiattrb&
+                 (ivert(i),indtime,indlevel,indtimerange,inddativarr,indnetwork,indbattrcli))) then
+                  datola=rmiss
+                end if
+              end if
+
               datila = qcspa%v7d%voldatir  (ivert(i) ,: ,indlevel ,indtimerange ,inddativarr, indnetwork )
 
               if (.not. c_e(datola))then
                 deltato=timedelta_miss
                 do iindtime=1,size(qcspa%v7d%time)
-                  if (c_e(datila(iindtime)))then
-                    if (iindtime < indtime) then
-                      deltat=qcspa%v7d%time(indtime)-qcspa%v7d%time(iindtime)
-                    else if (iindtime > indtime) then
-                      deltat=qcspa%v7d%time(iindtime)-qcspa%v7d%time(indtime)
-                    else
-                      cycle
-                    end if
-                    if (deltat < deltato) then
-                      datola = datila(iindtime)
-                      deltato = deltat
-                    end if
+                  if (.not. c_e(datila(iindtime))) cycle
+                                ! invalidated
+                  if (indbattrinv > 0 .and. &
+                   invalidated(qcspa%v7d%voldatiattrb&
+                   (ivert(i),iindtime,indlevel,indtimerange,inddativarr,indnetwork,indbattrinv))) cycle
+                                ! gross error check
+                  if (indbattrcli > 0 .and. &
+                   .not. vdge(qcspa%v7d%voldatiattrb&
+                   (ivert(i),iindtime,indlevel,indtimerange,inddativarr,indnetwork,indbattrcli))) cycle
+
+                  if (iindtime < indtime) then
+                    deltat=qcspa%v7d%time(indtime)-qcspa%v7d%time(iindtime)
+                  else if (iindtime > indtime) then
+                    deltat=qcspa%v7d%time(iindtime)-qcspa%v7d%time(indtime)
+                  else
+                    call l4f_category_log(qcspa%category,L4F_WARN,"somethings go wrong on ipotesys make in spatial QC")
+                  end if
+
+                  if (deltat < deltato) then
+                    datola = datila(iindtime)
+                    deltato = deltat
                   end if
                 end do
               end if

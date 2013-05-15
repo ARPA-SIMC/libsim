@@ -5,8 +5,8 @@ elemental logical function vd/**/VOL7D_POLY_TYPES (flag)
 /**/VOL7D_POLY_TYPE ,intent(in)  :: flag !< confidenza
       
 
-vd/**/VOL7D_POLY_TYPES = .not. (realdat(flag,vol7d_var_new(qcattrvarsbtables(2),scalefactor=0)) <= qcpar%att .and. c_e(flag))&
- .or. .not. c_e(qcpar%att)
+vd/**/VOL7D_POLY_TYPES = .not. (realdat(flag,vol7d_var_new(qcattrvarsbtables(2),scalefactor=0)) <= qcpar%att .and. c_e(flag)&
+ .and. c_e(qcpar%att))
 
 
 return
@@ -19,8 +19,8 @@ elemental logical function vdge/**/VOL7D_POLY_TYPES (flag)
 /**/VOL7D_POLY_TYPE ,intent(in)  :: flag !< confidenza
       
 
-vdge/**/VOL7D_POLY_TYPES = .not. (realdat(flag,vol7d_var_new(qcattrvarsbtables(2),scalefactor=0)) == qcpar%gross_error .and. c_e(flag)) &
- .or. .not. c_e(qcpar%gross_error)
+vdge/**/VOL7D_POLY_TYPES = .not. (realdat(flag,vol7d_var_new(qcattrvarsbtables(2),scalefactor=0)) == qcpar%gross_error .and. c_e(flag) &
+ .and. c_e(qcpar%gross_error))
 
 
 return
@@ -32,8 +32,8 @@ elemental logical function invalidated/**/VOL7D_POLY_TYPES(flag)
 
 /**/VOL7D_POLY_TYPE ,intent(in)  :: flag !< attributo di invalidazione del dato
       
-invalidated/**/VOL7D_POLY_TYPES=.not. (realdat(flag,vol7d_var_new(qcattrvarsbtables(2),scalefactor=0)) == qcpar%invalidated .and. c_e(flag)) &
- .or. .not. c_e(qcpar%invalidated)
+invalidated/**/VOL7D_POLY_TYPES= realdat(flag,vol7d_var_new(qcattrvarsbtables(1),scalefactor=0)) == qcpar%invalidated .and. c_e(flag) &
+ .and. c_e(qcpar%invalidated)
 
 
 return

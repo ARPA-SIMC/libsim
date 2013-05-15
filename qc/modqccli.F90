@@ -997,7 +997,7 @@ do indana=1,size(qccli%v7d%ana)
           do indtime=1,size(qccli%v7d%time)
 
 #ifdef DEBUG
-            call l4f_log(L4F_DEBUG,"Index:"// t2c(indana)//" "//t2c(indnetwork)//" "//t2c(indlevel)//" "//&
+            call l4f_log(L4F_INFO,"Index:"// t2c(indana)//" "//t2c(indnetwork)//" "//t2c(indlevel)//" "//&
              t2c(indtimerange)//" "//t2c(inddativarr)//" "//t2c(indtime))
 #endif
 !!$            print *,"elaboro data : "//t2c(qccli%v7d%time(indtime))
@@ -1018,7 +1018,7 @@ do indana=1,size(qccli%v7d%ana)
 
                                 ! gross error check allready done
 #ifdef DEBUG
-                  call l4f_log (L4F_DEBUG,"qccli: skip station for a preceding invalidated flag")
+                  call l4f_log (L4F_INFO,"qccli: skip station for a preceding invalidated flag")
 #endif
                   cycle
                 end if
@@ -1068,8 +1068,8 @@ do indana=1,size(qccli%v7d%ana)
                   endif
                   
 #ifdef DEBUG
-                  CALL l4f_log(L4F_DEBUG, 'height has value '//t2c(height))
-                  CALL l4f_log(L4F_DEBUG, 'for k having number '//t2c(k)//&
+                  CALL l4f_log(L4F_INFO, 'height has value '//t2c(height))
+                  CALL l4f_log(L4F_INFO, 'for k having number '//t2c(k)//&
                    ' iclv has value '//t2c(iclv(k)))
 #endif
                 end do
@@ -1184,13 +1184,13 @@ do indana=1,size(qccli%v7d%ana)
 
                                 !ATTENZIONE TODO : inddativarr È UNA GRANDE SEMPLIFICAZIONE NON VERA SE TIPI DI DATO DIVERSI !!!!
 #ifdef DEBUG
-                          call l4f_log (L4F_DEBUG,"qccli: gross error check flag set to bad")
+                          call l4f_log (L4F_INFO,"qccli: gross error check flag set to bad")
 #endif
                   qccli%v7d%voldatiattrb(indana,indtime,indlevel,indtimerange,inddativarr,indnetwork,indbattrout)=qcpar%gross_error
 
                   if ( associated ( qccli%data_id_in)) then
 #ifdef DEBUG
-                    call l4f_log (L4F_DEBUG,"id: "//t2c(&
+                    call l4f_log (L4F_INFO,"id: "//t2c(&
                      qccli%data_id_in(indana,indtime,indlevel,indtimerange,indnetwork)))
 #endif
                     qccli%data_id_out(indana,indtime,indlevel,indtimerange,indnetwork)=&
@@ -1203,7 +1203,7 @@ do indana=1,size(qccli%v7d%ana)
 
                                 ! gross error check allready done
 #ifdef DEBUG
-                          call l4f_log (L4F_DEBUG,"qccli: skip station for a preceding gross error check flagged bad")
+                          call l4f_log (L4F_INFO,"qccli: skip station for a preceding gross error check flagged bad")
 #endif
                 else
 
@@ -1284,12 +1284,12 @@ do indana=1,size(qccli%v7d%ana)
                            , 1_int_b) ! 0 reserved for gross error check
 
 #ifdef DEBUG
-                          call l4f_log (L4F_DEBUG,"data ndi:                   "//t2c(datoqui)//"->"//&
+                          call l4f_log (L4F_INFO,"data ndi:                   "//t2c(datoqui)//"->"//&
                            t2c(qccli%clima%voldatiattrb(indcana,indctime,indclevel,indctimerange,indcdativarr,indcnetwork,1))&
                            //" : "//t2c(qccli%v7d%time(indtime)))
-                          call l4f_log (L4F_DEBUG,"limits: "//t2c(indcana)//":"//qccli%clima%ana(indcana)%ident//&
+                          call l4f_log (L4F_INFO,"limits: "//t2c(indcana)//":"//qccli%clima%ana(indcana)%ident//&
                            " : "//t2c(climaquii)//" - "//t2c(climaquif)//" : "//t2c(qccli%clima%time(indctime))) 
-                          call l4f_log (L4F_DEBUG,"qccli: clima check "//t2c(datoqui)//" confidence: "//&
+                          call l4f_log (L4F_INFO,"qccli: clima check "//t2c(datoqui)//" confidence: "//&
                            t2c(qccli%v7d%voldatiattrb(indana,indtime,indlevel,indtimerange,inddativarr,indnetwork,indbattrout))&
                           //" : "//t2c(qccli%v7d%time(indtime)))
 #endif
@@ -1297,7 +1297,7 @@ do indana=1,size(qccli%v7d%ana)
               
                           if ( associated ( qccli%data_id_in)) then
 #ifdef DEBUG
-                            call l4f_log (L4F_DEBUG,"id: "//t2c(&
+                            call l4f_log (L4F_INFO,"id: "//t2c(&
                              qccli%data_id_in(indana,indtime,indlevel,indtimerange,indnetwork)))
 #endif
                             qccli%data_id_out(indana,indtime,indlevel,indtimerange,indnetwork)=&

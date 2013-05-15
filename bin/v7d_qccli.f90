@@ -115,7 +115,7 @@ CALL import(v7ddballe,var=var(:nvar),varkind=(/("r",i=1,nvar)/),&
  ,timei=ti,timef=tf,coordmin=coordmin,coordmax=coordmax)
 
 print *,"data input:"
-call display(v7ddballe%vol7d)
+!call display(v7ddballe%vol7d)
 call l4f_category_log(category,L4F_INFO,"end data import")
 
 call l4f_category_log(category,L4F_INFO,"start QC")
@@ -127,18 +127,17 @@ call init(v7dqccli,v7ddballe%vol7d,var(:nvar), &
  user=userce, password=passwordce, macropath=macropath, height2level=height2level, categoryappend="clima")
 
 print *,"data extreme:"
-call display(v7dqccli%extreme)
+!call display(v7dqccli%extreme)
 
 print *,"data clima:"
-call display(v7dqccli%clima)
+!call display(v7dqccli%clima)
 
 call l4f_category_log(category,L4F_INFO,"start climat QC")
-
 call quaconcli(v7dqccli)
-
 call l4f_category_log(category,L4F_INFO,"end climat QC")
-call l4f_category_log(category,L4F_INFO,"start export data")
 
+call l4f_category_log(category,L4F_INFO,"start export data")
+print *,"data output:"
 !call display(v7ddballe%vol7d)
 
 CALL export(v7ddballe,attr_only=.true.)

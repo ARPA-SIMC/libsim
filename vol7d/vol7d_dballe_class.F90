@@ -217,9 +217,6 @@ nullify(this%data_id)
 !TODO: quando scrivo bisogna gestire questo che non è da fare ?
 CALL init(this%vol7d,time_definition=time_definition)
 
-print *,"------------------"
-call display(this%vol7d)
-
                                 ! impostiamo la gestione dell'errore
 call idba_error_set_callback(0,v7d_dballe_error_handler, &
  this%category,this%handle_err)

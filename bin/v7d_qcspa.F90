@@ -46,12 +46,12 @@ type(ncar_plot) :: plot
 integer, parameter :: maxvar=10
 character(len=6) :: var(maxvar)=cmiss   ! variables to elaborate
 character(len=19) :: dsn='test1',user='test',password=''
-character(len=19) :: dsnc='test',userc='test',passwordc=''
+character(len=19) :: dsne='test',usere='test',passworde=''
 integer :: years=imiss,months=imiss,days=imiss,hours=imiss,yeare=imiss,monthe=imiss,daye=imiss,houre=imiss,nvar=0
 doubleprecision :: lons=dmiss,lats=dmiss,lone=dmiss,late=dmiss,lon,lat
 integer :: year, month, day, hour
 
-namelist /odbc/   dsn,user,password,dsnc,userc,passwordc       ! namelist to define DSN
+namelist /odbc/   dsn,user,password,dsne,usere,passworde       ! namelist to define DSN
 namelist /minmax/ years,months,days,hours,lons,lats,yeare,monthe,daye,houre,lone,late
 namelist /varlist/ var
 
@@ -156,16 +156,18 @@ DO WHILE (time <= tf)
   call l4f_category_log(category,L4F_INFO,"start peeling")
 
   !remove data invalidated and gross error only
-  qcpar=qcpartype(0_int_b,0_int_b,0_int_b)
+  !qcpar=qcpartype(0_int_b,0_int_b,0_int_b)
+  qcpar%att=bmiss
   call vol7d_peeling(v7ddballe%vol7d,v7ddballe%data_id,keep_attr=(/qcattrvarsbtables(4)/),purgeana=.true.)
   !call display(v7ddballe%vol7d)
 
   call l4f_category_log(category,L4F_INFO, "filtered N staz="//t2c(size(v7ddballe%vol7d%ana)))
 
   call l4f_category_log(category,L4F_INFO,"start QC")
+
                                 ! chiamiamo il "costruttore" per il Q.C.
   call init(v7dqcspa,v7ddballe%vol7d,var(:nvar),timei=ti,timef=tf,coordmin=coordmin,coordmax=coordmax,&
-   data_id_in=v7ddballe%data_id, dsn=dsnc, user=userc, categoryappend="space")
+   data_id_in=v7ddballe%data_id, dsne=dsne, usere=usere, categoryappend="space")
   !call display(v7dqcspa%clima)
   !call display(v7dqcspa%extreme)
 
