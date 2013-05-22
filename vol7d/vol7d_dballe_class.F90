@@ -207,9 +207,11 @@ this%handle=imiss
 this%handle_err=imiss
 this%handle_staz=imiss
 
-call l4f_launcher(a_name,a_name_append=trim(subcategory)//"."//trim(categoryappend))
-!init di log4fortran
-!ier=l4f_init()
+if (present(categoryappend))then
+  call l4f_launcher(a_name,a_name_append=trim(subcategory)//"."//trim(categoryappend))
+else
+  call l4f_launcher(a_name,a_name_append=trim(subcategory))
+endif
 this%category=l4f_category_get(a_name)
 
 nullify(this%data_id)
