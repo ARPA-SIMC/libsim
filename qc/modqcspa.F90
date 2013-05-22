@@ -88,6 +88,7 @@ use geo_proj_class
 use space_utilities
 use vol7d_class
 use modqc
+use modqccli
 use file_utilities
 use log4fortran
 use char_utilities
@@ -102,18 +103,18 @@ implicit none
 
 public
 
-character (len=255),parameter:: subcategory="QCspa"
+character (len=255),parameter:: subcategoryspa="QCspa"
 
 !>\brief Oggetto principale per il controllo di qualità
 type :: qcspatype
   type (vol7d),pointer :: v7d => null() !< Volume dati da controllare
-  type (vol7d) :: extreme !< Extreme di tutte le variabili da controllare
   integer,pointer :: data_id_in(:,:,:,:,:) => null()  !< Indici dati del DB in input
   integer,pointer :: data_id_out(:,:,:,:,:) => null() !< Indici dati del DB in output
   integer :: category !< log4fortran
   integer :: ndp !< number of points
   type(xy),pointer :: co(:) => null()
   type (triangles) :: tri !< triangles
+  type (qcclitype) :: qccli !< qccli part for normalization
 end type qcspatype
 
 
@@ -142,7 +143,7 @@ subroutine qcspainit(qcspa,v7d,var, timei, timef, coordmin, coordmax, data_id_in
 #ifdef HAVE_DBALLE
  dsne,usere,passworde,&
 #endif
-categoryappend)
+ height2level,categoryappend)
 
 type(qcspatype),intent(in out) :: qcspa !< Oggetto per il controllo spaziale
 type (vol7d),intent(in),target:: v7d !< Il volume Vol7d da controllare
@@ -154,6 +155,7 @@ TYPE(geo_coord),INTENT(inout),optional :: coordmin,coordmax
 TYPE(datetime),INTENT(in),optional :: timei, timef
 integer,intent(in),optional,target:: data_id_in(:,:,:,:,:) !< Indici dei dati in DB
 character(len=*),intent(in),optional :: extremepath !< file con il volume del extreme
+logical ,intent(in),optional :: height2level   !< use conventional level starting from station height
 character(len=*),INTENT(in),OPTIONAL :: categoryappend !< appennde questo suffisso al namespace category di log4fortran
 
 #ifdef HAVE_DBALLE
@@ -174,7 +176,7 @@ character(len=512) :: filepath
 character(len=512) :: a_name
 
 
-call l4f_launcher(a_name,a_name_append=trim(subcategory)//"."//trim(categoryappend))
+call l4f_launcher(a_name,a_name_append=trim(subcategoryspa)//"."//trim(categoryappend))
 qcspa%category=l4f_category_get(a_name)
 
 call delete(qcspa%tri)
@@ -189,92 +191,15 @@ if (present(data_id_in))then
   qcspa%data_id_in => data_id_in
 end if
 
-call init(qcspa%extreme)
-
-call optio(extremepath,filepath)
-
+call qccliinit(qcspa%qccli,v7d,var, timei, timef, data_id_in,&
+ macropath=cmiss, climapath=cmiss, extremepath=extremepath, &
 #ifdef HAVE_DBALLE
-
-ltimei=datetime_miss
-ltimef=datetime_miss
-if (present (timei)) ltimei=timei
-if (present (timef)) ltimef=timef
- 
-CALL getval(ltimei+timedelta_new(minute=30), year=yeari, month=monthi, day=dayi, hour=houri, minute=minutei, msec=mseci)
-call getval(ltimef+timedelta_new(minute=30), year=yearf, month=monthf, day=dayf, hour=hourf, minute=minutef, msec=msecf)
-
-if ( yeari == yearf .and. monthi == monthf .and. dayi == dayf) then
-
-  call init(ltimei, 1001, monthi, 1, houri, minutei, mseci) 
-  call init(ltimef, 1001, monthf, 1, hourf, minutef, msecf) 
-  ltimei = ltimei +timedelta_new(minute=30)
-  ltimef = ltimef +timedelta_new(minute=30)
-
-else
-                                ! if you span years or months or days I read all the climat dataset (should be optimized not so easy)
-  ltimei=datetime_miss
-  ltimef=datetime_miss
-
-end if
-
-call optio(dsne,ldsn)
-call optio(usere,luser)
-call optio(passworde,lpassword)
-
-if (c_e(filepath) .and. (c_e(ldsn).or.c_e(luser).or.c_e(lpassword))) then
-  call l4f_category_log(qcspa%category,L4F_ERROR,"extremepath and dba option defined together")
-  call raise_error("extremepath and dba option defined together")
-end if
-
-if (.not. c_e(ldsn)) then
-
+ dsncli=cmiss,dsnextreme=dsne,user=usere,password=passworde,&
 #endif
+ height2level=height2level,categoryappend=categoryappend)
 
-  if (.not. c_e(filepath)) then
 
-                                ! bufr import do not support attributes so it do not work for now
-                                ! filepath=get_package_filepath('climaprec.bufr', filetype_data)
-                                ! filepath="climaprec.bufr"
-                                !#else
-    filepath=get_package_filepath('qcclima-extreme.v7d', filetype_data)
-
-  end if
-
-  select case (trim(lowercase(suffixname(filepath))))
-
-  case("v7d")
-    iuni=getunit()
-    call import(qcspa%extreme,filename=filepath,unit=iuni)
-    close (unit=iuni)
-
-#ifdef HAVE_DBALLE
-  case("bufr")
-    call init(v7d_dballetmp,file=.true.,filename=filepath,categoryappend=trim(a_name)//".spatial")
-                                !call import(v7d_dballetmp)
-    call import(v7d_dballetmp,var=var,coordmin=coordmin, coordmax=coordmax, timei=ltimei, timef=ltimef, &
-     varkind=(/("r",i=1,size(var))/),attr=(/qcattrvarsbtables(2)/),attrkind=(/"b"/))
-    call copy(v7d_dballetmp%vol7d,qcspa%extreme)
-    call delete(v7d_dballetmp)
-#endif
-
-  case default
-    call l4f_category_log(qcspa%category,L4F_ERROR,"file type not supported (user .v7d or .bufr suffix only): "//trim(filepath))
-    call raise_error("file type not supported (use .v7d or .bufr suffix only): "//trim(filepath))
-  end select
-
-#ifdef HAVE_DBALLE
-else
-
-  call l4f_category_log(qcspa%category,L4F_DEBUG,"init v7d_dballetmp")
-  call init(v7d_dballetmp,dsn=ldsn,user=luser,password=lpassword,write=.false.,file=.false.,categoryappend=trim(a_name)//".spatial")
-  call l4f_category_log(qcspa%category,L4F_DEBUG,"import v7d_dballetmp")
-  call import(v7d_dballetmp,var=var,coordmin=coordmin, coordmax=coordmax, timei=ltimei, timef=ltimef, &
-   varkind=(/("r",i=1,size(var))/),attr=(/qcattrvarsbtables(2)/),attrkind=(/"b"/))
-  call copy(v7d_dballetmp%vol7d,qcspa%extreme)
-  call delete(v7d_dballetmp)
-
-end if
-#endif
+open (unit=11, file=t2c(timei)//"_"//t2c(timef)//".grad",STATUS='UNKNOWN', form='FORMATTED')
 
 return
 end subroutine qcspainit
@@ -432,7 +357,7 @@ type(qcspatype),intent(in out) :: qcspa !< Oggetto per l controllo climatico
 
 call qcspadealloc(qcspa)
 
-call delete(qcspa%extreme)
+call delete(qcspa%qccli)
 
 qcspa%ndp=imiss
 
@@ -462,7 +387,6 @@ logical ,intent(in),optional :: timerangemask(:) !< filtro sui timerange
 logical ,intent(in),optional :: varmask(:) !< Filtro sulle variabili
 logical ,intent(in),optional :: networkmask(:) !< Filtro sui network
 
-CHARACTER(len=vol7d_ana_lenident) :: ident
                                 !REAL(kind=fp_geo) :: lat,lon
 integer :: mese, ora
                                 !local
@@ -547,23 +471,11 @@ endif
 qcspa%v7d%voldatiattrb(:,:,:,:,:,:,indbattrout)=ibmiss
 
 !! TODO devo chiamare questa ma non ho ancor l'oggetto giusto
-!!call vol7d_normalize_data(qccli)
+call vol7d_normalize_data(qcspa%qccli)
 
 call qcspatri(qcspa)
 
 do indana=1,size(qcspa%v7d%ana)
-
-                                !  iarea= supermacroa(qcspa%in_macroa(indana))
-  iarea= 1
-  write(ident,'("BOX-",i2.2,"*")')iarea   ! macro-area
-                                !lat=0.0d0
-                                !lon=0.0d0
-                                !write(ident,'("BOX-",2i2.2)')iarea,lperc   ! macro-area e percentile
-                                !call init(ana,lat=lat,lon=lon,ident=ident)
-
-                                !allocate (indcanav(count(match(qcspa%clima%ana(:)%ident,ident))))
-                                !indcanav=match(qcspa%clima%ana(:)%ident,ident))))
-
   do indnetwork=1,size(qcspa%v7d%network)
     do indlevel=1,size(qcspa%v7d%level)
       do indtimerange=1,size(qcspa%v7d%timerange)
@@ -780,14 +692,15 @@ do indana=1,size(qcspa%v7d%ana)
               GRAD=(datoqui-datola)/DIST
               IF (GRAD >= 0.d0) Ipos=Ipos+1           ! se il gradiente e` positivo incrementa il contatore di positivi
               IF (GRAD <= 0.d0) Ineg=Ineg+1           ! se il gradiente e` negativo incrementa il contatore di negativi
-              gradmin=min(gradmin,grad)
+
+              gradmin=min(gradmin,abs(grad))
 
             END DO
 
             IF(IVB < 3) cycle      ! do nothing if valid gradients < 3
 
             IF (ipos == ivb .or. ineg == ivb)THEN  ! se tutti i gradienti sono dello stesso segno
-              write(11,*)gradmin
+              write(11,*)sign(gradmin,dble(ipos-ineg))
               FLAG=50_int_b
             ELSE
               FLAG=100_int_b

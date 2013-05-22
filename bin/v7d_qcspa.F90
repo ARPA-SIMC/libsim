@@ -45,13 +45,14 @@ type(ncar_plot) :: plot
 
 integer, parameter :: maxvar=10
 character(len=6) :: var(maxvar)=cmiss   ! variables to elaborate
-character(len=19) :: dsn='test1',user='test',password=''
-character(len=19) :: dsne='test',usere='test',passworde=''
+character(len=80) :: dsn='test1',user='test',password=''
+character(len=80) :: dsne='test',usere='test',passworde=''
 integer :: years=imiss,months=imiss,days=imiss,hours=imiss,yeare=imiss,monthe=imiss,daye=imiss,houre=imiss,nvar=0
 doubleprecision :: lons=dmiss,lats=dmiss,lone=dmiss,late=dmiss,lon,lat
 integer :: year, month, day, hour
+logical :: height2level=.false.
 
-namelist /odbc/   dsn,user,password,dsne,usere,passworde       ! namelist to define DSN
+namelist /odbc/   dsn,user,password,dsne,usere,passworde,height2level       ! namelist to define DSN
 namelist /minmax/ years,months,days,hours,lons,lats,yeare,monthe,daye,houre,lone,late
 namelist /varlist/ var
 
@@ -167,7 +168,7 @@ DO WHILE (time <= tf)
 
                                 ! chiamiamo il "costruttore" per il Q.C.
   call init(v7dqcspa,v7ddballe%vol7d,var(:nvar),timei=ti,timef=tf,coordmin=coordmin,coordmax=coordmax,&
-   data_id_in=v7ddballe%data_id, dsne=dsne, usere=usere, categoryappend="space")
+   data_id_in=v7ddballe%data_id, dsne=dsne, usere=usere, height2level=height2level, categoryappend="space")
   !call display(v7dqcspa%clima)
   !call display(v7dqcspa%extreme)
 
