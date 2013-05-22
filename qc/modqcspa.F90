@@ -653,13 +653,15 @@ do indana=1,size(qcspa%v7d%ana)
                 do iindtime=1,size(qcspa%v7d%time)
                   if (.not. c_e(datila(iindtime))) cycle
                                 ! invalidated
-                  if (indbattrinv > 0 .and. &
-                   invalidated(qcspa%v7d%voldatiattrb&
-                   (ivert(i),iindtime,indlevel,indtimerange,inddativarr,indnetwork,indbattrinv))) cycle
+                  if (indbattrinv > 0 ) then 
+                    if (invalidated(qcspa%v7d%voldatiattrb&
+                     (ivert(i),iindtime,indlevel,indtimerange,inddativarr,indnetwork,indbattrinv))) cycle
+                  end if
                                 ! gross error check
-                  if (indbattrcli > 0 .and. &
-                   .not. vdge(qcspa%v7d%voldatiattrb&
-                   (ivert(i),iindtime,indlevel,indtimerange,inddativarr,indnetwork,indbattrcli))) cycle
+                  if (indbattrcli > 0 )then
+                    if (.not. vdge(qcspa%v7d%voldatiattrb&
+                     (ivert(i),iindtime,indlevel,indtimerange,inddativarr,indnetwork,indbattrcli))) cycle
+                  end if
 
                   if (iindtime < indtime) then
                     deltat=qcspa%v7d%time(indtime)-qcspa%v7d%time(iindtime)
