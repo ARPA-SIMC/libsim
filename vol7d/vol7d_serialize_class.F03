@@ -403,14 +403,15 @@ this%anaonly = SIZE(v7d%time) == 0 .AND. SIZE(v7d%level) == 0 .AND. &
 
 nav = COUNT(this%mapper(:)%cat == 1)
 ndv = COUNT(this%mapper(:)%cat == 3)
-IF ((ndv > 0 .AND. &
- (SIZE(v7d%ana) == 0 .OR. SIZE(v7d%network) == 0 .OR. &
- SIZE(v7d%time) == 0 .OR. SIZE(v7d%level) == 0 .OR. &
- SIZE(v7d%timerange) == 0)) .OR. &
- (nav > 0 .AND. &
- (SIZE(v7d%ana) == 0 .OR. SIZE(v7d%network) == 0))) THEN
-  RETURN ! unexpectedly empty volume
-ENDIF
+! disabled, we should continue anyway, eliminate when sure
+!IF ((ndv > 0 .AND. &
+! (SIZE(v7d%ana) == 0 .OR. SIZE(v7d%network) == 0 .OR. &
+! SIZE(v7d%time) == 0 .OR. SIZE(v7d%level) == 0 .OR. &
+! SIZE(v7d%timerange) == 0)) .OR. &
+! (nav > 0 .AND. &
+! (SIZE(v7d%ana) == 0 .OR. SIZE(v7d%network) == 0))) THEN
+!  RETURN ! unexpectedly empty volume
+!ENDIF
 
 ! For column reordering
 this%loopstart(:) = 1
@@ -524,6 +525,13 @@ loop7d: DO WHILE(.TRUE.)
 
 IF (this%status == 0) THEN ! first iteration
   this%status = 1
+! safety check for empty volumes
+  IF (ANY(this%loopind(1:this%ser%ndvar) > this%ser%loopend(1:this%ser%ndvar))) THEN
+    next = .FALSE.
+    this%status = 2
+    RETURN
+  ENDIF
+
 ELSE ! following iterations
 ! final part of the loop over columns
   DO i = this%ser%ndvar, 1, -1
