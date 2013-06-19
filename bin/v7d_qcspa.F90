@@ -50,9 +50,10 @@ character(len=80) :: dsne='test',usere='test',passworde=''
 integer :: years=imiss,months=imiss,days=imiss,hours=imiss,yeare=imiss,monthe=imiss,daye=imiss,houre=imiss,nvar=0
 doubleprecision :: lons=dmiss,lats=dmiss,lone=dmiss,late=dmiss,lon,lat
 integer :: year, month, day, hour
-logical :: height2level=.false.
+logical :: height2level=.false.,doplot=.false.
 
-namelist /odbc/   dsn,user,password,dsne,usere,passworde,height2level       ! namelist to define DSN
+namelist /odbc/   dsn,user,password,dsne,usere,passworde       ! namelist to define DSN
+namelist /switch/ height2level,doplot
 namelist /minmax/ years,months,days,hours,lons,lats,yeare,monthe,daye,houre,lone,late
 namelist /varlist/ var
 
@@ -71,6 +72,7 @@ category=l4f_category_get(a_name//".main")
 
 open(10,file='qcspa.nml',status='old')
 read(10,nml=odbc,iostat=io)
+if ( io == 0 ) read(10,nml=switch,iostat=io)
 if ( io == 0 ) read(10,nml=minmax,iostat=io)
 if ( io == 0 ) read(10,nml=varlist,iostat=io)
 
@@ -130,8 +132,10 @@ call init(time,  year, month, day, hour, minute=00, msec=00)
 !if (time > timef) time=timei
 
 #ifdef HAVE_LIBNCARG
+if (doplot) then
   call l4f_category_log(category,L4F_INFO,"start plot")
   call init(plot,PSTYPE='PS', ORIENT='LANDSCAPE',COLOR='COLOR',file="v7d_qcspa.ps")
+end if
 #endif
 DO WHILE (time <= tf)
   timei = time - timedelta_new(minute=30)
@@ -150,7 +154,7 @@ DO WHILE (time <= tf)
    attr=(/qcattrvarsbtables(1),qcattrvarsbtables(2),qcattrvarsbtables(4)/),attrkind=(/"b","b","b"/)&
    ,timei=timei,timef=timef,coordmin=coordmin,coordmax=coordmax)
   
-  !call display(v7ddballe%vol7d)
+  call display(v7ddballe%vol7d)
   call l4f_category_log(category,L4F_INFO,"end data import")
   call l4f_category_log(category,L4F_INFO, "input N staz="//t2c(size(v7ddballe%vol7d%ana)))
 
@@ -180,9 +184,11 @@ DO WHILE (time <= tf)
   call l4f_category_log(category,L4F_INFO,"end spatial QC")
 
 #ifdef HAVE_LIBNCARG
-  call l4f_category_log(category,L4F_INFO,"start plot")
-  call plot_triangles(plot,v7dqcspa%co,v7dqcspa%tri,logo="Time: "//t2c(timeiqc)//" to "//t2c(timefqc))
-  call frame()
+  if (doplot) then
+    call l4f_category_log(category,L4F_INFO,"start plot")
+    call plot_triangles(plot,v7dqcspa%co,v7dqcspa%tri,logo="Time: "//t2c(timeiqc)//" to "//t2c(timefqc))
+    call frame()
+  end if
 #endif
 
   call l4f_category_log(category,L4F_INFO,"start export data")
@@ -192,8 +198,8 @@ DO WHILE (time <= tf)
 
   call l4f_category_log(category,L4F_INFO,"end export data")
 
-  call delete(v7dqcspa)
   call delete(v7ddballe)
+  call delete(v7dqcspa)
 
 end do
 

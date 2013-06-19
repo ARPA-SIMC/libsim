@@ -308,13 +308,12 @@ else
   ENDIF
     
                                 !print*,"write=",quiwrite,"wipe=",quiwipe,"dsn=",quidsn
-  
+  call idba_presentati(this%idbhandle,quidsn,quiuser,quipassword)
+
   if(quiwrite)then
-    call idba_presentati(this%idbhandle,quidsn,quiuser,quipassword)
     call idba_preparati (this%idbhandle,this%handle,"write","write","write")
     call idba_preparati (this%idbhandle,this%handle_staz,"write","write","write")
   else
-    call idba_presentati(this%idbhandle,quidsn,quiuser,quipassword)
     call idba_preparati (this%idbhandle,this%handle,"read","read","read")
     call idba_preparati (this%idbhandle,this%handle_staz,"read","read","read")
   end if
@@ -2396,7 +2395,6 @@ end if
 
 call idba_error_remove_callback(this%handle_err)
 
-
 !this%dsn=cmiss
 !this%user=cmiss
 !this%password=cmiss
@@ -2409,12 +2407,9 @@ if (associated(this%data_id)) deallocate (this%data_id)
 
 CALL delete(this%vol7d)
 
-
 !chiudo il logger
 call l4f_category_delete(this%category)
 !ier=l4f_fini()
-
-
 
 END SUBROUTINE vol7d_dballe_delete
 

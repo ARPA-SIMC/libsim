@@ -159,20 +159,11 @@ logical ,intent(in),optional :: height2level   !< use conventional level startin
 character(len=*),INTENT(in),OPTIONAL :: categoryappend !< appennde questo suffisso al namespace category di log4fortran
 
 #ifdef HAVE_DBALLE
-type (vol7d_dballe) :: v7d_dballetmp
 character(len=*),intent(in),optional :: dsne
 character(len=*),intent(in),optional :: usere
 character(len=*),intent(in),optional :: passworde
-character(len=512) :: ldsn
-character(len=512) :: luser
-character(len=512) :: lpassword
-TYPE(datetime) :: ltimei, ltimef
-integer :: yeari, yearf, monthi, monthf, dayi, dayf,&
- houri, minutei, mseci, hourf, minutef, msecf
 #endif
  
-integer :: iuni,i
-character(len=512) :: filepath
 character(len=512) :: a_name
 
 
@@ -396,7 +387,6 @@ logical :: anamaskl(size(qcspa%v7d%ana)), timemaskl(size(qcspa%v7d%time)), level
 
 integer :: indana ,  indtime ,indlevel ,indtimerange ,inddativarr, indnetwork
 real :: datoqui,datola,datila(size(qcspa%v7d%time))
-integer :: iarea
                                 !integer, allocatable :: indcanav(:)
 
                                 !TYPE(vol7d_ana)  :: ana
@@ -470,7 +460,6 @@ endif
 
 qcspa%v7d%voldatiattrb(:,:,:,:,:,:,indbattrout)=ibmiss
 
-!! TODO devo chiamare questa ma non ho ancor l'oggetto giusto
 call vol7d_normalize_data(qcspa%qccli)
 
 call qcspatri(qcspa)

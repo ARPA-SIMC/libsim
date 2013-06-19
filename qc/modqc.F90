@@ -152,6 +152,19 @@
 !! effettivamente falsa. La potenza del test trova applicazione nella
 !! pratica statistica in fase di pianificazione di un esperimento.
 !!
+!!Scope of quality checks on observation values
+!!Checks applied to determine the quality of an observation can range from the very simple to the
+!!very complex. In roughly increasing order of complexity they can include:
+!! * Syntactic checks (e.g. an air temperature must be a number to at most 1 decimal
+!!   place);
+!! * Numeric ranges (e.g. the temperature must fall in the range -90 to +70);
+!! * Climate range checks (i.e. is the datum consistent with climatology?)
+!! * Intra-record consistency (e.g. the air temperature must not be less than the dew
+!!   point);
+!! * Time-series consistency (e.g. the difference between two successive temperatures at
+!!   a site must be 'plausible'); and
+!! * Spatial consistency (e.g. the station-dependent limits of plausible difference between
+!!   the temperatures at a station and its neighbours must not be violated).
 !!\ingroup qc
 
 module modqc
