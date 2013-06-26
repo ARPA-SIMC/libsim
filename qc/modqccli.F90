@@ -735,7 +735,7 @@ do indana=1,size(qccli%v7d%ana)
               
 !!$                                print *,"dato  ",qccli%v7d%timerange(indtimerange) 
 !!$                                print *,"extreme ",qccli%extreme%timerange
-                                call l4f_log(L4F_DEBUG,"Index:"// to_char(indcana)//to_char(indctime)//to_char(indclevel)//&
+                                call l4f_log(L4F_DEBUG,"Index:"// to_char(indctime)//to_char(indclevel)//&
                                  to_char(indctimerange)//to_char(indcdativarr)//to_char(indcnetwork))
               
                                 !if (indcana <= 0 .or. indctime <= 0 .or. indclevel <= 0 .or. indctimerange <= 0 .or. indcdativarr <= 0 &

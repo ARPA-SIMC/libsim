@@ -115,6 +115,7 @@ type :: qcspatype
   type(xy),pointer :: co(:) => null()
   type (triangles) :: tri !< triangles
   type (qcclitype) :: qccli !< qccli part for normalization
+  character(len=20):: operation !< Operation to execute ("gradient"/"run")
 end type qcspatype
 
 
@@ -143,7 +144,7 @@ subroutine qcspainit(qcspa,v7d,var, timei, timef, coordmin, coordmax, data_id_in
 #ifdef HAVE_DBALLE
  dsne,usere,passworde,&
 #endif
- height2level,categoryappend)
+ height2level,operation,categoryappend)
 
 type(qcspatype),intent(in out) :: qcspa !< Oggetto per il controllo spaziale
 type (vol7d),intent(in),target:: v7d !< Il volume Vol7d da controllare
@@ -157,6 +158,7 @@ integer,intent(in),optional,target:: data_id_in(:,:,:,:,:) !< Indici dei dati in
 character(len=*),intent(in),optional :: extremepath !< file con il volume del extreme
 logical ,intent(in),optional :: height2level   !< use conventional level starting from station height
 character(len=*),INTENT(in),OPTIONAL :: categoryappend !< appennde questo suffisso al namespace category di log4fortran
+character(len=*), optional :: operation !< Operation to execute ("gradient"/"run")
 
 #ifdef HAVE_DBALLE
 character(len=*),intent(in),optional :: dsne
@@ -178,6 +180,8 @@ nullify ( qcspa%data_id_out )
 ! riporto il volume dati nel mio oggetto
 qcspa%v7d => v7d
 
+qcspa%operation=optio_c(operation,20)
+
 if (present(data_id_in))then
   qcspa%data_id_in => data_id_in
 end if
@@ -189,8 +193,9 @@ call qccliinit(qcspa%qccli,v7d,var, timei, timef, data_id_in,&
 #endif
  height2level=height2level,categoryappend=categoryappend)
 
-
-open (unit=11, file=t2c(timei)//"_"//t2c(timef)//".grad",STATUS='UNKNOWN', form='FORMATTED')
+if (qcspa%operation == "gradient") then
+  open (unit=11, file=t2c(timei)//"_"//t2c(timef)//".grad",STATUS='UNKNOWN', form='FORMATTED')
+end if
 
 return
 end subroutine qcspainit
@@ -691,7 +696,9 @@ do indana=1,size(qcspa%v7d%ana)
             IF(IVB < 3) cycle      ! do nothing if valid gradients < 3
 
             IF (ipos == ivb .or. ineg == ivb)THEN  ! se tutti i gradienti sono dello stesso segno
-              write(11,*)sign(gradmin,dble(ipos-ineg))
+              if (qcspa%operation == "gradient") then
+                write(11,*)sign(gradmin,dble(ipos-ineg))
+              end if
               FLAG=50_int_b
             ELSE
               FLAG=100_int_b
@@ -733,15 +740,17 @@ do indana=1,size(qcspa%v7d%ana)
                                 !ATTENZIONE TODO : inddativarr È UNA GRANDE SEMPLIFICAZIONE NON VERA SE TIPI DI DATO DIVERSI !!!!
                                 !                      qcspa%v7d%voldatiattrb(indana,indtime,indlevel,indtimerange,inddativarr,indnetwork,indbattrout)=&
                                 !                      qcspa%clima%voldatiattrb(indcana  ,indctime,indclevel,indctimerange,indcdativarr,indcnetwork,1)
-            qcspa%v7d%voldatiattrb(indana,indtime,indlevel,indtimerange,inddativarr,indnetwork,indbattrout)=flag
+            if (qcspa%operation == "run") then
+              qcspa%v7d%voldatiattrb(indana,indtime,indlevel,indtimerange,inddativarr,indnetwork,indbattrout)=flag
 
-            if ( associated ( qcspa%data_id_in)) then
+              if ( associated ( qcspa%data_id_in)) then
 #ifdef DEBUG
-              call l4f_log (L4F_DEBUG,"id: "//t2c(&
-               qcspa%data_id_in(indana,indtime,indlevel,indtimerange,indnetwork)))
+                call l4f_log (L4F_DEBUG,"id: "//t2c(&
+                 qcspa%data_id_in(indana,indtime,indlevel,indtimerange,indnetwork)))
 #endif
-              qcspa%data_id_out(indana,indtime,indlevel,indtimerange,indnetwork)=&
-               qcspa%data_id_in(indana,indtime,indlevel,indtimerange,indnetwork)
+                qcspa%data_id_out(indana,indtime,indlevel,indtimerange,indnetwork)=&
+                 qcspa%data_id_in(indana,indtime,indlevel,indtimerange,indnetwork)
+              end if
             end if
 !!$                end where
           end do

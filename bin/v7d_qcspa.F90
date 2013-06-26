@@ -25,6 +25,7 @@ use log4fortran
 use modqc
 use modqcspa
 use vol7d_dballe_class
+USE optionparser_class
 #ifdef HAVE_LIBNCARG
 USE ncar_plot_class
 #endif
@@ -35,6 +36,7 @@ integer :: category,io,ier,i
 character(len=512):: a_name
 
                                 !tipi derivati.
+TYPE(optionparser) :: opt
 TYPE(geo_coord)    :: coordmin, coordmax 
 TYPE(datetime)     :: time,ti, tf, timei, timef, timeiqc, timefqc
 type(qcspatype)    :: v7dqcspa
@@ -50,7 +52,10 @@ character(len=80) :: dsne='test',usere='test',passworde=''
 integer :: years=imiss,months=imiss,days=imiss,hours=imiss,yeare=imiss,monthe=imiss,daye=imiss,houre=imiss,nvar=0
 doubleprecision :: lons=dmiss,lats=dmiss,lone=dmiss,late=dmiss,lon,lat
 integer :: year, month, day, hour
-logical :: height2level=.false.,doplot=.false.
+logical :: height2level=.false.,doplot=.false.,version
+CHARACTER(len=512) :: input_file, output_file
+INTEGER :: optind, optstatus, ninput
+CHARACTER(len=20) :: operation
 
 namelist /odbc/   dsn,user,password,dsne,usere,passworde       ! namelist to define DSN
 namelist /switch/ height2level,doplot
@@ -65,6 +70,75 @@ call l4f_launcher(a_name,a_name_force="esempio_qcspa")
 
 ! set a_name
 category=l4f_category_get(a_name//".main")
+
+
+! define the option parser
+opt = optionparser_new(description_msg= &
+ 'Spatial quality control: compute gradient; compute NDI from gradient; apply quality control', &
+ usage_msg='Usage: v7d_transform [options] inputfile1 [inputfile2...] outputfile')
+
+! options for defining input
+CALL optionparser_add(opt, ' ', 'operation', operation, cmiss, help= &
+ 'operation to execute: ''gradient'' compute gradient and write on files; '&
+  //'''ndi''  compute NDI from gradient;' &
+  //'''run'' apply quality control ')
+
+
+! help options
+CALL optionparser_add_help(opt, 'h', 'help', help='show an help message and exit')
+CALL optionparser_add_html(opt, ' ', 'html-form', help= &
+ &'print the options as an html form')
+CALL optionparser_add(opt, ' ', 'version', version, help='show version and exit')
+
+! parse options and check for errors
+CALL optionparser_parse(opt, optind, optstatus)
+
+IF (optstatus == optionparser_help) THEN
+  CALL exit(0) ! generate a clean manpage
+ELSE IF (optstatus == optionparser_html) THEN
+  CALL exit(0) ! generate a clean form
+ELSE IF (optstatus == optionparser_err) THEN
+  CALL l4f_category_log(category,L4F_ERROR,'in command-line parameters')
+  CALL raise_fatal_error()
+ENDIF
+IF (version) THEN
+  WRITE(*,'(A,1X,A)')'v7d_qcspa',VERSION
+  CALL exit(0)
+ENDIF
+
+
+if (operation /= "gradient"  .or. operation /= "ndi" .or. operation /= "run") then
+  CALL optionparser_printhelp(opt)
+  CALL l4f_category_log(category, L4F_ERROR, &
+   'argument to --operation is wrong')
+  CALL raise_fatal_error()
+end if
+
+
+if (operation == "gradient") then
+
+                                ! check input/output files
+  i = iargc() - optind
+  IF (i < 0) THEN
+    CALL optionparser_printhelp(opt)
+    CALL l4f_category_log(category,L4F_ERROR,'input file missing')
+    CALL raise_fatal_error()
+  ELSE IF (i < 1) THEN
+    CALL optionparser_printhelp(opt)
+    CALL l4f_category_log(category,L4F_ERROR,'output file missing')
+    CALL raise_fatal_error()
+  ENDIF
+  CALL getarg(iargc(), output_file)
+  
+  
+  do ninput = optind, iargc()-1
+    call getarg(ninput, input_file)
+    
+
+    
+
+  end DO
+end if
 
 !------------------------------------------------------------------------
 ! read the namelist to define DSN
@@ -146,7 +220,7 @@ DO WHILE (time <= tf)
   call l4f_category_log(category,L4F_INFO,"elaborate from "//t2c(timeiqc)//" to "//t2c(timefqc))
 
                                 ! Chiamo il costruttore della classe vol7d_dballe per il mio oggetto in import
-  CALL init(v7ddballe,dsn=dsn,user=user,password=password,write=.true.,wipe=.false.,categoryappend="QCtarget"//t2c(time))
+  CALL init(v7ddballe,dsn=dsn,user=user,password=password,write=.true.,wipe=.false.,categoryappend="QCtarget-"//t2c(time))
   call l4f_category_log(category,L4F_INFO,"start data import")
 
   CALL import(v7ddballe,var=var(:nvar),varkind=(/("r",i=1,nvar)/),&
@@ -154,7 +228,7 @@ DO WHILE (time <= tf)
    attr=(/qcattrvarsbtables(1),qcattrvarsbtables(2),qcattrvarsbtables(4)/),attrkind=(/"b","b","b"/)&
    ,timei=timei,timef=timef,coordmin=coordmin,coordmax=coordmax)
   
-  call display(v7ddballe%vol7d)
+  !call display(v7ddballe%vol7d)
   call l4f_category_log(category,L4F_INFO,"end data import")
   call l4f_category_log(category,L4F_INFO, "input N staz="//t2c(size(v7ddballe%vol7d%ana)))
 
@@ -180,7 +254,8 @@ DO WHILE (time <= tf)
 
   ! spatial QC
   call l4f_category_log(category,L4F_INFO,"start spatial QC")
-  call quaconspa(v7dqcspa,noborder=.true.,timemask= ( v7dqcspa%v7d%time >= timeiqc .and. v7dqcspa%v7d%time <= timefqc ))
+  call quaconspa(v7dqcspa,noborder=.true.,timemask= ( v7dqcspa%v7d%time >= timeiqc .and. v7dqcspa%v7d%time <= timefqc ),&
+   operation=operation)
   call l4f_category_log(category,L4F_INFO,"end spatial QC")
 
 #ifdef HAVE_LIBNCARG
