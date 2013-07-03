@@ -156,6 +156,9 @@
 !!      class defined by a mask field, as for trans_type='maskinter',
 !!      are kept in the output; points are marked with the number of
 !!      the class they belong to (grid-to-sparse points).
+!!    - sub_type='maskfill' the input points corresponding to points
+!!      having valid data in a mask field, are kept in the output; the
+!!      other points are filled with missing values (grid-to-grid).
 !!
 !! \ingroup volgrid6d
 MODULE grid_transform_class
@@ -1037,11 +1040,12 @@ END SUBROUTINE make_vert_coord
 !! output grids involved. The function \a c_e can be used in order to
 !! check whether the object has been successfully initialised, if the
 !! result is \a .FALSE., it should not be used further on.
-SUBROUTINE grid_transform_init(this, trans, in, out, categoryappend)
+SUBROUTINE grid_transform_init(this, trans, in, out, maskgrid, categoryappend)
 TYPE(grid_transform),INTENT(out) :: this !< grid_transformation object
 TYPE(transform_def),INTENT(in) :: trans !< transformation object
 TYPE(griddim_def),INTENT(inout) :: in !< griddim object to transform
 TYPE(griddim_def),INTENT(inout) :: out !< griddim object defining target grid (input or output depending on type of transformation)
+REAL,INTENT(in),OPTIONAL :: maskgrid(:,:) !< 2D field to be used for defining valid points, it must have the same shape as the field to be interpolated (for transformation type 'metamorphosis:maskfill')
 CHARACTER(len=*),INTENT(in),OPTIONAL :: categoryappend !< append this suffix to log4fortran namespace category
 
 INTEGER :: nx, ny, i, j, ix, iy, n, nm, nr, cf_i, cf_o, nprev, &
@@ -1393,6 +1397,28 @@ ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
   this%outnx = this%innx
   this%outny = this%inny
 
+  IF (this%trans%sub_type == 'maskfill' ) THEN
+
+    IF (.NOT.PRESENT(maskgrid)) THEN
+      CALL l4f_category_log(this%category,L4F_ERROR, &
+       'grid_transform_init maskgrid argument missing for metamorphosis:maskfill transformation')
+      CALL raise_fatal_error()
+    ENDIF
+
+    IF (this%innx /= SIZE(maskgrid,1) .OR. this%inny /= SIZE(maskgrid,2)) THEN
+      CALL l4f_category_log(this%category,L4F_ERROR, &
+       'grid_transform_init mask non conformal with input field')
+      CALL l4f_category_log(this%category,L4F_ERROR, &
+       'mask: '//t2c(SIZE(maskgrid,1))//'x'//t2c(SIZE(maskgrid,2))// &
+       ' input field:'//t2c(this%innx)//'x'//t2c(this%inny))
+      CALL raise_fatal_error()
+    ENDIF
+
+    ALLOCATE(this%point_mask(this%innx,this%inny))
+    this%point_mask(:,:) = c_e(maskgrid(:,:))
+
+  ENDIF
+
 ELSE
 
   CALL l4f_category_log(this%category,L4F_WARN, &
@@ -1485,7 +1511,7 @@ TYPE(grid_transform),INTENT(out) :: this !< grid_transformation object
 TYPE(transform_def),INTENT(in) :: trans !< transformation object
 TYPE(griddim_def),INTENT(inout) :: in !< griddim object to transform
 TYPE(vol7d),INTENT(inout) :: v7d_out !< vol7d object with the coordinates of the sparse points to be used as transformation target (input or output depending on type of transformation)
-REAL,INTENT(in),OPTIONAL :: maskgrid(:,:) !< 2D field to be used for defining subareas according to its values, it must have the same shape as the field to be interpolated (for transformation type 'maskinter')
+REAL,INTENT(in),OPTIONAL :: maskgrid(:,:) !< 2D field to be used for defining subareas according to its values, it must have the same shape as the field to be interpolated (for transformation type 'maskinter' and 'metamorphosis:mask')
 INTEGER,INTENT(in),OPTIONAL :: nmaskclass !< number of classes (and thus potential subareas) over which the interval covered by \a maskgrid has to be divided
 REAL,INTENT(in),OPTIONAL :: startmaskclass !< this is the start of the interval covered by \a maskgrid which defines a single class (subarea)
 REAL,INTENT(in),OPTIONAL :: dmaskclass !< if \a nmaskclass is not provided, this is the subinterval of the interval covered by \a maskgrid which defines a single class (subarea)
@@ -1889,7 +1915,7 @@ ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
 
     IF (this%outnx <= 0) THEN
       CALL l4f_category_log(this%category,L4F_ERROR, &
-       "metamorphosis mask: no points inside first class")
+       "grid_transform_init no points inside mask for metamorphosis:mask transformation")
       this%valid = .FALSE.
       RETURN
       !CALL raise_fatal_error() ! really fatal error?
@@ -2961,6 +2987,14 @@ ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
       field_out(:,1,k) = PACK(field_in(:,:,k), c_e(this%point_index(:,:)))
     ENDDO
 
+  ELSE IF (this%trans%sub_type == 'maskfill') THEN
+
+    DO k = 1, innz
+      WHERE (this%point_mask(:,:))
+        field_out(:,:,k) = field_in(:,:,k)
+      END WHERE
+    ENDDO
+
   ENDIF
 
 ELSE IF (this%trans%trans_type == 'vertint') THEN
@@ -3389,27 +3423,6 @@ ELSE IF (this%trans%trans_type == 'boxinter' .OR. &
 
   CALL compute(this, &
    RESHAPE(field_in, (/SIZE(field_in,1), 1, SIZE(field_in,2)/)), field_out, var)
-
-! check that it works then remove!!!!
-!ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
-!
-!  IF (this%trans%sub_type == 'all') THEN
-!
-!    field_out(:,:,:) = RESHAPE(field_in(:,:), (/this%outnx,this%outny,innz/))
-!
-!  ELSE IF (this%trans%sub_type == 'coordbb') THEN
-!
-!    DO k = 1, innz
-!      field_out(:,1,k) = PACK(field_in(:,k), this%point_mask(:,1))
-!    ENDDO
-!
-!  ELSE IF (this%trans%sub_type == 'poly') THEN
-!
-!    DO k = 1, innz
-!      field_out(:,1,k) = PACK(field_in(:,k), c_e(this%point_index(:,1)))
-!    ENDDO
-!
-!  ENDIF
 
 ENDIF
 
