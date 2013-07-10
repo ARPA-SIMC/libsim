@@ -491,7 +491,8 @@ END FUNCTION index/**/VOL7D_POLY_TYPES
 !!  The array is then subdivided in 2 ([3]) subsets:
 !!  { values <= pivot} {pivot} {values > pivot}
 !!  One then call recursively the program to sort each subset.
-!!  When the size of the subarray is small enough, one uses an
+!!  When the size of the subarray is small enough or the maximum
+!!  level of recursion is gained, one uses an
 !!  insertion sort that is faster for very small sets.
 Subroutine sort/**/VOL7D_POLY_TYPES (XDONT)
 
@@ -500,20 +501,23 @@ Subroutine sort/**/VOL7D_POLY_TYPES (XDONT)
 ! _________________________________________________________
 
 VOL7D_POLY_TYPE, Dimension (:), Intent (InOut) :: XDONT !< vector to sort inline
+integer :: recursion
 ! __________________________________________________________
 !
 !
-      Call subsor/**/VOL7D_POLY_TYPES (XDONT, 1, Size (XDONT))
+      recursion=0
+      Call subsor/**/VOL7D_POLY_TYPES (XDONT, 1, Size (XDONT), recursion)
       Call inssor/**/VOL7D_POLY_TYPES (XDONT)
       Return
 End Subroutine sort/**/VOL7D_POLY_TYPES
-Recursive Subroutine subsor/**/VOL7D_POLY_TYPES (XDONT, IDEB1, IFIN1)
+Recursive Subroutine subsor/**/VOL7D_POLY_TYPES (XDONT, IDEB1, IFIN1, recursion)
 !  Sorts XDONT from IDEB1 to IFIN1
 ! __________________________________________________________
       VOL7D_POLY_TYPE, dimension (:), Intent (InOut) :: XDONT
       Integer, Intent (In) :: IDEB1, IFIN1
+      Integer, Intent (InOut) :: recursion
 ! __________________________________________________________
-      Integer, Parameter :: NINS = 16 ! Max for insertion sort
+      Integer, Parameter :: NINS = 16 , maxrec=1000 ! Max for insertion sort
       Integer :: ICRS, IDEB, IDCR, IFIN, IMIL
 
 #ifdef VOL7D_POLY_TYPE_AUTO
@@ -523,13 +527,14 @@ Recursive Subroutine subsor/**/VOL7D_POLY_TYPES (XDONT, IDEB1, IFIN1)
 #endif
 
 !
+      recursion=recursion+1
       IDEB = IDEB1
       IFIN = IFIN1
 !
 !  If we don't have enough values to make it worth while, we leave
 !  them unsorted, and the final insertion sort will take care of them
 !
-      If ((IFIN - IDEB) > NINS) Then
+      If ((IFIN - IDEB) > NINS .and. recursion <= maxrec*2 ) Then
          IMIL = (IDEB+IFIN) / 2
 !
 !  One chooses a pivot, median of 1st, last, and middle values
@@ -591,8 +596,8 @@ Recursive Subroutine subsor/**/VOL7D_POLY_TYPES (XDONT, IDEB1, IFIN1)
 !
 !  One now sorts each of the two sub-intervals
 !
-         Call subsor/**/VOL7D_POLY_TYPES (XDONT, IDEB1, ICRS-1)
-         Call subsor/**/VOL7D_POLY_TYPES (XDONT, IDCR, IFIN1)
+         Call subsor/**/VOL7D_POLY_TYPES (XDONT, IDEB1, ICRS-1, recursion)
+         Call subsor/**/VOL7D_POLY_TYPES (XDONT, IDCR, IFIN1, recursion)
       End If
       Return
       End Subroutine Subsor/**/VOL7D_POLY_TYPES
