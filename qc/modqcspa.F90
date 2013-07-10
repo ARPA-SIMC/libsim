@@ -182,6 +182,11 @@ qcspa%v7d => v7d
 
 qcspa%operation=optio_c(operation,20)
 
+if (qcspa%operation  /= "gradient" .and. qcspa%operation  /= "run") then
+  call l4f_category_log(qcspa%category,L4F_ERROR,"operation is wrong: "//qcspa%operation)
+  call raise_error()
+end if
+
 if (present(data_id_in))then
   qcspa%data_id_in => data_id_in
 end if
@@ -695,13 +700,21 @@ do indana=1,size(qcspa%v7d%ana)
 
             IF(IVB < 3) cycle      ! do nothing if valid gradients < 3
 
+
+            FLAG=100_int_b
+
             IF (ipos == ivb .or. ineg == ivb)THEN  ! se tutti i gradienti sono dello stesso segno
+
               if (qcspa%operation == "gradient") then
                 write(11,*)sign(gradmin,dble(ipos-ineg))
               end if
-              FLAG=50_int_b
-            ELSE
-              FLAG=100_int_b
+
+              if (gradmin> 5.E-5) then
+                FLAG=30_int_b
+              else if (gradmin> 2.5E-5) then
+                FLAG=50_int_b
+              end if
+
             END IF
 
 

@@ -26,6 +26,7 @@ use modqc
 use modqcspa
 use vol7d_dballe_class
 USE optionparser_class
+use array_utilities
 #ifdef HAVE_LIBNCARG
 USE ncar_plot_class
 #endif
@@ -56,7 +57,15 @@ logical :: height2level=.false.,doplot=.false.,version
 CHARACTER(len=512) :: input_file, output_file
 INTEGER :: optind, optstatus, ninput
 CHARACTER(len=20) :: operation
+TYPE(ARRAYOF_REAL):: grad
+real :: val
+integer :: iostat
+REAL, DIMENSION(11)   :: perc_vals=(/(10.*i,i=0,10)/) !(/0.,10.,20.,30.,40.,50.,60.,70.,80.,90.,100./)  !<the percentiles values to be computed, between 0. and 100.
+REAL, DIMENSION(size(perc_vals)-1)   :: ndi        !< normalized density index
+REAL, DIMENSION(size(perc_vals))     :: nlimbins   !< the extreme values of data taken in account for ndi computation
+double precision, dimension(2)       :: percentile
 
+    
 namelist /odbc/   dsn,user,password,dsne,usere,passworde       ! namelist to define DSN
 namelist /switch/ height2level,doplot
 namelist /minmax/ years,months,days,hours,lons,lats,yeare,monthe,daye,houre,lone,late
@@ -75,7 +84,7 @@ category=l4f_category_get(a_name//".main")
 ! define the option parser
 opt = optionparser_new(description_msg= &
  'Spatial quality control: compute gradient; compute NDI from gradient; apply quality control', &
- usage_msg='Usage: v7d_transform [options] inputfile1 [inputfile2...] outputfile')
+ usage_msg='Usage: v7d_transform [options] [inputfile1] [inputfile2...] [outputfile]')
 
 ! options for defining input
 CALL optionparser_add(opt, ' ', 'operation', operation, cmiss, help= &
@@ -107,7 +116,7 @@ IF (version) THEN
 ENDIF
 
 
-if (operation /= "gradient"  .or. operation /= "ndi" .or. operation /= "run") then
+if (operation /= "gradient"  .and. operation /= "ndi" .and. operation /= "run") then
   CALL optionparser_printhelp(opt)
   CALL l4f_category_log(category, L4F_ERROR, &
    'argument to --operation is wrong')
@@ -115,7 +124,7 @@ if (operation /= "gradient"  .or. operation /= "ndi" .or. operation /= "run") th
 end if
 
 
-if (operation == "gradient") then
+if (operation == "ndi") then
 
                                 ! check input/output files
   i = iargc() - optind
@@ -133,11 +142,42 @@ if (operation == "gradient") then
   
   do ninput = optind, iargc()-1
     call getarg(ninput, input_file)
-    
 
-    
+    print *,"open file:", t2c(input_file)
 
-  end DO
+    open (10,file=input_file,status="old")
+
+
+    do while (.true.)
+      read (10,*,iostat=iostat) val
+      if (iostat /= 0) exit
+      if (val /= 0.) call insert(grad,val)
+    end do
+
+    close(10)
+
+  end do
+  
+  print *,"calcolo percentile"
+  percentile = stat_percentile(grad%array(:grad%arraysize), (/10.,90./))
+  print *,percentile
+
+  print *,"calcolo NDI"
+  call NormalizedDensityIndex(pack(grad%array(:grad%arraysize),&
+   mask=(percentile(1) < grad%array(:grad%arraysize) .and. &
+   grad%array(:grad%arraysize) < percentile(2) )), perc_vals, ndi, nlimbins)
+
+  print *,ndi
+  print *,nlimbins
+
+
+!  0.13021742      0.25837621      0.45376661      0.73488075      0.99223697       1.0000000       1.0000000      0.66323280      0.38160193      0.20700261    
+! -2.21905229E-05 -1.18105772E-05 -6.57925284E-06 -3.60051945E-06 -1.76120716E-06 -3.99033837E-07  9.52641415E-07  2.22688618E-06  4.26485803E-06  7.80683240E-06  1.43365824E-05
+
+  call delete(grad)
+
+  stop
+
 end if
 
 !------------------------------------------------------------------------
@@ -245,8 +285,9 @@ DO WHILE (time <= tf)
   call l4f_category_log(category,L4F_INFO,"start QC")
 
                                 ! chiamiamo il "costruttore" per il Q.C.
-  call init(v7dqcspa,v7ddballe%vol7d,var(:nvar),timei=ti,timef=tf,coordmin=coordmin,coordmax=coordmax,&
-   data_id_in=v7ddballe%data_id, dsne=dsne, usere=usere, height2level=height2level, categoryappend="space")
+  call init(v7dqcspa,v7ddballe%vol7d,var(:nvar),timei=ti,timef=tf, coordmin=coordmin, coordmax=coordmax,&
+   data_id_in=v7ddballe%data_id, dsne=dsne, usere=usere, height2level=height2level, operation=operation,&
+   categoryappend="space")
   !call display(v7dqcspa%clima)
   !call display(v7dqcspa%extreme)
 
@@ -254,8 +295,7 @@ DO WHILE (time <= tf)
 
   ! spatial QC
   call l4f_category_log(category,L4F_INFO,"start spatial QC")
-  call quaconspa(v7dqcspa,noborder=.true.,timemask= ( v7dqcspa%v7d%time >= timeiqc .and. v7dqcspa%v7d%time <= timefqc ),&
-   operation=operation)
+  call quaconspa(v7dqcspa,noborder=.true.,timemask= ( v7dqcspa%v7d%time >= timeiqc .and. v7dqcspa%v7d%time <= timefqc ))
   call l4f_category_log(category,L4F_INFO,"end spatial QC")
 
 #ifdef HAVE_LIBNCARG
@@ -279,7 +319,9 @@ DO WHILE (time <= tf)
 end do
 
 #ifdef HAVE_LIBNCARG
-  call delete(plot)
+  if (doplot) then
+    call delete(plot)
+  end if
 #endif
 
 !close logger
