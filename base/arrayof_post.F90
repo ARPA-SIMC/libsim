@@ -241,7 +241,8 @@ END SUBROUTINE ARRAYOF_TYPE/**/_delete
 !! the memory occupation, without destroying its contents.
 !! The value of this::overalloc remains unchanged.
 !! After the call to the method, the object can continue to be used,
-!! extended and shortened as before.
+!! extended and shortened as before. If the object is empty the array
+!! is allocated to zero length.
 SUBROUTINE ARRAYOF_TYPE/**/_packarray(this)
 TYPE(ARRAYOF_TYPE) :: this !< object to be packed
 

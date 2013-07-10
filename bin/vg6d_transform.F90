@@ -18,6 +18,7 @@
 PROGRAM vg6d_transform
 #include "config.h"
 use log4fortran
+use gridinfo_class
 use volgrid6d_class
 use volgrid6d_class_compute
 #ifdef VAPOR
@@ -52,6 +53,8 @@ TYPE(vol7d_level) :: ilevel, olevel
 TYPE(vol7d_level),ALLOCATABLE :: olevel_list(:)
 TYPE(volgrid6d),POINTER  :: volgrid(:), volgrid_coord_tmp(:), volgrid_out(:), volgrid_tmp(:)
 TYPE(volgrid6d)  :: volgrid_coord
+TYPE(arrayof_gridinfo) :: maskgrid
+REAL,ALLOCATABLE :: maskfield(:,:)
 DOUBLE PRECISION :: ilon, ilat, flon, flat, radius
 
 type(griddim_def) :: griddim_out
@@ -445,24 +448,40 @@ ENDIF
 CALL init(volgrid_coord)
 #ifdef HAVE_LIBGRIBAPI
 IF (coord_format == 'grib_api' .AND. c_e(coord_file)) THEN
-  CALL import(volgrid_coord_tmp, filename=coord_file, decode=.TRUE., &
-   time_definition=time_definition, categoryappend="input_coord")
-  CALL init(volgrid_coord)
-  IF (ASSOCIATED(volgrid_coord_tmp)) THEN
-    IF (SIZE(volgrid_coord_tmp) == 1) THEN ! assign the volume and cleanup
-      volgrid_coord = volgrid_coord_tmp(1)
-      CALL init(volgrid_coord_tmp(1))
-      DEALLOCATE(volgrid_coord_tmp)
-    ELSE ! zero or >1 different grids obtained
+
+  IF (trans_type == 'vertint') THEN ! for vertint I need a complete volume
+    CALL import(volgrid_coord_tmp, filename=coord_file, decode=.TRUE., &
+     time_definition=time_definition, categoryappend="input_coord")
+    CALL init(volgrid_coord)
+    IF (ASSOCIATED(volgrid_coord_tmp)) THEN
+      IF (SIZE(volgrid_coord_tmp) == 1) THEN ! assign the volume and cleanup
+        volgrid_coord = volgrid_coord_tmp(1)
+        CALL init(volgrid_coord_tmp(1))
+        DEALLOCATE(volgrid_coord_tmp)
+      ELSE ! zero or >1 different grids obtained
+        CALL l4f_category_log(category, L4F_ERROR, &
+         'error importing volgrid6d coord_file '//TRIM(coord_file)//', '// &
+         t2c(SIZE(volgrid_coord_tmp))//' different grids obtained instead of 1')
+        CALL raise_fatal_error()
+      ENDIF
+    ELSE ! error in importing
       CALL l4f_category_log(category, L4F_ERROR, &
-       'error importing volgrid6d coord_file '//TRIM(coord_file)//', '// &
-       t2c(SIZE(volgrid_coord_tmp))//' different grids obtained instead of 1')
+       'error importing volgrid6d coord_file '//TRIM(coord_file))
       CALL raise_fatal_error()
     ENDIF
-  ELSE ! error in importing
-    CALL l4f_category_log(category, L4F_ERROR, &
-     'error importing volgrid6d coord_file '//TRIM(coord_file))
-    CALL raise_fatal_error()
+
+  ELSE ! otherwise just a single 2d field
+    CALL import(maskgrid, coord_file, categoryappend='maskgrid')
+    IF (maskgrid%arraysize < 1) THEN
+      CALL l4f_category_log(category, L4F_ERROR, &
+       'error importing mask grid file '//TRIM(coord_file))
+      CALL raise_fatal_error()
+    ENDIF
+    CALL import(maskgrid%array(1))
+    ALLOCATE(maskfield(maskgrid%array(1)%griddim%dim%nx, maskgrid%array(1)%griddim%dim%ny))
+    maskfield(:,:) = decode_gridinfo(maskgrid%array(1))
+    CALL delete(maskgrid)
+
   ENDIF
 ENDIF
 #endif
@@ -528,7 +547,8 @@ IF (trans_type /= 'none') THEN ! transform
    categoryappend="transformation")
 
   CALL transform(trans, griddim_out, volgrid6d_in=volgrid, &
-   volgrid6d_out=volgrid_out, lev_out=olevel_list, volgrid6d_coord_in=volgrid_coord, &
+   volgrid6d_out=volgrid_out, lev_out=olevel_list, &
+   volgrid6d_coord_in=volgrid_coord, maskgrid=maskfield, &
    clone=.TRUE., categoryappend="transform")
 
   CALL l4f_category_log(category,L4F_INFO,"transformation completed")

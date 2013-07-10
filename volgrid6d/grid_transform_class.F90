@@ -116,14 +116,14 @@
 !!      percentile of the input points distribution.
 !!
 !!  - trans_type='maskinter' takes a 2D field on the same grid as the
-!!    input points, it divides it in a number of classes according to
-!!    its values and every class is used as a mask for interpolation;
-!!    data are thus computed on a new set of points, the number of
-!!    which is equal to the number of classes, and for each of which
-!!    the value is the result of a function computed over those input
-!!    points belonging to the corresponding class; the output point
-!!    coordinates are defined as the centroids of the set of points
-!!    belonging to the class (grid-to-sparse points)
+!!    input points, it divides it in a number of subareas according to
+!!    its values and every subarea is used as a mask for
+!!    interpolation; data are thus computed on a new set of points,
+!!    the number of which is equal to the number of subareas, and for
+!!    each of which the value is the result of a function computed
+!!    over those input points belonging to the corresponding subarea;
+!!    the output point coordinates are defined as the centroids of the
+!!    subareas (grid-to-sparse points)
 !!    - sub_type='average' the function used is the average
 !!    - sub_type='stddev' the function used is the standard deviation.
 !!    - sub_type='max' the function used is the maximum
@@ -132,11 +132,11 @@
 !!      percentile of the input points distribution.
 !!
 !!  - trans_type='maskgen' generates a mask field, on the same grid as
-!!    the input, suitable to be used for 'maskinter' interpolation;
-!!    the output mask field contains, at each point, integer values
-!!    from 1 to the number of polygons provided, computed according to
-!!    the polygon in which every point lies. The parameter sub_type is
-!!    ininfluent at the moment (grid-to-grid).
+!!    the input, suitable to be used for 'maskinter' interpolation
+!!    (grid-to-grid)
+!!    - sub_type='poly' the output mask field contains, at each point,
+!!      integer values from 1 to the number of polygons provided,
+!!      computed according to the polygon in which every point lies.
 !!
 !!  - trans_type='metamorphosis' the output points and the values are
 !!    the same as the input ones, possibly a subset, but something
@@ -153,9 +153,10 @@
 !!      with the number of polygon they belong to (grid-to-sparse
 !!      points or sparse points-to-sparse points).
 !!    - sub_type='mask' the input points which belong to any valid
-!!      class defined by a mask field, as for trans_type='maskinter',
-!!      are kept in the output; points are marked with the number of
-!!      the class they belong to (grid-to-sparse points).
+!!      subarea defined by a mask field, as for
+!!      trans_type='maskinter', are kept in the output; points are
+!!      marked with the number of the subarea they belong to
+!!      (grid-to-sparse points).
 !!    - sub_type='maskfill' the input points corresponding to points
 !!      having valid data in a mask field, are kept in the output; the
 !!      other points are filled with missing values (grid-to-grid).
@@ -572,8 +573,17 @@ ELSE IF (this%trans_type == 'boxinter' .OR. this%trans_type == 'polyinter' &
 
 ELSE IF (this%trans_type == 'maskgen')THEN
 
-  IF (this%poly%arraysize <= 0) THEN
-    CALL l4f_category_log(this%category,L4F_ERROR,"maskgen: poly parameter missing or empty")
+  IF (this%sub_type == 'poly') THEN
+
+    IF (this%poly%arraysize <= 0) THEN
+      CALL l4f_category_log(this%category,L4F_ERROR,"maskgen:poly poly parameter missing or empty")
+      CALL raise_fatal_error()
+    ENDIF
+
+  ELSE
+
+    CALL l4f_category_log(this%category,L4F_ERROR,'maskgen: sub_type '// &
+     TRIM(this%sub_type)//' is wrong')
     CALL raise_fatal_error()
   ENDIF
 
@@ -1348,46 +1358,50 @@ ELSE IF (this%trans%trans_type == 'stencilinter') THEN
 
 ELSE IF (this%trans%trans_type == 'maskgen') THEN
 
-  CALL get_val(in, nx=this%innx, ny=this%inny)
+  IF (this%trans%sub_type == 'poly') THEN
+
+    CALL get_val(in, nx=this%innx, ny=this%inny)
 ! unlike before, here index arrays must have the shape of input grid
-  ALLOCATE(this%inter_index_x(this%innx,this%inny), &
-   this%inter_index_y(this%innx,this%inny))
-  this%inter_index_x(:,:) = imiss
-  this%inter_index_y(:,:) = 1
+    ALLOCATE(this%inter_index_x(this%innx,this%inny), &
+     this%inter_index_y(this%innx,this%inny))
+    this%inter_index_x(:,:) = imiss
+    this%inter_index_y(:,:) = 1
 
 ! compute coordinates of input grid in geo system
-  CALL unproj(in) ! TODO costringe a dichiarare in INTENT(inout), si puo` evitare?
+    CALL unproj(in) ! TODO costringe a dichiarare in INTENT(inout), si puo` evitare?
 
-  nprev = 1
+    nprev = 1
 !$OMP PARALLEL DEFAULT(SHARED)
 !$OMP DO PRIVATE(j, i, n, point) FIRSTPRIVATE(nprev)
-  DO j = 1, this%inny
-    inside_x: DO i = 1, this%innx
-      point = georef_coord_new(x=in%dim%lon(i,j), y=in%dim%lat(i,j))
+    DO j = 1, this%inny
+      inside_x: DO i = 1, this%innx
+        point = georef_coord_new(x=in%dim%lon(i,j), y=in%dim%lat(i,j))
 
-      DO n = nprev, this%trans%poly%arraysize ! optimize starting from last matched polygon
-        IF (inside(point, this%trans%poly%array(n))) THEN ! stop at the first matching polygon
-          this%inter_index_x(i,j) = n
-          nprev = n
-          CYCLE inside_x
-        ENDIF
-      ENDDO
-      DO n = nprev-1, 1, -1 ! test the other polygons
-        IF (inside(point, this%trans%poly%array(n))) THEN ! stop at the first matching polygon
-          this%inter_index_x(i,j) = n
-          nprev = n
-          CYCLE inside_x
-        ENDIF
-      ENDDO
+        DO n = nprev, this%trans%poly%arraysize ! optimize starting from last matched polygon
+          IF (inside(point, this%trans%poly%array(n))) THEN ! stop at the first matching polygon
+            this%inter_index_x(i,j) = n
+            nprev = n
+            CYCLE inside_x
+          ENDIF
+        ENDDO
+        DO n = nprev-1, 1, -1 ! test the other polygons
+          IF (inside(point, this%trans%poly%array(n))) THEN ! stop at the first matching polygon
+            this%inter_index_x(i,j) = n
+            nprev = n
+            CYCLE inside_x
+          ENDIF
+        ENDDO
 
 !     CALL delete(point) ! speedup
-    ENDDO inside_x
-  ENDDO
+      ENDDO inside_x
+    ENDDO
 !$OMP END PARALLEL
 
-  this%outnx = this%innx
-  this%outny = this%inny
-  CALL copy(in,out)
+    this%outnx = this%innx
+    this%outny = this%inny
+    CALL copy(in,out)
+
+  ENDIF
 
 ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
 
@@ -1486,11 +1500,11 @@ END SUBROUTINE grid_transform_init
 !!
 !!  - for 'maskinter' transformation, this is a two dimensional real
 !!    field (\a maskgrid argument), which, together with the \a
-!!    nmaskclass and \a dmaskclass arguments (both optional with
-!!    defaults), divides the input grid in \a nmaskclass subareas
-!!    according to the values of \a maskinter, and, in this case, \a
-!!    v7d_out is an output argument which returns the coordinates of
-!!    the target points (subareas' centroids)
+!!    maskbounds argument (optional with default), divides the input
+!!    grid in a number of subareas according to the values of \a
+!!    maskinter, and, in this case, \a v7d_out is an output argument
+!!    which returns the coordinates of the target points (subareas'
+!!    centroids)
 !!
 !!  - for 'metamorphosis' transformation, no target point information
 !!    has to be provided in input (it is calculated on the basis of
@@ -1506,23 +1520,20 @@ END SUBROUTINE grid_transform_init
 !! initialised, if the result is \a .FALSE., it should not be used
 !! further on.
 SUBROUTINE grid_transform_grid_vol7d_init(this, trans, in, v7d_out, &
- maskgrid, nmaskclass, startmaskclass, dmaskclass, categoryappend)
+ maskgrid, maskbounds, categoryappend)
 TYPE(grid_transform),INTENT(out) :: this !< grid_transformation object
 TYPE(transform_def),INTENT(in) :: trans !< transformation object
 TYPE(griddim_def),INTENT(inout) :: in !< griddim object to transform
 TYPE(vol7d),INTENT(inout) :: v7d_out !< vol7d object with the coordinates of the sparse points to be used as transformation target (input or output depending on type of transformation)
 REAL,INTENT(in),OPTIONAL :: maskgrid(:,:) !< 2D field to be used for defining subareas according to its values, it must have the same shape as the field to be interpolated (for transformation type 'maskinter' and 'metamorphosis:mask')
-INTEGER,INTENT(in),OPTIONAL :: nmaskclass !< number of classes (and thus potential subareas) over which the interval covered by \a maskgrid has to be divided
-REAL,INTENT(in),OPTIONAL :: startmaskclass !< this is the start of the interval covered by \a maskgrid which defines a single class (subarea)
-REAL,INTENT(in),OPTIONAL :: dmaskclass !< if \a nmaskclass is not provided, this is the subinterval of the interval covered by \a maskgrid which defines a single class (subarea)
+REAL,INTENT(in),OPTIONAL :: maskbounds(:) !< array of boundary values for defining subareas from the values of \a maskgrid, the number of subareas is SIZE(maskbounds) - 1, if not provided a default based on extreme values of \a makgrid is used
 CHARACTER(len=*),INTENT(in),OPTIONAL :: categoryappend !< append this suffix to log4fortran namespace category
 
-INTEGER :: ix, iy, n, nm, nr, nprev, lnmaskclass, xnmin, xnmax, ynmin, ynmax
+INTEGER :: ix, iy, n, nm, nr, nprev, nmaskarea, xnmin, xnmax, ynmin, ynmax
 DOUBLE PRECISION :: xmin, xmax, ymin, ymax, r2
 !DOUBLE PRECISION,POINTER :: lon(:), lat(:)
 DOUBLE PRECISION,ALLOCATABLE :: lon(:), lat(:)
-REAL :: lstartmaskclass, ldmaskclass, mmin, mmax
-REAL,ALLOCATABLE :: lbound_class(:)
+REAL,ALLOCATABLE :: lmaskbounds(:)
 TYPE(georef_coord) :: point
 
 
@@ -1717,7 +1728,7 @@ ELSE IF (this%trans%trans_type == 'maskinter') THEN
   this%inter_index_x(:,:) = imiss
   this%inter_index_y(:,:) = 1
 
-! generate the classes according to parameters and mask
+! generate the subarea boundaries according to maskgrid and maskbounds
   CALL gen_mask_class()
 
 ! compute coordinates of input grid in geo system
@@ -1728,25 +1739,26 @@ ELSE IF (this%trans%trans_type == 'maskinter') THEN
   DO iy = 1, this%inny
     DO ix = 1, this%innx
       IF (c_e(maskgrid(ix,iy))) THEN
-        DO n = lnmaskclass, 1, -1
-          IF (maskgrid(ix,iy) > lbound_class(n)) THEN
-            this%inter_index_x(ix,iy) = n
-            EXIT
-          ENDIF
-        ENDDO
+        IF (maskgrid(ix,iy) <= lmaskbounds(nmaskarea+1)) THEN
+          DO n = nmaskarea, 1, -1
+            IF (maskgrid(ix,iy) > lmaskbounds(n)) THEN
+              this%inter_index_x(ix,iy) = n
+              EXIT
+            ENDIF
+          ENDDO
+        ENDIF
       ENDIF
     ENDDO
   ENDDO
 !$OMP END PARALLEL
 
-  DEALLOCATE(lbound_class)
-  this%outnx = lnmaskclass
+  this%outnx = nmaskarea
   this%outny = 1
-  CALL vol7d_alloc(v7d_out, nana=lnmaskclass)
+  CALL vol7d_alloc(v7d_out, nana=nmaskarea)
 
 ! setup output point list, equal to average of polygon points
 ! warning, in case of concave areas points may coincide!
-  DO n = 1, lnmaskclass
+  DO n = 1, nmaskarea
     CALL init(v7d_out%ana(n), &
      lon=stat_average(PACK(in%dim%lon(:,:), &
      mask=(this%inter_index_x(:,:) == n))), &
@@ -1887,7 +1899,7 @@ ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
       CALL raise_fatal_error()
     ENDIF
 
-! generate the classes according to parameters and mask
+! generate the subarea boundaries according to maskgrid and maskbounds
     CALL gen_mask_class()
 
     this%outnx = 0
@@ -1899,19 +1911,19 @@ ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
     DO iy = 1, this%inny
       DO ix = 1, this%innx
         IF (c_e(maskgrid(ix,iy))) THEN
-          DO n = lnmaskclass, 1, -1
-            IF (maskgrid(ix,iy) > lbound_class(n)) THEN
-              this%outnx = this%outnx + 1
-              this%point_index(ix,iy) = n
-              EXIT
-            ENDIF
-          ENDDO
+          IF (maskgrid(ix,iy) <= lmaskbounds(nmaskarea+1)) THEN
+            DO n = nmaskarea, 1, -1
+              IF (maskgrid(ix,iy) > lmaskbounds(n)) THEN
+                this%outnx = this%outnx + 1
+                this%point_index(ix,iy) = n
+                EXIT
+              ENDIF
+            ENDDO
+          ENDIF
         ENDIF
       ENDDO
     ENDDO
 !$OMP END PARALLEL
-
-    DEALLOCATE(lbound_class)
 
     IF (this%outnx <= 0) THEN
       CALL l4f_category_log(this%category,L4F_ERROR, &
@@ -1921,9 +1933,9 @@ ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
       !CALL raise_fatal_error() ! really fatal error?
     ENDIF
 #ifdef DEBUG
-    DO n = 1, lnmaskclass
+    DO n = 1, nmaskarea
       CALL l4f_category_log(this%category,L4F_INFO, &
-       "points in class "//t2c(n)//": "// &
+       "points in subarea "//t2c(n)//": "// &
        t2c(COUNT(this%point_index(:,:) == n)))
     ENDDO
 #endif
@@ -1960,44 +1972,38 @@ ENDIF
 CONTAINS
 
 SUBROUTINE gen_mask_class()
+REAL :: startmaskclass, mmin, mmax
+INTEGER :: i
+
+IF (PRESENT(maskbounds)) THEN
+  nmaskarea = SIZE(maskbounds) - 1
+  IF (nmaskarea > 0) THEN
+    lmaskbounds = maskbounds ! automatic f2003 allocation
+    RETURN
+  ELSE IF (nmaskarea == 0) THEN
+    CALL l4f_category_log(this%category,L4F_WARN, &
+     'only one value provided for maskbounds, '//t2c(maskbounds(1)) &
+     //', it will be ignored')
+    CALL l4f_category_log(this%category,L4F_WARN, &
+     'at least 2 values are required for maskbounds')
+  ENDIF
+ENDIF
 
 mmin = MINVAL(maskgrid, mask=c_e(maskgrid))
 mmax = MAXVAL(maskgrid, mask=c_e(maskgrid))
 
-lnmaskclass = optio_l(nmaskclass)
-lstartmaskclass = optio_r(startmaskclass)
-ldmaskclass = optio_r(dmaskclass)
-! safety checks
-IF (c_e(lnmaskclass)) THEN
-  lnmaskclass = MAX(lnmaskclass, 2)
-ENDIF
-IF (c_e(ldmaskclass)) THEN
-  IF (dmaskclass == 0.0) THEN
-    CALL l4f_category_log(this%category,L4F_ERROR, &
-     'dmaskclass, if provided, must be nonzero')
-    CALL raise_fatal_error()
-  ENDIF
-ENDIF
-
-IF (c_e(lstartmaskclass) .AND. c_e(ldmaskclass) .AND. c_e(lnmaskclass)) THEN
-! nothing to do
-ELSE IF (c_e(lnmaskclass)) THEN
-  ldmaskclass = (mmax-mmin)/(lnmaskclass-1)
-  lstartmaskclass = mmin-0.5*ldmaskclass
-ELSE
-  IF (.NOT.c_e(ldmaskclass)) THEN
-    ldmaskclass = 1.0
-  ENDIF
-  lnmaskclass = INT((mmax - mmin + 0.5*ldmaskclass)/ldmaskclass + 1.0)
-  lstartmaskclass = mmin-0.5*ldmaskclass
-ENDIF
+nmaskarea = INT(mmax - mmin + 1.5)
+startmaskclass = mmin - 0.5
 ! assign limits for each class
-ALLOCATE(lbound_class(lnmaskclass+1))
-lbound_class(:) = (/(lstartmaskclass+REAL(n)*ldmaskclass,n=0,lnmaskclass)/)
+ALLOCATE(lmaskbounds(nmaskarea+1))
+lmaskbounds(:) = (/(startmaskclass+REAL(i),i=0,nmaskarea)/)
 #ifdef DEBUG
 CALL l4f_category_log(this%category,L4F_DEBUG, &
- "maskinter parameters n,start,step: "// &
- t2c(lnmaskclass)//','//t2c(lstartmaskclass)//','//t2c(ldmaskclass))
+ 'maskinter, '//t2c(nmaskarea)//' subareas defined, with boundaries:')
+DO i = 1, SIZE(lmaskbounds)
+  CALL l4f_category_log(this%category,L4F_DEBUG, &
+   'maskinter '//t2c(i)//' '//t2c(lmaskbounds(i)))
+ENDDO
 #endif
 
 END SUBROUTINE gen_mask_class

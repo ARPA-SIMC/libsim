@@ -29,11 +29,11 @@ USE vol7d_dballe_class
 #ifdef HAVE_LIBGRIBAPI
 USE grib_api_csv
 #endif
-use optionparser_class
+USE optionparser_class
 USE io_units
 USE georef_coord_class
 
-implicit none
+IMPLICIT NONE
 
 TYPE(optionparser) :: opt
 INTEGER :: optind, optstatus
@@ -55,7 +55,8 @@ DOUBLE PRECISION :: lon, lat
 DOUBLE PRECISION,ALLOCATABLE :: lon_array(:), lat_array(:)
 INTEGER :: polytopo
 DOUBLE PRECISION :: ilon, ilat, flon, flat, radius
-character(len=80) :: output_template,trans_type,sub_type
+TYPE(arrayof_real) :: maskbounds
+CHARACTER(len=80) :: output_template, trans_type, sub_type
 INTEGER :: output_td
 LOGICAL :: version, ldisplay
 logical :: c2agrid, noconvert
@@ -80,6 +81,25 @@ opt = optionparser_new(description_msg= &
 
 ! define command-line options
 ! options for transformation
+CALL optionparser_add(opt, 'v', 'trans-type', trans_type, 'inter', help= &
+ 'transformation type, ''inter'' for interpolation, &
+ &''stencilinter'' for interpolation using a stencil at each point' &
+#ifdef HAVE_SHAPELIB
+ //', ''polyinter'' for statistical processing within given polygons' &
+#endif
+ //', ''maskinter'' for statistical processing within subareas defined by &
+ &a mask of gridpoints, &
+ &''metamorphosis'' for keeping the same data but changing the container &
+ &from grid to sparse points, ')
+CALL optionparser_add(opt, 'z', 'sub-type', sub_type, 'bilin', help= &
+ 'transformation subtype, for ''inter'': ''near'', ''bilin'', &
+ &for ''stencilinter'', ' &
+#ifdef HAVE_SHAPELIB
+ //'''polyinter'', '&
+#endif
+ //'''maskinter'': ''average'', ''stddev'', ''max'', ''min'', ''percentile'', &
+ &for ''metamorphosis'': ''all'', ''coordbb''')
+
 CALL optionparser_add(opt, 'a', 'lon', lon, 10.D0, help= &
  'longitude of single interpolation point, alternative to --coord-file')
 CALL optionparser_add(opt, 'b', 'lat', lat, 45.D0, help= &
@@ -101,22 +121,10 @@ CALL optionparser_add(opt, ' ', 'coord-format', coord_format, &
 #ifdef HAVE_SHAPELIB
  //', ''shp'' for shapefile (sparse points or polygons)'&
 #endif
- )
-CALL optionparser_add(opt, 'v', 'trans-type', trans_type, 'inter', help= &
- 'transformation type, ''inter'' for interpolation, ''metamorphosis'' &
- &for keeping the same data but changing the container from grib to v7d'&
-#ifdef HAVE_SHAPELIB
- //', ''polyinter'' for statistical processing within given polygons'&
+#ifdef HAVE_LIBGRIBAPI
+ //', ''grib_api'' for GRIB file (mask)'&
 #endif
  )
-CALL optionparser_add(opt, 'z', 'sub-type', sub_type, 'bilin', help= &
- 'transformation subtype, for inter: ''near'', ''bilin'',&
- & for metamorphosis: ''all'', ''coordbb'''&
-#ifdef HAVE_SHAPELIB
- //', for ''polyinter'': ''average'', ''stddev'', ''max'', ''min'''&
-#endif
-)
-
 CALL optionparser_add(opt, 'a', 'ilon', ilon, 0.0D0, help= &
  'longitude of the southwestern bounding box corner')
 CALL optionparser_add(opt, 'b', 'ilat', ilat, 30.D0, help= &
@@ -129,6 +137,10 @@ radius = dmiss
 CALL optionparser_add(opt, ' ', 'radius', radius, help= &
  'radius of stencil in gridpoint units, fractionary values accepted, &
  &for ''stencilinter'' interpolation')
+CALL optionparser_add(opt, ' ', 'maskbounds', maskbounds, help= &
+ 'comma-separated list of boundary values for defining subareas &
+ &according to values of mask, &
+ &for ''maskinter'' and ''metamorphosis:mask'' transformations')
 
 CALL optionparser_add(opt, 'n', 'network', network, 'generic', help= &
  'string identifying network for output data')
@@ -215,6 +227,10 @@ if (optind <= iargc()) then
    'extra arguments after input and output file names')
   call raise_fatal_error()
 end if
+
+! pack maskbounds array or allocate it to zero length for further
+! correct behavior
+CALL packarray(maskbounds)
 
 CALL delete(opt)
 
@@ -321,7 +337,8 @@ IF (c2agrid) CALL vg6d_c2a(volgrid)
 
 IF (output_format /= 'grib_api_csv') THEN ! otherwise postpone
   CALL transform(trans, volgrid6d_in=volgrid, vol7d_out=v7d_out, v7d=v7d_coord, &
-   maskgrid=maskfield, networkname=network, noconvert=noconvert, &
+   maskgrid=maskfield, maskbounds=maskbounds%array, &
+   networkname=network, noconvert=noconvert, &
    categoryappend="transform")
   CALL l4f_category_log(category,L4F_INFO,"transformation completed")
 ENDIF
@@ -364,7 +381,8 @@ ELSE IF (output_format == 'grib_api_csv') THEN
 
   DO i = 1, SIZE(volgrid) ! transform one volume at a time
     CALL transform(trans, volgrid6d_in=volgrid(i), vol7d_out=v7d_out, v7d=v7d_coord, &
-     maskgrid=maskfield, networkname=network, noconvert=noconvert, &
+     maskgrid=maskfield, maskbounds=maskbounds%array, &
+     networkname=network, noconvert=noconvert, &
      categoryappend="transform")
     CALL grib_api_csv_export(v7d_out, volgrid(i), iun, i == 1)
   ENDDO

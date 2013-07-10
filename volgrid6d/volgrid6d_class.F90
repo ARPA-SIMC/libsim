@@ -1474,7 +1474,7 @@ END SUBROUTINE volgrid6d_transform_compute
 !! is created internally and it does not require preliminary
 !! initialisation.
 SUBROUTINE volgrid6d_transform(this, griddim, volgrid6d_in, volgrid6d_out, &
- lev_out, clone, volgrid6d_coord_in, decode, categoryappend)
+ lev_out, volgrid6d_coord_in, maskgrid, clone, decode, categoryappend)
 TYPE(transform_def),INTENT(in) :: this !< object specifying the abstract transformation
 TYPE(griddim_def),INTENT(in),OPTIONAL :: griddim !< griddim specifying the output grid (required by most transformation types)
 ! TODO ripristinare intent(in) dopo le opportune modifiche in grid_class.F90
@@ -1482,6 +1482,7 @@ TYPE(volgrid6d),INTENT(inout) :: volgrid6d_in !< object to be transformed, it is
 TYPE(volgrid6d),INTENT(out) :: volgrid6d_out !< transformed object, it does not need initialisation
 TYPE(vol7d_level),INTENT(in),OPTIONAL,TARGET :: lev_out(:) !< vol7d_level object defining target vertical grid, for vertical interpolations
 TYPE(volgrid6d),INTENT(in),OPTIONAL :: volgrid6d_coord_in !< object providing time constant input vertical coordinate for some kind of vertical interpolations
+REAL,INTENT(in),OPTIONAL :: maskgrid(:,:) !< 2D field to be used for defining subareas according to its values, it must have the same shape as the field to be interpolated (for transformation subtype 'maskfill')
 LOGICAL,INTENT(in),OPTIONAL :: clone !< if provided and \a .TRUE. , clone the \a gaid's from \a volgrid6d_in to \a volgrid6d_out
 LOGICAL,INTENT(in),OPTIONAL :: decode !< determine whether the data in \a volgrid6d_out should be decoded or remain coded in gaid, if not provided, the decode status is taken from \a volgrid6d_in
 CHARACTER(len=*),INTENT(in),OPTIONAL :: categoryappend !< append this suffix to log4fortran namespace category
@@ -1650,7 +1651,7 @@ ELSE
   CALL init(volgrid6d_out, griddim=griddim, &
    time_definition=volgrid6d_in%time_definition, categoryappend=categoryappend)
   CALL init(grid_trans, this, in=volgrid6d_in%griddim, out=volgrid6d_out%griddim, &
-   categoryappend=categoryappend)
+   maskgrid=maskgrid, categoryappend=categoryappend)
 ENDIF
 
 
@@ -1728,7 +1729,7 @@ END SUBROUTINE volgrid6d_transform
 !! to the transformation type, the output array may have of one or
 !! more \a volgrid6d elements on different grids.
 SUBROUTINE volgrid6dv_transform(this, griddim, volgrid6d_in, volgrid6d_out, &
- lev_out, volgrid6d_coord_in, clone, decode, categoryappend)
+ lev_out, volgrid6d_coord_in, maskgrid, clone, decode, categoryappend)
 TYPE(transform_def),INTENT(in) :: this !< object specifying the abstract transformation
 TYPE(griddim_def),INTENT(in),OPTIONAL :: griddim !< griddim specifying the output grid (required by most transformation types)
 ! TODO ripristinare intent(in) dopo le opportune modifiche in grid_class.F90
@@ -1736,6 +1737,7 @@ TYPE(volgrid6d),INTENT(inout) :: volgrid6d_in(:) !< object to be transformed, it
 TYPE(volgrid6d),POINTER :: volgrid6d_out(:) !< transformed object, it is a non associated pointer to an array of volgrid6d objects which will be allocated by the method
 TYPE(vol7d_level),INTENT(in),OPTIONAL :: lev_out(:) !< vol7d_level object defining target vertical grid
 TYPE(volgrid6d),INTENT(in),OPTIONAL :: volgrid6d_coord_in !< object providing time constant input vertical coordinate for some kind of vertical interpolations
+REAL,INTENT(in),OPTIONAL :: maskgrid(:,:) !< 2D field to be used for defining subareas according to its values, it must have the same shape as the field to be interpolated (for transformation subtype 'maskfill')
 LOGICAL,INTENT(in),OPTIONAL :: clone !< if provided and \a .TRUE. , clone the \a gaid's from \a volgrid6d_in to \a volgrid6d_out 
 LOGICAL,INTENT(in),OPTIONAL :: decode !< if provided and \a .FALSE. the data volume is not allocated, but work is performed on grid_id's
 CHARACTER(len=*),INTENT(in),OPTIONAL :: categoryappend !< append this suffix to log4fortran namespace category
@@ -1752,7 +1754,7 @@ end if
 do i=1,size(volgrid6d_in)
   call transform(this, griddim, volgrid6d_in(i), volgrid6d_out(i), &
    lev_out=lev_out, volgrid6d_coord_in=volgrid6d_coord_in, &
-   clone=clone, decode=decode, categoryappend=categoryappend)
+   maskgrid=maskgrid, clone=clone, decode=decode, categoryappend=categoryappend)
 end do
 
 END SUBROUTINE volgrid6dv_transform
@@ -1916,12 +1918,13 @@ end SUBROUTINE volgrid6d_v7d_transform_compute
 !! is created internally and it does not require preliminary
 !! initialisation.
 SUBROUTINE volgrid6d_v7d_transform(this, volgrid6d_in, vol7d_out, v7d, &
- maskgrid, networkname, noconvert, categoryappend)
+ maskgrid, maskbounds, networkname, noconvert, categoryappend)
 TYPE(transform_def),INTENT(in) :: this !< object specifying the abstract transformation
 TYPE(volgrid6d),INTENT(inout) :: volgrid6d_in !< object to be transformed, it is not modified, despite the INTENT(inout)
 TYPE(vol7d),INTENT(out) :: vol7d_out !< transformed object, it does not need initialisation
 TYPE(vol7d),INTENT(in),OPTIONAL :: v7d !< object containing a list of points over which transformation has to be done (required by some transformation types)
 REAL,INTENT(in),OPTIONAL :: maskgrid(:,:) !< 2D field to be used for defining subareas according to its values, it must have the same shape as the field to be interpolated (for transformation type 'maskinter')
+REAL,INTENT(in),OPTIONAL :: maskbounds(:) !< array of boundary values for defining subareas from the values of \a maskgrid, the number of subareas is SIZE(maskbounds) - 1, if not provided a default based on extreme values of \a makgrid is used
 CHARACTER(len=*),OPTIONAL,INTENT(in) :: networkname !< set the output network name in vol7d_out (default='generic')
 LOGICAL,OPTIONAL,INTENT(in) :: noconvert !< do not try to match variable and convert values during transform
 CHARACTER(len=*),INTENT(in),OPTIONAL :: categoryappend !< append this suffix to log4fortran namespace category
@@ -1994,7 +1997,7 @@ if (associated(volgrid6d_in%level)) nlevel=size(volgrid6d_in%level)
 if (associated(volgrid6d_in%var)) nvar=size(volgrid6d_in%var)
 
 CALL init(grid_trans, this, volgrid6d_in%griddim, v7d_locana, &
- maskgrid=maskgrid, categoryappend=categoryappend)
+ maskgrid=maskgrid, maskbounds=maskbounds, categoryappend=categoryappend)
 CALL init (vol7d_out,time_definition=time_definition)
 
 IF (c_e(grid_trans)) THEN
@@ -2045,12 +2048,13 @@ END SUBROUTINE volgrid6d_v7d_transform
 !! each element of the input \a volgrid6d array object is merged into
 !! a single \a vol7d output object.
 SUBROUTINE volgrid6dv_v7d_transform(this, volgrid6d_in, vol7d_out, v7d, &
- maskgrid, networkname, noconvert, categoryappend)
+ maskgrid, maskbounds, networkname, noconvert, categoryappend)
 TYPE(transform_def),INTENT(in) :: this !< object specifying the abstract transformation
 TYPE(volgrid6d),INTENT(inout) :: volgrid6d_in(:) !< object to be transformed, it is an array of volgrid6d objects, each of which will be transformed, it is not modified, despite the INTENT(inout)
 TYPE(vol7d),INTENT(out) :: vol7d_out !< transformed object, it does not need initialisation
 TYPE(vol7d),INTENT(in),OPTIONAL :: v7d !< object containing a list of points over which transformation has to be done (required by some transformation types)
 REAL,INTENT(in),OPTIONAL :: maskgrid(:,:) !< 2D field to be used for defining subareas according to its values, it must have the same shape as the field to be interpolated (for transformation type 'maskinter')
+REAL,INTENT(in),OPTIONAL :: maskbounds(:) !< array of boundary values for defining subareas from the values of \a maskgrid, the number of subareas is SIZE(maskbounds) - 1, if not provided a default based on extreme values of \a makgrid is used
 CHARACTER(len=*),OPTIONAL,INTENT(in) :: networkname !< set the output network name in vol7d_out (default='generic')
 LOGICAL,OPTIONAL,INTENT(in) :: noconvert !< do not try to match variable and convert values during transform
 CHARACTER(len=*),INTENT(in),OPTIONAL :: categoryappend !< append this suffix to log4fortran namespace category
@@ -2064,7 +2068,8 @@ CALL init(vol7d_out)
 
 DO i=1,SIZE(volgrid6d_in)
   CALL transform(this, volgrid6d_in(i), v7dtmp, v7d=v7d, &
-   maskgrid=maskgrid, networkname=networkname, noconvert=noconvert, categoryappend=categoryappend)
+   maskgrid=maskgrid, maskbounds=maskbounds, &
+   networkname=networkname, noconvert=noconvert, categoryappend=categoryappend)
   CALL vol7d_append(vol7d_out, v7dtmp)
 ENDDO
 
