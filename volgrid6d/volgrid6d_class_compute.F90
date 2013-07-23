@@ -107,9 +107,11 @@ ELSE IF (stat_proc_input /= stat_proc) THEN
   CALL raise_error()
 
 ELSE IF (COUNT(this%timerange(:)%timerange == stat_proc) == 0) THEN
-  CALL l4f_category_log(this%category, L4F_ERROR, &
+  CALL l4f_category_log(this%category, L4F_WARN, &
    'no timeranges of the desired statistical processing type '//t2c(stat_proc)//' available')
-  CALL raise_error()
+! return an empty volume, without signaling error
+  CALL init(that)
+  CALL volgrid6d_alloc_vol(that)
 
 ELSE
 ! euristically determine whether aggregation or difference is more suitable
@@ -126,7 +128,7 @@ ELSE
     CALL l4f_category_log(this%category, L4F_INFO, &
      'recomputing statistically processed data by difference '// &
      t2c(stat_proc_input)//':'//t2c(stat_proc))
-    CALL  volgrid6d_recompute_stat_proc_diff(this, that, stat_proc, step, &
+    CALL volgrid6d_recompute_stat_proc_diff(this, that, stat_proc, step, &
      full_steps, start, clone)
   ELSE
     CALL l4f_category_log(this%category, L4F_INFO, &
@@ -336,6 +338,9 @@ IF (COUNT(this%timerange(:)%timerange == tri .AND. this%timerange(:)%p2 /= imiss
  .AND. this%timerange(:)%p2 /= 0 .AND. this%timerange(:)%p1 == 0) == 0) THEN
   CALL l4f_category_log(this%category, L4F_WARN, &
    'volgrid6d_compute, no timeranges suitable for statistical processing by aggregation')
+! return an empty volume, without signaling error
+  CALL init(that)
+  CALL volgrid6d_alloc_vol(that)
   RETURN
 ENDIF
 
