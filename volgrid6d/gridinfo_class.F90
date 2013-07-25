@@ -602,7 +602,7 @@ SUBROUTINE time_import_gribapi(this,gaid)
 TYPE(datetime),INTENT(out) :: this ! datetime object
 INTEGER,INTENT(in) :: gaid ! grib_api id of the grib loaded in memory to import 
 
-INTEGER :: EditionNumber, ttimeincr, p2, unit, status
+INTEGER :: EditionNumber, ttimeincr, p2g, p2, unit, status
 CHARACTER(len=9) :: date
 CHARACTER(len=10) :: time
 
@@ -621,9 +621,9 @@ IF (EditionNumber == 1 .OR. EditionNumber == 2) THEN
 ! if analysis-like statistically processed data is encountered, the
 ! reference time must be shifted to the end of the processing period
     IF (status == GRIB_SUCCESS .AND. ttimeincr == 1) THEN
-      CALL grib_get(gaid,'lengthOfTimeRange',p2) 
+      CALL grib_get(gaid,'lengthOfTimeRange',p2g)
       CALL grib_get(gaid,'indicatorOfUnitForTimeRange',unit)
-      CALL g2_interval_to_second(unit,p2,p2)
+      CALL g2_interval_to_second(unit, p2g, p2)
       this = this + timedelta_new(msec=p2*1000)
     ELSE IF ((status == GRIB_SUCCESS .AND. ttimeincr == 2) .OR. &
      status /= GRIB_SUCCESS) THEN ! usual case
@@ -794,32 +794,30 @@ SUBROUTINE timerange_import_gribapi(this, gaid)
 TYPE(vol7d_timerange),INTENT(out) :: this ! vol7d_timerange object
 INTEGER,INTENT(in) :: gaid ! grib_api id of the grib loaded in memory to import
 
-INTEGER :: EditionNumber, tri, unit, p1_g1, p2_g1, statproc, p1, p2, ttimeincr, &
- status
+INTEGER :: EditionNumber, tri, unit, p1g, p2g, p1, p2, statproc, &
+ ttimeincr, status
 
 call grib_get(gaid,'GRIBEditionNumber',EditionNumber)
 
-if (EditionNumber == 1) then
+IF (EditionNumber == 1) THEN
 
   CALL grib_get(gaid,'timeRangeIndicator',tri)
-  CALL grib_get(gaid,'P1',p1_g1)
-  CALL grib_get(gaid,'P2',p2_g1)
+  CALL grib_get(gaid,'P1',p1g)
+  CALL grib_get(gaid,'P2',p2g)
   CALL grib_get(gaid,'indicatorOfUnitOfTimeRange',unit)
-!  CALL grib_get(gaid,'startStepInHours',p1_g1)
-!  CALL grib_get(gaid,'endStepInHours',p2_g1)
-  CALL timerange_g1_to_v7d(tri, p1_g1, p2_g1, unit, statproc, p1, p2)
+  CALL timerange_g1_to_v7d(tri, p1g, p2g, unit, statproc, p1, p2)
 
 ELSE IF (EditionNumber == 2) THEN
   
-  CALL grib_get(gaid,'forecastTime',p1)
+  CALL grib_get(gaid,'forecastTime',p1g)
   CALL grib_get(gaid,'indicatorOfUnitOfTimeRange',unit)
-  CALL g2_interval_to_second(unit,p1,p1)
+  CALL g2_interval_to_second(unit, p1g, p1)
   call grib_get(gaid,'typeOfStatisticalProcessing',statproc,status)
 
   IF (status == GRIB_SUCCESS .AND. statproc >= 0 .AND. statproc <= 9) THEN ! statistically processed
-    CALL grib_get(gaid,'lengthOfTimeRange',p2) 
+    CALL grib_get(gaid,'lengthOfTimeRange',p2g)
     CALL grib_get(gaid,'indicatorOfUnitForTimeRange',unit)
-    CALL g2_interval_to_second(unit,p2,p2)
+    CALL g2_interval_to_second(unit, p2g, p2)
 
 ! for forecast-like timeranges p1 has to be shifted to the end of interval
     CALL grib_get(gaid,'typeOfTimeIncrement',ttimeincr)
@@ -831,14 +829,14 @@ ELSE IF (EditionNumber == 2) THEN
   
   ENDIF
 
-else
+ELSE
 
   CALL l4f_log(L4F_ERROR,'GribEditionNumber '//t2c(EditionNumber)//' not supported')
   CALL raise_error()
 
-end if
+ENDIF
 
-call init(this, statproc, p1, p2)
+CALL init(this, statproc, p1, p2)
 
 END SUBROUTINE timerange_import_gribapi
 
