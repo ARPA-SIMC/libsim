@@ -140,6 +140,9 @@ call l4f_category_log(category,L4F_INFO,"start export data")
 print *,"data output:"
 !call display(v7ddballe%vol7d)
 
+
+deallocate (v7ddballe%data_id)
+v7ddballe%data_id => v7dqccli%data_id_out
 CALL export(v7ddballe,attr_only=.true.)
 
 call l4f_category_log(category,L4F_INFO,"end export data")

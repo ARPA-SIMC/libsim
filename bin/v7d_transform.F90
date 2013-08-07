@@ -169,7 +169,7 @@ opt = optionparser_new(description_msg= &
 #endif
  //', or into a configurable formatted csv file. &
  &If input-format is of file type, inputfile ''-'' indicates stdin, &
- &if input-format is of database type, inputfile specifies &
+ &if input-format or output-format is of database type, inputfile/outputfile specifies &
  &database access info in the form user/password@dsn, &
  &if empty or ''-'', a suitable default is used. &
  &If output-format is of file type, outputfile ''-'' indicates stdout.', &

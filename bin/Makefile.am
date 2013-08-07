@@ -10,13 +10,16 @@ v7d_plot_sound_LDADD = ../graphics/libsim_graphics.la  ../vol7d/libsim_vol7d.la 
 endif
 
 if DBALLE
-bin_PROGRAMS += v7d_qccli v7d_qcspa
+bin_PROGRAMS += v7d_qccli v7d_qcspa v7d_qctem
 
 v7d_qccli_SOURCES = v7d_qccli.f90 
 v7d_qccli_LDADD = ../base/libsim_base.la ../vol7d/libsim_vol7d.la ../log4fortran/liblog4fortran.la ../qc/libsim_qc.la
 
 v7d_qcspa_SOURCES = v7d_qcspa.F90 
 v7d_qcspa_LDADD = ../base/libsim_base.la ../vol7d/libsim_vol7d.la ../log4fortran/liblog4fortran.la ../qc/libsim_qc.la
+
+v7d_qctem_SOURCES = v7d_qctem.F90 
+v7d_qctem_LDADD = ../base/libsim_base.la ../vol7d/libsim_vol7d.la ../log4fortran/liblog4fortran.la ../qc/libsim_qc.la
 
 if NCARG
 v7d_qcspa_LDADD += ../graphics/libsim_graphics.la ../termolib/libsim_termolib.la

@@ -2403,8 +2403,10 @@ this%handle=imiss
 this%handle_err=imiss
 this%handle_staz=imiss
 
-if (associated(this%data_id)) deallocate (this%data_id)
-
+if (associated(this%data_id)) then
+  deallocate (this%data_id)
+  nullify(this%data_id)
+end if
 CALL delete(this%vol7d)
 
 !chiudo il logger

@@ -70,9 +70,9 @@ double precision, dimension(2)       :: percentile
 TYPE(cyclicdatetime) :: cyclicdt !< cyclic date and time
 type(vol7d_level) :: level,levelo
 type(vol7d_timerange) :: timerange,timerangeo
-type(vol7d_var) :: varia, variao
+type(vol7d_var) :: varia,variao
 CHARACTER(len=vol7d_ana_lenident) :: ident
-integer :: indcana, indvar,indctime,indclevel,indctimerange,indcdativarr,indcnetwork,indcattr
+integer :: indcana,indctime,indclevel,indctimerange,indcdativarr,indcnetwork,indcattr
 INTEGER,POINTER :: w_s(:), w_e(:)
 TYPE(vol7d_dballe) :: v7d_dba_out
 logical :: file
@@ -107,7 +107,7 @@ opt = optionparser_new(description_msg= &
 &')
 
 ! options for defining input
-CALL optionparser_add(opt, ' ', 'operation', operation, cmiss, help= &
+CALL optionparser_add(opt, ' ', 'operation', operation, "run", help= &
  'operation to execute: ''gradient'' compute gradient and write on files; '&
   //'''ndi''  compute NDI from gradient;' &
   //'''run'' apply quality control ')
@@ -116,7 +116,7 @@ CALL optionparser_add(opt, ' ', 'operation', operation, cmiss, help= &
 ! options for defining output
 output_template = ''
 CALL optionparser_add(opt, ' ', 'output-format', output_format, 'native', help= &
- 'format of output file, in the form ''name[:template]''; ''native'' for vol7d &
+ 'format of output file for "ndi" operation only, in the form ''name[:template]''; ''native'' for vol7d &
  &native binary format (no template to be specified)'&
 #ifdef HAVE_DBALLE
  //'; ''BUFR'' and ''CREX'' for corresponding formats, with template as an alias like ''synop'', ''metar'', &
@@ -178,28 +178,27 @@ if (operation == "ndi") then
   ENDIF
   CALL getarg(iargc(), output_file)
   
-  
+  call init(levelo)
+  call init(timerangeo)
+  call init (variao)
+
   do ninput = optind, iargc()-1
     call getarg(ninput, input_file)
 
     CALL l4f_category_log(category,L4F_INFO,"open file:"//t2c(input_file))
     open (10,file=input_file,status="old")
-!!$    read (10,*) level,timerange,varia
-!!$
-!!$    if (c_e(levelo)) then
-!!$      if ( level /= levelo .or. timerange /= timerangeo .or. varia /= variao ) then
-!!$        call l4f_category_log(category,L4F_ERROR,"Error reading grad files: file are incoerent")
-!!$        call raise_error("")
-!!$      end if
-!!$    else
-!!$      levelo = level
-!!$      timerangeo = timerange
-!!$      variao = varia
-!!$    end if
+    read (10,*) level,timerange,varia
 
-    call init(level,105,2000,imiss,imiss)
-    call init(timerange,254,imiss,imiss)
-    call init (varia,btable="B12101")
+    if (c_e(levelo)) then
+      if ( level /= levelo .or. timerange /= timerangeo .or. varia /= variao ) then
+        call l4f_category_log(category,L4F_ERROR,"Error reading grad files: file are incoerent")
+        call raise_error("")
+      end if
+    else
+      levelo = level
+      timerangeo = timerange
+      variao = varia
+    end if
 
     do while (.true.)
       read (10,*,iostat=iostat) val
@@ -220,13 +219,6 @@ if (operation == "ndi") then
    grad%array(:grad%arraysize) < percentile(2) )), perc_vals, ndi, nlimbins)
 
   call delete(grad)
-
-!!$  print *,ndi
-!!$  print *,nlimbins
-
-!  0.13021742      0.25837621      0.45376661      0.73488075      0.99223697       1.0000000       1.0000000      0.66323280      0.38160193      0.20700261    
-! -2.21905229E-05 -1.18105772E-05 -6.57925284E-06 -3.60051945E-06 -1.76120716E-06 -3.99033837E-07  9.52641415E-07  2.22688618E-06  4.26485803E-06  7.80683240E-06  1.43365824E-05
-
   call delete(v7dqcspa%clima)
   CALL init(v7dqcspa%clima, time_definition=0)
   call vol7d_alloc(v7dqcspa%clima,nana=size(perc_vals)-1, &
@@ -263,7 +255,8 @@ if (operation == "ndi") then
     end if
   end do
 
-  call display (v7dqcspa%clima)
+!  print *,">>>>>> Clima Spatial Volume <<<<<<"
+!  call display (v7dqcspa%clima)
 
   IF (output_format == 'native') THEN
     IF (output_file == '-') THEN ! stdout_unit does not work with unformatted
@@ -409,22 +402,27 @@ DO WHILE (time <= tf)
 
   call l4f_category_log(category,L4F_INFO, "filtered N staz="//t2c(size(v7ddballe%vol7d%ana)))
 
-  call l4f_category_log(category,L4F_INFO,"start QC")
+  call l4f_category_log(category,L4F_INFO,"initialize QC")
 
                                 ! chiamiamo il "costruttore" per il Q.C.
-  call init(v7dqcspa,v7ddballe%vol7d,var(:nvar),timei=ti,timef=tf, coordmin=coordmin, coordmax=coordmax,&
+
+
+  call init(v7dqcspa,v7ddballe%vol7d,var(:nvar),timei=timeiqc,timef=timefqc, coordmin=coordmin, coordmax=coordmax,&
    data_id_in=v7ddballe%data_id, &
    dsne=dsne, usere=usere, passworde=passworde,&
    dsnspa=dsnspa, userspa=userspa, passwordspa=passwordspa,&
    height2level=height2level, operation=operation,&
    categoryappend="space")
-  call display(v7dqcspa%clima)
+
+!  print *,">>>>>> Clima Spatial Volume <<<<<<"
+!  call display(v7dqcspa%clima)
 
   call alloc(v7dqcspa)
 
   ! spatial QC
+  !exclude the last time to do not check data two times
   call l4f_category_log(category,L4F_INFO,"start spatial QC")
-  call quaconspa(v7dqcspa,noborder=.true.,timemask= ( v7dqcspa%v7d%time >= timeiqc .and. v7dqcspa%v7d%time <= timefqc ))
+  call quaconspa(v7dqcspa,noborder=.true.,timemask= ( v7dqcspa%v7d%time >= timeiqc .and. v7dqcspa%v7d%time < timefqc ))
   call l4f_category_log(category,L4F_INFO,"end spatial QC")
 
 #ifdef HAVE_LIBNCARG
@@ -435,14 +433,19 @@ DO WHILE (time <= tf)
   end if
 #endif
 
-  call l4f_category_log(category,L4F_INFO,"start export data")
-  !call display(v7ddballe%vol7d)
+  if (v7dqcspa%operation == "run") then
+    call l4f_category_log(category,L4F_INFO,"start export data")
+    !call display(v7ddballe%vol7d)
 
-  CALL export(v7ddballe,attr_only=.true.)
-
-  call l4f_category_log(category,L4F_INFO,"end export data")
+    deallocate(v7ddballe%data_id)
+    v7ddballe%data_id => v7dqcspa%data_id_out
+    
+    CALL export(v7ddballe,attr_only=.true.)
+    call l4f_category_log(category,L4F_INFO,"end export data")
+  end if
 
   call delete(v7ddballe)
+  nullify(v7dqcspa%data_id_out)
   call delete(v7dqcspa)
 
 end do

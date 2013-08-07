@@ -341,7 +341,7 @@ if (.not. c_e(ldsncli)) then
     end select
 
   else
-    call l4f_category_log(qccli%category,L4F_WARN,"clima volume not iniziatized: QC will not be possible")
+    call l4f_category_log(qccli%category,L4F_WARN,"clima volume not iniziatized: clima QC will not be possible")
     call init(qccli%clima)
 !    call raise_fatal_error()
   end if

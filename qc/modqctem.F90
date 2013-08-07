@@ -18,7 +18,7 @@
 
 #include "config.h"
 
-!>\brief Controllo di qualità stemporale.
+!>\brief Controllo di qualità temporale.
 !! Questo modulo effettua un controllo temporale dei dati
 !!
 !!\ingroup qc
@@ -72,6 +72,13 @@ public
 
 character (len=255),parameter:: subcategorytem="QCtem"
 
+integer, parameter :: tem_nvar=1
+CHARACTER(len=10) :: tem_btable(tem_nvar)=(/"B12101"/) !< variable wmo code table for normalization.
+!> standard coefficients for orizontal gradient normalization
+real, parameter :: tem_a(tem_nvar) = (/1.e6/)
+!> standard coefficients for orizontal gradient normalization
+real, parameter :: tem_b(tem_nvar) = (/273.15/)
+
 !>\brief Oggetto principale per il controllo di qualità
 type :: qctemtype
   type (vol7d),pointer :: v7d => null() !< Volume dati da controllare
@@ -79,6 +86,8 @@ type :: qctemtype
   integer,pointer :: data_id_out(:,:,:,:,:) => null() !< Indici dati del DB in output
   integer :: category !< log4fortran
   type (qcclitype) :: qccli !< qccli part for normalization
+  type (vol7d) :: clima !< Clima spaziale di tutte le variabili da controllare
+  character(len=20):: operation !< Operation to execute ("gradient"/"run")
 end type qctemtype
 
 
@@ -106,8 +115,9 @@ contains
 subroutine qcteminit(qctem,v7d,var, timei, timef, coordmin, coordmax, data_id_in,extremepath,&
 #ifdef HAVE_DBALLE
  dsne,usere,passworde,&
+ dsntem,usertem,passwordtem,&
 #endif
- height2level,categoryappend)
+ height2level,operation,categoryappend)
 
 type(qctemtype),intent(in out) :: qctem !< Oggetto per il controllo temporale
 type (vol7d),intent(in),target:: v7d !< Il volume Vol7d da controllare
@@ -121,12 +131,16 @@ integer,intent(in),optional,target:: data_id_in(:,:,:,:,:) !< Indici dei dati in
 character(len=*),intent(in),optional :: extremepath !< file con il volume del extreme
 logical ,intent(in),optional :: height2level   !< use conventional level starting from station height
 character(len=*),INTENT(in),OPTIONAL :: categoryappend !< appennde questo suffisso al namespace category di log4fortran
+character(len=*), optional :: operation !< Operation to execute ("gradient"/"run")
 
 #ifdef HAVE_DBALLE
 type (vol7d_dballe) :: v7d_dballetmp
 character(len=*),intent(in),optional :: dsne
 character(len=*),intent(in),optional :: usere
 character(len=*),intent(in),optional :: passworde
+character(len=*),intent(in),optional :: dsntem
+character(len=*),intent(in),optional :: usertem
+character(len=*),intent(in),optional :: passwordtem
 character(len=512) :: ldsn
 character(len=512) :: luser
 character(len=512) :: lpassword
@@ -286,6 +300,18 @@ if (indbattrout <= 0 ) then
 
   call l4f_category_log(qctem%category,L4F_ERROR,"error finding attribute index for output")
   call raise_error()
+
+end if
+
+if (qctem%operation == "gradient") then
+  if ( size(qctem%v7d%level)      > 1 .or.&
+       size(qctem%v7d%timerange)  > 1 .or.&
+       size(qctem%v7d%dativar%r)  > 1 ) then
+    call l4f_category_log(qctem%category,L4F_ERROR,"gradient operation manage one level/timerange/var only")
+    call raise_error()
+  end if
+
+  write (11,*) qctem%v7d%level(1), qctem%v7d%timerange(1), qctem%v7d%dativar%r(1)
 
 end if
 
