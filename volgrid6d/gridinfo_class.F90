@@ -814,7 +814,7 @@ ELSE IF (EditionNumber == 2) THEN
   CALL g2_interval_to_second(unit, p1g, p1)
   call grib_get(gaid,'typeOfStatisticalProcessing',statproc,status)
 
-  IF (status == GRIB_SUCCESS .AND. statproc >= 0 .AND. statproc <= 9) THEN ! statistically processed
+  IF (status == GRIB_SUCCESS .AND. statproc >= 0 .AND. statproc < 254) THEN ! statistically processed
     CALL grib_get(gaid,'lengthOfTimeRange',p2g)
     CALL grib_get(gaid,'indicatorOfUnitForTimeRange',unit)
     CALL g2_interval_to_second(unit, p2g, p2)
@@ -871,8 +871,7 @@ ELSE IF (EditionNumber == 2) THEN
     CALL grib_set(gaid,'indicatorOfUnitOfTimeRange',unit)
     CALL grib_set(gaid,'forecastTime',p1)
 
-  ELSE IF (this%timerange >= 0 .AND. this%timerange <= 9 .OR. &
-   this%timerange >= 200 .AND. this%timerange <= 205) THEN
+  ELSE IF (this%timerange >= 0 .AND. this%timerange < 254) THEN
 ! statistically processed -> template 4.8
     CALL grib_set(gaid,'productDefinitionTemplateNumber', 8)
 
@@ -904,7 +903,7 @@ ELSE IF (EditionNumber == 2) THEN
       CALL grib_set(gaid,'lengthOfTimeRange',p2)
 
 ! warn about local use
-      IF (this%timerange >= 200 .AND. this%timerange <= 205) THEN
+      IF (this%timerange >= 192) THEN
         CALL l4f_log(L4F_WARN, &
          'coding in grib2 a nonstandard typeOfStatisticalProcessing '// &
          t2c(this%timerange))
@@ -912,17 +911,17 @@ ELSE IF (EditionNumber == 2) THEN
     ELSE ! bad timerange
       CALL l4f_log(L4F_ERROR, &
        'Timerange with 0>p1>p2 cannot be exported in grib2')
-      CALL raise_error()
+      CALL raise_fatal_error()
     ENDIF
   ELSE
     CALL l4f_log(L4F_ERROR, &
      'typeOfStatisticalProcessing not supported: '//TRIM(to_char(this%timerange)))
-    CALL raise_error()
+    CALL raise_fatal_error()
   ENDIF
 
 ELSE
   CALL l4f_log(L4F_ERROR,'GribEditionNumber '//t2c(EditionNumber)//' not supported')
-  CALL raise_error()
+  CALL raise_fatal_error()
 ENDIF
 
 CONTAINS
