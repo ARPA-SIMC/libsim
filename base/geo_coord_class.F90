@@ -53,8 +53,14 @@ INTEGER, PARAMETER :: fp_geo=fp_d
 !! polar geographical coordinates
 TYPE geo_coord
   PRIVATE
-  REAL(kind=fp_geo) :: lon, lat
+  INTEGER(kind=int_l) :: ilon, ilat
 END TYPE geo_coord
+
+TYPE geo_coord_r
+  PRIVATE
+  REAL(kind=fp_geo) :: lon, lat
+END TYPE geo_coord_r
+
 
 !> Derived type defining a one-dimensional array of georeferenced points
 !! with an associated topology (isolated point, arc, polygon, group of
@@ -66,7 +72,7 @@ TYPE geo_coordvect
 END TYPE geo_coordvect
 
 !> Missing value for geo_coord
-TYPE(geo_coord),PARAMETER :: geo_coord_miss=geo_coord(rdmiss,rdmiss)
+TYPE(geo_coord),PARAMETER :: geo_coord_miss=geo_coord(imiss,imiss)
 
 INTEGER, PARAMETER :: geo_coordvect_point = 1 !< Topology for geo_coordvect (from shapelib): isolated point
 INTEGER, PARAMETER :: geo_coordvect_arc = 3 !< Topology for geo_coordvect (from shapelib): arc (multiple arcs unsupported)
@@ -166,13 +172,27 @@ CONTAINS
 !! succede il contrario; non è possibile specificare le coordinate in entrambi
 !! i sistemi, usare eventualmente \a to_geo. Se non viene passato nessun parametro
 !! opzionale l'oggetto è inizializzato a valore mancante.
-SUBROUTINE geo_coord_init(this, lon, lat)
+SUBROUTINE geo_coord_init(this, lon, lat, ilon, ilat)
 TYPE(geo_coord) :: this !< oggetto da inizializzare
 REAL(kind=fp_geo), INTENT(IN), OPTIONAL :: lon !< longitudine geografica
 REAL(kind=fp_geo), INTENT(IN), OPTIONAL :: lat !< latitudine geografica
+integer(kind=int_l), INTENT(IN), OPTIONAL :: ilon !< integer longitudine geografica (nint(lon*1.e5)
+integer(kind=int_l), INTENT(IN), OPTIONAL :: ilat !< integer latitudine geografica (nint(lat*1.e5)
 
-CALL optio(lon, this%lon)
-CALL optio(lat, this%lat)
+real(kind=fp_geo) :: llon,llat
+
+CALL optio(ilon, this%ilon)
+CALL optio(ilat, this%ilat)
+
+if (.not. c_e(this%ilon)) then
+  CALL optio(lon, llon)
+  if (c_e(llon)) this%ilon=nint(llon*1.d5)
+end if
+
+if (.not. c_e(this%ilat)) then
+  CALL optio(lat, llat)
+  if (c_e(llat)) this%ilat=nint(llat*1.d5)
+end if
 
 END SUBROUTINE geo_coord_init
 
@@ -180,8 +200,8 @@ END SUBROUTINE geo_coord_init
 SUBROUTINE geo_coord_delete(this)
 TYPE(geo_coord), INTENT(INOUT) :: this !< oggetto da distruggre
 
-this%lon = rmiss
-this%lat = rmiss
+this%ilon = imiss
+this%ilat = imiss
 
 END SUBROUTINE geo_coord_delete
 
@@ -189,13 +209,18 @@ END SUBROUTINE geo_coord_delete
 !! Qualsiasi combinazione dei parametri opzionali è consentita; se
 !! il tipo di coordinata richiesta non è stato inizializzato né calcolato,
 !! restituisce il corrispondente valore mancante.
-elemental SUBROUTINE geo_coord_getval(this, lon, lat)
+elemental SUBROUTINE geo_coord_getval(this, lon, lat,ilon,ilat)
 TYPE(geo_coord),INTENT(IN) :: this !< oggetto di cui restituire i componenti
 REAL(kind=fp_geo), INTENT(OUT), OPTIONAL :: lon !< longitudine geografica
 REAL(kind=fp_geo), INTENT(OUT), OPTIONAL :: lat !< latitudine geografica
+integer(kind=int_l), INTENT(OUT), OPTIONAL :: ilon !< integer longitudine geografica (nint(lon*1.e5)
+integer(kind=int_l), INTENT(OUT), OPTIONAL :: ilat !< integer latitudine geografica (nint(lat*1.e5)
 
-IF (PRESENT(lon)) lon = this%lon
-IF (PRESENT(lat)) lat = this%lat
+IF (PRESENT(ilon)) ilon = getilon(this)
+IF (PRESENT(ilat)) ilat = getilat(this)
+
+IF (PRESENT(lon)) lon = getlon(this)
+IF (PRESENT(lat)) lat =  getlat(this)
 
 END SUBROUTINE geo_coord_getval
 
@@ -204,11 +229,23 @@ END SUBROUTINE geo_coord_getval
 !! Se la latitudine non è stata inizializzata né calcolata
 !! restituisce il corrispondente valore mancante.
 !! Nata per permettere operazioni vettorizzate
+elemental FUNCTION  getilat(this)
+TYPE(geo_coord),INTENT(IN) :: this !< oggetto di cui restituire latitudine
+integer(kind=int_l) :: getilat !< latitudine geografica
+
+getilat = this%ilat
+
+END FUNCTION getilat
+
+!> Restituisce la latitudine di uno o più componenti di un oggetto \a geo_coord.
+!! Se la latitudine non è stata inizializzata né calcolata
+!! restituisce il corrispondente valore mancante.
+!! Nata per permettere operazioni vettorizzate
 elemental FUNCTION  getlat(this)
 TYPE(geo_coord),INTENT(IN) :: this !< oggetto di cui restituire latitudine
-REAL(kind=fp_geo) :: getlat !< latitudine geografica
+real(kind=fp_geo) :: getlat !< latitudine geografica
 
-getlat = this%lat
+getlat = getilat(this)/1.d-5
 
 END FUNCTION getlat
 
@@ -216,11 +253,24 @@ END FUNCTION getlat
 !! Se la latitudine non è stata inizializzata né calcolata
 !! restituisce il corrispondente valore mancante.
 !! Nata per permettere operazioni vettorizzate
+elemental FUNCTION  getilon(this)
+TYPE(geo_coord),INTENT(IN) :: this !< oggetto di cui restituire latitudine
+integer(kind=int_l) :: getilon !< longitudine geografica
+
+getilon = this%ilon
+
+END FUNCTION getilon
+
+
+!> Restituisce la longitudine di uno o più componenti di un oggetto \a geo_coord.
+!! Se la latitudine non è stata inizializzata né calcolata
+!! restituisce il corrispondente valore mancante.
+!! Nata per permettere operazioni vettorizzate
 elemental FUNCTION  getlon(this)
 TYPE(geo_coord),INTENT(IN) :: this !< oggetto di cui restituire latitudine
-REAL(kind=fp_geo) :: getlon !< longitudine geografica
+real(kind=fp_geo) :: getlon !< longitudine geografica
 
-getlon = this%lon
+getlon = getilon(this)/1.d-5
 
 END FUNCTION getlon
 
@@ -229,7 +279,7 @@ elemental FUNCTION geo_coord_eq(this, that) RESULT(res)
 TYPE(geo_coord),INTENT(IN) :: this, that
 LOGICAL :: res
 
-res = (this%lon == that%lon .AND. this%lat == that%lat)
+res = (this%ilon == that%ilon .AND. this%ilat == that%ilat)
 
 END FUNCTION geo_coord_eq
 
@@ -238,7 +288,7 @@ elemental FUNCTION geo_coord_ge(this, that) RESULT(res)
 TYPE(geo_coord),INTENT(IN) :: this, that
 LOGICAL :: res
 
-res = (this%lon >= that%lon .AND. this%lat >= that%lat)
+res = (this%ilon >= that%ilon .AND. this%ilat >= that%ilat)
 
 END FUNCTION geo_coord_ge
 
@@ -247,7 +297,7 @@ elemental FUNCTION geo_coord_le(this, that) RESULT(res)
 TYPE(geo_coord),INTENT(IN) :: this, that
 LOGICAL :: res
 
-res = (this%lon <= that%lon .AND. this%lat <= that%lat)
+res = (this%ilon <= that%ilon .AND. this%ilat <= that%ilat)
 
 END FUNCTION geo_coord_le
 
@@ -256,7 +306,7 @@ elemental FUNCTION geo_coord_ne(this, that) RESULT(res)
 TYPE(geo_coord),INTENT(IN) :: this, that
 LOGICAL :: res
 
-res = (this%lon /= that%lon .OR. this%lat /= that%lat)
+res = .not. this == that 
 
 END FUNCTION geo_coord_ne
 
@@ -289,11 +339,11 @@ INTEGER :: i
 
 INQUIRE(unit, form=form)
 IF (form == 'FORMATTED') THEN
-  read(unit,*) (this(i)%lon,this(i)%lat, i=1,SIZE(this))
+  read(unit,*) (this(i)%ilon,this(i)%ilat, i=1,SIZE(this))
 !TODO bug gfortran compiler !
 !missing values are unredeable when formatted
 ELSE
-  READ(unit) (this(i)%lon,this(i)%lat, i=1,SIZE(this))
+  READ(unit) (this(i)%ilon,this(i)%ilat, i=1,SIZE(this))
 ENDIF
 
 END SUBROUTINE geo_coord_vect_read_unit
@@ -325,11 +375,11 @@ INTEGER :: i
 
 INQUIRE(unit, form=form)
 IF (form == 'FORMATTED') THEN
-  WRITE(unit,*) (this(i)%lon,this(i)%lat, i=1,SIZE(this))
+  WRITE(unit,*) (this(i)%ilon,this(i)%ilat, i=1,SIZE(this))
 !TODO bug gfortran compiler !
 !missing values are unredeable when formatted
 ELSE
-  WRITE(unit) (this(i)%lon,this(i)%lat, i=1,SIZE(this))
+  WRITE(unit) (this(i)%ilon,this(i)%ilat, i=1,SIZE(this))
 ENDIF
 
 END SUBROUTINE geo_coord_vect_write_unit
@@ -346,8 +396,8 @@ REAL(kind=fp_geo) :: dist !< distanza in metri
 REAL(kind=fp_geo) :: x,y
 ! Distanza approssimata, valida per piccoli angoli
 
-x = (this%lon-that%lon)*COS(((this%lat+this%lat)/2.)*degrad)
-y = (this%lat-that%lat)
+x = (getlon(this)-getlon(that))*COS(((getlat(this)+getlat(that))/2.)*degrad)
+y = getlat(this)-getlat(that)
 dist = SQRT(x**2 + y**2)*degrad*rearth
 
 END FUNCTION geo_coord_dist
@@ -456,7 +506,7 @@ TYPE(shpfileobject),OPTIONAL,INTENT(INOUT) :: shphandle
 INTEGER,OPTIONAL,INTENT(IN) :: nshp
 
 REAL(kind=fp_geo),ALLOCATABLE :: llon(:), llat(:)
-REAL(kind=fp_geo) :: lv1,lv2,lv3,lv4,lproj
+REAL(kind=fp_geo) :: lv1,lv2,lv3,lv4
 INTEGER :: i, lvsize
 CHARACTER(len=40) :: lname
 #ifdef HAVE_SHAPELIB
@@ -514,8 +564,7 @@ TYPE(shpfileobject),OPTIONAL,INTENT(INOUT) :: shphandle
 #endif
 INTEGER,OPTIONAL,INTENT(IN) :: nshp
 
-INTEGER :: i, lnshp, lproj
-CHARACTER(len=40) :: lname
+INTEGER :: i, lnshp
 #ifdef HAVE_SHAPELIB
 TYPE(shpobject) :: shpobj
 #endif
@@ -574,7 +623,6 @@ TYPE(geo_coordvect),POINTER :: this(:) !< puntatore all'oggetto su cui importare
 CHARACTER(len=*),INTENT(in),OPTIONAL :: shpfilesim !< nome del file in formato testo "SIM", il parametro deve essere fornito solo se si vuole importare da un file di quel tipo
 CHARACTER(len=*),INTENT(in),OPTIONAL :: shpfile !< nome delllo shapefile, il parametro deve essere fornito solo se si vuole importare da un file di quel tipo
 
-REAL(kind=fp_geo),ALLOCATABLE :: llon(:), llat(:)
 REAL(kind=fp_geo) :: inu
 REAL(kind=fp_d) :: minb(4), maxb(4)
 INTEGER :: i, u, ns, lvsize, shptype, dbfnf, dbfnr
@@ -648,11 +696,8 @@ CHARACTER(len=*),INTENT(in),OPTIONAL :: shpfile !< nome dello shapefile, il para
 !! esportati automaticamente nel solo sistema disponibile
 LOGICAL,INTENT(in),OPTIONAL :: append !< se è presente e vale \c .TRUE. , ::export accoda all'eventuale file esistente anziché sovrascriverlo
 
-REAL(kind=fp_geo),ALLOCATABLE :: llon(:), llat(:)
-REAL(kind=fp_geo) :: lv1,lv2,lv3,lv4
 REAL(kind=fp_d) :: minb(4), maxb(4)
 INTEGER :: i, u, ns, shptype, dbfnf, dbfnr
-CHARACTER(len=40) :: lname
 LOGICAL :: lappend
 #ifdef HAVE_SHAPELIB
 TYPE(shpfileobject) :: shphandle
@@ -732,12 +777,12 @@ ELSE ! Poligono non chiuso
   j = poly%vsize
 ENDIF
 DO i = starti, poly%vsize
-  IF ((poly%ll(i,2) <= this%lat .AND. &
-   this%lat < poly%ll(j,2)) .OR. &
-   (poly%ll(j,2) <= this%lat .AND. &
-   this%lat < poly%ll(i,2))) THEN
-    IF (this%lon < (poly%ll(j,1) - poly%ll(i,1)) * &
-     (this%lat - poly%ll(i,2)) / &
+  IF ((poly%ll(i,2) <= getlat(this) .AND. &
+   getlat(this) < poly%ll(j,2)) .OR. &
+   (poly%ll(j,2) <= getlat(this) .AND. &
+   getlat(this) < poly%ll(i,2))) THEN
+    IF (getlon(this) < (poly%ll(j,1) - poly%ll(i,1)) * &
+     (getlat(this) - poly%ll(i,2)) / &
      (poly%ll(j,2) - poly%ll(i,2)) + poly%ll(i,1)) THEN
       inside = .NOT. inside
     ENDIF

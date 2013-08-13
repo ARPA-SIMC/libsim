@@ -541,7 +541,7 @@ INTEGER :: i,ii, iii,n,n_ana,nn,nvarattr,istat,indattr
 integer :: nvar ,inddatiattr,inddativarattr
 integer :: nanavar ,indanavar,indanaattr,indanavarattr,nanavarattr
 
-REAL(kind=fp_geo) :: lat,lon
+INTEGER(kind=int_l) :: ilat,ilon
 CHARACTER(len=vol7d_ana_lenident) :: ident
 CHARACTER(len=10),allocatable :: lvar(:), lanavar(:)
 !INTEGER(kind=int_b)::attrdatib
@@ -660,23 +660,23 @@ if(ldegnet)call idba_set (this%handle,"query","best")
 
 if (present(coordmin)) then
 !  CALL geo_coord_to_geo(coordmin)
-  CALL getval(coordmin, lat=lat,lon=lon)
+  CALL getval(coordmin, ilat=ilat,ilon=ilon)
 
 #ifdef DEBUG
-  CALL l4f_category_log(this%category,L4F_DEBUG,'query coordmin:'//t2c(lon)//t2c(lat))
+  CALL l4f_category_log(this%category,L4F_DEBUG,'query coordmin:'//t2c(ilon)//t2c(ilat))
 #endif
-  call idba_set(this%handle,"lonmin",lon)
-  call idba_set(this%handle,"latmin",lat)
+  call idba_set(this%handle,"lonmin",ilon)
+  call idba_set(this%handle,"latmin",ilat)
 end if
 
 if (present(coordmax)) then
 !  CALL geo_coord_to_geo(coordmax)
-  CALL getval(coordmax, lat=lat,lon=lon)
+  CALL getval(coordmax, ilat=ilat,ilon=ilon)
 #ifdef DEBUG
-  CALL l4f_category_log(this%category,L4F_DEBUG,'query coordmax:'//t2c(lon)//t2c(lat))
+  CALL l4f_category_log(this%category,L4F_DEBUG,'query coordmax:'//t2c(ilon)//t2c(ilat))
 #endif
-  call idba_set(this%handle,"lonmax",lon)
-  call idba_set(this%handle,"latmax",lat)
+  call idba_set(this%handle,"lonmax",ilon)
+  call idba_set(this%handle,"latmax",ilat)
 end if
 
 if (present(timei)) then
@@ -796,8 +796,8 @@ do i=1,N
   call idba_enq (this%handle,"context_id",buffer(i)%data_id)
 
                                 !recupero i dati di anagrafica
-  call idba_enq (this%handle,"lat",   lat)
-  call idba_enq (this%handle,"lon",   lon)
+  call idba_enq (this%handle,"lat",   ilat)
+  call idba_enq (this%handle,"lon",   ilon)
   call idba_enq (this%handle,"ident",ident)
    
                                 !bufferizzo il contesto
@@ -805,7 +805,7 @@ do i=1,N
                                 !print*,year,month,day,hour,minute,sec
                                 !print*,btable,dato,buffer(i)%datiattrb
   
-  call init(buffer(i)%ana,lat=lat,lon=lon,ident=ident)
+  call init(buffer(i)%ana,ilat=ilat,ilon=ilon,ident=ident)
   call init(buffer(i)%time, year=year, month=month, day=day, hour=hour, minute=minute)
   call init(buffer(i)%level, rlevel1,rl1,rlevel2,rl2)
   call init(buffer(i)%timerange, rtimerange, p1, p2)
@@ -835,16 +835,16 @@ if(ldegnet)call idba_set (this%handle_staz,"query","best")
 
 if (present(coordmin)) then
 !  CALL geo_coord_to_geo(coordmin)
-  CALL getval(coordmin, lat=lat,lon=lon)
-  call idba_set(this%handle_staz,"lonmin",lon)
-  call idba_set(this%handle_staz,"latmin",lat)
+  CALL getval(coordmin, ilat=ilat,ilon=ilon)
+  call idba_set(this%handle_staz,"lonmin",ilon)
+  call idba_set(this%handle_staz,"latmin",ilat)
 end if
 
 if (present(coordmax)) then
 !  CALL geo_coord_to_geo(coordmax)
-  CALL getval(coordmax, lat=lat,lon=lon)
-  call idba_set(this%handle_staz,"lonmax",lon)
-  call idba_set(this%handle_staz,"latmax",lat)
+  CALL getval(coordmax, ilat=ilat,ilon=ilon)
+  call idba_set(this%handle_staz,"lonmax",ilon)
+  call idba_set(this%handle_staz,"latmax",ilat)
 end if
 
 nanavar=0
@@ -924,8 +924,8 @@ do i=1,N_ana
   call idba_enq (this%handle_staz,"context_id",bufferana(i)%data_id)
 
                                 !recupero i dati di anagrafica
-  call idba_enq (this%handle_staz,"lat",   lat)
-  call idba_enq (this%handle_staz,"lon",   lon)
+  call idba_enq (this%handle_staz,"lat",   ilat)
+  call idba_enq (this%handle_staz,"lon",   ilon)
   call idba_enq (this%handle_staz,"ident",ident)
    
                                 !bufferizzo il contesto
@@ -933,7 +933,7 @@ do i=1,N_ana
                                 !print*,year,month,day,hour,minute,sec
                                 !print*,btable,dato,buffer(i)%datiattrb
   
-  call init(bufferana(i)%ana,lat=lat,lon=lon,ident=ident)
+  call init(bufferana(i)%ana,ilat=ilat,ilon=ilon,ident=ident)
   call init(bufferana(i)%time, year=year, month=month, day=day, hour=hour, minute=minute)
   call init(bufferana(i)%level, rlevel1,rl1,rlevel2,rl2)
   call init(bufferana(i)%timerange, rtimerange, p1, p2)
@@ -1840,7 +1840,7 @@ integer :: nstaz,ntime,ntimerange,nlevel,nnetwork
 
 INTEGER :: i,ii,iii,iiii,iiiii,iiiiii,ind,inddatiattr,indanaattr
 
-REAL(kind=fp_geo) :: lat,lon 
+INTEGER(kind=int_l) :: ilat,ilon 
 !INTEGER(kind=int_b)::attrdatib
 
 
@@ -2055,15 +2055,15 @@ do iii=1, nnetwork
 
 
 !      CALL geo_coord_to_geo(this%vol7d%ana(i)%coord)
-      CALL getval(this%vol7d%ana(i)%coord, lat=lat,lon=lon)
+      CALL getval(this%vol7d%ana(i)%coord, ilat=ilat,ilon=ilon)
       call idba_unsetall (this%handle)
 #ifdef DEBUG
       CALL l4f_category_log(this%category,L4F_DEBUG,'unsetall handle')
 #endif
       call idba_setcontextana (this%handle)
 
-      call idba_set (this%handle,"lat",lat)
-      call idba_set (this%handle,"lon",lon)
+      call idba_set (this%handle,"lat",ilat)
+      call idba_set (this%handle,"lon",ilon)
 
       if (present(ident))then
          if (c_e(ident) .and. ident /= this%vol7d%ana(i)%ident ) cycle
@@ -2194,11 +2194,11 @@ do i=1, nstaz
 
       if (this%file)then
                                 ! writing on file cannot use ana_id
-        call getval(this%vol7d%ana(i)%coord, lat=lat,lon=lon)
-        call idba_set (this%handle,"lat",lat)
-        call idba_set (this%handle,"lon",lon)
+        call getval(this%vol7d%ana(i)%coord, ilat=ilat,ilon=ilon)
+        call idba_set (this%handle,"lat",ilat)
+        call idba_set (this%handle,"lon",ilon)
 #ifdef DEBUG
-        call l4f_category_log(this%category,L4F_DEBUG,"dati riferiti a lat: "//to_char(lat)//" lon: "//to_char(lon))
+        call l4f_category_log(this%category,L4F_DEBUG,"dati riferiti a lat: "//to_char(ilat)//" lon: "//to_char(ilon))
 #endif        
         if (present(ident))then
           if (c_e(ident) .and. ident /= this%vol7d%ana(i)%ident ) cycle
@@ -2728,7 +2728,7 @@ TYPE(vol7d_network),ALLOCATABLE :: networktmp(:)
 INTEGER :: i,ii, n, na, nd
 integer :: nvar, nanavar ,indanavar
 
-REAL(kind=fp_geo) :: lat,lon,latmin,latmax,lonmin,lonmax
+INTEGER(kind=int_l) :: ilat,ilon,latmin,latmax,lonmin,lonmax
 CHARACTER(len=vol7d_ana_lenident) :: ident
 !INTEGER(kind=int_b)::attrdatib
 
@@ -2860,8 +2860,8 @@ do while ( N > 0 )
                                 ! IF (ind<1) cycle ! non c'e'
 
                                 !recupero i dati di anagrafica
-    call idba_enq (this%handle,"lat",   lat)
-    call idba_enq (this%handle,"lon",   lon)
+    call idba_enq (this%handle,"lat",   ilat)
+    call idba_enq (this%handle,"lon",   ilon)
     call idba_enq (this%handle,"ident",ident)
 
     ! inizio la serie dei test con i parametri richiesti 
@@ -2883,18 +2883,18 @@ do while ( N > 0 )
     if (present(coordmin)) then
 !      CALL geo_coord_to_geo(coordmin)
       if (c_e(coordmin)) then
-        CALL getval(coordmin, lat=latmin,lon=lonmin)
-        if (lonmin > lon) cycle
-        if (latmin > lat) cycle
+        CALL getval(coordmin, ilat=latmin,ilon=lonmin)
+        if (lonmin > ilon) cycle
+        if (latmin > ilat) cycle
       end if
     end if
 
     if (present(coordmax)) then
 !      CALL geo_coord_to_geo(coordmax)
       if (c_e(coordmax)) then
-        CALL getval(coordmax, lat=latmax,lon=lonmax)
-        if (lonmax < lon) cycle
-        if (latmax < lat) cycle
+        CALL getval(coordmax, ilat=latmax,ilon=lonmax)
+        if (lonmax < ilon) cycle
+        if (latmax < ilat) cycle
       end if
     end if
 
@@ -2962,7 +2962,7 @@ do while ( N > 0 )
                                 !print*,btable,dato,buffer(nd)%datiattrb
   
 
-      call init(buffer(nd)%ana,lat=lat,lon=lon,ident=ident)
+      call init(buffer(nd)%ana,ilat=ilat,ilon=ilon,ident=ident)
       call init(buffer(nd)%time, year=year, month=month, day=day, hour=hour, minute=minute)
       call init(buffer(nd)%level, rlevel1,rl1,rlevel2,rl2)
       call init(buffer(nd)%timerange, rtimerange, p1, p2)
@@ -3034,7 +3034,7 @@ do while ( N > 0 )
                                 !print*,year,month,day,hour,minute,sec
                                 !print*,btable,na
   
-      call init(bufferana(na)%ana,lat=lat,lon=lon,ident=ident)
+      call init(bufferana(na)%ana,ilat=ilat,ilon=ilon,ident=ident)
       call init(bufferana(na)%time, year=year, month=month, day=day, hour=hour, minute=minute)
       call init(bufferana(na)%level, rlevel1,rl1,rlevel2,rl2)
       call init(bufferana(na)%timerange, rtimerange, p1, p2)
