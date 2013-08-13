@@ -433,20 +433,25 @@ DO WHILE (time <= tf)
   end if
 #endif
 
+
+  ! prepare data_id to be recreated
+  deallocate(v7ddballe%data_id)
+  nullify(v7ddballe%data_id)
+
   if (v7dqcspa%operation == "run") then
     call l4f_category_log(category,L4F_INFO,"start export data")
     !call display(v7ddballe%vol7d)
 
-    deallocate(v7ddballe%data_id)
+    ! data_id to use is the new one
     v7ddballe%data_id => v7dqcspa%data_id_out
-    
     CALL export(v7ddballe,attr_only=.true.)
     call l4f_category_log(category,L4F_INFO,"end export data")
   end if
 
-  call delete(v7ddballe)
-  nullify(v7dqcspa%data_id_out)
   call delete(v7dqcspa)
+  ! data_id was allready deleted
+  nullify(v7ddballe%data_id)
+  call delete(v7ddballe)
 
 end do
 
