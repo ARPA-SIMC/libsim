@@ -1015,15 +1015,11 @@ TYPE(vol7d_ana), INTENT(in) :: ana
 TYPE(c_ptr),VALUE :: genericptr
 
 CHARACTER(len=64),POINTER :: col
-REAL(kind=fp_geo) :: l1, l2
 
 CALL C_F_POINTER(genericptr, col)
-CALL getval(ana%coord, lon=l1, lat=l2)
-IF (c_e(l1).AND.c_e(l2)) THEN
-  col = t2c(l1)//','//t2c(l2)
-ELSE
-  col = ','
-ENDIF
+
+col = trim(ADJUSTL(to_char(getlon(ana%coord),miss="",form="(f10.5)")))//&
+ ','//trim(ADJUSTL(to_char(getlat(ana%coord),miss="",form="(f10.5)")))
 
 END SUBROUTINE default_vol7d_ana_callback
 

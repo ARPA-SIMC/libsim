@@ -70,7 +70,6 @@ CHARACTER(len=24) :: csv_time
 CHARACTER(len=12) :: csv_simpletime, csv_simplevertime
 CHARACTER(len=3) :: ch3
 LOGICAL,ALLOCATABLE :: key_mask(:)
-DOUBLE PRECISION :: coord
 
 #ifdef DEBUG
 ! expensive checks
@@ -117,7 +116,11 @@ IF (SIZE(v7d%dativar%r) /= SIZE(vg6d%var)) THEN
 ENDIF
 #endif
 
-ncol = word_split(output_keys, w_s, w_e, ',')
+if (len_trim(output_keys) > 0) then 
+  ncol = word_split(output_keys, w_s, w_e, ',')
+else
+  ncol=0
+end if
 ALLOCATE(key_mask(ncol))
 key_mask(:) = .FALSE.
 
@@ -156,11 +159,9 @@ DO l = 1, SIZE(vg6d%time)
 ! TODO add keys: iindex, jindex, kindex, var_description
               SELECT CASE(output_keys(w_s(n):w_e(n)))
               CASE('lon')
-                CALL getval(v7d%ana(np)%coord, lon=coord)
-                CALL csv_record_addfield_miss(csvline, coord)
+                CALL csv_record_addfield_miss(csvline, trim(ADJUSTL(to_char(getlon(v7d%ana(np)%coord),miss="",form="(f10.5)"))))
               CASE('lat')
-                CALL getval(v7d%ana(np)%coord, lat=coord)
-                CALL csv_record_addfield_miss(csvline, coord)
+                CALL csv_record_addfield_miss(csvline, trim(ADJUSTL(to_char(getlat(v7d%ana(np)%coord),miss="",form="(f10.5)"))))
               CASE('npoint')
                 CALL csv_record_addfield(csvline, TRIM(to_char(np)))
               CASE('isodate')
@@ -238,7 +239,7 @@ DO l = 1, SIZE(vg6d%time)
   ENDDO
 ENDDO
 
-DEALLOCATE(key_mask, w_s, w_e)
+if (ncol > 0) DEALLOCATE(key_mask, w_s, w_e)
 
 END SUBROUTINE grib_api_csv_export
 
