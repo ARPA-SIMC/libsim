@@ -56,22 +56,18 @@ INTERFACE delete
   MODULE PROCEDURE vol7d_ana_delete
 END INTERFACE
 
-!> Operatore logico di uguaglianza tra oggetti della classe vol7d_ana.
-!! Funziona anche per 
-!! confronti di tipo array-array (qualsiasi n. di dimensioni) e di tipo
-!! scalare-vettore(1-d) (ma non vettore(1-d)-scalare o tra array con più
-!! di 1 dimensione e scalari).
+!> Logical equality operator for objects of \a vol7d_ana class.
+!! It is defined as \a ELEMENTAL thus it works also with conformal arrays
+!! of any shape.
 INTERFACE OPERATOR (==)
-  MODULE PROCEDURE vol7d_ana_eq, vol7d_ana_eqsv
+  MODULE PROCEDURE vol7d_ana_eq
 END INTERFACE
 
-!> Operatore logico di disuguaglianza tra oggetti della classe vol7d_ana.
-!! Funziona anche per 
-!! confronti di tipo array-array (qualsiasi n. di dimensioni) e di tipo
-!! scalare-vettore(1-d) (ma non vettore(1-d)-scalare o tra array con più
-!! di 1 dimensione e scalari).
+!> Logical inequality operator for objects of \a vol7d_level class.
+!! It is defined as \a ELEMENTAL thus it works also with conformal arrays
+!! of any shape.
 INTERFACE OPERATOR (/=)
-  MODULE PROCEDURE vol7d_ana_ne, vol7d_ana_nesv
+  MODULE PROCEDURE vol7d_ana_ne
 END INTERFACE
 
 !> Legge un oggetto vol7d_ana o un vettore di oggetti vol7d_ana da
@@ -160,7 +156,7 @@ print*,"ANA: ",this%ident,lon,lat
 end subroutine display_ana
 
 
-elemental FUNCTION vol7d_ana_eq(this, that) RESULT(res)
+ELEMENTAL FUNCTION vol7d_ana_eq(this, that) RESULT(res)
 TYPE(vol7d_ana),INTENT(IN) :: this, that
 LOGICAL :: res
 
@@ -169,39 +165,13 @@ res = this%coord == that%coord .AND. this%ident == that%ident
 END FUNCTION vol7d_ana_eq
 
 
-FUNCTION vol7d_ana_eqsv(this, that) RESULT(res)
-TYPE(vol7d_ana),INTENT(IN) :: this, that(:)
-LOGICAL :: res(SIZE(that))
-
-INTEGER :: i
-
-DO i = 1, SIZE(that)
-  res(i) = this == that(i)
-ENDDO
-
-END FUNCTION vol7d_ana_eqsv
-
-
-elemental FUNCTION vol7d_ana_ne(this, that) RESULT(res)
+ELEMENTAL FUNCTION vol7d_ana_ne(this, that) RESULT(res)
 TYPE(vol7d_ana),INTENT(IN) :: this, that
 LOGICAL :: res
 
 res = .NOT.(this == that)
 
 END FUNCTION vol7d_ana_ne
-
-
-FUNCTION vol7d_ana_nesv(this, that) RESULT(res)
-TYPE(vol7d_ana),INTENT(IN) :: this, that(:)
-LOGICAL :: res(SIZE(that))
-
-INTEGER :: i
-
-DO i = 1, SIZE(that)
-  res(i) = .NOT.(this == that(i))
-ENDDO
-
-END FUNCTION vol7d_ana_nesv
 
 
 !> This method reads from a Fortran file unit the contents of the

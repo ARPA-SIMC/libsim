@@ -245,7 +245,7 @@ elemental FUNCTION  getlat(this)
 TYPE(geo_coord),INTENT(IN) :: this !< oggetto di cui restituire latitudine
 real(kind=fp_geo) :: getlat !< latitudine geografica
 
-getlat = getilat(this)/1.d-5
+getlat = getilat(this)*1.d-5
 
 END FUNCTION getlat
 
@@ -270,7 +270,7 @@ elemental FUNCTION  getlon(this)
 TYPE(geo_coord),INTENT(IN) :: this !< oggetto di cui restituire latitudine
 real(kind=fp_geo) :: getlon !< longitudine geografica
 
-getlon = getilon(this)/1.d-5
+getlon = getilon(this)*1.d-5
 
 END FUNCTION getlon
 
