@@ -333,12 +333,14 @@ END SUBROUTINE vol7d_dballe_init
 !! var e network sono scalari.
 
 SUBROUTINE vol7d_dballe_importvsns(this, var, network, coordmin, coordmax, timei, timef,level,timerange, set_network,&
- attr,anavar,anaattr, varkind,attrkind,anavarkind,anaattrkind)
+ attr,anavar,anaattr, varkind,attrkind,anavarkind,anaattrkind,anaonly,ana)
 TYPE(vol7d_dballe),INTENT(inout) :: this  !< oggetto vol7d_dballe
 CHARACTER(len=*),INTENT(in) :: var  !< variabile da importare secondo la tabella B locale o relativi alias
 !> coordinate minime e massime che definiscono il 
 !! rettangolo di estrazione per l'importazione
-TYPE(geo_coord),INTENT(inout),optional :: coordmin,coordmax 
+TYPE(geo_coord),INTENT(inout),optional :: coordmin,coordmax
+!> station coordinate for selected extraction
+TYPE(vol7d_ana),INTENT(inout),optional :: ana
 !>estremi temporali (inizio e fine) dell'estrazione per l'importazione
 TYPE(datetime),INTENT(in),optional :: timei, timef
 TYPE(vol7d_network),INTENT(in),optional :: network !< network da importare
@@ -382,9 +384,10 @@ CHARACTER(len=*),INTENT(in),OPTIONAL :: anavarkind(:)
 !! - "d" = double precision
 !! - "c" = character 
 CHARACTER(len=*),INTENT(in),OPTIONAL :: anaattrkind(:)
+logical,intent(in),optional :: anaonly !< extract ana data only
 
 CALL import(this, (/var/), network, coordmin, coordmax, timei, timef,level,timerange, set_network,&
- attr,anavar,anaattr, varkind,attrkind,anavarkind,anaattrkind)
+ attr,anavar,anaattr, varkind,attrkind,anavarkind,anaattrkind,anaonly,ana)
 
 END SUBROUTINE vol7d_dballe_importvsns
 
@@ -393,10 +396,11 @@ END SUBROUTINE vol7d_dballe_importvsns
 !!import da DB-all.e
 
 SUBROUTINE vol7d_dballe_importvsnv(this, var, network, coordmin, coordmax, timei, timef,level,timerange, set_network,&
- attr,anavar,anaattr, varkind,attrkind,anavarkind,anaattrkind)
+ attr,anavar,anaattr, varkind,attrkind,anavarkind,anaattrkind,anaonly,ana)
 TYPE(vol7d_dballe),INTENT(inout) :: this !< oggetto vol7d_dballe
 CHARACTER(len=*),INTENT(in) :: var
-TYPE(geo_coord),INTENT(inout),optional :: coordmin,coordmax 
+TYPE(geo_coord),INTENT(inout),optional :: coordmin,coordmax
+TYPE(vol7d_ana),INTENT(inout),optional :: ana
 TYPE(datetime),INTENT(in),optional :: timei, timef
 TYPE(vol7d_network),INTENT(in) :: network(:)
 TYPE(vol7d_network),INTENT(in),OPTIONAL :: set_network
@@ -404,6 +408,7 @@ TYPE(vol7d_level),INTENT(in),optional :: level
 TYPE(vol7d_timerange),INTENT(in),optional :: timerange
 CHARACTER(len=*),INTENT(in),OPTIONAL :: attr(:),anavar(:),anaattr(:)
 CHARACTER(len=*),INTENT(in),OPTIONAL :: varkind(:),attrkind(:),anavarkind(:),anaattrkind(:)
+logical,intent(in),optional :: anaonly
 
 
 INTEGER :: i
@@ -412,13 +417,13 @@ if (size(network) == 0) then
 
   CALL import(this, (/var/), coordmin=coordmin, coordmax=coordmax, timei=timei, timef=timef, level=level,&
    timerange=timerange,set_network=set_network, attr=attr,anavar=anavar,anaattr=anaattr,&
-   varkind=varkind,attrkind=attrkind,anavarkind=anavarkind,anaattrkind=anaattrkind)
+   varkind=varkind,attrkind=attrkind,anavarkind=anavarkind,anaattrkind=anaattrkind,anaonly=anaonly,ana=ana)
 
 else
 
   DO i = 1, SIZE(network)
     CALL import(this, (/var/), network(i), coordmin, coordmax, timei, timef, level,timerange,set_network,&
-     attr,anavar,anaattr, varkind,attrkind,anavarkind,anaattrkind)
+     attr,anavar,anaattr, varkind,attrkind,anavarkind,anaattrkind,anaonly,ana)
   ENDDO
 end if
 
@@ -431,10 +436,11 @@ END SUBROUTINE vol7d_dballe_importvsnv
 !!import da DB-all.e
 
 SUBROUTINE vol7d_dballe_importvvnv(this, var, network, coordmin,coordmax, timei, timef, level,timerange,set_network,&
- attr,anavar,anaattr, varkind,attrkind,anavarkind,anaattrkind)
+ attr,anavar,anaattr, varkind,attrkind,anavarkind,anaattrkind,anaonly,ana)
 TYPE(vol7d_dballe),INTENT(inout) :: this !< oggetto vol7d_dballe
 CHARACTER(len=*),INTENT(in) :: var(:)
 TYPE(geo_coord),INTENT(inout),optional :: coordmin,coordmax 
+TYPE(vol7d_ana),INTENT(inout),optional :: ana
 TYPE(datetime),INTENT(in),optional :: timei, timef
 TYPE(vol7d_network),INTENT(in) :: network(:)
 TYPE(vol7d_network),INTENT(in),OPTIONAL :: set_network
@@ -442,17 +448,18 @@ TYPE(vol7d_level),INTENT(in),optional :: level
 TYPE(vol7d_timerange),INTENT(in),optional :: timerange
 CHARACTER(len=*),INTENT(in),OPTIONAL :: attr(:),anavar(:),anaattr(:)
 CHARACTER(len=*),INTENT(in),OPTIONAL :: varkind(:),attrkind(:),anavarkind(:),anaattrkind(:)
+logical,intent(in),optional :: anaonly
 
 INTEGER :: i
 
 if (size(network) == 0 )then
   CALL import(this,var, coordmin=coordmin, coordmax=coordmax, timei=timei, timef=timef, level=level,&
    timerange=timerange,set_network=set_network, attr=attr,anavar=anavar,anaattr=anaattr,&
-   varkind=varkind,attrkind=attrkind,anavarkind=anavarkind,anaattrkind=anaattrkind)
+   varkind=varkind,attrkind=attrkind,anavarkind=anavarkind,anaattrkind=anaattrkind,anaonly=anaonly,ana=ana)
 else
   DO i = 1, SIZE(network)
     CALL import(this, var, network(i), coordmin, coordmax, timei, timef, level,timerange,set_network,&
-     attr,anavar,anaattr, varkind,attrkind,anavarkind,anaattrkind)
+     attr,anavar,anaattr, varkind,attrkind,anavarkind,anaattrkind,anaonly,ana)
   ENDDO
 end if
 
@@ -463,11 +470,12 @@ END SUBROUTINE vol7d_dballe_importvvnv
 !!import da DB-all.e oppure da BUFR/CREX formato generico
 
 SUBROUTINE vol7d_dballe_importvvns(this, var, network, coordmin, coordmax, timei, timef,level,timerange, set_network,&
- attr,anavar,anaattr, varkind,attrkind,anavarkind,anaattrkind,anaonly)
+ attr,anavar,anaattr, varkind,attrkind,anavarkind,anaattrkind,anaonly,ana)
 
 TYPE(vol7d_dballe),INTENT(inout) :: this !< oggetto vol7d_dballe
 CHARACTER(len=*),INTENT(in),optional :: var(:)
-TYPE(geo_coord),INTENT(inout),optional :: coordmin,coordmax 
+TYPE(geo_coord),INTENT(inout),optional :: coordmin,coordmax
+TYPE(vol7d_ana),INTENT(inout),optional :: ana
 TYPE(datetime),INTENT(in),OPTIONAL :: timei, timef
 TYPE(vol7d_network),INTENT(in),OPTIONAL :: network,set_network
 TYPE(vol7d_level),INTENT(in),optional :: level
@@ -479,7 +487,7 @@ logical,intent(in),optional :: anaonly
 if (this%file) then
 
   call vol7d_dballe_importvvns_file(this, var, network, coordmin, coordmax, timei, timef,level,timerange, set_network,&
-   attr,anavar,anaattr, varkind,attrkind,anavarkind,anaattrkind,anaonly)
+   attr,anavar,anaattr, varkind,attrkind,anavarkind,anaattrkind,anaonly,ana)
 
 else
   if (optio_log(anaonly)) then
@@ -488,7 +496,7 @@ else
   end if
 
   call vol7d_dballe_importvvns_dba(this, var, network, coordmin, coordmax, timei, timef,level,timerange, set_network,&
-   attr,anavar,anaattr, varkind,attrkind,anavarkind,anaattrkind)
+   attr,anavar,anaattr, varkind,attrkind,anavarkind,anaattrkind,ana)
   
 end if
 
@@ -500,11 +508,12 @@ end SUBROUTINE vol7d_dballe_importvvns
 !!
 !!import da DB-all.e
 SUBROUTINE vol7d_dballe_importvvns_dba(this, var, network, coordmin, coordmax, timei, timef,level,timerange, set_network,&
- attr,anavar,anaattr, varkind,attrkind,anavarkind,anaattrkind)
+ attr,anavar,anaattr, varkind,attrkind,anavarkind,anaattrkind,ana)
 
 TYPE(vol7d_dballe),INTENT(inout) :: this !< oggetto vol7d_dballe
 CHARACTER(len=*),INTENT(in),OPTIONAL :: var(:)
 TYPE(geo_coord),INTENT(inout),optional :: coordmin,coordmax 
+TYPE(vol7d_ana),INTENT(inout),optional :: ana
 TYPE(datetime),INTENT(in),OPTIONAL :: timei, timef
 TYPE(vol7d_network),INTENT(in),OPTIONAL :: network,set_network
 TYPE(vol7d_level),INTENT(in),optional :: level
@@ -679,6 +688,17 @@ if (present(coordmax)) then
   call idba_set(this%handle,"latmax",ilat)
 end if
 
+if (present(ana)) then
+  CALL getval(ana%coord, ilat=ilat,ilon=ilon)
+#ifdef DEBUG
+  CALL l4f_category_log(this%category,L4F_DEBUG,'query coord:'//t2c(ilon)//t2c(ilat))
+  CALL l4f_category_log(this%category,L4F_DEBUG,'query ident:'//ana%ident)
+#endif
+  call idba_set(this%handle,"lon",ilon)
+  call idba_set(this%handle,"lat",ilat)
+  call idba_set(this%handle,"ident",ana%ident)
+end if
+
 if (present(timei)) then
   if (c_e(timei)) then
 #ifdef DEBUG
@@ -845,6 +865,13 @@ if (present(coordmax)) then
   CALL getval(coordmax, ilat=ilat,ilon=ilon)
   call idba_set(this%handle_staz,"lonmax",ilon)
   call idba_set(this%handle_staz,"latmax",ilat)
+end if
+
+if (present(ana)) then
+  CALL getval(ana%coord, ilat=ilat,ilon=ilon)
+  call idba_set(this%handle_staz,"lon",ilon)
+  call idba_set(this%handle_staz,"lat",ilat)
+  call idba_set(this%handle_staz,"ident",ana%ident)
 end if
 
 nanavar=0
@@ -1764,8 +1791,8 @@ END SUBROUTINE vol7d_dballe_importvvns_dba
 !! Riscrive i dati nel DSN di DB-All.e con la possibilità di attivare
 !! una serie di filtri.
 
-SUBROUTINE vol7d_dballe_export(this, network, coordmin, coordmax, ident,&
- timei, timef,level,timerange,var,attr,anavar,anaattr,attr_only,template)
+SUBROUTINE vol7d_dballe_export(this, network, coordmin, coordmax,&
+ timei, timef,level,timerange,var,attr,anavar,anaattr,attr_only,template,ana)
 
 !> \todo gestire il filtro staz_id la qual cosa vuol dire aggiungere un id nel type ana
 
@@ -1774,7 +1801,7 @@ character(len=network_name_len),INTENT(in),optional :: network !< network da exp
 !> coordinate minime e massime che definiscono il 
 !! rettangolo di estrazione per l'esportazione
 TYPE(geo_coord),INTENT(in),optional :: coordmin,coordmax 
-CHARACTER(len=vol7d_ana_lenident),optional :: ident !< identificativo della stazione da exportare
+TYPE(vol7d_ana),INTENT(inout),optional :: ana  !< identificativo della stazione da exportare
 !>estremi temporali dei dati da esportare
 TYPE(datetime),INTENT(in),optional :: timei, timef
 TYPE(vol7d_level),INTENT(in),optional :: level !< livello selezionato per l'esportazione
@@ -2065,8 +2092,9 @@ do iii=1, nnetwork
       call idba_set (this%handle,"lat",ilat)
       call idba_set (this%handle,"lon",ilon)
 
-      if (present(ident))then
-         if (c_e(ident) .and. ident /= this%vol7d%ana(i)%ident ) cycle
+      if (present(ana))then
+         if (c_e(ana%ident) .and. ana%ident /= this%vol7d%ana(i)%ident ) cycle
+         if (c_e(ana%coord) .and. ana%coord /= this%vol7d%ana(i)%coord ) cycle
       end if
 
       if ( c_e(this%vol7d%ana(i)%ident)) then
@@ -2200,8 +2228,8 @@ do i=1, nstaz
 #ifdef DEBUG
         call l4f_category_log(this%category,L4F_DEBUG,"dati riferiti a lat: "//to_char(ilat)//" lon: "//to_char(ilon))
 #endif        
-        if (present(ident))then
-          if (c_e(ident) .and. ident /= this%vol7d%ana(i)%ident ) cycle
+        if (present(ana))then
+          if (c_e(ana%ident) .and. ana%ident /= this%vol7d%ana(i)%ident ) cycle
         end if
           
         if ( c_e(this%vol7d%ana(i)%ident)) then
@@ -2696,11 +2724,12 @@ END FUNCTION v7d_dballe_error_handler
 !! Attributes will not be imported at all.
 
 SUBROUTINE vol7d_dballe_importvvns_file(this, var, network, coordmin, coordmax, timei, timef,level,timerange, set_network,&
- attr,anavar,anaattr, varkind,attrkind,anavarkind,anaattrkind,anaonly)
+ attr,anavar,anaattr, varkind,attrkind,anavarkind,anaattrkind,anaonly,ana)
 
 TYPE(vol7d_dballe),INTENT(inout) :: this !< oggetto vol7d_dballe
 CHARACTER(len=*),INTENT(in),OPTIONAL :: var(:)
-TYPE(geo_coord),INTENT(inout),optional :: coordmin,coordmax 
+TYPE(geo_coord),INTENT(inout),optional :: coordmin,coordmax
+TYPE(vol7d_ana),INTENT(inout),optional :: ana
 TYPE(datetime),INTENT(in),OPTIONAL :: timei, timef
 TYPE(vol7d_network),INTENT(in),OPTIONAL :: network,set_network
 TYPE(vol7d_level),INTENT(in),optional :: level
@@ -2728,7 +2757,7 @@ TYPE(vol7d_network),ALLOCATABLE :: networktmp(:)
 INTEGER :: i,ii, n, na, nd
 integer :: nvar, nanavar ,indanavar
 
-INTEGER(kind=int_l) :: ilat,ilon,latmin,latmax,lonmin,lonmax
+INTEGER(kind=int_l) :: ilat,ilon,latmin,latmax,lonmin,lonmax,ilata,ilona
 CHARACTER(len=vol7d_ana_lenident) :: ident
 !INTEGER(kind=int_b)::attrdatib
 
@@ -2895,6 +2924,18 @@ do while ( N > 0 )
         CALL getval(coordmax, ilat=latmax,ilon=lonmax)
         if (lonmax < ilon) cycle
         if (latmax < ilat) cycle
+      end if
+    end if
+
+
+    if (present(ana)) then
+      if (c_e(ana%coord)) then
+        CALL getval(ana%coord, ilat=ilata,ilon=ilona)
+        if (ilona /= ilon) cycle
+        if (ilata /= ilat) cycle
+      end if
+      if (c_e(ana%ident)) then
+        if (ana%ident /= ident) cycle
       end if
     end if
 
