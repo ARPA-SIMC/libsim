@@ -672,7 +672,7 @@ if (present(coordmin)) then
   CALL getval(coordmin, ilat=ilat,ilon=ilon)
 
 #ifdef DEBUG
-  CALL l4f_category_log(this%category,L4F_DEBUG,'query coordmin:'//t2c(ilon)//t2c(ilat))
+  CALL l4f_category_log(this%category,L4F_DEBUG,'query coordmin:'//t2c(ilon,miss="missing")//"/"//t2c(ilat,miss="missing"))
 #endif
   call idba_set(this%handle,"lonmin",ilon)
   call idba_set(this%handle,"latmin",ilat)
@@ -682,7 +682,7 @@ if (present(coordmax)) then
 !  CALL geo_coord_to_geo(coordmax)
   CALL getval(coordmax, ilat=ilat,ilon=ilon)
 #ifdef DEBUG
-  CALL l4f_category_log(this%category,L4F_DEBUG,'query coordmax:'//t2c(ilon)//t2c(ilat))
+  CALL l4f_category_log(this%category,L4F_DEBUG,'query coordmax:'//t2c(ilon,miss="missing")//"/"//t2c(ilat,miss="missing"))
 #endif
   call idba_set(this%handle,"lonmax",ilon)
   call idba_set(this%handle,"latmax",ilat)
@@ -691,12 +691,17 @@ end if
 if (present(ana)) then
   CALL getval(ana%coord, ilat=ilat,ilon=ilon)
 #ifdef DEBUG
-  CALL l4f_category_log(this%category,L4F_DEBUG,'query coord:'//t2c(ilon)//t2c(ilat))
-  CALL l4f_category_log(this%category,L4F_DEBUG,'query ident:'//ana%ident)
+  CALL l4f_category_log(this%category,L4F_DEBUG,'query coord:'//t2c(ilon,miss="missing")//"/"//t2c(ilat,miss="missing"))
+  CALL l4f_category_log(this%category,L4F_DEBUG,'query ident:'//t2c(ana%ident,miss="missing"))
 #endif
   call idba_set(this%handle,"lon",ilon)
   call idba_set(this%handle,"lat",ilat)
-  call idba_set(this%handle,"ident",ana%ident)
+  if (c_e(ana%ident)) then
+    call idba_set(this%handle,"ident",ana%ident)
+    call idba_set(this%handle,"mobile",1)
+  else
+    call idba_set(this%handle,"mobile",0)
+  end if
 end if
 
 if (present(timei)) then
@@ -871,7 +876,12 @@ if (present(ana)) then
   CALL getval(ana%coord, ilat=ilat,ilon=ilon)
   call idba_set(this%handle_staz,"lon",ilon)
   call idba_set(this%handle_staz,"lat",ilat)
-  call idba_set(this%handle_staz,"ident",ana%ident)
+  if (c_e(ana%ident)) then
+    call idba_set(this%handle_staz,"ident",ana%ident)
+    call idba_set(this%handle_staz,"mobile",1)
+  else
+    call idba_set(this%handle_staz,"mobile",0)
+  end if
 end if
 
 nanavar=0

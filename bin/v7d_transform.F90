@@ -75,9 +75,11 @@ CHARACTER(len=10) :: trans_level_type
 CHARACTER(len=10), ALLOCATABLE :: vl(:), avl(:), al(:), alqc(:),vl_alc(:)
 CHARACTER(len=23) :: start_date, end_date
 CHARACTER(len=20) :: levelc, timerangec
+CHARACTER(len=50) :: anac
 TYPE(datetime) :: s_d, e_d
 TYPE(vol7d_level) :: level
 TYPE(vol7d_timerange) :: timerange
+TYPE(vol7d_ana) :: ana
 INTEGER :: ilevel_type, olevel_type
 TYPE(vol7d_level) :: ilevel, olevel
 TYPE(vol7d_level),ALLOCATABLE :: olevel_list(:)
@@ -90,8 +92,9 @@ TYPE(qcclitype) :: qccli
 TYPE(arrayof_georef_coord_array) :: poly
 DOUBLE PRECISION,ALLOCATABLE :: lon_array(:), lat_array(:)
 INTEGER :: polytopo
-DOUBLE PRECISION ::  ilon, ilat, flon, flat
+DOUBLE PRECISION ::  ilon, ilat, flon, flat, lat, lon
 DOUBLE PRECISION ::  ielon, ielat, felon, felat
+CHARACTER(len=vol7d_ana_lenident) :: ident !< identificativo per una stazione mobile (es. aereo)
 TYPE(geo_coord) :: coordmin,coordmax 
 TYPE(transform_def) :: trans
 #ifdef HAVE_DBALLE
@@ -249,6 +252,10 @@ CALL optionparser_add(opt, ' ', 'timerange', timerangec, ',,', help= &
  'if input-format is of database type, timerange to be extracted &
  &in the form timerange,p1,p2 empty fields indicate missing data, &
  &default is all timeranges in database')
+CALL optionparser_add(opt, ' ', 'ana', anac, ',,,', help= &
+ 'if input-format is of database type, ana to be extracted &
+ &in the form lon,lat,ident empty fields indicate missing data, &
+ &default is all ana in database')
 CALL optionparser_add(opt, ' ', 'set-network', set_network, '', help= &
  'if input-format is of database type, collapse all the input data into a single &
  &pseudo-network with the given name, empty for keeping the original networks')
@@ -621,6 +628,21 @@ CALL csv_record_getfield(argparse, i3)
 CALL init(timerange, timerange=i1, p1=i2, p2=i3)
 CALL delete(argparse)
 
+! check ana
+CALL init(argparse, anac, ',', nfield=n)
+IF (n < 3) THEN
+  CALL l4f_category_log(category, L4F_ERROR, &
+   'error in command-line parameters, wrong syntax for --ana: ' &
+   //TRIM(anac))
+  CALL raise_fatal_error()
+ENDIF
+CALL csv_record_getfield(argparse, lon)
+CALL csv_record_getfield(argparse, lat)
+CALL csv_record_getfield(argparse, ident)
+if (len_trim(ident) == 0)ident=cmiss  
+CALL init(ana, lat=lat, lon=lon, ident=ident)
+CALL delete(argparse)
+
 ! check comp_stat_proc
 istat_proc = imiss
 ostat_proc = imiss
@@ -793,7 +815,7 @@ DO ninput = optind, iargc()-1
     ENDIF
 
     IF (c_e(level) .OR. c_e(timerange) .OR. SIZE(avl) > 0 .OR. SIZE(al) > 0 &
-     .OR. c_e(set_network_obj) .OR. c_e(s_d) .OR. c_e(e_d)) THEN
+     .OR. c_e(set_network_obj) .OR. c_e(s_d) .OR. c_e(e_d) .OR. c_e(ana)) THEN
       CALL l4f_category_log(category, L4F_ERROR, &
        'selection options like date, level timerange or others not usable with native source')
       CALL raise_fatal_error()
@@ -825,7 +847,7 @@ DO ninput = optind, iargc()-1
      dsn=dsn, user=user, password=password, file=file)
 
     CALL import(v7d_dba, vl, nl, &
-     level=level, timerange=timerange, &
+     level=level, timerange=timerange, ana=ana,&
      anavar=avl, attr=alqc, set_network=set_network_obj, &
      coordmin=coordmin, coordmax=coordmax, &
      timei=s_d, timef=e_d)
@@ -839,7 +861,7 @@ DO ninput = optind, iargc()-1
 #ifdef HAVE_ORSIM
   ELSE IF (input_format == 'orsim') THEN
 
-    if (c_e(coordmin) .or. c_e(coordmax)) then
+    if (c_e(coordmin) .or. c_e(coordmax) .or. c_e(ana)) then
       CALL l4f_category_log(category, L4F_ERROR, &
        '--ielat, --ielon, --felat, --felon not usable with SIM Oracle source')
       CALL raise_fatal_error()

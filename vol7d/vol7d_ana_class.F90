@@ -39,9 +39,8 @@ TYPE vol7d_ana
   CHARACTER(len=vol7d_ana_lenident) :: ident !< identificativo per una stazione mobile (es. aereo)
 END TYPE  vol7d_ana
 
-! Deve essere dichiarata PARAMETER, non e` cosi` per un bug del pgi
 !> Valore mancante per vo7d_ana.
-TYPE(vol7d_ana) :: vol7d_ana_miss=vol7d_ana(geo_coord_miss,cmiss)
+TYPE(vol7d_ana),PARAMETER :: vol7d_ana_miss=vol7d_ana(geo_coord_miss,cmiss)
 
 !> Costruttore per la classe vol7d_ana.
 !! Deve essere richiamato 
@@ -68,6 +67,11 @@ END INTERFACE
 !! of any shape.
 INTERFACE OPERATOR (/=)
   MODULE PROCEDURE vol7d_ana_ne
+END INTERFACE
+
+!> check for missing value
+INTERFACE c_e
+  MODULE PROCEDURE vol7d_ana_c_e
 END INTERFACE
 
 !> Legge un oggetto vol7d_ana o un vettore di oggetti vol7d_ana da
@@ -148,10 +152,11 @@ END SUBROUTINE vol7d_ana_delete
 subroutine display_ana(this)
 
 TYPE(vol7d_ana),INTENT(in) :: this
-doubleprecision :: lon,lat
 
-call getval(this%coord,lon=lon,lat=lat)
-print*,"ANA: ",this%ident,lon,lat
+print*,"ANA: ",&
+ to_char(getlon(this%coord),miss="Missing lon",form="(f11.5)"),&
+ to_char(getlat(this%coord),miss="Missing lat",form="(f11.5)"),&
+ t2c(this%ident,miss="Missing ident")
 
 end subroutine display_ana
 
@@ -172,6 +177,13 @@ LOGICAL :: res
 res = .NOT.(this == that)
 
 END FUNCTION vol7d_ana_ne
+
+
+ELEMENTAL FUNCTION vol7d_ana_c_e(this) RESULT(c_e)
+TYPE(vol7d_ana),INTENT(IN) :: this
+LOGICAL :: c_e
+c_e = this /= vol7d_ana_miss
+END FUNCTION vol7d_ana_c_e
 
 
 !> This method reads from a Fortran file unit the contents of the
