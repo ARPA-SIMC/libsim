@@ -91,8 +91,23 @@ IF (.NOT.ASSOCIATED(varin2)) THEN
 ENDIF
 ALLOCATE(remap1(SIZE(varin1)), remap2(SIZE(varin2)))
 
-! Count different elements
 n = SIZE(varin1)
+#ifdef VOL7D_SORT
+! check for a common simple case
+IF (n > 0 .AND. n == SIZE(varin2)) THEN
+  IF (.NOT.sort) THEN ! no sort
+    IF (ALL(varin1 == varin2)) THEN ! all equal elements
+      ALLOCATE(varout(n),remap1(n),remap2(n))
+      varout(:) = varin1(:)
+      remap1(:) = (/(i,i=1,n)/)
+      remap2(:) = remap1(:)
+      RETURN
+    ENDIF
+  ENDIF
+ENDIF
+#endif
+
+! Count different elements
 DO i = 1, SIZE(varin2)
   IF (ALL(varin1 /= varin2(i))) THEN ! ALL(zero-sized) = .TRUE.
     n = n + 1

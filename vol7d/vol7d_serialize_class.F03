@@ -362,25 +362,47 @@ SUBROUTINE vol7d_serialize_setup(this, v7d)
 CLASS(vol7d_serialize),INTENT(inout) :: this
 TYPE(vol7d),INTENT(inout),TARGET :: v7d
 
-INTEGER :: nv, nav, ndv
+INTEGER :: nv, nav, ndv, i, j, n
 INTEGER,POINTER :: w_s(:), w_e(:)
+TYPE(vol7d_var_mapper),ALLOCATABLE :: mapper_tmp(:)
 
 CALL vol7d_alloc_vol(v7d) ! be safe
 this%v7d => v7d
 
+! Eliminate together with checkvarvect if the next section works well!!!
 ! Filter requested variables
+!IF (this%variable /= 'all') THEN
+!  nv = word_split(this%variable, w_s, w_e, ',')
+!  CALL checkvarvect(v7d%anavar)
+!  CALL checkvarvect(v7d%anaattr)
+!  CALL checkvarvect(v7d%anavarattr)
+!  CALL checkvarvect(v7d%dativar)
+!  CALL checkvarvect(v7d%datiattr)
+!  CALL checkvarvect(v7d%dativarattr)
+!  CALL vol7d_reform(v7d, miss=.TRUE.) ! sort?
+!  DEALLOCATE(w_s, w_e)
+!ENDIF
+
+CALL var_mapper(this%mapper, v7d)
+
+! Filter and sort requested variables
 IF (this%variable /= 'all') THEN
   nv = word_split(this%variable, w_s, w_e, ',')
-  CALL checkvarvect(v7d%anavar)
-  CALL checkvarvect(v7d%anaattr)
-  CALL checkvarvect(v7d%anavarattr)
-  CALL checkvarvect(v7d%dativar)
-  CALL checkvarvect(v7d%datiattr)
-  CALL checkvarvect(v7d%dativarattr)
-  CALL vol7d_reform(v7d, miss=.TRUE.) ! sort?
+  ALLOCATE(mapper_tmp(nv))
+  j = 0
+  DO i = 1, nv
+    n = var_mapper_searchvar(this%mapper, v7d, &
+     vol7d_var_new(btable=this%variable(w_s(i):w_e(i))))
+    IF (n > 0) THEN
+      j = j + 1
+      mapper_tmp(j) = this%mapper(n)
+    ENDIF
+  ENDDO
+  DEALLOCATE(this%mapper) ! why must I do these dealloc/alloc with gfortran??
+  ALLOCATE(this%mapper(j)) ! -fcheck-bounds complains otherwise!!
+  this%mapper = mapper_tmp(1:j)
   DEALLOCATE(w_s, w_e)
 ENDIF
-CALL var_mapper(v7d, this%mapper)
 
 ! If only ana volume, skip data-only dimensions
 IF (SIZE(v7d%time) == 0) THEN
@@ -403,15 +425,6 @@ this%anaonly = SIZE(v7d%time) == 0 .AND. SIZE(v7d%level) == 0 .AND. &
 
 nav = COUNT(this%mapper(:)%cat == 1)
 ndv = COUNT(this%mapper(:)%cat == 3)
-! disabled, we should continue anyway, eliminate when sure
-!IF ((ndv > 0 .AND. &
-! (SIZE(v7d%ana) == 0 .OR. SIZE(v7d%network) == 0 .OR. &
-! SIZE(v7d%time) == 0 .OR. SIZE(v7d%level) == 0 .OR. &
-! SIZE(v7d%timerange) == 0)) .OR. &
-! (nav > 0 .AND. &
-! (SIZE(v7d%ana) == 0 .OR. SIZE(v7d%network) == 0))) THEN
-!  RETURN ! unexpectedly empty volume
-!ENDIF
 
 ! For column reordering
 this%loopstart(:) = 1
@@ -1116,9 +1129,10 @@ ENDIF
 END SUBROUTINE default_vol7d_attr_callback
 
 
-SUBROUTINE var_mapper(v7d, mapper)
-TYPE(vol7d),INTENT(in) :: v7d
+! create a var_mapper object from the v7d volume provided
+SUBROUTINE var_mapper(mapper, v7d)
 TYPE(vol7d_var_mapper),ALLOCATABLE :: mapper(:)
+TYPE(vol7d),INTENT(in) :: v7d
 
 INTEGER :: n
 
@@ -1247,6 +1261,8 @@ END SUBROUTINE set_mapper
 END SUBROUTINE var_mapper
 
 
+! determine whether the volume mapped by mapper has missing values for
+! every variable at the indicated position
 FUNCTION var_mapper_miss(mapper, v7d, i1, i2, i3, i4, i6, analine) RESULT(miss)
 TYPE(vol7d_var_mapper),INTENT(in) :: mapper(:)
 TYPE(vol7d),INTENT(in) :: v7d
@@ -1323,6 +1339,55 @@ DO ind = 1, SIZE(mapper)
 ENDDO
 
 END FUNCTION var_mapper_miss
+
+
+! search for a variable in the mapper object and return the
+! corresponding index, or 0 if not found
+FUNCTION var_mapper_searchvar(mapper, v7d, var) RESULT(ind)
+TYPE(vol7d_var_mapper),INTENT(in) :: mapper(:)
+TYPE(vol7d),INTENT(in) :: v7d
+TYPE(vol7d_var),INTENT(in) :: var
+
+INTEGER :: ind
+INTEGER :: varind
+
+DO ind = 1, SIZE(mapper)
+  varind = mapper(ind)%i5
+!  attrind = mapper(ind)%i7
+
+  SELECT CASE(mapper(ind)%cat)
+  CASE(1)
+    SELECT CASE(mapper(ind)%typ)
+    CASE(1)
+      IF (v7d%anavar%r(varind) == var) RETURN
+    CASE(2)
+      IF (v7d%anavar%d(varind) == var) RETURN
+    CASE(3)
+      IF (v7d%anavar%i(varind) == var) RETURN
+    CASE(4)
+      IF (v7d%anavar%b(varind) == var) RETURN
+    CASE(5)
+      IF (v7d%anavar%c(varind) == var) RETURN
+    END SELECT
+  CASE(3)
+    SELECT CASE(mapper(ind)%typ)
+    CASE(1)
+      IF (v7d%dativar%r(varind) == var) RETURN
+    CASE(2)
+      IF (v7d%dativar%d(varind) == var) RETURN
+    CASE(3)
+      IF (v7d%dativar%i(varind) == var) RETURN
+    CASE(4)
+      IF (v7d%dativar%b(varind) == var) RETURN
+    CASE(5)
+      IF (v7d%dativar%c(varind) == var) RETURN
+    END SELECT
+  END SELECT
+END DO
+
+ind = 0 ! not found
+
+END FUNCTION var_mapper_searchvar
 
 
 SUBROUTINE call_value_callback(this, genericptr)
