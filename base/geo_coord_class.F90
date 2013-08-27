@@ -47,7 +47,8 @@ IMPLICIT NONE
 !! REAL(kind=fp_geo) :: x, y
 !! coordx = REAL(mylon, kind=fp_geo)
 !! \endcode
-INTEGER, PARAMETER :: fp_geo=fp_d
+INTEGER, PARAMETER :: fp_geo=fp_d 
+real(kind=fp_geo), PARAMETER :: fp_geo_miss=dmiss
 
 !> Derived type defining an isolated georeferenced point on Earth in
 !! polar geographical coordinates
@@ -155,6 +156,11 @@ INTERFACE c_e
   MODULE PROCEDURE c_e_geo_coord
 END INTERFACE
 
+!>Represent geo_coord object in a pretty string
+INTERFACE to_char
+  MODULE PROCEDURE to_char_geo_coord
+END INTERFACE
+
 !>Print object
 INTERFACE display
   MODULE PROCEDURE display_geo_coord
@@ -244,8 +250,14 @@ END FUNCTION getilat
 elemental FUNCTION  getlat(this)
 TYPE(geo_coord),INTENT(IN) :: this !< oggetto di cui restituire latitudine
 real(kind=fp_geo) :: getlat !< latitudine geografica
+integer(kind=int_l) :: ilat
 
-getlat = getilat(this)*1.d-5
+ilat=getilat(this)
+if (c_e(ilat)) then
+  getlat = ilat*1.d-5
+else
+  getlat=fp_geo_miss
+end if
 
 END FUNCTION getlat
 
@@ -269,8 +281,14 @@ END FUNCTION getilon
 elemental FUNCTION  getlon(this)
 TYPE(geo_coord),INTENT(IN) :: this !< oggetto di cui restituire latitudine
 real(kind=fp_geo) :: getlon !< longitudine geografica
+integer(kind=int_l) :: ilon
 
-getlon = getilon(this)*1.d-5
+ilon=getilon(this)
+if (c_e(ilon)) then
+  getlon = ilon*1.d-5
+else
+  getlon=fp_geo_miss
+end if
 
 END FUNCTION getlon
 
@@ -801,12 +819,22 @@ res = .not. this == geo_coord_miss
 
 end FUNCTION c_e_geo_coord
 
+
+character(len=80) function to_char_geo_coord(this)
+TYPE(geo_coord),INTENT(in) :: this
+
+to_char_geo_coord = "GEO_COORD: Lon="// &
+ trim(to_char(getlon(this),miss="Missing lon",form="(f11.5)"))//&
+ " Lat="// &
+ trim(to_char(getlat(this),miss="Missing lat",form="(f11.5)"))
+
+end function to_char_geo_coord
+
+
 subroutine display_geo_coord(this)
 TYPE(geo_coord),INTENT(in) :: this
-doubleprecision :: lon,lat
 
-call getval(this,lon=lon,lat=lat)
-print*,"GEO_COORD: Lon=",lon," Lat=",lat
+print*,trim(to_char(this))
 
 end subroutine display_geo_coord
 
