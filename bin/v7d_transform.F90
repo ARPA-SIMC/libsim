@@ -226,9 +226,11 @@ CALL optionparser_add(opt, ' ', 'extreme-format', extreme_format, &
 
 ! input database options
 CALL optionparser_add(opt, 's', 'start-date', start_date, '', help= &
- 'if input-format is of database type, initial date for extracting data')
+ 'if input-format is of database type, initial date for extracting data&
+ &; with format iso YYYY-MM-DD hh:mm:ss.msc  where characters on the right are optional')
 CALL optionparser_add(opt, 'e', 'end-date', end_date, '', help= &
- 'if input-format is of database type, final date for extracting data')
+ 'if input-format is of database type, final date for extracting data&
+ &; with format iso YYYY-MM-DD hh:mm:ss.msc  where characters on the right are optional')
 CALL optionparser_add(opt, 'n', 'network-list', network_list, '', help= &
  'if input-format is of database type, list of station networks to be extracted &
  &in the form of a comma-separated list of alphanumeric network identifiers')
@@ -285,15 +287,15 @@ CALL optionparser_add(opt, ' ', 'comp-stat-proc', comp_stat_proc, '', help= &
 
 CALL optionparser_add(opt, ' ', 'comp-step', comp_step, '0000000001 00:00:00.000', help= &
  'length of regularization or statistical processing step in the format &
- &''YYYYMMDDDD hh:mm:ss.msc'', it can be simplified up to the form ''D hh''')
+ &''YYYYMMDD hh:mm:ss.msc'', it can be simplified up to the form ''D hh''')
 CALL optionparser_add(opt, ' ', 'comp-start', comp_start, '', help= &
  'start of regularization, or statistical processing interval, an empty value means &
- &take the initial time step of the available data; the format is the same as for &
- &--start-date parameter')
+ &take the initial time step of the available data&
+ &; with format iso YYYY-MM-DD hh:mm:ss.msc  where characters on the right are optional')
 CALL optionparser_add(opt, ' ', 'comp-stop', comp_stop, '', help= &
  'stop of filter interval, an empty value means &
- &take the ending time step of the available data; the format is the same as for &
- &--start-date parameter')
+ &take the ending time step of the available data&
+ &; with format iso YYYY-MM-DD hh:mm:ss.msc  where characters on the right are optional')
 CALL optionparser_add(opt, ' ', 'comp-keep', comp_keep, help= &
  'keep the data that are not the result of the requested statistical processing, &
  &merging them with the result of the processing')
@@ -582,19 +584,53 @@ ENDIF
 
 
 ! time-related arguments
-s_d = datetime_new(isodate=start_date)
-e_d = datetime_new(isodate=end_date)
+IF (start_date /= '') THEN
+  s_d = datetime_new(isodate=start_date)
+  if (.not. c_e(s_d)) then
+    CALL l4f_category_log(category, L4F_ERROR, &
+     'error in command-line parameters, wrong syntax for --start-date: ' &
+     //start_date)
+    CALL raise_fatal_error()
+  end if
+ELSE
+  s_d = datetime_miss
+ENDIF
+
+IF (end_date /= '') THEN
+  e_d = datetime_new(isodate=end_date)
+  if (.not. c_e(e_d)) then
+    CALL l4f_category_log(category, L4F_ERROR, &
+     'error in command-line parameters, wrong syntax for --end-date: ' &
+     //end_date)
+    CALL raise_fatal_error()
+  end if
+ELSE
+  e_d = datetime_miss
+ENDIF
+
 c_i = timedelta_new(isodate=comp_step)
 f_t = timedelta_new(isodate=comp_fill_tolerance)
 
 IF (comp_start /= '') THEN
   c_s = datetime_new(isodate=comp_start)
+  if (.not. c_e(c_s)) then
+    CALL l4f_category_log(category, L4F_ERROR, &
+     'error in command-line parameters, wrong syntax for --comp-start: ' &
+     //comp_start)
+    CALL raise_fatal_error()
+  end if
 ELSE
   c_s = datetime_miss
 ENDIF
 
 IF (comp_stop /= '') THEN
   comp_e = datetime_new(isodate=comp_stop)
+  if (.not. c_e(comp_e)) then
+    CALL l4f_category_log(category, L4F_ERROR, &
+     'error in command-line parameters, wrong syntax for --comp-stop: ' &
+     //comp_stop)
+    CALL raise_fatal_error()
+  end if
 ELSE
   comp_e = datetime_miss
 ENDIF
@@ -992,6 +1028,9 @@ cyclicdt = cyclicdatetime_new(chardate=comp_cyclicdatetime)
 IF (comp_fill_data ) THEN
 
   CALL init(v7d_comp1)
+
+  CALL l4f_category_log(category, L4F_INFO, 'call vol7d_fill_time; step:'&
+   //t2c(c_i)//" start:"//t2c(c_s)//" stop:"//t2c(comp_e)//" cyclic:"//t2c(cyclicdt))
   CALL vol7d_fill_time(v7d, v7d_comp1, step=c_i, start=c_s, stopp=comp_e, cyclicdt=cyclicdt)
   CALL delete(v7d)
   v7d = v7d_comp1
