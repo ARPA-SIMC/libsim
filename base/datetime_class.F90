@@ -439,7 +439,7 @@ ELSE IF (PRESENT(isodate)) THEN ! formato iso YYYY-MM-DD hh:mm:ss.msc
 
   IF (c_e(isodate) .AND. LEN_TRIM(isodate) > 0) THEN
     datebuf(1:23) = '0001-01-01 00:00:00.000'
-    datebuf(1:MIN(LEN(isodate),23)) = isodate(1:MIN(LEN(isodate),23))
+    datebuf(1:MIN(LEN_TRIM(isodate),23)) = isodate(1:MIN(LEN_TRIM(isodate),23))
     READ(datebuf,'(I4,1X,I2,1X,I2,1X,I2,1X,I2,1X,I2,1X,I3)', err=100) &
      lyear, lmonth, lday, lhour, lminute, lsec, lmsec
     lmsec = lmsec + lsec*1000
@@ -503,7 +503,7 @@ END FUNCTION datetime_new_now
 !! (\a oraclesimdate) sono mutualmente escludentesi; \a oraclesimedate �
 !! obsoleto, usare piuttosto \a simpledate.
 SUBROUTINE datetime_init(this, year, month, day, hour, minute, msec, &
- unixtime, isodate, simpledate, oraclesimdate, now)
+ unixtime, isodate, simpledate, now)
 TYPE(datetime),INTENT(INOUT) :: this !< oggetto da inizializzare
 INTEGER,INTENT(IN),OPTIONAL :: year !< anno d.C., se � specificato, tutti gli eventuali parametri tranne \a month, \a day, \a hour e \a minute sono ignorati; per un problema non risolto, sono ammessi solo anni >0 (d.C.)
 INTEGER,INTENT(IN),OPTIONAL :: month !< mese, default=1 se � specificato \a year; pu� assumere anche valori <1 o >12, l'oggetto finale si aggiusta coerentemente
@@ -514,7 +514,6 @@ INTEGER,INTENT(IN),OPTIONAL :: msec !< millisecondi, default=0 se � specificat
 INTEGER(kind=int_ll),INTENT(IN),OPTIONAL :: unixtime !< inizializza l'oggetto a \a unixtime secondi dopo il 1/1/1970 (convenzione UNIX, notare che il parametro deve essere un intero a 8 byte)
 CHARACTER(len=*),INTENT(IN),OPTIONAL :: isodate !< inizializza l'oggetto ad una data espressa nel formato \c AAAA-MM-GG \c hh:mm:ss.msc, un sottoinsieme del formato noto come \a ISO, la parte iniziale \c AAAA-MM-GG � obbligatoria, il resto � opzionale
 CHARACTER(len=*),INTENT(IN),OPTIONAL :: simpledate !< inizializza l'oggetto ad una data espressa nel formato \c AAAAMMGGhhmmssmsc, la parte iniziale \c AAAAMMGG � obbligatoria, il resto � opzionale, da preferire rispetto a \a oraclesimdate
-CHARACTER(len=12),INTENT(IN),OPTIONAL :: oraclesimdate !< inizializza l'oggetto ad una data espressa nel formato \c AAAAMMGGhhmm, come nelle routine per l'accesso al db Oracle del SIM.
 INTEGER,INTENT(IN),OPTIONAL :: now !< inizializza l'oggetto all'istante corrente, se \a � \a datetime_utc inizializza con l'ora UTC (preferibile), se � \a datetime_local usa l'ora locale
 
 IF (PRESENT(now)) THEN
