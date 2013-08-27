@@ -111,6 +111,12 @@ INTERFACE index
   MODULE PROCEDURE index_ana
 END INTERFACE
 
+
+!>Represent ana object in a pretty string
+INTERFACE to_char
+  MODULE PROCEDURE to_char_ana
+END INTERFACE
+
 !>Print object
 INTERFACE display
   MODULE PROCEDURE display_ana
@@ -149,14 +155,26 @@ this%ident = cmiss
 END SUBROUTINE vol7d_ana_delete
 
 
+
+character(len=80) function to_char_ana(this)
+
+TYPE(vol7d_ana),INTENT(in) :: this
+
+to_char_ana="ANA: "//&
+ to_char(getlon(this%coord),miss="Missing lon",form="(f11.5)")//&
+ to_char(getlat(this%coord),miss="Missing lat",form="(f11.5)")//&
+ t2c(this%ident,miss="Missing ident")
+
+return
+
+end function to_char_ana
+
+
 subroutine display_ana(this)
 
 TYPE(vol7d_ana),INTENT(in) :: this
 
-print*,"ANA: ",&
- to_char(getlon(this%coord),miss="Missing lon",form="(f11.5)"),&
- to_char(getlat(this%coord),miss="Missing lat",form="(f11.5)"),&
- t2c(this%ident,miss="Missing ident")
+print*, trim(to_char(this))
 
 end subroutine display_ana
 
