@@ -33,7 +33,7 @@ if (ind > 0) then
       if (c_e(this%vol7d%volanaattr/**/VOL7D_POLY_TYPES/**/(i,ind,iii,indanaattr)))then
                                 !print*,"attr ",this%vol7d%datiattr%/**/VOL7D_POLY_TYPES/**/(indanaattr)%btable,&
                                 !this%vol7d%voldatiattr/**/VOL7D_POLY_TYPES/**/(i,ind,iii,indanaattr)
-        call idba_set (this%handle, this%vol7d%anaattr%/**/VOL7D_POLY_TYPES/**/(indanaattr)%btable,&
+        ier=idba_set (this%handle, this%vol7d%anaattr%/**/VOL7D_POLY_TYPES/**/(indanaattr)%btable,&
          this%vol7d%volanaattr/**/VOL7D_POLY_TYPES/**/(i,ind,iii,indanaattr))
         writeattr=.true.
       end if

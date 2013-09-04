@@ -42,7 +42,7 @@ if (ind > 0) then
 #endif
 
 
-        call idba_set (this%handle, this%vol7d%datiattr% VOL7D_POLY_TYPES/**/(inddatiattr)%btable,&
+        ier=idba_set (this%handle, this%vol7d%datiattr% VOL7D_POLY_TYPES/**/(inddatiattr)%btable,&
          this%vol7d%voldatiattr/**/VOL7D_POLY_TYPES/**/(i,ii,iii,iiii,ind,iiiiii,inddatiattr))
         writeattr=.true.
       end if

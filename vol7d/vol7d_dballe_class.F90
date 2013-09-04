@@ -79,7 +79,7 @@ USE geo_coord_class
 
 IMPLICIT NONE
 
-include "dballef.h"
+include "dballeff.h"
 
 !external v7d_dballe_error_handler
 
@@ -201,6 +201,7 @@ logical :: quiwrite,quiwipe,quifile
 character(len=512) :: a_name
 character(len=254) :: arg,lfilename,lformat
 logical :: exist
+integer :: ier
 
 this%idbhandle=imiss
 this%handle=imiss
@@ -220,7 +221,7 @@ nullify(this%data_id)
 CALL init(this%vol7d,time_definition=time_definition)
 
                                 ! impostiamo la gestione dell'errore
-call idba_error_set_callback(0,v7d_dballe_error_handler, &
+ier=idba_error_set_callback(0,v7d_dballe_error_handler, &
  this%category,this%handle_err)
 
 quiwrite=.false.
@@ -281,7 +282,7 @@ if (quifile) then
     end if
   end if
 
-  call idba_messaggi(this%handle,lfilename,mode,lformat)
+  ier=idba_messaggi(this%handle,lfilename,mode,lformat)
 
   this%file=.true.
 
@@ -308,17 +309,17 @@ else
   ENDIF
     
                                 !print*,"write=",quiwrite,"wipe=",quiwipe,"dsn=",quidsn
-  call idba_presentati(this%idbhandle,quidsn,quiuser,quipassword)
+  ier=idba_presentati(this%idbhandle,quidsn,quiuser,quipassword)
 
   if(quiwrite)then
-    call idba_preparati (this%idbhandle,this%handle,"write","write","write")
-    call idba_preparati (this%idbhandle,this%handle_staz,"write","write","write")
+    ier=idba_preparati (this%idbhandle,this%handle,"write","write","write")
+    ier=idba_preparati (this%idbhandle,this%handle_staz,"write","write","write")
   else
-    call idba_preparati (this%idbhandle,this%handle,"read","read","read")
-    call idba_preparati (this%idbhandle,this%handle_staz,"read","read","read")
+    ier=idba_preparati (this%idbhandle,this%handle,"read","read","read")
+    ier=idba_preparati (this%idbhandle,this%handle_staz,"read","read","read")
   end if
   
-  if (quiwipe)call idba_scopa (this%handle,quirepinfo)
+  if (quiwipe)ier=idba_scopa (this%handle,quirepinfo)
   
   this%file=.false.
   
@@ -563,7 +564,7 @@ integer :: nanavarr,     nanavari,     nanavarb,     nanavard,     nanavarc
 integer :: nanaattrr,    nanaattri,    nanaattrb,    nanaattrd,    nanaattrc 
 integer :: nanavarattrr, nanavarattri, nanavarattrb, nanavarattrd, nanavarattrc
 
-integer :: ir,ib,id,ic
+integer :: ir,ib,id,ic,ier
 
 
 !TYPE(datetime) :: odatetime
@@ -655,17 +656,17 @@ else
 end if
 
 
-call idba_unsetall(this%handle)
+ier=idba_unsetall(this%handle)
 
 #ifdef DEBUG
 CALL l4f_category_log(this%category,L4F_DEBUG,'unsetall handle')
 #endif
 
-if(c_e(lnetwork))call idba_set (this%handle,"rep_memo",lnetwork%name)
+if(c_e(lnetwork))ier=idba_set (this%handle,"rep_memo",lnetwork%name)
 !call idba_set (this%handle,"mobile",0)
 !print*,"network,mobile",network%name,0
 
-if(ldegnet)call idba_set (this%handle,"query","best")
+if(ldegnet)ier=idba_set (this%handle,"query","best")
 
 if (present(coordmin)) then
 !  CALL geo_coord_to_geo(coordmin)
@@ -674,8 +675,8 @@ if (present(coordmin)) then
 #ifdef DEBUG
   CALL l4f_category_log(this%category,L4F_DEBUG,'query coordmin:'//t2c(ilon,miss="missing")//"/"//t2c(ilat,miss="missing"))
 #endif
-  call idba_set(this%handle,"lonmin",ilon)
-  call idba_set(this%handle,"latmin",ilat)
+  ier=idba_set(this%handle,"lonmin",ilon)
+  ier=idba_set(this%handle,"latmin",ilat)
 end if
 
 if (present(coordmax)) then
@@ -684,8 +685,8 @@ if (present(coordmax)) then
 #ifdef DEBUG
   CALL l4f_category_log(this%category,L4F_DEBUG,'query coordmax:'//t2c(ilon,miss="missing")//"/"//t2c(ilat,miss="missing"))
 #endif
-  call idba_set(this%handle,"lonmax",ilon)
-  call idba_set(this%handle,"latmax",ilat)
+  ier=idba_set(this%handle,"lonmax",ilon)
+  ier=idba_set(this%handle,"latmax",ilat)
 end if
 
 if (present(ana)) then
@@ -694,13 +695,13 @@ if (present(ana)) then
   CALL l4f_category_log(this%category,L4F_DEBUG,'query coord:'//t2c(ilon,miss="missing")//"/"//t2c(ilat,miss="missing"))
   CALL l4f_category_log(this%category,L4F_DEBUG,'query ident:'//t2c(ana%ident,miss="missing"))
 #endif
-  call idba_set(this%handle,"lon",ilon)
-  call idba_set(this%handle,"lat",ilat)
+  ier=idba_set(this%handle,"lon",ilon)
+  ier=idba_set(this%handle,"lat",ilat)
   if (c_e(ana%ident)) then
-    call idba_set(this%handle,"ident",ana%ident)
-    call idba_set(this%handle,"mobile",1)
+    ier=idba_set(this%handle,"ident",ana%ident)
+    ier=idba_set(this%handle,"mobile",1)
   else
-    call idba_set(this%handle,"mobile",0)
+    ier=idba_set(this%handle,"mobile",0)
   end if
 end if
 
@@ -710,7 +711,7 @@ if (present(timei)) then
     CALL l4f_category_log(this%category,L4F_DEBUG,'query timei:'//to_char(timei))
 #endif
     CALL getval(timei, year=year, month=month, day=day, hour=hour, minute=minute)
-    call idba_setdatemin(this%handle,year,month,day,hour,minute,0)
+    ier=idba_setdatemin(this%handle,year,month,day,hour,minute,0)
                                 !print *,"datemin",year,month,day,hour,minute,0
   end if
 end if
@@ -721,7 +722,7 @@ if (present(timef)) then
     CALL l4f_category_log(this%category,L4F_DEBUG,'query timef:'//to_char(timef))
 #endif
     CALL getval(timef, year=year, month=month, day=day, hour=hour, minute=minute)
-    call idba_setdatemax(this%handle,year,month,day,hour,minute,0)
+    ier=idba_setdatemax(this%handle,year,month,day,hour,minute,0)
                                 !print *,"datemax",year,month,day,hour,minute,0
   end if
 end if
@@ -748,7 +749,7 @@ if (any(c_e(lvar))) then
 #ifdef DEBUG
   CALL l4f_category_log(this%category,L4F_DEBUG,'query varlist:'//t2c(SIZE(lvar))//":"//varlist)
 #endif  
-  if (varlist /= '' ) call idba_set(this%handle, "varlist",varlist )
+  if (varlist /= '' ) ier=idba_set(this%handle, "varlist",varlist )
 
 end if
 
@@ -756,17 +757,17 @@ if (c_e(ltimerange))then
 #ifdef DEBUG
   CALL l4f_category_log(this%category,L4F_DEBUG,'query timerange:'//to_char(timerange))
 #endif
-  call idba_settimerange(this%handle, timerange%timerange, timerange%p1, timerange%p2)
+  ier=idba_settimerange(this%handle, timerange%timerange, timerange%p1, timerange%p2)
 end if
 
 if (c_e(llevel))then
 #ifdef DEBUG
   CALL l4f_category_log(this%category,L4F_DEBUG,'query level:'//to_char(level))
 #endif
-  call idba_setlevel(this%handle, level%level1, level%l1,level%level2, level%l2)
+  ier=idba_setlevel(this%handle, level%level1, level%l1,level%level2, level%l2)
 end if
 
-call idba_voglioquesto (this%handle,N)
+ier=idba_voglioquesto (this%handle,N)
 !print*,"numero di dati ",N
 #ifdef DEBUG
 CALL l4f_category_log(this%category,L4F_DEBUG,'numero di dati:'//t2c(n))
@@ -784,12 +785,12 @@ ENDIF
 ! dammi tutti i dati
 do i=1,N
 
-  call idba_dammelo (this%handle,btable)
+  ier=idba_dammelo (this%handle,btable)
   
-  call idba_enqdate (this%handle,year,month,day,hour,minute,sec)
-  call idba_enqlevel(this%handle, rlevel1, rl1, rlevel2,rl2)
-  call idba_enqtimerange(this%handle, rtimerange, p1, p2)
-  call idba_enq(this%handle, "rep_memo",rep_memo)
+  ier=idba_enqdate (this%handle,year,month,day,hour,minute,sec)
+  ier=idba_enqlevel(this%handle, rlevel1, rl1, rlevel2,rl2)
+  ier=idba_enqtimerange(this%handle, rtimerange, p1, p2)
+  ier=idba_enq(this%handle, "rep_memo",rep_memo)
                                 !print *,"trovato network",rep_memo
   
                                 !nbtable=btable_numerico(btable)
@@ -806,25 +807,30 @@ do i=1,N
     ii= index_c(lvar, btable)
     if (ii > 0)then
                                 !print*, "indici",ii, btable,(varkind(ii))
-      if(varkind(ii) == "r") call idba_enq (this%handle,btable,buffer(i)%dator)
-      if(varkind(ii) == "i") call idba_enq (this%handle,btable,buffer(i)%datoi)
-      if(varkind(ii) == "b") call idba_enq (this%handle,btable,buffer(i)%datob)
-      if(varkind(ii) == "d") call idba_enq (this%handle,btable,buffer(i)%datod)
-      if(varkind(ii) == "c") call idba_enq (this%handle,btable,buffer(i)%datoc)
+      if(varkind(ii) == "r") ier=idba_enq (this%handle,btable,buffer(i)%dator)
+      if(varkind(ii) == "i") ier=idba_enq (this%handle,btable,buffer(i)%datoi)
+      if(varkind(ii) == "b") ier=idba_enq (this%handle,btable,buffer(i)%datob)
+      if(varkind(ii) == "d") ier=idba_enq (this%handle,btable,buffer(i)%datod)
+      if(varkind(ii) == "c") ier=idba_enq (this%handle,btable,buffer(i)%datoc)
     end if
   else
-    call idba_enq (this%handle,btable,buffer(i)%datoc) !char is default
+    ier=idba_enq (this%handle,btable,buffer(i)%datoc) !char is default
   end if
   
                                 !metto in memoria l'identificatore numerico dei dati
                                 !print*,buffer(i)%data_id
-  call idba_enq (this%handle,"context_id",buffer(i)%data_id)
+  ier=idba_enq (this%handle,"context_id",buffer(i)%data_id)
 
                                 !recupero i dati di anagrafica
-  call idba_enq (this%handle,"lat",   ilat)
-  call idba_enq (this%handle,"lon",   ilon)
-  call idba_enq (this%handle,"ident",ident)
-   
+  ier=idba_enq (this%handle,"lat",   ilat)
+  ier=idba_enq (this%handle,"lon",   ilon)
+  ier=idba_enq (this%handle,"ident",ident)
+
+!!$  print*,"ident",ident
+!!$  do ier=1,len(ident)
+!!$    print *,iachar(ident(ier:ier))
+!!$  end do
+
                                 !bufferizzo il contesto
                                 !print *,"lat,lon,ident",lat,lon,ident
                                 !print*,year,month,day,hour,minute,sec
@@ -847,40 +853,40 @@ end do
 
 !ora legge tutti i dati di anagrafica e li mette in bufferana
 
-call idba_unsetall(this%handle_staz)
+ier=idba_unsetall(this%handle_staz)
 #ifdef DEBUG
 CALL l4f_category_log(this%category,L4F_DEBUG,'unsetall handle_staz')
 #endif
 
-if(c_e(lnetwork))call idba_set (this%handle_staz,"rep_memo",lnetwork%name)
-call idba_set (this%handle_staz,"mobile",0)
+if(c_e(lnetwork))ier=idba_set (this%handle_staz,"rep_memo",lnetwork%name)
+ier=idba_set (this%handle_staz,"mobile",0)
 !print*,"network,mobile",network%name,0
 
-if(ldegnet)call idba_set (this%handle_staz,"query","best")
+if(ldegnet)ier=idba_set (this%handle_staz,"query","best")
 
 if (present(coordmin)) then
 !  CALL geo_coord_to_geo(coordmin)
   CALL getval(coordmin, ilat=ilat,ilon=ilon)
-  call idba_set(this%handle_staz,"lonmin",ilon)
-  call idba_set(this%handle_staz,"latmin",ilat)
+  ier=idba_set(this%handle_staz,"lonmin",ilon)
+  ier=idba_set(this%handle_staz,"latmin",ilat)
 end if
 
 if (present(coordmax)) then
 !  CALL geo_coord_to_geo(coordmax)
   CALL getval(coordmax, ilat=ilat,ilon=ilon)
-  call idba_set(this%handle_staz,"lonmax",ilon)
-  call idba_set(this%handle_staz,"latmax",ilat)
+  ier=idba_set(this%handle_staz,"lonmax",ilon)
+  ier=idba_set(this%handle_staz,"latmax",ilat)
 end if
 
 if (present(ana)) then
   CALL getval(ana%coord, ilat=ilat,ilon=ilon)
-  call idba_set(this%handle_staz,"lon",ilon)
-  call idba_set(this%handle_staz,"lat",ilat)
+  ier=idba_set(this%handle_staz,"lon",ilon)
+  ier=idba_set(this%handle_staz,"lat",ilat)
   if (c_e(ana%ident)) then
-    call idba_set(this%handle_staz,"ident",ana%ident)
-    call idba_set(this%handle_staz,"mobile",1)
+    ier=idba_set(this%handle_staz,"ident",ana%ident)
+    ier=idba_set(this%handle_staz,"mobile",1)
   else
-    call idba_set(this%handle_staz,"mobile",0)
+    ier=idba_set(this%handle_staz,"mobile",0)
   end if
 end if
 
@@ -895,13 +901,13 @@ if (size (lanavar) > 0 ) then
     varlist(LEN_TRIM(varlist)+1:) = TRIM(lanavar(i))
   ENDDO
                                 !print *,"varlist",varlist
-  call idba_set(this%handle_staz, "varlist",varlist )
+  ier=idba_set(this%handle_staz, "varlist",varlist )
 
 end if
 
 
-call idba_setcontextana(this%handle_staz)
-call idba_voglioquesto (this%handle_staz,N_ana)
+ier=idba_setcontextana(this%handle_staz)
+ier=idba_voglioquesto (this%handle_staz,N_ana)
 !print*,"numero di dati ",N_ana
 
 !ora che so quanti dati ho alloco la memoria per bufferana
@@ -925,16 +931,16 @@ do i=1,N_ana
   bufferana(i)%datoc=DBA_MVC
   bufferana(i)%btable = DBA_MVC
 
-  call idba_dammelo (this%handle_staz,btable)
+  ier=idba_dammelo (this%handle_staz,btable)
 
   
                                 !salto lat lon e ident
   if (btable == "B05001" .or. btable == "B06001" .or. btable == "B01011") cycle
 
-  call idba_enqdate (this%handle_staz,year,month,day,hour,minute,sec)
-  call idba_enqlevel(this%handle_staz, rlevel1, rl1, rlevel2,rl2)
-  call idba_enqtimerange(this%handle_staz, rtimerange, p1, p2)
-  call idba_enq(this%handle_staz, "rep_memo",rep_memo)
+  ier=idba_enqdate (this%handle_staz,year,month,day,hour,minute,sec)
+  ier=idba_enqlevel(this%handle_staz, rlevel1, rl1, rlevel2,rl2)
+  ier=idba_enqtimerange(this%handle_staz, rtimerange, p1, p2)
+  ier=idba_enq(this%handle_staz, "rep_memo",rep_memo)
                                 !print *,"trovato network",rep_memo
                                 !nbtable=btable_numerico(btable)
                                 ! ind = firsttrue(qccli%v7d%dativar%r(:)%btable == nbtable)
@@ -945,26 +951,31 @@ do i=1,N_ana
     ii= index_c(lanavar, btable)
     if (ii > 0)then
                                 !print*, "indici",ii, btable,(varkind(ii))
-      if(anavarkind(ii) == "r") call idba_enq (this%handle_staz,btable,bufferana(i)%dator)
-      if(anavarkind(ii) == "i") call idba_enq (this%handle_staz,btable,bufferana(i)%datoi)
-      if(anavarkind(ii) == "b") call idba_enq (this%handle_staz,btable,bufferana(i)%datob)
-      if(anavarkind(ii) == "d") call idba_enq (this%handle_staz,btable,bufferana(i)%datod)
-      if(anavarkind(ii) == "c") call idba_enq (this%handle_staz,btable,bufferana(i)%datoc)
+      if(anavarkind(ii) == "r") ier=idba_enq (this%handle_staz,btable,bufferana(i)%dator)
+      if(anavarkind(ii) == "i") ier=idba_enq (this%handle_staz,btable,bufferana(i)%datoi)
+      if(anavarkind(ii) == "b") ier=idba_enq (this%handle_staz,btable,bufferana(i)%datob)
+      if(anavarkind(ii) == "d") ier=idba_enq (this%handle_staz,btable,bufferana(i)%datod)
+      if(anavarkind(ii) == "c") ier=idba_enq (this%handle_staz,btable,bufferana(i)%datoc)
     end if
   else
-    call idba_enq (this%handle_staz,btable,bufferana(i)%datoc) !char is default
+    ier=idba_enq (this%handle_staz,btable,bufferana(i)%datoc) !char is default
     !print*,"dato anagrafica",btable," ",bufferana(i)%dator
   end if
   
                                 !metto in memoria l'identificatore numerico dei dati
                                 !print*,buffer(i)%data_id
-  call idba_enq (this%handle_staz,"context_id",bufferana(i)%data_id)
+  ier=idba_enq (this%handle_staz,"context_id",bufferana(i)%data_id)
 
                                 !recupero i dati di anagrafica
-  call idba_enq (this%handle_staz,"lat",   ilat)
-  call idba_enq (this%handle_staz,"lon",   ilon)
-  call idba_enq (this%handle_staz,"ident",ident)
-   
+  ier=idba_enq (this%handle_staz,"lat",   ilat)
+  ier=idba_enq (this%handle_staz,"lon",   ilon)
+  ier=idba_enq (this%handle_staz,"ident",ident)
+
+!!$  print*,"ident",ident
+!!$  do ier=1,len(ident)
+!!$    print *,iachar(ident(ier:ier))
+!!$  end do
+
                                 !bufferizzo il contesto
                                 !print *,"lat,lon",lat,lon
                                 !print*,year,month,day,hour,minute,sec
@@ -1557,19 +1568,19 @@ do i =1, N
 
      this%data_id(indana,indtime,indlevel,indtimerange,indnetwork)=buffer(i)%data_id
 
-     call idba_unsetall (this%handle)
+     ier=idba_unsetall (this%handle)
 #ifdef DEBUG
      CALL l4f_category_log(this%category,L4F_DEBUG,'unsetall handle')
 #endif
-     call idba_set (this%handle,"*context_id",buffer(i)%data_id)
-     call idba_set (this%handle,"*var_related",buffer(i)%btable)
+     ier=idba_set (this%handle,"*context_id",buffer(i)%data_id)
+     ier=idba_set (this%handle,"*var_related",buffer(i)%btable)
      !per ogni dato ora lavoro sugli attributi
-     call idba_set(this%handle, "*varlist",starvarlist )
-     call idba_voglioancora (this%handle,nn)
+     ier=idba_set(this%handle, "*varlist",starvarlist )
+     ier=idba_voglioancora (this%handle,nn)
      !print*,buffer(i)%btable," numero attributi",nn
      
      do ii=1,nn ! Se ho piu` di 1 attributo devo forse trovare l'indice (ii)
-       call idba_ancora (this%handle,starbtable)
+       ier=idba_ancora (this%handle,starbtable)
          !print *, starbtable
        indattr = firsttrue(attr == starbtable)
        IF (indattr<1) cycle ! non c'e'
@@ -1585,14 +1596,14 @@ do i =1, N
            if(attrkind(iii) == "r") then
              inddativarattr  = firsttrue(buffer(i)%btable == vol7dtmp%dativarattr%r%btable)
              inddatiattr = firsttrue(var_tmp == vol7dtmp%datiattr%r)
-             call idba_enq (this%handle,starbtable,&
+             ier=idba_enq (this%handle,starbtable,&
               vol7dtmp%voldatiattrr(indana,indtime,indlevel,indtimerange,&
               inddativarattr,indnetwork,inddatiattr))
            end if
            if(attrkind(iii) == "i") then
              inddativarattr  = firsttrue(buffer(i)%btable == vol7dtmp%dativarattr%i%btable)
              inddatiattr = firsttrue(var_tmp == vol7dtmp%datiattr%i)
-             call idba_enq (this%handle,starbtable,&
+             ier=idba_enq (this%handle,starbtable,&
               vol7dtmp%voldatiattri(indana,indtime,indlevel,indtimerange,&
               inddativarattr,indnetwork,inddatiattr))
            end if
@@ -1601,21 +1612,21 @@ do i =1, N
              inddatiattr = firsttrue(var_tmp == vol7dtmp%datiattr%b)
              !print *,"indici voldatiattr ",indana,indtime,indlevel,indtimerange,&
               !inddativarattr,indnetwork,inddatiattr
-             call idba_enq (this%handle,starbtable,&
+             ier=idba_enq (this%handle,starbtable,&
               vol7dtmp%voldatiattrb(indana,indtime,indlevel,indtimerange,&
               inddativarattr,indnetwork,inddatiattr))
            end if
            if(attrkind(iii) == "d") then
              inddativarattr  = firsttrue(buffer(i)%btable == vol7dtmp%dativarattr%d%btable)
              inddatiattr = firsttrue(var_tmp == vol7dtmp%datiattr%d)
-             call idba_enq (this%handle,starbtable,&
+             ier=idba_enq (this%handle,starbtable,&
               vol7dtmp%voldatiattrd(indana,indtime,indlevel,indtimerange,&
               inddativarattr,indnetwork,inddatiattr))
            end if
            if(attrkind(iii) == "c") then
              inddativarattr  = firsttrue(buffer(i)%btable == vol7dtmp%dativarattr%c%btable)
              inddatiattr = firsttrue(var_tmp == vol7dtmp%datiattr%c)
-             call idba_enq (this%handle,starbtable,&
+             ier=idba_enq (this%handle,starbtable,&
               vol7dtmp%voldatiattrc(indana,indtime,indlevel,indtimerange,&
               inddativarattr,indnetwork,inddatiattr))
            end if
@@ -1624,7 +1635,7 @@ do i =1, N
 
          inddativarattr  = firsttrue(buffer(i)%btable == vol7dtmp%dativarattr%c%btable)
          inddatiattr = firsttrue(var_tmp == vol7dtmp%datiattr%c)
-         call idba_enq (this%handle,starbtable,&
+         ier=idba_enq (this%handle,starbtable,&
           vol7dtmp%voldatiattrc(indana,indtime,indlevel,indtimerange,&
           inddativarattr,indnetwork,inddatiattr)) !char is default
          !print*,starbtable,vol7dtmp%voldatiattrc(indana,indtime,indlevel,indtimerange,&
@@ -1696,17 +1707,17 @@ do i =1, N_ana
 #ifdef DEBUG
      CALL l4f_category_log(this%category,L4F_DEBUG,'unsetall handle_staz')
 #endif
-     call idba_unsetall (this%handle_staz)
-     call idba_set (this%handle_staz,"*context_id",bufferana(i)%data_id)
-     call idba_set (this%handle_staz,"*var_related",bufferana(i)%btable)
+     ier=idba_unsetall (this%handle_staz)
+     ier=idba_set (this%handle_staz,"*context_id",bufferana(i)%data_id)
+     ier=idba_set (this%handle_staz,"*var_related",bufferana(i)%btable)
 
      !per ogni dato ora lavoro sugli attributi
-     call idba_set(this%handle_staz, "*varlist",starvarlist )
-     call idba_voglioancora (this%handle_staz,nn)
+     ier=idba_set(this%handle_staz, "*varlist",starvarlist )
+     ier=idba_voglioancora (this%handle_staz,nn)
      !print*,buffer(i)%dativar%btable," numero attributi",nn
      
      do ii=1,nn ! Se ho piu` di 1 attributo devo forse trovare l'indice (ii)
-       call idba_ancora (this%handle_staz,starbtable)
+       ier=idba_ancora (this%handle_staz,starbtable)
          !print *, starbtable
        indattr = firsttrue(anaattr == starbtable)
        IF (indattr<1) cycle ! non c'e'
@@ -1723,31 +1734,31 @@ do i =1, N_ana
            if(anaattrkind(iii) == "r") then
              indanavarattr  = firsttrue(bufferana(i)%btable == vol7dtmp%anavarattr%r%btable)
              indanaattr = firsttrue(var_tmp == vol7dtmp%anaattr%r)
-             call idba_enq (this%handle_staz,starbtable,&
+             ier=idba_enq (this%handle_staz,starbtable,&
               vol7dtmp%volanaattrr(indana,indanavarattr,indnetwork,indanaattr))
            end if
            if(anaattrkind(iii) == "i") then
              indanavarattr  = firsttrue(bufferana(i)%btable == vol7dtmp%anavarattr%i%btable)
              indanaattr = firsttrue(var_tmp == vol7dtmp%anaattr%i)
-             call idba_enq (this%handle_staz,starbtable,&
+             ier=idba_enq (this%handle_staz,starbtable,&
               vol7dtmp%volanaattri(indana,indanavarattr,indnetwork,indanaattr))
            end if
            if(anaattrkind(iii) == "b") then
              indanavarattr  = firsttrue(bufferana(i)%btable == vol7dtmp%anavarattr%b%btable)
              indanaattr = firsttrue(var_tmp == vol7dtmp%anaattr%b)
-             call idba_enq (this%handle_staz,starbtable,&
+             ier=idba_enq (this%handle_staz,starbtable,&
               vol7dtmp%volanaattrb(indana,indanavarattr,indnetwork,indanaattr))
            end if
            if(anaattrkind(iii) == "d") then
              indanavarattr  = firsttrue(bufferana(i)%btable == vol7dtmp%anavarattr%d%btable)
              indanaattr = firsttrue(var_tmp == vol7dtmp%anaattr%d)
-             call idba_enq (this%handle_staz,starbtable,&
+             ier=idba_enq (this%handle_staz,starbtable,&
               vol7dtmp%volanaattrd(indana,indanavarattr,indnetwork,indanaattr))
            end if
            if(anaattrkind(iii) == "c") then
              indanavarattr  = firsttrue(bufferana(i)%btable == vol7dtmp%anavarattr%c%btable)
              indanaattr = firsttrue(var_tmp == vol7dtmp%anaattr%c)
-             call idba_enq (this%handle_staz,starbtable,&
+             ier=idba_enq (this%handle_staz,starbtable,&
               vol7dtmp%volanaattrc(indana,indanavarattr,indnetwork,indanaattr))
            end if
 
@@ -1755,7 +1766,7 @@ do i =1, N_ana
        else         
          indanavarattr  = firsttrue(bufferana(i)%btable == vol7dtmp%anavarattr%c%btable)
          indanaattr = firsttrue(var_tmp == vol7dtmp%anaattr%c)
-         call idba_enq (this%handle,starbtable,&
+         ier=idba_enq (this%handle,starbtable,&
           vol7dtmp%volanaattrc(indana,indanavarattr,indnetwork,indanaattr)) !char is default
        end if
 
@@ -1875,7 +1886,7 @@ integer :: year,month,day,hour,minute
 integer :: nstaz,ntime,ntimerange,nlevel,nnetwork
 
 
-INTEGER :: i,ii,iii,iiii,iiiii,iiiiii,ind,inddatiattr,indanaattr
+INTEGER :: i,ii,iii,iiii,iiiii,iiiiii,ind,inddatiattr,indanaattr,ier
 
 INTEGER(kind=int_l) :: ilat,ilon 
 !INTEGER(kind=int_b)::attrdatib
@@ -2093,32 +2104,39 @@ do iii=1, nnetwork
 
 !      CALL geo_coord_to_geo(this%vol7d%ana(i)%coord)
       CALL getval(this%vol7d%ana(i)%coord, ilat=ilat,ilon=ilon)
-      call idba_unsetall (this%handle)
+      ier=idba_unsetall (this%handle)
 #ifdef DEBUG
       CALL l4f_category_log(this%category,L4F_DEBUG,'unsetall handle')
 #endif
-      call idba_setcontextana (this%handle)
+      ier=idba_setcontextana (this%handle)
 
-      call idba_set (this%handle,"lat",ilat)
-      call idba_set (this%handle,"lon",ilon)
+      ier=idba_set (this%handle,"lat",ilat)
+      ier=idba_set (this%handle,"lon",ilon)
 
       if (present(ana))then
          if (c_e(ana%ident) .and. ana%ident /= this%vol7d%ana(i)%ident ) cycle
          if (c_e(ana%coord) .and. ana%coord /= this%vol7d%ana(i)%coord ) cycle
       end if
 
+!      this%vol7d%ana(i)%ident=cmiss
+
+!!$      print*,"ident",this%vol7d%ana(i)%ident
+!!$      do ier=1,len(this%vol7d%ana(i)%ident)
+!!$        print *,iachar(this%vol7d%ana(i)%ident(ier:ier))
+!!$      end do
+
       if ( c_e(this%vol7d%ana(i)%ident)) then
 #ifdef DEBUG
          call l4f_category_log(this%category,L4F_DEBUG,"I have found a mobile station! ident: "//&
           this%vol7d%ana(i)%ident)
 #endif
-         call idba_set (this%handle,"ident",this%vol7d%ana(i)%ident)
-         call idba_set (this%handle,"mobile",1)
+         ier=idba_set (this%handle,"ident",this%vol7d%ana(i)%ident)
+         ier=idba_set (this%handle,"mobile",1)
       else
-         call idba_set (this%handle,"mobile",0)
+         ier=idba_set (this%handle,"mobile",0)
       end if
 
-      call idba_set(this%handle,"rep_memo",this%vol7d%network(iii)%name)
+      ier=idba_set(this%handle,"rep_memo",this%vol7d%network(iii)%name)
 
 
 #undef VOL7D_POLY_TYPES_V
@@ -2149,48 +2167,48 @@ do iii=1, nnetwork
 
       if (this%file)then
         if (present(template)) then
-          call idba_set (this%handle,"query","message "//trim(template))
+          ier=idba_set (this%handle,"query","message "//trim(template))
         else
-          call idba_set (this%handle,"query","message")
+          ier=idba_set (this%handle,"query","message")
         end if
       end if
 
 #ifdef DEBUG
       call l4f_category_log(this%category,L4F_DEBUG,"eseguo una main prendilo di anagrafica")
 #endif
-      call idba_prendilo (this%handle)
+      ier=idba_prendilo (this%handle)
 
       if (.not. this%file ) then
-        call idba_enq (this%handle,"*ana_id",ana_id(i,iii))
+        ier=idba_enq (this%handle,"*ana_id",ana_id(i,iii))
       end if
 
 
       do ii=1,nanavarr
-        if (c_e(this%vol7d%anavar%r(ii)%btable))call idba_unset (this%handle,this%vol7d%anavar%r(ii)%btable )
+        if (c_e(this%vol7d%anavar%r(ii)%btable))ier=idba_unset (this%handle,this%vol7d%anavar%r(ii)%btable )
 #ifdef DEBUG
         call l4f_category_log(this%category,L4F_DEBUG,"unset ana: "//this%vol7d%anavar%r(ii)%btable)
 #endif
       end do
       do ii=1,nanavari
-        if (c_e(this%vol7d%anavar%i(ii)%btable))call idba_unset (this%handle,this%vol7d%anavar%i(ii)%btable )
+        if (c_e(this%vol7d%anavar%i(ii)%btable))ier=idba_unset (this%handle,this%vol7d%anavar%i(ii)%btable )
 #ifdef DEBUG
         call l4f_category_log(this%category,L4F_DEBUG,"unset ana: "//this%vol7d%anavar%i(ii)%btable)
 #endif
       end do
       do ii=1,nanavarb
-        if (c_e(this%vol7d%anavar%b(ii)%btable))call idba_unset (this%handle,this%vol7d%anavar%b(ii)%btable )
+        if (c_e(this%vol7d%anavar%b(ii)%btable))ier=idba_unset (this%handle,this%vol7d%anavar%b(ii)%btable )
 #ifdef DEBUG
         call l4f_category_log(this%category,L4F_DEBUG,"unset ana: "//this%vol7d%anavar%b(ii)%btable)
 #endif
       end do
       do ii=1,nanavard
-        if (c_e(this%vol7d%anavar%d(ii)%btable))call idba_unset (this%handle,this%vol7d%anavar%d(ii)%btable )
+        if (c_e(this%vol7d%anavar%d(ii)%btable))ier=idba_unset (this%handle,this%vol7d%anavar%d(ii)%btable )
 #ifdef DEBUG
         call l4f_category_log(this%category,L4F_DEBUG,"unset ana: "//this%vol7d%anavar%d(ii)%btable)
 #endif
       end do
       do ii=1,nanavarc
-        if (c_e(this%vol7d%anavar%c(ii)%btable))call idba_unset (this%handle,this%vol7d%anavar%c(ii)%btable )
+        if (c_e(this%vol7d%anavar%c(ii)%btable))ier=idba_unset (this%handle,this%vol7d%anavar%c(ii)%btable )
 #ifdef DEBUG
         call l4f_category_log(this%category,L4F_DEBUG,"unset ana: "//this%vol7d%anavar%c(ii)%btable)
 #endif
@@ -2222,19 +2240,19 @@ do i=1, nstaz
 
                                 !>\todo optimize setting and unsetting in the right place
 
-      call idba_unsetall (this%handle)
+      ier=idba_unsetall (this%handle)
 #ifdef DEBUG
       CALL l4f_category_log(this%category,L4F_DEBUG,'unsetall handle')
 #endif        
 
       CALL getval(this%vol7d%time(ii), year=year, month=month, day=day, hour=hour, minute=minute)
-      call idba_setdate (this%handle,year,month,day,hour,minute,0)
+      ier=idba_setdate (this%handle,year,month,day,hour,minute,0)
 
       if (this%file)then
                                 ! writing on file cannot use ana_id
         call getval(this%vol7d%ana(i)%coord, ilat=ilat,ilon=ilon)
-        call idba_set (this%handle,"lat",ilat)
-        call idba_set (this%handle,"lon",ilon)
+        ier=idba_set (this%handle,"lat",ilat)
+        ier=idba_set (this%handle,"lon",ilon)
 #ifdef DEBUG
         call l4f_category_log(this%category,L4F_DEBUG,"dati riferiti a lat: "//to_char(ilat)//" lon: "//to_char(ilon))
 #endif        
@@ -2243,25 +2261,25 @@ do i=1, nstaz
         end if
           
         if ( c_e(this%vol7d%ana(i)%ident)) then
-          call idba_set (this%handle,"ident",this%vol7d%ana(i)%ident)
-          call idba_set (this%handle,"mobile",1)
+          ier=idba_set (this%handle,"ident",this%vol7d%ana(i)%ident)
+          ier=idba_set (this%handle,"mobile",1)
 #ifdef DEBUG
           call l4f_category_log(this%category,L4F_DEBUG,"there is a mobile station! identity: "&
            //this%vol7d%ana(i)%ident)
 #endif
         else
-          call idba_set (this%handle,"mobile",0)
+          ier=idba_set (this%handle,"mobile",0)
         end if
       else
 #ifdef DEBUG
           call l4f_category_log(this%category,L4F_DEBUG,"specify ana_id: "&
            //to_char(ana_id(i,iiiiii)))
 #endif
-        call idba_set (this%handle,"ana_id",ana_id(i,iiiiii))
+        ier=idba_set (this%handle,"ana_id",ana_id(i,iiiiii))
       end if
 
 
-      call idba_set (this%handle,"rep_memo",this%vol7d%network(iiiiii)%name)
+      ier=idba_set (this%handle,"rep_memo",this%vol7d%network(iiiiii)%name)
                  
 
       do iii=1,nlevel
@@ -2273,7 +2291,7 @@ do i=1, nstaz
           if (.not. lattr_only) then
                                   
 
-            call idba_setlevel(this%handle, this%vol7d%level(iii)%level1, this%vol7d%level(iii)%l1,&
+            ier=idba_setlevel(this%handle, this%vol7d%level(iii)%level1, this%vol7d%level(iii)%l1,&
              this%vol7d%level(iii)%level2, this%vol7d%level(iii)%l2)
             
 #ifdef DEBUG
@@ -2283,7 +2301,7 @@ do i=1, nstaz
             call l4f_category_log(this%category,L4F_DEBUG,"l2: "//to_char(this%vol7d%level(iii)%l2))
 #endif              
                  
-            call idba_settimerange(this%handle, this%vol7d%timerange(iiii)%timerange, &
+            ier=idba_settimerange(this%handle, this%vol7d%timerange(iiii)%timerange, &
              this%vol7d%timerange(iiii)%p1, this%vol7d%timerange(iiii)%p2)
               
 #ifdef DEBUG
@@ -2345,43 +2363,43 @@ call l4f_category_log(this%category,L4F_DEBUG,"macro tipo c")
 !              call l4f_category_log(this%category,L4F_DEBUG,"rispecify ana_id: "&
 !               //to_char(ana_id(i,iiiiii)))
 !#endif
-!              call idba_set (this%handle,"ana_id",ana_id(i,iiiiii))
+!              ier=idba_set (this%handle,"ana_id",ana_id(i,iiiiii))
 !            end if
 
                                 !print*,"eseguo una main prendilo"
 #ifdef DEBUG
             call l4f_category_log(this%category,L4F_DEBUG,"eseguo una main prendilo sui dati")
 #endif
-            call idba_prendilo (this%handle)
+            ier=idba_prendilo (this%handle)
                  
           end if
           
           do iiiii=1,ndativarr
-            if(c_e(this%vol7d%dativar%r(iiiii)%btable))call idba_unset (this%handle,this%vol7d%dativar%r(iiiii)%btable )
+            if(c_e(this%vol7d%dativar%r(iiiii)%btable))ier=idba_unset (this%handle,this%vol7d%dativar%r(iiiii)%btable )
 #ifdef DEBUG
             call l4f_category_log(this%category,L4F_DEBUG,"unset dati: "//this%vol7d%dativar%r(iiiii)%btable)
 #endif
           end do
           do iiiii=1,ndativari
-            if(c_e(this%vol7d%dativar%i(iiiii)%btable))call idba_unset (this%handle,this%vol7d%dativar%i(iiiii)%btable )
+            if(c_e(this%vol7d%dativar%i(iiiii)%btable))ier=idba_unset (this%handle,this%vol7d%dativar%i(iiiii)%btable )
 #ifdef DEBUG
             call l4f_category_log(this%category,L4F_DEBUG,"unset dati: "//this%vol7d%dativar%i(iiiii)%btable)
 #endif
           end do
           do iiiii=1,ndativarb
-            if(c_e(this%vol7d%dativar%b(iiiii)%btable))call idba_unset (this%handle,this%vol7d%dativar%b(iiiii)%btable )
+            if(c_e(this%vol7d%dativar%b(iiiii)%btable))ier=idba_unset (this%handle,this%vol7d%dativar%b(iiiii)%btable )
 #ifdef DEBUG
             call l4f_category_log(this%category,L4F_DEBUG,"unset dati: "//this%vol7d%dativar%b(iiiii)%btable)
 #endif
           end do
           do iiiii=1,ndativard
-            if(c_e(this%vol7d%dativar%d(iiiii)%btable))call idba_unset (this%handle,this%vol7d%dativar%d(iiiii)%btable )
+            if(c_e(this%vol7d%dativar%d(iiiii)%btable))ier=idba_unset (this%handle,this%vol7d%dativar%d(iiiii)%btable )
 #ifdef DEBUG
             call l4f_category_log(this%category,L4F_DEBUG,"unset dati: "//this%vol7d%dativar%d(iiiii)%btable)
 #endif
           end do
           do iiiii=1,ndativarc
-            if(c_e(this%vol7d%dativar%c(iiiii)%btable))call idba_unset (this%handle,this%vol7d%dativar%c(iiiii)%btable )
+            if(c_e(this%vol7d%dativar%c(iiiii)%btable))ier=idba_unset (this%handle,this%vol7d%dativar%c(iiiii)%btable )
 #ifdef DEBUG
             call l4f_category_log(this%category,L4F_DEBUG,"unset dati: "//this%vol7d%dativar%c(iiiii)%btable)
 #endif
@@ -2393,9 +2411,9 @@ call l4f_category_log(this%category,L4F_DEBUG,"macro tipo c")
 
       if (this%file)then
         if (present(template)) then
-          call idba_set (this%handle,"query","message "//trim(template))
+          ier=idba_set (this%handle,"query","message "//trim(template))
         else
-          call idba_set (this%handle,"query","message")
+          ier=idba_set (this%handle,"query","message")
         end if
 #ifdef DEBUG
         call l4f_category_log(this%category,L4F_DEBUG,"close message ")
@@ -2403,7 +2421,7 @@ call l4f_category_log(this%category,L4F_DEBUG,"macro tipo c")
                                 !print*,"eseguo una main prendilo"
         call l4f_category_log(this%category,L4F_DEBUG,"eseguo una main prendilo sui dati")
 #endif
-        call idba_prendilo (this%handle)
+        ier=idba_prendilo (this%handle)
         
       end if
 
@@ -2418,20 +2436,21 @@ END SUBROUTINE vol7d_dballe_export
 
 SUBROUTINE vol7d_dballe_delete(this)
 TYPE(vol7d_dballe) :: this !< oggetto da cancellare
+integer :: ier
 
 if (this%file)then
 
-  call idba_fatto(this%handle)
+  ier=idba_fatto(this%handle)
   
 else
 
-  call idba_fatto(this%handle)
-  call idba_fatto(this%handle_staz)
-  call idba_arrivederci(this%idbhandle)
+  ier=idba_fatto(this%handle)
+  ier=idba_fatto(this%handle_staz)
+  ier=idba_arrivederci(this%idbhandle)
 
 end if
 
-call idba_error_remove_callback(this%handle_err)
+ier=idba_error_remove_callback(this%handle_err)
 
 !this%dsn=cmiss
 !this%user=cmiss
@@ -2779,7 +2798,7 @@ integer :: nanavarr,     nanavari,     nanavarb,     nanavard,     nanavarc
 integer :: nanaattrr,    nanaattri,    nanaattrb,    nanaattrd,    nanaattrc 
 integer :: nanavarattrr, nanavarattri, nanavarattrb, nanavarattrd, nanavarattrc
 
-integer :: ir,ib,id,ic
+integer :: ir,ib,id,ic,ier
 
 TYPE(datetime) :: timee
 TYPE(vol7d_level) :: levele
@@ -2854,7 +2873,7 @@ else
 end if
 
 
-call idba_unsetall(this%handle)
+ier=idba_unsetall(this%handle)
 #ifdef DEBUG
 CALL l4f_category_log(this%category,L4F_DEBUG,'unsetall handle')
 #endif        
@@ -2868,16 +2887,22 @@ call mem_acquire( bufferana,na,100,this%category )
 
 do while ( N > 0 )
 
-  call idba_voglioquesto (this%handle,N)
+  ier=idba_voglioquesto (this%handle,N)
+  if (ier /= 0) then
+    call l4f_category_log(this%category,L4F_ERROR,"voglioquesto return error status")
+    N=1 ! I do not want terminate while loop
+    cycle
+  end if
+
   call l4f_category_log(this%category,L4F_debug,"numero dati voglioquesto:"//to_char(n))
 
   ! dammi tutti i dati
   do i=1,N
 
-    call idba_dammelo (this%handle,btable)
+    ier=idba_dammelo (this%handle,btable)
   
-    call idba_enqdate (this%handle,year,month,day,hour,minute,sec)
-    call idba_enqlevel(this%handle, rlevel1, rl1, rlevel2,rl2)
+    ier=idba_enqdate (this%handle,year,month,day,hour,minute,sec)
+    ier=idba_enqlevel(this%handle, rlevel1, rl1, rlevel2,rl2)
 !!$    !TODO
 !!$    !dballe BUG: missing viene scritto come 0
 !!$    !qui faccio un altibug ma sarà meglio eliminarlo in futuro
@@ -2890,8 +2915,8 @@ do while ( N > 0 )
 !!$      rl2=imiss 
 !!$    end if
 
-    call idba_enqtimerange(this%handle, rtimerange, p1, p2)
-    call idba_enq(this%handle, "rep_memo",rep_memo)
+    ier=idba_enqtimerange(this%handle, rtimerange, p1, p2)
+    ier=idba_enq(this%handle, "rep_memo",rep_memo)
                                 !print *,"trovato network",rep_memo
   
                                 !nbtable=btable_numerico(btable)
@@ -2899,9 +2924,14 @@ do while ( N > 0 )
                                 ! IF (ind<1) cycle ! non c'e'
 
                                 !recupero i dati di anagrafica
-    call idba_enq (this%handle,"lat",   ilat)
-    call idba_enq (this%handle,"lon",   ilon)
-    call idba_enq (this%handle,"ident",ident)
+    ier=idba_enq (this%handle,"lat",   ilat)
+    ier=idba_enq (this%handle,"lon",   ilon)
+    ier=idba_enq (this%handle,"ident",ident)
+
+!!$    print*,"ident",ident
+!!$    do ier=1,len(ident)
+!!$      print *,iachar(ident(ier:ier))
+!!$    end do
 
     ! inizio la serie dei test con i parametri richiesti 
 
@@ -2997,14 +3027,14 @@ do while ( N > 0 )
         ii=( firsttrue(var == btable))
         if (ii > 0)then
                                 !print*, "indici",ii, btable,(varkind(ii))
-          if(varkind(ii) == "r") call idba_enq (this%handle,btable,buffer(nd)%dator)
-          if(varkind(ii) == "i") call idba_enq (this%handle,btable,buffer(nd)%datoi)
-          if(varkind(ii) == "b") call idba_enq (this%handle,btable,buffer(nd)%datob)
-          if(varkind(ii) == "d") call idba_enq (this%handle,btable,buffer(nd)%datod)
-          if(varkind(ii) == "c") call idba_enq (this%handle,btable,buffer(nd)%datoc)
+          if(varkind(ii) == "r") ier=idba_enq (this%handle,btable,buffer(nd)%dator)
+          if(varkind(ii) == "i") ier=idba_enq (this%handle,btable,buffer(nd)%datoi)
+          if(varkind(ii) == "b") ier=idba_enq (this%handle,btable,buffer(nd)%datob)
+          if(varkind(ii) == "d") ier=idba_enq (this%handle,btable,buffer(nd)%datod)
+          if(varkind(ii) == "c") ier=idba_enq (this%handle,btable,buffer(nd)%datoc)
         end if
       else
-        call idba_enq (this%handle,btable,buffer(nd)%datoc) !char is default
+        ier=idba_enq (this%handle,btable,buffer(nd)%datoc) !char is default
       end if
   
                                 !bufferizzo il contesto
@@ -3069,14 +3099,14 @@ do while ( N > 0 )
           ii=( firsttrue(anavar == btable))
           if (ii > 0)then
                                 !print*, "indici",ii, btable,(varkind(ii))
-            if(anavarkind(ii) == "r") call idba_enq (this%handle,btable,bufferana(na)%dator)
-            if(anavarkind(ii) == "i") call idba_enq (this%handle,btable,bufferana(na)%datoi)
-            if(anavarkind(ii) == "b") call idba_enq (this%handle,btable,bufferana(na)%datob)
-            if(anavarkind(ii) == "d") call idba_enq (this%handle,btable,bufferana(na)%datod)
-            if(anavarkind(ii) == "c") call idba_enq (this%handle,btable,bufferana(na)%datoc)
+            if(anavarkind(ii) == "r") ier=idba_enq (this%handle,btable,bufferana(na)%dator)
+            if(anavarkind(ii) == "i") ier=idba_enq (this%handle,btable,bufferana(na)%datoi)
+            if(anavarkind(ii) == "b") ier=idba_enq (this%handle,btable,bufferana(na)%datob)
+            if(anavarkind(ii) == "d") ier=idba_enq (this%handle,btable,bufferana(na)%datod)
+            if(anavarkind(ii) == "c") ier=idba_enq (this%handle,btable,bufferana(na)%datoc)
           end if
         else
-          call idba_enq (this%handle,btable,bufferana(na)%datoc) !char is default
+          ier=idba_enq (this%handle,btable,bufferana(na)%datoc) !char is default
                                 !print*,"dato anagrafica",btable," ",bufferana(na)%dator
         end if
       end if
