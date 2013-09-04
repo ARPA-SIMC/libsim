@@ -22,11 +22,10 @@
 program v7d_qctem
 
 use log4fortran
-use modqc
-use modqctem
-use vol7d_dballe_class
 USE optionparser_class
 use array_utilities
+use vol7d_dballe_class
+use modqctem
 
 implicit none
 
@@ -36,9 +35,9 @@ character(len=512):: a_name,output_format, output_template
                                 !tipi derivati.
 TYPE(optionparser) :: opt
 TYPE(geo_coord)    :: coordmin, coordmax 
-TYPE(datetime)     :: time,ti, tf, timei, timef, timeiqc, timefqc
+TYPE(datetime)     :: time,ti, tf, timeiqc, timefqc
 type(qctemtype)    :: v7dqctem
-type(vol7d_dballe) :: v7ddballe
+type(vol7d_dballe) :: v7ddballe,v7ddballeana
 
 integer, parameter :: maxvar=10
 character(len=6) :: var(maxvar)=cmiss   ! variables to elaborate
@@ -48,8 +47,7 @@ character(len=512) :: dsne='test',usere='test',passworde=''
 character(len=512) :: dsntem='test',usertem='test',passwordtem=''
 #endif
 integer :: years=imiss,months=imiss,days=imiss,hours=imiss,yeare=imiss,monthe=imiss,daye=imiss,houre=imiss,nvar=0
-doubleprecision :: lons=dmiss,lats=dmiss,lone=dmiss,late=dmiss,lon,lat
-integer :: year, month, day, hour
+doubleprecision :: lons=dmiss,lats=dmiss,lone=dmiss,late=dmiss
 logical :: height2level=.false.,version
 CHARACTER(len=512) :: input_file, output_file
 INTEGER :: optind, optstatus, ninput
@@ -66,15 +64,16 @@ type(vol7d_level) :: level,levelo
 type(vol7d_timerange) :: timerange,timerangeo
 type(vol7d_var) :: varia,variao
 CHARACTER(len=vol7d_ana_lenident) :: ident
-integer :: indcana,indctime,indclevel,indctimerange,indcdativarr,indcnetwork,indcattr
+integer :: indcana,indctime,indclevel,indctimerange,indcdativarr,indcnetwork,indcattr,iana
 INTEGER,POINTER :: w_s(:), w_e(:)
 TYPE(vol7d_dballe) :: v7d_dba_out
 logical :: file
     
 #ifdef HAVE_DBALLE
-namelist /odbc/   dsn,user,password,dsne,usere,passworde,dsntem,usertem,passwordtem       ! namelist to define DSN
+namelist /odbc/   dsn,user,password,dsne,usere,passworde
+namelist /odbctem/ dsntem,usertem,passwordtem       ! namelist to define DSN
 #endif
-namelist /switch/ height2level
+namelist /switchtem/ height2level
 namelist /minmax/ years,months,days,hours,lons,lats,yeare,monthe,daye,houre,lone,late
 namelist /varlist/ var
 
@@ -249,7 +248,8 @@ if (operation == "ndi") then
     end if
   end do
 
-  call display (v7dqctem%clima)
+!  print *,">>>>>> Clima Temporal Volume <<<<<<"
+!  call display (v7dqctem%clima)
 
   IF (output_format == 'native') THEN
     IF (output_file == '-') THEN ! stdout_unit does not work with unformatted
@@ -297,15 +297,16 @@ end if
 ! read the namelist to define DSN
 !------------------------------------------------------------------------
 
-open(10,file='qctem.nml',status='old')
+open(10,file='qc.nml',status='old')
 read(10,nml=odbc,iostat=io)
-if ( io == 0 ) read(10,nml=switch,iostat=io)
+if ( io == 0 ) read(10,nml=odbctem,iostat=io)
+if ( io == 0 ) read(10,nml=switchtem,iostat=io)
 if ( io == 0 ) read(10,nml=minmax,iostat=io)
 if ( io == 0 ) read(10,nml=varlist,iostat=io)
 
 if (io /= 0 )then
-    call l4f_category_log(category,L4F_ERROR,"Error reading namelist qctem.nml")
-    call raise_error("Error reading namelist qctem.nml")
+    call l4f_category_log(category,L4F_ERROR,"Error reading namelist qc.nml")
+    call raise_error("Error reading namelist qc.nml")
 end if
 close(10)
 
@@ -331,10 +332,10 @@ call display(tf)
 CALL init(coordmin,lat=lats,lon=lons)
 CALL init(coordmax,lat=late,lon=lone)
 
-call getval(coordmin,lon=lon,lat=lat)
-print*,"lon lat minumum",lon,lat
-call getval(coordmax,lon=lon,lat=lat)
-print*,"lon lat maximum",lon,lat
+!call getval(coordmin,lon=lon,lat=lat)
+print*,"lon lat minimum -> ",to_char(coordmin)
+!call getval(coordmax,lon=lon,lat=lat)
+print*,"lon lat maximum -> ",to_char(coordmax)
 
 !------------------------------------------------------------------------
 call l4f_category_log(category,L4F_INFO,"QC on "//t2c(nvar)//" variables")
@@ -350,21 +351,15 @@ if (c_e(tf))   call l4f_category_log(category,L4F_INFO,"QC on "//t2c(tf)//" date
 !------------------------------------------------------------------------
 
 
-!timei=ti
-time=ti+timedelta_new(minute=30)
-CALL getval(time,year, month, day, hour)
-call init(time,  year, month, day, hour, minute=00, msec=00)
-!if (time < timei) time=time+timedelta_new(hour=1)
-!timef=tf
-!if (time > timef) time=timei
+CALL init(v7ddballeana,dsn=dsn,user=user,password=password,write=.false.,wipe=.false.,categoryappend="QCtarget-anaonly")
+call l4f_category_log(category,L4F_INFO,"start ana import")
 
-DO WHILE (time <= tf)
-  timei = time - timedelta_new(minute=30)
-  timef = time + timedelta_new(minute=30)
-  timeiqc = time - timedelta_new(minute=15)
-  timefqc = time + timedelta_new(minute=15)
-  time  = time + timedelta_new(minute=30)
-  call l4f_category_log(category,L4F_INFO,"elaborate from "//t2c(timeiqc)//" to "//t2c(timefqc))
+CALL import(v7ddballeana,var=var(:nvar),timei=ti,timef=tf,coordmin=coordmin,coordmax=coordmax,anaonly=.true.)
+
+
+do iana=1, size(v7ddballeana%vol7d%ana)
+
+  call l4f_category_log(category,L4F_INFO,"elaborate station "//trim(to_char(v7ddballeana%vol7d%ana(iana))))
 
                                 ! Chiamo il costruttore della classe vol7d_dballe per il mio oggetto in import
   CALL init(v7ddballe,dsn=dsn,user=user,password=password,write=.true.,wipe=.false.,categoryappend="QCtarget-"//t2c(time))
@@ -373,7 +368,7 @@ DO WHILE (time <= tf)
   CALL import(v7ddballe,var=var(:nvar),varkind=(/("r",i=1,nvar)/),&
    anavar=(/"B07030"/),anavarkind=(/"r"/),&
    attr=(/qcattrvarsbtables(1),qcattrvarsbtables(2),qcattrvarsbtables(4)/),attrkind=(/"b","b","b"/)&
-   ,timei=timei,timef=timef,coordmin=coordmin,coordmax=coordmax)
+   ,timei=ti,timef=tf, ana=v7ddballeana%vol7d%ana(iana))
   
   !call display(v7ddballe%vol7d)
   call l4f_category_log(category,L4F_INFO,"end data import")
@@ -387,40 +382,55 @@ DO WHILE (time <= tf)
   call vol7d_peeling(v7ddballe%vol7d,v7ddballe%data_id,keep_attr=(/qcattrvarsbtables(4)/),purgeana=.true.)
   !call display(v7ddballe%vol7d)
 
-  call l4f_category_log(category,L4F_INFO, "filtered N staz="//t2c(size(v7ddballe%vol7d%ana)))
+  call l4f_category_log(category,L4F_INFO, "filtered N time="//t2c(size(v7ddballe%vol7d%time)))
 
-  call l4f_category_log(category,L4F_INFO,"start QC")
+  call l4f_category_log(category,L4F_INFO,"initialize QC")
 
                                 ! chiamiamo il "costruttore" per il Q.C.
 
 
-  call init(v7dqctem,v7ddballe%vol7d,var(:nvar),timei=ti,timef=tf, coordmin=coordmin, coordmax=coordmax,&
+  call init(v7dqctem,v7ddballe%vol7d,var(:nvar),timei=ti,timef=tf, &
+   coordmin=v7ddballe%vol7d%ana(iana)%coord, coordmax=v7ddballe%vol7d%ana(iana)%coord,&
    data_id_in=v7ddballe%data_id, &
    dsne=dsne, usere=usere, passworde=passworde,&
    dsntem=dsntem, usertem=usertem, passwordtem=passwordtem,&
    height2level=height2level, operation=operation,&
    categoryappend="space")
-  call display(v7dqctem%clima)
+
+!  print *,">>>>>> Clima Temporal Volume <<<<<<"
+!  call display(v7dqcspa%clima)
 
   call alloc(v7dqctem)
 
-  ! spatial QC
+  ! temporal QC
   call l4f_category_log(category,L4F_INFO,"start temporal QC")
   call quacontem(v7dqctem,timemask= ( v7dqctem%v7d%time >= timeiqc .and. v7dqctem%v7d%time <= timefqc ))
   call l4f_category_log(category,L4F_INFO,"end temporal QC")
 
 
-  call l4f_category_log(category,L4F_INFO,"start export data")
-  !call display(v7ddballe%vol7d)
 
-  CALL export(v7ddballe,attr_only=.true.)
+  ! prepare data_id to be recreated
+  deallocate(v7ddballe%data_id)
+  nullify(v7ddballe%data_id)
 
-  call l4f_category_log(category,L4F_INFO,"end export data")
+  if (v7dqctem%operation == "run") then
+    call l4f_category_log(category,L4F_INFO,"start export data")
+    !call display(v7ddballe%vol7d)
 
-  call delete(v7ddballe)
+    ! data_id to use is the new one
+    v7ddballe%data_id => v7dqctem%data_id_out
+    CALL export(v7ddballe,attr_only=.true.)
+    call l4f_category_log(category,L4F_INFO,"end export data")
+  end if
+
   call delete(v7dqctem)
+  ! data_id was allready deleted
+  nullify(v7ddballe%data_id)
+  call delete(v7ddballe)
 
 end do
+
+call delete(v7ddballeana)
 
 !close logger
 call l4f_category_delete(category)

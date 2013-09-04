@@ -54,7 +54,7 @@ character(len=512) :: dsne='test',usere='test',passworde=''
 character(len=512) :: dsnspa='test',userspa='test',passwordspa=''
 #endif
 integer :: years=imiss,months=imiss,days=imiss,hours=imiss,yeare=imiss,monthe=imiss,daye=imiss,houre=imiss,nvar=0
-doubleprecision :: lons=dmiss,lats=dmiss,lone=dmiss,late=dmiss,lon,lat
+doubleprecision :: lons=dmiss,lats=dmiss,lone=dmiss,late=dmiss
 integer :: year, month, day, hour
 logical :: height2level=.false.,doplot=.false.,version
 CHARACTER(len=512) :: input_file, output_file
@@ -78,9 +78,10 @@ TYPE(vol7d_dballe) :: v7d_dba_out
 logical :: file
     
 #ifdef HAVE_DBALLE
-namelist /odbc/   dsn,user,password,dsne,usere,passworde,dsnspa,userspa,passwordspa       ! namelist to define DSN
+namelist /odbc/   dsn,user,password,dsne,usere,passworde
+namelist /odbcspa/ dsnspa,userspa,passwordspa       ! namelist to define DSN
 #endif
-namelist /switch/ height2level,doplot
+namelist /switchspa/ height2level,doplot
 namelist /minmax/ years,months,days,hours,lons,lats,yeare,monthe,daye,houre,lone,late
 namelist /varlist/ var
 
@@ -304,15 +305,16 @@ end if
 ! read the namelist to define DSN
 !------------------------------------------------------------------------
 
-open(10,file='qcspa.nml',status='old')
+open(10,file='qc.nml',status='old')
 read(10,nml=odbc,iostat=io)
-if ( io == 0 ) read(10,nml=switch,iostat=io)
+if ( io == 0 ) read(10,nml=odbcspa,iostat=io)
+if ( io == 0 ) read(10,nml=switchspa,iostat=io)
 if ( io == 0 ) read(10,nml=minmax,iostat=io)
 if ( io == 0 ) read(10,nml=varlist,iostat=io)
 
 if (io /= 0 )then
-    call l4f_category_log(category,L4F_ERROR,"Error reading namelist qcspa.nml")
-    call raise_error("Error reading namelist qcspa.nml")
+    call l4f_category_log(category,L4F_ERROR,"Error reading namelist qc.nml")
+    call raise_error("Error reading namelist qc.nml")
 end if
 close(10)
 
@@ -338,10 +340,10 @@ call display(tf)
 CALL init(coordmin,lat=lats,lon=lons)
 CALL init(coordmax,lat=late,lon=lone)
 
-call getval(coordmin,lon=lon,lat=lat)
-print*,"lon lat minumum",lon,lat
-call getval(coordmax,lon=lon,lat=lat)
-print*,"lon lat maximum",lon,lat
+!call getval(coordmin,lon=lon,lat=lat)
+print*,"lon lat minimum -> ",to_char(coordmin)
+!call getval(coordmax,lon=lon,lat=lat)
+print*,"lon lat maximum -> ",to_char(coordmax)
 
 !------------------------------------------------------------------------
 call l4f_category_log(category,L4F_INFO,"QC on "//t2c(nvar)//" variables")
@@ -388,7 +390,7 @@ DO WHILE (time <= tf)
    attr=(/qcattrvarsbtables(1),qcattrvarsbtables(2),qcattrvarsbtables(4)/),attrkind=(/"b","b","b"/)&
    ,timei=timei,timef=timef,coordmin=coordmin,coordmax=coordmax)
   
-  !call display(v7ddballe%vol7d)
+!  call display(v7ddballe%vol7d)
   call l4f_category_log(category,L4F_INFO,"end data import")
   call l4f_category_log(category,L4F_INFO, "input N staz="//t2c(size(v7ddballe%vol7d%ana)))
 
@@ -398,7 +400,7 @@ DO WHILE (time <= tf)
   !qcpar=qcpartype(0_int_b,0_int_b,0_int_b)
   qcpar%att=bmiss
   call vol7d_peeling(v7ddballe%vol7d,v7ddballe%data_id,keep_attr=(/qcattrvarsbtables(4)/),purgeana=.true.)
-  !call display(v7ddballe%vol7d)
+!  call display(v7ddballe%vol7d)
 
   call l4f_category_log(category,L4F_INFO, "filtered N staz="//t2c(size(v7ddballe%vol7d%ana)))
 
@@ -416,6 +418,9 @@ DO WHILE (time <= tf)
 
 !  print *,">>>>>> Clima Spatial Volume <<<<<<"
 !  call display(v7dqcspa%clima)
+
+  print *,">>>>>> Pre Data Volume <<<<<<"
+  call display(v7dqcspa%v7d)
 
   call alloc(v7dqcspa)
 
@@ -440,7 +445,8 @@ DO WHILE (time <= tf)
 
   if (v7dqcspa%operation == "run") then
     call l4f_category_log(category,L4F_INFO,"start export data")
-    !call display(v7ddballe%vol7d)
+    print *,">>>>>> Post Data Volume <<<<<<"
+    call display(v7ddballe%vol7d)
 
     ! data_id to use is the new one
     v7ddballe%data_id => v7dqcspa%data_id_out

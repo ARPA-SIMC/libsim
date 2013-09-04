@@ -826,7 +826,7 @@ do indana=1,size(qccli%v7d%ana)
     end do
   end do
 
-  read  (qccli%v7d%ana(indana)%ident,'(a1,i2.2,2i3.3)') canc, clev, iarea, desc
+  read  (qccli%v7d%ana(indana)%ident,'(a1,i2.2,2i3.3)') mycanc, clev, iarea, desc
   if (mycanc == canc) then
     clev=0
     iarea=0

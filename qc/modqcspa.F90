@@ -190,8 +190,6 @@ TYPE(vol7d_network)  :: network
 character(len=512) :: filepathspa
 character(len=512) :: a_name
 
-
-
 call l4f_launcher(a_name,a_name_append=trim(subcategoryspa)//"."//trim(categoryappend))
 qcspa%category=l4f_category_get(a_name)
 
@@ -792,7 +790,7 @@ do indtime=1,size(qcspa%v7d%time)
                 do iindtime=1,size(qcspa%v7d%time)
                   if (.not. c_e(datila(iindtime))) cycle
                                 ! invalidated
-                  if (indbattrinv > 0 ) then 
+                  if (indbattrinv > 0 ) then
                     if (invalidated(qcspa%v7d%voldatiattrb&
                      (ivert(i),iindtime,indlevel,indtimerange,inddativarr,indnetwork,indbattrinv))) cycle
                   end if
@@ -925,7 +923,6 @@ do indtime=1,size(qcspa%v7d%time)
       end do
     end do
   end do
-!!$          end forall
 end do
 
 !!$print*,"risultato"
