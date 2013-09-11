@@ -273,8 +273,6 @@ ENDDO
 
 ALLOCATE(map_tr(nitr, SIZE(itime), nitr, SIZE(itime), 2))
 map_tr(:,:,:,:,:) = imiss
-a_otime = arrayof_datetime_new()
-a_otimerange = arrayof_vol7d_timerange_new()
 
 mask_timerange(:) = mask_timerange(:) .AND. itimerange(:)%p2 == steps
 DO i = 1, SIZE(mask_timerange)
@@ -470,8 +468,6 @@ CALL l4f_log(L4F_DEBUG, &
 #endif
 
 ! create output time and timerange lists
-a_otime = arrayof_datetime_new()
-a_otimerange = arrayof_vol7d_timerange_new()
 
 IF (lforecast) THEN ! forecast mode
   IF (time_definition == 0) THEN ! reference time

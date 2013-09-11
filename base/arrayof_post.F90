@@ -2,20 +2,6 @@
 #define ARRAYOF_TYPE arrayof_/**/ARRAYOF_ORIGTYPE
 #endif
 
-!> Constructor for initializing an array object.
-!! It is left for compatibility with old code, but it is not
-!! anymore necessary to call the constructor before using
-!! an object of this type.
-FUNCTION ARRAYOF_TYPE/**/_new() RESULT(this)
-TYPE(ARRAYOF_TYPE) :: this !< array object to initialize
-
-! give empty/default values
-NULLIFY(this%array)
-this%arraysize = 0
-this%overalloc = 2.0D0
-
-END FUNCTION ARRAYOF_TYPE/**/_new
-
 
 !> Method for inserting a number of elements of the array at a desired position.
 !! If necessary, the array is reallocated to accomodate the new elements.
@@ -69,7 +55,7 @@ CALL insert(this, (/content/), pos=pos)
 END SUBROUTINE ARRAYOF_TYPE/**/_insert
 
 
-!> Quick function to append an element to the array.
+!> Quick method to append an element to the array.
 !! The return value is the position at which the element has been
 !! appended.
 FUNCTION ARRAYOF_TYPE/**/_append(this, content) RESULT(pos)
@@ -199,6 +185,7 @@ LOGICAL, INTENT(in), OPTIONAL :: nodestroy !< if provided and \c .TRUE. , the de
 #endif
 LOGICAL, INTENT(in), OPTIONAL :: nodealloc !< if provided and \c .TRUE. , the space reserved for the array is not deallocated, thus the values are retained, while the array pointer is nullified, this means that the caller must have previously assigned the pointer contents this%array to another pointer to prevent memory leaks
 
+TYPE(ARRAYOF_TYPE) :: empty
 
 #ifdef ARRAYOF_ORIGDESTRUCTOR
 INTEGER :: i
@@ -232,7 +219,7 @@ IF (ASSOCIATED(this%array)) THEN
   ENDIF
 ENDIF
 ! give empty values
-this=ARRAYOF_TYPE/**/_new()
+this=empty
 
 END SUBROUTINE ARRAYOF_TYPE/**/_delete
 

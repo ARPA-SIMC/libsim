@@ -5,20 +5,6 @@
 
 
 
-
-FUNCTION ARRAYOF_TYPE/**/_new() RESULT(this)
-TYPE(ARRAYOF_TYPE) :: this
-
-! give empty/default values
-NULLIFY(this%array)
-this%arraysize = 0
-this%overalloc = 2.0D0
-
-END FUNCTION ARRAYOF_TYPE/**/_new
-
-
-
-
 SUBROUTINE ARRAYOF_TYPE/**/_insert_array(this, content, nelem, pos)
 TYPE(ARRAYOF_TYPE) :: this
 ARRAYOF_ORIGTYPE, INTENT(in), OPTIONAL :: content(:)
@@ -199,6 +185,8 @@ LOGICAL, INTENT(in), OPTIONAL :: nodestroy
 #endif
 LOGICAL, INTENT(in), OPTIONAL :: nodealloc
 
+TYPE(ARRAYOF_TYPE) :: empty
+
 #ifdef ARRAYOF_ORIGDESTRUCTOR
 INTEGER :: i
 LOGICAL :: destroy
@@ -231,9 +219,10 @@ IF (ASSOCIATED(this%array)) THEN
   ENDIF
 ENDIF
 ! give empty values
-this=ARRAYOF_TYPE/**/_new()
+this=empty
 
 END SUBROUTINE ARRAYOF_TYPE/**/_delete
+
 
 
 

@@ -28,32 +28,50 @@
 !> Derived type defining a dynamically extensible array of ARRAYOF_ORIGTYPE elements
 TYPE ARRAYOF_TYPE
   ARRAYOF_ORIGTYPE, POINTER :: array(:)=>NULL() !< array of ARRAYOF_ORIGTYPE
-  INTEGER :: arraysize=0 !< current logical size of the array; it may be different from the physical size \c SIZE(this&perc;array), and it should be used instead of \c SIZE() intrinsic function in order to evaluate the number of elements assigned to \a array
+  INTEGER :: arraysize=0 !< current logical size of the array; it may be different from the physical size \c SIZE(this%array), and it should be used instead of \c SIZE() intrinsic function in order to evaluate the number of elements assigned to \a array
   DOUBLE PRECISION :: overalloc=2.0D0 !< overallocation factor, values close to 1 determine more calls to the system alloc function (decreased performances) at the advantage of less memory consumption, the default is 2; the results are not affected by the value of this member
 END TYPE ARRAYOF_TYPE
 
+!> Method for inserting elements of the array at a desired position.
+!! If necessary, the array is reallocated to accomodate the new elements.
 INTERFACE insert
   MODULE PROCEDURE ARRAYOF_TYPE/**/_insert, ARRAYOF_TYPE/**/_insert_array
 END INTERFACE
 
+!> Quick method to append an element to the array.
+!! The return value is the position at which the element has been
+!! appended.
+!! \param TYPE(ARRAYOF_TYPE)::this array object to extend
+!! \param ARRAYOF_ORIGTYPE,INTENT(in)::content object of \a TYPE ARRAYOF_ORIGTYPE to append
 INTERFACE append
   MODULE PROCEDURE ARRAYOF_TYPE/**/_append
 END INTERFACE
 
+!> Method for removing elements of the array at a desired position.
+!! If necessary, the array is reallocated to reduce space.
 INTERFACE remove
   MODULE PROCEDURE ARRAYOF_TYPE/**/_remove
 END INTERFACE
 
+!> Destructor for finalizing an array object.  If defined, calls the
+!! destructor for every element of the array object;
+!! finally it deallocates all the space occupied.
 INTERFACE delete
   MODULE PROCEDURE ARRAYOF_TYPE/**/_delete
 END INTERFACE
 
+!> Method for packing the array object reducing at a minimum
+!! the memory occupation, without destroying its contents.
+!! The value of this::overalloc remains unchanged.
+!! After the call to the method, the object can continue to be used,
+!! extended and shortened as before. If the object is empty the array
+!! is allocated to zero length.
 INTERFACE packarray
   MODULE PROCEDURE ARRAYOF_TYPE/**/_packarray
 END INTERFACE
 
 #ifndef ARRAYOF_PRIVATE
-PUBLIC ARRAYOF_TYPE, ARRAYOF_TYPE/**/_new
+PUBLIC ARRAYOF_TYPE
 #endif
 
 PRIVATE ARRAYOF_TYPE/**/_alloc, &

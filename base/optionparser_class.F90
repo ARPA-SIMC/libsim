@@ -467,7 +467,6 @@ IF (PRESENT(description_msg)) THEN
 ELSE
   NULLIFY(this%description_msg)
 ENDIF
-this%options = arrayof_option_new()
 
 END FUNCTION optionparser_new
 
@@ -598,7 +597,6 @@ myoption = option_new(short_opt, long_opt, cdefault, help)
 IF (.NOT.c_e(myoption)) RETURN ! error in creating option, ignore it
 
 myoption%destiarr => dest
-myoption%destiarr = arrayof_integer_new()
 IF (PRESENT(default)) THEN
   CALL insert(myoption%destiarr, default)
   CALL packarray(myoption%destiarr)
@@ -681,7 +679,6 @@ myoption = option_new(short_opt, long_opt, cdefault, help)
 IF (.NOT.c_e(myoption)) RETURN ! error in creating option, ignore it
 
 myoption%destrarr => dest
-myoption%destrarr = arrayof_real_new()
 IF (PRESENT(default)) THEN
   CALL insert(myoption%destrarr, default)
   CALL packarray(myoption%destrarr)
@@ -764,7 +761,6 @@ myoption = option_new(short_opt, long_opt, cdefault, help)
 IF (.NOT.c_e(myoption)) RETURN ! error in creating option, ignore it
 
 myoption%destdarr => dest
-myoption%destdarr = arrayof_doubleprecision_new()
 IF (PRESENT(default)) THEN
   CALL insert(myoption%destdarr, default)
   CALL packarray(myoption%destdarr)
