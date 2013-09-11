@@ -87,7 +87,8 @@ END TYPE gridinfo_def
 
 INTEGER, PARAMETER :: &
  cosmo_centre(3) = (/78,80,200/), & ! emission centres using COSMO coding
- ecmwf_centre(1) = (/98/) ! emission centres using ECMWF coding
+ ecmwf_centre(1) = (/98/), & ! emission centres using ECMWF coding
+ height_level(5) = (/102,103,106,117,160/)
 
 !> Constructor, it creates a new instance of the object.
 INTERFACE init
@@ -1031,24 +1032,27 @@ CONTAINS
 
 SUBROUTINE g2_to_dballe(ltype, scalef, scalev, lt, l)
 integer,intent(in) :: ltype,scalef,scalev
-integer,intent(out) ::lt,l
+integer,intent(out) :: lt,l
 
-integer,parameter :: height(5)=(/102,103,106,117,160/)
-doubleprecision:: sl
+doubleprecision :: sl
 
-if (ltype == 255) then
+
+IF (ltype == 255) THEN
   lt = imiss
   l = imiss
-else
+ELSE IF (ltype <= 10 .OR. (ltype >= 162 .AND. ltype <= 166)) THEN
+  lt = ltype
+  l = imiss
+ELSE
   lt = ltype
   sl = scalev*(10.D0**(-scalef))
 
-  if (any(ltype == height)) then
+  IF (ANY(ltype == height_level)) THEN
     l = NINT(sl*1000.D0)
-  else
+  ELSE
     l = NINT(sl)
-  end if
-end if
+  ENDIF
+ENDIF
 
 END SUBROUTINE g2_to_dballe
 
@@ -1056,7 +1060,7 @@ END SUBROUTINE level_g2_to_dballe
 
 
 SUBROUTINE level_dballe_to_g2(lt1,l1,lt2,l2, ltype1,scalef1,scalev1,ltype2,scalef2,scalev2)
-integer,intent(in) ::lt1,l1,lt2,l2
+integer,intent(in) :: lt1,l1,lt2,l2
 integer,intent(out) :: ltype1,scalef1,scalev1,ltype2,scalef2,scalev2
 
 
@@ -1066,27 +1070,30 @@ CALL dballe_to_g2(lt2, l2, ltype2, scalef2, scalev2)
 CONTAINS
 
 SUBROUTINE dballe_to_g2(lt, l, ltype, scalef, scalev)
-integer,intent(in) ::lt,l
-integer,intent(out) :: ltype,scalef,scalev
+INTEGER,INTENT(in) :: lt,l
+INTEGER,INTENT(out) :: ltype,scalef,scalev
 
-integer,parameter :: height(5)=(/102,103,106,117,160/)
 
-if (lt == imiss) then
+IF (lt == imiss) THEN
   ltype = 255
   scalev = 0
   scalef = 0
-else
+ELSE IF (lt <= 10 .OR. (lt >= 162 .AND. lt <= 166)) THEN
+  ltype = lt
+  scalev = 0
+  scalef = 0
+ELSE
   ltype = lt
   scalev = l
-  if (any(ltype == height)) then
+  IF (ANY(ltype == height_level)) THEN
     scalef = 3
-  else
+  ELSE
     scalef = 0
-  end if
-endif
+  ENDIF
+ENDIF
 
 !Caso generale reale
-!IF (ANY(ltype == height)) THEN
+!IF (ANY(ltype == height_level)) THEN
 !  sl=l/1000.D0
 !ELSE
 !  sl=l
