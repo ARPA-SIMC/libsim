@@ -571,7 +571,7 @@ ELSE ! no attributes requested
 
 ENDIF
 
-
+#ifdef ALCHIMIA
 ! generate variable lists
 IF (LEN_TRIM(output_variable_list) > 0) THEN
   n = word_split(output_variable_list, w_s, w_e, ',')
@@ -581,7 +581,7 @@ IF (LEN_TRIM(output_variable_list) > 0) THEN
   ENDDO
   DEALLOCATE(w_s, w_e)
 ENDIF
-
+#endif
 
 ! time-related arguments
 IF (start_date /= '') THEN
