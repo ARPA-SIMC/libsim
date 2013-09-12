@@ -47,6 +47,10 @@ if ALCHIMIA
 v7d_transform_LDADD += ../alchimia/libsim_alchimia.la ../termolib/libsim_termolib.la  
 endif
 
+bin_PROGRAMS += v7d_add_wmo_info
+
+v7d_add_wmo_info_SOURCES = v7d_add_wmo_info.F90
+v7d_add_wmo_info_LDADD = ../base/libsim_base.la ../vol7d/libsim_vol7d.la ../log4fortran/liblog4fortran.la
 
 bin_PROGRAMS += vg6d_getpoint vg6d_transform
 
@@ -79,7 +83,7 @@ endif
 endif
 
 if HELP2MAN
-man_MANS = v7d_transform.1 vg6d_getpoint.1 vg6d_transform.1
+man_MANS = v7d_transform.1 v7d_add_wmo_info.1 vg6d_getpoint.1 vg6d_transform.1
 
 if GRIBAPI
 man_MANS += vg6d_subarea.1
