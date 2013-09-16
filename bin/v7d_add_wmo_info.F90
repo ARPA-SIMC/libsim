@@ -19,6 +19,7 @@ PROGRAM v7d_add_wmo_info
 #include "config.h"
 
 USE log4fortran
+USE char_utilities
 USE optionparser_class
 USE io_units
 USE vol7d_var_class
@@ -36,7 +37,8 @@ CHARACTER(len=512) :: input_file, output_file, output_format, output_template
 INTEGER :: block_number
 LOGICAL :: file
 
-INTEGER :: iun, ier, i, n, ninput, iargc, bni, sni, sii
+INTEGER :: iun, ier, i, n, ninput, iargc, bni, sni
+INTEGER,ALLOCATABLE :: si(:,:),bn(:),sn(:)
 INTEGER,POINTER :: w_s(:), w_e(:)
 TYPE(vol7d) :: v7d, v7dtmp
 #ifdef HAVE_DBALLE
@@ -75,7 +77,13 @@ opt = optionparser_new(description_msg= &
  usage_msg='Usage: v7d_add_wmo_info [options] inputfile1 [inputfile2...] outputfile')
 
 ! options for defining input
-CALL optionparser_add(opt, ' ', 'input-format', input_format, 'native', help= &
+CALL optionparser_add(opt, ' ', 'input-format', input_format, &
+#ifdef HAVE_DBALLE
+ 'BUFR', &
+#else
+ 'native', &
+#endif
+ help= &
  'format of input, ''native'' for vol7d native binary file'&
 #ifdef HAVE_DBALLE
  //', ''BUFR'' for BUFR file with generic template, ''CREX'' for CREX file&
@@ -89,12 +97,18 @@ CALL optionparser_add(opt, 'd', 'display', ldisplay, help= &
  &with output on stdout.')
 block_number = imiss
 CALL optionparser_add(opt, ' ', 'block-number', block_number, help= &
- 'set variable B01001, WMO block number, to this value in output volume, &
+ 'set variable B01001 -WMO block number- to this value in output volume, &
  &if not provided an automatic choice is done.')
 
 ! options for defining output
 output_template = ''
-CALL optionparser_add(opt, ' ', 'output-format', output_format, 'native', help= &
+CALL optionparser_add(opt, ' ', 'output-format', output_format, &
+#ifdef HAVE_DBALLE
+ 'BUFR', &
+#else
+ 'native', &
+#endif
+ help= &
  'format of output file, in the form ''name[:template]''; ''native'' for vol7d &
  &native binary format (no template to be specified)'&
 #ifdef HAVE_DBALLE
@@ -214,29 +228,46 @@ IF (ldisplay) THEN
   CALL display(v7d)
 ENDIF
 
-CALL add_block_station_var(v7d)
-! search for block/station number variables and for station_id variable
-bni = INDEX(v7d%anavar%i, vol7d_var_new('B01001'))
-sni = INDEX(v7d%anavar%i, vol7d_var_new('B01002'))
-sii = INDEX(v7d%anavar%i, vol7d_var_new('B01192'))
-
-IF (bni <= 0 .OR. sni <= 0) THEN
-  CALL display(v7d)
+! make room for new variables, character type (experimental)
+CALL add_block_station_varc(v7d)
+! search for block/station number variables
+bni = INDEX(v7d%anavar%c, vol7d_var_new('B01001'))
+sni = INDEX(v7d%anavar%c, vol7d_var_new('B01002'))
+IF (bni <= 0 .OR. sni <= 0) THEN ! unexpected error
+  IF (ldisplay) THEN
+    PRINT*," >>>>> Error Volume <<<<<"
+    CALL display(v7d)
+  ENDIF
   CALL l4f_category_log(category,L4F_ERROR,'adding block/station number variables')
   CALL raise_fatal_error()
 ENDIF
+ALLOCATE(bn(SIZE(v7d%ana)), sn(SIZE(v7d%ana)))
 
-IF (sii <= 0) THEN
+IF (INDEX(v7d%anavar, vol7d_var_new('B01192')) > 0) THEN
+! retrieve station id if present
+  ALLOCATE(si(SIZE(v7d%ana),SIZE(v7d%network)))
+  si = integeranavol(v7d, vol7d_var_new('B01192'))
+! compute block/station number using station id number
   DO i = 1, SIZE(v7d%network)
-    CALL compute_block_station_number(block_number, &
-     v7d%volanai(:,bni,i), v7d%volanai(:,sni,i))
+    CALL compute_block_station_number(block_number, bn, sn, si(:,i))
+    v7d%volanac(:,bni,i) = to_char(bn) ! convert to char (experimental)
+    v7d%volanac(:,sni,i) = to_char(sn)
   ENDDO
+
+  DEALLOCATE(si)
+
 ELSE
+! compute block/station number using ana order
   DO i = 1, SIZE(v7d%network)
-    CALL compute_block_station_number(block_number, &
-     v7d%volanai(:,bni,i), v7d%volanai(:,sni,i), v7d%volanai(:,sii,i))
+    CALL compute_block_station_number(block_number, bn, sn)
+    v7d%volanac(:,bni,i) = to_char(bn) ! convert to char (experimental)
+    v7d%volanac(:,sni,i) = to_char(sn)
   ENDDO
+
 ENDIF
+
+DEALLOCATE(bn, sn)
+
 
 IF (ldisplay) THEN
   PRINT*," >>>>> Output Volume <<<<<"
@@ -326,7 +357,7 @@ ENDIF
 END SUBROUTINE parse_dba_access_info
 
 
-! make room for block/station numbers
+! make room for block/station number variables
 SUBROUTINE add_block_station_var(v7d)
 TYPE(vol7d),INTENT(inout) :: v7d
 
@@ -345,6 +376,25 @@ CALL vol7d_merge(v7d, locana)
 END SUBROUTINE add_block_station_var
 
 
+! make room for block/station number variables (char version)
+SUBROUTINE add_block_station_varc(v7d)
+TYPE(vol7d),INTENT(inout) :: v7d
+
+TYPE(vol7d) :: locana
+
+CALL init(locana)
+CALL vol7d_alloc(locana, nana=SIZE(v7d%ana), nnetwork=SIZE(v7d%network), nanavarc=2)
+CALL vol7d_alloc_vol(locana)
+locana%ana(:) = v7d%ana(:)
+locana%network(:) = v7d%network(:)
+CALL init(locana%anavar%c(1), btable='B01001')
+CALL init(locana%anavar%c(2), btable='B01002')
+
+CALL vol7d_merge(v7d, locana)
+
+END SUBROUTINE add_block_station_varc
+
+
 ! add block/station number with an intelligent(!) algorithm
 SUBROUTINE compute_block_station_number(block_number, out_block, out_station, &
  station_id)
@@ -359,6 +409,10 @@ out_block(:) = imiss
 
 IF (c_e(block_number)) THEN ! block_number provided
   IF (PRESENT(station_id)) THEN ! station_id found, use it as station number
+#ifdef DEBUG
+    CALL l4f_category_log(category, L4F_WARN, &
+     'computing station numbers according to db station id number')
+#endif
     WHERE(c_e(station_id))
       out_block(:) = block_number
     END WHERE
@@ -376,6 +430,10 @@ IF (c_e(block_number)) THEN ! block_number provided
       END WHERE
     ENDIF
   ELSE ! station_id not found, invent station number
+#ifdef DEBUG
+    CALL l4f_category_log(category, L4F_WARN, &
+     'computing station numbers according to ana order')
+#endif
     out_block(:) = block_number
     IF (SIZE(out_station) > 999) THEN
       CALL l4f_category_log(category, L4F_WARN, &
@@ -389,11 +447,19 @@ IF (c_e(block_number)) THEN ! block_number provided
   ENDIF
 ELSE ! block_number not provided
   IF (PRESENT(station_id)) THEN ! station_id found, use it as block/station number
+#ifdef DEBUG
+    CALL l4f_category_log(category, L4F_WARN, &
+     'computing block/station numbers according to db station id number')
+#endif
       WHERE(c_e(station_id))
         out_station(:) = MOD(station_id(:),1000)
         out_block(:) = MOD((station_id(:) - out_station(:))/1000,100)
       END WHERE
   ELSE ! station_id not found, invent block/station number
+#ifdef DEBUG
+    CALL l4f_category_log(category, L4F_WARN, &
+     'computing block/station numbers according to ana order')
+#endif
       out_station(:) = (/(MOD(i,1000),i=0,SIZE(out_station)-1)/)
       out_block(:) = MOD(((/(i,i=0,SIZE(out_station)-1)/))/1000,100)
   ENDIF
@@ -401,11 +467,12 @@ ENDIF
 
 #ifdef DEBUG
 DO i = 1, MIN(SIZE(out_block),10)
-  CALL l4f_category_log(category, L4F_DEBUG, &
+  CALL l4f_category_log(category, L4F_WARN, &
  'computed block/station numbers: '//t2c(out_block(i))//','//t2c(out_station(i)))
 ENDDO
 #endif
 
 END SUBROUTINE compute_block_station_number
+
 
 END PROGRAM v7d_add_wmo_info

@@ -182,7 +182,7 @@ END INTERFACE
 
 PRIVATE
 PUBLIC line_split
-PUBLIC to_char, t2c, delete, match, &
+PUBLIC to_char, t2c, c2i, c2r, c2d, delete, match, &
  fchar_to_cstr, fchar_to_cstr_alloc, cstr_to_fchar, UpperCase, LowerCase, &
  align_center, l_nblnk, f_nblnk, word_split, &
  line_split_new, line_split_get_nlines, line_split_get_line, &
@@ -459,6 +459,78 @@ CHARACTER(len=1) :: char
 WRITE(char,'(L1)') in
 
 END FUNCTION trim_logical_to_char
+
+
+!> Convert a character string to an integer value if possible.
+!! It is \a ELEMENTAL so it works with arrays of any shape. It returns
+!! missing value if the input cannot be converted or is empty or
+!! missing.
+ELEMENTAL FUNCTION c2i(string) RESULT(num)
+CHARACTER(len=*),INTENT(in) :: string !< string to be represented as \a INTEGER
+INTEGER :: num
+
+INTEGER :: lier
+
+IF (.NOT.c_e(string)) THEN
+  num = imiss
+ELSE IF (len_trim(string) == 0) THEN
+  num = imiss
+ELSE
+  READ(string, '(I32)', iostat=lier)num
+  IF (lier /= 0) THEN
+    num = imiss
+  ENDIF
+ENDIF
+
+END FUNCTION c2i
+
+
+!> Convert a character string to a real value if possible.
+!! It is \a ELEMENTAL so it works with arrays of any shape. It returns
+!! missing value if the input cannot be converted or is empty or
+!! missing.
+ELEMENTAL FUNCTION c2r(string) RESULT(num)
+CHARACTER(len=*),INTENT(in) :: string !< string to be represented as \a REAL
+REAL :: num
+
+INTEGER :: lier
+
+IF (.NOT.c_e(string)) THEN
+  num = rmiss
+ELSE IF (len_trim(string) == 0) THEN
+  num = rmiss
+ELSE
+  READ(string, '(F32.0)', iostat=lier)num
+  IF (lier /= 0) THEN
+    num = rmiss
+  ENDIF
+ENDIF
+
+END FUNCTION c2r
+
+
+!> Convert a character string to a double value if possible.
+!! It is \a ELEMENTAL so it works with arrays of any shape. It returns
+!! missing value if the input cannot be converted or is empty or
+!! missing.
+ELEMENTAL FUNCTION c2d(string) RESULT(num)
+CHARACTER(len=*),INTENT(in) :: string !< string to be represented as \a DOUBLE \a PRECISION
+DOUBLE PRECISION :: num
+
+INTEGER :: lier
+
+IF (.NOT.c_e(string)) THEN
+  num = rmiss
+ELSE IF (len_trim(string) == 0) THEN
+  num = rmiss
+ELSE
+  READ(string, '(F32.0)', iostat=lier)num
+  IF (lier /= 0) THEN
+    num = rmiss
+  ENDIF
+ENDIF
+
+END FUNCTION c2d
 
 
 !> Converts a \a CHARACTER variable into a string which can be

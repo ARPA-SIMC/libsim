@@ -83,6 +83,7 @@
 !! \ingroup vol7d
 MODULE vol7d_class
 USE kinds
+USE char_utilities
 USE datetime_class
 USE optional_values
 USE log4fortran
@@ -2542,11 +2543,8 @@ if (.not. present(unit)) close(unit=lunit)
 end subroutine vol7d_read_from_file
 
 
-
 ! to double precision
-
 elemental doubleprecision function doubledatd(voldat,var)
-
 doubleprecision,intent(in) :: voldat
 type(vol7d_var),intent(in) :: var
 
@@ -2556,7 +2554,6 @@ end function doubledatd
 
 
 elemental doubleprecision function doubledatr(voldat,var)
-
 real,intent(in) :: voldat
 type(vol7d_var),intent(in) :: var
 
@@ -2570,12 +2567,15 @@ end function doubledatr
 
 
 elemental doubleprecision function doubledati(voldat,var)
-
 integer,intent(in) :: voldat
 type(vol7d_var),intent(in) :: var
 
-if (c_e(voldat) .and. c_e(var%scalefactor))then
-  doubledati=dble(voldat)/10d0**var%scalefactor
+if (c_e(voldat)) then
+  if (c_e(var%scalefactor))then
+    doubledati=dble(voldat)/10.d0**var%scalefactor
+  else
+    doubledati=dble(voldat)
+  endif
 else
   doubledati=dmiss
 end if
@@ -2584,12 +2584,15 @@ end function doubledati
 
 
 elemental doubleprecision function doubledatb(voldat,var)
-
 integer(kind=int_b),intent(in) :: voldat
 type(vol7d_var),intent(in) :: var
 
-if (c_e(voldat) .and. c_e(var%scalefactor))then
-  doubledatb=dble(voldat)/10d0**var%scalefactor
+if (c_e(voldat)) then
+  if (c_e(var%scalefactor))then
+    doubledatb=dble(voldat)/10.d0**var%scalefactor
+  else
+    doubledatb=dble(voldat)
+  endif
 else
   doubledatb=dmiss
 end if
@@ -2597,38 +2600,29 @@ end if
 end function doubledatb
 
 
-
 elemental doubleprecision function doubledatc(voldat,var)
-
 CHARACTER(len=vol7d_cdatalen),intent(in) :: voldat
 type(vol7d_var),intent(in) :: var
-integer:: ier
 
-if (c_e(voldat) .and. c_e(var%scalefactor))then
-  read (voldat,*,iostat=ier)doubledatc
-  if(ier==0)then
-    doubledatc=doubledatc/10d0**var%scalefactor
-  else
-    doubledatc=dmiss
-  end if
-else
-  doubledatc=dmiss
+doubledatc = c2d(voldat)
+if (c_e(doubledatc) .and. c_e(var%scalefactor))then
+  doubledatc=doubledatc/10.d0**var%scalefactor
 end if
 
 end function doubledatc
 
 
-
-
 ! to integer
-
 elemental integer function integerdatd(voldat,var)
-
 doubleprecision,intent(in) :: voldat
 type(vol7d_var),intent(in) :: var
 
 if (c_e(voldat))then
-  integerdatd=nint(voldat*10d0**var%scalefactor)
+  if (c_e(var%scalefactor)) then
+    integerdatd=nint(voldat*10d0**var%scalefactor)
+  else
+    integerdatd=nint(voldat)
+  endif
 else
   integerdatd=imiss
 end if
@@ -2637,12 +2631,15 @@ end function integerdatd
 
 
 elemental integer function integerdatr(voldat,var)
-
 real,intent(in) :: voldat
 type(vol7d_var),intent(in) :: var
 
 if (c_e(voldat))then
-  integerdatr=nint(voldat*10d0**var%scalefactor)
+  if (c_e(var%scalefactor)) then
+    integerdatr=nint(voldat*10d0**var%scalefactor)
+  else
+    integerdatr=nint(voldat)
+  endif
 else
   integerdatr=imiss
 end if
@@ -2651,7 +2648,6 @@ end function integerdatr
 
 
 elemental integer function integerdati(voldat,var)
-
 integer,intent(in) :: voldat
 type(vol7d_var),intent(in) :: var
 
@@ -2661,7 +2657,6 @@ end function integerdati
 
 
 elemental integer function integerdatb(voldat,var)
-
 integer(kind=int_b),intent(in) :: voldat
 type(vol7d_var),intent(in) :: var
 
@@ -2674,50 +2669,17 @@ end if
 end function integerdatb
 
 
-
 elemental integer function integerdatc(voldat,var)
-
 CHARACTER(len=vol7d_cdatalen),intent(in) :: voldat
 type(vol7d_var),intent(in) :: var
-integer:: ier
 
-
-if (c_e(voldat))then
-  read (voldat,*,iostat=ier)integerdatc
-  if (ier /= 0)then
-    integerdatc=imiss
-  end if
-else
-  integerdatc=imiss
-end if
+integerdatc=c2i(voldat)
 
 end function integerdatc
 
 
-
-!!$!esempio senza elemental
-!!$function doubledatc(voldat,var,double)
-!!$
-!!$doubleprecision :: doubledatc(size(voldat))
-!!$CHARACTER(len=vol7d_cdatalen),intent(in) :: voldat(:)
-!!$type(vol7d_var),intent(in) :: var
-!!$doubleprecision,intent(in) :: double
-!!$
-!!$integer :: i
-!!$
-!!$do i =1 ,size(voldat)
-!!$  read (voldat(i),*)doubledatc(i)
-!!$end do
-!!$
-!!$doubledatc=doubledatc/10d0**var%scalefactor
-!!$
-!!$end function doubledatc
-
-
 ! to real
-
 elemental real function realdatd(voldat,var)
-
 doubleprecision,intent(in) :: voldat
 type(vol7d_var),intent(in) :: var
 
@@ -2731,7 +2693,6 @@ end function realdatd
 
 
 elemental real function realdatr(voldat,var)
-
 real,intent(in) :: voldat
 type(vol7d_var),intent(in) :: var
 
@@ -2741,12 +2702,15 @@ end function realdatr
 
 
 elemental real function realdati(voldat,var)
-
 integer,intent(in) :: voldat
 type(vol7d_var),intent(in) :: var
 
-if (c_e(voldat) .and. c_e(var%scalefactor))then
-  realdati=float(voldat)/10.**var%scalefactor
+if (c_e(voldat)) then
+  if (c_e(var%scalefactor))then
+    realdati=float(voldat)/10.**var%scalefactor
+  else
+    realdati=float(voldat)
+  endif
 else
   realdati=rmiss
 end if
@@ -2755,12 +2719,15 @@ end function realdati
 
 
 elemental real function realdatb(voldat,var)
-
 integer(kind=int_b),intent(in) :: voldat
 type(vol7d_var),intent(in) :: var
 
-if (c_e(voldat) .and. c_e(var%scalefactor))then
-  realdatb=float(voldat)/10.**var%scalefactor
+if (c_e(voldat)) then
+  if (c_e(var%scalefactor))then
+    realdatb=float(voldat)/10**var%scalefactor
+  else
+    realdatb=float(voldat)
+  endif
 else
   realdatb=rmiss
 end if
@@ -2768,51 +2735,90 @@ end if
 end function realdatb
 
 
-
 elemental real function realdatc(voldat,var)
-
 CHARACTER(len=vol7d_cdatalen),intent(in) :: voldat
 type(vol7d_var),intent(in) :: var
-integer:: ier
 
-if (c_e(voldat) .and. c_e(var%scalefactor))then
-  read (voldat,*,iostat=ier)realdatc
-  if (ier == 0)then
-    realdatc=realdatc/10.**var%scalefactor
-  else
-    realdatc=rmiss
-  end if
-else
-  realdatc=rmiss
+realdatc=c2r(voldat)
+if (c_e(realdatc) .and. c_e(var%scalefactor))then
+  realdatc=realdatc/10.**var%scalefactor
 end if
 
 end function realdatc
 
 
+!> Return an ana volume of a requested variable as real data.
+!! It returns a 2-d array of the proper shape (ana x network) for the
+!! ana variable requested, converted to real type. If the conversion
+!! fails or if the variable is not contained in the ana volume,
+!! missing data are returned.
+FUNCTION realanavol(this, var) RESULT(vol)
+TYPE(vol7d),INTENT(in) :: this !< the \a vol7d object to query, the method \a vol7d_alloc_vol must have been called for it otherwise progam may abort
+TYPE(vol7d_var),INTENT(in) :: var !< the ana variable to be returned
+REAL :: vol(SIZE(this%ana),size(this%network))
+
+CHARACTER(len=1) :: dtype
+INTEGER :: indvar
+
+indvar = INDEX(this%anavar, var, type=dtype)
+
+IF (indvar > 0) THEN
+  SELECT CASE (dtype)
+  CASE("d")
+    vol = realdat(this%volanad(:,indvar,:), var)
+  CASE("r")
+    vol = this%volanar(:,indvar,:)
+  CASE("i")
+    vol = realdat(this%volanai(:,indvar,:), var)
+  CASE("b")
+    vol = realdat(this%volanab(:,indvar,:), var)
+  CASE("c")
+    vol = realdat(this%volanac(:,indvar,:), var)
+  CASE default
+    vol = imiss
+  END SELECT
+ELSE
+  vol = imiss
+ENDIF
+
+END FUNCTION realanavol
 
 
-!!$elemental INTEGER(kind=int_b) function doubledatb(voldat,var,double)
-!!$
-!!$real,intent(in) :: voldat
-!!$type(vol7d_var),intent(in) :: var
-!!$integer(kind=int_b),intent(in) :: byte
-!!$
-!!$doubledatb=voldat*10.**var%scalefactor
-!!$
-!!$end function doubledatb
-!!$
-!!$
-!!$
-!!$elemental CHARACTER(len=vol7d_cdatalen) function doubledatc(voldat,var,double)
-!!$
-!!$real,intent(in) :: voldat
-!!$type(vol7d_var),intent(in) :: var
-!!$CHARACTER(len=vol7d_cdatalen),intent(in) :: char
-!!$
-!!$write (doubledatc,'(i20)')voldat*10.**var%scalefactor
-!!$
-!!$end function doubledatc
+!> Return an ana volume of a requested variable as integer data.
+!! It returns a 2-d array of the proper shape (ana x network) for the
+!! ana variable requested, converted to integer type. If the conversion
+!! fails or if the variable is not contained in the ana volume,
+!! missing data are returned.
+FUNCTION integeranavol(this, var) RESULT(vol)
+TYPE(vol7d),INTENT(in) :: this !< the \a vol7d object to query, the method \a vol7d_alloc_vol must have been called for it otherwise progam may abort
+TYPE(vol7d_var),INTENT(in) :: var !< the ana variable to be returned
+INTEGER :: vol(SIZE(this%ana),size(this%network))
 
+CHARACTER(len=1) :: dtype
+INTEGER :: indvar
+
+indvar = INDEX(this%anavar, var, type=dtype)
+
+IF (indvar > 0) THEN
+  SELECT CASE (dtype)
+  CASE("d")
+    vol = integerdat(this%volanad(:,indvar,:), var)
+  CASE("r")
+    vol = integerdat(this%volanar(:,indvar,:), var)
+  CASE("i")
+    vol = this%volanai(:,indvar,:)
+  CASE("b")
+    vol = integerdat(this%volanab(:,indvar,:), var)
+  CASE("c")
+    vol = integerdat(this%volanac(:,indvar,:), var)
+  CASE default
+    vol = imiss
+  END SELECT
+ELSE
+  vol = imiss
+ENDIF
+
+END FUNCTION integeranavol
 
 
 !> Move data for all variables from one coordinate in the character volume to other.
