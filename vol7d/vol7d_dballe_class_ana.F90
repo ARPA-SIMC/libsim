@@ -45,7 +45,6 @@ if (nanavar/**/VOL7D_POLY_TYPES_V > 0 ) then
     CALL l4f_category_log(this%category,L4F_DEBUG,"prendilo")
 #endif        
       ier=idba_prendilo (this%handle)
-      ier=idba_enq (this%handle,"ana_id",ana_id(i,iiiiii))
       
                                 !ho appena scritto quindi la scrittura non è più richiesta
       write=.false.
