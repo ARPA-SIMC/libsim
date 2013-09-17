@@ -19,18 +19,21 @@
 
 if (nanavar/**/VOL7D_POLY_TYPES_V > 0 ) then
 
-  do ii=1,nanavar/**/VOL7D_POLY_TYPES_V
+  do a=1,nanavar/**/VOL7D_POLY_TYPES_V
 
 
 
-    if (.not.lanavar/**/VOL7D_POLY_TYPES_V/**/(ii)) cycle
-    if (.not.c_e(this%vol7d%volana/**/VOL7D_POLY_TYPES_V(i,ii,iii))) cycle
+    if (.not.lanavar/**/VOL7D_POLY_TYPES_V/**/(a)) cycle
+    if (.not.c_e(this%vol7d%volana/**/VOL7D_POLY_TYPES_V(i,a,iiiiii))) cycle
     
-                                !print*,"scrivo",this%vol7d%datiana%/**/VOL7D_POLY_TYPES_V(iiiii)%btable,&
-                                !this%vol7d%volana/**/VOL7D_POLY_TYPES_V(i,ii,iii)
 
-    ier=idba_set (this%handle,this%vol7d%anavar%/**/VOL7D_POLY_TYPES_V(ii)%btable , &
-     this%vol7d%volana/**/VOL7D_POLY_TYPES_V(i,ii,iii))
+#ifdef DEBUG
+    CALL l4f_category_log(this%category,L4F_DEBUG,"scrivo: "//this%vol7d%anavar%/**/VOL7D_POLY_TYPES_V(a)%btable//&
+                                t2c(this%vol7d%volana/**/VOL7D_POLY_TYPES_V(i,a,iiiiii)))
+#endif        
+
+    ier=idba_set (this%handle,this%vol7d%anavar%/**/VOL7D_POLY_TYPES_V(a)%btable , &
+     this%vol7d%volana/**/VOL7D_POLY_TYPES_V(i,a,iiiiii))
 
                                 ! ci sono dei dati da scrivere, richiedo la scrittura
     write=.true.
@@ -38,8 +41,11 @@ if (nanavar/**/VOL7D_POLY_TYPES_V > 0 ) then
     if (any(lanaattrr).or.any(lanaattri).or.any(lanaattrb).or.any(lanaattrd).or.any(lanaattrc))then
       
                                 !print*,"eseguo prendilo per attributi"
+#ifdef DEBUG
+    CALL l4f_category_log(this%category,L4F_DEBUG,"prendilo")
+#endif        
       ier=idba_prendilo (this%handle)
-      ier=idba_enq (this%handle,"ana_id",ana_id(i,iii))
+      ier=idba_enq (this%handle,"ana_id",ana_id(i,iiiiii))
       
                                 !ho appena scritto quindi la scrittura non è più richiesta
       write=.false.
@@ -67,11 +73,16 @@ if (nanavar/**/VOL7D_POLY_TYPES_V > 0 ) then
       
       if (writeattr) then
                                 !print *,"critica"
+#ifdef DEBUG
+        CALL l4f_category_log(this%category,L4F_DEBUG,"critica")
+#endif        
         ier=idba_critica (this%handle)
       end if
       
-                                !print*,"unset",this%vol7d%dativar%/**/VOL7D_POLY_TYPES_V(ii)%btable 
-      ier=idba_unset (this%handle,this%vol7d%anavar%/**/VOL7D_POLY_TYPES_V(ii)%btable )
+#ifdef DEBUG
+      CALL l4f_category_log(this%category,L4F_DEBUG,"unset"//this%vol7d%dativar%/**/VOL7D_POLY_TYPES_V(a)%btable )
+#endif        
+      ier=idba_unset (this%handle,this%vol7d%anavar%/**/VOL7D_POLY_TYPES_V(a)%btable )
       
     end if
     

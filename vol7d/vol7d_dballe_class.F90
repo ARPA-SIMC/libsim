@@ -537,7 +537,7 @@ CHARACTER(len=6) :: btable
 CHARACTER(len=7) ::starbtable
 
 LOGICAL ::  ldegnet, lattr, lanaattr
-integer :: year,month,day,hour,minute,sec
+integer :: year,month,day,hour,minute,sec,msec
 integer :: rlevel1, rl1,rlevel2, rl2
 integer :: rtimerange, p1, p2
 character(len=network_name_len) :: rep_memo
@@ -710,9 +710,10 @@ if (present(timei)) then
 #ifdef DEBUG
     CALL l4f_category_log(this%category,L4F_DEBUG,'query timei:'//to_char(timei))
 #endif
-    CALL getval(timei, year=year, month=month, day=day, hour=hour, minute=minute)
-    ier=idba_setdatemin(this%handle,year,month,day,hour,minute,0)
-                                !print *,"datemin",year,month,day,hour,minute,0
+    CALL getval(timei, year=year, month=month, day=day, hour=hour, minute=minute,msec=msec)
+    sec=nint(float(msec)/1000.)
+    ier=idba_setdatemin(this%handle,year,month,day,hour,minute,sec)
+                                !print *,"datemin",year,month,day,hour,minute,sec
   end if
 end if
 
@@ -721,9 +722,10 @@ if (present(timef)) then
 #ifdef DEBUG
     CALL l4f_category_log(this%category,L4F_DEBUG,'query timef:'//to_char(timef))
 #endif
-    CALL getval(timef, year=year, month=month, day=day, hour=hour, minute=minute)
-    ier=idba_setdatemax(this%handle,year,month,day,hour,minute,0)
-                                !print *,"datemax",year,month,day,hour,minute,0
+    CALL getval(timef, year=year, month=month, day=day, hour=hour, minute=minute,msec=msec)
+    sec=nint(float(msec)/1000.)
+    ier=idba_setdatemax(this%handle,year,month,day,hour,minute,sec)
+                                !print *,"datemax",year,month,day,hour,minute,sec
   end if
 end if
 
@@ -837,7 +839,7 @@ do i=1,N
                                 !print*,btable,dato,buffer(i)%datiattrb
   
   call init(buffer(i)%ana,ilat=ilat,ilon=ilon,ident=ident)
-  call init(buffer(i)%time, year=year, month=month, day=day, hour=hour, minute=minute)
+  call init(buffer(i)%time, year=year, month=month, day=day, hour=hour, minute=minute,msec=sec*1000)
   call init(buffer(i)%level, rlevel1,rl1,rlevel2,rl2)
   call init(buffer(i)%timerange, rtimerange, p1, p2)
   call init(buffer(i)%network, rep_memo)
@@ -982,7 +984,7 @@ do i=1,N_ana
                                 !print*,btable,dato,buffer(i)%datiattrb
   
   call init(bufferana(i)%ana,ilat=ilat,ilon=ilon,ident=ident)
-  call init(bufferana(i)%time, year=year, month=month, day=day, hour=hour, minute=minute)
+  call init(bufferana(i)%time, year=year, month=month, day=day, hour=hour, minute=minute,msec=sec*1000)
   call init(bufferana(i)%level, rlevel1,rl1,rlevel2,rl2)
   call init(bufferana(i)%timerange, rtimerange, p1, p2)
   call init(bufferana(i)%network, rep_memo)
@@ -1811,11 +1813,12 @@ END SUBROUTINE vol7d_dballe_importvvns_dba
 !!
 !! Riscrive i dati nel DSN di DB-All.e con la possibilità di attivare
 !! una serie di filtri.
-
+!! Try to make the better work:
+!! if write on file and template is generic write ana data and attribute in separate bufr befor data
+!! if write on file and template is not generic write ana and data in the same bufr
+!! if write on db write ana and use ana_id to insert data
 SUBROUTINE vol7d_dballe_export(this, network, coordmin, coordmax,&
  timei, timef,level,timerange,var,attr,anavar,anaattr,attr_only,template,ana)
-
-!> \todo gestire il filtro staz_id la qual cosa vuol dire aggiungere un id nel type ana
 
 TYPE(vol7d_dballe),INTENT(inout) :: this !< oggetto contenente il volume e altre info per l'accesso al DSN
 character(len=network_name_len),INTENT(in),optional :: network !< network da exportare
@@ -1882,11 +1885,11 @@ logical :: write,writeattr,lattr_only
 !CHARACTER(len=6) :: btable
 !CHARACTER(len=7) ::starbtable
 
-integer :: year,month,day,hour,minute
+integer :: year,month,day,hour,minute,sec,msec
 integer :: nstaz,ntime,ntimerange,nlevel,nnetwork
 
 
-INTEGER :: i,ii,iii,iiii,iiiii,iiiiii,ind,inddatiattr,indanaattr,ier
+INTEGER :: i,ii,iii,iiii,iiiii,iiiiii,a,ind,inddatiattr,indanaattr,ier
 
 INTEGER(kind=int_l) :: ilat,ilon 
 !INTEGER(kind=int_b)::attrdatib
@@ -1947,11 +1950,11 @@ allocate (ltimerange(ntimerange))
 ltimerange=.false.
 
 if (present(timerange))then
-      where (timerange == this%vol7d%timerange(:))
-         ltimerange(:)=.true.
-      end where
+  where (timerange == this%vol7d%timerange(:))
+    ltimerange(:)=.true.
+  end where
 else
-   ltimerange=.true.
+  ltimerange=.true.
 end if
 
 nlevel=size(this%vol7d%level(:))
@@ -1959,11 +1962,11 @@ allocate (llevel(nlevel))
 llevel=.false.
 
 if (present(level))then
-      where (level == this%vol7d%level(:))
-         llevel(:)=.true.
-      end where
+  where (level == this%vol7d%level(:))
+    llevel(:)=.true.
+  end where
 else
-   llevel=.true.
+  llevel=.true.
 end if
 
 if (present(attr_only))then
@@ -2069,37 +2072,34 @@ call l4f_category_log(this%category,L4F_DEBUG,"macro ndati tipo c")
 
 !print *,"nstaz,ntime,nlevel,ntimerange,nnetwork",nstaz,ntime,nlevel,ntimerange,nnetwork
 
-do iii=1, nnetwork
-   if (.not.lnetwork(iii))cycle
+do iiiiii=1, nnetwork
+  if (.not.lnetwork(iiiiii))cycle
 
 ! l'anagrafica su file la scrivo solo per i generici
-!   if (this%file .and. present(template)) then
-!     if (template /= "generic") cycle
-!   end if
+  if (this%file .and. present(template)) then
+    if (template /= "generic") cycle
+  end if
 
-   do i=1, nstaz
+  do i=1, nstaz
 
-      if (present(coordmin).and.present(coordmax))then
+    if (present(coordmin).and.present(coordmax))then
+      if (.not. inside(this%vol7d%ana(i)%coord,coordmin,coordmax)) cycle
+    end if
 
-        if (.not. inside(this%vol7d%ana(i)%coord,coordmin,coordmax)) cycle
-                                !print * ,"sei dentro, OK"
-      end if
-
-
-      CALL getval(this%vol7d%ana(i)%coord, ilat=ilat,ilon=ilon)
-      ier=idba_unsetall (this%handle)
+    CALL getval(this%vol7d%ana(i)%coord, ilat=ilat,ilon=ilon)
+    ier=idba_unsetall (this%handle)
 #ifdef DEBUG
-      CALL l4f_category_log(this%category,L4F_DEBUG,'unsetall handle')
+    CALL l4f_category_log(this%category,L4F_DEBUG,'unsetall handle')
 #endif
-      ier=idba_setcontextana (this%handle)
+    ier=idba_setcontextana (this%handle)
 
-      ier=idba_set (this%handle,"lat",ilat)
-      ier=idba_set (this%handle,"lon",ilon)
+    ier=idba_set (this%handle,"lat",ilat)
+    ier=idba_set (this%handle,"lon",ilon)
 
-      if (present(ana))then
-         if (c_e(ana%ident) .and. ana%ident /= this%vol7d%ana(i)%ident ) cycle
-         if (c_e(ana%coord) .and. ana%coord /= this%vol7d%ana(i)%coord ) cycle
-      end if
+    if (present(ana))then
+      if (c_e(ana%ident) .and. ana%ident /= this%vol7d%ana(i)%ident ) cycle
+      if (c_e(ana%coord) .and. ana%coord /= this%vol7d%ana(i)%coord ) cycle
+    end if
 
 !      this%vol7d%ana(i)%ident=cmiss
 
@@ -2108,19 +2108,20 @@ do iii=1, nnetwork
 !!$        print *,iachar(this%vol7d%ana(i)%ident(ier:ier))
 !!$      end do
 
-      if ( c_e(this%vol7d%ana(i)%ident)) then
+    if ( c_e(this%vol7d%ana(i)%ident)) then
 #ifdef DEBUG
-         call l4f_category_log(this%category,L4F_DEBUG,"I have found a mobile station! ident: "//&
-          this%vol7d%ana(i)%ident)
+      call l4f_category_log(this%category,L4F_DEBUG,"I have found a mobile station! ident: "//&
+       this%vol7d%ana(i)%ident)
 #endif
-         ier=idba_set (this%handle,"ident",this%vol7d%ana(i)%ident)
-         ier=idba_set (this%handle,"mobile",1)
-      else
-         ier=idba_set (this%handle,"mobile",0)
-      end if
+      ier=idba_set (this%handle,"ident",this%vol7d%ana(i)%ident)
+      ier=idba_set (this%handle,"mobile",1)
+    else
+      ier=idba_set (this%handle,"mobile",0)
+    end if
 
-      ier=idba_set(this%handle,"rep_memo",this%vol7d%network(iii)%name)
+    ier=idba_set(this%handle,"rep_memo",this%vol7d%network(iiiiii)%name)
 
+    write=.false.
 
 #undef VOL7D_POLY_TYPES_V
 #define VOL7D_POLY_TYPES_V r
@@ -2144,59 +2145,65 @@ do iii=1, nnetwork
 #include "vol7d_dballe_class_ana.F90"
 #undef VOL7D_POLY_TYPES_V
 
-      !se NON ho dati di anagrafica (ma solo lat e long ..) devo fare comunque una prendilo
 
-      if (this%file)then
+    if (this%file)then
+      if (write) then
+
         if (present(template)) then
           ier=idba_set (this%handle,"query","message "//trim(template))
         else
           ier=idba_set (this%handle,"query","message")
         end if
+
+#ifdef DEBUG
+        call l4f_category_log(this%category,L4F_DEBUG,"eseguo una main prendilo di anagrafica")
+#endif
+        ier=idba_prendilo (this%handle)
       end if
 
+    else
+
+                                !se NON ho dati di anagrafica (ma solo lat e long ..) devo fare comunque una prendilo
 #ifdef DEBUG
       call l4f_category_log(this%category,L4F_DEBUG,"eseguo una main prendilo di anagrafica")
 #endif
       ier=idba_prendilo (this%handle)
+      ier=idba_enq (this%handle,"*ana_id",ana_id(i,iiiiii))
 
-      if (.not. this%file ) then
-        ier=idba_enq (this%handle,"*ana_id",ana_id(i,iii))
-      end if
+    end if
 
+    do ii=1,nanavarr
+      if (c_e(this%vol7d%anavar%r(ii)%btable))ier=idba_unset (this%handle,this%vol7d%anavar%r(ii)%btable )
+#ifdef DEBUG
+      call l4f_category_log(this%category,L4F_DEBUG,"unset ana: "//this%vol7d%anavar%r(ii)%btable)
+#endif
+    end do
+    do ii=1,nanavari
+      if (c_e(this%vol7d%anavar%i(ii)%btable))ier=idba_unset (this%handle,this%vol7d%anavar%i(ii)%btable )
+#ifdef DEBUG
+      call l4f_category_log(this%category,L4F_DEBUG,"unset ana: "//this%vol7d%anavar%i(ii)%btable)
+#endif
+    end do
+    do ii=1,nanavarb
+      if (c_e(this%vol7d%anavar%b(ii)%btable))ier=idba_unset (this%handle,this%vol7d%anavar%b(ii)%btable )
+#ifdef DEBUG
+      call l4f_category_log(this%category,L4F_DEBUG,"unset ana: "//this%vol7d%anavar%b(ii)%btable)
+#endif
+    end do
+    do ii=1,nanavard
+      if (c_e(this%vol7d%anavar%d(ii)%btable))ier=idba_unset (this%handle,this%vol7d%anavar%d(ii)%btable )
+#ifdef DEBUG
+      call l4f_category_log(this%category,L4F_DEBUG,"unset ana: "//this%vol7d%anavar%d(ii)%btable)
+#endif
+    end do
+    do ii=1,nanavarc
+      if (c_e(this%vol7d%anavar%c(ii)%btable))ier=idba_unset (this%handle,this%vol7d%anavar%c(ii)%btable )
+#ifdef DEBUG
+      call l4f_category_log(this%category,L4F_DEBUG,"unset ana: "//this%vol7d%anavar%c(ii)%btable)
+#endif
+    end do
 
-      do ii=1,nanavarr
-        if (c_e(this%vol7d%anavar%r(ii)%btable))ier=idba_unset (this%handle,this%vol7d%anavar%r(ii)%btable )
-#ifdef DEBUG
-        call l4f_category_log(this%category,L4F_DEBUG,"unset ana: "//this%vol7d%anavar%r(ii)%btable)
-#endif
-      end do
-      do ii=1,nanavari
-        if (c_e(this%vol7d%anavar%i(ii)%btable))ier=idba_unset (this%handle,this%vol7d%anavar%i(ii)%btable )
-#ifdef DEBUG
-        call l4f_category_log(this%category,L4F_DEBUG,"unset ana: "//this%vol7d%anavar%i(ii)%btable)
-#endif
-      end do
-      do ii=1,nanavarb
-        if (c_e(this%vol7d%anavar%b(ii)%btable))ier=idba_unset (this%handle,this%vol7d%anavar%b(ii)%btable )
-#ifdef DEBUG
-        call l4f_category_log(this%category,L4F_DEBUG,"unset ana: "//this%vol7d%anavar%b(ii)%btable)
-#endif
-      end do
-      do ii=1,nanavard
-        if (c_e(this%vol7d%anavar%d(ii)%btable))ier=idba_unset (this%handle,this%vol7d%anavar%d(ii)%btable )
-#ifdef DEBUG
-        call l4f_category_log(this%category,L4F_DEBUG,"unset ana: "//this%vol7d%anavar%d(ii)%btable)
-#endif
-      end do
-      do ii=1,nanavarc
-        if (c_e(this%vol7d%anavar%c(ii)%btable))ier=idba_unset (this%handle,this%vol7d%anavar%c(ii)%btable )
-#ifdef DEBUG
-        call l4f_category_log(this%category,L4F_DEBUG,"unset ana: "//this%vol7d%anavar%c(ii)%btable)
-#endif
-      end do
-
-
-   end do
+  end do
 end do
 
 
@@ -2204,21 +2211,23 @@ end do
 !print *,"nstaz,ntime,nlevel,ntimerange,nnetwork",nstaz,ntime,nlevel,ntimerange,nnetwork
 
 
-do i=1, nstaz
+do iiiiii=1, nnetwork
+  if (.not.lnetwork(iiiiii))cycle
 
-  do ii=1,ntime
-    if (present(timei) )then
-      if ( this%vol7d%time(ii) < timei ) cycle
-    endif
-    if (present(timef) )then
-      if ( this%vol7d%time(ii) > timef ) cycle
-    endif
-   
-    do iiiiii=1, nnetwork
-      if (.not.lnetwork(iiiiii))cycle
+  do i=1, nstaz
 
-      if ( (.not. this%file) .and. (.not. c_e(ana_id(i,iiiiii))) ) cycle
+    if ( (.not. this%file) .and. (.not. c_e(ana_id(i,iiiiii))) ) cycle
+    if (present(coordmin).and.present(coordmax))then
+      if (.not. inside(this%vol7d%ana(i)%coord,coordmin,coordmax)) cycle
+    end if
 
+    do ii=1,ntime
+      if (present(timei) )then
+        if ( this%vol7d%time(ii) < timei ) cycle
+      endif
+      if (present(timef) )then
+        if ( this%vol7d%time(ii) > timef ) cycle
+      endif
                                 !>\todo optimize setting and unsetting in the right place
 
       ier=idba_unsetall (this%handle)
@@ -2226,9 +2235,11 @@ do i=1, nstaz
       CALL l4f_category_log(this%category,L4F_DEBUG,'unsetall handle')
 #endif        
 
-      CALL getval(this%vol7d%time(ii), year=year, month=month, day=day, hour=hour, minute=minute)
-      ier=idba_setdate (this%handle,year,month,day,hour,minute,0)
-
+      ier=idba_set (this%handle,"rep_memo",this%vol7d%network(iiiiii)%name)
+#ifdef DEBUG
+      CALL l4f_category_log(this%category,L4F_DEBUG,'set rep_memo:'//this%vol7d%network(iiiiii)%name)
+#endif        
+      
       if (this%file)then
                                 ! writing on file cannot use ana_id
         call getval(this%vol7d%ana(i)%coord, ilat=ilat,ilon=ilon)
@@ -2237,8 +2248,10 @@ do i=1, nstaz
 #ifdef DEBUG
         call l4f_category_log(this%category,L4F_DEBUG,"dati riferiti a lat: "//to_char(ilat)//" lon: "//to_char(ilon))
 #endif        
+
         if (present(ana))then
           if (c_e(ana%ident) .and. ana%ident /= this%vol7d%ana(i)%ident ) cycle
+          if (c_e(ana%coord) .and. ana%coord /= this%vol7d%ana(i)%coord ) cycle
         end if
           
         if ( c_e(this%vol7d%ana(i)%ident)) then
@@ -2251,17 +2264,66 @@ do i=1, nstaz
         else
           ier=idba_set (this%handle,"mobile",0)
         end if
+        
+
+! l'anagrafica su file la scrivo solo per i non generici
+        if (present(template)) then
+          if (template /= "generic") then
+
+#ifdef DEBUG
+            call l4f_category_log(this%category,L4F_DEBUG,"setcontextana")
+#endif
+            ier=idba_setcontextana (this%handle)
+
+            write=.false.
+            
+#undef VOL7D_POLY_TYPES_V
+#define VOL7D_POLY_TYPES_V r
+!print*,"ana macro tipo r"
+#include "vol7d_dballe_class_ana.F90"
+#undef VOL7D_POLY_TYPES_V
+#define VOL7D_POLY_TYPES_V i
+!print*,"ana macro tipo i"
+#include "vol7d_dballe_class_ana.F90"
+#undef VOL7D_POLY_TYPES_V
+#define VOL7D_POLY_TYPES_V b
+!print*,"ana macro tipo b"
+#include "vol7d_dballe_class_ana.F90"
+#undef VOL7D_POLY_TYPES_V
+#define VOL7D_POLY_TYPES_V d
+!print*,"ana macro tipo d"
+#include "vol7d_dballe_class_ana.F90"
+#undef VOL7D_POLY_TYPES_V
+#define VOL7D_POLY_TYPES_V c
+!print*,"ana macro tipo c"
+#include "vol7d_dballe_class_ana.F90"
+#undef VOL7D_POLY_TYPES_V
+
+
+            if (write) then
+#ifdef DEBUG
+              call l4f_category_log(this%category,L4F_DEBUG,"eseguo una main prendilo di anagrafica")
+#endif
+              ier=idba_prendilo (this%handle)
+            end if
+
+          end if
+        end if
       else
 #ifdef DEBUG
-          call l4f_category_log(this%category,L4F_DEBUG,"specify ana_id: "&
+        call l4f_category_log(this%category,L4F_DEBUG,"specify ana_id: "&
            //to_char(ana_id(i,iiiiii)))
 #endif
         ier=idba_set (this%handle,"ana_id",ana_id(i,iiiiii))
       end if
 
-
-      ier=idba_set (this%handle,"rep_memo",this%vol7d%network(iiiiii)%name)
-                 
+      CALL getval(this%vol7d%time(ii), year=year, month=month, day=day, hour=hour, minute=minute,msec=msec)
+      sec=nint(float(msec)/1000.)
+#ifdef DEBUG
+        call l4f_category_log(this%category,L4F_DEBUG,"setdate: "&
+         //t2c(year)//t2c(month)//t2c(day)//t2c(hour)//t2c(minute)//t2c(sec))
+#endif
+      ier=idba_setdate (this%handle,year,month,day,hour,minute,sec)
 
       do iii=1,nlevel
         if (.not.llevel(iii))cycle
@@ -2304,31 +2366,31 @@ do i=1, nstaz
 #undef VOL7D_POLY_TYPES_V
 #define VOL7D_POLY_TYPES_V r
 #ifdef DEBUG
-call l4f_category_log(this%category,L4F_DEBUG,"macro tipo r")
+          call l4f_category_log(this%category,L4F_DEBUG,"macro tipo r")
 #endif
 #include "vol7d_dballe_class_dati.F90"
 #undef VOL7D_POLY_TYPES_V
 #define VOL7D_POLY_TYPES_V i
 #ifdef DEBUG
-call l4f_category_log(this%category,L4F_DEBUG,"macro tipo i")
+          call l4f_category_log(this%category,L4F_DEBUG,"macro tipo i")
 #endif
 #include "vol7d_dballe_class_dati.F90"
 #undef VOL7D_POLY_TYPES_V
 #define VOL7D_POLY_TYPES_V b
 #ifdef DEBUG
-call l4f_category_log(this%category,L4F_DEBUG,"macro tipo b")
+          call l4f_category_log(this%category,L4F_DEBUG,"macro tipo b")
 #endif
 #include "vol7d_dballe_class_dati.F90"
 #undef VOL7D_POLY_TYPES_V
 #define VOL7D_POLY_TYPES_V d
 #ifdef DEBUG
-call l4f_category_log(this%category,L4F_DEBUG,"macro tipo d")
+          call l4f_category_log(this%category,L4F_DEBUG,"macro tipo d")
 #endif
 #include "vol7d_dballe_class_dati.F90"
 #undef VOL7D_POLY_TYPES_V
 #define VOL7D_POLY_TYPES_V c
 #ifdef DEBUG
-call l4f_category_log(this%category,L4F_DEBUG,"macro tipo c")
+          call l4f_category_log(this%category,L4F_DEBUG,"macro tipo c")
 #endif
 #include "vol7d_dballe_class_dati.F90"
 #undef VOL7D_POLY_TYPES_V
@@ -2354,6 +2416,48 @@ call l4f_category_log(this%category,L4F_DEBUG,"macro tipo c")
             ier=idba_prendilo (this%handle)
                  
           end if
+
+
+!ana
+
+          if (this%file .and. present(template)) then
+            if (template /= "generic") then
+
+              do a=1,nanavarr
+                if (c_e(this%vol7d%anavar%r(a)%btable))ier=idba_unset (this%handle,this%vol7d%anavar%r(a)%btable )
+#ifdef DEBUG
+                call l4f_category_log(this%category,L4F_DEBUG,"unset ana: "//this%vol7d%anavar%r(a)%btable)
+#endif
+              end do
+              do a=1,nanavari
+                if (c_e(this%vol7d%anavar%i(a)%btable))ier=idba_unset (this%handle,this%vol7d%anavar%i(a)%btable )
+#ifdef DEBUG
+                call l4f_category_log(this%category,L4F_DEBUG,"unset ana: "//this%vol7d%anavar%i(a)%btable)
+#endif
+              end do
+              do a=1,nanavarb
+                if (c_e(this%vol7d%anavar%b(a)%btable))ier=idba_unset (this%handle,this%vol7d%anavar%b(a)%btable )
+#ifdef DEBUG
+                call l4f_category_log(this%category,L4F_DEBUG,"unset ana: "//this%vol7d%anavar%b(a)%btable)
+#endif
+              end do
+              do a=1,nanavard
+                if (c_e(this%vol7d%anavar%d(a)%btable))ier=idba_unset (this%handle,this%vol7d%anavar%d(a)%btable )
+#ifdef DEBUG
+                call l4f_category_log(this%category,L4F_DEBUG,"unset ana: "//this%vol7d%anavar%d(a)%btable)
+#endif
+              end do
+              do a=1,nanavarc
+                if (c_e(this%vol7d%anavar%c(a)%btable))ier=idba_unset (this%handle,this%vol7d%anavar%c(a)%btable )
+#ifdef DEBUG
+                call l4f_category_log(this%category,L4F_DEBUG,"unset ana: "//this%vol7d%anavar%c(a)%btable)
+#endif
+              end do
+
+            end if
+          end if
+
+! data
           
           do iiiii=1,ndativarr
             if(c_e(this%vol7d%dativar%r(iiiii)%btable))ier=idba_unset (this%handle,this%vol7d%dativar%r(iiiii)%btable )
@@ -2405,7 +2509,6 @@ call l4f_category_log(this%category,L4F_DEBUG,"macro tipo c")
         ier=idba_prendilo (this%handle)
         
       end if
-
     end do
   end do
 end do
@@ -2960,7 +3063,7 @@ do while ( N > 0 )
       end if
     end if
 
-    call init(timee, year=year, month=month, day=day, hour=hour, minute=minute)
+    call init(timee, year=year, month=month, day=day, hour=hour, minute=minute,msec=sec*1000)
 
     if (present(timei)) then
       if (c_e(timei) .and. timee < timei) cycle
@@ -3025,7 +3128,7 @@ do while ( N > 0 )
   
 
       call init(buffer(nd)%ana,ilat=ilat,ilon=ilon,ident=ident)
-      call init(buffer(nd)%time, year=year, month=month, day=day, hour=hour, minute=minute)
+      call init(buffer(nd)%time, year=year, month=month, day=day, hour=hour, minute=minute,msec=sec*1000)
       call init(buffer(nd)%level, rlevel1,rl1,rlevel2,rl2)
       call init(buffer(nd)%timerange, rtimerange, p1, p2)
       call init(buffer(nd)%network, rep_memo)
@@ -3097,7 +3200,7 @@ do while ( N > 0 )
                                 !print*,btable,na
   
       call init(bufferana(na)%ana,ilat=ilat,ilon=ilon,ident=ident)
-      call init(bufferana(na)%time, year=year, month=month, day=day, hour=hour, minute=minute)
+      call init(bufferana(na)%time, year=year, month=month, day=day, hour=hour, minute=minute,msec=sec*1000)
       call init(bufferana(na)%level, rlevel1,rl1,rlevel2,rl2)
       call init(bufferana(na)%timerange, rtimerange, p1, p2)
       call init(bufferana(na)%network, rep_memo)
