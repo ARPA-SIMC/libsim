@@ -2073,9 +2073,9 @@ do iii=1, nnetwork
    if (.not.lnetwork(iii))cycle
 
 ! l'anagrafica su file la scrivo solo per i generici
-   if (this%file .and. present(template)) then
-     if (template /= "generic") cycle
-   end if
+!   if (this%file .and. present(template)) then
+!     if (template /= "generic") cycle
+!   end if
 
    do i=1, nstaz
 
@@ -2086,23 +2086,6 @@ do iii=1, nnetwork
       end if
 
 
-! in alternativa si trattano separatamente
-!!$    if (present(coordmin)) then
-!!$      CALL geo_coord_to_geo(coordmin)
-!!$      CALL getval(coordmin, lat=latmin,lon=lonmin)
-!!$      if (lonmin > lon) cycle
-!!$      if (latmin > lat) cycle
-!!$    end if
-!!$
-!!$    if (present(coordmax)) then
-!!$      CALL geo_coord_to_geo(coordmax)
-!!$      CALL getval(coordmax, lat=latmax,lon=lonmax)
-!!$      if (lonmax < lon) cycle
-!!$      if (latmax < lat) cycle
-!!$    end if
-
-
-!      CALL geo_coord_to_geo(this%vol7d%ana(i)%coord)
       CALL getval(this%vol7d%ana(i)%coord, ilat=ilat,ilon=ilon)
       ier=idba_unsetall (this%handle)
 #ifdef DEBUG
@@ -2162,8 +2145,6 @@ do iii=1, nnetwork
 #undef VOL7D_POLY_TYPES_V
 
       !se NON ho dati di anagrafica (ma solo lat e long ..) devo fare comunque una prendilo
-      ! in quanto write indica DATI in sospeso da scrivere
-
 
       if (this%file)then
         if (present(template)) then
