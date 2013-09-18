@@ -380,7 +380,9 @@ CALL optionparser_add(opt, ' ', 'output-format', output_format, 'native', help= 
  &native binary format (no template to be specified)'&
 #ifdef HAVE_DBALLE
  //'; ''BUFR'' and ''CREX'' for corresponding formats, with template as an alias like ''synop'', ''metar'', &
- &''temp'', ''generic'', empty for ''generic'''&
+ &''temp'', ''generic'', empty for ''generic''&
+ &  the special value ''generic-frag'' is used to generate bufr on file where ana data is reported only once&
+ & at beginning and data in other bufr after'&
 #endif
 #ifdef HAVE_LIBGRIBAPI
  //'; ''grib_api'' for gridded output in grib format, template (required) is the &

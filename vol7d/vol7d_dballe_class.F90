@@ -1837,7 +1837,9 @@ CHARACTER(len=*),INTENT(in),OPTIONAL :: var(:),attr(:),anavar(:),anaattr(:)
 !! ottimizzando enormente le prestazioni: gli attributi riscritti saranno quelli con this%data_id definito
 !! (solitamente ricopiato dall'oggetto letto)
 logical,intent(in),optional :: attr_only 
-character(len=*),intent(in),optional :: template !< specificando category.subcategory.localcategory oppure un alias ("synop", "metar","temp","generic") forza l'exportazione ad uno specifico template BUFR/CREX"  
+!> specificando category.subcategory.localcategory oppure un alias ("synop", "metar","temp","generic") forza l'exportazione ad uno specifico template BUFR/CREX"
+!!  the special value "generic-frag is used to generate bufr on file where ana data is reported only once at beginning and data in other bufr after
+character(len=*),intent(in),optional :: template 
 
 !!$ Conversazioni con spanezz@jabber.linux.it su gio 27 mag 2010 09:38:52 CEST:
 !!$ (09:39:00) pat1@jabber.linux.it/Home: 
@@ -1880,7 +1882,8 @@ character(len=*),intent(in),optional :: template !< specificando category.subcat
 !REAL(kind=fp_geo) :: latmin,latmax,lonmin,lonmax
 logical, allocatable :: lnetwork(:),llevel(:),ltimerange(:)
 integer,allocatable :: ana_id(:,:)
-logical :: write,writeattr,lattr_only
+logical :: write,writeattr,lattr_only, generic_frag
+character(len=80) :: ltemplate 
 
 !CHARACTER(len=6) :: btable
 !CHARACTER(len=7) ::starbtable
@@ -1997,6 +2000,16 @@ else
    lnetwork=.true.
 end if
 
+ltemplate=optio_c(template,len(ltemplate))
+if (template == "generic-frag") then
+  ltemplate="generic"
+  generic_frag=.true.
+else
+  ltemplate=template
+  generic_frag=.false.
+end if
+
+
 
 !!!!!  anagrafica
 
@@ -2075,10 +2088,8 @@ call l4f_category_log(this%category,L4F_DEBUG,"macro ndati tipo c")
 do iiiiii=1, nnetwork
   if (.not.lnetwork(iiiiii))cycle
 
-! l'anagrafica su file la scrivo solo per i generici
-  if (this%file .and. present(template)) then
-    if (template /= "generic") cycle
-  end if
+! l'anagrafica su file la scrivo solo per i generici_frag or for ana_only datasets
+  if (this%file .and. .not. generic_frag .and. ntime > 0 ) cycle
 
   do i=1, nstaz
 
@@ -2149,8 +2160,8 @@ do iiiiii=1, nnetwork
     if (this%file)then
       if (write) then
 
-        if (present(template)) then
-          ier=idba_set (this%handle,"query","message "//trim(template))
+        if (c_e(ltemplate)) then
+          ier=idba_set (this%handle,"query","message "//trim(ltemplate))
         else
           ier=idba_set (this%handle,"query","message")
         end if
@@ -2266,16 +2277,15 @@ do iiiiii=1, nnetwork
         end if
         
 
-! l'anagrafica su file la scrivo solo per i non generici
-        if (present(template)) then
-          if (template /= "generic") then
+! l'anagrafica su file la scrivo solo per i non generici_frag
+        if (.not. generic_frag) then
 
 #ifdef DEBUG
-            call l4f_category_log(this%category,L4F_DEBUG,"setcontextana")
+          call l4f_category_log(this%category,L4F_DEBUG,"setcontextana")
 #endif
-            ier=idba_setcontextana (this%handle)
+          ier=idba_setcontextana (this%handle)
 
-            write=.false.
+          write=.false.
             
 #undef VOL7D_POLY_TYPES_V
 #define VOL7D_POLY_TYPES_V r
@@ -2300,14 +2310,13 @@ do iiiiii=1, nnetwork
 #undef VOL7D_POLY_TYPES_V
 
 
-            if (write) then
+          if (write) then
 #ifdef DEBUG
-              call l4f_category_log(this%category,L4F_DEBUG,"eseguo una main prendilo di anagrafica")
+            call l4f_category_log(this%category,L4F_DEBUG,"eseguo una main prendilo di anagrafica")
 #endif
-              ier=idba_prendilo (this%handle)
-            end if
-
+            ier=idba_prendilo (this%handle)
           end if
+
         end if
       else
 #ifdef DEBUG
@@ -2420,41 +2429,39 @@ do iiiiii=1, nnetwork
 
 !ana
 
-          if (this%file .and. present(template)) then
-            if (template /= "generic") then
+          if (this%file .and. .not. generic_frag) then
 
-              do a=1,nanavarr
-                if (c_e(this%vol7d%anavar%r(a)%btable))ier=idba_unset (this%handle,this%vol7d%anavar%r(a)%btable )
+            do a=1,nanavarr
+              if (c_e(this%vol7d%anavar%r(a)%btable))ier=idba_unset (this%handle,this%vol7d%anavar%r(a)%btable )
 #ifdef DEBUG
-                call l4f_category_log(this%category,L4F_DEBUG,"unset ana: "//this%vol7d%anavar%r(a)%btable)
+              call l4f_category_log(this%category,L4F_DEBUG,"unset ana: "//this%vol7d%anavar%r(a)%btable)
 #endif
-              end do
-              do a=1,nanavari
-                if (c_e(this%vol7d%anavar%i(a)%btable))ier=idba_unset (this%handle,this%vol7d%anavar%i(a)%btable )
+            end do
+            do a=1,nanavari
+              if (c_e(this%vol7d%anavar%i(a)%btable))ier=idba_unset (this%handle,this%vol7d%anavar%i(a)%btable )
 #ifdef DEBUG
-                call l4f_category_log(this%category,L4F_DEBUG,"unset ana: "//this%vol7d%anavar%i(a)%btable)
+              call l4f_category_log(this%category,L4F_DEBUG,"unset ana: "//this%vol7d%anavar%i(a)%btable)
 #endif
-              end do
-              do a=1,nanavarb
-                if (c_e(this%vol7d%anavar%b(a)%btable))ier=idba_unset (this%handle,this%vol7d%anavar%b(a)%btable )
+            end do
+            do a=1,nanavarb
+              if (c_e(this%vol7d%anavar%b(a)%btable))ier=idba_unset (this%handle,this%vol7d%anavar%b(a)%btable )
 #ifdef DEBUG
-                call l4f_category_log(this%category,L4F_DEBUG,"unset ana: "//this%vol7d%anavar%b(a)%btable)
+              call l4f_category_log(this%category,L4F_DEBUG,"unset ana: "//this%vol7d%anavar%b(a)%btable)
 #endif
-              end do
-              do a=1,nanavard
-                if (c_e(this%vol7d%anavar%d(a)%btable))ier=idba_unset (this%handle,this%vol7d%anavar%d(a)%btable )
+            end do
+            do a=1,nanavard
+              if (c_e(this%vol7d%anavar%d(a)%btable))ier=idba_unset (this%handle,this%vol7d%anavar%d(a)%btable )
 #ifdef DEBUG
-                call l4f_category_log(this%category,L4F_DEBUG,"unset ana: "//this%vol7d%anavar%d(a)%btable)
+              call l4f_category_log(this%category,L4F_DEBUG,"unset ana: "//this%vol7d%anavar%d(a)%btable)
 #endif
-              end do
-              do a=1,nanavarc
-                if (c_e(this%vol7d%anavar%c(a)%btable))ier=idba_unset (this%handle,this%vol7d%anavar%c(a)%btable )
+            end do
+            do a=1,nanavarc
+              if (c_e(this%vol7d%anavar%c(a)%btable))ier=idba_unset (this%handle,this%vol7d%anavar%c(a)%btable )
 #ifdef DEBUG
-                call l4f_category_log(this%category,L4F_DEBUG,"unset ana: "//this%vol7d%anavar%c(a)%btable)
+              call l4f_category_log(this%category,L4F_DEBUG,"unset ana: "//this%vol7d%anavar%c(a)%btable)
 #endif
-              end do
-
-            end if
+            end do
+            
           end if
 
 ! data
@@ -2495,8 +2502,8 @@ do iiiiii=1, nnetwork
       end do
 
       if (this%file)then
-        if (present(template)) then
-          ier=idba_set (this%handle,"query","message "//trim(template))
+        if (c_e(ltemplate)) then
+          ier=idba_set (this%handle,"query","message "//trim(ltemplate))
         else
           ier=idba_set (this%handle,"query","message")
         end if
