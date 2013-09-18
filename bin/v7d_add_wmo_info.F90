@@ -35,12 +35,13 @@ INTEGER :: optind, optstatus
 CHARACTER(len=8) :: input_format
 CHARACTER(len=512) :: input_file, output_file, output_format, output_template
 INTEGER :: block_number
-LOGICAL :: file
+LOGICAL :: ana_only, file
 
 INTEGER :: iun, ier, i, n, ninput, iargc, bni, sni
-INTEGER,ALLOCATABLE :: si(:,:),bn(:),sn(:)
+INTEGER,ALLOCATABLE :: si(:,:)
 INTEGER,POINTER :: w_s(:), w_e(:)
 TYPE(vol7d) :: v7d, v7dtmp
+LOGICAL :: vf(1)
 #ifdef HAVE_DBALLE
 TYPE(vol7d_dballe) :: v7d_dba, v7d_dba_out
 #endif
@@ -116,6 +117,9 @@ CALL optionparser_add(opt, ' ', 'output-format', output_format, &
  &''temp'', ''generic'', empty for ''generic'''&
 #endif
  )
+
+CALL optionparser_add(opt, ' ', 'ana-only', ana_only, help= &
+ 'output only ana information throwing away possible data in the input volume')
 
 ! help options
 CALL optionparser_add_help(opt, 'h', 'help', help='show an help message and exit')
@@ -228,11 +232,19 @@ IF (ldisplay) THEN
   CALL display(v7d)
 ENDIF
 
-! make room for new variables, character type (experimental)
-CALL add_block_station_varc(v7d)
+IF (ana_only) THEN ! throw away ana information
+  vf = (/.FALSE./)
+  CALL vol7d_reform(v7d, ltime=vf, ltimerange=vf, llevel=vf, &
+   ldativarr=vf, ldativard=vf, ldativari=vf, ldativarb=vf, ldativarc=vf, &
+   ldatiattrr=vf, ldatiattrd=vf, ldatiattri=vf, ldatiattrb=vf, ldatiattrc=vf, &
+   ldativarattrr=vf, ldativarattrd=vf, ldativarattri=vf, ldativarattrb=vf, ldativarattrc=vf)
+ENDIF
+
+! make room for new variables
+CALL add_block_station_var(v7d)
 ! search for block/station number variables
-bni = INDEX(v7d%anavar%c, vol7d_var_new('B01001'))
-sni = INDEX(v7d%anavar%c, vol7d_var_new('B01002'))
+bni = INDEX(v7d%anavar%i, vol7d_var_new('B01001'))
+sni = INDEX(v7d%anavar%i, vol7d_var_new('B01002'))
 IF (bni <= 0 .OR. sni <= 0) THEN ! unexpected error
   IF (ldisplay) THEN
     PRINT*," >>>>> Error Volume <<<<<"
@@ -241,7 +253,6 @@ IF (bni <= 0 .OR. sni <= 0) THEN ! unexpected error
   CALL l4f_category_log(category,L4F_ERROR,'adding block/station number variables')
   CALL raise_fatal_error()
 ENDIF
-ALLOCATE(bn(SIZE(v7d%ana)), sn(SIZE(v7d%ana)))
 
 IF (INDEX(v7d%anavar, vol7d_var_new('B01192')) > 0) THEN
 ! retrieve station id if present
@@ -249,24 +260,19 @@ IF (INDEX(v7d%anavar, vol7d_var_new('B01192')) > 0) THEN
   si = integeranavol(v7d, vol7d_var_new('B01192'))
 ! compute block/station number using station id number
   DO i = 1, SIZE(v7d%network)
-    CALL compute_block_station_number(block_number, bn, sn, si(:,i))
-    v7d%volanac(:,bni,i) = to_char(bn) ! convert to char (experimental)
-    v7d%volanac(:,sni,i) = to_char(sn)
+    CALL compute_block_station_number(block_number, &
+     v7d%volanai(:,bni,i), v7d%volanai(:,sni,i), si(:,i))
   ENDDO
-
   DEALLOCATE(si)
 
 ELSE
 ! compute block/station number using ana order
   DO i = 1, SIZE(v7d%network)
-    CALL compute_block_station_number(block_number, bn, sn)
-    v7d%volanac(:,bni,i) = to_char(bn) ! convert to char (experimental)
-    v7d%volanac(:,sni,i) = to_char(sn)
+    CALL compute_block_station_number(block_number, &
+     v7d%volanai(:,bni,i), v7d%volanai(:,sni,i))
   ENDDO
 
 ENDIF
-
-DEALLOCATE(bn, sn)
 
 
 IF (ldisplay) THEN
@@ -374,25 +380,6 @@ CALL init(locana%anavar%i(2), btable='B01002')
 CALL vol7d_merge(v7d, locana)
 
 END SUBROUTINE add_block_station_var
-
-
-! make room for block/station number variables (char version)
-SUBROUTINE add_block_station_varc(v7d)
-TYPE(vol7d),INTENT(inout) :: v7d
-
-TYPE(vol7d) :: locana
-
-CALL init(locana)
-CALL vol7d_alloc(locana, nana=SIZE(v7d%ana), nnetwork=SIZE(v7d%network), nanavarc=2)
-CALL vol7d_alloc_vol(locana)
-locana%ana(:) = v7d%ana(:)
-locana%network(:) = v7d%network(:)
-CALL init(locana%anavar%c(1), btable='B01001')
-CALL init(locana%anavar%c(2), btable='B01002')
-
-CALL vol7d_merge(v7d, locana)
-
-END SUBROUTINE add_block_station_varc
 
 
 ! add block/station number with an intelligent(!) algorithm
