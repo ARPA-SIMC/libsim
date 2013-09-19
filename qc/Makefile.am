@@ -1,5 +1,5 @@
 lib_LTLIBRARIES = libsim_qc.la
-libsim_qc_la_SOURCES = modqc.F90 modqctem.F90
+libsim_qc_la_SOURCES = modqc.F90
 
 AM_FCFLAGS = -I../base -I../vol7d -I../log4fortran
 libsim_qc_la_LIBADD = ../base/libsim_base.la ../vol7d/libsim_vol7d.la ../log4fortran/liblog4fortran.la
@@ -10,7 +10,7 @@ endif
 
 if SHAPELIB
 libsim_qc_la_LIBADD += $(SHAPELIB_LIBS)
-libsim_qc_la_SOURCES += modqccli.F90
+libsim_qc_la_SOURCES += modqccli.F90 modqctem.F90
 endif
 
 if NCARG
