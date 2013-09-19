@@ -114,4 +114,9 @@ IF (line_split_get_nlines(longline) /= 4 .OR. &
  line_split_get_line(longline, 4) /= 'la tempesta') CALL EXIT(1)
 CALL delete(longline)
 
+PRINT*,'checking wash_char'
+IF (TRIM(wash_char('abcde12345')) /= 'abcde' .OR. &
+ TRIM(wash_char('abcde 12345',badchar='a')) /= 'bcde 12345' .OR. &
+ TRIM(wash_char('abcde12345',goodchar='a')) /= 'a') CALL EXIT(1)
+
 END PROGRAM char_test

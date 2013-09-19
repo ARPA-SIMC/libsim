@@ -947,7 +947,7 @@ integer,allocatable :: igoodchar(:)
 integer,allocatable :: ibadchar(:)
 
 CHARACTER(len=len(in)) :: char,charr,charrr
-integer :: i,ia
+INTEGER :: i,ia,nchar
 
 char=""
 charr=""
@@ -958,13 +958,15 @@ if (present(goodchar)) then
 allocate(igoodchar(len(goodchar)))
 
   do i =1, len(goodchar)
-    igoodchar=iachar(goodchar(i:))
+    igoodchar=ichar(goodchar(i:i))
   end do
 
+  nchar=0
   do i=1,len(in)
-    ia = iachar(in(i:))
+    ia = ichar(in(i:i))
     if (any(ia == igoodchar))then
-      charrr=trim(charrr)//achar(ia)
+      nchar=nchar+1
+      charrr(nchar:nchar)=achar(ia)
     end if
   end do
 
@@ -983,14 +985,16 @@ if (present(badchar)) then
 allocate(ibadchar(len(badchar)))
 
   do i =1, len(badchar)
-    ibadchar=iachar(badchar(i:))
+    ibadchar=ichar(badchar(i:i))
   end do
 
+  nchar=0
   do i=1,len(charrr)
-    ia = iachar(charrr(i:))
+    ia = ichar(charrr(i:i))
     if (.not. any(ia == ibadchar))then
-      charr=trim(charr)//achar(ia)
-    end if
+      nchar=nchar+1
+      charr(nchar:nchar)=achar(ia)
+      end if
   end do
 
 deallocate(ibadchar)
@@ -1004,13 +1008,19 @@ end if
 
 if (.not. present(goodchar) .and. .not. present(badchar)) then
 
+  nchar=0
   do i=1,len(charr)
-    ia = iachar(charr(i:))
+    ia = ichar(charr(i:i))
     if ((ia >= 65 .and. ia <= 90) .or. &
         (ia >= 97 .and. ia <= 122))then
-      char=trim(char)//achar(ia)
+      nchar=nchar+1
+      char(nchar:nchar)=achar(ia)
     end if
   end do
+
+else
+
+  char=charr
 
 end if
 
