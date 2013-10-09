@@ -181,11 +181,11 @@ implicit none
 type :: qcpartype
   integer (kind=int_b):: att !< confidence for "*B33192"
   integer (kind=int_b):: gross_error ! special valuer for "*B33192" when gross error check failed
-  integer (kind=int_b):: invalidated ! special valuer for "*B33196" when manula invalidation happen
+  integer (kind=int_b):: invalidated ! special valuer for "*B33196" when manual invalidation happen
 end type qcpartype
 
 !> Default data with confidence less or equal 10 are rejected
-type(qcpartype)  :: qcpar=qcpartype(10_int_b,0_int_b,0_int_b)
+type(qcpartype)  :: qcpar=qcpartype(10_int_b,0_int_b,1_int_b)
 
 integer, parameter :: nqcattrvars=4
 CHARACTER(len=10),parameter :: qcattrvarsbtables(nqcattrvars)=(/"*B33196","*B33192","*B33193","*B33194"/)
