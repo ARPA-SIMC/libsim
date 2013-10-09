@@ -306,7 +306,7 @@ if ( io == 0 ) read(10,nml=varlist,iostat=io)
 
 if (io /= 0 )then
     call l4f_category_log(category,L4F_ERROR,"Error reading namelist qc.nml")
-    call raise_error("Error reading namelist qc.nml")
+    call raise_error()
 end if
 close(10)
 
@@ -354,8 +354,10 @@ if (c_e(tf))   call l4f_category_log(category,L4F_INFO,"QC on "//t2c(tf)//" date
 CALL init(v7ddballeana,dsn=dsn,user=user,password=password,write=.false.,wipe=.false.,categoryappend="QCtarget-anaonly")
 call l4f_category_log(category,L4F_INFO,"start ana import")
 
-CALL import(v7ddballeana,var=var(:nvar),timei=ti,timef=tf,coordmin=coordmin,coordmax=coordmax,anaonly=.true.)
+CALL import(v7ddballeana,timei=ti,timef=tf,coordmin=coordmin,coordmax=coordmax,anaonly=.true.)
 
+print *,"anagrafica:"
+call display(v7ddballeana%vol7d)
 
 do iana=1, size(v7ddballeana%vol7d%ana)
 
@@ -390,7 +392,7 @@ do iana=1, size(v7ddballeana%vol7d%ana)
 
 
   call init(v7dqctem,v7ddballe%vol7d,var(:nvar),timei=ti,timef=tf, &
-   coordmin=v7ddballe%vol7d%ana(iana)%coord, coordmax=v7ddballe%vol7d%ana(iana)%coord,&
+   coordmin=v7ddballeana%vol7d%ana(iana)%coord, coordmax=v7ddballeana%vol7d%ana(iana)%coord,&
    data_id_in=v7ddballe%data_id, &
    dsne=dsne, usere=usere, passworde=passworde,&
    dsntem=dsntem, usertem=usertem, passwordtem=passwordtem,&
@@ -404,7 +406,7 @@ do iana=1, size(v7ddballeana%vol7d%ana)
 
   ! temporal QC
   call l4f_category_log(category,L4F_INFO,"start temporal QC")
-  call quacontem(v7dqctem,timemask= ( v7dqctem%v7d%time >= timeiqc .and. v7dqctem%v7d%time <= timefqc ))
+!  call quacontem(v7dqctem,timemask= ( v7dqctem%v7d%time >= timeiqc .and. v7dqctem%v7d%time <= timefqc ))
   call l4f_category_log(category,L4F_INFO,"end temporal QC")
 
 
@@ -419,7 +421,7 @@ do iana=1, size(v7ddballeana%vol7d%ana)
 
     ! data_id to use is the new one
     v7ddballe%data_id => v7dqctem%data_id_out
-    CALL export(v7ddballe,attr_only=.true.)
+!    CALL export(v7ddballe,attr_only=.true.)
     call l4f_category_log(category,L4F_INFO,"end export data")
   end if
 

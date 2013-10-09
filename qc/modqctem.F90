@@ -570,7 +570,9 @@ do indana=1,size(qctem%v7d%ana)
                 datola=rmiss
               end if
             end if
-            
+
+
+            !TODO
             datila = qctem%v7d%voldatir  (ivert(i) ,: ,indlevel ,indtimerange ,inddativarr, indnetwork )
 
             if (.not. c_e(datola))then

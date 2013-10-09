@@ -28,10 +28,10 @@
 !!oggetto vol7d ulteriori informazioni.
 !!
 !!Con la chiamata init vengono definiti i parametri di accesso alla DSN
-!!(database) di DB-All.e.
+!!(database) di DB-All.e. oppure da file bufr/crex
 !!
 !!Con import è possibile acquisire nel prorio programma i dati presenti
-!!nel DSN; l'allocazione di memoria è automatica. Import è in grado di
+!!nel DSN o su file; l'allocazione di memoria è automatica. Import è in grado di
 !!importare dati senza nessuna ulteriore specificazione: vengono
 !!acquisite tutte le stazioni senza limiti di tempo o di spazio, per
 !!tutti i dati, compresi quelli di anagrafica; solo gli attributi
@@ -42,7 +42,8 @@
 !!spaziali, elenchi di variabili e attributi. E' possibile anche
 !!specificare il tipo per ogni variabile o attributo richiesto. E'
 !!fornito un set di routine per avere la possibilità di estrarre un
-!!vettore di variabili e un vettore di reti. vol7d_dballe%%data_id
+!!vettore di variabili e un vettore di reti. E' possibile anche specificare
+!!una singola stazione. vol7d_dballe%%data_id
 !!contiene un vettore di servizio con gli id interni del database che
 !!indirizzano direttamente i dati. Una particolare opzione permette di
 !!attivare l'opzione query di tipo best in DB-All.e per avere in una
@@ -58,7 +59,12 @@
 !!vol7d_dballe%%data_id in export permette di sovrascrivere solo gli
 !!attributi; eventualmente possono essere sovrascritti i soli attributi
 !!relativi agli elementi data_id non mancanti.
-!! 
+!!
+!! E' da notare che se si attiva l'opzione "anaonly" solo ma tutte le stazioni e 
+!! i dati di anagrafica vengono importati secondo i parametri di query selezionati.
+!! Se l'opzione "anaonly" è disattivata solo le stazioni con i dati richiesti presenti 
+!! saranno caricati nella sezione anagrafica
+!!
 !!Utilizzando due differenti oggetti uno per import e uno per export è
 !!possibile tramite l'associazione del puntatore in essi contenuto
 !!relativo al volume vol7d ricopiare contenuti in altri DSN senza
@@ -385,7 +391,7 @@ CHARACTER(len=*),INTENT(in),OPTIONAL :: anavarkind(:)
 !! - "d" = double precision
 !! - "c" = character 
 CHARACTER(len=*),INTENT(in),OPTIONAL :: anaattrkind(:)
-logical,intent(in),optional :: anaonly !< extract ana data only
+logical,intent(in),optional :: anaonly !< extract all ana data but only that
 
 CALL import(this, (/var/), network, coordmin, coordmax, timei, timef,level,timerange, set_network,&
  attr,anavar,anaattr, varkind,attrkind,anavarkind,anaattrkind,anaonly,ana)
@@ -491,13 +497,13 @@ if (this%file) then
    attr,anavar,anaattr, varkind,attrkind,anavarkind,anaattrkind,anaonly,ana)
 
 else
-  if (optio_log(anaonly)) then
-    CALL l4f_category_log(this%category,L4F_ERROR,"anaonly=.true. not supported accessing to dba")
-    CALL raise_fatal_error()
-  end if
+!!$  if (optio_log(anaonly)) then
+!!$    CALL l4f_category_log(this%category,L4F_ERROR,"anaonly=.true. not supported accessing to dba")
+!!$    CALL raise_fatal_error()
+!!$  end if
 
   call vol7d_dballe_importvvns_dba(this, var, network, coordmin, coordmax, timei, timef,level,timerange, set_network,&
-   attr,anavar,anaattr, varkind,attrkind,anavarkind,anaattrkind,ana)
+   attr,anavar,anaattr, varkind,attrkind,anavarkind,anaattrkind,anaonly,ana)
   
 end if
 
@@ -509,7 +515,7 @@ end SUBROUTINE vol7d_dballe_importvvns
 !!
 !!import da DB-all.e
 SUBROUTINE vol7d_dballe_importvvns_dba(this, var, network, coordmin, coordmax, timei, timef,level,timerange, set_network,&
- attr,anavar,anaattr, varkind,attrkind,anavarkind,anaattrkind,ana)
+ attr,anavar,anaattr, varkind,attrkind,anavarkind,anaattrkind,anaonly,ana)
 
 TYPE(vol7d_dballe),INTENT(inout) :: this !< oggetto vol7d_dballe
 CHARACTER(len=*),INTENT(in),OPTIONAL :: var(:)
@@ -521,6 +527,7 @@ TYPE(vol7d_level),INTENT(in),optional :: level
 TYPE(vol7d_timerange),INTENT(in),optional :: timerange
 CHARACTER(len=*),INTENT(in),OPTIONAL :: attr(:),anavar(:),anaattr(:)
 CHARACTER(len=*),INTENT(in),OPTIONAL :: varkind(:),attrkind(:),anavarkind(:),anaattrkind(:)
+logical,intent(in),optional :: anaonly
 
 TYPE(vol7d_network) :: lnetwork
 TYPE(vol7d_level) :: llevel
@@ -663,10 +670,15 @@ CALL l4f_category_log(this%category,L4F_DEBUG,'unsetall handle')
 #endif
 
 if(c_e(lnetwork))ier=idba_set (this%handle,"rep_memo",lnetwork%name)
-!call idba_set (this%handle,"mobile",0)
-!print*,"network,mobile",network%name,0
+
+#ifdef DEBUG
+CALL l4f_category_log(this%category,L4F_DEBUG,'query rep_memo:'//t2c(lnetwork%name,miss="missing"))
+#endif
 
 if(ldegnet)ier=idba_set (this%handle,"query","best")
+#ifdef DEBUG
+CALL l4f_category_log(this%category,L4F_DEBUG,'query best:'//t2c(ldegnet))
+#endif
 
 if (present(coordmin)) then
 !  CALL geo_coord_to_geo(coordmin)
@@ -732,7 +744,7 @@ end if
 
 nvar=0
 
-if (any(c_e(lvar))) then
+if (any(c_e(lvar)) .and. .not. optio_log(anaonly)) then
 
   IF (SIZE(lvar) > maxvarlist) THEN
     CALL l4f_category_log(this%category,L4F_ERROR,"too many variables requested: "//t2c(SIZE(lvar)))
@@ -774,6 +786,8 @@ ier=idba_voglioquesto (this%handle,N)
 #ifdef DEBUG
 CALL l4f_category_log(this%category,L4F_DEBUG,'numero di dati:'//t2c(n))
 #endif
+
+if (optio_log(anaonly)) N=0
 
 !ora che so quanti dati ho alloco la memoria per buffer
 allocate(buffer(N),stat=istat)
@@ -861,9 +875,6 @@ CALL l4f_category_log(this%category,L4F_DEBUG,'unsetall handle_staz')
 #endif
 
 if(c_e(lnetwork))ier=idba_set (this%handle_staz,"rep_memo",lnetwork%name)
-ier=idba_set (this%handle_staz,"mobile",0)
-!print*,"network,mobile",network%name,0
-
 if(ldegnet)ier=idba_set (this%handle_staz,"query","best")
 
 if (present(coordmin)) then
@@ -902,15 +913,15 @@ if (size (lanavar) > 0 ) then
     IF (nanavar > 1) varlist(LEN_TRIM(varlist)+1:) = ',' 
     varlist(LEN_TRIM(varlist)+1:) = TRIM(lanavar(i))
   ENDDO
-                                !print *,"varlist",varlist
-  ier=idba_set(this%handle_staz, "varlist",varlist )
+!!$  print *,"varlist :",trim(varlist)
+!!$  ier=idba_set(this%handle_staz, "varlist",trim(varlist))
 
 end if
 
 
 ier=idba_setcontextana(this%handle_staz)
 ier=idba_voglioquesto (this%handle_staz,N_ana)
-!print*,"numero di dati ",N_ana
+!!$print*,"numero di dati ",N_ana
 
 !ora che so quanti dati ho alloco la memoria per bufferana
 allocate(bufferana(N_ana),stat=istat)
@@ -936,9 +947,6 @@ do i=1,N_ana
   ier=idba_dammelo (this%handle_staz,btable)
 
   
-                                !salto lat lon e ident
-  if (btable == "B05001" .or. btable == "B06001" .or. btable == "B01011") cycle
-
   ier=idba_enqdate (this%handle_staz,year,month,day,hour,minute,sec)
   ier=idba_enqlevel(this%handle_staz, rlevel1, rl1, rlevel2,rl2)
   ier=idba_enqtimerange(this%handle_staz, rtimerange, p1, p2)
@@ -948,6 +956,24 @@ do i=1,N_ana
                                 ! ind = firsttrue(qccli%v7d%dativar%r(:)%btable == nbtable)
                                 ! IF (ind<1) cycle ! non c'e'
   
+
+                                !metto in memoria l'identificatore numerico dei dati
+                                !print*,bufferana(i)%data_id
+  ier=idba_enq (this%handle_staz,"context_id",bufferana(i)%data_id)
+
+                                !recupero i dati di anagrafica
+  ier=idba_enq (this%handle_staz,"lat",   ilat)
+  ier=idba_enq (this%handle_staz,"lon",   ilon)
+  ier=idba_enq (this%handle_staz,"ident",ident)
+
+
+                                !bufferizzo il contesto
+  
+  call init(bufferana(i)%ana,ilat=ilat,ilon=ilon,ident=ident)
+  call init(bufferana(i)%network, rep_memo)
+
+                                !salto lat lon e ident
+  if (btable == "B05001" .or. btable == "B06001" .or. btable == "B01011") cycle
 
   if ( size(lanavar) > 0 .and. present(anavarkind))then
     ii= index_c(lanavar, btable)
@@ -964,30 +990,9 @@ do i=1,N_ana
     !print*,"dato anagrafica",btable," ",bufferana(i)%dator
   end if
   
-                                !metto in memoria l'identificatore numerico dei dati
-                                !print*,buffer(i)%data_id
-  ier=idba_enq (this%handle_staz,"context_id",bufferana(i)%data_id)
-
-                                !recupero i dati di anagrafica
-  ier=idba_enq (this%handle_staz,"lat",   ilat)
-  ier=idba_enq (this%handle_staz,"lon",   ilon)
-  ier=idba_enq (this%handle_staz,"ident",ident)
-
-!!$  print*,"ident",ident
-!!$  do ier=1,len(ident)
-!!$    print *,iachar(ident(ier:ier))
-!!$  end do
-
-                                !bufferizzo il contesto
-                                !print *,"lat,lon",lat,lon
-                                !print*,year,month,day,hour,minute,sec
-                                !print*,btable,dato,buffer(i)%datiattrb
-  
-  call init(bufferana(i)%ana,ilat=ilat,ilon=ilon,ident=ident)
   call init(bufferana(i)%time, year=year, month=month, day=day, hour=hour, minute=minute,msec=sec*1000)
   call init(bufferana(i)%level, rlevel1,rl1,rlevel2,rl2)
   call init(bufferana(i)%timerange, rtimerange, p1, p2)
-  call init(bufferana(i)%network, rep_memo)
   bufferana(i)%btable = btable
 
 end do
@@ -998,16 +1003,27 @@ if (.not. any(c_e(lvar)))then
   nvar = count_distinct(buffer%btable, back=.TRUE.)
 end if
 
-nana = count_distinct(buffer%ana, back=.TRUE.)
-ntime = count_distinct(buffer%time, back=.TRUE.)
-ntimerange = count_distinct(buffer%timerange, back=.TRUE.)
-nlevel = count_distinct(buffer%level, back=.TRUE.)
+if (optio_log(anaonly)) then
+  nana = count_distinct(bufferana%ana, back=.TRUE.)
+else
+  nana = count_distinct(buffer%ana, back=.TRUE.)
+end if
 
 if(ldegnet) then
   nnetwork=1
 else
-  nnetwork = count_distinct(buffer%network, back=.TRUE.)
+  if (optio_log(anaonly)) then
+    nnetwork = count_distinct(bufferana%network, back=.TRUE.)
+  else
+    nnetwork = count_distinct(buffer%network, back=.TRUE.)
+  end if
 end if
+
+
+ntime = count_distinct(buffer%time, back=.TRUE.)
+ntimerange = count_distinct(buffer%timerange, back=.TRUE.)
+nlevel = count_distinct(buffer%level, back=.TRUE.)
+
 
 if (present(varkind))then
   ndativarr= count(varkind == "r")
@@ -1151,17 +1167,22 @@ call vol7d_alloc (vol7dtmp, &
  nanavarattrd=nanavarattrd, &
  nanavarattrc=nanavarattrc)
 
-! print *, "nana=",nana, "ntime=",ntime, "ntimerange=",ntimerange, &
-! "nlevel=",nlevel, "nnetwork=",nnetwork, &
-! "ndativarr=",ndativarr, "ndativari=",ndativari, &
-! "ndativarb=",ndativarb, "ndativard=",ndativard, "ndativarc=",ndativarc,&
-! "ndatiattrr=",ndatiattrr, "ndatiattri=",ndatiattri, "ndatiattrb=",ndatiattrb,&
-! "ndatiattrd=",ndatiattrd, "ndatiattrc=",ndatiattrc,&
-! "ndativarattrr=",ndativarattrr, "ndativarattri=",ndativarattri, "ndativarattrb=",ndativarattrb,&
-! "ndativarattrd=",ndativarattrd, "ndativarattrc=",ndativarattrc
-! print*,"ho fatto alloc"
+!!$print *, "nana=",nana, "ntime=",ntime, "ntimerange=",ntimerange, &
+!!$ "nlevel=",nlevel, "nnetwork=",nnetwork, &
+!!$ "ndativarr=",ndativarr, "ndativari=",ndativari, &
+!!$ "ndativarb=",ndativarb, "ndativard=",ndativard, "ndativarc=",ndativarc,&
+!!$ "ndatiattrr=",ndatiattrr, "ndatiattri=",ndatiattri, "ndatiattrb=",ndatiattrb,&
+!!$ "ndatiattrd=",ndatiattrd, "ndatiattrc=",ndatiattrc,&
+!!$ "ndativarattrr=",ndativarattrr, "ndativarattri=",ndativarattri, "ndativarattrb=",ndativarattrb,&
+!!$ "ndativarattrd=",ndativarattrd, "ndativarattrc=",ndativarattrc
+!!$print*,"ho fatto alloc"
 
-vol7dtmp%ana=pack_distinct(buffer%ana, nana, back=.TRUE.)
+if (optio_log(anaonly)) then
+  vol7dtmp%ana=pack_distinct(bufferana%ana, nana, back=.TRUE.)
+else
+  vol7dtmp%ana=pack_distinct(buffer%ana, nana, back=.TRUE.)  
+endif
+
 vol7dtmp%time=pack_distinct(buffer%time, ntime, back=.TRUE.)
 call sort(vol7dtmp%time)
 
@@ -1174,7 +1195,11 @@ call sort(vol7dtmp%level)
 if(ldegnet)then
   vol7dtmp%network(1)=set_network
 else
-  vol7dtmp%network=pack_distinct(buffer%network, nnetwork, back=.TRUE.)
+  if (optio_log(anaonly)) then
+    vol7dtmp%network=pack_distinct(bufferana%network, nnetwork, back=.TRUE.)
+  else
+    vol7dtmp%network=pack_distinct(buffer%network, nnetwork, back=.TRUE.)
+  end if
 end if
 
 !print*,"reti presenti", vol7dtmp%network%name,buffer%network%name
@@ -2606,7 +2631,7 @@ IF (n > 0) THEN
     !PRINT*," D=",blocal(i)%scalefactor
   ENDDO readline
 
-  CALL l4f_log(L4F_INFO,'Ho letto '//TRIM(to_char(i-1))//' variabili dalla tabella')
+  CALL l4f_log(L4F_INFO,'Found '//TRIM(to_char(i-1))//' variables in dballe master table')
 
   this=blocal
 
