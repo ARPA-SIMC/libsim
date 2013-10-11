@@ -84,7 +84,7 @@ TYPE(timedelta),INTENT(in) :: step !< length of the step over which the statisti
 TYPE(datetime),INTENT(in),OPTIONAL :: start !< start of statistical processing interval
 LOGICAL,INTENT(in),OPTIONAL :: full_steps !< if \a .TRUE. cumulate only on intervals starting at a forecast time modulo \a step, default is to cumulate on all possible combinations of intervals
 REAL,INTENT(in),OPTIONAL :: frac_valid !< minimum fraction of valid data required for considering acceptable a recomputed value, default=1.
-TYPE(timedelta),INTENT(in),OPTIONAL :: max_step ! maximum allowed distance in time between two single valid data within a dataset, for the dataset to be eligible for statistical processing
+TYPE(timedelta),INTENT(in),OPTIONAL :: max_step !< maximum allowed distance in time between two contiguougs valid data within an interval, for the interval to be eligible for statistical processing
 LOGICAL,INTENT(in),OPTIONAL :: weighted !< if provided and \c .TRUE., the statistical process is computed, if possible, by weighting every value with a weight proportional to its validity interval
 TYPE(vol7d),INTENT(inout),OPTIONAL :: other !< optional volume that, on exit, is going to contain the data that did not contribute to the accumulation computation
 
@@ -402,7 +402,7 @@ TYPE(vol7d),INTENT(out) :: that !< output volume which will contain the computed
 INTEGER,INTENT(in) :: stat_proc !< type of statistical processing to be computed (from grib2 table)
 TYPE(timedelta),INTENT(in) :: step !< length of the step over which the statistical processing is performed
 TYPE(datetime),INTENT(in),OPTIONAL :: start !< start of statistical processing interval
-TYPE(timedelta),INTENT(in),OPTIONAL :: max_step ! maximum allowed distance in time between two single valid data within a dataset, for the dataset to be eligible for statistical processing
+TYPE(timedelta),INTENT(in),OPTIONAL :: max_step !< maximum allowed distance in time between two contiguougs valid data within an interval, for the interval to be eligible for statistical processing
 LOGICAL,INTENT(in),OPTIONAL :: weighted !< if provided and \c .TRUE., the statistical process is computed, if possible, by weighting every value with a weight proportional to its validity interval
 TYPE(vol7d),INTENT(inout),OPTIONAL :: other !< optional volume that, on exit, is going to contain the data that did not contribute to the accumulation computation
 !INTEGER,INTENT(in),OPTIONAL :: stat_proc_input !< to be used with care, type of statistical processing of data that has to be processed (from grib2 table), only data having timerange of this type will be recomputed, the actual statistical processing performed and which will appear in the output volume, is however determined by \a stat_proc argument
