@@ -972,8 +972,8 @@ do i=1,N_ana
   call init(bufferana(i)%ana,ilat=ilat,ilon=ilon,ident=ident)
   call init(bufferana(i)%network, rep_memo)
 
-                                !salto lat lon e ident
-  if (btable == "B05001" .or. btable == "B06001" .or. btable == "B01011") cycle
+                                !salto lat lon e ident e network
+  if (btable == "B05001" .or. btable == "B06001" .or. btable == "B01011" .or. btable == "B01194" ) cycle
 
   if ( size(lanavar) > 0 .and. present(anavarkind))then
     ii= index_c(lanavar, btable)
@@ -3193,7 +3193,7 @@ do while ( N > 0 )
 
       if (.not. lanaonly)then
                                 !salto lat lon e ident
-        if (btable == "B05001" .or. btable == "B06001" .or. btable == "B01011") btable=DBA_MVC
+        if (btable == "B05001" .or. btable == "B06001" .or. btable == "B01011" .or. btable == "B01194") btable=DBA_MVC
 
       end if
 
