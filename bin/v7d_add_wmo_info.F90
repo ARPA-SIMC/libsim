@@ -34,7 +34,7 @@ TYPE(optionparser) :: opt
 INTEGER :: optind, optstatus
 CHARACTER(len=8) :: input_format
 CHARACTER(len=512) :: input_file, output_file, output_format, output_template
-INTEGER :: block_number
+INTEGER :: block_number, station_number
 LOGICAL :: ana_only, file
 
 INTEGER :: iun, ier, i, n, ninput, iargc, bni, sni
@@ -100,6 +100,9 @@ block_number = imiss
 CALL optionparser_add(opt, ' ', 'block-number', block_number, help= &
  'set variable B01001 -WMO block number- to this value in output volume, &
  &if not provided an automatic choice is done.')
+CALL optionparser_add(opt, ' ', 'station-number', station_number, default=0, help= &
+ 'add this offset when computing variable B01002 -WMO station number- to be set &
+&in output volume.')
 
 ! options for defining output
 output_template = ''
@@ -116,7 +119,9 @@ CALL optionparser_add(opt, ' ', 'output-format', output_format, &
  //'; ''BUFR'' and ''CREX'' for corresponding formats, with template as an alias like ''synop'', ''metar'', &
  &''temp'', ''generic'', empty for ''generic'''&
 #endif
- )
+ //'; ''WMOFLAT'' for writing a WMO flat file with station data, in this case &
+ &template (compulsory) is the name of a file containing a single line to be used &
+ &as template for the WMO flat file (implies --ana-only).')
 
 CALL optionparser_add(opt, ' ', 'ana-only', ana_only, help= &
  'output only ana information throwing away possible data in the input volume')
@@ -232,6 +237,7 @@ IF (ldisplay) THEN
   CALL display(v7d)
 ENDIF
 
+IF (output_format == 'WMOFLAT') ana_only = .TRUE. ! bruttino
 IF (ana_only) THEN ! throw away ana information
   vf = (/.FALSE./)
   CALL vol7d_reform(v7d, ltime=vf, ltimerange=vf, llevel=vf, &
@@ -317,6 +323,9 @@ ELSE IF (output_format == 'BUFR' .OR. output_format == 'CREX' .OR. output_format
   CALL delete(v7d_dba_out)
 #endif
 
+ELSE IF (output_format == 'WMOFLAT') THEN
+  CALL v7d_export_wmo_flat(v7d, output_file, output_template, bni, sni)
+
 ELSE IF (output_format /= '') THEN
   CALL l4f_category_log(category, L4F_ERROR, &
    'error in command-line parameters, format '// &
@@ -399,21 +408,23 @@ IF (c_e(block_number)) THEN ! block_number provided
 #ifdef DEBUG
     CALL l4f_category_log(category, L4F_WARN, &
      'computing station numbers according to db station id number')
+    CALL l4f_category_log(category, L4F_WARN, &
+     'valid/total ids:'//t2c(COUNT(c_e(station_id)))//'/'//t2c(size(station_id)))
 #endif
     WHERE(c_e(station_id))
       out_block(:) = block_number
     END WHERE
-    IF (ANY(c_e(station_id) .AND. station_id > 999)) THEN
+    IF (ANY(c_e(station_id) .AND. station_id + station_number > 999)) THEN
       CALL l4f_category_log(category, L4F_WARN, &
        'station_id > 999 encountered, stations may be duplicated')
       CALL l4f_category_log(category, L4F_WARN, &
        'try omitting --block-number option')
       WHERE(c_e(station_id))
-        out_station(:) = MOD(station_id(:),1000)
+        out_station(:) = MOD(station_id(:) + station_number,1000)
       END WHERE
     ELSE
       WHERE(c_e(station_id))
-        out_station(:) = station_id(:)
+        out_station(:) = station_id(:) + station_number
       END WHERE
     ENDIF
   ELSE ! station_id not found, invent station number
@@ -422,14 +433,14 @@ IF (c_e(block_number)) THEN ! block_number provided
      'computing station numbers according to ana order')
 #endif
     out_block(:) = block_number
-    IF (SIZE(out_station) > 999) THEN
+    IF (SIZE(out_station) + station_number > 999) THEN
       CALL l4f_category_log(category, L4F_WARN, &
        '> 999 stations imported, stations will be duplicated')
       CALL l4f_category_log(category, L4F_WARN, &
        'try omitting --block-number option')
-      out_station(:) = (/(MOD(i,1000),i=0,SIZE(out_station)-1)/)
+      out_station(:) = (/(MOD(i+station_number,1000),i=0,SIZE(out_station)-1)/)
     ELSE
-      out_station(:) = (/(i,i=0,SIZE(out_station)-1)/)
+      out_station(:) = (/(i+station_number,i=0,SIZE(out_station)-1)/)
     ENDIF
   ENDIF
 ELSE ! block_number not provided
@@ -439,16 +450,16 @@ ELSE ! block_number not provided
      'computing block/station numbers according to db station id number')
 #endif
       WHERE(c_e(station_id))
-        out_station(:) = MOD(station_id(:),1000)
-        out_block(:) = MOD((station_id(:) - out_station(:))/1000,100)
+        out_station(:) = MOD(station_id(:) + station_number,1000)
+        out_block(:) = MOD((station_id(:) + station_number - out_station(:))/1000,100)
       END WHERE
   ELSE ! station_id not found, invent block/station number
 #ifdef DEBUG
     CALL l4f_category_log(category, L4F_WARN, &
      'computing block/station numbers according to ana order')
 #endif
-      out_station(:) = (/(MOD(i,1000),i=0,SIZE(out_station)-1)/)
-      out_block(:) = MOD(((/(i,i=0,SIZE(out_station)-1)/))/1000,100)
+      out_station(:) = (/(MOD(i+station_number,1000),i=0,SIZE(out_station)-1)/)
+      out_block(:) = MOD(((/(i+station_number,i=0,SIZE(out_station)-1)/))/1000,100)
   ENDIF
 ENDIF
 
@@ -461,5 +472,66 @@ ENDDO
 
 END SUBROUTINE compute_block_station_number
 
+
+SUBROUTINE v7d_export_wmo_flat(v7d, output_file, output_template, bni, sni)
+TYPE(vol7d),INTENT(in) :: v7d
+CHARACTER(len=*),INTENT(in) :: output_file
+CHARACTER(len=*),INTENT(in) :: output_template
+INTEGER,INTENT(in) :: bni, sni
+
+INTEGER :: i
+CHARACTER(len=1024) :: template_format, output_line
+
+template_format=''
+
+OPEN(10,file=output_template)
+READ(10,'(A)')template_format
+CLOSE(10)
+
+OPEN(10,file=output_file)
+! loop only on the first network
+DO i = 1, SIZE(v7d%ana)
+  CALL wmo_flat_format(v7d%ana(i), v7d%volanai(i,bni,1), v7d%volanai(i,sni,1), i, &
+   template_format, output_line)
+  WRITE(10,'(A)')TRIM(output_line)
+ENDDO
+CLOSE(10)
+
+END SUBROUTINE v7d_export_wmo_flat
+
+
+SUBROUTINE wmo_flat_format(ana, bn, sn, i, template_format, output_line)
+TYPE(vol7d_ana),INTENT(in) :: ana
+INTEGER,INTENT(in) :: bn, sn, i
+CHARACTER(len=1024),INTENT(in) :: template_format
+CHARACTER(len=1024),INTENT(out) :: output_line
+
+DOUBLE PRECISION :: lon, lat
+CHARACTER(len=7) :: clon
+CHARACTER(len=6) :: clat
+
+CALL getval(ana%coord, lon=lon)
+CALL getval(ana%coord, lat=lat)
+clon = ''
+clat = ''
+IF (lon > 0.) THEN ! which is Greenwhich? E or W?
+  clon(7:7) = 'E'
+ELSE
+  clon(7:7) = 'W'
+  lon = -lon
+ENDIF
+IF (lat > 0.) THEN ! same as above
+  clat(6:6) = 'N'
+ELSE
+  clat(6:6) = 'S'
+  lat = -lat
+ENDIF
+! format sexagesimal coordinates, improve the 60 case
+WRITE(clon(1:6),'(I3.3,1X,I2.2)')INT(lon),INT((lon - INT(lon))*60.)
+WRITE(clat(1:5),'(I2.2,1X,I2.2)')INT(lat),INT((lat - INT(lat))*60.)
+! no check done on template_format, leave it to the user
+WRITE(output_line, template_format)bn,sn,i,clat,clon
+
+END SUBROUTINE wmo_flat_format
 
 END PROGRAM v7d_add_wmo_info

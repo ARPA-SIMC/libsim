@@ -2760,6 +2760,7 @@ REAL :: vol(SIZE(this%ana),size(this%network))
 CHARACTER(len=1) :: dtype
 INTEGER :: indvar
 
+dtype = cmiss
 indvar = INDEX(this%anavar, var, type=dtype)
 
 IF (indvar > 0) THEN
@@ -2797,6 +2798,7 @@ INTEGER :: vol(SIZE(this%ana),size(this%network))
 CHARACTER(len=1) :: dtype
 INTEGER :: indvar
 
+dtype = cmiss
 indvar = INDEX(this%anavar, var, type=dtype)
 
 IF (indvar > 0) THEN
