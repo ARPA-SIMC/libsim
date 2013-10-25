@@ -26,6 +26,9 @@ subroutine register_termo(vfn)
   call fnregister(vfn,swb_alb2swd_def())
   call fnregister(vfn,swd_alb2swb_def())
   call fnregister(vfn,t_p_w2omega_def())
+  call fnregister(vfn,snow_ls_conv2tot_def())
+  call fnregister(vfn,rain_snow_conv2tot_def())
+  call fnregister(vfn,rain_snow_ls_conv2tot_def())
 
 
 end subroutine register_termo
@@ -297,5 +300,67 @@ end function t_p_w2omega_def
 !!$
 !!$TSA(OSAT,PT)
 !!$
+
+
+subroutine snow_ls_conv2tot(mybin,mybout,bin,bout,in,out)
+  CHARACTER(len=10),intent(in) :: mybin(:)  !< vector table B  WMO input  in user's data
+  CHARACTER(len=10),intent(in) :: mybout(:) !< vector table B  WMO output in user's data
+  CHARACTER(len=10),intent(in) :: bin(:)    !< vector table B  WMO input used by function
+  CHARACTER(len=10),intent(in) :: bout(:)   !< vector table B  WMO output used by function
+  real, intent(in) :: in(:,:)
+  real, intent(out) :: out(:,:)
+
+  out(:,index_c(mybout,bout(1))) = in(:,index_c(mybin,bin(1))) + &
+   in(:,index_c(mybin,bin(2)))
+          
+end subroutine snow_ls_conv2tot
+
+type(fnds) function snow_ls_conv2tot_def()
+  call init(snow_ls_conv2tot_def,"snow_ls_conv2tot", &
+   [character(len=10) :: "B13201","B13203"], &
+   [character(len=10) :: "B13205"],0,func=snow_ls_conv2tot)
+end function snow_ls_conv2tot_def
+
+
+subroutine rain_snow_conv2tot(mybin,mybout,bin,bout,in,out)
+  CHARACTER(len=10),intent(in) :: mybin(:)  !< vector table B  WMO input  in user's data
+  CHARACTER(len=10),intent(in) :: mybout(:) !< vector table B  WMO output in user's data
+  CHARACTER(len=10),intent(in) :: bin(:)    !< vector table B  WMO input used by function
+  CHARACTER(len=10),intent(in) :: bout(:)   !< vector table B  WMO output used by function
+  real, intent(in) :: in(:,:)
+  real, intent(out) :: out(:,:)
+
+  out(:,index_c(mybout,bout(1))) = in(:,index_c(mybin,bin(1))) + &
+   in(:,index_c(mybin,bin(2)))
+          
+end subroutine rain_snow_conv2tot
+
+type(fnds) function rain_snow_conv2tot_def()
+  call init(rain_snow_conv2tot_def,"rain_snow_conv2tot", &
+   [character(len=10) :: "B13202","B13203"], &
+   [character(len=10) :: "B13204"],0,func=rain_snow_conv2tot)
+end function rain_snow_conv2tot_def
+
+
+subroutine rain_snow_ls_conv2tot(mybin,mybout,bin,bout,in,out)
+  CHARACTER(len=10),intent(in) :: mybin(:)  !< vector table B  WMO input  in user's data
+  CHARACTER(len=10),intent(in) :: mybout(:) !< vector table B  WMO output in user's data
+  CHARACTER(len=10),intent(in) :: bin(:)    !< vector table B  WMO input used by function
+  CHARACTER(len=10),intent(in) :: bout(:)   !< vector table B  WMO output used by function
+  real, intent(in) :: in(:,:)
+  real, intent(out) :: out(:,:)
+
+  out(:,index_c(mybout,bout(1))) = in(:,index_c(mybin,bin(1))) + &
+   in(:,index_c(mybin,bin(2))) + in(:,index_c(mybin,bin(3))) + &
+   in(:,index_c(mybin,bin(4)))
+          
+end subroutine rain_snow_ls_conv2tot
+
+type(fnds) function rain_snow_ls_conv2tot_def()
+  call init(rain_snow_ls_conv2tot_def,"rain_snow_ls_conv2tot", &
+   [character(len=10) :: "B13200","B13201","B13202","B13203"], &
+   [character(len=10) :: "B13011"],0,func=rain_snow_ls_conv2tot)
+end function rain_snow_ls_conv2tot_def
+
 
 end module termo
