@@ -202,25 +202,14 @@ if (operation == "ndi") then
     close(10)
   end do
   
-  CALL l4f_category_log(category,L4F_INFO,"compute percentile to remove the tails")
-  percentile = stat_percentile(grad%array(:grad%arraysize),(/10.,90./))
-  !print *,percentile
-
-    CALL l4f_category_log(category,L4F_INFO,"compute NDI")
-  call NormalizedDensityIndex(pack(grad%array(:grad%arraysize),&
-   mask=(percentile(1) < grad%array(:grad%arraysize) .and. &
-   grad%array(:grad%arraysize) < percentile(2) )), perc_vals, ndi, nlimbins)
-
-  call delete(grad)
   call delete(v7dqctem%clima)
   CALL init(v7dqctem%clima, time_definition=0)
   call vol7d_alloc(v7dqctem%clima,nana=size(perc_vals)-1, &
    nlevel=1, ntimerange=1, &
-   ndativarr=1, nnetwork=1,ntime=1,ndativarattrr=1,ndatiattrr=1)
+   ndativarr=1, nnetwork=2,ntime=1,ndativarattrr=1,ndatiattrr=1)
 
   call vol7d_alloc_vol(v7dqctem%clima,inivol=.true.)
 
-  call init(v7dqctem%clima%network(1),name="qctem-ndi")
   v7dqctem%clima%level=level
   v7dqctem%clima%timerange=timerange
   v7dqctem%clima%dativar%r(1)=varia
@@ -231,10 +220,22 @@ if (operation == "ndi") then
 
   indctime=1
   indclevel=1
-  indcnetwork=1
   indcattr=1
   indcdativarr=1
   indctimerange=1
+
+
+  indcnetwork=1
+  call init(v7dqctem%clima%network(indcnetwork),name="qctemsndi")
+
+  CALL l4f_category_log(category,L4F_INFO,"compute NDI spike")
+
+  CALL l4f_category_log(category,L4F_INFO,"compute percentile to remove the tails")
+  percentile = stat_percentile(abs(pack(grad%array(:grad%arraysize),mask=grad%array(:grad%arraysize) >= 0.)),(/10.,90./))
+  !print *,percentile
+
+  call NormalizedDensityIndex(abs(pack(grad%array(:grad%arraysize),&
+   mask=(abs(grad%array(:grad%arraysize)) < percentile(2) .and. grad%array(:grad%arraysize) >= 0. ))), perc_vals, ndi, nlimbins)
 
   do indcana=1,size(perc_vals)-1
     write(ident,'("#",i2.2,2i3.3)')0,0,nint(perc_vals(indcana))
@@ -247,6 +248,31 @@ if (operation == "ndi") then
        ndi(indcana)*100.
     end if
   end do
+
+  indcnetwork=2
+  call init(v7dqctem%clima%network(indcnetwork),name="qctemgndi")
+
+  CALL l4f_category_log(category,L4F_INFO,"compute NDI gap")
+  CALL l4f_category_log(category,L4F_INFO,"compute percentile to remove the tails")
+  percentile = stat_percentile(abs(pack(grad%array(:grad%arraysize),mask=grad%array(:grad%arraysize) < 0.)),(/10.,90./))
+
+  call NormalizedDensityIndex(abs(pack(grad%array(:grad%arraysize),&
+   mask=(abs(grad%array(:grad%arraysize)) < percentile(2) .and. grad%array(:grad%arraysize) < 0. ))), perc_vals, ndi, nlimbins)
+
+  do indcana=1,size(perc_vals)-1
+    write(ident,'("#",i2.2,2i3.3)')0,0,nint(perc_vals(indcana))
+    call init(v7dqctem%clima%ana(indcana),ident=ident,lat=0d0,lon=0d0)
+    if (c_e(nlimbins(indcana)).and.c_e(ndi(indcana)))then
+      ind=index_c(tem_btable,varia%btable)
+      v7dqctem%clima%voldatir(indcana, indctime, indclevel, indctimerange, indcdativarr, indcnetwork)=&
+       nlimbins(indcana)*tem_a(ind) + tem_b(ind)
+      v7dqctem%clima%voldatiattrr(indcana, indctime, indclevel, indctimerange, indcdativarr, indcnetwork,indcattr)=&
+       ndi(indcana)*100.
+    end if
+  end do
+
+  call delete(grad)
+  call display(v7dqctem%clima)
 
 !  print *,">>>>>> Clima Temporal Volume <<<<<<"
 !  call display (v7dqctem%clima)
@@ -324,7 +350,7 @@ end if
                                 ! Definisco le date iniziale e finale
 CALL init(ti, year=years, month=months, day=days, hour=hours)
 CALL init(tf, year=yeare, month=monthe, day=daye, hour=houre)
-print *,"time extreme"
+!print *,"time extreme"
 call display(ti)
 call display(tf)
 
@@ -406,7 +432,7 @@ do iana=1, size(v7ddballeana%vol7d%ana)
 
   ! temporal QC
   call l4f_category_log(category,L4F_INFO,"start temporal QC")
-!  call quacontem(v7dqctem,timemask= ( v7dqctem%v7d%time >= timeiqc .and. v7dqctem%v7d%time <= timefqc ))
+  call quacontem(v7dqctem,timemask= ( v7dqctem%v7d%time >= timeiqc .and. v7dqctem%v7d%time <= timefqc ))
   call l4f_category_log(category,L4F_INFO,"end temporal QC")
 
 
@@ -421,7 +447,7 @@ do iana=1, size(v7ddballeana%vol7d%ana)
 
     ! data_id to use is the new one
     v7ddballe%data_id => v7dqctem%data_id_out
-!    CALL export(v7ddballe,attr_only=.true.)
+    CALL export(v7ddballe,attr_only=.true.)
     call l4f_category_log(category,L4F_INFO,"end export data")
   end if
 

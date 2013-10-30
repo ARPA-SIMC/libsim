@@ -711,6 +711,7 @@ if (present(ana)) then
   ier=idba_set(this%handle,"lat",ilat)
   if (c_e(ana%ident)) then
     ier=idba_set(this%handle,"ident",ana%ident)
+    ! mobile ignored
     ier=idba_set(this%handle,"mobile",1)
   else
     ier=idba_set(this%handle,"mobile",0)
@@ -897,6 +898,7 @@ if (present(ana)) then
   ier=idba_set(this%handle_staz,"lat",ilat)
   if (c_e(ana%ident)) then
     ier=idba_set(this%handle_staz,"ident",ana%ident)
+! mobile ignored
     ier=idba_set(this%handle_staz,"mobile",1)
   else
     ier=idba_set(this%handle_staz,"mobile",0)

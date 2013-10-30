@@ -216,8 +216,7 @@ if (operation == "ndi") then
 
     CALL l4f_category_log(category,L4F_INFO,"compute NDI")
   call NormalizedDensityIndex(pack(grad%array(:grad%arraysize),&
-   mask=(percentile(1) < grad%array(:grad%arraysize) .and. &
-   grad%array(:grad%arraysize) < percentile(2) )), perc_vals, ndi, nlimbins)
+   mask=(grad%array(:grad%arraysize) < percentile(2) )), perc_vals, ndi, nlimbins)
 
   call delete(grad)
   call delete(v7dqcspa%clima)

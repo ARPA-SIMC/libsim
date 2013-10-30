@@ -76,9 +76,9 @@ character (len=255),parameter:: subcategorytem="QCtem"
 integer, parameter :: tem_nvar=1
 CHARACTER(len=10) :: tem_btable(tem_nvar)=(/"B12101"/) !< variable wmo code table for normalization.
 !> standard coefficients for orizontal gradient normalization
-real, parameter :: tem_a(tem_nvar) = (/1.e6/)
+real, parameter :: tem_a(tem_nvar) = (/1.e5/)
 !> standard coefficients for orizontal gradient normalization
-real, parameter :: tem_b(tem_nvar) = (/273.15/)
+real, parameter :: tem_b(tem_nvar) = (/250./)
 
 !>\brief Oggetto principale per il controllo di qualità
 type :: qctemtype
@@ -89,7 +89,7 @@ type :: qctemtype
   type (qcclitype) :: qccli !< qccli part for normalization
   type (vol7d) :: clima !< Clima spaziale di tutte le variabili da controllare
   character(len=20):: operation !< Operation to execute ("gradient"/"run")
-  logical :: writeheader  !< have to write header in gradient files
+  integer :: timeconfidence !< max time for data correlation in sec
 end type qctemtype
 
 
@@ -119,7 +119,7 @@ subroutine qcteminit(qctem,v7d,var, timei, timef, coordmin, coordmax, data_id_in
  dsne,usere,passworde,&
  dsntem,usertem,passwordtem,&
 #endif
- height2level,operation,categoryappend)
+ height2level,operation,timeconfidence,categoryappend)
 
 type(qctemtype),intent(in out) :: qctem !< Oggetto per il controllo temporale
 type (vol7d),intent(in),target:: v7d !< Il volume Vol7d da controllare
@@ -133,8 +133,9 @@ integer,intent(in),optional,target:: data_id_in(:,:,:,:,:) !< Indici dei dati in
 character(len=*),intent(in),optional :: extremepath !< file con il volume del extreme
 character(len=*),intent(in),optional :: temporalpath !< file with spatial ndi
 logical ,intent(in),optional :: height2level   !< use conventional level starting from station height
-character(len=*),INTENT(in),OPTIONAL :: categoryappend !< appennde questo suffisso al namespace category di log4fortran
 character(len=*), optional :: operation !< Operation to execute ("gradient"/"run")
+integer,intent(in),optional :: timeconfidence !< max time for data correlation in sec
+character(len=*),INTENT(in),OPTIONAL :: categoryappend !< aggiunge questo suffisso al namespace category di log4fortran
 
 #ifdef HAVE_DBALLE
 type (vol7d_dballe) :: v7d_dballetmp
@@ -147,12 +148,6 @@ character(len=*),intent(in),optional :: passwordtem
 character(len=512) :: ldsntem
 character(len=512) :: lusertem
 character(len=512) :: lpasswordtem
-character(len=512) :: ldsn
-character(len=512) :: luser
-character(len=512) :: lpassword
-TYPE(datetime) :: ltimei, ltimef
-integer :: yeari, yearf, monthi, monthf, dayi, dayf,&
- houri, minutei, mseci, hourf, minutef, msecf
 #endif
 
 TYPE(vol7d_network):: network 
@@ -166,8 +161,6 @@ qctem%category=l4f_category_get(a_name)
 
 nullify ( qctem%data_id_in )
 nullify ( qctem%data_id_out )
-
-qctem%writeheader =.false.
 
 ! riporto il volume dati nel mio oggetto
 qctem%v7d => v7d
@@ -185,6 +178,8 @@ end if
 if (present(data_id_in))then
   qctem%data_id_in => data_id_in
 end if
+
+qctem%timeconfidence = optio_i(timeconfidence)
 
 ! load extreme
 call qccliinit(qctem%qccli,v7d,var, timei, timef, data_id_in,&
@@ -252,9 +247,9 @@ if (qctem%operation == "run") then
 #ifdef HAVE_DBALLE
   else
 
-    call l4f_category_log(qctem%category,L4F_DEBUG,"init v7d_dballespa")
+    call l4f_category_log(qctem%category,L4F_DEBUG,"init v7d_dballetem")
     call init(v7d_dballetmp,dsn=ldsntem,user=lusertem,password=lpasswordtem,write=.false.,&
-     file=.false.,categoryappend=trim(a_name)//".spa")
+     file=.false.,categoryappend=trim(a_name)//".tem")
     call l4f_category_log(qctem%category,L4F_DEBUG,"import v7d_dballetmp")
     call import(v7d_dballetmp,var=var, &
      varkind=(/("r",i=1,size(var))/),attr=(/"*B33209"/),attrkind=(/"b"/),network=network)
@@ -265,12 +260,6 @@ if (qctem%operation == "run") then
 #endif
 end if
 
-
-! open file to write gradient
-if (qctem%operation == "gradient") then
-  open (unit=11, file=t2c(timei)//"_"//t2c(timef)//".grad",STATUS='UNKNOWN', form='FORMATTED')
-  qctem%writeheader =.true.
-end if
 
 return
 end subroutine qcteminit
@@ -356,29 +345,23 @@ logical ,intent(in),optional :: varmask(:) !< Filtro sulle variabili
 logical ,intent(in),optional :: networkmask(:) !< Filtro sui network
 
                                 !REAL(kind=fp_geo) :: lat,lon
-integer :: mese, ora
+integer :: asec
                                 !local
 integer :: indbattrinv,indbattrcli,indbattrout
 logical :: anamaskl(size(qctem%v7d%ana)), timemaskl(size(qctem%v7d%time)), levelmaskl(size(qctem%v7d%level)), &
  timerangemaskl(size(qctem%v7d%timerange)), varmaskl(size(qctem%v7d%dativar%r)), networkmaskl(size(qctem%v7d%network)) 
 
-integer :: indana ,  indtime ,indlevel ,indtimerange ,inddativarr, indnetwork
-integer :: indcana ,  indctime ,indclevel ,indctimerange ,indcdativarr, indcnetwork
-real :: datoqui,datola,datila(size(qctem%v7d%time)),climaquii, climaquif
-integer :: iarea
+integer :: indana ,  indtime ,indlevel ,indtimerange ,inddativarr, indnetwork,indtimenear
+integer :: indcana ,  indctime ,indclevel ,indctimerange ,indcdativarr, indcnetwork, indcnetworks, indcnetworkg
+real :: datoqui,datoprima,datodopo,climaquii, climaquif
                                 !integer, allocatable :: indcanav(:)
 
                                 !TYPE(vol7d_ana)  :: ana
-TYPE(datetime)   :: time, nintime
-TYPE(vol7d_level):: level
+TYPE(datetime)   :: time,prima, ora, dopo
 TYPE(vol7d_network):: network
-type(timedelta) :: deltato,deltat 
+type(timedelta) :: td
 
-integer :: ivert(50),i,ipos,ineg,it,itrov,iv,ivb,kk,iindtime
-double precision :: distmin=1000.d0,distscol=300000.d0
-double precision :: dist,grad,gradmin
-integer (kind=int_b) :: flag
-
+double precision :: gradprima,graddopo,grad
                                 !call qctem_validate (qctem)
 
 !localize optional parameter
@@ -412,24 +395,22 @@ end if
 
 if (qctem%operation == "gradient") then
 
-  !check for gradient operation
+                                !check for gradient operation
   if ( size(qctem%v7d%level)      > 1 .or.&
-       size(qctem%v7d%timerange)  > 1 .or.&
-       size(qctem%v7d%dativar%r)  > 1 ) then
+   size(qctem%v7d%timerange)  > 1 .or.&
+   size(qctem%v7d%dativar%r)  > 1 ) then
     call l4f_category_log(qctem%category,L4F_ERROR,"gradient operation manage one level/timerange/var only")
     call raise_error()
   end if
 
-  ! say we have to write header in file
-  if  (qctem%writeheader) then
-    call l4f_category_log(qctem%category,L4F_INFO,"write header in gradient file")
-    write (11,*) qctem%v7d%level(1), qctem%v7d%timerange(1), qctem%v7d%dativar%r(1)
-    qctem%writeheader =.false.
+                                !check for data to check
+  if ( size(qctem%v7d%time)      < 1 ) then
+    call l4f_category_log(qctem%category,L4F_INFO,"no data present for gradient operation")
+    return
   end if
-
 end if
 
-! set other local variable from optional parameter
+                                ! set other local variable from optional parameter
 if(present(anamask)) then
   anamaskl = anamask
 else
@@ -461,12 +442,11 @@ else
   networkmaskl = .true.
 endif
 
-! do not touch data that do not pass QC
+! do not touch data that will not in/validated by QC
 qctem%v7d%voldatiattrb(:,:,:,:,:,:,indbattrout)=ibmiss
 
 ! normalize data in space and time
 call vol7d_normalize_data(qctem%qccli)
-
 
 
 ! compute some index for temporal clima
@@ -477,9 +457,11 @@ time=cyclicdatetime_to_conventional(cyclicdatetime_new(chardate="/////////"))  !
 
 
 if (qctem%operation == "run") then
-  call init(network,"qctem-ndi")
   !!indcana          = firsttrue(qctem%clima%ana     == ana)
-  indcnetwork      = index(qctem%clima%network               , network)
+  call init(network,"qctemsndi")
+  indcnetworks      = index(qctem%clima%network               , network)
+  call init(network,"qctemgndi")
+  indcnetworkg      = index(qctem%clima%network               , network)
   indctime         = index(qctem%clima%time                  ,  time)
 end if
 
@@ -489,6 +471,18 @@ do indana=1,size(qctem%v7d%ana)
    "Check ana:"//to_char(qctem%v7d%ana(indana)) )
 
 
+                                ! open file to write gradient
+  if (qctem%operation == "gradient") then
+    call l4f_category_log(qctem%category,L4F_INFO,"open for write gradient file")
+    open (unit=11, file=    t2c(getilon(qctem%v7d%ana(indana)%coord))//&
+     t2c(getilat(qctem%v7d%ana(indana)%coord))//".grad",&
+     STATUS='UNKNOWN', form='FORMATTED')
+                                ! say we have to write header in file
+    write (11,*) qctem%v7d%level(1), qctem%v7d%timerange(1), qctem%v7d%dativar%r(1)
+  end if
+
+
+
 !!$            call l4f_log(L4F_INFO,"Index:"// t2c(indana)//t2c(indnetwork)//t2c(indlevel)//&
 !!$             t2c(indtimerange)//t2c(inddativarr)//t2c(indtime))
 
@@ -496,7 +490,7 @@ do indana=1,size(qctem%v7d%ana)
     do indlevel=1,size(qctem%v7d%level)
       do indtimerange=1,size(qctem%v7d%timerange)
         do inddativarr=1,size(qctem%v7d%dativar%r)
-          do indtime=1,size(qctem%v7d%time)
+          do indtime=2,size(qctem%v7d%time)-1
             
             if (.not.timemaskl(indtime).or. .not. levelmaskl(indlevel).or. &
              .not. timerangemaskl(indtimerange) .or. .not. varmaskl(inddativarr) .or. .not. networkmaskl(indnetwork)) cycle
@@ -505,7 +499,8 @@ do indana=1,size(qctem%v7d%ana)
             datoqui = qctem%v7d%voldatir  (indana ,indtime ,indlevel ,indtimerange ,inddativarr, indnetwork )
             
             if (.not. c_e(datoqui)) cycle
-            
+            ora = qctem%v7d%time  (indtime)
+
                                 ! invalidated
             if (indbattrinv > 0) then
               if( invalidated(qctem%v7d%voldatiattrb&
@@ -539,91 +534,125 @@ do indana=1,size(qctem%v7d%ana)
 
 
               call l4f_log(L4F_INFO,"Index:"// to_char(indctime)//to_char(indclevel)//&
-               to_char(indctimerange)//to_char(indcdativarr)//to_char(indcnetwork))
+               to_char(indctimerange)//to_char(indcdativarr)//to_char(indcnetworks))
               if ( indctime <= 0 .or. indclevel <= 0 .or. indctimerange <= 0 .or. indcdativarr <= 0 &
-               .or. indcnetwork <= 0 ) cycle
+               .or. indcnetworks <= 0 ) cycle
             end if
 
             
-            nintime=qctem%v7d%time(indtime)+timedelta_new(minute=30)
-            CALL getval(nintime, month=mese, hour=ora)
-            call init(time, year=1001, month=mese, day=1, hour=ora, minute=00)
-            
-            
-            level=qctem%v7d%level(indlevel)
+!!$            nintime=qctem%v7d%time(indtime)+timedelta_new(minute=30)
+!!$            CALL getval(nintime, month=mese, hour=ora)
+!!$            call init(time, year=1001, month=mese, day=1, hour=ora, minute=00)
+!!$ 
 
-                                !find the nearest data in time
-            datola = qctem%v7d%voldatir  (ivert(i) ,indtime ,indlevel ,indtimerange ,inddativarr, indnetwork )
+                                !find the nearest data in time before
+            indtimenear=indtime-1
+            datoprima = qctem%v7d%voldatir  (indana ,indtimenear ,indlevel ,indtimerange ,inddativarr, indnetwork )
+            prima = qctem%v7d%time  (indtimenear)
             
                                 ! invalidated
             if (indbattrinv > 0) then
               if( invalidated(qctem%v7d%voldatiattrb&
-               (ivert(i),indtime,indlevel,indtimerange,inddativarr,indnetwork,indbattrinv))) then
-                datola=rmiss
+               (indana,indtimenear,indlevel,indtimerange,inddativarr,indnetwork,indbattrinv))) then
+                datoprima=rmiss
               end if
             end if
             
                                 ! gross error check
             if (indbattrcli > 0) then
               if( .not. vdge(qctem%v7d%voldatiattrb&
-               (ivert(i),indtime,indlevel,indtimerange,inddativarr,indnetwork,indbattrcli))) then
-                datola=rmiss
+               (indana,indtimenear,indlevel,indtimerange,inddativarr,indnetwork,indbattrcli))) then
+                datoprima=rmiss
               end if
             end if
 
 
-            !TODO
-            datila = qctem%v7d%voldatir  (ivert(i) ,: ,indlevel ,indtimerange ,inddativarr, indnetwork )
+                                !find the nearest data in time after
+            indtimenear=indtime+1
+            datodopo = qctem%v7d%voldatir  (indana ,indtimenear ,indlevel ,indtimerange ,inddativarr, indnetwork )
+            dopo = qctem%v7d%time  (indtimenear)
 
-            if (.not. c_e(datola))then
-              deltato=timedelta_miss
-              do iindtime=1,size(qctem%v7d%time)
-                if (.not. c_e(datila(iindtime))) cycle
                                 ! invalidated
-                if (indbattrinv > 0 ) then
-                 if (invalidated(qctem%v7d%voldatiattrb&
-                 (ivert(i),iindtime,indlevel,indtimerange,inddativarr,indnetwork,indbattrinv))) cycle
-                end if
+            if (indbattrinv > 0) then
+              if( invalidated(qctem%v7d%voldatiattrb&
+               (indana,indtimenear,indlevel,indtimerange,inddativarr,indnetwork,indbattrinv))) then
+                datodopo=rmiss
+              end if
+            end if
+            
                                 ! gross error check
-                if (indbattrcli > 0) then
-                    if (.not. vdge(qctem%v7d%voldatiattrb&
-                     (ivert(i),iindtime,indlevel,indtimerange,inddativarr,indnetwork,indbattrcli))) cycle
-                  end if
+            if (indbattrcli > 0) then
+              if( .not. vdge(qctem%v7d%voldatiattrb&
+               (indana,indtimenear,indlevel,indtimerange,inddativarr,indnetwork,indbattrcli))) then
+                datodopo=rmiss
+              end if
+            end if
 
-                if (iindtime < indtime) then
-                  deltat=qctem%v7d%time(indtime)-qctem%v7d%time(iindtime)
-                else if (iindtime > indtime) then
-                  deltat=qctem%v7d%time(iindtime)-qctem%v7d%time(indtime)
-                else
-                  call l4f_category_log(qctem%category,L4F_WARN,"somethings go wrong on ipotesys make in spatial QC")
-                end if
-                
-                if (deltat < deltato) then
-                  datola = datila(iindtime)
-                  deltato = deltat
-                end if
-              end do
+
+            IF(.NOT.C_E(datoprima) .and. .NOT.C_E(datodopo) ) cycle
+            
+            gradprima=rmiss
+            graddopo=rmiss
+            grad=rmiss
+
+                                !compute time gradient only inside timeconfidence
+            td=ora-prima
+            call getval(td,asec=asec)
+            if ((c_e(qctem%timeconfidence) .and. asec <= qctem%timeconfidence) .or. &
+             .not. c_e(qctem%timeconfidence)) then
+              if (c_e(datoprima)) gradprima=(datoqui-datoprima) / dble(asec)
             end if
               
-            IF(.NOT.C_E(datola)) cycle
+            td=dopo-ora
+            call getval(td,asec=asec)
+            if ((c_e(qctem%timeconfidence) .and. asec <= qctem%timeconfidence) .or. &
+              .not. c_e(qctem%timeconfidence)) then
+              if (c_e(datodopo))  graddopo =(datodopo-datoqui ) / dble(asec)
+            end if
 
-            
-            IF(IVB < 3) cycle      ! do nothing if valid gradients < 3
-          
-            IF (ipos == ivb .or. ineg == ivb)THEN  ! se tutti i gradienti sono dello stesso segno
+                                ! we need some gradient
+            IF(.NOT.C_E(gradprima) .and. .NOT.C_E(graddopo) ) cycle
 
-              gradmin=sign(gradmin,dble(ipos-ineg))
 
-              if (qctem%operation == "gradient") then
-                write(11,*)gradmin
+                                ! for gap we set negative gradient
+                                ! for spike positive gradinet
+            IF(.NOT.C_E(gradprima) ) then
+
+              ! set gap for other one
+              grad= sign(abs(graddopo),-1.d0)
+
+            else IF(.NOT.C_E(graddopo) ) then
+
+              ! set gap for other one
+              grad= sign(abs(gradprima),-1.d0)
+
+            else
+
+              if (abs(max(abs(gradprima),abs(graddopo))-min(abs(gradprima),abs(graddopo))) < &
+               max(abs(gradprima),abs(graddopo))/2. .and. (sign(1.d0,gradprima)*sign(1.d0,graddopo)) < 0.) then
+                                ! spike
+                grad= min(abs(gradprima),abs(graddopo))
+              else
+                                ! gap
+                grad= sign(max(abs(gradprima),abs(graddopo)),-1.d0)
               end if
+            end IF
 
-
-            END IF
-
+            if (qctem%operation == "gradient") then
+              write(11,*)grad
+            end if
 
                                 !ATTENZIONE TODO : inddativarr È UNA GRANDE SEMPLIFICAZIONE NON VERA SE TIPI DI DATO DIVERSI !!!!
             if (qctem%operation == "run") then
+
+                                ! choice which network we have to use 
+              if (grad >= 0) then
+                indcnetwork=indcnetworks
+              else
+                indcnetwork=indcnetworkg
+              end if
+
+              grad=abs(grad)
 
               do indcana=1,size(qctem%clima%ana)-1
 
@@ -650,9 +679,9 @@ do indana=1,size(qctem%v7d%ana)
 !!$                   //" "//trim(to_char(mese))//" "//trim(to_char(altezza))//" "//trim(to_char(level)))
 
 
-                  if ( (datoqui >= climaquii .and. datoqui < climaquif) .or. &
-                   (indcana == 1 .and. datoqui < climaquif) .or. &
-                   (indcana == size(qctem%clima%ana)-1 .and. datoqui >= climaquii) ) then
+                  if ( (grad >= climaquii .and. grad < climaquif) .or. &
+                   (indcana == 1 .and. grad < climaquif) .or. &
+                   (indcana == size(qctem%clima%ana)-1 .and. grad >= climaquii) ) then
 
 #ifdef DEBUG
 !!$                      if(qcspa%clima%voldatiattrb(indcana,indctime,indclevel,indctimerange,indcdativarr,indcnetwork,1) < 10 )then
@@ -671,11 +700,11 @@ do indana=1,size(qctem%v7d%ana)
 
                     if ( associated ( qctem%data_id_in)) then
 #ifdef DEBUG
-              call l4f_log (L4F_DEBUG,"id: "//t2c(&
-               qctem%data_id_in(indana,indtime,indlevel,indtimerange,indnetwork)))
+                      call l4f_log (L4F_DEBUG,"id: "//t2c(&
+                       qctem%data_id_in(indana,indtime,indlevel,indtimerange,indnetwork)))
 #endif
-              qctem%data_id_out(indana,indtime,indlevel,indtimerange,indnetwork)=&
-               qctem%data_id_in(indana,indtime,indlevel,indtimerange,indnetwork)
+                      qctem%data_id_out(indana,indtime,indlevel,indtimerange,indnetwork)=&
+                       qctem%data_id_in(indana,indtime,indlevel,indtimerange,indnetwork)
                     end if
                   end if
                 end if
@@ -686,6 +715,11 @@ do indana=1,size(qctem%v7d%ana)
       end do
     end do
   end do
+
+  if (qctem%operation == "gradient") then
+    close (unit=11)
+  end if
+
 end do
 
 !!$print*,"risultato"
