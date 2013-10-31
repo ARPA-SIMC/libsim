@@ -98,6 +98,8 @@ B12192,Potential Temperature,K,255,0,2,0,1.0,0.0
 B12192,Potential Temperature,K,255,2,13,255,1.0,0.0
 B12192,Potential Temperature,K,98,128,3,255,1.0,0.0
 B12193,Pseudo Adiabatic Potential Temperature,K,255,2,14,255,1.0,0.0
+B12194,Air Density,molecole/cm**3,200,200,89,0,4.81E-20,0.0
+B12194,Air Density,molecole/cm**3,200,200,89,255,4.81E-20,0.0
 B13001,Specific humidity,Kg/Kg,255,1,0,0,1.0,0.0
 B13001,Specific humidity,Kg/Kg,255,2,51,255,1.0,0.0
 B13001,Specific humidity,Kg/Kg,98,128,133,255,1.0,0.0
@@ -372,6 +374,14 @@ B15234,Concentration of biogenic sec. org. in aerosol (invented),ug/m**3,200,200
 B15234,Concentration of biogenic sec. org. in aerosol (invented),ug/m**3,200,200,241,255,0.000000001,0.0
 B15235,Concentration of ISOPA1 in PM10 (invented),ug/m**3,200,195,22,0,0.000000001,0.0
 B15235,Concentration of ISOPA1 in PM10 (invented),ug/m**3,200,195,22,255,0.000000001,0.0
+B15237,Concentration of anthropogenic aerosol in PM10 (invented),ug/m**3,200,195,33,0,0.000000001,0.0
+B15237,Concentration of anthropogenic aerosol in PM10 (invented),ug/m**3,200,195,33,255,0.000000001,0.0
+B15238,Concentration of biogenic aerosol in PM10 (invented),ug/m**3,200,195,34,0,0.000000001,0.0
+B15238,Concentration of biogenic aerosol in PM10 (invented),ug/m**3,200,195,34,255,0.000000001,0.0
+B15239,Concentration of anthropogenic aerosol in PM2.5 (invented),ug/m**3,200,195,43,0,0.000000001,0.0
+B15239,Concentration of anthropogenic aerosol in PM2.5 (invented),ug/m**3,200,195,43,255,0.000000001,0.0
+B15240,Concentration of biogenic aerosol in PM2.5 (invented),ug/m**3,200,195,44,0,0.000000001,0.0
+B15240,Concentration of biogenic aerosol in PM2.5 (invented),ug/m**3,200,195,44,255,0.000000001,0.0
 B20010,Cloud cover DWD,Percent,200,201,29,255,1.0,0.0
 B20010,Cloud cover DWD,Percent,78,201,29,255,1.0,0.0
 B20010,High cloud cover,Percent,255,2,75,255,1.0,0.0
