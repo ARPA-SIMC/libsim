@@ -150,10 +150,12 @@ character(len=512) :: lusertem
 character(len=512) :: lpasswordtem
 #endif
 
+type (vol7d) :: v7dtmp
 TYPE(vol7d_network):: network 
 integer :: iuni,i
 character(len=512) :: filepathtem
 character(len=512) :: a_name
+character(len=9) ::netname(2)=(/"qctemgndi","qctemsndi"/)
 
 
 call l4f_launcher(a_name,a_name_append=trim(subcategorytem)//"."//trim(categoryappend))
@@ -192,74 +194,80 @@ call qccliinit(qctem%qccli,v7d,var, timei, timef, data_id_in,&
 
 ! now load temporal clima 
 
-if (qctem%operation == "run") then
+do i=1,size(netname)
 
-  call init(network,"qctem-ndi")
+  if (qctem%operation == "run") then
+    call init(network,netname(i))
 
 #ifdef HAVE_DBALLE
-  call optio(dsntem,ldsntem)
-  call optio(usertem,lusertem)
-  call optio(passwordtem,lpasswordtem)
+    call optio(dsntem,ldsntem)
+    call optio(usertem,lusertem)
+    call optio(passwordtem,lpasswordtem)
 
-  if (c_e(filepathtem) .and. (c_e(ldsntem).or.c_e(lusertem).or.c_e(lpasswordtem))) then
-    call l4f_category_log(qctem%category,L4F_ERROR,"filepath  defined together with dba options")
-    call raise_error()
-  end if
+    if (c_e(filepathtem) .and. (c_e(ldsntem).or.c_e(lusertem).or.c_e(lpasswordtem))) then
+      call l4f_category_log(qctem%category,L4F_ERROR,"filepath  defined together with dba options")
+      call raise_error()
+    end if
 
-  if (.not. c_e(ldsntem)) then
+    if (.not. c_e(ldsntem)) then
 
 #endif
 
-    if (.not. c_e(filepathtem)) then
-      filepathtem=get_package_filepath('qctem-ndi.v7d', filetype_data)
-    end if
+      if (.not. c_e(filepathtem)) then
+        filepathtem=get_package_filepath(netname(i)//'.v7d', filetype_data)
+      end if
+      
+      if (c_e(filepathtem))then
 
-    if (c_e(filepathtem))then
+        select case (trim(lowercase(suffixname(filepathtem))))
 
-      select case (trim(lowercase(suffixname(filepathtem))))
-
-      case("v7d")
-        iuni=getunit()
-        call import(qctem%clima,filename=filepathtem,unit=iuni)
-        close (unit=iuni)
+        case("v7d")
+          iuni=getunit()
+          call import(v7dtmp,filename=filepathtem,unit=iuni)
+          close (unit=iuni)
+          
+#ifdef HAVE_DBALLE
+        case("bufr")
+          call init(v7d_dballetmp,file=.true.,filename=filepathtem,categoryappend=trim(a_name)//".clima")
+          call import(v7d_dballetmp,var=var, &
+           varkind=(/("r",i=1,size(var))/),attr=(/"*B33209"/),attrkind=(/"b"/),network=network)
+          call copy(v7d_dballetmp%vol7d,v7dtmp)
+          call delete(v7d_dballetmp)
+#endif
+          
+        case default
+          call l4f_category_log(qctem%category,L4F_ERROR,&
+           "file type not supported (use .v7d or .bufr suffix only): "//trim(filepathtem))
+          call raise_error()
+        end select
         
+      else
+        call l4f_category_log(qctem%category,L4F_WARN,"spatial clima volume not iniziatized: spatial QC will not be possible")
+        call init(qctem%clima)
+        call raise_fatal_error()
+      end if
+      
 #ifdef HAVE_DBALLE
-      case("bufr")
-        call init(v7d_dballetmp,file=.true.,filename=filepathtem,categoryappend=trim(a_name)//".clima")
-        call import(v7d_dballetmp,var=var, &
-         varkind=(/("r",i=1,size(var))/),attr=(/"*B33209"/),attrkind=(/"b"/),network=network)
-        call copy(v7d_dballetmp%vol7d,qctem%clima)
-        call delete(v7d_dballetmp)
-#endif
-
-      case default
-        call l4f_category_log(qctem%category,L4F_ERROR,&
-         "file type not supported (use .v7d or .bufr suffix only): "//trim(filepathtem))
-        call raise_error()
-      end select
-
     else
-      call l4f_category_log(qctem%category,L4F_WARN,"spatial clima volume not iniziatized: spatial QC will not be possible")
-      call init(qctem%clima)
-      call raise_fatal_error()
-    end if
-
-#ifdef HAVE_DBALLE
-  else
-
-    call l4f_category_log(qctem%category,L4F_DEBUG,"init v7d_dballetem")
-    call init(v7d_dballetmp,dsn=ldsntem,user=lusertem,password=lpasswordtem,write=.false.,&
-     file=.false.,categoryappend=trim(a_name)//".tem")
-    call l4f_category_log(qctem%category,L4F_DEBUG,"import v7d_dballetmp")
-    call import(v7d_dballetmp,var=var, &
-     varkind=(/("r",i=1,size(var))/),attr=(/"*B33209"/),attrkind=(/"b"/),network=network)
-    call copy(v7d_dballetmp%vol7d,qctem%clima)
-    call delete(v7d_dballetmp)
     
-  end if
-#endif
-end if
+      call l4f_category_log(qctem%category,L4F_DEBUG,"init v7d_dballetem")
+      call init(v7d_dballetmp,dsn=ldsntem,user=lusertem,password=lpasswordtem,write=.false.,&
+       file=.false.,categoryappend=trim(a_name)//".tem")
+      call l4f_category_log(qctem%category,L4F_DEBUG,"import v7d_dballetmp")
+      call import(v7d_dballetmp,var=var, &
+       varkind=(/("r",i=1,size(var))/),attr=(/"*B33209"/),attrkind=(/"b"/),network=network)
 
+      call copy(v7d_dballetmp%vol7d,v7dtmp)
+
+      call delete(v7d_dballetmp)
+      
+    end if
+#endif
+  end if
+
+  call vol7d_merge(qctem%clima,v7dtmp)
+
+end do
 
 return
 end subroutine qcteminit
@@ -533,7 +541,7 @@ do indana=1,size(qctem%v7d%ana)
               indcdativarr     = index(qctem%clima%dativar%r, qctem%v7d%dativar%r(inddativarr))
 
 
-              call l4f_log(L4F_INFO,"Index:"// to_char(indctime)//to_char(indclevel)//&
+              call l4f_log(L4F_DEBUG,"Index:"// to_char(indctime)//to_char(indclevel)//&
                to_char(indctimerange)//to_char(indcdativarr)//to_char(indcnetworks))
               if ( indctime <= 0 .or. indclevel <= 0 .or. indctimerange <= 0 .or. indcdativarr <= 0 &
                .or. indcnetworks <= 0 ) cycle

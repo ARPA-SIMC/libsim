@@ -37,11 +37,12 @@ TYPE(optionparser) :: opt
 TYPE(geo_coord)    :: coordmin, coordmax 
 TYPE(datetime)     :: time,ti, tf, timeiqc, timefqc
 type(qctemtype)    :: v7dqctem
-type(vol7d_dballe) :: v7ddballe,v7ddballeana
+type(vol7d)        :: v7dana
 
 integer, parameter :: maxvar=10
 character(len=6) :: var(maxvar)=cmiss   ! variables to elaborate
 #ifdef HAVE_DBALLE
+type(vol7d_dballe) :: v7ddballe,v7ddballeana,v7d_dba_out
 character(len=512) :: dsn='test1',user='test',password=''
 character(len=512) :: dsne='test',usere='test',passworde=''
 character(len=512) :: dsntem='test',usertem='test',passwordtem=''
@@ -66,7 +67,6 @@ type(vol7d_var) :: varia,variao
 CHARACTER(len=vol7d_ana_lenident) :: ident
 integer :: indcana,indctime,indclevel,indctimerange,indcdativarr,indcnetwork,indcattr,iana
 INTEGER,POINTER :: w_s(:), w_e(:)
-TYPE(vol7d_dballe) :: v7d_dba_out
 logical :: file
     
 #ifdef HAVE_DBALLE
@@ -379,15 +379,23 @@ if (c_e(tf))   call l4f_category_log(category,L4F_INFO,"QC on "//t2c(tf)//" date
 
 CALL init(v7ddballeana,dsn=dsn,user=user,password=password,write=.false.,wipe=.false.,categoryappend="QCtarget-anaonly")
 call l4f_category_log(category,L4F_INFO,"start ana import")
-
 CALL import(v7ddballeana,timei=ti,timef=tf,coordmin=coordmin,coordmax=coordmax,anaonly=.true.)
+call vol7d_copy(v7ddballeana%vol7d,v7dana)
+call delete(v7ddballeana)
+
+!!$                            an alternative to copy is:
+
+!!$idbhandle=v7ddballeana%idbhandle
+!!$CALL init(v7ddballe,dsn=dsn,user=user,password=password,write=.true.,wipe=.false.,categoryappend="QCtarget-"//t2c(time),&
+!!$ idbhandle=idbhandle)
+!!$call delete(v7ddballeana,preserveidbhandle=.true.)
 
 print *,"anagrafica:"
-call display(v7ddballeana%vol7d)
+call display(v7dana)
 
-do iana=1, size(v7ddballeana%vol7d%ana)
+do iana=1, size(v7dana%ana)
 
-  call l4f_category_log(category,L4F_INFO,"elaborate station "//trim(to_char(v7ddballeana%vol7d%ana(iana))))
+  call l4f_category_log(category,L4F_INFO,"elaborate station "//trim(to_char(v7dana%ana(iana))))
 
                                 ! Chiamo il costruttore della classe vol7d_dballe per il mio oggetto in import
   CALL init(v7ddballe,dsn=dsn,user=user,password=password,write=.true.,wipe=.false.,categoryappend="QCtarget-"//t2c(time))
@@ -396,7 +404,7 @@ do iana=1, size(v7ddballeana%vol7d%ana)
   CALL import(v7ddballe,var=var(:nvar),varkind=(/("r",i=1,nvar)/),&
    anavar=(/"B07030"/),anavarkind=(/"r"/),&
    attr=(/qcattrvarsbtables(1),qcattrvarsbtables(2),qcattrvarsbtables(4)/),attrkind=(/"b","b","b"/)&
-   ,timei=ti,timef=tf, ana=v7ddballeana%vol7d%ana(iana))
+   ,timei=ti,timef=tf, ana=v7dana%ana(iana))
   
   !call display(v7ddballe%vol7d)
   call l4f_category_log(category,L4F_INFO,"end data import")
@@ -418,12 +426,12 @@ do iana=1, size(v7ddballeana%vol7d%ana)
 
 
   call init(v7dqctem,v7ddballe%vol7d,var(:nvar),timei=ti,timef=tf, &
-   coordmin=v7ddballeana%vol7d%ana(iana)%coord, coordmax=v7ddballeana%vol7d%ana(iana)%coord,&
+   coordmin=v7dana%ana(iana)%coord, coordmax=v7dana%ana(iana)%coord,&
    data_id_in=v7ddballe%data_id, &
    dsne=dsne, usere=usere, passworde=passworde,&
    dsntem=dsntem, usertem=usertem, passwordtem=passwordtem,&
    height2level=height2level, operation=operation,&
-   categoryappend="space")
+   categoryappend="temporal")
 
 !  print *,">>>>>> Clima Temporal Volume <<<<<<"
 !  call display(v7dqcspa%clima)
@@ -458,7 +466,7 @@ do iana=1, size(v7ddballeana%vol7d%ana)
 
 end do
 
-call delete(v7ddballeana)
+call delete(v7dana)
 
 !close logger
 call l4f_category_delete(category)
