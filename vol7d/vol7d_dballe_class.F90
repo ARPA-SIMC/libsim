@@ -182,7 +182,7 @@ CONTAINS
 
 !>\brief  inizializza l'oggetto
 SUBROUTINE vol7d_dballe_init(this,dsn,user,password,write,wipe,repinfo,&
- filename,format,file,categoryappend,time_definition)
+ filename,format,file,categoryappend,time_definition,idbhandle)
 
 
 TYPE(vol7d_dballe),INTENT(out) :: this !< l'oggetto da inizializzare
@@ -197,6 +197,7 @@ character(len=*),intent(in),optional :: format !< the file format. It can be "BU
 logical,INTENT(in),OPTIONAL :: file !< switch to use file or data base ( default=.false )
 character(len=*),INTENT(in),OPTIONAL :: categoryappend !< appennde questo suffisso al namespace category di log4fortran
 integer,INTENT(in),OPTIONAL :: time_definition !< 0=time is reference time ; 1=time is validity time (default=1) 
+integer,INTENT(in),OPTIONAL :: idbhandle !< dsn connection; if present it will be used
 
 character(len=1):: mode ! the open mode ("r" for read, "w" for write or create, "a" append) (comandato da "write", default="r" )
 
@@ -301,21 +302,27 @@ if (quifile) then
 
 else
 
-  quidsn = "test"
-  quiuser = "test"
-  quipassword = ""
-  IF (PRESENT(dsn)) THEN
-    IF (c_e(dsn)) quidsn = dsn
-  ENDIF
-  IF (PRESENT(user)) THEN
-    IF (c_e(user)) quiuser = user
-  ENDIF
-  IF (PRESENT(password)) THEN
-    IF (c_e(password)) quipassword = password
-  ENDIF
+
+  if (.not. c_e(optio_i(idbhandle))) then
+
+    quidsn = "test"
+    quiuser = "test"
+    quipassword = ""
+    IF (PRESENT(dsn)) THEN
+      IF (c_e(dsn)) quidsn = dsn
+    ENDIF
+    IF (PRESENT(user)) THEN
+      IF (c_e(user)) quiuser = user
+    ENDIF
+    IF (PRESENT(password)) THEN
+      IF (c_e(password)) quipassword = password
+    ENDIF
     
                                 !print*,"write=",quiwrite,"wipe=",quiwipe,"dsn=",quidsn
-  ier=idba_presentati(this%idbhandle,quidsn,quiuser,quipassword)
+    ier=idba_presentati(this%idbhandle,quidsn,quiuser,quipassword)
+  else
+    this%idbhandle=optio_i(idbhandle)
+  end if
 
   if(quiwrite)then
     ier=idba_preparati (this%idbhandle,this%handle,"write","write","write")
@@ -2552,8 +2559,9 @@ END SUBROUTINE vol7d_dballe_export
 
 !>\brief Cancella l'oggetto
 
-SUBROUTINE vol7d_dballe_delete(this)
+SUBROUTINE vol7d_dballe_delete(this, preserveidbhandle)
 TYPE(vol7d_dballe) :: this !< oggetto da cancellare
+logical,intent(in), optional :: preserveidbhandle !< do not close connection to dsn
 integer :: ier
 
 if (this%file)then
@@ -2564,7 +2572,7 @@ else
 
   ier=idba_fatto(this%handle)
   ier=idba_fatto(this%handle_staz)
-  ier=idba_arrivederci(this%idbhandle)
+  if (.not. optio_log(preserveidbhandle)) ier=idba_arrivederci(this%idbhandle)
 
 end if
 
