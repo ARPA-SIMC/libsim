@@ -1,15 +1,15 @@
 Summary: libsim: librerie di utilità in Fortran 90
 Name: libsim
-Version: 4.2.0
-Release: 933
+Version: 5.0.1
+Release: 1300%{dist}
 License: GPL2+
 Group: Applications/Meteo
 URL: http://www.arpa.emr.it/sim
 Packager: Davide Cesari <dcesari@arpa.emr.it>
 Source: %{name}-%{version}.tar.gz
 BuildRoot: /var/tmp/%{name}-buildroot
-BuildRequires: shapelib-fortran-devel oracle-instantclient-devel libemos libdballef-devel >= 4.0.19 grib_api-devel >= 1.8.0
-Requires: libdballef4 >= 4.0.19 grib_api >= 1.8.0 libgrib1 grib_api-def_simc >= 1.9.5 
+BuildRequires: fortrangis-devel oracle-instantclient-devel libdballef-devel >= 6.3 grib_api-devel libgrib1 ncl-devel gdal-devel libdballe-devel help2man log4c cnf-devel libpng-devel vapor-devel fortrangis-devel
+Requires: libdballef4 >= 6.3 grib_api-1.10.0 grib_api-def_simc-1.10.0
 
 #temporaneo
 %if 0%{?fedora} < 9
@@ -48,7 +48,14 @@ tipo vol7d.
 %setup -q
 
 %build
-%configure FC=gfortran FCFLAGS="-I/usr/include/ -I%{_fmoddir}" ORA_VER=oracle/11.2/client --enable-dwdgrib1 --enable-f2003-features --enable-vapor
+
+
+#configure FC=gfortran FCFLAGS="-I/usr/include/ -I%{_fmoddir} -ftree-parallelize-loops=2" ORACLE_VER=oracle/11.2/client --enable-dwdgrib1 --enable-f2003-features --enable-vapor --enable-alchimia --enable-shapelib --enable-netcdf --enable-gribapi --enable-gdal
+
+#configure CPPFLAGS="-I/usr/include/ -I%{_fmoddir}" FCFLAGS="%{optflags} -I%{_fmoddir}" ORACLE_VER=oracle/11.2/client --enable-f2003-features --enable-vapor --enable-alchimia --enable-shapelib --enable-netcdf --enable-gribapi --enable-gdal
+
+%configure FCFLAGS="%{optflags} -I%{_fmoddir}" ORACLE_VER=oracle/11.2/client --enable-f2003-features --enable-vapor --enable-alchimia --enable-shapelib --enable-netcdf --enable-gribapi --enable-gdal
+
 make 
 
 %install
@@ -70,27 +77,28 @@ mv $RPM_BUILD_ROOT%{_includedir}/*.mod $RPM_BUILD_ROOT%{_fmoddir}
 %endif
 %{_bindir}/*
 %{_datadir}/%{name}/*
-#%{_docdir}/%{name}/*
+#SOLO PER VAPOR:
 %{_includedir}/vdf4f_c.h
 %doc examples/*.f90
 %{_mandir}/man1
 
 %files -n libsim-doc
 %defattr(-,root,root,-)
-%doc %{_docdir}/libsim/html
+%doc %{_docdir}/%{name}/html
 
 %clean
 rm -rf %{buildroot}
 
-%pre
-
-%post
-
-%preun
-
-%postun
-
 %changelog
+* Wed Jan 16 2013 dcesari <dcesari@arpa.emr.it> - 5.0.0-1215%{dist}
+- New version requiring latest vapor version
+
+* Thu May 31 2012 dbranchini <dbranchini@arpa.emr.it> - 4.5.0-1128%{dist}
+- aggiunta gestione (correzione) campi cumulati ecmwf
+
+* Mon May 14 2012 dbranchini <dbranchini@arpa.emr.it> - 4.5.0-1121%{dist}
+- modifiche per variabili leaf wetness e evapotranspiration.
+
 * Tue Mar 17 2009 root <root@strip.metarpa> - 2.6.7-1
 - cambiato il mone degli eseguibili con prefix vg6d_
 
