@@ -1903,6 +1903,16 @@ IF (this%var%discipline == 255 .AND. &
       this%level%l1 = 10000 ! 10m
 
     ENDIF
+  ELSE IF (this%var%category == 228) THEN ! table 228
+
+    IF (this%var%number == 24) THEN
+      this%level%level1 = 4 ! Level of 0C Isotherm
+      this%level%l1 = 0
+      this%level%level2 = 255
+      this%level%l2 = 0
+
+    ENDIF
+
   ENDIF ! table 128
 ENDIF ! grib1 & ECMWF
 
