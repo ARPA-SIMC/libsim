@@ -735,7 +735,7 @@ do indana=1,size(qccli%v7d%ana)
               
 !!$                                print *,"dato  ",qccli%v7d%timerange(indtimerange) 
 !!$                                print *,"extreme ",qccli%extreme%timerange
-                                call l4f_log(L4F_DEBUG,"Index:"// to_char(indctime)//to_char(indclevel)//&
+                                call l4f_log(L4F_DEBUG,"normalize data Index:"// to_char(indctime)//to_char(indclevel)//&
                                  to_char(indctimerange)//to_char(indcdativarr)//to_char(indcnetwork))
               
                                 !if (indcana <= 0 .or. indctime <= 0 .or. indclevel <= 0 .or. indctimerange <= 0 .or. indcdativarr <= 0 &
@@ -770,7 +770,7 @@ do indana=1,size(qccli%v7d%ana)
 
             call init(ana,lat=0.0_fp_geo,lon=0.0_fp_geo,ident=ident)
             indcana=index(qccli%extreme%ana,ana)
-            call l4f_log(L4F_DEBUG,"Index25:"//to_char(k)//to_char(indcana)//&
+            call l4f_log(L4F_DEBUG,"normalize data Index25:"//to_char(k)//to_char(indcana)//&
              to_char(indctime)//to_char(indclevel)//&
              to_char(indctimerange)//to_char(indcdativarr)//to_char(indcnetwork))
             if (indcana > 0 )then
@@ -782,7 +782,7 @@ do indana=1,size(qccli%v7d%ana)
             write(ident,'("#",i2.2,2i3.3)')k,iarea,desc   ! macro-area e descrittore
             call init(ana,lat=0.d0,lon=0.d0,ident=ident)
             indcana=index(qccli%extreme%ana,ana)
-            call l4f_log(L4F_DEBUG,"Index50:"//to_char(k)//to_char(indcana)//&
+            call l4f_log(L4F_DEBUG,"normalize data Index50:"//to_char(k)//to_char(indcana)//&
              to_char(indctime)//to_char(indclevel)//&
              to_char(indctimerange)//to_char(indcdativarr)//to_char(indcnetwork))
             if (indcana > 0 )then
@@ -794,7 +794,7 @@ do indana=1,size(qccli%v7d%ana)
             write(ident,'("#",i2.2,2i3.3)')k,iarea,desc   ! macro-area e descrittore
             call init(ana,lat=0.d0,lon=0.d0,ident=ident)
             indcana=index(qccli%extreme%ana,ana)
-            call l4f_log(L4F_DEBUG,"Index75:"//to_char(k)//to_char(indcana)//&
+            call l4f_log(L4F_DEBUG,"normalize data Index75:"//to_char(k)//to_char(indcana)//&
              to_char(indctime)//to_char(indclevel)//&
              to_char(indctimerange)//to_char(indcdativarr)//to_char(indcnetwork))
             if (indcana > 0 )then
@@ -806,10 +806,10 @@ do indana=1,size(qccli%v7d%ana)
              ABS( perc75 - perc25 ) >= SPACING( MAX(ABS(perc75),ABS(perc25))))then
                                 ! normalize
               
-              call l4f_log(L4F_DEBUG,"dato qui ini: "//t2c(datoqui))
+              call l4f_log(L4F_DEBUG,"normalize data dato in  : "//t2c(datoqui))
               datoqui = (datoqui - perc50) / (perc75 - perc25) + &
                base_value(qccli%v7d%dativar%r(inddativarr)%btable)
-              call l4f_log(L4F_DEBUG,"dato qui out: "//t2c(datoqui))
+              call l4f_log(L4F_DEBUG,"normalize data dato out : "//t2c(datoqui))
               
             else
               

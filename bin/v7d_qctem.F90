@@ -379,7 +379,7 @@ if (c_e(tf))   call l4f_category_log(category,L4F_INFO,"QC on "//t2c(tf)//" date
 
 CALL init(v7ddballeana,dsn=dsn,user=user,password=password,write=.false.,wipe=.false.,categoryappend="QCtarget-anaonly")
 call l4f_category_log(category,L4F_INFO,"start ana import")
-CALL import(v7ddballeana,timei=ti,timef=tf,coordmin=coordmin,coordmax=coordmax,anaonly=.true.)
+CALL import(v7ddballeana,var=var(:nvar),timei=ti,timef=tf,coordmin=coordmin,coordmax=coordmax,anaonly=.true.)
 call vol7d_copy(v7ddballeana%vol7d,v7dana)
 call delete(v7ddballeana)
 
@@ -403,10 +403,18 @@ do iana=1, size(v7dana%ana)
 
   CALL import(v7ddballe,var=var(:nvar),varkind=(/("r",i=1,nvar)/),&
    anavar=(/"B07030"/),anavarkind=(/"r"/),&
-   attr=(/qcattrvarsbtables(1),qcattrvarsbtables(2),qcattrvarsbtables(4)/),attrkind=(/"b","b","b"/)&
+   attr=(/qcattrvarsbtables(1),qcattrvarsbtables(2),qcattrvarsbtables(3)/),attrkind=(/"b","b","b"/)&
    ,timei=ti,timef=tf, ana=v7dana%ana(iana))
-  
-  !call display(v7ddballe%vol7d)
+
+  ! this depend on witch version of dballe is in use: with dballe 6.6 comment this out
+  if (size(v7ddballe%vol7d%time)==0) then
+    CALL l4f_category_log(category,L4F_INFO,'skip empty volume: you are not using dballe >= 6.6 !')
+    call delete(v7ddballe)
+    cycle
+  end if
+
+  print *,"input volume"
+  call display(v7ddballe%vol7d)
   call l4f_category_log(category,L4F_INFO,"end data import")
   call l4f_category_log(category,L4F_INFO, "input N staz="//t2c(size(v7ddballe%vol7d%ana)))
 
@@ -415,7 +423,7 @@ do iana=1, size(v7dana%ana)
   !remove data invalidated and gross error only
   !qcpar=qcpartype(0_int_b,0_int_b,0_int_b)
   qcpar%att=bmiss
-  call vol7d_peeling(v7ddballe%vol7d,v7ddballe%data_id,keep_attr=(/qcattrvarsbtables(4)/),purgeana=.true.)
+  call vol7d_peeling(v7ddballe%vol7d,v7ddballe%data_id,keep_attr=(/qcattrvarsbtables(3)/),purgeana=.true.)
   !call display(v7ddballe%vol7d)
 
   call l4f_category_log(category,L4F_INFO, "filtered N time="//t2c(size(v7ddballe%vol7d%time)))
@@ -423,7 +431,6 @@ do iana=1, size(v7dana%ana)
   call l4f_category_log(category,L4F_INFO,"initialize QC")
 
                                 ! chiamiamo il "costruttore" per il Q.C.
-
 
   call init(v7dqctem,v7ddballe%vol7d,var(:nvar),timei=ti,timef=tf, &
    coordmin=v7dana%ana(iana)%coord, coordmax=v7dana%ana(iana)%coord,&
@@ -443,15 +450,14 @@ do iana=1, size(v7dana%ana)
   call quacontem(v7dqctem,timemask= ( v7dqctem%v7d%time >= timeiqc .and. v7dqctem%v7d%time <= timefqc ))
   call l4f_category_log(category,L4F_INFO,"end temporal QC")
 
-
-
   ! prepare data_id to be recreated
   deallocate(v7ddballe%data_id)
   nullify(v7ddballe%data_id)
 
   if (v7dqctem%operation == "run") then
     call l4f_category_log(category,L4F_INFO,"start export data")
-    !call display(v7ddballe%vol7d)
+    print *,"output volume"
+    call display(v7ddballe%vol7d)
 
     ! data_id to use is the new one
     v7ddballe%data_id => v7dqctem%data_id_out

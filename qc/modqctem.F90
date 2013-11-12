@@ -16,6 +16,20 @@
 ! You should have received a copy of the GNU General Public License
 ! along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+! derived from a work of:
+!!$CC**********************************************************************CC
+!!$CC**********************************************************************CC
+!!$CC									CC
+!!$CC		SERVIZIO METEOROLOGICO REGIONE EMILA ROMAGNA		CC
+!!$CC				E.R.S.A.				CC
+!!$CC									CC
+!!$CC									CC
+!!$CC	PAOLO PATRUNO			   PIER PAOLO ALBERONI		CC
+!!$CC									CC
+!!$CC	BOLOGNA 1992							CC
+!!$CC**********************************************************************CC
+!!$CC**********************************************************************CC
+
 #include "config.h"
 
 !>\brief Controllo di qualità temporale.
@@ -388,7 +402,7 @@ end if
 if (present(battrout))then
   indbattrout = index_c(qctem%v7d%datiattr%b(:)%btable, battrout)
 else
-  indbattrout = index_c(qctem%v7d%datiattr%b(:)%btable, qcattrvarsbtables(4))
+  indbattrout = index_c(qctem%v7d%datiattr%b(:)%btable, qcattrvarsbtables(3))
 end if
 
 
@@ -489,8 +503,6 @@ do indana=1,size(qctem%v7d%ana)
     write (11,*) qctem%v7d%level(1), qctem%v7d%timerange(1), qctem%v7d%dativar%r(1)
   end if
 
-
-
 !!$            call l4f_log(L4F_INFO,"Index:"// t2c(indana)//t2c(indnetwork)//t2c(indlevel)//&
 !!$             t2c(indtimerange)//t2c(inddativarr)//t2c(indtime))
 
@@ -540,13 +552,13 @@ do indana=1,size(qctem%v7d%ana)
                                 ! se leggo da bufr il default è char e non reale
               indcdativarr     = index(qctem%clima%dativar%r, qctem%v7d%dativar%r(inddativarr))
 
-
-              call l4f_log(L4F_DEBUG,"Index:"// to_char(indctime)//to_char(indclevel)//&
+#ifdef DEBUG
+              call l4f_log(L4F_DEBUG,"QCtem Index:"// to_char(indctime)//to_char(indclevel)//&
                to_char(indctimerange)//to_char(indcdativarr)//to_char(indcnetworks))
               if ( indctime <= 0 .or. indclevel <= 0 .or. indctimerange <= 0 .or. indcdativarr <= 0 &
                .or. indcnetworks <= 0 ) cycle
             end if
-
+#endif
             
 !!$            nintime=qctem%v7d%time(indtime)+timedelta_new(minute=30)
 !!$            CALL getval(nintime, month=mese, hour=ora)
@@ -618,6 +630,10 @@ do indana=1,size(qctem%v7d%ana)
               if (c_e(datodopo))  graddopo =(datodopo-datoqui ) / dble(asec)
             end if
 
+
+#ifdef DEBUG
+            call l4f_log(L4F_DEBUG,"QCtem gradprima:"// to_char(gradprima)//" graddopo:"//to_char(graddopo))
+#endif
                                 ! we need some gradient
             IF(.NOT.C_E(gradprima) .and. .NOT.C_E(graddopo) ) cycle
 
@@ -655,8 +671,14 @@ do indana=1,size(qctem%v7d%ana)
 
                                 ! choice which network we have to use 
               if (grad >= 0) then
+#ifdef DEBUG
+                call l4f_log(L4F_DEBUG,"QCtem choise gradient type: spike")
+#endif
                 indcnetwork=indcnetworks
               else
+#ifdef DEBUG
+                call l4f_log(L4F_DEBUG,"QCtem choise gradient type: gradmax")
+#endif
                 indcnetwork=indcnetworkg
               end if
 
@@ -667,6 +689,10 @@ do indana=1,size(qctem%v7d%ana)
                 climaquii=qctem%clima%voldatir(indcana  ,indctime,indclevel,indctimerange,indcdativarr,indcnetwork)
                 climaquif=qctem%clima%voldatir(indcana+1,indctime,indclevel,indctimerange,indcdativarr,indcnetwork)
 
+#ifdef DEBUG
+                call l4f_log(L4F_DEBUG,"QCtem clima start:"//t2c(climaquii))
+                call l4f_log(L4F_DEBUG,"QCtem clima   end:"//t2c(climaquif))
+#endif
                 if ( c_e(climaquii) .and. c_e(climaquif )) then
 
                 !write(ident,'("#",i2.2,2i3.3)')k,iarea,desc   ! macro-area e descrittore
@@ -692,16 +718,9 @@ do indana=1,size(qctem%v7d%ana)
                    (indcana == size(qctem%clima%ana)-1 .and. grad >= climaquii) ) then
 
 #ifdef DEBUG
-!!$                      if(qcspa%clima%voldatiattrb(indcana,indctime,indclevel,indctimerange,indcdativarr,indcnetwork,1) < 10 )then
-!!$                        call l4f_log (L4F_DEBUG,"data ndi:                   "//t2c(datoqui)//"->"//&
-!!$                         t2c(qcspa%clima%voldatiattrb(indcana,indctime,indclevel,indctimerange,indcdativarr,indcnetwork,1))&
-!!$                         //" : "//t2c(qcspa%v7d%time(indtime)))
-!!$                        call l4f_log (L4F_DEBUG,"limits: "//t2c(indcana)//":"//t2c(qcspa%clima%ana(indcana)% ident)//&
-!!$                         " : "//t2c(climaquii)//" - "//t2c(climaquif)//" : "//t2c(qcspa%clima%time(indctime))) 
-!!$                      end if
+                call l4f_log(L4F_DEBUG,"QCtem confidence:"// t2c(qctem%clima%voldatiattrb&
+                 (indcana,indctime,indclevel,indctimerange,indcdativarr,indcnetwork,1)))
 #endif
-
-                                !qcspa%v7d%voldatiattrb(indana,indtime,indlevel,indtimerange,inddativarr,indnetwork,indbattrout)=flag
 
                     qctem%v7d%voldatiattrb(   indana, indtime, indlevel, indtimerange, inddativarr, indnetwork, indbattrout)=&
                      qctem%clima%voldatiattrb(indcana,indctime,indclevel,indctimerange,indcdativarr,indcnetwork,1          )
@@ -744,228 +763,3 @@ end module modqctem
 
 !> \example v7d_qctem.F90
 !! Sample program for module qctem
-
-
-
-!!$	SUBROUTINE QUACONTEM (IMINUTI,DATI,FLAG,INTMAX,RJUMP,GRADMAX,
-!!$	1	N2,NB,NE,IER)
-!!$
-!!$COMSTART QUACONTEM
-!!$C	SUBROUTINE QUACONTEM (IMINUTI,DATI,FLAG,INTMAX,RJUMP,GRADMAX,
-!!$C				N2,NB,NE,IER)
-!!$C
-!!$c Esegue un test temporale sui dati.
-!!$c 
-!!$c L'asse dei tempi che viene espresso in minuti e` contenuto in IMINUTI.
-!!$c Per effettuare il controllo i dati non devono essere distanziati nel tempo
-!!$c piu` di INTMAX nel qual caso la serie viene spezzata in serie piu` piccole.
-!!$c Gli estremi delle serie non potranno essere controllati con il test dei 
-!!$c massimi e minimi
-!!$c Non vengono trattati i dati > 32767 o con flag >=iatt.
-!!$c (vedi :	COMMON /FLAGSOGLIA/IATT	
-!!$c		DATA IATT/3/	
-!!$c	nella function vf(flag)		)
-!!$c
-!!$c 1) test di variazione assoluta nel tempo
-!!$c Fa un controllo sui dati in maniera temporale controllando che la variazione
-!!$c assoluta tra due dati non superi RJUMP. Nel caso vengono settati tutti e due i
-!!$c dati errati e ricomincia col controllare il dato successivo. Se il test
-!!$c viene superato la flag non viene alterata altrimenti la flag viene 
-!!$c incrementata di una unita`
-!!$c 
-!!$c 2) test massimi e minimi	
-!!$c Solo se viene superato il primo test viene controllato che il dato considerato
-!!$c non sia un massimo o un minimo e che contemporaneamente non differisca dai
-!!$c valori intorno piu` di GRADMAX  per minuto. Se il test
-!!$c viene superato la flag viene decrementata altrimenti la flag viene 
-!!$c incrementata di una unita`. Gli estremi delle serie non potranno essere 
-!!$c controllati con il test dei massimi e minimi e la flag non verra` alterata.
-!!$c
-!!$C===============================================================================
-!!$c	INPUT:
-!!$c
-!!$c	IMINUTI(N2) :	I*4	CONTIENE LA COORDIMATA TEMPO (IN MINUTI)
-!!$c	DATI(N2): 	I*4	VETTORE CONTENENTE TUTTI I DATI
-!!$c	FLAG(N2)	BYTE	VETTORE DELLE FLAG ASSOCIATE AI DATI
-!!$C	INTMAX		I*4	DISTANZA MASSIMA TEMPORALE TRA I DATI
-!!$C	RJUMP		R*4	VARIAZIONE TEMPORALE ASSOLUTA ACCETTATA
-!!$C				ESPRESSA IN 
-!!$C			(UNITA` DI MIS. DATI/UNITA` MIS. COORDINATA TEMPO)
-!!$C	GRADMAX		R*4	VARIAZIONE TEMPORALE PER MASSIMI E MINIMI 
-!!$C				ACCETTATA ESPRESSA IN 
-!!$C			(UNITA` DI MIS. DATI/UNITA` MIS. COORDINATA TEMPO)
-!!$c	N2	:	I*4	DIMENSIONE DEI VETTORI: IMINUTI(N2),
-!!$C							DATI(N2),
-!!$C							FLAG(N2).
-!!$C				INDICE DELL' ELEMENTO CON CUI SI FINISCE
-!!$c				IL CONTROLLO
-!!$C
-!!$C===============================================================================
-!!$C	OUTPUT:
-!!$C
-!!$c	FLAG(N2) :    BYTE	FLAG ASSOCIATE AI DATI
-!!$C	NB	:	I*4	NUMERI DI DATI A CUI LA FLAG E` STATA
-!!$C				DECREMENTATA
-!!$C	NE	:	I*4	NUMERO DI DATI A CUI LA FLAG E` STATA
-!!$C				INCREMENTATA (DI UNA UNITA`)
-!!$C	IER	:	I*4	INDICATORE DI ERRORE
-!!$C
-!!$C	IER =  0    : 	TUTTO O.K.
-!!$C	IER =  1    :   L'indice  N2 < 1
-!!$C	IER =  2    :	Nessun dato buono nell' intervallo  
-!!$C	IER = -1    :   esiste un buco fra i dati superiore a INTMAX
-!!$C	IER = -2    :   Sono state incrementate piu` di tre flag
-!!$C
-!!$COMEND
-!!$
-!!$CC**********************************************************************CC
-!!$CC**********************************************************************CC
-!!$CC									CC
-!!$CC		SERVIZIO METEOROLOGICO REGIONE EMILA ROMAGNA		CC
-!!$CC				E.R.S.A.				CC
-!!$CC									CC
-!!$CC									CC
-!!$CC	PAOLO PATRUNO			   PIER PAOLO ALBERONI		CC
-!!$CC									CC
-!!$CC	BOLOGNA 1992							CC
-!!$CC**********************************************************************CC
-!!$CC**********************************************************************CC
-!!$
-!!$
-!!$	INTEGER*4 IMINUTI(N2),DATI(N2)
-!!$	BYTE FLAG(N2)
-!!$	logical j_c_e,vf
-!!$
-!!$C  Test che controlla la dimensione del vettore con l'intervallo da controllare
-!!$	IER=1
-!!$	IF(N2.LT.1) RETURN
-!!$
-!!$	NB=0		! NUMERO DEI DATI BUONI 	totale
-!!$	NE=0		! NUMERO DEI DATI ERRATI	totale
-!!$	IER=0	
-!!$	IN=0		!numero di dati buoni 		parziale
-!!$	IND1=1
-!!$	IND2=1		!indici dei dati da analizzare
-!!$	IND3=1
-!!$	IND_B=0		! indice dato maxmin da decrementare
-!!$
-!!$	DO I=1,N2
-!!$d		type*,'   i=',i,'   in=',in
-!!$d		type*,'ind1=',ind1,' ind2=',ind2,' ind3=', ind3
-!!$C	scarto i valori mancanti e gia flaggati errati
-!!$
-!!$	IF(j_c_e(DATI(I)).AND.vf(FLAG(I)))THEN
-!!$C	se il dato e` presente
-!!$	 IND1=IND2			!dato gia` controllato
-!!$	 IND2=IND3			!dato da controllare
-!!$	 IND3=I				!ultimo dato buono
-!!$c
-!!$c		type *,'------------------------------'
-!!$c		type*,'   i=',i,'   in=',in
-!!$c		type*,'ind1=',ind1,' ind2=',ind2,' ind3=', ind3
-!!$
-!!$C	verifico che l'intervallo tra loro non sia superiore a intmax	
-!!$C	controlla l'intervallo col dato precedente buono
-!!$	 IF ((IMINUTI(I)-IMINUTI(IND2)).GT.INTMAX)THEN
-!!$
-!!$C	  IN=-1
-!!$C	  NE=-1
-!!$C	  RETURN
-!!$
-!!$	  IER=-1	! condizione di errore in caso di intervallo >INTMAX
-!!$	  IN=1		! NUMERO DEI DATI BUONI 
-!!$	  IND1=I
-!!$	  IND2=I
-!!$	  IND3=I
-!!$	  IND_B = 0
-!!$	  GOTO 123
-!!$
-!!$	END IF
-!!$C	Faccio un controllo sui dati in maniera temporale controllando
-!!$c	che la variazione assoluta tra due dati non superi rjump.
-!!$c	Nel caso li setto tutti e due errati e ricomincio col
-!!$c	controllare il dato successivo.
-!!$
-!!$	 IF (IN.GE.1)THEN		!ci sono due dati da controllare
-!!$	  GRAD2=FLOAT((DATI(IND2)-DATI(IND3)))/
-!!$	1	FLOAT((IMINUTI(IND2)-IMINUTI(IND3)))
-!!$	  IF(abs(grad2).GE.RJUMP)THEN
-!!$C	    incrementa contatore errori e ricopre il dato errato
-!!$	    NE=NE+2
-!!$	    FLAG(IND2)=FLAG(IND2)+1
-!!$	    FLAG(IND3)=FLAG(IND3)+1
-!!$	    IN=1		! NUMERO DEI DATI BUONI 
-!!$	    IND1=I
-!!$	    IND2=I
-!!$	    IND3=I
-!!$	    IND_B=-I	! Il dato di inizio serie e' stato segnalato errato
-!!$	    GOTO 123
-!!$	  END IF
-!!$	 END IF
-!!$
-!!$
-!!$C	Faccio un controllo sui dati in maniera temporale controllando
-!!$C	che il dato considerato non sia un massimo o un minimo e che
-!!$C	contemporaneamente non differisca dai valori intorno piu` di
-!!$C	GRADMAX  per minuto.
-!!$
-!!$	 IF (IN.GT.1)THEN		!ci sono tre dati da controllare
-!!$
-!!$	  if(IND_B.gt.0)then		! decremento flag maxmin
-!!$	    NB=NB+1
-!!$	    FLAG(IND_B)=FLAG(IND_B)-1	!dato buono
-!!$	  endif
-!!$C	  controlla i gradienti
-!!$	  GRAD1=FLOAT((DATI(IND2)-DATI(IND1)))/
-!!$	1	FLOAT((IMINUTI(IND2)-IMINUTI(IND1)))
-!!$C	  GRAD2=FLOAT((DATI(IND2)-DATI(IND3)))/
-!!$C	1	FLOAT((IMINUTI(IND2)-IMINUTI(IND3)))
-!!$
-!!$C	  se sono entrambi superiori a gradmax
-!!$	  IF (ABS(GRAD1).GT.GRADMAX.AND.ABS(GRAD2).GT.GRADMAX)THEN
-!!$C	   se sono di segno opposto
-!!$	   IF ((sign(1.,GRAD1)*sign(1.,GRAD2)).LT.0.)THEN
-!!$C	    incrementa contatore errori e ricopre il dato errato
-!!$	    NE=NE+1
-!!$	    FLAG(IND2)=FLAG(IND2)+1
-!!$	    IND2=IND1
-!!$c	perde un turno 
-!!$c	se il primo dato della tripletta era errato non devo decrementare
-!!$c	la flag di quello centrale
-!!$c	se il primo dato e' buono mi comporto come inizio serie per evitare
-!!$c	di ridecrementare il primo
-!!$	    if(ind_b . gt. 0) IND_B = 0
-!!$	    GOTO 123
-!!$	   END IF
-!!$	  END IF
-!!$c	  type *,ind2
-!!$
-!!$c	Verico che la tripletta di dati non inizi con un dato errato
-!!$c	se a fine serie decremento la flag del penultimo dato
-!!$c	altrimenti memorizzo l'indice del dato in ind_b e continuo
-!!$c	il loop per testare il dato seguente
-!!$c	
-!!$	  if(ind1.ne.-ind_b)then
-!!$	    if(ind3 .eq. n2)then
-!!$	        NB=NB+1
-!!$		FLAG(IND2)=FLAG(IND2)-1	!dato buono
-!!$	    else
-!!$		ind_B=ind2
-!!$	    endif
-!!$	  end if
-!!$
-!!$	 END IF
-!!$C	 se il dato c'e` e non e` errato	(non si sa se e` buono)
-!!$	 IN=IN+1
-!!$	END IF
-!!$123	END DO
-!!$
-!!$C	se ci sono piu` di tre dati considerati errati 
-!!$C	termina in condizione di errore
-!!$c	uguale se non ne ha trovato neanche uno buono
-!!$
-!!$	IF(NE.GE.3) IER=-2
-!!$	IF(NB.EQ.0) IER= 2
-!!$
-!!$	RETURN
-!!$	END

@@ -752,7 +752,9 @@ end if
 
 nvar=0
 
+!if (any(c_e(lvar)) .and. .not. optio_log(anaonly)) then
 if (any(c_e(lvar)) .and. .not. optio_log(anaonly)) then
+  !usefull for anaonly starting from dballe 6.6
 
   IF (SIZE(lvar) > maxvarlist) THEN
     CALL l4f_category_log(this%category,L4F_ERROR,"too many variables requested: "//t2c(SIZE(lvar)))
