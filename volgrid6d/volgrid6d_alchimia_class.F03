@@ -123,6 +123,7 @@ do ivar=1, nvar
   end if
 
   varvg6d(ivarout)=vg6din%var(ivarin)
+  call init(gaid_template)
 
   do ilevel=1,nlevel
     do itime=1,ntime
