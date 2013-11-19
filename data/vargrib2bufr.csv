@@ -386,15 +386,15 @@ B15240,Concentration of biogenic aerosol in PM2.5 (invented),ug/m**3,200,195,44,
 B20010,Cloud cover DWD,Percent,200,201,29,255,1.0,0.0
 B20010,Cloud cover DWD,Percent,78,201,29,255,1.0,0.0
 B20010,High cloud cover,Percent,255,2,75,255,1.0,0.0
-B20010,High cloud cover ECMWF,Percent,98,128,188,255,1.0,0.0
+B20010,High cloud cover ECMWF,Fraction->Percent,98,128,188,255,100.0,0.0
 B20010,Low cloud cover,Percent,255,2,73,255,1.0,0.0
-B20010,Low cloud cover ECMWF,Percent,98,128,186,255,1.0,0.0
+B20010,Low cloud cover ECMWF,Fraction->Percent,98,128,186,255,100.0,0.0
 B20010,Medium cloud cover,Percent,255,2,74,255,1.0,0.0
-B20010,Medium cloud cover ECMWF,Percent,98,128,187,255,1.0,0.0
+B20010,Medium cloud cover ECMWF,Fraction->Percent,98,128,187,255,100.0,0.0
 B20010,Total cloud cover,Fraction,200,200,114,0,100.0,0.0
 B20010,Total cloud cover,Fraction,200,200,114,255,100.0,0.0
 B20010,Total cloud cover,Percent,255,2,71,255,1.0,0.0
-B20010,Total cloud cover,Percent,98,128,164,255,1.0,0.0
+B20010,Total cloud cover,Fraction->Percent,98,128,164,255,100.0,0.0
 B22001,Direction of waves,degree true,200,140,230,255,1.0,0.0
 B22001,Direction of waves,degree true,98,140,230,255,1.0,0.0
 B22037,Tidal elevation with respect to national land datum,m,255,2,82,255,1.0,0.0
