@@ -1784,6 +1784,7 @@ ntime=0
 ntimerange=0
 nlevel=0
 nvar=0
+NULLIFY(c_func)
 
 if (present(networkname))then
   call init(vol7d_out%network(1),name=networkname)
@@ -1830,18 +1831,19 @@ if (associated(volgrid6d_in%time))then
   end if
 end if
 
-if (associated(volgrid6d_in%level))then
-  nlevel=size(volgrid6d_in%level)
+IF (ASSOCIATED(volgrid6d_in%level)) THEN
+  nlevel = SIZE(volgrid6d_in%level)
   vol7d_out%level=volgrid6d_in%level
-end if
+ENDIF
 
-nullify(c_func)
-if (associated(volgrid6d_in%var) .AND. .NOT.optio_log(noconvert))then
-  nvar=size(volgrid6d_in%var)
-  CALL vargrib2varbufr(volgrid6d_in%var, vol7d_out%dativar%r, c_func)
-end if
+IF (ASSOCIATED(volgrid6d_in%var)) THEN
+  nvar = SIZE(volgrid6d_in%var)
+  IF (.NOT. optio_log(noconvert)) THEN
+    CALL vargrib2varbufr(volgrid6d_in%var, vol7d_out%dativar%r, c_func)
+  ENDIF
+ENDIF
 
-nana=size(vol7d_out%ana)
+nana = SIZE(vol7d_out%ana)
 
 ! allocate once for speed
 IF (.NOT.ASSOCIATED(volgrid6d_in%voldati)) THEN
@@ -1850,10 +1852,10 @@ IF (.NOT.ASSOCIATED(volgrid6d_in%voldati)) THEN
 ENDIF
 
 ALLOCATE(voldatir_out(nana,1,nlevel),stat=stallo)
-if (stallo /=0)then
-  call l4f_category_log(volgrid6d_in%category,L4F_FATAL,"allocating memory")
-  call raise_fatal_error()
-end if
+IF (stallo /= 0) THEN
+  CALL l4f_category_log(volgrid6d_in%category,L4F_FATAL,"allocating memory")
+  CALL raise_fatal_error()
+ENDIF
 
 inetwork=1
 do itime=1,ntime
@@ -1875,8 +1877,8 @@ do itime=1,ntime
         CALL compute(this, voldatiin, voldatir_out, vol7d_out%dativar%r(ivar))
 
         if (vol7d_out%time_definition == volgrid6d_in%time_definition) then
-          vol7d_out%voldatir(:,itime,:,itimerange,ivar,inetwork)= &
-           RESHAPE(voldatir_out,(/nana,nlevel/))
+          vol7d_out%voldatir(:,itime,:,itimerange,ivar,inetwork) = &
+           voldatir_out(:,1,:)
         else
           vol7d_out%voldatir(:,index(vol7d_out%time,validitytime(itime,itimerange)),:,itimerange,ivar,inetwork)=&
            RESHAPE(voldatir_out,(/nana,nlevel/))
