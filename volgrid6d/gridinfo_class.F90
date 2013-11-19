@@ -1896,11 +1896,22 @@ IF (this%var%discipline == 255 .AND. &
       this%level%l1 = 2000 ! 2m
 
     ELSE IF (this%var%number == 123 .AND. &
-      (this%timerange%timerange == 254 .OR. this%timerange%timerange == 205)) THEN ! 10FG6
+     (this%timerange%timerange == 254 .OR. this%timerange%timerange == 205)) THEN ! 10FG6
       this%timerange%timerange = 2 ! max
       this%timerange%p2 = 21600 ! length of period = 6 hours
       this%level%level1 = 103
       this%level%l1 = 10000 ! 10m
+
+! set cloud cover to bufr style
+    ELSE IF (this%var%number == 186) THEN ! low cloud cover
+      this%var%number = 248
+      this%level = vol7d_level_new(level1=256, level2=258, l2=1)
+    ELSE IF (this%var%number == 187) THEN ! medium cloud cover
+      this%var%number = 248
+      this%level = vol7d_level_new(level1=256, level2=258, l2=2)
+    ELSE IF (this%var%number == 188) THEN ! high cloud cover
+      this%var%number = 248
+      this%level = vol7d_level_new(level1=256, level2=258, l2=3)
 
     ENDIF
   ELSE IF (this%var%category == 228) THEN ! table 228
@@ -1915,6 +1926,24 @@ IF (this%var%discipline == 255 .AND. &
 
   ENDIF ! table 128
 ENDIF ! grib1 & ECMWF
+
+IF (this%var%discipline == 255 .AND. this%var%category == 2) THEN ! grib1 table 2
+
+! set cloud cover to bufr style
+  IF (this%var%number == 73) THEN ! low cloud cover
+    this%var%number = 71
+    this%level = vol7d_level_new(level1=256, level2=258, l2=1)
+  ELSE IF (this%var%number == 74) THEN ! medium cloud cover
+    this%var%number = 71
+    this%level = vol7d_level_new(level1=256, level2=258, l2=2)
+  ELSE IF (this%var%number == 75) THEN ! high cloud cover
+    this%var%number = 71
+    this%level = vol7d_level_new(level1=256, level2=258, l2=3)
+
+  ENDIF
+
+ENDIF
+
 
 END SUBROUTINE normalize_gridinfo
 
@@ -1970,12 +1999,40 @@ ELSE IF (this%timerange%timerange == 2) THEN ! max
     IF (this%var == volgrid6d_var_new(this%var%centre,201,187,255)) THEN
       this%timerange%timerange=205
     ENDIF
-
-ELSE IF (this%var%discipline == 255 .AND. &
- ANY(this%var%centre == ecmwf_centre)) THEN ! grib1 & ECMWF
   ENDIF
+ENDIF
 
-end if
+! reset cloud cover to grib1 style
+IF (this%var%discipline == 255 .AND. this%var%category == 2) THEN ! grib1 table 2
+  IF (this%var%number == 71 .AND. &
+   this%level%level1 == 256 .AND. this%level%level2 == 258) THEN ! l/m/h cloud cover
+    IF (this%level%l2 == 1) THEN ! l
+      this%var%number = 73
+    ELSE IF (this%level%l2 == 2) THEN ! m
+      this%var%number = 74
+    ELSE IF (this%level%l2 == 3) THEN ! h
+      this%var%number = 75
+    ENDIF
+    this%level = vol7d_level_new(level1=1) ! reset to surface
+  ENDIF
+ENDIF
+
+IF (ANY(this%var%centre == ecmwf_centre)) THEN ! ECMWF
+! reset cloud cover to grib1 style
+  IF (this%var%discipline == 255 .AND. this%var%category == 128) THEN ! grib1 table 128
+    IF (this%var%number == 248 .AND. &
+     this%level%level1 == 256 .AND. this%level%level2 == 258) THEN ! l/m/h cloud cover
+      IF (this%level%l2 == 1) THEN ! l
+        this%var%number = 186
+      ELSE IF (this%level%l2 == 2) THEN ! m
+        this%var%number = 187
+      ELSE IF (this%level%l2 == 3) THEN ! h
+        this%var%number = 188
+      ENDIF
+      this%level = vol7d_level_new(level1=1) ! reset to surface
+    ENDIF
+  ENDIF
+ENDIF
 
 END SUBROUTINE unnormalize_gridinfo
 #endif
