@@ -197,7 +197,7 @@ LOGICAL :: sample_mask(SIZE(sample))
 
 IF (optio_log(nomiss)) THEN
 ! compute average
-  average = SUM(sample)/SIZE(sample)
+  laverage = SUM(sample)/SIZE(sample)
   IF (PRESENT(average)) average = laverage
   variance = SUM(sample**2)/SIZE(sample) - laverage**2
 
@@ -244,7 +244,7 @@ LOGICAL :: sample_mask(SIZE(sample))
 
 IF (optio_log(nomiss)) THEN
 ! compute average
-  average = SUM(sample)/SIZE(sample)
+  laverage = SUM(sample)/SIZE(sample)
   IF (PRESENT(average)) average = laverage
   variance = SUM(sample**2)/SIZE(sample) - laverage**2
 
