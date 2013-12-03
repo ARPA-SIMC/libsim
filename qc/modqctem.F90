@@ -555,10 +555,10 @@ do indana=1,size(qctem%v7d%ana)
 #ifdef DEBUG
               call l4f_log(L4F_DEBUG,"QCtem Index:"// to_char(indctime)//to_char(indclevel)//&
                to_char(indctimerange)//to_char(indcdativarr)//to_char(indcnetworks))
+#endif
               if ( indctime <= 0 .or. indclevel <= 0 .or. indctimerange <= 0 .or. indcdativarr <= 0 &
                .or. indcnetworks <= 0 ) cycle
             end if
-#endif
             
 !!$            nintime=qctem%v7d%time(indtime)+timedelta_new(minute=30)
 !!$            CALL getval(nintime, month=mese, hour=ora)
