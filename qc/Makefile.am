@@ -11,12 +11,12 @@ endif
 if SHAPELIB
 libsim_qc_la_LIBADD += $(SHAPELIB_LIBS)
 libsim_qc_la_SOURCES += modqccli.F90 modqctem.F90
-endif
 
 if NCARG
 #libsim_qc_la_LIBADD += $(NCARG_LIBS)
 libsim_qc_la_SOURCES += modqcspa.F90
 #libsim_qc_la_LDFLAGS = $(NCARG_LDFLAGS)
+endif
 endif
 
 noinst_HEADERS = modqc_peeled_include.F90  modqc_peeling_include.F90  modqc_peel_util_include.F90
