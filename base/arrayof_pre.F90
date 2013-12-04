@@ -29,7 +29,9 @@
 TYPE ARRAYOF_TYPE
   ARRAYOF_ORIGTYPE, POINTER :: array(:)=>NULL() !< array of ARRAYOF_ORIGTYPE
   INTEGER :: arraysize=0 !< current logical size of the array; it may be different from the physical size \c SIZE(this%array), and it should be used instead of \c SIZE() intrinsic function in order to evaluate the number of elements assigned to \a array
-  DOUBLE PRECISION :: overalloc=2.0D0 !< overallocation factor, values close to 1 determine more calls to the system alloc function (decreased performances) at the advantage of less memory consumption, the default is 2; the results are not affected by the value of this member
+!> overallocation factor, values close to 1 determine more calls to the system alloc function (decreased performances)
+!!at the advantage of less memory consumption, the default is 2; the results are not affected by the value of this member
+  DOUBLE PRECISION :: overalloc=2.0D0
 END TYPE ARRAYOF_TYPE
 
 !> Method for inserting elements of the array at a desired position.

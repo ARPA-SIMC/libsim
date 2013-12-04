@@ -124,7 +124,11 @@ TYPE(ARRAYOF_TYPE) :: this !< array object in which an element has to be removed
 INTEGER, INTENT(in), OPTIONAL :: nelem !< number of elements to remove, if not provided, a single element is removed
 INTEGER, INTENT(in), OPTIONAL :: pos !< position of the element to be removed, if it is out of range, it is clipped, if it is not provided, objects are removed at the end
 #ifdef ARRAYOF_ORIGDESTRUCTOR
-LOGICAL, INTENT(in), OPTIONAL :: nodestroy !< if provided and \c .TRUE. , the destructor possibily defined for the ARRAYOF_ORIGTYPE is not called for every deleted object, may be useful if the objects to be deleted have been copied to another instance of ARRAYOF_TYPE and continue their life there
+!< if provided and \c .TRUE. , the destructor possibily defined for
+!!the ARRAYOF_ORIGTYPE is not called for every deleted object, may be
+!!useful if the objects to be deleted have been copied to another
+!!instance of ARRAYOF_TYPE and continue their life there
+LOGICAL, INTENT(in), OPTIONAL :: nodestroy 
 #endif
 
 INTEGER :: i, n, p
@@ -181,9 +185,19 @@ SUBROUTINE ARRAYOF_TYPE/**/_delete(this, &
  nodealloc)
 TYPE(ARRAYOF_TYPE) :: this !< array object to be destroyed
 #ifdef ARRAYOF_ORIGDESTRUCTOR
-LOGICAL, INTENT(in), OPTIONAL :: nodestroy !< if provided and \c .TRUE. , the destructor possibily defined for the ARRAYOF_ORIGTYPE is not called for every deleted object, may be useful if the objects to be deleted have been copied to another instance of ARRAYOF_TYPE and continue their life there
+!< if provided and \c .TRUE. , the destructor possibily defined for
+!!the ARRAYOF_ORIGTYPE is not called for every deleted object, may be
+!!useful if the objects to be deleted have been copied to another
+!!instance of ARRAYOF_TYPE and continue their life there
+LOGICAL, INTENT(in), OPTIONAL :: nodestroy
 #endif
-LOGICAL, INTENT(in), OPTIONAL :: nodealloc !< if provided and \c .TRUE. , the space reserved for the array is not deallocated, thus the values are retained, while the array pointer is nullified, this means that the caller must have previously assigned the pointer contents this%array to another pointer to prevent memory leaks
+
+!> if provided and \c .TRUE. , the space reserved for the array is not
+!! deallocated, thus the values are retained, while the array pointer
+!! is nullified, this means that the caller must have previously assigned
+!! the pointer contents this%array to another pointer to prevent memory
+!! leaks
+LOGICAL, INTENT(in), OPTIONAL :: nodealloc
 
 TYPE(ARRAYOF_TYPE) :: empty
 

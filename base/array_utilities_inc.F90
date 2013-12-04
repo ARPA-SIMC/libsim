@@ -468,7 +468,10 @@ END FUNCTION index/**/VOL7D_POLY_TYPES
 
 !!$Bottom-up merge sort
 !!$
-!!$Bottom-up merge sort is a non-recursive variant of the merge sort, in which the array is sorted by a sequence of passes. During each pass, the array is divided into blocks of size m\,. (Initially, m=1\,). Every two adjacent blocks are merged (as in normal merge sort), and the next pass is made with a twice larger value of m\,.
+!!$ Bottom-up merge sort is a non-recursive variant of the merge sort, 
+!!$ in which the array is sorted by a sequence of passes. During each pass,
+!!$ the array is divided into blocks of size m\,. (Initially, m=1\,).
+!!$ Every two adjacent blocks are merged (as in normal merge sort), and the next pass is made with a twice larger value of m\,.
 !!$
 !!$In pseudo-code:
 !!$

@@ -43,7 +43,12 @@ example_char_utilities_LDADD =   ../base/libsim_base.la
 
 
 if DBALLE
-noinst_PROGRAMS += esempio_v7ddballe esempio_v7ddballe_multi esempio_v7ddballe_import_export esempio_v7ddballe_export esempio_qc_convert example_v7ddballe_v7d2dba esempio_v7ddballe_move_and_collapse
+noinst_PROGRAMS += esempio_v7ddballe esempio_v7ddballe_multi esempio_v7ddballe_import_export esempio_v7ddballe_export  example_v7ddballe_v7d2dba esempio_v7ddballe_move_and_collapse example_dballe
+
+if F2003_EXTENDED_FEATURES
+example_dballe_SOURCES = example_dballe.F03
+example_dballe_LDADD = ../base/libsim_base.la ../vol7d/libsim_vol7d.la ../log4fortran/liblog4fortran.la
+endif
 
 esempio_v7ddballe_SOURCES = esempio_v7ddballe.f90
 esempio_v7ddballe_LDADD = ../base/libsim_base.la ../vol7d/libsim_vol7d.la ../log4fortran/liblog4fortran.la
@@ -86,8 +91,11 @@ example_ncarg_sounding_LDADD = ../graphics/libsim_graphics.la ../base/libsim_bas
 
 endif
 
+if SHAPELIB
+noinst_PROGRAMS +=esempio_qc_convert
 esempio_qc_convert_SOURCES = esempio_qc_convert.f90
 esempio_qc_convert_LDADD = ../base/libsim_base.la ../vol7d/libsim_vol7d.la ../log4fortran/liblog4fortran.la ../qc/libsim_qc.la
+endif
 
 endif
 
