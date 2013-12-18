@@ -46,12 +46,48 @@ IMPLICIT NONE
 
 include "dballeff.h"
 private
-public dbalevel, dbatimerange, dbarecord, dbahandle, dba
-public dbadata,dbadatai, dbadatar
 
 character (len=255),parameter:: subcategory="dballe_class"
 
-type,extends(vol7d_level) :: dbalevel
+type,public :: dbaconnection
+  integer :: dbhandle=imiss
+  integer :: handle_err=imiss
+  integer :: category !< log4fortran
+  contains
+# ifdef F2003_FULL_FEATURES
+    final :: dbaconnection_delete
+# else
+    procedure :: delete => dbaconnection_delete
+# endif
+end type dbaconnection
+
+interface dbaconnection
+  procedure  dbaconnection_init      ! add constructor to shape generic interface
+end interface
+
+type,public ::  dbasession
+  integer :: sehandle=imiss
+  logical :: file=.false.
+  integer :: category !< log4fortran
+  contains
+# ifdef F2003_FULL_FEATURES
+    final :: dbasession_delete
+# else
+    procedure :: delete => dbasession_delete
+    procedure :: unsetall => dbasession_unsetall
+    procedure :: set => dbasession_set
+    procedure :: prendilo => dbasession_prendilo
+# endif
+!  procedure :: dammelo => dbasession_dammelo
+!  procedure :: prendilo => dbasession_prendilo
+end type dbasession
+
+interface dbasession
+  procedure  dbasession_init      ! add constructor to shape generic interface
+end interface
+
+
+type,public,extends(vol7d_level) :: dbalevel
   contains
 
 # ifdef F2003_FULL_FEATURES
@@ -60,6 +96,7 @@ type,extends(vol7d_level) :: dbalevel
     procedure :: delete => dbalevel_delete
 # endif
   procedure :: display => dbalevel_display
+  procedure :: set => dbalevel_set
 !!$procedure :: spiega => dbalevel_spiega
 end type dbalevel
 
@@ -67,7 +104,7 @@ interface dbalevel
   procedure   dbalevel_init     ! add constructor to shape generic interface
 end interface
 
-type,extends(vol7d_timerange) :: dbatimerange
+type,public,extends(vol7d_timerange) :: dbatimerange
   contains
 # ifdef F2003_FULL_FEATURES
     final :: dbatimerange_delete
@@ -75,6 +112,7 @@ type,extends(vol7d_timerange) :: dbatimerange
     procedure :: delete => dbatimerange_delete
 # endif
   procedure :: display => dbatimerange_display
+  procedure :: set => dbatimerange_set
 !!$procedure :: spiega => dbatimerange_spiega
 end type dbatimerange
 
@@ -82,76 +120,79 @@ interface dbatimerange
   procedure   dbatimerange_init     ! add constructor to shape generic interface
 end interface
 
-type dbadata
+type,public,abstract :: dbadata
   character(len=9) :: btable
+contains
+  procedure(dbadata_set),deferred :: set
+  procedure(dbadata_display),deferred :: display
 end type dbadata
 
-type , extends(dbadata) :: dbadatai
+interface
+subroutine dbadata_set(data,session)
+import
+class(dbadata), intent(in) :: data
+type(dbasession), intent(in) :: session
+end subroutine dbadata_set
+
+subroutine dbadata_display(data)
+import
+class(dbadata), intent(in) :: data
+end subroutine dbadata_display
+
+end interface
+
+type,public, extends(dbadata) :: dbadatai
   integer :: value
+contains
+  procedure :: set => dbadatai_set
+  procedure :: display => dbadatai_display
 end type dbadatai
 
 interface dbadatai
-  procedure   dbadatai_init     ! add constructor to shape generic interface
+  procedure ::  dbadatai_init     ! add constructor to shape generic interface
 end interface dbadatai
 
-type , extends(dbadata) :: dbadatar
+type,public, extends(dbadata) :: dbadatar
   real :: value
+contains
+  procedure :: set => dbadatar_set
+  procedure :: display => dbadatar_display
 end type dbadatar
 
 interface dbadatar
-  procedure   dbadatar_init     ! add constructor to shape generic interface
+  procedure ::  dbadatar_init     ! add constructor to shape generic interface
 end interface dbadatar
 
-type  dbarecord
+type,public :: dbametadata
   type(dbalevel) :: level
   type(dbatimerange) :: timerange
-  class(dbadata),allocatable :: data(:)
   contains
 # ifdef F2003_FULL_FEATURES
-    final :: dbarecord_delete
+    final :: dbametadata_delete
 # else
-    procedure :: delete => dbarecord_delete
+    procedure :: delete => dbametadata_delete
 # endif
-  procedure :: display => dbarecord_display
-end type dbarecord
+  procedure :: set => dbametadata_set
+  procedure :: display => dbametadata_display
+end type dbametadata
 
-interface dbarecord
-  procedure   dbarecord_init     ! add constructor to shape generic interface
+interface dbametadata
+  procedure   dbametadata_init     ! add constructor to shape generic interface
 end interface
 
-type  dbahandle
-  integer :: dbhandle=imiss
-  integer :: handle_err=imiss
-  integer :: category !< log4fortran
-  contains
-# ifdef F2003_FULL_FEATURES
-    final :: dbahandle_delete
-# else
-    procedure :: delete => dbahandle_delete
-# endif
-end type dbahandle
+type, public :: dbadatac
+class(dbadata),allocatable :: var
+contains
+procedure :: display => dbadatac_display
+procedure :: set => dbadatac_set
+end type dbadatac
 
-interface dbahandle
-  procedure  dbahandle_init      ! add constructor to shape generic interface
-end interface
-
-type, extends(dbahandle) ::  dba
-  integer :: sehandle=imiss
-  logical :: file=.false.
-  contains
-# ifdef F2003_FULL_FEATURES
-    final :: dba_delete
-# else
-    procedure :: delete => dba_delete
-# endif
-!  procedure :: dammelo => dba_dammelo
-!  procedure :: prendilo => dba_prendilo
-end type dba
-
-interface dba
-  procedure  dba_init      ! add constructor to shape generic interface
-end interface
-
+type, public :: dbadatav
+type(dbadatac),allocatable :: datac(:)
+contains
+procedure :: display => dbadatav_display
+procedure :: set => dbadatav_set
+end type dbadatav
 
 contains
 
@@ -175,6 +216,53 @@ INTEGER,INTENT(IN),OPTIONAL :: l2 !< valore per il secondo livello
 call init (dbalevel_init%vol7d_level,level1, l1, level2, l2)
 end function dbalevel_init
 
+subroutine dbalevel_set(level,session)
+class(dbalevel), intent(in) :: level
+type(dbasession), intent(in) :: session
+integer :: ier
+
+!if (c_e(session%sehandle)) then
+ier = idba_setlevel(session%sehandle,&
+ level%level1, level%l1, level%level2, level%l2)
+
+end subroutine dbalevel_set
+
+
+subroutine dbadatac_set(data,session)
+class(dbadatac), intent(in) :: data
+type(dbasession), intent(in) :: session
+
+call data%var%set(session)
+
+end subroutine dbadatac_set
+
+subroutine dbadatac_display(data)
+class(dbadatac), intent(in) :: data
+
+call data%var%display()
+
+end subroutine dbadatac_display
+
+subroutine dbadatav_set(data,session)
+class(dbadatav), intent(in) :: data
+type(dbasession), intent(in) :: session
+integer :: i
+
+do i=1, size(data%datac)
+  call data%datac(i)%set(session)
+enddo
+
+end subroutine dbadatav_set
+
+subroutine dbadatav_display(data)
+class(dbadatav), intent(in) :: data
+integer :: i
+
+do i=1, size(data%datac)
+  call data%datac(i)%display()
+end do
+
+end subroutine dbadatav_display
 
 type(dbadatai) elemental function dbadatai_init(btable,value)
 
@@ -214,7 +302,29 @@ end if
 
 end function dbadatar_init
 
+subroutine dbadatai_set(data,session)
+class(dbadatai), intent(in) :: data
+type(dbasession), intent(in) :: session
+integer :: ier
+ier = idba_set(session%sehandle,data%btable,data%value)
+end subroutine dbadatai_set
 
+subroutine dbadatai_display(data)
+class(dbadatai), intent(in) :: data
+print *,data%btable,data%value
+end subroutine dbadatai_display
+
+subroutine dbadatar_set(data,session)
+class(dbadatar), intent(in) :: data
+type(dbasession), intent(in) :: session
+integer :: ier
+ier = idba_set(session%sehandle,data%btable,data%value)
+end subroutine dbadatar_set
+
+subroutine dbadatar_display(data)
+class(dbadatar), intent(in) :: data
+print *,data%btable,data%value
+end subroutine dbadatar_display
 
 !!$function dbalevel_spiega(level,handle)
 !!$class(dbalevel),    intent(in) :: level
@@ -237,6 +347,16 @@ class(dbatimerange), intent(in) :: timerange
 call display (timerange%vol7d_timerange)
 end subroutine dbatimerange_display
 
+subroutine dbatimerange_set(timerange,session)
+class(dbatimerange), intent(in) :: timerange
+type(dbasession), intent(in) :: session
+integer :: ier
+
+ier = idba_settimerange(session%sehandle,&
+ timerange%timerange, timerange%p1, timerange%p2)
+
+end subroutine dbatimerange_set
+
 type(dbatimerange) function dbatimerange_init(timerange, p1, p2)
 INTEGER,INTENT(IN),OPTIONAL :: timerange !< tipo di intervallo temporale
 INTEGER,INTENT(IN),OPTIONAL :: p1 !< valore per il primo istante temporale
@@ -246,47 +366,47 @@ call init (dbatimerange_init%vol7d_timerange,timerange, p1, p2)
 end function dbatimerange_init
 
 
-type(dbarecord) function dbarecord_init(level,timerange,data)
+type(dbametadata) function dbametadata_init(level,timerange)
 
 type(dbalevel), intent(in), optional :: level
 type(dbatimerange), intent(in), optional :: timerange
-class(dbadata),intent(in),optional :: data(:)
-
 
 if (present(level)) then
-  dbarecord_init%level=level
+  dbametadata_init%level=level
 else
-  dbarecord_init%level=dbalevel()
+  dbametadata_init%level=dbalevel()
 end if
 
 if (present(timerange)) then
-  dbarecord_init%timerange=timerange
+  dbametadata_init%timerange=timerange
 else
-  dbarecord_init%timerange=dbatimerange()
+  dbametadata_init%timerange=dbatimerange()
 end if
 
-if (present(data)) then
-  allocate(dbarecord_init%data(size(data)),source=data)
-else
-  allocate(dbadata::dbarecord_init%data(0))
-end if
+end function dbametadata_init
 
+subroutine dbametadata_display(metadata)
+class(dbametadata), intent(in) :: metadata
+call metadata%level%display()
+call metadata%timerange%display()
 
-end function dbarecord_init
+end subroutine dbametadata_display
 
-subroutine dbarecord_display(record)
-class(dbarecord), intent(in) :: record
-call record%level%display()
-call record%timerange%display()
+subroutine dbametadata_set(metadata,session)
+class(dbametadata), intent(in) :: metadata
+type(dbasession), intent(in) :: session
 
-end subroutine dbarecord_display
+call metadata%level%set(session)
+call metadata%timerange%set(session)
 
-elemental subroutine dbarecord_delete(record)
-class (dbarecord), intent(inout) :: record
+end subroutine dbametadata_set
+
+elemental subroutine dbametadata_delete(metadata)
+class (dbametadata), intent(inout) :: metadata
 !print *,"delete level"
-end subroutine dbarecord_delete
+end subroutine dbametadata_delete
 
-type(dbahandle) function dbahandle_init(dsn, user, password,categoryappend,idbhandle)
+type(dbaconnection) function dbaconnection_init(dsn, user, password,categoryappend,idbhandle)
 character (len=*), intent(in), optional :: dsn
 character (len=*), intent(in), optional :: user
 character (len=*), intent(in), optional :: password
@@ -303,11 +423,11 @@ if (present(categoryappend))then
 else
   call l4f_launcher(a_name,a_name_append=trim(subcategory))
 endif
-dbahandle_init%category=l4f_category_get(a_name)
+dbaconnection_init%category=l4f_category_get(a_name)
 
 ! impostiamo la gestione dell'errore
 ier=idba_error_set_callback(0,dballe_error_handler, &
- dbahandle_init%category,dbahandle_init%handle_err)
+ dbaconnection_init%category,dbaconnection_init%handle_err)
 
 if (.not. c_e(optio_i(idbhandle))) then
 
@@ -324,15 +444,15 @@ if (.not. c_e(optio_i(idbhandle))) then
     IF (c_e(password)) quipassword = password
   ENDIF
 
-  ier=idba_presentati(dbahandle_init%dbhandle,quidsn,quiuser,quipassword)
+  ier=idba_presentati(dbaconnection_init%dbhandle,quidsn,quiuser,quipassword)
 else
-  dbahandle_init%dbhandle=optio_i(idbhandle)
+  dbaconnection_init%dbhandle=optio_i(idbhandle)
 end if
 
-end function dbahandle_init
+end function dbaconnection_init
 
-subroutine dbahandle_delete(handle)
-class (dbahandle), intent(inout) :: handle
+subroutine dbaconnection_delete(handle)
+class (dbaconnection), intent(inout) :: handle
 integer :: ier
 
 print *,"dbhandle delete"
@@ -341,9 +461,11 @@ if (c_e(handle%dbhandle)) then
   ier = idba_arrivederci(handle%dbhandle)
 end if
 
-end subroutine dbahandle_delete
+end subroutine dbaconnection_delete
 
-type(dba) function dba_init(anaflag, dataflag, attrflag,filename,mode,type,write,wipe,repinfo)
+type(dbasession) function dbasession_init(connection,anaflag, dataflag, attrflag,&
+ filename,mode,type,write,wipe,repinfo,categoryappend)
+type(dbaconnection),intent(in) :: connection
 character (len=*), intent(in), optional :: anaflag
 character (len=*), intent(in), optional :: dataflag
 character (len=*), intent(in), optional :: attrflag
@@ -353,6 +475,7 @@ logical,INTENT(in),OPTIONAL :: write !< abilita la scrittura sul DSN/file ( defa
 logical,INTENT(in),OPTIONAL :: wipe !<  svuota il DSN/file e/o lo prepara per una scrittura ( default=.false. )
 character(len=*), INTENT(in),OPTIONAL :: repinfo !< eventuale file repinfo.csv usato con wipe ( default="" )
 character(len=*),intent(in),optional :: type !< the file format. It can be "BUFR" or "CREX". (default="BUFR")
+character(len=*),INTENT(in),OPTIONAL :: categoryappend !< appennde questo suffisso al namespace category di log4fortran
 
 integer :: ier
 character (len=5) :: lanaflag,ldataflag,lattrflag
@@ -360,8 +483,18 @@ character (len=1) :: lmode,ltype
 logical :: quiwrite,quiwipe
 character(len=255) :: quirepinfo
 logical :: exist
+character(len=512) :: a_name
 
-print *,"dba init"
+print *,"dbasession init"
+
+
+if (present(categoryappend))then
+  call l4f_launcher(a_name,a_name_append=trim(subcategory)//"."//trim(categoryappend))
+else
+  call l4f_launcher(a_name,a_name_append=trim(subcategory))
+endif
+dbasession_init%category=l4f_category_get(a_name)
+
 
 quiwrite=.false.
 if (present(write))then
@@ -380,7 +513,7 @@ endif
 if (present(filename)) then
 
   if (present(anaflag).or.present(dataflag).or.present( attrflag)) then
-    call l4f_category_log(dba_init%dbahandle%category,L4F_INFO,"option anaflag, dataflag, attrflag defined with filename")
+    call l4f_category_log(dbasession_init%category,L4F_INFO,"option anaflag, dataflag, attrflag defined with filename")
     CALL raise_error()
   end if
 
@@ -392,24 +525,24 @@ if (present(filename)) then
       lmode="w"
     else
       lmode="a"
-      call l4f_category_log(dba_init%dbahandle%category,L4F_INFO,"file exists; appending data to file")
+      call l4f_category_log(dbasession_init%category,L4F_INFO,"file exists; appending data to file")
     end if
   else
     if (.not.exist) then
-      call l4f_category_log(dba_init%dbahandle%category,L4F_ERROR,"file does not exist; cannot open file for read")
+      call l4f_category_log(dbasession_init%category,L4F_ERROR,"file does not exist; cannot open file for read")
       CALL raise_fatal_error()
     end if
   end if
 
   if (present(mode)) lmode = mode
 
-  dba_init%file=.true.
+  dbasession_init%file=.true.
 
-  ier =  idba_messaggi(dba_init%sehandle,filename, lmode, ltype)
+  ier =  idba_messaggi(dbasession_init%sehandle,filename, lmode, ltype)
 else
 
   if (present(mode).or.present(type)) then
-    call l4f_category_log(dba_init%dbahandle%category,L4F_INFO,"option mode, type defined without filename")
+    call l4f_category_log(dbasession_init%category,L4F_INFO,"option mode, type defined without filename")
     CALL raise_error()
   end if
 
@@ -422,28 +555,86 @@ else
   call optio(attrflag,lattrflag)
   if (.not. c_e(lattrflag)) lattrflag = "read"
 
-  ier = idba_preparati(dba_init%dbahandle%dbhandle,dba_init%sehandle, lanaflag, ldataflag, lattrflag)
+  ier = idba_preparati(connection%dbhandle,dbasession_init%sehandle, lanaflag, ldataflag, lattrflag)
 
-  dba_init%file=.true.
+  dbasession_init%file=.true.
 
-  if (quiwipe)ier=idba_scopa (dba_init%sehandle,quirepinfo)
+  if (quiwipe)ier=idba_scopa (dbasession_init%sehandle,quirepinfo)
 
 end if
 
 
-end function dba_init
+end function dbasession_init
 
-subroutine dba_delete(handle)
-class (dba), intent(inout) :: handle
+
+subroutine dbasession_unsetall(session)
+class (dbasession), intent(inout) :: session
 integer :: ier
 
-print *,"dba delete"
-
-if (c_e(handle%sehandle)) then 
-  ier = idba_fatto(handle%sehandle)
+if (c_e(session%sehandle)) then 
+  ier = idba_unsetall(session%sehandle)
 end if
 
-end subroutine dba_delete
+end subroutine dbasession_unsetall
+
+subroutine dbasession_prendilo(session)
+class (dbasession), intent(inout) :: session
+integer :: ier
+
+if (c_e(session%sehandle)) then 
+  ier = idba_prendilo(session%sehandle)
+end if
+
+end subroutine dbasession_prendilo
+
+
+
+subroutine dbasession_set(session,metadata,datav,data,level,timerange)
+class (dbasession), intent(in) :: session
+type (dbametadata),optional ::metadata
+class(dbadatav),optional ::datav
+class(dbadata),optional ::data
+type (dbalevel),optional ::level
+type (dbatimerange),optional ::timerange
+integer :: ier,i
+
+
+if (present(metadata)) then
+  call metadata%level%set(session)
+  call metadata%timerange%set(session)
+endif
+
+if (present(level)) then
+  call level%set(session)
+endif
+
+if (present(timerange)) then
+  call timerange%set(session)
+endif
+
+if (present(datav)) then
+  call datav%set(session)
+end if
+
+if (present(data)) then
+  call data%set(session)
+end if
+
+
+end subroutine dbasession_set
+
+
+subroutine dbasession_delete(session)
+class (dbasession), intent(inout) :: session
+integer :: ier
+
+print *,"dbasession delete"
+
+if (c_e(session%sehandle)) then 
+  ier = idba_fatto(session%sehandle)
+end if
+
+end subroutine dbasession_delete
 
 
 FUNCTION dballe_error_handler(category)
@@ -462,7 +653,7 @@ else
 end if
 
 call idba_error_message(message)
-call l4f_category_log(category,l4f_level,message)
+call l4f_category_log(category,l4f_level,trim(message))
 
 call idba_error_context(buf)
 
