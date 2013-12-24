@@ -98,7 +98,7 @@ INTEGER :: i, l
 TYPE(vol7d_serialize_iterline) :: linei
 TYPE(vol7d_serialize_itercol) :: coli
 
-WRITE(iun,'(A)')'{ "type": "FeatureCollection", "features": ['
+WRITE(iun,'(A)')'{"type":"FeatureCollection", "features":['
 
 l = 0
 linei = this%vol7d_serialize_iterline_new()
@@ -126,10 +126,10 @@ DO WHILE(linei%next())
     CALL coli%export(C_LOC(iun))
   END DO
 ! close property and feature
-  WRITE(iun,'(A)')'} }'
+  WRITE(iun,'(A)')'}}'
 END DO
 ! close feature list and featurecollection
-WRITE(iun,'(A)')'] }'
+WRITE(iun,'(A)')']}'
 
 END SUBROUTINE vol7d_serialize_export
 
@@ -144,9 +144,8 @@ REAL(kind=fp_geo) :: l1, l2
 CALL C_F_POINTER(genericptr, iun)
 
 CALL getval(ana%coord, lon=l1, lat=l2)
-WRITE(iun,'(A)')'"geometry": {"type": "Point",	"coordinates": [ '
-WRITE(iun,'(A)') t2c(l1, 'null')//', '//t2c(l2, 'null')
-WRITE(iun,'(A)')' ] }, "properties": {'
+WRITE(iun,'(A)')'"type":"Feature", "geometry":{"type":"Point", "coordinates":['//t2c(l1, 'null')//', '//t2c(l2, 'null')//']},'
+WRITE(iun,'(A)')'"properties":{'
 
 END SUBROUTINE vol7d_ana_callback_gj
 
@@ -162,9 +161,9 @@ CALL C_F_POINTER(genericptr, iun)
 
 IF (time /= datetime_miss) THEN
   CALL getval(time, isodate=isodate)
-  WRITE(iun,'(A)')'"reftime": "'//TRIM(isodate)//'",'
+  WRITE(iun,'(A)')'"datetime":"'//TRIM(isodate)//'",'
 ELSE
-  WRITE(iun,'(A)')'"reftime": null,'
+  WRITE(iun,'(A)')'"datetime":null,'
 ENDIF
 
 END SUBROUTINE vol7d_time_callback_gj
@@ -179,10 +178,10 @@ INTEGER,POINTER :: iun
 CALL C_F_POINTER(genericptr, iun)
 
 WRITE(iun,'(A,/,A,/,A,/,A)') &
- '"level.t1": '//t2c(level%level1,'null')//',', &
- '"level.l1": '//t2c(level%l1,'null')//',', &
- '"level.t2": '//t2c(level%level2,'null')//',', &
- '"level.l2": '//t2c(level%l2,'null')//','
+ '"level_t1":'//t2c(level%level1,'null')//',', &
+ '"level_v1":'//t2c(level%l1,'null')//',', &
+ '"level_t2":'//t2c(level%level2,'null')//',', &
+ '"level_v2":'//t2c(level%l2,'null')//','
 
 END SUBROUTINE vol7d_level_callback_gj
 
@@ -196,9 +195,9 @@ INTEGER,POINTER :: iun
 CALL C_F_POINTER(genericptr, iun)
 
 WRITE(iun,'(A,/,A,/,A)') &
- '"trange.type": '//t2c(timerange%timerange,'null')//',', &
- '"trange.p1": '//t2c(timerange%p1,'null')//',', &
- '"trange.p2": '//t2c(timerange%p2,'null')//','
+ '"trange_pind":'//t2c(timerange%timerange,'null')//',', &
+ '"trange_p1":'//t2c(timerange%p1,'null')//',', &
+ '"trange_p2":'//t2c(timerange%p2,'null')//','
 
 END SUBROUTINE vol7d_timerange_callback_gj
 
@@ -212,9 +211,9 @@ INTEGER,POINTER :: iun
 CALL C_F_POINTER(genericptr, iun)
 
 IF (c_e(network)) THEN
-  WRITE(iun,'(A)')'"dataset": "'//TRIM(network%name)//'",'
+  WRITE(iun,'(A)')'"network":"'//TRIM(network%name)//'",'
 ELSE
-  WRITE(iun,'(A)')'"dataset": null,'
+  WRITE(iun,'(A)')'"network":null,'
 ENDIF
 
 END SUBROUTINE vol7d_network_callback_gj
@@ -229,9 +228,9 @@ INTEGER,POINTER :: iun
 CALL C_F_POINTER(genericptr, iun)
 
 IF (c_e(var)) THEN
-  WRITE(iun,'(A)')'"bcode": "'//TRIM(var%btable)//'",'
+  WRITE(iun,'(A)')'"bcode":"'//TRIM(var%btable)//'",'
 ELSE
-  WRITE(iun,'(A)')'"bcode": null,'
+  WRITE(iun,'(A)')'"bcode":null,'
 ENDIF
 
 END SUBROUTINE vol7d_var_callback_gj
@@ -247,9 +246,9 @@ INTEGER,POINTER :: iun
 CALL C_F_POINTER(genericptr, iun)
 
 IF (c_e(var) .AND. c_e(attr)) THEN
-  WRITE(iun,'(A)')'"bcode": "'//TRIM(var%btable)//'.'//TRIM(attr%btable)//'",'
+  WRITE(iun,'(A)')'"bcode":"'//TRIM(var%btable)//'.'//TRIM(attr%btable)//'",'
 ELSE
-  WRITE(iun,'(A)')'"bcode": null,'
+  WRITE(iun,'(A)')'"bcode":null,'
 ENDIF
 
 END SUBROUTINE vol7d_attr_callback_gj
@@ -264,7 +263,7 @@ INTEGER,POINTER :: iun
 
 CALL C_F_POINTER(genericptr, iun)
 
-WRITE(iun,'(A)')'"value": '//t2c(valu, 'null') !//','
+WRITE(iun,'(A)')'"value":'//t2c(valu, 'null') !//','
 
 END SUBROUTINE vol7d_valuer_callback_gj
 
@@ -278,7 +277,7 @@ INTEGER,POINTER :: iun
 
 CALL C_F_POINTER(genericptr, iun)
 
-WRITE(iun,'(A)')'"value": '//t2c(valu, 'null') !//','
+WRITE(iun,'(A)')'"value":'//t2c(valu, 'null') !//','
 
 END SUBROUTINE vol7d_valued_callback_gj
 
@@ -295,12 +294,12 @@ CALL C_F_POINTER(genericptr, iun)
 IF (c_e(valu)) THEN
   IF (c_e(var%scalefactor) .AND. &
    .NOT.(var%scalefactor == 0 .AND. var%unit == 'NUMERIC')) THEN
-    WRITE(iun,'(A)')'"value": '//t2c(realdat(valu, var)) !//','
+    WRITE(iun,'(A)')'"value":'//t2c(realdat(valu, var)) !//','
   ELSE
-    WRITE(iun,'(A)')'"value": '//t2c(valu) !//','
+    WRITE(iun,'(A)')'"value":'//t2c(valu) !//','
   ENDIF
 ELSE
-  WRITE(iun,'(A)')'"value": null'
+  WRITE(iun,'(A)')'"value":null'
 ENDIF
 
 END SUBROUTINE vol7d_valuei_callback_gj
@@ -328,12 +327,12 @@ CALL C_F_POINTER(genericptr, iun)
 IF (c_e(valu)) THEN
   IF (c_e(var%scalefactor) .AND. var%unit /= 'CCITTIA5' .AND. &
    .NOT.(var%scalefactor == 0 .AND. var%unit == 'NUMERIC')) THEN
-    WRITE(iun,'(A)')'"value": '//t2c(realdat(valu, var)) !//','
+    WRITE(iun,'(A)')'"value":'//t2c(realdat(valu, var)) !//','
   ELSE
-    WRITE(iun,'(A)')'"value": "'//TRIM(valu)//'"'
+    WRITE(iun,'(A)')'"value":"'//TRIM(valu)//'"'
   ENDIF
 ELSE
-  WRITE(iun,'(A)')'"value": null'
+  WRITE(iun,'(A)')'"value":null'
 ENDIF
 
 END SUBROUTINE vol7d_valuec_callback_gj
