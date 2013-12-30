@@ -814,6 +814,7 @@ do i=1,N
   ier=idba_dammelo (this%handle,btable)
   
   ier=idba_enqdate (this%handle,year,month,day,hour,minute,sec)
+  IF (.NOT.c_e(sec)) sec = 0
   ier=idba_enqlevel(this%handle, rlevel1, rl1, rlevel2,rl2)
   ier=idba_enqtimerange(this%handle, rtimerange, p1, p2)
   ier=idba_enq(this%handle, "rep_memo",rep_memo)
@@ -959,6 +960,7 @@ do i=1,N_ana
 
   
   ier=idba_enqdate (this%handle_staz,year,month,day,hour,minute,sec)
+  IF (.NOT.c_e(sec)) sec = 0
   ier=idba_enqlevel(this%handle_staz, rlevel1, rl1, rlevel2,rl2)
   ier=idba_enqtimerange(this%handle_staz, rtimerange, p1, p2)
   ier=idba_enq(this%handle_staz, "rep_memo",rep_memo)
@@ -3030,6 +3032,7 @@ do while ( N > 0 )
     ier=idba_dammelo (this%handle,btable)
   
     ier=idba_enqdate (this%handle,year,month,day,hour,minute,sec)
+    IF (.NOT.c_e(sec)) sec = 0
     ier=idba_enqlevel(this%handle, rlevel1, rl1, rlevel2,rl2)
 !!$    !TODO
 !!$    !dballe BUG: missing viene scritto come 0
