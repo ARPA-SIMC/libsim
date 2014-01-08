@@ -131,7 +131,7 @@ SUBROUTINE vol7d_ana_init(this, lon, lat, ident, ilon, ilat)
 TYPE(vol7d_ana),INTENT(INOUT) :: this !< oggetto da inizializzare
 REAL(kind=fp_geo),INTENT(in),OPTIONAL :: lon !< longitudine
 REAL(kind=fp_geo),INTENT(in),OPTIONAL :: lat !< latitudine
-CHARACTER(len=vol7d_ana_lenident),INTENT(in),OPTIONAL :: ident !< identificativo del volo
+CHARACTER(len=*),INTENT(in),OPTIONAL :: ident !< identificativo del volo
 INTEGER(kind=int_l),INTENT(in),OPTIONAL :: ilon !< integer longitude (nint(lon*1.d5)
 INTEGER(kind=int_l),INTENT(in),OPTIONAL :: ilat !< integer latitude (nint(lat*1.d5)
 
