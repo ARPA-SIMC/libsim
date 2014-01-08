@@ -37,10 +37,12 @@ use err_handling
 use missing_values
 use vol7d_level_class
 use vol7d_timerange_class
+use geo_coord_class
+use vol7d_ana_class
+use vol7d_network_class
+use datetime_class
 
 !USE char_utilities
-!USE geo_coord_class
-
 
 IMPLICIT NONE
 
@@ -74,12 +76,11 @@ type,public ::  dbasession
     final :: dbasession_delete
 # else
     procedure :: delete => dbasession_delete
+# endif
     procedure :: unsetall => dbasession_unsetall
     procedure :: set => dbasession_set
     procedure :: prendilo => dbasession_prendilo
-# endif
 !  procedure :: dammelo => dbasession_dammelo
-!  procedure :: prendilo => dbasession_prendilo
 end type dbasession
 
 interface dbasession
@@ -91,12 +92,12 @@ type,public,extends(vol7d_level) :: dbalevel
   contains
 
 # ifdef F2003_FULL_FEATURES
-    final :: dbalevel_delete
+!    final :: dbalevel_delete
 # else
-    procedure :: delete => dbalevel_delete
+!    procedure :: delete => dbalevel_delete
 # endif
   procedure :: display => dbalevel_display
-  procedure :: set => dbalevel_set
+  procedure :: dbaset => dbalevel_set
 !!$procedure :: spiega => dbalevel_spiega
 end type dbalevel
 
@@ -107,12 +108,12 @@ end interface
 type,public,extends(vol7d_timerange) :: dbatimerange
   contains
 # ifdef F2003_FULL_FEATURES
-    final :: dbatimerange_delete
+!    final :: dbatimerange_delete
 # else
-    procedure :: delete => dbatimerange_delete
+!    procedure :: delete => dbatimerange_delete
 # endif
   procedure :: display => dbatimerange_display
-  procedure :: set => dbatimerange_set
+  procedure :: dbaset => dbatimerange_set
 !!$procedure :: spiega => dbatimerange_spiega
 end type dbatimerange
 
@@ -120,10 +121,87 @@ interface dbatimerange
   procedure   dbatimerange_init     ! add constructor to shape generic interface
 end interface
 
+
+
+type,public,extends(geo_coord) :: dbacoord
+
+!!$  REAL(kind=fp_geo) :: lon !< longitudine
+!!$  REAL(kind=fp_geo) :: lat !< latitudine
+!!$  INTEGER(kind=int_l) :: ilon !< integer longitude (nint(lon*1.d5)
+!!$  INTEGER(kind=int_l) :: ilat !< integer latitude (nint(lat*1.d5)
+
+  contains
+# ifdef F2003_FULL_FEATURES
+!    final :: dbacoord_delete
+# else
+!    procedure :: delete => dbacoord_delete
+# endif
+!  procedure :: display => dbacoord_display
+
+end type dbacoord
+
+interface dbacoord
+  procedure   dbacoord_init     ! add constructor to shape generic interface
+end interface
+
+
+type,public,extends(vol7d_ana) :: dbaana
+
+  contains
+# ifdef F2003_FULL_FEATURES
+!    final :: dbaana_delete
+# else
+!    procedure :: delete => dbaana_delete
+# endif
+  procedure :: display => dbaana_display
+  procedure :: dbaset => dbaana_set
+
+end type dbaana
+
+interface dbaana
+  procedure   dbaana_init     ! add constructor to shape generic interface
+end interface
+
+type,public,extends(vol7d_network) :: dbanetwork
+
+  contains
+# ifdef F2003_FULL_FEATURES
+!    final :: dbanetwork_delete
+# else
+!    procedure :: delete => dbanetwork_delete
+# endif
+  procedure :: display => dbanetwork_display
+  procedure :: dbaset => dbanetwork_set
+
+end type dbanetwork
+
+interface dbanetwork
+  procedure   dbanetwork_init     ! add constructor to shape generic interface
+end interface
+
+
+type,public,extends(datetime) :: dbadatetime
+
+  contains
+# ifdef F2003_FULL_FEATURES
+!    final :: dbanetwork_delete
+# else
+!    procedure :: delete => dbanetwork_delete
+# endif
+  procedure :: display => dbadatetime_display
+  procedure :: dbaset => dbadatetime_set
+
+end type dbadatetime
+
+interface dbadatetime
+  procedure   dbadatetime_init     ! add constructor to shape generic interface
+end interface
+
+
 type,public,abstract :: dbadata
   character(len=9) :: btable
 contains
-  procedure(dbadata_set),deferred :: set
+  procedure(dbadata_set),deferred :: dbaset
   procedure(dbadata_display),deferred :: display
 end type dbadata
 
@@ -144,7 +222,7 @@ end interface
 type,public, extends(dbadata) :: dbadatai
   integer :: value
 contains
-  procedure :: set => dbadatai_set
+  procedure :: dbaset => dbadatai_set
   procedure :: display => dbadatai_display
 end type dbadatai
 
@@ -155,7 +233,7 @@ end interface dbadatai
 type,public, extends(dbadata) :: dbadatar
   real :: value
 contains
-  procedure :: set => dbadatar_set
+  procedure :: dbaset => dbadatar_set
   procedure :: display => dbadatar_display
 end type dbadatar
 
@@ -166,13 +244,16 @@ end interface dbadatar
 type,public :: dbametadata
   type(dbalevel) :: level
   type(dbatimerange) :: timerange
+  type(dbaana) :: ana
+  type(dbanetwork) :: network
+  type(dbadatetime) :: datetime
   contains
 # ifdef F2003_FULL_FEATURES
-    final :: dbametadata_delete
+!    final :: dbametadata_delete
 # else
-    procedure :: delete => dbametadata_delete
+!    procedure :: delete => dbametadata_delete
 # endif
-  procedure :: set => dbametadata_set
+  procedure :: dbaset => dbametadata_set
   procedure :: display => dbametadata_display
 end type dbametadata
 
@@ -184,22 +265,17 @@ type, public :: dbadatac
 class(dbadata),allocatable :: var
 contains
 procedure :: display => dbadatac_display
-procedure :: set => dbadatac_set
+procedure :: dbaset => dbadatac_set
 end type dbadatac
 
 type, public :: dbadatav
 type(dbadatac),allocatable :: datac(:)
 contains
 procedure :: display => dbadatav_display
-procedure :: set => dbadatav_set
+procedure :: dbaset => dbadatav_set
 end type dbadatav
 
 contains
-
-elemental subroutine dbalevel_delete(level)
-class (dbalevel), intent(inout) :: level
-!print *,"delete level"
-end subroutine dbalevel_delete
 
 subroutine dbalevel_display(level)
 class(dbalevel), intent(in) :: level
@@ -228,11 +304,64 @@ ier = idba_setlevel(session%sehandle,&
 end subroutine dbalevel_set
 
 
+subroutine dbaana_display(ana)
+class(dbaana), intent(in) :: ana
+call display (ana%vol7d_ana)
+end subroutine dbaana_display
+
+
+type(dbacoord) function dbacoord_init(lon, lat, ilon, ilat)
+REAL(kind=fp_geo),INTENT(in),OPTIONAL :: lon !< longitudine
+REAL(kind=fp_geo),INTENT(in),OPTIONAL :: lat !< latitudine
+INTEGER(kind=int_l),INTENT(in),OPTIONAL :: ilon !< integer longitude (nint(lon*1.d5)
+INTEGER(kind=int_l),INTENT(in),OPTIONAL :: ilat !< integer latitude (nint(lat*1.d5)
+
+CALL init(dbacoord_init%geo_coord, lon=lon, lat=lat , ilon=ilon, ilat=ilat)
+
+end function dbacoord_init
+
+type(dbaana) function dbaana_init(coord,ident,lon, lat, ilon, ilat)
+CHARACTER(len=*),INTENT(in),OPTIONAL :: ident !< identificativo del volo
+TYPE(dbacoord),INTENT(IN),optional :: coord
+REAL(kind=fp_geo),INTENT(in),OPTIONAL :: lon !< longitudine
+REAL(kind=fp_geo),INTENT(in),OPTIONAL :: lat !< latitudine
+INTEGER(kind=int_l),INTENT(in),OPTIONAL :: ilon !< integer longitude (nint(lon*1.d5)
+INTEGER(kind=int_l),INTENT(in),OPTIONAL :: ilat !< integer latitude (nint(lat*1.d5)
+
+if (present(coord))then
+  CALL init(dbaana_init%vol7d_ana, ilon=getilon(coord%geo_coord), ilat=getilat(coord%geo_coord), ident=ident)
+else 
+  CALL init(dbaana_init%vol7d_ana, lon=lon, lat=lat, ilon=ilon, ilat=ilat, ident=ident)
+end if
+
+end function dbaana_init
+
+subroutine dbaana_set(ana,session)
+class(dbaana), intent(in) :: ana
+type(dbasession), intent(in) :: session
+integer :: ier
+
+print*,"set lat and lon"
+
+!if (c_e(session%sehandle)) then
+ier = idba_set(session%sehandle,"lat",getilat(ana%vol7d_ana%coord))
+ier = idba_set(session%sehandle,"lon",getilon(ana%vol7d_ana%coord))
+if (c_e(ana%vol7d_ana%ident)) then
+  ier = idba_set(session%sehandle,"ident",ana%vol7d_ana%ident)
+  ier = idba_set(session%sehandle,"mobile",1)
+else
+  ier = idba_set(session%sehandle,"ident",cmiss)
+  ier = idba_set(session%sehandle,"mobile",0)  
+end if
+
+end subroutine dbaana_set
+
+
 subroutine dbadatac_set(data,session)
 class(dbadatac), intent(in) :: data
 type(dbasession), intent(in) :: session
 
-call data%var%set(session)
+call data%var%dbaset(session)
 
 end subroutine dbadatac_set
 
@@ -249,7 +378,7 @@ type(dbasession), intent(in) :: session
 integer :: i
 
 do i=1, size(data%datac)
-  call data%datac(i)%set(session)
+  call data%datac(i)%dbaset(session)
 enddo
 
 end subroutine dbadatav_set
@@ -337,10 +466,6 @@ end subroutine dbadatar_display
 !!$
 !!$end function dbalevel_spiega
 
-elemental subroutine dbatimerange_delete(timerange)
-class (dbatimerange), intent(inout) :: timerange
-!print *,"delete timerange"
-end subroutine dbatimerange_delete
 
 subroutine dbatimerange_display(timerange)
 class(dbatimerange), intent(in) :: timerange
@@ -366,10 +491,61 @@ call init (dbatimerange_init%vol7d_timerange,timerange, p1, p2)
 end function dbatimerange_init
 
 
-type(dbametadata) function dbametadata_init(level,timerange)
+subroutine dbanetwork_display(network)
+class(dbanetwork), intent(in) :: network
+call display (network%vol7d_network)
+end subroutine dbanetwork_display
+
+subroutine dbanetwork_set(network,session)
+class(dbanetwork), intent(in) :: network
+type(dbasession), intent(in) :: session
+integer :: ier
+
+ier = idba_set(session%sehandle,"rep_memo", network%name)
+
+end subroutine dbanetwork_set
+
+type(dbanetwork) function dbanetwork_init(name)
+CHARACTER(len=*),INTENT(in),OPTIONAL :: name !< Mnemonic alias for type of report
+
+call init (dbanetwork_init%vol7d_network,name)
+end function dbanetwork_init
+
+
+subroutine dbadatetime_display(datetime)
+class(dbadatetime), intent(in) :: datetime
+call display (datetime%datetime)
+end subroutine dbadatetime_display
+
+subroutine dbadatetime_set(datetime,session)
+class(dbadatetime), intent(in) :: datetime
+type(dbasession), intent(in) :: session
+integer :: ier,year,month,day,hour,minute,sec,msec
+
+CALL getval(datetime%datetime, year=year, month=month, day=day, hour=hour, minute=minute,msec=msec)
+sec=nint(float(msec)/1000.)
+ier = idba_setdate(session%sehandle,year,month,day,hour,minute,sec)
+
+end subroutine dbadatetime_set
+
+type(dbadatetime) function dbadatetime_init(dt)
+type(datetime),INTENT(in),OPTIONAL :: dt !< date and time
+
+if (present(dt)) then
+  dbadatetime_init%datetime=dt
+else
+  dbadatetime_init%datetime=datetime_new()
+end if
+end function dbadatetime_init
+
+
+type(dbametadata) function dbametadata_init(level,timerange,ana,network,datetime)
 
 type(dbalevel), intent(in), optional :: level
 type(dbatimerange), intent(in), optional :: timerange
+type(dbaana), intent(in), optional :: ana
+type(dbanetwork), intent(in), optional :: network
+type(dbadatetime), intent(in), optional :: datetime
 
 if (present(level)) then
   dbametadata_init%level=level
@@ -383,12 +559,33 @@ else
   dbametadata_init%timerange=dbatimerange()
 end if
 
+if (present(ana)) then
+  dbametadata_init%ana=ana
+else
+  dbametadata_init%ana=dbaana()
+end if
+
+if (present(network)) then
+  dbametadata_init%network=network
+else
+  dbametadata_init%network=dbanetwork()
+end if
+
+if (present(datetime)) then
+  dbametadata_init%datetime=datetime
+else
+  dbametadata_init%datetime=dbadatetime()
+end if
+
 end function dbametadata_init
 
 subroutine dbametadata_display(metadata)
 class(dbametadata), intent(in) :: metadata
 call metadata%level%display()
 call metadata%timerange%display()
+call metadata%ana%display()
+call metadata%network%display()
+call metadata%datetime%display()
 
 end subroutine dbametadata_display
 
@@ -396,15 +593,13 @@ subroutine dbametadata_set(metadata,session)
 class(dbametadata), intent(in) :: metadata
 type(dbasession), intent(in) :: session
 
-call metadata%level%set(session)
-call metadata%timerange%set(session)
+call metadata%level%dbaset(session)
+call metadata%timerange%dbaset(session)
+call metadata%ana%dbaset(session)
+call metadata%network%dbaset(session)
+call metadata%datetime%dbaset(session)
 
 end subroutine dbametadata_set
-
-elemental subroutine dbametadata_delete(metadata)
-class (dbametadata), intent(inout) :: metadata
-!print *,"delete level"
-end subroutine dbametadata_delete
 
 type(dbaconnection) function dbaconnection_init(dsn, user, password,categoryappend,idbhandle)
 character (len=*), intent(in), optional :: dsn
@@ -513,7 +708,7 @@ endif
 if (present(filename)) then
 
   if (present(anaflag).or.present(dataflag).or.present( attrflag)) then
-    call l4f_category_log(dbasession_init%category,L4F_INFO,"option anaflag, dataflag, attrflag defined with filename")
+    call l4f_category_log(dbasession_init%category,L4F_ERROR,"option anaflag, dataflag, attrflag defined with filename")
     CALL raise_error()
   end if
 
@@ -542,7 +737,7 @@ if (present(filename)) then
 else
 
   if (present(mode).or.present(type)) then
-    call l4f_category_log(dbasession_init%category,L4F_INFO,"option mode, type defined without filename")
+    call l4f_category_log(dbasession_init%category,L4F_ERROR,"option mode, type defined without filename")
     CALL raise_error()
   end if
 
@@ -596,28 +791,25 @@ class(dbadatav),optional ::datav
 class(dbadata),optional ::data
 type (dbalevel),optional ::level
 type (dbatimerange),optional ::timerange
-integer :: ier,i
-
 
 if (present(metadata)) then
-  call metadata%level%set(session)
-  call metadata%timerange%set(session)
+  call metadata%dbaset(session)
 endif
 
 if (present(level)) then
-  call level%set(session)
+  call level%dbaset(session)
 endif
 
 if (present(timerange)) then
-  call timerange%set(session)
+  call timerange%dbaset(session)
 endif
 
 if (present(datav)) then
-  call datav%set(session)
+  call datav%dbaset(session)
 end if
 
 if (present(data)) then
-  call data%set(session)
+  call data%dbaset(session)
 end if
 
 
