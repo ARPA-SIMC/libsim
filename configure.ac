@@ -333,7 +333,7 @@ for try in /usr/lib64/ncarg /usr/lib/ncarg; do
 done
   AC_CHECK_LIB([ncarg], [ngpswk],
     NCARG_LDFLAGS=$ncarg_ldflags
-    NCARG_LIBS="-lncarg -lncarg_gks -lncarg_c -lX11 -lpng"
+    NCARG_LIBS="-lncarg -lncarg_gks -lncarg_c -lX11 -lpng -lcairo"
     AC_SUBST(NCARG_LDFLAGS)
     AC_SUBST(NCARG_LIBS)
     AC_DEFINE(HAVE_LIBNCARG, 1, [Enable ncar graphics code])
