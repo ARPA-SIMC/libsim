@@ -71,6 +71,7 @@ type,public ::  dbasession
   integer :: sehandle=imiss
   logical :: file=.false.
   integer :: category !< log4fortran
+  integer :: count=imiss !< number of results left to query
   contains
 # ifdef F2003_FULL_FEATURES
     final :: dbasession_delete
@@ -80,17 +81,29 @@ type,public ::  dbasession
     procedure :: unsetall => dbasession_unsetall
     procedure :: set => dbasession_set
     procedure :: setcontextana => dbasession_setcontextana
+    procedure :: dimenticami => dbasession_dimenticami
     procedure :: ingest => dbasession_ingest
     procedure :: prendilo => dbasession_prendilo
     procedure :: var_related => dbasession_var_related
     procedure :: critica => dbasession_critica
+    procedure :: scusa => dbasession_scusa
+    procedure :: extrude_ana => dbasession_extrude_ana
+    procedure :: extrude_anav => dbasession_extrude_anav
+    procedure :: extrude_metaanddata => dbasession_extrude_metaanddata
+    procedure :: extrude_metaanddatav => dbasession_extrude_metaanddatav
+!    procedure :: extrude_metaanddatac => dbasession_extrude_metaanddatac
+    procedure :: extrude_metaanddatar => dbasession_extrude_metaanddatar
+    procedure :: extrude_metaanddatarv => dbasession_extrude_metaanddatarv
+    procedure :: dissolve_metadata => dbasession_dissolve_metadata
+    procedure :: dissolveattr => dbasession_dissolveattr_metadata
+    generic   :: dissolve => dissolve_metadata ,dimenticami
+    generic   :: extrude => extrude_anav,extrude_metaanddatav,extrude_metaanddatarv!,extrude_metaanddatacv
 !  procedure :: dammelo => dbasession_dammelo
 end type dbasession
 
 interface dbasession
   procedure  dbasession_init      ! add constructor to shape generic interface
 end interface
-
 
 type,public,extends(vol7d_level) :: dbalevel
   contains
@@ -102,6 +115,7 @@ type,public,extends(vol7d_level) :: dbalevel
 # endif
   procedure :: display => dbalevel_display
   procedure :: dbaset => dbalevel_set
+  procedure :: dbaenq => dbalevel_enq
   procedure,nopass :: dbacontextana => dbalevel_contextana
 !!$procedure :: spiega => dbalevel_spiega
 end type dbalevel
@@ -119,6 +133,7 @@ type,public,extends(vol7d_timerange) :: dbatimerange
 # endif
   procedure :: display => dbatimerange_display
   procedure :: dbaset => dbatimerange_set
+  procedure :: dbaenq => dbatimerange_enq
   procedure,nopass :: dbacontextana => dbatimerange_contextana
 !!$procedure :: spiega => dbatimerange_spiega
 end type dbatimerange
@@ -142,7 +157,7 @@ type,public,extends(geo_coord) :: dbacoord
 # else
 !    procedure :: delete => dbacoord_delete
 # endif
-!  procedure :: display => dbacoord_display
+  procedure :: display => dbacoord_display
 
 end type dbacoord
 
@@ -161,7 +176,7 @@ type,public,extends(vol7d_ana) :: dbaana
 # endif
   procedure :: display => dbaana_display
   procedure :: dbaset => dbaana_set
-
+  procedure :: dbaenq => dbaana_enq
 end type dbaana
 
 interface dbaana
@@ -169,6 +184,12 @@ interface dbaana
 end interface
 
 type,public,extends(vol7d_network) :: dbanetwork
+
+  !Every type of report has an associated priority that controls which
+  !data are first returned when there is more than one in the same
+  !physical space. It can be changed by editing
+  !/etc/dballe/repinfo.csv
+  integer :: priority
 
   contains
 # ifdef F2003_FULL_FEATURES
@@ -178,6 +199,7 @@ type,public,extends(vol7d_network) :: dbanetwork
 # endif
   procedure :: display => dbanetwork_display
   procedure :: dbaset => dbanetwork_set
+  procedure :: dbaenq => dbanetwork_enq
 
 end type dbanetwork
 
@@ -196,6 +218,7 @@ type,public,extends(datetime) :: dbadatetime
 # endif
   procedure :: display => dbadatetime_display
   procedure :: dbaset => dbadatetime_set
+  procedure :: dbaenq => dbadatetime_enq
   procedure,nopass :: dbacontextana => dbadatetime_contextana
 end type dbadatetime
 
@@ -298,6 +321,7 @@ type,public :: dbametadata
 !    procedure :: delete => dbametadata_delete
 # endif
   procedure :: dbaset => dbametadata_set
+  procedure :: dbaenq => dbametadata_enq
   procedure :: dbacontextana => dbametadata_contextana
   procedure :: display => dbametadata_display
 end type dbametadata
@@ -307,40 +331,91 @@ interface dbametadata
 end interface
 
 type, public :: dbadat
-class(dbadata),allocatable :: data
-contains
-procedure :: display => dbadat_display
-procedure :: dbaset => dbadat_set
+  class(dbadata),allocatable :: dat
+  contains
+  procedure :: display => dbadat_display
+  procedure :: dbaset => dbadat_set
+!  procedure :: dbaingest => dbadat_ingest
 end type dbadat
 
+!!$interface dbadat
+!!$  procedure   dbadat_init     ! add constructor to shape generic interface
+!!$end interface
+
 type, public :: dbadatav
-type(dbadat),allocatable :: dat(:)
-contains
-procedure :: display => dbadatav_display
-procedure :: dbaset => dbadatav_set
+  type(dbadat),allocatable :: dat(:)
+  contains
+  procedure :: display => dbadatav_display
+  procedure :: dbaset => dbadatav_set
+!  procedure :: dbaingest => dbadatav_ingest
 end type dbadatav
 
 type, public ,extends(dbadat):: dbadataattr
-type(dbadatav) :: attrv
-contains
-procedure :: display => dbadataattr_display
-procedure :: dbaingest => dbadataattr_ingest
+  type(dbadatav) :: attrv
+  contains
+  procedure :: display => dbadataattr_display
+  procedure :: dbaingest => dbadataattr_ingest
 end type dbadataattr
 
 type, public :: dbadataattrv
-class(dbadataattr),allocatable :: dataattr(:)
-contains
-procedure :: display => dbadataattrv_display
-procedure :: dbaingest => dbadataattrv_ingest
+  class(dbadataattr),allocatable :: dataattr(:)
+  contains
+  procedure :: display => dbadataattrv_display
+  procedure :: dbaingest => dbadataattrv_ingest
 end type dbadataattrv
 
 type, public :: dbametaanddata
-type(dbametadata) :: metadata
-type(dbadataattrv) ::dataattrv
-contains
-procedure :: display => dbametaanddata_display
-procedure :: dbaingest => dbametaanddata_ingest
+  type(dbametadata) :: metadata
+  type(dbadataattrv) ::dataattrv
+  contains
+  procedure :: display => dbametaanddata_display
+  procedure :: dbaingest => dbametaanddata_ingest
 end type dbametaanddata
+
+type, public :: dbametaanddatav
+  type(dbametadata) :: metadata
+  type(dbadatav) ::datav
+  contains
+  procedure :: display => dbametaanddatav_display
+  procedure :: dbaingest => dbametaanddatav_ingest
+end type dbametaanddatav
+
+type, public,extends(dbadatar) :: dbametaanddatar
+  type(dbametadata) :: metadata
+  contains
+  procedure :: display => dbametaanddatar_display
+  procedure :: dbaingest => dbametaanddatar_ingest
+end type dbametaanddatar
+
+type, public,extends(dbadatac) :: dbametaanddatac
+  type(dbametadata) :: metadata
+  contains
+  procedure :: display => dbametaanddatac_display
+  procedure :: dbaingest => dbametaanddatac_ingest
+end type dbametaanddatac
+
+type, public ::  dbafilter
+  type(dbaana)       :: ana
+  character(len=6)   :: var
+  type(dbadatetime)  :: datetime
+  type(dbalevel)     :: level
+  type(dbatimerange) :: timerange
+  type(dbanetwork)   :: network
+
+  type(dbacoord)     :: coordmin,coordmax
+  type(dbadatetime)  :: datetimemin,datetimemax
+  integer            :: limit
+  character(len=255) :: ana_filter, data_filter, attr_filter, varlist, starvarlist
+  integer            :: priomin,priomax
+  logical            :: contextana
+  contains
+  procedure          :: display => dbafilter_display
+  procedure          :: dbaset => dbafilter_set
+end type dbafilter
+
+interface dbafilter
+  procedure   dbafilter_init     ! add constructor to shape generic interface
+end interface
 
 contains
 
@@ -370,6 +445,16 @@ ier = idba_setlevel(session%sehandle,&
 
 end subroutine dbalevel_set
 
+subroutine dbalevel_enq(level,session)
+class(dbalevel), intent(out) :: level
+type(dbasession), intent(in) :: session
+integer :: ier
+
+ier = idba_enqlevel(session%sehandle,&
+ level%level1, level%l1, level%level2, level%l2)
+
+end subroutine dbalevel_enq
+
 type(dbalevel) function dbalevel_contextana()
 
 dbalevel_contextana=dbalevel()
@@ -393,6 +478,11 @@ CALL init(dbacoord_init%geo_coord, lon=lon, lat=lat , ilon=ilon, ilat=ilat)
 
 end function dbacoord_init
 
+subroutine dbacoord_display(coord)
+class(dbacoord), intent(in) :: coord
+call display (coord%geo_coord)
+end subroutine dbacoord_display
+
 type(dbaana) function dbaana_init(coord,ident,lon, lat, ilon, ilat)
 CHARACTER(len=*),INTENT(in),OPTIONAL :: ident !< identificativo del volo
 TYPE(dbacoord),INTENT(IN),optional :: coord
@@ -414,8 +504,6 @@ class(dbaana), intent(in) :: ana
 type(dbasession), intent(in) :: session
 integer :: ier
 
-print*,"set lat and lon"
-
 !if (c_e(session%sehandle)) then
 ier = idba_set(session%sehandle,"lat",getilat(ana%vol7d_ana%coord))
 ier = idba_set(session%sehandle,"lon",getilon(ana%vol7d_ana%coord))
@@ -429,19 +517,33 @@ end if
 
 end subroutine dbaana_set
 
+subroutine dbaana_enq(ana,session)
+class(dbaana), intent(out) :: ana
+type(dbasession), intent(in) :: session
+integer :: ier,ilat,ilon
+
+!if (c_e(session%sehandle)) then
+ier = idba_enq(session%sehandle,"lat",ilat)
+ier = idba_enq(session%sehandle,"lon",ilon)
+
+call init(ana%vol7d_ana%coord,ilon=ilon,ilat=ilat)
+ier = idba_enq(session%sehandle,"ident",ana%vol7d_ana%ident)
+
+end subroutine dbaana_enq
+
 
 subroutine dbadat_set(data,session)
 class(dbadat), intent(in) :: data
 type(dbasession), intent(in) :: session
 
-call data%data%dbaset(session)
+call data%dat%dbaset(session)
 
 end subroutine dbadat_set
 
 subroutine dbadat_display(data)
 class(dbadat), intent(in) :: data
 
-call data%data%display()
+call data%dat%display()
 
 end subroutine dbadat_display
 
@@ -466,6 +568,83 @@ end do
 
 end subroutine dbadatav_display
 
+!!$subroutine dbadat_ingest(dat,session)
+!!$class(dbadat), intent(in) :: dat
+!!$type(dbasession), intent(in) :: session
+!!$
+!!$!write data in dsn
+!!$call dat%dbaset(session)
+!!$call session%prendilo()
+!!$
+!!$end subroutine dbadat_ingest
+!!$
+!!$subroutine dbadatav_ingest(datav,session)
+!!$class(dbadatav), intent(in) :: datav
+!!$type(dbasession), intent(in) :: session
+!!$integer :: i
+!!$!write data in dsn
+!!$do i =1,size(datav%dat)
+!!$  call datav%dat(i)%dbaset(session)
+!!$end do
+!!$call session%prendilo()
+!!$
+!!$end subroutine dbadatav_ingest
+
+
+subroutine dbasession_dissolve_metadata(session,metadata)
+class(dbasession), intent(in) :: session
+type(dbametadata), intent(in) :: metadata(:)
+
+integer :: i
+
+do i =1, size (metadata)
+
+  call metadata(i)%dbaset(session)
+  call session%dissolve()
+
+end do
+
+end subroutine dbasession_dissolve_metadata
+
+
+
+subroutine dbasession_dissolveattr_metadata(session,metadata)
+class(dbasession), intent(in) :: session
+type(dbametadata), intent(in),optional :: metadata(:)
+
+character(len=9) :: btable
+integer :: i,ii,count,ier
+
+if (present (metadata)) then
+  do i =1, size (metadata)
+
+    call metadata(i)%dbaset(session)
+
+    ier = idba_voglioquesto(session%sehandle, count)
+
+    do ii =1,count
+      ier = idba_dammelo(session%sehandle, btable)
+      call session%var_related(btable)
+      call session%scusa()
+
+    end do
+
+  end do
+else
+
+    ier = idba_voglioquesto(session%sehandle, count)
+
+    do i =1,count
+      ier = idba_dammelo(session%sehandle, btable)
+      call session%var_related(btable)
+      call session%scusa()
+
+    end do
+
+end if
+end subroutine dbasession_dissolveattr_metadata
+
+
 
 subroutine dbadataattr_ingest(data,session)
 class(dbadataattr), intent(in) :: data
@@ -476,7 +655,7 @@ call data%dbadat%dbaset(session)
 call session%prendilo()
 !write attributes in dsn
 call data%attrv%dbaset(session)
-call session%var_related(data%dbadat%data%btable)
+call session%var_related(data%dbadat%dat%btable)
 call session%critica()
 
 end subroutine dbadataattr_ingest
@@ -484,8 +663,9 @@ end subroutine dbadataattr_ingest
 subroutine dbadataattr_display(data)
 class(dbadataattr), intent(in) :: data
 
+print*,"Data:"
 call data%dbadat%display()
-print*,"attributes"
+print*,"Attributes:"
 call data%attrv%display()
 
 end subroutine dbadataattr_display
@@ -669,7 +849,7 @@ end subroutine dbadatac_set
 
 subroutine dbadatac_display(data)
 class(dbadatac), intent(in) :: data
-print *,data%btable,data%value
+print *,"Btable: ",data%btable,"Value: ",trim(data%value)
 end subroutine dbadatac_display
 
 
@@ -700,6 +880,16 @@ ier = idba_settimerange(session%sehandle,&
 
 end subroutine dbatimerange_set
 
+subroutine dbatimerange_enq(timerange,session)
+class(dbatimerange), intent(out) :: timerange
+type(dbasession), intent(in) :: session
+integer :: ier
+
+ier = idba_enqtimerange(session%sehandle,&
+ timerange%timerange, timerange%p1, timerange%p2)
+
+end subroutine dbatimerange_enq
+
 type(dbatimerange) function dbatimerange_init(timerange, p1, p2)
 INTEGER,INTENT(IN),OPTIONAL :: timerange !< tipo di intervallo temporale
 INTEGER,INTENT(IN),OPTIONAL :: p1 !< valore per il primo istante temporale
@@ -718,6 +908,7 @@ end function dbatimerange_contextana
 subroutine dbanetwork_display(network)
 class(dbanetwork), intent(in) :: network
 call display (network%vol7d_network)
+print *,"Priority=",network%priority
 end subroutine dbanetwork_display
 
 subroutine dbanetwork_set(network,session)
@@ -729,10 +920,21 @@ ier = idba_set(session%sehandle,"rep_memo", network%name)
 
 end subroutine dbanetwork_set
 
+subroutine dbanetwork_enq(network,session)
+class(dbanetwork), intent(out) :: network
+type(dbasession), intent(in) :: session
+integer :: ier
+
+ier = idba_enq(session%sehandle,"rep_memo", network%name)
+ier = idba_enq(session%sehandle,"priority", network%priority)
+
+end subroutine dbanetwork_enq
+
 type(dbanetwork) function dbanetwork_init(name)
 CHARACTER(len=*),INTENT(in),OPTIONAL :: name !< Mnemonic alias for type of report
 
 call init (dbanetwork_init%vol7d_network,name)
+dbanetwork_init%priority=imiss
 end function dbanetwork_init
 
 
@@ -751,6 +953,17 @@ sec=nint(float(msec)/1000.)
 ier = idba_setdate(session%sehandle,year,month,day,hour,minute,sec)
 
 end subroutine dbadatetime_set
+
+subroutine dbadatetime_enq(datetime,session)
+class(dbadatetime), intent(out) :: datetime
+type(dbasession), intent(in) :: session
+integer :: ier,year,month,day,hour,minute,sec,msec
+
+ier = idba_enqdate(session%sehandle,year,month,day,hour,minute,sec)
+msec=sec*1000
+CALL init(datetime%datetime, year=year, month=month, day=day, hour=hour, minute=minute,msec=msec)
+
+end subroutine dbadatetime_enq
 
 type(dbadatetime) function dbadatetime_init(dt)
 type(datetime),INTENT(in),OPTIONAL :: dt !< date and time
@@ -841,6 +1054,233 @@ end if
 
 end subroutine dbametadata_set
 
+subroutine dbametadata_enq(metadata,session)
+class(dbametadata), intent(out) :: metadata
+type(dbasession), intent(in) :: session
+
+call metadata%ana%dbaenq(session)
+call metadata%network%dbaenq(session)
+call metadata%datetime%dbaenq(session)
+call metadata%level%dbaenq(session)
+call metadata%timerange%dbaenq(session)
+
+end subroutine dbametadata_enq
+
+
+type(dbafilter) function dbafilter_init(ana,var,datetime,level,timerange,network,&
+ datetimemin,datetimemax,coordmin,coordmax,limit,&
+ ana_filter, data_filter, attr_filter, varlist, starvarlist, priomin, priomax, contextana)
+
+type(dbaana),intent(in),optional       :: ana
+character(len=*),intent(in),optional   :: var
+type(dbadatetime),intent(in),optional  :: datetime
+type(dbalevel),intent(in),optional     :: level
+type(dbatimerange),intent(in),optional :: timerange
+type(dbanetwork),intent(in),optional   :: network
+
+type(dbacoord),intent(in),optional :: coordmin,coordmax
+type(dbadatetime),intent(in),optional :: datetimemin,datetimemax
+integer,intent(in),optional :: limit
+character(len=*),intent(in),optional :: ana_filter, data_filter, attr_filter, varlist, starvarlist
+integer,intent(in),optional :: priomin,priomax
+logical,intent(in),optional :: contextana
+
+if (present(ana)) then
+  dbafilter_init%ana=ana
+else
+  dbafilter_init%ana=dbaana()
+end if
+
+if (present(var)) then
+  dbafilter_init%var=var
+else
+  dbafilter_init%var=cmiss
+end if
+
+if (present(datetime)) then
+  dbafilter_init%datetime=datetime
+else
+  dbafilter_init%datetime=dbadatetime()
+end if
+
+if (present(level)) then
+  dbafilter_init%level=level
+else
+  dbafilter_init%level=dbalevel()
+end if
+
+if (present(timerange)) then
+  dbafilter_init%timerange=timerange
+else
+  dbafilter_init%timerange=dbatimerange()
+end if
+
+if (present(network)) then
+  dbafilter_init%network=network
+else
+  dbafilter_init%network=dbanetwork()
+end if
+
+if (present(datetimemin)) then
+  dbafilter_init%datetimemin=datetimemin
+else
+  dbafilter_init%datetimemin=dbadatetime()
+end if
+
+if (present(datetimemax)) then
+  dbafilter_init%datetimemax=datetimemax
+else
+  dbafilter_init%datetimemax=dbadatetime()
+end if
+
+if (present(coordmin)) then
+  dbafilter_init%coordmin=coordmin
+else
+  dbafilter_init%coordmin=dbacoord()
+end if
+
+if (present(coordmax)) then
+  dbafilter_init%coordmax=coordmax
+else
+  dbafilter_init%coordmax=dbacoord()
+end if
+
+if (present(limit)) then
+  dbafilter_init%limit=limit
+else
+  dbafilter_init%limit=imiss
+end if
+
+if (present(ana_filter)) then
+  dbafilter_init%ana_filter=ana_filter
+else
+  dbafilter_init%ana_filter=cmiss
+end if
+
+if (present(data_filter)) then
+  dbafilter_init%data_filter=data_filter
+else
+  dbafilter_init%data_filter=cmiss
+end if
+
+if (present(attr_filter)) then
+  dbafilter_init%attr_filter=attr_filter
+else
+  dbafilter_init%attr_filter=cmiss
+end if
+
+if (present(varlist)) then
+  dbafilter_init%varlist=varlist
+else
+  dbafilter_init%varlist=cmiss
+end if
+
+if (present(starvarlist)) then
+  dbafilter_init%starvarlist=starvarlist
+else
+  dbafilter_init%starvarlist=cmiss
+end if
+
+if (present(priomin)) then
+  dbafilter_init%priomin=priomax
+else
+  dbafilter_init%priomin=imiss
+end if
+
+if (present(priomax)) then
+  dbafilter_init%priomax=priomax
+else
+  dbafilter_init%priomax=imiss
+end if
+
+if (present(contextana)) then
+  dbafilter_init%contextana=contextana
+else
+  dbafilter_init%contextana=.false.
+end if
+
+end function dbafilter_init
+
+subroutine dbafilter_display(filter)
+class(dbafilter), intent(in) :: filter
+
+call filter%ana%display()
+call filter%datetime%display()
+call filter%level%display()
+call filter%timerange%display()
+call filter%network%display()
+call filter%datetimemin%display()
+call filter%datetimemax%display()
+call filter%coordmin%display()
+call filter%coordmax%display()
+print *,"var=",filter%var
+print *,"limit=",filter%limit
+print *,"ana_filter=",trim(filter%ana_filter)
+print *,"data_filter=",trim(filter%data_filter)
+print *,"attr_filter=",trim(filter%attr_filter)
+print *,"varlist=",trim(filter%varlist)
+print *,"*varlist=",trim(filter%starvarlist)
+print *,"priomin=",filter%priomin
+print *,"priomax=",filter%priomax
+print *,"contextana=",filter%contextana
+
+end subroutine dbafilter_display
+
+subroutine dbafilter_set(filter,session)
+class(dbafilter), intent(in) :: filter
+type(dbasession), intent(in) :: session
+
+integer :: ier,year,month,day,hour,minute,sec,msec
+
+call session%unsetall()
+
+call filter%ana%dbaset(session)
+call filter%datetime%dbaset(session)
+call filter%level%dbaset(session)
+call filter%timerange%dbaset(session)
+call filter%network%dbaset(session)
+ier = idba_set(session%sehandle,"var",filter%var)
+
+ier = idba_set(session%sehandle,"limit",filter%limit)
+ier = idba_set(session%sehandle,"priomin",filter%priomin)
+ier = idba_set(session%sehandle,"priomax",filter%priomax)
+
+CALL getval(filter%datetimemin%datetime, year=year, month=month, day=day, hour=hour, minute=minute,msec=msec)
+sec=nint(float(msec)/1000.)
+
+ier = idba_set(session%sehandle,"yearmin",year)
+ier = idba_set(session%sehandle,"monthmin",month)
+ier = idba_set(session%sehandle,"daymin",day)
+ier = idba_set(session%sehandle,"hourmin",hour)
+ier = idba_set(session%sehandle,"minumin",minute)
+ier = idba_set(session%sehandle,"secmin",sec)
+
+CALL getval(filter%datetimemax%datetime, year=year, month=month, day=day, hour=hour, minute=minute,msec=msec)
+sec=nint(float(msec)/1000.)
+
+ier = idba_set(session%sehandle,"yearmax",year)
+ier = idba_set(session%sehandle,"monthmax",month)
+ier = idba_set(session%sehandle,"daymax",day)
+ier = idba_set(session%sehandle,"hourmax",hour)
+ier = idba_set(session%sehandle,"minumax",minute)
+ier = idba_set(session%sehandle,"secmax",sec)
+
+ier = idba_set(session%sehandle,"latmin",getilat(filter%coordmin%geo_coord))
+ier = idba_set(session%sehandle,"lonmin",getilon(filter%coordmin%geo_coord))
+ier = idba_set(session%sehandle,"latmax",getilat(filter%coordmax%geo_coord))
+ier = idba_set(session%sehandle,"lonmax",getilon(filter%coordmax%geo_coord))
+
+ier = idba_set(session%sehandle,"ana_filter",filter%ana_filter)
+ier = idba_set(session%sehandle,"data_filter",filter%data_filter)
+ier = idba_set(session%sehandle,"attr_filter",filter%attr_filter)
+ier = idba_set(session%sehandle,"varlist",filter%varlist)
+ier = idba_set(session%sehandle,"*varlist",filter%starvarlist)
+
+if (filter%contextana) then
+ call session%setcontextana()
+end if
+
+end subroutine dbafilter_set
 
 
 type(dbametadata) function dbametadata_contextana(metadata)
@@ -882,6 +1322,200 @@ call session%ingest(dataattrv=metaanddata%dataattrv)
 end subroutine dbametaanddata_ingest
 
 
+subroutine dbametaanddatav_display(metaanddatav)
+class(dbametaanddatav), intent(in) :: metaanddatav
+
+call metaanddatav%metadata%display()
+call metaanddatav%datav%display()
+
+end subroutine dbametaanddatav_display
+
+subroutine dbametaanddatav_ingest(metaanddatav,session)
+class(dbametaanddatav), intent(in) :: metaanddatav
+type(dbasession), intent(in) :: session
+
+!write metadata
+call session%set(metadata=metaanddatav%metadata)
+!write ana data and attribute
+call session%set(datav=metaanddatav%datav)
+call session%prendilo()
+
+end subroutine dbametaanddatav_ingest
+
+
+subroutine dbametaanddatar_display(data)
+class(dbametaanddatar), intent(in) :: data
+
+call data%metadata%display()
+call data%dbadatar%display()
+
+end subroutine dbametaanddatar_display
+
+subroutine dbametaanddatar_ingest(metaanddatar,session)
+class(dbametaanddatar), intent(in) :: metaanddatar
+type(dbasession), intent(in) :: session
+
+!write metadata
+call session%set(metadata=metaanddatar%metadata)
+!write ana data and attribute
+call session%set(data=metaanddatar%dbadatar)
+call session%prendilo()
+
+end subroutine dbametaanddatar_ingest
+
+
+subroutine dbametaanddatac_display(data)
+class(dbametaanddatac), intent(in) :: data
+
+call data%metadata%display()
+call data%dbadatac%display()
+
+end subroutine dbametaanddatac_display
+
+subroutine dbametaanddatac_ingest(metaanddatac,session)
+class(dbametaanddatac), intent(in) :: metaanddatac
+type(dbasession), intent(in) :: session
+
+!write metadata
+call session%set(metadata=metaanddatac%metadata)
+!write ana data and attribute
+call session%set(data=metaanddatac%dbadatac)
+call session%prendilo()
+
+end subroutine dbametaanddatac_ingest
+
+
+subroutine dbasession_extrude_ana(session,ana)
+class(dbasession), intent(inout) :: session
+type(dbaana), intent(out),optional :: ana
+
+integer :: ier
+
+if (.not. present(ana)) then
+  ier = idba_quantesono(session%sehandle, session%count)
+else
+  ier = idba_elencamele(session%sehandle)
+  call ana%dbaenq(session)
+  session%count=session%count-1
+end if
+
+end subroutine dbasession_extrude_ana
+
+
+subroutine dbasession_extrude_anav(session,anav)
+class(dbasession), intent(inout) :: session
+type(dbaana), intent(out),allocatable :: anav(:)
+integer :: i
+
+call session%extrude_ana()
+allocate(anav(session%count))
+i=0
+do while (session%count >0)
+  i=i+1
+  call session%extrude_ana(anav(i))
+end do
+
+end subroutine dbasession_extrude_anav
+
+
+subroutine dbasession_extrude_metaanddata(session,metaanddata,dataonly)
+class(dbasession), intent(inout) :: session
+type(dbametaanddata), intent(inout),optional :: metaanddata
+logical,intent(in),optional :: dataonly
+
+integer :: ier,ai,acount
+character(len=9) :: btable
+character(255) :: value
+
+if (.not. present(metaanddata)) then
+  ier = idba_voglioquesto(session%sehandle, session%count)
+else
+
+  allocate (metaanddata%dataattrv%dataattr(1))
+
+  ier = idba_dammelo(session%sehandle, btable)
+  ier = idba_enq(session%sehandle, btable,value)
+
+  allocate (metaanddata%dataattrv%dataattr(1)%dat,source=dbadatac(btable,value))
+
+  call metaanddata%metadata%dbaenq(session)
+
+  if (optio_log(dataonly))then
+
+    allocate (metaanddata%dataattrv%dataattr(1)%attrv%dat(0))
+
+  else
+
+    ier = idba_voglioancora(session%sehandle, acount)
+    
+    allocate (metaanddata%dataattrv%dataattr(1)%attrv%dat(acount))
+    do ai =1,acount
+      ier = idba_ancora(session%sehandle, btable)
+      ier = idba_enq(session%sehandle, btable,value)
+      allocate (metaanddata%dataattrv%dataattr(1)%attrv%dat(ai)%dat,source=dbadatac(btable,value))
+    end do
+  end if
+  session%count=session%count-1
+
+end if
+
+end subroutine dbasession_extrude_metaanddata
+
+
+subroutine dbasession_extrude_metaanddatav(session,metaanddatav,dataonly)
+class(dbasession), intent(inout) :: session
+type(dbametaanddata), intent(inout),allocatable :: metaanddatav(:)
+logical, optional :: dataonly
+
+integer :: i
+
+call session%extrude_metaanddata()
+allocate(metaanddatav(session%count))
+i=0
+do while (session%count >0)
+  i=i+1
+  call session%extrude_metaanddata(metaanddatav(i),dataonly=dataonly)
+end do
+
+end subroutine dbasession_extrude_metaanddatav
+
+
+subroutine dbasession_extrude_metaanddatar(session,metaanddatar)
+class(dbasession), intent(inout) :: session
+type(dbametaanddatar), intent(inout),optional :: metaanddatar
+
+integer :: ier
+character(len=9) :: btable
+real :: value
+
+if (.not. present(metaanddatar)) then
+  ier = idba_voglioquesto(session%sehandle, session%count)
+else
+  ier = idba_dammelo(session%sehandle, btable)
+  ier = idba_enq(session%sehandle, btable,value)
+  metaanddatar%dbadatar=dbadatar(btable,value)
+  call metaanddatar%metadata%dbaenq(session)
+  session%count=session%count-1
+end if
+end subroutine dbasession_extrude_metaanddatar
+
+
+subroutine dbasession_extrude_metaanddatarv(session,metaanddatarv)
+class(dbasession), intent(inout) :: session
+type(dbametaanddatar), intent(inout),allocatable :: metaanddatarv(:)
+
+integer :: i
+
+call session%extrude_metaanddatar()
+allocate(metaanddatarv(session%count))
+i=0
+do while (session%count >0)
+  i=i+1
+  call session%extrude_metaanddatar(metaanddatarv(i))
+end do
+end subroutine dbasession_extrude_metaanddatarv
+
+
 type(dbaconnection) function dbaconnection_init(dsn, user, password,categoryappend,idbhandle)
 character (len=*), intent(in), optional :: dsn
 character (len=*), intent(in), optional :: user
@@ -891,8 +1525,6 @@ integer,INTENT(in),OPTIONAL :: idbhandle !< dsn connection; if present it will b
 character(len=50) :: quidsn,quiuser,quipassword
 integer :: ier
 character(len=512) :: a_name
-
-print *,"dbhandle init"
 
 if (present(categoryappend))then
   call l4f_launcher(a_name,a_name_append=trim(subcategory)//"."//trim(categoryappend))
@@ -931,8 +1563,6 @@ subroutine dbaconnection_delete(handle)
 class (dbaconnection), intent(inout) :: handle
 integer :: ier
 
-print *,"dbhandle delete"
-
 if (c_e(handle%dbhandle)) then 
   ier = idba_arrivederci(handle%dbhandle)
 end if
@@ -960,9 +1590,6 @@ logical :: quiwrite,quiwipe
 character(len=255) :: quirepinfo
 logical :: exist
 character(len=512) :: a_name
-
-print *,"dbasession init"
-
 
 if (present(categoryappend))then
   call l4f_launcher(a_name,a_name_append=trim(subcategory)//"."//trim(categoryappend))
@@ -1084,6 +1711,18 @@ end if
 
 end subroutine dbasession_setcontextana
 
+
+subroutine dbasession_dimenticami(session)
+class (dbasession), intent(in) :: session
+integer :: ier
+
+if (c_e(session%sehandle)) then 
+  ier = idba_dimenticami(session%sehandle)
+end if
+
+end subroutine dbasession_dimenticami
+
+
 subroutine dbasession_critica(session)
 class (dbasession), intent(in) :: session
 integer :: ier
@@ -1094,14 +1733,24 @@ end if
 
 end subroutine dbasession_critica
 
-
-subroutine dbasession_set(session,metadata,datav,data,level,timerange)
+subroutine dbasession_scusa(session)
 class (dbasession), intent(in) :: session
-type (dbametadata),optional ::metadata
-class(dbadatav),optional ::datav
-class(dbadata),optional ::data
-type (dbalevel),optional ::level
-type (dbatimerange),optional ::timerange
+integer :: ier
+
+if (c_e(session%sehandle)) then 
+  ier = idba_scusa(session%sehandle)
+end if
+
+end subroutine dbasession_scusa
+
+subroutine dbasession_set(session,metadata,datav,data,level,timerange,filter)
+class (dbasession), intent(in) :: session
+type (dbametadata),optional :: metadata
+class(dbadatav),optional :: datav
+class(dbadata),optional :: data
+type (dbalevel),optional :: level
+type (dbatimerange),optional :: timerange
+type (dbafilter),optional :: filter
 
 if (present(metadata)) then
   call metadata%dbaset(session)
@@ -1123,14 +1772,21 @@ if (present(data)) then
   call data%dbaset(session)
 end if
 
+if (present(filter)) then
+  call filter%dbaset(session)
+end if
+
 end subroutine dbasession_set
 
 
-subroutine dbasession_ingest(session,dataattr,dataattrv,metaanddata)
+subroutine dbasession_ingest(session,dataattr,dataattrv,metaanddata,metaanddatac,metaanddatar,metaanddatav)
 class(dbasession), intent(in)   :: session
 class(dbadataattr),optional     :: dataattr
 class(dbadataattrv),optional    :: dataattrv
 class(dbametaanddata),optional  :: metaanddata
+class(dbametaanddatac),optional   :: metaanddatac
+class(dbametaanddatar),optional   :: metaanddatar
+class(dbametaanddatav),optional :: metaanddatav
 
 if (present(dataattr)) then
   call dataattr%dbaingest(session)
@@ -1144,14 +1800,24 @@ if (present(metaanddata)) then
   call metaanddata%dbaingest(session)
 end if
 
+if (present(metaanddatac)) then
+  call metaanddatac%dbaingest(session)
+end if
+
+if (present(metaanddatar)) then
+  call metaanddatar%dbaingest(session)
+end if
+
+if (present(metaanddatav)) then
+  call metaanddatav%dbaingest(session)
+end if
+
 end subroutine dbasession_ingest
 
 
 subroutine dbasession_delete(session)
 class (dbasession), intent(inout) :: session
 integer :: ier
-
-print *,"dbasession delete"
 
 if (c_e(session%sehandle)) then 
   ier = idba_fatto(session%sehandle)
