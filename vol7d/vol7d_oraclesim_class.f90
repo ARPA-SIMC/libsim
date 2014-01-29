@@ -324,8 +324,7 @@ INTEGER,ALLOCATABLE :: anatmp(:), vartmp(:), mapdatao(:), mapstazo(:), varlist(:
 LOGICAL,ALLOCATABLE :: lana(:)
 LOGICAL :: found, non_valid, lnon_valid, varbt_req(nvarmax)
 INTEGER(kind=int_b) :: msg(256)
-LOGICAL :: lanar(netana_nvarr), lanai(netana_nvari), lanac(netana_nvarc), &
- full_qcinfo
+LOGICAL :: lanar(netana_nvarr), lanai(netana_nvari), lanac(netana_nvarc)
 ! per attributi
 INTEGER :: attr_out_ind(SIZE(dataattr_builder)), nda_type(5)
 
@@ -400,9 +399,6 @@ IF (PRESENT(attr)) THEN
     ENDDO
   ENDDO
 ENDIF
-! B33192, B33196, B33197 allow full qc, update when necessary
-full_qcinfo = (attr_out_ind(2) /= 0) .AND. (attr_out_ind(5) /= 0) .AND. &
- (attr_out_ind(6) /= 0)
 
 ! Comincio l'estrazione
 nobs = oraclesim_getdatahead(this%connid, fchar_to_cstr(datai), &
@@ -1019,7 +1015,7 @@ rflag = 100. - &
 IF (rflag < 0. .OR. rflag > 100.) THEN
   flag = ibmiss
 ELSE
-  flag = NINT(rflag)
+  flag = NINT(rflag, kind=KIND(flag))
 ENDIF
 
 END FUNCTION make_qcflag
