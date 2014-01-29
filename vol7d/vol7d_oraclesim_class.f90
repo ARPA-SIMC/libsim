@@ -1025,15 +1025,16 @@ ENDIF
 END FUNCTION make_qcflag
 
 ! Gestione flag di qualita`, per compatibilita` con quanto fatto da
-! dballe, queste funzioni restituiscono 0 se la flag richiesta e`
-! presente o dato mancante se essa e` assente.
+! dballe, queste funzioni restituivano 0 se la flag richiesta era
+! presente, ora restituiscono 1,
+! o dato mancante se essa e` assente.
 ! Dato invalidato manualmente
 FUNCTION make_qcflag_inv(simflag) RESULT(flag)
 INTEGER(kind=int_b) :: simflag(flaglen)
 INTEGER(kind=int_b) :: flag
 
 IF (simflag(1) == ICHAR('1')) THEN
-  flag = 0
+  flag = 1
 ELSE
   flag = ibmiss
 ENDIF
