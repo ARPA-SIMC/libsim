@@ -91,13 +91,21 @@ type,public ::  dbasession
     procedure :: extrude_anav => dbasession_extrude_anav
     procedure :: extrude_metaanddata => dbasession_extrude_metaanddata
     procedure :: extrude_metaanddatav => dbasession_extrude_metaanddatav
-!    procedure :: extrude_metaanddatac => dbasession_extrude_metaanddatac
+    procedure :: extrude_metaanddatai => dbasession_extrude_metaanddatai
+    procedure :: extrude_metaanddataiv => dbasession_extrude_metaanddataiv
+    procedure :: extrude_metaanddatab => dbasession_extrude_metaanddatab
+    procedure :: extrude_metaanddatabv => dbasession_extrude_metaanddatabv
+    procedure :: extrude_metaanddatad => dbasession_extrude_metaanddatad
+    procedure :: extrude_metaanddatadv => dbasession_extrude_metaanddatadv
     procedure :: extrude_metaanddatar => dbasession_extrude_metaanddatar
     procedure :: extrude_metaanddatarv => dbasession_extrude_metaanddatarv
+    procedure :: extrude_metaanddatac => dbasession_extrude_metaanddatac
+    procedure :: extrude_metaanddatacv => dbasession_extrude_metaanddatacv
     procedure :: dissolve_metadata => dbasession_dissolve_metadata
     procedure :: dissolveattr => dbasession_dissolveattr_metadata
     generic   :: dissolve => dissolve_metadata ,dimenticami
-    generic   :: extrude => extrude_anav,extrude_metaanddatav,extrude_metaanddatarv!,extrude_metaanddatacv
+    generic   :: extrude => extrude_anav,extrude_metaanddatav,&
+     extrude_metaanddataiv,extrude_metaanddatabv,extrude_metaanddatadv,extrude_metaanddatarv,extrude_metaanddatacv
 !  procedure :: dammelo => dbasession_dammelo
 end type dbasession
 
@@ -380,6 +388,27 @@ type, public :: dbametaanddatav
   procedure :: dbaingest => dbametaanddatav_ingest
 end type dbametaanddatav
 
+type, public,extends(dbadatai) :: dbametaanddatai
+  type(dbametadata) :: metadata
+  contains
+  procedure :: display => dbametaanddatai_display
+  procedure :: dbaingest => dbametaanddatai_ingest
+end type dbametaanddatai
+
+type, public,extends(dbadatab) :: dbametaanddatab
+  type(dbametadata) :: metadata
+  contains
+  procedure :: display => dbametaanddatab_display
+  procedure :: dbaingest => dbametaanddatab_ingest
+end type dbametaanddatab
+
+type, public,extends(dbadatad) :: dbametaanddatad
+  type(dbametadata) :: metadata
+  contains
+  procedure :: display => dbametaanddatad_display
+  procedure :: dbaingest => dbametaanddatad_ingest
+end type dbametaanddatad
+
 type, public,extends(dbadatar) :: dbametaanddatar
   type(dbametadata) :: metadata
   contains
@@ -618,15 +647,14 @@ integer :: i,ii,count,ier
 if (present (metadata)) then
   do i =1, size (metadata)
 
+    ! here if metadata have some field missig they will be set to missing so it will be unset in dballe (I hope)
     call metadata(i)%dbaset(session)
-
     ier = idba_voglioquesto(session%sehandle, count)
 
     do ii =1,count
       ier = idba_dammelo(session%sehandle, btable)
-      call session%var_related(btable)
+      !call session%var_related(btable)         !not needed after dammelo
       call session%scusa()
-
     end do
 
   end do
@@ -636,14 +664,12 @@ else
 
     do i =1,count
       ier = idba_dammelo(session%sehandle, btable)
-      call session%var_related(btable)
+      !call session%var_related(btable)         !not needed after dammelo
       call session%scusa()
-
     end do
 
 end if
 end subroutine dbasession_dissolveattr_metadata
-
 
 
 subroutine dbadataattr_ingest(data,session)
@@ -1314,6 +1340,7 @@ subroutine dbametaanddata_ingest(metaanddata,session)
 class(dbametaanddata), intent(in) :: metaanddata
 type(dbasession), intent(in) :: session
 
+call session%unsetall()
 !write metadata
 call session%set(metadata=metaanddata%metadata)
 !write ana data and attribute
@@ -1342,6 +1369,29 @@ call session%prendilo()
 
 end subroutine dbametaanddatav_ingest
 
+subroutine dbametaanddatai_display(data)
+class(dbametaanddatai), intent(in) :: data
+
+call data%metadata%display()
+call data%dbadatai%display()
+
+end subroutine dbametaanddatai_display
+
+subroutine dbametaanddatab_display(data)
+class(dbametaanddatab), intent(in) :: data
+
+call data%metadata%display()
+call data%dbadatab%display()
+
+end subroutine dbametaanddatab_display
+
+subroutine dbametaanddatad_display(data)
+class(dbametaanddatad), intent(in) :: data
+
+call data%metadata%display()
+call data%dbadatad%display()
+
+end subroutine dbametaanddatad_display
 
 subroutine dbametaanddatar_display(data)
 class(dbametaanddatar), intent(in) :: data
@@ -1350,18 +1400,6 @@ call data%metadata%display()
 call data%dbadatar%display()
 
 end subroutine dbametaanddatar_display
-
-subroutine dbametaanddatar_ingest(metaanddatar,session)
-class(dbametaanddatar), intent(in) :: metaanddatar
-type(dbasession), intent(in) :: session
-
-!write metadata
-call session%set(metadata=metaanddatar%metadata)
-!write ana data and attribute
-call session%set(data=metaanddatar%dbadatar)
-call session%prendilo()
-
-end subroutine dbametaanddatar_ingest
 
 
 subroutine dbametaanddatac_display(data)
@@ -1372,10 +1410,64 @@ call data%dbadatac%display()
 
 end subroutine dbametaanddatac_display
 
+
+subroutine dbametaanddatai_ingest(metaanddatai,session)
+class(dbametaanddatai), intent(in) :: metaanddatai
+type(dbasession), intent(in) :: session
+
+call session%unsetall()
+!write metadata
+call session%set(metadata=metaanddatai%metadata)
+!write ana data and attribute
+call session%set(data=metaanddatai%dbadatai)
+call session%prendilo()
+
+end subroutine dbametaanddatai_ingest
+
+subroutine dbametaanddatab_ingest(metaanddatab,session)
+class(dbametaanddatab), intent(in) :: metaanddatab
+type(dbasession), intent(in) :: session
+
+call session%unsetall()
+!write metadata
+call session%set(metadata=metaanddatab%metadata)
+!write ana data and attribute
+call session%set(data=metaanddatab%dbadatab)
+call session%prendilo()
+
+end subroutine dbametaanddatab_ingest
+
+subroutine dbametaanddatad_ingest(metaanddatad,session)
+class(dbametaanddatad), intent(in) :: metaanddatad
+type(dbasession), intent(in) :: session
+
+call session%unsetall()
+!write metadata
+call session%set(metadata=metaanddatad%metadata)
+!write ana data and attribute
+call session%set(data=metaanddatad%dbadatad)
+call session%prendilo()
+
+end subroutine dbametaanddatad_ingest
+
+subroutine dbametaanddatar_ingest(metaanddatar,session)
+class(dbametaanddatar), intent(in) :: metaanddatar
+type(dbasession), intent(in) :: session
+
+call session%unsetall()
+!write metadata
+call session%set(metadata=metaanddatar%metadata)
+!write ana data and attribute
+call session%set(data=metaanddatar%dbadatar)
+call session%prendilo()
+
+end subroutine dbametaanddatar_ingest
+
 subroutine dbametaanddatac_ingest(metaanddatac,session)
 class(dbametaanddatac), intent(in) :: metaanddatac
 type(dbasession), intent(in) :: session
 
+call session%unsetall()
 !write metadata
 call session%set(metadata=metaanddatac%metadata)
 !write ana data and attribute
@@ -1431,6 +1523,10 @@ if (.not. present(metaanddata)) then
   ier = idba_voglioquesto(session%sehandle, session%count)
 else
 
+  if (allocated(metaanddata%dataattrv%dataattr)) then
+    deallocate (metaanddata%dataattrv%dataattr)
+  end if
+
   allocate (metaanddata%dataattrv%dataattr(1))
 
   ier = idba_dammelo(session%sehandle, btable)
@@ -1480,40 +1576,185 @@ end do
 end subroutine dbasession_extrude_metaanddatav
 
 
-subroutine dbasession_extrude_metaanddatar(session,metaanddatar)
+subroutine dbasession_extrude_metaanddatai(session,metaanddata)
 class(dbasession), intent(inout) :: session
-type(dbametaanddatar), intent(inout),optional :: metaanddatar
+type(dbametaanddatai), intent(inout),optional :: metaanddata
+
+integer :: ier
+character(len=9) :: btable
+integer :: value
+
+if (.not. present(metaanddata)) then
+  ier = idba_voglioquesto(session%sehandle, session%count)
+else
+  ier = idba_dammelo(session%sehandle, btable)
+  ier = idba_enq(session%sehandle, btable,value)
+  metaanddata%dbadatai=dbadatai(btable,value)
+  call metaanddata%metadata%dbaenq(session)
+  session%count=session%count-1
+end if
+end subroutine dbasession_extrude_metaanddatai
+
+
+subroutine dbasession_extrude_metaanddataiv(session,metaanddatav)
+class(dbasession), intent(inout) :: session
+type(dbametaanddatai), intent(inout),allocatable :: metaanddatav(:)
+
+integer :: i
+
+call session%extrude_metaanddatai()
+allocate(metaanddatav(session%count))
+i=0
+do while (session%count >0)
+  i=i+1
+  call session%extrude_metaanddatai(metaanddatav(i))
+end do
+end subroutine dbasession_extrude_metaanddataiv
+
+
+subroutine dbasession_extrude_metaanddatab(session,metaanddata)
+class(dbasession), intent(inout) :: session
+type(dbametaanddatab), intent(inout),optional :: metaanddata
+
+integer :: ier
+character(len=9) :: btable
+integer(kind=int_b) :: value
+
+if (.not. present(metaanddata)) then
+  ier = idba_voglioquesto(session%sehandle, session%count)
+else
+  ier = idba_dammelo(session%sehandle, btable)
+  ier = idba_enq(session%sehandle, btable,value)
+  metaanddata%dbadatab=dbadatab(btable,value)
+  call metaanddata%metadata%dbaenq(session)
+  session%count=session%count-1
+end if
+end subroutine dbasession_extrude_metaanddatab
+
+
+subroutine dbasession_extrude_metaanddatabv(session,metaanddatav)
+class(dbasession), intent(inout) :: session
+type(dbametaanddatab), intent(inout),allocatable :: metaanddatav(:)
+
+integer :: i
+
+call session%extrude_metaanddatab()
+allocate(metaanddatav(session%count))
+i=0
+do while (session%count >0)
+  i=i+1
+  call session%extrude_metaanddatab(metaanddatav(i))
+end do
+end subroutine dbasession_extrude_metaanddatabv
+
+
+subroutine dbasession_extrude_metaanddatad(session,metaanddata)
+class(dbasession), intent(inout) :: session
+type(dbametaanddatad), intent(inout),optional :: metaanddata
+
+integer :: ier
+character(len=9) :: btable
+doubleprecision :: value
+
+if (.not. present(metaanddata)) then
+  ier = idba_voglioquesto(session%sehandle, session%count)
+else
+  ier = idba_dammelo(session%sehandle, btable)
+  ier = idba_enq(session%sehandle, btable,value)
+  metaanddata%dbadatad=dbadatad(btable,value)
+  call metaanddata%metadata%dbaenq(session)
+  session%count=session%count-1
+end if
+end subroutine dbasession_extrude_metaanddatad
+
+
+subroutine dbasession_extrude_metaanddatadv(session,metaanddatav)
+class(dbasession), intent(inout) :: session
+type(dbametaanddatad), intent(inout),allocatable :: metaanddatav(:)
+
+integer :: i
+
+call session%extrude_metaanddatad()
+allocate(metaanddatav(session%count))
+i=0
+do while (session%count >0)
+  i=i+1
+  call session%extrude_metaanddatad(metaanddatav(i))
+end do
+end subroutine dbasession_extrude_metaanddatadv
+
+
+subroutine dbasession_extrude_metaanddatar(session,metaanddata)
+class(dbasession), intent(inout) :: session
+type(dbametaanddatar), intent(inout),optional :: metaanddata
 
 integer :: ier
 character(len=9) :: btable
 real :: value
 
-if (.not. present(metaanddatar)) then
+if (.not. present(metaanddata)) then
   ier = idba_voglioquesto(session%sehandle, session%count)
 else
   ier = idba_dammelo(session%sehandle, btable)
   ier = idba_enq(session%sehandle, btable,value)
-  metaanddatar%dbadatar=dbadatar(btable,value)
-  call metaanddatar%metadata%dbaenq(session)
+  metaanddata%dbadatar=dbadatar(btable,value)
+  call metaanddata%metadata%dbaenq(session)
   session%count=session%count-1
 end if
 end subroutine dbasession_extrude_metaanddatar
 
 
-subroutine dbasession_extrude_metaanddatarv(session,metaanddatarv)
+subroutine dbasession_extrude_metaanddatarv(session,metaanddatav)
 class(dbasession), intent(inout) :: session
-type(dbametaanddatar), intent(inout),allocatable :: metaanddatarv(:)
+type(dbametaanddatar), intent(inout),allocatable :: metaanddatav(:)
 
 integer :: i
 
 call session%extrude_metaanddatar()
-allocate(metaanddatarv(session%count))
+allocate(metaanddatav(session%count))
 i=0
 do while (session%count >0)
   i=i+1
-  call session%extrude_metaanddatar(metaanddatarv(i))
+  call session%extrude_metaanddatar(metaanddatav(i))
 end do
 end subroutine dbasession_extrude_metaanddatarv
+
+
+
+subroutine dbasession_extrude_metaanddatac(session,metaanddata)
+class(dbasession), intent(inout) :: session
+type(dbametaanddatac), intent(inout),optional :: metaanddata
+
+integer :: ier
+character(len=9) :: btable
+character(len=255) :: value
+
+if (.not. present(metaanddata)) then
+  ier = idba_voglioquesto(session%sehandle, session%count)
+else
+  ier = idba_dammelo(session%sehandle, btable)
+  ier = idba_enq(session%sehandle, btable,value)
+  metaanddata%dbadatac=dbadatac(btable,value)
+  call metaanddata%metadata%dbaenq(session)
+  session%count=session%count-1
+end if
+end subroutine dbasession_extrude_metaanddatac
+
+
+subroutine dbasession_extrude_metaanddatacv(session,metaanddatav)
+class(dbasession), intent(inout) :: session
+type(dbametaanddatac), intent(inout),allocatable :: metaanddatav(:)
+
+integer :: i
+
+call session%extrude_metaanddatac()
+allocate(metaanddatav(session%count))
+i=0
+do while (session%count >0)
+  i=i+1
+  call session%extrude_metaanddatac(metaanddatav(i))
+end do
+end subroutine dbasession_extrude_metaanddatacv
 
 
 type(dbaconnection) function dbaconnection_init(dsn, user, password,categoryappend,idbhandle)
@@ -1743,17 +1984,32 @@ end if
 
 end subroutine dbasession_scusa
 
-subroutine dbasession_set(session,metadata,datav,data,level,timerange,filter)
+subroutine dbasession_set(session,metadata,datav,data,datetime,ana,network,level,timerange,filter)
 class (dbasession), intent(in) :: session
 type (dbametadata),optional :: metadata
 class(dbadatav),optional :: datav
 class(dbadata),optional :: data
+type (dbadatetime),optional :: datetime
+type (dbaana),optional :: ana
+type (dbanetwork),optional :: network
 type (dbalevel),optional :: level
 type (dbatimerange),optional :: timerange
 type (dbafilter),optional :: filter
 
 if (present(metadata)) then
   call metadata%dbaset(session)
+endif
+
+if (present(datetime)) then
+  call datetime%dbaset(session)
+endif
+
+if (present(ana)) then
+  call ana%dbaset(session)
+endif
+
+if (present(network)) then
+  call network%dbaset(session)
 endif
 
 if (present(level)) then
@@ -1779,11 +2035,16 @@ end if
 end subroutine dbasession_set
 
 
-subroutine dbasession_ingest(session,dataattr,dataattrv,metaanddata,metaanddatac,metaanddatar,metaanddatav)
+subroutine dbasession_ingest(session,dataattr,dataattrv,metaanddata,&
+ metaanddatai,metaanddatab,metaanddatad,metaanddatac,metaanddatar,&
+ metaanddatav)
 class(dbasession), intent(in)   :: session
 class(dbadataattr),optional     :: dataattr
 class(dbadataattrv),optional    :: dataattrv
 class(dbametaanddata),optional  :: metaanddata
+class(dbametaanddatai),optional   :: metaanddatai
+class(dbametaanddatab),optional   :: metaanddatab
+class(dbametaanddatad),optional   :: metaanddatad
 class(dbametaanddatac),optional   :: metaanddatac
 class(dbametaanddatar),optional   :: metaanddatar
 class(dbametaanddatav),optional :: metaanddatav
@@ -1798,6 +2059,18 @@ end if
 
 if (present(metaanddata)) then
   call metaanddata%dbaingest(session)
+end if
+
+if (present(metaanddatai)) then
+  call metaanddatai%dbaingest(session)
+end if
+
+if (present(metaanddatab)) then
+  call metaanddatab%dbaingest(session)
+end if
+
+if (present(metaanddatad)) then
+  call metaanddatad%dbaingest(session)
 end if
 
 if (present(metaanddatac)) then
