@@ -3259,8 +3259,17 @@ FUNCTION interp_var_360(v1, v2, w1, w2)
 REAL,INTENT(in) :: v1, v2, w1, w2
 REAL :: interp_var_360
 
+REAL :: lv1, lv2
+
 IF (ABS(v1 - v2) > 180.) THEN
-  interp_var_360 = MOD(v1*w2 + v2*w1 + 180., 360.)
+  IF (v1 > v2) THEN
+    lv1 = v1 - 360.
+    lv2 = v2
+  ELSE
+    lv1 = v1
+    lv2 = v2 - 360.
+  ENDIF
+  interp_var_360 = MODULO(lv1*w2 + lv2*w1, 360.)
 ELSE
   interp_var_360 = v1*w2 + v2*w1
 ENDIF
