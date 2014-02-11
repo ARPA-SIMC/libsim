@@ -20,7 +20,8 @@ call delete1()   ! delete one var from the entire DB
 call delete2()   ! delete one var only where are some defined metadati
 call delete3()   ! delete some attributes from one var only where are some defined metadati
 call read1()     ! read ana, data and attributes for constant data, data and attributes for data
-call read2()     ! read an omogeneous vector of data
+call read2()     ! read data and attributes for data filtered and ordered by btable with type predefined
+call read3()     ! read an omogeneous vector of data
 call copy1()     ! copy data and attributes of everythings to an other dsn
 call copy2()     ! copy data and constant data to an other dsn
 
@@ -312,14 +313,42 @@ deallocate(metaanddatav)
 
 end subroutine read1
 
+
 subroutine read2()
+
+type(dbametaanddata),allocatable :: metaanddatav(:)
+type(dbafilter) :: filter
+integer :: i
+class(dbadata),allocatable :: vars(:)
+
+print *,"----------------------------------------------"
+print *,"--------------- read2 ------------------------"
+
+allocate (vars(2),source=[dbadatai("B12101"),dbadatai("B12102")])
+
+print *, "dati dati:"
+filter=dbafilter(vars=vars)
+call filter%display()
+call session%set(filter=filter)
+call session%extrude(metaanddatav,filter=filter,dataonly=.true.)
+
+do i=1,size(metaanddatav)
+  call metaanddatav(i)%display()
+end do
+
+deallocate(metaanddatav)
+
+end subroutine read2
+
+
+subroutine read3()
 
 type(dbametaanddatar),allocatable :: metaanddatarv(:)
 type(dbafilter) :: filter
 integer :: i
 
 print *,"----------------------------------------------"
-print *,"--------------- read2 ------------------------"
+print *,"--------------- read3 ------------------------"
 
 print *, "dati dati:"
 filter=dbafilter(var="B12102")
@@ -336,7 +365,7 @@ print *,"livelli", metaanddatarv(:)%metadata%level
 
 deallocate(metaanddatarv)
 
-end subroutine read2
+end subroutine read3
 
 
 subroutine delete1()

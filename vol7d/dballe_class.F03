@@ -51,6 +51,7 @@ private
 
 character (len=255),parameter:: subcategory="dballe_class"
 
+!> manage connection handle
 type,public :: dbaconnection
   integer :: dbhandle=imiss
   integer :: handle_err=imiss
@@ -67,6 +68,7 @@ interface dbaconnection
   procedure  dbaconnection_init      ! add constructor to shape generic interface
 end interface
 
+!> manage session handle
 type,public ::  dbasession
   integer :: sehandle=imiss
   logical :: file=.false.
@@ -113,6 +115,7 @@ interface dbasession
   procedure  dbasession_init      ! add constructor to shape generic interface
 end interface
 
+!> level metadata
 type,public,extends(vol7d_level) :: dbalevel
   contains
 
@@ -132,6 +135,7 @@ interface dbalevel
   procedure   dbalevel_init     ! add constructor to shape generic interface
 end interface
 
+!> timerange metadata
 type,public,extends(vol7d_timerange) :: dbatimerange
   contains
 # ifdef F2003_FULL_FEATURES
@@ -150,8 +154,7 @@ interface dbatimerange
   procedure   dbatimerange_init     ! add constructor to shape generic interface
 end interface
 
-
-
+!> fortran 2003 interface to geo_coord
 type,public,extends(geo_coord) :: dbacoord
 
 !!$  REAL(kind=fp_geo) :: lon !< longitudine
@@ -173,7 +176,7 @@ interface dbacoord
   procedure   dbacoord_init     ! add constructor to shape generic interface
 end interface
 
-
+!> ana metadata
 type,public,extends(vol7d_ana) :: dbaana
 
   contains
@@ -191,6 +194,7 @@ interface dbaana
   procedure   dbaana_init     ! add constructor to shape generic interface
 end interface
 
+!> network metadata
 type,public,extends(vol7d_network) :: dbanetwork
 
   !Every type of report has an associated priority that controls which
@@ -216,6 +220,7 @@ interface dbanetwork
 end interface
 
 
+!> datetime metadata
 type,public,extends(datetime) :: dbadatetime
 
   contains
@@ -235,6 +240,7 @@ interface dbadatetime
 end interface
 
 
+!> base (abstract)  type for data extension
 type,public,abstract :: dbadata
   character(len=9) :: btable
 contains
@@ -256,6 +262,7 @@ end subroutine dbadata_display
 
 end interface
 
+!> integer version for dbadata
 type,public, extends(dbadata) :: dbadatai
   integer :: value
 contains
@@ -267,6 +274,7 @@ interface dbadatai
   procedure ::  dbadatai_init     ! add constructor to shape generic interface
 end interface dbadatai
 
+!> real version for dbadata
 type,public, extends(dbadata) :: dbadatar
   real :: value
 contains
@@ -279,6 +287,7 @@ interface dbadatar
 end interface dbadatar
 
 
+!> doubleprecision version for dbadata
 type,public, extends(dbadata) :: dbadatad
   doubleprecision :: value
 contains
@@ -291,6 +300,7 @@ interface dbadatad
 end interface dbadatad
 
 
+!> byte version for dbadata
 type,public, extends(dbadata) :: dbadatab
   integer(kind=int_b) :: value
 contains
@@ -303,6 +313,7 @@ interface dbadatab
 end interface dbadatab
 
 
+!> character version for dbadata
 type,public, extends(dbadata) :: dbadatac
 !  character(:) :: value
   character(255) :: value
@@ -315,7 +326,7 @@ interface dbadatac
   procedure ::  dbadatac_init     ! add constructor to shape generic interface
 end interface dbadatac
 
-
+!> summ of all metadata pieces
 type,public :: dbametadata
   type(dbalevel) :: level
   type(dbatimerange) :: timerange
@@ -332,12 +343,15 @@ type,public :: dbametadata
   procedure :: dbaenq => dbametadata_enq
   procedure :: dbacontextana => dbametadata_contextana
   procedure :: display => dbametadata_display
+  procedure :: equal => dbametadata_equal
+  generic   :: operator (==) => equal
 end type dbametadata
 
 interface dbametadata
   procedure   dbametadata_init     ! add constructor to shape generic interface
 end interface
 
+!> container for dbadata (used for promiscuous vector of data)
 type, public :: dbadat
   class(dbadata),allocatable :: dat
   contains
@@ -346,10 +360,7 @@ type, public :: dbadat
 !  procedure :: dbaingest => dbadat_ingest
 end type dbadat
 
-!!$interface dbadat
-!!$  procedure   dbadat_init     ! add constructor to shape generic interface
-!!$end interface
-
+!> vector of container of dbadata
 type, public :: dbadatav
   type(dbadat),allocatable :: dat(:)
   contains
@@ -358,6 +369,7 @@ type, public :: dbadatav
 !  procedure :: dbaingest => dbadatav_ingest
 end type dbadatav
 
+!> extend one data container with a vector of data container (one data plus attributes)
 type, public ,extends(dbadat):: dbadataattr
   type(dbadatav) :: attrv
   contains
@@ -365,6 +377,7 @@ type, public ,extends(dbadat):: dbadataattr
   procedure :: dbaingest => dbadataattr_ingest
 end type dbadataattr
 
+!> vector of dbadataattr (more data plus attributes)
 type, public :: dbadataattrv
   class(dbadataattr),allocatable :: dataattr(:)
   contains
@@ -372,6 +385,7 @@ type, public :: dbadataattrv
   procedure :: dbaingest => dbadataattrv_ingest
 end type dbadataattrv
 
+!> one metadata with more data plus attributes
 type, public :: dbametaanddata
   type(dbametadata) :: metadata
   type(dbadataattrv) ::dataattrv
@@ -380,6 +394,7 @@ type, public :: dbametaanddata
   procedure :: dbaingest => dbametaanddata_ingest
 end type dbametaanddata
 
+!> one metadata plus vector of container of dbadata
 type, public :: dbametaanddatav
   type(dbametadata) :: metadata
   type(dbadatav) ::datav
@@ -388,6 +403,7 @@ type, public :: dbametaanddatav
   procedure :: dbaingest => dbametaanddatav_ingest
 end type dbametaanddatav
 
+!> metadata and integer data
 type, public,extends(dbadatai) :: dbametaanddatai
   type(dbametadata) :: metadata
   contains
@@ -395,6 +411,7 @@ type, public,extends(dbadatai) :: dbametaanddatai
   procedure :: dbaingest => dbametaanddatai_ingest
 end type dbametaanddatai
 
+!> metadata and byte data
 type, public,extends(dbadatab) :: dbametaanddatab
   type(dbametadata) :: metadata
   contains
@@ -402,6 +419,7 @@ type, public,extends(dbadatab) :: dbametaanddatab
   procedure :: dbaingest => dbametaanddatab_ingest
 end type dbametaanddatab
 
+!> metadata and doubleprecision data
 type, public,extends(dbadatad) :: dbametaanddatad
   type(dbametadata) :: metadata
   contains
@@ -409,6 +427,7 @@ type, public,extends(dbadatad) :: dbametaanddatad
   procedure :: dbaingest => dbametaanddatad_ingest
 end type dbametaanddatad
 
+!> metadata and real data
 type, public,extends(dbadatar) :: dbametaanddatar
   type(dbametadata) :: metadata
   contains
@@ -416,6 +435,7 @@ type, public,extends(dbadatar) :: dbametaanddatar
   procedure :: dbaingest => dbametaanddatar_ingest
 end type dbametaanddatar
 
+!> metadata and character data
 type, public,extends(dbadatac) :: dbametaanddatac
   type(dbametadata) :: metadata
   contains
@@ -423,6 +443,7 @@ type, public,extends(dbadatac) :: dbametaanddatac
   procedure :: dbaingest => dbametaanddatac_ingest
 end type dbametaanddatac
 
+!> filter to apply to extrude data
 type, public ::  dbafilter
   type(dbaana)       :: ana
   character(len=6)   :: var
@@ -437,6 +458,7 @@ type, public ::  dbafilter
   character(len=255) :: ana_filter, data_filter, attr_filter, varlist, starvarlist
   integer            :: priomin,priomax
   logical            :: contextana
+  class(dbadata),allocatable     :: vars(:),starvars(:)
   contains
   procedure          :: display => dbafilter_display
   procedure          :: dbaset => dbafilter_set
@@ -1093,9 +1115,31 @@ call metadata%timerange%dbaenq(session)
 end subroutine dbametadata_enq
 
 
+
+elemental logical function dbametadata_equal(this,that)
+
+class(dbametadata), intent(in) :: this
+class(dbametadata), intent(in) :: that
+
+if ( &
+ this%level%vol7d_level         == that%level%vol7d_level .and. &
+ this%timerange%vol7d_timerange == that%timerange%vol7d_timerange .and. &
+ this%datetime%datetime         == that%datetime%datetime .and. &
+ this%network%vol7d_network     == that%network%vol7d_network .and. &
+ this%ana%vol7d_ana             == that%ana%vol7d_ana &
+ ) then
+  dbametadata_equal = .true.
+else
+  dbametadata_equal = .false.
+end if
+
+end function dbametadata_equal
+
+
 type(dbafilter) function dbafilter_init(ana,var,datetime,level,timerange,network,&
  datetimemin,datetimemax,coordmin,coordmax,limit,&
- ana_filter, data_filter, attr_filter, varlist, starvarlist, priomin, priomax, contextana)
+ ana_filter, data_filter, attr_filter, varlist, starvarlist, priomin, priomax, contextana,&
+ vars, starvars)
 
 type(dbaana),intent(in),optional       :: ana
 character(len=*),intent(in),optional   :: var
@@ -1110,6 +1154,9 @@ integer,intent(in),optional :: limit
 character(len=*),intent(in),optional :: ana_filter, data_filter, attr_filter, varlist, starvarlist
 integer,intent(in),optional :: priomin,priomax
 logical,intent(in),optional :: contextana
+class(dbadata),intent(in),optional :: vars(:),starvars(:)
+
+integer :: i
 
 if (present(ana)) then
   dbafilter_init%ana=ana
@@ -1205,6 +1252,25 @@ if (present(starvarlist)) then
   dbafilter_init%starvarlist=starvarlist
 else
   dbafilter_init%starvarlist=cmiss
+end if
+
+if (present(vars)) then
+  allocate(dbafilter_init%vars(size(vars)),source=vars)
+  dbafilter_init%varlist=""
+  do i=1,size(vars) 
+    dbafilter_init%varlist=trim(dbafilter_init%varlist)//vars(i)%btable
+    if (i /=  size(vars)) dbafilter_init%varlist=trim(dbafilter_init%varlist)//","
+  end do
+end if
+
+if (present(starvars)) then
+  allocate(dbafilter_init%starvars(size(starvars)),source=starvars)
+
+  dbafilter_init%starvarlist=""
+  do i=1,size(starvars)
+    dbafilter_init%starvarlist=trim(dbafilter_init%starvarlist)//starvars(i)%btable
+    if (i /=  size(starvars)) dbafilter_init%starvarlist=trim(dbafilter_init%starvarlist)//","
+  end do
 end if
 
 if (present(priomin)) then
@@ -1510,58 +1576,213 @@ end do
 end subroutine dbasession_extrude_anav
 
 
-subroutine dbasession_extrude_metaanddata(session,metaanddata,dataonly)
+subroutine dbasession_extrude_metaanddata(session,metaanddata,dataonly,filter)
 class(dbasession), intent(inout) :: session
 type(dbametaanddata), intent(inout),optional :: metaanddata
+type(dbafilter),intent(in),optional :: filter
 logical,intent(in),optional :: dataonly
 
-integer :: ier,ai,acount
+type(dbametadata) :: metadata
+integer :: ier,ai,acount,i,j
 character(len=9) :: btable
 character(255) :: value
+logical :: lvars,lstarvars
+!+++++
+
 
 if (.not. present(metaanddata)) then
+  print *,"voglioquesto"
   ier = idba_voglioquesto(session%sehandle, session%count)
+
+! preroll one read because after I have to read one more to check metadata
+  if (session%count > 0) then
+    print*,"dammelo 1",session%count
+    ier = idba_dammelo(session%sehandle, btable)
+  end if
+
 else
 
   if (allocated(metaanddata%dataattrv%dataattr)) then
     deallocate (metaanddata%dataattrv%dataattr)
   end if
 
-  allocate (metaanddata%dataattrv%dataattr(1))
+  lvars=.false.
+  if (present(filter)) then
+    if (allocated(filter%vars)) then
+      lvars=.true.
+    end if
+  end if
+  lstarvars=.false.
+  if (present(filter)) then
+    if (allocated(filter%starvars)) then
+      lstarvars=.true.
+    end if
+  end if
 
-  ier = idba_dammelo(session%sehandle, btable)
-  ier = idba_enq(session%sehandle, btable,value)
+  if (lvars) then
 
-  allocate (metaanddata%dataattrv%dataattr(1)%dat,source=dbadatac(btable,value))
+    allocate (metaanddata%dataattrv%dataattr(size(filter%vars)))
+    do i = 1, size(filter%vars)
+      allocate (metaanddata%dataattrv%dataattr(i)%dat,source=filter%vars(i))
+      allocate (metaanddata%dataattrv%dataattr(i)%attrv%dat(0))
+    end do
 
-  call metaanddata%metadata%dbaenq(session)
+    call metaanddata%metadata%dbaenq(session)
+    call metadata%dbaenq(session)
 
-  if (optio_log(dataonly))then
+    do while ( metaanddata%metadata == metadata )
+      ier = idba_enq(session%sehandle,"var",btable)
+      do i=1,size(metaanddata%dataattrv%dataattr)
+        if (metaanddata%dataattrv%dataattr(i)%dat%btable == btable) then
 
-    allocate (metaanddata%dataattrv%dataattr(1)%attrv%dat(0))
+          select type ( dat =>  metaanddata%dataattrv%dataattr(i)%dat )
+            type is (dbadatai)
+              ier = idba_enq(session%sehandle, btable,dat%value)
+            type is (dbadatar)
+              ier = idba_enq(session%sehandle, btable,dat%value)
+            type is (dbadatad)
+              ier = idba_enq(session%sehandle, btable,dat%value)
+            type is (dbadatab)
+              ier = idba_enq(session%sehandle, btable,dat%value)
+            type is (dbadatac)
+              ier = idba_enq(session%sehandle, btable,dat%value)
+            end select
 
+            if (.not. optio_log(dataonly))then
+
+              deallocate (metaanddata%dataattrv%dataattr(i)%attrv%dat)
+
+              if (lstarvars) then
+
+                allocate (metaanddata%dataattrv%dataattr(i)%attrv%dat(size(filter%vars)))
+                do j = 1, size(filter%starvars)
+                  allocate (metaanddata%dataattrv%dataattr(i)%attrv%dat(j)%dat,source=filter%vars(j))
+                end do
+
+                ier = idba_voglioancora(session%sehandle, acount)
+                ier = idba_ancora(session%sehandle, btable)
+                ier = idba_enq(session%sehandle, btable,value)
+
+
+                do j=1,size(metaanddata%dataattrv%dataattr(i)%attrv%dat)
+                  if (metaanddata%dataattrv%dataattr(i)%attrv%dat(j)%dat%btable == btable) then
+                    
+                    select type ( dat =>  metaanddata%dataattrv%dataattr(i)%attrv%dat(j)%dat )
+                    type is (dbadatai)
+                      ier = idba_enq(session%sehandle, btable,dat%value)
+                    type is (dbadatar)
+                      ier = idba_enq(session%sehandle, btable,dat%value)
+                    type is (dbadatad)
+                      ier = idba_enq(session%sehandle, btable,dat%value)
+                    type is (dbadatab)
+                      ier = idba_enq(session%sehandle, btable,dat%value)
+                    type is (dbadatac)
+                      ier = idba_enq(session%sehandle, btable,dat%value)
+                    end select
+
+                  end if
+                end do
+
+              else
+                ier = idba_voglioancora(session%sehandle, acount)
+                
+                allocate (metaanddata%dataattrv%dataattr(i)%attrv%dat(acount))
+                do ai =1,acount
+                  ier = idba_ancora(session%sehandle, btable)
+                  ier = idba_enq(session%sehandle, btable,value)
+                  allocate (metaanddata%dataattrv%dataattr(1)%attrv%dat(ai)%dat,source=dbadatac(btable,value))
+                end do
+              end if
+            end if
+        end if
+      end do
+
+      session%count=session%count-1
+
+      if (session%count > 0 ) then
+        print *,"dammelo 2",session%count
+        ier = idba_dammelo(session%sehandle, btable)
+        call metadata%dbaenq(session)
+      else
+        metadata=dbametadata()
+      end if
+    end do
   else
 
-    ier = idba_voglioancora(session%sehandle, acount)
-    
-    allocate (metaanddata%dataattrv%dataattr(1)%attrv%dat(acount))
-    do ai =1,acount
-      ier = idba_ancora(session%sehandle, btable)
-      ier = idba_enq(session%sehandle, btable,value)
-      allocate (metaanddata%dataattrv%dataattr(1)%attrv%dat(ai)%dat,source=dbadatac(btable,value))
-    end do
-  end if
-  session%count=session%count-1
+    allocate (metaanddata%dataattrv%dataattr(1))
+    allocate (metaanddata%dataattrv%dataattr(1)%attrv%dat(0))
+    ier = idba_enq(session%sehandle,"var",btable)
+    ier = idba_enq(session%sehandle, btable,value)
+    allocate (metaanddata%dataattrv%dataattr(1)%dat,source=dbadatac(btable,value))
+    call metaanddata%metadata%dbaenq(session)
 
+    session%count=session%count-1
+
+    if (optio_log(dataonly))then
+
+      allocate (metaanddata%dataattrv%dataattr(1)%attrv%dat(0))
+
+    else
+
+      if (lstarvars) then
+
+        allocate (metaanddata%dataattrv%dataattr(1)%attrv%dat(size(filter%vars)))
+        do j = 1, size(filter%starvars)
+          allocate (metaanddata%dataattrv%dataattr(1)%attrv%dat(j)%dat,source=filter%vars(j))
+        end do
+        
+        ier = idba_voglioancora(session%sehandle, acount)
+        ier = idba_ancora(session%sehandle, btable)
+        ier = idba_enq(session%sehandle, btable,value)
+        
+        
+        do j=1,size(metaanddata%dataattrv%dataattr(1)%attrv%dat)
+          if (metaanddata%dataattrv%dataattr(1)%attrv%dat(j)%dat%btable == btable) then
+            
+            select type ( dat =>  metaanddata%dataattrv%dataattr(1)%attrv%dat(j)%dat )
+            type is (dbadatai)
+              ier = idba_enq(session%sehandle, btable,dat%value)
+            type is (dbadatar)
+              ier = idba_enq(session%sehandle, btable,dat%value)
+            type is (dbadatad)
+              ier = idba_enq(session%sehandle, btable,dat%value)
+            type is (dbadatab)
+              ier = idba_enq(session%sehandle, btable,dat%value)
+            type is (dbadatac)
+              ier = idba_enq(session%sehandle, btable,dat%value)
+            end select
+            
+          end if
+        end do
+
+      else
+
+        ier = idba_voglioancora(session%sehandle, acount)
+        
+        allocate (metaanddata%dataattrv%dataattr(1)%attrv%dat(acount))
+        do ai =1,acount
+          ier = idba_ancora(session%sehandle, btable)
+          ier = idba_enq(session%sehandle, btable,value)
+          allocate (metaanddata%dataattrv%dataattr(1)%attrv%dat(ai)%dat,source=dbadatac(btable,value))
+        end do
+      end if
+    end if
+
+    if (session%count > 0 ) then
+      print *,"dammelo 3",session%count
+      ier = idba_dammelo(session%sehandle, btable)
+    end if
+  end if
 end if
 
 end subroutine dbasession_extrude_metaanddata
 
 
-subroutine dbasession_extrude_metaanddatav(session,metaanddatav,dataonly)
+subroutine dbasession_extrude_metaanddatav(session,metaanddatav,dataonly,filter)
 class(dbasession), intent(inout) :: session
 type(dbametaanddata), intent(inout),allocatable :: metaanddatav(:)
-logical, optional :: dataonly
+logical, intent(in),optional :: dataonly
+type(dbafilter),intent(in),optional :: filter
 
 integer :: i
 
@@ -1570,7 +1791,7 @@ allocate(metaanddatav(session%count))
 i=0
 do while (session%count >0)
   i=i+1
-  call session%extrude_metaanddata(metaanddatav(i),dataonly=dataonly)
+  call session%extrude_metaanddata(metaanddatav(i),dataonly=dataonly,filter=filter)
 end do
 
 end subroutine dbasession_extrude_metaanddatav
