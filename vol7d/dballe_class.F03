@@ -458,7 +458,7 @@ type, public ::  dbafilter
   character(len=255) :: ana_filter, data_filter, attr_filter, varlist, starvarlist
   integer            :: priomin,priomax
   logical            :: contextana
-  class(dbadata),allocatable     :: vars(:),starvars(:)
+  type(dbadatav)     :: vars,starvars
   contains
   procedure          :: display => dbafilter_display
   procedure          :: dbaset => dbafilter_set
@@ -1154,7 +1154,7 @@ integer,intent(in),optional :: limit
 character(len=*),intent(in),optional :: ana_filter, data_filter, attr_filter, varlist, starvarlist
 integer,intent(in),optional :: priomin,priomax
 logical,intent(in),optional :: contextana
-class(dbadata),intent(in),optional :: vars(:),starvars(:)
+class(dbadatav),intent(in),optional :: vars,starvars
 
 integer :: i
 
@@ -1255,21 +1255,29 @@ else
 end if
 
 if (present(vars)) then
-  allocate(dbafilter_init%vars(size(vars)),source=vars)
+
+  allocate(dbafilter_init%vars%dat(size(vars%dat)))
+  do i =1,size(vars%dat)
+    allocate(dbafilter_init%vars%dat(i)%dat,source=vars%dat(i)%dat)
+  end do
+
   dbafilter_init%varlist=""
-  do i=1,size(vars) 
-    dbafilter_init%varlist=trim(dbafilter_init%varlist)//vars(i)%btable
-    if (i /=  size(vars)) dbafilter_init%varlist=trim(dbafilter_init%varlist)//","
+  do i=1,size(vars%dat) 
+    dbafilter_init%varlist=trim(dbafilter_init%varlist)//vars%dat(i)%dat%btable
+    if (i /=  size(vars%dat)) dbafilter_init%varlist=trim(dbafilter_init%varlist)//","
   end do
 end if
 
 if (present(starvars)) then
-  allocate(dbafilter_init%starvars(size(starvars)),source=starvars)
+  allocate(dbafilter_init%starvars%dat(size(starvars%dat)))
+  do i =1,size(starvars%dat)
+    allocate(dbafilter_init%starvars%dat(i)%dat,source=starvars%dat(i)%dat)
+  end do
 
   dbafilter_init%starvarlist=""
-  do i=1,size(starvars)
-    dbafilter_init%starvarlist=trim(dbafilter_init%starvarlist)//starvars(i)%btable
-    if (i /=  size(starvars)) dbafilter_init%starvarlist=trim(dbafilter_init%starvarlist)//","
+  do i=1,size(starvars%dat)
+    dbafilter_init%starvarlist=trim(dbafilter_init%starvarlist)//starvars%dat(i)%dat%btable
+    if (i /=  size(starvars%dat)) dbafilter_init%starvarlist=trim(dbafilter_init%starvarlist)//","
   end do
 end if
 
@@ -1583,24 +1591,22 @@ type(dbafilter),intent(in),optional :: filter
 logical,intent(in),optional :: dataonly
 
 type(dbametadata) :: metadata
-integer :: ier,ai,acount,i,j
+integer :: ier,acount,i,j
 character(len=9) :: btable
 character(255) :: value
 logical :: lvars,lstarvars
-!+++++
 
-
+! if you do not pass metaanddata we presume to have to initialize the query
 if (.not. present(metaanddata)) then
-  print *,"voglioquesto"
   ier = idba_voglioquesto(session%sehandle, session%count)
 
 ! preroll one read because after I have to read one more to check metadata
   if (session%count > 0) then
-    print*,"dammelo 1",session%count
     ier = idba_dammelo(session%sehandle, btable)
   end if
 
 else
+! you pass metaanddata so we continue with the query
 
   if (allocated(metaanddata%dataattrv%dataattr)) then
     deallocate (metaanddata%dataattrv%dataattr)
@@ -1608,99 +1614,103 @@ else
 
   lvars=.false.
   if (present(filter)) then
-    if (allocated(filter%vars)) then
+    if (allocated(filter%vars%dat)) then
       lvars=.true.
     end if
   end if
   lstarvars=.false.
   if (present(filter)) then
-    if (allocated(filter%starvars)) then
+    if (allocated(filter%starvars%dat)) then
       lstarvars=.true.
     end if
   end if
 
   if (lvars) then
 
-    allocate (metaanddata%dataattrv%dataattr(size(filter%vars)))
-    do i = 1, size(filter%vars)
-      allocate (metaanddata%dataattrv%dataattr(i)%dat,source=filter%vars(i))
+    ! create an empty vector for data 
+    allocate (metaanddata%dataattrv%dataattr(size(filter%vars%dat)))
+    do i = 1, size(filter%vars%dat)
+      allocate (metaanddata%dataattrv%dataattr(i)%dat,source=filter%vars%dat(i)%dat)
+      ! initialize to (0) the attribute vector
       allocate (metaanddata%dataattrv%dataattr(i)%attrv%dat(0))
     end do
 
+    ! load metadata
     call metaanddata%metadata%dbaenq(session)
+    ! load curret metadata
     call metadata%dbaenq(session)
 
+    ! if current metadata is equal to metadata
     do while ( metaanddata%metadata == metadata )
       ier = idba_enq(session%sehandle,"var",btable)
       do i=1,size(metaanddata%dataattrv%dataattr)
         if (metaanddata%dataattrv%dataattr(i)%dat%btable == btable) then
 
           select type ( dat =>  metaanddata%dataattrv%dataattr(i)%dat )
-            type is (dbadatai)
-              ier = idba_enq(session%sehandle, btable,dat%value)
-            type is (dbadatar)
-              ier = idba_enq(session%sehandle, btable,dat%value)
-            type is (dbadatad)
-              ier = idba_enq(session%sehandle, btable,dat%value)
-            type is (dbadatab)
-              ier = idba_enq(session%sehandle, btable,dat%value)
-            type is (dbadatac)
-              ier = idba_enq(session%sehandle, btable,dat%value)
-            end select
+          type is (dbadatai)
+            ier = idba_enq(session%sehandle, btable,dat%value)
+          type is (dbadatar)
+            ier = idba_enq(session%sehandle, btable,dat%value)
+          type is (dbadatad)
+            ier = idba_enq(session%sehandle, btable,dat%value)
+          type is (dbadatab)
+            ier = idba_enq(session%sehandle, btable,dat%value)
+          type is (dbadatac)
+            ier = idba_enq(session%sehandle, btable,dat%value)
+          end select
+          
+          if (.not. optio_log(dataonly))then
 
-            if (.not. optio_log(dataonly))then
+            deallocate (metaanddata%dataattrv%dataattr(i)%attrv%dat)
 
-              deallocate (metaanddata%dataattrv%dataattr(i)%attrv%dat)
+            if (lstarvars) then
 
-              if (lstarvars) then
+              allocate (metaanddata%dataattrv%dataattr(i)%attrv%dat(size(filter%starvars%dat)))
+              do j = 1, size(filter%starvars%dat)
+                allocate (metaanddata%dataattrv%dataattr(i)%attrv%dat(j)%dat,source=filter%starvars%dat(j)%dat)
+              end do
+              
+              ier = idba_voglioancora(session%sehandle, acount)
+              ier = idba_ancora(session%sehandle, btable)
+              ier = idba_enq(session%sehandle, btable,value)
+              
+              
+              do j=1,size(metaanddata%dataattrv%dataattr(i)%attrv%dat)
+                if (metaanddata%dataattrv%dataattr(i)%attrv%dat(j)%dat%btable == btable) then
+                    
+                  select type ( dat =>  metaanddata%dataattrv%dataattr(i)%attrv%dat(j)%dat )
+                  type is (dbadatai)
+                    ier = idba_enq(session%sehandle, btable,dat%value)
+                  type is (dbadatar)
+                    ier = idba_enq(session%sehandle, btable,dat%value)
+                  type is (dbadatad)
+                    ier = idba_enq(session%sehandle, btable,dat%value)
+                  type is (dbadatab)
+                    ier = idba_enq(session%sehandle, btable,dat%value)
+                  type is (dbadatac)
+                    ier = idba_enq(session%sehandle, btable,dat%value)
+                  end select
+                  
+                end if
+              end do
 
-                allocate (metaanddata%dataattrv%dataattr(i)%attrv%dat(size(filter%vars)))
-                do j = 1, size(filter%starvars)
-                  allocate (metaanddata%dataattrv%dataattr(i)%attrv%dat(j)%dat,source=filter%vars(j))
-                end do
-
-                ier = idba_voglioancora(session%sehandle, acount)
+            else
+              ier = idba_voglioancora(session%sehandle, acount)
+              
+              allocate (metaanddata%dataattrv%dataattr(i)%attrv%dat(acount))
+              do j =1,acount
                 ier = idba_ancora(session%sehandle, btable)
                 ier = idba_enq(session%sehandle, btable,value)
-
-
-                do j=1,size(metaanddata%dataattrv%dataattr(i)%attrv%dat)
-                  if (metaanddata%dataattrv%dataattr(i)%attrv%dat(j)%dat%btable == btable) then
-                    
-                    select type ( dat =>  metaanddata%dataattrv%dataattr(i)%attrv%dat(j)%dat )
-                    type is (dbadatai)
-                      ier = idba_enq(session%sehandle, btable,dat%value)
-                    type is (dbadatar)
-                      ier = idba_enq(session%sehandle, btable,dat%value)
-                    type is (dbadatad)
-                      ier = idba_enq(session%sehandle, btable,dat%value)
-                    type is (dbadatab)
-                      ier = idba_enq(session%sehandle, btable,dat%value)
-                    type is (dbadatac)
-                      ier = idba_enq(session%sehandle, btable,dat%value)
-                    end select
-
-                  end if
-                end do
-
-              else
-                ier = idba_voglioancora(session%sehandle, acount)
-                
-                allocate (metaanddata%dataattrv%dataattr(i)%attrv%dat(acount))
-                do ai =1,acount
-                  ier = idba_ancora(session%sehandle, btable)
-                  ier = idba_enq(session%sehandle, btable,value)
-                  allocate (metaanddata%dataattrv%dataattr(1)%attrv%dat(ai)%dat,source=dbadatac(btable,value))
-                end do
-              end if
+                allocate (metaanddata%dataattrv%dataattr(i)%attrv%dat(j)%dat,source=dbadatac(btable,value))
+              end do
             end if
+          end if
         end if
       end do
-
+      
       session%count=session%count-1
-
+      
       if (session%count > 0 ) then
-        print *,"dammelo 2",session%count
         ier = idba_dammelo(session%sehandle, btable)
         call metadata%dbaenq(session)
       else
@@ -1710,7 +1720,6 @@ else
   else
 
     allocate (metaanddata%dataattrv%dataattr(1))
-    allocate (metaanddata%dataattrv%dataattr(1)%attrv%dat(0))
     ier = idba_enq(session%sehandle,"var",btable)
     ier = idba_enq(session%sehandle, btable,value)
     allocate (metaanddata%dataattrv%dataattr(1)%dat,source=dbadatac(btable,value))
@@ -1726,15 +1735,14 @@ else
 
       if (lstarvars) then
 
-        allocate (metaanddata%dataattrv%dataattr(1)%attrv%dat(size(filter%vars)))
-        do j = 1, size(filter%starvars)
-          allocate (metaanddata%dataattrv%dataattr(1)%attrv%dat(j)%dat,source=filter%vars(j))
+        allocate (metaanddata%dataattrv%dataattr(1)%attrv%dat(size(filter%starvars%dat)))
+        do j = 1, size(filter%starvars%dat)
+          allocate (metaanddata%dataattrv%dataattr(1)%attrv%dat(j)%dat,source=filter%starvars%dat(j)%dat)
         end do
         
         ier = idba_voglioancora(session%sehandle, acount)
         ier = idba_ancora(session%sehandle, btable)
         ier = idba_enq(session%sehandle, btable,value)
-        
         
         do j=1,size(metaanddata%dataattrv%dataattr(1)%attrv%dat)
           if (metaanddata%dataattrv%dataattr(1)%attrv%dat(j)%dat%btable == btable) then
@@ -1760,16 +1768,15 @@ else
         ier = idba_voglioancora(session%sehandle, acount)
         
         allocate (metaanddata%dataattrv%dataattr(1)%attrv%dat(acount))
-        do ai =1,acount
+        do j =1,acount
           ier = idba_ancora(session%sehandle, btable)
           ier = idba_enq(session%sehandle, btable,value)
-          allocate (metaanddata%dataattrv%dataattr(1)%attrv%dat(ai)%dat,source=dbadatac(btable,value))
+          allocate (metaanddata%dataattrv%dataattr(1)%attrv%dat(j)%dat,source=dbadatac(btable,value))
         end do
       end if
     end if
 
     if (session%count > 0 ) then
-      print *,"dammelo 3",session%count
       ier = idba_dammelo(session%sehandle, btable)
     end if
   end if
@@ -1780,19 +1787,24 @@ end subroutine dbasession_extrude_metaanddata
 
 subroutine dbasession_extrude_metaanddatav(session,metaanddatav,dataonly,filter)
 class(dbasession), intent(inout) :: session
-type(dbametaanddata), intent(inout),allocatable :: metaanddatav(:)
+type(dbametaanddata), intent(out),allocatable :: metaanddatav(:)
 logical, intent(in),optional :: dataonly
 type(dbafilter),intent(in),optional :: filter
 
+type(dbametaanddata),allocatable :: metaanddatavbuf(:)
 integer :: i
 
 call session%extrude_metaanddata()
-allocate(metaanddatav(session%count))
+allocate(metaanddatavbuf(session%count))
 i=0
 do while (session%count >0)
   i=i+1
-  call session%extrude_metaanddata(metaanddatav(i),dataonly=dataonly,filter=filter)
+  call session%extrude_metaanddata(metaanddatavbuf(i),dataonly=dataonly,filter=filter)
 end do
+
+allocate (metaanddatav(i))
+metaanddatav=metaanddatavbuf(:i)
+deallocate(metaanddatavbuf)
 
 end subroutine dbasession_extrude_metaanddatav
 

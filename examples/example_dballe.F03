@@ -16,11 +16,11 @@ call write1()    ! write etherogeneous ensamble of data with attributes and cons
 call write2()    ! write an omogeneous vector of data
 call write3()    ! write an etherogeneous ensamble of data
 call write4()    ! write an etherogeneous ensamble of data and attributes
+call read2()     ! read data and attributes for data filtered and ordered by btable with type predefined
 call delete1()   ! delete one var from the entire DB
 call delete2()   ! delete one var only where are some defined metadati
 call delete3()   ! delete some attributes from one var only where are some defined metadati
 call read1()     ! read ana, data and attributes for constant data, data and attributes for data
-call read2()     ! read data and attributes for data filtered and ordered by btable with type predefined
 call read3()     ! read an omogeneous vector of data
 call copy1()     ! copy data and attributes of everythings to an other dsn
 call copy2()     ! copy data and constant data to an other dsn
@@ -319,19 +319,43 @@ subroutine read2()
 type(dbametaanddata),allocatable :: metaanddatav(:)
 type(dbafilter) :: filter
 integer :: i
-class(dbadata),allocatable :: vars(:)
+type(dbadatav) :: vars,starvars
 
 print *,"----------------------------------------------"
 print *,"--------------- read2 ------------------------"
 
-allocate (vars(2),source=[dbadatai("B12101"),dbadatai("B12102")])
+allocate (vars%dat(2))
+allocate (vars%dat(1)%dat,source=dbadatai("B12101"))
+allocate (vars%dat(2)%dat,source=dbadatac("B12102"))
 
-print *, "dati dati:"
 filter=dbafilter(vars=vars)
+print *, "filter:"
 call filter%display()
 call session%set(filter=filter)
 call session%extrude(metaanddatav,filter=filter,dataonly=.true.)
 
+print *, "dati dati:"
+do i=1,size(metaanddatav)
+  call metaanddatav(i)%display()
+end do
+
+
+deallocate (vars%dat)
+allocate (vars%dat(2))
+allocate (vars%dat(1)%dat,source=dbadatai("B13003"))
+allocate (vars%dat(2)%dat,source=dbadatac("B12102"))
+allocate (starvars%dat(3))
+allocate (starvars%dat(1)%dat,source=dbadatai("*B33192"))
+allocate (starvars%dat(2)%dat,source=dbadatac("*B33193"))
+allocate (starvars%dat(3)%dat,source=dbadatad("*B33194"))
+
+filter=dbafilter(vars=vars,starvars=starvars)
+print *, "filter:"
+call filter%display()
+call session%set(filter=filter)
+call session%extrude(metaanddatav,filter=filter)
+
+print *, "dati dati:"
 do i=1,size(metaanddatav)
   call metaanddatav(i)%display()
 end do
