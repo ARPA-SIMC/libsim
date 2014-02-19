@@ -17,8 +17,8 @@ class(mixList) :: this
 class(*), pointer :: curr
 logical :: found
 
-call this%start()
-do while(this%more())
+call this%rewind()
+do while(this%element())
   curr => this%Currentpoli()
   found=.false.
   select type(curr)
@@ -45,7 +45,7 @@ do while(this%more())
 
   call this%next()
 end do
-call this%start()
+call this%rewind()
 end subroutine displaymix
 
 

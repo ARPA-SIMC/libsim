@@ -18,8 +18,8 @@ subroutine displayByte(this)
 class(byteList) :: this
 class(*), pointer :: curr
 
-call this%start()
-do while(this%more())
+call this%rewind()
+do while(this%element())
   curr => this%Currentpoli()
   select type(curr)
   type is (integer(kind=int_b))
@@ -27,7 +27,6 @@ do while(this%more())
   end select
   call this%next()
 end do
-call this%start()
 end subroutine displayByte
 
 !!$  subroutine addByte(this, value)

@@ -22,55 +22,85 @@ type mytype
 end type mytype
 type(mytype) :: ir=mytype(3,6.)
                                 ! real list
-call list_real%add(3.14)
-call list_real%add(6.28)
+call list_real%append(3.14)
+call list_real%append(6.28)
 print *,"display real list"
 call list_real%display()
 
 !!$! do not work !!!
 !!$! compiler bug ?
 !!$                                ! char list
-!!$call list_char%add("hello world")
-!!$call list_char%add("bye bye baby")
+!!$call list_char%append("hello world")
+!!$call list_char%append("bye bye baby")
 !!$print *,"display char list"
 !!$call list_char%display()
 
 
                                 ! test integer list
 do i=1, 10
-  call list_int%add(i)
+  call list_int%append(i)
 enddo
 print *,"display integer list"
 call list_int%display()
 print *
-call list_int%start()
+call list_int%rewind()
 i = 1
-do while(list_int%more())
+do while(list_int%element())
   values(i) = list_int%current()
   call list_int%next()
   i = i + 1
 end do
 print *,"display integer vector from list"
 print *, values
-  
+
+! reverse
+call list_int%forward()
+i = 1
+do while(list_int%element())
+  values(i) = list_int%current()
+  call list_int%prev()
+  i = i + 1
+end do
+print *,"display inverse integer vector from list"
+print *, values
+
+print *,"seek return status =", list_int%seek(3)
+print *,"list index 3 =", list_int%current()
+
+                                ! test remove
+print *,"delete(5) return status =", list_int%delete(5)
+print *,"display integer vector with 5 removed"
+call list_int%display()
+! reverse
+print *,"display reverse integer vector with 5 removed"
+call list_int%forward()
+do while(list_int%element())
+  print*, list_int%current()
+  call list_int%prev()
+end do
+
+print *,"delete return status =", list_int%delete()
+print *,"display integer vector with everithings removed"
+call list_int%display()
+
                                 ! test mix list
   do i=1, 10
-  call list_mix%add(i)
+  call list_mix%append(i)
 enddo
-call list_mix%add(1.23)
-call list_mix%add(4d0)
-call list_mix%add(ir)
+call list_mix%append(1.23)
+call list_mix%append(4d0)
+call list_mix%append(ir)
                                 ! this do not work !
                                 ! compiler bug ???
-                                !  call list_mix%add("test1")
-                                !  call list_mix%add("test2")
+                                !  call list_mix%append("test1")
+                                !  call list_mix%append("test2")
 
 print *,"display mix list"
 call list_mix%display()
 
 print *,"print mix list with cast"
-call list_mix%start()
-do while (list_mix%more())
+call list_mix%rewind()
+do while (list_mix%element())
   
   val => list_mix%current()
   select type (x => val)
