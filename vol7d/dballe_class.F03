@@ -245,10 +245,16 @@ type,public,abstract :: dbadata
   character(len=9) :: btable
 contains
   procedure(dbadata_set),deferred :: dbaset
+  procedure :: dbadata_geti
+  procedure :: dbadata_getr
+  procedure :: dbadata_getd
+  procedure :: dbadata_getb
+  procedure :: dbadata_getc
+  generic   :: get => dbadata_geti,dbadata_getr,dbadata_getd,dbadata_getb,dbadata_getc
   procedure(dbadata_display),deferred :: display
 end type dbadata
 
-interface
+abstract interface
 subroutine dbadata_set(data,session)
 import
 class(dbadata), intent(in) :: data
@@ -266,6 +272,7 @@ end interface
 type,public, extends(dbadata) :: dbadatai
   integer :: value
 contains
+  procedure :: dbadata_geti => dbadatai_geti
   procedure :: dbaset => dbadatai_set
   procedure :: display => dbadatai_display
 end type dbadatai
@@ -278,6 +285,7 @@ end interface dbadatai
 type,public, extends(dbadata) :: dbadatar
   real :: value
 contains
+  procedure :: dbadata_getr => dbadatar_getr
   procedure :: dbaset => dbadatar_set
   procedure :: display => dbadatar_display
 end type dbadatar
@@ -291,6 +299,7 @@ end interface dbadatar
 type,public, extends(dbadata) :: dbadatad
   doubleprecision :: value
 contains
+  procedure :: dbadata_getd => dbadatad_getd
   procedure :: dbaset => dbadatad_set
   procedure :: display => dbadatad_display
 end type dbadatad
@@ -304,6 +313,7 @@ end interface dbadatad
 type,public, extends(dbadata) :: dbadatab
   integer(kind=int_b) :: value
 contains
+  procedure :: dbadata_getb => dbadatab_getb
   procedure :: dbaset => dbadatab_set
   procedure :: display => dbadatab_display
 end type dbadatab
@@ -318,6 +328,7 @@ type,public, extends(dbadata) :: dbadatac
 !  character(:) :: value
   character(255) :: value
 contains
+  procedure :: dbadata_getc => dbadatac_getc
   procedure :: dbaset => dbadatac_set
   procedure :: display => dbadatac_display
 end type dbadatac
@@ -469,6 +480,36 @@ interface dbafilter
 end interface
 
 contains
+
+subroutine dbadata_geti(data,value)
+class(dbadata), intent(in) :: data
+integer, intent(out) :: value
+value=imiss
+end subroutine dbadata_geti
+
+subroutine dbadata_getr(data,value)
+class(dbadata), intent(in) :: data
+real, intent(out) :: value
+value=rmiss
+end subroutine dbadata_getr
+
+subroutine dbadata_getd(data,value)
+class(dbadata), intent(in) :: data
+doubleprecision, intent(out) :: value
+value=dmiss
+end subroutine dbadata_getd
+
+subroutine dbadata_getb(data,value)
+class(dbadata), intent(in) :: data
+INTEGER(kind=int_b), intent(out) :: value
+value=bmiss
+end subroutine dbadata_getb
+
+subroutine dbadata_getc(data,value)
+class(dbadata), intent(in) :: data
+character(len=*), intent(out) :: value
+value=cmiss
+end subroutine dbadata_getc
 
 subroutine dbalevel_display(level)
 class(dbalevel), intent(in) :: level
@@ -740,6 +781,36 @@ end do
 
 end subroutine dbadataattrv_display
 
+
+subroutine dbadatai_geti(data,value)
+class(dbadatai), intent(in) :: data
+integer, intent(out) :: value
+value=data%value
+end subroutine dbadatai_geti
+
+subroutine dbadatar_getr(data,value)
+class(dbadatar), intent(in) :: data
+real, intent(out) :: value
+value=data%value
+end subroutine dbadatar_getr
+
+subroutine dbadatad_getd(data,value)
+class(dbadatad), intent(in) :: data
+doubleprecision, intent(out) :: value
+value=data%value
+end subroutine dbadatad_getd
+
+subroutine dbadatab_getb(data,value)
+class(dbadatab), intent(in) :: data
+integer(kind=int_b), intent(out) :: value
+value=data%value
+end subroutine dbadatab_getb
+
+subroutine dbadatac_getc(data,value)
+class(dbadatac), intent(in) :: data
+character(len=*), intent(out) :: value
+value=data%value
+end subroutine dbadatac_getc
 
 
 type(dbadatai) elemental function dbadatai_init(btable,value)

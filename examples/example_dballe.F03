@@ -54,6 +54,7 @@ allocate (metaanddata(1)%dataattrv%dataattr(2))
 
 ! first data
 allocate (metaanddata(1)%dataattrv%dataattr(1)%dat,source=dbadatai("B13003",85))
+
 ! create an etherogeneous ensamble of attr
 allocate (attrv%dat(3))
 allocate (attrv%dat(1)%dat,source=dbadatar("*B33192",30.))
@@ -300,7 +301,7 @@ end do
 deallocate(metaanddatav)
 
 print *, "dati dati:"
-filter=dbafilter(var="B12101")
+filter=dbafilter(var="B12102")
 call filter%display()
 call session%set(filter=filter)
 call session%extrude(metaanddatav)
@@ -320,6 +321,9 @@ type(dbametaanddata),allocatable :: metaanddatav(:)
 type(dbafilter) :: filter
 integer :: i
 type(dbadatav) :: vars,starvars
+integer :: ivalue
+real :: rvalue
+character(len=128) :: cvalue
 
 print *,"----------------------------------------------"
 print *,"--------------- read2 ------------------------"
@@ -338,6 +342,31 @@ print *, "dati dati:"
 do i=1,size(metaanddatav)
   call metaanddatav(i)%display()
 end do
+
+
+!!!!!!!!!!!!!!!!
+! how use values
+associate (dato => metaanddatav(1)%dataattrv%dataattr(1)%dat)
+print *,dato%btable
+! with cast
+select type (dato)
+type is (dbadatai)
+  print *,"cast integer value",dato%value
+type is (dbadatar)
+  print *,"cast real value",dato%value
+type is (dbadatac)
+  print *,"cast character value",dato%value
+end select
+
+! calling %get 
+call dato%get(ivalue)
+if (c_e(ivalue)) print *,"get  integer value",ivalue
+call dato%get(rvalue)
+if (c_e(rvalue)) print *,"get  real value",rvalue
+call dato%get(cvalue)
+if (c_e(cvalue)) print *,"get  char value",cvalue
+end associate
+!!!!!!!!!!!!!!!!
 
 
 deallocate (vars%dat)
