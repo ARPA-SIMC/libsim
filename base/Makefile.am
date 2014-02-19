@@ -5,6 +5,17 @@ libsim_base_la_SOURCES = for2r.f90 io_units.F90 kinds.F90 phys_const.f90 missing
  optionparser_class.F90 \
  simple_stat.f90 \
  space_utilities.F90
+if F2003_EXTENDED_FEATURES
+ libsim_base_la_SOURCES += list_link.F03 \
+ list_abstract.F03 \
+ list_mix.F03 \
+ list_integer.F03 \
+ list_doubleprecision.F03 \
+ list_character.F03 \
+ list_byte.F03 \
+ list_real.F03
+endif
+
 
 # Opzioni Fortran (-I... sono da considerarsi opzioni fortran
 # e non del preprocessore perche' servono per USE e non per #include)
@@ -29,6 +40,13 @@ missing_values.$(OBJEXT): kinds.$(OBJEXT)
 missing_values.lo: kinds.$(OBJEXT)
 char_utilities.$(OBJEXT): kinds.$(OBJEXT) missing_values.$(OBJEXT)
 char_utilities.lo: kinds.$(OBJEXT) missing_values.$(OBJEXT)
+
+list_integer.$(OBJEXT): list_link.$(OBJEXT) list_abstact.$(OBJEXT)
+list_real.$(OBJEXT): list_link.$(OBJEXT) list_abstact.$(OBJEXT)
+list_doubleprecison.$(OBJEXT): list_link.$(OBJEXT) list_abstact.$(OBJEXT)
+list_character.$(OBJEXT): list_link.$(OBJEXT) list_abstact.$(OBJEXT)
+list_byte.$(OBJEXT): list_link.$(OBJEXT) list_abstact.$(OBJEXT) kinds.$(OBJEXT)
+list_mix.$(OBJEXT): list_link.$(OBJEXT) list_abstact.$(OBJEXT) kinds.$(OBJEXT)
 
 optional_values.$(OBJEXT): missing_values.$(OBJEXT)
 optional_values.lo: missing_values.$(OBJEXT)

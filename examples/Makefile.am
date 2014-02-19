@@ -41,6 +41,12 @@ example_char_utilities_SOURCES = example_char_utilities.f90
 example_char_utilities_LDADD =   ../base/libsim_base.la
 
 
+if F2003_EXTENDED_FEATURES
+example_list_SOURCES = example_list.F03
+example_list_LDADD = ../base/libsim_base.la
+noinst_PROGRAMS += example_list
+endif
+
 
 if DBALLE
 noinst_PROGRAMS += esempio_v7ddballe esempio_v7ddballe_multi esempio_v7ddballe_import_export esempio_v7ddballe_export  example_v7ddballe_v7d2dba esempio_v7ddballe_move_and_collapse example_dballe
