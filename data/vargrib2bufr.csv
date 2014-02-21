@@ -396,7 +396,8 @@ B20010,Medium cloud cover ECMWF,Fraction->Percent,98,128,187,255,100.0,0.0
 B20010,Total cloud cover,Fraction,200,200,114,0,100.0,0.0
 B20010,Total cloud cover,Fraction,200,200,114,255,100.0,0.0
 B20010,Total cloud cover,Percent,255,2,71,255,1.0,0.0
-B20010,Total cloud cover,Fraction->Percent,98,128,164,255,100.0,0.0
+B20010,Total cloud cover ECMWF,Fraction->Percent,98,128,164,255,100.0,0.0
+B20010,Cloud cover ECMWF,Fraction->Percent,98,128,248,255,100.0,0.0
 B22001,Direction of waves,degree true,200,140,230,255,1.0,0.0
 B22001,Direction of waves,degree true,98,140,230,255,1.0,0.0
 B22037,Tidal elevation with respect to national land datum,m,255,2,82,255,1.0,0.0
