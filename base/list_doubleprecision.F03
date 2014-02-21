@@ -15,15 +15,10 @@ contains
 
 subroutine displayDoubleprecision(this)
 class(doubleprecisionList) :: this
-class(*), pointer :: curr
 
 call this%rewind()
 do while(this%element())
-  curr => this%Currentpoli()
-  select type(curr)
-  type is (doubleprecision)
-    print *, curr
-  end select
+  print *,"index:",this%currentindex()," value:", this%current()
   call this%next()
 end do
 end subroutine displayDoubleprecision

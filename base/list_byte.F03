@@ -16,15 +16,10 @@ contains
 
 subroutine displayByte(this)
 class(byteList) :: this
-class(*), pointer :: curr
 
 call this%rewind()
 do while(this%element())
-  curr => this%Currentpoli()
-  select type(curr)
-  type is (integer(kind=int_b))
-    print *, curr
-  end select
+  print *,"index:",this%currentindex()," value:", this%current()
   call this%next()
 end do
 end subroutine displayByte

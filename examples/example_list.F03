@@ -14,7 +14,7 @@ type(mixlist) :: list_mix
 
 class(*),pointer :: val
 integer values(10)
-integer i
+integer i,n
 
 type mytype
   integer :: i
@@ -75,9 +75,22 @@ call list_int%display()
 print *,"display reverse integer vector with 5 removed"
 call list_int%forward()
 do while(list_int%element())
-  print*, list_int%current()
+  print*, "index:",list_int%currentindex()," value:",list_int%current()
   call list_int%prev()
 end do
+
+
+print *,"delete(1) return status =", list_int%delete(1)
+print *,"display integer vector with 1 removed"
+call list_int%display()
+
+n=list_int%countelements()
+print *,"number of list elements=",n
+
+print *,"delete(",n,")"
+print *,"return status =", list_int%delete(n)
+print *,"display integer vector with last removed"
+call list_int%display()
 
 print *,"delete return status =", list_int%delete()
 print *,"display integer vector with everithings removed"
