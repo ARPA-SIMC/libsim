@@ -151,6 +151,12 @@ B13206,Soil water content level 2 IFS TESSEL (invented),m**3/m**3->kg/m**2,98,12
 B13206,Soil water content level 3 IFS TESSEL (invented),m**3/m**3->kg/m**2,98,128,41,255,720.7,0.0
 B13206,Soil water content level 4 IFS TESSEL (invented),m**3/m**3->kg/m**2,98,128,42,255,1890.,0.0
 B13212,Leaf wetness duration (invented),s,200,0,192,2,1.0,0.0
+B13230,CAPE (invented),J/Kg,255,7,6,0,1.0,0.0
+B13230,CAPE (invented),J/Kg,98,128,59,255,1.0,0.0
+B13230,CAPE (invented),J/Kg,200,201,145,255,1.0,0.0
+B13230,CAPE (invented),J/Kg,78,201,145,255,1.0,0.0
+B13230,CAPE (invented),J/Kg,200,201,143,255,1.0,0.0
+B13230,CAPE (invented),J/Kg,78,201,143,255,1.0,0.0
 B14018,Incoming short-wave radiation flux (surface),W/m^2,200,200,80,255,1.0,0.0
 B14018,Incoming short-wave radiation flux (surface),W/m^2,200,200,80,0,1.0,0.0
 B14019,Surface Albedo,Fraction,200,200,124,255,100.,0.0
