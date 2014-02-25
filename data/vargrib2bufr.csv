@@ -385,10 +385,10 @@ B15237,Concentration of anthropogenic aerosol in PM10 (invented),ug/m**3,200,195
 B15237,Concentration of anthropogenic aerosol in PM10 (invented),ug/m**3,200,195,33,255,0.000000001,0.0
 B15238,Concentration of biogenic aerosol in PM10 (invented),ug/m**3,200,195,34,0,0.000000001,0.0
 B15238,Concentration of biogenic aerosol in PM10 (invented),ug/m**3,200,195,34,255,0.000000001,0.0
-B15239,Concentration of anthropogenic aerosol in PM2.5 (invented),ug/m**3,200,195,43,0,0.000000001,0.0
-B15239,Concentration of anthropogenic aerosol in PM2.5 (invented),ug/m**3,200,195,43,255,0.000000001,0.0
-B15240,Concentration of biogenic aerosol in PM2.5 (invented),ug/m**3,200,195,44,0,0.000000001,0.0
-B15240,Concentration of biogenic aerosol in PM2.5 (invented),ug/m**3,200,195,44,255,0.000000001,0.0
+B15239,Concentration of anthropogenic aerosol in PM2.5 (invented),ug/m**3,200,195,63,0,0.000000001,0.0
+B15239,Concentration of anthropogenic aerosol in PM2.5 (invented),ug/m**3,200,195,63,255,0.000000001,0.0
+B15240,Concentration of biogenic aerosol in PM2.5 (invented),ug/m**3,200,195,64,0,0.000000001,0.0
+B15240,Concentration of biogenic aerosol in PM2.5 (invented),ug/m**3,200,195,64,255,0.000000001,0.0
 B15241,Aerosol Optical Thickness (invented),numeric,200,195,200,0,1.0,0.0
 B15241,Aerosol Optical Thickness (invented),numeric,200,195,200,255,1.0,0.0
 B20010,Cloud cover DWD,Percent,200,201,29,255,1.0,0.0
