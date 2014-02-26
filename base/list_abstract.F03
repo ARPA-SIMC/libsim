@@ -25,10 +25,10 @@ module list_abstract
      procedure, non_overridable :: delete       !> delete values from list
      procedure, non_overridable :: countelements!> count values in list
 !     procedure                  :: current => currentpoli !> get index of currLink
-!     procedure                  :: display      ! print values in list
+     procedure                  :: display      ! print values in list
 !     procedure                  :: write_formatted
 !     generic                    :: write(formatted) => write_formatted
-     procedure(displayValues), deferred :: display !> prints values in list
+!     procedure(displayValues), deferred :: display !> prints values in list
   end type list
 
   abstract interface
@@ -55,15 +55,17 @@ contains
 !!$       "class(List)"
 !!$ END SUBROUTINE
 !!$
-!!$subroutine display(this)
-!!$class(List) :: this
-!!$
-!!$call this%rewind()
-!!$do while(this%element())
-!!$  print *,"index:",this%currentindex()," value:", this%current()
-!!$  call this%next()
-!!$end do
-!!$end subroutine display
+
+subroutine display(this)
+class(List) :: this
+
+call this%rewind()
+do while(this%element())
+!  print *,"index:",this%currentindex()," value:", this%currentpoli()
+  print *,"index:",this%currentindex()," value: polimorphic value (not printable)"
+  call this%next()
+end do
+end subroutine display
 
 
 integer function countelements(this)

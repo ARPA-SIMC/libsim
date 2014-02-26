@@ -8,7 +8,7 @@ integer :: i
 type(dbasession) :: session
 type(dbaconnection) :: connection
 
-! connect to dsn
+! connect to dsn type DBA
 connection=dbaconnection(dsn="sqlite:/tmp/dballe.sqlite")
 session=dbasession(connection,wipe=.true.,anaflag="write", dataflag="write", attrflag="write")
 
@@ -22,12 +22,40 @@ call delete2()   ! delete one var only where are some defined metadati
 call delete3()   ! delete some attributes from one var only where are some defined metadati
 call read1()     ! read ana, data and attributes for constant data, data and attributes for data
 call read3()     ! read an omogeneous vector of data
+call read4()     ! read data and attributes for data in a double linked list
 call copy1()     ! copy data and attributes of everythings to an other dsn
 call copy2()     ! copy data and constant data to an other dsn
 
 !close everythings
 call session%delete()
 call connection%delete()
+
+
+! connect to dsn type BUFR file for write
+session=dbasession(filename="example_dballe.bufr",wipe=.true.,write=.true.)
+
+call write1()    ! write etherogeneous ensamble of data with attributes and constant data using macro object
+call write2()    ! write an omogeneous vector of data
+call write3()    ! write an etherogeneous ensamble of data
+call write4()    ! write an etherogeneous ensamble of data and attributes
+
+!close everythings
+call session%delete()
+
+
+! connect to dsn type BUFR file for read
+session=dbasession(filename="example_dballe.bufr")
+
+call read1l()     ! read ana, data and attributes for constant data, data and attributes for data
+
+!! note: I cannot read from file without filter (filter do not work on file) and put everythings in real matrix
+!call read3l()     ! read an omogeneous vector of data
+
+call copy1f()     ! copy data and attributes of everythings to an other file
+!call copy2f()     ! copy data and constant data to an other file
+
+!close everythings
+call session%delete()
 
 contains
 
@@ -151,9 +179,13 @@ do i =1,size(data)
   !call data(i)%dbaset(session)
 end do
 
-!write it in dsn
+!write it in dsn or file
 call session%prendilo()
 !!$session%enq(metadata)
+
+!close message if I am writing on file
+call session%close_message()
+
 
 end subroutine write2
 
@@ -208,6 +240,8 @@ call session%set(datav=datav)
 call session%prendilo()
 !!$session%enq(metadata)
 
+!close message if I am writing on file
+call session%close_message()
 
 end subroutine write3
 
@@ -314,6 +348,49 @@ deallocate(metaanddatav)
 
 end subroutine read1
 
+subroutine read1l()
+
+type(dbametaanddatalist) :: metaanddatal
+type(dbaanalist) :: anal
+type(dbafilter) :: filter
+logical :: status
+
+print *,"----------------------------------------------"
+print *,"--------------- read1l ------------------------"
+
+! rewind
+call session%filerewind()
+
+call session%set(filter=dbafilter())
+
+print *, "anagrafica:"
+filter=dbafilter(coordmin=dbacoord(lon= 9.d0,lat=44.d0),&
+                 coordmax=dbacoord(lon=11.d0,lat=46.d0))
+call session%set(filter=filter)
+call session%extrude(anal)
+call anal%display()
+status=anal%delete()
+
+! rewind
+call session%filerewind()
+
+print *, "dati di anagrafica:"
+call session%set(filter=dbafilter(contextana=.true.))
+call session%extrude(metaanddatal)
+call metaanddatal%display()
+status = metaanddatal%delete()
+
+! rewind
+call session%filerewind()
+
+print *, "dati dati:"
+filter=dbafilter(var="B12102")
+call session%set(filter=filter)
+call session%extrude(metaanddatal)
+call metaanddatal%display()
+status = metaanddatal%delete()
+
+end subroutine read1l
 
 subroutine read2()
 
@@ -421,6 +498,63 @@ deallocate(metaanddatarv)
 end subroutine read3
 
 
+
+subroutine read3l()
+
+type(dbametaanddatarlist) :: metaanddatarl
+type(dbametaanddatar),allocatable :: metaanddatarv(:)
+type(dbafilter) :: filter
+logical :: status
+
+print *,"----------------------------------------------"
+print *,"--------------- read3l ------------------------"
+
+! rewind
+call session%filerewind()
+
+print *, "dati dati:"
+filter=dbafilter(var="B12102")
+call session%set(filter=filter)
+call session%extrude(metaanddatarl)
+
+call metaanddatarl%display()
+
+metaanddatarv=metaanddatarl%toarray()
+print *,"max=",maxval(metaanddatarv(:)%dbadatar%value)
+
+status = metaanddatarl%delete()
+
+end subroutine read3l
+
+
+subroutine read4()
+
+type(dbametaanddata) :: myelement
+type(dbametaanddatalist) :: metaanddatal
+type(dbafilter) :: filter
+
+print *,"----------------------------------------------"
+print *,"--------------- read4 ------------------------"
+
+print *, "dati dati:"
+filter=dbafilter(var="B12102")
+call session%set(filter=filter)
+
+print*,"prima di extrude"
+call session%extrude(metaanddatal)
+print*,"prima di display"
+call metaanddatal%display()
+
+print *,"number of list elements=",metaanddatal%countelements()
+print *,"seek return status =", metaanddatal%seek(2)
+myelement=metaanddatal%current()
+print *,"list index 2 ="
+call myelement%display()
+print *,"status delete=", metaanddatal%delete()
+
+end subroutine read4
+
+
 subroutine delete1()
 
 type(dbafilter) :: filter
@@ -500,6 +634,7 @@ print *,"--------------- copy1 ----------------------"
 
 ! connect to dsn
 connectioncp=dbaconnection(dsn="sqlite:/tmp/dballecopy1.sqlite")
+!connectioncp=dbaconnection(dsn="mem:/tmp/dballecopy1")
 sessioncp=dbasession(connectioncp,wipe=.true.,anaflag="write", dataflag="write", attrflag="write")
 
 ! data
@@ -508,6 +643,7 @@ call session%extrude_metaanddata()
 do while (session%count >0)
   call session%extrude_metaanddata (metaanddata)
   call sessioncp%ingest(metaanddata=metaanddata)
+  if (session%file) call session%close_message()
 end do
 
 ! constant data
@@ -516,6 +652,7 @@ call session%extrude_metaanddata()
 do while (session%count >0)
   call session%extrude_metaanddata (metaanddata)
   call sessioncp%ingest(metaanddata=metaanddata)
+  if (session%file) call session%close_message()
 end do
 
 
@@ -524,6 +661,51 @@ call sessioncp%delete()
 call connectioncp%delete()
 
 end subroutine copy1
+
+
+subroutine copy1f()
+type(dbasession)    :: sessioncp
+type(dbametaanddata):: metaanddata
+
+print *,"----------------------------------------------"
+print *,"--------------- copy1f ----------------------"
+
+
+! connect to dsn type BUFR file for write
+sessioncp=dbasession(filename="example_dballe_copy1f.bufr",wipe=.true.,write=.true.)
+
+! data
+call session%filerewind()
+
+call session%set(filter=dbafilter())
+call session%extrude_metaanddata()
+do while (session%count >0)
+  print*,"read/write data"
+  call session%extrude_metaanddata (metaanddata)
+  call sessioncp%ingest(metaanddata=metaanddata)
+  call sessioncp%close_message()
+  call session%extrude_metaanddata()
+end do
+
+! constant data
+call session%filerewind()
+
+call session%set(filter=dbafilter(contextana=.true.))
+call session%extrude_metaanddata()
+do while (session%count >0)
+  print*,"read/write data ana"
+  call session%extrude_metaanddata (metaanddata)
+  call sessioncp%ingest(metaanddata=metaanddata)
+  call sessioncp%close_message()
+  call session%extrude_metaanddata()
+end do
+
+
+!close everythings
+call sessioncp%delete()
+
+end subroutine copy1f
+
 
 
 subroutine copy2()
@@ -535,7 +717,8 @@ print *,"----------------------------------------------"
 print *,"--------------- copy2 ----------------------"
 
 ! connect to dsn
-connectioncp=dbaconnection(dsn="sqlite:/tmp/dballecopy2.sqlite")
+!connectioncp=dbaconnection(dsn="sqlite:/tmp/dballecopy2.sqlite")
+connectioncp=dbaconnection(dsn="mem:/tmp/dballecopy2")
 sessioncp=dbasession(connectioncp,wipe=.true.,anaflag="write", dataflag="write", attrflag="write")
 
 ! use character type

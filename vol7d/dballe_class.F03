@@ -41,6 +41,7 @@ use geo_coord_class
 use vol7d_ana_class
 use vol7d_network_class
 use datetime_class
+use list_abstract
 
 !USE char_utilities
 
@@ -72,7 +73,11 @@ end interface
 type,public ::  dbasession
   integer :: sehandle=imiss
   logical :: file=.false.
-  integer :: category !< log4fortran
+  character(len=40) :: template=cmiss
+  character(len=255) :: filename=cmiss
+  character(len=40) :: mode=cmiss
+  character(len=40) :: format=cmiss
+  integer :: category=imiss !< log4fortran
   integer :: count=imiss !< number of results left to query
   contains
 # ifdef F2003_FULL_FEATURES
@@ -89,25 +94,36 @@ type,public ::  dbasession
     procedure :: var_related => dbasession_var_related
     procedure :: critica => dbasession_critica
     procedure :: scusa => dbasession_scusa
+    procedure :: close_message => dbasession_close_message
+    procedure :: unsetb => dbasession_unsetb
+    procedure :: filerewind => dbasession_filerewind
     procedure :: extrude_ana => dbasession_extrude_ana
     procedure :: extrude_anav => dbasession_extrude_anav
+    procedure :: extrude_anal => dbasession_extrude_anal
     procedure :: extrude_metaanddata => dbasession_extrude_metaanddata
+    procedure :: extrude_metaanddatal => dbasession_extrude_metaanddatal
     procedure :: extrude_metaanddatav => dbasession_extrude_metaanddatav
     procedure :: extrude_metaanddatai => dbasession_extrude_metaanddatai
     procedure :: extrude_metaanddataiv => dbasession_extrude_metaanddataiv
+    procedure :: extrude_metaanddatail => dbasession_extrude_metaanddatail
     procedure :: extrude_metaanddatab => dbasession_extrude_metaanddatab
     procedure :: extrude_metaanddatabv => dbasession_extrude_metaanddatabv
+    procedure :: extrude_metaanddatabl => dbasession_extrude_metaanddatabl
     procedure :: extrude_metaanddatad => dbasession_extrude_metaanddatad
     procedure :: extrude_metaanddatadv => dbasession_extrude_metaanddatadv
+    procedure :: extrude_metaanddatadl => dbasession_extrude_metaanddatadl
     procedure :: extrude_metaanddatar => dbasession_extrude_metaanddatar
     procedure :: extrude_metaanddatarv => dbasession_extrude_metaanddatarv
+    procedure :: extrude_metaanddatarl => dbasession_extrude_metaanddatarl
     procedure :: extrude_metaanddatac => dbasession_extrude_metaanddatac
     procedure :: extrude_metaanddatacv => dbasession_extrude_metaanddatacv
+    procedure :: extrude_metaanddatacl => dbasession_extrude_metaanddatacl
     procedure :: dissolve_metadata => dbasession_dissolve_metadata
     procedure :: dissolveattr => dbasession_dissolveattr_metadata
     generic   :: dissolve => dissolve_metadata ,dimenticami
-    generic   :: extrude => extrude_anav,extrude_metaanddatav,&
-     extrude_metaanddataiv,extrude_metaanddatabv,extrude_metaanddatadv,extrude_metaanddatarv,extrude_metaanddatacv
+    generic   :: extrude => extrude_ana, extrude_anav, extrude_anal,extrude_metaanddatav,extrude_metaanddatal,&
+     extrude_metaanddataiv,extrude_metaanddatabv,extrude_metaanddatadv,extrude_metaanddatarv,extrude_metaanddatacv&
+     ,extrude_metaanddatail,extrude_metaanddatarl,extrude_metaanddatadl,extrude_metaanddatabl,extrude_metaanddatacl
 !  procedure :: dammelo => dbasession_dammelo
 end type dbasession
 
@@ -193,6 +209,13 @@ end type dbaana
 interface dbaana
   procedure   dbaana_init     ! add constructor to shape generic interface
 end interface
+
+
+type, public, extends(list) :: dbaanaList
+  contains
+  procedure :: current => currentdbaana ! get integer pointed by iterator
+  procedure :: display => displaydbaana ! print the integer list
+end type dbaanaList
 
 !> network metadata
 type,public,extends(vol7d_network) :: dbanetwork
@@ -414,6 +437,13 @@ type, public :: dbametaanddatav
   procedure :: dbaingest => dbametaanddatav_ingest
 end type dbametaanddatav
 
+
+type, public, extends(list) :: dbametaanddataList
+  contains
+  procedure :: current => currentdbametaanddata ! get integer pointed by iterator
+  procedure :: display => displaydbametaanddata ! print the integer list
+end type dbametaanddataList
+
 !> metadata and integer data
 type, public,extends(dbadatai) :: dbametaanddatai
   type(dbametadata) :: metadata
@@ -421,6 +451,13 @@ type, public,extends(dbadatai) :: dbametaanddatai
   procedure :: display => dbametaanddatai_display
   procedure :: dbaingest => dbametaanddatai_ingest
 end type dbametaanddatai
+
+type, public, extends(list) :: dbametaanddataiList
+  contains
+  procedure :: current => currentdbametaanddatai ! get integer pointed by iterator
+  procedure :: display => displaydbametaanddatai ! print the integer list
+  procedure :: toarray => toarray_dbametaanddatai ! return ana allocated array
+end type dbametaanddataiList
 
 !> metadata and byte data
 type, public,extends(dbadatab) :: dbametaanddatab
@@ -430,6 +467,13 @@ type, public,extends(dbadatab) :: dbametaanddatab
   procedure :: dbaingest => dbametaanddatab_ingest
 end type dbametaanddatab
 
+type, public, extends(list) :: dbametaanddatabList
+  contains
+  procedure :: current => currentdbametaanddatab ! get integer pointed by iterator
+  procedure :: display => displaydbametaanddatab ! print the integer list
+  procedure :: toarray => toarray_dbametaanddatab ! return ana allocated array
+end type dbametaanddatabList
+
 !> metadata and doubleprecision data
 type, public,extends(dbadatad) :: dbametaanddatad
   type(dbametadata) :: metadata
@@ -437,6 +481,13 @@ type, public,extends(dbadatad) :: dbametaanddatad
   procedure :: display => dbametaanddatad_display
   procedure :: dbaingest => dbametaanddatad_ingest
 end type dbametaanddatad
+
+type, public, extends(list) :: dbametaanddatadList
+  contains
+  procedure :: current => currentdbametaanddatad ! get integer pointed by iterator
+  procedure :: display => displaydbametaanddatad ! print the integer list
+  procedure :: toarray => toarray_dbametaanddatad ! return ana allocated array
+end type dbametaanddatadList
 
 !> metadata and real data
 type, public,extends(dbadatar) :: dbametaanddatar
@@ -446,6 +497,13 @@ type, public,extends(dbadatar) :: dbametaanddatar
   procedure :: dbaingest => dbametaanddatar_ingest
 end type dbametaanddatar
 
+type, public, extends(list) :: dbametaanddatarList
+  contains
+  procedure :: current => currentdbametaanddatar ! get integer pointed by iterator
+  procedure :: display => displaydbametaanddatar ! print the integer list
+  procedure :: toarray => toarray_dbametaanddatar ! return ana allocated array
+end type dbametaanddatarList
+
 !> metadata and character data
 type, public,extends(dbadatac) :: dbametaanddatac
   type(dbametadata) :: metadata
@@ -453,6 +511,13 @@ type, public,extends(dbadatac) :: dbametaanddatac
   procedure :: display => dbametaanddatac_display
   procedure :: dbaingest => dbametaanddatac_ingest
 end type dbametaanddatac
+
+type, public, extends(list) :: dbametaanddatacList
+  contains
+  procedure :: current => currentdbametaanddatac ! get integer pointed by iterator
+  procedure :: display => displaydbametaanddatac ! print the integer list
+  procedure :: toarray => toarray_dbametaanddatac ! return ana allocated array
+end type dbametaanddatacList
 
 !> filter to apply to extrude data
 type, public ::  dbafilter
@@ -480,6 +545,30 @@ interface dbafilter
 end interface
 
 contains
+
+subroutine displaydbametaanddata(this)
+class(dbametaanddataList) :: this
+type(dbametaanddata) :: element
+
+call this%rewind()
+do while(this%element())
+  print *,"index:",this%currentindex()," value:"
+  element=this%current()
+  call element%display()
+  call this%next()
+end do
+end subroutine displaydbametaanddata
+
+type(dbametaanddata) function currentdbametaanddata(this)
+class(dbametaanddataList) :: this
+class(*), pointer :: v
+
+v => this%currentpoli()
+select type(v)
+type is (dbametaanddata)
+  currentdbametaanddata = v
+end select
+end function currentdbametaanddata
 
 subroutine dbadata_geti(data,value)
 class(dbadata), intent(in) :: data
@@ -624,6 +713,32 @@ ier = idba_enq(session%sehandle,"ident",ana%vol7d_ana%ident)
 end subroutine dbaana_enq
 
 
+
+subroutine displaydbaana(this)
+class(dbaanaList) :: this
+type(dbaana) :: element
+
+call this%rewind()
+do while(this%element())
+  print *,"index:",this%currentindex()," value:"
+  element=this%current()
+  call element%display()
+  call this%next()
+end do
+end subroutine displaydbaana
+
+type(dbaana) function currentdbaana(this)
+class(dbaanaList) :: this
+class(*), pointer :: v
+
+v => this%currentpoli()
+select type(v)
+type is (dbaana)
+  currentdbaana = v
+end select
+end function currentdbaana
+
+
 subroutine dbadat_set(data,session)
 class(dbadat), intent(in) :: data
 type(dbasession), intent(in) :: session
@@ -681,6 +796,33 @@ end subroutine dbadatav_display
 !!$call session%prendilo()
 !!$
 !!$end subroutine dbadatav_ingest
+
+
+subroutine dbasession_unsetb(session)
+class(dbasession), intent(in) :: session
+integer :: ier
+
+if (session%file)then
+  ier=idba_unsetb(session%sehandle)
+end if
+end subroutine dbasession_unsetb
+
+subroutine dbasession_close_message(session)
+class(dbasession), intent(in) :: session
+integer :: ier
+
+if (session%file)then
+  if (c_e(session%template)) then
+    ier=idba_set (session%sehandle,"query","message "//trim(session%template))
+  else
+    ier=idba_set (session%sehandle,"query","message")
+  end if
+
+  call session%unsetb()
+  call session%prendilo()
+
+end if
+end subroutine dbasession_close_message
 
 
 subroutine dbasession_dissolve_metadata(session,metadata)
@@ -747,6 +889,9 @@ call data%attrv%dbaset(session)
 call session%var_related(data%dbadat%dat%btable)
 call session%critica()
 
+!to close message on file
+!call session%close_message()
+
 end subroutine dbadataattr_ingest
 
 subroutine dbadataattr_display(data)
@@ -768,6 +913,10 @@ integer :: i
 do i=1, size(dataattr%dataattr)
   call dataattr%dataattr(i)%dbaingest(session)
 enddo
+
+!to close message on file
+!call session%prendilo()
+!call session%close_message()
 
 end subroutine dbadataattrv_ingest
 
@@ -1068,7 +1217,13 @@ type(dbasession), intent(in) :: session
 integer :: ier,year,month,day,hour,minute,sec,msec
 
 CALL getval(datetime%datetime, year=year, month=month, day=day, hour=hour, minute=minute,msec=msec)
-sec=nint(float(msec)/1000.)
+
+if (c_e(msec)) then
+  sec=nint(float(msec)/1000.)
+else
+  sec=imiss
+end if
+
 ier = idba_setdate(session%sehandle,year,month,day,hour,minute,sec)
 
 end subroutine dbadatetime_set
@@ -1079,7 +1234,13 @@ type(dbasession), intent(in) :: session
 integer :: ier,year,month,day,hour,minute,sec,msec
 
 ier = idba_enqdate(session%sehandle,year,month,day,hour,minute,sec)
-msec=sec*1000
+
+if (c_e(sec)) then
+  msec=sec*1000
+else
+  msec=imiss
+end if
+
 CALL init(datetime%datetime, year=year, month=month, day=day, hour=hour, minute=minute,msec=msec)
 
 end subroutine dbadatetime_enq
@@ -1417,7 +1578,11 @@ ier = idba_set(session%sehandle,"priomin",filter%priomin)
 ier = idba_set(session%sehandle,"priomax",filter%priomax)
 
 CALL getval(filter%datetimemin%datetime, year=year, month=month, day=day, hour=hour, minute=minute,msec=msec)
-sec=nint(float(msec)/1000.)
+if (c_e(msec)) then
+  sec=nint(float(msec)/1000.)
+else
+  sec=imiss
+end if
 
 ier = idba_set(session%sehandle,"yearmin",year)
 ier = idba_set(session%sehandle,"monthmin",month)
@@ -1427,7 +1592,12 @@ ier = idba_set(session%sehandle,"minumin",minute)
 ier = idba_set(session%sehandle,"secmin",sec)
 
 CALL getval(filter%datetimemax%datetime, year=year, month=month, day=day, hour=hour, minute=minute,msec=msec)
-sec=nint(float(msec)/1000.)
+
+if (c_e(msec)) then
+  sec=nint(float(msec)/1000.)
+else
+  sec=imiss
+end if
 
 ier = idba_set(session%sehandle,"yearmax",year)
 ier = idba_set(session%sehandle,"monthmax",month)
@@ -1488,8 +1658,10 @@ type(dbasession), intent(in) :: session
 call session%unsetall()
 !write metadata
 call session%set(metadata=metaanddata%metadata)
-!write ana data and attribute
+!write data and attribute
 call session%ingest(dataattrv=metaanddata%dataattrv)
+!to close message on file
+call session%close_message()
 
 end subroutine dbametaanddata_ingest
 
@@ -1510,9 +1682,313 @@ type(dbasession), intent(in) :: session
 call session%set(metadata=metaanddatav%metadata)
 !write ana data and attribute
 call session%set(datav=metaanddatav%datav)
-call session%prendilo()
+!to close message on file
+call session%close_message()
 
 end subroutine dbametaanddatav_ingest
+
+
+subroutine displaydbametaanddatai(this)
+class(dbametaanddataiList) :: this
+type(dbametaanddatai) :: element
+
+call this%rewind()
+do while(this%element())
+  print *,"index:",this%currentindex()," value:"
+  element=this%current()
+  call element%display()
+  call this%next()
+end do
+end subroutine displaydbametaanddatai
+
+type(dbametaanddatai) function currentdbametaanddatai(this)
+class(dbametaanddataiList) :: this
+class(*), pointer :: v
+
+v => this%currentpoli()
+select type(v)
+type is (dbametaanddatai)
+  currentdbametaanddatai = v
+end select
+end function currentdbametaanddatai
+
+
+subroutine dbasession_extrude_metaanddatail(session,metaanddatal)
+class(dbasession), intent(inout) :: session
+type(dbametaanddatailist), intent(inout) :: metaanddatal
+type(dbametaanddatai) :: element
+
+call session%extrude_metaanddatai()
+
+do while (session%count >0)
+  call session%extrude_metaanddatai(element)
+  call metaanddatal%append(element)
+  call session%extrude_metaanddatai()
+end do
+
+end subroutine dbasession_extrude_metaanddatail
+
+
+function toarray_dbametaanddatai(this)
+type(dbametaanddatai),allocatable :: toarray_dbametaanddatai(:)
+class(dbametaanddataiList) :: this
+
+integer :: i
+
+allocate (toarray_dbametaanddatai(this%countelements()))
+
+call this%rewind()
+i=0
+do while(this%element())
+  i=i+1
+  toarray_dbametaanddatai(i) =this%current()
+  call this%next()
+end do
+end function toarray_dbametaanddatai
+
+
+subroutine displaydbametaanddatar(this)
+class(dbametaanddatarList) :: this
+type(dbametaanddatar) :: element
+
+call this%rewind()
+do while(this%element())
+  print *,"index:",this%currentindex()," value:"
+  element=this%current()
+  call element%display()
+  call this%next()
+end do
+end subroutine displaydbametaanddatar
+
+type(dbametaanddatar) function currentdbametaanddatar(this)
+class(dbametaanddatarList) :: this
+class(*), pointer :: v
+
+v => this%currentpoli()
+select type(v)
+type is (dbametaanddatar)
+  currentdbametaanddatar = v
+end select
+end function currentdbametaanddatar
+
+
+subroutine dbasession_extrude_metaanddatarl(session,metaanddatal)
+class(dbasession), intent(inout) :: session
+type(dbametaanddatarlist), intent(inout) :: metaanddatal
+type(dbametaanddatar) :: element
+
+call session%extrude_metaanddatar()
+
+do while (session%count >0)
+  call session%extrude_metaanddatar(element)
+  call metaanddatal%append(element)
+  call session%extrude_metaanddatar()
+end do
+
+end subroutine dbasession_extrude_metaanddatarl
+
+
+function toarray_dbametaanddatar(this)
+type(dbametaanddatar),allocatable :: toarray_dbametaanddatar(:)
+class(dbametaanddatarList) :: this
+
+integer :: i
+
+allocate (toarray_dbametaanddatar(this%countelements()))
+
+call this%rewind()
+i=0
+do while(this%element())
+  i=i+1
+  toarray_dbametaanddatar(i) =this%current()
+  call this%next()
+end do
+end function toarray_dbametaanddatar
+
+
+
+subroutine displaydbametaanddatad(this)
+class(dbametaanddatadList) :: this
+type(dbametaanddatad) :: element
+
+call this%rewind()
+do while(this%element())
+  print *,"index:",this%currentindex()," value:"
+  element=this%current()
+  call element%display()
+  call this%next()
+end do
+end subroutine displaydbametaanddatad
+
+type(dbametaanddatad) function currentdbametaanddatad(this)
+class(dbametaanddatadList) :: this
+class(*), pointer :: v
+
+v => this%currentpoli()
+select type(v)
+type is (dbametaanddatad)
+  currentdbametaanddatad = v
+end select
+end function currentdbametaanddatad
+
+
+subroutine dbasession_extrude_metaanddatadl(session,metaanddatal)
+class(dbasession), intent(inout) :: session
+type(dbametaanddatadlist), intent(inout) :: metaanddatal
+type(dbametaanddatad) :: element
+
+call session%extrude_metaanddatad()
+
+do while (session%count >0)
+  call session%extrude_metaanddatad(element)
+  call metaanddatal%append(element)
+  call session%extrude_metaanddatad()
+end do
+
+end subroutine dbasession_extrude_metaanddatadl
+
+
+function toarray_dbametaanddatad(this)
+type(dbametaanddatad),allocatable :: toarray_dbametaanddatad(:)
+class(dbametaanddatadList) :: this
+
+integer :: i
+
+allocate (toarray_dbametaanddatad(this%countelements()))
+
+call this%rewind()
+i=0
+do while(this%element())
+  i=i+1
+  toarray_dbametaanddatad(i) =this%current()
+  call this%next()
+end do
+end function toarray_dbametaanddatad
+
+
+subroutine displaydbametaanddatab(this)
+class(dbametaanddatabList) :: this
+type(dbametaanddatab) :: element
+
+call this%rewind()
+do while(this%element())
+  print *,"index:",this%currentindex()," value:"
+  element=this%current()
+  call element%display()
+  call this%next()
+end do
+end subroutine displaydbametaanddatab
+
+type(dbametaanddatab) function currentdbametaanddatab(this)
+class(dbametaanddatabList) :: this
+class(*), pointer :: v
+
+v => this%currentpoli()
+select type(v)
+type is (dbametaanddatab)
+  currentdbametaanddatab = v
+end select
+end function currentdbametaanddatab
+
+
+subroutine dbasession_extrude_metaanddatabl(session,metaanddatal)
+class(dbasession), intent(inout) :: session
+type(dbametaanddatablist), intent(inout) :: metaanddatal
+type(dbametaanddatab) :: element
+
+call session%extrude_metaanddatab()
+
+do while (session%count >0)
+  call session%extrude_metaanddatab(element)
+  call metaanddatal%append(element)
+  call session%extrude_metaanddatab()
+end do
+
+end subroutine dbasession_extrude_metaanddatabl
+
+
+function toarray_dbametaanddatab(this)
+type(dbametaanddatab),allocatable :: toarray_dbametaanddatab(:)
+class(dbametaanddatabList) :: this
+
+integer :: i
+
+allocate (toarray_dbametaanddatab(this%countelements()))
+
+call this%rewind()
+i=0
+do while(this%element())
+  i=i+1
+  toarray_dbametaanddatab(i) =this%current()
+  call this%next()
+end do
+end function toarray_dbametaanddatab
+
+
+subroutine displaydbametaanddatac(this)
+class(dbametaanddatacList) :: this
+type(dbametaanddatac) :: element
+
+call this%rewind()
+do while(this%element())
+  print *,"index:",this%currentindex()," value:"
+  element=this%current()
+  call element%display()
+  call this%next()
+end do
+end subroutine displaydbametaanddatac
+
+type(dbametaanddatac) function currentdbametaanddatac(this)
+class(dbametaanddatacList) :: this
+class(*), pointer :: v
+
+v => this%currentpoli()
+select type(v)
+type is (dbametaanddatac)
+  currentdbametaanddatac = v
+end select
+end function currentdbametaanddatac
+
+
+subroutine dbasession_extrude_metaanddatacl(session,metaanddatal)
+class(dbasession), intent(inout) :: session
+type(dbametaanddataclist), intent(inout) :: metaanddatal
+type(dbametaanddatac) :: element
+
+call session%extrude_metaanddatac()
+
+do while (session%count >0)
+  call session%extrude_metaanddatac(element)
+  call metaanddatal%append(element)
+  call session%extrude_metaanddatac()
+end do
+
+end subroutine dbasession_extrude_metaanddatacl
+
+
+function toarray_dbametaanddatac(this)
+type(dbametaanddatac),allocatable :: toarray_dbametaanddatac(:)
+class(dbametaanddatacList) :: this
+
+integer :: i
+
+allocate (toarray_dbametaanddatac(this%countelements()))
+
+call this%rewind()
+i=0
+do while(this%element())
+  i=i+1
+  toarray_dbametaanddatac(i) =this%current()
+  call this%next()
+end do
+end function toarray_dbametaanddatac
+
+
+
+
+
+
+
 
 subroutine dbametaanddatai_display(data)
 class(dbametaanddatai), intent(in) :: data
@@ -1630,6 +2106,7 @@ integer :: ier
 
 if (.not. present(ana)) then
   ier = idba_quantesono(session%sehandle, session%count)
+  !print *,"numero ana",session%count
 else
   ier = idba_elencamele(session%sehandle)
   call ana%dbaenq(session)
@@ -1655,6 +2132,21 @@ end do
 end subroutine dbasession_extrude_anav
 
 
+subroutine dbasession_extrude_anal(session,anal)
+class(dbasession), intent(inout) :: session
+type(dbaanalist), intent(out) :: anal
+type(dbaana) :: element
+
+call session%extrude_ana()
+do while (session%count >0)
+  call session%extrude_ana(element)
+  call anal%append(element)
+  call session%extrude_ana()
+end do
+
+end subroutine dbasession_extrude_anal
+
+
 subroutine dbasession_extrude_metaanddata(session,metaanddata,dataonly,filter)
 class(dbasession), intent(inout) :: session
 type(dbametaanddata), intent(inout),optional :: metaanddata
@@ -1662,7 +2154,7 @@ type(dbafilter),intent(in),optional :: filter
 logical,intent(in),optional :: dataonly
 
 type(dbametadata) :: metadata
-integer :: ier,acount,i,j
+integer :: ier,acount,i,j,k
 character(len=9) :: btable
 character(255) :: value
 logical :: lvars,lstarvars
@@ -1670,6 +2162,7 @@ logical :: lvars,lstarvars
 ! if you do not pass metaanddata we presume to have to initialize the query
 if (.not. present(metaanddata)) then
   ier = idba_voglioquesto(session%sehandle, session%count)
+  !print *,"numero data",session%count
 
 ! preroll one read because after I have to read one more to check metadata
   if (session%count > 0) then
@@ -1677,6 +2170,7 @@ if (.not. present(metaanddata)) then
   end if
 
 else
+!+++
 ! you pass metaanddata so we continue with the query
 
   if (allocated(metaanddata%dataattrv%dataattr)) then
@@ -1742,29 +2236,30 @@ else
               end do
               
               ier = idba_voglioancora(session%sehandle, acount)
-              ier = idba_ancora(session%sehandle, btable)
-              ier = idba_enq(session%sehandle, btable,value)
+              do k =1,acount
+                ier = idba_ancora(session%sehandle, btable)
+                ier = idba_enq(session%sehandle, btable,value)
               
               
-              do j=1,size(metaanddata%dataattrv%dataattr(i)%attrv%dat)
-                if (metaanddata%dataattrv%dataattr(i)%attrv%dat(j)%dat%btable == btable) then
+                do j=1,size(metaanddata%dataattrv%dataattr(i)%attrv%dat)
+                  if (metaanddata%dataattrv%dataattr(i)%attrv%dat(j)%dat%btable == btable) then
                     
-                  select type ( dat =>  metaanddata%dataattrv%dataattr(i)%attrv%dat(j)%dat )
-                  type is (dbadatai)
-                    ier = idba_enq(session%sehandle, btable,dat%value)
-                  type is (dbadatar)
-                    ier = idba_enq(session%sehandle, btable,dat%value)
-                  type is (dbadatad)
-                    ier = idba_enq(session%sehandle, btable,dat%value)
-                  type is (dbadatab)
-                    ier = idba_enq(session%sehandle, btable,dat%value)
-                  type is (dbadatac)
-                    ier = idba_enq(session%sehandle, btable,dat%value)
-                  end select
+                    select type ( dat =>  metaanddata%dataattrv%dataattr(i)%attrv%dat(j)%dat )
+                    type is (dbadatai)
+                      ier = idba_enq(session%sehandle, btable,dat%value)
+                    type is (dbadatar)
+                      ier = idba_enq(session%sehandle, btable,dat%value)
+                    type is (dbadatad)
+                      ier = idba_enq(session%sehandle, btable,dat%value)
+                    type is (dbadatab)
+                      ier = idba_enq(session%sehandle, btable,dat%value)
+                    type is (dbadatac)
+                      ier = idba_enq(session%sehandle, btable,dat%value)
+                    end select
                   
-                end if
+                  end if
+                end do
               end do
-
             else
               ier = idba_voglioancora(session%sehandle, acount)
               
@@ -1867,9 +2362,11 @@ integer :: i
 
 call session%extrude_metaanddata()
 allocate(metaanddatavbuf(session%count))
+print *,"extrude",session%count
 i=0
 do while (session%count >0)
   i=i+1
+  print *,"elemento=",i
   call session%extrude_metaanddata(metaanddatavbuf(i),dataonly=dataonly,filter=filter)
 end do
 
@@ -1879,6 +2376,24 @@ deallocate(metaanddatavbuf)
 
 end subroutine dbasession_extrude_metaanddatav
 
+!> extrude metaanddata list
+subroutine dbasession_extrude_metaanddatal(session,metaanddatal,dataonly,filter)
+class(dbasession), intent(inout) :: session
+type(dbametaanddatalist), intent(out) :: metaanddatal
+logical, intent(in),optional :: dataonly
+type(dbafilter),intent(in),optional :: filter
+
+type(dbametaanddata) :: metaanddatabuf
+
+call session%extrude_metaanddata()
+
+do while (session%count >0)
+  call session%extrude_metaanddata(metaanddatabuf,dataonly=dataonly,filter=filter)
+  call metaanddatal%append(metaanddatabuf)
+  if (session%file) call session%extrude_metaanddata()
+end do
+
+end subroutine dbasession_extrude_metaanddatal
 
 subroutine dbasession_extrude_metaanddatai(session,metaanddata)
 class(dbasession), intent(inout) :: session
@@ -2115,26 +2630,34 @@ end if
 end subroutine dbaconnection_delete
 
 type(dbasession) function dbasession_init(connection,anaflag, dataflag, attrflag,&
- filename,mode,type,write,wipe,repinfo,categoryappend)
-type(dbaconnection),intent(in) :: connection
+ filename,mode,format,template,write,wipe,repinfo,categoryappend)
+type(dbaconnection),intent(in),optional :: connection
 character (len=*), intent(in), optional :: anaflag
 character (len=*), intent(in), optional :: dataflag
 character (len=*), intent(in), optional :: attrflag
 character (len=*), intent(in), optional :: filename
-character (len=*), intent(in), optional :: mode
+character (len=*), intent(in), optional :: mode !> "r"/"w"/"a" the open mode ("r" for read, "w" for write or create, "a" for append) 
+character (len=*), intent(in), optional :: template !> template to use for write on file
 logical,INTENT(in),OPTIONAL :: write !< abilita la scrittura sul DSN/file ( default=.false. )
 logical,INTENT(in),OPTIONAL :: wipe !<  svuota il DSN/file e/o lo prepara per una scrittura ( default=.false. )
 character(len=*), INTENT(in),OPTIONAL :: repinfo !< eventuale file repinfo.csv usato con wipe ( default="" )
-character(len=*),intent(in),optional :: type !< the file format. It can be "BUFR" or "CREX". (default="BUFR")
+character(len=*),intent(in),optional :: format !< the file format. It can be "BUFR" or "CREX". (default="BUFR")
 character(len=*),INTENT(in),OPTIONAL :: categoryappend !< appennde questo suffisso al namespace category di log4fortran
 
 integer :: ier
 character (len=5) :: lanaflag,ldataflag,lattrflag
-character (len=1) :: lmode,ltype
+character (len=1) :: lmode
 logical :: quiwrite,quiwipe
 character(len=255) :: quirepinfo
+character(len=40) :: lformat
 logical :: exist
 character(len=512) :: a_name
+
+! those are assigned by the default constructor?
+!!$dbasession_init%sehandle=imiss
+!!$dbasession_init%file=.false.
+!!$dbasession_init%template=cmiss
+!!$dbasession_init%count=imiss
 
 if (present(categoryappend))then
   call l4f_launcher(a_name,a_name_append=trim(subcategory)//"."//trim(categoryappend))
@@ -2164,9 +2687,13 @@ if (present(filename)) then
     call l4f_category_log(dbasession_init%category,L4F_ERROR,"option anaflag, dataflag, attrflag defined with filename")
     CALL raise_error()
   end if
-
+  
+  if (present(template))then
+    dbasession_init%template=template
+  endif
+  
   inquire(file=filename,EXIST=exist)
-
+  
   lmode="r"
   if (quiwrite)then
     if (quiwipe.or..not.exist) then
@@ -2184,13 +2711,26 @@ if (present(filename)) then
 
   if (present(mode)) lmode = mode
 
+  lformat="BUFR"
+  if (present(format))then
+    lformat=format
+  end if
+  
   dbasession_init%file=.true.
+  dbasession_init%filename=filename
+  dbasession_init%mode=lmode
+  dbasession_init%format=lformat
 
-  ier =  idba_messaggi(dbasession_init%sehandle,filename, lmode, ltype)
+  ier =  idba_messaggi(dbasession_init%sehandle,filename, lmode, lformat)
 else
+  
+  if (.not. present(connection)) then
+    call l4f_category_log(dbasession_init%category,L4F_ERROR,"connection not present accessing DBA")
+    CALL raise_error()
+  end if
 
-  if (present(mode).or.present(type)) then
-    call l4f_category_log(dbasession_init%category,L4F_ERROR,"option mode, type defined without filename")
+  if (present(mode).or.present(format).or.present(template)) then
+    call l4f_category_log(dbasession_init%category,L4F_ERROR,"option mode or format or template defined without filename")
     CALL raise_error()
   end if
 
@@ -2205,7 +2745,7 @@ else
 
   ier = idba_preparati(connection%dbhandle,dbasession_init%sehandle, lanaflag, ldataflag, lattrflag)
 
-  dbasession_init%file=.true.
+  dbasession_init%file=.false.
 
   if (quiwipe)ier=idba_scopa (dbasession_init%sehandle,quirepinfo)
 
@@ -2219,7 +2759,7 @@ subroutine dbasession_unsetall(session)
 class (dbasession), intent(in) :: session
 integer :: ier
 
-if (c_e(session%sehandle)) then 
+if (c_e(session%sehandle)) then
   ier = idba_unsetall(session%sehandle)
 end if
 
@@ -2229,7 +2769,7 @@ subroutine dbasession_prendilo(session)
 class (dbasession), intent(in) :: session
 integer :: ier
 
-if (c_e(session%sehandle)) then 
+if (c_e(session%sehandle)) then
   ier = idba_prendilo(session%sehandle)
 end if
 
@@ -2400,7 +2940,35 @@ if (c_e(session%sehandle)) then
   ier = idba_fatto(session%sehandle)
 end if
 
+session%sehandle=imiss
+session%file=.false.
+session%template=cmiss
+session%filename=cmiss
+session%mode=cmiss
+session%format=cmiss
+session%category=imiss
+session%count=imiss
+
 end subroutine dbasession_delete
+
+
+subroutine dbasession_filerewind(session)
+class (dbasession), intent(inout) :: session
+integer :: ier
+
+if (c_e(session%sehandle).and. session%file) then 
+  ier = idba_fatto(session%sehandle)
+  ier = idba_messaggi(session%sehandle,session%filename,session%mode,session%format)
+
+!!$! example: here we call constructor after a cast to reassign self (can you pass self attributes to constructor?) 
+!!$  select type(session)
+!!$  type is (dbasession)
+!!$    session=dbasession(filename=session%filename,mode=session%mode,format=session%format)
+!!$  end select
+  
+end if
+
+end subroutine dbasession_filerewind
 
 
 FUNCTION dballe_error_handler(category)
