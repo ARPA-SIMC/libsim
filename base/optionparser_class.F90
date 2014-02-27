@@ -68,19 +68,24 @@ END TYPE option
 !! Python library.
 !!
 !! The class handles both GNU-style long options, introduced by a
-!! double dash \c -- and containing any character except the equal
-!! sign \c = , and the traditional Unix short options, introduced by
-!! a single dash \c - and containing a single character which can be
-!! any ASCII character except the dash itself.
+!! double dash \c -- and containing any printable ASCII character
+!! except the equal sign \c = , and the traditional Unix short
+!! options, introduced by a single dash \c - and containing a single
+!! character which can be any printable ASCII character except the
+!! dash itself.
 !!
 !! Options may require an argument, which can be integer, real, double
 !! precision or character, in that case the argument may be given in
-!! the following way (long and short options):
+!! any of the following ways (long and short options):
 !!
 !!  - <tt>--lon=34.5</tt>
 !!  - <tt>--lon 34.5</tt>
 !!  - <tt>-l34.5</tt>
 !!  - <tt>-l 34.5</tt>
+!!
+!! If an option is declared to require an argument, the argument is
+!! compulsory and its absence determines an error condition in the
+!! parsing phase.
 !!
 !! Array options (only for integer, real and double precision) must be
 !! provided as comma-separated values, similarly to a record of a csv
@@ -899,7 +904,7 @@ INTEGER,INTENT(out) :: nextarg !< index of the first optional argument after int
 INTEGER,INTENT(out) :: status !< status of the parsing process, to be compared with the constants \a optionparser_ok, ecc.
 
 INTEGER :: i, j, endopt, indeq, iargc
-CHARACTER(len=1024) :: arg, optarg
+CHARACTER(len=16384) :: arg, optarg
 
 status = optionparser_ok
 i = 1
