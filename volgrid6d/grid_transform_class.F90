@@ -1789,6 +1789,7 @@ ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
       DO ix=1,this%innx
         CALL init(v7d_out%ana((iy-1)*this%innx+ix), &
          lon=in%dim%lon(ix,iy),lat=in%dim%lat(ix,iy))
+        n = n + 1
         this%point_index(ix,iy) = n
       ENDDO
     ENDDO

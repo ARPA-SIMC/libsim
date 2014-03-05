@@ -68,7 +68,8 @@ CHARACTER(len=8) :: input_format, coord_format, extreme_format
 
 CHARACTER(len=512) :: input_file, output_file, output_format, output_template, &
  network_list, variable_list, anavariable_list, attribute_list, coord_file,&
- extreme_file, output_variable_list, trans_level_list
+ extreme_file, output_variable_list
+CHARACTER(len=16384) :: trans_level_list
 CHARACTER(len=160) :: pre_trans_type
 TYPE(vol7d_network), ALLOCATABLE :: nl(:)
 CHARACTER(len=10) :: trans_level_type
