@@ -77,6 +77,8 @@ type,public ::  dbasession
   character(len=255) :: filename=cmiss
   character(len=40) :: mode=cmiss
   character(len=40) :: format=cmiss
+  character(len=40) :: options=cmiss
+  type(dbaconnection) :: memconnection
   integer :: category=imiss !< log4fortran
   integer :: count=imiss !< number of results left to query
   contains
@@ -86,6 +88,7 @@ type,public ::  dbasession
     procedure :: delete => dbasession_delete
 # endif
     procedure :: unsetall => dbasession_unsetall
+    procedure :: remove_all => dbasession_remove_all
     procedure :: set => dbasession_set
     procedure :: setcontextana => dbasession_setcontextana
     procedure :: dimenticami => dbasession_dimenticami
@@ -94,6 +97,8 @@ type,public ::  dbasession
     procedure :: var_related => dbasession_var_related
     procedure :: critica => dbasession_critica
     procedure :: scusa => dbasession_scusa
+    procedure :: messages_open => dbasession_messages_open
+    procedure :: messages_read_next => dbasession_messages_read_next
     procedure :: close_message => dbasession_close_message
     procedure :: unsetb => dbasession_unsetb
     procedure :: filerewind => dbasession_filerewind
@@ -823,6 +828,31 @@ if (session%file)then
 
 end if
 end subroutine dbasession_close_message
+
+
+subroutine dbasession_messages_open(session,filename,mode,format,options)
+class(dbasession), intent(in) :: session
+character (len=*), intent(in) :: filename
+character (len=*), intent(in) :: mode !> "r"/"w"/"a" the open mode ("r" for read, "w" for write or create, "a" for append) 
+character (len=*), intent(in) :: format !< the file format. It can be "BUFR" or "CREX". (default="BUFR")
+character (len=*), intent(in) :: options !> todo
+!character (len=*), intent(in) :: template !> template to use for write on file
+
+integer :: ier
+
+ier = idba_messages_open(session%sehandle, filename, mode, format, options)
+
+end subroutine dbasession_messages_open
+
+
+logical function dbasession_messages_read_next(session)
+class(dbasession), intent(in) :: session
+
+integer :: ier
+
+ier = idba_messages_read_next(session%sehandle, dbasession_messages_read_next)
+
+end function dbasession_messages_read_next
 
 
 subroutine dbasession_dissolve_metadata(session,metadata)
@@ -1793,7 +1823,8 @@ type(dbametaanddatar),allocatable :: toarray_dbametaanddatar(:)
 class(dbametaanddatarList) :: this
 
 integer :: i
-
+i=this%countelements()
+print *, "allocate:",i
 allocate (toarray_dbametaanddatar(this%countelements()))
 
 call this%rewind()
@@ -1986,10 +2017,6 @@ end function toarray_dbametaanddatac
 
 
 
-
-
-
-
 subroutine dbametaanddatai_display(data)
 class(dbametaanddatai), intent(in) :: data
 
@@ -2159,19 +2186,18 @@ character(len=9) :: btable
 character(255) :: value
 logical :: lvars,lstarvars
 
-! if you do not pass metaanddata we presume to have to initialize the query
+                                ! if you do not pass metaanddata we presume to have to initialize the query
 if (.not. present(metaanddata)) then
   ier = idba_voglioquesto(session%sehandle, session%count)
   !print *,"numero data",session%count
 
-! preroll one read because after I have to read one more to check metadata
+                                ! preroll one read because after I have to read one more to check metadata
   if (session%count > 0) then
     ier = idba_dammelo(session%sehandle, btable)
   end if
 
 else
-!+++
-! you pass metaanddata so we continue with the query
+                                ! you pass metaanddata so we continue with the query
 
   if (allocated(metaanddata%dataattrv%dataattr)) then
     deallocate (metaanddata%dataattrv%dataattr)
@@ -2189,6 +2215,10 @@ else
       lstarvars=.true.
     end if
   end if
+
+  print *,"lvars",lvars
+  print *,"lstarvars",lstarvars
+
 
   if (lvars) then
 
@@ -2234,41 +2264,48 @@ else
               do j = 1, size(filter%starvars%dat)
                 allocate (metaanddata%dataattrv%dataattr(i)%attrv%dat(j)%dat,source=filter%starvars%dat(j)%dat)
               end do
+
+              if (session%count > 0) then
               
-              ier = idba_voglioancora(session%sehandle, acount)
-              do k =1,acount
-                ier = idba_ancora(session%sehandle, btable)
-                ier = idba_enq(session%sehandle, btable,value)
+                ier = idba_voglioancora(session%sehandle, acount)
+                do k =1,acount
+                  ier = idba_ancora(session%sehandle, btable)
+                  ier = idba_enq(session%sehandle, btable,value)
               
               
-                do j=1,size(metaanddata%dataattrv%dataattr(i)%attrv%dat)
-                  if (metaanddata%dataattrv%dataattr(i)%attrv%dat(j)%dat%btable == btable) then
+                  do j=1,size(metaanddata%dataattrv%dataattr(i)%attrv%dat)
+                    if (metaanddata%dataattrv%dataattr(i)%attrv%dat(j)%dat%btable == btable) then
                     
-                    select type ( dat =>  metaanddata%dataattrv%dataattr(i)%attrv%dat(j)%dat )
-                    type is (dbadatai)
-                      ier = idba_enq(session%sehandle, btable,dat%value)
-                    type is (dbadatar)
-                      ier = idba_enq(session%sehandle, btable,dat%value)
-                    type is (dbadatad)
-                      ier = idba_enq(session%sehandle, btable,dat%value)
-                    type is (dbadatab)
-                      ier = idba_enq(session%sehandle, btable,dat%value)
-                    type is (dbadatac)
-                      ier = idba_enq(session%sehandle, btable,dat%value)
-                    end select
+                      select type ( dat =>  metaanddata%dataattrv%dataattr(i)%attrv%dat(j)%dat )
+                      type is (dbadatai)
+                        ier = idba_enq(session%sehandle, btable,dat%value)
+                      type is (dbadatar)
+                        ier = idba_enq(session%sehandle, btable,dat%value)
+                      type is (dbadatad)
+                        ier = idba_enq(session%sehandle, btable,dat%value)
+                      type is (dbadatab)
+                        ier = idba_enq(session%sehandle, btable,dat%value)
+                      type is (dbadatac)
+                        ier = idba_enq(session%sehandle, btable,dat%value)
+                      end select
                   
-                  end if
+                    end if
+                  end do
                 end do
-              end do
+              end if
             else
-              ier = idba_voglioancora(session%sehandle, acount)
+              if (session%count > 0) then
+                ier = idba_voglioancora(session%sehandle, acount)
               
-              allocate (metaanddata%dataattrv%dataattr(i)%attrv%dat(acount))
-              do j =1,acount
-                ier = idba_ancora(session%sehandle, btable)
-                ier = idba_enq(session%sehandle, btable,value)
-                allocate (metaanddata%dataattrv%dataattr(i)%attrv%dat(j)%dat,source=dbadatac(btable,value))
-              end do
+                allocate (metaanddata%dataattrv%dataattr(i)%attrv%dat(acount))
+                do j =1,acount
+                  ier = idba_ancora(session%sehandle, btable)
+                  ier = idba_enq(session%sehandle, btable,value)
+                  allocate (metaanddata%dataattrv%dataattr(i)%attrv%dat(j)%dat,source=dbadatac(btable,value))
+                end do
+              else
+                allocate (metaanddata%dataattrv%dataattr(i)%attrv%dat(0))
+              end if
             end if
           end if
         end if
@@ -2291,7 +2328,6 @@ else
     allocate (metaanddata%dataattrv%dataattr(1)%dat,source=dbadatac(btable,value))
     call metaanddata%metadata%dbaenq(session)
 
-    session%count=session%count-1
 
     if (optio_log(dataonly))then
 
@@ -2307,40 +2343,46 @@ else
         end do
         
         ier = idba_voglioancora(session%sehandle, acount)
-        ier = idba_ancora(session%sehandle, btable)
-        ier = idba_enq(session%sehandle, btable,value)
-        
-        do j=1,size(metaanddata%dataattrv%dataattr(1)%attrv%dat)
-          if (metaanddata%dataattrv%dataattr(1)%attrv%dat(j)%dat%btable == btable) then
-            
-            select type ( dat =>  metaanddata%dataattrv%dataattr(1)%attrv%dat(j)%dat )
-            type is (dbadatai)
-              ier = idba_enq(session%sehandle, btable,dat%value)
-            type is (dbadatar)
-              ier = idba_enq(session%sehandle, btable,dat%value)
-            type is (dbadatad)
-              ier = idba_enq(session%sehandle, btable,dat%value)
-            type is (dbadatab)
-              ier = idba_enq(session%sehandle, btable,dat%value)
-            type is (dbadatac)
-              ier = idba_enq(session%sehandle, btable,dat%value)
-            end select
-            
-          end if
-        end do
-
-      else
-
-        ier = idba_voglioancora(session%sehandle, acount)
-        
-        allocate (metaanddata%dataattrv%dataattr(1)%attrv%dat(acount))
-        do j =1,acount
+        if (acount > 0) then
           ier = idba_ancora(session%sehandle, btable)
           ier = idba_enq(session%sehandle, btable,value)
-          allocate (metaanddata%dataattrv%dataattr(1)%attrv%dat(j)%dat,source=dbadatac(btable,value))
-        end do
+        
+          do j=1,size(metaanddata%dataattrv%dataattr(1)%attrv%dat)
+            if (metaanddata%dataattrv%dataattr(1)%attrv%dat(j)%dat%btable == btable) then
+              
+              select type ( dat =>  metaanddata%dataattrv%dataattr(1)%attrv%dat(j)%dat )
+              type is (dbadatai)
+                ier = idba_enq(session%sehandle, btable,dat%value)
+              type is (dbadatar)
+                ier = idba_enq(session%sehandle, btable,dat%value)
+              type is (dbadatad)
+                ier = idba_enq(session%sehandle, btable,dat%value)
+              type is (dbadatab)
+                ier = idba_enq(session%sehandle, btable,dat%value)
+              type is (dbadatac)
+                ier = idba_enq(session%sehandle, btable,dat%value)
+              end select
+            end if
+          end do
+        end if
+      else
+
+        if (session%count > 0 ) then
+          ier = idba_voglioancora(session%sehandle, acount)
+        
+          allocate (metaanddata%dataattrv%dataattr(1)%attrv%dat(acount))
+          do j =1,acount
+            ier = idba_ancora(session%sehandle, btable)
+            ier = idba_enq(session%sehandle, btable,value)
+            allocate (metaanddata%dataattrv%dataattr(1)%attrv%dat(j)%dat,source=dbadatac(btable,value))
+          end do
+        else
+          allocate (metaanddata%dataattrv%dataattr(1)%attrv%dat(0))
+        end if
       end if
     end if
+
+    session%count=session%count-1
 
     if (session%count > 0 ) then
       ier = idba_dammelo(session%sehandle, btable)
@@ -2361,15 +2403,15 @@ type(dbametaanddata),allocatable :: metaanddatavbuf(:)
 integer :: i
 
 call session%extrude_metaanddata()
+! allocate to max dimension
 allocate(metaanddatavbuf(session%count))
-print *,"extrude",session%count
 i=0
 do while (session%count >0)
   i=i+1
-  print *,"elemento=",i
   call session%extrude_metaanddata(metaanddatavbuf(i),dataonly=dataonly,filter=filter)
 end do
 
+! compact data to real dimension
 allocate (metaanddatav(i))
 metaanddatav=metaanddatavbuf(:i)
 deallocate(metaanddatavbuf)
@@ -2383,15 +2425,42 @@ type(dbametaanddatalist), intent(out) :: metaanddatal
 logical, intent(in),optional :: dataonly
 type(dbafilter),intent(in),optional :: filter
 
-type(dbametaanddata) :: metaanddatabuf
+type(dbametaanddata),allocatable :: metaanddatavbuf(:)
+integer :: i
 
-call session%extrude_metaanddata()
+if (c_e(session%options))then
 
-do while (session%count >0)
-  call session%extrude_metaanddata(metaanddatabuf,dataonly=dataonly,filter=filter)
-  call metaanddatal%append(metaanddatabuf)
-  if (session%file) call session%extrude_metaanddata()
-end do
+  do while (session%messages_read_next())
+    call session%set(filter=filter)
+    call session%extrude()
+    call session%extrude(metaanddatavbuf,dataonly=dataonly,filter=filter)
+    do i=1,size(metaanddatavbuf)
+      call metaanddatal%append(metaanddatavbuf(i))
+    end do
+    
+    call session%remove_all()
+    deallocate (metaanddatavbuf)
+  end do
+
+else
+
+  call session%extrude()
+  
+  do while (session%count >0)
+    call session%extrude(metaanddatavbuf,dataonly=dataonly,filter=filter)
+    do i=1,size(metaanddatavbuf)
+      if (present(filter)) then 
+                                ! exclude contextana data from file 
+        if (filter%contextana) then
+          if (datetime_new() /= metaanddatavbuf(i)%metadata%datetime%datetime) cycle
+        end if
+      end if
+      call metaanddatal%append(metaanddatavbuf(i))
+    end do
+    if (session%file) call session%extrude()
+    deallocate (metaanddatavbuf)
+  end do
+end if
 
 end subroutine dbasession_extrude_metaanddatal
 
@@ -2629,8 +2698,8 @@ end if
 
 end subroutine dbaconnection_delete
 
-type(dbasession) function dbasession_init(connection,anaflag, dataflag, attrflag,&
- filename,mode,format,template,write,wipe,repinfo,categoryappend)
+recursive type(dbasession) function dbasession_init(connection,anaflag, dataflag, attrflag,&
+ filename,mode,format,template,write,wipe,repinfo,options,categoryappend)
 type(dbaconnection),intent(in),optional :: connection
 character (len=*), intent(in), optional :: anaflag
 character (len=*), intent(in), optional :: dataflag
@@ -2642,6 +2711,7 @@ logical,INTENT(in),OPTIONAL :: write !< abilita la scrittura sul DSN/file ( defa
 logical,INTENT(in),OPTIONAL :: wipe !<  svuota il DSN/file e/o lo prepara per una scrittura ( default=.false. )
 character(len=*), INTENT(in),OPTIONAL :: repinfo !< eventuale file repinfo.csv usato con wipe ( default="" )
 character(len=*),intent(in),optional :: format !< the file format. It can be "BUFR" or "CREX". (default="BUFR")
+character(len=*),intent(in),optional :: options !< options for messages_open dballe api; if present import from file to memdb. (default=None)
 character(len=*),INTENT(in),OPTIONAL :: categoryappend !< appennde questo suffisso al namespace category di log4fortran
 
 integer :: ier
@@ -2649,7 +2719,7 @@ character (len=5) :: lanaflag,ldataflag,lattrflag
 character (len=1) :: lmode
 logical :: quiwrite,quiwipe
 character(len=255) :: quirepinfo
-character(len=40) :: lformat
+character(len=40) :: lformat,loptions
 logical :: exist
 character(len=512) :: a_name
 
@@ -2683,11 +2753,6 @@ endif
 
 if (present(filename)) then
 
-  if (present(anaflag).or.present(dataflag).or.present( attrflag)) then
-    call l4f_category_log(dbasession_init%category,L4F_ERROR,"option anaflag, dataflag, attrflag defined with filename")
-    CALL raise_error()
-  end if
-  
   if (present(template))then
     dbasession_init%template=template
   endif
@@ -2715,13 +2780,36 @@ if (present(filename)) then
   if (present(format))then
     lformat=format
   end if
+
+  loptions=cmiss
+  if (present(options))then
+    loptions=options
+  end if
   
   dbasession_init%file=.true.
   dbasession_init%filename=filename
   dbasession_init%mode=lmode
   dbasession_init%format=lformat
+  dbasession_init%options=loptions
 
-  ier =  idba_messaggi(dbasession_init%sehandle,filename, lmode, lformat)
+
+  if (c_e(loptions))then
+                                ! connect to dsn type DBA
+    dbasession_init%memconnection=dbaconnection(dsn="mem:")
+    dbasession_init=dbasession(dbasession_init%memconnection,anaflag=anaflag, dataflag=dataflag, attrflag=attrflag)
+    call dbasession_init%messages_open(filename=filename,mode=lmode,format=lformat,options=loptions)
+
+  else
+
+    if (present(anaflag).or.present(dataflag).or.present( attrflag)) then
+      call l4f_category_log(dbasession_init%category,L4F_ERROR,"option anaflag, dataflag, attrflag defined with filename")
+      CALL raise_error()
+    end if
+  
+    ier =  idba_messaggi(dbasession_init%sehandle,filename, lmode, lformat)
+
+  end if
+
 else
   
   if (.not. present(connection)) then
@@ -2764,6 +2852,20 @@ if (c_e(session%sehandle)) then
 end if
 
 end subroutine dbasession_unsetall
+
+
+
+subroutine dbasession_remove_all(session)
+class (dbasession), intent(in) :: session
+integer :: ier
+
+if (c_e(session%sehandle)) then
+  ier = idba_remove_all(session%sehandle)
+end if
+
+end subroutine dbasession_remove_all
+
+
 
 subroutine dbasession_prendilo(session)
 class (dbasession), intent(in) :: session
@@ -2940,12 +3042,16 @@ if (c_e(session%sehandle)) then
   ier = idba_fatto(session%sehandle)
 end if
 
+call session%memconnection%delete()
+
+
 session%sehandle=imiss
 session%file=.false.
 session%template=cmiss
 session%filename=cmiss
 session%mode=cmiss
 session%format=cmiss
+session%options=cmiss
 session%category=imiss
 session%count=imiss
 

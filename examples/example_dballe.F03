@@ -8,56 +8,92 @@ integer :: i
 type(dbasession) :: session
 type(dbaconnection) :: connection
 
-! connect to dsn type DBA
-connection=dbaconnection(dsn="sqlite:/tmp/dballe.sqlite")
-session=dbasession(connection,wipe=.true.,anaflag="write", dataflag="write", attrflag="write")
-
-call write1()    ! write etherogeneous ensamble of data with attributes and constant data using macro object
-call write2()    ! write an omogeneous vector of data
-call write3()    ! write an etherogeneous ensamble of data
-call write4()    ! write an etherogeneous ensamble of data and attributes
-call read2()     ! read data and attributes for data filtered and ordered by btable with type predefined
-call delete1()   ! delete one var from the entire DB
-call delete2()   ! delete one var only where are some defined metadati
-call delete3()   ! delete some attributes from one var only where are some defined metadati
-call read1()     ! read ana, data and attributes for constant data, data and attributes for data
-call read3()     ! read an omogeneous vector of data
-call read4()     ! read data and attributes for data in a double linked list
-call copy1()     ! copy data and attributes of everythings to an other dsn
-call copy2()     ! copy data and constant data to an other dsn
-
-!close everythings
-call session%delete()
-call connection%delete()
+!!$! connect to dsn type DBA
+!!$connection=dbaconnection(dsn="sqlite:/tmp/dballe.sqlite")
+!!$session=dbasession(connection,wipe=.true.,anaflag="write", dataflag="write", attrflag="write")
+!!$
+!!$call write1()    ! write etherogeneous ensamble of data with attributes and constant data using macro object
+!!$call write2()    ! write an omogeneous vector of data
+!!$call write3()    ! write an etherogeneous ensamble of data
+!!$call write4()    ! write an etherogeneous ensamble of data and attributes
+!!$call read2()     ! read data and attributes for data filtered and ordered by btable with type predefined
+!!$call delete1()   ! delete one var from the entire DB
+!!$call delete2()   ! delete one var only where are some defined metadati
+!!$call delete3()   ! delete some attributes from one var only where are some defined metadati
+!!$call read1()     ! read ana, data and attributes for constant data, data and attributes for data
+!!$call read3()     ! read an omogeneous vector of data
+!!$call read4l()    ! read data and attributes for data in a double linked list
+!!$call copy1()     ! copy data and attributes of everythings to an other dsn
+!!$call copy2()     ! copy data and constant data to an other dsn
+!!$
+!!$!close everythings
+!!$call session%delete()
+!!$call connection%delete()
 
 
 ! connect to dsn type BUFR file for write
-session=dbasession(filename="example_dballe.bufr",wipe=.true.,write=.true.)
+!session=dbasession(filename="example_dballe.bufr",wipe=.true.,write=.true.)
 
-call write1()    ! write etherogeneous ensamble of data with attributes and constant data using macro object
-call write2()    ! write an omogeneous vector of data
-call write3()    ! write an etherogeneous ensamble of data
-call write4()    ! write an etherogeneous ensamble of data and attributes
+! to do ingest of ana
+call write0()    ! write ana on file
+!call write1()    ! write etherogeneous ensamble of data with attributes and constant data using macro object
+!call write2()    ! write an omogeneous vector of data
+!call write3()    ! write an etherogeneous ensamble of data
+!call write4()    ! write an etherogeneous ensamble of data and attributes
 
 !close everythings
-call session%delete()
+!call session%delete()
 
 
 ! connect to dsn type BUFR file for read
 session=dbasession(filename="example_dballe.bufr")
 
-call read1l()     ! read ana, data and attributes for constant data, data and attributes for data
+!call read1lf()     ! read ana, data and attributes for constant data, data and attributes for data in list
+!call read2lf()     ! read data and attributes for data filtered and ordered by btable with type predefined in list
 
 !! note: I cannot read from file without filter (filter do not work on file) and put everythings in real matrix
-!call read3l()     ! read an omogeneous vector of data
+!! we get error putting somethings that do not fit in real (like station name)
+!! call read3lf()     ! read an omogeneous vector of data
 
-call copy1f()     ! copy data and attributes of everythings to an other file
+!!call copy1f()     ! copy data and attributes of everythings to an other file
+! todo
 !call copy2f()     ! copy data and constant data to an other file
 
 !close everythings
 call session%delete()
 
+! use memdb
+!!$call read3lfmem()    ! read an omogeneous vector of data from file using list and mem (and filters)
+!!$call readmem()       ! read an list of data from file  using mem (and filters)
+!!$call copy1fmem()     ! copy data and attributes of everythings to an other file
+
+
 contains
+
+subroutine write0()
+
+type(dbasession) :: sessionana
+type(dbaanalist) :: anal
+logical :: status
+
+! connect to dsn type BUFR file for write
+sessionana=dbasession(filename="example_dballe_ana.bufr",wipe=.true.,write=.true.)
+
+
+call anal%append(dbaana(lon=11.d0,lat=45.d0))
+call anal%append(dbaana(lon=12.d0,lat=45.d0))
+call anal%append(dbaana(lon=13.d0,lat=45.d0))
+
+call anal%display()
+
+!todo ingest ana
+!call sessionana%ingest(ana=anal)
+
+call sessionana%delete()
+status=anal%delete()
+
+end subroutine write0
+
 
 subroutine write1()
 
@@ -348,25 +384,21 @@ deallocate(metaanddatav)
 
 end subroutine read1
 
-subroutine read1l()
+subroutine read1lf()
 
 type(dbametaanddatalist) :: metaanddatal
 type(dbaanalist) :: anal
-type(dbafilter) :: filter
 logical :: status
 
 print *,"----------------------------------------------"
-print *,"--------------- read1l ------------------------"
+print *,"--------------- read1lf ------------------------"
+
+! here (reading from file) we cannot use filters !!!
 
 ! rewind
 call session%filerewind()
 
-call session%set(filter=dbafilter())
-
 print *, "anagrafica:"
-filter=dbafilter(coordmin=dbacoord(lon= 9.d0,lat=44.d0),&
-                 coordmax=dbacoord(lon=11.d0,lat=46.d0))
-call session%set(filter=filter)
 call session%extrude(anal)
 call anal%display()
 status=anal%delete()
@@ -375,8 +407,7 @@ status=anal%delete()
 call session%filerewind()
 
 print *, "dati di anagrafica:"
-call session%set(filter=dbafilter(contextana=.true.))
-call session%extrude(metaanddatal)
+call session%extrude(metaanddatal,filter=dbafilter(contextana=.true.))
 call metaanddatal%display()
 status = metaanddatal%delete()
 
@@ -384,13 +415,12 @@ status = metaanddatal%delete()
 call session%filerewind()
 
 print *, "dati dati:"
-filter=dbafilter(var="B12102")
-call session%set(filter=filter)
+metaanddatal=dbametaanddatalist()
 call session%extrude(metaanddatal)
 call metaanddatal%display()
 status = metaanddatal%delete()
 
-end subroutine read1l
+end subroutine read1lf
 
 subroutine read2()
 
@@ -471,6 +501,42 @@ deallocate(metaanddatav)
 end subroutine read2
 
 
+
+subroutine read2lf()
+
+type(dbametaanddatalist) :: metaanddatal
+type(dbafilter) :: filter
+type(dbadatav) :: vars,starvars
+logical :: status
+
+print *,"----------------------------------------------"
+print *,"--------------- read2lf ------------------------"
+
+! rewind
+call session%filerewind()
+
+allocate (vars%dat(2))
+allocate (vars%dat(1)%dat,source=dbadatai("B13003"))
+allocate (vars%dat(2)%dat,source=dbadatac("B12102"))
+allocate (starvars%dat(3))
+allocate (starvars%dat(1)%dat,source=dbadatai("*B33192"))
+allocate (starvars%dat(2)%dat,source=dbadatac("*B33193"))
+allocate (starvars%dat(3)%dat,source=dbadatad("*B33194"))
+
+filter=dbafilter(vars=vars,starvars=starvars)
+!print *, "filter:"
+!call filter%display()
+
+call session%extrude(metaanddatal,filter=filter)
+
+print *, "dati dati:"
+call metaanddatal%display()
+
+status=metaanddatal%delete()
+
+end subroutine read2lf
+
+
 subroutine read3()
 
 type(dbametaanddatar),allocatable :: metaanddatarv(:)
@@ -499,24 +565,71 @@ end subroutine read3
 
 
 
-subroutine read3l()
+!!$subroutine read3l()
+!!$
+!!$type(dbametaanddatarlist) :: metaanddatarl
+!!$type(dbametaanddatar),allocatable :: metaanddatarv(:)
+!!$type(dbafilter) :: filter
+!!$logical :: status
+!!$
+!!$print *,"----------------------------------------------"
+!!$print *,"--------------- read3l ------------------------"
+!!$
+!!$! rewind
+!!$call session%filerewind()
+!!$
+!!$print *, "dati dati:"
+!!$filter=dbafilter(var="B12102")
+!!$call session%set(filter=filter)
+!!$call session%extrude(metaanddatarl)
+!!$
+!!$call metaanddatarl%display()
+!!$
+!!$metaanddatarv=metaanddatarl%toarray()
+!!$print *,"max=",maxval(metaanddatarv(:)%dbadatar%value)
+!!$
+!!$status = metaanddatarl%delete()
+!!$
+!!$end subroutine read3l
+
+
+subroutine read3lfmem()
 
 type(dbametaanddatarlist) :: metaanddatarl
 type(dbametaanddatar),allocatable :: metaanddatarv(:)
 type(dbafilter) :: filter
 logical :: status
+integer :: i
 
 print *,"----------------------------------------------"
-print *,"--------------- read3l ------------------------"
+print *,"--------------- read3lfmem ------------------------"
 
-! rewind
-call session%filerewind()
+! connect to dsn type DBA
+connection=dbaconnection(dsn="mem:")
+session=dbasession(connection,wipe=.true.,anaflag="write", dataflag="write", attrflag="write")
+call session%messages_open(filename="example_dballe.bufr",mode="rb",format="BUFR",options="")
+
+filter=dbafilter(var="B12101")
+
+! data
+do while (session%messages_read_next())
+
+  call session%set(filter=filter)
+
+  call session%extrude()
+  call session%extrude(metaanddatarv)
+
+  do i=1,size(metaanddatarv)
+    call metaanddatarv(i)%display()
+    call metaanddatarl%append(metaanddatarv(i))
+  end do
+
+  call session%remove_all()
+  deallocate (metaanddatarv)
+end do
+
 
 print *, "dati dati:"
-filter=dbafilter(var="B12102")
-call session%set(filter=filter)
-call session%extrude(metaanddatarl)
-
 call metaanddatarl%display()
 
 metaanddatarv=metaanddatarl%toarray()
@@ -524,17 +637,42 @@ print *,"max=",maxval(metaanddatarv(:)%dbadatar%value)
 
 status = metaanddatarl%delete()
 
-end subroutine read3l
+end subroutine read3lfmem
 
 
-subroutine read4()
+subroutine readmem()
+
+type(dbametaanddatalist) :: metaanddatal
+type(dbafilter) :: filter
+logical :: status
+
+print *,"----------------------------------------------"
+print *,"--------------- readmem ------------------------"
+
+! create mem db ehere put bufr from file
+session=dbasession(connection,wipe=.true.,anaflag="write", dataflag="write", attrflag="write",&
+ filename="example_dballe.bufr",mode="rb",format="BUFR",options="")
+
+filter=dbafilter(var="B12101")
+! in this case we have to pass filter and do not set it
+call session%extrude(metaanddatal,filter=filter)
+
+print *, "dati dati:"
+call metaanddatal%display()
+
+status = metaanddatal%delete()
+
+end subroutine readmem
+
+
+subroutine read4l()
 
 type(dbametaanddata) :: myelement
 type(dbametaanddatalist) :: metaanddatal
 type(dbafilter) :: filter
 
 print *,"----------------------------------------------"
-print *,"--------------- read4 ------------------------"
+print *,"--------------- read4l ------------------------"
 
 print *, "dati dati:"
 filter=dbafilter(var="B12102")
@@ -552,7 +690,7 @@ print *,"list index 2 ="
 call myelement%display()
 print *,"status delete=", metaanddatal%delete()
 
-end subroutine read4
+end subroutine read4l
 
 
 subroutine delete1()
@@ -708,6 +846,60 @@ end subroutine copy1f
 
 
 
+subroutine copy1fmem()
+type(dbaconnection) :: connectionfrom
+type(dbasession)    :: sessionfrom,sessionto
+type(dbametaanddata),allocatable :: metaanddatav(:)
+integer :: i
+
+print *,"----------------------------------------------"
+print *,"--------------- copy1fmem ----------------------"
+
+
+! connect to dsn type DBA
+connectionfrom=dbaconnection(dsn="mem:")
+sessionfrom=dbasession(connectionfrom,wipe=.true.,anaflag="write", dataflag="write", attrflag="write")
+call sessionfrom%messages_open(filename="example_dballe.bufr",mode="rb",format="BUFR",options="")
+
+! connect to dsn type BUFR file for write
+sessionto=dbasession(filename="example_dballe_copy1memf.bufr",wipe=.true.,write=.true.)
+
+! data
+do while (sessionfrom%messages_read_next())
+  print*,"read/write message"
+  call sessionfrom%set(filter=dbafilter())
+  call sessionfrom%extrude(metaanddatav)
+
+  do i =1,size(metaanddatav)
+    call metaanddatav(i)%display()
+    call sessionto%ingest(metaanddata=metaanddatav(i))
+  end do
+  call sessionto%close_message()
+  call sessionfrom%remove_all()
+end do
+
+!!$! constant data
+!!$call session%filerewind()
+!!$
+!!$call session%set(filter=dbafilter(contextana=.true.))
+!!$call session%extrude_metaanddata()
+!!$do while (session%count >0)
+!!$  print*,"read/write data ana"
+!!$  call session%extrude_metaanddata (metaanddata)
+!!$  call sessioncp%ingest(metaanddata=metaanddata)
+!!$  call sessioncp%close_message()
+!!$  call session%extrude_metaanddata()
+!!$end do
+
+!close everythings
+call sessionfrom%delete()
+call connectionfrom%delete()
+call sessionto%delete()
+
+end subroutine copy1fmem
+
+
+
 subroutine copy2()
 type(dbasession)    :: sessioncp
 type(dbaconnection) :: connectioncp
@@ -717,8 +909,7 @@ print *,"----------------------------------------------"
 print *,"--------------- copy2 ----------------------"
 
 ! connect to dsn
-!connectioncp=dbaconnection(dsn="sqlite:/tmp/dballecopy2.sqlite")
-connectioncp=dbaconnection(dsn="mem:/tmp/dballecopy2")
+connectioncp=dbaconnection(dsn="sqlite:/tmp/dballecopy2.sqlite")
 sessioncp=dbasession(connectioncp,wipe=.true.,anaflag="write", dataflag="write", attrflag="write")
 
 ! use character type
