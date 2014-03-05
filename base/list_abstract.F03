@@ -1,7 +1,9 @@
 
 module list_abstract
+
   use list_link
   use missing_values
+  implicit none
   private
   public :: list
   type, abstract :: list
@@ -70,6 +72,7 @@ end subroutine display
 
 integer function countelements(this)
 class(list) :: this
+
 if (.not.c_e(this%currentindex())) call this%rewind()
 countelements=this%currentindex()
 
@@ -78,7 +81,7 @@ do while(this%element())
    call this%next()
 end do
 
-if (.not. c_e(countelemets)) countelements =0
+if (.not. c_e(countelements)) countelements =0
 
 end function countelements
 
