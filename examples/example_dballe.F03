@@ -32,7 +32,7 @@ type(dbaconnection) :: connection
 
 
 ! connect to dsn type BUFR file for write
-!session=dbasession(filename="example_dballe.bufr",wipe=.true.,write=.true.)
+!session=dbasession(filename="example_dballe.bufr",wipe=.true.,write=.true.,memdb=.false.)
 
 ! to do ingest of ana
 call write0()    ! write ana on file
@@ -46,7 +46,7 @@ call write0()    ! write ana on file
 
 
 ! connect to dsn type BUFR file for read
-session=dbasession(filename="example_dballe.bufr")
+session=dbasession(filename="example_dballe.bufr",memdb=.false.)
 
 !call read1lf()     ! read ana, data and attributes for constant data, data and attributes for data in list
 !call read2lf()     ! read data and attributes for data filtered and ordered by btable with type predefined in list
@@ -77,7 +77,7 @@ type(dbaanalist) :: anal
 logical :: status
 
 ! connect to dsn type BUFR file for write
-sessionana=dbasession(filename="example_dballe_ana.bufr",wipe=.true.,write=.true.)
+sessionana=dbasession(filename="example_dballe_ana.bufr",wipe=.true.,write=.true.,memdb=.false.)
 
 
 call anal%append(dbaana(lon=11.d0,lat=45.d0))
@@ -86,8 +86,12 @@ call anal%append(dbaana(lon=13.d0,lat=45.d0))
 
 call anal%display()
 
-!todo ingest ana
-!call sessionana%ingest(ana=anal)
+call anal%rewind()
+!ingest ana
+do while (anal%element())
+  call sessionana%ingest(ana=anal%current())
+  call anal%next()
+end do
 
 call sessionana%delete()
 status=anal%delete()
@@ -606,8 +610,8 @@ print *,"--------------- read3lfmem ------------------------"
 
 ! connect to dsn type DBA
 connection=dbaconnection(dsn="mem:")
-session=dbasession(connection,wipe=.true.,anaflag="write", dataflag="write", attrflag="write")
-call session%messages_open(filename="example_dballe.bufr",mode="rb",format="BUFR",options="")
+session=dbasession(connection,wipe=.true.,anaflag="write", dataflag="write", attrflag="write",memdb=.true.)
+call session%messages_open(filename="example_dballe.bufr",mode="r",format="BUFR",simplified=.true.)
 
 filter=dbafilter(var="B12101")
 
@@ -651,7 +655,7 @@ print *,"--------------- readmem ------------------------"
 
 ! create mem db ehere put bufr from file
 session=dbasession(connection,wipe=.true.,anaflag="write", dataflag="write", attrflag="write",&
- filename="example_dballe.bufr",mode="rb",format="BUFR",options="")
+ filename="example_dballe.bufr",mode="r",format="BUFR",memdb=.true.)
 
 filter=dbafilter(var="B12101")
 ! in this case we have to pass filter and do not set it
@@ -810,7 +814,7 @@ print *,"--------------- copy1f ----------------------"
 
 
 ! connect to dsn type BUFR file for write
-sessioncp=dbasession(filename="example_dballe_copy1f.bufr",wipe=.true.,write=.true.)
+sessioncp=dbasession(filename="example_dballe_copy1f.bufr",wipe=.true.,write=.true.,memdb=.false.)
 
 ! data
 call session%filerewind()
@@ -858,8 +862,8 @@ print *,"--------------- copy1fmem ----------------------"
 
 ! connect to dsn type DBA
 connectionfrom=dbaconnection(dsn="mem:")
-sessionfrom=dbasession(connectionfrom,wipe=.true.,anaflag="write", dataflag="write", attrflag="write")
-call sessionfrom%messages_open(filename="example_dballe.bufr",mode="rb",format="BUFR",options="")
+sessionfrom=dbasession(connectionfrom,wipe=.true.,anaflag="write", dataflag="write", attrflag="write",memdb=.true.)
+call sessionfrom%messages_open(filename="example_dballe.bufr",mode="r",format="BUFR",simplified=.true.)
 
 ! connect to dsn type BUFR file for write
 sessionto=dbasession(filename="example_dballe_copy1memf.bufr",wipe=.true.,write=.true.)

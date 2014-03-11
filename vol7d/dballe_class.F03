@@ -77,7 +77,8 @@ type,public ::  dbasession
   character(len=255) :: filename=cmiss
   character(len=40) :: mode=cmiss
   character(len=40) :: format=cmiss
-  character(len=40) :: options=cmiss
+  logical           :: simplified=.true.
+  logical           :: memdb=.true.
   type(dbaconnection) :: memconnection
   integer :: category=imiss !< log4fortran
   integer :: count=imiss !< number of results left to query
@@ -97,7 +98,7 @@ type,public ::  dbasession
     procedure :: var_related => dbasession_var_related
     procedure :: critica => dbasession_critica
     procedure :: scusa => dbasession_scusa
-    procedure :: messages_open => dbasession_messages_open
+    procedure :: messages_open => dbasession_messages_open_input
     procedure :: messages_read_next => dbasession_messages_read_next
     procedure :: close_message => dbasession_close_message
     procedure :: unsetb => dbasession_unsetb
@@ -209,6 +210,7 @@ type,public,extends(vol7d_ana) :: dbaana
   procedure :: display => dbaana_display
   procedure :: dbaset => dbaana_set
   procedure :: dbaenq => dbaana_enq
+  procedure :: dbaingest => dbaana_ingest
 end type dbaana
 
 interface dbaana
@@ -718,6 +720,20 @@ ier = idba_enq(session%sehandle,"ident",ana%vol7d_ana%ident)
 end subroutine dbaana_enq
 
 
+subroutine dbaana_ingest(ana,session)
+class(dbaana), intent(in) :: ana
+type(dbasession), intent(in) :: session
+
+call session%unsetall()
+!write ana
+call session%set(ana=ana)
+call session%prendilo()
+
+!to close message on file
+call session%close_message()
+
+end subroutine dbaana_ingest
+
 
 subroutine displaydbaana(this)
 class(dbaanaList) :: this
@@ -830,19 +846,19 @@ end if
 end subroutine dbasession_close_message
 
 
-subroutine dbasession_messages_open(session,filename,mode,format,options)
+subroutine dbasession_messages_open_input(session,filename,mode,format,simplified)
 class(dbasession), intent(in) :: session
 character (len=*), intent(in) :: filename
 character (len=*), intent(in) :: mode !> "r"/"w"/"a" the open mode ("r" for read, "w" for write or create, "a" for append) 
 character (len=*), intent(in) :: format !< the file format. It can be "BUFR" or "CREX". (default="BUFR")
-character (len=*), intent(in) :: options !> todo
+logical, intent(in)           :: simplified !> rappresentation when interpret message (simplified/precise)
 !character (len=*), intent(in) :: template !> template to use for write on file
 
 integer :: ier
 
-ier = idba_messages_open(session%sehandle, filename, mode, format, options)
+ier = idba_messages_open_input(session%sehandle, filename, mode, format, simplified)
 
-end subroutine dbasession_messages_open
+end subroutine dbasession_messages_open_input
 
 
 logical function dbasession_messages_read_next(session)
@@ -2428,7 +2444,7 @@ type(dbafilter),intent(in),optional :: filter
 type(dbametaanddata),allocatable :: metaanddatavbuf(:)
 integer :: i
 
-if (c_e(session%options))then
+if (session%memdb)then
 
   do while (session%messages_read_next())
     call session%set(filter=filter)
@@ -2699,7 +2715,7 @@ end if
 end subroutine dbaconnection_delete
 
 recursive type(dbasession) function dbasession_init(connection,anaflag, dataflag, attrflag,&
- filename,mode,format,template,write,wipe,repinfo,options,categoryappend)
+ filename,mode,format,template,write,wipe,repinfo,simplified,memdb,categoryappend)
 type(dbaconnection),intent(in),optional :: connection
 character (len=*), intent(in), optional :: anaflag
 character (len=*), intent(in), optional :: dataflag
@@ -2711,7 +2727,8 @@ logical,INTENT(in),OPTIONAL :: write !< abilita la scrittura sul DSN/file ( defa
 logical,INTENT(in),OPTIONAL :: wipe !<  svuota il DSN/file e/o lo prepara per una scrittura ( default=.false. )
 character(len=*), INTENT(in),OPTIONAL :: repinfo !< eventuale file repinfo.csv usato con wipe ( default="" )
 character(len=*),intent(in),optional :: format !< the file format. It can be "BUFR" or "CREX". (default="BUFR")
-character(len=*),intent(in),optional :: options !< options for messages_open dballe api; if present import from file to memdb. (default=None)
+logical,intent(in),optional :: simplified !< rappresentation for interpreted message (simplified/precise)
+logical,intent(in),optional :: memdb     !< if true import from file to memdb (default=true)
 character(len=*),INTENT(in),OPTIONAL :: categoryappend !< appennde questo suffisso al namespace category di log4fortran
 
 integer :: ier
@@ -2719,8 +2736,8 @@ character (len=5) :: lanaflag,ldataflag,lattrflag
 character (len=1) :: lmode
 logical :: quiwrite,quiwipe
 character(len=255) :: quirepinfo
-character(len=40) :: lformat,loptions
-logical :: exist
+character(len=40) :: lformat
+logical :: exist,lsimplified
 character(len=512) :: a_name
 
 ! those are assigned by the default constructor?
@@ -2781,23 +2798,28 @@ if (present(filename)) then
     lformat=format
   end if
 
-  loptions=cmiss
-  if (present(options))then
-    loptions=options
+  lsimplified=.true.
+  if (present(simplified))then
+    lsimplified=simplified
+  end if
+
+  dbasession_init%memdb=.true.
+  if (present(memdb))then
+    dbasession_init%memdb=memdb
   end if
   
   dbasession_init%file=.true.
   dbasession_init%filename=filename
   dbasession_init%mode=lmode
   dbasession_init%format=lformat
-  dbasession_init%options=loptions
+  dbasession_init%simplified=lsimplified
 
 
-  if (c_e(loptions))then
+  if (dbasession_init%memdb)then
                                 ! connect to dsn type DBA
     dbasession_init%memconnection=dbaconnection(dsn="mem:")
     dbasession_init=dbasession(dbasession_init%memconnection,anaflag=anaflag, dataflag=dataflag, attrflag=attrflag)
-    call dbasession_init%messages_open(filename=filename,mode=lmode,format=lformat,options=loptions)
+    call dbasession_init%messages_open(filename=filename,mode=lmode,format=lformat,simplified=lsimplified)
 
   else
 
@@ -2981,10 +3003,11 @@ end if
 end subroutine dbasession_set
 
 
-subroutine dbasession_ingest(session,dataattr,dataattrv,metaanddata,&
+subroutine dbasession_ingest(session,ana,dataattr,dataattrv,metaanddata,&
  metaanddatai,metaanddatab,metaanddatad,metaanddatac,metaanddatar,&
  metaanddatav)
 class(dbasession), intent(in)   :: session
+class(dbaana),optional     :: ana
 class(dbadataattr),optional     :: dataattr
 class(dbadataattrv),optional    :: dataattrv
 class(dbametaanddata),optional  :: metaanddata
@@ -2994,6 +3017,10 @@ class(dbametaanddatad),optional   :: metaanddatad
 class(dbametaanddatac),optional   :: metaanddatac
 class(dbametaanddatar),optional   :: metaanddatar
 class(dbametaanddatav),optional :: metaanddatav
+
+if (present(ana)) then
+  call ana%dbaingest(session)
+end if
 
 if (present(dataattr)) then
   call dataattr%dbaingest(session)
@@ -3051,7 +3078,8 @@ session%template=cmiss
 session%filename=cmiss
 session%mode=cmiss
 session%format=cmiss
-session%options=cmiss
+session%simplified=.true.
+session%memdb=.true.
 session%category=imiss
 session%count=imiss
 
