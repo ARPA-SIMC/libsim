@@ -78,7 +78,7 @@ type,public ::  dbasession
   character(len=40) :: mode=cmiss
   character(len=40) :: format=cmiss
   logical           :: simplified=.true.
-  logical           :: memdb=.true.
+  logical           :: memdb=.false.
   type(dbaconnection) :: memconnection
   integer :: category=imiss !< log4fortran
   integer :: count=imiss !< number of results left to query
@@ -2728,7 +2728,7 @@ logical,INTENT(in),OPTIONAL :: wipe !<  svuota il DSN/file e/o lo prepara per un
 character(len=*), INTENT(in),OPTIONAL :: repinfo !< eventuale file repinfo.csv usato con wipe ( default="" )
 character(len=*),intent(in),optional :: format !< the file format. It can be "BUFR" or "CREX". (default="BUFR")
 logical,intent(in),optional :: simplified !< rappresentation for interpreted message (simplified/precise)
-logical,intent(in),optional :: memdb     !< if true import from file to memdb (default=true)
+logical,intent(in),optional :: memdb     !< if true import from file to memdb (default=true if filename present else false)
 character(len=*),INTENT(in),OPTIONAL :: categoryappend !< appennde questo suffisso al namespace category di log4fortran
 
 integer :: ier
@@ -2768,6 +2768,7 @@ if (present(wipe))then
   endif
 endif
 
+
 if (present(filename)) then
 
   if (present(template))then
@@ -2803,10 +2804,6 @@ if (present(filename)) then
     lsimplified=simplified
   end if
 
-  dbasession_init%memdb=.true.
-  if (present(memdb))then
-    dbasession_init%memdb=memdb
-  end if
   
   dbasession_init%file=.true.
   dbasession_init%filename=filename
@@ -2814,6 +2811,10 @@ if (present(filename)) then
   dbasession_init%format=lformat
   dbasession_init%simplified=lsimplified
 
+  dbasession_init%memdb=.true. ! default with filename
+  if (present(memdb))then
+    dbasession_init%memdb=memdb
+  end if
 
   if (dbasession_init%memdb)then
                                 ! connect to dsn type DBA
@@ -3079,7 +3080,7 @@ session%filename=cmiss
 session%mode=cmiss
 session%format=cmiss
 session%simplified=.true.
-session%memdb=.true.
+session%memdb=.false.
 session%category=imiss
 session%count=imiss
 

@@ -8,54 +8,53 @@ integer :: i
 type(dbasession) :: session
 type(dbaconnection) :: connection
 
-!!$! connect to dsn type DBA
-!!$connection=dbaconnection(dsn="sqlite:/tmp/dballe.sqlite")
-!!$session=dbasession(connection,wipe=.true.,anaflag="write", dataflag="write", attrflag="write")
-!!$
-!!$call write1()    ! write etherogeneous ensamble of data with attributes and constant data using macro object
-!!$call write2()    ! write an omogeneous vector of data
-!!$call write3()    ! write an etherogeneous ensamble of data
-!!$call write4()    ! write an etherogeneous ensamble of data and attributes
-!!$call read2()     ! read data and attributes for data filtered and ordered by btable with type predefined
-!!$call delete1()   ! delete one var from the entire DB
-!!$call delete2()   ! delete one var only where are some defined metadati
-!!$call delete3()   ! delete some attributes from one var only where are some defined metadati
-!!$call read1()     ! read ana, data and attributes for constant data, data and attributes for data
-!!$call read3()     ! read an omogeneous vector of data
-!!$call read4l()    ! read data and attributes for data in a double linked list
-!!$call copy1()     ! copy data and attributes of everythings to an other dsn
-!!$call copy2()     ! copy data and constant data to an other dsn
-!!$
-!!$!close everythings
-!!$call session%delete()
-!!$call connection%delete()
+! connect to dsn type DBA
+connection=dbaconnection(dsn="sqlite:/tmp/dballe.sqlite")
+session=dbasession(connection,wipe=.true.,anaflag="write", dataflag="write", attrflag="write")
+
+call write1()    ! write etherogeneous ensamble of data with attributes and constant data using macro object
+call write2()    ! write an omogeneous vector of data
+call write3()    ! write an etherogeneous ensamble of data
+call write4()    ! write an etherogeneous ensamble of data and attributes
+call read2()     ! read data and attributes for data filtered and ordered by btable with type predefined
+call delete1()   ! delete one var from the entire DB
+call delete2()   ! delete one var only where are some defined metadati
+call delete3()   ! delete some attributes from one var only where are some defined metadati
+call read1()     ! read ana, data and attributes for constant data, data and attributes for data
+call read3()     ! read an omogeneous vector of data
+call read4l()    ! read data and attributes for data in a double linked list
+call copy1()     ! copy data and attributes of everythings to an other dsn
+call copy2()     ! copy data and constant data to an other dsn
+
+!close everythings
+call session%delete()
+call connection%delete()
 
 
 ! connect to dsn type BUFR file for write
-!session=dbasession(filename="example_dballe.bufr",wipe=.true.,write=.true.,memdb=.false.)
+session=dbasession(filename="example_dballe.bufr",wipe=.true.,write=.true.,memdb=.false.)
 
-! to do ingest of ana
 call write0()    ! write ana on file
-!call write1()    ! write etherogeneous ensamble of data with attributes and constant data using macro object
-!call write2()    ! write an omogeneous vector of data
-!call write3()    ! write an etherogeneous ensamble of data
-!call write4()    ! write an etherogeneous ensamble of data and attributes
+call write1()    ! write etherogeneous ensamble of data with attributes and constant data using macro object
+call write2()    ! write an omogeneous vector of data
+call write3()    ! write an etherogeneous ensamble of data
+call write4()    ! write an etherogeneous ensamble of data and attributes
 
 !close everythings
-!call session%delete()
+call session%delete()
 
 
 ! connect to dsn type BUFR file for read
 session=dbasession(filename="example_dballe.bufr",memdb=.false.)
 
-!call read1lf()     ! read ana, data and attributes for constant data, data and attributes for data in list
-!call read2lf()     ! read data and attributes for data filtered and ordered by btable with type predefined in list
+call read1lf()     ! read ana, data and attributes for constant data, data and attributes for data in list
+call read2lf()     ! read data and attributes for data filtered and ordered by btable with type predefined in list
 
 !! note: I cannot read from file without filter (filter do not work on file) and put everythings in real matrix
 !! we get error putting somethings that do not fit in real (like station name)
 !! call read3lf()     ! read an omogeneous vector of data
 
-!!call copy1f()     ! copy data and attributes of everythings to an other file
+call copy1f()     ! copy data and attributes of everythings to an other file
 ! todo
 !call copy2f()     ! copy data and constant data to an other file
 
@@ -63,9 +62,9 @@ session=dbasession(filename="example_dballe.bufr",memdb=.false.)
 call session%delete()
 
 ! use memdb
-!!$call read3lfmem()    ! read an omogeneous vector of data from file using list and mem (and filters)
-!!$call readmem()       ! read an list of data from file  using mem (and filters)
-!!$call copy1fmem()     ! copy data and attributes of everythings to an other file
+call read3lfmem()    ! read an omogeneous vector of data from file using list and mem (and filters)
+call readmem()       ! read an list of data from file  using mem (and filters)
+call copy1fmem()     ! copy data and attributes of everythings to an other file
 
 
 contains
@@ -862,11 +861,11 @@ print *,"--------------- copy1fmem ----------------------"
 
 ! connect to dsn type DBA
 connectionfrom=dbaconnection(dsn="mem:")
-sessionfrom=dbasession(connectionfrom,wipe=.true.,anaflag="write", dataflag="write", attrflag="write",memdb=.true.)
+sessionfrom=dbasession(connectionfrom,wipe=.true.,anaflag="write", dataflag="write", attrflag="write")
 call sessionfrom%messages_open(filename="example_dballe.bufr",mode="r",format="BUFR",simplified=.true.)
 
 ! connect to dsn type BUFR file for write
-sessionto=dbasession(filename="example_dballe_copy1memf.bufr",wipe=.true.,write=.true.)
+sessionto=dbasession(filename="example_dballe_copy1memf.bufr",wipe=.true.,write=.true.,memdb=.false.)
 
 ! data
 do while (sessionfrom%messages_read_next())
