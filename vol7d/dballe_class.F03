@@ -43,8 +43,6 @@ use vol7d_network_class
 use datetime_class
 use list_abstract
 
-!USE char_utilities
-
 IMPLICIT NONE
 
 include "dballeff.h"
@@ -52,7 +50,7 @@ private
 
 character (len=255),parameter:: subcategory="dballe_class"
 
-!> manage connection handle
+!> manage connection handle to a DSN
 type,public :: dbaconnection
   integer :: dbhandle=imiss
   integer :: handle_err=imiss
@@ -98,8 +96,10 @@ type,public ::  dbasession
     procedure :: var_related => dbasession_var_related
     procedure :: critica => dbasession_critica
     procedure :: scusa => dbasession_scusa
-    procedure :: messages_open => dbasession_messages_open_input
+    procedure :: messages_open_input => dbasession_messages_open_input
+    procedure :: messages_open_output => dbasession_messages_open_output
     procedure :: messages_read_next => dbasession_messages_read_next
+    procedure :: messages_write_next => dbasession_messages_write_next
     procedure :: close_message => dbasession_close_message
     procedure :: unsetb => dbasession_unsetb
     procedure :: filerewind => dbasession_filerewind
@@ -127,10 +127,10 @@ type,public ::  dbasession
     procedure :: dissolve_metadata => dbasession_dissolve_metadata
     procedure :: dissolveattr => dbasession_dissolveattr_metadata
     generic   :: dissolve => dissolve_metadata ,dimenticami
-    generic   :: extrude => extrude_ana, extrude_anav, extrude_anal,extrude_metaanddatav,extrude_metaanddatal,&
+    generic   :: extrudea => extrude_ana, extrude_anav,extrude_anal
+    generic   :: extrude  => extrude_metaanddata,extrude_metaanddatav,extrude_metaanddatal,&
      extrude_metaanddataiv,extrude_metaanddatabv,extrude_metaanddatadv,extrude_metaanddatarv,extrude_metaanddatacv&
      ,extrude_metaanddatail,extrude_metaanddatarl,extrude_metaanddatadl,extrude_metaanddatabl,extrude_metaanddatacl
-!  procedure :: dammelo => dbasession_dammelo
 end type dbasession
 
 interface dbasession
@@ -217,7 +217,7 @@ interface dbaana
   procedure   dbaana_init     ! add constructor to shape generic interface
 end interface
 
-
+!> double linked list of ana
 type, public, extends(list) :: dbaanaList
   contains
   procedure :: current => currentdbaana ! get integer pointed by iterator
@@ -270,7 +270,7 @@ interface dbadatetime
 end interface
 
 
-!> base (abstract)  type for data extension
+!> base (abstract)  type for data
 type,public,abstract :: dbadata
   character(len=9) :: btable
 contains
@@ -444,7 +444,7 @@ type, public :: dbametaanddatav
   procedure :: dbaingest => dbametaanddatav_ingest
 end type dbametaanddatav
 
-
+!> double linked list of dbametaanddata
 type, public, extends(list) :: dbametaanddataList
   contains
   procedure :: current => currentdbametaanddata ! get integer pointed by iterator
@@ -526,7 +526,7 @@ type, public, extends(list) :: dbametaanddatacList
   procedure :: toarray => toarray_dbametaanddatac ! return ana allocated array
 end type dbametaanddatacList
 
-!> filter to apply to extrude data
+!> filter to apply before extrude data
 type, public ::  dbafilter
   type(dbaana)       :: ana
   character(len=6)   :: var
@@ -861,6 +861,26 @@ ier = idba_messages_open_input(session%sehandle, filename, mode, format, simplif
 end subroutine dbasession_messages_open_input
 
 
+subroutine dbasession_messages_open_output(session,filename,mode,format)
+class(dbasession), intent(in) :: session
+character (len=*), intent(in) :: filename
+character (len=*), intent(in),optional :: mode !> "r"/"w"/"a" the open mode ("r" for read, "w" for write or create, "a" for append) 
+character (len=*), intent(in),optional :: format !< the file format. It can be "BUFR" or "CREX". (default="BUFR")
+
+integer :: ier
+character (len=40) :: lmode, lformat
+
+lmode="w"
+if (present(mode)) lmode=mode
+
+lformat="BUFR"
+if (present(format)) lformat=format
+
+ier = idba_messages_open_output(session%sehandle, filename, lmode, lformat)
+
+end subroutine dbasession_messages_open_output
+
+
 logical function dbasession_messages_read_next(session)
 class(dbasession), intent(in) :: session
 
@@ -869,6 +889,20 @@ integer :: ier
 ier = idba_messages_read_next(session%sehandle, dbasession_messages_read_next)
 
 end function dbasession_messages_read_next
+
+subroutine dbasession_messages_write_next(session,template_name)
+class(dbasession), intent(in) :: session
+character(len=*), optional :: template_name
+character(len=40) :: ltemplate_name
+
+integer :: ier
+
+ltemplate_name="generic"
+if (present(template_name)) ltemplate_name=template_name
+
+ier = idba_messages_write_next(session%sehandle,ltemplate_name)
+
+end subroutine dbasession_messages_write_next
 
 
 subroutine dbasession_dissolve_metadata(session,metadata)
@@ -2193,8 +2227,8 @@ end subroutine dbasession_extrude_anal
 subroutine dbasession_extrude_metaanddata(session,metaanddata,dataonly,filter)
 class(dbasession), intent(inout) :: session
 type(dbametaanddata), intent(inout),optional :: metaanddata
-type(dbafilter),intent(in),optional :: filter
 logical,intent(in),optional :: dataonly
+type(dbafilter),intent(in),optional :: filter
 
 type(dbametadata) :: metadata
 integer :: ier,acount,i,j,k
@@ -2205,7 +2239,7 @@ logical :: lvars,lstarvars
                                 ! if you do not pass metaanddata we presume to have to initialize the query
 if (.not. present(metaanddata)) then
   ier = idba_voglioquesto(session%sehandle, session%count)
-  !print *,"numero data",session%count
+  print *,"extrude voglioquesto number data",session%count
 
                                 ! preroll one read because after I have to read one more to check metadata
   if (session%count > 0) then
@@ -2213,6 +2247,8 @@ if (.not. present(metaanddata)) then
   end if
 
 else
+
+  print *,"extrude dammelo"
                                 ! you pass metaanddata so we continue with the query
 
   if (allocated(metaanddata%dataattrv%dataattr)) then
@@ -2231,10 +2267,6 @@ else
       lstarvars=.true.
     end if
   end if
-
-  print *,"lvars",lvars
-  print *,"lstarvars",lstarvars
-
 
   if (lvars) then
 
@@ -2411,24 +2443,26 @@ end subroutine dbasession_extrude_metaanddata
 
 subroutine dbasession_extrude_metaanddatav(session,metaanddatav,dataonly,filter)
 class(dbasession), intent(inout) :: session
-type(dbametaanddata), intent(out),allocatable :: metaanddatav(:)
+type(dbametaanddata), intent(inout),allocatable :: metaanddatav(:)
 logical, intent(in),optional :: dataonly
 type(dbafilter),intent(in),optional :: filter
 
 type(dbametaanddata),allocatable :: metaanddatavbuf(:)
 integer :: i
 
-call session%extrude_metaanddata()
+call session%extrude()
+print*," count: ",session%count
+
 ! allocate to max dimension
 allocate(metaanddatavbuf(session%count))
 i=0
 do while (session%count >0)
   i=i+1
-  call session%extrude_metaanddata(metaanddatavbuf(i),dataonly=dataonly,filter=filter)
+  call session%extrude(metaanddatavbuf(i),dataonly=dataonly,filter=filter)
 end do
 
 ! compact data to real dimension
-allocate (metaanddatav(i))
+! allocate (metaanddatav(i))
 metaanddatav=metaanddatavbuf(:i)
 deallocate(metaanddatavbuf)
 
@@ -2820,7 +2854,7 @@ if (present(filename)) then
                                 ! connect to dsn type DBA
     dbasession_init%memconnection=dbaconnection(dsn="mem:")
     dbasession_init=dbasession(dbasession_init%memconnection,anaflag=anaflag, dataflag=dataflag, attrflag=attrflag)
-    call dbasession_init%messages_open(filename=filename,mode=lmode,format=lformat,simplified=lsimplified)
+    call dbasession_init%messages_open_input(filename=filename,mode=lmode,format=lformat,simplified=lsimplified)
 
   else
 

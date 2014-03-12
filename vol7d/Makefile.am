@@ -69,6 +69,11 @@ tmpvar3 = $(tmpvar2:vdf4f_c.cpp=)
 tmpvar4 = $(tmpvar3:oraclesim.c=)
 nodist_include_HEADERS = $(tmpvar4:.F90=.mod)
 
+dist_check_SCRIPTS = 
+check_PROGRAMS = 
+EXTRA_DIST =
+TESTS = $(check_PROGRAMS) $(dist_check_SCRIPTS)
+
 vol7d_varvect_class.$(OBJEXT): vol7d_var_class.$(OBJEXT)
 vol7d_varvect_class.lo: vol7d_var_class.$(OBJEXT)
 vol7d_class.$(OBJEXT): vol7d_ana_class.$(OBJEXT) \
@@ -97,6 +102,15 @@ vol7d_dballe_class.lo: vol7d_class.$(OBJEXT) \
 vol7d_dballe_class_nana.F90 vol7d_dballe_class_ndati.F90 \
 vol7d_dballe_class_dati.F90 vol7d_dballe_class_datiattr.F90 \
 vol7d_dballe_class_ana.F90 vol7d_dballe_class_anaattr.F90  vol7d_dballe_class_var_du.F90
+
+check_PROGRAMS += dballe_test
+dballe_test_SOURCES = dballe_test.F03
+dballe_test_LDADD = libsim_vol7d.la
+dist_check_SCRIPTS += dballe_test.sh
+# for tests/examples
+EXTRA_DIST += dballe_test.dat
+
+
 endif
 
 if NETCDF

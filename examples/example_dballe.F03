@@ -5,8 +5,8 @@ use datetime_class
 implicit none
 
 integer :: i
-type(dbasession) :: session
-type(dbaconnection) :: connection
+type(dbasession) :: session,sessionfrom,sessionto
+type(dbaconnection) :: connection,connectionfrom
 
 ! connect to dsn type DBA
 connection=dbaconnection(dsn="sqlite:/tmp/dballe.sqlite")
@@ -16,6 +16,7 @@ call write1()    ! write etherogeneous ensamble of data with attributes and cons
 call write2()    ! write an omogeneous vector of data
 call write3()    ! write an etherogeneous ensamble of data
 call write4()    ! write an etherogeneous ensamble of data and attributes
+call write5()    ! write a content of DSN to a file with filter
 call read2()     ! read data and attributes for data filtered and ordered by btable with type predefined
 call delete1()   ! delete one var from the entire DB
 call delete2()   ! delete one var only where are some defined metadati
@@ -54,18 +55,38 @@ call read2lf()     ! read data and attributes for data filtered and ordered by b
 !! we get error putting somethings that do not fit in real (like station name)
 !! call read3lf()     ! read an omogeneous vector of data
 
-call copy1f()     ! copy data and attributes of everythings to an other file
-! todo
-!call copy2f()     ! copy data and constant data to an other file
+! use memdb
+call read3lfmem()    ! read an omogeneous vector of data from file using list and mem (and filters)
+call readmem()       ! read an list of data from file  using mem (and filters)
 
 !close everythings
 call session%delete()
 
-! use memdb
-call read3lfmem()    ! read an omogeneous vector of data from file using list and mem (and filters)
-call readmem()       ! read an list of data from file  using mem (and filters)
-call copy1fmem()     ! copy data and attributes of everythings to an other file
 
+! connect to dsn type BUFR file for read
+sessionfrom=dbasession(filename="example_dballe.bufr",memdb=.false.)
+! connect to dsn type BUFR file for write
+sessionto=dbasession(filename="example_dballe_copy1f.bufr",wipe=.true.,write=.true.,memdb=.false.)
+call copy1f()     ! copy data and attributes of everythings to an other file
+! todo
+!call copy2f()     ! copy data and constant data to an other file
+!close everythings
+call sessionto%delete()
+call sessionfrom%delete()
+
+
+! use memdb
+! connect to dsn type DBA
+connectionfrom=dbaconnection(dsn="mem:")
+sessionfrom=dbasession(connectionfrom,wipe=.true.,anaflag="write", dataflag="write", attrflag="write")
+call sessionfrom%messages_open_input(filename="example_dballe.bufr",mode="r",format="BUFR",simplified=.true.)
+! connect to dsn type BUFR file for write
+sessionto=dbasession(filename="example_dballe_copy1fmem.bufr",wipe=.true.,write=.true.,memdb=.false.)
+call copy1fmem()     ! copy data and attributes of everythings to an other file
+!close everythings
+call sessionfrom%delete()
+call connectionfrom%delete()
+call sessionto%delete()
 
 contains
 
@@ -343,6 +364,22 @@ call session%ingest(dataattrv=dataattrv)
 
 end subroutine write4
 
+
+subroutine write5()
+
+print *,"----------------------------------------------"
+print *,"--------------- write5 ------------------------"
+
+call session%messages_open_output(filename="example_dballe_write5.bufr")
+
+call session%set(filter=dbafilter(coordmin=dbacoord(lon= 9.d0,lat=44.d0),&
+                 coordmax=dbacoord(lon=11.d0,lat=46.d0)))
+call session%messages_write_next()
+
+end subroutine write5
+
+
+
 subroutine read1()
 
 type(dbametaanddata),allocatable :: metaanddatav(:)
@@ -359,7 +396,7 @@ print *, "anagrafica:"
 filter=dbafilter(coordmin=dbacoord(lon= 9.d0,lat=44.d0),&
                  coordmax=dbacoord(lon=11.d0,lat=46.d0))
 call session%set(filter=filter)
-call session%extrude(ana)
+call session%extrudea(ana)
 do i=1,size(ana)
   call ana(i)%display()
 end do
@@ -402,7 +439,7 @@ print *,"--------------- read1lf ------------------------"
 call session%filerewind()
 
 print *, "anagrafica:"
-call session%extrude(anal)
+call session%extrudea(anal)
 call anal%display()
 status=anal%delete()
 
@@ -610,7 +647,7 @@ print *,"--------------- read3lfmem ------------------------"
 ! connect to dsn type DBA
 connection=dbaconnection(dsn="mem:")
 session=dbasession(connection,wipe=.true.,anaflag="write", dataflag="write", attrflag="write",memdb=.true.)
-call session%messages_open(filename="example_dballe.bufr",mode="r",format="BUFR",simplified=.true.)
+call session%messages_open_input(filename="example_dballe.bufr",mode="r",format="BUFR",simplified=.true.)
 
 filter=dbafilter(var="B12101")
 
@@ -652,7 +689,7 @@ logical :: status
 print *,"----------------------------------------------"
 print *,"--------------- readmem ------------------------"
 
-! create mem db ehere put bufr from file
+! create mem db where put bufr from file
 session=dbasession(connection,wipe=.true.,anaflag="write", dataflag="write", attrflag="write",&
  filename="example_dballe.bufr",mode="r",format="BUFR",memdb=.true.)
 
@@ -805,53 +842,48 @@ end subroutine copy1
 
 
 subroutine copy1f()
-type(dbasession)    :: sessioncp
-type(dbametaanddata):: metaanddata
+type(dbametaanddata), allocatable:: metaanddatav(:)
+integer :: i
 
 print *,"----------------------------------------------"
 print *,"--------------- copy1f ----------------------"
 
-
-! connect to dsn type BUFR file for write
-sessioncp=dbasession(filename="example_dballe_copy1f.bufr",wipe=.true.,write=.true.,memdb=.false.)
-
 ! data
-call session%filerewind()
+call sessionfrom%filerewind()
 
-call session%set(filter=dbafilter())
-call session%extrude_metaanddata()
-do while (session%count >0)
-  print*,"read/write data"
-  call session%extrude_metaanddata (metaanddata)
-  call sessioncp%ingest(metaanddata=metaanddata)
-  call sessioncp%close_message()
-  call session%extrude_metaanddata()
+call sessionfrom%set(filter=dbafilter())
+call sessionfrom%extrude(metaanddatav)
+do while (size(metaanddatav) >0)
+  print*,"read/write data; count: ",sessionfrom%count
+  do i =1,size(metaanddatav)
+    print *, "display metaanddatav index: ", i
+!    call metaanddatav(i)%display()
+!    call sessionto%ingest(metaanddata=metaanddatav(i))
+  end do
+!  call sessionto%close_message()
+  call sessionfrom%extrude(metaanddatav)
 end do
 
 ! constant data
-call session%filerewind()
+call sessionfrom%filerewind()
 
-call session%set(filter=dbafilter(contextana=.true.))
-call session%extrude_metaanddata()
-do while (session%count >0)
-  print*,"read/write data ana"
-  call session%extrude_metaanddata (metaanddata)
-  call sessioncp%ingest(metaanddata=metaanddata)
-  call sessioncp%close_message()
-  call session%extrude_metaanddata()
+call sessionfrom%set(filter=dbafilter(contextana=.true.))
+call sessionfrom%extrude(metaanddatav)
+do while (size(metaanddatav) >0)
+  print*,"read/write data; count: ",sessionfrom%count
+  do i =1,size(metaanddatav)
+    print *, "display metaanddatav index: ", i
+!    call metaanddatav(i)%display()
+!    call sessionto%ingest(metaanddata=metaanddatav(i))
+  end do
+!  call sessionto%close_message()
+  call sessionfrom%extrude(metaanddatav)
 end do
-
-
-!close everythings
-call sessioncp%delete()
 
 end subroutine copy1f
 
 
-
 subroutine copy1fmem()
-type(dbaconnection) :: connectionfrom
-type(dbasession)    :: sessionfrom,sessionto
 type(dbametaanddata),allocatable :: metaanddatav(:)
 integer :: i
 
@@ -859,48 +891,28 @@ print *,"----------------------------------------------"
 print *,"--------------- copy1fmem ----------------------"
 
 
-! connect to dsn type DBA
-connectionfrom=dbaconnection(dsn="mem:")
-sessionfrom=dbasession(connectionfrom,wipe=.true.,anaflag="write", dataflag="write", attrflag="write")
-call sessionfrom%messages_open(filename="example_dballe.bufr",mode="r",format="BUFR",simplified=.true.)
-
-! connect to dsn type BUFR file for write
-sessionto=dbasession(filename="example_dballe_copy1memf.bufr",wipe=.true.,write=.true.,memdb=.false.)
-
-! data
 do while (sessionfrom%messages_read_next())
-  print*,"read/write message"
-  call sessionfrom%set(filter=dbafilter())
-  call sessionfrom%extrude(metaanddatav)
+!!$  print*,"read/write message"
+!!$  call sessionfrom%set(filter=dbafilter())
+!!$  call sessionfrom%extrude(metaanddatav)
+!!$  do i =1,size(metaanddatav)
+!!$    call metaanddatav(i)%display()
+!!$    call sessionto%ingest(metaanddata=metaanddatav(i))
+!!$  end do
+!!$  call sessionto%prendilo()
 
-  do i =1,size(metaanddatav)
-    call metaanddatav(i)%display()
-    call sessionto%ingest(metaanddata=metaanddatav(i))
-  end do
-  call sessionto%close_message()
+  print *,"contextana"
+  call sessionfrom%set(filter=dbafilter(contextana=.true.))
+  call sessionfrom%extrude(metaanddatav)
+!!$  do i =1,size(metaanddatav)
+!!$    call metaanddatav(i)%display()
+!!$    call sessionto%ingest(metaanddata=metaanddatav(i))
+!!$  end do
+!!$  call sessionto%close_message()
   call sessionfrom%remove_all()
 end do
 
-!!$! constant data
-!!$call session%filerewind()
-!!$
-!!$call session%set(filter=dbafilter(contextana=.true.))
-!!$call session%extrude_metaanddata()
-!!$do while (session%count >0)
-!!$  print*,"read/write data ana"
-!!$  call session%extrude_metaanddata (metaanddata)
-!!$  call sessioncp%ingest(metaanddata=metaanddata)
-!!$  call sessioncp%close_message()
-!!$  call session%extrude_metaanddata()
-!!$end do
-
-!close everythings
-call sessionfrom%delete()
-call connectionfrom%delete()
-call sessionto%delete()
-
 end subroutine copy1fmem
-
 
 
 subroutine copy2()
