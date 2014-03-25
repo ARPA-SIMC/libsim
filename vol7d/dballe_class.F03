@@ -1874,7 +1874,7 @@ class(dbametaanddatarList) :: this
 
 integer :: i
 i=this%countelements()
-print *, "allocate:",i
+!print *, "allocate:",i
 allocate (toarray_dbametaanddatar(this%countelements()))
 
 call this%rewind()
@@ -2239,7 +2239,7 @@ logical :: lvars,lstarvars
                                 ! if you do not pass metaanddata we presume to have to initialize the query
 if (.not. present(metaanddata)) then
   ier = idba_voglioquesto(session%sehandle, session%count)
-  print *,"extrude voglioquesto number data",session%count
+!  print *,"extrude voglioquesto number data",session%count
 
                                 ! preroll one read because after I have to read one more to check metadata
   if (session%count > 0) then
@@ -2248,7 +2248,7 @@ if (.not. present(metaanddata)) then
 
 else
 
-  print *,"extrude dammelo"
+!  print *,"extrude dammelo"
                                 ! you pass metaanddata so we continue with the query
 
   if (allocated(metaanddata%dataattrv%dataattr)) then
@@ -2451,7 +2451,7 @@ type(dbametaanddata),allocatable :: metaanddatavbuf(:)
 integer :: i
 
 call session%extrude()
-print*," count: ",session%count
+!print*," count: ",session%count
 
 ! allocate to max dimension
 allocate(metaanddatavbuf(session%count))

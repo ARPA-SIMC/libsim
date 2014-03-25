@@ -10,6 +10,13 @@ v7d_plot_sound_LDADD = ../graphics/libsim_graphics.la  ../vol7d/libsim_vol7d.la 
 endif
 
 if DBALLE
+
+if F2003_EXTENDED_FEATURES
+bin_PROGRAMS += dba_qcfilter
+dba_qcfilter_SOURCES = dba_qcfilter.F03 
+dba_qcfilter_LDADD =  ../vol7d/libsim_vol7d.la ../log4fortran/liblog4fortran.la ../qc/libsim_qc.la ../base/libsim_base.la
+endif
+
 if SHAPELIB
 bin_PROGRAMS += v7d_qccli v7d_qctem
 
@@ -96,6 +103,9 @@ man_MANS += vg6d_subarea.1
 endif
 if NCARG
 man_MANS += v7d_plot_sound.1
+endif
+if DBALLE
+man_MANS += dba_qcfilter.1
 endif
 
 %.1: %
