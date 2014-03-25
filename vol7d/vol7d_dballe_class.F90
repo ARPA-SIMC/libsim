@@ -2196,7 +2196,7 @@ do iiiiii=1, nnetwork
 
 
     if (this%file)then
-      if (write) then
+      if (write .or. generic_frag) then
 
         if (c_e(ltemplate)) then
           ier=idba_set (this%handle,"query","message "//trim(ltemplate))
