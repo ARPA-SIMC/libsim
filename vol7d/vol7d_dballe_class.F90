@@ -3015,7 +3015,7 @@ na=0
 call mem_acquire( buffer,nd,1000,this%category )
 call mem_acquire( bufferana,na,100,this%category )
 
-do while ( N > 0 )
+do while ( .true. )
 
   ier=idba_voglioquesto (this%handle,N)
   if (ier /= 0) then
@@ -3025,6 +3025,12 @@ do while ( N > 0 )
   end if
 
   call l4f_category_log(this%category,L4F_debug,"numero dati voglioquesto:"//to_char(n))
+
+  if (.not. c_e(N)) exit
+
+                                ! use only with dballe svn <= 4266
+                                todo REMOVE the next line !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  if (N == 0) exit
 
   ! dammi tutti i dati
   do i=1,N
@@ -3184,7 +3190,29 @@ do while ( N > 0 )
       ! take in account time_definition
       IF (this%vol7d%time_definition == 0) buffer(nd)%time = buffer(nd)%time - &
        timedelta_new(msec=buffer(nd)%timerange%p1*1000)
-    
+
+                                ! put ana in bufferana becouse we can have no station data but we need ana
+                                !todo ; we have to do the same for network but I am tired ....      
+      if ( index(bufferana%ana,buffer(nd)%ana) <= 0) then
+        na=na+1
+        call mem_acquire( bufferana,na,0,this%category )
+
+        call init(bufferana(na)%ana,ilat=ilat,ilon=ilon,ident=ident)
+        call init(bufferana(na)%time, year=year, month=month, day=day, hour=hour, minute=minute,msec=sec*1000)
+        call init(bufferana(na)%level, rlevel1,rl1,rlevel2,rl2)
+        call init(bufferana(na)%timerange, rtimerange, p1, p2)
+        call init(bufferana(na)%network, rep_memo)
+
+        bufferana(na)%dator=DBA_MVR
+        bufferana(na)%datoi=DBA_MVI
+        bufferana(na)%datob=DBA_MVB
+        bufferana(na)%datod=DBA_MVD
+        bufferana(na)%datoc=DBA_MVC
+        bufferana(na)%btable = DBA_MVC
+
+      end if
+
+
     else
 
       ! ---------------->   anagrafica
@@ -3270,6 +3298,7 @@ else
 end if
 
 nana = count_distinct(bufferana(:na)%ana, back=.TRUE.)
+!nana = count_distinct(buffer(:nd)%ana, back=.TRUE.)
 ntime = count_distinct(buffer(:nd)%time, back=.TRUE.)
 ntimerange = count_distinct(buffer(:nd)%timerange, back=.TRUE.)
 nlevel = count_distinct(buffer(:nd)%level, back=.TRUE.)
@@ -3414,6 +3443,7 @@ call vol7d_alloc (vol7dtmp, &
 
 
 vol7dtmp%ana=pack_distinct(bufferana(:na)%ana, nana, back=.TRUE.)
+!vol7dtmp%ana=pack_distinct(buffer(:nd)%ana, nana, back=.TRUE.)
 vol7dtmp%time=pack_distinct(buffer(:nd)%time, ntime, back=.TRUE.)
 call sort(vol7dtmp%time)
 vol7dtmp%timerange=pack_distinct(buffer(:nd)%timerange, ntimerange, back=.TRUE.)
