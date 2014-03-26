@@ -3029,7 +3029,7 @@ do while ( .true. )
   if (.not. c_e(N)) exit
 
                                 ! use only with dballe svn <= 4266
-                                todo REMOVE the next line !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+                                ! todo REMOVE the next line !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   if (N == 0) exit
 
   ! dammi tutti i dati
@@ -3040,18 +3040,6 @@ do while ( .true. )
     ier=idba_enqdate (this%handle,year,month,day,hour,minute,sec)
     IF (.NOT.c_e(sec)) sec = 0
     ier=idba_enqlevel(this%handle, rlevel1, rl1, rlevel2,rl2)
-!!$    !TODO
-!!$    !dballe BUG: missing viene scritto come 0
-!!$    !qui faccio un altibug ma sarà meglio eliminarlo in futuro
-!!$    if  (rlevel1 == 0 .or. rlevel1 == 255 )then
-!!$      rlevel1=imiss
-!!$      rl1=imiss 
-!!$    end if
-!!$    if  (rlevel2 == 0 .or. rlevel2 == 255 )then
-!!$      rlevel2=imiss
-!!$      rl2=imiss 
-!!$    end if
-
     ier=idba_enqtimerange(this%handle, rtimerange, p1, p2)
     ier=idba_enq(this%handle, "rep_memo",rep_memo)
                                 !print *,"trovato network",rep_memo
