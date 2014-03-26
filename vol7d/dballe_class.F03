@@ -936,6 +936,7 @@ if (present (metadata)) then
     call metadata(i)%dbaset(session)
     ier = idba_voglioquesto(session%sehandle, count)
 
+    if (.not. c_e(count)) cycle
     do ii =1,count
       ier = idba_dammelo(session%sehandle, btable)
       !call session%var_related(btable)         !not needed after dammelo
@@ -945,14 +946,15 @@ if (present (metadata)) then
   end do
 else
 
-    ier = idba_voglioquesto(session%sehandle, count)
+  ier = idba_voglioquesto(session%sehandle, count)
 
+  if (c_e(count)) then
     do i =1,count
       ier = idba_dammelo(session%sehandle, btable)
       !call session%var_related(btable)         !not needed after dammelo
       call session%scusa()
     end do
-
+  end if
 end if
 end subroutine dbasession_dissolveattr_metadata
 
@@ -2199,12 +2201,17 @@ type(dbaana), intent(out),allocatable :: anav(:)
 integer :: i
 
 call session%extrude_ana()
-allocate(anav(session%count))
-i=0
-do while (session%count >0)
-  i=i+1
-  call session%extrude_ana(anav(i))
-end do
+
+if (c_e(session%count)) then
+  allocate(anav(session%count))
+  i=0
+  do while (session%count >0)
+    i=i+1
+    call session%extrude_ana(anav(i))
+  end do
+else
+  allocate(anav(0))
+end if
 
 end subroutine dbasession_extrude_anav
 
@@ -2215,12 +2222,13 @@ type(dbaanalist), intent(out) :: anal
 type(dbaana) :: element
 
 call session%extrude_ana()
-do while (session%count >0)
-  call session%extrude_ana(element)
-  call anal%append(element)
-  call session%extrude_ana()
-end do
-
+if (c_e(session%count))then
+  do while (session%count >0)
+    call session%extrude_ana(element)
+    call anal%append(element)
+    call session%extrude_ana()
+  end do
+end if
 end subroutine dbasession_extrude_anal
 
 
@@ -2242,7 +2250,7 @@ if (.not. present(metaanddata)) then
 !  print *,"extrude voglioquesto number data",session%count
 
                                 ! preroll one read because after I have to read one more to check metadata
-  if (session%count > 0) then
+  if (c_e(session%count) .and. session%count > 0) then
     ier = idba_dammelo(session%sehandle, btable)
   end if
 
@@ -2313,7 +2321,7 @@ else
                 allocate (metaanddata%dataattrv%dataattr(i)%attrv%dat(j)%dat,source=filter%starvars%dat(j)%dat)
               end do
 
-              if (session%count > 0) then
+              if (c_e(session%count) .and. session%count > 0) then
               
                 ier = idba_voglioancora(session%sehandle, acount)
                 do k =1,acount
@@ -2342,7 +2350,7 @@ else
                 end do
               end if
             else
-              if (session%count > 0) then
+              if (c_e(session%count) .and. session%count > 0) then
                 ier = idba_voglioancora(session%sehandle, acount)
               
                 allocate (metaanddata%dataattrv%dataattr(i)%attrv%dat(acount))
@@ -2359,9 +2367,9 @@ else
         end if
       end do
       
-      session%count=session%count-1
+      if (c_e(session%count)) session%count=session%count-1
       
-      if (session%count > 0 ) then
+      if (c_e(session%count) .and. session%count > 0 ) then
         ier = idba_dammelo(session%sehandle, btable)
         call metadata%dbaenq(session)
       else
@@ -2415,7 +2423,7 @@ else
         end if
       else
 
-        if (session%count > 0 ) then
+        if (c_e(session%count) .and. session%count > 0 ) then
           ier = idba_voglioancora(session%sehandle, acount)
         
           allocate (metaanddata%dataattrv%dataattr(1)%attrv%dat(acount))
@@ -2430,10 +2438,12 @@ else
       end if
     end if
 
-    session%count=session%count-1
+    if (c_e(session%count)) then
+      session%count=session%count-1
 
-    if (session%count > 0 ) then
-      ier = idba_dammelo(session%sehandle, btable)
+      if (session%count > 0 ) then
+        ier = idba_dammelo(session%sehandle, btable)
+      end if
     end if
   end if
 end if
@@ -2453,18 +2463,24 @@ integer :: i
 call session%extrude()
 !print*," count: ",session%count
 
-! allocate to max dimension
-allocate(metaanddatavbuf(session%count))
-i=0
-do while (session%count >0)
-  i=i+1
-  call session%extrude(metaanddatavbuf(i),dataonly=dataonly,filter=filter)
-end do
+if (c_e(session%count)) then
+  ! allocate to max dimension
+  allocate(metaanddatavbuf(session%count))
+  i=0
+  do while (session%count >0)
+    i=i+1
+    call session%extrude(metaanddatavbuf(i),dataonly=dataonly,filter=filter)
+  end do
 
-! compact data to real dimension
-! allocate (metaanddatav(i))
-metaanddatav=metaanddatavbuf(:i)
-deallocate(metaanddatavbuf)
+  ! compact data to real dimension
+  ! allocate (metaanddatav(i))
+  metaanddatav=metaanddatavbuf(:i)
+  deallocate(metaanddatavbuf)
+
+else
+  allocate(metaanddatav(0))
+end if
+
 
 end subroutine dbasession_extrude_metaanddatav
 
@@ -2496,7 +2512,7 @@ else
 
   call session%extrude()
   
-  do while (session%count >0)
+  do while (c_e(session%count) .and. session%count >0)
     call session%extrude(metaanddatavbuf,dataonly=dataonly,filter=filter)
     do i=1,size(metaanddatavbuf)
       if (present(filter)) then 
@@ -2541,12 +2557,17 @@ type(dbametaanddatai), intent(inout),allocatable :: metaanddatav(:)
 integer :: i
 
 call session%extrude_metaanddatai()
-allocate(metaanddatav(session%count))
-i=0
-do while (session%count >0)
-  i=i+1
-  call session%extrude_metaanddatai(metaanddatav(i))
-end do
+if (c_e(session%count)) then
+  allocate(metaanddatav(session%count))
+  i=0
+  do while (session%count >0)
+    i=i+1
+    call session%extrude_metaanddatai(metaanddatav(i))
+  end do
+else
+  allocate(metaanddatav(0))
+end if
+
 end subroutine dbasession_extrude_metaanddataiv
 
 
@@ -2577,12 +2598,17 @@ type(dbametaanddatab), intent(inout),allocatable :: metaanddatav(:)
 integer :: i
 
 call session%extrude_metaanddatab()
-allocate(metaanddatav(session%count))
-i=0
-do while (session%count >0)
-  i=i+1
-  call session%extrude_metaanddatab(metaanddatav(i))
-end do
+if (c_e(session%count)) then
+  allocate(metaanddatav(session%count))
+  i=0
+  do while (session%count >0)
+    i=i+1
+    call session%extrude_metaanddatab(metaanddatav(i))
+  end do
+else
+  allocate(metaanddatav(0))
+end if
+
 end subroutine dbasession_extrude_metaanddatabv
 
 
@@ -2613,12 +2639,16 @@ type(dbametaanddatad), intent(inout),allocatable :: metaanddatav(:)
 integer :: i
 
 call session%extrude_metaanddatad()
-allocate(metaanddatav(session%count))
-i=0
-do while (session%count >0)
-  i=i+1
-  call session%extrude_metaanddatad(metaanddatav(i))
-end do
+if (c_e(session%count)) then
+  allocate(metaanddatav(session%count))
+  i=0
+  do while (session%count >0)
+    i=i+1
+    call session%extrude_metaanddatad(metaanddatav(i))
+  end do
+else
+  allocate(metaanddatav(0))
+end if
 end subroutine dbasession_extrude_metaanddatadv
 
 
@@ -2649,12 +2679,16 @@ type(dbametaanddatar), intent(inout),allocatable :: metaanddatav(:)
 integer :: i
 
 call session%extrude_metaanddatar()
-allocate(metaanddatav(session%count))
-i=0
-do while (session%count >0)
-  i=i+1
-  call session%extrude_metaanddatar(metaanddatav(i))
-end do
+if (c_e(session%count)) then
+  allocate(metaanddatav(session%count))
+  i=0
+  do while (session%count >0)
+    i=i+1
+    call session%extrude_metaanddatar(metaanddatav(i))
+  end do
+else
+  allocate(metaanddatav(0))
+end if
 end subroutine dbasession_extrude_metaanddatarv
 
 
@@ -2686,12 +2720,16 @@ type(dbametaanddatac), intent(inout),allocatable :: metaanddatav(:)
 integer :: i
 
 call session%extrude_metaanddatac()
-allocate(metaanddatav(session%count))
-i=0
-do while (session%count >0)
-  i=i+1
-  call session%extrude_metaanddatac(metaanddatav(i))
-end do
+if (c_e(session%count)) then
+  allocate(metaanddatav(session%count))
+  i=0
+  do while (session%count >0)
+    i=i+1
+    call session%extrude_metaanddatac(metaanddatav(i))
+  end do
+else
+  allocate(metaanddatav(session%count))
+end if
 end subroutine dbasession_extrude_metaanddatacv
 
 

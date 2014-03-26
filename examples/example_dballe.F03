@@ -818,7 +818,7 @@ sessioncp=dbasession(connectioncp,wipe=.true.,anaflag="write", dataflag="write",
 ! data
 call session%set(filter=dbafilter())
 call session%extrude_metaanddata()
-do while (session%count >0)
+do while (c_e(session%count))
   call session%extrude_metaanddata (metaanddata)
   call sessioncp%ingest(metaanddata=metaanddata)
   if (session%file) call session%close_message()
@@ -827,7 +827,7 @@ end do
 ! constant data
 call session%set(filter=dbafilter(contextana=.true.))
 call session%extrude_metaanddata()
-do while (session%count >0)
+do while (c_e(session%count))
   call session%extrude_metaanddata (metaanddata)
   call sessioncp%ingest(metaanddata=metaanddata)
   if (session%file) call session%close_message()
@@ -932,7 +932,7 @@ sessioncp=dbasession(connectioncp,wipe=.true.,anaflag="write", dataflag="write",
 ! data
 call session%set(filter=dbafilter())
 call session%extrude_metaanddatac()
-do while (session%count >0)
+do while (c_e(session%count))
   call session%extrude_metaanddatac (metaanddatac)
   call sessioncp%ingest(metaanddatac=metaanddatac)
 end do
@@ -940,7 +940,7 @@ end do
 ! constant data
 call session%set(filter=dbafilter(contextana=.true.))
 call session%extrude_metaanddatac()
-do while (session%count >0)
+do while (c_e(session%count))
   call session%extrude_metaanddatac (metaanddatac)
   call sessioncp%ingest(metaanddatac=metaanddatac)
 end do

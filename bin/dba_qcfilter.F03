@@ -23,7 +23,7 @@ logical :: qcsummaryflag,version
 integer (kind=int_b):: flag0,flag1,flag2,flag3
 TYPE(optionparser) :: opt
 INTEGER :: optind, optstatus
-CHARACTER(len=512):: a_name
+CHARACTER(len=512):: a_name,input_file,output_file 
 INTEGER :: category,ier
 
 
@@ -39,8 +39,8 @@ opt = optionparser_new(description_msg= &
  &Flag used are *B33192,*B33193,*B33194,*B33196. &
  &Station constant data are reported as is')
 
-!!$CALL optionparser_add(opt, 'c', 'input-file', input_file, help= &
-!!$ 'file to read')
+CALL optionparser_add(opt, 'c', 'input-file', input_file, default="(stdin)", help='file to read')
+CALL optionparser_add(opt, 'c', 'output-file', output_file, default="(stdout)", help='file to read')
 
 ! help options
 CALL optionparser_add_help(opt, 'h', 'help', help='show an help message and exit')
@@ -74,8 +74,8 @@ ENDIF
 !!$  CALL l4f_category_log(category,L4F_ERROR,'output file missing')
 !!$  CALL raise_fatal_error()
 !!$ENDIF
-!!$CALL getarg(iargc()-1, input_file)
-!!$CALL getarg(iargc(), output_file)
+!CALL getarg(iargc()-1, input_file)
+!CALL getarg(iargc(), output_file)
 
 
 filter=dbafilter(starvarlist="*B33192,*B33193,*B33194,*B33196")
@@ -83,10 +83,10 @@ filter=dbafilter(starvarlist="*B33192,*B33193,*B33194,*B33196")
 ! connect to dsn type BUFR file for read
 connectionfrom=dbaconnection(dsn="mem:")
 sessionfrom=dbasession(connectionfrom,wipe=.true.,anaflag="write", dataflag="write", attrflag="write")
-call sessionfrom%messages_open_input(filename="/dev/stdin",mode="r",format="BUFR",simplified=.true.)
+call sessionfrom%messages_open_input(filename=input_file,mode="r",format="BUFR",simplified=.true.)
 
 ! connect to dsn type BUFR file for write
-sessionto=dbasession(filename="/dev/stdout",wipe=.true.,write=.true.,memdb=.false.)
+sessionto=dbasession(filename=output_file,wipe=.true.,write=.true.,memdb=.false.)
 
 
 do while (sessionfrom%messages_read_next())
