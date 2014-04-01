@@ -105,7 +105,9 @@ if NCARG
 man_MANS += v7d_plot_sound.1
 endif
 if DBALLE
+if F2003_EXTENDED_FEATURES
 man_MANS += dba_qcfilter.1
+endif
 endif
 
 %.1: %
