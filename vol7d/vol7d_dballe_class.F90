@@ -3125,6 +3125,11 @@ do while ( .true. )
     end if
 
 
+    PRINT*,"---------------------------------"
+    call display(timee)
+    print *,"rlevel1",rlevel1
+    print*,"btable",btable
+
     if (rlevel1 /= 257)then
       ! dati
 
@@ -3335,7 +3340,11 @@ ndativarattrc=0
 if (.not. present(anavar))then
   nanavar = count_distinct(bufferana(:na)%btable, back=.TRUE.,mask=(bufferana(:na)%btable /= DBA_MVC))
 else
-  nanavar = size(anavar)
+  if (all(.not. c_e(anavar))) then
+    nanavar = count_distinct(bufferana(:na)%btable, back=.TRUE.,mask=(bufferana(:na)%btable /= DBA_MVC))
+  else
+    nanavar = count(c_e(anavar))
+  end if
 end if
 
 if (present(anavarkind))then
@@ -3538,9 +3547,22 @@ if (present(anavar).and. present(anavarkind))then
   end do
 else if (present(anavar))then
 
-  do i=1, nanavar
-    call init (vol7dtmp%anavar%c(i), btable=anavar(i))
-  end do
+  IF (ANY(c_e(anavar))) THEN
+    DO i=1, nanavar
+      CALL init (vol7dtmp%anavar%c(i), btable=anavar(i))
+    END DO
+  ELSE
+
+    do i=1,nanavarc
+      call init(vol7dtmp%anavar%c(i))
+    end do
+
+    if (nanavarc > 0) then ! we can have only lat lon and ident and not btables at all (so here we can get a strange segfault)
+      call pack_distinct_c(bufferana(:na)%btable,vol7dtmp%anavar%c%btable, back=.TRUE.,&
+       mask=(bufferana(:na)%btable /= DBA_MVC))
+    end if
+
+  ENDIF
 
 else
 
