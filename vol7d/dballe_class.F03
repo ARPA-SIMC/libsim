@@ -299,6 +299,7 @@ contains
   procedure(dbadata_display),deferred :: display
 end type dbadata
 
+!> set parameters in dballe API
 abstract interface
 subroutine dbadata_set(data,session)
 import
@@ -306,6 +307,7 @@ class(dbadata), intent(in) :: data
 type(dbasession), intent(in) :: session
 end subroutine dbadata_set
 
+!> print a summary of object content
 subroutine dbadata_display(data)
 import
 class(dbadata), intent(in) :: data
@@ -475,6 +477,7 @@ type, public,extends(dbadatai) :: dbametaanddatai
   procedure :: dbaingest => dbametaanddatai_ingest
 end type dbametaanddatai
 
+!> metadata and integer data double linked list
 type, public, extends(list) :: dbametaanddataiList
   contains
   procedure :: current => currentdbametaanddatai ! get integer pointed by iterator
@@ -490,6 +493,7 @@ type, public,extends(dbadatab) :: dbametaanddatab
   procedure :: dbaingest => dbametaanddatab_ingest
 end type dbametaanddatab
 
+!> metadata and byte data double linked list
 type, public, extends(list) :: dbametaanddatabList
   contains
   procedure :: current => currentdbametaanddatab ! get integer pointed by iterator
@@ -505,6 +509,7 @@ type, public,extends(dbadatad) :: dbametaanddatad
   procedure :: dbaingest => dbametaanddatad_ingest
 end type dbametaanddatad
 
+!> metadata and diubleprecision data double linked list
 type, public, extends(list) :: dbametaanddatadList
   contains
   procedure :: current => currentdbametaanddatad ! get integer pointed by iterator
@@ -520,6 +525,7 @@ type, public,extends(dbadatar) :: dbametaanddatar
   procedure :: dbaingest => dbametaanddatar_ingest
 end type dbametaanddatar
 
+!> metadata and real data double linked list
 type, public, extends(list) :: dbametaanddatarList
   contains
   procedure :: current => currentdbametaanddatar ! get integer pointed by iterator
@@ -535,6 +541,7 @@ type, public,extends(dbadatac) :: dbametaanddatac
   procedure :: dbaingest => dbametaanddatac_ingest
 end type dbametaanddatac
 
+!> metadata and character data double linked list
 type, public, extends(list) :: dbametaanddatacList
   contains
   procedure :: current => currentdbametaanddatac ! get integer pointed by iterator
@@ -569,6 +576,7 @@ end interface
 
 contains
 
+!> print a summary of object content
 subroutine displaydbametaanddata(this)
 class(dbametaanddataList) :: this
 type(dbametaanddata) :: element
@@ -623,6 +631,7 @@ character(len=*), intent(out) :: value
 value=cmiss
 end subroutine dbadata_getc
 
+!> print a summary of object content
 subroutine dbalevel_display(level)
 class(dbalevel), intent(in) :: level
 call display (level%vol7d_level)
@@ -638,6 +647,7 @@ INTEGER,INTENT(IN),OPTIONAL :: l2 !< valore per il secondo livello
 call init (dbalevel_init%vol7d_level,level1, l1, level2, l2)
 end function dbalevel_init
 
+!> set parameters in dballe API
 subroutine dbalevel_set(level,session)
 class(dbalevel), intent(in) :: level
 type(dbasession), intent(in) :: session
@@ -649,6 +659,7 @@ ier = idba_setlevel(session%sehandle,&
 
 end subroutine dbalevel_set
 
+!> query parameters from dballe API
 subroutine dbalevel_enq(level,session)
 class(dbalevel), intent(out) :: level
 type(dbasession), intent(in) :: session
@@ -666,6 +677,7 @@ dbalevel_contextana=dbalevel()
 end function dbalevel_contextana
 
 
+!> print a summary of object content
 subroutine dbaana_display(ana)
 class(dbaana), intent(in) :: ana
 call display (ana%vol7d_ana)
@@ -682,6 +694,7 @@ CALL init(dbacoord_init%geo_coord, lon=lon, lat=lat , ilon=ilon, ilat=ilat)
 
 end function dbacoord_init
 
+!> print a summary of object content
 subroutine dbacoord_display(coord)
 class(dbacoord), intent(in) :: coord
 call display (coord%geo_coord)
@@ -703,6 +716,7 @@ end if
 
 end function dbaana_init
 
+!> set parameters in dballe API
 subroutine dbaana_set(ana,session)
 class(dbaana), intent(in) :: ana
 type(dbasession), intent(in) :: session
@@ -721,6 +735,7 @@ end if
 
 end subroutine dbaana_set
 
+!> query parameters from dballe API
 subroutine dbaana_enq(ana,session)
 class(dbaana), intent(out) :: ana
 type(dbasession), intent(in) :: session
@@ -751,6 +766,7 @@ call session%close_message()
 end subroutine dbaana_ingest
 
 
+!> print a summary of object content
 subroutine displaydbaana(this)
 class(dbaanaList) :: this
 type(dbaana) :: element
@@ -776,6 +792,7 @@ end select
 end function currentdbaana
 
 
+!> set parameters in dballe API
 subroutine dbadc_set(dc,session)
 class(dbadc), intent(in) :: dc
 type(dbasession), intent(in) :: session
@@ -784,6 +801,7 @@ call dc%dat%dbaset(session)
 
 end subroutine dbadc_set
 
+!> print a summary of object content
 subroutine dbadc_display(dc)
 class(dbadc), intent(in) :: dc
 
@@ -791,6 +809,7 @@ call dc%dat%display()
 
 end subroutine dbadc_display
 
+!> set parameters in dballe API
 subroutine dbadcv_set(dcv,session)
 class(dbadcv), intent(in) :: dcv
 type(dbasession), intent(in) :: session
@@ -802,6 +821,7 @@ enddo
 
 end subroutine dbadcv_set
 
+!> print a summary of object content
 subroutine dbadcv_display(dcv)
 class(dbadcv), intent(in) :: dcv
 integer :: i
@@ -992,6 +1012,7 @@ call session%critica()
 
 end subroutine dbadataattr_ingest
 
+!> print a summary of object content
 subroutine dbadataattr_display(dc)
 class(dbadataattr), intent(in) :: dc
 
@@ -1018,6 +1039,7 @@ enddo
 
 end subroutine dbadataattrv_ingest
 
+!> print a summary of object content
 subroutine dbadataattrv_display(dataattr)
 class(dbadataattrv), intent(in) :: dataattr
 integer :: i
@@ -1157,6 +1179,7 @@ end if
 end function dbadatac_init
 
 
+!> set parameters in dballe API
 subroutine dbadatai_set(data,session)
 class(dbadatai), intent(in) :: data
 type(dbasession), intent(in) :: session
@@ -1164,11 +1187,13 @@ integer :: ier
 ier = idba_set(session%sehandle,data%btable,data%value)
 end subroutine dbadatai_set
 
+!> print a summary of object content
 subroutine dbadatai_display(data)
 class(dbadatai), intent(in) :: data
 print *,data%btable,data%value
 end subroutine dbadatai_display
 
+!> set parameters in dballe API
 subroutine dbadatar_set(data,session)
 class(dbadatar), intent(in) :: data
 type(dbasession), intent(in) :: session
@@ -1176,12 +1201,14 @@ integer :: ier
 ier = idba_set(session%sehandle,data%btable,data%value)
 end subroutine dbadatar_set
 
+!> print a summary of object content
 subroutine dbadatar_display(data)
 class(dbadatar), intent(in) :: data
 print *,data%btable,data%value
 end subroutine dbadatar_display
 
 
+!> set parameters in dballe API
 subroutine dbadatad_set(data,session)
 class(dbadatad), intent(in) :: data
 type(dbasession), intent(in) :: session
@@ -1189,11 +1216,13 @@ integer :: ier
 ier = idba_set(session%sehandle,data%btable,data%value)
 end subroutine dbadatad_set
 
+!> print a summary of object content
 subroutine dbadatad_display(data)
 class(dbadatad), intent(in) :: data
 print *,data%btable,data%value
 end subroutine dbadatad_display
 
+!> set parameters in dballe API
 subroutine dbadatab_set(data,session)
 class(dbadatab), intent(in) :: data
 type(dbasession), intent(in) :: session
@@ -1201,11 +1230,13 @@ integer :: ier
 ier = idba_set(session%sehandle,data%btable,data%value)
 end subroutine dbadatab_set
 
+!> print a summary of object content
 subroutine dbadatab_display(data)
 class(dbadatab), intent(in) :: data
 print *,data%btable,data%value
 end subroutine dbadatab_display
 
+!> set parameters in dballe API
 subroutine dbadatac_set(data,session)
 class(dbadatac), intent(in) :: data
 type(dbasession), intent(in) :: session
@@ -1213,6 +1244,7 @@ integer :: ier
 ier = idba_set(session%sehandle,data%btable,data%value)
 end subroutine dbadatac_set
 
+!> print a summary of object content
 subroutine dbadatac_display(data)
 class(dbadatac), intent(in) :: data
 print *,"Btable: ",data%btable,"Value: ",trim(data%value)
@@ -1231,11 +1263,13 @@ end subroutine dbadatac_display
 !!$end function dbalevel_spiega
 
 
+!> print a summary of object content
 subroutine dbatimerange_display(timerange)
 class(dbatimerange), intent(in) :: timerange
 call display (timerange%vol7d_timerange)
 end subroutine dbatimerange_display
 
+!> set parameters in dballe API
 subroutine dbatimerange_set(timerange,session)
 class(dbatimerange), intent(in) :: timerange
 type(dbasession), intent(in) :: session
@@ -1246,6 +1280,7 @@ ier = idba_settimerange(session%sehandle,&
 
 end subroutine dbatimerange_set
 
+!> query parameters from dballe API
 subroutine dbatimerange_enq(timerange,session)
 class(dbatimerange), intent(out) :: timerange
 type(dbasession), intent(in) :: session
@@ -1271,12 +1306,14 @@ dbatimerange_contextana=dbatimerange()
 end function dbatimerange_contextana
 
 
+!> print a summary of object content
 subroutine dbanetwork_display(network)
 class(dbanetwork), intent(in) :: network
 call display (network%vol7d_network)
 print *,"Priority=",network%priority
 end subroutine dbanetwork_display
 
+!> set parameters in dballe API
 subroutine dbanetwork_set(network,session)
 class(dbanetwork), intent(in) :: network
 type(dbasession), intent(in) :: session
@@ -1286,6 +1323,7 @@ ier = idba_set(session%sehandle,"rep_memo", network%name)
 
 end subroutine dbanetwork_set
 
+!> query parameters from dballe API
 subroutine dbanetwork_enq(network,session)
 class(dbanetwork), intent(out) :: network
 type(dbasession), intent(in) :: session
@@ -1304,11 +1342,13 @@ dbanetwork_init%priority=imiss
 end function dbanetwork_init
 
 
+!> print a summary of object content
 subroutine dbadatetime_display(datetime)
 class(dbadatetime), intent(in) :: datetime
 call display (datetime%datetime)
 end subroutine dbadatetime_display
 
+!> set parameters in dballe API
 subroutine dbadatetime_set(datetime,session)
 class(dbadatetime), intent(in) :: datetime
 type(dbasession), intent(in) :: session
@@ -1326,6 +1366,7 @@ ier = idba_setdate(session%sehandle,year,month,day,hour,minute,sec)
 
 end subroutine dbadatetime_set
 
+!> query parameters from dballe API
 subroutine dbadatetime_enq(datetime,session)
 class(dbadatetime), intent(out) :: datetime
 type(dbasession), intent(in) :: session
@@ -1401,6 +1442,7 @@ end if
 
 end function dbametadata_init
 
+!> print a summary of object content
 subroutine dbametadata_display(metadata)
 class(dbametadata), intent(in) :: metadata
 call metadata%level%display()
@@ -1411,6 +1453,7 @@ call metadata%datetime%display()
 
 end subroutine dbametadata_display
 
+!> set parameters in dballe API
 subroutine dbametadata_set(metadata,session)
 class(dbametadata), intent(in) :: metadata
 type(dbasession), intent(in) :: session
@@ -1432,6 +1475,7 @@ end if
 
 end subroutine dbametadata_set
 
+!> query parameters from dballe API
 subroutine dbametadata_enq(metadata,session)
 class(dbametadata), intent(out) :: metadata
 type(dbasession), intent(in) :: session
@@ -1631,6 +1675,7 @@ end if
 
 end function dbafilter_init
 
+!> print a summary of object content
 subroutine dbafilter_display(filter)
 class(dbafilter), intent(in) :: filter
 
@@ -1656,6 +1701,7 @@ print *,"contextana=",filter%contextana
 
 end subroutine dbafilter_display
 
+!> set parameters in dballe API
 subroutine dbafilter_set(filter,session)
 class(dbafilter), intent(in) :: filter
 type(dbasession), intent(in) :: session
@@ -1741,6 +1787,7 @@ dbametadata_contextana%timerange=timerange%dbacontextana()
 end function dbametadata_contextana
 
 
+!> print a summary of object content
 subroutine dbametaanddata_display(metaanddata)
 class(dbametaanddata), intent(in) :: metaanddata
 
@@ -1764,6 +1811,7 @@ call session%close_message()
 end subroutine dbametaanddata_ingest
 
 
+!> print a summary of object content
 subroutine dbametaanddatav_display(metaanddatav)
 class(dbametaanddatav), intent(in) :: metaanddatav
 
@@ -1786,6 +1834,7 @@ call session%close_message()
 end subroutine dbametaanddatav_ingest
 
 
+!> print a summary of object content
 subroutine displaydbametaanddatai(this)
 class(dbametaanddataiList) :: this
 type(dbametaanddatai) :: element
@@ -1845,6 +1894,7 @@ end do
 end function toarray_dbametaanddatai
 
 
+!> print a summary of object content
 subroutine displaydbametaanddatar(this)
 class(dbametaanddatarList) :: this
 type(dbametaanddatar) :: element
@@ -1905,7 +1955,7 @@ end do
 end function toarray_dbametaanddatar
 
 
-
+!> print a summary of object content
 subroutine displaydbametaanddatad(this)
 class(dbametaanddatadList) :: this
 type(dbametaanddatad) :: element
@@ -1965,6 +2015,7 @@ end do
 end function toarray_dbametaanddatad
 
 
+!> print a summary of object content
 subroutine displaydbametaanddatab(this)
 class(dbametaanddatabList) :: this
 type(dbametaanddatab) :: element
@@ -2024,6 +2075,7 @@ end do
 end function toarray_dbametaanddatab
 
 
+!> print a summary of object content
 subroutine displaydbametaanddatac(this)
 class(dbametaanddatacList) :: this
 type(dbametaanddatac) :: element
@@ -2085,6 +2137,7 @@ end function toarray_dbametaanddatac
 
 
 
+!> print a summary of object content
 subroutine dbametaanddatai_display(data)
 class(dbametaanddatai), intent(in) :: data
 
@@ -2093,6 +2146,7 @@ call data%dbadatai%display()
 
 end subroutine dbametaanddatai_display
 
+!> print a summary of object content
 subroutine dbametaanddatab_display(data)
 class(dbametaanddatab), intent(in) :: data
 
@@ -2101,6 +2155,7 @@ call data%dbadatab%display()
 
 end subroutine dbametaanddatab_display
 
+!> print a summary of object content
 subroutine dbametaanddatad_display(data)
 class(dbametaanddatad), intent(in) :: data
 
@@ -2109,6 +2164,7 @@ call data%dbadatad%display()
 
 end subroutine dbametaanddatad_display
 
+!> print a summary of object content
 subroutine dbametaanddatar_display(data)
 class(dbametaanddatar), intent(in) :: data
 
@@ -2118,6 +2174,7 @@ call data%dbadatar%display()
 end subroutine dbametaanddatar_display
 
 
+!> print a summary of object content
 subroutine dbametaanddatac_display(data)
 class(dbametaanddatac), intent(in) :: data
 
@@ -2999,6 +3056,7 @@ end if
 
 end subroutine dbasession_var_related
 
+!> set parameters in dballe API
 subroutine dbasession_setcontextana(session)
 class (dbasession), intent(in) :: session
 integer :: ier
@@ -3041,6 +3099,7 @@ end if
 
 end subroutine dbasession_scusa
 
+!> set parameters in dballe API
 subroutine dbasession_set(session,metadata,datav,data,datetime,ana,network,level,timerange,filter)
 class (dbasession), intent(in) :: session
 type (dbametadata),optional :: metadata
