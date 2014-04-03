@@ -25,7 +25,7 @@ TYPE(optionparser) :: opt
 INTEGER :: optind, optstatus
 CHARACTER(len=512):: a_name,input_file,output_file 
 INTEGER :: category,ier
-type(dbadatav) :: starvars
+type(dbadcv) :: starvars
 
 
 !questa chiamata prende dal launcher il nome univoco
@@ -78,12 +78,13 @@ ENDIF
 !CALL getarg(iargc()-1, input_file)
 !CALL getarg(iargc(), output_file)
 
-allocate (starvars%dat(4))
-allocate (starvars%dat(1)%dat,source=dbadatab("*B33192"))
-allocate (starvars%dat(2)%dat,source=dbadatab("*B33193"))
-allocate (starvars%dat(3)%dat,source=dbadatab("*B33194"))
-allocate (starvars%dat(4)%dat,source=dbadatab("*B33196"))
+allocate (starvars%dcv(4))
+allocate (starvars%dcv(1)%dat,source=dbadatab("*B33192"))
+allocate (starvars%dcv(2)%dat,source=dbadatab("*B33193"))
+allocate (starvars%dcv(3)%dat,source=dbadatab("*B33194"))
+allocate (starvars%dcv(4)%dat,source=dbadatab("*B33196"))
 filter=dbafilter(starvars=starvars)
+!call filter%display()
 
 ! connect to dsn type BUFR file for read
 connectionfrom=dbaconnection(dsn="mem:")
@@ -107,12 +108,10 @@ do while (sessionfrom%messages_read_next())
 !      internal compiler error
 !      associate(dataattr =>  metaanddatav(i)%dataattrv%dataattr(j))
 
-!      call filter%display()
-
-      call metaanddatav(i)%dataattrv%dataattr(j)%attrv%dat(4)%dat%get(flag0)
-      call metaanddatav(i)%dataattrv%dataattr(j)%attrv%dat(1)%dat%get(flag1)
-      call metaanddatav(i)%dataattrv%dataattr(j)%attrv%dat(2)%dat%get(flag2)
-      call metaanddatav(i)%dataattrv%dataattr(j)%attrv%dat(3)%dat%get(flag3)
+      call metaanddatav(i)%dataattrv%dataattr(j)%attrv%dcv(4)%dat%get(flag0)
+      call metaanddatav(i)%dataattrv%dataattr(j)%attrv%dcv(1)%dat%get(flag1)
+      call metaanddatav(i)%dataattrv%dataattr(j)%attrv%dcv(2)%dat%get(flag2)
+      call metaanddatav(i)%dataattrv%dataattr(j)%attrv%dcv(3)%dat%get(flag3)
 
       qcsummaryflag =qcsummaryflagb(flag0,flag1,flag2,flag3)
       
@@ -125,9 +124,8 @@ do while (sessionfrom%messages_read_next())
 !!$          allocate(metaanddatav(i)%dataattrv%dataattr(j)%attrv%dat(2)%dat,source=dbadatac())
 !!$          allocate(metaanddatav(i)%dataattrv%dataattr(j)%attrv%dat(3)%dat,source=dbadatac())
 
-
 !         remove from mem db
-        filterd=dbafilter(var=metaanddatav(i)%dataattrv%dataattr(j)%dbadat%dat%btable)
+        filterd=dbafilter(var=metaanddatav(i)%dataattrv%dataattr(j)%dat%btable)
         call sessionfrom%set(filter=filterd)
         call sessionfrom%dissolve([metaanddatav(i)%metadata])
 

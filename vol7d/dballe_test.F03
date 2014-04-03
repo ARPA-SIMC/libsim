@@ -89,7 +89,7 @@ end subroutine write0
 subroutine write1()
 
 type(dbametaanddata),allocatable :: metaanddata(:)
-type(dbadatav) :: attrv
+type(dbadcv) :: attrv
 integer :: i
 
 print *,"----------------------------------------------"
@@ -112,20 +112,20 @@ allocate (metaanddata(1)%dataattrv%dataattr(2))
 allocate (metaanddata(1)%dataattrv%dataattr(1)%dat,source=dbadatai("B13003",85))
 
 ! create an etherogeneous ensamble of attr
-allocate (attrv%dat(3))
-allocate (attrv%dat(1)%dat,source=dbadatar("*B33192",30.))
-allocate (attrv%dat(2)%dat,source=dbadatai("*B33193",50))
-allocate (attrv%dat(3)%dat,source=dbadatar("*B33194",70.))
+allocate (attrv%dcv(3))
+allocate (attrv%dcv(1)%dat,source=dbadatar("*B33192",30.))
+allocate (attrv%dcv(2)%dat,source=dbadatai("*B33193",50))
+allocate (attrv%dcv(3)%dat,source=dbadatar("*B33194",70.))
 !assemble data and attribute
 metaanddata(1)%dataattrv%dataattr(1)%attrv=attrv
 
 ! second data
 allocate (metaanddata(1)%dataattrv%dataattr(2)%dat,source=dbadatai("B12101",27315))
 ! create an etherogeneous ensamble of attr
-deallocate(attrv%dat)
-allocate (attrv%dat(2))
-allocate (attrv%dat(1)%dat,source=dbadatar("*B33192",30.))
-allocate (attrv%dat(2)%dat,source=dbadatai("*B33193",50))
+deallocate(attrv%dcv)
+allocate (attrv%dcv(2))
+allocate (attrv%dcv(1)%dat,source=dbadatar("*B33192",30.))
+allocate (attrv%dcv(2)%dat,source=dbadatai("*B33193",50))
 !assemble data and attribute
 metaanddata(1)%dataattrv%dataattr(2)%attrv=attrv
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -137,9 +137,9 @@ metaanddata(2)%metadata=metaanddata(1)%metadata%dbacontextana()
 ! create  an etherogeneous ensamble of data
 allocate (metaanddata(2)%dataattrv%dataattr(2))
 allocate (metaanddata(2)%dataattrv%dataattr(1)%dat,source=dbadatai("B07030",223))
-allocate (metaanddata(2)%dataattrv%dataattr(1)%attrv%dat(0))          ! we do not want attributes
+allocate (metaanddata(2)%dataattrv%dataattr(1)%attrv%dcv(0))          ! we do not want attributes
 allocate (metaanddata(2)%dataattrv%dataattr(2)%dat,source=dbadatac("B01019","My beautifull station"))
-allocate (metaanddata(2)%dataattrv%dataattr(2)%attrv%dat(0))          ! we do not want attributes
+allocate (metaanddata(2)%dataattrv%dataattr(2)%attrv%dcv(0))          ! we do not want attributes
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -222,7 +222,7 @@ end subroutine write2
 subroutine write3()
 
 type(dbametadata) :: metadata
-type(dbadatav) :: datav
+type(dbadcv) :: datav
 type(dbalevel) :: level
 type(dbatimerange) :: timerange
 type(dbaana) :: ana
@@ -255,9 +255,9 @@ call session%set(metadata)
 call metadata%display()
 
 ! create and display an etherogeneous ensamble of data
-allocate (datav%dat(2))
-allocate (datav%dat(1)%dat,source=dbadatai("B12102",26312))
-allocate (datav%dat(2)%dat,source=dbadatar("B12101",273.15))
+allocate (datav%dcv(2))
+allocate (datav%dcv(1)%dat,source=dbadatai("B12102",26312))
+allocate (datav%dcv(2)%dat,source=dbadatar("B12101",273.15))
 call datav%display()
 !set data
 call session%set(datav=datav)
@@ -279,8 +279,8 @@ subroutine write4()
 
 type(dbametadata) :: metadata
 type(dbadataattrv) :: dataattrv
-type(dbadatav) :: attrv
-type(dbadatav) :: datav
+type(dbadcv) :: attrv
+type(dbadcv) :: datav
 
 print *,"----------------------------------------------"
 print *,"--------------- write4 ------------------------"
@@ -299,25 +299,25 @@ metadata=dbametadata( &
 call session%set(metadata)
 
 ! create and display an etherogeneous ensamble of data
-allocate (datav%dat(2))
-allocate (datav%dat(1)%dat,source=dbadatai("B12102",26312))
-allocate (datav%dat(2)%dat,source=dbadatar("B12101",273.15))
+allocate (datav%dcv(2))
+allocate (datav%dcv(1)%dat,source=dbadatai("B12102",26312))
+allocate (datav%dcv(2)%dat,source=dbadatar("B12101",273.15))
 
 ! create and display an etherogeneous ensamble of attr
-allocate (attrv%dat(3))
-allocate (attrv%dat(1)%dat,source=dbadatai("*B33192",30))
-allocate (attrv%dat(2)%dat,source=dbadatac("*B33193","70"))
-allocate (attrv%dat(3)%dat,source=dbadatad("*B33194",50.d0))
+allocate (attrv%dcv(3))
+allocate (attrv%dcv(1)%dat,source=dbadatai("*B33192",30))
+allocate (attrv%dcv(2)%dat,source=dbadatac("*B33193","70"))
+allocate (attrv%dcv(3)%dat,source=dbadatad("*B33194",50.d0))
 call attrv%display()
 
 ! assemble data and attribute
 allocate (dataattrv%dataattr(2))
 ! first with attribute
-allocate (dataattrv%dataattr(1)%dat,source=datav%dat(1)%dat)
+allocate (dataattrv%dataattr(1)%dat,source=datav%dcv(1)%dat)
 dataattrv%dataattr(1)%attrv=attrv
 ! second without attribute
-allocate (dataattrv%dataattr(2)%dat,source=datav%dat(2)%dat)
-allocate (dataattrv%dataattr(2)%attrv%dat(0))
+allocate (dataattrv%dataattr(2)%dat,source=datav%dcv(2)%dat)
+allocate (dataattrv%dataattr(2)%attrv%dcv(0))
 
 call dataattrv%display()
 

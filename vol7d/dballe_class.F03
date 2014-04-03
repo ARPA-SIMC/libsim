@@ -18,13 +18,23 @@
 
 #include "config.h"
 
-!> \brief  classe per import ed export di volumi da e in DB-All.e 
+!> \brief  class for import and export data from e to DB-All.e 
 !!
-!!Questo modulo definisce gli oggetti e i metodi per gestire
-!!l'importazione e l'esportazione di volumi dal database per dati sparsi
+!!This module define objects and methods to manage
+!! import and export of data from database for sparse data
 !!DB-All.e
 !!
-!!Programma esempio
+!! The main usefull structure is this:
+!!
+!!                     %timerange
+!!                     %ana
+!!                     %network
+!!                     %datetime
+!! metaanddata%metadata%level
+!!            %dataattrv%dataattr(*)%dat
+!!                                  %attrv%dcv(*)%dat
+!!
+!!Program example
 !!\include example_dballe.F03
 !!
 !!\ingroup vol7d
@@ -393,26 +403,27 @@ interface dbametadata
 end interface
 
 !> container for dbadata (used for promiscuous vector of data)
-type, public :: dbadat
+type, public :: dbadc
   class(dbadata),allocatable :: dat
   contains
-  procedure :: display => dbadat_display
-  procedure :: dbaset => dbadat_set
+  procedure :: display => dbadc_display
+  procedure :: dbaset => dbadc_set
 !  procedure :: dbaingest => dbadat_ingest
-end type dbadat
+end type dbadc
+
 
 !> vector of container of dbadata
-type, public :: dbadatav
-  type(dbadat),allocatable :: dat(:)
+type, public :: dbadcv
+  type(dbadc),allocatable :: dcv(:)
   contains
-  procedure :: display => dbadatav_display
-  procedure :: dbaset => dbadatav_set
+  procedure :: display => dbadcv_display
+  procedure :: dbaset => dbadcv_set
 !  procedure :: dbaingest => dbadatav_ingest
-end type dbadatav
+end type dbadcv
 
 !> extend one data container with a vector of data container (one data plus attributes)
-type, public ,extends(dbadat):: dbadataattr
-  type(dbadatav) :: attrv
+type, public ,extends(dbadc):: dbadataattr
+  type(dbadcv) :: attrv
   contains
   procedure :: display => dbadataattr_display
   procedure :: dbaingest => dbadataattr_ingest
@@ -438,7 +449,7 @@ end type dbametaanddata
 !> one metadata plus vector of container of dbadata
 type, public :: dbametaanddatav
   type(dbametadata) :: metadata
-  type(dbadatav) ::datav
+  type(dbadcv) ::datav
   contains
   procedure :: display => dbametaanddatav_display
   procedure :: dbaingest => dbametaanddatav_ingest
@@ -541,7 +552,7 @@ type, public ::  dbafilter
   character(len=255) :: ana_filter, data_filter, attr_filter, varlist, starvarlist
   integer            :: priomin,priomax
   logical            :: contextana
-  type(dbadatav)     :: vars,starvars
+  type(dbadcv)     :: vars,starvars
   contains
   procedure          :: display => dbafilter_display
   procedure          :: dbaset => dbafilter_set
@@ -760,41 +771,41 @@ end select
 end function currentdbaana
 
 
-subroutine dbadat_set(data,session)
-class(dbadat), intent(in) :: data
+subroutine dbadc_set(dc,session)
+class(dbadc), intent(in) :: dc
 type(dbasession), intent(in) :: session
 
-call data%dat%dbaset(session)
+call dc%dat%dbaset(session)
 
-end subroutine dbadat_set
+end subroutine dbadc_set
 
-subroutine dbadat_display(data)
-class(dbadat), intent(in) :: data
+subroutine dbadc_display(dc)
+class(dbadc), intent(in) :: dc
 
-call data%dat%display()
+call dc%dat%display()
 
-end subroutine dbadat_display
+end subroutine dbadc_display
 
-subroutine dbadatav_set(data,session)
-class(dbadatav), intent(in) :: data
+subroutine dbadcv_set(dcv,session)
+class(dbadcv), intent(in) :: dcv
 type(dbasession), intent(in) :: session
 integer :: i
 
-do i=1, size(data%dat)
-  call data%dat(i)%dbaset(session)
+do i=1, size(dcv%dcv)
+  call dcv%dcv(i)%dbaset(session)
 enddo
 
-end subroutine dbadatav_set
+end subroutine dbadcv_set
 
-subroutine dbadatav_display(data)
-class(dbadatav), intent(in) :: data
+subroutine dbadcv_display(dcv)
+class(dbadcv), intent(in) :: dcv
 integer :: i
 
-do i=1, size(data%dat)
-  call data%dat(i)%display()
+do i=1, size(dcv%dcv)
+  call dcv%dcv(i)%display()
 end do
 
-end subroutine dbadatav_display
+end subroutine dbadcv_display
 
 !!$subroutine dbadat_ingest(dat,session)
 !!$class(dbadat), intent(in) :: dat
@@ -964,11 +975,11 @@ class(dbadataattr), intent(in) :: data
 type(dbasession), intent(in) :: session
 
 !write data in dsn
-call data%dbadat%dbaset(session)
+call data%dbadc%dbaset(session)
 call session%prendilo()
 !write attributes in dsn
 call data%attrv%dbaset(session)
-call session%var_related(data%dbadat%dat%btable)
+call session%var_related(data%dbadc%dat%btable)
 call session%critica()
 
 !to close message on file
@@ -976,13 +987,13 @@ call session%critica()
 
 end subroutine dbadataattr_ingest
 
-subroutine dbadataattr_display(data)
-class(dbadataattr), intent(in) :: data
+subroutine dbadataattr_display(dc)
+class(dbadataattr), intent(in) :: dc
 
 print*,"Data:"
-call data%dbadat%display()
+call dc%dbadc%display()
 print*,"Attributes:"
-call data%attrv%display()
+call dc%attrv%display()
 
 end subroutine dbadataattr_display
 
@@ -1468,7 +1479,7 @@ integer,intent(in),optional :: limit
 character(len=*),intent(in),optional :: ana_filter, data_filter, attr_filter, varlist, starvarlist
 integer,intent(in),optional :: priomin,priomax
 logical,intent(in),optional :: contextana
-class(dbadatav),intent(in),optional :: vars,starvars
+class(dbadcv),intent(in),optional :: vars,starvars
 
 integer :: i
 
@@ -1570,28 +1581,28 @@ end if
 
 if (present(vars)) then
 
-  allocate(dbafilter_init%vars%dat(size(vars%dat)))
-  do i =1,size(vars%dat)
-    allocate(dbafilter_init%vars%dat(i)%dat,source=vars%dat(i)%dat)
+  allocate(dbafilter_init%vars%dcv(size(vars%dcv)))
+  do i =1,size(vars%dcv)
+    allocate(dbafilter_init%vars%dcv(i)%dat,source=vars%dcv(i)%dat)
   end do
 
   dbafilter_init%varlist=""
-  do i=1,size(vars%dat) 
-    dbafilter_init%varlist=trim(dbafilter_init%varlist)//vars%dat(i)%dat%btable
-    if (i /=  size(vars%dat)) dbafilter_init%varlist=trim(dbafilter_init%varlist)//","
+  do i=1,size(vars%dcv) 
+    dbafilter_init%varlist=trim(dbafilter_init%varlist)//vars%dcv(i)%dat%btable
+    if (i /=  size(vars%dcv)) dbafilter_init%varlist=trim(dbafilter_init%varlist)//","
   end do
 end if
 
 if (present(starvars)) then
-  allocate(dbafilter_init%starvars%dat(size(starvars%dat)))
-  do i =1,size(starvars%dat)
-    allocate(dbafilter_init%starvars%dat(i)%dat,source=starvars%dat(i)%dat)
+  allocate(dbafilter_init%starvars%dcv(size(starvars%dcv)))
+  do i =1,size(starvars%dcv)
+    allocate(dbafilter_init%starvars%dcv(i)%dat,source=starvars%dcv(i)%dat)
   end do
 
   dbafilter_init%starvarlist=""
-  do i=1,size(starvars%dat)
-    dbafilter_init%starvarlist=trim(dbafilter_init%starvarlist)//starvars%dat(i)%dat%btable
-    if (i /=  size(starvars%dat)) dbafilter_init%starvarlist=trim(dbafilter_init%starvarlist)//","
+  do i=1,size(starvars%dcv)
+    dbafilter_init%starvarlist=trim(dbafilter_init%starvarlist)//starvars%dcv(i)%dat%btable
+    if (i /=  size(starvars%dcv)) dbafilter_init%starvarlist=trim(dbafilter_init%starvarlist)//","
   end do
 end if
 
@@ -2265,13 +2276,13 @@ else
 
   lvars=.false.
   if (present(filter)) then
-    if (allocated(filter%vars%dat)) then
+    if (allocated(filter%vars%dcv)) then
       lvars=.true.
     end if
   end if
   lstarvars=.false.
   if (present(filter)) then
-    if (allocated(filter%starvars%dat)) then
+    if (allocated(filter%starvars%dcv)) then
       lstarvars=.true.
     end if
   end if
@@ -2279,11 +2290,11 @@ else
   if (lvars) then
 
     ! create an empty vector for data 
-    allocate (metaanddata%dataattrv%dataattr(size(filter%vars%dat)))
-    do i = 1, size(filter%vars%dat)
-      allocate (metaanddata%dataattrv%dataattr(i)%dat,source=filter%vars%dat(i)%dat)
+    allocate (metaanddata%dataattrv%dataattr(size(filter%vars%dcv)))
+    do i = 1, size(filter%vars%dcv)
+      allocate (metaanddata%dataattrv%dataattr(i)%dat,source=filter%vars%dcv(i)%dat)
       ! initialize to (0) the attribute vector
-      allocate (metaanddata%dataattrv%dataattr(i)%attrv%dat(0))
+      allocate (metaanddata%dataattrv%dataattr(i)%attrv%dcv(0))
     end do
 
     ! load metadata
@@ -2312,13 +2323,13 @@ else
           
           if (.not. optio_log(dataonly))then
 
-            deallocate (metaanddata%dataattrv%dataattr(i)%attrv%dat)
+            deallocate (metaanddata%dataattrv%dataattr(i)%attrv%dcv)
 
             if (lstarvars) then
 
-              allocate (metaanddata%dataattrv%dataattr(i)%attrv%dat(size(filter%starvars%dat)))
-              do j = 1, size(filter%starvars%dat)
-                allocate (metaanddata%dataattrv%dataattr(i)%attrv%dat(j)%dat,source=filter%starvars%dat(j)%dat)
+              allocate (metaanddata%dataattrv%dataattr(i)%attrv%dcv(size(filter%starvars%dcv)))
+              do j = 1, size(filter%starvars%dcv)
+                allocate (metaanddata%dataattrv%dataattr(i)%attrv%dcv(j)%dat,source=filter%starvars%dcv(j)%dat)
               end do
 
               if (c_e(session%count) .and. session%count > 0) then
@@ -2329,10 +2340,10 @@ else
                   ier = idba_enq(session%sehandle, btable,value)
               
               
-                  do j=1,size(metaanddata%dataattrv%dataattr(i)%attrv%dat)
-                    if (metaanddata%dataattrv%dataattr(i)%attrv%dat(j)%dat%btable == btable) then
+                  do j=1,size(metaanddata%dataattrv%dataattr(i)%attrv%dcv)
+                    if (metaanddata%dataattrv%dataattr(i)%attrv%dcv(j)%dat%btable == btable) then
                     
-                      select type ( dat =>  metaanddata%dataattrv%dataattr(i)%attrv%dat(j)%dat )
+                      select type ( dat =>  metaanddata%dataattrv%dataattr(i)%attrv%dcv(j)%dat )
                       type is (dbadatai)
                         ier = idba_enq(session%sehandle, btable,dat%value)
                       type is (dbadatar)
@@ -2353,14 +2364,14 @@ else
               if (c_e(session%count) .and. session%count > 0) then
                 ier = idba_voglioancora(session%sehandle, acount)
               
-                allocate (metaanddata%dataattrv%dataattr(i)%attrv%dat(acount))
+                allocate (metaanddata%dataattrv%dataattr(i)%attrv%dcv(acount))
                 do j =1,acount
                   ier = idba_ancora(session%sehandle, btable)
                   ier = idba_enq(session%sehandle, btable,value)
-                  allocate (metaanddata%dataattrv%dataattr(i)%attrv%dat(j)%dat,source=dbadatac(btable,value))
+                  allocate (metaanddata%dataattrv%dataattr(i)%attrv%dcv(j)%dat,source=dbadatac(btable,value))
                 end do
               else
-                allocate (metaanddata%dataattrv%dataattr(i)%attrv%dat(0))
+                allocate (metaanddata%dataattrv%dataattr(i)%attrv%dcv(0))
               end if
             end if
           end if
@@ -2387,15 +2398,15 @@ else
 
     if (optio_log(dataonly))then
 
-      allocate (metaanddata%dataattrv%dataattr(1)%attrv%dat(0))
+      allocate (metaanddata%dataattrv%dataattr(1)%attrv%dcv(0))
 
     else
 
       if (lstarvars) then
 
-        allocate (metaanddata%dataattrv%dataattr(1)%attrv%dat(size(filter%starvars%dat)))
-        do j = 1, size(filter%starvars%dat)
-          allocate (metaanddata%dataattrv%dataattr(1)%attrv%dat(j)%dat,source=filter%starvars%dat(j)%dat)
+        allocate (metaanddata%dataattrv%dataattr(1)%attrv%dcv(size(filter%starvars%dcv)))
+        do j = 1, size(filter%starvars%dcv)
+          allocate (metaanddata%dataattrv%dataattr(1)%attrv%dcv(j)%dat,source=filter%starvars%dcv(j)%dat)
         end do
         
         ier = idba_voglioancora(session%sehandle, acount)
@@ -2403,10 +2414,10 @@ else
           ier = idba_ancora(session%sehandle, btable)
           ier = idba_enq(session%sehandle, btable,value)
         
-          do j=1,size(metaanddata%dataattrv%dataattr(1)%attrv%dat)
-            if (metaanddata%dataattrv%dataattr(1)%attrv%dat(j)%dat%btable == btable) then
+          do j=1,size(metaanddata%dataattrv%dataattr(1)%attrv%dcv)
+            if (metaanddata%dataattrv%dataattr(1)%attrv%dcv(j)%dat%btable == btable) then
               
-              select type ( dat =>  metaanddata%dataattrv%dataattr(1)%attrv%dat(j)%dat )
+              select type ( dat =>  metaanddata%dataattrv%dataattr(1)%attrv%dcv(j)%dat )
               type is (dbadatai)
                 ier = idba_enq(session%sehandle, btable,dat%value)
               type is (dbadatar)
@@ -2426,14 +2437,14 @@ else
         if (c_e(session%count) .and. session%count > 0 ) then
           ier = idba_voglioancora(session%sehandle, acount)
         
-          allocate (metaanddata%dataattrv%dataattr(1)%attrv%dat(acount))
+          allocate (metaanddata%dataattrv%dataattr(1)%attrv%dcv(acount))
           do j =1,acount
             ier = idba_ancora(session%sehandle, btable)
             ier = idba_enq(session%sehandle, btable,value)
-            allocate (metaanddata%dataattrv%dataattr(1)%attrv%dat(j)%dat,source=dbadatac(btable,value))
+            allocate (metaanddata%dataattrv%dataattr(1)%attrv%dcv(j)%dat,source=dbadatac(btable,value))
           end do
         else
-          allocate (metaanddata%dataattrv%dataattr(1)%attrv%dat(0))
+          allocate (metaanddata%dataattrv%dataattr(1)%attrv%dcv(0))
         end if
       end if
     end if
@@ -3028,7 +3039,7 @@ end subroutine dbasession_scusa
 subroutine dbasession_set(session,metadata,datav,data,datetime,ana,network,level,timerange,filter)
 class (dbasession), intent(in) :: session
 type (dbametadata),optional :: metadata
-class(dbadatav),optional :: datav
+class(dbadcv),optional :: datav
 class(dbadata),optional :: data
 type (dbadatetime),optional :: datetime
 type (dbaana),optional :: ana
