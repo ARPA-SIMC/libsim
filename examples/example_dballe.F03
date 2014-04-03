@@ -80,13 +80,18 @@ call sessionfrom%delete()
 connectionfrom=dbaconnection(dsn="mem:")
 sessionfrom=dbasession(connectionfrom,wipe=.true.,anaflag="write", dataflag="write", attrflag="write")
 call sessionfrom%messages_open_input(filename="example_dballe.bufr",mode="r",format="BUFR",simplified=.true.)
+
 ! connect to dsn type BUFR file for write
 sessionto=dbasession(filename="example_dballe_copy1fmem.bufr",wipe=.true.,write=.true.,memdb=.false.)
-call copy1fmem()     ! copy data and attributes of everythings to an other file
+call copy1fmem()     ! copy data and attributes of everythings to an other file using mem for input
+call sessionto%delete()
+
+call sessionfrom%messages_open_output(filename="example_dballe_copyf2mem.bufr")
+call copy1f2mem()     ! copy data and attributes of everythings to an other file using mem for input and output
+
 !close everythings
 call sessionfrom%delete()
 call connectionfrom%delete()
-call sessionto%delete()
 
 contains
 
@@ -892,27 +897,39 @@ print *,"--------------- copy1fmem ----------------------"
 
 
 do while (sessionfrom%messages_read_next())
-!!$  print*,"read/write message"
-!!$  call sessionfrom%set(filter=dbafilter())
-!!$  call sessionfrom%extrude(metaanddatav)
-!!$  do i =1,size(metaanddatav)
-!!$    call metaanddatav(i)%display()
-!!$    call sessionto%ingest(metaanddata=metaanddatav(i))
-!!$  end do
-!!$  call sessionto%prendilo()
+  print*,"read/write message"
+  call sessionfrom%set(filter=dbafilter())
+  call sessionfrom%extrude(metaanddatav)
+  do i =1,size(metaanddatav)
+    call metaanddatav(i)%display()
+    call sessionto%ingest(metaanddata=metaanddatav(i))
+  end do
+  call sessionto%prendilo()
 
   print *,"contextana"
   call sessionfrom%set(filter=dbafilter(contextana=.true.))
   call sessionfrom%extrude(metaanddatav)
-!!$  do i =1,size(metaanddatav)
-!!$    call metaanddatav(i)%display()
-!!$    call sessionto%ingest(metaanddata=metaanddatav(i))
-!!$  end do
-!!$  call sessionto%close_message()
+  do i =1,size(metaanddatav)
+    call metaanddatav(i)%display()
+    call sessionto%ingest(metaanddata=metaanddatav(i))
+  end do
+  call sessionto%close_message()
   call sessionfrom%remove_all()
 end do
 
 end subroutine copy1fmem
+
+subroutine copy1f2mem()
+
+print *,"----------------------------------------------"
+print *,"--------------- copy1f2mem ----------------------"
+
+do while (sessionfrom%messages_read_next())
+  call sessionfrom%messages_write_next() 
+  call sessionfrom%remove_all()
+end do
+
+end subroutine copy1f2mem
 
 
 subroutine copy2()

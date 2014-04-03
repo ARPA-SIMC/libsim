@@ -3015,6 +3015,7 @@ na=0
 call mem_acquire( buffer,nd,1000,this%category )
 call mem_acquire( bufferana,na,100,this%category )
 
+ier=idba_setcontextana (this%handle)
 do while ( .true. )
 
   ier=idba_voglioquesto (this%handle,N)
@@ -3123,12 +3124,6 @@ do while ( .true. )
       call  init (levele, rlevel1, rl1,rlevel2, rl2)
       if (levele /= llevel) cycle
     end if
-
-
-    PRINT*,"---------------------------------"
-    call display(timee)
-    print *,"rlevel1",rlevel1
-    print*,"btable",btable
 
     if (rlevel1 /= 257)then
       ! dati
@@ -3247,6 +3242,8 @@ do while ( .true. )
 
 
       if (c_e(btable)) then
+        print *,"btable ana",btable
+
         if (present(anavar).and. present(anavarkind))then
           ii=( firsttrue(anavar == btable))
           if (ii > 0)then
@@ -3362,8 +3359,6 @@ else
   nanavarc= nanavar
 end if
 
-!print *, "nana=",nana," ntime=",ntime," ntimerange=",ntimerange, &
-!" nlevel=",nlevel," nnetwork=",nnetwork," ndativarr=",ndativarr
 
 nanaattrr=0
 nanaattri=0
@@ -3436,6 +3431,16 @@ call vol7d_alloc (vol7dtmp, &
 !!$ "ndatiattrd=",ndatiattrd, "ndatiattrc=",ndatiattrc,&
 !!$ "ndativarattrr=",ndativarattrr, "ndativarattri=",ndativarattri, "ndativarattrb=",ndativarattrb,&
 !!$ "ndativarattrd=",ndativarattrd, "ndativarattrc=",ndativarattrc
+
+
+ print *, "nana=",nana, "nnetwork=",nnetwork, &
+ "nanavarr=",nanavarr, "nanavari=",nanavari, &
+ "nanavarb=",nanavarb, "nanavard=",nanavard, "nanavarc=",nanavarc,&
+ "nanaattrr=",nanaattrr, "nanaattri=",nanaattri, "nanaattrb=",nanaattrb,&
+ "nanaattrd=",nanaattrd, "nanaattrc=",nanaattrc,&
+ "nanavarattrr=",nanavarattrr, "nanavarattri=",nanavarattri, "nanavarattrb=",nanavarattrb,&
+ "nanavarattrd=",nanavarattrd, "nanavarattrc=",nanavarattrc
+
 !!$ print*,"ho fatto alloc"
 
 

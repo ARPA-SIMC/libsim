@@ -17,7 +17,7 @@ type(dbaconnection) :: connectionfrom
 
 
 type(dbametaanddata),allocatable :: metaanddatav(:)
-type(dbafilter) :: filter
+type(dbafilter) :: filter,filterd
 integer :: i,j
 logical :: qcsummaryflag,version
 integer (kind=int_b):: flag0,flag1,flag2,flag3
@@ -25,6 +25,7 @@ TYPE(optionparser) :: opt
 INTEGER :: optind, optstatus
 CHARACTER(len=512):: a_name,input_file,output_file 
 INTEGER :: category,ier
+type(dbadatav) :: starvars
 
 
 !questa chiamata prende dal launcher il nome univoco
@@ -39,8 +40,8 @@ opt = optionparser_new(description_msg= &
  &Flag used are *B33192,*B33193,*B33194,*B33196. &
  &Station constant data are reported as is')
 
-CALL optionparser_add(opt, 'c', 'input-file', input_file, default="(stdin)", help='file to read')
-CALL optionparser_add(opt, 'c', 'output-file', output_file, default="(stdout)", help='file to read')
+CALL optionparser_add(opt, 'i', 'input-file', input_file, default="(stdin)", help='file to read')
+CALL optionparser_add(opt, 'o', 'output-file', output_file, default="(stdout)", help='file to read')
 
 ! help options
 CALL optionparser_add_help(opt, 'h', 'help', help='show an help message and exit')
@@ -77,21 +78,27 @@ ENDIF
 !CALL getarg(iargc()-1, input_file)
 !CALL getarg(iargc(), output_file)
 
-
-filter=dbafilter(starvarlist="*B33192,*B33193,*B33194,*B33196")
+allocate (starvars%dat(4))
+allocate (starvars%dat(1)%dat,source=dbadatab("*B33192"))
+allocate (starvars%dat(2)%dat,source=dbadatab("*B33193"))
+allocate (starvars%dat(3)%dat,source=dbadatab("*B33194"))
+allocate (starvars%dat(4)%dat,source=dbadatab("*B33196"))
+filter=dbafilter(starvars=starvars)
 
 ! connect to dsn type BUFR file for read
 connectionfrom=dbaconnection(dsn="mem:")
 sessionfrom=dbasession(connectionfrom,wipe=.true.,anaflag="write", dataflag="write", attrflag="write")
 call sessionfrom%messages_open_input(filename=input_file,mode="r",format="BUFR",simplified=.true.)
 
-! connect to dsn type BUFR file for write
-sessionto=dbasession(filename=output_file,wipe=.true.,write=.true.,memdb=.false.)
+call sessionfrom%messages_open_output(filename=output_file,mode="w",format="BUFR")
+
+!!$! connect to dsn type BUFR file for write
+!!$sessionto=dbasession(filename=output_file,wipe=.true.,write=.true.,memdb=.false.)
 
 
 do while (sessionfrom%messages_read_next())
   call sessionfrom%set(filter=filter)
-  call sessionfrom%extrude(metaanddatav)
+  call sessionfrom%extrude(metaanddatav,filter=filter)
   do i =1,size(metaanddatav)
 !    call metaanddatav(i)%display()
 
@@ -99,40 +106,50 @@ do while (sessionfrom%messages_read_next())
 
 !      internal compiler error
 !      associate(dataattr =>  metaanddatav(i)%dataattrv%dataattr(j))
+
+!      call filter%display()
+
+      call metaanddatav(i)%dataattrv%dataattr(j)%attrv%dat(4)%dat%get(flag0)
+      call metaanddatav(i)%dataattrv%dataattr(j)%attrv%dat(1)%dat%get(flag1)
+      call metaanddatav(i)%dataattrv%dataattr(j)%attrv%dat(2)%dat%get(flag2)
+      call metaanddatav(i)%dataattrv%dataattr(j)%attrv%dat(3)%dat%get(flag3)
+
+      qcsummaryflag =qcsummaryflagb(flag0,flag1,flag2,flag3)
       
-        call metaanddatav(i)%dataattrv%dataattr(j)%attrv%dat(4)%dat%get(flag0)
-        call metaanddatav(i)%dataattrv%dataattr(j)%attrv%dat(1)%dat%get(flag1)
-        call metaanddatav(i)%dataattrv%dataattr(j)%attrv%dat(2)%dat%get(flag2)
-        call metaanddatav(i)%dataattrv%dataattr(j)%attrv%dat(3)%dat%get(flag3)
+      if (.not.qcsummaryflag) then
 
-        qcsummaryflag =qcsummaryflagb(flag0,flag1,flag2,flag3)
-
-        if (.not.qcsummaryflag) then
 !         set data to missing
-          allocate(metaanddatav(i)%dataattrv%dataattr(j)%dbadat%dat,source=dbadatac())
-          allocate(metaanddatav(i)%dataattrv%dataattr(j)%attrv%dat(4)%dat,source=dbadatac())
-          allocate(metaanddatav(i)%dataattrv%dataattr(j)%attrv%dat(1)%dat,source=dbadatac())
-          allocate(metaanddatav(i)%dataattrv%dataattr(j)%attrv%dat(2)%dat,source=dbadatac())
-          allocate(metaanddatav(i)%dataattrv%dataattr(j)%attrv%dat(3)%dat,source=dbadatac())
-        end if
+!!$          allocate(metaanddatav(i)%dataattrv%dataattr(j)%dbadat%dat,source=dbadatac())
+!!$          allocate(metaanddatav(i)%dataattrv%dataattr(j)%attrv%dat(4)%dat,source=dbadatac())
+!!$          allocate(metaanddatav(i)%dataattrv%dataattr(j)%attrv%dat(1)%dat,source=dbadatac())
+!!$          allocate(metaanddatav(i)%dataattrv%dataattr(j)%attrv%dat(2)%dat,source=dbadatac())
+!!$          allocate(metaanddatav(i)%dataattrv%dataattr(j)%attrv%dat(3)%dat,source=dbadatac())
+
+
+!         remove from mem db
+        filterd=dbafilter(var=metaanddatav(i)%dataattrv%dataattr(j)%dbadat%dat%btable)
+        call sessionfrom%set(filter=filterd)
+        call sessionfrom%dissolve([metaanddatav(i)%metadata])
+
+      end if
 !      end associate
 
     end do
-
-    call sessionto%ingest(metaanddata=metaanddatav(i))
+!!$    call sessionto%ingest(metaanddata=metaanddatav(i))
   end do
-  call sessionto%prendilo()
+!!$  call sessionto%prendilo()
 
 !  print *,"contextana"
-  call sessionfrom%set(filter=dbafilter(contextana=.true.))
-  call sessionfrom%extrude(metaanddatav)
-    
-  do i =1,size(metaanddatav)
-!    call metaanddatav(i)%display()
-    call sessionto%ingest(metaanddata=metaanddatav(i))
-  end do
-  call sessionto%close_message()
+!!$  call sessionfrom%set(filter=dbafilter(contextana=.true.))
+!!$  call sessionfrom%extrude(metaanddatav)
+!!$    
+!!$  do i =1,size(metaanddatav)
+!!$    call metaanddatav(i)%display()
+!!$    call sessionto%ingest(metaanddata=metaanddatav(i))
+!!$  end do
+!!$  call sessionto%close_message()
 
+  call sessionfrom%messages_write_next()
   call sessionfrom%remove_all()
 end do
 
