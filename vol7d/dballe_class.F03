@@ -25,7 +25,7 @@
 !!DB-All.e
 !!
 !! The main usefull structure is this:
-!!
+!!\verbatim
 !!                     %timerange
 !!                     %ana
 !!                     %network
@@ -34,7 +34,10 @@
 !!            %dataattrv%dataattr(*)%dat
 !!                                  %attrv%dcv(*)%dat
 !!
-!!Program example
+!!\endverbatim
+!!You can use a vector of this structure to archive a full dataset in memory.
+!!
+!!The program example is the better starting point:
 !!\include example_dballe.F03
 !!
 !!\ingroup vol7d
@@ -62,33 +65,34 @@ character (len=255),parameter:: subcategory="dballe_class"
 
 !> manage connection handle to a DSN
 type,public :: dbaconnection
-  integer :: dbhandle=imiss
-  integer :: handle_err=imiss
+  integer :: dbhandle=imiss !< dballe DB handle
+  integer :: handle_err=imiss !< dballe error handler
   integer :: category !< log4fortran
   contains
 # ifdef F2003_FULL_FEATURES
     final :: dbaconnection_delete
 # else
-    procedure :: delete => dbaconnection_delete
+    procedure :: delete => dbaconnection_delete !<
 # endif
 end type dbaconnection
 
+!> add constructor to shape generic interface
 interface dbaconnection
-  procedure  dbaconnection_init      ! add constructor to shape generic interface
+  procedure  dbaconnection_init
 end interface
 
 !> manage session handle
 type,public ::  dbasession
-  integer :: sehandle=imiss
-  logical :: file=.false.
-  character(len=40) :: template=cmiss
-  character(len=255) :: filename=cmiss
-  character(len=40) :: mode=cmiss
-  character(len=40) :: format=cmiss
-  logical           :: simplified=.true.
-  logical           :: memdb=.false.
-  type(dbaconnection) :: memconnection
-  integer :: category=imiss !< log4fortran
+  integer :: sehandle=imiss !< session handler
+  logical :: file=.false. !< is it a file?
+  character(len=40) :: template=cmiss !< template for BUFR format
+  character(len=255) :: filename=cmiss !< filename
+  character(len=40) :: mode=cmiss !< mode for open file
+  character(len=40) :: format=cmiss !< format (bufr/crex)
+  logical           :: simplified=.true. !< how to interpret input data
+  logical           :: memdb=.false. !<  use memdb
+  type(dbaconnection) :: memconnection !< connection for memdb
+  integer :: category=imiss !< log4fortran category
   integer :: count=imiss !< number of results left to query
   contains
 # ifdef F2003_FULL_FEATURES
@@ -96,55 +100,56 @@ type,public ::  dbasession
 # else
     procedure :: delete => dbasession_delete
 # endif
-    procedure :: unsetall => dbasession_unsetall
-    procedure :: remove_all => dbasession_remove_all
-    procedure :: set => dbasession_set
-    procedure :: setcontextana => dbasession_setcontextana
-    procedure :: dimenticami => dbasession_dimenticami
-    procedure :: ingest => dbasession_ingest
-    procedure :: prendilo => dbasession_prendilo
-    procedure :: var_related => dbasession_var_related
-    procedure :: critica => dbasession_critica
-    procedure :: scusa => dbasession_scusa
-    procedure :: messages_open_input => dbasession_messages_open_input
-    procedure :: messages_open_output => dbasession_messages_open_output
-    procedure :: messages_read_next => dbasession_messages_read_next
-    procedure :: messages_write_next => dbasession_messages_write_next
-    procedure :: close_message => dbasession_close_message
-    procedure :: unsetb => dbasession_unsetb
-    procedure :: filerewind => dbasession_filerewind
-    procedure :: extrude_ana => dbasession_extrude_ana
-    procedure :: extrude_anav => dbasession_extrude_anav
-    procedure :: extrude_anal => dbasession_extrude_anal
-    procedure :: extrude_metaanddata => dbasession_extrude_metaanddata
-    procedure :: extrude_metaanddatal => dbasession_extrude_metaanddatal
-    procedure :: extrude_metaanddatav => dbasession_extrude_metaanddatav
-    procedure :: extrude_metaanddatai => dbasession_extrude_metaanddatai
-    procedure :: extrude_metaanddataiv => dbasession_extrude_metaanddataiv
-    procedure :: extrude_metaanddatail => dbasession_extrude_metaanddatail
-    procedure :: extrude_metaanddatab => dbasession_extrude_metaanddatab
-    procedure :: extrude_metaanddatabv => dbasession_extrude_metaanddatabv
-    procedure :: extrude_metaanddatabl => dbasession_extrude_metaanddatabl
-    procedure :: extrude_metaanddatad => dbasession_extrude_metaanddatad
-    procedure :: extrude_metaanddatadv => dbasession_extrude_metaanddatadv
-    procedure :: extrude_metaanddatadl => dbasession_extrude_metaanddatadl
-    procedure :: extrude_metaanddatar => dbasession_extrude_metaanddatar
-    procedure :: extrude_metaanddatarv => dbasession_extrude_metaanddatarv
-    procedure :: extrude_metaanddatarl => dbasession_extrude_metaanddatarl
-    procedure :: extrude_metaanddatac => dbasession_extrude_metaanddatac
-    procedure :: extrude_metaanddatacv => dbasession_extrude_metaanddatacv
-    procedure :: extrude_metaanddatacl => dbasession_extrude_metaanddatacl
-    procedure :: dissolve_metadata => dbasession_dissolve_metadata
-    procedure :: dissolveattr => dbasession_dissolveattr_metadata
-    generic   :: dissolve => dissolve_metadata ,dimenticami
-    generic   :: extrudea => extrude_ana, extrude_anav,extrude_anal
+    procedure :: unsetall => dbasession_unsetall !<
+    procedure :: remove_all => dbasession_remove_all !<
+    procedure :: set => dbasession_set !<
+    procedure :: setcontextana => dbasession_setcontextana !<
+    procedure :: dimenticami => dbasession_dimenticami !<
+    procedure :: ingest => dbasession_ingest !<
+    procedure :: prendilo => dbasession_prendilo !<
+    procedure :: var_related => dbasession_var_related !<
+    procedure :: critica => dbasession_critica !<
+    procedure :: scusa => dbasession_scusa !<
+    procedure :: messages_open_input => dbasession_messages_open_input !<
+    procedure :: messages_open_output => dbasession_messages_open_output !<
+    procedure :: messages_read_next => dbasession_messages_read_next !<
+    procedure :: messages_write_next => dbasession_messages_write_next !<
+    procedure :: close_message => dbasession_close_message !<
+    procedure :: unsetb => dbasession_unsetb !<
+    procedure :: filerewind => dbasession_filerewind !<
+    procedure :: extrude_ana => dbasession_extrude_ana !<
+    procedure :: extrude_anav => dbasession_extrude_anav !<
+    procedure :: extrude_anal => dbasession_extrude_anal !<
+    procedure :: extrude_metaanddata => dbasession_extrude_metaanddata !<
+    procedure :: extrude_metaanddatal => dbasession_extrude_metaanddatal !<
+    procedure :: extrude_metaanddatav => dbasession_extrude_metaanddatav !<
+    procedure :: extrude_metaanddatai => dbasession_extrude_metaanddatai !<
+    procedure :: extrude_metaanddataiv => dbasession_extrude_metaanddataiv !<
+    procedure :: extrude_metaanddatail => dbasession_extrude_metaanddatail !<
+    procedure :: extrude_metaanddatab => dbasession_extrude_metaanddatab !<
+    procedure :: extrude_metaanddatabv => dbasession_extrude_metaanddatabv !<
+    procedure :: extrude_metaanddatabl => dbasession_extrude_metaanddatabl !<
+    procedure :: extrude_metaanddatad => dbasession_extrude_metaanddatad !<
+    procedure :: extrude_metaanddatadv => dbasession_extrude_metaanddatadv !<
+    procedure :: extrude_metaanddatadl => dbasession_extrude_metaanddatadl !<
+    procedure :: extrude_metaanddatar => dbasession_extrude_metaanddatar !<
+    procedure :: extrude_metaanddatarv => dbasession_extrude_metaanddatarv !<
+    procedure :: extrude_metaanddatarl => dbasession_extrude_metaanddatarl !<
+    procedure :: extrude_metaanddatac => dbasession_extrude_metaanddatac !<
+    procedure :: extrude_metaanddatacv => dbasession_extrude_metaanddatacv !<
+    procedure :: extrude_metaanddatacl => dbasession_extrude_metaanddatacl !<
+    procedure :: dissolve_metadata => dbasession_dissolve_metadata !<
+    procedure :: dissolveattr => dbasession_dissolveattr_metadata !<
+    generic   :: dissolve => dissolve_metadata ,dimenticami !<
+    generic   :: extrudea => extrude_ana, extrude_anav,extrude_anal !<
     generic   :: extrude  => extrude_metaanddata,extrude_metaanddatav,extrude_metaanddatal,&
      extrude_metaanddataiv,extrude_metaanddatabv,extrude_metaanddatadv,extrude_metaanddatarv,extrude_metaanddatacv&
-     ,extrude_metaanddatail,extrude_metaanddatarl,extrude_metaanddatadl,extrude_metaanddatabl,extrude_metaanddatacl
+     ,extrude_metaanddatail,extrude_metaanddatarl,extrude_metaanddatadl,extrude_metaanddatabl,extrude_metaanddatacl !<
 end type dbasession
 
+!> add constructor to shape generic interface
 interface dbasession
-  procedure  dbasession_init      ! add constructor to shape generic interface
+  procedure  dbasession_init
 end interface
 
 !> level metadata
