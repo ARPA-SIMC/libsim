@@ -263,7 +263,7 @@ CALL optionparser_add(opt, ' ', 'set-network', set_network, '', help= &
  'if input-format is of database type, collapse all the input data into a single &
  &pseudo-network with the given name, empty for keeping the original networks')
 CALL optionparser_add(opt, ' ', 'disable-qc', disable_qc, help= &
- 'desable data removing based on SIMC quality control.')
+ 'disable data removing based on SIMC quality control.')
 
 ! option for displaying/processing
 CALL optionparser_add(opt, 'd', 'display', ldisplay, help= &
