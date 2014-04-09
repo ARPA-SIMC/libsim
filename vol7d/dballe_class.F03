@@ -143,8 +143,9 @@ type,public ::  dbasession
     generic   :: dissolve => dissolve_metadata ,dimenticami !<
     generic   :: extrudea => extrude_ana, extrude_anav,extrude_anal !<
     generic   :: extrude  => extrude_metaanddata,extrude_metaanddatav,extrude_metaanddatal,&
-     extrude_metaanddataiv,extrude_metaanddatabv,extrude_metaanddatadv,extrude_metaanddatarv,extrude_metaanddatacv&
-     ,extrude_metaanddatail,extrude_metaanddatarl,extrude_metaanddatadl,extrude_metaanddatabl,extrude_metaanddatacl !<
+     !extrude_metaanddatai,extrude_metaanddatab,extrude_metaanddatad,extrude_metaanddatar,extrude_metaanddatac,&      !ambiguos
+     extrude_metaanddataiv,extrude_metaanddatabv,extrude_metaanddatadv,extrude_metaanddatarv,extrude_metaanddatacv,&
+     extrude_metaanddatail,extrude_metaanddatarl,extrude_metaanddatadl,extrude_metaanddatabl,extrude_metaanddatacl !<
 end type dbasession
 
 !> add constructor to shape generic interface
@@ -2295,13 +2296,11 @@ type(dbaanalist), intent(out) :: anal
 type(dbaana) :: element
 
 call session%extrude_ana()
-if (c_e(session%count))then
-  do while (session%count >0)
-    call session%extrude_ana(element)
-    call anal%append(element)
-    call session%extrude_ana()
-  end do
-end if
+do while (c_e(session%count) .and. session%count >0)
+  call session%extrude_ana(element)
+  call anal%append(element)
+  call session%extrude_ana()
+end do
 end subroutine dbasession_extrude_anal
 
 
@@ -2511,6 +2510,7 @@ else
       end if
     end if
 
+
     if (c_e(session%count)) then
       session%count=session%count-1
 
@@ -2551,6 +2551,7 @@ if (c_e(session%count)) then
   deallocate(metaanddatavbuf)
 
 else
+  if (allocated(metaanddatav)) deallocate(metaanddatav)
   allocate(metaanddatav(0))
 end if
 

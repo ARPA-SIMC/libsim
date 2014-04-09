@@ -421,11 +421,12 @@ do while (size(metaanddatav) >0)
   do i =1,size(metaanddatav)
     print *, "display metaanddatav index: ", i
 !    call metaanddatav(i)%display()
-!    call sessionto%ingest(metaanddata=metaanddatav(i))
+    call sessionto%ingest(metaanddata=metaanddatav(i))
   end do
 !  call sessionto%close_message()
   call sessionfrom%extrude(metaanddatav)
 end do
+deallocate (metaanddatav)
 
 ! constant data
 call sessionfrom%filerewind()
@@ -437,7 +438,7 @@ do while (size(metaanddatav) >0)
   do i =1,size(metaanddatav)
     print *, "display metaanddatav index: ", i
 !    call metaanddatav(i)%display()
-!    call sessionto%ingest(metaanddata=metaanddatav(i))
+    call sessionto%ingest(metaanddata=metaanddatav(i))
   end do
 !  call sessionto%close_message()
   call sessionfrom%extrude(metaanddatav)

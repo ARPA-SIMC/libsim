@@ -822,18 +822,18 @@ sessioncp=dbasession(connectioncp,wipe=.true.,anaflag="write", dataflag="write",
 
 ! data
 call session%set(filter=dbafilter())
-call session%extrude_metaanddata()
-do while (c_e(session%count))
-  call session%extrude_metaanddata (metaanddata)
+call session%extrude()
+do while (c_e(session%count) .and. session%count > 0 )
+  call session%extrude (metaanddata)
   call sessioncp%ingest(metaanddata=metaanddata)
   if (session%file) call session%close_message()
 end do
 
 ! constant data
 call session%set(filter=dbafilter(contextana=.true.))
-call session%extrude_metaanddata()
-do while (c_e(session%count))
-  call session%extrude_metaanddata (metaanddata)
+call session%extrude()
+do while (c_e(session%count) .and. session%count > 0)
+  call session%extrude (metaanddata)
   call sessioncp%ingest(metaanddata=metaanddata)
   if (session%file) call session%close_message()
 end do
@@ -863,11 +863,12 @@ do while (size(metaanddatav) >0)
   do i =1,size(metaanddatav)
     print *, "display metaanddatav index: ", i
 !    call metaanddatav(i)%display()
-!    call sessionto%ingest(metaanddata=metaanddatav(i))
+    call sessionto%ingest(metaanddata=metaanddatav(i))
   end do
 !  call sessionto%close_message()
   call sessionfrom%extrude(metaanddatav)
 end do
+deallocate (metaanddatav)
 
 ! constant data
 call sessionfrom%filerewind()
@@ -879,7 +880,7 @@ do while (size(metaanddatav) >0)
   do i =1,size(metaanddatav)
     print *, "display metaanddatav index: ", i
 !    call metaanddatav(i)%display()
-!    call sessionto%ingest(metaanddata=metaanddatav(i))
+    call sessionto%ingest(metaanddata=metaanddatav(i))
   end do
 !  call sessionto%close_message()
   call sessionfrom%extrude(metaanddatav)
@@ -949,16 +950,16 @@ sessioncp=dbasession(connectioncp,wipe=.true.,anaflag="write", dataflag="write",
 ! data
 call session%set(filter=dbafilter())
 call session%extrude_metaanddatac()
-do while (c_e(session%count))
-  call session%extrude_metaanddatac (metaanddatac)
+do while (c_e(session%count) .and. session%count > 0)
+  call session%extrude_metaanddatac(metaanddatac)
   call sessioncp%ingest(metaanddatac=metaanddatac)
 end do
 
 ! constant data
 call session%set(filter=dbafilter(contextana=.true.))
 call session%extrude_metaanddatac()
-do while (c_e(session%count))
-  call session%extrude_metaanddatac (metaanddatac)
+do while (c_e(session%count) .and. session%count > 0)
+  call session%extrude_metaanddatac(metaanddatac)
   call sessioncp%ingest(metaanddatac=metaanddatac)
 end do
 
