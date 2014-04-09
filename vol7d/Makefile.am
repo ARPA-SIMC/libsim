@@ -108,7 +108,7 @@ dballe_test_SOURCES = dballe_test.F03
 dballe_test_LDADD = libsim_vol7d.la
 dist_check_SCRIPTS += dballe_test.sh
 # for tests/examples
-EXTRA_DIST += dballe_test.dat
+EXTRA_DIST += dballe_test_copy1fmem.test  dballe_test_copy1f.test
 
 
 endif
