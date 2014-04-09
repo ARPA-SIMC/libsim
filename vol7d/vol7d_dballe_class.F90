@@ -209,6 +209,9 @@ character(len=512) :: a_name
 character(len=254) :: arg,lfilename,lformat
 logical :: exist
 integer :: ier
+#ifndef DBALLELT67
+logical :: read_next
+#endif
 
 this%idbhandle=imiss
 this%handle=imiss
@@ -289,9 +292,30 @@ if (quifile) then
     end if
   end if
 
-  ier=idba_messaggi(this%handle,lfilename,mode,lformat)
+#ifndef DBALLELT67
 
+  if(quiwrite)then
+    ier=idba_messaggi(this%handle,lfilename,mode,lformat)
+    this%file=.true.
+  else
+
+    ier=idba_presentati(this%idbhandle,dsn="mem:",user="",password="")
+    ier=idba_preparati (this%idbhandle,this%handle,"write","write","write")
+    ier=idba_preparati (this%idbhandle,this%handle_staz,"write","write","write")
+    ier = idba_messages_open_input(this%handle, lfilename, mode, lformat, simplified=.true.)
+    ier=idba_messages_read_next(this%handle, read_next)
+    do while (read_next) 
+      ier=idba_messages_read_next(this%handle, read_next)
+    end do
+    this%file=.false.
+  end if
+#else
+
+  ier=idba_messaggi(this%handle,lfilename,mode,lformat)
   this%file=.true.
+
+#endif
+
 
 #ifdef DEBUG
   call l4f_category_log(this%category,L4F_DEBUG,"handle from idba_messaggi: "//t2c(this%handle))
@@ -2568,17 +2592,21 @@ TYPE(vol7d_dballe) :: this !< oggetto da cancellare
 logical,intent(in), optional :: preserveidbhandle !< do not close connection to dsn
 integer :: ier
 
+#ifndef DBALLELT67
 if (this%file)then
 
   ier=idba_fatto(this%handle)
-  
+
 else
+#endif
 
   ier=idba_fatto(this%handle)
   ier=idba_fatto(this%handle_staz)
   if (.not. optio_log(preserveidbhandle)) ier=idba_arrivederci(this%idbhandle)
 
+#ifndef DBALLELT67
 end if
+#endif
 
 ier=idba_error_remove_callback(this%handle_err)
 
@@ -2880,7 +2908,10 @@ END FUNCTION v7d_dballe_error_handler
 !!
 !! It works like vol7d_dballe_importvvns reading from file but with some restrictions.
 !! File can user BUFR or CREX format.
+
+#ifndef F2003_EXTENDED_FEATURES
 !! Attributes will not be imported at all.
+#endif
 
 SUBROUTINE vol7d_dballe_importvvns_file(this, var, network, coordmin, coordmax, timei, timef,level,timerange, set_network,&
  attr,anavar,anaattr, varkind,attrkind,anavarkind,anaattrkind,anaonly,ana)
@@ -3029,9 +3060,9 @@ do while ( .true. )
 
   if (.not. c_e(N)) exit
 
-                                ! use only with dballe svn <= 4266
-                                ! todo REMOVE the next line !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  if (N == 0) exit
+#ifdef DBALLELT67
+  if (N == 0) exit                                  ! use only with dballe svn <= 4266
+#endif
 
   ! dammi tutti i dati
   do i=1,N
