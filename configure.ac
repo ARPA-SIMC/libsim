@@ -63,11 +63,13 @@ AC_FC_WRAPPERS()dnl Determine how to call C from Fortran
 AC_ARG_ENABLE(debug-mode, AC_HELP_STRING([--enable-debug-mode],
   [enable debug mode]), , [enableval=no])dnl default disable
 if test "x$enableval" = "xyes"; then
-if test "x$FC" = "xgfortran"; then
+case "$FC" in
+  *gfortran*)
 FCFLAGS="$FCFLAGS -g -fbounds-check -O0 -fexceptions -Wall"
-else
+;;
+  *)
 FCFLAGS="$FCFLAGS -g -C"
-fi
+esac
 AC_DEFINE(DEBUG, 1, [Enable debugging mode])
 fi
 

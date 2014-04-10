@@ -103,15 +103,17 @@ vol7d_dballe_class_nana.F90 vol7d_dballe_class_ndati.F90 \
 vol7d_dballe_class_dati.F90 vol7d_dballe_class_datiattr.F90 \
 vol7d_dballe_class_ana.F90 vol7d_dballe_class_anaattr.F90  vol7d_dballe_class_var_du.F90
 
+if F2003_EXTENDED_FEATURES
 check_PROGRAMS += dballe_test
 dballe_test_SOURCES = dballe_test.F03
 dballe_test_LDADD = libsim_vol7d.la
 dist_check_SCRIPTS += dballe_test.sh
+endif
 # for tests/examples
+endif
+
 EXTRA_DIST += dballe_test_copy1fmem.test  dballe_test_copy1f.test
 
-
-endif
 
 if NETCDF
 vol7d_netcdf_class.$(OBJEXT): vol7d_class.$(OBJEXT)

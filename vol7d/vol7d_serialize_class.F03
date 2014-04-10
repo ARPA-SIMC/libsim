@@ -111,7 +111,7 @@ END TYPE vol7d_serialize_iterline
 
 !> Iterator object for iterating over "column" of a line in a vol7d serialization.
 !! All the components are private. An object of this class is
-!! constructed starting either starting from a \a vol7d_serialize
+!! constructed either starting from a \a vol7d_serialize
 !! object (iterator over "header" columns) or from \a
 !! vol7d_serialize_iterline object (iterator over "body" columns) as
 !! a result of \a the vol7d_serialize_itercol_new() function method.
@@ -214,7 +214,7 @@ SUBROUTINE vol7d_serialize_parse(this, category)
 CLASS(vol7d_serialize),INTENT(inout) :: this !< object having undorgone the vol7d_serialize_optionparser method
 INTEGER,INTENT(in),OPTIONAL :: category !< log4fortran category for logging error messages
 
-CALL parse_v7d_column(this%column, this%icolumn, '--'//TRIM(this%ext)//'csv-column', &
+CALL parse_v7d_column(this%column, this%icolumn, '--'//TRIM(this%ext)//'-column', &
  .FALSE., category)
 CALL parse_v7d_column(this%loop, this%looporder, '--'//TRIM(this%ext)//'-loop', &
  .TRUE., category)
@@ -222,6 +222,10 @@ CALL parse_v7d_column(this%loop, this%looporder, '--'//TRIM(this%ext)//'-loop', 
 END SUBROUTINE vol7d_serialize_parse
 
 
+! internal sobroutine to parse a string like
+! 'time,timerange,level,ana,network,var,value' (ccol) transforming
+! into an integer array of the corresponding PARAMETER values defined
+! in vol7d_class (icol)
 SUBROUTINE parse_v7d_column(ccol, icol, par_name, check_all, category)
 CHARACTER(len=*),INTENT(in) :: ccol
 INTEGER,INTENT(out) :: icol(:)
