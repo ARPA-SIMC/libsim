@@ -19,7 +19,7 @@ type(dbaconnection) :: connectionfrom
 type(dbametaanddata),allocatable :: metaanddatav(:)
 type(dbafilter) :: filter,filterd
 integer :: i,j
-logical :: qcsummaryflag,version
+logical :: qcsummaryflag,version,preserve
 integer (kind=int_b):: flag0,flag1,flag2,flag3
 TYPE(optionparser) :: opt
 INTEGER :: optind, optstatus
@@ -42,6 +42,7 @@ opt = optionparser_new(description_msg= &
 
 CALL optionparser_add(opt, 'i', 'input-file', input_file, default="(stdin)", help='file to read')
 CALL optionparser_add(opt, 'o', 'output-file', output_file, default="(stdout)", help='file to read')
+CALL optionparser_add(opt, 'p', 'preserve', preserve, help='preserve wrong data, remove attribute, insert B33007=0 for wrong data')
 
 ! help options
 CALL optionparser_add_help(opt, 'h', 'help', help='show an help message and exit')
@@ -115,7 +116,23 @@ do while (sessionfrom%messages_read_next())
 
       qcsummaryflag =qcsummaryflagb(flag0,flag1,flag2,flag3)
       
-      if (.not.qcsummaryflag) then
+
+      if (preserve) then
+
+!         remove attr from mem db 
+        call sessionfrom%dissolveattr([metaanddatav(i)%metadata])
+
+        if (.not.qcsummaryflag) then
+!         and insert confidence
+          deallocate(metaanddatav(i)%dataattrv%dataattr(j)%attrv%dcv)
+          allocate (metaanddatav(i)%dataattrv%dataattr(j)%attrv%dcv(1))
+          allocate (metaanddatav(i)%dataattrv%dataattr(j)%attrv%dcv(1)%dat,source=dbadatai("*B33007",0))
+          call sessionfrom%ingest(dataattr=metaanddatav(i)%dataattrv%dataattr(j))
+        end if
+
+      else
+
+        if (.not.qcsummaryflag) then
 
 !         set data to missing
 !!$          allocate(metaanddatav(i)%dataattrv%dataattr(j)%dbadat%dat,source=dbadatac())
@@ -124,14 +141,19 @@ do while (sessionfrom%messages_read_next())
 !!$          allocate(metaanddatav(i)%dataattrv%dataattr(j)%attrv%dat(2)%dat,source=dbadatac())
 !!$          allocate(metaanddatav(i)%dataattrv%dataattr(j)%attrv%dat(3)%dat,source=dbadatac())
 
-!         remove from mem db
-        filterd=dbafilter(var=metaanddatav(i)%dataattrv%dataattr(j)%dat%btable)
-        call sessionfrom%set(filter=filterd)
-        call sessionfrom%dissolve([metaanddatav(i)%metadata])
+
+!         remove data and attr from mem db
+          filterd=dbafilter(var=metaanddatav(i)%dataattrv%dataattr(j)%dat%btable)
+          call sessionfrom%set(filter=filterd)
+          call sessionfrom%dissolve([metaanddatav(i)%metadata])
+
+        else
+!         remove attr from mem db 
+          call sessionfrom%dissolveattr([metaanddatav(i)%metadata])
+        end if
 
       end if
 !      end associate
-
     end do
 !!$    call sessionto%ingest(metaanddata=metaanddatav(i))
   end do
