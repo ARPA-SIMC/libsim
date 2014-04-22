@@ -205,6 +205,40 @@ OPTIMIZE_OUTPUT_FOR_C  = NO
 
 OPTIMIZE_OUTPUT_JAVA   = NO
 
+
+
+#    Set the OPTIMIZE_FOR_FORTRAN tag to YES if your project consists
+#    of Fortran sources. Doxygen will then generate output that is
+#    tailored for Fortran.
+#    The default value is: NO.
+
+OPTIMIZE_FOR_FORTRAN = YES
+
+#Doxygen selects the parser to use depending on the extension of the
+#files it parses. With this tag you can assign which parser to use for
+#a given extension. Doxygen has a built-in mapping, but you can
+#override or extend it using this tag. The format is ext=language,
+#where ext is a file extension, and language is one of the parsers
+#supported by doxygen: IDL, Java, Javascript, C#, C, C++, D, PHP,
+#Objective-C, Python, Fortran (fixed format Fortran: FortranFixed, free
+#formatted Fortran: FortranFree, unknown formatted Fortran: Fortran. In
+#the later case the parser tries to guess whether the code is fixed or
+#free formatted code, this is the default for Fortran type files),
+#VHDL.
+#For instance to make doxygen treat .inc files as Fortran files
+#(default is PHP), and .f files as C (default is Fortran), use:
+#inc=Fortran f=C.
+#Note For files without extension you can use no_extension as a
+#placeholder.  
+#Note that for custom extensions you also need to set FILE_PATTERNS
+#otherwise the files are not read by doxygen.
+
+# if you follow documentation it does not work
+#EXTENSION_MAPPING = f=FortranFixed f90=FortranFree F90=FortranFree f03=FortranFree F03=FortranFree
+
+EXTENSION_MAPPING = f90=Fortran F90=Fortran f03=Fortran F03=Fortran
+
+
 #OBSOLETE
 ## Set the OPTIMIZE_OUTPUT_FORTRAN tag to YES if your project consists of Fortran 
 ## sources only. Doxygen will then generate output that is more tailored for Fortran. 
@@ -250,7 +284,7 @@ EXTRACT_ALL            = NO
 # If the EXTRACT_PRIVATE tag is set to YES all private members of a class 
 # will be included in the documentation.
 
-EXTRACT_PRIVATE        = NO
+EXTRACT_PRIVATE        = YES
 
 # If the EXTRACT_STATIC tag is set to YES all static members of a file 
 # will be included in the documentation.
@@ -1035,7 +1069,7 @@ INCLUDE_FILE_PATTERNS  =
 # undefined via #undef or recursively expanded use the := operator 
 # instead of the = operator.
 
-PREDEFINED             = 
+PREDEFINED             = DOXYGEN
 
 # If the MACRO_EXPANSION and EXPAND_ONLY_PREDEF tags are set to YES then 
 # this tag can be used to specify a list of macro names that should be expanded. 
@@ -1050,7 +1084,7 @@ EXPAND_AS_DEFINED      =
 # function macros are typically used for boiler-plate code, and will confuse 
 # the parser if not removed.
 
-SKIP_FUNCTION_MACROS   = YES
+SKIP_FUNCTION_MACROS   = NO
 
 #---------------------------------------------------------------------------
 # Configuration::additions related to external references   
@@ -1119,7 +1153,7 @@ HIDE_UNDOC_RELATIONS   = YES
 # toolkit from AT&T and Lucent Bell Labs. The other options in this section 
 # have no effect if this option is set to NO (the default)
 
-HAVE_DOT               = NO
+HAVE_DOT               = YES
 
 # If the CLASS_GRAPH and HAVE_DOT tags are set to YES then doxygen 
 # will generate a graph for each documented class showing the direct and 
@@ -1171,7 +1205,7 @@ INCLUDED_BY_GRAPH      = YES
 # So in most cases it will be better to enable call graphs for selected 
 # functions only using the \callgraph command.
 
-CALL_GRAPH             = NO
+CALL_GRAPH             = YES
 
 # If the CALLER_GRAPH and HAVE_DOT tags are set to YES then doxygen will 
 # generate a caller dependency graph for every global function or class method. 

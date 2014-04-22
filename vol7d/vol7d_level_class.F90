@@ -188,12 +188,12 @@ CONTAINS
 !! Se non viene passato nessun parametro opzionale l'oggetto è
 !! inizializzato a valore mancante.
 FUNCTION vol7d_level_new(level1, l1, level2, l2) RESULT(this)
-INTEGER,INTENT(IN),OPTIONAL :: level1 !< tipo di livello 1
-INTEGER,INTENT(IN),OPTIONAL :: l1 !< valore per il primo livello
-INTEGER,INTENT(IN),OPTIONAL :: level2 !< tipo di livello 2
-INTEGER,INTENT(IN),OPTIONAL :: l2 !< valore per il secondo livello
+INTEGER,INTENT(IN),OPTIONAL :: level1 !< type for level 1
+INTEGER,INTENT(IN),OPTIONAL :: l1 !< value for level 1
+INTEGER,INTENT(IN),OPTIONAL :: level2 !< type for level 2
+INTEGER,INTENT(IN),OPTIONAL :: l2 !< value for level 2
 
-TYPE(vol7d_level) :: this !< oggetto da inizializzare
+TYPE(vol7d_level) :: this !< object to initialize
 
 CALL init(this, level1, l1, level2, l2)
 
@@ -205,10 +205,10 @@ END FUNCTION vol7d_level_new
 !! inizializzato a valore mancante.
 SUBROUTINE vol7d_level_init(this, level1, l1, level2, l2)
 TYPE(vol7d_level),INTENT(INOUT) :: this !< oggetto da inizializzare
-INTEGER,INTENT(IN),OPTIONAL :: level1 !< tipo di livello 1
-INTEGER,INTENT(IN),OPTIONAL :: l1 !< valore per il primo livello
-INTEGER,INTENT(IN),OPTIONAL :: level2 !< tipo di livello 2
-INTEGER,INTENT(IN),OPTIONAL :: l2 !< valore per il secondo livello
+INTEGER,INTENT(IN),OPTIONAL :: level1 !< type for level 1
+INTEGER,INTENT(IN),OPTIONAL :: l1 !< value for level 1
+INTEGER,INTENT(IN),OPTIONAL :: level2 !< type for level 2
+INTEGER,INTENT(IN),OPTIONAL :: l2 !< value for level 2
 
 this%level1 = imiss
 this%l1 = imiss

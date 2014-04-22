@@ -18,11 +18,9 @@
 
 #include "config.h"
 
-!> \brief  class for import and export data from e to DB-All.e 
-!!
-!!This module define objects and methods to manage
-!! import and export of data from database for sparse data
-!!DB-All.e
+!> \brief  class for import and export data from e to DB-All.e. 
+!! This module define objects and methods to manage
+!! import and export of data from database for sparse data DB-All.e
 !!
 !! The main usefull structure is this:
 !!\verbatim
@@ -35,13 +33,13 @@
 !!                                  %attrv%dcv(*)%dat
 !!
 !!\endverbatim
-!!You can use a vector of this structure to archive a full dataset in memory.
+!! You can use a vector of this structure to archive a full dataset in memory.
 !!
-!!The program example is the better starting point:
+!! The program example is the better starting point:
 !!\include example_dballe.F03
 !!
 !!\ingroup vol7d
-
+!!
 MODULE dballe_class
 
 use optional_values
@@ -72,13 +70,13 @@ type,public :: dbaconnection
 # ifdef F2003_FULL_FEATURES
     final :: dbaconnection_delete
 # else
-    procedure :: delete => dbaconnection_delete !<
+    procedure :: delete => dbaconnection_delete !< todo
 # endif
 end type dbaconnection
 
-!> add constructor to shape generic interface
+!> User-defined constructors => dballe_class::dbaconnection_init
 interface dbaconnection
-  procedure  dbaconnection_init
+  procedure  dbaconnection_init !< add constructor to shape generic interface
 end interface
 
 !> manage session handle
@@ -98,59 +96,59 @@ type,public ::  dbasession
 # ifdef F2003_FULL_FEATURES
     final :: dbasession_delete
 # else
-    procedure :: delete => dbasession_delete
+    procedure :: delete => dbasession_delete !< todo
 # endif
-    procedure :: unsetall => dbasession_unsetall !<
-    procedure :: remove_all => dbasession_remove_all !<
-    procedure :: set => dbasession_set !<
-    procedure :: setcontextana => dbasession_setcontextana !<
-    procedure :: dimenticami => dbasession_dimenticami !<
-    procedure :: ingest => dbasession_ingest !<
-    procedure :: prendilo => dbasession_prendilo !<
-    procedure :: var_related => dbasession_var_related !<
-    procedure :: critica => dbasession_critica !<
-    procedure :: scusa => dbasession_scusa !<
-    procedure :: messages_open_input => dbasession_messages_open_input !<
-    procedure :: messages_open_output => dbasession_messages_open_output !<
-    procedure :: messages_read_next => dbasession_messages_read_next !<
-    procedure :: messages_write_next => dbasession_messages_write_next !<
-    procedure :: close_message => dbasession_close_message !<
-    procedure :: unsetb => dbasession_unsetb !<
-    procedure :: filerewind => dbasession_filerewind !<
-    procedure :: extrude_ana => dbasession_extrude_ana !<
-    procedure :: extrude_anav => dbasession_extrude_anav !<
-    procedure :: extrude_anal => dbasession_extrude_anal !<
-    procedure :: extrude_metaanddata => dbasession_extrude_metaanddata !<
-    procedure :: extrude_metaanddatal => dbasession_extrude_metaanddatal !<
-    procedure :: extrude_metaanddatav => dbasession_extrude_metaanddatav !<
-    procedure :: extrude_metaanddatai => dbasession_extrude_metaanddatai !<
-    procedure :: extrude_metaanddataiv => dbasession_extrude_metaanddataiv !<
-    procedure :: extrude_metaanddatail => dbasession_extrude_metaanddatail !<
-    procedure :: extrude_metaanddatab => dbasession_extrude_metaanddatab !<
-    procedure :: extrude_metaanddatabv => dbasession_extrude_metaanddatabv !<
-    procedure :: extrude_metaanddatabl => dbasession_extrude_metaanddatabl !<
-    procedure :: extrude_metaanddatad => dbasession_extrude_metaanddatad !<
-    procedure :: extrude_metaanddatadv => dbasession_extrude_metaanddatadv !<
-    procedure :: extrude_metaanddatadl => dbasession_extrude_metaanddatadl !<
-    procedure :: extrude_metaanddatar => dbasession_extrude_metaanddatar !<
-    procedure :: extrude_metaanddatarv => dbasession_extrude_metaanddatarv !<
-    procedure :: extrude_metaanddatarl => dbasession_extrude_metaanddatarl !<
-    procedure :: extrude_metaanddatac => dbasession_extrude_metaanddatac !<
-    procedure :: extrude_metaanddatacv => dbasession_extrude_metaanddatacv !<
-    procedure :: extrude_metaanddatacl => dbasession_extrude_metaanddatacl !<
-    procedure :: dissolve_metadata => dbasession_dissolve_metadata !<
-    procedure :: dissolveattr => dbasession_dissolveattr_metadata !<
-    generic   :: dissolve => dissolve_metadata ,dimenticami !<
-    generic   :: extrudea => extrude_ana, extrude_anav,extrude_anal !<
+    procedure :: unsetall => dbasession_unsetall !< dballe unsetall
+    procedure :: remove_all => dbasession_remove_all !< dballe remove_all
+    procedure :: set => dbasession_set !< set dballe parameters
+    procedure :: setcontextana => dbasession_setcontextana !< set dballe station data context
+    procedure :: dimenticami => dbasession_dimenticami !< dballe dimenticami
+    procedure :: ingest => dbasession_ingest !< put data on DSN
+    procedure :: prendilo => dbasession_prendilo !< dballe prendilo
+    procedure :: var_related => dbasession_var_related !< dballe var_related
+    procedure :: critica => dbasession_critica !< dballe critica
+    procedure :: scusa => dbasession_scusa !< dballe scusa
+    procedure :: messages_open_input => dbasession_messages_open_input !< dballe messages_open_input
+    procedure :: messages_open_output => dbasession_messages_open_output !< dballe messages_open_output
+    procedure :: messages_read_next => dbasession_messages_read_next !< dballe messages_read_next
+    procedure :: messages_write_next => dbasession_messages_write_next !< dballe messages_write_next
+    procedure :: close_message => dbasession_close_message !< dballe close_message
+    procedure :: unsetb => dbasession_unsetb !< dballe unsetb
+    procedure :: filerewind => dbasession_filerewind !< rewind file associates with this session
+    procedure :: extrude_ana => dbasession_extrude_ana !< get station metadata from DSN
+    procedure :: extrude_anav => dbasession_extrude_anav !< get station metadata from DSN
+    procedure :: extrude_anal => dbasession_extrude_anal !< get station metadata from DSN
+    procedure :: extrude_metaanddata => dbasession_extrude_metaanddata !< get data from DSN
+    procedure :: extrude_metaanddatal => dbasession_extrude_metaanddatal !< get data from DSN
+    procedure :: extrude_metaanddatav => dbasession_extrude_metaanddatav !< get data from DSN
+    procedure :: extrude_metaanddatai => dbasession_extrude_metaanddatai !< get data from DSN
+    procedure :: extrude_metaanddataiv => dbasession_extrude_metaanddataiv !< get data from DSN
+    procedure :: extrude_metaanddatail => dbasession_extrude_metaanddatail !< get data from DSN
+    procedure :: extrude_metaanddatab => dbasession_extrude_metaanddatab !< get data from DSN
+    procedure :: extrude_metaanddatabv => dbasession_extrude_metaanddatabv !< get data from DSN
+    procedure :: extrude_metaanddatabl => dbasession_extrude_metaanddatabl !< get data from DSN
+    procedure :: extrude_metaanddatad => dbasession_extrude_metaanddatad !< get data from DSN
+    procedure :: extrude_metaanddatadv => dbasession_extrude_metaanddatadv !< get data from DSN
+    procedure :: extrude_metaanddatadl => dbasession_extrude_metaanddatadl !< get data from DSN
+    procedure :: extrude_metaanddatar => dbasession_extrude_metaanddatar !< get data from DSN
+    procedure :: extrude_metaanddatarv => dbasession_extrude_metaanddatarv !< get data from DSN
+    procedure :: extrude_metaanddatarl => dbasession_extrude_metaanddatarl !< get data from DSN
+    procedure :: extrude_metaanddatac => dbasession_extrude_metaanddatac !< get data from DSN
+    procedure :: extrude_metaanddatacv => dbasession_extrude_metaanddatacv !< get data from DSN
+    procedure :: extrude_metaanddatacl => dbasession_extrude_metaanddatacl !< get data from DSN
+    procedure :: dissolve_metadata => dbasession_dissolve_metadata !< remove data from DSN
+    procedure :: dissolveattr => dbasession_dissolveattr_metadata !< remove attributes from DSN
+    generic   :: dissolve => dissolve_metadata ,dimenticami !< remove from DSN
+    generic   :: extrudea => extrude_ana, extrude_anav,extrude_anal !< get station metadata from DSN
     generic   :: extrude  => extrude_metaanddata,extrude_metaanddatav,extrude_metaanddatal,&
      !extrude_metaanddatai,extrude_metaanddatab,extrude_metaanddatad,extrude_metaanddatar,extrude_metaanddatac,&      !ambiguos
      extrude_metaanddataiv,extrude_metaanddatabv,extrude_metaanddatadv,extrude_metaanddatarv,extrude_metaanddatacv,&
-     extrude_metaanddatail,extrude_metaanddatarl,extrude_metaanddatadl,extrude_metaanddatabl,extrude_metaanddatacl !<
+     extrude_metaanddatail,extrude_metaanddatarl,extrude_metaanddatadl,extrude_metaanddatabl,extrude_metaanddatacl !< get data from DSN
 end type dbasession
 
-!> add constructor to shape generic interface
+!> User-defined constructors => dballe_class::dbasession_init
 interface dbasession
-  procedure  dbasession_init
+  procedure  dbasession_init     !< add constructor to shape generic interface
 end interface
 
 !> level metadata
@@ -160,17 +158,18 @@ type,public,extends(vol7d_level) :: dbalevel
 # ifdef F2003_FULL_FEATURES
 !    final :: dbalevel_delete
 # else
-!    procedure :: delete => dbalevel_delete
+!    procedure :: delete => dbalevel_delete !< todo
 # endif
-  procedure :: display => dbalevel_display
-  procedure :: dbaset => dbalevel_set
-  procedure :: dbaenq => dbalevel_enq
-  procedure,nopass :: dbacontextana => dbalevel_contextana
+  procedure :: display => dbalevel_display !< print a summary of object contents
+  procedure :: dbaset => dbalevel_set  !< set dballe parameters
+  procedure :: dbaenq => dbalevel_enq  !< query dballe parameters
+  procedure,nopass :: dbacontextana => dbalevel_contextana !< set dballe station data context for level
 !!$procedure :: spiega => dbalevel_spiega
 end type dbalevel
 
+!> User-defined constructors => dballe_class::dbalevel_init
 interface dbalevel
-  procedure   dbalevel_init     ! add constructor to shape generic interface
+  procedure   dbalevel_init     !< add constructor to shape generic interface
 end interface
 
 !> timerange metadata
@@ -181,15 +180,16 @@ type,public,extends(vol7d_timerange) :: dbatimerange
 # else
 !    procedure :: delete => dbatimerange_delete
 # endif
-  procedure :: display => dbatimerange_display
-  procedure :: dbaset => dbatimerange_set
-  procedure :: dbaenq => dbatimerange_enq
-  procedure,nopass :: dbacontextana => dbatimerange_contextana
+  procedure :: display => dbatimerange_display !< print a summary of object contents
+  procedure :: dbaset => dbatimerange_set  !< set dballe parameters
+  procedure :: dbaenq => dbatimerange_enq  !< query dballe parameters
+  procedure,nopass :: dbacontextana => dbatimerange_contextana !< set dballe station data context for timerange
 !!$procedure :: spiega => dbatimerange_spiega
 end type dbatimerange
 
+!> User-defined constructors => dballe_class::dbatimerange_init
 interface dbatimerange
-  procedure   dbatimerange_init     ! add constructor to shape generic interface
+  procedure   dbatimerange_init     !< add constructor to shape generic interface
 end interface
 
 !> fortran 2003 interface to geo_coord
@@ -206,12 +206,13 @@ type,public,extends(geo_coord) :: dbacoord
 # else
 !    procedure :: delete => dbacoord_delete
 # endif
-  procedure :: display => dbacoord_display
+  procedure :: display => dbacoord_display !< print a summary of object contents
 
 end type dbacoord
 
+!> User-defined constructors => dballe_class::dbacoord_init
 interface dbacoord
-  procedure   dbacoord_init     ! add constructor to shape generic interface
+  procedure   dbacoord_init     !< add constructor to shape generic interface
 end interface
 
 !> ana metadata
@@ -223,21 +224,22 @@ type,public,extends(vol7d_ana) :: dbaana
 # else
 !    procedure :: delete => dbaana_delete
 # endif
-  procedure :: display => dbaana_display
-  procedure :: dbaset => dbaana_set
-  procedure :: dbaenq => dbaana_enq
-  procedure :: dbaingest => dbaana_ingest
+  procedure :: display => dbaana_display !< print a summary of object contents
+  procedure :: dbaset => dbaana_set  !< set dballe parameters
+  procedure :: dbaenq => dbaana_enq  !< query dballe parameters
+  procedure :: dbaingest => dbaana_ingest !< put data on DSN
 end type dbaana
 
+!> User-defined constructors => dballe_class::dbaana_init
 interface dbaana
-  procedure   dbaana_init     ! add constructor to shape generic interface
+  procedure   dbaana_init     !< add constructor to shape generic interface
 end interface
 
 !> double linked list of ana
 type, public, extends(list) :: dbaanaList
   contains
-  procedure :: current => currentdbaana ! get integer pointed by iterator
-  procedure :: display => displaydbaana ! print the integer list
+  procedure :: current => currentdbaana !< get dbaana pointed by iterator
+  procedure :: display => displaydbaana !< print a summary of object contents
 end type dbaanaList
 
 !> network metadata
@@ -255,14 +257,15 @@ type,public,extends(vol7d_network) :: dbanetwork
 # else
 !    procedure :: delete => dbanetwork_delete
 # endif
-  procedure :: display => dbanetwork_display
-  procedure :: dbaset => dbanetwork_set
-  procedure :: dbaenq => dbanetwork_enq
+  procedure :: display => dbanetwork_display  !< print a summary of object contents
+  procedure :: dbaset => dbanetwork_set  !< set dballe parameters
+  procedure :: dbaenq => dbanetwork_enq  !< query dballe parameters
 
 end type dbanetwork
 
+!> User-defined constructors => dballe_class::dbanetwork_init
 interface dbanetwork
-  procedure   dbanetwork_init     ! add constructor to shape generic interface
+  procedure   dbanetwork_init     !< add constructor to shape generic interface
 end interface
 
 
@@ -275,14 +278,15 @@ type,public,extends(datetime) :: dbadatetime
 # else
 !    procedure :: delete => dbanetwork_delete
 # endif
-  procedure :: display => dbadatetime_display
-  procedure :: dbaset => dbadatetime_set
-  procedure :: dbaenq => dbadatetime_enq
-  procedure,nopass :: dbacontextana => dbadatetime_contextana
+  procedure :: display => dbadatetime_display  !< print a summary of object contents
+  procedure :: dbaset => dbadatetime_set  !< set dballe parameters
+  procedure :: dbaenq => dbadatetime_enq  !< query dballe parameters
+  procedure,nopass :: dbacontextana => dbadatetime_contextana  !< set dballe station data context for date and time
 end type dbadatetime
 
+!> User-defined constructors => dballe_class::dbadatetime_init
 interface dbadatetime
-  procedure   dbadatetime_init     ! add constructor to shape generic interface
+  procedure   dbadatetime_init     !< add constructor to shape generic interface
 end interface
 
 
@@ -290,14 +294,14 @@ end interface
 type,public,abstract :: dbadata
   character(len=9) :: btable
 contains
-  procedure(dbadata_set),deferred :: dbaset
-  procedure :: dbadata_geti
-  procedure :: dbadata_getr
-  procedure :: dbadata_getd
-  procedure :: dbadata_getb
-  procedure :: dbadata_getc
-  generic   :: get => dbadata_geti,dbadata_getr,dbadata_getd,dbadata_getb,dbadata_getc
-  procedure(dbadata_display),deferred :: display
+  procedure(dbadata_set),deferred :: dbaset !< set dballe parameters
+  procedure :: dbadata_geti !< return integer value
+  procedure :: dbadata_getr !< return real value
+  procedure :: dbadata_getd !< return double precision value
+  procedure :: dbadata_getb !< return byte value
+  procedure :: dbadata_getc !< return character value
+  generic   :: get => dbadata_geti,dbadata_getr,dbadata_getd,dbadata_getb,dbadata_getc !< return value
+  procedure(dbadata_display),deferred :: display  !< print a summary of object contents
 end type dbadata
 
 !> set parameters in dballe API
@@ -308,7 +312,7 @@ class(dbadata), intent(in) :: data
 type(dbasession), intent(in) :: session
 end subroutine dbadata_set
 
-!> print a summary of object content
+!> print a summary of object contents
 subroutine dbadata_display(data)
 import
 class(dbadata), intent(in) :: data
@@ -320,26 +324,28 @@ end interface
 type,public, extends(dbadata) :: dbadatai
   integer :: value
 contains
-  procedure :: dbadata_geti => dbadatai_geti
-  procedure :: dbaset => dbadatai_set
-  procedure :: display => dbadatai_display
+  procedure :: dbadata_geti => dbadatai_geti !< return integer value
+  procedure :: dbaset => dbadatai_set !< set dballe parameters
+  procedure :: display => dbadatai_display  !< print a summary of object contents
 end type dbadatai
 
+!> User-defined constructors => dballe_class::dbadatai_init
 interface dbadatai
-  procedure ::  dbadatai_init     ! add constructor to shape generic interface
+  procedure ::  dbadatai_init     !< add constructor to shape generic interface
 end interface dbadatai
 
 !> real version for dbadata
 type,public, extends(dbadata) :: dbadatar
   real :: value
 contains
-  procedure :: dbadata_getr => dbadatar_getr
-  procedure :: dbaset => dbadatar_set
-  procedure :: display => dbadatar_display
+  procedure :: dbadata_getr => dbadatar_getr !< return real value
+  procedure :: dbaset => dbadatar_set !< set dballe parameters
+  procedure :: display => dbadatar_display !< print a summary of object contents
 end type dbadatar
 
+!> User-defined constructors => dballe_class::dbadatar_init
 interface dbadatar
-  procedure ::  dbadatar_init     ! add constructor to shape generic interface
+  procedure ::  dbadatar_init     !< add constructor to shape generic interface
 end interface dbadatar
 
 
@@ -347,13 +353,14 @@ end interface dbadatar
 type,public, extends(dbadata) :: dbadatad
   doubleprecision :: value
 contains
-  procedure :: dbadata_getd => dbadatad_getd
-  procedure :: dbaset => dbadatad_set
-  procedure :: display => dbadatad_display
+  procedure :: dbadata_getd => dbadatad_getd !< return double precision value
+  procedure :: dbaset => dbadatad_set !< set dballe parameters
+  procedure :: display => dbadatad_display !< print a summary of object contents
 end type dbadatad
 
+!> User-defined constructors => dballe_class::dbadatad_init
 interface dbadatad
-  procedure ::  dbadatad_init     ! add constructor to shape generic interface
+  procedure ::  dbadatad_init     !< add constructor to shape generic interface
 end interface dbadatad
 
 
@@ -361,13 +368,14 @@ end interface dbadatad
 type,public, extends(dbadata) :: dbadatab
   integer(kind=int_b) :: value
 contains
-  procedure :: dbadata_getb => dbadatab_getb
-  procedure :: dbaset => dbadatab_set
-  procedure :: display => dbadatab_display
+  procedure :: dbadata_getb => dbadatab_getb !< return byte value
+  procedure :: dbaset => dbadatab_set !< set dballe parameters
+  procedure :: display => dbadatab_display !< print a summary of object contents
 end type dbadatab
 
+!> User-defined constructors => dballe_class::dbadatab_init
 interface dbadatab
-  procedure ::  dbadatab_init     ! add constructor to shape generic interface
+  procedure ::  dbadatab_init     !< add constructor to shape generic interface
 end interface dbadatab
 
 
@@ -376,13 +384,14 @@ type,public, extends(dbadata) :: dbadatac
 !  character(:) :: value
   character(255) :: value
 contains
-  procedure :: dbadata_getc => dbadatac_getc
-  procedure :: dbaset => dbadatac_set
-  procedure :: display => dbadatac_display
+  procedure :: dbadata_getc => dbadatac_getc !< return character value
+  procedure :: dbaset => dbadatac_set !< set dballe parameters
+  procedure :: display => dbadatac_display !< print a summary of object contents
 end type dbadatac
 
+!> User-defined constructors => dballe_class::dbadatac_init
 interface dbadatac
-  procedure ::  dbadatac_init     ! add constructor to shape generic interface
+  procedure ::  dbadatac_init     !< add constructor to shape generic interface
 end interface dbadatac
 
 !> summ of all metadata pieces
@@ -398,24 +407,25 @@ type,public :: dbametadata
 # else
 !    procedure :: delete => dbametadata_delete
 # endif
-  procedure :: dbaset => dbametadata_set
-  procedure :: dbaenq => dbametadata_enq
-  procedure :: dbacontextana => dbametadata_contextana
-  procedure :: display => dbametadata_display
-  procedure :: equal => dbametadata_equal
-  generic   :: operator (==) => equal
+  procedure :: dbaset => dbametadata_set  !< set dballe parameters
+  procedure :: dbaenq => dbametadata_enq  !< query dballe parameters
+  procedure :: dbacontextana => dbametadata_contextana  !< set dballe station data context for all metadata
+  procedure :: display => dbametadata_display !< print a summary of object contents
+  procedure :: equal => dbametadata_equal !> compare two dbametadata
+  generic   :: operator (==) => equal !> == operator
 end type dbametadata
 
+!> User-defined constructors => dballe_class::dbametadata_init
 interface dbametadata
-  procedure   dbametadata_init     ! add constructor to shape generic interface
+  procedure   dbametadata_init     !< add constructor to shape generic interface
 end interface
 
 !> container for dbadata (used for promiscuous vector of data)
 type, public :: dbadc
   class(dbadata),allocatable :: dat
   contains
-  procedure :: display => dbadc_display
-  procedure :: dbaset => dbadc_set
+  procedure :: display => dbadc_display !< print a summary of object contents
+  procedure :: dbaset => dbadc_set !< set dballe parameters
 !  procedure :: dbaingest => dbadat_ingest
 end type dbadc
 
@@ -424,8 +434,8 @@ end type dbadc
 type, public :: dbadcv
   type(dbadc),allocatable :: dcv(:)
   contains
-  procedure :: display => dbadcv_display
-  procedure :: dbaset => dbadcv_set
+  procedure :: display => dbadcv_display !< print a summary of object contents
+  procedure :: dbaset => dbadcv_set !< set dballe parameters
 !  procedure :: dbaingest => dbadatav_ingest
 end type dbadcv
 
@@ -433,16 +443,16 @@ end type dbadcv
 type, public ,extends(dbadc):: dbadataattr
   type(dbadcv) :: attrv
   contains
-  procedure :: display => dbadataattr_display
-  procedure :: dbaingest => dbadataattr_ingest
+  procedure :: display => dbadataattr_display !< print a summary of object contents
+  procedure :: dbaingest => dbadataattr_ingest !< put data on DSN
 end type dbadataattr
 
 !> vector of dbadataattr (more data plus attributes)
 type, public :: dbadataattrv
   class(dbadataattr),allocatable :: dataattr(:)
   contains
-  procedure :: display => dbadataattrv_display
-  procedure :: dbaingest => dbadataattrv_ingest
+  procedure :: display => dbadataattrv_display !< print a summary of object contents
+  procedure :: dbaingest => dbadataattrv_ingest!< put data on DSN
 end type dbadataattrv
 
 !> one metadata with more data plus attributes
@@ -450,8 +460,8 @@ type, public :: dbametaanddata
   type(dbametadata) :: metadata
   type(dbadataattrv) ::dataattrv
   contains
-  procedure :: display => dbametaanddata_display
-  procedure :: dbaingest => dbametaanddata_ingest
+  procedure :: display => dbametaanddata_display !< print a summary of object contents
+  procedure :: dbaingest => dbametaanddata_ingest!< put data on DSN
 end type dbametaanddata
 
 !> one metadata plus vector of container of dbadata
@@ -459,30 +469,30 @@ type, public :: dbametaanddatav
   type(dbametadata) :: metadata
   type(dbadcv) ::datav
   contains
-  procedure :: display => dbametaanddatav_display
-  procedure :: dbaingest => dbametaanddatav_ingest
+  procedure :: display => dbametaanddatav_display !< print a summary of object contents
+  procedure :: dbaingest => dbametaanddatav_ingest!< put data on DSN
 end type dbametaanddatav
 
 !> double linked list of dbametaanddata
 type, public, extends(list) :: dbametaanddataList
   contains
-  procedure :: current => currentdbametaanddata ! get integer pointed by iterator
-  procedure :: display => displaydbametaanddata ! print the integer list
+  procedure :: current => currentdbametaanddata ! get dbametaanddata pointed by iterator
+  procedure :: display => displaydbametaanddata  !< print a summary of object contents
 end type dbametaanddataList
 
 !> metadata and integer data
 type, public,extends(dbadatai) :: dbametaanddatai
   type(dbametadata) :: metadata
   contains
-  procedure :: display => dbametaanddatai_display
-  procedure :: dbaingest => dbametaanddatai_ingest
+  procedure :: display => dbametaanddatai_display !< print a summary of object contents
+  procedure :: dbaingest => dbametaanddatai_ingest!< put data on DSN
 end type dbametaanddatai
 
 !> metadata and integer data double linked list
 type, public, extends(list) :: dbametaanddataiList
   contains
-  procedure :: current => currentdbametaanddatai ! get integer pointed by iterator
-  procedure :: display => displaydbametaanddatai ! print the integer list
+  procedure :: current => currentdbametaanddatai ! get dbametaanddatai pointed by iterator
+  procedure :: display => displaydbametaanddatai  !< print a summary of object contents
   procedure :: toarray => toarray_dbametaanddatai ! return ana allocated array
 end type dbametaanddataiList
 
@@ -490,15 +500,15 @@ end type dbametaanddataiList
 type, public,extends(dbadatab) :: dbametaanddatab
   type(dbametadata) :: metadata
   contains
-  procedure :: display => dbametaanddatab_display
-  procedure :: dbaingest => dbametaanddatab_ingest
+  procedure :: display => dbametaanddatab_display !< print a summary of object contents
+  procedure :: dbaingest => dbametaanddatab_ingest!< put data on DSN
 end type dbametaanddatab
 
 !> metadata and byte data double linked list
 type, public, extends(list) :: dbametaanddatabList
   contains
-  procedure :: current => currentdbametaanddatab ! get integer pointed by iterator
-  procedure :: display => displaydbametaanddatab ! print the integer list
+  procedure :: current => currentdbametaanddatab ! get dbametaanddatab pointed by iterator
+  procedure :: display => displaydbametaanddatab  !< print a summary of object contents
   procedure :: toarray => toarray_dbametaanddatab ! return ana allocated array
 end type dbametaanddatabList
 
@@ -506,15 +516,15 @@ end type dbametaanddatabList
 type, public,extends(dbadatad) :: dbametaanddatad
   type(dbametadata) :: metadata
   contains
-  procedure :: display => dbametaanddatad_display
-  procedure :: dbaingest => dbametaanddatad_ingest
+  procedure :: display => dbametaanddatad_display !< print a summary of object contents
+  procedure :: dbaingest => dbametaanddatad_ingest!< put data on DSN
 end type dbametaanddatad
 
 !> metadata and diubleprecision data double linked list
 type, public, extends(list) :: dbametaanddatadList
   contains
-  procedure :: current => currentdbametaanddatad ! get integer pointed by iterator
-  procedure :: display => displaydbametaanddatad ! print the integer list
+  procedure :: current => currentdbametaanddatad ! get dbametaanddatad pointed by iterator
+  procedure :: display => displaydbametaanddatad  !< print a summary of object contents
   procedure :: toarray => toarray_dbametaanddatad ! return ana allocated array
 end type dbametaanddatadList
 
@@ -522,15 +532,15 @@ end type dbametaanddatadList
 type, public,extends(dbadatar) :: dbametaanddatar
   type(dbametadata) :: metadata
   contains
-  procedure :: display => dbametaanddatar_display
-  procedure :: dbaingest => dbametaanddatar_ingest
+  procedure :: display => dbametaanddatar_display !< print a summary of object contents
+  procedure :: dbaingest => dbametaanddatar_ingest!< put data on DSN
 end type dbametaanddatar
 
 !> metadata and real data double linked list
 type, public, extends(list) :: dbametaanddatarList
   contains
-  procedure :: current => currentdbametaanddatar ! get integer pointed by iterator
-  procedure :: display => displaydbametaanddatar ! print the integer list
+  procedure :: current => currentdbametaanddatar ! get dbametaanddatar pointed by iterator
+  procedure :: display => displaydbametaanddatar  !< print a summary of object contents
   procedure :: toarray => toarray_dbametaanddatar ! return ana allocated array
 end type dbametaanddatarList
 
@@ -538,15 +548,15 @@ end type dbametaanddatarList
 type, public,extends(dbadatac) :: dbametaanddatac
   type(dbametadata) :: metadata
   contains
-  procedure :: display => dbametaanddatac_display
-  procedure :: dbaingest => dbametaanddatac_ingest
+  procedure :: display => dbametaanddatac_display !< print a summary of object contents
+  procedure :: dbaingest => dbametaanddatac_ingest!< put data on DSN
 end type dbametaanddatac
 
 !> metadata and character data double linked list
 type, public, extends(list) :: dbametaanddatacList
   contains
-  procedure :: current => currentdbametaanddatac ! get integer pointed by iterator
-  procedure :: display => displaydbametaanddatac ! print the integer list
+  procedure :: current => currentdbametaanddatac ! get dbametaanddatac pointed by iterator
+  procedure :: display => displaydbametaanddatac  !< print a summary of object contents
   procedure :: toarray => toarray_dbametaanddatac ! return ana allocated array
 end type dbametaanddatacList
 
@@ -567,17 +577,18 @@ type, public ::  dbafilter
   logical            :: contextana
   type(dbadcv)     :: vars,starvars
   contains
-  procedure          :: display => dbafilter_display
-  procedure          :: dbaset => dbafilter_set
+  procedure          :: display => dbafilter_display  !< print a summary of object contents
+  procedure          :: dbaset => dbafilter_set !< set dballe parameters
 end type dbafilter
 
+!> User-defined constructors => dballe_class::dbafilter_init
 interface dbafilter
-  procedure   dbafilter_init     ! add constructor to shape generic interface
+  procedure   dbafilter_init     !< add constructor to shape generic interface
 end interface
 
 contains
 
-!> print a summary of object content
+!> print a summary of object contents
 subroutine displaydbametaanddata(this)
 class(dbametaanddataList) :: this
 type(dbametaanddata) :: element
@@ -638,12 +649,14 @@ class(dbalevel), intent(in) :: level
 call display (level%vol7d_level)
 end subroutine dbalevel_display
 
+!> Constructor
+!! Without parameter it is initialized to missing
 type(dbalevel) function dbalevel_init(level1, l1, level2, l2)
 
-INTEGER,INTENT(IN),OPTIONAL :: level1 !< tipo di livello 1
-INTEGER,INTENT(IN),OPTIONAL :: l1 !< valore per il primo livello
-INTEGER,INTENT(IN),OPTIONAL :: level2 !< tipo di livello 2
-INTEGER,INTENT(IN),OPTIONAL :: l2 !< valore per il secondo livello
+INTEGER,INTENT(IN),OPTIONAL :: level1 !< type for level 1
+INTEGER,INTENT(IN),OPTIONAL :: l1 !< value for level 1
+INTEGER,INTENT(IN),OPTIONAL :: level2 !< type for level 2
+INTEGER,INTENT(IN),OPTIONAL :: l2 !< value for level 2
 
 call init (dbalevel_init%vol7d_level,level1, l1, level2, l2)
 end function dbalevel_init
@@ -671,6 +684,7 @@ ier = idba_enqlevel(session%sehandle,&
 
 end subroutine dbalevel_enq
 
+!> set dballe station data context for level
 type(dbalevel) function dbalevel_contextana()
 
 dbalevel_contextana=dbalevel()
@@ -685,6 +699,8 @@ call display (ana%vol7d_ana)
 end subroutine dbaana_display
 
 
+!> Constructor
+!! Without parameter it is initialized to missing
 type(dbacoord) function dbacoord_init(lon, lat, ilon, ilat)
 REAL(kind=fp_geo),INTENT(in),OPTIONAL :: lon !< longitudine
 REAL(kind=fp_geo),INTENT(in),OPTIONAL :: lat !< latitudine
@@ -701,9 +717,11 @@ class(dbacoord), intent(in) :: coord
 call display (coord%geo_coord)
 end subroutine dbacoord_display
 
+!> Constructor
+!! Without parameter it is initialized to missing
 type(dbaana) function dbaana_init(coord,ident,lon, lat, ilon, ilat)
 CHARACTER(len=*),INTENT(in),OPTIONAL :: ident !< identificativo del volo
-TYPE(dbacoord),INTENT(IN),optional :: coord
+TYPE(dbacoord),INTENT(IN),optional :: coord !< coordinate
 REAL(kind=fp_geo),INTENT(in),OPTIONAL :: lon !< longitudine
 REAL(kind=fp_geo),INTENT(in),OPTIONAL :: lat !< latitudine
 INTEGER(kind=int_l),INTENT(in),OPTIONAL :: ilon !< integer longitude (nint(lon*1.d5)
@@ -752,6 +770,7 @@ ier = idba_enq(session%sehandle,"ident",ana%vol7d_ana%ident)
 end subroutine dbaana_enq
 
 
+!> put data on DSN
 subroutine dbaana_ingest(ana,session)
 class(dbaana), intent(in) :: ana
 type(dbasession), intent(in) :: session
@@ -996,6 +1015,7 @@ end if
 end subroutine dbasession_dissolveattr_metadata
 
 
+!> put data on DSN
 subroutine dbadataattr_ingest(data,session)
 class(dbadataattr), intent(in) :: data
 type(dbasession), intent(in) :: session
@@ -1025,6 +1045,7 @@ call dc%attrv%display()
 end subroutine dbadataattr_display
 
 
+!> put data on DSN
 subroutine dbadataattrv_ingest(dataattr,session)
 class(dbadataattrv), intent(in) :: dataattr
 type(dbasession), intent(in) :: session
@@ -1083,10 +1104,12 @@ value=data%value
 end subroutine dbadatac_getc
 
 
+!> Constructor
+!! Without parameter it is initialized to missing
 type(dbadatai) elemental function dbadatai_init(btable,value)
 
-character(len=*),INTENT(IN),OPTIONAL :: btable !< descrittore variabile
-INTEGER,INTENT(IN),OPTIONAL :: value  !< valore
+character(len=*),INTENT(IN),OPTIONAL :: btable !< parameter descriptor
+INTEGER,INTENT(IN),OPTIONAL :: value  !< value
 
 if (present(btable)) then
   dbadatai_init%btable=btable
@@ -1102,10 +1125,12 @@ end if
 
 end function dbadatai_init
 
+!> Constructor
+!! Without parameter it is initialized to missing
 type(dbadatar) elemental function dbadatar_init(btable,value)
 
-character(len=*),INTENT(IN),OPTIONAL :: btable !< descrittore variabile
-real,INTENT(IN),OPTIONAL :: value  !< valore
+character(len=*),INTENT(IN),OPTIONAL :: btable !< parameter descriptor
+real,INTENT(IN),OPTIONAL :: value  !< value
 
 if (present(btable)) then
   dbadatar_init%btable=btable
@@ -1121,10 +1146,12 @@ end if
 
 end function dbadatar_init
 
+!> Constructor
+!! Without parameter it is initialized to missing
 type(dbadatad) elemental function dbadatad_init(btable,value)
 
-character(len=*),INTENT(IN),OPTIONAL :: btable !< descrittore variabile
-double precision,INTENT(IN),OPTIONAL :: value  !< valore
+character(len=*),INTENT(IN),OPTIONAL :: btable !< parameter descriptor
+double precision,INTENT(IN),OPTIONAL :: value  !< value
 
 if (present(btable)) then
   dbadatad_init%btable=btable
@@ -1141,10 +1168,12 @@ end if
 end function dbadatad_init
 
 
+!> Constructor
+!! Without parameter it is initialized to missing
 type(dbadatab) elemental function dbadatab_init(btable,value)
 
-character(len=*),INTENT(IN),OPTIONAL :: btable !< descrittore variabile
-INTEGER(kind=int_b) ,INTENT(IN),OPTIONAL :: value  !< valore
+character(len=*),INTENT(IN),OPTIONAL :: btable !< parameter descriptor
+INTEGER(kind=int_b) ,INTENT(IN),OPTIONAL :: value  !< value
 
 if (present(btable)) then
   dbadatab_init%btable=btable
@@ -1160,10 +1189,12 @@ end if
 
 end function dbadatab_init
 
+!> Constructor
+!! Without parameter it is initialized to missing
 type(dbadatac) elemental function dbadatac_init(btable,value)
 
-character(len=*),INTENT(IN),OPTIONAL :: btable !< descrittore variabile
-character(len=*),INTENT(IN),OPTIONAL :: value  !< valore
+character(len=*),INTENT(IN),OPTIONAL :: btable !< parameter descriptor
+character(len=*),INTENT(IN),OPTIONAL :: value  !< value
 
 if (present(btable)) then
   dbadatac_init%btable=btable
@@ -1292,6 +1323,8 @@ ier = idba_enqtimerange(session%sehandle,&
 
 end subroutine dbatimerange_enq
 
+!> Constructor
+!! Without parameter it is initialized to missing
 type(dbatimerange) function dbatimerange_init(timerange, p1, p2)
 INTEGER,INTENT(IN),OPTIONAL :: timerange !< tipo di intervallo temporale
 INTEGER,INTENT(IN),OPTIONAL :: p1 !< valore per il primo istante temporale
@@ -1300,6 +1333,7 @@ INTEGER,INTENT(IN),OPTIONAL :: p2 !< valore per il secondo istante temporale
 call init (dbatimerange_init%vol7d_timerange,timerange, p1, p2)
 end function dbatimerange_init
 
+!> set dballe station data context for timerange
 type(dbatimerange) function dbatimerange_contextana()
 
 dbatimerange_contextana=dbatimerange()
@@ -1385,6 +1419,8 @@ CALL init(datetime%datetime, year=year, month=month, day=day, hour=hour, minute=
 
 end subroutine dbadatetime_enq
 
+!> Constructor
+!! Without parameter it is initialized to missing
 type(dbadatetime) function dbadatetime_init(dt)
 type(datetime),INTENT(in),OPTIONAL :: dt !< date and time
 
@@ -1396,6 +1432,7 @@ end if
 
 end function dbadatetime_init
 
+!> set dballe station data context for date and time
 type(dbadatetime) function dbadatetime_contextana()
 
 dbadatetime_contextana%datetime=datetime_new()
@@ -1403,6 +1440,8 @@ dbadatetime_contextana%datetime=datetime_new()
 end function dbadatetime_contextana
 
 
+!> Constructor
+!! Without parameter it is initialized to missing
 type(dbametadata) function dbametadata_init(level,timerange,ana,network,datetime)
 
 type(dbalevel), intent(in), optional :: level
@@ -1511,6 +1550,8 @@ end if
 end function dbametadata_equal
 
 
+!> Constructor
+!! Without parameter it is initialized to missing
 type(dbafilter) function dbafilter_init(ana,var,datetime,level,timerange,network,&
  datetimemin,datetimemax,coordmin,coordmax,limit,&
  ana_filter, data_filter, attr_filter, varlist, starvarlist, priomin, priomax, contextana,&
@@ -1769,6 +1810,7 @@ end if
 end subroutine dbafilter_set
 
 
+!> set dballe station data context for all metadata
 type(dbametadata) function dbametadata_contextana(metadata)
 class(dbametadata), intent(in) :: metadata
 
@@ -1797,6 +1839,7 @@ call metaanddata%dataattrv%display()
 
 end subroutine dbametaanddata_display
 
+!> put data on DSN
 subroutine dbametaanddata_ingest(metaanddata,session)
 class(dbametaanddata), intent(in) :: metaanddata
 type(dbasession), intent(in) :: session
@@ -1821,6 +1864,7 @@ call metaanddatav%datav%display()
 
 end subroutine dbametaanddatav_display
 
+!> put data on DSN
 subroutine dbametaanddatav_ingest(metaanddatav,session)
 class(dbametaanddatav), intent(in) :: metaanddatav
 type(dbasession), intent(in) :: session
@@ -2185,6 +2229,7 @@ call data%dbadatac%display()
 end subroutine dbametaanddatac_display
 
 
+!> put data on DSN
 subroutine dbametaanddatai_ingest(metaanddatai,session)
 class(dbametaanddatai), intent(in) :: metaanddatai
 type(dbasession), intent(in) :: session
@@ -2198,6 +2243,7 @@ call session%prendilo()
 
 end subroutine dbametaanddatai_ingest
 
+!> put data on DSN
 subroutine dbametaanddatab_ingest(metaanddatab,session)
 class(dbametaanddatab), intent(in) :: metaanddatab
 type(dbasession), intent(in) :: session
@@ -2211,6 +2257,7 @@ call session%prendilo()
 
 end subroutine dbametaanddatab_ingest
 
+!> put data on DSN
 subroutine dbametaanddatad_ingest(metaanddatad,session)
 class(dbametaanddatad), intent(in) :: metaanddatad
 type(dbasession), intent(in) :: session
@@ -2224,6 +2271,7 @@ call session%prendilo()
 
 end subroutine dbametaanddatad_ingest
 
+!> put data on DSN
 subroutine dbametaanddatar_ingest(metaanddatar,session)
 class(dbametaanddatar), intent(in) :: metaanddatar
 type(dbasession), intent(in) :: session
@@ -2237,6 +2285,7 @@ call session%prendilo()
 
 end subroutine dbametaanddatar_ingest
 
+!> put data on DSN
 subroutine dbametaanddatac_ingest(metaanddatac,session)
 class(dbametaanddatac), intent(in) :: metaanddatac
 type(dbasession), intent(in) :: session
@@ -2806,13 +2855,15 @@ else
 end if
 end subroutine dbasession_extrude_metaanddatacv
 
-
+!> Constructor
+!! Without parameter it is initialized to missing
 type(dbaconnection) function dbaconnection_init(dsn, user, password,categoryappend,idbhandle)
-character (len=*), intent(in), optional :: dsn
-character (len=*), intent(in), optional :: user
-character (len=*), intent(in), optional :: password
+character (len=*), intent(in), optional :: dsn !< DSN (dballe/ODBC definition)
+character (len=*), intent(in), optional :: user !< username to use
+character (len=*), intent(in), optional :: password !< password to use
 character(len=*),INTENT(in),OPTIONAL :: categoryappend !< appennde questo suffisso al namespace category di log4fortran
 integer,INTENT(in),OPTIONAL :: idbhandle !< dsn connection; if present it will be used
+
 character(len=50) :: quidsn,quiuser,quipassword
 integer :: ier
 character(len=512) :: a_name
@@ -2860,6 +2911,8 @@ end if
 
 end subroutine dbaconnection_delete
 
+!> Constructor
+!! Without parameter it is initialized to missing
 recursive type(dbasession) function dbasession_init(connection,anaflag, dataflag, attrflag,&
  filename,mode,format,template,write,wipe,repinfo,simplified,memdb,categoryappend)
 type(dbaconnection),intent(in),optional :: connection
@@ -2867,8 +2920,8 @@ character (len=*), intent(in), optional :: anaflag
 character (len=*), intent(in), optional :: dataflag
 character (len=*), intent(in), optional :: attrflag
 character (len=*), intent(in), optional :: filename
-character (len=*), intent(in), optional :: mode !> "r"/"w"/"a" the open mode ("r" for read, "w" for write or create, "a" for append) 
-character (len=*), intent(in), optional :: template !> template to use for write on file
+character (len=*), intent(in), optional :: mode !< "r"/"w"/"a" the open mode ("r" for read, "w" for write or create, "a" for append) 
+character (len=*), intent(in), optional :: template !< template to use for write on file
 logical,INTENT(in),OPTIONAL :: write !< abilita la scrittura sul DSN/file ( default=.false. )
 logical,INTENT(in),OPTIONAL :: wipe !<  svuota il DSN/file e/o lo prepara per una scrittura ( default=.false. )
 character(len=*), INTENT(in),OPTIONAL :: repinfo !< eventuale file repinfo.csv usato con wipe ( default="" )
@@ -3152,6 +3205,7 @@ end if
 end subroutine dbasession_set
 
 
+!> put data on DSN
 subroutine dbasession_ingest(session,ana,dataattr,dataattrv,metaanddata,&
  metaanddatai,metaanddatab,metaanddatad,metaanddatac,metaanddatar,&
  metaanddatav)
