@@ -163,7 +163,7 @@ type,public,extends(vol7d_level) :: dbalevel
   procedure :: display => dbalevel_display !< print a summary of object contents
   procedure :: dbaset => dbalevel_set  !< set dballe parameters
   procedure :: dbaenq => dbalevel_enq  !< query dballe parameters
-  procedure,nopass :: dbacontextana => dbalevel_contextana !< set dballe station data context for level
+  procedure,nopass :: dbacontextana => dbalevel_contextana !< set dballe station data context for level  (in object, not dballe session)
 !!$procedure :: spiega => dbalevel_spiega
 end type dbalevel
 
@@ -183,7 +183,7 @@ type,public,extends(vol7d_timerange) :: dbatimerange
   procedure :: display => dbatimerange_display !< print a summary of object contents
   procedure :: dbaset => dbatimerange_set  !< set dballe parameters
   procedure :: dbaenq => dbatimerange_enq  !< query dballe parameters
-  procedure,nopass :: dbacontextana => dbatimerange_contextana !< set dballe station data context for timerange
+  procedure,nopass :: dbacontextana => dbatimerange_contextana !< set dballe station data context for timerange (in object, not dballe session)
 !!$procedure :: spiega => dbatimerange_spiega
 end type dbatimerange
 
@@ -281,7 +281,7 @@ type,public,extends(datetime) :: dbadatetime
   procedure :: display => dbadatetime_display  !< print a summary of object contents
   procedure :: dbaset => dbadatetime_set  !< set dballe parameters
   procedure :: dbaenq => dbadatetime_enq  !< query dballe parameters
-  procedure,nopass :: dbacontextana => dbadatetime_contextana  !< set dballe station data context for date and time
+  procedure,nopass :: dbacontextana => dbadatetime_contextana  !< set dballe station data context for date and time (in object, not dballe session)
 end type dbadatetime
 
 !> User-defined constructors => dballe_class::dbadatetime_init
@@ -409,7 +409,7 @@ type,public :: dbametadata
 # endif
   procedure :: dbaset => dbametadata_set  !< set dballe parameters
   procedure :: dbaenq => dbametadata_enq  !< query dballe parameters
-  procedure :: dbacontextana => dbametadata_contextana  !< set dballe station data context for all metadata
+  procedure :: dbacontextana => dbametadata_contextana  !< set dballe station data context for all metadata (in object, not dballe session)
   procedure :: display => dbametadata_display !< print a summary of object contents
   procedure :: equal => dbametadata_equal !> compare two dbametadata
   generic   :: operator (==) => equal !> == operator
@@ -476,7 +476,7 @@ end type dbametaanddatav
 !> double linked list of dbametaanddata
 type, public, extends(list) :: dbametaanddataList
   contains
-  procedure :: current => currentdbametaanddata ! get dbametaanddata pointed by iterator
+  procedure :: current => currentdbametaanddata  !< get dbametaanddata pointed by iterator
   procedure :: display => displaydbametaanddata  !< print a summary of object contents
 end type dbametaanddataList
 
@@ -491,9 +491,9 @@ end type dbametaanddatai
 !> metadata and integer data double linked list
 type, public, extends(list) :: dbametaanddataiList
   contains
-  procedure :: current => currentdbametaanddatai ! get dbametaanddatai pointed by iterator
+  procedure :: current => currentdbametaanddatai  !< get dbametaanddatai pointed by iterator
   procedure :: display => displaydbametaanddatai  !< print a summary of object contents
-  procedure :: toarray => toarray_dbametaanddatai ! return ana allocated array
+  procedure :: toarray => toarray_dbametaanddatai !< return dbametaanddatai allocated array
 end type dbametaanddataiList
 
 !> metadata and byte data
@@ -507,9 +507,9 @@ end type dbametaanddatab
 !> metadata and byte data double linked list
 type, public, extends(list) :: dbametaanddatabList
   contains
-  procedure :: current => currentdbametaanddatab ! get dbametaanddatab pointed by iterator
+  procedure :: current => currentdbametaanddatab  !< get dbametaanddatab pointed by iterator
   procedure :: display => displaydbametaanddatab  !< print a summary of object contents
-  procedure :: toarray => toarray_dbametaanddatab ! return ana allocated array
+  procedure :: toarray => toarray_dbametaanddatab !< return dbametaanddatab allocated array
 end type dbametaanddatabList
 
 !> metadata and doubleprecision data
@@ -523,9 +523,9 @@ end type dbametaanddatad
 !> metadata and diubleprecision data double linked list
 type, public, extends(list) :: dbametaanddatadList
   contains
-  procedure :: current => currentdbametaanddatad ! get dbametaanddatad pointed by iterator
+  procedure :: current => currentdbametaanddatad  !< get dbametaanddatad pointed by iterator
   procedure :: display => displaydbametaanddatad  !< print a summary of object contents
-  procedure :: toarray => toarray_dbametaanddatad ! return ana allocated array
+  procedure :: toarray => toarray_dbametaanddatad !< return dbametaanddatad allocated array
 end type dbametaanddatadList
 
 !> metadata and real data
@@ -539,9 +539,9 @@ end type dbametaanddatar
 !> metadata and real data double linked list
 type, public, extends(list) :: dbametaanddatarList
   contains
-  procedure :: current => currentdbametaanddatar ! get dbametaanddatar pointed by iterator
+  procedure :: current => currentdbametaanddatar  !< get dbametaanddatar pointed by iterator
   procedure :: display => displaydbametaanddatar  !< print a summary of object contents
-  procedure :: toarray => toarray_dbametaanddatar ! return ana allocated array
+  procedure :: toarray => toarray_dbametaanddatar !< return dbametaanddatar allocated array
 end type dbametaanddatarList
 
 !> metadata and character data
@@ -555,9 +555,9 @@ end type dbametaanddatac
 !> metadata and character data double linked list
 type, public, extends(list) :: dbametaanddatacList
   contains
-  procedure :: current => currentdbametaanddatac ! get dbametaanddatac pointed by iterator
+  procedure :: current => currentdbametaanddatac  !< get dbametaanddatac pointed by iterator
   procedure :: display => displaydbametaanddatac  !< print a summary of object contents
-  procedure :: toarray => toarray_dbametaanddatac ! return ana allocated array
+  procedure :: toarray => toarray_dbametaanddatac !< return dbametaanddatac allocated array
 end type dbametaanddatacList
 
 !> filter to apply before extrude data
@@ -602,6 +602,7 @@ do while(this%element())
 end do
 end subroutine displaydbametaanddata
 
+!> Get dbametaanddata pointed by iterator
 type(dbametaanddata) function currentdbametaanddata(this)
 class(dbametaanddataList) :: this
 class(*), pointer :: v
@@ -613,33 +614,38 @@ type is (dbametaanddata)
 end select
 end function currentdbametaanddata
 
+!> return integer value
 subroutine dbadata_geti(data,value)
 class(dbadata), intent(in) :: data
-integer, intent(out) :: value
+integer, intent(out) :: value !< retuned value
 value=imiss
 end subroutine dbadata_geti
 
+!> return real value
 subroutine dbadata_getr(data,value)
 class(dbadata), intent(in) :: data
-real, intent(out) :: value
+real, intent(out) :: value !< retuned value
 value=rmiss
 end subroutine dbadata_getr
 
+!> return double precision value
 subroutine dbadata_getd(data,value)
 class(dbadata), intent(in) :: data
-doubleprecision, intent(out) :: value
+doubleprecision, intent(out) :: value !< retuned value
 value=dmiss
 end subroutine dbadata_getd
 
+!> return byte value
 subroutine dbadata_getb(data,value)
 class(dbadata), intent(in) :: data
-INTEGER(kind=int_b), intent(out) :: value
+INTEGER(kind=int_b), intent(out) :: value !< retuned value
 value=bmiss
 end subroutine dbadata_getb
 
+!> return character value
 subroutine dbadata_getc(data,value)
 class(dbadata), intent(in) :: data
-character(len=*), intent(out) :: value
+character(len=*), intent(out) :: value !< retuned value
 value=cmiss
 end subroutine dbadata_getc
 
@@ -664,7 +670,7 @@ end function dbalevel_init
 !> set parameters in dballe API
 subroutine dbalevel_set(level,session)
 class(dbalevel), intent(in) :: level
-type(dbasession), intent(in) :: session
+type(dbasession), intent(in) :: session !< dballe session
 integer :: ier
 
 !if (c_e(session%sehandle)) then
@@ -676,7 +682,7 @@ end subroutine dbalevel_set
 !> query parameters from dballe API
 subroutine dbalevel_enq(level,session)
 class(dbalevel), intent(out) :: level
-type(dbasession), intent(in) :: session
+type(dbasession), intent(in) :: session !< dballe session
 integer :: ier
 
 ier = idba_enqlevel(session%sehandle,&
@@ -684,7 +690,7 @@ ier = idba_enqlevel(session%sehandle,&
 
 end subroutine dbalevel_enq
 
-!> set dballe station data context for level
+!> set dballe station data context for level (in object, not dballe session)
 type(dbalevel) function dbalevel_contextana()
 
 dbalevel_contextana=dbalevel()
@@ -738,7 +744,7 @@ end function dbaana_init
 !> set parameters in dballe API
 subroutine dbaana_set(ana,session)
 class(dbaana), intent(in) :: ana
-type(dbasession), intent(in) :: session
+type(dbasession), intent(in) :: session !< dballe session
 integer :: ier
 
 !if (c_e(session%sehandle)) then
@@ -757,7 +763,7 @@ end subroutine dbaana_set
 !> query parameters from dballe API
 subroutine dbaana_enq(ana,session)
 class(dbaana), intent(out) :: ana
-type(dbasession), intent(in) :: session
+type(dbasession), intent(in) :: session !< dballe session
 integer :: ier,ilat,ilon
 
 !if (c_e(session%sehandle)) then
@@ -773,7 +779,7 @@ end subroutine dbaana_enq
 !> put data on DSN
 subroutine dbaana_ingest(ana,session)
 class(dbaana), intent(in) :: ana
-type(dbasession), intent(in) :: session
+type(dbasession), intent(in) :: session !< dballe session
 
 call session%unsetall()
 !write ana
@@ -800,6 +806,7 @@ do while(this%element())
 end do
 end subroutine displaydbaana
 
+!> get dbaana pointed by iterator
 type(dbaana) function currentdbaana(this)
 class(dbaanaList) :: this
 class(*), pointer :: v
@@ -815,7 +822,7 @@ end function currentdbaana
 !> set parameters in dballe API
 subroutine dbadc_set(dc,session)
 class(dbadc), intent(in) :: dc
-type(dbasession), intent(in) :: session
+type(dbasession), intent(in) :: session !< dballe session
 
 call dc%dat%dbaset(session)
 
@@ -832,7 +839,7 @@ end subroutine dbadc_display
 !> set parameters in dballe API
 subroutine dbadcv_set(dcv,session)
 class(dbadcv), intent(in) :: dcv
-type(dbasession), intent(in) :: session
+type(dbasession), intent(in) :: session !< dballe session
 integer :: i
 
 do i=1, size(dcv%dcv)
@@ -875,6 +882,7 @@ end subroutine dbadcv_display
 !!$end subroutine dbadatav_ingest
 
 
+!> dballe unsetb
 subroutine dbasession_unsetb(session)
 class(dbasession), intent(in) :: session
 integer :: ier
@@ -884,6 +892,7 @@ if (session%file)then
 end if
 end subroutine dbasession_unsetb
 
+!> dballe close_message
 subroutine dbasession_close_message(session)
 class(dbasession), intent(in) :: session
 integer :: ier
@@ -902,13 +911,14 @@ end if
 end subroutine dbasession_close_message
 
 
+!> dballe messages_open_input
 subroutine dbasession_messages_open_input(session,filename,mode,format,simplified)
 class(dbasession), intent(in) :: session
-character (len=*), intent(in) :: filename
-character (len=*), intent(in) :: mode !> "r"/"w"/"a" the open mode ("r" for read, "w" for write or create, "a" for append) 
+character (len=*), intent(in) :: filename !< file name to open
+character (len=*), intent(in) :: mode !< "r"/"w"/"a" the open mode ("r" for read, "w" for write or create, "a" for append) 
 character (len=*), intent(in) :: format !< the file format. It can be "BUFR" or "CREX". (default="BUFR")
-logical, intent(in)           :: simplified !> rappresentation when interpret message (simplified/precise)
-!character (len=*), intent(in) :: template !> template to use for write on file
+logical, intent(in)           :: simplified !< rappresentation when interpret message (simplified/precise)
+!character (len=*), intent(in) :: template !< template to use for write on file
 
 integer :: ier
 
@@ -917,10 +927,11 @@ ier = idba_messages_open_input(session%sehandle, filename, mode, format, simplif
 end subroutine dbasession_messages_open_input
 
 
+!> dballe messages_open_output
 subroutine dbasession_messages_open_output(session,filename,mode,format)
 class(dbasession), intent(in) :: session
-character (len=*), intent(in) :: filename
-character (len=*), intent(in),optional :: mode !> "r"/"w"/"a" the open mode ("r" for read, "w" for write or create, "a" for append) 
+character (len=*), intent(in) :: filename !< file name to open
+character (len=*), intent(in),optional :: mode !< "r"/"w"/"a" the open mode ("r" for read, "w" for write or create, "a" for append) 
 character (len=*), intent(in),optional :: format !< the file format. It can be "BUFR" or "CREX". (default="BUFR")
 
 integer :: ier
@@ -937,6 +948,7 @@ ier = idba_messages_open_output(session%sehandle, filename, lmode, lformat)
 end subroutine dbasession_messages_open_output
 
 
+!> dballe messages_read_next
 logical function dbasession_messages_read_next(session)
 class(dbasession), intent(in) :: session
 
@@ -946,9 +958,10 @@ ier = idba_messages_read_next(session%sehandle, dbasession_messages_read_next)
 
 end function dbasession_messages_read_next
 
+!> dballe messages_write_next
 subroutine dbasession_messages_write_next(session,template_name)
 class(dbasession), intent(in) :: session
-character(len=*), optional :: template_name
+character(len=*), optional :: template_name !< template to use writing BUFR/CREX
 character(len=40) :: ltemplate_name
 
 integer :: ier
@@ -961,9 +974,10 @@ ier = idba_messages_write_next(session%sehandle,ltemplate_name)
 end subroutine dbasession_messages_write_next
 
 
+!> remove data from DSN
 subroutine dbasession_dissolve_metadata(session,metadata)
 class(dbasession), intent(in) :: session
-type(dbametadata), intent(in) :: metadata(:)
+type(dbametadata), intent(in) :: metadata(:) !< data are removed where those metadata match
 
 integer :: i
 
@@ -978,9 +992,10 @@ end subroutine dbasession_dissolve_metadata
 
 
 
+!> remove attributes from DSN
 subroutine dbasession_dissolveattr_metadata(session,metadata)
 class(dbasession), intent(in) :: session
-type(dbametadata), intent(in),optional :: metadata(:)
+type(dbametadata), intent(in),optional :: metadata(:) !< attributes are removed where those metadata match
 
 character(len=9) :: btable
 integer :: i,ii,count,ier
@@ -1018,7 +1033,7 @@ end subroutine dbasession_dissolveattr_metadata
 !> put data on DSN
 subroutine dbadataattr_ingest(data,session)
 class(dbadataattr), intent(in) :: data
-type(dbasession), intent(in) :: session
+type(dbasession), intent(in) :: session !< dballe session
 
 !write data in dsn
 call data%dbadc%dbaset(session)
@@ -1048,7 +1063,7 @@ end subroutine dbadataattr_display
 !> put data on DSN
 subroutine dbadataattrv_ingest(dataattr,session)
 class(dbadataattrv), intent(in) :: dataattr
-type(dbasession), intent(in) :: session
+type(dbasession), intent(in) :: session !< dballe session
 integer :: i
 
 do i=1, size(dataattr%dataattr)
@@ -1072,34 +1087,38 @@ end do
 
 end subroutine dbadataattrv_display
 
-
+!> return integer value
 subroutine dbadatai_geti(data,value)
 class(dbadatai), intent(in) :: data
-integer, intent(out) :: value
+integer, intent(out) :: value !< value returned
 value=data%value
 end subroutine dbadatai_geti
 
+!> return real value
 subroutine dbadatar_getr(data,value)
 class(dbadatar), intent(in) :: data
-real, intent(out) :: value
+real, intent(out) :: value !< value returned
 value=data%value
 end subroutine dbadatar_getr
 
+!> return double precision value
 subroutine dbadatad_getd(data,value)
 class(dbadatad), intent(in) :: data
-doubleprecision, intent(out) :: value
+doubleprecision, intent(out) :: value !< value returned
 value=data%value
 end subroutine dbadatad_getd
 
+!> return byte value
 subroutine dbadatab_getb(data,value)
 class(dbadatab), intent(in) :: data
-integer(kind=int_b), intent(out) :: value
+integer(kind=int_b), intent(out) :: value !< value returned
 value=data%value
 end subroutine dbadatab_getb
 
+!> return character value
 subroutine dbadatac_getc(data,value)
 class(dbadatac), intent(in) :: data
-character(len=*), intent(out) :: value
+character(len=*), intent(out) :: value !< value returned
 value=data%value
 end subroutine dbadatac_getc
 
@@ -1214,7 +1233,7 @@ end function dbadatac_init
 !> set parameters in dballe API
 subroutine dbadatai_set(data,session)
 class(dbadatai), intent(in) :: data
-type(dbasession), intent(in) :: session
+type(dbasession), intent(in) :: session !< dballe session
 integer :: ier
 ier = idba_set(session%sehandle,data%btable,data%value)
 end subroutine dbadatai_set
@@ -1228,7 +1247,7 @@ end subroutine dbadatai_display
 !> set parameters in dballe API
 subroutine dbadatar_set(data,session)
 class(dbadatar), intent(in) :: data
-type(dbasession), intent(in) :: session
+type(dbasession), intent(in) :: session !< dballe session
 integer :: ier
 ier = idba_set(session%sehandle,data%btable,data%value)
 end subroutine dbadatar_set
@@ -1243,7 +1262,7 @@ end subroutine dbadatar_display
 !> set parameters in dballe API
 subroutine dbadatad_set(data,session)
 class(dbadatad), intent(in) :: data
-type(dbasession), intent(in) :: session
+type(dbasession), intent(in) :: session !< dballe session
 integer :: ier
 ier = idba_set(session%sehandle,data%btable,data%value)
 end subroutine dbadatad_set
@@ -1257,7 +1276,7 @@ end subroutine dbadatad_display
 !> set parameters in dballe API
 subroutine dbadatab_set(data,session)
 class(dbadatab), intent(in) :: data
-type(dbasession), intent(in) :: session
+type(dbasession), intent(in) :: session !< dballe session
 integer :: ier
 ier = idba_set(session%sehandle,data%btable,data%value)
 end subroutine dbadatab_set
@@ -1271,7 +1290,7 @@ end subroutine dbadatab_display
 !> set parameters in dballe API
 subroutine dbadatac_set(data,session)
 class(dbadatac), intent(in) :: data
-type(dbasession), intent(in) :: session
+type(dbasession), intent(in) :: session !< dballe session
 integer :: ier
 ier = idba_set(session%sehandle,data%btable,data%value)
 end subroutine dbadatac_set
@@ -1304,7 +1323,7 @@ end subroutine dbatimerange_display
 !> set parameters in dballe API
 subroutine dbatimerange_set(timerange,session)
 class(dbatimerange), intent(in) :: timerange
-type(dbasession), intent(in) :: session
+type(dbasession), intent(in) :: session !< dballe session
 integer :: ier
 
 ier = idba_settimerange(session%sehandle,&
@@ -1315,7 +1334,7 @@ end subroutine dbatimerange_set
 !> query parameters from dballe API
 subroutine dbatimerange_enq(timerange,session)
 class(dbatimerange), intent(out) :: timerange
-type(dbasession), intent(in) :: session
+type(dbasession), intent(in) :: session !< dballe session
 integer :: ier
 
 ier = idba_enqtimerange(session%sehandle,&
@@ -1333,7 +1352,7 @@ INTEGER,INTENT(IN),OPTIONAL :: p2 !< valore per il secondo istante temporale
 call init (dbatimerange_init%vol7d_timerange,timerange, p1, p2)
 end function dbatimerange_init
 
-!> set dballe station data context for timerange
+!> set dballe station data context for timerange  (in object, not dballe session)
 type(dbatimerange) function dbatimerange_contextana()
 
 dbatimerange_contextana=dbatimerange()
@@ -1361,7 +1380,7 @@ end subroutine dbanetwork_set
 !> query parameters from dballe API
 subroutine dbanetwork_enq(network,session)
 class(dbanetwork), intent(out) :: network
-type(dbasession), intent(in) :: session
+type(dbasession), intent(in) :: session !< dballe session
 integer :: ier
 
 ier = idba_enq(session%sehandle,"rep_memo", network%name)
@@ -1369,6 +1388,8 @@ ier = idba_enq(session%sehandle,"priority", network%priority)
 
 end subroutine dbanetwork_enq
 
+!> Constructor
+!! Without parameter it is initialized to missing
 type(dbanetwork) function dbanetwork_init(name)
 CHARACTER(len=*),INTENT(in),OPTIONAL :: name !< Mnemonic alias for type of report
 
@@ -1386,7 +1407,7 @@ end subroutine dbadatetime_display
 !> set parameters in dballe API
 subroutine dbadatetime_set(datetime,session)
 class(dbadatetime), intent(in) :: datetime
-type(dbasession), intent(in) :: session
+type(dbasession), intent(in) :: session !< dballe session
 integer :: ier,year,month,day,hour,minute,sec,msec
 
 CALL getval(datetime%datetime, year=year, month=month, day=day, hour=hour, minute=minute,msec=msec)
@@ -1404,7 +1425,8 @@ end subroutine dbadatetime_set
 !> query parameters from dballe API
 subroutine dbadatetime_enq(datetime,session)
 class(dbadatetime), intent(out) :: datetime
-type(dbasession), intent(in) :: session
+type(dbasession), intent(in) :: session !< dballe session
+
 integer :: ier,year,month,day,hour,minute,sec,msec
 
 ier = idba_enqdate(session%sehandle,year,month,day,hour,minute,sec)
@@ -1432,7 +1454,7 @@ end if
 
 end function dbadatetime_init
 
-!> set dballe station data context for date and time
+!> set dballe station data context for date and time  (in object, not dballe session)
 type(dbadatetime) function dbadatetime_contextana()
 
 dbadatetime_contextana%datetime=datetime_new()
@@ -1444,11 +1466,11 @@ end function dbadatetime_contextana
 !! Without parameter it is initialized to missing
 type(dbametadata) function dbametadata_init(level,timerange,ana,network,datetime)
 
-type(dbalevel), intent(in), optional :: level
-type(dbatimerange), intent(in), optional :: timerange
-type(dbaana), intent(in), optional :: ana
-type(dbanetwork), intent(in), optional :: network
-type(dbadatetime), intent(in), optional :: datetime
+type(dbalevel), intent(in), optional :: level !< level
+type(dbatimerange), intent(in), optional :: timerange !< timerange
+type(dbaana), intent(in), optional :: ana !< ana
+type(dbanetwork), intent(in), optional :: network !< network
+type(dbadatetime), intent(in), optional :: datetime !< date and time
 
 if (present(level)) then
   dbametadata_init%level=level
@@ -1496,7 +1518,7 @@ end subroutine dbametadata_display
 !> set parameters in dballe API
 subroutine dbametadata_set(metadata,session)
 class(dbametadata), intent(in) :: metadata
-type(dbasession), intent(in) :: session
+type(dbasession), intent(in) :: session !< dballe session
 
 call metadata%ana%dbaset(session)
 call metadata%network%dbaset(session)
@@ -1518,7 +1540,7 @@ end subroutine dbametadata_set
 !> query parameters from dballe API
 subroutine dbametadata_enq(metadata,session)
 class(dbametadata), intent(out) :: metadata
-type(dbasession), intent(in) :: session
+type(dbasession), intent(in) :: session !< dballe session
 
 call metadata%ana%dbaenq(session)
 call metadata%network%dbaenq(session)
@@ -1529,11 +1551,11 @@ call metadata%timerange%dbaenq(session)
 end subroutine dbametadata_enq
 
 
-
+!> equal operator for dbametadata
 elemental logical function dbametadata_equal(this,that)
 
-class(dbametadata), intent(in) :: this
-class(dbametadata), intent(in) :: that
+class(dbametadata), intent(in) :: this !< first element
+class(dbametadata), intent(in) :: that !< second element
 
 if ( &
  this%level%vol7d_level         == that%level%vol7d_level .and. &
@@ -1551,26 +1573,34 @@ end function dbametadata_equal
 
 
 !> Constructor
+!! This is the filter we can use to limit results fron the extrude operation
 !! Without parameter it is initialized to missing
 type(dbafilter) function dbafilter_init(ana,var,datetime,level,timerange,network,&
  datetimemin,datetimemax,coordmin,coordmax,limit,&
  ana_filter, data_filter, attr_filter, varlist, starvarlist, priomin, priomax, contextana,&
  vars, starvars)
 
-type(dbaana),intent(in),optional       :: ana
-character(len=*),intent(in),optional   :: var
-type(dbadatetime),intent(in),optional  :: datetime
-type(dbalevel),intent(in),optional     :: level
-type(dbatimerange),intent(in),optional :: timerange
-type(dbanetwork),intent(in),optional   :: network
-
-type(dbacoord),intent(in),optional :: coordmin,coordmax
-type(dbadatetime),intent(in),optional :: datetimemin,datetimemax
-integer,intent(in),optional :: limit
-character(len=*),intent(in),optional :: ana_filter, data_filter, attr_filter, varlist, starvarlist
-integer,intent(in),optional :: priomin,priomax
-logical,intent(in),optional :: contextana
-class(dbadcv),intent(in),optional :: vars,starvars
+type(dbaana),intent(in),optional       :: ana !< ana filter
+character(len=*),intent(in),optional   :: var !< var filter
+type(dbadatetime),intent(in),optional  :: datetime !< date and time filter
+type(dbalevel),intent(in),optional     :: level !< level filter
+type(dbatimerange),intent(in),optional :: timerange !< timerange filter
+type(dbanetwork),intent(in),optional   :: network !< network filter
+type(dbacoord),intent(in),optional     :: coordmin !< minimun coordinate filter
+type(dbacoord),intent(in),optional     :: coordmax !< maximum coordinate filter
+type(dbadatetime),intent(in),optional  :: datetimemin !< minumum date and time filter
+type(dbadatetime),intent(in),optional  :: datetimemax !< maximum date and time filter
+integer,intent(in),optional            :: limit !< Maximum number of results to return 
+character(len=*),intent(in),optional   :: ana_filter !< Restricts the results to only those stations which have a pseudoana value that matches the filter. Examples: 'height>=1000', 'B02001=1', '1000<=height<=2000
+character(len=*),intent(in),optional   :: data_filter !< Restricts the results to only the variables of the given type, which have a value that matches the filter. Examples: 't<260', 'B22021>2', '10<=B22021<=20'
+character(len=*),intent(in),optional   :: attr_filter !< Restricts the results to only those data which have an attribute that matches the filter. Examples: 'conf>70', 'B33197=0', '25<=conf<=50' 
+character(len=*),intent(in),optional   :: varlist !< Comma-separated list of variable B codes wanted on output 
+character(len=*),intent(in),optional   :: starvarlist !< Comma-separated list of attribute B codes wanted on output 
+integer,intent(in),optional            :: priomin !< minimum priority on network wanted on output
+integer,intent(in),optional            :: priomax !< maximum priority on network wanted on output
+logical,intent(in),optional            :: contextana !< set contextana; only station data wanted on output
+class(dbadcv),intent(in),optional      :: vars ! vector of vars wanted on output
+class(dbadcv),intent(in),optional      :: starvars ! vector of vars for attribute wanted on output
 
 integer :: i
 
@@ -1810,7 +1840,7 @@ end if
 end subroutine dbafilter_set
 
 
-!> set dballe station data context for all metadata
+!> set dballe station data context for all metadata  (in object, not dballe session)
 type(dbametadata) function dbametadata_contextana(metadata)
 class(dbametadata), intent(in) :: metadata
 
@@ -1842,7 +1872,7 @@ end subroutine dbametaanddata_display
 !> put data on DSN
 subroutine dbametaanddata_ingest(metaanddata,session)
 class(dbametaanddata), intent(in) :: metaanddata
-type(dbasession), intent(in) :: session
+type(dbasession), intent(in) :: session !< dballe session
 
 call session%unsetall()
 !write metadata
@@ -1867,7 +1897,7 @@ end subroutine dbametaanddatav_display
 !> put data on DSN
 subroutine dbametaanddatav_ingest(metaanddatav,session)
 class(dbametaanddatav), intent(in) :: metaanddatav
-type(dbasession), intent(in) :: session
+type(dbasession), intent(in) :: session !< dballe session
 
 !write metadata
 call session%set(metadata=metaanddatav%metadata)
@@ -1893,6 +1923,7 @@ do while(this%element())
 end do
 end subroutine displaydbametaanddatai
 
+!> Get dbametaanddatai pointed by iterator
 type(dbametaanddatai) function currentdbametaanddatai(this)
 class(dbametaanddataiList) :: this
 class(*), pointer :: v
@@ -1905,9 +1936,10 @@ end select
 end function currentdbametaanddatai
 
 
+!> get data from DSN
 subroutine dbasession_extrude_metaanddatail(session,metaanddatal)
 class(dbasession), intent(inout) :: session
-type(dbametaanddatailist), intent(inout) :: metaanddatal
+type(dbametaanddatailist), intent(inout) :: metaanddatal !< extruded data
 type(dbametaanddatai) :: element
 
 call session%extrude_metaanddatai()
@@ -1920,9 +1952,9 @@ end do
 
 end subroutine dbasession_extrude_metaanddatail
 
-
+!> return an array of dbametaanddatai
 function toarray_dbametaanddatai(this)
-type(dbametaanddatai),allocatable :: toarray_dbametaanddatai(:)
+type(dbametaanddatai),allocatable :: toarray_dbametaanddatai(:) !< array
 class(dbametaanddataiList) :: this
 
 integer :: i
@@ -1953,6 +1985,7 @@ do while(this%element())
 end do
 end subroutine displaydbametaanddatar
 
+!> Get dbametaanddatar pointed by iterator
 type(dbametaanddatar) function currentdbametaanddatar(this)
 class(dbametaanddatarList) :: this
 class(*), pointer :: v
@@ -1965,9 +1998,10 @@ end select
 end function currentdbametaanddatar
 
 
+!> get data from DSN
 subroutine dbasession_extrude_metaanddatarl(session,metaanddatal)
 class(dbasession), intent(inout) :: session
-type(dbametaanddatarlist), intent(inout) :: metaanddatal
+type(dbametaanddatarlist), intent(inout) :: metaanddatal !<extruded data
 type(dbametaanddatar) :: element
 
 call session%extrude_metaanddatar()
@@ -1981,8 +2015,9 @@ end do
 end subroutine dbasession_extrude_metaanddatarl
 
 
+!> return an array of dbametaanddatar
 function toarray_dbametaanddatar(this)
-type(dbametaanddatar),allocatable :: toarray_dbametaanddatar(:)
+type(dbametaanddatar),allocatable :: toarray_dbametaanddatar(:) !< array
 class(dbametaanddatarList) :: this
 
 integer :: i
@@ -2014,6 +2049,7 @@ do while(this%element())
 end do
 end subroutine displaydbametaanddatad
 
+!> Get dbametaanddatad pointed by iterator
 type(dbametaanddatad) function currentdbametaanddatad(this)
 class(dbametaanddatadList) :: this
 class(*), pointer :: v
@@ -2025,10 +2061,10 @@ type is (dbametaanddatad)
 end select
 end function currentdbametaanddatad
 
-
+!> get data from DSN
 subroutine dbasession_extrude_metaanddatadl(session,metaanddatal)
 class(dbasession), intent(inout) :: session
-type(dbametaanddatadlist), intent(inout) :: metaanddatal
+type(dbametaanddatadlist), intent(inout) :: metaanddatal !<extruded data
 type(dbametaanddatad) :: element
 
 call session%extrude_metaanddatad()
@@ -2042,8 +2078,9 @@ end do
 end subroutine dbasession_extrude_metaanddatadl
 
 
+!> return an array of dbametaanddatad
 function toarray_dbametaanddatad(this)
-type(dbametaanddatad),allocatable :: toarray_dbametaanddatad(:)
+type(dbametaanddatad),allocatable :: toarray_dbametaanddatad(:) !< array
 class(dbametaanddatadList) :: this
 
 integer :: i
@@ -2074,6 +2111,7 @@ do while(this%element())
 end do
 end subroutine displaydbametaanddatab
 
+!> Get dbametaanddatab pointed by iterator
 type(dbametaanddatab) function currentdbametaanddatab(this)
 class(dbametaanddatabList) :: this
 class(*), pointer :: v
@@ -2086,9 +2124,10 @@ end select
 end function currentdbametaanddatab
 
 
+!> get data from DSN
 subroutine dbasession_extrude_metaanddatabl(session,metaanddatal)
 class(dbasession), intent(inout) :: session
-type(dbametaanddatablist), intent(inout) :: metaanddatal
+type(dbametaanddatablist), intent(inout) :: metaanddatal !<extruded data
 type(dbametaanddatab) :: element
 
 call session%extrude_metaanddatab()
@@ -2102,8 +2141,9 @@ end do
 end subroutine dbasession_extrude_metaanddatabl
 
 
+!> return an array of dbametaanddatab
 function toarray_dbametaanddatab(this)
-type(dbametaanddatab),allocatable :: toarray_dbametaanddatab(:)
+type(dbametaanddatab),allocatable :: toarray_dbametaanddatab(:) !< array
 class(dbametaanddatabList) :: this
 
 integer :: i
@@ -2134,6 +2174,7 @@ do while(this%element())
 end do
 end subroutine displaydbametaanddatac
 
+!> Get dbametaanddatac pointed by iterator
 type(dbametaanddatac) function currentdbametaanddatac(this)
 class(dbametaanddatacList) :: this
 class(*), pointer :: v
@@ -2146,9 +2187,10 @@ end select
 end function currentdbametaanddatac
 
 
+!> get data from DSN
 subroutine dbasession_extrude_metaanddatacl(session,metaanddatal)
 class(dbasession), intent(inout) :: session
-type(dbametaanddataclist), intent(inout) :: metaanddatal
+type(dbametaanddataclist), intent(inout) :: metaanddatal!< extruded data
 type(dbametaanddatac) :: element
 
 call session%extrude_metaanddatac()
@@ -2162,8 +2204,9 @@ end do
 end subroutine dbasession_extrude_metaanddatacl
 
 
+!> return an array of dbametaanddatac
 function toarray_dbametaanddatac(this)
-type(dbametaanddatac),allocatable :: toarray_dbametaanddatac(:)
+type(dbametaanddatac),allocatable :: toarray_dbametaanddatac(:) !< array
 class(dbametaanddatacList) :: this
 
 integer :: i
@@ -2178,8 +2221,6 @@ do while(this%element())
   call this%next()
 end do
 end function toarray_dbametaanddatac
-
-
 
 
 !> print a summary of object content
@@ -2232,7 +2273,7 @@ end subroutine dbametaanddatac_display
 !> put data on DSN
 subroutine dbametaanddatai_ingest(metaanddatai,session)
 class(dbametaanddatai), intent(in) :: metaanddatai
-type(dbasession), intent(in) :: session
+type(dbasession), intent(in) :: session !< dballe session
 
 call session%unsetall()
 !write metadata
@@ -2246,7 +2287,7 @@ end subroutine dbametaanddatai_ingest
 !> put data on DSN
 subroutine dbametaanddatab_ingest(metaanddatab,session)
 class(dbametaanddatab), intent(in) :: metaanddatab
-type(dbasession), intent(in) :: session
+type(dbasession), intent(in) :: session !< dballe session
 
 call session%unsetall()
 !write metadata
@@ -2260,7 +2301,7 @@ end subroutine dbametaanddatab_ingest
 !> put data on DSN
 subroutine dbametaanddatad_ingest(metaanddatad,session)
 class(dbametaanddatad), intent(in) :: metaanddatad
-type(dbasession), intent(in) :: session
+type(dbasession), intent(in) :: session !< dballe session
 
 call session%unsetall()
 !write metadata
@@ -2274,7 +2315,7 @@ end subroutine dbametaanddatad_ingest
 !> put data on DSN
 subroutine dbametaanddatar_ingest(metaanddatar,session)
 class(dbametaanddatar), intent(in) :: metaanddatar
-type(dbasession), intent(in) :: session
+type(dbasession), intent(in) :: session !< dballe session
 
 call session%unsetall()
 !write metadata
@@ -2288,7 +2329,7 @@ end subroutine dbametaanddatar_ingest
 !> put data on DSN
 subroutine dbametaanddatac_ingest(metaanddatac,session)
 class(dbametaanddatac), intent(in) :: metaanddatac
-type(dbasession), intent(in) :: session
+type(dbasession), intent(in) :: session !< dballe session
 
 call session%unsetall()
 !write metadata
@@ -2299,10 +2340,10 @@ call session%prendilo()
 
 end subroutine dbametaanddatac_ingest
 
-
+!> get data from DSN
 subroutine dbasession_extrude_ana(session,ana)
 class(dbasession), intent(inout) :: session
-type(dbaana), intent(out),optional :: ana
+type(dbaana), intent(out),optional :: ana !< ana
 
 integer :: ier
 
@@ -2318,9 +2359,10 @@ end if
 end subroutine dbasession_extrude_ana
 
 
+!> get data from DSN
 subroutine dbasession_extrude_anav(session,anav)
 class(dbasession), intent(inout) :: session
-type(dbaana), intent(out),allocatable :: anav(:)
+type(dbaana), intent(out),allocatable :: anav(:) !< array of ana
 integer :: i
 
 call session%extrude_ana()
@@ -2339,9 +2381,10 @@ end if
 end subroutine dbasession_extrude_anav
 
 
+!> get data from DSN
 subroutine dbasession_extrude_anal(session,anal)
 class(dbasession), intent(inout) :: session
-type(dbaanalist), intent(out) :: anal
+type(dbaanalist), intent(out) :: anal !< double linked list of ana
 type(dbaana) :: element
 
 call session%extrude_ana()
@@ -2353,11 +2396,12 @@ end do
 end subroutine dbasession_extrude_anal
 
 
+!> get data from DSN
 subroutine dbasession_extrude_metaanddata(session,metaanddata,dataonly,filter)
 class(dbasession), intent(inout) :: session
-type(dbametaanddata), intent(inout),optional :: metaanddata
-logical,intent(in),optional :: dataonly
-type(dbafilter),intent(in),optional :: filter
+type(dbametaanddata), intent(inout),optional :: metaanddata !< extruded data
+logical,intent(in),optional :: dataonly       !< set to .true. to get data only (no attribute) 
+type(dbafilter),intent(in),optional :: filter !< use this to filter wanted data                
 
 type(dbametadata) :: metadata
 integer :: ier,acount,i,j,k
@@ -2573,11 +2617,12 @@ end if
 end subroutine dbasession_extrude_metaanddata
 
 
+!> get data from DSN
 subroutine dbasession_extrude_metaanddatav(session,metaanddatav,dataonly,filter)
 class(dbasession), intent(inout) :: session
-type(dbametaanddata), intent(inout),allocatable :: metaanddatav(:)
-logical, intent(in),optional :: dataonly
-type(dbafilter),intent(in),optional :: filter
+type(dbametaanddata), intent(inout),allocatable :: metaanddatav(:) !< extruded data
+logical, intent(in),optional :: dataonly        !< set to .true. to get data only (no attribute) 
+type(dbafilter),intent(in),optional :: filter   !< use this to filter wanted data
 
 type(dbametaanddata),allocatable :: metaanddatavbuf(:)
 integer :: i
@@ -2607,12 +2652,12 @@ end if
 
 end subroutine dbasession_extrude_metaanddatav
 
-!> extrude metaanddata list
+!> Get data fron DSN; extrude metaanddata list
 subroutine dbasession_extrude_metaanddatal(session,metaanddatal,dataonly,filter)
 class(dbasession), intent(inout) :: session
-type(dbametaanddatalist), intent(out) :: metaanddatal
-logical, intent(in),optional :: dataonly
-type(dbafilter),intent(in),optional :: filter
+type(dbametaanddatalist), intent(out) :: metaanddatal !< extruded data
+logical, intent(in),optional :: dataonly          !< set to .true. to get data only (no attribute) 
+type(dbafilter),intent(in),optional :: filter     !< use this to filter wanted data                
 
 type(dbametaanddata),allocatable :: metaanddatavbuf(:)
 integer :: i
@@ -2653,9 +2698,10 @@ end if
 
 end subroutine dbasession_extrude_metaanddatal
 
+!> Get data from DSN
 subroutine dbasession_extrude_metaanddatai(session,metaanddata)
 class(dbasession), intent(inout) :: session
-type(dbametaanddatai), intent(inout),optional :: metaanddata
+type(dbametaanddatai), intent(inout),optional :: metaanddata !< extruded data
 
 integer :: ier
 character(len=9) :: btable
@@ -2673,9 +2719,10 @@ end if
 end subroutine dbasession_extrude_metaanddatai
 
 
+!> Get data from DSN
 subroutine dbasession_extrude_metaanddataiv(session,metaanddatav)
 class(dbasession), intent(inout) :: session
-type(dbametaanddatai), intent(inout),allocatable :: metaanddatav(:)
+type(dbametaanddatai), intent(inout),allocatable :: metaanddatav(:) !< extruded data
 
 integer :: i
 
@@ -2694,9 +2741,10 @@ end if
 end subroutine dbasession_extrude_metaanddataiv
 
 
+!> Get data from DSN
 subroutine dbasession_extrude_metaanddatab(session,metaanddata)
 class(dbasession), intent(inout) :: session
-type(dbametaanddatab), intent(inout),optional :: metaanddata
+type(dbametaanddatab), intent(inout),optional :: metaanddata !< extruded data
 
 integer :: ier
 character(len=9) :: btable
@@ -2714,9 +2762,10 @@ end if
 end subroutine dbasession_extrude_metaanddatab
 
 
+!> Get data from DSN
 subroutine dbasession_extrude_metaanddatabv(session,metaanddatav)
 class(dbasession), intent(inout) :: session
-type(dbametaanddatab), intent(inout),allocatable :: metaanddatav(:)
+type(dbametaanddatab), intent(inout),allocatable :: metaanddatav(:) !<extruded data
 
 integer :: i
 
@@ -2735,9 +2784,10 @@ end if
 end subroutine dbasession_extrude_metaanddatabv
 
 
+!> get data from DSN
 subroutine dbasession_extrude_metaanddatad(session,metaanddata)
 class(dbasession), intent(inout) :: session
-type(dbametaanddatad), intent(inout),optional :: metaanddata
+type(dbametaanddatad), intent(inout),optional :: metaanddata !< extruded data
 
 integer :: ier
 character(len=9) :: btable
@@ -2755,9 +2805,10 @@ end if
 end subroutine dbasession_extrude_metaanddatad
 
 
+!> Get data from DSN
 subroutine dbasession_extrude_metaanddatadv(session,metaanddatav)
 class(dbasession), intent(inout) :: session
-type(dbametaanddatad), intent(inout),allocatable :: metaanddatav(:)
+type(dbametaanddatad), intent(inout),allocatable :: metaanddatav(:) !<extruded data
 
 integer :: i
 
@@ -2775,9 +2826,10 @@ end if
 end subroutine dbasession_extrude_metaanddatadv
 
 
+!> get data from DSN
 subroutine dbasession_extrude_metaanddatar(session,metaanddata)
 class(dbasession), intent(inout) :: session
-type(dbametaanddatar), intent(inout),optional :: metaanddata
+type(dbametaanddatar), intent(inout),optional :: metaanddata !< extruded data
 
 integer :: ier
 character(len=9) :: btable
@@ -2795,9 +2847,10 @@ end if
 end subroutine dbasession_extrude_metaanddatar
 
 
+!> Get data from DSN
 subroutine dbasession_extrude_metaanddatarv(session,metaanddatav)
 class(dbasession), intent(inout) :: session
-type(dbametaanddatar), intent(inout),allocatable :: metaanddatav(:)
+type(dbametaanddatar), intent(inout),allocatable :: metaanddatav(:) !<extruded data
 
 integer :: i
 
@@ -2816,9 +2869,10 @@ end subroutine dbasession_extrude_metaanddatarv
 
 
 
+!> get data from DSN
 subroutine dbasession_extrude_metaanddatac(session,metaanddata)
 class(dbasession), intent(inout) :: session
-type(dbametaanddatac), intent(inout),optional :: metaanddata
+type(dbametaanddatac), intent(inout),optional :: metaanddata !< extruded data
 
 integer :: ier
 character(len=9) :: btable
@@ -2836,9 +2890,10 @@ end if
 end subroutine dbasession_extrude_metaanddatac
 
 
+!> Get data from DSN
 subroutine dbasession_extrude_metaanddatacv(session,metaanddatav)
 class(dbasession), intent(inout) :: session
-type(dbametaanddatac), intent(inout),allocatable :: metaanddatav(:)
+type(dbametaanddatac), intent(inout),allocatable :: metaanddatav(:) !<extruded data
 
 integer :: i
 
@@ -2901,6 +2956,7 @@ end if
 
 end function dbaconnection_init
 
+!> remove dballe connection
 subroutine dbaconnection_delete(handle)
 class (dbaconnection), intent(inout) :: handle
 integer :: ier
@@ -2915,20 +2971,20 @@ end subroutine dbaconnection_delete
 !! Without parameter it is initialized to missing
 recursive type(dbasession) function dbasession_init(connection,anaflag, dataflag, attrflag,&
  filename,mode,format,template,write,wipe,repinfo,simplified,memdb,categoryappend)
-type(dbaconnection),intent(in),optional :: connection
-character (len=*), intent(in), optional :: anaflag
-character (len=*), intent(in), optional :: dataflag
-character (len=*), intent(in), optional :: attrflag
-character (len=*), intent(in), optional :: filename
+type(dbaconnection),intent(in),optional :: connection !< dballe connection
+character (len=*), intent(in), optional :: anaflag !< controls access to pseudoana records and can have these values "read": pseudoana records cannot be modified; "write": pseudoana records can be added and removed. 
+character (len=*), intent(in), optional :: dataflag !< control access to observed data and can have these values "read": data cannot be modified in any way; "add": data can be added to the database, but existing data cannot be modified. Deletions are disabled. This is used to insert new data in the database while preserving the data that was already present in it; "write": data can freely be added, overwritten and deleted.
+character (len=*), intent(in), optional :: attrflag !< controls access to data attributes and can have these values "read": attributes cannot be modified in any way; "write": attributes can freely be added, overwritten and deleted. Note that some combinations are illegal, such as pseudoana=read and data=add (when adding a new data, it's sometimes necessary to insert new pseudoana records), or data=rewrite and attr=read (when deleting data, their attributes are deleted as well). 
+character (len=*), intent(in), optional :: filename !< optional file name to use 
 character (len=*), intent(in), optional :: mode !< "r"/"w"/"a" the open mode ("r" for read, "w" for write or create, "a" for append) 
 character (len=*), intent(in), optional :: template !< template to use for write on file
-logical,INTENT(in),OPTIONAL :: write !< abilita la scrittura sul DSN/file ( default=.false. )
-logical,INTENT(in),OPTIONAL :: wipe !<  svuota il DSN/file e/o lo prepara per una scrittura ( default=.false. )
-character(len=*), INTENT(in),OPTIONAL :: repinfo !< eventuale file repinfo.csv usato con wipe ( default="" )
+logical,INTENT(in),OPTIONAL :: write !< enable write on DSN/file ( default=.false. )
+logical,INTENT(in),OPTIONAL :: wipe !<  clean DSN/file and initialize it ( default=.false. )
+character(len=*), INTENT(in),OPTIONAL :: repinfo !< optional file repinfo.csv to use with wipe ( default="" )
 character(len=*),intent(in),optional :: format !< the file format. It can be "BUFR" or "CREX". (default="BUFR")
 logical,intent(in),optional :: simplified !< rappresentation for interpreted message (simplified/precise)
 logical,intent(in),optional :: memdb     !< if true import from file to memdb (default=true if filename present else false)
-character(len=*),INTENT(in),OPTIONAL :: categoryappend !< appennde questo suffisso al namespace category di log4fortran
+character(len=*),INTENT(in),OPTIONAL :: categoryappend !< name to append to namespace category of log4fortran
 
 integer :: ier
 character (len=5) :: lanaflag,ldataflag,lattrflag
@@ -3065,6 +3121,7 @@ end if
 end function dbasession_init
 
 
+!> clean all setting on dballe API
 subroutine dbasession_unsetall(session)
 class (dbasession), intent(in) :: session
 integer :: ier
@@ -3076,7 +3133,7 @@ end if
 end subroutine dbasession_unsetall
 
 
-
+!> dballe remove_all
 subroutine dbasession_remove_all(session)
 class (dbasession), intent(in) :: session
 integer :: ier
@@ -3088,7 +3145,7 @@ end if
 end subroutine dbasession_remove_all
 
 
-
+!> dballe prendilo
 subroutine dbasession_prendilo(session)
 class (dbasession), intent(in) :: session
 integer :: ier
@@ -3099,6 +3156,7 @@ end if
 
 end subroutine dbasession_prendilo
 
+!> dballe var_related
 subroutine dbasession_var_related(session,btable)
 class (dbasession), intent(in) :: session
 character(len=*),INTENT(IN) :: btable !< descrittore variabile
@@ -3110,7 +3168,7 @@ end if
 
 end subroutine dbasession_var_related
 
-!> set parameters in dballe API
+!> set parameters in dballe API needed for station data
 subroutine dbasession_setcontextana(session)
 class (dbasession), intent(in) :: session
 integer :: ier
@@ -3121,7 +3179,7 @@ end if
 
 end subroutine dbasession_setcontextana
 
-
+!> dballe dimenticami
 subroutine dbasession_dimenticami(session)
 class (dbasession), intent(in) :: session
 integer :: ier
@@ -3132,7 +3190,7 @@ end if
 
 end subroutine dbasession_dimenticami
 
-
+!> dballe critica
 subroutine dbasession_critica(session)
 class (dbasession), intent(in) :: session
 integer :: ier
@@ -3143,6 +3201,7 @@ end if
 
 end subroutine dbasession_critica
 
+!> dballe scusa
 subroutine dbasession_scusa(session)
 class (dbasession), intent(in) :: session
 integer :: ier
@@ -3156,15 +3215,15 @@ end subroutine dbasession_scusa
 !> set parameters in dballe API
 subroutine dbasession_set(session,metadata,datav,data,datetime,ana,network,level,timerange,filter)
 class (dbasession), intent(in) :: session
-type (dbametadata),optional :: metadata
-class(dbadcv),optional :: datav
-class(dbadata),optional :: data
-type (dbadatetime),optional :: datetime
-type (dbaana),optional :: ana
-type (dbanetwork),optional :: network
-type (dbalevel),optional :: level
-type (dbatimerange),optional :: timerange
-type (dbafilter),optional :: filter
+type (dbametadata),optional :: metadata !< metadata
+class(dbadcv),optional :: datav !< data array
+class(dbadata),optional :: data !< data
+type (dbadatetime),optional :: datetime !< date and time
+type (dbaana),optional :: ana !< ana
+type (dbanetwork),optional :: network !< network
+type (dbalevel),optional :: level !< level
+type (dbatimerange),optional :: timerange !< timerange
+type (dbafilter),optional :: filter !< filter for wanted data
 
 if (present(metadata)) then
   call metadata%dbaset(session)
@@ -3210,16 +3269,16 @@ subroutine dbasession_ingest(session,ana,dataattr,dataattrv,metaanddata,&
  metaanddatai,metaanddatab,metaanddatad,metaanddatac,metaanddatar,&
  metaanddatav)
 class(dbasession), intent(in)   :: session
-class(dbaana),optional     :: ana
-class(dbadataattr),optional     :: dataattr
-class(dbadataattrv),optional    :: dataattrv
-class(dbametaanddata),optional  :: metaanddata
-class(dbametaanddatai),optional   :: metaanddatai
-class(dbametaanddatab),optional   :: metaanddatab
-class(dbametaanddatad),optional   :: metaanddatad
-class(dbametaanddatac),optional   :: metaanddatac
-class(dbametaanddatar),optional   :: metaanddatar
-class(dbametaanddatav),optional :: metaanddatav
+class(dbaana),optional          :: ana !< ana 
+class(dbadataattr),optional     :: dataattr !< dataattr
+class(dbadataattrv),optional    :: dataattrv !< array datatattr
+class(dbametaanddata),optional  :: metaanddata !< metaanddata
+class(dbametaanddatai),optional :: metaanddatai !< metaanddatai
+class(dbametaanddatab),optional :: metaanddatab !< metaanddatab
+class(dbametaanddatad),optional :: metaanddatad !< metaanddatad
+class(dbametaanddatac),optional :: metaanddatac !< metaanddatac
+class(dbametaanddatar),optional :: metaanddatar !< metaanddatar
+class(dbametaanddatav),optional :: metaanddatav !< array metaanddata
 
 if (present(ana)) then
   call ana%dbaingest(session)
@@ -3263,7 +3322,7 @@ end if
 
 end subroutine dbasession_ingest
 
-
+!> clear a dballe session
 subroutine dbasession_delete(session)
 class (dbasession), intent(inout) :: session
 integer :: ier
@@ -3289,6 +3348,7 @@ session%count=imiss
 end subroutine dbasession_delete
 
 
+!> rewind a file associated to a session (needed to restart reading)
 subroutine dbasession_filerewind(session)
 class (dbasession), intent(inout) :: session
 integer :: ier
