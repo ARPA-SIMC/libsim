@@ -3403,3 +3403,8 @@ return
 END FUNCTION dballe_error_handler
 
 end MODULE dballe_class
+
+!>\example example_dballe.F03
+!!\brief Sample program to demostrate the dballe_class module.
+!!
+!! This module have examples to read/write/manipulate data from/to DB or BUFR.

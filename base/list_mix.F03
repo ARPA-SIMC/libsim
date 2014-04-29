@@ -79,3 +79,8 @@ end function Currentmix
 
 
 end module list_mix
+
+!>\example example_list.F03
+!!\brief Sample program to demostrate the list* module.
+!!
+!! This modules port lists to fortran 2003.
