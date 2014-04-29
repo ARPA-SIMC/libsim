@@ -2595,14 +2595,24 @@ integer :: ier
 #ifndef DBALLELT67
 if (this%file)then
 
-  ier=idba_fatto(this%handle)
+  IF (c_e(this%handle)) THEN
+    ier=idba_fatto(this%handle)
+  ENDIF
 
 else
 #endif
 
-  ier=idba_fatto(this%handle)
-  ier=idba_fatto(this%handle_staz)
-  if (.not. optio_log(preserveidbhandle)) ier=idba_arrivederci(this%idbhandle)
+  IF (c_e(this%handle)) THEN
+    ier=idba_fatto(this%handle)
+  ENDIF
+  IF (c_e(this%handle_staz)) THEN
+    ier=idba_fatto(this%handle_staz)
+  ENDIF
+  if (.not. optio_log(preserveidbhandle)) THEN
+    IF (c_e(this%idbhandle)) THEN
+      ier=idba_arrivederci(this%idbhandle)
+    ENDIF
+  endif
 
 #ifndef DBALLELT67
 end if
