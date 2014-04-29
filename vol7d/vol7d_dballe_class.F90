@@ -2592,31 +2592,17 @@ TYPE(vol7d_dballe) :: this !< oggetto da cancellare
 logical,intent(in), optional :: preserveidbhandle !< do not close connection to dsn
 integer :: ier
 
-#ifndef DBALLELT67
 if (this%file)then
 
-  IF (c_e(this%handle)) THEN
-    ier=idba_fatto(this%handle)
-  ENDIF
-
+  ier=idba_fatto(this%handle)
+  
 else
-#endif
 
-  IF (c_e(this%handle)) THEN
-    ier=idba_fatto(this%handle)
-  ENDIF
-  IF (c_e(this%handle_staz)) THEN
-    ier=idba_fatto(this%handle_staz)
-  ENDIF
-  if (.not. optio_log(preserveidbhandle)) THEN
-    IF (c_e(this%idbhandle)) THEN
-      ier=idba_arrivederci(this%idbhandle)
-    ENDIF
-  endif
+  ier=idba_fatto(this%handle)
+  ier=idba_fatto(this%handle_staz)
+  if (.not. optio_log(preserveidbhandle)) ier=idba_arrivederci(this%idbhandle)
 
-#ifndef DBALLELT67
 end if
-#endif
 
 ier=idba_error_remove_callback(this%handle_err)
 
