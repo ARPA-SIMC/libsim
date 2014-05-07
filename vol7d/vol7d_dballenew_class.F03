@@ -75,14 +75,14 @@
 !!
 !!\ingroup vol7d
 
-MODULE vol7d_dballe_class
+MODULE vol7d_dballenew_class
 
+USE dballe_class
 USE char_utilities
 USE vol7d_class
 USE array_utilities
 use log4fortran
 USE geo_coord_class
-USE dballe_class
 
 IMPLICIT NONE
 
@@ -205,6 +205,25 @@ character(len=254) :: arg,lfilename,lformat
 logical :: exist
 integer :: ier
 logical :: read_next
+
+
+quiwrite=.false.
+if (present(write))then
+  quiwrite=write
+endif
+
+quiwipe=.false.
+quirepinfo=""
+if (present(wipe))then
+  quiwipe=wipe
+  if (present(repinfo))then
+    quirepinfo=repinfo
+  endif
+endif
+
+
+!! TODO wipe and repinfo
+
 
 this%idbhandle=dbaconnection()
 this%handle=dbasession()
@@ -459,6 +478,10 @@ end if
 
 N=0
 if ( .not. optio_log(anaonly)) then
+
+  filter = dbafilter()
+!  filter=dbafilter(coordmin=dbacoord(lon= 9.d0,lat=44.d0),&
+!   coordmax=dbacoord(lon=11.d0,lat=46.d0)))
 
 !!$  filter=dbafilter(coordmin=coordmin,coordmax=coordmax,ana=ana,datetimemin=timei,datetimemax=timef,&
 !!$   timerange=timerange,level=level,network=network,query=query,&
@@ -1459,7 +1482,7 @@ call l4f_category_delete(this%category)
 END SUBROUTINE vol7d_dballe_delete
 
 
-end MODULE vol7d_dballe_class
+end MODULE vol7d_dballenew_class
 
 !>\example esempio_v7ddballe.f90
 !!/brief Programma esempio semplice per l'uso di vol7d con DB-All.e

@@ -30,6 +30,7 @@ AM_FCFLAGS += -I/usr/include/dballe
 libsim_vol7d_la_LIBADD += $(DBALLE_LIBS)
 if F2003_EXTENDED_FEATURES
 libsim_vol7d_la_SOURCES += dballe_class.F03
+libsim_vol7d_la_SOURCES += vol7d_dballenew_class.F03
 endif
 endif
 
