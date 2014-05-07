@@ -1576,11 +1576,12 @@ end function dbametadata_equal
 !> Constructor
 !! This is the filter we can use to limit results fron the extrude operation
 !! Without parameter it is initialized to missing
-type(dbafilter) function dbafilter_init(ana,var,datetime,level,timerange,network,&
+type(dbafilter) function dbafilter_init(filter,ana,var,datetime,level,timerange,network,&
  datetimemin,datetimemax,coordmin,coordmax,limit,&
  ana_filter, data_filter, attr_filter, varlist, starvarlist,priority, priomin, priomax, contextana,&
  vars, starvars, query)
 
+type(dbafilter),intent(in),optional    :: filter !< prototype filter to use as default
 type(dbaana),intent(in),optional       :: ana !< ana filter
 character(len=*),intent(in),optional   :: var !< var filter
 type(dbadatetime),intent(in),optional  :: datetime !< date and time filter
@@ -1606,100 +1607,107 @@ class(dbadcv),intent(in),optional      :: starvars ! vector of vars for attribut
 character(len=*),intent(in),optional   :: query !< Comma-separated list of query modifiers. Can have one of: 'best' or obsoletes:  'bigana', 'nosort', 'stream'. Examples: 'best'  obsoletes: 'nosort,stream' 
 
 integer :: i
+logical :: nopreserve
+
+nopreserve=.true.
+if (present(filter)) then
+  dbafilter_init=filter
+  nopreserve=.false.
+end if
 
 if (present(ana)) then
   dbafilter_init%ana=ana
-else
+else if (nopreserve) then
   dbafilter_init%ana=dbaana()
 end if
 
 if (present(var)) then
   dbafilter_init%var=var
-else
+else if (nopreserve) then
   dbafilter_init%var=cmiss
 end if
 
 if (present(datetime)) then
   dbafilter_init%datetime=datetime
-else
+else if (nopreserve) then
   dbafilter_init%datetime=dbadatetime()
 end if
 
 if (present(level)) then
   dbafilter_init%level=level
-else
+else if (nopreserve) then
   dbafilter_init%level=dbalevel()
 end if
 
 if (present(timerange)) then
   dbafilter_init%timerange=timerange
-else
+else if (nopreserve) then
   dbafilter_init%timerange=dbatimerange()
 end if
 
 if (present(network)) then
   dbafilter_init%network=network
-else
+else if (nopreserve) then
   dbafilter_init%network=dbanetwork()
 end if
 
 if (present(datetimemin)) then
   dbafilter_init%datetimemin=datetimemin
-else
+else if (nopreserve) then
   dbafilter_init%datetimemin=dbadatetime()
 end if
 
 if (present(datetimemax)) then
   dbafilter_init%datetimemax=datetimemax
-else
+else if (nopreserve) then
   dbafilter_init%datetimemax=dbadatetime()
 end if
 
 if (present(coordmin)) then
   dbafilter_init%coordmin=coordmin
-else
+else if (nopreserve) then
   dbafilter_init%coordmin=dbacoord()
 end if
 
 if (present(coordmax)) then
   dbafilter_init%coordmax=coordmax
-else
+else if (nopreserve) then
   dbafilter_init%coordmax=dbacoord()
 end if
 
 if (present(limit)) then
   dbafilter_init%limit=limit
-else
+else if (nopreserve) then
   dbafilter_init%limit=imiss
 end if
 
 if (present(ana_filter)) then
   dbafilter_init%ana_filter=ana_filter
-else
+else if (nopreserve) then
   dbafilter_init%ana_filter=cmiss
 end if
 
 if (present(data_filter)) then
   dbafilter_init%data_filter=data_filter
-else
+else if (nopreserve) then
   dbafilter_init%data_filter=cmiss
 end if
 
 if (present(attr_filter)) then
   dbafilter_init%attr_filter=attr_filter
-else
+else if (nopreserve) then
   dbafilter_init%attr_filter=cmiss
 end if
 
 if (present(varlist)) then
   dbafilter_init%varlist=varlist
-else
+else if (nopreserve) then
   dbafilter_init%varlist=cmiss
 end if
 
 if (present(starvarlist)) then
   dbafilter_init%starvarlist=starvarlist
-else
+else if (nopreserve) then
   dbafilter_init%starvarlist=cmiss
 end if
 
@@ -1735,31 +1743,31 @@ end if
 
 if (present(priority)) then
   dbafilter_init%priority=priority
-else
+else if (nopreserve) then
   dbafilter_init%priority=imiss
 end if
 
 if (present(priomin)) then
   dbafilter_init%priomin=priomax
-else
+else if (nopreserve) then
   dbafilter_init%priomin=imiss
 end if
 
 if (present(priomax)) then
   dbafilter_init%priomax=priomax
-else
+else if (nopreserve) then
   dbafilter_init%priomax=imiss
 end if
 
 if (present(contextana)) then
   dbafilter_init%contextana=contextana
-else
+else if (nopreserve) then
   dbafilter_init%contextana=.false.
 end if
 
 if (present(query)) then
   dbafilter_init%query=query
-else
+else if (nopreserve) then
   dbafilter_init%query=cmiss
 end if
 

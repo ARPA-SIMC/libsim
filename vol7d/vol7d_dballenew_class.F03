@@ -99,7 +99,7 @@ TYPE vol7d_dballe
 
   TYPE(vol7d) :: vol7d !< volume vol7d
   type(dbaconnection) :: idbhandle !< handle delle sessioni connesse al DSN DB-All.e
-  type(dbasession) :: handle,handle_staz !< handle delle sessioni connesse al DSN DB-All.e
+  type(dbasession) :: handle !< handle delle sessioni connesse al DSN DB-All.e
   !> memorizza gli id interni al database DB-All.e per 
   !!ottimizzare le riscritture degli attributi ai dati
   integer ,pointer :: data_id(:,:,:,:,:)
@@ -135,12 +135,10 @@ INTERFACE import
 END INTERFACE
 
 #ifdef NONE
-
 !>\brief exporta
 INTERFACE export
   MODULE PROCEDURE vol7d_dballe_export
 END INTERFACE
-
 #endif
 
 type record
@@ -194,7 +192,7 @@ character(len=*),INTENT(in),OPTIONAL :: categoryappend !< appennde questo suffis
 integer,INTENT(in),OPTIONAL :: time_definition !< 0=time is reference time ; 1=time is validity time (default=1) 
 integer,INTENT(in),OPTIONAL :: idbhandle !< dsn connection; if present it will be used
 
-character(len=1):: mode ! the open mode ("r" for read, "w" for write or create, "a" append) (comandato da "write", default="r" )
+character(len=1):: mode="r" ! the open mode ("r" for read, "w" for write or create, "a" append) (comandato da "write", default="r" )
 
 character(len=50) :: quidsn,quiuser,quipassword
 character(len=255) :: quirepinfo
@@ -224,10 +222,8 @@ endif
 
 !! TODO wipe and repinfo
 
-
-this%idbhandle=dbaconnection()
-this%handle=dbasession()
-this%handle_staz=dbasession()
+!this%idbhandle=dbaconnection()
+!this%handle=dbasession()
 
 if (present(categoryappend))then
   call l4f_launcher(a_name,a_name_append=trim(subcategory)//"."//trim(categoryappend))
@@ -243,25 +239,58 @@ CALL init(this%vol7d,time_definition=time_definition)
 
 if (optio_log(file)) then
 
-  this%idbhandle=dbaconnection(dsn="mem:",user="",password="")
-  this%handle=dbasession(this%idbhandle,"write","write","write")
-  this%handle_staz=dbasession(this%idbhandle,"write","write","write")
-  call this%handle%messages_open_input(lfilename, mode, lformat, simplified=.true.)
-  read_next = this%handle%messages_read_next()
-  do while (read_next) 
+  lformat="BUFR"
+  if (present(format))then
+    lformat=format
+  end if
+  
+
+  lfilename=trim(arg)//"."//trim(lformat)
+  if (index(arg,'/',back=.true.) > 0) lfilename=lfilename(index(arg,'/',back=.true.)+1 : )
+
+  if (present(filename))then
+    if (filename /= "")then
+      lfilename=filename
+    end if
+  end if
+
+
+  if (.not. quiwrite) then
+    print *,"import in mem:"
+
+    this%idbhandle=dbaconnection(dsn="mem:",user="",password="")
+    this%handle=dbasession(this%idbhandle,"write","write","write")
+    call this%handle%messages_open_input(lfilename, mode, lformat, simplified=.true.)
     read_next = this%handle%messages_read_next()
-  end do
+    do while (read_next) 
+      read_next = this%handle%messages_read_next()
+    end do
+
+    print *,"end import in mem:"
+  end if
 
 else
+
+
+    quidsn = "test"
+    quiuser = "test"
+    quipassword = ""
+    IF (PRESENT(dsn)) THEN
+      IF (c_e(dsn)) quidsn = dsn
+    ENDIF
+    IF (PRESENT(user)) THEN
+      IF (c_e(user)) quiuser = user
+    ENDIF
+    IF (PRESENT(password)) THEN
+      IF (c_e(password)) quipassword = password
+    ENDIF
 
     this%idbhandle=dbaconnection(quidsn,quiuser,quipassword,idbhandle=idbhandle)
 
   if(quiwrite)then
     this%handle=dbasession(this%idbhandle,"write","write","write")
-    this%handle_staz=dbasession(this%idbhandle,"write","write","write")
   else
     this%handle=dbasession(this%idbhandle,"read","read","read")
-    this%handle_staz=dbasession(this%idbhandle,"read","read","read")
   end if
   
 endif
@@ -353,7 +382,13 @@ INTEGER(kind=int_l) :: ilat,ilon
 CHARACTER(len=vol7d_ana_lenident) :: ident
 !CHARACTER(len=10),allocatable :: lvar(:), lanavar(:)
 class(dbadcv),allocatable :: vars,starvars,anavars,anastarvars
-type(dbafilter) :: filter
+type(dbafilter)    :: filter
+type(dbacoord)     :: mydbacoordmin, mydbacoordmax
+type(dbaana)       :: mydbaana
+type(dbadatetime)  :: mydatetimemin, mydatetimemax
+type(dbatimerange) :: mydbatimerange
+type(dbalevel)     :: mydbalevel
+type(dbanetwork)   :: mydbanetwork
 
 
 !INTEGER(kind=int_b)::attrdatib
@@ -372,7 +407,8 @@ TYPE(vol7d) :: vol7dtmp
 
 type(record),ALLOCATABLE :: buffer(:),bufferana(:)
 character(len=40) :: query
-
+type(dbametaanddata),allocatable :: metaanddatav(:)
+logical :: dataonly
 
 !!!  CALL print_info('Estratte dall''archivio '//TRIM(to_char(nobs)) // ' osservazioni')
 
@@ -402,32 +438,58 @@ if (present(var)) then
   nvar=count(c_e(var))
   if (nvar > 0) then
     allocate (vars%dcv(nvar))
-    do i=1,nvar
-      if (c_e(var(i)).and. present(varkind))then
-        if(varkind(i) == "r") allocate (vars%dcv(i)%dat,source=dbadatar(var(i)))
-        if(varkind(i) == "i") allocate (vars%dcv(i)%dat,source=dbadatai(var(i)))
-        if(varkind(i) == "b") allocate (vars%dcv(i)%dat,source=dbadatab(var(i)))
-        if(varkind(i) == "d") allocate (vars%dcv(i)%dat,source=dbadatad(var(i)))
-        if(varkind(i) == "c") allocate (vars%dcv(i)%dat,source=dbadatac(var(i)))
-      else
+    do i=1,size(var)
+      if (c_e(var(i)))then
+        if (present(varkind))then
+          select case (varkind(i))
+          case("r")
+            allocate (vars%dcv(i)%dat,source=dbadatar(var(i)))
+          case("i")
+            allocate (vars%dcv(i)%dat,source=dbadatai(var(i)))
+          case("b")
+            allocate (vars%dcv(i)%dat,source=dbadatab(var(i)))
+          case("d")
+            allocate (vars%dcv(i)%dat,source=dbadatad(var(i)))
+          case("c")
+            allocate (vars%dcv(i)%dat,source=dbadatac(var(i)))
+          case default
+            call l4f_category_log(this%category,L4F_ERROR,"var and varkind mismach")
+            CALL raise_fatal_error()
+          end select
+        end if
+      else 
         allocate (vars%dcv(i)%dat,source=dbadatac(var(i))) !char is default
       end if
     end do
   end if
 end if
 
+
+
 if (present(anavar)) then
   nanavar=count(c_e(anavar))
   if (nanavar > 0) then
-    allocate (anavars%dcv(nvar))
-    do i=1,nanavar
-      if (c_e(anavar(i)).and. present(anavarkind))then
-        if(anavarkind(i) == "r") allocate (anavars%dcv(i)%dat,source=dbadatar(anavar(i)))
-        if(anavarkind(i) == "i") allocate (anavars%dcv(i)%dat,source=dbadatai(anavar(i)))
-        if(anavarkind(i) == "b") allocate (anavars%dcv(i)%dat,source=dbadatab(anavar(i)))
-        if(anavarkind(i) == "d") allocate (anavars%dcv(i)%dat,source=dbadatad(anavar(i)))
-        if(anavarkind(i) == "c") allocate (anavars%dcv(i)%dat,source=dbadatac(anavar(i)))
-      else
+    allocate (anavars%dcv(nanavar))
+    do i=1,size(anavar)
+      if (c_e(anavar(i)))then
+        if (present(anavarkind))then
+          select case (anavarkind(i))
+          case("r")
+            allocate (anavars%dcv(i)%dat,source=dbadatar(anavar(i)))
+          case("i")
+            allocate (anavars%dcv(i)%dat,source=dbadatai(anavar(i)))
+          case("b")
+            allocate (anavars%dcv(i)%dat,source=dbadatab(anavar(i)))
+          case("d")
+            allocate (anavars%dcv(i)%dat,source=dbadatad(anavar(i)))
+          case("c")
+            allocate (anavars%dcv(i)%dat,source=dbadatac(anavar(i)))
+          case default
+            call l4f_category_log(this%category,L4F_ERROR,"anavar and anavarkind mismach")
+            CALL raise_fatal_error()
+          end select
+        end if
+      else 
         allocate (anavars%dcv(i)%dat,source=dbadatac(anavar(i))) !char is default
       end if
     end do
@@ -441,14 +503,26 @@ if (present(attr)) then
   if (nattr > 0) then
     lattr = .true.
     allocate (starvars%dcv(nattr))
-    do i=1,nattr
-      if (c_e(attr(i)).and. present(attrkind))then
-        if(attrkind(i) == "r") allocate (starvars%dcv(i)%dat,source=dbadatar(attr(i)))
-        if(attrkind(i) == "i") allocate (starvars%dcv(i)%dat,source=dbadatai(attr(i)))
-        if(attrkind(i) == "b") allocate (starvars%dcv(i)%dat,source=dbadatab(attr(i)))
-        if(attrkind(i) == "d") allocate (starvars%dcv(i)%dat,source=dbadatad(attr(i)))
-        if(attrkind(i) == "c") allocate (starvars%dcv(i)%dat,source=dbadatac(attr(i)))
-      else
+    do i=1,size(attr)
+      if (c_e(attr(i)))then
+        if (present(attrkind))then
+          select case (attrkind(i))
+          case("r")
+            allocate (starvars%dcv(i)%dat,source=dbadatar(attr(i)))
+          case("i")
+            allocate (starvars%dcv(i)%dat,source=dbadatai(attr(i)))
+          case("b")
+            allocate (starvars%dcv(i)%dat,source=dbadatab(attr(i)))
+          case("d")
+            allocate (starvars%dcv(i)%dat,source=dbadatad(attr(i)))
+          case("c")
+            allocate (starvars%dcv(i)%dat,source=dbadatac(attr(i)))
+          case default
+            call l4f_category_log(this%category,L4F_ERROR,"attr and attrkind mismach")
+            CALL raise_fatal_error()
+          end select
+        end if
+      else 
         allocate (starvars%dcv(i)%dat,source=dbadatac(attr(i))) !char is default
       end if
     end do
@@ -461,14 +535,26 @@ if (present(anaattr)) then
   if (nanaattr > 0) then
     lanaattr = .true.
     allocate (anastarvars%dcv(nanaattr))
-    do i=1,nanaattr
-      if (c_e(anaattr(i)).and. present(anaattrkind))then
-        if(anaattrkind(i) == "r") allocate (anastarvars%dcv(i)%dat,source=dbadatar(anaattr(i)))
-        if(anaattrkind(i) == "i") allocate (anastarvars%dcv(i)%dat,source=dbadatai(anaattr(i)))
-        if(anaattrkind(i) == "b") allocate (anastarvars%dcv(i)%dat,source=dbadatab(anaattr(i)))
-        if(anaattrkind(i) == "d") allocate (anastarvars%dcv(i)%dat,source=dbadatad(anaattr(i)))
-        if(anaattrkind(i) == "c") allocate (anastarvars%dcv(i)%dat,source=dbadatac(anaattr(i)))
-      else
+    do i=1,size(anaattr)
+      if (c_e(anaattr(i)))then
+        if (present(anaattrkind))then
+          select case (anaattrkind(i))
+          case("r")
+            allocate (anastarvars%dcv(i)%dat,source=dbadatar(anaattr(i)))
+          case("i")
+            allocate (anastarvars%dcv(i)%dat,source=dbadatai(anaattr(i)))
+          case("b")
+            allocate (anastarvars%dcv(i)%dat,source=dbadatab(anaattr(i)))
+          case("d")
+            allocate (anastarvars%dcv(i)%dat,source=dbadatad(anaattr(i)))
+          case("c")
+            allocate (anastarvars%dcv(i)%dat,source=dbadatac(anaattr(i)))
+          case default
+            call l4f_category_log(this%category,L4F_ERROR,"attr and attrkind mismach")
+            CALL raise_fatal_error()
+          end select
+        end if
+      else 
         allocate (anastarvars%dcv(i)%dat,source=dbadatac(anaattr(i))) !char is default
       end if
     end do
@@ -479,9 +565,21 @@ end if
 N=0
 if ( .not. optio_log(anaonly)) then
 
-  filter = dbafilter()
-!  filter=dbafilter(coordmin=dbacoord(lon= 9.d0,lat=44.d0),&
-!   coordmax=dbacoord(lon=11.d0,lat=46.d0)))
+  ! like a cast
+  mydbacoordmin%geo_coord=coordmin
+  mydbacoordmax%geo_coord=coordmax
+  mydbaana%vol7d_ana=ana
+  mydatetimemin%datetime=timei
+  mydatetimemax%datetime=timef
+  mydbatimerange%vol7d_timerange=timerange
+  mydbalevel%vol7d_level=level
+  mydbanetwork%vol7d_network=network
+
+  filter=dbafilter(coordmin=mydbacoordmin,coordmax=mydbacoordmax,ana=mydbaana, &
+   datetimemin=mydatetimemin,datetimemax=mydatetimemax, &
+   timerange=mydbatimerange,level=mydbalevel,network=mydbanetwork,query=query,&
+   vars=vars,starvars=starvars)
+
 
 !!$  filter=dbafilter(coordmin=coordmin,coordmax=coordmax,ana=ana,datetimemin=timei,datetimemax=timef,&
 !!$   timerange=timerange,level=level,network=network,query=query,&
@@ -491,145 +589,37 @@ if ( .not. optio_log(anaonly)) then
   if (this%vol7d%time_definition == 0) buffer(i)%time = buffer(i)%time - &
    timedelta_new(msec=buffer(i)%timerange%p1*1000)
 
+
+print *, "filter:"
+call filter%display()
+call this%handle%set(filter=filter)
+if (allocated(starvars%dcv)) then
+  dataonly=.false.
+else
+  dataonly=.true.
 end if
 
-#ifdef NONE
+call this%handle%extrude(metaanddatav,filter=filter,dataonly=dataonly)
+
+end if
+
 
 ! ---------------->   anagrafica
 
 !ora legge tutti i dati di anagrafica e li mette in bufferana
 
-ier=idba_unsetall(this%handle_staz)
-#ifdef DEBUG
-CALL l4f_category_log(this%category,L4F_DEBUG,'unsetall handle_staz')
-#endif
+filter=dbafilter(filter=filter,contextana=.true.)
+deallocate (metaanddatav)
+call this%handle%extrude(metaanddatav,filter=filter,dataonly=dataonly)
 
-if(c_e(lnetwork))ier=idba_set (this%handle_staz,"rep_memo",lnetwork%name)
-if(ldegnet)ier=idba_set (this%handle_staz,"query","best")
+!  ier=idba_enqdate (this%handle_staz,year,month,day,hour,minute,sec)
+!  IF (.NOT.c_e(sec)) sec = 0
+!  ier=idba_enq (this%handle_staz,"context_id",bufferana(i)%data_id)
 
-if (present(coordmin)) then
-!  CALL geo_coord_to_geo(coordmin)
-  CALL getval(coordmin, ilat=ilat,ilon=ilon)
-  ier=idba_set(this%handle_staz,"lonmin",ilon)
-  ier=idba_set(this%handle_staz,"latmin",ilat)
-end if
-
-if (present(coordmax)) then
-!  CALL geo_coord_to_geo(coordmax)
-  CALL getval(coordmax, ilat=ilat,ilon=ilon)
-  ier=idba_set(this%handle_staz,"lonmax",ilon)
-  ier=idba_set(this%handle_staz,"latmax",ilat)
-end if
-
-if (present(ana)) then
-  CALL getval(ana%coord, ilat=ilat,ilon=ilon)
-  ier=idba_set(this%handle_staz,"lon",ilon)
-  ier=idba_set(this%handle_staz,"lat",ilat)
-  if (c_e(ana%ident)) then
-    ier=idba_set(this%handle_staz,"ident",ana%ident)
-! mobile ignored
-    ier=idba_set(this%handle_staz,"mobile",1)
-  else
-    ier=idba_set(this%handle_staz,"mobile",0)
-  end if
-end if
-
-nanavar=0
-
-if (size (lanavar) > 0 ) then
-                                ! creo la stringa con l'elenco
-  varlist = ''
-  DO i = 1, SIZE(lanavar)
-    nanavar = nanavar + 1
-    IF (nanavar > 1) varlist(LEN_TRIM(varlist)+1:) = ',' 
-    varlist(LEN_TRIM(varlist)+1:) = TRIM(lanavar(i))
-  ENDDO
-!!$  print *,"varlist :",trim(varlist)
-!!$  ier=idba_set(this%handle_staz, "varlist",trim(varlist))
-
-end if
-
-
-ier=idba_setcontextana(this%handle_staz)
-ier=idba_voglioquesto (this%handle_staz,N_ana)
-!!$print*,"numero di dati ",N_ana
-
-!ora che so quanti dati ho alloco la memoria per bufferana
-allocate(bufferana(N_ana),stat=istat)
-if (istat/= 0) THEN
-  CALL l4f_category_log(this%category,L4F_ERROR,'cannot allocate ' &
-   //TRIM(to_char(n_ana))//' bufferana elements')
-  CALL raise_fatal_error()
-ENDIF
-
-
-! dammi tutti i dati di anagrafica
-do i=1,N_ana
-  call init(bufferana(i)%ana)
-  call init(bufferana(i)%network)
-
-  bufferana(i)%dator=DBA_MVR
-  bufferana(i)%datoi=DBA_MVI
-  bufferana(i)%datob=DBA_MVB
-  bufferana(i)%datod=DBA_MVD
-  bufferana(i)%datoc=DBA_MVC
-  bufferana(i)%btable = DBA_MVC
-
-  ier=idba_dammelo (this%handle_staz,btable)
-
-  
-  ier=idba_enqdate (this%handle_staz,year,month,day,hour,minute,sec)
-  IF (.NOT.c_e(sec)) sec = 0
-  ier=idba_enqlevel(this%handle_staz, rlevel1, rl1, rlevel2,rl2)
-  ier=idba_enqtimerange(this%handle_staz, rtimerange, p1, p2)
-  ier=idba_enq(this%handle_staz, "rep_memo",rep_memo)
-                                !print *,"trovato network",rep_memo
-                                !nbtable=btable_numerico(btable)
-                                ! ind = firsttrue(qccli%v7d%dativar%r(:)%btable == nbtable)
-                                ! IF (ind<1) cycle ! non c'e'
-  
-
-                                !metto in memoria l'identificatore numerico dei dati
-                                !print*,bufferana(i)%data_id
-  ier=idba_enq (this%handle_staz,"context_id",bufferana(i)%data_id)
-
-                                !recupero i dati di anagrafica
-  ier=idba_enq (this%handle_staz,"lat",   ilat)
-  ier=idba_enq (this%handle_staz,"lon",   ilon)
-  ier=idba_enq (this%handle_staz,"ident",ident)
-
-
-                                !bufferizzo il contesto
-  
-  call init(bufferana(i)%ana,ilat=ilat,ilon=ilon,ident=ident)
-  call init(bufferana(i)%network, rep_memo)
-
-                                !salto lat lon e ident e network
-  if (btable == "B05001" .or. btable == "B06001" .or. btable == "B01011" .or. btable == "B01194" ) cycle
-
-  if ( size(lanavar) > 0 .and. present(anavarkind))then
-    ii= index_c(lanavar, btable)
-    if (ii > 0)then
-                                !print*, "indici",ii, btable,(varkind(ii))
-      if(anavarkind(ii) == "r") ier=idba_enq (this%handle_staz,btable,bufferana(i)%dator)
-      if(anavarkind(ii) == "i") ier=idba_enq (this%handle_staz,btable,bufferana(i)%datoi)
-      if(anavarkind(ii) == "b") ier=idba_enq (this%handle_staz,btable,bufferana(i)%datob)
-      if(anavarkind(ii) == "d") ier=idba_enq (this%handle_staz,btable,bufferana(i)%datod)
-      if(anavarkind(ii) == "c") ier=idba_enq (this%handle_staz,btable,bufferana(i)%datoc)
-    end if
-  else
-    ier=idba_enq (this%handle_staz,btable,bufferana(i)%datoc) !char is default
-    !print*,"dato anagrafica",btable," ",bufferana(i)%dator
-  end if
-  
-  call init(bufferana(i)%time, year=year, month=month, day=day, hour=hour, minute=minute,msec=sec*1000)
-  call init(bufferana(i)%level, rlevel1,rl1,rlevel2,rl2)
-  call init(bufferana(i)%timerange, rtimerange, p1, p2)
-  bufferana(i)%btable = btable
-
-end do
 
 ! ---------------->   anagrafica fine
+
+#ifdef NONE
 
 if (.not. any(c_e(lvar)))then
   nvar = count_distinct(buffer%btable, back=.TRUE.)
@@ -1465,7 +1455,6 @@ logical,intent(in), optional :: preserveidbhandle !< do not close connection to 
 integer :: ier
 
 call this%handle%delete()
-call this%handle_staz%delete()
 if (.not. optio_log(preserveidbhandle)) call this%idbhandle%delete()
 
 !!$if (associated(this%data_id)) then

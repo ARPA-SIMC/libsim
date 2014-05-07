@@ -268,9 +268,7 @@ if (quifile) then
   if (index(arg,'/',back=.true.) > 0) lfilename=lfilename(index(arg,'/',back=.true.)+1 : )
 
   if (present(filename))then
-    if (filename == "")then
-      filename=lfilename
-    else
+    if (filename /= "")then
       lfilename=filename
     end if
   end if

@@ -19,8 +19,8 @@ call write4()    ! write an etherogeneous ensamble of data and attributes
 call write5()    ! write a content of DSN to a file with filter
 call read2()     ! read data and attributes for data filtered and ordered by btable with type predefined
 call delete1()   ! delete one var from the entire DB
-call delete2()   ! delete one var only where are some defined metadati
-call delete3()   ! delete some attributes from one var only where are some defined metadati
+call delete2()   ! delete one var only where are some defined metadata
+call delete3()   ! delete some attributes from one var only where are some defined metadata
 call read1()     ! read ana, data and attributes for constant data, data and attributes for data
 call read3()     ! read an omogeneous vector of data
 call read4l()    ! read data and attributes for data in a double linked list
