@@ -573,9 +573,10 @@ type, public ::  dbafilter
   type(dbadatetime)  :: datetimemin,datetimemax
   integer            :: limit
   character(len=255) :: ana_filter, data_filter, attr_filter, varlist, starvarlist
-  integer            :: priomin,priomax
+  character(len=40)  :: query 
+  integer            :: priority,priomin,priomax
   logical            :: contextana
-  type(dbadcv)     :: vars,starvars
+  type(dbadcv)       :: vars,starvars
   contains
   procedure          :: display => dbafilter_display  !< print a summary of object contents
   procedure          :: dbaset => dbafilter_set !< set dballe parameters
@@ -1577,8 +1578,8 @@ end function dbametadata_equal
 !! Without parameter it is initialized to missing
 type(dbafilter) function dbafilter_init(ana,var,datetime,level,timerange,network,&
  datetimemin,datetimemax,coordmin,coordmax,limit,&
- ana_filter, data_filter, attr_filter, varlist, starvarlist, priomin, priomax, contextana,&
- vars, starvars)
+ ana_filter, data_filter, attr_filter, varlist, starvarlist,priority, priomin, priomax, contextana,&
+ vars, starvars, query)
 
 type(dbaana),intent(in),optional       :: ana !< ana filter
 character(len=*),intent(in),optional   :: var !< var filter
@@ -1596,11 +1597,13 @@ character(len=*),intent(in),optional   :: data_filter !< Restricts the results t
 character(len=*),intent(in),optional   :: attr_filter !< Restricts the results to only those data which have an attribute that matches the filter. Examples: 'conf>70', 'B33197=0', '25<=conf<=50' 
 character(len=*),intent(in),optional   :: varlist !< Comma-separated list of variable B codes wanted on output 
 character(len=*),intent(in),optional   :: starvarlist !< Comma-separated list of attribute B codes wanted on output 
+integer,intent(in),optional            :: priority !< priority on network wanted on output
 integer,intent(in),optional            :: priomin !< minimum priority on network wanted on output
 integer,intent(in),optional            :: priomax !< maximum priority on network wanted on output
 logical,intent(in),optional            :: contextana !< set contextana; only station data wanted on output
 class(dbadcv),intent(in),optional      :: vars ! vector of vars wanted on output
 class(dbadcv),intent(in),optional      :: starvars ! vector of vars for attribute wanted on output
+character(len=*),intent(in),optional   :: query !< Comma-separated list of query modifiers. Can have one of: 'best' or obsoletes:  'bigana', 'nosort', 'stream'. Examples: 'best'  obsoletes: 'nosort,stream' 
 
 integer :: i
 
@@ -1701,30 +1704,39 @@ else
 end if
 
 if (present(vars)) then
+  if (allocated(vars%dcv)) then
+    allocate(dbafilter_init%vars%dcv(size(vars%dcv)))
+    do i =1,size(vars%dcv)
+      allocate(dbafilter_init%vars%dcv(i)%dat,source=vars%dcv(i)%dat)
+    end do
 
-  allocate(dbafilter_init%vars%dcv(size(vars%dcv)))
-  do i =1,size(vars%dcv)
-    allocate(dbafilter_init%vars%dcv(i)%dat,source=vars%dcv(i)%dat)
-  end do
-
-  dbafilter_init%varlist=""
-  do i=1,size(vars%dcv) 
-    dbafilter_init%varlist=trim(dbafilter_init%varlist)//vars%dcv(i)%dat%btable
-    if (i /=  size(vars%dcv)) dbafilter_init%varlist=trim(dbafilter_init%varlist)//","
-  end do
+    dbafilter_init%varlist=""
+    do i=1,size(vars%dcv) 
+      dbafilter_init%varlist=trim(dbafilter_init%varlist)//vars%dcv(i)%dat%btable
+      if (i /=  size(vars%dcv)) dbafilter_init%varlist=trim(dbafilter_init%varlist)//","
+    end do
+  endif
 end if
 
 if (present(starvars)) then
-  allocate(dbafilter_init%starvars%dcv(size(starvars%dcv)))
-  do i =1,size(starvars%dcv)
-    allocate(dbafilter_init%starvars%dcv(i)%dat,source=starvars%dcv(i)%dat)
-  end do
+  if (allocated(starvars%dcv)) then
+    allocate(dbafilter_init%starvars%dcv(size(starvars%dcv)))
+    do i =1,size(starvars%dcv)
+      allocate(dbafilter_init%starvars%dcv(i)%dat,source=starvars%dcv(i)%dat)
+    end do
+    
+    dbafilter_init%starvarlist=""
+    do i=1,size(starvars%dcv)
+      dbafilter_init%starvarlist=trim(dbafilter_init%starvarlist)//starvars%dcv(i)%dat%btable
+      if (i /=  size(starvars%dcv)) dbafilter_init%starvarlist=trim(dbafilter_init%starvarlist)//","
+    end do
+  end if
+end if
 
-  dbafilter_init%starvarlist=""
-  do i=1,size(starvars%dcv)
-    dbafilter_init%starvarlist=trim(dbafilter_init%starvarlist)//starvars%dcv(i)%dat%btable
-    if (i /=  size(starvars%dcv)) dbafilter_init%starvarlist=trim(dbafilter_init%starvarlist)//","
-  end do
+if (present(priority)) then
+  dbafilter_init%priority=priority
+else
+  dbafilter_init%priority=imiss
 end if
 
 if (present(priomin)) then
@@ -1743,6 +1755,12 @@ if (present(contextana)) then
   dbafilter_init%contextana=contextana
 else
   dbafilter_init%contextana=.false.
+end if
+
+if (present(query)) then
+  dbafilter_init%query=query
+else
+  dbafilter_init%query=cmiss
 end if
 
 end function dbafilter_init
@@ -1767,9 +1785,11 @@ print *,"data_filter=",trim(filter%data_filter)
 print *,"attr_filter=",trim(filter%attr_filter)
 print *,"varlist=",trim(filter%varlist)
 print *,"*varlist=",trim(filter%starvarlist)
+print *,"priority=",filter%priority
 print *,"priomin=",filter%priomin
 print *,"priomax=",filter%priomax
 print *,"contextana=",filter%contextana
+print *,"query=",trim(filter%query)
 
 end subroutine dbafilter_display
 
@@ -1790,6 +1810,7 @@ call filter%network%dbaset(session)
 ier = idba_set(session%sehandle,"var",filter%var)
 
 ier = idba_set(session%sehandle,"limit",filter%limit)
+ier = idba_set(session%sehandle,"priority",filter%priority)
 ier = idba_set(session%sehandle,"priomin",filter%priomin)
 ier = idba_set(session%sehandle,"priomax",filter%priomax)
 
@@ -1832,6 +1853,8 @@ ier = idba_set(session%sehandle,"data_filter",filter%data_filter)
 ier = idba_set(session%sehandle,"attr_filter",filter%attr_filter)
 ier = idba_set(session%sehandle,"varlist",filter%varlist)
 ier = idba_set(session%sehandle,"*varlist",filter%starvarlist)
+
+ier = idba_set(session%sehandle,"query",filter%query)
 
 if (filter%contextana) then
  call session%setcontextana()
@@ -2963,7 +2986,9 @@ integer :: ier
 
 if (c_e(handle%dbhandle)) then 
   ier = idba_arrivederci(handle%dbhandle)
+  ier = idba_error_remove_callback(handle%handle_err)
 end if
+
 
 end subroutine dbaconnection_delete
 
