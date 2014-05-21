@@ -21,6 +21,13 @@ type mytype
   real    :: r
 end type mytype
 type(mytype) :: ir=mytype(3,6.)
+
+type charmylen
+  character(len=10) :: char10
+end type charmylen
+type(charmylen) :: mychar
+
+
                                 ! real list
 call list_real%append(3.14)
 call list_real%append(6.28)
@@ -29,11 +36,11 @@ call list_real%display()
 
 !!$! do not work !!!
 !!$! compiler bug ?
-!!$                                ! char list
-!!$call list_char%append("hello world")
-!!$call list_char%append("bye bye baby")
-!!$print *,"display char list"
-!!$call list_char%display()
+!!$                                ! char fixed len (255) list
+call list_char%append("hello world")
+call list_char%append("bye bye baby")
+print *,"display char list"
+call list_char%display()
 
 
                                 ! test integer list
@@ -108,6 +115,11 @@ call list_mix%append(ir)
                                 !  call list_mix%append("test1")
                                 !  call list_mix%append("test2")
 
+                                ! but this should work
+
+mychar%char10="ciao ciao"
+call list_mix%append(mychar)
+
 print *,"display mix list"
 call list_mix%display()
 
@@ -129,6 +141,8 @@ do while (list_mix%element())
     print *,x
   type is (mytype)
     print *,x%i,x%r
+  type is (charmylen)
+    print *,x%char10
   end select
   
   call list_mix%next()

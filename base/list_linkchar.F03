@@ -5,7 +5,7 @@
 !! This module is used by other lists modules only for character.
 !!\ingroup base
 module list_linkchar
-  parameter (listcharmaxlen=255)
+  parameter (listcharmaxlen=10)
 
   private
   public :: link, listcharmaxlen
