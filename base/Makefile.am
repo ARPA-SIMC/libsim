@@ -7,7 +7,9 @@ libsim_base_la_SOURCES = for2r.f90 io_units.F90 kinds.F90 phys_const.f90 missing
  space_utilities.F90
 if F2003_EXTENDED_FEATURES
  libsim_base_la_SOURCES += list_link.F03 \
+ list_linkchar.F03 \
  list_abstract.F03 \
+ list_abstractforchar.F03 \
  list_mix.F03 \
  list_integer.F03 \
  list_doubleprecision.F03 \
@@ -49,8 +51,8 @@ list_real.$(OBJEXT): list_link.$(OBJEXT) list_abstract.$(OBJEXT)
 list_real.lo: list_link.$(OBJEXT) list_abstract.$(OBJEXT)
 list_doubleprecision.$(OBJEXT): list_link.$(OBJEXT) list_abstract.$(OBJEXT)
 list_doubleprecision.lo: list_link.$(OBJEXT) list_abstract.$(OBJEXT)
-list_character.$(OBJEXT): list_link.$(OBJEXT) list_abstract.$(OBJEXT)
-list_character.lo: list_link.$(OBJEXT) list_abstract.$(OBJEXT)
+list_character.$(OBJEXT): list_linkchar.$(OBJEXT) list_abstractforchar.$(OBJEXT)
+list_character.lo: list_linkchar.$(OBJEXT) list_abstractforchar.$(OBJEXT)
 list_byte.$(OBJEXT): list_link.$(OBJEXT) list_abstract.$(OBJEXT) kinds.$(OBJEXT)
 list_byte.lo: list_link.$(OBJEXT) list_abstract.$(OBJEXT) kinds.$(OBJEXT)
 list_mix.$(OBJEXT): list_link.$(OBJEXT) list_abstract.$(OBJEXT) kinds.$(OBJEXT)

@@ -1,4 +1,4 @@
-!> \brief  class to use lists in fortran 2003.
+!> \brief  class to use character lists in fortran 2003 WARNING !!!! CHAR LEN IS FIXED TO 255.
 !!
 !! Linked data structure is a data structure which
 !! consists of a set of data records (nodes) linked together and organized by references .
@@ -15,7 +15,8 @@
 !!\ingroup base
 !!
 module list_character
-  use list_abstract
+  use list_abstractforchar
+  use list_linkchar
   private
   public :: characterList
 !> Character specific implementation of doubly-linked list
@@ -40,7 +41,8 @@ class(characterList) :: this
 
 call this%rewind()
 do while(this%element())
-  print *,"index:",this%currentindex()," value:", this%current()
+
+  print *,"index:",this%currentindex()," value:", trim(this%current())
   call this%next()
 end do
 end subroutine displayCharacter
@@ -58,15 +60,11 @@ end subroutine displayCharacter
 
 !> get character pointed by iterator
 function currentCharacter(this)
-character(len=:),pointer :: currentCharacter
+character(len=listcharmaxlen) :: currentCharacter
 class(characterList) :: this
-class(*), pointer :: v
 
-v => this%currentpoli()
-select type(v)
-type is (character(len=*))
-  currentCharacter => v
-end select
+currentCharacter = this%currentpoli()
+
 end function currentCharacter
 
 end module list_character
