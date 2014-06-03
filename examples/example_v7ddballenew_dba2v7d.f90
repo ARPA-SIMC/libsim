@@ -26,7 +26,8 @@ IMPLICIT NONE
 
 TYPE(vol7d_dballe) :: v7d_dba
 integer :: category,ier
-character(len=512):: a_name,filename="../data/example_temp.bufr"
+character(len=512):: a_name,filename="/tmp/example.bufr"
+!"../data/example_temp.bufr"
 
 !questa chiamata prende dal launcher il nome univoco
 call l4f_launcher(a_name)
@@ -37,8 +38,10 @@ call l4f_category_log(category,L4F_INFO,"inizio")
 ! Chiamo il costruttore della classe vol7d_dballe per il mio oggetto in export
 CALL init(v7d_dba,filename=filename,file=.true.,categoryappend="dballenewapi")
 
-!CALL import(v7d_dba,var=["B12101"],attr=["*B33192"],anavar=["B12101"],anaattr=["*B33192"])
-CALL import(v7d_dba)
+CALL import(v7d_dba,var=["B12101","B12102"],varkind=["r","i"],&
+                   attr=["*B33196","*B33192","*B33193"],attrkind=["b","c","b"],&
+                   anavar=["B12101"],anaattr=["*B33192"])
+!CALL import(v7d_dba)
 
 Print *,"Fine lettura dati"
 

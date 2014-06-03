@@ -53,6 +53,7 @@ use vol7d_ana_class
 use vol7d_network_class
 use datetime_class
 use list_abstract
+use vol7d_class, only: vol7d_cdatalen
 
 IMPLICIT NONE
 
@@ -382,7 +383,9 @@ end interface dbadatab
 !> character version for dbadata
 type,public, extends(dbadata) :: dbadatac
 !  character(:) :: value
-  character(255) :: value
+!  character(255) :: value
+character(vol7d_cdatalen) :: value
+
 contains
   procedure :: dbadata_getc => dbadatac_getc !< return character value
   procedure :: dbaset => dbadatac_set !< set dballe parameters
