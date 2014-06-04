@@ -83,6 +83,7 @@ USE vol7d_class
 USE array_utilities
 use log4fortran
 USE geo_coord_class
+use list_mix
 use list_character
 use list_linkchar
 
@@ -90,7 +91,7 @@ IMPLICIT NONE
 
 character (len=255),parameter:: subcategory="vol7d_dballe_class"
 
-!>\brief Oggetto per import ed export da DB-All.e
+                                !>\brief Oggetto per import ed export da DB-All.e
 !!
 !!L'oggetto è costituito da un oggetto vol7d attorniato dalle 
 !!informazioni necessarie per l'accesso al DSN di DB-All.e
@@ -102,11 +103,12 @@ TYPE vol7d_dballe
   TYPE(vol7d) :: vol7d !< volume vol7d
   type(dbaconnection) :: idbhandle !< handle delle sessioni connesse al DSN DB-All.e
   type(dbasession) :: handle !< handle delle sessioni connesse al DSN DB-All.e
-  !> memorizza gli id interni al database DB-All.e per 
+                                !> memorizza gli id interni al database DB-All.e per 
   !!ottimizzare le riscritture degli attributi ai dati
   integer ,pointer :: data_id(:,:,:,:,:)
+  integer :: time_definition
   integer :: category !< log4fortran
-  
+
 END TYPE vol7d_dballe
 
 INTEGER, PARAMETER, PRIVATE :: nftype = 2
@@ -117,57 +119,33 @@ CHARACTER(len=16), PARAMETER, PRIVATE :: &
  (/2,nftype/))
 
 
+type(vol7d_var),allocatable,private :: blocal(:) ! cache of dballe.txt
+
 CHARACTER(len=20),PRIVATE :: dballe_name='wreport', dballe_name_env='DBA_TABLES'
 
 
-!>\brief inizializza
+                                !>\brief inizializza
 INTERFACE init
   MODULE PROCEDURE vol7d_dballe_init
-END INTERFACE
+END INTERFACE init
 
-!>\brief cancella
+                                !>\brief cancella
 INTERFACE delete
   MODULE PROCEDURE vol7d_dballe_delete
-END INTERFACE
+END INTERFACE delete
 
 
-!>\brief importa
+                                !>\brief importa
 INTERFACE import
-  MODULE PROCEDURE  vol7d_dballe_importvvnv,vol7d_dballe_import
-END INTERFACE
+  MODULE PROCEDURE  vol7d_dballe_importvvnv,vol7d_dballe_import, dba2v7d
+END INTERFACE import
 
 #ifdef NONE
-!>\brief exporta
+                                !>\brief exporta
 INTERFACE export
   MODULE PROCEDURE vol7d_dballe_export
-END INTERFACE
+END INTERFACE export
 #endif
-
-type record
-
-  !! prime 5 dimensioni
-  integer :: data_id
-  TYPE(vol7d_ana) :: ana
-  TYPE(datetime) :: time
-  TYPE(vol7d_level) :: level
-  TYPE(vol7d_timerange) :: timerange
-  TYPE(vol7d_network) :: network
-  !TYPE(vol7d_var) ::  dativar
-  CHARACTER(len=10) :: btable
-  !! Volumi di valori e attributi per  dati
-  REAL :: dator
-  REAL(kind=fp_d) :: datod
-  INTEGER :: datoi
-  INTEGER(kind=int_b) :: datob 
-  CHARACTER(len=vol7d_cdatalen) :: datoc 
-
-!  INTEGER(kind=int_b)   :: datiattrb(3)
-!  REAL(kind=fp_d),POINTER :: voldatiattrd(:,:,:,:,:,:,:)
-!  INTEGER,POINTER :: voldatiattri(:,:,:,:,:,:,:)
-!  INTEGER(kind=int_b),POINTER :: voldatiattrb(:,:,:,:,:,:,:)
-!  CHARACTER(len=vol7d_cdatalen),POINTER :: voldatiattrc(:,:,:,:,:,:,:)
-
-END TYPE record
 
 PRIVATE
 PUBLIC vol7d_dballe, init, delete, import, export
@@ -175,7 +153,7 @@ PUBLIC vol7d_dballe, init, delete, import, export
 CONTAINS
 
 
-!>\brief  inizializza l'oggetto
+                                !>\brief  inizializza l'oggetto
 SUBROUTINE vol7d_dballe_init(this,dsn,user,password,write,wipe,repinfo,&
  filename,format,file,categoryappend,time_definition,idbhandle)
 
@@ -224,8 +202,8 @@ endif
 
 !! TODO wipe and repinfo
 
-!this%idbhandle=dbaconnection()
-!this%handle=dbasession()
+                                !this%idbhandle=dbaconnection()
+                                !this%handle=dbasession()
 
 if (present(categoryappend))then
   call l4f_launcher(a_name,a_name_append=trim(subcategory)//"."//trim(categoryappend))
@@ -236,8 +214,8 @@ this%category=l4f_category_get(a_name)
 
 nullify(this%data_id)
 
-!TODO: quando scrivo bisogna gestire questo che non è da fare ?
-CALL init(this%vol7d,time_definition=time_definition)
+                                !TODO: quando scrivo bisogna gestire questo che non è da fare ?
+                                !CALL init(this%vol7d,time_definition=time_definition)
 
 if (optio_log(file)) then
 
@@ -245,7 +223,7 @@ if (optio_log(file)) then
   if (present(format))then
     lformat=format
   end if
-  
+
 
   lfilename=trim(arg)//"."//trim(lformat)
   if (index(arg,'/',back=.true.) > 0) lfilename=lfilename(index(arg,'/',back=.true.)+1 : )
@@ -258,7 +236,7 @@ if (optio_log(file)) then
 
 
   if (.not. quiwrite) then
-    !print *,"import in mem:"
+                                !print *,"import in mem:"
 
     this%idbhandle=dbaconnection(dsn="mem:",user="",password="")
     this%handle=dbasession(this%idbhandle,"write","write","write")
@@ -268,40 +246,43 @@ if (optio_log(file)) then
       read_next = this%handle%messages_read_next()
     end do
 
-    !print *,"end import in mem:"
+                                !print *,"end import in mem:"
   end if
 
 else
 
 
-    quidsn = "test"
-    quiuser = "test"
-    quipassword = ""
-    IF (PRESENT(dsn)) THEN
-      IF (c_e(dsn)) quidsn = dsn
-    ENDIF
-    IF (PRESENT(user)) THEN
-      IF (c_e(user)) quiuser = user
-    ENDIF
-    IF (PRESENT(password)) THEN
-      IF (c_e(password)) quipassword = password
-    ENDIF
+  quidsn = "test"
+  quiuser = "test"
+  quipassword = ""
+  IF (PRESENT(dsn)) THEN
+    IF (c_e(dsn)) quidsn = dsn
+  ENDIF
+  IF (PRESENT(user)) THEN
+    IF (c_e(user)) quiuser = user
+  ENDIF
+  IF (PRESENT(password)) THEN
+    IF (c_e(password)) quipassword = password
+  ENDIF
 
-    this%idbhandle=dbaconnection(quidsn,quiuser,quipassword,idbhandle=idbhandle)
+  this%idbhandle=dbaconnection(quidsn,quiuser,quipassword,idbhandle=idbhandle)
 
   if(quiwrite)then
     this%handle=dbasession(this%idbhandle,"write","write","write")
   else
     this%handle=dbasession(this%idbhandle,"read","read","read")
   end if
-  
+
 endif
+
+this%time_definition = optio_i(time_definition)
+
 
 END SUBROUTINE vol7d_dballe_init
 
 
 
-!>\brief Identica a vol7d_dballe_importvsns con var e network vettore.
+                                !>\brief Identica a vol7d_dballe_importvsns con var e network vettore.
 !!
 !!import da DB-all.e
 
@@ -358,10 +339,10 @@ TYPE(vol7d_level) :: llevel
 TYPE(vol7d_timerange) :: ltimerange
 
 INTEGER,PARAMETER :: maxvarlist=100
-!TYPE(vol7d) :: v7d
-! da non fare (con gfortran?)!!!!!
-!CHARACTER(len=SIZE(var)*7) :: varlist
-!CHARACTER(len=SIZE(attr)*8) :: starvarlist
+                                !TYPE(vol7d) :: v7d
+                                ! da non fare (con gfortran?)!!!!!
+                                !CHARACTER(len=SIZE(var)*7) :: varlist
+                                !CHARACTER(len=SIZE(attr)*8) :: starvarlist
 CHARACTER(len=maxvarlist*7) :: varlist
 CHARACTER(len=maxvarlist*8) :: starvarlist
 CHARACTER(len=6) :: btable
@@ -383,7 +364,7 @@ integer :: nanavar ,indanavar,indanaattr,indanavarattr,nanavarattr
 
 INTEGER(kind=int_l) :: ilat,ilon
 CHARACTER(len=vol7d_ana_lenident) :: ident
-!CHARACTER(len=10),allocatable :: lvar(:), lanavar(:)
+                                !CHARACTER(len=10),allocatable :: lvar(:), lanavar(:)
 type(dbadcv)       :: vars,starvars,anavars,anastarvars
 type(dbafilter)    :: filter
 type(dbacoord)     :: mydbacoordmin, mydbacoordmax
@@ -394,7 +375,7 @@ type(dbalevel)     :: mydbalevel
 type(dbanetwork)   :: mydbanetwork
 
 
-!INTEGER(kind=int_b)::attrdatib
+                                !INTEGER(kind=int_b)::attrdatib
 
 integer :: ndativarr,     ndativari,     ndativarb,     ndativard,     ndativarc
 integer :: ndatiattrr,    ndatiattri,    ndatiattrb,    ndatiattrd,    ndatiattrc 
@@ -407,20 +388,17 @@ integer :: nanavarattrr, nanavarattri, nanavarattrb, nanavarattrd, nanavarattrc
 integer :: ir,ib,id,ic,ier,nanaattr,nattr
 
 TYPE(vol7d) :: vol7dtmp
-type(characterlist) :: dativarl,dativarattrl,anavarl,anavarattrl
-character(len=listcharmaxlen),allocatable :: dativara(:),dativarattra(:),anavara(:),anavarattra(:)
 integer :: ndativar,ndativarattr
 
 
-type(record),ALLOCATABLE :: buffer(:),bufferana(:)
 character(len=40) :: query
 type(dbametaanddata),allocatable :: metaanddatav(:)
-logical :: status
 
 
 #ifdef DEBUG
 CALL l4f_category_log(this%category,L4F_DEBUG,'inizio')
 #endif        
+
 
 IF (PRESENT(set_network)) THEN
   if (c_e(set_network)) then
@@ -438,8 +416,18 @@ else
   query=cmiss
 end if
 
+
+                                !     uncommenti this if you want compatibility API with old import
+
+!!$  if (allocated(starvars%dcv)) then
+!!$    ldataonly=.false.
+!!$  else
+!!$    ldataonly=.true.
+!!$  end if
+
+
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-! ------------- prepare filter options
+                                ! ------------- prepare filter options
 
 !!
 !!           translate import option for dballe2003 api
@@ -570,496 +558,78 @@ if (present(anaattr)) then
 end if
 
 
-if ( .not. optio_log(anaonly)) then
-
-  ! like a cast
-  mydbacoordmin=dbacoord()
-  if (present(coordmin)) mydbacoordmin%geo_coord=coordmin
-  mydbacoordmax=dbacoord()
-  if (present(coordmax)) mydbacoordmax%geo_coord=coordmax
-  mydbaana=dbaana()
-  if (present(ana)) mydbaana%vol7d_ana=ana
-  mydatetimemin=dbadatetime()
-  if (present(timei)) mydatetimemin%datetime=timei
-  mydatetimemax=dbadatetime()
-  if (present(timef)) mydatetimemax%datetime=timef
-  mydbatimerange=dbatimerange()
-  if (present(timerange)) mydbatimerange%vol7d_timerange=timerange
-  mydbalevel=dbalevel()
-  if (present(level)) mydbalevel%vol7d_level=level
-  mydbanetwork=dbanetwork()
-  if (present(network)) mydbanetwork%vol7d_network=network
+                                ! like a cast
+mydbacoordmin=dbacoord()
+if (present(coordmin)) mydbacoordmin%geo_coord=coordmin
+mydbacoordmax=dbacoord()
+if (present(coordmax)) mydbacoordmax%geo_coord=coordmax
+mydbaana=dbaana()
+if (present(ana)) mydbaana%vol7d_ana=ana
+mydatetimemin=dbadatetime()
+if (present(timei)) mydatetimemin%datetime=timei
+mydatetimemax=dbadatetime()
+if (present(timef)) mydatetimemax%datetime=timef
+mydbatimerange=dbatimerange()
+if (present(timerange)) mydbatimerange%vol7d_timerange=timerange
+mydbalevel=dbalevel()
+if (present(level)) mydbalevel%vol7d_level=level
+mydbanetwork=dbanetwork()
+if (present(network)) mydbanetwork%vol7d_network=network
 
 !!
 !!         here we have options ready for filter
 !!
-
-!
-! ---------------->   working on data
-!
-
-                                ! set filter
-
-  filter=dbafilter(coordmin=mydbacoordmin,coordmax=mydbacoordmax,ana=mydbaana, &
-   datetimemin=mydatetimemin,datetimemax=mydatetimemax, &
-   timerange=mydbatimerange,level=mydbalevel,network=mydbanetwork,query=query,&
-   vars=vars,starvars=starvars)
-
+filter=dbafilter(coordmin=mydbacoordmin,coordmax=mydbacoordmax,ana=mydbaana, &
+ datetimemin=mydatetimemin,datetimemax=mydatetimemax, &
+ timerange=mydbatimerange,level=mydbalevel,network=mydbanetwork,query=query,&
+ vars=vars,starvars=starvars)
 !!$  print *, "filter:"
 !!$  call filter%display()
 
+if ( .not. optio_log(anaonly)) then
+                                ! ---------------->   working on data
+                                ! set filter
   call this%handle%set(filter=filter)
-
-
-!     uncommenti this if you want compatibility API with old import
-
-!!$  if (allocated(starvars%dcv)) then
-!!$    ldataonly=.false.
-!!$  else
-!!$    ldataonly=.true.
-!!$  end if
-
-
                                 ! estrude the data
-
   call this%handle%extrude(metaanddatav,filter=filter,dataonly=dataonly)
-!!$  do i =1, size(metaanddatav)
-!!$    call metaanddatav(i)%display()
-!!$  end do
 
-                                ! take in account time_definition
-  if (this%vol7d%time_definition == 0) then
-    do i =i,size(metaanddatav)
-      metaanddatav(i)%metadata%datetime%datetime = &
-       metaanddatav(i)%metadata%datetime%datetime - &
-       timedelta_new(msec=metaanddatav(i)%metadata%timerange%vol7d_timerange%p1*1000)
-    end do
-  end if
+  call dba2v7d(vol7dtmp,metaanddatav,this%time_definition,set_network)
 
+  deallocate (metaanddatav)
 
-!!--------------------------------------------------------------------------
-!! if not presetted find vars, starvars, anavars, anastarvars
-!!
+end if
 
-                                ! data
-  if (.not. allocated(vars%dcv)) then
-    do i =1, size(metaanddatav)
-      do j=1, size(metaanddatav(i)%dataattrv%dataattr)
-        if (c_e(metaanddatav(i)%metadata%datetime%datetime)) then
-          !print *,"dativarl: ", metaanddatav(i)%dataattrv%dataattr(j)%dat%btable
-          call dativarl%append(metaanddatav(i)%dataattrv%dataattr(j)%dat%btable)
-        else
-          !print *,"anavarl: ", metaanddatav(i)%dataattrv%dataattr(j)%dat%btable
-          call anavarl%append(metaanddatav(i)%dataattrv%dataattr(j)%dat%btable)
-        end if
-      end do
-    end do
-    
-    ndativar     = count_distinct (toarray_charl(dativarl)    , back=.TRUE.)
-    allocate(dativara(ndativar))
-    call pack_distinct_c (toarray_charl(dativarl)    , dativara    , back=.TRUE.)
-    status = dativarl%delete()
-    allocate (vars%dcv(ndativar))
-    do i=1,ndativar
-      allocate(vars%dcv(i)%dat,source=dbadatac(dativara(i)))
-    end do
+                                ! ---------------->   constant station data
 
-    nanavar      = count_distinct (toarray_charl(anavarl)     , back=.TRUE.)
-    allocate(anavara(nanavar))
-    call pack_distinct_c (toarray_charl(anavarl)     , anavara     , back=.TRUE.)
-    status = anavarl%delete()
-    allocate (anavars%dcv(nanavar))
-    do i=1,nanavar
-      allocate(anavars%dcv(i)%dat,source=dbadatac(anavara(i)))
-    end do
+filter=dbafilter(filter=filter,contextana=.true.)
 
-  end if
+!!$filter=dbafilter(coordmin=mydbacoordmin,coordmax=mydbacoordmax,ana=mydbaana, &
+!!$ datetimemin=mydatetimemin,datetimemax=mydatetimemax, &
+!!$ timerange=mydbatimerange,level=mydbalevel,network=mydbanetwork,query=query,&
+!!$ vars=anavars,starvars=anastarvars,contextana=.true.)
+                                ! set filter
+call this%handle%set(filter=filter)
+
+call this%handle%extrude(metaanddatav,filter=filter,dataonly=dataonly)
+
+call dba2v7d(this%vol7d, metaanddatav,this%time_definition,set_network)
+
+deallocate (metaanddatav)
 
 
-                                ! attributes
-  if (.not. allocated(starvars%dcv)) then
-    do i =1, size(metaanddatav)
-      do j=1, size(metaanddatav(i)%dataattrv%dataattr)
-        do k=1, size(metaanddatav(i)%dataattrv%dataattr(j)%attrv%dcv)
-          if (c_e(metaanddatav(i)%metadata%datetime%datetime)) then
-            !print *,"dativarattrl: ", metaanddatav(i)%dataattrv%dataattr(j)%attrv%dcv(k)%dat%btable
-            call dativarattrl%append(metaanddatav(i)%dataattrv%dataattr(j)%attrv%dcv(k)%dat%btable)
-          else
-            !print *,"anavarattrl: ", metaanddatav(i)%dataattrv%dataattr(j)%attrv%dcv(k)%dat%btable
-            call anavarattrl%append(metaanddatav(i)%dataattrv%dataattr(j)%attrv%dcv(k)%dat%btable)
-          end if
-        end do
-      end do
-    end do
-    
+                                ! ---------------->   constant station data end
 
-    ndativarattr = count_distinct (toarray_charl(dativarattrl), back=.TRUE.)
-    allocate(dativarattra(ndativarattr))
-    call pack_distinct_c (toarray_charl(dativarattrl), dativarattra, back=.TRUE.)
-    status = dativarattrl%delete()
-    allocate(starvars%dcv(ndativarattr))
-    do i=1,ndativarattr
-      allocate(starvars%dcv(i)%dat,source=dbadatac(dativarattra(i)))
-    end do
-    
-    nanavarattr  = count_distinct (toarray_charl(anavarattrl) , back=.TRUE.)
-    allocate(anavarattra(nanavarattr))
-    call pack_distinct_c (toarray_charl(anavarattrl) , anavarattra , back=.TRUE.)
-    status = anavarattrl%delete()
-    allocate(anastarvars%dcv(nanavarattr))
-    do i=1,nanavarattr
-      allocate(anastarvars%dcv(i)%dat,source=dbadatac(anavarattra(i)))
-    end do
+if ( .not. optio_log(anaonly)) then
+  CALL vol7d_merge(this%vol7d, vol7dtmp, sort=.TRUE.) ! Smart merge
+!!$else
+!!$                                ! should we sort separately in case no merge is done?
+!!$  CALL vol7d_smart_sort(this%vol7d, lsort_time=.TRUE., lsort_timerange=.TRUE., lsort_level=.TRUE.)
+end if
 
-  end if
-
-!!--------------------------------------------------------------------------
+call vol7d_dballe_set_var_du(this%vol7d)
 
 
-!!
-!!             count all
-!!
-
-  if(ldegnet) then
-    nnetwork=1
-  else
-    nnetwork = count_distinct(metaanddatav(:)%metadata%network%vol7d_network, back=.TRUE.)
-  end if
-  
-  ntime      = count_distinct(metaanddatav(:)%metadata%datetime%datetime, back=.TRUE.)
-  ntimerange = count_distinct(metaanddatav(:)%metadata%timerange%vol7d_timerange, back=.TRUE.)
-  nlevel     = count_distinct(metaanddatav(:)%metadata%level%vol7d_level, back=.TRUE.)
-  nana       = count_distinct(metaanddatav(:)%metadata%ana%vol7d_ana, back=.TRUE.)
-  
-! var
-
-  ndativarr = 0
-  ndativari = 0
-  ndativarb = 0
-  ndativard = 0
-  ndativarc = 0
-  
-  do i =1 ,size(vars%dcv)
-    associate (dato => vars%dcv(i)%dat)
-      select type (dato)
-      type is (dbadatar)
-        ndativarr = ndativarr + 1
-      type is (dbadatai)
-        ndativari = ndativari + 1
-      type is (dbadatab)
-        ndativarb = ndativarb + 1
-      type is (dbadatad)
-        ndativard = ndativard + 1
-      type is (dbadatac)
-        ndativarc = ndativarc + 1
-      end select
-    end associate
-  end do
-  
-  
-!attr
-  
-  ndatiattrr = 0
-  ndatiattri = 0
-  ndatiattrb = 0
-  ndatiattrd = 0
-  ndatiattrc = 0
-  
-  do i =1 ,size(starvars%dcv)
-    associate (dato => starvars%dcv(i)%dat)
-      select type (dato)
-      type is (dbadatar)
-        ndatiattrr = ndatiattrr + 1
-      type is (dbadatai)
-        ndatiattri = ndatiattri + 1
-      type is (dbadatab)
-        ndatiattrb = ndatiattrb + 1
-      type is (dbadatad)
-        ndatiattrd = ndatiattrd + 1
-      type is (dbadatac)
-        ndatiattrc = ndatiattrc + 1
-      end select
-    end associate
-  end do
-  
-  
-! ana var
-
-  nanavarr = 0
-  nanavari = 0
-  nanavarb = 0
-  nanavard = 0
-  nanavarc = 0
-  
-  do i =1 ,size(anavars%dcv)
-    associate (dato => anavars%dcv(i)%dat)
-      select type (dato)
-      type is (dbadatar)
-        nanavarr = nanavarr + 1
-      type is (dbadatai)
-        nanavari = nanavari + 1
-      type is (dbadatab)
-        nanavarb = nanavarb + 1
-      type is (dbadatad)
-        nanavard = nanavard + 1
-      type is (dbadatac)
-        nanavarc = nanavarc + 1
-      end select
-    end associate
-  end do
-  
-
-! ana attr
-
-  nanaattrr = 0
-  nanaattri = 0
-  nanaattrb = 0
-  nanaattrd = 0
-  nanaattrc = 0
-  
-  do i =1 ,size(anastarvars%dcv)
-    associate (dato => anastarvars%dcv(i)%dat)
-      select type (dato)
-      type is (dbadatar)
-        nanaattrr = nanaattrr + 1
-      type is (dbadatai)
-        nanaattri = nanaattri + 1
-      type is (dbadatab)
-        nanaattrb = nanaattrb + 1
-      type is (dbadatad)
-        nanaattrd = nanaattrd + 1
-      type is (dbadatac)
-        nanaattrc = nanaattrc + 1
-      end select
-    end associate
-  end do
-  
-
-!refine
-
-  ndativarattrr=0
-  ndativarattri=0
-  ndativarattrb=0
-  ndativarattrd=0
-  ndativarattrc=0
-  
-  if (ndatiattrr > 0 ) ndativarattrr=ndativarr+ndativari+ndativarb+ndativard+ndativarc
-  if (ndatiattri > 0 ) ndativarattri=ndativarr+ndativari+ndativarb+ndativard+ndativarc
-  if (ndatiattrb > 0 ) ndativarattrb=ndativarr+ndativari+ndativarb+ndativard+ndativarc
-  if (ndatiattrd > 0 ) ndativarattrd=ndativarr+ndativari+ndativarb+ndativard+ndativarc
-  if (ndatiattrc > 0 ) ndativarattrc=ndativarr+ndativari+ndativarb+ndativard+ndativarc
-  
-  
-  nanavarattrr=0
-  nanavarattri=0
-  nanavarattrb=0
-  nanavarattrd=0
-  nanavarattrc=0
-  
-  if (nanaattrr > 0 ) nanavarattrr=nanavarr+nanavari+nanavarb+nanavard+nanavarc
-  if (nanaattri > 0 ) nanavarattri=nanavarr+nanavari+nanavarb+nanavard+nanavarc
-  if (nanaattrb > 0 ) nanavarattrb=nanavarr+nanavari+nanavarb+nanavard+nanavarc
-  if (nanaattrd > 0 ) nanavarattrd=nanavarr+nanavari+nanavarb+nanavard+nanavarc
-  if (nanaattrc > 0 ) nanavarattrc=nanavarr+nanavari+nanavarb+nanavard+nanavarc
-  
-  
-  CALL init(vol7dtmp,time_definition=this%vol7d%time_definition)
-  
-!!$  print *, "nana=",nana, "ntime=",ntime, "ntimerange=",ntimerange, &
-!!$   "nlevel=",nlevel, "nnetwork=",nnetwork, &
-!!$   "ndativarr=",ndativarr, "ndativari=",ndativari, &
-!!$   "ndativarb=",ndativarb, "ndativard=",ndativard, "ndativarc=",ndativarc,&
-!!$   "ndatiattrr=",ndatiattrr, "ndatiattri=",ndatiattri, "ndatiattrb=",ndatiattrb,&
-!!$   "ndatiattrd=",ndatiattrd, "ndatiattrc=",ndatiattrc,&
-!!$   "ndativarattrr=",ndativarattrr, "ndativarattri=",ndativarattri, "ndativarattrb=",ndativarattrb,&
-!!$   "ndativarattrd=",ndativarattrd, "ndativarattrc=",ndativarattrc
-
-  call vol7d_alloc (vol7dtmp, &
-   nana=nana, ntime=ntime, ntimerange=ntimerange, &
-   nlevel=nlevel, nnetwork=nnetwork, &
-   ndativarr=ndativarr, ndativari=ndativari, ndativarb=ndativarb, ndativard=ndativard, ndativarc=ndativarc,&
-   ndatiattrr=ndatiattrr, ndatiattri=ndatiattri, ndatiattrb=ndatiattrb, ndatiattrd=ndatiattrd, ndatiattrc=ndatiattrc,&
-   ndativarattrr=ndativarattrr, &
-   ndativarattri=ndativarattri, &
-   ndativarattrb=ndativarattrb, &
-   ndativarattrd=ndativarattrd, &
-   ndativarattrc=ndativarattrc,&
-   nanavarr=nanavarr, nanavari=nanavari, nanavarb=nanavarb, nanavard=nanavard, nanavarc=nanavarc,&
-   nanaattrr=nanaattrr, nanaattri=nanaattri, nanaattrb=nanaattrb, nanaattrd=nanaattrd, nanaattrc=nanaattrc,&
-   nanavarattrr=nanavarattrr, &
-   nanavarattri=nanavarattri, &
-   nanavarattrb=nanavarattrb, &
-   nanavarattrd=nanavarattrd, &
-   nanavarattrc=nanavarattrc)
-  
-  vol7dtmp%ana=pack_distinct(metaanddatav(:)%metadata%ana%vol7d_ana, nana, back=.TRUE.)
-  
-  vol7dtmp%time=pack_distinct(metaanddatav(:)%metadata%datetime%datetime, ntime, back=.TRUE.)
-  call sort(vol7dtmp%time)
-
-  vol7dtmp%timerange=pack_distinct(metaanddatav(:)%metadata%timerange%vol7d_timerange, ntimerange, back=.TRUE.)
-  call sort(vol7dtmp%timerange)
-  
-  vol7dtmp%level=pack_distinct(metaanddatav(:)%metadata%level%vol7d_level, nlevel, back=.TRUE.)
-  call sort(vol7dtmp%level)
-  
-  if(ldegnet)then
-    vol7dtmp%network(1)=set_network
-  else
-    vol7dtmp%network=pack_distinct(metaanddatav(:)%metadata%network%vol7d_network, nnetwork, back=.TRUE.)
-  end if
-
-
-! var
-
-  ndativarr = 0
-  ndativari = 0
-  ndativarb = 0
-  ndativard = 0
-  ndativarc = 0
-  
-  do i =1 ,size(vars%dcv)
-    associate (dato => vars%dcv(i)%dat)
-      select type (dato)
-      type is (dbadatar)
-        ndativarr = ndativarr + 1
-        call init (vol7dtmp%dativar%r(ndativarr), btable=dato%btable)
-      type is (dbadatai)
-        ndativari = ndativari + 1
-        call init (vol7dtmp%dativar%i(ndativari), btable=dato%btable)
-      type is (dbadatab)
-        ndativarb = ndativarb + 1
-        call init (vol7dtmp%dativar%b(ndativarb), btable=dato%btable)
-      type is (dbadatad)
-        ndativard = ndativard + 1
-        call init (vol7dtmp%dativar%d(ndativard), btable=dato%btable)
-      type is (dbadatac)
-        ndativarc = ndativarc + 1
-        call init (vol7dtmp%dativar%c(ndativarc), btable=dato%btable)
-      end select
-    end associate
-  end do
-  
-
-!attr
-
-  ndatiattrr = 0
-  ndatiattri = 0
-  ndatiattrb = 0
-  ndatiattrd = 0
-  ndatiattrc = 0
-  
-  do i =1 ,size(starvars%dcv)
-    associate (dato => starvars%dcv(i)%dat)
-      select type (dato)
-      type is (dbadatar)
-        ndatiattrr = ndatiattrr + 1
-        call init (vol7dtmp%datiattr%r(ndatiattrr), btable=dato%btable)
-      type is (dbadatai)
-        ndatiattri = ndatiattri + 1
-        call init (vol7dtmp%datiattr%i(ndatiattri), btable=dato%btable)
-      type is (dbadatab)
-        ndatiattrb = ndatiattrb + 1
-        call init (vol7dtmp%datiattr%b(ndatiattrb), btable=dato%btable)
-      type is (dbadatad)
-        ndatiattrd = ndatiattrd + 1
-        call init (vol7dtmp%datiattr%d(ndatiattrd), btable=dato%btable)
-      type is (dbadatac)
-        ndatiattrc = ndatiattrc + 1
-        call init (vol7dtmp%datiattr%c(ndatiattrc), btable=dato%btable)
-      end select
-    end associate
-  end do
-  
-    
-! ana var
-  
-  nanavarr = 0
-  nanavari = 0
-  nanavarb = 0
-  nanavard = 0
-  nanavarc = 0
-  
-  do i =1 ,size(anavars%dcv)
-    associate (dato => anavars%dcv(i)%dat)
-      select type (dato)
-      type is (dbadatar)
-        nanavarr = nanavarr + 1
-        call init (vol7dtmp%anavar%r(nanavarr), btable=dato%btable)
-      type is (dbadatai)
-        nanavari = nanavari + 1
-        call init (vol7dtmp%anavar%i(nanavari), btable=dato%btable)
-      type is (dbadatab)
-        nanavarb = nanavarb + 1
-        call init (vol7dtmp%anavar%b(nanavarb), btable=dato%btable)
-      type is (dbadatad)
-        nanavard = nanavard + 1
-        call init (vol7dtmp%anavar%d(nanavard), btable=dato%btable)
-      type is (dbadatac)
-        nanavarc = nanavarc + 1
-        call init (vol7dtmp%anavar%c(nanavarc), btable=dato%btable)
-      end select
-    end associate
-  end do
-  
-  
-! ana attr
-  
-  nanaattrr = 0
-  nanaattri = 0
-  nanaattrb = 0
-  nanaattrd = 0
-  nanaattrc = 0
-  
-  do i =1 ,size(anastarvars%dcv)
-    associate (dato => anastarvars%dcv(i)%dat)
-      select type (dato)
-      type is (dbadatar)
-        nanaattrr = nanaattrr + 1
-        call init (vol7dtmp%anaattr%r(nanaattrr), btable=dato%btable)
-      type is (dbadatai)
-        nanaattri = nanaattri + 1
-        call init (vol7dtmp%anaattr%i(nanaattri), btable=dato%btable)
-      type is (dbadatab)
-        nanaattrb = nanaattrb + 1
-        call init (vol7dtmp%anaattr%b(nanaattrb), btable=dato%btable)
-      type is (dbadatad)
-        nanaattrd = nanaattrd + 1
-        call init (vol7dtmp%anaattr%d(nanaattrd), btable=dato%btable)
-      type is (dbadatac)
-        nanaattrc = nanaattrc + 1
-        call init (vol7dtmp%anaattr%c(nanaattrc), btable=dato%btable)
-      end select
-    end associate
-  end do
-
-
-! here we colcolate the link from attributes and vars
-  do i =1, size(vars%dcv)
-    associate (dato => vars%dcv(i)%dat)
-      if ( ndativarattri > 0 ) call init(vol7dtmp%dativarattr%i(i),btable=dato%btable)
-      if ( ndativarattrr > 0 ) call init(vol7dtmp%dativarattr%r(i),btable=dato%btable)
-      if ( ndativarattrd > 0 ) call init(vol7dtmp%dativarattr%d(i),btable=dato%btable)
-      if ( ndativarattrb > 0 ) call init(vol7dtmp%dativarattr%b(i),btable=dato%btable)
-      if ( ndativarattrc > 0 ) call init(vol7dtmp%dativarattr%c(i),btable=dato%btable)
-    end associate
-  end do
-
-  do i =1, size(anavars%dcv)
-    associate (dato => anavars%dcv(i)%dat)
-      if ( nanavarattri > 0 ) call init(vol7dtmp%anavarattr%i(i),btable=dato%btable)
-      if ( nanavarattrr > 0 ) call init(vol7dtmp%anavarattr%r(i),btable=dato%btable)
-      if ( nanavarattrd > 0 ) call init(vol7dtmp%anavarattr%d(i),btable=dato%btable)
-      if ( nanavarattrb > 0 ) call init(vol7dtmp%anavarattr%b(i),btable=dato%btable)
-      if ( nanavarattrc > 0 ) call init(vol7dtmp%anavarattr%c(i),btable=dato%btable)
-    end associate
-  end do
-
-! set index in dativaratt*
-  call vol7d_set_attr_ind(this%vol7d)
-
-
-  call vol7d_alloc_vol (vol7dtmp)
+#ifdef NONE
 
 !!$if (lattr) then
 !!$
@@ -1075,205 +645,32 @@ if ( .not. optio_log(anaonly)) then
 !!$
 !!$else
 
-  nullify(this%data_id)
+nullify(this%data_id)
 
 !!$end if
 
 
-! Ora qui bisogna metterci dentro idati
-
-
-  do i =1, size(metaanddatav)
-
-    indana       = firsttrue(metaanddatav(i)%metadata%ana%vol7d_ana             == vol7dtmp%ana)
-    indtime      = firsttrue(metaanddatav(i)%metadata%datetime%datetime         == vol7dtmp%time)
-    indtimerange = firsttrue(metaanddatav(i)%metadata%timerange%vol7d_timerange == vol7dtmp%timerange)
-    indlevel     = firsttrue(metaanddatav(i)%metadata%level%vol7d_level         == vol7dtmp%level)
-    if (ldegnet)then
-      indnetwork=1
-    else
-      indnetwork = firsttrue(metaanddatav(i)%metadata%network%vol7d_network     == vol7dtmp%network)
-    endif
-
-
-    if (c_e(metaanddatav(i)%metadata%datetime%datetime)) then      ! dati
-      
-      do j=1, size(metaanddatav(i)%dataattrv%dataattr)
-        
-        associate (dato => metaanddatav(i)%dataattrv%dataattr(j)%dat)
-          select type (dato)
-          type is (dbadatai)
-            inddativar = firsttrue(dato%btable == vol7dtmp%dativar%i%btable)
-            vol7dtmp%voldatii( &
-             indana,indtime,indlevel,indtimerange,inddativar,indnetwork &
-             ) = dato%value
-            
-          type is (dbadatar)
-            inddativar = firsttrue(dato%btable == vol7dtmp%dativar%r%btable)
-            vol7dtmp%voldatir( &
-             indana,indtime,indlevel,indtimerange,inddativar,indnetwork &
-             ) = dato%value
-            
-          type is (dbadatad)
-            inddativar = firsttrue(dato%btable == vol7dtmp%dativar%d%btable)
-            vol7dtmp%voldatid( &
-             indana,indtime,indlevel,indtimerange,inddativar,indnetwork &
-             ) = dato%value
-            
-          type is (dbadatab)
-            inddativar = firsttrue(dato%btable == vol7dtmp%dativar%b%btable)
-            vol7dtmp%voldatib( &
-             indana,indtime,indlevel,indtimerange,inddativar,indnetwork &
-             ) = dato%value
-            
-          type is (dbadatac)
-            inddativar = firsttrue(dato%btable == vol7dtmp%dativar%c%btable)
-            vol7dtmp%voldatic( &
-             indana,indtime,indlevel,indtimerange,inddativar,indnetwork &
-             ) = dato%value
-            
-          end select
-          
-
-                                ! attributes
-          do k=1, size(metaanddatav(i)%dataattrv%dataattr(j)%attrv%dcv)
-            associate (attr => metaanddatav(i)%dataattrv%dataattr(j)%attrv%dcv(k)%dat)
-              select type (attr)
-                
-              type is (dbadatai)
-                inddativarattr  = firsttrue(dato%btable == vol7dtmp%dativarattr%i%btable)
-                indattrvar = firsttrue(attr%btable == vol7dtmp%datiattr%i%btable)
-                vol7dtmp%voldatiattri( &
-                 indana,indtime,indlevel,indtimerange,inddativarattr,indnetwork,indattrvar &
-                 ) = attr%value
-              type is (dbadatar)
-                inddativarattr  = firsttrue(dato%btable == vol7dtmp%dativarattr%r%btable)
-                indattrvar = firsttrue(attr%btable == vol7dtmp%datiattr%r%btable)
-                vol7dtmp%voldatiattrr( &
-                 indana,indtime,indlevel,indtimerange,inddativarattr,indnetwork,indattrvar &
-                 ) = attr%value
-              type is (dbadatad)
-                inddativarattr  = firsttrue(dato%btable == vol7dtmp%dativarattr%d%btable)
-                indattrvar = firsttrue(attr%btable == vol7dtmp%datiattr%d%btable)
-                vol7dtmp%voldatiattrd( &
-                 indana,indtime,indlevel,indtimerange,inddativarattr,indnetwork,indattrvar &
-                 ) = attr%value
-              type is (dbadatab)
-                inddativarattr  = firsttrue(dato%btable == vol7dtmp%dativarattr%b%btable)
-                indattrvar = firsttrue(attr%btable == vol7dtmp%datiattr%b%btable)
-                vol7dtmp%voldatiattrb( &
-                 indana,indtime,indlevel,indtimerange,inddativarattr,indnetwork,indattrvar &
-                 ) = attr%value
-              type is (dbadatac)
-                inddativarattr  = firsttrue(dato%btable == vol7dtmp%dativarattr%c%btable)
-                indattrvar = firsttrue(attr%btable == vol7dtmp%datiattr%c%btable)
-                vol7dtmp%voldatiattrc( &
-                 indana,indtime,indlevel,indtimerange,inddativarattr,indnetwork,indattrvar &
-                 ) = attr%value
-                
-              end select
-            end associate
-          end do
-        end associate
-      end do
-
-
-!!$    else
-!!$
-!!$      do j=1, size(metaanddatav(i)%dataattrv%dataattr)
-!!$        indanavar = firsttrue(metaanddatav(i)%dataattrv%dataattr(j)%dat%btable == vol7dtmp%anavar%c%btable)
-!!$        print *,"ana",indanavar
-!!$                                ! attributes
-!!$        do k=1, size(metaanddatav(i)%dataattrv%dataattr(j)%attrv%dcv)
-!!$          indanaattr = firsttrue(metaanddatav(i)%dataattrv%dataattr(j)%attrv%dcv(k)%dat%btable == vol7dtmp%anaattr%c%btable)
-!!$          print *,"ana",indanavar,indanaattr
-!!$
-!!$
-!!$
-!!$        end do
-!!$      end do
-
-    end if
-
-  end do
-
-end if
-
-! ---------------->   constant station data
-
-! filter=dbafilter(filter=filter,contextana=.true.)
-
-filter=dbafilter(coordmin=mydbacoordmin,coordmax=mydbacoordmax,ana=mydbaana, &
- datetimemin=mydatetimemin,datetimemax=mydatetimemax, &
- timerange=mydbatimerange,level=mydbalevel,network=mydbanetwork,query=query,&
- vars=anavars,starvars=anastarvars,contextana=.true.)
-
-
-deallocate (metaanddatav)
-call this%handle%extrude(metaanddatav,filter=filter,dataonly=dataonly)
-!!$do i =1, size(metaanddatav)
-!!$  call metaanddatav(i)%display()
-!!$end do
-
-!  ier=idba_enqdate (this%handle_staz,year,month,day,hour,minute,sec)
-!  IF (.NOT.c_e(sec)) sec = 0
-!  ier=idba_enq (this%handle_staz,"context_id",bufferana(i)%data_id)
-
-
-! ---------------->   constant station data end
-
-#ifdef NONE
-
                                 !memorizzo data_id
 #ifdef DEBUG
-     !CALL l4f_category_log(this%category,L4F_DEBUG,"data_id: "//trim(to_char(buffer(i)%data_id)))
+                                !CALL l4f_category_log(this%category,L4F_DEBUG,"data_id: "//trim(to_char(buffer(i)%data_id)))
 #endif
 
-     this%data_id(indana,indtime,indlevel,indtimerange,indnetwork)=buffer(i)%data_id
+this%data_id(indana,indtime,indlevel,indtimerange,indnetwork)=buffer(i)%data_id
 
 
-     ier=idba_set (this%handle,"*context_id",buffer(i)%data_id)
-     ier=idba_set (this%handle,"*var_related",buffer(i)%btable)
-     !per ogni dato ora lavoro sugli attributi
-     ier=idba_set(this%handle, "*varlist",starvarlist )
-     ier=idba_voglioancora (this%handle,nn)
-     !print*,buffer(i)%btable," numero attributi",nn
-     
+ier=idba_set (this%handle,"*context_id",buffer(i)%data_id)
+ier=idba_set (this%handle,"*var_related",buffer(i)%btable)
+                                !per ogni dato ora lavoro sugli attributi
+ier=idba_set(this%handle, "*varlist",starvarlist )
+ier=idba_voglioancora (this%handle,nn)
+                                !print*,buffer(i)%btable," numero attributi",nn
+
 #endif
-
-! Smart merge
-CALL vol7d_merge(this%vol7d, vol7dtmp, sort=.TRUE.)
-! should we sort separately in case no merge is done?
-!CALL vol7d_smart_sort(this%vol7d, ltime=.TRUE., ltimerange=.TRUE., llevel=.TRUE,)
-
-!call vol7d_dballe_set_var_du(this%vol7d)
-
-
-contains
-
-!> return an array of btable
-function toarray_charl(this)
-character(len=listcharmaxlen),allocatable :: toarray_charl(:) !< array
-type(characterlist) :: this
-
-integer :: i
-
-allocate (toarray_charl(this%countelements()))
-
-call this%rewind()
-i=0
-do while(this%element())
-  i=i+1
-  toarray_charl(i) =this%current()
-  call this%next()
-end do
-end function toarray_charl
-
 
 END SUBROUTINE vol7d_dballe_import
 
 
-!>\brief Cancella l'oggetto
+                                !>\brief Cancella l'oggetto
 
 SUBROUTINE vol7d_dballe_delete(this, preserveidbhandle)
 TYPE(vol7d_dballe) :: this !< oggetto da cancellare
@@ -1290,11 +687,1022 @@ if (.not. optio_log(preserveidbhandle)) call this%idbhandle%delete()
 
 CALL delete(this%vol7d)
 
-!chiudo il logger
+                                !chiudo il logger
 call l4f_category_delete(this%category)
-!ier=l4f_fini()
+                                !ier=l4f_fini()
 
 END SUBROUTINE vol7d_dballe_delete
+
+
+
+                                !>\brief import dba objects in vol7d
+!subroutine dba2v7d(this,metaanddatav,vars,starvars,anavars,anastarvars,time_definition, set_network)
+subroutine dba2v7d(this,metaanddatav,time_definition, set_network)
+
+type(dbametaanddata),intent(inout)      :: metaanddatav(:)  ! change value in datetime reguard timedefinition
+TYPE(vol7d),INTENT(inout)               :: this
+integer,INTENT(in),OPTIONAL             :: time_definition !< 0=time is reference time ; 1=time is validity time (default=1) 
+TYPE(vol7d_network),INTENT(in),OPTIONAL :: set_network
+type(dbadcv)                :: vars
+type(dbadcv)                :: starvars
+type(dbadcv)                :: anavars
+type(dbadcv)                :: anastarvars
+
+
+LOGICAL :: ldegnet
+integer :: indana,indtime,indlevel,indtimerange,inddativar,indnetwork,indattrvar
+
+integer :: nana,ntime,ntimerange,nlevel,nnetwork
+
+INTEGER :: i, j, k, n
+integer :: nvar ,inddatiattr,inddativarattr
+integer :: nanavar ,indanavar,indanaattr,indanavarattr,nanavarattr
+
+integer :: ndativarr,     ndativari,     ndativarb,     ndativard,     ndativarc
+integer :: ndatiattrr,    ndatiattri,    ndatiattrb,    ndatiattrd,    ndatiattrc 
+integer :: ndativarattrr, ndativarattri, ndativarattrb, ndativarattrd, ndativarattrc
+
+integer :: nanavarr,     nanavari,     nanavarb,     nanavard,     nanavarc
+integer :: nanaattrr,    nanaattri,    nanaattrb,    nanaattrd,    nanaattrc 
+integer :: nanavarattrr, nanavarattri, nanavarattrb, nanavarattrd, nanavarattrc
+
+integer :: ndativar,ndativarattr
+
+type(characterlist) :: dativarl,dativarattrl,anavarl,anavarattrl
+
+character(len=listcharmaxlen),allocatable :: dativara(:),dativarattra(:),anavara(:),anavarattra(:)
+logical :: status
+integer :: ltime_definition
+character(len=9),allocatable :: btablev(:)
+
+ltime_definition=optio_i(time_definition)
+if (.not. c_e(ltime_definition)) ltime_definition = 1
+
+                                ! take in account time_definition
+if (ltime_definition == 0) then
+  do i =1,size(metaanddatav)
+    metaanddatav(i)%metadata%datetime%datetime = &
+     metaanddatav(i)%metadata%datetime%datetime - &
+     timedelta_new(msec=metaanddatav(i)%metadata%timerange%vol7d_timerange%p1*1000)
+  end do
+end if
+
+
+IF (PRESENT(set_network)) THEN
+  if (c_e(set_network)) then
+    ldegnet = .TRUE.
+  else
+    ldegnet = .FALSE.
+  end if
+ELSE
+  ldegnet = .FALSE.
+ENDIF
+
+
+
+!!--------------------------------------------------------------------------
+!! find vars, starvars, anavars, anastarvars
+!!
+
+!!$  vars=todcv_dbadat(dativarl)
+!!$  allocate (btablev(size(vars%dcv)))
+!!$  do i=1, size(btablev)
+!!$    btablev(i)=vars%dcv(i)%dat%btable
+!!$  end do
+!!$
+!!$  ndativar     = count_distinct (btablev    , back=.TRUE.)
+
+                                ! data
+do i =1, size(metaanddatav)
+  do j=1, size(metaanddatav(i)%dataattrv%dataattr)
+    if (c_e(metaanddatav(i)%metadata%datetime%datetime)) then
+                                !print *,"dativarl: ", metaanddatav(i)%dataattrv%dataattr(j)%dat%btable
+      call dativarl%append(metaanddatav(i)%dataattrv%dataattr(j)%dat%btable)
+    else
+                                !print *,"anavarl: ", metaanddatav(i)%dataattrv%dataattr(j)%dat%btable
+      call anavarl%append(metaanddatav(i)%dataattrv%dataattr(j)%dat%btable)
+    end if
+  end do
+end do
+
+ndativar     = count_distinct (toarray_charl(dativarl)    , back=.TRUE.)
+allocate(dativara(ndativar))
+call pack_distinct_c (toarray_charl(dativarl)    , dativara    , back=.TRUE.)
+status = dativarl%delete()
+allocate (vars%dcv(ndativar))
+
+nanavar      = count_distinct (toarray_charl(anavarl)     , back=.TRUE.)
+allocate(anavara(nanavar))
+call pack_distinct_c (toarray_charl(anavarl)     , anavara     , back=.TRUE.)
+status = anavarl%delete()
+allocate (anavars%dcv(nanavar))
+
+
+
+an: do n=1,ndativar
+  do i =1, size(metaanddatav)
+    do j=1, size(metaanddatav(i)%dataattrv%dataattr)
+      if (c_e(metaanddatav(i)%metadata%datetime%datetime)) then
+        if (metaanddatav(i)%dataattrv%dataattr(j)%dat%btable == dativara(n)) then
+          allocate(vars%dcv(n)%dat,source=metaanddatav(i)%dataattrv%dataattr(j)%dat)
+          cycle an
+        end if
+      end if
+    end do
+  end do 
+end do an
+
+bn: do n=1,nanavar
+  do i =1, size(metaanddatav)
+    do j=1, size(metaanddatav(i)%dataattrv%dataattr)
+      if (.not. c_e(metaanddatav(i)%metadata%datetime%datetime)) then
+        if (metaanddatav(i)%dataattrv%dataattr(j)%dat%btable == anavara(n)) then
+          allocate(anavars%dcv(n)%dat,source=metaanddatav(i)%dataattrv%dataattr(j)%dat)
+          cycle bn
+        end if
+      end if
+    end do
+  end do
+end do bn
+
+                                ! attributes
+do i =1, size(metaanddatav)
+  do j=1, size(metaanddatav(i)%dataattrv%dataattr)
+    do k=1, size(metaanddatav(i)%dataattrv%dataattr(j)%attrv%dcv)
+      if (c_e(metaanddatav(i)%metadata%datetime%datetime)) then
+                                !print *,"dativarattrl: ", metaanddatav(i)%dataattrv%dataattr(j)%attrv%dcv(k)%dat%btable
+        call dativarattrl%append(metaanddatav(i)%dataattrv%dataattr(j)%attrv%dcv(k)%dat%btable)
+      else
+                                !print *,"anavarattrl: ", metaanddatav(i)%dataattrv%dataattr(j)%attrv%dcv(k)%dat%btable
+        call anavarattrl%append(metaanddatav(i)%dataattrv%dataattr(j)%attrv%dcv(k)%dat%btable)
+      end if
+    end do
+  end do
+end do
+
+
+ndativarattr = count_distinct (toarray_charl(dativarattrl), back=.TRUE.)
+allocate(dativarattra(ndativarattr))
+call pack_distinct_c (toarray_charl(dativarattrl), dativarattra, back=.TRUE.)
+status = dativarattrl%delete()
+allocate(starvars%dcv(ndativarattr))
+
+nanavarattr  = count_distinct (toarray_charl(anavarattrl) , back=.TRUE.)
+allocate(anavarattra(nanavarattr))
+call pack_distinct_c (toarray_charl(anavarattrl) , anavarattra , back=.TRUE.)
+status = anavarattrl%delete()
+allocate(anastarvars%dcv(nanavarattr))
+
+
+cn: do n=1,ndativarattr
+  do i =1, size(metaanddatav)
+    do j=1, size(metaanddatav(i)%dataattrv%dataattr)
+      do k=1, size(metaanddatav(i)%dataattrv%dataattr(j)%attrv%dcv)
+        if (c_e(metaanddatav(i)%metadata%datetime%datetime)) then
+          if (metaanddatav(i)%dataattrv%dataattr(j)%attrv%dcv(k)%dat%btable == dativarattra(n))then 
+            allocate(starvars%dcv(n)%dat,source=metaanddatav(i)%dataattrv%dataattr(j)%attrv%dcv(k)%dat)
+            cycle cn
+          end if
+        end if
+      end do
+    end do
+  end do
+end do cn
+
+
+dn: do n=1,nanavarattr
+  do i =1, size(metaanddatav)
+    do j=1, size(metaanddatav(i)%dataattrv%dataattr)
+      do k=1, size(metaanddatav(i)%dataattrv%dataattr(j)%attrv%dcv)
+        if (.not. c_e(metaanddatav(i)%metadata%datetime%datetime)) then
+          if (metaanddatav(i)%dataattrv%dataattr(j)%attrv%dcv(k)%dat%btable == anavarattra(n))then 
+            allocate(anastarvars%dcv(n)%dat,source=metaanddatav(i)%dataattrv%dataattr(j)%attrv%dcv(k)%dat)
+            cycle dn
+          end if
+        end if
+      end do
+    end do
+  end do
+end do dn
+
+
+!!--------------------------------------------------------------------------
+
+
+!!
+!!             count all removing contextana metadata
+!!
+
+if(ldegnet) then
+  nnetwork=1
+else
+  nnetwork = count_distinct(metaanddatav(:)%metadata%network%vol7d_network, back=.TRUE.)
+end if
+
+ntime      = count_distinct(metaanddatav(:)%metadata%datetime%datetime, &
+ mask=c_e(metaanddatav(:)%metadata%datetime%datetime),back=.TRUE.)
+ntimerange = count_distinct(metaanddatav(:)%metadata%timerange%vol7d_timerange, &
+ mask=c_e(metaanddatav(:)%metadata%timerange%vol7d_timerange), back=.TRUE.)
+nlevel     = count_distinct(metaanddatav(:)%metadata%level%vol7d_level, &
+ mask=c_e(metaanddatav(:)%metadata%level%vol7d_level),back=.TRUE.)
+nana       = count_distinct(metaanddatav(:)%metadata%ana%vol7d_ana, back=.TRUE.)
+
+                                ! var
+
+ndativarr = 0
+ndativari = 0
+ndativarb = 0
+ndativard = 0
+ndativarc = 0
+
+do i =1 ,size(vars%dcv)
+  associate (dato => vars%dcv(i)%dat)
+    select type (dato)
+    type is (dbadatar)
+      ndativarr = ndativarr + 1
+    type is (dbadatai)
+      ndativari = ndativari + 1
+    type is (dbadatab)
+      ndativarb = ndativarb + 1
+    type is (dbadatad)
+      ndativard = ndativard + 1
+    type is (dbadatac)
+      ndativarc = ndativarc + 1
+    end select
+  end associate
+end do
+
+
+                                !attr
+
+ndatiattrr = 0
+ndatiattri = 0
+ndatiattrb = 0
+ndatiattrd = 0
+ndatiattrc = 0
+
+do i =1 ,size(starvars%dcv)
+  associate (dato => starvars%dcv(i)%dat)
+    select type (dato)
+    type is (dbadatar)
+      ndatiattrr = ndatiattrr + 1
+    type is (dbadatai)
+      ndatiattri = ndatiattri + 1
+    type is (dbadatab)
+      ndatiattrb = ndatiattrb + 1
+    type is (dbadatad)
+      ndatiattrd = ndatiattrd + 1
+    type is (dbadatac)
+      ndatiattrc = ndatiattrc + 1
+    end select
+  end associate
+end do
+
+
+                                ! ana var
+
+nanavarr = 0
+nanavari = 0
+nanavarb = 0
+nanavard = 0
+nanavarc = 0
+
+do i =1 ,size(anavars%dcv)
+  associate (dato => anavars%dcv(i)%dat)
+    select type (dato)
+    type is (dbadatar)
+      nanavarr = nanavarr + 1
+    type is (dbadatai)
+      nanavari = nanavari + 1
+    type is (dbadatab)
+      nanavarb = nanavarb + 1
+    type is (dbadatad)
+      nanavard = nanavard + 1
+    type is (dbadatac)
+      nanavarc = nanavarc + 1
+    end select
+  end associate
+end do
+
+
+                                ! ana attr
+
+nanaattrr = 0
+nanaattri = 0
+nanaattrb = 0
+nanaattrd = 0
+nanaattrc = 0
+
+do i =1 ,size(anastarvars%dcv)
+  associate (dato => anastarvars%dcv(i)%dat)
+    select type (dato)
+    type is (dbadatar)
+      nanaattrr = nanaattrr + 1
+    type is (dbadatai)
+      nanaattri = nanaattri + 1
+    type is (dbadatab)
+      nanaattrb = nanaattrb + 1
+    type is (dbadatad)
+      nanaattrd = nanaattrd + 1
+    type is (dbadatac)
+      nanaattrc = nanaattrc + 1
+    end select
+  end associate
+end do
+
+
+                                !refine
+
+ndativarattrr=0
+ndativarattri=0
+ndativarattrb=0
+ndativarattrd=0
+ndativarattrc=0
+
+if (ndatiattrr > 0 ) ndativarattrr=ndativarr+ndativari+ndativarb+ndativard+ndativarc
+if (ndatiattri > 0 ) ndativarattri=ndativarr+ndativari+ndativarb+ndativard+ndativarc
+if (ndatiattrb > 0 ) ndativarattrb=ndativarr+ndativari+ndativarb+ndativard+ndativarc
+if (ndatiattrd > 0 ) ndativarattrd=ndativarr+ndativari+ndativarb+ndativard+ndativarc
+if (ndatiattrc > 0 ) ndativarattrc=ndativarr+ndativari+ndativarb+ndativard+ndativarc
+
+
+nanavarattrr=0
+nanavarattri=0
+nanavarattrb=0
+nanavarattrd=0
+nanavarattrc=0
+
+if (nanaattrr > 0 ) nanavarattrr=nanavarr+nanavari+nanavarb+nanavard+nanavarc
+if (nanaattri > 0 ) nanavarattri=nanavarr+nanavari+nanavarb+nanavard+nanavarc
+if (nanaattrb > 0 ) nanavarattrb=nanavarr+nanavari+nanavarb+nanavard+nanavarc
+if (nanaattrd > 0 ) nanavarattrd=nanavarr+nanavari+nanavarb+nanavard+nanavarc
+if (nanaattrc > 0 ) nanavarattrc=nanavarr+nanavari+nanavarb+nanavard+nanavarc
+
+
+CALL init(this,time_definition=ltime_definition)
+
+!!$  print *, "nana=",nana, "ntime=",ntime, "ntimerange=",ntimerange, &
+!!$   "nlevel=",nlevel, "nnetwork=",nnetwork, &
+!!$   "ndativarr=",ndativarr, "ndativari=",ndativari, &
+!!$   "ndativarb=",ndativarb, "ndativard=",ndativard, "ndativarc=",ndativarc,&
+!!$   "ndatiattrr=",ndatiattrr, "ndatiattri=",ndatiattri, "ndatiattrb=",ndatiattrb,&
+!!$   "ndatiattrd=",ndatiattrd, "ndatiattrc=",ndatiattrc,&
+!!$   "ndativarattrr=",ndativarattrr, "ndativarattri=",ndativarattri, "ndativarattrb=",ndativarattrb,&
+!!$   "ndativarattrd=",ndativarattrd, "ndativarattrc=",ndativarattrc
+
+call vol7d_alloc (this, &
+nana=nana, ntime=ntime, ntimerange=ntimerange, &
+nlevel=nlevel, nnetwork=nnetwork, &
+ndativarr=ndativarr, ndativari=ndativari, ndativarb=ndativarb, ndativard=ndativard, ndativarc=ndativarc,&
+ndatiattrr=ndatiattrr, ndatiattri=ndatiattri, ndatiattrb=ndatiattrb, ndatiattrd=ndatiattrd, ndatiattrc=ndatiattrc,&
+ndativarattrr=ndativarattrr, &
+ndativarattri=ndativarattri, &
+ndativarattrb=ndativarattrb, &
+ndativarattrd=ndativarattrd, &
+ndativarattrc=ndativarattrc,&
+nanavarr=nanavarr, nanavari=nanavari, nanavarb=nanavarb, nanavard=nanavard, nanavarc=nanavarc,&
+nanaattrr=nanaattrr, nanaattri=nanaattri, nanaattrb=nanaattrb, nanaattrd=nanaattrd, nanaattrc=nanaattrc,&
+nanavarattrr=nanavarattrr, &
+nanavarattri=nanavarattri, &
+nanavarattrb=nanavarattrb, &
+nanavarattrd=nanavarattrd, &
+nanavarattrc=nanavarattrc)
+
+
+! fill metadata removing contextana metadata
+
+this%ana=pack_distinct(metaanddatav(:)%metadata%ana%vol7d_ana, nana, back=.TRUE.)
+
+this%time=pack_distinct(metaanddatav(:)%metadata%datetime%datetime, ntime, &
+ mask=c_e(metaanddatav(:)%metadata%datetime%datetime),back=.TRUE.)
+call sort(this%time)
+
+this%timerange=pack_distinct(metaanddatav(:)%metadata%timerange%vol7d_timerange, ntimerange, &
+ mask=c_e(metaanddatav(:)%metadata%timerange%vol7d_timerange), back=.TRUE.)
+call sort(this%timerange)
+
+this%level=pack_distinct(metaanddatav(:)%metadata%level%vol7d_level, nlevel, &
+ mask=c_e(metaanddatav(:)%metadata%level%vol7d_level), back=.TRUE.)
+call sort(this%level)
+
+if(ldegnet)then
+  this%network(1)=set_network
+else
+  this%network=pack_distinct(metaanddatav(:)%metadata%network%vol7d_network, nnetwork, back=.TRUE.)
+end if
+
+
+                                ! var
+
+ndativarr = 0
+ndativari = 0
+ndativarb = 0
+ndativard = 0
+ndativarc = 0
+
+do i =1 ,size(vars%dcv)
+  associate (dato => vars%dcv(i)%dat)
+    select type (dato)
+    type is (dbadatar)
+      ndativarr = ndativarr + 1
+      call init (this%dativar%r(ndativarr), btable=dato%btable)
+    type is (dbadatai)
+      ndativari = ndativari + 1
+      call init (this%dativar%i(ndativari), btable=dato%btable)
+    type is (dbadatab)
+      ndativarb = ndativarb + 1
+      call init (this%dativar%b(ndativarb), btable=dato%btable)
+    type is (dbadatad)
+      ndativard = ndativard + 1
+      call init (this%dativar%d(ndativard), btable=dato%btable)
+    type is (dbadatac)
+      ndativarc = ndativarc + 1
+      call init (this%dativar%c(ndativarc), btable=dato%btable)
+    end select
+  end associate
+end do
+
+
+                                !attr
+
+ndatiattrr = 0
+ndatiattri = 0
+ndatiattrb = 0
+ndatiattrd = 0
+ndatiattrc = 0
+
+do i =1 ,size(starvars%dcv)
+  associate (dato => starvars%dcv(i)%dat)
+    select type (dato)
+    type is (dbadatar)
+      ndatiattrr = ndatiattrr + 1
+      call init (this%datiattr%r(ndatiattrr), btable=dato%btable)
+    type is (dbadatai)
+      ndatiattri = ndatiattri + 1
+      call init (this%datiattr%i(ndatiattri), btable=dato%btable)
+    type is (dbadatab)
+      ndatiattrb = ndatiattrb + 1
+      call init (this%datiattr%b(ndatiattrb), btable=dato%btable)
+    type is (dbadatad)
+      ndatiattrd = ndatiattrd + 1
+      call init (this%datiattr%d(ndatiattrd), btable=dato%btable)
+    type is (dbadatac)
+      ndatiattrc = ndatiattrc + 1
+      call init (this%datiattr%c(ndatiattrc), btable=dato%btable)
+    end select
+  end associate
+end do
+
+
+                                ! ana var
+
+nanavarr = 0
+nanavari = 0
+nanavarb = 0
+nanavard = 0
+nanavarc = 0
+
+do i =1 ,size(anavars%dcv)
+  associate (dato => anavars%dcv(i)%dat)
+    select type (dato)
+    type is (dbadatar)
+      nanavarr = nanavarr + 1
+      call init (this%anavar%r(nanavarr), btable=dato%btable)
+    type is (dbadatai)
+      nanavari = nanavari + 1
+      call init (this%anavar%i(nanavari), btable=dato%btable)
+    type is (dbadatab)
+      nanavarb = nanavarb + 1
+      call init (this%anavar%b(nanavarb), btable=dato%btable)
+    type is (dbadatad)
+      nanavard = nanavard + 1
+      call init (this%anavar%d(nanavard), btable=dato%btable)
+    type is (dbadatac)
+      nanavarc = nanavarc + 1
+      call init (this%anavar%c(nanavarc), btable=dato%btable)
+    end select
+  end associate
+end do
+
+
+                                ! ana attr
+
+nanaattrr = 0
+nanaattri = 0
+nanaattrb = 0
+nanaattrd = 0
+nanaattrc = 0
+
+do i =1 ,size(anastarvars%dcv)
+  associate (dato => anastarvars%dcv(i)%dat)
+    select type (dato)
+    type is (dbadatar)
+      nanaattrr = nanaattrr + 1
+      call init (this%anaattr%r(nanaattrr), btable=dato%btable)
+    type is (dbadatai)
+      nanaattri = nanaattri + 1
+      call init (this%anaattr%i(nanaattri), btable=dato%btable)
+    type is (dbadatab)
+      nanaattrb = nanaattrb + 1
+      call init (this%anaattr%b(nanaattrb), btable=dato%btable)
+    type is (dbadatad)
+      nanaattrd = nanaattrd + 1
+      call init (this%anaattr%d(nanaattrd), btable=dato%btable)
+    type is (dbadatac)
+      nanaattrc = nanaattrc + 1
+      call init (this%anaattr%c(nanaattrc), btable=dato%btable)
+    end select
+  end associate
+end do
+
+
+                                ! here we colcolate the link from attributes and vars
+do i =1, size(vars%dcv)
+  associate (dato => vars%dcv(i)%dat)
+    if ( ndativarattri > 0 ) call init(this%dativarattr%i(i),btable=dato%btable)
+    if ( ndativarattrr > 0 ) call init(this%dativarattr%r(i),btable=dato%btable)
+    if ( ndativarattrd > 0 ) call init(this%dativarattr%d(i),btable=dato%btable)
+    if ( ndativarattrb > 0 ) call init(this%dativarattr%b(i),btable=dato%btable)
+    if ( ndativarattrc > 0 ) call init(this%dativarattr%c(i),btable=dato%btable)
+  end associate
+end do
+
+do i =1, size(anavars%dcv)
+  associate (dato => anavars%dcv(i)%dat)
+    if ( nanavarattri > 0 ) call init(this%anavarattr%i(i),btable=dato%btable)
+    if ( nanavarattrr > 0 ) call init(this%anavarattr%r(i),btable=dato%btable)
+    if ( nanavarattrd > 0 ) call init(this%anavarattr%d(i),btable=dato%btable)
+    if ( nanavarattrb > 0 ) call init(this%anavarattr%b(i),btable=dato%btable)
+    if ( nanavarattrc > 0 ) call init(this%anavarattr%c(i),btable=dato%btable)
+  end associate
+end do
+
+                                ! set index in dativaratt*
+call vol7d_set_attr_ind(this)
+
+call vol7d_alloc_vol (this)
+
+                                ! Ora qui bisogna metterci dentro idati
+
+do i =1, size(metaanddatav)
+
+  indana       = firsttrue(metaanddatav(i)%metadata%ana%vol7d_ana             == this%ana)
+  if (ldegnet)then
+    indnetwork=1
+  else
+    indnetwork = firsttrue(metaanddatav(i)%metadata%network%vol7d_network     == this%network)
+  endif
+  
+  
+  if (c_e(metaanddatav(i)%metadata%datetime%datetime)) then      ! dati
+
+    indtime      = firsttrue(metaanddatav(i)%metadata%datetime%datetime         == this%time)
+    indtimerange = firsttrue(metaanddatav(i)%metadata%timerange%vol7d_timerange == this%timerange)
+    indlevel     = firsttrue(metaanddatav(i)%metadata%level%vol7d_level         == this%level)
+    
+    do j=1, size(metaanddatav(i)%dataattrv%dataattr)
+      
+      associate (dato => metaanddatav(i)%dataattrv%dataattr(j)%dat)
+        select type (dato)
+        type is (dbadatai)
+          inddativar = firsttrue(dato%btable == this%dativar%i%btable)
+          this%voldatii( &
+           indana,indtime,indlevel,indtimerange,inddativar,indnetwork &
+           ) = dato%value
+          
+        type is (dbadatar)
+          inddativar = firsttrue(dato%btable == this%dativar%r%btable)
+          this%voldatir( &
+           indana,indtime,indlevel,indtimerange,inddativar,indnetwork &
+           ) = dato%value
+          
+        type is (dbadatad)
+          inddativar = firsttrue(dato%btable == this%dativar%d%btable)
+          this%voldatid( &
+           indana,indtime,indlevel,indtimerange,inddativar,indnetwork &
+           ) = dato%value
+          
+        type is (dbadatab)
+          inddativar = firsttrue(dato%btable == this%dativar%b%btable)
+          this%voldatib( &
+           indana,indtime,indlevel,indtimerange,inddativar,indnetwork &
+           ) = dato%value
+          
+        type is (dbadatac)
+          inddativar = firsttrue(dato%btable == this%dativar%c%btable)
+          this%voldatic( &
+           indana,indtime,indlevel,indtimerange,inddativar,indnetwork &
+           ) = dato%value
+          
+        end select
+        
+        
+                                ! dati attributes
+        do k=1, size(metaanddatav(i)%dataattrv%dataattr(j)%attrv%dcv)
+          associate (attr => metaanddatav(i)%dataattrv%dataattr(j)%attrv%dcv(k)%dat)
+            select type (attr)
+              
+            type is (dbadatai)
+              inddativarattr  = firsttrue(dato%btable == this%dativarattr%i%btable)
+              indattrvar = firsttrue(attr%btable == this%datiattr%i%btable)
+              this%voldatiattri( &
+               indana,indtime,indlevel,indtimerange,inddativarattr,indnetwork,indattrvar &
+               ) = attr%value
+            type is (dbadatar)
+              inddativarattr  = firsttrue(dato%btable == this%dativarattr%r%btable)
+              indattrvar = firsttrue(attr%btable == this%datiattr%r%btable)
+              this%voldatiattrr( &
+               indana,indtime,indlevel,indtimerange,inddativarattr,indnetwork,indattrvar &
+               ) = attr%value
+            type is (dbadatad)
+              inddativarattr  = firsttrue(dato%btable == this%dativarattr%d%btable)
+              indattrvar = firsttrue(attr%btable == this%datiattr%d%btable)
+              this%voldatiattrd( &
+               indana,indtime,indlevel,indtimerange,inddativarattr,indnetwork,indattrvar &
+               ) = attr%value
+            type is (dbadatab)
+              inddativarattr  = firsttrue(dato%btable == this%dativarattr%b%btable)
+              indattrvar = firsttrue(attr%btable == this%datiattr%b%btable)
+              this%voldatiattrb( &
+               indana,indtime,indlevel,indtimerange,inddativarattr,indnetwork,indattrvar &
+               ) = attr%value
+            type is (dbadatac)
+              inddativarattr  = firsttrue(dato%btable == this%dativarattr%c%btable)
+              indattrvar = firsttrue(attr%btable == this%datiattr%c%btable)
+              this%voldatiattrc( &
+               indana,indtime,indlevel,indtimerange,inddativarattr,indnetwork,indattrvar &
+               ) = attr%value
+              
+            end select
+          end associate
+        end do
+      end associate
+    end do
+
+  else
+                                ! ana
+    do j=1, size(metaanddatav(i)%dataattrv%dataattr)
+      
+      associate (dato => metaanddatav(i)%dataattrv%dataattr(j)%dat)
+        select type (dato)
+        type is (dbadatai)
+          indanavar = firsttrue(dato%btable == this%anavar%i%btable)
+          this%volanai( &
+           indana,indanavar,indnetwork &
+           ) = dato%value
+          
+        type is (dbadatar)
+          indanavar = firsttrue(dato%btable == this%anavar%r%btable)
+          this%volanar( &
+           indana,indanavar,indnetwork &
+           ) = dato%value
+          
+        type is (dbadatad)
+          indanavar = firsttrue(dato%btable == this%anavar%d%btable)
+          this%volanad( &
+           indana,indanavar,indnetwork &
+           ) = dato%value
+          
+        type is (dbadatab)
+          indanavar = firsttrue(dato%btable == this%anavar%b%btable)
+          this%volanab( &
+           indana,indanavar,indnetwork &
+           ) = dato%value
+          
+        type is (dbadatac)
+          indanavar = firsttrue(dato%btable == this%anavar%c%btable)
+          this%volanac( &
+           indana,indanavar,indnetwork &
+           ) = dato%value
+          
+        end select
+        
+        
+                                ! ana attributes
+        do k=1, size(metaanddatav(i)%dataattrv%dataattr(j)%attrv%dcv)
+          associate (attr => metaanddatav(i)%dataattrv%dataattr(j)%attrv%dcv(k)%dat)
+            select type (attr)
+              
+            type is (dbadatai)
+              indanavarattr  = firsttrue(dato%btable == this%anavarattr%i%btable)
+              indattrvar = firsttrue(attr%btable == this%datiattr%i%btable)
+              this%volanaattri( &
+               indana,indanavarattr,indnetwork,indattrvar &
+               ) = attr%value
+            type is (dbadatar)
+              indanavarattr  = firsttrue(dato%btable == this%anavarattr%r%btable)
+              indattrvar = firsttrue(attr%btable == this%datiattr%r%btable)
+              this%volanaattrr( &
+               indana,indanavarattr,indnetwork,indattrvar &
+               ) = attr%value
+            type is (dbadatad)
+              indanavarattr  = firsttrue(dato%btable == this%anavarattr%d%btable)
+              indattrvar = firsttrue(attr%btable == this%datiattr%d%btable)
+              this%volanaattrd( &
+               indana,indanavarattr,indnetwork,indattrvar &
+               ) = attr%value
+            type is (dbadatab)
+              indanavarattr  = firsttrue(dato%btable == this%anavarattr%b%btable)
+              indattrvar = firsttrue(attr%btable == this%datiattr%b%btable)
+              this%volanaattrb( &
+               indana,indanavarattr,indnetwork,indattrvar &
+               ) = attr%value
+            type is (dbadatac)
+              indanavarattr  = firsttrue(dato%btable == this%anavarattr%c%btable)
+              indattrvar = firsttrue(attr%btable == this%datiattr%c%btable)
+              this%volanaattrc( &
+               indana,indanavarattr,indnetwork,indattrvar &
+               ) = attr%value
+              
+            end select
+          end associate
+        end do
+      end associate
+    end do
+  end if
+end do
+
+contains
+
+!!$!> /brief Return an dbadcv from a mixlist with dbadata* type 
+!!$function todcv_dbadat(this)
+!!$type(dbadcv) :: todcv_dbadat !< array
+!!$type(mixlist) :: this
+!!$
+!!$integer :: i
+!!$
+!!$allocate (todcv_dbadat%dcv(this%countelements()))
+!!$
+!!$call this%rewind()
+!!$i=0
+!!$do while(this%element())
+!!$  i=i+1
+!!$
+!!$  associate (dato => this%current())
+!!$    select type (dato)
+!!$    type is (dbadatar)
+!!$      allocate(todcv_dbadat%dcv(i)%dat,source=dato)
+!!$    type is (dbadatai)
+!!$      allocate(todcv_dbadat%dcv(i)%dat,source=dato)
+!!$    type is (dbadatab)
+!!$      allocate(todcv_dbadat%dcv(i)%dat,source=dato)
+!!$    type is (dbadatad)
+!!$      allocate(todcv_dbadat%dcv(i)%dat,source=dato)
+!!$    type is (dbadatac)
+!!$      allocate(todcv_dbadat%dcv(i)%dat,source=dato)
+!!$    end select
+!!$  end associate
+!!$
+!!$  call this%next()
+!!$end do
+!!$end function todcv_dbadat
+
+!!$! Definisce le funzioni count_distinct e pack_distinct
+!!$#define VOL7D_POLY_TYPE TYPE(dbadata)
+!!$#define VOL7D_POLY_TYPES _dbadata
+!!$#undef ENABLE_SORT
+!!$#include "array_utilities_inc.F90"
+!!$#undef VOL7D_POLY_TYPE
+!!$#undef VOL7D_POLY_TYPES
+
+
+end subroutine dba2v7d
+
+
+subroutine vol7d_dballe_import_dballevar(this)
+
+type(vol7d_var),pointer :: this(:)
+INTEGER :: i,un,n
+
+IF (associated(this)) return
+IF (allocated(blocal)) then
+  ALLOCATE(this(size(blocal)))
+  this=blocal
+  return
+end if
+
+un = open_dballe_file('dballe.txt', filetype_data)
+IF (un < 0) then
+
+  call l4f_log(L4F_ERROR,"error open_dballe_file: dballe.txt")
+  CALL raise_error("error open_dballe_file: dballe.txt")
+  return
+end if
+
+n = 0
+DO WHILE(.TRUE.)
+  READ(un,*,END=100)
+  n = n + 1
+ENDDO
+100 CONTINUE
+
+IF (n > 0) THEN
+  ALLOCATE(this(n))
+  ALLOCATE(blocal(n))
+  REWIND(un)
+  readline: do i = 1 ,n
+    READ(un,'(1x,A6,1x,a65,a24,i4)')blocal(i)%btable,blocal(i)%description,blocal(i)%unit,&
+     blocal(i)%scalefactor
+    blocal(i)%btable(:1)="B"
+    !print*,"B=",blocal(i)%btable
+    !print*," D=",blocal(i)%description
+    !PRINT*," U=",blocal(i)%unit
+    !PRINT*," D=",blocal(i)%scalefactor
+  ENDDO readline
+
+  CALL l4f_log(L4F_INFO,'Found '//TRIM(to_char(i-1))//' variables in dballe master table')
+
+  this=blocal
+
+ENDIF
+CLOSE(un)
+
+END SUBROUTINE vol7d_dballe_import_dballevar
+
+
+
+!> \brief Integra il vettore delle variabili in vol7d con le descrizioni e le unità di misura
+!!eventualmente mancanti.
+
+subroutine vol7d_dballe_set_var_du(this)
+
+TYPE(vol7d) :: this !< oggetto vol7d con le variabili da completare
+integer :: i,j
+type(vol7d_var),pointer :: dballevar(:)
+
+
+call vol7d_dballe_import_dballevar(dballevar)
+
+#undef VOL7D_POLY_NAME
+#define VOL7D_POLY_NAME dativar
+
+
+#undef VOL7D_POLY_TYPES_V
+#define VOL7D_POLY_TYPES_V r
+#include "vol7d_dballe_class_var_du.F90"
+#undef VOL7D_POLY_TYPES_V
+#define VOL7D_POLY_TYPES_V i
+#include "vol7d_dballe_class_var_du.F90"
+#undef VOL7D_POLY_TYPES_V
+#define VOL7D_POLY_TYPES_V b
+#include "vol7d_dballe_class_var_du.F90"
+#undef VOL7D_POLY_TYPES_V
+#define VOL7D_POLY_TYPES_V d
+#include "vol7d_dballe_class_var_du.F90"
+#undef VOL7D_POLY_TYPES_V
+#define VOL7D_POLY_TYPES_V c
+#include "vol7d_dballe_class_var_du.F90"
+#undef VOL7D_POLY_TYPES_V
+
+#undef VOL7D_POLY_NAME
+#define VOL7D_POLY_NAME anavar
+
+
+#undef VOL7D_POLY_TYPES_V
+#define VOL7D_POLY_TYPES_V r
+#include "vol7d_dballe_class_var_du.F90"
+#undef VOL7D_POLY_TYPES_V
+#define VOL7D_POLY_TYPES_V i
+#include "vol7d_dballe_class_var_du.F90"
+#undef VOL7D_POLY_TYPES_V
+#define VOL7D_POLY_TYPES_V b
+#include "vol7d_dballe_class_var_du.F90"
+#undef VOL7D_POLY_TYPES_V
+#define VOL7D_POLY_TYPES_V d
+#include "vol7d_dballe_class_var_du.F90"
+#undef VOL7D_POLY_TYPES_V
+#define VOL7D_POLY_TYPES_V c
+#include "vol7d_dballe_class_var_du.F90"
+#undef VOL7D_POLY_TYPES_V
+
+
+#undef VOL7D_POLY_NAME
+#define VOL7D_POLY_NAME datiattr
+
+
+#undef VOL7D_POLY_TYPES_V
+#define VOL7D_POLY_TYPES_V r
+#include "vol7d_dballe_class_var_du.F90"
+#undef VOL7D_POLY_TYPES_V
+#define VOL7D_POLY_TYPES_V i
+#include "vol7d_dballe_class_var_du.F90"
+#undef VOL7D_POLY_TYPES_V
+#define VOL7D_POLY_TYPES_V b
+#include "vol7d_dballe_class_var_du.F90"
+#undef VOL7D_POLY_TYPES_V
+#define VOL7D_POLY_TYPES_V d
+#include "vol7d_dballe_class_var_du.F90"
+#undef VOL7D_POLY_TYPES_V
+#define VOL7D_POLY_TYPES_V c
+#include "vol7d_dballe_class_var_du.F90"
+#undef VOL7D_POLY_TYPES_V
+
+
+#undef VOL7D_POLY_NAME
+#define VOL7D_POLY_NAME anaattr
+
+
+#undef VOL7D_POLY_TYPES_V
+#define VOL7D_POLY_TYPES_V r
+#include "vol7d_dballe_class_var_du.F90"
+#undef VOL7D_POLY_TYPES_V
+#define VOL7D_POLY_TYPES_V i
+#include "vol7d_dballe_class_var_du.F90"
+#undef VOL7D_POLY_TYPES_V
+#define VOL7D_POLY_TYPES_V b
+#include "vol7d_dballe_class_var_du.F90"
+#undef VOL7D_POLY_TYPES_V
+#define VOL7D_POLY_TYPES_V d
+#include "vol7d_dballe_class_var_du.F90"
+#undef VOL7D_POLY_TYPES_V
+#define VOL7D_POLY_TYPES_V c
+#include "vol7d_dballe_class_var_du.F90"
+#undef VOL7D_POLY_TYPES_V
+
+
+deallocate(dballevar)
+
+return
+
+end subroutine vol7d_dballe_set_var_du
+
+
+
+FUNCTION get_dballe_filepath(filename, filetype) RESULT(path)
+CHARACTER(len=*), INTENT(in) :: filename
+INTEGER, INTENT(in) :: filetype
+
+INTEGER ::  j
+CHARACTER(len=512) :: path
+LOGICAL :: exist
+
+IF (dballe_name == ' ') THEN
+  CALL getarg(0, dballe_name)
+  ! dballe_name_env
+ENDIF
+
+IF (filetype < 1 .OR. filetype > nftype) THEN
+  path = ""
+  CALL l4f_log(L4F_ERROR, 'dballe file type '//TRIM(to_char(filetype))// &
+   ' not valid')
+  CALL raise_error()
+  RETURN
+ENDIF
+
+! try with environment variable
+CALL getenv(TRIM(dballe_name_env), path)
+IF (path /= ' ') THEN
+
+  path=TRIM(path)//'/'//filename
+  INQUIRE(file=path, exist=exist)
+  IF (exist) THEN
+    CALL l4f_log(L4F_INFO, 'dballe file '//TRIM(path)//' found')
+    RETURN
+  ENDIF
+ENDIF
+! try with pathlist
+DO j = 1, SIZE(pathlist,1)
+  IF (pathlist(j,filetype) == ' ') EXIT
+  path=TRIM(pathlist(j,filetype))//'/'//TRIM(dballe_name)//'/'//filename
+  INQUIRE(file=path, exist=exist)
+  IF (exist) THEN
+    CALL l4f_log(L4F_INFO, 'dballe file '//TRIM(path)//' found')
+    RETURN
+  ENDIF
+ENDDO
+CALL l4f_log(L4F_ERROR, 'dballe file '//TRIM(filename)//' not found')
+CALL raise_error()
+path = ""
+
+END FUNCTION get_dballe_filepath
+
+
+FUNCTION open_dballe_file(filename, filetype) RESULT(unit)
+CHARACTER(len=*), INTENT(in) :: filename
+INTEGER, INTENT(in) :: filetype
+INTEGER :: unit,i
+
+CHARACTER(len=512) :: path
+
+unit = -1
+path=get_dballe_filepath(filename, filetype)
+IF (path == '') RETURN
+
+unit = getunit()
+IF (unit == -1) RETURN
+
+OPEN(unit, file=path, status='old', iostat = i)
+IF (i == 0) THEN
+  CALL l4f_log(L4F_INFO, 'dballe file '//TRIM(path)//' opened')
+  RETURN
+ENDIF
+
+CALL l4f_log(L4F_ERROR, 'dballe file '//TRIM(filename)//' not found')
+CALL raise_error()
+unit = -1
+
+END FUNCTION open_dballe_file
+
 
 
 end MODULE vol7d_dballenew_class
@@ -1312,30 +1720,3 @@ end MODULE vol7d_dballenew_class
 !!\brief Esempio di utilizzo della classe vol7d_dballe_class
 !!
 !! Vengono estratti i dati e riscritti in un nuovo DSN
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

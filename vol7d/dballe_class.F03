@@ -303,6 +303,8 @@ contains
   procedure :: dbadata_getc !< return character value
   generic   :: get => dbadata_geti,dbadata_getr,dbadata_getd,dbadata_getb,dbadata_getc !< return value
   procedure(dbadata_display),deferred :: display  !< print a summary of object contents
+  procedure :: equal => dbadata_equal !> compare two dbametadata
+  generic   :: operator (==) => equal !> == operator
 end type dbadata
 
 !> set parameters in dballe API
@@ -617,6 +619,22 @@ type is (dbametaanddata)
   currentdbametaanddata = v
 end select
 end function currentdbametaanddata
+
+
+!> equal operator for dbadata
+elemental logical function dbadata_equal(this,that)
+
+class(dbadata), intent(in) :: this !< first element
+class(dbadata), intent(in) :: that !< second element
+
+if ( this%btable         == that%btable ) then
+  dbadata_equal = .true.
+else
+  dbadata_equal = .false.
+end if
+
+end function dbadata_equal
+
 
 !> return integer value
 subroutine dbadata_geti(data,value)

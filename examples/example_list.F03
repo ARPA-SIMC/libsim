@@ -36,7 +36,7 @@ call list_real%display()
 
 !!$! do not work !!!
 !!$! compiler bug ?
-!!$                                ! char fixed len (255) list
+!!$                                ! char fixed len (10) list
 call list_char%append("hello world")
 call list_char%append("bye bye baby")
 print *,"display char list"
@@ -104,7 +104,7 @@ print *,"display integer vector with everithings removed"
 call list_int%display()
 
                                 ! test mix list
-  do i=1, 10
+do i=1, 10
   call list_mix%append(i)
 enddo
 call list_mix%append(1.23)
