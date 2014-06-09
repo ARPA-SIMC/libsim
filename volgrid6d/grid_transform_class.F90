@@ -91,7 +91,7 @@
 !!
 !!  - trans_type='polyinter' output data are the result of a function
 !!    computed over the input points lying inside a set of
-!!    georoferenced polygons; polygons cannot overlap each other; for
+!!    georeferenced polygons; polygons cannot overlap each other; for
 !!    output on sparse points, the number of output points is equal to
 !!    the number of polygons and output point coordinates are defined
 !!    as the centroids of the polygons, for output on a grid, the

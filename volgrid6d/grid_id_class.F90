@@ -1021,7 +1021,7 @@ TYPE(gdaldataseth) :: hds
 REAL(kind=c_double) :: geotrans(6), dummy1, dummy2, dummy3, dummy4
 REAL :: gdalmiss
 REAL,ALLOCATABLE :: buffer(:,:)
-INTEGER :: ix1, iy1, ix2, iy2, ixs, iys, ord(2), ier, ierv(1)
+INTEGER :: ix1, iy1, ix2, iy2, ixs, iys, ord(2), ier
 INTEGER(kind=c_int) :: nrx, nry
 LOGICAL :: must_trans
 
@@ -1110,8 +1110,8 @@ IF (SIZE(buffer) /= (SIZE(field)))THEN
 ENDIF
 
 ! set missing value if necessary
-gdalmiss = REAL(gdalgetrasternodatavalue(gdalid, ierv))
-IF (ierv(1) /= 0) THEN ! success -> there are missing values
+gdalmiss = REAL(gdalgetrasternodatavalue(gdalid, ier))
+IF (ier /= 0) THEN ! success -> there are missing values
 #ifdef DEBUG
   CALL l4f_log(L4F_INFO, 'gdal missing data value: '//TRIM(to_char(gdalmiss)))
 #endif

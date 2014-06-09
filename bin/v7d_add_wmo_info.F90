@@ -238,7 +238,7 @@ IF (ldisplay) THEN
 ENDIF
 
 IF (output_format == 'WMOFLAT') ana_only = .TRUE. ! bruttino
-IF (ana_only) THEN ! throw away ana information
+IF (ana_only) THEN ! throw away non-station information
   vf = (/.FALSE./)
   CALL vol7d_reform(v7d, ltime=vf, ltimerange=vf, llevel=vf, &
    ldativarr=vf, ldativard=vf, ldativari=vf, ldativarb=vf, ldativarc=vf, &
@@ -246,8 +246,14 @@ IF (ana_only) THEN ! throw away ana information
    ldativarattrr=vf, ldativarattrd=vf, ldativarattri=vf, ldativarattrb=vf, ldativarattrc=vf)
 ENDIF
 
+! search for block/station number variables
+bni = INDEX(v7d%anavar%i, vol7d_var_new('B01001'))
+sni = INDEX(v7d%anavar%i, vol7d_var_new('B01002'))
+IF (bni <= 0 .OR. sni <= 0) THEN ! not present yet
 ! make room for new variables
-CALL add_block_station_var(v7d)
+  CALL l4f_category_log(category, L4F_INFO, 'making room for WMO info')
+  CALL add_block_station_var(v7d)
+ENDIF
 ! search for block/station number variables
 bni = INDEX(v7d%anavar%i, vol7d_var_new('B01001'))
 sni = INDEX(v7d%anavar%i, vol7d_var_new('B01002'))
