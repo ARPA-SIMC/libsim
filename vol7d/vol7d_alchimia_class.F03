@@ -165,8 +165,8 @@ do i=size(mayvfn%fnds),1,-1
         do itimerange=1,ntimerange
           do inetwork=1,nnetwork
             call mayvfn%fnds(i)%fn(newbout,newbout,mayvfn%fnds(i)%bin,mayvfn%fnds(i)%bout,&
-             v7dout%voldatir(:,ilevel,itime,itimerange,:,inetwork),&
-             v7dout%voldatir(:,ilevel,itime,itimerange,:,inetwork))
+             v7dout%voldatir(:,itime,ilevel,itimerange,:,inetwork),&
+             v7dout%voldatir(:,itime,ilevel,itimerange,:,inetwork))
           end do
         end do
       end do
