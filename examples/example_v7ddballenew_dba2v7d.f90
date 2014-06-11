@@ -50,13 +50,20 @@ CALL init(v7d_dba,filename=filename,file=.true.,categoryappend="dballenewapi")
 CALL import(v7d_dba,var=["B12101","B12102"],varkind=["r","i"],&
                    attr=["*B33196","*B33192","*B33193"],attrkind=["b","c","b"],&
                    anavar=["B12101"],anaattr=["*B33192"])
-!CALL import(v7d_dba)
+
+!!$CALL import(v7d_dba)
 
 Print *,"Fine lettura dati"
 
 call display(v7d_dba%vol7d)
 
 call l4f_category_log(category,L4F_INFO,"fine import")
+
+call l4f_category_log(category,L4F_INFO,"startport")
+
+CALL export(v7d_dba)
+
+call l4f_category_log(category,L4F_INFO,"fine export")
 
 CALL delete (v7d_dba) 
 

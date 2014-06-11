@@ -24,6 +24,14 @@ libsim_vol7d_la_LDFLAGS += $(ORA_LDFLAGS)
 libsim_vol7d_la_LIBADD += $(ORA_LIBS)
 endif
 
+if F2003_FEATURES
+libsim_vol7d_la_SOURCES += vol7d_serialize_class.F03 vol7d_serialize_csv_class.F03 \
+ vol7d_serialize_geojson_class.F03 
+if DBALLE
+libsim_vol7d_la_SOURCES += vol7d_serialize_dballe_class.F03
+endif
+endif
+
 if DBALLE
 libsim_vol7d_la_SOURCES += vol7d_dballe_class.F90
 AM_FCFLAGS += -I/usr/include/dballe
@@ -38,11 +46,6 @@ endif
 if NETCDF
 libsim_vol7d_la_SOURCES += vol7d_netcdf_class.f90
 libsim_vol7d_la_LIBADD += $(NETCDF_LIBS)
-endif
-
-if F2003_FEATURES
-libsim_vol7d_la_SOURCES += vol7d_serialize_class.F03 vol7d_serialize_csv_class.F03 \
- vol7d_serialize_geojson_class.F03
 endif
 
 if VERSIONINFO
@@ -126,6 +129,10 @@ vol7d_serialize_csv_class.$(OBJEXT): vol7d_serialize_class.$(OBJEXT)
 vol7d_serialize_csv_class.lo: vol7d_serialize_class.$(OBJEXT)
 vol7d_serialize_geojson_class.$(OBJEXT): vol7d_serialize_class.$(OBJEXT)
 vol7d_serialize_geojson_class.lo: vol7d_serialize_class.$(OBJEXT)
+if DBALLE
+vol7d_serialize_dballe_class.$(OBJEXT): vol7d_serialize_class.$(OBJEXT)
+vol7d_serialize_dballe_class.lo: vol7d_serialize_class.$(OBJEXT)
+endif
 endif
 
 mostlyclean-compile:

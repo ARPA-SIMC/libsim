@@ -86,6 +86,7 @@ USE geo_coord_class
 use list_mix
 use list_character
 use list_linkchar
+use vol7d_serialize_dballe_class
 
 IMPLICIT NONE
 
@@ -140,12 +141,11 @@ INTERFACE import
   MODULE PROCEDURE  vol7d_dballe_importvvnv,vol7d_dballe_import, dba2v7d
 END INTERFACE import
 
-#ifdef NONE
                                 !>\brief exporta
 INTERFACE export
   MODULE PROCEDURE vol7d_dballe_export
 END INTERFACE export
-#endif
+
 
 PRIVATE
 PUBLIC vol7d_dballe, init, delete, import, export
@@ -1702,6 +1702,55 @@ CALL raise_error()
 unit = -1
 
 END FUNCTION open_dballe_file
+
+
+
+
+!> \brief Exporta un volume dati a un DSN DB-all.e
+!!
+!! Riscrive i dati nel DSN di DB-All.e con la possibilità di attivare
+!! una serie di filtri.
+!! Try to make the better work:
+!! if write on file and template is generic write ana data and attribute in separate bufr befor data
+!! if write on file and template is not generic write ana and data in the same bufr
+!! if write on db write ana and use ana_id to insert data
+SUBROUTINE vol7d_dballe_export(this, network, coordmin, coordmax,&
+ timei, timef,level,timerange,var,attr,anavar,anaattr,attr_only,template,ana)
+
+TYPE(vol7d_dballe),INTENT(inout) :: this !< oggetto contenente il volume e altre info per l'accesso al DSN
+character(len=network_name_len),INTENT(in),optional :: network !< network da exportare
+!> coordinate minime e massime che definiscono il 
+!! rettangolo di estrazione per l'esportazione
+TYPE(geo_coord),INTENT(in),optional :: coordmin,coordmax 
+!>estremi temporali dei dati da esportare
+TYPE(datetime),INTENT(in),optional :: timei, timef
+TYPE(vol7d_level),INTENT(in),optional :: level !< livello selezionato per l'esportazione
+TYPE(vol7d_timerange),INTENT(in),optional :: timerange !< timerange selezionato per l'esportazione
+!> variabili da exportare secondo la tabella B locale o alias relative a dati, attributi,
+!! anagrafica e attributi dell'anagrafica
+CHARACTER(len=*),INTENT(in),OPTIONAL :: var(:),attr(:),anavar(:),anaattr(:)
+!> permette di riscrivere su un DSN letto precedentemente, modificando solo gli attributi ai dati,
+!! ottimizzando enormente le prestazioni: gli attributi riscritti saranno quelli con this%data_id definito
+!! (solitamente ricopiato dall'oggetto letto)
+logical,intent(in),optional :: attr_only 
+!> specificando category.subcategory.localcategory oppure un alias ("synop", "metar","temp","generic") forza l'exportazione ad uno specifico template BUFR/CREX"
+!!  the special value "generic-frag is used to generate bufr on file where ana data is reported only once at beginning and data in other bufr after
+character(len=*),intent(in),optional :: template 
+TYPE(vol7d_ana),INTENT(inout),optional :: ana  !< identificativo della stazione da exportare
+
+TYPE(vol7d_serialize_dballe) :: serialize
+
+serialize = vol7d_serialize_dballe_new(ana)
+
+call serialize%vol7d_serialize_optionparser()
+call serialize%vol7d_serialize_parse()
+call serialize%vol7d_serialize_setup(this%vol7d)
+call serialize%vol7d_serialize_export(10)
+
+
+
+
+end SUBROUTINE vol7d_dballe_export
 
 
 
