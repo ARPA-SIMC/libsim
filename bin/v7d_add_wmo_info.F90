@@ -247,13 +247,13 @@ IF (ana_only) THEN ! throw away non-station information
 ENDIF
 
 ! search for block/station number variables
-bni = INDEX(v7d%anavar%i, vol7d_var_new('B01001'))
-sni = INDEX(v7d%anavar%i, vol7d_var_new('B01002'))
-IF (bni <= 0 .OR. sni <= 0) THEN ! not present yet
+!bni = INDEX(v7d%anavar%i, vol7d_var_new('B01001'))
+!sni = INDEX(v7d%anavar%i, vol7d_var_new('B01002'))
+!IF (bni <= 0 .OR. sni <= 0) THEN ! not present yet
 ! make room for new variables
   CALL l4f_category_log(category, L4F_INFO, 'making room for WMO info')
   CALL add_block_station_var(v7d)
-ENDIF
+!ENDIF
 ! search for block/station number variables
 bni = INDEX(v7d%anavar%i, vol7d_var_new('B01001'))
 sni = INDEX(v7d%anavar%i, vol7d_var_new('B01002'))
@@ -507,6 +507,7 @@ END SUBROUTINE v7d_export_wmo_flat
 
 
 SUBROUTINE wmo_flat_format(ana, bn, sn, i, template_format, output_line)
+IMPLICIT NONE
 TYPE(vol7d_ana),INTENT(in) :: ana
 INTEGER,INTENT(in) :: bn, sn, i
 CHARACTER(len=1024),INTENT(in) :: template_format
