@@ -3267,7 +3267,6 @@ do while ( .true. )
 
 
       if (c_e(btable)) then
-        print *,"btable ana",btable
 
         if (present(anavar).and. present(anavarkind))then
           ii=( firsttrue(anavar == btable))
