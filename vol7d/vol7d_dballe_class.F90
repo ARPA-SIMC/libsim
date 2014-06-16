@@ -3448,27 +3448,6 @@ call vol7d_alloc (vol7dtmp, &
  nanavarattrd=nanavarattrd, &
  nanavarattrc=nanavarattrc)
 
-!!$ print *, "nana=",nana, "ntime=",ntime, "ntimerange=",ntimerange, &
-!!$ "nlevel=",nlevel, "nnetwork=",nnetwork, &
-!!$ "ndativarr=",ndativarr, "ndativari=",ndativari, &
-!!$ "ndativarb=",ndativarb, "ndativard=",ndativard, "ndativarc=",ndativarc,&
-!!$ "ndatiattrr=",ndatiattrr, "ndatiattri=",ndatiattri, "ndatiattrb=",ndatiattrb,&
-!!$ "ndatiattrd=",ndatiattrd, "ndatiattrc=",ndatiattrc,&
-!!$ "ndativarattrr=",ndativarattrr, "ndativarattri=",ndativarattri, "ndativarattrb=",ndativarattrb,&
-!!$ "ndativarattrd=",ndativarattrd, "ndativarattrc=",ndativarattrc
-
-
- print *, "nana=",nana, "nnetwork=",nnetwork, &
- "nanavarr=",nanavarr, "nanavari=",nanavari, &
- "nanavarb=",nanavarb, "nanavard=",nanavard, "nanavarc=",nanavarc,&
- "nanaattrr=",nanaattrr, "nanaattri=",nanaattri, "nanaattrb=",nanaattrb,&
- "nanaattrd=",nanaattrd, "nanaattrc=",nanaattrc,&
- "nanavarattrr=",nanavarattrr, "nanavarattri=",nanavarattri, "nanavarattrb=",nanavarattrb,&
- "nanavarattrd=",nanavarattrd, "nanavarattrc=",nanavarattrc
-
-!!$ print*,"ho fatto alloc"
-
-
 vol7dtmp%ana=pack_distinct(bufferana(:na)%ana, nana, back=.TRUE.)
 !vol7dtmp%ana=pack_distinct(buffer(:nd)%ana, nana, back=.TRUE.)
 vol7dtmp%time=pack_distinct(buffer(:nd)%time, ntime, back=.TRUE.)
