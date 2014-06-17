@@ -507,7 +507,6 @@ END SUBROUTINE v7d_export_wmo_flat
 
 
 SUBROUTINE wmo_flat_format(ana, bn, sn, i, template_format, output_line)
-IMPLICIT NONE
 TYPE(vol7d_ana),INTENT(in) :: ana
 INTEGER,INTENT(in) :: bn, sn, i
 CHARACTER(len=1024),INTENT(in) :: template_format
