@@ -911,7 +911,7 @@ TYPE(c_ptr),VALUE :: genericptr
 CHARACTER(len=64),POINTER :: col
 
 CALL C_F_POINTER(genericptr, col)
-col = var%btable//'.'//attr%btable
+col = TRIM(var%btable)//'.'//attr%btable
 
 END SUBROUTINE default_vol7d_value_attr_header_callback
 
@@ -1125,7 +1125,7 @@ CHARACTER(len=64),POINTER :: col
 
 CALL C_F_POINTER(genericptr, col)
 IF (c_e(var) .AND. c_e(attr)) THEN
-  col = var%btable//'.'//attr%btable
+  col = TRIM(var%btable)//'.'//attr%btable
 ELSE
   col = ''
 ENDIF
@@ -1479,23 +1479,23 @@ CASE(4)
   CASE(1)
     CALL this%line%vol7d_valuer_callback(this%ser%v7d%voldatiattrr( &
      this%line%i1, this%line%i2, this%line%i3, this%line%i4, varind, this%line%i6, attrind), &
-     this%ser%v7d%datiattr%r(varind), genericptr)
+     this%ser%v7d%datiattr%r(attrind), genericptr)
   CASE(2)
     CALL this%line%vol7d_valued_callback(this%ser%v7d%voldatiattrd( &
      this%line%i1, this%line%i2, this%line%i3, this%line%i4, varind, this%line%i6, attrind), &
-     this%ser%v7d%datiattr%i(varind), genericptr)
+     this%ser%v7d%datiattr%i(attrind), genericptr)
   CASE(3)
     CALL this%line%vol7d_valuei_callback(this%ser%v7d%voldatiattri( &
      this%line%i1, this%line%i2, this%line%i3, this%line%i4, varind, this%line%i6, attrind), &
-     this%ser%v7d%datiattr%d(varind), genericptr)
+     this%ser%v7d%datiattr%d(attrind), genericptr)
   CASE(4)
     CALL this%line%vol7d_valueb_callback(this%ser%v7d%voldatiattrb( &
      this%line%i1, this%line%i2, this%line%i3, this%line%i4, varind, this%line%i6, attrind), &
-     this%ser%v7d%datiattr%b(varind), genericptr)
+     this%ser%v7d%datiattr%b(attrind), genericptr)
   CASE(5)
     CALL this%line%vol7d_valuec_callback(this%ser%v7d%voldatiattrc( &
      this%line%i1, this%line%i2, this%line%i3, this%line%i4, varind, this%line%i6, attrind), &
-     this%ser%v7d%datiattr%c(varind), genericptr)
+     this%ser%v7d%datiattr%c(attrind), genericptr)
   END SELECT
 END SELECT
 
@@ -1563,7 +1563,14 @@ INTEGER(kind=int_b),INTENT(in) :: valu
 TYPE(vol7d_var),INTENT(in) :: var
 TYPE(c_ptr),VALUE :: genericptr
 
-CALL default_vol7d_valuei_callback(INT(valu), var, genericptr)
+CHARACTER(len=64),POINTER :: col
+
+IF (c_e(valu)) THEN
+  CALL default_vol7d_valuei_callback(INT(valu), var, genericptr)
+ELSE
+  CALL C_F_POINTER(genericptr, col)
+  col = ''
+ENDIF
 
 END SUBROUTINE default_vol7d_valueb_callback
 
