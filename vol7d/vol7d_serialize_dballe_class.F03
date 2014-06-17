@@ -86,10 +86,16 @@ INTEGER :: i
 TYPE(vol7d_serialize_iterline) :: linei
 TYPE(vol7d_serialize_itercol) :: coli
 
+! set "header" callbacks
+!!$CALL this%vol7d_serialize_set_callback(vol7d_ana_callback_gj, &
+!!$ vol7d_time_callback_gj, vol7d_level_callback_gj, &
+!!$ vol7d_timerange_callback_gj, vol7d_network_callback_gj, &
+!!$ vol7d_var_callback_gj, vol7d_val_callback_gj, &
+!!$ vol7d_value_var_callback_gj, vol7d_value_attr_callback_gj)
 
-! make dballe header and count columns
+! loop over headers and count columns
 i = 0; line = ''
-coli = this%vol7d_serialize_itercol_new()
+coli = this%vol7d_serialize_itercol_new() ! column iterator from this (header line)
 DO WHILE(coli%next())
   i = i + 1
   IF (i /= 1) THEN
@@ -97,6 +103,7 @@ DO WHILE(coli%next())
   ENDIF
 ! use double pointer to avoid ICE on IBM xlf compiler
   pline => line(LEN_TRIM(line)+1:LEN_TRIM(line)+1)
+! call callbacks
   CALL coli%export(C_LOC(pline))
 END DO
 
@@ -106,6 +113,7 @@ ALLOCATE(col(i))
 ! loop over lines
 linei = this%vol7d_serialize_iterline_new()
 
+! set "data lines" callbacks
 !!$CALL linei%vol7d_serialize_iterline_set_callback(vol7d_ana_callback_gj, &
 !!$ vol7d_time_callback_gj, vol7d_level_callback_gj, &
 !!$ vol7d_timerange_callback_gj, vol7d_network_callback_gj, &
@@ -115,12 +123,13 @@ linei = this%vol7d_serialize_iterline_new()
 
 DO WHILE(linei%next())
   i = 0; line = ''
-  coli = linei%vol7d_serialize_itercol_new()
+  coli = linei%vol7d_serialize_itercol_new() ! column iterator from linei (data line)
   DO WHILE(coli%next())
     i = i + 1
     IF (i /= 1) THEN
       line(LEN_TRIM(line)+1:) = ','
     ENDIF
+! call callbacks
     CALL coli%export(C_LOC(col(i)(1:1)))
     line(LEN_TRIM(line)+1:) = col(i)
   END DO
