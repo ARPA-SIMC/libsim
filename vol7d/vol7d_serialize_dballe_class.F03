@@ -23,12 +23,9 @@ USE vol7d_class
 IMPLICIT NONE
 
 TYPE,EXTENDS(vol7d_serialize) :: vol7d_serialize_dballe
-
-TYPE(vol7d_ana) :: ana  !< identificativo della stazione da exportare
-
-
+  TYPE(vol7d_ana) :: ana  !< identificativo della stazione da exportare
   CONTAINS
-  PROCEDURE :: vol7d_serialize_optionparser
+!  PROCEDURE :: vol7d_serialize_optionparser
   PROCEDURE :: vol7d_serialize_export
 END TYPE vol7d_serialize_dballe
 
@@ -40,6 +37,7 @@ CONTAINS
 FUNCTION vol7d_serialize_dballe_new(ana) RESULT(this)
 TYPE(vol7d_serialize_dballe) :: this
 TYPE(vol7d_ana),INTENT(in),optional :: ana  !< identificativo della stazione da exportare
+
 if (present(ana))then
   this%ana=ana
 else
@@ -48,6 +46,15 @@ end if
 
 this%vol7d_serialize = vol7d_serialize_new()
 
+! reset unconditionally some parameters
+this%column = 'ana,time,timerange,level,network'
+this%loop = 'ana,time,timerange,level,network'
+this%keep_miss = .FALSE.
+this%cachedesc = .TRUE.
+! call original parse method to fix tuning parameters without forcing
+! to call option methods explicitely
+CALL this%vol7d_serialize_parse()
+
 END FUNCTION vol7d_serialize_dballe_new
 
 
@@ -55,25 +62,17 @@ SUBROUTINE vol7d_serialize_optionparser(this, opt, ext)
 CLASS(vol7d_serialize_dballe),INTENT(inout) :: this
 TYPE(optionparser),INTENT(inout),OPTIONAL :: opt
 CHARACTER(len=*),INTENT(in),OPTIONAL :: ext
-
-!!$IF (PRESENT(ext)) THEN
-!!$  this%ext = ext
-!!$ELSE
-!!$  this%ext = 'dballe'
-!!$ENDIF
-
-! reset unconditionally some parameters
-this%vol7d_Serialize%cachedesc = .TRUE.
-!this%column='ana,time,timerange,level,network,var,value'
-!this%loop='time,timerange,level,var,ana,network'
-this%keep_miss=.TRUE.
-
-! call the generic method
-!CALL this%vol7d_serialize%vol7d_serialize_optionparser(opt, ext)
-! add a specific parameter
-
-
+! do nothing
 END SUBROUTINE vol7d_serialize_optionparser
+
+
+!SUBROUTINE vol7d_serialize_parse(this, category)
+!CLASS(vol7d_serialize_geojson),INTENT(inout) :: this !< object having undorgone the vol7d_serialize_optionparser method
+!INTEGER,INTENT(in),OPTIONAL :: category !< log4fortran category for logging error messages
+!
+!!! do nothing
+!
+!END SUBROUTINE vol7d_serialize_parse
 
 
 SUBROUTINE vol7d_serialize_export(this, iun)
@@ -87,12 +86,6 @@ INTEGER :: i
 TYPE(vol7d_serialize_iterline) :: linei
 TYPE(vol7d_serialize_itercol) :: coli
 
-!!$CALL linei%vol7d_serialize_iterline_set_callback(vol7d_ana_callback_gj, &
-!!$ vol7d_time_callback_gj, vol7d_level_callback_gj, &
-!!$ vol7d_timerange_callback_gj, vol7d_network_callback_gj, &
-!!$ vol7d_var_callback_gj, vol7d_attr_callback_gj, vol7d_valuer_callback_gj, &
-!!$ vol7d_valued_callback_gj, vol7d_valuei_callback_gj, vol7d_valueb_callback_gj, &
-!!$ vol7d_valuec_callback_gj)
 
 ! make dballe header and count columns
 i = 0; line = ''
@@ -112,6 +105,14 @@ ALLOCATE(col(i))
 
 ! loop over lines
 linei = this%vol7d_serialize_iterline_new()
+
+!!$CALL linei%vol7d_serialize_iterline_set_callback(vol7d_ana_callback_gj, &
+!!$ vol7d_time_callback_gj, vol7d_level_callback_gj, &
+!!$ vol7d_timerange_callback_gj, vol7d_network_callback_gj, &
+!!$ vol7d_var_callback_gj, vol7d_attr_callback_gj, vol7d_valuer_callback_gj, &
+!!$ vol7d_valued_callback_gj, vol7d_valuei_callback_gj, vol7d_valueb_callback_gj, &
+!!$ vol7d_valuec_callback_gj)
+
 DO WHILE(linei%next())
   i = 0; line = ''
   coli = linei%vol7d_serialize_itercol_new()
