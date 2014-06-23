@@ -28,6 +28,7 @@ IMPLICIT NONE
 TYPE(vol7d_dballe) :: v7d_dba
 TYPE(vol7d) :: v7d
 type(dbametaanddata),allocatable :: metaanddatav(:)
+type(dbametaanddatalist),allocatable :: metaanddatal
 type(dbadcv) :: attrv
 
 integer :: category,ier,i
@@ -40,9 +41,9 @@ call l4f_launcher(a_name)
 ier=l4f_init()
 call l4f_category_log(category,L4F_INFO,"inizio")
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!                           import from file
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+print*,"!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+print*,"!!                           import/export from file"
+print*,"!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
 
 ! Chiamo il costruttore della classe vol7d_dballe per il mio oggetto in export
 CALL init(v7d_dba,filename=filename,file=.true.,categoryappend="dballenewapi")
@@ -68,9 +69,9 @@ call l4f_category_log(category,L4F_INFO,"fine export")
 CALL delete (v7d_dba) 
 
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!                           import from metaanddatav
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+print*,"!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+print*,"!!                           import from metaanddatav"
+print*,"!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
 
 allocate(metaanddatav(2))   ! one metadata for data and one for constant data
 
@@ -128,6 +129,10 @@ end do
 call import (v7d,metaanddatav)
 
 call display(v7d)
+
+!call metaanddatav%delete()
+call export (v7d,metaanddatal)
+call metaanddatal%display()
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 

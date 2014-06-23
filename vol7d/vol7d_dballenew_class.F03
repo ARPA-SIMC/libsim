@@ -143,7 +143,7 @@ END INTERFACE import
 
                                 !>\brief exporta
 INTERFACE export
-  MODULE PROCEDURE vol7d_dballe_export
+  MODULE PROCEDURE vol7d_dballe_export, v7d2dba
 END INTERFACE export
 
 
@@ -1704,16 +1704,11 @@ unit = -1
 END FUNCTION open_dballe_file
 
 
-
-
 !> \brief Exporta un volume dati a un DSN DB-all.e
 !!
 !! Riscrive i dati nel DSN di DB-All.e con la possibilità di attivare
 !! una serie di filtri.
-!! Try to make the better work:
-!! if write on file and template is generic write ana data and attribute in separate bufr befor data
-!! if write on file and template is not generic write ana and data in the same bufr
-!! if write on db write ana and use ana_id to insert data
+
 SUBROUTINE vol7d_dballe_export(this, network, coordmin, coordmax,&
  timei, timef,level,timerange,var,attr,anavar,anaattr,attr_only,template,ana)
 
@@ -1738,19 +1733,31 @@ logical,intent(in),optional :: attr_only
 character(len=*),intent(in),optional :: template 
 TYPE(vol7d_ana),INTENT(inout),optional :: ana  !< identificativo della stazione da exportare
 
+type(dbametaanddatalist) :: metaanddatal
+
+
+call v7d2dba(this%vol7d,metaanddatal)
+!call metaanddatal%display()
+
+!!! todo write
+
+end SUBROUTINE vol7d_dballe_export
+
+
+subroutine v7d2dba(v7d,metaanddatal)
+TYPE(vol7d),INTENT(inout)   :: v7d  !!!!!! dovrebbe essere intent(in)
+type(dbametaanddatalist),intent(inout) :: metaanddatal
+
 TYPE(vol7d_serialize_dballe) :: serialize
 
-serialize = vol7d_serialize_dballe_new(ana)
+serialize = vol7d_serialize_dballe_new()
 
 !call serialize%vol7d_serialize_optionparser()
 !call serialize%vol7d_serialize_parse()
-call serialize%vol7d_serialize_setup(this%vol7d)
-call serialize%vol7d_serialize_export(10)
+call serialize%vol7d_serialize_setup(v7d)
+call serialize%vol7d_serialize_export(metaanddatal)
 
-
-
-
-end SUBROUTINE vol7d_dballe_export
+end subroutine v7d2dba
 
 
 

@@ -57,7 +57,7 @@ TYPE vol7d_serialize
   INTEGER :: icolumn(7), looporder(6), loopinvorder(6), &
    loopstart(6), loopend(6)
   TYPE(vol7d_var_mapper),ALLOCATABLE :: mapper(:)
-  TYPE(vol7d),POINTER :: v7d=>NULL()
+  TYPE(vol7d),POINTER,public :: v7d=>NULL()
   PROCEDURE(default_vol7d_ana_header_callback),NOPASS,POINTER :: vol7d_ana_callback
   PROCEDURE(default_vol7d_time_header_callback),NOPASS,POINTER :: vol7d_time_callback
   PROCEDURE(default_vol7d_level_header_callback),NOPASS,POINTER :: vol7d_level_callback
