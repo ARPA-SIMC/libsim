@@ -96,11 +96,16 @@ TYPE vol7d_serialize_iterline
   PROCEDURE(default_vol7d_network_callback),NOPASS,POINTER :: vol7d_network_callback
   PROCEDURE(default_vol7d_var_callback),NOPASS,POINTER :: vol7d_var_callback
   PROCEDURE(default_vol7d_attr_callback),NOPASS,POINTER :: vol7d_attr_callback
-  PROCEDURE(default_vol7d_valuer_callback),NOPASS,POINTER :: vol7d_valuer_callback
-  PROCEDURE(default_vol7d_valued_callback),NOPASS,POINTER :: vol7d_valued_callback
-  PROCEDURE(default_vol7d_valuei_callback),NOPASS,POINTER :: vol7d_valuei_callback
-  PROCEDURE(default_vol7d_valueb_callback),NOPASS,POINTER :: vol7d_valueb_callback
-  PROCEDURE(default_vol7d_valuec_callback),NOPASS,POINTER :: vol7d_valuec_callback
+  PROCEDURE(default_vol7d_valuer_var_callback),NOPASS,POINTER :: vol7d_valuer_var_callback
+  PROCEDURE(default_vol7d_valued_var_callback),NOPASS,POINTER :: vol7d_valued_var_callback
+  PROCEDURE(default_vol7d_valuei_var_callback),NOPASS,POINTER :: vol7d_valuei_var_callback
+  PROCEDURE(default_vol7d_valueb_var_callback),NOPASS,POINTER :: vol7d_valueb_var_callback
+  PROCEDURE(default_vol7d_valuec_var_callback),NOPASS,POINTER :: vol7d_valuec_var_callback
+  PROCEDURE(default_vol7d_valuer_attr_callback),NOPASS,POINTER :: vol7d_valuer_attr_callback
+  PROCEDURE(default_vol7d_valued_attr_callback),NOPASS,POINTER :: vol7d_valued_attr_callback
+  PROCEDURE(default_vol7d_valuei_attr_callback),NOPASS,POINTER :: vol7d_valuei_attr_callback
+  PROCEDURE(default_vol7d_valueb_attr_callback),NOPASS,POINTER :: vol7d_valueb_attr_callback
+  PROCEDURE(default_vol7d_valuec_attr_callback),NOPASS,POINTER :: vol7d_valuec_attr_callback
   CONTAINS
   PROCEDURE :: vol7d_serialize_iterline_set_callback
   PROCEDURE,PRIVATE :: vol7d_serialize_iterline_next
@@ -329,9 +334,12 @@ END SUBROUTINE vol7d_serialize_set_callback
 SUBROUTINE vol7d_serialize_iterline_set_callback(this, vol7d_ana_callback, &
  vol7d_time_callback, vol7d_level_callback, &
  vol7d_timerange_callback, vol7d_network_callback, &
- vol7d_var_callback, vol7d_attr_callback, vol7d_valuer_callback, &
- vol7d_valued_callback, vol7d_valuei_callback, vol7d_valueb_callback, &
- vol7d_valuec_callback)
+ vol7d_var_callback, vol7d_attr_callback, vol7d_valuer_var_callback, &
+ vol7d_valued_var_callback, vol7d_valuei_var_callback, vol7d_valueb_var_callback, &
+ vol7d_valuec_var_callback, &
+ vol7d_valuer_attr_callback, &
+ vol7d_valued_attr_callback, vol7d_valuei_attr_callback, vol7d_valueb_attr_callback, &
+ vol7d_valuec_attr_callback)
 CLASS(vol7d_serialize_iterline),INTENT(inout) :: this
 PROCEDURE(default_vol7d_ana_callback),OPTIONAL :: vol7d_ana_callback
 PROCEDURE(default_vol7d_time_callback),OPTIONAL :: vol7d_time_callback
@@ -340,11 +348,16 @@ PROCEDURE(default_vol7d_timerange_callback),OPTIONAL :: vol7d_timerange_callback
 PROCEDURE(default_vol7d_network_callback),OPTIONAL :: vol7d_network_callback
 PROCEDURE(default_vol7d_var_callback),OPTIONAL :: vol7d_var_callback
 PROCEDURE(default_vol7d_attr_callback),OPTIONAL :: vol7d_attr_callback
-PROCEDURE(default_vol7d_valuer_callback),OPTIONAL :: vol7d_valuer_callback
-PROCEDURE(default_vol7d_valued_callback),OPTIONAL :: vol7d_valued_callback
-PROCEDURE(default_vol7d_valuei_callback),OPTIONAL :: vol7d_valuei_callback
-PROCEDURE(default_vol7d_valueb_callback),OPTIONAL :: vol7d_valueb_callback
-PROCEDURE(default_vol7d_valuec_callback),OPTIONAL :: vol7d_valuec_callback
+PROCEDURE(default_vol7d_valuer_var_callback),OPTIONAL :: vol7d_valuer_var_callback
+PROCEDURE(default_vol7d_valued_var_callback),OPTIONAL :: vol7d_valued_var_callback
+PROCEDURE(default_vol7d_valuei_var_callback),OPTIONAL :: vol7d_valuei_var_callback
+PROCEDURE(default_vol7d_valueb_var_callback),OPTIONAL :: vol7d_valueb_var_callback
+PROCEDURE(default_vol7d_valuec_var_callback),OPTIONAL :: vol7d_valuec_var_callback
+PROCEDURE(default_vol7d_valuer_attr_callback),OPTIONAL :: vol7d_valuer_attr_callback
+PROCEDURE(default_vol7d_valued_attr_callback),OPTIONAL :: vol7d_valued_attr_callback
+PROCEDURE(default_vol7d_valuei_attr_callback),OPTIONAL :: vol7d_valuei_attr_callback
+PROCEDURE(default_vol7d_valueb_attr_callback),OPTIONAL :: vol7d_valueb_attr_callback
+PROCEDURE(default_vol7d_valuec_attr_callback),OPTIONAL :: vol7d_valuec_attr_callback
 
 IF (PRESENT(vol7d_ana_callback)) this%vol7d_ana_callback => vol7d_ana_callback
 IF (PRESENT(vol7d_time_callback)) this%vol7d_time_callback => vol7d_time_callback
@@ -353,11 +366,16 @@ IF (PRESENT(vol7d_timerange_callback)) this%vol7d_timerange_callback => vol7d_ti
 IF (PRESENT(vol7d_network_callback)) this%vol7d_network_callback => vol7d_network_callback
 IF (PRESENT(vol7d_var_callback)) this%vol7d_var_callback => vol7d_var_callback
 IF (PRESENT(vol7d_attr_callback)) this%vol7d_attr_callback => vol7d_attr_callback
-IF (PRESENT(vol7d_valuer_callback)) this%vol7d_valuer_callback => vol7d_valuer_callback
-IF (PRESENT(vol7d_valued_callback)) this%vol7d_valued_callback => vol7d_valued_callback
-IF (PRESENT(vol7d_valuei_callback)) this%vol7d_valuei_callback => vol7d_valuei_callback
-IF (PRESENT(vol7d_valueb_callback)) this%vol7d_valueb_callback => vol7d_valueb_callback
-IF (PRESENT(vol7d_valuec_callback)) this%vol7d_valuec_callback => vol7d_valuec_callback
+IF (PRESENT(vol7d_valuer_var_callback)) this%vol7d_valuer_var_callback => vol7d_valuer_var_callback
+IF (PRESENT(vol7d_valued_var_callback)) this%vol7d_valued_var_callback => vol7d_valued_var_callback
+IF (PRESENT(vol7d_valuei_var_callback)) this%vol7d_valuei_var_callback => vol7d_valuei_var_callback
+IF (PRESENT(vol7d_valueb_var_callback)) this%vol7d_valueb_var_callback => vol7d_valueb_var_callback
+IF (PRESENT(vol7d_valuec_var_callback)) this%vol7d_valuec_var_callback => vol7d_valuec_var_callback
+IF (PRESENT(vol7d_valuer_attr_callback)) this%vol7d_valuer_attr_callback => vol7d_valuer_attr_callback
+IF (PRESENT(vol7d_valued_attr_callback)) this%vol7d_valued_attr_callback => vol7d_valued_attr_callback
+IF (PRESENT(vol7d_valuei_attr_callback)) this%vol7d_valuei_attr_callback => vol7d_valuei_attr_callback
+IF (PRESENT(vol7d_valueb_attr_callback)) this%vol7d_valueb_attr_callback => vol7d_valueb_attr_callback
+IF (PRESENT(vol7d_valuec_attr_callback)) this%vol7d_valuec_attr_callback => vol7d_valuec_attr_callback
 
 END SUBROUTINE vol7d_serialize_iterline_set_callback
 
@@ -517,11 +535,16 @@ iterator%vol7d_timerange_callback => default_vol7d_timerange_callback
 iterator%vol7d_network_callback => default_vol7d_network_callback
 iterator%vol7d_var_callback => default_vol7d_var_callback
 iterator%vol7d_attr_callback => default_vol7d_attr_callback
-iterator%vol7d_valuer_callback => default_vol7d_valuer_callback
-iterator%vol7d_valued_callback => default_vol7d_valued_callback
-iterator%vol7d_valuei_callback => default_vol7d_valuei_callback
-iterator%vol7d_valueb_callback => default_vol7d_valueb_callback
-iterator%vol7d_valuec_callback => default_vol7d_valuec_callback
+iterator%vol7d_valuer_var_callback => default_vol7d_valuer_var_callback
+iterator%vol7d_valued_var_callback => default_vol7d_valued_var_callback
+iterator%vol7d_valuei_var_callback => default_vol7d_valuei_var_callback
+iterator%vol7d_valueb_var_callback => default_vol7d_valueb_var_callback
+iterator%vol7d_valuec_var_callback => default_vol7d_valuec_var_callback
+iterator%vol7d_valuer_attr_callback => default_vol7d_valuer_attr_callback
+iterator%vol7d_valued_attr_callback => default_vol7d_valued_attr_callback
+iterator%vol7d_valuei_attr_callback => default_vol7d_valuei_attr_callback
+iterator%vol7d_valueb_attr_callback => default_vol7d_valueb_attr_callback
+iterator%vol7d_valuec_attr_callback => default_vol7d_valuec_attr_callback
 
 END FUNCTION vol7d_serialize_iterline_new
 
@@ -1408,101 +1431,101 @@ SELECT CASE(this%ser%mapper(ind)%cat)
 CASE(1)
   SELECT CASE(this%ser%mapper(ind)%typ)
   CASE(1)
-    CALL this%line%vol7d_valuer_callback(this%ser%v7d%volanar( &
+    CALL this%line%vol7d_valuer_var_callback(this%ser%v7d%volanar( &
      this%line%i1, varind, this%line%i6), &
      this%ser%v7d%anavar%r(varind), genericptr)
   CASE(2)
-    CALL this%line%vol7d_valued_callback(this%ser%v7d%volanad( &
+    CALL this%line%vol7d_valued_var_callback(this%ser%v7d%volanad( &
      this%line%i1, varind, this%line%i6), &
      this%ser%v7d%anavar%d(varind), genericptr)
   CASE(3)
-    CALL this%line%vol7d_valuei_callback(this%ser%v7d%volanai( &
+    CALL this%line%vol7d_valuei_var_callback(this%ser%v7d%volanai( &
      this%line%i1, varind, this%line%i6), &
      this%ser%v7d%anavar%i(varind), genericptr)
   CASE(4)
-    CALL this%line%vol7d_valueb_callback(this%ser%v7d%volanab( &
+    CALL this%line%vol7d_valueb_var_callback(this%ser%v7d%volanab( &
      this%line%i1, varind, this%line%i6), &
      this%ser%v7d%anavar%b(varind), genericptr)
   CASE(5)
-    CALL this%line%vol7d_valuec_callback(this%ser%v7d%volanac( &
+    CALL this%line%vol7d_valuec_var_callback(this%ser%v7d%volanac( &
      this%line%i1, varind, this%line%i6), &
      this%ser%v7d%anavar%c(varind), genericptr)
   END SELECT
 CASE(2)
   SELECT CASE(this%ser%mapper(ind)%typ)
   CASE(1)
-    CALL this%line%vol7d_valuer_callback(this%ser%v7d%volanaattrr( &
+    CALL this%line%vol7d_valuer_attr_callback(this%ser%v7d%volanaattrr( &
      this%line%i1, varind, this%line%i6, attrind), &
-     this%ser%v7d%anaattr%r(attrind), genericptr)
+     this%ser%v7d%anavarattr%r(varind), this%ser%v7d%anaattr%r(attrind), genericptr)
   CASE(2)
-    CALL this%line%vol7d_valued_callback(this%ser%v7d%volanaattrd( &
+    CALL this%line%vol7d_valued_attr_callback(this%ser%v7d%volanaattrd( &
      this%line%i1, varind, this%line%i6, attrind), &
-     this%ser%v7d%anaattr%d(attrind), genericptr)
+     this%ser%v7d%anavarattr%d(varind), this%ser%v7d%anaattr%d(attrind), genericptr)
   CASE(3)
-    CALL this%line%vol7d_valuei_callback(this%ser%v7d%volanaattri( &
+    CALL this%line%vol7d_valuei_attr_callback(this%ser%v7d%volanaattri( &
      this%line%i1, varind, this%line%i6, attrind), &
-     this%ser%v7d%anaattr%i(attrind), genericptr)
+     this%ser%v7d%anavarattr%i(varind), this%ser%v7d%anaattr%i(attrind), genericptr)
   CASE(4)
-    CALL this%line%vol7d_valueb_callback(this%ser%v7d%volanaattrb( &
+    CALL this%line%vol7d_valueb_attr_callback(this%ser%v7d%volanaattrb( &
      this%line%i1, varind, this%line%i6, attrind), &
-     this%ser%v7d%anaattr%b(attrind), genericptr)
+     this%ser%v7d%anavarattr%b(varind), this%ser%v7d%anaattr%b(attrind), genericptr)
   CASE(5)
-    CALL this%line%vol7d_valuec_callback(this%ser%v7d%volanaattrc( &
+    CALL this%line%vol7d_valuec_attr_callback(this%ser%v7d%volanaattrc( &
      this%line%i1, varind, this%line%i6, attrind), &
-     this%ser%v7d%anaattr%c(attrind), genericptr)
+     this%ser%v7d%anavarattr%c(varind), this%ser%v7d%anaattr%c(attrind), genericptr)
   END SELECT
 CASE(3)
   SELECT CASE(this%ser%mapper(ind)%typ)
   CASE(1)
-    CALL this%line%vol7d_valuer_callback(this%ser%v7d%voldatir( &
+    CALL this%line%vol7d_valuer_var_callback(this%ser%v7d%voldatir( &
      this%line%i1, this%line%i2, this%line%i3, this%line%i4, varind, this%line%i6), &
      this%ser%v7d%dativar%r(varind), genericptr)
   CASE(2)
-    CALL this%line%vol7d_valued_callback(this%ser%v7d%voldatid( &
+    CALL this%line%vol7d_valued_var_callback(this%ser%v7d%voldatid( &
      this%line%i1, this%line%i2, this%line%i3, this%line%i4, varind, this%line%i6), &
      this%ser%v7d%dativar%d(varind), genericptr)
   CASE(3)
-    CALL this%line%vol7d_valuei_callback(this%ser%v7d%voldatii( &
+    CALL this%line%vol7d_valuei_var_callback(this%ser%v7d%voldatii( &
      this%line%i1, this%line%i2, this%line%i3, this%line%i4, varind, this%line%i6), &
      this%ser%v7d%dativar%i(varind), genericptr)
   CASE(4)
-    CALL this%line%vol7d_valueb_callback(this%ser%v7d%voldatib( &
+    CALL this%line%vol7d_valueb_var_callback(this%ser%v7d%voldatib( &
      this%line%i1, this%line%i2, this%line%i3, this%line%i4, varind, this%line%i6), &
      this%ser%v7d%dativar%b(varind), genericptr)
   CASE(5)
-    CALL this%line%vol7d_valuec_callback(this%ser%v7d%voldatic( &
+    CALL this%line%vol7d_valuec_var_callback(this%ser%v7d%voldatic( &
      this%line%i1, this%line%i2, this%line%i3, this%line%i4, varind, this%line%i6), &
      this%ser%v7d%dativar%c(varind), genericptr)
   END SELECT
 CASE(4)
   SELECT CASE(this%ser%mapper(ind)%typ)
   CASE(1)
-    CALL this%line%vol7d_valuer_callback(this%ser%v7d%voldatiattrr( &
+    CALL this%line%vol7d_valuer_attr_callback(this%ser%v7d%voldatiattrr( &
      this%line%i1, this%line%i2, this%line%i3, this%line%i4, varind, this%line%i6, attrind), &
-     this%ser%v7d%datiattr%r(attrind), genericptr)
+     this%ser%v7d%dativarattr%r(varind), this%ser%v7d%datiattr%r(attrind), genericptr)
   CASE(2)
-    CALL this%line%vol7d_valued_callback(this%ser%v7d%voldatiattrd( &
+    CALL this%line%vol7d_valued_attr_callback(this%ser%v7d%voldatiattrd( &
      this%line%i1, this%line%i2, this%line%i3, this%line%i4, varind, this%line%i6, attrind), &
-     this%ser%v7d%datiattr%i(attrind), genericptr)
+     this%ser%v7d%dativarattr%d(varind), this%ser%v7d%datiattr%d(attrind), genericptr)
   CASE(3)
-    CALL this%line%vol7d_valuei_callback(this%ser%v7d%voldatiattri( &
+    CALL this%line%vol7d_valuei_attr_callback(this%ser%v7d%voldatiattri( &
      this%line%i1, this%line%i2, this%line%i3, this%line%i4, varind, this%line%i6, attrind), &
-     this%ser%v7d%datiattr%d(attrind), genericptr)
+     this%ser%v7d%dativarattr%i(varind), this%ser%v7d%datiattr%i(attrind), genericptr)
   CASE(4)
-    CALL this%line%vol7d_valueb_callback(this%ser%v7d%voldatiattrb( &
+    CALL this%line%vol7d_valueb_attr_callback(this%ser%v7d%voldatiattrb( &
      this%line%i1, this%line%i2, this%line%i3, this%line%i4, varind, this%line%i6, attrind), &
-     this%ser%v7d%datiattr%b(attrind), genericptr)
+     this%ser%v7d%dativarattr%b(varind), this%ser%v7d%datiattr%b(attrind), genericptr)
   CASE(5)
-    CALL this%line%vol7d_valuec_callback(this%ser%v7d%voldatiattrc( &
+    CALL this%line%vol7d_valuec_attr_callback(this%ser%v7d%voldatiattrc( &
      this%line%i1, this%line%i2, this%line%i3, this%line%i4, varind, this%line%i6, attrind), &
-     this%ser%v7d%datiattr%c(attrind), genericptr)
+     this%ser%v7d%dativarattr%c(varind), this%ser%v7d%datiattr%c(attrind), genericptr)
   END SELECT
 END SELECT
 
 END SUBROUTINE call_value_callback
 
 
-SUBROUTINE default_vol7d_valuer_callback(valu, var, genericptr)
+SUBROUTINE default_vol7d_valuer_var_callback(valu, var, genericptr)
 REAL,INTENT(in) :: valu
 TYPE(vol7d_var),INTENT(in) :: var
 TYPE(c_ptr),VALUE :: genericptr
@@ -1516,10 +1539,10 @@ ELSE
   col = ''
 ENDIF
 
-END SUBROUTINE default_vol7d_valuer_callback
+END SUBROUTINE default_vol7d_valuer_var_callback
 
 
-SUBROUTINE default_vol7d_valued_callback(valu, var, genericptr)
+SUBROUTINE default_vol7d_valued_var_callback(valu, var, genericptr)
 DOUBLE PRECISION,INTENT(in) :: valu
 TYPE(vol7d_var),INTENT(in) :: var
 TYPE(c_ptr),VALUE :: genericptr
@@ -1533,10 +1556,10 @@ ELSE
   col = ''
 ENDIF
 
-END SUBROUTINE default_vol7d_valued_callback
+END SUBROUTINE default_vol7d_valued_var_callback
 
 
-SUBROUTINE default_vol7d_valuei_callback(valu, var, genericptr)
+SUBROUTINE default_vol7d_valuei_var_callback(valu, var, genericptr)
 INTEGER,INTENT(in) :: valu
 TYPE(vol7d_var),INTENT(in) :: var
 TYPE(c_ptr),VALUE :: genericptr
@@ -1555,10 +1578,10 @@ ELSE
   col = ''
 ENDIF
 
-END SUBROUTINE default_vol7d_valuei_callback
+END SUBROUTINE default_vol7d_valuei_var_callback
 
 
-SUBROUTINE default_vol7d_valueb_callback(valu, var, genericptr)
+SUBROUTINE default_vol7d_valueb_var_callback(valu, var, genericptr)
 INTEGER(kind=int_b),INTENT(in) :: valu
 TYPE(vol7d_var),INTENT(in) :: var
 TYPE(c_ptr),VALUE :: genericptr
@@ -1566,16 +1589,16 @@ TYPE(c_ptr),VALUE :: genericptr
 CHARACTER(len=64),POINTER :: col
 
 IF (c_e(valu)) THEN
-  CALL default_vol7d_valuei_callback(INT(valu), var, genericptr)
+  CALL default_vol7d_valuei_var_callback(INT(valu), var, genericptr)
 ELSE
   CALL C_F_POINTER(genericptr, col)
   col = ''
 ENDIF
 
-END SUBROUTINE default_vol7d_valueb_callback
+END SUBROUTINE default_vol7d_valueb_var_callback
 
 
-SUBROUTINE default_vol7d_valuec_callback(valu, var, genericptr)
+SUBROUTINE default_vol7d_valuec_var_callback(valu, var, genericptr)
 CHARACTER(len=*),INTENT(in) :: valu
 TYPE(vol7d_var),INTENT(in) :: var
 TYPE(c_ptr),VALUE :: genericptr
@@ -1594,7 +1617,93 @@ ELSE
   col = ''
 ENDIF
 
-END SUBROUTINE default_vol7d_valuec_callback
+END SUBROUTINE default_vol7d_valuec_var_callback
+
+
+SUBROUTINE default_vol7d_valuer_attr_callback(valu, var, attr, genericptr)
+REAL,INTENT(in) :: valu
+TYPE(vol7d_var),INTENT(in) :: var
+TYPE(vol7d_var),INTENT(in) :: attr
+TYPE(c_ptr),VALUE :: genericptr
+
+CALL default_vol7d_valuer_var_callback(valu, attr, genericptr)
+
+END SUBROUTINE default_vol7d_valuer_attr_callback
+
+
+SUBROUTINE default_vol7d_valued_attr_callback(valu, var, attr, genericptr)
+DOUBLE PRECISION,INTENT(in) :: valu
+TYPE(vol7d_var),INTENT(in) :: var
+TYPE(vol7d_var),INTENT(in) :: attr
+TYPE(c_ptr),VALUE :: genericptr
+
+CALL default_vol7d_valued_var_callback(valu, attr, genericptr)
+
+END SUBROUTINE default_vol7d_valued_attr_callback
+
+
+SUBROUTINE default_vol7d_valuei_attr_callback(valu, var, attr, genericptr)
+INTEGER,INTENT(in) :: valu
+TYPE(vol7d_var),INTENT(in) :: var
+TYPE(vol7d_var),INTENT(in) :: attr
+TYPE(c_ptr),VALUE :: genericptr
+
+CHARACTER(len=64),POINTER :: col
+
+CALL C_F_POINTER(genericptr, col)
+IF (c_e(valu)) THEN
+  IF (c_e(attr%scalefactor) .AND. &
+   .NOT.(attr%scalefactor == 0 .AND. attr%unit == 'NUMERIC')) THEN
+    col = t2c(realdat(valu, attr))
+  ELSE
+    col = t2c(valu)
+  ENDIF
+ELSE
+  col = ''
+ENDIF
+
+END SUBROUTINE default_vol7d_valuei_attr_callback
+
+
+SUBROUTINE default_vol7d_valueb_attr_callback(valu, var, attr, genericptr)
+INTEGER(kind=int_b),INTENT(in) :: valu
+TYPE(vol7d_var),INTENT(in) :: var
+TYPE(vol7d_var),INTENT(in) :: attr
+TYPE(c_ptr),VALUE :: genericptr
+
+CHARACTER(len=64),POINTER :: col
+
+IF (c_e(valu)) THEN
+  CALL default_vol7d_valuei_var_callback(INT(valu), attr, genericptr)
+ELSE
+  CALL C_F_POINTER(genericptr, col)
+  col = ''
+ENDIF
+
+END SUBROUTINE default_vol7d_valueb_attr_callback
+
+
+SUBROUTINE default_vol7d_valuec_attr_callback(valu, var, attr, genericptr)
+CHARACTER(len=*),INTENT(in) :: valu
+TYPE(vol7d_var),INTENT(in) :: var
+TYPE(vol7d_var),INTENT(in) :: attr
+TYPE(c_ptr),VALUE :: genericptr
+
+CHARACTER(len=64),POINTER :: col
+
+CALL C_F_POINTER(genericptr, col)
+IF (c_e(valu)) THEN
+  IF (c_e(attr%scalefactor) .AND. attr%unit /= 'CCITTIA5' .AND. &
+   .NOT.(attr%scalefactor == 0 .AND. attr%unit == 'NUMERIC')) THEN
+    col = t2c(realdat(valu, attr))
+  ELSE
+    col = TRIM(valu)
+  ENDIF
+ELSE
+  col = ''
+ENDIF
+
+END SUBROUTINE default_vol7d_valuec_attr_callback
 
 
 END MODULE vol7d_serialize_class

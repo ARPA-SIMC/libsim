@@ -106,9 +106,11 @@ linei = this%vol7d_serialize_iterline_new()
 CALL linei%vol7d_serialize_iterline_set_callback(vol7d_ana_callback_gj, &
  vol7d_time_callback_gj, vol7d_level_callback_gj, &
  vol7d_timerange_callback_gj, vol7d_network_callback_gj, &
- vol7d_var_callback_gj, vol7d_attr_callback_gj, vol7d_valuer_callback_gj, &
- vol7d_valued_callback_gj, vol7d_valuei_callback_gj, vol7d_valueb_callback_gj, &
- vol7d_valuec_callback_gj)
+ vol7d_var_callback_gj, vol7d_attr_callback_gj, &
+ vol7d_valuer_callback_gj, vol7d_valued_callback_gj, &
+ vol7d_valuei_callback_gj, vol7d_valueb_callback_gj, vol7d_valuec_callback_gj, &
+ vol7d_valuer_attr_callback_gj, vol7d_valued_attr_callback_gj, &
+ vol7d_valuei_attr_callback_gj, vol7d_valueb_attr_callback_gj, vol7d_valuec_attr_callback_gj)
 
 DO WHILE(linei%next())
 ! open feature
@@ -336,5 +338,62 @@ ELSE
 ENDIF
 
 END SUBROUTINE vol7d_valuec_callback_gj
+
+
+SUBROUTINE vol7d_valuer_attr_callback_gj(valu, var, attr, genericptr)
+REAL,INTENT(in) :: valu
+TYPE(vol7d_var),INTENT(in) :: var
+TYPE(vol7d_var),INTENT(in) :: attr
+TYPE(c_ptr),VALUE :: genericptr
+
+CALL vol7d_valuer_callback_gj(valu, attr, genericptr)
+
+END SUBROUTINE vol7d_valuer_attr_callback_gj
+
+
+SUBROUTINE vol7d_valued_attr_callback_gj(valu, var, attr, genericptr)
+DOUBLE PRECISION,INTENT(in) :: valu
+TYPE(vol7d_var),INTENT(in) :: var
+TYPE(vol7d_var),INTENT(in) :: attr
+TYPE(c_ptr),VALUE :: genericptr
+
+CALL vol7d_valued_callback_gj(valu, attr, genericptr)
+
+END SUBROUTINE vol7d_valued_attr_callback_gj
+
+
+SUBROUTINE vol7d_valuei_attr_callback_gj(valu, var, attr, genericptr)
+INTEGER,INTENT(in) :: valu
+TYPE(vol7d_var),INTENT(in) :: var
+TYPE(vol7d_var),INTENT(in) :: attr
+TYPE(c_ptr),VALUE :: genericptr
+
+CALL vol7d_valuei_callback_gj(valu, attr, genericptr)
+
+END SUBROUTINE vol7d_valuei_attr_callback_gj
+
+
+SUBROUTINE vol7d_valueb_attr_callback_gj(valu, var, attr, genericptr)
+INTEGER(kind=int_b),INTENT(in) :: valu
+TYPE(vol7d_var),INTENT(in) :: var
+TYPE(vol7d_var),INTENT(in) :: attr
+TYPE(c_ptr),VALUE :: genericptr
+
+CALL vol7d_valuei_callback_gj(INT(valu), attr, genericptr)
+
+END SUBROUTINE vol7d_valueb_attr_callback_gj
+
+
+SUBROUTINE vol7d_valuec_attr_callback_gj(valu, var, attr, genericptr)
+CHARACTER(len=*),INTENT(in) :: valu
+TYPE(vol7d_var),INTENT(in) :: var
+TYPE(vol7d_var),INTENT(in) :: attr
+TYPE(c_ptr),VALUE :: genericptr
+
+INTEGER,POINTER :: iun
+
+CALL vol7d_valuec_callback_gj(valu, attr, genericptr)
+
+END SUBROUTINE vol7d_valuec_attr_callback_gj
 
 END MODULE vol7d_serialize_geojson_class

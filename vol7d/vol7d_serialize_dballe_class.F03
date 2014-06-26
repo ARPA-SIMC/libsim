@@ -156,6 +156,24 @@ end do
 END SUBROUTINE vol7d_valuer_callback_dba
 
 
+SUBROUTINE vol7d_valued_callback_dba(valu, var, genericptr)
+double precision,INTENT(in) :: valu
+TYPE(vol7d_var),INTENT(in) :: var
+TYPE(c_ptr),VALUE :: genericptr
+type(dbametaanddata),POINTER :: metaanddata
+integer :: i
+
+CALL C_F_POINTER(genericptr, metaanddata)
+
+do i =1, size(metaanddata%dataattrv%dataattr)
+  if (.not. allocated(metaanddata%dataattrv%dataattr(i)%dat)) then
+    allocate(metaanddata%dataattrv%dataattr(i)%dat,source=dbadatad(var%btable,valu))
+    exit
+  end if
+end do
+
+END SUBROUTINE vol7d_valued_callback_dba
+
 
 SUBROUTINE vol7d_valuei_callback_dba(valu, var, genericptr)
 integer,INTENT(in) :: valu
@@ -176,10 +194,8 @@ end do
 END SUBROUTINE vol7d_valuei_callback_dba
 
 
-
-
-SUBROUTINE vol7d_valued_callback_dba(valu, var, genericptr)
-double precision,INTENT(in) :: valu
+SUBROUTINE vol7d_valueb_callback_dba(valu, var, genericptr)
+INTEGER(kind=int_b),INTENT(in) :: valu
 TYPE(vol7d_var),INTENT(in) :: var
 TYPE(c_ptr),VALUE :: genericptr
 type(dbametaanddata),POINTER :: metaanddata
@@ -189,12 +205,12 @@ CALL C_F_POINTER(genericptr, metaanddata)
 
 do i =1, size(metaanddata%dataattrv%dataattr)
   if (.not. allocated(metaanddata%dataattrv%dataattr(i)%dat)) then
-    allocate(metaanddata%dataattrv%dataattr(i)%dat,source=dbadatad(var%btable,valu))
+    allocate(metaanddata%dataattrv%dataattr(i)%dat,source=dbadatab(var%btable,valu))
     exit
   end if
 end do
 
-END SUBROUTINE vol7d_valued_callback_dba
+END SUBROUTINE vol7d_valueb_callback_dba
 
 
 SUBROUTINE vol7d_valuec_callback_dba(valu, var, genericptr)
@@ -216,10 +232,70 @@ end do
 END SUBROUTINE vol7d_valuec_callback_dba
 
 
+SUBROUTINE vol7d_valuer_attr_callback_dba(valu, var, attr, genericptr)
+REAL,INTENT(in) :: valu
+TYPE(vol7d_var),INTENT(in) :: var
+TYPE(vol7d_var),INTENT(in) :: attr
+TYPE(c_ptr),VALUE :: genericptr
+type(dbametaanddata),POINTER :: metaanddata
+integer :: i
 
-SUBROUTINE vol7d_valueb_callback_dba(valu, var, genericptr)
+CALL C_F_POINTER(genericptr, metaanddata)
+
+do i =1, size(metaanddata%dataattrv%dataattr)
+  if (.not. allocated(metaanddata%dataattrv%dataattr(i)%dat)) then
+    allocate(metaanddata%dataattrv%dataattr(i)%dat,source=dbadatar(var%btable,valu))
+    exit
+  end if
+end do
+
+END SUBROUTINE vol7d_valuer_attr_callback_dba
+
+
+SUBROUTINE vol7d_valued_attr_callback_dba(valu, var, attr, genericptr)
+double precision,INTENT(in) :: valu
+TYPE(vol7d_var),INTENT(in) :: var
+TYPE(vol7d_var),INTENT(in) :: attr
+TYPE(c_ptr),VALUE :: genericptr
+type(dbametaanddata),POINTER :: metaanddata
+integer :: i
+
+CALL C_F_POINTER(genericptr, metaanddata)
+
+do i =1, size(metaanddata%dataattrv%dataattr)
+  if (.not. allocated(metaanddata%dataattrv%dataattr(i)%dat)) then
+    allocate(metaanddata%dataattrv%dataattr(i)%dat,source=dbadatad(var%btable,valu))
+    exit
+  end if
+end do
+
+END SUBROUTINE vol7d_valued_attr_callback_dba
+
+
+SUBROUTINE vol7d_valuei_attr_callback_dba(valu, var, attr, genericptr)
+integer,INTENT(in) :: valu
+TYPE(vol7d_var),INTENT(in) :: var
+TYPE(vol7d_var),INTENT(in) :: attr
+TYPE(c_ptr),VALUE :: genericptr
+type(dbametaanddata),POINTER :: metaanddata
+integer :: i
+
+CALL C_F_POINTER(genericptr, metaanddata)
+
+do i =1, size(metaanddata%dataattrv%dataattr)
+  if (.not. allocated(metaanddata%dataattrv%dataattr(i)%dat)) then
+    allocate(metaanddata%dataattrv%dataattr(i)%dat,source=dbadatai(var%btable,valu))
+    exit
+  end if
+end do
+
+END SUBROUTINE vol7d_valuei_attr_callback_dba
+
+
+SUBROUTINE vol7d_valueb_attr_callback_dba(valu, var, attr, genericptr)
 INTEGER(kind=int_b),INTENT(in) :: valu
 TYPE(vol7d_var),INTENT(in) :: var
+TYPE(vol7d_var),INTENT(in) :: attr
 TYPE(c_ptr),VALUE :: genericptr
 type(dbametaanddata),POINTER :: metaanddata
 integer :: i
@@ -233,8 +309,27 @@ do i =1, size(metaanddata%dataattrv%dataattr)
   end if
 end do
 
-END SUBROUTINE vol7d_valueb_callback_dba
+END SUBROUTINE vol7d_valueb_attr_callback_dba
 
+
+SUBROUTINE vol7d_valuec_attr_callback_dba(valu, var, attr, genericptr)
+character(len=*),INTENT(in) :: valu
+TYPE(vol7d_var),INTENT(in) :: var
+TYPE(vol7d_var),INTENT(in) :: attr
+TYPE(c_ptr),VALUE :: genericptr
+type(dbametaanddata),POINTER :: metaanddata
+integer :: i
+
+CALL C_F_POINTER(genericptr, metaanddata)
+
+do i =1, size(metaanddata%dataattrv%dataattr)
+  if (.not. allocated(metaanddata%dataattrv%dataattr(i)%dat)) then
+    allocate(metaanddata%dataattrv%dataattr(i)%dat,source=dbadatac(var%btable,valu))
+    exit
+  end if
+end do
+
+END SUBROUTINE vol7d_valuec_attr_callback_dba
 
 
 SUBROUTINE vol7d_void_callback_dba(genericptr)
@@ -335,6 +430,11 @@ CALL linei%vol7d_serialize_iterline_set_callback(vol7d_ana_callback_dba &
  ,vol7d_valuei_callback_dba &
  ,vol7d_valueb_callback_dba &
  ,vol7d_valuec_callback_dba &
+ ,vol7d_valuer_attr_callback_dba &
+ ,vol7d_valued_attr_callback_dba &
+ ,vol7d_valuei_attr_callback_dba &
+ ,vol7d_valueb_attr_callback_dba &
+ ,vol7d_valuec_attr_callback_dba &
  )
 
 DO WHILE(linei%next())
@@ -375,5 +475,27 @@ end if
 END DO
 
 END SUBROUTINE vol7d_serialize_export
+
+SUBROUTINE default_vol7d_valuec_callback(valu, var, genericptr)
+CHARACTER(len=*),INTENT(in) :: valu
+TYPE(vol7d_var),INTENT(in) :: var
+TYPE(c_ptr),VALUE :: genericptr
+
+CHARACTER(len=64),POINTER :: col
+
+CALL C_F_POINTER(genericptr, col)
+IF (c_e(valu)) THEN
+  IF (c_e(var%scalefactor) .AND. var%unit /= 'CCITTIA5' .AND. &
+   .NOT.(var%scalefactor == 0 .AND. var%unit == 'NUMERIC')) THEN
+    col = t2c(realdat(valu, var))
+  ELSE
+    col = TRIM(valu)
+  ENDIF
+ELSE
+  col = ''
+ENDIF
+
+END SUBROUTINE default_vol7d_valuec_callback
+
 
 END MODULE vol7d_serialize_dballe_class
