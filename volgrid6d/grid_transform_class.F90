@@ -2492,8 +2492,8 @@ REAL,INTENT(in) :: field_in(:,:,:) !< input array
 REAL,INTENT(out) :: field_out(:,:,:) !< output array
 TYPE(vol7d_var),INTENT(in),OPTIONAL :: var !< physical variable to be interpolated, if provided, some ad-hoc algorithms may be used where possible
 
-INTEGER :: i, j, k, ii, jj, ie, je, n, navg, kk, kkcache, kkup, kkdown, kfound, &
- inused, i1, i2, j1, j2, np, ns
+INTEGER :: i, j, k, ii, jj, ie, je, n, navg, kk, kkcache, kkup, kkdown, &
+ kfound, kfoundin, inused, i1, i2, j1, j2, np, ns
 INTEGER,ALLOCATABLE :: nval(:,:)
 REAL :: z1,z2,z3,z4
 DOUBLE PRECISION  :: x1,x3,y1,y3,xp,yp
@@ -3114,6 +3114,7 @@ ELSE IF (this%trans%trans_type == 'vertint') THEN
                  this%vcoord_out(k) < &
                  MAX(this%coord_3d_in(i,j,kkdown), this%coord_3d_in(i,j,kkdown+1))) THEN
                   kkcache = kkdown
+                  kfoundin = kkcache
                   kfound = kkcache + this%levshift
                   EXIT ! kk
                 ENDIF
@@ -3124,6 +3125,7 @@ ELSE IF (this%trans%trans_type == 'vertint') THEN
                  this%vcoord_out(k) < &
                  MAX(this%coord_3d_in(i,j,kkup), this%coord_3d_in(i,j,kkup+1))) THEN
                   kkcache = kkup
+                  kfoundin = kkcache
                   kfound = kkcache + this%levshift
                   EXIT ! kk
                 ENDIF
@@ -3133,8 +3135,8 @@ ELSE IF (this%trans%trans_type == 'vertint') THEN
 
             IF (c_e(kfound)) THEN
               IF (c_e(field_in(i,j,kfound)) .AND. c_e(field_in(i,j,kfound+1))) THEN
-                z1 = REAL((this%vcoord_out(k) - this%coord_3d_in(i,j,kfound))/ &
-                 (this%coord_3d_in(i,j,kfound+1) - this%coord_3d_in(i,j,kfound)))
+                z1 = REAL((this%vcoord_out(k) - this%coord_3d_in(i,j,kfoundin))/ &
+                 (this%coord_3d_in(i,j,kfoundin+1) - this%coord_3d_in(i,j,kfoundin)))
                 z2 = 1.0 - z1
                 SELECT CASE(vartype)
 
