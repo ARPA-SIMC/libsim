@@ -27,15 +27,15 @@ endif
 if F2003_FEATURES
 libsim_vol7d_la_SOURCES += vol7d_serialize_class.F03 vol7d_serialize_csv_class.F03 \
  vol7d_serialize_geojson_class.F03 
-if DBALLE
-libsim_vol7d_la_SOURCES += vol7d_serialize_dballe_class.F03
-endif
 endif
 
 if DBALLE
 libsim_vol7d_la_SOURCES += vol7d_dballe_class.F90
 AM_FCFLAGS += -I/usr/include/dballe
 libsim_vol7d_la_LIBADD += $(DBALLE_LIBS)
+if F2003_FEATURES
+libsim_vol7d_la_SOURCES += vol7d_serialize_dballe_class.F03
+endif
 if F2003_EXTENDED_FEATURES
 libsim_vol7d_la_SOURCES += dballe_class.F03
 libsim_vol7d_la_SOURCES += vol7d_dballenew_class.F03
