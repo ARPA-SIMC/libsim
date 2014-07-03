@@ -847,7 +847,7 @@ TYPE(vol7d_timerange),INTENT(in) :: this ! vol7d_timerange object
 INTEGER,INTENT(in) :: gaid ! grib_api id of the grib loaded in memory to export
 TYPE(datetime) :: reftime ! reference time of data, used for coding correct end of statistical processing period in grib2
 
-INTEGER :: EditionNumber, tri, currentunit, unit, p1_g1, p2_g1, p1, p2
+INTEGER :: EditionNumber, tri, currentunit, unit, p1_g1, p2_g1, p1, p2, pdtn
 
 CALL grib_get(gaid,'GRIBEditionNumber',EditionNumber)
 
@@ -863,9 +863,11 @@ IF (EditionNumber == 1 ) THEN
   CALL grib_set(gaid,'indicatorOfUnitOfTimeRange',unit)
 
 ELSE IF (EditionNumber == 2) THEN
+  CALL grib_get(gaid,'productDefinitionTemplateNumber', pdtn)
 
   IF (this%timerange == 254) THEN ! point in time -> template 4.0
-    CALL grib_set(gaid,'productDefinitionTemplateNumber', 0)
+    IF (pdtn < 0 .OR. pdtn > 7) &
+     CALL grib_set(gaid,'productDefinitionTemplateNumber', 0)
 ! Set reasonable time unit
     CALL timerange_v7d_to_g2(this%p1,p1,unit)
 ! Set the native keys
@@ -874,7 +876,8 @@ ELSE IF (EditionNumber == 2) THEN
 
   ELSE IF (this%timerange >= 0 .AND. this%timerange < 254) THEN
 ! statistically processed -> template 4.8
-    CALL grib_set(gaid,'productDefinitionTemplateNumber', 8)
+    IF (pdtn < 8 .OR. pdtn > 14) &
+     CALL grib_set(gaid,'productDefinitionTemplateNumber', 8)
 
     IF (this%p1 >= this%p2) THEN ! forecast-like
 ! Set reasonable time unit
