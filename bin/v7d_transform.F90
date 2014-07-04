@@ -69,10 +69,9 @@ CHARACTER(len=8) :: input_format, coord_format, extreme_format
 CHARACTER(len=512) :: input_file, output_file, output_format, output_template, &
  network_list, variable_list, anavariable_list, attribute_list, coord_file,&
  extreme_file, output_variable_list
-CHARACTER(len=16384) :: trans_level_list
 CHARACTER(len=160) :: pre_trans_type
 TYPE(vol7d_network), ALLOCATABLE :: nl(:)
-CHARACTER(len=10) :: trans_level_type
+TYPE(arrayof_integer) :: trans_level_type, trans_level_list, trans_botlevel_list
 CHARACTER(len=10), ALLOCATABLE :: vl(:), avl(:), al(:), alqc(:),vl_alc(:)
 CHARACTER(len=23) :: start_date, end_date
 CHARACTER(len=20) :: levelc, timerangec
@@ -81,10 +80,9 @@ TYPE(datetime) :: s_d, e_d
 TYPE(vol7d_level) :: level
 TYPE(vol7d_timerange) :: timerange
 TYPE(vol7d_ana) :: ana
-INTEGER :: ilevel_type, olevel_type
 TYPE(vol7d_level) :: ilevel, olevel
 TYPE(vol7d_level),ALLOCATABLE :: olevel_list(:)
-INTEGER :: iun, ier, i, l, n, ninput, iargc, i1, i2, i3, i4
+INTEGER :: iun, ier, i, n, ninput, iargc, i1, i2, i3, i4
 INTEGER,POINTER :: w_s(:), w_e(:)
 TYPE(vol7d) :: v7d, v7d_coord, v7dtmp, v7d_comp1, v7d_comp2, v7d_comp3
 #ifdef HAVE_SHAPELIB
@@ -190,10 +188,11 @@ CALL optionparser_add(opt, ' ', 'input-format', input_format, 'native', help= &
  //', ''orsim'' for SIM Oracle database'&
 #endif
  )
-CALL optionparser_add(opt, 'c', 'coord-file', coord_file, help= &
- 'file with coordinates of interpolation points, required if a geographical &
- &transformation is requested')
 coord_file=cmiss
+CALL optionparser_add(opt, 'c', 'coord-file', coord_file, help= &
+ 'file with horizontal coordinates of target interpolation points &
+ &or with vertical coordinate of input levels, required if a geographical &
+ &transformation is requested')
 CALL optionparser_add(opt, ' ', 'coord-format', coord_format, &
 #ifdef HAVE_DBALLE
  'BUFR', &
@@ -328,12 +327,16 @@ CALL optionparser_add(opt, ' ', 'pre-trans-type', pre_trans_type, '', help= &
  &within a given bounding box&
  &; empty for no transformation')
 
-CALL optionparser_add(opt, ' ', 'trans-level-type', trans_level_type, '100', help= &
+CALL optionparser_add(opt, ' ', 'trans-level-type', trans_level_type, help= &
  'type of input and output level for vertical interpolation &
- &in the form [inlev:]outlev, from grib2 table, at the moment &
- &input and output type must be the same and only single levels are supported')
-CALL optionparser_add(opt, ' ', 'trans-level-list', trans_level_list, '50000,70000,85000,100000', help= &
- 'list of output levels for vertical interpolation, the unit is determined &
+ &in the form intop,inbot,outtop,outbot, from grib2 table; inbot and outbot &
+ &can either be empty (single surface) &
+ &or equal to the corresponding top value (layer between 2 surfaces)')
+CALL optionparser_add(opt, ' ', 'trans-level-list', trans_level_list, help= &
+ 'list of output levels (or top surfaces) for vertical interpolation, the unit is determined &
+ &by the value of level-type and taken from grib2 table')
+CALL optionparser_add(opt, ' ', 'trans-botlevel-list', trans_botlevel_list, help= &
+ 'list of output bottom surfaces for vertical interpolation, the unit is determined &
  &by the value of level-type and taken from grib2 table')
 
 #ifdef HAVE_LIBGRIBAPI
@@ -716,7 +719,7 @@ IF (c_e(coord_file)) THEN
   ELSE IF (coord_format == 'BUFR' .OR. coord_format == 'CREX') THEN
     CALL init(v7d_dba, filename=coord_file, format=coord_format, file=.TRUE., &
      write=.FALSE., categoryappend="anagrafica")
-    CALL import(v7d_dba, anaonly=.TRUE.)
+    CALL import(v7d_dba) ! , anaonly=.TRUE.)
     v7d_coord = v7d_dba%vol7d
 ! destroy v7d_ana without deallocating the contents passed to v7d
     CALL init(v7d_dba%vol7d)
@@ -765,46 +768,28 @@ if ( status /= 0 ) then
 end if
 #endif
 
-! check level_type
-ilevel_type = imiss
-olevel_type = imiss
-IF (trans_level_type /= '') THEN
-  CALL init(argparse, trans_level_type, ':', nfield=n)
-  IF (n == 1) THEN
-    CALL csv_record_getfield(argparse, olevel_type)
-    ilevel_type = olevel_type
-  ELSE  IF (n == 2) THEN
-    CALL csv_record_getfield(argparse, ilevel_type)
-    CALL csv_record_getfield(argparse, olevel_type)
-  ENDIF
-  CALL delete(argparse)
-  IF (.NOT.c_e(ilevel_type) .OR. .NOT.c_e(olevel_type)) THEN
-    CALL l4f_category_log(category, L4F_ERROR, &
-     'error in command-line parameters, wrong syntax for --trans-level-type: ' &
-     //TRIM(trans_level_type))
-    CALL raise_fatal_error()
-  ENDIF
-! temporary
-  IF (ilevel_type /= olevel_type) THEN
-    CALL l4f_category_log(category, L4F_ERROR, &
-     'error in command-line parameters, input and output level types must be equal: ' &
-     //TRIM(trans_level_type))
-    CALL raise_fatal_error()
-  ENDIF
-ENDIF
-CALL init(ilevel, ilevel_type)
-CALL init(olevel, olevel_type)
+! make ilevel and olevel
+DO WHILE(trans_level_type%arraysize < 4) ! complete up to 4 elements
+  CALL insert(trans_level_type, imiss)
+ENDDO
+CALL init(ilevel, level1=trans_level_type%array(1), level2=trans_level_type%array(2))
+CALL init(olevel, level1=trans_level_type%array(3), level2=trans_level_type%array(4))
+CALL delete(trans_level_type)
 
-! make level_list
-CALL init(argparse, trans_level_list, ',', nfield=n)
-IF (n > 0 .AND. c_e(olevel_type)) THEN
-  ALLOCATE(olevel_list(n))
-  DO i = 1, n
-    CALL csv_record_getfield(argparse, l)
-    CALL init(olevel_list(i), olevel_type, l)
+! make olevel_list
+ALLOCATE(olevel_list(trans_level_list%arraysize))
+IF (c_e(olevel%level2) .AND. trans_botlevel_list%arraysize >= trans_level_list%arraysize) THEN
+  DO i = 1, trans_level_list%arraysize
+    CALL init(olevel_list(i), olevel%level1, trans_level_list%array(i), &
+     olevel%level2, trans_botlevel_list%array(i))
+  ENDDO
+ELSE
+  DO i = 1, trans_level_list%arraysize
+    CALL init(olevel_list(i), olevel%level1, trans_level_list%array(i))
   ENDDO
 ENDIF
-CALL delete(argparse)
+CALL delete(trans_level_list)
+CALL delete(trans_botlevel_list)
 
 #ifdef F2003_FEATURES
 ! parse csv and geojson options
@@ -993,20 +978,39 @@ ENDIF
 IF (pre_trans_type /= '') THEN
   n = word_split(pre_trans_type, w_s, w_e, ':')
   IF (n >= 2) THEN ! syntax is correct
-!    IF (poly%arraysize <= 0) THEN ! improve
-! if/elseprobably not needed anymore, delete!!!
-      CALL init(trans, trans_type=pre_trans_type(w_s(1):w_e(1)), &
-       ilon=ilon, ilat=ilat, flon=flon, flat=flat, poly=poly, &
-       input_levtype=ilevel, output_levtype=olevel, &
-       sub_type=pre_trans_type(w_s(2):w_e(2)), categoryappend="transformation1")
-!    ELSE
-!      CALL init(trans, trans_type=pre_trans_type(w_s(1):w_e(1)), &
-!       ilon=ilon, ilat=ilat, flon=flon, flat=flat, &
-!       input_levtype=ilevel, output_levtype=olevel, &
-!       sub_type=pre_trans_type(w_s(2):w_e(2)), categoryappend="transformation1")
-!    ENDIF
+! chheck whether coord volume must be converted to real
+    IF (pre_trans_type(w_s(1):w_e(1)) == 'vertint' .AND. c_e(coord_file)) THEN
+      call display(v7d_coord)
+      lconvr=.FALSE.
+      IF (ASSOCIATED(v7d_coord%dativar%d)) THEN
+        IF (SIZE(v7d_coord%dativar%d) > 0) lconvr=.TRUE.
+      ENDIF
+      IF (ASSOCIATED(v7d_coord%dativar%i)) THEN
+        IF (SIZE(v7d_coord%dativar%i) > 0) lconvr=.TRUE.
+      ENDIF
+      IF (ASSOCIATED(v7d_coord%dativar%b)) THEN
+        IF (SIZE(v7d_coord%dativar%b) > 0) lconvr=.TRUE.
+      ENDIF
+      IF (ASSOCIATED(v7d_coord%dativar%c)) THEN
+        IF (SIZE(v7d_coord%dativar%c) > 0) lconvr=.TRUE.
+      ENDIF
+
+      IF (lconvr) THEN
+        CALL l4f_category_log(category, L4F_INFO, 'Converting coord data to real for processing.')
+        CALL vol7d_convr(v7d_coord, v7dtmp)
+        CALL delete(v7d_coord)
+        v7d_coord=v7dtmp
+        CALL init(v7dtmp) ! detach it
+        CALL display(v7d_coord)
+      ENDIF
+    ENDIF
+
+    CALL init(trans, trans_type=pre_trans_type(w_s(1):w_e(1)), &
+     ilon=ilon, ilat=ilat, flon=flon, flat=flat, poly=poly, &
+     input_levtype=ilevel, output_levtype=olevel, &
+     sub_type=pre_trans_type(w_s(2):w_e(2)), categoryappend="transformation1")
     CALL transform(trans, vol7d_in=v7d, vol7d_out=v7d_comp1, v7d=v7d_coord, &
-     lev_out=olevel_list, categoryappend="transform1")
+     lev_out=olevel_list, vol7d_coord_in=v7d_coord, categoryappend="transform1")
     CALL delete(trans)
   ELSE ! syntax is wrong
     CALL init(v7d_comp1)

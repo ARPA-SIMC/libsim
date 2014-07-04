@@ -1553,33 +1553,6 @@ IF (trans_type == 'vertint') THEN
           RETURN
         ENDIF
 
-! the levels must be the same as for input data
-! TODO: try to match equal levels in a more flexible way
-        IF (SIZE(volgrid6d_coord_in%level) /= SIZE(volgrid6d_in%level)) THEN
-! number is different
-          CALL l4f_category_log(volgrid6d_in%category, L4F_ERROR, &
-           'volume providing constant input vertical coordinate must have &
-           &the same number of vertical levels as the input')
-          CALL l4f_category_log(volgrid6d_in%category, L4F_ERROR, &
-           'coord levels: '//t2c(SIZE(volgrid6d_coord_in%level))//&
-           ', input levels: '//t2c(SIZE(volgrid6d_in%level)))
-          CALL raise_error()
-          RETURN
-          IF (ANY(volgrid6d_coord_in%level /= volgrid6d_in%level)) THEN
-! some levels are different
-            DO i = 1, SIZE(volgrid6d_coord_in%level)
-              IF (volgrid6d_coord_in%level(i) /= volgrid6d_in%level(i)) THEN
-                CALL l4f_category_log(volgrid6d_in%category, L4F_ERROR, &
-                 'level '//t2c(i)//' is different')
-                CALL display(volgrid6d_coord_in%level(i))
-                CALL display(volgrid6d_in%level(i))
-              ENDIF
-            ENDDO
-            CALL raise_error()
-            RETURN
-          ENDIF
-        ENDIF
-
 ! search for variable providing vertical coordinate
         CALL get_val(this, output_levtype=output_levtype)
         vcoord_var = vol7d_var_new(vol7d_level_to_var(output_levtype))
@@ -2295,17 +2268,22 @@ END SUBROUTINE v7d_v7d_transform_compute
 !! is created internally and it does not require preliminary
 !! initialisation. The success of the transformation can be checked
 !! with the \a c_e method: c_e(vol7d_out).
-SUBROUTINE v7d_v7d_transform(this, vol7d_in, vol7d_out, v7d, lev_out, categoryappend)
+SUBROUTINE v7d_v7d_transform(this, vol7d_in, vol7d_out, v7d, lev_out, vol7d_coord_in, &
+ categoryappend)
 TYPE(transform_def),INTENT(in) :: this !< object specifying the abstract transformation
 TYPE(vol7d),INTENT(inout) :: vol7d_in !< object to be transformed, it is not modified, despite the INTENT(inout)
 TYPE(vol7d),INTENT(out) :: vol7d_out !< transformed object, it does not need initialisation
 TYPE(vol7d),INTENT(in),OPTIONAL :: v7d !< object containing a list of points over which transformation has to be done (required by some transformation types)
 TYPE(vol7d_level),INTENT(in),OPTIONAL,TARGET :: lev_out(:) !< vol7d_level object defining target vertical grid, for vertical interpolations
+TYPE(vol7d),INTENT(in),OPTIONAL :: vol7d_coord_in !< object providing time constant input vertical coordinate for some kind of vertical interpolations
 CHARACTER(len=*),INTENT(in),OPTIONAL :: categoryappend !< append this suffix to log4fortran namespace category
 
 INTEGER :: nvar, inetwork
 TYPE(grid_transform) :: grid_trans
 TYPE(vol7d_level),POINTER :: llev_out(:)
+TYPE(vol7d_level) :: output_levtype
+TYPE(vol7d_var) :: vcoord_var
+INTEGER :: var_coord_in
 INTEGER,ALLOCATABLE :: point_index(:)
 TYPE(vol7d) :: v7d_locana
 CHARACTER(len=80) :: trans_type
@@ -2323,12 +2301,60 @@ CALL get_val(this, trans_type=trans_type)
 IF (trans_type == 'vertint') THEN
 
   IF (PRESENT(lev_out)) THEN
-    CALL init(grid_trans, this, lev_in=vol7d_in%level, lev_out=lev_out, &
-     categoryappend=categoryappend)
+
+! if vol7d_coord_in provided and allocated, check that it fits
+    var_coord_in = -1
+    IF (PRESENT(vol7d_coord_in)) THEN
+      IF (ASSOCIATED(vol7d_coord_in%voldatir) .AND. &
+       ASSOCIATED(vol7d_coord_in%dativar%r)) THEN
+
+! strictly 1 time, 1 timerange and 1 network
+        IF (SIZE(vol7d_coord_in%voldatir,2) /= 1 .OR. &
+         SIZE(vol7d_coord_in%voldatir,4) /= 1 .OR. &
+         SIZE(vol7d_coord_in%voldatir,6) /= 1) THEN
+          CALL l4f_log(L4F_ERROR, &
+           'volume providing constant input vertical coordinate must have &
+           &only 1 time, 1 timerange and 1 network')
+          CALL raise_error()
+          RETURN
+        ENDIF
+
+! search for variable providing vertical coordinate
+        CALL get_val(this, output_levtype=output_levtype)
+        vcoord_var = vol7d_var_new(vol7d_level_to_var(output_levtype))
+        IF (.NOT.c_e(vcoord_var)) THEN
+          CALL l4f_log(L4F_ERROR, &
+           'requested output level type '//t2c(output_levtype%level1)// &
+           ' does not correspond to any known physical variable for &
+           &providing vertical coordinate')
+          CALL raise_error()
+          RETURN
+        ENDIF
+
+        var_coord_in = INDEX(vol7d_coord_in%dativar%r, vcoord_var)
+
+        IF (var_coord_in <= 0) THEN
+          CALL l4f_log(L4F_ERROR, &
+           'volume providing constant input vertical coordinate contains no &
+           &real variables matching output level type '//t2c(output_levtype%level1))
+          CALL raise_error()
+          RETURN
+        ENDIF
+
+      ENDIF
+    ENDIF
+
+    IF (var_coord_in > 0) THEN
+      CALL init(grid_trans, this, lev_in=vol7d_in%level, lev_out=lev_out, &
+       coord_3d_in=vol7d_coord_in%voldatir(:,1:1,:,1,var_coord_in,1), & ! dirty 1:1
+       categoryappend=categoryappend)
+    ELSE
+      CALL init(grid_trans, this, lev_in=vol7d_in%level, lev_out=lev_out, &
+       categoryappend=categoryappend)
+    ENDIF
+
     CALL get_val(grid_trans, output_level_auto=llev_out) ! get levels if auto-generated
     IF (.NOT.associated(llev_out)) llev_out => lev_out
-
-! if this init is successful, I am sure that v7d_locana%ana is associated
 
     IF (c_e(grid_trans)) THEN! .AND. nvar > 0) THEN
 
@@ -2350,7 +2376,7 @@ IF (trans_type == 'vertint') THEN
     CALL raise_error()
   ENDIF
 
-ELSE  
+ELSE
 
   CALL init(grid_trans, this, vol7d_in, v7d_locana, &
    categoryappend=categoryappend)

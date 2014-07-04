@@ -188,21 +188,10 @@ CALL optionparser_add(opt, 'f', 'npx', npx, 4, help= &
 CALL optionparser_add(opt, 'g', 'npy', npy, 4, help= &
  'number of nodes along x axis on input grid, over which to apply function for boxregrid')
 
-!CALL optionparser_add(opt, ' ', 'trans-level-type', level_type, '100,,100,', help= &
-! 'type of input and output level for vertical interpolation &
-! &in the form intop,inbot,outtop,outbot, from grib2 table, at the moment &
-! &intop and outtop type must be the same, inbot and outbot can either be empty &
-! &(single surface) &
-! &or equal to the corresponding top value (layer between 2 surfaces)')
-!CALL optionparser_add(opt, ' ', 'trans-level-list', level_list, '50000,70000,85000,100000', help= &
-! 'list of output levels for vertical interpolation, the unit is determined &
-! &by the value of level-type and taken from grib2 table')
-
 CALL optionparser_add(opt, ' ', 'trans-level-type', trans_level_type, help= &
  'type of input and output level for vertical interpolation &
- &in the form intop,inbot,outtop,outbot, from grib2 table, at the moment &
- &intop and outtop type must be the same, inbot and outbot can either be empty &
- &(single surface) &
+ &in the form intop,inbot,outtop,outbot, from grib2 table; inbot and outbot &
+ &can either be empty (single surface) &
  &or equal to the corresponding top value (layer between 2 surfaces)')
 CALL optionparser_add(opt, ' ', 'trans-level-list', trans_level_list, help= &
  'list of output levels (or top surfaces) for vertical interpolation, the unit is determined &
