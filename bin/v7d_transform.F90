@@ -980,7 +980,6 @@ IF (pre_trans_type /= '') THEN
   IF (n >= 2) THEN ! syntax is correct
 ! chheck whether coord volume must be converted to real
     IF (pre_trans_type(w_s(1):w_e(1)) == 'vertint' .AND. c_e(coord_file)) THEN
-      call display(v7d_coord)
       lconvr=.FALSE.
       IF (ASSOCIATED(v7d_coord%dativar%d)) THEN
         IF (SIZE(v7d_coord%dativar%d) > 0) lconvr=.TRUE.
