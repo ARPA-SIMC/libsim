@@ -281,6 +281,7 @@ TYPE grid_transform
   LOGICAL,POINTER :: stencil(:,:) => NULL()
   REAL,POINTER :: coord_3d_in(:,:,:) => NULL()
   LOGICAL :: recur = .FALSE.
+  LOGICAL :: dolog = .FALSE. ! must compute log() of vert coord before vertint
 
 !  type(volgrid6d) :: input_vertcoordvol ! volume which provides the input vertical coordinate if separated from the data volume itself (for vertint) cannot be here because of cross-use, should be an argument of compute
 !  type(vol7d_level), pointer :: output_vertlevlist(:) ! list of vertical levels of output data (for vertint) can be here or an argument of compute, how to do?
@@ -790,28 +791,30 @@ IF (this%trans%trans_type == 'vertint') THEN
 ! coord_3d_in from the volume within the compute method
       CALL l4f_category_log(this%category, L4F_ERROR, &
        'vertint: different input and output level types &
-       &require coord_3d_in input vertical coordinate argument')
-      this%valid = .FALSE.
-      RETURN
-    ENDIF
-    IF (SIZE(coord_3d_in,3) /= inused) THEN
-      CALL l4f_category_log(this%category, L4F_ERROR, &
-       'vertint: vertical size of coord_3d_in (vertical coordinate) &
-       &different from number of input levels suitable for interpolation')
-      CALL l4f_category_log(this%category, L4F_ERROR, &
-       'coord_3d_in: '//t2c(SIZE(coord_3d_in,3))// &
-       ', input levels for interpolation: '//t2c(inused))
-      this%valid = .FALSE.
-      RETURN
-    ENDIF
+       &and no coord_3d_in, hoping for vert. coord. in volume')
+      this%dolog = dolog ! a little bit dirty, I must compute log later
+!      this%valid = .FALSE.
+!      RETURN
+    ELSE
+      IF (SIZE(coord_3d_in,3) /= inused) THEN
+        CALL l4f_category_log(this%category, L4F_ERROR, &
+         'vertint: vertical size of coord_3d_in (vertical coordinate) &
+         &different from number of input levels suitable for interpolation')
+        CALL l4f_category_log(this%category, L4F_ERROR, &
+         'coord_3d_in: '//t2c(SIZE(coord_3d_in,3))// &
+         ', input levels for interpolation: '//t2c(inused))
+        this%valid = .FALSE.
+        RETURN
+      ENDIF
 
-    this%coord_3d_in => coord_3d_in
-    IF (dolog) THEN
-      WHERE(c_e(this%coord_3d_in) .AND. this%coord_3d_in > 0.0)
-        this%coord_3d_in = LOG(this%coord_3d_in)
-      ELSE WHERE
-        this%coord_3d_in = rmiss
-      END WHERE
+      this%coord_3d_in => coord_3d_in
+      IF (dolog) THEN
+        WHERE(c_e(this%coord_3d_in) .AND. this%coord_3d_in > 0.0)
+          this%coord_3d_in = LOG(this%coord_3d_in)
+        ELSE WHERE
+          this%coord_3d_in = rmiss
+        END WHERE
+      ENDIF
     ENDIF
 
   ELSE
@@ -823,149 +826,149 @@ IF (this%trans%trans_type == 'vertint') THEN
      t2c(trans%vertint%input_levtype%level1))
 #endif
 
-  IF (SIZE(lev_out) > 0) THEN ! output level list provided
-    ALLOCATE(mask_out(SIZE(lev_out)), coord_out(SIZE(lev_out)))
-    mask_out(:) = (lev_out(:)%level1 == trans%vertint%output_levtype%level1) .AND. &
-     (lev_out(:)%level2 == trans%vertint%output_levtype%level2)
-    CALL make_vert_coord(lev_out, mask_out, coord_out, dolog)
+    IF (SIZE(lev_out) > 0) THEN ! output level list provided
+      ALLOCATE(mask_out(SIZE(lev_out)), coord_out(SIZE(lev_out)))
+      mask_out(:) = (lev_out(:)%level1 == trans%vertint%output_levtype%level1) .AND. &
+       (lev_out(:)%level2 == trans%vertint%output_levtype%level2)
+      CALL make_vert_coord(lev_out, mask_out, coord_out, dolog)
 
-  ELSE ! output level list not provided, try to autogenerate
-    IF (c_e(trans%vertint%input_levtype%level2) .AND. &
-     .NOT.c_e(trans%vertint%output_levtype%level2)) THEN ! full -> half
-      IF (trans%vertint%output_levtype%level1 == 105) THEN
+    ELSE ! output level list not provided, try to autogenerate
+      IF (c_e(trans%vertint%input_levtype%level2) .AND. &
+       .NOT.c_e(trans%vertint%output_levtype%level2)) THEN ! full -> half
+        IF (trans%vertint%output_levtype%level1 == 105) THEN
+          ALLOCATE(this%output_level_auto(inused-1))
+          CALL l4f_category_log(this%category,L4F_INFO, &
+           'grid_transform_levtype_levtype_init: autogenerating '//t2c(inused-1) &
+           //'/'//t2c(iend-istart)//' output levels (f->h)')
+          DO i = istart, iend - 1
+            CALL init(this%output_level_auto(i-istart+1), &
+             trans%vertint%input_levtype%level1, lev_in(i)%l2)
+          ENDDO
+        ELSE
+          CALL l4f_category_log(this%category, L4F_ERROR, &
+           'grid_transform_levtype_levtype_init: automatic generation of output levels &
+           &available only for hybrid levels')
+          this%valid = .FALSE.
+          RETURN
+        ENDIF
+      ELSE IF (.NOT.c_e(trans%vertint%input_levtype%level2) .AND. &
+       c_e(trans%vertint%output_levtype%level2)) THEN ! half -> full
         ALLOCATE(this%output_level_auto(inused-1))
-        CALL l4f_category_log(this%category,L4F_INFO, &
-         'grid_transform_levtype_levtype_init: autogenerating '//t2c(inused-1) &
-         //'/'//t2c(iend-istart)//' output levels (f->h)')
-        DO i = istart, iend - 1
-          CALL init(this%output_level_auto(i-istart+1), &
-           trans%vertint%input_levtype%level1, lev_in(i)%l2)
-        ENDDO
+        IF (trans%vertint%output_levtype%level1 == 105) THEN
+          CALL l4f_category_log(this%category,L4F_INFO, &
+           'grid_transform_levtype_levtype_init: autogenerating '//t2c(inused-1) &
+           //'/'//t2c(iend-istart)//' output levels (h->f)')
+          DO i = istart, iend - 1
+            CALL init(this%output_level_auto(i-istart+1), trans%vertint%input_levtype%level1, &
+             lev_in(i)%l1, trans%vertint%input_levtype%level1, &
+             lev_in(i)%l1+1)
+          ENDDO
+        ELSE
+          CALL l4f_category_log(this%category, L4F_ERROR, &
+           'grid_transform_levtype_levtype_init: automatic generation of output levels &
+           &available only for hybrid levels')
+          this%valid = .FALSE.
+          RETURN
+        ENDIF
       ELSE
         CALL l4f_category_log(this%category, L4F_ERROR, &
-         'grid_transform_levtype_levtype_init: automatic generation of output levels &
-         &available only for hybrid levels')
+         'grid_transform_levtype_levtype_init: strange situation'// &
+         to_char(c_e(trans%vertint%input_levtype%level2))//' '// &
+         to_char(c_e(trans%vertint%output_levtype%level2)))
         this%valid = .FALSE.
         RETURN
       ENDIF
-    ELSE IF (.NOT.c_e(trans%vertint%input_levtype%level2) .AND. &
-     c_e(trans%vertint%output_levtype%level2)) THEN ! half -> full
-      ALLOCATE(this%output_level_auto(inused-1))
-      IF (trans%vertint%output_levtype%level1 == 105) THEN
-        CALL l4f_category_log(this%category,L4F_INFO, &
-         'grid_transform_levtype_levtype_init: autogenerating '//t2c(inused-1) &
-         //'/'//t2c(iend-istart)//' output levels (h->f)')
-        DO i = istart, iend - 1
-          CALL init(this%output_level_auto(i-istart+1), trans%vertint%input_levtype%level1, &
-           lev_in(i)%l1, trans%vertint%input_levtype%level1, &
-           lev_in(i)%l1+1)
-        ENDDO
-      ELSE
-        CALL l4f_category_log(this%category, L4F_ERROR, &
-         'grid_transform_levtype_levtype_init: automatic generation of output levels &
-         &available only for hybrid levels')
-        this%valid = .FALSE.
-        RETURN
-      ENDIF
-    ELSE
-      CALL l4f_category_log(this%category, L4F_ERROR, &
-       'grid_transform_levtype_levtype_init: strange situation'// &
-       to_char(c_e(trans%vertint%input_levtype%level2))//' '// &
-       to_char(c_e(trans%vertint%output_levtype%level2)))
-      this%valid = .FALSE.
-      RETURN
+      ALLOCATE(coord_out(inused-1), mask_out(inused-1))
+      mask_out(:) = .TRUE.
+      CALL make_vert_coord(this%output_level_auto, mask_out, coord_out, dolog)
     ENDIF
-    ALLOCATE(coord_out(inused-1), mask_out(inused-1))
-    mask_out(:) = .TRUE.
-    CALL make_vert_coord(this%output_level_auto, mask_out, coord_out, dolog)
-  ENDIF
 
-  this%outnz = SIZE(mask_out)
-  ostart = firsttrue(mask_out)
-  oend = lasttrue(mask_out)
+    this%outnz = SIZE(mask_out)
+    ostart = firsttrue(mask_out)
+    oend = lasttrue(mask_out)
 
 ! set valid = .FALSE. here?
-  IF (istart == 0) THEN
-    CALL l4f_category_log(this%category, L4F_WARN, &
-     'grid_transform_levtype_levtype_init: &
-     &input contains no vertical levels of type ('// &
-     TRIM(to_char(trans%vertint%input_levtype%level1))//','// &
-     TRIM(to_char(trans%vertint%input_levtype%level2))// &
-     ') suitable for interpolation')
-    this%valid = .FALSE.
-    RETURN
+    IF (istart == 0) THEN
+      CALL l4f_category_log(this%category, L4F_WARN, &
+       'grid_transform_levtype_levtype_init: &
+       &input contains no vertical levels of type ('// &
+       TRIM(to_char(trans%vertint%input_levtype%level1))//','// &
+       TRIM(to_char(trans%vertint%input_levtype%level2))// &
+       ') suitable for interpolation')
+      this%valid = .FALSE.
+      RETURN
 !      iend = -1 ! for loops
-  ELSE IF (istart == iend) THEN
-    CALL l4f_category_log(this%category, L4F_WARN, &
-     'grid_transform_levtype_levtype_init: &
-     &input contains only 1 vertical level of type ('// &
-     TRIM(to_char(trans%vertint%input_levtype%level1))//','// &
-     TRIM(to_char(trans%vertint%input_levtype%level2))// &
-     ') suitable for interpolation')
-  ENDIF
-  IF (ostart == 0) THEN
-    CALL l4f_category_log(this%category, L4F_WARN, &
-     'grid_transform_levtype_levtype_init: &
-     &output contains no vertical levels of type ('// &
-     TRIM(to_char(trans%vertint%output_levtype%level1))//','// &
-     TRIM(to_char(trans%vertint%output_levtype%level2))// &
-     ') suitable for interpolation')
-    this%valid = .FALSE.
-    RETURN
+    ELSE IF (istart == iend) THEN
+      CALL l4f_category_log(this%category, L4F_WARN, &
+       'grid_transform_levtype_levtype_init: &
+       &input contains only 1 vertical level of type ('// &
+       TRIM(to_char(trans%vertint%input_levtype%level1))//','// &
+       TRIM(to_char(trans%vertint%input_levtype%level2))// &
+       ') suitable for interpolation')
+    ENDIF
+    IF (ostart == 0) THEN
+      CALL l4f_category_log(this%category, L4F_WARN, &
+       'grid_transform_levtype_levtype_init: &
+       &output contains no vertical levels of type ('// &
+       TRIM(to_char(trans%vertint%output_levtype%level1))//','// &
+       TRIM(to_char(trans%vertint%output_levtype%level2))// &
+       ') suitable for interpolation')
+      this%valid = .FALSE.
+      RETURN
 !      oend = -1 ! for loops
-  ENDIF
-
-! end of code common for all vertint subtypes
-  IF (this%trans%sub_type == 'linear') THEN
-
-    ALLOCATE(this%inter_index_z(this%outnz), this%inter_zp(this%outnz))
-    this%inter_index_z(:) = imiss
-    this%inter_zp(:) = dmiss
-    IF (this%trans%extrap .AND. istart > 0) THEN
-      WHERE(mask_out)
-! extrapolate down by default
-        this%inter_index_z(:) = istart
-        this%inter_zp(:) = 1.0D0
-      ENDWHERE
     ENDIF
 
-    icache = istart + 1
-    outlev: DO j = ostart, oend
-      inlev: DO i = icache, iend
-        IF (coord_in(i) >= coord_out(j)) THEN
-          IF (coord_out(j) >= coord_in(i-1)) THEN
-            this%inter_index_z(j) = i - 1
-            this%inter_zp(j) = (coord_out(j)-coord_in(i-1)) / &
-             (coord_in(i)-coord_in(i-1)) ! weight for (i)
-            icache = i ! speedup next j iteration
-          ENDIF
-          CYCLE outlev ! found or extrapolated down
-        ENDIF
-      ENDDO inlev
-! if I'm here I must extrapolate up
-      IF (this%trans%extrap .AND. iend > 1) THEN
-        this%inter_index_z(j) = iend - 1
-        this%inter_zp(j) = 0.0D0
+! end of code common for all vertint subtypes
+    IF (this%trans%sub_type == 'linear') THEN
+
+      ALLOCATE(this%inter_index_z(this%outnz), this%inter_zp(this%outnz))
+      this%inter_index_z(:) = imiss
+      this%inter_zp(:) = dmiss
+      IF (this%trans%extrap .AND. istart > 0) THEN
+        WHERE(mask_out)
+! extrapolate down by default
+          this%inter_index_z(:) = istart
+          this%inter_zp(:) = 1.0D0
+        ENDWHERE
       ENDIF
-    ENDDO outlev
 
-    DEALLOCATE(coord_out, mask_out)
+      icache = istart + 1
+      outlev: DO j = ostart, oend
+        inlev: DO i = icache, iend
+          IF (coord_in(i) >= coord_out(j)) THEN
+            IF (coord_out(j) >= coord_in(i-1)) THEN
+              this%inter_index_z(j) = i - 1
+              this%inter_zp(j) = (coord_out(j)-coord_in(i-1)) / &
+               (coord_in(i)-coord_in(i-1)) ! weight for (i)
+              icache = i ! speedup next j iteration
+            ENDIF
+            CYCLE outlev ! found or extrapolated down
+          ENDIF
+        ENDDO inlev
+! if I'm here I must extrapolate up
+        IF (this%trans%extrap .AND. iend > 1) THEN
+          this%inter_index_z(j) = iend - 1
+          this%inter_zp(j) = 0.0D0
+        ENDIF
+      ENDDO outlev
 
-  ELSE IF (this%trans%sub_type == 'linearsparse') THEN
+      DEALLOCATE(coord_out, mask_out)
+
+    ELSE IF (this%trans%sub_type == 'linearsparse') THEN
 ! just store vertical coordinates, dirty work is done later
-    ALLOCATE(this%vcoord_in(SIZE(coord_in)),  this%vcoord_out(SIZE(coord_out)))
-    this%vcoord_in(:) = coord_in(:)
-    this%vcoord_out(:) = coord_out(:)
-    DEALLOCATE(coord_out, mask_out)
+      ALLOCATE(this%vcoord_in(SIZE(coord_in)),  this%vcoord_out(SIZE(coord_out)))
+      this%vcoord_in(:) = coord_in(:)
+      this%vcoord_out(:) = coord_out(:)
+      DEALLOCATE(coord_out, mask_out)
 
-  ELSE
+    ELSE
 
-    CALL l4f_category_log(this%category,L4F_WARN, &
-     'init_grid_transform inter sub_type '//TRIM(this%trans%sub_type) &
-     //' not supported')
-    this%valid = .FALSE.
+      CALL l4f_category_log(this%category,L4F_WARN, &
+       'init_grid_transform inter sub_type '//TRIM(this%trans%sub_type) &
+       //' not supported')
+      this%valid = .FALSE.
 
-  ENDIF
+    ENDIF
 
   ENDIF ! levels are different
 !ELSE IF (this%trans%trans_type == 'verttrans') THEN
@@ -1563,11 +1566,6 @@ IF (this%trans%trans_type == 'inter') THEN
      this%innx, this%inny, xmin, xmax, ymin, ymax, &
      lon, lat, this%trans%extrap, &
      this%inter_index_x(:,1), this%inter_index_y(:,1))
-
-! To print the original coordinate
-!    CALL unproj(in)
-!    PRINT*,in%dim%lon(this%inter_index_x(1,1),this%inter_index_y(1,1)), &
-!     in%dim%lat(this%inter_index_x(1,1),this%inter_index_y(1,1))
 
     IF ( this%trans%sub_type == 'bilin' ) THEN
       ALLOCATE(this%inter_x(this%innx,this%inny),this%inter_y(this%innx,this%inny))
@@ -2486,11 +2484,13 @@ END FUNCTION grid_transform_c_e
 !! a 2-d array with shape \a (np,1), which may have to be reshaped and
 !! assigned to the target 1-d array after the subroutine call by means
 !! of the \a RESHAPE() intrinsic function.
-RECURSIVE SUBROUTINE grid_transform_compute(this, field_in, field_out, var)
+RECURSIVE SUBROUTINE grid_transform_compute(this, field_in, field_out, var, &
+ coord_3d_in)
 TYPE(grid_transform),INTENT(in) :: this !< grid_transformation object
 REAL,INTENT(in) :: field_in(:,:,:) !< input array
 REAL,INTENT(out) :: field_out(:,:,:) !< output array
 TYPE(vol7d_var),INTENT(in),OPTIONAL :: var !< physical variable to be interpolated, if provided, some ad-hoc algorithms may be used where possible
+REAL,INTENT(in),OPTIONAL,TARGET :: coord_3d_in(:,:,:) !< input vertical coordinate for vertical interpolation, if not provided by other means
 
 INTEGER :: i, j, k, ii, jj, ie, je, n, navg, kk, kkcache, kkup, kkdown, &
  kfound, kfoundin, inused, i1, i2, j1, j2, np, ns
@@ -2500,9 +2500,11 @@ DOUBLE PRECISION  :: x1,x3,y1,y3,xp,yp
 INTEGER :: innx, inny, innz, outnx, outny, outnz, vartype
 DOUBLE PRECISION,ALLOCATABLE :: coord_in(:)
 REAL,ALLOCATABLE :: val_in(:), field_tmp(:,:,:)
+REAL,POINTER :: coord_3d_in_act(:,:,:)
 TYPE(grid_transform) :: likethis
 ! constants for local use
 INTEGER,PARAMETER :: var_ord=0, var_dir360=1, var_press=2
+LOGICAL :: alloc_coord_3d_in_act
 
 
 #ifdef DEBUG
@@ -3040,6 +3042,7 @@ ELSE IF (this%trans%trans_type == 'vertint') THEN
 
   IF (this%trans%sub_type == 'linear') THEN
 
+    alloc_coord_3d_in_act = .FALSE.
     IF (ASSOCIATED(this%inter_index_z)) THEN
 
       DO k = 1, outnz
@@ -3093,9 +3096,39 @@ ELSE IF (this%trans%trans_type == 'vertint') THEN
 
     ELSE ! use coord_3d_in
 
-! I should check associated(this%coord_3d_in), but I trust this%valid
+      IF (ASSOCIATED(this%coord_3d_in)) THEN
+        coord_3d_in_act => this%coord_3d_in
+#ifdef DEBUG
+        CALL l4f_category_log(this%category,L4F_DEBUG, &
+         "Using external vertical coordinate for vertint")
+#endif
+      ELSE
+        IF (PRESENT(coord_3d_in)) THEN
+#ifdef DEBUG
+          CALL l4f_category_log(this%category,L4F_DEBUG, &
+           "Using internal vertical coordinate for vertint")
+#endif
+          IF (this%dolog) THEN
+            ALLOCATE(coord_3d_in_act(SIZE(coord_3d_in,1), &
+             SIZE(coord_3d_in,2), SIZE(coord_3d_in,3)))
+            alloc_coord_3d_in_act = .TRUE.
+            WHERE (c_e(coord_3d_in) .AND. coord_3d_in > 0.0)
+              coord_3d_in_act = LOG(coord_3d_in)
+            ELSEWHERE
+              coord_3d_in_act = rmiss
+            END WHERE
+          ELSE
+            coord_3d_in_act => coord_3d_in
+          ENDIF
+        ELSE
+          CALL l4f_category_log(this%category,L4F_ERROR, &
+           "Missing internal and external vertical coordinate for vertint")
+          CALL raise_error()
+          RETURN
+        ENDIF
+      ENDIF
 
-      inused = SIZE(this%coord_3d_in,3)
+      inused = SIZE(coord_3d_in_act,3)
       IF (inused < 2) RETURN ! to avoid algorithm failure
       kkcache = 1
 
@@ -3110,9 +3143,9 @@ ELSE IF (this%trans%trans_type == 'vertint') THEN
 
               IF (kkdown >= 1) THEN ! search down
                 IF (this%vcoord_out(k) >= &
-                 MIN(this%coord_3d_in(i,j,kkdown), this%coord_3d_in(i,j,kkdown+1)) .AND. &
+                 MIN(coord_3d_in_act(i,j,kkdown), coord_3d_in_act(i,j,kkdown+1)) .AND. &
                  this%vcoord_out(k) < &
-                 MAX(this%coord_3d_in(i,j,kkdown), this%coord_3d_in(i,j,kkdown+1))) THEN
+                 MAX(coord_3d_in_act(i,j,kkdown), coord_3d_in_act(i,j,kkdown+1))) THEN
                   kkcache = kkdown
                   kfoundin = kkcache
                   kfound = kkcache + this%levshift
@@ -3121,9 +3154,9 @@ ELSE IF (this%trans%trans_type == 'vertint') THEN
               ENDIF
               IF (kkup < inused) THEN ! search up
                 IF (this%vcoord_out(k) >= &
-                 MIN(this%coord_3d_in(i,j,kkup), this%coord_3d_in(i,j,kkup+1)) .AND. &
+                 MIN(coord_3d_in_act(i,j,kkup), coord_3d_in_act(i,j,kkup+1)) .AND. &
                  this%vcoord_out(k) < &
-                 MAX(this%coord_3d_in(i,j,kkup), this%coord_3d_in(i,j,kkup+1))) THEN
+                 MAX(coord_3d_in_act(i,j,kkup), coord_3d_in_act(i,j,kkup+1))) THEN
                   kkcache = kkup
                   kfoundin = kkcache
                   kfound = kkcache + this%levshift
@@ -3135,8 +3168,8 @@ ELSE IF (this%trans%trans_type == 'vertint') THEN
 
             IF (c_e(kfound)) THEN
               IF (c_e(field_in(i,j,kfound)) .AND. c_e(field_in(i,j,kfound+1))) THEN
-                z1 = REAL((this%vcoord_out(k) - this%coord_3d_in(i,j,kfoundin))/ &
-                 (this%coord_3d_in(i,j,kfoundin+1) - this%coord_3d_in(i,j,kfoundin)))
+                z1 = REAL((this%vcoord_out(k) - coord_3d_in_act(i,j,kfoundin))/ &
+                 (coord_3d_in_act(i,j,kfoundin+1) - coord_3d_in_act(i,j,kfoundin)))
                 z2 = 1.0 - z1
                 SELECT CASE(vartype)
 
@@ -3156,6 +3189,7 @@ ELSE IF (this%trans%trans_type == 'vertint') THEN
           ENDDO ! i
         ENDDO ! j
       ENDDO ! k
+      IF (alloc_coord_3d_in_act) DEALLOCATE(coord_3d_in_act)
     ENDIF
 
   ELSE IF (this%trans%sub_type == 'linearsparse') THEN

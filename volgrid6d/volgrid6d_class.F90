@@ -1345,17 +1345,18 @@ END SUBROUTINE volgrid6dv_delete
 
 ! Internal method for performing grid to grid computations
 SUBROUTINE volgrid6d_transform_compute(this, volgrid6d_in, volgrid6d_out, &
- lev_out, clone)
+ lev_out, var_coord_vol, clone)
 TYPE(grid_transform),INTENT(in) :: this ! oggetto di trasformazione per il grigliato
 type(volgrid6d), INTENT(in) :: volgrid6d_in ! oggetto da trasformare
 type(volgrid6d), INTENT(inout) :: volgrid6d_out ! oggetto trasformato; deve essere completo (init, alloc, alloc_vol)
 TYPE(vol7d_level),INTENT(in),OPTIONAL :: lev_out(:) ! vol7d_level object defining target vertical grid, for vertical interpolations
+INTEGER,INTENT(in),OPTIONAL :: var_coord_vol ! index of variable defining vertical coordinate values in input volume
 LOGICAL,INTENT(in),OPTIONAL :: clone ! se fornito e \c .TRUE., clona i gaid da volgrid6d_in a volgrid6d_out
 
-INTEGER :: ntime, ntimerange, inlevel, onlevel, nvar
-INTEGER :: itime, itimerange, ilevel, ivar, levshift, levused
+INTEGER :: ntime, ntimerange, inlevel, onlevel, nvar, &
+ itime, itimerange, ilevel, ivar, levshift, levused, lvar_coord_vol
+REAL,POINTER :: voldatiin(:,:,:), voldatiout(:,:,:), coord_3d_in(:,:,:)
 
-REAL,POINTER :: voldatiin(:,:,:), voldatiout(:,:,:)
 
 #ifdef DEBUG
 call l4f_category_log(volgrid6d_in%category,L4F_DEBUG,"start volgrid6d_transform_compute")
@@ -1366,6 +1367,7 @@ ntimerange=0
 inlevel=0
 onlevel=0
 nvar=0
+lvar_coord_vol = optio_i(var_coord_vol)
 
 if (associated(volgrid6d_in%time))then
   ntime=size(volgrid6d_in%time)
@@ -1404,6 +1406,9 @@ ENDIF
 
 CALL get_val(this, levshift=levshift, levused=levused)
 DO ivar=1,nvar
+  IF (c_e(var_coord_vol)) THEN
+    IF (ivar == var_coord_vol) CYCLE ! skip coordinate variable in output
+  ENDIF
   DO itimerange=1,ntimerange
     DO itime=1,ntime
 ! skip empty columns where possible, improve
@@ -1444,12 +1449,21 @@ DO ivar=1,nvar
         ENDIF
       ENDDO
 
+      IF (c_e(var_coord_vol)) THEN
+        CALL volgrid_get_vol_3d(volgrid6d_in, itime, itimerange, var_coord_vol, &
+         coord_3d_in)
+      ENDIF
       CALL volgrid_get_vol_3d(volgrid6d_in, itime, itimerange, ivar, &
        voldatiin)
       IF (ASSOCIATED(volgrid6d_out%voldati)) & ! improve!!!!
        CALL volgrid_get_vol_3d(volgrid6d_out, itime, itimerange, ivar, &
        voldatiout)
-      CALL compute(this, voldatiin, voldatiout, convert(volgrid6d_in%var(ivar)))
+      IF (c_e(var_coord_vol)) THEN
+        CALL compute(this, voldatiin, voldatiout, convert(volgrid6d_in%var(ivar)), &
+         coord_3d_in)
+      ELSE
+        CALL compute(this, voldatiin, voldatiout, convert(volgrid6d_in%var(ivar)))
+      ENDIF
       CALL volgrid_set_vol_3d(volgrid6d_out, itime, itimerange, ivar, &
        voldatiout)
     ENDDO
@@ -1491,8 +1505,8 @@ TYPE(grid_transform) :: grid_trans
 TYPE(vol7d_level),POINTER :: llev_out(:)
 TYPE(vol7d_level) :: output_levtype
 TYPE(vol7d_var) :: vcoord_var
-INTEGER :: i, ntime, ntimerange, nlevel, nvar, var_coord_in, cf_out, &
- nxc, nyc, nxi, nyi, i3, i4, i5, i6
+INTEGER :: i, ntime, ntimerange, nlevel, nvar, var_coord_in, var_coord_vol, &
+ cf_out, nxc, nyc, nxi, nyi, i3, i4, i5, i6
 TYPE(geo_proj) :: proj_in, proj_out
 CHARACTER(len=80) :: trans_type
 LOGICAL :: ldecode
@@ -1535,11 +1549,12 @@ ELSE IF (PRESENT(griddim)) THEN ! just get component_flag, the rest is rubbish
 ENDIF
 
 
+var_coord_in = imiss
+var_coord_vol = imiss
 IF (trans_type == 'vertint') THEN
   IF (PRESENT(lev_out)) THEN
 
 ! if volgrid6d_coord_in provided and allocated, check that it fits
-    var_coord_in = imiss
     IF (PRESENT(volgrid6d_coord_in)) THEN
       IF (ASSOCIATED(volgrid6d_coord_in%voldati)) THEN
 
@@ -1593,6 +1608,31 @@ IF (trans_type == 'vertint') THEN
            ', input volume: '//t2c(nxi)//'x'//t2c(nyi))
           CALL raise_error()
           RETURN
+        ENDIF
+
+        CALL l4f_category_log(volgrid6d_in%category, L4F_INFO, &
+         'Coordinate for vertint found in coord volume at position '// &
+         t2c(var_coord_in))
+
+      ENDIF
+    ENDIF
+
+    IF (.NOT.c_e(var_coord_in)) THEN ! search for coordinate within volume
+! search for variable providing vertical coordinate
+      CALL get_val(this, output_levtype=output_levtype)
+      vcoord_var = vol7d_var_new(vol7d_level_to_var(output_levtype))
+      IF (c_e(vcoord_var)) THEN
+        DO i = 1, SIZE(volgrid6d_in%var)
+          IF (convert(volgrid6d_in%var(i)) == vcoord_var) THEN
+            var_coord_vol = i
+            EXIT
+          ENDIF
+        ENDDO
+
+        IF (c_e(var_coord_vol)) THEN
+          CALL l4f_category_log(volgrid6d_in%category, L4F_INFO, &
+           'Coordinate for vertint found in input volume at position '// &
+           t2c(var_coord_vol))
         ENDIF
 
       ENDIF
@@ -1670,7 +1710,7 @@ IF (c_e(grid_trans)) THEN ! transformation is valid
      "volgrid6d_transform: vertint to "//t2c(nlevel)//" levels")
 #endif
     CALL compute(grid_trans, volgrid6d_in, volgrid6d_out, lev_out=llev_out, &
-     clone=clone)
+     var_coord_vol=var_coord_vol, clone=clone)
   ELSE
     CALL compute(grid_trans, volgrid6d_in, volgrid6d_out, clone=clone)
   ENDIF
