@@ -1,7 +1,7 @@
 Summary: libsim: librerie di utilità in Fortran 90
 Name: libsim
-Version: 5.0.2
-Release: 1316%{dist}
+Version: 5.1.0
+Release: 1392%{dist}
 License: GPL2+
 Group: Applications/Meteo
 URL: http://www.arpa.emr.it/sim
@@ -31,16 +31,16 @@ scientifiche, come la gestione di errori in esecuzione, la gestione di
 dati georeferenziati, di coordinate temporali, ecc.
 
 libsim_grib definisce una serie di classi ad alto livello stratificate
-sopra la libreria ECMWF emos per gestire l'I/O di file in formato
+sopra la libreria ECMWF emos per gestire l\'I/O di file in formato
 grib.
 
 libsim_vol7d definisce una serie di classi per facilitare
-l'elaborazione di dati osservativi idro-meteo, includendo metodi per
+l\'elaborazione di dati osservativi idro-meteo, includendo metodi per
 la loro importazione da database tipo DbAll-e e dal database Oracle di
 ARPA-SIM.
 
 libsim_volgrid6d definisce una serie di classi per facilitare
-l'elaborazione di dati idro-meteo su grigliati georeferenziati,
+l\'elaborazione di dati idro-meteo su grigliati georeferenziati,
 compresa la trasformazione in griglie di tipo diverso e in oggetti di
 tipo vol7d.
 
@@ -49,12 +49,7 @@ tipo vol7d.
 
 %build
 
-
-#configure FC=gfortran FCFLAGS="-I/usr/include/ -I%{_fmoddir} -ftree-parallelize-loops=2" ORACLE_VER=oracle/11.2/client --enable-dwdgrib1 --enable-f2003-features --enable-vapor --enable-alchimia --enable-shapelib --enable-netcdf --enable-gribapi --enable-gdal
-
-#configure CPPFLAGS="-I/usr/include/ -I%{_fmoddir}" FCFLAGS="%{optflags} -I%{_fmoddir}" ORACLE_VER=oracle/11.2/client --enable-f2003-features --enable-vapor --enable-alchimia --enable-shapelib --enable-netcdf --enable-gribapi --enable-gdal
-
-%configure FCFLAGS="%{optflags} -I%{_fmoddir}" ORACLE_VER=oracle/11.2/client --enable-f2003-features --enable-vapor --enable-alchimia --enable-shapelib --enable-netcdf --enable-gribapi --enable-gdal
+%configure FCFLAGS="%{optflags} -I%{_fmoddir}" ORACLE_VER=oracle/11.2/client --enable-f2003-features --enable-vapor --enable-alchimia --enable-shapelib --enable-netcdf --enable-gribapi --enable-gdal --enable-f2003-extended-features
 
 make 
 
