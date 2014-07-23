@@ -449,7 +449,6 @@ end subroutine copy1f
 
 subroutine copy1fmem()
 type(dbametaanddata),allocatable :: metaanddatav(:)
-integer :: i
 
 print *,"----------------------------------------------"
 print *,"--------------- copy1fmem ----------------------"

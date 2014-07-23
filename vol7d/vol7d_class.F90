@@ -112,7 +112,7 @@ INTEGER, PARAMETER :: vol7d_timerange_d=4 !< indice della dimensione "intervallo
 INTEGER, PARAMETER :: vol7d_var_d=5 !< indice della dimensione "variabile" nei volumi di dati, da usare nei metodi vol7d_get_voldati*
 INTEGER, PARAMETER :: vol7d_network_d=6 !< indice della dimensione "rete" nei volumi di dati, da usare nei metodi vol7d_get_voldati*
 INTEGER, PARAMETER :: vol7d_attr_d=7 !< indice della dimensione "attributo" nei volumi di dati, da usare nei metodi vol7d_get_voldati*
-INTEGER, PARAMETER :: vol7d_cdatalen=20
+INTEGER, PARAMETER :: vol7d_cdatalen=32
 
 TYPE vol7d_varmap
   INTEGER :: r, d, i, b, c

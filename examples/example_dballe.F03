@@ -114,7 +114,7 @@ call anal%display()
 call anal%rewind()
 !ingest ana
 do while (anal%element())
-  call sessionana%ingest(ana=anal%current())
+  call sessionana%ingest(anal%current())
   call anal%next()
 end do
 
@@ -183,7 +183,8 @@ allocate (metaanddata(2)%dataattrv%dataattr(2)%attrv%dcv(0))          ! we do no
 ! display and save everythings
 do i=1,size(metaanddata)
   call metaanddata(i)%display()
-  call session%ingest(metaanddata=metaanddata(i))
+  !call session%ingest(metaanddata(i))
+  call metaanddata(i)%ingest(session)
 end do
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
@@ -358,14 +359,16 @@ allocate (dataattrv%dataattr(2)%attrv%dcv(0))
 call dataattrv%display()
 
 ! write data and attribute
-call session%ingest(dataattrv=dataattrv)
+call session%ingest(dataattrv)
+call dataattrv%ingest(session)
 
 
 ! work on constant station data
 call session%set(metadata%dbacontextana())
 
 ! write the same data and attribute as constant station data
-call session%ingest(dataattrv=dataattrv)
+!call session%ingest(dataattrv)
+call dataattrv%ingest(session)
 
 end subroutine write4
 
@@ -825,7 +828,8 @@ call session%set(filter=dbafilter())
 call session%extrude()
 do while (c_e(session%count) .and. session%count > 0 )
   call session%extrude (metaanddata)
-  call sessioncp%ingest(metaanddata=metaanddata)
+  !call sessioncp%ingest(metaanddata)
+  call metaanddata%ingest(sessioncp)
   if (session%file) call session%close_message()
 end do
 
@@ -834,7 +838,8 @@ call session%set(filter=dbafilter(contextana=.true.))
 call session%extrude()
 do while (c_e(session%count) .and. session%count > 0)
   call session%extrude (metaanddata)
-  call sessioncp%ingest(metaanddata=metaanddata)
+  !call sessioncp%ingest(metaanddata)
+  call metaanddata%ingest(sessioncp)
   if (session%file) call session%close_message()
 end do
 
@@ -863,7 +868,8 @@ do while (size(metaanddatav) >0)
   do i =1,size(metaanddatav)
     print *, "display metaanddatav index: ", i
 !    call metaanddatav(i)%display()
-    call sessionto%ingest(metaanddata=metaanddatav(i))
+    !call sessionto%ingest(metaanddatav(i))
+    call metaanddatav(i)%ingest(sessionto)
   end do
 !  call sessionto%close_message()
   call sessionfrom%extrude(metaanddatav)
@@ -880,7 +886,8 @@ do while (size(metaanddatav) >0)
   do i =1,size(metaanddatav)
     print *, "display metaanddatav index: ", i
 !    call metaanddatav(i)%display()
-    call sessionto%ingest(metaanddata=metaanddatav(i))
+    !call sessionto%ingest(metaanddatav(i))
+    call metaanddatav(i)%ingest(sessionto)
   end do
 !  call sessionto%close_message()
   call sessionfrom%extrude(metaanddatav)
@@ -903,7 +910,8 @@ do while (sessionfrom%messages_read_next())
   call sessionfrom%extrude(metaanddatav)
   do i =1,size(metaanddatav)
     call metaanddatav(i)%display()
-    call sessionto%ingest(metaanddata=metaanddatav(i))
+    !call sessionto%ingest(metaanddatav(i))
+    call metaanddatav(i)%ingest(sessionto)
   end do
   call sessionto%prendilo()
 
@@ -912,7 +920,8 @@ do while (sessionfrom%messages_read_next())
   call sessionfrom%extrude(metaanddatav)
   do i =1,size(metaanddatav)
     call metaanddatav(i)%display()
-    call sessionto%ingest(metaanddata=metaanddatav(i))
+    !call sessionto%ingest(metaanddatav(i))
+    call metaanddatav(i)%ingest(sessionto)
   end do
   call sessionto%close_message()
   call sessionfrom%remove_all()
@@ -952,7 +961,8 @@ call session%set(filter=dbafilter())
 call session%extrude_metaanddatac()
 do while (c_e(session%count) .and. session%count > 0)
   call session%extrude_metaanddatac(metaanddatac)
-  call sessioncp%ingest(metaanddatac=metaanddatac)
+  !call sessioncp%ingest(metaanddatac)
+  call metaanddatac%ingest(sessioncp)
 end do
 
 ! constant data
@@ -960,7 +970,8 @@ call session%set(filter=dbafilter(contextana=.true.))
 call session%extrude_metaanddatac()
 do while (c_e(session%count) .and. session%count > 0)
   call session%extrude_metaanddatac(metaanddatac)
-  call sessioncp%ingest(metaanddatac=metaanddatac)
+  !call sessioncp%ingest(metaanddatac)
+  call metaanddatac%ingest(sessioncp)
 end do
 
 

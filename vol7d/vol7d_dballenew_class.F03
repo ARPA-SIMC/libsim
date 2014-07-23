@@ -155,7 +155,7 @@ CONTAINS
 
                                 !>\brief  inizializza l'oggetto
 SUBROUTINE vol7d_dballe_init(this,dsn,user,password,write,wipe,repinfo,&
- filename,format,file,categoryappend,time_definition,idbhandle)
+ filename,format,file,categoryappend,time_definition,idbhandle,template)
 
 
 TYPE(vol7d_dballe),INTENT(out) :: this !< l'oggetto da inizializzare
@@ -171,17 +171,18 @@ logical,INTENT(in),OPTIONAL :: file !< switch to use file or data base ( default
 character(len=*),INTENT(in),OPTIONAL :: categoryappend !< appennde questo suffisso al namespace category di log4fortran
 integer,INTENT(in),OPTIONAL :: time_definition !< 0=time is reference time ; 1=time is validity time (default=1) 
 integer,INTENT(in),OPTIONAL :: idbhandle !< dsn connection; if present it will be used
+!> specificando category.subcategory.localcategory oppure un alias ("synop", "metar","temp","generic") forza l'exportazione ad uno specifico template BUFR/CREX"
+!!  the special value "generic-frag is used to generate bufr on file where ana data is reported only once at beginning and data in other bufr after
+character(len=*),intent(in),optional :: template 
 
 character(len=1):: mode="r" ! the open mode ("r" for read, "w" for write or create, "a" append) (comandato da "write", default="r" )
 
 character(len=50) :: quidsn,quiuser,quipassword
 character(len=255) :: quirepinfo
-logical :: quiwrite,quiwipe,quifile
+logical :: quiwrite,quiwipe
 
 character(len=512) :: a_name
 character(len=254) :: arg,lfilename,lformat
-logical :: exist
-integer :: ier
 logical :: read_next
 
 
@@ -239,7 +240,7 @@ if (optio_log(file)) then
                                 !print *,"import in mem:"
 
     this%idbhandle=dbaconnection(dsn="mem:",user="",password="")
-    this%handle=dbasession(this%idbhandle,"write","write","write")
+    this%handle=dbasession(this%idbhandle,"write","write","write",template=template)
     call this%handle%messages_open_input(lfilename, mode, lformat, simplified=.true.)
     read_next = this%handle%messages_read_next()
     do while (read_next) 
@@ -334,36 +335,19 @@ CHARACTER(len=*),INTENT(in),OPTIONAL :: varkind(:),attrkind(:),anavarkind(:),ana
 logical,intent(in),optional :: anaonly
 logical,intent(in),optional :: dataonly
 
-TYPE(vol7d_network) :: lnetwork
-TYPE(vol7d_level) :: llevel
-TYPE(vol7d_timerange) :: ltimerange
 
 INTEGER,PARAMETER :: maxvarlist=100
                                 !TYPE(vol7d) :: v7d
                                 ! da non fare (con gfortran?)!!!!!
                                 !CHARACTER(len=SIZE(var)*7) :: varlist
                                 !CHARACTER(len=SIZE(attr)*8) :: starvarlist
-CHARACTER(len=maxvarlist*7) :: varlist
-CHARACTER(len=maxvarlist*8) :: starvarlist
-CHARACTER(len=6) :: btable
-CHARACTER(len=7) ::starbtable
 
 LOGICAL ::  ldegnet, lattr, lanaattr
-integer :: year,month,day,hour,minute,sec,msec
-integer :: rlevel1, rl1,rlevel2, rl2
-integer :: rtimerange, p1, p2
-character(len=network_name_len) :: rep_memo
-integer :: indana,indtime,indlevel,indtimerange,inddativar,indnetwork,indattrvar
 
-integer :: nana,ntime,ntimerange,nlevel,nnetwork
-TYPE(vol7d_var) :: var_tmp
+INTEGER :: i
+integer :: nvar 
+integer :: nanavar
 
-INTEGER :: i, j, k, ii, iii,n,n_ana,nn,nvarattr,istat,indattr
-integer :: nvar ,inddatiattr,inddativarattr
-integer :: nanavar ,indanavar,indanaattr,indanavarattr,nanavarattr
-
-INTEGER(kind=int_l) :: ilat,ilon
-CHARACTER(len=vol7d_ana_lenident) :: ident
                                 !CHARACTER(len=10),allocatable :: lvar(:), lanavar(:)
 type(dbadcv)       :: vars,starvars,anavars,anastarvars
 type(dbafilter)    :: filter
@@ -374,22 +358,9 @@ type(dbatimerange) :: mydbatimerange
 type(dbalevel)     :: mydbalevel
 type(dbanetwork)   :: mydbanetwork
 
-
-                                !INTEGER(kind=int_b)::attrdatib
-
-integer :: ndativarr,     ndativari,     ndativarb,     ndativard,     ndativarc
-integer :: ndatiattrr,    ndatiattri,    ndatiattrb,    ndatiattrd,    ndatiattrc 
-integer :: ndativarattrr, ndativarattri, ndativarattrb, ndativarattrd, ndativarattrc
-
-integer :: nanavarr,     nanavari,     nanavarb,     nanavard,     nanavarc
-integer :: nanaattrr,    nanaattri,    nanaattrb,    nanaattrd,    nanaattrc 
-integer :: nanavarattrr, nanavarattri, nanavarattrb, nanavarattrd, nanavarattrc
-
-integer :: ir,ib,id,ic,ier,nanaattr,nattr
+integer :: nanaattr,nattr
 
 TYPE(vol7d) :: vol7dtmp
-integer :: ndativar,ndativarattr
-
 
 character(len=40) :: query
 type(dbametaanddata),allocatable :: metaanddatav(:)
@@ -675,7 +646,6 @@ END SUBROUTINE vol7d_dballe_import
 SUBROUTINE vol7d_dballe_delete(this, preserveidbhandle)
 TYPE(vol7d_dballe) :: this !< oggetto da cancellare
 logical,intent(in), optional :: preserveidbhandle !< do not close connection to dsn
-integer :: ier
 
 call this%handle%delete()
 if (.not. optio_log(preserveidbhandle)) call this%idbhandle%delete()
@@ -715,8 +685,8 @@ integer :: indana,indtime,indlevel,indtimerange,inddativar,indnetwork,indattrvar
 integer :: nana,ntime,ntimerange,nlevel,nnetwork
 
 INTEGER :: i, j, k, n
-integer :: nvar ,inddatiattr,inddativarattr
-integer :: nanavar ,indanavar,indanaattr,indanavarattr,nanavarattr
+integer :: inddativarattr
+integer :: nanavar, indanavar,indanavarattr,nanavarattr
 
 integer :: ndativarr,     ndativari,     ndativarb,     ndativard,     ndativarc
 integer :: ndatiattrr,    ndatiattri,    ndatiattrb,    ndatiattrd,    ndatiattrc 
@@ -733,7 +703,6 @@ type(characterlist) :: dativarl,dativarattrl,anavarl,anavarattrl
 character(len=listcharmaxlen),allocatable :: dativara(:),dativarattra(:),anavara(:),anavarattra(:)
 logical :: status
 integer :: ltime_definition
-character(len=9),allocatable :: btablev(:)
 
 ltime_definition=optio_i(time_definition)
 if (.not. c_e(ltime_definition)) ltime_definition = 1
@@ -763,14 +732,6 @@ ENDIF
 !!--------------------------------------------------------------------------
 !! find vars, starvars, anavars, anastarvars
 !!
-
-!!$  vars=todcv_dbadat(dativarl)
-!!$  allocate (btablev(size(vars%dcv)))
-!!$  do i=1, size(btablev)
-!!$    btablev(i)=vars%dcv(i)%dat%btable
-!!$  end do
-!!$
-!!$  ndativar     = count_distinct (btablev    , back=.TRUE.)
 
                                 ! data
 do i =1, size(metaanddatav)
@@ -1709,8 +1670,12 @@ END FUNCTION open_dballe_file
 !! Riscrive i dati nel DSN di DB-All.e con la possibilità di attivare
 !! una serie di filtri.
 
+
+!!! TODO manage attr_only
+!!! attention template migrated in init
+
 SUBROUTINE vol7d_dballe_export(this, network, coordmin, coordmax,&
- timei, timef,level,timerange,var,attr,anavar,anaattr,attr_only,template,ana)
+ timei, timef,level,timerange,var,attr,anavar,anaattr,attr_only,ana,dataonly)
 
 TYPE(vol7d_dballe),INTENT(inout) :: this !< oggetto contenente il volume e altre info per l'accesso al DSN
 character(len=network_name_len),INTENT(in),optional :: network !< network da exportare
@@ -1728,24 +1693,124 @@ CHARACTER(len=*),INTENT(in),OPTIONAL :: var(:),attr(:),anavar(:),anaattr(:)
 !! ottimizzando enormente le prestazioni: gli attributi riscritti saranno quelli con this%data_id definito
 !! (solitamente ricopiato dall'oggetto letto)
 logical,intent(in),optional :: attr_only 
-!> specificando category.subcategory.localcategory oppure un alias ("synop", "metar","temp","generic") forza l'exportazione ad uno specifico template BUFR/CREX"
-!!  the special value "generic-frag is used to generate bufr on file where ana data is reported only once at beginning and data in other bufr after
-character(len=*),intent(in),optional :: template 
 TYPE(vol7d_ana),INTENT(inout),optional :: ana  !< identificativo della stazione da exportare
+logical, intent(in),optional :: dataonly          !< set to .true. to get data only (no attribute) 
 
 type(dbametaanddatalist) :: metaanddatal
 
+type(dbadcv)       :: vars,starvars,anavars,anastarvars
+type(dbafilter)    :: filter
+type(dbacoord)     :: mydbacoordmin, mydbacoordmax
+type(dbaana)       :: mydbaana
+type(dbadatetime)  :: mydatetimemin, mydatetimemax
+type(dbatimerange) :: mydbatimerange
+type(dbalevel)     :: mydbalevel
+type(dbanetwork)   :: mydbanetwork
+
+integer :: i
+LOGICAL :: lattr, lanaattr,stat
+integer :: nanaattr,nattr,nanavar,nvar
+
+
+                                ! ------------- prepare filter options
+
+!!
+!!           translate import option for dballe2003 api
+!!
+
+if (present(var)) then
+  nvar=count(c_e(var))
+  if (nvar > 0) then
+    allocate (vars%dcv(nvar))
+    do i=1,size(var)
+      if (c_e(var(i)))then
+        allocate (vars%dcv(i)%dat,source=dbadatac(var(i))) !char is default
+      end if
+    end do
+  end if
+end if
+
+if (present(anavar)) then
+  nanavar=count(c_e(anavar))
+  if (nanavar > 0) then
+    allocate (anavars%dcv(nanavar))
+    do i=1,size(anavar)
+      if (c_e(anavar(i)))then
+        allocate (anavars%dcv(i)%dat,source=dbadatac(anavar(i))) !char is default
+      end if
+    end do
+  end if
+end if
+
+lattr = .false.
+if (present(attr)) then
+  nattr=count(c_e(attr))
+  if (nattr > 0) then
+    lattr = .true.
+    allocate (starvars%dcv(nattr))
+    do i=1,size(attr)
+      if (c_e(attr(i)))then
+          allocate (starvars%dcv(i)%dat,source=dbadatac(attr(i))) !char is default
+      end if
+    end do
+  end if
+end if
+
+lanaattr = .false.
+if (present(anaattr)) then
+  nanaattr=count(c_e(anaattr))
+  if (nanaattr > 0) then
+    lanaattr = .true.
+    allocate (anastarvars%dcv(nanaattr))
+    do i=1,size(anaattr)
+      if (c_e(anaattr(i)))then
+        allocate (anastarvars%dcv(i)%dat,source=dbadatac(anaattr(i))) !char is default
+      end if
+    end do
+  end if
+end if
+
+
+                                ! like a cast
+mydbacoordmin=dbacoord()
+if (present(coordmin)) mydbacoordmin%geo_coord=coordmin
+mydbacoordmax=dbacoord()
+if (present(coordmax)) mydbacoordmax%geo_coord=coordmax
+mydbaana=dbaana()
+if (present(ana)) mydbaana%vol7d_ana=ana
+mydatetimemin=dbadatetime()
+if (present(timei)) mydatetimemin%datetime=timei
+mydatetimemax=dbadatetime()
+if (present(timef)) mydatetimemax%datetime=timef
+mydbatimerange=dbatimerange()
+if (present(timerange)) mydbatimerange%vol7d_timerange=timerange
+mydbalevel=dbalevel()
+if (present(level)) mydbalevel%vol7d_level=level
+mydbanetwork=dbanetwork()
+if (present(network)) call init(mydbanetwork%vol7d_network,name=network)
+
+!!
+!!         here we have options ready for filter
+!!
+filter=dbafilter(coordmin=mydbacoordmin,coordmax=mydbacoordmax,ana=mydbaana, &
+ datetimemin=mydatetimemin,datetimemax=mydatetimemax, &
+ timerange=mydbatimerange,level=mydbalevel,network=mydbanetwork,&
+ vars=vars,starvars=starvars)
+!!$  print *, "filter:"
+!!$  call filter%display()
 
 call v7d2dba(this%vol7d,metaanddatal)
 !call metaanddatal%display()
 
-!!! todo write
+call this%handle%ingest(metaanddatal,filter=filter,dataonly=dataonly)
+
+stat = metaanddatal%delete()
 
 end SUBROUTINE vol7d_dballe_export
 
 
 subroutine v7d2dba(v7d,metaanddatal)
-TYPE(vol7d),INTENT(inout)   :: v7d  !!!!!! dovrebbe essere intent(in)
+TYPE(vol7d),INTENT(in)   :: v7d  !!!!!! dovrebbe essere intent(in)
 type(dbametaanddatalist),intent(inout) :: metaanddatal
 
 TYPE(vol7d_serialize_dballe) :: serialize
@@ -1758,7 +1823,6 @@ call serialize%vol7d_serialize_setup(v7d)
 call serialize%vol7d_serialize_export(metaanddatal)
 
 end subroutine v7d2dba
-
 
 
 end MODULE vol7d_dballenew_class

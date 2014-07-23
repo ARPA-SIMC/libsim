@@ -381,8 +381,7 @@ END SUBROUTINE vol7d_attr_callback_dba
 
 SUBROUTINE vol7d_serialize_export(this, metaanddatal)
 CLASS(vol7d_serialize_dballe),INTENT(inout) :: this
-type(dbametaanddatalist) :: metaanddatal
-
+type(dbametaanddatalist),INTENT(inout) :: metaanddatal
 TYPE(vol7d_serialize_iterline) :: linei
 TYPE(vol7d_serialize_itercol) :: coli
 
@@ -412,6 +411,7 @@ DO WHILE(coli%next())
 END DO
 
 conta%nattr=conta%nattr/conta%nvar
+
 allocate(metaanddata%dataattrv%dataattr(conta%nvar))
 do i =1,conta%nvar
   allocate(metaanddata%dataattrv%dataattr(i)%attrv%dcv(conta%nattr))
@@ -438,7 +438,6 @@ CALL linei%vol7d_serialize_iterline_set_callback(vol7d_ana_callback_dba &
  )
 
 DO WHILE(linei%next())
-
   coli = linei%vol7d_serialize_itercol_new() ! column iterator from linei (data line)
   DO WHILE(coli%next())
 ! call callbacks
@@ -446,11 +445,11 @@ DO WHILE(linei%next())
   END DO
 
 ! manage time definition
-if (this%v7d%time_definition == 0) then
-  metaanddata%metadata%datetime%datetime = &
-   metaanddata%metadata%datetime%datetime + &
-   timedelta_new(msec=metaanddata%metadata%timerange%vol7d_timerange%p1*1000)
-end if
+  if (this%v7d%time_definition == 0) then
+    metaanddata%metadata%datetime%datetime = &
+     metaanddata%metadata%datetime%datetime + &
+     timedelta_new(msec=metaanddata%metadata%timerange%vol7d_timerange%p1*1000)
+  end if
 
 !!  set to missing
   do i =1,conta%nvar
@@ -476,26 +475,26 @@ END DO
 
 END SUBROUTINE vol7d_serialize_export
 
-SUBROUTINE default_vol7d_valuec_callback(valu, var, genericptr)
-CHARACTER(len=*),INTENT(in) :: valu
-TYPE(vol7d_var),INTENT(in) :: var
-TYPE(c_ptr),VALUE :: genericptr
-
-CHARACTER(len=64),POINTER :: col
-
-CALL C_F_POINTER(genericptr, col)
-IF (c_e(valu)) THEN
-  IF (c_e(var%scalefactor) .AND. var%unit /= 'CCITTIA5' .AND. &
-   .NOT.(var%scalefactor == 0 .AND. var%unit == 'NUMERIC')) THEN
-    col = t2c(realdat(valu, var))
-  ELSE
-    col = TRIM(valu)
-  ENDIF
-ELSE
-  col = ''
-ENDIF
-
-END SUBROUTINE default_vol7d_valuec_callback
+!!$SUBROUTINE default_vol7d_valuec_callback(valu, var, genericptr)
+!!$CHARACTER(len=*),INTENT(in) :: valu
+!!$TYPE(vol7d_var),INTENT(in) :: var
+!!$TYPE(c_ptr),VALUE :: genericptr
+!!$
+!!$CHARACTER(len=64),POINTER :: col
+!!$
+!!$CALL C_F_POINTER(genericptr, col)
+!!$IF (c_e(valu)) THEN
+!!$  IF (c_e(var%scalefactor) .AND. var%unit /= 'CCITTIA5' .AND. &
+!!$   .NOT.(var%scalefactor == 0 .AND. var%unit == 'NUMERIC')) THEN
+!!$    col = t2c(realdat(valu, var))
+!!$  ELSE
+!!$    col = TRIM(valu)
+!!$  ENDIF
+!!$ELSE
+!!$  col = ''
+!!$ENDIF
+!!$
+!!$END SUBROUTINE default_vol7d_valuec_callback
 
 
 END MODULE vol7d_serialize_dballe_class

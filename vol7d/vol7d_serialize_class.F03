@@ -382,13 +382,13 @@ END SUBROUTINE vol7d_serialize_iterline_set_callback
 
 SUBROUTINE vol7d_serialize_setup(this, v7d)
 CLASS(vol7d_serialize),INTENT(inout) :: this
-TYPE(vol7d),INTENT(inout),TARGET :: v7d
+TYPE(vol7d),INTENT(in),TARGET :: v7d
 
 INTEGER :: nv, nav, ndv, i, j, n
 INTEGER,POINTER :: w_s(:), w_e(:)
 TYPE(vol7d_var_mapper),ALLOCATABLE :: mapper_tmp(:)
 
-CALL vol7d_alloc_vol(v7d) ! be safe
+!!CALL vol7d_alloc_vol(v7d) ! be safe
 this%v7d => v7d
 
 ! Eliminate together with checkvarvect if the next section works well!!!
