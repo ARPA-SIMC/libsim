@@ -116,10 +116,22 @@ INTERFACE OPERATOR (>=)
   MODULE PROCEDURE geo_coord_ge
 END INTERFACE
 
+!> Logical greater operator. Returns true if the first point
+!! lies to the northeast of the second
+INTERFACE OPERATOR (>)
+  MODULE PROCEDURE geo_coord_gt
+END INTERFACE
+
 !> Logical less-equal operator. Returns true if the first point
 !! lies to the southwest of the second
 INTERFACE OPERATOR (<=)
   MODULE PROCEDURE geo_coord_le
+END INTERFACE
+
+!> Logical less operator. Returns true if the first point
+!! lies to the southwest of the second
+INTERFACE OPERATOR (<)
+  MODULE PROCEDURE geo_coord_lt
 END INTERFACE
 
 !> Import one or more \a geo_coordvect objects from a plain text file
@@ -310,6 +322,13 @@ res = (this%ilon >= that%ilon .AND. this%ilat >= that%ilat)
 
 END FUNCTION geo_coord_ge
 
+elemental FUNCTION geo_coord_gt(this, that) RESULT(res)
+TYPE(geo_coord),INTENT(IN) :: this, that
+LOGICAL :: res
+
+res = (this%ilon > that%ilon .AND. this%ilat > that%ilat)
+
+END FUNCTION geo_coord_gt
 
 elemental FUNCTION geo_coord_le(this, that) RESULT(res)
 TYPE(geo_coord),INTENT(IN) :: this, that
@@ -319,6 +338,13 @@ res = (this%ilon <= that%ilon .AND. this%ilat <= that%ilat)
 
 END FUNCTION geo_coord_le
 
+elemental FUNCTION geo_coord_lt(this, that) RESULT(res)
+TYPE(geo_coord),INTENT(IN) :: this, that
+LOGICAL :: res
+
+res = (this%ilon < that%ilon .AND. this%ilat < that%ilat)
+
+END FUNCTION geo_coord_lt
 
 elemental FUNCTION geo_coord_ne(this, that) RESULT(res)
 TYPE(geo_coord),INTENT(IN) :: this, that
