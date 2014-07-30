@@ -30,15 +30,13 @@ libsim_vol7d_la_SOURCES += vol7d_serialize_class.F03 vol7d_serialize_csv_class.F
 endif
 
 if DBALLE
-libsim_vol7d_la_SOURCES += vol7d_dballe_class.F90
 AM_FCFLAGS += -I/usr/include/dballe
 libsim_vol7d_la_LIBADD += $(DBALLE_LIBS)
 if F2003_EXTENDED_FEATURES
 libsim_vol7d_la_SOURCES += dballe_class.F03
-if F2003_FEATURES
 libsim_vol7d_la_SOURCES += vol7d_serialize_dballe_class.F03
-endif
-libsim_vol7d_la_SOURCES += vol7d_dballenew_class.F03
+libsim_vol7d_la_SOURCES += vol7d_dballe_class.F03
+libsim_vol7d_la_SOURCES += vol7d_dballeold_class.F90
 endif
 endif
 
@@ -59,11 +57,6 @@ vol7d_dballe_class_nana.F90 vol7d_dballe_class_ndati.F90 \
 vol7d_dballe_class_dati.F90 vol7d_dballe_class_datiattr.F90 \
 vol7d_dballe_class_ana.F90 vol7d_dballe_class_anaattr.F90 vol7d_dballe_class_var_du.F90
 
-if ALCHIMIA
-libsim_vol7d_la_SOURCES += vol7d_alchimia_class.F03
-AM_FCFLAGS += -I../alchimia
-libsim_vol7d_la_LIBADD += ../alchimia/libsim_alchimia.la
-endif
 
 # c'e` una maniera migliore?
 tmpvar = $(libsim_vol7d_la_SOURCES:.f90=.mod)
@@ -98,14 +91,25 @@ vol7d_oraclesim_class.lo: vol7d_class.$(OBJEXT) vol7d_oraclesim_class_vartable.F
 endif
 
 if DBALLE
-vol7d_dballe_class.$(OBJEXT): vol7d_class.$(OBJEXT) \
+vol7d_dballeold_class.$(OBJEXT): vol7d_class.$(OBJEXT) \
 vol7d_dballe_class_nana.F90 vol7d_dballe_class_ndati.F90 \
 vol7d_dballe_class_dati.F90 vol7d_dballe_class_datiattr.F90 \
 vol7d_dballe_class_ana.F90 vol7d_dballe_class_anaattr.F90 vol7d_dballe_class_var_du.F90
-vol7d_dballe_class.lo: vol7d_class.$(OBJEXT) \
+vol7d_dballeold_class.lo: vol7d_class.$(OBJEXT) \
 vol7d_dballe_class_nana.F90 vol7d_dballe_class_ndati.F90 \
 vol7d_dballe_class_dati.F90 vol7d_dballe_class_datiattr.F90 \
 vol7d_dballe_class_ana.F90 vol7d_dballe_class_anaattr.F90  vol7d_dballe_class_var_du.F90
+
+vol7d_dballe_class.$(OBJEXT): vol7d_class.$(OBJEXT) \
+vol7d_dballe_class_var_du.F90
+vol7d_dballe_class.lo: vol7d_class.$(OBJEXT) \
+vol7d_dballe_class_var_du.F90
+
+if ALCHIMIA
+libsim_vol7d_la_SOURCES += vol7d_alchimia_class.F03
+AM_FCFLAGS += -I../alchimia
+libsim_vol7d_la_LIBADD += ../alchimia/libsim_alchimia.la
+endif
 
 if F2003_EXTENDED_FEATURES
 check_PROGRAMS += dballe_test
@@ -134,6 +138,7 @@ vol7d_serialize_dballe_class.$(OBJEXT): vol7d_serialize_class.$(OBJEXT)
 vol7d_serialize_dballe_class.lo: vol7d_serialize_class.$(OBJEXT)
 endif
 endif
+
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT) *.mod

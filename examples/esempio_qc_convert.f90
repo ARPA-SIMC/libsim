@@ -162,9 +162,9 @@ call export(v7d,unit=iunit)
 close (unit=iunit)
 
 filename="climaprec.bufr"
-call init(v7d_dballe,file=.true.,wipe=.true.,write=.true.,filename=filename,categoryappend="esporto")
+call init(v7d_dballe,file=.true.,wipe=.true.,write=.true.,filename=filename,categoryappend="esporto",template="generic")
 call copy(v7d,v7d_dballe%vol7d)
-call export(v7d_dballe,template="generic")
+call export(v7d_dballe)
 call delete(v7d_dballe)
 
 call delete(v7d)

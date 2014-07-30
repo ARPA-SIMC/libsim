@@ -77,11 +77,11 @@ call l4f_category_log(category,L4F_INFO,"export to BUFR")
 
 ! Chiamo il costruttore della classe vol7d_dballe per il mio oggetto in export
 CALL init(v7d_exp,file=.true.,write=.true.,wipe=.true.,filename=filename,&
-categoryappend="exportBUFR",format="BUFR")
+categoryappend="exportBUFR",format="BUFR",TEMPLATE="synop")
 
 CALL display(vol7d_out)
 v7d_exp%vol7d = vol7d_out
-CALL export(v7d_exp,TEMPLATE="synop")
+CALL export(v7d_exp)
 
 CALL l4f_category_log(category,L4F_INFO,"terminato")
 

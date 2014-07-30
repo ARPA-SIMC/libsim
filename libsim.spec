@@ -8,7 +8,7 @@ URL: http://www.arpa.emr.it/sim
 Packager: Davide Cesari <dcesari@arpa.emr.it>
 Source: %{name}-%{version}.tar.gz
 BuildRoot: /var/tmp/%{name}-buildroot
-BuildRequires: fortrangis-devel oracle-instantclient-devel libdballef-devel >= 6.3 grib_api-devel libgrib1 ncl-devel gdal-devel libdballe-devel help2man log4c cnf-devel libpng-devel vapor-devel fortrangis-devel
+BuildRequires: fortrangis-devel oracle-instantclient-devel libdballef-devel >= 6.3 grib_api-devel ncl-devel gdal-devel libdballe-devel help2man log4c cnf-devel libpng-devel vapor-devel fortrangis-devel
 Requires: libdballef4 >= 6.3 grib_api-1.10.0 grib_api-def_simc-1.10.0
 
 #temporaneo

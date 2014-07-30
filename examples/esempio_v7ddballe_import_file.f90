@@ -47,7 +47,7 @@ call l4f_category_log(category,L4F_INFO,"inizializzazioni")
 CALL init(v7d_file,file=.true.,categoryappend="importBUFR")
 
 call l4f_category_log(category,L4F_INFO,"Leggo i dati")
-CALL import(v7d_file,var="B12101")
+CALL import(v7d_file,var=(/"B12101"/))
 !CALL import(v7d_file)
 
 call l4f_category_log(category,L4F_INFO,"Fine lettura")
@@ -55,13 +55,13 @@ call l4f_category_log(category,L4F_INFO,"Fine lettura")
 !CALL init(v7d_dba,dsn="test",user="test",write=.true.,wipe=.true.,categoryappend="exportdba")
 filename="new.bufr"
 CALL init(v7d_dba,file=.true.,write=.true.,wipe=.true.&
- ,filename=filename,categoryappend="exportBUFR")
+ ,filename=filename,categoryappend="exportBUFR", template="generic")
 
 v7d_dba%vol7d=v7d_file%vol7d
 
 call l4f_category_log(category,L4F_INFO,"inizio export")
 
-call export(v7d_dba, template="generic")
+call export(v7d_dba)
 
 call l4f_category_log(category,L4F_INFO,"fine export")
 

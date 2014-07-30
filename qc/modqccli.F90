@@ -117,7 +117,7 @@ use simple_stat
 !use array_utilities
 !use io_units
 #ifdef HAVE_DBALLE
-use vol7d_dballe_class
+use vol7d_dballeold_class
 #endif
 
 implicit none

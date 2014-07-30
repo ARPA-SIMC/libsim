@@ -75,7 +75,7 @@
 !!
 !!\ingroup vol7d
 
-MODULE vol7d_dballenew_class
+MODULE vol7d_dballe_class
 
 USE dballe_class
 USE char_utilities
@@ -148,7 +148,7 @@ END INTERFACE export
 
 
 PRIVATE
-PUBLIC vol7d_dballe, init, delete, import, export
+PUBLIC vol7d_dballe, init, delete, import, export, vol7d_dballe_import_dballevar, vol7d_dballe_set_var_du
 
 CONTAINS
 
@@ -572,12 +572,15 @@ end if
 
                                 ! ---------------->   constant station data
 
-filter=dbafilter(filter=filter,contextana=.true.)
+filter=dbafilter(coordmin=mydbacoordmin,coordmax=mydbacoordmax,ana=mydbaana, &
+ datetimemin=mydatetimemin,datetimemax=mydatetimemax, &
+ timerange=mydbatimerange,level=mydbalevel,network=mydbanetwork,query=query,&
+ vars=anavars,starvars=anastarvars,contextana=.true.)
 
-!!$filter=dbafilter(coordmin=mydbacoordmin,coordmax=mydbacoordmax,ana=mydbaana, &
-!!$ datetimemin=mydatetimemin,datetimemax=mydatetimemax, &
-!!$ timerange=mydbatimerange,level=mydbalevel,network=mydbanetwork,query=query,&
-!!$ vars=anavars,starvars=anastarvars,contextana=.true.)
+
+! do not work (anavars and anastarvars are optional )
+!filter=dbafilter(filter=filter,contextana=.true.,vars=anavars,starvars=anastarvars)
+
                                 ! set filter
 call this%handle%set(filter=filter)
 
@@ -586,7 +589,6 @@ call this%handle%extrude(metaanddatav,filter=filter,dataonly=dataonly)
 call dba2v7d(this%vol7d, metaanddatav,this%time_definition,set_network)
 
 deallocate (metaanddatav)
-
 
                                 ! ---------------->   constant station data end
 
@@ -733,6 +735,7 @@ ENDIF
 !! find vars, starvars, anavars, anastarvars
 !!
 
+! create lists of all
                                 ! data
 do i =1, size(metaanddatav)
   do j=1, size(metaanddatav(i)%dataattrv%dataattr)
@@ -746,6 +749,7 @@ do i =1, size(metaanddatav)
   end do
 end do
 
+!count and put in vector of unuique key
 ndativar     = count_distinct (toarray_charl(dativarl)    , back=.TRUE.)
 allocate(dativara(ndativar))
 call pack_distinct_c (toarray_charl(dativarl)    , dativara    , back=.TRUE.)
@@ -757,7 +761,6 @@ allocate(anavara(nanavar))
 call pack_distinct_c (toarray_charl(anavarl)     , anavara     , back=.TRUE.)
 status = anavarl%delete()
 allocate (anavars%dcv(nanavar))
-
 
 
 an: do n=1,ndativar
@@ -851,7 +854,7 @@ end do dn
 
 
 !!
-!!             count all removing contextana metadata
+!!             count all unique metadata
 !!
 
 if(ldegnet) then
@@ -1002,14 +1005,18 @@ if (nanaattrc > 0 ) nanavarattrc=nanavarr+nanavari+nanavarb+nanavard+nanavarc
 
 CALL init(this,time_definition=ltime_definition)
 
-!!$  print *, "nana=",nana, "ntime=",ntime, "ntimerange=",ntimerange, &
-!!$   "nlevel=",nlevel, "nnetwork=",nnetwork, &
-!!$   "ndativarr=",ndativarr, "ndativari=",ndativari, &
-!!$   "ndativarb=",ndativarb, "ndativard=",ndativard, "ndativarc=",ndativarc,&
-!!$   "ndatiattrr=",ndatiattrr, "ndatiattri=",ndatiattri, "ndatiattrb=",ndatiattrb,&
-!!$   "ndatiattrd=",ndatiattrd, "ndatiattrc=",ndatiattrc,&
-!!$   "ndativarattrr=",ndativarattrr, "ndativarattri=",ndativarattri, "ndativarattrb=",ndativarattrb,&
-!!$   "ndativarattrd=",ndativarattrd, "ndativarattrc=",ndativarattrc
+!!$print *, "nana=",nana, "ntime=",ntime, "ntimerange=",ntimerange, &
+!!$ "nlevel=",nlevel, "nnetwork=",nnetwork, &
+!!$ "ndativarr=",ndativarr, "ndativari=",ndativari, &
+!!$ "ndativarb=",ndativarb, "ndativard=",ndativard, "ndativarc=",ndativarc,&
+!!$ "ndatiattrr=",ndatiattrr, "ndatiattri=",ndatiattri, "ndatiattrb=",ndatiattrb,&
+!!$ "ndatiattrd=",ndatiattrd, "ndatiattrc=",ndatiattrc,&
+!!$ "ndativarattrr=",ndativarattrr, "ndativarattri=",ndativarattri, "ndativarattrb=",ndativarattrb,&
+!!$ "ndativarattrd=",ndativarattrd, "ndativarattrc=",ndativarattrc
+!!$
+!!$print *,"nanaattrr,nanaattri,nanaattrb,nanaattrd,nanaattrc"
+!!$print *,nanaattrr,nanaattri,nanaattrb,nanaattrd,nanaattrc
+
 
 call vol7d_alloc (this, &
 nana=nana, ntime=ntime, ntimerange=ntimerange, &
@@ -1346,31 +1353,31 @@ do i =1, size(metaanddatav)
               
             type is (dbadatai)
               indanavarattr  = firsttrue(dato%btable == this%anavarattr%i%btable)
-              indattrvar = firsttrue(attr%btable == this%datiattr%i%btable)
+              indattrvar = firsttrue(attr%btable == this%anaattr%i%btable)
               this%volanaattri( &
                indana,indanavarattr,indnetwork,indattrvar &
                ) = attr%value
             type is (dbadatar)
               indanavarattr  = firsttrue(dato%btable == this%anavarattr%r%btable)
-              indattrvar = firsttrue(attr%btable == this%datiattr%r%btable)
+              indattrvar = firsttrue(attr%btable == this%anaattr%r%btable)
               this%volanaattrr( &
                indana,indanavarattr,indnetwork,indattrvar &
                ) = attr%value
             type is (dbadatad)
               indanavarattr  = firsttrue(dato%btable == this%anavarattr%d%btable)
-              indattrvar = firsttrue(attr%btable == this%datiattr%d%btable)
+              indattrvar = firsttrue(attr%btable == this%anaattr%d%btable)
               this%volanaattrd( &
                indana,indanavarattr,indnetwork,indattrvar &
                ) = attr%value
             type is (dbadatab)
               indanavarattr  = firsttrue(dato%btable == this%anavarattr%b%btable)
-              indattrvar = firsttrue(attr%btable == this%datiattr%b%btable)
+              indattrvar = firsttrue(attr%btable == this%anaattr%b%btable)
               this%volanaattrb( &
                indana,indanavarattr,indnetwork,indattrvar &
                ) = attr%value
             type is (dbadatac)
               indanavarattr  = firsttrue(dato%btable == this%anavarattr%c%btable)
-              indattrvar = firsttrue(attr%btable == this%datiattr%c%btable)
+              indattrvar = firsttrue(attr%btable == this%anaattr%c%btable)
               this%volanaattrc( &
                indana,indanavarattr,indnetwork,indattrvar &
                ) = attr%value
@@ -1673,9 +1680,11 @@ END FUNCTION open_dballe_file
 
 !!! TODO manage attr_only
 !!! attention template migrated in init
+!SUBROUTINE vol7d_dballe_export(this, network, coordmin, coordmax,&
+! timei, timef,level,timerange,var,attr,anavar,anaattr,attr_only,ana,dataonly)
 
 SUBROUTINE vol7d_dballe_export(this, network, coordmin, coordmax,&
- timei, timef,level,timerange,var,attr,anavar,anaattr,attr_only,ana,dataonly)
+ timei, timef,level,timerange,var,attr,anavar,anaattr,ana,dataonly)
 
 TYPE(vol7d_dballe),INTENT(inout) :: this !< oggetto contenente il volume e altre info per l'accesso al DSN
 character(len=network_name_len),INTENT(in),optional :: network !< network da exportare
@@ -1689,10 +1698,10 @@ TYPE(vol7d_timerange),INTENT(in),optional :: timerange !< timerange selezionato 
 !> variabili da exportare secondo la tabella B locale o alias relative a dati, attributi,
 !! anagrafica e attributi dell'anagrafica
 CHARACTER(len=*),INTENT(in),OPTIONAL :: var(:),attr(:),anavar(:),anaattr(:)
-!> permette di riscrivere su un DSN letto precedentemente, modificando solo gli attributi ai dati,
-!! ottimizzando enormente le prestazioni: gli attributi riscritti saranno quelli con this%data_id definito
-!! (solitamente ricopiato dall'oggetto letto)
-logical,intent(in),optional :: attr_only 
+!!$!> permette di riscrivere su un DSN letto precedentemente, modificando solo gli attributi ai dati,
+!!$!! ottimizzando enormente le prestazioni: gli attributi riscritti saranno quelli con this%data_id definito
+!!$!! (solitamente ricopiato dall'oggetto letto)
+!!$logical,intent(in),optional :: attr_only 
 TYPE(vol7d_ana),INTENT(inout),optional :: ana  !< identificativo della stazione da exportare
 logical, intent(in),optional :: dataonly          !< set to .true. to get data only (no attribute) 
 
@@ -1826,7 +1835,7 @@ call serialize%vol7d_serialize_export(metaanddatal)
 end subroutine v7d2dba
 
 
-end MODULE vol7d_dballenew_class
+end MODULE vol7d_dballe_class
 
 !>\example esempio_v7ddballe.f90
 !!/brief Programma esempio semplice per l'uso di vol7d con DB-All.e

@@ -1,6 +1,6 @@
 dnl Process this file with autoconf to produce a configure script.
 
-AC_INIT(libsim, 5.1.0, [dcesari@arpa.emr.it])
+AC_INIT(libsim, 6.0.0, [dcesari@arpa.emr.it])
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_SRCDIR([configure.ac])
 AM_INIT_AUTOMAKE([foreign])
@@ -35,23 +35,36 @@ AM_CONDITIONAL(EXAMPLES, test "x$enableval" = "xyes")
 AC_ARG_ENABLE(f2003-features, AC_HELP_STRING([--enable-f2003-features],
   [enable some F2003 features (gfortran 4.6)]), , [enableval=no])dnl default disable
 if test "x$enableval" = "xyes"; then
-AC_DEFINE(F2003_FEATURES, 1, [Enable some F2003 features (gfortran 4.6)])
+   AC_DEFINE(F2003_FEATURES, 1, [Enable some F2003 features (gfortran 4.6)])
 fi
 AM_CONDITIONAL(F2003_FEATURES, test "x$enableval" = "xyes")
+#save
+MY_F2003_FEATURES=$enableval
 
 AC_ARG_ENABLE(f2003-extended-features, AC_HELP_STRING([--enable-f2003-extended-features],
   [enable extended F2003 features (gfortran 4.8)]), , [enableval=no])dnl default disable
 if test "x$enableval" = "xyes"; then
-AC_DEFINE(F2003_EXTENDED_FEATURES, 1, [Enable major part of F2003 features (gfortran 4.8)])
+  AC_DEFINE(F2003_EXTENDED_FEATURES, 1, [Enable major part of F2003 features (gfortran 4.8)])
 fi
 AM_CONDITIONAL(F2003_EXTENDED_FEATURES, test "x$enableval" = "xyes")
+if test "x$MY_F2003_FEATURES" = "xno"; then
+  AC_MSG_ERROR([F2003_EXTENDED_FEATURES enabled without F2003_FEATURES])
+fi
+#save
+MY_F2003_EXTENDED_FEATURES=$enableval
+
 
 AC_ARG_ENABLE(f2003-full-features, AC_HELP_STRING([--enable-f2003-full-features],
   [enable full F2003 features (gfortran 4.9)]), , [enableval=no])dnl default disable
 if test "x$enableval" = "xyes"; then
-AC_DEFINE(F2003_FULL_FEATURES, 1, [Enable full F2003 features (gfortran 4.9)])
+  AC_DEFINE(F2003_FULL_FEATURES, 1, [Enable full F2003 features (gfortran 4.9)])
 fi
 AM_CONDITIONAL(F2003_FULL_FEATURES, test "x$enableval" = "xyes")
+if test "x$MY_F2003_EXTENDED_FEATURES" = "xno"; then
+  AC_MSG_ERROR([F2003_FULL_FEATURES enabled without F2003_EXTENDED_FEATURES])
+fi
+#save
+MY_F2003_FULL_FEATURES=$enableval
 
 AC_PROG_CXX()
 
@@ -259,6 +272,10 @@ AM_CONDITIONAL(GDAL, test "x$enableval" = "xyes")
 AC_ARG_ENABLE(dballe, AC_HELP_STRING([--disable-dballe],
   [disable dballe support]),,[enableval=yes])dnl default enable
 if test "x$enableval" = "xyes"; then
+
+  if test "x$MY_F2003_EXTENDED_FEATURES" = "xno"; then
+     AC_MSG_ERROR([dballe enabled without F2003_EXTENDED_FEATURES])
+  fi
   PKG_CHECK_EXISTS([libdballef >= 6.0], [enableval=yes], [enableval=no])
   if test "x$enableval" = "xyes"; then
     AC_MSG_RESULT([dballe code requested and found])

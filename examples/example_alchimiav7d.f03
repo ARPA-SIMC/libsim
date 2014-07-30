@@ -35,7 +35,7 @@ filenameout="../data/tp.bufr"
 call register_termo(vfn)
 
 call init(myin,filename=filenamein, file=.true., categoryappend="input")
-call init(myout,filename=filenameout, file=.true., write=.true., wipe=.true., categoryappend="output")
+call init(myout,filename=filenameout, file=.true., write=.true., wipe=.true., categoryappend="output",template="generic")
 
 !CALL import(myin,var=(/"B12101","B10004"/),varkind=(/"r","r"/))
 CALL import(myin)
@@ -57,7 +57,7 @@ end if
 call display(vfnoracle)
 
 call display(myout%vol7d)
-call export(myout,template="generic")
+call export(myout)
 
 call delete(myout)
 call delete(myin)

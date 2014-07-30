@@ -39,7 +39,7 @@ call init(network,name='generic')
 CALL init(v7d)
 
 ! Importo i dati, variabile 'B13011' della btable (precipitazione),
-CALL import(v7d, 'B13011',set_network=network,varkind=(/"r"/),  attr=(/"*B33192","*B33007"/))
+CALL import(v7d, var=(/'B13011'/),set_network=network,varkind=(/"r"/),  attr=(/"*B33192","*B33007"/))
 !CALL import(v7d, 'B13011', network=network, timei=ti, timef=tf, timerange=vol7d_timerange(4,-1800,0), attr=(/"*B33192","*B33007"/))
 
 print *,v7d%vol7d%dativar%r

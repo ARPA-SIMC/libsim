@@ -58,7 +58,7 @@ CALL init(network(8), 'rete22')
 CALL init(v7d,dsn="test",user="test",password="")
 ! Importo i dati, variabile 'B13011' della btable (precipitazione),
 ! rete 18 (FIDUPO), 20 (SIMNBO), 21 (SIMNPR)
-CALL import(v7d, 'B13011', network, timei=ti, timef=tf, set_network=dummy_network,varkind=(/"r"/))
+CALL import(v7d, (/'B13011'/), network, timei=ti, timef=tf, set_network=dummy_network,varkind=(/"r"/))
 
 PRINT*,SHAPE(v7d%vol7d%voldatir)
 

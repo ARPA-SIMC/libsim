@@ -321,11 +321,11 @@ ELSE IF (output_format == 'BUFR' .OR. output_format == 'CREX' .OR. output_format
   IF (output_template == '') output_template = 'generic'
 ! check whether wipe=file is reasonable
   CALL init(v7d_dba_out, filename=output_file, FORMAT=output_format, &
-   dsn=dsn, user=user, password=password, file=file, WRITE=.TRUE., wipe=file)
+   dsn=dsn, user=user, password=password, file=file, WRITE=.TRUE., wipe=file, template=output_template)
 
   v7d_dba_out%vol7d = v7d
   CALL init(v7d) ! nullify without deallocating
-  CALL export(v7d_dba_out, template=output_template)
+  CALL export(v7d_dba_out)
   CALL delete(v7d_dba_out)
 #endif
 

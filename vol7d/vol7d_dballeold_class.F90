@@ -75,7 +75,7 @@
 !!
 !!\ingroup vol7d
 
-MODULE vol7d_dballe_class
+MODULE vol7d_dballeold_class
 
 USE char_utilities
 USE vol7d_class
@@ -3753,7 +3753,7 @@ end if
 end subroutine mem_acquire
 
 
-end MODULE vol7d_dballe_class
+end MODULE vol7d_dballeold_class
 
 !>\example esempio_v7ddballe.f90
 !!/brief Programma esempio semplice per l'uso di vol7d con DB-All.e

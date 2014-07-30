@@ -364,10 +364,10 @@ ELSE IF (output_format == 'BUFR' .OR. output_format == 'CREX') THEN
     output_file='/dev/stdout'
   ENDIF
   CALL init(v7d_dba_out, filename=output_file, format=output_format, file=.TRUE., &
-   write=.TRUE., wipe=.TRUE., categoryappend="export")
+   write=.TRUE., wipe=.TRUE., categoryappend="export", template=output_template)
   IF (ldisplay) CALL display(v7d_out)
   v7d_dba_out%vol7d = v7d_out
-  CALL export (v7d_dba_out, template=output_template)
+  CALL export (v7d_dba_out)
   CALL delete(v7d_dba_out)
 #endif
 #ifdef HAVE_LIBGRIBAPI
