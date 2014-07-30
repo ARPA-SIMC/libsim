@@ -789,7 +789,7 @@ IF (this%trans%trans_type == 'vertint') THEN
     IF (.NOT.PRESENT(coord_3d_in)) THEN
 ! the next check is going to be relaxed to allow taking vertical
 ! coord_3d_in from the volume within the compute method
-      CALL l4f_category_log(this%category, L4F_ERROR, &
+      CALL l4f_category_log(this%category, L4F_WARN, &
        'vertint: different input and output level types &
        &and no coord_3d_in, hoping for vert. coord. in volume')
       this%dolog = dolog ! a little bit dirty, I must compute log later

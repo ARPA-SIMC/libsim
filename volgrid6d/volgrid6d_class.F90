@@ -1406,9 +1406,9 @@ ENDIF
 
 CALL get_val(this, levshift=levshift, levused=levused)
 DO ivar=1,nvar
-  IF (c_e(var_coord_vol)) THEN
-    IF (ivar == var_coord_vol) CYCLE ! skip coordinate variable in output
-  ENDIF
+!  IF (c_e(var_coord_vol)) THEN
+!    IF (ivar == var_coord_vol) CYCLE ! skip coordinate variable in output
+!  ENDIF
   DO itimerange=1,ntimerange
     DO itime=1,ntime
 ! skip empty columns where possible, improve
