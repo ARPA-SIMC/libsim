@@ -1802,7 +1802,8 @@ filter=dbafilter(coordmin=mydbacoordmin,coordmax=mydbacoordmax,ana=mydbaana, &
 call v7d2dba(this%vol7d,metaanddatal)
 !call metaanddatal%display()
 
-call this%handle%ingest(metaanddatal,filter=filter,dataonly=dataonly)
+!call this%handle%ingest(metaanddatal,filter=filter,dataonly=dataonly)
+call metaanddatal%ingest(session=this%handle,filter=filter,dataonly=dataonly)
 
 stat = metaanddatal%delete()
 

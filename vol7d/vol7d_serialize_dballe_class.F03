@@ -32,6 +32,7 @@ END TYPE vol7d_serialize_dballe
 
 type counter
   integer :: nvar,nattr
+  integer :: nanavar,nanaattr
 end type counter
 
 PRIVATE
@@ -232,24 +233,32 @@ end do
 END SUBROUTINE vol7d_valuec_callback_dba
 
 
+
 SUBROUTINE vol7d_valuer_attr_callback_dba(valu, var, attr, genericptr)
 REAL,INTENT(in) :: valu
 TYPE(vol7d_var),INTENT(in) :: var
 TYPE(vol7d_var),INTENT(in) :: attr
 TYPE(c_ptr),VALUE :: genericptr
 type(dbametaanddata),POINTER :: metaanddata
-integer :: i
+integer :: i,j
 
 CALL C_F_POINTER(genericptr, metaanddata)
 
+!print*, "vol7d_valuei_attr_callback_dba: ",var%btable,attr%btable
 do i =1, size(metaanddata%dataattrv%dataattr)
-  if (.not. allocated(metaanddata%dataattrv%dataattr(i)%dat)) then
-    allocate(metaanddata%dataattrv%dataattr(i)%dat,source=dbadatar(var%btable,valu))
-    exit
+  if (metaanddata%dataattrv%dataattr(i)%dat%btable == var%btable) then
+    do j =1, size(metaanddata%dataattrv%dataattr(i)%attrv%dcv)
+      if (.not. allocated(metaanddata%dataattrv%dataattr(i)%attrv%dcv(j)%dat)) then
+        !print *,"allocate attributei: ",var%btable
+        allocate(metaanddata%dataattrv%dataattr(i)%attrv%dcv(j)%dat,source=dbadatar(attr%btable,valu))
+        exit
+      end if
+    end do
   end if
 end do
 
 END SUBROUTINE vol7d_valuer_attr_callback_dba
+
 
 
 SUBROUTINE vol7d_valued_attr_callback_dba(valu, var, attr, genericptr)
@@ -258,18 +267,25 @@ TYPE(vol7d_var),INTENT(in) :: var
 TYPE(vol7d_var),INTENT(in) :: attr
 TYPE(c_ptr),VALUE :: genericptr
 type(dbametaanddata),POINTER :: metaanddata
-integer :: i
+integer :: i,j
 
 CALL C_F_POINTER(genericptr, metaanddata)
 
+!print*, "vol7d_valuei_attr_callback_dba: ",var%btable,attr%btable
 do i =1, size(metaanddata%dataattrv%dataattr)
-  if (.not. allocated(metaanddata%dataattrv%dataattr(i)%dat)) then
-    allocate(metaanddata%dataattrv%dataattr(i)%dat,source=dbadatad(var%btable,valu))
-    exit
+  if (metaanddata%dataattrv%dataattr(i)%dat%btable == var%btable) then
+    do j =1, size(metaanddata%dataattrv%dataattr(i)%attrv%dcv)
+      if (.not. allocated(metaanddata%dataattrv%dataattr(i)%attrv%dcv(j)%dat)) then
+        !print *,"allocate attributei: ",var%btable
+        allocate(metaanddata%dataattrv%dataattr(i)%attrv%dcv(j)%dat,source=dbadatad(attr%btable,valu))
+        exit
+      end if
+    end do
   end if
 end do
 
 END SUBROUTINE vol7d_valued_attr_callback_dba
+
 
 
 SUBROUTINE vol7d_valuei_attr_callback_dba(valu, var, attr, genericptr)
@@ -278,14 +294,20 @@ TYPE(vol7d_var),INTENT(in) :: var
 TYPE(vol7d_var),INTENT(in) :: attr
 TYPE(c_ptr),VALUE :: genericptr
 type(dbametaanddata),POINTER :: metaanddata
-integer :: i
+integer :: i,j
 
 CALL C_F_POINTER(genericptr, metaanddata)
 
+!print*, "vol7d_valuei_attr_callback_dba: ",var%btable,attr%btable
 do i =1, size(metaanddata%dataattrv%dataattr)
-  if (.not. allocated(metaanddata%dataattrv%dataattr(i)%dat)) then
-    allocate(metaanddata%dataattrv%dataattr(i)%dat,source=dbadatai(var%btable,valu))
-    exit
+  if (metaanddata%dataattrv%dataattr(i)%dat%btable == var%btable) then
+    do j =1, size(metaanddata%dataattrv%dataattr(i)%attrv%dcv)
+      if (.not. allocated(metaanddata%dataattrv%dataattr(i)%attrv%dcv(j)%dat)) then
+        !print *,"allocate attributei: ",var%btable
+        allocate(metaanddata%dataattrv%dataattr(i)%attrv%dcv(j)%dat,source=dbadatai(attr%btable,valu))
+        exit
+      end if
+    end do
   end if
 end do
 
@@ -298,19 +320,24 @@ TYPE(vol7d_var),INTENT(in) :: var
 TYPE(vol7d_var),INTENT(in) :: attr
 TYPE(c_ptr),VALUE :: genericptr
 type(dbametaanddata),POINTER :: metaanddata
-integer :: i
+integer :: i,j
 
 CALL C_F_POINTER(genericptr, metaanddata)
 
+!print*, "vol7d_valuei_attr_callback_dba: ",var%btable,attr%btable
 do i =1, size(metaanddata%dataattrv%dataattr)
-  if (.not. allocated(metaanddata%dataattrv%dataattr(i)%dat)) then
-    allocate(metaanddata%dataattrv%dataattr(i)%dat,source=dbadatab(var%btable,valu))
-    exit
+  if (metaanddata%dataattrv%dataattr(i)%dat%btable == var%btable) then
+    do j =1, size(metaanddata%dataattrv%dataattr(i)%attrv%dcv)
+      if (.not. allocated(metaanddata%dataattrv%dataattr(i)%attrv%dcv(j)%dat)) then
+        !print *,"allocate attributei: ",var%btable
+        allocate(metaanddata%dataattrv%dataattr(i)%attrv%dcv(j)%dat,source=dbadatab(attr%btable,valu))
+        exit
+      end if
+    end do
   end if
 end do
 
 END SUBROUTINE vol7d_valueb_attr_callback_dba
-
 
 SUBROUTINE vol7d_valuec_attr_callback_dba(valu, var, attr, genericptr)
 character(len=*),INTENT(in) :: valu
@@ -318,14 +345,20 @@ TYPE(vol7d_var),INTENT(in) :: var
 TYPE(vol7d_var),INTENT(in) :: attr
 TYPE(c_ptr),VALUE :: genericptr
 type(dbametaanddata),POINTER :: metaanddata
-integer :: i
+integer :: i,j
 
 CALL C_F_POINTER(genericptr, metaanddata)
 
+!print*, "vol7d_valuei_attr_callback_dba: ",var%btable,attr%btable
 do i =1, size(metaanddata%dataattrv%dataattr)
-  if (.not. allocated(metaanddata%dataattrv%dataattr(i)%dat)) then
-    allocate(metaanddata%dataattrv%dataattr(i)%dat,source=dbadatac(var%btable,valu))
-    exit
+  if (metaanddata%dataattrv%dataattr(i)%dat%btable == var%btable) then
+    do j =1, size(metaanddata%dataattrv%dataattr(i)%attrv%dcv)
+      if (.not. allocated(metaanddata%dataattrv%dataattr(i)%attrv%dcv(j)%dat)) then
+        !print *,"allocate attributei: ",var%btable
+        allocate(metaanddata%dataattrv%dataattr(i)%attrv%dcv(j)%dat,source=dbadatac(attr%btable,valu))
+        exit
+      end if
+    end do
   end if
 end do
 
@@ -339,13 +372,18 @@ end SUBROUTINE vol7d_void_callback_dba
 
 SUBROUTINE vol7d_value_var_header_callback_dba(var, typ, genericptr)
 TYPE(vol7d_var),INTENT(in) :: var
-CHARACTER(len=1),INTENT(in) :: typ
+CHARACTER(len=*),INTENT(in) :: typ
 TYPE(c_ptr),VALUE :: genericptr
 
 type (counter),POINTER :: conta
 
 CALL C_F_POINTER(genericptr, conta)
-conta%nvar=conta%nvar+1
+
+if (typ(2:2) == "d") then
+  conta%nvar=conta%nvar+1
+else if (typ(2:2) == "a") then
+  conta%nanavar=conta%nanavar+1
+end if
 
 END SUBROUTINE vol7d_value_var_header_callback_dba
 
@@ -353,13 +391,18 @@ END SUBROUTINE vol7d_value_var_header_callback_dba
 SUBROUTINE vol7d_value_attr_header_callback_dba(var, attr, typ, genericptr)
 TYPE(vol7d_var),INTENT(in) :: var
 TYPE(vol7d_var),INTENT(in) :: attr
-CHARACTER(len=1),INTENT(in) :: typ
+CHARACTER(len=*),INTENT(in) :: typ
 TYPE(c_ptr),VALUE :: genericptr
 
 type (counter),POINTER :: conta
 
 CALL C_F_POINTER(genericptr, conta)
-conta%nattr=conta%nattr+1
+
+if (typ(2:2) == "d") then
+  conta%nattr=conta%nattr+1
+else if (typ(2:2) == "a") then
+  conta%nanaattr=conta%nanaattr+1
+end if
 
 END SUBROUTINE vol7d_value_attr_header_callback_dba
 
@@ -387,9 +430,9 @@ TYPE(vol7d_serialize_itercol) :: coli
 
 type (counter),target :: conta
 type(dbametaanddata),target :: metaanddata
-integer :: i,j
+integer :: i,j, nvar , nattr
 
-conta=counter(0,0)
+conta=counter(0,0,0,0)
 
 ! set "header" callbacks
 CALL this%vol7d_serialize_set_callback(&
@@ -410,11 +453,14 @@ DO WHILE(coli%next())
   CALL coli%export(C_LOC(conta))
 END DO
 
-conta%nattr=conta%nattr/conta%nvar
+print *,"Conta: ",conta
+nattr = conta%nattr/conta%nvar + conta%nanaattr/conta%nanavar
+nvar  = conta%nvar + conta%nanavar
+print *,"nvar: ",nvar,"nattr: ",nattr
 
-allocate(metaanddata%dataattrv%dataattr(conta%nvar))
-do i =1,conta%nvar
-  allocate(metaanddata%dataattrv%dataattr(i)%attrv%dcv(conta%nattr))
+allocate(metaanddata%dataattrv%dataattr(nvar))
+do i =1,nvar
+  allocate(metaanddata%dataattrv%dataattr(i)%attrv%dcv(nattr))
 enddo
 
 ! loop over lines
@@ -452,10 +498,10 @@ DO WHILE(linei%next())
   end if
 
 !!  set to missing
-  do i =1,conta%nvar
+  do i =1,nvar
     if (.not. allocated(metaanddata%dataattrv%dataattr(i)%dat)) &
     allocate(metaanddata%dataattrv%dataattr(i)%dat,source=dbadatai())
-    do j=1,conta%nattr
+    do j=1,nattr
       if (.not. allocated(metaanddata%dataattrv%dataattr(i)%attrv%dcv(j)%dat)) &
       allocate(metaanddata%dataattrv%dataattr(i)%attrv%dcv(j)%dat,source=dbadatac())
     end do
@@ -464,9 +510,9 @@ DO WHILE(linei%next())
   call metaanddatal%append(metaanddata)
 
 !!  deallocate
-  do i =1,conta%nvar
+  do i =1,nvar
     deallocate(metaanddata%dataattrv%dataattr(i)%dat)
-    do j=1,conta%nattr
+    do j=1,nattr
       deallocate(metaanddata%dataattrv%dataattr(i)%attrv%dcv(j)%dat)
     end do
   enddo

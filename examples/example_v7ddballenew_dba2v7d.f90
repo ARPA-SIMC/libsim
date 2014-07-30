@@ -73,73 +73,73 @@ call l4f_category_log(category,L4F_INFO,"end export")
 
 CALL delete (v7d_dba) 
 
-!!$
-!!$print*,"!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
-!!$print*,"!!                           import from metaanddatav"
-!!$print*,"!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
-!!$
-!!$allocate(metaanddatav(2))   ! one metadata for data and one for constant data
-!!$
-!!$metaanddatav(1)%metadata=dbametadata( &
-!!$  level=dbalevel(level1=105, l1=2000) &
-!!$ ,timerange=dbatimerange(timerange=4, p1=3600,p2=7200) &
-!!$ ,ana=dbaana(lon=10.d0,lat=45.d0) &
-!!$ ,network=dbanetwork("generic") &
-!!$ ,datetime=dbadatetime(datetime_new(2014,01,06,18,00)))
-!!$
-!!$!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!$! create  an etherogeneous ensamble of data
-!!$allocate (metaanddatav(1)%dataattrv%dataattr(2))
-!!$
-!!$! first data
-!!$allocate (metaanddatav(1)%dataattrv%dataattr(1)%dat,source=dbadatai("B13003",85))
-!!$
-!!$! create an etherogeneous ensamble of attr
-!!$allocate (attrv%dcv(3))
-!!$allocate (attrv%dcv(1)%dat,source=dbadatar("*B33192",30.))
-!!$allocate (attrv%dcv(2)%dat,source=dbadatai("*B33193",50))
-!!$allocate (attrv%dcv(3)%dat,source=dbadatar("*B33194",70.))
-!!$!assemble data and attribute
-!!$metaanddatav(1)%dataattrv%dataattr(1)%attrv=attrv
-!!$
-!!$! second data
-!!$allocate (metaanddatav(1)%dataattrv%dataattr(2)%dat,source=dbadatai("B12101",27315))
-!!$! create an etherogeneous ensamble of attr
-!!$deallocate(attrv%dcv)
-!!$allocate (attrv%dcv(2))
-!!$allocate (attrv%dcv(1)%dat,source=dbadatar("*B33192",30.))
-!!$allocate (attrv%dcv(2)%dat,source=dbadatai("*B33193",50))
-!!$!assemble data and attribute
-!!$metaanddatav(1)%dataattrv%dataattr(2)%attrv=attrv
-!!$!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!$
-!!$!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!$! station costant data
-!!$! copy the same metadata setting that here we have constant in time data
-!!$metaanddatav(2)%metadata=metaanddatav(1)%metadata%dbacontextana()
-!!$! create  an etherogeneous ensamble of data
-!!$allocate (metaanddatav(2)%dataattrv%dataattr(2))
-!!$allocate (metaanddatav(2)%dataattrv%dataattr(1)%dat,source=dbadatai("B07030",223))
-!!$allocate (metaanddatav(2)%dataattrv%dataattr(1)%attrv%dcv(0))          ! we do not want attributes
-!!$allocate (metaanddatav(2)%dataattrv%dataattr(2)%dat,source=dbadatac("B01019","My beautifull station"))
-!!$allocate (metaanddatav(2)%dataattrv%dataattr(2)%attrv%dcv(0))          ! we do not want attributes
-!!$!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!$
-!!$!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!$! display and put everythings in vol7d
-!!$do i=1,size(metaanddatav)
-!!$  call metaanddatav(i)%display()
-!!$end do
-!!$
-!!$call import (v7d,metaanddatav)
-!!$
-!!$call display(v7d)
-!!$
-!!$!call metaanddatav%delete()
-!!$call export (v7d,metaanddatal)
-!!$call metaanddatal%display()
-!!$
-!!$!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+Print*,"!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+print*,"!!                           import from metaanddatav"
+print*,"!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+
+allocate(metaanddatav(2))   ! one metadata for data and one for constant data
+
+metaanddatav(1)%metadata=dbametadata( &
+  level=dbalevel(level1=103, l1=2000) &
+ ,timerange=dbatimerange(timerange=4, p1=3600,p2=7200) &
+ ,ana=dbaana(lon=10.d0,lat=45.d0) &
+ ,network=dbanetwork("generic") &
+ ,datetime=dbadatetime(datetime_new(2014,01,06,18,00)))
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+! create  an etherogeneous ensamble of data
+allocate (metaanddatav(1)%dataattrv%dataattr(2))
+
+! first data
+allocate (metaanddatav(1)%dataattrv%dataattr(1)%dat,source=dbadatai("B13003",85))
+
+! create an etherogeneous ensamble of attr
+allocate (attrv%dcv(3))
+allocate (attrv%dcv(1)%dat,source=dbadatar("*B33192",30.))
+allocate (attrv%dcv(2)%dat,source=dbadatai("*B33193",50))
+allocate (attrv%dcv(3)%dat,source=dbadatar("*B33194",70.))
+!assemble data and attribute
+metaanddatav(1)%dataattrv%dataattr(1)%attrv=attrv
+
+! second data
+allocate (metaanddatav(1)%dataattrv%dataattr(2)%dat,source=dbadatai("B12101",27315))
+! create an etherogeneous ensamble of attr
+deallocate(attrv%dcv)
+allocate (attrv%dcv(2))
+allocate (attrv%dcv(1)%dat,source=dbadatar("*B33192",30.))
+allocate (attrv%dcv(2)%dat,source=dbadatai("*B33193",50))
+!assemble data and attribute
+metaanddatav(1)%dataattrv%dataattr(2)%attrv=attrv
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+! station costant data
+! copy the same metadata setting that here we have constant in time data
+metaanddatav(2)%metadata=metaanddatav(1)%metadata%dbacontextana()
+! create  an etherogeneous ensamble of data
+allocate (metaanddatav(2)%dataattrv%dataattr(2))
+allocate (metaanddatav(2)%dataattrv%dataattr(1)%dat,source=dbadatai("B07030",223))
+allocate (metaanddatav(2)%dataattrv%dataattr(1)%attrv%dcv(0))          ! we do not want attributes
+allocate (metaanddatav(2)%dataattrv%dataattr(2)%dat,source=dbadatac("B01019","My beautifull station"))
+allocate (metaanddatav(2)%dataattrv%dataattr(2)%attrv%dcv(0))          ! we do not want attributes
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+! display and put everythings in vol7d
+do i=1,size(metaanddatav)
+  call metaanddatav(i)%display()
+end do
+
+call import (v7d,metaanddatav)
+
+call display(v7d)
+
+!call metaanddatav%delete()
+call export (v7d,metaanddatal)
+call metaanddatal%display()
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 !chiudo il logger
 call l4f_category_delete(category)

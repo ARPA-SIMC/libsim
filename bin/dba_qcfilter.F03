@@ -127,7 +127,8 @@ do while (sessionfrom%messages_read_next())
           deallocate(metaanddatav(i)%dataattrv%dataattr(j)%attrv%dcv)
           allocate (metaanddatav(i)%dataattrv%dataattr(j)%attrv%dcv(1))
           allocate (metaanddatav(i)%dataattrv%dataattr(j)%attrv%dcv(1)%dat,source=dbadatai("*B33007",0))
-          call sessionfrom%ingest(dataattr=metaanddatav(i)%dataattrv%dataattr(j))
+          !call sessionfrom%ingest(dataattr=metaanddatav(i)%dataattrv%dataattr(j))
+          call metaanddatav(i)%dataattrv%dataattr(j)%ingest(sessionfrom)
         end if
 
       else

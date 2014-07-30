@@ -61,6 +61,7 @@ subroutine write0()
 
 type(dbasession) :: sessionana
 type(dbaanalist) :: anal
+type(dbaana) :: ana
 logical :: status
 
 ! connect to dsn type BUFR file for write
@@ -76,7 +77,9 @@ call anal%display()
 call anal%rewind()
 !ingest ana
 do while (anal%element())
-  call sessionana%ingest(ana=anal%current())
+  !call sessionana%ingest(ana=anal%current())
+  ana=anal%current()
+  call ana%ingest(sessionana)
   call anal%next()
 end do
 
@@ -146,7 +149,8 @@ allocate (metaanddata(2)%dataattrv%dataattr(2)%attrv%dcv(0))          ! we do no
 ! display and save everythings
 do i=1,size(metaanddata)
   call metaanddata(i)%display()
-  call session%ingest(metaanddata=metaanddata(i))
+  !call session%ingest(metaanddata=metaanddata(i))
+  call metaanddata(i)%ingest(session)
 end do
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
@@ -322,14 +326,15 @@ allocate (dataattrv%dataattr(2)%attrv%dcv(0))
 call dataattrv%display()
 
 ! write data and attribute
-call session%ingest(dataattrv=dataattrv)
-
+!call session%ingest(dataattrv=dataattrv)
+call dataattrv%ingest(session)
 
 ! work on constant station data
 call session%set(metadata%dbacontextana())
 
 ! write the same data and attribute as constant station data
-call session%ingest(dataattrv=dataattrv)
+!call session%ingest(dataattrv=dataattrv)
+call dataattrv%ingest(session)
 
 end subroutine write4
 
@@ -421,7 +426,8 @@ do while (size(metaanddatav) >0)
   do i =1,size(metaanddatav)
     print *, "display metaanddatav index: ", i
 !    call metaanddatav(i)%display()
-    call sessionto%ingest(metaanddata=metaanddatav(i))
+    !call sessionto%ingest(metaanddata=metaanddatav(i))
+    call metaanddatav(i)%ingest(sessionto)
   end do
 !  call sessionto%close_message()
   call sessionfrom%extrude(metaanddatav)
@@ -438,7 +444,8 @@ do while (size(metaanddatav) >0)
   do i =1,size(metaanddatav)
     print *, "display metaanddatav index: ", i
 !    call metaanddatav(i)%display()
-    call sessionto%ingest(metaanddata=metaanddatav(i))
+    !call sessionto%ingest(metaanddata=metaanddatav(i))
+    call metaanddatav(i)%ingest(sessionto)
   end do
 !  call sessionto%close_message()
   call sessionfrom%extrude(metaanddatav)

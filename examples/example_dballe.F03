@@ -99,6 +99,7 @@ subroutine write0()
 
 type(dbasession) :: sessionana
 type(dbaanalist) :: anal
+type(dbaana) :: ana
 logical :: status
 
 ! connect to dsn type BUFR file for write
@@ -114,7 +115,8 @@ call anal%display()
 call anal%rewind()
 !ingest ana
 do while (anal%element())
-  call sessionana%ingest(anal%current())
+  ana=anal%current()
+  call ana%ingest(sessionana)
   call anal%next()
 end do
 
@@ -359,7 +361,7 @@ allocate (dataattrv%dataattr(2)%attrv%dcv(0))
 call dataattrv%display()
 
 ! write data and attribute
-call session%ingest(dataattrv)
+!call session%ingest(dataattrv)
 call dataattrv%ingest(session)
 
 
