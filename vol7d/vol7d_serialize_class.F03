@@ -779,64 +779,64 @@ SELECT CASE(this%ser%mapper(ind)%cat)
 CASE(1)
   SELECT CASE(this%ser%mapper(ind)%typ)
   CASE(1)
-    CALL this%ser%vol7d_value_var_callback(this%ser%v7d%anavar%r(varind), 'r', genericptr)
+    CALL this%ser%vol7d_value_var_callback(this%ser%v7d%anavar%r(varind), 'ra', genericptr)
   CASE(2)
-    CALL this%ser%vol7d_value_var_callback(this%ser%v7d%anavar%d(varind), 'd', genericptr)
+    CALL this%ser%vol7d_value_var_callback(this%ser%v7d%anavar%d(varind), 'da', genericptr)
   CASE(3)
-    CALL this%ser%vol7d_value_var_callback(this%ser%v7d%anavar%i(varind), 'i', genericptr)
+    CALL this%ser%vol7d_value_var_callback(this%ser%v7d%anavar%i(varind), 'ia', genericptr)
   CASE(4)
-    CALL this%ser%vol7d_value_var_callback(this%ser%v7d%anavar%b(varind), 'b', genericptr)
+    CALL this%ser%vol7d_value_var_callback(this%ser%v7d%anavar%b(varind), 'ba', genericptr)
   CASE(5)
-    CALL this%ser%vol7d_value_var_callback(this%ser%v7d%anavar%c(varind), 'c', genericptr)
+    CALL this%ser%vol7d_value_var_callback(this%ser%v7d%anavar%c(varind), 'ca', genericptr)
   END SELECT
 CASE(2)
   SELECT CASE(this%ser%mapper(ind)%typ)
   CASE(1)
     CALL this%ser%vol7d_value_attr_callback(this%ser%v7d%anavarattr%r(varind), &
-     this%ser%v7d%anaattr%r(attrind), 'r', genericptr)
+     this%ser%v7d%anaattr%r(attrind), 'ra', genericptr)
   CASE(2)
     CALL this%ser%vol7d_value_attr_callback(this%ser%v7d%anavarattr%d(varind), &
-     this%ser%v7d%anaattr%d(attrind), 'd', genericptr)
+     this%ser%v7d%anaattr%d(attrind), 'da', genericptr)
   CASE(3)
     CALL this%ser%vol7d_value_attr_callback(this%ser%v7d%anavarattr%i(varind), &
-     this%ser%v7d%anaattr%i(attrind), 'i', genericptr)
+     this%ser%v7d%anaattr%i(attrind), 'ia', genericptr)
   CASE(4)
     CALL this%ser%vol7d_value_attr_callback(this%ser%v7d%anavarattr%b(varind), &
-     this%ser%v7d%anaattr%b(attrind), 'b', genericptr)
+     this%ser%v7d%anaattr%b(attrind), 'ba', genericptr)
   CASE(5)
     CALL this%ser%vol7d_value_attr_callback(this%ser%v7d%anavarattr%c(varind), &
-     this%ser%v7d%anaattr%c(attrind), 'c', genericptr)
+     this%ser%v7d%anaattr%c(attrind), 'ca', genericptr)
   END SELECT
 CASE(3)
   SELECT CASE(this%ser%mapper(ind)%typ)
   CASE(1)
-    CALL this%ser%vol7d_value_var_callback(this%ser%v7d%dativar%r(varind), 'r', genericptr)
+    CALL this%ser%vol7d_value_var_callback(this%ser%v7d%dativar%r(varind), 'rd', genericptr)
   CASE(2)
-    CALL this%ser%vol7d_value_var_callback(this%ser%v7d%dativar%d(varind), 'd', genericptr)
+    CALL this%ser%vol7d_value_var_callback(this%ser%v7d%dativar%d(varind), 'dd', genericptr)
   CASE(3)
-    CALL this%ser%vol7d_value_var_callback(this%ser%v7d%dativar%i(varind), 'i', genericptr)
+    CALL this%ser%vol7d_value_var_callback(this%ser%v7d%dativar%i(varind), 'id', genericptr)
   CASE(4)
-    CALL this%ser%vol7d_value_var_callback(this%ser%v7d%dativar%b(varind), 'b', genericptr)
+    CALL this%ser%vol7d_value_var_callback(this%ser%v7d%dativar%b(varind), 'bd', genericptr)
   CASE(5)
-    CALL this%ser%vol7d_value_var_callback(this%ser%v7d%dativar%c(varind), 'c', genericptr)
+    CALL this%ser%vol7d_value_var_callback(this%ser%v7d%dativar%c(varind), 'cd', genericptr)
   END SELECT
 CASE(4)
   SELECT CASE(this%ser%mapper(ind)%typ)
   CASE(1)
     CALL this%ser%vol7d_value_attr_callback(this%ser%v7d%dativarattr%r(varind), &
-     this%ser%v7d%datiattr%r(attrind), 'r', genericptr)
+     this%ser%v7d%datiattr%r(attrind), 'rd', genericptr)
   CASE(2)
     CALL this%ser%vol7d_value_attr_callback(this%ser%v7d%dativarattr%d(varind), &
-     this%ser%v7d%datiattr%d(attrind), 'd', genericptr)
+     this%ser%v7d%datiattr%d(attrind), 'dd', genericptr)
   CASE(3)
     CALL this%ser%vol7d_value_attr_callback(this%ser%v7d%dativarattr%i(varind), &
-     this%ser%v7d%datiattr%i(attrind), 'i', genericptr)
+     this%ser%v7d%datiattr%i(attrind), 'id', genericptr)
   CASE(4)
     CALL this%ser%vol7d_value_attr_callback(this%ser%v7d%dativarattr%b(varind), &
-     this%ser%v7d%datiattr%b(attrind), 'b', genericptr)
+     this%ser%v7d%datiattr%b(attrind), 'bd', genericptr)
   CASE(5)
     CALL this%ser%vol7d_value_attr_callback(this%ser%v7d%dativarattr%c(varind), &
-     this%ser%v7d%datiattr%c(attrind), 'c', genericptr)
+     this%ser%v7d%datiattr%c(attrind), 'cd', genericptr)
   END SELECT
 END SELECT
 
@@ -915,7 +915,7 @@ END SUBROUTINE default_vol7d_val_header_callback
 
 SUBROUTINE default_vol7d_value_var_header_callback(var, typ, genericptr)
 TYPE(vol7d_var),INTENT(in) :: var
-CHARACTER(len=1),INTENT(in) :: typ
+CHARACTER(len=2),INTENT(in) :: typ
 TYPE(c_ptr),VALUE :: genericptr
 
 CHARACTER(len=64),POINTER :: col
@@ -928,7 +928,7 @@ END SUBROUTINE default_vol7d_value_var_header_callback
 SUBROUTINE default_vol7d_value_attr_header_callback(var, attr, typ, genericptr)
 TYPE(vol7d_var),INTENT(in) :: var
 TYPE(vol7d_var),INTENT(in) :: attr
-CHARACTER(len=1),INTENT(in) :: typ
+CHARACTER(len=2),INTENT(in) :: typ
 TYPE(c_ptr),VALUE :: genericptr
 
 CHARACTER(len=64),POINTER :: col
