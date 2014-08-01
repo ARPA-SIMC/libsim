@@ -1,4 +1,4 @@
-AM_FCFLAGS = -I../base -I../grib -I../volgrid6d -I../vol7d -I../qc -I../termolib -I../log4fortran  -I../graphics -I../alchimia
+AM_FCFLAGS = -I../base -I../volgrid6d -I../vol7d -I../qc -I../termolib -I../log4fortran  -I../graphics -I../alchimia
 #EXTRA_DIST = log4crc
 bin_PROGRAMS =
 

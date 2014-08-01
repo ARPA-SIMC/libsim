@@ -83,7 +83,6 @@ use vol7d_dballeold_class
 
 implicit none
 
-public
 
 character (len=255),parameter:: subcategorytem="QCtem"
 
@@ -121,6 +120,10 @@ end interface
 interface delete
   module procedure qctemdelete
 end interface
+
+PRIVATE
+PUBLIC tem_nvar, tem_btable, tem_a, tem_b, qctemtype, init, alloc, delete, &
+ quacontem
 
 
 contains
@@ -198,7 +201,7 @@ end if
 qctem%timeconfidence = optio_i(timeconfidence)
 
 ! load extreme
-call qccliinit(qctem%qccli,v7d,var, timei, timef, data_id_in,&
+call init(qctem%qccli,v7d,var, timei, timef, data_id_in,&
  macropath=cmiss, climapath=cmiss, extremepath=extremepath, &
 #ifdef HAVE_DBALLE
  dsncli=cmiss,dsnextreme=dsne,user=usere,password=passworde,&

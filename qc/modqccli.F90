@@ -117,12 +117,10 @@ use simple_stat
 !use array_utilities
 !use io_units
 #ifdef HAVE_DBALLE
-use vol7d_dballeold_class
+use vol7d_dballe_class
 #endif
 
 implicit none
-
-public
 
 character (len=255),parameter:: subcategory="QCcli"
 
@@ -162,6 +160,10 @@ interface delete
   module procedure qcclidelete
 end interface
 
+PRIVATE
+PUBLIC cli_nlevel, cli_level1, cli_level2, qcclitype, init, alloc, delete, &
+ vol7d_normalize_data, quaconcli, cli_level, cli_level_generate, &
+ qc_compute_percentile, qc_compute_NormalizedDensityIndex
 
 contains
 

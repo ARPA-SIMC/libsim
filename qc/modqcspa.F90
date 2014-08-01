@@ -101,10 +101,8 @@ use vol7d_dballeold_class
 
 implicit none
 
-public
 
 character (len=255),parameter:: subcategoryspa="QCspa"
-
 
 integer, parameter :: spa_nvar=1
 CHARACTER(len=10) :: spa_btable(spa_nvar)=(/"B12101"/) !< variable wmo code table for normalization.
@@ -143,6 +141,10 @@ end interface
 interface delete
   module procedure qcspadelete
 end interface
+
+PRIVATE
+PUBLIC spa_nvar, spa_btable, spa_a, spa_b, qcspatype, init, alloc, delete, &
+ qcspatri, quaconspa
 
 
 contains
@@ -218,7 +220,7 @@ if (present(data_id_in))then
 end if
 
 ! load extreme
-call qccliinit(qcspa%qccli,v7d,var, timei, timef, data_id_in,&
+call init(qcspa%qccli,v7d,var, timei, timef, data_id_in,&
  macropath=cmiss, climapath=cmiss, extremepath=extremepath, &
 #ifdef HAVE_DBALLE
  dsncli=cmiss,dsnextreme=dsne,user=usere,password=passworde,&

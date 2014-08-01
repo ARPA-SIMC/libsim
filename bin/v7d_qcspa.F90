@@ -22,9 +22,14 @@
 program v7d_qcspa
 
 use log4fortran
+USE missing_values
+USE simple_stat
+USE geo_coord_class
+USE datetime_class
 use modqc
 use modqcspa
-use vol7d_dballe_class
+use vol7d_dballeold_class
+USE vol7d_class
 USE optionparser_class
 use array_utilities
 #ifdef HAVE_LIBNCARG
@@ -286,11 +291,11 @@ if (operation == "ndi") then
     IF (output_template == '') output_template = 'generic'
                                 ! check whether wipe=file is reasonable
     CALL init(v7d_dba_out, filename=output_file, FORMAT=output_format, &
-     dsn=dsn, user=user, password=password, file=file, WRITE=.TRUE., wipe=file, template=output_template)
+     dsn=dsn, user=user, password=password, file=file, WRITE=.TRUE., wipe=file)
     
     v7d_dba_out%vol7d = v7dqcspa%clima
     CALL init(v7dqcspa%clima) ! nullify without deallocating
-    CALL export(v7d_dba_out)
+    CALL export(v7d_dba_out, template=output_template)
     CALL delete(v7d_dba_out)
 #endif
     

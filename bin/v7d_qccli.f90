@@ -20,8 +20,12 @@
 program v7d_qccli
 
 use log4fortran
+USE missing_values
+USE geo_coord_class
+USE datetime_class
+USE modqc
 use modqccli
-use vol7d_dballe_class
+use vol7d_dballeold_class
 
 implicit none
 
