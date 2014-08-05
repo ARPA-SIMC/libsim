@@ -243,9 +243,10 @@ CALL optionparser_add(opt, ' ', 'anavariable-list', anavariable_list, '', help= 
  &in the form of a comma-separated list of B-table alphanumeric codes, &
  &e.g. ''B01192,B01193,B07001''')
 CALL optionparser_add(opt, ' ', 'attribute-list', attribute_list, '', help= &
- 'if input-format is of database type, list of data attributes to be extracted &
+ 'if input-format is of DB-all.e type, list of data attributes to be extracted &
  &in the form of a comma-separated list of B-table alphanumeric codes, &
- &e.g. ''B33196,B33197''')
+ &e.g. ''B33196,B33197''; for no attribute set attribute-list to empty string '''' &
+ &; if attribute-list is missed all present attributes in input will be imported')
 CALL optionparser_add(opt, ' ', 'level', levelc, ',,,', help= &
  'if input-format is of database type, vertical level to be extracted &
  &in the form level1,l1,level2,l2 empty fields indicate missing data, &
@@ -558,22 +559,22 @@ IF (LEN_TRIM(attribute_list) > 0) THEN
 ! al is the list of attributes requested by the user
 ! alqc is the same list
     ALLOCATE(alqc(n))
-    alqc(1:SIZE(al)) = al(:)
+    alqc = al
 
   ENDIF
 
-ELSE ! no attributes requested
-  ALLOCATE(al(0)) ! an empty al is required for safety
-  IF (.NOT.disable_qc) THEN ! set alqc to qc variables
-! al is empty
-! alqc is the list of the attributes required by qc
-    ALLOCATE(alqc(nqcattrvars))
-    alqc(:) = qcattrvarsbtables(:)
-  ELSE ! an empty alqc is required for safety
-! al is empty
-! alqc is empty
-    ALLOCATE(alqc(0))
-  ENDIF
+!!$ELSE ! no attributes requested
+!!$  ALLOCATE(al(0)) ! an empty al is required for safety
+!!$  IF (.NOT.disable_qc) THEN ! set alqc to qc variables
+!!$! al is empty
+!!$! alqc is the list of the attributes required by qc
+!!$    ALLOCATE(alqc(nqcattrvars))
+!!$    alqc(:) = qcattrvarsbtables(:)
+!!$  ELSE ! an empty alqc is required for safety
+!!$! al is empty
+!!$! alqc is empty
+!!$    ALLOCATE(alqc(0))
+!!$  ENDIF
 
 ENDIF
 
