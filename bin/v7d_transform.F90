@@ -242,7 +242,9 @@ CALL optionparser_add(opt, ' ', 'anavariable-list', anavariable_list, '', help= 
  'if input-format is of database type, list of station variables to be extracted &
  &in the form of a comma-separated list of B-table alphanumeric codes, &
  &e.g. ''B01192,B01193,B07001''')
-CALL optionparser_add(opt, ' ', 'attribute-list', attribute_list, '', help= &
+
+attribute_list=''   ! do not show default in help
+CALL optionparser_add(opt, ' ', 'attribute-list', attribute_list, help= &
  'if input-format is of DB-all.e type, list of data attributes to be extracted &
  &in the form of a comma-separated list of B-table alphanumeric codes, &
  &e.g. ''B33196,B33197''; for no attribute set attribute-list to empty string '''' &

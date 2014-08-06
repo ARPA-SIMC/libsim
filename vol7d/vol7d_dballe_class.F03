@@ -175,12 +175,8 @@ integer,INTENT(in),OPTIONAL :: idbhandle !< dsn connection; if present it will b
 !!  the special value "generic-frag is used to generate bufr on file where ana data is reported only once at beginning and data in other bufr after
 character(len=*),intent(in),optional :: template 
 
-character(len=1):: mode="r" ! the open mode ("r" for read, "w" for write or create, "a" append) (comandato da "write", default="r" )
-
-character(len=50) :: quidsn,quiuser,quipassword
-character(len=255) :: quirepinfo
-logical :: quiwrite,quiwipe
-
+character(len=1):: mode  ! the open mode ("r" for read, "w" for write or create, "a" append) (comandato da "write", default="r" )
+logical :: quiwrite
 character(len=512) :: a_name
 character(len=254) :: arg,lfilename,lformat
 logical :: read_next
@@ -191,21 +187,6 @@ if (present(write))then
   quiwrite=write
 endif
 
-quiwipe=.false.
-quirepinfo=""
-if (present(wipe))then
-  quiwipe=wipe
-  if (present(repinfo))then
-    quirepinfo=repinfo
-  endif
-endif
-
-
-!! TODO wipe and repinfo
-
-                                !this%idbhandle=dbaconnection()
-                                !this%handle=dbasession()
-
 if (present(categoryappend))then
   call l4f_launcher(a_name,a_name_append=trim(subcategory)//"."//trim(categoryappend))
 else
@@ -215,16 +196,12 @@ this%category=l4f_category_get(a_name)
 
 nullify(this%data_id)
 
-                                !TODO: quando scrivo bisogna gestire questo che non è da fare ?
-                                !CALL init(this%vol7d,time_definition=time_definition)
-
 if (optio_log(file)) then
 
   lformat="BUFR"
   if (present(format))then
     lformat=format
   end if
-
 
   lfilename=trim(arg)//"."//trim(lformat)
   if (index(arg,'/',back=.true.) > 0) lfilename=lfilename(index(arg,'/',back=.true.)+1 : )
@@ -235,49 +212,47 @@ if (optio_log(file)) then
     end if
   end if
 
+  if(quiwrite)then
 
-  if (.not. quiwrite) then
+!!!!!  this for write message by message without memdb
+!    this%handle=dbasession(filename=lfilename,wipe=wipe,&
+!     write=quiwrite,format=format,repinfo=repinfo,template=template,memdb=.false.)
+!!!!!
+
+!!!!!  this for write in memdb and write file on export
+    this%idbhandle=dbaconnection(dsn="mem:")
+    this%handle=dbasession(this%idbhandle,anaflag="write",dataflag="write",attrflag="write",wipe=.true.,&
+     write=.true.,repinfo=repinfo)
+    mode="w"    ! todo mode "a" ??
+    call this%handle%messages_open_output(lfilename, mode, lformat)
+!!!!!
+
+  else
                                 !print *,"import in mem:"
-
-    this%idbhandle=dbaconnection(dsn="mem:",user="",password="")
-    this%handle=dbasession(this%idbhandle,"write","write","write",template=template)
+    this%idbhandle=dbaconnection(dsn="mem:")
+    this%handle=dbasession(this%idbhandle,anaflag="write",dataflag="write",attrflag="write",wipe=.true.,&
+     write=.true.,repinfo=repinfo,template=template)
+    mode="r"
     call this%handle%messages_open_input(lfilename, mode, lformat, simplified=.true.)
     read_next = this%handle%messages_read_next()
     do while (read_next) 
       read_next = this%handle%messages_read_next()
     end do
-
-                                !print *,"end import in mem:"
   end if
 
 else
 
-
-  quidsn = "test"
-  quiuser = "test"
-  quipassword = ""
-  IF (PRESENT(dsn)) THEN
-    IF (c_e(dsn)) quidsn = dsn
-  ENDIF
-  IF (PRESENT(user)) THEN
-    IF (c_e(user)) quiuser = user
-  ENDIF
-  IF (PRESENT(password)) THEN
-    IF (c_e(password)) quipassword = password
-  ENDIF
-
-  this%idbhandle=dbaconnection(quidsn,quiuser,quipassword,idbhandle=idbhandle)
+  this%idbhandle=dbaconnection(dsn,user,password,idbhandle=idbhandle)
 
   if(quiwrite)then
-    this%handle=dbasession(this%idbhandle,"write","write","write")
+    this%handle=dbasession(this%idbhandle,"write","write","write",wipe=wipe,write=quiwrite,repinfo=repinfo)
   else
-    this%handle=dbasession(this%idbhandle,"read","read","read")
+    this%handle=dbasession(this%idbhandle,"read","read","read",wipe=wipe,write=quiwrite,repinfo=repinfo)
   end if
 
 endif
 
 this%time_definition = optio_i(time_definition)
-
 
 END SUBROUTINE vol7d_dballe_init
 
@@ -650,6 +625,7 @@ TYPE(vol7d_dballe) :: this !< oggetto da cancellare
 logical,intent(in), optional :: preserveidbhandle !< do not close connection to dsn
 
 call this%handle%delete()
+
 if (.not. optio_log(preserveidbhandle)) call this%idbhandle%delete()
 
 !!$if (associated(this%data_id)) then
@@ -1809,10 +1785,30 @@ filter=dbafilter(coordmin=mydbacoordmin,coordmax=mydbacoordmax,ana=mydbaana, &
 !!$  call filter%display()
 
 call v7d2dba(this%vol7d,metaanddatal)
-!call metaanddatal%display()
+call metaanddatal%display()
+
+!clean memdb
+call this%handle%remove_all()
 
 !call this%handle%ingest(metaanddatal,filter=filter,dataonly=dataonly)
 call metaanddatal%ingest(session=this%handle,filter=filter,dataonly=dataonly)
+
+
+!!!!!  this if we have written in memdb and now we have to write the file
+
+!filter is already in ingest
+!this%handle%set(filter=filter)
+
+! export to file
+!! TODO : revert template from init to export  !!!!!!!!!!!!!!!!!!!!!
+!!call this%handle%messages_write_next(template)
+call this%handle%messages_write_next()
+
+!clean memdb
+call this%handle%remove_all()
+
+!!!!!
+
 
 stat = metaanddatal%delete()
 

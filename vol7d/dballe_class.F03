@@ -657,6 +657,8 @@ end if
 end function dbadata_equal
 
 
+!!! mmmm TODO: ma qui sotto manacano i cast e torna sempre missing ?
+
 !> return integer value
 subroutine dbadata_geti(data,value)
 class(dbadata), intent(in) :: data
@@ -1037,7 +1039,7 @@ character(len=40) :: ltemplate_name
 
 integer :: ier
 
-ltemplate_name="generic"
+ltemplate_name="generic"  !! "wmo" =  wmo - WMO style templates (autodetect) ?
 if (present(template_name)) ltemplate_name=template_name
 
 ier = idba_messages_write_next(session%sehandle,ltemplate_name)
@@ -1329,13 +1331,14 @@ subroutine dbadatai_set(data,session)
 class(dbadatai), intent(in) :: data
 type(dbasession), intent(in) :: session !< dballe session
 integer :: ier
+if (.not. c_e(data%btable)) return
 ier = idba_set(session%sehandle,data%btable,data%value)
 end subroutine dbadatai_set
 
 !> print a summary of object content
 subroutine dbadatai_display(data)
 class(dbadatai), intent(in) :: data
-print *,data%btable,data%value
+print *,"Btable: ", t2c(data%btable,miss="Missing")," Value: ", t2c(data%value,miss="Missing value")
 end subroutine dbadatai_display
 
 !> set parameters in dballe API
@@ -1343,13 +1346,14 @@ subroutine dbadatar_set(data,session)
 class(dbadatar), intent(in) :: data
 type(dbasession), intent(in) :: session !< dballe session
 integer :: ier
+if (.not. c_e(data%btable)) return
 ier = idba_set(session%sehandle,data%btable,data%value)
 end subroutine dbadatar_set
 
 !> print a summary of object content
 subroutine dbadatar_display(data)
 class(dbadatar), intent(in) :: data
-print *,data%btable,data%value
+print *,"Btable: ", t2c(data%btable,miss="Missing")," Value: ", t2c(data%value,miss="Missing value")
 end subroutine dbadatar_display
 
 
@@ -1358,13 +1362,14 @@ subroutine dbadatad_set(data,session)
 class(dbadatad), intent(in) :: data
 type(dbasession), intent(in) :: session !< dballe session
 integer :: ier
+if (.not. c_e(data%btable)) return
 ier = idba_set(session%sehandle,data%btable,data%value)
 end subroutine dbadatad_set
 
 !> print a summary of object content
 subroutine dbadatad_display(data)
 class(dbadatad), intent(in) :: data
-print *,data%btable,data%value
+print *,"Btable: ", t2c(data%btable,miss="Missing")," Value: ", t2c(data%value,miss="Missing value")
 end subroutine dbadatad_display
 
 !> set parameters in dballe API
@@ -1372,13 +1377,14 @@ subroutine dbadatab_set(data,session)
 class(dbadatab), intent(in) :: data
 type(dbasession), intent(in) :: session !< dballe session
 integer :: ier
+if (.not. c_e(data%btable)) return
 ier = idba_set(session%sehandle,data%btable,data%value)
 end subroutine dbadatab_set
 
 !> print a summary of object content
 subroutine dbadatab_display(data)
 class(dbadatab), intent(in) :: data
-print *,data%btable,data%value
+print *,"Btable: ", t2c(data%btable,miss="Missing")," Value: ", t2c(data%value,miss="Missing value")
 end subroutine dbadatab_display
 
 !> set parameters in dballe API
@@ -1386,13 +1392,14 @@ subroutine dbadatac_set(data,session)
 class(dbadatac), intent(in) :: data
 type(dbasession), intent(in) :: session !< dballe session
 integer :: ier
+if (.not. c_e(data%btable)) return
 ier = idba_set(session%sehandle,data%btable,data%value)
 end subroutine dbadatac_set
 
 !> print a summary of object content
 subroutine dbadatac_display(data)
 class(dbadatac), intent(in) :: data
-print *,"Btable: ",data%btable,"Value: ",trim(data%value)
+print *,"Btable: ", t2c(data%btable,miss="Missing")," Value: ", t2c(data%value,miss="Missing value")
 end subroutine dbadatac_display
 
 

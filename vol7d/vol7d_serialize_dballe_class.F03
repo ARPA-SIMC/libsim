@@ -245,17 +245,19 @@ integer :: i,j
 CALL C_F_POINTER(genericptr, metaanddata)
 
 !print*, "vol7d_valuei_attr_callback_dba: ",var%btable,attr%btable
-do i =1, size(metaanddata%dataattrv%dataattr)
-  if (metaanddata%dataattrv%dataattr(i)%dat%btable == var%btable) then
-    do j =1, size(metaanddata%dataattrv%dataattr(i)%attrv%dcv)
-      if (.not. allocated(metaanddata%dataattrv%dataattr(i)%attrv%dcv(j)%dat)) then
-        !print *,"allocate attributei: ",var%btable
-        allocate(metaanddata%dataattrv%dataattr(i)%attrv%dcv(j)%dat,source=dbadatar(attr%btable,valu))
-        exit
-      end if
-    end do
+ivar:do i =1, size(metaanddata%dataattrv%dataattr)
+  if (allocated(metaanddata%dataattrv%dataattr(i)%dat)) then
+    if (metaanddata%dataattrv%dataattr(i)%dat%btable == var%btable) then
+      do j =1, size(metaanddata%dataattrv%dataattr(i)%attrv%dcv)
+        if (.not. allocated(metaanddata%dataattrv%dataattr(i)%attrv%dcv(j)%dat)) then
+                                !print *,"allocate attributei: ",var%btable
+          allocate(metaanddata%dataattrv%dataattr(i)%attrv%dcv(j)%dat,source=dbadatar(attr%btable,valu))
+          exit ivar
+        end if
+      end do
+    end if
   end if
-end do
+end do ivar
 
 END SUBROUTINE vol7d_valuer_attr_callback_dba
 
@@ -272,17 +274,19 @@ integer :: i,j
 CALL C_F_POINTER(genericptr, metaanddata)
 
 !print*, "vol7d_valuei_attr_callback_dba: ",var%btable,attr%btable
-do i =1, size(metaanddata%dataattrv%dataattr)
-  if (metaanddata%dataattrv%dataattr(i)%dat%btable == var%btable) then
-    do j =1, size(metaanddata%dataattrv%dataattr(i)%attrv%dcv)
-      if (.not. allocated(metaanddata%dataattrv%dataattr(i)%attrv%dcv(j)%dat)) then
-        !print *,"allocate attributei: ",var%btable
-        allocate(metaanddata%dataattrv%dataattr(i)%attrv%dcv(j)%dat,source=dbadatad(attr%btable,valu))
-        exit
-      end if
-    end do
+ivar:do i =1, size(metaanddata%dataattrv%dataattr)
+  if (allocated(metaanddata%dataattrv%dataattr(i)%dat)) then
+    if (metaanddata%dataattrv%dataattr(i)%dat%btable == var%btable) then
+      do j =1, size(metaanddata%dataattrv%dataattr(i)%attrv%dcv)
+        if (.not. allocated(metaanddata%dataattrv%dataattr(i)%attrv%dcv(j)%dat)) then
+                                !print *,"allocate attributei: ",var%btable
+          allocate(metaanddata%dataattrv%dataattr(i)%attrv%dcv(j)%dat,source=dbadatad(attr%btable,valu))
+          exit ivar
+        end if
+      end do
+    end if
   end if
-end do
+end do ivar
 
 END SUBROUTINE vol7d_valued_attr_callback_dba
 
@@ -299,17 +303,19 @@ integer :: i,j
 CALL C_F_POINTER(genericptr, metaanddata)
 
 !print*, "vol7d_valuei_attr_callback_dba: ",var%btable,attr%btable
-do i =1, size(metaanddata%dataattrv%dataattr)
-  if (metaanddata%dataattrv%dataattr(i)%dat%btable == var%btable) then
-    do j =1, size(metaanddata%dataattrv%dataattr(i)%attrv%dcv)
-      if (.not. allocated(metaanddata%dataattrv%dataattr(i)%attrv%dcv(j)%dat)) then
-        !print *,"allocate attributei: ",var%btable
-        allocate(metaanddata%dataattrv%dataattr(i)%attrv%dcv(j)%dat,source=dbadatai(attr%btable,valu))
-        exit
-      end if
-    end do
+ivar:do i =1, size(metaanddata%dataattrv%dataattr)
+  if (allocated(metaanddata%dataattrv%dataattr(i)%dat)) then
+    if (metaanddata%dataattrv%dataattr(i)%dat%btable == var%btable) then
+      do j =1, size(metaanddata%dataattrv%dataattr(i)%attrv%dcv)
+        if (.not. allocated(metaanddata%dataattrv%dataattr(i)%attrv%dcv(j)%dat)) then
+                                !print *,"allocate attributei: ",var%btable
+          allocate(metaanddata%dataattrv%dataattr(i)%attrv%dcv(j)%dat,source=dbadatai(attr%btable,valu))
+          exit ivar
+        end if
+      end do
+    end if
   end if
-end do
+end do ivar
 
 END SUBROUTINE vol7d_valuei_attr_callback_dba
 
@@ -325,17 +331,19 @@ integer :: i,j
 CALL C_F_POINTER(genericptr, metaanddata)
 
 !print*, "vol7d_valuei_attr_callback_dba: ",var%btable,attr%btable
-do i =1, size(metaanddata%dataattrv%dataattr)
-  if (metaanddata%dataattrv%dataattr(i)%dat%btable == var%btable) then
-    do j =1, size(metaanddata%dataattrv%dataattr(i)%attrv%dcv)
-      if (.not. allocated(metaanddata%dataattrv%dataattr(i)%attrv%dcv(j)%dat)) then
-        !print *,"allocate attributei: ",var%btable
-        allocate(metaanddata%dataattrv%dataattr(i)%attrv%dcv(j)%dat,source=dbadatab(attr%btable,valu))
-        exit
-      end if
-    end do
+ivar:do i =1, size(metaanddata%dataattrv%dataattr)
+  if (allocated(metaanddata%dataattrv%dataattr(i)%dat)) then
+    if (metaanddata%dataattrv%dataattr(i)%dat%btable == var%btable) then
+      do j =1, size(metaanddata%dataattrv%dataattr(i)%attrv%dcv)
+        if (.not. allocated(metaanddata%dataattrv%dataattr(i)%attrv%dcv(j)%dat)) then
+                                !print *,"allocate attributei: ",var%btable
+          allocate(metaanddata%dataattrv%dataattr(i)%attrv%dcv(j)%dat,source=dbadatab(attr%btable,valu))
+          exit ivar
+        end if
+      end do
+    end if
   end if
-end do
+end do ivar
 
 END SUBROUTINE vol7d_valueb_attr_callback_dba
 
@@ -350,17 +358,19 @@ integer :: i,j
 CALL C_F_POINTER(genericptr, metaanddata)
 
 !print*, "vol7d_valuei_attr_callback_dba: ",var%btable,attr%btable
-do i =1, size(metaanddata%dataattrv%dataattr)
-  if (metaanddata%dataattrv%dataattr(i)%dat%btable == var%btable) then
-    do j =1, size(metaanddata%dataattrv%dataattr(i)%attrv%dcv)
-      if (.not. allocated(metaanddata%dataattrv%dataattr(i)%attrv%dcv(j)%dat)) then
-        !print *,"allocate attributei: ",var%btable
-        allocate(metaanddata%dataattrv%dataattr(i)%attrv%dcv(j)%dat,source=dbadatac(attr%btable,valu))
-        exit
-      end if
-    end do
+ivar:do i =1, size(metaanddata%dataattrv%dataattr)
+  if (allocated(metaanddata%dataattrv%dataattr(i)%dat)) then
+    if (metaanddata%dataattrv%dataattr(i)%dat%btable == var%btable) then
+      do j =1, size(metaanddata%dataattrv%dataattr(i)%attrv%dcv)
+        if (.not. allocated(metaanddata%dataattrv%dataattr(i)%attrv%dcv(j)%dat)) then
+                                !print *,"allocate attributei: ",var%btable
+          allocate(metaanddata%dataattrv%dataattr(i)%attrv%dcv(j)%dat,source=dbadatac(attr%btable,valu))
+          exit ivar
+        end if
+      end do
+    end if
   end if
-end do
+end do ivar
 
 END SUBROUTINE vol7d_valuec_attr_callback_dba
 
@@ -453,10 +463,12 @@ DO WHILE(coli%next())
   CALL coli%export(C_LOC(conta))
 END DO
 
-print *,"Conta: ",conta
-nattr = conta%nattr/conta%nvar + conta%nanaattr/conta%nanavar
+!print *,"Conta: ",conta
+nattr = 0
+if (conta%nvar > 0) nattr= nattr + conta%nattr/conta%nvar 
+if (conta%nanavar > 0) nattr= nattr + conta%nanaattr/conta%nanavar
 nvar  = conta%nvar + conta%nanavar
-print *,"nvar: ",nvar,"nattr: ",nattr
+!print *,"nvar: ",nvar,"nattr: ",nattr
 
 allocate(metaanddata%dataattrv%dataattr(nvar))
 do i =1,nvar
