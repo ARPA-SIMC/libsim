@@ -1408,9 +1408,13 @@ SUBROUTINE timerange_g1_to_v7d(tri, p1_g1, p2_g1, unit, statproc, p1, p2)
 INTEGER,INTENT(in) :: tri, p1_g1, p2_g1, unit
 INTEGER,INTENT(out) :: statproc, p1, p2
 
-IF (tri == 0 .OR. tri == 1 .OR. tri == 10) THEN ! point in time
+IF (tri == 0 .OR. tri == 1) THEN ! point in time
   statproc = 254
   CALL g1_interval_to_second(unit, p1_g1, p1)
+  p2 = 0
+ELSE IF (tri == 10) THEN ! point in time
+  statproc = 254
+  CALL g1_interval_to_second(unit, p1_g1*256+p2_g1, p1)
   p2 = 0
 ELSE IF (tri == 2) THEN ! somewhere between p1 and p2, not good for grib2 standard
   statproc = 205
@@ -1535,13 +1539,22 @@ ELSE IF (statproc == 206) THEN ! COSMO-nudging (statistical processing in the pa
 !  CALL second_to_gribtr(p1-p2, p1_g1, unit, 1)
 ELSE IF (statproc == 254) THEN ! point in time
   tri = 0
-!  CALL second_to_gribtr(p1, p1_g1, unit, 1)
   p2_g1 = 0
 ELSE
-  call l4f_log(L4F_ERROR,'timerange_v7d_to_g1: GRIB2 statisticalprocessing ' &
+  CALL l4f_log(L4F_ERROR,'timerange_v7d_to_g1: GRIB2 statisticalprocessing ' &
    //TRIM(to_char(statproc))//' cannot be converted to GRIB1.')
   CALL raise_error()
 ENDIF
+
+IF (p1_g1 > 255 .OR. p2_g1 > 255) THEN
+  tri = 10
+  ptmp = MAX(p1_g1,p2_g1)
+  p2_g1 = MOD(ptmp,256)
+  p1_g1 = ptmp/256
+  CALL l4f_log(L4F_WARN,'timerange_v7d_to_g1: timerange too big for grib1 ' &
+   //TRIM(to_char(ptmp))//', forcing time range indicator to 10.')
+ENDIF
+  
 
 ! p1 < 0 is not allowed, use COSMO trick
 IF (p1_g1 < 0) THEN
@@ -1575,39 +1588,62 @@ ENDIF
 END SUBROUTINE timerange_v7d_to_g2
 
 
-! improve to limit the values to 255 if possible
+! These units are tested for applicability:
+! 0  Minute
+! 1  Hour
+! 2  Day
+! 10 3 hours
+! 11 6 hours
+! 12 12 hours
 SUBROUTINE timerange_choose_unit_g1(valuein1, valuein2, valueout1, valueout2, unit)
 INTEGER,INTENT(in) :: valuein1, valuein2
 INTEGER,INTENT(out) :: valueout1, valueout2, unit
+
+INTEGER :: i
+TYPE unitchecker
+  INTEGER :: unit
+  INTEGER :: sectounit
+END TYPE unitchecker
+
+TYPE(unitchecker),PARAMETER :: hunit(5) = (/ &
+ unitchecker(1, 3600), unitchecker(10, 10800), unitchecker(11, 21600), &
+ unitchecker(12, 43200), unitchecker(2, 86400) /)
+TYPE(unitchecker),PARAMETER :: munit(3) = (/ & ! 13 14 COSMO extensions
+ unitchecker(0, 60), unitchecker(13, 900), unitchecker(14, 1800) /)
 
 IF (.NOT.c_e(valuein1) .OR. .NOT.c_e(valuein2)) THEN
   valueout1 = imiss
   valueout2 = imiss
   unit = 1
 ELSE IF (MOD(valuein1,3600) == 0 .AND. MOD(valuein2,3600) == 0) THEN ! prefer hours
-  valueout1 = valuein1/3600
-  valueout2 = valuein2/3600
-  unit = 1
-ELSE IF (MOD(valuein1,60) == 0. .AND. MOD(valuein2,60) == 0) THEN ! then minutes
-  valueout1 = valuein1/60
-  valueout2 = valuein2/60
-  unit = 0
-! COSMO extensions
-  IF (valueout1 >= 255 .OR. valueout2 >= 255) THEN ! try 15 minutes
-    valueout1 = valuein1/900
-    valueout2 = valuein2/900
-    unit = 13
-    IF (valueout1 >= 255 .OR. valueout2 >= 255) THEN ! try 30 minutes
-      valueout1 = valuein1/1800
-      valueout2 = valuein2/1800
-      unit = 14
+  DO i = 1, SIZE(hunit)
+    IF (MOD(valuein1, hunit(i)%sectounit) == 0 &
+     .AND. MOD(valuein2, hunit(i)%sectounit) == 0 &
+     .AND. valuein1/hunit(i)%sectounit < 255 &
+     .AND. valuein2/hunit(i)%sectounit < 255) THEN
+      valueout1 = valuein1/hunit(i)%sectounit
+      valueout2 = valuein2/hunit(i)%sectounit
+      unit = hunit(i)%unit
+      EXIT
     ENDIF
-  ENDIF
+  ENDDO
+ELSE IF (MOD(valuein1,60) == 0. .AND. MOD(valuein2,60) == 0) THEN ! then minutes
+  DO i = 1, SIZE(hunit)
+    IF (MOD(valuein1, hunit(i)%sectounit) == 0 &
+     .AND. MOD(valuein2, hunit(i)%sectounit) == 0 &
+     .AND. valuein1/hunit(i)%sectounit < 255 &
+     .AND. valuein2/hunit(i)%sectounit < 255) THEN
+      valueout1 = valuein1/hunit(i)%sectounit
+      valueout2 = valuein2/hunit(i)%sectounit
+      unit = hunit(i)%unit
+      EXIT
+    ENDIF
+  ENDDO
 
 ELSE
 
   CALL l4f_log(L4F_ERROR,'timerange_second_to_g1: cannot find a grib1 timerange unit for coding ' &
-   //t2c(valuein1)//','//t2c(valuein2)//'s intevals' )
+   //t2c(valuein1)//','//t2c(valuein2)//'s intervals' )
     CALL raise_error()
 ENDIF
 
