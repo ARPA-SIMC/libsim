@@ -71,7 +71,7 @@ CLASS(vol7d_serialize_csv),INTENT(inout) :: this
 INTEGER,INTENT(in) :: iun
 
 CHARACTER(len=64),TARGET,ALLOCATABLE :: col(:)
-CHARACTER(len=512),TARGET :: line
+CHARACTER(len=2048),TARGET :: line
 CHARACTER(len=1),POINTER :: pline
 INTEGER :: i
 TYPE(vol7d_serialize_iterline) :: linei
