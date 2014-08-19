@@ -463,12 +463,12 @@ DO WHILE(coli%next())
   CALL coli%export(C_LOC(conta))
 END DO
 
-!print *,"Conta: ",conta
+print *,"Conta: ",conta
 nattr = 0
 if (conta%nvar > 0) nattr= nattr + conta%nattr/conta%nvar 
 if (conta%nanavar > 0) nattr= nattr + conta%nanaattr/conta%nanavar
 nvar  = conta%nvar + conta%nanavar
-!print *,"nvar: ",nvar,"nattr: ",nattr
+print *,"nvar: ",nvar,"nattr: ",nattr
 
 allocate(metaanddata%dataattrv%dataattr(nvar))
 do i =1,nvar
@@ -496,6 +496,9 @@ CALL linei%vol7d_serialize_iterline_set_callback(vol7d_ana_callback_dba &
  )
 
 DO WHILE(linei%next())
+
+  print *,"++++++++++++++++++++++++++++++++++++++++++++++++++++ ciao ciao ++++++++++++++++++++++++"
+
   coli = linei%vol7d_serialize_itercol_new() ! column iterator from linei (data line)
   DO WHILE(coli%next())
 ! call callbacks

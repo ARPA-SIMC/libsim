@@ -1822,9 +1822,12 @@ type(dbametaanddatalist),intent(inout) :: metaanddatal
 TYPE(vol7d_serialize_dballe) :: serialize
 
 serialize = vol7d_serialize_dballe_new()
+serialize%anaonly=.true.
+call serialize%vol7d_serialize_setup(v7d)
+call serialize%vol7d_serialize_export(metaanddatal)
 
-!call serialize%vol7d_serialize_optionparser()
-!call serialize%vol7d_serialize_parse()
+serialize = vol7d_serialize_dballe_new()
+serialize%dataonly=.true.
 call serialize%vol7d_serialize_setup(v7d)
 call serialize%vol7d_serialize_export(metaanddatal)
 

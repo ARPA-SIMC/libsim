@@ -19,7 +19,7 @@ PROGRAM v7ddballe_import_export
 ! Programma di esempio di estrazione e scrittura dall'archivio DB-all.e
 USE datetime_class
 USE vol7d_class
-USE vol7d_dballe_class
+USE vol7d_dballeold_class
 
 IMPLICIT NONE
 

@@ -316,6 +316,12 @@ contains
   procedure :: dbadata_getb !< return byte value
   procedure :: dbadata_getc !< return character value
   generic   :: get => dbadata_geti,dbadata_getr,dbadata_getd,dbadata_getb,dbadata_getc !< return value
+  procedure :: dbadata_c_e_i !< test integer missing value
+  procedure :: dbadata_c_e_r !< test real missing value
+  procedure :: dbadata_c_e_d !< test double precision missing value
+  procedure :: dbadata_c_e_b !< test byte missing value
+  procedure :: dbadata_c_e_c !< test character missing value
+  procedure :: c_e => dbadata_c_e !< test missing value
   procedure(dbadata_display),deferred :: display  !< print a summary of object contents
   procedure :: equal => dbadata_equal !> compare two dbametadata
   generic   :: operator (==) => equal !> == operator
@@ -657,42 +663,149 @@ end if
 end function dbadata_equal
 
 
-!!! mmmm TODO: ma qui sotto manacano i cast e torna sempre missing ?
-
 !> return integer value
 subroutine dbadata_geti(data,value)
 class(dbadata), intent(in) :: data
 integer, intent(out) :: value !< retuned value
 value=imiss
+
+select type(data)
+type is (dbadatai)
+  value = data%value
+end select
+
 end subroutine dbadata_geti
+
+
+!> test missing value
+logical function dbadata_c_e_i(data)
+class(dbadata), intent(in) :: data
+
+dbadata_c_e_i=.false.
+
+select type(data)
+type is (dbadatai)
+  dbadata_c_e_i = c_e(data%value)
+end select
+
+end function dbadata_c_e_i
 
 !> return real value
 subroutine dbadata_getr(data,value)
 class(dbadata), intent(in) :: data
 real, intent(out) :: value !< retuned value
 value=rmiss
+
+select type(data)
+type is (dbadatar)
+  value = data%value
+end select
+
 end subroutine dbadata_getr
+
+!> test missing value
+logical function dbadata_c_e_r(data)
+class(dbadata), intent(in) :: data
+
+dbadata_c_e_r=.false.
+
+select type(data)
+type is (dbadatar)
+  dbadata_c_e_r = c_e(data%value)
+end select
+
+end function dbadata_c_e_r
 
 !> return double precision value
 subroutine dbadata_getd(data,value)
 class(dbadata), intent(in) :: data
 doubleprecision, intent(out) :: value !< retuned value
 value=dmiss
+
+select type(data)
+type is (dbadatad)
+  value = data%value
+end select
+
 end subroutine dbadata_getd
+
+!> test missing value
+logical function dbadata_c_e_d(data)
+class(dbadata), intent(in) :: data
+
+dbadata_c_e_d=.false.
+
+select type(data)
+type is (dbadatad)
+  dbadata_c_e_d = c_e(data%value)
+end select
+
+end function dbadata_c_e_d
+
 
 !> return byte value
 subroutine dbadata_getb(data,value)
 class(dbadata), intent(in) :: data
 INTEGER(kind=int_b), intent(out) :: value !< retuned value
 value=bmiss
+
+select type(data)
+type is (dbadatab)
+  value = data%value
+end select
+
 end subroutine dbadata_getb
+
+!> test missing value
+logical function dbadata_c_e_b(data)
+class(dbadata), intent(in) :: data
+
+dbadata_c_e_b=.false.
+
+select type(data)
+type is (dbadatab)
+  dbadata_c_e_b = c_e(data%value)
+end select
+
+end function dbadata_c_e_b
 
 !> return character value
 subroutine dbadata_getc(data,value)
 class(dbadata), intent(in) :: data
 character(len=*), intent(out) :: value !< retuned value
 value=cmiss
+
+select type(data)
+type is (dbadatac)
+  value = data%value
+end select
+
 end subroutine dbadata_getc
+
+
+!> test missing value
+logical function dbadata_c_e_c(data)
+class(dbadata), intent(in) :: data
+
+dbadata_c_e_c=.false.
+
+select type(data)
+type is (dbadatac)
+  dbadata_c_e_c = c_e(data%value)
+end select
+
+end function dbadata_c_e_c
+
+
+!> test missing value
+logical function dbadata_c_e(data)
+class(dbadata), intent(in) :: data
+
+dbadata_c_e=data%dbadata_c_e_i() .or. data%dbadata_c_e_r() .or. data%dbadata_c_e_d() &
+ .or. data%dbadata_c_e_b() .or. data%dbadata_c_e_c()
+
+end function dbadata_c_e
+
 
 !> print a summary of object content
 subroutine dbalevel_display(level)
@@ -1110,31 +1223,47 @@ type(dbasession), intent(in) :: session !< dballe session
 logical, intent(in),optional :: dataonly          !< set to .true. to get data only (no attribute) 
 type(dbafilter),intent(in),optional :: filter     !< use this to filter wanted data                
 integer :: i
+logical :: critica
 
 if (present(filter))then
   if (filter%vars == data%dbadc%dat) return
 endif
 !write data in dsn
+
+print *,"dati:"
+call data%dbadc%display()
 call data%dbadc%dbaset(session)
 call session%prendilo()
-
 
 if (optio_log(dataonly)) return
 !write attributes in dsn
 if (allocated(data%attrv%dcv)) then
   if (size(data%attrv%dcv) > 0 )then
 
+    critica = .false.
     do i = 1, size(data%attrv%dcv)
       if (present(filter))then
         if (filter%starvars == data%attrv%dcv(i)%dat) continue
       endif
-      call data%attrv%dcv(i)%dat%dbaset(session)
+
+      if (data%attrv%dcv(i)%dat%c_e()) then
+        print *,"attributi:"
+        call data%attrv%dcv(i)%dat%display()
+        call data%attrv%dcv(i)%dat%dbaset(session)
+        critica=.true.
+      endif
     end do
 
-    call session%var_related(data%dbadc%dat%btable)
-    call session%critica()
+    if (critica) then
+      print *,"dato per attributi:"
+      print *, data%dbadc%dat%btable
+      call session%var_related(data%dbadc%dat%btable) ! I have made a prendilo and I do not need this
+      call session%critica()
+    end if
+
   end if
 end if
+
 
 !to close message on file
 !call session%close_message()
