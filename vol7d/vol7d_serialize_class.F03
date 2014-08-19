@@ -600,10 +600,14 @@ ENDIF ! first iteration
 
   IF (this%ser%ndvar == 5) THEN ! all variables in one line
     this%i5 = 0
-    this%analine = .FALSE.
+    this%analine = this%ser%anavol .OR. this%ser%anaonly
+! do not repeat ana variables for every data entry
+    IF (this%analine) THEN
+      IF (this%i2 /= 1 .OR. this%i3 /= 1 .OR. this%i4 /= 1) CYCLE
+    ENDIF
     IF (.NOT.this%ser%keep_miss) THEN ! check whether the line has valid data
       IF (var_mapper_miss(this%ser%mapper, this%ser%v7d, &
-       this%i1, this%i2, this%i3, this%i4, this%i6, this%ser%anavol)) CYCLE
+       this%i1, this%i2, this%i3, this%i4, this%i6, this%analine)) CYCLE
     ENDIF
   ELSE ! one variable per line
     this%i5 = this%loopind(this%ser%loopinvorder(vol7d_var_d))
