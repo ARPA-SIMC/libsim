@@ -52,7 +52,9 @@ TYPE vol7d_serialize
   LOGICAL,PUBLIC :: keep_miss=.FALSE. !< keep in output the elements with all missing data
   LOGICAL,PUBLIC :: no_rescale=.FALSE. !< do not rescale integer values in output
   LOGICAL,PUBLIC :: cachedesc=.FALSE. !< cache descriptors that do not change from one line to the next
-  LOGICAL :: anaonly=.FALSE.
+  LOGICAL,PUBLIC :: anaonly=.FALSE. !< export only station volumes
+  LOGICAL,PUBLIC :: dataonly=.FALSE. !< export only data volumes
+  LOGICAL :: anavol=.FALSE.
   INTEGER :: ndvar=5
   INTEGER :: icolumn(7), looporder(6), loopinvorder(6), &
    loopstart(6), loopend(6)
@@ -405,7 +407,7 @@ this%v7d => v7d
 !  DEALLOCATE(w_s, w_e)
 !ENDIF
 
-CALL var_mapper(this%mapper, v7d)
+CALL var_mapper(this%mapper, v7d, this%anaonly, this%dataonly)
 
 ! Filter and sort requested variables
 IF (this%variable /= 'all') THEN
@@ -442,7 +444,7 @@ IF (SIZE(v7d%timerange) == 0) THEN
     this%icolumn(:) = -1
   END WHERE
 ENDIF
-this%anaonly = SIZE(v7d%time) == 0 .AND. SIZE(v7d%level) == 0 .AND. &
+this%anavol = SIZE(v7d%time) == 0 .AND. SIZE(v7d%level) == 0 .AND. &
  SIZE(v7d%timerange) == 0
 
 nav = COUNT(this%mapper(:)%cat == 1)
@@ -601,7 +603,7 @@ ENDIF ! first iteration
     this%analine = .FALSE.
     IF (.NOT.this%ser%keep_miss) THEN ! check whether the line has valid data
       IF (var_mapper_miss(this%ser%mapper, this%ser%v7d, &
-       this%i1, this%i2, this%i3, this%i4, this%i6, this%ser%anaonly)) CYCLE
+       this%i1, this%i2, this%i3, this%i4, this%i6, this%ser%anavol)) CYCLE
     ENDIF
   ELSE ! one variable per line
     this%i5 = this%loopind(this%ser%loopinvorder(vol7d_var_d))
@@ -1157,114 +1159,124 @@ END SUBROUTINE default_vol7d_attr_callback
 
 
 ! create a var_mapper object from the v7d volume provided
-SUBROUTINE var_mapper(mapper, v7d)
+SUBROUTINE var_mapper(mapper, v7d, anaonly, dataonly)
 TYPE(vol7d_var_mapper),ALLOCATABLE :: mapper(:)
 TYPE(vol7d),INTENT(in) :: v7d
+LOGICAL,INTENT(in) :: anaonly
+LOGICAL,INTENT(in) :: dataonly
 
 INTEGER :: n
 
 n = 0
 
-IF (ASSOCIATED(v7d%anavar%r)) n = n + SIZE(v7d%anavar%r)
-IF (ASSOCIATED(v7d%anavar%d)) n = n + SIZE(v7d%anavar%d)
-IF (ASSOCIATED(v7d%anavar%i)) n = n + SIZE(v7d%anavar%i)
-IF (ASSOCIATED(v7d%anavar%b)) n = n + SIZE(v7d%anavar%b)
-IF (ASSOCIATED(v7d%anavar%c)) n = n + SIZE(v7d%anavar%c)
+IF (.NOT.dataonly) THEN
+  IF (ASSOCIATED(v7d%anavar%r)) n = n + SIZE(v7d%anavar%r)
+  IF (ASSOCIATED(v7d%anavar%d)) n = n + SIZE(v7d%anavar%d)
+  IF (ASSOCIATED(v7d%anavar%i)) n = n + SIZE(v7d%anavar%i)
+  IF (ASSOCIATED(v7d%anavar%b)) n = n + SIZE(v7d%anavar%b)
+  IF (ASSOCIATED(v7d%anavar%c)) n = n + SIZE(v7d%anavar%c)
 
-IF (ASSOCIATED(v7d%anaattr%r) .AND. ASSOCIATED(v7d%anavarattr%r)) n = n + &
- SIZE(v7d%anaattr%r) * SIZE(v7d%anavarattr%r)
-IF (ASSOCIATED(v7d%anaattr%d) .AND. ASSOCIATED(v7d%anavarattr%d)) n = n + &
- SIZE(v7d%anaattr%d) * SIZE(v7d%anavarattr%d)
-IF (ASSOCIATED(v7d%anaattr%i) .AND. ASSOCIATED(v7d%anavarattr%i)) n = n + &
- SIZE(v7d%anaattr%i) * SIZE(v7d%anavarattr%i)
-IF (ASSOCIATED(v7d%anaattr%b) .AND. ASSOCIATED(v7d%anavarattr%b)) n = n + &
- SIZE(v7d%anaattr%b) * SIZE(v7d%anavarattr%b)
-IF (ASSOCIATED(v7d%anaattr%c) .AND. ASSOCIATED(v7d%anavarattr%c)) n = n + &
- SIZE(v7d%anaattr%c) * SIZE(v7d%anavarattr%c)
+  IF (ASSOCIATED(v7d%anaattr%r) .AND. ASSOCIATED(v7d%anavarattr%r)) n = n + &
+   SIZE(v7d%anaattr%r) * SIZE(v7d%anavarattr%r)
+  IF (ASSOCIATED(v7d%anaattr%d) .AND. ASSOCIATED(v7d%anavarattr%d)) n = n + &
+   SIZE(v7d%anaattr%d) * SIZE(v7d%anavarattr%d)
+  IF (ASSOCIATED(v7d%anaattr%i) .AND. ASSOCIATED(v7d%anavarattr%i)) n = n + &
+   SIZE(v7d%anaattr%i) * SIZE(v7d%anavarattr%i)
+  IF (ASSOCIATED(v7d%anaattr%b) .AND. ASSOCIATED(v7d%anavarattr%b)) n = n + &
+   SIZE(v7d%anaattr%b) * SIZE(v7d%anavarattr%b)
+  IF (ASSOCIATED(v7d%anaattr%c) .AND. ASSOCIATED(v7d%anavarattr%c)) n = n + &
+   SIZE(v7d%anaattr%c) * SIZE(v7d%anavarattr%c)
+ENDIF
 
-IF (ASSOCIATED(v7d%dativar%r)) n = n + SIZE(v7d%dativar%r)
-IF (ASSOCIATED(v7d%dativar%d)) n = n + SIZE(v7d%dativar%d)
-IF (ASSOCIATED(v7d%dativar%i)) n = n + SIZE(v7d%dativar%i)
-IF (ASSOCIATED(v7d%dativar%b)) n = n + SIZE(v7d%dativar%b)
-IF (ASSOCIATED(v7d%dativar%c)) n = n + SIZE(v7d%dativar%c)
+IF (.NOT.anaonly) THEN
+  IF (ASSOCIATED(v7d%dativar%r)) n = n + SIZE(v7d%dativar%r)
+  IF (ASSOCIATED(v7d%dativar%d)) n = n + SIZE(v7d%dativar%d)
+  IF (ASSOCIATED(v7d%dativar%i)) n = n + SIZE(v7d%dativar%i)
+  IF (ASSOCIATED(v7d%dativar%b)) n = n + SIZE(v7d%dativar%b)
+  IF (ASSOCIATED(v7d%dativar%c)) n = n + SIZE(v7d%dativar%c)
 
-IF (ASSOCIATED(v7d%datiattr%r) .AND. ASSOCIATED(v7d%dativarattr%r)) n = n + &
- SIZE(v7d%datiattr%r) * SIZE(v7d%dativarattr%r)
-IF (ASSOCIATED(v7d%datiattr%d) .AND. ASSOCIATED(v7d%dativarattr%d)) n = n + &
- SIZE(v7d%datiattr%d) * SIZE(v7d%dativarattr%d)
-IF (ASSOCIATED(v7d%datiattr%i) .AND. ASSOCIATED(v7d%dativarattr%i)) n = n + &
- SIZE(v7d%datiattr%i) * SIZE(v7d%dativarattr%i)
-IF (ASSOCIATED(v7d%datiattr%b) .AND. ASSOCIATED(v7d%dativarattr%b)) n = n + &
- SIZE(v7d%datiattr%b) * SIZE(v7d%dativarattr%b)
-IF (ASSOCIATED(v7d%datiattr%c) .AND. ASSOCIATED(v7d%dativarattr%c)) n = n + &
- SIZE(v7d%datiattr%c) * SIZE(v7d%dativarattr%c)
+  IF (ASSOCIATED(v7d%datiattr%r) .AND. ASSOCIATED(v7d%dativarattr%r)) n = n + &
+   SIZE(v7d%datiattr%r) * SIZE(v7d%dativarattr%r)
+  IF (ASSOCIATED(v7d%datiattr%d) .AND. ASSOCIATED(v7d%dativarattr%d)) n = n + &
+   SIZE(v7d%datiattr%d) * SIZE(v7d%dativarattr%d)
+  IF (ASSOCIATED(v7d%datiattr%i) .AND. ASSOCIATED(v7d%dativarattr%i)) n = n + &
+   SIZE(v7d%datiattr%i) * SIZE(v7d%dativarattr%i)
+  IF (ASSOCIATED(v7d%datiattr%b) .AND. ASSOCIATED(v7d%dativarattr%b)) n = n + &
+   SIZE(v7d%datiattr%b) * SIZE(v7d%dativarattr%b)
+  IF (ASSOCIATED(v7d%datiattr%c) .AND. ASSOCIATED(v7d%dativarattr%c)) n = n + &
+   SIZE(v7d%datiattr%c) * SIZE(v7d%dativarattr%c)
+ENDIF
 
 ALLOCATE(mapper(n))
 
 n = 0
 
-IF (ASSOCIATED(v7d%anavar%r)) THEN
-  CALL set_mapper(1, 1, 1, SIZE(v7d%anavar%r))
-ENDIF
-IF (ASSOCIATED(v7d%anavar%d)) THEN
-  CALL set_mapper(1, 2, 1, SIZE(v7d%anavar%d))
-ENDIF
-IF (ASSOCIATED(v7d%anavar%i)) THEN
-  CALL set_mapper(1, 3, 1, SIZE(v7d%anavar%i))
-ENDIF
-IF (ASSOCIATED(v7d%anavar%b)) THEN
-  CALL set_mapper(1, 4, 1, SIZE(v7d%anavar%b))
-ENDIF
-IF (ASSOCIATED(v7d%anavar%c)) THEN
-  CALL set_mapper(1, 5, 1, SIZE(v7d%anavar%c))
+IF (.NOT.dataonly) THEN
+  IF (ASSOCIATED(v7d%anavar%r)) THEN
+    CALL set_mapper(1, 1, 1, SIZE(v7d%anavar%r))
+  ENDIF
+  IF (ASSOCIATED(v7d%anavar%d)) THEN
+    CALL set_mapper(1, 2, 1, SIZE(v7d%anavar%d))
+  ENDIF
+  IF (ASSOCIATED(v7d%anavar%i)) THEN
+    CALL set_mapper(1, 3, 1, SIZE(v7d%anavar%i))
+  ENDIF
+  IF (ASSOCIATED(v7d%anavar%b)) THEN
+    CALL set_mapper(1, 4, 1, SIZE(v7d%anavar%b))
+  ENDIF
+  IF (ASSOCIATED(v7d%anavar%c)) THEN
+    CALL set_mapper(1, 5, 1, SIZE(v7d%anavar%c))
+  ENDIF
+
+  IF (ASSOCIATED(v7d%anaattr%r) .AND. ASSOCIATED(v7d%anavarattr%r)) THEN
+    CALL set_mapper(2, 1, SIZE(v7d%anaattr%r), SIZE(v7d%anavarattr%r))
+  ENDIF
+  IF (ASSOCIATED(v7d%anaattr%d) .AND. ASSOCIATED(v7d%anavarattr%d)) THEN
+    CALL set_mapper(2, 2, SIZE(v7d%anaattr%d), SIZE(v7d%anavarattr%d))
+  ENDIF
+  IF (ASSOCIATED(v7d%anaattr%i) .AND. ASSOCIATED(v7d%anavarattr%i)) THEN
+    CALL set_mapper(2, 3, SIZE(v7d%anaattr%i), SIZE(v7d%anavarattr%i))
+  ENDIF
+  IF (ASSOCIATED(v7d%anaattr%b) .AND. ASSOCIATED(v7d%anavarattr%b)) THEN
+    CALL set_mapper(2, 4, SIZE(v7d%anaattr%b), SIZE(v7d%anavarattr%b))
+  ENDIF
+  IF (ASSOCIATED(v7d%anaattr%c) .AND. ASSOCIATED(v7d%anavarattr%c)) THEN
+    CALL set_mapper(2, 5, SIZE(v7d%anaattr%c), SIZE(v7d%anavarattr%c))
+  ENDIF
 ENDIF
 
-IF (ASSOCIATED(v7d%anaattr%r) .AND. ASSOCIATED(v7d%anavarattr%r)) THEN
-  CALL set_mapper(2, 1, SIZE(v7d%anaattr%r), SIZE(v7d%anavarattr%r))
-ENDIF
-IF (ASSOCIATED(v7d%anaattr%d) .AND. ASSOCIATED(v7d%anavarattr%d)) THEN
-  CALL set_mapper(2, 2, SIZE(v7d%anaattr%d), SIZE(v7d%anavarattr%d))
-ENDIF
-IF (ASSOCIATED(v7d%anaattr%i) .AND. ASSOCIATED(v7d%anavarattr%i)) THEN
-  CALL set_mapper(2, 3, SIZE(v7d%anaattr%i), SIZE(v7d%anavarattr%i))
-ENDIF
-IF (ASSOCIATED(v7d%anaattr%b) .AND. ASSOCIATED(v7d%anavarattr%b)) THEN
-  CALL set_mapper(2, 4, SIZE(v7d%anaattr%b), SIZE(v7d%anavarattr%b))
-ENDIF
-IF (ASSOCIATED(v7d%anaattr%c) .AND. ASSOCIATED(v7d%anavarattr%c)) THEN
-  CALL set_mapper(2, 5, SIZE(v7d%anaattr%c), SIZE(v7d%anavarattr%c))
-ENDIF
+IF (.NOT.anaonly) THEN
+  IF (ASSOCIATED(v7d%dativar%r)) THEN
+    CALL set_mapper(3, 1, 1, SIZE(v7d%dativar%r))
+  ENDIF
+  IF (ASSOCIATED(v7d%dativar%d)) THEN
+    CALL set_mapper(3, 2, 1, SIZE(v7d%dativar%d))
+  ENDIF
+  IF (ASSOCIATED(v7d%dativar%i)) THEN
+    CALL set_mapper(3, 3, 1, SIZE(v7d%dativar%i))
+  ENDIF
+  IF (ASSOCIATED(v7d%dativar%b)) THEN
+    CALL set_mapper(3, 4, 1, SIZE(v7d%dativar%b))
+  ENDIF
+  IF (ASSOCIATED(v7d%dativar%c)) THEN
+    CALL set_mapper(3, 5, 1, SIZE(v7d%dativar%c))
+  ENDIF
 
-IF (ASSOCIATED(v7d%dativar%r)) THEN
-  CALL set_mapper(3, 1, 1, SIZE(v7d%dativar%r))
-ENDIF
-IF (ASSOCIATED(v7d%dativar%d)) THEN
-  CALL set_mapper(3, 2, 1, SIZE(v7d%dativar%d))
-ENDIF
-IF (ASSOCIATED(v7d%dativar%i)) THEN
-  CALL set_mapper(3, 3, 1, SIZE(v7d%dativar%i))
-ENDIF
-IF (ASSOCIATED(v7d%dativar%b)) THEN
-  CALL set_mapper(3, 4, 1, SIZE(v7d%dativar%b))
-ENDIF
-IF (ASSOCIATED(v7d%dativar%c)) THEN
-  CALL set_mapper(3, 5, 1, SIZE(v7d%dativar%c))
-ENDIF
-
-IF (ASSOCIATED(v7d%datiattr%r) .AND. ASSOCIATED(v7d%dativarattr%r)) THEN
-  CALL set_mapper(4, 1, SIZE(v7d%datiattr%r), SIZE(v7d%dativarattr%r))
-ENDIF
-IF (ASSOCIATED(v7d%datiattr%d) .AND. ASSOCIATED(v7d%dativarattr%d)) THEN
-  CALL set_mapper(4, 2, SIZE(v7d%datiattr%d), SIZE(v7d%dativarattr%d))
-ENDIF
-IF (ASSOCIATED(v7d%datiattr%i) .AND. ASSOCIATED(v7d%dativarattr%i)) THEN
-  CALL set_mapper(4, 3, SIZE(v7d%datiattr%i), SIZE(v7d%dativarattr%i))
-ENDIF
-IF (ASSOCIATED(v7d%datiattr%b) .AND. ASSOCIATED(v7d%dativarattr%b)) THEN
-  CALL set_mapper(4, 4, SIZE(v7d%datiattr%b), SIZE(v7d%dativarattr%b))
-ENDIF
-IF (ASSOCIATED(v7d%datiattr%c) .AND. ASSOCIATED(v7d%dativarattr%c)) THEN
-  CALL set_mapper(4, 5, SIZE(v7d%datiattr%c), SIZE(v7d%dativarattr%c))
+  IF (ASSOCIATED(v7d%datiattr%r) .AND. ASSOCIATED(v7d%dativarattr%r)) THEN
+    CALL set_mapper(4, 1, SIZE(v7d%datiattr%r), SIZE(v7d%dativarattr%r))
+  ENDIF
+  IF (ASSOCIATED(v7d%datiattr%d) .AND. ASSOCIATED(v7d%dativarattr%d)) THEN
+    CALL set_mapper(4, 2, SIZE(v7d%datiattr%d), SIZE(v7d%dativarattr%d))
+  ENDIF
+  IF (ASSOCIATED(v7d%datiattr%i) .AND. ASSOCIATED(v7d%dativarattr%i)) THEN
+    CALL set_mapper(4, 3, SIZE(v7d%datiattr%i), SIZE(v7d%dativarattr%i))
+  ENDIF
+  IF (ASSOCIATED(v7d%datiattr%b) .AND. ASSOCIATED(v7d%dativarattr%b)) THEN
+    CALL set_mapper(4, 4, SIZE(v7d%datiattr%b), SIZE(v7d%dativarattr%b))
+  ENDIF
+  IF (ASSOCIATED(v7d%datiattr%c) .AND. ASSOCIATED(v7d%dativarattr%c)) THEN
+    CALL set_mapper(4, 5, SIZE(v7d%datiattr%c), SIZE(v7d%dativarattr%c))
+  ENDIF
 ENDIF
 
 CONTAINS
