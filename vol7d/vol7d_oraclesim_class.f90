@@ -398,6 +398,12 @@ IF (PRESENT(attr)) THEN
       ENDIF
     ENDDO
   ENDDO
+ELSE ! attr not provided now means all attributes
+  DO j = 1, SIZE(dataattr_builder)
+    nda_type(dataattr_builder(j)%vartype) = &
+     nda_type(dataattr_builder(j)%vartype) + 1
+    attr_out_ind(j) = nda_type(dataattr_builder(j)%vartype)
+  ENDDO
 ENDIF
 
 ! Comincio l'estrazione

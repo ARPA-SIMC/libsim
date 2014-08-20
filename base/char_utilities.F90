@@ -698,7 +698,7 @@ END FUNCTION f_nblnk
 !! word_start and \a word_end are provided, they are allocated with \a
 !! nword elements and set to the indices of initial and final
 !! character of every word in \a input_string. Groups of contiguous
-!! separation characters are treated as single separator characters.
+!! separation characters are treated as a single separator character.
 FUNCTION word_split(input_string, word_start, word_end, sep) RESULT(nword)
 CHARACTER(len=*), INTENT(in) :: input_string !< string to be scanned
 INTEGER, POINTER, OPTIONAL :: word_start(:) !< indices of first character of each word in \a input_string, allocated here, must be deallocated by the user

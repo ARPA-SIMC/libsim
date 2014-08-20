@@ -243,12 +243,12 @@ CALL optionparser_add(opt, ' ', 'anavariable-list', anavariable_list, '', help= 
  &in the form of a comma-separated list of B-table alphanumeric codes, &
  &e.g. ''B01192,B01193,B07001''')
 
-attribute_list=''   ! do not show default in help
+attribute_list=cmiss   ! do not show default in help
 CALL optionparser_add(opt, ' ', 'attribute-list', attribute_list, help= &
  'if input-format is of DB-all.e type, list of data attributes to be extracted &
  &in the form of a comma-separated list of B-table alphanumeric codes, &
  &e.g. ''B33196,B33197''; for no attribute set attribute-list to empty string '''' &
- &; if attribute-list is missed all present attributes in input will be imported')
+ &; if attribute-list is not provided all present attributes in input will be imported')
 CALL optionparser_add(opt, ' ', 'level', levelc, ',,,', help= &
  'if input-format is of database type, vertical level to be extracted &
  &in the form level1,l1,level2,l2 empty fields indicate missing data, &
@@ -529,14 +529,20 @@ IF (LEN_TRIM(anavariable_list) > 0) THEN
   ENDDO
   DEALLOCATE(w_s, w_e)
 ENDIF
-IF (LEN_TRIM(attribute_list) > 0) THEN
+IF (c_e(attribute_list)) THEN ! argument provided
+  IF (LEN_TRIM(attribute_list) > 0) THEN ! argument nonempty => some attributes requested
+    n = word_split(attribute_list, w_s, w_e, ',')
+    ALLOCATE(al(n))
+    DO i = 1, n
+      al(i) = attribute_list(w_s(i):w_e(i))
+    ENDDO
+    DEALLOCATE(w_s, w_e)
 
-  n = word_split(attribute_list, w_s, w_e, ',')
-  ALLOCATE(al(n))
-  DO i = 1, n
-    al(i) = attribute_list(w_s(i):w_e(i))
-  ENDDO
-  DEALLOCATE(w_s, w_e)
+  ELSE ! argument provided empty => no attributes
+    n = 0
+    ALLOCATE(al(0)) ! SIZE() 0 means no attributes
+  ENDIF
+
 
   IF (.NOT.disable_qc) THEN ! add qc variables not specified yet to alqc
 ! al is the list of attributes requested by the user
@@ -557,27 +563,14 @@ IF (LEN_TRIM(attribute_list) > 0) THEN
       ENDIF
     ENDDO
 
-  ELSE ! duplicate al
-! al is the list of attributes requested by the user
-! alqc is the same list
+  ELSE ! alqc is equal to al
     ALLOCATE(alqc(n))
     alqc = al
-
   ENDIF
-
-!!$ELSE ! no attributes requested
-!!$  ALLOCATE(al(0)) ! an empty al is required for safety
-!!$  IF (.NOT.disable_qc) THEN ! set alqc to qc variables
-!!$! al is empty
-!!$! alqc is the list of the attributes required by qc
-!!$    ALLOCATE(alqc(nqcattrvars))
-!!$    alqc(:) = qcattrvarsbtables(:)
-!!$  ELSE ! an empty alqc is required for safety
-!!$! al is empty
-!!$! alqc is empty
-!!$    ALLOCATE(alqc(0))
-!!$  ENDIF
-
+ELSE ! argument not provided => all attributes
+  ALLOCATE(al(0))
+  ALLOCATE(alqc(1))
+  alqc(1) = cmiss ! 1 element missing means all attributes
 ENDIF
 
 #ifdef ALCHIMIA
