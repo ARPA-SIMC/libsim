@@ -493,7 +493,7 @@ filter=dbafilter(vars=vars)
 print *, "filter:"
 call filter%display()
 call session%set(filter=filter)
-call session%extrude(metaanddatav,filter=filter,dataonly=.true.)
+call session%extrude(metaanddatav,filter=filter,noattr=.true.)
 
 print *, "dati dati:"
 do i=1,size(metaanddatav)

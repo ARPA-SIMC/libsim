@@ -600,11 +600,14 @@ type, public ::  dbafilter
   type(dbacoord)     :: coordmin,coordmax
   type(dbadatetime)  :: datetimemin,datetimemax
   integer            :: limit
-  character(len=255) :: ana_filter, data_filter, attr_filter, varlist, starvarlist
+  character(len=255) :: ana_filter, data_filter, attr_filter, varlist, starvarlist, anavarlist, anastarvarlist
   character(len=40)  :: query 
   integer            :: priority,priomin,priomax
   logical            :: contextana
+  logical            :: anaonly
+  logical            :: dataonly
   type(dbadcv)       :: vars,starvars
+  type(dbadcv)       :: anavars,anastarvars
   contains
   procedure          :: display => dbafilter_display  !< print a summary of object contents
   procedure          :: dbaset => dbafilter_set !< set dballe parameters
@@ -1009,27 +1012,27 @@ end subroutine dbadcv_set
 
 
 !> put data on DSN
-subroutine dbadcv_ingest(dcv,session,dataonly,filter)
+subroutine dbadcv_ingest(dcv,session,noattr,filter)
 class(dbadcv), intent(in) :: dcv
 type(dbasession), intent(in) :: session !< dballe session
-logical, intent(in),optional :: dataonly          !< set to .true. to get data only (no attribute) 
+logical, intent(in),optional :: noattr          !< set to .true. to get data only (no attribute) 
 type(dbafilter),intent(in),optional :: filter     !< use this to filter wanted data                
 integer :: i
 
 do i=1, size(dcv%dcv)
-  call dcv%dcv(i)%ingest(session,dataonly,filter)
+  call dcv%dcv(i)%ingest(session,noattr,filter)
 enddo
 
 end subroutine dbadcv_ingest
 
 !> put data on DSN
-subroutine dbadc_ingest(data,session,dataonly,filter)
+subroutine dbadc_ingest(data,session,noattr,filter)
 class(dbadc), intent(in) :: data
 type(dbasession), intent(in) :: session !< dballe session
-logical, intent(in),optional :: dataonly          !< set to .true. to get data only (no attribute) 
+logical, intent(in),optional :: noattr          !< set to .true. to get data only (no attribute) 
 type(dbafilter),intent(in),optional :: filter     !< use this to filter wanted data                
 
-call data%ingest(session,dataonly,filter)
+call data%ingest(session,noattr,filter)
 
 end subroutine dbadc_ingest
 
@@ -1217,16 +1220,20 @@ end subroutine dbasession_dissolveattr_metadata
 
 
 !> put data on DSN
-subroutine dbadataattr_ingest(data,session,dataonly,filter)
+subroutine dbadataattr_ingest(data,session,noattr,filter)
 class(dbadataattr), intent(in) :: data
 type(dbasession), intent(in) :: session !< dballe session
-logical, intent(in),optional :: dataonly          !< set to .true. to get data only (no attribute) 
+logical, intent(in),optional :: noattr          !< set to .true. to get data only (no attribute) 
 type(dbafilter),intent(in),optional :: filter     !< use this to filter wanted data                
 integer :: i
 logical :: critica
 
 if (present(filter))then
-  if (filter%vars == data%dbadc%dat) return
+  if (filter%contextana) then
+    if (filter%anavars == data%dbadc%dat) return
+  else
+    if (filter%vars == data%dbadc%dat) return
+  end if
 endif
 !write data in dsn
 
@@ -1235,7 +1242,7 @@ call data%dbadc%display()
 call data%dbadc%dbaset(session)
 call session%prendilo()
 
-if (optio_log(dataonly)) return
+if (optio_log(noattr)) return
 !write attributes in dsn
 if (allocated(data%attrv%dcv)) then
   if (size(data%attrv%dcv) > 0 )then
@@ -1243,7 +1250,11 @@ if (allocated(data%attrv%dcv)) then
     critica = .false.
     do i = 1, size(data%attrv%dcv)
       if (present(filter))then
-        if (filter%starvars == data%attrv%dcv(i)%dat) continue
+        if (filter%contextana) then
+          if (filter%anastarvars == data%attrv%dcv(i)%dat) continue
+        else
+          if (filter%starvars == data%attrv%dcv(i)%dat) continue
+        end if
       endif
 
       if (data%attrv%dcv(i)%dat%c_e()) then
@@ -1283,16 +1294,16 @@ end subroutine dbadataattr_display
 
 
 !> put data on DSN
-subroutine dbadataattrv_ingest(dataattr,session,dataonly,filter)
+subroutine dbadataattrv_ingest(dataattr,session,noattr,filter)
 class(dbadataattrv), intent(in) :: dataattr
 type(dbasession), intent(in) :: session !< dballe session
-logical, intent(in),optional :: dataonly          !< set to .true. to get data only (no attribute) 
+logical, intent(in),optional :: noattr          !< set to .true. to get data only (no attribute) 
 type(dbafilter),intent(in),optional :: filter     !< use this to filter wanted data                
 integer :: i
 
 if(.not. allocated(dataattr%dataattr)) return
 do i=1, size(dataattr%dataattr)
-  call dataattr%dataattr(i)%ingest(session,dataonly,filter)
+  call dataattr%dataattr(i)%ingest(session,noattr,filter)
 enddo
 
 !to close message on file
@@ -1789,6 +1800,7 @@ class(dbametadata), intent(in) :: that !< second element
 
 dbafilter_equal_dbametadata = .false.
 
+!! TODO utilizzare dataonly ?
 
 if (this%contextana .and. c_e(that%timerange%vol7d_timerange)) return
 if (this%contextana .and. c_e(that%datetime%datetime)) return
@@ -1892,8 +1904,9 @@ end function dbametadata_equal
 !! Without parameter it is initialized to missing
 type(dbafilter) function dbafilter_init(filter,ana,var,datetime,level,timerange,network,&
  datetimemin,datetimemax,coordmin,coordmax,limit,&
- ana_filter, data_filter, attr_filter, varlist, starvarlist,priority, priomin, priomax, contextana,&
- vars, starvars, query)
+ ana_filter, data_filter, attr_filter, varlist, starvarlist, anavarlist, anastarvarlist ,&
+ priority, priomin, priomax, contextana,&
+ vars, starvars, anavars, anastarvars, query,anaonly,dataonly)
 
 type(dbafilter),intent(in),optional    :: filter !< prototype filter to use as default
 type(dbaana),intent(in),optional       :: ana !< ana filter
@@ -1912,13 +1925,19 @@ character(len=*),intent(in),optional   :: data_filter !< Restricts the results t
 character(len=*),intent(in),optional   :: attr_filter !< Restricts the results to only those data which have an attribute that matches the filter. Examples: 'conf>70', 'B33197=0', '25<=conf<=50' 
 character(len=*),intent(in),optional   :: varlist !< Comma-separated list of variable B codes wanted on output 
 character(len=*),intent(in),optional   :: starvarlist !< Comma-separated list of attribute B codes wanted on output 
+character(len=*),intent(in),optional   :: anavarlist !< Comma-separated list of variable B codes wanted on output for ana 
+character(len=*),intent(in),optional   :: anastarvarlist !< Comma-separated list of attribute B codes wanted on output for ana
 integer,intent(in),optional            :: priority !< priority on network wanted on output
 integer,intent(in),optional            :: priomin !< minimum priority on network wanted on output
 integer,intent(in),optional            :: priomax !< maximum priority on network wanted on output
-logical,intent(in),optional            :: contextana !< set contextana; only station data wanted on output
+logical,intent(in),optional            :: contextana !< set contextana; if true we want to work on station data else on data
 class(dbadcv),intent(in),optional      :: vars ! vector of vars wanted on output
 class(dbadcv),intent(in),optional      :: starvars ! vector of vars for attribute wanted on output
+class(dbadcv),intent(in),optional      :: anavars ! vector of ana vars wanted on output
+class(dbadcv),intent(in),optional      :: anastarvars ! vector of vars for attribute of ana wanted on output
 character(len=*),intent(in),optional   :: query !< Comma-separated list of query modifiers. Can have one of: 'best' or obsoletes:  'bigana', 'nosort', 'stream'. Examples: 'best'  obsoletes: 'nosort,stream' 
+logical,intent(in),optional            :: anaonly !< only station data wanted on input/output
+logical,intent(in),optional            :: dataonly !< only data wanted on input/output
 
 integer :: i
 logical :: nopreserve
@@ -1926,6 +1945,35 @@ logical :: nopreserve
 nopreserve=.true.
 if (present(filter)) then
   dbafilter_init=filter
+
+  if (allocated(filter%vars%dcv)) then
+    allocate(dbafilter_init%vars%dcv(size(filter%vars%dcv)))
+    do i =1,size(filter%vars%dcv)
+      allocate(dbafilter_init%vars%dcv(i)%dat,source=filter%vars%dcv(i)%dat)
+    end do
+  end if
+
+  if (allocated(filter%starvars%dcv)) then
+    allocate(dbafilter_init%starvars%dcv(size(filter%starvars%dcv)))
+    do i =1,size(filter%starvars%dcv)
+      allocate(dbafilter_init%starvars%dcv(i)%dat,source=filter%starvars%dcv(i)%dat)
+    end do
+  end if
+
+  if (allocated(filter%anavars%dcv)) then
+    allocate(dbafilter_init%anavars%dcv(size(filter%anavars%dcv)))
+    do i =1,size(filter%anavars%dcv)
+      allocate(dbafilter_init%anavars%dcv(i)%dat,source=filter%anavars%dcv(i)%dat)
+    end do
+  end if
+
+  if (allocated(filter%anastarvars%dcv)) then
+    allocate(dbafilter_init%anastarvars%dcv(size(filter%anastarvars%dcv)))
+    do i =1,size(filter%anastarvars%dcv)
+      allocate(dbafilter_init%anastarvars%dcv(i)%dat,source=filter%anastarvars%dcv(i)%dat)
+    end do
+  end if
+
   nopreserve=.false.
 end if
 
@@ -2025,6 +2073,18 @@ else if (nopreserve) then
   dbafilter_init%starvarlist=cmiss
 end if
 
+if (present(anavarlist)) then
+  dbafilter_init%anavarlist=anavarlist
+else if (nopreserve) then
+  dbafilter_init%anavarlist=cmiss
+end if
+
+if (present(anastarvarlist)) then
+  dbafilter_init%anastarvarlist=anastarvarlist
+else if (nopreserve) then
+  dbafilter_init%anastarvarlist=cmiss
+end if
+
 if (present(vars)) then
   if (allocated(vars%dcv)) then
     allocate(dbafilter_init%vars%dcv(size(vars%dcv)))
@@ -2055,6 +2115,37 @@ if (present(starvars)) then
   end if
 end if
 
+
+if (present(anavars)) then
+  if (allocated(anavars%dcv)) then
+    allocate(dbafilter_init%anavars%dcv(size(vars%dcv)))
+    do i =1,size(anavars%dcv)
+      allocate(dbafilter_init%anavars%dcv(i)%dat,source=anavars%dcv(i)%dat)
+    end do
+
+    dbafilter_init%anavarlist=""
+    do i=1,size(anavars%dcv) 
+      dbafilter_init%anavarlist=trim(dbafilter_init%anavarlist)//anavars%dcv(i)%dat%btable
+      if (i /=  size(anavars%dcv)) dbafilter_init%anavarlist=trim(dbafilter_init%anavarlist)//","
+    end do
+  endif
+end if
+
+if (present(anastarvars)) then
+  if (allocated(anastarvars%dcv)) then
+    allocate(dbafilter_init%anastarvars%dcv(size(anastarvars%dcv)))
+    do i =1,size(anastarvars%dcv)
+      allocate(dbafilter_init%anastarvars%dcv(i)%dat,source=anastarvars%dcv(i)%dat)
+    end do
+    
+    dbafilter_init%anastarvarlist=""
+    do i=1,size(anastarvars%dcv)
+      dbafilter_init%anastarvarlist=trim(dbafilter_init%anastarvarlist)//anastarvars%dcv(i)%dat%btable
+      if (i /=  size(anastarvars%dcv)) dbafilter_init%anastarvarlist=trim(dbafilter_init%anastarvarlist)//","
+    end do
+  end if
+end if
+
 if (present(priority)) then
   dbafilter_init%priority=priority
 else if (nopreserve) then
@@ -2079,6 +2170,17 @@ else if (nopreserve) then
   dbafilter_init%contextana=.false.
 end if
 
+if (present(anaonly)) then
+  dbafilter_init%anaonly=anaonly
+else if (nopreserve) then
+  dbafilter_init%anaonly=.false.
+end if
+if (present(dataonly)) then
+  dbafilter_init%dataonly=dataonly
+else if (nopreserve) then
+  dbafilter_init%dataonly=.false.
+end if
+
 if (present(query)) then
   dbafilter_init%query=query
 else if (nopreserve) then
@@ -2100,6 +2202,10 @@ call filter%datetimemin%display()
 call filter%datetimemax%display()
 call filter%coordmin%display()
 call filter%coordmax%display()
+call filter%vars%display()
+call filter%starvars%display()
+call filter%anavars%display()
+call filter%anastarvars%display()
 print *,"var=",filter%var
 print *,"limit=",filter%limit
 print *,"ana_filter=",trim(filter%ana_filter)
@@ -2107,10 +2213,14 @@ print *,"data_filter=",trim(filter%data_filter)
 print *,"attr_filter=",trim(filter%attr_filter)
 print *,"varlist=",trim(filter%varlist)
 print *,"*varlist=",trim(filter%starvarlist)
+print *,"anavarlist=",trim(filter%anavarlist)
+print *,"ana*varlist=",trim(filter%anastarvarlist)
 print *,"priority=",filter%priority
 print *,"priomin=",filter%priomin
 print *,"priomax=",filter%priomax
 print *,"contextana=",filter%contextana
+print *,"anaonly=",filter%anaonly
+print *,"dataonly=",filter%dataonly
 print *,"query=",trim(filter%query)
 
 end subroutine dbafilter_display
@@ -2173,13 +2283,16 @@ ier = idba_set(session%sehandle,"lonmax",getilon(filter%coordmax%geo_coord))
 ier = idba_set(session%sehandle,"ana_filter",filter%ana_filter)
 ier = idba_set(session%sehandle,"data_filter",filter%data_filter)
 ier = idba_set(session%sehandle,"attr_filter",filter%attr_filter)
-ier = idba_set(session%sehandle,"varlist",filter%varlist)
-ier = idba_set(session%sehandle,"*varlist",filter%starvarlist)
 
 ier = idba_set(session%sehandle,"query",filter%query)
 
 if (filter%contextana) then
  call session%setcontextana()
+ ier = idba_set(session%sehandle,"varlist",filter%anavarlist)
+ ier = idba_set(session%sehandle,"*varlist",filter%anastarvarlist)
+else
+  ier = idba_set(session%sehandle,"varlist",filter%varlist)
+  ier = idba_set(session%sehandle,"*varlist",filter%starvarlist)
 end if
 
 end subroutine dbafilter_set
@@ -2215,11 +2328,14 @@ call metaanddata%dataattrv%display()
 end subroutine dbametaanddata_display
 
 !> put data on DSN
-subroutine dbametaanddata_ingest(metaanddata,session,dataonly,filter)
+subroutine dbametaanddata_ingest(metaanddata,session,noattr,filter)
 class(dbametaanddata), intent(in) :: metaanddata
 type(dbasession), intent(in) :: session !< dballe session
-logical, intent(in),optional :: dataonly          !< set to .true. to get data only (no attribute) 
+logical, intent(in),optional :: noattr          !< set to .true. to get data only (no attribute) 
 type(dbafilter),intent(in),optional :: filter     !< use this to filter wanted data                
+
+!TODO mmm qui bisogna vedere ... modificando equal forse va bene
+! ma probabilmente bisogna settare contextana per selezionare i filtri di var e attr nelle altre extrude
 
 if (present(filter)) then
   if (filter == metaanddata%metadata) return
@@ -2232,8 +2348,8 @@ call session%set(metadata=metaanddata%metadata)
 
 !!!! todo FILTER : qui bisogna controllare che i filtri sottostanti siano attivi e funzionanti
 !write data and attribute
-!call session%ingest(metaanddata%dataattrv,dataonly,filter)
-call metaanddata%dataattrv%ingest(session,dataonly,filter)
+!call session%ingest(metaanddata%dataattrv,noattr,filter)
+call metaanddata%dataattrv%ingest(session,noattr,filter)
 !to close message on file
 call session%close_message()
 
@@ -2250,11 +2366,14 @@ call metaanddatav%datav%display()
 end subroutine dbametaanddatav_display
 
 !> put data on DSN
-subroutine dbametaanddatav_ingest(metaanddatav,session,dataonly,filter)
+subroutine dbametaanddatav_ingest(metaanddatav,session,noattr,filter)
 class(dbametaanddatav), intent(in) :: metaanddatav
 type(dbasession), intent(in) :: session !< dballe session
-logical, intent(in),optional :: dataonly          !< set to .true. to get data only (no attribute) 
+logical, intent(in),optional :: noattr          !< set to .true. to get data only (no attribute) 
 type(dbafilter),intent(in),optional :: filter     !< use this to filter wanted data                
+
+!TODO mmm qui bisogna vedere ... modificando equal forse va bene
+! ma probabilmente bisogna settare contextana per selezionare i filtri di var e attr nelle altre extrude
 
 if (present(filter)) then
   if (filter == metaanddatav%metadata)return
@@ -2264,7 +2383,7 @@ call session%set(metadata=metaanddatav%metadata)
 
 !write ana data and attribute
 !!$call session%set(datav=metaanddatav%datav)
-call metaanddatav%datav%ingest(session,dataonly,filter)
+call metaanddatav%datav%ingest(session,noattr,filter)
 
 !to close message on file
 call session%close_message()
@@ -2273,19 +2392,19 @@ end subroutine dbametaanddatav_ingest
 
 
 !> put data on DSN; ingest metaanddata list
-subroutine dbametaanddatal_ingest(metaanddatal,session,dataonly,filter)
+subroutine dbametaanddatal_ingest(metaanddatal,session,noattr,filter)
 class(dbametaanddatalist), intent(in) :: metaanddatal !< extruded data
 class(dbasession), intent(in) :: session
-logical, intent(in),optional :: dataonly          !< set to .true. to get data only (no attribute) 
+logical, intent(in),optional :: noattr          !< set to .true. to get data only (no attribute) 
 type(dbafilter),intent(in),optional :: filter     !< use this to filter wanted data                
 type(dbametaanddata) :: metaanddata
 
 
 call metaanddatal%rewind()
 do while(metaanddatal%element())
-  !call session%ingest(metaanddatal%current(),dataonly,filter)
+  !call session%ingest(metaanddatal%current(),noattr,filter)
   metaanddata=metaanddatal%current()
-  call metaanddata%ingest(session,dataonly,filter)
+  call metaanddata%ingest(session,noattr,filter)
   call metaanddatal%next()
 end do
 
@@ -2780,10 +2899,10 @@ end subroutine dbasession_extrude_anal
 
 
 !> get data from DSN
-subroutine dbasession_extrude_metaanddata(session,metaanddata,dataonly,filter)
+subroutine dbasession_extrude_metaanddata(session,metaanddata,noattr,filter)
 class(dbasession), intent(inout) :: session
 type(dbametaanddata), intent(inout),optional :: metaanddata !< extruded data
-logical,intent(in),optional :: dataonly       !< set to .true. to get data only (no attribute) 
+logical,intent(in),optional :: noattr       !< set to .true. to get data only (no attribute) 
 type(dbafilter),intent(in),optional :: filter !< use this to filter wanted data                
 
 type(dbametadata) :: metadata
@@ -2791,6 +2910,7 @@ integer :: ier,acount,i,j,k
 character(len=9) :: btable
 character(255) :: value
 logical :: lvars,lstarvars
+type(dbadcv)       :: vars,starvars
 
                                 ! if you do not pass metaanddata we presume to have to initialize the query
 if (.not. present(metaanddata)) then
@@ -2812,24 +2932,55 @@ else
   end if
 
   lvars=.false.
-  if (present(filter)) then
-    if (allocated(filter%vars%dcv)) then
-      lvars=.true.
-    end if
-  end if
   lstarvars=.false.
   if (present(filter)) then
-    if (allocated(filter%starvars%dcv)) then
-      lstarvars=.true.
+
+    if (filter%contextana) then
+
+      if (allocated(filter%anavars%dcv)) then
+        lvars=.true.
+        allocate(vars%dcv(size(filter%anavars%dcv)))
+        do i =1,size(filter%anavars%dcv)
+          allocate(vars%dcv(i),source=filter%anavars%dcv(i))
+        end do
+      end if
+      
+      if (allocated(filter%anastarvars%dcv)) then
+        lstarvars=.true.
+        allocate(starvars%dcv(size(filter%anastarvars%dcv)))
+        do i =1,size(filter%anastarvars%dcv)
+          allocate(starvars%dcv(i),source=filter%anastarvars%dcv(i))
+        end do
+      end if
+
+    else
+
+      if (allocated(filter%vars%dcv)) then
+        lvars=.true.
+        allocate(vars%dcv(size(filter%vars%dcv)))
+        do i =1,size(filter%vars%dcv)
+          allocate(vars%dcv(i),source=filter%vars%dcv(i))
+        end do
+      end if
+      
+      if (allocated(filter%starvars%dcv)) then
+        lstarvars=.true.
+        allocate(starvars%dcv(size(filter%starvars%dcv)))
+        do i =1,size(filter%starvars%dcv)
+          allocate(starvars%dcv(i),source=filter%starvars%dcv(i))
+        end do
+      end if
+      
     end if
+
   end if
 
   if (lvars) then
 
     ! create an empty vector for data 
-    allocate (metaanddata%dataattrv%dataattr(size(filter%vars%dcv)))
-    do i = 1, size(filter%vars%dcv)
-      allocate (metaanddata%dataattrv%dataattr(i)%dat,source=filter%vars%dcv(i)%dat)
+    allocate (metaanddata%dataattrv%dataattr(size(vars%dcv)))
+    do i = 1, size(vars%dcv)
+      allocate (metaanddata%dataattrv%dataattr(i)%dat,source=vars%dcv(i)%dat)
       ! initialize to (0) the attribute vector
       allocate (metaanddata%dataattrv%dataattr(i)%attrv%dcv(0))
     end do
@@ -2858,15 +3009,15 @@ else
             ier = idba_enq(session%sehandle, btable,dat%value)
           end select
           
-          if (.not. optio_log(dataonly))then
+          if (.not. optio_log(noattr))then
 
             deallocate (metaanddata%dataattrv%dataattr(i)%attrv%dcv)
 
             if (lstarvars) then
 
-              allocate (metaanddata%dataattrv%dataattr(i)%attrv%dcv(size(filter%starvars%dcv)))
-              do j = 1, size(filter%starvars%dcv)
-                allocate (metaanddata%dataattrv%dataattr(i)%attrv%dcv(j)%dat,source=filter%starvars%dcv(j)%dat)
+              allocate (metaanddata%dataattrv%dataattr(i)%attrv%dcv(size(starvars%dcv)))
+              do j = 1, size(starvars%dcv)
+                allocate (metaanddata%dataattrv%dataattr(i)%attrv%dcv(j)%dat,source=starvars%dcv(j)%dat)
               end do
 
               if (c_e(session%count) .and. session%count > 0) then
@@ -2933,7 +3084,7 @@ else
     call metaanddata%metadata%dbaenq(session)
 
 
-    if (optio_log(dataonly))then
+    if (optio_log(noattr))then
 
       allocate (metaanddata%dataattrv%dataattr(1)%attrv%dcv(0))
 
@@ -2941,9 +3092,9 @@ else
 
       if (lstarvars) then
 
-        allocate (metaanddata%dataattrv%dataattr(1)%attrv%dcv(size(filter%starvars%dcv)))
-        do j = 1, size(filter%starvars%dcv)
-          allocate (metaanddata%dataattrv%dataattr(1)%attrv%dcv(j)%dat,source=filter%starvars%dcv(j)%dat)
+        allocate (metaanddata%dataattrv%dataattr(1)%attrv%dcv(size(starvars%dcv)))
+        do j = 1, size(starvars%dcv)
+          allocate (metaanddata%dataattrv%dataattr(1)%attrv%dcv(j)%dat,source=starvars%dcv(j)%dat)
         end do
         
         ier = idba_voglioancora(session%sehandle, acount)
@@ -3001,10 +3152,10 @@ end subroutine dbasession_extrude_metaanddata
 
 
 !> get data from DSN
-subroutine dbasession_extrude_metaanddatav(session,metaanddatav,dataonly,filter)
+subroutine dbasession_extrude_metaanddatav(session,metaanddatav,noattr,filter)
 class(dbasession), intent(inout) :: session
 type(dbametaanddata), intent(inout),allocatable :: metaanddatav(:) !< extruded data
-logical, intent(in),optional :: dataonly        !< set to .true. to get data only (no attribute) 
+logical, intent(in),optional :: noattr        !< set to .true. to get data only (no attribute) 
 type(dbafilter),intent(in),optional :: filter   !< use this to filter wanted data
 
 type(dbametaanddata),allocatable :: metaanddatavbuf(:)
@@ -3019,7 +3170,7 @@ if (c_e(session%count)) then
   i=0
   do while (session%count >0)
     i=i+1
-    call session%extrude(metaanddatavbuf(i),dataonly=dataonly,filter=filter)
+    call session%extrude(metaanddatavbuf(i),noattr=noattr,filter=filter)
   end do
 
   ! compact data to real dimension
@@ -3037,10 +3188,10 @@ end subroutine dbasession_extrude_metaanddatav
 
 
 !> Get data fron DSN; extrude metaanddata list
-subroutine dbasession_extrude_metaanddatal(session,metaanddatal,dataonly,filter)
+subroutine dbasession_extrude_metaanddatal(session,metaanddatal,noattr,filter)
 class(dbasession), intent(inout) :: session
 type(dbametaanddatalist), intent(out) :: metaanddatal !< extruded data
-logical, intent(in),optional :: dataonly          !< set to .true. to get data only (no attribute) 
+logical, intent(in),optional :: noattr          !< set to .true. to get data only (no attribute) 
 type(dbafilter),intent(in),optional :: filter     !< use this to filter wanted data                
 
 type(dbametaanddata),allocatable :: metaanddatavbuf(:)
@@ -3051,7 +3202,7 @@ if (session%memdb)then
   do while (session%messages_read_next())
     call session%set(filter=filter)
     call session%extrude()
-    call session%extrude(metaanddatavbuf,dataonly=dataonly,filter=filter)
+    call session%extrude(metaanddatavbuf,noattr=noattr,filter=filter)
     do i=1,size(metaanddatavbuf)
       call metaanddatal%append(metaanddatavbuf(i))
     end do
@@ -3065,7 +3216,7 @@ else
   call session%extrude()
   
   do while (c_e(session%count) .and. session%count >0)
-    call session%extrude(metaanddatavbuf,dataonly=dataonly,filter=filter)
+    call session%extrude(metaanddatavbuf,noattr=noattr,filter=filter)
     do i=1,size(metaanddatavbuf)
       if (present(filter)) then 
                                 ! exclude contextana data from file 
@@ -3667,23 +3818,23 @@ end subroutine dbasession_set
 !!$end subroutine dbasession_ingest_dataattr
 !!$
 !!$!> put data on DSN
-!!$subroutine dbasession_ingest_dataattrv(session,dataattrv,dataonly,filter)
+!!$subroutine dbasession_ingest_dataattrv(session,dataattrv,noattr,filter)
 !!$class(dbasession), intent(in)   :: session
 !!$class(dbadataattrv)    :: dataattrv !< array datatattr
-!!$logical, intent(in),optional :: dataonly          !< set to .true. to get data only (no attribute) 
+!!$logical, intent(in),optional :: noattr          !< set to .true. to get data only (no attribute) 
 !!$type(dbafilter),intent(in),optional :: filter     !< use this to filter wanted data                
 !!$
-!!$call dataattrv%ingest(session,dataonly,filter)
+!!$call dataattrv%ingest(session,noattr,filter)
 !!$end subroutine dbasession_ingest_dataattrv
 !!$
 !!$!> put data on DSN
-!!$subroutine dbasession_ingest_metaanddata(session,metaanddata,dataonly,filter)
+!!$subroutine dbasession_ingest_metaanddata(session,metaanddata,noattr,filter)
 !!$class(dbasession), intent(in)   :: session
 !!$class(dbametaanddata)  :: metaanddata !< metaanddata
-!!$logical, intent(in),optional :: dataonly          !< set to .true. to get data only (no attribute) 
+!!$logical, intent(in),optional :: noattr          !< set to .true. to get data only (no attribute) 
 !!$type(dbafilter),intent(in),optional :: filter     !< use this to filter wanted data                
 !!$
-!!$call metaanddata%ingest(session,dataonly,filter)
+!!$call metaanddata%ingest(session,noattr,filter)
 !!$end subroutine dbasession_ingest_metaanddata
 !!$
 !!$!> put data on DSN
@@ -3722,28 +3873,28 @@ end subroutine dbasession_set
 !!$end subroutine dbasession_ingest_metaanddatar
 !!$
 !!$!> put data on DSN
-!!$subroutine dbasession_ingest_metaanddatav(session, metaanddatav,dataonly,filter)
+!!$subroutine dbasession_ingest_metaanddatav(session, metaanddatav,noattr,filter)
 !!$class(dbasession), intent(in)   :: session
 !!$class(dbametaanddatav) :: metaanddatav !< array metaanddata
-!!$logical, intent(in),optional :: dataonly          !< set to .true. to get data only (no attribute) 
+!!$logical, intent(in),optional :: noattr          !< set to .true. to get data only (no attribute) 
 !!$type(dbafilter),intent(in),optional :: filter     !< use this to filter wanted data                
 !!$
-!!$call metaanddatav%ingest(session,dataonly,filter)
+!!$call metaanddatav%ingest(session,noattr,filter)
 !!$end subroutine dbasession_ingest_metaanddatav
 !!$
-!!$subroutine dbasession_ingest_metaanddatal(session, metaanddatal,dataonly,filter)
+!!$subroutine dbasession_ingest_metaanddatal(session, metaanddatal,noattr,filter)
 !!$class(dbasession), intent(in)   :: session
 !!$class (dbametaanddatalist) :: metaanddatal !< metaanddata list
-!!$logical, intent(in),optional :: dataonly          !< set to .true. to get data only (no attribute) 
+!!$logical, intent(in),optional :: noattr          !< set to .true. to get data only (no attribute) 
 !!$type(dbafilter),intent(in),optional :: filter     !< use this to filter wanted data                
 !!$
-!!$call metaanddatal%ingest(session,dataonly,filter)
+!!$call metaanddatal%ingest(session,noattr,filter)
 !!$end subroutine dbasession_ingest_metaanddatal
 !!$
 !!$!> put data on DSN
 !!$subroutine dbasession_ingest(session,ana,dataattr,dataattrv,metaanddata,&
 !!$ metaanddatai,metaanddatab,metaanddatad,metaanddatac,metaanddatar,&
-!!$ metaanddatav ,metaanddatal,dataonly,filter)
+!!$ metaanddatav ,metaanddatal,noattr,filter)
 !!$class(dbasession), intent(in)   :: session
 !!$class(dbaana),optional          :: ana !< ana 
 !!$class(dbadataattr),optional     :: dataattr !< dataattr
@@ -3756,7 +3907,7 @@ end subroutine dbasession_set
 !!$class(dbametaanddatar),optional :: metaanddatar !< metaanddatar
 !!$class(dbametaanddatav),optional :: metaanddatav !< array metaanddata
 !!$class(dbametaanddatalist),optional :: metaanddatal !< metaanddata list
-!!$logical, intent(in),optional :: dataonly          !< set to .true. to get data only (no attribute) 
+!!$logical, intent(in),optional :: noattr          !< set to .true. to get data only (no attribute) 
 !!$type(dbafilter),intent(in),optional :: filter     !< use this to filter wanted data                
 !!$
 !!$if (present(ana)) then
@@ -3768,7 +3919,7 @@ end subroutine dbasession_set
 !!$end if
 !!$
 !!$if (present(dataattrv)) then
-!!$  call dataattrv%ingest(session,dataonly,filter)
+!!$  call dataattrv%ingest(session,noattr,filter)
 !!$end if
 !!$
 !!$if (present(metaanddata)) then
@@ -3796,11 +3947,11 @@ end subroutine dbasession_set
 !!$end if
 !!$
 !!$if (present(metaanddatav)) then
-!!$  call metaanddatav%ingest(session,dataonly,filter)
+!!$  call metaanddatav%ingest(session,noattr,filter)
 !!$end if
 !!$
 !!$if (present(metaanddatal)) then
-!!$  call metaanddatal%ingest(session,dataonly,filter)
+!!$  call metaanddatal%ingest(session,noattr,filter)
 !!$end if
 !!$
 !!$end subroutine dbasession_ingest

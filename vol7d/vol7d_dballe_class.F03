@@ -138,12 +138,12 @@ END INTERFACE delete
 
                                 !>\brief importa
 INTERFACE import
-  MODULE PROCEDURE  vol7d_dballe_importvvnv,vol7d_dballe_import, dba2v7d
+  MODULE PROCEDURE  vol7d_dballe_importvvnv,vol7d_dballe_import, vol7d_dballe_import_old, dba2v7d
 END INTERFACE import
 
                                 !>\brief exporta
 INTERFACE export
-  MODULE PROCEDURE vol7d_dballe_export, v7d2dba
+  MODULE PROCEDURE vol7d_dballe_export_old,vol7d_dballe_export, v7d2dba
 END INTERFACE export
 
 
@@ -293,8 +293,8 @@ end if
 
 END SUBROUTINE vol7d_dballe_importvvnv
 
-!!import da DB-all.e
-SUBROUTINE vol7d_dballe_import(this, var, network, coordmin, coordmax, timei, timef,level,timerange, set_network,&
+!>import da DB-all.e
+SUBROUTINE vol7d_dballe_import_old(this, var, network, coordmin, coordmax, timei, timef,level,timerange, set_network,&
  attr,anavar,anaattr, varkind,attrkind,anavarkind,anaattrkind,anaonly,dataonly,ana)
 
 TYPE(vol7d_dballe),INTENT(inout) :: this !< oggetto vol7d_dballe
@@ -317,7 +317,7 @@ INTEGER,PARAMETER :: maxvarlist=100
                                 !CHARACTER(len=SIZE(var)*7) :: varlist
                                 !CHARACTER(len=SIZE(attr)*8) :: starvarlist
 
-LOGICAL ::  ldegnet, lattr, lanaattr
+LOGICAL ::  ldegnet
 
 INTEGER :: i
 integer :: nvar 
@@ -335,11 +335,7 @@ type(dbanetwork)   :: mydbanetwork
 
 integer :: nanaattr,nattr
 
-TYPE(vol7d) :: vol7dtmp
-
 character(len=40) :: query
-type(dbametaanddata),allocatable :: metaanddatav(:)
-
 
 #ifdef DEBUG
 CALL l4f_category_log(this%category,L4F_DEBUG,'inizio')
@@ -439,67 +435,73 @@ if (present(anavar)) then
   end if
 end if
 
-lattr = .false.
 if (present(attr)) then
-  nattr=count(c_e(attr))
-  if (nattr > 0) then
-    lattr = .true.
+  nattr=size(attr)
+  if (nattr == 0) then
     allocate (starvars%dcv(nattr))
-    do i=1,size(attr)
-      if (c_e(attr(i)))then
-        if (present(attrkind))then
-          select case (attrkind(i))
-          case("r")
-            allocate (starvars%dcv(i)%dat,source=dbadatar(attr(i)))
-          case("i")
-            allocate (starvars%dcv(i)%dat,source=dbadatai(attr(i)))
-          case("b")
-            allocate (starvars%dcv(i)%dat,source=dbadatab(attr(i)))
-          case("d")
-            allocate (starvars%dcv(i)%dat,source=dbadatad(attr(i)))
-          case("c")
-            allocate (starvars%dcv(i)%dat,source=dbadatac(attr(i)))
-          case default
-            call l4f_category_log(this%category,L4F_ERROR,"attr and attrkind mismach")
-            CALL raise_fatal_error()
-          end select
-        else 
-          allocate (starvars%dcv(i)%dat,source=dbadatac(attr(i))) !char is default
+  else
+    nattr=count(c_e(attr))
+    if (nattr > 0) then
+      allocate (starvars%dcv(nattr))
+      do i=1,size(attr)
+        if (c_e(attr(i)))then
+          if (present(attrkind))then
+            select case (attrkind(i))
+            case("r")
+              allocate (starvars%dcv(i)%dat,source=dbadatar(attr(i)))
+            case("i")
+              allocate (starvars%dcv(i)%dat,source=dbadatai(attr(i)))
+            case("b")
+              allocate (starvars%dcv(i)%dat,source=dbadatab(attr(i)))
+            case("d")
+              allocate (starvars%dcv(i)%dat,source=dbadatad(attr(i)))
+            case("c")
+              allocate (starvars%dcv(i)%dat,source=dbadatac(attr(i)))
+            case default
+              call l4f_category_log(this%category,L4F_ERROR,"attr and attrkind mismach")
+              CALL raise_fatal_error()
+            end select
+          else 
+            allocate (starvars%dcv(i)%dat,source=dbadatac(attr(i))) !char is default
+          end if
         end if
-      end if
-    end do
-  end if
+      end do
+    end if
+  endif
 end if
 
-lanaattr = .false.
 if (present(anaattr)) then
-  nanaattr=count(c_e(anaattr))
-  if (nanaattr > 0) then
-    lanaattr = .true.
+  nanaattr=size(anaattr)
+  if (nanaattr == 0) then
     allocate (anastarvars%dcv(nanaattr))
-    do i=1,size(anaattr)
-      if (c_e(anaattr(i)))then
-        if (present(anaattrkind))then
-          select case (anaattrkind(i))
-          case("r")
-            allocate (anastarvars%dcv(i)%dat,source=dbadatar(anaattr(i)))
-          case("i")
-            allocate (anastarvars%dcv(i)%dat,source=dbadatai(anaattr(i)))
-          case("b")
-            allocate (anastarvars%dcv(i)%dat,source=dbadatab(anaattr(i)))
-          case("d")
-            allocate (anastarvars%dcv(i)%dat,source=dbadatad(anaattr(i)))
-          case("c")
-            allocate (anastarvars%dcv(i)%dat,source=dbadatac(anaattr(i)))
-          case default
-            call l4f_category_log(this%category,L4F_ERROR,"attr and attrkind mismach")
-            CALL raise_fatal_error()
-          end select
-        else 
-          allocate (anastarvars%dcv(i)%dat,source=dbadatac(anaattr(i))) !char is default
+  else
+    nanaattr=count(c_e(anaattr))
+    if (nanaattr > 0) then
+      allocate (anastarvars%dcv(nanaattr))
+      do i=1,size(anaattr)
+        if (c_e(anaattr(i)))then
+          if (present(anaattrkind))then
+            select case (anaattrkind(i))
+            case("r")
+              allocate (anastarvars%dcv(i)%dat,source=dbadatar(anaattr(i)))
+            case("i")
+              allocate (anastarvars%dcv(i)%dat,source=dbadatai(anaattr(i)))
+            case("b")
+              allocate (anastarvars%dcv(i)%dat,source=dbadatab(anaattr(i)))
+            case("d")
+              allocate (anastarvars%dcv(i)%dat,source=dbadatad(anaattr(i)))
+            case("c")
+              allocate (anastarvars%dcv(i)%dat,source=dbadatac(anaattr(i)))
+            case default
+              call l4f_category_log(this%category,L4F_ERROR,"attr and attrkind mismach")
+              CALL raise_fatal_error()
+            end select
+          else 
+            allocate (anastarvars%dcv(i)%dat,source=dbadatac(anaattr(i))) !char is default
+          end if
         end if
-      end if
-    end do
+      end do
+    end if
   end if
 end if
 
@@ -528,46 +530,62 @@ if (present(network)) mydbanetwork%vol7d_network=network
 filter=dbafilter(coordmin=mydbacoordmin,coordmax=mydbacoordmax,ana=mydbaana, &
  datetimemin=mydatetimemin,datetimemax=mydatetimemax, &
  timerange=mydbatimerange,level=mydbalevel,network=mydbanetwork,query=query,&
- vars=vars,starvars=starvars)
+ vars=vars,starvars=starvars,anavars=anavars,anastarvars=anastarvars,&
+ dataonly=dataonly,anaonly=anaonly)
 !!$  print *, "filter:"
 !!$  call filter%display()
 
-if ( .not. optio_log(anaonly)) then
-                                ! ---------------->   working on data
+call import(this,filter,set_network)
+
+
+END SUBROUTINE vol7d_dballe_import_old
+
+
+
+!>import da DB-all.e
+subroutine vol7d_dballe_import(this,filter,set_network)
+
+TYPE(vol7d_dballe),INTENT(inout) :: this !< oggetto vol7d_dballe
+type(dbafilter),INTENT(in)     :: filter
+TYPE(vol7d_network),INTENT(in),OPTIONAL :: set_network
+
+TYPE(vol7d) :: vol7dtmp
+type(dbametaanddata),allocatable :: metaanddatav(:)
+type(dbafilter)    :: myfilter
+
+
+if ( .not. filter%dataonly) then
+                                ! ---------------->   constant station data
+  myfilter=dbafilter(filter=filter,contextana=.true.)
                                 ! set filter
   call this%handle%set(filter=filter)
                                 ! estrude the data
-  call this%handle%extrude(metaanddatav,filter=filter,dataonly=dataonly)
+  call this%handle%extrude(metaanddatav,filter=filter)
+  
+  call dba2v7d(this%vol7d, metaanddatav,this%time_definition,set_network)
+
+  deallocate (metaanddatav)
+
+else
+                                ! empty volume
+  call init(this%vol7d)
+  call vol7d_alloc(this%vol7d)
+  call vol7d_alloc_vol(this%vol7d)
+end if
+                                ! ---------------->   constant station data end
+
+if ( .not. filter%anaonly) then
+                                ! ---------------->   working on data
+  myfilter=dbafilter(filter=filter,contextana=.false.)
+                                ! set filter
+  call this%handle%set(filter=filter)
+                                ! estrude the data
+  call this%handle%extrude(metaanddatav,filter=filter)
 
   call dba2v7d(vol7dtmp,metaanddatav,this%time_definition,set_network)
 
   deallocate (metaanddatav)
 
-end if
-
-                                ! ---------------->   constant station data
-
-filter=dbafilter(coordmin=mydbacoordmin,coordmax=mydbacoordmax,ana=mydbaana, &
- datetimemin=mydatetimemin,datetimemax=mydatetimemax, &
- timerange=mydbatimerange,level=mydbalevel,network=mydbanetwork,query=query,&
- vars=anavars,starvars=anastarvars,contextana=.true.)
-
-
-! do not work (anavars and anastarvars are optional )
-!filter=dbafilter(filter=filter,contextana=.true.,vars=anavars,starvars=anastarvars)
-
-                                ! set filter
-call this%handle%set(filter=filter)
-
-call this%handle%extrude(metaanddatav,filter=filter,dataonly=dataonly)
-
-call dba2v7d(this%vol7d, metaanddatav,this%time_definition,set_network)
-
-deallocate (metaanddatav)
-
-                                ! ---------------->   constant station data end
-
-if ( .not. optio_log(anaonly)) then
   CALL vol7d_merge(this%vol7d, vol7dtmp, sort=.TRUE.) ! Smart merge
 !!$else
 !!$                                ! should we sort separately in case no merge is done?
@@ -615,7 +633,9 @@ ier=idba_voglioancora (this%handle,nn)
 
 #endif
 
-END SUBROUTINE vol7d_dballe_import
+
+end subroutine vol7d_dballe_import
+
 
 
                                 !>\brief Cancella l'oggetto
@@ -1659,8 +1679,8 @@ END FUNCTION open_dballe_file
 !SUBROUTINE vol7d_dballe_export(this, network, coordmin, coordmax,&
 ! timei, timef,level,timerange,var,attr,anavar,anaattr,attr_only,ana,dataonly)
 
-SUBROUTINE vol7d_dballe_export(this, network, coordmin, coordmax,&
- timei, timef,level,timerange,var,attr,anavar,anaattr,ana,dataonly)
+SUBROUTINE vol7d_dballe_export_old(this, network, coordmin, coordmax,&
+ timei, timef,level,timerange,var,attr,anavar,anaattr,ana,dataonly,anaonly)
 
 TYPE(vol7d_dballe),INTENT(inout) :: this !< oggetto contenente il volume e altre info per l'accesso al DSN
 character(len=network_name_len),INTENT(in),optional :: network !< network da exportare
@@ -1679,9 +1699,9 @@ CHARACTER(len=*),INTENT(in),OPTIONAL :: var(:),attr(:),anavar(:),anaattr(:)
 !!$!! (solitamente ricopiato dall'oggetto letto)
 !!$logical,intent(in),optional :: attr_only 
 TYPE(vol7d_ana),INTENT(inout),optional :: ana  !< identificativo della stazione da exportare
-logical, intent(in),optional :: dataonly          !< set to .true. to get data only (no attribute) 
+logical, intent(in),optional :: dataonly          !< set to .true. to export data only
+logical, intent(in),optional :: anaonly           !< set to .true. to export ana only
 
-type(dbametaanddatalist) :: metaanddatal
 
 type(dbadcv)       :: vars,starvars,anavars,anastarvars
 type(dbafilter)    :: filter
@@ -1693,14 +1713,14 @@ type(dbalevel)     :: mydbalevel
 type(dbanetwork)   :: mydbanetwork
 
 integer :: i
-LOGICAL :: lattr, lanaattr,stat
+LOGICAL :: lattr, lanaattr
 integer :: nanaattr,nattr,nanavar,nvar
 
 
                                 ! ------------- prepare filter options
 
 !!
-!!           translate import option for dballe2003 api
+!!           translate export option for dballe2003 api
 !!
 
 if (present(var)) then
@@ -1780,9 +1800,24 @@ if (present(network)) call init(mydbanetwork%vol7d_network,name=network)
 filter=dbafilter(coordmin=mydbacoordmin,coordmax=mydbacoordmax,ana=mydbaana, &
  datetimemin=mydatetimemin,datetimemax=mydatetimemax, &
  timerange=mydbatimerange,level=mydbalevel,network=mydbanetwork,&
- vars=vars,starvars=starvars)
+ vars=vars,starvars=starvars,anavars=anavars,anastarvars=anastarvars,&
+ dataonly=dataonly,anaonly=anaonly)
 !!$  print *, "filter:"
 !!$  call filter%display()
+
+call export (this, filter)
+
+end SUBROUTINE vol7d_dballe_export_old
+
+
+
+subroutine vol7d_dballe_export (this, filter)
+
+TYPE(vol7d_dballe),INTENT(inout) :: this !< oggetto contenente il volume e altre info per l'accesso al DSN
+type(dbafilter),intent(in)    :: filter !< filter o use
+
+type(dbametaanddatalist) :: metaanddatal
+logical :: stat
 
 call v7d2dba(this%vol7d,metaanddatal)
 call metaanddatal%display()
@@ -1791,8 +1826,7 @@ call metaanddatal%display()
 call this%handle%remove_all()
 
 !call this%handle%ingest(metaanddatal,filter=filter,dataonly=dataonly)
-call metaanddatal%ingest(session=this%handle,filter=filter,dataonly=dataonly)
-
+call metaanddatal%ingest(session=this%handle,filter=filter)
 
 !!!!!  this if we have written in memdb and now we have to write the file
 
@@ -1812,7 +1846,7 @@ call this%handle%remove_all()
 
 stat = metaanddatal%delete()
 
-end SUBROUTINE vol7d_dballe_export
+end subroutine vol7d_dballe_export
 
 
 subroutine v7d2dba(v7d,metaanddatal)
