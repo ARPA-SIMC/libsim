@@ -390,7 +390,8 @@ IF (PRESENT(attr)) THEN
   DO j = 1, SIZE(dataattr_builder)
     DO i = 1, SIZE(attr)
       IF (attr(i) == dataattr_builder(j)%btable .OR. &
-       attr(i) == dataattr_builder(j)%btable(2:) .OR. attr(i) == '*') THEN
+       attr(i) == dataattr_builder(j)%btable(2:) .OR. attr(i) == '*' .OR. &
+       attr(i) == cmiss) THEN
         nda_type(dataattr_builder(j)%vartype) = &
          nda_type(dataattr_builder(j)%vartype) + 1
         attr_out_ind(j) = nda_type(dataattr_builder(j)%vartype)

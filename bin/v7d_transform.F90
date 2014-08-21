@@ -546,7 +546,7 @@ IF (c_e(attribute_list)) THEN ! argument provided
 
   IF (.NOT.disable_qc) THEN ! add qc variables not specified yet to alqc
 ! al is the list of attributes requested by the user
-! alqc is al completed by the attributes required by qc
+! alqc is al completed with the attributes required by qc
     DO i = 1, nqcattrvars
       IF (ALL(qcattrvarsbtables(i) /= al(:))) THEN
         n = n + 1
