@@ -1237,8 +1237,8 @@ if (present(filter))then
 endif
 !write data in dsn
 
-print *,"dati:"
-call data%dbadc%display()
+!print *,"dati:"
+!call data%dbadc%display()
 call data%dbadc%dbaset(session)
 call session%prendilo()
 

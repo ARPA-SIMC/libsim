@@ -102,13 +102,14 @@ character (len=255),parameter:: subcategory="vol7d_dballe_class"
 TYPE vol7d_dballe
 
   TYPE(vol7d) :: vol7d !< volume vol7d
-  type(dbaconnection) :: idbhandle !< handle delle sessioni connesse al DSN DB-All.e
-  type(dbasession) :: handle !< handle delle sessioni connesse al DSN DB-All.e
-                                !> memorizza gli id interni al database DB-All.e per 
+  type(dbaconnection) :: idbhandle !< handle della connessioni al DSN DB-All.e
+  type(dbasession) :: handle !< handle della sessione connessa al DSN DB-All.e
+  !> memorizza gli id interni al database DB-All.e per 
   !!ottimizzare le riscritture degli attributi ai dati
   integer ,pointer :: data_id(:,:,:,:,:)
   integer :: time_definition
   integer :: category !< log4fortran
+  logical :: file !<
 
 END TYPE vol7d_dballe
 
@@ -198,6 +199,8 @@ nullify(this%data_id)
 
 if (optio_log(file)) then
 
+  this%file=.true.
+
   lformat="BUFR"
   if (present(format))then
     lformat=format
@@ -241,6 +244,8 @@ if (optio_log(file)) then
   end if
 
 else
+
+  this%file=.false.
 
   this%idbhandle=dbaconnection(dsn,user,password,idbhandle=idbhandle)
 
@@ -1820,29 +1825,32 @@ type(dbametaanddatalist) :: metaanddatal
 logical :: stat
 
 call v7d2dba(this%vol7d,metaanddatal)
-call metaanddatal%display()
+!call metaanddatal%display()
 
 !clean memdb
 call this%handle%remove_all()
 
+! using filter here can limit memory use for memdb
 !call this%handle%ingest(metaanddatal,filter=filter,dataonly=dataonly)
 call metaanddatal%ingest(session=this%handle,filter=filter)
 
-!!!!!  this if we have written in memdb and now we have to write the file
+if (this%file) then
+  !!!!!  this if we have written in memdb and now we have to write the file
 
-!filter is already in ingest
-!this%handle%set(filter=filter)
+  !filter is already in ingest
+  !this%handle%set(filter=filter)
 
-! export to file
-!! TODO : revert template from init to export  !!!!!!!!!!!!!!!!!!!!!
-!!call this%handle%messages_write_next(template)
-call this%handle%messages_write_next()
+  ! export to file
+  !! TODO : revert template from init to export  !!!!!!!!!!!!!!!!!!!!!
+  !!call this%handle%messages_write_next(template)
 
-!clean memdb
-call this%handle%remove_all()
+  ! note that you can use unsetall hera because the filter was used in ingest
+  call filter%dbaset(this%handle)
+  call this%handle%messages_write_next()
+  !clean memdb
+  call this%handle%remove_all()
 
-!!!!!
-
+end if
 
 stat = metaanddatal%delete()
 
