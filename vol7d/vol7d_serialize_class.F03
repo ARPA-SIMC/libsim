@@ -568,11 +568,11 @@ loop7d: DO WHILE(.TRUE.)
 IF (this%status == 0) THEN ! first iteration
   this%status = 1
 ! safety check for empty volumes
-  IF (ANY(this%loopind(1:this%ser%ndvar) > this%ser%loopend(1:this%ser%ndvar))) THEN
-    next = .FALSE.
-    this%status = 2
-    RETURN
-  ENDIF
+!  IF (ANY(this%loopind(1:this%ser%ndvar) > this%ser%loopend(1:this%ser%ndvar))) THEN
+!    next = .FALSE.
+!    this%status = 2
+!    RETURN
+!  ENDIF
 
 ELSE ! following iterations
 ! final part of the loop over columns
