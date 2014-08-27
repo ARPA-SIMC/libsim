@@ -556,6 +556,7 @@ CLASS(vol7d_serialize_iterline),INTENT(inout) :: this
 LOGICAL :: next
 
 INTEGER :: i
+LOGICAL :: colmask(6)
 
 IF (.NOT.ASSOCIATED(this%ser)) THEN ! safety check
   this%status = 3
@@ -565,31 +566,41 @@ ENDIF
 
 loop7d: DO WHILE(.TRUE.)
 
-IF (this%status == 0) THEN ! first iteration
-  this%status = 1
+  IF (this%status == 0) THEN ! first iteration
+    this%status = 1
 ! safety check for empty volumes
-!  IF (ANY(this%loopind(1:this%ser%ndvar) > this%ser%loopend(1:this%ser%ndvar))) THEN
-!    next = .FALSE.
-!    this%status = 2
-!    RETURN
-!  ENDIF
-
-ELSE ! following iterations
-! final part of the loop over columns
-  DO i = this%ser%ndvar, 1, -1
-    IF (this%loopind(i) < this%ser%loopend(i)) THEN ! increment loop index
-      this%loopind(i) = this%loopind(i) + 1
-      EXIT
-    ELSE ! end of loop for this index, reset and increment next index
-      this%loopind(i) = this%ser%loopstart(i)
+    colmask = .TRUE.
+    IF (this%ser%anavol) THEN
+! mask non ana columns
+      colmask(this%ser%loopinvorder(vol7d_time_d)) = .FALSE.
+      colmask(this%ser%loopinvorder(vol7d_level_d)) = .FALSE.
+      colmask(this%ser%loopinvorder(vol7d_timerange_d)) = .FALSE.
     ENDIF
-  ENDDO
-  IF (i == 0) THEN ! all counters have reached the end
-    next = .FALSE.
-    this%status = 2
-    RETURN
-  ENDIF
-ENDIF ! first iteration
+
+    IF (ANY( &
+     this%loopind(1:this%ser%ndvar) > this%ser%loopend(1:this%ser%ndvar) .AND. &
+     colmask(1:this%ser%ndvar))) THEN
+      next = .FALSE.
+      this%status = 2
+      RETURN
+    ENDIF
+
+  ELSE ! following iterations
+! final part of the loop over columns
+    DO i = this%ser%ndvar, 1, -1
+      IF (this%loopind(i) < this%ser%loopend(i)) THEN ! increment loop index
+        this%loopind(i) = this%loopind(i) + 1
+        EXIT
+      ELSE ! end of loop for this index, reset and increment next index
+        this%loopind(i) = this%ser%loopstart(i)
+      ENDIF
+    ENDDO
+    IF (i == 0) THEN ! all counters have reached the end
+      next = .FALSE.
+      this%status = 2
+      RETURN
+    ENDIF
+  ENDIF ! first iteration
 
 ! set indices, use pointers?
   this%i1 = this%loopind(this%ser%loopinvorder(vol7d_ana_d))
