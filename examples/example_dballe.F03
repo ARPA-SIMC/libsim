@@ -734,9 +734,9 @@ print*,"prima di display"
 call metaanddatal%display()
 
 print *,"number of list elements=",metaanddatal%countelements()
-print *,"seek return status =", metaanddatal%seek(2)
+print *,"seek return status =", metaanddatal%seek(1)
 myelement=metaanddatal%current()
-print *,"list index 2 ="
+print *,"list index 1 ="
 call myelement%display()
 print *,"status delete=", metaanddatal%delete()
 

@@ -84,7 +84,7 @@ end interface
 type,public ::  dbasession
   integer :: sehandle=imiss !< session handler
   logical :: file=.false. !< is it a file?
-  character(len=40) :: template=cmiss !< template for BUFR format
+  character(len=40) :: template='generic' !< template for BUFR format
   character(len=255) :: filename=cmiss !< filename
   character(len=40) :: mode=cmiss !< mode for open file
   character(len=40) :: format=cmiss !< format (bufr/crex)
@@ -838,6 +838,11 @@ integer :: ier
 ier = idba_setlevel(session%sehandle,&
  level%level1, level%l1, level%level2, level%l2)
 
+!todo this is a work around
+if (.not. c_e(level%vol7d_level)) then
+  call session%setcontextana
+end if
+
 end subroutine dbalevel_set
 
 !> query parameters from dballe API
@@ -1042,10 +1047,11 @@ subroutine dbadcv_display(dcv)
 class(dbadcv), intent(in) :: dcv
 integer :: i
 
-do i=1, size(dcv%dcv)
-  call dcv%dcv(i)%display()
-end do
-
+if (allocated(dcv%dcv)) then
+  do i=1, size(dcv%dcv)
+    call dcv%dcv(i)%display()
+  end do
+end if
 end subroutine dbadcv_display
 
 !!$subroutine dbadat_ingest(dat,session)
@@ -1107,7 +1113,6 @@ character (len=*), intent(in) :: filename !< file name to open
 character (len=*), intent(in) :: mode !< "r"/"w"/"a" the open mode ("r" for read, "w" for write or create, "a" for append) 
 character (len=*), intent(in) :: format !< the file format. It can be "BUFR" or "CREX". (default="BUFR")
 logical, intent(in)           :: simplified !< rappresentation when interpret message (simplified/precise)
-!character (len=*), intent(in) :: template !< template to use for write on file
 
 integer :: ier
 
@@ -1155,7 +1160,10 @@ character(len=40) :: ltemplate_name
 
 integer :: ier
 
-ltemplate_name="generic"  !! "wmo" =  wmo - WMO style templates (autodetect) ?
+!TODO how to set autodetect?
+!ltemplate_name="generic"  !! "wmo" =  wmo - WMO style templates (autodetect) ?
+
+ltemplate_name=session%template
 if (present(template_name)) ltemplate_name=template_name
 
 ier = idba_messages_write_next(session%sehandle,ltemplate_name)
@@ -1230,17 +1238,23 @@ logical :: critica
 
 if (present(filter))then
   if (filter%contextana) then
-    if (filter%anavars == data%dbadc%dat) return
+    if (.not. filter%anavars == data%dbadc%dat) return
   else
-    if (filter%vars == data%dbadc%dat) return
+    if (.not. filter%vars == data%dbadc%dat) return
   end if
 endif
+
 !write data in dsn
 
-!print *,"dati:"
-!call data%dbadc%display()
+print *,"ingest dati:"
+call data%dbadc%display()
+
 call data%dbadc%dbaset(session)
 call session%prendilo()
+print *,"ingest prendilo"
+
+! TODO remove return to write attributes
+!return
 
 if (optio_log(noattr)) return
 !write attributes in dsn
@@ -1251,14 +1265,14 @@ if (allocated(data%attrv%dcv)) then
     do i = 1, size(data%attrv%dcv)
       if (present(filter))then
         if (filter%contextana) then
-          if (filter%anastarvars == data%attrv%dcv(i)%dat) continue
+          if (.not. filter%anastarvars == data%attrv%dcv(i)%dat) continue
         else
-          if (filter%starvars == data%attrv%dcv(i)%dat) continue
+          if (.not. filter%starvars == data%attrv%dcv(i)%dat) continue
         end if
       endif
 
       if (data%attrv%dcv(i)%dat%c_e()) then
-        print *,"attributi:"
+        print *,"ingest attributi:"
         call data%attrv%dcv(i)%dat%display()
         call data%attrv%dcv(i)%dat%dbaset(session)
         critica=.true.
@@ -1266,9 +1280,10 @@ if (allocated(data%attrv%dcv)) then
     end do
 
     if (critica) then
-      print *,"dato per attributi:"
+      print *,"ingest dato per attributi:"
       print *, data%dbadc%dat%btable
       call session%var_related(data%dbadc%dat%btable) ! I have made a prendilo and I do not need this
+      print *,"ingest critica"
       call session%critica()
     end if
 
@@ -1570,6 +1585,11 @@ integer :: ier
 ier = idba_settimerange(session%sehandle,&
  timerange%timerange, timerange%p1, timerange%p2)
 
+!todo this is a work around
+if (.not. c_e(timerange%vol7d_timerange)) then
+  call session%setcontextana
+end if
+
 end subroutine dbatimerange_set
 
 !> query parameters from dballe API
@@ -1661,6 +1681,11 @@ end if
 
 ier = idba_setdate(session%sehandle,year,month,day,hour,minute,sec)
 
+!todo this is a work around
+if (.not. c_e(datetime%datetime)) then
+  call session%setcontextana
+end if
+
 end subroutine dbadatetime_set
 
 !> query parameters from dballe API
@@ -1678,7 +1703,13 @@ else
   msec=imiss
 end if
 
-CALL init(datetime%datetime, year=year, month=month, day=day, hour=hour, minute=minute,msec=msec)
+!! TODO
+!! this is a workaround ! year == 1000 should never exist
+if (year==1000) then
+  datetime%datetime=datetime_new()
+else
+  CALL init(datetime%datetime, year=year, month=month, day=day, hour=hour, minute=minute,msec=msec)
+end if
 
 end subroutine dbadatetime_enq
 
@@ -1761,6 +1792,9 @@ subroutine dbametadata_set(metadata,session)
 class(dbametadata), intent(in) :: metadata
 type(dbasession), intent(in) :: session !< dballe session
 
+print *,"ingest metadata:"
+call metadata%display()
+
 call metadata%ana%dbaset(session)
 call metadata%network%dbaset(session)
 
@@ -1793,25 +1827,24 @@ end subroutine dbametadata_enq
 
 
 !> equal operator for dbafilter and dbametadata
-elemental logical function dbafilter_equal_dbametadata(this,that)
+logical function dbafilter_equal_dbametadata(this,that)
 
 class(dbafilter), intent(in) :: this !< first element
 class(dbametadata), intent(in) :: that !< second element
 
 dbafilter_equal_dbametadata = .false.
 
-!! TODO utilizzare dataonly ?
+!! TODO utilizzare dataonly ? direi di no
 
 if (this%contextana .and. c_e(that%timerange%vol7d_timerange)) return
 if (this%contextana .and. c_e(that%datetime%datetime)) return
 if (this%contextana .and. c_e(that%level%vol7d_level)) return
 
-if (.not. this%level%vol7d_level         == that%level%vol7d_level ) return
-if (.not. this%timerange%vol7d_timerange == that%timerange%vol7d_timerange ) return
-if (.not. this%datetime%datetime         == that%datetime%datetime ) return
-if (.not. this%network%vol7d_network     == that%network%vol7d_network ) return
-if (.not. this%ana%vol7d_ana             == that%ana%vol7d_ana ) return
-
+if (c_e(this%level%vol7d_level)         .and. .not. this%level%vol7d_level         == that%level%vol7d_level ) return
+if (c_e(this%timerange%vol7d_timerange) .and. .not. this%timerange%vol7d_timerange == that%timerange%vol7d_timerange ) return
+if (c_e(this%datetime%datetime)         .and. .not. this%datetime%datetime         == that%datetime%datetime ) return
+if (c_e(this%network%vol7d_network)     .and. .not. this%network%vol7d_network     == that%network%vol7d_network ) return
+if (c_e(this%ana%vol7d_ana)             .and. .not. this%ana%vol7d_ana             == that%ana%vol7d_ana ) return
 
 if ( c_e(this%datetimemin%datetime) .and. c_e(that%datetime%datetime) .and. &
  this%datetimemin%datetime > that%datetime%datetime ) return
@@ -1856,6 +1889,7 @@ end function dbafilter_equal_dbametadata
 
 
 !> equal operator for dbadcv and dbadata
+!! if dbadcv%dcv is not allocated result is .true.
 elemental logical function dbadcv_equal_dbadata(this,that)
 
 class(dbadcv), intent(in) :: this !< first element
@@ -1867,12 +1901,13 @@ integer :: i
 !dbafilter_equal_dbadata = any(this%vars%dcv(:)%dat == that)
 
 if (allocated(this%dcv)) then
+  dbadcv_equal_dbadata=.false.
   do i=1, size(this%dcv)
     dbadcv_equal_dbadata = this%dcv(i)%dat == that
     if (dbadcv_equal_dbadata) continue
   end do
 else
-  dbadcv_equal_dbadata=.false.
+  dbadcv_equal_dbadata=.true.
 end if
 
 end function dbadcv_equal_dbadata
@@ -2235,9 +2270,6 @@ integer :: ier,year,month,day,hour,minute,sec,msec
 call session%unsetall()
 
 call filter%ana%dbaset(session)
-call filter%datetime%dbaset(session)
-call filter%level%dbaset(session)
-call filter%timerange%dbaset(session)
 call filter%network%dbaset(session)
 ier = idba_set(session%sehandle,"var",filter%var)
 
@@ -2245,35 +2277,6 @@ ier = idba_set(session%sehandle,"limit",filter%limit)
 ier = idba_set(session%sehandle,"priority",filter%priority)
 ier = idba_set(session%sehandle,"priomin",filter%priomin)
 ier = idba_set(session%sehandle,"priomax",filter%priomax)
-
-CALL getval(filter%datetimemin%datetime, year=year, month=month, day=day, hour=hour, minute=minute,msec=msec)
-if (c_e(msec)) then
-  sec=nint(float(msec)/1000.)
-else
-  sec=imiss
-end if
-
-ier = idba_set(session%sehandle,"yearmin",year)
-ier = idba_set(session%sehandle,"monthmin",month)
-ier = idba_set(session%sehandle,"daymin",day)
-ier = idba_set(session%sehandle,"hourmin",hour)
-ier = idba_set(session%sehandle,"minumin",minute)
-ier = idba_set(session%sehandle,"secmin",sec)
-
-CALL getval(filter%datetimemax%datetime, year=year, month=month, day=day, hour=hour, minute=minute,msec=msec)
-
-if (c_e(msec)) then
-  sec=nint(float(msec)/1000.)
-else
-  sec=imiss
-end if
-
-ier = idba_set(session%sehandle,"yearmax",year)
-ier = idba_set(session%sehandle,"monthmax",month)
-ier = idba_set(session%sehandle,"daymax",day)
-ier = idba_set(session%sehandle,"hourmax",hour)
-ier = idba_set(session%sehandle,"minumax",minute)
-ier = idba_set(session%sehandle,"secmax",sec)
 
 ier = idba_set(session%sehandle,"latmin",getilat(filter%coordmin%geo_coord))
 ier = idba_set(session%sehandle,"lonmin",getilon(filter%coordmin%geo_coord))
@@ -2287,10 +2290,48 @@ ier = idba_set(session%sehandle,"attr_filter",filter%attr_filter)
 ier = idba_set(session%sehandle,"query",filter%query)
 
 if (filter%contextana) then
+
  call session%setcontextana()
+
  ier = idba_set(session%sehandle,"varlist",filter%anavarlist)
  ier = idba_set(session%sehandle,"*varlist",filter%anastarvarlist)
+
 else
+
+  if (c_e(filter%datetime%datetime)) call filter%datetime%dbaset(session)
+  if (c_e(filter%level%vol7d_level)) call filter%level%dbaset(session)
+  if (c_e(filter%timerange%vol7d_timerange)) call filter%timerange%dbaset(session)
+
+  CALL getval(filter%datetimemin%datetime, year=year, month=month, day=day, hour=hour, minute=minute,msec=msec)
+  if (c_e(msec)) then
+    sec=nint(float(msec)/1000.)
+  else
+    sec=imiss
+  end if
+
+  ier = idba_set(session%sehandle,"yearmin",year)
+  ier = idba_set(session%sehandle,"monthmin",month)
+  ier = idba_set(session%sehandle,"daymin",day)
+  ier = idba_set(session%sehandle,"hourmin",hour)
+  ier = idba_set(session%sehandle,"minumin",minute)
+  ier = idba_set(session%sehandle,"secmin",sec)
+
+  CALL getval(filter%datetimemax%datetime, year=year, month=month, day=day, hour=hour, minute=minute,msec=msec)
+  
+  if (c_e(msec)) then
+    sec=nint(float(msec)/1000.)
+  else
+    sec=imiss
+  end if
+  
+  ier = idba_set(session%sehandle,"yearmax",year)
+  ier = idba_set(session%sehandle,"monthmax",month)
+  ier = idba_set(session%sehandle,"daymax",day)
+  ier = idba_set(session%sehandle,"hourmax",hour)
+  ier = idba_set(session%sehandle,"minumax",minute)
+  ier = idba_set(session%sehandle,"secmax",sec)
+
+
   ier = idba_set(session%sehandle,"varlist",filter%varlist)
   ier = idba_set(session%sehandle,"*varlist",filter%starvarlist)
 end if
@@ -2334,25 +2375,40 @@ type(dbasession), intent(in) :: session !< dballe session
 logical, intent(in),optional :: noattr          !< set to .true. to get data only (no attribute) 
 type(dbafilter),intent(in),optional :: filter     !< use this to filter wanted data                
 
-!TODO mmm qui bisogna vedere ... modificando equal forse va bene
-! ma probabilmente bisogna settare contextana per selezionare i filtri di var e attr nelle altre extrude
+type(dbafilter)    :: myfilter
 
-if (present(filter)) then
-  if (filter == metaanddata%metadata) return
-endif
+!print *,"------------------"
+!call metaanddata%display()
+!print *,"contextana false"
+
+myfilter=dbafilter(filter=filter,contextana=.false.)
+call ingest(metaanddata,session,noattr,myfilter)
+
+!print *,"contextana true"
+myfilter=dbafilter(filter=filter,contextana=.true.)
+call ingest(metaanddata,session,noattr,myfilter)
+
+contains
+
+subroutine ingest(metaanddata,session,noattr,filter)
+class(dbametaanddata), intent(in) :: metaanddata
+type(dbasession), intent(in) :: session !< dballe session
+logical, intent(in),optional :: noattr          !< set to .true. to get data only (no attribute) 
+type(dbafilter),intent(in) :: filter     !< use this to filter wanted data                
+
+if (.not. filter == metaanddata%metadata) return
 
 call session%unsetall()
 !write metadata
 call session%set(metadata=metaanddata%metadata)
 
-
-!!!! todo FILTER : qui bisogna controllare che i filtri sottostanti siano attivi e funzionanti
 !write data and attribute
 !call session%ingest(metaanddata%dataattrv,noattr,filter)
 call metaanddata%dataattrv%ingest(session,noattr,filter)
 !to close message on file
 call session%close_message()
 
+end subroutine ingest
 end subroutine dbametaanddata_ingest
 
 
@@ -2372,12 +2428,23 @@ type(dbasession), intent(in) :: session !< dballe session
 logical, intent(in),optional :: noattr          !< set to .true. to get data only (no attribute) 
 type(dbafilter),intent(in),optional :: filter     !< use this to filter wanted data                
 
-!TODO mmm qui bisogna vedere ... modificando equal forse va bene
-! ma probabilmente bisogna settare contextana per selezionare i filtri di var e attr nelle altre extrude
+type(dbafilter)    :: myfilter
 
-if (present(filter)) then
-  if (filter == metaanddatav%metadata)return
-endif
+myfilter=dbafilter(filter=filter,contextana=.false.)
+call ingest(metaanddatav,session,noattr,myfilter)
+
+myfilter=dbafilter(filter=filter,contextana=.true.)
+call ingest(metaanddatav,session,noattr,myfilter)
+
+contains
+
+subroutine ingest(metaanddatav,session,noattr,filter)
+class(dbametaanddatav), intent(in) :: metaanddatav
+type(dbasession), intent(in) :: session !< dballe session
+logical, intent(in),optional :: noattr          !< set to .true. to get data only (no attribute) 
+type(dbafilter),intent(in) :: filter     !< use this to filter wanted data                
+
+if (.not. filter == metaanddatav%metadata)return
 !write metadata
 call session%set(metadata=metaanddatav%metadata)
 
@@ -2388,6 +2455,7 @@ call metaanddatav%datav%ingest(session,noattr,filter)
 !to close message on file
 call session%close_message()
 
+end subroutine ingest
 end subroutine dbametaanddatav_ingest
 
 
@@ -2395,10 +2463,9 @@ end subroutine dbametaanddatav_ingest
 subroutine dbametaanddatal_ingest(metaanddatal,session,noattr,filter)
 class(dbametaanddatalist), intent(in) :: metaanddatal !< extruded data
 class(dbasession), intent(in) :: session
-logical, intent(in),optional :: noattr          !< set to .true. to get data only (no attribute) 
+logical, intent(in),optional :: noattr          !< set to .true. to put data only (no attribute) 
 type(dbafilter),intent(in),optional :: filter     !< use this to filter wanted data                
 type(dbametaanddata) :: metaanddata
-
 
 call metaanddatal%rewind()
 do while(metaanddatal%element())
@@ -2912,10 +2979,10 @@ character(255) :: value
 logical :: lvars,lstarvars
 type(dbadcv)       :: vars,starvars
 
+
                                 ! if you do not pass metaanddata we presume to have to initialize the query
 if (.not. present(metaanddata)) then
   ier = idba_voglioquesto(session%sehandle, session%count)
-!  print *,"extrude voglioquesto number data",session%count
 
                                 ! preroll one read because after I have to read one more to check metadata
   if (c_e(session%count) .and. session%count > 0) then
@@ -2924,7 +2991,6 @@ if (.not. present(metaanddata)) then
 
 else
 
-!  print *,"extrude dammelo"
                                 ! you pass metaanddata so we continue with the query
 
   if (allocated(metaanddata%dataattrv%dataattr)) then
@@ -2937,11 +3003,12 @@ else
 
     if (filter%contextana) then
 
+      !todo try to use this:     vars=filter%anavars
       if (allocated(filter%anavars%dcv)) then
         lvars=.true.
         allocate(vars%dcv(size(filter%anavars%dcv)))
         do i =1,size(filter%anavars%dcv)
-          allocate(vars%dcv(i),source=filter%anavars%dcv(i))
+          allocate(vars%dcv(i)%dat,source=filter%anavars%dcv(i)%dat)
         end do
       end if
       
@@ -2949,7 +3016,7 @@ else
         lstarvars=.true.
         allocate(starvars%dcv(size(filter%anastarvars%dcv)))
         do i =1,size(filter%anastarvars%dcv)
-          allocate(starvars%dcv(i),source=filter%anastarvars%dcv(i))
+          allocate(starvars%dcv(i)%dat,source=filter%anastarvars%dcv(i)%dat)
         end do
       end if
 
@@ -2959,7 +3026,7 @@ else
         lvars=.true.
         allocate(vars%dcv(size(filter%vars%dcv)))
         do i =1,size(filter%vars%dcv)
-          allocate(vars%dcv(i),source=filter%vars%dcv(i))
+          allocate(vars%dcv(i)%dat,source=filter%vars%dcv(i)%dat)
         end do
       end if
       
@@ -2967,7 +3034,7 @@ else
         lstarvars=.true.
         allocate(starvars%dcv(size(filter%starvars%dcv)))
         do i =1,size(filter%starvars%dcv)
-          allocate(starvars%dcv(i),source=filter%starvars%dcv(i))
+          allocate(starvars%dcv(i)%dat,source=filter%starvars%dcv(i)%dat)
         end do
       end if
       
@@ -3160,6 +3227,9 @@ type(dbafilter),intent(in),optional :: filter   !< use this to filter wanted dat
 
 type(dbametaanddata),allocatable :: metaanddatavbuf(:)
 integer :: i
+
+!todo aggiungere anche altrove dove passato filter
+if (present(filter)) call filter%dbaset(session)
 
 call session%extrude()
 !print*," count: ",session%count
@@ -3960,6 +4030,7 @@ end subroutine dbasession_set
 subroutine dbasession_delete(session)
 class (dbasession), intent(inout) :: session
 integer :: ier
+type(dbasession) :: defsession
 
 if (c_e(session%sehandle)) then 
   ier = idba_fatto(session%sehandle)
@@ -3967,17 +4038,21 @@ end if
 
 call session%memconnection%delete()
 
+select type (session)
+type is (dbasession)
+  session = defsession
+end select
 
-session%sehandle=imiss
-session%file=.false.
-session%template=cmiss
-session%filename=cmiss
-session%mode=cmiss
-session%format=cmiss
-session%simplified=.true.
-session%memdb=.false.
-session%category=imiss
-session%count=imiss
+!!$session%sehandle=imiss
+!!$session%file=.false.
+!!$session%template=cmiss
+!!$session%filename=cmiss
+!!$session%mode=cmiss
+!!$session%format=cmiss
+!!$session%simplified=.true.
+!!$session%memdb=.false.
+!!$session%category=imiss
+!!$session%count=imiss
 
 end subroutine dbasession_delete
 

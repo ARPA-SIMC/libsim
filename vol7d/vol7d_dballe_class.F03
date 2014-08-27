@@ -558,14 +558,13 @@ TYPE(vol7d) :: vol7dtmp
 type(dbametaanddata),allocatable :: metaanddatav(:)
 type(dbafilter)    :: myfilter
 
-
 if ( .not. filter%dataonly) then
                                 ! ---------------->   constant station data
   myfilter=dbafilter(filter=filter,contextana=.true.)
-                                ! set filter
-  call this%handle%set(filter=filter)
+!                                ! set filter
+!  call this%handle%set(filter=myfilter)
                                 ! estrude the data
-  call this%handle%extrude(metaanddatav,filter=filter)
+  call this%handle%extrude(metaanddatav,filter=myfilter)
   
   call dba2v7d(this%vol7d, metaanddatav,this%time_definition,set_network)
 
@@ -582,10 +581,11 @@ end if
 if ( .not. filter%anaonly) then
                                 ! ---------------->   working on data
   myfilter=dbafilter(filter=filter,contextana=.false.)
-                                ! set filter
-  call this%handle%set(filter=filter)
+!                                ! set filter
+!  call this%handle%set(filter=myfilter)
                                 ! estrude the data
-  call this%handle%extrude(metaanddatav,filter=filter)
+
+  call this%handle%extrude(metaanddatav,filter=myfilter)
 
   call dba2v7d(vol7dtmp,metaanddatav,this%time_definition,set_network)
 
@@ -1685,7 +1685,7 @@ END FUNCTION open_dballe_file
 ! timei, timef,level,timerange,var,attr,anavar,anaattr,attr_only,ana,dataonly)
 
 SUBROUTINE vol7d_dballe_export_old(this, network, coordmin, coordmax,&
- timei, timef,level,timerange,var,attr,anavar,anaattr,ana,dataonly,anaonly)
+ timei, timef,level,timerange,var,attr,anavar,anaattr,ana,dataonly,anaonly,template)
 
 TYPE(vol7d_dballe),INTENT(inout) :: this !< oggetto contenente il volume e altre info per l'accesso al DSN
 character(len=network_name_len),INTENT(in),optional :: network !< network da exportare
@@ -1706,6 +1706,9 @@ CHARACTER(len=*),INTENT(in),OPTIONAL :: var(:),attr(:),anavar(:),anaattr(:)
 TYPE(vol7d_ana),INTENT(inout),optional :: ana  !< identificativo della stazione da exportare
 logical, intent(in),optional :: dataonly          !< set to .true. to export data only
 logical, intent(in),optional :: anaonly           !< set to .true. to export ana only
+!> specificando category.subcategory.localcategory oppure un alias ("synop", "metar","temp","generic") forza l'exportazione ad uno specifico template BUFR/CREX"
+!!  the special value "generic-frag is used to generate bufr on file where ana data is reported only once at beginning and data in other bufr after
+character(len=*),intent(in),optional :: template 
 
 
 type(dbadcv)       :: vars,starvars,anavars,anastarvars
@@ -1807,19 +1810,22 @@ filter=dbafilter(coordmin=mydbacoordmin,coordmax=mydbacoordmax,ana=mydbaana, &
  timerange=mydbatimerange,level=mydbalevel,network=mydbanetwork,&
  vars=vars,starvars=starvars,anavars=anavars,anastarvars=anastarvars,&
  dataonly=dataonly,anaonly=anaonly)
+
 !!$  print *, "filter:"
 !!$  call filter%display()
 
-call export (this, filter)
+call export (this, filter,template)
 
 end SUBROUTINE vol7d_dballe_export_old
 
 
-
-subroutine vol7d_dballe_export (this, filter)
+subroutine vol7d_dballe_export (this, filter, template)
 
 TYPE(vol7d_dballe),INTENT(inout) :: this !< oggetto contenente il volume e altre info per l'accesso al DSN
 type(dbafilter),intent(in)    :: filter !< filter o use
+!> specificando category.subcategory.localcategory oppure un alias ("synop", "metar","temp","generic") forza l'exportazione ad uno specifico template BUFR/CREX"
+!!  the special value "generic-frag is used to generate bufr on file where ana data is reported only once at beginning and data in other bufr after
+character(len=*),intent(in),optional :: template 
 
 type(dbametaanddatalist) :: metaanddatal
 logical :: stat
@@ -1831,7 +1837,6 @@ call v7d2dba(this%vol7d,metaanddatal)
 call this%handle%remove_all()
 
 ! using filter here can limit memory use for memdb
-!call this%handle%ingest(metaanddatal,filter=filter,dataonly=dataonly)
 call metaanddatal%ingest(session=this%handle,filter=filter)
 
 if (this%file) then
@@ -1846,7 +1851,7 @@ if (this%file) then
 
   ! note that you can use unsetall hera because the filter was used in ingest
   call filter%dbaset(this%handle)
-  call this%handle%messages_write_next()
+  call this%handle%messages_write_next(template)
   !clean memdb
   call this%handle%remove_all()
 
