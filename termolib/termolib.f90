@@ -1778,7 +1778,15 @@ elemental subroutine UV(DD,FF,U,V)
   real,intent(out)::u,v
   real::ar
 
-  if(c_e(dd) .and. c_e(ff))then
+!!$ B/C1
+!!$ Regulations for reporting SYNOP data in TDCF
+!!$ Amendment: 7 Nov. 2012
+!!$                                ! B/C 1.10.5.3.2
+!!$ Calm shall be reported by setting wind direction to 0 and wind speed to 0. Variable shall
+!!$ be reported by setting wind direction to 0 and wind speed to a positive
+!!$ non-missing value.
+
+  if(c_e(dd) .and. c_e(ff) .and. dd > 0. )then
 
     AR=dd*degrad
                                 !scambio seno e coseno per rotazione 90 gradi
