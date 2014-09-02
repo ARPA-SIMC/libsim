@@ -1834,7 +1834,7 @@ call v7d2dba(this%vol7d,metaanddatal)
 !call metaanddatal%display()
 
 !clean memdb
-call this%handle%remove_all()
+if (this%file) call this%handle%remove_all()
 
 ! using filter here can limit memory use for memdb
 call metaanddatal%ingest(session=this%handle,filter=filter)
