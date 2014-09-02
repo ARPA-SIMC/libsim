@@ -307,8 +307,11 @@ CALL optionparser_add(opt, ' ', 'comp-full-steps', comp_full_steps, help= &
  &time equal to a multiple of comp-step, otherwise all reasonable combinations &
  &of forecast times are computed')
 CALL optionparser_add(opt, ' ', 'comp-frac-valid', comp_frac_valid, 1., help= &
- 'specify the fraction of input data that has to be valid in order to consider a &
- &statistically processed value acceptable')
+ '(from 0. to 1.) specify the fraction  of input data that has to be valid in order to consider a &
+ &statistically processed value acceptable; for instantaneous data define time between two &
+ &contiguougs valid data within an interval &
+ &following this rule: max_step=all_step/(comp-frac-valid*999 +1) &
+ &(when comp_frac_valid is 0, max_step = all_intervall; when frac_valis is 1, max_step = all_intervall/1000)')
 CALL optionparser_add(opt, ' ', 'comp-sort', comp_sort, help= &
  'sort all sortable dimensions of the volume after the computations')
 CALL optionparser_add(opt, ' ', 'comp-fill-data', comp_fill_data, help= &
@@ -1080,9 +1083,10 @@ IF (c_e(istat_proc) .AND. c_e(ostat_proc)) THEN
     CALL init(v7dtmp) ! detach it
   end if
 
+  !when comp_frac_valid is 0, max_step = all_intervall; frac_valis is 1, max_step = all_intervall/1000 
   CALL vol7d_compute_stat_proc(v7d, v7d_comp1, istat_proc, ostat_proc, c_i, c_s, &
    full_steps=comp_full_steps, frac_valid=comp_frac_valid, &
-   max_step=timedelta_depop(c_i)/10, weighted=.TRUE., other=v7d_comp3)
+   max_step=timedelta_depop(c_i)/nint(comp_frac_valid*999.+1.), weighted=.TRUE., other=v7d_comp3)
 
   CALL delete(v7d)
   v7d = v7d_comp3
