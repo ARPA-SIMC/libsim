@@ -564,7 +564,7 @@ if ( .not. filter%dataonly) then
 !                                ! set filter
 !  call this%handle%set(filter=myfilter)
                                 ! estrude the data
-  call this%handle%extrude(metaanddatav,filter=myfilter)
+  call this%handle%ingest(metaanddatav,filter=myfilter)
   
   call dba2v7d(this%vol7d, metaanddatav,this%time_definition,set_network)
 
@@ -585,7 +585,7 @@ if ( .not. filter%anaonly) then
 !  call this%handle%set(filter=myfilter)
                                 ! estrude the data
 
-  call this%handle%extrude(metaanddatav,filter=myfilter)
+  call this%handle%ingest(metaanddatav,filter=myfilter)
 
   call dba2v7d(vol7dtmp,metaanddatav,this%time_definition,set_network)
 
@@ -1837,19 +1837,19 @@ call v7d2dba(this%vol7d,metaanddatal)
 if (this%file) call this%handle%remove_all()
 
 ! using filter here can limit memory use for memdb
-call metaanddatal%ingest(session=this%handle,filter=filter)
+call metaanddatal%extrude(session=this%handle,filter=filter)
 
 if (this%file) then
   !!!!!  this if we have written in memdb and now we have to write the file
 
-  !filter is already in ingest
+  !filter is already in extrude
   !this%handle%set(filter=filter)
 
   ! export to file
   !! TODO : revert template from init to export  !!!!!!!!!!!!!!!!!!!!!
   !!call this%handle%messages_write_next(template)
 
-  ! note that you can use unsetall hera because the filter was used in ingest
+  ! note that you can use unsetall hera because the filter was used in extrude
   call filter%dbaset(this%handle)
   call this%handle%messages_write_next(template)
   !clean memdb

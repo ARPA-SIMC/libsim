@@ -100,7 +100,7 @@ call sessionfrom%messages_open_output(filename=output_file,mode="w",format="BUFR
 
 do while (sessionfrom%messages_read_next())
   call sessionfrom%set(filter=filter)
-  call sessionfrom%extrude(metaanddatav,filter=filter)
+  call sessionfrom%ingest(metaanddatav,filter=filter)
   do i =1,size(metaanddatav)
 !    call metaanddatav(i)%display()
 
@@ -127,8 +127,8 @@ do while (sessionfrom%messages_read_next())
           deallocate(metaanddatav(i)%dataattrv%dataattr(j)%attrv%dcv)
           allocate (metaanddatav(i)%dataattrv%dataattr(j)%attrv%dcv(1))
           allocate (metaanddatav(i)%dataattrv%dataattr(j)%attrv%dcv(1)%dat,source=dbadatai("*B33007",0))
-          !call sessionfrom%ingest(dataattr=metaanddatav(i)%dataattrv%dataattr(j))
-          call metaanddatav(i)%dataattrv%dataattr(j)%ingest(sessionfrom)
+          !call sessionfrom%extrude(dataattr=metaanddatav(i)%dataattrv%dataattr(j))
+          call metaanddatav(i)%dataattrv%dataattr(j)%extrude(sessionfrom)
         end if
 
       else
@@ -156,17 +156,17 @@ do while (sessionfrom%messages_read_next())
       end if
 !      end associate
     end do
-!!$    call sessionto%ingest(metaanddata=metaanddatav(i))
+!!$    call sessionto%extrude(metaanddata=metaanddatav(i))
   end do
 !!$  call sessionto%prendilo()
 
 !  print *,"contextana"
 !!$  call sessionfrom%set(filter=dbafilter(contextana=.true.))
-!!$  call sessionfrom%extrude(metaanddatav)
+!!$  call sessionfrom%ingest(metaanddatav)
 !!$    
 !!$  do i =1,size(metaanddatav)
 !!$    call metaanddatav(i)%display()
-!!$    call sessionto%ingest(metaanddata=metaanddatav(i))
+!!$    call sessionto%extrude(metaanddata=metaanddatav(i))
 !!$  end do
 !!$  call sessionto%close_message()
 

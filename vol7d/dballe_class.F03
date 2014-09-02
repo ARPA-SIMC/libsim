@@ -104,18 +104,18 @@ type,public ::  dbasession
     procedure :: set => dbasession_set !< set dballe parameters
     procedure :: setcontextana => dbasession_setcontextana !< set dballe station data context
     procedure :: dimenticami => dbasession_dimenticami !< dballe dimenticami
-!!$    procedure :: ingest_dbasession => dbasession_ingest !< put data on DSN
-!!$    procedure :: ingest_ana => dbasession_ingest_ana !< put data on DSN
-!!$    procedure :: ingest_dataattr => dbasession_ingest_dataattr !< put data on DSN
-!!$    procedure :: ingest_dataattrv => dbasession_ingest_dataattrv !< put data on DSN
-!!$    procedure :: ingest_metaanddata => dbasession_ingest_metaanddata !< put data on DSN
-!!$    procedure :: ingest_metaanddatai => dbasession_ingest_metaanddatai !< put data on DSN
-!!$    procedure :: ingest_metaanddatar => dbasession_ingest_metaanddatar !< put data on DSN
-!!$    procedure :: ingest_metaanddatad => dbasession_ingest_metaanddatad !< put data on DSN
-!!$    procedure :: ingest_metaanddatab => dbasession_ingest_metaanddatab !< put data on DSN
-!!$    procedure :: ingest_metaanddatac => dbasession_ingest_metaanddatac !< put data on DSN
-!!$    procedure :: ingest_metaanddatav => dbasession_ingest_metaanddatav !< put data on DSN
-!!$    procedure :: ingest_metaanddatal => dbasession_ingest_metaanddatal !< put data on DSN
+!!$    procedure :: extrude_dbasession => dbasession_extrude !< put data on DSN
+!!$    procedure :: extrude_ana => dbasession_extrude_ana !< put data on DSN
+!!$    procedure :: extrude_dataattr => dbasession_extrude_dataattr !< put data on DSN
+!!$    procedure :: extrude_dataattrv => dbasession_extrude_dataattrv !< put data on DSN
+!!$    procedure :: extrude_metaanddata => dbasession_extrude_metaanddata !< put data on DSN
+!!$    procedure :: extrude_metaanddatai => dbasession_extrude_metaanddatai !< put data on DSN
+!!$    procedure :: extrude_metaanddatar => dbasession_extrude_metaanddatar !< put data on DSN
+!!$    procedure :: extrude_metaanddatad => dbasession_extrude_metaanddatad !< put data on DSN
+!!$    procedure :: extrude_metaanddatab => dbasession_extrude_metaanddatab !< put data on DSN
+!!$    procedure :: extrude_metaanddatac => dbasession_extrude_metaanddatac !< put data on DSN
+!!$    procedure :: extrude_metaanddatav => dbasession_extrude_metaanddatav !< put data on DSN
+!!$    procedure :: extrude_metaanddatal => dbasession_extrude_metaanddatal !< put data on DSN
     procedure :: prendilo => dbasession_prendilo !< dballe prendilo
     procedure :: var_related => dbasession_var_related !< dballe var_related
     procedure :: critica => dbasession_critica !< dballe critica
@@ -127,38 +127,38 @@ type,public ::  dbasession
     procedure :: close_message => dbasession_close_message !< dballe close_message
     procedure :: unsetb => dbasession_unsetb !< dballe unsetb
     procedure :: filerewind => dbasession_filerewind !< rewind file associates with this session
-    procedure :: extrude_ana => dbasession_extrude_ana !< get station metadata from DSN
-    procedure :: extrude_anav => dbasession_extrude_anav !< get station metadata from DSN
-    procedure :: extrude_anal => dbasession_extrude_anal !< get station metadata from DSN
-    procedure :: extrude_metaanddata => dbasession_extrude_metaanddata !< get data from DSN
-    procedure :: extrude_metaanddatal => dbasession_extrude_metaanddatal !< get data from DSN
-    procedure :: extrude_metaanddatav => dbasession_extrude_metaanddatav !< get data from DSN
-    procedure :: extrude_metaanddatai => dbasession_extrude_metaanddatai !< get data from DSN
-    procedure :: extrude_metaanddataiv => dbasession_extrude_metaanddataiv !< get data from DSN
-    procedure :: extrude_metaanddatail => dbasession_extrude_metaanddatail !< get data from DSN
-    procedure :: extrude_metaanddatab => dbasession_extrude_metaanddatab !< get data from DSN
-    procedure :: extrude_metaanddatabv => dbasession_extrude_metaanddatabv !< get data from DSN
-    procedure :: extrude_metaanddatabl => dbasession_extrude_metaanddatabl !< get data from DSN
-    procedure :: extrude_metaanddatad => dbasession_extrude_metaanddatad !< get data from DSN
-    procedure :: extrude_metaanddatadv => dbasession_extrude_metaanddatadv !< get data from DSN
-    procedure :: extrude_metaanddatadl => dbasession_extrude_metaanddatadl !< get data from DSN
-    procedure :: extrude_metaanddatar => dbasession_extrude_metaanddatar !< get data from DSN
-    procedure :: extrude_metaanddatarv => dbasession_extrude_metaanddatarv !< get data from DSN
-    procedure :: extrude_metaanddatarl => dbasession_extrude_metaanddatarl !< get data from DSN
-    procedure :: extrude_metaanddatac => dbasession_extrude_metaanddatac !< get data from DSN
-    procedure :: extrude_metaanddatacv => dbasession_extrude_metaanddatacv !< get data from DSN
-    procedure :: extrude_metaanddatacl => dbasession_extrude_metaanddatacl !< get data from DSN
+    procedure :: ingest_ana => dbasession_ingest_ana !< get station metadata from DSN
+    procedure :: ingest_anav => dbasession_ingest_anav !< get station metadata from DSN
+    procedure :: ingest_anal => dbasession_ingest_anal !< get station metadata from DSN
+    procedure :: ingest_metaanddata => dbasession_ingest_metaanddata !< get data from DSN
+    procedure :: ingest_metaanddatal => dbasession_ingest_metaanddatal !< get data from DSN
+    procedure :: ingest_metaanddatav => dbasession_ingest_metaanddatav !< get data from DSN
+    procedure :: ingest_metaanddatai => dbasession_ingest_metaanddatai !< get data from DSN
+    procedure :: ingest_metaanddataiv => dbasession_ingest_metaanddataiv !< get data from DSN
+    procedure :: ingest_metaanddatail => dbasession_ingest_metaanddatail !< get data from DSN
+    procedure :: ingest_metaanddatab => dbasession_ingest_metaanddatab !< get data from DSN
+    procedure :: ingest_metaanddatabv => dbasession_ingest_metaanddatabv !< get data from DSN
+    procedure :: ingest_metaanddatabl => dbasession_ingest_metaanddatabl !< get data from DSN
+    procedure :: ingest_metaanddatad => dbasession_ingest_metaanddatad !< get data from DSN
+    procedure :: ingest_metaanddatadv => dbasession_ingest_metaanddatadv !< get data from DSN
+    procedure :: ingest_metaanddatadl => dbasession_ingest_metaanddatadl !< get data from DSN
+    procedure :: ingest_metaanddatar => dbasession_ingest_metaanddatar !< get data from DSN
+    procedure :: ingest_metaanddatarv => dbasession_ingest_metaanddatarv !< get data from DSN
+    procedure :: ingest_metaanddatarl => dbasession_ingest_metaanddatarl !< get data from DSN
+    procedure :: ingest_metaanddatac => dbasession_ingest_metaanddatac !< get data from DSN
+    procedure :: ingest_metaanddatacv => dbasession_ingest_metaanddatacv !< get data from DSN
+    procedure :: ingest_metaanddatacl => dbasession_ingest_metaanddatacl !< get data from DSN
     procedure :: dissolve_metadata => dbasession_dissolve_metadata !< remove data from DSN
     procedure :: dissolveattr => dbasession_dissolveattr_metadata !< remove attributes from DSN
     generic   :: dissolve => dissolve_metadata ,dimenticami !< remove from DSN
-    generic   :: extrudea => extrude_ana, extrude_anav,extrude_anal !< get station metadata from DSN
-    generic   :: extrude  => extrude_metaanddata,extrude_metaanddatav,extrude_metaanddatal,&
-     !extrude_metaanddatai,extrude_metaanddatab,extrude_metaanddatad,extrude_metaanddatar,extrude_metaanddatac,&      !ambiguos
-     extrude_metaanddataiv,extrude_metaanddatabv,extrude_metaanddatadv,extrude_metaanddatarv,extrude_metaanddatacv,&
-     extrude_metaanddatail,extrude_metaanddatarl,extrude_metaanddatadl,extrude_metaanddatabl,extrude_metaanddatacl !< get data from DSN
-!!$    generic   :: ingest => ingest_ana,ingest_dataattr,ingest_dataattrv,ingest_metaanddata,&
-!!$     ingest_metaanddatai,ingest_metaanddatar,ingest_metaanddatad,ingest_metaanddatab,ingest_metaanddatac,&
-!!$     ingest_metaanddatav,ingest_metaanddatal
+    generic   :: ingesta => ingest_ana, ingest_anav,ingest_anal !< get station metadata from DSN
+    generic   :: ingest  => ingest_metaanddata,ingest_metaanddatav,ingest_metaanddatal,&
+     !ingest_metaanddatai,ingest_metaanddatab,ingest_metaanddatad,ingest_metaanddatar,ingest_metaanddatac,&      !ambiguos
+     ingest_metaanddataiv,ingest_metaanddatabv,ingest_metaanddatadv,ingest_metaanddatarv,ingest_metaanddatacv,&
+     ingest_metaanddatail,ingest_metaanddatarl,ingest_metaanddatadl,ingest_metaanddatabl,ingest_metaanddatacl !< get data from DSN
+!!$    generic   :: extrude => extrude_ana,extrude_dataattr,extrude_dataattrv,extrude_metaanddata,&
+!!$     extrude_metaanddatai,extrude_metaanddatar,extrude_metaanddatad,extrude_metaanddatab,extrude_metaanddatac,&
+!!$     extrude_metaanddatav,extrude_metaanddatal
 end type dbasession
 
 !> User-defined constructors => dballe_class::dbasession_init
@@ -242,7 +242,7 @@ type,public,extends(vol7d_ana) :: dbaana
   procedure :: display => dbaana_display !< print a summary of object contents
   procedure :: dbaset => dbaana_set  !< set dballe parameters
   procedure :: dbaenq => dbaana_enq  !< query dballe parameters
-  procedure :: ingest => dbaana_ingest !< put data on DSN
+  procedure :: extrude => dbaana_extrude !< put data on DSN
 end type dbaana
 
 !> User-defined constructors => dballe_class::dbaana_init
@@ -451,7 +451,7 @@ type, public :: dbadc
   contains
   procedure :: display => dbadc_display !< print a summary of object contents
   procedure :: dbaset => dbadc_set !< set dballe parameters
-  procedure :: ingest => dbadc_ingest
+  procedure :: extrude => dbadc_extrude
 end type dbadc
 
 
@@ -461,7 +461,7 @@ type, public :: dbadcv
   contains
   procedure :: display => dbadcv_display !< print a summary of object contents
   procedure :: dbaset => dbadcv_set !< set dballe parameters
-  procedure :: ingest => dbadcv_ingest
+  procedure :: extrude => dbadcv_extrude
   procedure :: equal => dbadcv_equal_dbadata !> compare dbadcv and  dbadata
   generic   :: operator (==) => equal !> == operator
 end type dbadcv
@@ -471,7 +471,7 @@ type, public ,extends(dbadc):: dbadataattr
   type(dbadcv) :: attrv
   contains
   procedure :: display => dbadataattr_display !< print a summary of object contents
-  procedure :: ingest => dbadataattr_ingest !< put data on DSN
+  procedure :: extrude => dbadataattr_extrude !< put data on DSN
 end type dbadataattr
 
 !> vector of dbadataattr (more data plus attributes)
@@ -479,7 +479,7 @@ type, public :: dbadataattrv
   class(dbadataattr),allocatable :: dataattr(:)
   contains
   procedure :: display => dbadataattrv_display !< print a summary of object contents
-  procedure :: ingest => dbadataattrv_ingest!< put data on DSN
+  procedure :: extrude => dbadataattrv_extrude!< put data on DSN
 end type dbadataattrv
 
 !> one metadata with more data plus attributes
@@ -488,7 +488,7 @@ type, public :: dbametaanddata
   type(dbadataattrv) ::dataattrv
   contains
   procedure :: display => dbametaanddata_display !< print a summary of object contents
-  procedure :: ingest => dbametaanddata_ingest!< put data on DSN
+  procedure :: extrude => dbametaanddata_extrude!< put data on DSN
 end type dbametaanddata
 
 !> one metadata plus vector of container of dbadata
@@ -497,7 +497,7 @@ type, public :: dbametaanddatav
   type(dbadcv) ::datav
   contains
   procedure :: display => dbametaanddatav_display !< print a summary of object contents
-  procedure :: ingest => dbametaanddatav_ingest!< put data on DSN
+  procedure :: extrude => dbametaanddatav_extrude!< put data on DSN
 end type dbametaanddatav
 
 !> double linked list of dbametaanddata
@@ -505,7 +505,7 @@ type, public, extends(list) :: dbametaanddataList
   contains
   procedure :: current => currentdbametaanddata  !< get dbametaanddata pointed by iterator
   procedure :: display => displaydbametaanddata  !< print a summary of object contents
-  procedure :: ingest => dbametaanddatal_ingest !< put data on DSN
+  procedure :: extrude => dbametaanddatal_extrude !< put data on DSN
 end type dbametaanddataList
 
 !> metadata and integer data
@@ -513,7 +513,7 @@ type, public,extends(dbadatai) :: dbametaanddatai
   type(dbametadata) :: metadata
   contains
   procedure :: display => dbametaanddatai_display !< print a summary of object contents
-  procedure :: ingest => dbametaanddatai_ingest!< put data on DSN
+  procedure :: extrude => dbametaanddatai_extrude!< put data on DSN
 end type dbametaanddatai
 
 !> metadata and integer data double linked list
@@ -529,7 +529,7 @@ type, public,extends(dbadatab) :: dbametaanddatab
   type(dbametadata) :: metadata
   contains
   procedure :: display => dbametaanddatab_display !< print a summary of object contents
-  procedure :: ingest => dbametaanddatab_ingest!< put data on DSN
+  procedure :: extrude => dbametaanddatab_extrude!< put data on DSN
 end type dbametaanddatab
 
 !> metadata and byte data double linked list
@@ -545,7 +545,7 @@ type, public,extends(dbadatad) :: dbametaanddatad
   type(dbametadata) :: metadata
   contains
   procedure :: display => dbametaanddatad_display !< print a summary of object contents
-  procedure :: ingest => dbametaanddatad_ingest!< put data on DSN
+  procedure :: extrude => dbametaanddatad_extrude!< put data on DSN
 end type dbametaanddatad
 
 !> metadata and diubleprecision data double linked list
@@ -561,7 +561,7 @@ type, public,extends(dbadatar) :: dbametaanddatar
   type(dbametadata) :: metadata
   contains
   procedure :: display => dbametaanddatar_display !< print a summary of object contents
-  procedure :: ingest => dbametaanddatar_ingest!< put data on DSN
+  procedure :: extrude => dbametaanddatar_extrude!< put data on DSN
 end type dbametaanddatar
 
 !> metadata and real data double linked list
@@ -577,7 +577,7 @@ type, public,extends(dbadatac) :: dbametaanddatac
   type(dbametadata) :: metadata
   contains
   procedure :: display => dbametaanddatac_display !< print a summary of object contents
-  procedure :: ingest => dbametaanddatac_ingest!< put data on DSN
+  procedure :: extrude => dbametaanddatac_extrude!< put data on DSN
 end type dbametaanddatac
 
 !> metadata and character data double linked list
@@ -588,7 +588,7 @@ type, public, extends(list) :: dbametaanddatacList
   procedure :: toarray => toarray_dbametaanddatac !< return dbametaanddatac allocated array
 end type dbametaanddatacList
 
-!> filter to apply before extrude data
+!> filter to apply before ingest data
 type, public ::  dbafilter
   type(dbaana)       :: ana
   character(len=6)   :: var
@@ -943,7 +943,7 @@ end subroutine dbaana_enq
 
 
 !> put data on DSN
-subroutine dbaana_ingest(ana,session)
+subroutine dbaana_extrude(ana,session)
 class(dbaana), intent(in) :: ana
 type(dbasession), intent(in) :: session !< dballe session
 
@@ -955,7 +955,7 @@ call session%prendilo()
 !to close message on file
 call session%close_message()
 
-end subroutine dbaana_ingest
+end subroutine dbaana_extrude
 
 
 !> print a summary of object content
@@ -1017,7 +1017,7 @@ end subroutine dbadcv_set
 
 
 !> put data on DSN
-subroutine dbadcv_ingest(dcv,session,noattr,filter)
+subroutine dbadcv_extrude(dcv,session,noattr,filter)
 class(dbadcv), intent(in) :: dcv
 type(dbasession), intent(in) :: session !< dballe session
 logical, intent(in),optional :: noattr          !< set to .true. to get data only (no attribute) 
@@ -1025,21 +1025,21 @@ type(dbafilter),intent(in),optional :: filter     !< use this to filter wanted d
 integer :: i
 
 do i=1, size(dcv%dcv)
-  call dcv%dcv(i)%ingest(session,noattr,filter)
+  call dcv%dcv(i)%extrude(session,noattr,filter)
 enddo
 
-end subroutine dbadcv_ingest
+end subroutine dbadcv_extrude
 
 !> put data on DSN
-subroutine dbadc_ingest(data,session,noattr,filter)
+subroutine dbadc_extrude(data,session,noattr,filter)
 class(dbadc), intent(in) :: data
 type(dbasession), intent(in) :: session !< dballe session
 logical, intent(in),optional :: noattr          !< set to .true. to get data only (no attribute) 
 type(dbafilter),intent(in),optional :: filter     !< use this to filter wanted data                
 
-call data%ingest(session,noattr,filter)
+call data%extrude(session,noattr,filter)
 
-end subroutine dbadc_ingest
+end subroutine dbadc_extrude
 
 
 !> print a summary of object content
@@ -1054,7 +1054,7 @@ if (allocated(dcv%dcv)) then
 end if
 end subroutine dbadcv_display
 
-!!$subroutine dbadat_ingest(dat,session)
+!!$subroutine dbadat_extrude(dat,session)
 !!$class(dbadat), intent(in) :: dat
 !!$type(dbasession), intent(in) :: session
 !!$
@@ -1062,9 +1062,9 @@ end subroutine dbadcv_display
 !!$call dat%dbaset(session)
 !!$call session%prendilo()
 !!$
-!!$end subroutine dbadat_ingest
+!!$end subroutine dbadat_extrude
 !!$
-!!$subroutine dbadatav_ingest(datav,session)
+!!$subroutine dbadatav_extrude(datav,session)
 !!$class(dbadatav), intent(in) :: datav
 !!$type(dbasession), intent(in) :: session
 !!$integer :: i
@@ -1074,7 +1074,7 @@ end subroutine dbadcv_display
 !!$end do
 !!$call session%prendilo()
 !!$
-!!$end subroutine dbadatav_ingest
+!!$end subroutine dbadatav_extrude
 
 
 !> dballe unsetb
@@ -1228,7 +1228,7 @@ end subroutine dbasession_dissolveattr_metadata
 
 
 !> put data on DSN
-subroutine dbadataattr_ingest(data,session,noattr,filter)
+subroutine dbadataattr_extrude(data,session,noattr,filter)
 class(dbadataattr), intent(in) :: data
 type(dbasession), intent(in) :: session !< dballe session
 logical, intent(in),optional :: noattr          !< set to .true. to get data only (no attribute) 
@@ -1246,12 +1246,12 @@ endif
 
 !write data in dsn
 
-print *,"ingest dati:"
+print *,"extrude dati:"
 call data%dbadc%display()
 
 call data%dbadc%dbaset(session)
 call session%prendilo()
-print *,"ingest prendilo"
+print *,"extrude prendilo"
 
 ! TODO remove return to write attributes
 !return
@@ -1272,7 +1272,7 @@ if (allocated(data%attrv%dcv)) then
       endif
 
       if (data%attrv%dcv(i)%dat%c_e()) then
-        print *,"ingest attributi:"
+        print *,"extrude attributi:"
         call data%attrv%dcv(i)%dat%display()
         call data%attrv%dcv(i)%dat%dbaset(session)
         critica=.true.
@@ -1280,10 +1280,10 @@ if (allocated(data%attrv%dcv)) then
     end do
 
     if (critica) then
-      print *,"ingest dato per attributi:"
+      print *,"extrude dato per attributi:"
       print *, data%dbadc%dat%btable
       call session%var_related(data%dbadc%dat%btable) ! I have made a prendilo and I do not need this
-      print *,"ingest critica"
+      print *,"extrude critica"
       call session%critica()
     end if
 
@@ -1294,7 +1294,7 @@ end if
 !to close message on file
 !call session%close_message()
 
-end subroutine dbadataattr_ingest
+end subroutine dbadataattr_extrude
 
 !> print a summary of object content
 subroutine dbadataattr_display(dc)
@@ -1309,7 +1309,7 @@ end subroutine dbadataattr_display
 
 
 !> put data on DSN
-subroutine dbadataattrv_ingest(dataattr,session,noattr,filter)
+subroutine dbadataattrv_extrude(dataattr,session,noattr,filter)
 class(dbadataattrv), intent(in) :: dataattr
 type(dbasession), intent(in) :: session !< dballe session
 logical, intent(in),optional :: noattr          !< set to .true. to get data only (no attribute) 
@@ -1318,14 +1318,14 @@ integer :: i
 
 if(.not. allocated(dataattr%dataattr)) return
 do i=1, size(dataattr%dataattr)
-  call dataattr%dataattr(i)%ingest(session,noattr,filter)
+  call dataattr%dataattr(i)%extrude(session,noattr,filter)
 enddo
 
 !to close message on file
 !call session%prendilo()
 !call session%close_message()
 
-end subroutine dbadataattrv_ingest
+end subroutine dbadataattrv_extrude
 
 !> print a summary of object content
 subroutine dbadataattrv_display(dataattr)
@@ -1792,7 +1792,7 @@ subroutine dbametadata_set(metadata,session)
 class(dbametadata), intent(in) :: metadata
 type(dbasession), intent(in) :: session !< dballe session
 
-print *,"ingest metadata:"
+print *,"extrude metadata:"
 call metadata%display()
 
 call metadata%ana%dbaset(session)
@@ -1935,7 +1935,7 @@ end function dbametadata_equal
 
 
 !> Constructor
-!! This is the filter we can use to limit results fron the extrude operation
+!! This is the filter we can use to limit results fron the ingest operation
 !! Without parameter it is initialized to missing
 type(dbafilter) function dbafilter_init(filter,ana,var,datetime,level,timerange,network,&
  datetimemin,datetimemax,coordmin,coordmax,limit,&
@@ -2369,7 +2369,7 @@ call metaanddata%dataattrv%display()
 end subroutine dbametaanddata_display
 
 !> put data on DSN
-subroutine dbametaanddata_ingest(metaanddata,session,noattr,filter)
+subroutine dbametaanddata_extrude(metaanddata,session,noattr,filter)
 class(dbametaanddata), intent(in) :: metaanddata
 type(dbasession), intent(in) :: session !< dballe session
 logical, intent(in),optional :: noattr          !< set to .true. to get data only (no attribute) 
@@ -2382,15 +2382,15 @@ type(dbafilter)    :: myfilter
 !print *,"contextana false"
 
 myfilter=dbafilter(filter=filter,contextana=.false.)
-call ingest(metaanddata,session,noattr,myfilter)
+call extrude(metaanddata,session,noattr,myfilter)
 
 !print *,"contextana true"
 myfilter=dbafilter(filter=filter,contextana=.true.)
-call ingest(metaanddata,session,noattr,myfilter)
+call extrude(metaanddata,session,noattr,myfilter)
 
 contains
 
-subroutine ingest(metaanddata,session,noattr,filter)
+subroutine extrude(metaanddata,session,noattr,filter)
 class(dbametaanddata), intent(in) :: metaanddata
 type(dbasession), intent(in) :: session !< dballe session
 logical, intent(in),optional :: noattr          !< set to .true. to get data only (no attribute) 
@@ -2403,13 +2403,13 @@ call session%unsetall()
 call session%set(metadata=metaanddata%metadata)
 
 !write data and attribute
-!call session%ingest(metaanddata%dataattrv,noattr,filter)
-call metaanddata%dataattrv%ingest(session,noattr,filter)
+!call session%extrude(metaanddata%dataattrv,noattr,filter)
+call metaanddata%dataattrv%extrude(session,noattr,filter)
 !to close message on file
 call session%close_message()
 
-end subroutine ingest
-end subroutine dbametaanddata_ingest
+end subroutine extrude
+end subroutine dbametaanddata_extrude
 
 
 !> print a summary of object content
@@ -2422,7 +2422,7 @@ call metaanddatav%datav%display()
 end subroutine dbametaanddatav_display
 
 !> put data on DSN
-subroutine dbametaanddatav_ingest(metaanddatav,session,noattr,filter)
+subroutine dbametaanddatav_extrude(metaanddatav,session,noattr,filter)
 class(dbametaanddatav), intent(in) :: metaanddatav
 type(dbasession), intent(in) :: session !< dballe session
 logical, intent(in),optional :: noattr          !< set to .true. to get data only (no attribute) 
@@ -2431,14 +2431,14 @@ type(dbafilter),intent(in),optional :: filter     !< use this to filter wanted d
 type(dbafilter)    :: myfilter
 
 myfilter=dbafilter(filter=filter,contextana=.false.)
-call ingest(metaanddatav,session,noattr,myfilter)
+call extrude(metaanddatav,session,noattr,myfilter)
 
 myfilter=dbafilter(filter=filter,contextana=.true.)
-call ingest(metaanddatav,session,noattr,myfilter)
+call extrude(metaanddatav,session,noattr,myfilter)
 
 contains
 
-subroutine ingest(metaanddatav,session,noattr,filter)
+subroutine extrude(metaanddatav,session,noattr,filter)
 class(dbametaanddatav), intent(in) :: metaanddatav
 type(dbasession), intent(in) :: session !< dballe session
 logical, intent(in),optional :: noattr          !< set to .true. to get data only (no attribute) 
@@ -2450,18 +2450,18 @@ call session%set(metadata=metaanddatav%metadata)
 
 !write ana data and attribute
 !!$call session%set(datav=metaanddatav%datav)
-call metaanddatav%datav%ingest(session,noattr,filter)
+call metaanddatav%datav%extrude(session,noattr,filter)
 
 !to close message on file
 call session%close_message()
 
-end subroutine ingest
-end subroutine dbametaanddatav_ingest
+end subroutine extrude
+end subroutine dbametaanddatav_extrude
 
 
-!> put data on DSN; ingest metaanddata list
-subroutine dbametaanddatal_ingest(metaanddatal,session,noattr,filter)
-class(dbametaanddatalist), intent(in) :: metaanddatal !< extruded data
+!> put data on DSN; extrude metaanddata list
+subroutine dbametaanddatal_extrude(metaanddatal,session,noattr,filter)
+class(dbametaanddatalist), intent(in) :: metaanddatal !< ingestd data
 class(dbasession), intent(in) :: session
 logical, intent(in),optional :: noattr          !< set to .true. to put data only (no attribute) 
 type(dbafilter),intent(in),optional :: filter     !< use this to filter wanted data                
@@ -2469,13 +2469,13 @@ type(dbametaanddata) :: metaanddata
 
 call metaanddatal%rewind()
 do while(metaanddatal%element())
-  !call session%ingest(metaanddatal%current(),noattr,filter)
+  !call session%extrude(metaanddatal%current(),noattr,filter)
   metaanddata=metaanddatal%current()
-  call metaanddata%ingest(session,noattr,filter)
+  call metaanddata%extrude(session,noattr,filter)
   call metaanddatal%next()
 end do
 
-end subroutine dbametaanddatal_ingest
+end subroutine dbametaanddatal_extrude
 
 
 !> print a summary of object content
@@ -2506,20 +2506,20 @@ end function currentdbametaanddatai
 
 
 !> get data from DSN
-subroutine dbasession_extrude_metaanddatail(session,metaanddatal)
+subroutine dbasession_ingest_metaanddatail(session,metaanddatal)
 class(dbasession), intent(inout) :: session
-type(dbametaanddatailist), intent(inout) :: metaanddatal !< extruded data
+type(dbametaanddatailist), intent(inout) :: metaanddatal !< ingestd data
 type(dbametaanddatai) :: element
 
-call session%extrude_metaanddatai()
+call session%ingest_metaanddatai()
 
 do while (session%count >0)
-  call session%extrude_metaanddatai(element)
+  call session%ingest_metaanddatai(element)
   call metaanddatal%append(element)
-  call session%extrude_metaanddatai()
+  call session%ingest_metaanddatai()
 end do
 
-end subroutine dbasession_extrude_metaanddatail
+end subroutine dbasession_ingest_metaanddatail
 
 !> return an array of dbametaanddatai
 function toarray_dbametaanddatai(this)
@@ -2568,20 +2568,20 @@ end function currentdbametaanddatar
 
 
 !> get data from DSN
-subroutine dbasession_extrude_metaanddatarl(session,metaanddatal)
+subroutine dbasession_ingest_metaanddatarl(session,metaanddatal)
 class(dbasession), intent(inout) :: session
-type(dbametaanddatarlist), intent(inout) :: metaanddatal !<extruded data
+type(dbametaanddatarlist), intent(inout) :: metaanddatal !<ingestd data
 type(dbametaanddatar) :: element
 
-call session%extrude_metaanddatar()
+call session%ingest_metaanddatar()
 
 do while (session%count >0)
-  call session%extrude_metaanddatar(element)
+  call session%ingest_metaanddatar(element)
   call metaanddatal%append(element)
-  call session%extrude_metaanddatar()
+  call session%ingest_metaanddatar()
 end do
 
-end subroutine dbasession_extrude_metaanddatarl
+end subroutine dbasession_ingest_metaanddatarl
 
 
 !> return an array of dbametaanddatar
@@ -2631,20 +2631,20 @@ end select
 end function currentdbametaanddatad
 
 !> get data from DSN
-subroutine dbasession_extrude_metaanddatadl(session,metaanddatal)
+subroutine dbasession_ingest_metaanddatadl(session,metaanddatal)
 class(dbasession), intent(inout) :: session
-type(dbametaanddatadlist), intent(inout) :: metaanddatal !<extruded data
+type(dbametaanddatadlist), intent(inout) :: metaanddatal !<ingestd data
 type(dbametaanddatad) :: element
 
-call session%extrude_metaanddatad()
+call session%ingest_metaanddatad()
 
 do while (session%count >0)
-  call session%extrude_metaanddatad(element)
+  call session%ingest_metaanddatad(element)
   call metaanddatal%append(element)
-  call session%extrude_metaanddatad()
+  call session%ingest_metaanddatad()
 end do
 
-end subroutine dbasession_extrude_metaanddatadl
+end subroutine dbasession_ingest_metaanddatadl
 
 
 !> return an array of dbametaanddatad
@@ -2694,20 +2694,20 @@ end function currentdbametaanddatab
 
 
 !> get data from DSN
-subroutine dbasession_extrude_metaanddatabl(session,metaanddatal)
+subroutine dbasession_ingest_metaanddatabl(session,metaanddatal)
 class(dbasession), intent(inout) :: session
-type(dbametaanddatablist), intent(inout) :: metaanddatal !<extruded data
+type(dbametaanddatablist), intent(inout) :: metaanddatal !<ingestd data
 type(dbametaanddatab) :: element
 
-call session%extrude_metaanddatab()
+call session%ingest_metaanddatab()
 
 do while (session%count >0)
-  call session%extrude_metaanddatab(element)
+  call session%ingest_metaanddatab(element)
   call metaanddatal%append(element)
-  call session%extrude_metaanddatab()
+  call session%ingest_metaanddatab()
 end do
 
-end subroutine dbasession_extrude_metaanddatabl
+end subroutine dbasession_ingest_metaanddatabl
 
 
 !> return an array of dbametaanddatab
@@ -2757,20 +2757,20 @@ end function currentdbametaanddatac
 
 
 !> get data from DSN
-subroutine dbasession_extrude_metaanddatacl(session,metaanddatal)
+subroutine dbasession_ingest_metaanddatacl(session,metaanddatal)
 class(dbasession), intent(inout) :: session
-type(dbametaanddataclist), intent(inout) :: metaanddatal!< extruded data
+type(dbametaanddataclist), intent(inout) :: metaanddatal!< ingestd data
 type(dbametaanddatac) :: element
 
-call session%extrude_metaanddatac()
+call session%ingest_metaanddatac()
 
 do while (session%count >0)
-  call session%extrude_metaanddatac(element)
+  call session%ingest_metaanddatac(element)
   call metaanddatal%append(element)
-  call session%extrude_metaanddatac()
+  call session%ingest_metaanddatac()
 end do
 
-end subroutine dbasession_extrude_metaanddatacl
+end subroutine dbasession_ingest_metaanddatacl
 
 
 !> return an array of dbametaanddatac
@@ -2840,7 +2840,7 @@ end subroutine dbametaanddatac_display
 
 
 !> put data on DSN
-subroutine dbametaanddatai_ingest(metaanddatai,session)
+subroutine dbametaanddatai_extrude(metaanddatai,session)
 class(dbametaanddatai), intent(in) :: metaanddatai
 type(dbasession), intent(in) :: session !< dballe session
 
@@ -2851,10 +2851,10 @@ call session%set(metadata=metaanddatai%metadata)
 call session%set(data=metaanddatai%dbadatai)
 call session%prendilo()
 
-end subroutine dbametaanddatai_ingest
+end subroutine dbametaanddatai_extrude
 
 !> put data on DSN
-subroutine dbametaanddatab_ingest(metaanddatab,session)
+subroutine dbametaanddatab_extrude(metaanddatab,session)
 class(dbametaanddatab), intent(in) :: metaanddatab
 type(dbasession), intent(in) :: session !< dballe session
 
@@ -2865,10 +2865,10 @@ call session%set(metadata=metaanddatab%metadata)
 call session%set(data=metaanddatab%dbadatab)
 call session%prendilo()
 
-end subroutine dbametaanddatab_ingest
+end subroutine dbametaanddatab_extrude
 
 !> put data on DSN
-subroutine dbametaanddatad_ingest(metaanddatad,session)
+subroutine dbametaanddatad_extrude(metaanddatad,session)
 class(dbametaanddatad), intent(in) :: metaanddatad
 type(dbasession), intent(in) :: session !< dballe session
 
@@ -2879,10 +2879,10 @@ call session%set(metadata=metaanddatad%metadata)
 call session%set(data=metaanddatad%dbadatad)
 call session%prendilo()
 
-end subroutine dbametaanddatad_ingest
+end subroutine dbametaanddatad_extrude
 
 !> put data on DSN
-subroutine dbametaanddatar_ingest(metaanddatar,session)
+subroutine dbametaanddatar_extrude(metaanddatar,session)
 class(dbametaanddatar), intent(in) :: metaanddatar
 type(dbasession), intent(in) :: session !< dballe session
 
@@ -2893,10 +2893,10 @@ call session%set(metadata=metaanddatar%metadata)
 call session%set(data=metaanddatar%dbadatar)
 call session%prendilo()
 
-end subroutine dbametaanddatar_ingest
+end subroutine dbametaanddatar_extrude
 
 !> put data on DSN
-subroutine dbametaanddatac_ingest(metaanddatac,session)
+subroutine dbametaanddatac_extrude(metaanddatac,session)
 class(dbametaanddatac), intent(in) :: metaanddatac
 type(dbasession), intent(in) :: session !< dballe session
 
@@ -2907,10 +2907,10 @@ call session%set(metadata=metaanddatac%metadata)
 call session%set(data=metaanddatac%dbadatac)
 call session%prendilo()
 
-end subroutine dbametaanddatac_ingest
+end subroutine dbametaanddatac_extrude
 
 !> get data from DSN
-subroutine dbasession_extrude_ana(session,ana)
+subroutine dbasession_ingest_ana(session,ana)
 class(dbasession), intent(inout) :: session
 type(dbaana), intent(out),optional :: ana !< ana
 
@@ -2925,50 +2925,50 @@ else
   session%count=session%count-1
 end if
 
-end subroutine dbasession_extrude_ana
+end subroutine dbasession_ingest_ana
 
 
 !> get data from DSN
-subroutine dbasession_extrude_anav(session,anav)
+subroutine dbasession_ingest_anav(session,anav)
 class(dbasession), intent(inout) :: session
 type(dbaana), intent(out),allocatable :: anav(:) !< array of ana
 integer :: i
 
-call session%extrude_ana()
+call session%ingest_ana()
 
 if (c_e(session%count)) then
   allocate(anav(session%count))
   i=0
   do while (session%count >0)
     i=i+1
-    call session%extrude_ana(anav(i))
+    call session%ingest_ana(anav(i))
   end do
 else
   allocate(anav(0))
 end if
 
-end subroutine dbasession_extrude_anav
+end subroutine dbasession_ingest_anav
 
 
 !> get data from DSN
-subroutine dbasession_extrude_anal(session,anal)
+subroutine dbasession_ingest_anal(session,anal)
 class(dbasession), intent(inout) :: session
 type(dbaanalist), intent(out) :: anal !< double linked list of ana
 type(dbaana) :: element
 
-call session%extrude_ana()
+call session%ingest_ana()
 do while (c_e(session%count) .and. session%count >0)
-  call session%extrude_ana(element)
+  call session%ingest_ana(element)
   call anal%append(element)
-  call session%extrude_ana()
+  call session%ingest_ana()
 end do
-end subroutine dbasession_extrude_anal
+end subroutine dbasession_ingest_anal
 
 
 !> get data from DSN
-subroutine dbasession_extrude_metaanddata(session,metaanddata,noattr,filter)
+subroutine dbasession_ingest_metaanddata(session,metaanddata,noattr,filter)
 class(dbasession), intent(inout) :: session
-type(dbametaanddata), intent(inout),optional :: metaanddata !< extruded data
+type(dbametaanddata), intent(inout),optional :: metaanddata !< ingestd data
 logical,intent(in),optional :: noattr       !< set to .true. to get data only (no attribute) 
 type(dbafilter),intent(in),optional :: filter !< use this to filter wanted data                
 
@@ -3215,13 +3215,13 @@ else
   end if
 end if
 
-end subroutine dbasession_extrude_metaanddata
+end subroutine dbasession_ingest_metaanddata
 
 
 !> get data from DSN
-subroutine dbasession_extrude_metaanddatav(session,metaanddatav,noattr,filter)
+subroutine dbasession_ingest_metaanddatav(session,metaanddatav,noattr,filter)
 class(dbasession), intent(inout) :: session
-type(dbametaanddata), intent(inout),allocatable :: metaanddatav(:) !< extruded data
+type(dbametaanddata), intent(inout),allocatable :: metaanddatav(:) !< ingestd data
 logical, intent(in),optional :: noattr        !< set to .true. to get data only (no attribute) 
 type(dbafilter),intent(in),optional :: filter   !< use this to filter wanted data
 
@@ -3231,7 +3231,7 @@ integer :: i
 !todo aggiungere anche altrove dove passato filter
 if (present(filter)) call filter%dbaset(session)
 
-call session%extrude()
+call session%ingest()
 !print*," count: ",session%count
 
 if (c_e(session%count)) then
@@ -3240,7 +3240,7 @@ if (c_e(session%count)) then
   i=0
   do while (session%count >0)
     i=i+1
-    call session%extrude(metaanddatavbuf(i),noattr=noattr,filter=filter)
+    call session%ingest(metaanddatavbuf(i),noattr=noattr,filter=filter)
   end do
 
   ! compact data to real dimension
@@ -3254,13 +3254,13 @@ else
 end if
 
 
-end subroutine dbasession_extrude_metaanddatav
+end subroutine dbasession_ingest_metaanddatav
 
 
-!> Get data fron DSN; extrude metaanddata list
-subroutine dbasession_extrude_metaanddatal(session,metaanddatal,noattr,filter)
+!> Get data fron DSN; ingest metaanddata list
+subroutine dbasession_ingest_metaanddatal(session,metaanddatal,noattr,filter)
 class(dbasession), intent(inout) :: session
-type(dbametaanddatalist), intent(out) :: metaanddatal !< extruded data
+type(dbametaanddatalist), intent(out) :: metaanddatal !< ingestd data
 logical, intent(in),optional :: noattr          !< set to .true. to get data only (no attribute) 
 type(dbafilter),intent(in),optional :: filter     !< use this to filter wanted data                
 
@@ -3271,8 +3271,8 @@ if (session%memdb)then
 
   do while (session%messages_read_next())
     call session%set(filter=filter)
-    call session%extrude()
-    call session%extrude(metaanddatavbuf,noattr=noattr,filter=filter)
+    call session%ingest()
+    call session%ingest(metaanddatavbuf,noattr=noattr,filter=filter)
     do i=1,size(metaanddatavbuf)
       call metaanddatal%append(metaanddatavbuf(i))
     end do
@@ -3283,10 +3283,10 @@ if (session%memdb)then
 
 else
 
-  call session%extrude()
+  call session%ingest()
   
   do while (c_e(session%count) .and. session%count >0)
-    call session%extrude(metaanddatavbuf,noattr=noattr,filter=filter)
+    call session%ingest(metaanddatavbuf,noattr=noattr,filter=filter)
     do i=1,size(metaanddatavbuf)
       if (present(filter)) then 
                                 ! exclude contextana data from file 
@@ -3296,17 +3296,17 @@ else
       end if
       call metaanddatal%append(metaanddatavbuf(i))
     end do
-    if (session%file) call session%extrude()
+    if (session%file) call session%ingest()
     deallocate (metaanddatavbuf)
   end do
 end if
 
-end subroutine dbasession_extrude_metaanddatal
+end subroutine dbasession_ingest_metaanddatal
 
 !> Get data from DSN
-subroutine dbasession_extrude_metaanddatai(session,metaanddata)
+subroutine dbasession_ingest_metaanddatai(session,metaanddata)
 class(dbasession), intent(inout) :: session
-type(dbametaanddatai), intent(inout),optional :: metaanddata !< extruded data
+type(dbametaanddatai), intent(inout),optional :: metaanddata !< ingestd data
 
 integer :: ier
 character(len=9) :: btable
@@ -3321,35 +3321,35 @@ else
   call metaanddata%metadata%dbaenq(session)
   session%count=session%count-1
 end if
-end subroutine dbasession_extrude_metaanddatai
+end subroutine dbasession_ingest_metaanddatai
 
 
 !> Get data from DSN
-subroutine dbasession_extrude_metaanddataiv(session,metaanddatav)
+subroutine dbasession_ingest_metaanddataiv(session,metaanddatav)
 class(dbasession), intent(inout) :: session
-type(dbametaanddatai), intent(inout),allocatable :: metaanddatav(:) !< extruded data
+type(dbametaanddatai), intent(inout),allocatable :: metaanddatav(:) !< ingestd data
 
 integer :: i
 
-call session%extrude_metaanddatai()
+call session%ingest_metaanddatai()
 if (c_e(session%count)) then
   allocate(metaanddatav(session%count))
   i=0
   do while (session%count >0)
     i=i+1
-    call session%extrude_metaanddatai(metaanddatav(i))
+    call session%ingest_metaanddatai(metaanddatav(i))
   end do
 else
   allocate(metaanddatav(0))
 end if
 
-end subroutine dbasession_extrude_metaanddataiv
+end subroutine dbasession_ingest_metaanddataiv
 
 
 !> Get data from DSN
-subroutine dbasession_extrude_metaanddatab(session,metaanddata)
+subroutine dbasession_ingest_metaanddatab(session,metaanddata)
 class(dbasession), intent(inout) :: session
-type(dbametaanddatab), intent(inout),optional :: metaanddata !< extruded data
+type(dbametaanddatab), intent(inout),optional :: metaanddata !< ingestd data
 
 integer :: ier
 character(len=9) :: btable
@@ -3364,35 +3364,35 @@ else
   call metaanddata%metadata%dbaenq(session)
   session%count=session%count-1
 end if
-end subroutine dbasession_extrude_metaanddatab
+end subroutine dbasession_ingest_metaanddatab
 
 
 !> Get data from DSN
-subroutine dbasession_extrude_metaanddatabv(session,metaanddatav)
+subroutine dbasession_ingest_metaanddatabv(session,metaanddatav)
 class(dbasession), intent(inout) :: session
-type(dbametaanddatab), intent(inout),allocatable :: metaanddatav(:) !<extruded data
+type(dbametaanddatab), intent(inout),allocatable :: metaanddatav(:) !<ingestd data
 
 integer :: i
 
-call session%extrude_metaanddatab()
+call session%ingest_metaanddatab()
 if (c_e(session%count)) then
   allocate(metaanddatav(session%count))
   i=0
   do while (session%count >0)
     i=i+1
-    call session%extrude_metaanddatab(metaanddatav(i))
+    call session%ingest_metaanddatab(metaanddatav(i))
   end do
 else
   allocate(metaanddatav(0))
 end if
 
-end subroutine dbasession_extrude_metaanddatabv
+end subroutine dbasession_ingest_metaanddatabv
 
 
 !> get data from DSN
-subroutine dbasession_extrude_metaanddatad(session,metaanddata)
+subroutine dbasession_ingest_metaanddatad(session,metaanddata)
 class(dbasession), intent(inout) :: session
-type(dbametaanddatad), intent(inout),optional :: metaanddata !< extruded data
+type(dbametaanddatad), intent(inout),optional :: metaanddata !< ingestd data
 
 integer :: ier
 character(len=9) :: btable
@@ -3407,34 +3407,34 @@ else
   call metaanddata%metadata%dbaenq(session)
   session%count=session%count-1
 end if
-end subroutine dbasession_extrude_metaanddatad
+end subroutine dbasession_ingest_metaanddatad
 
 
 !> Get data from DSN
-subroutine dbasession_extrude_metaanddatadv(session,metaanddatav)
+subroutine dbasession_ingest_metaanddatadv(session,metaanddatav)
 class(dbasession), intent(inout) :: session
-type(dbametaanddatad), intent(inout),allocatable :: metaanddatav(:) !<extruded data
+type(dbametaanddatad), intent(inout),allocatable :: metaanddatav(:) !<ingestd data
 
 integer :: i
 
-call session%extrude_metaanddatad()
+call session%ingest_metaanddatad()
 if (c_e(session%count)) then
   allocate(metaanddatav(session%count))
   i=0
   do while (session%count >0)
     i=i+1
-    call session%extrude_metaanddatad(metaanddatav(i))
+    call session%ingest_metaanddatad(metaanddatav(i))
   end do
 else
   allocate(metaanddatav(0))
 end if
-end subroutine dbasession_extrude_metaanddatadv
+end subroutine dbasession_ingest_metaanddatadv
 
 
 !> get data from DSN
-subroutine dbasession_extrude_metaanddatar(session,metaanddata)
+subroutine dbasession_ingest_metaanddatar(session,metaanddata)
 class(dbasession), intent(inout) :: session
-type(dbametaanddatar), intent(inout),optional :: metaanddata !< extruded data
+type(dbametaanddatar), intent(inout),optional :: metaanddata !< ingestd data
 
 integer :: ier
 character(len=9) :: btable
@@ -3449,35 +3449,35 @@ else
   call metaanddata%metadata%dbaenq(session)
   session%count=session%count-1
 end if
-end subroutine dbasession_extrude_metaanddatar
+end subroutine dbasession_ingest_metaanddatar
 
 
 !> Get data from DSN
-subroutine dbasession_extrude_metaanddatarv(session,metaanddatav)
+subroutine dbasession_ingest_metaanddatarv(session,metaanddatav)
 class(dbasession), intent(inout) :: session
-type(dbametaanddatar), intent(inout),allocatable :: metaanddatav(:) !<extruded data
+type(dbametaanddatar), intent(inout),allocatable :: metaanddatav(:) !<ingestd data
 
 integer :: i
 
-call session%extrude_metaanddatar()
+call session%ingest_metaanddatar()
 if (c_e(session%count)) then
   allocate(metaanddatav(session%count))
   i=0
   do while (session%count >0)
     i=i+1
-    call session%extrude_metaanddatar(metaanddatav(i))
+    call session%ingest_metaanddatar(metaanddatav(i))
   end do
 else
   allocate(metaanddatav(0))
 end if
-end subroutine dbasession_extrude_metaanddatarv
+end subroutine dbasession_ingest_metaanddatarv
 
 
 
 !> get data from DSN
-subroutine dbasession_extrude_metaanddatac(session,metaanddata)
+subroutine dbasession_ingest_metaanddatac(session,metaanddata)
 class(dbasession), intent(inout) :: session
-type(dbametaanddatac), intent(inout),optional :: metaanddata !< extruded data
+type(dbametaanddatac), intent(inout),optional :: metaanddata !< ingestd data
 
 integer :: ier
 character(len=9) :: btable
@@ -3492,28 +3492,28 @@ else
   call metaanddata%metadata%dbaenq(session)
   session%count=session%count-1
 end if
-end subroutine dbasession_extrude_metaanddatac
+end subroutine dbasession_ingest_metaanddatac
 
 
 !> Get data from DSN
-subroutine dbasession_extrude_metaanddatacv(session,metaanddatav)
+subroutine dbasession_ingest_metaanddatacv(session,metaanddatav)
 class(dbasession), intent(inout) :: session
-type(dbametaanddatac), intent(inout),allocatable :: metaanddatav(:) !<extruded data
+type(dbametaanddatac), intent(inout),allocatable :: metaanddatav(:) !<ingestd data
 
 integer :: i
 
-call session%extrude_metaanddatac()
+call session%ingest_metaanddatac()
 if (c_e(session%count)) then
   allocate(metaanddatav(session%count))
   i=0
   do while (session%count >0)
     i=i+1
-    call session%extrude_metaanddatac(metaanddatav(i))
+    call session%ingest_metaanddatac(metaanddatav(i))
   end do
 else
   allocate(metaanddatav(session%count))
 end if
-end subroutine dbasession_extrude_metaanddatacv
+end subroutine dbasession_ingest_metaanddatacv
 
 !> Constructor
 !! Without parameter it is initialized to missing
@@ -3871,98 +3871,98 @@ end if
 end subroutine dbasession_set
 
 
-!!!   Those are for reverse order call  session%ingest(object) 
+!!!   Those are for reverse order call  session%extrude(object) 
 
 !!$!> put data on DSN
-!!$subroutine dbasession_ingest_ana(session,ana)
+!!$subroutine dbasession_extrude_ana(session,ana)
 !!$class(dbasession), intent(in)   :: session
 !!$class(dbaana)          :: ana !< ana 
-!!$call ana%ingest(session)
-!!$end subroutine dbasession_ingest_ana
+!!$call ana%extrude(session)
+!!$end subroutine dbasession_extrude_ana
 !!$
 !!$!> put data on DSN
-!!$subroutine dbasession_ingest_dataattr(session,dataattr)
+!!$subroutine dbasession_extrude_dataattr(session,dataattr)
 !!$class(dbasession), intent(in)   :: session
 !!$class(dbadataattr)     :: dataattr !< dataattr
-!!$call dataattr%ingest(session)
-!!$end subroutine dbasession_ingest_dataattr
+!!$call dataattr%extrude(session)
+!!$end subroutine dbasession_extrude_dataattr
 !!$
 !!$!> put data on DSN
-!!$subroutine dbasession_ingest_dataattrv(session,dataattrv,noattr,filter)
+!!$subroutine dbasession_extrude_dataattrv(session,dataattrv,noattr,filter)
 !!$class(dbasession), intent(in)   :: session
 !!$class(dbadataattrv)    :: dataattrv !< array datatattr
 !!$logical, intent(in),optional :: noattr          !< set to .true. to get data only (no attribute) 
 !!$type(dbafilter),intent(in),optional :: filter     !< use this to filter wanted data                
 !!$
-!!$call dataattrv%ingest(session,noattr,filter)
-!!$end subroutine dbasession_ingest_dataattrv
+!!$call dataattrv%extrude(session,noattr,filter)
+!!$end subroutine dbasession_extrude_dataattrv
 !!$
 !!$!> put data on DSN
-!!$subroutine dbasession_ingest_metaanddata(session,metaanddata,noattr,filter)
+!!$subroutine dbasession_extrude_metaanddata(session,metaanddata,noattr,filter)
 !!$class(dbasession), intent(in)   :: session
 !!$class(dbametaanddata)  :: metaanddata !< metaanddata
 !!$logical, intent(in),optional :: noattr          !< set to .true. to get data only (no attribute) 
 !!$type(dbafilter),intent(in),optional :: filter     !< use this to filter wanted data                
 !!$
-!!$call metaanddata%ingest(session,noattr,filter)
-!!$end subroutine dbasession_ingest_metaanddata
+!!$call metaanddata%extrude(session,noattr,filter)
+!!$end subroutine dbasession_extrude_metaanddata
 !!$
 !!$!> put data on DSN
-!!$subroutine dbasession_ingest_metaanddatai(session,metaanddatai)
+!!$subroutine dbasession_extrude_metaanddatai(session,metaanddatai)
 !!$class(dbasession), intent(in)   :: session
 !!$class(dbametaanddatai) :: metaanddatai !< metaanddatai
-!!$call metaanddatai%ingest(session)
-!!$end subroutine dbasession_ingest_metaanddatai
+!!$call metaanddatai%extrude(session)
+!!$end subroutine dbasession_extrude_metaanddatai
 !!$
 !!$!> put data on DSN
-!!$subroutine dbasession_ingest_metaanddatab(session,metaanddatab)
+!!$subroutine dbasession_extrude_metaanddatab(session,metaanddatab)
 !!$class(dbasession), intent(in)   :: session
 !!$class(dbametaanddatab) :: metaanddatab !< metaanddatab
-!!$call metaanddatab%ingest(session)
-!!$end subroutine dbasession_ingest_metaanddatab
+!!$call metaanddatab%extrude(session)
+!!$end subroutine dbasession_extrude_metaanddatab
 !!$
 !!$!> put data on DSN
-!!$subroutine dbasession_ingest_metaanddatad(session,metaanddatad)
+!!$subroutine dbasession_extrude_metaanddatad(session,metaanddatad)
 !!$class(dbasession), intent(in)   :: session
 !!$class(dbametaanddatad) :: metaanddatad !< metaanddatad
-!!$call metaanddatad%ingest(session)
-!!$end subroutine dbasession_ingest_metaanddatad
+!!$call metaanddatad%extrude(session)
+!!$end subroutine dbasession_extrude_metaanddatad
 !!$
 !!$!> put data on DSN
-!!$subroutine dbasession_ingest_metaanddatac(session,metaanddatac)
+!!$subroutine dbasession_extrude_metaanddatac(session,metaanddatac)
 !!$class(dbasession), intent(in)   :: session
 !!$class(dbametaanddatac) :: metaanddatac !< metaanddatac
-!!$call metaanddatac%ingest(session)
-!!$end subroutine dbasession_ingest_metaanddatac
+!!$call metaanddatac%extrude(session)
+!!$end subroutine dbasession_extrude_metaanddatac
 !!$
 !!$!> put data on DSN
-!!$subroutine dbasession_ingest_metaanddatar(session,metaanddatar)
+!!$subroutine dbasession_extrude_metaanddatar(session,metaanddatar)
 !!$class(dbasession), intent(in)   :: session
 !!$class(dbametaanddatar) :: metaanddatar !< metaanddatar
-!!$call metaanddatar%ingest(session)
-!!$end subroutine dbasession_ingest_metaanddatar
+!!$call metaanddatar%extrude(session)
+!!$end subroutine dbasession_extrude_metaanddatar
 !!$
 !!$!> put data on DSN
-!!$subroutine dbasession_ingest_metaanddatav(session, metaanddatav,noattr,filter)
+!!$subroutine dbasession_extrude_metaanddatav(session, metaanddatav,noattr,filter)
 !!$class(dbasession), intent(in)   :: session
 !!$class(dbametaanddatav) :: metaanddatav !< array metaanddata
 !!$logical, intent(in),optional :: noattr          !< set to .true. to get data only (no attribute) 
 !!$type(dbafilter),intent(in),optional :: filter     !< use this to filter wanted data                
 !!$
-!!$call metaanddatav%ingest(session,noattr,filter)
-!!$end subroutine dbasession_ingest_metaanddatav
+!!$call metaanddatav%extrude(session,noattr,filter)
+!!$end subroutine dbasession_extrude_metaanddatav
 !!$
-!!$subroutine dbasession_ingest_metaanddatal(session, metaanddatal,noattr,filter)
+!!$subroutine dbasession_extrude_metaanddatal(session, metaanddatal,noattr,filter)
 !!$class(dbasession), intent(in)   :: session
 !!$class (dbametaanddatalist) :: metaanddatal !< metaanddata list
 !!$logical, intent(in),optional :: noattr          !< set to .true. to get data only (no attribute) 
 !!$type(dbafilter),intent(in),optional :: filter     !< use this to filter wanted data                
 !!$
-!!$call metaanddatal%ingest(session,noattr,filter)
-!!$end subroutine dbasession_ingest_metaanddatal
+!!$call metaanddatal%extrude(session,noattr,filter)
+!!$end subroutine dbasession_extrude_metaanddatal
 !!$
 !!$!> put data on DSN
-!!$subroutine dbasession_ingest(session,ana,dataattr,dataattrv,metaanddata,&
+!!$subroutine dbasession_extrude(session,ana,dataattr,dataattrv,metaanddata,&
 !!$ metaanddatai,metaanddatab,metaanddatad,metaanddatac,metaanddatar,&
 !!$ metaanddatav ,metaanddatal,noattr,filter)
 !!$class(dbasession), intent(in)   :: session
@@ -3981,50 +3981,50 @@ end subroutine dbasession_set
 !!$type(dbafilter),intent(in),optional :: filter     !< use this to filter wanted data                
 !!$
 !!$if (present(ana)) then
-!!$  call ana%ingest(session)
+!!$  call ana%extrude(session)
 !!$end if
 !!$
 !!$if (present(dataattr)) then
-!!$  call dataattr%ingest(session)
+!!$  call dataattr%extrude(session)
 !!$end if
 !!$
 !!$if (present(dataattrv)) then
-!!$  call dataattrv%ingest(session,noattr,filter)
+!!$  call dataattrv%extrude(session,noattr,filter)
 !!$end if
 !!$
 !!$if (present(metaanddata)) then
-!!$  call metaanddata%ingest(session)
+!!$  call metaanddata%extrude(session)
 !!$end if
 !!$
 !!$if (present(metaanddatai)) then
-!!$  call metaanddatai%ingest(session)
+!!$  call metaanddatai%extrude(session)
 !!$end if
 !!$
 !!$if (present(metaanddatab)) then
-!!$  call metaanddatab%ingest(session)
+!!$  call metaanddatab%extrude(session)
 !!$end if
 !!$
 !!$if (present(metaanddatad)) then
-!!$  call metaanddatad%ingest(session)
+!!$  call metaanddatad%extrude(session)
 !!$end if
 !!$
 !!$if (present(metaanddatac)) then
-!!$  call metaanddatac%ingest(session)
+!!$  call metaanddatac%extrude(session)
 !!$end if
 !!$
 !!$if (present(metaanddatar)) then
-!!$  call metaanddatar%ingest(session)
+!!$  call metaanddatar%extrude(session)
 !!$end if
 !!$
 !!$if (present(metaanddatav)) then
-!!$  call metaanddatav%ingest(session,noattr,filter)
+!!$  call metaanddatav%extrude(session,noattr,filter)
 !!$end if
 !!$
 !!$if (present(metaanddatal)) then
-!!$  call metaanddatal%ingest(session,noattr,filter)
+!!$  call metaanddatal%extrude(session,noattr,filter)
 !!$end if
 !!$
-!!$end subroutine dbasession_ingest
+!!$end subroutine dbasession_extrude
 
 !> clear a dballe session
 subroutine dbasession_delete(session)

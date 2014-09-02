@@ -113,10 +113,10 @@ call anal%append(dbaana(lon=13.d0,lat=45.d0))
 call anal%display()
 
 call anal%rewind()
-!ingest ana
+!extrude ana
 do while (anal%element())
   ana=anal%current()
-  call ana%ingest(sessionana)
+  call ana%extrude(sessionana)
   call anal%next()
 end do
 
@@ -185,8 +185,8 @@ allocate (metaanddata(2)%dataattrv%dataattr(2)%attrv%dcv(0))          ! we do no
 ! display and save everythings
 do i=1,size(metaanddata)
   call metaanddata(i)%display()
-  !call session%ingest(metaanddata(i))
-  call metaanddata(i)%ingest(session)
+  !call session%extrude(metaanddata(i))
+  call metaanddata(i)%extrude(session)
 end do
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
@@ -361,16 +361,16 @@ allocate (dataattrv%dataattr(2)%attrv%dcv(0))
 call dataattrv%display()
 
 ! write data and attribute
-!call session%ingest(dataattrv)
-call dataattrv%ingest(session)
+!call session%extrude(dataattrv)
+call dataattrv%extrude(session)
 
 
 ! work on constant station data
 call session%set(metadata%dbacontextana())
 
 ! write the same data and attribute as constant station data
-!call session%ingest(dataattrv)
-call dataattrv%ingest(session)
+!call session%extrude(dataattrv)
+call dataattrv%extrude(session)
 
 end subroutine write4
 
@@ -406,7 +406,7 @@ print *, "anagrafica:"
 filter=dbafilter(coordmin=dbacoord(lon= 9.d0,lat=44.d0),&
                  coordmax=dbacoord(lon=11.d0,lat=46.d0))
 call session%set(filter=filter)
-call session%extrudea(ana)
+call session%ingesta(ana)
 do i=1,size(ana)
   call ana(i)%display()
 end do
@@ -414,7 +414,7 @@ deallocate(ana)
 
 print *, "dati di anagrafica:"
 call session%set(filter=dbafilter(contextana=.true.))
-call session%extrude(metaanddatav)
+call session%ingest(metaanddatav)
 do i=1,size(metaanddatav)
   call metaanddatav(i)%display()
 end do
@@ -424,7 +424,7 @@ print *, "dati dati:"
 filter=dbafilter(var="B12102")
 call filter%display()
 call session%set(filter=filter)
-call session%extrude(metaanddatav)
+call session%ingest(metaanddatav)
 
 do i=1,size(metaanddatav)
   call metaanddatav(i)%display()
@@ -449,7 +449,7 @@ print *,"--------------- read1lf ------------------------"
 call session%filerewind()
 
 print *, "anagrafica:"
-call session%extrudea(anal)
+call session%ingesta(anal)
 call anal%display()
 status=anal%delete()
 
@@ -457,7 +457,7 @@ status=anal%delete()
 call session%filerewind()
 
 print *, "dati di anagrafica:"
-call session%extrude(metaanddatal,filter=dbafilter(contextana=.true.))
+call session%ingest(metaanddatal,filter=dbafilter(contextana=.true.))
 call metaanddatal%display()
 status = metaanddatal%delete()
 
@@ -466,7 +466,7 @@ call session%filerewind()
 
 print *, "dati dati:"
 metaanddatal=dbametaanddatalist()
-call session%extrude(metaanddatal)
+call session%ingest(metaanddatal)
 call metaanddatal%display()
 status = metaanddatal%delete()
 
@@ -493,7 +493,7 @@ filter=dbafilter(vars=vars)
 print *, "filter:"
 call filter%display()
 call session%set(filter=filter)
-call session%extrude(metaanddatav,filter=filter,noattr=.true.)
+call session%ingest(metaanddatav,filter=filter,noattr=.true.)
 
 print *, "dati dati:"
 do i=1,size(metaanddatav)
@@ -539,7 +539,7 @@ filter=dbafilter(vars=vars,starvars=starvars)
 print *, "filter:"
 call filter%display()
 call session%set(filter=filter)
-call session%extrude(metaanddatav,filter=filter)
+call session%ingest(metaanddatav,filter=filter)
 
 print *, "dati dati:"
 do i=1,size(metaanddatav)
@@ -577,7 +577,7 @@ filter=dbafilter(vars=vars,starvars=starvars)
 !print *, "filter:"
 !call filter%display()
 
-call session%extrude(metaanddatal,filter=filter)
+call session%ingest(metaanddatal,filter=filter)
 
 print *, "dati dati:"
 call metaanddatal%display()
@@ -600,7 +600,7 @@ print *, "dati dati:"
 filter=dbafilter(var="B12102")
 call filter%display()
 call session%set(filter=filter)
-call session%extrude(metaanddatarv)
+call session%ingest(metaanddatarv)
 
 do i=1,size(metaanddatarv)
   call metaanddatarv(i)%display()
@@ -631,7 +631,7 @@ end subroutine read3
 !!$print *, "dati dati:"
 !!$filter=dbafilter(var="B12102")
 !!$call session%set(filter=filter)
-!!$call session%extrude(metaanddatarl)
+!!$call session%ingest(metaanddatarl)
 !!$
 !!$call metaanddatarl%display()
 !!$
@@ -666,8 +666,8 @@ do while (session%messages_read_next())
 
   call session%set(filter=filter)
 
-  call session%extrude()
-  call session%extrude(metaanddatarv)
+  call session%ingest()
+  call session%ingest(metaanddatarv)
 
   do i=1,size(metaanddatarv)
     call metaanddatarv(i)%display()
@@ -705,7 +705,7 @@ session=dbasession(connection,wipe=.true.,anaflag="write", dataflag="write", att
 
 filter=dbafilter(var="B12101")
 ! in this case we have to pass filter and do not set it
-call session%extrude(metaanddatal,filter=filter)
+call session%ingest(metaanddatal,filter=filter)
 
 print *, "dati dati:"
 call metaanddatal%display()
@@ -728,8 +728,8 @@ print *, "dati dati:"
 filter=dbafilter(var="B12102")
 call session%set(filter=filter)
 
-print*,"prima di extrude"
-call session%extrude(metaanddatal)
+print*,"prima di ingest"
+call session%ingest(metaanddatal)
 print*,"prima di display"
 call metaanddatal%display()
 
@@ -827,21 +827,21 @@ sessioncp=dbasession(connectioncp,wipe=.true.,anaflag="write", dataflag="write",
 
 ! data
 call session%set(filter=dbafilter())
-call session%extrude()
+call session%ingest()
 do while (c_e(session%count) .and. session%count > 0 )
-  call session%extrude (metaanddata)
-  !call sessioncp%ingest(metaanddata)
-  call metaanddata%ingest(sessioncp)
+  call session%ingest (metaanddata)
+  !call sessioncp%extrude(metaanddata)
+  call metaanddata%extrude(sessioncp)
   if (session%file) call session%close_message()
 end do
 
 ! constant data
 call session%set(filter=dbafilter(contextana=.true.))
-call session%extrude()
+call session%ingest()
 do while (c_e(session%count) .and. session%count > 0)
-  call session%extrude (metaanddata)
-  !call sessioncp%ingest(metaanddata)
-  call metaanddata%ingest(sessioncp)
+  call session%ingest (metaanddata)
+  !call sessioncp%extrude(metaanddata)
+  call metaanddata%extrude(sessioncp)
   if (session%file) call session%close_message()
 end do
 
@@ -864,17 +864,17 @@ print *,"--------------- copy1f ----------------------"
 call sessionfrom%filerewind()
 
 call sessionfrom%set(filter=dbafilter())
-call sessionfrom%extrude(metaanddatav)
+call sessionfrom%ingest(metaanddatav)
 do while (size(metaanddatav) >0)
   print*,"read/write data; count: ",sessionfrom%count
   do i =1,size(metaanddatav)
     print *, "display metaanddatav index: ", i
 !    call metaanddatav(i)%display()
-    !call sessionto%ingest(metaanddatav(i))
-    call metaanddatav(i)%ingest(sessionto)
+    !call sessionto%extrude(metaanddatav(i))
+    call metaanddatav(i)%extrude(sessionto)
   end do
 !  call sessionto%close_message()
-  call sessionfrom%extrude(metaanddatav)
+  call sessionfrom%ingest(metaanddatav)
 end do
 deallocate (metaanddatav)
 
@@ -882,17 +882,17 @@ deallocate (metaanddatav)
 call sessionfrom%filerewind()
 
 call sessionfrom%set(filter=dbafilter(contextana=.true.))
-call sessionfrom%extrude(metaanddatav)
+call sessionfrom%ingest(metaanddatav)
 do while (size(metaanddatav) >0)
   print*,"read/write data; count: ",sessionfrom%count
   do i =1,size(metaanddatav)
     print *, "display metaanddatav index: ", i
 !    call metaanddatav(i)%display()
-    !call sessionto%ingest(metaanddatav(i))
-    call metaanddatav(i)%ingest(sessionto)
+    !call sessionto%extrude(metaanddatav(i))
+    call metaanddatav(i)%extrude(sessionto)
   end do
 !  call sessionto%close_message()
-  call sessionfrom%extrude(metaanddatav)
+  call sessionfrom%ingest(metaanddatav)
 end do
 
 end subroutine copy1f
@@ -909,21 +909,21 @@ print *,"--------------- copy1fmem ----------------------"
 do while (sessionfrom%messages_read_next())
   print*,"read/write message"
   call sessionfrom%set(filter=dbafilter())
-  call sessionfrom%extrude(metaanddatav)
+  call sessionfrom%ingest(metaanddatav)
   do i =1,size(metaanddatav)
     call metaanddatav(i)%display()
-    !call sessionto%ingest(metaanddatav(i))
-    call metaanddatav(i)%ingest(sessionto)
+    !call sessionto%extrude(metaanddatav(i))
+    call metaanddatav(i)%extrude(sessionto)
   end do
   call sessionto%prendilo()
 
   print *,"contextana"
   call sessionfrom%set(filter=dbafilter(contextana=.true.))
-  call sessionfrom%extrude(metaanddatav)
+  call sessionfrom%ingest(metaanddatav)
   do i =1,size(metaanddatav)
     call metaanddatav(i)%display()
-    !call sessionto%ingest(metaanddatav(i))
-    call metaanddatav(i)%ingest(sessionto)
+    !call sessionto%extrude(metaanddatav(i))
+    call metaanddatav(i)%extrude(sessionto)
   end do
   call sessionto%close_message()
   call sessionfrom%remove_all()
@@ -960,20 +960,20 @@ sessioncp=dbasession(connectioncp,wipe=.true.,anaflag="write", dataflag="write",
 
 ! data
 call session%set(filter=dbafilter())
-call session%extrude_metaanddatac()
+call session%ingest_metaanddatac()
 do while (c_e(session%count) .and. session%count > 0)
-  call session%extrude_metaanddatac(metaanddatac)
-  !call sessioncp%ingest(metaanddatac)
-  call metaanddatac%ingest(sessioncp)
+  call session%ingest_metaanddatac(metaanddatac)
+  !call sessioncp%extrude(metaanddatac)
+  call metaanddatac%extrude(sessioncp)
 end do
 
 ! constant data
 call session%set(filter=dbafilter(contextana=.true.))
-call session%extrude_metaanddatac()
+call session%ingest_metaanddatac()
 do while (c_e(session%count) .and. session%count > 0)
-  call session%extrude_metaanddatac(metaanddatac)
-  !call sessioncp%ingest(metaanddatac)
-  call metaanddatac%ingest(sessioncp)
+  call session%ingest_metaanddatac(metaanddatac)
+  !call sessioncp%extrude(metaanddatac)
+  call metaanddatac%extrude(sessioncp)
 end do
 
 
