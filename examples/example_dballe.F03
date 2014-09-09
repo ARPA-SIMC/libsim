@@ -8,6 +8,85 @@ integer :: i
 type(dbasession) :: session,sessionfrom,sessionto
 type(dbaconnection) :: connection,connectionfrom
 
+
+type (dbacoord) :: coord
+type (dbaana) :: ana
+type (dbadatetime) :: mydatetime
+type (dbalevel) :: level
+type (dbanetwork) :: network
+type (dbatimerange) :: timerange
+type (dbametadata) :: metadata
+type (dbadatar) :: datar
+type (dbametaanddatar) :: metaanddatar
+type (dbadc) :: dc
+type (dbadcv),allocatable :: dcv
+type (dbametaanddatav) :: metaanddatav
+type (dbadataattrv) :: dataattrv
+type (dbametaanddata) :: metaandata
+
+!Oggetti:
+
+!dbacoord : fortran 2003 interface to geo_coord
+coord=dbacoord(lon=10.d0,lat=45.d0)
+!dbaana : ana metadata
+ana=dbaana(coord,ident="mianave")
+
+!dbadatetime : datetime metadata
+mydatetime=dbadatetime(datetime_new(2014,01,06,18,00))
+
+!dbalevel : level metadata
+level=dbalevel(level1=105, l1=2000)
+
+!dbanetwork : network metadata 
+network=dbanetwork("generic")
+
+!dbatimerange : timerange metadata 
+timerange=dbatimerange(timerange=4, p1=3600,p2=7200)
+
+!dbametadata : summ of all metadata pieces 
+metadata=dbametadata(level=level,timerange=timerange,ana=ana,network=network,datetime=mydatetime)
+
+!dbametaanddatar : metadata and real data
+metaanddatar%metadata=metadata
+metaanddatar%dbadatar=datar
+!dbametaanddatarlist : metadata and real data double linked list 
+
+!dbametaanddatai : metadata and integer data 
+!dbametaanddatailist : metadata and integer data double linked list 
+
+!dbametaanddatab : metadata and byte data
+!dbametaanddatablist : metadata and byte data double linked list
+
+!dbametaanddatac : metadata and character data 
+!dbametaanddataclist : metadata and character data double linked list 
+
+!dbametaanddatad : metadata and doubleprecision data 
+!dbametaanddatadlist : metadata and diubleprecision data double linked list 
+
+!dbadc : container for dbadata (used for promiscuous vector of data)
+allocate(dc%dat,source=dbadatai("B12102",26312))
+
+!dbadcv : vector of container of dbadata
+allocate (dcv%dcv(2))
+allocate (dcv%dcv(1)%dat,source=dbadatai("B12102",26312))
+allocate (dcv%dcv(2)%dat,source=dbadatar("B12101",273.15))
+
+!dbametaanddatav one metadata plus vector of container of dbadata 
+metaanddatav%metadata=metadata
+metaanddatav%datav=dcv
+
+!dbadataattrv : vector of dbadataattr (more data plus attributes) 
+allocate(dataattrv%dataattr(2))
+dataattrv%dataattr(1)%dbadc=dc
+dataattrv%dataattr(1)%attrv=dcv
+
+!dbametaanddata : one metadata plus vector of container of dbadata  plus attributes
+metaandata%metadata=metadata
+metaandata%dataattrv=dataattrv
+
+!dbametaanddatalist double linked list of dbametaanddata
+
+
 ! connect to dsn type DBA
 connection=dbaconnection(dsn="sqlite:/tmp/dballe.sqlite")
 session=dbasession(connection,wipe=.true.,anaflag="write", dataflag="write", attrflag="write")
