@@ -1981,33 +1981,37 @@ nopreserve=.true.
 if (present(filter)) then
   dbafilter_init=filter
 
-!!$  if (allocated(filter%vars%dcv)) then
-!!$    allocate(dbafilter_init%vars%dcv(size(filter%vars%dcv)))
-!!$    do i =1,size(filter%vars%dcv)
-!!$      allocate(dbafilter_init%vars%dcv(i)%dat,source=filter%vars%dcv(i)%dat)
-!!$    end do
-!!$  end if
-!!$
-!!$  if (allocated(filter%starvars%dcv)) then
-!!$    allocate(dbafilter_init%starvars%dcv(size(filter%starvars%dcv)))
-!!$    do i =1,size(filter%starvars%dcv)
-!!$      allocate(dbafilter_init%starvars%dcv(i)%dat,source=filter%starvars%dcv(i)%dat)
-!!$    end do
-!!$  end if
-!!$
-!!$  if (allocated(filter%anavars%dcv)) then
-!!$    allocate(dbafilter_init%anavars%dcv(size(filter%anavars%dcv)))
-!!$    do i =1,size(filter%anavars%dcv)
-!!$      allocate(dbafilter_init%anavars%dcv(i)%dat,source=filter%anavars%dcv(i)%dat)
-!!$    end do
-!!$  end if
-!!$
-!!$  if (allocated(filter%anastarvars%dcv)) then
-!!$    allocate(dbafilter_init%anastarvars%dcv(size(filter%anastarvars%dcv)))
-!!$    do i =1,size(filter%anastarvars%dcv)
-!!$      allocate(dbafilter_init%anastarvars%dcv(i)%dat,source=filter%anastarvars%dcv(i)%dat)
-!!$    end do
-!!$  end if
+  if (allocated(filter%vars%dcv)) then
+    if (allocated(dbafilter_init%vars%dcv)) deallocate(dbafilter_init%vars%dcv)
+    allocate(dbafilter_init%vars%dcv(size(filter%vars%dcv)))
+    do i =1,size(filter%vars%dcv)
+      allocate(dbafilter_init%vars%dcv(i)%dat,source=filter%vars%dcv(i)%dat)
+    end do
+  end if
+
+  if (allocated(filter%starvars%dcv)) then
+    if (allocated(dbafilter_init%starvars%dcv)) deallocate(dbafilter_init%starvars%dcv)
+    allocate(dbafilter_init%starvars%dcv(size(filter%starvars%dcv)))
+    do i =1,size(filter%starvars%dcv)
+      allocate(dbafilter_init%starvars%dcv(i)%dat,source=filter%starvars%dcv(i)%dat)
+    end do
+  end if
+
+  if (allocated(filter%anavars%dcv)) then
+    if (allocated(dbafilter_init%anavars%dcv)) deallocate(dbafilter_init%anavars%dcv)
+    allocate(dbafilter_init%anavars%dcv(size(filter%anavars%dcv)))
+    do i =1,size(filter%anavars%dcv)
+      allocate(dbafilter_init%anavars%dcv(i)%dat,source=filter%anavars%dcv(i)%dat)
+    end do
+  end if
+
+  if (allocated(filter%anastarvars%dcv)) then
+    if (allocated(dbafilter_init%anastarvars%dcv)) deallocate(dbafilter_init%anastarvars%dcv)
+    allocate(dbafilter_init%anastarvars%dcv(size(filter%anastarvars%dcv)))
+    do i =1,size(filter%anastarvars%dcv)
+      allocate(dbafilter_init%anastarvars%dcv(i)%dat,source=filter%anastarvars%dcv(i)%dat)
+    end do
+  end if
 
   nopreserve=.false.
 end if
@@ -3803,7 +3807,8 @@ class (dbasession), intent(in) :: session
 integer :: ier
 
 if (c_e(session%sehandle)) then 
-  ier = idba_critica(session%sehandle)
+!TODO uncomment when solved segfault
+!  ier = idba_critica(session%sehandle)
 end if
 
 end subroutine dbasession_critica
