@@ -19,7 +19,7 @@ PROGRAM v7ddballe_import_export
 ! Programma di esempio di estrazione e scrittura dall'archivio DB-all.e
 USE datetime_class
 USE vol7d_class
-USE vol7d_dballeold_class
+USE vol7d_dballe_class
 
 IMPLICIT NONE
 
@@ -44,6 +44,8 @@ integer :: inddatiattr,inddativarattr
 CALL init(ti, year=2007, month=3, day=18, hour=12)
 CALL init(tf, year=2007, month=3, day=21, hour=00)
 
+call init(network,"generic")
+
 ! Chiamo il costruttore della classe vol7d_dballe per il mio oggetto in import
 CALL init(v7d)
 
@@ -51,10 +53,15 @@ CALL init(v7d)
 CALL init(v7d_exp,dsn="test",user="test",write=.true.,wipe=.false.)
 
 ! Importo i dati
+
+CALL import(v7d,var=(/"B13003","B13011","B12101"/),varkind=(/"d","r","r"/), network=network, timei=ti, timef=tf&
+ ,attr=(/"*B33192","*B33007"/),attrkind=(/"i","b"/))
+
+
 !  Esempi:
+!CALL import(v7d)
 !CALL import(v7d,(/"B13011","B12101"/), 255, ti, tf, timerange=vol7d_timerange(4,-1800,0), attr=(/"*B33192","*B33007"/))
 !CALL import(v7d,(/"B13011","B12101"/), 255, ti, tf,  attr=(/"*B33192","*B33007"/))
-CALL import(v7d)
 !CALL import(v7d,var=(/"B13003","B13011","B12101"/))
 !CALL import(v7d,var=(/"B13003","B13011","B12101"/),varkind=(/"d","r","r"/), network=255, timei=ti, timef=tf&
 ! ,attr=(/"*B33192","*B33007"/),attrkind=(/"i","b"/))
@@ -133,8 +140,8 @@ end if
 
 Print *,"Scrivo i dati"
 
-!CALL export(v7d_exp)
-CALL export(v7d_exp,attr_only=.true.)
+CALL export(v7d_exp)
+!CALL export(v7d_exp,attr_only=.true.)
 
 CALL delete (v7d_exp) 
 

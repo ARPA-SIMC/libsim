@@ -32,7 +32,7 @@ type(dbametaanddatalist) :: metaanddatal
 type(dbadcv) :: attrv
 
 integer :: category,ier,i
-character(len=512):: a_name,filename="/tmp/example.bufr"
+character(len=512):: a_name,filename="/tmp/example.bufr",filenameout="/tmp/exampleout.bufr"
 !"../data/example_temp.bufr"
 
 !questa chiamata prende dal launcher il nome univoco
@@ -50,28 +50,34 @@ print*,"!!                           import/export from file"
 print*,"!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
 
 ! Chiamo il costruttore della classe vol7d_dballe per il mio oggetto in export
-CALL init(v7d_dba,filename=filename,file=.true.,categoryappend="dballenewapi")
+CALL init(v7d_dba,filename=filename,file=.true.,categoryappend="dballenewapi_read")
 
 !CALL import(v7d_dba,var=["B12101","B12102"],varkind=["r","i"],&
 !                   attr=["*B33196","*B33192","*B33193"],attrkind=["b","c","b"],&
 !                   anavar=["B12101"],anaattr=["*B33192"])
 
-CALL import(v7d_dba)
-
 call l4f_category_log(category,L4F_INFO,"End data reading")
+
 call l4f_category_log(category,L4F_INFO,"start import")
-
-call display(v7d_dba%vol7d)
-
+CALL import(v7d_dba)
 call l4f_category_log(category,L4F_INFO,"end import")
 
+call vol7d_copy(v7d_dba%vol7d,v7d)
+CALL delete (v7d_dba) 
+
+call display(v7d)
+
+
+CALL init(v7d_dba,filename=filenameout,file=.true.,write=.true.,wipe=.true.,categoryappend="dballenewapi_write")
+
+call vol7d_copy(v7d,v7d_dba%vol7d)
+
 call l4f_category_log(category,L4F_INFO,"start export")
-
 CALL export(v7d_dba)
-
 call l4f_category_log(category,L4F_INFO,"end export")
 
 CALL delete (v7d_dba) 
+CALL delete (v7d) 
 
 
 Print*,"!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
