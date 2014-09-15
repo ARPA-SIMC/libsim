@@ -60,6 +60,11 @@ end do
 print *,"display integer vector from list"
 print *, values
 
+!more easy
+values =list_int%toarray()
+print *,"display integer vector from list with toarray"
+print *, values
+
 ! reverse
 call list_int%forward()
 i = 1

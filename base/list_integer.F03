@@ -17,7 +17,7 @@
 module list_integer
   use list_abstract
   private
-  public :: integerList
+  public :: integerList, toarray_integerl
 
 !> Integer specific implementation of doubly-linked list
 !!
@@ -30,6 +30,7 @@ module list_integer
 !     procedure :: addInteger               !< add integer in list
      procedure :: current => currentInteger !< get integer pointed by iterator
      procedure :: display => displayInteger !< print the integer list
+     procedure :: toarray => toarray_Integerl !< convert to array the integer list
 !     generic :: add => addInteger
   end type integerList
 
@@ -67,5 +68,24 @@ type is (integer)
   currentInteger = v
 end select
 end function currentInteger
+
+!> /brief Return an array of integer from list 
+function toarray_integerl(this)
+integer,allocatable :: toarray_integerl(:) !< array
+class(integerlist) :: this !< list of integer
+
+integer :: i
+
+allocate (toarray_integerl(this%countelements()))
+
+call this%rewind()
+i=0
+do while(this%element())
+  i=i+1
+  toarray_integerl(i) =this%current()
+  call this%next()
+end do
+end function toarray_integerl
+
 
 end module list_integer
