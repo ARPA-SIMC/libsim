@@ -1246,12 +1246,12 @@ endif
 
 !write data in dsn
 
-print *,"extrude dati:"
+!print *,"extrude dati:"
 call data%dbadc%display()
 
 call data%dbadc%dbaset(session)
 call session%prendilo()
-print *,"extrude prendilo"
+!print *,"extrude prendilo"
 
 ! TODO remove return to write attributes
 !return
@@ -1272,7 +1272,7 @@ if (allocated(data%attrv%dcv)) then
       endif
 
       if (data%attrv%dcv(i)%dat%c_e()) then
-        print *,"extrude attributi:"
+        !print *,"extrude attributi:"
         call data%attrv%dcv(i)%dat%display()
         call data%attrv%dcv(i)%dat%dbaset(session)
         critica=.true.
@@ -1280,10 +1280,10 @@ if (allocated(data%attrv%dcv)) then
     end do
 
     if (critica) then
-      print *,"extrude dato per attributi:"
-      print *, data%dbadc%dat%btable
+      !print *,"extrude dato per attributi:"
+      !print *, data%dbadc%dat%btable
       call session%var_related(data%dbadc%dat%btable) ! I have made a prendilo and I do not need this
-      print *,"extrude critica"
+      !print *,"extrude critica"
       call session%critica()
     end if
 
@@ -1792,7 +1792,7 @@ subroutine dbametadata_set(metadata,session)
 class(dbametadata), intent(in) :: metadata
 type(dbasession), intent(in) :: session !< dballe session
 
-print *,"extrude metadata:"
+!print *,"extrude metadata:"
 call metadata%display()
 
 call metadata%ana%dbaset(session)
@@ -1981,37 +1981,38 @@ nopreserve=.true.
 if (present(filter)) then
   dbafilter_init=filter
 
-  if (allocated(filter%vars%dcv)) then
-    if (allocated(dbafilter_init%vars%dcv)) deallocate(dbafilter_init%vars%dcv)
-    allocate(dbafilter_init%vars%dcv(size(filter%vars%dcv)))
-    do i =1,size(filter%vars%dcv)
-      allocate(dbafilter_init%vars%dcv(i)%dat,source=filter%vars%dcv(i)%dat)
-    end do
-  end if
-
-  if (allocated(filter%starvars%dcv)) then
-    if (allocated(dbafilter_init%starvars%dcv)) deallocate(dbafilter_init%starvars%dcv)
-    allocate(dbafilter_init%starvars%dcv(size(filter%starvars%dcv)))
-    do i =1,size(filter%starvars%dcv)
-      allocate(dbafilter_init%starvars%dcv(i)%dat,source=filter%starvars%dcv(i)%dat)
-    end do
-  end if
-
-  if (allocated(filter%anavars%dcv)) then
-    if (allocated(dbafilter_init%anavars%dcv)) deallocate(dbafilter_init%anavars%dcv)
-    allocate(dbafilter_init%anavars%dcv(size(filter%anavars%dcv)))
-    do i =1,size(filter%anavars%dcv)
-      allocate(dbafilter_init%anavars%dcv(i)%dat,source=filter%anavars%dcv(i)%dat)
-    end do
-  end if
-
-  if (allocated(filter%anastarvars%dcv)) then
-    if (allocated(dbafilter_init%anastarvars%dcv)) deallocate(dbafilter_init%anastarvars%dcv)
-    allocate(dbafilter_init%anastarvars%dcv(size(filter%anastarvars%dcv)))
-    do i =1,size(filter%anastarvars%dcv)
-      allocate(dbafilter_init%anastarvars%dcv(i)%dat,source=filter%anastarvars%dcv(i)%dat)
-    end do
-  end if
+!!$  if (allocated(filter%vars%dcv)) then
+!!$    if (allocated(dbafilter_init%vars%dcv)) deallocate(dbafilter_init%vars%dcv)
+!!$    allocate(dbafilter_init%vars%dcv(size(filter%vars%dcv)))
+!!$    do i =1,size(filter%vars%dcv)
+!!$      allocate(dbafilter_init%vars%dcv(i)%dat,source=filter%vars%dcv(i)%dat)
+!!$    end do
+!!$  end if
+!!$
+!!$  if (allocated(filter%starvars%dcv)) then
+!!$    if (allocated(dbafilter_init%starvars%dcv)) deallocate(dbafilter_init%starvars%dcv)
+!!$    allocate(dbafilter_init%starvars%dcv(size(filter%starvars%dcv)))
+!!$    do i =1,size(filter%starvars%dcv)
+!!$      allocate(dbafilter_init%starvars%dcv(i)%dat,source=filter%starvars%dcv(i)%dat)
+!!$    end do
+!!$  end if
+!!$
+!!$  if (allocated(filter%anavars%dcv)) then
+!!$    if (allocated(dbafilter_init%anavars%dcv)) deallocate(dbafilter_init%anavars%dcv)
+!!$    allocate(dbafilter_init%anavars%dcv(size(filter%anavars%dcv)))
+!!$    do i =1,size(filter%anavars%dcv)
+!!$      call filter%anavars%dcv(i)%dat%display()
+!!$      allocate(dbafilter_init%anavars%dcv(i)%dat,source=filter%anavars%dcv(i)%dat)
+!!$    end do
+!!$  end if
+!!$
+!!$  if (allocated(filter%anastarvars%dcv)) then
+!!$    if (allocated(dbafilter_init%anastarvars%dcv)) deallocate(dbafilter_init%anastarvars%dcv)
+!!$    allocate(dbafilter_init%anastarvars%dcv(size(filter%anastarvars%dcv)))
+!!$    do i =1,size(filter%anastarvars%dcv)
+!!$      allocate(dbafilter_init%anastarvars%dcv(i)%dat,source=filter%anastarvars%dcv(i)%dat)
+!!$    end do
+!!$  end if
 
   nopreserve=.false.
 end if
@@ -2157,7 +2158,7 @@ end if
 
 if (present(anavars)) then
   if (allocated(anavars%dcv)) then
-    allocate(dbafilter_init%anavars%dcv(size(vars%dcv)))
+    allocate(dbafilter_init%anavars%dcv(size(anavars%dcv)))
     do i =1,size(anavars%dcv)
       allocate(dbafilter_init%anavars%dcv(i)%dat,source=anavars%dcv(i)%dat)
     end do
@@ -2232,18 +2233,25 @@ end function dbafilter_init
 subroutine dbafilter_display(filter)
 class(dbafilter), intent(in) :: filter
 
+Print *,"------------------ filter ---------------"
 call filter%ana%display()
 call filter%datetime%display()
 call filter%level%display()
 call filter%timerange%display()
 call filter%network%display()
+print *, " >>>> minimum:"
 call filter%datetimemin%display()
-call filter%datetimemax%display()
 call filter%coordmin%display()
+print *, " >>>> maximum:"
+call filter%datetimemax%display()
 call filter%coordmax%display()
+print *, " >>>> vars:"
 call filter%vars%display()
+print *, " >>>> starvars:"
 call filter%starvars%display()
+print *, " >>>> anavars:"
 call filter%anavars%display()
+print *, " >>>> anastarvars:"
 call filter%anastarvars%display()
 print *,"var=",filter%var
 print *,"limit=",filter%limit
@@ -2261,6 +2269,8 @@ print *,"contextana=",filter%contextana
 print *,"anaonly=",filter%anaonly
 print *,"dataonly=",filter%dataonly
 print *,"query=",trim(filter%query)
+
+Print *,"-----------------------------------------"
 
 end subroutine dbafilter_display
 
