@@ -19,7 +19,7 @@ type (dbametadata) :: metadata
 type (dbadatar) :: datar
 type (dbametaanddatar) :: metaanddatar
 type (dbadc) :: dc
-type (dbadcv),allocatable :: dcv
+type (dbadcv) :: dcv
 type (dbametaanddatav) :: metaanddatav
 type (dbadataattrv) :: dataattrv
 type (dbametaanddata) :: metaandata
