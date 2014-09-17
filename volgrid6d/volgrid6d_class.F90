@@ -1449,8 +1449,8 @@ DO ivar=1,nvar
         ENDIF
       ENDDO
 
-      IF (c_e(var_coord_vol)) THEN
-        CALL volgrid_get_vol_3d(volgrid6d_in, itime, itimerange, var_coord_vol, &
+      IF (c_e(lvar_coord_vol)) THEN
+        CALL volgrid_get_vol_3d(volgrid6d_in, itime, itimerange, lvar_coord_vol, &
          coord_3d_in)
       ENDIF
       CALL volgrid_get_vol_3d(volgrid6d_in, itime, itimerange, ivar, &
@@ -1458,7 +1458,7 @@ DO ivar=1,nvar
       IF (ASSOCIATED(volgrid6d_out%voldati)) & ! improve!!!!
        CALL volgrid_get_vol_3d(volgrid6d_out, itime, itimerange, ivar, &
        voldatiout)
-      IF (c_e(var_coord_vol)) THEN
+      IF (c_e(lvar_coord_vol)) THEN
         CALL compute(this, voldatiin, voldatiout, convert(volgrid6d_in%var(ivar)), &
          coord_3d_in)
       ELSE
