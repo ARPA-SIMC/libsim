@@ -1,7 +1,7 @@
 Summary: libsim: librerie di utilità in Fortran 90
 Name: libsim
 Version: 6.0.0
-Release: 1421%{dist}
+Release: 1430%{dist}
 License: GPL2+
 Group: Applications/Meteo
 URL: http://www.arpa.emr.it/sim
