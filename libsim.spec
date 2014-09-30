@@ -1,15 +1,15 @@
 Summary: libsim: librerie di utilità in Fortran 90
 Name: libsim
 Version: 6.0.0
-Release: 1430%{dist}
+Release: 1433%{dist}
 License: GPL2+
 Group: Applications/Meteo
 URL: http://www.arpa.emr.it/sim
 Packager: Davide Cesari <dcesari@arpa.emr.it>
 Source: %{name}-%{version}.tar.gz
 BuildRoot: /var/tmp/%{name}-buildroot
-BuildRequires: fortrangis-devel oracle-instantclient-devel libdballef-devel >= 6.3 grib_api-devel ncl-devel gdal-devel libdballe-devel help2man log4c cnf-devel libpng-devel vapor-devel fortrangis-devel
-Requires: libdballef4 >= 6.3 grib_api
+BuildRequires: fortrangis-devel oracle-instantclient-devel libdballef-devel >= 6.7-4312 grib_api-devel ncl-devel gdal-devel libdballe-devel help2man log4c cnf-devel libpng-devel vapor-devel fortrangis-devel
+Requires: libdballef4 >= 6.7-4312 grib_api
 
 #temporaneo
 %if 0%{?fedora} < 9

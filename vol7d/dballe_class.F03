@@ -1253,9 +1253,6 @@ call data%dbadc%dbaset(session)
 call session%prendilo()
 !print *,"extrude prendilo"
 
-! TODO remove return to write attributes
-!return
-
 if (optio_log(noattr)) return
 !write attributes in dsn
 if (allocated(data%attrv%dcv)) then
@@ -3817,8 +3814,7 @@ class (dbasession), intent(in) :: session
 integer :: ier
 
 if (c_e(session%sehandle)) then 
-!TODO uncomment when solved segfault
-!  ier = idba_critica(session%sehandle)
+  ier = idba_critica(session%sehandle)
 end if
 
 end subroutine dbasession_critica
