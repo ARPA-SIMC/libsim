@@ -419,6 +419,7 @@ REAL,ALLOCATABLE :: weightr(:)
 DOUBLE PRECISION,ALLOCATABLE :: weightd(:)
 LOGICAL,ALLOCATABLE :: mask_time(:)
 LOGICAL :: lweighted
+CHARACTER(len=8) :: env_var
 
 IF (PRESENT(max_step)) THEN
   lmax_step = max_step
@@ -427,6 +428,10 @@ ELSE
 ENDIF
 lweighted = optio_log(weighted)
 tri = 254
+! enable bad behavior for climat database
+env_var = ''
+CALL getenv('LIBSIM_CLIMAT_BEHAVIOR', env_var)
+lweighted = lweighted .AND. LEN_TRIM(env_var) == 0
 
 CALL init(that, time_definition=this%time_definition)
 ! be safe

@@ -151,13 +151,19 @@ INTEGER :: i, j, nstep
 LOGICAL :: usestart
 TYPE(datetime) :: lstart, lend, tmptime
 INTEGER(kind=int_ll) :: tmpmsec
-
+CHARACTER(len=8) :: env_var
+LOGICAL :: climat_behavior
 
 IF (SIZE(itime) == 0) THEN ! avoid segmentation fault in case of empty volume
   ALLOCATE(otime(0), itime_start(0), itime_end(0))
   otimerange = vol7d_timerange_miss
   RETURN
 ENDIF
+
+! enable bad behavior for climat database
+env_var = ''
+CALL getenv('LIBSIM_CLIMAT_BEHAVIOR', env_var)
+climat_behavior = LEN_TRIM(env_var) > 0
 
 ! compute lstart = the start time (not the end) of the first
 ! processing interval
@@ -194,7 +200,12 @@ DO i = 1, nstep
   DO WHILE(itime(j) < tmptime .AND. j < SIZE(itime))
     j = j + 1
   ENDDO
-  IF (itime(j) >= tmptime) itime_start(i) = j
+  IF (itime(j) >= tmptime) THEN
+    itime_start(i) = j
+    IF (climat_behavior .AND. itime(j) == tmptime) THEN
+      itime_start(i) = j + 1
+    ENDIF
+  ENDIF
 
   tmptime = tmptime + step
   DO WHILE(itime(j) < tmptime .AND. j < SIZE(itime))
