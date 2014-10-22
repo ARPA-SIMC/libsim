@@ -565,7 +565,7 @@ if ( .not. filter%dataonly) then
 !  call this%handle%set(filter=myfilter)
                                 ! estrude the data
   call this%handle%ingest(metaanddatav,filter=myfilter)
-  
+
   call dba2v7d(this%vol7d, metaanddatav,this%time_definition,set_network)
 
   deallocate (metaanddatav)

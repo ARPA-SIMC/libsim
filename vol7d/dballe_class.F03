@@ -921,7 +921,7 @@ if (c_e(ana%vol7d_ana%ident)) then
   ier = idba_set(session%sehandle,"mobile",1)
 else
   ier = idba_set(session%sehandle,"ident",cmiss)
-  ier = idba_set(session%sehandle,"mobile",0)  
+  ier = idba_set(session%sehandle,"mobile",imiss)  
 end if
 
 end subroutine dbaana_set
@@ -3641,6 +3641,12 @@ if (present(wipe))then
   endif
 endif
 
+if (present(memdb))then
+  dbasession_init%memdb=memdb
+else
+  dbasession_init%memdb=.false.
+end if
+
 
 if (present(filename)) then
 
@@ -3684,15 +3690,15 @@ if (present(filename)) then
   dbasession_init%format=lformat
   dbasession_init%simplified=lsimplified
 
-  dbasession_init%memdb=.true. ! default with filename
-  if (present(memdb))then
-    dbasession_init%memdb=memdb
+  if (.not.present(memdb))then
+    dbasession_init%memdb=.true. ! default with filename
   end if
 
   if (dbasession_init%memdb)then
                                 ! connect to dsn type DBA
     dbasession_init%memconnection=dbaconnection(dsn="mem:")
-    dbasession_init=dbasession(dbasession_init%memconnection,anaflag=anaflag, dataflag=dataflag, attrflag=attrflag)
+    dbasession_init=dbasession(dbasession_init%memconnection,anaflag=anaflag, dataflag=dataflag, attrflag=attrflag,&
+     memdb=dbasession_init%memdb)
     call dbasession_init%messages_open_input(filename=filename,mode=lmode,format=lformat,simplified=lsimplified)
 
   else
