@@ -12,9 +12,13 @@ endif
 if DBALLE
 
 if F2003_EXTENDED_FEATURES
-bin_PROGRAMS += dba_qcfilter
+bin_PROGRAMS += dba_qcfilter dba_transform
 dba_qcfilter_SOURCES = dba_qcfilter.F03 
 dba_qcfilter_LDADD =  ../vol7d/libsim_vol7d.la ../log4fortran/liblog4fortran.la ../qc/libsim_qc.la ../base/libsim_base.la
+
+dba_transform_SOURCES = dba_transform.F03 
+dba_transform_LDADD =  ../vol7d/libsim_vol7d.la ../log4fortran/liblog4fortran.la ../qc/libsim_qc.la ../base/libsim_base.la
+
 endif
 
 if SHAPELIB
