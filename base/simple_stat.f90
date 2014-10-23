@@ -120,9 +120,33 @@ INTERFACE stat_percentile
   MODULE PROCEDURE stat_percentiler, stat_percentiled
 END INTERFACE
 
+!> Bin a sample into equally spaced intervals to form a histogram.
+!! The sample is binned into the requested number of intervals (bins)
+!! and the population of each bin is returned in the allocatable array
+!! \a bin(:).  If the operation cannot be performed \a bin is not
+!! allocated. If the lower and upper bound of the histogram are not
+!! provided, they are computed as the minimum and maximum of the
+!! sample.
+!!
+!! SUBROUTINE stat_bin()
+!! \param sample(:) REAL,INTENT(in) the sample to be binned
+!! \param bin(:) INTEGER,INTENT(out),ALLOCATABLE the array with the population of each bin, dimensioned as (nbin)
+!! \param nbin INTEGER,INTENT(in) the number of bins requested
+!! \param start REAL,INTENT(in),OPTIONAL the start of the overall histogram interval
+!! \param finish REAL,INTENT(in),OPTIONAL the end of the overall histogram interval
+!! \param binbounds(:) REAL,INTENT(out),ALLOCATABLE,OPTIONAL the boundary of each bin, dimensioned as (nbin+1)
+INTERFACE stat_bin
+  MODULE PROCEDURE stat_binr !, stat_bind
+END INTERFACE stat_bin
+
+INTERFACE stat_mode_histogram
+  MODULE PROCEDURE stat_mode_histogramr !, stat_moded
+END INTERFACE stat_mode_histogram
+
 PRIVATE
 PUBLIC stat_average, stat_variance, stat_stddev, stat_linear_corr, &
- stat_linear_regression, stat_percentile, NormalizedDensityIndex
+ stat_linear_regression, stat_percentile, stat_mode_histogram, stat_bin, &
+ NormalizedDensityIndex
 
 CONTAINS
 
@@ -130,7 +154,7 @@ CONTAINS
 FUNCTION stat_averager(sample, mask, nomiss) RESULT(average)
 REAL,INTENT(in) :: sample(:)
 LOGICAL,OPTIONAL,INTENT(in) :: mask(:)
-LOGICAL,OPTIONAL,INTENT(in) :: nomiss ! informs that the sample does not contain missing data (for speedup, unused)
+LOGICAL,OPTIONAL,INTENT(in) :: nomiss ! informs that the sample does not contain missing data and is not of zero length (for speedup)
 
 REAL :: average
 
@@ -158,7 +182,7 @@ END FUNCTION stat_averager
 FUNCTION stat_averaged(sample, mask, nomiss) RESULT(average)
 DOUBLE PRECISION,INTENT(in) :: sample(:)
 LOGICAL,OPTIONAL,INTENT(in) :: mask(:)
-LOGICAL,OPTIONAL,INTENT(in) :: nomiss ! informs that the sample does not contain missing data (for speedup, unused)
+LOGICAL,OPTIONAL,INTENT(in) :: nomiss ! informs that the sample does not contain missing data and is not of zero length (for speedup)
 
 DOUBLE PRECISION :: average
 
@@ -634,6 +658,119 @@ ENDDO
 
 END FUNCTION stat_percentiled
 
+
+SUBROUTINE stat_binr(sample, bin, nbin, start, finish, binbounds)
+REAL,INTENT(in) :: sample(:)
+INTEGER,INTENT(out),ALLOCATABLE :: bin(:)
+INTEGER,INTENT(in) :: nbin
+REAL,INTENT(in),OPTIONAL :: start
+REAL,INTENT(in),OPTIONAL :: finish
+REAL,INTENT(out),ALLOCATABLE,OPTIONAL :: binbounds(:)
+
+INTEGER :: i, ind
+REAL :: lstart, lfinish, incr
+REAL,ALLOCATABLE :: lbinbounds(:)
+
+! safety checks
+IF (nbin < 1) RETURN
+IF (COUNT(c_e(sample)) < 1) RETURN
+
+lstart = optio_r(start)
+IF (.NOT.c_e(lstart)) lstart = MINVAL(sample, mask=c_e(sample))
+lfinish = optio_r(finish)
+IF (.NOT.c_e(lfinish)) lfinish = MAXVAL(sample, mask=c_e(sample))
+IF (lfinish <= lstart) RETURN
+
+incr = (lfinish-lstart)/nbin
+ALLOCATE(bin(nbin))
+
+ALLOCATE(lbinbounds(nbin+1))
+
+DO i = 1, nbin
+  lbinbounds(i) = lstart + (i-1)*incr
+ENDDO  
+lbinbounds(nbin+1) = lfinish ! set exact value to avoid truncation error
+
+DO i = 1, nbin-1
+  bin(i) = COUNT(sample >= lbinbounds(i) .AND. sample < lbinbounds(i+1))
+!, .AND. c_e(sample))
+ENDDO
+bin(nbin) = COUNT(sample >= lbinbounds(nbin) .AND. sample <= lbinbounds(nbin+1))
+!, .AND. c_e(sample)) ! special case, include upper limit
+
+IF (PRESENT(binbounds)) binbounds = lbinbounds
+
+END SUBROUTINE stat_binr
+
+
+SUBROUTINE stat_binr2(sample, bin, nbin, start, finish, binbounds)
+REAL,INTENT(in) :: sample(:)
+INTEGER,INTENT(out),ALLOCATABLE :: bin(:)
+INTEGER,INTENT(in) :: nbin
+REAL,INTENT(in),OPTIONAL :: start
+REAL,INTENT(in),OPTIONAL :: finish
+REAL,INTENT(out),ALLOCATABLE,OPTIONAL :: binbounds(:)
+
+INTEGER :: i, ind
+REAL :: lstart, lfinish, incr
+
+! safety checks
+IF (nbin < 1) RETURN
+IF (COUNT(c_e(sample)) < 1) RETURN
+
+lstart = optio_r(start)
+IF (.NOT.c_e(lstart)) lstart = MINVAL(sample, mask=c_e(sample))
+lfinish = optio_r(finish)
+IF (.NOT.c_e(lfinish)) lfinish = MAXVAL(sample, mask=c_e(sample))
+IF (lfinish <= lstart) RETURN
+
+incr = (lfinish-lstart)/nbin
+ALLOCATE(bin(nbin))
+
+bin(:) = 0
+
+DO i = 1, SIZE(sample)
+  IF (c_e(sample(i))) THEN
+    ind = INT((sample(i)-lstart)/incr) + 1
+    IF (ind > 0 .AND. ind <= nbin) THEN
+      bin(ind) = bin(ind) + 1
+    ELSE
+      IF (sample(i) == finish) bin(nbin) = bin(nbin) + 1 ! special case, include upper limit
+    ENDIF
+  ENDIF
+ENDDO
+
+IF (PRESENT(binbounds)) THEN
+  ALLOCATE(binbounds(nbin+1))
+  DO i = 1, nbin
+    binbounds(i) = lstart + (i-1)*incr
+  ENDDO
+  binbounds(nbin+1) = lfinish ! set exact value to avoid truncation error
+ENDIF
+
+END SUBROUTINE stat_binr2
+
+
+FUNCTION stat_mode_histogramr(sample, nbin, start, finish) RESULT(mode)
+REAL,INTENT(in) :: sample(:)
+INTEGER,INTENT(in) :: nbin
+REAL,INTENT(in),OPTIONAL :: start
+REAL,INTENT(in),OPTIONAL :: finish
+
+REAL :: mode
+
+INTEGER :: loc(1)
+INTEGER,ALLOCATABLE :: bin(:)
+REAL,ALLOCATABLE :: binbounds(:)
+
+CALL stat_bin(sample, bin, nbin, start, finish, binbounds)
+mode = rmiss
+IF (ALLOCATED(bin)) THEN
+  loc = MAXLOC(bin)
+  mode = (binbounds(loc(1)) + binbounds(loc(1)+1))*0.5
+ENDIF
+
+END FUNCTION stat_mode_histogramr
 
 !!$ Calcolo degli NDI calcolati
 !!$
