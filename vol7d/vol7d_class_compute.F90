@@ -407,7 +407,7 @@ LOGICAL,INTENT(in),OPTIONAL :: weighted !< if provided and \c .TRUE., the statis
 TYPE(vol7d),INTENT(inout),OPTIONAL :: other !< optional volume that, on exit, is going to contain the data that did not contribute to the accumulation computation
 !INTEGER,INTENT(in),OPTIONAL :: stat_proc_input !< to be used with care, type of statistical processing of data that has to be processed (from grib2 table), only data having timerange of this type will be recomputed, the actual statistical processing performed and which will appear in the output volume, is however determined by \a stat_proc argument
 
-INTEGER :: tri, itr, iw, iwn, i, i1, i3, i5, i6
+INTEGER :: tri, itr, iw, iwn, i, i1, i3, i5, i6, vartype
 INTEGER(kind=int_ll),ALLOCATABLE :: stepmsec(:)
 INTEGER(kind=int_ll) :: dmsec
 TYPE(datetime) :: w_start, w_end
@@ -415,8 +415,8 @@ TYPE(timedelta) :: sub_step, lmax_step
 TYPE(vol7d_timerange) :: otimerange
 TYPE(vol7d) :: v7dtmp
 INTEGER,POINTER :: itime_start(:), itime_end(:)
-REAL,ALLOCATABLE :: weightr(:)
-DOUBLE PRECISION,ALLOCATABLE :: weightd(:)
+REAL,ALLOCATABLE :: weightr(:), tmpvoldatir(:)
+DOUBLE PRECISION,ALLOCATABLE :: weightd(:), tmpvoldatid(:)
 LOGICAL,ALLOCATABLE :: mask_time(:)
 LOGICAL :: lweighted
 CHARACTER(len=8) :: env_var
@@ -481,9 +481,10 @@ ENDDO
 ! finally perform computations
 ! warning: mask_time is reused for a different purpose
 IF (ASSOCIATED(this%voldatir)) THEN
-  ALLOCATE(weightr(SIZE(this%time)))
+  ALLOCATE(weightr(SIZE(this%time)), tmpvoldatir(SIZE(this%time)))
   DO i6 = 1, SIZE(this%network)
     DO i5 = 1, SIZE(this%dativar%r)
+      vartype = vol7d_vartype(this%dativar%r(i5))
       DO i3 = 1, SIZE(this%level)
         DO i1 = 1, SIZE(this%ana)
           mask_time(:) = this%voldatir(i1,:,i3,itr,i5,i6) /= rmiss
@@ -529,23 +530,35 @@ IF (ASSOCIATED(this%voldatir)) THEN
 
             IF (COUNT(mask_time(itime_start(i):itime_end(i))) > 0) THEN
               IF (stat_proc == 0) THEN ! average
-
-                IF (lweighted) THEN
-                  WHERE(mask_time(itime_start(i):itime_end(i)))
-                    weightr(itime_start(i):itime_end(i)) = &
-                     weightr(itime_start(i):itime_end(i)) * &
-                     this%voldatir(i1,itime_start(i):itime_end(i),i3,itr,i5,i6)
-                  END WHERE
-                  that%voldatir(i1,i,i3,1,i5,i6) = &
-                   SUM(weightr(itime_start(i):itime_end(i)), &
-                   mask=mask_time(itime_start(i):itime_end(i)))
-
-                ELSE
-                  that%voldatir(i1,i,i3,1,i5,i6) = &
-                   SUM(this%voldatir(i1,itime_start(i):itime_end(i),i3,itr,i5,i6), &
-                   mask=mask_time(itime_start(i):itime_end(i)))/ &
-                   COUNT(mask_time(itime_start(i):itime_end(i)))
-                ENDIF
+!                IF (vartype /= var_dir360) THEN
+                  IF (lweighted) THEN
+                    WHERE(mask_time(itime_start(i):itime_end(i)))
+                      weightr(itime_start(i):itime_end(i)) = &
+                       weightr(itime_start(i):itime_end(i)) * &
+                       this%voldatir(i1,itime_start(i):itime_end(i),i3,itr,i5,i6)
+                    END WHERE
+                    that%voldatir(i1,i,i3,1,i5,i6) = &
+                     SUM(weightr(itime_start(i):itime_end(i)), &
+                     mask=mask_time(itime_start(i):itime_end(i)))
+                    
+                  ELSE
+                    that%voldatir(i1,i,i3,1,i5,i6) = &
+                     SUM(this%voldatir(i1,itime_start(i):itime_end(i),i3,itr,i5,i6), &
+                     mask=mask_time(itime_start(i):itime_end(i)))/ &
+                     COUNT(mask_time(itime_start(i):itime_end(i)))
+                  ENDIF
+!                ELSE
+!                  tmpvoldati(itime_start(i):itime_end(i)) = &
+!                   this%voldatir(i1,itime_start(i):itime_end(i),i3,itr,i5,i6)
+!                  WHERE (c_e(tmpvoldati(itime_start(i):itime_end(i))) .AND. &
+!                   tmpvoldati(itime_start(i):itime_end(i)) > 337.5)
+!                    tmpvoldati(itime_start(i):itime_end(i)) = &
+!                     tmpvoldati(itime_start(i):itime_end(i)) -360.
+!                  END WHERE
+!                  that%voldatir(i1,i,i3,1,i5,i6) = &
+!                   stat_mode_histogram(tmpvoldati(itime_start(i):itime_end(i)), &
+!                   8, -22.5, 337.5, mask=mask_time(itime_start(i):itime_end(i)))
+!                ENDIF
 
               ELSE IF (stat_proc == 2) THEN ! maximum
 
@@ -561,6 +574,23 @@ IF (ASSOCIATED(this%voldatir)) THEN
                  this%voldatir(i1,itime_start(i):itime_end(i),i3,itr,i5,i6), &
                  mask=mask_time(itime_start(i):itime_end(i)))
 
+              ELSE IF (stat_proc == 201) THEN ! mode
+! mode only for angles at the moment, with predefined histogram
+                IF (vartype == var_dir360) THEN
+                  tmpvoldatir(itime_start(i):itime_end(i)) = &
+                   this%voldatir(i1,itime_start(i):itime_end(i),i3,itr,i5,i6)
+! reduce to interval [-22.5,337.5]
+                  WHERE (c_e(tmpvoldatir(itime_start(i):itime_end(i))) .AND. &
+                   tmpvoldatir(itime_start(i):itime_end(i)) > 337.5)
+                    tmpvoldatir(itime_start(i):itime_end(i)) = &
+                     tmpvoldatir(itime_start(i):itime_end(i)) -360.
+                  END WHERE
+                  that%voldatir(i1,i,i3,1,i5,i6) = &
+                   stat_mode_histogram(tmpvoldatir(itime_start(i):itime_end(i)), &
+                   8, -22.5, 337.5, mask=mask_time(itime_start(i):itime_end(i)))
+
+                ENDIF
+
               ENDIF
             ENDIF
           ENDDO timeloopr
@@ -568,15 +598,16 @@ IF (ASSOCIATED(this%voldatir)) THEN
       ENDDO
     ENDDO
   ENDDO
-  DEALLOCATE(weightr)
+  DEALLOCATE(weightr, tmpvoldatir)
 ENDIF
 
 ! finally perform computations
 ! warning: mask_time is reused for a different purpose
 IF (ASSOCIATED(this%voldatid)) THEN
-  ALLOCATE(weightd(SIZE(this%time)))
+  ALLOCATE(weightd(SIZE(this%time)), tmpvoldatid(SIZE(this%time)))
   DO i6 = 1, SIZE(this%network)
-    DO i5 = 1, SIZE(this%dativar%r)
+    DO i5 = 1, SIZE(this%dativar%d)
+      vartype = vol7d_vartype(this%dativar%d(i5))
       DO i3 = 1, SIZE(this%level)
         DO i1 = 1, SIZE(this%ana)
           mask_time(:) = this%voldatid(i1,:,i3,itr,i5,i6) /= rmiss
@@ -654,6 +685,22 @@ IF (ASSOCIATED(this%voldatid)) THEN
                  this%voldatid(i1,itime_start(i):itime_end(i),i3,itr,i5,i6), &
                  mask=mask_time(itime_start(i):itime_end(i)))
 
+              ELSE IF (stat_proc == 201) THEN ! mode
+! mode only for angles at the moment, with predefined histogram
+                IF (vartype == var_dir360) THEN
+                  tmpvoldatid(itime_start(i):itime_end(i)) = &
+                   this%voldatid(i1,itime_start(i):itime_end(i),i3,itr,i5,i6)
+! reduce to interval [-22.5,337.5]
+                  WHERE (c_e(tmpvoldatid(itime_start(i):itime_end(i))) .AND. &
+                   tmpvoldatid(itime_start(i):itime_end(i)) > 337.5)
+                    tmpvoldatid(itime_start(i):itime_end(i)) = &
+                     tmpvoldatid(itime_start(i):itime_end(i)) -360.
+                  END WHERE
+                  that%voldatid(i1,i,i3,1,i5,i6) = &
+                   stat_mode_histogram(tmpvoldatid(itime_start(i):itime_end(i)), &
+                   8, -22.5D0, 337.5D0, mask=mask_time(itime_start(i):itime_end(i)))
+                ENDIF
+
               ENDIF
             ENDIF
           ENDDO timeloopd
@@ -661,7 +708,7 @@ IF (ASSOCIATED(this%voldatid)) THEN
       ENDDO
     ENDDO
   ENDDO
-  DEALLOCATE(weightd)
+  DEALLOCATE(weightd, tmpvoldatid)
 ENDIF
 
 DEALLOCATE(stepmsec, mask_time, itime_start, itime_end)
