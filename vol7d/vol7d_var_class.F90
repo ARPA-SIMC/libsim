@@ -118,6 +118,14 @@ INTERFACE display
   MODULE PROCEDURE display_var, display_var_vect
 END INTERFACE
 
+! constants for vol7d_vartype
+INTEGER,PARAMETER :: var_ord=0 !< unclassified variable (vol7d_vartype function)
+INTEGER,PARAMETER :: var_dir360=1 !< direction in degrees (vol7d_vartype function)
+INTEGER,PARAMETER :: var_press=2 !< pressure in Pa (vol7d_vartype function)
+INTEGER,PARAMETER :: var_ucomp=3 !< u component of a vector field (vol7d_vartype function)
+INTEGER,PARAMETER :: var_vcomp=4 !< v component of a vector field (vol7d_vartype function)
+INTEGER,PARAMETER :: var_wcomp=5 !< w component of a vector field (vol7d_vartype function)
+
 
 CONTAINS
 
@@ -265,6 +273,32 @@ TYPE(vol7d_var),INTENT(IN) :: this
 LOGICAL :: c_e
 c_e = this /= vol7d_var_miss
 END FUNCTION vol7d_var_c_e
+
+
+!> Return the physical type of the variable.
+!! Returns a rough classification of the variable depending on the
+!! physical parameter it represents. The result is one of the
+!! constants vartype_* defined in the module. To be extended.
+ELEMENTAL FUNCTION vol7d_vartype(this) RESULT(vartype)
+TYPE(vol7d_var),INTENT(in) :: this !< vol7d_var vector object to test
+
+INTEGER :: vartype
+
+vartype = var_ord
+SELECT CASE(this%btable)
+CASE('B01012', 'B11001', 'B11043', 'B22001') ! direction, degree true
+  vartype = var_dir360
+CASE('B07004', 'B10004', 'B10051', 'B10060') ! pressure, Pa
+  vartype = var_press
+CASE('B11003', 'B11200') ! u-component
+  vartype = var_ucomp
+CASE('B11004', 'B11201') ! v-component
+  vartype = var_vcomp
+CASE('B11005', 'B11006') ! w-component
+  vartype = var_wcomp
+END SELECT
+
+END FUNCTION vol7d_vartype
 
 
 ! Definisce le funzioni count_distinct e pack_distinct

@@ -2502,8 +2502,6 @@ DOUBLE PRECISION,ALLOCATABLE :: coord_in(:)
 REAL,ALLOCATABLE :: val_in(:), field_tmp(:,:,:)
 REAL,POINTER :: coord_3d_in_act(:,:,:)
 TYPE(grid_transform) :: likethis
-! constants for local use
-INTEGER,PARAMETER :: var_ord=0, var_dir360=1, var_press=2
 LOGICAL :: alloc_coord_3d_in_act
 
 
@@ -2550,18 +2548,7 @@ ENDIF
 
 vartype = var_ord
 IF (PRESENT(var)) THEN
-  SELECT CASE(var%btable)
-  CASE('B01012', 'B11001', 'B11043', 'B22001') ! direction, degree true
-    vartype = var_dir360
-#ifdef DEBUG
-    CALL l4f_category_log(this%category,L4F_DEBUG,"interpolating direction")
-#endif
-  CASE('B07004', 'B10004', 'B10051', 'B10060') ! pressure, Pa
-    vartype = var_press
-#ifdef DEBUG
-    CALL l4f_category_log(this%category,L4F_DEBUG,"interpolating pressure")
-#endif
-  END SELECT
+  vartype = vol7d_vartype(var)
 ENDIF
 
 innx = SIZE(field_in,1); inny = SIZE(field_in,2); innz = SIZE(field_in,3)
@@ -3051,18 +3038,6 @@ ELSE IF (this%trans%trans_type == 'vertint') THEN
           z2 = REAL(1.0D0 - this%inter_zp(k)) ! weight for k
           SELECT CASE(vartype)
 
-          CASE(var_ord)
-            DO j = 1, inny
-              DO i = 1, innx
-                IF (c_e(field_in(i,j,this%inter_index_z(k))) .AND. &
-                 c_e(field_in(i,j,this%inter_index_z(k)+1))) THEN
-                  field_out(i,j,k) = &
-                   field_in(i,j,this%inter_index_z(k))*z2 + &
-                   field_in(i,j,this%inter_index_z(k)+1)*z1
-                ENDIF
-              ENDDO
-            ENDDO
-
           CASE(var_dir360)
             DO j = 1, inny
               DO i = 1, innx
@@ -3085,6 +3060,18 @@ ELSE IF (this%trans%trans_type == 'vertint') THEN
                   field_out(i,j,k) = EXP( &
                    LOG(field_in(i,j,this%inter_index_z(k)))*z2 + &
                    LOG(field_in(i,j,this%inter_index_z(k)+1))*z1)
+                ENDIF
+              ENDDO
+            ENDDO
+
+          CASE default
+            DO j = 1, inny
+              DO i = 1, innx
+                IF (c_e(field_in(i,j,this%inter_index_z(k))) .AND. &
+                 c_e(field_in(i,j,this%inter_index_z(k)+1))) THEN
+                  field_out(i,j,k) = &
+                   field_in(i,j,this%inter_index_z(k))*z2 + &
+                   field_in(i,j,this%inter_index_z(k)+1)*z1
                 ENDIF
               ENDDO
             ENDDO
@@ -3173,14 +3160,15 @@ ELSE IF (this%trans%trans_type == 'vertint') THEN
                 z2 = 1.0 - z1
                 SELECT CASE(vartype)
 
-                CASE(var_ord)
-                  field_out(i,j,k) = field_in(i,j,kfound)*z2 + field_in(i,j,kfound+1)*z1
                 CASE(var_dir360)
                   field_out(i,j,k) = &
                    interp_var_360(field_in(i,j,kfound), field_in(i,j,kfound+1), z1, z2)
                 CASE(var_press)
                   field_out(i,j,k) = EXP(LOG(field_in(i,j,kfound))*z2 + &
                    LOG(field_in(i,j,kfound+1))*z1)
+
+                CASE default
+                  field_out(i,j,k) = field_in(i,j,kfound)*z2 + field_in(i,j,kfound+1)*z1
                 END SELECT
 
               ENDIF
@@ -3198,29 +3186,6 @@ ELSE IF (this%trans%trans_type == 'vertint') THEN
     DO j = 1, inny
       DO i = 1, innx
         SELECT CASE(vartype)
-
-        CASE(var_ord)
-          n = COUNT(c_e(field_in(i,j,:)))
-          IF (n > 1) THEN
-            coord_in(1:n) = PACK(this%vcoord_in(:), mask=c_e(field_in(i,j,:)))
-            val_in(1:n) = PACK(field_in(i,j,:), mask=c_e(field_in(i,j,:)))
-            kkcache = 2
-            outlev1: DO k = 1, outnz
-              IF (.NOT.c_e(this%vcoord_out(k))) CYCLE outlev1
-              inlev1: DO kk = kkcache, n
-                IF (coord_in(kk) >= this%vcoord_out(k)) THEN
-                  IF (this%vcoord_out(k) >= coord_in(kk-1)) THEN
-                    z1 = REAL((this%vcoord_out(k) - coord_in(kk-1))/ &
-                     (coord_in(kk) - coord_in(kk-1)))
-                    z2 = 1.0 - z1
-                    field_out(i,j,k) = val_in(kk-1)*z2 + val_in(kk)*z1
-                    kkcache = kk
-                  ENDIF
-                  CYCLE outlev1
-                ENDIF
-              ENDDO inlev1
-            ENDDO outlev1
-          ENDIF
 
         CASE(var_dir360)
           n = COUNT(c_e(field_in(i,j,:)))
@@ -3269,6 +3234,29 @@ ELSE IF (this%trans%trans_type == 'vertint') THEN
                 ENDIF
               ENDDO inlev3
             ENDDO outlev3
+          ENDIF
+
+        CASE default
+          n = COUNT(c_e(field_in(i,j,:)))
+          IF (n > 1) THEN
+            coord_in(1:n) = PACK(this%vcoord_in(:), mask=c_e(field_in(i,j,:)))
+            val_in(1:n) = PACK(field_in(i,j,:), mask=c_e(field_in(i,j,:)))
+            kkcache = 2
+            outlev1: DO k = 1, outnz
+              IF (.NOT.c_e(this%vcoord_out(k))) CYCLE outlev1
+              inlev1: DO kk = kkcache, n
+                IF (coord_in(kk) >= this%vcoord_out(k)) THEN
+                  IF (this%vcoord_out(k) >= coord_in(kk-1)) THEN
+                    z1 = REAL((this%vcoord_out(k) - coord_in(kk-1))/ &
+                     (coord_in(kk) - coord_in(kk-1)))
+                    z2 = 1.0 - z1
+                    field_out(i,j,k) = val_in(kk-1)*z2 + val_in(kk)*z1
+                    kkcache = kk
+                  ENDIF
+                  CYCLE outlev1
+                ENDIF
+              ENDDO inlev1
+            ENDDO outlev1
           ENDIF
 
         END SELECT
