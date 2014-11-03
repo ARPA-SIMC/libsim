@@ -15,14 +15,14 @@
 
 ! You should have received a copy of the GNU General Public License
 ! along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
 #include "config.h"
 
-!> \defgroup alchimia_class Libsim package, alchimia library.
-!! Generate new variabile using functions libraries
+!> \defgroup alchimia Libsim package, alchimia library.
+!! Generate new variabile using function libraries
 
-!> This module defines objects and methods for generate derivate variables.
-!!\ingroup alchimia_class
+!> This module defines objects and methods for generating
+!! derivative variables.
+!!\ingroup alchimia
 module alchimia
 
 USE missing_values

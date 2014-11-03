@@ -17,6 +17,17 @@
 ! along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "config.h"
 !> \defgroup volgrid6d Libsim package, volgrid6d library.
+!! The libsim volgrid6d library contains classes for managing data on
+!! regular rectangular grids, tipically the output of a numerical
+!! weather prediction model, and for their import from a WMO GRIB file
+!! of from other geophysical data file formats. In order to compile
+!! and link programs using this library, you have to insert the
+!! required \c USE statements in the program units involved, specify
+!! the location of module files when compiling (tipically \c
+!! -I/usr/lib/gfortran/modules or \c -I/usr/lib64/gfortran/modules or
+!! \c -I/usr/include) and indicate the library name \c -lsim_volgrid6d
+!! when linking, assuming that the library has been installed in a
+!! default location.
 
 !> This module defines objects and methods for managing data volumes
 !! on rectangular georeferenced grids.  The data are accomodated in a

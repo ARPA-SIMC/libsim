@@ -17,7 +17,9 @@
 ! along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "config.h"
 
-!> \defgroup log4fortran Pacchetto log4fortran, libreria logforfortran 
+!> \defgroup log4fortran Libsim package, log4fortran library.
+!! Fortran interface to a basic set of log4c library for performing
+!! logging within a program.
 
 !>\brief classe per la gestione del logging
 !!

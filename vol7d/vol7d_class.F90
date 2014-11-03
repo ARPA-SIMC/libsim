@@ -17,16 +17,17 @@
 ! along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "config.h"
 
-!> \defgroup vol7d Pacchetto libsim, libreria vol7d.
-!! La libreria vol7d di libsim contiene classi per la gestione in
-!! Fortran 90 di dati puntuali, tipicamente osservazioni da stazioni meteo,
-!! e per la loro importazione da Db-Alle e dal database Oracle del SIM.
-!! Per compilare e linkare programmi che fanno uso di questa libreria si
-!! dovranno inserire gli appositi comandi \c USE nelle unità di
-!! programma coinvolte e usare, in fase di compilazione, l'opzione
-!! \c -I/usr/include e, in fase di linking, l'opzione
-!! \c -lsim_vol7d, presupponendo che l'installazione sia stata
-!! fatta a livello di sistema.
+!> \defgroup vol7d Libsim package, vol7d library.
+!! The libsim vol7d library contains classes for managing pointwise
+!! data, tipically weather observations, and for their import from a
+!! Db-All.e database or from a WMO BUFR file. In order to compile and
+!! link programs using this library, you have to insert the required
+!! \c USE statements in the program units involved, specify the
+!! location of module files when compiling (tipically \c
+!! -I/usr/lib/gfortran/modules or \c -I/usr/lib64/gfortran/modules or
+!! \c -I/usr/include) and indicate the library name \c -lsim_vol7d
+!! when linking, assuming that the library has been installed in a
+!! default location.
 
 !> Classe per la gestione di un volume completo di dati osservati.
 !! Questo modulo definisce gli oggetti e i metodi per gestire

@@ -18,7 +18,7 @@
 #include "config.h"
 !> \defgroup base Libsim package, base library.
 !! The libsim base library defines modules and classes of general
-!! utility for scientifical applications in Fortran 90. In order to
+!! use for scientifical applications in Fortran 90. In order to
 !! compile and link programs using this library, you have to insert
 !! the required \c USE statements in the program units involved,
 !! specify the location of module files when compiling (tipically \c

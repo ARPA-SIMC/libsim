@@ -15,11 +15,11 @@
 
 ! You should have received a copy of the GNU General Public License
 ! along with this program.  If not, see <http://www.gnu.org/licenses/>.
-!> \defgroup qc Pacchetto libsim, libreria qc.
-!! Procedure per il controllo di qualità.
-!! Al momento è implementato solo il controllo di qualità climatico.
-
 #include "config.h"
+!> \defgroup qc Libsim package, qc library.
+!! Procedures for data quality control.
+!! At the moment only climatological quality control is implemented
+
 !> Utilities and defines for quality control.
 !! 
 !! Concise, high-value definitions of Data Quality by expert users,
@@ -166,7 +166,6 @@
 !! * Spatial consistency (e.g. the station-dependent limits of plausible difference between
 !!   the temperatures at a station and its neighbours must not be violated).
 !!\ingroup qc
-
 module modqc
 use kinds
 use missing_values
