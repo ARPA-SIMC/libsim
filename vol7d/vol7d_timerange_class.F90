@@ -281,9 +281,11 @@ ELEMENTAL FUNCTION vol7d_timerange_eq(this, that) RESULT(res)
 TYPE(vol7d_timerange),INTENT(IN) :: this, that
 LOGICAL :: res
 
+
 res = &
  this%timerange == that%timerange .AND. &
- this%p1 == that%p1 .AND. this%p2 == that%p2
+ this%p1 == that%p1 .AND. (this%p2 == that%p2 .OR. &
+ this%timerange == 254)
 
 END FUNCTION vol7d_timerange_eq
 
