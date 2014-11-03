@@ -129,18 +129,34 @@ END INTERFACE
 !! sample.
 !!
 !! SUBROUTINE stat_bin()
-!! \param sample(:) REAL,INTENT(in) the sample to be binned
+!! \param sample(:) REAL or DOUBLE PRECISION,INTENT(in) the variable to be binned
 !! \param bin(:) INTEGER,INTENT(out),ALLOCATABLE the array with the population of each bin, dimensioned as (nbin)
 !! \param nbin INTEGER,INTENT(in) the number of bins requested
-!! \param start REAL,INTENT(in),OPTIONAL the start of the overall histogram interval
-!! \param finish REAL,INTENT(in),OPTIONAL the end of the overall histogram interval
-!! \param binbounds(:) REAL,INTENT(out),ALLOCATABLE,OPTIONAL the boundary of each bin, dimensioned as (nbin+1)
+!! \param start REAL or DOUBLE PRECISION,INTENT(in),OPTIONAL the start of the overall histogram interval
+!! \param finish REAL or DOUBLE PRECISION,INTENT(in),OPTIONAL the end of the overall histogram interval
+!! \param mask(:) LOGICAL,OPTIONAL,INTENT(in) additional mask to be and'ed with missing values
+!! \param binbounds(:) REAL or DOUBLE PRECISION,INTENT(out),ALLOCATABLE,OPTIONAL the boundary of each bin, dimensioned as (nbin+1)
 INTERFACE stat_bin
-  MODULE PROCEDURE stat_binr !, stat_bind
+  MODULE PROCEDURE stat_binr, stat_bind
 END INTERFACE stat_bin
 
+!> Compute the mode of the random variable provided
+!! taking into account missing data.
+!! The mode is computed by binning the sample into the requested
+!! number of intervals (bins) and the mode is computed as the midpoint
+!! of the most populated bin; in case of multi-modality, the smallest
+!! value is returned. If the operation cannot be performed a missing
+!! value is returned. See the description of simple_stat::stat_bin
+!! subroutine for details about the binning procedure.
+!!
+!! REAL or DOUBLE PRECISION FUNCTION stat_mode_histogram()
+!! \param sample(:) REAL or DOUBLE PRECISION,INTENT(in) the variable for which the mode has to be computed
+!! \param nbin INTEGER,INTENT(in) the number of bins requested
+!! \param start REAL or DOUBLE PRECISION,INTENT(in),OPTIONAL the start of the overall histogram interval
+!! \param finish REAL or DOUBLE PRECISION,INTENT(in),OPTIONAL the end of the overall histogram interval
+!! \param mask(:) LOGICAL,OPTIONAL,INTENT(in) additional mask to be and'ed with missing values
 INTERFACE stat_mode_histogram
-  MODULE PROCEDURE stat_mode_histogramr !, stat_moded
+  MODULE PROCEDURE stat_mode_histogramr, stat_mode_histogramd
 END INTERFACE stat_mode_histogram
 
 PRIVATE
@@ -659,26 +675,34 @@ ENDDO
 END FUNCTION stat_percentiled
 
 
-SUBROUTINE stat_binr(sample, bin, nbin, start, finish, binbounds)
+SUBROUTINE stat_binr(sample, bin, nbin, start, finish, mask, binbounds)
 REAL,INTENT(in) :: sample(:)
 INTEGER,INTENT(out),ALLOCATABLE :: bin(:)
 INTEGER,INTENT(in) :: nbin
 REAL,INTENT(in),OPTIONAL :: start
 REAL,INTENT(in),OPTIONAL :: finish
+LOGICAL,INTENT(in),OPTIONAL :: mask(:)
 REAL,INTENT(out),ALLOCATABLE,OPTIONAL :: binbounds(:)
 
 INTEGER :: i, ind
 REAL :: lstart, lfinish, incr
 REAL,ALLOCATABLE :: lbinbounds(:)
+LOGICAL :: lmask(SIZE(sample))
 
 ! safety checks
 IF (nbin < 1) RETURN
-IF (COUNT(c_e(sample)) < 1) RETURN
+IF (PRESENT(mask)) THEN
+  lmask = mask
+ELSE
+  lmask =.TRUE.
+ENDIF
+lmask = lmask .AND. c_e(sample)
+IF (COUNT(lmask) < 1) RETURN
 
 lstart = optio_r(start)
-IF (.NOT.c_e(lstart)) lstart = MINVAL(sample, mask=c_e(sample))
+IF (.NOT.c_e(lstart)) lstart = MINVAL(sample, mask=lmask)
 lfinish = optio_r(finish)
-IF (.NOT.c_e(lfinish)) lfinish = MAXVAL(sample, mask=c_e(sample))
+IF (.NOT.c_e(lfinish)) lfinish = MAXVAL(sample, mask=lmask)
 IF (lfinish <= lstart) RETURN
 
 incr = (lfinish-lstart)/nbin
@@ -692,10 +716,10 @@ ENDDO
 lbinbounds(nbin+1) = lfinish ! set exact value to avoid truncation error
 
 DO i = 1, nbin-1
-  bin(i) = COUNT(sample >= lbinbounds(i) .AND. sample < lbinbounds(i+1))
+  bin(i) = COUNT(sample >= lbinbounds(i) .AND. sample < lbinbounds(i+1) .AND. lmask)
 !, .AND. c_e(sample))
 ENDDO
-bin(nbin) = COUNT(sample >= lbinbounds(nbin) .AND. sample <= lbinbounds(nbin+1))
+bin(nbin) = COUNT(sample >= lbinbounds(nbin) .AND. sample <= lbinbounds(nbin+1) .AND. lmask)
 !, .AND. c_e(sample)) ! special case, include upper limit
 
 IF (PRESENT(binbounds)) binbounds = lbinbounds
@@ -703,20 +727,29 @@ IF (PRESENT(binbounds)) binbounds = lbinbounds
 END SUBROUTINE stat_binr
 
 
-SUBROUTINE stat_binr2(sample, bin, nbin, start, finish, binbounds)
+! alternative algorithm, probably faster with big samples, to be tested
+SUBROUTINE stat_binr2(sample, bin, nbin, start, finish, mask, binbounds)
 REAL,INTENT(in) :: sample(:)
 INTEGER,INTENT(out),ALLOCATABLE :: bin(:)
 INTEGER,INTENT(in) :: nbin
 REAL,INTENT(in),OPTIONAL :: start
 REAL,INTENT(in),OPTIONAL :: finish
+LOGICAL,INTENT(in),OPTIONAL :: mask(:)
 REAL,INTENT(out),ALLOCATABLE,OPTIONAL :: binbounds(:)
 
 INTEGER :: i, ind
 REAL :: lstart, lfinish, incr
+LOGICAL :: lmask(SIZE(sample))
 
 ! safety checks
 IF (nbin < 1) RETURN
-IF (COUNT(c_e(sample)) < 1) RETURN
+IF (PRESENT(mask)) THEN
+  lmask = mask
+ELSE
+  lmask =.TRUE.
+ENDIF
+lmask = lmask .AND. c_e(sample)
+IF (COUNT(lmask) < 1) RETURN
 
 lstart = optio_r(start)
 IF (.NOT.c_e(lstart)) lstart = MINVAL(sample, mask=c_e(sample))
@@ -730,7 +763,7 @@ ALLOCATE(bin(nbin))
 bin(:) = 0
 
 DO i = 1, SIZE(sample)
-  IF (c_e(sample(i))) THEN
+  IF (lmask(i)) THEN
     ind = INT((sample(i)-lstart)/incr) + 1
     IF (ind > 0 .AND. ind <= nbin) THEN
       bin(ind) = bin(ind) + 1
@@ -751,11 +784,64 @@ ENDIF
 END SUBROUTINE stat_binr2
 
 
-FUNCTION stat_mode_histogramr(sample, nbin, start, finish) RESULT(mode)
+SUBROUTINE stat_bind(sample, bin, nbin, start, finish, mask, binbounds)
+DOUBLE PRECISION,INTENT(in) :: sample(:)
+INTEGER,INTENT(out),ALLOCATABLE :: bin(:)
+INTEGER,INTENT(in) :: nbin
+DOUBLE PRECISION,INTENT(in),OPTIONAL :: start
+DOUBLE PRECISION,INTENT(in),OPTIONAL :: finish
+LOGICAL,INTENT(in),OPTIONAL :: mask(:)
+DOUBLE PRECISION,INTENT(out),ALLOCATABLE,OPTIONAL :: binbounds(:)
+
+INTEGER :: i, ind
+DOUBLE PRECISION :: lstart, lfinish, incr
+DOUBLE PRECISION,ALLOCATABLE :: lbinbounds(:)
+LOGICAL :: lmask(SIZE(sample))
+
+! safety checks
+IF (nbin < 1) RETURN
+IF (PRESENT(mask)) THEN
+  lmask = mask
+ELSE
+  lmask =.TRUE.
+ENDIF
+lmask = lmask .AND. c_e(sample)
+IF (COUNT(lmask) < 1) RETURN
+
+lstart = optio_d(start)
+IF (.NOT.c_e(lstart)) lstart = MINVAL(sample, mask=lmask)
+lfinish = optio_d(finish)
+IF (.NOT.c_e(lfinish)) lfinish = MAXVAL(sample, mask=lmask)
+IF (lfinish <= lstart) RETURN
+
+incr = (lfinish-lstart)/nbin
+ALLOCATE(bin(nbin))
+
+ALLOCATE(lbinbounds(nbin+1))
+
+DO i = 1, nbin
+  lbinbounds(i) = lstart + (i-1)*incr
+ENDDO  
+lbinbounds(nbin+1) = lfinish ! set exact value to avoid truncation error
+
+DO i = 1, nbin-1
+  bin(i) = COUNT(sample >= lbinbounds(i) .AND. sample < lbinbounds(i+1) .AND. lmask)
+!, .AND. c_e(sample))
+ENDDO
+bin(nbin) = COUNT(sample >= lbinbounds(nbin) .AND. sample <= lbinbounds(nbin+1) .AND. lmask)
+!, .AND. c_e(sample)) ! special case, include upper limit
+
+IF (PRESENT(binbounds)) binbounds = lbinbounds
+
+END SUBROUTINE stat_bind
+
+
+FUNCTION stat_mode_histogramr(sample, nbin, start, finish, mask) RESULT(mode)
 REAL,INTENT(in) :: sample(:)
 INTEGER,INTENT(in) :: nbin
 REAL,INTENT(in),OPTIONAL :: start
 REAL,INTENT(in),OPTIONAL :: finish
+LOGICAL,INTENT(in),OPTIONAL :: mask(:)
 
 REAL :: mode
 
@@ -763,7 +849,7 @@ INTEGER :: loc(1)
 INTEGER,ALLOCATABLE :: bin(:)
 REAL,ALLOCATABLE :: binbounds(:)
 
-CALL stat_bin(sample, bin, nbin, start, finish, binbounds)
+CALL stat_bin(sample, bin, nbin, start, finish, mask, binbounds)
 mode = rmiss
 IF (ALLOCATED(bin)) THEN
   loc = MAXLOC(bin)
@@ -771,6 +857,29 @@ IF (ALLOCATED(bin)) THEN
 ENDIF
 
 END FUNCTION stat_mode_histogramr
+
+
+FUNCTION stat_mode_histogramd(sample, nbin, start, finish, mask) RESULT(mode)
+DOUBLE PRECISION,INTENT(in) :: sample(:)
+INTEGER,INTENT(in) :: nbin
+DOUBLE PRECISION,INTENT(in),OPTIONAL :: start
+DOUBLE PRECISION,INTENT(in),OPTIONAL :: finish
+LOGICAL,INTENT(in),OPTIONAL :: mask(:)
+
+DOUBLE PRECISION :: mode
+
+INTEGER :: loc(1)
+INTEGER,ALLOCATABLE :: bin(:)
+DOUBLE PRECISION,ALLOCATABLE :: binbounds(:)
+
+CALL stat_bin(sample, bin, nbin, start, finish, mask, binbounds)
+mode = rmiss
+IF (ALLOCATED(bin)) THEN
+  loc = MAXLOC(bin)
+  mode = (binbounds(loc(1)) + binbounds(loc(1)+1))*0.5D0
+ENDIF
+
+END FUNCTION stat_mode_histogramd
 
 !!$ Calcolo degli NDI calcolati
 !!$
