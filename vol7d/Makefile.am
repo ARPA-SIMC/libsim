@@ -105,23 +105,21 @@ vol7d_dballe_class_var_du.F90
 vol7d_dballe_class.lo: vol7d_class.$(OBJEXT) \
 vol7d_dballe_class_var_du.F90
 
-if ALCHIMIA
-libsim_vol7d_la_SOURCES += vol7d_alchimia_class.F03
-AM_FCFLAGS += -I../alchimia
-libsim_vol7d_la_LIBADD += ../alchimia/libsim_alchimia.la
-endif
-
 if F2003_EXTENDED_FEATURES
 check_PROGRAMS += dballe_test
 dballe_test_SOURCES = dballe_test.F03
 dballe_test_LDADD = libsim_vol7d.la
 dist_check_SCRIPTS += dballe_test.sh
 endif
-# for tests/examples
+endif
+
+if ALCHIMIA
+libsim_vol7d_la_SOURCES += vol7d_alchimia_class.F03
+AM_FCFLAGS += -I../alchimia
+libsim_vol7d_la_LIBADD += ../alchimia/libsim_alchimia.la
 endif
 
 EXTRA_DIST += dballe_test_copy1fmem.test  dballe_test_copy1f.test
-
 
 if NETCDF
 vol7d_netcdf_class.$(OBJEXT): vol7d_class.$(OBJEXT)
