@@ -1110,13 +1110,24 @@ end subroutine dbasession_close_message
 subroutine dbasession_messages_open_input(session,filename,mode,format,simplified)
 class(dbasession), intent(in) :: session
 character (len=*), intent(in) :: filename !< file name to open
-character (len=*), intent(in) :: mode !< "r"/"w"/"a" the open mode ("r" for read, "w" for write or create, "a" for append) 
-character (len=*), intent(in) :: format !< the file format. It can be "BUFR" or "CREX". (default="BUFR")
-logical, intent(in)           :: simplified !< rappresentation when interpret message (simplified/precise)
+character (len=*), intent(in),optional :: mode !< "r"/"w"/"a" the open mode ("r" for read, "w" for write or create, "a" for append) 
+character (len=*), intent(in),optional :: format !< the file format. It can be "BUFR" or "CREX". (default="BUFR")
+logical, intent(in),optional           :: simplified !< rappresentation when interpret message (simplified/precise)
 
 integer :: ier
+character (len=40) :: lmode, lformat
+logical :: lsimplified
 
-ier = idba_messages_open_input(session%sehandle, filename, mode, format, simplified)
+lmode="r"
+if (present(mode)) lmode=mode
+
+lformat="BUFR"
+if (present(format)) lformat=format
+
+lsimplified=.true.
+if (present(simplified)) lsimplified=simplified
+
+ier = idba_messages_open_input(session%sehandle, filename, lmode, lformat, lsimplified)
 
 end subroutine dbasession_messages_open_input
 
@@ -1247,7 +1258,7 @@ endif
 !write data in dsn
 
 !print *,"extrude dati:"
-call data%dbadc%display()
+!call data%dbadc%display()
 
 call data%dbadc%dbaset(session)
 call session%prendilo()
@@ -1270,7 +1281,7 @@ if (allocated(data%attrv%dcv)) then
 
       if (data%attrv%dcv(i)%dat%c_e()) then
         !print *,"extrude attributi:"
-        call data%attrv%dcv(i)%dat%display()
+        !call data%attrv%dcv(i)%dat%display()
         call data%attrv%dcv(i)%dat%dbaset(session)
         critica=.true.
       endif
@@ -1790,7 +1801,7 @@ class(dbametadata), intent(in) :: metadata
 type(dbasession), intent(in) :: session !< dballe session
 
 !print *,"extrude metadata:"
-call metadata%display()
+!call metadata%display()
 
 call metadata%ana%dbaset(session)
 call metadata%network%dbaset(session)
