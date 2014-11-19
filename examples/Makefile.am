@@ -52,10 +52,22 @@ if DBALLE
 noinst_PROGRAMS += esempio_v7ddballe esempio_v7ddballe_multi esempio_v7ddballe_import_export esempio_v7ddballe_export  example_v7ddballe_v7d2dba esempio_v7ddballe_move_and_collapse
 
 if F2003_EXTENDED_FEATURES
-noinst_PROGRAMS += example_dballe example_v7ddballenew_dba2v7d
+noinst_PROGRAMS += example_dballe example_dballe_read_list example_dballe_read_reallist example_dballe_read_vector example_dballe_read_real example_v7ddballenew_dba2v7d
 
 example_dballe_SOURCES = example_dballe.F03
 example_dballe_LDADD = ../base/libsim_base.la ../vol7d/libsim_vol7d.la ../log4fortran/liblog4fortran.la
+
+example_dballe_read_list_SOURCES = example_dballe_read_list.F03
+example_dballe_read_list_LDADD = ../base/libsim_base.la ../vol7d/libsim_vol7d.la ../log4fortran/liblog4fortran.la
+
+example_dballe_read_reallist_SOURCES = example_dballe_read_reallist.F03
+example_dballe_read_reallist_LDADD = ../base/libsim_base.la ../vol7d/libsim_vol7d.la ../log4fortran/liblog4fortran.la
+
+example_dballe_read_vector_SOURCES = example_dballe_read_vector.F03
+example_dballe_read_vector_LDADD = ../base/libsim_base.la ../vol7d/libsim_vol7d.la ../log4fortran/liblog4fortran.la
+
+example_dballe_read_real_SOURCES = example_dballe_read_real.F03
+example_dballe_read_real_LDADD = ../base/libsim_base.la ../vol7d/libsim_vol7d.la ../log4fortran/liblog4fortran.la
 
 example_v7ddballenew_dba2v7d_SOURCES = example_v7ddballenew_dba2v7d.f90
 example_v7ddballenew_dba2v7d_LDADD = ../base/libsim_base.la ../vol7d/libsim_vol7d.la ../log4fortran/liblog4fortran.la
