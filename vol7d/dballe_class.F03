@@ -90,6 +90,7 @@ type,public ::  dbasession
   character(len=40) :: format=cmiss !< format (bufr/crex)
   logical           :: simplified=.true. !< how to interpret input data
   logical           :: memdb=.false. !<  use memdb
+  logical           :: loadfile=.false. !<  load data in file into memdb
   type(dbaconnection) :: memconnection !< connection for memdb
   integer :: category=imiss !< log4fortran category
   integer :: count=imiss !< number of results left to query
@@ -2528,18 +2529,35 @@ end function currentdbametaanddatai
 
 
 !> get data from DSN
-subroutine dbasession_ingest_metaanddatail(session,metaanddatal)
+subroutine dbasession_ingest_metaanddatail(session,metaanddatal,filter)
 class(dbasession), intent(inout) :: session
 type(dbametaanddatailist), intent(inout) :: metaanddatal !< ingestd data
+type(dbafilter),intent(in),optional :: filter     !< use this to filter wanted data                
+
 type(dbametaanddatai) :: element
 
-call session%ingest_metaanddatai()
 
-do while (session%count >0)
-  call session%ingest_metaanddatai(element)
-  call metaanddatal%append(element)
+if (session%memdb .and. .not. session%loadfile)then
+
+  do while (session%messages_read_next())
+    call session%set(filter=filter)
+    call session%ingest_metaanddatai()
+    call session%ingest_metaanddatai(element)
+    call metaanddatal%append(element)
+    call session%remove_all()
+  end do
+
+else
+
+  call session%set(filter=filter)
   call session%ingest_metaanddatai()
-end do
+  do while (c_e(session%count) .and. session%count >0)
+    call session%ingest_metaanddatai(element)
+    call metaanddatal%append(element)
+    if (session%file) call session%ingest()
+  end do
+
+end if
 
 end subroutine dbasession_ingest_metaanddatail
 
@@ -2590,18 +2608,35 @@ end function currentdbametaanddatar
 
 
 !> get data from DSN
-subroutine dbasession_ingest_metaanddatarl(session,metaanddatal)
+subroutine dbasession_ingest_metaanddatarl(session,metaanddatal,filter)
 class(dbasession), intent(inout) :: session
 type(dbametaanddatarlist), intent(inout) :: metaanddatal !<ingestd data
+type(dbafilter),intent(in),optional :: filter     !< use this to filter wanted data                
+
 type(dbametaanddatar) :: element
 
-call session%ingest_metaanddatar()
+if (session%memdb .and. .not. session%loadfile)then
 
-do while (session%count >0)
-  call session%ingest_metaanddatar(element)
-  call metaanddatal%append(element)
+  do while (session%messages_read_next())
+    call session%set(filter=filter)
+    call session%ingest_metaanddatar()
+    call session%ingest_metaanddatar(element)
+    call metaanddatal%append(element)
+    call session%remove_all()
+  end do
+
+else
+
+  call session%set(filter=filter)
   call session%ingest_metaanddatar()
-end do
+  do while (c_e(session%count) .and. session%count >0)
+    call session%ingest_metaanddatar(element)
+    call metaanddatal%append(element)
+    if (session%file) call session%ingest()
+  end do
+
+end if
+
 
 end subroutine dbasession_ingest_metaanddatarl
 
@@ -2653,18 +2688,34 @@ end select
 end function currentdbametaanddatad
 
 !> get data from DSN
-subroutine dbasession_ingest_metaanddatadl(session,metaanddatal)
+subroutine dbasession_ingest_metaanddatadl(session,metaanddatal,filter)
 class(dbasession), intent(inout) :: session
 type(dbametaanddatadlist), intent(inout) :: metaanddatal !<ingestd data
+type(dbafilter),intent(in),optional :: filter     !< use this to filter wanted data                
+
 type(dbametaanddatad) :: element
 
-call session%ingest_metaanddatad()
+if (session%memdb .and. .not. session%loadfile)then
 
-do while (session%count >0)
-  call session%ingest_metaanddatad(element)
-  call metaanddatal%append(element)
+  do while (session%messages_read_next())
+    call session%set(filter=filter)
+    call session%ingest_metaanddatad()
+    call session%ingest_metaanddatad(element)
+    call metaanddatal%append(element)
+    call session%remove_all()
+  end do
+
+else
+
+  call session%set(filter=filter)
   call session%ingest_metaanddatad()
-end do
+  do while (c_e(session%count) .and. session%count >0)
+    call session%ingest_metaanddatad(element)
+    call metaanddatal%append(element)
+    if (session%file) call session%ingest()
+  end do
+
+end if
 
 end subroutine dbasession_ingest_metaanddatadl
 
@@ -2716,18 +2767,34 @@ end function currentdbametaanddatab
 
 
 !> get data from DSN
-subroutine dbasession_ingest_metaanddatabl(session,metaanddatal)
+subroutine dbasession_ingest_metaanddatabl(session,metaanddatal,filter)
 class(dbasession), intent(inout) :: session
 type(dbametaanddatablist), intent(inout) :: metaanddatal !<ingestd data
+type(dbafilter),intent(in),optional :: filter     !< use this to filter wanted data                
+
 type(dbametaanddatab) :: element
 
-call session%ingest_metaanddatab()
+if (session%memdb .and. .not. session%loadfile)then
 
-do while (session%count >0)
-  call session%ingest_metaanddatab(element)
-  call metaanddatal%append(element)
+  do while (session%messages_read_next())
+    call session%set(filter=filter)
+    call session%ingest_metaanddatab()
+    call session%ingest_metaanddatab(element)
+    call metaanddatal%append(element)
+    call session%remove_all()
+  end do
+
+else
+
+  call session%set(filter=filter)
   call session%ingest_metaanddatab()
-end do
+  do while (c_e(session%count) .and. session%count >0)
+    call session%ingest_metaanddatab(element)
+    call metaanddatal%append(element)
+    if (session%file) call session%ingest()
+  end do
+
+end if
 
 end subroutine dbasession_ingest_metaanddatabl
 
@@ -2779,18 +2846,34 @@ end function currentdbametaanddatac
 
 
 !> get data from DSN
-subroutine dbasession_ingest_metaanddatacl(session,metaanddatal)
+subroutine dbasession_ingest_metaanddatacl(session,metaanddatal,filter)
 class(dbasession), intent(inout) :: session
 type(dbametaanddataclist), intent(inout) :: metaanddatal!< ingestd data
+type(dbafilter),intent(in),optional :: filter     !< use this to filter wanted data                
+
 type(dbametaanddatac) :: element
 
-call session%ingest_metaanddatac()
+if (session%memdb .and. .not. session%loadfile)then
 
-do while (session%count >0)
-  call session%ingest_metaanddatac(element)
-  call metaanddatal%append(element)
+  do while (session%messages_read_next())
+    call session%set(filter=filter)
+    call session%ingest_metaanddatac()
+    call session%ingest_metaanddatac(element)
+    call metaanddatal%append(element)
+    call session%remove_all()
+  end do
+
+else
+
+  call session%set(filter=filter)
   call session%ingest_metaanddatac()
-end do
+  do while (c_e(session%count) .and. session%count >0)
+    call session%ingest_metaanddatac(element)
+    call metaanddatal%append(element)
+    if (session%file) call session%ingest()
+  end do
+
+end if
 
 end subroutine dbasession_ingest_metaanddatacl
 
@@ -3289,7 +3372,7 @@ type(dbafilter),intent(in),optional :: filter     !< use this to filter wanted d
 type(dbametaanddata),allocatable :: metaanddatavbuf(:)
 integer :: i
 
-if (session%memdb)then
+if (session%memdb .and. .not. session%loadfile)then
 
   do while (session%messages_read_next())
     call session%set(filter=filter)
@@ -3599,7 +3682,7 @@ end subroutine dbaconnection_delete
 !> Constructor
 !! Without parameter it is initialized to missing
 recursive type(dbasession) function dbasession_init(connection,anaflag, dataflag, attrflag,&
- filename,mode,format,template,write,wipe,repinfo,simplified,memdb,categoryappend)
+ filename,mode,format,template,write,wipe,repinfo,simplified,memdb,loadfile,categoryappend)
 type(dbaconnection),intent(in),optional :: connection !< dballe connection
 character (len=*), intent(in), optional :: anaflag !< controls access to pseudoana records and can have these values "read": pseudoana records cannot be modified; "write": pseudoana records can be added and removed. 
 character (len=*), intent(in), optional :: dataflag !< control access to observed data and can have these values "read": data cannot be modified in any way; "add": data can be added to the database, but existing data cannot be modified. Deletions are disabled. This is used to insert new data in the database while preserving the data that was already present in it; "write": data can freely be added, overwritten and deleted.
@@ -3612,7 +3695,8 @@ logical,INTENT(in),OPTIONAL :: wipe !<  clean DSN/file and initialize it ( defau
 character(len=*), INTENT(in),OPTIONAL :: repinfo !< optional file repinfo.csv to use with wipe ( default="" )
 character(len=*),intent(in),optional :: format !< the file format. It can be "BUFR" or "CREX". (default="BUFR")
 logical,intent(in),optional :: simplified !< rappresentation for interpreted message (simplified/precise)
-logical,intent(in),optional :: memdb     !< if true import from file to memdb (default=true if filename present else false)
+logical,intent(in),optional :: memdb     !< if true set a memdb ready for import data from file (default=true if filename present else false)
+logical,intent(in),optional :: loadfile     !< if true import from file to memdb (default=true if filename present else false)
 character(len=*),INTENT(in),OPTIONAL :: categoryappend !< name to append to namespace category of log4fortran
 
 integer :: ier
@@ -3621,7 +3705,7 @@ character (len=1) :: lmode
 logical :: quiwrite,quiwipe
 character(len=255) :: quirepinfo
 character(len=40) :: lformat
-logical :: exist,lsimplified
+logical :: exist,lsimplified,read_next
 character(len=512) :: a_name
 
 ! those are assigned by the default constructor?
@@ -3656,6 +3740,12 @@ if (present(memdb))then
   dbasession_init%memdb=memdb
 else
   dbasession_init%memdb=.false.
+end if
+
+if (present(loadfile))then
+  dbasession_init%loadfile=loadfile
+else
+  dbasession_init%loadfile=.false.
 end if
 
 
@@ -3705,12 +3795,23 @@ if (present(filename)) then
     dbasession_init%memdb=.true. ! default with filename
   end if
 
+  if (.not.present(loadfile))then
+    dbasession_init%loadfile=.true. ! default with filename
+  end if
+
   if (dbasession_init%memdb)then
                                 ! connect to dsn type DBA
     dbasession_init%memconnection=dbaconnection(dsn="mem:")
     dbasession_init=dbasession(dbasession_init%memconnection,anaflag=anaflag, dataflag=dataflag, attrflag=attrflag,&
-     memdb=dbasession_init%memdb)
+     memdb=dbasession_init%memdb,loadfile=dbasession_init%loadfile)
     call dbasession_init%messages_open_input(filename=filename,mode=lmode,format=lformat,simplified=lsimplified)
+
+    if (dbasession_init%loadfile)then
+      read_next = dbasession_init%messages_read_next()
+      do while (read_next) 
+        read_next = dbasession_init%messages_read_next()
+      end do
+    end if
 
   else
 

@@ -780,7 +780,7 @@ print *,"--------------- readmem ------------------------"
 
 ! create mem db where put bufr from file
 session=dbasession(connection,wipe=.true.,anaflag="write", dataflag="write", attrflag="write",&
- filename="example_dballe.bufr",mode="r",format="BUFR",memdb=.true.)
+ filename="example_dballe.bufr",mode="r",format="BUFR",memdb=.true.,loadfile=.false.)
 
 filter=dbafilter(var="B12101")
 ! in this case we have to pass filter and do not set it
@@ -805,10 +805,10 @@ print *,"--------------- read4l ------------------------"
 
 print *, "dati dati:"
 filter=dbafilter(var="B12102")
-call session%set(filter=filter)
+!call session%set(filter=filter)
 
 print*,"prima di ingest"
-call session%ingest(metaanddatal)
+call session%ingest(metaanddatal,filter=filter)
 print*,"prima di display"
 call metaanddatal%display()
 
