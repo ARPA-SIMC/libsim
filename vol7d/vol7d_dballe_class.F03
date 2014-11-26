@@ -225,7 +225,7 @@ if (optio_log(file)) then
 !!!!!  this for write in memdb and write file on export
     this%idbhandle=dbaconnection(dsn="mem:")
     this%handle=dbasession(this%idbhandle,anaflag="write",dataflag="write",attrflag="write",wipe=.true.,&
-     write=.true.,repinfo=repinfo)
+     write=.true.,repinfo=repinfo,template=template)
     mode="w"    ! todo mode "a" ??
     call this%handle%messages_open_output(lfilename, mode, lformat)
 !!!!!
