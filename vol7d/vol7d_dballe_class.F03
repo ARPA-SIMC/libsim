@@ -1827,6 +1827,8 @@ type(dbafilter),intent(in)    :: filter !< filter o use
 !!  the special value "generic-frag is used to generate bufr on file where ana data is reported only once at beginning and data in other bufr after
 character(len=*),intent(in),optional :: template 
 
+character(len=40) :: ltemplate 
+
 type(dbametaanddatalist) :: metaanddatal
 logical :: stat
 
@@ -1851,7 +1853,13 @@ if (this%file) then
 
   ! note that you can use unsetall hera because the filter was used in extrude
   call filter%dbaset(this%handle)
-  call this%handle%messages_write_next(template)
+
+  ltemplate=this%handle%template
+  if (present(template))then
+    ltemplate=template
+  end if
+
+  call this%handle%messages_write_next(ltemplate)
   !clean memdb
   call this%handle%remove_all()
 
