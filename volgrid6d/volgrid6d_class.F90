@@ -1504,7 +1504,7 @@ TYPE(transform_def),INTENT(in) :: this !< object specifying the abstract transfo
 TYPE(griddim_def),INTENT(in),OPTIONAL :: griddim !< griddim specifying the output grid (required by most transformation types)
 ! TODO ripristinare intent(in) dopo le opportune modifiche in grid_class.F90
 TYPE(volgrid6d),INTENT(inout) :: volgrid6d_in !< object to be transformed, it is not modified, despite the INTENT(inout)
-TYPE(volgrid6d),INTENT(out) :: volgrid6d_out !< transformed object, it does not need initialisation
+TYPE(volgrid6d),INTENT(out) :: volgrid6d_out !< transformed object, it does not require initialisation
 TYPE(vol7d_level),INTENT(in),OPTIONAL,TARGET :: lev_out(:) !< vol7d_level object defining target vertical grid, for vertical interpolations
 TYPE(volgrid6d),INTENT(in),OPTIONAL :: volgrid6d_coord_in !< object providing time constant input vertical coordinate for some kind of vertical interpolations
 REAL,INTENT(in),OPTIONAL :: maskgrid(:,:) !< 2D field to be used for defining subareas according to its values, it must have the same shape as the field to be interpolated (for transformation subtype 'maskfill')
@@ -1851,7 +1851,7 @@ if (associated(volgrid6d_in%time))then
 
     nntime = count_distinct(reshape(validitytime,(/ntime*ntimerange/)), back=.TRUE.)
     vol7d_out%time=pack_distinct(reshape(validitytime,(/ntime*ntimerange/)), nntime,back=.TRUE.)
-  
+
   end if
 end if
 
@@ -1947,7 +1947,7 @@ SUBROUTINE volgrid6d_v7d_transform(this, volgrid6d_in, vol7d_out, v7d, &
  maskgrid, maskbounds, networkname, noconvert, categoryappend)
 TYPE(transform_def),INTENT(in) :: this !< object specifying the abstract transformation
 TYPE(volgrid6d),INTENT(inout) :: volgrid6d_in !< object to be transformed, it is not modified, despite the INTENT(inout)
-TYPE(vol7d),INTENT(out) :: vol7d_out !< transformed object, it does not need initialisation
+TYPE(vol7d),INTENT(out) :: vol7d_out !< transformed object, it does not requires initialisation
 TYPE(vol7d),INTENT(in),OPTIONAL :: v7d !< object containing a list of points over which transformation has to be done (required by some transformation types)
 REAL,INTENT(in),OPTIONAL :: maskgrid(:,:) !< 2D field to be used for defining subareas according to its values, it must have the same shape as the field to be interpolated (for transformation type 'maskinter')
 REAL,INTENT(in),OPTIONAL :: maskbounds(:) !< array of boundary values for defining subareas from the values of \a maskgrid, the number of subareas is SIZE(maskbounds) - 1, if not provided a default based on extreme values of \a makgrid is used
@@ -2077,7 +2077,7 @@ SUBROUTINE volgrid6dv_v7d_transform(this, volgrid6d_in, vol7d_out, v7d, &
  maskgrid, maskbounds, networkname, noconvert, categoryappend)
 TYPE(transform_def),INTENT(in) :: this !< object specifying the abstract transformation
 TYPE(volgrid6d),INTENT(inout) :: volgrid6d_in(:) !< object to be transformed, it is an array of volgrid6d objects, each of which will be transformed, it is not modified, despite the INTENT(inout)
-TYPE(vol7d),INTENT(out) :: vol7d_out !< transformed object, it does not need initialisation
+TYPE(vol7d),INTENT(out) :: vol7d_out !< transformed object, it does not require initialisation
 TYPE(vol7d),INTENT(in),OPTIONAL :: v7d !< object containing a list of points over which transformation has to be done (required by some transformation types)
 REAL,INTENT(in),OPTIONAL :: maskgrid(:,:) !< 2D field to be used for defining subareas according to its values, it must have the same shape as the field to be interpolated (for transformation type 'maskinter')
 REAL,INTENT(in),OPTIONAL :: maskbounds(:) !< array of boundary values for defining subareas from the values of \a maskgrid, the number of subareas is SIZE(maskbounds) - 1, if not provided a default based on extreme values of \a makgrid is used
@@ -2218,7 +2218,7 @@ TYPE(transform_def),INTENT(in) :: this !< object specifying the abstract transfo
 TYPE(griddim_def),INTENT(in),OPTIONAL :: griddim !< griddim specifying the output grid (required by most transformation types)
 ! TODO ripristinare intent(in) dopo le opportune modifiche in grid_class.F90
 TYPE(vol7d),INTENT(inout) :: vol7d_in !< object to be transformed, it is not modified, despite the INTENT(inout)
-TYPE(volgrid6d),INTENT(out) :: volgrid6d_out !< transformed object, it does not need initialisation
+TYPE(volgrid6d),INTENT(out) :: volgrid6d_out !< transformed object, it does not require initialisation
 CHARACTER(len=*),OPTIONAL,INTENT(in) :: networkname  !< select the network to be processed from the \a vol7d input object, default the first network
 TYPE(grid_id),OPTIONAL,INTENT(in) :: gaid_template !< the template (typically grib_api) to be associated with output data, it also helps in improving variable conversion
 CHARACTER(len=*),INTENT(in),OPTIONAL :: categoryappend !< append this suffix to log4fortran namespace category
@@ -2323,7 +2323,7 @@ SUBROUTINE v7d_v7d_transform(this, vol7d_in, vol7d_out, v7d, lev_out, vol7d_coor
  categoryappend)
 TYPE(transform_def),INTENT(in) :: this !< object specifying the abstract transformation
 TYPE(vol7d),INTENT(inout) :: vol7d_in !< object to be transformed, it is not modified, despite the INTENT(inout)
-TYPE(vol7d),INTENT(out) :: vol7d_out !< transformed object, it does not need initialisation
+TYPE(vol7d),INTENT(out) :: vol7d_out !< transformed object, it does not require initialisation
 TYPE(vol7d),INTENT(in),OPTIONAL :: v7d !< object containing a list of points over which transformation has to be done (required by some transformation types)
 TYPE(vol7d_level),INTENT(in),OPTIONAL,TARGET :: lev_out(:) !< vol7d_level object defining target vertical grid, for vertical interpolations
 TYPE(vol7d),INTENT(in),OPTIONAL :: vol7d_coord_in !< object providing time constant input vertical coordinate for some kind of vertical interpolations
