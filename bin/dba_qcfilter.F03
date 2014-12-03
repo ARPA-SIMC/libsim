@@ -12,8 +12,8 @@ use err_handling
 
 implicit none
 
-type(dbasession) :: sessionfrom,sessionto
-type(dbaconnection) :: connectionfrom
+type(dbasession) :: sessionfrom
+type(dbaconnection) :: connection
 
 
 type(dbametaanddata),allocatable :: metaanddatav(:)
@@ -88,8 +88,8 @@ filter=dbafilter(starvars=starvars)
 !call filter%display()
 
 ! connect to dsn type BUFR file for read
-connectionfrom=dbaconnection(dsn="mem:")
-sessionfrom=dbasession(connectionfrom,wipe=.true.,anaflag="write", dataflag="write", attrflag="write")
+connection=dbaconnection(dsn="mem:")
+sessionfrom=dbasession(connection,write=.true.,wipe=.true.)
 call sessionfrom%messages_open_input(filename=input_file,mode="r",format="BUFR",simplified=.true.)
 
 call sessionfrom%messages_open_output(filename=output_file,mode="w",format="BUFR")
@@ -175,7 +175,7 @@ do while (sessionfrom%messages_read_next())
 end do
 
 !close everythings
-call sessionto%delete()
+!call sessionto%delete()
 call sessionfrom%delete()
 
 

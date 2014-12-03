@@ -110,7 +110,7 @@ man_MANS += v7d_plot_sound.1
 endif
 if DBALLE
 if F2003_EXTENDED_FEATURES
-man_MANS += dba_qcfilter.1
+man_MANS += dba_qcfilter.1 dba_transform.1
 endif
 endif
 
