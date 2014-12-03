@@ -3702,11 +3702,12 @@ character(len=*),INTENT(in),OPTIONAL :: categoryappend !< name to append to name
 integer :: ier
 character (len=5) :: lanaflag,ldataflag,lattrflag
 character (len=1) :: lmode
-logical :: quiwrite,quiwipe
-character(len=255) :: quirepinfo
+logical :: lwrite,lwipe
+character(len=255) :: lrepinfo
 character(len=40) :: lformat
-logical :: exist,lsimplified,read_next
+logical :: exist,lsimplified,read_next,lfile,lmemdb,lloadfile
 character(len=512) :: a_name
+character(len=40) :: ltemplate
 
 ! those are assigned by the default constructor?
 !!$dbasession_init%sehandle=imiss
@@ -3722,44 +3723,50 @@ endif
 dbasession_init%category=l4f_category_get(a_name)
 
 
-quiwrite=.false.
+lwrite=.false.
 if (present(write))then
-  quiwrite=write
+  lwrite=write
 endif
 
-quiwipe=.false.
-quirepinfo=""
+lwipe=.false.
+lrepinfo=""
 if (present(wipe))then
-  quiwipe=wipe
+  lwipe=wipe
   if (present(repinfo))then
-    quirepinfo=repinfo
+    lrepinfo=repinfo
   endif
 endif
 
-if (present(memdb))then
-  dbasession_init%memdb=memdb
+lmemdb=.false.
+lloadfile=.false.
+lfile=.false.
+
+if (present(template))then
+  ltemplate=template
 else
-  dbasession_init%memdb=.false.
+  ltemplate=cmiss
+endif
+
+lsimplified=.true.
+if (present(simplified))then
+  lsimplified=simplified
 end if
 
-if (present(loadfile))then
-  dbasession_init%loadfile=loadfile
-else
-  dbasession_init%loadfile=.false.
+lformat="BUFR"
+if (present(format))then
+  lformat=format
 end if
 
+lmode="r"
 
 if (present(filename)) then
 
-  if (present(template))then
-    dbasession_init%template=template
-  endif
-  
+  lfile=.true.
+
   inquire(file=filename,EXIST=exist)
   
-  lmode="r"
-  if (quiwrite)then
-    if (quiwipe.or..not.exist) then
+  if (lwrite)then
+    if (lwipe.or..not.exist) then
       lmode="w"
     else
       lmode="a"
@@ -3774,23 +3781,6 @@ if (present(filename)) then
 
   if (present(mode)) lmode = mode
 
-  lformat="BUFR"
-  if (present(format))then
-    lformat=format
-  end if
-
-  lsimplified=.true.
-  if (present(simplified))then
-    lsimplified=simplified
-  end if
-
-  
-  dbasession_init%file=.true.
-  dbasession_init%filename=filename
-  dbasession_init%mode=lmode
-  dbasession_init%format=lformat
-  dbasession_init%simplified=lsimplified
-
   if (.not.present(memdb))then
     dbasession_init%memdb=.true. ! default with filename
   end if
@@ -3799,60 +3789,123 @@ if (present(filename)) then
     dbasession_init%loadfile=.true. ! default with filename
   end if
 
-  if (dbasession_init%memdb)then
-                                ! connect to dsn type DBA
-    dbasession_init%memconnection=dbaconnection(dsn="mem:")
-    dbasession_init=dbasession(dbasession_init%memconnection,anaflag=anaflag, dataflag=dataflag, attrflag=attrflag,&
-     memdb=dbasession_init%memdb,loadfile=dbasession_init%loadfile)
-    call dbasession_init%messages_open_input(filename=filename,mode=lmode,format=lformat,simplified=lsimplified)
+end if
 
-    if (dbasession_init%loadfile)then
-      read_next = dbasession_init%messages_read_next()
-      do while (read_next) 
-        read_next = dbasession_init%messages_read_next()
-      end do
+if (present(memdb))then
+  lmemdb=memdb
+end if
+
+if (present(loadfile))then
+  lloadfile=loadfile
+end if
+
+
+call optio(anaflag,lanaflag)
+if (.not. c_e(lanaflag))then
+  if (lwrite) then
+    lanaflag = "write"
+  else
+    lanaflag = "read"
+  end if
+end if
+
+call optio(dataflag,ldataflag)
+if (.not. c_e(ldataflag)) then
+  if (lwrite) then
+    ldataflag = "write"
+  else
+    ldataflag = "read"
+  end if
+end if
+
+call optio(attrflag,lattrflag)
+if (.not. c_e(lattrflag))then
+  if (lwrite) then
+    lattrflag = "write"
+  else
+    lattrflag = "read"
+  end if
+end if
+
+if (.not.lfile) then
+  if(.not. present(connection)) then
+    call l4f_category_log(dbasession_init%category,L4F_ERROR,"connection not present accessing DBA")
+    CALL raise_error()
+  end if
+  
+  if (present(mode).or.present(format).or.present(template).or.present(simplified)) then
+    call l4f_category_log(dbasession_init%category,L4F_ERROR,&
+     "option mode or format or template or simplified defined without filename")
+    CALL raise_error()
+  end if
+
+  if (present(anaflag).or.present(dataflag).or.present( attrflag)) then
+    call l4f_category_log(dbasession_init%category,L4F_ERROR,"option anaflag, dataflag, attrflag defined with filename access")
+    CALL raise_error()
+  end if
+end if
+
+
+! check filename for recursive call
+if (present(filename))then
+  if (lmemdb)then
+    if (.not. present(connection)) then
+                                ! connect to dsn type DBA
+      dbasession_init%memconnection=dbaconnection(dsn="mem:")
+      !call self with memconnection without filename 
+      dbasession_init=dbasession(dbasession_init%memconnection,&
+       write=.true.,wipe=lwrite,repinfo=lrepinfo,&
+       memdb=lmemdb,loadfile=lloadfile) ! without categoryappend
+      
     end if
+
+      if (lmode == "r") then
+        call dbasession_init%messages_open_input(filename=filename,mode=lmode,&
+         format=lformat,simplified=lsimplified)
+        
+        if (lloadfile)then
+          read_next = dbasession_init%messages_read_next()
+          do while (read_next) 
+            read_next = dbasession_init%messages_read_next()
+          end do
+        end if
+      else
+        
+        call dbasession_init%messages_open_output(filename=filename,&
+         mode=lmode,format=lformat)
+
+      end if
 
   else
 
-    if (present(anaflag).or.present(dataflag).or.present( attrflag)) then
-      call l4f_category_log(dbasession_init%category,L4F_ERROR,"option anaflag, dataflag, attrflag defined with filename")
-      CALL raise_error()
-    end if
-  
     ier =  idba_messaggi(dbasession_init%sehandle,filename, lmode, lformat)
 
   end if
 
 else
   
-  if (.not. present(connection)) then
-    call l4f_category_log(dbasession_init%category,L4F_ERROR,"connection not present accessing DBA")
-    CALL raise_error()
-  end if
-
-  if (present(mode).or.present(format).or.present(template)) then
-    call l4f_category_log(dbasession_init%category,L4F_ERROR,"option mode or format or template defined without filename")
-    CALL raise_error()
-  end if
-
-  call optio(anaflag,lanaflag)
-  if (.not. c_e(lanaflag)) lanaflag = "read"
-
-  call optio(dataflag,ldataflag)
-  if (.not. c_e(ldataflag)) ldataflag = "read"
-
-  call optio(attrflag,lattrflag)
-  if (.not. c_e(lattrflag)) lattrflag = "read"
-
   ier = idba_preparati(connection%dbhandle,dbasession_init%sehandle, lanaflag, ldataflag, lattrflag)
-
-  dbasession_init%file=.false.
-
-  if (quiwipe)ier=idba_scopa (dbasession_init%sehandle,quirepinfo)
+  if (lwipe)ier=idba_scopa (dbasession_init%sehandle,lrepinfo)
 
 end if
 
+dbasession_init%file=lfile
+if (dbasession_init%file) dbasession_init%filename=filename
+dbasession_init%mode=lmode
+dbasession_init%format=lformat
+dbasession_init%simplified=lsimplified
+dbasession_init%memdb=lmemdb
+dbasession_init%loadfile=lloadfile
+dbasession_init%template=ltemplate
+
+!!$print *,'file',dbasession_init%file
+!!$print *,'filename',trim(dbasession_init%filename)
+!!$print *,'mode',dbasession_init%mode
+!!$print *,'format',dbasession_init%format
+!!$print *,'simplified',dbasession_init%simplified
+!!$print *,'memdb',dbasession_init%memdb
+!!$print *,'loadfile',dbasession_init%loadfile
+!!$print *,'template',dbasession_init%template
 
 end function dbasession_init
 

@@ -166,21 +166,19 @@ character(len=*), INTENT(in),OPTIONAL :: password !< per l'accesso al DSN ( defa
 logical,INTENT(in),OPTIONAL :: write !< abilita la scrittura sul DSN/file ( default=.false. )
 logical,INTENT(in),OPTIONAL :: wipe !<  svuota il DSN/file e/o lo prepara per una scrittura ( default=.false. )
 character(len=*), INTENT(in),OPTIONAL :: repinfo !< eventuale file repinfo.csv usato con wipe ( default="" )
-character(len=*),intent(inout),optional :: filename !< nome del file su cui scrivere; se passato ="" ritorna il valore rielaborato
-character(len=*),intent(in),optional :: format !< the file format. It can be "BUFR" or "CREX". (default="BUFR")
+character(len=*),intent(inout),optional :: filename !< nome dell'eventuale file da utilizzare in alternativa a dsn when file is true; se passato ="" ritorna un valore di deafult elaborato
+character(len=*),intent(in),optional :: format !< the file format when file is true. It can be "BUFR" or "CREX". (default="BUFR")
 logical,INTENT(in),OPTIONAL :: file !< switch to use file or data base ( default=.false )
 character(len=*),INTENT(in),OPTIONAL :: categoryappend !< appennde questo suffisso al namespace category di log4fortran
 integer,INTENT(in),OPTIONAL :: time_definition !< 0=time is reference time ; 1=time is validity time (default=1) 
 integer,INTENT(in),OPTIONAL :: idbhandle !< dsn connection; if present it will be used
 !> specificando category.subcategory.localcategory oppure un alias ("synop", "metar","temp","generic") forza l'exportazione ad uno specifico template BUFR/CREX"
 !!  the special value "generic-frag is used to generate bufr on file where ana data is reported only once at beginning and data in other bufr after
-character(len=*),intent(in),optional :: template 
+character(len=*),intent(in),optional :: template !< default template to use exporting to file; can be overwritten by export
 
-character(len=1):: mode  ! the open mode ("r" for read, "w" for write or create, "a" append) (comandato da "write", default="r" )
-logical :: quiwrite
+logical :: quiwrite,loadfile
 character(len=512) :: a_name
 character(len=254) :: arg,lfilename,lformat
-logical :: read_next
 
 
 quiwrite=.false.
@@ -216,44 +214,20 @@ if (optio_log(file)) then
   end if
 
   if(quiwrite)then
-
-!!!!!  this for write message by message without memdb
-!    this%handle=dbasession(filename=lfilename,wipe=wipe,&
-!     write=quiwrite,format=format,repinfo=repinfo,template=template,memdb=.false.)
-!!!!!
-
-!!!!!  this for write in memdb and write file on export
-    this%idbhandle=dbaconnection(dsn="mem:")
-    this%handle=dbasession(this%idbhandle,anaflag="write",dataflag="write",attrflag="write",wipe=.true.,&
-     write=.true.,repinfo=repinfo,filename=lfilename,template=template)
-    mode="w"    ! todo mode "a" ??
-    call this%handle%messages_open_output(lfilename, mode, lformat)
-!!!!!
-
+                                !   this for write in memdb and write file on export
+    loadfile=.false.
   else
-                                !print *,"import in mem:"
-    this%idbhandle=dbaconnection(dsn="mem:")
-    this%handle=dbasession(this%idbhandle,anaflag="write",dataflag="write",attrflag="write",wipe=.true.,&
-     write=.true.,repinfo=repinfo,template=template)
-    mode="r"
-    call this%handle%messages_open_input(lfilename, mode, lformat, simplified=.true.)
-    read_next = this%handle%messages_read_next()
-    do while (read_next) 
-      read_next = this%handle%messages_read_next()
-    end do
+    loadfile=.true.
   end if
+
+  this%handle=dbasession(wipe=wipe,write=quiwrite,repinfo=repinfo,filename=lfilename,template=template,&
+   memdb=.true.,loadfile=loadfile)
 
 else
 
   this%file=.false.
-
   this%idbhandle=dbaconnection(dsn,user,password,idbhandle=idbhandle)
-
-  if(quiwrite)then
-    this%handle=dbasession(this%idbhandle,"write","write","write",wipe=wipe,write=quiwrite,repinfo=repinfo)
-  else
-    this%handle=dbasession(this%idbhandle,"read","read","read",wipe=wipe,write=quiwrite,repinfo=repinfo)
-  end if
+  this%handle=dbasession(this%idbhandle,wipe=wipe,write=quiwrite,repinfo=repinfo)
 
 endif
 
