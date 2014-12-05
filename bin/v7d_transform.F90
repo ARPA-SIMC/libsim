@@ -465,7 +465,7 @@ IF (optstatus == optionparser_help) THEN
 ELSE IF (optstatus == optionparser_html) THEN
   CALL exit(0) ! generate a clean form
 ELSE IF (optstatus == optionparser_err) THEN
-  CALL l4f_category_log(category,L4F_ERROR,'in command-line parameters')
+  CALL l4f_category_log(category,L4F_ERROR,'in command-line arguments')
   CALL raise_fatal_error()
 ENDIF
 IF (version) THEN
@@ -593,7 +593,7 @@ IF (start_date /= '') THEN
   s_d = datetime_new(isodate=start_date)
   if (.not. c_e(s_d)) then
     CALL l4f_category_log(category, L4F_ERROR, &
-     'error in command-line parameters, wrong syntax for --start-date: ' &
+     'error in command-line arguments, wrong syntax for --start-date: ' &
      //start_date)
     CALL raise_fatal_error()
   end if
@@ -605,7 +605,7 @@ IF (end_date /= '') THEN
   e_d = datetime_new(isodate=end_date)
   if (.not. c_e(e_d)) then
     CALL l4f_category_log(category, L4F_ERROR, &
-     'error in command-line parameters, wrong syntax for --end-date: ' &
+     'error in command-line arguments, wrong syntax for --end-date: ' &
      //end_date)
     CALL raise_fatal_error()
   end if
@@ -620,7 +620,7 @@ IF (comp_start /= '') THEN
   c_s = datetime_new(isodate=comp_start)
   if (.not. c_e(c_s)) then
     CALL l4f_category_log(category, L4F_ERROR, &
-     'error in command-line parameters, wrong syntax for --comp-start: ' &
+     'error in command-line arguments, wrong syntax for --comp-start: ' &
      //comp_start)
     CALL raise_fatal_error()
   end if
@@ -632,7 +632,7 @@ IF (comp_stop /= '') THEN
   comp_e = datetime_new(isodate=comp_stop)
   if (.not. c_e(comp_e)) then
     CALL l4f_category_log(category, L4F_ERROR, &
-     'error in command-line parameters, wrong syntax for --comp-stop: ' &
+     'error in command-line arguments, wrong syntax for --comp-stop: ' &
      //comp_stop)
     CALL raise_fatal_error()
   end if
@@ -644,7 +644,7 @@ ENDIF
 CALL init(argparse, levelc, ',', nfield=n)
 IF (n < 4) THEN
   CALL l4f_category_log(category, L4F_ERROR, &
-   'error in command-line parameters, wrong syntax for --level: ' &
+   'error in command-line arguments, wrong syntax for --level: ' &
    //TRIM(levelc))
   CALL raise_fatal_error()
 ENDIF
@@ -659,7 +659,7 @@ CALL delete(argparse)
 CALL init(argparse, timerangec, ',', nfield=n)
 IF (n < 3) THEN
   CALL l4f_category_log(category, L4F_ERROR, &
-   'error in command-line parameters, wrong syntax for --timerange: ' &
+   'error in command-line arguments, wrong syntax for --timerange: ' &
    //TRIM(timerangec))
   CALL raise_fatal_error()
 ENDIF
@@ -673,7 +673,7 @@ CALL delete(argparse)
 CALL init(argparse, anac, ',', nfield=n)
 IF (n < 3) THEN
   CALL l4f_category_log(category, L4F_ERROR, &
-   'error in command-line parameters, wrong syntax for --ana: ' &
+   'error in command-line arguments, wrong syntax for --ana: ' &
    //TRIM(anac))
   CALL raise_fatal_error()
 ENDIF
@@ -699,7 +699,7 @@ IF (comp_stat_proc /= '') THEN
   CALL delete(argparse)
   IF (.NOT.c_e(istat_proc) .OR. .NOT.c_e(ostat_proc)) THEN
     CALL l4f_category_log(category, L4F_ERROR, &
-     'error in command-line parameters, wrong syntax for --comp-stat-proc: ' &
+     'error in command-line arguments, wrong syntax for --comp-stat-proc: ' &
      //TRIM(comp_stat_proc))
     CALL raise_fatal_error()
   ENDIF
@@ -752,7 +752,7 @@ IF (c_e(coord_file)) THEN
 #endif
   ELSE
     CALL l4f_category_log(category, L4F_ERROR, &
-     'error in command-line parameters, format '// &
+     'error in command-line arguments, format '// &
      TRIM(coord_format)//' in --coord-format not valid or not supported.')
       CALL raise_fatal_error()
   ENDIF
@@ -892,7 +892,7 @@ DO ninput = optind, iargc()-1
 
     IF (.NOT.ALLOCATED(nl) .OR. (.NOT.ALLOCATED(vl) .AND. .NOT.ALLOCATED(avl))) THEN
       CALL l4f_category_log(category, L4F_ERROR, &
-       'error in command-line parameters, it is necessary to provide --network-list')
+       'error in command-line arguments, it is necessary to provide --network-list')
       CALL l4f_category_log(category, L4F_ERROR, &
        'and either --variable-list or --anavariable-list with SIM Oracle source')
       CALL raise_fatal_error()
@@ -915,7 +915,7 @@ DO ninput = optind, iargc()-1
 
   ELSE
     CALL l4f_category_log(category, L4F_ERROR, &
-     'error in command-line parameters, format '// &
+     'error in command-line arguments, format '// &
      TRIM(input_format)//' in --input-format not valid or not supported.')
     CALL raise_fatal_error()
   ENDIF
@@ -1157,7 +1157,7 @@ if (comp_qc_ndi .or. comp_qc_perc) then
 !!$      clima_file=get_package_filepath(clima_file, filetype_data)
 !!$      CALL import(v7d_clima, filename=clima_file)
       CALL l4f_category_log(category, L4F_ERROR, &
-       'error in command-line parameters, format '// &
+       'error in command-line arguments, format '// &
        TRIM(extreme_format)//' in --extreme-format native not valid or not supported.')
       CALL raise_fatal_error()
  
@@ -1172,7 +1172,7 @@ if (comp_qc_ndi .or. comp_qc_perc) then
 #endif
     ELSE
       CALL l4f_category_log(category, L4F_ERROR, &
-       'error in command-line parameters, format '// &
+       'error in command-line arguments, format '// &
        TRIM(extreme_format)//' in --extreme-format not valid or not supported.')
       CALL raise_fatal_error()
     ENDIF
@@ -1395,7 +1395,7 @@ ELSE IF (output_format == 'netcdf') THEN
 
 ELSE IF (output_format /= '') THEN
   CALL l4f_category_log(category, L4F_ERROR, &
-   'error in command-line parameters, format '// &
+   'error in command-line arguments, format '// &
    TRIM(output_format)//' in --output-format not valid or not supported.')
   CALL raise_fatal_error()
 ENDIF
@@ -1442,7 +1442,7 @@ ELSE
   ELSE
     CALL optionparser_printhelp(opt)
     CALL l4f_category_log(category, L4F_ERROR, &
-     'error in command-line parameters, database access info '// &
+     'error in command-line arguments, database access info '// &
      TRIM(string)//' not valid.')
     CALL raise_fatal_error()
   ENDIF
@@ -1488,7 +1488,7 @@ DO i = 1, MIN(nc, SIZE(icol))
     j = j + 1
     icol(j) = 7
   CASE default
-    CALL l4f_category_log(category,L4F_ERROR,'error in command-line parameters, column '// &
+    CALL l4f_category_log(category,L4F_ERROR,'error in command-line arguments, column '// &
      ccol(w_s(i):w_e(i))//' in '//TRIM(par_name)//' not valid.')
     CALL raise_fatal_error()
   END SELECT
@@ -1500,7 +1500,7 @@ IF (check_all) THEN
   IF (ALL(icol /= vol7d_time_d) .OR. ALL(icol /= vol7d_timerange_d) .OR. &
    ALL(icol /= vol7d_level_d) .OR. ALL(icol /= vol7d_ana_d) .OR. &
    ALL(icol /= vol7d_network_d)) THEN
-    CALL l4f_category_log(category,L4F_ERROR,'error in command-line parameters, some columns missing in '//TRIM(par_name)//' .')
+    CALL l4f_category_log(category,L4F_ERROR,'error in command-line arguments, some columns missing in '//TRIM(par_name)//' .')
     CALL raise_fatal_error()
   ENDIF
   IF (ANY(icol == 7)) THEN

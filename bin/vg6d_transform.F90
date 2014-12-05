@@ -103,11 +103,11 @@ ier=l4f_init()
 category=l4f_category_get(a_name//".main")
 
 
-                                ! define the option parser
+! define the option parser
 opt = optionparser_new(description_msg= &
  'Gridded-field to gridded-field transformation application. &
  &It reads grib edition 1 and 2 and gdal-supported formats &
- &and zooms, interpolates or regrids data according to optional parameters. &
+ &and zooms, interpolates or regrids data according to optional arguments. &
  &The whole input data file is read and organized in memory, transformed, and &
  &written on output. So it is possible to perform multi-field processing &
  &like wind component transformation, but memory constraints limit the number &
@@ -117,7 +117,7 @@ opt = optionparser_new(description_msg= &
  &to be used as a template for the output file.', &
  usage_msg='Usage: vg6d_transform [options] inputfile outputfile')
 
-                                ! define command-line options
+! define command-line options
 CALL optionparser_add(opt, 'v', 'trans-type', trans_type, 'none', help= &
  'transformation type: ''inter'' for interpolation, ''boxinter'' for &
  &statistical interpolation on boxes, ''zoom'' for zooming, &
@@ -207,17 +207,17 @@ coord_file=cmiss
 #if defined (HAVE_SHAPELIB) || defined (HAVE_LIBGRIBAPI)
 CALL optionparser_add(opt, ' ', 'coord-file', coord_file, help= &
 #ifdef HAVE_SHAPELIB
- 'file in shp format with coordinates of polygons, required for maskgen transformation' &
+'file in shp format with coordinates of polygons, required for maskgen transformation' &
 #endif
 #if defined (HAVE_SHAPELIB) && defined (HAVE_LIBGRIBAPI)
- //' or '// &
+//' or '// &
 #endif
 #ifdef HAVE_LIBGRIBAPI
- 'file in grib format providing vertical coordinate of input data for vertical interpolation' &
+'file in grib format providing vertical coordinate of input data for vertical interpolation' &
 #endif
- )
+)
 #endif
-coord_format=cmiss
+coord_format=''
 #if defined (HAVE_SHAPELIB) || defined (HAVE_LIBGRIBAPI)
 CALL optionparser_add(opt, ' ', 'coord-format', coord_format, help= &
  'format of coord file (shp or grib_api)')
@@ -232,14 +232,14 @@ CALL optionparser_add(opt, ' ', 'output-format', output_format, &
 #endif
 help='format of output file, in the form ''name[:grid_definition]'''&
 #ifdef HAVE_LIBGRIBAPI
- //'; ''grib_api'' for gridded output in grib format, grid_definition is the &
+//'; ''grib_api'' for gridded output in grib format, grid_definition is the &
  &path name of a grib file in which the first message is used as a template &
  &for defining the output grid and'&
 #endif
 #ifdef VAPOR
- //'; ''vapor'' for gridded output in vdf format'&
+//'; ''vapor'' for gridded output in vdf format'&
 #endif
- //'; if this option includes a grid_definition, --type &
+//'; if this option includes a grid_definition, --type &
  &argument &c. are ignored, otherwise --type &c. define the output grid')
 
 CALL optionparser_add(opt, 'e', 'a-grid', c2agrid, help= &
@@ -312,17 +312,17 @@ CALL optionparser_add(opt, '', 'output-variable-list', output_variable_list, '',
 #endif
 
 
-                                ! help options
+! help options
 CALL optionparser_add_help(opt, 'h', 'help', help='show an help message and exit')
 CALL optionparser_add(opt, ' ', 'version', version, help='show version and exit')
 
-                                ! parse options and check for errors
+! parse options and check for errors
 CALL optionparser_parse(opt, optind, optstatus)
 
 IF (optstatus == optionparser_help) THEN
   CALL exit(0) ! generate a clean manpage
 ELSE IF (optstatus == optionparser_err) THEN
-  CALL l4f_category_log(category,L4F_ERROR,'in command-line parameters')
+  CALL l4f_category_log(category,L4F_ERROR,'in command-line arguments')
   CALL raise_fatal_error()
 ENDIF
 IF (version) THEN
@@ -413,7 +413,7 @@ IF (comp_stat_proc /= '') THEN
   CALL delete(argparse)
   IF (.NOT.c_e(istat_proc) .OR. .NOT.c_e(ostat_proc)) THEN
     CALL l4f_category_log(category, L4F_ERROR, &
-     'error in command-line parameters, wrong syntax for --comp-stat-proc: ' &
+     'error in command-line arguments, wrong syntax for --comp-stat-proc: ' &
      //TRIM(comp_stat_proc))
     CALL raise_fatal_error()
   ENDIF
@@ -423,57 +423,65 @@ CALL delete(opt)
 
 call l4f_category_log(category,L4F_INFO,"transforming from file:"//trim(input_file))
 call l4f_category_log(category,L4F_INFO,"transforming to   file:"//trim(output_file))
+
+CALL init(volgrid_coord)
+
+IF (c_e(coord_file)) THEN
+  IF (.FALSE.) THEN ! dummy clause
 #ifdef HAVE_SHAPELIB
-IF (coord_format == 'shp' .AND. c_e(coord_file)) THEN
-  CALL import(poly, coord_file)
-  IF (poly%arraysize <= 0) THEN
+  ELSE IF (coord_format == 'shp') THEN
+    CALL IMPORT(poly, coord_file)
+    IF (poly%arraysize <= 0) THEN
+      CALL l4f_category_log(category, L4F_ERROR, &
+       'error importing shapefile '//TRIM(coord_file))
+      CALL raise_fatal_error()
+    ENDIF
+#endif
+#ifdef HAVE_LIBGRIBAPI
+  ELSE IF (coord_format == 'grib_api') THEN
+
+    IF (trans_type == 'vertint') THEN ! for vertint I need a complete volume
+      CALL import(volgrid_coord_tmp, filename=coord_file, decode=.TRUE., &
+       time_definition=time_definition, categoryappend="input_coord")
+      CALL init(volgrid_coord)
+      IF (ASSOCIATED(volgrid_coord_tmp)) THEN
+        IF (SIZE(volgrid_coord_tmp) == 1) THEN ! assign the volume and cleanup
+          volgrid_coord = volgrid_coord_tmp(1)
+          CALL init(volgrid_coord_tmp(1))
+          DEALLOCATE(volgrid_coord_tmp)
+        ELSE ! zero or >1 different grids obtained
+          CALL l4f_category_log(category, L4F_ERROR, &
+           'error importing volgrid6d coord_file '//TRIM(coord_file)//', '// &
+           t2c(SIZE(volgrid_coord_tmp))//' different grids obtained instead of 1')
+          CALL raise_fatal_error()
+        ENDIF
+      ELSE ! error in importing
+        CALL l4f_category_log(category, L4F_ERROR, &
+         'error importing volgrid6d coord_file '//TRIM(coord_file))
+        CALL raise_fatal_error()
+      ENDIF
+
+    ELSE ! otherwise just a single 2d field
+      CALL import(maskgrid, coord_file, categoryappend='maskgrid')
+      IF (maskgrid%arraysize < 1) THEN
+        CALL l4f_category_log(category, L4F_ERROR, &
+         'error importing mask grid file '//TRIM(coord_file))
+        CALL raise_fatal_error()
+      ENDIF
+      CALL import(maskgrid%array(1))
+      ALLOCATE(maskfield(maskgrid%array(1)%griddim%dim%nx, maskgrid%array(1)%griddim%dim%ny))
+      maskfield(:,:) = decode_gridinfo(maskgrid%array(1))
+      CALL delete(maskgrid)
+
+    ENDIF
+#endif
+  ELSE
     CALL l4f_category_log(category, L4F_ERROR, &
-     'error importing shapefile '//TRIM(coord_file))
+     'error in command-line arguments, format '// &
+     TRIM(coord_format)//' in --coord-format not valid or not supported.')
     CALL raise_fatal_error()
   ENDIF
 ENDIF
-#endif
-
-CALL init(volgrid_coord)
-#ifdef HAVE_LIBGRIBAPI
-IF (coord_format == 'grib_api' .AND. c_e(coord_file)) THEN
-
-  IF (trans_type == 'vertint') THEN ! for vertint I need a complete volume
-    CALL import(volgrid_coord_tmp, filename=coord_file, decode=.TRUE., &
-     time_definition=time_definition, categoryappend="input_coord")
-    CALL init(volgrid_coord)
-    IF (ASSOCIATED(volgrid_coord_tmp)) THEN
-      IF (SIZE(volgrid_coord_tmp) == 1) THEN ! assign the volume and cleanup
-        volgrid_coord = volgrid_coord_tmp(1)
-        CALL init(volgrid_coord_tmp(1))
-        DEALLOCATE(volgrid_coord_tmp)
-      ELSE ! zero or >1 different grids obtained
-        CALL l4f_category_log(category, L4F_ERROR, &
-         'error importing volgrid6d coord_file '//TRIM(coord_file)//', '// &
-         t2c(SIZE(volgrid_coord_tmp))//' different grids obtained instead of 1')
-        CALL raise_fatal_error()
-      ENDIF
-    ELSE ! error in importing
-      CALL l4f_category_log(category, L4F_ERROR, &
-       'error importing volgrid6d coord_file '//TRIM(coord_file))
-      CALL raise_fatal_error()
-    ENDIF
-
-  ELSE ! otherwise just a single 2d field
-    CALL import(maskgrid, coord_file, categoryappend='maskgrid')
-    IF (maskgrid%arraysize < 1) THEN
-      CALL l4f_category_log(category, L4F_ERROR, &
-       'error importing mask grid file '//TRIM(coord_file))
-      CALL raise_fatal_error()
-    ENDIF
-    CALL import(maskgrid%array(1))
-    ALLOCATE(maskfield(maskgrid%array(1)%griddim%dim%nx, maskgrid%array(1)%griddim%dim%ny))
-    maskfield(:,:) = decode_gridinfo(maskgrid%array(1))
-    CALL delete(maskgrid)
-
-  ENDIF
-ENDIF
-#endif
 
 i = word_split(output_format, w_s, w_e, ':')
 IF (i >= 2) THEN ! grid from a grib template
@@ -544,7 +552,7 @@ IF (trans_type /= 'none') THEN ! transform
   CALL delete(volgrid)
 
 ELSE
-  
+
   volgrid_out => volgrid
 
 ENDIF
@@ -582,7 +590,7 @@ if (ASSOCIATED(volgrid_out) .and. output_variable_list /= " ") then
   end if
 
   CALL l4f_category_log(category,L4F_INFO,"alchemy completed")
-  
+
 end if
 #endif
 
@@ -615,7 +623,7 @@ call delete(vfnoracle)
 
 CALL l4f_category_log(category,L4F_INFO,"end")
 
-                                !chiudo il logger
+!chiudo il logger
 call l4f_category_delete(category)
 ier=l4f_fini()
 

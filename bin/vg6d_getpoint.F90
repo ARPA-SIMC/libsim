@@ -195,7 +195,7 @@ CALL optionparser_parse(opt, optind, optstatus)
 IF (optstatus == optionparser_help) THEN
   CALL exit(0) ! generate a clean manpage
 ELSE IF (optstatus == optionparser_err) THEN
-  CALL l4f_category_log(category,L4F_FATAL,'in command-line parameters')
+  CALL l4f_category_log(category,L4F_FATAL,'in command-line arguments')
   CALL raise_fatal_error()
 ENDIF
 IF (version) THEN
@@ -296,9 +296,9 @@ IF (c_e(coord_file)) THEN
 
   ELSE
     CALL l4f_category_log(category, L4F_ERROR, &
-     'error in command-line parameters, format '// &
+     'error in command-line arguments, format '// &
      TRIM(coord_format)//' in --coord-format not valid or not supported.')
-    CALL EXIT(1)
+    CALL raise_fatal_error()
   ENDIF
 ENDIF
 
@@ -392,7 +392,7 @@ ELSE IF (output_format == 'grib_api_csv') THEN
 
 ELSE IF (output_format /= '') THEN
   CALL l4f_category_log(category, L4F_ERROR, &
-   'error in command-line parameters, format '// &
+   'error in command-line arguments, format '// &
    TRIM(output_format)//' in --output-format not valid or not supported.')
   CALL EXIT(1)
 ENDIF

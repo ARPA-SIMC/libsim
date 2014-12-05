@@ -279,7 +279,8 @@ TYPE grid_transform
   DOUBLE PRECISION,POINTER :: vcoord_out(:) => NULL()
   LOGICAL,POINTER :: point_mask(:,:) => NULL()
   LOGICAL,POINTER :: stencil(:,:) => NULL()
-  REAL,POINTER :: coord_3d_in(:,:,:) => NULL()
+!  REAL,POINTER :: coord_3d_in(:,:,:) => NULL()
+  REAL,ALLOCATABLE :: coord_3d_in(:,:,:)
   LOGICAL :: recur = .FALSE.
   LOGICAL :: dolog = .FALSE. ! must compute log() of vert coord before vertint
 
@@ -717,7 +718,8 @@ TYPE(grid_transform),INTENT(out) :: this !< grid_transformation object
 TYPE(transform_def),INTENT(in) :: trans !< transformation object
 TYPE(vol7d_level),INTENT(in) :: lev_in(:) !< vol7d_level from input object
 TYPE(vol7d_level),INTENT(in) :: lev_out(:) !< vol7d_level object defining target vertical grid
-REAL,INTENT(in),OPTIONAL,TARGET :: coord_3d_in(:,:,:)
+!REAL,INTENT(in),OPTIONAL,TARGET :: coord_3d_in(:,:,:)
+REAL,INTENT(inout),OPTIONAL,ALLOCATABLE :: coord_3d_in(:,:,:)
 CHARACTER(len=*),INTENT(in),OPTIONAL :: categoryappend !< append this suffix to log4fortran namespace category
 
 DOUBLE PRECISION :: coord_in(SIZE(lev_in))
@@ -807,7 +809,7 @@ IF (this%trans%trans_type == 'vertint') THEN
         RETURN
       ENDIF
 
-      this%coord_3d_in => coord_3d_in
+      CALL MOVE_ALLOC(coord_3d_in, this%coord_3d_in) ! steal allocation
       IF (dolog) THEN
         WHERE(c_e(this%coord_3d_in) .AND. this%coord_3d_in > 0.0)
           this%coord_3d_in = LOG(this%coord_3d_in)
@@ -2394,7 +2396,7 @@ END SUBROUTINE grid_transform_init_common
 SUBROUTINE grid_transform_delete(this)
 TYPE(grid_transform),INTENT(inout) :: this !< grid_transform object
 
-call delete(this%trans)
+CALL delete(this%trans)
 
 this%innx=imiss
 this%inny=imiss
@@ -2425,6 +2427,7 @@ if (associated(this%vcoord_out)) deallocate (this%vcoord_out)
 if (associated(this%point_mask)) deallocate (this%point_mask)
 if (associated(this%stencil)) deallocate (this%stencil)
 if (associated(this%output_level_auto)) deallocate (this%output_level_auto)
+IF (ALLOCATED(this%coord_3d_in)) DEALLOCATE(this%coord_3d_in)
 this%valid = .FALSE.
 
 ! close the logger
@@ -2486,7 +2489,7 @@ END FUNCTION grid_transform_c_e
 !! of the \a RESHAPE() intrinsic function.
 RECURSIVE SUBROUTINE grid_transform_compute(this, field_in, field_out, var, &
  coord_3d_in)
-TYPE(grid_transform),INTENT(in) :: this !< grid_transformation object
+TYPE(grid_transform),INTENT(in),TARGET :: this !< grid_transformation object
 REAL,INTENT(in) :: field_in(:,:,:) !< input array
 REAL,INTENT(out) :: field_out(:,:,:) !< output array
 TYPE(vol7d_var),INTENT(in),OPTIONAL :: var !< physical variable to be interpolated, if provided, some ad-hoc algorithms may be used where possible
@@ -3083,7 +3086,7 @@ ELSE IF (this%trans%trans_type == 'vertint') THEN
 
     ELSE ! use coord_3d_in
 
-      IF (ASSOCIATED(this%coord_3d_in)) THEN
+      IF (ALLOCATED(this%coord_3d_in)) THEN
         coord_3d_in_act => this%coord_3d_in
 #ifdef DEBUG
         CALL l4f_category_log(this%category,L4F_DEBUG, &

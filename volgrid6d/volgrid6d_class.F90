@@ -1514,13 +1514,16 @@ CHARACTER(len=*),INTENT(in),OPTIONAL :: categoryappend !< append this suffix to 
 
 TYPE(grid_transform) :: grid_trans
 TYPE(vol7d_level),POINTER :: llev_out(:)
-TYPE(vol7d_level) :: output_levtype
+TYPE(vol7d_level) :: input_levtype, output_levtype
 TYPE(vol7d_var) :: vcoord_var
 INTEGER :: i, ntime, ntimerange, nlevel, nvar, var_coord_in, var_coord_vol, &
- cf_out, nxc, nyc, nxi, nyi, i3, i4, i5, i6
+ cf_out, nxc, nyc, nxi, nyi, i3, i4, i5, i6, &
+ k, ulstart, ulend, spos
+REAL,ALLOCATABLE :: coord_3d_in(:,:,:)
 TYPE(geo_proj) :: proj_in, proj_out
 CHARACTER(len=80) :: trans_type
 LOGICAL :: ldecode
+LOGICAL,ALLOCATABLE :: mask_in(:)
 
 #ifdef DEBUG
 call l4f_category_log(volgrid6d_in%category, L4F_DEBUG, "start volgrid6d_transform")
@@ -1605,7 +1608,11 @@ IF (trans_type == 'vertint') THEN
           CALL raise_error()
           RETURN
         ENDIF
+        CALL l4f_category_log(volgrid6d_in%category, L4F_INFO, &
+         'Coordinate for vertint found in coord volume at position '// &
+         t2c(var_coord_in))
 
+! check horizontal grid
 ! this is too strict (component flag and so on)
 !        IF (volgrid6d_coord_in%griddim /= volgrid6d_in%griddim) THEN
         CALL get_val(volgrid6d_coord_in%griddim, nx=nxc, ny=nyc)
@@ -1621,9 +1628,43 @@ IF (trans_type == 'vertint') THEN
           RETURN
         ENDIF
 
-        CALL l4f_category_log(volgrid6d_in%category, L4F_INFO, &
-         'Coordinate for vertint found in coord volume at position '// &
-         t2c(var_coord_in))
+! check vertical coordinate system
+        CALL get_val(this, input_levtype=input_levtype)
+        mask_in = & ! implicit allocation
+         (volgrid6d_coord_in%level(:)%level1 == input_levtype%level1) .AND. &
+         (volgrid6d_coord_in%level(:)%level2 == input_levtype%level2)
+        ulstart = firsttrue(mask_in)
+        ulend = lasttrue(mask_in)
+        IF (ulstart == 0 .OR. ulend == 0) THEN
+          CALL l4f_category_log(volgrid6d_in%category, L4F_ERROR, &
+           'coordinate file does not contain levels of type '// &
+           t2c(input_levtype%level1)//'/'//t2c(input_levtype%level2)// &
+           ' specified for input data')
+          CALL raise_error()
+          RETURN
+        ENDIF
+
+        coord_3d_in = volgrid6d_coord_in%voldati(:,:,ulstart:ulend,1,1,var_coord_in) ! implicit allocation
+! special case
+        IF (output_levtype%level1 == 103) THEN ! surface coordinate needed
+          spos = firsttrue(volgrid6d_coord_in%level(:) == vol7d_level_new(1))
+          IF (spos == 0) THEN
+            CALL l4f_category_log(volgrid6d_in%category, L4F_ERROR, &
+             'output level '//t2c(output_levtype%level1)// &
+             ' requested, but height of surface not provided in coordinate file')
+            CALL raise_error()
+            RETURN
+          ENDIF
+          DO k = 1, SIZE(coord_3d_in,3)
+            WHERE(c_e(coord_3d_in(:,:,k)) .AND. &
+             c_e(volgrid6d_coord_in%voldati(:,:,spos,1,1,var_coord_in)))
+              coord_3d_in(:,:,k) = coord_3d_in(:,:,k) - &
+               volgrid6d_coord_in%voldati(:,:,spos,1,1,var_coord_in)
+            ELSEWHERE
+              coord_3d_in(:,:,k) = rmiss
+            END WHERE
+          ENDDO
+        ENDIF
 
       ENDIF
     ENDIF
@@ -1653,8 +1694,7 @@ IF (trans_type == 'vertint') THEN
      time_definition=volgrid6d_in%time_definition, categoryappend=categoryappend)
     IF (c_e(var_coord_in)) THEN
       CALL init(grid_trans, this, lev_in=volgrid6d_in%level, lev_out=lev_out, &
-       coord_3d_in=volgrid6d_coord_in%voldati(:,:,:,1,1,var_coord_in), &
-       categoryappend=categoryappend)
+       coord_3d_in=coord_3d_in, categoryappend=categoryappend)
     ELSE
       CALL init(grid_trans, this, lev_in=volgrid6d_in%level, lev_out=lev_out, &
        categoryappend=categoryappend)
@@ -2332,12 +2372,14 @@ CHARACTER(len=*),INTENT(in),OPTIONAL :: categoryappend !< append this suffix to 
 INTEGER :: nvar, inetwork
 TYPE(grid_transform) :: grid_trans
 TYPE(vol7d_level),POINTER :: llev_out(:)
-TYPE(vol7d_level) :: output_levtype
+TYPE(vol7d_level) :: input_levtype, output_levtype
 TYPE(vol7d_var) :: vcoord_var
-INTEGER :: var_coord_in
+REAL,ALLOCATABLE :: coord_3d_in(:,:,:)
+INTEGER :: var_coord_in, k, ulstart, ulend, spos
 INTEGER,ALLOCATABLE :: point_index(:)
 TYPE(vol7d) :: v7d_locana
 CHARACTER(len=80) :: trans_type
+LOGICAL,ALLOCATABLE :: mask_in(:)
 
 CALL vol7d_alloc_vol(vol7d_in) ! be safe
 nvar=0
@@ -2372,6 +2414,13 @@ IF (trans_type == 'vertint') THEN
 
 ! search for variable providing vertical coordinate
         CALL get_val(this, output_levtype=output_levtype)
+        IF (output_levtype%level1 == 103) THEN ! surface coordinate needed
+          CALL l4f_log(L4F_ERROR, &
+           'requested output level type '//t2c(output_levtype%level1)// &
+           ' not yet supported for sparse point')
+          CALL raise_error()
+          RETURN
+        ENDIF
         vcoord_var = vol7d_var_new(vol7d_level_to_var(output_levtype))
         IF (.NOT.c_e(vcoord_var)) THEN
           CALL l4f_log(L4F_ERROR, &
@@ -2391,14 +2440,54 @@ IF (trans_type == 'vertint') THEN
           CALL raise_error()
           RETURN
         ENDIF
+        CALL l4f_log(L4F_INFO, &
+         'Coordinate for vertint found in coord volume at position '// &
+         t2c(var_coord_in))
+
+! check vertical coordinate system
+        CALL get_val(this, input_levtype=input_levtype)
+        mask_in = & ! implicit allocation
+         (vol7d_coord_in%level(:)%level1 == input_levtype%level1) .AND. &
+         (vol7d_coord_in%level(:)%level2 == input_levtype%level2)
+        ulstart = firsttrue(mask_in)
+        ulend = lasttrue(mask_in)
+        IF (ulstart == 0 .OR. ulend == 0) THEN
+          CALL l4f_log(L4F_ERROR, &
+           'coordinate file does not contain levels of type '// &
+           t2c(input_levtype%level1)//'/'//t2c(input_levtype%level2)// &
+           ' specified for input data')
+          CALL raise_error()
+          RETURN
+        ENDIF
+
+        coord_3d_in = vol7d_coord_in%voldatir(:,1:1,ulstart:ulend,1,var_coord_in,1) ! dirty 1:1, implicit allocation
+! special case
+        IF (output_levtype%level1 == 103) THEN ! surface coordinate needed
+          spos = firsttrue(vol7d_coord_in%level(:) == vol7d_level_new(1))
+          IF (spos == 0) THEN
+            CALL l4f_log(L4F_ERROR, &
+             'output level '//t2c(output_levtype%level1)// &
+             ' requested, but height of surface not provided in coordinate file')
+            CALL raise_error()
+            RETURN
+          ENDIF
+          DO k = 1, SIZE(coord_3d_in,3)
+            WHERE(c_e(coord_3d_in(:,:,k)) .AND. &
+             c_e(vol7d_coord_in%voldatir(:,1:1,spos,1,var_coord_in,1)))
+              coord_3d_in(:,:,k) = coord_3d_in(:,:,k) - &
+               vol7d_coord_in%voldatir(:,1:1,spos,1,var_coord_in,1)
+            ELSEWHERE
+              coord_3d_in(:,:,k) = rmiss
+            END WHERE
+          ENDDO
+        ENDIF
 
       ENDIF
     ENDIF
-
+! TODO here: search for coordinate within volume
     IF (var_coord_in > 0) THEN
       CALL init(grid_trans, this, lev_in=vol7d_in%level, lev_out=lev_out, &
-       coord_3d_in=vol7d_coord_in%voldatir(:,1:1,:,1,var_coord_in,1), & ! dirty 1:1
-       categoryappend=categoryappend)
+       coord_3d_in=coord_3d_in, categoryappend=categoryappend)
     ELSE
       CALL init(grid_trans, this, lev_in=vol7d_in%level, lev_out=lev_out, &
        categoryappend=categoryappend)
