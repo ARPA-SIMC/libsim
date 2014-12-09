@@ -6,7 +6,7 @@ level of API library calls and within the command line utilities such
 as \a vg6d_subarea, \a vg6d_transform, \a vg6d_getpoint, and \a
 v7d_transform.
 
-Transformations are defined at least by 2 parameters named \a type and
+Transformations are defined at least by 2 parameters named \a trans_type and
 \a subtype. The transformations operate separately either on the
 vertical or on the horizontal structure of the coordinate
 system. Horizontal tranformations are divided into two main groups:
@@ -20,7 +20,7 @@ These transformations are grid-to-grid or sparse points-to-grid; the
 output geographic projection or grid point coordinates is the same as
 the input, and only a few parameters have to be specified.
 
-\subsection zoom type=zoom
+\subsection zoom trans_type=zoom
 
 It is a grid-to-grid transformation, it generates a new grid by
 cutting or extending (with missing values) the input grid, adding or
@@ -35,7 +35,7 @@ reference system:
  - sub_type='index' the bounds of the zoomed/extended area are
    defined by grid indices.
 
-\subsection boxregrid type=boxregrid
+\subsection boxregrid trans_type=boxregrid
 
 It is a grid-to-grid transformation, it generates a new grid in which
 the value at every point is the result of a function computed over \a
@@ -46,7 +46,7 @@ geographical reference system:
  - sub_type='max' the function used is the maximum
  - sub_type='min' the function used is the minimum.
 
-\subsection metamorphosis type=metamorphosis
+\subsection metamorphosis trans_type=metamorphosis
 
 When the metamorphosis transformation type is applied, the output
 points and values are the same as the input ones, but the data
@@ -63,7 +63,7 @@ These transformations produce, in output, data on an arbitrary grid or
 set of sparse points, thus a full description of the output grid or a
 list of output points have to be provided.
 
-\subsection inter type=inter
+\subsection inter trans_type=inter
 
 This transformation interpolates the input data on a new set of
 points, the input and output datasets can be either of grid type or of
@@ -88,7 +88,7 @@ subtypes:
 
 \image html trans_inter_linear.png
 
-\subsection boxinter type=boxinter
+\subsection boxinter trans_type=boxinter
 
 The boxinter type is suitable both for grid-to-grid and sparse
 points-to-grid transformations and it computes data on a new grid in
@@ -104,7 +104,7 @@ over those input points that lie inside the output point's grid box:
    of the input points distribution, the percentile value, in the
    interval [0,100] has to be additionally provided.
 
-\subsection polyinter type=polyinter
+\subsection polyinter trans_type=polyinter
 
 The polyinter type is suitable both for grid-to-sparse points and
 sparse points-to-sparse points transformations and it computes data on
@@ -123,6 +123,33 @@ defined as the centroids of the polygons:
    interval [0,100] has to be additionally provided.
 
 \section verttrans Vertical transformations
+
+Vertical interpolations are selected with trans_type='vertint'. The
+sub_types available are \c 'linear', more suitable for gridded data,
+and \c 'linearsparse' for sparse data, where every vertical profile
+has its own independent set of vertical levels. Apart from sub_type,
+all the other concepts apply almost in the same way to vertical
+interpolations in sparse point space or in grid point space.
+
+Vertical interpolations require the specification of the following
+information:
+
+ - type of input and output vertical coordinate systems, also called
+   vertical layer or level type, they can be the same or they can
+   differ between input and output
+
+ - list of target output levels (or top of layers) for interpolation,
+   and optional list of bottom of layers; interpolation from hybrid
+   levels to hybrid layers and vice-versa is the only case in which
+   this parameter can be omitted and computed automatically by the
+   library
+
+ - coordinates of the input vertical levels expressed in the output
+   coordinate system, this can be provided as a separate coordinate
+   file (time-independent) or can be contained in the data volume
+   (time-dependent) in the form of a variable compatible with the
+   output level type; this information is not required when input and
+   output level types are the same.
 
 Vertical levels and layers are specified in analogy with grib2 coding
 by means of one or two surfaces with type of coordinate specified as
@@ -143,15 +170,45 @@ in the following table:
 Only the vertical levels having an associated B table variable are
 fully supported as output target level of vertical interpolations in
 libsim, the other ones are only supported as input levels for vertical
-interpolations when accompanied by a variable specifying the vertical
-coordinate of the input levels, or for transformations between the
-same type of vertical coordinates.
+interpolations or for transformations between the same type of
+vertical coordinates.
+
+Layers are managed only when the type of top and bottom surfaces are
+the same and they are treated as a single level whose vertical
+coordinate is the average (or log-average for pressure) between the
+value of the coordinate at the top and at the bottom of the layer.
+
+In the case of vertical interpolation from command line tools, the
+command-line arguments specifying the information indicated above are
+the following:
+
+ - type of input and output vertical levels are specified by \c
+   -\-trans-level-type=it,ib,ot,ob where \c it specifies the input level or
+   top surface type, \c ot specifies the input bottom surface type for a
+   layer (it should be empty for a level), and similar for \c ot and \c ob
+
+ - the list of output levels or top layer surfaces is specified by \c
+   -\-trans-level-list= while the bottom surfaces of layers, if
+   applicable, are specified by \c --trans-botlevel-list. In both
+   cases the values have to be specified as comma-separated lists of
+   integer values in the units indicated in the second column of the
+   table above
+
+ - the external file specifying a constant coordinate for the input
+   dataset is specified by the arguments \c -\-coord-file and \c
+   -\-coord-format.  It must have the same horizontal structure of the
+   main dataset, it must contain a single time, timerange, network, it
+   must match exactly the vertical level structure of the input data
+   to be interpolated (extra level types are however ignored without
+   error) and it must contain a variable that matches the one in the
+   third column of the previous table (possibly after an automatic
+   grib-to-bufr conversion).
 
 \subsection verteq Vertical interpolation between the same type of coordinates
 
 This is a simple special case, where there is no need to specify the
 vertical output coordinate in the input system, but only the list of
-ouput levels. The following example shows hot to interpolate data on
+output levels. The following example shows hot to interpolate data on
 isobaric surfaces to a different set of isobaric surfaces:
 
 \code
@@ -165,10 +222,10 @@ vg6d_transform --trans-type=vertint --sub-type=linear \
 Notice that vertical interpolations where pressure is the vertical
 coordinate are computed linearly in the logarithm of pressure.
 
-It is also possible to from layers between two levels of equal type to
-levels and vice-versa, with the simplification that the coordinate
-associated to a layer is the average of the coordinates of the levels
-above and below (log-average for pressure levels).
+It is also possible to interpolate from layers between two levels of
+equal type to levels and vice-versa, with the simplification that the
+coordinate associated to a layer is the average of the coordinates of
+the levels above and below (log-average for pressure levels).
 
 In the case of hybrid levels, where the vertical coordinate is an
 integer index, the list of output levels can be automatically
@@ -200,7 +257,7 @@ cat hyblaycoord.grib surfh.grib > hyblaycoord_surf.grib
 
 \subsection vertdiff Vertical interpolation to a different type of coordinate
 
-When the vertical corodinate system is different in input and in
+When the vertical coordinate system is different in input and in
 output, the coordinates of each input point in terms of the output
 coordinate system has to be specified.
 
@@ -211,7 +268,7 @@ system are constant in time, while the second is suitable for output
 coordinates that vary with time. In both cases, the variable
 expressing the coordinate value must be defined on the same input
 levels as the data to be interpolated and must have a parameter
-matching the one in the above table.
+matching the one in the table above.
 
 The following example shows how to interpolate gridded data from input
 hybrid coordinate system (code 105) to height system (code 102) by

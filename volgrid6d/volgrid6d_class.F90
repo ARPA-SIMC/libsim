@@ -1516,9 +1516,9 @@ TYPE(grid_transform) :: grid_trans
 TYPE(vol7d_level),POINTER :: llev_out(:)
 TYPE(vol7d_level) :: input_levtype, output_levtype
 TYPE(vol7d_var) :: vcoord_var
-INTEGER :: i, ntime, ntimerange, nlevel, nvar, var_coord_in, var_coord_vol, &
+INTEGER :: i, k, ntime, ntimerange, nlevel, nvar, var_coord_in, var_coord_vol, &
  cf_out, nxc, nyc, nxi, nyi, i3, i4, i5, i6, &
- k, ulstart, ulend, spos
+ ulstart, ulend, spos
 REAL,ALLOCATABLE :: coord_3d_in(:,:,:)
 TYPE(geo_proj) :: proj_in, proj_out
 CHARACTER(len=80) :: trans_type
@@ -1775,7 +1775,7 @@ IF (c_e(grid_trans)) THEN ! transformation is valid
 ELSE
 ! should log with grid_trans%category, but it is private
   CALL l4f_category_log(volgrid6d_in%category, L4F_ERROR, &
-   "trying to use an invalid grid_transform object")
+   'volgrid6d_transform: transformation not valid')
   CALL raise_error()
 ENDIF
 
@@ -2312,14 +2312,17 @@ END SUBROUTINE v7d_volgrid6d_transform
 
 
 ! Internal method for performing sparse point to sparse point computations
-SUBROUTINE v7d_v7d_transform_compute(this, vol7d_in, vol7d_out, lev_out)
+SUBROUTINE v7d_v7d_transform_compute(this, vol7d_in, vol7d_out, lev_out, &
+ var_coord_vol)
 TYPE(grid_transform),INTENT(in) :: this ! oggetto di trasformazione per grigliato
 type(vol7d), INTENT(in) :: vol7d_in ! oggetto da trasformare
 type(vol7d), INTENT(inout) :: vol7d_out ! oggetto trasformato
 TYPE(vol7d_level),INTENT(in),OPTIONAL :: lev_out(:) ! vol7d_level object defining target vertical grid, for vertical interpolations
+INTEGER,INTENT(in),OPTIONAL :: var_coord_vol ! index of variable defining vertical coordinate values in input volume
 
-INTEGER :: itime, itimerange, ivar, inetwork
+INTEGER :: itime, itimerange, ivar, inetwork, lvar_coord_vol
 
+lvar_coord_vol = optio_i(var_coord_vol)
 vol7d_out%time(:) = vol7d_in%time(:)
 vol7d_out%timerange(:) = vol7d_in%timerange(:)
 IF (PRESENT(lev_out)) THEN
@@ -2337,11 +2340,19 @@ IF (ASSOCIATED(vol7d_in%dativar%r)) THEN ! work only when real vars are availabl
         DO itime = 1, SIZE(vol7d_in%time)
 
 ! dirty trick to make voldatir look like a 2d-array of shape (nana,1)
-          CALL compute(this, &
-           vol7d_in%voldatir(:,itime,:,itimerange,ivar,inetwork), &
-           vol7d_out%voldatir(:,itime:itime,:,itimerange,ivar,inetwork), &
-           vol7d_in%dativar%r(ivar))
-
+          IF (c_e(lvar_coord_vol)) THEN
+            CALL compute(this, &
+             vol7d_in%voldatir(:,itime,:,itimerange,ivar,inetwork), &
+             vol7d_out%voldatir(:,itime:itime,:,itimerange,ivar,inetwork), &
+             var=vol7d_in%dativar%r(ivar), &
+             coord_3d_in=vol7d_in%voldatir(:,itime:itime,:,itimerange, &
+             lvar_coord_vol,inetwork))
+          ELSE
+            CALL compute(this, &
+             vol7d_in%voldatir(:,itime,:,itimerange,ivar,inetwork), &
+             vol7d_out%voldatir(:,itime:itime,:,itimerange,ivar,inetwork), &
+             var=vol7d_in%dativar%r(ivar))
+          ENDIF
         ENDDO
       ENDDO
     ENDDO
@@ -2375,7 +2386,7 @@ TYPE(vol7d_level),POINTER :: llev_out(:)
 TYPE(vol7d_level) :: input_levtype, output_levtype
 TYPE(vol7d_var) :: vcoord_var
 REAL,ALLOCATABLE :: coord_3d_in(:,:,:)
-INTEGER :: var_coord_in, k, ulstart, ulend, spos
+INTEGER :: var_coord_in, var_coord_vol, i, k, ulstart, ulend, spos
 INTEGER,ALLOCATABLE :: point_index(:)
 TYPE(vol7d) :: v7d_locana
 CHARACTER(len=80) :: trans_type
@@ -2391,6 +2402,7 @@ CALL init(vol7d_out, time_definition=vol7d_in%time_definition)
 
 CALL get_val(this, trans_type=trans_type)
 
+var_coord_vol = imiss
 IF (trans_type == 'vertint') THEN
 
   IF (PRESENT(lev_out)) THEN
@@ -2484,7 +2496,28 @@ IF (trans_type == 'vertint') THEN
 
       ENDIF
     ENDIF
-! TODO here: search for coordinate within volume
+
+    IF (var_coord_in <= 0) THEN ! search for coordinate within volume
+! search for variable providing vertical coordinate
+      CALL get_val(this, output_levtype=output_levtype)
+      vcoord_var = vol7d_var_new(vol7d_level_to_var(output_levtype))
+      IF (c_e(vcoord_var)) THEN
+        DO i = 1, SIZE(vol7d_in%dativar%r)
+          IF (vol7d_in%dativar%r(i) == vcoord_var) THEN
+            var_coord_vol = i
+            EXIT
+          ENDIF
+        ENDDO
+
+        IF (c_e(var_coord_vol)) THEN
+          CALL l4f_log(L4F_INFO, &
+           'Coordinate for vertint found in input volume at position '// &
+           t2c(var_coord_vol))
+        ENDIF
+
+      ENDIF
+    ENDIF
+
     IF (var_coord_in > 0) THEN
       CALL init(grid_trans, this, lev_in=vol7d_in%level, lev_out=lev_out, &
        coord_3d_in=coord_3d_in, categoryappend=categoryappend)
@@ -2505,7 +2538,11 @@ IF (trans_type == 'vertint') THEN
 
       CALL vol7d_alloc_vol(vol7d_out)
 
-      CALL compute(grid_trans, vol7d_in, vol7d_out, llev_out)
+! no need to check c_e(var_coord_vol) here since the presence of
+! this%coord_3d_in (external) has precedence over coord_3d_in internal
+! in grid_transform_compute
+      CALL compute(grid_trans, vol7d_in, vol7d_out, llev_out, &
+       var_coord_vol=var_coord_vol)
     ELSE
       CALL l4f_log(L4F_ERROR, 'v7d_v7d_transform: transformation not valid')
       CALL raise_error()

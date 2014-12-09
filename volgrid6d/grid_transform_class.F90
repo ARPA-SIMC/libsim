@@ -3349,11 +3349,13 @@ END SUBROUTINE grid_transform_compute
 !! must have been properly initialised, so that it contains all the
 !! information needed for computing the transformation. This is the
 !! sparse points-to-grid and sparse points-to-sparse points version.
-SUBROUTINE grid_transform_v7d_grid_compute(this, field_in, field_out, var)
+SUBROUTINE grid_transform_v7d_grid_compute(this, field_in, field_out, var, &
+ coord_3d_in)
 TYPE(grid_transform),INTENT(in) :: this !< grid_tranform object
 REAL, INTENT(in) :: field_in(:,:) !< input array
 REAL, INTENT(out):: field_out(:,:,:) !< output array
 TYPE(vol7d_var),INTENT(in),OPTIONAL :: var !< physical variable to be interpolated, if provided, some ad-hoc algorithms may be used where possible
+REAL,INTENT(in),OPTIONAL,TARGET :: coord_3d_in(:,:,:) !< input vertical coordinate for vertical interpolation, if not provided by other means
 
 real,allocatable :: field_in_p(:),x_in_p(:),y_in_p(:)
 INTEGER :: inn_p, ier, k
@@ -3497,7 +3499,8 @@ ELSE IF (this%trans%trans_type == 'boxinter' .OR. &
  this%trans%trans_type == 'metamorphosis') THEN ! use the grid-to-grid method
 
   CALL compute(this, &
-   RESHAPE(field_in, (/SIZE(field_in,1), 1, SIZE(field_in,2)/)), field_out, var)
+   RESHAPE(field_in, (/SIZE(field_in,1), 1, SIZE(field_in,2)/)), field_out, var, &
+   coord_3d_in)
 
 ENDIF
 
