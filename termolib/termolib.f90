@@ -611,12 +611,12 @@ end function W
 
 !-----------------------------------------------------------------
 
+!> Compute relative humidity (1-100) from specific humidity \q,
+!! pressure \a pt and temperature \a t.
+!! \q in Kg/Kg, \a pt in hPa, \a t in K.
+!! From Baker 1983, Mon.Wea.Rev., 111, p. 328.
 elemental real function QTORELHUM(Q,PT,T) 
  
-! CALCOLA L'UMIDITA RELATIVA A PARTIRE DALLA UMIDITA' SPECIFICA 
-! REF.: BAKER, MON.WEA.REV.,1983,111,PAG.328 E SEG. 
-!----------------------------------------------------------------------------
-
   real,intent(in)::q,pt,t
 
   if( c_e(q) .and. c_e(pt) .and. c_e(t) )then 

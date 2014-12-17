@@ -3,6 +3,7 @@ module termo
 USE alchimia
 USE termolib
 USE array_utilities
+USE missing_values
 
 IMPLICIT NONE
 
@@ -29,6 +30,10 @@ subroutine register_termo(vfn)
   call fnregister(vfn,snow_ls_conv2tot_def())
   call fnregister(vfn,rain_snow_conv2tot_def())
   call fnregister(vfn,rain_snow_ls_conv2tot_def())
+  call fnregister(vfn,z_fi_def())
+  call fnregister(vfn,fi_z_def())
+  call fnregister(vfn,z_h_def())
+  call fnregister(vfn,h_z_def())
 
 
 end subroutine register_termo
@@ -197,8 +202,6 @@ call init(swb_alb2swd_def,"swb_alb2swd",&
 end function swb_alb2swd_def
 
 
-!!$QTORELHUM(Q,PT,T) 
-
 subroutine  q_p_t2r(mybin,mybout,bin,bout,in,out)
   CHARACTER(len=10),intent(in) :: mybin(:)  !< vector table B  WMO input  in user's data
   CHARACTER(len=10),intent(in) :: mybout(:) !< vector table B  WMO output in user's data
@@ -207,8 +210,6 @@ subroutine  q_p_t2r(mybin,mybout,bin,bout,in,out)
   real, intent(in) :: in(:,:)
   real, intent(out) :: out(:,:)
 
-!  out(:,index_c(mybout,bout(1)))= QTORELHUM(in (:,index_c(mybin ,bin (1))),&
-!   in (:,index_c(mybin ,bin (2)))*100.,in (:,index_c(mybin ,bin (3)))) 
   out(:,index_c(mybout,bout(1)))= QTORELHUM(in (:,index_c(mybin ,bin (1))),&
    in (:,index_c(mybin ,bin (2))),in (:,index_c(mybin ,bin (3)))) 
           
@@ -361,6 +362,91 @@ type(fnds) function rain_snow_ls_conv2tot_def()
    [character(len=10) :: "B13200","B13201","B13202","B13203"], &
    [character(len=10) :: "B13011"],0,func=rain_snow_ls_conv2tot)
 end function rain_snow_ls_conv2tot_def
+
+
+SUBROUTINE z_fi(mybin,mybout,bin,bout,in,out)
+CHARACTER(len=10),INTENT(in) :: mybin(:)  !< vector table B  WMO input  in user's data
+CHARACTER(len=10),INTENT(in) :: mybout(:) !< vector table B  WMO output in user's data
+CHARACTER(len=10),INTENT(in) :: bin(:)    !< vector table B  WMO input used by function
+CHARACTER(len=10),INTENT(in) :: bout(:)   !< vector table B  WMO output used by function
+REAL, INTENT(in) :: in(:,:)
+REAL, INTENT(out) :: out(:,:)
+
+WHERE (c_e(in(:,index_c(mybin,bin(1)))))
+  out(:,index_c(mybout,bout(1))) = in(:,index_c(mybin,bin(1)))/gearth
+ELSEWHERE
+  out(:,index_c(mybout,bout(1))) = rmiss
+END WHERE
+          
+END SUBROUTINE z_fi
+
+TYPE(fnds) FUNCTION z_fi_def()
+CALL init(z_fi_def,"z_fi", &
+ [CHARACTER(len=10) :: "B10008"], &
+ [CHARACTER(len=10) :: "B10009"],0,func=z_fi)
+END FUNCTION z_fi_def
+
+
+SUBROUTINE fi_z(mybin,mybout,bin,bout,in,out)
+CHARACTER(len=10),INTENT(in) :: mybin(:)  !< vector table B  WMO input  in user's data
+CHARACTER(len=10),INTENT(in) :: mybout(:) !< vector table B  WMO output in user's data
+CHARACTER(len=10),INTENT(in) :: bin(:)    !< vector table B  WMO input used by function
+CHARACTER(len=10),INTENT(in) :: bout(:)   !< vector table B  WMO output used by function
+REAL, INTENT(in) :: in(:,:)
+REAL, INTENT(out) :: out(:,:)
+
+WHERE (c_e(in(:,index_c(mybin,bin(1)))))
+  out(:,index_c(mybout,bout(1))) = in(:,index_c(mybin,bin(1)))*gearth
+ELSEWHERE
+  out(:,index_c(mybout,bout(1))) = rmiss
+END WHERE
+          
+END SUBROUTINE fi_z
+
+TYPE(fnds) FUNCTION fi_z_def()
+CALL init(fi_z_def,"fi_z", &
+ [CHARACTER(len=10) :: "B10009"], &
+ [CHARACTER(len=10) :: "B10008"],0,func=fi_z)
+END FUNCTION fi_z_def
+
+
+SUBROUTINE z_h(mybin,mybout,bin,bout,in,out)
+CHARACTER(len=10),INTENT(in) :: mybin(:)  !< vector table B  WMO input  in user's data
+CHARACTER(len=10),INTENT(in) :: mybout(:) !< vector table B  WMO output in user's data
+CHARACTER(len=10),INTENT(in) :: bin(:)    !< vector table B  WMO input used by function
+CHARACTER(len=10),INTENT(in) :: bout(:)   !< vector table B  WMO output used by function
+REAL, INTENT(in) :: in(:,:)
+REAL, INTENT(out) :: out(:,:)
+
+out(:,index_c(mybout,bout(1))) = in(:,index_c(mybin,bin(1)))
+          
+END SUBROUTINE z_h
+
+TYPE(fnds) FUNCTION z_h_def()
+CALL init(z_h_def,"z_h", &
+ [CHARACTER(len=10) :: "B10007"], &
+ [CHARACTER(len=10) :: "B10009"],0,func=z_h)
+END FUNCTION z_h_def
+
+
+SUBROUTINE h_z(mybin,mybout,bin,bout,in,out)
+CHARACTER(len=10),INTENT(in) :: mybin(:)  !< vector table B  WMO input  in user's data
+CHARACTER(len=10),INTENT(in) :: mybout(:) !< vector table B  WMO output in user's data
+CHARACTER(len=10),INTENT(in) :: bin(:)    !< vector table B  WMO input used by function
+CHARACTER(len=10),INTENT(in) :: bout(:)   !< vector table B  WMO output used by function
+REAL, INTENT(in) :: in(:,:)
+REAL, INTENT(out) :: out(:,:)
+
+out(:,index_c(mybout,bout(1))) = in(:,index_c(mybin,bin(1)))
+          
+END SUBROUTINE h_z
+
+TYPE(fnds) FUNCTION h_z_def()
+CALL init(h_z_def,"h_z", &
+ [CHARACTER(len=10) :: "B10009"], &
+ [CHARACTER(len=10) :: "B10007"],0,func=h_z)
+END FUNCTION h_z_def
+
 
 
 end module termo
