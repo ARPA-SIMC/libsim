@@ -246,7 +246,7 @@ vg6d_transform --trans-type=vertint --sub-type=linear \
 # extract level corresponding to surface (=orography), needed for
 # interpolation to level type 103, assume we have 45 vertical layers
 grib_copy -w shortName=h,level=46 lfff00000000c tmpgrib
-grib_set -s typeOfLevel=surface,level=0  tmpgrib surfh.grib
+grib_set -s typeOfLevel=surface,level=0 tmpgrib surfh.grib
 
 # append height of surface orography to the coordinate files for use
 # with output type of level 103
@@ -322,5 +322,21 @@ vg6d_transform --trans-type=vertint --sub-type=linear \
 For completeness, also the pressure field in this case will be
 contained in the output file although it will be constant within
 numerical precision on the output levels.
+
+When vertically interpolating observed radiosoundings, usually
+intepreted as isobaric levels, the preliminary computation of height
+variable \a B10007 from geopotential may be necessary, thus the
+complete procedure will look like the following:
+
+\code
+v7d_transform --input-format=BUFR --output-format=BUFR \
+ --output-variable-list=B10007,B10004,B11001,B11002,B12101,B12103 \
+ temp_input.bufr temp_with_h.bufr
+
+v7d_transform --input-format=BUFR --output-format=BUFR \
+ --pre-trans-type=vertint:linearsparse --trans-level-type=100,,102, \
+ --trans-level-list=100000,200000,300000,400000,500000 \
+ temp_with_h.bufr temp_at_h.bufr
+\endcode
 
 */

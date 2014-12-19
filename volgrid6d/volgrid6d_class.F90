@@ -1365,8 +1365,9 @@ INTEGER,INTENT(in),OPTIONAL :: var_coord_vol ! index of variable defining vertic
 LOGICAL,INTENT(in),OPTIONAL :: clone ! se fornito e \c .TRUE., clona i gaid da volgrid6d_in a volgrid6d_out
 
 INTEGER :: ntime, ntimerange, inlevel, onlevel, nvar, &
- itime, itimerange, ilevel, ivar, levshift, levused, lvar_coord_vol
+ itime, itimerange, ilevel, ivar, levshift, levused, lvar_coord_vol, spos
 REAL,POINTER :: voldatiin(:,:,:), voldatiout(:,:,:), coord_3d_in(:,:,:)
+TYPE(vol7d_level) :: output_levtype
 
 
 #ifdef DEBUG
@@ -1416,6 +1417,23 @@ IF (.NOT.ASSOCIATED(volgrid6d_out%voldati)) THEN
 ENDIF
 
 CALL get_val(this, levshift=levshift, levused=levused)
+spos = imiss
+IF (c_e(lvar_coord_vol)) THEN
+  CALL get_val(this%trans, output_levtype=output_levtype)
+  IF (output_levtype%level1 == 103 .OR. output_levtype%level1 == 108) THEN
+    spos = firsttrue(volgrid6d_in%level(:) == vol7d_level_new(1))
+    IF (spos == 0) THEN
+      CALL l4f_category_log(volgrid6d_in%category, L4F_ERROR, &
+       'output level '//t2c(output_levtype%level1)// &
+       ' requested, but height/press of surface not provided in volume')
+    ENDIF
+    IF (.NOT.c_e(levshift) .AND. .NOT.c_e(levused)) THEN
+      CALL l4f_category_log(volgrid6d_in%category, L4F_ERROR, &
+       'internal inconsistence, levshift and levused undefined when they should be')
+    ENDIF
+  ENDIF
+ENDIF
+
 DO ivar=1,nvar
 !  IF (c_e(var_coord_vol)) THEN
 !    IF (ivar == var_coord_vol) CYCLE ! skip coordinate variable in output
@@ -1463,6 +1481,20 @@ DO ivar=1,nvar
       IF (c_e(lvar_coord_vol)) THEN
         CALL volgrid_get_vol_3d(volgrid6d_in, itime, itimerange, lvar_coord_vol, &
          coord_3d_in)
+        IF (c_e(spos)) THEN ! compute difference wrt surface coordinate
+          IF (spos == 0) THEN ! error condition, set all to missing and goodnight
+            coord_3d_in(:,:,levshift+1:levshift+levused) = rmiss
+          ELSE
+            DO ilevel = levshift+1, levshift+levused
+              WHERE(c_e(coord_3d_in(:,:,ilevel)) .AND. c_e(coord_3d_in(:,:,spos)))
+                coord_3d_in(:,:,ilevel) = coord_3d_in(:,:,ilevel) - &
+                 coord_3d_in(:,:,spos)
+              ELSEWHERE
+                coord_3d_in(:,:,ilevel) = rmiss
+              END WHERE
+            ENDDO
+          ENDIF
+        ENDIF
       ENDIF
       CALL volgrid_get_vol_3d(volgrid6d_in, itime, itimerange, ivar, &
        voldatiin)
@@ -1471,7 +1503,7 @@ DO ivar=1,nvar
        voldatiout)
       IF (c_e(lvar_coord_vol)) THEN
         CALL compute(this, voldatiin, voldatiout, convert(volgrid6d_in%var(ivar)), &
-         coord_3d_in)
+         coord_3d_in(:,:,levshift+1:levshift+levused)) ! subset coord_3d_in
       ELSE
         CALL compute(this, voldatiin, voldatiout, convert(volgrid6d_in%var(ivar)))
       ENDIF
@@ -1578,6 +1610,7 @@ IF (trans_type == 'vertint') THEN
           CALL l4f_category_log(volgrid6d_in%category, L4F_ERROR, &
            'volume providing constant input vertical coordinate must have &
            &only 1 time and 1 timerange')
+          CALL init(volgrid6d_out) ! initialize to empty
           CALL raise_error()
           RETURN
         ENDIF
@@ -1590,6 +1623,7 @@ IF (trans_type == 'vertint') THEN
            'requested output level type '//t2c(output_levtype%level1)// &
            ' does not correspond to any known physical variable for &
            &providing vertical coordinate')
+          CALL init(volgrid6d_out) ! initialize to empty
           CALL raise_error()
           RETURN
         ENDIF
@@ -1605,6 +1639,7 @@ IF (trans_type == 'vertint') THEN
           CALL l4f_category_log(volgrid6d_in%category, L4F_ERROR, &
            'volume providing constant input vertical coordinate contains no &
            &variables matching output level type '//t2c(output_levtype%level1))
+          CALL init(volgrid6d_out) ! initialize to empty
           CALL raise_error()
           RETURN
         ENDIF
@@ -1624,6 +1659,7 @@ IF (trans_type == 'vertint') THEN
           CALL l4f_category_log(volgrid6d_in%category, L4F_ERROR, &
            'vertical coordinate: '//t2c(nxc)//'x'//t2c(nyc)// &
            ', input volume: '//t2c(nxi)//'x'//t2c(nyi))
+          CALL init(volgrid6d_out) ! initialize to empty
           CALL raise_error()
           RETURN
         ENDIF
@@ -1640,18 +1676,21 @@ IF (trans_type == 'vertint') THEN
            'coordinate file does not contain levels of type '// &
            t2c(input_levtype%level1)//'/'//t2c(input_levtype%level2)// &
            ' specified for input data')
+          CALL init(volgrid6d_out) ! initialize to empty
           CALL raise_error()
           RETURN
         ENDIF
 
         coord_3d_in = volgrid6d_coord_in%voldati(:,:,ulstart:ulend,1,1,var_coord_in) ! implicit allocation
 ! special case
-        IF (output_levtype%level1 == 103) THEN ! surface coordinate needed
+        IF (output_levtype%level1 == 103 .OR. &
+         output_levtype%level1 == 108) THEN ! surface coordinate needed
           spos = firsttrue(volgrid6d_coord_in%level(:) == vol7d_level_new(1))
           IF (spos == 0) THEN
             CALL l4f_category_log(volgrid6d_in%category, L4F_ERROR, &
              'output level '//t2c(output_levtype%level1)// &
-             ' requested, but height of surface not provided in coordinate file')
+             ' requested, but height/press of surface not provided in coordinate file')
+            CALL init(volgrid6d_out) ! initialize to empty
             CALL raise_error()
             RETURN
           ENDIF
@@ -2320,7 +2359,10 @@ type(vol7d), INTENT(inout) :: vol7d_out ! oggetto trasformato
 TYPE(vol7d_level),INTENT(in),OPTIONAL :: lev_out(:) ! vol7d_level object defining target vertical grid, for vertical interpolations
 INTEGER,INTENT(in),OPTIONAL :: var_coord_vol ! index of variable defining vertical coordinate values in input volume
 
-INTEGER :: itime, itimerange, ivar, inetwork, lvar_coord_vol
+INTEGER :: itime, itimerange, ilevel, ivar, inetwork, &
+ levshift, levused, lvar_coord_vol, spos
+REAL,ALLOCATABLE :: coord_3d_in(:,:,:)
+TYPE(vol7d_level) :: output_levtype
 
 lvar_coord_vol = optio_i(var_coord_vol)
 vol7d_out%time(:) = vol7d_in%time(:)
@@ -2334,6 +2376,26 @@ vol7d_out%network(:) = vol7d_in%network(:)
 IF (ASSOCIATED(vol7d_in%dativar%r)) THEN ! work only when real vars are available
   vol7d_out%dativar%r(:) = vol7d_in%dativar%r(:)
 
+  CALL get_val(this, levshift=levshift, levused=levused)
+  spos = imiss
+  IF (c_e(lvar_coord_vol)) THEN
+    CALL get_val(this%trans, output_levtype=output_levtype)
+    IF (output_levtype%level1 == 103 .OR. output_levtype%level1 == 108) THEN
+      spos = firsttrue(vol7d_in%level(:) == vol7d_level_new(1))
+      IF (spos == 0) THEN
+        CALL l4f_log(L4F_ERROR, &
+         'output level '//t2c(output_levtype%level1)// &
+         ' requested, but height/press of surface not provided in volume')
+      ENDIF
+      IF (.NOT.c_e(levshift) .AND. .NOT.c_e(levused)) THEN
+        CALL l4f_log(L4F_ERROR, &
+         'internal inconsistence, levshift and levused undefined when they should be')
+      ENDIF
+      ALLOCATE(coord_3d_in(SIZE(vol7d_in%ana),1,SIZE(vol7d_in%level)))
+    ENDIF
+
+  ENDIF
+
   DO inetwork = 1, SIZE(vol7d_in%network)
     DO ivar = 1, SIZE(vol7d_in%dativar%r)
       DO itimerange = 1, SIZE(vol7d_in%timerange)
@@ -2341,12 +2403,33 @@ IF (ASSOCIATED(vol7d_in%dativar%r)) THEN ! work only when real vars are availabl
 
 ! dirty trick to make voldatir look like a 2d-array of shape (nana,1)
           IF (c_e(lvar_coord_vol)) THEN
-            CALL compute(this, &
-             vol7d_in%voldatir(:,itime,:,itimerange,ivar,inetwork), &
-             vol7d_out%voldatir(:,itime:itime,:,itimerange,ivar,inetwork), &
-             var=vol7d_in%dativar%r(ivar), &
-             coord_3d_in=vol7d_in%voldatir(:,itime:itime,:,itimerange, &
-             lvar_coord_vol,inetwork))
+            IF (c_e(spos)) THEN ! compute difference wrt surface coordinate
+              IF (spos == 0) THEN ! error condition, set all to missing and goodnight
+                coord_3d_in(:,:,levshift+1:levshift+levused) = rmiss
+              ELSE
+                DO ilevel = levshift+1, levshift+levused
+                  WHERE(c_e(vol7d_in%voldatir(:,itime:itime,ilevel,itimerange,lvar_coord_vol,inetwork)) .AND. &
+                  c_e(vol7d_in%voldatir(:,itime:itime,spos,itimerange,lvar_coord_vol,inetwork))) 
+                    coord_3d_in(:,:,ilevel) = vol7d_in%voldatir(:,itime:itime,ilevel,itimerange,lvar_coord_vol,inetwork) - &
+                     vol7d_in%voldatir(:,itime:itime,spos,itimerange,lvar_coord_vol,inetwork)
+                  ELSEWHERE
+                    coord_3d_in(:,:,ilevel) = rmiss
+                  END WHERE
+                ENDDO
+              ENDIF
+              CALL compute(this, &
+               vol7d_in%voldatir(:,itime,:,itimerange,ivar,inetwork), &
+               vol7d_out%voldatir(:,itime:itime,:,itimerange,ivar,inetwork), &
+               var=vol7d_in%dativar%r(ivar), &
+               coord_3d_in=coord_3d_in)
+            ELSE
+              CALL compute(this, &
+               vol7d_in%voldatir(:,itime,:,itimerange,ivar,inetwork), &
+               vol7d_out%voldatir(:,itime:itime,:,itimerange,ivar,inetwork), &
+               var=vol7d_in%dativar%r(ivar), &
+               coord_3d_in=vol7d_in%voldatir(:,itime:itime,:,itimerange, &
+               lvar_coord_vol,inetwork))
+            ENDIF
           ELSE
             CALL compute(this, &
              vol7d_in%voldatir(:,itime,:,itimerange,ivar,inetwork), &
@@ -2426,13 +2509,6 @@ IF (trans_type == 'vertint') THEN
 
 ! search for variable providing vertical coordinate
         CALL get_val(this, output_levtype=output_levtype)
-        IF (output_levtype%level1 == 103) THEN ! surface coordinate needed
-          CALL l4f_log(L4F_ERROR, &
-           'requested output level type '//t2c(output_levtype%level1)// &
-           ' not yet supported for sparse point')
-          CALL raise_error()
-          RETURN
-        ENDIF
         vcoord_var = vol7d_var_new(vol7d_level_to_var(output_levtype))
         IF (.NOT.c_e(vcoord_var)) THEN
           CALL l4f_log(L4F_ERROR, &
@@ -2474,12 +2550,13 @@ IF (trans_type == 'vertint') THEN
 
         coord_3d_in = vol7d_coord_in%voldatir(:,1:1,ulstart:ulend,1,var_coord_in,1) ! dirty 1:1, implicit allocation
 ! special case
-        IF (output_levtype%level1 == 103) THEN ! surface coordinate needed
+        IF (output_levtype%level1 == 103 &
+         .OR. output_levtype%level1 == 108) THEN ! surface coordinate needed
           spos = firsttrue(vol7d_coord_in%level(:) == vol7d_level_new(1))
           IF (spos == 0) THEN
             CALL l4f_log(L4F_ERROR, &
              'output level '//t2c(output_levtype%level1)// &
-             ' requested, but height of surface not provided in coordinate file')
+             ' requested, but height/press of surface not provided in coordinate file')
             CALL raise_error()
             RETURN
           ENDIF

@@ -256,7 +256,7 @@ END TYPE transform_def
 !! projections.
 TYPE grid_transform
   PRIVATE
-  TYPE(transform_def) :: trans ! type of transformation required
+  TYPE(transform_def),PUBLIC :: trans ! type of transformation required
   INTEGER :: innx = imiss
   INTEGER :: inny = imiss
   INTEGER :: innz = imiss
@@ -789,14 +789,10 @@ IF (this%trans%trans_type == 'vertint') THEN
     DEALLOCATE(mask_out)
 
     IF (.NOT.PRESENT(coord_3d_in)) THEN
-! the next check is going to be relaxed to allow taking vertical
-! coord_3d_in from the volume within the compute method
       CALL l4f_category_log(this%category, L4F_WARN, &
        'vertint: different input and output level types &
-       &and no coord_3d_in, hoping for vert. coord. in volume')
+       &and no coord_3d_in, expecting vert. coord. in volume')
       this%dolog = dolog ! a little bit dirty, I must compute log later
-!      this%valid = .FALSE.
-!      RETURN
     ELSE
       IF (SIZE(coord_3d_in,3) /= inused) THEN
         CALL l4f_category_log(this%category, L4F_ERROR, &
@@ -820,7 +816,7 @@ IF (this%trans%trans_type == 'vertint') THEN
     ENDIF
 
   ELSE
-! TODO: here we should check that valid levels are contiguous and ordered
+! here we assume that valid levels are contiguous and ordered
 
 #ifdef DEBUG
     CALL l4f_category_log(this%category, L4F_DEBUG, &
@@ -958,8 +954,8 @@ IF (this%trans%trans_type == 'vertint') THEN
 
     ELSE IF (this%trans%sub_type == 'linearsparse') THEN
 ! just store vertical coordinates, dirty work is done later
-      ALLOCATE(this%vcoord_in(SIZE(coord_in)),  this%vcoord_out(SIZE(coord_out)))
-      this%vcoord_in(:) = coord_in(:)
+      ALLOCATE(this%vcoord_in(this%levused),  this%vcoord_out(SIZE(coord_out)))
+      this%vcoord_in(:) = coord_in(this%levshift+1:this%levshift+this%levused)
       this%vcoord_out(:) = coord_out(:)
       DEALLOCATE(coord_out, mask_out)
 
@@ -2501,7 +2497,8 @@ INTEGER,ALLOCATABLE :: nval(:,:)
 REAL :: z1,z2,z3,z4
 DOUBLE PRECISION  :: x1,x3,y1,y3,xp,yp
 INTEGER :: innx, inny, innz, outnx, outny, outnz, vartype
-DOUBLE PRECISION,ALLOCATABLE :: coord_in(:)
+REAL,ALLOCATABLE :: coord_in(:)
+LOGICAL,ALLOCATABLE :: mask_in(:)
 REAL,ALLOCATABLE :: val_in(:), field_tmp(:,:,:)
 REAL,POINTER :: coord_3d_in_act(:,:,:)
 TYPE(grid_transform) :: likethis
@@ -3185,84 +3182,95 @@ ELSE IF (this%trans%trans_type == 'vertint') THEN
 
   ELSE IF (this%trans%sub_type == 'linearsparse') THEN
 
-    ALLOCATE(coord_in(innz),val_in(innz))
+
+    IF (.NOT.ASSOCIATED(this%vcoord_in) .AND. .NOT.PRESENT(coord_3d_in)) THEN
+      CALL l4f_category_log(this%category,L4F_ERROR, &
+       "linearsparse interpolation, no input vert coord available")
+      RETURN
+    ENDIF
+
+    ALLOCATE(coord_in(innz),val_in(innz),mask_in(innz))
     DO j = 1, inny
       DO i = 1, innx
-        SELECT CASE(vartype)
 
-        CASE(var_dir360)
-          n = COUNT(c_e(field_in(i,j,:)))
-          IF (n > 1) THEN
-            coord_in(1:n) = PACK(this%vcoord_in(:), mask=c_e(field_in(i,j,:)))
-            val_in(1:n) = PACK(field_in(i,j,:), mask=c_e(field_in(i,j,:)))
-            kkcache = 2
-            outlev2: DO k = 1, outnz
-              IF (.NOT.c_e(this%vcoord_out(k))) CYCLE outlev2
-              inlev2: DO kk = kkcache, n
-                IF (coord_in(kk) >= this%vcoord_out(k)) THEN
-                  IF (this%vcoord_out(k) >= coord_in(kk-1)) THEN
-                    z1 = REAL((this%vcoord_out(k) - coord_in(kk-1))/ &
-                     (coord_in(kk) - coord_in(kk-1)))
-                    z2 = 1.0 - z1
-                    field_out(i,j,k) = &
-                     interp_var_360(val_in(kk-1), val_in(kk), z1, z2)
-                    kkcache = kk
-                  ENDIF
-                  CYCLE outlev2
-                ENDIF
-              ENDDO inlev2
-            ENDDO outlev2
+        IF (ASSOCIATED(this%vcoord_in)) THEN
+          mask_in = c_e(field_in(i,j,this%levshift+1:this%levshift+this%levused)) &
+           .AND. c_e(this%vcoord_in(:))
+        ELSE
+          mask_in = c_e(field_in(i,j,this%levshift+1:this%levshift+this%levused)) &
+           .AND. c_e(coord_3d_in(i,j,:))
+        ENDIF
+
+        IF (vartype == var_press) THEN
+          mask_in(:) = mask_in(:) .AND. &
+           (field_in(i,j,this%levshift+1:this%levshift+this%levused) > 0.0D0)
+        ENDIF
+        inused = COUNT(mask_in)
+        IF (inused > 1) THEN
+          IF (ASSOCIATED(this%vcoord_in)) THEN
+            coord_in(1:inused) = PACK(this%vcoord_in(:), mask=mask_in)
+          ELSE
+            coord_in(1:inused) = PACK(coord_3d_in(i,j,:), mask=mask_in)
           ENDIF
-
-        CASE(var_press)
-          n = COUNT(c_e(field_in(i,j,:)) .AND. field_in(i,j,:) > 0.0D0)
-          IF (n > 1) THEN
-            coord_in(1:n) = PACK(this%vcoord_in(:), &
-             mask=c_e(field_in(i,j,:)) .AND. field_in(i,j,:) > 0.0D0)
-            val_in(1:n) = LOG(PACK(field_in(i,j,:), &
-             mask=c_e(field_in(i,j,:))  .AND. field_in(i,j,:) > 0.0D0))
-            kkcache = 2
-            outlev3: DO k = 1, outnz
-              IF (.NOT.c_e(this%vcoord_out(k))) CYCLE outlev3
-              inlev3: DO kk = kkcache, n
-                IF (coord_in(kk) >= this%vcoord_out(k)) THEN
-                  IF (this%vcoord_out(k) >= coord_in(kk-1)) THEN
-                    z1 = REAL((this%vcoord_out(k) - coord_in(kk-1))/ &
-                     (coord_in(kk) - coord_in(kk-1)))
-                    z2 = 1.0 - z1
-                    field_out(i,j,k) = EXP(val_in(kk-1)*z2 + val_in(kk)*z1)
-                    kkcache = kk
-                  ENDIF
-                  CYCLE outlev3
-                ENDIF
-              ENDDO inlev3
-            ENDDO outlev3
+          IF (vartype == var_press) THEN
+            val_in(1:inused) = LOG(PACK( &
+             field_in(i,j,this%levshift+1:this%levshift+this%levused), &
+             mask=mask_in))
+          ELSE
+            val_in(1:inused) = PACK( &
+             field_in(i,j,this%levshift+1:this%levshift+this%levused), &
+             mask=mask_in)
           ENDIF
+          kkcache = 1
+          DO k = 1, outnz
 
-        CASE default
-          n = COUNT(c_e(field_in(i,j,:)))
-          IF (n > 1) THEN
-            coord_in(1:n) = PACK(this%vcoord_in(:), mask=c_e(field_in(i,j,:)))
-            val_in(1:n) = PACK(field_in(i,j,:), mask=c_e(field_in(i,j,:)))
-            kkcache = 2
-            outlev1: DO k = 1, outnz
-              IF (.NOT.c_e(this%vcoord_out(k))) CYCLE outlev1
-              inlev1: DO kk = kkcache, n
-                IF (coord_in(kk) >= this%vcoord_out(k)) THEN
-                  IF (this%vcoord_out(k) >= coord_in(kk-1)) THEN
-                    z1 = REAL((this%vcoord_out(k) - coord_in(kk-1))/ &
-                     (coord_in(kk) - coord_in(kk-1)))
-                    z2 = 1.0 - z1
-                    field_out(i,j,k) = val_in(kk-1)*z2 + val_in(kk)*z1
-                    kkcache = kk
-                  ENDIF
-                  CYCLE outlev1
+            kfound = imiss
+            DO kk = 1, MAX(inused-kkcache-1, kkcache) ! +-1
+              kkup = kkcache + kk
+              kkdown = kkcache - kk + 1
+
+              IF (kkdown >= 1) THEN ! search down
+                IF (this%vcoord_out(k) >= &
+                 MIN(coord_in(kkdown), coord_in(kkdown+1)) .AND. &
+                 this%vcoord_out(k) < &
+                 MAX(coord_in(kkdown), coord_in(kkdown+1))) THEN
+                  kkcache = kkdown
+                  kfoundin = kkcache
+                  kfound = kkcache
+                  EXIT ! kk
                 ENDIF
-              ENDDO inlev1
-            ENDDO outlev1
-          ENDIF
+              ENDIF
+              IF (kkup < inused) THEN ! search up
+                IF (this%vcoord_out(k) >= &
+                 MIN(coord_in(kkup), coord_in(kkup+1)) .AND. &
+                 this%vcoord_out(k) < &
+                 MAX(coord_in(kkup), coord_in(kkup+1))) THEN
+                  kkcache = kkup
+                  kfoundin = kkcache
+                  kfound = kkcache
+                  EXIT ! kk
+                ENDIF
+              ENDIF
 
-        END SELECT
+            ENDDO
+
+            IF (c_e(kfound)) THEN
+              z1 = REAL((this%vcoord_out(k) - coord_in(kfound-1))/ &
+               (coord_in(kfound) - coord_in(kfound-1)))
+              z2 = 1.0 - z1
+              IF (vartype == var_dir360) THEN
+                field_out(i,j,k) = &
+                 interp_var_360(val_in(kfound-1), val_in(kfound), z1, z2)
+              ELSE IF (vartype == var_press) THEN
+                field_out(i,j,k) = EXP(val_in(kfound-1)*z2 + val_in(kfound)*z1)
+              ELSE
+                field_out(i,j,k) = val_in(kfound-1)*z2 + val_in(kfound)*z1
+              ENDIF
+            ENDIF
+
+          ENDDO
+
+        ENDIF
 
       ENDDO
     ENDDO
