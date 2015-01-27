@@ -1269,6 +1269,8 @@ character(len=1) :: type
 integer :: ind
 TYPE(vol7d_var) ::  var
 LOGICAL,allocatable :: ltime(:),ltimerange(:),lana(:),lnetwork(:)
+logical,allocatable :: maschera(:)
+
 
 allocate(ltime(size(this%time)))
 allocate(ltimerange(size(this%timerange)))
@@ -1293,11 +1295,20 @@ type=cmiss
 !type="i"
 ind = index(that%dativar, var, type=type)
 
+allocate(maschera(size(that%level)))
+
+maschera = (&
+ (that%level%level1 == 105.and.that%level%level2 == 105) .or. &
+ (that%level%level1 == 103 .and. that%level%level2 == imiss ) .or. &
+ (that%level%level1 == 102 .and. that%level%level2 == imiss )) &
+ .and. c_e(that%voldatic(1,1,:,1,ind,1))
+
+
 select case (type)
 
 case("d")
   
-  where (that%level%level1 == 105.and.that%level%level2 == 105 .and. c_e(that%voldatid(1,1,:,1,ind,1)))
+  where (maschera)
     that%level%level1 = 100
     that%level%l1 = int(realdat(that%voldatid(1,1,:,1,ind,1),that%dativar%d(ind)))
     that%level%l1 = int(that%voldatid(1,1,:,1,ind,1))
@@ -1307,7 +1318,7 @@ case("d")
 
 case("r")
 
-  where (that%level%level1 == 105.and.that%level%level2 == 105 .and. c_e(that%voldatir(1,1,:,1,ind,1)))
+  where (maschera)
     that%level%level1 = 100
     that%level%l1 = int(realdat(that%voldatir(1,1,:,1,ind,1),that%dativar%r(ind)))
     that%level%level2 = imiss
@@ -1316,7 +1327,7 @@ case("r")
 
 case("i")
     
-  where (that%level%level1 == 105.and.that%level%level2 == 105 .and. c_e(that%voldatii(1,1,:,1,ind,1)))
+  where (maschera)
     that%level%level1 = 100
     that%level%l1 = int(realdat(that%voldatii(1,1,:,1,ind,1),that%dativar%i(ind)))
     that%level%level2 = imiss
@@ -1325,7 +1336,7 @@ case("i")
 
 case("b")
 
-  where (that%level%level1 == 105.and.that%level%level2 == 105 .and. c_e(that%voldatib(1,1,:,1,ind,1)))
+  where (maschera)
     that%level%level1 = 100
     that%level%l1 = int(realdat(that%voldatib(1,1,:,1,ind,1),that%dativar%b(ind)))
     that%level%level2 = imiss
@@ -1334,7 +1345,7 @@ case("b")
 
 case("c")
 
-  where (that%level%level1 == 105.and.that%level%level2 == 105 .and. c_e(that%voldatic(1,1,:,1,ind,1)))
+  where (maschera)
     that%level%level1 = 100
     that%level%l1 = int(realdat(that%voldatic(1,1,:,1,ind,1),that%dativar%c(ind)))
     that%level%level2 = imiss

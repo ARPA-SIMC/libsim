@@ -1170,7 +1170,7 @@ if (.not. any(c_e(r_ur))) then
 !end if
 
    where ( .not. c_e(r_ur))
-    r_ur=QTORELHUM(r_uq,r_pr,r_tt)
+    r_ur=QTORELHUM(r_uq,r_pr*100.,r_tt)
   end where
 
 ! delete very dry points for truncation problem
