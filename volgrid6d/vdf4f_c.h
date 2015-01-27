@@ -1,6 +1,7 @@
 #ifndef VDF4F_H
 #define VDF4F_H
 
+#include <string>
 #include <sys/types.h>
 
 

@@ -213,7 +213,7 @@ if test "x$enableval" = "xyes"; then
   AC_DEFINE(VAPOR, 1, [Enable vapor code])
   VAPOR_CPPFLAGS="-I/usr/include/vapor"
   AC_SUBST(VAPOR_CPPFLAGS)
-  VAPOR_LIBS="-lvdf -lcommon -lnetcdf -lexpat -lproj -lrt -lstdc++"
+  VAPOR_LIBS="-lvdf -lcommon -lnetcdf -lexpat -lproj -lrt -ludunits2 -lstdc++"
   AC_SUBST(VAPOR_LIBS)
 else
   AC_MSG_RESULT([vapor code not included])
