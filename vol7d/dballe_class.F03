@@ -3629,9 +3629,9 @@ character (len=*), intent(in), optional :: password !< password to use
 character(len=*),INTENT(in),OPTIONAL :: categoryappend !< appennde questo suffisso al namespace category di log4fortran
 integer,INTENT(in),OPTIONAL :: idbhandle !< dsn connection; if present it will be used
 
-character(len=50) :: quidsn,quiuser,quipassword
+character(len=50) :: quiuser,quipassword
 integer :: ier
-character(len=512) :: a_name
+character(len=512) :: a_name,quidsn
 
 if (present(categoryappend))then
   call l4f_launcher(a_name,a_name_append=trim(subcategory)//"."//trim(categoryappend))
