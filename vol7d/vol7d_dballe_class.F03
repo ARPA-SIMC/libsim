@@ -204,6 +204,8 @@ if (optio_log(file)) then
     lformat=format
   end if
 
+  CALL getarg(0,arg)
+
   lfilename=trim(arg)//"."//trim(lformat)
   if (index(arg,'/',back=.true.) > 0) lfilename=lfilename(index(arg,'/',back=.true.)+1 : )
 

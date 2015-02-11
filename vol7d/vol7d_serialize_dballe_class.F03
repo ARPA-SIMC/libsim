@@ -495,6 +495,8 @@ CALL linei%vol7d_serialize_iterline_set_callback(vol7d_ana_callback_dba &
  ,vol7d_valuec_attr_callback_dba &
  )
 
+metaanddatal=dbametaanddatalist()
+
 DO WHILE(linei%next())
 
   coli = linei%vol7d_serialize_itercol_new() ! column iterator from linei (data line)
