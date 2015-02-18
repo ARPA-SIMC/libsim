@@ -1808,6 +1808,8 @@ character(len=40) :: ltemplate
 type(dbametaanddatalist) :: metaanddatal
 logical :: stat
 
+metaanddatal=dbametaanddatalist()
+
 call v7d2dba(this%vol7d,metaanddatal)
 !call metaanddatal%display()
 

@@ -470,6 +470,8 @@ if (conta%nanavar > 0) nattr= nattr + conta%nanaattr/conta%nanavar
 nvar  = conta%nvar + conta%nanavar
 !print *,"nvar: ",nvar,"nattr: ",nattr
 
+metaanddata%metadata=dbametadata()   ! initialize must be done for station constant data
+
 allocate(metaanddata%dataattrv%dataattr(nvar))
 do i =1,nvar
   allocate(metaanddata%dataattrv%dataattr(i)%attrv%dcv(nattr))
@@ -494,8 +496,6 @@ CALL linei%vol7d_serialize_iterline_set_callback(vol7d_ana_callback_dba &
  ,vol7d_valueb_attr_callback_dba &
  ,vol7d_valuec_attr_callback_dba &
  )
-
-metaanddatal=dbametaanddatalist()
 
 DO WHILE(linei%next())
 

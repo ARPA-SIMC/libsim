@@ -2484,7 +2484,7 @@ end subroutine dbametaanddatav_extrude
 
 !> put data on DSN; extrude metaanddata list
 subroutine dbametaanddatal_extrude(metaanddatal,session,noattr,filter)
-class(dbametaanddatalist), intent(in) :: metaanddatal !< ingestd data
+class(dbametaanddatalist), intent(inout) :: metaanddatal !< ingestd data
 class(dbasession), intent(in) :: session
 logical, intent(in),optional :: noattr          !< set to .true. to put data only (no attribute) 
 type(dbafilter),intent(in),optional :: filter     !< use this to filter wanted data                
