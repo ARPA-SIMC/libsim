@@ -792,7 +792,7 @@ end subroutine volgrid6d_read_from_file
 
 !> Import a single \a gridinfo object into a \a volgrid6d object.
 !! This methods imports a single gridded field from a \a gridinfo
-!! object into a \a volgrid6d object, inseting it into the
+!! object into a \a volgrid6d object, inserting it into the
 !! multidimensional structure of volgrid6d. The volgrid6d object must
 !! have been already initialized and the dimensions specified with
 !! volgrid6d_alloc(). If the \a force argument is missing or \a
@@ -804,27 +804,34 @@ end subroutine volgrid6d_read_from_file
 !! \a .TRUE. , the gridinfo dimension descriptors that do not fit into
 !! available descriptors in the \a volgrid6d structure, will be
 !! accomodated in a empty (i.e. equal to missing value) descriptor, if
-!! available, other wise the gridinfo will be rejected.  The
+!! available, otherwise the gridinfo will be rejected.  The
 !! descriptor of the grid in the \a volgrid object is assigned to the
 !! descriptor contained in \a gridinfo if it is missing in \a volgrid,
 !! otherwise it is checked and the object is rejected if grids do not
 !! match.
-SUBROUTINE import_from_gridinfo(this, gridinfo, force, clone)
+SUBROUTINE import_from_gridinfo(this, gridinfo, force, dup_mode, clone)
 TYPE(volgrid6d),INTENT(inout) :: this !< object in which to import
-type(gridinfo_def),intent(in) :: gridinfo !< gridinfo object to be imported
+TYPE(gridinfo_def),INTENT(in) :: gridinfo !< gridinfo object to be imported
 LOGICAL,INTENT(in),OPTIONAL :: force !< if provided and \c .TRUE., the gridinfo is forced into an empty element of \a this, if required and possible
+INTEGER,INTENT(in),OPTIONAL :: dup_mode !< determines the behavior in case of duplicate metadata: if \a dup_mode is not provided or 0, a duplicate field overwrites, if \a dup_mode is 1, duplicate fields are merged with priority to the last
 LOGICAL , INTENT(in),OPTIONAL :: clone !< if provided and \c .TRUE. , clone the gaid's from \a gridinfo to \a this
 
 CHARACTER(len=255) :: type
-INTEGER :: ilevel, itime, itimerange, ivar
-LOGICAL :: lforce
+INTEGER :: ilevel, itime, itimerange, ivar, ldup_mode
+LOGICAL :: lforce, dup
 TYPE(datetime) :: correctedtime
+REAL,ALLOCATABLE :: tmpgrid(:,:)
 
-if (present(force)) then
+IF (PRESENT(force)) THEN
   lforce = force
-else
-  lforce = .false.
-endif
+ELSE
+  lforce = .FALSE.
+ENDIF
+IF (PRESENT(dup_mode)) THEN
+  ldup_mode = dup_mode
+ELSE
+  ldup_mode = 0
+ENDIF
 
 call get_val(this%griddim,proj_type=type)
 
@@ -901,40 +908,48 @@ IF (ivar == 0) THEN
   RETURN
 ENDIF
 
-if (associated(this%gaid))then
-
+IF (ASSOCIATED(this%gaid)) THEN
+  dup = .FALSE.
   IF (c_e(this%gaid(ilevel,itime,itimerange,ivar))) THEN
+    dup = .TRUE.
+    CALL l4f_category_log(this%category,L4F_WARN,"gaid exist: grib duplicated")
+! avoid memory leaks
+    IF (optio_log(clone)) CALL delete(this%gaid(ilevel,itime,itimerange,ivar))
+  ENDIF
 
-   call l4f_category_log(this%category,L4F_WARN,"gaid exist: grib duplicated")
-
-  end if
-
-  if (optio_log(clone))then
-    call copy(gridinfo%gaid, this%gaid(ilevel,itime,itimerange,ivar))
+  IF (optio_log(clone)) THEN
+    CALL copy(gridinfo%gaid, this%gaid(ilevel,itime,itimerange,ivar))
 #ifdef DEBUG
-    call l4f_category_log(this%category,L4F_DEBUG,"cloning to a new gaid")
+    CALL l4f_category_log(this%category,L4F_DEBUG,"cloning to a new gaid")
 #endif
-  else
+  ELSE
     this%gaid(ilevel,itime,itimerange,ivar) = gridinfo%gaid
-  end if
-  
-else
+  ENDIF
 
-  call l4f_category_log(this%category,L4F_ERROR,&
+  IF (ASSOCIATED(this%voldati))THEN
+    IF (.NOT.dup .OR. ldup_mode == 0) THEN
+      this%voldati(:,:,ilevel,itime,itimerange,ivar) = decode_gridinfo(gridinfo)
+    ELSE IF (ldup_mode == 1) THEN
+      tmpgrid = decode_gridinfo(gridinfo) ! f2003 automatic allocation
+      WHERE(c_e(tmpgrid))
+        this%voldati(:,:,ilevel,itime,itimerange,ivar) = tmpgrid(:,:)
+      END WHERE
+    ELSE IF (ldup_mode == 2) THEN
+      WHERE(.NOT.c_e(this%voldati(:,:,ilevel,itime,itimerange,ivar)))
+        this%voldati(:,:,ilevel,itime,itimerange,ivar) = decode_gridinfo(gridinfo)
+      END WHERE
+    ENDIF
+  ENDIF
+
+ELSE
+  CALL l4f_category_log(this%category,L4F_ERROR, &
    "gaid not allocated, you probably need to call volgrid6d_alloc_vol first")
-  call raise_error()
+  CALL raise_error()
   RETURN
-  
-end if
+ENDIF
 
 
-if (associated (this%voldati))then
-
-  this%voldati(:,:,ilevel,itime,itimerange,ivar) = decode_gridinfo(gridinfo)
-  
-end if
-
-end subroutine import_from_gridinfo
+END SUBROUTINE import_from_gridinfo
 
 
 !> Export a single grid of a \a volgrid6d object to a \a gridinfo_def object.
@@ -1032,9 +1047,11 @@ END SUBROUTINE export_to_gridinfo
 !! objects, and all the dimension descriptors in each of the objects
 !! are allocated and assigned within the method according to the data
 !! contained in \a gridinfov.
-SUBROUTINE import_from_gridinfovv(this, gridinfov, clone, decode, time_definition, categoryappend)
+SUBROUTINE import_from_gridinfovv(this, gridinfov, dup_mode, clone, decode, &
+ time_definition, categoryappend)
 TYPE(volgrid6d),POINTER :: this(:) !< object in which to import
 TYPE(arrayof_gridinfo),INTENT(in) :: gridinfov !< array of gridinfo objects to be imported
+INTEGER,INTENT(in),OPTIONAL :: dup_mode !< determines the behavior in case of duplicate metadata: if \a dup_mode is not provided or 0, a duplicate field overwrites, if \a dup_mode is 1, duplicate fields are merged with priority to the last
 LOGICAL , INTENT(in),OPTIONAL :: clone !< if provided and \c .TRUE. , clone the gaid's from \a gridinfo to \a this
 LOGICAL,INTENT(in),OPTIONAL :: decode !< if provided and \a .FALSE. the data volume in the elements of \a this is not allocated and successive work will be performed on grid_id's
 INTEGER,INTENT(IN),OPTIONAL :: time_definition !< 0=time is reference time; 1=time is validity time
@@ -1149,8 +1166,8 @@ DO i = 1, gridinfov%arraysize
    "to volgrid6d index: "//t2c(index(this%griddim, gridinfov%array(i)%griddim)))
 #endif
 
-  CALL import (this(index(this%griddim, gridinfov%array(i)%griddim)), &
-   gridinfov%array(i), clone=clone)
+  CALL import(this(index(this%griddim, gridinfov%array(i)%griddim)), &
+   gridinfov%array(i), dup_mode=dup_mode, clone=clone)
 
 ENDDO
 
@@ -1245,9 +1262,11 @@ END SUBROUTINE export_to_gridinfovv
 !! temporary \a gridinfo object, importing it into the \a volgrid6d
 !! object cloning the gaid's and then destroying the gridinfo, so it
 !! works similarly to vogrid6d_class::import_from_gridinfovv() method.
-SUBROUTINE volgrid6d_import_from_file(this, filename, decode, time_definition, categoryappend)
+SUBROUTINE volgrid6d_import_from_file(this, filename, dup_mode, decode, &
+ time_definition, categoryappend)
 TYPE(volgrid6d),POINTER :: this(:) !< object in which to import
 CHARACTER(len=*),INTENT(in) :: filename !< name of file from which to import
+INTEGER,INTENT(in),OPTIONAL :: dup_mode !< determines the behavior in case of duplicate metadata: if \a dup_mode is not provided or 0, a duplicate field overwrites, if \a dup_mode is 1, duplicate fields are merged with priority to the last
 LOGICAL,INTENT(in),OPTIONAL :: decode !< if provided and \a .FALSE. the data volume in the elements of \a this is not allocated and successive work will be performed on grid_id's
 INTEGER,INTENT(IN),OPTIONAL :: time_definition !< 0=time is reference time; 1=time is validity time
 character(len=*),INTENT(in),OPTIONAL :: categoryappend !< append this suffix to log4fortran namespace category
@@ -1270,14 +1289,14 @@ CALL import(gridinfo, filename=filename, categoryappend=categoryappend)
   
 IF (gridinfo%arraysize > 0) THEN
 
-  CALL import(this, gridinfo, clone=.TRUE., decode=decode, &
+  CALL import(this, gridinfo, dup_mode=dup_mode, clone=.TRUE., decode=decode, &
    time_definition=time_definition, categoryappend=categoryappend)
 
   CALL l4f_category_log(category,L4F_INFO,"deleting gridinfo")
   CALL delete(gridinfo)
 
 ELSE
-  CALL l4f_category_log(category,L4F_INFO,"file does not contains gridded data")
+  CALL l4f_category_log(category,L4F_INFO,"file does not contain gridded data")
 ENDIF
 
 ! close logger
@@ -1531,7 +1550,7 @@ END SUBROUTINE volgrid6d_transform_compute
 !! is created internally and it does not require preliminary
 !! initialisation.
 SUBROUTINE volgrid6d_transform(this, griddim, volgrid6d_in, volgrid6d_out, &
- lev_out, volgrid6d_coord_in, maskgrid, clone, decode, categoryappend)
+ lev_out, volgrid6d_coord_in, maskgrid, maskbounds, clone, decode, categoryappend)
 TYPE(transform_def),INTENT(in) :: this !< object specifying the abstract transformation
 TYPE(griddim_def),INTENT(in),OPTIONAL :: griddim !< griddim specifying the output grid (required by most transformation types)
 ! TODO ripristinare intent(in) dopo le opportune modifiche in grid_class.F90
@@ -1540,6 +1559,7 @@ TYPE(volgrid6d),INTENT(out) :: volgrid6d_out !< transformed object, it does not 
 TYPE(vol7d_level),INTENT(in),OPTIONAL,TARGET :: lev_out(:) !< vol7d_level object defining target vertical grid, for vertical interpolations
 TYPE(volgrid6d),INTENT(in),OPTIONAL :: volgrid6d_coord_in !< object providing time constant input vertical coordinate for some kind of vertical interpolations
 REAL,INTENT(in),OPTIONAL :: maskgrid(:,:) !< 2D field to be used for defining subareas according to its values, it must have the same shape as the field to be interpolated (for transformation subtype 'maskfill')
+REAL,INTENT(in),OPTIONAL :: maskbounds(:) !< array of boundary values for defining a subset of valid points where the values of \a maskgrid are within the first and last value of \a maskbounds (for transformation type 'metamorphosis:maskfill')
 LOGICAL,INTENT(in),OPTIONAL :: clone !< if provided and \a .TRUE. , clone the \a gaid's from \a volgrid6d_in to \a volgrid6d_out
 LOGICAL,INTENT(in),OPTIONAL :: decode !< determine whether the data in \a volgrid6d_out should be decoded or remain coded in gaid, if not provided, the decode status is taken from \a volgrid6d_in
 CHARACTER(len=*),INTENT(in),OPTIONAL :: categoryappend !< append this suffix to log4fortran namespace category
@@ -1754,7 +1774,7 @@ ELSE
   CALL init(volgrid6d_out, griddim=griddim, &
    time_definition=volgrid6d_in%time_definition, categoryappend=categoryappend)
   CALL init(grid_trans, this, in=volgrid6d_in%griddim, out=volgrid6d_out%griddim, &
-   maskgrid=maskgrid, categoryappend=categoryappend)
+   maskgrid=maskgrid, maskbounds=maskbounds, categoryappend=categoryappend)
 ENDIF
 
 
@@ -1832,7 +1852,7 @@ END SUBROUTINE volgrid6d_transform
 !! to the transformation type, the output array may have of one or
 !! more \a volgrid6d elements on different grids.
 SUBROUTINE volgrid6dv_transform(this, griddim, volgrid6d_in, volgrid6d_out, &
- lev_out, volgrid6d_coord_in, maskgrid, clone, decode, categoryappend)
+ lev_out, volgrid6d_coord_in, maskgrid, maskbounds, clone, decode, categoryappend)
 TYPE(transform_def),INTENT(in) :: this !< object specifying the abstract transformation
 TYPE(griddim_def),INTENT(in),OPTIONAL :: griddim !< griddim specifying the output grid (required by most transformation types)
 ! TODO ripristinare intent(in) dopo le opportune modifiche in grid_class.F90
@@ -1841,6 +1861,7 @@ TYPE(volgrid6d),POINTER :: volgrid6d_out(:) !< transformed object, it is a non a
 TYPE(vol7d_level),INTENT(in),OPTIONAL :: lev_out(:) !< vol7d_level object defining target vertical grid
 TYPE(volgrid6d),INTENT(in),OPTIONAL :: volgrid6d_coord_in !< object providing time constant input vertical coordinate for some kind of vertical interpolations
 REAL,INTENT(in),OPTIONAL :: maskgrid(:,:) !< 2D field to be used for defining subareas according to its values, it must have the same shape as the field to be interpolated (for transformation subtype 'maskfill')
+REAL,INTENT(in),OPTIONAL :: maskbounds(:) !< array of boundary values for defining a subset of valid points where the values of \a maskgrid are within the first and last value of \a maskbounds (for transformation type 'metamorphosis:maskfill')
 LOGICAL,INTENT(in),OPTIONAL :: clone !< if provided and \a .TRUE. , clone the \a gaid's from \a volgrid6d_in to \a volgrid6d_out 
 LOGICAL,INTENT(in),OPTIONAL :: decode !< if provided and \a .FALSE. the data volume is not allocated, but work is performed on grid_id's
 CHARACTER(len=*),INTENT(in),OPTIONAL :: categoryappend !< append this suffix to log4fortran namespace category
@@ -1857,7 +1878,8 @@ end if
 do i=1,size(volgrid6d_in)
   call transform(this, griddim, volgrid6d_in(i), volgrid6d_out(i), &
    lev_out=lev_out, volgrid6d_coord_in=volgrid6d_coord_in, &
-   maskgrid=maskgrid, clone=clone, decode=decode, categoryappend=categoryappend)
+   maskgrid=maskgrid, maskbounds=maskbounds, &
+   clone=clone, decode=decode, categoryappend=categoryappend)
 end do
 
 END SUBROUTINE volgrid6dv_transform

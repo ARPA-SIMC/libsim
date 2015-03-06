@@ -56,11 +56,12 @@ TYPE(volgrid6d)  :: volgrid_coord
 TYPE(arrayof_gridinfo) :: maskgrid
 REAL,ALLOCATABLE :: maskfield(:,:)
 DOUBLE PRECISION :: ilon, ilat, flon, flat, radius
+TYPE(arrayof_real) :: maskbounds
 
 type(griddim_def) :: griddim_out
 type(transform_def) :: trans
 
-integer :: nx,ny,component_flag,npx,npy
+INTEGER :: nx,ny,component_flag,npx,npy,dup_mode
 doubleprecision :: xmin, xmax, ymin, ymax, xoff, yoff
 INTEGER :: ix, iy, fx, fy, time_definition, utm_zone
 doubleprecision :: latitude_south_pole,longitude_south_pole,angle_rotation
@@ -101,7 +102,6 @@ ier=l4f_init()
 
 !imposta a_name
 category=l4f_category_get(a_name//".main")
-
 
 ! define the option parser
 opt = optionparser_new(description_msg= &
@@ -182,6 +182,10 @@ radius = dmiss
 CALL optionparser_add(opt, ' ', 'radius', radius, help= &
  'radius of stencil in gridpoint units, fractionary values accepted, &
  &for ''stencilinter'' interpolation')
+CALL optionparser_add(opt, ' ', 'maskbounds', maskbounds, help= &
+ 'comma-separated list of boundary values for defining subareas &
+ &according to values of mask, &
+ &for ''metamorphosis:maskfill'' transformation')
 
 CALL optionparser_add(opt, 'f', 'npx', npx, 4, help= &
  'number of nodes along x axis on input grid, over which to apply function for boxregrid')
@@ -260,11 +264,16 @@ CALL optionparser_add(opt, 't', 'component-flag', component_flag, &
 ! this option has been commented because it is not handled in
 ! volgrid_class, it makes sense only in vg6d_getpoint for determining
 ! the time_definition of output v7d volume
-!time_definition = 0
+
 CALL optionparser_add(opt, ' ', 'time-definition', time_definition, 0, help= &
- 'time definition for import volume, 0 for reference time (more suitable for &
+ 'time definition for imported volume, 0 for reference time (more suitable for &
  &presenting forecast data) and 1 for verification time (more suitable for &
  &comparing forecasts with observations)')
+
+CALL optionparser_add(opt, ' ', 'dup-mode', dup_mode, 0, help= &
+ 'behavior in case of duplicated input metadata: 0=overwrite fields, &
+ &1=merge fields taking into account missing data and with priority to &
+ &the second field')
 
 ! for computing
 CALL optionparser_add(opt, ' ', 'comp-stat-proc', comp_stat_proc, '', help= &
@@ -419,6 +428,10 @@ IF (comp_stat_proc /= '') THEN
   ENDIF
 ENDIF
 
+! pack maskbounds array or allocate it to zero length for further
+! correct behavior
+CALL packarray(maskbounds)
+
 CALL delete(opt)
 
 call l4f_category_log(category,L4F_INFO,"transforming from file:"//trim(input_file))
@@ -510,15 +523,9 @@ DEALLOCATE(w_s, w_e)
 
 CALL griddim_unproj(griddim_out)
 
-!other operations have proper decode inside
-IF (output_format == "vapor") THEN
-  decode=.true.
-else
-  decode=.false.
-endif
-
+decode = output_format == "vapor" .OR. dup_mode > 0
 ! import input volume
-CALL import(volgrid, filename=input_file, decode=decode, &
+CALL import(volgrid, filename=input_file, decode=decode, dup_mode=dup_mode, &
  time_definition=time_definition, categoryappend="input_volume")
 IF (.NOT.ASSOCIATED(volgrid)) THEN
   CALL l4f_category_log(category, L4F_ERROR, &
@@ -545,7 +552,8 @@ IF (trans_type /= 'none') THEN ! transform
 
   CALL transform(trans, griddim_out, volgrid6d_in=volgrid, &
    volgrid6d_out=volgrid_out, lev_out=olevel_list, &
-   volgrid6d_coord_in=volgrid_coord, maskgrid=maskfield, &
+   volgrid6d_coord_in=volgrid_coord, &
+   maskgrid=maskfield, maskbounds=maskbounds%array, &
    clone=.TRUE., categoryappend="transform")
 
   CALL l4f_category_log(category,L4F_INFO,"transformation completed")

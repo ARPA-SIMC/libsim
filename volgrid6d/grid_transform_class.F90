@@ -120,7 +120,8 @@
 !!
 !!  - trans_type='maskinter' takes a 2D field on the same grid as the
 !!    input points, it divides it in a number of subareas according to
-!!    its values and every subarea is used as a mask for
+!!    its values and and optional list of boundaries
+!!    and every subarea is used as a mask for
 !!    interpolation; data are thus computed on a new set of points,
 !!    the number of which is equal to the number of subareas, and for
 !!    each of which the value is the result of a function computed
@@ -161,8 +162,10 @@
 !!      marked with the number of the subarea they belong to
 !!      (grid-to-sparse points).
 !!    - sub_type='maskfill' the input points corresponding to points
-!!      having valid data in a mask field, are kept in the output; the
-!!      other points are filled with missing values (grid-to-grid).
+!!      having valid data and optionally having values within
+!!      requested bounds in a 2-D mask field, are kept in the output;
+!!      the other points are filled with missing values
+!!      (grid-to-grid).
 !!
 !! \ingroup volgrid6d
 MODULE grid_transform_class
@@ -626,7 +629,7 @@ ELSE IF (this%trans_type == 'metamorphosis') THEN
       CALL raise_fatal_error()
     ENDIF
 
-  ELSE IF (this%sub_type == 'mask')THEN
+  ELSE IF (this%sub_type == 'mask' .OR. this%sub_type == 'maskfill')THEN
 ! nothing to do here
   ELSE
     CALL l4f_category_log(this%category,L4F_ERROR,'metamorphosis: sub_type '// &
@@ -1052,12 +1055,14 @@ END SUBROUTINE make_vert_coord
 !! output grids involved. The function \a c_e can be used in order to
 !! check whether the object has been successfully initialised, if the
 !! result is \a .FALSE., it should not be used further on.
-SUBROUTINE grid_transform_init(this, trans, in, out, maskgrid, categoryappend)
+SUBROUTINE grid_transform_init(this, trans, in, out, maskgrid, maskbounds, &
+ categoryappend)
 TYPE(grid_transform),INTENT(out) :: this !< grid_transformation object
 TYPE(transform_def),INTENT(in) :: trans !< transformation object
 TYPE(griddim_def),INTENT(inout) :: in !< griddim object to transform
 TYPE(griddim_def),INTENT(inout) :: out !< griddim object defining target grid (input or output depending on type of transformation)
 REAL,INTENT(in),OPTIONAL :: maskgrid(:,:) !< 2D field to be used for defining valid points, it must have the same shape as the field to be interpolated (for transformation type 'metamorphosis:maskfill')
+REAL,INTENT(in),OPTIONAL :: maskbounds(:) !< array of boundary values for defining a subset of valid points where the values of \a maskgrid are within the first and last value of \a maskbounds (for transformation type 'metamorphosis:maskfill')
 CHARACTER(len=*),INTENT(in),OPTIONAL :: categoryappend !< append this suffix to log4fortran namespace category
 
 INTEGER :: nx, ny, i, j, ix, iy, n, nm, nr, cf_i, cf_o, nprev, &
@@ -1414,7 +1419,7 @@ ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
   this%outnx = this%innx
   this%outny = this%inny
 
-  IF (this%trans%sub_type == 'maskfill' ) THEN
+  IF (this%trans%sub_type == 'maskfill') THEN
 
     IF (.NOT.PRESENT(maskgrid)) THEN
       CALL l4f_category_log(this%category,L4F_ERROR, &
@@ -1432,7 +1437,18 @@ ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
     ENDIF
 
     ALLOCATE(this%point_mask(this%innx,this%inny))
-    this%point_mask(:,:) = c_e(maskgrid(:,:))
+
+! behavior depends on the presence/usability of maskbounds,
+! simplified wrt its use in metamorphosis:mask
+    IF (.NOT.PRESENT(maskbounds)) THEN
+      this%point_mask(:,:) = c_e(maskgrid(:,:))
+    ELSE IF (SIZE(maskbounds) < 2) THEN
+      this%point_mask(:,:) = c_e(maskgrid(:,:))
+    ELSE
+      this%point_mask(:,:) = c_e(maskgrid(:,:)) .AND. &
+       maskgrid(:,:) > maskbounds(1) .AND. &
+       maskgrid(:,:) <= maskbounds(SIZE(maskbounds))
+    ENDIF
 
   ENDIF
 
@@ -1529,7 +1545,7 @@ TYPE(transform_def),INTENT(in) :: trans !< transformation object
 TYPE(griddim_def),INTENT(inout) :: in !< griddim object to transform
 TYPE(vol7d),INTENT(inout) :: v7d_out !< vol7d object with the coordinates of the sparse points to be used as transformation target (input or output depending on type of transformation)
 REAL,INTENT(in),OPTIONAL :: maskgrid(:,:) !< 2D field to be used for defining subareas according to its values, it must have the same shape as the field to be interpolated (for transformation type 'maskinter' and 'metamorphosis:mask')
-REAL,INTENT(in),OPTIONAL :: maskbounds(:) !< array of boundary values for defining subareas from the values of \a maskgrid, the number of subareas is SIZE(maskbounds) - 1, if not provided a default based on extreme values of \a makgrid is used
+REAL,INTENT(in),OPTIONAL :: maskbounds(:) !< array of boundary values for defining subareas from the values of \a maskgrid, the number of subareas is SIZE(maskbounds) - 1, if not provided a default based on extreme values of \a maskgrid is used
 CHARACTER(len=*),INTENT(in),OPTIONAL :: categoryappend !< append this suffix to log4fortran namespace category
 
 INTEGER :: ix, iy, n, nm, nr, nprev, nmaskarea, xnmin, xnmax, ynmin, ynmax
