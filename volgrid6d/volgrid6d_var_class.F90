@@ -80,6 +80,7 @@ TYPE conv_func
 END TYPE conv_func
 
 TYPE(conv_func), PARAMETER :: conv_func_miss=conv_func(rmiss,rmiss)
+TYPE(conv_func), PARAMETER :: conv_func_identity=conv_func(1.0,0.0)
 
 TYPE vg6d_v7d_var_conv
   TYPE(volgrid6d_var) :: vg6d_var
@@ -93,7 +94,7 @@ TYPE(vg6d_v7d_var_conv), PARAMETER :: vg6d_v7d_var_conv_miss= &
 
 TYPE(vg6d_v7d_var_conv), ALLOCATABLE :: conv_fwd(:), conv_bwd(:)
 
-!> Initilize a \a volgrid6d_var object with the optional arguments provided.
+!> Initialize a \a volgrid6d_var object with the optional arguments provided.
 !! If an argument is not provided, the corresponding object member and
 !! those depending on it will be set to missing. For grib1-style
 !! variables, the \a discipline argument must be omitted, it will be
@@ -158,10 +159,18 @@ INTERFACE index
   MODULE PROCEDURE index_var6d
 END INTERFACE
 
-!> \brief display on the screen a brief content of object
+!> Display on the screen a brief content of object
 INTERFACE display
   MODULE PROCEDURE display_volgrid6d_var
 END INTERFACE
+
+!> Compose two conversions into a single one.
+!! Unlike scalar multiplication (and like matrix multiplication) here
+!! a*b /= b*a. By convention, the second factor is applied first in
+!! the result.
+INTERFACE OPERATOR (*)
+  MODULE PROCEDURE conv_func_mult
+END INTERFACE OPERATOR (*)
 
 !> Apply the conversion function \a this to \a values.
 !! function version
@@ -172,12 +181,14 @@ END INTERFACE
 !> Apply the conversion function \a this to \a values.
 !! subroutine version
 INTERFACE convert
-  MODULE PROCEDURE varbufr2vargrib_convert, vargrib2varbufr_convert, conv_func_convert
+  MODULE PROCEDURE varbufr2vargrib_convert, vargrib2varbufr_convert, &
+   conv_func_convert
 END INTERFACE
 
 PRIVATE
 PUBLIC volgrid6d_var, volgrid6d_var_miss, volgrid6d_var_new, init, delete, &
- OPERATOR(==), OPERATOR(/=), &
+ volgrid6d_var_normalize, &
+ OPERATOR(==), OPERATOR(/=), OPERATOR(*), &
  count_distinct, pack_distinct, map_distinct, map_inv_distinct, &
  index, display, &
  vargrib2varbufr, varbufr2vargrib, &
@@ -286,39 +297,31 @@ ELEMENTAL FUNCTION volgrid6d_var_eq(this, that) RESULT(res)
 TYPE(volgrid6d_var),INTENT(IN) :: this, that
 LOGICAL :: res
 
-if  ( this%discipline == that%discipline )then
+IF (this%discipline == that%discipline) THEN
 
-  if ( this%discipline == 255 )then
-                                !grib1
-     res= this%category == that%category .and. &
+  IF (this%discipline == 255) THEN ! grib1
+    res = this%category == that%category .AND. &
      this%number == that%number
 
-    if ( (this%category >= 128 .and. this%category <= 254) .or. &
-     (this%number >= 128 .and. this%number <= 254) )then
-      res = res .and. this%centre == that%centre           !local definition (centre is important)
-    end if
+    IF ((this%category >= 128 .AND. this%category <= 254) .OR. &
+     (this%number >= 128 .AND. this%number <= 254)) THEN
+      res = res .AND. this%centre == that%centre ! local definition, centre matters
+    ENDIF
 
-  else
-                                !grib2
-    res = this%category == that%category .and. &
+  ELSE ! grib2
+    res = this%category == that%category .AND. &
      this%number == that%number
 
-    if ( (this%discipline >= 192 .and. this%discipline <= 254) .or. &
-     (this%category >= 192 .and. this%category <= 254) .or. &
-     (this%number >= 192 .and. this%number <= 254) )then
-      res = res .and. this%centre == that%centre           !local definition (centre is important)
-    end if
+    IF ((this%discipline >= 192 .AND. this%discipline <= 254) .OR. &
+     (this%category >= 192 .AND. this%category <= 254) .OR. &
+     (this%number >= 192 .AND. this%number <= 254)) THEN
+      res = res .AND. this%centre == that%centre ! local definition, centre matters
+    ENDIF
+  ENDIF
 
-  end if
-
-else
-
-  ! one is grib1 and other is grib2 or different discipline
-  res=.false.
-
-end if
-
-
+ELSE ! different edition or different discipline
+  res = .FALSE.
+ENDIF
 
 END FUNCTION volgrid6d_var_eq
 
@@ -528,6 +531,45 @@ CALL l4f_log(L4F_WARN, 'varbufr2vargrib: variable '// &
 END FUNCTION varbufr2vargrib_convert
 
 
+!> Normalize a variable definition converting it to the
+!! format (grib edition) specified in the (grib) template provided.
+!! This allows a basic grib1 <-> grib2 conversion provided that
+!! entries for both grib editions of the related variable are present
+!! in the static file \a vargrib2ufr.csv. If the \a c_func variable
+!! returned is not missing (i.e. /= conv_func_miss) the field value
+!! should be converted as well using the conv_func::compute method .
+SUBROUTINE volgrid6d_var_normalize(this, c_func, grid_id_template)
+TYPE(volgrid6d_var),INTENT(inout) :: this !< variable to normalize
+TYPE(conv_func),INTENT(out) :: c_func !< \a conv_func object to convert data
+TYPE(grid_id),INTENT(in) :: grid_id_template !< a template (typically grib_api) to which data will be finally exported, it helps in improving variable conversion
+
+LOGICAL :: compat
+INTEGER :: gaid, editionnumber
+TYPE(volgrid6d_var) :: convert2
+TYPE(vol7d_var) :: tmpbufr
+TYPE(conv_func) tmpc_func
+
+compat = .TRUE.
+c_func = conv_func_miss
+
+#ifdef HAVE_LIBGRIBAPI
+gaid = grid_id_get_gaid(grid_id_template)
+IF (c_e(gaid)) THEN
+  CALL grib_get(gaid, 'GRIBEditionNumber', editionnumber)
+  compat = editionnumber == 1 .EQV. this%discipline == 255
+ENDIF
+#endif
+IF (compat) RETURN ! nothing to do
+
+tmpbufr = convert(this, tmpc_func)
+! manage missing for speed?
+this = convert(tmpbufr, c_func, grid_id_template)
+c_func = c_func * tmpc_func
+IF (c_func == conv_func_identity) c_func = conv_func_miss
+
+END SUBROUTINE volgrid6d_var_normalize
+
+
 ! Private subroutine for reading forward and backward conversion tables
 ! todo: better error handling
 SUBROUTINE vg6d_v7d_var_conv_setup()
@@ -637,6 +679,21 @@ res = .NOT.(this == that)
 
 END FUNCTION conv_func_ne
 
+
+FUNCTION conv_func_mult(this, that) RESULT(mult)
+TYPE(conv_func),INTENT(in) :: this
+TYPE(conv_func),INTENT(in) :: that
+
+TYPE(conv_func) :: mult
+
+IF (this == conv_func_miss .OR. that == conv_func_miss) THEN
+  mult = conv_func_miss
+ELSE
+  mult%a = this%a*that%a
+  mult%b = this%a*that%b+this%b
+ENDIF
+
+END FUNCTION conv_func_mult
 
 !> Apply the conversion function \a this to \a values.
 !! The numerical conversion (only linear at the moment) defined by the

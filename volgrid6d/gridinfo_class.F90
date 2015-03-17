@@ -587,9 +587,25 @@ END SUBROUTINE gridinfo_import_gribapi
 ! grib_api driver
 SUBROUTINE gridinfo_export_gribapi(this, gaid)
 TYPE(gridinfo_def),INTENT(inout) :: this ! gridinfo object
-INTEGER, INTENT(in) :: gaid ! grib_api id of the grib loaded in memory to import
+INTEGER, INTENT(in) :: gaid ! grib_api id of the grib loaded in memory to export
+
+TYPE(conv_func) :: c_func
+REAL,ALLOCATABLE :: tmparr(:,:)
 
 CALL unnormalize_gridinfo(this)
+
+! convert variable and values to the correct edition if required
+CALL volgrid6d_var_normalize(this%var, c_func, grid_id_new(grib_api_id=gaid))
+IF (this%var == volgrid6d_var_miss) THEN
+  CALL l4f_log(L4F_ERROR, &
+   'A suitable variable has not been found in table when converting edition')
+  CALL raise_error()
+ENDIF
+IF (c_func /= conv_func_miss) THEN ! convert values as well
+  tmparr = decode_gridinfo(this) ! f2003 implicit allocation
+  CALL compute(c_func, tmparr)
+  CALL encode_gridinfo(this, tmparr)
+ENDIF
 
 CALL time_export_gribapi(this%time, gaid, this%timerange)
 CALL timerange_export_gribapi(this%timerange, gaid, this%time)
@@ -959,32 +975,29 @@ INTEGER :: EditionNumber, centre, discipline, category, number
 
 call grib_get(gaid,'GRIBEditionNumber',EditionNumber)
 
-if (EditionNumber == 1)then
+if (EditionNumber == 1) then
 
   call grib_get(gaid,'centre',centre)
   call grib_get(gaid,'gribTablesVersionNo',category)
   call grib_get(gaid,'indicatorOfParameter',number)
 
-  call init (this, centre, category, number)
+  call init(this, centre, category, number)
 
-else if (EditionNumber == 2)then
+else if (EditionNumber == 2) then
 
   call grib_get(gaid,'centre',centre)
   call grib_get(gaid,'discipline',discipline)
   call grib_get(gaid,'parameterCategory',category)
   call grib_get(gaid,'parameterNumber',number)
 
-  call init (this, centre, category, number, discipline)
+  call init(this, centre, category, number, discipline)
   
 else
 
   CALL l4f_log(L4F_ERROR,'GribEditionNumber '//t2c(EditionNumber)//' not supported')
   CALL raise_error()
 
-end if
-                                ! da capire come ottenere 
-!this%description
-!this%unit
+endif
 
 END SUBROUTINE var_import_gribapi
 
@@ -997,21 +1010,21 @@ INTEGER ::EditionNumber
 
 call grib_get(gaid,'GRIBEditionNumber',EditionNumber)
 
-if (EditionNumber == 1)then
+if (EditionNumber == 1) then
 
   IF (this%centre /= 255) & ! if centre missing (coming from bufr), keep template
    CALL grib_set(gaid,'centre',this%centre)
-  call grib_set(gaid,'gribTablesVersionNo',this%category)
-  call grib_set(gaid,'indicatorOfParameter',this%number)
+  CALL grib_set(gaid,'gribTablesVersionNo',this%category)
+  CALL grib_set(gaid,'indicatorOfParameter',this%number)
 
-else if (EditionNumber == 2)then
+else if (EditionNumber == 2) then
 
 ! this must be changed to 65535!!!!
   IF (this%centre /= 255) & ! if centre missing (coming from bufr), keep template
    CALL grib_set(gaid,'centre',this%centre)
-  call grib_set(gaid,'discipline',this%discipline)
-  call grib_set(gaid,'parameterCategory',this%category)
-  call grib_set(gaid,'parameterNumber',this%number)
+  CALL grib_set(gaid,'discipline',this%discipline)
+  CALL grib_set(gaid,'parameterCategory',this%category)
+  CALL grib_set(gaid,'parameterNumber',this%number)
 
 else
 
