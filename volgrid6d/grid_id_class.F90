@@ -225,7 +225,7 @@ INTEGER,INTENT(in),OPTIONAL :: driver !< select the driver that will be associat
 TYPE(grid_id),INTENT(in),OPTIONAL :: from_grid_id !< select the driver as the one associated to the provided grid_id object
 TYPE(grid_file_id) :: this
 
-INTEGER :: n, ier
+INTEGER :: n, ier, nf
 #ifdef HAVE_LIBGDAL
 INTEGER :: imode
 #endif
@@ -240,7 +240,7 @@ IF (filename == '' .OR. .NOT.c_e(filename)) RETURN
 
 n = INDEX(filename,':')
 IF (n > 1) THEN ! override with driver from filename
-  CALL init(driveropts, filename(:n-1))
+  CALL init(driveropts, filename(:n-1), nfield=nf)
   CALL csv_record_getfield(driveropts, drivername)
 #ifdef HAVE_LIBGRIBAPI
   IF (drivername == 'grib_api') THEN
@@ -249,11 +249,16 @@ IF (n > 1) THEN ! override with driver from filename
 #endif
 #ifdef HAVE_LIBGDAL
   IF (drivername == 'gdal') THEN
-    this%driver = grid_id_gdal
-    CALL csv_record_getfield(driveropts, this%gdal_options%xmin)
-    CALL csv_record_getfield(driveropts, this%gdal_options%ymin)
-    CALL csv_record_getfield(driveropts, this%gdal_options%xmax)
-    CALL csv_record_getfield(driveropts, this%gdal_options%ymax)
+    IF (nf > 4) THEN
+      this%driver = grid_id_gdal
+      CALL csv_record_getfield(driveropts, this%gdal_options%xmin)
+      CALL csv_record_getfield(driveropts, this%gdal_options%ymin)
+      CALL csv_record_getfield(driveropts, this%gdal_options%xmax)
+      CALL csv_record_getfield(driveropts, this%gdal_options%ymax)
+    ELSE
+      CALL l4f_log(L4F_ERROR, 'gdal driver requires 4 extra arguments (bounding box)')
+      CALL raise_error()
+    ENDIF
   ENDIF
 #endif
   CALL delete(driveropts)
