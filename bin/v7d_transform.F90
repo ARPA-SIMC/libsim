@@ -329,8 +329,8 @@ CALL optionparser_add(opt, ' ', 'pre-trans-type', pre_trans_type, '', help= &
  //'; ''polyinter'' for statistical processing within given polygons, &
  &with subtype ''average'', ''stddev'', ''max'', ''min'''&
 #endif
- //'; ''metamorphosis'' with subtype ''coordbb'' for selecting only data &
- &within a given bounding box&
+ //'; ''metamorphosis'' with subtypes ''coordbb'', ''poly'' &
+ &for selecting only data within a given bounding box or a set of polygons&
  &; empty for no transformation')
 
 CALL optionparser_add(opt, ' ', 'trans-level-type', trans_level_type, help= &
