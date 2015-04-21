@@ -2134,7 +2134,7 @@ IF (c_e(grid_trans)) THEN
    ntimerange=ntimerange, ndativarr=nvar, nnetwork=nnetwork)
   vol7d_out%ana = v7d_locana%ana
 
-  CALL get_val(grid_trans, point_index=point_index)
+  CALL get_val(grid_trans, output_point_index=point_index)
   IF (ALLOCATED(point_index)) THEN
 ! check that size(point_index) == nana?
     CALL vol7d_alloc(vol7d_out, nanavari=1)
@@ -2493,9 +2493,9 @@ TYPE(vol7d_var) :: vcoord_var
 REAL,ALLOCATABLE :: coord_3d_in(:,:,:)
 INTEGER :: var_coord_in, var_coord_vol, i, k, ulstart, ulend, spos
 INTEGER,ALLOCATABLE :: point_index(:)
-TYPE(vol7d) :: v7d_locana
+TYPE(vol7d) :: v7d_locana, vol7d_tmpana
 CHARACTER(len=80) :: trans_type
-LOGICAL,ALLOCATABLE :: mask_in(:)
+LOGICAL,ALLOCATABLE :: mask_in(:), point_mask(:)
 
 CALL vol7d_alloc_vol(vol7d_in) ! be safe
 nvar=0
@@ -2665,7 +2665,7 @@ ELSE
      nlevel=SIZE(vol7d_in%level), nnetwork=SIZE(vol7d_in%network), ndativarr=nvar)
     vol7d_out%ana = v7d_locana%ana
 
-    CALL get_val(grid_trans, point_index=point_index)
+    CALL get_val(grid_trans, point_mask=point_mask, output_point_index=point_index)
 
     IF (ALLOCATED(point_index)) THEN
       CALL vol7d_alloc(vol7d_out, nanavari=1)
@@ -2680,6 +2680,23 @@ ELSE
       ENDDO
     ENDIF
     CALL compute(grid_trans, vol7d_in, vol7d_out)
+
+    IF (ALLOCATED(point_mask)) THEN ! keep full ana
+      IF (SIZE(point_mask) /= SIZE(vol7d_in%ana)) THEN
+        CALL l4f_log(L4F_WARN, &
+         'v7d_v7d_transform: inconsistency in point size: '//t2c(SIZE(point_mask)) &
+         //':'//t2c(SIZE(vol7d_in%ana)))
+      ELSE
+#ifdef DEBUG
+        CALL l4f_log(L4F_DEBUG, 'v7d_v7d_transform: merging ana from in to out')
+#endif
+        CALL vol7d_copy(vol7d_in, vol7d_tmpana, &
+         lana=point_mask, lnetwork=(/.TRUE./), &
+         ltime=(/.FALSE./), ltimerange=(/.FALSE./), llevel=(/.FALSE./))
+        CALL vol7d_append(vol7d_out, vol7d_tmpana)
+      ENDIF
+    ENDIF
+
   ELSE
     CALL l4f_log(L4F_ERROR, 'v7d_v7d_transform: transformation not valid')
     CALL raise_error()

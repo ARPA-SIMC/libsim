@@ -1071,6 +1071,7 @@ DOUBLE PRECISION :: xmin, xmax, ymin, ymax, steplon, steplat, &
  xmin_new, ymin_new, ellips_smaj_axis, ellips_flatt, r2
 TYPE(geo_proj) :: proj_in, proj_out
 TYPE(georef_coord) :: point
+LOGICAL,ALLOCATABLE :: point_mask(:,:)
 
 
 CALL grid_transform_init_common(this, trans, categoryappend)
@@ -1106,8 +1107,8 @@ IF (this%trans%trans_type == 'zoom') THEN
     CALL unproj(in)
     CALL get_val(in, nx=nx, ny=ny)
 
-    ALLOCATE(this%point_mask(nx,ny))
-    this%point_mask(:,:) = .FALSE.
+    ALLOCATE(point_mask(nx,ny))
+    point_mask(:,:) = .FALSE.
 
 ! mark points falling into requested bounding-box
     DO j = 1, ny
@@ -1117,31 +1118,31 @@ IF (this%trans%trans_type == 'zoom') THEN
          in%dim%lon(i,j) < this%trans%rect_coo%flon .AND. &
          in%dim%lat(i,j) > this%trans%rect_coo%ilat .AND. &
          in%dim%lat(i,j) < this%trans%rect_coo%flat) THEN ! improve!
-          this%point_mask(i,j) = .TRUE.
+          point_mask(i,j) = .TRUE.
         ENDIF
       ENDDO
     ENDDO
 
 ! determine cut indices keeping all points which fall inside b-b
     DO i = 1, nx
-      IF (ANY(this%point_mask(i,:))) EXIT
+      IF (ANY(point_mask(i,:))) EXIT
     ENDDO
     this%trans%rect_ind%ix = i
     DO i = nx, this%trans%rect_ind%ix, -1
-      IF (ANY(this%point_mask(i,:))) EXIT
+      IF (ANY(point_mask(i,:))) EXIT
     ENDDO
     this%trans%rect_ind%fx = i
 
     DO j = 1, ny
-      IF (ANY(this%point_mask(:,j))) EXIT
+      IF (ANY(point_mask(:,j))) EXIT
     ENDDO
     this%trans%rect_ind%iy = j
     DO j = ny, this%trans%rect_ind%iy, -1
-      IF (ANY(this%point_mask(:,j))) EXIT
+      IF (ANY(point_mask(:,j))) EXIT
     ENDDO
     this%trans%rect_ind%fy = j
 
-    DEALLOCATE(this%point_mask)
+    DEALLOCATE(point_mask)
 
     IF (this%trans%rect_ind%ix > this%trans%rect_ind%fx .OR. &
      this%trans%rect_ind%iy > this%trans%rect_ind%fy) THEN
@@ -1808,9 +1809,6 @@ ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
 
   ELSE IF (this%trans%sub_type == 'coordbb' ) THEN
 
-    ALLOCATE(this%point_mask(this%innx,this%inny))
-    this%point_mask(:,:) = .FALSE.
-
 ! count and mark points falling into requested bounding-box
     this%outnx = 0
     this%outny = 1
@@ -1822,7 +1820,6 @@ ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
          in%dim%lat(ix,iy) > this%trans%rect_coo%ilat .AND. &
          in%dim%lat(ix,iy) < this%trans%rect_coo%flat) THEN ! improve!
           this%outnx = this%outnx + 1
-          this%point_mask(ix,iy) = .TRUE.
           this%point_index(ix,iy) = this%outnx
         ENDIF
       ENDDO
@@ -1846,7 +1843,7 @@ ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
     n = 0
     DO iy = 1, this%inny
       DO ix = 1, this%innx
-        IF (this%point_mask(ix,iy)) THEN
+        IF (c_e(this%point_index(ix,iy))) THEN
           n = n + 1
           CALL init(v7d_out%ana(n),lon=in%dim%lon(ix,iy),lat=in%dim%lat(ix,iy))
         ENDIF
@@ -2259,18 +2256,20 @@ ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
 ! common to all metamorphosis subtypes
   this%innx = SIZE(v7d_in%ana)
   this%inny = 1
+! allocate index array
+  ALLOCATE(this%point_index(this%innx,this%inny))
+  this%point_index(:,:) = imiss
 
   IF (this%trans%sub_type == 'all' ) THEN
 
     this%outnx = SIZE(v7d_in%ana)
     this%outny = 1
+    this%point_index(:,1) = (/(i,i=1,this%innx)/)
     CALL vol7d_alloc(v7d_out, nana=SIZE(v7d_in%ana))
     v7d_out%ana = v7d_in%ana
 
   ELSE IF (this%trans%sub_type == 'coordbb' ) THEN
 
-    ALLOCATE(this%point_mask(this%innx,this%inny))
-    this%point_mask(:,:) = .FALSE.
     ALLOCATE(lon(this%innx),lat(this%innx))
 
 ! count and mark points falling into requested bounding-box
@@ -2284,7 +2283,7 @@ ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
        lat(i) > this%trans%rect_coo%ilat .AND. &
        lat(i) < this%trans%rect_coo%flat) THEN ! improve!
         this%outnx = this%outnx + 1
-        this%point_mask(i,1) = .TRUE.
+        this%point_index(i,1) = this%outnx
       ENDIF
     ENDDO
 
@@ -2298,7 +2297,6 @@ ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
       this%valid = .FALSE.
       DEALLOCATE(lon, lat)
       RETURN
-      !CALL raise_fatal_error() ! really fatal error?
     ENDIF
 
     CALL vol7d_alloc(v7d_out, nana=this%outnx)
@@ -2306,7 +2304,7 @@ ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
 ! collect coordinates of points falling into requested bounding-box
     n = 0
     DO i = 1, this%innx
-      IF (this%point_mask(i,1)) THEN
+      IF (c_e(this%point_index(i,1))) THEN
         n = n + 1
         CALL init(v7d_out%ana(n),lon=lon(i),lat=lat(i))
       ENDIF
@@ -2315,8 +2313,6 @@ ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
 
   ELSE IF (this%trans%sub_type == 'poly' ) THEN
 
-    ALLOCATE(this%point_index(this%innx,this%inny))
-    this%point_index(:,:) = imiss
 ! count and mark points falling into requested polygon
     this%outnx = 0
     this%outny = 1
@@ -2452,25 +2448,37 @@ END SUBROUTINE grid_transform_delete
 !! Only a few selected memebrs of \a grid_transform object can be
 !! queried, this is mainly for use by \a volgrid6d_class, rather than
 !! for public use.
-SUBROUTINE grid_transform_get_val(this, output_level_auto, point_index, &
- levshift, levused)
+SUBROUTINE grid_transform_get_val(this, output_level_auto, point_mask, &
+ point_index, output_point_index, levshift, levused)
 TYPE(grid_transform),INTENT(in) :: this !< object to examine
 TYPE(vol7d_level),POINTER,OPTIONAL :: output_level_auto(:) !< array of auto-generated output levels
-INTEGER,INTENT(out),ALLOCATABLE,OPTIONAL :: point_index(:) !< array of indices indicating the polygon to which every output point has been assigned, if applicable
+LOGICAL,INTENT(out),ALLOCATABLE,OPTIONAL :: point_mask(:) !< mask array indicating the input points that are kept in the output, for metamorphosis transformations
+INTEGER,INTENT(out),ALLOCATABLE,OPTIONAL :: point_index(:) !< array of indices indicating the polygon to which every input point has been assigned, if applicable
+INTEGER,INTENT(out),ALLOCATABLE,OPTIONAL :: output_point_index(:) !< array of indices indicating the polygon to which every output point has been assigned, if applicable
 INTEGER,INTENT(out),OPTIONAL :: levshift !< shift between input and output levels for vertint
 INTEGER,INTENT(out),OPTIONAL :: levused !< number of input levels used for vertint
 
 INTEGER :: i
 
 IF (PRESENT(output_level_auto)) output_level_auto => this%output_level_auto
+IF (PRESENT(point_mask)) THEN
+  IF (ASSOCIATED(this%point_index)) THEN
+    point_mask = c_e(RESHAPE(this%point_index, (/SIZE(this%point_index)/)))
+  ENDIF
+ENDIF
 IF (PRESENT(point_index)) THEN
   IF (ASSOCIATED(this%point_index)) THEN
+    point_index = RESHAPE(this%point_index, (/SIZE(this%point_index)/))
+  ENDIF
+ENDIF
+IF (PRESENT(output_point_index)) THEN
+  IF (ASSOCIATED(this%point_index)) THEN
 ! metamorphosis, index is computed from input origin of output point
-    point_index = PACK(this%point_index(:,:), c_e(this%point_index))
+    output_point_index = PACK(this%point_index(:,:), c_e(this%point_index))
   ELSE IF (this%trans%trans_type == 'polyinter' .OR. &
    this%trans%trans_type == 'maskinter') THEN
-! other cases, index is order of output pint
-    point_index = (/(i,i=1,this%outnx)/)
+! other cases, index is order of output point
+    output_point_index = (/(i,i=1,this%outnx)/)
   ENDIF
 ENDIF
 IF (PRESENT(levshift)) levshift = this%levshift
@@ -3017,14 +3025,8 @@ ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
 
     field_out(:,:,:) = RESHAPE(field_in(:,:,:), (/this%outnx,this%outny,innz/))
 
-  ELSE IF (this%trans%sub_type == 'coordbb') THEN
-
-    DO k = 1, innz
-! this is to sparse-points only, so field_out(:,1,k) is acceptable
-      field_out(:,1,k) = PACK(field_in(:,:,k), this%point_mask(:,:))
-    ENDDO
-
-  ELSE IF (this%trans%sub_type == 'poly' .OR. this%trans%sub_type == 'mask') THEN
+  ELSE IF (this%trans%sub_type == 'coordbb' .OR. this%trans%sub_type == 'poly' &
+   .OR. this%trans%sub_type == 'mask') THEN
 
     DO k = 1, innz
 ! this is to sparse-points only, so field_out(:,1,k) is acceptable
