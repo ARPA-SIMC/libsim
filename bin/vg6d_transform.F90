@@ -541,6 +541,7 @@ ENDIF
 IF (c2agrid) CALL vg6d_c2a(volgrid)
 
 IF (trans_type /= 'none') THEN ! transform
+  CALL l4f_category_log(category,L4F_DEBUG,'execute transform')
 
 ! transformation object
   CALL init(trans, trans_type=trans_type, sub_type=sub_type, extrap=extrap, &
@@ -561,11 +562,13 @@ IF (trans_type /= 'none') THEN ! transform
 
 ELSE
 
+  CALL l4f_category_log(category,L4F_DEBUG,'clone in to out')
   volgrid_out => volgrid
 
 ENDIF
 
 if (round .and. ASSOCIATED(volgrid_out)) then
+  CALL l4f_category_log(category,L4F_DEBUG,'execute rounding')
   call rounding(volgrid_out,volgrid_tmp,level=almost_equal_levels,nostatproc=.true.)
   CALL delete(volgrid_out)
   volgrid_out => volgrid_tmp
@@ -575,6 +578,7 @@ end if
 #ifdef ALCHIMIA
 if (ASSOCIATED(volgrid_out) .and. output_variable_list /= " ") then
 
+  CALL l4f_category_log(category,L4F_DEBUG,'execute alchemy')
   call register_termo(vfn)
   IF (ldisplay ) call display(vfn)
 
@@ -620,6 +624,8 @@ IF (ldisplay .and. ASSOCIATED(volgrid_out)) THEN ! done here in order to print f
 ENDIF
 
 ! export
+
+CALL l4f_category_log(category,L4F_DEBUG,'execute export')
 CALL write_to_file_out(volgrid_out)
 
 IF (ASSOCIATED(volgrid_out)) CALL delete(volgrid_out)

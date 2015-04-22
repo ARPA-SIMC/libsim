@@ -3859,29 +3859,29 @@ if (present(filename))then
       
     end if
 
-      if (lmode == "r") then
-        call dbasession_init%messages_open_input(filename=filename,mode=lmode,&
-         format=lformat,simplified=lsimplified)
-        
-        if (lloadfile)then
+    if (lmode == "r") then
+      call dbasession_init%messages_open_input(filename=filename,mode=lmode,&
+       format=lformat,simplified=lsimplified)
+      
+      if (lloadfile)then
+        read_next = dbasession_init%messages_read_next()
+        do while (read_next) 
           read_next = dbasession_init%messages_read_next()
-          do while (read_next) 
-            read_next = dbasession_init%messages_read_next()
-          end do
-        end if
-      else
-        
-        call dbasession_init%messages_open_output(filename=filename,&
-         mode=lmode,format=lformat)
-
+        end do
       end if
-
+    else
+      
+      call dbasession_init%messages_open_output(filename=filename,&
+       mode=lmode,format=lformat)
+      
+    end if
+    
   else
-
+    
     ier =  idba_messaggi(dbasession_init%sehandle,filename, lmode, lformat)
-
+    
   end if
-
+  
 else
   
   ier = idba_preparati(connection%dbhandle,dbasession_init%sehandle, lanaflag, ldataflag, lattrflag)

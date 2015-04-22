@@ -238,12 +238,16 @@ call l4f_category_log(category,L4F_INFO,"transforming from file:"//trim(input_fi
 call l4f_category_log(category,L4F_INFO,"transforming to   file:"//trim(output_file))
 
 CALL init(v7d_coord)
+
 IF (c_e(coord_file)) THEN
+  CALL l4f_category_log(category,L4F_DEBUG,'start import coord')
   IF (coord_format == 'native') THEN
+    CALL l4f_category_log(category,L4F_DEBUG,'execute import coord native')
     CALL import(v7d_coord, filename=coord_file)
 
 #ifdef HAVE_DBALLE
   ELSE IF (coord_format == 'BUFR' .OR. coord_format == 'CREX') THEN
+    CALL l4f_category_log(category,L4F_DEBUG,'execute import coord v7d')
     CALL init(v7d_ana, filename=coord_file, format=coord_format, file=.TRUE., &
      write=.FALSE., categoryappend="anagrafica")
     CALL import(v7d_ana, anaonly=.TRUE.)
@@ -255,6 +259,7 @@ IF (c_e(coord_file)) THEN
 
 #ifdef HAVE_SHAPELIB
   ELSE IF (coord_format == 'shp') THEN
+    CALL l4f_category_log(category,L4F_DEBUG,'execute import coord shape')
     CALL import(poly, coord_file)
     IF (poly%arraysize <= 0) THEN
       CALL l4f_category_log(category, L4F_ERROR, &
@@ -281,6 +286,7 @@ IF (c_e(coord_file)) THEN
 
 #ifdef HAVE_LIBGRIBAPI
   ELSE IF (coord_format == 'grib_api') THEN
+    CALL l4f_category_log(category,L4F_DEBUG,'execute import coord grib_api')
     CALL import(maskgrid, coord_file, categoryappend='maskgrid')
     IF (maskgrid%arraysize < 1) THEN
       CALL l4f_category_log(category, L4F_ERROR, &
@@ -300,6 +306,8 @@ IF (c_e(coord_file)) THEN
      TRIM(coord_format)//' in --coord-format not valid or not supported.')
     CALL raise_fatal_error()
   ENDIF
+
+  CALL l4f_category_log(category,L4F_DEBUG,'end import coord')
 ENDIF
 
 IF (.NOT.c_e(v7d_coord)) THEN ! fallback, initialise v7d_coord from single point

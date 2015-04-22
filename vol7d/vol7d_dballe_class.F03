@@ -180,7 +180,6 @@ logical :: quiwrite,loadfile
 character(len=512) :: a_name
 character(len=254) :: arg,lfilename,lformat
 
-
 quiwrite=.false.
 if (present(write))then
   quiwrite=write
@@ -192,6 +191,10 @@ else
   call l4f_launcher(a_name,a_name_append=trim(subcategory))
 endif
 this%category=l4f_category_get(a_name)
+
+#ifdef DEBUG
+CALL l4f_category_log(this%category,L4F_DEBUG,'vol7d_dballe_init start')
+#endif        
 
 nullify(this%data_id)
 
@@ -234,6 +237,10 @@ else
 endif
 
 this%time_definition = optio_i(time_definition)
+
+#ifdef DEBUG
+CALL l4f_category_log(this%category,L4F_DEBUG,'vol7d_dballe_init end')
+#endif        
 
 END SUBROUTINE vol7d_dballe_init
 
@@ -534,15 +541,20 @@ TYPE(vol7d) :: vol7dtmp
 type(dbametaanddata),allocatable :: metaanddatav(:)
 type(dbafilter)    :: myfilter
 
+CALL l4f_category_log(this%category,L4F_DEBUG,'start import vol7d_dballe')
+
 if ( .not. filter%dataonly) then
                                 ! ---------------->   constant station data
   myfilter=dbafilter(filter=filter,contextana=.true.)
 !                                ! set filter
 !  call this%handle%set(filter=myfilter)
                                 ! estrude the data
+  CALL l4f_category_log(this%category,L4F_DEBUG,'start import vol7d_dballe ingest')
   call this%handle%ingest(metaanddatav,filter=myfilter)
-
+  CALL l4f_category_log(this%category,L4F_DEBUG,'end import vol7d_dballe ingest')
+  CALL l4f_category_log(this%category,L4F_DEBUG,'start import vol7d_dballe dba2v7d')
   call dba2v7d(this%vol7d, metaanddatav,this%time_definition,set_network)
+  CALL l4f_category_log(this%category,L4F_DEBUG,'end import vol7d_dballe dba2v7d')
 
   deallocate (metaanddatav)
 
@@ -614,6 +626,7 @@ ier=idba_voglioancora (this%handle,nn)
 
 #endif
 
+CALL l4f_category_log(this%category,L4F_DEBUG,'end import vol7d_dballe')
 
 end subroutine vol7d_dballe_import
 
