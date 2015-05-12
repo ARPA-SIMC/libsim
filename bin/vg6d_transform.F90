@@ -128,7 +128,7 @@ CALL optionparser_add(opt, 'z', 'sub-type', sub_type, 'near', help= &
  'transformation subtype, for inter: ''near'', ''bilin'', &
  &for boxinter and boxregrid: ''average'', ''stddev'', ''max'', ''min'', &
  &for zoom: ''index'', ''coord'', ''coordbb'', ''projcoord'', &
- &for metamorphosis: ''all''')
+ &for metamorphosis: ''all'', ''maskvalid'', ''maskinvalid'', ''invalidset''')
 CALL optionparser_add(opt, ' ', 'extrap', extrap, help= &
  'enable extrapolation outside input grid, it works only for ''inter'' &
  &transformations, use with care')
@@ -185,7 +185,8 @@ CALL optionparser_add(opt, ' ', 'radius', radius, help= &
 CALL optionparser_add(opt, ' ', 'maskbounds', maskbounds, help= &
  'comma-separated list of boundary values for defining subareas &
  &according to values of mask, &
- &for ''metamorphosis:maskfill'' transformation')
+ &for ''metamorphosis:maskvalid'' transformation &
+ or for setting a constant value for metamorphosis:invalidset transformation')
 
 CALL optionparser_add(opt, 'f', 'npx', npx, 4, help= &
  'number of nodes along x axis on input grid, over which to apply function for boxregrid')

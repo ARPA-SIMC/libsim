@@ -161,11 +161,17 @@
 !!      trans_type='maskinter', are kept in the output; points are
 !!      marked with the number of the subarea they belong to
 !!      (grid-to-sparse points).
-!!    - sub_type='maskfill' the input points corresponding to points
+!!    - sub_type='maskvalid' the input points corresponding to points
 !!      having valid data and optionally having values within
 !!      requested bounds in a 2-D mask field, are kept in the output;
 !!      the other points are filled with missing values
 !!      (grid-to-grid).
+!!    - sub_type='maskinvalid' the input points corresponding to points
+!!      having non valid data in a 2-D mask field, are kept in the
+!!      output; the other points are filled with missing values
+!!      (grid-to-grid).
+!!    - sub_type='invalidset' the input points having non valid data
+!!      are set to a user-specified constant value (grid-to-grid).
 !!
 !! \ingroup volgrid6d
 MODULE grid_transform_class
@@ -284,6 +290,7 @@ TYPE grid_transform
   LOGICAL,POINTER :: stencil(:,:) => NULL()
 !  REAL,POINTER :: coord_3d_in(:,:,:) => NULL()
   REAL,ALLOCATABLE :: coord_3d_in(:,:,:)
+  REAL :: invalidset = rmiss
   LOGICAL :: recur = .FALSE.
   LOGICAL :: dolog = .FALSE. ! must compute log() of vert coord before vertint
 
@@ -423,7 +430,7 @@ end if
 
 IF (this%trans_type == 'zoom') THEN
 
-  if (this%sub_type == 'coord' .OR. this%sub_type == 'projcoord')then
+  IF (this%sub_type == 'coord' .OR. this%sub_type == 'projcoord')THEN
 
     if (c_e(this%rect_coo%ilon) .and. c_e(this%rect_coo%ilat) .and. &
         c_e(this%rect_coo%flon) .and. c_e(this%rect_coo%flat)) then ! coordinates given
@@ -463,11 +470,11 @@ IF (this%trans_type == 'zoom') THEN
 
   else if (this%sub_type == 'index')then
 
-    if (c_e(this%rect_ind%ix) .and. c_e(this%rect_ind%iy) .or. &
-        c_e(this%rect_ind%fx) .or. c_e(this%rect_ind%fy)) then
+    IF (c_e(this%rect_ind%ix) .AND. c_e(this%rect_ind%iy) .AND. &
+     c_e(this%rect_ind%fx) .AND. c_e(this%rect_ind%fy)) THEN
 
 ! check
-      if (this%rect_ind%ix > this%rect_ind%fx .OR. &
+      IF (this%rect_ind%ix > this%rect_ind%fx .OR. &
        this%rect_ind%iy > this%rect_ind%fy) THEN
 
         CALL l4f_category_log(this%category,L4F_ERROR,'invalid zoom indices: ')
@@ -481,7 +488,7 @@ IF (this%trans_type == 'zoom') THEN
         CALL raise_fatal_error()
       ENDIF
 
-    else
+    ELSE
 
       CALL l4f_category_log(this%category,L4F_ERROR,&
        'zoom: index parameters ix, iy, fx, fy not provided')
@@ -489,13 +496,10 @@ IF (this%trans_type == 'zoom') THEN
 
     ENDIF
 
-  else
-
-    CALL l4f_category_log(this%category,L4F_ERROR,'zoom: sub_type '// &
-     TRIM(this%sub_type)//' is wrong')
-    CALL raise_fatal_error()
-
-  end if
+  ELSE
+    CALL sub_type_error()
+    RETURN
+  END IF
 
 ELSE IF (this%trans_type == 'boxregrid') THEN
 
@@ -515,42 +519,39 @@ ELSE IF (this%trans_type == 'boxregrid') THEN
 
   ENDIF
 
-  IF (this%sub_type == 'average' .OR. &
-   this%sub_type == 'max' .OR. this%sub_type == 'min')THEN
+  IF (this%sub_type == 'average' .OR. this%sub_type == 'max' .OR. &
+   this%sub_type == 'min')THEN
 ! nothing to do here
   ELSE
-    CALL l4f_category_log(this%category,L4F_ERROR,'boxregrid: sub_type '// &
-     TRIM(this%sub_type)//' is wrong')
-    CALL raise_fatal_error()
+    CALL sub_type_error()
+    RETURN
   ENDIF
 
 ELSE IF (this%trans_type == 'inter') THEN
 
-  if (this%sub_type == 'near')then
+  IF (this%sub_type == 'near' .OR. this%sub_type == 'bilin' .OR. &
+   this%sub_type == 'linear') THEN
 ! nothing to do here
-  else if (this%sub_type == 'bilin')then
-! nothing to do here
-  else if (this%sub_type == 'linear')then
-! nothing to do here
-  else
-    CALL l4f_category_log(this%category,L4F_ERROR,'inter: sub_type '// &
-     TRIM(this%sub_type)//' is wrong')
-    CALL raise_fatal_error()
-  endif
+  ELSE
+    CALL sub_type_error()
+    RETURN
+  ENDIF
 
 ELSE IF (this%trans_type == 'boxinter' .OR. this%trans_type == 'polyinter' &
-  .OR. this%trans_type == 'maskinter' .OR. this%trans_type == 'stencilinter')THEN
+  .OR. this%trans_type == 'maskinter' .OR. this%trans_type == 'stencilinter') THEN
 
   IF (this%trans_type == 'polyinter') THEN
     IF (this%poly%arraysize <= 0) THEN
-      CALL l4f_category_log(this%category,L4F_ERROR,"polyinter: poly parameter missing or empty")
+      CALL l4f_category_log(this%category,L4F_ERROR, &
+       "polyinter: poly parameter missing or empty")
       CALL raise_fatal_error()
     ENDIF
   ENDIF
 
   IF (this%trans_type == 'stencilinter') THEN
     IF (.NOT.c_e(this%area_info%radius)) THEN
-      CALL l4f_category_log(this%category,L4F_ERROR,"stencilinter: radius parameter missing")
+      CALL l4f_category_log(this%category,L4F_ERROR, &
+       "stencilinter: radius parameter missing")
       CALL raise_fatal_error()
     ENDIF
   ENDIF
@@ -572,9 +573,8 @@ ELSE IF (this%trans_type == 'boxinter' .OR. this%trans_type == 'polyinter' &
       this%sub_type = 'min'
     ENDIF
   ELSE
-    CALL l4f_category_log(this%category,L4F_ERROR,TRIM(this%trans_type)// &
-     ': sub_type '//TRIM(this%sub_type)//' is wrong')
-    CALL raise_fatal_error()
+    CALL sub_type_error()
+    RETURN
   ENDIF
 
 ELSE IF (this%trans_type == 'maskgen')THEN
@@ -587,10 +587,8 @@ ELSE IF (this%trans_type == 'maskgen')THEN
     ENDIF
 
   ELSE
-
-    CALL l4f_category_log(this%category,L4F_ERROR,'maskgen: sub_type '// &
-     TRIM(this%sub_type)//' is wrong')
-    CALL raise_fatal_error()
+    CALL sub_type_error()
+    RETURN
   ENDIF
 
 ELSE IF (this%trans_type == 'vertint') THEN
@@ -605,6 +603,13 @@ ELSE IF (this%trans_type == 'vertint') THEN
     CALL l4f_category_log(this%category,L4F_ERROR, &
      'vertint parameter output_levtype not provided')
     CALL raise_fatal_error()
+  ENDIF
+
+  IF (this%sub_type == 'linear' .OR. this%sub_type == 'linearsparse') THEN
+! nothing to do here
+  ELSE
+    CALL sub_type_error()
+    RETURN
   ENDIF
 
 ELSE IF (this%trans_type == 'metamorphosis') THEN
@@ -629,21 +634,36 @@ ELSE IF (this%trans_type == 'metamorphosis') THEN
       CALL raise_fatal_error()
     ENDIF
 
-  ELSE IF (this%sub_type == 'mask' .OR. this%sub_type == 'maskfill')THEN
+  ELSE IF (this%sub_type == 'mask' .OR. this%sub_type == 'maskvalid' .OR. &
+   this%sub_type == 'maskinvalid' .OR. this%sub_type == 'invalidset')THEN
 ! nothing to do here
   ELSE
-    CALL l4f_category_log(this%category,L4F_ERROR,'metamorphosis: sub_type '// &
-     TRIM(this%sub_type)//' is wrong')
-    CALL raise_fatal_error()
+    CALL sub_type_error()
+    RETURN
   ENDIF
 
 ELSE
-
-  CALL l4f_category_log(this%category,L4F_ERROR,'trans_type '// &
-   TRIM(this%trans_type)//' is wrong')
-  CALL raise_fatal_error()
-
+  CALL trans_type_error()
+  RETURN
 ENDIF
+
+CONTAINS
+
+SUBROUTINE sub_type_error()
+
+CALL l4f_category_log(this%category, L4F_ERROR, TRIM(this%trans_type) &
+ //': sub_type '//TRIM(this%sub_type)//' is not defined')
+CALL raise_fatal_error()
+
+END SUBROUTINE sub_type_error
+
+SUBROUTINE trans_type_error()
+
+CALL l4f_category_log(this%category, L4F_ERROR, 'trans_type '//this%trans_type &
+ //' is not defined')
+CALL raise_fatal_error()
+
+END SUBROUTINE trans_type_error
 
 
 END SUBROUTINE transform_init
@@ -962,23 +982,10 @@ IF (this%trans%trans_type == 'vertint') THEN
       this%vcoord_out(:) = coord_out(:)
       DEALLOCATE(coord_out, mask_out)
 
-    ELSE
-
-      CALL l4f_category_log(this%category,L4F_WARN, &
-       'init_grid_transform inter sub_type '//TRIM(this%trans%sub_type) &
-       //' not supported')
-      this%valid = .FALSE.
-
     ENDIF
 
   ENDIF ! levels are different
 !ELSE IF (this%trans%trans_type == 'verttrans') THEN
-ELSE
-
-  CALL l4f_category_log(this%category,L4F_WARN, &
-   'init_grid_transform trans type '//TRIM(this%trans%trans_type) &
-   //' not supported')
-  this%valid = .FALSE.
 
 ENDIF
 
@@ -1061,8 +1068,8 @@ TYPE(grid_transform),INTENT(out) :: this !< grid_transformation object
 TYPE(transform_def),INTENT(in) :: trans !< transformation object
 TYPE(griddim_def),INTENT(inout) :: in !< griddim object to transform
 TYPE(griddim_def),INTENT(inout) :: out !< griddim object defining target grid (input or output depending on type of transformation)
-REAL,INTENT(in),OPTIONAL :: maskgrid(:,:) !< 2D field to be used for defining valid points, it must have the same shape as the field to be interpolated (for transformation type 'metamorphosis:maskfill')
-REAL,INTENT(in),OPTIONAL :: maskbounds(:) !< array of boundary values for defining a subset of valid points where the values of \a maskgrid are within the first and last value of \a maskbounds (for transformation type 'metamorphosis:maskfill')
+REAL,INTENT(in),OPTIONAL :: maskgrid(:,:) !< 2D field to be used for defining valid points, it must have the same shape as the field to be interpolated (for transformation type 'metamorphosis:maskvalid')
+REAL,INTENT(in),OPTIONAL :: maskbounds(:) !< array of boundary values for defining a subset of valid points where the values of \a maskgrid are within the first and last value of \a maskbounds (for transformation type 'metamorphosis:maskvalid')
 CHARACTER(len=*),INTENT(in),OPTIONAL :: categoryappend !< append this suffix to log4fortran namespace category
 
 INTEGER :: nx, ny, i, j, ix, iy, n, nm, nr, cf_i, cf_o, nprev, &
@@ -1157,15 +1164,8 @@ IF (this%trans%trans_type == 'zoom') THEN
 
     ENDIF
 
-  ELSE IF (this%trans%sub_type == 'index') THEN
+!  ELSE IF (this%trans%sub_type == 'index') THEN
 ! nothing particular to do
-  ELSE
-
-    CALL l4f_category_log(this%category,L4F_WARN, &
-     'grid_transform_init zoom sub_type '//TRIM(this%trans%sub_type) &
-     //' not supported')
-    this%valid = .FALSE.
-    RETURN
 
   ENDIF
 ! to do in all zoom cases
@@ -1220,8 +1220,7 @@ ELSE IF (this%trans%trans_type == 'boxregrid') THEN
     xmin_new = xmin + (this%trans%box_info%npx - 1)*0.5D0*steplon
     ymin_new = ymin + (this%trans%box_info%npy - 1)*0.5D0*steplat
 
-    CALL l4f_category_log(this%category,L4F_DEBUG,"copying griddim in out")
-    call copy(in, out)
+    CALL copy(in, out)
     out%dim%nx = nx/this%trans%box_info%npx
     out%dim%ny = ny/this%trans%box_info%npy
 
@@ -1233,13 +1232,6 @@ ELSE IF (this%trans%trans_type == 'boxregrid') THEN
     CALL set_val(out, xmin=xmin_new, ymin=ymin_new, &
      xmax=xmin_new + DBLE(out%dim%nx-1)*steplon, dx=steplon, &
      ymax=ymin_new + DBLE(out%dim%ny-1)*steplat, dy=steplat)
-
-  ELSE
-
-    CALL l4f_category_log(this%category,L4F_WARN, &
-     'init_grid_transform boxregrid sub_type '//TRIM(this%trans%sub_type) &
-     //' not supported')
-    this%valid = .FALSE.
 
   ENDIF
 
@@ -1274,13 +1266,6 @@ ELSE IF (this%trans%trans_type == 'inter') THEN
       CALL proj(in,out%dim%lon,out%dim%lat,this%inter_xp,this%inter_yp)
 
     ENDIF
-  ELSE
-
-    CALL l4f_category_log(this%category,L4F_WARN, &
-     'init_grid_transform inter sub_type '//TRIM(this%trans%sub_type) &
-     //' not supported')
-    this%valid = .FALSE.
-
   ENDIF
 
 ELSE IF (this%trans%trans_type == 'boxinter') THEN
@@ -1366,7 +1351,6 @@ ELSE IF (this%trans%trans_type == 'stencilinter') THEN
 
 ELSE IF (this%trans%trans_type == 'maskgen' .OR. &
  this%trans%trans_type == 'polyinter') THEN
-! warning, no check of subtype here, intentionally up to now
 
   IF (this%trans%trans_type == 'polyinter') THEN
     this%recur = .TRUE. ! grid-to-grid polyinter is done in two steps!
@@ -1420,11 +1404,12 @@ ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
   this%outnx = this%innx
   this%outny = this%inny
 
-  IF (this%trans%sub_type == 'maskfill') THEN
+  IF (this%trans%sub_type == 'maskvalid' .OR. this%trans%sub_type == 'maskinvalid') THEN
 
     IF (.NOT.PRESENT(maskgrid)) THEN
       CALL l4f_category_log(this%category,L4F_ERROR, &
-       'grid_transform_init maskgrid argument missing for metamorphosis:maskfill transformation')
+       'grid_transform_init maskgrid argument missing for metamorphosis:'// &
+       TRIM(this%trans%sub_type)//' transformation')
       CALL raise_fatal_error()
     ENDIF
 
@@ -1439,27 +1424,44 @@ ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
 
     ALLOCATE(this%point_mask(this%innx,this%inny))
 
+    IF (this%trans%sub_type == 'maskvalid') THEN
 ! behavior depends on the presence/usability of maskbounds,
 ! simplified wrt its use in metamorphosis:mask
-    IF (.NOT.PRESENT(maskbounds)) THEN
-      this%point_mask(:,:) = c_e(maskgrid(:,:))
-    ELSE IF (SIZE(maskbounds) < 2) THEN
-      this%point_mask(:,:) = c_e(maskgrid(:,:))
-    ELSE
-      this%point_mask(:,:) = c_e(maskgrid(:,:)) .AND. &
-       maskgrid(:,:) > maskbounds(1) .AND. &
-       maskgrid(:,:) <= maskbounds(SIZE(maskbounds))
+      IF (.NOT.PRESENT(maskbounds)) THEN
+        this%point_mask(:,:) = c_e(maskgrid(:,:))
+      ELSE IF (SIZE(maskbounds) < 2) THEN
+        this%point_mask(:,:) = c_e(maskgrid(:,:))
+      ELSE
+        this%point_mask(:,:) = c_e(maskgrid(:,:)) .AND. &
+         maskgrid(:,:) > maskbounds(1) .AND. &
+         maskgrid(:,:) <= maskbounds(SIZE(maskbounds))
+      ENDIF
+    ELSE ! reverse condition
+      this%point_mask(:,:) = .NOT.c_e(maskgrid(:,:))
     ENDIF
 
+  ELSE IF (this%trans%sub_type == 'invalidset') THEN
+
+    IF (.NOT.PRESENT(maskbounds)) THEN
+      CALL l4f_category_log(this%category,L4F_ERROR, &
+       'grid_transform_init maskbounds argument missing for metamorphosis:'// &
+       TRIM(this%trans%sub_type)//' transformation')
+      this%valid = .FALSE.
+      RETURN
+    ELSE IF (SIZE(maskbounds) < 1) THEN
+      CALL l4f_category_log(this%category,L4F_ERROR, &
+       'grid_transform_init maskbounds argument empty for metamorphosis:'// &
+       TRIM(this%trans%sub_type)//' transformation')
+      this%valid = .FALSE.
+      RETURN
+    ELSE
+      this%invalidset = maskbounds(1)
+#ifdef DEBUG
+      CALL l4f_category_log(this%category, L4F_DEBUG, &
+       "grid_transform_init setting invalidset to "//t2c(this%invalidset))
+#endif
+    ENDIF
   ENDIF
-
-ELSE
-
-  CALL l4f_category_log(this%category,L4F_WARN, &
-   'init_grid_transform trans type '//TRIM(this%trans%trans_type) &
-   //' not supported')
-  this%valid = .FALSE.
-
 ENDIF
 
 CONTAINS
@@ -1485,8 +1487,6 @@ ELSE
      'trying to interpolate a grid with component flag 1 to a grid on a different projection')
     CALL l4f_category_log(this%category,L4F_WARN, &
      'vector fields will probably be wrong')
-!      this%valid = .FALSE.
-!      RETURN
   ELSE
     CALL set_val(out, component_flag=cf_i)
   ENDIF
@@ -1593,13 +1593,6 @@ IF (this%trans%trans_type == 'inter') THEN
 
     DEALLOCATE(lon,lat)
 
-  ELSE
-
-    CALL l4f_category_log(this%category,L4F_WARN, &
-     'grid_transform_init inter sub_type '//TRIM(this%trans%sub_type) &
-     //' not supported')
-    this%valid = .FALSE.
-    
   ENDIF
 
 ELSE IF (this%trans%trans_type == 'polyinter') THEN
@@ -1826,15 +1819,12 @@ ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
     ENDDO
 
     IF (this%outnx <= 0) THEN
-      CALL l4f_category_log(this%category,L4F_ERROR, &
+      CALL l4f_category_log(this%category,L4F_WARN, &
        "metamorphosis coordbb: no points inside bounding box "//&
        TRIM(to_char(this%trans%rect_coo%ilon))//","// &
        TRIM(to_char(this%trans%rect_coo%flon))//","// &
        TRIM(to_char(this%trans%rect_coo%ilat))//","// &
        TRIM(to_char(this%trans%rect_coo%flat)))
-      this%valid = .FALSE.
-      RETURN
-      !CALL raise_fatal_error() ! really fatal error?
     ENDIF
 
     CALL vol7d_alloc(v7d_out, nana=this%outnx)
@@ -1875,10 +1865,8 @@ ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
 !$OMP END PARALLEL
 
     IF (this%outnx <= 0) THEN
-      CALL l4f_category_log(this%category,L4F_INFO, &
+      CALL l4f_category_log(this%category,L4F_WARN, &
        "metamorphosis poly: no points inside polygons")
-!      this%valid = .FALSE.
-!      RETURN
     ENDIF
 
     CALL vol7d_alloc(v7d_out, nana=this%outnx)
@@ -1893,13 +1881,13 @@ ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
       ENDDO
     ENDDO
 
-
   ELSE IF (this%trans%sub_type == 'mask' ) THEN
 
     IF (.NOT.PRESENT(maskgrid)) THEN
       CALL l4f_category_log(this%category,L4F_ERROR, &
        'grid_transform_init maskgrid argument missing for metamorphosis:mask transformation')
-      CALL raise_fatal_error()
+      this%valid = .FALSE.
+      RETURN
     ENDIF
 
     IF (this%innx /= SIZE(maskgrid,1) .OR. this%inny /= SIZE(maskgrid,2)) THEN
@@ -1938,11 +1926,8 @@ ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
 !$OMP END PARALLEL
 
     IF (this%outnx <= 0) THEN
-      CALL l4f_category_log(this%category,L4F_ERROR, &
+      CALL l4f_category_log(this%category,L4F_WARN, &
        "grid_transform_init no points inside mask for metamorphosis:mask transformation")
-      this%valid = .FALSE.
-      RETURN
-      !CALL raise_fatal_error() ! really fatal error?
     ENDIF
 #ifdef DEBUG
     DO n = 1, nmaskarea
@@ -1963,22 +1948,7 @@ ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
       ENDDO
     ENDDO
 
-  ELSE
-
-    CALL l4f_category_log(this%category,L4F_WARN, &
-     'grid_transform_init metamorphosis sub_type '//TRIM(this%trans%sub_type) &
-     //' not supported')
-    this%valid = .FALSE.
-
   ENDIF
-
-ELSE
-
-  CALL l4f_category_log(this%category,L4F_WARN, &
-   'init_grid_v7d_transform trans type '//TRIM(this%trans%trans_type) &
-   //' not supported')
-  this%valid = .FALSE.
-
 ENDIF
 
 CONTAINS
@@ -2087,13 +2057,6 @@ IF (this%trans%trans_type == 'inter') THEN
 
     DEALLOCATE(lon,lat)
 
-  ELSE
-
-    CALL l4f_category_log(this%category,L4F_WARN, &
-     'init_v7d_grid_transform inter sub_type '//TRIM(this%trans%sub_type) &
-     //' not supported')
-    this%valid = .FALSE.
-
   ENDIF
 
 ELSE IF (this%trans%trans_type == 'boxinter') THEN
@@ -2123,13 +2086,6 @@ ELSE IF (this%trans%trans_type == 'boxinter') THEN
    this%outnx, this%outny , xmin, xmax, ymin, ymax, &
    lon, lat, .FALSE., &
    this%inter_index_x(:,1), this%inter_index_y(:,1))
-
-ELSE
-
-  CALL l4f_category_log(this%category,L4F_WARN, &
-   'init_v7d_grid_transform trans type '//TRIM(this%trans%trans_type) &
-   //' not supported')
-  this%valid = .FALSE.
 
 ENDIF
 
@@ -2207,13 +2163,6 @@ IF (this%trans%trans_type == 'inter') THEN
     CALL getval(v7d_in%ana(:)%coord,lon=this%inter_xp(:,1),lat=this%inter_yp(:,1))
     CALL getval(v7d_out%ana(:)%coord,lon=this%inter_x(:,1),lat=this%inter_y(:,1))
 
-  ELSE
-
-    CALL l4f_category_log(this%category,L4F_WARN, &
-     'init_v7d_v7d_transform inter sub_type '//TRIM(this%trans%sub_type) &
-     //' not supported')
-    this%valid = .FALSE.
-
   ENDIF
 
 ELSE IF (this%trans%trans_type == 'polyinter') THEN
@@ -2288,15 +2237,12 @@ ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
     ENDDO
 
     IF (this%outnx <= 0) THEN
-      CALL l4f_category_log(this%category,L4F_ERROR, &
+      CALL l4f_category_log(this%category,L4F_WARN, &
        "metamorphosis:coordbb: no points inside bounding box "//&
        TRIM(to_char(this%trans%rect_coo%ilon))//","// &
        TRIM(to_char(this%trans%rect_coo%flon))//","// &
        TRIM(to_char(this%trans%rect_coo%ilat))//","// &
        TRIM(to_char(this%trans%rect_coo%flat)))
-      this%valid = .FALSE.
-      DEALLOCATE(lon, lat)
-      RETURN
     ENDIF
 
     CALL vol7d_alloc(v7d_out, nana=this%outnx)
@@ -2331,7 +2277,7 @@ ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
     ENDDO
 
     IF (this%outnx <= 0) THEN
-      CALL l4f_category_log(this%category,L4F_INFO, &
+      CALL l4f_category_log(this%category,L4F_WARN, &
        "metamorphosis:poly: no points inside polygons")
     ENDIF
 
@@ -2348,21 +2294,7 @@ ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
       ENDIF
     ENDDO
 
-  ELSE
-
-    CALL l4f_category_log(this%category,L4F_WARN, &
-     'grid_transform_init metamorphosis sub_type '//TRIM(this%trans%sub_type) &
-     //' not supported')
-    this%valid = .FALSE.
-
   ENDIF
-
-ELSE
-
-  CALL l4f_category_log(this%category,L4F_WARN, &
-   'init_v7d_v7d_transform trans type '//TRIM(this%trans%trans_type) &
-   //' not supported')
-  this%valid = .FALSE.
 ENDIF
 
 END SUBROUTINE grid_transform_vol7d_vol7d_init
@@ -2377,7 +2309,6 @@ CHARACTER(len=*),INTENT(in),OPTIONAL :: categoryappend
 CHARACTER(len=512) :: a_name
 
 
-!this%valid = .TRUE.
 CALL l4f_launcher(a_name, a_name_append= &
  TRIM(subcategory)//"."//TRIM(optio_c(categoryappend,255)))
 this%category=l4f_category_get(a_name)
@@ -2387,13 +2318,6 @@ CALL l4f_category_log(this%category,L4F_DEBUG,"start init_grid_transform")
 #endif
 
 this%trans=trans
-!NULLIFY(this%inter_index_x)
-!NULLIFY(this%inter_index_y)
-!NULLIFY(this%inter_x)
-!NULLIFY(this%inter_y)
-!NULLIFY(this%inter_xp)
-!NULLIFY(this%inter_yp)
-!NULLIFY(this%point_mask)
 
 END SUBROUTINE grid_transform_init_common
 
@@ -3033,11 +2957,29 @@ ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
       field_out(:,1,k) = PACK(field_in(:,:,k), c_e(this%point_index(:,:)))
     ENDDO
 
-  ELSE IF (this%trans%sub_type == 'maskfill') THEN
+  ELSE IF (this%trans%sub_type == 'maskvalid') THEN
 
     DO k = 1, innz
       WHERE (this%point_mask(:,:))
         field_out(:,:,k) = field_in(:,:,k)
+      END WHERE
+    ENDDO
+
+  ELSE IF (this%trans%sub_type == 'maskinvalid') THEN
+
+    DO k = 1, innz
+      WHERE (.NOT.this%point_mask(:,:))
+        field_out(:,:,k) = field_in(:,:,k)
+      END WHERE
+    ENDDO
+
+  ELSE IF (this%trans%sub_type == 'invalidset') THEN
+
+    DO k = 1, innz
+      WHERE (c_e(field_in(:,:,k)))
+        field_out(:,:,k) = field_in(:,:,k)
+      ELSE WHERE
+        field_out(:,:,k) = this%invalidset
       END WHERE
     ENDDO
 
