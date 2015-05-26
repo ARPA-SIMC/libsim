@@ -999,7 +999,7 @@ do indana=1,size(qccli%v7d%ana)
           do indtime=1,size(qccli%v7d%time)
 
 #ifdef DEBUG
-            call l4f_log(L4F_INFO,"Index:"// t2c(indana)//" "//t2c(indnetwork)//" "//t2c(indlevel)//" "//&
+            call l4f_log(L4F_DEBUG,"Index:"// t2c(indana)//" "//t2c(indnetwork)//" "//t2c(indlevel)//" "//&
              t2c(indtimerange)//" "//t2c(inddativarr)//" "//t2c(indtime))
 #endif
 !!$            print *,"elaboro data : "//t2c(qccli%v7d%time(indtime))

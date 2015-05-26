@@ -25,8 +25,12 @@ USE geo_coord_class
 USE datetime_class
 USE modqc
 use modqccli
+use vol7d_class
+#ifdef OLDDBALLEAPI 
 use vol7d_dballeold_class
-
+#else
+use vol7d_dballe_class
+#endif
 implicit none
 
 integer :: category,io,ier,i
@@ -119,7 +123,7 @@ CALL import(v7ddballe,var=var(:nvar),varkind=(/("r",i=1,nvar)/),&
  ,timei=ti,timef=tf,coordmin=coordmin,coordmax=coordmax)
 
 print *,"data input:"
-!call display(v7ddballe%vol7d)
+call display(v7ddballe%vol7d)
 call l4f_category_log(category,L4F_INFO,"end data import")
 
 call l4f_category_log(category,L4F_INFO,"start QC")
@@ -127,14 +131,17 @@ call l4f_category_log(category,L4F_INFO,"start QC")
                                 ! chiamiamo il "costruttore" per il Q.C.
 call init(v7dqccli,v7ddballe%vol7d,var(:nvar), &
  timei=ti,timef=tf, &
- data_id_in=v7ddballe%data_id, dsncli=dsnc, dsnextreme=dsne, &
+#ifdef OLDDBALLEAPI  
+ data_id_in=v7ddballe%data_id,&
+#endif
+ dsncli=dsnc, dsnextreme=dsne, &
  user=userce, password=passwordce, macropath=macropath, height2level=height2level, categoryappend="clima")
 
 print *,"data extreme:"
-!call display(v7dqccli%extreme)
+call display(v7dqccli%extreme)
 
 print *,"data clima:"
-!call display(v7dqccli%clima)
+call display(v7dqccli%clima)
 
 call l4f_category_log(category,L4F_INFO,"start climat QC")
 call quaconcli(v7dqccli)
@@ -142,12 +149,16 @@ call l4f_category_log(category,L4F_INFO,"end climat QC")
 
 call l4f_category_log(category,L4F_INFO,"start export data")
 print *,"data output:"
-!call display(v7ddballe%vol7d)
+call display(v7ddballe%vol7d)
 
 
 deallocate (v7ddballe%data_id)
 v7ddballe%data_id => v7dqccli%data_id_out
-CALL export(v7ddballe,attr_only=.true.)
+CALL export(v7ddballe&
+#ifdef OLDDBALLEAPI 
+,attr_only=.true.
+#endif
+)
 
 call l4f_category_log(category,L4F_INFO,"end export data")
 

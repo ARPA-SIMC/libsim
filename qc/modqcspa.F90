@@ -96,7 +96,7 @@ use datetime_class
 !use array_utilities
 !use io_units
 #ifdef HAVE_DBALLE
-use vol7d_dballeold_class
+use vol7d_dballe_class
 #endif
 
 implicit none
@@ -689,7 +689,7 @@ do indtime=1,size(qcspa%v7d%time)
               indcdativarr     = index(qcspa%clima%dativar%r, qcspa%v7d%dativar%r(inddativarr))
 
 
-              call l4f_log(L4F_INFO,"Index:"// to_char(indctime)//to_char(indclevel)//&
+              call l4f_log(L4F_DEBUG,"Index:"// to_char(indctime)//to_char(indclevel)//&
                to_char(indctimerange)//to_char(indcdativarr)//to_char(indcnetwork))
               if ( indctime <= 0 .or. indclevel <= 0 .or. indctimerange <= 0 .or. indcdativarr <= 0 &
                .or. indcnetwork <= 0 ) cycle
