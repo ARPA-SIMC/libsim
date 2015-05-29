@@ -2,14 +2,24 @@ program dballe_test
 
 use dballe_class
 use datetime_class
+use log4fortran
 implicit none
 
 type(dbasession) :: session, sessionfrom,sessionto
 type(dbaconnection) :: connection ,connectionfrom
+integer :: ier, category
+CHARACTER(len=512) :: a_name
+
+!questa chiamata prende dal launcher il nome univoco
+call l4f_launcher(a_name,a_name_force="dballe_test")
+!init di log4fortran
+ier=l4f_init()
+!imposta a_name
+category=l4f_category_get(a_name//".main")
 
 ! connect to dsn type DBA
 connection=dbaconnection(dsn="sqlite:dballe_test.sqlite")
-session=dbasession(connection,wipe=.true.,anaflag="write", dataflag="write", attrflag="write")
+session=dbasession(connection,wipe=.true.,write=.true.)!,anaflag="write", dataflag="write", attrflag="write")
 call write1()    ! write etherogeneous ensamble of data with attributes and constant data using macro object
 call write2()    ! write an omogeneous vector of data
 call write3()    ! write an etherogeneous ensamble of data
@@ -20,7 +30,6 @@ call delete3()   ! delete some attributes from one var only where are some defin
 !close everythings
 call session%delete()
 call connection%delete()
-
 
 ! connect to dsn type BUFR file for write
 session=dbasession(filename="dballe_test.bufr",wipe=.true.,write=.true.,memdb=.false.)
@@ -45,7 +54,7 @@ call sessionfrom%delete()
 ! use memdb
 ! connect to dsn type DBA
 connectionfrom=dbaconnection(dsn="mem:")
-sessionfrom=dbasession(connectionfrom,wipe=.true.,anaflag="write", dataflag="write", attrflag="write")
+sessionfrom=dbasession(connectionfrom,wipe=.true.,write=.true.)!,anaflag="write", dataflag="write", attrflag="write")
 call sessionfrom%messages_open_input(filename="dballe_test.bufr",mode="r",format="BUFR",simplified=.true.)
 ! connect to dsn type BUFR file for write
 sessionto=dbasession(filename="dballe_test_copy1fmem.bufr",wipe=.true.,write=.true.,memdb=.false.)
@@ -54,6 +63,10 @@ call copy1fmem()     ! copy data and attributes of everythings to an other file
 call sessionfrom%delete()
 call connectionfrom%delete()
 call sessionto%delete()
+
+!chiudo il logger
+CALL l4f_category_delete(category)
+ier=l4f_fini()
 
 contains
 
