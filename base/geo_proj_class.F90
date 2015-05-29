@@ -122,6 +122,12 @@ INTERFACE OPERATOR (/=)
   MODULE PROCEDURE geo_proj_ne
 END INTERFACE
 
+
+INTEGER,PARAMETER,PUBLIC :: &
+ geo_proj_unit_degree = 0, & !< coordinate unit is degrees (longitude periodic over 360 degrees)
+ geo_proj_unit_meter = 1     !< coordinate unit is meters (non-periodic)
+
+
 INTEGER,PARAMETER :: nellips = 41 !< number of predefine ellipsoids
 
 ! queste costanti vanno usate per specificare l'ellissoide da usare per
@@ -405,7 +411,7 @@ SUBROUTINE geo_proj_get_val(this, &
  longitude_south_pole, latitude_south_pole, angle_rotation, &
  longitude_stretch_pole, latitude_stretch_pole, stretch_factor, &
  latin1, latin2, lad, projection_center_flag, &
- ellips_smaj_axis, ellips_flatt, ellips_type)
+ ellips_smaj_axis, ellips_flatt, ellips_type, unit)
 TYPE(geo_proj),INTENT(in) :: this
 CHARACTER(len=*),OPTIONAL :: proj_type !< Type of projection
 DOUBLE PRECISION,OPTIONAL :: lov !< Line of view, also known as reference longitude or orientation of the grid (polar projections)
@@ -425,6 +431,7 @@ INTEGER,OPTIONAL :: projection_center_flag !< Flag indicating which pole is repr
 DOUBLE PRECISION,OPTIONAL :: ellips_smaj_axis !< Earth semi-major axis
 DOUBLE PRECISION,OPTIONAL :: ellips_flatt !< Earth flattening
 INTEGER,OPTIONAL :: ellips_type !< number in the interval [1,nellips] indicating a predefined ellipsoid, alternative to the previous arguments
+INTEGER,OPTIONAL :: unit !< unit of measure of the projected coordinate, one of the constants \a geo_proj_unit_*
 
 INTEGER :: i
 
@@ -464,6 +471,18 @@ IF (PRESENT(ellips_type)) THEN
     ENDIF
   ENDDO
 ENDIF
+
+IF (PRESENT(unit)) THEN
+  SELECT CASE(this%proj_type)
+  CASE("regular_ll", "rotated_ll")
+    unit = geo_proj_unit_degree
+  CASE("lambert", "polar_stereographic", "UTM")
+    unit = geo_proj_unit_meter
+  CASE default
+    unit = imiss
+  END SELECT
+ENDIF
+
 
 END SUBROUTINE geo_proj_get_val
 
@@ -506,7 +525,7 @@ ENDIF
 
 ! ellipsoid
 IF (PRESENT(ellips_smaj_axis)) THEN
-! explicit ellipsoid parameters provided (sphere is flatt is not present or 0)
+! explicit ellipsoid parameters provided (sphere if flatt is not present or 0)
   CALL ellips_compute(this%ellips, ellips_smaj_axis, ellips_flatt)
 ELSE IF (PRESENT(ellips_type)) THEN
   IF (ellips_type > 0 .AND. ellips_type <= nellips) THEN
@@ -592,13 +611,14 @@ IF (this%proj_type == 'rotated_ll' .OR. this%proj_type == 'stretched_rotated_ll'
   PRINT*,"Rotated projection:"
   PRINT*,"lon of south pole",this%rotated%longitude_south_pole
   PRINT*,"lat of south pole",this%rotated%latitude_south_pole
+  PRINT*,"angle of rotation",this%rotated%angle_rotation
 ENDIF
 
 IF (this%proj_type == 'stretched_ll' .OR. this%proj_type == 'stretched_rotated_ll') THEN
   PRINT*,"Stretched projection:"
   PRINT*,"lon of stretch pole",this%stretched%longitude_stretch_pole
   PRINT*,"lat of stretch pole",this%stretched%latitude_stretch_pole
-  PRINT*,"stretching factor ",this%stretched%stretch_factor
+  PRINT*,"stretching factor",this%stretched%stretch_factor
 ENDIF
 
 IF (this%proj_type == 'lambert' .OR. this%proj_type == 'polar_stereographic') THEN
@@ -769,8 +789,9 @@ DOUBLE PRECISION, INTENT(in) :: longitude_south_pole, latitude_south_pole, &
 
 DOUBLE PRECISION :: cy0,sy0,rx,srx,crx,sy,cy,l_south_pole
 
-
-l_south_pole = ACOS(-SIN(degrad*latitude_south_pole))
+! old hibu formula
+!l_south_pole = ACOS(-SIN(degrad*latitude_south_pole))
+l_south_pole = (latitude_south_pole+90.)*degrad
 
 rx = degrad*(lon - longitude_south_pole)
 srx = SIN(rx)
@@ -784,6 +805,7 @@ cy = COS(degrad*lat)
 
 x = raddeg*ATAN2(cy*srx, cy0*cy*crx+sy0*sy)       
 y = raddeg*ASIN(cy0*sy - sy0*cy*crx)
+x = x + angle_rotation ! check
 
 END SUBROUTINE proj_rotated_ll
 
@@ -794,16 +816,19 @@ DOUBLE PRECISION, INTENT(out) :: lon,lat
 DOUBLE PRECISION, INTENT(in) :: longitude_south_pole, latitude_south_pole, &
  angle_rotation
 
-DOUBLE PRECISION :: cy0, sy0, l_south_pole
+DOUBLE PRECISION :: cy0, sy0, l_south_pole, xr
 
-l_south_pole=ACOS(-SIN(degrad*latitude_south_pole))
+xr = (x - angle_rotation)*degrad ! check
+! old hibu formula
+!l_south_pole = ACOS(-SIN(degrad*latitude_south_pole))
+l_south_pole = (latitude_south_pole+90.)*degrad
 
 cy0 = COS(l_south_pole)
 sy0 = SIN(l_south_pole)
 
-lat = raddeg*ASIN(sy0*COS(degrad*y)*COS(degrad*x)+cy0*SIN(degrad*y))
+lat = raddeg*ASIN(sy0*COS(degrad*y)*COS(xr)+cy0*SIN(degrad*y))
 lon = longitude_south_pole + &
- raddeg*ASIN(SIN(degrad*x)*COS(degrad*y)/COS(degrad*lat))
+ raddeg*ASIN(SIN(xr)*COS(degrad*y)/COS(degrad*lat))
 
 END SUBROUTINE unproj_rotated_ll
 

@@ -197,7 +197,7 @@ PUBLIC get_val,set_val,write_unit,read_unit,display
 PUBLIC OPERATOR(==),OPERATOR(/=)
 PUBLIC count_distinct, pack_distinct, map_distinct, map_inv_distinct,index
 PUBLIC wind_unrot, import, export
-
+PUBLIC griddim_central_lon, griddim_set_central_lon
 CONTAINS
 
 !> Constructor for a \a griddim_def object.
@@ -517,6 +517,87 @@ CALL write_unit(this%grid%grid, unit)
 END SUBROUTINE griddim_write_unit
 
 
+!> Euristically determine the approximate central longitude of the
+!! grid in degrees.
+!! The method depends on the projection used.
+FUNCTION griddim_central_lon(this) RESULT(lon)
+TYPE(griddim_def),INTENT(inout) :: this !< grid descriptor
+
+DOUBLE PRECISION :: lon
+
+CALL griddim_pistola_central_lon(this, lon)
+
+END FUNCTION griddim_central_lon
+
+
+!> Euristically reset the approximate central longitude of the
+!! grid to a value compatible to the provided longitude \a lonref.
+!! The method depends on the projection used.
+SUBROUTINE griddim_set_central_lon(this, lonref)
+TYPE(griddim_def),INTENT(inout) :: this !< grid descriptor
+DOUBLE PRECISION,INTENT(in) :: lonref !< reference longitude
+
+DOUBLE PRECISION :: lon
+
+CALL griddim_pistola_central_lon(this, lon, lonref)
+
+END SUBROUTINE griddim_set_central_lon
+
+
+! internal subroutine for performing tasks common to the prevous two
+SUBROUTINE griddim_pistola_central_lon(this, lon, lonref)
+TYPE(griddim_def),INTENT(inout) :: this ! grid descriptor
+DOUBLE PRECISION,INTENT(inout) :: lon ! central longitude
+DOUBLE PRECISION,INTENT(in),OPTIONAL :: lonref ! reference longitude
+
+INTEGER :: unit
+DOUBLE PRECISION :: lonsp, latsp, londelta, lov
+CHARACTER(len=80) :: ptype
+
+lon = dmiss
+CALL get_val(this%grid%proj, unit=unit)
+IF (unit == geo_proj_unit_meter) THEN ! it is a plane projection
+  CALL get_val(this%grid%proj, lov=lon)
+  IF (PRESENT(lonref)) THEN
+    CALL long_reset_to_cart_closest(lov, lonref)
+    CALL set_val(this%grid%proj, lov=lon)
+  ENDIF
+
+ELSE IF (unit == geo_proj_unit_degree) THEN ! it is a spheric projection
+  CALL get_val(this%grid%proj, proj_type=ptype, &
+   longitude_south_pole=lonsp, latitude_south_pole=latsp)
+  SELECT CASE(ptype)
+  CASE('rotated_ll','stretched_rotated_ll') ! use origin of rotated system
+    IF (latsp < 0.0D0) THEN
+      lon = lonsp
+      IF (PRESENT(lonref)) THEN
+        CALL long_reset_to_cart_closest(lov, lonref)
+        CALL set_val(this%grid%proj, longitude_south_pole=lonref)
+      ENDIF
+    ELSE
+      lon = MODULO(lonsp + 180.0D0, 360.0D0)
+!      IF (PRESENT(lonref)) THEN
+!        CALL long_reset_to_cart_closest(lov, lonref)
+!        CALL set_val(this%grid%proj, longitude_south_pole=lonref)
+!      ENDIF
+    ENDIF
+  CASE default ! use real grid limits
+    IF (c_e(this%grid%grid%xmin) .AND. c_e(this%grid%grid%xmin)) THEN
+      lon = 0.5D0*(this%grid%grid%xmin + this%grid%grid%xmax)
+    ENDIF
+      IF (PRESENT(lonref)) THEN
+        londelta = lon
+        CALL long_reset_to_cart_closest(londelta, lonref)
+        londelta = londelta - lon
+        this%grid%grid%xmin = this%grid%grid%xmin + londelta
+        this%grid%grid%xmax = this%grid%grid%xmax + londelta
+      ENDIF
+  END SELECT
+ENDIF
+
+END SUBROUTINE griddim_pistola_central_lon
+
+
 !> Generates coordinates of every point of a generic grid from the
 !! grid description. The number of grid points along both direction is
 !! guessed from the shape of x and y arrays, which must be conformal.
@@ -667,7 +748,8 @@ TYPE(griddim_def),INTENT(inout) :: this ! griddim object
 INTEGER, INTENT(in) :: gaid ! grib_api id of the grib loaded in memory to import
 
 DOUBLE PRECISION :: loFirst, loLast, laFirst, laLast, x1, y1
-INTEGER :: EditionNumber, iScansNegatively, jScansPositively, zone, datum, reflon
+INTEGER :: EditionNumber, iScansNegatively, jScansPositively, zone, datum, &
+ reflon, ierr
 
 ! Generic keys
 CALL grib_get(gaid, 'typeOfGrid', this%grid%proj%proj_type)
@@ -691,14 +773,8 @@ CALL grib_get_dmiss(gaid,'longitudeOfSouthernPoleInDegrees', &
  this%grid%proj%rotated%longitude_south_pole)
 CALL grib_get_dmiss(gaid,'latitudeOfSouthernPoleInDegrees', &
  this%grid%proj%rotated%latitude_south_pole)
-
-IF (EditionNumber == 1) THEN
-  CALL grib_get_dmiss(gaid,'angleOfRotationInDegrees', &
-   this%grid%proj%rotated%angle_rotation)
-ELSE IF (EditionNumber == 2)THEN
-  CALL grib_get_dmiss(gaid,'angleOfRotationOfProjectionInDegrees', &
-   this%grid%proj%rotated%angle_rotation)
-ENDIF
+CALL grib_get_dmiss(gaid,'angleOfRotationInDegrees', &
+ this%grid%proj%rotated%angle_rotation)
 
 ! Keys for stretched grids (checked through missing values)
 ! units must be verified, still experimental in grib_api
@@ -732,6 +808,13 @@ CASE ('regular_ll', 'rotated_ll', 'stretched_ll', 'stretched_rotated_ll')
   CALL grib_get(gaid,'latitudeOfFirstGridPointInDegrees',laFirst)
   CALL grib_get(gaid,'latitudeOfLastGridPointInDegrees',laLast)
 
+! longitudes are sometimes wrongly coded even in grib2 and even by the
+! Metoffice!
+! longitudeOfFirstGridPointInDegrees = 354.911;
+! longitudeOfLastGridPointInDegrees = 363.311;
+  CALL long_reset_0_360(lofirst)
+  CALL long_reset_0_360(lolast)
+
   IF (iScansNegatively  == 0) THEN
     this%grid%grid%xmin = loFirst
     this%grid%grid%xmax = loLast
@@ -748,7 +831,7 @@ CASE ('regular_ll', 'rotated_ll', 'stretched_ll', 'stretched_rotated_ll')
   ENDIF
 
 ! reset longitudes in order to have a Cartesian plane
-  IF (this%grid%grid%xmax-this%grid%grid%xmin < 0) &
+  IF (this%grid%grid%xmax < this%grid%grid%xmin) &
    this%grid%grid%xmin = this%grid%grid%xmin - 360.D0
 
 ! compute dx and dy (should we get them from grib?)
@@ -762,9 +845,20 @@ CASE ('polar_stereographic', 'lambert', 'albers')
 ! latin1/latin2 may be missing (e.g. stereographic)
   CALL grib_get_dmiss(gaid,'Latin1InDegrees',this%grid%proj%polar%latin1)
   CALL grib_get_dmiss(gaid,'Latin2InDegrees',this%grid%proj%polar%latin2)
+#ifdef DEBUG
+  CALL l4f_category_log(this%category,L4F_DEBUG, &
+   "griddim_import_gribapi, latin1/2 "// &
+   TRIM(to_char(this%grid%proj%polar%latin1))//" "// &
+   TRIM(to_char(this%grid%proj%polar%latin2)))
+#endif
 ! projection center flag, aka hemisphere 
   CALL grib_get(gaid,'projectionCenterFlag',&
-   this%grid%proj%polar%projection_center_flag)
+   this%grid%proj%polar%projection_center_flag, ierr)
+  IF (ierr /= GRIB_SUCCESS) THEN ! try center/centre
+    CALL grib_get(gaid,'projectionCentreFlag',&
+     this%grid%proj%polar%projection_center_flag)
+  ENDIF
+
   IF (IAND(this%grid%proj%polar%projection_center_flag,64) == 1) THEN
     CALL l4f_category_log(this%category,L4F_ERROR, &
      "griddim_import_gribapi, bi-polar projections not supported")
@@ -774,7 +868,7 @@ CASE ('polar_stereographic', 'lambert', 'albers')
   CALL grib_get(gaid,'LoVInDegrees',this%grid%proj%lov)
 #ifdef DEBUG
   CALL l4f_category_log(this%category,L4F_DEBUG, &
-   "griddim_import_gribapi, centralMeridian "//TRIM(to_char(this%grid%proj%lov)))
+   "griddim_import_gribapi, central meridian "//TRIM(to_char(this%grid%proj%lov)))
 #endif
 
 ! latitude at which dx and dy are valid
@@ -790,12 +884,26 @@ CASE ('polar_stereographic', 'lambert', 'albers')
 ! intersection parallel nearest to the pole on the projection plane.
     this%grid%proj%polar%lad = this%grid%proj%polar%latin1
   ELSE IF (EditionNumber == 2) THEN
-    CALL grib_get(gaid,'LaDInDegrees',this%grid%proj%polar%latin1)
+    CALL grib_get(gaid,'LaDInDegrees',this%grid%proj%polar%lad)
   ENDIF
+#ifdef DEBUG
+  CALL l4f_category_log(this%category,L4F_DEBUG, &
+   "griddim_import_gribapi, lad "//TRIM(to_char(this%grid%proj%polar%lad)))
+#endif
 
 ! compute projected extremes from lon and lat of first point
   CALL grib_get(gaid,'longitudeOfFirstGridPointInDegrees',loFirst)
   CALL grib_get(gaid,'latitudeOfFirstGridPointInDegrees',laFirst)
+  CALL long_reset_0_360(lofirst)
+  CALL long_reset_to_cart_closest(this%grid%proj%lov, lofirst)
+#ifdef DEBUG
+  CALL l4f_category_log(this%category,L4F_DEBUG, &
+   "griddim_import_gribapi, longitude of first point "//TRIM(to_char(lofirst)))
+  CALL l4f_category_log(this%category,L4F_DEBUG, &
+   "griddim_import_gribapi, central meridian reset "//TRIM(to_char(this%grid%proj%lov)))
+#endif
+
+
   CALL proj(this, loFirst, laFirst, x1, y1)
   IF (iScansNegatively  == 0) THEN
     this%grid%grid%xmin = x1
@@ -1048,16 +1156,16 @@ CASE ('regular_ll', 'rotated_ll', 'stretched_ll', 'stretched_rotated_ll')
     laLast = this%grid%grid%ymax
   ENDIF
 
-  CALL grib_set(gaid,'longitudeOfFirstGridPointInDegrees',loFirst)
-  CALL grib_set(gaid,'longitudeOfLastGridPointInDegrees',loLast)
-  CALL grib_set(gaid,'latitudeOfFirstGridPointInDegrees',laFirst)
-  CALL grib_set(gaid,'latitudeOfLastGridPointInDegrees',laLast)
-
 ! reset lon in standard grib 2 definition [0,360]
   IF (EditionNumber == 2) THEN
     IF (loFirst < 0.d0) loFirst = loFirst + 360.d0
     IF (loLast < 0.d0) loLast = loLast + 360.d0
   ENDIF
+
+  CALL grib_set(gaid,'longitudeOfFirstGridPointInDegrees',loFirst)
+  CALL grib_set(gaid,'longitudeOfLastGridPointInDegrees',loLast)
+  CALL grib_set(gaid,'latitudeOfFirstGridPointInDegrees',laFirst)
+  CALL grib_set(gaid,'latitudeOfLastGridPointInDegrees',laLast)
 
 ! test relative coordinate truncation error with respect to tol
 ! tol should be tuned
@@ -1537,12 +1645,67 @@ fy = MAX(liy, lfy)
 END SUBROUTINE griddim_zoom_projcoord
 
 
+!> Reset a longitude value in the interval [0-360[.
+!! The value is reset in place. This is usually useful in connecton
+!! with grib2 coding/decoding.
+SUBROUTINE long_reset_0_360(lon)
+DOUBLE PRECISION,INTENT(inout) :: lon !< the longitude to reset
+
+IF (.NOT.c_e(lon)) RETURN
+DO WHILE(lon < 0.0D0)
+  lon = lon + 360.0D0
+END DO
+DO WHILE(lon >= 360.0D0)
+  lon = lon - 360.0D0
+END DO
+
+END SUBROUTINE long_reset_0_360
+
+
+!> Reset a longitude value in the interval [0-360[.
+!! The value is reset in place. This is usually useful in connecton
+!! with grib2 coding/decoding.
+SUBROUTINE long_reset_m90_270(lon)
+DOUBLE PRECISION,INTENT(inout) :: lon !< the longitude to reset
+
+IF (.NOT.c_e(lon)) RETURN
+DO WHILE(lon < -90.0D0)
+  lon = lon + 360.0D0
+END DO
+DO WHILE(lon >= 270.0D0)
+  lon = lon - 360.0D0
+END DO
+
+END SUBROUTINE long_reset_m90_270
+
+
+!> Reset a longitude value in the interval [-180-180[.
+!! The value is reset in place. This is usually useful in connecton
+!! with grib2 coding/decoding.
+SUBROUTINE long_reset_m180_180(lon)
+DOUBLE PRECISION,INTENT(inout) :: lon !< the longitude to reset
+
+IF (.NOT.c_e(lon)) RETURN
+DO WHILE(lon < -180.0D0)
+  lon = lon + 360.0D0
+END DO
+DO WHILE(lon >= 180.0D0)
+  lon = lon - 360.0D0
+END DO
+
+END SUBROUTINE long_reset_m180_180
+
+
+SUBROUTINE long_reset_to_cart_closest(lon, lonref)
+DOUBLE PRECISION,INTENT(inout) :: lon !< the longitude to reset
+DOUBLE PRECISION,INTENT(in) :: lonref !< the longitude to compare
+
+IF (.NOT.c_e(lon) .OR. .NOT.c_e(lonref)) RETURN
+IF (ABS(lon-lonref) < 180.0D0) RETURN ! nothing to do
+lon = lon - NINT((lon-lonref)/360.0D0)*360.0D0 ! se non e` vera e` ben trovata
+
+END SUBROUTINE long_reset_to_cart_closest
+
+
 END MODULE grid_class
-
-
-!>\example example_vg6d_1.f90
-!!\brief Programma esempio semplice per la definizione di griddim.
-!!
-!! Programma che crea un oggetto griddim e ne stampa alcuni valori a
-!! schermo. Comprende anche una demo dell'uso di log4fortran.
 
