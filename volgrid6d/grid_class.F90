@@ -1157,9 +1157,12 @@ CASE ('regular_ll', 'rotated_ll', 'stretched_ll', 'stretched_rotated_ll')
   ENDIF
 
 ! reset lon in standard grib 2 definition [0,360]
-  IF (EditionNumber == 2) THEN
-    IF (loFirst < 0.d0) loFirst = loFirst + 360.d0
-    IF (loLast < 0.d0) loLast = loLast + 360.d0
+  IF (EditionNumber == 1) THEN
+    CALL long_reset_m180_360(loFirst)
+    CALL long_reset_m180_360(loLast)
+  ELSE IF (EditionNumber == 2) THEN
+    CALL long_reset_0_360(loFirst)
+    CALL long_reset_0_360(loLast)
   ENDIF
 
   CALL grib_set(gaid,'longitudeOfFirstGridPointInDegrees',loFirst)
@@ -1646,7 +1649,7 @@ END SUBROUTINE griddim_zoom_projcoord
 
 
 !> Reset a longitude value in the interval [0-360[.
-!! The value is reset in place. This is usually useful in connecton
+!! The value is reset in place. This is usually useful in connection
 !! with grib2 coding/decoding.
 SUBROUTINE long_reset_0_360(lon)
 DOUBLE PRECISION,INTENT(inout) :: lon !< the longitude to reset
@@ -1662,25 +1665,42 @@ END DO
 END SUBROUTINE long_reset_0_360
 
 
-!> Reset a longitude value in the interval [0-360[.
-!! The value is reset in place. This is usually useful in connecton
-!! with grib2 coding/decoding.
-SUBROUTINE long_reset_m90_270(lon)
+!> Reset a longitude value in the interval [-180-360[.
+!! The value is reset in place. This is usually useful in connection
+!! with grib1 coding/decoding.
+SUBROUTINE long_reset_m180_360(lon)
 DOUBLE PRECISION,INTENT(inout) :: lon !< the longitude to reset
 
 IF (.NOT.c_e(lon)) RETURN
-DO WHILE(lon < -90.0D0)
+DO WHILE(lon < -180.0D0)
   lon = lon + 360.0D0
 END DO
-DO WHILE(lon >= 270.0D0)
+DO WHILE(lon >= 360.0D0)
   lon = lon - 360.0D0
 END DO
 
-END SUBROUTINE long_reset_m90_270
+END SUBROUTINE long_reset_m180_360
+
+
+!> Reset a longitude value in the interval [-90-270[.
+!! The value is reset in place. This is usually useful in connection
+!! with grib2 coding/decoding.
+!SUBROUTINE long_reset_m90_270(lon)
+!DOUBLE PRECISION,INTENT(inout) :: lon !< the longitude to reset
+!
+!IF (.NOT.c_e(lon)) RETURN
+!DO WHILE(lon < -90.0D0)
+!  lon = lon + 360.0D0
+!END DO
+!DO WHILE(lon >= 270.0D0)
+!  lon = lon - 360.0D0
+!END DO
+!
+!END SUBROUTINE long_reset_m90_270
 
 
 !> Reset a longitude value in the interval [-180-180[.
-!! The value is reset in place. This is usually useful in connecton
+!! The value is reset in place. This is usually useful in connection
 !! with grib2 coding/decoding.
 SUBROUTINE long_reset_m180_180(lon)
 DOUBLE PRECISION,INTENT(inout) :: lon !< the longitude to reset

@@ -1269,7 +1269,7 @@ ELSE IF (this%trans%trans_type == 'boxregrid') THEN
 
 ELSE IF (this%trans%trans_type == 'inter') THEN
 
-  CALL outgrid_setup() ! common setup for grid-generatig methods
+  CALL outgrid_setup() ! common setup for grid-generating methods
 
   IF (this%trans%sub_type == 'near' .OR. this%trans%sub_type == 'bilin' ) THEN
 
@@ -1302,7 +1302,7 @@ ELSE IF (this%trans%trans_type == 'inter') THEN
 
 ELSE IF (this%trans%trans_type == 'boxinter') THEN
 
-  CALL outgrid_setup() ! common setup for grid-generatig methods
+  CALL outgrid_setup() ! common setup for grid-generating methods
   CALL get_val(in, nx=this%innx, ny=this%inny)
   CALL get_val(out, nx=this%outnx, ny=this%outny, &
    xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax)
@@ -1329,7 +1329,7 @@ ELSE IF (this%trans%trans_type == 'boxinter') THEN
 
 ELSE IF (this%trans%trans_type == 'stencilinter') THEN
 
-  CALL outgrid_setup() ! common setup for grid-generatig methods
+  CALL outgrid_setup() ! common setup for grid-generating methods
 ! from inter:near
   CALL get_val(in, nx=this%innx, ny=this%inny, &
    xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax)
@@ -1547,6 +1547,8 @@ ELSE
     CALL set_val(out, component_flag=cf_i)
   ENDIF
 ENDIF
+! rotate the output grid by n*360 degrees to bring it closer to the input grid
+CALL griddim_set_central_lon(out, griddim_central_lon(in))
 
 END SUBROUTINE outgrid_setup
 
