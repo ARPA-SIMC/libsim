@@ -733,12 +733,12 @@ TYPE(geo_proj),INTENT(in) :: this, that
 LOGICAL :: eq
 
 eq = this%proj_type == that%proj_type .AND. this%xoff == that%xoff .AND. &
- this%yoff == that%yoff .AND. this%lov == that%lov .AND. &
- this%rotated%longitude_south_pole == that%rotated%longitude_south_pole .AND. &
+ this%yoff == that%yoff .AND. geo_lon_eq(this%lov, that%lov) .AND. &
+ geo_lon_eq(this%rotated%longitude_south_pole, that%rotated%longitude_south_pole) .AND. &
  this%rotated%latitude_south_pole == that%rotated%latitude_south_pole .AND. &
  this%rotated%angle_rotation == that%rotated%angle_rotation .AND. &
  this%stretched%latitude_stretch_pole == that%stretched%latitude_stretch_pole .AND. &
- this%stretched%longitude_stretch_pole == that%stretched%longitude_stretch_pole .AND. &
+ geo_lon_eq(this%stretched%longitude_stretch_pole, that%stretched%longitude_stretch_pole) .AND. &
  this%stretched%stretch_factor == that%stretched%stretch_factor .AND. &
  this%polar%latin1 == that%polar%latin1 .AND. & ! polar%lon1, polar%lat1
  this%polar%latin2 == that%polar%latin2 .AND. & ! intentionally not checked
@@ -756,6 +756,20 @@ LOGICAL :: ne
 ne = .NOT. (this == that)
 
 END FUNCTION geo_proj_ne
+
+
+!> Compare two longitudes and return .TRUE. if they
+!! represent the same longitude modulo 360.
+ELEMENTAL FUNCTION geo_lon_eq(l1, l2) RESULT(eq)
+DOUBLE PRECISION,INTENT(in) :: l1 !< first longitude
+DOUBLE PRECISION,INTENT(in) :: l2 !< second longitude
+
+LOGICAL :: eq
+
+!eq = (l1 == l2) .OR. (ABS(l2-l1) == 360.0D0)
+eq = MODULO(l2-l1, 360.0D0) == 0.0D0
+
+END FUNCTION geo_lon_eq
 
 ! =====================
 ! == transformations ==

@@ -1547,8 +1547,8 @@ ELSE
     CALL set_val(out, component_flag=cf_i)
   ENDIF
 ENDIF
-! rotate the output grid by n*360 degrees to bring it closer to the input grid
-CALL griddim_set_central_lon(out, griddim_central_lon(in))
+! rotate the input grid by n*360 degrees to bring it closer to the output grid
+CALL griddim_set_central_lon(in, griddim_central_lon(out))
 
 END SUBROUTINE outgrid_setup
 
