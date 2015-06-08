@@ -58,10 +58,12 @@ TYPE(georef_coord),PARAMETER :: georef_coord_miss=georef_coord(dmiss,dmiss)
 !! georeferenced coordinate system.
 TYPE georef_coord_array
   PRIVATE
-  INTEGER,POINTER :: parts(:) => NULL()
-  TYPE(georef_coord),POINTER :: coord(:) => NULL()
+  INTEGER,ALLOCATABLE :: parts(:)
+  TYPE(georef_coord),ALLOCATABLE :: coord(:)
   INTEGER :: topo=imiss
   TYPE(geo_proj) :: proj
+  TYPE(georef_coord) :: bbox(2)=(/georef_coord_miss, georef_coord_miss/)
+  LOGICAL :: bbox_updated=.FALSE.
 END TYPE georef_coord_array
 
 INTEGER,PARAMETER :: georef_coord_array_point = 1 !< Topology for georef_coord_array (from shapelib): isolated point
@@ -85,6 +87,10 @@ END INTERFACE
 !> Methods for returning the value of object members.
 INTERFACE getval
   MODULE PROCEDURE georef_coord_getval, georef_coord_proj_getval, georef_coord_array_getval
+END INTERFACE
+
+INTERFACE compute_bbox
+  MODULE PROCEDURE georef_coord_array_compute_bbox
 END INTERFACE
 
 !> Logical equality operator.
@@ -152,7 +158,7 @@ PRIVATE
 PUBLIC georef_coord, georef_coord_miss, &
  georef_coord_array, georef_coord_array_point, georef_coord_array_arc, &
  georef_coord_array_polygon, georef_coord_array_multipoint, &
- delete, c_e, getval, OPERATOR(==), OPERATOR(/=), OPERATOR(>=), OPERATOR(<=), &
+ delete, c_e, getval, compute_bbox, OPERATOR(==), OPERATOR(/=), OPERATOR(>=), OPERATOR(<=), &
 #ifdef HAVE_SHAPELIB
  import, export, &
 #endif
@@ -272,7 +278,7 @@ res = (this%x == that%x .AND. this%y == that%y)
 END FUNCTION georef_coord_eq
 
 
-elemental FUNCTION georef_coord_ge(this, that) RESULT(res)
+ELEMENTAL FUNCTION georef_coord_ge(this, that) RESULT(res)
 TYPE(georef_coord),INTENT(IN) :: this, that
 LOGICAL :: res
 
@@ -393,7 +399,7 @@ END SUBROUTINE georef_coord_vect_write_unit
 
 !> Determines whether the point \a this lies inside a specified rectangle.
 !! The rectangle is oriented parallely to the coordinate system, its
-!! lower-left and upper-right verticies are specified by the two
+!! lower-left and upper-right vertices are specified by the two
 !! arguments. The function returns \c .TRUE. also in the case it lies
 !! exactly on the border of the rectangle.
 FUNCTION georef_coord_inside_rectang(this, coordmin, coordmax) RESULT(res)
@@ -407,9 +413,9 @@ res = (this >= coordmin .AND. this <= coordmax)
 END FUNCTION georef_coord_inside_rectang
 
 
-! ===================
+! ========================
 ! == georef_coord_array ==
-! ===================
+! ========================
 !> Construct a \a georef_coord_array object with the optional parameters provided.
 !! If coordinates are not provided the object obtained is empty
 !! (missing, see c_e function), if coordinate arrays are of different
@@ -441,8 +447,6 @@ TYPE(georef_coord_array),INTENT(inout) :: this
 
 TYPE(georef_coord_array) :: lobj
 
-IF (ASSOCIATED(this%coord)) DEALLOCATE(this%coord)
-IF (ASSOCIATED(this%parts)) DEALLOCATE(this%parts)
 this = lobj
 
 END SUBROUTINE georef_coord_array_delete
@@ -452,7 +456,7 @@ ELEMENTAL FUNCTION georef_coord_array_c_e(this) RESULT (res)
 TYPE(georef_coord_array),INTENT(in) :: this
 LOGICAL :: res
 
-res = ASSOCIATED(this%coord) ! incomplete but reasonable
+res = ALLOCATED(this%coord)
 
 END FUNCTION georef_coord_array_c_e
 
@@ -471,12 +475,12 @@ TYPE(geo_proj),OPTIONAL,INTENT(out) :: proj !< geographical projection
 
 
 IF (PRESENT(x)) THEN
-  IF (ASSOCIATED(this%coord)) THEN
+  IF (ALLOCATED(this%coord)) THEN
     x = this%coord%x
   ENDIF
 ENDIF
 IF (PRESENT(y)) THEN
-  IF (ASSOCIATED(this%coord)) THEN
+  IF (ALLOCATED(this%coord)) THEN
     y = this%coord%y
   ENDIF
 ENDIF
@@ -485,6 +489,24 @@ IF (PRESENT(proj)) proj = this%proj ! warning proj has no missing value yet
 
 END SUBROUTINE georef_coord_array_getval
 
+
+!> Compute the bounding box of each shape in \a georef_coord_array object.
+!! The bounding box is computed and stored in the object, it is used
+!! by the inside() function for speedup; after it is computed the
+!! object cannot be changed, otherwise the bounding box will not be
+!! valid.
+SUBROUTINE georef_coord_array_compute_bbox(this)
+TYPE(georef_coord_array),INTENT(inout) :: this !< object to manipulate
+
+IF (ALLOCATED(this%coord)) THEN
+  this%bbox(1)%x = MINVAL(this%coord(:)%x)
+  this%bbox(1)%y = MINVAL(this%coord(:)%y)
+  this%bbox(2)%x = MAXVAL(this%coord(:)%x)
+  this%bbox(2)%y = MAXVAL(this%coord(:)%y)
+  this%bbox_updated = .TRUE.
+ENDIF
+
+END SUBROUTINE georef_coord_array_compute_bbox
 
 #ifdef HAVE_SHAPELIB
 ! internal method for importing a single shape
@@ -502,10 +524,12 @@ IF (.NOT.shpisnull(shpobj)) THEN
   this = georef_coord_array_new(x=DBLE(shpobj%padfx), y=DBLE(shpobj%padfy), &
    topo=shpobj%nshptype)
   IF (shpobj%nparts > 1 .AND. ASSOCIATED(shpobj%panpartstart)) THEN
-    ALLOCATE(this%parts(size(shpobj%panpartstart)))
-    this%parts(:) = shpobj%panpartstart(:)
+    this%parts = shpobj%panpartstart(:) ! automatic f95 allocation
+  ELSE IF (ALLOCATED(this%parts)) THEN
+    DEALLOCATE(this%parts)
   ENDIF
   CALL shpdestroyobject(shpobj)
+  CALL compute_bbox(this)
 ENDIF
 
 
@@ -521,8 +545,8 @@ INTEGER,INTENT(IN) :: nshp ! index of shape to write starting from 0, -1 to appe
 INTEGER :: i
 TYPE(shpobject) :: shpobj
 
-IF (ASSOCIATED(this%coord)) THEN
-  IF (ASSOCIATED(this%parts)) THEN
+IF (ALLOCATED(this%coord)) THEN
+  IF (ALLOCATED(this%parts)) THEN
     shpobj = shpcreateobject(this%topo, -1, SIZE(this%parts), this%parts, &
      this%parts, SIZE(this%coord), this%coord(:)%x, this%coord(:)%y)
   ELSE
@@ -570,7 +594,6 @@ ENDIF
 CALL shpgetinfo(shphandle, ns, shptype, minb, maxb, dbfnf, dbfnr)
 IF (ns > 0) THEN ! allocate and read the object
   CALL insert(this, nelem=ns)
-!  this%array(:)%topo = shptype ! probably useless, done in the following import
   DO i = 1, ns
     CALL georef_coord_array_import(this%array(i), shphandle=shphandle, nshp=i-1)
   ENDDO
@@ -635,9 +658,13 @@ INTEGER :: i
 
 inside = .FALSE. 
 IF (.NOT.c_e(this)) RETURN
-IF (.NOT.ASSOCIATED(poly%coord)) RETURN
+IF (.NOT.ALLOCATED(poly%coord)) RETURN
+! if outside bounding box stop here
+IF (poly%bbox_updated) THEN
+  IF (.NOT.georef_coord_inside_rectang(this, poly%bbox(1), poly%bbox(2))) RETURN
+ENDIF
 
-IF (ASSOCIATED(poly%parts)) THEN
+IF (ALLOCATED(poly%parts)) THEN
   DO i = 1, SIZE(poly%parts)-1
     inside = inside .NEQV. pointinpoly(this%x, this%y, &
      poly%coord(poly%parts(i)+1:poly%parts(i+1))%x, &
@@ -685,6 +712,7 @@ ENDDO
 END FUNCTION pointinpoly
 
 END FUNCTION georef_coord_inside
+
 
 
 END MODULE georef_coord_class
