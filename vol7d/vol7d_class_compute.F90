@@ -1088,33 +1088,29 @@ TYPE(datetime),INTENT(in),OPTIONAL :: stopp
 TYPE(cyclicdatetime),INTENT(in),OPTIONAL :: cyclicdt !< cyclic date and time
 
 TYPE(datetime) :: lstart, lstop
-TYPE(cyclicdatetime) :: lcyclicdt
 LOGICAL, ALLOCATABLE :: time_mask(:)
-!TYPE(vol7d) :: v7dtmp2
 
 CALL safe_start_stop(this, lstart, lstop, start, stopp)
 IF (.NOT. c_e(lstart) .OR. .NOT. c_e(lstop)) RETURN
-
-lcyclicdt=cyclicdatetime_miss
-if (present(cyclicdt)) then
-  if(c_e(cyclicdt)) lcyclicdt=cyclicdt
-end if
 
 CALL l4f_log(L4F_INFO, 'vol7d_filter_time: time interval '//TRIM(to_char(lstart))// &
  ' '//TRIM(to_char(lstop)))
 
 ALLOCATE(time_mask(SIZE(this%time)))
 
-!call display(lcyclicdt)
-time_mask = this%time >= lstart .AND. this%time <= lstop .AND. this%time == lcyclicdt
+time_mask = this%time >= lstart .AND. this%time <= lstop
 
+IF (PRESENT(cyclicdt)) THEN
+  IF (c_e(cyclicdt)) THEN
+    time_mask = time_mask .AND. this%time == cyclicdt
+  ENDIF
+ENDIF
 
-if (present(step)) then
-  if (c_e(step)) then
-    time_mask=time_mask .AND. MOD(this%time - lstart, step) == timedelta_0 
-  end if
-end if
-
+IF (PRESENT(step)) THEN
+  IF (c_e(step)) THEN
+    time_mask = time_mask .AND. MOD(this%time - lstart, step) == timedelta_0 
+  ENDIF
+ENDIF
 
 CALL vol7d_copy(this,that, ltime=time_mask)
 

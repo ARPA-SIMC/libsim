@@ -272,7 +272,7 @@ CALL optionparser_add(opt, 'd', 'display', ldisplay, help= &
  'briefly display the data volume imported, warning: this option is incompatible &
  &with output on stdout.')
 CALL optionparser_add(opt, ' ', 'comp-filter-time', comp_filter_time, help= &
- 'filter the time series keeping only the data selected by comp-start comp-end comp-step comp-cyclicdatetime')
+ 'filter the time series keeping only the data selected by comp-start comp-stop comp-step comp-cyclicdatetime')
 
 CALL optionparser_add(opt, ' ', 'comp-cyclicdatetime', comp_cyclicdatetime, help= &
 'date and time in the format \c TMMGGhhmm  where any repeated group of char should be / for missing. &
