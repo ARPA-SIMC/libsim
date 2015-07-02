@@ -89,8 +89,9 @@ END TYPE option
 !!
 !! Array options (only for integer, real and double precision) must be
 !! provided as comma-separated values, similarly to a record of a csv
-!! file, an empty field generates a missing value in the resulting
-!! array, the length of the array is not a priori limited.
+!! file, an empty field generates a missing value of the proper type
+!! and in the resulting array, the length of the array is not a priori
+!! limited.
 !!
 !! Grouping of short options, like \c -xvf is not allowed.  When a
 !! double dash \c -- or an argument (which is not an argument to an
@@ -110,6 +111,11 @@ END TYPE option
 !!  - logical (without additional argument)
 !!  - count (without additional argument)
 !!  - help (without additional argument)
+!!
+!! If the same option is encountered multiple times on the command
+!! line, the value set in the last occurrence takes precedence, the
+!! only exception is count options where every repetition increments
+!! the corresponding counter by one.
 !!
 !! Options are added through the generic \a optionparser_add method
 !! (for character, integer, floating point or logical options,
@@ -214,7 +220,6 @@ END FUNCTION option_new
 SUBROUTINE option_delete(this)
 TYPE(option),INTENT(inout) :: this ! object to destroy
 
-IF (.NOT.ASSOCIATED(this%help_msg)) PRINT*,'help not associated'
 IF (ASSOCIATED(this%help_msg)) DEALLOCATE(this%help_msg)
 NULLIFY(this%destc)
 NULLIFY(this%desti)
