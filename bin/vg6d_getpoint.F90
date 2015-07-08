@@ -54,7 +54,7 @@ TYPE(arrayof_georef_coord_array) :: poly
 DOUBLE PRECISION :: lon, lat
 DOUBLE PRECISION,ALLOCATABLE :: lon_array(:), lat_array(:)
 INTEGER :: polytopo
-DOUBLE PRECISION :: ilon, ilat, flon, flat, radius
+DOUBLE PRECISION :: ilon, ilat, flon, flat, radius, percentile
 TYPE(arrayof_real) :: maskbounds
 CHARACTER(len=80) :: output_template, trans_type, sub_type
 INTEGER :: output_td
@@ -137,6 +137,8 @@ radius = dmiss
 CALL optionparser_add(opt, ' ', 'radius', radius, help= &
  'radius of stencil in gridpoint units, fractionary values accepted, &
  &for ''stencilinter'' interpolation')
+CALL optionparser_add(opt, ' ', 'percentile', percentile, 50.0D0, help= &
+ 'desired percentile, [0.,100.], for ''*:percentile'' transformations')
 CALL optionparser_add(opt, ' ', 'maskbounds', maskbounds, help= &
  'comma-separated list of boundary values for defining subareas &
  &according to values of mask, &
@@ -329,7 +331,7 @@ ENDIF
 ! trasformation object
 CALL init(trans, trans_type=trans_type, sub_type=sub_type, &
  ilon=ilon, ilat=ilat, flon=flon, flat=flat, poly=poly, radius=radius, &
- categoryappend="transformation", time_definition=output_td)
+ percentile=percentile, categoryappend="transformation", time_definition=output_td)
 
 ! import input volume
 CALL import(volgrid, filename=input_file, decode=.FALSE., categoryappend="input volume")
