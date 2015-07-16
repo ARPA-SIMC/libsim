@@ -1069,7 +1069,7 @@ USE grib_api
 TYPE(griddim_def),INTENT(in) :: this ! griddim object
 INTEGER, INTENT(inout) :: gaid ! grib_api id of the grib loaded in memory to export
 
-INTEGER :: EditionNumber, iScansNegatively, jScansPositively, nv, pvl, zone
+INTEGER :: EditionNumber, iScansNegatively, jScansPositively, nv, pvl, zone, ierr
 DOUBLE PRECISION :: loFirst, loLast, laFirst, laLast, reflon
 DOUBLE PRECISION :: sdx, sdy, ratio, tol
 
@@ -1215,7 +1215,13 @@ CASE ('polar_stereographic', 'lambert', 'albers')
   CALL grib_set_dmiss(gaid,'Latin2InDegrees',this%grid%proj%polar%latin2)
 ! projection center flag, aka hemisphere 
   CALL grib_set(gaid,'projectionCenterFlag',&
-   this%grid%proj%polar%projection_center_flag)
+   this%grid%proj%polar%projection_center_flag, ierr)
+  IF (ierr /= GRIB_SUCCESS) THEN ! try center/centre
+    CALL grib_set(gaid,'projectionCentreFlag',&
+     this%grid%proj%polar%projection_center_flag)
+  ENDIF
+
+
 ! line of view, aka central meridian
   CALL grib_set(gaid,'LoVInDegrees',this%grid%proj%lov)
 ! latitude at which dx and dy are valid
