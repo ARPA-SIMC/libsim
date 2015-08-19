@@ -239,7 +239,7 @@ help='format of output file, in the form ''name[:grid_definition]'''&
 #ifdef HAVE_LIBGRIBAPI
 //'; ''grib_api'' for gridded output in grib format, grid_definition is the &
  &path name of a grib file in which the first message is used as a template &
- &for defining the output grid and'&
+ &for defining the output grid'&
 #endif
 #ifdef VAPOR
 //'; ''vapor'' for gridded output in vdf format'&
