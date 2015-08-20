@@ -38,10 +38,11 @@ TYPE option
   CHARACTER(len=1) :: short_opt=''
   CHARACTER(len=80) :: long_opt=''
   INTEGER :: opttype=-1
-  LOGICAL :: need_arg=.FALSE.
+  INTEGER :: need_arg=0 ! 0=no, 1=optional, 2=yes, was .FALSE.
   LOGICAL :: has_default=.FALSE.
   CHARACTER(len=1),POINTER :: destc=>NULL()
   INTEGER :: destclen=0
+  INTEGER :: helpformat=0 ! 0=txt, 1=markdown, 2=htmlform, improve!
   INTEGER,POINTER :: desti=>NULL()
   TYPE(arrayof_integer),POINTER :: destiarr=>NULL()
   REAL,POINTER :: destr=>NULL()
@@ -83,9 +84,18 @@ END TYPE option
 !!  - <tt>-l34.5</tt>
 !!  - <tt>-l 34.5</tt>
 !!
-!! If an option is declared to require an argument, the argument is
-!! compulsory and its absence determines an error condition in the
-!! parsing phase.
+!! By default, the argument to an option is compulsory, so any
+!! following string, even empty or starting with a dash \c - , is
+!! interpreted as the argument to the option, while its absence
+!! (i.e. end of command line) determines an error condition in the
+!! parsing phase. However an argument can be declared as optional in
+!! the corresponding definition method; in those cases the following
+!! argument, if any, is interpreted as the argument to the option only
+!! if it does not start with a dash \c - (no chance to quote a dash in
+!! these cases); if no optional argument is found, then the variable
+!! associated to the option is set to the default value if provided or
+!! to the missing value of the corresponding type, without raising an
+!! error condition.
 !!
 !! Array options (only for integer, real and double precision) must be
 !! provided as comma-separated values, similarly to a record of a csv
@@ -143,7 +153,7 @@ END TYPE optionparser
 !! for a detailed documentation.
 INTERFACE optionparser_add
   MODULE PROCEDURE optionparser_add_c, optionparser_add_i, optionparser_add_r, &
-   optionparser_add_d, optionparser_add_l, &!?, optionparser_add_count
+   optionparser_add_d, optionparser_add_l, &
    optionparser_add_iarray, optionparser_add_rarray, optionparser_add_darray
 END INTERFACE
 
@@ -190,7 +200,7 @@ CONTAINS
 FUNCTION option_new(short_opt, long_opt, default, help) RESULT(this)
 CHARACTER(len=*),INTENT(in) :: short_opt
 CHARACTER(len=*),INTENT(in) :: long_opt
-CHARACTER(len=*) :: default
+CHARACTER(len=*),INTENT(in) :: default
 CHARACTER(len=*),OPTIONAL :: help
 TYPE(option) :: this
 
@@ -290,6 +300,12 @@ CASE(opttype_count)
   this%destcount = this%destcount + 1
 CASE(opttype_help)
   status = optionparser_help
+  SELECT CASE(optarg) ! set help format
+  CASE('md', 'markdown')
+    this%helpformat = 1
+  CASE('html', 'htmlform')
+    this%helpformat = 2
+  END SELECT
 CASE(opttype_html)
   status = optionparser_html
 END SELECT
@@ -313,7 +329,7 @@ END FUNCTION option_found
 ! long and it should be trimmed with the \a TRIM() intrinsic
 ! function.
 FUNCTION option_format_opt(this) RESULT(format_opt)
-TYPE(option),INTENT(inout) :: this
+TYPE(option),INTENT(in) :: this
 
 CHARACTER(len=100) :: format_opt
 
@@ -349,11 +365,49 @@ IF (this%long_opt /= '') THEN
   IF (argname /= '') THEN
     format_opt(LEN_TRIM(format_opt)+1:) = '='//TRIM(argname)
   ENDIF
-ENDIF  
+ENDIF
 
 END FUNCTION option_format_opt
 
 
+! print on stdout a human-readable text representation of a single option
+SUBROUTINE option_format_help(this, ncols)
+TYPE(option),INTENT(in) :: this
+INTEGER,INTENT(in) :: ncols
+
+INTEGER :: j
+INTEGER, PARAMETER :: indent = 10
+TYPE(line_split) :: help_line
+
+! print option brief representation
+WRITE(*,'(A)')TRIM(option_format_opt(this))
+! print option help
+IF (ASSOCIATED(this%help_msg)) THEN
+  help_line = line_split_new(cstr_to_fchar(this%help_msg), ncols-indent)
+  DO j = 1, line_split_get_nlines(help_line)
+    WRITE(*,'(T10,A)')TRIM(line_split_get_line(help_line,j))
+  ENDDO
+  CALL delete(help_line)
+ENDIF
+
+END SUBROUTINE option_format_help
+
+
+! print on stdout a markdown representation of a single option
+SUBROUTINE option_format_md(this)
+TYPE(option),INTENT(in) :: this
+
+! print option brief representation
+WRITE(*,'(''`'',A,''`'')')TRIM(option_format_opt(this))
+! print option help
+IF (ASSOCIATED(this%help_msg)) THEN
+  WRITE(*,'(''> '',A,/)')TRIM(cstr_to_fchar(this%help_msg))
+ENDIF
+
+END SUBROUTINE option_format_md
+
+
+! print on stdout an html representation of a single option
 SUBROUTINE option_format_html(this)
 TYPE(option),INTENT(in) :: this
 
@@ -530,7 +584,7 @@ IF (PRESENT(default)) &
  CALL dirty_char_assignment(myoption%destc, myoption%destclen, default, LEN(default))
 !IF (PRESENT(default)) myoption%destc(1:myoption%destclen) = default
 myoption%opttype = opttype_c
-myoption%need_arg = .TRUE.
+myoption%need_arg = 2
 
 i = arrayof_option_append(this%options, myoption)
 
@@ -568,7 +622,7 @@ IF (.NOT.c_e(myoption)) RETURN ! error in creating option, ignore it
 myoption%desti => dest
 IF (PRESENT(default)) myoption%desti = default
 myoption%opttype = opttype_i
-myoption%need_arg = .TRUE.
+myoption%need_arg = 2
 
 i = arrayof_option_append(this%options, myoption)
 
@@ -612,7 +666,7 @@ IF (PRESENT(default)) THEN
   CALL packarray(myoption%destiarr)
 ENDIF
 myoption%opttype = opttype_iarr
-myoption%need_arg = .TRUE.
+myoption%need_arg = 2
 
 i = arrayof_option_append(this%options, myoption)
 
@@ -650,7 +704,7 @@ IF (.NOT.c_e(myoption)) RETURN ! error in creating option, ignore it
 myoption%destr => dest
 IF (PRESENT(default)) myoption%destr = default
 myoption%opttype = opttype_r
-myoption%need_arg = .TRUE.
+myoption%need_arg = 2
 
 i = arrayof_option_append(this%options, myoption)
 
@@ -694,7 +748,7 @@ IF (PRESENT(default)) THEN
   CALL packarray(myoption%destrarr)
 ENDIF
 myoption%opttype = opttype_rarr
-myoption%need_arg = .TRUE.
+myoption%need_arg = 2
 
 i = arrayof_option_append(this%options, myoption)
 
@@ -732,7 +786,7 @@ IF (.NOT.c_e(myoption)) RETURN ! error in creating option, ignore it
 myoption%destd => dest
 IF (PRESENT(default)) myoption%destd = default
 myoption%opttype = opttype_d
-myoption%need_arg = .TRUE.
+myoption%need_arg = 2
 
 i = arrayof_option_append(this%options, myoption)
 
@@ -776,7 +830,7 @@ IF (PRESENT(default)) THEN
   CALL packarray(myoption%destdarr)
 ENDIF
 myoption%opttype = opttype_darr
-myoption%need_arg = .TRUE.
+myoption%need_arg = 2
 
 i = arrayof_option_append(this%options, myoption)
 
@@ -806,7 +860,7 @@ IF (.NOT.c_e(myoption)) RETURN ! error in creating option, ignore it
 myoption%destl => dest
 myoption%destl = .FALSE. ! unconditionally set to false, option can only set it to true
 myoption%opttype = opttype_l
-myoption%need_arg = .FALSE.
+myoption%need_arg = 0
 
 i = arrayof_option_append(this%options, myoption)
 
@@ -835,7 +889,7 @@ IF (.NOT.c_e(myoption)) RETURN ! error in creating option, ignore it
 myoption%destcount => dest
 IF (PRESENT(start)) myoption%destcount = start
 myoption%opttype = opttype_count
-myoption%need_arg = .FALSE.
+myoption%need_arg = 0
 
 i = arrayof_option_append(this%options, myoption)
 
@@ -860,7 +914,7 @@ myoption = option_new(short_opt, long_opt, '', help)
 IF (.NOT.c_e(myoption)) RETURN ! error in creating option, ignore it
 
 myoption%opttype = opttype_help
-myoption%need_arg = .FALSE.
+myoption%need_arg = 1
 
 i = arrayof_option_append(this%options, myoption)
 
@@ -886,7 +940,7 @@ myoption = option_new(short_opt, long_opt, '', help)
 IF (.NOT.c_e(myoption)) RETURN ! error in creating option, ignore it
 
 myoption%opttype = opttype_html
-myoption%need_arg = .FALSE.
+myoption%need_arg = 0
 
 i = arrayof_option_append(this%options, myoption)
 this%httpmode = .TRUE. ! program may run as a web application
@@ -929,7 +983,9 @@ DO WHILE(i <= iargc())
     ENDIF
     find_longopt: DO j = 1, this%options%arraysize
       IF (this%options%array(j)%long_opt == arg(3:endopt)) THEN ! found option
-        IF (this%options%array(j)%need_arg) THEN
+        SELECT CASE(this%options%array(j)%need_arg)
+        CASE(2) ! compulsory
+!        IF (this%options%array(j)%need_arg) THEN
           IF (indeq /= 0) THEN
             optarg = arg(indeq+1:)
           ELSE
@@ -938,10 +994,23 @@ DO WHILE(i <= iargc())
           ENDIF
           status = MAX(option_found(this%options%array(j), optarg), &
            status)
-        ELSE
+        CASE(1) ! optional
+          IF (indeq /= 0) THEN
+            optarg = arg(indeq+1:)
+          ELSE
+            CALL getarg(i+1, optarg)
+            IF (optarg(1:1) == '-') THEN
+              optarg = '' ! refused, use cmiss and do sthg special?
+            ELSE            
+              i=i+1 ! accepted
+            ENDIF
+          ENDIF
+          status = MAX(option_found(this%options%array(j), optarg), &
+           status)
+        CASE(0)
           status = MAX(option_found(this%options%array(j)), &
            status)
-        ENDIF
+        END SELECT
         EXIT find_longopt
       ENDIF
     ENDDO find_longopt
@@ -953,7 +1022,9 @@ DO WHILE(i <= iargc())
   ELSE IF (arg(1:1) == '-') THEN ! short option
     find_shortopt: DO j = 1, this%options%arraysize
       IF (this%options%array(j)%short_opt == arg(2:2)) THEN ! found option
-        IF (this%options%array(j)%need_arg) THEN
+        SELECT CASE(this%options%array(j)%need_arg)
+        CASE(2) ! compulsory
+!        IF (this%options%array(j)%need_arg) THEN
           IF (LEN_TRIM(arg) > 2) THEN
             optarg = arg(3:)
           ELSE
@@ -962,10 +1033,23 @@ DO WHILE(i <= iargc())
           ENDIF
           status = MAX(option_found(this%options%array(j), optarg), &
            status)
-        ELSE
+        CASE(1) ! optional
+          IF (LEN_TRIM(arg) > 2) THEN
+            optarg = arg(3:)
+          ELSE
+            CALL getarg(i+1, optarg)
+            IF (optarg(1:1) == '-') THEN
+              optarg = '' ! refused, use cmiss and do sthg special?
+            ELSE            
+              i=i+1 ! accepted
+            ENDIF
+          ENDIF
+          status = MAX(option_found(this%options%array(j), optarg), &
+           status)
+        CASE(0)
           status = MAX(option_found(this%options%array(j)), &
            status)
-        ENDIF
+        END SELECT
         EXIT find_shortopt
       ENDIF
     ENDDO find_shortopt
@@ -991,14 +1075,40 @@ END SELECT
 END SUBROUTINE optionparser_parse
 
 
-!> Print the help message well formatted on stdout. It can be called
-!! by the user program and it is called anyway in case of error in the
-!! interpretation of the command line.
+!> Print on stdout a human-readable text representation of the help message.
+!! It can be called by the user program and it is called anyway in
+!! case of error in the interpretation of the command line.
 SUBROUTINE optionparser_printhelp(this)
-TYPE(optionparser),INTENT(inout) :: this !< \a optionparser object with correctly initialised options
+TYPE(optionparser),INTENT(in) :: this !< \a optionparser object with correctly initialised options
+
+INTEGER :: i, form
+
+form = 0
+DO i = 1, this%options%arraysize ! loop over options
+  IF (this%options%array(i)%opttype == opttype_help) THEN
+    form = this%options%array(i)%helpformat
+  ENDIF
+ENDDO
+
+SELECT CASE(form)
+CASE(0)
+  CALL optionparser_printhelptxt(this)
+CASE(1)
+  CALL optionparser_printhelpmd(this)
+CASE(2)
+  CALL optionparser_printhtml(this)
+END SELECT
+
+END SUBROUTINE optionparser_printhelp
+
+
+!> Print on stdout a human-readable text representation of the help message.
+!! It can be called by the user program and it is called anyway in
+!! case of error in the interpretation of the command line.
+SUBROUTINE optionparser_printhelptxt(this)
+TYPE(optionparser),INTENT(in) :: this !< \a optionparser object with correctly initialised options
 
 INTEGER :: i, j, ncols
-INTEGER, PARAMETER :: indent = 10
 CHARACTER(len=80) :: buf
 TYPE(line_split) :: help_line
 
@@ -1029,26 +1139,68 @@ ENDIF
 WRITE(*,'(/,A)')'Options:'
 
 DO i = 1, this%options%arraysize ! loop over options
-! print option brief representation
-  WRITE(*,'(A)')TRIM(option_format_opt(this%options%array(i)))
-! print option help
-  IF (ASSOCIATED(this%options%array(i)%help_msg)) THEN
-    help_line = line_split_new(cstr_to_fchar(this%options%array(i)%help_msg), ncols-indent)
-    DO j = 1, line_split_get_nlines(help_line)
-      WRITE(*,'(T10,A)')TRIM(line_split_get_line(help_line,j))
-    ENDDO
-    CALL delete(help_line)
-  ENDIF
+  CALL option_format_help(this%options%array(i), ncols)
 ENDDO
 
-END SUBROUTINE optionparser_printhelp
+END SUBROUTINE optionparser_printhelptxt
 
+
+!> Print on stdout a markdown representation of the help message.
+!! It can be called by the user program and it is called anyway if the
+!! program has been called with the `--help md` option.
+SUBROUTINE optionparser_printhelpmd(this)
+TYPE(optionparser),INTENT(in) :: this !< \a optionparser object with correctly initialised options
+
+INTEGER :: i, j
+CHARACTER(len=80) :: buf
+TYPE(line_split) :: help_line
+
+! print usage message
+WRITE(*,'(A)')'### Synopsis ###'
+
+IF (ASSOCIATED(this%usage_msg)) THEN
+  WRITE(*,'(A,/)')TRIM(mdquote_usage_msg(cstr_to_fchar(this%usage_msg)))
+ELSE
+  CALL getarg(0, buf)
+  WRITE(*,'(A,/)')'Usage: `'//TRIM(buf)//' [options] [arguments]`'
+ENDIF
+
+! print description message
+IF (ASSOCIATED(this%description_msg)) THEN
+  WRITE(*,'(A)')'### Description ###'
+  WRITE(*,'(A,/)')cstr_to_fchar(this%description_msg)
+ENDIF
+
+WRITE(*,'(A)')'### Options ###'
+
+DO i = 1, this%options%arraysize ! loop over options
+  CALL option_format_md(this%options%array(i))
+ENDDO
+
+CONTAINS
+
+FUNCTION mdquote_usage_msg(usage_msg)
+CHARACTER(len=*),INTENT(in) :: usage_msg
+
+CHARACTER(len=LEN(usage_msg)+2) :: mdquote_usage_msg
+INTEGER :: colon
+
+colon = INDEX(usage_msg, ':') ! typically 'Usage: cp [options] origin destination'
+IF (colon > 0 .AND. colon < LEN(usage_msg)-1) THEN
+  mdquote_usage_msg = usage_msg(:colon+1)//'`'//usage_msg(colon+2:)//'`'
+ELSE
+  mdquote_usage_msg = usage_msg
+ENDIF
+
+END FUNCTION mdquote_usage_msg
+
+END SUBROUTINE optionparser_printhelpmd
 
 !> Print on stdout an html form reflecting the command line options set up.
 !! It can be called by the user program and it is called anyway if the
-!! program has been called with the html option set.
+!! program has been called with the `--help htmlform` option.
 SUBROUTINE optionparser_printhtml(this)
-TYPE(optionparser),INTENT(inout) :: this !< \a optionparser object with correctly initialised options
+TYPE(optionparser),INTENT(in) :: this !< \a optionparser object with correctly initialised options
 
 INTEGER :: i
 
@@ -1077,7 +1229,7 @@ WRITE(*,'(A/A/A/A)')'COMPREPLY=()','cur=${COMP_WORDS[COMP_CWORD]}', &
 !-*)
 !    COMPREPLY=( $( compgen -W 
 DO i = 1, this%options%arraysize ! loop over options
-  IF (this%options%array(i)%need_arg) THEN
+  IF (this%options%array(i)%need_arg == 2) THEN
   ENDIF
 ENDDO
 
