@@ -128,8 +128,6 @@ CALL optionparser_add(opt, ' ', 'ana-only', ana_only, help= &
 
 ! help options
 CALL optionparser_add_help(opt, 'h', 'help', help='show an help message and exit')
-CALL optionparser_add_html(opt, ' ', 'html-form', help= &
- &'print the options as an html form')
 CALL optionparser_add(opt, ' ', 'version', version, help='show version and exit')
 
 ! parse options and check for errors
@@ -137,8 +135,6 @@ CALL optionparser_parse(opt, optind, optstatus)
 
 IF (optstatus == optionparser_help) THEN
   CALL exit(0) ! generate a clean manpage
-ELSE IF (optstatus == optionparser_html) THEN
-  CALL exit(0) ! generate a clean form
 ELSE IF (optstatus == optionparser_err) THEN
   CALL l4f_category_log(category,L4F_ERROR,'in command-line parameters')
   CALL raise_fatal_error()

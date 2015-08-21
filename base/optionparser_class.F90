@@ -175,21 +175,19 @@ END INTERFACE
 
 INTEGER,PARAMETER :: opttype_c = 1, opttype_i = 2, opttype_r = 3, &
  opttype_d = 4, opttype_l = 5, opttype_count = 6, opttype_help = 7, &
- opttype_html = 8, &
  opttype_carr = 11, opttype_iarr = 12, opttype_rarr = 13, &
  opttype_darr = 14, opttype_larr = 15
 
 INTEGER,PARAMETER :: optionparser_ok = 0 !< constants indicating the status returned by optionparser_parse, status of parsing: OK
-INTEGER,PARAMETER :: optionparser_html = 1 !< status of parsing: html form has been requested
-INTEGER,PARAMETER :: optionparser_help = 2 !< status of parsing: help has been requested
-INTEGER,PARAMETER :: optionparser_err = 3 !< status of parsing: an error was encountered
+INTEGER,PARAMETER :: optionparser_help = 1 !< status of parsing: help has been requested
+INTEGER,PARAMETER :: optionparser_err = 2 !< status of parsing: an error was encountered
 
 
 PRIVATE
 PUBLIC optionparser, optionparser_new, delete, optionparser_add, &
- optionparser_add_count, optionparser_add_help, optionparser_add_html, &
- optionparser_parse, optionparser_printhelp, optionparser_printhtml, &
- optionparser_ok, optionparser_html, optionparser_help, optionparser_err
+ optionparser_add_count, optionparser_add_help, &
+ optionparser_parse, optionparser_printhelp, &
+ optionparser_ok, optionparser_help, optionparser_err
 
 
 CONTAINS
@@ -303,11 +301,9 @@ CASE(opttype_help)
   SELECT CASE(optarg) ! set help format
   CASE('md', 'markdown')
     this%helpformat = 1
-  CASE('html', 'htmlform')
+  CASE('htmlform')
     this%helpformat = 2
   END SELECT
-CASE(opttype_html)
-  status = optionparser_html
 END SELECT
 
 RETURN
@@ -407,8 +403,8 @@ ENDIF
 END SUBROUTINE option_format_md
 
 
-! print on stdout an html representation of a single option
-SUBROUTINE option_format_html(this)
+! print on stdout an html form representation of a single option
+SUBROUTINE option_format_htmlform(this)
 TYPE(option),INTENT(in) :: this
 
 CHARACTER(len=80) :: opt_name, opt_id, opt_default ! check len of default
@@ -499,7 +495,7 @@ ENDIF
 
 END SUBROUTINE option_format_html_help
 
-END SUBROUTINE option_format_html
+END SUBROUTINE option_format_htmlform
 
 
 FUNCTION option_c_e(this) RESULT(c_e)
@@ -936,33 +932,6 @@ i = arrayof_option_append(this%options, myoption)
 END SUBROUTINE optionparser_add_help
 
 
-!> Add a new html option, without optional argument.
-!! When parsing will be performed, the set of program options in form
-!! of an html form will be printed if this option is encountered. The
-!! form can be directly printed as well by calling the
-!! optparser_printhtml method.
-SUBROUTINE optionparser_add_html(this, short_opt, long_opt, help)
-TYPE(optionparser),INTENT(inout) :: this !< \a optionparser object
-CHARACTER(len=*),INTENT(in) :: short_opt !< the short option (may be empty)
-CHARACTER(len=*),INTENT(in) :: long_opt !< the long option (may be empty)
-CHARACTER(len=*),OPTIONAL :: help !< the help message that will be formatted and pretty-printed on screen
-
-INTEGER :: i
-TYPE(option) :: myoption
-
-! common initialisation
-myoption = option_new(short_opt, long_opt, '', help)
-IF (.NOT.c_e(myoption)) RETURN ! error in creating option, ignore it
-
-myoption%opttype = opttype_html
-myoption%need_arg = 0
-
-i = arrayof_option_append(this%options, myoption)
-this%httpmode = .TRUE. ! program may run as a web application
-
-END SUBROUTINE optionparser_add_html
-
-
 !> This method performs the parsing of the command-line options
 !! which have been previously added using the optionparser_add family
 !! of methods. The destination variables set through the
@@ -1105,8 +1074,6 @@ nextarg = i
 SELECT CASE(status)
 CASE(optionparser_err, optionparser_help)
   CALL optionparser_printhelp(this)
-CASE(optionparser_html)
-  CALL optionparser_printhtml(this)
 END SELECT
 
 END SUBROUTINE optionparser_parse
@@ -1133,7 +1100,7 @@ CASE(0)
 CASE(1)
   CALL optionparser_printhelpmd(this)
 CASE(2)
-  CALL optionparser_printhtml(this)
+  CALL optionparser_printhelphtmlform(this)
 END SELECT
 
 END SUBROUTINE optionparser_printhelp
@@ -1236,18 +1203,18 @@ END SUBROUTINE optionparser_printhelpmd
 !> Print on stdout an html form reflecting the command line options set up.
 !! It can be called by the user program and it is called anyway if the
 !! program has been called with the `--help htmlform` option.
-SUBROUTINE optionparser_printhtml(this)
+SUBROUTINE optionparser_printhelphtmlform(this)
 TYPE(optionparser),INTENT(in) :: this !< \a optionparser object with correctly initialised options
 
 INTEGER :: i
 
 DO i = 1, this%options%arraysize ! loop over options
-  CALL option_format_html(this%options%array(i))
+  CALL option_format_htmlform(this%options%array(i))
 ENDDO
 
 WRITE(*,'(A)')'<input TYPE="submit" VALUE="runprogram" />'
 
-END SUBROUTINE optionparser_printhtml
+END SUBROUTINE optionparser_printhelphtmlform
 
 
 SUBROUTINE optionparser_make_completion(this)
@@ -1302,5 +1269,4 @@ DO i = srclen+1, destclen
 ENDDO
 
 END SUBROUTINE dirty_char_assignment
-
 
