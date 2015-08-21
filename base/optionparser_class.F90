@@ -88,19 +88,19 @@ END TYPE option
 !! following string, even empty or starting with a dash \c - , is
 !! interpreted as the argument to the option, while its absence
 !! (i.e. end of command line) determines an error condition in the
-!! parsing phase. However an argument can be declared as optional in
-!! the corresponding definition method; in those cases the following
-!! argument, if any, is interpreted as the argument to the option only
-!! if it does not start with a dash \c - (no chance to quote a dash in
-!! these cases); if no optional argument is found, then the variable
-!! associated to the option is set to the default value if provided or
-!! to the missing value of the corresponding type, without raising an
-!! error condition.
+!! parsing phase. However the argument toi character options can be
+!! declared as optional in the corresponding definition method; in
+!! those cases the following argument, if any, is interpreted as the
+!! argument to the option only if it does not start with a dash \c -
+!! (no chance to quote a dash in these cases); if no optional argument
+!! is found, then the variable associated to the option is set to the
+!! missing value of the corresponding type, without raising an error
+!! condition.
 !!
 !! Array options (only for integer, real and double precision) must be
 !! provided as comma-separated values, similarly to a record of a csv
 !! file, an empty field generates a missing value of the proper type
-!! and in the resulting array, the length of the array is not a priori
+!! in the resulting array, the length of the array is not a priori
 !! limited.
 !!
 !! Grouping of short options, like \c -xvf is not allowed.  When a
@@ -120,7 +120,7 @@ END TYPE option
 !!  - array of double precision (with additional argument)
 !!  - logical (without additional argument)
 !!  - count (without additional argument)
-!!  - help (without additional argument)
+!!  - help (with additional optional argument)
 !!
 !! If the same option is encountered multiple times on the command
 !! line, the value set in the last occurrence takes precedence, the
@@ -552,13 +552,14 @@ END SUBROUTINE optionparser_delete
 !! optional default value can be provided for the destination. Please
 !! use the generic \a optionparser_add method rather than this
 !! particular method.
-SUBROUTINE optionparser_add_c(this, short_opt, long_opt, dest, default, help)
+SUBROUTINE optionparser_add_c(this, short_opt, long_opt, dest, default, help, isopt)
 TYPE(optionparser),INTENT(inout) :: this !< \a optionparser object
 CHARACTER(len=*),INTENT(in) :: short_opt !< the short option (may be empty)
 CHARACTER(len=*),INTENT(in) :: long_opt !< the long option (may be empty)
 CHARACTER(len=*),TARGET :: dest !< the destination of the option parse result
 CHARACTER(len=*),OPTIONAL :: default !< the default value to give to dest if option is not found
 CHARACTER(len=*),OPTIONAL :: help !< the help message that will be formatted and pretty-printed on screen
+LOGICAL,INTENT(in),OPTIONAL :: isopt !< if provided and \c .TRUE. the argument is considered optional
 
 CHARACTER(LEN=60) :: cdefault
 INTEGER :: i
@@ -584,7 +585,11 @@ IF (PRESENT(default)) &
  CALL dirty_char_assignment(myoption%destc, myoption%destclen, default, LEN(default))
 !IF (PRESENT(default)) myoption%destc(1:myoption%destclen) = default
 myoption%opttype = opttype_c
-myoption%need_arg = 2
+IF (optio_log(isopt)) THEN
+  myoption%need_arg = 1
+ELSE
+  myoption%need_arg = 2
+ENDIF
 
 i = arrayof_option_append(this%options, myoption)
 
@@ -896,10 +901,20 @@ i = arrayof_option_append(this%options, myoption)
 END SUBROUTINE optionparser_add_count
 
 
-!> Add a new help option, without optional argument.
+!> Add a new help option, with an optional argument.
 !! When parsing will be performed, the full help message will be
 !! printed if this option is encountered. The message can be directly
-!! printed as well by calling the optparser_printhelp method.
+!! printed as well by calling the optparser_printhelp method.  The
+!! optional argument given by the user to the option specifies the
+!! format of the help message, it can be one fo the following:
+!!
+!!  - \c txt or no extra argument: generic plain-text format suitable
+!!    for printing to screen and to be fed to the \c help2man command
+!!    for generating man pages
+!!  - <tt>md</tt> or <tt>markdown</tt>: print help in markdown format,
+!!    suitable for wiki/github/doxygen etc. pages
+!!  - <tt>htmlform</tt>: print help as an html form suitable for
+!!    providing the options through a web interface (experimental)
 SUBROUTINE optionparser_add_help(this, short_opt, long_opt, help)
 TYPE(optionparser),INTENT(inout) :: this !< \a optionparser object
 CHARACTER(len=*),INTENT(in) :: short_opt !< the short option (may be empty)
@@ -985,24 +1000,35 @@ DO WHILE(i <= iargc())
       IF (this%options%array(j)%long_opt == arg(3:endopt)) THEN ! found option
         SELECT CASE(this%options%array(j)%need_arg)
         CASE(2) ! compulsory
-!        IF (this%options%array(j)%need_arg) THEN
           IF (indeq /= 0) THEN
             optarg = arg(indeq+1:)
+            status = MAX(option_found(this%options%array(j), optarg), &
+             status)
           ELSE
-            i=i+1
-            CALL getarg(i, optarg)
+            IF (i < iargc()) THEN
+              i=i+1
+              CALL getarg(i, optarg)
+              status = MAX(option_found(this%options%array(j), optarg), &
+               status)
+            ELSE
+              status = optionparser_err
+              CALL l4f_log(L4F_ERROR, &
+               'in optionparser, option '''//TRIM(arg)//''' requires an argument')
+            ENDIF
           ENDIF
-          status = MAX(option_found(this%options%array(j), optarg), &
-           status)
         CASE(1) ! optional
           IF (indeq /= 0) THEN
             optarg = arg(indeq+1:)
           ELSE
-            CALL getarg(i+1, optarg)
-            IF (optarg(1:1) == '-') THEN
-              optarg = '' ! refused, use cmiss and do sthg special?
-            ELSE            
-              i=i+1 ! accepted
+            IF (i < iargc()) THEN
+              CALL getarg(i+1, optarg)
+              IF (optarg(1:1) == '-') THEN
+                optarg = cmiss ! refused
+              ELSE            
+                i=i+1 ! accepted
+              ENDIF
+            ELSE
+              optarg = cmiss ! refused
             ENDIF
           ENDIF
           status = MAX(option_found(this%options%array(j), optarg), &
@@ -1024,24 +1050,35 @@ DO WHILE(i <= iargc())
       IF (this%options%array(j)%short_opt == arg(2:2)) THEN ! found option
         SELECT CASE(this%options%array(j)%need_arg)
         CASE(2) ! compulsory
-!        IF (this%options%array(j)%need_arg) THEN
           IF (LEN_TRIM(arg) > 2) THEN
             optarg = arg(3:)
+            status = MAX(option_found(this%options%array(j), optarg), &
+             status)
           ELSE
-            i=i+1
-            CALL getarg(i, optarg)
+            IF (i < iargc()) THEN
+              i=i+1
+              CALL getarg(i, optarg)
+              status = MAX(option_found(this%options%array(j), optarg), &
+               status)
+            ELSE
+              status = optionparser_err
+              CALL l4f_log(L4F_ERROR, &
+               'in optionparser, option '''//TRIM(arg)//''' requires an argument')
+            ENDIF
           ENDIF
-          status = MAX(option_found(this%options%array(j), optarg), &
-           status)
         CASE(1) ! optional
           IF (LEN_TRIM(arg) > 2) THEN
             optarg = arg(3:)
           ELSE
-            CALL getarg(i+1, optarg)
-            IF (optarg(1:1) == '-') THEN
-              optarg = '' ! refused, use cmiss and do sthg special?
-            ELSE            
-              i=i+1 ! accepted
+            IF (i < iargc()) THEN
+              CALL getarg(i+1, optarg)
+              IF (optarg(1:1) == '-') THEN
+                optarg = cmiss ! refused
+              ELSE            
+                i=i+1 ! accepted
+              ENDIF
+            ELSE
+              optarg = cmiss ! refused
             ENDIF
           ENDIF
           status = MAX(option_found(this%options%array(j), optarg), &

@@ -16,7 +16,7 @@
 ! You should have received a copy of the GNU General Public License
 ! along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-!> Module for quickly interpret the \c OPTIONAL parameters passed
+!> Module for quickly interpreting the \c OPTIONAL parameters passed
 !! to a subprogram.
 !! This module defines functions and subroutines that handle in a
 !! quick way \c OPTIONAL parameters in a subprogram by returning a
@@ -30,25 +30,26 @@ USE missing_values
 IMPLICIT NONE
 
 !> Generic subroutine for checking \c OPTIONAL parameters.
-
 !! The generic interface has to be used instead of the specific
 !! one. It sets the output value to input, if input is present,
 !! otherwise it sets it to missing value.
 INTERFACE optio
-  MODULE PROCEDURE soptio_b, soptio_s, soptio_l, soptio_r, soptio_d, soptio_c, soptio_log
+  MODULE PROCEDURE soptio_b, soptio_s, soptio_l, soptio_r, soptio_d, &
+   soptio_c, soptio_log
 END INTERFACE
 
-PUBLIC
+PRIVATE
+PUBLIC optio, &
+ optio_b, optio_s, optio_i, optio_l, optio_r, optio_d, optio_c, optio_log, &
+ soptio_b, soptio_s, soptio_l, soptio_r, soptio_d, soptio_c, soptio_log
 
 CONTAINS
 
-
-!FUNCTION
+! Functions
 
 !> Return the optional value if present, otherwise return missing value.
-elemental integer(kind=int_b) function optio_b(var)
-
-integer(kind=int_b),intent(in),optional  :: var !< variable to be checked
+ELEMENTAL INTEGER(kind=int_b) FUNCTION optio_b(var)
+INTEGER(kind=int_b),INTENT(in),OPTIONAL  :: var !< variable to be checked
 
 if (present(var))then
   optio_b=var
@@ -56,14 +57,11 @@ else
   optio_b=ibmiss
 end if
 
-return
-end function optio_b
-
+END FUNCTION optio_b
 
 !> Return the optional value if present, otherwise return missing value.
-elemental integer(kind=int_s) function optio_s(var)
-
-integer(kind=int_s),intent(in),optional  :: var !< variable to be checked
+ELEMENTAL INTEGER(kind=int_s) FUNCTION optio_s(var)
+INTEGER(kind=int_s),INTENT(in),OPTIONAL  :: var !< variable to be checked
 
 if (present(var))then
   optio_s=var
@@ -71,15 +69,11 @@ else
   optio_s=ismiss
 end if
 
-return
-end function optio_s
-
-
+END FUNCTION optio_s
 
 !> Return the optional value if present, otherwise return missing value.
-elemental integer(kind=int_l) function optio_i(var)
-
-integer(kind=int_l),intent(in),optional  :: var !< variable to be checked
+ELEMENTAL INTEGER(kind=int_l) FUNCTION optio_i(var)
+INTEGER(kind=int_l),INTENT(in),OPTIONAL  :: var !< variable to be checked
 
 if (present(var))then
   optio_i=var
@@ -87,14 +81,11 @@ else
   optio_i=imiss
 end if
 
-return
-end function optio_i
-
+END FUNCTION optio_i
 
 !> Return the optional value if present, otherwise return missing value.
-elemental integer(kind=int_l) function optio_l(var)
-
-integer(kind=int_l),intent(in),optional  :: var !< variable to be checked
+ELEMENTAL INTEGER(kind=int_l) FUNCTION optio_l(var)
+INTEGER(kind=int_l),INTENT(in),OPTIONAL  :: var !< variable to be checked
 
 if (present(var))then
   optio_l=var
@@ -102,14 +93,11 @@ else
   optio_l=ilmiss
 end if
 
-return
-end function optio_l
-
+END FUNCTION optio_l
 
 !> Return the optional value if present, otherwise return missing value.
-elemental real function optio_r(var)
-
-real,intent(in),optional  :: var !< variable to be checked
+ELEMENTAL REAL FUNCTION optio_r(var)
+REAL,INTENT(in),OPTIONAL  :: var !< variable to be checked
 
 if (present(var))then
   optio_r=var
@@ -117,14 +105,11 @@ else
   optio_r=rmiss
 end if
 
-return
-end function optio_r
-
+END FUNCTION optio_r
 
 !> Return the optional value if present, otherwise return missing value.
-elemental doubleprecision function optio_d(var)
-
-doubleprecision,intent(in),optional  :: var !< variable to be checked
+ELEMENTAL DOUBLE PRECISION FUNCTION optio_d(var)
+DOUBLE PRECISION,INTENT(in),OPTIONAL  :: var !< variable to be checked
 
 if (present(var))then
   optio_d=var
@@ -132,17 +117,15 @@ else
   optio_d=rdmiss
 end if
 
-return
-end function optio_d
-
+END FUNCTION optio_d
 
 !> Return the optional value if present, otherwise return missing value.
-!! N.B. elemental is not possible here.
-function optio_c(var,len) result(char)
+!! Unfortunately elemental is not possible here.
+FUNCTION optio_c(var,len) RESULT(char)
+CHARACTER (len=*),INTENT(in),OPTIONAL  :: var !< variable to be checked
+INTEGER,INTENT(in) :: len !< length of the result
 
-character (len=*),intent(in),optional  :: var !< variable to be checked
-integer , intent(in) :: len
-CHARACTER(len=LEN) :: char
+CHARACTER(len=len) :: char
 
 if (present(var))then
   char=var
@@ -150,14 +133,11 @@ else
   char=cmiss
 end if
 
-return
-end function optio_c
+END FUNCTION optio_c
 
-
-!> Return the optional value if present, otherwise return .FALSE. .
-elemental logical function optio_log(var)
-
-logical,intent(in),optional  :: var !< variable to be checked
+!> Return the optional value if present, otherwise return \c .FALSE. .
+ELEMENTAL LOGICAL FUNCTION optio_log(var)
+LOGICAL,INTENT(in),OPTIONAL  :: var !< variable to be checked
 
 if (present(var))then
   optio_log=var
@@ -165,18 +145,16 @@ else
   optio_log=.false.
 end if
 
-return
-end function optio_log
+END FUNCTION optio_log
 
 
-!SUBROUTINE
+! Subroutines
 
 !> Set the output value to input, if input is present, otherwise set it
 !! to missing value.
-elemental subroutine soptio_b(var,optio_b)
-
-integer(kind=int_b),intent(in),optional  :: var !< variable to be checked
-integer(kind=int_b),intent(out) :: optio_b !< equal to \a var if present, otherwise equal to the corresponding missing value
+ELEMENTAL SUBROUTINE soptio_b(var,optio_b)
+INTEGER(kind=int_b),INTENT(in),OPTIONAL  :: var !< variable to be checked
+INTEGER(kind=int_b),INTENT(out) :: optio_b !< equal to \a var if present, otherwise equal to the corresponding missing value
 
 if (present(var))then
   optio_b=var
@@ -184,16 +162,13 @@ else
   optio_b=ibmiss
 end if
 
-return
-end subroutine soptio_b
-
+END SUBROUTINE soptio_b
 
 !> Set the output value to input, if input is present, otherwise set it
 !! to missing value.
-elemental subroutine soptio_s(var,optio_s)
-
-integer(kind=int_s),intent(in),optional  :: var !< variable to be checked
-integer(kind=int_s),intent(out) :: optio_s !< equal to \a var if present, otherwise equal to the corresponding missing value
+ELEMENTAL SUBROUTINE soptio_s(var,optio_s)
+INTEGER(kind=int_s),INTENT(in),OPTIONAL  :: var !< variable to be checked
+INTEGER(kind=int_s),INTENT(out) :: optio_s !< equal to \a var if present, otherwise equal to the corresponding missing value
 
 if (present(var))then
   optio_s=var
@@ -201,16 +176,13 @@ else
   optio_s=ismiss
 end if
 
-return
-end subroutine soptio_s
-
+END SUBROUTINE soptio_s
 
 !> Set the output value to input, if input is present, otherwise set it
 !! to missing value.
-elemental subroutine soptio_l(var,optio_l)
-
-integer(kind=int_l),intent(in),optional  :: var !< variable to be checked
-integer(kind=int_l),intent(out) :: optio_l !< equal to \a var if present, otherwise equal to the corresponding missing value
+ELEMENTAL SUBROUTINE soptio_l(var,optio_l)
+INTEGER(kind=int_l),INTENT(in),OPTIONAL  :: var !< variable to be checked
+INTEGER(kind=int_l),INTENT(out) :: optio_l !< equal to \a var if present, otherwise equal to the corresponding missing value
 
 if (present(var))then
   optio_l=var
@@ -218,17 +190,13 @@ else
   optio_l=ilmiss
 end if
 
-return
-end subroutine soptio_l
-
-
+END SUBROUTINE soptio_l
 
 !> Set the output value to input, if input is present, otherwise set it
 !! to missing value.
-elemental subroutine soptio_r(var,optio_r)
-
-real,intent(in),optional  :: var !< variable to be checked
-real,intent(out) :: optio_r !< equal to \a var if present, otherwise equal to the corresponding missing value
+ELEMENTAL SUBROUTINE soptio_r(var,optio_r)
+REAL,INTENT(in),OPTIONAL  :: var !< variable to be checked
+REAL,INTENT(out) :: optio_r !< equal to \a var if present, otherwise equal to the corresponding missing value
 
 if (present(var))then
   optio_r=var
@@ -236,16 +204,13 @@ else
   optio_r=rmiss
 end if
 
-return
-end subroutine soptio_r
-
+END SUBROUTINE soptio_r
 
 !> Set the output value to input, if input is present, otherwise set it
 !! to missing value.
-elemental subroutine soptio_d(var,optio_d)
-
-doubleprecision,intent(in),optional  :: var !< variable to be checked
-doubleprecision,intent(out) :: optio_d !< equal to \a var if present, otherwise equal to the corresponding missing value
+ELEMENTAL SUBROUTINE soptio_d(var,optio_d)
+DOUBLE PRECISION,INTENT(in),OPTIONAL  :: var !< variable to be checked
+DOUBLE PRECISION,INTENT(out) :: optio_d !< equal to \a var if present, otherwise equal to the corresponding missing value
 
 if (present(var))then
   optio_d=var
@@ -253,17 +218,14 @@ else
   optio_d=rdmiss
 end if
 
-return
-end subroutine soptio_d
+END SUBROUTINE soptio_d
 
 
 !> Set the output value to input, if input is present, otherwise set it
 !! to missing value.
-elemental subroutine soptio_c(var,optio_c)
-
-character (len=*),intent(in),optional  :: var !< variable to be checked
-CHARACTER (len=*),intent(out) :: optio_c !< equal to \a var if present, otherwise equal to the corresponding missing value
-
+ELEMENTAL SUBROUTINE soptio_c(var,optio_c)
+CHARACTER (len=*),INTENT(in),OPTIONAL  :: var !< variable to be checked
+CHARACTER (len=*),INTENT(out) :: optio_c !< equal to \a var if present, otherwise equal to the corresponding missing value
 
 if (present(var))then
   optio_c=var
@@ -271,16 +233,13 @@ else
   optio_c=cmiss
 end if
 
-return
-end subroutine soptio_c
-
+END SUBROUTINE soptio_c
 
 !> Set the output value to input, if input is present, otherwise set it
 !! to \c .FALSE. .
-elemental subroutine soptio_log(var,optio_log)
-
-logical,intent(in),optional  :: var !< variable to be checked
-logical,intent(out) :: optio_log !< equal to \a var if present, otherwise equal to .false.
+ELEMENTAL SUBROUTINE soptio_log(var,optio_log)
+LOGICAL,INTENT(in),OPTIONAL  :: var !< variable to be checked
+LOGICAL,INTENT(out) :: optio_log !< equal to \a var if present, otherwise equal to .false.
 
 if (present(var))then
   optio_log=var
@@ -288,9 +247,8 @@ else
   optio_log=.false.
 end if
 
-return
-end subroutine soptio_log
+END SUBROUTINE soptio_log
 
 
-end module optional_values
+END MODULE optional_values
 
