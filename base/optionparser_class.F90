@@ -563,7 +563,7 @@ TYPE(option) :: myoption
 
 
 IF (PRESENT(default)) THEN
-  cdefault = ' [default='//TRIM(default)//']'
+  cdefault = ' [default='//t2c(default, 'MISSING')//']'
 ELSE
   cdefault = ''
 ENDIF
@@ -611,7 +611,7 @@ INTEGER :: i
 TYPE(option) :: myoption
 
 IF (PRESENT(default)) THEN
-  cdefault = ' [default='//t2c(default)//']'
+  cdefault = ' [default='//t2c(default, 'MISSING')//']'
 ELSE
   cdefault = ''
 ENDIF
@@ -693,7 +693,7 @@ INTEGER :: i
 TYPE(option) :: myoption
 
 IF (PRESENT(default)) THEN
-  cdefault = ' [default='//t2c(default)//']'
+  cdefault = ' [default='//t2c(default, 'MISSING')//']'
 ELSE
   cdefault = ''
 ENDIF
@@ -775,7 +775,11 @@ INTEGER :: i
 TYPE(option) :: myoption
 
 IF (PRESENT(default)) THEN
-  cdefault = ' [default='//TRIM(ADJUSTL(to_char(default,form='(G15.9)')))//']'
+  IF (c_e(default)) THEN
+    cdefault = ' [default='//TRIM(ADJUSTL(to_char(default,form='(G15.9)')))//']'
+  ELSE
+    cdefault = ' [default='//t2c(default, 'MISSING')//']'
+  ENDIF
 ELSE
   cdefault = ''
 ENDIF
