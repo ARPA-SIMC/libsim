@@ -105,7 +105,7 @@ TYPE(vol7d_oraclesim) :: v7d_osim
 TYPE(vol7d_network) :: set_network_obj
 CHARACTER(len=network_name_len) :: set_network
 CHARACTER(len=512) :: dsn, user, password
-LOGICAL :: version, ldisplay, disable_qc, comp_qc_ndi, comp_qc_perc, comp_qc_area_er
+LOGICAL :: version, ldisplay, disable_qc, comp_qc_ndi, comp_qc_perc, comp_qc_area_er,anaonly
 CHARACTER(len=512):: a_name
 INTEGER :: category
 
@@ -234,17 +234,15 @@ CALL optionparser_add(opt, 'e', 'end-date', end_date, '', help= &
 CALL optionparser_add(opt, 'n', 'network-list', network_list, '', help= &
  'if input-format is of database type, list of station networks to be extracted &
  &in the form of a comma-separated list of alphanumeric network identifiers')
-CALL optionparser_add(opt, 'v', 'variable-list', variable_list, '', help= &
+CALL optionparser_add(opt, 'v', 'variable-list', variable_list, cmiss, help= &
  'if input-format is of database type, list of data variables to be extracted &
  &in the form of a comma-separated list of B-table alphanumeric codes, &
- &e.g. ''B13011,B12101''')
-CALL optionparser_add(opt, ' ', 'anavariable-list', anavariable_list, '', help= &
+ &e.g. ''B13011,B12101''; if omitted means all')
+CALL optionparser_add(opt, ' ', 'anavariable-list', anavariable_list, cmiss, help= &
  'if input-format is of database type, list of station variables to be extracted &
  &in the form of a comma-separated list of B-table alphanumeric codes, &
- &e.g. ''B01192,B01193,B07001''')
-
-attribute_list=cmiss   ! do not show default in help
-CALL optionparser_add(opt, ' ', 'attribute-list', attribute_list, help= &
+ &e.g. ''B01192,B01193,B07001''; if omitted means all')
+CALL optionparser_add(opt, ' ', 'attribute-list', attribute_list, cmiss, help= &
  'if input-format is of DB-all.e type, list of data attributes to be extracted &
  &in the form of a comma-separated list of B-table alphanumeric codes, &
  &e.g. ''B33196,B33197''; for no attribute set attribute-list to empty string '''' &
@@ -513,22 +511,29 @@ IF (LEN_TRIM(network_list) > 0) THEN
   DEALLOCATE(w_s, w_e)
 ENDIF
 ! generate variable lists
-IF (LEN_TRIM(variable_list) > 0) THEN
-  n = word_split(variable_list, w_s, w_e, ',')
-  ALLOCATE(vl(n))
-  DO i = 1, n
-    vl(i) = variable_list(w_s(i):w_e(i))
-  ENDDO
-  DEALLOCATE(w_s, w_e)
-ENDIF
-IF (LEN_TRIM(anavariable_list) > 0) THEN
-  n = word_split(anavariable_list, w_s, w_e, ',')
-  ALLOCATE(avl(n))
-  DO i = 1, n
-    avl(i) = anavariable_list(w_s(i):w_e(i))
-  ENDDO
-  DEALLOCATE(w_s, w_e)
-ENDIF
+if (c_e(variable_list))then
+  IF (LEN_TRIM(variable_list) > 0) THEN
+    n = word_split(variable_list, w_s, w_e, ',')
+    ALLOCATE(vl(n))
+    DO i = 1, n
+      vl(i) = variable_list(w_s(i):w_e(i))
+    ENDDO
+    DEALLOCATE(w_s, w_e)
+    anaonly=.false.
+  ENDIF
+else
+  anaonly=.true.
+end if
+if (c_e(anavariable_list))then
+  IF (LEN_TRIM(anavariable_list) > 0) THEN
+    n = word_split(anavariable_list, w_s, w_e, ',')
+    ALLOCATE(avl(n))
+    DO i = 1, n
+      avl(i) = anavariable_list(w_s(i):w_e(i))
+    ENDDO
+    DEALLOCATE(w_s, w_e)
+  ENDIF
+end if
 IF (c_e(attribute_list)) THEN ! argument provided
   IF (LEN_TRIM(attribute_list) > 0) THEN ! argument nonempty => some attributes requested
     n = word_split(attribute_list, w_s, w_e, ',')
@@ -810,7 +815,7 @@ IF (.NOT.ALLOCATED(vl)) ALLOCATE(vl(0)) ! allocate if missing
 IF (.NOT.ALLOCATED(avl)) ALLOCATE(avl(0)) ! allocate if missing
 IF (.NOT.ALLOCATED(al)) ALLOCATE(al(0)) ! allocate if missing
 IF (.NOT.ALLOCATED(nl)) allocate (nl(0))
-IF( .NOT.ALLOCATED(vl)) allocate (vl(0))
+IF (.NOT.ALLOCATED(vl_alc)) allocate (vl_alc(0))
 
 IF (set_network /= '') THEN
   CALL init(set_network_obj, name=set_network)
@@ -870,7 +875,7 @@ DO ninput = optind, iargc()-1
      level=level, timerange=timerange, ana=ana,&
      anavar=avl, attr=alqc, set_network=set_network_obj, &
      coordmin=coordmin, coordmax=coordmax, &
-     timei=s_d, timef=e_d)
+     timei=s_d, timef=e_d,anaonly=anaonly)
     
     v7dtmp = v7d_dba%vol7d
     CALL init(v7d_dba%vol7d) ! nullify without deallocating
