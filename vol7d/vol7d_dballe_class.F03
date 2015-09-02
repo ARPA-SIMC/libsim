@@ -847,19 +847,19 @@ end do dn
 !!             count all unique metadata
 !!
 
-if(ldegnet) then
-  nnetwork=1
-else
-  nnetwork = count_distinct(metaanddatav(:)%metadata%network%vol7d_network, back=.TRUE.)
-end if
-
-ntime      = count_distinct(metaanddatav(:)%metadata%datetime%datetime, &
- mask=c_e(metaanddatav(:)%metadata%datetime%datetime),back=.TRUE.)
-ntimerange = count_distinct(metaanddatav(:)%metadata%timerange%vol7d_timerange, &
- mask=c_e(metaanddatav(:)%metadata%timerange%vol7d_timerange), back=.TRUE.)
-nlevel     = count_distinct(metaanddatav(:)%metadata%level%vol7d_level, &
- mask=c_e(metaanddatav(:)%metadata%level%vol7d_level),back=.TRUE.)
-nana       = count_distinct(metaanddatav(:)%metadata%ana%vol7d_ana, back=.TRUE.)
+!!$if(ldegnet) then
+!!$  nnetwork=1
+!!$else
+!!$  nnetwork = count_distinct(metaanddatav(:)%metadata%network%vol7d_network, back=.TRUE.)
+!!$end if
+!!$
+!!$ntime      = count_distinct(metaanddatav(:)%metadata%datetime%datetime, &
+!!$ mask=c_e(metaanddatav(:)%metadata%datetime%datetime),back=.TRUE.)
+!!$ntimerange = count_distinct(metaanddatav(:)%metadata%timerange%vol7d_timerange, &
+!!$ mask=c_e(metaanddatav(:)%metadata%timerange%vol7d_timerange), back=.TRUE.)
+!!$nlevel     = count_distinct(metaanddatav(:)%metadata%level%vol7d_level, &
+!!$ mask=c_e(metaanddatav(:)%metadata%level%vol7d_level),back=.TRUE.)
+!!$nana       = count_distinct(metaanddatav(:)%metadata%ana%vol7d_ana, back=.TRUE.)
 
                                 ! var
 
@@ -1009,8 +1009,8 @@ CALL init(this,time_definition=ltime_definition)
 
 
 call vol7d_alloc (this, &
-nana=nana, ntime=ntime, ntimerange=ntimerange, &
-nlevel=nlevel, nnetwork=nnetwork, &
+!!$nana=nana, ntime=ntime, ntimerange=ntimerange, &
+!!$nlevel=nlevel, nnetwork=nnetwork, &
 ndativarr=ndativarr, ndativari=ndativari, ndativarb=ndativarb, ndativard=ndativard, ndativarc=ndativarc,&
 ndatiattrr=ndatiattrr, ndatiattri=ndatiattri, ndatiattrb=ndatiattrb, ndatiattrd=ndatiattrd, ndatiattrc=ndatiattrc,&
 ndativarattrr=ndativarattrr, &
@@ -1029,24 +1029,43 @@ nanavarattrc=nanavarattrc)
 
 ! fill metadata removing contextana metadata
 
-this%ana=pack_distinct(metaanddatav(:)%metadata%ana%vol7d_ana, nana, back=.TRUE.)
 
-this%time=pack_distinct(metaanddatav(:)%metadata%datetime%datetime, ntime, &
- mask=c_e(metaanddatav(:)%metadata%datetime%datetime),back=.TRUE.)
-call sort(this%time)
+!!$count_and_pack_distinct(vect,pack_distinct, mask, back) RESULT(count_distinct)
+!!$
+!!$VOL7D_POLY_TYPE,INTENT(in) :: vect(:)
+!!$VOL7D_POLY_TYPE,INTENT(out) :: pack_distinct(:)
+!!$LOGICAL,INTENT(in),OPTIONAL :: mask(:), back
+!!$INTEGER :: count_distinct
 
-this%timerange=pack_distinct(metaanddatav(:)%metadata%timerange%vol7d_timerange, ntimerange, &
- mask=c_e(metaanddatav(:)%metadata%timerange%vol7d_timerange), back=.TRUE.)
-call sort(this%timerange)
 
-this%level=pack_distinct(metaanddatav(:)%metadata%level%vol7d_level, nlevel, &
- mask=c_e(metaanddatav(:)%metadata%level%vol7d_level), back=.TRUE.)
-call sort(this%level)
+nana=count_and_pack_distinct(metaanddatav(:)%metadata%ana%vol7d_ana,this%ana)
+!this%ana=pack_distinct(metaanddatav(:)%metadata%ana%vol7d_ana, nana, back=.TRUE.)
+
+ntime=count_and_pack_distinct(metaanddatav(:)%metadata%datetime%datetime,this%time, &
+ mask=c_e(metaanddatav(:)%metadata%datetime%datetime))
+!this%time=pack_distinct(metaanddatav(:)%metadata%datetime%datetime, ntime, &
+! mask=c_e(metaanddatav(:)%metadata%datetime%datetime),back=.TRUE.)
+!call sort(this%time)
+
+ntimerange=count_and_pack_distinct(metaanddatav(:)%metadata%timerange%vol7d_timerange,this%timerange, &
+ mask=c_e(metaanddatav(:)%metadata%timerange%vol7d_timerange))
+!this%timerange=pack_distinct(metaanddatav(:)%metadata%timerange%vol7d_timerange, ntimerange, &
+! mask=c_e(metaanddatav(:)%metadata%timerange%vol7d_timerange), back=.TRUE.)
+!call sort(this%timerange)
+
+nlevel=count_and_pack_distinct(metaanddatav(:)%metadata%level%vol7d_level,this%level, &
+ mask=c_e(metaanddatav(:)%metadata%level%vol7d_level))
+!this%level=pack_distinct(metaanddatav(:)%metadata%level%vol7d_level, nlevel, &
+! mask=c_e(metaanddatav(:)%metadata%level%vol7d_level), back=.TRUE.)
+!call sort(this%level)
 
 if(ldegnet)then
+  nnetwork=1
+  ALLOCATE(this%network(1))
   this%network(1)=set_network
 else
-  this%network=pack_distinct(metaanddatav(:)%metadata%network%vol7d_network, nnetwork, back=.TRUE.)
+  nnetwork=count_and_pack_distinct(metaanddatav(:)%metadata%network%vol7d_network,this%network)
+  !this%network=pack_distinct(metaanddatav(:)%metadata%network%vol7d_network, nnetwork, back=.TRUE.)
 end if
 
 
