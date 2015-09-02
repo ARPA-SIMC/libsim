@@ -1201,22 +1201,27 @@ call vol7d_set_attr_ind(this)
 call vol7d_alloc_vol (this)
 
                                 ! Ora qui bisogna metterci dentro idati
-
+indana = 0
+indtime = 0
+indnetwork = 0
+indtime = 0
+indtimerange = 0
+indlevel = 0
 do i =1, size(metaanddatav)
 
-  indana       = firsttrue(metaanddatav(i)%metadata%ana%vol7d_ana             == this%ana)
+  indana       = INDEX(this%ana, metaanddatav(i)%metadata%ana%vol7d_ana, cache=indana)
   if (ldegnet)then
     indnetwork=1
   else
-    indnetwork = firsttrue(metaanddatav(i)%metadata%network%vol7d_network     == this%network)
+    indnetwork = INDEX(this%network, metaanddatav(i)%metadata%network%vol7d_network, cache=indnetwork)
   endif
   
   
   if (c_e(metaanddatav(i)%metadata%datetime%datetime)) then      ! dati
 
-    indtime      = firsttrue(metaanddatav(i)%metadata%datetime%datetime         == this%time)
-    indtimerange = firsttrue(metaanddatav(i)%metadata%timerange%vol7d_timerange == this%timerange)
-    indlevel     = firsttrue(metaanddatav(i)%metadata%level%vol7d_level         == this%level)
+    indtime      = INDEX(this%time, metaanddatav(i)%metadata%datetime%datetime, cache=indtime)
+    indtimerange = INDEX(this%timerange, metaanddatav(i)%metadata%timerange%vol7d_timerange, cache=indtimerange)
+    indlevel     = INDEX(this%level, metaanddatav(i)%metadata%level%vol7d_level, cache=indlevel)
     
     do j=1, size(metaanddatav(i)%dataattrv%dataattr)
       
