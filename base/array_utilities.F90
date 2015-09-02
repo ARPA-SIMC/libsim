@@ -28,47 +28,42 @@ IMPLICIT NONE
 ! la routine per i char non puo' essere sviluppata in macro perche` si deve scrivere diversa
 !cosi' esiste la function count_distinctc (senza _ ) e la subroutine pack_distinctc qui ivi scritte
 
-!> to document
-INTERFACE count_distinct
-  MODULE PROCEDURE count_distinct_i, count_distinct_r, count_distinct_d, &
-   count_distinct_c
-END INTERFACE
+#undef VOL7D_POLY_TYPE_AUTO
 
-!> to document
-INTERFACE pack_distinct
-  MODULE PROCEDURE pack_distinct_i, pack_distinct_r, pack_distinct_d
-END INTERFACE
+#undef VOL7D_POLY_TYPE
+#undef VOL7D_POLY_TYPES
+#define VOL7D_POLY_TYPE INTEGER
+#define VOL7D_POLY_TYPES _i
+#define ENABLE_SORT
+#include "array_utilities_pre.F90"
+#undef ENABLE_SORT
 
-!> to document
-INTERFACE map_distinct
-  MODULE PROCEDURE map_distinct_i, map_distinct_r, map_distinct_d, &
-   map_distinct_c
-END INTERFACE
+#undef VOL7D_POLY_TYPE
+#undef VOL7D_POLY_TYPES
+#define VOL7D_POLY_TYPE REAL
+#define VOL7D_POLY_TYPES _r
+#define ENABLE_SORT
+#include "array_utilities_pre.F90"
+#undef ENABLE_SORT
 
-!> to document
-INTERFACE map_inv_distinct
-  MODULE PROCEDURE map_inv_distinct_i, map_inv_distinct_r, map_inv_distinct_d, &
-   map_inv_distinct_c
-END INTERFACE
+#undef VOL7D_POLY_TYPE
+#undef VOL7D_POLY_TYPES
+#define VOL7D_POLY_TYPE DOUBLEPRECISION
+#define VOL7D_POLY_TYPES _d
+#define ENABLE_SORT
+#include "array_utilities_pre.F90"
+#undef ENABLE_SORT
 
-!> Find the firsth or last index of an element in a vector equal to the values provided
-INTERFACE index
-  MODULE PROCEDURE index_i, index_r, index_d
-END INTERFACE
-
-!>\brief Sorts inline into ascending order.
-!!  Quicksort chooses a "pivot" in the set, and explores the
-!!  array from both ends, looking for a value > pivot with the
-!!  increasing index, for a value <= pivot with the decreasing
-!!  index, and swapping them when it has found one of each.
-!!  The array is then subdivided in 2 ([3]) subsets:
-!!  { values <= pivot} {pivot} {values > pivot}
-!!  One then call recursively the program to sort each subset.
-!!  When the size of the subarray is small enough, one uses an
-!!  insertion sort that is faster for very small sets.
-INTERFACE sort
-  MODULE PROCEDURE sort_i, sort_r, sort_d, sort_c
-END INTERFACE
+#define VOL7D_NO_PACK
+#undef VOL7D_POLY_TYPE
+#undef VOL7D_POLY_TYPES
+#define VOL7D_POLY_TYPE CHARACTER(len=*)
+#define VOL7D_POLY_TYPE_AUTO(var) CHARACTER(len=LEN(var))
+#define VOL7D_POLY_TYPES _c
+#define ENABLE_SORT
+#include "array_utilities_pre.F90"
+#undef VOL7D_POLY_TYPE_AUTO
+#undef ENABLE_SORT
 
 
 #define ARRAYOF_ORIGEQ 1
@@ -103,7 +98,8 @@ PUBLIC insert, append, remove, delete, packarray
 PUBLIC insert_unique, append_unique
 
 PUBLIC sort, index, index_c, &
- count_distinct, pack_distinct, map_distinct, map_inv_distinct, &
+ count_distinct, pack_distinct, count_and_pack_distinct, &
+ map_distinct, map_inv_distinct, &
  firsttrue, lasttrue, pack_distinct_c, map
 
 CONTAINS
@@ -138,6 +134,7 @@ END FUNCTION lasttrue
 
 ! Definisce le funzioni count_distinct e pack_distinct
 #undef VOL7D_POLY_TYPE_AUTO
+#undef VOL7D_NO_PACK
 
 #undef VOL7D_POLY_TYPE
 #undef VOL7D_POLY_TYPES

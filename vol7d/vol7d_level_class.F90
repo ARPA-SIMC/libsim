@@ -119,35 +119,10 @@ INTERFACE c_e
   MODULE PROCEDURE vol7d_level_c_e
 END INTERFACE
 
-!> to be documented
-INTERFACE count_distinct
-  MODULE PROCEDURE count_distinct_level
-END INTERFACE
-
-!> to be documented
-INTERFACE pack_distinct
-  MODULE PROCEDURE pack_distinct_level
-END INTERFACE
-
-!> to be documented
-INTERFACE map_distinct
-  MODULE PROCEDURE map_distinct_level
-END INTERFACE
-
-!> to be documented
-INTERFACE map_inv_distinct
-  MODULE PROCEDURE map_inv_distinct_level
-END INTERFACE
-
-!> to be documented
-INTERFACE index
-  MODULE PROCEDURE index_level
-END INTERFACE
-
-!> to be documented
-INTERFACE sort
-  MODULE PROCEDURE sort_level
-END INTERFACE
+#define VOL7D_POLY_TYPE TYPE(vol7d_level)
+#define VOL7D_POLY_TYPES _level
+#define ENABLE_SORT
+#include "array_utilities_pre.F90"
 
 !>Print object
 INTERFACE display
@@ -396,13 +371,7 @@ c_e = this /= vol7d_level_miss
 END FUNCTION vol7d_level_c_e
 
 
-! Definisce le funzioni count_distinct e pack_distinct
-#define VOL7D_POLY_TYPE TYPE(vol7d_level)
-#define VOL7D_POLY_TYPES _level
-#define ENABLE_SORT
 #include "array_utilities_inc.F90"
-#undef VOL7D_POLY_TYPE
-#undef VOL7D_POLY_TYPES
 
 
 FUNCTION vol7d_level_to_var(level) RESULT(btable)

@@ -112,35 +112,10 @@ INTERFACE c_e
   MODULE PROCEDURE vol7d_timerange_c_e
 END INTERFACE
 
-!> to be documented
-INTERFACE count_distinct
-  MODULE PROCEDURE count_distinct_timerange
-END INTERFACE
-
-!> to be documented
-INTERFACE pack_distinct
-  MODULE PROCEDURE pack_distinct_timerange
-END INTERFACE
-
-!> to be documented
-INTERFACE map_distinct
-  MODULE PROCEDURE map_distinct_timerange
-END INTERFACE
-
-!> to be documented
-INTERFACE map_inv_distinct
-  MODULE PROCEDURE map_inv_distinct_timerange
-END INTERFACE
-
-!> to be documented
-INTERFACE index
-  MODULE PROCEDURE index_timerange
-END INTERFACE
-
-!> to be documented
-INTERFACE sort
-  MODULE PROCEDURE sort_timerange
-END INTERFACE
+#define VOL7D_POLY_TYPE TYPE(vol7d_timerange)
+#define VOL7D_POLY_TYPES _timerange
+#define ENABLE_SORT
+#include "array_utilities_pre.F90"
 
 !>Print object
 INTERFACE display
@@ -383,13 +358,7 @@ c_e = this /= vol7d_timerange_miss
 END FUNCTION vol7d_timerange_c_e
 
 
-! Definisce le funzioni count_distinct e pack_distinct
-#define VOL7D_POLY_TYPE TYPE(vol7d_timerange)
-#define VOL7D_POLY_TYPES _timerange
-#define ENABLE_SORT
 #include "array_utilities_inc.F90"
-#undef VOL7D_POLY_TYPE
-#undef VOL7D_POLY_TYPES
 
 #include "arrayof_post.F90"
 

@@ -309,35 +309,13 @@ INTERFACE c_e
   MODULE PROCEDURE c_e_datetime, c_e_timedelta, c_e_cyclicdatetime
 END INTERFACE
 
-!> to document
-INTERFACE count_distinct
-  MODULE PROCEDURE count_distinct_datetime
-END INTERFACE
-
-!> to document
-INTERFACE pack_distinct
-  MODULE PROCEDURE pack_distinct_datetime
-END INTERFACE
-
-!> to document
-INTERFACE map_distinct
-  MODULE PROCEDURE map_distinct_datetime
-END INTERFACE
-
-!> to document
-INTERFACE map_inv_distinct
-  MODULE PROCEDURE map_inv_distinct_datetime
-END INTERFACE
-
-!> Index method.
-INTERFACE index
-  MODULE PROCEDURE index_datetime
-END INTERFACE
-
-!> Sort method.
-INTERFACE sort
-  MODULE PROCEDURE sort_datetime
-END INTERFACE
+#undef VOL7D_POLY_TYPE
+#undef VOL7D_POLY_TYPES
+#undef ENABLE_SORT
+#define VOL7D_POLY_TYPE TYPE(datetime)
+#define VOL7D_POLY_TYPES _datetime
+#define ENABLE_SORT
+#include "array_utilities_pre.F90"
 
 
 #define ARRAYOF_ORIGTYPE TYPE(datetime)
@@ -358,7 +336,8 @@ PUBLIC datetime, datetime_miss, datetime_utc, datetime_local, &
  timedelta, timedelta_miss, timedelta_new, timedelta_0, &
  timedelta_min, timedelta_max, timedelta_getamsec, timedelta_depop, &
  display, c_e, &
- count_distinct, pack_distinct, map_distinct, map_inv_distinct, index, sort, &
+ count_distinct, pack_distinct, count_and_pack_distinct, &
+ map_distinct, map_inv_distinct, index, sort, &
  cyclicdatetime, cyclicdatetime_new, cyclicdatetime_miss, display_cyclicdatetime
 PUBLIC insert, append, remove, packarray
 PUBLIC insert_unique, append_unique
@@ -1840,14 +1819,7 @@ print*,"CYCLICDATETIME: ",to_char(this)
 end subroutine display_cyclicdatetime
 
 
-
-#undef VOL7D_POLY_TYPE
-#undef VOL7D_POLY_TYPES
-#define VOL7D_POLY_TYPE TYPE(datetime)
-#define VOL7D_POLY_TYPES _datetime
-#define ENABLE_SORT
 #include "array_utilities_inc.F90"
-#undef ENABLE_SORT
 
 END MODULE datetime_class
 

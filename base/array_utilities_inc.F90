@@ -167,6 +167,76 @@ ELSE
 ENDIF
 
 END FUNCTION pack_distinct/**/VOL7D_POLY_TYPES
+
+#ifndef VOL7D_POLY_TYPE_AUTO
+FUNCTION count_and_pack_distinct/**/VOL7D_POLY_TYPES(vect, pack_distinct, mask, back) RESULT(count_distinct)
+VOL7D_POLY_TYPE,INTENT(in) :: vect(:)
+VOL7D_POLY_TYPE,INTENT(out) :: pack_distinct(:)
+LOGICAL,INTENT(in),OPTIONAL :: mask(:), back
+INTEGER :: count_distinct
+
+INTEGER :: i, j
+LOGICAL :: lback
+
+IF (PRESENT(back)) THEN
+  lback = back
+ELSE
+  lback = .FALSE.
+ENDIF
+count_distinct = 0
+
+IF (PRESENT (mask)) THEN
+  IF (lback) THEN
+    vectm1: DO i = 1, SIZE(vect)
+      IF (.NOT.mask(i)) CYCLE vectm1
+!      DO j = i-1, 1, -1
+!        IF (.NOT.mask(j)) CYCLE
+!        IF (vect(j) == vect(i)) CYCLE vectm1
+      DO j = count_distinct, 1, -1
+        IF (pack_distinct(j) == vect(i)) CYCLE vectm1
+      ENDDO
+      count_distinct = count_distinct + 1
+      pack_distinct(count_distinct) = vect(i)
+    ENDDO vectm1
+  ELSE
+    vectm2: DO i = 1, SIZE(vect)
+      IF (.NOT.mask(i)) CYCLE vectm2
+!      DO j = 1, i-1
+!        IF (.NOT.mask(j)) CYCLE
+!        IF (vect(j) == vect(i)) CYCLE vectm2
+      DO j = 1, count_distinct
+        IF (pack_distinct(j) == vect(i)) CYCLE vectm2
+      ENDDO
+      count_distinct = count_distinct + 1
+      pack_distinct(count_distinct) = vect(i)
+    ENDDO vectm2
+  ENDIF
+ELSE
+  IF (lback) THEN
+    vect1: DO i = 1, SIZE(vect)
+!      DO j = i-1, 1, -1
+!        IF (vect(j) == vect(i)) CYCLE vect1
+      DO j = count_distinct, 1, -1
+        IF (pack_distinct(j) == vect(i)) CYCLE vect1
+      ENDDO
+      count_distinct = count_distinct + 1
+      pack_distinct(count_distinct) = vect(i)
+    ENDDO vect1
+  ELSE
+    vect2: DO i = 1, SIZE(vect)
+!      DO j = 1, i-1
+!        IF (vect(j) == vect(i)) CYCLE vect2
+      DO j = 1, count_distinct
+        IF (pack_distinct(j) == vect(i)) CYCLE vect2
+      ENDDO
+      count_distinct = count_distinct + 1
+      pack_distinct(count_distinct) = vect(i)
+    ENDDO vect2
+  ENDIF
+ENDIF
+
+END FUNCTION count_and_pack_distinct/**/VOL7D_POLY_TYPES
+#endif
 #endif
 
 !> map distinct
@@ -352,13 +422,15 @@ END FUNCTION map_inv_distinct/**/VOL7D_POLY_TYPES
 
 
 !> Cerca l'indice del primo o ultimo elemento di vect uguale a search
-FUNCTION index/**/VOL7D_POLY_TYPES(vect, search, mask, back) &
+FUNCTION index/**/VOL7D_POLY_TYPES(vect, search, mask, back, cache) &
  RESULT(index_)
 VOL7D_POLY_TYPE,INTENT(in) :: vect(:), search
-LOGICAL,INTENT(in),OPTIONAL :: mask(:), back
+LOGICAL,INTENT(in),OPTIONAL :: mask(:)
+LOGICAL,INTENT(in),OPTIONAL :: back
+INTEGER,INTENT(in),OPTIONAL :: cache
 INTEGER :: index_
 
-INTEGER :: i
+INTEGER :: i, lcache
 LOGICAL :: lback
 
 IF (PRESENT(back)) THEN
@@ -387,20 +459,36 @@ IF (PRESENT (mask)) THEN
     ENDDO vectm2
   ENDIF
 ELSE
-  IF (lback) THEN
-    vect1: DO i = SIZE(vect), 1, -1
+  IF (PRESENT(cache)) THEN
+    lcache = MAX(MIN(SIZE(vect),cache),1)
+    DO i = lcache, SIZE(vect)
       IF (vect(i) == search) THEN
         index_ = i
         RETURN
       ENDIF
-    ENDDO vect1
+    ENDDO
+    DO i = 1, lcache-1
+      IF (vect(i) == search) THEN
+        index_ = i
+        RETURN
+      ENDIF
+    ENDDO
   ELSE
-    vect2: DO i = 1, SIZE(vect)
-      IF (vect(i) == search) THEN
-        index_ = i
-        RETURN
-      ENDIF
-    ENDDO vect2
+    IF (lback) THEN
+      vect1: DO i = SIZE(vect), 1, -1
+        IF (vect(i) == search) THEN
+          index_ = i
+          RETURN
+        ENDIF
+      ENDDO vect1
+    ELSE
+      vect2: DO i = 1, SIZE(vect)
+        IF (vect(i) == search) THEN
+          index_ = i
+          RETURN
+        ENDIF
+      ENDDO vect2
+    ENDIF
   ENDIF
 ENDIF
 

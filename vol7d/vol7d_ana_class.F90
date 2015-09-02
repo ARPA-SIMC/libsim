@@ -86,38 +86,16 @@ INTERFACE write_unit
   MODULE PROCEDURE vol7d_ana_write_unit, vol7d_ana_vect_write_unit
 END INTERFACE
 
-!> to be documented
-INTERFACE count_distinct
-  MODULE PROCEDURE count_distinct_ana
-END INTERFACE
+#define VOL7D_POLY_TYPE TYPE(vol7d_ana)
+#define VOL7D_POLY_TYPES _ana
+#include "array_utilities_pre.F90"
 
-!> to be documented
-INTERFACE pack_distinct
-  MODULE PROCEDURE pack_distinct_ana
-END INTERFACE
-
-!> to be documented
-INTERFACE map_distinct
-  MODULE PROCEDURE map_distinct_ana
-END INTERFACE
-
-!> to be documented
-INTERFACE map_inv_distinct
-  MODULE PROCEDURE map_inv_distinct_ana
-END INTERFACE
-
-!> to be documented
-INTERFACE index
-  MODULE PROCEDURE index_ana
-END INTERFACE
-
-
-!>Represent ana object in a pretty string
+!> Represent ana object in a pretty string
 INTERFACE to_char
   MODULE PROCEDURE to_char_ana
 END INTERFACE
 
-!>Print object
+!> Print object
 INTERFACE display
   MODULE PROCEDURE display_ana
 END INTERFACE
@@ -272,11 +250,7 @@ ENDIF
 END SUBROUTINE vol7d_ana_vect_write_unit
 
 
-#define VOL7D_POLY_TYPE TYPE(vol7d_ana)
-#define VOL7D_POLY_TYPES _ana
 #include "array_utilities_inc.F90"
-#undef VOL7D_POLY_TYPE
-#undef VOL7D_POLY_TYPES
 
 
 END MODULE vol7d_ana_class

@@ -162,25 +162,17 @@ INTERFACE display
   MODULE PROCEDURE griddim_display
 END INTERFACE
 
-INTERFACE count_distinct
-  MODULE PROCEDURE count_distinct_griddim,count_distinct_grid
-END INTERFACE
+#define VOL7D_POLY_TYPE TYPE(grid_def)
+#define VOL7D_POLY_TYPES _grid
+#include "array_utilities_pre.F90"
+#undef VOL7D_POLY_TYPE
+#undef VOL7D_POLY_TYPES
 
-INTERFACE pack_distinct
-  MODULE PROCEDURE pack_distinct_griddim,pack_distinct_grid
-END INTERFACE
-
-INTERFACE map_distinct
-  MODULE PROCEDURE map_distinct_griddim,map_distinct_grid
-END INTERFACE
-
-INTERFACE map_inv_distinct
-  MODULE PROCEDURE map_inv_distinct_griddim,map_inv_distinct_grid
-END INTERFACE
-
-INTERFACE index
-  MODULE PROCEDURE index_griddim,index_grid
-END INTERFACE
+#define VOL7D_POLY_TYPE TYPE(griddim_def)
+#define VOL7D_POLY_TYPES _griddim
+#include "array_utilities_pre.F90"
+#undef VOL7D_POLY_TYPE
+#undef VOL7D_POLY_TYPES
 
 INTERFACE wind_unrot
   MODULE PROCEDURE griddim_wind_unrot
@@ -195,7 +187,8 @@ PUBLIC proj, unproj, griddim_unproj, griddim_gen_coord, &
 PUBLIC init, delete, copy
 PUBLIC get_val,set_val,write_unit,read_unit,display
 PUBLIC OPERATOR(==),OPERATOR(/=)
-PUBLIC count_distinct, pack_distinct, map_distinct, map_inv_distinct,index
+PUBLIC count_distinct, pack_distinct, count_and_pack_distinct, &
+ map_distinct, map_inv_distinct,index
 PUBLIC wind_unrot, import, export
 PUBLIC griddim_central_lon, griddim_set_central_lon
 CONTAINS
@@ -1525,14 +1518,12 @@ PRINT*,"<<<<<<<<<<<<<<< griddim >>>>>>>>>>>>>>>>"
 END SUBROUTINE griddim_display
 
 
-! Definisce le funzioni count_distinct e pack_distinct
 #define VOL7D_POLY_TYPE TYPE(grid_def)
 #define VOL7D_POLY_TYPES _grid
 #include "array_utilities_inc.F90"
 #undef VOL7D_POLY_TYPE
 #undef VOL7D_POLY_TYPES
 
-! Definisce le funzioni count_distinct e pack_distinct
 #define VOL7D_POLY_TYPE TYPE(griddim_def)
 #define VOL7D_POLY_TYPES _griddim
 #include "array_utilities_inc.F90"

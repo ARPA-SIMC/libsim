@@ -134,30 +134,9 @@ INTERFACE OPERATOR (/=)
   MODULE PROCEDURE volgrid6d_var_ne, conv_func_ne
 END INTERFACE
 
-!> to be documented
-INTERFACE count_distinct
-  MODULE PROCEDURE count_distinct_var6d
-END INTERFACE
-
-!> to be documented
-INTERFACE pack_distinct
-  MODULE PROCEDURE pack_distinct_var6d
-END INTERFACE
-
-!> to be documented
-INTERFACE map_distinct
-  MODULE PROCEDURE map_distinct_var6d
-END INTERFACE
-
-!> to be documented
-INTERFACE map_inv_distinct
-  MODULE PROCEDURE map_inv_distinct_var6d
-END INTERFACE
-
-!> to be documented
-INTERFACE index
-  MODULE PROCEDURE index_var6d
-END INTERFACE
+#define VOL7D_POLY_TYPE TYPE(volgrid6d_var)
+#define VOL7D_POLY_TYPES _var6d
+#include "array_utilities_pre.F90"
 
 !> Display on the screen a brief content of object
 INTERFACE display
@@ -189,7 +168,8 @@ PRIVATE
 PUBLIC volgrid6d_var, volgrid6d_var_miss, volgrid6d_var_new, init, delete, &
  volgrid6d_var_normalize, &
  OPERATOR(==), OPERATOR(/=), OPERATOR(*), &
- count_distinct, pack_distinct, map_distinct, map_inv_distinct, &
+ count_distinct, pack_distinct, count_and_pack_distinct, &
+ map_distinct, map_inv_distinct, &
  index, display, &
  vargrib2varbufr, varbufr2vargrib, &
  conv_func, conv_func_miss, compute, convert, &
@@ -335,12 +315,7 @@ res = .NOT.(this == that)
 END FUNCTION volgrid6d_var_ne
 
 
-! define count_distinct e pack_distinct functions
-#define VOL7D_POLY_TYPE TYPE(volgrid6d_var)
-#define VOL7D_POLY_TYPES _var6d
 #include "array_utilities_inc.F90"
-#undef VOL7D_POLY_TYPE
-#undef VOL7D_POLY_TYPES
 
 
 !> Display on the screen a brief content of \a volgrid6d_var object.

@@ -69,30 +69,9 @@ INTERFACE OPERATOR (/=)
   MODULE PROCEDURE vol7d_network_ne
 END INTERFACE
 
-!> to be documented
-INTERFACE count_distinct
-  MODULE PROCEDURE count_distinct_network
-END INTERFACE
-
-!> to be documented
-INTERFACE pack_distinct
-  MODULE PROCEDURE pack_distinct_network
-END INTERFACE
-
-!> to be documented
-INTERFACE map_distinct
-  MODULE PROCEDURE map_distinct_network
-END INTERFACE
-
-!> to be documented
-INTERFACE map_inv_distinct
-  MODULE PROCEDURE map_inv_distinct_network
-END INTERFACE
-
-!> to be documented
-INTERFACE index
-  MODULE PROCEDURE index_network
-END INTERFACE
+#define VOL7D_POLY_TYPE TYPE(vol7d_network)
+#define VOL7D_POLY_TYPES _network
+#include "array_utilities_pre.F90"
 
 !>Print object
 INTERFACE display
@@ -199,12 +178,7 @@ res = .NOT.(this == that)
 END FUNCTION vol7d_network_ne
 
 
-! Definisce le funzioni count_distinct e pack_distinct
-#define VOL7D_POLY_TYPE TYPE(vol7d_network)
-#define VOL7D_POLY_TYPES _network
 #include "array_utilities_inc.F90"
-#undef VOL7D_POLY_TYPE
-#undef VOL7D_POLY_TYPES
 
 
 END MODULE vol7d_network_class
