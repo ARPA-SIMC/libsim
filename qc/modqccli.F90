@@ -1018,7 +1018,7 @@ do indana=1,size(qccli%v7d%ana)
                 if( invalidated(qccli%v7d%voldatiattrb&
                  (indana,indtime,indlevel,indtimerange,inddativarr,indnetwork,indbattrinv))) then
 
-                                ! gross error check allready done
+                                ! invalidated flag allready set
 #ifdef DEBUG
                   call l4f_log (L4F_INFO,"qccli: skip station for a preceding invalidated flag")
 #endif

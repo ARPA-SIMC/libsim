@@ -757,9 +757,11 @@ if (optio_log(purgeana)) then
   end do
 
   data_idtmp=data_id(anaind,:,:,:,:)
-
-  deallocate(data_id)
-  data_id=>data_idtmp
+ 
+  if(present(data_id)) then
+    if (associated(data_id))deallocate(data_id)
+    data_id=>data_idtmp
+  end if 
   
   call vol7d_reform(this,miss=miss,lana=llana)
 
