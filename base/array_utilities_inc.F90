@@ -168,10 +168,14 @@ ENDIF
 
 END FUNCTION pack_distinct/**/VOL7D_POLY_TYPES
 
-#ifndef VOL7D_POLY_TYPE_AUTO
+
 FUNCTION count_and_pack_distinct/**/VOL7D_POLY_TYPES(vect, pack_distinct, mask, back) RESULT(count_distinct)
 VOL7D_POLY_TYPE,INTENT(in) :: vect(:)
+#ifdef VOL7D_POLY_TYPE_AUTO
+VOL7D_POLY_TYPE_AUTO(vect),INTENT(out) :: pack_distinct(:)
+#else
 VOL7D_POLY_TYPE,INTENT(out) :: pack_distinct(:)
+#endif
 LOGICAL,INTENT(in),OPTIONAL :: mask(:), back
 INTEGER :: count_distinct
 
@@ -236,7 +240,6 @@ ELSE
 ENDIF
 
 END FUNCTION count_and_pack_distinct/**/VOL7D_POLY_TYPES
-#endif
 #endif
 
 !> map distinct

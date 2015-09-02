@@ -7,11 +7,9 @@ INTERFACE pack_distinct
   MODULE PROCEDURE pack_distinct/**/VOL7D_POLY_TYPES
 END INTERFACE
 
-#ifndef VOL7D_POLY_TYPE_AUTO
 INTERFACE count_and_pack_distinct
   MODULE PROCEDURE count_and_pack_distinct/**/VOL7D_POLY_TYPES
 END INTERFACE
-#endif
 #endif
 
 INTERFACE map_distinct
