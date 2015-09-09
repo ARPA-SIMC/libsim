@@ -33,8 +33,8 @@ opt = optionparser_new(description_msg= &
 
 !"/home/ppatruno/tmp/rmap.bufr"
 
-CALL optionparser_add(opt, 'i', 'input-file', input_file, default="(stdin)", help='file to read')
-CALL optionparser_add(opt, 'o', 'output-file', output_file, default="(stdout)", help='file to read')
+CALL optionparser_add(opt, 'i', 'input-file', input_file, default="", help='file to read')
+CALL optionparser_add(opt, 'o', 'output-file', output_file, default="", help='file to read')
 CALL optionparser_add(opt, 'u', 'ident', ident, default=cmiss,help='filter data for this ident')
 CALL optionparser_add(opt, 'd', 'display', display,help='display data after filter')
 

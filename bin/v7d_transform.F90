@@ -511,6 +511,7 @@ IF (LEN_TRIM(network_list) > 0) THEN
   DEALLOCATE(w_s, w_e)
 ENDIF
 ! generate variable lists
+anaonly=.false.
 if (c_e(variable_list))then
   IF (LEN_TRIM(variable_list) > 0) THEN
     n = word_split(variable_list, w_s, w_e, ',')
@@ -519,10 +520,9 @@ if (c_e(variable_list))then
       vl(i) = variable_list(w_s(i):w_e(i))
     ENDDO
     DEALLOCATE(w_s, w_e)
-    anaonly=.false.
-  ENDIF
-else
-  anaonly=.true.
+  else
+    anaonly=.true.
+  end if
 end if
 if (c_e(anavariable_list))then
   IF (LEN_TRIM(anavariable_list) > 0) THEN
@@ -858,8 +858,9 @@ DO ninput = optind, iargc()-1
     IF (input_format == 'BUFR' .OR. input_format == 'CREX') then
 
       IF (input_file == '-') THEN
-        CALL l4f_category_log(category, L4F_INFO, 'trying /dev/stdin as stdin unit.')
-        input_file='/dev/stdin'
+        !CALL l4f_category_log(category, L4F_INFO, 'trying /dev/stdin as stdin unit.')
+        !input_file='/dev/stdin'
+        input_file=''
       ENDIF
       file=.TRUE.
 
@@ -1321,8 +1322,9 @@ ELSE IF (output_format == 'geojson') THEN
 ELSE IF (output_format == 'BUFR' .OR. output_format == 'CREX' .OR. output_format == 'dba') THEN
   IF (output_format == 'BUFR' .OR. output_format == 'CREX') THEN
     IF (output_file == '-') THEN
-      CALL l4f_category_log(category, L4F_INFO, 'trying /dev/stdout as stdout unit.')
-      output_file='/dev/stdout'
+      !CALL l4f_category_log(category, L4F_INFO, 'trying /dev/stdout as stdout unit.')
+      !output_file='/dev/stdout'
+      output_file=''
     ENDIF
     file=.TRUE.
 

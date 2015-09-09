@@ -194,8 +194,9 @@ ELSE IF (input_format == 'BUFR' .OR. input_format == 'CREX' .OR. input_format ==
   IF (input_format == 'BUFR' .OR. input_format == 'CREX') THEN
 
     IF (input_file == '-') THEN
-      CALL l4f_category_log(category, L4F_INFO, 'trying /dev/stdin as stdin unit.')
-      input_file='/dev/stdin'
+      !CALL l4f_category_log(category, L4F_INFO, 'trying /dev/stdin as stdin unit.')
+      !input_file='/dev/stdin'
+      input_file=''
     ENDIF
     file=.TRUE.
 

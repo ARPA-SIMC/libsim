@@ -40,8 +40,8 @@ opt = optionparser_new(description_msg= &
  &Flag used are *B33192,*B33193,*B33194,*B33196. &
  &Station constant data are reported as is')
 
-CALL optionparser_add(opt, 'i', 'input-file', input_file, default="(stdin)", help='file to read')
-CALL optionparser_add(opt, 'o', 'output-file', output_file, default="(stdout)", help='file to read')
+CALL optionparser_add(opt, 'i', 'input-file', input_file, default="", help='file to read')
+CALL optionparser_add(opt, 'o', 'output-file', output_file, default="", help='file to read')
 CALL optionparser_add(opt, 'p', 'preserve', preserve, help='preserve wrong data, remove attribute, insert B33007=0 for wrong data')
 
 ! help options
