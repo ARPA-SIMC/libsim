@@ -1,8 +1,21 @@
+#ifdef ENABLE_SORT
+INTERFACE count_distinct_sorted
+  MODULE PROCEDURE count_distinct_sorted/**/VOL7D_POLY_TYPES
+END INTERFACE
+#endif
+
 INTERFACE count_distinct
   MODULE PROCEDURE count_distinct/**/VOL7D_POLY_TYPES
 END INTERFACE
 
 #ifndef VOL7D_NO_PACK
+
+#ifdef ENABLE_SORT
+INTERFACE pack_distinct_sorted
+  MODULE PROCEDURE pack_distinct_sorted/**/VOL7D_POLY_TYPES
+END INTERFACE
+#endif
+
 INTERFACE pack_distinct
   MODULE PROCEDURE pack_distinct/**/VOL7D_POLY_TYPES
 END INTERFACE

@@ -98,6 +98,7 @@ PUBLIC insert, append, remove, delete, packarray
 PUBLIC insert_unique, append_unique
 
 PUBLIC sort, index, index_c, &
+ count_distinct_sorted, pack_distinct_sorted, &
  count_distinct, pack_distinct, count_and_pack_distinct, &
  map_distinct, map_inv_distinct, &
  firsttrue, lasttrue, pack_distinct_c, map
@@ -132,7 +133,7 @@ ENDDO
 END FUNCTION lasttrue
 
 
-! Definisce le funzioni count_distinct e pack_distinct
+! Definisce le funzioni count_distinct(_sorted) e pack_distinct(_sorted)
 #undef VOL7D_POLY_TYPE_AUTO
 #undef VOL7D_NO_PACK
 

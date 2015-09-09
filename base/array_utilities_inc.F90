@@ -18,6 +18,31 @@
 
 ! You should have received a copy of the GNU General Public License
 ! along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+#ifdef ENABLE_SORT
+!> conta gli elementi distinti in un sorted array
+FUNCTION count_distinct_sorted/**/VOL7D_POLY_TYPES(vect, mask) RESULT(count_distinct_sorted)
+VOL7D_POLY_TYPE,INTENT(in) :: vect(:)
+LOGICAL,INTENT(in),OPTIONAL :: mask(:)
+INTEGER :: count_distinct_sorted
+
+INTEGER :: i, j
+
+count_distinct_sorted = 0
+
+j=1
+DO i = 1, SIZE(vect)-1
+  IF (PRESENT (mask)) THEN
+    IF (.NOT.mask(i)) CYCLE
+  end IF
+  IF (vect(j) == vect(i)) CYCLE
+  count_distinct_sorted = count_distinct_sorted + 1
+  j=i
+ENDDO
+
+END FUNCTION count_distinct_sorted/**/VOL7D_POLY_TYPES
+#endif
+
 !> conta gli elementi distinti in vect
 FUNCTION count_distinct/**/VOL7D_POLY_TYPES(vect, mask, back) RESULT(count_distinct)
 VOL7D_POLY_TYPE,INTENT(in) :: vect(:)
@@ -93,6 +118,37 @@ END FUNCTION count_distinct/**/VOL7D_POLY_TYPES
 
 
 #ifndef VOL7D_NO_PACK
+
+#ifdef ENABLE_SORT
+!> compatta gli elementi distinti di vect in un sorted array
+FUNCTION pack_distinct_sorted/**/VOL7D_POLY_TYPES(vect, dim, mask) &
+ RESULT(pack_distinct_sorted)
+VOL7D_POLY_TYPE,INTENT(in) :: vect(:)
+INTEGER,INTENT(in) :: dim
+LOGICAL,INTENT(in),OPTIONAL :: mask(:)
+VOL7D_POLY_TYPE :: pack_distinct_sorted(dim)
+
+INTEGER :: count_distinct
+INTEGER :: i, j
+
+count_distinct = 0
+
+j=1
+DO i = 1, SIZE(vect)-1
+  IF (PRESENT (mask)) THEN
+    IF (.NOT.mask(i)) CYCLE
+  end IF
+  IF (vect(j) == vect(i)) CYCLE
+  count_distinct = count_distinct + 1
+  if (count_distinct > dim) return
+  pack_distinct_sorted(count_distinct)=vect(i)
+
+  j=i
+ENDDO
+
+END FUNCTION pack_distinct_sorted/**/VOL7D_POLY_TYPES
+#endif
+
 !> compatta gli elementi distinti di vect in un array
 FUNCTION pack_distinct/**/VOL7D_POLY_TYPES(vect, dim, mask, back) &
  RESULT(pack_distinct)

@@ -696,6 +696,12 @@ character(len=listcharmaxlen),allocatable :: dativara(:),dativarattra(:),anavara
 logical :: status
 integer :: ltime_definition
 
+type(datetime),allocatable :: tmptime(:)
+type(vol7d_network),allocatable :: tmpnetwork(:)
+type(vol7d_level),allocatable :: tmplevel(:)
+type(vol7d_timerange),allocatable :: tmptimerange(:)
+
+
 ltime_definition=optio_i(time_definition)
 if (.not. c_e(ltime_definition)) ltime_definition = 1
 
@@ -851,15 +857,34 @@ if(ldegnet) then
   nnetwork=1
 else
   nnetwork = count_distinct(metaanddatav(:)%metadata%network%vol7d_network, back=.TRUE.)
+  !allocate (tmpnetwork,source=metaanddatav(:)%metadata%network%vol7d_network)
+  !call sort(tmpnetwork)
+  !nnetwork = count_distinct_sorted(tmpnetwork)
 end if
 
-ntime      = count_distinct(metaanddatav(:)%metadata%datetime%datetime, &
- mask=c_e(metaanddatav(:)%metadata%datetime%datetime),back=.TRUE.)
-ntimerange = count_distinct(metaanddatav(:)%metadata%timerange%vol7d_timerange, &
- mask=c_e(metaanddatav(:)%metadata%timerange%vol7d_timerange), back=.TRUE.)
-nlevel     = count_distinct(metaanddatav(:)%metadata%level%vol7d_level, &
- mask=c_e(metaanddatav(:)%metadata%level%vol7d_level),back=.TRUE.)
-nana       = count_distinct(metaanddatav(:)%metadata%ana%vol7d_ana, back=.TRUE.)
+!ntime      = count_distinct(metaanddatav(:)%metadata%datetime%datetime, &
+! mask=c_e(metaanddatav(:)%metadata%datetime%datetime),back=.TRUE.)
+allocate (tmptime(size(metaanddatav(:)%metadata%datetime%datetime)),source=metaanddatav(:)%metadata%datetime%datetime)
+call sort(tmptime)
+ntime = count_distinct_sorted(tmptime,mask=c_e(tmptime))
+
+!ntimerange = count_distinct(metaanddatav(:)%metadata%timerange%vol7d_timerange, &
+! mask=c_e(metaanddatav(:)%metadata%timerange%vol7d_timerange), back=.TRUE.)
+allocate (tmptimerange(size(metaanddatav(:)%metadata%timerange%vol7d_timerange)))
+call sort(tmptimerange)
+ntimerange = count_distinct_sorted(tmptimerange,mask=c_e(tmptimerange))
+
+
+!nlevel     = count_distinct(metaanddatav(:)%metadata%level%vol7d_level, &
+! mask=c_e(metaanddatav(:)%metadata%level%vol7d_level),back=.TRUE.)
+allocate (tmplevel(size(metaanddatav(:)%metadata%level%vol7d_level)))
+call sort(tmplevel)
+nlevel = count_distinct_sorted(tmplevel,mask=c_e(tmplevel))
+
+nana   = count_distinct(metaanddatav(:)%metadata%ana%vol7d_ana, back=.TRUE.)
+!allocate (tmpana,source=metaanddatav(:)%metadata%ana%vol7d_ana)
+!call sort(tmpana)
+!nana = count_distinct_sorted(tmpana)
 
 !!$if(ldegnet) then
 !!$  nnetwork=1
@@ -1041,24 +1066,33 @@ nanavarattrc=nanavarattrc)
 
 !nana=count_and_pack_distinct(metaanddatav(:)%metadata%ana%vol7d_ana,this%ana, back=.TRUE.)
 this%ana=pack_distinct(metaanddatav(:)%metadata%ana%vol7d_ana, nana, back=.TRUE.)
+!this%ana=pack_distinct_sorted(tmpana, nana)
+!deallocate(tmpana)
+!call sort(this%ana)
 
 !ntime=count_and_pack_distinct(metaanddatav(:)%metadata%datetime%datetime,this%time, &
 ! mask=c_e(metaanddatav(:)%metadata%datetime%datetime), back=.TRUE.)
-this%time=pack_distinct(metaanddatav(:)%metadata%datetime%datetime, ntime, &
- mask=c_e(metaanddatav(:)%metadata%datetime%datetime),back=.TRUE.)
-call sort(this%time)
+!this%time=pack_distinct(metaanddatav(:)%metadata%datetime%datetime, ntime, &
+! mask=c_e(metaanddatav(:)%metadata%datetime%datetime),back=.TRUE.)
+this%time=pack_distinct_sorted(tmptime, ntime,mask=c_e(tmptime))
+deallocate(tmptime)
+!call sort(this%time)
 
 !ntimerange=count_and_pack_distinct(metaanddatav(:)%metadata%timerange%vol7d_timerange,this%timerange, &
 ! mask=c_e(metaanddatav(:)%metadata%timerange%vol7d_timerange), back=.TRUE.)
-this%timerange=pack_distinct(metaanddatav(:)%metadata%timerange%vol7d_timerange, ntimerange, &
- mask=c_e(metaanddatav(:)%metadata%timerange%vol7d_timerange), back=.TRUE.)
-call sort(this%timerange)
+!this%timerange=pack_distinct(metaanddatav(:)%metadata%timerange%vol7d_timerange, ntimerange, &
+! mask=c_e(metaanddatav(:)%metadata%timerange%vol7d_timerange), back=.TRUE.)
+this%timerange=pack_distinct_sorted(tmptimerange, ntimerange,mask=c_e(tmptimerange))
+deallocate(tmptimerange)
+!call sort(this%timerange)
 
 !nlevel=count_and_pack_distinct(metaanddatav(:)%metadata%level%vol7d_level,this%level, &
 ! mask=c_e(metaanddatav(:)%metadata%level%vol7d_level), back=.TRUE.)
-this%level=pack_distinct(metaanddatav(:)%metadata%level%vol7d_level, nlevel, &
- mask=c_e(metaanddatav(:)%metadata%level%vol7d_level), back=.TRUE.)
-call sort(this%level)
+!this%level=pack_distinct(metaanddatav(:)%metadata%level%vol7d_level, nlevel, &
+! mask=c_e(metaanddatav(:)%metadata%level%vol7d_level), back=.TRUE.)
+this%level=pack_distinct_sorted(tmplevel, nlevel,mask=c_e(tmplevel))
+deallocate(tmplevel)
+!call sort(this%level)
 
 if(ldegnet)then
   nnetwork=1
@@ -1067,8 +1101,10 @@ if(ldegnet)then
 else
   !nnetwork=count_and_pack_distinct(metaanddatav(:)%metadata%network%vol7d_network,this%network, back=.TRUE.)
   this%network=pack_distinct(metaanddatav(:)%metadata%network%vol7d_network, nnetwork, back=.TRUE.)
+  !this%network=pack_distinct_sorted(tmpnetwork, nnetwork)
+  !deallocate(tmpnetwork)
 end if
-
+!call sort(this%network)
 
                                 ! var
 
