@@ -336,7 +336,9 @@ PUBLIC datetime, datetime_miss, datetime_utc, datetime_local, &
  timedelta, timedelta_miss, timedelta_new, timedelta_0, &
  timedelta_min, timedelta_max, timedelta_getamsec, timedelta_depop, &
  display, c_e, &
- count_distinct, pack_distinct, count_and_pack_distinct, &
+ count_distinct, pack_distinct, &
+ count_distinct_sorted, pack_distinct_sorted, &
+ count_and_pack_distinct, &
  map_distinct, map_inv_distinct, index, sort, &
  cyclicdatetime, cyclicdatetime_new, cyclicdatetime_miss, display_cyclicdatetime
 PUBLIC insert, append, remove, packarray
