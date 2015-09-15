@@ -69,8 +69,37 @@ INTERFACE OPERATOR (/=)
   MODULE PROCEDURE vol7d_network_ne
 END INTERFACE
 
+!> Logical greater-than operator for objects of \a vol7d_network class.
+!! It is defined as \a ELEMENTAL thus it works also with conformal arrays
+!! of any shape.
+INTERFACE OPERATOR (>)
+  MODULE PROCEDURE vol7d_network_gt
+END INTERFACE
+
+!> Logical less-than operator for objects of \a vol7d_network class.
+!! It is defined as \a ELEMENTAL thus it works also with conformal arrays
+!! of any shape.
+INTERFACE OPERATOR (<)
+  MODULE PROCEDURE vol7d_network_lt
+END INTERFACE
+
+!> Logical greater-equal operator for objects of \a vol7d_network class.
+!! It is defined as \a ELEMENTAL thus it works also with conformal arrays
+!! of any shape.
+INTERFACE OPERATOR (>=)
+  MODULE PROCEDURE vol7d_network_ge
+END INTERFACE
+
+!> Logical less-equal operator for objects of \a vol7d_network class.
+!! It is defined as \a ELEMENTAL thus it works also with conformal arrays
+!! of any shape.
+INTERFACE OPERATOR (<=)
+  MODULE PROCEDURE vol7d_network_le
+END INTERFACE
+
 #define VOL7D_POLY_TYPE TYPE(vol7d_network)
 #define VOL7D_POLY_TYPES _network
+#define ENABLE_SORT
 #include "array_utilities_pre.F90"
 
 !>Print object
@@ -176,6 +205,40 @@ LOGICAL :: res
 res = .NOT.(this == that)
 
 END FUNCTION vol7d_network_ne
+
+
+ELEMENTAL FUNCTION vol7d_network_gt(this, that) RESULT(res)
+TYPE(vol7d_network),INTENT(IN) :: this, that
+LOGICAL :: res
+
+res = this%name > that%name
+
+END FUNCTION vol7d_network_gt
+
+ELEMENTAL FUNCTION vol7d_network_lt(this, that) RESULT(res)
+TYPE(vol7d_network),INTENT(IN) :: this, that
+LOGICAL :: res
+
+res = this%name < that%name
+
+END FUNCTION vol7d_network_lt
+
+
+ELEMENTAL FUNCTION vol7d_network_ge(this, that) RESULT(res)
+TYPE(vol7d_network),INTENT(IN) :: this, that
+LOGICAL :: res
+
+res = this%name >= that%name
+
+END FUNCTION vol7d_network_ge
+
+ELEMENTAL FUNCTION vol7d_network_le(this, that) RESULT(res)
+TYPE(vol7d_network),INTENT(IN) :: this, that
+LOGICAL :: res
+
+res = this%name <= that%name
+
+END FUNCTION vol7d_network_le
 
 
 #include "array_utilities_inc.F90"

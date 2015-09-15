@@ -110,26 +110,18 @@ INTERFACE OPERATOR (/=)
   MODULE PROCEDURE geo_coord_ne
 END INTERFACE
 
-!> Logical greater-equal operator. Returns true if the first point
-!! lies to the northeast of the second
 INTERFACE OPERATOR (>=)
   MODULE PROCEDURE geo_coord_ge
 END INTERFACE
 
-!> Logical greater operator. Returns true if the first point
-!! lies to the northeast of the second
 INTERFACE OPERATOR (>)
   MODULE PROCEDURE geo_coord_gt
 END INTERFACE
 
-!> Logical less-equal operator. Returns true if the first point
-!! lies to the southwest of the second
 INTERFACE OPERATOR (<=)
   MODULE PROCEDURE geo_coord_le
 END INTERFACE
 
-!> Logical less operator. Returns true if the first point
-!! lies to the southwest of the second
 INTERFACE OPERATOR (<)
   MODULE PROCEDURE geo_coord_lt
 END INTERFACE
@@ -314,38 +306,6 @@ res = (this%ilon == that%ilon .AND. this%ilat == that%ilat)
 END FUNCTION geo_coord_eq
 
 
-elemental FUNCTION geo_coord_ge(this, that) RESULT(res)
-TYPE(geo_coord),INTENT(IN) :: this, that
-LOGICAL :: res
-
-res = (this%ilon >= that%ilon .AND. this%ilat >= that%ilat)
-
-END FUNCTION geo_coord_ge
-
-elemental FUNCTION geo_coord_gt(this, that) RESULT(res)
-TYPE(geo_coord),INTENT(IN) :: this, that
-LOGICAL :: res
-
-res = (this%ilon > that%ilon .AND. this%ilat > that%ilat)
-
-END FUNCTION geo_coord_gt
-
-elemental FUNCTION geo_coord_le(this, that) RESULT(res)
-TYPE(geo_coord),INTENT(IN) :: this, that
-LOGICAL :: res
-
-res = (this%ilon <= that%ilon .AND. this%ilat <= that%ilat)
-
-END FUNCTION geo_coord_le
-
-elemental FUNCTION geo_coord_lt(this, that) RESULT(res)
-TYPE(geo_coord),INTENT(IN) :: this, that
-LOGICAL :: res
-
-res = (this%ilon < that%ilon .AND. this%ilat < that%ilat)
-
-END FUNCTION geo_coord_lt
-
 elemental FUNCTION geo_coord_ne(this, that) RESULT(res)
 TYPE(geo_coord),INTENT(IN) :: this, that
 LOGICAL :: res
@@ -353,6 +313,102 @@ LOGICAL :: res
 res = .not. this == that 
 
 END FUNCTION geo_coord_ne
+
+!> Logical great operator. Returns true if the first point
+!! lies to the west of the second or if lon is equal north
+elemental FUNCTION geo_coord_gt(this, that) RESULT(res)
+TYPE(geo_coord),INTENT(IN) :: this, that
+LOGICAL :: res
+
+res = (this%ilon > that%ilon) 
+
+if (.not. res .and. this%ilon == that%ilon ) then
+  res =  (this%ilat > that%ilat)
+end if
+
+END FUNCTION geo_coord_gt
+
+!> Logical less operator. Returns true if the first point
+!! lies to the west of the second or if lon is equal south
+elemental FUNCTION geo_coord_lt(this, that) RESULT(res)
+TYPE(geo_coord),INTENT(IN) :: this, that
+LOGICAL :: res
+
+res = .not. (this%ilon > that%ilon)
+
+END FUNCTION geo_coord_lt
+
+
+!> Logical great-equal operator. Returns true if the first point
+!! lies to the west of the second or if lon is equal north
+elemental FUNCTION geo_coord_ge(this, that) RESULT(res)
+TYPE(geo_coord),INTENT(IN) :: this, that
+LOGICAL :: res
+
+res = (this%ilon > that%ilon)
+
+if (.not. res .and. this%ilon == that%ilon ) then
+  res =  (this%ilat >= that%ilat)
+end if
+
+END FUNCTION geo_coord_ge
+
+
+!> Logical less-equal operator. Returns true if the first point
+!! lies to the west of the second or if lon is equal south
+elemental FUNCTION geo_coord_le(this, that) RESULT(res)
+TYPE(geo_coord),INTENT(IN) :: this, that
+LOGICAL :: res
+
+res = (this%ilon < that%ilon)
+
+if (.not. res .and. this%ilon == that%ilon ) then
+  res =  (this%ilat <= that%ilat)
+end if
+
+END FUNCTION geo_coord_le
+
+
+!> Logical greater-equal operator. Returns true if the first point
+!! lies to the northeast of the second
+elemental FUNCTION geo_coord_ure(this, that) RESULT(res)
+TYPE(geo_coord),INTENT(IN) :: this, that
+LOGICAL :: res
+
+res = (this%ilon >= that%ilon .AND. this%ilat >= that%ilat)
+
+END FUNCTION geo_coord_ure
+
+!> Logical greater operator. Returns true if the first point
+!! lies to the northeast of the second
+elemental FUNCTION geo_coord_ur(this, that) RESULT(res)
+TYPE(geo_coord),INTENT(IN) :: this, that
+LOGICAL :: res
+
+res = (this%ilon > that%ilon .AND. this%ilat > that%ilat)
+
+END FUNCTION geo_coord_ur
+
+
+!> Logical less-equal operator. Returns true if the first point
+!! lies to the southwest of the second
+elemental FUNCTION geo_coord_lle(this, that) RESULT(res)
+TYPE(geo_coord),INTENT(IN) :: this, that
+LOGICAL :: res
+
+res = (this%ilon <= that%ilon .AND. this%ilat <= that%ilat)
+
+END FUNCTION geo_coord_lle
+
+!> Logical less operator. Returns true if the first point
+!! lies to the southwest of the second
+elemental FUNCTION geo_coord_ll(this, that) RESULT(res)
+TYPE(geo_coord),INTENT(IN) :: this, that
+LOGICAL :: res
+
+res = (this%ilon < that%ilon .AND. this%ilat < that%ilat)
+
+END FUNCTION geo_coord_ll
 
 
 !> Legge da un'unità di file il contenuto dell'oggetto \a this.
@@ -461,7 +517,7 @@ TYPE(geo_coord),INTENT(IN) :: coordmin !< vertice sud-ovest del rettangolo
 TYPE(geo_coord),INTENT(IN) :: coordmax !< vertice nord-est del rettangolo
 LOGICAL :: res !< \c .TRUE. se \a this è dentro il rettangolo o sul bordo e \c .FALSE. se è fuori
 
-res = (this >= coordmin .AND. this <= coordmax)
+res = (geo_coord_ure(this, coordmin) .AND. geo_coord_lle(this,coordmax))
 
 END FUNCTION geo_coord_inside_rectang
 

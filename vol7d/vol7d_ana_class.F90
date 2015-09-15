@@ -62,12 +62,46 @@ INTERFACE OPERATOR (==)
   MODULE PROCEDURE vol7d_ana_eq
 END INTERFACE
 
-!> Logical inequality operator for objects of \a vol7d_level class.
+!> Logical inequality operator for objects of \a vol7d_ana class.
 !! It is defined as \a ELEMENTAL thus it works also with conformal arrays
 !! of any shape.
 INTERFACE OPERATOR (/=)
   MODULE PROCEDURE vol7d_ana_ne
 END INTERFACE
+
+
+!> Logical greater-than operator for objects of \a vol7d_ana class.
+!! It is defined as \a ELEMENTAL thus it works also with conformal arrays
+!! of any shape.
+!! Comparison is performed first on \a ident, then on coord
+INTERFACE OPERATOR (>)
+  MODULE PROCEDURE vol7d_ana_gt
+END INTERFACE
+
+!> Logical less-than operator for objects of \a vol7d_ana class.
+!! It is defined as \a ELEMENTAL thus it works also with conformal arrays
+!! of any shape.
+!! Comparison is performed first on \a ident, then on coord
+INTERFACE OPERATOR (<)
+  MODULE PROCEDURE vol7d_ana_lt
+END INTERFACE
+
+!> Logical greater-equal operator for objects of \a vol7d_ana class.
+!! It is defined as \a ELEMENTAL thus it works also with conformal arrays
+!! of any shape.
+!! Comparison is performed first on \a ident, then on coord
+INTERFACE OPERATOR (>=)
+  MODULE PROCEDURE vol7d_ana_ge
+END INTERFACE
+
+!> Logical less-equal operator for objects of \a vol7d_ana class.
+!! It is defined as \a ELEMENTAL thus it works also with conformal arrays
+!! of any shape.
+!! Comparison is performed first on \a ident, then on coord
+INTERFACE OPERATOR (<=)
+  MODULE PROCEDURE vol7d_ana_le
+END INTERFACE
+
 
 !> check for missing value
 INTERFACE c_e
@@ -88,6 +122,7 @@ END INTERFACE
 
 #define VOL7D_POLY_TYPE TYPE(vol7d_ana)
 #define VOL7D_POLY_TYPES _ana
+#define ENABLE_SORT
 #include "array_utilities_pre.F90"
 
 !> Represent ana object in a pretty string
@@ -173,6 +208,61 @@ LOGICAL :: res
 res = .NOT.(this == that)
 
 END FUNCTION vol7d_ana_ne
+
+
+ELEMENTAL FUNCTION vol7d_ana_gt(this, that) RESULT(res)
+TYPE(vol7d_ana),INTENT(IN) :: this, that
+LOGICAL :: res
+
+res = this%ident > that%ident
+
+if (.not. res) then
+  if (this%ident == that%ident) then
+    res =this%coord > that%coord
+  end if
+end if
+
+END FUNCTION vol7d_ana_gt
+
+
+
+ELEMENTAL FUNCTION vol7d_ana_lt(this, that) RESULT(res)
+TYPE(vol7d_ana),INTENT(IN) :: this, that
+LOGICAL :: res
+
+res = .not. (this > that)
+
+END FUNCTION vol7d_ana_lt
+
+
+ELEMENTAL FUNCTION vol7d_ana_ge(this, that) RESULT(res)
+TYPE(vol7d_ana),INTENT(IN) :: this, that
+LOGICAL :: res
+
+res = this%ident > that%ident
+
+if (.not. res) then
+  if (this%ident == that%ident) then
+    res =this%coord >= that%coord
+  end if
+end if
+
+END FUNCTION vol7d_ana_ge
+
+
+ELEMENTAL FUNCTION vol7d_ana_le(this, that) RESULT(res)
+TYPE(vol7d_ana),INTENT(IN) :: this, that
+LOGICAL :: res
+
+res = this%ident < that%ident
+
+if (.not. res) then
+  if (this%ident == that%ident) then
+    res =this%coord <= that%coord
+  end if
+end if
+
+END FUNCTION vol7d_ana_le
 
 
 ELEMENTAL FUNCTION vol7d_ana_c_e(this) RESULT(c_e)

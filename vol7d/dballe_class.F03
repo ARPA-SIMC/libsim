@@ -1861,11 +1861,11 @@ if ( c_e(this%datetimemax%datetime) .and. c_e(that%datetime%datetime) .and. &
  this%datetimemax%datetime < that%datetime%datetime ) return
 
 if (c_e(this%coordmin%geo_coord)) then
-  if (that%ana%vol7d_ana%coord < this%coordmin%geo_coord) return 
+  if (geo_coord_ll(that%ana%vol7d_ana%coord, this%coordmin%geo_coord)) return 
 end if
 
 if (c_e(this%coordmax%geo_coord)) then
-  if (that%ana%vol7d_ana%coord > this%coordmax%geo_coord) return 
+  if (geo_coord_ur(that%ana%vol7d_ana%coord, this%coordmax%geo_coord)) return 
 end if
 
 dbafilter_equal_dbametadata = .true.
