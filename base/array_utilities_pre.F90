@@ -39,6 +39,12 @@ INTERFACE index
 END INTERFACE
 
 #ifdef ENABLE_SORT
+
+!> Index method with sorted array.
+INTERFACE index_sorted
+  MODULE PROCEDURE index_sorted/**/VOL7D_POLY_TYPES
+END INTERFACE
+
 !> Sort method.
 INTERFACE sort
   MODULE PROCEDURE sort/**/VOL7D_POLY_TYPES

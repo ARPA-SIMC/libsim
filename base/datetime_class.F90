@@ -339,7 +339,7 @@ PUBLIC datetime, datetime_miss, datetime_utc, datetime_local, &
  count_distinct, pack_distinct, &
  count_distinct_sorted, pack_distinct_sorted, &
  count_and_pack_distinct, &
- map_distinct, map_inv_distinct, index, sort, &
+ map_distinct, map_inv_distinct, index, index_sorted, sort, &
  cyclicdatetime, cyclicdatetime_new, cyclicdatetime_miss, display_cyclicdatetime
 PUBLIC insert, append, remove, packarray
 PUBLIC insert_unique, append_unique

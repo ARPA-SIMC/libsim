@@ -1270,19 +1270,19 @@ indtimerange = 0
 indlevel = 0
 do i =1, size(metaanddatav)
 
-  indana       = INDEX(this%ana, metaanddatav(i)%metadata%ana%vol7d_ana, cache=indana)
+  indana       = INDEX_sorted(this%ana, metaanddatav(i)%metadata%ana%vol7d_ana)
   if (ldegnet)then
     indnetwork=1
   else
-    indnetwork = INDEX(this%network, metaanddatav(i)%metadata%network%vol7d_network, cache=indnetwork)
+    indnetwork = INDEX_sorted(this%network, metaanddatav(i)%metadata%network%vol7d_network)
   endif
   
   
   if (c_e(metaanddatav(i)%metadata%datetime%datetime)) then      ! dati
 
-    indtime      = INDEX(this%time, metaanddatav(i)%metadata%datetime%datetime, cache=indtime)
-    indtimerange = INDEX(this%timerange, metaanddatav(i)%metadata%timerange%vol7d_timerange, cache=indtimerange)
-    indlevel     = INDEX(this%level, metaanddatav(i)%metadata%level%vol7d_level, cache=indlevel)
+    indtime      = INDEX_sorted(this%time, metaanddatav(i)%metadata%datetime%datetime)
+    indtimerange = INDEX_sorted(this%timerange, metaanddatav(i)%metadata%timerange%vol7d_timerange)
+    indlevel     = INDEX_sorted(this%level, metaanddatav(i)%metadata%level%vol7d_level)
     
     do j=1, size(metaanddatav(i)%dataattrv%dataattr)
       

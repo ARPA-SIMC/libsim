@@ -556,11 +556,33 @@ END FUNCTION index/**/VOL7D_POLY_TYPES
 
 #ifdef ENABLE_SORT
 
-! TODO
 
-!! The pack distinct should be optimized when sort is available
-!! first sort and after remove the next element if equal
-!! rewriting is possible inline
+!> Cerca l'indice del primo o ultimo elemento di vect uguale a search
+recursive FUNCTION index_sorted/**/VOL7D_POLY_TYPES(vect, search) &
+ RESULT(index_)
+VOL7D_POLY_TYPE,INTENT(in) :: vect(:), search
+INTEGER :: index_
+
+integer ::  mid
+ 
+    mid = size(vect)/2 + 1
+    if (size(vect) == 0) then
+      index_ = 0        ! not found
+    else if (size(vect) < 10) then
+          index_=index(vect, search)     ! sequential search foe few number
+    else if (vect(mid) > search) then
+        index_= index_sorted/**/VOL7D_POLY_TYPES(vect(:mid-1), search)
+    else if (vect(mid) < search) then
+        index_ = index_sorted/**/VOL7D_POLY_TYPES(vect(mid+1:), search)
+        if (index_ /= 0) then
+            index_ = mid + index_
+        end if
+    else
+        index_ = mid      ! SUCCESS!!
+    end if
+
+END FUNCTION index_sorted/**/VOL7D_POLY_TYPES
+
 
 !!$Da Wikipedia, l'enciclopedia libera.
 !!$Il merge sort   un algoritmo di ordinamento abbastanza rapido che utilizza un processo di risoluzione ricorsivo.
