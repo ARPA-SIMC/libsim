@@ -858,7 +858,7 @@ if(ldegnet) then
   nnetwork=1
 else
   !nnetwork = count_distinct(metaanddatav(:)%metadata%network%vol7d_network, back=.TRUE.)
-  allocate (tmpnetwork(size(metaanddatav(:)%metadata%network%vol7d_network)),&
+  allocate (tmpnetwork(size(metaanddatav(:))),&
    source=metaanddatav(:)%metadata%network%vol7d_network)
   call sort(tmpnetwork)
   nnetwork = count_distinct_sorted(tmpnetwork)
@@ -866,27 +866,27 @@ end if
 
 !ntime      = count_distinct(metaanddatav(:)%metadata%datetime%datetime, &
 ! mask=c_e(metaanddatav(:)%metadata%datetime%datetime),back=.TRUE.)
-allocate (tmptime(size(metaanddatav(:)%metadata%datetime%datetime)),&
+allocate (tmptime(size(metaanddatav(:))),&
  source=metaanddatav(:)%metadata%datetime%datetime)
 call sort(tmptime)
 ntime = count_distinct_sorted(tmptime,mask=c_e(tmptime))
 
 !ntimerange = count_distinct(metaanddatav(:)%metadata%timerange%vol7d_timerange, &
 ! mask=c_e(metaanddatav(:)%metadata%timerange%vol7d_timerange), back=.TRUE.)
-allocate (tmptimerange(size(metaanddatav(:)%metadata%timerange%vol7d_timerange)),&
+allocate (tmptimerange(size(metaanddatav(:))),&
  source=metaanddatav(:)%metadata%timerange%vol7d_timerange)
 call sort(tmptimerange)
 ntimerange = count_distinct_sorted(tmptimerange,mask=c_e(tmptimerange))
 
 !nlevel     = count_distinct(metaanddatav(:)%metadata%level%vol7d_level, &
 ! mask=c_e(metaanddatav(:)%metadata%level%vol7d_level),back=.TRUE.)
-allocate (tmplevel(size(metaanddatav(:)%metadata%level%vol7d_level)),&
+allocate (tmplevel(size(metaanddatav(:))),&
  source=metaanddatav(:)%metadata%level%vol7d_level)
 call sort(tmplevel)
 nlevel = count_distinct_sorted(tmplevel,mask=c_e(tmplevel))
 
 !nana   = count_distinct(metaanddatav(:)%metadata%ana%vol7d_ana, back=.TRUE.)
-allocate (tmpana(size(metaanddatav(:)%metadata%ana%vol7d_ana)),&
+allocate (tmpana(size(metaanddatav(:))),&
  source=metaanddatav(:)%metadata%ana%vol7d_ana)
 call sort(tmpana)
 nana = count_distinct_sorted(tmpana)
@@ -1271,19 +1271,21 @@ indlevel = 0
 do i =1, size(metaanddatav)
 
   indana       = INDEX_sorted(this%ana, metaanddatav(i)%metadata%ana%vol7d_ana)
+
   if (ldegnet)then
     indnetwork=1
   else
     indnetwork = INDEX_sorted(this%network, metaanddatav(i)%metadata%network%vol7d_network)
   endif
-  
-  
-  if (c_e(metaanddatav(i)%metadata%datetime%datetime)) then      ! dati
+    
+  if (c_e(metaanddatav(i)%metadata%datetime%datetime) .and. &
+      c_e(metaanddatav(i)%metadata%timerange%vol7d_timerange) .and. &
+      c_e(metaanddatav(i)%metadata%level%vol7d_level) ) then      ! dati
 
     indtime      = INDEX_sorted(this%time, metaanddatav(i)%metadata%datetime%datetime)
     indtimerange = INDEX_sorted(this%timerange, metaanddatav(i)%metadata%timerange%vol7d_timerange)
     indlevel     = INDEX_sorted(this%level, metaanddatav(i)%metadata%level%vol7d_level)
-    
+
     do j=1, size(metaanddatav(i)%dataattrv%dataattr)
       
       associate (dato => metaanddatav(i)%dataattrv%dataattr(j)%dat)

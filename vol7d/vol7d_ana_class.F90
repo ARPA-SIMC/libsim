@@ -216,53 +216,43 @@ LOGICAL :: res
 
 res = this%ident > that%ident
 
-if (.not. res) then
-  if (this%ident == that%ident) then
-    res =this%coord > that%coord
-  end if
+if ( this%ident == that%ident) then
+  res =this%coord > that%coord
 end if
 
 END FUNCTION vol7d_ana_gt
-
-
-
-ELEMENTAL FUNCTION vol7d_ana_lt(this, that) RESULT(res)
-TYPE(vol7d_ana),INTENT(IN) :: this, that
-LOGICAL :: res
-
-res = .not. (this > that)
-
-END FUNCTION vol7d_ana_lt
 
 
 ELEMENTAL FUNCTION vol7d_ana_ge(this, that) RESULT(res)
 TYPE(vol7d_ana),INTENT(IN) :: this, that
 LOGICAL :: res
 
-res = this%ident > that%ident
-
-if (.not. res) then
-  if (this%ident == that%ident) then
-    res =this%coord >= that%coord
-  end if
-end if
+res = .not. this < that
 
 END FUNCTION vol7d_ana_ge
+
+
+ELEMENTAL FUNCTION vol7d_ana_lt(this, that) RESULT(res)
+TYPE(vol7d_ana),INTENT(IN) :: this, that
+LOGICAL :: res
+
+res = this%ident < that%ident
+
+if ( this%ident == that%ident) then
+  res = this%coord < that%coord
+end if
+
+END FUNCTION vol7d_ana_lt
 
 
 ELEMENTAL FUNCTION vol7d_ana_le(this, that) RESULT(res)
 TYPE(vol7d_ana),INTENT(IN) :: this, that
 LOGICAL :: res
 
-res = this%ident < that%ident
-
-if (.not. res) then
-  if (this%ident == that%ident) then
-    res =this%coord <= that%coord
-  end if
-end if
+res = .not. (this > that)
 
 END FUNCTION vol7d_ana_le
+
 
 
 ELEMENTAL FUNCTION vol7d_ana_c_e(this) RESULT(c_e)

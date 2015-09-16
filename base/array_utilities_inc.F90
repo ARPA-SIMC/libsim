@@ -31,14 +31,25 @@ INTEGER :: i, j
 count_distinct_sorted = 0
 
 j=1
-DO i = 1, SIZE(vect)-1
-  IF (PRESENT (mask)) THEN
-    IF (.NOT.mask(i)) CYCLE
-  end IF
-  IF (vect(j) == vect(i)) CYCLE
-  count_distinct_sorted = count_distinct_sorted + 1
-  j=i
-ENDDO
+i = 1
+do while (i <= size(vect))
+  if (present(mask)) then
+    do while (.not. mask(i))
+      i=i+1
+      if ( i > size(vect)) return
+    end do
+  end if
+                                ! count the first
+  if (i==j)  count_distinct_sorted = count_distinct_sorted + 1
+
+  if (vect(j) /= vect(i)) then
+    count_distinct_sorted = count_distinct_sorted + 1
+    j = i
+  end if
+
+  i = i+1
+
+end do
 
 END FUNCTION count_distinct_sorted/**/VOL7D_POLY_TYPES
 #endif
@@ -128,22 +139,26 @@ INTEGER,INTENT(in) :: dim
 LOGICAL,INTENT(in),OPTIONAL :: mask(:)
 VOL7D_POLY_TYPE :: pack_distinct_sorted(dim)
 
-INTEGER :: count_distinct
-INTEGER :: i, j
+INTEGER :: i,count_distinct
+
+if (dim < 1) return
 
 count_distinct = 0
 
-j=1
-DO i = 1, SIZE(vect)-1
+DO i = 1, SIZE(vect)
   IF (PRESENT (mask)) THEN
     IF (.NOT.mask(i)) CYCLE
   end IF
-  IF (vect(j) == vect(i)) CYCLE
+
+  if (count_distinct == 0) then
+    count_distinct = count_distinct + 1
+    pack_distinct_sorted(count_distinct)=vect(i)
+  end if
+  if (pack_distinct_sorted(count_distinct) == vect(i)) CYCLE
   count_distinct = count_distinct + 1
   if (count_distinct > dim) return
   pack_distinct_sorted(count_distinct)=vect(i)
-
-  j=i
+  
 ENDDO
 
 END FUNCTION pack_distinct_sorted/**/VOL7D_POLY_TYPES
@@ -566,21 +581,35 @@ INTEGER :: index_
 integer ::  mid
  
     mid = size(vect)/2 + 1
-    if (size(vect) == 0) then
-      index_ = 0        ! not found
-    else if (size(vect) < 10) then
-          index_=index(vect, search)     ! sequential search foe few number
-    else if (vect(mid) > search) then
-        index_= index_sorted/**/VOL7D_POLY_TYPES(vect(:mid-1), search)
-    else if (vect(mid) < search) then
-        index_ = index_sorted/**/VOL7D_POLY_TYPES(vect(mid+1:), search)
-        if (index_ /= 0) then
-            index_ = mid + index_
-        end if
-    else
-        index_ = mid      ! SUCCESS!!
-    end if
 
+!!$    if (size(vect) == 0) then
+!!$      index_ = 0        ! not found
+!!$
+!!$    else if (size(vect) == 1) then
+!!$      if (vect(1) == search) then
+!!$        index_ = 1
+!!$      else
+!!$        index_ = 0        ! not found
+!!$      end if
+!!$ else if .....
+
+    if (size(vect) < 10) then
+      !print *,"call index with size: ",size(vect)
+      index_=index(vect, search)     ! sequential search for few number
+      !print *,"returned: ",index_
+    else if (vect(mid) > search) then
+      !print *,"call index_sorted  -->",mid-1
+      index_= index_sorted/**/VOL7D_POLY_TYPES(vect(:mid-1), search)
+    else if (vect(mid) < search) then
+      !print *,"call index_sorted",mid+1,"<--"
+      index_ = index_sorted/**/VOL7D_POLY_TYPES(vect(mid+1:), search)
+      if (index_ /= 0) then
+        index_ = mid + index_
+      end if
+    else
+      index_ = mid      ! SUCCESS!!
+    end if
+    
 END FUNCTION index_sorted/**/VOL7D_POLY_TYPES
 
 
