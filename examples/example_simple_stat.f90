@@ -1,8 +1,9 @@
 use simple_stat
+use array_utilities
 
 IMPLICIT NONE
 
-real, DIMENSION(100000) :: rnum 
+real, DIMENSION(1000000) :: rnum 
 integer,dimension(:),allocatable :: seed
 integer :: k
 
@@ -17,6 +18,20 @@ allocate (seed(k))
 seed=5
 call random_seed(put=seed)
 call random_number(rnum)
+
+do i=1,size(rnum),size(rnum)/10
+  print *, rnum(i)
+end do
+
+print *, "start sort ",size(rnum)
+call sort (rnum)
+print *,"end sort"
+
+do i=1,size(rnum),size(rnum)/10
+  print *, rnum(i)
+end do
+
+stop 1
 
 allocate (ndi(size(perc_vals)-1),limbins(size(perc_vals)))
 

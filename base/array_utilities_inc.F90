@@ -718,7 +718,7 @@ Recursive Subroutine subsor/**/VOL7D_POLY_TYPES (XDONT, IDEB1, IFIN1, recursion)
       Integer, Intent (In) :: IDEB1, IFIN1
       Integer, Intent (InOut) :: recursion
 ! __________________________________________________________
-      Integer, Parameter :: NINS = 16 , maxrec=1000 ! Max for insertion sort
+      Integer, Parameter :: NINS = 16 , maxrec=5000 ! Max for insertion sort
       Integer :: ICRS, IDEB, IDCR, IFIN, IMIL
 
 #ifdef VOL7D_POLY_TYPE_AUTO
@@ -727,6 +727,7 @@ Recursive Subroutine subsor/**/VOL7D_POLY_TYPES (XDONT, IDEB1, IFIN1, recursion)
       VOL7D_POLY_TYPE ::   XPIV, XWRK
 #endif
 
+      print *,"recursion:",recursion
 !
       recursion=recursion+1
       IDEB = IDEB1
@@ -736,36 +737,38 @@ Recursive Subroutine subsor/**/VOL7D_POLY_TYPES (XDONT, IDEB1, IFIN1, recursion)
 !  them unsorted, and the final insertion sort will take care of them
 !
       If ((IFIN - IDEB) > NINS .and. recursion <= maxrec*2 ) Then
-         IMIL = (IDEB+IFIN) / 2
+        print *,"subsor:",ifin-ideb
+
+        IMIL = (IDEB+IFIN) / 2
 !
 !  One chooses a pivot, median of 1st, last, and middle values
 !
-         If (XDONT(IMIL) < XDONT(IDEB)) Then
+        If (XDONT(IMIL) < XDONT(IDEB)) Then
+          XWRK = XDONT (IDEB)
+          XDONT (IDEB) = XDONT (IMIL)
+          XDONT (IMIL) = XWRK
+        End If
+        If (XDONT(IMIL) > XDONT(IFIN)) Then
+          XWRK = XDONT (IFIN)
+          XDONT (IFIN) = XDONT (IMIL)
+          XDONT (IMIL) = XWRK
+          If (XDONT(IMIL) < XDONT(IDEB)) Then
             XWRK = XDONT (IDEB)
             XDONT (IDEB) = XDONT (IMIL)
             XDONT (IMIL) = XWRK
-         End If
-         If (XDONT(IMIL) > XDONT(IFIN)) Then
-            XWRK = XDONT (IFIN)
-            XDONT (IFIN) = XDONT (IMIL)
-            XDONT (IMIL) = XWRK
-            If (XDONT(IMIL) < XDONT(IDEB)) Then
-               XWRK = XDONT (IDEB)
-               XDONT (IDEB) = XDONT (IMIL)
-               XDONT (IMIL) = XWRK
-            End If
-         End If
-         XPIV = XDONT (IMIL)
+          End If
+        End If
+        XPIV = XDONT (IMIL)
 !
 !  One exchanges values to put those > pivot in the end and
 !  those <= pivot at the beginning
 !
-         ICRS = IDEB
-         IDCR = IFIN
-         ECH2: Do
-            Do
-               ICRS = ICRS + 1
-               If (ICRS >= IDCR) Then
+        ICRS = IDEB
+        IDCR = IFIN
+        ECH2: Do
+          Do
+            ICRS = ICRS + 1
+            If (ICRS >= IDCR) Then
 !
 !  the first  >  pivot is IDCR
 !  the last   <= pivot is ICRS-1
@@ -774,34 +777,49 @@ Recursive Subroutine subsor/**/VOL7D_POLY_TYPES (XDONT, IDEB1, IFIN1, recursion)
 !        to it, and one can reduce by one the size of the set to process,
 !        as if XDONT (IFIN) > XPIV
 !
-                  Exit ECH2
+              Exit ECH2
 !
-               End If
-               If (XDONT(ICRS) > XPIV) Exit
-            End Do
-            Do
-               If (XDONT(IDCR) <= XPIV) Exit
-               IDCR = IDCR - 1
-               If (ICRS >= IDCR) Then
-!
+            End If
+            If (XDONT(ICRS) > XPIV) Exit
+          End Do
+          Do
+            If (XDONT(IDCR) <= XPIV) Exit
+            IDCR = IDCR - 1
+            If (ICRS >= IDCR) Then
+                                !
 !  The last value < pivot is always ICRS-1
 !
-                  Exit ECH2
-               End If
-            End Do
+              Exit ECH2
+            End If
+          End Do
 !
-            XWRK = XDONT (IDCR)
-            XDONT (IDCR) = XDONT (ICRS)
-            XDONT (ICRS) = XWRK
-         End Do ECH2
+          XWRK = XDONT (IDCR)
+          XDONT (IDCR) = XDONT (ICRS)
+          XDONT (ICRS) = XWRK
+        End Do ECH2
 !
 !  One now sorts each of the two sub-intervals
 !
-         Call subsor/**/VOL7D_POLY_TYPES (XDONT, IDEB1, ICRS-1, recursion)
-         Call subsor/**/VOL7D_POLY_TYPES (XDONT, IDCR, IFIN1, recursion)
+        Call subsor/**/VOL7D_POLY_TYPES (XDONT, IDEB1, ICRS-1, recursion)
+        Call subsor/**/VOL7D_POLY_TYPES (XDONT, IDCR, IFIN1, recursion)
+
+!!$      else
+!!$        Call inssor/**/VOL7D_POLY_TYPES (XDONT(IDEB:IFIN))
+
       End If
       Return
       End Subroutine Subsor/**/VOL7D_POLY_TYPES
+
+
+!> \brief Sorts into increasing order (Insertion sort)
+!!  Sorts XDONT into increasing order (Insertion sort)
+!!  This subroutine uses insertion sort. It does not use any
+!!  work array and is faster when XDONT is of very small size
+!!  (< 20), or already almost sorted, so it is used in a final
+!!  pass when the partial quicksorting has left a sequence
+!!  of small subsets and that sorting is only necessary within
+!!  each subset to complete the process.
+!!  Michel Olagnon - Apr. 2000
    Subroutine inssor/**/VOL7D_POLY_TYPES  (XDONT)
 !  Sorts XDONT into increasing order (Insertion sort)
 ! __________________________________________________________
@@ -814,6 +832,8 @@ Recursive Subroutine subsor/**/VOL7D_POLY_TYPES (XDONT, IDEB1, IFIN1, recursion)
 #else
       VOL7D_POLY_TYPE :: XWRK
 #endif
+
+      print *,"inssor:",size(xdont)
 
 !
       Do ICRS = 2, Size (XDONT)
@@ -831,5 +851,306 @@ Recursive Subroutine subsor/**/VOL7D_POLY_TYPES (XDONT, IDEB1, IFIN1, recursion)
 !
       End Subroutine inssor/**/VOL7D_POLY_TYPES
 !
+
+
+
+!!$Heapsort is an in-place sorting algorithm with worst case and average
+!!$complexity of O(n logn).
+!!$
+!!$The basic idea is to turn the array into a binary heap structure,
+!!$which has the property that it allows efficient retrieval and removal
+!!$of the maximal element. We repeatedly "remove" the maximal element
+!!$from the heap, thus building the sorted list from back to
+!!$front. Heapsort requires random access, so can only be used on an
+!!$array-like data structure.
+
+subroutine heapsort/**/VOL7D_POLY_TYPES(a)
+
+VOL7D_POLY_TYPE, intent(in out) :: a(0:)
+ 
+#ifdef VOL7D_POLY_TYPE_AUTO
+      VOL7D_POLY_TYPE_AUTO(a) :: temp
+#else
+      VOL7D_POLY_TYPE :: temp
+#endif
+
+integer :: start, n, bottom
+ 
+n = size(a)
+do start = (n - 2) / 2, 0, -1
+  call siftdown(a, start, n);
+end do
+
+do bottom = n - 1, 1, -1
+  temp = a(0)
+  a(0) = a(bottom)
+  a(bottom) = temp;
+  call siftdown(a, 0, bottom)
+end do
+   
+contains 
+subroutine siftdown(a, start, bottom)
+ 
+VOL7D_POLY_TYPE, intent(in out) :: a(0:)
+
+#ifdef VOL7D_POLY_TYPE_AUTO
+VOL7D_POLY_TYPE_AUTO(a) :: temp
+#else
+VOL7D_POLY_TYPE :: temp
+#endif
+
+integer, intent(in) :: start, bottom
+integer :: child, root
+
+root = start
+do while(root*2 + 1 < bottom)
+  child = root * 2 + 1
+  
+  if (child + 1 < bottom) then
+    if (a(child) < a(child+1)) child = child + 1
+  end if
+ 
+  if (a(root) < a(child)) then
+    temp = a(child)
+    a(child) = a (root)
+    a(root) = temp
+    root = child
+  else
+    return
+  end if
+end do
+ 
+end subroutine siftdown
+
+end subroutine heapsort/**/VOL7D_POLY_TYPES
+
+
+! oppure
+
+
+
+!*****************************************************
+!*  Sorts an array RA of length N in ascending order *
+!*                by the Heapsort method             *
+!* ------------------------------------------------- *
+!* INPUTS:                                           *
+!*	    N	  size of table RA                   *
+!*          RA	  table to be sorted                 *
+!* OUTPUT:                                           *
+!*	    RA    table sorted in ascending order    *
+!*                                                   *
+!* NOTE: The Heapsort method is a N Log2 N routine,  *
+!*       and can be used for very large arrays.      *
+!*****************************************************         
+SUBROUTINE HPSORT/**/VOL7D_POLY_TYPES(RA)
+
+VOL7D_POLY_TYPE,intent(INOUT) ::  RA(:)
+
+#ifdef VOL7D_POLY_TYPE_AUTO
+VOL7D_POLY_TYPE_AUTO(RA) :: RRA
+#else
+VOL7D_POLY_TYPE RRA
+#endif
+
+integer :: i,j,l,ir
+
+IR=size(ra)
+L=ir/2+1
+
+                                !The index L will be decremented from its initial value during the
+                                !"hiring" (heap creation) phase. Once it reaches 1, the index IR 
+                                !will be decremented from its initial value down to 1 during the
+                                !"retirement-and-promotion" (heap selection) phase.
+do while(.true.)
+  if(L > 1)then
+    L=L-1
+    RRA=RA(L)
+  else
+    RRA=RA(IR)
+    RA(IR)=RA(1)
+    IR=IR-1
+    if(IR.eq.1)then
+      RA(1)=RRA
+      return
+    end if
+  end if
+  I=L
+  J=L+L
+do while(J.le.IR)
+  if(J < IR)then
+    if(RA(J) < RA(J+1))  J=J+1
+  end if
+  if(RRA < RA(J))then
+    RA(I)=RA(J)
+    I=J; J=J+J
+  else
+    J=IR+1
+  end if
+end do
+
+RA(I)=RRA
+
+end do
+
+END SUBROUTINE HPSORT/**/VOL7D_POLY_TYPES
+
+
+
+!!$Selection sort
+!!$
+!!$L'ordinamento per selezione (selection sort) è un algoritmo di
+!!$ordinamento che opera in place ed in modo simile all'ordinamento per
+!!$inserzione. L'algoritmo è di tipo non adattivo, ossia il suo tempo di
+!!$esecuzione non dipende dall'input ma dalla dimensione dell'array.
+!!$
+!!$Descrizione dell'algoritmo
+!!$
+!!$L'algoritmo seleziona di volta in volta il numero minore nella
+!!$sequenza di partenza e lo sposta nella sequenza ordinata; di fatto la
+!!$sequenza viene suddivisa in due parti: la sottosequenza ordinata, che
+!!$occupa le prime posizioni dell'array, e la sottosequenza da ordinare,
+!!$che costituisce la parte restante dell'array.
+!!$
+!!$Dovendo ordinare un array A di lunghezza n, si fa scorrere l'indice i
+!!$da 1 a n-1 ripetendo i seguenti passi:
+!!$
+!!$    si cerca il più piccolo elemento della sottosequenza A[i..n];
+!!$    si scambia questo elemento con l'elemento i-esimo.
+!!$
+
+!!$! --------------------------------------------------------------------
+!!$! INTEGER FUNCTION  FindMinimum():
+!!$!    This function returns the location of the minimum in the section
+!!$! between Start and End.
+!!$! --------------------------------------------------------------------
+!!$
+!!$   INTEGER FUNCTION  FindMinimum(x, Start, End)
+!!$      IMPLICIT  NONE
+!!$      INTEGER, DIMENSION(1:), INTENT(IN) :: x
+!!$      INTEGER, INTENT(IN)                :: Start, End
+!!$      INTEGER                            :: Minimum
+!!$      INTEGER                            :: Location
+!!$      INTEGER                            :: i
+!!$
+!!$      Minimum  = x(Start)		! assume the first is the min
+!!$      Location = Start			! record its position
+!!$      DO i = Start+1, End		! start with next elements
+!!$         IF (x(i) < Minimum) THEN	!   if x(i) less than the min?
+!!$            Minimum  = x(i)		!      Yes, a new minimum found
+!!$            Location = i                !      record its position
+!!$         END IF
+!!$      END DO
+!!$      FindMinimum = Location        	! return the position
+!!$   END FUNCTION  FindMinimum
+!!$
+!!$! --------------------------------------------------------------------
+!!$! SUBROUTINE  Swap():
+!!$!    This subroutine swaps the values of its two formal arguments.
+!!$! --------------------------------------------------------------------
+!!$
+!!$   SUBROUTINE  Swap(a, b)
+!!$      IMPLICIT  NONE
+!!$      INTEGER, INTENT(INOUT) :: a, b
+!!$      INTEGER                :: Temp
+!!$
+!!$      Temp = a
+!!$      a    = b
+!!$      b    = Temp
+!!$   END SUBROUTINE  Swap
+!!$
+!!$! --------------------------------------------------------------------
+!!$! SUBROUTINE  Sort():
+!!$!    This subroutine receives an array x() and sorts it into ascending
+!!$! order.
+!!$! --------------------------------------------------------------------
+!!$
+!!$   SUBROUTINE  Sort(x, Size)
+!!$      IMPLICIT  NONE
+!!$      INTEGER, DIMENSION(1:), INTENT(INOUT) :: x
+!!$      INTEGER, INTENT(IN)                   :: Size
+!!$      INTEGER                               :: i
+!!$      INTEGER                               :: Location
+!!$
+!!$      DO i = 1, Size-1			! except for the last
+!!$         Location = FindMinimum(x, i, Size)	! find min from this to last
+!!$         CALL  Swap(x(i), x(Location))	! swap this and the minimum
+!!$      END DO
+!!$   END SUBROUTINE  Sort
+!!$
+
+
+!!$il Bubble sort o bubblesort (letteralmente: ordinamento a bolle) è un
+!!$semplice algoritmo di ordinamento di dati. Il suo funzionamento è
+!!$semplice: ogni coppia di elementi adiacenti della lista viene
+!!$comparata e se sono nell'ordine sbagliato vengono invertiti di
+!!$posizione. L'algoritmo continua poi a scorrere tutta la lista finché
+!!$non vengono più eseguiti scambi, situazione che indica che la lista è
+!!$ordinata.
+!!$
+!!$Il Bubble sort non è un algoritmo efficiente
+!!$
+!!$SUBROUTINE Bubble_Sort(a)
+!!$  REAL, INTENT(in out), DIMENSION(:) :: a
+!!$  REAL :: temp
+!!$  INTEGER :: i, j
+!!$  LOGICAL :: swapped
+!!$ 
+!!$  DO j = SIZE(a)-1, 1, -1
+!!$    swapped = .FALSE.
+!!$    DO i = 1, j
+!!$      IF (a(i) > a(i+1)) THEN
+!!$        temp = a(i)
+!!$        a(i) = a(i+1)
+!!$        a(i+1) = temp
+!!$        swapped = .TRUE.
+!!$      END IF
+!!$    END DO
+!!$    IF (.NOT. swapped) EXIT
+!!$  END DO
+!!$END SUBROUTINE Bubble_Sort
+
+
+!!$ lo Shaker sort, noto anche come Bubble sort bidirezionale, Cocktail
+!!$ sort, Cocktail shaker sort, Ripple sort, Happy hour sort o Shuttle
+!!$ sort è un algoritmo di ordinamento dei dati sviluppato dalla Sun
+!!$ Microsystems. Lo shaker sort è sostanzialmente una variante del
+!!$ bubble sort: si differenzia da quest'ultimo per l'indice del ciclo
+!!$ più interno che, anziché scorrere dall'inizio alla fine, inverte la
+!!$ sua direzione ad ogni ciclo. Pur mantenendo la stessa complessità,
+!!$ ovvero O(n²), lo shaker sort riduce la probabilità che l'ordinamento
+!!$ abbia un costo corrispondente al caso peggiore.
+!!$
+!!$ 
+!!$  SUBROUTINE Cocktail_sort(a)
+!!$    INTEGER, INTENT(IN OUT) :: a(:)
+!!$    INTEGER :: i, bottom, top, temp 
+!!$    LOGICAL :: swapped
+!!$ 
+!!$    bottom = 1
+!!$    top = SIZE(a) - 1
+!!$    DO WHILE (bottom < top )
+!!$       swapped = .FALSE.
+!!$       DO i = bottom, top
+!!$          IF (array(i) > array(i+1)) THEN
+!!$              temp = array(i)
+!!$              array(i) = array(i+1)
+!!$              array(i+1) = temp
+!!$              swapped = .TRUE.
+!!$          END IF
+!!$       END DO
+!!$       IF (.NOT. swapped) EXIT
+!!$       DO i = top, bottom + 1, -1
+!!$          IF (array(i) < array(i-1)) THEN
+!!$              temp = array(i)
+!!$              array(i) = array(i-1)
+!!$              array(i-1) = temp
+!!$              swapped = .TRUE.
+!!$          END IF
+!!$       END DO
+!!$       IF (.NOT. swapped) EXIT
+!!$       bottom = bottom + 1
+!!$       top = top - 1
+!!$    END DO
+!!$  END SUBROUTINE Cocktail_sort
 
 #endif
