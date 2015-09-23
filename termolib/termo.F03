@@ -34,7 +34,7 @@ subroutine register_termo(vfn)
   call fnregister(vfn,fi_z_def())
   call fnregister(vfn,z_h_def())
   call fnregister(vfn,h_z_def())
-
+  call fnregister(vfn,r_p_t2q_def())
 
 end subroutine register_termo
 
@@ -46,7 +46,14 @@ subroutine  td_t_p2ept(mybin,mybout,bin,bout,in,out)
   real, intent(in) :: in(:,:)
   real, intent(out) :: out(:,:)
 
-  out(:,index_c(mybout,bout(1)))=ooee(in(:,index_c(mybin,bin(1))),in(:,index_c(mybin,bin(2))),in(:,index_c(mybin,bin(3)))/100.)
+  where (c_e(in(:,index_c(mybin,bin(3)))))
+    out(:,index_c(mybout,bout(1)))=ooee(&
+     in(:,index_c(mybin,bin(1))),&
+     in(:,index_c(mybin,bin(2))),&
+     in(:,index_c(mybin,bin(3)))/100.)
+  elsewhere
+    out(:,index_c(mybout,bout(1)))=rmiss
+  endwhere
 
 end subroutine td_t_p2ept
 
@@ -59,7 +66,11 @@ subroutine  t_p2pt(mybin,mybout,bin,bout,in,out)
   real, intent(in) :: in(:,:)
   real, intent(out) :: out(:,:)
 
-  out(:,index_c(mybout,bout(1)))=o(in(:,index_c(mybin,bin(1))),in(:,index_c(mybin,bin(2)))/100.)
+  where (c_e(in(:,index_c(mybin,bin(2)))))
+    out(:,index_c(mybout,bout(1)))=o(in(:,index_c(mybin,bin(1))),in(:,index_c(mybin,bin(2)))/100.)
+  elsewhere
+    out(:,index_c(mybout,bout(1)))=rmiss
+  end where
 
 end subroutine t_p2pt
 
@@ -139,6 +150,38 @@ type(fnds) function r_t2td_def()
 end function r_t2td_def
 
 
+!RELHUMTOQ(RH,PT,T)
+
+subroutine  r_p_t2q(mybin,mybout,bin,bout,in,out)
+  CHARACTER(len=10),intent(in) :: mybin(:)  !< vector table B  WMO input  in user's data
+  CHARACTER(len=10),intent(in) :: mybout(:) !< vector table B  WMO output in user's data
+  CHARACTER(len=10),intent(in) :: bin(:)    !< vector table B  WMO input used by function
+  CHARACTER(len=10),intent(in) :: bout(:)   !< vector table B  WMO output used by function
+  real, intent(in) :: in(:,:)
+  real, intent(out) :: out(:,:)
+
+  where (c_e(in(:,index_c(mybin,bin(2)))))
+    out(:,index_c(mybout,bout(1)))= RELHUMTOQ(&
+     in (:,index_c(mybin ,bin (1))),&
+     in (:,index_c(mybin ,bin (2)))/100.,&
+     in (:,index_c(mybin ,bin (3))))
+  elsewhere
+    out(:,index_c(mybout,bout(1)))=rmiss
+  endwhere
+
+  where (c_e(out(:,index_c(mybout,bout(1)))))
+    out(:,index_c(mybout,bout(1)))=out(:,index_c(mybout,bout(1)))/1000.
+  end where
+          
+end subroutine r_p_t2q
+
+type(fnds) function r_p_t2q_def()
+  call init(r_p_t2q_def,"r_p_t2q",&
+   [character(len=10) :: "B13003","B10004","B12101"],&
+   [character(len=10) :: "B13001"],0,func=r_p_t2q)
+end function r_p_t2q_def
+
+
 subroutine  ff_swd_lwb2pgt(mybin,mybout,bin,bout,in,out)
 CHARACTER(len=10),intent(in) :: mybin(:)  !< vector table B  WMO input  in user's data
 CHARACTER(len=10),intent(in) :: mybout(:) !< vector table B  WMO output in user's data
@@ -149,10 +192,10 @@ real, intent(out) :: out(:,:)
 
 out(:,index_c(mybout,bout(1)))= pgt(in (:,index_c(mybin ,bin (1))),in (:,index_c(mybin ,bin (2))),in (:,index_c(mybin ,bin (3))))
 
-print *, "TEST  in -------->>>>",in (1,index_c(mybin ,bin (1))),&
- in (1,index_c(mybin ,bin (2))),&
- in (1,index_c(mybin ,bin (3)))
-print *, "TEST     -------->>>>",out(1,index_c(mybout,bout(1)))
+!!$print *, "TEST  in -------->>>>",in (1,index_c(mybin ,bin (1))),&
+!!$ in (1,index_c(mybin ,bin (2))),&
+!!$ in (1,index_c(mybin ,bin (3)))
+!!$print *, "TEST     -------->>>>",out(1,index_c(mybout,bout(1)))
 
 
 end subroutine ff_swd_lwb2pgt
@@ -284,8 +327,6 @@ end function t_p_w2omega_def
 !!$W(TD,PT) 
 !!$
 !!$td_pq(p,q)
-!!$
-!!$RELHUMTOQ(RH,PT,T)
 !!$
 !!$ESAT(T)
 !!$

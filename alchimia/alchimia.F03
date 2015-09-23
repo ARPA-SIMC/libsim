@@ -499,7 +499,7 @@ logical ::  somefoundout
 integer,save :: order
 character(len=10) :: newbout(nmaxb)
 
-stat = .true.
+stat=.true.
 newbout=cmiss
 vfntmp=vfn
 
