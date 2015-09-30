@@ -9,3 +9,39 @@ University Corporation for Atmospheric Research
 
 sort from public domain utilities http://www.fortran-2000.com :
 Michel Olagnon - Apr. 2000
+
+----------------------------------------------------------------
+string_match derived by http://sourceforge.net/projects/flibs
+$Copyright (c) 2008, Arjen Markus
+
+----------------------------------------------------------------
+README FOR X2R (ADMB2R, C2R, For2R)
+
+The X2R software allows programmers to write data, metadata, and 
+results from compiled models to an ASCII file that can be read 
+easily by R. Versions are provided for AD Model Builder, C/C++,
+and Fortran 95.
+
+X2R is FREE SOFTWARE. Source is provided, and it may be modified 
+by the user to suit particular needs. 
+
+This software was written while the authors were employed by or 
+associated with the U.S. National Oceanic and Atmospheric 
+Administration (NOAA). The software is considered an EXPERIMENTAL 
+PRODUCT by NOAA. It is released to the scientific community for 
+research purposes. 
+
+   ***************************************************
+   *                                                 *
+   *  THE SOFTWARE CARRIES NO WARRANTY OF ANY KIND.  *
+   *                                                 *
+   ***************************************************
+
+The authors will endeavor to fix bugs promptly and will consider 
+users' requests for extending the capability of this software. 
+Contact Mike.Prager@noaa.gov or Jennifer.Martin@noaa.gov. 
+
+Use of tradenames does not imply endorsement by the authors, 
+NOAA, or any government agency. 
+
+September 11, 2006 

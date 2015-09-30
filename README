@@ -1,31 +1,46 @@
 Introduction
 ------------
 
-Libsim is a ......
+Libsim comprende gruppi di moduli di utilità in Fortran 90:
 
-The main characteristics of libsim are:
+libsim_base definisce moduli e classi di uso generale in applicazioni
+scientifiche, come la gestione di errori in esecuzione, la gestione di
+dati georeferenziati, di coordinate temporali, ecc.
 
-...
-...
+libsim_grib definisce una serie di classi ad alto livello stratificate
+sopra la libreria ECMWF emos per gestire l'I/O di file in formato
+grib.
+
+libsim_vol7d definisce una serie di classi per facilitare
+l'elaborazione di dati osservativi idro-meteo, includendo metodi per
+la loro importazione da database tipo DbAll-e e dal database Oracle di
+ARPA-SIM.
+
+libsim_volgrid6d definisce una serie di classi per facilitare
+l'elaborazione di dati idro-meteo su grigliati georeferenziati,
+compresa la trasformazione in griglie di tipo diverso e in oggetti di
+tipo vol7d.
+
+e molto altro...
 
 Dependencies
 ------------
 
-libsim requires ............. inorder to be built.
+libsim requires:
 
-Additionally, to build the Fortran API 
 
 To build the documentation, you need doxygen.
 
 In Fedora, the names of the packages depended on are:
 
- * unixODBC-devel gperf gcc-gfortran doxygen tetex tetex-latex latex2html
+fortrangis-devel oracle-instantclient-devel libdballef-devel >=
+6.7-4312 grib_api-devel ncl-devel gdal-devel libdballe-devel help2man
+log4c cnf-devel libpng-devel vapor-devel fortrangis-devel
+inorder to be built.
+
  * For CNF there is an unofficial starmet package: contact the DB-All.e team
    about it.
 
-In Debian, the names of the packages depended on are:
-
-.....
 
 Building DB-All.e
 -----------------
@@ -41,15 +56,12 @@ other Unix software::
   make install
 
 
-
 Documentation
 -------------
 
 Documentation for all commandline tools can be found in their manpages.  All
 commandline tools also have extensive commandline help that can be accessed
 using the "--help" option.
-
-
 
 
 Contact and copyright information
@@ -75,38 +87,3 @@ Contact informations for ARPA-SIM:
   Email: urpsim@smr.arpa.emr.it
   Website: http://www.arpa.emr.it/sim/
 
-----------------------------------------------------------------
-string_match derived by http://sourceforge.net/projects/flibs
-$Copyright (c) 2008, Arjen Markus
-
-----------------------------------------------------------------
-README FOR X2R (ADMB2R, C2R, For2R)
-
-The X2R software allows programmers to write data, metadata, and 
-results from compiled models to an ASCII file that can be read 
-easily by R. Versions are provided for AD Model Builder, C/C++,
-and Fortran 95.
-
-X2R is FREE SOFTWARE. Source is provided, and it may be modified 
-by the user to suit particular needs. 
-
-This software was written while the authors were employed by or 
-associated with the U.S. National Oceanic and Atmospheric 
-Administration (NOAA). The software is considered an EXPERIMENTAL 
-PRODUCT by NOAA. It is released to the scientific community for 
-research purposes. 
-
-   ***************************************************
-   *                                                 *
-   *  THE SOFTWARE CARRIES NO WARRANTY OF ANY KIND.  *
-   *                                                 *
-   ***************************************************
-
-The authors will endeavor to fix bugs promptly and will consider 
-users' requests for extending the capability of this software. 
-Contact Mike.Prager@noaa.gov or Jennifer.Martin@noaa.gov. 
-
-Use of tradenames does not imply endorsement by the authors, 
-NOAA, or any government agency. 
-
-September 11, 2006 
