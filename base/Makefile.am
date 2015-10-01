@@ -32,7 +32,7 @@ if SHAPELIB
 libsim_base_la_LIBADD += $(SHAPELIB_LIBS)
 endif
 
-noinst_HEADERS = arrayof_pre.F90 arrayof_post.F90 array_utilities_inc.F90 arrayof_pre_nodoc.F90 arrayof_post_nodoc.F90 
+noinst_HEADERS = arrayof_pre.F90 arrayof_post.F90 array_utilities_pre.F90 array_utilities_inc.F90 arrayof_pre_nodoc.F90 arrayof_post_nodoc.F90 
 
 # c'e` una maniera migliore?
 tmpvar = $(libsim_base_la_SOURCES:.f90=.mod)
