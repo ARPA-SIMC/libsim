@@ -1,15 +1,15 @@
 Summary: libsim: librerie di utilità in Fortran 90
 Name: libsim
-Version: 6.0.0
-Release: 1433%{dist}
+Version: 6.1.0
+Release: 1506%{dist}
 License: GPL2+
 Group: Applications/Meteo
 URL: http://www.arpa.emr.it/sim
 Packager: Davide Cesari <dcesari@arpa.emr.it>
 Source: %{name}-%{version}.tar.gz
 BuildRoot: /var/tmp/%{name}-buildroot
-BuildRequires: fortrangis-devel oracle-instantclient-devel libdballef-devel >= 6.7-4312 grib_api-devel ncl-devel gdal-devel libdballe-devel help2man log4c cnf-devel libpng-devel vapor-devel fortrangis-devel
-Requires: libdballef4 >= 6.7-4312 grib_api
+BuildRequires: fortrangis-devel oracle-instantclient-devel libdballef-devel >= 7.6 grib_api-devel ncl-devel gdal-devel libdballe-devel help2man log4c cnf-devel libpng-devel vapor-devel fortrangis-devel netcdf-fortran-devel shapelib-devel
+Requires: libdballef4 >= 7.6 grib_api
 
 #temporaneo
 %if 0%{?fedora} < 9
@@ -31,16 +31,16 @@ scientifiche, come la gestione di errori in esecuzione, la gestione di
 dati georeferenziati, di coordinate temporali, ecc.
 
 libsim_grib definisce una serie di classi ad alto livello stratificate
-sopra la libreria ECMWF emos per gestire l\'I/O di file in formato
+sopra la libreria ECMWF emos per gestire l'I/O di file in formato
 grib.
 
 libsim_vol7d definisce una serie di classi per facilitare
-l\'elaborazione di dati osservativi idro-meteo, includendo metodi per
+l'elaborazione di dati osservativi idro-meteo, includendo metodi per
 la loro importazione da database tipo DbAll-e e dal database Oracle di
 ARPA-SIM.
 
 libsim_volgrid6d definisce una serie di classi per facilitare
-l\'elaborazione di dati idro-meteo su grigliati georeferenziati,
+l'elaborazione di dati idro-meteo su grigliati georeferenziati,
 compresa la trasformazione in griglie di tipo diverso e in oggetti di
 tipo vol7d.
 
@@ -85,6 +85,18 @@ mv $RPM_BUILD_ROOT%{_includedir}/*.mod $RPM_BUILD_ROOT%{_fmoddir}
 rm -rf %{buildroot}
 
 %changelog
+* Thu Oct 1 2015 dbranchini <dbranchini@arpa.emr.it> - 6.1.0-1505%{dist}
+- implemented heap sort for all vol7d objects
+- stdin/stdout in dballe fortran api change
+- fix for grib2 output on Lamber conformal
+- use qc without data_id
+- new function in termo for specific humidity
+- fix in termo for missing values when scaled values
+
+* Thu Feb 12 2015 dbranchini <dbranchini@arpa.emr.it> - 6.0.1-1462%{dist}
+- Fixed too short dns buffer
+- Fixed not initialized list in v7d2dba and other not initialized var in vol7d_dballe_init
+
 * Wed Jan 16 2013 dcesari <dcesari@arpa.emr.it> - 5.0.0-1215%{dist}
 - New version requiring latest vapor version
 
