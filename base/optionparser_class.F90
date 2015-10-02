@@ -1131,7 +1131,9 @@ IF (ASSOCIATED(this%usage_msg)) THEN
   CALL delete(help_line)
 ELSE
   CALL getarg(0, buf)
-  WRITE(*,'(A)')'Usage: '//TRIM(buf)//' [options] [arguments]'
+  i = INDEX(buf, '/', back=.TRUE.) ! remove directory part
+  IF (buf(i+1:i+3) == 'lt-') i = i + 3 ! remove automake prefix
+  WRITE(*,'(A)')'Usage: '//TRIM(buf(i+1:))//' [options] [arguments]'
 ENDIF
 
 ! print description message
@@ -1170,7 +1172,9 @@ IF (ASSOCIATED(this%usage_msg)) THEN
   WRITE(*,'(A,/)')TRIM(mdquote_usage_msg(cstr_to_fchar(this%usage_msg)))
 ELSE
   CALL getarg(0, buf)
-  WRITE(*,'(A,/)')'Usage: `'//TRIM(buf)//' [options] [arguments]`'
+  i = INDEX(buf, '/', back=.TRUE.) ! remove directory part
+  IF (buf(i+1:i+3) == 'lt-') i = i + 3 ! remove automake prefix
+  WRITE(*,'(A,/)')'Usage: `'//TRIM(buf(i+1:))//' [options] [arguments]`'
 ENDIF
 
 ! print description message
