@@ -21,28 +21,27 @@ Summary:  libsim documentation
 Group: Applications/Meteo
 
 %description -n libsim-doc
-Librerie di utilità in Fortran 90, documentazione.
+Libsim is a collection of Fortran libraries and command-line tools.
+
+This package contains the doxygen documentation for libsim.
 
 %description
-Libsim comprende quattro gruppi di moduli di utilità in Fortran 90:
+Libsim is a collection of Fortran libraries and command-line tools.
 
-libsim_base definisce moduli e classi di uso generale in applicazioni
-scientifiche, come la gestione di errori in esecuzione, la gestione di
-dati georeferenziati, di coordinate temporali, ecc.
+The libraries include a general purpose ''base'' library with modules
+for handling character variables, csv files, command-line arguments,
+physical constants, date and time computations, georeferenced
+coordinates, growable arrays and list structures of any type and
+other.
 
-libsim_grib definisce una serie di classi ad alto livello stratificate
-sopra la libreria ECMWF emos per gestire l'I/O di file in formato
-grib.
+Another set of libraries is specific to Meteorology and Earth Science
+and allows to work with gridded and sparse georeferenced data, perform
+interpolations, statistical processing in time, data quality control,
+thermodynamic computations.
 
-libsim_vol7d definisce una serie di classi per facilitare
-l'elaborazione di dati osservativi idro-meteo, includendo metodi per
-la loro importazione da database tipo DbAll-e e dal database Oracle di
-ARPA-SIM.
-
-libsim_volgrid6d definisce una serie di classi per facilitare
-l'elaborazione di dati idro-meteo su grigliati georeferenziati,
-compresa la trasformazione in griglie di tipo diverso e in oggetti di
-tipo vol7d.
+The ready-to-use command-line tools allow to perform many kinds of
+space interpolations and time computations on georeferenced data in
+GRIB and BUFR format.
 
 %prep
 %setup -q

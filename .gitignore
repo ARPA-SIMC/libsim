@@ -11,6 +11,7 @@ depcomp
 install-sh
 ltmain.sh
 missing
+libtool
 Makefile.in
 Makefile
 .deps
@@ -21,3 +22,17 @@ Makefile
 *.mod
 *~
 bin/*.1
+bin/dba_qcfilter
+bin/dba_transform
+bin/v7d_add_wmo_info
+bin/v7d_plot_sound
+bin/v7d_pollini
+bin/v7d_qccli
+bin/v7d_qcspa
+bin/v7d_qctem
+bin/v7d_transform
+bin/vg6d_getpoint
+bin/vg6d_subarea
+bin/vg6d_transform
+doc/Doxyfile
+doc/latex/

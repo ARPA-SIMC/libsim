@@ -12,32 +12,32 @@ physical constants, date and time computations, georeferenced
 coordinates, growable arrays and list structures of any type and
 other.
 
-Another set of libraries are specific to meteorology and Earth
-sciences and allow to work with gridded and sparse georeferenced data,
-perform interpolations, statistical processing in time, data quality
-control, thermodynamic computations.
+Another set of libraries is specific to Meteorology and Earth Science
+and allows to work with gridded and sparse georeferenced data, perform
+interpolations, statistical processing in time, data quality control,
+thermodynamic computations.
 
 The ready-to-use command-line tools allow to perform many kinds of
 space interpolations and time computations on georeferenced data in
 GRIB and BUFR format.
 
-Libsim strongly relies
-on[DB-All.e](https://github.com/ARPA-SIMC/dballe)/[wreport](https://github.com/ARPA-SIMC/dballe)
+Libsim strongly relies on
+[DB-All.e](https://github.com/ARPA-SIMC/dballe)/[wreport](https://github.com/ARPA-SIMC/dballe)
 for handling sparse point data and on [ECMWF
 grib_api](https://software.ecmwf.int/wiki/display/GRIB/Home) for
 gridded data in GRIB format. It can also understand shapefiles and all
 the Gdal-supported raster formats.
 
-Libsim is written in moder object-oriented style Fortran 90; since its
-development started in 2006, only a few modules have been written with
-O-O F2003 syntax.
+Libsim is written in modern object-oriented-style Fortran 90; since
+its development started in 2006, only a few modules have been written
+with real O-O F2003 syntax.
 
 Build and dependencies
 ----------------------
 
 The package is meant to be built on Linux with the GNU Compiler
 Collection (gcc/gfortran, etc.).  With limitations, it can be built
-also on other POSIX-compatible operating systems and/or with other
+also on other POSIX-compliant operating systems and/or with other
 Fortran compilers.
 
 The build process is not trivial and requires the installation of many
