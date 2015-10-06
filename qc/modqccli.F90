@@ -673,7 +673,7 @@ if (qccli%height2level) then
       iclv(indana)=imiss
     endif
     
-    call l4f_category_log(qccli%category,L4F_DEBUG, 'height has value '//t2c(height))
+    call l4f_category_log(qccli%category,L4F_DEBUG, 'height has value '//t2c(height,"missing"))
     call l4f_category_log(qccli%category,L4F_DEBUG, 'for indana having number '//t2c(indana)//&
      ' iclv has value '//t2c(iclv(indana)))
 

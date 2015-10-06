@@ -411,7 +411,7 @@ DO WHILE (time <= tf)
 
 
   call init(v7dqcspa,v7ddballe%vol7d,var(:nvar),timei=timeiqc,timef=timefqc, coordmin=coordmin, coordmax=coordmax,&
-   data_id_in=v7ddballe%data_id, &
+   !data_id_in=v7ddballe%data_id, &
    dsne=dsne, usere=usere, passworde=passworde,&
    dsnspa=dsnspa, userspa=userspa, passwordspa=passwordspa,&
    height2level=height2level, operation=operation,&
@@ -420,8 +420,8 @@ DO WHILE (time <= tf)
 !  print *,">>>>>> Clima Spatial Volume <<<<<<"
 !  call display(v7dqcspa%clima)
 
-  print *,">>>>>> Pre Data Volume <<<<<<"
-  call display(v7dqcspa%v7d)
+  !print *,">>>>>> Pre Data Volume <<<<<<"
+  !call display(v7dqcspa%v7d)
 
   call alloc(v7dqcspa)
 
@@ -446,8 +446,8 @@ DO WHILE (time <= tf)
 
   if (v7dqcspa%operation == "run") then
     call l4f_category_log(category,L4F_INFO,"start export data")
-    print *,">>>>>> Post Data Volume <<<<<<"
-    call display(v7ddballe%vol7d)
+    !print *,">>>>>> Post Data Volume <<<<<<"
+    !call display(v7ddballe%vol7d)
 
     ! data_id to use is the new one
     v7ddballe%data_id => v7dqcspa%data_id_out
