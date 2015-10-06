@@ -214,14 +214,22 @@ if (c_e(ntime) .and. c_e(ntimerange) .and. c_e(nlevel) .and. c_e(nvar)) then
     case ("regular_ll")
 
       call l4f_category_log(this%category,L4F_INFO,"VDF: probably vapor do not support this projection ?: "//trim(proj_type))
-      mapprojection = "+proj=latlon +ellps=sphere"
+      !mapprojection = "+proj=latlon +ellps=sphere"
 
-      extents(1)=extents(1)*111177.d0
-      extents(2)=extents(2)*111177.d0
-      extents(3)=extents(3)*100000.d0
-      extents(4)=extents(4)*111177.d0
-      extents(5)=extents(5)*111177.d0
-      extents(6)=extents(6)*100000.d0
+      !extents(1)=extents(1)*111177.d0
+      !extents(2)=extents(2)*111177.d0
+      !extents(3)=extents(3)*100000.d0
+      !extents(4)=extents(4)*111177.d0
+      !extents(5)=extents(5)*111177.d0
+      !extents(6)=extents(6)*100000.d0
+
+      ! from DCReaderGRIB.cpp
+
+      !lon_0 = (extents(1) + extents(3)) / 2.0
+      !lat_0 = (extents(2) + extents(4)) / 2.0
+      mapprojection = "+proj=eqc +ellps=WGS84"//" +lon_0="//t2c((extents(1) + extents(3)) / 2.0)// &
+       " +lat_0="//t2c((extents(2) + extents(4)) / 2.0)
+
 
     case ("rotated_ll")
 
