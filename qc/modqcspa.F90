@@ -604,9 +604,13 @@ endif
 
 ! do not touch data that do not pass QC
 qcspa%v7d%voldatiattrb(:,:,:,:,:,:,indbattrout)=ibmiss
-
+ 
+print *,"prima normalize"
+print *,qcspa%v7d%voldatir
 ! normalize data in space and time
 call vol7d_normalize_data(qcspa%qccli)
+print *,"dopo normalize"
+print *,qcspa%v7d%voldatir
 
 ! triangulate
 call qcspatri(qcspa)
@@ -689,8 +693,10 @@ do indtime=1,size(qcspa%v7d%time)
               indcdativarr     = index(qcspa%clima%dativar%r, qcspa%v7d%dativar%r(inddativarr))
 
 
+#ifdef DEBUG
               call l4f_log(L4F_DEBUG,"Index:"// to_char(indctime)//to_char(indclevel)//&
                to_char(indctimerange)//to_char(indcdativarr)//to_char(indcnetwork))
+#endif
               if ( indctime <= 0 .or. indclevel <= 0 .or. indctimerange <= 0 .or. indcdativarr <= 0 &
                .or. indcnetwork <= 0 ) cycle
             end if
@@ -824,6 +830,11 @@ do indtime=1,size(qcspa%v7d%time)
                 call l4f_category_log(qcspa%category,L4F_ERROR,"distance from two station == 0.")
                 call raise_error()
               END IF
+
+#ifdef DEBUG
+              call l4f_log (L4F_DEBUG,"distanza: "//t2c(dist))
+#endif
+
               dist=max(dist,distmin)
                                 !	    modifica 23/9/1998
                                 !           se la distanza supera distscol, stazioni scorrelate - salta -
@@ -837,6 +848,10 @@ do indtime=1,size(qcspa%v7d%time)
               gradmin=min(gradmin,abs(grad))
 
             END DO
+
+#ifdef DEBUG
+            call l4f_log (L4F_DEBUG,"ivb: "//t2c(ivb))
+#endif
 
             IF(IVB < 3) cycle      ! do nothing if valid gradients < 3
 
@@ -868,6 +883,11 @@ do indtime=1,size(qcspa%v7d%time)
 
                 climaquii=qcspa%clima%voldatir(indcana  ,indctime,indclevel,indctimerange,indcdativarr,indcnetwork)
                 climaquif=qcspa%clima%voldatir(indcana+1,indctime,indclevel,indctimerange,indcdativarr,indcnetwork)
+
+#ifdef DEBUG
+                call l4f_log (L4F_DEBUG,"climaquii: "//t2c(climaquii))
+                call l4f_log (L4F_DEBUG,"climaquif: "//t2c(climaquif))
+#endif
 
                 if ( c_e(climaquii) .and. c_e(climaquif )) then
 
@@ -907,6 +927,13 @@ do indtime=1,size(qcspa%v7d%time)
 
                     qcspa%v7d%voldatiattrb(   indana, indtime, indlevel, indtimerange, inddativarr, indnetwork, indbattrout)=&
                      qcspa%clima%voldatiattrb(indcana,indctime,indclevel,indctimerange,indcdativarr,indcnetwork,1          )
+
+#ifdef DEBUG
+                      call l4f_log (L4F_DEBUG,"datoqui: "//t2c(datoqui))
+                      call l4f_log (L4F_DEBUG,"flag qcspa: "//t2c(&
+                       qcspa%clima%voldatiattrb(indcana,indctime,indclevel,indctimerange,indcdativarr,indcnetwork,1)&
+                       ))
+#endif
 
                     if ( associated ( qcspa%data_id_in)) then
 #ifdef DEBUG

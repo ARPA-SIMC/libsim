@@ -651,20 +651,20 @@ if (qccli%height2level) then
     if( indvar > 0 .and. indnetwork > 0 ) then
       select case (type)
       case("d")
-        height=int(realdat(qccli%v7d%volanad(indana,indvar,indnetwork),qccli%v7d%anavar%d(indvar)))
+        height=realdat(qccli%v7d%volanad(indana,indvar,indnetwork),qccli%v7d%anavar%d(indvar))
       case("r")
-        height=int(realdat(qccli%v7d%volanar(indana,indvar,indnetwork),qccli%v7d%anavar%r(indvar)))
+        height=realdat(qccli%v7d%volanar(indana,indvar,indnetwork),qccli%v7d%anavar%r(indvar))
       case ("i")
-        height=int(realdat(qccli%v7d%volanai(indana,indvar,indnetwork),qccli%v7d%anavar%i(indvar)))
+        height=realdat(qccli%v7d%volanai(indana,indvar,indnetwork),qccli%v7d%anavar%i(indvar))
       case("b")
-        height=int(realdat(qccli%v7d%volanab(indana,indvar,indnetwork),qccli%v7d%anavar%b(indvar)))
+        height=realdat(qccli%v7d%volanab(indana,indvar,indnetwork),qccli%v7d%anavar%b(indvar))
       case("c")
-        height=int(realdat(qccli%v7d%volanac(indana,indvar,indnetwork),qccli%v7d%anavar%c(indvar)))
+        height=realdat(qccli%v7d%volanac(indana,indvar,indnetwork),qccli%v7d%anavar%c(indvar))
       case default
-        height=imiss
+        height=rmiss
       end select
     else
-      height=imiss
+      height=rmiss
     end if
     
     if (c_e(height)) then
@@ -673,9 +673,9 @@ if (qccli%height2level) then
       iclv(indana)=imiss
     endif
     
-    call l4f_category_log(qccli%category,L4F_DEBUG, 'height has value '//t2c(height,"missing"))
+    call l4f_category_log(qccli%category,L4F_DEBUG, 'height has value '//t2c(height,"Missing"))
     call l4f_category_log(qccli%category,L4F_DEBUG, 'for indana having number '//t2c(indana)//&
-     ' iclv has value '//t2c(iclv(indana)))
+     ' iclv has value '//t2c(iclv(indana),"Missing"))
 
   end do
 
@@ -699,6 +699,8 @@ end if
 do indana=1,size(qccli%v7d%ana)
   iarea= qccli%in_macroa(indana)
 
+  if (.not. c_e(iarea)) cycle
+
   do indnetwork=1,size(qccli%v7d%network)
     do indlevel=1,size(qccli%v7d%level)
       do indtimerange=1,size(qccli%v7d%timerange)
@@ -719,6 +721,8 @@ do indana=1,size(qccli%v7d%ana)
 
             time=cyclicdatetime_to_conventional(cyclicdatetime_new(month=mese, hour=ora))
             !call init(time, year=1001, month=mese, day=1, hour=ora, minute=01)
+
+            call display(time)
 
             level=qccli%v7d%level(indlevel)
 
@@ -761,7 +765,9 @@ do indana=1,size(qccli%v7d%ana)
             else
               k=0
             end if
-            
+
+            if (.not. c_e(k)) cycle
+
             desc=25
             write(ident,'("#",i2.2,2i3.3)')k,iarea,desc   ! macro-area e descrittore
 
@@ -782,6 +788,7 @@ do indana=1,size(qccli%v7d%ana)
             
             desc=50
             write(ident,'("#",i2.2,2i3.3)')k,iarea,desc   ! macro-area e descrittore
+            call display(ana)
             call init(ana,lat=0.d0,lon=0.d0,ident=ident)
             indcana=index(qccli%extreme%ana,ana)
             call l4f_log(L4F_DEBUG,"normalize data Index50:"//to_char(k)//to_char(indcana)//&
@@ -892,7 +899,8 @@ logical :: anamaskl(size(qccli%v7d%ana)), timemaskl(size(qccli%v7d%time)), level
 integer :: indana , indtime ,indlevel ,indtimerange ,inddativarr, indnetwork
 integer :: indcana, indctime,indclevel,indctimerange,indcdativarr,indcnetwork
 real :: datoqui,climaquii,climaquif, extremequii,extremequif,perc25,perc50,perc75
-integer :: iarea,desc,height,indn,indvar,k
+integer :: iarea,desc,indn,indvar,k
+real :: height
 !integer, allocatable :: indcanav(:)
 
 
@@ -1047,20 +1055,20 @@ do indana=1,size(qccli%v7d%ana)
                   if( indvar > 0 .and. indn > 0 ) then
                     select case (type)
                     case("d")
-                      height=int(realdat(qccli%v7d%volanad(k,indvar,indn),qccli%v7d%anavar%d(indvar)))
+                      height=realdat(qccli%v7d%volanad(k,indvar,indn),qccli%v7d%anavar%d(indvar))
                     case("r")
-                      height=int(realdat(qccli%v7d%volanar(k,indvar,indn),qccli%v7d%anavar%r(indvar)))
+                      height=realdat(qccli%v7d%volanar(k,indvar,indn),qccli%v7d%anavar%r(indvar))
                     case ("i")
-                      height=int(realdat(qccli%v7d%volanai(k,indvar,indn),qccli%v7d%anavar%i(indvar)))
+                      height=realdat(qccli%v7d%volanai(k,indvar,indn),qccli%v7d%anavar%i(indvar))
                     case("b")
-                      height=int(realdat(qccli%v7d%volanab(k,indvar,indn),qccli%v7d%anavar%b(indvar)))
+                      height=realdat(qccli%v7d%volanab(k,indvar,indn),qccli%v7d%anavar%b(indvar))
                     case("c")
-                      height=int(realdat(qccli%v7d%volanac(k,indvar,indn),qccli%v7d%anavar%c(indvar)))
+                      height=realdat(qccli%v7d%volanac(k,indvar,indn),qccli%v7d%anavar%c(indvar))
                     case default
-                      height=imiss
+                      height=rmiss
                     end select
                   else
-                    height=imiss
+                    height=rmiss
                   end if
                   
                   if (c_e(height)) then
@@ -1070,7 +1078,7 @@ do indana=1,size(qccli%v7d%ana)
                   endif
                   
 #ifdef DEBUG
-                  CALL l4f_log(L4F_INFO, 'height has value '//t2c(height))
+                  CALL l4f_log(L4F_INFO, 'height has value '//t2c(height,"Missing"))
                   CALL l4f_log(L4F_INFO, 'for k having number '//t2c(k)//&
                    ' iclv has value '//t2c(iclv(k)))
 #endif
@@ -1521,20 +1529,20 @@ if (this%height2level) then
     if( indvar > 0 .and. indnetwork > 0 ) then
       select case (type)
       case("d")
-        height=int(realdat(this%v7d%volanad(k,indvar,indnetwork),this%v7d%anavar%d(indvar)))
+        height=realdat(this%v7d%volanad(k,indvar,indnetwork),this%v7d%anavar%d(indvar))
       case("r")
-        height=int(realdat(this%v7d%volanar(k,indvar,indnetwork),this%v7d%anavar%r(indvar)))
+        height=realdat(this%v7d%volanar(k,indvar,indnetwork),this%v7d%anavar%r(indvar))
       case ("i")
-        height=int(realdat(this%v7d%volanai(k,indvar,indnetwork),this%v7d%anavar%i(indvar)))
+        height=realdat(this%v7d%volanai(k,indvar,indnetwork),this%v7d%anavar%i(indvar))
       case("b")
-        height=int(realdat(this%v7d%volanab(k,indvar,indnetwork),this%v7d%anavar%b(indvar)))
+        height=realdat(this%v7d%volanab(k,indvar,indnetwork),this%v7d%anavar%b(indvar))
       case("c")
-        height=int(realdat(this%v7d%volanac(k,indvar,indnetwork),this%v7d%anavar%c(indvar)))
+        height=realdat(this%v7d%volanac(k,indvar,indnetwork),this%v7d%anavar%c(indvar))
       case default
-        height=imiss
+        height=rmiss
       end select
     else
-      height=imiss
+      height=rmiss
     end if
 
     if (c_e(height)) then
@@ -1790,20 +1798,20 @@ if (.NOT.(lnorm)) then
       if( indvar > 0 .and. indnetwork > 0 ) then
         select case (type)
         case("d")
-          height=int(realdat(this%v7d%volanad(k,indvar,indnetwork),this%v7d%anavar%d(indvar)))
+          height=realdat(this%v7d%volanad(k,indvar,indnetwork),this%v7d%anavar%d(indvar))
         case("r")
-          height=int(realdat(this%v7d%volanar(k,indvar,indnetwork),this%v7d%anavar%r(indvar)))
+          height=realdat(this%v7d%volanar(k,indvar,indnetwork),this%v7d%anavar%r(indvar))
         case ("i")
-          height=int(realdat(this%v7d%volanai(k,indvar,indnetwork),this%v7d%anavar%i(indvar)))
+          height=realdat(this%v7d%volanai(k,indvar,indnetwork),this%v7d%anavar%i(indvar))
         case("b")
-          height=int(realdat(this%v7d%volanab(k,indvar,indnetwork),this%v7d%anavar%b(indvar)))
+          height=realdat(this%v7d%volanab(k,indvar,indnetwork),this%v7d%anavar%b(indvar))
         case("c")
-          height=int(realdat(this%v7d%volanac(k,indvar,indnetwork),this%v7d%anavar%c(indvar)))
+          height=realdat(this%v7d%volanac(k,indvar,indnetwork),this%v7d%anavar%c(indvar))
         case default
-          height=imiss
+          height=rmiss
         end select
       else
-        height=imiss
+        height=rmiss
       end if
       
       if (c_e(height)) then
@@ -1813,7 +1821,7 @@ if (.NOT.(lnorm)) then
       endif
       
 #ifdef DEBUG
-      CALL l4f_log(L4F_DEBUG, 'height has value '//t2c(height))
+      CALL l4f_log(L4F_DEBUG, 'height has value '//t2c(height,"Missing"))
       CALL l4f_log(L4F_DEBUG, 'for k having number '//t2c(k)//&
        ' iclv has value '//t2c(iclv(k)))
 #endif
