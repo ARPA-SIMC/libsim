@@ -661,6 +661,9 @@ END FUNCTION td_pq
 
 !----------------------------------------------------------------- 
 
+!> Compute specific humidity \q in Kg/Kg from relative humidity,
+!! pressure \a pt and temperature \a t.
+!! \rh in 0-100, \a pt in hPa, \a t in K.
 elemental real function RELHUMTOQ(RH,PT,T)
  
 ! CALCOLA L'UMIDITA SPECIFICA A PARTIRE DALLA UMIDITA RELATIVA 
@@ -674,7 +677,7 @@ elemental real function RELHUMTOQ(RH,PT,T)
       return
     end if
 
-    RELHUMTOQ=rh*(eps0*ESAT(t))/(pt-c1*ESAT(t)) 
+    RELHUMTOQ=rh*0.01*(eps0*ESAT(t))/(pt-c1*ESAT(t)) 
     if (RELHUMTOQ  <  0.)RELHUMTOQ = 0. 
 
   else
