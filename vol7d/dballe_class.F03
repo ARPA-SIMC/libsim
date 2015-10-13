@@ -1032,13 +1032,14 @@ enddo
 end subroutine dbadcv_extrude
 
 !> put data on DSN
-subroutine dbadc_extrude(data,session,noattr,filter)
+subroutine dbadc_extrude(data,session,noattr,filter,attronly)
 class(dbadc), intent(in) :: data
 type(dbasession), intent(in) :: session !< dballe session
 logical, intent(in),optional :: noattr          !< set to .true. to get data only (no attribute) 
 type(dbafilter),intent(in),optional :: filter     !< use this to filter wanted data                
+logical, intent(in),optional :: attronly          !< set to .true. to export attr only (no data) 
 
-call data%extrude(session,noattr,filter)
+call data%extrude(session,noattr,filter,attronly)
 
 end subroutine dbadc_extrude
 
@@ -1240,11 +1241,12 @@ end subroutine dbasession_dissolveattr_metadata
 
 
 !> put data on DSN
-subroutine dbadataattr_extrude(data,session,noattr,filter)
+subroutine dbadataattr_extrude(data,session,noattr,filter,attronly)
 class(dbadataattr), intent(in) :: data
 type(dbasession), intent(in) :: session !< dballe session
-logical, intent(in),optional :: noattr          !< set to .true. to get data only (no attribute) 
+logical, intent(in),optional :: noattr          !< set to .true. to put data only (no attribute) 
 type(dbafilter),intent(in),optional :: filter     !< use this to filter wanted data                
+logical, intent(in),optional :: attronly          !< set to .true. to put attr only (no data) 
 integer :: i
 logical :: critica
 
@@ -1261,9 +1263,11 @@ endif
 !print *,"extrude dati:"
 !call data%dbadc%display()
 
-call data%dbadc%dbaset(session)
-call session%prendilo()
-!print *,"extrude prendilo"
+if (.not.optio_log(attronly)) then
+  call data%dbadc%dbaset(session)
+  call session%prendilo()
+  !print *,"extrude prendilo"
+end if
 
 if (optio_log(noattr)) return
 !write attributes in dsn
@@ -1318,16 +1322,18 @@ end subroutine dbadataattr_display
 
 
 !> put data on DSN
-subroutine dbadataattrv_extrude(dataattr,session,noattr,filter)
+subroutine dbadataattrv_extrude(dataattr,session,noattr,filter,attronly)
 class(dbadataattrv), intent(in) :: dataattr
 type(dbasession), intent(in) :: session !< dballe session
 logical, intent(in),optional :: noattr          !< set to .true. to get data only (no attribute) 
 type(dbafilter),intent(in),optional :: filter     !< use this to filter wanted data                
+logical, intent(in),optional :: attronly          !< set to .true. to export attr only (no data) 
+
 integer :: i
 
 if(.not. allocated(dataattr%dataattr)) return
 do i=1, size(dataattr%dataattr)
-  call dataattr%dataattr(i)%extrude(session,noattr,filter)
+  call dataattr%dataattr(i)%extrude(session,noattr,filter,attronly)
 enddo
 
 !to close message on file
@@ -2392,11 +2398,12 @@ call metaanddata%dataattrv%display()
 end subroutine dbametaanddata_display
 
 !> put data on DSN
-subroutine dbametaanddata_extrude(metaanddata,session,noattr,filter)
+subroutine dbametaanddata_extrude(metaanddata,session,noattr,filter,attronly)
 class(dbametaanddata), intent(in) :: metaanddata
 type(dbasession), intent(in) :: session !< dballe session
 logical, intent(in),optional :: noattr          !< set to .true. to get data only (no attribute) 
 type(dbafilter),intent(in),optional :: filter     !< use this to filter wanted data                
+logical, intent(in),optional :: attronly          !< set to .true. to export attr only (no data) 
 
 type(dbafilter)    :: myfilter
 
@@ -2405,19 +2412,20 @@ type(dbafilter)    :: myfilter
 !print *,"contextana false"
 
 myfilter=dbafilter(filter=filter,contextana=.false.)
-call extrude(metaanddata,session,noattr,myfilter)
+call extrude(metaanddata,session,noattr,myfilter,attronly)
 
 !print *,"contextana true"
 myfilter=dbafilter(filter=filter,contextana=.true.)
-call extrude(metaanddata,session,noattr,myfilter)
+call extrude(metaanddata,session,noattr,myfilter,attronly)
 
 contains
 
-subroutine extrude(metaanddata,session,noattr,filter)
+subroutine extrude(metaanddata,session,noattr,filter,attronly)
 class(dbametaanddata), intent(in) :: metaanddata
 type(dbasession), intent(in) :: session !< dballe session
 logical, intent(in),optional :: noattr          !< set to .true. to get data only (no attribute) 
 type(dbafilter),intent(in) :: filter     !< use this to filter wanted data                
+logical, intent(in),optional :: attronly          !< set to .true. to export attr only (no data) 
 
 if (.not. filter == metaanddata%metadata) return
 
@@ -2427,7 +2435,7 @@ call session%set(metadata=metaanddata%metadata)
 
 !write data and attribute
 !call session%extrude(metaanddata%dataattrv,noattr,filter)
-call metaanddata%dataattrv%extrude(session,noattr,filter)
+call metaanddata%dataattrv%extrude(session,noattr,filter,attronly)
 !to close message on file
 call session%close_message()
 
@@ -2483,18 +2491,19 @@ end subroutine dbametaanddatav_extrude
 
 
 !> put data on DSN; extrude metaanddata list
-subroutine dbametaanddatal_extrude(metaanddatal,session,noattr,filter)
+subroutine dbametaanddatal_extrude(metaanddatal,session,noattr,filter,attronly)
 class(dbametaanddatalist), intent(inout) :: metaanddatal !< ingestd data
 class(dbasession), intent(in) :: session
 logical, intent(in),optional :: noattr          !< set to .true. to put data only (no attribute) 
 type(dbafilter),intent(in),optional :: filter     !< use this to filter wanted data                
 type(dbametaanddata) :: metaanddata
+logical, intent(in),optional :: attronly          !< set to .true. to export attr only (no data) 
 
 call metaanddatal%rewind()
 do while(metaanddatal%element())
   !call session%extrude(metaanddatal%current(),noattr,filter)
   metaanddata=metaanddatal%current()
-  call metaanddata%extrude(session,noattr,filter)
+  call metaanddata%extrude(session,noattr,filter,attronly)
   call metaanddatal%next()
 end do
 

@@ -426,7 +426,8 @@ do iana=1, size(v7dana%ana)
   !remove data invalidated and gross error only
   !qcpar=qcpartype(0_int_b,0_int_b,0_int_b)
   qcpar%att=bmiss
-  call vol7d_peeling(v7ddballe%vol7d,v7ddballe%data_id,keep_attr=(/qcattrvarsbtables(3)/),purgeana=.true.)
+  !call vol7d_peeling(v7ddballe%vol7d,v7ddballe%data_id,keep_attr=(/qcattrvarsbtables(3)/),purgeana=.true.)
+  call vol7d_peeling(v7ddballe%vol7d,keep_attr=(/qcattrvarsbtables(3)/),purgeana=.true.)
   !call display(v7ddballe%vol7d)
 
   call l4f_category_log(category,L4F_INFO, "filtered N time="//t2c(size(v7ddballe%vol7d%time)))
@@ -437,7 +438,7 @@ do iana=1, size(v7dana%ana)
 
   call init(v7dqctem,v7ddballe%vol7d,var(:nvar),timei=ti,timef=tf, &
    coordmin=v7dana%ana(iana)%coord, coordmax=v7dana%ana(iana)%coord,&
-   data_id_in=v7ddballe%data_id, &
+!   data_id_in=v7ddballe%data_id, &
    dsne=dsne, usere=usere, passworde=passworde,&
    dsntem=dsntem, usertem=usertem, passwordtem=passwordtem,&
    height2level=height2level, operation=operation,&
@@ -454,8 +455,8 @@ do iana=1, size(v7dana%ana)
   call l4f_category_log(category,L4F_INFO,"end temporal QC")
 
   ! prepare data_id to be recreated
-  deallocate(v7ddballe%data_id)
-  nullify(v7ddballe%data_id)
+  !deallocate(v7ddballe%data_id)
+  !nullify(v7ddballe%data_id)
 
   if (v7dqctem%operation == "run") then
     call l4f_category_log(category,L4F_INFO,"start export data")
@@ -463,7 +464,7 @@ do iana=1, size(v7dana%ana)
     call display(v7ddballe%vol7d)
 
     ! data_id to use is the new one
-    v7ddballe%data_id => v7dqctem%data_id_out
+    !v7ddballe%data_id => v7dqctem%data_id_out
     !CALL export(v7ddballe,attr_only=.true.)
     CALL export(v7ddballe)
     call l4f_category_log(category,L4F_INFO,"end export data")
@@ -471,7 +472,7 @@ do iana=1, size(v7dana%ana)
 
   call delete(v7dqctem)
   ! data_id was allready deleted
-  nullify(v7ddballe%data_id)
+  !nullify(v7ddballe%data_id)
   call delete(v7ddballe)
 
 end do
