@@ -1,6 +1,9 @@
 AM_FCFLAGS = -I../base -I../volgrid6d -I../vol7d -I../qc -I../termolib -I../log4fortran  -I../graphics -I../alchimia
 #EXTRA_DIST = log4crc
 bin_PROGRAMS =
+dist_check_SCRIPTS = 
+check_PROGRAMS = 
+
 
 if NCARG
 bin_PROGRAMS += v7d_plot_sound
@@ -18,6 +21,8 @@ dba_qcfilter_LDADD =  ../vol7d/libsim_vol7d.la ../log4fortran/liblog4fortran.la 
 
 dba_transform_SOURCES = dba_transform.F03 
 dba_transform_LDADD =  ../vol7d/libsim_vol7d.la ../log4fortran/liblog4fortran.la ../qc/libsim_qc.la ../base/libsim_base.la
+
+dist_check_SCRIPTS += dba_qcfilter_test.sh
 
 endif
 
@@ -94,10 +99,11 @@ endif
 # improve
 if GRIBAPI
 if SHAPELIB
-dist_check_SCRIPTS = getpoint_transform_test.sh
-TESTS = $(dist_check_SCRIPTS)
+dist_check_SCRIPTS += getpoint_transform_test.sh
 endif
 endif
+
+TESTS = $(check_PROGRAMS) $(dist_check_SCRIPTS)
 
 if HELP2MAN
 man_MANS = v7d_transform.1 v7d_add_wmo_info.1 vg6d_getpoint.1 vg6d_transform.1
