@@ -605,12 +605,12 @@ endif
 ! do not touch data that do not pass QC
 qcspa%v7d%voldatiattrb(:,:,:,:,:,:,indbattrout)=ibmiss
  
-print *,"prima normalize"
-print *,qcspa%v7d%voldatir
+!print *,"prima normalize"
+!print *,qcspa%v7d%voldatir
 ! normalize data in space and time
 call vol7d_normalize_data(qcspa%qccli)
-print *,"dopo normalize"
-print *,qcspa%v7d%voldatir
+!print *,"dopo normalize"
+!print *,qcspa%v7d%voldatir
 
 ! triangulate
 call qcspatri(qcspa)

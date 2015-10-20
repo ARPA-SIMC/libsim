@@ -640,33 +640,36 @@ if (qccli%height2level) then
 
   call init(var, btable="B07030")    ! height
   
+  errore qui !
+
   type=cmiss
   indvar = index(qccli%v7d%anavar, var, type=type)
-!!$  print*,"indvar ",indvar
-  indnetwork=min(1,size(qccli%v7d%network))
-!!$  print*,"indnetwork ",indnetwork
   
   do indana=1,size(qccli%v7d%ana)
+    height=rmiss
+
+    ! here we take the height fron any network (the last network win)
+    do indnetwork=1,size(qccli%v7d%network)
     
-    if( indvar > 0 .and. indnetwork > 0 ) then
-      select case (type)
-      case("d")
-        height=realdat(qccli%v7d%volanad(indana,indvar,indnetwork),qccli%v7d%anavar%d(indvar))
-      case("r")
-        height=realdat(qccli%v7d%volanar(indana,indvar,indnetwork),qccli%v7d%anavar%r(indvar))
-      case ("i")
-        height=realdat(qccli%v7d%volanai(indana,indvar,indnetwork),qccli%v7d%anavar%i(indvar))
-      case("b")
-        height=realdat(qccli%v7d%volanab(indana,indvar,indnetwork),qccli%v7d%anavar%b(indvar))
-      case("c")
-        height=realdat(qccli%v7d%volanac(indana,indvar,indnetwork),qccli%v7d%anavar%c(indvar))
-      case default
-        height=rmiss
-      end select
-    else
-      height=rmiss
-    end if
+      if( indvar > 0 ) then
+
+        print *,"indvar indnetwork type ",indvar,indnetwork,type
+        select case (type)
+        case("d")
+          height=realdat(qccli%v7d%volanad(indana,indvar,indnetwork),qccli%v7d%anavar%d(indvar))
+        case("r")
+          height=realdat(qccli%v7d%volanar(indana,indvar,indnetwork),qccli%v7d%anavar%r(indvar))
+        case ("i")
+          height=realdat(qccli%v7d%volanai(indana,indvar,indnetwork),qccli%v7d%anavar%i(indvar))
+        case("b")
+          height=realdat(qccli%v7d%volanab(indana,indvar,indnetwork),qccli%v7d%anavar%b(indvar))
+        case("c")
+          height=realdat(qccli%v7d%volanac(indana,indvar,indnetwork),qccli%v7d%anavar%c(indvar))
+        end select
+      end if
     
+    end do
+
     if (c_e(height)) then
       iclv(indana)=firsttrue(cli_level1 <= height .and. height <= cli_level2 )
     else
