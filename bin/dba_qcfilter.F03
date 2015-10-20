@@ -170,6 +170,7 @@ do while (sessionfrom%messages_read_next())
 !!$  end do
 !!$  call sessionto%close_message()
 
+  call sessionfrom%unsetall()
   call sessionfrom%messages_write_next()
   call sessionfrom%remove_all()
 end do

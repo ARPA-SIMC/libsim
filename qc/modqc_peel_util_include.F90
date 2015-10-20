@@ -43,6 +43,10 @@ end function invalidated/**/VOL7D_POLY_TYPES
 
 !> Check data validity based on multiple confidences.
 !! Compute final decision boolean flag
+!! a controllo di qualità completo dovrebbe essere falso se solo una di queste condizioni si verifica:
+!! a) invalidato
+!! b) gross error check fallito
+!! c) flag1 AND flag2 AND flag3 sotto soglia
 ELEMENTAL LOGICAL FUNCTION qcsummaryflag/**/VOL7D_POLY_TYPES(flag0, flag1, flag2, flag3)
 /**/VOL7D_POLY_TYPE ,intent(in),optional :: flag0
 /**/VOL7D_POLY_TYPE ,intent(in),optional :: flag1

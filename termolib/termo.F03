@@ -168,10 +168,6 @@ subroutine  r_p_t2q(mybin,mybout,bin,bout,in,out)
   elsewhere
     out(:,index_c(mybout,bout(1)))=rmiss
   endwhere
-
-  where (c_e(out(:,index_c(mybout,bout(1)))))
-    out(:,index_c(mybout,bout(1)))=out(:,index_c(mybout,bout(1)))/1000.
-  end where
           
 end subroutine r_p_t2q
 

@@ -22,6 +22,7 @@ Makefile
 *.mod
 *~
 bin/*.1
+bin/*.md
 bin/dba_qcfilter
 bin/dba_transform
 bin/v7d_add_wmo_info
