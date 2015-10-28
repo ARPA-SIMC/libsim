@@ -640,20 +640,18 @@ if (qccli%height2level) then
 
   call init(var, btable="B07030")    ! height
   
-  errore qui !
 
   type=cmiss
   indvar = index(qccli%v7d%anavar, var, type=type)
-  
+
   do indana=1,size(qccli%v7d%ana)
     height=rmiss
 
-    ! here we take the height fron any network (the last network win)
+    ! here we take the height fron any network (the first network win)
     do indnetwork=1,size(qccli%v7d%network)
-    
+
       if( indvar > 0 ) then
 
-        print *,"indvar indnetwork type ",indvar,indnetwork,type
         select case (type)
         case("d")
           height=realdat(qccli%v7d%volanad(indana,indvar,indnetwork),qccli%v7d%anavar%d(indvar))
@@ -668,6 +666,7 @@ if (qccli%height2level) then
         end select
       end if
     
+      if (c_e(height)) exit
     end do
 
     if (c_e(height)) then
@@ -675,13 +674,12 @@ if (qccli%height2level) then
     else
       iclv(indana)=imiss
     endif
-    
+  
     call l4f_category_log(qccli%category,L4F_DEBUG, 'height has value '//t2c(height,"Missing"))
     call l4f_category_log(qccli%category,L4F_DEBUG, 'for indana having number '//t2c(indana)//&
      ' iclv has value '//t2c(iclv(indana),"Missing"))
-
   end do
-
+    
 endif
 
 
@@ -724,8 +722,6 @@ do indana=1,size(qccli%v7d%ana)
 
             time=cyclicdatetime_to_conventional(cyclicdatetime_new(month=mese, hour=ora))
             !call init(time, year=1001, month=mese, day=1, hour=ora, minute=01)
-
-            call display(time)
 
             level=qccli%v7d%level(indlevel)
 
@@ -791,7 +787,6 @@ do indana=1,size(qccli%v7d%ana)
             
             desc=50
             write(ident,'("#",i2.2,2i3.3)')k,iarea,desc   ! macro-area e descrittore
-            call display(ana)
             call init(ana,lat=0.d0,lon=0.d0,ident=ident)
             indcana=index(qccli%extreme%ana,ana)
             call l4f_log(L4F_DEBUG,"normalize data Index50:"//to_char(k)//to_char(indcana)//&

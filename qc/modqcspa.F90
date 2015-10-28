@@ -522,6 +522,11 @@ double precision :: dist,grad,gradmin
 
                                 !call qcspa_validate (qcspa)
 
+if (size(qcspa%v7d%ana) < 3 ) then
+  call l4f_category_log(qcspa%category,L4F_WARN,"number of station < 3; do nothing")
+  return
+end if
+
 !localize optional parameter
 if (present(battrinv))then
   indbattrinv = index_c(qcspa%v7d%datiattr%b(:)%btable, battrinv)
@@ -841,7 +846,7 @@ do indtime=1,size(qcspa%v7d%time)
               if (dist > distscol) cycle
               IVB=IVB+1
                                 !	valore del gradiente nella direzione delle due stazioni
-              GRAD=(datoqui-datola)/DIST
+              GRAD=(datoqui-datola)/(DIST*10.)
               IF (GRAD >= 0.d0) Ipos=Ipos+1           ! se il gradiente e` positivo incrementa il contatore di positivi
               IF (GRAD <= 0.d0) Ineg=Ineg+1           ! se il gradiente e` negativo incrementa il contatore di negativi
 
@@ -929,8 +934,8 @@ do indtime=1,size(qcspa%v7d%time)
                      qcspa%clima%voldatiattrb(indcana,indctime,indclevel,indctimerange,indcdativarr,indcnetwork,1          )
 
 #ifdef DEBUG
-                      call l4f_log (L4F_DEBUG,"datoqui: "//t2c(datoqui))
-                      call l4f_log (L4F_DEBUG,"flag qcspa: "//t2c(&
+                      call l4f_log (L4F_INFO,"datoqui: "//t2c(datoqui))
+                      call l4f_log (L4F_INFO,"flag qcspa: "//t2c(&
                        qcspa%clima%voldatiattrb(indcana,indctime,indclevel,indctimerange,indcdativarr,indcnetwork,1)&
                        ))
 #endif

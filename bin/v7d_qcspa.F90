@@ -82,6 +82,7 @@ integer :: indcana,indctime,indclevel,indctimerange,indcdativarr,indcnetwork,ind
 INTEGER,POINTER :: w_s(:), w_e(:)
 TYPE(vol7d_dballe) :: v7d_dba_out
 logical :: file
+integer :: status
     
 #ifdef HAVE_DBALLE
 namelist /odbc/   dsn,user,password,dsne,usere,passworde
@@ -188,9 +189,14 @@ if (operation == "ndi") then
   do ninput = optind, iargc()-1
     call getarg(ninput, input_file)
 
-    CALL l4f_category_log(category,L4F_INFO,"open file:"//t2c(input_file))
+    CALL l4f_category_log(category,L4F_INFO,"open file: "//t2c(input_file))
     open (10,file=input_file,status="old")
-    read (10,*) level,timerange,varia
+    read (10,*,iostat=status) level,timerange,varia
+    if (status /= 0) then
+      CALL l4f_category_log(category,L4F_WARN,"error reading: "//t2c(input_file))
+      close(10)
+      cycle
+    endif
 
     if (c_e(levelo)) then
       if ( level /= levelo .or. timerange /= timerangeo .or. varia /= variao ) then
@@ -257,8 +263,8 @@ if (operation == "ndi") then
     end if
   end do
 
-!  print *,">>>>>> Clima Spatial Volume <<<<<<"
-!  call display (v7dqcspa%clima)
+  print *,">>>>>> NDI Volume <<<<<<"
+  call display (v7dqcspa%clima)
 
   IF (output_format == 'native') THEN
     IF (output_file == '-') THEN ! stdout_unit does not work with unformatted
