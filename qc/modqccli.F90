@@ -637,10 +637,8 @@ end if
 
 
 if (qccli%height2level) then
-
   call init(var, btable="B07030")    ! height
   
-
   type=cmiss
   indvar = index(qccli%v7d%anavar, var, type=type)
 
@@ -651,7 +649,6 @@ if (qccli%height2level) then
     do indnetwork=1,size(qccli%v7d%network)
 
       if( indvar > 0 ) then
-
         select case (type)
         case("d")
           height=realdat(qccli%v7d%volanad(indana,indvar,indnetwork),qccli%v7d%anavar%d(indvar))
@@ -675,9 +672,11 @@ if (qccli%height2level) then
       iclv(indana)=imiss
     endif
   
-    call l4f_category_log(qccli%category,L4F_DEBUG, 'height has value '//t2c(height,"Missing"))
+#ifdef DEBUG
+    call l4f_category_log(qccli%category,L4F_DEBUG, 'vol7d_normalize_data height has value '//t2c(height,"Missing"))
     call l4f_category_log(qccli%category,L4F_DEBUG, 'for indana having number '//t2c(indana)//&
      ' iclv has value '//t2c(iclv(indana),"Missing"))
+#endif
   end do
     
 endif
@@ -975,6 +974,9 @@ else
 endif
 
 qccli%v7d%voldatiattrb(:,:,:,:,:,:,indbattrout)=ibmiss
+call init(anavar,"B07030" )
+type=cmiss
+indvar = index(qccli%v7d%anavar, anavar, type=type)
 
 do indana=1,size(qccli%v7d%ana)
 
@@ -997,7 +999,50 @@ do indana=1,size(qccli%v7d%ana)
   
   latc=0.d0
   lonc=0.d0
+
+
+                                ! use conventional level starting from station height
+  if (qccli%height2level) then
+        
+    height=rmiss
+      
+                                ! here we take the height fron any network (the first network win)
+    do indn=1,size(qccli%v7d%network)
+      
+      if( indvar > 0 .and. indn > 0 ) then
+        select case (type)
+        case("d")
+          height=realdat(qccli%v7d%volanad(indana,indvar,indn),qccli%v7d%anavar%d(indvar))
+        case("r")
+          height=realdat(qccli%v7d%volanar(indana,indvar,indn),qccli%v7d%anavar%r(indvar))
+        case ("i")
+          height=realdat(qccli%v7d%volanai(indana,indvar,indn),qccli%v7d%anavar%i(indvar))
+        case("b")
+          height=realdat(qccli%v7d%volanab(indana,indvar,indn),qccli%v7d%anavar%b(indvar))
+        case("c")
+          height=realdat(qccli%v7d%volanac(indana,indvar,indn),qccli%v7d%anavar%c(indvar))
+        case default
+          height=rmiss
+        end select
+      end if
+                  
+      if (c_e(height)) exit
+    end do
+      
+    if (c_e(height)) then
+      iclv(indana)=firsttrue(cli_level1 <= height .and. height <= cli_level2 )
+    else
+      iclv(indana)=imiss
+    endif
+    
+#ifdef DEBUG
+    CALL l4f_log(L4F_DEBUG, 'quaconcli height has value '//t2c(height,"Missing"))
+    CALL l4f_log(L4F_DEBUG, 'for k having number '//t2c(k)//&
+     ' iclv has value '//t2c(iclv(indana)))
+#endif
   
+  end if
+
   do indnetwork=1,size(qccli%v7d%network)
     do indlevel=1,size(qccli%v7d%level)
       do indtimerange=1,size(qccli%v7d%timerange)
@@ -1039,50 +1084,6 @@ do indana=1,size(qccli%v7d%ana)
               !call init(time, year=1001, month=mese, day=1, hour=ora, minute=00)
 
 !!$              print *,"data convenzionale per percentili: ",t2c(time)
-
-              ! use conventional level starting from station height
-              if (qccli%height2level) then
-                call init(anavar,"B07030" )
-
-                type=cmiss
-                indvar = index(qccli%v7d%anavar, anavar, type=type)
-                indn=min(1,size(qccli%v7d%network))
-
-                do k=1,size(qccli%v7d%ana)
-    
-                  if( indvar > 0 .and. indn > 0 ) then
-                    select case (type)
-                    case("d")
-                      height=realdat(qccli%v7d%volanad(k,indvar,indn),qccli%v7d%anavar%d(indvar))
-                    case("r")
-                      height=realdat(qccli%v7d%volanar(k,indvar,indn),qccli%v7d%anavar%r(indvar))
-                    case ("i")
-                      height=realdat(qccli%v7d%volanai(k,indvar,indn),qccli%v7d%anavar%i(indvar))
-                    case("b")
-                      height=realdat(qccli%v7d%volanab(k,indvar,indn),qccli%v7d%anavar%b(indvar))
-                    case("c")
-                      height=realdat(qccli%v7d%volanac(k,indvar,indn),qccli%v7d%anavar%c(indvar))
-                    case default
-                      height=rmiss
-                    end select
-                  else
-                    height=rmiss
-                  end if
-                  
-                  if (c_e(height)) then
-                    iclv(k)=firsttrue(cli_level1 <= height .and. height <= cli_level2 )
-                  else
-                    iclv(k)=imiss
-                  endif
-                  
-#ifdef DEBUG
-                  CALL l4f_log(L4F_DEBUG, 'height has value '//t2c(height,"Missing"))
-                  CALL l4f_log(L4F_DEBUG, 'for k having number '//t2c(k)//&
-                   ' iclv has value '//t2c(iclv(k)))
-#endif
-                end do
-
-              end if
 
               level=qccli%v7d%level(indlevel)
 
@@ -1489,8 +1490,6 @@ if (this%height2level) then
   
   type=cmiss
   indvar = index(this%v7d%anavar, var, type=type)
-  indnetwork=min(1,size(this%v7d%network))
-
   
 !!$#ifdef DEBUG
 !!$  CALL l4f_log(L4F_DEBUG, 'SIZE this anavar r '//t2c(SIZE(this%v7d%anavar%r)))
@@ -1523,25 +1522,30 @@ if (this%height2level) then
 !!$#endif
 
   do k=1,size(this%v7d%ana)
-    
-    if( indvar > 0 .and. indnetwork > 0 ) then
-      select case (type)
-      case("d")
-        height=realdat(this%v7d%volanad(k,indvar,indnetwork),this%v7d%anavar%d(indvar))
-      case("r")
-        height=realdat(this%v7d%volanar(k,indvar,indnetwork),this%v7d%anavar%r(indvar))
-      case ("i")
-        height=realdat(this%v7d%volanai(k,indvar,indnetwork),this%v7d%anavar%i(indvar))
-      case("b")
-        height=realdat(this%v7d%volanab(k,indvar,indnetwork),this%v7d%anavar%b(indvar))
-      case("c")
-        height=realdat(this%v7d%volanac(k,indvar,indnetwork),this%v7d%anavar%c(indvar))
-      case default
-        height=rmiss
-      end select
-    else
-      height=rmiss
-    end if
+    height=rmiss
+
+    ! here we take the height fron any network (the first network win)
+    do indnetwork=1,size(this%v7d%network)
+
+      if( indvar > 0 .and. indnetwork > 0 ) then
+        select case (type)
+        case("d")
+          height=realdat(this%v7d%volanad(k,indvar,indnetwork),this%v7d%anavar%d(indvar))
+        case("r")
+          height=realdat(this%v7d%volanar(k,indvar,indnetwork),this%v7d%anavar%r(indvar))
+        case ("i")
+          height=realdat(this%v7d%volanai(k,indvar,indnetwork),this%v7d%anavar%i(indvar))
+        case("b")
+          height=realdat(this%v7d%volanab(k,indvar,indnetwork),this%v7d%anavar%b(indvar))
+        case("c")
+          height=realdat(this%v7d%volanac(k,indvar,indnetwork),this%v7d%anavar%c(indvar))
+        case default
+          height=rmiss
+        end select
+      end if
+
+      if (c_e(height)) exit
+    end do
 
     if (c_e(height)) then
       iclv(k)=firsttrue(cli_level1 <= height .and. height <= cli_level2 )
@@ -1550,7 +1554,7 @@ if (this%height2level) then
     endif
 
 #ifdef DEBUG
-    CALL l4f_log(L4F_DEBUG, 'height has value '//t2c(height))
+    CALL l4f_log(L4F_DEBUG, 'qc_compute_percentile height has value '//t2c(height))
     CALL l4f_log(L4F_DEBUG, 'for k having number '//t2c(k)//&
        ' iclv has value '//t2c(iclv(k)))
 #endif
@@ -1789,28 +1793,32 @@ if (.NOT.(lnorm)) then
     
     type=cmiss
     indvar = index(this%v7d%anavar, var, type=type)
-    indnetwork=min(1,size(this%v7d%network))
 
     do k=1,size(this%v7d%ana)
+      height=rmiss
+
+      ! here we take the height fron any network (the first network win)
+      do indnetwork=1,size(this%v7d%network)
     
-      if( indvar > 0 .and. indnetwork > 0 ) then
-        select case (type)
-        case("d")
-          height=realdat(this%v7d%volanad(k,indvar,indnetwork),this%v7d%anavar%d(indvar))
-        case("r")
-          height=realdat(this%v7d%volanar(k,indvar,indnetwork),this%v7d%anavar%r(indvar))
-        case ("i")
-          height=realdat(this%v7d%volanai(k,indvar,indnetwork),this%v7d%anavar%i(indvar))
-        case("b")
-          height=realdat(this%v7d%volanab(k,indvar,indnetwork),this%v7d%anavar%b(indvar))
-        case("c")
-          height=realdat(this%v7d%volanac(k,indvar,indnetwork),this%v7d%anavar%c(indvar))
-        case default
-          height=rmiss
-        end select
-      else
-        height=rmiss
-      end if
+        if( indvar > 0 .and. indnetwork > 0 ) then
+          select case (type)
+          case("d")
+            height=realdat(this%v7d%volanad(k,indvar,indnetwork),this%v7d%anavar%d(indvar))
+          case("r")
+            height=realdat(this%v7d%volanar(k,indvar,indnetwork),this%v7d%anavar%r(indvar))
+          case ("i")
+            height=realdat(this%v7d%volanai(k,indvar,indnetwork),this%v7d%anavar%i(indvar))
+          case("b")
+            height=realdat(this%v7d%volanab(k,indvar,indnetwork),this%v7d%anavar%b(indvar))
+          case("c")
+            height=realdat(this%v7d%volanac(k,indvar,indnetwork),this%v7d%anavar%c(indvar))
+          case default
+            height=rmiss
+          end select
+        end if
+
+        if (c_e(height)) exit
+      end do
       
       if (c_e(height)) then
         iclv(k)=firsttrue(cli_level1 <= height .and. height <= cli_level2 )
@@ -1819,7 +1827,7 @@ if (.NOT.(lnorm)) then
       endif
       
 #ifdef DEBUG
-      CALL l4f_log(L4F_DEBUG, 'height has value '//t2c(height,"Missing"))
+      CALL l4f_log(L4F_DEBUG, 'qc_compute_NormalizedDensityIndex height has value '//t2c(height,"Missing"))
       CALL l4f_log(L4F_DEBUG, 'for k having number '//t2c(k)//&
        ' iclv has value '//t2c(iclv(k)))
 #endif
