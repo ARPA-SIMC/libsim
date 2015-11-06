@@ -900,7 +900,7 @@ ELSE IF (EditionNumber == 2) THEN
       CALL timerange_v7d_to_g2(this%p1-this%p2,p1,unit)
       CALL grib_set(gaid,'indicatorOfUnitOfTimeRange',unit)
       CALL grib_set(gaid,'forecastTime',p1)
-      CALL code_endoftimeinterval(reftime+timedelta_new(msec=this%p2*1000))
+      CALL code_endoftimeinterval(reftime+timedelta_new(msec=this%p1*1000))
 ! Successive times processed have same start time of forecast,
 ! forecast time is incremented
       CALL grib_set(gaid,'typeOfStatisticalProcessing',this%timerange)
