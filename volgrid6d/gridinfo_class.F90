@@ -1413,7 +1413,7 @@ END SUBROUTINE level_g2_to_g1
 ! Tri 2 (point in time) gives (hopefully temporarily) statproc 205.
 !
 ! Tri 13 (COSMO-nudging) gives p1 (forecast time) 0 and a temporary
-! 206 statproc.
+! 257 statproc.
 !
 ! Further processing and correction of the values returned is
 ! performed in normalize_gridinfo.
@@ -1446,7 +1446,7 @@ ELSE IF (tri == 5) THEN ! difference
   CALL g1_interval_to_second(unit, p2_g1, p1)
   CALL g1_interval_to_second(unit, p2_g1-p1_g1, p2)
 ELSE IF (tri == 13) THEN ! COSMO-nudging, use a temporary value then normalize
-  statproc = 206 ! check if 206 is legal!
+  statproc = 257 ! check if 257 is legal!
   p1 = 0 ! analysis regardless of p2_g1
   CALL g1_interval_to_second(unit, p2_g1-p1_g1, p2)
 ELSE
@@ -1519,7 +1519,7 @@ END SUBROUTINE g2_interval_to_second
 ! Statproc 205 (point in time, non standard, not good in grib2) is
 ! correctly converted to tri 2.
 !
-! Statproc 206 (COSMO nudging-like, non standard, not good in grib2)
+! Statproc 257 (COSMO nudging-like, non standard, not good in grib2)
 ! should not appear here, but is anyway converted to tri 13 (real
 ! COSMO-nudging).
 !
@@ -1543,8 +1543,8 @@ ELSE IF (statproc == 4) THEN ! difference
   tri = 5
 ELSE IF (statproc == 205) THEN ! point in time interval, not good for grib2 standard
   tri = 2
-ELSE IF (statproc == 206) THEN ! COSMO-nudging (statistical processing in the past)
-! this should never happen (at least from COSMO grib1), since 206 is
+ELSE IF (statproc == 257) THEN ! COSMO-nudging (statistical processing in the past)
+! this should never happen (at least from COSMO grib1), since 257 is
 ! converted to something else in normalize_gridinfo; now a negative
 ! p1_g1 is set, it will be corrected in the next section
   tri = 13
@@ -1670,7 +1670,7 @@ END SUBROUTINE timerange_choose_unit_g1
 ! corrected as well, otherwise 205 is kept (with possible error
 ! conditions later).
 !
-! Timerange 206 (COSMO nudging) is converted to point in time if
+! Timerange 257 (COSMO nudging) is converted to point in time if
 ! interval length is 0, or to a proper timerange if parameter is
 ! recognized as a COSMO statistically processed parameter (and in case
 ! of maximum or minimum the parameter is corrected as well); if
@@ -1723,7 +1723,7 @@ ELSE IF (this%timerange%timerange == 205) THEN ! point in time interval
     ENDIF
   ENDIF
 
-ELSE IF (this%timerange%timerange == 206) THEN ! COSMO-nudging
+ELSE IF (this%timerange%timerange == 257) THEN ! COSMO-nudging
 
   IF (this%timerange%p2 == 0) THEN ! point in time
 
