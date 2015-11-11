@@ -107,7 +107,7 @@ character (len=255),parameter:: subcategoryspa="QCspa"
 integer, parameter :: spa_nvar=1
 CHARACTER(len=10) :: spa_btable(spa_nvar)=(/"B12101"/) !< variable wmo code table for normalization.
 !> standard coefficients for orizontal gradient normalization
-real, parameter :: spa_a(spa_nvar) = (/1.e6/)
+real, parameter :: spa_a(spa_nvar) = (/1.e5/)
 !> standard coefficients for orizontal gradient normalization
 real, parameter :: spa_b(spa_nvar) = (/273.15/)
 
@@ -517,7 +517,7 @@ type(timedelta) :: deltato,deltat
 integer :: ivert(50),i,ipos,ineg,it,itrov,iv,ivb,kk,iindtime
 double precision :: distmin=1000.d0,distscol=300000.d0
 double precision :: dist,grad,gradmin
-!!$integer (kind=int_b) :: flag
+integer (kind=int_b) :: flag
 !!$CHARACTER(len=vol7d_ana_lenident) :: ident
 
                                 !call qcspa_validate (qcspa)
@@ -846,7 +846,7 @@ do indtime=1,size(qcspa%v7d%time)
               if (dist > distscol) cycle
               IVB=IVB+1
                                 !	valore del gradiente nella direzione delle due stazioni
-              GRAD=(datoqui-datola)/(DIST*10.)
+              GRAD=(datoqui-datola)/(DIST)
               IF (GRAD >= 0.d0) Ipos=Ipos+1           ! se il gradiente e` positivo incrementa il contatore di positivi
               IF (GRAD <= 0.d0) Ineg=Ineg+1           ! se il gradiente e` negativo incrementa il contatore di negativi
 
@@ -860,16 +860,7 @@ do indtime=1,size(qcspa%v7d%time)
 
             IF(IVB < 3) cycle      ! do nothing if valid gradients < 3
 
-
-!!$            FLAG=100_int_b
-
             IF (ipos == ivb .or. ineg == ivb)THEN  ! se tutti i gradienti sono dello stesso segno
-
-!!$              if (gradmin> 5.E-5) then
-!!$                FLAG=30_int_b
-!!$              else if (gradmin> 2.5E-5) then
-!!$                FLAG=50_int_b
-!!$              end if
 
               gradmin=sign(gradmin,dble(ipos-ineg))
 
@@ -877,80 +868,51 @@ do indtime=1,size(qcspa%v7d%time)
                 write(11,*)gradmin
               end if
 
-
-            END IF
-
+              flag=bmiss
 
                                 !ATTENZIONE TODO : inddativarr È UNA GRANDE SEMPLIFICAZIONE NON VERA SE TIPI DI DATO DIVERSI !!!!
-            if (qcspa%operation == "run") then
+              if (qcspa%operation == "run") then
 
-              do indcana=1,size(qcspa%clima%ana)-1
-
-                climaquii=qcspa%clima%voldatir(indcana  ,indctime,indclevel,indctimerange,indcdativarr,indcnetwork)
-                climaquif=qcspa%clima%voldatir(indcana+1,indctime,indclevel,indctimerange,indcdativarr,indcnetwork)
-
-#ifdef DEBUG
-                call l4f_log (L4F_DEBUG,"climaquii: "//t2c(climaquii))
-                call l4f_log (L4F_DEBUG,"climaquif: "//t2c(climaquif))
-#endif
-
-                if ( c_e(climaquii) .and. c_e(climaquif )) then
-
-                !write(ident,'("#",i2.2,2i3.3)')k,iarea,desc   ! macro-area e descrittore
-                !write(ident,'("#",i2.2,2i3.3)')0,0,   ! macro-area e descrittore
-
-                !write(ident,'("#",i2.2,2i3.3)')0,0,(desc-1)*10   ! macro-area e descrittore
-                !call init(ana,ident=ident,lat=0d0,lon=0d0)
-                !indcana=index(qccli%clima%ana,ana)
-
-
-!!$            call l4f_log (L4F_INFO,"ident: "//qcspa%clima%ana(indcana)%ident//ident)
-
-!!$                print *, "son qua",trim(qcspa%clima%ana(indcana)%ident),trim(ident)
-!!$                where (match(qcspa%clima%ana(:)%ident,ident).and. &
-!!$                 c_e(qcspa%clima%voldatir(indcana,indctime,indclevel,indctimerange,indcdativarr,indcnetwork)))
-!!$                  call l4f_log (L4F_INFO,"macroarea,iarea,mese,altezza,level "//&
-!!$                   trim(to_char(qcspa%in_macroa(indana)))//" "//trim(to_char(iarea))&
-!!$                   //" "//trim(to_char(mese))//" "//trim(to_char(altezza))//" "//trim(to_char(level)))
-
-
-                  if ( (datoqui >= climaquii .and. datoqui < climaquif) .or. &
-                   (indcana == 1 .and. datoqui < climaquif) .or. &
-                   (indcana == size(qcspa%clima%ana)-1 .and. datoqui >= climaquii) ) then
+                do indcana=1,size(qcspa%clima%ana)-1
+                  climaquii=qcspa%clima%voldatir(indcana  ,indctime,indclevel,indctimerange,indcdativarr,indcnetwork)
+                  climaquif=qcspa%clima%voldatir(indcana+1,indctime,indclevel,indctimerange,indcdativarr,indcnetwork)
 
 #ifdef DEBUG
-!!$                      if(qcspa%clima%voldatiattrb(indcana,indctime,indclevel,indctimerange,indcdativarr,indcnetwork,1) < 10 )then
-!!$                        call l4f_log (L4F_DEBUG,"data ndi:                   "//t2c(datoqui)//"->"//&
-!!$                         t2c(qcspa%clima%voldatiattrb(indcana,indctime,indclevel,indctimerange,indcdativarr,indcnetwork,1))&
-!!$                         //" : "//t2c(qcspa%v7d%time(indtime)))
-!!$                        call l4f_log (L4F_DEBUG,"limits: "//t2c(indcana)//":"//t2c(qcspa%clima%ana(indcana)% ident)//&
-!!$                         " : "//t2c(climaquii)//" - "//t2c(climaquif)//" : "//t2c(qcspa%clima%time(indctime))) 
-!!$                      end if
+                  call l4f_log (L4F_DEBUG,"climaquii: "//t2c(climaquii))
+                  call l4f_log (L4F_DEBUG,"climaquif: "//t2c(climaquif))
 #endif
 
-                                !qcspa%v7d%voldatiattrb(indana,indtime,indlevel,indtimerange,inddativarr,indnetwork,indbattrout)=flag
-
-                    qcspa%v7d%voldatiattrb(   indana, indtime, indlevel, indtimerange, inddativarr, indnetwork, indbattrout)=&
-                     qcspa%clima%voldatiattrb(indcana,indctime,indclevel,indctimerange,indcdativarr,indcnetwork,1          )
-
+                  if ( c_e(climaquii) .and. c_e(climaquif )) then
+                    
+                    if ( (gradmin >= climaquii .and. gradmin < climaquif) .or. &
+                     (indcana == 1 .and. gradmin < climaquif) .or. &
+                     (indcana == size(qcspa%clima%ana)-1 .and. gradmin >= climaquii) ) then
+                      
+                      flag=qcspa%clima%voldatiattrb(indcana,indctime,indclevel,indctimerange,indcdativarr,indcnetwork,1)
+                      
+                      if ( associated ( qcspa%data_id_in)) then
 #ifdef DEBUG
-                      call l4f_log (L4F_INFO,"datoqui: "//t2c(datoqui))
-                      call l4f_log (L4F_INFO,"flag qcspa: "//t2c(&
-                       qcspa%clima%voldatiattrb(indcana,indctime,indclevel,indctimerange,indcdativarr,indcnetwork,1)&
-                       ))
+                        call l4f_log (L4F_DEBUG,"id: "//t2c(&
+                         qcspa%data_id_in(indana,indtime,indlevel,indtimerange,indnetwork)))
 #endif
-
-                    if ( associated ( qcspa%data_id_in)) then
-#ifdef DEBUG
-                      call l4f_log (L4F_DEBUG,"id: "//t2c(&
-                       qcspa%data_id_in(indana,indtime,indlevel,indtimerange,indnetwork)))
-#endif
-                      qcspa%data_id_out(indana,indtime,indlevel,indtimerange,indnetwork)=&
-                       qcspa%data_id_in(indana,indtime,indlevel,indtimerange,indnetwork)
+                        qcspa%data_id_out(indana,indtime,indlevel,indtimerange,indnetwork)=&
+                         qcspa%data_id_in(indana,indtime,indlevel,indtimerange,indnetwork)
+                      end if
                     end if
                   end if
-                end if
-              end do
+                end do
+#ifdef DEBUG
+                call l4f_log (L4F_INFO,"datoqui: "//t2c(datoqui))
+                call l4f_log (L4F_INFO,"flag qcspa: "//t2c(flag))
+#endif
+
+              end if
+            else
+              flag=100_int_b
+            end if
+            if (qcspa%operation == "run") then
+              !TODO controllare se flag = missing comporta rimozione della precedente flag
+              qcspa%v7d%voldatiattrb(   indana, indtime, indlevel, indtimerange, inddativarr, indnetwork, indbattrout)=flag
             end if
           end do
         end do

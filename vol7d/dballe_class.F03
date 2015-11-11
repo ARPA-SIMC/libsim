@@ -1263,8 +1263,9 @@ endif
 !print *,"extrude dati:"
 !call data%dbadc%display()
 
+
+call data%dbadc%dbaset(session)
 if (.not.optio_log(attronly)) then
-  call data%dbadc%dbaset(session)
   call session%prendilo()
   !print *,"extrude prendilo"
 end if
@@ -1278,9 +1279,9 @@ if (allocated(data%attrv%dcv)) then
     do i = 1, size(data%attrv%dcv)
       if (present(filter))then
         if (filter%contextana) then
-          if (.not. filter%anastarvars == data%attrv%dcv(i)%dat) continue
+          if (.not. filter%anastarvars == data%attrv%dcv(i)%dat) cycle
         else
-          if (.not. filter%starvars == data%attrv%dcv(i)%dat) continue
+          if (.not. filter%starvars == data%attrv%dcv(i)%dat) cycle
         end if
       endif
 
@@ -1293,10 +1294,9 @@ if (allocated(data%attrv%dcv)) then
     end do
 
     if (critica) then
-      !print *,"extrude dato per attributi:"
-      !print *, data%dbadc%dat%btable
-      call session%var_related(data%dbadc%dat%btable) ! I have made a prendilo and I do not need this
       !print *,"extrude critica"
+      !print *,"extrude dato per attributi: ", data%dbadc%dat%btable
+      call session%var_related(data%dbadc%dat%btable) ! If I have made a prendilo I do not need this
       call session%critica()
     end if
 
@@ -1919,7 +1919,7 @@ if (allocated(this%dcv)) then
   dbadcv_equal_dbadata=.false.
   do i=1, size(this%dcv)
     dbadcv_equal_dbadata = this%dcv(i)%dat == that
-    if (dbadcv_equal_dbadata) continue
+    if (dbadcv_equal_dbadata) exit
   end do
 else
   dbadcv_equal_dbadata=.true.
