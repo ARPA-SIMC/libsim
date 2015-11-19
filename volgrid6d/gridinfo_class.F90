@@ -1883,7 +1883,11 @@ IF (this%var%discipline == 255 .AND. &
     IF ((this%var%number == 142 .OR. & ! large scale precipitation
      this%var%number == 143 .OR. & ! convective precipitation
      this%var%number == 144 .OR. & ! total snow
-     this%var%number == 228) .AND. & ! total precipitation
+     this%var%number == 228 .OR. & ! total precipitation
+     this%var%number == 145 .OR. & ! boundary layer dissipation
+     this%var%number == 146 .OR. & ! surface sensible heat flux
+     this%var%number == 147 .OR. & ! surface latent heat flux
+     this%var%number == 169) .AND. & ! surface solar radiation downwards
      this%timerange%timerange == 254) THEN
       this%timerange%timerange = 1 ! accumulated
       this%timerange%p2 = this%timerange%p1 ! length of period = forecast time

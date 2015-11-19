@@ -2660,6 +2660,20 @@ end if
 end function swdown
 
 
+!> incoming short wave radiation from direct and diffuse radiation
+elemental real function swdown_dirdif(swdir,swdif)
+real,intent(in) :: swdir !< incoming direct short wave radiation (W/m**2)
+real,intent(in) :: swdif !< incoming diffuse short wave radiation (W/m**2)
+
+if (c_e(swdir) .and. c_e(swdif)) then
+  swdown_dirdif = swdir + swdif
+else
+  swdown_dirdif = rmiss
+end if
+
+end function swdown_dirdif
+
+
 !> Omega from temperature, pressure and vertical velocity; pressure
 !! tendency term and humidity in density are neglected.
 ELEMENTAL REAL FUNCTION omega_simple(t, p, w)
