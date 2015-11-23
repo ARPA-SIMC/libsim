@@ -1,7 +1,7 @@
 Summary: libsim: librerie di utilità in Fortran 90
 Name: libsim
-Version: 6.1.0
-Release: 1506%{dist}
+Version: 6.1.2
+Release: 1%{dist}
 License: GPL2+
 Group: Applications/Meteo
 URL: http://www.arpa.emr.it/sim
@@ -84,6 +84,12 @@ mv $RPM_BUILD_ROOT%{_includedir}/*.mod $RPM_BUILD_ROOT%{_fmoddir}
 rm -rf %{buildroot}
 
 %changelog
+* Mon Nov 23 2015 dbranchini <dbranchini@arpa.emr.it> - 6.1.2-1%{dist}
+- fix bug on endofftimeinterval, avoid timerange 206 which is now valid
+
+* Tue Oct 27 2015 dbranchini <dbranchini@arpa.emr.it> - 6.1.1-1%{dist}
+- fixed dba_qcfilter bug
+
 * Thu Oct 1 2015 dbranchini <dbranchini@arpa.emr.it> - 6.1.0-1505%{dist}
 - implemented heap sort for all vol7d objects
 - stdin/stdout in dballe fortran api change
