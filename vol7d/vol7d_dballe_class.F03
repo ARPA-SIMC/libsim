@@ -545,7 +545,7 @@ CALL l4f_category_log(this%category,L4F_DEBUG,'start import vol7d_dballe')
 
 if ( .not. filter%dataonly) then
                                 ! ---------------->   constant station data
-  myfilter=dbafilter(filter=filter,contextana=.true.)
+  myfilter=dbafilter(filter=filter,contextana=.TRUE.,query=cmiss)
 !                                ! set filter
 !  call this%handle%set(filter=myfilter)
                                 ! estrude the data
