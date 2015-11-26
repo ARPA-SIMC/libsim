@@ -1105,19 +1105,18 @@ IF (c_e(istat_proc) .AND. c_e(ostat_proc)) THEN
   ENDIF
 ENDIF
 
+! rounding
+IF (round) THEN
+  CALL rounding(v7d,v7dtmp,level=almost_equal_levels,nostatproc=.TRUE.)
+  CALL delete(v7d)
+  v7d = v7dtmp
+  CALL init(v7dtmp) ! detach it
+end if
 
 ! sort
 IF (comp_sort) THEN
   CALL vol7d_smart_sort(v7d, lsort_time=.TRUE., lsort_timerange=.TRUE., lsort_level=.TRUE.)
 ENDIF
-
-
-if (round) then
-  call rounding(v7d,v7dtmp,level=almost_equal_levels,nostatproc=.true.)
-  CALL delete(v7d)
-  v7d= v7dtmp
-  CALL init(v7dtmp) ! detach it
-end if
 
 
 #ifdef ALCHIMIA

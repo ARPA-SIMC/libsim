@@ -3059,7 +3059,7 @@ end if
 !preserve p1 for forecast time
 if (optio_log(nostatproc)) then
   roundtimerange(:)%timerange=254
-  roundtimerange(:)%p2=imiss
+  roundtimerange(:)%p2=0
 end if
 
 
@@ -3120,8 +3120,8 @@ do  itimerange=ntimerange+1,size(v7d_tmp%timerange)
 end do
 
 !copy with remove
-call copy(v7d_tmp,v7dout,miss=.true.)
-CALL delete (v7d_tmp)
+CALL copy(v7d_tmp,v7dout,miss=.TRUE.,lsort_timerange=.TRUE.,lsort_level=.TRUE.)
+CALL delete(v7d_tmp)
 
 !call display(v7dout)
 
