@@ -380,6 +380,36 @@ CALL l4f_log(L4F_DEBUG, &
 END SUBROUTINE recompute_stat_proc_diff_common
 
 
+! common operations for statistical processing by metamorphosis
+SUBROUTINE compute_stat_proc_metamorph_common(istat_proc, itimerange, ostat_proc, &
+ otimerange, map_tr)
+INTEGER,INTENT(in) :: istat_proc
+TYPE(vol7d_timerange),INTENT(in) :: itimerange(:)
+INTEGER,INTENT(in) :: ostat_proc
+!TYPE(timedelta),INTENT(in) :: step
+TYPE(vol7d_timerange),POINTER :: otimerange(:)
+INTEGER,POINTER :: map_tr(:)
+
+INTEGER :: i
+LOGICAL :: tr_mask(SIZE(itimerange))
+
+IF (SIZE(itimerange) == 0) THEN ! avoid segmentation fault in case of empty volume
+  ALLOCATE(otimerange(0), map_tr(0))
+  RETURN
+ENDIF
+
+! useful timeranges
+tr_mask(:) = itimerange(:)%timerange == istat_proc .AND. itimerange(:)%p2 /= imiss &
+ .AND. itimerange(:)%p2 /= 0 ! .AND. itimerange(:)%p1 == 0
+ALLOCATE(otimerange(COUNT(tr_mask)), map_tr(COUNT(tr_mask)))
+
+otimerange = PACK(itimerange, mask=tr_mask)
+otimerange(:)%timerange = ostat_proc
+map_tr = PACK((/(i,i=1,SIZE(itimerange))/), mask=tr_mask)
+
+END SUBROUTINE compute_stat_proc_metamorph_common
+
+
 ! common operations for statistical processing by aggregation, experimental
 SUBROUTINE recompute_stat_proc_agg_common_exp(itime, itimerange, stat_proc, tri, &
  step, time_definition, otime, otimerange, map_ttr, dtratio, start)

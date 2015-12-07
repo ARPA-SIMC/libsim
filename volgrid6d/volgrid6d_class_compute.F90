@@ -68,6 +68,24 @@ CONTAINS
 !!    possible to provide \a stat_proc_input \a /= \a stat_proc, but
 !!    it has to be used with care.
 !!
+!!  - \a stat_proc_input = 0
+!!    - \a stat_proc = 1
+!!    a time-averaged rate or flux is transformed into a
+!!    time-integrated value (sometimes called accumulated) on the same
+!!    interval by multiplying the values by the length of the time
+!!    interval in seconds, keeping constant all the rest, including
+!!    the variable; the unit of the variable implicitly changes
+!!    accordingly, this is supported officially in grib2 standard, in
+!!    the other cases it is a forcing of the standards.
+!!
+!!  - \a stat_proc_input = 1
+!!    - \a stat_proc = 0
+!!    a time-integrated value (sometimes called accumulated) is
+!!    transformed into a time-averaged rate or flux on the same
+!!    interval by dividing the values by the length of the time
+!!    interval in seconds, see also the previous description of the
+!!    opposite computation.
+!!
 !! If a particular statistical processing cannot be performed on the
 !! input data, the program continues with a warning and, if requested,
 !! the input data is passed over to the volume specified by the \a
@@ -102,9 +120,19 @@ ELSE IF (stat_proc == 254) THEN
   CALL raise_error()
 
 ELSE IF (stat_proc_input /= stat_proc) THEN
-  CALL l4f_category_log(this%category, L4F_ERROR, &
-   'statistical processing with different input and output values makes sense only for instantaneous data')
-  CALL raise_error()
+  IF ((stat_proc_input == 0 .AND. stat_proc == 1) .OR. &
+   (stat_proc_input == 1 .AND. stat_proc == 0)) THEN
+    CALL l4f_category_log(this%category, L4F_INFO, &
+     'computing statistically processed data by integration/differentiation '// &
+     t2c(stat_proc_input)//':'//t2c(stat_proc))
+    CALL volgrid6d_compute_stat_proc_metamorph(this, that, stat_proc_input, &
+     stat_proc, clone)
+  ELSE
+    CALL l4f_category_log(this%category, L4F_ERROR, &
+   'statistical processing '//t2c(stat_proc_input)//':'//t2c(stat_proc)// &
+   ' not implemented or does not make sense')
+    CALL raise_error()
+  ENDIF
 
 ELSE IF (COUNT(this%timerange(:)%timerange == stat_proc) == 0) THEN
   CALL l4f_category_log(this%category, L4F_WARN, &
@@ -628,5 +656,117 @@ IF (.NOT.ASSOCIATED(that%voldati)) THEN
 ENDIF
 
 END SUBROUTINE volgrid6d_recompute_stat_proc_diff
+
+
+!> Specialized method for statistically processing a set of data
+!! by integration/differentiation.
+!! This method performs statistical processing by integrating
+!! (accumulating) in time values having representing time-average
+!! rates or fluxes, (\a stat_proc_input=0 \a stat_proc=1) or by
+!! transforming a time-integrated (accumulated) value in a
+!! time-average rate or flux (\a stat_proc_input=1 \a stat_proc=0).
+!! analysis/observation or forecast timerange are processed. The only
+!! operation performed is respectively multiplying or dividing the
+!! values by the length of the time interval in seconds.
+!!
+!! The output \a that volgrid6d object contains elements from the
+!! original volume \a this satisfying the conditions
+!!  - timerange (vol7d_timerange_class::vol7d_timerange::timerange)
+!!    of type \a stat_proc_input (0 or 1)
+!!  - any p1 (analysis/observation or forecast)
+!!  - p2 &gt; 0 (processing interval non null, non instantaneous data)
+!!    and equal to a multiplier of \a step if \a full_steps is \c .TRUE.
+!!
+!! Output data will have timerange of type \a stat_proc (1 or 0) and
+!! p1 and p2 equal to the corresponding input values.  The supported
+!! statistical processing methods (parameter \a stat_proc) are:
+!!
+!!  - 0 average
+!!  - 1 cumulation
+!!
+!! Input volume may have any value of \a this%time_definition, and
+!! that value will be conserved in the output volume.
+SUBROUTINE volgrid6d_compute_stat_proc_metamorph(this, that, stat_proc_input, stat_proc, clone)
+TYPE(volgrid6d),INTENT(inout) :: this !< volume providing data to be recomputed, it is not modified by the method, apart from performing a \a volgrid6d_alloc_vol on it
+TYPE(volgrid6d),INTENT(out) :: that !< output volume which will contain the recomputed data
+INTEGER,INTENT(in) :: stat_proc_input !< type of statistical processing of data that has to be processed (from grib2 table), only data having timerange of this type will be processed, the actual statistical processing performed and which will appear in the output volume, is however determined by \a stat_proc argument
+INTEGER,INTENT(in) :: stat_proc !< type of statistical processing to be recomputed (from grib2 table), data in output volume \a that will have a timerange of this type
+LOGICAL , INTENT(in),OPTIONAL :: clone !< if provided and \c .TRUE. , clone the gaid's from \a this to \a that
+
+INTEGER i, j, n, i3, i4, i6
+INTEGER,POINTER :: map_tr(:), map_trc(:,:), count_trc(:,:)
+REAL,POINTER :: voldatiin(:,:), voldatiout(:,:)
+REAL,ALLOCATABLE :: int_ratio(:)
+LOGICAL :: lclone
+
+NULLIFY(voldatiin, voldatiout)
+
+! be safe
+CALL volgrid6d_alloc_vol(this)
+! when volume is not decoded it is better to clone anyway to avoid
+! overwriting fields
+lclone = optio_log(clone) .OR. .NOT.ASSOCIATED(this%voldati)
+
+IF (.NOT.((stat_proc_input == 0 .AND. stat_proc == 1) .OR. &
+ (stat_proc_input == 1 .AND. stat_proc == 0))) THEN
+
+  CALL l4f_category_log(this%category, L4F_WARN, &
+   'compute_stat_proc_metamorph, can only be applied to average->accumulated timerange and viceversa')
+! return an empty volume, without signaling error
+  CALL init(that)
+  CALL volgrid6d_alloc_vol(that)
+  RETURN
+ENDIF
+
+! initialise the output volume
+CALL init(that, griddim=this%griddim, time_definition=this%time_definition)
+CALL volgrid6d_alloc(that, dim=this%griddim%dim, ntime=SIZE(this%time), &
+ nlevel=SIZE(this%level), nvar=SIZE(this%var), ini=.FALSE.)
+that%time = this%time
+that%level = this%level
+that%var = this%var
+
+CALL compute_stat_proc_metamorph_common(stat_proc_input, this%timerange, stat_proc, &
+ that%timerange, map_tr)
+
+! complete the definition of the output volume
+CALL volgrid6d_alloc_vol(that, decode=ASSOCIATED(this%voldati))
+
+ALLOCATE(int_ratio(SIZE(that%timerange)))
+IF (stat_proc == 0) THEN ! average -> integral
+  DO j = 1, SIZE(that%timerange)
+    int_ratio(j) = 1./REAL(that%timerange(j)%p2)
+  ENDDO
+ELSE ! cumulation
+  DO j = 1, SIZE(that%timerange)
+    int_ratio(j) = REAL(that%timerange(j)%p2)
+  ENDDO
+ENDIF
+
+DO i6 = 1, SIZE(this%var)
+  DO j = 1, SIZE(map_tr)
+    DO i4 = 1, SIZE(that%time)
+      DO i3 = 1, SIZE(this%level)
+
+        IF (lclone) THEN
+          CALL copy(this%gaid(i3,i4,map_tr(j),i6), that%gaid(i3,i4,j,i6))
+        ELSE
+          that%gaid(i3,i4,map_tr(j),i6) = this%gaid(i3,i4,j,i6)
+        ENDIF
+        CALL volgrid_get_vol_2d(this, i3, i4, map_tr(j), i6, voldatiin)
+        CALL volgrid_get_vol_2d(that, i3, i4, j, i6, voldatiout)
+        WHERE (c_e(voldatiin))
+          voldatiout = voldatiin*int_ratio(j)
+        ELSEWHERE
+          voldatiout = rmiss
+        END WHERE
+        CALL volgrid_set_vol_2d(that, i3, i4, j, i6, voldatiout)
+      ENDDO
+    ENDDO
+  ENDDO
+ENDDO
+
+
+END SUBROUTINE volgrid6d_compute_stat_proc_metamorph
 
 END MODULE volgrid6d_class_compute
