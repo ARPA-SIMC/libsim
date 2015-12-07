@@ -1,6 +1,6 @@
 Summary: libsim: librerie di utilità in Fortran 90
 Name: libsim
-Version: 6.1.2
+Version: 6.1.3
 Release: 1%{dist}
 License: GPL2+
 Group: Applications/Meteo
@@ -84,6 +84,10 @@ mv $RPM_BUILD_ROOT%{_includedir}/*.mod $RPM_BUILD_ROOT%{_fmoddir}
 rm -rf %{buildroot}
 
 %changelog
+* Wed Dec 2 2015 dbranchini <dbranchini@arpa.emr.it> - 6.1.3-1%{dist}
+- no querybest in ana
+- sort level and timerange after rounding, fix timerange 254 in rounding
+
 * Mon Nov 23 2015 dbranchini <dbranchini@arpa.emr.it> - 6.1.2-1%{dist}
 - fix bug on endofftimeinterval, avoid timerange 206 which is now valid
 
