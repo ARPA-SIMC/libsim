@@ -1243,12 +1243,13 @@ end subroutine dbasession_dissolveattr_metadata
 !> put data on DSN
 subroutine dbadataattr_extrude(data,session,noattr,filter,attronly)
 class(dbadataattr), intent(in) :: data
-type(dbasession), intent(in) :: session !< dballe session
-logical, intent(in),optional :: noattr          !< set to .true. to put data only (no attribute) 
-type(dbafilter),intent(in),optional :: filter     !< use this to filter wanted data                
-logical, intent(in),optional :: attronly          !< set to .true. to put attr only (no data) 
-integer :: i
+type(dbasession), intent(in) :: session           !< dballe session
+logical, intent(in),optional :: noattr            !< set to .true. to put data only (no attribute)
+type(dbafilter),intent(in),optional :: filter     !< use this to filter wanted data
+logical, intent(in),optional :: attronly          !< set to .true. to put attr only (no data)
+integer :: i,ierr,count
 logical :: critica
+character(len=9) :: btable
 
 if (present(filter))then
   if (filter%contextana) then
@@ -1265,16 +1266,26 @@ endif
 
 
 call data%dbadc%dbaset(session)
-if (.not.optio_log(attronly)) then
+if (optio_log(attronly)) then
+
+  ierr = idba_set(session%sehandle,"var",data%dbadc%dat%btable)
+
+  call data%dbadc%dat%dbaset(session)
+  ierr = idba_voglioquesto(session%sehandle, count)
+
+  if (c_e(count)) then
+    ierr=idba_dammelo(session%sehandle, btable)
+    !ierr=idba_enqi(session%sehandle, "context_id", id)
+  endif
+else
   call session%prendilo()
-  !print *,"extrude prendilo"
 end if
 
 if (optio_log(noattr)) return
+
 !write attributes in dsn
 if (allocated(data%attrv%dcv)) then
   if (size(data%attrv%dcv) > 0 )then
-
     critica = .false.
     do i = 1, size(data%attrv%dcv)
       if (present(filter))then
@@ -1290,13 +1301,16 @@ if (allocated(data%attrv%dcv)) then
         !call data%attrv%dcv(i)%dat%display()
         call data%attrv%dcv(i)%dat%dbaset(session)
         critica=.true.
+      else
+        !ierr=idba_seti(session%sehandle, "*context_id", id)
+        !call session%var_related(data%dbadc%dat%btable) ! If I have made a prendilo I do not need this
+        call data%attrv%dcv(i)%dat%dbaset(session)
+        call session%scusa()
       endif
     end do
-
     if (critica) then
-      !print *,"extrude critica"
-      !print *,"extrude dato per attributi: ", data%dbadc%dat%btable
-      call session%var_related(data%dbadc%dat%btable) ! If I have made a prendilo I do not need this
+      !ierr=idba_seti(session%sehandle, "*context_id", id)
+      !call session%var_related(data%dbadc%dat%btable) ! If I have made a prendilo I do not need this
       call session%critica()
     end if
 
