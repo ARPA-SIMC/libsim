@@ -395,19 +395,19 @@ B15240,Concentration of biogenic aerosol in PM2.5 (invented),ug/m**3,200,195,64,
 B15240,Concentration of biogenic aerosol in PM2.5 (invented),ug/m**3,200,195,64,255,0.000000001,0.0
 B15241,Aerosol Optical Thickness (invented),numeric,200,195,200,0,1.0,0.0
 B15241,Aerosol Optical Thickness (invented),numeric,200,195,200,255,1.0,0.0
+B20010,Total cloud cover,Percent,255,2,71,255,1.0,0.0
+B20010,High cloud cover,Percent,255,2,75,255,1.0,0.0
+B20010,Medium cloud cover,Percent,255,2,74,255,1.0,0.0
+B20010,Low cloud cover,Percent,255,2,73,255,1.0,0.0
+B20010,Total cloud cover ECMWF,Fraction->Percent,98,128,164,255,100.0,0.0
+B20010,High cloud cover ECMWF,Fraction->Percent,98,128,188,255,100.0,0.0
+B20010,Medium cloud cover ECMWF,Fraction->Percent,98,128,187,255,100.0,0.0
+B20010,Low cloud cover ECMWF,Fraction->Percent,98,128,186,255,100.0,0.0
+B20010,Cloud cover ECMWF,Fraction->Percent,98,128,248,255,100.0,0.0
 B20010,Cloud cover DWD,Percent,200,201,29,255,1.0,0.0
 B20010,Cloud cover DWD,Percent,78,201,29,255,1.0,0.0
-B20010,High cloud cover,Percent,255,2,75,255,1.0,0.0
-B20010,High cloud cover ECMWF,Fraction->Percent,98,128,188,255,100.0,0.0
-B20010,Low cloud cover,Percent,255,2,73,255,1.0,0.0
-B20010,Low cloud cover ECMWF,Fraction->Percent,98,128,186,255,100.0,0.0
-B20010,Medium cloud cover,Percent,255,2,74,255,1.0,0.0
-B20010,Medium cloud cover ECMWF,Fraction->Percent,98,128,187,255,100.0,0.0
 B20010,Total cloud cover,Fraction,200,200,114,0,100.0,0.0
 B20010,Total cloud cover,Fraction,200,200,114,255,100.0,0.0
-B20010,Total cloud cover,Percent,255,2,71,255,1.0,0.0
-B20010,Total cloud cover ECMWF,Fraction->Percent,98,128,164,255,100.0,0.0
-B20010,Cloud cover ECMWF,Fraction->Percent,98,128,248,255,100.0,0.0
 B21001,Horizontal reflectivity,dB,200,201,230,255,1.0,0.0 
 B21001,Horizontal reflectivity,dB,78,201,230,255,1.0,0.0 
 B22001,Direction of waves,degree true,200,140,230,255,1.0,0.0
