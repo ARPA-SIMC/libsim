@@ -1,0 +1,15 @@
+prefix=@prefix@
+exec_prefix=@exec_prefix@
+libdir=@libdir@
+includedir=@includedir@
+datarootdir=@datarootdir@
+datadir=@datadir@
+
+Name: libsim
+Description: General-purpose and Earth-Science fortran library
+URL: https://github.com/ARPA-SIMC/libsim
+Version: @VERSION@
+Requires:
+Requires.private:
+Libs: -L${libdir} -lsim_volgrid6d -lsim_vol7d -lsim_termolib -lsim_alchimia -lsim_base -llog4fortran
+Cflags: -I${libdir}/@FC@/modules
