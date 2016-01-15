@@ -64,6 +64,7 @@ mv $RPM_BUILD_ROOT%{_includedir}/*.mod $RPM_BUILD_ROOT%{_fmoddir}
 %{_libdir}/*.a
 %{_libdir}/*.la
 %{_libdir}/*.so*
+%{_libdir}/pkgconfig/%{name}.pc
 %if 0%{?fedora} < 9
 %{_includedir}/*
 %else

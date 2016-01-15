@@ -426,6 +426,7 @@ AC_SUBST(pkgdocdir)
 
 AC_CONFIG_FILES([
 Makefile
+libsim.pc
 base/Makefile
 vol7d/Makefile
 volgrid6d/Makefile
