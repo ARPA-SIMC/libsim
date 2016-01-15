@@ -592,8 +592,6 @@ INTEGER, INTENT(in) :: gaid ! grib_api id of the grib loaded in memory to export
 TYPE(conv_func) :: c_func
 REAL,ALLOCATABLE :: tmparr(:,:)
 
-CALL unnormalize_gridinfo(this)
-
 ! convert variable and values to the correct edition if required
 CALL volgrid6d_var_normalize(this%var, c_func, grid_id_new(grib_api_id=gaid))
 IF (this%var == volgrid6d_var_miss) THEN
@@ -606,6 +604,8 @@ IF (c_func /= conv_func_miss) THEN ! convert values as well
   CALL compute(c_func, tmparr)
   CALL encode_gridinfo(this, tmparr)
 ENDIF
+
+CALL unnormalize_gridinfo(this)
 
 CALL time_export_gribapi(this%time, gaid, this%timerange)
 CALL timerange_export_gribapi(this%timerange, gaid, this%time)
@@ -2076,7 +2076,7 @@ ENDIF
 IF (ANY(this%var%centre == ecmwf_centre)) THEN ! ECMWF
 ! reset cloud cover to grib1 style
   IF (this%var%discipline == 255 .AND. this%var%category == 128) THEN ! grib1 table 128
-    IF (this%var%number == 248 .AND. &
+    IF ((this%var%number == 248 .OR. this%var%number == 164) .AND. &
      this%level%level1 == 256 .AND. this%level%level2 == 258) THEN ! l/m/h cloud cover
       IF (this%level%l2 == 1) THEN ! l
         this%var%number = 186

@@ -973,39 +973,35 @@ REAL,POINTER :: voldati(:,:)
 TYPE(datetime) :: correctedtime
 
 #ifdef DEBUG
-call l4f_category_log(this%category,L4F_DEBUG,"export_to_gridinfo")
+CALL l4f_category_log(this%category,L4F_DEBUG,"export_to_gridinfo")
 #endif
 
-usetemplate = .FALSE.
+IF (.NOT.c_e(this%gaid(ilevel,itime,itimerange,ivar))) THEN
+#ifdef DEBUG
+  CALL l4f_category_log(this%category,L4F_DEBUG,"empty gaid found, skipping export")
+#endif
+  RETURN
+ENDIF
 
+usetemplate = .FALSE.
 IF (PRESENT(gaid_template)) THEN
   CALL copy(gaid_template, gaid)
-  usetemplate = c_e(gaid)
 #ifdef DEBUG
   CALL l4f_category_log(this%category,L4F_DEBUG,"template cloned to a new gaid")
 #endif
-ELSE
-  gaid = gridinfo%gaid ! is this really a good thing? (gridinfo was intent(out))!
+  usetemplate = c_e(gaid)
 ENDIF
 
-
-if (.not.c_e(gaid)) then
-  if (c_e(this%gaid(ilevel,itime,itimerange,ivar))) then
-    if (optio_log(clone)) then
-      call copy(this%gaid(ilevel,itime,itimerange,ivar), gaid)
+IF (.NOT.usetemplate) THEN
+  IF (optio_log(clone)) THEN
+    CALL copy(this%gaid(ilevel,itime,itimerange,ivar), gaid)
 #ifdef DEBUG
-      CALL l4f_category_log(this%category,L4F_DEBUG,"original gaid cloned to a new one")
+    CALL l4f_category_log(this%category,L4F_DEBUG,"original gaid cloned to a new one")
 #endif
-    else
-      gaid = this%gaid(ilevel,itime,itimerange,ivar)
-    end if
-  else
-
-    CALL l4f_category_log(this%category,L4F_INFO,&
-     "cannot find a valid gaid, you may not be able to export gridinfo to a file")
-
-  end if
-end if
+  ELSE
+    gaid = this%gaid(ilevel,itime,itimerange,ivar)
+  ENDIF
+ENDIF
 
 IF (this%time_definition == 1) THEN
   correctedtime = this%time(itime) - &
@@ -1014,12 +1010,8 @@ ELSE
   correctedtime = this%time(itime)
 ENDIF
 
-call init(gridinfo,gaid,&
- this%griddim,&
- correctedtime,&
- this%timerange(itimerange),&
- this%level(ilevel),&
- this%var(ivar))
+CALL init(gridinfo,gaid, this%griddim, correctedtime, this%timerange(itimerange), &
+ this%level(ilevel), this%var(ivar))
 
 ! reset the gridinfo, bad but necessary at this point for encoding the field
 CALL export(gridinfo%griddim, gridinfo%gaid)

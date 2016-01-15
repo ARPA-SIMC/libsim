@@ -520,12 +520,11 @@ TYPE(grid_id),INTENT(in) :: grid_id_template !< a template (typically grib_api) 
 
 LOGICAL :: compat
 INTEGER :: gaid, editionnumber
-TYPE(volgrid6d_var) :: convert2
+TYPE(volgrid6d_var) :: tmpgrib
 TYPE(vol7d_var) :: tmpbufr
-TYPE(conv_func) tmpc_func
+TYPE(conv_func) tmpc_func1, tmpc_func2
 
 compat = .TRUE.
-c_func = conv_func_miss
 
 #ifdef HAVE_LIBGRIBAPI
 gaid = grid_id_get_gaid(grid_id_template)
@@ -534,12 +533,26 @@ IF (c_e(gaid)) THEN
   compat = editionnumber == 1 .EQV. this%discipline == 255
 ENDIF
 #endif
-IF (compat) RETURN ! nothing to do
 
-tmpbufr = convert(this, tmpc_func)
-! manage missing for speed?
-this = convert(tmpbufr, c_func, grid_id_template)
-c_func = c_func * tmpc_func
+tmpbufr = convert(this, tmpc_func1)
+tmpgrib = convert(tmpbufr, tmpc_func2, grid_id_template)
+!c_func = c_func * tmpc_func
+
+IF (tmpgrib /= volgrid6d_var_miss) THEN
+! conversion back and forth successful, return new variable
+!  c_func = conv_func_miss
+  this = tmpgrib
+  c_func = tmpc_func1 * tmpc_func2
+ELSE IF (compat) THEN
+! conversion back and forth unsuccessful but gribedition compatible, keep original
+  c_func = conv_func_miss
+ELSE
+! conversion back and forth unsuccessful and gribedition incompatible, set to miss
+  this = tmpgrib
+  c_func = conv_func_miss
+ENDIF
+
+! set to missing in common case to avoid useless conversion
 IF (c_func == conv_func_identity) c_func = conv_func_miss
 
 END SUBROUTINE volgrid6d_var_normalize
