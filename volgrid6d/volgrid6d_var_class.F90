@@ -536,11 +536,9 @@ ENDIF
 
 tmpbufr = convert(this, tmpc_func1)
 tmpgrib = convert(tmpbufr, tmpc_func2, grid_id_template)
-!c_func = c_func * tmpc_func
 
 IF (tmpgrib /= volgrid6d_var_miss) THEN
 ! conversion back and forth successful, return new variable
-!  c_func = conv_func_miss
   this = tmpgrib
   c_func = tmpc_func1 * tmpc_func2
 ELSE IF (compat) THEN
