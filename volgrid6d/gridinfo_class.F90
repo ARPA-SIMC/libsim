@@ -51,7 +51,7 @@
 !! Simple example of use: \include example_vg6d_2.f90
 !! More complex example: \include example_vg6d_4.f90
 !! \ingroup volgrid6d
-module gridinfo_class
+MODULE gridinfo_class
 
 USE grid_class
 USE datetime_class
@@ -2127,7 +2127,7 @@ END SUBROUTINE gridinfo_import_gdal
 #endif
 
 
-end module gridinfo_class
+END MODULE gridinfo_class
 
 
 !>\example example_vg6d_2.f90
