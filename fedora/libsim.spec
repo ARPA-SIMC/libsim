@@ -16,9 +16,19 @@ Requires: libdballef4 >= 7.6 grib_api
 %define _fmoddir       %{_libdir}/gfortran/modules
 %endif
 
+%package -n -devel
+Summary:  libsim development files
+Group: Applications/Meteo
+
 %package -n libsim-doc
 Summary:  libsim documentation
 Group: Applications/Meteo
+
+%description -n libsim-devel
+Libsim is a collection of Fortran libraries and command-line tools.
+
+This package contains the development files, necessary for building
+applications using libsim.
 
 %description -n libsim-doc
 Libsim is a collection of Fortran libraries and command-line tools.
@@ -61,21 +71,24 @@ mv $RPM_BUILD_ROOT%{_includedir}/*.mod $RPM_BUILD_ROOT%{_fmoddir}
 
 %files
 %defattr(-, root, root)
-%{_libdir}/*.a
-%{_libdir}/*.la
 %{_libdir}/*.so*
-%{_libdir}/pkgconfig/%{name}.pc
-%if 0%{?fedora} < 9
-%{_includedir}/*
-%else
-%{_fmoddir}/*.mod
-%endif
 %{_bindir}/*
 %{_datadir}/%{name}/*
 #SOLO PER VAPOR:
 %{_includedir}/vdf4f_c.h
 %doc examples/*.f90
 %{_mandir}/man1
+
+%files -n libsim-devel
+%{_libdir}/*.a
+%{_libdir}/*.la
+%{_libdir}/*.so
+%{_libdir}/pkgconfig/%{name}.pc
+%if 0%{?fedora} < 9
+%{_includedir}/*
+%else
+%{_fmoddir}/*.mod
+%endif
 
 %files -n libsim-doc
 %defattr(-,root,root,-)
