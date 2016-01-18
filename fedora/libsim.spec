@@ -1,6 +1,6 @@
 Summary: libsim: librerie di utilità in Fortran 90
 Name: libsim
-Version: 6.1.3
+Version: 6.1.4
 Release: 1%{dist}
 License: GPL2+
 Group: Applications/Meteo
@@ -16,7 +16,7 @@ Requires: libdballef4 >= 7.6 grib_api
 %define _fmoddir       %{_libdir}/gfortran/modules
 %endif
 
-%package -n -devel
+%package -n libsim-devel
 Summary:  libsim development files
 Group: Applications/Meteo
 
@@ -70,16 +70,14 @@ mv $RPM_BUILD_ROOT%{_includedir}/*.mod $RPM_BUILD_ROOT%{_fmoddir}
 %endif
 
 %files
-%defattr(-, root, root)
-%{_libdir}/*.so*
+%defattr(-,root,root)
+%{_libdir}/*.so.*
 %{_bindir}/*
 %{_datadir}/%{name}/*
-#SOLO PER VAPOR:
-%{_includedir}/vdf4f_c.h
-%doc examples/*.f90
 %{_mandir}/man1
 
 %files -n libsim-devel
+%defattr(-,root,root)
 %{_libdir}/*.a
 %{_libdir}/*.la
 %{_libdir}/*.so
@@ -89,9 +87,11 @@ mv $RPM_BUILD_ROOT%{_includedir}/*.mod $RPM_BUILD_ROOT%{_fmoddir}
 %else
 %{_fmoddir}/*.mod
 %endif
+%{_includedir}/vdf4f_c.h
 
 %files -n libsim-doc
-%defattr(-,root,root,-)
+%defattr(-,root,root)
+%doc examples/*.f90
 %doc %{_docdir}/%{name}/html
 
 %clean
