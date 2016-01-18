@@ -98,6 +98,10 @@ mv $RPM_BUILD_ROOT%{_includedir}/*.mod $RPM_BUILD_ROOT%{_fmoddir}
 rm -rf %{buildroot}
 
 %changelog
+* Mon Jan 18 2016 dcesari <dcesari@arpa.emr.it> - 6.1.4-1%{dist}
+- devel package
+- stddev subtype in stencilinter type
+
 * Wed Dec 2 2015 dbranchini <dbranchini@arpa.emr.it> - 6.1.3-1%{dist}
 - no querybest in ana
 - sort level and timerange after rounding, fix timerange 254 in rounding
