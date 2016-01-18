@@ -2920,6 +2920,29 @@ ELSE IF (this%trans%trans_type == 'stencilinter') THEN
 !$OMP END PARALLEL
     ENDIF
 
+  ELSE IF (this%trans%sub_type == 'stddev') THEN
+
+!$OMP PARALLEL DEFAULT(SHARED)
+!$OMP DO PRIVATE(i, j, k, i1, i2, j1, j2)
+    DO k = 1, innz
+      DO j = 1, this%outny
+        DO i = 1, this%outnx
+          IF (c_e(this%inter_index_x(i,j))) THEN
+            i1 = this%inter_index_x(i,j) - np
+            i2 = this%inter_index_x(i,j) + np
+            j1 = this%inter_index_y(i,j) - np
+            j2 = this%inter_index_y(i,j) + np
+! da paura
+            field_out(i:i,j,k) = stat_stddev( &
+             RESHAPE(field_in(i1:i2,j1:j2,k), (/ns/)), &
+             mask=RESHAPE(field_in(i1:i2,j1:j2,k) /= rmiss .AND. &
+             this%stencil(:,:), (/ns/)))
+          ENDIF
+        ENDDO
+      ENDDO
+    ENDDO
+!$OMP END PARALLEL
+
   ELSE IF (this%trans%sub_type == 'max') THEN
 
 !$OMP PARALLEL DEFAULT(SHARED)
