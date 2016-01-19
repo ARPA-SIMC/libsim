@@ -1527,7 +1527,7 @@ CONTAINS
 SUBROUTINE outgrid_setup()
 
 ! set increments in new grid in order for all the baraque to work
-CALL griddim_setsteps(out, out%dim%nx, out%dim%ny)
+CALL griddim_setsteps(out)
 ! check component flag
 CALL get_val(in, proj=proj_in, component_flag=cf_i)
 CALL get_val(out, proj=proj_out, component_flag=cf_o)

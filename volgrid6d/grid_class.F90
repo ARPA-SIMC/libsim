@@ -619,12 +619,10 @@ END SUBROUTINE griddim_steps
 
 
 !> Compute and set grid steps.
-SUBROUTINE griddim_setsteps(this, nx, ny)
+SUBROUTINE griddim_setsteps(this)
 TYPE(griddim_def), INTENT(inout) :: this !< generic grid descriptor
-INTEGER,INTENT(in) :: nx !< number of points along x direction
-INTEGER,INTENT(in) :: ny !< number of points along y direction
 
-CALL grid_rect_setsteps(this%grid%grid, nx, ny)
+CALL grid_rect_setsteps(this%grid%grid, this%dim%nx, this%dim%ny)
 
 END SUBROUTINE griddim_setsteps
 

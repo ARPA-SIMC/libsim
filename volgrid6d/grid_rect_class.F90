@@ -290,9 +290,16 @@ INTEGER,INTENT(in) :: ny !< number of points along y direction
 DOUBLE PRECISION,INTENT(out) :: dx !< grid step along x direction
 DOUBLE PRECISION,INTENT(out) :: dy !< grid step along y direction
 
-
-dx = (this%xmax - this%xmin)/DBLE(nx - 1)
-dy = (this%ymax - this%ymin)/DBLE(ny - 1)
+IF (c_e(nx)) THEN
+  dx = (this%xmax - this%xmin)/DBLE(nx - 1)
+ELSE
+  dx = dmiss
+ENDIF
+IF (c_e(ny)) THEN
+  dy = (this%ymax - this%ymin)/DBLE(ny - 1)
+ELSE
+  dy = dmiss
+ENDIF
 
 END SUBROUTINE grid_rect_steps
 
