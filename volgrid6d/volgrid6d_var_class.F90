@@ -173,7 +173,7 @@ PUBLIC volgrid6d_var, volgrid6d_var_miss, volgrid6d_var_new, init, delete, &
  index, display, &
  vargrib2varbufr, varbufr2vargrib, &
  conv_func, conv_func_miss, compute, convert, &
- volgrid6d_var_hor_comp_index
+ volgrid6d_var_hor_comp_index, volgrid6d_var_is_hor_comp
 
 
 CONTAINS
@@ -518,40 +518,41 @@ TYPE(volgrid6d_var),INTENT(inout) :: this !< variable to normalize
 TYPE(conv_func),INTENT(out) :: c_func !< \a conv_func object to convert data
 TYPE(grid_id),INTENT(in) :: grid_id_template !< a template (typically grib_api) to which data will be finally exported, it helps in improving variable conversion
 
-LOGICAL :: compat
-INTEGER :: gaid, editionnumber
+LOGICAL :: eqed, eqcentre
+INTEGER :: gaid, editionnumber, centre
 TYPE(volgrid6d_var) :: tmpgrib
 TYPE(vol7d_var) :: tmpbufr
 TYPE(conv_func) tmpc_func1, tmpc_func2
 
-compat = .TRUE.
+eqed = .TRUE.
+eqcentre = .TRUE.
+c_func = conv_func_miss
 
 #ifdef HAVE_LIBGRIBAPI
 gaid = grid_id_get_gaid(grid_id_template)
 IF (c_e(gaid)) THEN
   CALL grib_get(gaid, 'GRIBEditionNumber', editionnumber)
-  compat = editionnumber == 1 .EQV. this%discipline == 255
+  CALL grib_get(gaid, 'centre', centre)
+  eqed = editionnumber == 1 .EQV. this%discipline == 255
+  eqcentre = centre == this%centre
 ENDIF
 #endif
+
+IF (eqed .AND. eqcentre) RETURN ! nothing to do
 
 tmpbufr = convert(this, tmpc_func1)
 tmpgrib = convert(tmpbufr, tmpc_func2, grid_id_template)
 
 IF (tmpgrib /= volgrid6d_var_miss) THEN
-! conversion back and forth successful, return new variable
+! conversion back and forth successful, set also conversion function
   this = tmpgrib
   c_func = tmpc_func1 * tmpc_func2
-ELSE IF (compat) THEN
-! conversion back and forth unsuccessful but gribedition compatible, keep original
-  c_func = conv_func_miss
-ELSE
-! conversion back and forth unsuccessful and gribedition incompatible, set to miss
+! set to missing in common case to avoid useless computation
+  IF (c_func == conv_func_identity) c_func = conv_func_miss
+ELSE IF (.NOT.eqed) THEN
+! conversion back and forth unsuccessful and grib edition incompatible, set to miss
   this = tmpgrib
-  c_func = conv_func_miss
 ENDIF
-
-! set to missing in common case to avoid useless conversion
-IF (c_func == conv_func_identity) c_func = conv_func_miss
 
 END SUBROUTINE volgrid6d_var_normalize
 

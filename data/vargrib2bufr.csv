@@ -162,9 +162,9 @@ B14018,Downward short-wave radiation flux (surface),W/m^2,200,200,115,0,1.0,0.0
 B14018,Downward short-wave radiation flux (surface),W/m^2,200,200,115,255,1.0,0.0
 B14018,Downward short-wave radiation flux (surface),W/m^2,255,4,7,0,1.0,0.0
 B14018,Downward short-wave radiation flux (surface),W/m^2,98,128,169,255,1.0,0.0
+B14019,Surface Albedo,Percent,255,2,84,255,1.0,0.0
 B14019,Surface Albedo,Fraction,200,200,124,255,100.,0.0
 B14019,Surface Albedo,Fraction,200,200,124,0,100.,0.0
-B14019,Surface Albedo,Percent,255,2,84,255,1.0,0.0
 B14021,Global solar radiation,W/m^2,255,4,7,0,1.0,0.0
 B14192,Instantaneous sensible heat flux (invented),W/m^2,98,128,146,255,1.0,0.0
 B14192,Instantaneous sensible heat flux (invented),W/m^2,255,0,11,0,1.0,0.0

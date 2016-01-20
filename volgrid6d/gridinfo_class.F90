@@ -596,7 +596,7 @@ REAL,ALLOCATABLE :: tmparr(:,:)
 CALL volgrid6d_var_normalize(this%var, c_func, grid_id_new(grib_api_id=gaid))
 IF (this%var == volgrid6d_var_miss) THEN
   CALL l4f_log(L4F_ERROR, &
-   'A suitable variable has not been found in table when converting edition')
+   'A suitable variable has not been found in table when converting template')
   CALL raise_error()
 ENDIF
 IF (c_func /= conv_func_miss) THEN ! convert values as well
