@@ -55,7 +55,8 @@ space interpolations and time computations on georeferenced data in
 GRIB and BUFR format.
 
 %prep
-%setup -q
+%setup -q -n %{name}-%{version}-%{release}
+sh autogen.sh
 
 %build
 
