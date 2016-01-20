@@ -91,9 +91,9 @@ TYPE(qcclitype) :: qccli
 TYPE(arrayof_georef_coord_array) :: poly
 DOUBLE PRECISION,ALLOCATABLE :: lon_array(:), lat_array(:)
 INTEGER :: polytopo
-DOUBLE PRECISION ::  ilon, ilat, flon, flat, lat, lon
+DOUBLE PRECISION ::  ilon, ilat, flon, flat, lat, lon, percentile
 DOUBLE PRECISION ::  ielon, ielat, felon, felat
-CHARACTER(len=vol7d_ana_lenident) :: ident !< identificativo per una stazione mobile (es. aereo)
+CHARACTER(len=vol7d_ana_lenident) :: ident
 TYPE(geo_coord) :: coordmin,coordmax 
 TYPE(transform_def) :: trans
 #ifdef HAVE_DBALLE
@@ -326,7 +326,7 @@ CALL optionparser_add(opt, ' ', 'pre-trans-type', pre_trans_type, '', help= &
  &''inter'' for interpolation, with subtypes ''near'', ''linear'', ''bilin'''&
 #ifdef HAVE_SHAPELIB
  //'; ''polyinter'' for statistical processing within given polygons, &
- &with subtype ''average'', ''stddev'', ''max'', ''min'''&
+ &with subtype ''average'', ''stddev'', ''max'', ''min'', ''percentile'''&
 #endif
  //'; ''metamorphosis'' with subtypes ''coordbb'', ''poly'' &
  &for selecting only data within a given bounding box or a set of polygons&
@@ -343,6 +343,8 @@ CALL optionparser_add(opt, ' ', 'trans-level-list', trans_level_list, help= &
 CALL optionparser_add(opt, ' ', 'trans-botlevel-list', trans_botlevel_list, help= &
  'list of output bottom surfaces for vertical interpolation, the unit is determined &
  &by the value of level-type and taken from grib2 table')
+CALL optionparser_add(opt, ' ', 'percentile', percentile, 50.0D0, help= &
+ 'desired percentile, [0.,100.], for ''*:percentile'' transformations')
 
 #ifdef HAVE_LIBGRIBAPI
 CALL optionparser_add(opt, ' ', 'post-trans-type', post_trans_type, '', help= &
@@ -1007,7 +1009,7 @@ IF (pre_trans_type /= '') THEN
     ENDIF
 
     CALL init(trans, trans_type=pre_trans_type(w_s(1):w_e(1)), &
-     ilon=ilon, ilat=ilat, flon=flon, flat=flat, poly=poly, &
+     ilon=ilon, ilat=ilat, flon=flon, flat=flat, poly=poly, percentile=percentile, &
      input_levtype=ilevel, output_levtype=olevel, &
      sub_type=pre_trans_type(w_s(2):w_e(2)), categoryappend="transformation1")
     CALL transform(trans, vol7d_in=v7d, vol7d_out=v7d_comp1, v7d=v7d_coord, &

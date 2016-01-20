@@ -55,7 +55,7 @@ TYPE(volgrid6d),POINTER  :: volgrid(:), volgrid_coord_tmp(:), volgrid_out(:), vo
 TYPE(volgrid6d)  :: volgrid_coord
 TYPE(arrayof_gridinfo) :: maskgrid
 REAL,ALLOCATABLE :: maskfield(:,:)
-DOUBLE PRECISION :: ilon, ilat, flon, flat, radius
+DOUBLE PRECISION :: ilon, ilat, flon, flat, radius, percentile
 TYPE(arrayof_real) :: maskbounds
 
 type(griddim_def) :: griddim_out
@@ -122,11 +122,19 @@ CALL optionparser_add(opt, 'v', 'trans-type', trans_type, 'none', help= &
  'transformation type: ''inter'' for interpolation, ''boxinter'' for &
  &statistical interpolation on boxes, ''zoom'' for zooming, &
  &''boxregrid'' for resolution reduction, ''metamorphosis'' for &
- &keeping the same grid but changing e.g. the component flag, &
- &''none'' for no transformation (input/output only)')
+ &keeping the same grid but changing e.g. the component flag, '&
+#ifdef HAVE_SHAPELIB
+ //'maskgen for generating a mask field on polygons, polyinter for intepolating &
+ &on polygons, '&
+#endif
+ //'''NONE'' for no transformation (input/output ONLY)')
 CALL optionparser_add(opt, 'z', 'sub-type', sub_type, 'near', help= &
  'transformation subtype, for inter: ''near'', ''bilin'', &
- &for boxinter and boxregrid: ''average'', ''stddev'', ''max'', ''min'', &
+ &for boxinter, boxregrid'&
+#ifdef HAVE_SHAPELIB
+ //', polyinter'&
+#endif
+//': ''average'', ''stddev'', ''max'', ''min'', ''percentile'', &
  &for zoom: ''index'', ''coord'', ''coordbb'', ''projcoord'', &
  &for metamorphosis: ''all'', ''maskvalid'', ''maskinvalid'', ''invalidset''')
 CALL optionparser_add(opt, ' ', 'extrap', extrap, help= &
@@ -186,7 +194,7 @@ CALL optionparser_add(opt, ' ', 'maskbounds', maskbounds, help= &
  'comma-separated list of boundary values for defining subareas &
  &according to values of mask, &
  &for ''metamorphosis:maskvalid'' transformation &
- or for setting a constant value for metamorphosis:invalidset transformation')
+ &or for setting a constant value for metamorphosis:invalidset transformation')
 
 CALL optionparser_add(opt, 'f', 'npx', npx, 4, help= &
  'number of nodes along x axis on input grid, over which to apply function for boxregrid')
@@ -204,6 +212,8 @@ CALL optionparser_add(opt, ' ', 'trans-level-list', trans_level_list, help= &
 CALL optionparser_add(opt, ' ', 'trans-botlevel-list', trans_botlevel_list, help= &
  'list of output bottom surfaces for vertical interpolation, the unit is determined &
  &by the value of level-type and taken from grib2 table')
+CALL optionparser_add(opt, ' ', 'percentile', percentile, 50.0D0, help= &
+ 'desired percentile, [0.,100.], for ''*:percentile'' transformations')
 
 CALL optionparser_add(opt, ' ', 'rounding', round, help= &
  'simplifies volume, merging similar levels and timeranges')
@@ -212,7 +222,7 @@ coord_file=cmiss
 #if defined (HAVE_SHAPELIB) || defined (HAVE_LIBGRIBAPI)
 CALL optionparser_add(opt, ' ', 'coord-file', coord_file, help= &
 #ifdef HAVE_SHAPELIB
-'file in shp format with coordinates of polygons, required for maskgen transformation' &
+'file in shp format with coordinates of polygons, required for maskgen and polyinter  transformation' &
 #endif
 #if defined (HAVE_SHAPELIB) && defined (HAVE_LIBGRIBAPI)
 //' or '// &
@@ -548,7 +558,7 @@ IF (trans_type /= 'none') THEN ! transform
   CALL init(trans, trans_type=trans_type, sub_type=sub_type, extrap=extrap, &
    ix=ix, iy=iy, fx=fx, fy=fy, &
    ilon=ilon, ilat=ilat, flon=flon, flat=flat, npx=npx, npy=npy, &
-   radius=radius, poly=poly, percentile=0.5D0, &
+   radius=radius, poly=poly, percentile=percentile, &
    input_levtype=ilevel, output_levtype=olevel, &
    categoryappend="transformation")
 
