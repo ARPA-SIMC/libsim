@@ -3050,6 +3050,8 @@ if (present(griddim_t)) then
 
  call get_val(griddim_t,xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax)
  call set_val(this%griddim,xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax)
+! improve grid definition precision
+ CALL griddim_setsteps(this%griddim)
 
 else
 
@@ -3073,6 +3075,8 @@ else
     xmin=xmin-step_lon/2.d0
     xmax=xmax-step_lon/2.d0
     call set_val(this%griddim, xmin=xmin, xmax=xmax)
+! improve grid definition precision
+    CALL griddim_setsteps(this%griddim)
     
   case (2)
 
@@ -3085,6 +3089,8 @@ else
     ymin=ymin-step_lat/2.d0
     ymax=ymax-step_lat/2.d0
     call set_val(this%griddim, ymin=ymin, ymax=ymax)
+! improve grid definition precision
+    CALL griddim_setsteps(this%griddim)
     
   case default
 
