@@ -10,6 +10,7 @@ Description: General-purpose and Earth-Science fortran library
 URL: https://github.com/ARPA-SIMC/libsim
 Version: @VERSION@
 Requires:
-Requires.private: libdballef
+Requires.private: log4c gdal libdballef grib_api_f90 netcdf-fortran
 Libs: -L${libdir} -lsim_volgrid6d -lsim_vol7d -lsim_termolib -lsim_alchimia -lsim_base -llog4fortran
+Libs.private: -lcnf -locci -lfortrangis -lshp -lngmath -lncarg -lncarg_gks -lncarg_c -lX11 -lpng -lcairo
 Cflags: -I${libdir}/@FC@/modules
