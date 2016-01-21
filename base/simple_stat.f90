@@ -239,7 +239,7 @@ IF (optio_log(nomiss)) THEN
 ! compute average
   laverage = SUM(sample)/SIZE(sample)
   IF (PRESENT(average)) average = laverage
-  variance = SUM(sample**2)/SIZE(sample) - laverage**2
+  variance = SUM((sample-laverage)**2)/SIZE(sample)
 
 ELSE
   sample_mask = (sample /= rmiss)
@@ -253,9 +253,9 @@ ELSE
 ! compute sum of squares and variance
     variance = 0.
     DO i = 1, SIZE(sample)
-      IF (sample_mask(i)) variance = variance + sample(i)**2
+      IF (sample_mask(i)) variance = variance + (sample(i)-laverage)**2
     ENDDO
-    variance = variance/sample_count - laverage**2
+    variance = variance/sample_count
 !  IF (sample_count > 1) THEN ! do we need this correction?
 !    variance = variance*REAL(sample_count,kind=KIND(variance))/ &
 !     REAL(sample_count-1,kind=KIND(variance))
@@ -286,7 +286,7 @@ IF (optio_log(nomiss)) THEN
 ! compute average
   laverage = SUM(sample)/SIZE(sample)
   IF (PRESENT(average)) average = laverage
-  variance = SUM(sample**2)/SIZE(sample) - laverage**2
+  variance = SUM((sample-laverage)**2)/SIZE(sample)
 
 ELSE
   sample_mask = (sample /= dmiss)
@@ -300,9 +300,9 @@ ELSE
 ! compute sum of squares and variance
     variance = 0.
     DO i = 1, SIZE(sample)
-      IF (sample_mask(i)) variance = variance + sample(i)**2
+      IF (sample_mask(i)) variance = variance + (sample(i)-laverage)**2
     ENDDO
-    variance = variance/sample_count - laverage**2
+    variance = variance/sample_count
 !  IF (sample_count > 1) THEN ! do we need this correction?
 !    variance = variance*REAL(sample_count,kind=KIND(variance))/ &
 !     REAL(sample_count-1,kind=KIND(variance))
@@ -326,7 +326,13 @@ LOGICAL,OPTIONAL,INTENT(in) :: nomiss
 REAL :: stddev
 
 stddev = stat_variance(sample, average, mask, nomiss)
-IF (c_e(stddev) .AND. stddev > 0.0) stddev = SQRT(stddev)
+IF (c_e(stddev)) THEN
+  IF (stddev > 0.0D0) THEN
+    stddev = SQRT(stddev)
+  ELSE
+    stddev = 0.0D0
+  ENDIF
+ENDIF
 
 END FUNCTION stat_stddevr
 
@@ -340,7 +346,14 @@ LOGICAL,OPTIONAL,INTENT(in) :: nomiss
 DOUBLE PRECISION :: stddev
 
 stddev = stat_variance(sample, average, mask, nomiss)
-IF (c_e(stddev) .AND. stddev > 0.0) stddev = SQRT(stddev)
+IF (c_e(stddev)) THEN
+  IF (stddev > 0.0D0) THEN
+    stddev = SQRT(stddev)
+  ELSE
+    stddev = 0.0D0
+  ENDIF
+ENDIF
+
 
 END FUNCTION stat_stddevd
 
@@ -385,22 +398,21 @@ IF (sample_count > 0) THEN
   lvariance2 = 0.
   DO i = 1, SIZE(sample1)
     IF (sample_mask(i))THEN
-      lvariance1 = lvariance1 + sample1(i)**2
-      lvariance2 = lvariance2 + sample2(i)**2
+      lvariance1 = lvariance1 + (sample1(i)-laverage1)**2
+      lvariance2 = lvariance2 + (sample2(i)-laverage2)**2
     ENDIF
   ENDDO
-  lvariance1 =  lvariance1/sample_count - laverage1**2
-  lvariance2 =  lvariance2/sample_count - laverage2**2
+  lvariance1 = lvariance1/sample_count
+  lvariance2 = lvariance2/sample_count
   IF (PRESENT(variance1)) variance1 = lvariance1
   IF (PRESENT(variance2)) variance2 = lvariance2
 ! compute correlation
   linear_corr = 0.
   DO i = 1, SIZE(sample1)
-    IF (sample_mask(i)) linear_corr = linear_corr + sample1(i)*sample2(i)
+    IF (sample_mask(i)) linear_corr = linear_corr + &
+     (sample1(i)-laverage1)*(sample2(i)-laverage2)
   ENDDO
-  linear_corr = (linear_corr/sample_count - laverage1*laverage2) / SQRT(lvariance1*lvariance2)
-!  linear_corr = (SUM(sample1*sample2, mask=sample_mask)/sample_count - laverage1*laverage2) / &
-!   SQRT(lvariance1*lvariance2)
+  linear_corr = linear_corr/sample_count / SQRT(lvariance1*lvariance2)
 ELSE
   IF (PRESENT(average1)) average1 = rmiss
   IF (PRESENT(average2)) average2 = rmiss
@@ -452,22 +464,21 @@ IF (sample_count > 0) THEN
   lvariance2 = 0.
   DO i = 1, SIZE(sample1)
     IF (sample_mask(i))THEN
-      lvariance1 = lvariance1 + sample1(i)**2
-      lvariance2 = lvariance2 + sample2(i)**2
+      lvariance1 = lvariance1 + (sample1(i)-laverage1)**2
+      lvariance2 = lvariance2 + (sample2(i)-laverage2)**2
     ENDIF
   ENDDO
-  lvariance1 =  lvariance1/sample_count - laverage1**2
-  lvariance2 =  lvariance2/sample_count - laverage2**2
+  lvariance1 = lvariance1/sample_count
+  lvariance2 = lvariance2/sample_count
   IF (PRESENT(variance1)) variance1 = lvariance1
   IF (PRESENT(variance2)) variance2 = lvariance2
 ! compute correlation
-  linear_corr = 0.
+  linear_corr = 0.0D0
   DO i = 1, SIZE(sample1)
-    IF (sample_mask(i)) linear_corr = linear_corr + sample1(i)*sample2(i)
+    IF (sample_mask(i)) linear_corr = linear_corr + &
+     (sample1(i)-laverage1)*(sample2(i)-laverage2)
   ENDDO
-  linear_corr = (linear_corr/sample_count - laverage1*laverage2) / SQRT(lvariance1*lvariance2)
-!  linear_corr = (SUM(sample1*sample2, mask=sample_mask)/sample_count - laverage1*laverage2) / &
-!   SQRT(lvariance1*lvariance2)
+  linear_corr = linear_corr/sample_count / SQRT(lvariance1*lvariance2)
 ELSE
   IF (PRESENT(average1)) average1 = dmiss
   IF (PRESENT(average2)) average2 = dmiss
