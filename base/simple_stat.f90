@@ -326,14 +326,8 @@ LOGICAL,OPTIONAL,INTENT(in) :: nomiss
 REAL :: stddev
 
 stddev = stat_variance(sample, average, mask, nomiss)
-IF (c_e(stddev)) THEN
-  IF (stddev > 0.0D0) THEN
-    stddev = SQRT(stddev)
-  ELSE
-    stddev = 0.0D0
-  ENDIF
-ENDIF
-
+IF (c_e(stddev)) stddev = SQRT(stddev)
+ 
 END FUNCTION stat_stddevr
 
 
@@ -346,14 +340,7 @@ LOGICAL,OPTIONAL,INTENT(in) :: nomiss
 DOUBLE PRECISION :: stddev
 
 stddev = stat_variance(sample, average, mask, nomiss)
-IF (c_e(stddev)) THEN
-  IF (stddev > 0.0D0) THEN
-    stddev = SQRT(stddev)
-  ELSE
-    stddev = 0.0D0
-  ENDIF
-ENDIF
-
+IF (c_e(stddev)) stddev = SQRT(stddev)
 
 END FUNCTION stat_stddevd
 
