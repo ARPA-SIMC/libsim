@@ -50,6 +50,7 @@ END INTERFACE
 !! \param average REAL,OPTIONAL,INTENT(out) or DOUBLE PRECISION,OPTIONAL,INTENT(out) the average of the variable can optionally be returned
 !! \param mask(:) LOGICAL,OPTIONAL,INTENT(in) additional mask to be and'ed with missing values
 !! \param nomiss LOGICAL,OPTIONAL,INTENT(in) if provided and \a .TRUE. it disables all the checks for missing data and empty sample and enables the use of a fast algorithm
+!! \param nm1 LOGICAL,OPTIONAL,INTENT(in) if provided and \a .TRUE. it computes the variance dividing by \a n - 1 rather than by \a n
 INTERFACE stat_variance
   MODULE PROCEDURE stat_variancer, stat_varianced
 END INTERFACE
@@ -64,6 +65,7 @@ END INTERFACE
 !! \param average REAL,OPTIONAL,INTENT(out) or DOUBLE PRECISION,OPTIONAL,INTENT(out) the average of the variable can optionally be returned
 !! \param mask(:) LOGICAL,OPTIONAL,INTENT(in) additional mask to be and'ed with missing values
 !! \param nomiss LOGICAL,OPTIONAL,INTENT(in) if provided and \a .TRUE. it disables all the checks for missing data and empty sample and enables the use of a fast algorithm
+!! \param nm1 LOGICAL,OPTIONAL,INTENT(in) if provided and \a .TRUE. it computes the variance dividing by \a n - 1 rather than by \a n
 INTERFACE stat_stddev
   MODULE PROCEDURE stat_stddevr, stat_stddevd
 END INTERFACE
@@ -223,11 +225,12 @@ ENDIF
 END FUNCTION stat_averaged
 
 
-FUNCTION stat_variancer(sample, average, mask, nomiss) RESULT(variance)
+FUNCTION stat_variancer(sample, average, mask, nomiss, nm1) RESULT(variance)
 REAL,INTENT(in) :: sample(:)
 REAL,OPTIONAL,INTENT(out) :: average
 LOGICAL,OPTIONAL,INTENT(in) :: mask(:)
 LOGICAL,OPTIONAL,INTENT(in) :: nomiss
+LOGICAL,OPTIONAL,INTENT(in) :: nm1
 
 REAL :: variance
 
@@ -239,7 +242,11 @@ IF (optio_log(nomiss)) THEN
 ! compute average
   laverage = SUM(sample)/SIZE(sample)
   IF (PRESENT(average)) average = laverage
-  variance = SUM((sample-laverage)**2)/SIZE(sample)
+  IF (optio_log(nm1)) THEN
+    variance = SUM((sample-laverage)**2)/MAX(SIZE(sample)-1,1)
+  ELSE
+    variance = SUM((sample-laverage)**2)/SIZE(sample)
+  ENDIF
 
 ELSE
   sample_mask = (sample /= rmiss)
@@ -255,11 +262,11 @@ ELSE
     DO i = 1, SIZE(sample)
       IF (sample_mask(i)) variance = variance + (sample(i)-laverage)**2
     ENDDO
-    variance = variance/sample_count
-!  IF (sample_count > 1) THEN ! do we need this correction?
-!    variance = variance*REAL(sample_count,kind=KIND(variance))/ &
-!     REAL(sample_count-1,kind=KIND(variance))
-!  ENDIF
+    IF (optio_log(nm1)) THEN
+      variance = variance/MAX(sample_count-1,1)
+    ELSE
+      variance = variance/sample_count
+    ENDIF
   ELSE
     IF (PRESENT(average)) average = rmiss
     variance = rmiss
@@ -270,11 +277,12 @@ ENDIF
 END FUNCTION stat_variancer
 
 
-FUNCTION stat_varianced(sample, average, mask, nomiss) RESULT(variance)
+FUNCTION stat_varianced(sample, average, mask, nomiss, nm1) RESULT(variance)
 DOUBLE PRECISION,INTENT(in) :: sample(:)
 DOUBLE PRECISION,OPTIONAL,INTENT(out) :: average
 LOGICAL,OPTIONAL,INTENT(in) :: mask(:)
 LOGICAL,OPTIONAL,INTENT(in) :: nomiss
+LOGICAL,OPTIONAL,INTENT(in) :: nm1
 
 DOUBLE PRECISION :: variance
 
@@ -286,7 +294,11 @@ IF (optio_log(nomiss)) THEN
 ! compute average
   laverage = SUM(sample)/SIZE(sample)
   IF (PRESENT(average)) average = laverage
-  variance = SUM((sample-laverage)**2)/SIZE(sample)
+  IF (optio_log(nm1)) THEN
+    variance = SUM((sample-laverage)**2)/MAX(SIZE(sample)-1,1)
+  ELSE
+    variance = SUM((sample-laverage)**2)/SIZE(sample)
+  ENDIF
 
 ELSE
   sample_mask = (sample /= dmiss)
@@ -302,11 +314,11 @@ ELSE
     DO i = 1, SIZE(sample)
       IF (sample_mask(i)) variance = variance + (sample(i)-laverage)**2
     ENDDO
-    variance = variance/sample_count
-!  IF (sample_count > 1) THEN ! do we need this correction?
-!    variance = variance*REAL(sample_count,kind=KIND(variance))/ &
-!     REAL(sample_count-1,kind=KIND(variance))
-!  ENDIF
+    IF (optio_log(nm1)) THEN
+      variance = variance/MAX(sample_count-1,1)
+    ELSE
+      variance = variance/sample_count
+    ENDIF
   ELSE
     IF (PRESENT(average)) average = dmiss
     variance = dmiss
@@ -317,29 +329,31 @@ ENDIF
 END FUNCTION stat_varianced
 
 
-FUNCTION stat_stddevr(sample, average, mask, nomiss) RESULT(stddev)
+FUNCTION stat_stddevr(sample, average, mask, nomiss, nm1) RESULT(stddev)
 REAL,INTENT(in) :: sample(:)
 REAL,OPTIONAL,INTENT(out) :: average
 LOGICAL,OPTIONAL,INTENT(in) :: mask(:)
 LOGICAL,OPTIONAL,INTENT(in) :: nomiss
+LOGICAL,OPTIONAL,INTENT(in) :: nm1
 
 REAL :: stddev
 
-stddev = stat_variance(sample, average, mask, nomiss)
+stddev = stat_variance(sample, average, mask, nomiss, nm1)
 IF (c_e(stddev)) stddev = SQRT(stddev)
  
 END FUNCTION stat_stddevr
 
 
-FUNCTION stat_stddevd(sample, average, mask, nomiss) RESULT(stddev)
+FUNCTION stat_stddevd(sample, average, mask, nomiss, nm1) RESULT(stddev)
 DOUBLE PRECISION,INTENT(in) :: sample(:)
 DOUBLE PRECISION,OPTIONAL,INTENT(out) :: average
 LOGICAL,OPTIONAL,INTENT(in) :: mask(:)
 LOGICAL,OPTIONAL,INTENT(in) :: nomiss
+LOGICAL,OPTIONAL,INTENT(in) :: nm1
 
 DOUBLE PRECISION :: stddev
 
-stddev = stat_variance(sample, average, mask, nomiss)
+stddev = stat_variance(sample, average, mask, nomiss, nm1)
 IF (c_e(stddev)) stddev = SQRT(stddev)
 
 END FUNCTION stat_stddevd

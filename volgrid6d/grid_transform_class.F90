@@ -559,7 +559,8 @@ ELSE IF (this%trans_type == 'boxinter' .OR. this%trans_type == 'polyinter' &
     ENDIF
   ENDIF
 
-  IF (this%sub_type == 'average' .OR. this%sub_type == 'stddev') THEN
+  IF (this%sub_type == 'average' .OR. this%sub_type == 'stddev' &
+   .OR. this%sub_type == 'stddevnm1') THEN
     this%stat_info%percentile = rmiss
   ELSE IF (this%sub_type == 'max') THEN
     this%stat_info%percentile = 101.
@@ -2507,7 +2508,7 @@ LOGICAL,ALLOCATABLE :: mask_in(:)
 REAL,ALLOCATABLE :: val_in(:), field_tmp(:,:,:)
 REAL,POINTER :: coord_3d_in_act(:,:,:)
 TYPE(grid_transform) :: likethis
-LOGICAL :: alloc_coord_3d_in_act
+LOGICAL :: alloc_coord_3d_in_act, nm1
 
 
 #ifdef DEBUG
@@ -2803,8 +2804,14 @@ ELSE IF (this%trans%trans_type == 'boxinter' &
       DEALLOCATE(nval)
     ENDIF
 
-  ELSE IF (this%trans%sub_type == 'stddev') THEN
+  ELSE IF (this%trans%sub_type == 'stddev' .OR. &
+   this%trans%sub_type == 'stddevnm1') THEN
 
+    IF (this%trans%sub_type == 'stddev') THEN
+      nm1 = .FALSE.
+    ELSE
+      nm1 = .TRUE.
+    ENDIF
     DO k = 1, innz
       DO j = 1, this%outny
         DO i = 1, this%outnx
@@ -2812,7 +2819,7 @@ ELSE IF (this%trans%trans_type == 'boxinter' &
           field_out(i:i,j,k) = stat_stddev( &
            RESHAPE(field_in(:,:,k), (/SIZE(field_in(:,:,k))/)), &
            mask=RESHAPE((this%inter_index_x == i .AND. &
-           this%inter_index_y == j), (/SIZE(field_in(:,:,k))/)))
+           this%inter_index_y == j), (/SIZE(field_in(:,:,k))/)), nm1=nm1)
         ENDDO
       ENDDO
     ENDDO
@@ -2920,7 +2927,14 @@ ELSE IF (this%trans%trans_type == 'stencilinter') THEN
 !$OMP END PARALLEL
     ENDIF
 
-  ELSE IF (this%trans%sub_type == 'stddev') THEN
+  ELSE IF (this%trans%sub_type == 'stddev' .OR. &
+   this%trans%sub_type == 'stddevnm1') THEN
+
+    IF (this%trans%sub_type == 'stddev') THEN
+      nm1 = .FALSE.
+    ELSE
+      nm1 = .TRUE.
+    ENDIF
 
 !$OMP PARALLEL DEFAULT(SHARED)
 !$OMP DO PRIVATE(i, j, k, i1, i2, j1, j2)
@@ -2936,7 +2950,7 @@ ELSE IF (this%trans%trans_type == 'stencilinter') THEN
             field_out(i:i,j,k) = stat_stddev( &
              RESHAPE(field_in(i1:i2,j1:j2,k), (/ns/)), &
              mask=RESHAPE(field_in(i1:i2,j1:j2,k) /= rmiss .AND. &
-             this%stencil(:,:), (/ns/)))
+             this%stencil(:,:), (/ns/)), nm1=nm1)
           ENDIF
         ENDDO
       ENDDO
