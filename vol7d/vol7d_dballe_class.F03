@@ -213,7 +213,7 @@ if (optio_log(file)) then
   if (index(arg,'/',back=.true.) > 0) lfilename=lfilename(index(arg,'/',back=.true.)+1 : )
 
   if (present(filename))then
-    if (filename /= "")then
+    if (c_e(filename))then
       lfilename=filename
     end if
   end if

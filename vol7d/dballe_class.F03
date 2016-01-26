@@ -3763,7 +3763,12 @@ if (present(filename)) then
 
   lfile=.true.
 
-  inquire(file=filename,EXIST=exist)
+  IF (filename == '') THEN
+! if stdio do not check existence, stdin always exist, stdout never exist
+    exist = .NOT.lwrite
+  ELSE
+    INQUIRE(file=filename,EXIST=exist)
+  ENDIF
   
   if (lwrite)then
     if (lwipe.or..not.exist) then
