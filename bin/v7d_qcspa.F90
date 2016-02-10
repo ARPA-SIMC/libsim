@@ -82,7 +82,7 @@ integer :: indcana,indctime,indclevel,indctimerange,indcdativarr,indcnetwork,ind
 INTEGER,POINTER :: w_s(:), w_e(:)
 TYPE(vol7d_dballe) :: v7d_dba_out
 logical :: file
-integer :: status
+integer :: status,grunit
     
 #ifdef HAVE_DBALLE
 namelist /odbc/   dsn,user,password,dsne,usere,passworde
@@ -182,6 +182,8 @@ if (operation == "ndi") then
   ENDIF
   CALL getarg(iargc(), output_file)
   
+
+                                !you can define level, timerange, var or get it from file
   call init(levelo)
   call init(timerangeo)
   call init (variao)
@@ -190,15 +192,18 @@ if (operation == "ndi") then
     call getarg(ninput, input_file)
 
     CALL l4f_category_log(category,L4F_INFO,"open file: "//t2c(input_file))
-    open (10,file=input_file,status="old")
-    read (10,*,iostat=status) level,timerange,varia
+    grunit=getunit()
+    open (grunit,file=input_file,status="old")
+    read (grunit,*,iostat=status) level,timerange,varia
     if (status /= 0) then
       CALL l4f_category_log(category,L4F_WARN,"error reading: "//t2c(input_file))
-      close(10)
+      close(grunit)
       cycle
     endif
 
     if (c_e(levelo)) then
+
+      !if (t2c(input_file) /= to_char(levelo)//"_"//to_char(timerangeo)//"_"//variao%btable//".grad")
       if ( level /= levelo .or. timerange /= timerangeo .or. varia /= variao ) then
         call l4f_category_log(category,L4F_ERROR,"Error reading grad files: file are incoerent")
         call raise_error("")
@@ -210,12 +215,12 @@ if (operation == "ndi") then
     end if
 
     do while (.true.)
-      read (10,*,iostat=iostat) val
+      read (grunit,*,iostat=iostat) val
       if (iostat /= 0) exit
       if (val /= 0.) call insert(grad,val)
     end do
 
-    close(10)
+    close(grunit)
   end do
   
   CALL l4f_category_log(category,L4F_INFO,"compute percentile to remove the tails")

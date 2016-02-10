@@ -123,7 +123,8 @@ type :: qcspatype
   type (qcclitype) :: qccli !< qccli part for normalization
   type (vol7d) :: clima !< Clima spaziale di tutte le variabili da controllare
   character(len=20):: operation !< Operation to execute ("gradient"/"run")
-  logical :: writeheader  !< have to write header in gradient files
+  !logical :: writeheader  !< have to write header in gradient files
+  !integer :: grunit !< unit used internally to write gradient
 end type qcspatype
 
 
@@ -200,7 +201,6 @@ call delete(qcspa%tri)
 nullify ( qcspa%data_id_in )
 nullify ( qcspa%data_id_out )
 
-qcspa%writeheader =.false.
 
 ! riporto il volume dati nel mio oggetto
 qcspa%v7d => v7d
@@ -298,12 +298,6 @@ if (qcspa%operation == "run") then
 #endif
 end if
 
-
-! open file to write gradient
-if (qcspa%operation == "gradient") then
-  open (unit=11, file=t2c(timei)//"_"//t2c(timef)//".grad",STATUS='UNKNOWN', form='FORMATTED')
-  qcspa%writeheader =.true.
-end if
 
 return
 end subroutine qcspainit
@@ -467,10 +461,6 @@ call delete(qcspa%qccli)
 
 qcspa%ndp=imiss
 
-if (qcspa%operation == "gradient") then
-  close (unit=11)
-end if
-
 !delete logger
 call l4f_category_delete(qcspa%category)
 
@@ -514,11 +504,13 @@ TYPE(datetime)   :: time
 TYPE(vol7d_network):: network
 type(timedelta) :: deltato,deltat 
 
-integer :: ivert(50),i,ipos,ineg,it,itrov,iv,ivb,kk,iindtime
+integer :: ivert(50),i,ipos,ineg,it,itrov,iv,ivb,kk,iindtime,grunit
 double precision :: distmin=1000.d0,distscol=300000.d0
 double precision :: dist,grad,gradmin
 integer (kind=int_b) :: flag
 !!$CHARACTER(len=vol7d_ana_lenident) :: ident
+character(len=512) :: filename
+logical :: exist
 
                                 !call qcspa_validate (qcspa)
 
@@ -556,24 +548,17 @@ if (indbattrout <= 0 ) then
 
 end if
 
-if (qcspa%operation == "gradient") then
-
-  !check for gradient operation
-  if ( size(qcspa%v7d%level)      > 1 .or.&
-       size(qcspa%v7d%timerange)  > 1 .or.&
-       size(qcspa%v7d%dativar%r)  > 1 ) then
-    call l4f_category_log(qcspa%category,L4F_ERROR,"gradient operation manage one level/timerange/var only")
-    call raise_error()
-  end if
-
-  ! say we have to write header in file
-  if  (qcspa%writeheader) then
-    call l4f_category_log(qcspa%category,L4F_INFO,"write header in gradient file")
-    write (11,*) qcspa%v7d%level(1), qcspa%v7d%timerange(1), qcspa%v7d%dativar%r(1)
-    qcspa%writeheader =.false.
-  end if
-
-end if
+!!$if (qcspa%operation == "gradient") then
+!!$
+!!$  !check for gradient operation
+!!$  if ( size(qcspa%v7d%level)      > 1 .or.&
+!!$       size(qcspa%v7d%timerange)  > 1 .or.&
+!!$       size(qcspa%v7d%dativar%r)  > 1 ) then
+!!$    call l4f_category_log(qcspa%category,L4F_ERROR,"gradient operation manage one level/timerange/var only")
+!!$    call raise_error()
+!!$  end if
+!!$
+!!$end if
 
 ! set other local variable from optional parameter
 if(present(anamask)) then
@@ -641,11 +626,42 @@ do indtime=1,size(qcspa%v7d%time)
   call l4f_category_log(qcspa%category,L4F_INFO,&
    "Check time:"//t2c(qcspa%v7d%time(indtime)) )
 
-  do indnetwork=1,size(qcspa%v7d%network)
-    do indana=1,size(qcspa%v7d%ana)
-      do indlevel=1,size(qcspa%v7d%level)
-        do indtimerange=1,size(qcspa%v7d%timerange)
-          do inddativarr=1,size(qcspa%v7d%dativar%r)
+  do indlevel=1,size(qcspa%v7d%level)
+    do indtimerange=1,size(qcspa%v7d%timerange)
+      do inddativarr=1,size(qcspa%v7d%dativar%r)
+
+
+        if (qcspa%operation == "gradient") then
+                                ! open file to write gradient
+
+          filename=trim(to_char(qcspa%v7d%level(indlevel)))//&
+           "_"//trim(to_char(qcspa%v7d%timerange(indtimerange)))//&
+           "_"//trim(qcspa%v7d%dativar%r(inddativarr)%btable)//&
+           ".grad"
+
+          call l4f_category_log(qcspa%category,L4F_INFO,"try to open gradient file; filename below")
+          call l4f_category_log(qcspa%category,L4F_INFO,filename)
+
+          inquire(file=filename, exist=exist)
+          
+          grunit=getunit()
+          if (grunit /= -1) then
+                                !open (unit=grunit, file=t2c(timei)//"_"//t2c(timef)//".grad",STATUS='UNKNOWN', form='FORMATTED')
+            open (grunit, file=filename ,STATUS='UNKNOWN', form='FORMATTED',position='APPEND')
+          end if
+                                ! say we have to write header in file
+          if  (.not. exist) then
+            call l4f_category_log(qcspa%category,L4F_INFO,"write header in gradient file")
+            write (grunit,*) &
+             qcspa%v7d%level(indlevel), &
+             qcspa%v7d%timerange(indtimerange), &
+             qcspa%v7d%dativar%r(inddativarr)
+          end if
+        end if
+
+
+        do indnetwork=1,size(qcspa%v7d%network)
+          do indana=1,size(qcspa%v7d%ana)
 
 !!$            call l4f_log(L4F_INFO,"Index:"// t2c(indana)//t2c(indnetwork)//t2c(indlevel)//&
 !!$             t2c(indtimerange)//t2c(inddativarr)//t2c(indtime))
@@ -865,7 +881,7 @@ do indtime=1,size(qcspa%v7d%time)
               gradmin=sign(gradmin,dble(ipos-ineg))
 
               if (qcspa%operation == "gradient") then
-                write(11,*)gradmin
+                write(grunit,*)gradmin
               end if
 
               flag=bmiss
@@ -916,6 +932,11 @@ do indtime=1,size(qcspa%v7d%time)
             end if
           end do
         end do
+
+        if (qcspa%operation == "gradient") then
+          close (unit=grunit)
+        end if
+        
       end do
     end do
   end do
