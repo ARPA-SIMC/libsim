@@ -158,9 +158,9 @@ B13230,CAPE (invented),J/Kg,200,201,145,255,1.0,0.0
 B13230,CAPE (invented),J/Kg,78,201,145,255,1.0,0.0
 B13230,CAPE (invented),J/Kg,200,201,143,255,1.0,0.0
 B13230,CAPE (invented),J/Kg,78,201,143,255,1.0,0.0
+B14018,Downward short-wave radiation flux (surface),W/m^2,255,4,7,0,1.0,0.0
 B14018,Downward short-wave radiation flux (surface),W/m^2,200,200,115,0,1.0,0.0
 B14018,Downward short-wave radiation flux (surface),W/m^2,200,200,115,255,1.0,0.0
-B14018,Downward short-wave radiation flux (surface),W/m^2,255,4,7,0,1.0,0.0
 B14018,Downward short-wave radiation flux (surface),W/m^2,98,128,169,255,1.0,0.0
 B14019,Surface Albedo,Percent,255,2,84,255,1.0,0.0
 B14019,Surface Albedo,Fraction,200,200,124,255,100.,0.0
