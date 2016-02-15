@@ -35,7 +35,7 @@ IMPLICIT NONE
 !! accessibili e scrivibili, ma è comunque consigliato assegnarli tramite
 !! il costruttore ::init.
 TYPE vol7d_timerange
-  INTEGER :: timerange !< proprietà statistiche del dato (es. 0=media, 1=cumulazione, 2=massimo, 3=minimo, 4=differenza... 254=dato istantaneo) tratte dalla code table 4.10 del formato WMO grib edizione 2, vedi http://www.wmo.ch/pages/prog/www/WMOCodes/GRIB.html
+  INTEGER :: timerange !< proprietà statistiche del dato (es. 0=media, 1=cumulazione, 2=massimo, 3=minimo, 4=differenza... 254=dato istantaneo) tratte dalla code table 4.10 del formato WMO grib edizione 2, vedi http://www.wmo.int/pages/prog/www/WMOCodes/WMO306_vI2/LatestVERSION/WMO306_vI2_GRIB2_CodeFlag_en.pdf
   INTEGER :: p1 !< termine del periodo di validità del dato, in secondi, a partire dall'istante di riferimento (0 per dati osservati o analizzati)
   INTEGER :: p2 !< durata del periodo di validità del dato, in secondi (0 per dati istantanei)
 END TYPE vol7d_timerange

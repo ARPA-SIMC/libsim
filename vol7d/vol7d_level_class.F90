@@ -35,8 +35,8 @@ IMPLICIT NONE
 TYPE vol7d_level
   INTEGER :: level1 !< tipo di livello o strato verticale (vedi tabella 4.5 formato grib2 WMO http://www.wmo.int/pages/prog/www/WMOCodes/WMO306_vI2/LatestVERSION/WMO306_vI2_GRIB2_CodeFlag_en.pdf)
   INTEGER :: l1 !< valore numerico del primo livello, se previsto da \a level1
-  INTEGER :: level2 !< tipo di livello o strato verticale (vedi tabella 4.10 formato grib2 WMO http://www.wmo.ch/pages/prog/www/WMOCodes/Operational/GRIB2/FM92-GRIB2-2007Nov.pdf )
-  INTEGER :: l2 !< valore numerico del secondo livello, se previsto da \a level2 (in altre parole, se il dato è riferita ad uno strato di spessore finito)
+  INTEGER :: level2 !< tipo di livello o strato verticale (vedi tabella 4.5 formato grib2 WMO http://www.wmo.int/pages/prog/www/WMOCodes/WMO306_vI2/LatestVERSION/WMO306_vI2_GRIB2_CodeFlag_en.pdf)
+  INTEGER :: l2 !< valore numerico del secondo livello, se previsto da \a level2
 END TYPE  vol7d_level
 
 !> Valore mancante per vol7d_level.
