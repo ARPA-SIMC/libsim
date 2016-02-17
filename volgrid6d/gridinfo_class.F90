@@ -734,10 +734,16 @@ else if (EditionNumber == 2)then
   call grib_get(gaid,'typeOfFirstFixedSurface',ltype1)
   call grib_get(gaid,'scaleFactorOfFirstFixedSurface',scalef1)
   call grib_get(gaid,'scaledValueOfFirstFixedSurface',scalev1)
+  IF (scalef1 == -1 .OR. scalev1 == -1) THEN
+    scalef1 = imiss; scalev1 = imiss
+  ENDIF
 
   call grib_get(gaid,'typeOfSecondFixedSurface',ltype2)
   call grib_get(gaid,'scaleFactorOfSecondFixedSurface',scalef2)
   call grib_get(gaid,'scaledValueOfSecondFixedSurface',scalev2)
+  IF (scalef2 == -1 .OR. scalev2 == -1) THEN
+    scalef2 = imiss; scalev2 = imiss
+  ENDIF
 
 else
 
@@ -1053,20 +1059,24 @@ integer,intent(out) :: lt,l
 doubleprecision :: sl
 
 
-IF (ltype == 255) THEN
+IF (ltype == 255 .OR. ltype == -1) THEN
   lt = imiss
   l = imiss
-ELSE IF (ltype <= 10 .OR. (ltype >= 162 .AND. ltype <= 166)) THEN
+ELSE IF (ltype <= 10 .OR. ltype == 101 .OR. (ltype >= 162 .AND. ltype <= 184)) THEN
   lt = ltype
   l = imiss
 ELSE
   lt = ltype
-  sl = scalev*(10.D0**(-scalef))
+  IF (c_e(scalef) .AND. c_e(scalev)) THEN
+    sl = scalev*(10.D0**(-scalef))
 
-  IF (ANY(ltype == height_level)) THEN
-    l = NINT(sl*1000.D0)
+    IF (ANY(ltype == height_level)) THEN
+      l = NINT(sl*1000.D0)
+    ELSE
+      l = NINT(sl)
+    ENDIF
   ELSE
-    l = NINT(sl)
+    l = imiss
   ENDIF
 ENDIF
 
