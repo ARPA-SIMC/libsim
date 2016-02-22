@@ -887,13 +887,14 @@ END SUBROUTINE datetime_vect_write_unit
 !! forniti, ovviamente non fornire un parametro equivale a fornirlo =0.
 !! Questa � la versione \c FUNCTION, in stile F2003, del costruttore, da preferire
 !! rispetto alla versione \c SUBROUTINE \c init.
-FUNCTION timedelta_new(year, month, day, hour, minute, msec, &
+FUNCTION timedelta_new(year, month, day, hour, minute, sec, msec, &
  isodate, simpledate, oraclesimdate) RESULT (this)
 INTEGER,INTENT(IN),OPTIONAL :: year !< anni, se presente l'oggetto diventa "popolare"
 INTEGER,INTENT(IN),OPTIONAL :: month !< mesi, se presente l'oggetto diventa "popolare"
 INTEGER,INTENT(IN),OPTIONAL :: day !< giorni
 INTEGER,INTENT(IN),OPTIONAL :: hour !< ore
 INTEGER,INTENT(IN),OPTIONAL :: minute !< minuti
+INTEGER,INTENT(IN),OPTIONAL :: sec !< secondi
 INTEGER,INTENT(IN),OPTIONAL :: msec !< millisecondi
 CHARACTER(len=*),INTENT(IN),OPTIONAL :: isodate !< inizializza l'oggetto ad un intervallo nel formato \c GGGGGGGGGG \c hh:mm:ss.msc, ignorando tutti gli altri parametri
 CHARACTER(len=*),INTENT(IN),OPTIONAL :: simpledate !< inizializza l'oggetto ad un intervallo nel formato \c GGGGGGGGhhmmmsc, ignorando tutti gli altri parametri, da preferire rispetto a \a oraclesimdate
@@ -901,7 +902,7 @@ CHARACTER(len=12),INTENT(IN),OPTIONAL :: oraclesimdate !< inizializza l'oggetto 
 
 TYPE(timedelta) :: this !< oggetto da inizializzare
 
-CALL timedelta_init(this, year, month, day, hour, minute, msec, &
+CALL timedelta_init(this, year, month, day, hour, minute, sec, msec, &
  isodate, simpledate, oraclesimdate)
 
 END FUNCTION timedelta_new
@@ -911,7 +912,7 @@ END FUNCTION timedelta_new
 !! Se non viene passato nulla lo inizializza a intervallo di durata nulla.
 !! L'intervallo ottenuto � pari alla somma dei valori di tutti i parametri
 !! forniti, ovviamente non fornire un parametro equivale a fornirlo =0.
-SUBROUTINE timedelta_init(this, year, month, day, hour, minute, msec, &
+SUBROUTINE timedelta_init(this, year, month, day, hour, minute, sec, msec, &
  isodate, simpledate, oraclesimdate)
 TYPE(timedelta),INTENT(INOUT) :: this !< oggetto da inizializzare
 INTEGER,INTENT(IN),OPTIONAL :: year !< anni, se presente l'oggetto diventa "popolare"
@@ -919,6 +920,7 @@ INTEGER,INTENT(IN),OPTIONAL :: month !< mesi, se presente l'oggetto diventa "pop
 INTEGER,INTENT(IN),OPTIONAL :: day !< giorni
 INTEGER,INTENT(IN),OPTIONAL :: hour !< ore
 INTEGER,INTENT(IN),OPTIONAL :: minute !< minuti
+INTEGER,INTENT(IN),OPTIONAL :: sec !< secondi
 INTEGER,INTENT(IN),OPTIONAL :: msec !< millisecondi
 CHARACTER(len=*),INTENT(IN),OPTIONAL :: isodate !< inizializza l'oggetto ad un intervallo nel formato \c AAAAMMGGGG \c hh:mm:ss.msc, ignorando tutti gli altri parametri, se \c AAAA o \c MM sono diversi da 0 l'oggetto diventa "popolare"
 CHARACTER(len=*),INTENT(IN),OPTIONAL :: simpledate !< inizializza l'oggetto ad un intervallo nel formato \c GGGGGGGGhhmmmsc, ignorando tutti gli altri parametri, da preferire rispetto a \a oraclesimdate
@@ -978,8 +980,9 @@ ELSE IF (PRESENT(oraclesimdate)) THEN
    3600000_int_ll*INT(h, KIND=int_ll) + 60000_int_ll*INT(m, KIND=int_ll)
 
 ELSE IF (.not. present(year) .and. .not. present(month) .and. .not. present(day)&
- .and. .not. present(hour) .and. .not. present(minute) .and. .not. present(msec)&
- .and. .not. present(isodate) .and. .not. present(simpledate) .and. .not. present(oraclesimdate)) THEN
+ .and. .not. present(hour) .and. .not. present(minute) .and. .not. present(sec)&
+ .and. .not. present(msec) .and. .not. present(isodate) &
+ .and. .not. present(simpledate) .and. .not. present(oraclesimdate)) THEN
 
   this=timedelta_miss
 
@@ -1020,6 +1023,14 @@ ELSE
   IF (PRESENT(minute)) THEN
     if (c_e(minute))then
       this%iminuti = this%iminuti + 60000_int_ll*INT(minute, KIND=int_ll)
+    else
+      this=timedelta_miss
+      return
+    end if
+  ENDIF
+  IF (PRESENT(sec)) THEN
+    if (c_e(sec))then
+      this%iminuti = this%iminuti + 1000_int_ll*INT(sec, KIND=int_ll)
     else
       this=timedelta_miss
       return
