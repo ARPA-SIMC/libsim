@@ -975,23 +975,23 @@ if (any(field == rmiss)) then
 
   call grib_set(gaid,'missingValue',rmiss)
   if (editionNumber == 1) then
-! enable bitmap in a grib1
+! enable bitmap in grib1
 ! grib_api 1.9.9 goes into an infinite loop with second order packing here
     CALL grib_set(gaid,'packingType','grid_simple')
     call grib_set(gaid,"bitmapPresent",1)
   else
-! enable bitmap in a grib2
+! enable bitmap in grib2
     call grib_set(gaid,"bitMapIndicator",0)
   endif
 
 else
 
   if (editionNumber == 1) then
-! enable bitmap in a grib1
+! disable bitmap in grib1
     call grib_set(gaid,"bitmapPresent",0)
   else
-! enable bitmap in a grib2
-    call grib_set(gaid,"bitMapIndicator",1)
+! disable bitmap in grib2
+    call grib_set(gaid,"bitMapIndicator",255)
   endif
 
 end if
