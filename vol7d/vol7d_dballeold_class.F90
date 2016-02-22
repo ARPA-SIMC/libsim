@@ -894,7 +894,7 @@ do i=1,N
 
                                 ! take in account time_definition
   if (this%vol7d%time_definition == 0) buffer(i)%time = buffer(i)%time - &
-   timedelta_new(msec=buffer(i)%timerange%p1*1000)
+   timedelta_new(sec=buffer(i)%timerange%p1)
 
 end do
 
@@ -3202,7 +3202,7 @@ do while ( .true. )
 
       ! take in account time_definition
       IF (this%vol7d%time_definition == 0) buffer(nd)%time = buffer(nd)%time - &
-       timedelta_new(msec=buffer(nd)%timerange%p1*1000)
+       timedelta_new(sec=buffer(nd)%timerange%p1)
 
                                 ! put ana in bufferana becouse we can have no station data but we need ana
                                 !todo ; we have to do the same for network but I am tired ....      

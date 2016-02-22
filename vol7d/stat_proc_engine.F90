@@ -68,7 +68,7 @@ ELSE ! compute start automatically
 ! the shortest interval available is used, the longest could be used
 ! obtaining more data but worse
   lstart = itime(1) - &
-   timedelta_new(msec=MINVAL(itimerange(:)%p2, mask=tr_mask(:))*1000)
+   timedelta_new(sec=MINVAL(itimerange(:)%p2, mask=tr_mask(:)))
 
   lstart = lstart-(MOD(lstart, step)) ! round to step, check the - sign!!!
 ENDIF
@@ -102,7 +102,7 @@ DO j = 1, SIZE(itimerange)
 
   nval = nval + 1
   map_tr(nval) = j ! mappatura per ottimizzare il successivo ciclo sui timerange
-  dt1 = timedelta_new(msec=itimerange(j)%p2*1000)
+  dt1 = timedelta_new(sec=itimerange(j)%p2)
 
   ! calcolo il numero teorico di intervalli in ingresso che
   ! contribuiscono all'intervallo corrente in uscita
@@ -497,10 +497,10 @@ maxp1 = MAXVAL(itimerange(:)%p1, mask=mask_timerange)
 minp2 = MINVAL(itimerange(:)%p2, mask=mask_timerange)
 minp1mp2 = MINVAL(itimerange(:)%p1 - itimerange(:)%p2, mask=mask_timerange)
 IF (time_definition == 0) THEN ! reference time
-  lstart = lstart + timedelta_new(msec=1000*minp1mp2)
-  lend = lend + timedelta_new(msec=1000*maxp1)
+  lstart = lstart + timedelta_new(sec=minp1mp2)
+  lend = lend + timedelta_new(sec=maxp1)
 ELSE ! verification time
-  lstart = lstart - timedelta_new(msec=1000*minp2)
+  lstart = lstart - timedelta_new(sec=minp2)
   lstart = lstart - (MOD(lstart, step)) ! round to step, check the - sign!!!
 ENDIF
 #ifdef DEBUG
@@ -617,8 +617,8 @@ TYPE(datetime),INTENT(out) :: pend
 TYPE(timedelta) :: p1, p2
 
 
-p1 = timedelta_new(msec=timerange%p1*1000) ! end of period
-p2 = timedelta_new(msec=timerange%p2*1000) ! length of period
+p1 = timedelta_new(sec=timerange%p1) ! end of period
+p2 = timedelta_new(sec=timerange%p2) ! length of period
 
 IF (time == datetime_miss .OR. .NOT.c_e(timerange%p1) .OR. .NOT.c_e(timerange%p2) .OR. &
  (timerange%p1 > 0 .AND. timerange%p1 < timerange%p2) .OR. &

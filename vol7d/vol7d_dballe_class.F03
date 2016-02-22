@@ -711,7 +711,7 @@ if (ltime_definition == 0) then
   do i =1,size(metaanddatav)
     metaanddatav(i)%metadata%datetime%datetime = &
      metaanddatav(i)%metadata%datetime%datetime - &
-     timedelta_new(msec=metaanddatav(i)%metadata%timerange%vol7d_timerange%p1*1000)
+     timedelta_new(sec=metaanddatav(i)%metadata%timerange%vol7d_timerange%p1)
   end do
 end if
 

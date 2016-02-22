@@ -871,7 +871,7 @@ ENDIF
 
 correctedtime = gridinfo%time
 IF (this%time_definition == 1) correctedtime = correctedtime + &
- timedelta_new(msec=gridinfo%timerange%p1*1000)
+ timedelta_new(sec=gridinfo%timerange%p1)
 itime = index(this%time, correctedtime)
 IF (itime == 0 .AND. lforce) THEN
   itime = index(this%time, datetime_miss)
@@ -1005,7 +1005,7 @@ ENDIF
 
 IF (this%time_definition == 1) THEN
   correctedtime = this%time(itime) - &
-   timedelta_new(msec=this%timerange(itimerange)%p1*1000)
+   timedelta_new(sec=this%timerange(itimerange)%p1)
 ELSE
   correctedtime = this%time(itime)
 ENDIF
@@ -1094,7 +1094,7 @@ IF (PRESENT(time_definition)) THEN
   IF (time_definition == 1) THEN
     DO i = 1, gridinfov%arraysize
       correctedtime(i) = correctedtime(i) + &
-       timedelta_new(msec=gridinfov%array(i)%timerange%p1*1000)
+       timedelta_new(sec=gridinfov%array(i)%timerange%p1)
     ENDDO
   ENDIF
 ENDIF
@@ -1934,10 +1934,10 @@ if (associated(volgrid6d_in%time))then
       do itimerange=1,ntimerange
         if (vol7d_out%time_definition > volgrid6d_in%time_definition) then
           validitytime(itime,itimerange) = &
-           volgrid6d_in%time(itime) + timedelta_new(msec=volgrid6d_in%timerange(itimerange)%p1*1000)
+           volgrid6d_in%time(itime) + timedelta_new(sec=volgrid6d_in%timerange(itimerange)%p1)
         else
           validitytime(itime,itimerange) = &
-           volgrid6d_in%time(itime) - timedelta_new(msec=volgrid6d_in%timerange(itimerange)%p1*1000)
+           volgrid6d_in%time(itime) - timedelta_new(sec=volgrid6d_in%timerange(itimerange)%p1)
         end if
       end do
     end do
@@ -2097,10 +2097,10 @@ if (associated(volgrid6d_in%time)) then
       do itimerange=1,ntimerange
         if (time_definition > volgrid6d_in%time_definition) then
           validitytime(itime,itimerange) = &
-           volgrid6d_in%time(itime) + timedelta_new(msec=volgrid6d_in%timerange(itimerange)%p1*1000)
+           volgrid6d_in%time(itime) + timedelta_new(sec=volgrid6d_in%timerange(itimerange)%p1)
         else
           validitytime(itime,itimerange) = &
-           volgrid6d_in%time(itime) - timedelta_new(msec=volgrid6d_in%timerange(itimerange)%p1*1000)
+           volgrid6d_in%time(itime) - timedelta_new(sec=volgrid6d_in%timerange(itimerange)%p1)
         end if
       end do
     end do

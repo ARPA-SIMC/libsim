@@ -641,7 +641,7 @@ IF (EditionNumber == 1 .OR. EditionNumber == 2) THEN
       CALL grib_get(gaid,'lengthOfTimeRange',p2g)
       CALL grib_get(gaid,'indicatorOfUnitForTimeRange',unit)
       CALL g2_interval_to_second(unit, p2g, p2)
-      this = this + timedelta_new(msec=p2*1000)
+      this = this + timedelta_new(sec=p2)
     ELSE IF ((status == GRIB_SUCCESS .AND. ttimeincr == 2) .OR. &
      status /= GRIB_SUCCESS) THEN ! usual case
 ! do nothing
@@ -679,7 +679,7 @@ ELSE IF (EditionNumber == 2 )THEN
   IF (timerange%p1 >= timerange%p2) THEN ! forecast-like
     CALL code_referencetime(this)
   ELSE IF (timerange%p1 == 0) THEN ! analysis-like
-    CALL code_referencetime(this-timedelta_new(msec=timerange%p2*1000))
+    CALL code_referencetime(this-timedelta_new(sec=timerange%p2))
   ELSE ! bad timerange
     CALL l4f_log( L4F_ERROR, 'Timerange with 0>p1>p2 cannot be exported in grib2')
     CALL raise_error()
@@ -906,7 +906,7 @@ ELSE IF (EditionNumber == 2) THEN
       CALL timerange_v7d_to_g2(this%p1-this%p2,p1,unit)
       CALL grib_set(gaid,'indicatorOfUnitOfTimeRange',unit)
       CALL grib_set(gaid,'forecastTime',p1)
-      CALL code_endoftimeinterval(reftime+timedelta_new(msec=this%p1*1000))
+      CALL code_endoftimeinterval(reftime+timedelta_new(sec=this%p1))
 ! Successive times processed have same start time of forecast,
 ! forecast time is incremented
       CALL grib_set(gaid,'typeOfStatisticalProcessing',this%timerange)

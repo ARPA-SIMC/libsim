@@ -509,7 +509,7 @@ DO WHILE(linei%next())
   if (this%v7d%time_definition == 0) then
     metaanddata%metadata%datetime%datetime = &
      metaanddata%metadata%datetime%datetime + &
-     timedelta_new(msec=metaanddata%metadata%timerange%vol7d_timerange%p1*1000)
+     timedelta_new(sec=metaanddata%metadata%timerange%vol7d_timerange%p1)
   end if
 
 !!  set to missing
