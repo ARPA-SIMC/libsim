@@ -26,6 +26,7 @@ MODULE simple_stat
 USE missing_values
 USE optional_values
 USE array_utilities
+USE doubleprecision_phys_const
 IMPLICIT NONE
 
 !> Compute the average of the random variable provided,
@@ -892,6 +893,43 @@ IF (ALLOCATED(bin)) THEN
 ENDIF
 
 END FUNCTION stat_mode_histogramd
+
+
+!> Return a random number taken from a Gaussian distribution.
+!! This function returns a random number taken from a sequence having
+!! a Gaussian distribution with zero average and unit variance. The
+!! method used is the [Box-Muller
+!! transform](https://en.wikipedia.org/wiki/Box%E2%80%93Muller_transform). For
+!! efficiency, the function generates two random numbers each second
+!! call and stores the second number for the successive call, thus, in
+!! the current implementation, it is not thread-safe. The default
+!! Fortran randon number generator is used, thus it is up to the user
+!! to properly initialise the random seed for the desired randomness
+!! and (non)repeatability.
+FUNCTION stat_random_gaussian() RESULT(rg)
+DOUBLE PRECISION :: rg
+
+DOUBLE PRECISION :: r1, r2
+DOUBLE PRECISION,SAVE :: rgnext
+LOGICAL,SAVE :: mustdo=.TRUE.
+
+IF (mustdo) THEN
+  DO WHILE(.TRUE.)
+    CALL RANDOM_NUMBER(r1)
+    CALL RANDOM_NUMBER(r2)
+    IF (r1 > 0.0D0) EXIT ! avoid special case r1 == 0
+  ENDDO
+
+  rg = SQRT(-2.0D0*LOG(r1))*COS(2.0D0*pi*r2)
+  rgnext = SQRT(-2.0D0*LOG(r1))*SIN(2.0D0*pi*r2)
+  mustdo = .FALSE.
+ELSE
+  rg = rgnext
+  mustdo = .TRUE.
+ENDIF
+
+END FUNCTION stat_random_gaussian
+
 
 !!$ Calcolo degli NDI calcolati
 !!$
