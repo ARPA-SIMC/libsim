@@ -6,7 +6,7 @@ libsim_base_la_SOURCES = for2r.f90 io_units.F90 kinds.F90 phys_const.f90 missing
  simple_stat.f90 \
  space_utilities.F90
 if F2003_EXTENDED_FEATURES
- libsim_base_la_SOURCES += list_link.F03 \
+libsim_base_la_SOURCES += list_link.F03 \
  list_linkchar.F03 \
  list_abstract.F03 \
  list_abstractforchar.F03 \
@@ -15,7 +15,8 @@ if F2003_EXTENDED_FEATURES
  list_doubleprecision.F03 \
  list_character.F03 \
  list_byte.F03 \
- list_real.F03
+ list_real.F03 \
+ mathstat_func_class.F90
 endif
 
 
@@ -83,6 +84,11 @@ geo_transforms.$(OBJEXT): phys_const.$(OBJEXT)
 geo_transforms.lo: phys_const.$(OBJEXT)
 
 check_PROGRAMS = char_utilities_test datetime_test file_utilities_test simple_stat_test
+
+if F2003_EXTENDED_FEATURES
+check_PROGRAMS += mathstat_func_test
+endif
+
 TESTS = $(check_PROGRAMS)
 
 char_utilities_test_SOURCES = char_utilities_test.f90
@@ -96,6 +102,11 @@ file_utilities_test_LDADD = libsim_base.la
 
 simple_stat_test_SOURCES = simple_stat_test.f90
 simple_stat_test_LDADD = libsim_base.la
+
+if F2003_EXTENDED_FEATURES
+mathstat_func_test_SOURCES = mathstat_func_test.F90
+mathstat_func_test_LDADD = libsim_base.la
+endif
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT) *.mod
