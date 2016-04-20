@@ -30,6 +30,19 @@ USE missing_values
 !USE array_utilities
 IMPLICIT NONE
 
+! Per l'optimum interpolation a basso livello serve:
+!  - (o)bs, (b)ackground interpolato su punti obs, entrambi (no)
+!  - O covar. err. di O, B covar. err. di b sui punti o, entrambe (no,no)
+!  - Brhs covar. err. di b tra i punti b e i punti o (no,nb)
+
+! Per l'optimum interpolation ad alto livello con B e O calcolate come
+! funzioni analitiche rispetto alla distanza serve:
+!  - (o)bs, (b)ackground interpolato su punti obs, entrambi (no)
+!  - funzione di autocorrelazione dell'errore di O e di B
+!  - coordinate di o e b (no) (nb)
+!  - funzione distanza tra le coordinate
+
+
 TYPE :: mathstat_func_1d
   PROCEDURE(mathstat_func_1d_gauss),NOPASS,POINTER :: func => NULL()
   DOUBLE PRECISION,ALLOCATABLE :: params(:)
