@@ -699,7 +699,11 @@ end if
 do indana=1,size(qccli%v7d%ana)
   iarea= qccli%in_macroa(indana)
 
-  if (.not. c_e(iarea)) cycle
+  if (.not. c_e(iarea)) then
+    qccli%v7d%voldatir  (indana ,indtime ,indlevel ,indtimerange ,&
+     inddativarr, indnetwork ) = datoqui
+    cycle
+  end if
 
   do indnetwork=1,size(qccli%v7d%network)
     do indlevel=1,size(qccli%v7d%level)
@@ -764,7 +768,11 @@ do indana=1,size(qccli%v7d%ana)
               k=0
             end if
 
-            if (.not. c_e(k)) cycle
+            if (.not. c_e(k)) then
+              qccli%v7d%voldatir  (indana ,indtime ,indlevel ,indtimerange ,&
+               inddativarr, indnetwork ) = datoqui
+              cycle
+            end if
 
             desc=25
             write(ident,'("#",i2.2,2i3.3)')k,iarea,desc   ! macro-area e descrittore
