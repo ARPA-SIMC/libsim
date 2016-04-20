@@ -699,12 +699,6 @@ end if
 do indana=1,size(qccli%v7d%ana)
   iarea= qccli%in_macroa(indana)
 
-  if (.not. c_e(iarea)) then
-    qccli%v7d%voldatir  (indana ,indtime ,indlevel ,indtimerange ,&
-     inddativarr, indnetwork ) = datoqui
-    cycle
-  end if
-
   do indnetwork=1,size(qccli%v7d%network)
     do indlevel=1,size(qccli%v7d%level)
       do indtimerange=1,size(qccli%v7d%timerange)
@@ -714,6 +708,12 @@ do indana=1,size(qccli%v7d%ana)
             datoqui = qccli%v7d%voldatir  (indana ,indtime ,indlevel ,indtimerange ,inddativarr, indnetwork )
               
             if (.not. c_e(datoqui)) cycle
+
+            if (.not. c_e(iarea)) then
+              qccli%v7d%voldatir  (indana ,indtime ,indlevel ,indtimerange ,&
+               inddativarr, indnetwork ) = rmiss
+              cycle
+            end if
 
 !!$              if (indbattrinv > 0) then
 !!$                if( invalidated(qccli%v7d%voldatiattrb&
@@ -770,7 +770,7 @@ do indana=1,size(qccli%v7d%ana)
 
             if (.not. c_e(k)) then
               qccli%v7d%voldatir  (indana ,indtime ,indlevel ,indtimerange ,&
-               inddativarr, indnetwork ) = datoqui
+               inddativarr, indnetwork ) = rmiss
               cycle
             end if
 
