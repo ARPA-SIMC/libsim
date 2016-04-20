@@ -889,19 +889,24 @@ do indtime=1,size(qcspa%v7d%time)
               !  we normalize gradmin or denormalize climaqui after
               !              gradmin=gradmin*spa_a(ind) + spa_b(ind)
 
+
+#ifdef DEBUG
+              call l4f_log (L4F_DEBUG,"gradmin: "//t2c(gradmin))
+#endif
+
               flag=bmiss
 
                                 !ATTENZIONE TODO : inddativarr È UNA GRANDE SEMPLIFICAZIONE NON VERA SE TIPI DI DATO DIVERSI !!!!
               if (qcspa%operation == "run") then
 
                 do indcana=1,size(qcspa%clima%ana)-1
-                  climaquii=qcspa%clima%voldatir(indcana  &
+                  climaquii=(qcspa%clima%voldatir(indcana  &
                    ,indctime,indclevel,indctimerange,indcdativarr,indcnetwork)&
-                   /spa_a(ind) - spa_b(ind) ! denormalize
+                    - spa_b(ind))/spa_a(ind) ! denormalize
 
-                  climaquif=qcspa%clima%voldatir(indcana+1 &
+                  climaquif=(qcspa%clima%voldatir(indcana+1 &
                    ,indctime,indclevel,indctimerange,indcdativarr,indcnetwork)&
-                   /spa_a(ind) - spa_b(ind) ! denormalize
+                    - spa_b(ind))/spa_a(ind) ! denormalize
 
 #ifdef DEBUG
                   call l4f_log (L4F_DEBUG,"climaquii: "//t2c(climaquii))
