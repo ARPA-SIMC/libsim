@@ -511,6 +511,7 @@ integer (kind=int_b) :: flag
 !!$CHARACTER(len=vol7d_ana_lenident) :: ident
 character(len=512) :: filename
 logical :: exist
+integer :: ind
 
                                 !call qcspa_validate (qcspa)
 
@@ -630,6 +631,7 @@ do indtime=1,size(qcspa%v7d%time)
     do indtimerange=1,size(qcspa%v7d%timerange)
       do inddativarr=1,size(qcspa%v7d%dativar%r)
 
+        ind=index_c(spa_btable,qcspa%v7d%dativar%r(inddativarr)%btable)
 
         if (qcspa%operation == "gradient") then
                                 ! open file to write gradient
@@ -884,14 +886,22 @@ do indtime=1,size(qcspa%v7d%time)
                 write(grunit,*)gradmin
               end if
 
+              !  we normalize gradmin or denormalize climaqui after
+              !              gradmin=gradmin*spa_a(ind) + spa_b(ind)
+
               flag=bmiss
 
                                 !ATTENZIONE TODO : inddativarr È UNA GRANDE SEMPLIFICAZIONE NON VERA SE TIPI DI DATO DIVERSI !!!!
               if (qcspa%operation == "run") then
 
                 do indcana=1,size(qcspa%clima%ana)-1
-                  climaquii=qcspa%clima%voldatir(indcana  ,indctime,indclevel,indctimerange,indcdativarr,indcnetwork)
-                  climaquif=qcspa%clima%voldatir(indcana+1,indctime,indclevel,indctimerange,indcdativarr,indcnetwork)
+                  climaquii=qcspa%clima%voldatir(indcana  &
+                   ,indctime,indclevel,indctimerange,indcdativarr,indcnetwork)&
+                   /spa_a(ind) - spa_b(ind) ! denormalize
+
+                  climaquif=qcspa%clima%voldatir(indcana+1 &
+                   ,indctime,indclevel,indctimerange,indcdativarr,indcnetwork)&
+                   /spa_a(ind) - spa_b(ind) ! denormalize
 
 #ifdef DEBUG
                   call l4f_log (L4F_DEBUG,"climaquii: "//t2c(climaquii))
