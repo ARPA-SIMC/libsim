@@ -1297,14 +1297,16 @@ if (allocated(data%attrv%dcv)) then
       endif
 
       if (data%attrv%dcv(i)%dat%c_e()) then
-        !print *,"extrude attributi:"
-        !call data%attrv%dcv(i)%dat%display()
+          !print *,"extrude attributi:"
+          !call data%attrv%dcv(i)%dat%display()
         call data%attrv%dcv(i)%dat%dbaset(session)
         critica=.true.
       else
         !ierr=idba_seti(session%sehandle, "*context_id", id)
         !call session%var_related(data%dbadc%dat%btable) ! If I have made a prendilo I do not need this
         call data%attrv%dcv(i)%dat%dbaset(session)
+          !print *,"scusa  attributi:"
+          !call data%attrv%dcv(i)%dat%display()
         call session%scusa()
       endif
     end do
@@ -3850,7 +3852,15 @@ if (.not. c_e(lattrflag))then
   end if
 end if
 
-if (.not.lfile) then
+if (lfile) then
+
+  if (present(anaflag).or.present(dataflag).or.present( attrflag)) then
+    call l4f_category_log(dbasession_init%category,L4F_ERROR,"option anaflag, dataflag, attrflag defined with filename access")
+    CALL raise_error()
+  end if
+
+else
+
   if(.not. present(connection)) then
     call l4f_category_log(dbasession_init%category,L4F_ERROR,"connection not present accessing DBA")
     CALL raise_error()
@@ -3862,10 +3872,6 @@ if (.not.lfile) then
     CALL raise_error()
   end if
 
-  if (present(anaflag).or.present(dataflag).or.present( attrflag)) then
-    call l4f_category_log(dbasession_init%category,L4F_ERROR,"option anaflag, dataflag, attrflag defined with filename access")
-    CALL raise_error()
-  end if
 end if
 
 

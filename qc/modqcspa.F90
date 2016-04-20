@@ -63,7 +63,8 @@
 !!
 !! N.B.
 !! Se una stazione risulta circondata da dati mancanti nessun controllo 
-!! viene fatto su di essa e la confidenza rimane inalterata.
+!! viene fatto su di essa e la confidenza risulta assente e quella eventualmente calcolata
+!! precedentemente viene cancellata.
 !!
 !!23/9/1998
 !!
@@ -505,7 +506,7 @@ TYPE(vol7d_network):: network
 type(timedelta) :: deltato,deltat 
 
 integer :: ivert(50),i,ipos,ineg,it,itrov,iv,ivb,kk,iindtime,grunit
-double precision :: distmin=1000.d0,distscol=300000.d0
+double precision :: distmin=1000.d0,distscol=100000.d0
 double precision :: dist,grad,gradmin
 integer (kind=int_b) :: flag
 !!$CHARACTER(len=vol7d_ana_lenident) :: ident
@@ -942,7 +943,7 @@ do indtime=1,size(qcspa%v7d%time)
               flag=100_int_b
             end if
             if (qcspa%operation == "run") then
-              !TODO controllare se flag = missing comporta rimozione della precedente flag
+              !TODO controllare se flag = missing comporta rimozione della precedente flag; risposta: SI quando sarà chiusa https://github.com/ARPA-SIMC/dballe/issues/44
               qcspa%v7d%voldatiattrb(   indana, indtime, indlevel, indtimerange, inddativarr, indnetwork, indbattrout)=flag
             end if
           end do
