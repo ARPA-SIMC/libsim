@@ -12,9 +12,9 @@ B10007,Height,m,200,200,8,0,1.0,0.0
 B10007,Height,m,200,200,8,255,1.0,0.0
 B10007,Height,m,201,200,8,0,1.0,0.0
 B10007,Height,m,201,200,8,255,1.0,0.0
-B10007,Height,m,98,128,129,255,1.0,0.0
 B10008,Geopotential,m**2/s**2,255,3,4,0,1.0,0.0
 B10008,Geopotential,m**2/s**2,255,2,6,255,1.0,0.0
+B10008,Geopotential,m**2/s**2,98,128,129,255,1.0,0.0
 B10009,Geopotential height,gpm,255,3,5,0,1.0,0.0
 B10009,Geopotential height,gpm,255,2,7,255,1.0,0.0
 B10051,Pressure reduced to mean sea level,Pa,255,3,1,0,1.0,0.0
