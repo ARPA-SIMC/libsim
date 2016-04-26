@@ -494,7 +494,7 @@ integer :: indbattrinv,indbattrcli,indbattrout
 logical :: anamaskl(size(qcspa%v7d%ana)), timemaskl(size(qcspa%v7d%time)), levelmaskl(size(qcspa%v7d%level)), &
  timerangemaskl(size(qcspa%v7d%timerange)), varmaskl(size(qcspa%v7d%dativar%r)), networkmaskl(size(qcspa%v7d%network)) 
 
-integer :: indana ,  indtime ,indlevel ,indtimerange ,inddativarr, indnetwork
+integer :: indana ,  indtime ,indlevel ,indtimerange ,inddativarr, indnetwork,indnet
 integer :: indcana ,  indctime ,indclevel ,indctimerange ,indcdativarr, indcnetwork
 real :: datoqui,datola,datila(size(qcspa%v7d%time)),climaquii, climaquif
                                 !integer, allocatable :: indcanav(:)
@@ -814,39 +814,45 @@ do indtime=1,size(qcspa%v7d%time)
                   datola=rmiss
                 end if
               end if
-
-              datila = qcspa%v7d%voldatir  (ivert(i) ,: ,indlevel ,indtimerange ,inddativarr, indnetwork )
-
-              if (.not. c_e(datola))then
-                deltato=timedelta_miss
-                do iindtime=1,size(qcspa%v7d%time)
-                  if (.not. c_e(datila(iindtime))) cycle
+                                !TODO 
+                                ! if we do not have data from the same network
+                                ! here we search for the first data found (nearest in time) looping over the network
+                                ! we do not have priority to take in account
+              do indnet=1, size(qcspa%v7d%network)
+                if (c_e(datola))then
+                  exit
+                else
+                  datila = qcspa%v7d%voldatir  (ivert(i) ,: ,indlevel ,indtimerange ,inddativarr, indnet )
+                  deltato=timedelta_miss
+                  do iindtime=1,size(qcspa%v7d%time)
+                    if (.not. c_e(datila(iindtime))) cycle
                                 ! invalidated
-                  if (indbattrinv > 0 ) then
-                    if (invalidated(qcspa%v7d%voldatiattrb&
-                     (ivert(i),iindtime,indlevel,indtimerange,inddativarr,indnetwork,indbattrinv))) cycle
-                  end if
+                    if (indbattrinv > 0 ) then
+                      if (invalidated(qcspa%v7d%voldatiattrb&
+                       (ivert(i),iindtime,indlevel,indtimerange,inddativarr,indnetwork,indbattrinv))) cycle
+                    end if
                                 ! gross error check
-                  if (indbattrcli > 0 )then
-                    if (.not. vdge(qcspa%v7d%voldatiattrb&
-                     (ivert(i),iindtime,indlevel,indtimerange,inddativarr,indnetwork,indbattrcli))) cycle
-                  end if
+                    if (indbattrcli > 0 )then
+                      if (.not. vdge(qcspa%v7d%voldatiattrb&
+                       (ivert(i),iindtime,indlevel,indtimerange,inddativarr,indnetwork,indbattrcli))) cycle
+                    end if
+                    
+                    if (iindtime < indtime) then
+                      deltat=qcspa%v7d%time(indtime)-qcspa%v7d%time(iindtime)
+                    else if (iindtime > indtime) then
+                      deltat=qcspa%v7d%time(iindtime)-qcspa%v7d%time(indtime)
+                    else
+                      call l4f_category_log(qcspa%category,L4F_WARN,"somethings go wrong on ipotesys make in spatial QC")
+                    end if
+                    
+                    if (deltat < deltato) then
+                      datola = datila(iindtime)
+                      deltato = deltat
+                    end if
+                  end do
+                end if
+              end do
 
-                  if (iindtime < indtime) then
-                    deltat=qcspa%v7d%time(indtime)-qcspa%v7d%time(iindtime)
-                  else if (iindtime > indtime) then
-                    deltat=qcspa%v7d%time(iindtime)-qcspa%v7d%time(indtime)
-                  else
-                    call l4f_category_log(qcspa%category,L4F_WARN,"somethings go wrong on ipotesys make in spatial QC")
-                  end if
-
-                  if (deltat < deltato) then
-                    datola = datila(iindtime)
-                    deltato = deltat
-                  end if
-                end do
-              end if
-              
               IF(.NOT.C_E(datola)) cycle
                                 !	distanza tra le due stazioni
               dist = DISTANZA (qcspa%co(INDANA),qcspa%co(IVERT(I)))
