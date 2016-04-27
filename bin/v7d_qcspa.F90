@@ -444,7 +444,8 @@ DO WHILE (time <= tf)
   !attention: do not exclude the first/last time so we check data two times
   call l4f_category_log(category,L4F_INFO,"start spatial QC")
   !call quaconspa(v7dqcspa,noborder=.true.,timemask= ( v7dqcspa%v7d%time >= timeiqc .and. v7dqcspa%v7d%time < timefqc ))
-  call quaconspa(v7dqcspa,noborder=.true.,timemask= ( v7dqcspa%v7d%time >= timeiqc .and. v7dqcspa%v7d%time <= timefqc ))
+  call quaconspa(v7dqcspa,timetollerance=timedelta_new(minute=15),noborder=.true.,&
+   timemask= ( v7dqcspa%v7d%time >= timeiqc .and. v7dqcspa%v7d%time <= timefqc ))
   call l4f_category_log(category,L4F_INFO,"end spatial QC")
 
 #ifdef HAVE_LIBNCARG
