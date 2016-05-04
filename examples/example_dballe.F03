@@ -2,6 +2,7 @@ program example_dballe
 
 use dballe_class
 use datetime_class
+use log4fortran
 implicit none
 
 integer :: i
@@ -23,6 +24,19 @@ type (dbadcv) :: dcv
 type (dbametaanddatav) :: metaanddatav
 type (dbadataattrv) :: dataattrv
 type (dbametaanddata) :: metaandata
+
+
+integer :: category,ier
+character(len=512):: a_name
+
+!questa chiamata prende dal launcher il nome univoco
+call l4f_launcher(a_name,a_name_force="example",a_name_append="main")
+!init di log4fortran
+ier=l4f_init()
+!imposta a_name
+category=l4f_category_get(a_name//".main")
+
+call l4f_category_log(category,L4F_INFO,"example_dballe")
 
 !Oggetti:
 
@@ -62,7 +76,7 @@ metaanddatar%dbadatar=datar
 
 !dbametaanddatad : metadata and doubleprecision data 
 !dbametaanddatadlist : metadata and diubleprecision data double linked list 
-
+ 
 !dbadc : container for dbadata (used for promiscuous vector of data)
 allocate(dc%dat,source=dbadatai("B12102",26312))
 
@@ -87,23 +101,38 @@ metaandata%dataattrv=dataattrv
 !dbametaanddatalist double linked list of dbametaanddata
 
 
-! connect to dsn type DBA
+call l4f_category_log(category,L4F_INFO,"connect to dsn type DBA")
+
 connection=dbaconnection(dsn="sqlite:/tmp/dballe.sqlite")
 session=dbasession(connection,wipe=.true.,anaflag="write", dataflag="write", attrflag="write")
 
+call l4f_category_log(category,L4F_INFO,"write1")
 call write1()    ! write etherogeneous ensamble of data with attributes and constant data using macro object
+call l4f_category_log(category,L4F_INFO,"write2")
 call write2()    ! write an omogeneous vector of data
+call l4f_category_log(category,L4F_INFO,"write3")
 call write3()    ! write an etherogeneous ensamble of data
+call l4f_category_log(category,L4F_INFO,"write4")
 call write4()    ! write an etherogeneous ensamble of data and attributes
+call l4f_category_log(category,L4F_INFO,"write5")
 call write5()    ! write a content of DSN to a file with filter
+call l4f_category_log(category,L4F_INFO,"read2")
 call read2()     ! read data and attributes for data filtered and ordered by btable with type predefined
+call l4f_category_log(category,L4F_INFO,"delete1")
 call delete1()   ! delete one var from the entire DB
+call l4f_category_log(category,L4F_INFO,"delete2")
 call delete2()   ! delete one var only where are some defined metadata
+call l4f_category_log(category,L4F_INFO,"delete3")
 call delete3()   ! delete some attributes from one var only where are some defined metadata
+call l4f_category_log(category,L4F_INFO,"read1")
 call read1()     ! read ana, data and attributes for constant data, data and attributes for data
+call l4f_category_log(category,L4F_INFO,"read3")
 call read3()     ! read an omogeneous vector of data
+call l4f_category_log(category,L4F_INFO,"read4")
 call read4l()    ! read data and attributes for data in a double linked list
+call l4f_category_log(category,L4F_INFO,"copy1")
 call copy1()     ! copy data and attributes of everythings to an other dsn
+call l4f_category_log(category,L4F_INFO,"copy2")
 call copy2()     ! copy data and constant data to an other dsn
 
 !close everythings
@@ -111,23 +140,30 @@ call session%delete()
 call connection%delete()
 
 
-! connect to dsn type BUFR file for write
+call l4f_category_log(category,L4F_INFO,"connect to dsn type BUFR file for write")
 session=dbasession(filename="example_dballe.bufr",wipe=.true.,write=.true.,memdb=.false.)
 
+call l4f_category_log(category,L4F_INFO,"write0")
 call write0()    ! write ana on file
+call l4f_category_log(category,L4F_INFO,"write1")
 call write1()    ! write etherogeneous ensamble of data with attributes and constant data using macro object
+call l4f_category_log(category,L4F_INFO,"write2")
 call write2()    ! write an omogeneous vector of data
+call l4f_category_log(category,L4F_INFO,"write3")
 call write3()    ! write an etherogeneous ensamble of data
+call l4f_category_log(category,L4F_INFO,"write4")
 call write4()    ! write an etherogeneous ensamble of data and attributes
 
 !close everythings
 call session%delete()
 
 
-! connect to dsn type BUFR file for read
+call l4f_category_log(category,L4F_INFO,"connect to dsn type BUFR file for read")
 session=dbasession(filename="example_dballe.bufr",memdb=.false.)
 
+call l4f_category_log(category,L4F_INFO,"read1lf")
 call read1lf()     ! read ana, data and attributes for constant data, data and attributes for data in list
+call l4f_category_log(category,L4F_INFO,"read2lf")
 call read2lf()     ! read data and attributes for data filtered and ordered by btable with type predefined in list
 
 !! note: I cannot read from file without filter (filter do not work on file) and put everythings in real matrix
@@ -135,37 +171,38 @@ call read2lf()     ! read data and attributes for data filtered and ordered by b
 !! call read3lf()     ! read an omogeneous vector of data
 
 ! use memdb
+call l4f_category_log(category,L4F_INFO,"read3lfmem")
 call read3lfmem()    ! read an omogeneous vector of data from file using list and mem (and filters)
+call l4f_category_log(category,L4F_INFO,"readmem")
 call readmem()       ! read an list of data from file  using mem (and filters)
 
-!close everythings
-call session%delete()
-
-
-! connect to dsn type BUFR file for read
+call l4f_category_log(category,L4F_INFO,"connect to dsn type BUFR file for read")
 sessionfrom=dbasession(filename="example_dballe.bufr",memdb=.false.)
-! connect to dsn type BUFR file for write
+call l4f_category_log(category,L4F_INFO,"connect to dsn type BUFR file for write")
 sessionto=dbasession(filename="example_dballe_copy1f.bufr",wipe=.true.,write=.true.,memdb=.false.)
+call l4f_category_log(category,L4F_INFO,"copy1f")
 call copy1f()     ! copy data and attributes of everythings to an other file
 ! todo
+!call l4f_category_log(category,L4F_INFO,"copy2f")
 !call copy2f()     ! copy data and constant data to an other file
 !close everythings
 call sessionto%delete()
 call sessionfrom%delete()
 
 
-! use memdb
-! connect to dsn type DBA
+call l4f_category_log(category,L4F_INFO,"use memdb: connect to dsn type DBA")
 connectionfrom=dbaconnection(dsn="mem:")
 sessionfrom=dbasession(connectionfrom,wipe=.true.,anaflag="write", dataflag="write", attrflag="write")
 call sessionfrom%messages_open_input(filename="example_dballe.bufr",mode="r",format="BUFR",simplified=.true.)
 
-! connect to dsn type BUFR file for write
+call l4f_category_log(category,L4F_INFO,"connect to dsn type BUFR file for write")
 sessionto=dbasession(filename="example_dballe_copy1fmem.bufr",wipe=.true.,write=.true.,memdb=.false.)
+call l4f_category_log(category,L4F_INFO,"copy1fmem")
 call copy1fmem()     ! copy data and attributes of everythings to an other file using mem for input
 call sessionto%delete()
 
 call sessionfrom%messages_open_output(filename="example_dballe_copyf2mem.bufr")
+call l4f_category_log(category,L4F_INFO,"copy1f2mem")
 call copy1f2mem()     ! copy data and attributes of everythings to an other file using mem for input and output
 
 !close everythings
@@ -766,6 +803,10 @@ print *,"max=",maxval(metaanddatarv(:)%dbadatar%value)
 
 status = metaanddatarl%delete()
 
+!close everythings
+call session%delete()
+call connection%delete()
+
 end subroutine read3lfmem
 
 
@@ -779,7 +820,7 @@ print *,"----------------------------------------------"
 print *,"--------------- readmem ------------------------"
 
 ! create mem db where put bufr from file
-session=dbasession(connection,wipe=.true.,anaflag="write", dataflag="write", attrflag="write",&
+session=dbasession(wipe=.true.,&
  filename="example_dballe.bufr",mode="r",format="BUFR",memdb=.true.,loadfile=.false.)
 
 filter=dbafilter(var="B12101")
@@ -790,6 +831,8 @@ print *, "dati dati:"
 call metaanddatal%display()
 
 status = metaanddatal%delete()
+
+call session%delete()
 
 end subroutine readmem
 

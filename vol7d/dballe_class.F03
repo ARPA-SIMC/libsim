@@ -3886,6 +3886,13 @@ if (present(filename))then
        write=.true.,wipe=lwrite,repinfo=lrepinfo,&
        memdb=lmemdb,loadfile=lloadfile) ! without categoryappend
       
+    else
+      dbasession_init%memconnection=connection
+      !call self with memconnection without filename 
+      dbasession_init=dbasession(dbasession_init%memconnection,&
+       write=.true.,wipe=lwrite,repinfo=lrepinfo,&
+       memdb=lmemdb,loadfile=lloadfile) ! without categoryappend
+
     end if
 
     if (lmode == "r") then
