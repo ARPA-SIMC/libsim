@@ -32,6 +32,7 @@ use array_utilities
 !use vol7d_dballeold_class
 use vol7d_dballe_class
 USE vol7d_class
+USE db_utils
 use modqctem
 
 implicit none
@@ -481,38 +482,5 @@ call delete(v7dana)
 !close logger
 call l4f_category_delete(category)
 ier=l4f_fini()
-
-CONTAINS
-
-SUBROUTINE parse_dba_access_info(string, dsn, user, password)
-CHARACTER(len=*),INTENT(in) :: string
-CHARACTER(len=*),INTENT(out) :: dsn
-CHARACTER(len=*),INTENT(out) :: user
-CHARACTER(len=*),INTENT(out) :: password
-
-INTEGER :: bar, at
-
-IF (string == '-' .OR. string == '') THEN
-  dsn = cmiss
-  user = cmiss
-  password = cmiss
-ELSE
-  bar = INDEX(string, '/')
-  at = INDEX(string, '@')
-  IF (bar > 0 .AND. at > bar) THEN
-    user = string(:bar-1)
-    password = string(bar+1:at-1)
-    dsn = string(at+1:)
-  ELSE
-    CALL optionparser_printhelp(opt)
-    CALL l4f_category_log(category, L4F_ERROR, &
-     'error in command-line parameters, database access info '// &
-     TRIM(string)//' not valid.')
-    CALL raise_fatal_error()
-  ENDIF
-ENDIF
-
-END SUBROUTINE parse_dba_access_info
-
 
 end program v7d_qctem

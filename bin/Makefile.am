@@ -7,8 +7,11 @@ check_PROGRAMS =
 
 if NCARG
 bin_PROGRAMS += v7d_plot_sound
-
-v7d_plot_sound_SOURCES = v7d_plot_sound.F90
+v7d_plot_sound_SOURCES =
+if DBALLE
+v7d_plot_sound_SOURCES += db_utils.F90
+endif
+v7d_plot_sound_SOURCES += v7d_plot_sound.F90
 v7d_plot_sound_LDADD = ../graphics/libsim_graphics.la  ../vol7d/libsim_vol7d.la  ../log4fortran/liblog4fortran.la ../termolib/libsim_termolib.la ../base/libsim_base.la
 endif
 
@@ -32,7 +35,7 @@ bin_PROGRAMS += v7d_qccli v7d_qctem
 v7d_qccli_SOURCES = v7d_qccli.F90 
 v7d_qccli_LDADD = ../base/libsim_base.la ../vol7d/libsim_vol7d.la ../log4fortran/liblog4fortran.la ../qc/libsim_qc.la
 
-v7d_qctem_SOURCES = v7d_qctem.F90 
+v7d_qctem_SOURCES = db_utils.F90 v7d_qctem.F90 
 v7d_qctem_LDADD = ../base/libsim_base.la ../vol7d/libsim_vol7d.la ../log4fortran/liblog4fortran.la ../qc/libsim_qc.la
 
 if NCARG
@@ -40,7 +43,7 @@ if NCARG
 # which requires NCAR for triangulations
 bin_PROGRAMS += v7d_qcspa
 
-v7d_qcspa_SOURCES = v7d_qcspa.F90 
+v7d_qcspa_SOURCES = db_utils.F90 v7d_qcspa.F90 
 v7d_qcspa_LDADD = ../base/libsim_base.la ../vol7d/libsim_vol7d.la ../log4fortran/liblog4fortran.la ../qc/libsim_qc.la
 
 v7d_qcspa_LDADD += ../graphics/libsim_graphics.la ../termolib/libsim_termolib.la
@@ -57,21 +60,30 @@ v7d_pollini_LDADD = ../base/libsim_base.la ../vol7d/libsim_vol7d.la ../log4fortr
 endif
 
 bin_PROGRAMS += v7d_transform
+v7d_transform_SOURCES =
 
 if F2003_FEATURES
-v7d_transform_SOURCES = v7d_transform.F90
+#v7d_transform_SOURCES = v7d_transform.F90
 else
-v7d_transform_SOURCES = vol7d_csv.F90 v7d_transform.F90
+v7d_transform_SOURCES += vol7d_csv.F90
 endif
 v7d_transform_LDADD = ../base/libsim_base.la ../vol7d/libsim_vol7d.la ../qc/libsim_qc.la ../volgrid6d/libsim_volgrid6d.la ../log4fortran/liblog4fortran.la
 
 if ALCHIMIA
-v7d_transform_LDADD += ../alchimia/libsim_alchimia.la ../termolib/libsim_termolib.la  
+v7d_transform_LDADD += ../alchimia/libsim_alchimia.la ../termolib/libsim_termolib.la
 endif
 
-bin_PROGRAMS += v7d_add_wmo_info
+if DBALLE
+v7d_transform_SOURCES += db_utils.F90
+endif
+v7d_transform_SOURCES += v7d_transform.F90
 
-v7d_add_wmo_info_SOURCES = v7d_add_wmo_info.F90
+bin_PROGRAMS += v7d_add_wmo_info
+v7d_add_wmo_info_SOURCES =
+if DBALLE
+v7d_add_wmo_info_SOURCES += db_utils.F90
+endif
+v7d_add_wmo_info_SOURCES += v7d_add_wmo_info.F90
 v7d_add_wmo_info_LDADD = ../base/libsim_base.la ../vol7d/libsim_vol7d.la ../log4fortran/liblog4fortran.la
 
 bin_PROGRAMS += vg6d_getpoint vg6d_transform

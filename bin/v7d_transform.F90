@@ -32,6 +32,9 @@ USE vol7d_oraclesim_class
 #ifdef HAVE_DBALLE
 USE vol7d_dballe_class
 #endif
+#if defined HAVE_ORSIM || defined HAVE_DBALLE
+USE db_utils
+#endif
 #ifdef HAVE_LIBGRIBAPI
 #ifdef HAVE_LIBNETCDF
 USE vol7d_netcdf_class
@@ -1424,37 +1427,6 @@ call delete(vfnoracle)
 ier = l4f_fini()
 
 CONTAINS
-
-SUBROUTINE parse_dba_access_info(string, dsn, user, password)
-CHARACTER(len=*),INTENT(in) :: string
-CHARACTER(len=*),INTENT(out) :: dsn
-CHARACTER(len=*),INTENT(out) :: user
-CHARACTER(len=*),INTENT(out) :: password
-
-INTEGER :: bar, at
-
-IF (string == '-' .OR. string == '') THEN
-  dsn = cmiss
-  user = cmiss
-  password = cmiss
-ELSE
-  bar = INDEX(string, '/')
-  at = INDEX(string, '@')
-  IF (bar > 0 .AND. at > bar) THEN
-    user = string(:bar-1)
-    password = string(bar+1:at-1)
-    dsn = string(at+1:)
-  ELSE
-    CALL optionparser_printhelp(opt)
-    CALL l4f_category_log(category, L4F_ERROR, &
-     'error in command-line arguments, database access info '// &
-     TRIM(string)//' not valid.')
-    CALL raise_fatal_error()
-  ENDIF
-ENDIF
-
-END SUBROUTINE parse_dba_access_info
-
 
 #ifndef F2003_FEATURES
 SUBROUTINE parse_v7d_column(ccol, icol, par_name, check_all)
