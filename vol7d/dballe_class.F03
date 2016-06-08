@@ -3359,7 +3359,11 @@ type(dbametaanddata),allocatable :: metaanddatavbuf(:)
 integer :: i
 
 !todo aggiungere anche altrove dove passato filter
-if (present(filter)) call filter%dbaset(session)
+if (present(filter)) then
+  call filter%dbaset(session)
+else
+  call session%unsetall()
+endif
 
 call session%ingest()
 !print*," count: ",session%count
