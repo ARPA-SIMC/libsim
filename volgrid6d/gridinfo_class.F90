@@ -1089,7 +1089,6 @@ SUBROUTINE level_dballe_to_g2(lt1,l1,lt2,l2, ltype1,scalef1,scalev1,ltype2,scale
 integer,intent(in) :: lt1,l1,lt2,l2
 integer,intent(out) :: ltype1,scalef1,scalev1,ltype2,scalef2,scalev2
 
-
 CALL dballe_to_g2(lt1, l1, ltype1, scalef1, scalev1)
 CALL dballe_to_g2(lt2, l2, ltype2, scalef2, scalev2)
 
@@ -1106,6 +1105,10 @@ IF (lt == imiss) THEN
   scalef = 0
 ELSE IF (lt <= 10 .OR. (lt >= 162 .AND. lt <= 166)) THEN
   ltype = lt
+  scalev = 0
+  scalef = 0
+ELSE IF (lt == 256 .AND. l == imiss) THEN ! special case for cloud level -> surface
+  ltype = 1
   scalev = 0
   scalef = 0
 ELSE
