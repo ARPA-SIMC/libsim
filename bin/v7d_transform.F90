@@ -175,8 +175,9 @@ opt = optionparser_new(description_msg= &
  //', or into a configurable formatted csv file. &
  &If input-format is of file type, inputfile ''-'' indicates stdin, &
  &if input-format or output-format is of database type, inputfile/outputfile specifies &
- &database access info in the form user/password@dsn, &
- &if empty or ''-'', a suitable default is used. &
+ &database access info in the form user/password@dsn or in URI form, &
+ &possibly with embedded user and password information, &
+ &if empty or ''-'', a suitable default is used when possible. &
  &If output-format is of file type, outputfile ''-'' indicates stdout.', &
  usage_msg='Usage: v7d_transform [options] inputfile1 [inputfile2...] outputfile')
 
