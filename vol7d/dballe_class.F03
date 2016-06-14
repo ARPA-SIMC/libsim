@@ -1304,9 +1304,10 @@ if (allocated(data%attrv%dcv)) then
       else
         !ierr=idba_seti(session%sehandle, "*context_id", id)
         !call session%var_related(data%dbadc%dat%btable) ! If I have made a prendilo I do not need this
-        call data%attrv%dcv(i)%dat%dbaset(session)
-          !print *,"scusa  attributi:"
-          !call data%attrv%dcv(i)%dat%display()
+        !call data%attrv%dcv(i)%dat%dbaset(session)
+        ierr = idba_set(session%sehandle,"*var",data%attrv%dcv(i)%dat%btable)
+        print *,"scusa  attributi:"
+        call data%attrv%dcv(i)%dat%display()
         call session%scusa()
       endif
     end do
