@@ -1742,7 +1742,7 @@ END FUNCTION open_dballe_file
 ! timei, timef,level,timerange,var,attr,anavar,anaattr,attr_only,ana,dataonly)
 
 SUBROUTINE vol7d_dballe_export_old(this, network, coordmin, coordmax,&
- timei, timef,level,timerange,var,attr,anavar,anaattr,ana,dataonly,anaonly,template)
+ timei, timef,level,timerange,var,attr,anavar,anaattr,ana,dataonly,anaonly,template,attr_only)
 
 TYPE(vol7d_dballe),INTENT(inout) :: this !< oggetto contenente il volume e altre info per l'accesso al DSN
 character(len=network_name_len),INTENT(in),optional :: network !< network da exportare
@@ -1766,6 +1766,7 @@ logical, intent(in),optional :: anaonly           !< set to .true. to export ana
 !> specificando category.subcategory.localcategory oppure un alias ("synop", "metar","temp","generic") forza l'exportazione ad uno specifico template BUFR/CREX"
 !!  the special value "generic-frag is used to generate bufr on file where ana data is reported only once at beginning and data in other bufr after
 character(len=*),intent(in),optional :: template 
+logical, intent(in),optional :: attr_only          !< set to .true. to export attr only (no data) 
 
 
 type(dbadcv)       :: vars,starvars,anavars,anastarvars
@@ -1871,18 +1872,19 @@ filter=dbafilter(coordmin=mydbacoordmin,coordmax=mydbacoordmax,ana=mydbaana, &
 !!$  print *, "filter:"
 !!$  call filter%display()
 
-call export (this, filter,template)
+call export (this, filter,template,attr_only)
 
 end SUBROUTINE vol7d_dballe_export_old
 
 
-subroutine vol7d_dballe_export (this, filter, template)
+subroutine vol7d_dballe_export (this, filter, template, attr_only)
 
 TYPE(vol7d_dballe),INTENT(inout) :: this !< oggetto contenente il volume e altre info per l'accesso al DSN
 type(dbafilter),intent(in)    :: filter !< filter o use
 !> specificando category.subcategory.localcategory oppure un alias ("synop", "metar","temp","generic") forza l'exportazione ad uno specifico template BUFR/CREX"
 !!  the special value "generic-frag is used to generate bufr on file where ana data is reported only once at beginning and data in other bufr after
 character(len=*),intent(in),optional :: template 
+logical, intent(in),optional :: attr_only          !< set to .true. to export attr only (no data) 
 
 character(len=40) :: ltemplate 
 
@@ -1898,7 +1900,7 @@ call v7d2dba(this%vol7d,metaanddatal)
 if (this%file) call this%handle%remove_all()
 
 ! using filter here can limit memory use for memdb
-call metaanddatal%extrude(session=this%handle,filter=filter)
+call metaanddatal%extrude(session=this%handle,filter=filter,attronly=attr_only)
 
 if (this%file) then
   !!!!!  this if we have written in memdb and now we have to write the file

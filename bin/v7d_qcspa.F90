@@ -26,6 +26,7 @@ USE missing_values
 USE simple_stat
 USE geo_coord_class
 USE datetime_class
+use dballe_class
 use modqc
 use modqcspa
 !use vol7d_dballeold_class
@@ -33,6 +34,7 @@ use vol7d_dballe_class
 USE vol7d_class
 USE optionparser_class
 use array_utilities
+
 #ifdef HAVE_LIBNCARG
 USE ncar_plot_class
 #endif
@@ -83,6 +85,7 @@ integer :: indcana,indctime,indclevel,indctimerange,indcdativarr,indcnetwork,ind
 INTEGER,POINTER :: w_s(:), w_e(:)
 TYPE(vol7d_dballe) :: v7d_dba_out
 logical :: file
+integer :: status,grunit
     
 #ifdef HAVE_DBALLE
 namelist /odbc/   dsn,user,password,dsne,usere,passworde
@@ -182,6 +185,8 @@ if (operation == "ndi") then
   ENDIF
   CALL getarg(iargc(), output_file)
   
+
+                                !you can define level, timerange, var or get it from file
   call init(levelo)
   call init(timerangeo)
   call init (variao)
@@ -189,11 +194,19 @@ if (operation == "ndi") then
   do ninput = optind, iargc()-1
     call getarg(ninput, input_file)
 
-    CALL l4f_category_log(category,L4F_INFO,"open file:"//t2c(input_file))
-    open (10,file=input_file,status="old")
-    read (10,*) level,timerange,varia
+    CALL l4f_category_log(category,L4F_INFO,"open file: "//t2c(input_file))
+    grunit=getunit()
+    open (grunit,file=input_file,status="old")
+    read (grunit,*,iostat=status) level,timerange,varia
+    if (status /= 0) then
+      CALL l4f_category_log(category,L4F_WARN,"error reading: "//t2c(input_file))
+      close(grunit)
+      cycle
+    endif
 
     if (c_e(levelo)) then
+
+      !if (t2c(input_file) /= to_char(levelo)//"_"//to_char(timerangeo)//"_"//variao%btable//".grad")
       if ( level /= levelo .or. timerange /= timerangeo .or. varia /= variao ) then
         call l4f_category_log(category,L4F_ERROR,"Error reading grad files: file are incoerent")
         call raise_error("")
@@ -205,12 +218,12 @@ if (operation == "ndi") then
     end if
 
     do while (.true.)
-      read (10,*,iostat=iostat) val
+      read (grunit,*,iostat=iostat) val
       if (iostat /= 0) exit
       if (val /= 0.) call insert(grad,val)
     end do
 
-    close(10)
+    close(grunit)
   end do
   
   CALL l4f_category_log(category,L4F_INFO,"compute percentile to remove the tails")
@@ -258,8 +271,8 @@ if (operation == "ndi") then
     end if
   end do
 
-!  print *,">>>>>> Clima Spatial Volume <<<<<<"
-!  call display (v7dqcspa%clima)
+  print *,">>>>>> NDI Volume <<<<<<"
+  call display (v7dqcspa%clima)
 
   IF (output_format == 'native') THEN
     IF (output_file == '-') THEN ! stdout_unit does not work with unformatted
@@ -360,11 +373,13 @@ if (c_e(ti))   call l4f_category_log(category,L4F_INFO,"QC on "//t2c(ti)//" date
 if (c_e(tf))   call l4f_category_log(category,L4F_INFO,"QC on "//t2c(tf)//" datetime max value")
 !------------------------------------------------------------------------
 
+time=ti
 
-!timei=ti
-time=ti+timedelta_new(minute=30)
-CALL getval(time,year, month, day, hour)
-call init(time,  year, month, day, hour, minute=00, msec=00)
+! aproximate to integer hours (not required reading date from namelist)
+!time=ti+timedelta_new(minute=30)
+!CALL getval(time,year, month, day, hour)
+!call init(time,  year, month, day, hour, minute=00, msec=00)
+
 !if (time < timei) time=time+timedelta_new(hour=1)
 !timef=tf
 !if (time > timef) time=timei
@@ -380,11 +395,10 @@ DO WHILE (time <= tf)
   timef = time + timedelta_new(minute=30)
   timeiqc = time - timedelta_new(minute=15)
   timefqc = time + timedelta_new(minute=15)
-  time  = time + timedelta_new(minute=30)
   call l4f_category_log(category,L4F_INFO,"elaborate from "//t2c(timeiqc)//" to "//t2c(timefqc))
 
                                 ! Chiamo il costruttore della classe vol7d_dballe per il mio oggetto in import
-  CALL init(v7ddballe,dsn=dsn,user=user,password=password,write=.true.,wipe=.false.,categoryappend="QCtarget-"//t2c(time))
+  CALL init(v7ddballe,dsn=dsn,user=user,password=password,write=.true.,wipe=.false.,categoryappend="data-"//t2c(time))
   call l4f_category_log(category,L4F_INFO,"start data import")
 
   CALL import(v7ddballe,var=var(:nvar),varkind=(/("r",i=1,nvar)/),&
@@ -401,7 +415,8 @@ DO WHILE (time <= tf)
   !remove data invalidated and gross error only
   !qcpar=qcpartype(0_int_b,0_int_b,0_int_b)
   qcpar%att=bmiss
-  call vol7d_peeling(v7ddballe%vol7d,v7ddballe%data_id,keep_attr=(/qcattrvarsbtables(4)/),purgeana=.true.)
+  !call vol7d_peeling(v7ddballe%vol7d,v7ddballe%data_id,keep_attr=(/qcattrvarsbtables(4)/),purgeana=.true.)
+  call vol7d_peeling(v7ddballe%vol7d,keep_attr=(/qcattrvarsbtables(4)/),purgeana=.true.)
 !  call display(v7ddballe%vol7d)
 
   call l4f_category_log(category,L4F_INFO, "filtered N staz="//t2c(size(v7ddballe%vol7d%ana)))
@@ -412,24 +427,26 @@ DO WHILE (time <= tf)
 
 
   call init(v7dqcspa,v7ddballe%vol7d,var(:nvar),timei=timeiqc,timef=timefqc, coordmin=coordmin, coordmax=coordmax,&
-   data_id_in=v7ddballe%data_id, &
+   !data_id_in=v7ddballe%data_id, &
    dsne=dsne, usere=usere, passworde=passworde,&
    dsnspa=dsnspa, userspa=userspa, passwordspa=passwordspa,&
    height2level=height2level, operation=operation,&
-   categoryappend="space")
+   categoryappend="space"//t2c(time))
 
 !  print *,">>>>>> Clima Spatial Volume <<<<<<"
 !  call display(v7dqcspa%clima)
 
-  print *,">>>>>> Pre Data Volume <<<<<<"
-  call display(v7dqcspa%v7d)
+  !print *,">>>>>> Pre Data Volume <<<<<<"
+  !call display(v7dqcspa%v7d)
 
   call alloc(v7dqcspa)
 
   ! spatial QC
-  !exclude the last time to do not check data two times
+  !attention: do not exclude the first/last time so we check data two times
   call l4f_category_log(category,L4F_INFO,"start spatial QC")
-  call quaconspa(v7dqcspa,noborder=.true.,timemask= ( v7dqcspa%v7d%time >= timeiqc .and. v7dqcspa%v7d%time < timefqc ))
+  !call quaconspa(v7dqcspa,noborder=.true.,timemask= ( v7dqcspa%v7d%time >= timeiqc .and. v7dqcspa%v7d%time < timefqc ))
+  call quaconspa(v7dqcspa,timetollerance=timedelta_new(minute=15),noborder=.true.,&
+   timemask= ( v7dqcspa%v7d%time >= timeiqc .and. v7dqcspa%v7d%time <= timefqc ))
   call l4f_category_log(category,L4F_INFO,"end spatial QC")
 
 #ifdef HAVE_LIBNCARG
@@ -442,26 +459,30 @@ DO WHILE (time <= tf)
 
 
   ! prepare data_id to be recreated
-  deallocate(v7ddballe%data_id)
-  nullify(v7ddballe%data_id)
+  !deallocate(v7ddballe%data_id)
+  !nullify(v7ddballe%data_id)
 
   if (v7dqcspa%operation == "run") then
     call l4f_category_log(category,L4F_INFO,"start export data")
-    print *,">>>>>> Post Data Volume <<<<<<"
-    call display(v7ddballe%vol7d)
+    !print *,">>>>>> Post Data Volume <<<<<<"
+    !call display(v7ddballe%vol7d)
 
     ! data_id to use is the new one
-    v7ddballe%data_id => v7dqcspa%data_id_out
-    !CALL export(v7ddballe,attr_only=.true.)
-    CALL export(v7ddballe)
+    !v7ddballe%data_id => v7dqcspa%data_id_out
+
+    CALL export(v7ddballe,&
+     filter=dbafilter(datetimemin=dbadatetime(timeiqc),datetimemax=dbadatetime(timefqc)),&
+     attr_only=.true.)
+    !CALL export(v7ddballe)
     call l4f_category_log(category,L4F_INFO,"end export data")
   end if
 
   call delete(v7dqcspa)
   ! data_id was allready deleted
-  nullify(v7ddballe%data_id)
+  !nullify(v7ddballe%data_id)
   call delete(v7ddballe)
 
+  time  = time + timedelta_new(minute=30)
 end do
 
 #ifdef HAVE_LIBNCARG

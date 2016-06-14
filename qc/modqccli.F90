@@ -637,48 +637,48 @@ end if
 
 
 if (qccli%height2level) then
-
   call init(var, btable="B07030")    ! height
   
   type=cmiss
   indvar = index(qccli%v7d%anavar, var, type=type)
-!!$  print*,"indvar ",indvar
-  indnetwork=min(1,size(qccli%v7d%network))
-!!$  print*,"indnetwork ",indnetwork
-  
+
   do indana=1,size(qccli%v7d%ana)
+    height=rmiss
+
+    ! here we take the height fron any network (the first network win)
+    do indnetwork=1,size(qccli%v7d%network)
+
+      if( indvar > 0 ) then
+        select case (type)
+        case("d")
+          height=realdat(qccli%v7d%volanad(indana,indvar,indnetwork),qccli%v7d%anavar%d(indvar))
+        case("r")
+          height=realdat(qccli%v7d%volanar(indana,indvar,indnetwork),qccli%v7d%anavar%r(indvar))
+        case ("i")
+          height=realdat(qccli%v7d%volanai(indana,indvar,indnetwork),qccli%v7d%anavar%i(indvar))
+        case("b")
+          height=realdat(qccli%v7d%volanab(indana,indvar,indnetwork),qccli%v7d%anavar%b(indvar))
+        case("c")
+          height=realdat(qccli%v7d%volanac(indana,indvar,indnetwork),qccli%v7d%anavar%c(indvar))
+        end select
+      end if
     
-    if( indvar > 0 .and. indnetwork > 0 ) then
-      select case (type)
-      case("d")
-        height=int(realdat(qccli%v7d%volanad(indana,indvar,indnetwork),qccli%v7d%anavar%d(indvar)))
-      case("r")
-        height=int(realdat(qccli%v7d%volanar(indana,indvar,indnetwork),qccli%v7d%anavar%r(indvar)))
-      case ("i")
-        height=int(realdat(qccli%v7d%volanai(indana,indvar,indnetwork),qccli%v7d%anavar%i(indvar)))
-      case("b")
-        height=int(realdat(qccli%v7d%volanab(indana,indvar,indnetwork),qccli%v7d%anavar%b(indvar)))
-      case("c")
-        height=int(realdat(qccli%v7d%volanac(indana,indvar,indnetwork),qccli%v7d%anavar%c(indvar)))
-      case default
-        height=imiss
-      end select
-    else
-      height=imiss
-    end if
-    
+      if (c_e(height)) exit
+    end do
+
     if (c_e(height)) then
       iclv(indana)=firsttrue(cli_level1 <= height .and. height <= cli_level2 )
     else
       iclv(indana)=imiss
     endif
-    
-    call l4f_category_log(qccli%category,L4F_DEBUG, 'height has value '//t2c(height))
+  
+#ifdef DEBUG
+    call l4f_category_log(qccli%category,L4F_DEBUG, 'vol7d_normalize_data height has value '//t2c(height,"Missing"))
     call l4f_category_log(qccli%category,L4F_DEBUG, 'for indana having number '//t2c(indana)//&
-     ' iclv has value '//t2c(iclv(indana)))
-
+     ' iclv has value '//t2c(iclv(indana),"Missing"))
+#endif
   end do
-
+    
 endif
 
 
@@ -708,6 +708,12 @@ do indana=1,size(qccli%v7d%ana)
             datoqui = qccli%v7d%voldatir  (indana ,indtime ,indlevel ,indtimerange ,inddativarr, indnetwork )
               
             if (.not. c_e(datoqui)) cycle
+
+            if (.not. c_e(iarea)) then
+              qccli%v7d%voldatir  (indana ,indtime ,indlevel ,indtimerange ,&
+               inddativarr, indnetwork ) = rmiss
+              cycle
+            end if
 
 !!$              if (indbattrinv > 0) then
 !!$                if( invalidated(qccli%v7d%voldatiattrb&
@@ -761,7 +767,13 @@ do indana=1,size(qccli%v7d%ana)
             else
               k=0
             end if
-            
+
+            if (.not. c_e(k)) then
+              qccli%v7d%voldatir  (indana ,indtime ,indlevel ,indtimerange ,&
+               inddativarr, indnetwork ) = rmiss
+              cycle
+            end if
+
             desc=25
             write(ident,'("#",i2.2,2i3.3)')k,iarea,desc   ! macro-area e descrittore
 
@@ -892,7 +904,8 @@ logical :: anamaskl(size(qccli%v7d%ana)), timemaskl(size(qccli%v7d%time)), level
 integer :: indana , indtime ,indlevel ,indtimerange ,inddativarr, indnetwork
 integer :: indcana, indctime,indclevel,indctimerange,indcdativarr,indcnetwork
 real :: datoqui,climaquii,climaquif, extremequii,extremequif,perc25,perc50,perc75
-integer :: iarea,desc,height,indn,indvar,k
+integer :: iarea,desc,indn,indvar,k
+real :: height
 !integer, allocatable :: indcanav(:)
 
 
@@ -969,6 +982,9 @@ else
 endif
 
 qccli%v7d%voldatiattrb(:,:,:,:,:,:,indbattrout)=ibmiss
+call init(anavar,"B07030" )
+type=cmiss
+indvar = index(qccli%v7d%anavar, anavar, type=type)
 
 do indana=1,size(qccli%v7d%ana)
 
@@ -991,7 +1007,50 @@ do indana=1,size(qccli%v7d%ana)
   
   latc=0.d0
   lonc=0.d0
+
+
+                                ! use conventional level starting from station height
+  if (qccli%height2level) then
+        
+    height=rmiss
+      
+                                ! here we take the height fron any network (the first network win)
+    do indn=1,size(qccli%v7d%network)
+      
+      if( indvar > 0 .and. indn > 0 ) then
+        select case (type)
+        case("d")
+          height=realdat(qccli%v7d%volanad(indana,indvar,indn),qccli%v7d%anavar%d(indvar))
+        case("r")
+          height=realdat(qccli%v7d%volanar(indana,indvar,indn),qccli%v7d%anavar%r(indvar))
+        case ("i")
+          height=realdat(qccli%v7d%volanai(indana,indvar,indn),qccli%v7d%anavar%i(indvar))
+        case("b")
+          height=realdat(qccli%v7d%volanab(indana,indvar,indn),qccli%v7d%anavar%b(indvar))
+        case("c")
+          height=realdat(qccli%v7d%volanac(indana,indvar,indn),qccli%v7d%anavar%c(indvar))
+        case default
+          height=rmiss
+        end select
+      end if
+                  
+      if (c_e(height)) exit
+    end do
+      
+    if (c_e(height)) then
+      iclv(indana)=firsttrue(cli_level1 <= height .and. height <= cli_level2 )
+    else
+      iclv(indana)=imiss
+    endif
+    
+#ifdef DEBUG
+    CALL l4f_log(L4F_DEBUG, 'quaconcli height has value '//t2c(height,"Missing"))
+    CALL l4f_log(L4F_DEBUG, 'for k having number '//t2c(k)//&
+     ' iclv has value '//t2c(iclv(indana)))
+#endif
   
+  end if
+
   do indnetwork=1,size(qccli%v7d%network)
     do indlevel=1,size(qccli%v7d%level)
       do indtimerange=1,size(qccli%v7d%timerange)
@@ -1020,7 +1079,7 @@ do indana=1,size(qccli%v7d%ana)
 
                                 ! invalidated flag allready set
 #ifdef DEBUG
-                  call l4f_log (L4F_INFO,"qccli: skip station for a preceding invalidated flag")
+                  call l4f_log (L4F_DEBUG,"qccli: skip station for a preceding invalidated flag")
 #endif
                   cycle
                 end if
@@ -1033,50 +1092,6 @@ do indana=1,size(qccli%v7d%ana)
               !call init(time, year=1001, month=mese, day=1, hour=ora, minute=00)
 
 !!$              print *,"data convenzionale per percentili: ",t2c(time)
-
-              ! use conventional level starting from station height
-              if (qccli%height2level) then
-                call init(anavar,"B07030" )
-
-                type=cmiss
-                indvar = index(qccli%v7d%anavar, anavar, type=type)
-                indn=min(1,size(qccli%v7d%network))
-
-                do k=1,size(qccli%v7d%ana)
-    
-                  if( indvar > 0 .and. indn > 0 ) then
-                    select case (type)
-                    case("d")
-                      height=int(realdat(qccli%v7d%volanad(k,indvar,indn),qccli%v7d%anavar%d(indvar)))
-                    case("r")
-                      height=int(realdat(qccli%v7d%volanar(k,indvar,indn),qccli%v7d%anavar%r(indvar)))
-                    case ("i")
-                      height=int(realdat(qccli%v7d%volanai(k,indvar,indn),qccli%v7d%anavar%i(indvar)))
-                    case("b")
-                      height=int(realdat(qccli%v7d%volanab(k,indvar,indn),qccli%v7d%anavar%b(indvar)))
-                    case("c")
-                      height=int(realdat(qccli%v7d%volanac(k,indvar,indn),qccli%v7d%anavar%c(indvar)))
-                    case default
-                      height=imiss
-                    end select
-                  else
-                    height=imiss
-                  end if
-                  
-                  if (c_e(height)) then
-                    iclv(k)=firsttrue(cli_level1 <= height .and. height <= cli_level2 )
-                  else
-                    iclv(k)=imiss
-                  endif
-                  
-#ifdef DEBUG
-                  CALL l4f_log(L4F_INFO, 'height has value '//t2c(height))
-                  CALL l4f_log(L4F_INFO, 'for k having number '//t2c(k)//&
-                   ' iclv has value '//t2c(iclv(k)))
-#endif
-                end do
-
-              end if
 
               level=qccli%v7d%level(indlevel)
 
@@ -1177,7 +1192,7 @@ do indana=1,size(qccli%v7d%ana)
                 extremequif=perc50 + (perc75 - perc25) *1.3 * 3.65  ! 1.3 to go to standard deviation and 3.65 to make 3.65 sigma 
 
 #ifdef DEBUG
-                call l4f_log (L4F_INFO,"qccli: gross error check "//t2c(extremequii)//">"//t2c(datoqui)//"<"//t2c(extremequif))
+                call l4f_log (L4F_DEBUG,"qccli: gross error check "//t2c(extremequii)//">"//t2c(datoqui)//"<"//t2c(extremequif))
 #endif
 
 
@@ -1186,13 +1201,13 @@ do indana=1,size(qccli%v7d%ana)
 
                                 !ATTENZIONE TODO : inddativarr È UNA GRANDE SEMPLIFICAZIONE NON VERA SE TIPI DI DATO DIVERSI !!!!
 #ifdef DEBUG
-                          call l4f_log (L4F_INFO,"qccli: gross error check flag set to bad")
+                          call l4f_log (L4F_DEBUG,"qccli: gross error check flag set to bad")
 #endif
                   qccli%v7d%voldatiattrb(indana,indtime,indlevel,indtimerange,inddativarr,indnetwork,indbattrout)=qcpar%gross_error
 
                   if ( associated ( qccli%data_id_in)) then
 #ifdef DEBUG
-                    call l4f_log (L4F_INFO,"id: "//t2c(&
+                    call l4f_log (L4F_DEBUG,"id: "//t2c(&
                      qccli%data_id_in(indana,indtime,indlevel,indtimerange,indnetwork)))
 #endif
                     qccli%data_id_out(indana,indtime,indlevel,indtimerange,indnetwork)=&
@@ -1205,7 +1220,7 @@ do indana=1,size(qccli%v7d%ana)
 
                                 ! gross error check allready done
 #ifdef DEBUG
-                          call l4f_log (L4F_INFO,"qccli: skip station for a preceding gross error check flagged bad")
+                          call l4f_log (L4F_DEBUG,"qccli: skip station for a preceding gross error check flagged bad")
 #endif
                 else
 
@@ -1286,12 +1301,12 @@ do indana=1,size(qccli%v7d%ana)
                            , 1_int_b) ! 0 reserved for gross error check
 
 #ifdef DEBUG
-                          call l4f_log (L4F_INFO,"data ndi:                   "//t2c(datoqui)//"->"//&
+                          call l4f_log (L4F_DEBUG,"data ndi:                   "//t2c(datoqui)//"->"//&
                            t2c(qccli%clima%voldatiattrb(indcana,indctime,indclevel,indctimerange,indcdativarr,indcnetwork,1))&
                            //" : "//t2c(qccli%v7d%time(indtime)))
-                          call l4f_log (L4F_INFO,"limits: "//t2c(indcana)//":"//qccli%clima%ana(indcana)%ident//&
+                          call l4f_log (L4F_DEBUG,"limits: "//t2c(indcana)//":"//qccli%clima%ana(indcana)%ident//&
                            " : "//t2c(climaquii)//" - "//t2c(climaquif)//" : "//t2c(qccli%clima%time(indctime))) 
-                          call l4f_log (L4F_INFO,"qccli: clima check "//t2c(datoqui)//" confidence: "//&
+                          call l4f_log (L4F_DEBUG,"qccli: clima check "//t2c(datoqui)//" confidence: "//&
                            t2c(qccli%v7d%voldatiattrb(indana,indtime,indlevel,indtimerange,inddativarr,indnetwork,indbattrout))&
                           //" : "//t2c(qccli%v7d%time(indtime)))
 #endif
@@ -1299,7 +1314,7 @@ do indana=1,size(qccli%v7d%ana)
               
                           if ( associated ( qccli%data_id_in)) then
 #ifdef DEBUG
-                            call l4f_log (L4F_INFO,"id: "//t2c(&
+                            call l4f_log (L4F_DEBUG,"id: "//t2c(&
                              qccli%data_id_in(indana,indtime,indlevel,indtimerange,indnetwork)))
 #endif
                             qccli%data_id_out(indana,indtime,indlevel,indtimerange,indnetwork)=&
@@ -1483,8 +1498,6 @@ if (this%height2level) then
   
   type=cmiss
   indvar = index(this%v7d%anavar, var, type=type)
-  indnetwork=min(1,size(this%v7d%network))
-
   
 !!$#ifdef DEBUG
 !!$  CALL l4f_log(L4F_DEBUG, 'SIZE this anavar r '//t2c(SIZE(this%v7d%anavar%r)))
@@ -1517,25 +1530,30 @@ if (this%height2level) then
 !!$#endif
 
   do k=1,size(this%v7d%ana)
-    
-    if( indvar > 0 .and. indnetwork > 0 ) then
-      select case (type)
-      case("d")
-        height=int(realdat(this%v7d%volanad(k,indvar,indnetwork),this%v7d%anavar%d(indvar)))
-      case("r")
-        height=int(realdat(this%v7d%volanar(k,indvar,indnetwork),this%v7d%anavar%r(indvar)))
-      case ("i")
-        height=int(realdat(this%v7d%volanai(k,indvar,indnetwork),this%v7d%anavar%i(indvar)))
-      case("b")
-        height=int(realdat(this%v7d%volanab(k,indvar,indnetwork),this%v7d%anavar%b(indvar)))
-      case("c")
-        height=int(realdat(this%v7d%volanac(k,indvar,indnetwork),this%v7d%anavar%c(indvar)))
-      case default
-        height=imiss
-      end select
-    else
-      height=imiss
-    end if
+    height=rmiss
+
+    ! here we take the height fron any network (the first network win)
+    do indnetwork=1,size(this%v7d%network)
+
+      if( indvar > 0 .and. indnetwork > 0 ) then
+        select case (type)
+        case("d")
+          height=realdat(this%v7d%volanad(k,indvar,indnetwork),this%v7d%anavar%d(indvar))
+        case("r")
+          height=realdat(this%v7d%volanar(k,indvar,indnetwork),this%v7d%anavar%r(indvar))
+        case ("i")
+          height=realdat(this%v7d%volanai(k,indvar,indnetwork),this%v7d%anavar%i(indvar))
+        case("b")
+          height=realdat(this%v7d%volanab(k,indvar,indnetwork),this%v7d%anavar%b(indvar))
+        case("c")
+          height=realdat(this%v7d%volanac(k,indvar,indnetwork),this%v7d%anavar%c(indvar))
+        case default
+          height=rmiss
+        end select
+      end if
+
+      if (c_e(height)) exit
+    end do
 
     if (c_e(height)) then
       iclv(k)=firsttrue(cli_level1 <= height .and. height <= cli_level2 )
@@ -1544,7 +1562,7 @@ if (this%height2level) then
     endif
 
 #ifdef DEBUG
-    CALL l4f_log(L4F_DEBUG, 'height has value '//t2c(height))
+    CALL l4f_log(L4F_DEBUG, 'qc_compute_percentile height has value '//t2c(height))
     CALL l4f_log(L4F_DEBUG, 'for k having number '//t2c(k)//&
        ' iclv has value '//t2c(iclv(k)))
 #endif
@@ -1586,7 +1604,7 @@ this%extreme%level=this%v7d%level
 this%extreme%timerange=this%v7d%timerange
 this%extreme%dativar%r=this%v7d%dativar%r
 this%extreme%time(1)=cyclicdatetime_to_conventional(cyclicdt)
-call l4f_category_log(this%category, L4F_INFO,"vol7d_compute_percentile conventional datetime "//to_char(this%extreme%time(1)))
+call l4f_category_log(this%category, L4F_DEBUG,"vol7d_compute_percentile conventional datetime "//to_char(this%extreme%time(1)))
 call init(this%extreme%network(1),name="qcclima-perc")
 
 call vol7d_alloc_vol(this%extreme,inivol=.true.)
@@ -1783,28 +1801,32 @@ if (.NOT.(lnorm)) then
     
     type=cmiss
     indvar = index(this%v7d%anavar, var, type=type)
-    indnetwork=min(1,size(this%v7d%network))
 
     do k=1,size(this%v7d%ana)
+      height=rmiss
+
+      ! here we take the height fron any network (the first network win)
+      do indnetwork=1,size(this%v7d%network)
     
-      if( indvar > 0 .and. indnetwork > 0 ) then
-        select case (type)
-        case("d")
-          height=int(realdat(this%v7d%volanad(k,indvar,indnetwork),this%v7d%anavar%d(indvar)))
-        case("r")
-          height=int(realdat(this%v7d%volanar(k,indvar,indnetwork),this%v7d%anavar%r(indvar)))
-        case ("i")
-          height=int(realdat(this%v7d%volanai(k,indvar,indnetwork),this%v7d%anavar%i(indvar)))
-        case("b")
-          height=int(realdat(this%v7d%volanab(k,indvar,indnetwork),this%v7d%anavar%b(indvar)))
-        case("c")
-          height=int(realdat(this%v7d%volanac(k,indvar,indnetwork),this%v7d%anavar%c(indvar)))
-        case default
-          height=imiss
-        end select
-      else
-        height=imiss
-      end if
+        if( indvar > 0 .and. indnetwork > 0 ) then
+          select case (type)
+          case("d")
+            height=realdat(this%v7d%volanad(k,indvar,indnetwork),this%v7d%anavar%d(indvar))
+          case("r")
+            height=realdat(this%v7d%volanar(k,indvar,indnetwork),this%v7d%anavar%r(indvar))
+          case ("i")
+            height=realdat(this%v7d%volanai(k,indvar,indnetwork),this%v7d%anavar%i(indvar))
+          case("b")
+            height=realdat(this%v7d%volanab(k,indvar,indnetwork),this%v7d%anavar%b(indvar))
+          case("c")
+            height=realdat(this%v7d%volanac(k,indvar,indnetwork),this%v7d%anavar%c(indvar))
+          case default
+            height=rmiss
+          end select
+        end if
+
+        if (c_e(height)) exit
+      end do
       
       if (c_e(height)) then
         iclv(k)=firsttrue(cli_level1 <= height .and. height <= cli_level2 )
@@ -1813,7 +1835,7 @@ if (.NOT.(lnorm)) then
       endif
       
 #ifdef DEBUG
-      CALL l4f_log(L4F_DEBUG, 'height has value '//t2c(height))
+      CALL l4f_log(L4F_DEBUG, 'qc_compute_NormalizedDensityIndex height has value '//t2c(height,"Missing"))
       CALL l4f_log(L4F_DEBUG, 'for k having number '//t2c(k)//&
        ' iclv has value '//t2c(iclv(k)))
 #endif

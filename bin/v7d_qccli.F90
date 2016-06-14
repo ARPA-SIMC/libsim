@@ -157,11 +157,7 @@ deallocate (v7ddballe%data_id)
 v7ddballe%data_id => v7dqccli%data_id_out
 #endif
 
-CALL export(v7ddballe&
-#ifdef OLDDBALLEAPI 
-,attr_only=.true.
-#endif
-)
+CALL export(v7ddballe ,attr_only=.true.)
 
 call l4f_category_log(category,L4F_INFO,"end export data")
 

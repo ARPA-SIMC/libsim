@@ -744,7 +744,6 @@ if (optio_log(purgeana)) then
 
   nana=count(llana)
 
-  allocate(data_idtmp(nana,size(data_id,2),size(data_id,3),size(data_id,4),size(data_id,5)))
 
   allocate(anaind(nana))
 
@@ -756,9 +755,10 @@ if (optio_log(purgeana)) then
     end if
   end do
 
-  data_idtmp=data_id(anaind,:,:,:,:)
  
   if(present(data_id)) then
+    allocate(data_idtmp(nana,size(data_id,2),size(data_id,3),size(data_id,4),size(data_id,5)))
+    data_idtmp=data_id(anaind,:,:,:,:)
     if (associated(data_id))deallocate(data_id)
     data_id=>data_idtmp
   end if 

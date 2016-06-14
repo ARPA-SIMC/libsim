@@ -63,7 +63,8 @@
 !!
 !! N.B.
 !! Se una stazione risulta circondata da dati mancanti nessun controllo 
-!! viene fatto su di essa e la confidenza rimane inalterata.
+!! viene fatto su di essa e la confidenza risulta assente e quella eventualmente calcolata
+!! precedentemente viene cancellata.
 !!
 !!23/9/1998
 !!
@@ -107,7 +108,7 @@ character (len=255),parameter:: subcategoryspa="QCspa"
 integer, parameter :: spa_nvar=1
 CHARACTER(len=10) :: spa_btable(spa_nvar)=(/"B12101"/) !< variable wmo code table for normalization.
 !> standard coefficients for orizontal gradient normalization
-real, parameter :: spa_a(spa_nvar) = (/1.e6/)
+real, parameter :: spa_a(spa_nvar) = (/1.e5/)
 !> standard coefficients for orizontal gradient normalization
 real, parameter :: spa_b(spa_nvar) = (/273.15/)
 
@@ -123,7 +124,8 @@ type :: qcspatype
   type (qcclitype) :: qccli !< qccli part for normalization
   type (vol7d) :: clima !< Clima spaziale di tutte le variabili da controllare
   character(len=20):: operation !< Operation to execute ("gradient"/"run")
-  logical :: writeheader  !< have to write header in gradient files
+  !logical :: writeheader  !< have to write header in gradient files
+  !integer :: grunit !< unit used internally to write gradient
 end type qcspatype
 
 
@@ -200,7 +202,6 @@ call delete(qcspa%tri)
 nullify ( qcspa%data_id_in )
 nullify ( qcspa%data_id_out )
 
-qcspa%writeheader =.false.
 
 ! riporto il volume dati nel mio oggetto
 qcspa%v7d => v7d
@@ -298,12 +299,6 @@ if (qcspa%operation == "run") then
 #endif
 end if
 
-
-! open file to write gradient
-if (qcspa%operation == "gradient") then
-  open (unit=11, file=t2c(timei)//"_"//t2c(timef)//".grad",STATUS='UNKNOWN', form='FORMATTED')
-  qcspa%writeheader =.true.
-end if
 
 return
 end subroutine qcspainit
@@ -467,10 +462,6 @@ call delete(qcspa%qccli)
 
 qcspa%ndp=imiss
 
-if (qcspa%operation == "gradient") then
-  close (unit=11)
-end if
-
 !delete logger
 call l4f_category_delete(qcspa%category)
 
@@ -481,11 +472,12 @@ end subroutine qcspadelete
 !>\brief Controllo di Qualità spaziale.
 !!Questo è il vero e proprio controllo di qualità spaziale.
 
-SUBROUTINE quaconspa (qcspa,noborder,battrinv,battrcli,battrout,&
+SUBROUTINE quaconspa (qcspa,timetollerance,noborder,battrinv,battrcli,battrout,&
  anamask,timemask,levelmask,timerangemask,varmask,networkmask)
 
 
 type(qcspatype),intent(in out) :: qcspa !< Oggetto per il controllo di qualità
+type(timedelta),intent(in) :: timetollerance !< time tollerance to compare nearest stations
 logical,intent(in),optional :: noborder !< Exclude border from QC
 character (len=10) ,intent(in),optional :: battrinv !< attributo invalidated in input
 character (len=10) ,intent(in),optional :: battrcli !< attributo con la confidenza climatologica in input
@@ -503,7 +495,7 @@ integer :: indbattrinv,indbattrcli,indbattrout
 logical :: anamaskl(size(qcspa%v7d%ana)), timemaskl(size(qcspa%v7d%time)), levelmaskl(size(qcspa%v7d%level)), &
  timerangemaskl(size(qcspa%v7d%timerange)), varmaskl(size(qcspa%v7d%dativar%r)), networkmaskl(size(qcspa%v7d%network)) 
 
-integer :: indana ,  indtime ,indlevel ,indtimerange ,inddativarr, indnetwork
+integer :: indana ,  indtime ,indlevel ,indtimerange ,inddativarr, indnetwork,indnet
 integer :: indcana ,  indctime ,indclevel ,indctimerange ,indcdativarr, indcnetwork
 real :: datoqui,datola,datila(size(qcspa%v7d%time)),climaquii, climaquif
                                 !integer, allocatable :: indcanav(:)
@@ -514,13 +506,21 @@ TYPE(datetime)   :: time
 TYPE(vol7d_network):: network
 type(timedelta) :: deltato,deltat 
 
-integer :: ivert(50),i,ipos,ineg,it,itrov,iv,ivb,kk,iindtime
-double precision :: distmin=1000.d0,distscol=300000.d0
+integer :: ivert(50),i,ipos,ineg,it,itrov,iv,ivb,kk,iindtime,grunit
+double precision :: distmin=1000.d0,distscol=100000.d0
 double precision :: dist,grad,gradmin
-!!$integer (kind=int_b) :: flag
+integer (kind=int_b) :: flag
 !!$CHARACTER(len=vol7d_ana_lenident) :: ident
+character(len=512) :: filename
+logical :: exist
+integer :: ind
 
                                 !call qcspa_validate (qcspa)
+
+if (size(qcspa%v7d%ana) < 3 ) then
+  call l4f_category_log(qcspa%category,L4F_WARN,"number of station < 3; do nothing")
+  return
+end if
 
 !localize optional parameter
 if (present(battrinv))then
@@ -551,24 +551,17 @@ if (indbattrout <= 0 ) then
 
 end if
 
-if (qcspa%operation == "gradient") then
-
-  !check for gradient operation
-  if ( size(qcspa%v7d%level)      > 1 .or.&
-       size(qcspa%v7d%timerange)  > 1 .or.&
-       size(qcspa%v7d%dativar%r)  > 1 ) then
-    call l4f_category_log(qcspa%category,L4F_ERROR,"gradient operation manage one level/timerange/var only")
-    call raise_error()
-  end if
-
-  ! say we have to write header in file
-  if  (qcspa%writeheader) then
-    call l4f_category_log(qcspa%category,L4F_INFO,"write header in gradient file")
-    write (11,*) qcspa%v7d%level(1), qcspa%v7d%timerange(1), qcspa%v7d%dativar%r(1)
-    qcspa%writeheader =.false.
-  end if
-
-end if
+!!$if (qcspa%operation == "gradient") then
+!!$
+!!$  !check for gradient operation
+!!$  if ( size(qcspa%v7d%level)      > 1 .or.&
+!!$       size(qcspa%v7d%timerange)  > 1 .or.&
+!!$       size(qcspa%v7d%dativar%r)  > 1 ) then
+!!$    call l4f_category_log(qcspa%category,L4F_ERROR,"gradient operation manage one level/timerange/var only")
+!!$    call raise_error()
+!!$  end if
+!!$
+!!$end if
 
 ! set other local variable from optional parameter
 if(present(anamask)) then
@@ -604,9 +597,13 @@ endif
 
 ! do not touch data that do not pass QC
 qcspa%v7d%voldatiattrb(:,:,:,:,:,:,indbattrout)=ibmiss
-
+ 
+!print *,"prima normalize"
+!print *,qcspa%v7d%voldatir
 ! normalize data in space and time
 call vol7d_normalize_data(qcspa%qccli)
+!print *,"dopo normalize"
+!print *,qcspa%v7d%voldatir
 
 ! triangulate
 call qcspatri(qcspa)
@@ -632,11 +629,43 @@ do indtime=1,size(qcspa%v7d%time)
   call l4f_category_log(qcspa%category,L4F_INFO,&
    "Check time:"//t2c(qcspa%v7d%time(indtime)) )
 
-  do indnetwork=1,size(qcspa%v7d%network)
-    do indana=1,size(qcspa%v7d%ana)
-      do indlevel=1,size(qcspa%v7d%level)
-        do indtimerange=1,size(qcspa%v7d%timerange)
-          do inddativarr=1,size(qcspa%v7d%dativar%r)
+  do indlevel=1,size(qcspa%v7d%level)
+    do indtimerange=1,size(qcspa%v7d%timerange)
+      do inddativarr=1,size(qcspa%v7d%dativar%r)
+
+        ind=index_c(spa_btable,qcspa%v7d%dativar%r(inddativarr)%btable)
+
+        if (qcspa%operation == "gradient") then
+                                ! open file to write gradient
+
+          filename=trim(to_char(qcspa%v7d%level(indlevel)))//&
+           "_"//trim(to_char(qcspa%v7d%timerange(indtimerange)))//&
+           "_"//trim(qcspa%v7d%dativar%r(inddativarr)%btable)//&
+           ".grad"
+
+          call l4f_category_log(qcspa%category,L4F_INFO,"try to open gradient file; filename below")
+          call l4f_category_log(qcspa%category,L4F_INFO,filename)
+
+          inquire(file=filename, exist=exist)
+          
+          grunit=getunit()
+          if (grunit /= -1) then
+                                !open (unit=grunit, file=t2c(timei)//"_"//t2c(timef)//".grad",STATUS='UNKNOWN', form='FORMATTED')
+            open (grunit, file=filename ,STATUS='UNKNOWN', form='FORMATTED',position='APPEND')
+          end if
+                                ! say we have to write header in file
+          if  (.not. exist) then
+            call l4f_category_log(qcspa%category,L4F_INFO,"write header in gradient file")
+            write (grunit,*) &
+             qcspa%v7d%level(indlevel), &
+             qcspa%v7d%timerange(indtimerange), &
+             qcspa%v7d%dativar%r(inddativarr)
+          end if
+        end if
+
+
+        do indnetwork=1,size(qcspa%v7d%network)
+          do indana=1,size(qcspa%v7d%ana)
 
 !!$            call l4f_log(L4F_INFO,"Index:"// t2c(indana)//t2c(indnetwork)//t2c(indlevel)//&
 !!$             t2c(indtimerange)//t2c(inddativarr)//t2c(indtime))
@@ -689,8 +718,10 @@ do indtime=1,size(qcspa%v7d%time)
               indcdativarr     = index(qcspa%clima%dativar%r, qcspa%v7d%dativar%r(inddativarr))
 
 
+#ifdef DEBUG
               call l4f_log(L4F_DEBUG,"Index:"// to_char(indctime)//to_char(indclevel)//&
                to_char(indctimerange)//to_char(indcdativarr)//to_char(indcnetwork))
+#endif
               if ( indctime <= 0 .or. indclevel <= 0 .or. indctimerange <= 0 .or. indcdativarr <= 0 &
                .or. indcnetwork <= 0 ) cycle
             end if
@@ -784,11 +815,14 @@ do indtime=1,size(qcspa%v7d%time)
                   datola=rmiss
                 end if
               end if
+                                !TODO 
+                                ! if we do not have data from the same network at the same time
+                                ! here we search for the first data found (nearest in time) looping over the network
+                                ! we do not have priority for network to take in account
 
-              datila = qcspa%v7d%voldatir  (ivert(i) ,: ,indlevel ,indtimerange ,inddativarr, indnetwork )
-
-              if (.not. c_e(datola))then
-                deltato=timedelta_miss
+              deltato=timedelta_miss
+              do indnet=1, size(qcspa%v7d%network)
+                datila = qcspa%v7d%voldatir  (ivert(i) ,: ,indlevel ,indtimerange ,inddativarr, indnet )
                 do iindtime=1,size(qcspa%v7d%time)
                   if (.not. c_e(datila(iindtime))) cycle
                                 ! invalidated
@@ -801,22 +835,21 @@ do indtime=1,size(qcspa%v7d%time)
                     if (.not. vdge(qcspa%v7d%voldatiattrb&
                      (ivert(i),iindtime,indlevel,indtimerange,inddativarr,indnetwork,indbattrcli))) cycle
                   end if
-
+                  
                   if (iindtime < indtime) then
                     deltat=qcspa%v7d%time(indtime)-qcspa%v7d%time(iindtime)
-                  else if (iindtime > indtime) then
+                  else if (iindtime >= indtime) then
                     deltat=qcspa%v7d%time(iindtime)-qcspa%v7d%time(indtime)
-                  else
-                    call l4f_category_log(qcspa%category,L4F_WARN,"somethings go wrong on ipotesys make in spatial QC")
                   end if
-
-                  if (deltat < deltato) then
+                    
+                  if ((deltat < deltato .or. .not. c_e(deltato)) .and. deltat <= timetollerance ) then
                     datola = datila(iindtime)
                     deltato = deltat
                   end if
                 end do
-              end if
-              
+              end do
+
+
               IF(.NOT.C_E(datola)) cycle
                                 !	distanza tra le due stazioni
               dist = DISTANZA (qcspa%co(INDANA),qcspa%co(IVERT(I)))
@@ -824,13 +857,18 @@ do indtime=1,size(qcspa%v7d%time)
                 call l4f_category_log(qcspa%category,L4F_ERROR,"distance from two station == 0.")
                 call raise_error()
               END IF
+
+#ifdef DEBUG
+              call l4f_log (L4F_DEBUG,"distanza: "//t2c(dist))
+#endif
+
               dist=max(dist,distmin)
                                 !	    modifica 23/9/1998
                                 !           se la distanza supera distscol, stazioni scorrelate - salta -
               if (dist > distscol) cycle
               IVB=IVB+1
                                 !	valore del gradiente nella direzione delle due stazioni
-              GRAD=(datoqui-datola)/DIST
+              GRAD=(datoqui-datola)/(DIST)
               IF (GRAD >= 0.d0) Ipos=Ipos+1           ! se il gradiente e` positivo incrementa il contatore di positivi
               IF (GRAD <= 0.d0) Ineg=Ineg+1           ! se il gradiente e` negativo incrementa il contatore di negativi
 
@@ -838,90 +876,86 @@ do indtime=1,size(qcspa%v7d%time)
 
             END DO
 
+#ifdef DEBUG
+            call l4f_log (L4F_DEBUG,"ivb: "//t2c(ivb))
+#endif
+
             IF(IVB < 3) cycle      ! do nothing if valid gradients < 3
 
-
-!!$            FLAG=100_int_b
-
             IF (ipos == ivb .or. ineg == ivb)THEN  ! se tutti i gradienti sono dello stesso segno
-
-!!$              if (gradmin> 5.E-5) then
-!!$                FLAG=30_int_b
-!!$              else if (gradmin> 2.5E-5) then
-!!$                FLAG=50_int_b
-!!$              end if
 
               gradmin=sign(gradmin,dble(ipos-ineg))
 
               if (qcspa%operation == "gradient") then
-                write(11,*)gradmin
+                write(grunit,*)gradmin
               end if
 
+              !  we normalize gradmin or denormalize climaqui after
+              !              gradmin=gradmin*spa_a(ind) + spa_b(ind)
 
-            END IF
 
+#ifdef DEBUG
+              call l4f_log (L4F_DEBUG,"gradmin: "//t2c(gradmin))
+#endif
+
+              flag=bmiss
 
                                 !ATTENZIONE TODO : inddativarr È UNA GRANDE SEMPLIFICAZIONE NON VERA SE TIPI DI DATO DIVERSI !!!!
-            if (qcspa%operation == "run") then
+              if (qcspa%operation == "run") then
 
-              do indcana=1,size(qcspa%clima%ana)-1
+                do indcana=1,size(qcspa%clima%ana)-1
+                  climaquii=(qcspa%clima%voldatir(indcana  &
+                   ,indctime,indclevel,indctimerange,indcdativarr,indcnetwork)&
+                    - spa_b(ind))/spa_a(ind) ! denormalize
 
-                climaquii=qcspa%clima%voldatir(indcana  ,indctime,indclevel,indctimerange,indcdativarr,indcnetwork)
-                climaquif=qcspa%clima%voldatir(indcana+1,indctime,indclevel,indctimerange,indcdativarr,indcnetwork)
-
-                if ( c_e(climaquii) .and. c_e(climaquif )) then
-
-                !write(ident,'("#",i2.2,2i3.3)')k,iarea,desc   ! macro-area e descrittore
-                !write(ident,'("#",i2.2,2i3.3)')0,0,   ! macro-area e descrittore
-
-                !write(ident,'("#",i2.2,2i3.3)')0,0,(desc-1)*10   ! macro-area e descrittore
-                !call init(ana,ident=ident,lat=0d0,lon=0d0)
-                !indcana=index(qccli%clima%ana,ana)
-
-
-!!$            call l4f_log (L4F_INFO,"ident: "//qcspa%clima%ana(indcana)%ident//ident)
-
-!!$                print *, "son qua",trim(qcspa%clima%ana(indcana)%ident),trim(ident)
-!!$                where (match(qcspa%clima%ana(:)%ident,ident).and. &
-!!$                 c_e(qcspa%clima%voldatir(indcana,indctime,indclevel,indctimerange,indcdativarr,indcnetwork)))
-!!$                  call l4f_log (L4F_INFO,"macroarea,iarea,mese,altezza,level "//&
-!!$                   trim(to_char(qcspa%in_macroa(indana)))//" "//trim(to_char(iarea))&
-!!$                   //" "//trim(to_char(mese))//" "//trim(to_char(altezza))//" "//trim(to_char(level)))
-
-
-                  if ( (datoqui >= climaquii .and. datoqui < climaquif) .or. &
-                   (indcana == 1 .and. datoqui < climaquif) .or. &
-                   (indcana == size(qcspa%clima%ana)-1 .and. datoqui >= climaquii) ) then
+                  climaquif=(qcspa%clima%voldatir(indcana+1 &
+                   ,indctime,indclevel,indctimerange,indcdativarr,indcnetwork)&
+                    - spa_b(ind))/spa_a(ind) ! denormalize
 
 #ifdef DEBUG
-!!$                      if(qcspa%clima%voldatiattrb(indcana,indctime,indclevel,indctimerange,indcdativarr,indcnetwork,1) < 10 )then
-!!$                        call l4f_log (L4F_DEBUG,"data ndi:                   "//t2c(datoqui)//"->"//&
-!!$                         t2c(qcspa%clima%voldatiattrb(indcana,indctime,indclevel,indctimerange,indcdativarr,indcnetwork,1))&
-!!$                         //" : "//t2c(qcspa%v7d%time(indtime)))
-!!$                        call l4f_log (L4F_DEBUG,"limits: "//t2c(indcana)//":"//t2c(qcspa%clima%ana(indcana)% ident)//&
-!!$                         " : "//t2c(climaquii)//" - "//t2c(climaquif)//" : "//t2c(qcspa%clima%time(indctime))) 
-!!$                      end if
+                  call l4f_log (L4F_DEBUG,"climaquii: "//t2c(climaquii))
+                  call l4f_log (L4F_DEBUG,"climaquif: "//t2c(climaquif))
 #endif
 
-                                !qcspa%v7d%voldatiattrb(indana,indtime,indlevel,indtimerange,inddativarr,indnetwork,indbattrout)=flag
-
-                    qcspa%v7d%voldatiattrb(   indana, indtime, indlevel, indtimerange, inddativarr, indnetwork, indbattrout)=&
-                     qcspa%clima%voldatiattrb(indcana,indctime,indclevel,indctimerange,indcdativarr,indcnetwork,1          )
-
-                    if ( associated ( qcspa%data_id_in)) then
+                  if ( c_e(climaquii) .and. c_e(climaquif )) then
+                    
+                    if ( (gradmin >= climaquii .and. gradmin < climaquif) .or. &
+                     (indcana == 1 .and. gradmin < climaquif) .or. &
+                     (indcana == size(qcspa%clima%ana)-1 .and. gradmin >= climaquii) ) then
+                      
+                      flag=qcspa%clima%voldatiattrb(indcana,indctime,indclevel,indctimerange,indcdativarr,indcnetwork,1)
+                      
+                      if ( associated ( qcspa%data_id_in)) then
 #ifdef DEBUG
-                      call l4f_log (L4F_DEBUG,"id: "//t2c(&
-                       qcspa%data_id_in(indana,indtime,indlevel,indtimerange,indnetwork)))
+                        call l4f_log (L4F_DEBUG,"id: "//t2c(&
+                         qcspa%data_id_in(indana,indtime,indlevel,indtimerange,indnetwork)))
 #endif
-                      qcspa%data_id_out(indana,indtime,indlevel,indtimerange,indnetwork)=&
-                       qcspa%data_id_in(indana,indtime,indlevel,indtimerange,indnetwork)
+                        qcspa%data_id_out(indana,indtime,indlevel,indtimerange,indnetwork)=&
+                         qcspa%data_id_in(indana,indtime,indlevel,indtimerange,indnetwork)
+                      end if
                     end if
                   end if
-                end if
-              end do
+                end do
+#ifdef DEBUG
+                call l4f_log (L4F_INFO,"datoqui: "//t2c(datoqui))
+                call l4f_log (L4F_INFO,"flag qcspa: "//t2c(flag))
+#endif
+
+              end if
+            else
+              flag=100_int_b
+            end if
+            if (qcspa%operation == "run") then
+              !TODO controllare se flag = missing comporta rimozione della precedente flag; risposta: SI quando sarà chiusa https://github.com/ARPA-SIMC/dballe/issues/44
+              qcspa%v7d%voldatiattrb(   indana, indtime, indlevel, indtimerange, inddativarr, indnetwork, indbattrout)=flag
             end if
           end do
         end do
+
+        if (qcspa%operation == "gradient") then
+          close (unit=grunit)
+        end if
+        
       end do
     end do
   end do
