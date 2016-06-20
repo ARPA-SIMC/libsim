@@ -1,6 +1,6 @@
 Summary: libsim: librerie di utilità in Fortran 90
 Name: libsim
-Version: 6.1.5
+Version: 6.1.6
 Release: 1
 License: GPL2+
 Group: Applications/Meteo
@@ -100,7 +100,10 @@ mv $RPM_BUILD_ROOT%{_includedir}/*.mod $RPM_BUILD_ROOT%{_fmoddir}
 rm -rf %{buildroot}
 
 %changelog
-* Mon Feb 22 2016 dcesari <dcesari@arpa.emr.it> - 6.1.5-1%{dist}
+* Mon Jun 20 2016 dbranchini <dbranchini@arpa.emr.it> - 6.1.6-1
+- merged qcspa branch (quality control improvements)
+
+* Mon Feb 22 2016 dcesari <dcesari@arpa.emr.it> - 6.1.5-1
 - prefer seconds for timedelta to avoid problems with long timeranges
 - timedelta can be initialised in sec as well
 - fix bitmap key in grib2
@@ -109,7 +112,7 @@ rm -rf %{buildroot}
 - handle correctly stdin and stdout in dballe_class
 - implemented n-1 variant of variance and stddev, variance guaranteed >=0
 
-* Mon Jan 18 2016 dcesari <dcesari@arpa.emr.it> - 6.1.4-1%{dist}
+* Mon Jan 18 2016 dcesari <dcesari@arpa.emr.it> - 6.1.4-1
 - devel package
 - stddev subtype in stencilinter type
 
