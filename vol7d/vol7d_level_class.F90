@@ -223,26 +223,32 @@ this%l2 = imiss
 END SUBROUTINE vol7d_level_delete
 
 
-subroutine display_level(this)
-
+SUBROUTINE display_level(this)
 TYPE(vol7d_level),INTENT(in) :: this
 
 print*,trim(to_char(this))
 
-end subroutine display_level
+END SUBROUTINE display_level
 
 
-
-character(len=255) function to_char_level(this)
-
+FUNCTION to_char_level(this)
+#ifdef HAVE_DBALLE
+#ifdef HAVE_DBALLEF_MOD
+USE dballef
+#else
+include 'dballeff.h'
+#endif
+#endif
 TYPE(vol7d_level),INTENT(in) :: this
+CHARACTER(len=255) :: to_char_level
 
 #ifdef HAVE_DBALLE
-integer :: handle=0
+INTEGER :: handle, ier
 
-call idba_messaggi(handle,"/dev/null", "w", "BUFR")
-call idba_spiegal(handle,this%level1,this%l1,this%level2,this%l2,to_char_level)
-call idba_fatto(handle)
+handle = 0
+ier = idba_messaggi(handle,"/dev/null", "w", "BUFR")
+ier = idba_spiegal(handle,this%level1,this%l1,this%level2,this%l2,to_char_level)
+ier = idba_fatto(handle)
 
 to_char_level="LEVEL: "//to_char_level
 
@@ -254,7 +260,7 @@ to_char_level="LEVEL: "//&
 
 #endif
 
-end function to_char_level
+END FUNCTION to_char_level
 
 
 ELEMENTAL FUNCTION vol7d_level_eq(this, that) RESULT(res)
