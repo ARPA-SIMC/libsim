@@ -1,6 +1,6 @@
 Summary: libsim: librerie di utilità in Fortran 90
 Name: libsim
-Version: 6.1.6
+Version: 6.1.7
 Release: 1
 License: GPL2+
 Group: Applications/Meteo
@@ -100,6 +100,9 @@ mv $RPM_BUILD_ROOT%{_includedir}/*.mod $RPM_BUILD_ROOT%{_fmoddir}
 rm -rf %{buildroot}
 
 %changelog
+* Mon Jul 11 2016 Daniele Branchini <dbranchini@arpae.it> - 6.1.7-1
+- changes following dballe issue #61 (removing cnf)
+
 * Mon Jun 20 2016 dbranchini <dbranchini@arpa.emr.it> - 6.1.6-1
 - merged qcspa branch (quality control improvements)
 
