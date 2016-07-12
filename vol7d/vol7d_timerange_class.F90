@@ -217,26 +217,32 @@ this%p2 = imiss
 END SUBROUTINE vol7d_timerange_delete
 
 
-subroutine display_timerange(this)
-
+SUBROUTINE display_timerange(this)
 TYPE(vol7d_timerange),INTENT(in) :: this
 
 print*,to_char_timerange(this)
 
-end subroutine display_timerange
+END SUBROUTINE display_timerange
 
 
-
-character(len=80) function to_char_timerange(this)
-
+FUNCTION to_char_timerange(this)
+#ifdef HAVE_DBALLE
+#ifdef HAVE_DBALLEF_MOD
+USE dballef
+#else
+include 'dballeff.h'
+#endif
+#endif
 TYPE(vol7d_timerange),INTENT(in) :: this
+CHARACTER(len=80) :: to_char_timerange
 
 #ifdef HAVE_DBALLE
-integer :: handle=0
+INTEGER :: handle, ier
 
-call idba_messaggi(handle,"/dev/null", "w", "BUFR")
-call idba_spiegat(handle,this%timerange,this%p1,this%p2,to_char_timerange)
-call idba_fatto(handle)
+handle = 0
+ier = idba_messaggi(handle,"/dev/null", "w", "BUFR")
+ier = idba_spiegat(handle,this%timerange,this%p1,this%p2,to_char_timerange)
+ier = idba_fatto(handle)
 
 to_char_timerange="Timerange: "//to_char_timerange
 
@@ -247,9 +253,7 @@ to_char_timerange="Timerange: "//trim(to_char(this%timerange))//" P1: "//&
 
 #endif
 
-return
-
-end function to_char_timerange
+END FUNCTION to_char_timerange
 
 
 ELEMENTAL FUNCTION vol7d_timerange_eq(this, that) RESULT(res)

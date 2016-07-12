@@ -728,10 +728,15 @@ end do
 end SUBROUTINE dat_vect_display
 
 
-character(len=80) function to_char_dat(this,idat,rdat,ddat,bdat,cdat)
-
+FUNCTION to_char_dat(this,idat,rdat,ddat,bdat,cdat)
+#ifdef HAVE_DBALLE
+#ifdef HAVE_DBALLEF_MOD
+USE dballef
+#else
+include 'dballeff.h'
+#endif
+#endif
 TYPE(vol7d_var),INTENT(in) :: this
-
 !> real
 REAL :: rdat
 !> double precision
@@ -742,26 +747,16 @@ INTEGER :: idat
 INTEGER(kind=int_b) :: bdat
 !> character
 CHARACTER(len=*) :: cdat
+CHARACTER(len=80) :: to_char_dat
 
-character(len=80) ::to_char_tmp
+CHARACTER(len=LEN(to_char_dat)) :: to_char_tmp
 
 
 #ifdef HAVE_DBALLE
-integer :: handle=0
+INTEGER :: handle, ier
 
+handle = 0
 to_char_dat="VALUE: "
-
-!!$ purtroppo spiegab vuole solo character !!!!
-!!$call idba_messaggi(handle,"/dev/null", "w", "BUFR")
-!!$
-!!$if ( c_e (idat)) call idba_spiegab(handle,this%btable,idat,to_char_tmp)
-!!$to_char_dat=trim(to_char_dat)//" ; "//to_char_tmp
-!!$if ( c_e (rdat)) call idba_spiegab(handle,this%btable,rdat,to_char_tmp)
-!!$to_char_dat=trim(to_char_dat)//" ; "//to_char_tmp
-!!$if ( c_e (ddat)) call idba_spiegab(handle,this%btable,ddat,to_char_tmp)
-!!$to_char_dat=trim(to_char_dat)//" ; "//to_char_tmp
-!!$if ( c_e (bdat)) call idba_spiegab(handle,this%btable,bdat,to_char_tmp)
-!!$to_char_dat=trim(to_char_dat)//" ; "//to_char_tmp
 
 if (c_e (idat)) to_char_dat=trim(to_char_dat)//" ;int> "//trim(to_char(idat))
 if (c_e (rdat)) to_char_dat=trim(to_char_dat)//" ;real> "//trim(to_char(rdat))
@@ -769,13 +764,11 @@ if (c_e (ddat)) to_char_dat=trim(to_char_dat)//" ;double> "//trim(to_char(ddat))
 if (c_e (bdat)) to_char_dat=trim(to_char_dat)//" ;byte> "//trim(to_char(bdat))
 
 if ( c_e (cdat))then
-  call idba_messaggi(handle,"/dev/null", "w", "BUFR")
-  call idba_spiegab(handle,this%btable,cdat,to_char_tmp)
-  call idba_fatto(handle)
+  ier = idba_messaggi(handle,"/dev/null", "w", "BUFR")
+  ier = idba_spiegab(handle,this%btable,cdat,to_char_tmp)
+  ier = idba_fatto(handle)
   to_char_dat=trim(to_char_dat)//" ;char> "//trim(to_char_tmp)
 endif
-
-!!$call idba_fatto(handle)
 
 #else
 
@@ -786,10 +779,9 @@ if (c_e (ddat)) to_char_dat=trim(to_char_dat)//" ;double> "//trim(to_char(ddat))
 if (c_e (bdat)) to_char_dat=trim(to_char_dat)//" ;byte> "//trim(to_char(bdat))
 if (c_e (cdat)) to_char_dat=trim(to_char_dat)//" ;char> "//trim(cdat)
 
-
 #endif
 
-end function to_char_dat
+END FUNCTION to_char_dat
 
 
 !> Tests whether anything has ever been assigned to a vol7d object
