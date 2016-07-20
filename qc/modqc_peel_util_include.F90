@@ -57,6 +57,7 @@ ELEMENTAL LOGICAL FUNCTION qcsummaryflag/**/VOL7D_POLY_TYPES(flag0, flag1, flag2
 #ifdef VOL7D_POLY_ISC
 
 qcsummaryflag/**/VOL7D_POLY_TYPES = .NOT.invalidated(optio_3/**/VOL7D_POLY_TYPES(flag0)) .AND. &
+ vdge(optio_3/**/VOL7D_POLY_TYPES(flag1)) .AND. &
  vd(optio_3/**/VOL7D_POLY_TYPES(flag1)) .AND. &
  vd(optio_3/**/VOL7D_POLY_TYPES(flag2)) .AND. &
  vd(optio_3/**/VOL7D_POLY_TYPES(flag3))
@@ -84,8 +85,11 @@ end function optio_3c
 #else
 
 qcsummaryflag/**/VOL7D_POLY_TYPES = .NOT.invalidated(optio_/**/VOL7D_POLY_TYPES(flag0)) .AND. &
- vd(optio_/**/VOL7D_POLY_TYPES(flag1)) .AND. vd(optio_/**/VOL7D_POLY_TYPES(flag2)) .AND. &
+ vdge(optio_/**/VOL7D_POLY_TYPES(flag1)) .AND. &
+ vd(optio_/**/VOL7D_POLY_TYPES(flag1)) .AND. &
+ vd(optio_/**/VOL7D_POLY_TYPES(flag2)) .AND. &
  vd(optio_/**/VOL7D_POLY_TYPES(flag3))
+
 
 #endif
 
