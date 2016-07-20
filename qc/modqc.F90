@@ -183,7 +183,7 @@ type :: qcpartype
   integer (kind=int_b):: invalidated ! special valuer for "*B33196" when manual invalidation happen
 end type qcpartype
 
-!> Default data with confidence less or equal 10 are rejected
+!> Default: data with confidence less or equal 10 are rejected
 type(qcpartype)  :: qcpar=qcpartype(10_int_b,0_int_b,1_int_b)
 
 integer, parameter :: nqcattrvars=4

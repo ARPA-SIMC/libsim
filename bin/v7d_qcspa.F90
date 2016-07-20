@@ -413,7 +413,8 @@ DO WHILE (time <= tf)
   call l4f_category_log(category,L4F_INFO,"start peeling")
 
   !remove data invalidated and gross error only
-  !qcpar=qcpartype(0_int_b,0_int_b,0_int_b)
+  !this change the behaviour of qcsummary_flag to ignore confidence att thresold
+  !qcpar=qcpartype(0_int_b,0_int_b,1_int_b)
   qcpar%att=bmiss
   !call vol7d_peeling(v7ddballe%vol7d,v7ddballe%data_id,keep_attr=(/qcattrvarsbtables(4)/),purgeana=.true.)
   call vol7d_peeling(v7ddballe%vol7d,keep_attr=(/qcattrvarsbtables(4)/),purgeana=.true.)
