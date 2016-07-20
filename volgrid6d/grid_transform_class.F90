@@ -523,7 +523,8 @@ ELSE IF (this%trans_type == 'boxregrid') THEN
   ENDIF
 
   IF (this%sub_type == 'average' .OR. this%sub_type == 'max' .OR. &
-   this%sub_type == 'min')THEN
+   this%sub_type == 'min' .OR. this%sub_type == 'stddev' &
+   .OR. this%sub_type == 'stddevnm1') THEN
 ! nothing to do here
   ELSE
     CALL sub_type_error()
@@ -1197,9 +1198,6 @@ IF (this%trans%trans_type == 'zoom') THEN
 
     ENDIF
 
-!  ELSE IF (this%trans%sub_type == 'index') THEN
-! nothing particular to do
-
   ENDIF
 ! to do in all zoom cases
 
@@ -1237,36 +1235,31 @@ IF (this%trans%trans_type == 'zoom') THEN
   this%outny=out%dim%ny
 
   CALL set_val(out, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax)
-
+  
 ELSE IF (this%trans%trans_type == 'boxregrid') THEN
 
-  IF (this%trans%sub_type == 'average' .OR. &
-   this%trans%sub_type == 'max' .OR. this%trans%sub_type == 'min')THEN
+  CALL get_val(in, nx=nx, ny=ny, xmin=xmin, xmax=xmax, &
+   ymin=ymin, ymax=ymax, dx=steplon, dy=steplat)
 
-    CALL get_val(in, nx=nx, ny=ny, xmin=xmin, xmax=xmax, &
-     ymin=ymin, ymax=ymax, dx=steplon, dy=steplat)
-
-    this%innx = nx
-    this%inny = ny
+  this%innx = nx
+  this%inny = ny
 
 ! new grid
-    xmin_new = xmin + (this%trans%box_info%npx - 1)*0.5D0*steplon
-    ymin_new = ymin + (this%trans%box_info%npy - 1)*0.5D0*steplat
+  xmin_new = xmin + (this%trans%box_info%npx - 1)*0.5D0*steplon
+  ymin_new = ymin + (this%trans%box_info%npy - 1)*0.5D0*steplat
 
-    CALL copy(in, out)
-    out%dim%nx = nx/this%trans%box_info%npx
-    out%dim%ny = ny/this%trans%box_info%npy
+  CALL copy(in, out)
+  out%dim%nx = nx/this%trans%box_info%npx
+  out%dim%ny = ny/this%trans%box_info%npy
 
-    this%outnx=out%dim%nx
-    this%outny=out%dim%ny
-    steplon = steplon*this%trans%box_info%npx
-    steplat = steplat*this%trans%box_info%npy
+  this%outnx=out%dim%nx
+  this%outny=out%dim%ny
+  steplon = steplon*this%trans%box_info%npx
+  steplat = steplat*this%trans%box_info%npy
 
-    CALL set_val(out, xmin=xmin_new, ymin=ymin_new, &
-     xmax=xmin_new + DBLE(out%dim%nx-1)*steplon, dx=steplon, &
-     ymax=ymin_new + DBLE(out%dim%ny-1)*steplat, dy=steplat)
-
-  ENDIF
+  CALL set_val(out, xmin=xmin_new, ymin=ymin_new, &
+   xmax=xmin_new + DBLE(out%dim%nx-1)*steplon, dx=steplon, &
+   ymax=ymin_new + DBLE(out%dim%ny-1)*steplat, dy=steplat)
 
 ELSE IF (this%trans%trans_type == 'inter') THEN
 
@@ -2673,6 +2666,31 @@ ELSE IF (this%trans%trans_type == 'boxregrid') THEN
       ENDDO
 
     ENDIF
+
+  ELSE IF (this%trans%sub_type == 'stddev' .OR. &
+   this%trans%sub_type == 'stddevnm1') THEN
+
+    IF (this%trans%sub_type == 'stddev') THEN
+      nm1 = .FALSE.
+    ELSE
+      nm1 = .TRUE.
+    ENDIF
+
+    navg = this%trans%box_info%npx*this%trans%box_info%npy
+    DO k = 1, innz
+      jj = 0
+      DO j = 1, this%inny - this%trans%box_info%npy + 1, this%trans%box_info%npy
+        je = j+this%trans%box_info%npy-1
+        jj = jj+1
+        ii = 0
+        DO i = 1, this%innx - this%trans%box_info%npx + 1, this%trans%box_info%npx
+          ie = i+this%trans%box_info%npx-1
+          ii = ii+1
+          field_out(ii,jj,k) = stat_stddev( &
+           RESHAPE(field_in(i:ie,j:je,k),(/navg/)), nm1=nm1)
+        ENDDO
+      ENDDO
+    ENDDO
 
   ELSE IF (this%trans%sub_type == 'max') THEN
     DO k = 1, innz

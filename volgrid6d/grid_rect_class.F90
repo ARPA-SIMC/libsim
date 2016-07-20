@@ -290,12 +290,14 @@ INTEGER,INTENT(in) :: ny !< number of points along y direction
 DOUBLE PRECISION,INTENT(out) :: dx !< grid step along x direction
 DOUBLE PRECISION,INTENT(out) :: dy !< grid step along y direction
 
-IF (c_e(nx)) THEN
+IF (c_e(nx) .AND. c_e(this%xmax) .AND. c_e(this%xmin) .AND. &
+ c_e(nx) .AND. nx > 1) THEN
   dx = (this%xmax - this%xmin)/DBLE(nx - 1)
 ELSE
   dx = dmiss
 ENDIF
-IF (c_e(ny)) THEN
+IF (c_e(ny) .AND. c_e(this%ymax) .AND. c_e(this%ymin) .AND. &
+ c_e(ny) .AND. ny > 1) THEN
   dy = (this%ymax - this%ymin)/DBLE(ny - 1)
 ELSE
   dy = dmiss
