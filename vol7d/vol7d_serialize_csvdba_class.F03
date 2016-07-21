@@ -15,34 +15,34 @@
 
 ! You should have received a copy of the GNU General Public License
 ! along with this program.  If not, see <http://www.gnu.org/licenses/>.
-MODULE vol7d_serialize_csv_class
+MODULE vol7d_serialize_csvdba_class
 USE,INTRINSIC :: iso_c_binding
 USE vol7d_serialize_class
 USE optionparser_class
 IMPLICIT NONE
 
-TYPE,EXTENDS(vol7d_serialize) :: vol7d_serialize_csv
-  INTEGER :: csv_header=1
+TYPE,EXTENDS(vol7d_serialize) :: vol7d_serialize_csvdba
   CONTAINS
   PROCEDURE :: vol7d_serialize_optionparser
+  PROCEDURE :: vol7d_serialize_parse
   PROCEDURE :: vol7d_serialize_export
-END TYPE vol7d_serialize_csv
+END TYPE vol7d_serialize_csvdba
 
 PRIVATE
-PUBLIC vol7d_serialize_csv, vol7d_serialize_csv_new
+PUBLIC vol7d_serialize_csvdba, vol7d_serialize_csvdba_new
 
 CONTAINS
 
-FUNCTION vol7d_serialize_csv_new() RESULT(this)
-TYPE(vol7d_serialize_csv) :: this
+FUNCTION vol7d_serialize_csvdba_new() RESULT(this)
+TYPE(vol7d_serialize_csvdba) :: this
 
 this%vol7d_serialize = vol7d_serialize_new()
 
-END FUNCTION vol7d_serialize_csv_new
+END FUNCTION vol7d_serialize_csvdba_new
 
 
 SUBROUTINE vol7d_serialize_optionparser(this, opt, ext)
-CLASS(vol7d_serialize_csv),INTENT(inout) :: this
+CLASS(vol7d_serialize_csvdba),INTENT(inout) :: this
 TYPE(optionparser),INTENT(inout),OPTIONAL :: opt
 CHARACTER(len=*),INTENT(in),OPTIONAL :: ext
 
@@ -53,21 +53,26 @@ ELSE
 ENDIF
 
 ! reset unconditionally some parameters
-this%vol7d_serialize%cachedesc = .TRUE.
-
-! call the generic method
-CALL this%vol7d_serialize%vol7d_serialize_optionparser(opt, ext)
-! add a specific parameter
-IF (present(opt)) &
- CALL optionparser_add(opt, ' ', 'csv-header', this%csv_header, 2, help= &
- 'write 0 to 2 header lines at the beginning of csv output')
-
+this%cachedesc = .TRUE.
+this%column = 'ana,network,time,level,timerange,var,value'
+this%loop = 'time,timerange,level,ana,network,var'
+! no options, the rest all set to default
 
 END SUBROUTINE vol7d_serialize_optionparser
 
 
+SUBROUTINE vol7d_serialize_parse(this, category)
+CLASS(vol7d_serialize_csvdba),INTENT(inout) :: this !< object having undorgone the vol7d_serialize_optionparser method
+INTEGER,INTENT(in),OPTIONAL :: category !< log4fortran category for logging error messages
+
+! call the original method
+CALL this%vol7d_serialize%vol7d_serialize_parse(category)
+
+END SUBROUTINE vol7d_serialize_parse
+
+
 SUBROUTINE vol7d_serialize_export(this, iun)
-CLASS(vol7d_serialize_csv),INTENT(inout) :: this
+CLASS(vol7d_serialize_csvdba),INTENT(inout) :: this
 INTEGER,INTENT(in) :: iun
 
 CHARACTER(len=64),TARGET,ALLOCATABLE :: col(:)
@@ -76,10 +81,6 @@ CHARACTER(len=1),POINTER :: pline
 INTEGER :: i
 TYPE(vol7d_serialize_iterline) :: linei
 TYPE(vol7d_serialize_itercol) :: coli
-
-
-! old header to be erased in the future
-IF (this%csv_header >= 2) WRITE(iun,'(A)')'written by v7d_transform'
 
 ! make csv header and count columns
 i = 0; line = ''
@@ -94,7 +95,7 @@ DO WHILE(coli%next())
   CALL coli%export(C_LOC(pline))
 END DO
 
-IF (this%csv_header >= 1) WRITE(iun,'(A)')TRIM(line)
+WRITE(iun,'(A)')TRIM(line)
 ALLOCATE(col(i))
 
 ! loop over lines
@@ -115,4 +116,4 @@ END DO
 
 END SUBROUTINE vol7d_serialize_export
 
-END MODULE vol7d_serialize_csv_class
+END MODULE vol7d_serialize_csvdba_class

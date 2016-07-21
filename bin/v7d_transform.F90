@@ -48,6 +48,7 @@ use volgrid6d_class
 USE georef_coord_class
 #ifdef F2003_FEATURES
 USE vol7d_serialize_csv_class
+USE vol7d_serialize_csvdba_class
 USE vol7d_serialize_geojson_class
 #else
 USE vol7d_csv
@@ -135,6 +136,7 @@ character(len=160) :: post_trans_type
 #endif
 #ifdef F2003_FEATURES
 TYPE(vol7d_serialize_csv) :: v7d_csv
+TYPE(vol7d_serialize_csvdba) :: v7d_csvdba
 TYPE(vol7d_serialize_geojson) :: v7d_geojson
 #endif
 #ifdef ALCHIMIA
@@ -405,18 +407,21 @@ CALL optionparser_add(opt, ' ', 'output-format', output_format, 'native', help= 
  &is used as a template for the output grib messages, (see also post-trans-type)'&
 #endif
 #ifdef HAVE_LIBNETCDF
- //', ''netcdf'' for netcdf file following cf convenction 1.1 '&
+ //', ''netcdf'' for netcdf file following cf convention 1.1'&
 #endif
 #ifdef F2003_FEATURES
- //'; ''geojson'' for geojson format (no template to be specified)'&
+ //'; ''geojson'' for geojson format (no template)'&
+ //'; ''csvdba'' for csv format specific for dballe'&
 #endif
- //'; ''csv'' for formatted csv format (no template to be specified)')
+ //'; ''csv'' for configurable csv format (no template to be specified)')
 
 #ifdef F2003_FEATURES
 ! setup options for csv and geojson
 v7d_csv = vol7d_serialize_csv_new()
+v7d_csvdba = vol7d_serialize_csvdba_new()
 v7d_geojson = vol7d_serialize_geojson_new()
 CALL v7d_csv%vol7d_serialize_optionparser(opt, 'csv')
+CALL v7d_csvdba%vol7d_serialize_optionparser(opt, 'csv')
 CALL v7d_geojson%vol7d_serialize_optionparser(opt, 'geojson')
 #else
 ! options for configuring csv output
@@ -801,6 +806,7 @@ CALL delete(trans_botlevel_list)
 #ifdef F2003_FEATURES
 ! parse csv and geojson options
 CALL v7d_csv%vol7d_serialize_parse(category)
+CALL v7d_csvdba%vol7d_serialize_parse(category)
 CALL v7d_geojson%vol7d_serialize_parse(category)
 #else
 ! check csv-column
@@ -886,7 +892,7 @@ DO ninput = optind, iargc()-1
     
     v7dtmp = v7d_dba%vol7d
     CALL init(v7d_dba%vol7d) ! nullify without deallocating
-    CALL delete(v7d_dba)
+    CALL delete(v7d_dba) ! cleanly close the database
 
 #endif
 
@@ -920,6 +926,7 @@ DO ninput = optind, iargc()-1
     ENDIF
     v7dtmp = v7d_osim%vol7d
     CALL init(v7d_osim%vol7d) ! nullify without deallocating
+    CALL delete(v7d_osim) ! cleanly close the database
 #endif
 
   ELSE
@@ -942,10 +949,10 @@ CALL delete(opt) ! check whether I can already get rid of this stuff now
 CALL vol7d_dballe_set_var_du(v7d)
 #endif
 
-IF (ldisplay) then
-  print*," >>>>> Input Volume <<<<<"
+IF (ldisplay) THEN
+  PRINT*," >>>>> Input Volume <<<<<"
   CALL display(v7d)
-end IF
+ENDIF
 
 ! apply quality control data removing
 IF (.NOT.disable_qc) THEN
@@ -1055,9 +1062,7 @@ IF (comp_fill_data ) THEN
 ENDIF
 
 
-
 IF (comp_filter_time ) THEN
-
   CALL init(v7d_comp1)
   CALL vol7d_filter_time(v7d, v7d_comp1, step=c_i, start=c_s, stopp=comp_e, cyclicdt=cyclicdt)
   CALL delete(v7d)
@@ -1289,7 +1294,6 @@ IF (output_format == 'native') THEN
   OPEN(iun, file=output_file, form='UNFORMATTED', access=stream_if_possible)
   CALL export(v7d, unit=iun)
   CLOSE(iun)
-  CALL delete(v7d)
 
 ELSE IF (output_format == 'csv') THEN
 #ifdef F2003_FEATURES
@@ -1307,9 +1311,19 @@ ELSE IF (output_format == 'csv') THEN
   CALL csv_export(v7d, iun)
 #endif
   IF (output_file /= '-') CLOSE(iun)
-  CALL delete(v7d)
 
 #ifdef F2003_FEATURES
+ELSE IF (output_format == 'csvdba') THEN
+  CALL v7d_csvdba%vol7d_serialize_setup(v7d)
+  IF (output_file == '-') THEN
+    iun = stdout_unit
+  ELSE
+    iun = getunit()
+    OPEN(iun, file=output_file, form='FORMATTED', access='SEQUENTIAL')
+  ENDIF
+  CALL v7d_csvdba%vol7d_serialize_export(iun)
+  IF (output_file /= '-') CLOSE(iun)
+
 ELSE IF (output_format == 'geojson') THEN
   CALL v7d_geojson%vol7d_serialize_setup(v7d)
   IF (output_file == '-') THEN
@@ -1320,7 +1334,6 @@ ELSE IF (output_format == 'geojson') THEN
   ENDIF
   CALL v7d_geojson%vol7d_serialize_export(iun)
   IF (output_file /= '-') CLOSE(iun)
-  CALL delete(v7d)
 #endif
 
 #ifdef HAVE_DBALLE
@@ -1409,15 +1422,8 @@ ELSE IF (output_format /= '') THEN
   CALL raise_fatal_error()
 ENDIF
 
-! cleanly close the databases
-IF (input_format == 'native') THEN
-  CALL delete(v7d) ! controllare? input native output bufr
-#ifdef HAVE_ORSIM
-ELSE IF (input_format == 'orsim') THEN
-  CALL delete(v7d_osim)
-#endif
-ENDIF
-
+! finalization done once here
+CALL delete(v7d)
 
 #ifdef ALCHIMIA
 call delete(vfn)

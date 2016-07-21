@@ -26,7 +26,7 @@ endif
 
 if F2003_FEATURES
 libsim_vol7d_la_SOURCES += vol7d_serialize_class.F03 vol7d_serialize_csv_class.F03 \
- vol7d_serialize_geojson_class.F03 
+ vol7d_serialize_csvdba_class.F03 vol7d_serialize_geojson_class.F03 
 endif
 
 if DBALLE
@@ -132,6 +132,8 @@ endif
 if F2003_FEATURES
 vol7d_serialize_csv_class.$(OBJEXT): vol7d_serialize_class.$(OBJEXT)
 vol7d_serialize_csv_class.lo: vol7d_serialize_class.$(OBJEXT)
+vol7d_serialize_csvdba_class.$(OBJEXT): vol7d_serialize_class.$(OBJEXT)
+vol7d_serialize_csvdba_class.lo: vol7d_serialize_class.$(OBJEXT)
 vol7d_serialize_geojson_class.$(OBJEXT): vol7d_serialize_class.$(OBJEXT)
 vol7d_serialize_geojson_class.lo: vol7d_serialize_class.$(OBJEXT)
 if DBALLE
