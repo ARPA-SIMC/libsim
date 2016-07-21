@@ -1220,7 +1220,7 @@ do indana=1,size(qccli%v7d%ana)
 
                                 ! gross error check allready done
 #ifdef DEBUG
-                          call l4f_log (L4F_DEBUG,"qccli: skip station for a preceding gross error check flagged bad")
+                          call l4f_log (L4F_WARN,"qccli: skip station for a preceding gross error check flagged bad")
 #endif
                 else
 
@@ -1252,10 +1252,18 @@ do indana=1,size(qccli%v7d%ana)
 
                                 !climat check
 
-                  do desc=1,size(qccli%clima%ana)-1
+                  do desc=1,size(qccli%clima%ana)
 
                     climaquii=rmiss
                     climaquif=rmiss
+
+                    write(ident,'("#",i2.2,2i3.3)')0,0,min(desc,size(qccli%clima%ana)-1) *10   ! macro-area e descrittore
+                    call init(ana,ident=ident,lat=0d0,lon=0d0)
+                    indcana=index(qccli%clima%ana,ana)
+                    if (indcana > 0 )then
+                      climaquif=qccli%clima%voldatir(indcana,indctime,indclevel,indctimerange,indcdativarr,indcnetwork)
+                    end if
+
 
                     write(ident,'("#",i2.2,2i3.3)')0,0,(desc-1)*10   ! macro-area e descrittore
                     call init(ana,ident=ident,lat=0d0,lon=0d0)
@@ -1266,12 +1274,6 @@ do indana=1,size(qccli%v7d%ana)
                       climaquii=qccli%clima%voldatir(indcana,indctime,indclevel,indctimerange,indcdativarr,indcnetwork)
                     end if
 
-                    write(ident,'("#",i2.2,2i3.3)')0,0,desc*10   ! macro-area e descrittore
-                    call init(ana,ident=ident,lat=0d0,lon=0d0)
-                    indcana=index(qccli%clima%ana,ana)
-                    if (indcana > 0 )then
-                      climaquif=qccli%clima%voldatir(indcana,indctime,indclevel,indctimerange,indcdativarr,indcnetwork)
-                    end if
 
 !!$                  call l4f_log (L4F_INFO,"ident: "//qccli%clima%ana(indcana)%ident//ident)
                     !if ( match(qccli%clima%ana(indcana)%ident,ident) .and. c_e(climaquii) .and. c_e(climaquif)) then
@@ -1288,13 +1290,15 @@ do indana=1,size(qccli%v7d%ana)
 !!$                      print*,"ndi=",climaquii,datoqui,climaquif
 
                       if ( (climaquii <= datoqui.and. datoqui < climaquif) .or. &
-                       (desc == 1 .and. datoqui < climaquii) .or. &
-                       (desc == size(qccli%clima%ana)-1 .and. datoqui >= climaquif) ) then
+                       (desc == 1                     .and. datoqui < climaquii) .or. &
+                       (desc == size(qccli%clima%ana) .and. datoqui >= climaquif) ) then
                     
                         if (c_e(qccli%clima%voldatiattrb(indcana  &
                          ,indctime,indclevel,indctimerange,indcdativarr,indcnetwork,1))) then
 
                                 !ATTENZIONE TODO : inddativarr È UNA GRANDE SEMPLIFICAZIONE NON VERA SE TIPI DI DATO DIVERSI !!!!
+
+                                !indcana is the left value as descr-1
                           qccli%v7d%voldatiattrb(indana,indtime,indlevel,indtimerange,inddativarr,indnetwork,indbattrout)=&
                            max (qccli%clima%voldatiattrb&
                            (indcana,indctime,indclevel,indctimerange,indcdativarr,indcnetwork,1)&

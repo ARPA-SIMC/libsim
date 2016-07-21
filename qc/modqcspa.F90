@@ -903,12 +903,14 @@ do indtime=1,size(qcspa%v7d%time)
                                 !ATTENZIONE TODO : inddativarr È UNA GRANDE SEMPLIFICAZIONE NON VERA SE TIPI DI DATO DIVERSI !!!!
               if (qcspa%operation == "run") then
 
-                do indcana=1,size(qcspa%clima%ana)-1
+                do indcana=1,size(qcspa%clima%ana)
                   climaquii=(qcspa%clima%voldatir(indcana  &
                    ,indctime,indclevel,indctimerange,indcdativarr,indcnetwork)&
                     - spa_b(ind))/spa_a(ind) ! denormalize
 
-                  climaquif=(qcspa%clima%voldatir(indcana+1 &
+                  ! the last interval have  climaquii == climaquif
+                  ! the check will be the last extreme to +infinite
+                  climaquif=(qcspa%clima%voldatir(min(indcana+1,size(qcspa%clima%ana)) &
                    ,indctime,indclevel,indctimerange,indcdativarr,indcnetwork)&
                     - spa_b(ind))/spa_a(ind) ! denormalize
 
@@ -920,8 +922,8 @@ do indtime=1,size(qcspa%v7d%time)
                   if ( c_e(climaquii) .and. c_e(climaquif )) then
                     
                     if ( (gradmin >= climaquii .and. gradmin < climaquif) .or. &
-                     (indcana == 1 .and. gradmin < climaquif) .or. &
-                     (indcana == size(qcspa%clima%ana)-1 .and. gradmin >= climaquii) ) then
+                     (indcana == 1                       .and. gradmin < climaquii) .or. &
+                     (indcana == size(qcspa%clima%ana) .and. gradmin >= climaquif) ) then
                       
                       flag=qcspa%clima%voldatiattrb(indcana,indctime,indclevel,indctimerange,indcdativarr,indcnetwork,1)
                       
