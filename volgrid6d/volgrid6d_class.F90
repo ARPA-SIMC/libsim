@@ -2141,7 +2141,9 @@ IF (c_e(grid_trans)) THEN
     ENDDO
   ENDIF
   CALL compute(grid_trans, volgrid6d_in, vol7d_out, networkname, noconvert)
-!ELSE how to signal error status? c_e(vol7d_out)
+ELSE
+  CALL l4f_log(L4F_ERROR, 'vg6d_v7d_transform: transformation not valid')
+  CALL raise_error()
 ENDIF
 
 CALL delete(grid_trans)
@@ -2354,8 +2356,7 @@ IF (c_e(grid_trans)) THEN
   CALL vg6d_wind_rot(volgrid6d_out)
 ELSE
 ! should log with grid_trans%category, but it is private
-  CALL l4f_log(L4F_ERROR, &
-   "trying to use an invalid grid_transform object")
+  CALL l4f_log(L4F_ERROR, 'v7d_vg6d_transform: transformation not valid')
   CALL raise_error()
 ENDIF
 

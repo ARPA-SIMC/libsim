@@ -63,6 +63,7 @@
 !!    without changing the geographical reference system
 !!    (grid-to-grid)
 !!    - sub_type='average' the function used is the average.
+!!    - sub_type='stddev' the function used is the standard deviation.
 !!    - sub_type='max' the function used is the maximum
 !!    - sub_type='min' the function used is the minimum
 !!
@@ -301,7 +302,7 @@ TYPE grid_transform
 !  type(vol7d_level), pointer :: output_vertlevlist(:) ! list of vertical levels of output data (for vertint) can be here or an argument of compute, how to do?
   TYPE(vol7d_level),POINTER :: output_level_auto(:) => NULL() ! array of auto-generated levels, stored for successive query
   INTEGER :: category ! category for log4fortran
-  LOGICAL :: valid = .TRUE. ! the transformation has been successfully initialised
+  LOGICAL :: valid = .FALSE. ! the transformation has been successfully initialised
 END TYPE grid_transform
 
 
@@ -1194,7 +1195,8 @@ IF (this%trans%trans_type == 'zoom') THEN
        TRIM(to_char(this%trans%rect_coo%flon))//","// &
        TRIM(to_char(this%trans%rect_coo%ilat))//","// &
        TRIM(to_char(this%trans%rect_coo%flat)))
-      CALL raise_fatal_error() ! really fatal error?
+      CALL raise_error()
+      RETURN
 
     ENDIF
 
@@ -1220,10 +1222,10 @@ IF (this%trans%trans_type == 'zoom') THEN
   xmax=xmax+steplon*(this%trans%rect_ind%fx-nx)
   ymax=ymax+steplat*(this%trans%rect_ind%fy-ny)
 
-  call copy(in,out)
+  CALL copy(in,out)
 ! if unproj has been called for in, in%dim will contain allocated coordinates
 ! which will be copied to out%dim, but they are wrong
-  call dealloc(out%dim)
+  CALL dealloc(out%dim)
 
   out%dim%nx = this%trans%rect_ind%fx - this%trans%rect_ind%ix + 1 ! newx
   out%dim%ny = this%trans%rect_ind%fy - this%trans%rect_ind%iy + 1 ! newy
@@ -1235,6 +1237,8 @@ IF (this%trans%trans_type == 'zoom') THEN
   this%outny=out%dim%ny
 
   CALL set_val(out, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax)
+
+  this%valid = .TRUE. ! warning, no check of subtype
   
 ELSE IF (this%trans%trans_type == 'boxregrid') THEN
 
@@ -1260,6 +1264,8 @@ ELSE IF (this%trans%trans_type == 'boxregrid') THEN
   CALL set_val(out, xmin=xmin_new, ymin=ymin_new, &
    xmax=xmin_new + DBLE(out%dim%nx-1)*steplon, dx=steplon, &
    ymax=ymin_new + DBLE(out%dim%ny-1)*steplat, dy=steplat)
+
+  this%valid = .TRUE. ! warning, no check of subtype
 
 ELSE IF (this%trans%trans_type == 'inter') THEN
 
@@ -1292,6 +1298,8 @@ ELSE IF (this%trans%trans_type == 'inter') THEN
       CALL proj(in,out%dim%lon,out%dim%lat,this%inter_xp,this%inter_yp)
 
     ENDIF
+
+    this%valid = .TRUE.
   ENDIF
 
 ELSE IF (this%trans%trans_type == 'boxinter') THEN
@@ -1320,6 +1328,8 @@ ELSE IF (this%trans%trans_type == 'boxinter') THEN
    this%outnx, this%outny, xmin, xmax, ymin, ymax, &
    in%dim%lon, in%dim%lat, .FALSE., &
    this%inter_index_x, this%inter_index_y)
+
+  this%valid = .TRUE. ! warning, no check of subtype
 
 ELSE IF (this%trans%trans_type == 'stencilinter') THEN
 
@@ -1375,6 +1385,8 @@ ELSE IF (this%trans%trans_type == 'stencilinter') THEN
    'stencilinter: stencil points '//t2c(COUNT(this%stencil)))
 #endif
 
+  this%valid = .TRUE. ! warning, no check of subtype
+
 ELSE IF (this%trans%trans_type == 'maskgen' .OR. &
  this%trans%trans_type == 'polyinter') THEN
 
@@ -1423,6 +1435,8 @@ ELSE IF (this%trans%trans_type == 'maskgen' .OR. &
   ENDDO
 !$OMP END PARALLEL
 
+  this%valid = .TRUE. ! warning, no check of subtype
+
 ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
 
   CALL copy(in,out)
@@ -1436,7 +1450,8 @@ ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
       CALL l4f_category_log(this%category,L4F_ERROR, &
        'grid_transform_init maskgrid argument missing for metamorphosis:'// &
        TRIM(this%trans%sub_type)//' transformation')
-      CALL raise_fatal_error()
+      CALL raise_error()
+      RETURN
     ENDIF
 
     IF (this%innx /= SIZE(maskgrid,1) .OR. this%inny /= SIZE(maskgrid,2)) THEN
@@ -1445,7 +1460,8 @@ ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
       CALL l4f_category_log(this%category,L4F_ERROR, &
        'mask: '//t2c(SIZE(maskgrid,1))//'x'//t2c(SIZE(maskgrid,2))// &
        ' input field:'//t2c(this%innx)//'x'//t2c(this%inny))
-      CALL raise_fatal_error()
+      CALL raise_error()
+      RETURN
     ENDIF
 
     ALLOCATE(this%point_mask(this%innx,this%inny))
@@ -1466,19 +1482,19 @@ ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
       this%point_mask(:,:) = .NOT.c_e(maskgrid(:,:))
     ENDIF
 
+    this%valid = .TRUE.
+
   ELSE IF (this%trans%sub_type == 'setinvalidto') THEN
 
     IF (.NOT.PRESENT(maskbounds)) THEN
       CALL l4f_category_log(this%category,L4F_ERROR, &
        'grid_transform_init maskbounds missing for metamorphosis:'// &
        TRIM(this%trans%sub_type)//' transformation')
-      this%valid = .FALSE.
       RETURN
     ELSE IF (SIZE(maskbounds) < 1) THEN
       CALL l4f_category_log(this%category,L4F_ERROR, &
        'grid_transform_init maskbounds empty for metamorphosis:'// &
        TRIM(this%trans%sub_type)//' transformation')
-      this%valid = .FALSE.
       RETURN
     ELSE
       this%val1 = maskbounds(1)
@@ -1488,19 +1504,21 @@ ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
 #endif
     ENDIF
 
+    this%valid = .TRUE.
+
   ELSE IF (this%trans%sub_type == 'settoinvalid') THEN
 
     IF (.NOT.PRESENT(maskbounds)) THEN
       CALL l4f_category_log(this%category,L4F_ERROR, &
        'grid_transform_init maskbounds missing for metamorphosis:'// &
        TRIM(this%trans%sub_type)//' transformation')
-      this%valid = .FALSE.
+      CALL raise_error()
       RETURN
     ELSE IF (SIZE(maskbounds) < 2) THEN
       CALL l4f_category_log(this%category,L4F_ERROR, &
        'grid_transform_init maskbounds must have at least 2 elements for metamorphosis:'// &
        TRIM(this%trans%sub_type)//' transformation')
-      this%valid = .FALSE.
+      CALL raise_error()
       RETURN
     ELSE
       this%val1 = maskbounds(1)
@@ -1511,7 +1529,11 @@ ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
        t2c(this%val2)//']')
 #endif
     ENDIF
+
+    this%valid = .TRUE.
+
   ENDIF
+
 ENDIF
 
 CONTAINS
@@ -1644,6 +1666,8 @@ IF (this%trans%trans_type == 'inter') THEN
 
     DEALLOCATE(lon,lat)
 
+    this%valid = .TRUE.
+
   ENDIF
 
 ELSE IF (this%trans%trans_type == 'polyinter') THEN
@@ -1705,6 +1729,8 @@ ELSE IF (this%trans%trans_type == 'polyinter') THEN
   ENDDO
 #endif
 
+  this%valid = .TRUE. ! warning, no check of subtype
+
 ELSE IF (this%trans%trans_type == 'stencilinter') THEN
   
 ! from inter:near
@@ -1763,6 +1789,8 @@ ELSE IF (this%trans%trans_type == 'stencilinter') THEN
 #endif
 
   DEALLOCATE(lon,lat)
+
+  this%valid = .TRUE. ! warning, no check of subtype
 
 ELSE IF (this%trans%trans_type == 'maskinter') THEN
 
@@ -1825,6 +1853,8 @@ ELSE IF (this%trans%trans_type == 'maskinter') THEN
      mask=(this%inter_index_x(:,:) == n))))
    ENDDO
 
+  this%valid = .TRUE. ! warning, no check of subtype
+
 ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
 
 ! common to all metamorphosis subtypes
@@ -1851,6 +1881,8 @@ ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
       ENDDO
     ENDDO
 
+    this%valid = .TRUE.
+
   ELSE IF (this%trans%sub_type == 'coordbb' ) THEN
 
 ! count and mark points falling into requested bounding-box
@@ -1871,7 +1903,7 @@ ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
 
     IF (this%outnx <= 0) THEN
       CALL l4f_category_log(this%category,L4F_WARN, &
-       "metamorphosis coordbb: no points inside bounding box "//&
+       "metamorphosis:coordbb: no points inside bounding box "//&
        TRIM(to_char(this%trans%rect_coo%ilon))//","// &
        TRIM(to_char(this%trans%rect_coo%flon))//","// &
        TRIM(to_char(this%trans%rect_coo%ilat))//","// &
@@ -1890,6 +1922,8 @@ ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
         ENDIF
       ENDDO
     ENDDO
+
+    this%valid = .TRUE.
 
   ELSE IF (this%trans%sub_type == 'poly' ) THEN
 
@@ -1917,7 +1951,7 @@ ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
 
     IF (this%outnx <= 0) THEN
       CALL l4f_category_log(this%category,L4F_WARN, &
-       "metamorphosis poly: no points inside polygons")
+       "metamorphosis:poly: no points inside polygons")
     ENDIF
 
     CALL vol7d_alloc(v7d_out, nana=this%outnx)
@@ -1932,12 +1966,14 @@ ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
       ENDDO
     ENDDO
 
+    this%valid = .TRUE.
+
   ELSE IF (this%trans%sub_type == 'mask' ) THEN
 
     IF (.NOT.PRESENT(maskgrid)) THEN
       CALL l4f_category_log(this%category,L4F_ERROR, &
        'grid_transform_init maskgrid argument missing for metamorphosis:mask transformation')
-      this%valid = .FALSE.
+      CALL raise_error()
       RETURN
     ENDIF
 
@@ -1947,7 +1983,8 @@ ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
       CALL l4f_category_log(this%category,L4F_ERROR, &
        'mask: '//t2c(SIZE(maskgrid,1))//'x'//t2c(SIZE(maskgrid,2))// &
        ' input field:'//t2c(this%innx)//'x'//t2c(this%inny))
-      CALL raise_fatal_error()
+      CALL raise_error()
+      RETURN
     ENDIF
 
 ! generate the subarea boundaries according to maskgrid and maskbounds
@@ -1998,6 +2035,8 @@ ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
         ENDIF
       ENDDO
     ENDDO
+
+    this%valid = .TRUE.
 
   ENDIF
 ENDIF
@@ -2108,6 +2147,8 @@ IF (this%trans%trans_type == 'inter') THEN
 
     DEALLOCATE(lon,lat)
 
+    this%valid = .TRUE.
+
   ENDIF
 
 ELSE IF (this%trans%trans_type == 'boxinter') THEN
@@ -2137,6 +2178,8 @@ ELSE IF (this%trans%trans_type == 'boxinter') THEN
    this%outnx, this%outny , xmin, xmax, ymin, ymax, &
    lon, lat, .FALSE., &
    this%inter_index_x(:,1), this%inter_index_y(:,1))
+
+  this%valid = .TRUE. ! warning, no check of subtype
 
 ENDIF
 
@@ -2214,6 +2257,8 @@ IF (this%trans%trans_type == 'inter') THEN
     CALL getval(v7d_in%ana(:)%coord,lon=this%inter_xp(:,1),lat=this%inter_yp(:,1))
     CALL getval(v7d_out%ana(:)%coord,lon=this%inter_x(:,1),lat=this%inter_y(:,1))
 
+    this%valid = .TRUE.
+
   ENDIF
 
 ELSE IF (this%trans%trans_type == 'polyinter') THEN
@@ -2251,6 +2296,8 @@ ELSE IF (this%trans%trans_type == 'polyinter') THEN
 !    DEALLOCATE(lon, lat)
   ENDDO
 
+  this%valid = .TRUE. ! warning, no check of subtype
+
 ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
 
 ! common to all metamorphosis subtypes
@@ -2267,6 +2314,8 @@ ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
     this%point_index(:,1) = (/(i,i=1,this%innx)/)
     CALL vol7d_alloc(v7d_out, nana=SIZE(v7d_in%ana))
     v7d_out%ana = v7d_in%ana
+
+    this%valid = .TRUE.
 
   ELSE IF (this%trans%sub_type == 'coordbb' ) THEN
 
@@ -2308,6 +2357,8 @@ ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
     ENDDO
     DEALLOCATE(lon, lat)
 
+    this%valid = .TRUE.
+
   ELSE IF (this%trans%sub_type == 'poly' ) THEN
 
 ! count and mark points falling into requested polygon
@@ -2344,6 +2395,8 @@ ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
         CALL init(v7d_out%ana(n),lon=lon1,lat=lat1)
       ENDIF
     ENDDO
+
+    this%valid = .TRUE.
 
   ENDIF
 ENDIF
