@@ -73,7 +73,7 @@ TYPE(optionparser) :: opt
 INTEGER :: optind, optstatus
 TYPE(csv_record) :: argparse
 INTEGER :: iargc
-!CHARACTER(len=3) :: set_scmode
+CHARACTER(len=3) :: set_scmode
 LOGICAL :: version, ldisplay
 #ifdef VAPOR
 LOGICAL :: rzscan,reusevdf
@@ -98,7 +98,7 @@ TYPE(datetime) :: c_s
 TYPE(gridinfo_def) :: gridinfo
 TYPE(grid_file_id) :: ifile,ofile
 TYPE(grid_id) :: input_grid_id
-!INTEGER :: gaid
+INTEGER :: gaid
 REAL, ALLOCATABLE :: field(:,:,:),fieldz(:,:,:)
 TYPE(grid_transform) :: grid_trans
 CHARACTER(len=1) :: trans_mode
@@ -284,13 +284,14 @@ CALL optionparser_add(opt, 'e', 'a-grid', c2agrid, help= &
 CALL optionparser_add(opt, 't', 'component-flag', component_flag, &
  0, help='wind component flag in interpolated grid (0/1)')
 
-!CALL optionparser_add(opt, ' ', 'set-scmode', set_scmode, 'xxx', &
-! help='set output grid scanning mode to a particular standard value: &
-! &3 binary digits indicating respectively iScansNegatively, jScansPositively and &
-! &jPointsAreConsecutive (grib_api jargon), 0 for false, 1 for true, &
-! &000 for ECMWF-like grids, 010 for COSMO and Cartesian-like grids. &
-! &Any other character indicates to keep the &
-! &corresponding original scanning mode value')
+CALL optionparser_add(opt, ' ', 'set-scmode', set_scmode, 'xxx', &
+ help='set output grid scanning mode to a particular standard value: &
+ &3 binary digits indicating respectively iScansNegatively, jScansPositively and &
+ &jPointsAreConsecutive (grib_api jargon), 0 for false, 1 for true, &
+ &000 for ECMWF-like grids, 010 for COSMO and Cartesian-like grids. &
+ &Any other character indicates to keep the &
+ &corresponding original scanning mode value; &
+ &available only with --trans-mode=s')
 
 ! this option has been commented because it is not handled in
 ! volgrid_class, it makes sense only in vg6d_getpoint for determining
@@ -712,26 +713,26 @@ ELSE ! run in salsiccia (serial) mode
       fieldz = field
 
     ENDIF
-
+    
 ! set scanning mode if grib_api
-!  IF (grid_id_get_driver(gridinfo%gaid) == 'grib_api') THEN
-!    gaid = grid_id_get_gaid(gridinfo%gaid)
-!    IF (set_scmode(1:1) == '0') THEN
-!      CALL grib_set(gaid, 'iScansNegatively', 0)
-!    ELSE IF (set_scmode(1:1) == '1') THEN
-!      CALL grib_set(gaid, 'iScansNegatively', 1)
-!    ENDIF
-!    IF (set_scmode(2:2) == '0') THEN
-!      CALL grib_set(gaid, 'jScansPositively', 0)
-!    ELSE IF (set_scmode(2:2) == '1') THEN
-!      CALL grib_set(gaid, 'jScansPositively', 1)
-!    ENDIF
-!    IF (set_scmode(3:3) == '0') THEN
-!      CALL grib_set(gaid, 'jPointsAreConsecutive', 0)
-!    ELSE IF (set_scmode(3:3) == '1') THEN
-!      CALL grib_set(gaid, 'jPointsAreConsecutive', 1)
-!    ENDIF
-!  ENDIF
+    IF (grid_id_get_driver(gridinfo%gaid) == 'grib_api') THEN
+      gaid = grid_id_get_gaid(gridinfo%gaid)
+      IF (set_scmode(1:1) == '0') THEN
+        CALL grib_set(gaid, 'iScansNegatively', 0)
+      ELSE IF (set_scmode(1:1) == '1') THEN
+        CALL grib_set(gaid, 'iScansNegatively', 1)
+      ENDIF
+      IF (set_scmode(2:2) == '0') THEN
+        CALL grib_set(gaid, 'jScansPositively', 0)
+      ELSE IF (set_scmode(2:2) == '1') THEN
+        CALL grib_set(gaid, 'jScansPositively', 1)
+      ENDIF
+      IF (set_scmode(3:3) == '0') THEN
+        CALL grib_set(gaid, 'jPointsAreConsecutive', 0)
+      ELSE IF (set_scmode(3:3) == '1') THEN
+        CALL grib_set(gaid, 'jPointsAreConsecutive', 1)
+      ENDIF
+    ENDIF
 
     CALL encode_gridinfo(gridinfo, fieldz(:,:,1))
     CALL export(gridinfo)
