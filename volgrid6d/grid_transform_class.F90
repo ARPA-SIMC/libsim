@@ -933,7 +933,7 @@ IF (this%trans%trans_type == 'vertint') THEN
          'grid_transform_levtype_levtype_init: strange situation'// &
          to_char(c_e(trans%vertint%input_levtype%level2))//' '// &
          to_char(c_e(trans%vertint%output_levtype%level2)))
-        this%valid = .FALSE.
+        CALL raise_error()
         RETURN
       ENDIF
       ALLOCATE(coord_out(inused-1), mask_out(inused-1))
