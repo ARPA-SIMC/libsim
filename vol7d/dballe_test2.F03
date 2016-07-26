@@ -3,6 +3,7 @@ program dballe_test
 use dballe_class
 use datetime_class
 use log4fortran
+use missing_values
 implicit none
 
 type(dbasession) :: session, sessionto
@@ -51,7 +52,7 @@ integer :: i
 print *,"----------------------------------------------"
 print *,"--------------- write1 ------------------------"
 
-allocate(metaanddata(2))   ! one metadata for data and one for constant data
+allocate(metaanddata(4))   ! one metadata for data and one for constant data
 
 metaanddata(1)%metadata=dbametadata( &
   level=dbalevel(level1=105, l1=2000) &
@@ -64,6 +65,20 @@ metaanddata(2)%metadata=dbametadata( &
   level=dbalevel(level1=105, l1=2000) &
  ,timerange=dbatimerange(timerange=4, p1=3600,p2=7200) &
  ,ana=dbaana(lon=11.d0,lat=45.d0) &
+ ,network=dbanetwork("generic") &
+ ,datetime=dbadatetime(datetime_new(2014,01,06,18,00)))
+
+metaanddata(3)%metadata=dbametadata( &
+  level=dbalevel(level1=105, l1=2000) &
+ ,timerange=dbatimerange(timerange=4, p1=3600,p2=7200) &
+ ,ana=dbaana(lon=12.d0,lat=45.d0) &
+ ,network=dbanetwork("generic") &
+ ,datetime=dbadatetime(datetime_new(2014,01,06,18,00)))
+
+metaanddata(4)%metadata=dbametadata( &
+  level=dbalevel(level1=105, l1=2000) &
+ ,timerange=dbatimerange(timerange=4, p1=3600,p2=7200) &
+ ,ana=dbaana(lon=13.d0,lat=45.d0) &
  ,network=dbanetwork("generic") &
  ,datetime=dbadatetime(datetime_new(2014,01,06,18,00)))
 
@@ -93,6 +108,31 @@ allocate (attrv%dcv(1)%dat,source=dbadatar("*B33192",30.))
 allocate (attrv%dcv(2)%dat,source=dbadatai("*B33193",50))
 !assemble data and attribute
 metaanddata(2)%dataattrv%dataattr(1)%attrv=attrv
+
+
+! 3d station with all data and attributes missing
+allocate (metaanddata(3)%dataattrv%dataattr(1))
+
+allocate (metaanddata(3)%dataattrv%dataattr(1)%dat,source=dbadatai("B12101",imiss))
+! create an etherogeneous ensamble of attr
+deallocate(attrv%dcv)
+allocate (attrv%dcv(1))
+allocate (attrv%dcv(1)%dat,source=dbadatar("*B33192",rmiss))
+!assemble data and attribute
+metaanddata(3)%dataattrv%dataattr(1)%attrv=attrv
+
+
+! 4d station with  data present and attributes missing
+allocate (metaanddata(4)%dataattrv%dataattr(1))
+
+allocate (metaanddata(4)%dataattrv%dataattr(1)%dat,source=dbadatai("B12101",27315))
+! create an etherogeneous ensamble of attr
+deallocate(attrv%dcv)
+allocate (attrv%dcv(1))
+allocate (attrv%dcv(1)%dat,source=dbadatar("*B33192",rmiss))
+!assemble data and attribute
+metaanddata(4)%dataattrv%dataattr(1)%attrv=attrv
+
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!

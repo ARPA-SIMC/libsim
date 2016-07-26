@@ -1268,18 +1268,28 @@ endif
 !print *,"extrude dati:"
 !call data%dbadc%display()
 
-
 call data%dbadc%dbaset(session)
-if (optio_log(attronly)) then
+if (optio_log(attronly).or. .not. data%dbadc%dat%c_e()) then
 
+  !! those hare required?
   ierr = idba_set(session%sehandle,"var",data%dbadc%dat%btable)
-
   call data%dbadc%dat%dbaset(session)
+  !!
+
   ierr = idba_voglioquesto(session%sehandle, count)
 
+  ! with missing data to extrude and missing data in DB we have nothing to delete
+  ! with attronly  and missing data in DB we have nothing to do
+  if (count ==0) return
+
   if (c_e(count)) then
-    ierr=idba_dammelo(session%sehandle, btable)
-    !ierr=idba_enqi(session%sehandle, "context_id", id)
+    if (optio_log(attronly))then
+      ierr=idba_dammelo(session%sehandle, btable)
+                                !ierr=idba_enqi(session%sehandle, "context_id", id)
+    else
+                                !remove data from db if data is missing
+      ierr=idba_dimenticami(session%sehandle)
+    endif
   endif
 else
   call session%prendilo()
@@ -1305,7 +1315,7 @@ if (allocated(data%attrv%dcv)) then
           !call data%attrv%dcv(i)%dat%display()
         call data%attrv%dcv(i)%dat%dbaset(session)
         critica=.true.
-      else
+      else if(optio_log(attronly)) then
         !ierr=idba_seti(session%sehandle, "*context_id", id)
         !call session%var_related(data%dbadc%dat%btable) ! If I have made a prendilo I do not need this
         !call data%attrv%dcv(i)%dat%dbaset(session)
@@ -2984,7 +2994,12 @@ call session%unsetall()
 call session%set(metadata=metaanddatai%metadata)
 !write ana data and attribute
 call session%set(data=metaanddatai%dbadatai)
-call session%prendilo()
+
+if (metaanddatai%dbadatai%c_e()) then
+  call session%prendilo()
+else
+  call session%dimenticami()
+endif
 
 end subroutine dbametaanddatai_extrude
 
@@ -2998,7 +3013,12 @@ call session%unsetall()
 call session%set(metadata=metaanddatab%metadata)
 !write ana data and attribute
 call session%set(data=metaanddatab%dbadatab)
-call session%prendilo()
+
+if (metaanddatab%dbadatab%c_e()) then
+  call session%prendilo()
+else
+  call session%dimenticami()
+endif
 
 end subroutine dbametaanddatab_extrude
 
@@ -3012,7 +3032,12 @@ call session%unsetall()
 call session%set(metadata=metaanddatad%metadata)
 !write ana data and attribute
 call session%set(data=metaanddatad%dbadatad)
-call session%prendilo()
+
+if (metaanddatad%dbadatad%c_e()) then
+  call session%prendilo()
+else
+  call session%dimenticami()
+endif
 
 end subroutine dbametaanddatad_extrude
 
@@ -3026,7 +3051,12 @@ call session%unsetall()
 call session%set(metadata=metaanddatar%metadata)
 !write ana data and attribute
 call session%set(data=metaanddatar%dbadatar)
-call session%prendilo()
+
+if (metaanddatar%dbadatar%c_e()) then
+  call session%prendilo()
+else
+  call session%dimenticami()
+endif
 
 end subroutine dbametaanddatar_extrude
 
@@ -3040,7 +3070,12 @@ call session%unsetall()
 call session%set(metadata=metaanddatac%metadata)
 !write ana data and attribute
 call session%set(data=metaanddatac%dbadatac)
-call session%prendilo()
+
+if (metaanddatac%dbadatac%c_e()) then
+  call session%prendilo()
+else
+  call session%dimenticami()
+endif
 
 end subroutine dbametaanddatac_extrude
 
