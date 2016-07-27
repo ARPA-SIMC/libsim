@@ -801,7 +801,7 @@ IF (this%trans%trans_type == 'vertint') THEN
      'vertint: input upper and lower surface must be of the same type, '// &
      t2c(trans%vertint%input_levtype%level1)//'/='// &
      t2c(trans%vertint%input_levtype%level2))
-    this%valid = .FALSE.
+    CALL raise_error()
     RETURN
   ENDIF
   IF (c_e(trans%vertint%output_levtype%level2) .AND. &
@@ -810,7 +810,7 @@ IF (this%trans%trans_type == 'vertint') THEN
      'vertint: output upper and lower surface must be of the same type'// &
      t2c(trans%vertint%output_levtype%level1)//'/='// &
      t2c(trans%vertint%output_levtype%level2))
-    this%valid = .FALSE.
+    CALL raise_error()
     RETURN
   ENDIF
 
@@ -825,7 +825,7 @@ IF (this%trans%trans_type == 'vertint') THEN
     CALL l4f_category_log(this%category, L4F_ERROR, &
      'grid_transform_levtype_levtype_init: input levels badly sorted '//&
      t2c(inused)//'/'//t2c(COUNT(mask_in)))
-    this%valid = .FALSE.
+    CALL raise_error()
     RETURN
   ENDIF
   this%levshift = istart-1
@@ -859,7 +859,7 @@ IF (this%trans%trans_type == 'vertint') THEN
         CALL l4f_category_log(this%category, L4F_ERROR, &
          'coord_3d_in: '//t2c(SIZE(coord_3d_in,3))// &
          ', input levels for interpolation: '//t2c(inused))
-        this%valid = .FALSE.
+        CALL raise_error()
         RETURN
       ENDIF
 
@@ -891,7 +891,8 @@ IF (this%trans%trans_type == 'vertint') THEN
     ELSE ! output level list not provided, try to autogenerate
       IF (c_e(trans%vertint%input_levtype%level2) .AND. &
        .NOT.c_e(trans%vertint%output_levtype%level2)) THEN ! full -> half
-        IF (trans%vertint%output_levtype%level1 == 105) THEN
+        IF (trans%vertint%output_levtype%level1 == 105 .OR. &
+         trans%vertint%output_levtype%level1 == 150) THEN
           ALLOCATE(this%output_level_auto(inused-1))
           CALL l4f_category_log(this%category,L4F_INFO, &
            'grid_transform_levtype_levtype_init: autogenerating '//t2c(inused-1) &
@@ -904,13 +905,14 @@ IF (this%trans%trans_type == 'vertint') THEN
           CALL l4f_category_log(this%category, L4F_ERROR, &
            'grid_transform_levtype_levtype_init: automatic generation of output levels &
            &available only for hybrid levels')
-          this%valid = .FALSE.
+          CALL raise_error()
           RETURN
         ENDIF
       ELSE IF (.NOT.c_e(trans%vertint%input_levtype%level2) .AND. &
        c_e(trans%vertint%output_levtype%level2)) THEN ! half -> full
         ALLOCATE(this%output_level_auto(inused-1))
-        IF (trans%vertint%output_levtype%level1 == 105) THEN
+        IF (trans%vertint%output_levtype%level1 == 105 .OR. &
+         trans%vertint%output_levtype%level1 == 150) THEN
           CALL l4f_category_log(this%category,L4F_INFO, &
            'grid_transform_levtype_levtype_init: autogenerating '//t2c(inused-1) &
            //'/'//t2c(iend-istart)//' output levels (h->f)')
@@ -923,7 +925,7 @@ IF (this%trans%trans_type == 'vertint') THEN
           CALL l4f_category_log(this%category, L4F_ERROR, &
            'grid_transform_levtype_levtype_init: automatic generation of output levels &
            &available only for hybrid levels')
-          this%valid = .FALSE.
+          CALL raise_error()
           RETURN
         ENDIF
       ELSE
@@ -931,7 +933,7 @@ IF (this%trans%trans_type == 'vertint') THEN
          'grid_transform_levtype_levtype_init: strange situation'// &
          to_char(c_e(trans%vertint%input_levtype%level2))//' '// &
          to_char(c_e(trans%vertint%output_levtype%level2)))
-        this%valid = .FALSE.
+        CALL raise_error()
         RETURN
       ENDIF
       ALLOCATE(coord_out(inused-1), mask_out(inused-1))
@@ -951,7 +953,6 @@ IF (this%trans%trans_type == 'vertint') THEN
        TRIM(to_char(trans%vertint%input_levtype%level1))//','// &
        TRIM(to_char(trans%vertint%input_levtype%level2))// &
        ') suitable for interpolation')
-      this%valid = .FALSE.
       RETURN
 !      iend = -1 ! for loops
     ELSE IF (istart == iend) THEN
@@ -969,7 +970,6 @@ IF (this%trans%trans_type == 'vertint') THEN
        TRIM(to_char(trans%vertint%output_levtype%level1))//','// &
        TRIM(to_char(trans%vertint%output_levtype%level2))// &
        ') suitable for interpolation')
-      this%valid = .FALSE.
       RETURN
 !      oend = -1 ! for loops
     ENDIF
@@ -1009,6 +1009,7 @@ IF (this%trans%trans_type == 'vertint') THEN
       ENDDO outlev
 
       DEALLOCATE(coord_out, mask_out)
+      this%valid = .TRUE.
 
     ELSE IF (this%trans%sub_type == 'linearsparse') THEN
 ! just store vertical coordinates, dirty work is done later
@@ -1016,10 +1017,12 @@ IF (this%trans%trans_type == 'vertint') THEN
       this%vcoord_in(:) = coord_in(this%levshift+1:this%levshift+this%levused)
       this%vcoord_out(:) = coord_out(:)
       DEALLOCATE(coord_out, mask_out)
+      this%valid = .TRUE.
 
     ENDIF
 
   ENDIF ! levels are different
+
 !ELSE IF (this%trans%trans_type == 'verttrans') THEN
 
 ENDIF
