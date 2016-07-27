@@ -238,6 +238,11 @@ do i=1,size(metaanddatav)
   call metaanddatav(i)%display()
   !call sessionto%extrude(metaanddata=metaanddatav(i))
   call metaanddatav(i)%extrude(sessionto)
+  if (sessionto%memdb) then
+    call sessionto%messages_write_next("generic")
+                                !clean memdb
+    call sessionto%remove_all()
+  endif
 end do
 
 end subroutine export2bufr

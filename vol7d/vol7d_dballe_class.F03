@@ -1903,25 +1903,24 @@ if (this%file) call this%handle%remove_all()
 call metaanddatal%extrude(session=this%handle,filter=filter,attronly=attr_only,template=template)
 
 if (this%file) then
-!!$  !!!!!  this if we have written in memdb and now we have to write the file
-!!$
-!!$  !filter is already in extrude
-!!$  !this%handle%set(filter=filter)
-!!$
-!!$  ! export to file
-!!$  !! TODO : revert template from init to export  !!!!!!!!!!!!!!!!!!!!!
-!!$  !!call this%handle%messages_write_next(template)
-!!$
-!!$  ! note that you can use unsetall hera because the filter was used in extrude
-!!$  call filter%dbaset(this%handle)
-!!$
-!!$  ltemplate=this%handle%template
-!!$  if (present(template))then
-!!$    ltemplate=template
-!!$  end if
-!!$
-!!$  call this%handle%messages_write_next(ltemplate)
-!!$
+  !!!!!  this if we have written in memdb and now we have to write the file
+
+  !filter is already in extrude
+  !this%handle%set(filter=filter)
+
+  ! export to file
+  !! TODO : revert template from init to export  !!!!!!!!!!!!!!!!!!!!!
+  !!call this%handle%messages_write_next(template)
+
+  ! note that you can use unsetall hera because the filter was used in extrude
+  call filter%dbaset(this%handle)
+
+  ltemplate=this%handle%template
+  if (present(template))then
+    ltemplate=template
+  end if
+
+  call this%handle%messages_write_next(ltemplate)
 
   !clean memdb
   call this%handle%remove_all()

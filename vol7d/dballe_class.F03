@@ -1121,7 +1121,8 @@ if (session%file)then
 
   if (session%memdb) then
 
-    call session%messages_write_next(template=ltemplate)
+    return
+    !call session%messages_write_next(template=ltemplate)
 
   else
 
@@ -3956,10 +3957,10 @@ if (.not. c_e(lattrflag))then
 end if
 
 
-print*,"---------------- call session_init --------------------------------"
-print *,"session_init,lformat,ltemplate,lmemdb,lfile,lloadfile,lanaflag,ldataflag,lattrflag"
-print *,"session_init",lformat,ltemplate,lmemdb,lfile,lloadfile,lanaflag,ldataflag,lattrflag
-print*,"------------------------------------------------"
+!!$print*,"---------------- call session_init --------------------------------"
+!!$print *,"session_init,lformat,ltemplate,lmemdb,lfile,lloadfile,lanaflag,ldataflag,lattrflag"
+!!$print *,"session_init",lformat,ltemplate,lmemdb,lfile,lloadfile,lanaflag,ldataflag,lattrflag
+!!$print*,"------------------------------------------------"
 
 if (lfile) then
 
@@ -3986,9 +3987,7 @@ end if
 
 ! check filename for recursive call
 if (present(filename))then
-  print*,"ora son qui"
   if (lmemdb)then
-    print*,"ora son quo"
     if (.not. present(connection)) then
                                 ! connect to dsn type DBA
       dbasession_init%memconnection=dbaconnection(dsn="mem:")
@@ -4025,14 +4024,12 @@ if (present(filename))then
     
   else
     
-    print*,"ora son qua"
     ier =  idba_messaggi(dbasession_init%sehandle,filename, lmode, lformat)
     
   end if
   
 else
   
-  print*,"ora son li"
   ier = idba_preparati(connection%dbhandle,dbasession_init%sehandle, lanaflag, ldataflag, lattrflag)
   if (lwipe)ier=idba_scopa (dbasession_init%sehandle,lrepinfo)
 
@@ -4047,16 +4044,16 @@ dbasession_init%memdb=lmemdb
 dbasession_init%loadfile=lloadfile
 dbasession_init%template=ltemplate
 
-print*,"--------------- at end ---------------------------------"
-print *,'file',dbasession_init%file
-print *,'filename',trim(dbasession_init%filename)
-print *,'mode',dbasession_init%mode
-print *,'format',dbasession_init%format
-print *,'simplified',dbasession_init%simplified
-print *,'memdb',dbasession_init%memdb
-print *,'loadfile',dbasession_init%loadfile
-print *,'template',dbasession_init%template
-print*,"------------------------------------------------"
+!!$print*,"--------------- at end ---------------------------------"
+!!$print *,'file',dbasession_init%file
+!!$print *,'filename',trim(dbasession_init%filename)
+!!$print *,'mode',dbasession_init%mode
+!!$print *,'format',dbasession_init%format
+!!$print *,'simplified',dbasession_init%simplified
+!!$print *,'memdb',dbasession_init%memdb
+!!$print *,'loadfile',dbasession_init%loadfile
+!!$print *,'template',dbasession_init%template
+!!$print*,"------------------------------------------------"
 
 end function dbasession_init
 
