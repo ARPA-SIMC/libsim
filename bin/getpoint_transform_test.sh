@@ -46,4 +46,38 @@ EOF
 
 diff $tmpfile.check.csv $tmpfile.csv
 rm -f $tmpfile.check.csv $tmpfile.csv
+rm -f $tmpfile.v7d
 echo "vg6d_getpoint with polygons test passed"
+
+
+# vg6d_transform with bilin test
+${pref}vg6d_transform --trans-mode=p --trans-type=inter --sub-type=bilin \
+    --type=regular_ll --nx=11 --ny=11 --x-min=5. --x-max=15. \
+    --y-min=40. --y-max=50. \
+    ../data/t_p.grb ${tmpfile}_p.grb
+
+${pref}vg6d_getpoint --trans-type=inter --sub-type=near --lon=8. --lat=47. \
+    --output-format=native ${tmpfile}_p.grb ${tmpfile}_p.v7d
+
+${pref}v7d_transform --input-format=native --output-format=csv \
+    ${tmpfile}_p.v7d ${tmpfile}_p.csv
+
+${pref}vg6d_transform --trans-mode=s --trans-type=inter --sub-type=bilin \
+    --type=regular_ll --nx=21 --ny=21 --x-min=0. --x-max=20. \
+    --y-min=35. --y-max=55. \
+    ../data/t_p.grb ${tmpfile}_s.grb
+
+# ${pref}vg6d_getpoint --trans-type=metamorphosis --sub-type=coordbb \
+#     --ilon=7.5 --flon=8.5 --ilat=46.5 --flat=47.5 \
+#     --output-format=native ${tmpfile}_s.grb ${tmpfile}_s.v7d
+
+${pref}vg6d_getpoint --trans-type=inter --sub-type=near --lon=8. --lat=47. \
+    --output-format=native ${tmpfile}_s.grb ${tmpfile}_s.v7d
+
+${pref}v7d_transform --input-format=native --output-format=csv \
+    ${tmpfile}_s.v7d ${tmpfile}_s.csv
+
+diff ${tmpfile}_p.csv ${tmpfile}_s.csv
+rm -f ${tmpfile}_*.*
+echo "vg6d_transform with bilin test passed"
+

@@ -73,7 +73,7 @@ TYPE(optionparser) :: opt
 INTEGER :: optind, optstatus
 TYPE(csv_record) :: argparse
 INTEGER :: iargc
-!CHARACTER(len=3) :: set_scmode
+CHARACTER(len=3) :: set_scmode
 LOGICAL :: version, ldisplay
 #ifdef VAPOR
 LOGICAL :: rzscan,reusevdf
@@ -94,6 +94,15 @@ TYPE(timedelta) :: c_i
 TYPE(datetime) :: c_s
 !REAL :: comp_frac_valid
 
+! from vg6d_subarea
+TYPE(gridinfo_def) :: gridinfo
+TYPE(grid_file_id) :: ifile,ofile
+TYPE(grid_id) :: input_grid_id
+INTEGER :: gaid
+REAL, ALLOCATABLE :: field(:,:,:),fieldz(:,:,:)
+TYPE(grid_transform) :: grid_trans
+CHARACTER(len=1) :: trans_mode
+
 !questa chiamata prende dal launcher il nome univoco
 call l4f_launcher(a_name,a_name_force="volgrid6dtransform")
 
@@ -108,16 +117,27 @@ opt = optionparser_new(description_msg= &
  'Gridded-field to gridded-field transformation application. &
  &It reads grib edition 1 and 2 and gdal-supported formats &
  &and zooms, interpolates or regrids data according to optional arguments. &
- &The whole input data file is read and organized in memory, transformed, and &
- &written on output. So it is possible to perform multi-field processing &
+ &In the default ''p'' mode, the whole input data file is read and organized &
+ &in memory, transformed, and written on output, &
+ &so it is possible to perform multi-field processing &
  &like wind component transformation, but memory constraints limit the number &
- &of input fields. The output file is specified in the form &
+ &of input fields. When running in the optional ''s'' mode, the input data is &
+ &processed one horizontal slice at a time with less memory footprint and less &
+ &processing capabilities. The output file is specified in the form &
  &[output_driver:[output_template:]]pathname, when output_driver is grib_api, &
  &output_template may specify a file contaning a grib message &
  &to be used as a template for the output file.', &
  usage_msg='Usage: vg6d_transform [options] inputfile outputfile')
 
 ! define command-line options
+CALL optionparser_add(opt, ' ', 'trans-mode', trans_mode, 'p', help= &
+ 'transformation mode: either ''p''rosciutto or ''s''alsiccia; in ''p'' mode &
+ &the input data are accomodated into an expensive 6-dimensional prosciutto (ham) &
+ &which can be processed, converted, sliced and baked along all possible dimensions; &
+ &in ''s'' mode, the input data are processed as a cheap and infinitely &
+ &long salsiccia (sausage), one field at a time, so only operations on sigle horizontal slices &
+ &are allowed in this mode; many options are thus silently ignored or may &
+ &generate unexpected errors in ''s'' mode')
 CALL optionparser_add(opt, 'v', 'trans-type', trans_type, 'none', help= &
  'transformation type: ''inter'' for interpolation, ''boxinter'' for &
  &statistical interpolation on boxes, ''zoom'' for zooming, &
@@ -264,13 +284,14 @@ CALL optionparser_add(opt, 'e', 'a-grid', c2agrid, help= &
 CALL optionparser_add(opt, 't', 'component-flag', component_flag, &
  0, help='wind component flag in interpolated grid (0/1)')
 
-!CALL optionparser_add(opt, ' ', 'set-scmode', set_scmode, 'xxx', &
-! help='set output grid scanning mode to a particular standard value: &
-! &3 binary digits indicating respectively iScansNegatively, jScansPositively and &
-! &jPointsAreConsecutive (grib_api jargon), 0 for false, 1 for true, &
-! &000 for ECMWF-like grids, 010 for COSMO and Cartesian-like grids. &
-! &Any other character indicates to keep the &
-! &corresponding original scanning mode value')
+CALL optionparser_add(opt, ' ', 'set-scmode', set_scmode, 'xxx', &
+ help='set output grid scanning mode to a particular standard value: &
+ &3 binary digits indicating respectively iScansNegatively, jScansPositively and &
+ &jPointsAreConsecutive (grib_api jargon), 0 for false, 1 for true, &
+ &000 for ECMWF-like grids, 010 for COSMO and Cartesian-like grids. &
+ &Any other character indicates to keep the &
+ &corresponding original scanning mode value; &
+ &available only with --trans-mode=s')
 
 ! this option has been commented because it is not handled in
 ! volgrid_class, it makes sense only in vg6d_getpoint for determining
@@ -454,7 +475,7 @@ IF (c_e(coord_file)) THEN
   IF (.FALSE.) THEN ! dummy clause
 #ifdef HAVE_SHAPELIB
   ELSE IF (coord_format == 'shp') THEN
-    CALL IMPORT(poly, coord_file)
+    CALL import(poly, coord_file)
     IF (poly%arraysize <= 0) THEN
       CALL l4f_category_log(category, L4F_ERROR, &
        'error importing shapefile '//TRIM(coord_file))
@@ -534,26 +555,8 @@ DEALLOCATE(w_s, w_e)
 
 CALL griddim_unproj(griddim_out)
 
-decode = output_format == "vapor" .OR. dup_mode > 0
-! import input volume
-CALL import(volgrid, filename=input_file, decode=decode, dup_mode=dup_mode, &
- time_definition=time_definition, categoryappend="input_volume")
-IF (.NOT.ASSOCIATED(volgrid)) THEN
-  CALL l4f_category_log(category, L4F_ERROR, &
-   'error importing input volume from file '//TRIM(input_file))
-  CALL raise_fatal_error()
-ENDIF
-
-IF (ldisplay) THEN
-  PRINT*,'input grid >>>>>>>>>>>>>>>>>>>>'
-  CALL display(volgrid)
-ENDIF
-
-IF (c2agrid) CALL vg6d_c2a(volgrid)
-
-IF (trans_type /= 'none') THEN ! transform
-  CALL l4f_category_log(category,L4F_DEBUG,'execute transform')
-
+IF (trans_type /= 'none') THEN ! define transform
+  CALL l4f_category_log(category,L4F_DEBUG,'defining transform')
 ! transformation object
   CALL init(trans, trans_type=trans_type, sub_type=sub_type, extrap=extrap, &
    ix=ix, iy=iy, fx=fx, fy=fy, &
@@ -561,99 +564,207 @@ IF (trans_type /= 'none') THEN ! transform
    radius=radius, poly=poly, percentile=percentile, &
    input_levtype=ilevel, output_levtype=olevel, &
    categoryappend="transformation")
-
-  CALL transform(trans, griddim_out, volgrid6d_in=volgrid, &
-   volgrid6d_out=volgrid_out, lev_out=olevel_list, &
-   volgrid6d_coord_in=volgrid_coord, &
-   maskgrid=maskfield, maskbounds=maskbounds%array, &
-   clone=.TRUE., categoryappend="transform")
-
-  CALL l4f_category_log(category,L4F_INFO,"transformation completed")
-  CALL delete(volgrid)
-
-ELSE
-
-  CALL l4f_category_log(category,L4F_DEBUG,'clone in to out')
-  volgrid_out => volgrid
-
 ENDIF
 
-if (round .and. ASSOCIATED(volgrid_out)) then
-  CALL l4f_category_log(category,L4F_DEBUG,'execute rounding')
-  call rounding(volgrid_out,volgrid_tmp,level=almost_equal_levels,nostatproc=.true.)
-  CALL delete(volgrid_out)
-  volgrid_out => volgrid_tmp
-  NULLIFY(volgrid_tmp)
-end if
+IF (trans_mode == "p") THEN ! run in prosciutto (volume) mode
 
-#ifdef ALCHIMIA
-if (ASSOCIATED(volgrid_out) .and. output_variable_list /= " ") then
+  decode = output_format == "vapor" .OR. dup_mode > 0
+! import input volume
+  CALL import(volgrid, filename=input_file, decode=decode, dup_mode=dup_mode, &
+   time_definition=time_definition, categoryappend="input_volume")
+  IF (.NOT.ASSOCIATED(volgrid)) THEN
+    CALL l4f_category_log(category, L4F_ERROR, &
+     'error importing input volume from file '//TRIM(input_file))
+    CALL raise_fatal_error()
+  ENDIF
 
-  CALL l4f_category_log(category,L4F_DEBUG,'execute alchemy')
-  call register_termo(vfn)
-  IF (ldisplay ) call display(vfn)
+  IF (ldisplay) THEN
+    PRINT*,'input grid >>>>>>>>>>>>>>>>>>>>'
+    CALL display(volgrid)
+  ENDIF
 
-  if ( alchemy(volgrid_out,vfn,vl,volgrid_tmp,copy=.true.,vfnoracle=vfnoracle) == 0 ) then
-    call display(vfnoracle)
+  IF (c2agrid) CALL vg6d_c2a(volgrid)
+
+  IF (trans_type /= 'none') THEN ! transform
+    CALL l4f_category_log(category,L4F_DEBUG,'execute transform')
+
+    CALL transform(trans, griddim_out, volgrid6d_in=volgrid, &
+     volgrid6d_out=volgrid_out, lev_out=olevel_list, &
+     volgrid6d_coord_in=volgrid_coord, &
+     maskgrid=maskfield, maskbounds=maskbounds%array, &
+     clone=.TRUE., categoryappend="transform")
+
+    CALL l4f_category_log(category,L4F_INFO,"transformation completed")
+    CALL delete(volgrid)
+
+  ELSE
+
+    CALL l4f_category_log(category,L4F_DEBUG,'clone in to out')
+    volgrid_out => volgrid
+
+  ENDIF
+
+  if (round .and. ASSOCIATED(volgrid_out)) then
+    CALL l4f_category_log(category,L4F_DEBUG,'execute rounding')
+    call rounding(volgrid_out,volgrid_tmp,level=almost_equal_levels,nostatproc=.true.)
     CALL delete(volgrid_out)
     volgrid_out => volgrid_tmp
     NULLIFY(volgrid_tmp)
-  else
-    print *,"Impossible solution"
-    CALL l4f_category_log(category, L4F_ERROR, 'Cannot make variable you have requested')
-
-    if (.not. shoppinglist(vl,vfn,vfnoracle,copy=.false.)) then
-      CALL l4f_category_log(category, L4F_ERROR, 'shoppinglist: generic error')
-    else
-      call sl_display_pretty(compile_sl(vfnoracle))
-      IF (ldisplay ) call display(vfn)
-    end if
-    CALL l4f_category_log(category, L4F_ERROR, 'Exit for error')
-    CALL raise_fatal_error()
   end if
 
-  CALL l4f_category_log(category,L4F_INFO,"alchemy completed")
+#ifdef ALCHIMIA
+  if (ASSOCIATED(volgrid_out) .and. output_variable_list /= " ") then
 
-end if
+    CALL l4f_category_log(category,L4F_DEBUG,'execute alchemy')
+    call register_termo(vfn)
+    IF (ldisplay ) call display(vfn)
+
+    if ( alchemy(volgrid_out,vfn,vl,volgrid_tmp,copy=.true.,vfnoracle=vfnoracle) == 0 ) then
+      call display(vfnoracle)
+      CALL delete(volgrid_out)
+      volgrid_out => volgrid_tmp
+      NULLIFY(volgrid_tmp)
+    else
+      print *,"Impossible solution"
+      CALL l4f_category_log(category, L4F_ERROR, 'Cannot make variable you have requested')
+
+      if (.not. shoppinglist(vl,vfn,vfnoracle,copy=.false.)) then
+        CALL l4f_category_log(category, L4F_ERROR, 'shoppinglist: generic error')
+      else
+        call sl_display_pretty(compile_sl(vfnoracle))
+        IF (ldisplay ) call display(vfn)
+      end if
+      CALL l4f_category_log(category, L4F_ERROR, 'Exit for error')
+      CALL raise_fatal_error()
+    end if
+
+    CALL l4f_category_log(category,L4F_INFO,"alchemy completed")
+
+  end if
 #endif
 
-IF (c_e(istat_proc) .AND. c_e(ostat_proc) .AND. ASSOCIATED(volgrid_out)) THEN ! stat_proc
-  CALL l4f_category_log(category,L4F_INFO,"computing stat_proc")
-  ALLOCATE(volgrid_tmp(SIZE(volgrid_out)))
-  DO i = 1, SIZE(volgrid_out)
-    CALL volgrid6d_compute_stat_proc(volgrid_out(i), volgrid_tmp(i), &
-     istat_proc, ostat_proc, c_i, full_steps=comp_full_steps, start=c_s, clone=.TRUE.)
-  ENDDO
-  CALL delete(volgrid_out)
-  volgrid_out => volgrid_tmp
-  NULLIFY(volgrid_tmp)
-ENDIF
+  IF (c_e(istat_proc) .AND. c_e(ostat_proc) .AND. ASSOCIATED(volgrid_out)) THEN ! stat_proc
+    CALL l4f_category_log(category,L4F_INFO,"computing stat_proc")
+    ALLOCATE(volgrid_tmp(SIZE(volgrid_out)))
+    DO i = 1, SIZE(volgrid_out)
+      CALL volgrid6d_compute_stat_proc(volgrid_out(i), volgrid_tmp(i), &
+       istat_proc, ostat_proc, c_i, full_steps=comp_full_steps, start=c_s, clone=.TRUE.)
+    ENDDO
+    CALL delete(volgrid_out)
+    volgrid_out => volgrid_tmp
+    NULLIFY(volgrid_tmp)
+  ENDIF
 
-IF (ldisplay .and. ASSOCIATED(volgrid_out)) THEN ! done here in order to print final ellipsoid
-  PRINT*,'output grid >>>>>>>>>>>>>>>>>>>>'
-  CALL display(volgrid_out)
-ENDIF
+  IF (ldisplay .and. ASSOCIATED(volgrid_out)) THEN ! done here in order to print final ellipsoid
+    PRINT*,'output grid >>>>>>>>>>>>>>>>>>>>'
+    CALL display(volgrid_out)
+  ENDIF
 
 ! export
 
-CALL l4f_category_log(category,L4F_DEBUG,'execute export')
-CALL write_to_file_out(volgrid_out)
+  CALL l4f_category_log(category,L4F_DEBUG,'execute export')
+  CALL write_to_file_out(volgrid_out)
 
-IF (ASSOCIATED(volgrid_out)) CALL delete(volgrid_out)
+  IF (ASSOCIATED(volgrid_out)) CALL delete(volgrid_out)
 
 #ifdef ALCHIMIA
-call delete(vfn)
-call delete(vfnoracle)
+  CALL delete(vfn)
+  CALL delete(vfnoracle)
 #endif
+
+
+ELSE ! run in salsiccia (serial) mode
+
+  ifile = grid_file_id_new(input_file,'r')
+  ofile = grid_file_id_new(output_file,'w')
+
+  DO WHILE (.TRUE.)
+    input_grid_id = grid_id_new(ifile)
+    IF (.NOT.c_e(input_grid_id)) THEN ! THEN because of a bug in gfortran?!
+      EXIT
+    ENDIF
+
+    CALL l4f_category_log(category,L4F_INFO,"importing gridinfo")
+    CALL init(gridinfo, gaid=input_grid_id, categoryappend="imported")
+    CALL import(gridinfo)
+    IF (ldisplay) THEN
+      CALL display(gridinfo,namespace="ls")
+    ENDIF
+    CALL l4f_category_log(category,L4F_INFO,"gridinfo imported")
+
+    ALLOCATE(field(gridinfo%griddim%dim%nx,gridinfo%griddim%dim%ny,1))
+    field(:,:,1) = decode_gridinfo(gridinfo)
+
+    IF (trans_type /= 'none') THEN ! transform
+      CALL init(grid_trans, trans, in=gridinfo%griddim, out=griddim_out, &
+       categoryappend="gridtransformed")
+      IF (ldisplay) THEN
+        CALL display(griddim_out)
+      ENDIF
+
+      ALLOCATE (fieldz(griddim_out%dim%nx,griddim_out%dim%ny,1))
+      CALL compute(grid_trans, field, fieldz)
+      CALL delete(grid_trans)
+      CALL delete(gridinfo%griddim)
+      CALL copy(griddim_out, gridinfo%griddim, categoryappend="cloned")
+
+    ELSE
+
+      fieldz = field
+
+    ENDIF
+    
+! set scanning mode if grib_api
+    IF (grid_id_get_driver(gridinfo%gaid) == 'grib_api') THEN
+      gaid = grid_id_get_gaid(gridinfo%gaid)
+      IF (set_scmode(1:1) == '0') THEN
+        CALL grib_set(gaid, 'iScansNegatively', 0)
+      ELSE IF (set_scmode(1:1) == '1') THEN
+        CALL grib_set(gaid, 'iScansNegatively', 1)
+      ENDIF
+      IF (set_scmode(2:2) == '0') THEN
+        CALL grib_set(gaid, 'jScansPositively', 0)
+      ELSE IF (set_scmode(2:2) == '1') THEN
+        CALL grib_set(gaid, 'jScansPositively', 1)
+      ENDIF
+      IF (set_scmode(3:3) == '0') THEN
+        CALL grib_set(gaid, 'jPointsAreConsecutive', 0)
+      ELSE IF (set_scmode(3:3) == '1') THEN
+        CALL grib_set(gaid, 'jPointsAreConsecutive', 1)
+      ENDIF
+    ENDIF
+
+    CALL encode_gridinfo(gridinfo, fieldz(:,:,1))
+    CALL export(gridinfo)
+    IF (ldisplay) THEN
+      CALL display(gridinfo,namespace="ls")
+    ENDIF
+
+    CALL export(gridinfo%gaid, ofile)
+
+    CALL delete(gridinfo)
+    DEALLOCATE(field, fieldz)
+
+  ENDDO
+
+  CALL delete(ifile)
+  CALL delete(ofile)
+
+ENDIF ! run mode
+
+! general cleanup
+CALL delete(griddim_out)
+IF (trans_type /= 'none') THEN
+  CALL delete(trans)
+ENDIF
 
 CALL l4f_category_log(category,L4F_INFO,"end")
 
 !chiudo il logger
-call l4f_category_delete(category)
+CALL l4f_category_delete(category)
 ier=l4f_fini()
 
-contains
-
+CONTAINS
 
 SUBROUTINE write_to_file_out(myvolgrid)
 TYPE(volgrid6d),POINTER :: myvolgrid(:)
