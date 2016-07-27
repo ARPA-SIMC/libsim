@@ -1022,28 +1022,30 @@ end subroutine dbadcv_set
 
 
 !> put data on DSN
-subroutine dbadcv_extrude(dcv,session,noattr,filter)
+subroutine dbadcv_extrude(dcv,session,noattr,filter,template)
 class(dbadcv), intent(in) :: dcv
 type(dbasession), intent(in) :: session !< dballe session
 logical, intent(in),optional :: noattr          !< set to .true. to get data only (no attribute) 
 type(dbafilter),intent(in),optional :: filter     !< use this to filter wanted data                
+character(len=*),intent(in),optional :: template
 integer :: i
 
 do i=1, size(dcv%dcv)
-  call dcv%dcv(i)%extrude(session,noattr,filter)
+  call dcv%dcv(i)%extrude(session,noattr,filter,template=template)
 enddo
 
 end subroutine dbadcv_extrude
 
 !> put data on DSN
-subroutine dbadc_extrude(data,session,noattr,filter,attronly)
+subroutine dbadc_extrude(data,session,noattr,filter,attronly,template)
 class(dbadc), intent(in) :: data
 type(dbasession), intent(in) :: session !< dballe session
 logical, intent(in),optional :: noattr          !< set to .true. to get data only (no attribute) 
 type(dbafilter),intent(in),optional :: filter     !< use this to filter wanted data                
 logical, intent(in),optional :: attronly          !< set to .true. to export attr only (no data) 
+character(len=*),intent(in),optional :: template
 
-call data%extrude(session,noattr,filter,attronly)
+call data%extrude(session,noattr,filter,attronly,template)
 
 end subroutine dbadc_extrude
 
@@ -1088,26 +1090,51 @@ subroutine dbasession_unsetb(session)
 class(dbasession), intent(in) :: session
 integer :: ier
 
-if (session%file)then
-  ier=idba_unsetb(session%sehandle)
-end if
+!if (session%file)then
+ier=idba_unsetb(session%sehandle)
+!end if
 end subroutine dbasession_unsetb
 
 !> dballe close_message
-subroutine dbasession_close_message(session)
+subroutine dbasession_close_message(session,template)
 class(dbasession), intent(in) :: session
+character(len=*),intent(in),optional :: template
 integer :: ier
+character(len=40) :: ltemplate
+
+
+ltemplate=session%template
+if (present(template)) ltemplate=template
+
+print*,"--------------- dbasession ---------------------------------"
+print *,'file',session%file
+print *,'filename',trim(session%filename)
+print *,'mode',session%mode
+print *,'format',session%format
+print *,'simplified',session%simplified
+print *,'memdb',session%memdb
+print *,'loadfile',session%loadfile
+print *,'template',ltemplate
+print*,"------------------------------------------------"
 
 if (session%file)then
-  if (c_e(session%template)) then
-    ier=idba_set (session%sehandle,"query","message "//trim(session%template))
+
+  if (session%memdb) then
+
+    call session%messages_write_next(template=ltemplate)
+
   else
-    ier=idba_set (session%sehandle,"query","message")
+
+    if (c_e(ltemplate)) then
+      ier=idba_set (session%sehandle,"query","message "//trim(ltemplate))
+    else
+      ier=idba_set (session%sehandle,"query","message")
+    end if
+    
+    call session%unsetb()
+    call session%prendilo()
+  
   end if
-
-  call session%unsetb()
-  call session%prendilo()
-
 end if
 end subroutine dbasession_close_message
 
@@ -1170,20 +1197,20 @@ ier = idba_messages_read_next(session%sehandle, dbasession_messages_read_next)
 end function dbasession_messages_read_next
 
 !> dballe messages_write_next
-subroutine dbasession_messages_write_next(session,template_name)
+subroutine dbasession_messages_write_next(session,template)
 class(dbasession), intent(in) :: session
-character(len=*), optional :: template_name !< template to use writing BUFR/CREX
-character(len=40) :: ltemplate_name
+character(len=*), optional :: template !< template to use writing BUFR/CREX
+character(len=40) :: ltemplate
 
 integer :: ier
 
 !TODO how to set autodetect?
-!ltemplate_name="generic"  !! "wmo" =  wmo - WMO style templates (autodetect) ?
+!ltemplate="generic"  !! "wmo" =  wmo - WMO style templates (autodetect) ?
 
-ltemplate_name=session%template
-if (present(template_name)) ltemplate_name=template_name
+ltemplate=session%template
+if (present(template)) ltemplate=template
 
-ier = idba_messages_write_next(session%sehandle,ltemplate_name)
+ier = idba_messages_write_next(session%sehandle,ltemplate)
 
 end subroutine dbasession_messages_write_next
 
@@ -1245,15 +1272,22 @@ end subroutine dbasession_dissolveattr_metadata
 
 
 !> put data on DSN
-subroutine dbadataattr_extrude(data,session,noattr,filter,attronly)
+subroutine dbadataattr_extrude(data,session,noattr,filter,attronly,template)
 class(dbadataattr), intent(in) :: data
 type(dbasession), intent(in) :: session           !< dballe session
 logical, intent(in),optional :: noattr            !< set to .true. to put data only (no attribute)
 type(dbafilter),intent(in),optional :: filter     !< use this to filter wanted data
 logical, intent(in),optional :: attronly          !< set to .true. to put attr only (no data)
+character(len=*),intent(in),optional :: template
 integer :: i,ierr,count
 logical :: critica
 character(len=9) :: btable
+
+
+if (session%file .and. optio_log(attronly))then
+  call l4f_category_log(session%category,L4F_ERROR,"attronly writing on file not supported")
+  CALL raise_fatal_error()
+end if
 
 if (present(filter))then
   if (filter%contextana) then
@@ -1267,6 +1301,9 @@ endif
 
 !print *,"extrude dati:"
 !call data%dbadc%display()
+
+! missing on file do nothing
+if (.not. data%dbadc%dat%c_e() .and. session%file) return
 
 call data%dbadc%dbaset(session)
 if (optio_log(attronly).or. .not. data%dbadc%dat%c_e()) then
@@ -1353,18 +1390,19 @@ end subroutine dbadataattr_display
 
 
 !> put data on DSN
-subroutine dbadataattrv_extrude(dataattr,session,noattr,filter,attronly)
+subroutine dbadataattrv_extrude(dataattr,session,noattr,filter,attronly,template)
 class(dbadataattrv), intent(in) :: dataattr
 type(dbasession), intent(in) :: session !< dballe session
 logical, intent(in),optional :: noattr          !< set to .true. to get data only (no attribute) 
 type(dbafilter),intent(in),optional :: filter     !< use this to filter wanted data                
 logical, intent(in),optional :: attronly          !< set to .true. to export attr only (no data) 
+character(len=*),intent(in),optional :: template
 
 integer :: i
 
 if(.not. allocated(dataattr%dataattr)) return
 do i=1, size(dataattr%dataattr)
-  call dataattr%dataattr(i)%extrude(session,noattr,filter,attronly)
+  call dataattr%dataattr(i)%extrude(session,noattr,filter,attronly,template)
 enddo
 
 !to close message on file
@@ -2429,12 +2467,13 @@ call metaanddata%dataattrv%display()
 end subroutine dbametaanddata_display
 
 !> put data on DSN
-subroutine dbametaanddata_extrude(metaanddata,session,noattr,filter,attronly)
+subroutine dbametaanddata_extrude(metaanddata,session,noattr,filter,attronly,template)
 class(dbametaanddata), intent(in) :: metaanddata
 type(dbasession), intent(in) :: session !< dballe session
 logical, intent(in),optional :: noattr          !< set to .true. to get data only (no attribute) 
 type(dbafilter),intent(in),optional :: filter     !< use this to filter wanted data                
 logical, intent(in),optional :: attronly          !< set to .true. to export attr only (no data) 
+character(len=*),intent(in),optional :: template
 
 type(dbafilter)    :: myfilter
 
@@ -2443,20 +2482,21 @@ type(dbafilter)    :: myfilter
 !print *,"contextana false"
 
 myfilter=dbafilter(filter=filter,contextana=.false.)
-call extrude(metaanddata,session,noattr,myfilter,attronly)
+call extrude(metaanddata,session,noattr,myfilter,attronly,template)
 
 !print *,"contextana true"
 myfilter=dbafilter(filter=filter,contextana=.true.)
-call extrude(metaanddata,session,noattr,myfilter,attronly)
+call extrude(metaanddata,session,noattr,myfilter,attronly,template)
 
 contains
 
-subroutine extrude(metaanddata,session,noattr,filter,attronly)
+subroutine extrude(metaanddata,session,noattr,filter,attronly,template)
 class(dbametaanddata), intent(in) :: metaanddata
 type(dbasession), intent(in) :: session !< dballe session
 logical, intent(in),optional :: noattr          !< set to .true. to get data only (no attribute) 
 type(dbafilter),intent(in) :: filter     !< use this to filter wanted data                
 logical, intent(in),optional :: attronly          !< set to .true. to export attr only (no data) 
+character(len=*),intent(in),optional :: template
 
 if (.not. filter == metaanddata%metadata) return
 
@@ -2467,8 +2507,10 @@ call session%set(metadata=metaanddata%metadata)
 !write data and attribute
 !call session%extrude(metaanddata%dataattrv,noattr,filter)
 call metaanddata%dataattrv%extrude(session,noattr,filter,attronly)
+
+print*,"extrude metaanddata"
 !to close message on file
-call session%close_message()
+call session%close_message(template)
 
 end subroutine extrude
 end subroutine dbametaanddata_extrude
@@ -2484,27 +2526,29 @@ call metaanddatav%datav%display()
 end subroutine dbametaanddatav_display
 
 !> put data on DSN
-subroutine dbametaanddatav_extrude(metaanddatav,session,noattr,filter)
+subroutine dbametaanddatav_extrude(metaanddatav,session,noattr,filter,template)
 class(dbametaanddatav), intent(in) :: metaanddatav
 type(dbasession), intent(in) :: session !< dballe session
 logical, intent(in),optional :: noattr          !< set to .true. to get data only (no attribute) 
 type(dbafilter),intent(in),optional :: filter     !< use this to filter wanted data                
+character(len=*),intent(in),optional :: template
 
 type(dbafilter)    :: myfilter
 
 myfilter=dbafilter(filter=filter,contextana=.false.)
-call extrude(metaanddatav,session,noattr,myfilter)
+call extrude(metaanddatav,session,noattr,myfilter,template)
 
 myfilter=dbafilter(filter=filter,contextana=.true.)
-call extrude(metaanddatav,session,noattr,myfilter)
+call extrude(metaanddatav,session,noattr,myfilter,template)
 
 contains
 
-subroutine extrude(metaanddatav,session,noattr,filter)
+subroutine extrude(metaanddatav,session,noattr,filter,template)
 class(dbametaanddatav), intent(in) :: metaanddatav
 type(dbasession), intent(in) :: session !< dballe session
 logical, intent(in),optional :: noattr          !< set to .true. to get data only (no attribute) 
 type(dbafilter),intent(in) :: filter     !< use this to filter wanted data                
+character(len=*),intent(in),optional :: template
 
 if (.not. filter == metaanddatav%metadata)return
 !write metadata
@@ -2512,29 +2556,31 @@ call session%set(metadata=metaanddatav%metadata)
 
 !write ana data and attribute
 !!$call session%set(datav=metaanddatav%datav)
-call metaanddatav%datav%extrude(session,noattr,filter)
+call metaanddatav%datav%extrude(session,noattr,filter,template)
 
+print*,"dbaana_metaanddatav"
 !to close message on file
-call session%close_message()
+call session%close_message(template)
 
 end subroutine extrude
 end subroutine dbametaanddatav_extrude
 
 
 !> put data on DSN; extrude metaanddata list
-subroutine dbametaanddatal_extrude(metaanddatal,session,noattr,filter,attronly)
+subroutine dbametaanddatal_extrude(metaanddatal,session,noattr,filter,attronly,template)
 class(dbametaanddatalist), intent(inout) :: metaanddatal !< ingestd data
 class(dbasession), intent(in) :: session
 logical, intent(in),optional :: noattr          !< set to .true. to put data only (no attribute) 
 type(dbafilter),intent(in),optional :: filter     !< use this to filter wanted data                
 type(dbametaanddata) :: metaanddata
 logical, intent(in),optional :: attronly          !< set to .true. to export attr only (no data) 
+character(len=*),intent(in),optional :: template
 
 call metaanddatal%rewind()
 do while(metaanddatal%element())
   !call session%extrude(metaanddatal%current(),noattr,filter)
   metaanddata=metaanddatal%current()
-  call metaanddata%extrude(session,noattr,filter,attronly)
+  call metaanddata%extrude(session,noattr,filter,attronly,template)
   call metaanddatal%next()
 end do
 
@@ -3909,6 +3955,12 @@ if (.not. c_e(lattrflag))then
   end if
 end if
 
+
+print*,"---------------- call session_init --------------------------------"
+print *,"session_init,lformat,ltemplate,lmemdb,lfile,lloadfile,lanaflag,ldataflag,lattrflag"
+print *,"session_init",lformat,ltemplate,lmemdb,lfile,lloadfile,lanaflag,ldataflag,lattrflag
+print*,"------------------------------------------------"
+
 if (lfile) then
 
   if (present(anaflag).or.present(dataflag).or.present( attrflag)) then
@@ -3934,7 +3986,9 @@ end if
 
 ! check filename for recursive call
 if (present(filename))then
+  print*,"ora son qui"
   if (lmemdb)then
+    print*,"ora son quo"
     if (.not. present(connection)) then
                                 ! connect to dsn type DBA
       dbasession_init%memconnection=dbaconnection(dsn="mem:")
@@ -3971,12 +4025,14 @@ if (present(filename))then
     
   else
     
+    print*,"ora son qua"
     ier =  idba_messaggi(dbasession_init%sehandle,filename, lmode, lformat)
     
   end if
   
 else
   
+  print*,"ora son li"
   ier = idba_preparati(connection%dbhandle,dbasession_init%sehandle, lanaflag, ldataflag, lattrflag)
   if (lwipe)ier=idba_scopa (dbasession_init%sehandle,lrepinfo)
 
@@ -3991,14 +4047,16 @@ dbasession_init%memdb=lmemdb
 dbasession_init%loadfile=lloadfile
 dbasession_init%template=ltemplate
 
-!!$print *,'file',dbasession_init%file
-!!$print *,'filename',trim(dbasession_init%filename)
-!!$print *,'mode',dbasession_init%mode
-!!$print *,'format',dbasession_init%format
-!!$print *,'simplified',dbasession_init%simplified
-!!$print *,'memdb',dbasession_init%memdb
-!!$print *,'loadfile',dbasession_init%loadfile
-!!$print *,'template',dbasession_init%template
+print*,"--------------- at end ---------------------------------"
+print *,'file',dbasession_init%file
+print *,'filename',trim(dbasession_init%filename)
+print *,'mode',dbasession_init%mode
+print *,'format',dbasession_init%format
+print *,'simplified',dbasession_init%simplified
+print *,'memdb',dbasession_init%memdb
+print *,'loadfile',dbasession_init%loadfile
+print *,'template',dbasession_init%template
+print*,"------------------------------------------------"
 
 end function dbasession_init
 

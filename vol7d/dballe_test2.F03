@@ -27,13 +27,19 @@ call writeattronly()   ! append some attributes to station 1
 
 
 ! connect to dsn type BUFR file for write
-sessionto=dbasession(filename="dballe_test2.bufr",wipe=.true.,write=.true.,memdb=.false.)
+sessionto=dbasession(filename="dballe_test2.bufr",wipe=.true.,write=.true.,memdb=.false.,template="generic")
+call export2bufr()
+
+call sessionto%delete()
+
+! connect to dsn type BUFR file for write with memdb 
+sessionto=dbasession(filename="dballe_test2_memdb.bufr",wipe=.true.,write=.true.,memdb=.true.,template="generic")
 call export2bufr()
 
 
 !close everythings
-call session%delete()
 call sessionto%delete()
+call session%delete()
 call connection%delete()
 
 
@@ -230,7 +236,7 @@ call session%ingest(metaanddatav)
 
 do i=1,size(metaanddatav)
   call metaanddatav(i)%display()
-  !call sessionto%extrude(metaanddata=metaanddata(i))
+  !call sessionto%extrude(metaanddata=metaanddatav(i))
   call metaanddatav(i)%extrude(sessionto)
 end do
 
