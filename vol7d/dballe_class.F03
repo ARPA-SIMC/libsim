@@ -1106,16 +1106,16 @@ character(len=40) :: ltemplate
 ltemplate=session%template
 if (present(template)) ltemplate=template
 
-print*,"--------------- dbasession ---------------------------------"
-print *,'file',session%file
-print *,'filename',trim(session%filename)
-print *,'mode',session%mode
-print *,'format',session%format
-print *,'simplified',session%simplified
-print *,'memdb',session%memdb
-print *,'loadfile',session%loadfile
-print *,'template',ltemplate
-print*,"------------------------------------------------"
+!!$print*,"--------------- dbasession ---------------------------------"
+!!$print *,'file',session%file
+!!$print *,'filename',trim(session%filename)
+!!$print *,'mode',session%mode
+!!$print *,'format',session%format
+!!$print *,'simplified',session%simplified
+!!$print *,'memdb',session%memdb
+!!$print *,'loadfile',session%loadfile
+!!$print *,'template',ltemplate
+!!$print*,"------------------------------------------------"
 
 if (session%file)then
 
