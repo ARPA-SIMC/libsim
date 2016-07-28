@@ -1,21 +1,22 @@
-Summary: libsim: librerie di utilità in Fortran 90
+Summary: Fortran utility libraries
 Name: libsim
 Version: 6.1.7
 Release: 1
 License: GPL2+
 Group: Applications/Meteo
 URL: https://github.com/arpa-simc/%{name}
-Packager: Davide Cesari <dcesari@arpa.emr.it>
+Packager: Davide Cesari <dcesari@arpae.it>
 #Source: %{name}-%{version}.tar.gz
 Source: https://github.com/arpa-simc/%{name}/archive/v%{version}-%{release}.tar.gz#/%{name}-%{version}-%{release}.tar.gz  
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot
-BuildRequires: fortrangis-devel oracle-instantclient-devel libdballef-devel >= 7.6 grib_api-devel ncl-devel gdal-devel libdballe-devel help2man log4c log4c-devel
-BuildRequires: cnf-devel libpng-devel vapor-devel fortrangis-devel netcdf-fortran-devel shapelib-devel jasper-devel proj-devel popt-devel openjpeg-devel cairo-devel
+BuildRequires: fortrangis-devel %{!?no_oracle:oracle-instantclient-devel} libdballef-devel >= 7.6 grib_api-devel ncl-devel gdal-devel libdballe-devel help2man log4c log4c-devel
+BuildRequires: cnf-devel libpng-devel %{!?no_vapor:vapor-devel} fortrangis-devel netcdf-fortran-devel shapelib-devel jasper-devel proj-devel popt-devel openjpeg-devel cairo-devel
 Requires: libdballef4 >= 7.6 grib_api
+# run rpmbuild with arguments --define='no_oracle 1' --define='no_vapor 1'
+# to disable oracle and/or vapor support requiring stiff dependencies
 
-#temporaneo
 %if 0%{?fedora} < 9
-%define _fmoddir       %{_libdir}/gfortran/modules
+%define _fmoddir %{_libdir}/gfortran/modules
 %endif
 
 %package -n libsim-devel
@@ -61,7 +62,7 @@ sh autogen.sh
 
 %build
 
-%configure FCFLAGS="%{optflags} -I%{_fmoddir}" ORACLE_VER=oracle/11.2/client --enable-f2003-features --enable-vapor --enable-alchimia --enable-shapelib --enable-netcdf --enable-gribapi --enable-gdal --enable-f2003-extended-features
+%configure FCFLAGS="%{optflags} -I%{_fmoddir}" ORACLE_VER=oracle/11.2/client %{?no_oracle:--disable-oraclesim} --enable-f2003-features %{!?no_vapor:--enable-vapor} --enable-alchimia --enable-shapelib --enable-netcdf --enable-gribapi --enable-gdal --enable-f2003-extended-features
 
 make 
 
@@ -90,7 +91,10 @@ mv $RPM_BUILD_ROOT%{_includedir}/*.mod $RPM_BUILD_ROOT%{_fmoddir}
 %else
 %{_fmoddir}/*.mod
 %endif
+%if 0%{?no_vapor}
+%else
 %{_includedir}/vdf4f_c.h
+%endif
 
 %files -n libsim-doc
 %defattr(-,root,root)
