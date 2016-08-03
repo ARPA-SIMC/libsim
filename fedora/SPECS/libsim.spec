@@ -1,6 +1,8 @@
+# run rpmbuild with arguments --define='no_oracle 1' --define='no_vapor 1'
+# to disable oracle and/or vapor support requiring stiff dependencies
 Summary: Fortran utility libraries
 Name: libsim
-Version: 6.1.7
+Version: 6.1.8
 Release: 1
 License: GPL2+
 Group: Applications/Meteo
@@ -12,8 +14,6 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot
 BuildRequires: fortrangis-devel %{!?no_oracle:oracle-instantclient-devel} libdballef-devel >= 7.6 grib_api-devel ncl-devel gdal-devel libdballe-devel help2man log4c log4c-devel
 BuildRequires: cnf-devel libpng-devel %{!?no_vapor:vapor-devel} fortrangis-devel netcdf-fortran-devel shapelib-devel jasper-devel proj-devel popt-devel openjpeg-devel cairo-devel
 Requires: libdballef4 >= 7.6 grib_api
-# run rpmbuild with arguments --define='no_oracle 1' --define='no_vapor 1'
-# to disable oracle and/or vapor support requiring stiff dependencies
 
 %if 0%{?fedora} < 9
 %define _fmoddir %{_libdir}/gfortran/modules
