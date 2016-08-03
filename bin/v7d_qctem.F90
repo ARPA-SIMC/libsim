@@ -43,7 +43,7 @@ character(len=512):: a_name,output_format, output_template
                                 !tipi derivati.
 TYPE(optionparser) :: opt
 TYPE(geo_coord)    :: coordmin, coordmax 
-TYPE(datetime)     :: time,ti, tf, timeiqc, timefqc
+TYPE(datetime)     :: time, timeiqc, timefqc
 type(qctemtype)    :: v7dqctem
 type(vol7d)        :: v7dana
 
@@ -352,11 +352,11 @@ if (nvar == 0) then
     call raise_error()
 end if
                                 ! Definisco le date iniziale e finale
-CALL init(ti, year=years, month=months, day=days, hour=hours)
-CALL init(tf, year=yeare, month=monthe, day=daye, hour=houre)
+CALL init(timeiqc, year=years, month=months, day=days, hour=hours)
+CALL init(timefqc, year=yeare, month=monthe, day=daye, hour=houre)
 !print *,"time extreme"
-call display(ti)
-call display(tf)
+call display(timeiqc)
+call display(timefqc)
 
                                 ! Define coordinate box
 CALL init(coordmin,lat=lats,lon=lons)
@@ -376,14 +376,14 @@ if (c_e(lons)) call l4f_category_log(category,L4F_INFO,"QC on "//t2c(lons)//" lo
 if (c_e(lone)) call l4f_category_log(category,L4F_INFO,"QC on "//t2c(lone)//" lon max value")
 if (c_e(lats)) call l4f_category_log(category,L4F_INFO,"QC on "//t2c(lats)//" lat min value")
 if (c_e(late)) call l4f_category_log(category,L4F_INFO,"QC on "//t2c(late)//" lat max value")
-if (c_e(ti))   call l4f_category_log(category,L4F_INFO,"QC on "//t2c(ti)//" datetime min value")
-if (c_e(tf))   call l4f_category_log(category,L4F_INFO,"QC on "//t2c(tf)//" datetime max value")
+if (c_e(timeiqc))   call l4f_category_log(category,L4F_INFO,"QC on "//t2c(timeiqc)//" datetime min value")
+if (c_e(timefqc))   call l4f_category_log(category,L4F_INFO,"QC on "//t2c(timefqc)//" datetime max value")
 !------------------------------------------------------------------------
 
 
 CALL init(v7ddballeana,dsn=dsn,user=user,password=password,write=.false.,wipe=.false.,categoryappend="QCtarget-anaonly")
 call l4f_category_log(category,L4F_INFO,"start ana import")
-CALL import(v7ddballeana,var=var(:nvar),timei=ti,timef=tf,coordmin=coordmin,coordmax=coordmax,anaonly=.true.)
+CALL import(v7ddballeana,var=var(:nvar),timei=timeiqc,timef=timefqc,coordmin=coordmin,coordmax=coordmax,anaonly=.true.)
 call vol7d_copy(v7ddballeana%vol7d,v7dana)
 call delete(v7ddballeana)
 
@@ -408,7 +408,7 @@ do iana=1, size(v7dana%ana)
   CALL import(v7ddballe,var=var(:nvar),varkind=(/("r",i=1,nvar)/),&
    anavar=(/"B07030"/),anavarkind=(/"r"/),&
    attr=(/qcattrvarsbtables(1),qcattrvarsbtables(2),qcattrvarsbtables(3)/),attrkind=(/"b","b","b"/)&
-   ,timei=ti,timef=tf, ana=v7dana%ana(iana))
+   ,timei=timeiqc,timef=timefqc, ana=v7dana%ana(iana))
 
   ! this depend on witch version of dballe is in use: with dballe 6.6 comment this out
   if (size(v7ddballe%vol7d%time)==0) then
@@ -437,7 +437,7 @@ do iana=1, size(v7dana%ana)
 
                                 ! chiamiamo il "costruttore" per il Q.C.
 
-  call init(v7dqctem,v7ddballe%vol7d,var(:nvar),timei=ti,timef=tf, &
+  call init(v7dqctem,v7ddballe%vol7d,var(:nvar),timei=timeiqc,timef=timefqc, &
    coordmin=v7dana%ana(iana)%coord, coordmax=v7dana%ana(iana)%coord,&
 !   data_id_in=v7ddballe%data_id, &
    dsne=dsne, usere=usere, passworde=passworde,&

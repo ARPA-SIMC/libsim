@@ -280,9 +280,9 @@ do i=1,size(netname)
       
     end if
 #endif
-  end if
+    call vol7d_merge(qctem%clima,v7dtmp)
 
-  call vol7d_merge(qctem%clima,v7dtmp)
+  end if
 
 end do
 
@@ -514,13 +514,12 @@ do indana=1,size(qctem%v7d%ana)
       do indtimerange=1,size(qctem%v7d%timerange)
         do inddativarr=1,size(qctem%v7d%dativar%r)
           do indtime=2,size(qctem%v7d%time)-1
-            
+
             if (.not.timemaskl(indtime).or. .not. levelmaskl(indlevel).or. &
              .not. timerangemaskl(indtimerange) .or. .not. varmaskl(inddativarr) .or. .not. networkmaskl(indnetwork)) cycle
             
             
             datoqui = qctem%v7d%voldatir  (indana ,indtime ,indlevel ,indtimerange ,inddativarr, indnetwork )
-            
             if (.not. c_e(datoqui)) cycle
             ora = qctem%v7d%time  (indtime)
 

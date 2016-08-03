@@ -2509,7 +2509,6 @@ call session%set(metadata=metaanddata%metadata)
 !call session%extrude(metaanddata%dataattrv,noattr,filter)
 call metaanddata%dataattrv%extrude(session,noattr,filter,attronly)
 
-print*,"extrude metaanddata"
 !to close message on file
 call session%close_message(template)
 
