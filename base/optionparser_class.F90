@@ -88,7 +88,7 @@ END TYPE option
 !! following string, even empty or starting with a dash \c - , is
 !! interpreted as the argument to the option, while its absence
 !! (i.e. end of command line) determines an error condition in the
-!! parsing phase. However the argument toi character options can be
+!! parsing phase. However the argument to character options can be
 !! declared as optional in the corresponding definition method; in
 !! those cases the following argument, if any, is interpreted as the
 !! argument to the option only if it does not start with a dash \c -
@@ -111,7 +111,7 @@ END TYPE option
 !!
 !! Options can be of the following kinds:
 !!
-!!  - character (with additional argument)
+!!  - character (with additional argument, possibly optional)
 !!  - integer (with additional argument)
 !!  - real (with additional argument)
 !!  - double precision (with additional argument)
@@ -121,6 +121,7 @@ END TYPE option
 !!  - logical (without additional argument)
 !!  - count (without additional argument)
 !!  - help (with additional optional argument)
+!!  - separator (without additional argument)
 !!
 !! If the same option is encountered multiple times on the command
 !! line, the value set in the last occurrence takes precedence, the
@@ -130,8 +131,8 @@ END TYPE option
 !! Options are added through the generic \a optionparser_add method
 !! (for character, integer, floating point or logical options,
 !! including array variants) or through the specific methods \a
-!! optionparser_add_count, \a optionparser_add_help (for count and
-!! help options).
+!! optionparser_add_count, \a optionparser_add_help \a
+!! optionparser_add_sep (for count, help and separator options).
 !!
 !! The effect of command line parsing is to set some desired variables
 !! according to the information provided on the command line.
@@ -406,13 +407,22 @@ END SUBROUTINE option_format_help
 
 
 ! print on stdout a markdown representation of a single option
-SUBROUTINE option_format_md(this)
+SUBROUTINE option_format_md(this, ncols)
 TYPE(option),INTENT(in) :: this
+INTEGER,INTENT(in) :: ncols
+
+INTEGER :: j
+INTEGER, PARAMETER :: indent = 2
+TYPE(line_split) :: help_line
 
 IF (this%opttype == opttype_sep) THEN ! special treatment for separator type
   IF (ASSOCIATED(this%help_msg)) THEN
+    help_line = line_split_new(cstr_to_fchar(this%help_msg), ncols)
     WRITE(*,'()')
-    WRITE(*,'(A)')TRIM(cstr_to_fchar(this%help_msg))
+    DO j = 1, line_split_get_nlines(help_line)
+      WRITE(*,'(A)')TRIM(line_split_get_line(help_line,j))
+    ENDDO
+    CALL delete(help_line)
     WRITE(*,'()')
   ENDIF
 ELSE ! ordinary option
@@ -420,7 +430,12 @@ ELSE ! ordinary option
   WRITE(*,'(''`'',A,''`'')')TRIM(option_format_opt(this))
 ! print option help
   IF (ASSOCIATED(this%help_msg)) THEN
-    WRITE(*,'(''> '',A,/)')TRIM(cstr_to_fchar(this%help_msg))
+    help_line = line_split_new(cstr_to_fchar(this%help_msg), ncols-indent)
+    DO j = 1, line_split_get_nlines(help_line)
+      WRITE(*,'(''> '',A)')TRIM(line_split_get_line(help_line,j))
+    ENDDO
+    CALL delete(help_line)
+    WRITE(*,'()')
   ENDIF
 ENDIF
 
@@ -1217,32 +1232,44 @@ END SUBROUTINE optionparser_printhelptxt
 SUBROUTINE optionparser_printhelpmd(this)
 TYPE(optionparser),INTENT(in) :: this !< \a optionparser object with correctly initialised options
 
-INTEGER :: i, j
+INTEGER :: i, j, ncols
 CHARACTER(len=80) :: buf
 TYPE(line_split) :: help_line
+
+ncols = default_columns()
 
 ! print usage message
 WRITE(*,'(A)')'### Synopsis ###'
 
 IF (ASSOCIATED(this%usage_msg)) THEN
-  WRITE(*,'(A,/)')TRIM(mdquote_usage_msg(cstr_to_fchar(this%usage_msg)))
+  help_line = line_split_new(mdquote_usage_msg(cstr_to_fchar(this%usage_msg)), ncols)
+  DO j = 1, line_split_get_nlines(help_line)
+    WRITE(*,'(A)')TRIM(line_split_get_line(help_line,j))
+  ENDDO
+  CALL delete(help_line)
 ELSE
   CALL getarg(0, buf)
   i = INDEX(buf, '/', back=.TRUE.) ! remove directory part
   IF (buf(i+1:i+3) == 'lt-') i = i + 3 ! remove automake prefix
-  WRITE(*,'(A,/)')'Usage: `'//TRIM(buf(i+1:))//' [options] [arguments]`'
+  WRITE(*,'(A)')'Usage: `'//TRIM(buf(i+1:))//' [options] [arguments]`'
 ENDIF
 
 ! print description message
 IF (ASSOCIATED(this%description_msg)) THEN
+  WRITE(*,'()')
   WRITE(*,'(A)')'### Description ###'
-  WRITE(*,'(A,/)')cstr_to_fchar(this%description_msg)
+  help_line = line_split_new(cstr_to_fchar(this%description_msg), ncols)
+  DO j = 1, line_split_get_nlines(help_line)
+    WRITE(*,'(A)')TRIM(line_split_get_line(help_line,j))
+  ENDDO
+  CALL delete(help_line)
+
 ENDIF
 
-WRITE(*,'(A)')'### Options ###'
+WRITE(*,'(/,A)')'### Options ###'
 
 DO i = 1, this%options%arraysize ! loop over options
-  CALL option_format_md(this%options%array(i))
+  CALL option_format_md(this%options%array(i), ncols)
 ENDDO
 
 CONTAINS

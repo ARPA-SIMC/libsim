@@ -133,9 +133,9 @@ opt = optionparser_new(description_msg= &
 CALL optionparser_add(opt, ' ', 'trans-mode', trans_mode, 'p', help= &
  'transformation mode: either ''p''rosciutto or ''s''alsiccia; in ''p'' mode &
  &the input data are accomodated into an expensive 6-dimensional prosciutto (ham) &
- &which can be processed, converted, sliced and baked along all possible dimensions; &
+ &which can be processed, converted, sliced or baked along all possible dimensions; &
  &in ''s'' mode, the input data are processed as a cheap and infinitely &
- &long salsiccia (sausage), one field at a time, so only operations on sigle horizontal slices &
+ &long salsiccia (sausage), one field at a time, so only operations on single horizontal slices &
  &are allowed in this mode; many options are thus silently ignored or may &
  &generate unexpected errors in ''s'' mode')
 
