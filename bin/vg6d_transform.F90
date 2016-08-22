@@ -138,6 +138,10 @@ CALL optionparser_add(opt, ' ', 'trans-mode', trans_mode, 'p', help= &
  &long salsiccia (sausage), one field at a time, so only operations on sigle horizontal slices &
  &are allowed in this mode; many options are thus silently ignored or may &
  &generate unexpected errors in ''s'' mode')
+
+CALL optionparser_add_sep(opt, 'The following options are mostly valid  both in &
+ &''p'' mode and in ''s'' mode (see --trans-mode)')
+
 CALL optionparser_add(opt, 'v', 'trans-type', trans_type, 'none', help= &
  'transformation type: ''inter'' for interpolation, ''boxinter'' for &
  &statistical interpolation on boxes, ''zoom'' for zooming, &
@@ -147,7 +151,7 @@ CALL optionparser_add(opt, 'v', 'trans-type', trans_type, 'none', help= &
  //'maskgen for generating a mask field on polygons, polyinter for intepolating &
  &on polygons, '&
 #endif
- //'''NONE'' for no transformation (input/output ONLY)')
+ //'''none'' for no transformation (input/output only)')
 CALL optionparser_add(opt, 'z', 'sub-type', sub_type, 'near', help= &
  'transformation subtype, for inter: ''near'', ''bilin'', &
  &for boxinter, boxregrid'&
@@ -160,6 +164,11 @@ CALL optionparser_add(opt, 'z', 'sub-type', sub_type, 'near', help= &
 CALL optionparser_add(opt, ' ', 'extrap', extrap, help= &
  'enable extrapolation outside input grid, it works only for ''inter'' &
  &transformations, use with care')
+
+! display option
+CALL optionparser_add(opt, ' ', 'display', ldisplay, help= &
+ 'briefly display the data volume imported and exported, warning: this option is incompatible &
+ &with output on stdout.')
 
 CALL optionparser_add(opt, 'u', 'type', proj_type, 'regular_ll', help= &
  'projection and parameters of interpolated grid: it is a string &
@@ -235,9 +244,6 @@ CALL optionparser_add(opt, ' ', 'trans-botlevel-list', trans_botlevel_list, help
 CALL optionparser_add(opt, ' ', 'percentile', percentile, 50.0D0, help= &
  'desired percentile, [0.,100.], for ''*:percentile'' transformations')
 
-CALL optionparser_add(opt, ' ', 'rounding', round, help= &
- 'simplifies volume, merging similar levels and timeranges')
-
 coord_file=cmiss
 #if defined (HAVE_SHAPELIB) || defined (HAVE_LIBGRIBAPI)
 CALL optionparser_add(opt, ' ', 'coord-file', coord_file, help= &
@@ -277,25 +283,30 @@ help='format of output file, in the form ''name[:grid_definition]'''&
 //'; if this option includes a grid_definition, --type &
  &argument &c. are ignored, otherwise --type &c. define the output grid')
 
+! display option
+CALL optionparser_add(opt, ' ', 'display', ldisplay, help= &
+ 'briefly display the data volume imported and exported, warning: this option is incompatible &
+ &with output on stdout.')
+
+CALL optionparser_add_sep(opt, 'The following options are valid only in ''p'' mode &
+ &(see --trans-mode)')
+
+#ifdef ALCHIMIA
+CALL optionparser_add(opt, '', 'output-variable-list', output_variable_list, '', help= &
+ 'list of data variables required in output; if they are not in input they will be computed if possible. &
+ &The output_variable_list is expressed in the form of a comma-separated list of B-table alphanumeric codes, &
+ &e.g. ''B13011,B12101''')
+#endif
+
+CALL optionparser_add(opt, ' ', 'rounding', round, help= &
+ 'simplify volume, merging similar levels and timeranges')
+
 CALL optionparser_add(opt, 'e', 'a-grid', c2agrid, help= &
  'interpolate U/V points of an Arakawa C grid on the corresponding T points &
  &of an Arakawa A grid')
 
 CALL optionparser_add(opt, 't', 'component-flag', component_flag, &
  0, help='wind component flag in interpolated grid (0/1)')
-
-CALL optionparser_add(opt, ' ', 'set-scmode', set_scmode, 'xxx', &
- help='set output grid scanning mode to a particular standard value: &
- &3 binary digits indicating respectively iScansNegatively, jScansPositively and &
- &jPointsAreConsecutive (grib_api jargon), 0 for false, 1 for true, &
- &000 for ECMWF-like grids, 010 for COSMO and Cartesian-like grids. &
- &Any other character indicates to keep the &
- &corresponding original scanning mode value; &
- &available only with --trans-mode=s')
-
-! this option has been commented because it is not handled in
-! volgrid_class, it makes sense only in vg6d_getpoint for determining
-! the time_definition of output v7d volume
 
 CALL optionparser_add(opt, ' ', 'time-definition', time_definition, 0, help= &
  'time definition for imported volume, 0 for reference time (more suitable for &
@@ -332,11 +343,6 @@ CALL optionparser_add(opt, ' ', 'comp-full-steps', comp_full_steps, help= &
  &time equal to a multiple of comp-step, otherwise all reasonable combinations &
  &of forecast times are computed')
 
-! display option
-CALL optionparser_add(opt, ' ', 'display', ldisplay, help= &
- 'briefly display the data volume imported and exported, warning: this option is incompatible &
- &with output on stdout.')
-
 #ifdef VAPOR
 CALL optionparser_add(opt, ' ', 'reverse-vapor-z-order', rzscan, help= &
  'reverse the scan order for Z (level) coordinate during export to vdf files for vapor.')
@@ -345,12 +351,17 @@ CALL optionparser_add(opt, ' ', 'reuse-vapor-vdf-file', reusevdf, help= &
  'reuse and modify an existing vdf file appending data to a vapor data collection during export to vapor.')
 #endif
 
-#ifdef ALCHIMIA
-CALL optionparser_add(opt, '', 'output-variable-list', output_variable_list, '', help= &
- 'list of data variables you require in output; if they are not in input they will be computed if possible. &
- &The output_variable_list is expressed in the form of a comma-separated list of B-table alphanumeric codes, &
- &e.g. ''B13011,B12101''')
-#endif
+CALL optionparser_add_sep(opt, 'The following option is valid only in ''s'' mode &
+ &(see --trans-mode)')
+
+CALL optionparser_add(opt, ' ', 'set-scmode', set_scmode, 'xxx', &
+ help='set output grid scanning mode to a particular standard value: &
+ &3 binary digits indicating respectively iScansNegatively, jScansPositively and &
+ &jPointsAreConsecutive (grib_api jargon), 0 for false, 1 for true, &
+ &000 for ECMWF-like grids, 010 for COSMO and Cartesian-like grids. &
+ &Any other character indicates to keep the &
+ &corresponding original scanning mode value; &
+ &available only with --trans-mode=s')
 
 
 ! help options

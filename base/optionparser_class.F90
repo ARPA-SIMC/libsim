@@ -175,7 +175,7 @@ END INTERFACE
 
 INTEGER,PARAMETER :: opttype_c = 1, opttype_i = 2, opttype_r = 3, &
  opttype_d = 4, opttype_l = 5, opttype_count = 6, opttype_help = 7, &
- opttype_carr = 11, opttype_iarr = 12, opttype_rarr = 13, &
+ opttype_sep = 8, opttype_carr = 11, opttype_iarr = 12, opttype_rarr = 13, &
  opttype_darr = 14, opttype_larr = 15
 
 INTEGER,PARAMETER :: optionparser_ok = 0 !< constants indicating the status returned by optionparser_parse, status of parsing: OK
@@ -185,7 +185,7 @@ INTEGER,PARAMETER :: optionparser_err = 2 !< status of parsing: an error was enc
 
 PRIVATE
 PUBLIC optionparser, optionparser_new, delete, optionparser_add, &
- optionparser_add_count, optionparser_add_help, &
+ optionparser_add_count, optionparser_add_help, optionparser_add_sep, &
  optionparser_parse, optionparser_printhelp, &
  optionparser_ok, optionparser_help, optionparser_err
 
@@ -375,15 +375,31 @@ INTEGER :: j
 INTEGER, PARAMETER :: indent = 10
 TYPE(line_split) :: help_line
 
+
+IF (this%opttype == opttype_sep) THEN ! special treatment for separator type
+  IF (ASSOCIATED(this%help_msg)) THEN
+! help2man is quite picky about the treatment of arbitrary lines
+! within options, the only universal way seems to be unindented lines
+! with an empty line before and after
+    help_line = line_split_new(cstr_to_fchar(this%help_msg), ncols)
+    WRITE(*,'()')
+    DO j = 1, line_split_get_nlines(help_line)
+      WRITE(*,'(A)')TRIM(line_split_get_line(help_line,j))
+    ENDDO
+    CALL delete(help_line)
+    WRITE(*,'()')
+  ENDIF
+ELSE ! ordinary option
 ! print option brief representation
-WRITE(*,'(A)')TRIM(option_format_opt(this))
+  WRITE(*,'(A)')TRIM(option_format_opt(this))
 ! print option help
-IF (ASSOCIATED(this%help_msg)) THEN
-  help_line = line_split_new(cstr_to_fchar(this%help_msg), ncols-indent)
-  DO j = 1, line_split_get_nlines(help_line)
-    WRITE(*,'(T10,A)')TRIM(line_split_get_line(help_line,j))
-  ENDDO
-  CALL delete(help_line)
+  IF (ASSOCIATED(this%help_msg)) THEN
+    help_line = line_split_new(cstr_to_fchar(this%help_msg), ncols-indent)
+    DO j = 1, line_split_get_nlines(help_line)
+      WRITE(*,'(T10,A)')TRIM(line_split_get_line(help_line,j))
+    ENDDO
+    CALL delete(help_line)
+  ENDIF
 ENDIF
 
 END SUBROUTINE option_format_help
@@ -393,11 +409,19 @@ END SUBROUTINE option_format_help
 SUBROUTINE option_format_md(this)
 TYPE(option),INTENT(in) :: this
 
+IF (this%opttype == opttype_sep) THEN ! special treatment for separator type
+  IF (ASSOCIATED(this%help_msg)) THEN
+    WRITE(*,'()')
+    WRITE(*,'(A)')TRIM(cstr_to_fchar(this%help_msg))
+    WRITE(*,'()')
+  ENDIF
+ELSE ! ordinary option
 ! print option brief representation
-WRITE(*,'(''`'',A,''`'')')TRIM(option_format_opt(this))
+  WRITE(*,'(''`'',A,''`'')')TRIM(option_format_opt(this))
 ! print option help
-IF (ASSOCIATED(this%help_msg)) THEN
-  WRITE(*,'(''> '',A,/)')TRIM(cstr_to_fchar(this%help_msg))
+  IF (ASSOCIATED(this%help_msg)) THEN
+    WRITE(*,'(''> '',A,/)')TRIM(cstr_to_fchar(this%help_msg))
+  ENDIF
 ENDIF
 
 END SUBROUTINE option_format_md
@@ -455,6 +479,7 @@ CASE(opttype_l)
   CALL option_format_html_closespan()
 
 CASE(opttype_count)
+CASE(opttype_sep)
 END SELECT
 
 
@@ -934,6 +959,37 @@ myoption%need_arg = 1
 i = arrayof_option_append(this%options, myoption)
 
 END SUBROUTINE optionparser_add_help
+
+
+!> Add a new separator option, with a text.
+!! This is a dummy option that inserts a separator line with a text
+!! within the list of options when the help is printed. It is useful
+!! to insert a visual separator between options or an explanation
+!! which is not associated with a specific options but applies to all
+!! the subsequent options. The text provided will be formatted into
+!! many lines if necessary. Any number of separator options can be
+!! added within the option list; they have no effect on the
+!! interpretation of the options associated with the optionparser
+!! object.
+SUBROUTINE optionparser_add_sep(this, help)
+TYPE(optionparser),INTENT(inout) :: this !< \a optionparser object
+!CHARACTER(len=*),INTENT(in) :: short_opt !< the short option (may be empty)
+!CHARACTER(len=*),INTENT(in) :: long_opt !< the long option (may be empty)
+CHARACTER(len=*) :: help !< the help message that will be formatted and pretty-printed on screen
+
+INTEGER :: i
+TYPE(option) :: myoption
+
+! common initialisation
+myoption = option_new('_', '_', '', help)
+IF (.NOT.c_e(myoption)) RETURN ! error in creating option, ignore it
+
+myoption%opttype = opttype_sep
+myoption%need_arg = 0
+
+i = arrayof_option_append(this%options, myoption)
+
+END SUBROUTINE optionparser_add_sep
 
 
 !> This method performs the parsing of the command-line options
