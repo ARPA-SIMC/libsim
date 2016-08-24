@@ -2,7 +2,7 @@
 # to disable oracle and/or vapor support requiring stiff dependencies
 Summary: Fortran utility libraries
 Name: libsim
-Version: 6.1.8
+Version: 6.1.9
 Release: 1
 License: GPL2+
 Group: Applications/Meteo
