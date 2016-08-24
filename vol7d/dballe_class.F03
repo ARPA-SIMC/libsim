@@ -1332,10 +1332,7 @@ if (optio_log(attronly).or. .not. data%dbadc%dat%c_e() .or. code ==13 ) then
     endif
   endif
 else
-  print *,"prima prendilo"
   call session%prendilo()
-  print *,"dopo prendilo"
-
 end if
 
 if (optio_log(noattr)) return
