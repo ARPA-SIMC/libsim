@@ -372,7 +372,7 @@ logical ,intent(in),optional :: networkmask(:) !< Filtro sui network
                                 !REAL(kind=fp_geo) :: lat,lon
 integer :: asec
                                 !local
-integer :: indbattrinv,indbattrcli,indbattrout
+integer :: indbattrinv,indbattrcli,indbattrout,grunit
 logical :: anamaskl(size(qctem%v7d%ana)), timemaskl(size(qctem%v7d%time)), levelmaskl(size(qctem%v7d%level)), &
  timerangemaskl(size(qctem%v7d%timerange)), varmaskl(size(qctem%v7d%dativar%r)), networkmaskl(size(qctem%v7d%network)) 
 
@@ -388,6 +388,8 @@ type(timedelta) :: td
 
 double precision :: gradprima,graddopo,grad
                                 !call qctem_validate (qctem)
+character(len=512) :: filename
+logical :: exist
 
 !localize optional parameter
 if (present(battrinv))then
@@ -495,24 +497,46 @@ do indana=1,size(qctem%v7d%ana)
   call l4f_category_log(qctem%category,L4F_INFO,&
    "Check ana:"//to_char(qctem%v7d%ana(indana)) )
 
-
-                                ! open file to write gradient
-  if (qctem%operation == "gradient") then
-    call l4f_category_log(qctem%category,L4F_INFO,"open for write gradient file")
-    open (unit=11, file=    t2c(getilon(qctem%v7d%ana(indana)%coord))//&
-     t2c(getilat(qctem%v7d%ana(indana)%coord))//".grad",&
-     STATUS='UNKNOWN', form='FORMATTED')
-                                ! say we have to write header in file
-    write (11,*) qctem%v7d%level(1), qctem%v7d%timerange(1), qctem%v7d%dativar%r(1)
-  end if
-
-!!$            call l4f_log(L4F_INFO,"Index:"// t2c(indana)//t2c(indnetwork)//t2c(indlevel)//&
-!!$             t2c(indtimerange)//t2c(inddativarr)//t2c(indtime))
-
   do indnetwork=1,size(qctem%v7d%network)
     do indlevel=1,size(qctem%v7d%level)
       do indtimerange=1,size(qctem%v7d%timerange)
         do inddativarr=1,size(qctem%v7d%dativar%r)
+
+          if (qctem%operation == "gradient") then
+                                ! open file to write gradient
+
+                                !t2c(getilon(qctem%v7d%ana(indana)%coord))
+                                !t2c(getilat(qctem%v7d%ana(indana)%coord))
+
+            filename=trim(to_char(qctem%v7d%level(indlevel)))//&
+             "_"//trim(to_char(qctem%v7d%timerange(indtimerange)))//&
+             "_"//trim(qctem%v7d%dativar%r(inddativarr)%btable)//&
+             ".grad"
+            
+            call l4f_category_log(qctem%category,L4F_INFO,"try to open gradient file; filename below")
+            call l4f_category_log(qctem%category,L4F_INFO,filename)
+            
+            inquire(file=filename, exist=exist)
+            
+            grunit=getunit()
+            if (grunit /= -1) then
+                                !open (unit=grunit, file=t2c(timei)//"_"//t2c(timef)//".grad",STATUS='UNKNOWN', form='FORMATTED')
+              open (grunit, file=filename ,STATUS='UNKNOWN', form='FORMATTED',position='APPEND')
+            end if
+                                ! say we have to write header in file
+            if  (.not. exist) then
+              call l4f_category_log(qctem%category,L4F_INFO,"write header in gradient file")
+              write (grunit,*) &
+               qctem%v7d%level(indlevel), &
+               qctem%v7d%timerange(indtimerange), &
+               qctem%v7d%dativar%r(inddativarr)
+            end if
+          end if
+
+!!$            call l4f_log(L4F_INFO,"Index:"// t2c(indana)//t2c(indnetwork)//t2c(indlevel)//&
+!!$             t2c(indtimerange)//t2c(inddativarr)//t2c(indtime))
+
+
           do indtime=2,size(qctem%v7d%time)-1
 
             if (.not.timemaskl(indtime).or. .not. levelmaskl(indlevel).or. &
@@ -665,7 +689,7 @@ do indana=1,size(qctem%v7d%ana)
             end IF
 
             if (qctem%operation == "gradient") then
-              write(11,*)grad
+              write(grunit,*)grad
             end if
 
                                 !ATTENZIONE TODO : inddativarr È UNA GRANDE SEMPLIFICAZIONE NON VERA SE TIPI DI DATO DIVERSI !!!!
@@ -746,7 +770,7 @@ do indana=1,size(qctem%v7d%ana)
   end do
 
   if (qctem%operation == "gradient") then
-    close (unit=11)
+    close (unit=grunit)
   end if
 
 end do
