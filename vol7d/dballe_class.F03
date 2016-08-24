@@ -1280,7 +1280,7 @@ logical, intent(in),optional :: noattr            !< set to .true. to put data o
 type(dbafilter),intent(in),optional :: filter     !< use this to filter wanted data
 logical, intent(in),optional :: attronly          !< set to .true. to put attr only (no data)
 character(len=*),intent(in),optional :: template
-integer :: i,ierr,count
+integer :: i,ierr,count,code
 logical :: critica
 character(len=9) :: btable
 
@@ -1307,11 +1307,13 @@ endif
 if (.not. data%dbadc%dat%c_e() .and. session%file) return
 
 call data%dbadc%dbaset(session)
-if (optio_log(attronly).or. .not. data%dbadc%dat%c_e()) then
+
+code = idba_error_code()    !! 13 for Value is outside the range
+
+if (optio_log(attronly).or. .not. data%dbadc%dat%c_e() .or. code ==13 ) then
 
   !! those hare required?
   ierr = idba_set(session%sehandle,"var",data%dbadc%dat%btable)
-  call data%dbadc%dat%dbaset(session)
   !!
 
   ierr = idba_voglioquesto(session%sehandle, count)
@@ -1330,7 +1332,10 @@ if (optio_log(attronly).or. .not. data%dbadc%dat%c_e()) then
     endif
   endif
 else
+  print *,"prima prendilo"
   call session%prendilo()
+  print *,"dopo prendilo"
+
 end if
 
 if (optio_log(noattr)) return

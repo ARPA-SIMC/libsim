@@ -58,7 +58,7 @@ integer :: i
 print *,"----------------------------------------------"
 print *,"--------------- write1 ------------------------"
 
-allocate(metaanddata(4))   ! one metadata for data and one for constant data
+allocate(metaanddata(5))   ! one metadata for data and one for constant data
 
 metaanddata(1)%metadata=dbametadata( &
   level=dbalevel(level1=105, l1=2000) &
@@ -85,6 +85,13 @@ metaanddata(4)%metadata=dbametadata( &
   level=dbalevel(level1=105, l1=2000) &
  ,timerange=dbatimerange(timerange=4, p1=3600,p2=7200) &
  ,ana=dbaana(lon=13.d0,lat=45.d0) &
+ ,network=dbanetwork("generic") &
+ ,datetime=dbadatetime(datetime_new(2014,01,06,18,00)))
+
+metaanddata(5)%metadata=dbametadata( &
+  level=dbalevel(level1=105, l1=2000) &
+ ,timerange=dbatimerange(timerange=4, p1=3600,p2=7200) &
+ ,ana=dbaana(lon=14.d0,lat=45.d0) &
  ,network=dbanetwork("generic") &
  ,datetime=dbadatetime(datetime_new(2014,01,06,18,00)))
 
@@ -138,6 +145,22 @@ allocate (attrv%dcv(1))
 allocate (attrv%dcv(1)%dat,source=dbadatar("*B33192",rmiss))
 !assemble data and attribute
 metaanddata(4)%dataattrv%dataattr(1)%attrv=attrv
+
+
+
+! ! 5d station with  data invalid (Value -5 is outside the range [0,126] for 013003 (RELATIVE HUMIDITY) ) and attribute
+allocate (metaanddata(5)%dataattrv%dataattr(1))
+
+! first data
+allocate (metaanddata(5)%dataattrv%dataattr(1)%dat,source=dbadatai("B13003",-5))
+
+! create an attr
+deallocate (attrv%dcv)
+allocate (attrv%dcv(1))
+allocate (attrv%dcv(1)%dat,source=dbadatar("*B33192",30.))
+!assemble data and attribute
+metaanddata(5)%dataattrv%dataattr(1)%attrv=attrv
+
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
