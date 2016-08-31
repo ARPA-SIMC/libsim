@@ -390,6 +390,7 @@ double precision :: gradprima,graddopo,grad
                                 !call qctem_validate (qctem)
 character(len=512) :: filename
 logical :: exist
+integer :: ind
 
 !localize optional parameter
 if (present(battrinv))then
@@ -501,6 +502,7 @@ do indana=1,size(qctem%v7d%ana)
     do indlevel=1,size(qctem%v7d%level)
       do indtimerange=1,size(qctem%v7d%timerange)
         do inddativarr=1,size(qctem%v7d%dativar%r)
+          ind=index_c(tem_btable,qctem%v7d%dativar%r(inddativarr)%btable)
 
           if (qctem%operation == "gradient") then
                                 ! open file to write gradient
@@ -698,22 +700,28 @@ do indana=1,size(qctem%v7d%ana)
                                 ! choice which network we have to use 
               if (grad >= 0) then
 #ifdef DEBUG
-                call l4f_log(L4F_DEBUG,"QCtem choise gradient type: spike")
+                call l4f_log(L4F_DEBUG,"QCtem choice gradient type: spike")
 #endif
                 indcnetwork=indcnetworks
               else
 #ifdef DEBUG
-                call l4f_log(L4F_DEBUG,"QCtem choise gradient type: gradmax")
+                call l4f_log(L4F_DEBUG,"QCtem choice gradient type: gradmax")
 #endif
                 indcnetwork=indcnetworkg
               end if
 
               grad=abs(grad)
+              call l4f_log(L4F_DEBUG,"gradiente da confrontare con QCtem clima:"//t2c(grad))
 
-              do indcana=1,size(qctem%clima%ana)-1
+              do indcana=1,size(qctem%clima%ana)
 
-                climaquii=qctem%clima%voldatir(indcana  ,indctime,indclevel,indctimerange,indcdativarr,indcnetwork)
-                climaquif=qctem%clima%voldatir(indcana+1,indctime,indclevel,indctimerange,indcdativarr,indcnetwork)
+                climaquii=(qctem%clima%voldatir(indcana &
+                ,indctime,indclevel,indctimerange,indcdativarr,indcnetwork)&
+                 -tem_b(ind))/tem_a(ind)   ! denormalize
+                 
+                climaquif=(qctem%clima%voldatir(min(indcana+1,size(qctem%clima%ana)) &
+                ,indctime,indclevel,indctimerange,indcdativarr,indcnetwork)&
+                -tem_b(ind))/tem_a(ind)    ! denormalize
 
 #ifdef DEBUG
                 call l4f_log(L4F_DEBUG,"QCtem clima start:"//t2c(climaquii))
@@ -721,27 +729,9 @@ do indana=1,size(qctem%v7d%ana)
 #endif
                 if ( c_e(climaquii) .and. c_e(climaquif )) then
 
-                !write(ident,'("#",i2.2,2i3.3)')k,iarea,desc   ! macro-area e descrittore
-                !write(ident,'("#",i2.2,2i3.3)')0,0,   ! macro-area e descrittore
-
-                !write(ident,'("#",i2.2,2i3.3)')0,0,(desc-1)*10   ! macro-area e descrittore
-                !call init(ana,ident=ident,lat=0d0,lon=0d0)
-                !indcana=index(qccli%clima%ana,ana)
-
-
-!!$            call l4f_log (L4F_INFO,"ident: "//qcspa%clima%ana(indcana)%ident//ident)
-
-!!$                print *, "son qua",trim(qcspa%clima%ana(indcana)%ident),trim(ident)
-!!$                where (match(qcspa%clima%ana(:)%ident,ident).and. &
-!!$                 c_e(qcspa%clima%voldatir(indcana,indctime,indclevel,indctimerange,indcdativarr,indcnetwork)))
-!!$                  call l4f_log (L4F_INFO,"macroarea,iarea,mese,altezza,level "//&
-!!$                   trim(to_char(qcspa%in_macroa(indana)))//" "//trim(to_char(iarea))&
-!!$                   //" "//trim(to_char(mese))//" "//trim(to_char(altezza))//" "//trim(to_char(level)))
-
-
                   if ( (grad >= climaquii .and. grad < climaquif) .or. &
-                   (indcana == 1 .and. grad < climaquif) .or. &
-                   (indcana == size(qctem%clima%ana)-1 .and. grad >= climaquii) ) then
+                   (indcana == 1 .and. grad < climaquii) .or. &
+                   (indcana == size(qctem%clima%ana) .and. grad >= climaquif) ) then
 
 #ifdef DEBUG
                 call l4f_log(L4F_DEBUG,"QCtem confidence:"// t2c(qctem%clima%voldatiattrb&
