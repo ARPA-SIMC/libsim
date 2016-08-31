@@ -467,7 +467,7 @@ do iana=1, size(v7dana%ana)
     ! data_id to use is the new one
     !v7ddballe%data_id => v7dqctem%data_id_out
     !CALL export(v7ddballe,attr_only=.true.)
-    CALL export(v7ddballe)
+    CALL export(v7ddballe, attr_only=.true.)
     call l4f_category_log(category,L4F_INFO,"end export data")
   end if
 
