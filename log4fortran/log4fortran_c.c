@@ -54,7 +54,7 @@ F77_SUBROUTINE(l4f_category_log)(POINTER(a_category),
   GENPTR_CHARACTER(a_format)
 
   cnfImprt(a_format, a_format_length > 100 ? 100:a_format_length, ptr_a_format);
-  log4c_category_log(cnfCptr(*a_category), *a_priority, ptr_a_format);
+  log4c_category_log(cnfCptr(*a_category), *a_priority, "%s", ptr_a_format);
 
 }
 
@@ -73,7 +73,7 @@ F77_SUBROUTINE(l4f_log)(INTEGER(a_priority),
 
   cnfImprt(a_format, a_format_length > 100 ? 100:a_format_length, ptr_a_format);
 
-  log4c_category_log(default_cat, *a_priority, ptr_a_format);
+  log4c_category_log(default_cat, *a_priority, "%s", ptr_a_format);
 
 }
 

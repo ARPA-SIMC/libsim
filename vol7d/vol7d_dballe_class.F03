@@ -1556,7 +1556,7 @@ TYPE(vol7d) :: this !< oggetto vol7d con le variabili da completare
 integer :: i,j
 type(vol7d_var),pointer :: dballevar(:)
 
-
+nullify(dballevar)
 call vol7d_dballe_import_dballevar(dballevar)
 
 #undef VOL7D_POLY_NAME

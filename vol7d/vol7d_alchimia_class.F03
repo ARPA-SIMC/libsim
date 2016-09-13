@@ -30,7 +30,7 @@ character(len=*) :: var
 integer :: ind
 
 #ifdef HAVE_DBALLE
-type(vol7d_var),pointer :: dballevar(:)
+TYPE(vol7d_var),pointer,save :: dballevar(:) => NULL()
 
 call vol7d_dballe_import_dballevar(dballevar)
 ind=index_c(dballevar(:)%btable,var)
