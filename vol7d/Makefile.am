@@ -108,10 +108,13 @@ vol7d_dballe_class_var_du.F90
 if F2003_EXTENDED_FEATURES
 check_PROGRAMS += dballe_test 
 check_PROGRAMS += dballe_test2
+check_PROGRAMS += dballe_test3
 dballe_test_SOURCES = dballe_test.F03
 dballe_test2_SOURCES = dballe_test2.F03
+dballe_test3_SOURCES = dballe_test3.F03
 dballe_test_LDADD = libsim_vol7d.la
 dballe_test2_LDADD = libsim_vol7d.la
+dballe_test3_LDADD = libsim_vol7d.la
 dist_check_SCRIPTS += dballe_test.sh
 endif
 endif

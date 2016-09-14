@@ -3266,8 +3266,6 @@ else
     allocate (metaanddata%dataattrv%dataattr(size(vars%dcv)))
     do i = 1, size(vars%dcv)
       allocate (metaanddata%dataattrv%dataattr(i)%dat,source=vars%dcv(i)%dat)
-      ! initialize to (0) the attribute vector
-      allocate (metaanddata%dataattrv%dataattr(i)%attrv%dcv(0))
     end do
 
     ! load metadata
@@ -3294,9 +3292,11 @@ else
             ier = idba_enq(session%sehandle, btable,dat%value)
           end select
           
-          if (.not. optio_log(noattr))then
+          if (optio_log(noattr))then
+                                ! initialize to (0) the attribute vector
+            allocate (metaanddata%dataattrv%dataattr(i)%attrv%dcv(0))
 
-            deallocate (metaanddata%dataattrv%dataattr(i)%attrv%dcv)
+          else
 
             if (lstarvars) then
 
@@ -3311,11 +3311,11 @@ else
                 do k =1,acount
                   ier = idba_ancora(session%sehandle, btable)
                   ier = idba_enq(session%sehandle, btable,value)
-              
-              
+
                   do j=1,size(metaanddata%dataattrv%dataattr(i)%attrv%dcv)
+
                     if (metaanddata%dataattrv%dataattr(i)%attrv%dcv(j)%dat%btable == btable) then
-                    
+          
                       select type ( dat =>  metaanddata%dataattrv%dataattr(i)%attrv%dcv(j)%dat )
                       type is (dbadatai)
                         ier = idba_enq(session%sehandle, btable,dat%value)
@@ -3376,40 +3376,44 @@ else
     else
 
       if (lstarvars) then
-
+        
         allocate (metaanddata%dataattrv%dataattr(1)%attrv%dcv(size(starvars%dcv)))
         do j = 1, size(starvars%dcv)
           allocate (metaanddata%dataattrv%dataattr(1)%attrv%dcv(j)%dat,source=starvars%dcv(j)%dat)
         end do
         
-        ier = idba_voglioancora(session%sehandle, acount)
-        if (acount > 0) then
-          ier = idba_ancora(session%sehandle, btable)
-          ier = idba_enq(session%sehandle, btable,value)
-        
-          do j=1,size(metaanddata%dataattrv%dataattr(1)%attrv%dcv)
-            if (metaanddata%dataattrv%dataattr(1)%attrv%dcv(j)%dat%btable == btable) then
+        if (c_e(session%count) .and. session%count > 0) then
+          
+          ier = idba_voglioancora(session%sehandle, acount)
+          do k =1,acount
+            ier = idba_ancora(session%sehandle, btable)
+            ier = idba_enq(session%sehandle, btable,value)
+            
+            do j=1,size(metaanddata%dataattrv%dataattr(1)%attrv%dcv)
               
-              select type ( dat =>  metaanddata%dataattrv%dataattr(1)%attrv%dcv(j)%dat )
-              type is (dbadatai)
-                ier = idba_enq(session%sehandle, btable,dat%value)
-              type is (dbadatar)
-                ier = idba_enq(session%sehandle, btable,dat%value)
-              type is (dbadatad)
-                ier = idba_enq(session%sehandle, btable,dat%value)
-              type is (dbadatab)
-                ier = idba_enq(session%sehandle, btable,dat%value)
-              type is (dbadatac)
-                ier = idba_enq(session%sehandle, btable,dat%value)
-              end select
-            end if
+              if (metaanddata%dataattrv%dataattr(1)%attrv%dcv(j)%dat%btable == btable) then
+                
+                select type ( dat =>  metaanddata%dataattrv%dataattr(1)%attrv%dcv(j)%dat )
+                type is (dbadatai)
+                  ier = idba_enq(session%sehandle, btable,dat%value)
+                type is (dbadatar)
+                  ier = idba_enq(session%sehandle, btable,dat%value)
+                type is (dbadatad)
+                  ier = idba_enq(session%sehandle, btable,dat%value)
+                type is (dbadatab)
+                  ier = idba_enq(session%sehandle, btable,dat%value)
+                type is (dbadatac)
+                  ier = idba_enq(session%sehandle, btable,dat%value)
+                end select
+                
+              end if
+            end do
           end do
         end if
       else
-
-        if (c_e(session%count) .and. session%count > 0 ) then
+        if (c_e(session%count) .and. session%count > 0) then
           ier = idba_voglioancora(session%sehandle, acount)
-        
+          
           allocate (metaanddata%dataattrv%dataattr(1)%attrv%dcv(acount))
           do j =1,acount
             ier = idba_ancora(session%sehandle, btable)
@@ -3421,8 +3425,7 @@ else
         end if
       end if
     end if
-
-
+    
     if (c_e(session%count)) then
       session%count=session%count-1
 

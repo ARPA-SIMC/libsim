@@ -22,3 +22,5 @@ echo "check  dballe_test2.bufr"
 cmp -b dballe_test2.bufr dballe_test2.test || failed
 cmp -b dballe_test2_memdb.bufr dballe_test2_memdb.test || failed
 
+echo "check  dballe_test3.bufr"
+cmp -b dballe_test3.bufr dballe_test3.test || failed
