@@ -2,7 +2,7 @@
 # to disable oracle and/or vapor support requiring stiff dependencies
 Summary: Fortran utility libraries
 Name: libsim
-Version: 6.1.9
+Version: 6.1.10
 Release: 1
 License: GPL2+
 Group: Applications/Meteo
@@ -105,6 +105,11 @@ mv $RPM_BUILD_ROOT%{_includedir}/*.mod $RPM_BUILD_ROOT%{_fmoddir}
 rm -rf %{buildroot}
 
 %changelog
+* Thu Sep 15 2016 Daniele Branchini <dbranchini@arpae.it> - 6.1.10-1
+- better confidence computatin in qctem
+- fixed #23
+- do not alter data on export in output
+
 * Mon Jul 11 2016 Daniele Branchini <dbranchini@arpae.it> - 6.1.7-1
 - changes following dballe issue #61 (removing cnf)
 
