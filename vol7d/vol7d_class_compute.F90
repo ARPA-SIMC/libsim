@@ -126,6 +126,21 @@ ELSE IF (stat_proc == 254) THEN
     ENDIF
   ENDIF
 
+ELSE IF (stat_proc_input /= stat_proc) THEN
+  IF ((stat_proc_input == 0 .AND. stat_proc == 1) .OR. &
+   (stat_proc_input == 1 .AND. stat_proc == 0)) THEN
+    CALL l4f_log(L4F_INFO, &
+     'computing statistically processed data by integration/differentiation '// &
+     t2c(stat_proc_input)//':'//t2c(stat_proc))
+    CALL vol7d_compute_stat_proc_metamorph(this, that, stat_proc_input, &
+     stat_proc)
+  ELSE
+    CALL l4f_log(L4F_ERROR, &
+   'statistical processing '//t2c(stat_proc_input)//':'//t2c(stat_proc)// &
+   ' not implemented or does not make sense')
+    CALL raise_error()
+  ENDIF
+
 ELSE
   CALL l4f_log(L4F_INFO, &
    'recomputing statistically processed data by aggregation and difference '//&
@@ -959,6 +974,90 @@ ENDIF
 END SUBROUTINE makeother
 
 END SUBROUTINE vol7d_recompute_stat_proc_diff
+
+
+SUBROUTINE vol7d_compute_stat_proc_metamorph(this, that, stat_proc_input, stat_proc)
+TYPE(vol7d),INTENT(inout) :: this !< volume providing data to be recomputed, it is not modified by the method, apart from performing a \a vol7d_alloc_vol on it
+TYPE(vol7d),INTENT(out) :: that !< output volume which will contain the recomputed data
+INTEGER,INTENT(in) :: stat_proc_input !< type of statistical processing of data that has to be processed (from grib2 table), only data having timerange of this type will be processed, the actual statistical processing performed and which will appear in the output volume, is however determined by \a stat_proc argument
+INTEGER,INTENT(in) :: stat_proc !< type of statistical processing to be recomputed (from grib2 table), data in output volume \a that will have a timerange of this type
+
+INTEGER :: i, j
+!INTEGER,ALLOCATABLE :: map_tr(:)
+LOGICAL,ALLOCATABLE :: tr_mask(:)
+REAL,ALLOCATABLE :: int_ratio(:)
+DOUBLE PRECISION,ALLOCATABLE :: int_ratiod(:)
+
+IF (.NOT.((stat_proc_input == 0 .AND. stat_proc == 1) .OR. &
+ (stat_proc_input == 1 .AND. stat_proc == 0))) THEN
+
+  CALL l4f_log(L4F_WARN, &
+   'compute_stat_proc_metamorph, can only be applied to average->accumulated timerange and viceversa')
+! return an empty volume, without signaling error
+  CALL init(that)
+  CALL vol7d_alloc_vol(that)
+  RETURN
+ENDIF
+
+! be safe
+CALL vol7d_alloc_vol(this)
+! this sort guarantees that timeranges are not shuffled in the
+! following vol7d_copy
+!CALL vol7d_smart_sort(this, lsort_timerange)
+
+! useful timeranges
+tr_mask = this%timerange(:)%timerange == stat_proc_input .AND. this%timerange(:)%p2 /= imiss &
+ .AND. this%timerange(:)%p2 /= 0 ! .AND. itimerange(:)%p1 == 0
+
+! initial check (necessary?)
+IF (COUNT(tr_mask) == 0) THEN
+  CALL l4f_log(L4F_WARN, &
+   'vol7d_compute, no timeranges suitable for statistical processing by metamorphosis')
+  CALL init(that)
+!  CALL makeother()
+  RETURN
+ENDIF
+
+CALL vol7d_copy(this, that, ltimerange=tr_mask)
+!map_tr = PACK((/(i,i=1,SIZE(this%itimerange))/), mask=tr_mask)
+
+!ALLOCATE(int_ratio(SIZE(that%timerange)))
+IF (stat_proc == 0) THEN ! average -> integral
+  int_ratio = 1./REAL(that%timerange(:)%p2)
+  int_ratiod = 1./DBLE(that%timerange(:)%p2)
+!  DO j = 1, SIZE(that%timerange)
+!    int_ratio(j) = 1./REAL(that%timerange(j)%p2)
+!  ENDDO
+ELSE ! cumulation
+  int_ratio = REAL(that%timerange(:)%p2)
+  int_ratiod = DBLE(that%timerange(:)%p2)
+!  DO j = 1, SIZE(that%timerange)
+!    int_ratio(j) = REAL(that%timerange(j)%p2)
+!  ENDDO
+ENDIF
+
+IF (ASSOCIATED(that%voldatir)) THEN
+  DO j = 1, SIZE(that%timerange)
+    WHERE(c_e(that%voldatir(:,:,:,j,:,:)))
+      that%voldatir(:,:,:,j,:,:) = that%voldatir(:,:,:,j,:,:)*int_ratio(j)
+    ELSEWHERE
+      that%voldatir(:,:,:,j,:,:) = rmiss
+    END WHERE
+  ENDDO
+ENDIF
+
+IF (ASSOCIATED(that%voldatid)) THEN
+  DO j = 1, SIZE(that%timerange)
+    WHERE(c_e(that%voldatid(:,:,:,j,:,:)))
+      that%voldatid(:,:,:,j,:,:) = that%voldatid(:,:,:,j,:,:)*int_ratiod(j)
+    ELSEWHERE
+      that%voldatid(:,:,:,j,:,:) = rmiss
+    END WHERE
+  ENDDO
+ENDIF
+
+
+END SUBROUTINE vol7d_compute_stat_proc_metamorph
 
 
 !> Riempimento dei buchi temporali in un volume.
