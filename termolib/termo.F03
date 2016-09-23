@@ -36,6 +36,8 @@ subroutine register_termo(vfn)
   call fnregister(vfn,z_h_def())
   call fnregister(vfn,h_z_def())
   call fnregister(vfn,r_p_t2q_def())
+  call fnregister(vfn,swgwmo2swgsim_def())
+  call fnregister(vfn,swgsim2swgwmo_def())
 
 end subroutine register_termo
 
@@ -259,6 +261,44 @@ call init(swdir_swdif2swd_def,"swdir_swdif2swd",&
  [character(len=10) :: "B14194","B14195"],&
  [character(len=10) :: "B14018"],0,func=swdir_swdif2swd)
 end function swdir_swdif2swd_def
+
+
+subroutine swgwmo2swgsim(mybin,mybout,bin,bout,in,out)
+CHARACTER(len=10),intent(in) :: mybin(:)  !< vector table B  WMO input  in user's data
+CHARACTER(len=10),intent(in) :: mybout(:) !< vector table B  WMO output in user's data
+CHARACTER(len=10),intent(in) :: bin(:)    !< vector table B  WMO input used by function
+CHARACTER(len=10),intent(in) :: bout(:)   !< vector table B  WMO output used by function
+real, intent(in) :: in(:,:)
+real, intent(out) :: out(:,:)
+
+out(:,index_c(mybout, bout(1))) = in(:,index_c(mybin, bin(1)))
+
+end subroutine swgwmo2swgsim
+
+type(fnds) function swgwmo2swgsim_def()
+call init(swgwmo2swgsim_def,"swgwmo2swgsim",&
+ [character(len=10) :: "B14021"],&
+ [character(len=10) :: "B14198"],0,func=swgwmo2swgsim)
+end function swgwmo2swgsim_def
+
+
+subroutine swgsim2swgwmo(mybin,mybout,bin,bout,in,out)
+CHARACTER(len=10),intent(in) :: mybin(:)  !< vector table B  WMO input  in user's data
+CHARACTER(len=10),intent(in) :: mybout(:) !< vector table B  WMO output in user's data
+CHARACTER(len=10),intent(in) :: bin(:)    !< vector table B  WMO input used by function
+CHARACTER(len=10),intent(in) :: bout(:)   !< vector table B  WMO output used by function
+real, intent(in) :: in(:,:)
+real, intent(out) :: out(:,:)
+
+out(:,index_c(mybout, bout(1))) = in(:,index_c(mybin, bin(1)))
+
+end subroutine swgsim2swgwmo
+
+type(fnds) function swgsim2swgwmo_def()
+call init(swgsim2swgwmo_def,"swgsim2swgwmo",&
+ [character(len=10) :: "B14198"],&
+ [character(len=10) :: "B14021"],0,func=swgsim2swgwmo)
+end function swgsim2swgwmo_def
 
 
 subroutine  q_p_t2r(mybin,mybout,bin,bout,in,out)
