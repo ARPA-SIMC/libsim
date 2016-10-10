@@ -1045,6 +1045,8 @@ ENDIF
 ! copy required data and reset timerange
 CALL vol7d_copy(this, that, ltimerange=tr_mask)
 that%timerange(:)%timerange = stat_proc
+! why next automatic f2003 allocation does not always work?
+ALLOCATE(int_ratio(SIZE(that%timerange)), int_ratiod(SIZE(that%timerange)))
 
 IF (stat_proc == 0) THEN ! average -> integral
   int_ratio = 1./REAL(that%timerange(:)%p2)
