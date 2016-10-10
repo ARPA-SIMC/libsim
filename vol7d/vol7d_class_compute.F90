@@ -1042,7 +1042,9 @@ IF (COUNT(tr_mask) == 0) THEN
   RETURN
 ENDIF
 
+! copy required data and reset timerange
 CALL vol7d_copy(this, that, ltimerange=tr_mask)
+that%timerange(:)%timerange = stat_proc
 
 IF (stat_proc == 0) THEN ! average -> integral
   int_ratio = 1./REAL(that%timerange(:)%p2)
