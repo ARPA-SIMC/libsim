@@ -7,7 +7,7 @@ function failed(){
 }
 
 function cleanup(){
-    rm -f dballe_test_copy1f.bufr dballe_test_copy1fmem.bufr dballe_test2.bufr dballe_test.sqlite
+    rm -f dballe_test_copy1f.bufr dballe_test_copy1fmem.bufr dballe_test.sqlite dballe_test2.bufr dballe_test3.bufr
 }
 
 trap '{ cleanup; }' EXIT
