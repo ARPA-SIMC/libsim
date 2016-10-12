@@ -661,13 +661,13 @@ END SUBROUTINE volgrid6d_recompute_stat_proc_diff
 !> Specialized method for statistically processing a set of data
 !! by integration/differentiation.
 !! This method performs statistical processing by integrating
-!! (accumulating) in time values having representing time-average
-!! rates or fluxes, (\a stat_proc_input=0 \a stat_proc=1) or by
-!! transforming a time-integrated (accumulated) value in a
-!! time-average rate or flux (\a stat_proc_input=1 \a stat_proc=0).
-!! analysis/observation or forecast timerange are processed. The only
-!! operation performed is respectively multiplying or dividing the
-!! values by the length of the time interval in seconds.
+!! (accumulating) in time values representing time-average rates or
+!! fluxes, (\a stat_proc_input=0 \a stat_proc=1) or by transforming a
+!! time-integrated (accumulated) value in a time-average rate or flux
+!! (\a stat_proc_input=1 \a stat_proc=0). Analysis/observation or
+!! forecast timeranges are processed. The only operation performed is
+!! respectively multiplying or dividing the values by the length of
+!! the time interval in seconds.
 !!
 !! The output \a that volgrid6d object contains elements from the
 !! original volume \a this satisfying the conditions
@@ -732,15 +732,10 @@ CALL compute_stat_proc_metamorph_common(stat_proc_input, this%timerange, stat_pr
 ! complete the definition of the output volume
 CALL volgrid6d_alloc_vol(that, decode=ASSOCIATED(this%voldati))
 
-ALLOCATE(int_ratio(SIZE(that%timerange)))
 IF (stat_proc == 0) THEN ! average -> integral
-  DO j = 1, SIZE(that%timerange)
-    int_ratio(j) = 1./REAL(that%timerange(j)%p2)
-  ENDDO
+  int_ratio = 1./REAL(that%timerange(:)%p2)
 ELSE ! cumulation
-  DO j = 1, SIZE(that%timerange)
-    int_ratio(j) = REAL(that%timerange(j)%p2)
-  ENDDO
+  int_ratio = REAL(that%timerange(:)%p2)
 ENDIF
 
 DO i6 = 1, SIZE(this%var)
