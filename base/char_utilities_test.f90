@@ -66,12 +66,20 @@ IF (ABS((dcheck+1.0D-120)/1.0D+120) > 1.0D-200 ) CALL EXIT(1)
 
 PRINT*,'Checking l_nblnk'
 IF (l_nblnk('1234') /= 4 .OR. l_nblnk('12345 ') /= 5) CALL EXIT(1)
-PRINT*,'Checking l_nblnk degenerated'
-IF (l_nblnk('    ') /= 0 .OR. l_nblnk('') /= 0) CALL EXIT(1)
+PRINT*,'Checking l_nblnk partly degenerated'
+IF (l_nblnk('    ') /= 0) CALL EXIT(1)
+PRINT*,'Checking l_nblnk fully degenerated'
+IF (l_nblnk('') /= 0) CALL EXIT(1)
 PRINT*,'Checking f_nblnk'
 IF (f_nblnk('1234', ' ') /= 1 .OR. f_nblnk(' 12345',' ') /= 2) CALL EXIT(1)
-PRINT*,'Checking f_nblnk degenerated'
-IF (f_nblnk('    ') /= 5 .OR. f_nblnk('') /= 1) CALL EXIT(1)
+! the following test fails with gfortran-4.8.3 -O2 because f_nblnk is
+! called only once and the result recycled, so the test has been split
+!PRINT*,'Checking f_nblnk degenerated'
+!IF (f_nblnk('    ') /= 5 .OR. f_nblnk('') /= 1) CALL EXIT(1)
+PRINT*,'Checking f_nblnk partly degenerated'
+IF (f_nblnk('    ') /= 5) CALL EXIT(1)
+PRINT*,'Checking f_nblnk fully degenerated'
+IF (f_nblnk('') /= 1) CALL EXIT(1)
 
 !PRINT*,'Checking align_left'
 !IF (align_left('  ciao') /= 'ciao  ' .OR. align_left('ciao  ') /= 'ciao  ') CALL EXIT(1)
