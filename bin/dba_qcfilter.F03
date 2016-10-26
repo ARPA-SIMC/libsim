@@ -80,10 +80,10 @@ ENDIF
 !CALL getarg(iargc(), output_file)
 
 allocate (starvars%dcv(4))
-allocate (starvars%dcv(1)%dat,source=dbadatab("*B33192"))
-allocate (starvars%dcv(2)%dat,source=dbadatab("*B33193"))
-allocate (starvars%dcv(3)%dat,source=dbadatab("*B33194"))
-allocate (starvars%dcv(4)%dat,source=dbadatab("*B33196"))
+allocate (starvars%dcv(1)%dat,source=dbadatab(qcattrvarsbtables(1)))
+allocate (starvars%dcv(2)%dat,source=dbadatab(qcattrvarsbtables(2)))
+allocate (starvars%dcv(3)%dat,source=dbadatab(qcattrvarsbtables(3)))
+allocate (starvars%dcv(4)%dat,source=dbadatab(qcattrvarsbtables(4)))
 filter=dbafilter(starvars=starvars)
 !call filter%display()
 
@@ -109,10 +109,10 @@ do while (sessionfrom%messages_read_next())
 !      internal compiler error
 !      associate(dataattr =>  metaanddatav(i)%dataattrv%dataattr(j))
 
-      call metaanddatav(i)%dataattrv%dataattr(j)%attrv%dcv(4)%dat%get(flag0)
-      call metaanddatav(i)%dataattrv%dataattr(j)%attrv%dcv(1)%dat%get(flag1)
-      call metaanddatav(i)%dataattrv%dataattr(j)%attrv%dcv(2)%dat%get(flag2)
-      call metaanddatav(i)%dataattrv%dataattr(j)%attrv%dcv(3)%dat%get(flag3)
+      call metaanddatav(i)%dataattrv%dataattr(j)%attrv%dcv(1)%dat%get(flag0)
+      call metaanddatav(i)%dataattrv%dataattr(j)%attrv%dcv(2)%dat%get(flag1)
+      call metaanddatav(i)%dataattrv%dataattr(j)%attrv%dcv(3)%dat%get(flag2)
+      call metaanddatav(i)%dataattrv%dataattr(j)%attrv%dcv(4)%dat%get(flag3)
 
       qcsummaryflag =qcsummaryflagb(flag0,flag1,flag2,flag3)
       
