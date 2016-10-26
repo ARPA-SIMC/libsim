@@ -46,12 +46,13 @@ end function invalidated/**/VOL7D_POLY_TYPES
 !! a controllo di qualità completo dovrebbe essere falso se solo una di queste condizioni si verifica:
 !! a) invalidato
 !! b) gross error check fallito
-!! c) flag1 AND flag2 AND flag3 sotto soglia
-ELEMENTAL LOGICAL FUNCTION qcsummaryflag/**/VOL7D_POLY_TYPES(flag0, flag1, flag2, flag3)
+!! c) flag1 OR flag2 OR flag3 sotto soglia
+ELEMENTAL LOGICAL FUNCTION qcsummaryflag/**/VOL7D_POLY_TYPES(flag0, flag1, flag2, flag3) 
 /**/VOL7D_POLY_TYPE ,intent(in),optional :: flag0
 /**/VOL7D_POLY_TYPE ,intent(in),optional :: flag1
 /**/VOL7D_POLY_TYPE ,intent(in),optional :: flag2
 /**/VOL7D_POLY_TYPE ,intent(in),optional :: flag3
+integer :: tot
 
 
 #ifdef VOL7D_POLY_ISC
@@ -62,6 +63,38 @@ qcsummaryflag/**/VOL7D_POLY_TYPES = .NOT.invalidated(optio_3/**/VOL7D_POLY_TYPES
  vd(optio_3/**/VOL7D_POLY_TYPES(flag2)) .AND. &
  vd(optio_3/**/VOL7D_POLY_TYPES(flag3))
 
+
+if (invalidated(optio_3/**/VOL7D_POLY_TYPES(flag0))) then
+  qcsummaryflag/**/VOL7D_POLY_TYPES = .false.
+  return
+endif
+
+if ( vdge(optio_3/**/VOL7D_POLY_TYPES(flag1))) then
+  qcsummaryflag/**/VOL7D_POLY_TYPES = .false.
+  return
+endif
+
+tot=0
+
+if (.not. vd(optio_3/**/VOL7D_POLY_TYPES(flag1))) then 
+  tot = tot -1
+endif
+
+if (.not. vd(optio_3/**/VOL7D_POLY_TYPES(flag2))) then 
+  tot = tot -1
+endif
+if (vd(optio_3/**/VOL7D_POLY_TYPES(flag2)) .and. c_e(optio_3/**/VOL7D_POLY_TYPES(flag2))) then 
+  tot = tot +1
+endif
+
+if (.not. vd(optio_3/**/VOL7D_POLY_TYPES(flag3))) then 
+  tot = tot -1
+endif
+if (vd(optio_3/**/VOL7D_POLY_TYPES(flag3)) .and. c_e(optio_3/**/VOL7D_POLY_TYPES(flag3))) then 
+  tot = tot +1
+endif
+
+qcsummaryflag/**/VOL7D_POLY_TYPES=(tot >= -1)
 
 contains
 
@@ -84,12 +117,39 @@ end function optio_3c
 
 #else
 
-qcsummaryflag/**/VOL7D_POLY_TYPES = .NOT.invalidated(optio_/**/VOL7D_POLY_TYPES(flag0)) .AND. &
- vdge(optio_/**/VOL7D_POLY_TYPES(flag1)) .AND. &
- vd(optio_/**/VOL7D_POLY_TYPES(flag1)) .AND. &
- vd(optio_/**/VOL7D_POLY_TYPES(flag2)) .AND. &
- vd(optio_/**/VOL7D_POLY_TYPES(flag3))
 
+
+if (invalidated(optio_/**/VOL7D_POLY_TYPES(flag0))) then
+  qcsummaryflag/**/VOL7D_POLY_TYPES = .false.
+  return
+endif
+
+if ( vdge(optio_/**/VOL7D_POLY_TYPES(flag1))) then
+  qcsummaryflag/**/VOL7D_POLY_TYPES = .false.
+  return
+endif
+
+tot=0
+
+if (.not. vd(optio_/**/VOL7D_POLY_TYPES(flag1))) then 
+  tot = tot -1
+endif
+
+if (.not. vd(optio_/**/VOL7D_POLY_TYPES(flag2))) then 
+  tot = tot -1
+endif
+if (vd(optio_/**/VOL7D_POLY_TYPES(flag2)) .and. c_e(optio_/**/VOL7D_POLY_TYPES(flag2))) then 
+  tot = tot +1
+endif
+
+if (.not. vd(optio_/**/VOL7D_POLY_TYPES(flag3))) then 
+  tot = tot -1
+endif
+if (vd(optio_/**/VOL7D_POLY_TYPES(flag3)) .and. c_e(optio_/**/VOL7D_POLY_TYPES(flag3))) then 
+  tot = tot +1
+endif
+
+qcsummaryflag/**/VOL7D_POLY_TYPES=(tot >= -1)
 
 #endif
 
