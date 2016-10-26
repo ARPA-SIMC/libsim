@@ -639,9 +639,9 @@ do indana=1,size(qctem%v7d%ana)
 
             IF(.NOT.C_E(datoprima) .and. .NOT.C_E(datodopo) ) cycle
             
-            gradprima=rmiss
-            graddopo=rmiss
-            grad=rmiss
+            gradprima=dmiss
+            graddopo=dmiss
+            grad=dmiss
 
                                 !compute time gradient only inside timeconfidence
             td=ora-prima

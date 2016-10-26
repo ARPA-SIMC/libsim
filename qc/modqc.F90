@@ -178,7 +178,7 @@ implicit none
 
 !> Definisce il livello di attendibilità per i dati validi
 type :: qcpartype
-  integer (kind=int_b):: att !< confidence for "*B33192"
+  integer (kind=int_b):: att !< confidence for "*B33192" "*B33193" "*B33194"
   integer (kind=int_b):: gross_error ! special valuer for "*B33192" when gross error check failed
   integer (kind=int_b):: invalidated ! special valuer for "*B33196" when manual invalidation happen
 end type qcpartype
