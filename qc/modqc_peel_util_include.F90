@@ -57,19 +57,12 @@ integer :: tot
 
 #ifdef VOL7D_POLY_ISC
 
-qcsummaryflag/**/VOL7D_POLY_TYPES = .NOT.invalidated(optio_3/**/VOL7D_POLY_TYPES(flag0)) .AND. &
- vdge(optio_3/**/VOL7D_POLY_TYPES(flag1)) .AND. &
- vd(optio_3/**/VOL7D_POLY_TYPES(flag1)) .AND. &
- vd(optio_3/**/VOL7D_POLY_TYPES(flag2)) .AND. &
- vd(optio_3/**/VOL7D_POLY_TYPES(flag3))
-
-
 if (invalidated(optio_3/**/VOL7D_POLY_TYPES(flag0))) then
   qcsummaryflag/**/VOL7D_POLY_TYPES = .false.
   return
 endif
 
-if ( vdge(optio_3/**/VOL7D_POLY_TYPES(flag1))) then
+if ( .not. vdge(optio_3/**/VOL7D_POLY_TYPES(flag1))) then
   qcsummaryflag/**/VOL7D_POLY_TYPES = .false.
   return
 endif
@@ -118,13 +111,12 @@ end function optio_3c
 #else
 
 
-
 if (invalidated(optio_/**/VOL7D_POLY_TYPES(flag0))) then
   qcsummaryflag/**/VOL7D_POLY_TYPES = .false.
   return
 endif
 
-if ( vdge(optio_/**/VOL7D_POLY_TYPES(flag1))) then
+if ( .not. vdge(optio_/**/VOL7D_POLY_TYPES(flag1))) then
   qcsummaryflag/**/VOL7D_POLY_TYPES = .false.
   return
 endif
