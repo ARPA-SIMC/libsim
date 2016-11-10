@@ -2,7 +2,7 @@
 # to disable oracle and/or vapor support requiring stiff dependencies
 Summary: Fortran utility libraries
 Name: libsim
-Version: 6.1.11
+Version: 6.1.12
 Release: 1
 License: GPL2+
 Group: Applications/Meteo
@@ -20,6 +20,7 @@ Requires: libdballef4 >= 7.6 grib_api
 %endif
 
 %package -n libsim-devel
+Requires: fortrangis-devel %{!?no_oracle:oracle-instantclient-devel} libdballef-devel >= 7.6 grib_api-devel ncl-devel gdal-devel libdballe-devel help2man log4c log4c-devel
 Summary:  libsim development files
 Group: Applications/Meteo
 
@@ -106,6 +107,10 @@ mv $RPM_BUILD_ROOT%{_includedir}/*.mod $RPM_BUILD_ROOT%{_fmoddir}
 rm -rf %{buildroot}
 
 %changelog
+* Thu Nov 10 2016 Daniele Branchini <dbranchini@arpae.it> - 6.1.12-1
+- fixed #30, #31
+- other fixes in quality control modules
+
 * Wed Oct 12 2016 Daniele Branchini <dbranchini@arpae.it> - 6.1.11-1
 - Implement time integration/differentiation for sparse data with --comp-stat-proc=0:1 or --comp-stat-proc=1:0.
 - Allow to convert identically radiation variables, from B14021 to B14198 and viceversa
