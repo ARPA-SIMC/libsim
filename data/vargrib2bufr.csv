@@ -138,6 +138,7 @@ B13202,Convective liquid precipitation (invented),Kg/m**2,78,201,113,255,1.0,0.0
 B13203,Convective snowfall (invented),Kg/m**2,255,2,78,255,1.0,0.0
 B13204,Total convective precipitation(liquid+snow; invented),Kg/m**200,200,2,152,255,1.0,0.0
 B13204,Total convective precipitation(liquid+snow; invented),m->Kg/m**2,98,128,143,255,1000.0,0.0
+B13205,Snowfall (grid-scale+convective; invented),Kg/m**2,80,2,153,255,1.0,0.0
 B13205,Snowfall (grid-scale+convective; invented),Kg/m**2,200,2,153,255,1.0,0.0
 B13205,Snowfall (grid-scale+convective; invented),m->Kg/m**2,98,128,144,255,1000.0,0.0
 B13206,Soil water content (invented),kg/m**2,255,2,86,255,1.0,0.0

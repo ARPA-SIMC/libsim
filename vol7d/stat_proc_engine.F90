@@ -180,9 +180,9 @@ lend = itime(SIZE(itime))
 
 ! count the size of output time, it is done step by step and not with
 ! a / operation in order to make it work also for "popular" intervals
-tmptime = lstart+step
+tmptime = lstart
 nstep = 0
-DO WHILE(tmptime <= lend)
+DO WHILE(tmptime < lend)
   nstep = nstep + 1
   tmptime = tmptime + step
 ENDDO

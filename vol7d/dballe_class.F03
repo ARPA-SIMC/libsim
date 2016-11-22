@@ -3434,12 +3434,13 @@ else
       end if
     end if
   end if
-  !reading from file get some variable not in filter so we can have some attrv%dcv not allocated
-  do i=1,size(metaanddata%dataattrv%dataattr)
-    if (.not.allocated(metaanddata%dataattrv%dataattr(i)%attrv%dcv))  then
-      allocate (metaanddata%dataattrv%dataattr(i)%attrv%dcv(0))
-    endif
-  end do
+!!$  SOLVED by https://github.com/ARPA-SIMC/dballe/issues/73
+!!$  !reading from file get some variable not in filter so we can have some attrv%dcv not allocated
+!!$  do i=1,size(metaanddata%dataattrv%dataattr)
+!!$    if (.not.allocated(metaanddata%dataattrv%dataattr(i)%attrv%dcv))  then
+!!$      allocate (metaanddata%dataattrv%dataattr(i)%attrv%dcv(0))
+!!$    endif
+!!$  end do
 
 end if
 
