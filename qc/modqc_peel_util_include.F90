@@ -39,14 +39,26 @@ invalidated/**/VOL7D_POLY_TYPES= realdat(flag,vol7d_var_new(qcattrvarsbtables(1)
 return
 end function invalidated/**/VOL7D_POLY_TYPES
 
-
-
 !> Check data validity based on multiple confidences.
 !! Compute final decision boolean flag
-!! a controllo di qualità completo dovrebbe essere falso se solo una di queste condizioni si verifica:
-!! a) invalidato
-!! b) gross error check fallito
-!! c) flag1 OR flag2 OR flag3 sotto soglia
+!! Quality control is complete if one of 3 conditions is verified:
+!! a) invalidated data 
+!! b) gross error check failed
+!! c) tot variable less -1
+
+!> Controllo di validita' del dato basato su test multipli.
+!! Per il calcolo della validita' del dato (flag booleano B33007), si prendono in considerazione 3 test; il dato risulta invalidato (flag booleano posto a false) se e solo se uno dei test risulta soddisfatto:
+!! a) il dato e' stato invalidato a mano (flag0=B33196=0)
+!! b) il dato non ha passato il gross erro check (flag1=B33192=0)
+!! c) la variabile tot risulta minore a -1
+!! La variabile tot e' il risultato del confronto tra controllo climatologico (flag1, B33192), controllo temporale (flag2, B33193) e controllo spaziale (flag3, B33194).
+!! Ad ognuno di tali controlli e' stato attribuito un punteggio a seconda che ciascuno dei valori relativi ai flag di qualita' risulti inferiore od uguale-maggiore di 10.
+!! Nel dettaglio:
+!! se B33192 < 10 tot=-1; se B33192>=10 tot=0
+!! se B33193 < 10 tot=-1; se B33193>=10 tot=1
+!! se B33194 < 10 tot=-1; se B33194>=10 tot=1
+!! Ogni dato e' controllato nei 3 flag di qualita' presenti, e viene valutata la somma risultante di tot. Se tot risulta inferiore a -1, qcsummaryflag e' posto a false ed il dato e' invalitato (B33007=0). Se tot risulta maggiore od uguale a -1 qcsummaryflag e' true ed il dato e' valido.
+
 ELEMENTAL LOGICAL FUNCTION qcsummaryflag/**/VOL7D_POLY_TYPES(flag0, flag1, flag2, flag3) 
 /**/VOL7D_POLY_TYPE ,intent(in),optional :: flag0
 /**/VOL7D_POLY_TYPE ,intent(in),optional :: flag1
