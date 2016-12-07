@@ -105,9 +105,11 @@ vol7d_dballe_class_var_du.F90
 vol7d_dballe_class.lo: vol7d_class.$(OBJEXT) \
 vol7d_dballe_class_var_du.F90
 
-check_PROGRAMS += vol7d_dballe_test 
+check_PROGRAMS += vol7d_dballe_test  vol7d_dballe_test2
 vol7d_dballe_test_SOURCES = vol7d_dballe_test.F90
 vol7d_dballe_test_LDADD = libsim_vol7d.la
+vol7d_dballe_test2_SOURCES = vol7d_dballe_test2.F90
+vol7d_dballe_test2_LDADD = libsim_vol7d.la
 dist_check_SCRIPTS += vol7d_dballe_test.sh
 
 if F2003_EXTENDED_FEATURES

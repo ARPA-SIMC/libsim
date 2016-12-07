@@ -3186,7 +3186,7 @@ end subroutine dbasession_ingest_anal
 !> get data from DSN
 subroutine dbasession_ingest_metaanddata(session,metaanddata,noattr,filter)
 class(dbasession), intent(inout) :: session
-type(dbametaanddata), intent(inout),optional :: metaanddata !< ingestd data
+type(dbametaanddata), intent(inout),optional :: metaanddata !< ingested data
 logical,intent(in),optional :: noattr       !< set to .true. to get data only (no attribute) 
 type(dbafilter),intent(in),optional :: filter !< use this to filter wanted data                
 
@@ -3436,12 +3436,12 @@ else
   end if
 !!$  SOLVED by https://github.com/ARPA-SIMC/dballe/issues/73
 !!$  !reading from file get some variable not in filter so we can have some attrv%dcv not allocated
-!!$  do i=1,size(metaanddata%dataattrv%dataattr)
-!!$    if (.not.allocated(metaanddata%dataattrv%dataattr(i)%attrv%dcv))  then
-!!$      allocate (metaanddata%dataattrv%dataattr(i)%attrv%dcv(0))
-!!$    endif
-!!$  end do
-
+  do i=1,size(metaanddata%dataattrv%dataattr)
+    if (.not.allocated(metaanddata%dataattrv%dataattr(i)%attrv%dcv))  then
+      allocate (metaanddata%dataattrv%dataattr(i)%attrv%dcv(0))
+    endif
+  end do
+  
 end if
 
 end subroutine dbasession_ingest_metaanddata

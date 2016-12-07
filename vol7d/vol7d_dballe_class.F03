@@ -549,7 +549,8 @@ if ( .not. filter%dataonly) then
 !                                ! set filter
 !  call this%handle%set(filter=myfilter)
                                 ! estrude the data
-  CALL l4f_category_log(this%category,L4F_DEBUG,'start import vol7d_dballe ingest')
+  CALL l4f_category_log(this%category,L4F_DEBUG,'start import vol7d_dballe ingest for constant station data')
+!  call this%handle%ingest(filter=myfilter)
   call this%handle%ingest(metaanddatav,filter=myfilter)
   CALL l4f_category_log(this%category,L4F_DEBUG,'end import vol7d_dballe ingest')
   CALL l4f_category_log(this%category,L4F_DEBUG,'start import vol7d_dballe dba2v7d')
@@ -573,9 +574,13 @@ if ( .not. filter%anaonly) then
 !  call this%handle%set(filter=myfilter)
                                 ! estrude the data
 
+  CALL l4f_category_log(this%category,L4F_DEBUG,'start import vol7d_dballe ingest for station data')
+!  call this%handle%ingest(filter=myfilter)
   call this%handle%ingest(metaanddatav,filter=myfilter)
-
+  CALL l4f_category_log(this%category,L4F_DEBUG,'end import vol7d_dballe ingest')
+  CALL l4f_category_log(this%category,L4F_DEBUG,'start import vol7d_dballe dba2v7d')
   call dba2v7d(vol7dtmp,metaanddatav,this%time_definition,set_network)
+  CALL l4f_category_log(this%category,L4F_DEBUG,'end import vol7d_dballe dba2v7d')
 
   deallocate (metaanddatav)
 
