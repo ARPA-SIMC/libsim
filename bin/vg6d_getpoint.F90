@@ -51,7 +51,8 @@ TYPE(vol7d) :: v7d_out
 TYPE(vol7d_dballe) :: v7d_ana, v7d_dba_out
 #endif
 TYPE(arrayof_georef_coord_array) :: poly
-DOUBLE PRECISION :: lon, lat
+!DOUBLE PRECISION :: lon, lat
+TYPE(arrayof_doubleprecision) :: lon, lat
 DOUBLE PRECISION,ALLOCATABLE :: lon_array(:), lat_array(:)
 INTEGER :: polytopo
 DOUBLE PRECISION :: ilon, ilat, flon, flat, radius, percentile
@@ -100,10 +101,16 @@ CALL optionparser_add(opt, 'z', 'sub-type', sub_type, 'bilin', help= &
  //'''maskinter'': ''average'', ''stddev'', ''max'', ''min'', ''percentile'', &
  &for ''metamorphosis'': ''all'', ''coordbb''')
 
-CALL optionparser_add(opt, 'a', 'lon', lon, 10.D0, help= &
- 'longitude of single interpolation point, alternative to --coord-file')
-CALL optionparser_add(opt, 'b', 'lat', lat, 45.D0, help= &
- 'latitude of single interpolation point, alternative to --coord-file')
+!CALL optionparser_add(opt, 'a', 'lon', lon, 10.D0, help= &
+! 'longitude of single interpolation point, alternative to --coord-file')
+!CALL optionparser_add(opt, 'b', 'lat', lat, 45.D0, help= &
+! 'latitude of single interpolation point, alternative to --coord-file')
+CALL optionparser_add(opt, 'a', 'lon', lon, (/10.D0/), help= &
+ 'comma-separated list of longitudes of interpolation points, &
+ &alternative to --coord-file')
+CALL optionparser_add(opt, 'b', 'lat', lat, (/45.D0/), help= &
+ 'comma-separated list of latitudes of interpolation points, &
+ &alternative to --coord-file')
 CALL optionparser_add(opt, 'c', 'coord-file', coord_file, help= &
  'file with coordinates of interpolation points, alternative to --lon, --lat; &
  &no coordinate information is required for metamorphosis transformation')
@@ -313,10 +320,15 @@ IF (c_e(coord_file)) THEN
 ENDIF
 
 IF (.NOT.c_e(v7d_coord)) THEN ! fallback, initialise v7d_coord from single point
-  CALL vol7d_alloc(v7d_coord, nana=1)
+  CALL vol7d_alloc(v7d_coord, nana=MIN(lon%arraysize, lat%arraysize))
   CALL vol7d_alloc_vol(v7d_coord)
-  CALL init(v7d_coord%ana(1), lat=lat, lon=lon)
+  DO i = 1, MIN(lon%arraysize, lat%arraysize)
+    CALL init(v7d_coord%ana(i), lat=lat%array(i), lon=lon%array(i))
+  ENDDO
 ENDIF
+! useless after this point
+CALL delete(lon)
+CALL delete(lat)
 
 IF (ldisplay) CALL display(v7d_coord)
 

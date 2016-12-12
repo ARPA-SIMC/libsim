@@ -691,11 +691,14 @@ CHARACTER(LEN=40) :: cdefault
 INTEGER :: i
 TYPE(option) :: myoption
 
-!IF (PRESENT(default)) THEN
-!  cdefault = ' [default='//TRIM(to_char(default))//']'
-!ELSE
-  cdefault = ''
-!ENDIF
+cdefault = ''
+IF (PRESENT(default)) THEN
+  IF (SIZE(default) == 1) THEN
+    cdefault = ' [default='//TRIM(to_char(default(1)))//']'
+  ELSE IF (SIZE(default) > 1) THEN
+    cdefault = ' [default='//TRIM(to_char(default(1)))//',...]'
+  ENDIF
+ENDIF
 
 ! common initialisation
 myoption = option_new(short_opt, long_opt, cdefault, help)
@@ -773,11 +776,14 @@ CHARACTER(LEN=40) :: cdefault
 INTEGER :: i
 TYPE(option) :: myoption
 
-!IF (PRESENT(default)) THEN
-!  cdefault = ' [default='//TRIM(to_char(default))//']'
-!ELSE
-  cdefault = ''
-!ENDIF
+cdefault = ''
+IF (PRESENT(default)) THEN
+  IF (SIZE(default) == 1) THEN
+    cdefault = ' [default='//TRIM(to_char(default(1)))//']'
+  ELSE IF (SIZE(default) > 1) THEN
+    cdefault = ' [default='//TRIM(to_char(default(1)))//',...]'
+  ENDIF
+ENDIF
 
 ! common initialisation
 myoption = option_new(short_opt, long_opt, cdefault, help)
@@ -859,11 +865,14 @@ CHARACTER(LEN=40) :: cdefault
 INTEGER :: i
 TYPE(option) :: myoption
 
-!IF (PRESENT(default)) THEN
-!  cdefault = ' [default='//TRIM(to_char(default))//']'
-!ELSE
-  cdefault = ''
-!ENDIF
+cdefault = ''
+IF (PRESENT(default)) THEN
+  IF (SIZE(default) == 1) THEN
+    cdefault = ' [default='//TRIM(ADJUSTL(to_char(default(1),form='(G15.9)')))//']'
+  ELSE IF (SIZE(default) > 1) THEN
+    cdefault = ' [default='//TRIM(ADJUSTL(to_char(default(1),form='(G15.9)')))//',...]'
+  ENDIF
+ENDIF
 
 ! common initialisation
 myoption = option_new(short_opt, long_opt, cdefault, help)
