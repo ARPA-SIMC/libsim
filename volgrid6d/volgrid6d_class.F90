@@ -809,24 +809,22 @@ end subroutine volgrid6d_read_from_file
 !! descriptor contained in \a gridinfo if it is missing in \a volgrid,
 !! otherwise it is checked and the object is rejected if grids do not
 !! match.
-SUBROUTINE import_from_gridinfo(this, gridinfo, force, dup_mode, clone)
+SUBROUTINE import_from_gridinfo(this, gridinfo, force, dup_mode, clone, &
+ isanavar)
 TYPE(volgrid6d),INTENT(inout) :: this !< object in which to import
 TYPE(gridinfo_def),INTENT(in) :: gridinfo !< gridinfo object to be imported
 LOGICAL,INTENT(in),OPTIONAL :: force !< if provided and \c .TRUE., the gridinfo is forced into an empty element of \a this, if required and possible
 INTEGER,INTENT(in),OPTIONAL :: dup_mode !< determines the behavior in case of duplicate metadata: if \a dup_mode is not provided or 0, a duplicate field overwrites, if \a dup_mode is 1, duplicate fields are merged with priority to the last
 LOGICAL , INTENT(in),OPTIONAL :: clone !< if provided and \c .TRUE. , clone the gaid's from \a gridinfo to \a this
+LOGICAL,INTENT(IN),OPTIONAL :: isanavar !< if provides and \a .TRUE., the gridinfo object is treated as time-independent and replicated for every time and timerange
 
 CHARACTER(len=255) :: type
-INTEGER :: ilevel, itime, itimerange, ivar, ldup_mode
-LOGICAL :: lforce, dup
+INTEGER :: itime0, itimerange0, itime1, itimerange1, itime, itimerange, &
+ ilevel, ivar, ldup_mode
+LOGICAL :: dup
 TYPE(datetime) :: correctedtime
 REAL,ALLOCATABLE :: tmpgrid(:,:)
 
-IF (PRESENT(force)) THEN
-  lforce = force
-ELSE
-  lforce = .FALSE.
-ENDIF
 IF (PRESENT(dup_mode)) THEN
   ldup_mode = dup_mode
 ELSE
@@ -857,7 +855,7 @@ end if
 
 ! Cerco gli indici del campo da inserire, se non trovo metto nel primo missing
 ilevel = index(this%level, gridinfo%level)
-IF (ilevel == 0 .AND. lforce) THEN
+IF (ilevel == 0 .AND. optio_log(force)) THEN
   ilevel = index(this%level, vol7d_level_miss)
   IF (ilevel /= 0) this%level(ilevel) = gridinfo%level
 ENDIF
@@ -869,35 +867,44 @@ IF (ilevel == 0) THEN
   RETURN
 ENDIF
 
-correctedtime = gridinfo%time
-IF (this%time_definition == 1) correctedtime = correctedtime + &
- timedelta_new(sec=gridinfo%timerange%p1)
-itime = index(this%time, correctedtime)
-IF (itime == 0 .AND. lforce) THEN
-  itime = index(this%time, datetime_miss)
-  IF (itime /= 0) this%time(itime) = correctedtime
-ENDIF
-IF (itime == 0) THEN
-  CALL l4f_category_log(this%category,L4F_ERROR, &
-   "volgrid6d: time not valid for volume, gridinfo rejected")
-  CALL raise_error()
-  RETURN
-ENDIF
+IF (optio_log(isanavar)) THEN ! assign to all times and timeranges
+  itime0 = 1
+  itime1 = SIZE(this%time)
+  itimerange0 = 1
+  itimerange1 = SIZE(this%timerange)
+ELSE ! usual case
+  correctedtime = gridinfo%time
+  IF (this%time_definition == 1) correctedtime = correctedtime + &
+   timedelta_new(sec=gridinfo%timerange%p1)
+  itime0 = index(this%time, correctedtime)
+  IF (itime0 == 0 .AND. optio_log(force)) THEN
+    itime0 = index(this%time, datetime_miss)
+    IF (itime0 /= 0) this%time(itime0) = correctedtime
+  ENDIF
+  IF (itime0 == 0) THEN
+    CALL l4f_category_log(this%category,L4F_ERROR, &
+     "volgrid6d: time not valid for volume, gridinfo rejected")
+    CALL raise_error()
+    RETURN
+  ENDIF
+  itime1 = itime0
 
-itimerange = index(this%timerange,gridinfo%timerange)
-IF (itimerange == 0 .AND. lforce) THEN
-  itimerange = index(this%timerange, vol7d_timerange_miss)
-  IF (itimerange /= 0) this%timerange(itimerange) = gridinfo%timerange
-ENDIF
-IF (itimerange == 0) THEN
-  CALL l4f_category_log(this%category,L4F_ERROR, &
-   "volgrid6d: timerange not valid for volume, gridinfo rejected")
-  CALL raise_error()
-  RETURN
+  itimerange0 = index(this%timerange,gridinfo%timerange)
+  IF (itimerange0 == 0 .AND. optio_log(force)) THEN
+    itimerange0 = index(this%timerange, vol7d_timerange_miss)
+    IF (itimerange0 /= 0) this%timerange(itimerange0) = gridinfo%timerange
+  ENDIF
+  IF (itimerange0 == 0) THEN
+    CALL l4f_category_log(this%category,L4F_ERROR, &
+     "volgrid6d: timerange not valid for volume, gridinfo rejected")
+    CALL raise_error()
+    RETURN
+  ENDIF
+  itimerange1 = itimerange0
 ENDIF
 
 ivar = index(this%var, gridinfo%var)
-IF (ivar == 0 .AND. lforce) THEN
+IF (ivar == 0 .AND. optio_log(force)) THEN
   ivar = index(this%var, volgrid6d_var_miss)
   IF (ivar /= 0) this%var(ivar) = gridinfo%var
 ENDIF
@@ -908,45 +915,49 @@ IF (ivar == 0) THEN
   RETURN
 ENDIF
 
-IF (ASSOCIATED(this%gaid)) THEN
-  dup = .FALSE.
-  IF (c_e(this%gaid(ilevel,itime,itimerange,ivar))) THEN
-    dup = .TRUE.
-    CALL l4f_category_log(this%category,L4F_WARN,"gaid exist: grib duplicated")
+DO itimerange = itimerange0, itimerange1
+  DO itime = itime0, itime1
+    IF (ASSOCIATED(this%gaid)) THEN
+      dup = .FALSE.
+      IF (c_e(this%gaid(ilevel,itime,itimerange,ivar))) THEN
+        dup = .TRUE.
+        CALL l4f_category_log(this%category,L4F_WARN,"gaid exist: grib duplicated")
 ! avoid memory leaks
-    IF (optio_log(clone)) CALL delete(this%gaid(ilevel,itime,itimerange,ivar))
-  ENDIF
+        IF (optio_log(clone)) CALL delete(this%gaid(ilevel,itime,itimerange,ivar))
+      ENDIF
 
-  IF (optio_log(clone)) THEN
-    CALL copy(gridinfo%gaid, this%gaid(ilevel,itime,itimerange,ivar))
+      IF (optio_log(clone)) THEN
+        CALL copy(gridinfo%gaid, this%gaid(ilevel,itime,itimerange,ivar))
 #ifdef DEBUG
-    CALL l4f_category_log(this%category,L4F_DEBUG,"cloning to a new gaid")
+        CALL l4f_category_log(this%category,L4F_DEBUG,"cloning to a new gaid")
 #endif
-  ELSE
-    this%gaid(ilevel,itime,itimerange,ivar) = gridinfo%gaid
-  ENDIF
+      ELSE
+        this%gaid(ilevel,itime,itimerange,ivar) = gridinfo%gaid
+      ENDIF
 
-  IF (ASSOCIATED(this%voldati))THEN
-    IF (.NOT.dup .OR. ldup_mode == 0) THEN
-      this%voldati(:,:,ilevel,itime,itimerange,ivar) = decode_gridinfo(gridinfo)
-    ELSE IF (ldup_mode == 1) THEN
-      tmpgrid = decode_gridinfo(gridinfo) ! f2003 automatic allocation
-      WHERE(c_e(tmpgrid))
-        this%voldati(:,:,ilevel,itime,itimerange,ivar) = tmpgrid(:,:)
-      END WHERE
-    ELSE IF (ldup_mode == 2) THEN
-      WHERE(.NOT.c_e(this%voldati(:,:,ilevel,itime,itimerange,ivar)))
-        this%voldati(:,:,ilevel,itime,itimerange,ivar) = decode_gridinfo(gridinfo)
-      END WHERE
+      IF (ASSOCIATED(this%voldati))THEN
+        IF (.NOT.dup .OR. ldup_mode == 0) THEN
+          this%voldati(:,:,ilevel,itime,itimerange,ivar) = decode_gridinfo(gridinfo)
+        ELSE IF (ldup_mode == 1) THEN
+          tmpgrid = decode_gridinfo(gridinfo) ! f2003 automatic allocation
+          WHERE(c_e(tmpgrid))
+            this%voldati(:,:,ilevel,itime,itimerange,ivar) = tmpgrid(:,:)
+          END WHERE
+        ELSE IF (ldup_mode == 2) THEN
+          WHERE(.NOT.c_e(this%voldati(:,:,ilevel,itime,itimerange,ivar)))
+            this%voldati(:,:,ilevel,itime,itimerange,ivar) = decode_gridinfo(gridinfo)
+          END WHERE
+        ENDIF
+      ENDIF
+
+    ELSE
+      CALL l4f_category_log(this%category,L4F_ERROR, &
+       "gaid not allocated, you probably need to call volgrid6d_alloc_vol first")
+      CALL raise_error()
+      RETURN
     ENDIF
-  ENDIF
-
-ELSE
-  CALL l4f_category_log(this%category,L4F_ERROR, &
-   "gaid not allocated, you probably need to call volgrid6d_alloc_vol first")
-  CALL raise_error()
-  RETURN
-ENDIF
+  ENDDO
+ENDDO
 
 
 END SUBROUTINE import_from_gridinfo
@@ -1039,21 +1050,30 @@ END SUBROUTINE export_to_gridinfo
 !! objects, and all the dimension descriptors in each of the objects
 !! are allocated and assigned within the method according to the data
 !! contained in \a gridinfov.
+!! If the \a anavar array argument is provided, all the input messages
+!! whose variable maps to one of the B-table variables contained in \a
+!! anavar are treated as time-independent (AKA anagraphic data,
+!! station data, etc.), thus their time and timerange are ignored and
+!! they are replicated for every time and timerange present in the
+!! corresponding data volume.
 SUBROUTINE import_from_gridinfovv(this, gridinfov, dup_mode, clone, decode, &
- time_definition, categoryappend)
+ time_definition, anavar, categoryappend)
 TYPE(volgrid6d),POINTER :: this(:) !< object in which to import
 TYPE(arrayof_gridinfo),INTENT(in) :: gridinfov !< array of gridinfo objects to be imported
 INTEGER,INTENT(in),OPTIONAL :: dup_mode !< determines the behavior in case of duplicate metadata: if \a dup_mode is not provided or 0, a duplicate field overwrites, if \a dup_mode is 1, duplicate fields are merged with priority to the last
 LOGICAL , INTENT(in),OPTIONAL :: clone !< if provided and \c .TRUE. , clone the gaid's from \a gridinfo to \a this
 LOGICAL,INTENT(in),OPTIONAL :: decode !< if provided and \a .FALSE. the data volume in the elements of \a this is not allocated and successive work will be performed on grid_id's
 INTEGER,INTENT(IN),OPTIONAL :: time_definition !< 0=time is reference time; 1=time is validity time
-character(len=*),INTENT(in),OPTIONAL :: categoryappend !< append this suffix to log4fortran namespace category
+CHARACTER(len=*),INTENT(IN),OPTIONAL :: anavar(:) !< list of variables (B-table code equivalent) to be treated as time-independent data
+CHARACTER(len=*),INTENT(in),OPTIONAL :: categoryappend !< append this suffix to log4fortran namespace category
 
-INTEGER :: i, stallo
+INTEGER :: i, j, stallo
 INTEGER :: ngrid, ntime, ntimerange, nlevel, nvar
 INTEGER :: category
 CHARACTER(len=512) :: a_name
 TYPE(datetime),ALLOCATABLE :: correctedtime(:)
+LOGICAL,ALLOCATABLE :: isanavar(:)
+TYPE(vol7d_var) :: lvar
 
 ! category temporanea (altrimenti non possiamo loggare)
 if (present(categoryappend))then
@@ -1068,8 +1088,8 @@ call l4f_category_log(category,L4F_DEBUG,"start import_from_gridinfovv")
 #endif
 
 ngrid=count_distinct(gridinfov%array(1:gridinfov%arraysize)%griddim,back=.true.)
-CALL l4f_category_log(category,L4F_INFO,&
- "numero delle aree differenti: "//t2c(ngrid))
+CALL l4f_category_log(category,L4F_INFO, t2c(ngrid)// &
+ ' different grid definition(s) found in input data')
 
 ALLOCATE(this(ngrid),stat=stallo)
 IF (stallo /= 0)THEN
@@ -1078,14 +1098,31 @@ IF (stallo /= 0)THEN
 ENDIF
 DO i = 1, ngrid
   IF (PRESENT(categoryappend))THEN
-    CALL init(this(i), time_definition=time_definition, categoryappend=TRIM(categoryappend)//"-vol"//to_char(i))
+    CALL init(this(i), time_definition=time_definition, categoryappend=TRIM(categoryappend)//"-vol"//t2c(i))
   ELSE
-    CALL init(this(i), time_definition=time_definition, categoryappend="vol"//to_char(i))
+    CALL init(this(i), time_definition=time_definition, categoryappend="vol"//t2c(i))
   ENDIF
 ENDDO
 
 this(:)%griddim=pack_distinct(gridinfov%array(1:gridinfov%arraysize)%griddim, &
  ngrid, back=.TRUE.)
+
+! mark elements as ana variables (time-independent)
+ALLOCATE(isanavar(gridinfov%arraysize))
+isanavar(:) = .FALSE.
+IF (PRESENT(anavar)) THEN
+  DO i = 1, gridinfov%arraysize
+    DO j = 1, SIZE(anavar)
+      lvar = convert(gridinfov%array(i)%var)
+      IF (lvar%btable == anavar(j)) THEN
+        isanavar(i) = .TRUE.
+        EXIT
+      ENDIF
+    ENDDO
+  ENDDO
+  CALL l4f_category_log(category,L4F_INFO,t2c(COUNT(isanavar))//'/'// &
+   t2c(gridinfov%arraysize)//' constant-data messages found in input data')
+ENDIF
 
 ! create time corrected for time_definition
 ALLOCATE(correctedtime(gridinfov%arraysize))
@@ -1100,13 +1137,22 @@ IF (PRESENT(time_definition)) THEN
 ENDIF
 
 DO i = 1, ngrid
-! ntime = count_distinct(gridinfov%array(1:gridinfov%arraysize)%time, &
+  IF (PRESENT(anavar)) THEN
+    j = COUNT((this(i)%griddim == gridinfov%array(1:gridinfov%arraysize)%griddim) &
+     .AND. .NOT.isanavar(:))
+    IF (j <= 0) THEN
+      CALL l4f_category_log(category, L4F_FATAL, 'grid n.'//t2c(i)// &
+       ' has only constant data, this is not allowed')
+      CALL l4f_category_log(category, L4F_FATAL, 'please check anavar argument')
+      CALL raise_fatal_error()
+    ENDIF
+  ENDIF
   ntime = count_distinct(correctedtime, &
-   mask=(this(i)%griddim == gridinfov%array(1:gridinfov%arraysize)%griddim),&
-   back=.TRUE.)
+   mask=(this(i)%griddim == gridinfov%array(1:gridinfov%arraysize)%griddim) &
+   .AND. .NOT.isanavar(:), back=.TRUE.)
   ntimerange = count_distinct(gridinfov%array(1:gridinfov%arraysize)%timerange, &
-   mask=(this(i)%griddim == gridinfov%array(1:gridinfov%arraysize)%griddim), &
-   back=.TRUE.)
+   mask=(this(i)%griddim == gridinfov%array(1:gridinfov%arraysize)%griddim) &
+   .AND. .NOT.isanavar(:), back=.TRUE.)
   nlevel = count_distinct(gridinfov%array(1:gridinfov%arraysize)%level, &
    mask=(this(i)%griddim == gridinfov%array(1:gridinfov%arraysize)%griddim), &
    back=.TRUE.)
@@ -1121,15 +1167,15 @@ DO i = 1, ngrid
   CALL volgrid6d_alloc(this(i),this(i)%griddim%dim,ntime=ntime, &
    ntimerange=ntimerange,nlevel=nlevel,nvar=nvar)
 
-! this(i)%time=pack_distinct(gridinfov%array(1:gridinfov%arraysize)%time, ntime, &
-  this(i)%time=pack_distinct(correctedtime, ntime, &
-   mask=(this(i)%griddim == gridinfov%array(1:gridinfov%arraysize)%griddim), &
-   back=.TRUE.)
+  this(i)%time = pack_distinct(correctedtime, ntime, &
+   mask=(this(i)%griddim == gridinfov%array(1:gridinfov%arraysize)%griddim) &
+   .AND. .NOT.isanavar(:), back=.TRUE.)
   CALL sort(this(i)%time)
 
-  this(i)%timerange=pack_distinct(gridinfov%array(1:gridinfov%arraysize)%timerange, &
-   ntimerange, mask=(this(i)%griddim == gridinfov%array(1:gridinfov%arraysize)%griddim), &
-   back=.TRUE.)
+  this(i)%timerange = pack_distinct(gridinfov%array( &
+   1:gridinfov%arraysize)%timerange, ntimerange, &
+   mask=(this(i)%griddim == gridinfov%array(1:gridinfov%arraysize)%griddim) &
+   .AND. .NOT.isanavar(:), back=.TRUE.)
   CALL sort(this(i)%timerange)
 
   this(i)%level=pack_distinct(gridinfov%array(1:gridinfov%arraysize)%level, &
@@ -1159,7 +1205,7 @@ DO i = 1, gridinfov%arraysize
 #endif
 
   CALL import(this(index(this%griddim, gridinfov%array(i)%griddim)), &
-   gridinfov%array(i), dup_mode=dup_mode, clone=clone)
+   gridinfov%array(i), dup_mode=dup_mode, clone=clone, isanavar=isanavar(i))
 
 ENDDO
 
@@ -1253,14 +1299,17 @@ END SUBROUTINE export_to_gridinfovv
 !! of \a volgrid6d objects. The data are imported by creating a
 !! temporary \a gridinfo object, importing it into the \a volgrid6d
 !! object cloning the gaid's and then destroying the gridinfo, so it
-!! works similarly to vogrid6d_class::import_from_gridinfovv() method.
+!! works similarly to volgrid6d_class::import_from_gridinfovv() method.
+!! For a detailed explanation of the \a anavar argument, see the
+!! documentation of volgrid6d_class::import_from_gridinfovv() method.
 SUBROUTINE volgrid6d_import_from_file(this, filename, dup_mode, decode, &
- time_definition, categoryappend)
+ time_definition, anavar, categoryappend)
 TYPE(volgrid6d),POINTER :: this(:) !< object in which to import
 CHARACTER(len=*),INTENT(in) :: filename !< name of file from which to import
 INTEGER,INTENT(in),OPTIONAL :: dup_mode !< determines the behavior in case of duplicate metadata: if \a dup_mode is not provided or 0, a duplicate field overwrites, if \a dup_mode is 1, duplicate fields are merged with priority to the last
 LOGICAL,INTENT(in),OPTIONAL :: decode !< if provided and \a .FALSE. the data volume in the elements of \a this is not allocated and successive work will be performed on grid_id's
 INTEGER,INTENT(IN),OPTIONAL :: time_definition !< 0=time is reference time; 1=time is validity time
+CHARACTER(len=*),INTENT(IN),OPTIONAL :: anavar(:) !< list of variables (B-table code equivalent) to be treated as time-independent data
 character(len=*),INTENT(in),OPTIONAL :: categoryappend !< append this suffix to log4fortran namespace category
 
 TYPE(arrayof_gridinfo) :: gridinfo
@@ -1282,7 +1331,8 @@ CALL import(gridinfo, filename=filename, categoryappend=categoryappend)
 IF (gridinfo%arraysize > 0) THEN
 
   CALL import(this, gridinfo, dup_mode=dup_mode, clone=.TRUE., decode=decode, &
-   time_definition=time_definition, categoryappend=categoryappend)
+   time_definition=time_definition, anavar=anavar, &
+   categoryappend=categoryappend)
 
   CALL l4f_category_log(category,L4F_INFO,"deleting gridinfo")
   CALL delete(gridinfo)

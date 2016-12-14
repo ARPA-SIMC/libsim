@@ -45,9 +45,10 @@ implicit none
 
 INTEGER :: category, ier, i, n
 CHARACTER(len=12) :: coord_format
-CHARACTER(len=10), ALLOCATABLE :: vl(:)
+CHARACTER(len=10), ALLOCATABLE :: vl(:), avl(:)
 !CHARACTER(len=10) :: level_type
-CHARACTER(len=512) :: a_name, coord_file, input_file, output_file, output_format, output_template, output_variable_list
+CHARACTER(len=512) :: a_name, coord_file, input_file, output_file, &
+ output_format, output_template, anavariable_list, output_variable_list
 TYPE(arrayof_integer) :: trans_level_type, trans_level_list, trans_botlevel_list
 TYPE(vol7d_level) :: ilevel, olevel
 TYPE(vol7d_level),ALLOCATABLE :: olevel_list(:)
@@ -264,6 +265,11 @@ CALL optionparser_add(opt, ' ', 'coord-format', coord_format, help= &
  'format of coord file (shp or grib_api)')
 #endif
 
+CALL optionparser_add(opt, ' ', 'anavariable-list', anavariable_list, '', help= &
+ 'list of variables in the form of a comma-separated list of B-table &
+ &alphanumeric codes, e.g. ''B10007,B29192'' to be considered as &
+ &time-independent and assigned to all times and timeranges')
+
 output_template = ''
 CALL optionparser_add(opt, ' ', 'output-format', output_format, &
 #ifdef HAVE_LIBGRIBAPI
@@ -415,6 +421,14 @@ IF (LEN_TRIM(output_variable_list) > 0) THEN
   ALLOCATE(vl(n))
   DO i = 1, n
     vl(i) = output_variable_list(w_s(i):w_e(i))
+  ENDDO
+  DEALLOCATE(w_s, w_e)
+ENDIF
+IF (LEN_TRIM(anavariable_list) > 0) THEN
+  n = word_split(anavariable_list, w_s, w_e, ',')
+  ALLOCATE(avl(n))
+  DO i = 1, n
+    avl(i) = anavariable_list(w_s(i):w_e(i))
   ENDDO
   DEALLOCATE(w_s, w_e)
 ENDIF
@@ -582,7 +596,7 @@ IF (trans_mode == "p") THEN ! run in prosciutto (volume) mode
   decode = output_format == "vapor" .OR. dup_mode > 0
 ! import input volume
   CALL import(volgrid, filename=input_file, decode=decode, dup_mode=dup_mode, &
-   time_definition=time_definition, categoryappend="input_volume")
+   time_definition=time_definition, anavar=avl, categoryappend="input_volume")
   IF (.NOT.ASSOCIATED(volgrid)) THEN
     CALL l4f_category_log(category, L4F_ERROR, &
      'error importing input volume from file '//TRIM(input_file))
@@ -636,7 +650,6 @@ IF (trans_mode == "p") THEN ! run in prosciutto (volume) mode
       volgrid_out => volgrid_tmp
       NULLIFY(volgrid_tmp)
     else
-      print *,"Impossible solution"
       CALL l4f_category_log(category, L4F_ERROR, 'Cannot make variable you have requested')
 
       if (.not. shoppinglist(vl,vfn,vfnoracle,copy=.false.)) then
