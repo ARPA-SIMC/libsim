@@ -105,7 +105,7 @@ CALL optionparser_add(opt, 'o', 'orient', orient, 'LANDSCAPE', help= &
 CALL optionparser_add(opt, 'c', 'color', color, 'COLOR', help= &
  'postscript color mode (''COLOR'' or ''MONOCHROME'')')
 CALL optionparser_add(opt, 'n', 'nomogram', nomogram, 'herlofson', help= &
- 'nomogram type (''herlofson'', ''herlofson-down'', ''emagram'', ''emagram-down''')
+ 'nomogram type (''herlofson'', ''herlofson-down'', ''emagramma'', ''emagramma-down''')
 CALL optionparser_add(opt, 'l', 'logo', logo, 'Met Service', help= &
  'logo to print in footer')
 CALL optionparser_add(opt, 't', 'packtimerange', packtimerange, help= &
