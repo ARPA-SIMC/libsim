@@ -873,6 +873,8 @@ IF (this%trans%trans_type == 'vertint') THEN
       ENDIF
     ENDIF
 
+    this%valid = .TRUE. ! warning, no check of subtype
+
   ELSE
 ! here we assume that valid levels are contiguous and ordered
 

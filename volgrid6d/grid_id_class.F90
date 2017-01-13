@@ -847,8 +847,8 @@ call grib_get(gaid,'numberOfValues',numberOfValues)
 IF (numberOfPoints /= SIZE(field)) THEN
   CALL l4f_log(L4F_ERROR, 'grid_id_decode_data_gribapi numberOfPoints and grid size different')
   CALL l4f_log(L4F_ERROR, 'grid_id_decode_data_gribapi numberOfPoints: ' &
-   //t2c(numberOfPoints)//', nx,ny:'&
-   //t2c(SIZE(field,1))//' x '//t2c(SIZE(field,2)))
+   //t2c(numberOfPoints)//', nx,ny: '&
+   //t2c(SIZE(field,1))//','//t2c(SIZE(field,2)))
   CALL raise_error()
   field(:,:) = rmiss
   RETURN

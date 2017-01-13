@@ -1540,6 +1540,7 @@ DO ivar=1,nvar
       ENDDO
 
       IF (c_e(lvar_coord_vol)) THEN
+        NULLIFY(coord_3d_in)
         CALL volgrid_get_vol_3d(volgrid6d_in, itime, itimerange, lvar_coord_vol, &
          coord_3d_in)
         IF (c_e(spos)) THEN ! compute difference wrt surface coordinate
@@ -1574,6 +1575,9 @@ DO ivar=1,nvar
   ENDDO
 ENDDO
 
+IF (c_e(lvar_coord_vol)) THEN
+  DEALLOCATE(coord_3d_in)
+ENDIF
 IF (.NOT.ASSOCIATED(volgrid6d_in%voldati)) THEN
   DEALLOCATE(voldatiin)
 ENDIF
