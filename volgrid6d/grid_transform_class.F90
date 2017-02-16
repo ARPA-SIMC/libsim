@@ -174,8 +174,8 @@
 !!    - sub_type='setinvalidto' the input points having non valid data
 !!      are set to a user-specified constant value (grid-to-grid).
 !!    - sub_type='settoinvalid' the input points having values
-!!      included in the requested bounds are kept in the output, the
-!!      others are set to an invalid value (grid-to-grid).
+!!      included in the requested bounds are set to an invalid value,
+!!      the others are kept unchanged (grid-to-grid).
 !!
 !! \ingroup volgrid6d
 MODULE grid_transform_class
@@ -2180,7 +2180,7 @@ ELSE IF (this%trans%trans_type == 'boxinter') THEN
   CALL getval(v7d_in%ana(:)%coord,lon=lon,lat=lat)
 ! use find_index in the opposite way, here extrap does not make sense
   CALL find_index(out,'near',&
-   this%outnx, this%outny , xmin, xmax, ymin, ymax, &
+   this%outnx, this%outny, xmin, xmax, ymin, ymax, &
    lon, lat, .FALSE., &
    this%inter_index_x(:,1), this%inter_index_y(:,1))
 
