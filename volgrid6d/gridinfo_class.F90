@@ -1573,12 +1573,14 @@ ELSE
 ENDIF
 
 IF (p1_g1 > 255 .OR. p2_g1 > 255) THEN
-  tri = 10
   ptmp = MAX(p1_g1,p2_g1)
   p2_g1 = MOD(ptmp,256)
   p1_g1 = ptmp/256
-  CALL l4f_log(L4F_WARN,'timerange_v7d_to_g1: timerange too big for grib1 ' &
-   //TRIM(to_char(ptmp))//', forcing time range indicator to 10.')
+  IF (tri /= 0) THEN ! if not instantaneous give warning
+    CALL l4f_log(L4F_WARN,'timerange_v7d_to_g1: timerange too long for grib1 ' &
+     //TRIM(to_char(ptmp))//', forcing time range indicator to 10.')
+  ENDIF
+  tri = 10
 ENDIF
   
 
@@ -1637,6 +1639,7 @@ TYPE(unitchecker),PARAMETER :: hunit(5) = (/ &
 TYPE(unitchecker),PARAMETER :: munit(3) = (/ & ! 13 14 COSMO extensions
  unitchecker(0, 60), unitchecker(13, 900), unitchecker(14, 1800) /)
 
+unit = imiss
 IF (.NOT.c_e(valuein1) .OR. .NOT.c_e(valuein2)) THEN
   valueout1 = imiss
   valueout2 = imiss
@@ -1653,21 +1656,45 @@ ELSE IF (MOD(valuein1,3600) == 0 .AND. MOD(valuein2,3600) == 0) THEN ! prefer ho
       EXIT
     ENDIF
   ENDDO
+  IF (.NOT.c_e(unit)) THEN
+! last chance, disable overflow check and start from longest unit,
+    DO i = SIZE(hunit), 1, -1
+      IF (MOD(valuein1, hunit(i)%sectounit) == 0 &
+       .AND. MOD(valuein2, hunit(i)%sectounit) == 0) THEN
+        valueout1 = valuein1/hunit(i)%sectounit
+        valueout2 = valuein2/hunit(i)%sectounit
+        unit = hunit(i)%unit
+        EXIT
+      ENDIF
+    ENDDO
+  ENDIF
 ELSE IF (MOD(valuein1,60) == 0. .AND. MOD(valuein2,60) == 0) THEN ! then minutes
-  DO i = 1, SIZE(hunit)
-    IF (MOD(valuein1, hunit(i)%sectounit) == 0 &
-     .AND. MOD(valuein2, hunit(i)%sectounit) == 0 &
-     .AND. valuein1/hunit(i)%sectounit < 255 &
-     .AND. valuein2/hunit(i)%sectounit < 255) THEN
-      valueout1 = valuein1/hunit(i)%sectounit
-      valueout2 = valuein2/hunit(i)%sectounit
-      unit = hunit(i)%unit
+  DO i = 1, SIZE(munit)
+    IF (MOD(valuein1, munit(i)%sectounit) == 0 &
+     .AND. MOD(valuein2, munit(i)%sectounit) == 0 &
+     .AND. valuein1/munit(i)%sectounit < 255 &
+     .AND. valuein2/munit(i)%sectounit < 255) THEN
+      valueout1 = valuein1/munit(i)%sectounit
+      valueout2 = valuein2/munit(i)%sectounit
+      unit = munit(i)%unit
       EXIT
     ENDIF
   ENDDO
+  IF (.NOT.c_e(unit)) THEN
+! last chance, disable overflow check and start from longest unit,
+    DO i = SIZE(munit), 1, -1
+      IF (MOD(valuein1, munit(i)%sectounit) == 0 &
+       .AND. MOD(valuein2, munit(i)%sectounit) == 0) THEN
+        valueout1 = valuein1/munit(i)%sectounit
+        valueout2 = valuein2/munit(i)%sectounit
+        unit = munit(i)%unit
+        EXIT
+      ENDIF
+    ENDDO
+  ENDIF
+ENDIF
 
-ELSE
-
+IF (.NOT.c_e(unit)) THEN
   CALL l4f_log(L4F_ERROR,'timerange_second_to_g1: cannot find a grib1 timerange unit for coding ' &
    //t2c(valuein1)//','//t2c(valuein2)//'s intervals' )
     CALL raise_error()
@@ -1991,6 +2018,13 @@ IF (this%var%discipline == 255 .AND. &
       this%level%level2 = 255
       this%level%l2 = 0
 
+    ELSE IF (this%var%number == 28 .AND. &
+     (this%timerange%timerange == 254 .OR. this%timerange%timerange == 205)) THEN ! 10FG3
+      this%timerange%timerange = 2 ! max
+      this%timerange%p2 = 10800 ! length of period = 3 hours
+      this%level%level1 = 103
+      this%level%l1 = 10000 ! 10m
+
     ENDIF
 
   ENDIF ! table 128
@@ -2053,6 +2087,9 @@ ELSE IF (this%timerange%timerange == 2) THEN ! max
       this%timerange%timerange=205
 
     ELSE IF(this%var == volgrid6d_var_new(this%var%centre,128,123,255)) THEN ! uvmax
+      this%timerange%timerange=205
+
+    ELSE IF(this%var == volgrid6d_var_new(this%var%centre,228,28,255)) THEN ! uvmax
       this%timerange%timerange=205
 
     ENDIF
