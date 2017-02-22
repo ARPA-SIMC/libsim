@@ -2,7 +2,7 @@
 # to disable oracle and/or vapor support requiring stiff dependencies
 Summary: Fortran utility libraries
 Name: libsim
-Version: 6.1.13
+Version: 6.1.14
 Release: 1
 License: GPL2+
 Group: Applications/Meteo
@@ -107,6 +107,11 @@ mv $RPM_BUILD_ROOT%{_includedir}/*.mod $RPM_BUILD_ROOT%{_fmoddir}
 rm -rf %{buildroot}
 
 %changelog
+* Wed Feb 22 2017 Davide Cesari <dcesari@arpae.it> - 6.1.14-1
+- fixed #33 #34, new ECMWF wind gust and bug on long timeranges
+- fixes for use of stdin/stdout
+- other minor bugfixes
+
 * Tue Jan 3 2017 Daniele Branchini <dbranchini@arpae.it> - 6.1.13-1
 - fixed #27
 - allow array for --lon and --lat + pretty printing of default
