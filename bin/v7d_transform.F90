@@ -1015,7 +1015,7 @@ IF (pre_trans_type /= '') THEN
         CALL delete(v7d_coord)
         v7d_coord=v7dtmp
         CALL init(v7dtmp) ! detach it
-        CALL display(v7d_coord)
+        IF (ldisplay) CALL display(v7d_coord)
       ENDIF
     ENDIF
 
@@ -1133,25 +1133,26 @@ ENDIF
 #ifdef ALCHIMIA
 if (output_variable_list /= " ") then
 
-  call register_termo(vfn)
+  CALL register_termo(vfn)
 
-  if (alchemy(v7d,vfn,vl_alc,v7dtmp,copy=.true., vfnoracle=vfnoracle) == 0 ) then
-    IF (ldisplay) call display(vfnoracle)
+  IF (alchemy(v7d,vfn,vl_alc,v7dtmp,copy=.TRUE., vfnoracle=vfnoracle) == 0) THEN
+    IF (ldisplay) CALL display(vfnoracle)
     CALL delete(v7d)
     v7d = v7dtmp
     CALL init(v7dtmp) ! detach it
-  else
+  ELSE
     CALL l4f_category_log(category, L4F_ERROR, 'Cannot make variable you have requested')
 
-    if (.not. shoppinglist(vl,vfn,vfnoracle,copy=.false.)) then
+    IF (.NOT. shoppinglist(vl,vfn,vfnoracle,copy=.FALSE.)) THEN
       CALL l4f_category_log(category, L4F_ERROR, 'shoppinglist: generic error')
-    else
-      call sl_display_pretty(compile_sl(vfnoracle))
-      IF (ldisplay ) call display(vfn)
-    end if
+    ELSE
+      CALL l4f_category_log(category, L4F_ERROR, 'use --display to get more information')
+      IF (ldisplay) CALL sl_display_pretty(compile_sl(vfnoracle))
+      IF (ldisplay) CALL display(vfn)
+    ENDIF
     CALL l4f_category_log(category, L4F_ERROR, 'Exit for error')
     CALL raise_fatal_error()
-  end if
+  ENDIF
 end if
 #endif
 

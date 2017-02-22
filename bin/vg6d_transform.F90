@@ -652,26 +652,27 @@ IF (trans_mode == "p") THEN ! run in prosciutto (volume) mode
   if (ASSOCIATED(volgrid_out) .and. output_variable_list /= " ") then
 
     CALL l4f_category_log(category,L4F_DEBUG,'execute alchemy')
-    call register_termo(vfn)
-    IF (ldisplay ) call display(vfn)
+    CALL register_termo(vfn)
+    IF (ldisplay) CALL display(vfn)
 
-    if ( alchemy(volgrid_out,vfn,vl,volgrid_tmp,copy=.true.,vfnoracle=vfnoracle) == 0 ) then
-      call display(vfnoracle)
+    IF (alchemy(volgrid_out,vfn,vl,volgrid_tmp,copy=.TRUE.,vfnoracle=vfnoracle) == 0) THEN
+      IF (ldisplay) CALL display(vfnoracle)
       CALL delete(volgrid_out)
       volgrid_out => volgrid_tmp
       NULLIFY(volgrid_tmp)
-    else
+    ELSE
       CALL l4f_category_log(category, L4F_ERROR, 'Cannot make variable you have requested')
 
-      if (.not. shoppinglist(vl,vfn,vfnoracle,copy=.false.)) then
+      IF (.NOT. shoppinglist(vl,vfn,vfnoracle,copy=.FALSE.)) THEN
         CALL l4f_category_log(category, L4F_ERROR, 'shoppinglist: generic error')
-      else
-        call sl_display_pretty(compile_sl(vfnoracle))
-        IF (ldisplay ) call display(vfn)
-      end if
+      ELSE
+        CALL l4f_category_log(category, L4F_ERROR, 'use --display to get more information')
+        IF (ldisplay) CALL sl_display_pretty(compile_sl(vfnoracle))
+        IF (ldisplay) CALL display(vfn)
+      ENDIF
       CALL l4f_category_log(category, L4F_ERROR, 'Exit for error')
       CALL raise_fatal_error()
-    end if
+    ENDIF
 
     CALL l4f_category_log(category,L4F_INFO,"alchemy completed")
 
