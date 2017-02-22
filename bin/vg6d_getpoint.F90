@@ -212,23 +212,27 @@ IF (version) THEN
   CALL exit(0)
 ENDIF
 
-if (optind <= iargc()) then
-  call getarg(optind, input_file)
-  optind=optind+1
-else
-  call optionparser_printhelp(opt)
-  call l4f_category_log(category,L4F_FATAL,'input file missing')
-  call raise_fatal_error()
-end if
+IF (optind <= iargc()) THEN
+  CALL getarg(optind, input_file)
+  IF (input_file == '-') THEN
+    CALL l4f_category_log(category, L4F_INFO, 'trying /dev/stdin as stdin unit')
+    input_file = '/dev/stdin'
+  ENDIF
+  optind = optind+1
+ELSE
+  CALL optionparser_printhelp(opt)
+  CALL l4f_category_log(category, L4F_FATAL, 'input file missing')
+  CALL raise_fatal_error()
+ENDIF
 
-if (optind <= iargc()) then
-  call getarg(optind,output_file)
-  optind=optind+1
-else
-  call optionparser_printhelp(opt)
-  call l4f_category_log(category,L4F_FATAL,'output file missing')
-  call raise_fatal_error()
-end if
+IF (optind <= iargc()) THEN
+  CALL getarg(optind, output_file)
+  optind = optind+1
+ELSE
+  CALL optionparser_printhelp(opt)
+  CALL l4f_category_log(category, L4F_FATAL, 'output file missing')
+  CALL raise_fatal_error()
+ENDIF
 
 if (optind <= iargc()) then
   call optionparser_printhelp(opt)
