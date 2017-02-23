@@ -153,15 +153,19 @@ CALL optionparser_add(opt, 'v', 'trans-type', trans_type, 'none', help= &
  &on polygons, '&
 #endif
  //'''none'' for no transformation (input/output only)')
-CALL optionparser_add(opt, 'z', 'sub-type', sub_type, 'near', help= &
+sub_type = ''
+CALL optionparser_add(opt, 'z', 'sub-type', sub_type, help= &
  'transformation subtype, for inter: ''near'', ''bilin'', &
  &for boxinter, boxregrid'&
 #ifdef HAVE_SHAPELIB
  //', polyinter'&
 #endif
 //': ''average'', ''stddev'', ''max'', ''min'', ''percentile'', &
- &for zoom: ''index'', ''coord'', ''coordbb'', ''projcoord'', &
- &for metamorphosis: ''all'', ''maskvalid'', ''maskinvalid'', &
+ &for zoom: ''index'', ''coord'', ''coordbb'', ''projcoord'', '&
+#ifdef HAVE_SHAPELIB
+ //'for maskgen: ''poly'', '&
+#endif
+ //'for metamorphosis: ''all'', ''maskvalid'', ''maskinvalid'', &
  &''setinvalidto'', ''settoinvalid''')
 CALL optionparser_add(opt, ' ', 'extrap', extrap, help= &
  'enable extrapolation outside input grid, it works only for ''inter'' &
@@ -222,8 +226,8 @@ CALL optionparser_add(opt, ' ', 'radius', radius, help= &
  'radius of stencil in gridpoint units, fractionary values accepted, &
  &for ''stencilinter'' interpolation')
 CALL optionparser_add(opt, ' ', 'maskbounds', maskbounds, help= &
- 'comma-separated list of boundary values for some ''metamorphosis'' &
- &transformations: &
+ 'comma-separated list of boundary values for some sub-types of &
+ &''metamorphosis'' transformation: &
  &for ''maskvalid'' it defines an optional range of mask field values &
  &defining the area of valid points (2 values), &
  &for ''setinvalidto'' it sets the constant value to be used (1 value), &
@@ -252,7 +256,7 @@ coord_file=cmiss
 #if defined (HAVE_SHAPELIB) || defined (HAVE_LIBGRIBAPI)
 CALL optionparser_add(opt, ' ', 'coord-file', coord_file, help= &
 #ifdef HAVE_SHAPELIB
-'file in shp format with coordinates of polygons, required for maskgen and polyinter  transformation' &
+'file in shp format with coordinates of polygons, required for maskgen and polyinter transformation' &
 #endif
 #if defined (HAVE_SHAPELIB) && defined (HAVE_LIBGRIBAPI)
 //' or '// &
