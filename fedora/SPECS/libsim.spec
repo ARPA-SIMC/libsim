@@ -15,7 +15,7 @@ BuildRequires: fortrangis-devel %{!?no_oracle:oracle-instantclient-devel} libdba
 BuildRequires: cnf-devel libpng-devel %{!?no_vapor:vapor-devel} fortrangis-devel netcdf-fortran-devel shapelib-devel jasper-devel proj-devel popt-devel openjpeg-devel cairo-devel
 Requires: libdballef4 >= 7.6 grib_api
 
-%if 0%{?fedora} < 9
+%if 0%{?fedora} < 9 || 0%{?rhel}
 %define _fmoddir %{_libdir}/gfortran/modules
 %endif
 
