@@ -15,7 +15,7 @@ BuildRequires: fortrangis-devel %{!?no_oracle:oracle-instantclient-devel} libdba
 BuildRequires: cnf-devel libpng-devel %{!?no_vapor:vapor-devel} fortrangis-devel netcdf-fortran-devel shapelib-devel jasper-devel proj-devel popt-devel openjpeg-devel cairo-devel
 Requires: libdballef4 >= 7.6 grib_api
 
-%if 0%{?fedora} < 9 || 0%{?rhel}
+%if 0%{?fedora} < 9
 %define _fmoddir %{_libdir}/gfortran/modules
 %endif
 
@@ -70,7 +70,7 @@ make check
 
 %install
 make DESTDIR=%{buildroot} install
-%if 0%{?fedora} >= 9
+%if 0%{?fedora} >= 9 || 0%{?rhel}
 mkdir -p $RPM_BUILD_ROOT%{_fmoddir}
 mv $RPM_BUILD_ROOT%{_includedir}/*.mod $RPM_BUILD_ROOT%{_fmoddir}
 %endif
@@ -88,10 +88,10 @@ mv $RPM_BUILD_ROOT%{_includedir}/*.mod $RPM_BUILD_ROOT%{_fmoddir}
 %{_libdir}/*.la
 %{_libdir}/*.so
 %{_libdir}/pkgconfig/%{name}.pc
-%if 0%{?fedora} < 9
-%{_includedir}/*
-%else
+%if 0%{?fedora} >= 9 || 0%{?rhel}
 %{_fmoddir}/*.mod
+%else
+%{_includedir}/*
 %endif
 %if 0%{?no_vapor}
 %else
