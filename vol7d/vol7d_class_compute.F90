@@ -126,22 +126,8 @@ ELSE IF (stat_proc == 254) THEN
     ENDIF
   ENDIF
 
-ELSE IF (stat_proc_input /= stat_proc) THEN
-  IF ((stat_proc_input == 0 .AND. stat_proc == 1) .OR. &
-   (stat_proc_input == 1 .AND. stat_proc == 0)) THEN
-    CALL l4f_log(L4F_INFO, &
-     'computing statistically processed data by integration/differentiation '// &
-     t2c(stat_proc_input)//':'//t2c(stat_proc))
-    CALL vol7d_compute_stat_proc_metamorph(this, that, stat_proc_input, &
-     stat_proc)
-  ELSE
-    CALL l4f_log(L4F_ERROR, &
-   'statistical processing '//t2c(stat_proc_input)//':'//t2c(stat_proc)// &
-   ' not implemented or does not make sense')
-    CALL raise_error()
-  ENDIF
-
-ELSE
+ELSE IF (stat_proc_input == stat_proc .OR. &
+ (stat_proc == 2 .OR. stat_proc == 3)) THEN ! min and max can be computed from any input
   CALL l4f_log(L4F_INFO, &
    'recomputing statistically processed data by aggregation and difference '//&
    TRIM(to_char(stat_proc_input))//':'//TRIM(to_char(stat_proc)))
@@ -161,6 +147,20 @@ ELSE
   CALL vol7d_merge(that1, that2, sort=.TRUE.)
   CALL delete(that2)
   that = that1
+ELSE ! IF (stat_proc_input /= stat_proc) THEN
+  IF ((stat_proc_input == 0 .AND. stat_proc == 1) .OR. &
+   (stat_proc_input == 1 .AND. stat_proc == 0)) THEN
+    CALL l4f_log(L4F_INFO, &
+     'computing statistically processed data by integration/differentiation '// &
+     t2c(stat_proc_input)//':'//t2c(stat_proc))
+    CALL vol7d_compute_stat_proc_metamorph(this, that, stat_proc_input, &
+     stat_proc)
+  ELSE
+    CALL l4f_log(L4F_ERROR, &
+   'statistical processing '//t2c(stat_proc_input)//':'//t2c(stat_proc)// &
+   ' not implemented or does not make sense')
+    CALL raise_error()
+  ENDIF
 ENDIF
 
 END SUBROUTINE vol7d_compute_stat_proc
@@ -856,7 +856,7 @@ CALL recompute_stat_proc_diff_common(this%time, this%timerange, stat_proc, step,
 ! complete the definition of the empty output template
 CALL vol7d_alloc(that, nana=0, nlevel=0, nnetwork=0)
 CALL vol7d_alloc_vol(that)
-
+! shouldn't we exit here with an empty volume if stat_proc/=0,1 ?
 ALLOCATE(mask_time(SIZE(this%time)))
 DO l = 1, SIZE(this%time)
   mask_time(l) = ANY(this%time(l) == that%time(:))
