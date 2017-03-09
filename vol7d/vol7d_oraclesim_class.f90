@@ -70,7 +70,7 @@ REAL,ALLOCATABLE :: valore1(:), valore2(:)
 INTEGER(kind=int_b),ALLOCATABLE :: cdatao(:,:), cflag(:,:), valore3(:,:)
 CHARACTER(len=12),ALLOCATABLE :: fdatao(:)
 INTEGER :: nmax=0, nact=0, nvarmax=0
-INTEGER,PARAMETER :: nmaxmin=100000, nmaxmax=5000000, oraclesim_netmax=50, &
+INTEGER,PARAMETER :: nmaxmin=100000, nmaxmax=5000000, oraclesim_netmax=100, &
  datelen=13, flaglen=10, cvallen=8
  
 ! tabelle nuove di conversione variabili da btable a oraclesim
