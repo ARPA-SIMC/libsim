@@ -62,7 +62,7 @@ TYPE(arrayof_real) :: maskbounds
 type(griddim_def) :: griddim_out
 type(transform_def) :: trans
 
-INTEGER :: nx,ny,component_flag,npx,npy,dup_mode
+INTEGER :: nx,ny,component_flag,npx,npy,dup_mode,set_component_flag
 doubleprecision :: xmin, xmax, ymin, ymax, xoff, yoff
 INTEGER :: ix, iy, fx, fy, time_definition, utm_zone
 doubleprecision :: latitude_south_pole,longitude_south_pole,angle_rotation
@@ -177,24 +177,24 @@ CALL optionparser_add(opt, ' ', 'display', ldisplay, help= &
  &with output on stdout.')
 
 CALL optionparser_add(opt, 'u', 'type', proj_type, 'regular_ll', help= &
- 'projection and parameters of interpolated grid: it is a string &
+ 'projection and parameters of target grid: it is a string &
  &as ''regular_ll'', ''rotated_ll'', ''UTM''')
 CALL optionparser_add(opt, 'i', 'nx', nx, 31, help= &
- 'number of nodes along x axis on interpolated grid')
+ 'number of nodes along x axis on target grid')
 CALL optionparser_add(opt, 'l', 'ny', ny, 31, help= &
- 'number of nodes along y axis on interpolated grid')
+ 'number of nodes along y axis on target grid')
 CALL optionparser_add(opt, 'm', 'x-min', xmin, 0.0D0, help= &
- 'x coordinate of the lower left corner of interpolated grid (degrees or meters)')
+ 'x coordinate of the lower left corner of target grid (degrees or meters)')
 CALL optionparser_add(opt, 'o', 'y-min', ymin, 30.0D0, help= &
- 'y coordinate of the lower left corner of interpolated grid (degrees or meters)')
+ 'y coordinate of the lower left corner of target grid (degrees or meters)')
 CALL optionparser_add(opt, 'n', 'x-max', xmax, 30.0D0, help= &
- 'x coordinate of the upper right corner of interpolated grid (degrees or meters)')
+ 'x coordinate of the upper right corner of target grid (degrees or meters)')
 CALL optionparser_add(opt, 'p', 'y-max', ymax, 60.0D0, help= &
- 'y coordinate of the upper right corner of interpolated grid (degrees or meters)')
+ 'y coordinate of the upper right corner of target grid (degrees or meters)')
 CALL optionparser_add(opt, 'n', 'x-off', xoff, 0.0D0, help= &
- 'x coordinate offset (also known as false easting) in interpolated grid')
+ 'x coordinate offset (also known as false easting) in target grid')
 CALL optionparser_add(opt, 'p', 'y-off', yoff, 0.0D0, help= &
- 'y coordinate offset (also known as false northing) in interpolated grid')
+ 'y coordinate offset (also known as false northing) in target grid')
 CALL optionparser_add(opt, ' ', 'utm-zone', utm_zone, 32, help= &
  'zone number for UTM projections')
 
@@ -204,6 +204,9 @@ CALL optionparser_add(opt, 'r', 'longitude-south-pole', longitude_south_pole, &
  10.0D0, help='longitude of south pole for rotated grid')
 CALL optionparser_add(opt, 's', 'angle-rotation', angle_rotation, &
  0.0D0, help='angle of rotation for rotated grid')
+
+CALL optionparser_add(opt, 't', 'component-flag', component_flag, &
+ 0, help='wind component flag in target grid (0/1)')
 
 CALL optionparser_add(opt, 'a', 'ilon', ilon, 0.0D0, help= &
  'longitude of the southwestern zooming/bounding box corner')
@@ -316,10 +319,14 @@ CALL optionparser_add(opt, ' ', 'rounding', round, help= &
 
 CALL optionparser_add(opt, 'e', 'a-grid', c2agrid, help= &
  'interpolate U/V points of an Arakawa C grid on the corresponding T points &
- &of an Arakawa A grid')
+ &of an Arakawa A grid, best with --trans-type=none')
 
-CALL optionparser_add(opt, 't', 'component-flag', component_flag, &
- 0, help='wind component flag in interpolated grid (0/1)')
+set_component_flag = imiss
+CALL optionparser_add(opt, ' ', 'set-component-flag', set_component_flag, help= &
+ 'set component flag of the output data to the indicated value, &
+ &0=components referred to geographic system, &
+ &1=components referred to projected system, & 
+ &best with --trans-type=none')
 
 CALL optionparser_add(opt, ' ', 'time-definition', time_definition, 0, help= &
  'time definition for imported volume, 0 for reference time (more suitable for &
@@ -624,6 +631,16 @@ IF (trans_mode == "p") THEN ! run in prosciutto (volume) mode
   ENDIF
 
   IF (c2agrid) CALL vg6d_c2a(volgrid)
+
+  IF (set_component_flag == 0) THEN ! unrotated components are desired
+    DO i = 1, SIZE(volgrid)
+      CALL wind_unrot(volgrid(i)) ! unrotate if necessary
+    ENDDO
+  ELSE IF (set_component_flag == 1) THEN ! rotated components are desired
+    DO i = 1, SIZE(volgrid)
+      CALL wind_rot(volgrid(i)) ! rotate if necessary
+    ENDDO
+  ENDIF
 
   IF (trans_type /= 'none') THEN ! transform
     CALL l4f_category_log(category,L4F_DEBUG,'execute transform')
