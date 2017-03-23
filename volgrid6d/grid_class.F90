@@ -205,9 +205,12 @@ SUBROUTINE griddim_init(this, nx, ny, &
 TYPE(griddim_def),INTENT(inout) :: this !< object to be created
 INTEGER,INTENT(in),OPTIONAL :: nx !< number of points along the x axis
 INTEGER,INTENT(in),OPTIONAL :: ny !< number of points along the y axis
-!> longitudini e latitudini minime e massime
-DOUBLE PRECISION,INTENT(in),OPTIONAL :: xmin, xmax, ymin, ymax !< grid extremes in projection units (degrees or meters depending on the projection type)
-DOUBLE PRECISION,INTENT(in),OPTIONAL :: dx, dy !< grid steps in x and y directions
+DOUBLE PRECISION,INTENT(in),OPTIONAL :: xmin !< lower bound for x coordinate on grid in projection units (degrees or meters depending on the projection type)
+DOUBLE PRECISION,INTENT(in),OPTIONAL :: xmax !< upper bound for x coordinate
+DOUBLE PRECISION,INTENT(in),OPTIONAL :: ymin !< lower bound for y coordinate
+DOUBLE PRECISION,INTENT(in),OPTIONAL :: ymax !< upper bound for y coordinate
+DOUBLE PRECISION,INTENT(in),OPTIONAL :: dx !< grid step in x direction
+DOUBLE PRECISION,INTENT(in),OPTIONAL :: dy !< grid step in y direction
 !> Resolved u- and v- components of vector quantities relative to 0=the easterly and northerly directions
 !! 1=the defined grid in the direction of increasing x and y (or i and j) coordinates respectively (0=north, 128=south)
 INTEGER,INTENT(in),OPTIONAL :: component_flag
