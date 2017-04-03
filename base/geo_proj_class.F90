@@ -520,12 +520,12 @@ DOUBLE PRECISION :: llov
 ! line of view / central meridian
 llov = optio_d(lov)
 lzone = optio_i(zone)
-IF (c_e(lov) .AND. c_e(zone)) THEN
-  this%lov = lov + zone*6.0D0 - 183.0D0
-ELSE IF (c_e(lov)) THEN
-  this%lov = lov
-ELSE IF (c_e(zone)) THEN
-  this%lov = zone*6.0D0 - 183.0D0
+IF (c_e(llov) .AND. c_e(lzone)) THEN
+  this%lov = llov + zone*6.0D0 - 183.0D0
+ELSE IF (c_e(llov)) THEN
+  this%lov = llov
+ELSE IF (c_e(lzone)) THEN
+  this%lov = lzone*6.0D0 - 183.0D0
 ENDIF
 
 ! ellipsoid
