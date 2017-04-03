@@ -27,7 +27,7 @@ TYPE geo_proj_polar
   DOUBLE PRECISION :: latin1, latin2 ! latitudes at which the projection plane intesects the sphere
   DOUBLE PRECISION :: lad ! latitudine at which dx and dy (in m) are specified
   DOUBLE PRECISION :: lon1, lat1 ! stored in order not to forget them, from grib
-  INTEGER :: projection_center_flag ! 0 = south pole, 1 = north pole
+  INTEGER :: projection_center_flag ! 0 = northern hemisphere, 128 = southern hemisphere
 END TYPE geo_proj_polar
 
 TYPE geo_proj_rotated
@@ -513,13 +513,18 @@ DOUBLE PRECISION,INTENT(in),OPTIONAL :: ellips_smaj_axis !< Earth semi-major axi
 DOUBLE PRECISION,INTENT(in),OPTIONAL :: ellips_flatt !< Earth flattening
 INTEGER,INTENT(in),OPTIONAL :: ellips_type !< number in the interval [1,nellips] indicating a predefined ellipsoid, alternative to the previous arguments
 
+INTEGER :: lzone
+DOUBLE PRECISION :: llov
+
 
 ! line of view / central meridian
-IF (PRESENT(lov) .AND. PRESENT(zone)) THEN ! set lov according to requested UTM zone
+llov = optio_d(lov)
+lzone = optio_i(zone)
+IF (c_e(lov) .AND. c_e(zone)) THEN
   this%lov = lov + zone*6.0D0 - 183.0D0
-ELSE IF (PRESENT(lov)) THEN
+ELSE IF (c_e(lov)) THEN
   this%lov = lov
-ELSE IF (PRESENT(zone)) THEN
+ELSE IF (c_e(zone)) THEN
   this%lov = zone*6.0D0 - 183.0D0
 ENDIF
 
