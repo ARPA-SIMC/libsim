@@ -3476,10 +3476,15 @@ if (c_e(session%count)) then
     call session%ingest(metaanddatavbuf(i),noattr=noattr,filter=filter)
   end do
 
-  ! compact data to real dimension
-  ! allocate (metaanddatav(i))
-  metaanddatav=metaanddatavbuf(:i)
-  deallocate(metaanddatavbuf)
+! compact data to real dimension
+  IF (SIZE(metaanddatavbuf) == i) THEN
+! space/time optimization in common case of no filter
+    CALL move_ALLOC(metaanddatavbuf, metaanddatav)
+  ELSE
+! allocate (metaanddatav(i))
+    metaanddatav=metaanddatavbuf(:i)
+    DEALLOCATE(metaanddatavbuf)
+  ENDIF
 
 else
   if (allocated(metaanddatav)) deallocate(metaanddatav)
