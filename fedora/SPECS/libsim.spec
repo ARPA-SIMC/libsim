@@ -2,7 +2,7 @@
 # to disable oracle and/or vapor support requiring stiff dependencies
 Summary: Fortran utility libraries
 Name: libsim
-Version: 6.1.14
+Version: 6.1.15
 Release: 1
 License: GPL2+
 Group: Applications/Meteo
@@ -107,6 +107,12 @@ mv $RPM_BUILD_ROOT%{_includedir}/*.mod $RPM_BUILD_ROOT%{_fmoddir}
 rm -rf %{buildroot}
 
 %changelog
+* Tue Apr 4 2017 Daniele Branchini <dbranchini@arpae.it> - 6.1.15-1
+- allow computing max and min from any input stat-proc
+- allow simple rot/unrot of wind components
+- memory/time optimization in common case
+- improved doc
+
 * Wed Feb 22 2017 Davide Cesari <dcesari@arpae.it> - 6.1.14-1
 - fixed #33 #34, new ECMWF wind gust and bug on long timeranges
 - fixes for use of stdin/stdout
