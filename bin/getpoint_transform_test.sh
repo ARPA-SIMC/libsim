@@ -6,6 +6,7 @@ if [ "$1" = "installed" ]; then
     pref=""
 else
     pref=./
+    export LIBSIM_DATA=../data
 fi
 
 # vg6d_getpoint with nearest point test
