@@ -265,7 +265,9 @@ CALL optionparser_add(opt, ' ', 'coord-file', coord_file, help= &
 //' or '// &
 #endif
 #ifdef HAVE_LIBGRIBAPI
-'file in grib format providing vertical coordinate of input data for vertical interpolation' &
+'file in grib format providing the vertical coordinate of input data for &
+&vertical interpolation or the mask field required by some sub-types of &
+&''metamorphosis'' transformation (see --maskbound)' &
 #endif
 )
 #endif
