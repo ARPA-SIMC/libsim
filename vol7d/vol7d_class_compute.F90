@@ -545,35 +545,21 @@ IF (ASSOCIATED(this%voldatir)) THEN
 
             IF (COUNT(mask_time(itime_start(i):itime_end(i))) > 0) THEN
               IF (stat_proc == 0) THEN ! average
-!                IF (vartype /= var_dir360) THEN
-                  IF (lweighted) THEN
-                    WHERE(mask_time(itime_start(i):itime_end(i)))
-                      weightr(itime_start(i):itime_end(i)) = &
-                       weightr(itime_start(i):itime_end(i)) * &
-                       this%voldatir(i1,itime_start(i):itime_end(i),i3,itr,i5,i6)
-                    END WHERE
-                    that%voldatir(i1,i,i3,1,i5,i6) = &
-                     SUM(weightr(itime_start(i):itime_end(i)), &
-                     mask=mask_time(itime_start(i):itime_end(i)))
-                    
-                  ELSE
-                    that%voldatir(i1,i,i3,1,i5,i6) = &
-                     SUM(this%voldatir(i1,itime_start(i):itime_end(i),i3,itr,i5,i6), &
-                     mask=mask_time(itime_start(i):itime_end(i)))/ &
-                     COUNT(mask_time(itime_start(i):itime_end(i)))
-                  ENDIF
-!                ELSE
-!                  tmpvoldati(itime_start(i):itime_end(i)) = &
-!                   this%voldatir(i1,itime_start(i):itime_end(i),i3,itr,i5,i6)
-!                  WHERE (c_e(tmpvoldati(itime_start(i):itime_end(i))) .AND. &
-!                   tmpvoldati(itime_start(i):itime_end(i)) > 337.5)
-!                    tmpvoldati(itime_start(i):itime_end(i)) = &
-!                     tmpvoldati(itime_start(i):itime_end(i)) -360.
-!                  END WHERE
-!                  that%voldatir(i1,i,i3,1,i5,i6) = &
-!                   stat_mode_histogram(tmpvoldati(itime_start(i):itime_end(i)), &
-!                   8, -22.5, 337.5, mask=mask_time(itime_start(i):itime_end(i)))
-!                ENDIF
+                IF (lweighted) THEN
+                  WHERE(mask_time(itime_start(i):itime_end(i)))
+                    weightr(itime_start(i):itime_end(i)) = &
+                     weightr(itime_start(i):itime_end(i)) * &
+                     this%voldatir(i1,itime_start(i):itime_end(i),i3,itr,i5,i6)
+                  END WHERE
+                  that%voldatir(i1,i,i3,1,i5,i6) = &
+                   SUM(weightr(itime_start(i):itime_end(i)), &
+                   mask=mask_time(itime_start(i):itime_end(i)))
+                ELSE
+                  that%voldatir(i1,i,i3,1,i5,i6) = &
+                   SUM(this%voldatir(i1,itime_start(i):itime_end(i),i3,itr,i5,i6), &
+                   mask=mask_time(itime_start(i):itime_end(i)))/ &
+                   COUNT(mask_time(itime_start(i):itime_end(i)))
+                ENDIF
 
               ELSE IF (stat_proc == 2) THEN ! maximum
 
@@ -587,6 +573,11 @@ IF (ASSOCIATED(this%voldatir)) THEN
                 that%voldatir(i1,i,i3,1,i5,i6) = &
                  MINVAL( &
                  this%voldatir(i1,itime_start(i):itime_end(i),i3,itr,i5,i6), &
+                 mask=mask_time(itime_start(i):itime_end(i)))
+
+              ELSE IF (stat_proc == 6) THEN ! stddev (non weighted only)
+                that%voldatir(i1,i,i3,1,i5,i6) = &
+                 stat_stddev(this%voldatir(i1,itime_start(i):itime_end(i),i3,itr,i5,i6), &
                  mask=mask_time(itime_start(i):itime_end(i)))
 
               ELSE IF (stat_proc == 201) THEN ! mode
