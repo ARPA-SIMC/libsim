@@ -209,7 +209,7 @@ END SUBROUTINE vol7d_compute_stat_proc
 !! volume will not carry all the information about the processing
 !! which has been done, in the previous case, for example, the
 !! temperatures will simply look like monthly average temperatures.
-SUBROUTINE vol7d_recompute_stat_proc_agg(this, that, stat_proc, &
+SUBROUTINE vol7d_recompute_stat_proc_agg_old(this, that, stat_proc, &
  step, start, frac_valid, other, stat_proc_input)
 TYPE(vol7d),INTENT(inout) :: this !< volume providing data to be recomputed, it is not modified by the method, apart from performing a \a vol7d_alloc_vol on it
 TYPE(vol7d),INTENT(out) :: that !< output volume which will contain the recomputed data
@@ -376,6 +376,237 @@ IF (PRESENT(other)) THEN ! create volume with the remaining data for further pro
   CALL vol7d_copy(this, other, miss=.FALSE., sort=.FALSE., unique=.FALSE., &
    ltimerange=(this%timerange(:)%timerange /= tri .OR. this%timerange(:)%p2 == imiss &
    .OR. this%timerange(:)%p2 == 0 .OR. this%timerange(:)%p1 /= 0))
+ENDIF
+END SUBROUTINE makeother
+
+END SUBROUTINE vol7d_recompute_stat_proc_agg_old
+
+
+!> Specialized method for statistically processing a set of data
+!! already processed with the same statistical processing, on a
+!! different time interval.  This method performs statistical
+!! processing by aggregation of shorter intervals.  Only floating
+!! point single or double precision data with analysis/observation
+!! timerange are processed.
+!!
+!! The output \a that vol7d object contains elements from the original volume
+!! \a this satisfying the conditions
+!!  - real single or double precision variables
+!!  - timerange (vol7d_timerange_class::vol7d_timerange::timerange)
+!!    of type \a stat_proc (or \a stat_proc_input if provided)
+!!  - p1 = 0 (end of period == reference time, analysis/observation)
+!!  - p2 > 0 (processing interval non null, non instantaneous data)
+!!    and equal to a multiplier of \a step
+!!
+!! Output data will have timerange of type \a stat_proc, p1 = 0 and p2
+!! = \a step.  The supported statistical processing methods (parameter
+!! \a stat_proc) are:
+!!
+!!  - 0 average
+!!  - 1 cumulation
+!!  - 2 maximum
+!!  - 3 minimum
+!!
+!! The start of processing period can be computed automatically from
+!! the input intervals as the first possible interval modulo \a step,
+!! or, for a better control, it can be specified explicitely by the
+!! optional argument \a start. Be warned that, in the final volume,
+!! the first reference time will actually be \a start \a + \a step,
+!! since \a start indicates the beginning of first processing
+!! interval, while reference time (for analysis/oservation) is the end
+!! of the interval.
+!!
+!! The purpose of the optional argument \a stat_proc_input is to allow
+!! processing with a certain statistical processing operator a dataset
+!! already processed with a different operator, by specifying the
+!! latter as stat_proc_input; this is useful, for example, if one
+!! wants to compute the monthly average of daily maximum temperatures;
+!! however this has to be used with care since the resulting data
+!! volume will not carry all the information about the processing
+!! which has been done, in the previous case, for example, the
+!! temperatures will simply look like monthly average temperatures.
+SUBROUTINE vol7d_recompute_stat_proc_agg(this, that, stat_proc, &
+ step, start, frac_valid, other, stat_proc_input)
+TYPE(vol7d),INTENT(inout) :: this !< volume providing data to be recomputed, it is not modified by the method, apart from performing a \a vol7d_alloc_vol on it
+TYPE(vol7d),INTENT(out) :: that !< output volume which will contain the recomputed data
+INTEGER,INTENT(in) :: stat_proc !< type of statistical processing to be recomputed (from grib2 table), only data having timerange of this type will be recomputed and will appear in the output volume
+TYPE(timedelta),INTENT(in) :: step !< length of the step over which the statistical processing is performed
+TYPE(datetime),INTENT(in),OPTIONAL :: start !< start of statistical processing interval
+REAL,INTENT(in),OPTIONAL :: frac_valid !< minimum fraction of valid data required for considering acceptable a recomputed value, default=1.
+TYPE(vol7d),INTENT(inout),OPTIONAL :: other !< optional volume that, on exit, is going to contain the data that did not contribute to the statistical processing
+INTEGER,INTENT(in),OPTIONAL :: stat_proc_input !< to be used with care, type of statistical processing of data that has to be processed (from grib2 table), only data having timerange of this type will be recomputed, the actual statistical processing performed and which will appear in the output volume, is however determined by \a stat_proc argument
+
+INTEGER :: tri
+INTEGER :: i, j, k, l, n, n1, i1, i3, i5, i6
+REAL :: lfrac_valid, frac_c, frac_m
+LOGICAL,ALLOCATABLE :: ttr_mask(:,:)
+INTEGER,POINTER :: map_ttr(:,:,:), dtratio(:)
+
+
+IF (PRESENT(stat_proc_input)) THEN
+  tri = stat_proc_input
+ELSE
+  tri = stat_proc
+ENDIF
+IF (PRESENT(frac_valid)) THEN
+  lfrac_valid = frac_valid
+ELSE
+  lfrac_valid = 1.0
+ENDIF
+
+! be safe
+CALL vol7d_alloc_vol(this)
+! initial check
+
+! cleanup the original volume
+CALL vol7d_smart_sort(this, lsort_time=.TRUE.) ! time-ordered volume needed
+CALL vol7d_reform(this, miss=.FALSE., sort=.FALSE., unique=.TRUE.)
+
+CALL init(that, time_definition=this%time_definition)
+CALL vol7d_alloc(that, nana=SIZE(this%ana), nlevel=SIZE(this%level), &
+ nnetwork=SIZE(this%network))
+IF (ASSOCIATED(this%dativar%r)) THEN
+  CALL vol7d_alloc(that, ndativarr=SIZE(this%dativar%r))
+  that%dativar%r = this%dativar%r
+ENDIF
+IF (ASSOCIATED(this%dativar%d)) THEN
+  CALL vol7d_alloc(that, ndativard=SIZE(this%dativar%d))
+  that%dativar%d = this%dativar%d
+ENDIF
+that%ana = this%ana
+that%level = this%level
+that%network = this%network
+
+! compute the output time and timerange and all the required mappings
+CALL recompute_stat_proc_agg_common_exp(this%time, this%timerange, stat_proc, tri, &
+ step, this%time_definition, that%time, that%timerange, map_ttr, dtratio, start)
+CALL vol7d_alloc_vol(that)
+
+ALLOCATE(ttr_mask(SIZE(this%time), size(this%timerange)))
+! finally perform computations
+IF (ASSOCIATED(this%voldatir)) THEN
+  DO j = 1, SIZE(that%timerange)
+    DO i = 1, SIZE(that%time)
+
+      DO i1 = 1, SIZE(this%ana)
+        DO i3 = 1, SIZE(this%level)
+          DO i6 = 1, SIZE(this%network)
+            DO i5 = 1, SIZE(this%dativar%r)
+
+              frac_m = 0.
+              DO n = SIZE(dtratio), 1, -1 ! precedence to longer periods
+                IF (dtratio(n) <= 0) CYCLE ! safety check
+                ttr_mask = .FALSE.
+                DO l = 1, SIZE(this%timerange)
+                  DO k = 1, SIZE(this%time)
+                    IF (map_ttr(k,l,1) == i .AND. map_ttr(k,l,2) == j .AND. &
+                     map_ttr(k,l,3) == dtratio(n)) THEN ! useful combination
+
+                      ttr_mask(k,l) = c_e(this%voldatir(i1,k,i3,l,i5,i6))
+                    ENDIF
+                  ENDDO
+                ENDDO
+                n1 = COUNT(ttr_mask)
+                frac_c = REAL(n1)/REAL(dtratio(n))
+
+                IF (n1 > 0 .AND. frac_c >= MAX(lfrac_valid, frac_m)) THEN
+                  frac_m = frac_c
+                  SELECT CASE(stat_proc)
+                  CASE (0) ! average
+                    that%voldatir(i1,i,i3,j,i5,i6) = &
+                     SUM(this%voldatir(i1,:,i3,:,i5,i6), &
+                     mask=ttr_mask)/n1
+                  CASE (1) ! accumulation
+                    that%voldatir(i1,i,i3,j,i5,i6) = &
+                     SUM(this%voldatir(i1,:,i3,:,i5,i6), &
+                     mask=ttr_mask)
+                  CASE (2) ! maximum
+                    that%voldatir(i1,i,i3,j,i5,i6) = &
+                     MAXVAL(this%voldatir(i1,:,i3,:,i5,i6), &
+                     mask=ttr_mask)
+                  CASE (3) ! minimum
+                    that%voldatir(i1,i,i3,j,i5,i6) = &
+                     MINVAL(this%voldatir(i1,:,i3,:,i5,i6), &
+                     mask=ttr_mask)
+                  END SELECT
+                ENDIF
+
+              ENDDO ! dtratio
+            ENDDO ! var
+          ENDDO ! network
+        ENDDO ! level
+      ENDDO ! ana
+    ENDDO ! otime
+  ENDDO ! otimerange
+ENDIF
+
+IF (ASSOCIATED(this%voldatid)) THEN
+  DO j = 1, SIZE(that%timerange)
+    DO i = 1, SIZE(that%time)
+
+      DO i1 = 1, SIZE(this%ana)
+        DO i3 = 1, SIZE(this%level)
+          DO i6 = 1, SIZE(this%network)
+            DO i5 = 1, SIZE(this%dativar%r)
+
+              frac_m = 0.
+              DO n = SIZE(dtratio), 1, -1 ! precedence to longer periods
+                IF (dtratio(n) <= 0) CYCLE ! safety check
+                ttr_mask = .FALSE.
+                DO l = 1, SIZE(this%timerange)
+                  DO k = 1, SIZE(this%time)
+                    IF (map_ttr(k,l,1) == i .AND. map_ttr(k,l,2) == j .AND. &
+                     map_ttr(k,l,3) == dtratio(n)) THEN ! useful combination
+
+                      ttr_mask(k,l) = c_e(this%voldatid(i1,k,i3,l,i5,i6))
+                    ENDIF
+                  ENDDO
+                ENDDO
+                n1 = COUNT(ttr_mask)
+                frac_c = REAL(n1)/REAL(dtratio(n))
+
+                IF (n1 > 0 .AND. frac_c >= MAX(lfrac_valid, frac_m)) THEN
+                  frac_m = frac_c
+                  SELECT CASE(stat_proc)
+                  CASE (0) ! average
+                    that%voldatid(i1,i,i3,j,i5,i6) = &
+                     SUM(this%voldatid(i1,:,i3,:,i5,i6), &
+                     mask=ttr_mask)/n1
+                  CASE (1) ! accumulation
+                    that%voldatid(i1,i,i3,j,i5,i6) = &
+                     SUM(this%voldatid(i1,:,i3,:,i5,i6), &
+                     mask=ttr_mask)
+                  CASE (2) ! maximum
+                    that%voldatid(i1,i,i3,j,i5,i6) = &
+                     MAXVAL(this%voldatid(i1,:,i3,:,i5,i6), &
+                     mask=ttr_mask)
+                  CASE (3) ! minimum
+                    that%voldatid(i1,i,i3,j,i5,i6) = &
+                     MINVAL(this%voldatid(i1,:,i3,:,i5,i6), &
+                     mask=ttr_mask)
+                  END SELECT
+                ENDIF
+
+              ENDDO ! dtratio
+            ENDDO ! var
+          ENDDO ! network
+        ENDDO ! level
+      ENDDO ! ana
+    ENDDO ! otime
+  ENDDO ! otimerange
+ENDIF
+
+DEALLOCATE(ttr_mask)
+
+CALL makeother()
+
+CONTAINS
+
+SUBROUTINE makeother()
+IF (PRESENT(other)) THEN ! create volume with the remaining data for further processing
+  CALL vol7d_copy(this, other, miss=.FALSE., sort=.FALSE., unique=.FALSE., &
+   ltimerange=(this%timerange(:)%timerange /= tri .OR. this%timerange(:)%p2 == imiss &
+   .OR. this%timerange(:)%p2 == 0)) ! or MOD(steps, this%timerange(:)%p2) == 0
 ENDIF
 END SUBROUTINE makeother
 

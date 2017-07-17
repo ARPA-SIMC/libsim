@@ -162,7 +162,7 @@ ELSE
     CALL l4f_category_log(this%category, L4F_INFO, &
      'recomputing statistically processed data by aggregation '// &
      t2c(stat_proc_input)//':'//t2c(stat_proc))
-    CALL volgrid6d_recompute_stat_proc_agg_exp(this, that, stat_proc, step, start, &
+    CALL volgrid6d_recompute_stat_proc_agg(this, that, stat_proc, step, start, &
      frac_valid, clone)
   ENDIF
 
@@ -212,7 +212,7 @@ END SUBROUTINE volgrid6d_compute_stat_proc
 !! volume will not carry all the information about the processing
 !! which has been done, in the previous case, for example, the
 !! temperatures will simply look like monthly average temperatures.
-SUBROUTINE volgrid6d_recompute_stat_proc_agg_exp(this, that, stat_proc, step, start, frac_valid, clone)
+SUBROUTINE volgrid6d_recompute_stat_proc_agg(this, that, stat_proc, step, start, frac_valid, clone)
 TYPE(volgrid6d),INTENT(inout) :: this !< volume providing data to be recomputed, it is not modified by the method, apart from performing a \a volgrid6d_alloc_vol on it
 TYPE(volgrid6d),INTENT(out) :: that !< output volume which will contain the recomputed data
 INTEGER,INTENT(in) :: stat_proc !< type of statistical processing to be recomputed (from grib2 table), only data having timerange of this type will be recomputed and will appear in the output volume
@@ -309,7 +309,8 @@ do_otimerange: DO j = 1, SIZE(that%timerange)
               ENDIF ! useful combination
             ENDDO
           ENDDO
-          IF (n1 == dtratio(n)) THEN ! success
+          IF (REAL(n1)/REAL(dtratio(n)) >= lfrac_valid) THEN ! success
+!          IF (n1 == dtratio(n)) THEN ! success
             IF (stat_proc == 0) THEN ! average
               WHERE(c_e(voldatiout(:,:)))
                 voldatiout(:,:) = voldatiout(:,:)/n1
@@ -325,165 +326,6 @@ do_otimerange: DO j = 1, SIZE(that%timerange)
 ENDDO do_otimerange
 
 DEALLOCATE(dtratio, map_ttr)
-
-END SUBROUTINE volgrid6d_recompute_stat_proc_agg_exp
-
-
-SUBROUTINE volgrid6d_recompute_stat_proc_agg(this, that, stat_proc, step, start, frac_valid, clone)
-TYPE(volgrid6d),INTENT(inout) :: this !< volume providing data to be recomputed, it is not modified by the method, apart from performing a \a volgrid6d_alloc_vol on it
-TYPE(volgrid6d),INTENT(out) :: that !< output volume which will contain the recomputed data
-INTEGER,INTENT(in) :: stat_proc !< type of statistical processing to be recomputed (from grib2 table), only data having timerange of this type will be recomputed and will appear in the output volume
-TYPE(timedelta),INTENT(in) :: step !< length of the step over which the statistical processing is performed
-TYPE(datetime),INTENT(in),OPTIONAL :: start !< start of statistical processing interval
-REAL,INTENT(in),OPTIONAL :: frac_valid !< minimum fraction of valid data required for considering acceptable a recomputed value, default=1.
-LOGICAL , INTENT(in),OPTIONAL :: clone !< if provided and \c .TRUE. , clone the gaid's from \a this to \a that
-
-INTEGER :: tri
-INTEGER i, j, n, i3, i4, i6
-INTEGER,POINTER :: map_tr(:), map_trc(:,:), count_trc(:,:)
-REAL :: lfrac_valid
-LOGICAL,ALLOCATABLE :: mask_time(:)
-TYPE(vol7d_timerange) :: otimerange
-!TYPE(vol7d) :: v7dtmp
-LOGICAL :: lclone
-REAL,POINTER :: voldatiin(:,:), voldatiout(:,:)
-
-
-NULLIFY(voldatiin, voldatiout)
-tri = stat_proc
-IF (PRESENT(frac_valid)) THEN
-  lfrac_valid = frac_valid
-ELSE
-  lfrac_valid = 1.0
-ENDIF
-
-CALL init(that)
-! be safe
-CALL volgrid6d_alloc_vol(this)
-
-! initial check
-IF (COUNT(this%timerange(:)%timerange == tri .AND. this%timerange(:)%p2 /= imiss &
- .AND. this%timerange(:)%p2 /= 0 .AND. this%timerange(:)%p1 == 0) == 0) THEN
-  CALL l4f_category_log(this%category, L4F_WARN, &
-   'volgrid6d_compute, no timeranges suitable for statistical processing by aggregation')
-! return an empty volume, without signaling error
-  CALL init(that)
-  CALL volgrid6d_alloc_vol(that)
-  RETURN
-ENDIF
-
-! when volume is not decoded it is better to clone anyway to avoid
-! overwriting fields
-lclone = optio_log(clone) .OR. .NOT.ASSOCIATED(this%voldati)
-! initialise the output volume
-CALL init(that, griddim=this%griddim, time_definition=this%time_definition)
-CALL volgrid6d_alloc(that, dim=this%griddim%dim, & !ntimerange=1, &
- nlevel=SIZE(this%level), nvar=SIZE(this%var), ini=.FALSE.)
-that%level = this%level
-that%var = this%var
-
-CALL recompute_stat_proc_agg_common(this%time, this%timerange, stat_proc, tri, &
- step, that%time, otimerange, map_tr, map_trc, count_trc, start)
-
-that%timerange(1) = otimerange
-CALL volgrid6d_alloc_vol(that, decode=ASSOCIATED(this%voldati))
-
-! copy the elements of the original volume that may be useful for the
-! new volume into a temporary object, this is usually useless
-! copy the timeranges already satisfying the requested step, if any
-!ALLOCATE(mask_time(SIZE(this%time)))
-!DO i = 1, SIZE(this%time)
-!  mask_time(i) = ANY(this%time(i) == that%time)
-!ENDDO
-j = firsttrue(that%timerange(1) == this%timerange(:))
-IF (j > 0) THEN
-
-  DO i6 = 1, SIZE(this%var)
-    DO i4 = 1, SIZE(this%time)
-      i = firsttrue(that%time(:) == this%time(i4))
-      IF (i > 0) THEN
-        DO i3 = 1, SIZE(this%level)
-          IF (c_e(this%gaid(i3,i4,i,i6))) THEN
-            IF (lclone) THEN
-              CALL copy(this%gaid(i3,i4,j,i6), that%gaid(i3,i,1,i6))
-            ELSE
-              that%gaid(i3,i,1,i6) = this%gaid(i3,i4,j,i6)
-            ENDIF
-            IF (ASSOCIATED(that%voldati)) THEN
-              that%voldati(:,:,i3,i,1,i6) = this%voldati(:,:,i3,i4,j,i6)
-            ELSE
-              CALL volgrid_get_vol_2d(this, i3, i4, j, i6, voldatiin)
-              CALL volgrid_set_vol_2d(that, i3, i, 1, i6, voldatiin)
-            ENDIF
-          ENDIF
-        ENDDO
-      ENDIF
-    ENDDO
-  ENDDO
-
-ENDIF
-
-
-DO i6 = 1, SIZE(this%var)
-  DO i3 = 1, SIZE(this%level)
-    DO j = 1, SIZE(map_tr)
-      DO i = 1, SIZE(that%time)
-        mask_time = (map_trc(:,j) == i)
-        IF (.NOT.ANY(mask_time)) CYCLE
-
-        CALL volgrid_get_vol_2d(that, i3, i, 1, i6, voldatiout)
-        n = 0
-        DO i4 = 1, SIZE(this%time)
-          IF (.NOT.mask_time(i4)) CYCLE
-          CALL volgrid_get_vol_2d(this, i3, i4, map_tr(j), i6, voldatiin)
-          
-          IF (n == 0) THEN ! to be done only first time
-            voldatiout = voldatiin
-            IF (lclone) THEN
-              CALL copy(this%gaid(i3,i4,map_tr(j),i6), that%gaid(i3,i,1,i6))
-            ELSE
-              that%gaid(i3,i,1,i6) = this%gaid(i3,i4,map_tr(j),i6)
-            ENDIF
-          ELSE
-            SELECT CASE(stat_proc)
-            CASE (0, 1) ! average, cumulation
-              WHERE(c_e(voldatiin(:,:)) .AND. c_e(voldatiout(:,:)))
-                voldatiout(:,:) = voldatiout(:,:) + voldatiin(:,:)
-              ELSEWHERE
-                voldatiout(:,:) = rmiss
-              END WHERE
-            CASE(2) ! maximum
-              WHERE(c_e(voldatiin(:,:)) .AND. c_e(voldatiout(:,:)))
-                voldatiout(:,:) = MAX(voldatiout(:,:), voldatiin(:,:))
-              ELSEWHERE
-                voldatiout(:,:) = rmiss
-              END WHERE
-            CASE(3) ! minimum
-              WHERE(c_e(voldatiin(:,:)) .AND. c_e(voldatiout(:,:)))
-                voldatiout(:,:) = MIN(voldatiout(:,:), voldatiin(:,:))
-              ELSEWHERE
-                voldatiout(:,:) = rmiss
-              END WHERE
-            END SELECT
-          ENDIF
-          n = n + 1
-        ENDDO
-
-        IF (n > 0) THEN
-          IF (stat_proc == 0) THEN ! average
-            WHERE(c_e(voldatiout(:,:)))
-              voldatiout(:,:) = voldatiout(:,:)/n
-            END WHERE
-          ENDIF
-          CALL volgrid_set_vol_2d(that, i3, i, 1, i6, voldatiout)
-        ENDIF
-
-      ENDDO
-    ENDDO
-  ENDDO
-ENDDO
-
-DEALLOCATE(map_tr, map_trc, count_trc, mask_time)
 
 END SUBROUTINE volgrid6d_recompute_stat_proc_agg
 
