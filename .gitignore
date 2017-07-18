@@ -12,6 +12,7 @@ install-sh
 ltmain.sh
 missing
 libtool
+test-driver
 Makefile.in
 Makefile
 .deps
