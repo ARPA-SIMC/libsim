@@ -495,12 +495,14 @@ lend = itime(SIZE(itime))
 maxp1 = MAXVAL(itimerange(:)%p1, mask=mask_timerange)
 maxp2 = MAXVAL(itimerange(:)%p2, mask=mask_timerange)
 minp1mp2 = MINVAL(itimerange(:)%p1 - itimerange(:)%p2, mask=mask_timerange)
+IF (time_definition == 0) THEN ! reference time
+  lend = lend + timedelta_new(sec=maxp1)
+ENDIF
 IF (lstart == datetime_miss) THEN ! autodetect
   lstart = itime(1)
 ! if autodetected, adjust to obtain real absolute start of data
   IF (time_definition == 0) THEN ! reference time
     lstart = lstart + timedelta_new(sec=minp1mp2)
-    lend = lend + timedelta_new(sec=maxp1)
   ELSE ! verification time
 ! go back to start of longest processing interval
     lstart = lstart - timedelta_new(sec=maxp2)

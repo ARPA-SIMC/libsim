@@ -591,6 +591,11 @@ IF (ASSOCIATED(this%voldatid)) THEN
                     that%voldatid(i1,i,i3,j,i5,i6) = &
                      MINVAL(this%voldatid(i1,:,i3,:,i5,i6), &
                      mask=ttr_mask)
+                  CASE (6) ! stddev
+                    that%voldatid(i1,i,i3,j,i5,i6) = &
+                     stat_stddev( &
+                     RESHAPE(this%voldatid(i1,:,i3,:,i5,i6), shape=linshape), &
+                     mask=RESHAPE(ttr_mask, shape=linshape))
                   END SELECT
                 ENDIF
 
