@@ -467,7 +467,6 @@ CALL l4f_log(L4F_DEBUG, &
 
 ! keep only timeranges of one type (really necessary?)
 IF (lforecast) THEN
-  mask_timerange(:) = mask_timerange(:) .AND. itimerange(:)%p1 > 0
   CALL l4f_log(L4F_INFO, &
    'recompute_stat_proc_agg, processing in forecast mode')
 ELSE
@@ -613,7 +612,7 @@ IF (PRESENT(dtratio)) THEN
 
 ELSE
   
-  ALLOCATE(map_ttr(SIZE(itime),SIZE(itimerange),3)) ! 2
+  ALLOCATE(map_ttr(SIZE(itime),SIZE(itimerange),2))
   map_ttr(:,:,:) = imiss
   do_itimerange2: DO l = 1, SIZE(itimerange)
     IF (.NOT.mask_timerange(l)) CYCLE do_itimerange2

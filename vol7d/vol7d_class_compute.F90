@@ -438,6 +438,7 @@ INTEGER,INTENT(in),OPTIONAL :: stat_proc_input !< to be used with care, type of 
 
 INTEGER :: tri
 INTEGER :: i, j, k, l, n, n1, i1, i3, i5, i6
+INTEGER :: linshape(1)
 REAL :: lfrac_valid, frac_c, frac_m
 LOGICAL,ALLOCATABLE :: ttr_mask(:,:)
 INTEGER,POINTER :: map_ttr(:,:,:), dtratio(:)
@@ -482,7 +483,8 @@ CALL recompute_stat_proc_agg_common_exp(this%time, this%timerange, stat_proc, tr
  step, this%time_definition, that%time, that%timerange, map_ttr, dtratio, start)
 CALL vol7d_alloc_vol(that)
 
-ALLOCATE(ttr_mask(SIZE(this%time), size(this%timerange)))
+ALLOCATE(ttr_mask(SIZE(this%time), SIZE(this%timerange)))
+linshape = (/SIZE(ttr_mask)/)
 ! finally perform computations
 IF (ASSOCIATED(this%voldatir)) THEN
   DO j = 1, SIZE(that%timerange)
@@ -528,6 +530,11 @@ IF (ASSOCIATED(this%voldatir)) THEN
                     that%voldatir(i1,i,i3,j,i5,i6) = &
                      MINVAL(this%voldatir(i1,:,i3,:,i5,i6), &
                      mask=ttr_mask)
+                  CASE (6) ! stddev
+                    that%voldatir(i1,i,i3,j,i5,i6) = &
+                     stat_stddev( &
+                     RESHAPE(this%voldatir(i1,:,i3,:,i5,i6), shape=linshape), &
+                     mask=RESHAPE(ttr_mask, shape=linshape))
                   END SELECT
                 ENDIF
 
