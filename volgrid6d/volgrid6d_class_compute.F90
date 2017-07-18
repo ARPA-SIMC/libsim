@@ -388,7 +388,8 @@ do_otimerange: DO j = 1, SIZE(that%timerange)
         n1 = 0
         DO l = 1, SIZE(this%timerange)
           DO k = 1, SIZE(this%time)
-            IF (map_ttr(k,l,1) == i .AND. map_ttr(k,l,2) == j) THEN ! useful combination
+            IF ((map_ttr(k,l,1) == i .AND. map_ttr(k,l,2) == j) &
+             .OR. (map_ttr(k,l,3) == i .AND. map_ttr(k,l,4) == j)) THEN ! useful combination
               CALL volgrid_get_vol_2d(this, i3, k, l, i6, voldatiin)
 
               IF (n1 == 0) THEN ! first time

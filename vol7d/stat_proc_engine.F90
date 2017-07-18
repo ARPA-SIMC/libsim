@@ -614,7 +614,7 @@ IF (PRESENT(dtratio)) THEN
 
 ELSE
   
-  ALLOCATE(map_ttr(SIZE(itime),SIZE(itimerange),2))
+  ALLOCATE(map_ttr(SIZE(itime),SIZE(itimerange),4))
   map_ttr(:,:,:) = imiss
   do_itimerange2: DO l = 1, SIZE(itimerange)
     IF (.NOT.mask_timerange(l)) CYCLE do_itimerange2
@@ -630,9 +630,14 @@ ELSE
           ENDIF
 
           IF (pstart1 >= pstart2 .AND. pend1 <= pend2) THEN ! useful
-            map_ttr(k,l,1) = i
-            map_ttr(k,l,2) = j
-            CYCLE do_itime2
+            IF (.NOT.c_e(map_ttr(k,l,1))) THEN
+              map_ttr(k,l,1) = i
+              map_ttr(k,l,2) = j
+            ELSE ! ugly solution
+              map_ttr(k,l,3) = i
+              map_ttr(k,l,4) = j
+            ENDIF
+!            CYCLE do_itime2
           ENDIF
         ENDDO do_otime2
       ENDDO do_otimerange2
