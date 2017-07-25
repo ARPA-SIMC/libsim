@@ -222,11 +222,11 @@ INTEGER,INTENT(in) :: stat_proc !< type of statistical processing to be recomput
 TYPE(timedelta),INTENT(in) :: step !< length of the step over which the statistical processing is performed
 TYPE(datetime),INTENT(in),OPTIONAL :: start !< start of statistical processing interval
 REAL,INTENT(in),OPTIONAL :: frac_valid !< minimum fraction of valid data required for considering acceptable a recomputed value, default=1.
-LOGICAL , INTENT(in),OPTIONAL :: clone !< if provided and \c .TRUE. , clone the gaid's from \a this to \a that
+LOGICAL, INTENT(in),OPTIONAL :: clone !< if provided and \c .TRUE. , clone the gaid's from \a this to \a that
 
 INTEGER :: tri
-INTEGER i, j, k, l, n, n1, i3, i6
-INTEGER,POINTER :: map_ttr(:,:,:)
+INTEGER i, j, n, n1, ndtr, i3, i6
+TYPE(arrayof_ttr_mapper),POINTER :: map_ttr(:,:)
 INTEGER,POINTER :: dtratio(:)
 REAL :: lfrac_valid
 LOGICAL :: lclone
@@ -264,68 +264,67 @@ CALL volgrid6d_alloc_vol(that, decode=ASSOCIATED(this%voldati))
 do_otimerange: DO j = 1, SIZE(that%timerange)
   do_otime: DO i = 1, SIZE(that%time)
 
-    DO n = 1, SIZE(dtratio)
-      IF (dtratio(n) <= 0) CYCLE ! safety check
+    DO n1 = 1, SIZE(dtratio)
+      IF (dtratio(n1) <= 0) CYCLE ! safety check
 
       DO i6 = 1, SIZE(this%var)
         DO i3 = 1, SIZE(this%level)
           CALL volgrid_get_vol_2d(that, i3, i, j, i6, voldatiout)
+          ndtr = 0
+          DO n = 1, map_ttr(i,j)%arraysize
+            IF (map_ttr(i,j)%array(n)%extra_info == dtratio(n1)) THEN
+              ndtr = ndtr + 1
+              CALL volgrid_get_vol_2d(this, i3, map_ttr(i,j)%array(n)%it, &
+               map_ttr(i,j)%array(n)%itr, i6, voldatiin)
 
-          n1 = 0
-          DO l = 1, SIZE(this%timerange)
-            DO k = 1, SIZE(this%time)
-              IF (map_ttr(k,l,1) == i .AND. map_ttr(k,l,2) == j .AND. &
-               map_ttr(k,l,3) == dtratio(n)) THEN ! useful combination
-                CALL volgrid_get_vol_2d(this, i3, k, l, i6, voldatiin)
+              IF (ndtr == 1) THEN
+                voldatiout = voldatiin
+                IF (lclone) THEN
+                  CALL copy(this%gaid(i3, map_ttr(i,j)%array(n)%it,&
+                   map_ttr(i,j)%array(n)%itr,i6), that%gaid(i3,i,j,i6))
+                ELSE
+                  that%gaid(i3,i,j,i6) = this%gaid(i3, map_ttr(i,j)%array(n)%it, &
+                   map_ttr(i,j)%array(n)%itr,i6)
+                ENDIF
 
-                IF (n1 == 0) THEN ! first time
-                  voldatiout = voldatiin
-                  IF (lclone) THEN
-                    CALL copy(this%gaid(i3,k,l,i6), that%gaid(i3,i,j,i6))
-                  ELSE
-                    that%gaid(i3,i,j,i6) = this%gaid(i3,k,l,i6)
-                  ENDIF
+              ELSE ! second or more time
+                SELECT CASE(stat_proc)
+                CASE (0, 1, 4) ! average, accumulation, difference
+                  WHERE(c_e(voldatiin(:,:)) .AND. c_e(voldatiout(:,:)))
+                    voldatiout(:,:) = voldatiout(:,:) + voldatiin(:,:)
+                  ELSEWHERE
+                    voldatiout(:,:) = rmiss
+                  END WHERE
+                CASE(2) ! maximum
+                  WHERE(c_e(voldatiin(:,:)) .AND. c_e(voldatiout(:,:)))
+                    voldatiout(:,:) = MAX(voldatiout(:,:), voldatiin(:,:))
+                  ELSEWHERE
+                    voldatiout(:,:) = rmiss
+                  END WHERE
+                CASE(3) ! minimum
+                  WHERE(c_e(voldatiin(:,:)) .AND. c_e(voldatiout(:,:)))
+                    voldatiout(:,:) = MIN(voldatiout(:,:), voldatiin(:,:))
+                  ELSEWHERE
+                    voldatiout(:,:) = rmiss
+                  END WHERE
+                END SELECT
 
-                ELSE ! second or more time
-                  SELECT CASE(stat_proc)
-                  CASE (0, 1) ! average, cumulation
-                    WHERE(c_e(voldatiin(:,:)) .AND. c_e(voldatiout(:,:)))
-                      voldatiout(:,:) = voldatiout(:,:) + voldatiin(:,:)
-                    ELSEWHERE
-                      voldatiout(:,:) = rmiss
-                    END WHERE
-                  CASE(2) ! maximum
-                    WHERE(c_e(voldatiin(:,:)) .AND. c_e(voldatiout(:,:)))
-                      voldatiout(:,:) = MAX(voldatiout(:,:), voldatiin(:,:))
-                    ELSEWHERE
-                      voldatiout(:,:) = rmiss
-                    END WHERE
-                  CASE(3) ! minimum
-                    WHERE(c_e(voldatiin(:,:)) .AND. c_e(voldatiout(:,:)))
-                      voldatiout(:,:) = MIN(voldatiout(:,:), voldatiin(:,:))
-                    ELSEWHERE
-                      voldatiout(:,:) = rmiss
-                    END WHERE
-                  END SELECT
-
-                ENDIF ! first time
-                n1 = n1 + 1
-              ENDIF ! useful combination
-            ENDDO
-          ENDDO
-          IF (REAL(n1)/REAL(dtratio(n)) >= lfrac_valid) THEN ! success
-!          IF (n1 == dtratio(n)) THEN ! success
-            IF (stat_proc == 0) THEN ! average
-              WHERE(c_e(voldatiout(:,:)))
-                voldatiout(:,:) = voldatiout(:,:)/n1
-              END WHERE
+              ENDIF ! first time
+            ENDIF ! dtratio(n1)
+            IF (REAL(ndtr)/REAL(dtratio(n1)) >= lfrac_valid) THEN ! success
+              IF (stat_proc == 0) THEN ! average
+                WHERE(c_e(voldatiout(:,:)))
+                  voldatiout(:,:) = voldatiout(:,:)/ndtr
+                END WHERE
+              ENDIF
+              CALL volgrid_set_vol_2d(that, i3, i, j, i6, voldatiout)
             ENDIF
-            CALL volgrid_set_vol_2d(that, i3, i, j, i6, voldatiout)
-          ENDIF
+          ENDDO ! ttr
 
         ENDDO ! level
       ENDDO ! var
     ENDDO ! dtratio
+    CALL delete(map_ttr(i,j))
   ENDDO do_otime
 ENDDO do_otimerange
 
@@ -344,8 +343,8 @@ TYPE(timedelta),INTENT(in),OPTIONAL :: max_step !< maximum allowed distance in t
 LOGICAL , INTENT(in),OPTIONAL :: clone !< if provided and \c .TRUE. , clone the gaid's from \a this to \a that
 
 INTEGER :: tri
-INTEGER i, j, k, l, n, n1, i3, i6
-INTEGER,POINTER :: map_ttr(:,:,:)
+INTEGER i, j, n, i3, i6
+TYPE(arrayof_ttr_mapper),POINTER :: map_ttr(:,:)
 TYPE(timedelta) :: lmax_step
 LOGICAL :: lclone
 REAL,POINTER :: voldatiin(:,:), voldatiout(:,:)
@@ -381,56 +380,64 @@ CALL volgrid6d_alloc_vol(that, decode=ASSOCIATED(this%voldati))
 do_otimerange: DO j = 1, SIZE(that%timerange)
   do_otime: DO i = 1, SIZE(that%time)
 
+! check validity condition (missing values in volume are not accounted for)
+    DO n = 2, map_ttr(i,j)%arraysize
+      IF (map_ttr(i,j)%array(n)%time - map_ttr(i,j)%array(n-1)%time > &
+       lmax_step) THEN
+        CALL delete(map_ttr(i,j))
+        EXIT
+      ENDIF
+    ENDDO
+    
     DO i6 = 1, SIZE(this%var)
       DO i3 = 1, SIZE(this%level)
         CALL volgrid_get_vol_2d(that, i3, i, j, i6, voldatiout)
 
-        n1 = 0
-        DO l = 1, SIZE(this%timerange)
-          DO k = 1, SIZE(this%time)
-            IF ((map_ttr(k,l,1) == i .AND. map_ttr(k,l,2) == j) &
-             .OR. (map_ttr(k,l,3) == i .AND. map_ttr(k,l,4) == j)) THEN ! useful combination
-              CALL volgrid_get_vol_2d(this, i3, k, l, i6, voldatiin)
+!        IF (stat_proc == 4) THEN ! special treatment
+!
+!        ELSE
+        DO n = 1, map_ttr(i,j)%arraysize
+          CALL volgrid_get_vol_2d(this, i3, map_ttr(i,j)%array(n)%it, &
+           map_ttr(i,j)%array(n)%itr, i6, voldatiin)
 
-              IF (n1 == 0) THEN ! first time
-                voldatiout = voldatiin
-                IF (lclone) THEN
-                  CALL copy(this%gaid(i3,k,l,i6), that%gaid(i3,i,j,i6))
-                ELSE
-                  that%gaid(i3,i,j,i6) = this%gaid(i3,k,l,i6)
-                ENDIF
+          IF (n == 1) THEN
+            voldatiout = voldatiin
+            IF (lclone) THEN
+              CALL copy(this%gaid(i3, map_ttr(i,j)%array(n)%it,&
+               map_ttr(i,j)%array(n)%itr,i6), that%gaid(i3,i,j,i6))
+            ELSE
+              that%gaid(i3,i,j,i6) = this%gaid(i3, map_ttr(i,j)%array(n)%it, &
+               map_ttr(i,j)%array(n)%itr,i6)
+            ENDIF
 
-              ELSE ! second or more time
-                SELECT CASE(stat_proc)
-                CASE (0, 1) ! average, cumulation
-                  WHERE(c_e(voldatiin(:,:)) .AND. c_e(voldatiout(:,:)))
-                    voldatiout(:,:) = voldatiout(:,:) + voldatiin(:,:)
-                  ELSEWHERE
-                    voldatiout(:,:) = rmiss
-                  END WHERE
-                CASE(2) ! maximum
-                  WHERE(c_e(voldatiin(:,:)) .AND. c_e(voldatiout(:,:)))
-                    voldatiout(:,:) = MAX(voldatiout(:,:), voldatiin(:,:))
-                  ELSEWHERE
-                    voldatiout(:,:) = rmiss
-                  END WHERE
-                CASE(3) ! minimum
-                  WHERE(c_e(voldatiin(:,:)) .AND. c_e(voldatiout(:,:)))
-                    voldatiout(:,:) = MIN(voldatiout(:,:), voldatiin(:,:))
-                  ELSEWHERE
-                    voldatiout(:,:) = rmiss
-                  END WHERE
-                END SELECT
+          ELSE ! second or more time
+            SELECT CASE(stat_proc)
+            CASE (0, 1) ! average, accumulation
+              WHERE(c_e(voldatiin(:,:)) .AND. c_e(voldatiout(:,:)))
+                voldatiout(:,:) = voldatiout(:,:) + voldatiin(:,:)
+              ELSEWHERE
+                voldatiout(:,:) = rmiss
+              END WHERE
+            CASE(2) ! maximum
+              WHERE(c_e(voldatiin(:,:)) .AND. c_e(voldatiout(:,:)))
+                voldatiout(:,:) = MAX(voldatiout(:,:), voldatiin(:,:))
+              ELSEWHERE
+                voldatiout(:,:) = rmiss
+              END WHERE
+            CASE(3) ! minimum
+              WHERE(c_e(voldatiin(:,:)) .AND. c_e(voldatiout(:,:)))
+                voldatiout(:,:) = MIN(voldatiout(:,:), voldatiin(:,:))
+              ELSEWHERE
+                voldatiout(:,:) = rmiss
+              END WHERE
+            END SELECT
 
-              ENDIF ! first time
-              n1 = n1 + 1
-            ENDIF ! useful combination
-          ENDDO
+          ENDIF ! first time
         ENDDO
-        IF (n1 > 0) THEN ! success
+        IF (n > 1) THEN ! success
           IF (stat_proc == 0) THEN ! average
             WHERE(c_e(voldatiout(:,:)))
-              voldatiout(:,:) = voldatiout(:,:)/n1
+              voldatiout(:,:) = voldatiout(:,:)/(n-1)
             END WHERE
           ENDIF
           CALL volgrid_set_vol_2d(that, i3, i, j, i6, voldatiout)
@@ -438,6 +445,7 @@ do_otimerange: DO j = 1, SIZE(that%timerange)
 
       ENDDO ! level
     ENDDO ! var
+    CALL delete(map_ttr(i,j))
   ENDDO do_otime
 ENDDO do_otimerange
 

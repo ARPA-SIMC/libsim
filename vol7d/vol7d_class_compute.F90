@@ -437,11 +437,12 @@ TYPE(vol7d),INTENT(inout),OPTIONAL :: other !< optional volume that, on exit, is
 INTEGER,INTENT(in),OPTIONAL :: stat_proc_input !< to be used with care, type of statistical processing of data that has to be processed (from grib2 table), only data having timerange of this type will be recomputed, the actual statistical processing performed and which will appear in the output volume, is however determined by \a stat_proc argument
 
 INTEGER :: tri
-INTEGER :: i, j, k, l, n, n1, i1, i3, i5, i6
+INTEGER :: i, j, n, n1, ndtr, i1, i3, i5, i6
 INTEGER :: linshape(1)
 REAL :: lfrac_valid, frac_c, frac_m
 LOGICAL,ALLOCATABLE :: ttr_mask(:,:)
-INTEGER,POINTER :: map_ttr(:,:,:), dtratio(:)
+TYPE(arrayof_ttr_mapper),POINTER :: map_ttr(:,:)
+INTEGER,POINTER :: dtratio(:)
 
 
 IF (PRESENT(stat_proc_input)) THEN
@@ -496,29 +497,43 @@ IF (ASSOCIATED(this%voldatir)) THEN
             DO i5 = 1, SIZE(this%dativar%r)
 
               frac_m = 0.
-              DO n = SIZE(dtratio), 1, -1 ! precedence to longer periods
-                IF (dtratio(n) <= 0) CYCLE ! safety check
+              DO n1 = SIZE(dtratio), 1, -1 ! precedence to longer periods
+                IF (dtratio(n1) <= 0) CYCLE ! safety check
                 ttr_mask = .FALSE.
-                DO l = 1, SIZE(this%timerange)
-                  DO k = 1, SIZE(this%time)
-                    IF (map_ttr(k,l,1) == i .AND. map_ttr(k,l,2) == j .AND. &
-                     map_ttr(k,l,3) == dtratio(n)) THEN ! useful combination
-
-                      ttr_mask(k,l) = c_e(this%voldatir(i1,k,i3,l,i5,i6))
+                DO n = 1, map_ttr(i,j)%arraysize
+                  IF (map_ttr(i,j)%array(n)%extra_info == dtratio(n1)) THEN
+                    IF (c_e(this%voldatir(i1,map_ttr(i,j)%array(n)%it,i3, &
+                     map_ttr(i,j)%array(n)%itr,i5,i6))) THEN
+                      ttr_mask(map_ttr(i,j)%array(n)%it, &
+                       map_ttr(i,j)%array(n)%itr) = .TRUE.
                     ENDIF
-                  ENDDO
+                  ENDIF
                 ENDDO
-                n1 = COUNT(ttr_mask)
-                frac_c = REAL(n1)/REAL(dtratio(n))
 
-                IF (n1 > 0 .AND. frac_c >= MAX(lfrac_valid, frac_m)) THEN
+!                DO l = 1, SIZE(this%timerange)
+!                  DO k = 1, SIZE(this%time)
+!                    IF (map_ttr(k,l,1) == i .AND. map_ttr(k,l,2) == j .AND. &
+!                     map_ttr(k,l,3) == dtratio(n)) THEN ! useful combination
+!
+!                      ttr_mask(k,l) = c_e(this%voldatir(i1,k,i3,l,i5,i6))
+!                    ENDIF
+!                  ENDDO
+!                ENDDO
+
+!                ttr_mask(:,:) = map_ttr(:,:,3) == dtratio(n) .AND. &
+!                 map_ttr(:,:,1) == i .AND. map_ttr(:,:,2) == j .AND. &
+!                 c_e(this%voldatir(i1,:,i3,:,i5,i6))
+                ndtr = COUNT(ttr_mask)
+                frac_c = REAL(ndtr)/REAL(dtratio(n1))
+
+                IF (ndtr > 0 .AND. frac_c >= MAX(lfrac_valid, frac_m)) THEN
                   frac_m = frac_c
                   SELECT CASE(stat_proc)
                   CASE (0) ! average
                     that%voldatir(i1,i,i3,j,i5,i6) = &
                      SUM(this%voldatir(i1,:,i3,:,i5,i6), &
                      mask=ttr_mask)/n1
-                  CASE (1) ! accumulation
+                  CASE (1, 4) ! accumulation, difference
                     that%voldatir(i1,i,i3,j,i5,i6) = &
                      SUM(this%voldatir(i1,:,i3,:,i5,i6), &
                      mask=ttr_mask)
@@ -543,6 +558,7 @@ IF (ASSOCIATED(this%voldatir)) THEN
           ENDDO ! network
         ENDDO ! level
       ENDDO ! ana
+      CALL delete(map_ttr(i,j))
     ENDDO ! otime
   ENDDO ! otimerange
 ENDIF
@@ -557,29 +573,30 @@ IF (ASSOCIATED(this%voldatid)) THEN
             DO i5 = 1, SIZE(this%dativar%r)
 
               frac_m = 0.
-              DO n = SIZE(dtratio), 1, -1 ! precedence to longer periods
-                IF (dtratio(n) <= 0) CYCLE ! safety check
+              DO n1 = SIZE(dtratio), 1, -1 ! precedence to longer periods
+                IF (dtratio(n1) <= 0) CYCLE ! safety check
                 ttr_mask = .FALSE.
-                DO l = 1, SIZE(this%timerange)
-                  DO k = 1, SIZE(this%time)
-                    IF (map_ttr(k,l,1) == i .AND. map_ttr(k,l,2) == j .AND. &
-                     map_ttr(k,l,3) == dtratio(n)) THEN ! useful combination
-
-                      ttr_mask(k,l) = c_e(this%voldatid(i1,k,i3,l,i5,i6))
+                DO n = 1, map_ttr(i,j)%arraysize
+                  IF (map_ttr(i,j)%array(n)%extra_info == dtratio(n1)) THEN
+                    IF (c_e(this%voldatid(i1,map_ttr(i,j)%array(n)%it,i3, &
+                     map_ttr(i,j)%array(n)%itr,i5,i6))) THEN
+                      ttr_mask(map_ttr(i,j)%array(n)%it, &
+                       map_ttr(i,j)%array(n)%itr) = .TRUE.
                     ENDIF
-                  ENDDO
+                  ENDIF
                 ENDDO
-                n1 = COUNT(ttr_mask)
-                frac_c = REAL(n1)/REAL(dtratio(n))
 
-                IF (n1 > 0 .AND. frac_c >= MAX(lfrac_valid, frac_m)) THEN
+                ndtr = COUNT(ttr_mask)
+                frac_c = REAL(ndtr)/REAL(dtratio(n1))
+
+                IF (ndtr > 0 .AND. frac_c >= MAX(lfrac_valid, frac_m)) THEN
                   frac_m = frac_c
                   SELECT CASE(stat_proc)
                   CASE (0) ! average
                     that%voldatid(i1,i,i3,j,i5,i6) = &
                      SUM(this%voldatid(i1,:,i3,:,i5,i6), &
                      mask=ttr_mask)/n1
-                  CASE (1) ! accumulation
+                  CASE (1, 4) ! accumulation, difference
                     that%voldatid(i1,i,i3,j,i5,i6) = &
                      SUM(this%voldatid(i1,:,i3,:,i5,i6), &
                      mask=ttr_mask)
@@ -604,6 +621,7 @@ IF (ASSOCIATED(this%voldatid)) THEN
           ENDDO ! network
         ENDDO ! level
       ENDDO ! ana
+      CALL delete(map_ttr(i,j))
     ENDDO ! otime
   ENDDO ! otimerange
 ENDIF

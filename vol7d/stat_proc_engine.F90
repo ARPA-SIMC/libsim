@@ -25,7 +25,108 @@ USE datetime_class
 USE vol7d_class
 IMPLICIT NONE
 
+! per ogni elemento i,j dell'output, definire n elementi di input ad
+! esso contribuenti (arrayof_ttr_mapper) con le seguenti informazioni
+TYPE ttr_mapper
+  INTEGER :: it=imiss ! k
+  INTEGER :: itr=imiss ! l
+  INTEGER :: extra_info=imiss ! dtratio for intervals, extreme for point in time
+  TYPE(datetime) :: time=datetime_miss ! time for point in time
+END TYPE ttr_mapper
+
+INTERFACE OPERATOR (==)
+  MODULE PROCEDURE ttr_mapper_eq
+END INTERFACE
+
+INTERFACE OPERATOR (/=)
+  MODULE PROCEDURE ttr_mapper_ne
+END INTERFACE
+
+INTERFACE OPERATOR (>)
+  MODULE PROCEDURE ttr_mapper_gt
+END INTERFACE
+
+INTERFACE OPERATOR (<)
+  MODULE PROCEDURE ttr_mapper_lt
+END INTERFACE
+
+INTERFACE OPERATOR (>=)
+  MODULE PROCEDURE ttr_mapper_ge
+END INTERFACE
+
+INTERFACE OPERATOR (<=)
+  MODULE PROCEDURE ttr_mapper_le
+END INTERFACE
+
+#undef VOL7D_POLY_TYPE
+#undef VOL7D_POLY_TYPES
+#undef ENABLE_SORT
+#define VOL7D_POLY_TYPE TYPE(ttr_mapper)
+#define VOL7D_POLY_TYPES _ttr_mapper
+#define ENABLE_SORT
+#include "array_utilities_pre.F90"
+
+#define ARRAYOF_ORIGTYPE TYPE(ttr_mapper)
+#define ARRAYOF_TYPE arrayof_ttr_mapper
+!define ARRAYOF_ORIGEQ 1
+#include "arrayof_pre.F90"
+! from arrayof
+
+
 CONTAINS
+
+! simplified comparisons only on time
+ELEMENTAL FUNCTION ttr_mapper_eq(this, that) RESULT(res)
+TYPE(ttr_mapper),INTENT(IN) :: this, that
+LOGICAL :: res
+
+res = this%time == that%time
+
+END FUNCTION ttr_mapper_eq
+
+ELEMENTAL FUNCTION ttr_mapper_ne(this, that) RESULT(res)
+TYPE(ttr_mapper),INTENT(IN) :: this, that
+LOGICAL :: res
+
+res = this%time /= that%time
+
+END FUNCTION ttr_mapper_ne
+
+ELEMENTAL FUNCTION ttr_mapper_gt(this, that) RESULT(res)
+TYPE(ttr_mapper),INTENT(IN) :: this, that
+LOGICAL :: res
+
+res = this%time > that%time
+
+END FUNCTION ttr_mapper_gt
+
+ELEMENTAL FUNCTION ttr_mapper_lt(this, that) RESULT(res)
+TYPE(ttr_mapper),INTENT(IN) :: this, that
+LOGICAL :: res
+
+res = this%time < that%time
+
+END FUNCTION ttr_mapper_lt
+
+ELEMENTAL FUNCTION ttr_mapper_ge(this, that) RESULT(res)
+TYPE(ttr_mapper),INTENT(IN) :: this, that
+LOGICAL :: res
+
+res = this%time >= that%time
+
+END FUNCTION ttr_mapper_ge
+
+ELEMENTAL FUNCTION ttr_mapper_le(this, that) RESULT(res)
+TYPE(ttr_mapper),INTENT(IN) :: this, that
+LOGICAL :: res
+
+res = this%time <= that%time
+
+END FUNCTION ttr_mapper_le
+
+#include "arrayof_post.F90"
+#include "array_utilities_inc.F90"
+
 
 ! common operations for statistical processing by aggregation
 SUBROUTINE recompute_stat_proc_agg_common(itime, itimerange, stat_proc, tri, &
@@ -421,11 +522,11 @@ TYPE(timedelta),INTENT(in) :: step
 INTEGER,INTENT(in) :: time_definition
 TYPE(datetime),POINTER :: otime(:)
 TYPE(vol7d_timerange),POINTER :: otimerange(:)
-INTEGER,POINTER :: map_ttr(:,:,:)
+TYPE(arrayof_ttr_mapper),POINTER :: map_ttr(:,:)
 INTEGER,POINTER,OPTIONAL :: dtratio(:)
 TYPE(datetime),INTENT(in),OPTIONAL :: start
 
-INTEGER :: i, j, k, l, na, nf
+INTEGER :: i, j, k, l, na, nf, n
 INTEGER :: steps, p1, maxp1, maxp2, minp1mp2, dstart
 LOGICAL :: lforecast
 TYPE(datetime) :: lstart, lend, pstart1, pstart2, pend1, pend2, reftime1, reftime2, tmptime
@@ -433,6 +534,7 @@ TYPE(arrayof_datetime) :: a_otime
 TYPE(arrayof_vol7d_timerange) :: a_otimerange
 TYPE(arrayof_integer) :: a_dtratio
 LOGICAL,ALLOCATABLE :: mask_timerange(:) ! improve !!!!
+TYPE(ttr_mapper) :: lmapper
 
 ! compute length of cumulation step in seconds
 CALL getval(timedelta_depop(step), asec=steps)
@@ -482,7 +584,7 @@ CALL l4f_log(L4F_DEBUG, &
 #endif
 
 IF (SIZE(itime) == 0 .OR. COUNT(mask_timerange) == 0) THEN ! avoid segmentation fault in case of empty volume
-  ALLOCATE(otime(0), otimerange(0), map_ttr(0,0,0))
+  ALLOCATE(otime(0), otimerange(0), map_ttr(0,0))
   IF (PRESENT(dtratio)) ALLOCATE(dtratio(0))
   RETURN
 ENDIF
@@ -585,8 +687,7 @@ IF (PRESENT(dtratio)) THEN
    t2c(dtratio(1))//' to '//t2c(dtratio(SIZE(dtratio))))
 #endif
   
-  ALLOCATE(map_ttr(SIZE(itime),SIZE(itimerange),3))
-  map_ttr(:,:,:) = imiss
+  ALLOCATE(map_ttr(SIZE(otime),SIZE(otimerange)))
   do_itimerange1: DO l = 1, SIZE(itimerange)
     IF (.NOT.mask_timerange(l)) CYCLE do_itimerange1
     do_itime1: DO k = 1, SIZE(itime)
@@ -594,7 +695,7 @@ IF (PRESENT(dtratio)) THEN
        time_definition, pstart1, pend1, reftime1)
       do_otimerange1: DO j = 1, SIZE(otimerange)
         do_otime1: DO i = 1, SIZE(otime)
-          CALL time_timerange_get_period(otime(i), otimerange(j), &
+          CALL time_timerange_get_period_pop(otime(i), otimerange(j), step, &
            time_definition, pstart2, pend2, reftime2)
           IF (lforecast) THEN
             IF (reftime1 /= reftime2) CYCLE do_otime1
@@ -602,10 +703,11 @@ IF (PRESENT(dtratio)) THEN
 
           IF (pstart1 >= pstart2 .AND. pend1 <= pend2 .AND. &
            MOD(pstart1-pstart2, pend1-pstart1) == timedelta_0) THEN ! useful
-            map_ttr(k,l,1) = i
-            map_ttr(k,l,2) = j
-            map_ttr(k,l,3) = steps/itimerange(l)%p2 ! guaranteed to be integer
-            CYCLE do_itime1
+            lmapper%it = k
+            lmapper%itr = l
+            lmapper%extra_info = steps/itimerange(l)%p2 ! dtratio, guaranteed to be integer
+            n = append(map_ttr(i,j), lmapper)
+            CYCLE do_itime1 ! can contribute only to a single interval
           ENDIF
         ENDDO do_otime1
       ENDDO do_otimerange1
@@ -614,8 +716,7 @@ IF (PRESENT(dtratio)) THEN
 
 ELSE
   
-  ALLOCATE(map_ttr(SIZE(itime),SIZE(itimerange),4))
-  map_ttr(:,:,:) = imiss
+  ALLOCATE(map_ttr(SIZE(otime),SIZE(otimerange)))
   do_itimerange2: DO l = 1, SIZE(itimerange)
     IF (.NOT.mask_timerange(l)) CYCLE do_itimerange2
     do_itime2: DO k = 1, SIZE(itime)
@@ -623,26 +724,40 @@ ELSE
        time_definition, pstart1, pend1, reftime1)
       do_otimerange2: DO j = 1, SIZE(otimerange)
         do_otime2: DO i = 1, SIZE(otime)
-          CALL time_timerange_get_period(otime(i), otimerange(j), &
+          CALL time_timerange_get_period_pop(otime(i), otimerange(j), step, &
            time_definition, pstart2, pend2, reftime2)
           IF (lforecast) THEN
             IF (reftime1 /= reftime2) CYCLE do_otime2
           ENDIF
 
           IF (pstart1 >= pstart2 .AND. pend1 <= pend2) THEN ! useful
-            IF (.NOT.c_e(map_ttr(k,l,1))) THEN
-              map_ttr(k,l,1) = i
-              map_ttr(k,l,2) = j
-            ELSE ! ugly solution
-              map_ttr(k,l,3) = i
-              map_ttr(k,l,4) = j
+            lmapper%it = k
+            lmapper%itr = l
+            IF (pstart1 == pstart2) THEN
+              lmapper%extra_info = 1 ! start of interval
+            ELSE IF (pend1 == pend2) THEN
+              lmapper%extra_info = 1 ! end of interval
+            ELSE
+              lmapper%extra_info = imiss
             ENDIF
-!            CYCLE do_itime2
+            lmapper%time = pstart1 ! = pend1, order by time?
+            n = append(map_ttr(i,j), lmapper)
+! here no CYCLE because a single input can contribute to multiple output intervals
           ENDIF
         ENDDO do_otime2
       ENDDO do_otimerange2
     ENDDO do_itime2
   ENDDO do_itimerange2
+
+! if weighted?
+  DO j = 1, SIZE(otimerange)
+    DO i = 1, SIZE(otime)
+      IF (map_ttr(i,j)%arraysize > 0) THEN
+!        CALL packarray(map_ttr(i,j)) ! probably not worth
+        CALL sort(map_ttr(i,j)%array(1:map_ttr(i,j)%arraysize)) ! sort by verification time
+      ENDIF
+    ENDDO
+  ENDDO
   
 ENDIF
 
@@ -690,6 +805,51 @@ ELSE
 ENDIF
 
 END SUBROUTINE time_timerange_get_period
+
+
+! get start of period, end of period and reference time from time,
+! timerange, according to time_definition. step is taken separately
+! from timerange and can be "popular"
+SUBROUTINE time_timerange_get_period_pop(time, timerange, step, time_definition, &
+ pstart, pend, reftime)
+TYPE(datetime),INTENT(in) :: time
+TYPE(vol7d_timerange),INTENT(in) :: timerange
+TYPE(timedelta),INTENT(in) :: step
+INTEGER,INTENT(in) :: time_definition
+TYPE(datetime),INTENT(out) :: reftime
+TYPE(datetime),INTENT(out) :: pstart
+TYPE(datetime),INTENT(out) :: pend
+
+TYPE(timedelta) :: p1, p2
+
+
+p1 = timedelta_new(sec=timerange%p1) ! end of period
+!p2 = timedelta_new(sec=timerange%p2) ! length of period
+
+IF (time == datetime_miss .OR. .NOT.c_e(timerange%p1) .OR. .NOT.c_e(timerange%p2) .OR. &
+ (timerange%p1 > 0 .AND. timerange%p1 < timerange%p2) .OR. &
+ timerange%p1 < 0 .OR. timerange%p2 < 0) THEN ! is this too pedantic and slow?
+  pstart = datetime_miss
+  pend = datetime_miss
+  reftime = datetime_miss
+  RETURN
+ENDIF
+
+IF (time_definition == 0) THEN ! time == reference time
+  reftime = time
+  pend = time + p1
+  pstart = pend - step
+ELSE IF (time_definition == 1) THEN ! time == verification time
+  pend = time
+  pstart = time - step
+  reftime = time - p1
+ELSE
+  pstart = datetime_miss
+  pend = datetime_miss
+  reftime = datetime_miss
+ENDIF
+
+END SUBROUTINE time_timerange_get_period_pop
 
 
 ! set time, timerange%p1, timerange%p2 according to pstart, pend,
