@@ -510,19 +510,6 @@ IF (ASSOCIATED(this%voldatir)) THEN
                   ENDIF
                 ENDDO
 
-!                DO l = 1, SIZE(this%timerange)
-!                  DO k = 1, SIZE(this%time)
-!                    IF (map_ttr(k,l,1) == i .AND. map_ttr(k,l,2) == j .AND. &
-!                     map_ttr(k,l,3) == dtratio(n)) THEN ! useful combination
-!
-!                      ttr_mask(k,l) = c_e(this%voldatir(i1,k,i3,l,i5,i6))
-!                    ENDIF
-!                  ENDDO
-!                ENDDO
-
-!                ttr_mask(:,:) = map_ttr(:,:,3) == dtratio(n) .AND. &
-!                 map_ttr(:,:,1) == i .AND. map_ttr(:,:,2) == j .AND. &
-!                 c_e(this%voldatir(i1,:,i3,:,i5,i6))
                 ndtr = COUNT(ttr_mask)
                 frac_c = REAL(ndtr)/REAL(dtratio(n1))
 

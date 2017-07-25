@@ -736,7 +736,7 @@ ELSE
             IF (pstart1 == pstart2) THEN
               lmapper%extra_info = 1 ! start of interval
             ELSE IF (pend1 == pend2) THEN
-              lmapper%extra_info = 1 ! end of interval
+              lmapper%extra_info = 2 ! end of interval
             ELSE
               lmapper%extra_info = imiss
             ENDIF
