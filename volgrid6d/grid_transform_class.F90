@@ -78,6 +78,8 @@
 !!      linear interpolation of the 3 surrounding input points
 !!      individuated by means of a triangulation procedure (sparse
 !!      points-to-grid, sparse points-to-sparse points).
+!!    - sub_type='shapiro_near' the interpolated value is that of sub_type=near
+!!      after smoothing the input field with a shapiro filter of order 2.
 !!
 !!  - trans_type='boxinter' computes data on a new grid in which the
 !!    value at every point is the result of a function computed over
@@ -535,7 +537,7 @@ ELSE IF (this%trans_type == 'boxregrid') THEN
 ELSE IF (this%trans_type == 'inter') THEN
 
   IF (this%sub_type == 'near' .OR. this%sub_type == 'bilin' .OR. &
-   this%sub_type == 'linear') THEN
+   this%sub_type == 'linear' .OR. this%sub_type == 'shapiro_near') THEN
 ! nothing to do here
   ELSE
     CALL sub_type_error()
@@ -1276,7 +1278,8 @@ ELSE IF (this%trans%trans_type == 'inter') THEN
 
   CALL outgrid_setup() ! common setup for grid-generating methods
 
-  IF (this%trans%sub_type == 'near' .OR. this%trans%sub_type == 'bilin' ) THEN
+  IF (this%trans%sub_type == 'near' .OR. this%trans%sub_type == 'bilin'&
+    .OR. this%trans%sub_type == 'shapiro_near') THEN
 
     CALL get_val(in, nx=this%innx, ny=this%inny, &
      xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax)
@@ -1642,7 +1645,8 @@ CALL l4f_category_log(this%category, L4F_DEBUG, "grid_transform vg6d-v7d")
 
 IF (this%trans%trans_type == 'inter') THEN
 
-  IF (this%trans%sub_type == 'near' .OR. this%trans%sub_type == 'bilin' ) THEN
+  IF (this%trans%sub_type == 'near' .OR. this%trans%sub_type == 'bilin' &
+     & .OR. this%trans%sub_type == 'shapiro_near') THEN
 
     CALL get_val(in, nx=this%innx, ny=this%inny)
     this%outnx = SIZE(v7d_out%ana)
@@ -2551,7 +2555,7 @@ REAL,INTENT(in),OPTIONAL,TARGET :: coord_3d_in(:,:,:) !< input vertical coordina
 INTEGER :: i, j, k, ii, jj, ie, je, n, navg, kk, kkcache, kkup, kkdown, &
  kfound, kfoundin, inused, i1, i2, j1, j2, np, ns
 INTEGER,ALLOCATABLE :: nval(:,:)
-REAL :: z1,z2,z3,z4
+REAL :: z1,z2,z3,z4,z(4)
 DOUBLE PRECISION  :: x1,x3,y1,y3,xp,yp
 INTEGER :: innx, inny, innz, outnx, outny, outnz, vartype
 REAL,ALLOCATABLE :: coord_in(:)
@@ -2831,6 +2835,40 @@ ELSE IF (this%trans%trans_type == 'inter') THEN
               field_out(i,j,k) = hbilin (z1,z2,z3,z4,x1,y1,x3,y3,xp,yp)
 
             ENDIF
+          ENDIF
+
+        ENDDO
+      ENDDO
+    ENDDO
+  ELSE IF (this%trans%sub_type == 'shapiro_near') THEN
+    DO k = 1, innz
+      DO j = 1, this%outny
+        DO i = 1, this%outnx
+
+          IF (c_e(this%inter_index_x(i,j))) THEN
+
+            IF(this%inter_index_x(i,j)-1>0)THEN          
+              z(1) = field_in(this%inter_index_x(i,j)-1,this%inter_index_y(i,j)  ,k)
+            ELSE
+              z(1) = rmiss
+            END IF
+            IF(this%inter_index_x(i,j)+1<=this%outnx)THEN
+              z(3)=field_in(this%inter_index_x(i,j)+1,this%inter_index_y(i,j)  ,k)
+            ELSE
+              z(3) = rmiss
+            END IF
+            IF(this%inter_index_y(i,j)+1<=this%outny)THEN          
+              z(2)=field_in(this%inter_index_x(i,j)  ,this%inter_index_y(i,j)+1,k)
+            ELSE
+              z(2) = rmiss
+            END IF
+            IF(this%inter_index_y(i,j)-1>0)THEN
+              z(4)=field_in(this%inter_index_x(i,j)  ,this%inter_index_y(i,j)-1,k)
+            ELSE
+              z(4) = rmiss
+            END IF
+            field_out(i,j,k) = shapiro (z,field_in(this%inter_index_x(i,j),this%inter_index_y(i,j),k))
+
           ENDIF
 
         ENDDO
@@ -3700,6 +3738,25 @@ zp = (z6-z5)*(p1)+z5
 END FUNCTION hbilin
 
 
+! Shapiro filter of order 2
+FUNCTION shapiro (z,zp) RESULT(zs)
+!! z_smoothed(i,j) = z(i,j) * (1-S) + S * sum(z_vicini)/N 
+!!                 = z(i,j) - S/N (N*z(i,j) - sum(z_vicini))
+REAL,INTENT(in) :: z(:) ! Z values on the four surrounding points
+REAL,INTENT(in) :: zp          ! Z values on the central point
+REAL   :: zs                   ! Z smoothed value on the central point
+INTEGER:: N
+
+IF(c_e(zp))THEN
+  N = count(c_e(z))
+  zs = zp - 0.5* ( N*zp - sum(z, c_e(z)) )/N
+ELSE
+  zs = rmiss
+END IF
+
+END FUNCTION shapiro
+
+
 ! Locate index of requested point
 ELEMENTAL SUBROUTINE find_index(this, inter_type, nx, ny, xmin, xmax, ymin, ymax, &
  lon, lat, extrap, index_x, index_y)
@@ -3714,7 +3771,7 @@ INTEGER,INTENT(out) :: index_x,index_y ! index of point requested
 INTEGER :: lnx, lny
 DOUBLE PRECISION :: x,y
 
-IF (inter_type == "near") THEN
+IF (inter_type == "near" .OR. inter_type == "shapiro_near") THEN
 
   CALL proj(this,lon,lat,x,y)
   index_x = NINT((x-xmin)/((xmax-xmin)/DBLE(nx-1)))+1
