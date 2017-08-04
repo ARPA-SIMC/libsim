@@ -630,6 +630,104 @@ END SUBROUTINE makeother
 END SUBROUTINE vol7d_recompute_stat_proc_agg
 
 
+SUBROUTINE vol7d_compute_stat_proc_agg_exp(this, that, stat_proc, &
+ step, start, max_step, weighted, other)
+TYPE(vol7d),INTENT(inout) :: this !< volume providing data to be computed, it is not modified by the method, apart from performing a \a vol7d_alloc_vol on it
+TYPE(vol7d),INTENT(out) :: that !< output volume which will contain the computed data
+INTEGER,INTENT(in) :: stat_proc !< type of statistical processing to be computed (from grib2 table)
+TYPE(timedelta),INTENT(in) :: step !< length of the step over which the statistical processing is performed
+TYPE(datetime),INTENT(in),OPTIONAL :: start !< start of statistical processing interval
+TYPE(timedelta),INTENT(in),OPTIONAL :: max_step !< maximum allowed distance in time between two contiguougs valid data within an interval, for the interval to be eligible for statistical processing
+LOGICAL,INTENT(in),OPTIONAL :: weighted !< if provided and \c .TRUE., the statistical process is computed, if possible, by weighting every value with a weight proportional to its validity interval
+TYPE(vol7d),INTENT(inout),OPTIONAL :: other !< optional volume that, on exit, is going to contain the data that did not contribute to the accumulation computation
+!INTEGER,INTENT(in),OPTIONAL :: stat_proc_input !< to be used with care, type of statistical processing of data that has to be processed (from grib2 table), only data having timerange of this type will be recomputed, the actual statistical processing performed and which will appear in the output volume, is however determined by \a stat_proc argument
+
+INTEGER :: tri
+INTEGER :: i, j, n, n1, ndtr, i1, i3, i5, i6
+INTEGER :: linshape(1)
+TYPE(timedelta) :: lmax_step
+LOGICAL,ALLOCATABLE :: ttr_mask(:,:)
+TYPE(arrayof_ttr_mapper),POINTER :: map_ttr(:,:)
+LOGICAL :: lweighted
+CHARACTER(len=8) :: env_var
+
+IF (PRESENT(max_step)) THEN
+  lmax_step = max_step
+ELSE
+  lmax_step = timedelta_max
+ENDIF
+lweighted = optio_log(weighted)
+tri = 254
+! enable bad behavior for climat database
+env_var = ''
+CALL getenv('LIBSIM_CLIMAT_BEHAVIOR', env_var)
+lweighted = lweighted .AND. LEN_TRIM(env_var) == 0
+
+! be safe
+CALL vol7d_alloc_vol(this)
+! initial check
+
+! cleanup the original volume
+CALL vol7d_smart_sort(this, lsort_time=.TRUE.) ! time-ordered volume needed
+CALL vol7d_reform(this, miss=.FALSE., sort=.FALSE., unique=.TRUE.)
+
+CALL init(that, time_definition=this%time_definition)
+CALL vol7d_alloc(that, nana=SIZE(this%ana), nlevel=SIZE(this%level), &
+ nnetwork=SIZE(this%network))
+IF (ASSOCIATED(this%dativar%r)) THEN
+  CALL vol7d_alloc(that, ndativarr=SIZE(this%dativar%r))
+  that%dativar%r = this%dativar%r
+ENDIF
+IF (ASSOCIATED(this%dativar%d)) THEN
+  CALL vol7d_alloc(that, ndativard=SIZE(this%dativar%d))
+  that%dativar%d = this%dativar%d
+ENDIF
+that%ana = this%ana
+that%level = this%level
+that%network = this%network
+
+! compute the output time and timerange and all the required mappings
+CALL recompute_stat_proc_agg_common_exp(this%time, this%timerange, stat_proc, tri, &
+ step, this%time_definition, that%time, that%timerange, map_ttr, start=start)
+CALL vol7d_alloc_vol(that)
+
+do_otimerange: DO j = 1, SIZE(that%timerange)
+  do_otime: DO i = 1, SIZE(that%time)
+    IF (map_ttr(i,j)%arraysize <=0) CYCLE do_otime
+
+    IF (ASSOCIATED(this%voldatir)) THEN
+
+      DO i1 = 1, SIZE(this%ana)
+        DO i3 = 1, SIZE(this%level)
+          DO i6 = 1, SIZE(this%network)
+            DO i5 = 1, SIZE(this%dativar%r)
+
+              ttr_mask = .FALSE.
+              DO n = 1, map_ttr(i,j)%arraysize
+                IF (c_e(this%voldatir(i1,map_ttr(i,j)%array(n)%it,i3, &
+                 map_ttr(i,j)%array(n)%itr,i5,i6))) THEN
+                  ttr_mask(map_ttr(i,j)%array(n)%it, &
+                   map_ttr(i,j)%array(n)%itr) = .TRUE.
+                ENDIF
+              ENDDO
+              ndtr = COUNT(ttr_mask)
+
+              
+            ENDDO
+          ENDDO
+        ENDDO
+      ENDDO
+    ENDIF
+
+    CALL delete(map_ttr(i,j))
+  ENDDO do_otime
+ENDDO do_otimerange
+
+DEALLOCATE(map_ttr)
+
+
+END SUBROUTINE vol7d_compute_stat_proc_agg_exp
+
 !> Method for statistically processing a set of instantaneous data.
 !! This method performs statistical processing by aggregation of
 !! instantaneous data.  Only floating point single or double precision

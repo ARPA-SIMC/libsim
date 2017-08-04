@@ -68,7 +68,8 @@ END INTERFACE
 
 #define ARRAYOF_ORIGTYPE TYPE(ttr_mapper)
 #define ARRAYOF_TYPE arrayof_ttr_mapper
-!define ARRAYOF_ORIGEQ 1
+#define ARRAYOF_ORIGEQ 1
+#define ARRAYOF_ORIGGT 1
 #include "arrayof_pre.F90"
 ! from arrayof
 
@@ -741,7 +742,7 @@ ELSE
               lmapper%extra_info = imiss
             ENDIF
             lmapper%time = pstart1 ! = pend1, order by time?
-            n = append(map_ttr(i,j), lmapper)
+            n = insert_sorted(map_ttr(i,j), lmapper, .TRUE., .TRUE.)
 ! here no CYCLE because a single input can contribute to multiple output intervals
           ENDIF
         ENDDO do_otime2
