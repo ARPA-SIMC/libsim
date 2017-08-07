@@ -536,6 +536,14 @@ TYPE(arrayof_vol7d_timerange) :: a_otimerange
 TYPE(arrayof_integer) :: a_dtratio
 LOGICAL,ALLOCATABLE :: mask_timerange(:) ! improve !!!!
 TYPE(ttr_mapper) :: lmapper
+CHARACTER(len=8) :: env_var
+LOGICAL :: climat_behavior
+
+
+! enable bad behavior for climat database (only for instantaneous data)
+env_var = ''
+CALL getenv('LIBSIM_CLIMAT_BEHAVIOR', env_var)
+climat_behavior = LEN_TRIM(env_var) > 0 .AND. .NOT.PRESENT(dtratio)
 
 ! compute length of cumulation step in seconds
 CALL getval(timedelta_depop(step), asec=steps)
@@ -731,6 +739,7 @@ ELSE
             IF (reftime1 /= reftime2) CYCLE do_otime2
           ENDIF
 
+          IF (climat_behavior .ANd. pstart1 == pstart2) CYCLE do_otime2
           IF (pstart1 >= pstart2 .AND. pend1 <= pend2) THEN ! useful
             lmapper%it = k
             lmapper%itr = l
@@ -743,7 +752,7 @@ ELSE
             ENDIF
             lmapper%time = pstart1 ! = pend1, order by time?
             n = insert_sorted(map_ttr(i,j), lmapper, .TRUE., .TRUE.)
-! here no CYCLE because a single input can contribute to multiple output intervals
+! no CYCLE, a single input can contribute to multiple output intervals
           ENDIF
         ENDDO do_otime2
       ENDDO do_otimerange2
@@ -751,19 +760,65 @@ ELSE
   ENDDO do_itimerange2
 
 ! if weighted?
-  DO j = 1, SIZE(otimerange)
-    DO i = 1, SIZE(otime)
-      IF (map_ttr(i,j)%arraysize > 0) THEN
-!        CALL packarray(map_ttr(i,j)) ! probably not worth
-        CALL sort(map_ttr(i,j)%array(1:map_ttr(i,j)%arraysize)) ! sort by verification time
-      ENDIF
-    ENDDO
-  ENDDO
+!  DO j = 1, SIZE(otimerange)
+!    DO i = 1, SIZE(otime)
+!      IF (map_ttr(i,j)%arraysize > 0) THEN
+!!        CALL packarray(map_ttr(i,j)) ! probably not worth
+!        CALL sort(map_ttr(i,j)%array(1:map_ttr(i,j)%arraysize)) ! sort by verification time
+!      ENDIF
+!    ENDDO
+!  ENDDO
   
 ENDIF
 
 END SUBROUTINE recompute_stat_proc_agg_common_exp
 
+
+SUBROUTINE compute_stat_proc_agg_sw(vertime, pstart, pend, time_mask, &
+ max_step, weights)
+TYPE(datetime),INTENT(in) :: vertime(:)
+TYPE(datetime),INTENT(in) :: pstart
+TYPE(datetime),INTENT(in) :: pend
+LOGICAL,INTENT(in) :: time_mask(:)
+TYPE(timedelta),OPTIONAL,INTENT(out) :: max_step
+DOUBLE PRECISION,OPTIONAL,INTENT(out) :: weights(:)
+
+INTEGER :: i, nt
+TYPE(datetime),ALLOCATABLE :: lvertime(:)
+TYPE(datetime) :: half, nexthalf
+INTEGER(kind=int_ll) :: dt, tdt
+
+lvertime = PACK(vertime, mask=time_mask)
+nt = SIZE(lvertime)
+
+IF (PRESENT(max_step)) THEN
+  max_step = timedelta_0
+  DO i = 1, nt - 1
+    IF (lvertime(i+1) - lvertime(i) > max_step) &
+     max_step = lvertime(i+1) - lvertime(i)
+  ENDDO
+ENDIF
+
+IF (PRESENT(weights)) THEN
+  IF (nt == 1) THEN
+    weights(1) = 1.0
+  ELSE
+    CALL getval(pend - pstart, amsec=tdt)
+    half = lvertime(1) + (lvertime(2) - lvertime(1))/2
+    CALL getval(half - pstart, amsec=dt)
+    weights(1) = DBLE(dt)/DBLE(tdt)
+    DO i = 2, nt - 1
+      nexthalf = lvertime(i) + (lvertime(i+1) - lvertime(i))/2
+      CALL getval(nexthalf - half, amsec=dt)
+      weights(i) = DBLE(dt)/DBLE(tdt)
+      half = nexthalf
+    ENDDO
+    CALL getval(pend - half, amsec=dt)
+    weights(nt) = DBLE(dt)/DBLE(tdt)
+  ENDIF
+ENDIF
+
+END SUBROUTINE compute_stat_proc_agg_sw
 
 ! get start of period, end of period and reference time from time,
 ! timerange, according to time_definition.

@@ -519,7 +519,7 @@ IF (ASSOCIATED(this%voldatir)) THEN
                   CASE (0) ! average
                     that%voldatir(i1,i,i3,j,i5,i6) = &
                      SUM(this%voldatir(i1,:,i3,:,i5,i6), &
-                     mask=ttr_mask)/n1
+                     mask=ttr_mask)/ndtr
                   CASE (1, 4) ! accumulation, difference
                     that%voldatir(i1,i,i3,j,i5,i6) = &
                      SUM(this%voldatir(i1,:,i3,:,i5,i6), &
@@ -582,7 +582,7 @@ IF (ASSOCIATED(this%voldatid)) THEN
                   CASE (0) ! average
                     that%voldatid(i1,i,i3,j,i5,i6) = &
                      SUM(this%voldatid(i1,:,i3,:,i5,i6), &
-                     mask=ttr_mask)/n1
+                     mask=ttr_mask)/ndtr
                   CASE (1, 4) ! accumulation, difference
                     that%voldatid(i1,i,i3,j,i5,i6) = &
                      SUM(this%voldatid(i1,:,i3,:,i5,i6), &
@@ -643,11 +643,14 @@ TYPE(vol7d),INTENT(inout),OPTIONAL :: other !< optional volume that, on exit, is
 !INTEGER,INTENT(in),OPTIONAL :: stat_proc_input !< to be used with care, type of statistical processing of data that has to be processed (from grib2 table), only data having timerange of this type will be recomputed, the actual statistical processing performed and which will appear in the output volume, is however determined by \a stat_proc argument
 
 INTEGER :: tri
-INTEGER :: i, j, n, n1, ndtr, i1, i3, i5, i6
-INTEGER :: linshape(1)
-TYPE(timedelta) :: lmax_step
+INTEGER :: i, j, n, ndtr, i1, i3, i5, i6, vartype, maxsize
+TYPE(timedelta) :: lmax_step, act_max_step
+TYPE(datetime) :: pstart, pend, reftime
 LOGICAL,ALLOCATABLE :: ttr_mask(:,:)
 TYPE(arrayof_ttr_mapper),POINTER :: map_ttr(:,:)
+REAL,ALLOCATABLE :: tmpvolr(:)
+DOUBLE PRECISION,ALLOCATABLE :: tmpvold(:), weights(:)
+LOGICAL,ALLOCATABLE :: lin_mask(:)
 LOGICAL :: lweighted
 CHARACTER(len=8) :: env_var
 
@@ -662,6 +665,8 @@ tri = 254
 env_var = ''
 CALL getenv('LIBSIM_CLIMAT_BEHAVIOR', env_var)
 lweighted = lweighted .AND. LEN_TRIM(env_var) == 0
+! only average can be weighted
+lweighted = lweighted .AND. stat_proc == 0
 
 ! be safe
 CALL vol7d_alloc_vol(this)
@@ -691,42 +696,135 @@ CALL recompute_stat_proc_agg_common_exp(this%time, this%timerange, stat_proc, tr
  step, this%time_definition, that%time, that%timerange, map_ttr, start=start)
 CALL vol7d_alloc_vol(that)
 
+maxsize = MAXVAL(map_ttr(:,:)%arraysize)
+ALLOCATE(tmpvolr(maxsize), tmpvold(maxsize), lin_mask(maxsize), weights(maxsize))
+!ALLOCATE(ttr_mask(SIZE(this%time), SIZE(this%timerange)))
+!IF (stat_proc == 201) THEN
+!  ALLOCATE(tmpvolr(SIZE(this%time), SIZE(this%timerange)), &
+!   tmpvold(SIZE(this%time), SIZE(this%timerange)))
+!linshape = (/SIZE(ttr_mask)/)
 do_otimerange: DO j = 1, SIZE(that%timerange)
   do_otime: DO i = 1, SIZE(that%time)
-    IF (map_ttr(i,j)%arraysize <=0) CYCLE do_otime
+    IF (map_ttr(i,j)%arraysize <= 0) CYCLE do_otime
+! required for some computations
+    CALL time_timerange_get_period(that%time(i), that%timerange(j), &
+     that%time_definition, pstart, pend, reftime)
 
     IF (ASSOCIATED(this%voldatir)) THEN
-
       DO i1 = 1, SIZE(this%ana)
         DO i3 = 1, SIZE(this%level)
           DO i6 = 1, SIZE(this%network)
             DO i5 = 1, SIZE(this%dativar%r)
-
-              ttr_mask = .FALSE.
+! difference treated separately here
+              IF (stat_proc == 4) THEN
+                n = map_ttr(i,j)%arraysize
+                IF (n >= 2) THEN
+                  IF (map_ttr(i,j)%array(1)%extra_info == 1 .AND. &
+                   map_ttr(i,j)%array(n)%extra_info == 2) THEN
+                    IF (c_e(this%voldatir(i1,map_ttr(i,j)%array(1)%it,i3, &
+                     map_ttr(i,j)%array(1)%itr,i5,i6)) .AND. &
+                     c_e(this%voldatir(i1,map_ttr(i,j)%array(n)%it,i3, &
+                     map_ttr(i,j)%array(n)%itr,i5,i6))) THEN
+                      that%voldatir(i1,i,i3,j,i5,i6) = &
+                       this%voldatir(i1,map_ttr(i,j)%array(n)%it,i3, &
+                       map_ttr(i,j)%array(n)%itr,i5,i6) - &
+                       this%voldatir(i1,map_ttr(i,j)%array(1)%it,i3, &
+                       map_ttr(i,j)%array(1)%itr,i5,i6)
+                    ENDIF
+                  ENDIF
+                ENDIF
+                CYCLE
+              ENDIF
+! other stat_proc
+              vartype = vol7d_vartype(this%dativar%r(i5))
+              lin_mask = .FALSE.
+              ndtr = 0
               DO n = 1, map_ttr(i,j)%arraysize
                 IF (c_e(this%voldatir(i1,map_ttr(i,j)%array(n)%it,i3, &
                  map_ttr(i,j)%array(n)%itr,i5,i6))) THEN
-                  ttr_mask(map_ttr(i,j)%array(n)%it, &
-                   map_ttr(i,j)%array(n)%itr) = .TRUE.
+                  ndtr = ndtr + 1
+                  tmpvolr(ndtr) = this%voldatir(i1,map_ttr(i,j)%array(n)%it,i3, &
+                   map_ttr(i,j)%array(n)%itr,i5,i6)
+                  lin_mask(n) = .TRUE.
                 ENDIF
               ENDDO
-              ndtr = COUNT(ttr_mask)
+              IF (ndtr == 0) CYCLE
+              IF (lweighted) THEN
+                CALL compute_stat_proc_agg_sw( &
+                 map_ttr(i,j)%array(:)%time, pstart, pend, lin_mask, &
+                 act_max_step, weights)
+              ELSE
+                CALL compute_stat_proc_agg_sw( &
+                 map_ttr(i,j)%array(:)%time, pstart, pend, lin_mask, &
+                 act_max_step)
+              ENDIF
+              IF (act_max_step > lmax_step) CYCLE
 
-              
+!              DO n = 1, map_ttr(i,j)%arraysize
+!                IF (c_e(this%voldatir(i1,map_ttr(i,j)%array(n)%it,i3, &
+!                 map_ttr(i,j)%array(n)%itr,i5,i6))) THEN
+!                  ttr_mask(map_ttr(i,j)%array(n)%it, &
+!                   map_ttr(i,j)%array(n)%itr) = .TRUE.
+!                ENDIF
+!              ENDDO
+!              ndtr = COUNT(ttr_mask)
+!              IF (ndtr > 0) THEN
+!              ENDIF
+
+              SELECT CASE(stat_proc)
+                CASE (0) ! average
+                  IF (lweighted) THEN
+                    that%voldatir(i1,i,i3,j,i5,i6) = &
+                     SUM(REAL(weights(1:ndtr))*tmpvolr(1:ndtr))/ndtr
+                  ELSE
+                    that%voldatir(i1,i,i3,j,i5,i6) = &
+                     SUM(tmpvolr(1:ndtr))/ndtr
+                  ENDIF
+
+!                CASE (1, 4) ! accumulation, difference
+!                  that%voldatir(i1,i,i3,j,i5,i6) = &
+!                   SUM(this%voldatir(i1,:,i3,:,i5,i6), &
+!                   mask=ttr_mask)
+                CASE (2) ! maximum
+                  that%voldatir(i1,i,i3,j,i5,i6) = &
+                   MAXVAL(tmpvolr(1:ndtr))
+                CASE (3) ! minimum
+                  that%voldatir(i1,i,i3,j,i5,i6) = &
+                   MINVAL(tmpvolr(1:ndtr))
+                CASE (6) ! stddev
+                  that%voldatir(i1,i,i3,j,i5,i6) = &
+                   stat_stddev(tmpvolr(1:ndtr))
+                CASE (201) ! mode
+! mode only for angles at the moment, with predefined histogram
+                  IF (vartype == var_dir360) THEN
+! reduce to interval [-22.5,337.5]
+                    WHERE (tmpvolr(1:ndtr) > 337.5)
+                      tmpvolr(1:ndtr) = tmpvolr(1:ndtr) - 360.
+                    END WHERE
+                    that%voldatir(i1,i,i3,j,i5,i6) = &
+                     stat_mode_histogram(tmpvolr(1:ndtr), &
+                     8, -22.5, 337.5)
+                  ENDIF
+                END SELECT
+
+
+                  
+                
+              ENDDO
             ENDDO
           ENDDO
         ENDDO
-      ENDDO
-    ENDIF
+      ENDIF
 
     CALL delete(map_ttr(i,j))
   ENDDO do_otime
 ENDDO do_otimerange
 
-DEALLOCATE(map_ttr)
+DEALLOCATE(map_ttr, ttr_mask)
 
 
 END SUBROUTINE vol7d_compute_stat_proc_agg_exp
+
 
 !> Method for statistically processing a set of instantaneous data.
 !! This method performs statistical processing by aggregation of
