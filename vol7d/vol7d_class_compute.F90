@@ -95,7 +95,7 @@ IF (stat_proc_input == 254) THEN
   CALL l4f_log(L4F_INFO, 'computing statistical processing by aggregation '//&
    TRIM(to_char(stat_proc_input))//':'//TRIM(to_char(stat_proc)))
 
-  CALL vol7d_compute_stat_proc_agg(this, that, stat_proc, &
+  CALL vol7d_compute_stat_proc_agg_exp(this, that, stat_proc, &
    step, start, max_step, weighted, other)
 
 ELSE IF (stat_proc == 254) THEN
@@ -642,11 +642,11 @@ LOGICAL,INTENT(in),OPTIONAL :: weighted !< if provided and \c .TRUE., the statis
 TYPE(vol7d),INTENT(inout),OPTIONAL :: other !< optional volume that, on exit, is going to contain the data that did not contribute to the accumulation computation
 !INTEGER,INTENT(in),OPTIONAL :: stat_proc_input !< to be used with care, type of statistical processing of data that has to be processed (from grib2 table), only data having timerange of this type will be recomputed, the actual statistical processing performed and which will appear in the output volume, is however determined by \a stat_proc argument
 
+TYPE(vol7d) :: v7dtmp
 INTEGER :: tri
 INTEGER :: i, j, n, ndtr, i1, i3, i5, i6, vartype, maxsize
 TYPE(timedelta) :: lmax_step, act_max_step
 TYPE(datetime) :: pstart, pend, reftime
-LOGICAL,ALLOCATABLE :: ttr_mask(:,:)
 TYPE(arrayof_ttr_mapper),POINTER :: map_ttr(:,:)
 REAL,ALLOCATABLE :: tmpvolr(:)
 DOUBLE PRECISION,ALLOCATABLE :: tmpvold(:), weights(:)
@@ -675,34 +675,32 @@ CALL vol7d_alloc_vol(this)
 ! cleanup the original volume
 CALL vol7d_smart_sort(this, lsort_time=.TRUE.) ! time-ordered volume needed
 CALL vol7d_reform(this, miss=.FALSE., sort=.FALSE., unique=.TRUE.)
+CALL vol7d_copy(this, v7dtmp, ltime=(/.FALSE./), ltimerange=(/.FALSE./))
 
 CALL init(that, time_definition=this%time_definition)
-CALL vol7d_alloc(that, nana=SIZE(this%ana), nlevel=SIZE(this%level), &
- nnetwork=SIZE(this%network))
-IF (ASSOCIATED(this%dativar%r)) THEN
-  CALL vol7d_alloc(that, ndativarr=SIZE(this%dativar%r))
-  that%dativar%r = this%dativar%r
-ENDIF
-IF (ASSOCIATED(this%dativar%d)) THEN
-  CALL vol7d_alloc(that, ndativard=SIZE(this%dativar%d))
-  that%dativar%d = this%dativar%d
-ENDIF
-that%ana = this%ana
-that%level = this%level
-that%network = this%network
+
+!CALL vol7d_alloc(that, nana=SIZE(this%ana), nlevel=SIZE(this%level), &
+! nnetwork=SIZE(this%network))
+!IF (ASSOCIATED(this%dativar%r)) THEN
+!  CALL vol7d_alloc(that, ndativarr=SIZE(this%dativar%r))
+!  that%dativar%r = this%dativar%r
+!ENDIF
+!IF (ASSOCIATED(this%dativar%d)) THEN
+!  CALL vol7d_alloc(that, ndativard=SIZE(this%dativar%d))
+!  that%dativar%d = this%dativar%d
+!ENDIF
+!that%ana = this%ana
+!that%level = this%level
+!that%network = this%network
 
 ! compute the output time and timerange and all the required mappings
 CALL recompute_stat_proc_agg_common_exp(this%time, this%timerange, stat_proc, tri, &
  step, this%time_definition, that%time, that%timerange, map_ttr, start=start)
-CALL vol7d_alloc_vol(that)
+!CALL vol7d_alloc_vol(that)
+CALL vol7d_merge(that, v7dtmp)
 
 maxsize = MAXVAL(map_ttr(:,:)%arraysize)
 ALLOCATE(tmpvolr(maxsize), tmpvold(maxsize), lin_mask(maxsize), weights(maxsize))
-!ALLOCATE(ttr_mask(SIZE(this%time), SIZE(this%timerange)))
-!IF (stat_proc == 201) THEN
-!  ALLOCATE(tmpvolr(SIZE(this%time), SIZE(this%timerange)), &
-!   tmpvold(SIZE(this%time), SIZE(this%timerange)))
-!linshape = (/SIZE(ttr_mask)/)
 do_otimerange: DO j = 1, SIZE(that%timerange)
   do_otime: DO i = 1, SIZE(that%time)
     IF (map_ttr(i,j)%arraysize <= 0) CYCLE do_otime
@@ -715,7 +713,7 @@ do_otimerange: DO j = 1, SIZE(that%timerange)
         DO i3 = 1, SIZE(this%level)
           DO i6 = 1, SIZE(this%network)
             DO i5 = 1, SIZE(this%dativar%r)
-! difference treated separately here
+! stat_proc difference treated separately here
               IF (stat_proc == 4) THEN
                 n = map_ttr(i,j)%arraysize
                 IF (n >= 2) THEN
@@ -751,25 +749,16 @@ do_otimerange: DO j = 1, SIZE(that%timerange)
               IF (ndtr == 0) CYCLE
               IF (lweighted) THEN
                 CALL compute_stat_proc_agg_sw( &
-                 map_ttr(i,j)%array(:)%time, pstart, pend, lin_mask, &
+                 map_ttr(i,j)%array(1:map_ttr(i,j)%arraysize)%time, &
+                 pstart, pend, lin_mask(1:map_ttr(i,j)%arraysize), &
                  act_max_step, weights)
               ELSE
                 CALL compute_stat_proc_agg_sw( &
-                 map_ttr(i,j)%array(:)%time, pstart, pend, lin_mask, &
+                 map_ttr(i,j)%array(1:map_ttr(i,j)%arraysize)%time, &
+                 pstart, pend, lin_mask(1:map_ttr(i,j)%arraysize), &
                  act_max_step)
               ENDIF
               IF (act_max_step > lmax_step) CYCLE
-
-!              DO n = 1, map_ttr(i,j)%arraysize
-!                IF (c_e(this%voldatir(i1,map_ttr(i,j)%array(n)%it,i3, &
-!                 map_ttr(i,j)%array(n)%itr,i5,i6))) THEN
-!                  ttr_mask(map_ttr(i,j)%array(n)%it, &
-!                   map_ttr(i,j)%array(n)%itr) = .TRUE.
-!                ENDIF
-!              ENDDO
-!              ndtr = COUNT(ttr_mask)
-!              IF (ndtr > 0) THEN
-!              ENDIF
 
               SELECT CASE(stat_proc)
                 CASE (0) ! average
@@ -781,10 +770,6 @@ do_otimerange: DO j = 1, SIZE(that%timerange)
                      SUM(tmpvolr(1:ndtr))/ndtr
                   ENDIF
 
-!                CASE (1, 4) ! accumulation, difference
-!                  that%voldatir(i1,i,i3,j,i5,i6) = &
-!                   SUM(this%voldatir(i1,:,i3,:,i5,i6), &
-!                   mask=ttr_mask)
                 CASE (2) ! maximum
                   that%voldatir(i1,i,i3,j,i5,i6) = &
                    MAXVAL(tmpvolr(1:ndtr))
@@ -806,10 +791,6 @@ do_otimerange: DO j = 1, SIZE(that%timerange)
                      8, -22.5, 337.5)
                   ENDIF
                 END SELECT
-
-
-                  
-                
               ENDDO
             ENDDO
           ENDDO
@@ -820,8 +801,13 @@ do_otimerange: DO j = 1, SIZE(that%timerange)
   ENDDO do_otime
 ENDDO do_otimerange
 
-DEALLOCATE(map_ttr, ttr_mask)
+DEALLOCATE(map_ttr)
+DEALLOCATE(tmpvolr, tmpvold, lin_mask, weights)
 
+IF (PRESENT(other)) THEN ! create volume with the remaining data for further processing
+  CALL vol7d_copy(this, other, miss=.FALSE., sort=.FALSE., unique=.FALSE., &
+   ltimerange=(this%timerange(:)%timerange /= tri))
+ENDIF
 
 END SUBROUTINE vol7d_compute_stat_proc_agg_exp
 
