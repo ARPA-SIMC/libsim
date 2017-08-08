@@ -333,6 +333,28 @@ DEALLOCATE(dtratio, map_ttr)
 END SUBROUTINE volgrid6d_recompute_stat_proc_agg
 
 
+!> Method for statistically processing a set of instantaneous data.
+!! This method performs statistical processing by aggregation of
+!! instantaneous data.
+!!
+!! The output \a that volgrid6d object contains elements from the original volume
+!! \a this satisfying the conditions
+!!  - timerange (vol7d_timerange_class::vol7d_timerange::timerange)
+!!    of type 254 (instantaeous)
+!!  - p2 = 0 (processing interval null, instantaneous data)
+!!
+!! Output data will have timerange of type \a stat_proc, and p2 = \a
+!! step.  The supported statistical processing methods (parameter \a
+!! stat_proc) are:
+!!
+!!  - 0 average
+!!  - 2 maximum
+!!  - 3 minimum
+!!  - 4 difference
+!!
+!! A maximum distance in time for input valid data can be assigned
+!! with the optional argument \a max_step, in order to filter datasets
+!! with too long "holes".
 SUBROUTINE volgrid6d_compute_stat_proc_agg(this, that, stat_proc, step, start, max_step, clone)
 TYPE(volgrid6d),INTENT(inout) :: this !< volume providing data to be recomputed, it is not modified by the method, apart from performing a \a volgrid6d_alloc_vol on it
 TYPE(volgrid6d),INTENT(out) :: that !< output volume which will contain the recomputed data
@@ -463,9 +485,9 @@ do_otimerange: DO j = 1, SIZE(that%timerange)
 
             ENDIF ! first time
           ENDDO
-          IF (stat_proc == 0 .AND. n > 0) THEN ! average, n>0 redundant
+          IF (stat_proc == 0) THEN ! average
             WHERE(c_e(voldatiout(:,:)))
-              voldatiout(:,:) = voldatiout(:,:)/(n-1)
+              voldatiout(:,:) = voldatiout(:,:)/ninp
             END WHERE
           ENDIF
         ENDIF
