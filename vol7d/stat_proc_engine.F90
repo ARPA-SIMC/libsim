@@ -788,15 +788,33 @@ TYPE(datetime),ALLOCATABLE :: lvertime(:)
 TYPE(datetime) :: half, nexthalf
 INTEGER(kind=int_ll) :: dt, tdt
 
+nt = COUNT(time_mask)
+ALLOCATE(lvertime(nt))
 lvertime = PACK(vertime, mask=time_mask)
-nt = SIZE(lvertime)
 
 IF (PRESENT(max_step)) THEN
-  max_step = timedelta_0
-  DO i = 1, nt - 1
-    IF (lvertime(i+1) - lvertime(i) > max_step) &
-     max_step = lvertime(i+1) - lvertime(i)
-  ENDDO
+! new way
+!  max_step = timedelta_0
+!  DO i = 1, nt - 1
+!    IF (lvertime(i+1) - lvertime(i) > max_step) &
+!     max_step = lvertime(i+1) - lvertime(i)
+!  ENDDO
+!  IF (lvertime(1) - pstart > max_step) max_step = lvertime(1) - pstart
+!  IF (pend - lvertime(nt) > max_step) max_step = pend - lvertime(nt)
+! old way
+  IF (nt == 1) THEN
+    max_step = pend - pstart
+  ELSE
+    half = lvertime(1) + (lvertime(2) - lvertime(1))/2
+    max_step = half - pstart
+    DO i = 2, nt - 1
+      nexthalf = lvertime(i) + (lvertime(i+1) - lvertime(i))/2
+      IF (nexthalf - half > max_step) max_step = nexthalf - half
+      half = nexthalf
+    ENDDO
+    IF (pend - half > max_step) max_step = pend - half
+  ENDIF
+
 ENDIF
 
 IF (PRESENT(weights)) THEN
