@@ -49,17 +49,26 @@ CONTAINS
 !!    - \a stat_proc = 0 average instantaneous observations
 !!    - \a stat_proc = 2 compute maximum of instantaneous observations
 !!    - \a stat_proc = 3 compute minimum of instantaneous observations
+!!    - \a stat_proc = 4 compute difference of instantaneous observations
+!!    - \a stat_proc = 6 compute standard deviation of instantaneous
+!!      observations
+!!    - \a stat_proc = 201 compute the prevailing direction (mode) on
+!!      specified sectors, suitable only for variables representing an
+!!      angle in degrees, e.g. wind direction
+!!
 !!  processing is computed on longer intervals by aggregation, see the
 !!  description of vol7d_compute_stat_proc_agg()
 !!
 !!  - \a stat_proc_input = *
 !!    - \a stat_proc = 254 consider statistically processed values as
 !!      instantaneous without any extra processing
+!!
 !!  see the description of vol7d_decompute_stat_proc()
 !!
-!!  - \a stat_proc_input = 0, 1, 2, 3
+!!  - \a stat_proc_input = 0, 1, 2, 3, 4
 !!    - \a stat_proc = \a stat_proc_input recompute input data on
 !!      different intervals
+!!
 !!    the same statistical processing is applied to obtain data
 !!    processed on a different interval, either longer, by
 !!    aggregation, or shorter, by differences, see the description of
@@ -67,6 +76,26 @@ CONTAINS
 !!    vol7d_recompute_stat_proc_diff() respectively; it is also
 !!    possible to provide \a stat_proc_input \a /= \a stat_proc, but
 !!    it has to be used with care.
+!!
+!!  - \a stat_proc_input = 0
+!!    - \a stat_proc = 1
+!!
+!!    a time-averaged rate or flux is transformed into a
+!!    time-integrated value (sometimes called accumulated) on the same
+!!    interval by multiplying the values by the length of the time
+!!    interval in seconds, keeping constant all the rest, including
+!!    the variable; the unit of the variable implicitly changes
+!!    accordingly, this is supported officially in grib2 standard, in
+!!    the other cases it is a forcing of the standards.
+!!
+!!  - \a stat_proc_input = 1
+!!    - \a stat_proc = 0
+!!
+!!    a time-integrated value (sometimes called accumulated) is
+!!    transformed into a time-averaged rate or flux on the same
+!!    interval by dividing the values by the length of the time
+!!    interval in seconds, see also the previous description of the
+!!    opposite computation.
 !!
 !! If a particular statistical processing cannot be performed on the
 !! input data, the program continues with a warning and, if requested,
@@ -437,7 +466,7 @@ END SUBROUTINE vol7d_recompute_stat_proc_agg
 !!  - 3 minimum
 !!  - 4 difference
 !!  - 6 standard deviation
-!!  - 201 mode (only for wind direction sectors
+!!  - 201 mode (only for wind direction sectors)
 !!
 !! In the case of average, it is possible to weigh the data
 !! proportionally to the length of the time interval for which every
@@ -945,7 +974,6 @@ END SUBROUTINE vol7d_recompute_stat_proc_diff
 !!    of type \a stat_proc_input (0 or 1)
 !!  - any p1 (analysis/observation or forecast)
 !!  - p2 &gt; 0 (processing interval non null, non instantaneous data)
-!!    and equal to a multiplier of \a step if \a full_steps is \c .TRUE.
 !!
 !! Output data will have timerange of type \a stat_proc (1 or 0) and
 !! p1 and p2 equal to the corresponding input values.  The supported

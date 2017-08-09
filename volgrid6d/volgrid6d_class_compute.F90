@@ -49,17 +49,21 @@ CONTAINS
 !!    - \a stat_proc = 0 average instantaneous observations
 !!    - \a stat_proc = 2 compute maximum of instantaneous observations
 !!    - \a stat_proc = 3 compute minimum of instantaneous observations
-!!  processing is computed on longer intervals by aggregation, see the
-!!  description of vol7d_compute_stat_proc_agg()
+!!    - \a stat_proc = 4 compute difference of instantaneous observations
+!!
+!!    processing is computed on longer time intervals by aggregation,
+!!    see the description of volgrid6d_compute_stat_proc_agg()
 !!
 !!  - \a stat_proc_input = *
 !!    - \a stat_proc = 254 consider statistically processed values as
 !!      instantaneous without any extra processing
-!!  see the description of vol7d_decompute_stat_proc()
 !!
-!!  - \a stat_proc_input = 0, 1, 2, 3
+!!    see the description of volgrid6d_decompute_stat_proc()
+!!
+!!  - \a stat_proc_input = 0, 1, 2, 3, 4
 !!    - \a stat_proc = \a stat_proc_input recompute input data on
 !!      different intervals
+!!
 !!    the same statistical processing is applied to obtain data
 !!    processed on a different interval, either longer, by
 !!    aggregation, or shorter, by differences, see the description of
@@ -70,6 +74,7 @@ CONTAINS
 !!
 !!  - \a stat_proc_input = 0
 !!    - \a stat_proc = 1
+!!
 !!    a time-averaged rate or flux is transformed into a
 !!    time-integrated value (sometimes called accumulated) on the same
 !!    interval by multiplying the values by the length of the time
@@ -80,6 +85,7 @@ CONTAINS
 !!
 !!  - \a stat_proc_input = 1
 !!    - \a stat_proc = 0
+!!
 !!    a time-integrated value (sometimes called accumulated) is
 !!    transformed into a time-averaged rate or flux on the same
 !!    interval by dividing the values by the length of the time
@@ -694,7 +700,6 @@ END SUBROUTINE volgrid6d_recompute_stat_proc_diff
 !!    of type \a stat_proc_input (0 or 1)
 !!  - any p1 (analysis/observation or forecast)
 !!  - p2 &gt; 0 (processing interval non null, non instantaneous data)
-!!    and equal to a multiplier of \a step if \a full_steps is \c .TRUE.
 !!
 !! Output data will have timerange of type \a stat_proc (1 or 0) and
 !! p1 and p2 equal to the corresponding input values.  The supported
