@@ -177,6 +177,7 @@ END SUBROUTINE vol7d_compute_stat_proc
 !!  - real single or double precision variables
 !!  - timerange (vol7d_timerange_class::vol7d_timerange::timerange)
 !!    of type \a stat_proc (or \a stat_proc_input if provided)
+!!  - any p1 (analysis/observation or forecast)
 !!  - p2 > 0 (processing interval non null, non instantaneous data)
 !!    and equal to a multiplier of \a step
 !!
@@ -424,6 +425,7 @@ END SUBROUTINE vol7d_recompute_stat_proc_agg
 !!  - real single or double precision variables
 !!  - timerange (vol7d_timerange_class::vol7d_timerange::timerange)
 !!    of type 254 (instantaeous)
+!!  - any p1 (analysis/observation or forecast)
 !!  - p2 = 0 (processing interval null, instantaneous data)
 !!
 !! Output data will have timerange of type \a stat_proc, and p2 = \a
@@ -770,6 +772,7 @@ END SUBROUTINE vol7d_decompute_stat_proc
 !!
 !!  - 0 average
 !!  - 1 cumulation
+!!  - 4 difference
 !!
 !! Input volume may have any value of \a this%time_definition, and
 !! that value will be conserved in the output volume.
@@ -840,7 +843,7 @@ IF (ASSOCIATED(this%voldatir)) THEN
                          (this%voldatir(i1,l,i3,f(k),i5,i6)*this%timerange(f(k))%p2 - &
                          this%voldatir(i1,j,i3,f(i),i5,i6)*this%timerange(f(i))%p2)/ &
                          steps ! optimize avoiding conversions
-                      ELSE IF (stat_proc == 1) THEN ! cumulation, compute MAX(0.,)?
+                      ELSE IF (stat_proc == 1 .OR. stat_proc == 4) THEN ! acc, diff
                         that%voldatir( &
                          i1,map_tr(i,j,k,l,1),i3,map_tr(i,j,k,l,2),i5,i6) = &
                          this%voldatir(i1,l,i3,f(k),i5,i6) - &
@@ -880,7 +883,7 @@ IF (ASSOCIATED(this%voldatid)) THEN
                          (this%voldatid(i1,l,i3,f(k),i5,i6)*this%timerange(f(k))%p2 - &
                          this%voldatid(i1,j,i3,f(i),i5,i6)*this%timerange(f(i))%p2)/ &
                          steps ! optimize avoiding conversions
-                      ELSE IF (stat_proc == 1) THEN ! cumulation, compute MAX(0.,)?
+                      ELSE IF (stat_proc == 1 .OR. stat_proc == 4) THEN ! acc, diff
                         that%voldatid( &
                          i1,map_tr(i,j,k,l,1),i3,map_tr(i,j,k,l,2),i5,i6) = &
                          this%voldatid(i1,l,i3,f(k),i5,i6) - &

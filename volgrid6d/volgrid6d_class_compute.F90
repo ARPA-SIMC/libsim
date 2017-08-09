@@ -183,6 +183,7 @@ END SUBROUTINE volgrid6d_compute_stat_proc
 !! \a this satisfying the conditions
 !!  - timerange (vol7d_timerange_class::vol7d_timerange::timerange)
 !!    of type \a stat_proc (or \a stat_proc_input if provided)
+!!  - any p1 (analysis/observation or forecast)
 !!  - p2 > 0 (processing interval non null, non instantaneous data)
 !!    and equal to a multiplier of \a step
 !!
@@ -341,6 +342,7 @@ END SUBROUTINE volgrid6d_recompute_stat_proc_agg
 !! \a this satisfying the conditions
 !!  - timerange (vol7d_timerange_class::vol7d_timerange::timerange)
 !!    of type 254 (instantaeous)
+!!  - any p1 (analysis/observation or forecast)
 !!  - p2 = 0 (processing interval null, instantaneous data)
 !!
 !! Output data will have timerange of type \a stat_proc, and p2 = \a
@@ -523,7 +525,8 @@ END SUBROUTINE volgrid6d_compute_stat_proc_agg
 !! stat_proc) are:
 !!
 !!  - 0 average
-!!  - 1 cumulation
+!!  - 1 accumulation
+!!  - 4 difference
 !!
 !! Input volume may have any value of \a this%time_definition, and
 !! that value will be conserved in the output volume.
@@ -647,7 +650,7 @@ DO l = 1, SIZE(this%time)
                   ELSEWHERE
                     voldatiout(:,:) = rmiss
                   END WHERE
-                ELSE IF (stat_proc == 1) THEN ! cumulation, compute MAX(0.,)?
+                ELSE IF (stat_proc == 1 .OR. stat_proc == 4) THEN ! acc, diff
                   WHERE(c_e(voldatiin1(:,:)) .AND. c_e(voldatiin2(:,:)))
                     voldatiout(:,:) = voldatiin1(:,:) - voldatiin2(:,:)
                   ELSEWHERE

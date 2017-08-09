@@ -685,11 +685,10 @@ TYPE(datetime),INTENT(out) :: reftime
 TYPE(datetime),INTENT(out) :: pstart
 TYPE(datetime),INTENT(out) :: pend
 
-TYPE(timedelta) :: p1, p2
+TYPE(timedelta) :: p1
 
 
 p1 = timedelta_new(sec=timerange%p1) ! end of period
-!p2 = timedelta_new(sec=timerange%p2) ! length of period
 
 IF (time == datetime_miss .OR. .NOT.c_e(timerange%p1) .OR. .NOT.c_e(timerange%p2) .OR. &
  (timerange%p1 > 0 .AND. timerange%p1 < timerange%p2) .OR. &
