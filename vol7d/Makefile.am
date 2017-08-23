@@ -132,7 +132,13 @@ AM_FCFLAGS += -I../alchimia
 libsim_vol7d_la_LIBADD += ../alchimia/libsim_alchimia.la
 endif
 
-EXTRA_DIST += dballe_test_copy1fmem.test  dballe_test_copy1f.test vol7d_dballe_test.bufr
+EXTRA_DIST += \
+  dballe_test.bufr dballe_test_ana.bufr\
+  dballe_test_copy1fmem.test  dballe_test_copy1f.test\
+  dballe_test2_memdb.test  dballe_test2.test\
+  dballe_test3.test\
+  vol7d_dballe_test.bufr     vol7d_dballe_test.test \
+  vol7d_dballe_test2.bufr    vol7d_dballe_test2.test
 
 if NETCDF
 vol7d_netcdf_class.$(OBJEXT): vol7d_class.$(OBJEXT)
