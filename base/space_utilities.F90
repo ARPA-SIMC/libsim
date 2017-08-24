@@ -51,21 +51,9 @@
 
 #include "config.h"
 
-!> This module defines objects and methods for managing data volumes
-!! on rectangular georeferenced grids.  The data are accomodated in a
-!! multi-dimensional array with 6 predefined dimensions. Different
-!! geographic coordinates and projections are supported, mainly
-!! inspired by grib coding standards. The \a volgrid6d object contains
-!! information and data on an homogeneous grid definition, while
-!! different grids are managed as arrays of \a volgrid6d objects.
-!! Every object contains also an identificator of the grid (\a grid_id
-!! object), carrying information about the driver used or which has to
-!! be used for import/export from/to file.  With the help of \a
-!! gridinfo_def class, data can be imported and exported to the
-!! supported formats, mainly grib1 and grib2 through grib_api and many
-!! GIS-style formats through gdal.
+!> Space utilities, derived from NCAR software.
 !!
-!! Simple example program \include example_vg6d_3.f90
+!! Simple example program \include example_space_utilities.F90
 !!
 !!\ingroup base
 

@@ -779,7 +779,7 @@ TYPE(grid_transform),INTENT(out) :: this !< grid_transformation object
 TYPE(transform_def),INTENT(in) :: trans !< transformation object
 TYPE(vol7d_level),INTENT(in) :: lev_in(:) !< vol7d_level from input object
 TYPE(vol7d_level),INTENT(in) :: lev_out(:) !< vol7d_level object defining target vertical grid
-REAL,INTENT(inout),OPTIONAL,ALLOCATABLE :: coord_3d_in(:,:,:)
+REAL,INTENT(inout),OPTIONAL,ALLOCATABLE :: coord_3d_in(:,:,:) !< vertical coordinates of each input point in target reference system
 CHARACTER(len=*),INTENT(in),OPTIONAL :: categoryappend !< append this suffix to log4fortran namespace category
 
 DOUBLE PRECISION :: coord_in(SIZE(lev_in))

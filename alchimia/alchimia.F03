@@ -133,8 +133,8 @@ subroutine  alchimia_copy(mybin,mybout,bin,bout,in,out)
   CHARACTER(len=10),intent(in) :: mybout(:) !< vector table B  WMO output in user's data
   CHARACTER(len=10),intent(in) :: bin(:)    !< vector table B  WMO input used by function
   CHARACTER(len=10),intent(in) :: bout(:)   !< vector table B  WMO output used by function
-  real, intent(in) :: in(:,:)
-  real, intent(out) :: out(:,:)
+  real, intent(in) :: in(:,:) !< input data array
+  real, intent(out) :: out(:,:) !< output data array
 
   out(:,index_c(mybout,bout(1)))=in(:,index_c(mybin,bin(1)))
 

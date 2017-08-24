@@ -380,7 +380,8 @@ INTEGER,INTENT(out),OPTIONAL :: nx !< number of points along the x axis
 INTEGER,INTENT(out),OPTIONAL :: ny !< number of points along the y axis
 !> longitudini e latitudini minime e massime
 DOUBLE PRECISION,INTENT(out),OPTIONAL :: xmin, xmax, ymin, ymax !< grid extremes in projection units (degrees or meters depending on the projection type)
-DOUBLE PRECISION,INTENT(out),OPTIONAL :: dx, dy !< grid steps in x and y directions
+!> grid steps in x and y directions
+DOUBLE PRECISION,INTENT(out),OPTIONAL :: dx, dy
 !> Resolved u- and v- components of vector quantities relative to 0=the easterly and northerly directions
 !! 1=the defined grid in the direction of increasing x and y (or i and j) coordinates respectively (0=north, 128=south)
 INTEGER,INTENT(out),OPTIONAL :: component_flag
@@ -439,7 +440,8 @@ INTEGER,INTENT(in),OPTIONAL :: nx !< number of points along the x axis
 INTEGER,INTENT(in),OPTIONAL :: ny !< number of points along the y axis
 !> longitudini e latitudini minime e massime
 DOUBLE PRECISION,INTENT(in),OPTIONAL :: xmin, xmax, ymin, ymax !< grid extremes in projection units (degrees or meters depending on the projection type)
-DOUBLE PRECISION,INTENT(in),OPTIONAL :: dx, dy !< grid steps in x and y directions
+!> grid steps in x and y directions
+DOUBLE PRECISION,INTENT(in),OPTIONAL :: dx, dy
 !> Resolved u- and v- components of vector quantities relative to 0=the easterly and northerly directions
 !! 1=the defined grid in the direction of increasing x and y (or i and j) coordinates respectively (0=north, 128=south)
 INTEGER,INTENT(in),OPTIONAL :: component_flag

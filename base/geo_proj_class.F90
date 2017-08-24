@@ -412,7 +412,7 @@ SUBROUTINE geo_proj_get_val(this, &
  longitude_stretch_pole, latitude_stretch_pole, stretch_factor, &
  latin1, latin2, lad, projection_center_flag, &
  ellips_smaj_axis, ellips_flatt, ellips_type, unit)
-TYPE(geo_proj),INTENT(in) :: this
+TYPE(geo_proj),INTENT(in) :: this !< Object to be queried
 CHARACTER(len=*),OPTIONAL :: proj_type !< Type of projection
 DOUBLE PRECISION,OPTIONAL :: lov !< Line of view, also known as reference longitude or orientation of the grid (polar projections)
 INTEGER,OPTIONAL :: zone !< Earth zone (mainly for UTM), sets lov to the correct zone central meridian
@@ -493,7 +493,7 @@ SUBROUTINE geo_proj_set_val(this, &
  longitude_stretch_pole, latitude_stretch_pole, stretch_factor, &
  latin1, latin2, lad, projection_center_flag, &
  ellips_smaj_axis, ellips_flatt, ellips_type)
-TYPE(geo_proj),INTENT(inout) :: this
+TYPE(geo_proj),INTENT(inout) :: this !< Object to be updated
 CHARACTER(len=*),OPTIONAL :: proj_type !< Type of projection
 DOUBLE PRECISION,OPTIONAL :: lov !< Line of view, also known as reference longitude or orientation of the grid (polar projections)
 INTEGER,INTENT(in),OPTIONAL :: zone !< Earth zone (mainly for UTM), sets lov to the correct zone central meridian
@@ -658,7 +658,7 @@ END SUBROUTINE geo_proj_display
 !> Computes and returns coordinates in the projected system given the
 !! geographical coordinates.
 ELEMENTAL SUBROUTINE geo_proj_proj(this, lon, lat, x, y)
-TYPE(geo_proj),INTENT(in) :: this
+TYPE(geo_proj),INTENT(in) :: this !< object to project
 !> geographical coordinates
 DOUBLE PRECISION, INTENT(in) :: lon, lat
 !> projected coordinates
@@ -697,7 +697,7 @@ END SUBROUTINE geo_proj_proj
 !> Computes and returns geographical coordinates given the coordinates
 !! in the projected system.
 ELEMENTAL SUBROUTINE geo_proj_unproj(this, x, y, lon, lat)
-TYPE(geo_proj),INTENT(in) :: this
+TYPE(geo_proj),INTENT(in) :: this !< object to unproject
 !> projected coordinates
 DOUBLE PRECISION, INTENT(in) :: x, y
 !> geographical coordinates

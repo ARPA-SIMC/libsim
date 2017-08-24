@@ -135,7 +135,7 @@ end if
 
 END FUNCTION optio_c
 
-!> Return the optional value if present, otherwise return \c .FALSE. .
+!> Return the optional value if present, otherwise return \c .FALSE.
 ELEMENTAL LOGICAL FUNCTION optio_log(var)
 LOGICAL,INTENT(in),OPTIONAL  :: var !< variable to be checked
 
@@ -236,7 +236,7 @@ end if
 END SUBROUTINE soptio_c
 
 !> Set the output value to input, if input is present, otherwise set it
-!! to \c .FALSE. .
+!! to \c .FALSE.
 ELEMENTAL SUBROUTINE soptio_log(var,optio_log)
 LOGICAL,INTENT(in),OPTIONAL  :: var !< variable to be checked
 LOGICAL,INTENT(out) :: optio_log !< equal to \a var if present, otherwise equal to .false.

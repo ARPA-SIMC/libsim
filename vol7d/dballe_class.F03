@@ -673,8 +673,8 @@ end function dbadata_equal
 
 !> return integer value
 subroutine dbadata_geti(data,value)
-class(dbadata), intent(in) :: data
-integer, intent(out) :: value !< retuned value
+class(dbadata), intent(in) :: data !< data object to be decoded
+integer, intent(out) :: value !< returned value
 value=imiss
 
 select type(data)
@@ -687,7 +687,7 @@ end subroutine dbadata_geti
 
 !> test missing value
 logical function dbadata_c_e_i(data)
-class(dbadata), intent(in) :: data
+class(dbadata), intent(in) :: data !< data object to be tested
 
 dbadata_c_e_i=.false.
 
@@ -700,8 +700,8 @@ end function dbadata_c_e_i
 
 !> return real value
 subroutine dbadata_getr(data,value)
-class(dbadata), intent(in) :: data
-real, intent(out) :: value !< retuned value
+class(dbadata), intent(in) :: data !< data object to be decoded
+real, intent(out) :: value !< returned value
 value=rmiss
 
 select type(data)
@@ -713,7 +713,7 @@ end subroutine dbadata_getr
 
 !> test missing value
 logical function dbadata_c_e_r(data)
-class(dbadata), intent(in) :: data
+class(dbadata), intent(in) :: data !< data object to be tested
 
 dbadata_c_e_r=.false.
 
@@ -726,8 +726,8 @@ end function dbadata_c_e_r
 
 !> return double precision value
 subroutine dbadata_getd(data,value)
-class(dbadata), intent(in) :: data
-doubleprecision, intent(out) :: value !< retuned value
+class(dbadata), intent(in) :: data !< data object to be decoded
+doubleprecision, intent(out) :: value !< returned value
 value=dmiss
 
 select type(data)
@@ -739,7 +739,7 @@ end subroutine dbadata_getd
 
 !> test missing value
 logical function dbadata_c_e_d(data)
-class(dbadata), intent(in) :: data
+class(dbadata), intent(in) :: data !< data object to be tested
 
 dbadata_c_e_d=.false.
 
@@ -753,8 +753,8 @@ end function dbadata_c_e_d
 
 !> return byte value
 subroutine dbadata_getb(data,value)
-class(dbadata), intent(in) :: data
-INTEGER(kind=int_b), intent(out) :: value !< retuned value
+class(dbadata), intent(in) :: data !< data object to be decoded
+INTEGER(kind=int_b), intent(out) :: value !< returned value
 value=bmiss
 
 select type(data)
@@ -766,7 +766,7 @@ end subroutine dbadata_getb
 
 !> test missing value
 logical function dbadata_c_e_b(data)
-class(dbadata), intent(in) :: data
+class(dbadata), intent(in) :: data !< data object to be tested
 
 dbadata_c_e_b=.false.
 
@@ -779,8 +779,8 @@ end function dbadata_c_e_b
 
 !> return character value
 subroutine dbadata_getc(data,value)
-class(dbadata), intent(in) :: data
-character(len=*), intent(out) :: value !< retuned value
+class(dbadata), intent(in) :: data !< data object to be decoded
+character(len=*), intent(out) :: value !< returned value
 value=cmiss
 
 select type(data)
@@ -793,7 +793,7 @@ end subroutine dbadata_getc
 
 !> test missing value
 logical function dbadata_c_e_c(data)
-class(dbadata), intent(in) :: data
+class(dbadata), intent(in) :: data !< data object to be tested
 
 dbadata_c_e_c=.false.
 
@@ -807,7 +807,7 @@ end function dbadata_c_e_c
 
 !> test missing value
 logical function dbadata_c_e(data)
-class(dbadata), intent(in) :: data
+class(dbadata), intent(in) :: data !< data object to be tested
 
 dbadata_c_e=data%dbadata_c_e_i() .or. data%dbadata_c_e_r() .or. data%dbadata_c_e_d() &
  .or. data%dbadata_c_e_b() .or. data%dbadata_c_e_c()

@@ -146,8 +146,8 @@ END SUBROUTINE print_info
 
 SUBROUTINE eh_setval(fatal, verbose, to_stderr, to_stdout, to_unit)
 LOGICAL, OPTIONAL, INTENT(in) :: fatal !< specifica se gli errori devono interrompere il programma (\a .TRUE.) o meno (\a .FALSE.)
-LOGICAL, OPTIONAL, INTENT(in) :: to_stderr
-LOGICAL, OPTIONAL, INTENT(in) :: to_stdout
+LOGICAL, OPTIONAL, INTENT(in) :: to_stderr !< set output to stderr
+LOGICAL, OPTIONAL, INTENT(in) :: to_stdout !< set output to stdout
 INTEGER, OPTIONAL, INTENT(in) :: verbose !< specifica il livello di "disturbo" tollerato dall'utente, i messaggi con un livello di disturbo superiore non saranno stampati
 INTEGER, OPTIONAL, INTENT(in) :: to_unit !< specifica l'unità su cui stampare i messaggi di errore, il default è standard error, è consigliato usare i valori definiti dal modulo io_units
 

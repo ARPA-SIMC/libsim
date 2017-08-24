@@ -24,12 +24,12 @@ abstract interface
 end interface
 
 type fnds
-  CHARACTER(len=10) :: name=cmiss
-  CHARACTER(len=10),allocatable :: bin(:) !< table B  WMO
-  CHARACTER(len=10),allocatable :: bout(:) !<  table B  WMO
-  integer :: priority
-  integer :: order
-  procedure (elabora) ,nopass, pointer :: fn
+  CHARACTER(len=10) :: name=cmiss !< description of function
+  CHARACTER(len=10),allocatable :: bin(:) !< standard table B descriptor for input parameters
+  CHARACTER(len=10),allocatable :: bout(:) !< standard table B descriptor for output parameters
+  integer :: priority !< relative priority for choise from functions with same output
+  integer :: order !< order to execute functions
+  procedure(elabora),nopass,pointer :: fn !< function with the abstract interface
 
   contains
 
@@ -70,12 +70,13 @@ contains
 
 
 subroutine init_fn(fn,name,bin,bout,priority,order,func)
-class(fnds),intent(inout) :: fn
-CHARACTER(len=*),optional :: name
-CHARACTER(len=*),optional :: bin(:) !< table B  WMO
-CHARACTER(len=*),optional :: bout(:) !<  table B  WMO
-integer,optional :: priority,order
-procedure (elabora),optional :: func
+CLASS(fnds),intent(inout) :: fn !< function object to create
+CHARACTER(len=*),optional :: name !< description of function
+CHARACTER(len=*),optional :: bin(:) !< standard table B descriptor for input parameters
+CHARACTER(len=*),optional :: bout(:) !< standard table B descriptor for output parameters
+integer,optional :: priority !< relative priority for choise from functions with same output
+integer,optional :: order !< order to execute functions
+procedure (elabora),optional :: func !< function with the abstract interface
 
 call optio(name,fn%name)
 
