@@ -410,6 +410,9 @@ minp1mp2 = MINVAL(itimerange(:)%p1 - itimerange(:)%p2, mask=mask_timerange)
 IF (time_definition == 0) THEN ! reference time
   lend = lend + timedelta_new(sec=maxp1)
 ENDIF
+! extend interval at the end in order to include al the data, must use
+! < and not <= in the DO WHILE loops some lines below
+lend = lend + step
 IF (lstart == datetime_miss) THEN ! autodetect
   lstart = itime(1)
 ! if autodetected, adjust to obtain real absolute start of data
@@ -442,7 +445,7 @@ IF (lforecast) THEN ! forecast mode
 
   ELSE ! verification time
     tmptime = lstart + step
-    DO WHILE(tmptime <= lend)
+    DO WHILE(tmptime < lend) ! < since lend has been extended
       CALL insert_unique(a_otime, tmptime)
       tmptime = tmptime + step
     ENDDO
@@ -454,7 +457,7 @@ IF (lforecast) THEN ! forecast mode
 
 ELSE ! analysis mode
   tmptime = lstart + step
-  DO WHILE(tmptime <= lend)
+  DO WHILE(tmptime < lend) ! < since lend has been extended
     CALL insert_unique(a_otime, tmptime)
     tmptime = tmptime + step
   ENDDO
@@ -540,7 +543,7 @@ ELSE
             IF (reftime1 /= reftime2) CYCLE do_otime2
           ENDIF
 
-          IF (climat_behavior .ANd. pstart1 == pstart2) CYCLE do_otime2
+          IF (climat_behavior .AND. pstart1 == pstart2) CYCLE do_otime2
           IF (pstart1 >= pstart2 .AND. pend1 <= pend2) THEN ! useful
             lmapper%it = k
             lmapper%itr = l
