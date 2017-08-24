@@ -93,6 +93,14 @@ INTERFACE append_unique
   MODULE PROCEDURE ARRAYOF_TYPE/**/_append_unique
 END INTERFACE
 
+#ifdef ARRAYOF_ORIGGT
+INTERFACE insert_sorted
+  MODULE PROCEDURE ARRAYOF_TYPE/**/_insert_sorted
+END INTERFACE insert_sorted
+
+PRIVATE ARRAYOF_TYPE/**/_insert_sorted
+#endif
+
 PRIVATE ARRAYOF_TYPE/**/_insert_unique, ARRAYOF_TYPE/**/_append_unique
 
 !PUBLIC insert_unique, append_unique

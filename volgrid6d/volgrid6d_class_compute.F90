@@ -49,17 +49,21 @@ CONTAINS
 !!    - \a stat_proc = 0 average instantaneous observations
 !!    - \a stat_proc = 2 compute maximum of instantaneous observations
 !!    - \a stat_proc = 3 compute minimum of instantaneous observations
-!!  processing is computed on longer intervals by aggregation, see the
-!!  description of vol7d_compute_stat_proc_agg()
+!!    - \a stat_proc = 4 compute difference of instantaneous observations
+!!
+!!    processing is computed on longer time intervals by aggregation,
+!!    see the description of volgrid6d_compute_stat_proc_agg()
 !!
 !!  - \a stat_proc_input = *
 !!    - \a stat_proc = 254 consider statistically processed values as
 !!      instantaneous without any extra processing
-!!  see the description of vol7d_decompute_stat_proc()
 !!
-!!  - \a stat_proc_input = 0, 1, 2, 3
+!!    see the description of volgrid6d_decompute_stat_proc()
+!!
+!!  - \a stat_proc_input = 0, 1, 2, 3, 4
 !!    - \a stat_proc = \a stat_proc_input recompute input data on
 !!      different intervals
+!!
 !!    the same statistical processing is applied to obtain data
 !!    processed on a different interval, either longer, by
 !!    aggregation, or shorter, by differences, see the description of
@@ -70,6 +74,7 @@ CONTAINS
 !!
 !!  - \a stat_proc_input = 0
 !!    - \a stat_proc = 1
+!!
 !!    a time-averaged rate or flux is transformed into a
 !!    time-integrated value (sometimes called accumulated) on the same
 !!    interval by multiplying the values by the length of the time
@@ -80,6 +85,7 @@ CONTAINS
 !!
 !!  - \a stat_proc_input = 1
 !!    - \a stat_proc = 0
+!!
 !!    a time-integrated value (sometimes called accumulated) is
 !!    transformed into a time-averaged rate or flux on the same
 !!    interval by dividing the values by the length of the time
@@ -110,9 +116,12 @@ INTEGER :: dtmax, dtstep
 
 
 IF (stat_proc_input == 254) THEN
-  CALL l4f_category_log(this%category, L4F_ERROR, &
-   'statistical processing of instantaneous data not implemented for gridded fields')
-  CALL raise_error()
+  CALL l4f_category_log(this%category, L4F_INFO, &
+   'computing statistical processing by aggregation '//&
+   TRIM(to_char(stat_proc_input))//':'//TRIM(to_char(stat_proc)))
+
+  CALL volgrid6d_compute_stat_proc_agg(this, that, stat_proc, &
+   step, start, max_step, clone)
 
 ELSE IF (stat_proc == 254) THEN
   CALL l4f_category_log(this%category, L4F_ERROR, &
@@ -162,7 +171,7 @@ ELSE
     CALL l4f_category_log(this%category, L4F_INFO, &
      'recomputing statistically processed data by aggregation '// &
      t2c(stat_proc_input)//':'//t2c(stat_proc))
-    CALL volgrid6d_recompute_stat_proc_agg_exp(this, that, stat_proc, step, start, &
+    CALL volgrid6d_recompute_stat_proc_agg(this, that, stat_proc, step, start, &
      frac_valid, clone)
   ENDIF
 
@@ -174,25 +183,25 @@ END SUBROUTINE volgrid6d_compute_stat_proc
 !> Specialized method for statistically processing a set of data
 !! already processed with the same statistical processing, on a
 !! different time interval.  This method performs statistical
-!! processing by aggregation of shorter intervals.  Only data with
-!! analysis/observation timerange are processed.
+!! processing by aggregation of shorter intervals.
 !!
 !! The output \a that volgrid6d object contains elements from the original volume
 !! \a this satisfying the conditions
 !!  - timerange (vol7d_timerange_class::vol7d_timerange::timerange)
 !!    of type \a stat_proc (or \a stat_proc_input if provided)
-!!  - p1 = 0 (end of period == reference time, analysis/observation)
+!!  - any p1 (analysis/observation or forecast)
 !!  - p2 > 0 (processing interval non null, non instantaneous data)
 !!    and equal to a multiplier of \a step
 !!
-!! Output data will have timerange of type \a stat_proc, p1 = 0 and p2
-!! = \a step.  The supported statistical processing methods (parameter
-!! \a stat_proc) are:
+!! Output data will have timerange of type \a stat_proc and p2 = \a
+!! step.  The supported statistical processing methods (parameter \a
+!! stat_proc) are:
 !!
 !!  - 0 average
-!!  - 1 cumulation
+!!  - 1 accumulation
 !!  - 2 maximum
 !!  - 3 minimum
+!!  - 4 difference
 !!
 !! The start of processing period can be computed automatically from
 !! the input intervals as the first possible interval modulo \a step,
@@ -212,18 +221,18 @@ END SUBROUTINE volgrid6d_compute_stat_proc
 !! volume will not carry all the information about the processing
 !! which has been done, in the previous case, for example, the
 !! temperatures will simply look like monthly average temperatures.
-SUBROUTINE volgrid6d_recompute_stat_proc_agg_exp(this, that, stat_proc, step, start, frac_valid, clone)
+SUBROUTINE volgrid6d_recompute_stat_proc_agg(this, that, stat_proc, step, start, frac_valid, clone)
 TYPE(volgrid6d),INTENT(inout) :: this !< volume providing data to be recomputed, it is not modified by the method, apart from performing a \a volgrid6d_alloc_vol on it
 TYPE(volgrid6d),INTENT(out) :: that !< output volume which will contain the recomputed data
 INTEGER,INTENT(in) :: stat_proc !< type of statistical processing to be recomputed (from grib2 table), only data having timerange of this type will be recomputed and will appear in the output volume
 TYPE(timedelta),INTENT(in) :: step !< length of the step over which the statistical processing is performed
 TYPE(datetime),INTENT(in),OPTIONAL :: start !< start of statistical processing interval
 REAL,INTENT(in),OPTIONAL :: frac_valid !< minimum fraction of valid data required for considering acceptable a recomputed value, default=1.
-LOGICAL , INTENT(in),OPTIONAL :: clone !< if provided and \c .TRUE. , clone the gaid's from \a this to \a that
+LOGICAL, INTENT(in),OPTIONAL :: clone !< if provided and \c .TRUE. , clone the gaid's from \a this to \a that
 
 INTEGER :: tri
-INTEGER i, j, k, l, n, n1, i3, i6
-INTEGER,POINTER :: map_ttr(:,:,:)
+INTEGER i, j, n, n1, ndtr, i3, i6
+TYPE(arrayof_ttr_mapper),POINTER :: map_ttr(:,:)
 INTEGER,POINTER :: dtratio(:)
 REAL :: lfrac_valid
 LOGICAL :: lclone
@@ -252,67 +261,68 @@ CALL volgrid6d_alloc(that, dim=this%griddim%dim, ntimerange=1, &
 that%level = this%level
 that%var = this%var
 
-CALL recompute_stat_proc_agg_common_exp(this%time, this%timerange, stat_proc, tri, &
- step, this%time_definition, that%time, that%timerange, map_ttr, dtratio, start)
+CALL recompute_stat_proc_agg_common(this%time, this%timerange, stat_proc, tri, &
+ step, this%time_definition, that%time, that%timerange, map_ttr, &
+ dtratio=dtratio, start=start)
 
 CALL volgrid6d_alloc_vol(that, decode=ASSOCIATED(this%voldati))
 
 do_otimerange: DO j = 1, SIZE(that%timerange)
   do_otime: DO i = 1, SIZE(that%time)
 
-    DO n = 1, SIZE(dtratio)
-      IF (dtratio(n) <= 0) CYCLE ! safety check
+    DO n1 = 1, SIZE(dtratio)
+      IF (dtratio(n1) <= 0) CYCLE ! safety check
 
       DO i6 = 1, SIZE(this%var)
         DO i3 = 1, SIZE(this%level)
           CALL volgrid_get_vol_2d(that, i3, i, j, i6, voldatiout)
+          ndtr = 0
+          DO n = 1, map_ttr(i,j)%arraysize
+            IF (map_ttr(i,j)%array(n)%extra_info == dtratio(n1)) THEN
+              ndtr = ndtr + 1
+              CALL volgrid_get_vol_2d(this, i3, map_ttr(i,j)%array(n)%it, &
+               map_ttr(i,j)%array(n)%itr, i6, voldatiin)
 
-          n1 = 0
-          DO l = 1, SIZE(this%timerange)
-            DO k = 1, SIZE(this%time)
-              IF (map_ttr(k,l,1) == i .AND. map_ttr(k,l,2) == j .AND. &
-               map_ttr(k,l,3) == dtratio(n)) THEN ! useful combination
-                CALL volgrid_get_vol_2d(this, i3, k, l, i6, voldatiin)
+              IF (ndtr == 1) THEN
+                voldatiout = voldatiin
+                IF (lclone) THEN
+                  CALL copy(this%gaid(i3, map_ttr(i,j)%array(n)%it,&
+                   map_ttr(i,j)%array(n)%itr,i6), that%gaid(i3,i,j,i6))
+                ELSE
+                  that%gaid(i3,i,j,i6) = this%gaid(i3, map_ttr(i,j)%array(n)%it, &
+                   map_ttr(i,j)%array(n)%itr,i6)
+                ENDIF
 
-                IF (n1 == 0) THEN ! first time
-                  voldatiout = voldatiin
-                  IF (lclone) THEN
-                    CALL copy(this%gaid(i3,k,l,i6), that%gaid(i3,i,j,i6))
-                  ELSE
-                    that%gaid(i3,i,j,i6) = this%gaid(i3,k,l,i6)
-                  ENDIF
+              ELSE ! second or more time
+                SELECT CASE(stat_proc)
+                CASE (0, 1, 4) ! average, accumulation, difference
+                  WHERE(c_e(voldatiin(:,:)) .AND. c_e(voldatiout(:,:)))
+                    voldatiout(:,:) = voldatiout(:,:) + voldatiin(:,:)
+                  ELSEWHERE
+                    voldatiout(:,:) = rmiss
+                  END WHERE
+                CASE(2) ! maximum
+                  WHERE(c_e(voldatiin(:,:)) .AND. c_e(voldatiout(:,:)))
+                    voldatiout(:,:) = MAX(voldatiout(:,:), voldatiin(:,:))
+                  ELSEWHERE
+                    voldatiout(:,:) = rmiss
+                  END WHERE
+                CASE(3) ! minimum
+                  WHERE(c_e(voldatiin(:,:)) .AND. c_e(voldatiout(:,:)))
+                    voldatiout(:,:) = MIN(voldatiout(:,:), voldatiin(:,:))
+                  ELSEWHERE
+                    voldatiout(:,:) = rmiss
+                  END WHERE
+                END SELECT
 
-                ELSE ! second or more time
-                  SELECT CASE(stat_proc)
-                  CASE (0, 1) ! average, cumulation
-                    WHERE(c_e(voldatiin(:,:)) .AND. c_e(voldatiout(:,:)))
-                      voldatiout(:,:) = voldatiout(:,:) + voldatiin(:,:)
-                    ELSEWHERE
-                      voldatiout(:,:) = rmiss
-                    END WHERE
-                  CASE(2) ! maximum
-                    WHERE(c_e(voldatiin(:,:)) .AND. c_e(voldatiout(:,:)))
-                      voldatiout(:,:) = MAX(voldatiout(:,:), voldatiin(:,:))
-                    ELSEWHERE
-                      voldatiout(:,:) = rmiss
-                    END WHERE
-                  CASE(3) ! minimum
-                    WHERE(c_e(voldatiin(:,:)) .AND. c_e(voldatiout(:,:)))
-                      voldatiout(:,:) = MIN(voldatiout(:,:), voldatiin(:,:))
-                    ELSEWHERE
-                      voldatiout(:,:) = rmiss
-                    END WHERE
-                  END SELECT
+              ENDIF ! first time
+            ENDIF ! dtratio(n1)
+          ENDDO ! ttr
 
-                ENDIF ! first time
-                n1 = n1 + 1
-              ENDIF ! useful combination
-            ENDDO
-          ENDDO
-          IF (n1 == dtratio(n)) THEN ! success
+          IF (REAL(ndtr)/REAL(dtratio(n1)) >= lfrac_valid) THEN ! success
             IF (stat_proc == 0) THEN ! average
               WHERE(c_e(voldatiout(:,:)))
-                voldatiout(:,:) = voldatiout(:,:)/n1
+                voldatiout(:,:) = voldatiout(:,:)/ndtr
               END WHERE
             ENDIF
             CALL volgrid_set_vol_2d(that, i3, i, j, i6, voldatiout)
@@ -321,171 +331,185 @@ do_otimerange: DO j = 1, SIZE(that%timerange)
         ENDDO ! level
       ENDDO ! var
     ENDDO ! dtratio
+    CALL delete(map_ttr(i,j))
   ENDDO do_otime
 ENDDO do_otimerange
 
 DEALLOCATE(dtratio, map_ttr)
 
-END SUBROUTINE volgrid6d_recompute_stat_proc_agg_exp
+END SUBROUTINE volgrid6d_recompute_stat_proc_agg
 
 
-SUBROUTINE volgrid6d_recompute_stat_proc_agg(this, that, stat_proc, step, start, frac_valid, clone)
+!> Method for statistically processing a set of instantaneous data.
+!! This method performs statistical processing by aggregation of
+!! instantaneous data.
+!!
+!! The output \a that volgrid6d object contains elements from the original volume
+!! \a this satisfying the conditions
+!!  - timerange (vol7d_timerange_class::vol7d_timerange::timerange)
+!!    of type 254 (instantaeous)
+!!  - any p1 (analysis/observation or forecast)
+!!  - p2 = 0 (processing interval null, instantaneous data)
+!!
+!! Output data will have timerange of type \a stat_proc, and p2 = \a
+!! step.  The supported statistical processing methods (parameter \a
+!! stat_proc) are:
+!!
+!!  - 0 average
+!!  - 2 maximum
+!!  - 3 minimum
+!!  - 4 difference
+!!
+!! A maximum distance in time for input valid data can be assigned
+!! with the optional argument \a max_step, in order to filter datasets
+!! with too long "holes".
+SUBROUTINE volgrid6d_compute_stat_proc_agg(this, that, stat_proc, step, start, max_step, clone)
 TYPE(volgrid6d),INTENT(inout) :: this !< volume providing data to be recomputed, it is not modified by the method, apart from performing a \a volgrid6d_alloc_vol on it
 TYPE(volgrid6d),INTENT(out) :: that !< output volume which will contain the recomputed data
 INTEGER,INTENT(in) :: stat_proc !< type of statistical processing to be recomputed (from grib2 table), only data having timerange of this type will be recomputed and will appear in the output volume
 TYPE(timedelta),INTENT(in) :: step !< length of the step over which the statistical processing is performed
 TYPE(datetime),INTENT(in),OPTIONAL :: start !< start of statistical processing interval
-REAL,INTENT(in),OPTIONAL :: frac_valid !< minimum fraction of valid data required for considering acceptable a recomputed value, default=1.
+TYPE(timedelta),INTENT(in),OPTIONAL :: max_step !< maximum allowed distance in time between two contiguougs valid data within an interval, for the interval to be eligible for statistical processing
 LOGICAL , INTENT(in),OPTIONAL :: clone !< if provided and \c .TRUE. , clone the gaid's from \a this to \a that
 
 INTEGER :: tri
-INTEGER i, j, n, i3, i4, i6
-INTEGER,POINTER :: map_tr(:), map_trc(:,:), count_trc(:,:)
-REAL :: lfrac_valid
-LOGICAL,ALLOCATABLE :: mask_time(:)
-TYPE(vol7d_timerange) :: otimerange
-!TYPE(vol7d) :: v7dtmp
+INTEGER i, j, n, ninp, i3, i6
+TYPE(arrayof_ttr_mapper),POINTER :: map_ttr(:,:)
+TYPE(timedelta) :: lmax_step
 LOGICAL :: lclone
 REAL,POINTER :: voldatiin(:,:), voldatiout(:,:)
 
 
 NULLIFY(voldatiin, voldatiout)
-tri = stat_proc
-IF (PRESENT(frac_valid)) THEN
-  lfrac_valid = frac_valid
+tri = 254
+IF (PRESENT(max_step)) THEN
+  lmax_step = max_step
 ELSE
-  lfrac_valid = 1.0
+  lmax_step = timedelta_max
 ENDIF
 
 CALL init(that)
 ! be safe
 CALL volgrid6d_alloc_vol(this)
 
-! initial check
-IF (COUNT(this%timerange(:)%timerange == tri .AND. this%timerange(:)%p2 /= imiss &
- .AND. this%timerange(:)%p2 /= 0 .AND. this%timerange(:)%p1 == 0) == 0) THEN
-  CALL l4f_category_log(this%category, L4F_WARN, &
-   'volgrid6d_compute, no timeranges suitable for statistical processing by aggregation')
-! return an empty volume, without signaling error
-  CALL init(that)
-  CALL volgrid6d_alloc_vol(that)
-  RETURN
-ENDIF
-
 ! when volume is not decoded it is better to clone anyway to avoid
 ! overwriting fields
 lclone = optio_log(clone) .OR. .NOT.ASSOCIATED(this%voldati)
 ! initialise the output volume
 CALL init(that, griddim=this%griddim, time_definition=this%time_definition)
-CALL volgrid6d_alloc(that, dim=this%griddim%dim, & !ntimerange=1, &
+CALL volgrid6d_alloc(that, dim=this%griddim%dim, ntimerange=1, &
  nlevel=SIZE(this%level), nvar=SIZE(this%var), ini=.FALSE.)
 that%level = this%level
 that%var = this%var
 
 CALL recompute_stat_proc_agg_common(this%time, this%timerange, stat_proc, tri, &
- step, that%time, otimerange, map_tr, map_trc, count_trc, start)
+ step, this%time_definition, that%time, that%timerange, map_ttr, start=start)
 
-that%timerange(1) = otimerange
 CALL volgrid6d_alloc_vol(that, decode=ASSOCIATED(this%voldati))
 
-! copy the elements of the original volume that may be useful for the
-! new volume into a temporary object, this is usually useless
-! copy the timeranges already satisfying the requested step, if any
-!ALLOCATE(mask_time(SIZE(this%time)))
-!DO i = 1, SIZE(this%time)
-!  mask_time(i) = ANY(this%time(i) == that%time)
-!ENDDO
-j = firsttrue(that%timerange(1) == this%timerange(:))
-IF (j > 0) THEN
+do_otimerange: DO j = 1, SIZE(that%timerange)
+  do_otime: DO i = 1, SIZE(that%time)
+    ninp = map_ttr(i,j)%arraysize
+    IF (ninp <= 0) CYCLE do_otime
 
-  DO i6 = 1, SIZE(this%var)
-    DO i4 = 1, SIZE(this%time)
-      i = firsttrue(that%time(:) == this%time(i4))
-      IF (i > 0) THEN
-        DO i3 = 1, SIZE(this%level)
-          IF (c_e(this%gaid(i3,i4,i,i6))) THEN
-            IF (lclone) THEN
-              CALL copy(this%gaid(i3,i4,j,i6), that%gaid(i3,i,1,i6))
-            ELSE
-              that%gaid(i3,i,1,i6) = this%gaid(i3,i4,j,i6)
-            ENDIF
-            IF (ASSOCIATED(that%voldati)) THEN
-              that%voldati(:,:,i3,i,1,i6) = this%voldati(:,:,i3,i4,j,i6)
-            ELSE
-              CALL volgrid_get_vol_2d(this, i3, i4, j, i6, voldatiin)
-              CALL volgrid_set_vol_2d(that, i3, i, 1, i6, voldatiin)
-            ENDIF
-          ENDIF
-        ENDDO
+    IF (stat_proc == 4) THEN ! check validity for difference
+      IF (map_ttr(i,j)%array(1)%extra_info /= 1 .OR. &
+       map_ttr(i,j)%array(ninp)%extra_info /= 2) THEN
+        CALL delete(map_ttr(i,j))
+        CYCLE do_otime
       ENDIF
-    ENDDO
-  ENDDO
+    ELSE
+! check validity condition (missing values in volume are not accounted for)
+      DO n = 2, ninp
+        IF (map_ttr(i,j)%array(n)%time - map_ttr(i,j)%array(n-1)%time > &
+         lmax_step) THEN
+          CALL delete(map_ttr(i,j))
+          CYCLE do_otime
+        ENDIF
+      ENDDO
+    ENDIF
+    
+    DO i6 = 1, SIZE(this%var)
+      DO i3 = 1, SIZE(this%level)
+        CALL volgrid_get_vol_2d(that, i3, i, j, i6, voldatiout)
 
-ENDIF
-
-
-DO i6 = 1, SIZE(this%var)
-  DO i3 = 1, SIZE(this%level)
-    DO j = 1, SIZE(map_tr)
-      DO i = 1, SIZE(that%time)
-        mask_time = (map_trc(:,j) == i)
-        IF (.NOT.ANY(mask_time)) CYCLE
-
-        CALL volgrid_get_vol_2d(that, i3, i, 1, i6, voldatiout)
-        n = 0
-        DO i4 = 1, SIZE(this%time)
-          IF (.NOT.mask_time(i4)) CYCLE
-          CALL volgrid_get_vol_2d(this, i3, i4, map_tr(j), i6, voldatiin)
-          
-          IF (n == 0) THEN ! to be done only first time
-            voldatiout = voldatiin
-            IF (lclone) THEN
-              CALL copy(this%gaid(i3,i4,map_tr(j),i6), that%gaid(i3,i,1,i6))
-            ELSE
-              that%gaid(i3,i,1,i6) = this%gaid(i3,i4,map_tr(j),i6)
-            ENDIF
+        IF (stat_proc == 4) THEN ! special treatment for difference
+          IF (lclone) THEN
+            CALL copy(this%gaid(i3, map_ttr(i,j)%array(1)%it,&
+             map_ttr(i,j)%array(1)%itr,i6), that%gaid(i3,i,j,i6))
           ELSE
-            SELECT CASE(stat_proc)
-            CASE (0, 1) ! average, cumulation
-              WHERE(c_e(voldatiin(:,:)) .AND. c_e(voldatiout(:,:)))
-                voldatiout(:,:) = voldatiout(:,:) + voldatiin(:,:)
-              ELSEWHERE
-                voldatiout(:,:) = rmiss
-              END WHERE
-            CASE(2) ! maximum
-              WHERE(c_e(voldatiin(:,:)) .AND. c_e(voldatiout(:,:)))
-                voldatiout(:,:) = MAX(voldatiout(:,:), voldatiin(:,:))
-              ELSEWHERE
-                voldatiout(:,:) = rmiss
-              END WHERE
-            CASE(3) ! minimum
-              WHERE(c_e(voldatiin(:,:)) .AND. c_e(voldatiout(:,:)))
-                voldatiout(:,:) = MIN(voldatiout(:,:), voldatiin(:,:))
-              ELSEWHERE
-                voldatiout(:,:) = rmiss
-              END WHERE
-            END SELECT
+            that%gaid(i3,i,j,i6) = this%gaid(i3, map_ttr(i,j)%array(1)%it, &
+             map_ttr(i,j)%array(1)%itr,i6)
           ENDIF
-          n = n + 1
-        ENDDO
+! improve the next workflow?
+          CALL volgrid_get_vol_2d(this, i3, map_ttr(i,j)%array(ninp)%it, &
+           map_ttr(i,j)%array(ninp)%itr, i6, voldatiin)
+          voldatiout = voldatiin
+          CALL volgrid_get_vol_2d(this, i3, map_ttr(i,j)%array(1)%it, &
+           map_ttr(i,j)%array(1)%itr, i6, voldatiin)
 
-        IF (n > 0) THEN
+          WHERE(c_e(voldatiin(:,:)) .AND. c_e(voldatiout(:,:)))
+            voldatiout(:,:) = voldatiout(:,:) - voldatiin(:,:)
+          ELSEWHERE
+            voldatiout(:,:) = rmiss
+          END WHERE
+
+        ELSE ! other stat_proc
+          DO n = 1, ninp
+            CALL volgrid_get_vol_2d(this, i3, map_ttr(i,j)%array(n)%it, &
+             map_ttr(i,j)%array(n)%itr, i6, voldatiin)
+
+            IF (n == 1) THEN
+              voldatiout = voldatiin
+              IF (lclone) THEN
+                CALL copy(this%gaid(i3, map_ttr(i,j)%array(n)%it,&
+                 map_ttr(i,j)%array(n)%itr,i6), that%gaid(i3,i,j,i6))
+              ELSE
+                that%gaid(i3,i,j,i6) = this%gaid(i3, map_ttr(i,j)%array(n)%it, &
+                 map_ttr(i,j)%array(n)%itr,i6)
+              ENDIF
+
+            ELSE ! second or more time
+              SELECT CASE(stat_proc)
+              CASE (0, 1) ! average, accumulation
+                WHERE(c_e(voldatiin(:,:)) .AND. c_e(voldatiout(:,:)))
+                  voldatiout(:,:) = voldatiout(:,:) + voldatiin(:,:)
+                ELSEWHERE
+                  voldatiout(:,:) = rmiss
+                END WHERE
+              CASE(2) ! maximum
+                WHERE(c_e(voldatiin(:,:)) .AND. c_e(voldatiout(:,:)))
+                  voldatiout(:,:) = MAX(voldatiout(:,:), voldatiin(:,:))
+                ELSEWHERE
+                  voldatiout(:,:) = rmiss
+                END WHERE
+              CASE(3) ! minimum
+                WHERE(c_e(voldatiin(:,:)) .AND. c_e(voldatiout(:,:)))
+                  voldatiout(:,:) = MIN(voldatiout(:,:), voldatiin(:,:))
+                ELSEWHERE
+                  voldatiout(:,:) = rmiss
+                END WHERE
+              END SELECT
+
+            ENDIF ! first time
+          ENDDO
           IF (stat_proc == 0) THEN ! average
             WHERE(c_e(voldatiout(:,:)))
-              voldatiout(:,:) = voldatiout(:,:)/n
+              voldatiout(:,:) = voldatiout(:,:)/ninp
             END WHERE
           ENDIF
-          CALL volgrid_set_vol_2d(that, i3, i, 1, i6, voldatiout)
         ENDIF
+        CALL volgrid_set_vol_2d(that, i3, i, j, i6, voldatiout)
+      ENDDO ! level
+    ENDDO ! var
+    CALL delete(map_ttr(i,j))
+  ENDDO do_otime
+ENDDO do_otimerange
 
-      ENDDO
-    ENDDO
-  ENDDO
-ENDDO
+DEALLOCATE(map_ttr)
 
-DEALLOCATE(map_tr, map_trc, count_trc, mask_time)
 
-END SUBROUTINE volgrid6d_recompute_stat_proc_agg
+END SUBROUTINE volgrid6d_compute_stat_proc_agg
 
 
 !> Specialized method for statistically processing a set of data
@@ -507,7 +531,8 @@ END SUBROUTINE volgrid6d_recompute_stat_proc_agg
 !! stat_proc) are:
 !!
 !!  - 0 average
-!!  - 1 cumulation
+!!  - 1 accumulation
+!!  - 4 difference
 !!
 !! Input volume may have any value of \a this%time_definition, and
 !! that value will be conserved in the output volume.
@@ -631,7 +656,7 @@ DO l = 1, SIZE(this%time)
                   ELSEWHERE
                     voldatiout(:,:) = rmiss
                   END WHERE
-                ELSE IF (stat_proc == 1) THEN ! cumulation, compute MAX(0.,)?
+                ELSE IF (stat_proc == 1 .OR. stat_proc == 4) THEN ! acc, diff
                   WHERE(c_e(voldatiin1(:,:)) .AND. c_e(voldatiin2(:,:)))
                     voldatiout(:,:) = voldatiin1(:,:) - voldatiin2(:,:)
                   ELSEWHERE
@@ -675,7 +700,6 @@ END SUBROUTINE volgrid6d_recompute_stat_proc_diff
 !!    of type \a stat_proc_input (0 or 1)
 !!  - any p1 (analysis/observation or forecast)
 !!  - p2 &gt; 0 (processing interval non null, non instantaneous data)
-!!    and equal to a multiplier of \a step if \a full_steps is \c .TRUE.
 !!
 !! Output data will have timerange of type \a stat_proc (1 or 0) and
 !! p1 and p2 equal to the corresponding input values.  The supported

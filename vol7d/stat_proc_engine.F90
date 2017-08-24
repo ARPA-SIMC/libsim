@@ -25,205 +25,108 @@ USE datetime_class
 USE vol7d_class
 IMPLICIT NONE
 
+! per ogni elemento i,j dell'output, definire n elementi di input ad
+! esso contribuenti (arrayof_ttr_mapper) con le seguenti informazioni
+TYPE ttr_mapper
+  INTEGER :: it=imiss ! k
+  INTEGER :: itr=imiss ! l
+  INTEGER :: extra_info=imiss ! dtratio for intervals, extreme for point in time
+  TYPE(datetime) :: time=datetime_miss ! time for point in time
+END TYPE ttr_mapper
+
+INTERFACE OPERATOR (==)
+  MODULE PROCEDURE ttr_mapper_eq
+END INTERFACE
+
+INTERFACE OPERATOR (/=)
+  MODULE PROCEDURE ttr_mapper_ne
+END INTERFACE
+
+INTERFACE OPERATOR (>)
+  MODULE PROCEDURE ttr_mapper_gt
+END INTERFACE
+
+INTERFACE OPERATOR (<)
+  MODULE PROCEDURE ttr_mapper_lt
+END INTERFACE
+
+INTERFACE OPERATOR (>=)
+  MODULE PROCEDURE ttr_mapper_ge
+END INTERFACE
+
+INTERFACE OPERATOR (<=)
+  MODULE PROCEDURE ttr_mapper_le
+END INTERFACE
+
+#undef VOL7D_POLY_TYPE
+#undef VOL7D_POLY_TYPES
+#undef ENABLE_SORT
+#define VOL7D_POLY_TYPE TYPE(ttr_mapper)
+#define VOL7D_POLY_TYPES _ttr_mapper
+#define ENABLE_SORT
+#include "array_utilities_pre.F90"
+
+#define ARRAYOF_ORIGTYPE TYPE(ttr_mapper)
+#define ARRAYOF_TYPE arrayof_ttr_mapper
+#define ARRAYOF_ORIGEQ 1
+#define ARRAYOF_ORIGGT 1
+#include "arrayof_pre.F90"
+! from arrayof
+
+
 CONTAINS
 
-! common operations for statistical processing by aggregation
-SUBROUTINE recompute_stat_proc_agg_common(itime, itimerange, stat_proc, tri, &
- step, otime, otimerange, map_tr, map_trc, count_trc, start)
-TYPE(datetime),INTENT(in) :: itime(:)
-TYPE(vol7d_timerange),INTENT(in) :: itimerange(:)
-INTEGER,INTENT(in) :: stat_proc
-INTEGER,INTENT(in) :: tri
-TYPE(timedelta),INTENT(in) :: step
-TYPE(datetime),POINTER :: otime(:)
-TYPE(vol7d_timerange),INTENT(out) :: otimerange
-INTEGER,POINTER :: map_tr(:), map_trc(:,:), count_trc(:,:)
-TYPE(datetime),INTENT(in),OPTIONAL :: start
+! simplified comparisons only on time
+ELEMENTAL FUNCTION ttr_mapper_eq(this, that) RESULT(res)
+TYPE(ttr_mapper),INTENT(IN) :: this, that
+LOGICAL :: res
 
-INTEGER :: i, j, k, nval, ncum, ntr, nstep
-LOGICAL :: usestart, tr_mask(SIZE(itimerange))
-TYPE(datetime) :: lstart, lend, tmptime, tmptimes, t1, t2
-TYPE(timedelta) :: dt1, stepvero
-INTEGER(kind=int_ll) :: tmpmsec
+res = this%time == that%time
 
+END FUNCTION ttr_mapper_eq
 
-IF (SIZE(itime) == 0) THEN ! avoid segmentation fault in case of empty volume
-  ALLOCATE(otime(0), map_tr(0), map_trc(0,0), count_trc(0,0))
-  otimerange = vol7d_timerange_miss
-  RETURN
-ENDIF
+ELEMENTAL FUNCTION ttr_mapper_ne(this, that) RESULT(res)
+TYPE(ttr_mapper),INTENT(IN) :: this, that
+LOGICAL :: res
 
-! useful timeranges
-tr_mask(:) = itimerange(:)%timerange == tri .AND. itimerange(:)%p2 /= imiss &
- .AND. itimerange(:)%p2 /= 0 .AND. itimerange(:)%p1 == 0
-ntr = COUNT(tr_mask)
+res = this%time /= that%time
 
-! compute lstart = the start time (not the end) of the first
-! processing interval
-usestart = PRESENT(start) ! treat datetime_miss as .NOT.PRESENT()
-IF (usestart) usestart = usestart .AND. start /= datetime_miss
-IF (usestart) THEN ! start explicitely provided
-  lstart = start
-ELSE ! compute start automatically
-! the shortest interval available is used, the longest could be used
-! obtaining more data but worse
-  lstart = itime(1) - &
-   timedelta_new(sec=MINVAL(itimerange(:)%p2, mask=tr_mask(:)))
+END FUNCTION ttr_mapper_ne
 
-  lstart = lstart-(MOD(lstart, step)) ! round to step, check the - sign!!!
-ENDIF
-lend = itime(SIZE(itime))
+ELEMENTAL FUNCTION ttr_mapper_gt(this, that) RESULT(res)
+TYPE(ttr_mapper),INTENT(IN) :: this, that
+LOGICAL :: res
 
-! count the size of output time, it is done step by step and not with
-! a / operation in order to make it work also for "popular" intervals
-tmptime = lstart+step
-nstep = 0
-DO WHILE(tmptime <= lend)
-  nstep = nstep + 1
-  tmptime = tmptime + step
-ENDDO
-ALLOCATE(map_tr(ntr), map_trc(SIZE(itime), ntr), count_trc(nstep, ntr))
-map_trc(:,:) = 0
+res = this%time > that%time
 
-! compute otime
-ALLOCATE(otime(nstep))
-tmptime = lstart+step
-DO i = 1, nstep
-  otime(i) = tmptime ! validity time is the end of the interval
-  tmptime = tmptime + step
-ENDDO
-! compute otimerange
-CALL getval(timedelta_depop(step), amsec=tmpmsec)
-CALL init(otimerange, timerange=stat_proc, p1=0, p2=INT(tmpmsec/1000))
+END FUNCTION ttr_mapper_gt
 
-nval = 0
-DO j = 1, SIZE(itimerange)
-  IF (.NOT.tr_mask(j)) CYCLE
+ELEMENTAL FUNCTION ttr_mapper_lt(this, that) RESULT(res)
+TYPE(ttr_mapper),INTENT(IN) :: this, that
+LOGICAL :: res
 
-  nval = nval + 1
-  map_tr(nval) = j ! mappatura per ottimizzare il successivo ciclo sui timerange
-  dt1 = timedelta_new(sec=itimerange(j)%p2)
+res = this%time < that%time
 
-  ! calcolo il numero teorico di intervalli in ingresso che
-  ! contribuiscono all'intervallo corrente in uscita
-  tmptimes = lstart
-  tmptime = lstart+step
-  ncum = 0
-  DO WHILE(tmptime <= lend)
-    ncum = ncum + 1
-    stepvero = tmptime - tmptimes ! funziona anche se step e` "umano"
-    count_trc(ncum,nval) = stepvero/dt1
-    tmptimes = tmptime
-    tmptime = tmptime + step
-  ENDDO
-  ! individuo gli intervalli in ingresso che contribuiscono all'intervallo
-  ! corrente in uscita, scartando quelli che distano un numero non intero
-  ! di intervalli in ingresso dall'inizio dell'intervallo in uscita
-  DO i = 1, SIZE(itime)
-    t1 = itime(i) - dt1
-    t2 = itime(i)
-    DO k = 1, nstep
-      IF (t1 >= otime(k) - step .AND. t2 <= otime(k)) THEN
-        IF (MOD(t1-(otime(k)-step), t2-t1) == timedelta_0) THEN
-          map_trc(i,nval) = k
-        ENDIF
-      ENDIF
-    ENDDO
-  ENDDO
-ENDDO
+END FUNCTION ttr_mapper_lt
 
-END SUBROUTINE recompute_stat_proc_agg_common
+ELEMENTAL FUNCTION ttr_mapper_ge(this, that) RESULT(res)
+TYPE(ttr_mapper),INTENT(IN) :: this, that
+LOGICAL :: res
 
+res = this%time >= that%time
 
-! common operations for statistical processing by aggregation from
-! instantaneous data
-SUBROUTINE compute_stat_proc_agg_common(itime, stat_proc, &
- step, otime, otimerange, itime_start, itime_end, start)
-TYPE(datetime),INTENT(in) :: itime(:)
-INTEGER,INTENT(in) :: stat_proc
-TYPE(timedelta),INTENT(in) :: step
-TYPE(datetime),POINTER :: otime(:)
-TYPE(vol7d_timerange),INTENT(out) :: otimerange
-INTEGER,POINTER :: itime_start(:), itime_end(:)
-TYPE(datetime),INTENT(in),OPTIONAL :: start
+END FUNCTION ttr_mapper_ge
 
-INTEGER :: i, j, nstep
-LOGICAL :: usestart
-TYPE(datetime) :: lstart, lend, tmptime
-INTEGER(kind=int_ll) :: tmpmsec
-CHARACTER(len=8) :: env_var
-LOGICAL :: climat_behavior
+ELEMENTAL FUNCTION ttr_mapper_le(this, that) RESULT(res)
+TYPE(ttr_mapper),INTENT(IN) :: this, that
+LOGICAL :: res
 
-IF (SIZE(itime) == 0) THEN ! avoid segmentation fault in case of empty volume
-  ALLOCATE(otime(0), itime_start(0), itime_end(0))
-  otimerange = vol7d_timerange_miss
-  RETURN
-ENDIF
+res = this%time <= that%time
 
-! enable bad behavior for climat database
-env_var = ''
-CALL getenv('LIBSIM_CLIMAT_BEHAVIOR', env_var)
-climat_behavior = LEN_TRIM(env_var) > 0
+END FUNCTION ttr_mapper_le
 
-! compute lstart = the start time (not the end) of the first
-! processing interval
-usestart = PRESENT(start) ! treat datetime_miss as .NOT.PRESENT()
-IF (usestart) usestart = usestart .AND. start /= datetime_miss
-IF (usestart) THEN ! start explicitely provided
-  lstart = start
-ELSE ! compute start automatically
-! the shortest interval available is used, the longest could be used
-! obtaining more data but worse
-  lstart = itime(1)
-ENDIF
-lend = itime(SIZE(itime))
-
-! count the size of output time, it is done step by step and not with
-! a / operation in order to make it work also for "popular" intervals
-tmptime = lstart
-nstep = 0
-DO WHILE(tmptime < lend)
-  nstep = nstep + 1
-  tmptime = tmptime + step
-ENDDO
-
-ALLOCATE(itime_start(nstep), itime_end(nstep))
-itime_start(:) = SIZE(itime)+1
-itime_end(:) = 0
-
-! compute otime
-ALLOCATE(otime(nstep))
-tmptime = lstart!+step
-j = 1
-DO i = 1, nstep
-! search for start interval (itime sorted)
-  DO WHILE(itime(j) < tmptime .AND. j < SIZE(itime))
-    j = j + 1
-  ENDDO
-  IF (itime(j) >= tmptime) THEN
-    itime_start(i) = j
-    IF (climat_behavior .AND. itime(j) == tmptime) THEN
-      itime_start(i) = j + 1
-    ENDIF
-  ENDIF
-
-  tmptime = tmptime + step
-  DO WHILE(itime(j) < tmptime .AND. j < SIZE(itime))
-    j = j + 1
-  ENDDO
-  IF (itime(j) <= tmptime) THEN ! take into account corner cases
-    itime_end(i) = j
-  ELSE
-    itime_end(i) = j - 1
-  ENDIF
-
-  otime(i) = tmptime ! validity time is the end of the interval
-ENDDO
-! compute otimerange
-CALL getval(timedelta_depop(step), amsec=tmpmsec)
-CALL init(otimerange, timerange=stat_proc, p1=0, p2=INT(tmpmsec/1000_int_ll))
-
-END SUBROUTINE compute_stat_proc_agg_common
+#include "arrayof_post.F90"
+#include "array_utilities_inc.F90"
 
 
 ! common operations for statistical processing by differences
@@ -410,8 +313,8 @@ map_tr = PACK((/(i,i=1,SIZE(itimerange))/), mask=tr_mask)
 END SUBROUTINE compute_stat_proc_metamorph_common
 
 
-! common operations for statistical processing by aggregation, experimental
-SUBROUTINE recompute_stat_proc_agg_common_exp(itime, itimerange, stat_proc, tri, &
+! common operations for statistical processing by aggregation
+SUBROUTINE recompute_stat_proc_agg_common(itime, itimerange, stat_proc, tri, &
  step, time_definition, otime, otimerange, map_ttr, dtratio, start)
 TYPE(datetime),INTENT(in) :: itime(:)
 TYPE(vol7d_timerange),INTENT(in) :: itimerange(:)
@@ -421,18 +324,27 @@ TYPE(timedelta),INTENT(in) :: step
 INTEGER,INTENT(in) :: time_definition
 TYPE(datetime),POINTER :: otime(:)
 TYPE(vol7d_timerange),POINTER :: otimerange(:)
-INTEGER,POINTER :: map_ttr(:,:,:)
-INTEGER,POINTER :: dtratio(:)
+TYPE(arrayof_ttr_mapper),POINTER :: map_ttr(:,:)
+INTEGER,POINTER,OPTIONAL :: dtratio(:)
 TYPE(datetime),INTENT(in),OPTIONAL :: start
 
-INTEGER :: i, j, k, l, na, nf
-INTEGER :: steps, p1, maxp1, minp2, minp1mp2, dstart
+INTEGER :: i, j, k, l, na, nf, n
+INTEGER :: steps, p1, maxp1, maxp2, minp1mp2, dstart
 LOGICAL :: lforecast
 TYPE(datetime) :: lstart, lend, pstart1, pstart2, pend1, pend2, reftime1, reftime2, tmptime
 TYPE(arrayof_datetime) :: a_otime
 TYPE(arrayof_vol7d_timerange) :: a_otimerange
 TYPE(arrayof_integer) :: a_dtratio
 LOGICAL,ALLOCATABLE :: mask_timerange(:) ! improve !!!!
+TYPE(ttr_mapper) :: lmapper
+CHARACTER(len=8) :: env_var
+LOGICAL :: climat_behavior
+
+
+! enable bad behavior for climat database (only for instantaneous data)
+env_var = ''
+CALL getenv('LIBSIM_CLIMAT_BEHAVIOR', env_var)
+climat_behavior = LEN_TRIM(env_var) > 0 .AND. .NOT.PRESENT(dtratio)
 
 ! compute length of cumulation step in seconds
 CALL getval(timedelta_depop(step), asec=steps)
@@ -440,23 +352,25 @@ CALL getval(timedelta_depop(step), asec=steps)
 ! create a mask of suitable timeranges
 ALLOCATE(mask_timerange(SIZE(itimerange)))
 mask_timerange(:) = itimerange(:)%timerange == tri &
- .AND. itimerange(:)%p1 /= imiss .AND. itimerange(:)%p2 /= imiss &
- .AND. itimerange(:)%p1 >= 0 &
- .AND. itimerange(:)%p2 > 0 &
- .AND. MOD(steps, itimerange(:)%p2) == 0
+ .AND. itimerange(:)%p1 /= imiss .AND. itimerange(:)%p1 >= 0
+
+IF (PRESENT(dtratio)) THEN
+  mask_timerange(:) = mask_timerange(:) .AND. itimerange(:)%p2 /= imiss &
+   .AND. itimerange(:)%p2 > 0 .AND. MOD(steps, itimerange(:)%p2) == 0
+ELSE ! instantaneous
+  mask_timerange(:) = mask_timerange(:) .AND. itimerange(:)%p2 == 0
+ENDIF
 
 #ifdef DEBUG
 CALL l4f_log(L4F_DEBUG, &
- 'recompute_stat_proc_agg, number of useful timeranges before choosing analysis/forecast: '// &
+ '(re)compute_stat_proc_agg, number of useful timeranges before choosing analysis/forecast: '// &
  t2c(COUNT(mask_timerange)))
 #endif
 
 ! euristically determine whether we are dealing with an
 ! analysis/observation or a forecast dataset
-na = COUNT(itimerange(:)%timerange == tri .AND. &
- itimerange(:)%p1 == 0 .AND. itimerange(:)%p2 > 0)
-nf = COUNT(itimerange(:)%timerange == tri .AND. &
- itimerange(:)%p1 > 0 .AND. itimerange(:)%p2 > 0)
+na = COUNT(mask_timerange(:) .AND. itimerange(:)%p1 == 0)
+nf = COUNT(mask_timerange(:) .AND. itimerange(:)%p1 > 0)
 lforecast = nf >= na
 #ifdef DEBUG
 CALL l4f_log(L4F_DEBUG, &
@@ -465,7 +379,6 @@ CALL l4f_log(L4F_DEBUG, &
 
 ! keep only timeranges of one type (really necessary?)
 IF (lforecast) THEN
-  mask_timerange(:) = mask_timerange(:) .AND. itimerange(:)%p1 > 0
   CALL l4f_log(L4F_INFO, &
    'recompute_stat_proc_agg, processing in forecast mode')
 ELSE
@@ -476,33 +389,42 @@ ENDIF
 
 #ifdef DEBUG
 CALL l4f_log(L4F_DEBUG, &
- 'recompute_stat_proc_agg, number of useful timeranges: '// &
+ '(re)compute_stat_proc_agg, number of useful timeranges: '// &
  t2c(COUNT(mask_timerange)))
 #endif
 
 IF (SIZE(itime) == 0 .OR. COUNT(mask_timerange) == 0) THEN ! avoid segmentation fault in case of empty volume
-  ALLOCATE(otime(0), otimerange(0), dtratio(0), map_ttr(0,0,0))
+  ALLOCATE(otime(0), otimerange(0), map_ttr(0,0))
+  IF (PRESENT(dtratio)) ALLOCATE(dtratio(0))
   RETURN
 ENDIF
 
-! determine start and end of processing period
+! determine start and end of processing period, should work with p2==0
 lstart = datetime_miss
 IF (PRESENT(start)) lstart = start
-IF (lstart == datetime_miss) THEN
-  lstart = itime(1)
-ENDIF
 lend = itime(SIZE(itime))
-! correct them
+! compute some quantities
 maxp1 = MAXVAL(itimerange(:)%p1, mask=mask_timerange)
-minp2 = MINVAL(itimerange(:)%p2, mask=mask_timerange)
+maxp2 = MAXVAL(itimerange(:)%p2, mask=mask_timerange)
 minp1mp2 = MINVAL(itimerange(:)%p1 - itimerange(:)%p2, mask=mask_timerange)
 IF (time_definition == 0) THEN ! reference time
-  lstart = lstart + timedelta_new(sec=minp1mp2)
   lend = lend + timedelta_new(sec=maxp1)
-ELSE ! verification time
-  lstart = lstart - timedelta_new(sec=minp2)
-  lstart = lstart - (MOD(lstart, step)) ! round to step, check the - sign!!!
 ENDIF
+! extend interval at the end in order to include al the data, must use
+! < and not <= in the DO WHILE loops some lines below
+lend = lend + step
+IF (lstart == datetime_miss) THEN ! autodetect
+  lstart = itime(1)
+! if autodetected, adjust to obtain real absolute start of data
+  IF (time_definition == 0) THEN ! reference time
+    lstart = lstart + timedelta_new(sec=minp1mp2)
+  ELSE ! verification time
+! go back to start of longest processing interval
+    lstart = lstart - timedelta_new(sec=maxp2)
+!  lstart = lstart - (MOD(lstart, step)) ! round to step, + or - ?
+  ENDIF
+ENDIF
+
 #ifdef DEBUG
 CALL l4f_log(L4F_DEBUG, &
  'recompute_stat_proc_agg, processing period: '//t2c(lstart)//' - '//t2c(lend))
@@ -512,10 +434,10 @@ CALL l4f_log(L4F_DEBUG, &
 
 IF (lforecast) THEN ! forecast mode
   IF (time_definition == 0) THEN ! reference time
-    CALL insert(a_otime, itime)
+    CALL insert(a_otime, itime) ! should I limit to elements itime >= lstart?
 
 ! apply start shift to timerange, not to reftime
-    CALL getval(lstart-itime(1), asec=dstart)
+    CALL getval(lstart-itime(SIZE(itime)), asec=dstart)
     dstart = MAX(0, dstart)
     DO p1 = steps + dstart, maxp1, steps
       CALL insert_unique(a_otimerange, vol7d_timerange_new(stat_proc, p1, steps))
@@ -523,7 +445,7 @@ IF (lforecast) THEN ! forecast mode
 
   ELSE ! verification time
     tmptime = lstart + step
-    DO WHILE(tmptime <= lend)
+    DO WHILE(tmptime < lend) ! < since lend has been extended
       CALL insert_unique(a_otime, tmptime)
       tmptime = tmptime + step
     ENDDO
@@ -535,7 +457,7 @@ IF (lforecast) THEN ! forecast mode
 
 ELSE ! analysis mode
   tmptime = lstart + step
-  DO WHILE(tmptime <= lend)
+  DO WHILE(tmptime < lend) ! < since lend has been extended
     CALL insert_unique(a_otime, tmptime)
     tmptime = tmptime + step
   ENDDO
@@ -543,65 +465,172 @@ ELSE ! analysis mode
 
 ENDIF
 
-! count the possible i/o interval ratios
-DO k = 1, SIZE(itimerange)
-  IF (itimerange(k)%p2 /= 0) &
-   CALL insert_unique(a_dtratio, steps/itimerange(k)%p2) ! guaranteed to be integer
-ENDDO
-
 CALL packarray(a_otime)
 CALL packarray(a_otimerange)
-CALL packarray(a_dtratio)
 otime => a_otime%array
 otimerange => a_otimerange%array
-dtratio => a_dtratio%array
 CALL sort(otime)
 CALL sort(otimerange)
-CALL sort(dtratio)
 ! delete local objects keeping the contents
 CALL delete(a_otime, nodealloc=.TRUE.)
 CALL delete(a_otimerange, nodealloc=.TRUE.)
-CALL delete(a_dtratio, nodealloc=.TRUE.)
 
 #ifdef DEBUG
 CALL l4f_log(L4F_DEBUG, &
  'recompute_stat_proc_agg, output time and timerange: '//&
  t2c(SIZE(otime))//', '//t2c(size(otimerange)))
-CALL l4f_log(L4F_DEBUG, &
- 'recompute_stat_proc_agg, found '//t2c(size(dtratio))// &
- ' possible aggregation ratios, from '// &
- t2c(dtratio(1))//' to '//t2c(dtratio(SIZE(dtratio))))
 #endif
 
-ALLOCATE(map_ttr(SIZE(itime),SIZE(itimerange),3))
-map_ttr(:,:,:) = imiss
-do_itimerange: DO l = 1, SIZE(itimerange)
-  IF (.NOT.mask_timerange(l)) CYCLE do_itimerange
-  do_itime: DO k = 1, SIZE(itime)
-  CALL time_timerange_get_period(itime(k), itimerange(l), &
-   time_definition, pstart1, pend1, reftime1)
-    do_otimerange: DO j = 1, SIZE(otimerange)
-      do_otime: DO i = 1, SIZE(otime)
-        CALL time_timerange_get_period(otime(i), otimerange(j), &
-         time_definition, pstart2, pend2, reftime2)
-        IF (lforecast) THEN
-          IF (reftime1 /= reftime2) CYCLE do_otime
-        ENDIF
+IF (PRESENT(dtratio)) THEN
+! count the possible i/o interval ratios
+  DO k = 1, SIZE(itimerange)
+    IF (itimerange(k)%p2 /= 0) &
+     CALL insert_unique(a_dtratio, steps/itimerange(k)%p2) ! guaranteed to be integer
+  ENDDO
+  CALL packarray(a_dtratio)
+  dtratio => a_dtratio%array
+  CALL sort(dtratio)
+! delete local object keeping the contents
+  CALL delete(a_dtratio, nodealloc=.TRUE.)
 
-        IF (pstart1 >= pstart2 .AND. pend1 <= pend2 .AND. &
-         MOD(pstart1-pstart2, pend1-pstart1) == timedelta_0) THEN ! useful
-          map_ttr(k,l,1) = i
-          map_ttr(k,l,2) = j
-          map_ttr(k,l,3) = steps/itimerange(l)%p2 ! guaranteed to be integer
-          CYCLE do_itime
-        ENDIF
-      ENDDO do_otime
-    ENDDO do_otimerange
-  ENDDO do_itime
-ENDDO do_itimerange
+#ifdef DEBUG
+  CALL l4f_log(L4F_DEBUG, &
+   'recompute_stat_proc_agg, found '//t2c(size(dtratio))// &
+   ' possible aggregation ratios, from '// &
+   t2c(dtratio(1))//' to '//t2c(dtratio(SIZE(dtratio))))
+#endif
+  
+  ALLOCATE(map_ttr(SIZE(otime),SIZE(otimerange)))
+  do_itimerange1: DO l = 1, SIZE(itimerange)
+    IF (.NOT.mask_timerange(l)) CYCLE do_itimerange1
+    do_itime1: DO k = 1, SIZE(itime)
+      CALL time_timerange_get_period(itime(k), itimerange(l), &
+       time_definition, pstart1, pend1, reftime1)
+      do_otimerange1: DO j = 1, SIZE(otimerange)
+        do_otime1: DO i = 1, SIZE(otime)
+          CALL time_timerange_get_period_pop(otime(i), otimerange(j), step, &
+           time_definition, pstart2, pend2, reftime2)
+          IF (lforecast) THEN
+            IF (reftime1 /= reftime2) CYCLE do_otime1
+          ENDIF
 
-END SUBROUTINE recompute_stat_proc_agg_common_exp
+          IF (pstart1 >= pstart2 .AND. pend1 <= pend2 .AND. &
+           MOD(pstart1-pstart2, pend1-pstart1) == timedelta_0) THEN ! useful
+            lmapper%it = k
+            lmapper%itr = l
+            lmapper%extra_info = steps/itimerange(l)%p2 ! dtratio, guaranteed to be integer
+            n = append(map_ttr(i,j), lmapper)
+            CYCLE do_itime1 ! can contribute only to a single interval
+          ENDIF
+        ENDDO do_otime1
+      ENDDO do_otimerange1
+    ENDDO do_itime1
+  ENDDO do_itimerange1
 
+ELSE
+  
+  ALLOCATE(map_ttr(SIZE(otime),SIZE(otimerange)))
+  do_itimerange2: DO l = 1, SIZE(itimerange)
+    IF (.NOT.mask_timerange(l)) CYCLE do_itimerange2
+    do_itime2: DO k = 1, SIZE(itime)
+      CALL time_timerange_get_period(itime(k), itimerange(l), &
+       time_definition, pstart1, pend1, reftime1)
+      do_otimerange2: DO j = 1, SIZE(otimerange)
+        do_otime2: DO i = 1, SIZE(otime)
+          CALL time_timerange_get_period_pop(otime(i), otimerange(j), step, &
+           time_definition, pstart2, pend2, reftime2)
+          IF (lforecast) THEN
+            IF (reftime1 /= reftime2) CYCLE do_otime2
+          ENDIF
+
+          IF (climat_behavior .AND. pstart1 == pstart2) CYCLE do_otime2
+          IF (pstart1 >= pstart2 .AND. pend1 <= pend2) THEN ! useful
+            lmapper%it = k
+            lmapper%itr = l
+            IF (pstart1 == pstart2) THEN
+              lmapper%extra_info = 1 ! start of interval
+            ELSE IF (pend1 == pend2) THEN
+              lmapper%extra_info = 2 ! end of interval
+            ELSE
+              lmapper%extra_info = imiss
+            ENDIF
+            lmapper%time = pstart1 ! = pend1, order by time?
+            n = insert_sorted(map_ttr(i,j), lmapper, .TRUE., .TRUE.)
+! no CYCLE, a single input can contribute to multiple output intervals
+          ENDIF
+        ENDDO do_otime2
+      ENDDO do_otimerange2
+    ENDDO do_itime2
+  ENDDO do_itimerange2
+
+ENDIF
+
+END SUBROUTINE recompute_stat_proc_agg_common
+
+
+SUBROUTINE compute_stat_proc_agg_sw(vertime, pstart, pend, time_mask, &
+ max_step, weights)
+TYPE(datetime),INTENT(in) :: vertime(:)
+TYPE(datetime),INTENT(in) :: pstart
+TYPE(datetime),INTENT(in) :: pend
+LOGICAL,INTENT(in) :: time_mask(:)
+TYPE(timedelta),OPTIONAL,INTENT(out) :: max_step
+DOUBLE PRECISION,OPTIONAL,INTENT(out) :: weights(:)
+
+INTEGER :: i, nt
+TYPE(datetime),ALLOCATABLE :: lvertime(:)
+TYPE(datetime) :: half, nexthalf
+INTEGER(kind=int_ll) :: dt, tdt
+
+nt = COUNT(time_mask)
+ALLOCATE(lvertime(nt))
+lvertime = PACK(vertime, mask=time_mask)
+
+IF (PRESENT(max_step)) THEN
+! new way
+!  max_step = timedelta_0
+!  DO i = 1, nt - 1
+!    IF (lvertime(i+1) - lvertime(i) > max_step) &
+!     max_step = lvertime(i+1) - lvertime(i)
+!  ENDDO
+!  IF (lvertime(1) - pstart > max_step) max_step = lvertime(1) - pstart
+!  IF (pend - lvertime(nt) > max_step) max_step = pend - lvertime(nt)
+! old way
+  IF (nt == 1) THEN
+    max_step = pend - pstart
+  ELSE
+    half = lvertime(1) + (lvertime(2) - lvertime(1))/2
+    max_step = half - pstart
+    DO i = 2, nt - 1
+      nexthalf = lvertime(i) + (lvertime(i+1) - lvertime(i))/2
+      IF (nexthalf - half > max_step) max_step = nexthalf - half
+      half = nexthalf
+    ENDDO
+    IF (pend - half > max_step) max_step = pend - half
+  ENDIF
+
+ENDIF
+
+IF (PRESENT(weights)) THEN
+  IF (nt == 1) THEN
+    weights(1) = 1.0
+  ELSE
+    CALL getval(pend - pstart, amsec=tdt)
+    half = lvertime(1) + (lvertime(2) - lvertime(1))/2
+    CALL getval(half - pstart, amsec=dt)
+    weights(1) = DBLE(dt)/DBLE(tdt)
+    DO i = 2, nt - 1
+      nexthalf = lvertime(i) + (lvertime(i+1) - lvertime(i))/2
+      CALL getval(nexthalf - half, amsec=dt)
+      weights(i) = DBLE(dt)/DBLE(tdt)
+      half = nexthalf
+    ENDDO
+    CALL getval(pend - half, amsec=dt)
+    weights(nt) = DBLE(dt)/DBLE(tdt)
+  ENDIF
+ENDIF
+
+END SUBROUTINE compute_stat_proc_agg_sw
 
 ! get start of period, end of period and reference time from time,
 ! timerange, according to time_definition.
@@ -644,6 +673,50 @@ ELSE
 ENDIF
 
 END SUBROUTINE time_timerange_get_period
+
+
+! get start of period, end of period and reference time from time,
+! timerange, according to time_definition. step is taken separately
+! from timerange and can be "popular"
+SUBROUTINE time_timerange_get_period_pop(time, timerange, step, time_definition, &
+ pstart, pend, reftime)
+TYPE(datetime),INTENT(in) :: time
+TYPE(vol7d_timerange),INTENT(in) :: timerange
+TYPE(timedelta),INTENT(in) :: step
+INTEGER,INTENT(in) :: time_definition
+TYPE(datetime),INTENT(out) :: reftime
+TYPE(datetime),INTENT(out) :: pstart
+TYPE(datetime),INTENT(out) :: pend
+
+TYPE(timedelta) :: p1
+
+
+p1 = timedelta_new(sec=timerange%p1) ! end of period
+
+IF (time == datetime_miss .OR. .NOT.c_e(timerange%p1) .OR. .NOT.c_e(timerange%p2) .OR. &
+ (timerange%p1 > 0 .AND. timerange%p1 < timerange%p2) .OR. &
+ timerange%p1 < 0 .OR. timerange%p2 < 0) THEN ! is this too pedantic and slow?
+  pstart = datetime_miss
+  pend = datetime_miss
+  reftime = datetime_miss
+  RETURN
+ENDIF
+
+IF (time_definition == 0) THEN ! time == reference time
+  reftime = time
+  pend = time + p1
+  pstart = pend - step
+ELSE IF (time_definition == 1) THEN ! time == verification time
+  pend = time
+  pstart = time - step
+  reftime = time - p1
+ELSE
+  pstart = datetime_miss
+  pend = datetime_miss
+  reftime = datetime_miss
+ENDIF
+
+END SUBROUTINE time_timerange_get_period_pop
 
 
 ! set time, timerange%p1, timerange%p2 according to pstart, pend,

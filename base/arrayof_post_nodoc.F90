@@ -110,6 +110,47 @@ CALL ARRAYOF_TYPE/**/_alloc(this)
 this%array(this%arraysize) = content
 
 END FUNCTION ARRAYOF_TYPE/**/_append_unique
+
+
+#ifdef ARRAYOF_ORIGGT
+
+
+
+
+FUNCTION ARRAYOF_TYPE/**/_insert_sorted(this, content, incr, back) RESULT(pos)
+TYPE(ARRAYOF_TYPE) :: this !< array object to extend
+ARRAYOF_ORIGTYPE, INTENT(in) :: content !< object of \a TYPE ARRAYOF_ORIGTYPE to insert
+LOGICAL, INTENT(in) :: incr !< insert in increasing order
+LOGICAL, INTENT(in) :: back !< search position starting from end of array (optimization)
+
+INTEGER :: pos
+
+IF (incr) THEN
+  IF (back) THEN
+    DO pos = this%arraysize+1, 2, -1
+      IF (this%array(pos-1) < content) EXIT
+    ENDDO
+  ELSE
+    DO pos = 1, this%arraysize
+      IF (this%array(pos) > content) EXIT
+    ENDDO
+  ENDIF
+ELSE
+  IF (back) THEN
+    DO pos = this%arraysize+1, 2, -1
+      IF (this%array(pos-1) > content) EXIT
+    ENDDO
+  ELSE
+    DO pos = 1, this%arraysize
+      IF (this%array(pos) < content) EXIT
+    ENDDO
+  ENDIF
+ENDIF
+
+CALL insert(this, (/content/), pos=pos)
+
+END FUNCTION ARRAYOF_TYPE/**/_insert_sorted
+#endif
 #endif
 
 

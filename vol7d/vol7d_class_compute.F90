@@ -49,17 +49,26 @@ CONTAINS
 !!    - \a stat_proc = 0 average instantaneous observations
 !!    - \a stat_proc = 2 compute maximum of instantaneous observations
 !!    - \a stat_proc = 3 compute minimum of instantaneous observations
+!!    - \a stat_proc = 4 compute difference of instantaneous observations
+!!    - \a stat_proc = 6 compute standard deviation of instantaneous
+!!      observations
+!!    - \a stat_proc = 201 compute the prevailing direction (mode) on
+!!      specified sectors, suitable only for variables representing an
+!!      angle in degrees, e.g. wind direction
+!!
 !!  processing is computed on longer intervals by aggregation, see the
 !!  description of vol7d_compute_stat_proc_agg()
 !!
 !!  - \a stat_proc_input = *
 !!    - \a stat_proc = 254 consider statistically processed values as
 !!      instantaneous without any extra processing
+!!
 !!  see the description of vol7d_decompute_stat_proc()
 !!
-!!  - \a stat_proc_input = 0, 1, 2, 3
+!!  - \a stat_proc_input = 0, 1, 2, 3, 4
 !!    - \a stat_proc = \a stat_proc_input recompute input data on
 !!      different intervals
+!!
 !!    the same statistical processing is applied to obtain data
 !!    processed on a different interval, either longer, by
 !!    aggregation, or shorter, by differences, see the description of
@@ -67,6 +76,26 @@ CONTAINS
 !!    vol7d_recompute_stat_proc_diff() respectively; it is also
 !!    possible to provide \a stat_proc_input \a /= \a stat_proc, but
 !!    it has to be used with care.
+!!
+!!  - \a stat_proc_input = 0
+!!    - \a stat_proc = 1
+!!
+!!    a time-averaged rate or flux is transformed into a
+!!    time-integrated value (sometimes called accumulated) on the same
+!!    interval by multiplying the values by the length of the time
+!!    interval in seconds, keeping constant all the rest, including
+!!    the variable; the unit of the variable implicitly changes
+!!    accordingly, this is supported officially in grib2 standard, in
+!!    the other cases it is a forcing of the standards.
+!!
+!!  - \a stat_proc_input = 1
+!!    - \a stat_proc = 0
+!!
+!!    a time-integrated value (sometimes called accumulated) is
+!!    transformed into a time-averaged rate or flux on the same
+!!    interval by dividing the values by the length of the time
+!!    interval in seconds, see also the previous description of the
+!!    opposite computation.
 !!
 !! If a particular statistical processing cannot be performed on the
 !! input data, the program continues with a warning and, if requested,
@@ -170,35 +199,36 @@ END SUBROUTINE vol7d_compute_stat_proc
 !! already processed with the same statistical processing, on a
 !! different time interval.  This method performs statistical
 !! processing by aggregation of shorter intervals.  Only floating
-!! point single or double precision data with analysis/observation
-!! timerange are processed.
+!! point single or double precision data  are processed.
 !!
 !! The output \a that vol7d object contains elements from the original volume
 !! \a this satisfying the conditions
 !!  - real single or double precision variables
 !!  - timerange (vol7d_timerange_class::vol7d_timerange::timerange)
 !!    of type \a stat_proc (or \a stat_proc_input if provided)
-!!  - p1 = 0 (end of period == reference time, analysis/observation)
+!!  - any p1 (analysis/observation or forecast)
 !!  - p2 > 0 (processing interval non null, non instantaneous data)
 !!    and equal to a multiplier of \a step
 !!
-!! Output data will have timerange of type \a stat_proc, p1 = 0 and p2
-!! = \a step.  The supported statistical processing methods (parameter
-!! \a stat_proc) are:
+!! Output data will have timerange of type \a stat_proc and p2 = \a
+!! step.  The supported statistical processing methods (parameter \a
+!! stat_proc) are:
 !!
 !!  - 0 average
-!!  - 1 cumulation
+!!  - 1 accumulation
 !!  - 2 maximum
 !!  - 3 minimum
+!!  - 4 difference
+!!  - 6 standard deviation
 !!
 !! The start of processing period can be computed automatically from
 !! the input intervals as the first possible interval modulo \a step,
-!! or, for a better control, it can be specified explicitely by the
-!! optional argument \a start. Be warned that, in the final volume,
-!! the first reference time will actually be \a start \a + \a step,
-!! since \a start indicates the beginning of first processing
-!! interval, while reference time (for analysis/oservation) is the end
-!! of the interval.
+!! or, for a better control, it can be specified explicitly by the
+!! optional argument \a start.  Notice that \a start indicates the
+!! beginning of the processing interval, so in the final volume, the
+!! first datum may have time equal to \a start \a + \a step, e.g. in
+!! the case when time is the verification time, which is typical for
+!! observed datasets.
 !!
 !! The purpose of the optional argument \a stat_proc_input is to allow
 !! processing with a certain statistical processing operator a dataset
@@ -221,12 +251,12 @@ TYPE(vol7d),INTENT(inout),OPTIONAL :: other !< optional volume that, on exit, is
 INTEGER,INTENT(in),OPTIONAL :: stat_proc_input !< to be used with care, type of statistical processing of data that has to be processed (from grib2 table), only data having timerange of this type will be recomputed, the actual statistical processing performed and which will appear in the output volume, is however determined by \a stat_proc argument
 
 INTEGER :: tri
-INTEGER i, j, n, i1, i3, i5, i6
-INTEGER,POINTER :: map_tr(:), map_trc(:,:), count_trc(:,:)
+INTEGER :: i, j, n, n1, ndtr, i1, i3, i5, i6
+INTEGER :: linshape(1)
 REAL :: lfrac_valid, frac_c, frac_m
-LOGICAL,ALLOCATABLE :: mask_time(:)
-TYPE(vol7d_timerange) :: otimerange
-TYPE(vol7d) :: v7dtmp
+LOGICAL,ALLOCATABLE :: ttr_mask(:,:)
+TYPE(arrayof_ttr_mapper),POINTER :: map_ttr(:,:)
+INTEGER,POINTER :: dtratio(:)
 
 
 IF (PRESENT(stat_proc_input)) THEN
@@ -240,132 +270,164 @@ ELSE
   lfrac_valid = 1.0
 ENDIF
 
-CALL init(that, time_definition=this%time_definition)
 ! be safe
 CALL vol7d_alloc_vol(this)
 ! initial check
-IF (COUNT(this%timerange(:)%timerange == tri .AND. this%timerange(:)%p2 /= imiss &
- .AND. this%timerange(:)%p2 /= 0 .AND. this%timerange(:)%p1 == 0) == 0) THEN
-  CALL l4f_log(L4F_WARN, &
-   'vol7d_compute, no timeranges suitable for statistical processing by aggregation')
-  CALL makeother()
-  RETURN
-ENDIF
 
 ! cleanup the original volume
 CALL vol7d_smart_sort(this, lsort_time=.TRUE.) ! time-ordered volume needed
 CALL vol7d_reform(this, miss=.FALSE., sort=.FALSE., unique=.TRUE.)
 
+CALL init(that, time_definition=this%time_definition)
+CALL vol7d_alloc(that, nana=SIZE(this%ana), nlevel=SIZE(this%level), &
+ nnetwork=SIZE(this%network))
+IF (ASSOCIATED(this%dativar%r)) THEN
+  CALL vol7d_alloc(that, ndativarr=SIZE(this%dativar%r))
+  that%dativar%r = this%dativar%r
+ENDIF
+IF (ASSOCIATED(this%dativar%d)) THEN
+  CALL vol7d_alloc(that, ndativard=SIZE(this%dativar%d))
+  that%dativar%d = this%dativar%d
+ENDIF
+that%ana = this%ana
+that%level = this%level
+that%network = this%network
+
 ! compute the output time and timerange and all the required mappings
 CALL recompute_stat_proc_agg_common(this%time, this%timerange, stat_proc, tri, &
- step, that%time, otimerange, map_tr, map_trc, count_trc, start)
-
-! create a template for the new volume with the elements that may not
-! be present in the original one, that%time is already allocated
-CALL vol7d_alloc(that, nana=0, nlevel=0, ntimerange=1, nnetwork=0)
-that%timerange(1) = otimerange
+ step, this%time_definition, that%time, that%timerange, map_ttr, dtratio, start)
 CALL vol7d_alloc_vol(that)
 
-! copy the elements of the original volume that may be useful for the
-! new volume into a temporary object, this is usually useless
-ALLOCATE(mask_time(SIZE(this%time)))
-DO i = 1, SIZE(this%time)
-  mask_time(i) = ANY(this%time(i) == that%time)
-ENDDO
-CALL vol7d_copy(this, v7dtmp, miss=.FALSE., sort=.FALSE., unique=.FALSE., &
- ltimerange=(this%timerange(:) == that%timerange(1)), ltime=mask_time)
-! merge with template
-CALL vol7d_merge(that, v7dtmp)
-
+ALLOCATE(ttr_mask(SIZE(this%time), SIZE(this%timerange)))
+linshape = (/SIZE(ttr_mask)/)
 ! finally perform computations
-! warning: mask_time is reused for a different purpose
 IF (ASSOCIATED(this%voldatir)) THEN
-  DO i = 1, SIZE(that%time)
-    DO i1 = 1, SIZE(this%ana)
-      DO i3 = 1, SIZE(this%level)
-        DO i6 = 1, SIZE(this%network)
-          DO i5 = 1, SIZE(this%dativar%r)
-            frac_m = 0.
-            DO j = 1, SIZE(map_tr)
-! count the number of valid data that contribute to the current interval
-              mask_time = this%voldatir(i1,:,i3,map_tr(j),i5,i6) /= rmiss .AND. &
-               map_trc(:,j) == i
-              n = COUNT(mask_time)
-! compute the ratio between n. of valid data and n. of required data (fraction)
-              frac_c = REAL(n)/count_trc(i,j)
-! keep the timerange giving the maximum fraction
-              IF (n > 0 .AND. frac_c >= MAX(lfrac_valid, frac_m)) THEN
-                frac_m = frac_c
-                IF (stat_proc == 0) THEN ! average
-                  that%voldatir(i1,i,i3,1,i5,i6) = &
-                   SUM(this%voldatir(i1,:,i3,map_tr(j),i5,i6), &
-                   mask=mask_time)/n
-                ELSE IF (stat_proc == 1) THEN ! cumulation
-                  that%voldatir(i1,i,i3,1,i5,i6) = &
-                   SUM(this%voldatir(i1,:,i3,map_tr(j),i5,i6), &
-                   mask=mask_time)
-                ELSE IF (stat_proc == 2) THEN ! maximum
-                  that%voldatir(i1,i,i3,1,i5,i6) = &
-                   MAXVAL(this%voldatir(i1,:,i3,map_tr(j),i5,i6), &
-                   mask=mask_time)
-                ELSE IF (stat_proc == 3) THEN ! minimum
-                  that%voldatir(i1,i,i3,1,i5,i6) = &
-                   MINVAL(this%voldatir(i1,:,i3,map_tr(j),i5,i6), &
-                   mask=mask_time)
+  DO j = 1, SIZE(that%timerange)
+    DO i = 1, SIZE(that%time)
+
+      DO i1 = 1, SIZE(this%ana)
+        DO i3 = 1, SIZE(this%level)
+          DO i6 = 1, SIZE(this%network)
+            DO i5 = 1, SIZE(this%dativar%r)
+
+              frac_m = 0.
+              DO n1 = SIZE(dtratio), 1, -1 ! precedence to longer periods
+                IF (dtratio(n1) <= 0) CYCLE ! safety check
+                ttr_mask = .FALSE.
+                DO n = 1, map_ttr(i,j)%arraysize
+                  IF (map_ttr(i,j)%array(n)%extra_info == dtratio(n1)) THEN
+                    IF (c_e(this%voldatir(i1,map_ttr(i,j)%array(n)%it,i3, &
+                     map_ttr(i,j)%array(n)%itr,i5,i6))) THEN
+                      ttr_mask(map_ttr(i,j)%array(n)%it, &
+                       map_ttr(i,j)%array(n)%itr) = .TRUE.
+                    ENDIF
+                  ENDIF
+                ENDDO
+
+                ndtr = COUNT(ttr_mask)
+                frac_c = REAL(ndtr)/REAL(dtratio(n1))
+
+                IF (ndtr > 0 .AND. frac_c >= MAX(lfrac_valid, frac_m)) THEN
+                  frac_m = frac_c
+                  SELECT CASE(stat_proc)
+                  CASE (0) ! average
+                    that%voldatir(i1,i,i3,j,i5,i6) = &
+                     SUM(this%voldatir(i1,:,i3,:,i5,i6), &
+                     mask=ttr_mask)/ndtr
+                  CASE (1, 4) ! accumulation, difference
+                    that%voldatir(i1,i,i3,j,i5,i6) = &
+                     SUM(this%voldatir(i1,:,i3,:,i5,i6), &
+                     mask=ttr_mask)
+                  CASE (2) ! maximum
+                    that%voldatir(i1,i,i3,j,i5,i6) = &
+                     MAXVAL(this%voldatir(i1,:,i3,:,i5,i6), &
+                     mask=ttr_mask)
+                  CASE (3) ! minimum
+                    that%voldatir(i1,i,i3,j,i5,i6) = &
+                     MINVAL(this%voldatir(i1,:,i3,:,i5,i6), &
+                     mask=ttr_mask)
+                  CASE (6) ! stddev
+                    that%voldatir(i1,i,i3,j,i5,i6) = &
+                     stat_stddev( &
+                     RESHAPE(this%voldatir(i1,:,i3,:,i5,i6), shape=linshape), &
+                     mask=RESHAPE(ttr_mask, shape=linshape))
+                  END SELECT
                 ENDIF
-              ENDIF
-            ENDDO
-          ENDDO
-        ENDDO
-      ENDDO
-    ENDDO
-  ENDDO
+
+              ENDDO ! dtratio
+            ENDDO ! var
+          ENDDO ! network
+        ENDDO ! level
+      ENDDO ! ana
+      CALL delete(map_ttr(i,j))
+    ENDDO ! otime
+  ENDDO ! otimerange
 ENDIF
 
 IF (ASSOCIATED(this%voldatid)) THEN
-  DO i = 1, SIZE(that%time)
-    DO i1 = 1, SIZE(this%ana)
-      DO i3 = 1, SIZE(this%level)
-        DO i6 = 1, SIZE(this%network)
-          DO i5 = 1, SIZE(this%dativar%d)
-            frac_m = 0.
-            DO j = 1, SIZE(map_tr)
-! count the number of valid data that contribute to the current interval
-              mask_time = this%voldatid(i1,:,i3,map_tr(j),i5,i6) /= rdmiss .AND. &
-               map_trc(:,j) == i
-              n = COUNT(mask_time)
-! compute the ratio between n. of valid data and n. of required data (fraction)
-              frac_c = REAL(n)/count_trc(i,j)
-! keep the timerange giving the maximum fraction
-              IF (n > 0 .AND. frac_c >= MAX(lfrac_valid, frac_m)) THEN
-                frac_m = frac_c
-                IF (stat_proc == 0) THEN ! average
-                  that%voldatid(i1,i,i3,1,i5,i6) = &
-                   SUM(this%voldatid(i1,:,i3,map_tr(j),i5,i6), &
-                   mask=mask_time)/n
-                ELSE IF (stat_proc == 1) THEN ! cumulation
-                  that%voldatid(i1,i,i3,1,i5,i6) = &
-                   SUM(this%voldatid(i1,:,i3,map_tr(j),i5,i6), &
-                   mask=mask_time)
-                ELSE IF (stat_proc == 2) THEN ! maximum
-                  that%voldatid(i1,i,i3,1,i5,i6) = &
-                   MAXVAL(this%voldatid(i1,:,i3,map_tr(j),i5,i6), &
-                   mask=mask_time)
-                ELSE IF (stat_proc == 3) THEN ! minimum
-                  that%voldatid(i1,i,i3,1,i5,i6) = &
-                   MINVAL(this%voldatid(i1,:,i3,map_tr(j),i5,i6), &
-                   mask=mask_time)
+  DO j = 1, SIZE(that%timerange)
+    DO i = 1, SIZE(that%time)
+
+      DO i1 = 1, SIZE(this%ana)
+        DO i3 = 1, SIZE(this%level)
+          DO i6 = 1, SIZE(this%network)
+            DO i5 = 1, SIZE(this%dativar%d)
+
+              frac_m = 0.
+              DO n1 = SIZE(dtratio), 1, -1 ! precedence to longer periods
+                IF (dtratio(n1) <= 0) CYCLE ! safety check
+                ttr_mask = .FALSE.
+                DO n = 1, map_ttr(i,j)%arraysize
+                  IF (map_ttr(i,j)%array(n)%extra_info == dtratio(n1)) THEN
+                    IF (c_e(this%voldatid(i1,map_ttr(i,j)%array(n)%it,i3, &
+                     map_ttr(i,j)%array(n)%itr,i5,i6))) THEN
+                      ttr_mask(map_ttr(i,j)%array(n)%it, &
+                       map_ttr(i,j)%array(n)%itr) = .TRUE.
+                    ENDIF
+                  ENDIF
+                ENDDO
+
+                ndtr = COUNT(ttr_mask)
+                frac_c = REAL(ndtr)/REAL(dtratio(n1))
+
+                IF (ndtr > 0 .AND. frac_c >= MAX(lfrac_valid, frac_m)) THEN
+                  frac_m = frac_c
+                  SELECT CASE(stat_proc)
+                  CASE (0) ! average
+                    that%voldatid(i1,i,i3,j,i5,i6) = &
+                     SUM(this%voldatid(i1,:,i3,:,i5,i6), &
+                     mask=ttr_mask)/ndtr
+                  CASE (1, 4) ! accumulation, difference
+                    that%voldatid(i1,i,i3,j,i5,i6) = &
+                     SUM(this%voldatid(i1,:,i3,:,i5,i6), &
+                     mask=ttr_mask)
+                  CASE (2) ! maximum
+                    that%voldatid(i1,i,i3,j,i5,i6) = &
+                     MAXVAL(this%voldatid(i1,:,i3,:,i5,i6), &
+                     mask=ttr_mask)
+                  CASE (3) ! minimum
+                    that%voldatid(i1,i,i3,j,i5,i6) = &
+                     MINVAL(this%voldatid(i1,:,i3,:,i5,i6), &
+                     mask=ttr_mask)
+                  CASE (6) ! stddev
+                    that%voldatid(i1,i,i3,j,i5,i6) = &
+                     stat_stddev( &
+                     RESHAPE(this%voldatid(i1,:,i3,:,i5,i6), shape=linshape), &
+                     mask=RESHAPE(ttr_mask, shape=linshape))
+                  END SELECT
                 ENDIF
-              ENDIF
-            ENDDO
-          ENDDO
-        ENDDO
-      ENDDO
-    ENDDO
-  ENDDO
+
+              ENDDO ! dtratio
+            ENDDO ! var
+          ENDDO ! network
+        ENDDO ! level
+      ENDDO ! ana
+      CALL delete(map_ttr(i,j))
+    ENDDO ! otime
+  ENDDO ! otimerange
 ENDIF
 
-DEALLOCATE(map_tr, map_trc, count_trc, mask_time)
+DEALLOCATE(ttr_mask)
 
 CALL makeother()
 
@@ -375,7 +437,7 @@ SUBROUTINE makeother()
 IF (PRESENT(other)) THEN ! create volume with the remaining data for further processing
   CALL vol7d_copy(this, other, miss=.FALSE., sort=.FALSE., unique=.FALSE., &
    ltimerange=(this%timerange(:)%timerange /= tri .OR. this%timerange(:)%p2 == imiss &
-   .OR. this%timerange(:)%p2 == 0 .OR. this%timerange(:)%p1 /= 0))
+   .OR. this%timerange(:)%p2 == 0)) ! or MOD(steps, this%timerange(:)%p2) == 0
 ENDIF
 END SUBROUTINE makeother
 
@@ -385,23 +447,26 @@ END SUBROUTINE vol7d_recompute_stat_proc_agg
 !> Method for statistically processing a set of instantaneous data.
 !! This method performs statistical processing by aggregation of
 !! instantaneous data.  Only floating point single or double precision
-!! data with analysis/observation timerange are processed.
+!! data are processed.
 !!
 !! The output \a that vol7d object contains elements from the original volume
 !! \a this satisfying the conditions
 !!  - real single or double precision variables
 !!  - timerange (vol7d_timerange_class::vol7d_timerange::timerange)
 !!    of type 254 (instantaeous)
-!!  - p1 = 0 (end of period == reference time, analysis/observation)
+!!  - any p1 (analysis/observation or forecast)
 !!  - p2 = 0 (processing interval null, instantaneous data)
 !!
-!! Output data will have timerange of type \a stat_proc, p1 = 0 and p2
-!! = \a step.  The supported statistical processing methods (parameter
-!! \a stat_proc) are:
+!! Output data will have timerange of type \a stat_proc, and p2 = \a
+!! step.  The supported statistical processing methods (parameter \a
+!! stat_proc) are:
 !!
 !!  - 0 average
 !!  - 2 maximum
 !!  - 3 minimum
+!!  - 4 difference
+!!  - 6 standard deviation
+!!  - 201 mode (only for wind direction sectors)
 !!
 !! In the case of average, it is possible to weigh the data
 !! proportionally to the length of the time interval for which every
@@ -422,17 +487,15 @@ LOGICAL,INTENT(in),OPTIONAL :: weighted !< if provided and \c .TRUE., the statis
 TYPE(vol7d),INTENT(inout),OPTIONAL :: other !< optional volume that, on exit, is going to contain the data that did not contribute to the accumulation computation
 !INTEGER,INTENT(in),OPTIONAL :: stat_proc_input !< to be used with care, type of statistical processing of data that has to be processed (from grib2 table), only data having timerange of this type will be recomputed, the actual statistical processing performed and which will appear in the output volume, is however determined by \a stat_proc argument
 
-INTEGER :: tri, itr, iw, iwn, i, i1, i3, i5, i6, vartype
-INTEGER(kind=int_ll),ALLOCATABLE :: stepmsec(:)
-INTEGER(kind=int_ll) :: dmsec
-TYPE(datetime) :: w_start, w_end
-TYPE(timedelta) :: sub_step, lmax_step
-TYPE(vol7d_timerange) :: otimerange
 TYPE(vol7d) :: v7dtmp
-INTEGER,POINTER :: itime_start(:), itime_end(:)
-REAL,ALLOCATABLE :: weightr(:), tmpvoldatir(:)
-DOUBLE PRECISION,ALLOCATABLE :: weightd(:), tmpvoldatid(:)
-LOGICAL,ALLOCATABLE :: mask_time(:)
+INTEGER :: tri
+INTEGER :: i, j, n, ninp, ndtr, i1, i3, i5, i6, vartype, maxsize
+TYPE(timedelta) :: lmax_step, act_max_step
+TYPE(datetime) :: pstart, pend, reftime
+TYPE(arrayof_ttr_mapper),POINTER :: map_ttr(:,:)
+REAL,ALLOCATABLE :: tmpvolr(:)
+DOUBLE PRECISION,ALLOCATABLE :: tmpvold(:), weights(:)
+LOGICAL,ALLOCATABLE :: lin_mask(:)
 LOGICAL :: lweighted
 CHARACTER(len=8) :: env_var
 
@@ -447,288 +510,214 @@ tri = 254
 env_var = ''
 CALL getenv('LIBSIM_CLIMAT_BEHAVIOR', env_var)
 lweighted = lweighted .AND. LEN_TRIM(env_var) == 0
+! only average can be weighted
+lweighted = lweighted .AND. stat_proc == 0
 
-CALL init(that, time_definition=this%time_definition)
 ! be safe
 CALL vol7d_alloc_vol(this)
 ! initial check
-itr = index(this%timerange(:), vol7d_timerange_new(tri, 0, 0))
-IF (itr <= 0) THEN
-  CALL l4f_log(L4F_WARN, &
-   'vol7d_compute, no timeranges suitable for statistical processing by aggregation')
-  CALL makeother()
-  RETURN
-ENDIF
 
 ! cleanup the original volume
 CALL vol7d_smart_sort(this, lsort_time=.TRUE.) ! time-ordered volume needed
 CALL vol7d_reform(this, miss=.FALSE., sort=.FALSE., unique=.TRUE.)
-! recompute itr, it may have changed
-itr = index(this%timerange(:), vol7d_timerange_new(tri, 0, 0))
+! copy everything except time and timerange
+CALL vol7d_copy(this, v7dtmp, ltime=(/.FALSE./), ltimerange=(/.FALSE./))
 
+! create new volume
+CALL init(that, time_definition=this%time_definition)
 ! compute the output time and timerange and all the required mappings
-CALL compute_stat_proc_agg_common(this%time, stat_proc, &
- step, that%time, otimerange, itime_start, itime_end, start)
-
-! create a template for the new volume with the elements that may not
-! be present in the original one, that%time is already allocated
-CALL vol7d_alloc(that, nana=0, nlevel=0, ntimerange=1, nnetwork=0)
-that%timerange(1) = otimerange
-CALL vol7d_alloc_vol(that)
-
-! copy the elements of the original volume that may be useful for the
-! new volume into a temporary object, this is usually useless
-ALLOCATE(mask_time(SIZE(this%time)))
-DO i = 1, SIZE(this%time)
-  mask_time(i) = ANY(this%time(i) == that%time)
-ENDDO
-CALL vol7d_copy(this, v7dtmp, miss=.FALSE., sort=.FALSE., unique=.FALSE., &
- ltimerange=(this%timerange(:) == that%timerange(1)), ltime=mask_time)
-! merge with template
+CALL recompute_stat_proc_agg_common(this%time, this%timerange, stat_proc, tri, &
+ step, this%time_definition, that%time, that%timerange, map_ttr, start=start)
+! merge with information from original volume
 CALL vol7d_merge(that, v7dtmp)
 
-! compute step length taking into account "pop" intervals
-ALLOCATE(stepmsec(SIZE(that%time)))
-DO i = 1, SIZE(that%time)
-  CALL getval(that%time(i)-(that%time(i)-step), amsec=stepmsec(i))
-ENDDO
+maxsize = MAXVAL(map_ttr(:,:)%arraysize)
+ALLOCATE(tmpvolr(maxsize), tmpvold(maxsize), lin_mask(maxsize), weights(maxsize))
+do_otimerange: DO j = 1, SIZE(that%timerange)
+  do_otime: DO i = 1, SIZE(that%time)
+    ninp = map_ttr(i,j)%arraysize
+    IF (ninp <= 0) CYCLE do_otime
+! required for some computations
+    CALL time_timerange_get_period(that%time(i), that%timerange(j), &
+     that%time_definition, pstart, pend, reftime)
 
-! finally perform computations
-! warning: mask_time is reused for a different purpose
-IF (ASSOCIATED(this%voldatir)) THEN
-  ALLOCATE(weightr(SIZE(this%time)), tmpvoldatir(SIZE(this%time)))
-  DO i6 = 1, SIZE(this%network)
-    DO i5 = 1, SIZE(this%dativar%r)
-      vartype = vol7d_vartype(this%dativar%r(i5))
-      DO i3 = 1, SIZE(this%level)
-        DO i1 = 1, SIZE(this%ana)
-          mask_time(:) = this%voldatir(i1,:,i3,itr,i5,i6) /= rmiss
-          weightr(:) = rmiss
-          timeloopr: DO i = 1, SIZE(that%time)
-
-! start of first interval = start of output interval
-            w_start = that%time(i) - step
-! search first valid value index (iw)
-            iw = itime_start(i)
-            DO WHILE(iw <= itime_end(i))
-              IF (mask_time(iw)) EXIT
-              iw = iw + 1
-            ENDDO
-
-! loop on input data in output interval
-            DO WHILE(iw <= itime_end(i))
-! search next valid value index (iwn)
-              iwn = iw + 1
-              DO WHILE(iwn <= itime_end(i))
-                IF (mask_time(iwn)) EXIT
-                iwn = iwn + 1
-              ENDDO
-              IF (iwn > itime_end(i)) THEN ! next is the last
-! end of last interval = end of output interval
-                w_end = that%time(i) ! 
-              ELSE ! next is not the last
-! end of interval = midpoint between this and next value
-                w_end = this%time(iw) + (this%time(iwn)-this%time(iw))/2
-              ENDIF
-! compute length of interval associated to current value
-              sub_step = w_end - w_start
-              IF (sub_step > lmax_step) CYCLE timeloopr ! output interval rejected
-              IF (lweighted) THEN ! we should optimize for the unweighted case 
-! compute relative weight
-                CALL getval(sub_step, amsec=dmsec)
-                weightr(iw) = REAL(dmsec)/REAL(stepmsec(i))
-              ENDIF
-! next becomes current
-              iw = iwn
-              w_start = w_end
-            ENDDO
-
-            IF (COUNT(mask_time(itime_start(i):itime_end(i))) > 0) THEN
-              IF (stat_proc == 0) THEN ! average
-                IF (lweighted) THEN
-                  WHERE(mask_time(itime_start(i):itime_end(i)))
-                    weightr(itime_start(i):itime_end(i)) = &
-                     weightr(itime_start(i):itime_end(i)) * &
-                     this%voldatir(i1,itime_start(i):itime_end(i),i3,itr,i5,i6)
-                  END WHERE
-                  that%voldatir(i1,i,i3,1,i5,i6) = &
-                   SUM(weightr(itime_start(i):itime_end(i)), &
-                   mask=mask_time(itime_start(i):itime_end(i)))
-                ELSE
-                  that%voldatir(i1,i,i3,1,i5,i6) = &
-                   SUM(this%voldatir(i1,itime_start(i):itime_end(i),i3,itr,i5,i6), &
-                   mask=mask_time(itime_start(i):itime_end(i)))/ &
-                   COUNT(mask_time(itime_start(i):itime_end(i)))
+    IF (ASSOCIATED(this%voldatir)) THEN
+      DO i1 = 1, SIZE(this%ana)
+        DO i3 = 1, SIZE(this%level)
+          DO i6 = 1, SIZE(this%network)
+            DO i5 = 1, SIZE(this%dativar%r)
+! stat_proc difference treated separately here
+              IF (stat_proc == 4) THEN
+                IF (ninp >= 2) THEN
+                  IF (map_ttr(i,j)%array(1)%extra_info == 1 .AND. &
+                   map_ttr(i,j)%array(n)%extra_info == 2) THEN
+                    IF (c_e(this%voldatir(i1,map_ttr(i,j)%array(1)%it,i3, &
+                     map_ttr(i,j)%array(1)%itr,i5,i6)) .AND. &
+                     c_e(this%voldatir(i1,map_ttr(i,j)%array(ninp)%it,i3, &
+                     map_ttr(i,j)%array(ninp)%itr,i5,i6))) THEN
+                      that%voldatir(i1,i,i3,j,i5,i6) = &
+                       this%voldatir(i1,map_ttr(i,j)%array(ninp)%it,i3, &
+                       map_ttr(i,j)%array(ninp)%itr,i5,i6) - &
+                       this%voldatir(i1,map_ttr(i,j)%array(1)%it,i3, &
+                       map_ttr(i,j)%array(1)%itr,i5,i6)
+                    ENDIF
+                  ENDIF
                 ENDIF
+                CYCLE
+              ENDIF
+! other stat_proc
+              vartype = vol7d_vartype(this%dativar%r(i5))
+              lin_mask = .FALSE.
+              ndtr = 0
+              DO n = 1, ninp
+                IF (c_e(this%voldatir(i1,map_ttr(i,j)%array(n)%it,i3, &
+                 map_ttr(i,j)%array(n)%itr,i5,i6))) THEN
+                  ndtr = ndtr + 1
+                  tmpvolr(ndtr) = this%voldatir(i1,map_ttr(i,j)%array(n)%it,i3, &
+                   map_ttr(i,j)%array(n)%itr,i5,i6)
+                  lin_mask(n) = .TRUE.
+                ENDIF
+              ENDDO
+              IF (ndtr == 0) CYCLE
+              IF (lweighted) THEN
+                CALL compute_stat_proc_agg_sw(map_ttr(i,j)%array(1:ninp)%time, &
+                 pstart, pend, lin_mask(1:ninp), act_max_step, weights)
+              ELSE
+                CALL compute_stat_proc_agg_sw(map_ttr(i,j)%array(1:ninp)%time, &
+                 pstart, pend, lin_mask(1:ninp), act_max_step)
+              ENDIF
+              IF (act_max_step > lmax_step) CYCLE
 
-              ELSE IF (stat_proc == 2) THEN ! maximum
-
-                that%voldatir(i1,i,i3,1,i5,i6) = &
-                 MAXVAL( &
-                 this%voldatir(i1,itime_start(i):itime_end(i),i3,itr,i5,i6), &
-                 mask=mask_time(itime_start(i):itime_end(i)))
-
-              ELSE IF (stat_proc == 3) THEN ! minimum
-
-                that%voldatir(i1,i,i3,1,i5,i6) = &
-                 MINVAL( &
-                 this%voldatir(i1,itime_start(i):itime_end(i),i3,itr,i5,i6), &
-                 mask=mask_time(itime_start(i):itime_end(i)))
-
-              ELSE IF (stat_proc == 6) THEN ! stddev (non weighted only)
-                that%voldatir(i1,i,i3,1,i5,i6) = &
-                 stat_stddev(this%voldatir(i1,itime_start(i):itime_end(i),i3,itr,i5,i6), &
-                 mask=mask_time(itime_start(i):itime_end(i)))
-
-              ELSE IF (stat_proc == 201) THEN ! mode
+              SELECT CASE(stat_proc)
+              CASE (0) ! average
+                IF (lweighted) THEN
+                  that%voldatir(i1,i,i3,j,i5,i6) = &
+                   SUM(REAL(weights(1:ndtr))*tmpvolr(1:ndtr))
+                ELSE
+                  that%voldatir(i1,i,i3,j,i5,i6) = &
+                   SUM(tmpvolr(1:ndtr))/ndtr
+                ENDIF
+              CASE (2) ! maximum
+                that%voldatir(i1,i,i3,j,i5,i6) = &
+                 MAXVAL(tmpvolr(1:ndtr))
+              CASE (3) ! minimum
+                that%voldatir(i1,i,i3,j,i5,i6) = &
+                 MINVAL(tmpvolr(1:ndtr))
+              CASE (6) ! stddev
+                that%voldatir(i1,i,i3,j,i5,i6) = &
+                 stat_stddev(tmpvolr(1:ndtr))
+              CASE (201) ! mode
 ! mode only for angles at the moment, with predefined histogram
                 IF (vartype == var_dir360) THEN
-                  tmpvoldatir(itime_start(i):itime_end(i)) = &
-                   this%voldatir(i1,itime_start(i):itime_end(i),i3,itr,i5,i6)
 ! reduce to interval [-22.5,337.5]
-                  WHERE (c_e(tmpvoldatir(itime_start(i):itime_end(i))) .AND. &
-                   tmpvoldatir(itime_start(i):itime_end(i)) > 337.5)
-                    tmpvoldatir(itime_start(i):itime_end(i)) = &
-                     tmpvoldatir(itime_start(i):itime_end(i)) -360.
+                  WHERE (tmpvolr(1:ndtr) > 337.5)
+                    tmpvolr(1:ndtr) = tmpvolr(1:ndtr) - 360.
                   END WHERE
-                  that%voldatir(i1,i,i3,1,i5,i6) = &
-                   stat_mode_histogram(tmpvoldatir(itime_start(i):itime_end(i)), &
-                   8, -22.5, 337.5, mask=mask_time(itime_start(i):itime_end(i)))
-
+                  that%voldatir(i1,i,i3,j,i5,i6) = &
+                   stat_mode_histogram(tmpvolr(1:ndtr), &
+                   8, -22.5, 337.5)
                 ENDIF
-
-              ENDIF
-            ENDIF
-          ENDDO timeloopr
+              END SELECT
+            ENDDO
+          ENDDO
         ENDDO
       ENDDO
-    ENDDO
-  ENDDO
-  DEALLOCATE(weightr, tmpvoldatir)
-ENDIF
+    ENDIF
 
-! finally perform computations
-! warning: mask_time is reused for a different purpose
-IF (ASSOCIATED(this%voldatid)) THEN
-  ALLOCATE(weightd(SIZE(this%time)), tmpvoldatid(SIZE(this%time)))
-  DO i6 = 1, SIZE(this%network)
-    DO i5 = 1, SIZE(this%dativar%d)
-      vartype = vol7d_vartype(this%dativar%d(i5))
-      DO i3 = 1, SIZE(this%level)
-        DO i1 = 1, SIZE(this%ana)
-          mask_time(:) = this%voldatid(i1,:,i3,itr,i5,i6) /= rmiss
-          weightd(:) = dmiss
-          timeloopd: DO i = 1, SIZE(that%time)
-
-! start of first interval = start of output interval
-            w_start = that%time(i) - step
-! search first valid value index (iw)
-            iw = itime_start(i)
-            DO WHILE(iw <= itime_end(i))
-              IF (mask_time(iw)) EXIT
-              iw = iw + 1
-            ENDDO
-
-! loop on input data in output interval
-            DO WHILE(iw <= itime_end(i))
-! search next valid value index (iwn)
-              iwn = iw + 1
-              DO WHILE(iwn <= itime_end(i))
-                IF (mask_time(iwn)) EXIT
-                iwn = iwn + 1
-              ENDDO
-              IF (iwn > itime_end(i)) THEN ! next is the last
-! end of last interval = end of output interval
-                w_end = that%time(i) ! 
-              ELSE ! next is not the last
-! end of interval = midpoint between this and next value
-                w_end = this%time(iw) + (this%time(iwn)-this%time(iw))/2
-              ENDIF
-! compute length of interval associated to current value
-              sub_step = w_end - w_start
-              IF (sub_step > lmax_step) CYCLE timeloopd ! output interval rejected
-              IF (lweighted) THEN ! we should optimize for the unweighted case 
-! compute relative weight
-                CALL getval(sub_step, amsec=dmsec)
-                weightd(iw) = DBLE(dmsec)/DBLE(stepmsec(i))
-              ENDIF
-! next becomes current
-              iw = iwn
-              w_start = w_end
-            ENDDO
-
-            IF (COUNT(mask_time(itime_start(i):itime_end(i))) > 0) THEN
-              IF (stat_proc == 0) THEN ! average
-
-                IF (lweighted) THEN
-                  WHERE(mask_time(itime_start(i):itime_end(i)))
-                    weightd(itime_start(i):itime_end(i)) = &
-                     weightd(itime_start(i):itime_end(i)) * &
-                     this%voldatid(i1,itime_start(i):itime_end(i),i3,itr,i5,i6)
-                  END WHERE
-                  that%voldatid(i1,i,i3,1,i5,i6) = &
-                   SUM(weightd(itime_start(i):itime_end(i)), &
-                   mask=mask_time(itime_start(i):itime_end(i)))
-
-                ELSE
-                  that%voldatid(i1,i,i3,1,i5,i6) = &
-                   SUM(this%voldatid(i1,itime_start(i):itime_end(i),i3,itr,i5,i6), &
-                   mask=mask_time(itime_start(i):itime_end(i)))/ &
-                   COUNT(mask_time(itime_start(i):itime_end(i)))
+    IF (ASSOCIATED(this%voldatid)) THEN
+      DO i1 = 1, SIZE(this%ana)
+        DO i3 = 1, SIZE(this%level)
+          DO i6 = 1, SIZE(this%network)
+            DO i5 = 1, SIZE(this%dativar%d)
+! stat_proc difference treated separately here
+              IF (stat_proc == 4) THEN
+                IF (n >= 2) THEN
+                  IF (map_ttr(i,j)%array(1)%extra_info == 1 .AND. &
+                   map_ttr(i,j)%array(ninp)%extra_info == 2) THEN
+                    IF (c_e(this%voldatid(i1,map_ttr(i,j)%array(1)%it,i3, &
+                     map_ttr(i,j)%array(1)%itr,i5,i6)) .AND. &
+                     c_e(this%voldatid(i1,map_ttr(i,j)%array(ninp)%it,i3, &
+                     map_ttr(i,j)%array(ninp)%itr,i5,i6))) THEN
+                      that%voldatid(i1,i,i3,j,i5,i6) = &
+                       this%voldatid(i1,map_ttr(i,j)%array(ninp)%it,i3, &
+                       map_ttr(i,j)%array(ninp)%itr,i5,i6) - &
+                       this%voldatid(i1,map_ttr(i,j)%array(1)%it,i3, &
+                       map_ttr(i,j)%array(1)%itr,i5,i6)
+                    ENDIF
+                  ENDIF
                 ENDIF
+                CYCLE
+              ENDIF
+! other stat_proc
+              vartype = vol7d_vartype(this%dativar%d(i5))
+              lin_mask = .FALSE.
+              ndtr = 0
+              DO n = 1, ninp
+                IF (c_e(this%voldatid(i1,map_ttr(i,j)%array(n)%it,i3, &
+                 map_ttr(i,j)%array(n)%itr,i5,i6))) THEN
+                  ndtr = ndtr + 1
+                  tmpvold(ndtr) = this%voldatid(i1,map_ttr(i,j)%array(n)%it,i3, &
+                   map_ttr(i,j)%array(n)%itr,i5,i6)
+                  lin_mask(n) = .TRUE.
+                ENDIF
+              ENDDO
+              IF (ndtr == 0) CYCLE
+              IF (lweighted) THEN
+                CALL compute_stat_proc_agg_sw(map_ttr(i,j)%array(1:ninp)%time, &
+                 pstart, pend, lin_mask(1:ninp), act_max_step, weights)
+              ELSE
+                CALL compute_stat_proc_agg_sw(map_ttr(i,j)%array(1:ninp)%time, &
+                 pstart, pend, lin_mask(1:ninp), act_max_step)
+              ENDIF
+              IF (act_max_step > lmax_step) CYCLE
 
-              ELSE IF (stat_proc == 2) THEN ! maximum
-
-                that%voldatid(i1,i,i3,1,i5,i6) = &
-                 MAXVAL( &
-                 this%voldatid(i1,itime_start(i):itime_end(i),i3,itr,i5,i6), &
-                 mask=mask_time(itime_start(i):itime_end(i)))
-
-              ELSE IF (stat_proc == 3) THEN ! minimum
-
-                that%voldatid(i1,i,i3,1,i5,i6) = &
-                 MINVAL( &
-                 this%voldatid(i1,itime_start(i):itime_end(i),i3,itr,i5,i6), &
-                 mask=mask_time(itime_start(i):itime_end(i)))
-
-              ELSE IF (stat_proc == 201) THEN ! mode
+              SELECT CASE(stat_proc)
+              CASE (0) ! average
+                IF (lweighted) THEN
+                  that%voldatid(i1,i,i3,j,i5,i6) = &
+                   SUM(REAL(weights(1:ndtr))*tmpvold(1:ndtr))
+                ELSE
+                  that%voldatid(i1,i,i3,j,i5,i6) = &
+                   SUM(tmpvold(1:ndtr))/ndtr
+                ENDIF
+              CASE (2) ! maximum
+                that%voldatid(i1,i,i3,j,i5,i6) = &
+                 MAXVAL(tmpvold(1:ndtr))
+              CASE (3) ! minimum
+                that%voldatid(i1,i,i3,j,i5,i6) = &
+                 MINVAL(tmpvold(1:ndtr))
+              CASE (6) ! stddev
+                that%voldatid(i1,i,i3,j,i5,i6) = &
+                 stat_stddev(tmpvold(1:ndtr))
+              CASE (201) ! mode
 ! mode only for angles at the moment, with predefined histogram
                 IF (vartype == var_dir360) THEN
-                  tmpvoldatid(itime_start(i):itime_end(i)) = &
-                   this%voldatid(i1,itime_start(i):itime_end(i),i3,itr,i5,i6)
 ! reduce to interval [-22.5,337.5]
-                  WHERE (c_e(tmpvoldatid(itime_start(i):itime_end(i))) .AND. &
-                   tmpvoldatid(itime_start(i):itime_end(i)) > 337.5)
-                    tmpvoldatid(itime_start(i):itime_end(i)) = &
-                     tmpvoldatid(itime_start(i):itime_end(i)) -360.
+                  WHERE (tmpvold(1:ndtr) > 337.5)
+                    tmpvold(1:ndtr) = tmpvold(1:ndtr) - 360.
                   END WHERE
-                  that%voldatid(i1,i,i3,1,i5,i6) = &
-                   stat_mode_histogram(tmpvoldatid(itime_start(i):itime_end(i)), &
-                   8, -22.5D0, 337.5D0, mask=mask_time(itime_start(i):itime_end(i)))
+                  that%voldatid(i1,i,i3,j,i5,i6) = &
+                   stat_mode_histogram(tmpvold(1:ndtr), &
+                   8, -22.5D0, 337.5D0)
                 ENDIF
-
-              ENDIF
-            ENDIF
-          ENDDO timeloopd
+              END SELECT
+            ENDDO
+          ENDDO
         ENDDO
       ENDDO
-    ENDDO
-  ENDDO
-  DEALLOCATE(weightd, tmpvoldatid)
-ENDIF
+    ENDIF
 
-DEALLOCATE(stepmsec, mask_time, itime_start, itime_end)
+    CALL delete(map_ttr(i,j))
+  ENDDO do_otime
+ENDDO do_otimerange
 
-CALL makeother()
+DEALLOCATE(map_ttr)
+DEALLOCATE(tmpvolr, tmpvold, lin_mask, weights)
 
-CONTAINS
-
-SUBROUTINE makeother()
 IF (PRESENT(other)) THEN ! create volume with the remaining data for further processing
   CALL vol7d_copy(this, other, miss=.FALSE., sort=.FALSE., unique=.FALSE., &
    ltimerange=(this%timerange(:)%timerange /= tri))
 ENDIF
-END SUBROUTINE makeother
 
 END SUBROUTINE vol7d_compute_stat_proc_agg
 
@@ -812,6 +801,7 @@ END SUBROUTINE vol7d_decompute_stat_proc
 !!
 !!  - 0 average
 !!  - 1 cumulation
+!!  - 4 difference
 !!
 !! Input volume may have any value of \a this%time_definition, and
 !! that value will be conserved in the output volume.
@@ -882,7 +872,7 @@ IF (ASSOCIATED(this%voldatir)) THEN
                          (this%voldatir(i1,l,i3,f(k),i5,i6)*this%timerange(f(k))%p2 - &
                          this%voldatir(i1,j,i3,f(i),i5,i6)*this%timerange(f(i))%p2)/ &
                          steps ! optimize avoiding conversions
-                      ELSE IF (stat_proc == 1) THEN ! cumulation, compute MAX(0.,)?
+                      ELSE IF (stat_proc == 1 .OR. stat_proc == 4) THEN ! acc, diff
                         that%voldatir( &
                          i1,map_tr(i,j,k,l,1),i3,map_tr(i,j,k,l,2),i5,i6) = &
                          this%voldatir(i1,l,i3,f(k),i5,i6) - &
@@ -922,7 +912,7 @@ IF (ASSOCIATED(this%voldatid)) THEN
                          (this%voldatid(i1,l,i3,f(k),i5,i6)*this%timerange(f(k))%p2 - &
                          this%voldatid(i1,j,i3,f(i),i5,i6)*this%timerange(f(i))%p2)/ &
                          steps ! optimize avoiding conversions
-                      ELSE IF (stat_proc == 1) THEN ! cumulation, compute MAX(0.,)?
+                      ELSE IF (stat_proc == 1 .OR. stat_proc == 4) THEN ! acc, diff
                         that%voldatid( &
                          i1,map_tr(i,j,k,l,1),i3,map_tr(i,j,k,l,2),i5,i6) = &
                          this%voldatid(i1,l,i3,f(k),i5,i6) - &
@@ -984,7 +974,6 @@ END SUBROUTINE vol7d_recompute_stat_proc_diff
 !!    of type \a stat_proc_input (0 or 1)
 !!  - any p1 (analysis/observation or forecast)
 !!  - p2 &gt; 0 (processing interval non null, non instantaneous data)
-!!    and equal to a multiplier of \a step if \a full_steps is \c .TRUE.
 !!
 !! Output data will have timerange of type \a stat_proc (1 or 0) and
 !! p1 and p2 equal to the corresponding input values.  The supported
