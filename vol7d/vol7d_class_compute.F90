@@ -592,7 +592,7 @@ do_otimerange: DO j = 1, SIZE(that%timerange)
               CASE (0) ! average
                 IF (lweighted) THEN
                   that%voldatir(i1,i,i3,j,i5,i6) = &
-                   SUM(REAL(weights(1:ndtr))*tmpvolr(1:ndtr))/ndtr
+                   SUM(REAL(weights(1:ndtr))*tmpvolr(1:ndtr))
                 ELSE
                   that%voldatir(i1,i,i3,j,i5,i6) = &
                    SUM(tmpvolr(1:ndtr))/ndtr
@@ -675,7 +675,7 @@ do_otimerange: DO j = 1, SIZE(that%timerange)
               CASE (0) ! average
                 IF (lweighted) THEN
                   that%voldatid(i1,i,i3,j,i5,i6) = &
-                   SUM(REAL(weights(1:ndtr))*tmpvold(1:ndtr))/ndtr
+                   SUM(REAL(weights(1:ndtr))*tmpvold(1:ndtr))
                 ELSE
                   that%voldatid(i1,i,i3,j,i5,i6) = &
                    SUM(tmpvold(1:ndtr))/ndtr
