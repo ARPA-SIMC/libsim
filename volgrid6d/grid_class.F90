@@ -1242,6 +1242,12 @@ CASE ('polar_stereographic', 'lambert', 'albers')
 ! use the values kept for personal pleasure ?
 !  loFirst = this%grid%proj%polar%lon1
 !  laFirst = this%grid%proj%polar%lat1
+! reset lon in standard grib 2 definition [0,360]
+  IF (EditionNumber == 1) THEN
+    CALL long_reset_m180_360(loFirst)
+  ELSE IF (EditionNumber == 2) THEN
+    CALL long_reset_0_360(loFirst)
+  ENDIF
   CALL grib_set(gaid,'longitudeOfFirstGridPointInDegrees',loFirst)
   CALL grib_set(gaid,'latitudeOfFirstGridPointInDegrees',laFirst)
 
