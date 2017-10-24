@@ -3462,6 +3462,9 @@ vg6dout%time=vg6din%time
 vg6dout%var=vg6din%var
 vg6dout%timerange=pack_distinct(roundtimerange,ntimerange,back=.true.)
 vg6dout%level=pack_distinct(roundlevel,nlevel,back=.true.)
+! sort modified dimensions
+CALL sort(vg6dout%timerange)
+CALL sort(vg6dout%level)
 
 do ilevel=1,size(vg6din%level)
   indl=index(vg6dout%level,roundlevel(ilevel))
