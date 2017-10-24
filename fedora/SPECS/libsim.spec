@@ -2,7 +2,7 @@
 # to disable oracle and/or vapor support requiring stiff dependencies
 Summary: Fortran utility libraries
 Name: libsim
-Version: 6.2.0
+Version: 6.2.1
 Release: 1
 License: GPL2+
 Group: Applications/Meteo
@@ -107,6 +107,9 @@ mv $RPM_BUILD_ROOT%{_includedir}/*.mod $RPM_BUILD_ROOT%{_fmoddir}
 rm -rf %{buildroot}
 
 %changelog
+* Tue Oct 24 2017 Davide Cesari <dcesari@arpae.it> - 6.2.1-1
+- minor fixes and documentation
+
 * Wed Aug 30 2017 Davide Cesari <dcesari@arpae.it> - 6.2.0-1
 - new statistical processing approach
 - Shapiro transform
