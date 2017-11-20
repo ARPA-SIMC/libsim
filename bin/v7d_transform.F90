@@ -86,7 +86,7 @@ TYPE(vol7d_timerange) :: timerange
 TYPE(vol7d_ana) :: ana
 TYPE(vol7d_level) :: ilevel, olevel
 TYPE(vol7d_level),ALLOCATABLE :: olevel_list(:)
-INTEGER :: iun, ier, i, n, ninput, iargc, i1, i2, i3, i4
+INTEGER :: iun, ier, i, n, ninput, iargc, i1, i2, i3, i4, time_definition
 INTEGER,POINTER :: w_s(:), w_e(:)
 TYPE(vol7d) :: v7d, v7d_coord, v7dtmp, v7d_comp1, v7d_comp2, v7d_comp3
 #ifdef HAVE_SHAPELIB
@@ -460,6 +460,13 @@ CALL optionparser_add(opt, '', 'output-variable-list', output_variable_list, '',
 
 CALL optionparser_add(opt, ' ', 'rounding', round, help= &
  'simplifies volume, merging similar levels and timeranges')
+
+CALL optionparser_add(opt, ' ', 'time-definition', time_definition, 1, help= &
+ 'time definition for imported volume, if supported by the import method, &
+ &0 for reference time (more suitable for &
+ &presenting forecast data) and 1 for verification time (more suitable for &
+ &comparing forecasts with observations)')
+
 
 ! help options
 CALL optionparser_add_help(opt, 'h', 'help', help='show an help message and exit')
@@ -882,7 +889,8 @@ DO ninput = optind, iargc()-1
     ENDIF
     
     CALL init(v7d_dba, filename=input_file, FORMAT=input_format, &
-     dsn=dsn, user=user, password=password, file=file)
+     dsn=dsn, user=user, password=password, file=file, &
+     time_definition=time_definition)
 
     CALL import(v7d_dba, vl, nl, &
      level=level, timerange=timerange, ana=ana,&
@@ -913,7 +921,9 @@ DO ninput = optind, iargc()-1
       CALL raise_fatal_error()
     ENDIF
     CALL parse_dba_access_info(input_file, dsn, user, password)
-    CALL init(v7d_osim, dsn=dsn, user=user, password=password, time_definition=0)
+    CALL init(v7d_osim, dsn=dsn, user=user, password=password, &
+     time_definition=time_definition)
+
     IF (SIZE(vl) > 0) THEN ! data requested
       CALL import(v7d_osim, vl, nl, timei=s_d, timef=e_d, &
        level=level, timerange=timerange, &
