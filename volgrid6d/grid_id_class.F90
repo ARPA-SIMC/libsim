@@ -947,6 +947,9 @@ call grib_get(gaid,'jScansPositively',jScansPositively)
 call grib_get(gaid,'jPointsAreConsecutive',jPointsAreConsecutive)
 
 ! queste sono gia` fatte in export_gridinfo, si potrebbero evitare?!
+#ifdef DEBUG
+CALL l4f_log(L4F_DEBUG, 'grib_api, Ni,Nj:'//t2c(SIZE(field,1))//','//t2c(SIZE(field,2)))
+#endif
 call grib_set(gaid,'Ni',SIZE(field,1))
 call grib_set(gaid,'Nj',SIZE(field,2))
 
@@ -1003,6 +1006,8 @@ CALL l4f_log(L4F_DEBUG, 'grib_api, coding field in interval: '// &
  t2c(MINVAL(field,mask=c_e(field)))//' '//t2c(MAXVAL(field,mask=c_e(field))))
 CALL l4f_log(L4F_DEBUG, 'grib_api, coding field with number of missing: '// &
  t2c(COUNT(.NOT.c_e(field))))
+CALL l4f_log(L4F_DEBUG, 'grib_api, sizex:'//t2c(x1)//','//t2c(x2)//','//t2c(xs))
+CALL l4f_log(L4F_DEBUG, 'grib_api, sizey:'//t2c(y1)//','//t2c(y2)//','//t2c(ys))
 #endif
 IF ( jPointsAreConsecutive == 0) THEN
   CALL grib_set(gaid,'values', RESHAPE(field(x1:x2:xs,y1:y2:ys), &
