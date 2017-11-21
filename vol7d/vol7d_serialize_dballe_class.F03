@@ -532,6 +532,14 @@ DO WHILE(linei%next())
     end do
   enddo
 
+! restore reference time if changed because of time definition
+! otherwise strange things happen
+  if (this%v7d%time_definition == 0) then
+    metaanddata%metadata%datetime%datetime = &
+     metaanddata%metadata%datetime%datetime - &
+     timedelta_new(sec=metaanddata%metadata%timerange%vol7d_timerange%p1)
+  end if
+
 END DO
 
 END SUBROUTINE vol7d_serialize_export
