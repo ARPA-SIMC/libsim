@@ -2,7 +2,7 @@
 # to disable oracle and/or vapor support requiring stiff dependencies
 Summary: Fortran utility libraries
 Name: libsim
-Version: 6.2.1
+Version: 6.2.2
 Release: 1
 License: GPL2+
 Group: Applications/Meteo
@@ -107,6 +107,9 @@ mv $RPM_BUILD_ROOT%{_includedir}/*.mod $RPM_BUILD_ROOT%{_fmoddir}
 rm -rf %{buildroot}
 
 %changelog
+* Tue Nov 21 2017 Daniele Branchini <dbranchini@arpae.it> - 6.2.2-1
+- Centre 80 for COSMO and ECMWF entries (fix #38)
+
 * Tue Oct 24 2017 Davide Cesari <dcesari@arpae.it> - 6.2.1-1
 - minor fixes and documentation
 
