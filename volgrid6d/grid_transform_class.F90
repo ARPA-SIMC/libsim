@@ -1631,7 +1631,8 @@ REAL,INTENT(in),OPTIONAL :: maskgrid(:,:) !< 2D field to be used for defining su
 REAL,INTENT(in),OPTIONAL :: maskbounds(:) !< array of boundary values for defining subareas from the values of \a maskgrid, the number of subareas is SIZE(maskbounds) - 1, if not provided a default based on extreme values of \a maskgrid is used
 CHARACTER(len=*),INTENT(in),OPTIONAL :: categoryappend !< append this suffix to log4fortran namespace category
 
-INTEGER :: ix, iy, n, nm, nr, nprev, nmaskarea, xnmin, xnmax, ynmin, ynmax
+INTEGER :: ix, iy, n, nm, nr, nprev, nmaskarea, xnmin, xnmax, ynmin, ynmax, &
+ time_definition
 DOUBLE PRECISION :: xmin, xmax, ymin, ymax, r2
 DOUBLE PRECISION,ALLOCATABLE :: lon(:), lat(:)
 REAL,ALLOCATABLE :: lmaskbounds(:)
@@ -1643,10 +1644,16 @@ CALL grid_transform_init_common(this, trans, categoryappend)
 CALL l4f_category_log(this%category, L4F_DEBUG, "grid_transform vg6d-v7d")
 #endif
 
+! used after in some transformations
+CALL get_val(trans, time_definition=time_definition)
+IF (.NOT. c_e(time_definition)) THEN
+  time_definition=1  ! default to validity time
+ENDIF
+
 IF (this%trans%trans_type == 'inter') THEN
 
   IF (this%trans%sub_type == 'near' .OR. this%trans%sub_type == 'bilin' &
-     & .OR. this%trans%sub_type == 'shapiro_near') THEN
+   .OR. this%trans%sub_type == 'shapiro_near') THEN
 
     CALL get_val(in, nx=this%innx, ny=this%inny)
     this%outnx = SIZE(v7d_out%ana)
@@ -1720,6 +1727,8 @@ ELSE IF (this%trans%trans_type == 'polyinter') THEN
 
   this%outnx = this%trans%poly%arraysize
   this%outny = 1
+  CALL delete(v7d_out) ! required to avoid leaks because intent(inout), dangerous
+  CALL init(v7d_out, time_definition=time_definition)
   CALL vol7d_alloc(v7d_out, nana=this%outnx)
 
 ! setup output point list, equal to average of polygon points
@@ -1850,6 +1859,8 @@ ELSE IF (this%trans%trans_type == 'maskinter') THEN
 
   this%outnx = nmaskarea
   this%outny = 1
+  CALL delete(v7d_out) ! required to avoid leaks because intent(inout), dangerous
+  CALL init(v7d_out, time_definition=time_definition)
   CALL vol7d_alloc(v7d_out, nana=nmaskarea)
 
 ! setup output point list, equal to average of polygon points
@@ -1873,6 +1884,9 @@ ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
 ! allocate index array
   ALLOCATE(this%point_index(this%innx,this%inny))
   this%point_index(:,:) = imiss
+! setup output coordinates
+  CALL delete(v7d_out) ! required to avoid leaks because intent(inout), dangerous
+  CALL init(v7d_out, time_definition=time_definition)
 
   IF (this%trans%sub_type == 'all' ) THEN
 

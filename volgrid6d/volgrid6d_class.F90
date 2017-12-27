@@ -2126,11 +2126,11 @@ if (.not. c_e(time_definition)) then
   time_definition=1  ! default to validity time
 endif
 
-if (present(v7d)) then
-  v7d_locana = v7d
-else
-  call init(v7d_locana,time_definition=time_definition)
-endif
+IF (PRESENT(v7d)) THEN
+  CALL vol7d_copy(v7d, v7d_locana)
+ELSE
+  CALL init(v7d_locana)
+ENDIF
 
 if (associated(volgrid6d_in%timerange)) ntimerange=size(volgrid6d_in%timerange)
 
@@ -2207,9 +2207,7 @@ CALL delete(grid_trans)
 CALL vol7d_dballe_set_var_du(vol7d_out)
 #endif
 
-IF (.NOT. PRESENT(v7d)) THEN
-  CALL delete(v7d_locana)
-ENDIF
+CALL delete(v7d_locana)
 
 END SUBROUTINE volgrid6d_v7d_transform
 

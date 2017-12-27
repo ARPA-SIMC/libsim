@@ -304,7 +304,9 @@ PRIVATE vol7d_get_volr, vol7d_get_vold, vol7d_get_voli, vol7d_get_volb, &
  volptr1dc, volptr2dc, volptr3dc, volptr4dc, volptr5dc, volptr6dc, volptr7dc, &
  vol7d_nullifyr, vol7d_nullifyd, vol7d_nullifyi, vol7d_nullifyb, vol7d_nullifyc, &
  vol7d_init, vol7d_delete, vol7d_write_on_file, vol7d_read_from_file, &
- vol7d_check_alloc_ana,  vol7d_check_alloc_dati, vol7d_display, dat_display,dat_vect_display, &
+ vol7d_check_alloc_ana, vol7d_force_alloc_ana, &
+ vol7d_check_alloc_dati, vol7d_force_alloc_dati, vol7d_force_alloc, &
+ vol7d_display, dat_display, dat_vect_display, &
  to_char_dat, vol7d_check
 
 PRIVATE doubledatd,doubledatr,doubledati,doubledatb,doubledatc
@@ -954,7 +956,15 @@ CALL vol7d_varvect_alloc(this%dativarattr, ndativarattrr, ndativarattrd, &
 END SUBROUTINE vol7d_alloc
 
 
-SUBROUTINE vol7d_check_alloc_ana(this, ini)
+FUNCTION vol7d_check_alloc_ana(this)
+TYPE(vol7d),INTENT(in) :: this
+LOGICAL :: vol7d_check_alloc_ana
+
+vol7d_check_alloc_ana = ASSOCIATED(this%ana) .AND. ASSOCIATED(this%network)
+
+END FUNCTION vol7d_check_alloc_ana
+
+SUBROUTINE vol7d_force_alloc_ana(this, ini)
 TYPE(vol7d),INTENT(inout) :: this
 LOGICAL,INTENT(in),OPTIONAL :: ini
 
@@ -962,23 +972,33 @@ LOGICAL,INTENT(in),OPTIONAL :: ini
 IF (.NOT. ASSOCIATED(this%ana)) CALL vol7d_alloc(this, nana=1, ini=ini)
 IF (.NOT. ASSOCIATED(this%network)) CALL vol7d_alloc(this, nnetwork=1, ini=ini)
 
-END SUBROUTINE vol7d_check_alloc_ana
+END SUBROUTINE vol7d_force_alloc_ana
 
 
-SUBROUTINE vol7d_check_alloc_dati(this, ini)
+FUNCTION vol7d_check_alloc_dati(this)
+TYPE(vol7d),INTENT(in) :: this
+LOGICAL :: vol7d_check_alloc_dati
+
+vol7d_check_alloc_dati = vol7d_check_alloc_ana(this) .AND. &
+ ASSOCIATED(this%time) .AND. ASSOCIATED(this%level) .AND. &
+ ASSOCIATED(this%timerange)
+
+END FUNCTION vol7d_check_alloc_dati
+
+SUBROUTINE vol7d_force_alloc_dati(this, ini)
 TYPE(vol7d),INTENT(inout) :: this
 LOGICAL,INTENT(in),OPTIONAL :: ini
 
 ! Alloco i descrittori minimi per avere un volume di dati
-CALL vol7d_check_alloc_ana(this, ini)
+CALL vol7d_force_alloc_ana(this, ini)
 IF (.NOT. ASSOCIATED(this%time)) CALL vol7d_alloc(this, ntime=1, ini=ini)
 IF (.NOT. ASSOCIATED(this%level)) CALL vol7d_alloc(this, nlevel=1, ini=ini)
 IF (.NOT. ASSOCIATED(this%timerange)) CALL vol7d_alloc(this, ntimerange=1, ini=ini)
 
-END SUBROUTINE vol7d_check_alloc_dati
+END SUBROUTINE vol7d_force_alloc_dati
 
 
-SUBROUTINE vol7d_check_alloc(this)
+SUBROUTINE vol7d_force_alloc(this)
 TYPE(vol7d),INTENT(inout) :: this
 
 ! If anything really not allocated yet, allocate with size 0
@@ -988,7 +1008,120 @@ IF (.NOT. ASSOCIATED(this%time)) CALL vol7d_alloc(this, ntime=0)
 IF (.NOT. ASSOCIATED(this%level)) CALL vol7d_alloc(this, nlevel=0)
 IF (.NOT. ASSOCIATED(this%timerange)) CALL vol7d_alloc(this, ntimerange=0)
 
-END SUBROUTINE vol7d_check_alloc
+END SUBROUTINE vol7d_force_alloc
+
+
+FUNCTION vol7d_check_vol(this)
+TYPE(vol7d),INTENT(in) :: this !< oggetto da controllare
+LOGICAL :: vol7d_check_vol
+
+vol7d_check_vol = c_e(this)
+
+! Anagrafica
+IF (ASSOCIATED(this%anavar%r) .AND. .NOT.ASSOCIATED(this%volanar)) THEN
+  vol7d_check_vol = .FALSE.
+ENDIF
+
+IF (ASSOCIATED(this%anavar%d) .AND. .NOT.ASSOCIATED(this%volanad)) THEN
+  vol7d_check_vol = .FALSE.
+ENDIF
+
+IF (ASSOCIATED(this%anavar%i) .AND. .NOT.ASSOCIATED(this%volanai)) THEN
+  vol7d_check_vol = .FALSE.
+ENDIF
+
+IF (ASSOCIATED(this%anavar%b) .AND. .NOT.ASSOCIATED(this%volanab)) THEN
+  vol7d_check_vol = .FALSE.
+ENDIF
+
+IF (ASSOCIATED(this%anavar%c) .AND. .NOT.ASSOCIATED(this%volanac)) THEN
+  vol7d_check_vol = .FALSE.
+ENDIF
+IF (ASSOCIATED(this%anavar%r) .OR. ASSOCIATED(this%anavar%d) .OR. &
+ ASSOCIATED(this%anavar%i) .OR. ASSOCIATED(this%anavar%b) .OR. &
+ ASSOCIATED(this%anavar%c)) THEN
+  vol7d_check_vol = vol7d_check_vol .AND. vol7d_check_alloc_ana(this)
+ENDIF
+
+! Attributi dell'anagrafica
+IF (ASSOCIATED(this%anaattr%r) .AND. ASSOCIATED(this%anavarattr%r) .AND. &
+ .NOT.ASSOCIATED(this%volanaattrr)) THEN
+  vol7d_check_vol = .FALSE.
+ENDIF
+
+IF (ASSOCIATED(this%anaattr%d) .AND. ASSOCIATED(this%anavarattr%d) .AND. &
+ .NOT.ASSOCIATED(this%volanaattrd)) THEN
+  vol7d_check_vol = .FALSE.
+ENDIF
+
+IF (ASSOCIATED(this%anaattr%i) .AND. ASSOCIATED(this%anavarattr%i) .AND. &
+ .NOT.ASSOCIATED(this%volanaattri)) THEN
+  vol7d_check_vol = .FALSE.
+ENDIF
+
+IF (ASSOCIATED(this%anaattr%b) .AND. ASSOCIATED(this%anavarattr%b) .AND. &
+ .NOT.ASSOCIATED(this%volanaattrb)) THEN
+  vol7d_check_vol = .FALSE.
+ENDIF
+
+IF (ASSOCIATED(this%anaattr%c) .AND. ASSOCIATED(this%anavarattr%c) .AND. &
+ .NOT.ASSOCIATED(this%volanaattrc)) THEN
+  vol7d_check_vol = .FALSE.
+ENDIF
+
+! Dati
+IF (ASSOCIATED(this%dativar%r) .AND. .NOT.ASSOCIATED(this%voldatir)) THEN
+  vol7d_check_vol = .FALSE.
+ENDIF
+
+IF (ASSOCIATED(this%dativar%d) .AND. .NOT.ASSOCIATED(this%voldatid)) THEN
+  vol7d_check_vol = .FALSE.
+ENDIF
+
+IF (ASSOCIATED(this%dativar%i) .AND. .NOT.ASSOCIATED(this%voldatii)) THEN
+  vol7d_check_vol = .FALSE.
+ENDIF
+
+IF (ASSOCIATED(this%dativar%b) .AND. .NOT.ASSOCIATED(this%voldatib)) THEN
+  vol7d_check_vol = .FALSE.
+ENDIF
+
+IF (ASSOCIATED(this%dativar%c) .AND. .NOT.ASSOCIATED(this%voldatic)) THEN
+  vol7d_check_vol = .FALSE.
+ENDIF
+
+! Attributi dei dati
+IF (ASSOCIATED(this%datiattr%r) .AND. ASSOCIATED(this%dativarattr%r) .AND. &
+ .NOT.ASSOCIATED(this%voldatiattrr)) THEN
+  vol7d_check_vol = .FALSE.
+ENDIF
+
+IF (ASSOCIATED(this%datiattr%d) .AND. ASSOCIATED(this%dativarattr%d) .AND. &
+ .NOT.ASSOCIATED(this%voldatiattrd)) THEN
+  vol7d_check_vol = .FALSE.
+ENDIF
+
+IF (ASSOCIATED(this%datiattr%i) .AND. ASSOCIATED(this%dativarattr%i) .AND. &
+ .NOT.ASSOCIATED(this%voldatiattri)) THEN
+  vol7d_check_vol = .FALSE.
+ENDIF
+
+IF (ASSOCIATED(this%datiattr%b) .AND. ASSOCIATED(this%dativarattr%b) .AND. &
+ .NOT.ASSOCIATED(this%voldatiattrb)) THEN
+  vol7d_check_vol = .FALSE.
+ENDIF
+
+IF (ASSOCIATED(this%datiattr%c) .AND. ASSOCIATED(this%dativarattr%c) .AND. &
+ .NOT.ASSOCIATED(this%voldatiattrc)) THEN
+  vol7d_check_vol = .FALSE.
+ENDIF
+IF (ASSOCIATED(this%dativar%r) .OR. ASSOCIATED(this%dativar%d) .OR. &
+ ASSOCIATED(this%dativar%i) .OR. ASSOCIATED(this%dativar%b) .OR. &
+ ASSOCIATED(this%dativar%c)) THEN
+  vol7d_check_vol = vol7d_check_vol .AND. vol7d_check_alloc_dati(this)
+ENDIF
+
+END FUNCTION vol7d_check_vol
 
 
 !> Metodo per allocare i volumi richiesti di variabili e attributi per
@@ -1020,31 +1153,31 @@ ENDIF
 
 ! Anagrafica
 IF (ASSOCIATED(this%anavar%r) .AND. .NOT.ASSOCIATED(this%volanar)) THEN
-  CALL vol7d_check_alloc_ana(this, ini)
+  CALL vol7d_force_alloc_ana(this, ini)
   ALLOCATE(this%volanar(SIZE(this%ana), SIZE(this%anavar%r), SIZE(this%network)))
   IF (linivol) this%volanar(:,:,:) = rmiss
 ENDIF
 
 IF (ASSOCIATED(this%anavar%d) .AND. .NOT.ASSOCIATED(this%volanad)) THEN
-  CALL vol7d_check_alloc_ana(this, ini)
+  CALL vol7d_force_alloc_ana(this, ini)
   ALLOCATE(this%volanad(SIZE(this%ana), SIZE(this%anavar%d), SIZE(this%network)))
   IF (linivol) this%volanad(:,:,:) = rdmiss
 ENDIF
 
 IF (ASSOCIATED(this%anavar%i) .AND. .NOT.ASSOCIATED(this%volanai)) THEN
-  CALL vol7d_check_alloc_ana(this, ini)
+  CALL vol7d_force_alloc_ana(this, ini)
   ALLOCATE(this%volanai(SIZE(this%ana), SIZE(this%anavar%i), SIZE(this%network)))
   IF (linivol) this%volanai(:,:,:) = imiss
 ENDIF
 
 IF (ASSOCIATED(this%anavar%b) .AND. .NOT.ASSOCIATED(this%volanab)) THEN
-  CALL vol7d_check_alloc_ana(this, ini)
+  CALL vol7d_force_alloc_ana(this, ini)
   ALLOCATE(this%volanab(SIZE(this%ana), SIZE(this%anavar%b), SIZE(this%network)))
   IF (linivol) this%volanab(:,:,:) = ibmiss
 ENDIF
 
 IF (ASSOCIATED(this%anavar%c) .AND. .NOT.ASSOCIATED(this%volanac)) THEN
-  CALL vol7d_check_alloc_ana(this, ini)
+  CALL vol7d_force_alloc_ana(this, ini)
   ALLOCATE(this%volanac(SIZE(this%ana), SIZE(this%anavar%c), SIZE(this%network)))
   IF (linivol) this%volanac(:,:,:) = cmiss
 ENDIF
@@ -1052,7 +1185,7 @@ ENDIF
 ! Attributi dell'anagrafica
 IF (ASSOCIATED(this%anaattr%r) .AND. ASSOCIATED(this%anavarattr%r) .AND. &
  .NOT.ASSOCIATED(this%volanaattrr)) THEN
-  CALL vol7d_check_alloc_ana(this, ini)
+  CALL vol7d_force_alloc_ana(this, ini)
   ALLOCATE(this%volanaattrr(SIZE(this%ana), SIZE(this%anavarattr%r), &
    SIZE(this%network), SIZE(this%anaattr%r)))
   IF (linivol) this%volanaattrr(:,:,:,:) = rmiss
@@ -1060,7 +1193,7 @@ ENDIF
 
 IF (ASSOCIATED(this%anaattr%d) .AND. ASSOCIATED(this%anavarattr%d) .AND. &
  .NOT.ASSOCIATED(this%volanaattrd)) THEN
-  CALL vol7d_check_alloc_ana(this, ini)
+  CALL vol7d_force_alloc_ana(this, ini)
   ALLOCATE(this%volanaattrd(SIZE(this%ana), SIZE(this%anavarattr%d), &
    SIZE(this%network), SIZE(this%anaattr%d)))
   IF (linivol) this%volanaattrd(:,:,:,:) = rdmiss
@@ -1068,7 +1201,7 @@ ENDIF
 
 IF (ASSOCIATED(this%anaattr%i) .AND. ASSOCIATED(this%anavarattr%i) .AND. &
  .NOT.ASSOCIATED(this%volanaattri)) THEN
-  CALL vol7d_check_alloc_ana(this, ini)
+  CALL vol7d_force_alloc_ana(this, ini)
   ALLOCATE(this%volanaattri(SIZE(this%ana), SIZE(this%anavarattr%i), &
    SIZE(this%network), SIZE(this%anaattr%i)))
   IF (linivol) this%volanaattri(:,:,:,:) = imiss
@@ -1076,7 +1209,7 @@ ENDIF
 
 IF (ASSOCIATED(this%anaattr%b) .AND. ASSOCIATED(this%anavarattr%b) .AND. &
  .NOT.ASSOCIATED(this%volanaattrb)) THEN
-  CALL vol7d_check_alloc_ana(this, ini)
+  CALL vol7d_force_alloc_ana(this, ini)
   ALLOCATE(this%volanaattrb(SIZE(this%ana), SIZE(this%anavarattr%b), &
    SIZE(this%network), SIZE(this%anaattr%b)))
   IF (linivol) this%volanaattrb(:,:,:,:) = ibmiss
@@ -1084,7 +1217,7 @@ ENDIF
 
 IF (ASSOCIATED(this%anaattr%c) .AND. ASSOCIATED(this%anavarattr%c) .AND. &
  .NOT.ASSOCIATED(this%volanaattrc)) THEN
-  CALL vol7d_check_alloc_ana(this, ini)
+  CALL vol7d_force_alloc_ana(this, ini)
   ALLOCATE(this%volanaattrc(SIZE(this%ana), SIZE(this%anavarattr%c), &
    SIZE(this%network), SIZE(this%anaattr%c)))
   IF (linivol) this%volanaattrc(:,:,:,:) = cmiss
@@ -1092,35 +1225,35 @@ ENDIF
 
 ! Dati
 IF (ASSOCIATED(this%dativar%r) .AND. .NOT.ASSOCIATED(this%voldatir)) THEN
-  CALL vol7d_check_alloc_dati(this, ini)
+  CALL vol7d_force_alloc_dati(this, ini)
   ALLOCATE(this%voldatir(SIZE(this%ana), SIZE(this%time), SIZE(this%level), &
    SIZE(this%timerange), SIZE(this%dativar%r), SIZE(this%network)))
   IF (linivol) this%voldatir(:,:,:,:,:,:) = rmiss
 ENDIF
 
 IF (ASSOCIATED(this%dativar%d) .AND. .NOT.ASSOCIATED(this%voldatid)) THEN
-  CALL vol7d_check_alloc_dati(this, ini)
+  CALL vol7d_force_alloc_dati(this, ini)
   ALLOCATE(this%voldatid(SIZE(this%ana), SIZE(this%time), SIZE(this%level), &
    SIZE(this%timerange), SIZE(this%dativar%d), SIZE(this%network)))
   IF (linivol) this%voldatid(:,:,:,:,:,:) = rdmiss
 ENDIF
 
 IF (ASSOCIATED(this%dativar%i) .AND. .NOT.ASSOCIATED(this%voldatii)) THEN
-  CALL vol7d_check_alloc_dati(this, ini)
+  CALL vol7d_force_alloc_dati(this, ini)
   ALLOCATE(this%voldatii(SIZE(this%ana), SIZE(this%time), SIZE(this%level), &
    SIZE(this%timerange), SIZE(this%dativar%i), SIZE(this%network)))
   IF (linivol) this%voldatii(:,:,:,:,:,:) = imiss
 ENDIF
 
 IF (ASSOCIATED(this%dativar%b) .AND. .NOT.ASSOCIATED(this%voldatib)) THEN
-  CALL vol7d_check_alloc_dati(this, ini)
+  CALL vol7d_force_alloc_dati(this, ini)
   ALLOCATE(this%voldatib(SIZE(this%ana), SIZE(this%time), SIZE(this%level), &
    SIZE(this%timerange), SIZE(this%dativar%b), SIZE(this%network)))
   IF (linivol) this%voldatib(:,:,:,:,:,:) = ibmiss
 ENDIF
 
 IF (ASSOCIATED(this%dativar%c) .AND. .NOT.ASSOCIATED(this%voldatic)) THEN
-  CALL vol7d_check_alloc_dati(this, ini)
+  CALL vol7d_force_alloc_dati(this, ini)
   ALLOCATE(this%voldatic(SIZE(this%ana), SIZE(this%time), SIZE(this%level), &
    SIZE(this%timerange), SIZE(this%dativar%c), SIZE(this%network)))
   IF (linivol) this%voldatic(:,:,:,:,:,:) = cmiss
@@ -1129,7 +1262,7 @@ ENDIF
 ! Attributi dei dati
 IF (ASSOCIATED(this%datiattr%r) .AND. ASSOCIATED(this%dativarattr%r) .AND. &
  .NOT.ASSOCIATED(this%voldatiattrr)) THEN
-  CALL vol7d_check_alloc_dati(this, ini)
+  CALL vol7d_force_alloc_dati(this, ini)
   ALLOCATE(this%voldatiattrr(SIZE(this%ana), SIZE(this%time), SIZE(this%level), &
    SIZE(this%timerange), SIZE(this%dativarattr%r), SIZE(this%network), &
    SIZE(this%datiattr%r)))
@@ -1138,7 +1271,7 @@ ENDIF
 
 IF (ASSOCIATED(this%datiattr%d) .AND. ASSOCIATED(this%dativarattr%d) .AND. &
  .NOT.ASSOCIATED(this%voldatiattrd)) THEN
-  CALL vol7d_check_alloc_dati(this, ini)
+  CALL vol7d_force_alloc_dati(this, ini)
   ALLOCATE(this%voldatiattrd(SIZE(this%ana), SIZE(this%time), SIZE(this%level), &
    SIZE(this%timerange), SIZE(this%dativarattr%d), SIZE(this%network), &
    SIZE(this%datiattr%d)))
@@ -1147,7 +1280,7 @@ ENDIF
 
 IF (ASSOCIATED(this%datiattr%i) .AND. ASSOCIATED(this%dativarattr%i) .AND. &
  .NOT.ASSOCIATED(this%voldatiattri)) THEN
-  CALL vol7d_check_alloc_dati(this, ini)
+  CALL vol7d_force_alloc_dati(this, ini)
   ALLOCATE(this%voldatiattri(SIZE(this%ana), SIZE(this%time), SIZE(this%level), &
    SIZE(this%timerange), SIZE(this%dativarattr%i), SIZE(this%network), &
    SIZE(this%datiattr%i)))
@@ -1156,7 +1289,7 @@ ENDIF
 
 IF (ASSOCIATED(this%datiattr%b) .AND. ASSOCIATED(this%dativarattr%b) .AND. &
  .NOT.ASSOCIATED(this%voldatiattrb)) THEN
-  CALL vol7d_check_alloc_dati(this, ini)
+  CALL vol7d_force_alloc_dati(this, ini)
   ALLOCATE(this%voldatiattrb(SIZE(this%ana), SIZE(this%time), SIZE(this%level), &
    SIZE(this%timerange), SIZE(this%dativarattr%b), SIZE(this%network), &
    SIZE(this%datiattr%b)))
@@ -1165,7 +1298,7 @@ ENDIF
 
 IF (ASSOCIATED(this%datiattr%c) .AND. ASSOCIATED(this%dativarattr%c) .AND. &
  .NOT.ASSOCIATED(this%voldatiattrc)) THEN
-  CALL vol7d_check_alloc_dati(this, ini)
+  CALL vol7d_force_alloc_dati(this, ini)
   ALLOCATE(this%voldatiattrc(SIZE(this%ana), SIZE(this%time), SIZE(this%level), &
    SIZE(this%timerange), SIZE(this%dativarattr%c), SIZE(this%network), &
    SIZE(this%datiattr%c)))
@@ -1173,7 +1306,7 @@ IF (ASSOCIATED(this%datiattr%c) .AND. ASSOCIATED(this%dativarattr%c) .AND. &
 ENDIF
 
 ! Catch-all method
-CALL vol7d_check_alloc(this)
+CALL vol7d_force_alloc(this)
 
 ! Creo gli indici var-attr
 
@@ -1447,7 +1580,7 @@ END SUBROUTINE vol7d_merge
 SUBROUTINE vol7d_append(this, that, sort, bestdata, &
  ltimesimple, ltimerangesimple, llevelsimple, lanasimple, lnetworksimple)
 TYPE(vol7d),INTENT(INOUT) :: this !< primo oggetto in ingresso, a cui sarà accodato il secondo
-TYPE(vol7d),INTENT(INOUT) :: that !< secondo oggetto in ingresso, non viene modificato dal metodo
+TYPE(vol7d),INTENT(IN) :: that !< secondo oggetto in ingresso, non viene modificato dal metodo
 LOGICAL,INTENT(IN),OPTIONAL :: sort !< se fornito e uguale a \c .TRUE., i descrittori che supportano un ordinamento (operatori > e/o <) risulteranno ordinati in ordine crescente nell'oggetto finale
 ! experimental, please do not use outside the library now, they force the use
 ! of a simplified mapping algorithm which is valid only whene the dimension
@@ -1462,6 +1595,7 @@ INTEGER,POINTER :: remapt1(:), remapt2(:), remaptr1(:), remaptr2(:), &
  remapl1(:), remapl2(:), remapa1(:), remapa2(:), remapn1(:), remapn2(:)
 
 IF (.NOT.c_e(that)) RETURN ! speedup, nothing to do
+IF (.NOT.vol7d_check_vol(that)) RETURN ! be safe
 IF (.NOT.c_e(this)) THEN ! this case is like a vol7d_copy, more efficient to copy?
   CALL vol7d_copy(that, this, sort=sort)
   RETURN
@@ -1476,7 +1610,6 @@ ENDIF
 
 ! Completo l'allocazione per avere volumi a norma
 CALL vol7d_alloc_vol(this)
-CALL vol7d_alloc_vol(that)
 
 CALL init(v7dtmp, time_definition=this%time_definition)
 CALL optio(sort, lsort)
@@ -1599,7 +1732,7 @@ SUBROUTINE vol7d_copy(this, that, sort, unique, miss, &
  ldativarr, ldativard, ldativari, ldativarb, ldativarc, &
  ldatiattrr, ldatiattrd, ldatiattri, ldatiattrb, ldatiattrc, &
  ldativarattrr, ldativarattrd, ldativarattri, ldativarattrb, ldativarattrc)
-TYPE(vol7d),INTENT(INOUT) :: this !< oggetto origine
+TYPE(vol7d),INTENT(IN) :: this !< oggetto origine
 TYPE(vol7d),INTENT(INOUT) :: that !< oggetto destinazione
 LOGICAL,INTENT(IN),OPTIONAL :: sort !< if present and \a .TRUE., sort all the sortable dimensions
 LOGICAL,INTENT(IN),OPTIONAL :: unique !< se fornito e uguale a \c .TRUE., gli eventuali elementi duplicati nei descrittori dell'oggetto iniziale verranno collassati in un unico elemento (con eventuale perdita dei dati relativi agli elementi duplicati)
@@ -1637,7 +1770,7 @@ INTEGER,POINTER :: remapt(:), remaptr(:), remapl(:), remapa(:), remapn(:)
 
 CALL init(that)
 IF (.NOT.c_e(this)) RETURN ! speedup, nothing to do
-CALL vol7d_alloc_vol(this) ! be safe
+IF (.NOT.vol7d_check_vol(this)) RETURN ! be safe
 
 CALL optio(sort, lsort)
 CALL optio(unique, lunique)
@@ -1835,7 +1968,7 @@ END SUBROUTINE vol7d_smart_sort
 !! I dati di anagrafica al momento non sono convertiti.
 !! Anche gli attributi di anagrafica e dati non sono toccati.
 SUBROUTINE vol7d_convr(this, that)
-TYPE(vol7d),INTENT(INOUT) :: this !< oggetto origine
+TYPE(vol7d),INTENT(IN) :: this !< oggetto origine
 TYPE(vol7d),INTENT(INOUT) :: that !< oggetto convertito
 LOGICAL :: anaconv ! dovra` diventare un parametro
 INTEGER :: i
@@ -2769,10 +2902,10 @@ IF (indvar > 0) THEN
   CASE("c")
     vol = realdat(this%volanac(:,indvar,:), var)
   CASE default
-    vol = imiss
+    vol = rmiss
   END SELECT
 ELSE
-  vol = imiss
+  vol = rmiss
 ENDIF
 
 END FUNCTION realanavol

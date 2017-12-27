@@ -18,7 +18,8 @@
 SUBROUTINE vol7d_merge_final/**/VOL7D_POLY_TYPES(this, that, v7dtmp, &
  remapa1, remapa2, remapt1, remapt2, remapl1, remapl2, &
  remaptr1, remaptr2, remapn1, remapn2, bestdata)
-TYPE(vol7d),INTENT(inout) :: this, that
+TYPE(vol7d),INTENT(inout) :: this
+TYPE(vol7d),INTENT(in) :: that
 TYPE(vol7d),INTENT(inout) :: v7dtmp
 INTEGER,INTENT(in) :: remapa1(:), remapa2(:), remapt1(:), remapt2(:), &
  remapl1(:), remapl2(:), remaptr1(:), remaptr2(:), remapn1(:), remapn2(:)
@@ -178,7 +179,8 @@ END SUBROUTINE vol7d_merge_final/**/VOL7D_POLY_TYPES
 SUBROUTINE vol7d_reform_final/**/VOL7D_POLY_TYPES(this, v7dtmp, &
  remapa, remapt, remapl, remaptr, remapn, sort, unique, miss, &
 lanavar, lanaattr, lanavarattr, ldativar, ldatiattr, ldativarattr)
-TYPE(vol7d),INTENT(inout) :: this, v7dtmp
+TYPE(vol7d),INTENT(in) :: this
+TYPE(vol7d),INTENT(inout) :: v7dtmp
 INTEGER,INTENT(in) :: remapa(:), remapt(:), remapl(:), remaptr(:), remapn(:)
 LOGICAL,INTENT(in) :: sort, unique, miss
 LOGICAL,INTENT(in),OPTIONAL :: lanavar(:), lanaattr(:), lanavarattr(:), &
