@@ -38,6 +38,7 @@ subroutine register_termo(vfn)
   call fnregister(vfn,r_p_t2q_def())
   call fnregister(vfn,swgwmo2swgsim_def())
   call fnregister(vfn,swgsim2swgwmo_def())
+  call fnregister(vfn,rh_t_td_p2vis_def())
 
 end subroutine register_termo
 
@@ -544,6 +545,26 @@ CALL init(h_z_def,"h_z", &
  [CHARACTER(len=10) :: "B10007"],0,func=h_z)
 END FUNCTION h_z_def
 
+
+SUBROUTINE rh_t_td_p2vis(mybin,mybout,bin,bout,in,out)
+CHARACTER(len=10),INTENT(in) :: mybin(:)  !< vector table B  WMO input  in user's data
+CHARACTER(len=10),INTENT(in) :: mybout(:) !< vector table B  WMO output in user's data
+CHARACTER(len=10),INTENT(in) :: bin(:)    !< vector table B  WMO input used by function
+CHARACTER(len=10),INTENT(in) :: bout(:)   !< vector table B  WMO output used by function
+REAL, INTENT(in) :: in(:,:)
+REAL, INTENT(out) :: out(:,:)
+
+out(:,index_c(mybout,bout(1))) = vis_boudala( &
+ in(:,index_c(mybin,bin(1))), in(:,index_c(mybin,bin(2))), &
+ in(:,index_c(mybin,bin(3))))
+
+END SUBROUTINE rh_t_td_p2vis
+
+TYPE(fnds) FUNCTION rh_t_td_p2vis_def()
+CALL init(rh_t_td_p2vis_def,"rh_t_td_p2vis", &
+ [CHARACTER(len=10) :: "B13003","B12101","B12103"], &
+ [CHARACTER(len=10) :: "B20001"],0,func=rh_t_td_p2vis)
+END FUNCTION rh_t_td_p2vis_def
 
 
 end module termo

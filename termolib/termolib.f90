@@ -15,7 +15,7 @@
 
 ! You should have received a copy of the GNU General Public License
 ! along with this program.  If not, see <http://www.gnu.org/licenses/>.
-module termolib
+MODULE termolib
 
 
 use missing_values
@@ -2688,6 +2688,30 @@ ELSE
 ENDIF
 
 END FUNCTION omega_simple
+
+!> Compute visibility with the Boudala method.
+!! Requires redundant information RH and T/Td. Visibility in m.
+ELEMENTAL REAL FUNCTION vis_boudala(rh, t, td)
+REAL,INTENT(in) :: rh !< Relative humidity (%)
+REAL,INTENT(in) :: t !< Temperature (K)
+REAL,INTENT(in) :: td !< Dew point temperature (K)
+
+REAL,PARAMETER :: maxvis=30000., l5=LOG(0.05)*1000.
+REAL :: beta, phi
+
+IF (c_e(rh) .AND. c_e(t) .AND. c_e(td)) THEN
+  IF (rh > 95.) THEN
+    phi = LOG(ABS(1./(LOG(MIN(td/t, 0.9998)))))
+    beta = EXP(-5.605+0.0114*rh*phi) ! sigma in Boudala 2009 (km**-1)
+    vis_boudala = -l5/beta
+  ELSE
+    vis_boudala = maxvis
+  ENDIF
+ELSE
+  vis_boudala = rmiss
+ENDIF
+
+END FUNCTION vis_boudala
 
 
 end module termolib
