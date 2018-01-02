@@ -236,8 +236,12 @@ CHARACTER(len=*),INTENT(in),OPTIONAL :: categoryappend !< append this suffix to 
 
 CHARACTER(len=512) :: a_name
 
-CALL l4f_launcher(a_name,a_name_append=TRIM(subcategory)//"."// &
- TRIM(optio_c(categoryappend,255)))
+IF (PRESENT(categoryappend)) THEN
+  CALL l4f_launcher(a_name,a_name_append=TRIM(subcategory)//"."// &
+   TRIM(categoryappend))
+ELSE
+  CALL l4f_launcher(a_name,a_name_append=TRIM(subcategory))
+ENDIF
 this%category=l4f_category_get(a_name)
 
 ! geographical projection

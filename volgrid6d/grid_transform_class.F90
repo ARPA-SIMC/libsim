@@ -383,7 +383,12 @@ character(len=*),INTENT(in),OPTIONAL :: categoryappend !< suffix to append to lo
 
 character(len=512) :: a_name
 
-call l4f_launcher(a_name,a_name_append=trim(subcategory)//"."//trim(optio_c(categoryappend,255)))
+IF (PRESENT(categoryappend)) THEN
+  CALL l4f_launcher(a_name,a_name_append=TRIM(subcategory)//"."// &
+   TRIM(categoryappend))
+ELSE
+  CALL l4f_launcher(a_name,a_name_append=TRIM(subcategory))
+ENDIF
 this%category=l4f_category_get(a_name)
 
 this%trans_type = trans_type
@@ -2435,9 +2440,12 @@ CHARACTER(len=*),INTENT(in),OPTIONAL :: categoryappend
 
 CHARACTER(len=512) :: a_name
 
-
-CALL l4f_launcher(a_name, a_name_append= &
- TRIM(subcategory)//"."//TRIM(optio_c(categoryappend,255)))
+IF (PRESENT(categoryappend)) THEN
+  CALL l4f_launcher(a_name,a_name_append=TRIM(subcategory)//"."// &
+   TRIM(categoryappend))
+ELSE
+  CALL l4f_launcher(a_name,a_name_append=TRIM(subcategory))
+ENDIF
 this%category=l4f_category_get(a_name)
 
 #ifdef DEBUG
