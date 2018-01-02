@@ -294,7 +294,12 @@ CALL copy(this%grid%grid, that%grid%grid)
 CALL copy(this%dim, that%dim)
 
 ! new category
-call l4f_launcher(a_name,a_name_append=trim(subcategory)//"."//trim(optio_c(categoryappend,255)))
+IF (PRESENT(categoryappend)) THEN
+  CALL l4f_launcher(a_name,a_name_append=TRIM(subcategory)//"."// &
+   TRIM(categoryappend))
+ELSE
+  CALL l4f_launcher(a_name,a_name_append=TRIM(subcategory))
+ENDIF
 that%category=l4f_category_get(a_name)
 
 END SUBROUTINE griddim_copy
