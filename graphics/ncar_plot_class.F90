@@ -1373,7 +1373,7 @@ end if
 
 ! draw addon var
 if (present (acolor))then
-  call set_color(trim(optio_c(acolor,40)))
+  call set_color(trim(acolor))
 else
   call set_color("orange")
 end if
@@ -1410,7 +1410,7 @@ end if
 
 ! disegno la temperatura
 if (present (tcolor))then
-  call set_color(trim(optio_c(tcolor,40)))
+  call set_color(trim(tcolor))
 else
   call set_color("blue")
 end if
@@ -1431,7 +1431,7 @@ end if
 ! disegno la TD
 
 if (present (tdcolor))then
-  call set_color(trim(optio_c(tdcolor,40)))
+  call set_color(trim(tdcolor))
 else
   call set_color("sky blue")
 end if
@@ -1454,7 +1454,7 @@ end if
 
 ! disegno  umidita relativa
 if (present (ucolor))then
-  call set_color(trim(optio_c(ucolor,40)))
+  call set_color(trim(ucolor))
 else
   call set_color("ever-green1")
 end if
@@ -1497,7 +1497,7 @@ call gtx ( xx(1),yy(2),'wind')
 ! simbologia synottica
 
 if (present (wcolor))then
-  color=trim(optio_c(wcolor,40))
+  color=wcolor
 else
   color="foreground"
 end if
