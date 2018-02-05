@@ -756,6 +756,7 @@ ELSE ! run in salsiccia (serial) mode
     field(:,:,1) = decode_gridinfo(gridinfo)
 
     IF (trans_type /= 'none') THEN ! transform
+! common optimisation, recompute grid_trans only when grid changes
       IF (griddim_cache /= gridinfo%griddim) THEN ! do not use cached grid_trans
         CALL delete(grid_trans)
         CALL init(grid_trans, trans, in=gridinfo%griddim, out=griddim_out, &

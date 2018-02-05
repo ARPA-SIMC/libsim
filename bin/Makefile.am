@@ -3,7 +3,7 @@ AM_FCFLAGS = -I../base -I../volgrid6d -I../vol7d -I../qc -I../termolib -I../log4
 bin_PROGRAMS =
 dist_check_SCRIPTS = 
 check_PROGRAMS = 
-
+dist_bin_SCRIPTS =
 
 if NCARG
 bin_PROGRAMS += v7d_plot_sound
@@ -103,9 +103,10 @@ vg6d_transform_LDADD += ../alchimia/libsim_alchimia.la ../termolib/libsim_termol
 endif
 
 if GRIBAPI
-bin_PROGRAMS += vg6d_subarea
-vg6d_subarea_SOURCES = vg6d_subarea.F90
-vg6d_subarea_LDADD = ../volgrid6d/libsim_volgrid6d.la ../base/libsim_base.la ../vol7d/libsim_vol7d.la ../log4fortran/liblog4fortran.la
+dist_bin_SCRIPTS += vg6d_subarea
+#bin_PROGRAMS += vg6d_subarea
+#vg6d_subarea_SOURCES = vg6d_subarea.F90
+#vg6d_subarea_LDADD = ../volgrid6d/libsim_volgrid6d.la ../base/libsim_base.la ../vol7d/libsim_vol7d.la ../log4fortran/liblog4fortran.la
 endif
 
 # improve
@@ -120,9 +121,9 @@ TESTS = $(check_PROGRAMS) $(dist_check_SCRIPTS)
 if HELP2MAN
 man_MANS = v7d_transform.1 v7d_add_wmo_info.1 vg6d_getpoint.1 vg6d_transform.1
 
-if GRIBAPI
-man_MANS += vg6d_subarea.1
-endif
+#if GRIBAPI
+#man_MANS += vg6d_subarea.1
+#endif
 if NCARG
 man_MANS += v7d_plot_sound.1
 endif

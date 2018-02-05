@@ -1,0 +1,12 @@
+#!/bin/sh
+
+echo "*************************************************************" >&2
+echo "Warning vg6d_subarea is obsolete and it will be soon removed!" >&2
+echo "Please use vg6d_transform --trans-mode=s instead." >&2
+echo "*************************************************************" >&2
+pref=`dirname $0`
+[ -n "$pref" ] && pref="$pref/"
+
+echo "Executing: ${pref}vg6d_transform --trans-mode=s $@" >&2
+
+exec ${pref}vg6d_transform --trans-mode=s "$@"

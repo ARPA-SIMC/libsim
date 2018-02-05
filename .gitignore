@@ -34,7 +34,6 @@ bin/v7d_qcspa
 bin/v7d_qctem
 bin/v7d_transform
 bin/vg6d_getpoint
-bin/vg6d_subarea
 bin/vg6d_transform
 doc/Doxyfile
 doc/latex/
