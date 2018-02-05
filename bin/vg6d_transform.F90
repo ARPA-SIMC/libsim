@@ -59,8 +59,8 @@ REAL,ALLOCATABLE :: maskfield(:,:)
 DOUBLE PRECISION :: ilon, ilat, flon, flat, radius, percentile
 TYPE(arrayof_real) :: maskbounds
 
-type(griddim_def) :: griddim_out
-type(transform_def) :: trans
+TYPE(griddim_def) :: griddim_out, griddim_cache
+TYPE(transform_def) :: trans
 
 INTEGER :: nx,ny,component_flag,npx,npy,dup_mode,set_component_flag
 doubleprecision :: xmin, xmax, ymin, ymax, xoff, yoff
@@ -736,6 +736,7 @@ ELSE ! run in salsiccia (serial) mode
 
   ifile = grid_file_id_new(input_file,'r')
   ofile = grid_file_id_new(output_file,'w')
+  CALL init(griddim_cache)
 
   DO WHILE (.TRUE.)
     input_grid_id = grid_id_new(ifile)
@@ -755,15 +756,19 @@ ELSE ! run in salsiccia (serial) mode
     field(:,:,1) = decode_gridinfo(gridinfo)
 
     IF (trans_type /= 'none') THEN ! transform
-      CALL init(grid_trans, trans, in=gridinfo%griddim, out=griddim_out, &
-       categoryappend="gridtransformed")
+      IF (griddim_cache /= gridinfo%griddim) THEN ! do not use cached grid_trans
+        CALL delete(grid_trans)
+        CALL init(grid_trans, trans, in=gridinfo%griddim, out=griddim_out, &
+         categoryappend="gridtransformed")
+        griddim_cache = gridinfo%griddim
+      ENDIF
+
       IF (ldisplay) THEN
         CALL display(griddim_out)
       ENDIF
 
       ALLOCATE (fieldz(griddim_out%dim%nx,griddim_out%dim%ny,1))
       CALL compute(grid_trans, field, fieldz)
-      CALL delete(grid_trans)
       CALL delete(gridinfo%griddim)
       CALL copy(griddim_out, gridinfo%griddim, categoryappend="cloned")
 
@@ -806,6 +811,7 @@ ELSE ! run in salsiccia (serial) mode
 
   ENDDO
 
+  CALL delete(grid_trans)
   CALL delete(ifile)
   CALL delete(ofile)
 
