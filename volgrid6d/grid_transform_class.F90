@@ -64,8 +64,12 @@
 !!    (grid-to-grid)
 !!    - sub_type='average' the function used is the average.
 !!    - sub_type='stddev' the function used is the standard deviation.
+!!    - sub_type='stddevnm1' the function used is the standard
+!!      deviation computed with n-1.
 !!    - sub_type='max' the function used is the maximum
 !!    - sub_type='min' the function used is the minimum
+!!    - sub_type='percentile' the function used is a requested
+!!      percentile of the input points distribution.
 !!
 !!  - trans_type='inter' interpolates the input data on a new set of
 !!    specified points
@@ -87,6 +91,8 @@
 !!    (grid-to-grid and sparse points-to-grid)
 !!    - sub_type='average' the function used is the average
 !!    - sub_type='stddev' the function used is the standard deviation.
+!!    - sub_type='stddevnm1' the function used is the standard
+!!      deviation computed with n-1.
 !!    - sub_type='max' the function used is the maximum
 !!    - sub_type='min' the function used is the minimum
 !!    - sub_type='percentile' the function used is a requested
@@ -116,6 +122,9 @@
 !!    radius in input grid point units; stencils can overlap each
 !!    other (grid-to-grid and grid-to-sparse points)
 !!    - sub_type='average' the function used is the average
+!!    - sub_type='stddev' the function used is the standard deviation.
+!!    - sub_type='stddevnm1' the function used is the standard
+!!      deviation computed with n-1.
 !!    - sub_type='max' the function used is the maximum
 !!    - sub_type='min' the function used is the minimum
 !!    - sub_type='percentile' the function used is a requested
@@ -133,6 +142,8 @@
 !!    subareas (grid-to-sparse points)
 !!    - sub_type='average' the function used is the average
 !!    - sub_type='stddev' the function used is the standard deviation.
+!!    - sub_type='stddevnm1' the function used is the standard
+!!      deviation computed with n-1.
 !!    - sub_type='max' the function used is the maximum
 !!    - sub_type='min' the function used is the minimum
 !!    - sub_type='percentile' the function used is a requested
@@ -512,33 +523,6 @@ IF (this%trans_type == 'zoom') THEN
     RETURN
   END IF
 
-ELSE IF (this%trans_type == 'boxregrid') THEN
-
-  IF (c_e(this%box_info%npx) .AND. c_e(this%box_info%npy)) THEN
-
-    IF (this%box_info%npx <= 0 .OR. this%box_info%npy <= 0 ) THEN
-      CALL l4f_category_log(this%category,L4F_ERROR,'invalid regrid parameters: '//&
-       TRIM(to_char(this%box_info%npx))//' '//TRIM(to_char(this%box_info%npy)))
-      CALL raise_fatal_error()
-    ENDIF
-
-  ELSE
-
-    CALL l4f_category_log(this%category,L4F_ERROR, &
-     'boxregrid parameters npx, npy not provided')
-    CALL raise_fatal_error()
-
-  ENDIF
-
-  IF (this%sub_type == 'average' .OR. this%sub_type == 'max' .OR. &
-   this%sub_type == 'min' .OR. this%sub_type == 'stddev' &
-   .OR. this%sub_type == 'stddevnm1') THEN
-! nothing to do here
-  ELSE
-    CALL sub_type_error()
-    RETURN
-  ENDIF
-
 ELSE IF (this%trans_type == 'inter') THEN
 
   IF (this%sub_type == 'near' .OR. this%sub_type == 'bilin' .OR. &
@@ -549,8 +533,22 @@ ELSE IF (this%trans_type == 'inter') THEN
     RETURN
   ENDIF
 
-ELSE IF (this%trans_type == 'boxinter' .OR. this%trans_type == 'polyinter' &
-  .OR. this%trans_type == 'maskinter' .OR. this%trans_type == 'stencilinter') THEN
+ELSE IF (this%trans_type == 'boxregrid' .OR. this%trans_type == 'boxinter' &
+ .OR. this%trans_type == 'polyinter' .OR. this%trans_type == 'stencilinter') THEN
+
+  IF (this%trans_type == 'boxregrid') THEN
+    IF (c_e(this%box_info%npx) .AND. c_e(this%box_info%npy)) THEN
+      IF (this%box_info%npx <= 0 .OR. this%box_info%npy <= 0 ) THEN
+        CALL l4f_category_log(this%category,L4F_ERROR,'boxregrid: invalid parameters  '//&
+         TRIM(to_char(this%box_info%npx))//' '//TRIM(to_char(this%box_info%npy)))
+        CALL raise_fatal_error()
+      ENDIF
+    ELSE
+      CALL l4f_category_log(this%category,L4F_ERROR, &
+       'boxregrid: parameters npx, npy missing')
+      CALL raise_fatal_error()
+    ENDIF
+  ENDIF
 
   IF (this%trans_type == 'polyinter') THEN
     IF (this%poly%arraysize <= 0) THEN
@@ -2814,7 +2812,26 @@ ELSE IF (this%trans%trans_type == 'boxregrid') THEN
       ENDDO
     ENDDO
 
-  ENDIF
+  ELSE IF (this%trans%sub_type == 'percentile') THEN
+
+    navg = this%trans%box_info%npx*this%trans%box_info%npy
+    DO k = 1, innz
+      jj = 0
+      DO j = 1, this%inny - this%trans%box_info%npy + 1, this%trans%box_info%npy
+        je = j+this%trans%box_info%npy-1
+        jj = jj+1
+        ii = 0
+        DO i = 1, this%innx - this%trans%box_info%npx + 1, this%trans%box_info%npx
+          ie = i+this%trans%box_info%npx-1
+          ii = ii+1
+          field_out(ii:ii,jj,k) = stat_percentile( &
+           RESHAPE(field_in(i:ie,j:je,k),(/navg/)), &
+           (/REAL(this%trans%stat_info%percentile)/))
+        ENDDO
+      ENDDO
+    ENDDO
+
+ENDIF
 
 ELSE IF (this%trans%trans_type == 'inter') THEN
 

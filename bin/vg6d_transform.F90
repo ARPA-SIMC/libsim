@@ -145,22 +145,23 @@ CALL optionparser_add_sep(opt, 'The following options are mostly valid  both in 
 
 CALL optionparser_add(opt, 'v', 'trans-type', trans_type, 'none', help= &
  'transformation type: ''inter'' for interpolation, ''boxinter'' for &
- &statistical interpolation on boxes, ''zoom'' for zooming, &
+ &statistical interpolation on boxes, ''stencilinter'' for statistical interpolation &
+ &on a circular stencil, ''zoom'' for zooming, &
  &''boxregrid'' for resolution reduction, ''metamorphosis'' for &
  &keeping the same grid but changing e.g. the component flag, '&
 #ifdef HAVE_SHAPELIB
- //'maskgen for generating a mask field on polygons, polyinter for intepolating &
+ //'''maskgen'' for generating a mask field on polygons, ''polyinter'' for intepolating &
  &on polygons, '&
 #endif
  //'''none'' for no transformation (input/output only)')
 sub_type = ''
 CALL optionparser_add(opt, 'z', 'sub-type', sub_type, help= &
  'transformation subtype, for inter: ''near'', ''bilin'', &
- &for boxinter, boxregrid'&
+ &for boxinter, stencilinter, boxregrid'&
 #ifdef HAVE_SHAPELIB
  //', polyinter'&
 #endif
-//': ''average'', ''stddev'', ''max'', ''min'', ''percentile'', &
+//': ''average'', ''stddev'', ''stddevnm1'', ''max'', ''min'', ''percentile'', &
  &for zoom: ''index'', ''coord'', ''coordbb'', ''projcoord'', '&
 #ifdef HAVE_SHAPELIB
  //'for maskgen: ''poly'', '&
