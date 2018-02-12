@@ -244,11 +244,10 @@ if (share .or. filetype == filetype_config) then
     ENDIF
   ENDDO
 
-  CALL l4f_log(L4F_INFO, 'package file '//TRIM(lfilename)//' not found')
-!  CALL raise_error()
-  path = cmiss
-
 end if
+
+CALL l4f_log(L4F_INFO, 'package file '//TRIM(lfilename)//' not found')
+path = cmiss
 
 END FUNCTION get_package_filepath
 

@@ -71,8 +71,8 @@ TYPE(csv_record) :: argparse
 CHARACTER(len=8) :: input_format, coord_format, extreme_format
 
 CHARACTER(len=512) :: input_file, output_file, output_format, output_template, &
- network_list, variable_list, anavariable_list, attribute_list, coord_file,&
- extreme_file, output_variable_list
+ network_list, variable_list, anavariable_list, attribute_list, coord_file, &
+ coord_file_tmp, extreme_file, output_variable_list
 CHARACTER(len=160) :: pre_trans_type
 TYPE(vol7d_network), ALLOCATABLE :: nl(:)
 TYPE(arrayof_integer) :: trans_level_type, trans_level_list, trans_botlevel_list
@@ -729,7 +729,10 @@ CALL init(v7d_coord)
 ! import coord_file
 IF (c_e(coord_file)) THEN
 
-  coord_file=get_package_filepath(coord_file, filetype_data)
+! look first for file in package location, if not found leave as is,
+! useful for shapefile where shapelib takes care of missing extension
+  coord_file_tmp=get_package_filepath(coord_file, filetype_data)
+  IF (c_e(coord_file_tmp)) coord_file = coord_file_tmp
 
   IF (coord_format == 'native') THEN
     CALL import(v7d_coord, filename=coord_file)

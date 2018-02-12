@@ -47,7 +47,7 @@ INTEGER :: category, ier, i, n
 CHARACTER(len=12) :: coord_format
 CHARACTER(len=10), ALLOCATABLE :: vl(:), avl(:)
 !CHARACTER(len=10) :: level_type
-CHARACTER(len=512) :: a_name, coord_file, input_file, output_file, &
+CHARACTER(len=512) :: a_name, coord_file, coord_file_tmp, input_file, output_file, &
  output_format, output_template, anavariable_list, output_variable_list
 TYPE(arrayof_integer) :: trans_level_type, trans_level_list, trans_botlevel_list
 TYPE(vol7d_level) :: ilevel, olevel
@@ -522,6 +522,12 @@ call l4f_category_log(category,L4F_INFO,"transforming to   file:"//trim(output_f
 CALL init(volgrid_coord)
 
 IF (c_e(coord_file)) THEN
+
+! look first for file in package location, if not found leave as is,
+! useful for shapefile where shapelib takes care of missing extension
+  coord_file_tmp=get_package_filepath(coord_file, filetype_data)
+  IF (c_e(coord_file_tmp)) coord_file = coord_file_tmp
+
   IF (.FALSE.) THEN ! dummy clause
 #ifdef HAVE_SHAPELIB
   ELSE IF (coord_format == 'shp') THEN
