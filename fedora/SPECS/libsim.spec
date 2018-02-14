@@ -2,7 +2,7 @@
 # to disable oracle and/or vapor support requiring stiff dependencies
 Summary: Fortran utility libraries
 Name: libsim
-Version: 6.2.3
+Version: 6.2.4
 Release: 1
 License: GPL2+
 Group: Applications/Meteo
@@ -107,6 +107,14 @@ mv $RPM_BUILD_ROOT%{_includedir}/*.mod $RPM_BUILD_ROOT%{_fmoddir}
 rm -rf %{buildroot}
 
 %changelog
+* Wed Feb 14 2018 Daniele Branchini <dbranchini@arpae.it> - 6.2.4-1
+- fix v7d_dballe import with multiple networks specified, close #49
+- fix bug in maskinvalid transformation
+- fix in file_utilities and improvement in the search algorithm for coord-file
+- deprecate vg6d_subarea and replace it with a shell script
+- add alchemy method for computing visibility with Boudala formula
+- swan products for centre 80 in vargrib2bufr
+
 * Tue Nov 21 2017 Daniele Branchini <dbranchini@arpae.it> - 6.2.2-1
 - Centre 80 for COSMO and ECMWF entries (fix #38)
 
