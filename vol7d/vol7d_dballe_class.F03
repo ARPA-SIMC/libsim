@@ -264,20 +264,27 @@ TYPE(vol7d_timerange),INTENT(in),optional :: timerange
 CHARACTER(len=*),INTENT(in),OPTIONAL :: attr(:),anavar(:),anaattr(:)
 CHARACTER(len=*),INTENT(in),OPTIONAL :: varkind(:),attrkind(:),anavarkind(:),anaattrkind(:)
 logical,intent(in),optional :: anaonly
-logical,intent(in),optional :: dataonly
+LOGICAL,INTENT(in),OPTIONAL :: dataonly
+TYPE(vol7d_dballe) :: v7ddbatmp
 
 INTEGER :: i
 
-if (size(network) == 0 )then
-  CALL import(this,var, coordmin=coordmin, coordmax=coordmax, timei=timei, timef=timef, level=level,&
-   timerange=timerange,set_network=set_network, attr=attr,anavar=anavar,anaattr=anaattr,&
-   varkind=varkind,attrkind=attrkind,anavarkind=anavarkind,anaattrkind=anaattrkind,anaonly=anaonly,dataonly=dataonly,ana=ana)
-else
+IF (SIZE(network) == 0 )THEN
+  CALL import(this, var, coordmin=coordmin, coordmax=coordmax, timei=timei, &
+   timef=timef, level=level, timerange=timerange, set_network=set_network, &
+   attr=attr, anavar=anavar, anaattr=anaattr, varkind=varkind, attrkind=attrkind, &
+   anavarkind=anavarkind, anaattrkind=anaattrkind, anaonly=anaonly, &
+   dataonly=dataonly, ana=ana)
+ELSE
+  CALL init(this%vol7d) ! necessary?
+  v7ddbatmp = this ! shallow copy
   DO i = 1, SIZE(network)
-    CALL import(this, var, network(i), coordmin, coordmax, timei, timef, level,timerange,set_network,&
-     attr,anavar,anaattr, varkind,attrkind,anavarkind,anaattrkind,anaonly,dataonly,ana)
+    CALL import(v7ddbatmp, var, network(i), coordmin, coordmax, timei, timef, &
+     level,timerange, set_network, attr,anavar,anaattr, varkind, attrkind, &
+     anavarkind, anaattrkind, anaonly, dataonly, ana)
+    CALL vol7d_merge(this%vol7d, v7ddbatmp%vol7d, sort=.TRUE.)
   ENDDO
-end if
+ENDIF
 
 END SUBROUTINE vol7d_dballe_importvvnv
 
