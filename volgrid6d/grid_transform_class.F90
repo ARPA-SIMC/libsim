@@ -3204,18 +3204,11 @@ ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
       field_out(:,1,k) = PACK(field_in(:,:,k), c_e(this%point_index(:,:)))
     ENDDO
 
-  ELSE IF (this%trans%sub_type == 'maskvalid') THEN
+  ELSE IF (this%trans%sub_type == 'maskvalid' .OR. &
+   this%trans%sub_type == 'maskinvalid') THEN
 
     DO k = 1, innz
       WHERE (this%point_mask(:,:))
-        field_out(:,:,k) = field_in(:,:,k)
-      END WHERE
-    ENDDO
-
-  ELSE IF (this%trans%sub_type == 'maskinvalid') THEN
-
-    DO k = 1, innz
-      WHERE (.NOT.this%point_mask(:,:))
         field_out(:,:,k) = field_in(:,:,k)
       END WHERE
     ENDDO
