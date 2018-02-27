@@ -437,8 +437,12 @@ IF (lforecast) THEN ! forecast mode
     CALL insert(a_otime, itime) ! should I limit to elements itime >= lstart?
 
 ! apply start shift to timerange, not to reftime
-    CALL getval(lstart-itime(SIZE(itime)), asec=dstart)
-    dstart = MAX(0, dstart)
+! why did we use itime(SIZE(itime)) (last ref time)?
+!    CALL getval(lstart-itime(SIZE(itime)), asec=dstart)
+    CALL getval(lstart-itime(1), asec=dstart)
+! allow starting before first reftime but restrict dtstart to -steps
+!    dstart = MAX(0, dstart)
+    IF (dstart < 0) dstart = MOD(dstart, steps)
     DO p1 = steps + dstart, maxp1, steps
       CALL insert_unique(a_otimerange, vol7d_timerange_new(stat_proc, p1, steps))
     ENDDO
@@ -650,7 +654,7 @@ p1 = timedelta_new(sec=timerange%p1) ! end of period
 p2 = timedelta_new(sec=timerange%p2) ! length of period
 
 IF (time == datetime_miss .OR. .NOT.c_e(timerange%p1) .OR. .NOT.c_e(timerange%p2) .OR. &
- (timerange%p1 > 0 .AND. timerange%p1 < timerange%p2) .OR. &
+! (timerange%p1 > 0 .AND. timerange%p1 < timerange%p2) .OR. &
  timerange%p1 < 0 .OR. timerange%p2 < 0) THEN ! is this too pedantic and slow?
   pstart = datetime_miss
   pend = datetime_miss
@@ -694,7 +698,7 @@ TYPE(timedelta) :: p1
 p1 = timedelta_new(sec=timerange%p1) ! end of period
 
 IF (time == datetime_miss .OR. .NOT.c_e(timerange%p1) .OR. .NOT.c_e(timerange%p2) .OR. &
- (timerange%p1 > 0 .AND. timerange%p1 < timerange%p2) .OR. &
+! (timerange%p1 > 0 .AND. timerange%p1 < timerange%p2) .OR. &
  timerange%p1 < 0 .OR. timerange%p2 < 0) THEN ! is this too pedantic and slow?
   pstart = datetime_miss
   pend = datetime_miss
