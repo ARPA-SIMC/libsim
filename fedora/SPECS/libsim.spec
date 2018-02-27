@@ -2,7 +2,7 @@
 # to disable oracle and/or vapor support requiring stiff dependencies
 Summary: Fortran utility libraries
 Name: libsim
-Version: 6.2.4
+Version: 6.2.5
 Release: 1
 License: GPL2+
 Group: Applications/Meteo
@@ -107,6 +107,9 @@ mv $RPM_BUILD_ROOT%{_includedir}/*.mod $RPM_BUILD_ROOT%{_fmoddir}
 rm -rf %{buildroot}
 
 %changelog
+* Tue Feb 27 2018 Daniele Branchini <dbranchini@arpae.it> - 6.2.5-1
+- allow processing period to start before reference time in forecast mode, closes #50
+
 * Wed Feb 14 2018 Daniele Branchini <dbranchini@arpae.it> - 6.2.4-1
 - fix v7d_dballe import with multiple networks specified, close #49
 - fix bug in maskinvalid transformation
