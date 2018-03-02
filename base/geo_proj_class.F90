@@ -1060,7 +1060,7 @@ a1 = deltalon*cosp
 !!$m = 111132.0894_fp_utm*lat - 16216.94_fp_utm*SIN(2.0*p) + 17.21_fp_utm*SIN(4.0*p) &
 !!$ - 0.02_fp_utm*SIN(6.0*p)
 ! Modificato rispetto alla routine originale, dipende dall'ellissoide
-m = ellips%ef0*p - ellips%ef1*SIN(2.0D0*p) - ellips%ef2*SIN(4.0D0*p) - &
+m = ellips%ef0*p - ellips%ef1*SIN(2.0D0*p) + ellips%ef2*SIN(4.0D0*p) - &
  ellips%ef3*SIN(6.0D0*p)
 
 a2 = a1**2
@@ -1113,9 +1113,10 @@ c2 = c1**2
 t1 = tanp1**2
 t2 = t1**2
 sin2p1 = sinp1**2
-n1 = ellips%a/SQRT(1.0D0-ellips%e2*sin2p1)
-!r0 = 1.0D0-ellips%e2*sin2p1
-r1 = ellips%a*(1.0D0-ellips%e2)/SQRT(r0**3)
+r0 = 1.0D0-ellips%e2*sin2p1
+n1 = ellips%a/SQRT(r0)
+!r1 = ellips%a*(1.0D0-ellips%e2)/SQRT(r0**3)
+r1 = r0/(1.0D0-ellips%e2)
 
 d = xm/(n1*k0)
 d2=d**2
@@ -1124,7 +1125,12 @@ d4=d*d3
 d5=d*d4
 d6=d*d5
 
-p = p1 - (n1*tanp1/r1) * (d2/2.0D0 &
+! other variant from mstortini:
+!p = p1 - (1.0D0*tanp1/r0) * (d2/2.0D0 &
+! original version with r1 = ellips%a*(1.0D0-ellips%e2)/SQRT(r0**3)
+!p = p1 - (n1*tanp1/r1) * (d2/2.0D0 &
+! optimized version with different definition of r1
+p = p1 - (r1*tanp1) * (d2/2.0D0 &
  - (5.0D0 + 3.0D0*t1 + 10.0D0*c1 - 4.0D0*c2 &
  - 9.0D0*ellips%ep2)*d4/24.0D0 &
  + (61.0D0 + 90.0D0*t1 + 298.0D0*c1 + 45.0D0*t2 &
