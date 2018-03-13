@@ -1320,6 +1320,7 @@ if (optio_log(attronly).or. .not. data%dbadc%dat%c_e() .or. code ==13 ) then
 
   ! with missing data to extrude and missing data in DB we have nothing to delete
   ! with attronly  and missing data in DB we have nothing to do
+  ierr=idba_unsetb(session%sehandle)
   if (count ==0) return
 
   if (c_e(count)) then
@@ -1333,6 +1334,7 @@ if (optio_log(attronly).or. .not. data%dbadc%dat%c_e() .or. code ==13 ) then
   endif
 else
   call session%prendilo()
+  ierr=idba_unsetb(session%sehandle)
 end if
 
 if (optio_log(noattr)) return
