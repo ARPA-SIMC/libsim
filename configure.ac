@@ -302,6 +302,21 @@ AM_CONDITIONAL(DBALLE, test "x$enableval" = "xyes")
 AC_ARG_ENABLE(gribapi, AC_HELP_STRING([--disable-gribapi],
   [disable gribapi support]),,[enableval=yes])dnl default enable
 if test "x$enableval" = "xyes"; then
+grib_api_flavor=
+AC_CHECK_LIB(
+	     [eccodes_f90],
+	     [grib_f_open_file],
+	     [
+	      AC_MSG_RESULT([eccodes code included])
+	      AC_DEFINE(HAVE_LIBGRIBAPI, 1, [Enable gribapi code])
+	      GRIBAPI_LIBS="-leccodes_f90 -leccodes -ljasper"
+	      AC_SUBST(GRIBAPI_LIBS)
+	      grib_api_flavor=eccodes
+	     ],
+	     [AC_MSG_RESULT([eccodes library not found, trying with legacy grib_api])],
+	     [-leccodes -ljasper]
+	    )
+if test "x$grib_api_flavor" = "x"; then
 AC_CHECK_LIB(
 	     [grib_api_f90],
 	     [grib_f_open_file],
@@ -310,10 +325,12 @@ AC_CHECK_LIB(
 	      AC_DEFINE(HAVE_LIBGRIBAPI, 1, [Enable gribapi code])
 	      GRIBAPI_LIBS="-lgrib_api_f90 -lgrib_api -ljasper"
 	      AC_SUBST(GRIBAPI_LIBS)
+	      grib_api_flavor=grib_api
 	     ],
-	     [AC_MSG_ERROR([grib-api library not found])],
+	     [AC_MSG_ERROR([eccodes and grib-api library not found])],
 	     [-lgrib_api -ljasper]
 	    )
+fi
 else
   AC_MSG_RESULT([gribapi code not included])
 fi
