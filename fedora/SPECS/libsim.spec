@@ -33,7 +33,8 @@ BuildRequires: eccodes-simc
 %{?with_vapor:BuildRequires: vapor-devel}
 
 BuildRequires: libdballef-devel >= 7.6 %{grib_sw}-devel ncl-devel gdal-devel libdballe-devel help2man log4c log4c-devel
-BuildRequires: libtool doxygen graphviz texlive-latex-bin cnf-devel libpng-devel fortrangis-devel netcdf-fortran-devel shapelib-devel jasper-devel proj-devel popt-devel openjpeg-devel cairo-devel
+BuildRequires: doxygen graphviz texlive-latex-bin texlive-dvips-bin
+BuildRequires: libtool cnf-devel libpng-devel fortrangis-devel netcdf-fortran-devel shapelib-devel jasper-devel proj-devel popt-devel openjpeg-devel cairo-devel
 Requires: libdballef4 >= 7.6 %{grib_sw}
 
 
