@@ -22,6 +22,7 @@ Makefile
 *.la
 *.mod
 *~
+\#*\#
 bin/*.1
 bin/*.md
 bin/dba_qcfilter

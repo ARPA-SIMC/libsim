@@ -1,26 +1,46 @@
-# run rpmbuild with arguments --define='no_oracle 1' --define='no_vapor 1'
-# to disable oracle and/or vapor support requiring stiff dependencies
+# run rpmbuild with arguments --define='with_oracle 1' --define='with_vapor 1'
+# to enable oracle and/or vapor support requiring stiff dependencies
 Summary: Fortran utility libraries
 Name: libsim
-Version: 6.2.6
+Version: 6.2.7
 Release: 1
 License: GPL2+
 Group: Applications/Meteo
 URL: https://github.com/arpa-simc/%{name}
 Packager: Davide Cesari <dcesari@arpae.it>
-#Source: %{name}-%{version}.tar.gz
 Source: https://github.com/arpa-simc/%{name}/archive/v%{version}-%{release}.tar.gz#/%{name}-%{version}-%{release}.tar.gz  
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot
-BuildRequires: %{!?no_oracle:oracle-instantclient-devel} libdballef-devel >= 7.6 grib_api-devel ncl-devel gdal-devel libdballe-devel help2man log4c log4c-devel
-BuildRequires: libtool doxygen cnf-devel libpng-devel %{!?no_vapor:vapor-devel} fortrangis-devel netcdf-fortran-devel shapelib-devel jasper-devel proj-devel popt-devel openjpeg-devel cairo-devel
-Requires: libdballef4 >= 7.6 grib_api
 
 %if 0%{?fedora} < 9
 %define _fmoddir %{_libdir}/gfortran/modules
 %endif
 
+%if 0%{?fedora} <= 24
+# grib_api is used only on older fedoras
+%define grib_sw grib_api
+%else
+%define grib_sw eccodes
+BuildRequires: eccodes-simc
+%endif
+
+# expliciting eccodes for centos7
+%if 0%{?el7}
+%define grib_sw eccodes
+BuildRequires: eccodes-simc
+%endif
+
+%{?with_oracle:BuildRequires: oracle-instantclient-devel}
+%{?with_vapor:BuildRequires: vapor-devel}
+
+BuildRequires: libdballef-devel >= 7.6 %{grib_sw}-devel ncl-devel gdal-devel libdballe-devel help2man log4c log4c-devel
+BuildRequires: libtool doxygen cnf-devel libpng-devel fortrangis-devel netcdf-fortran-devel shapelib-devel jasper-devel proj-devel popt-devel openjpeg-devel cairo-devel
+Requires: libdballef4 >= 7.6 %{grib_sw}
+
+
 %package -n libsim-devel
-Requires: fortrangis-devel %{!?no_oracle:oracle-instantclient-devel} libdballef-devel >= 7.6 grib_api-devel ncl-devel gdal-devel libdballe-devel help2man log4c log4c-devel
+
+%{?with_oracle:Requires: oracle-instantclient-devel}
+Requires: fortrangis-devel libdballef-devel >= 7.6 %{grib_sw}-devel ncl-devel gdal-devel libdballe-devel help2man log4c log4c-devel
 Summary:  libsim development files
 Group: Applications/Meteo
 
@@ -63,7 +83,7 @@ sh autogen.sh
 
 %build
 
-%configure FCFLAGS="%{optflags} -I%{_fmoddir}" ORACLE_VER=oracle/11.2/client %{?no_oracle:--disable-oraclesim} --enable-f2003-features %{!?no_vapor:--enable-vapor} --enable-alchimia --enable-shapelib --enable-netcdf --enable-gribapi --enable-gdal --enable-f2003-extended-features
+%configure FCFLAGS="%{optflags} -I%{_fmoddir}" ORACLE_VER=oracle/11.2/client %{!?with_oracle:--disable-oraclesim} --enable-f2003-features %{?with_vapor:--enable-vapor} --enable-alchimia --enable-shapelib --enable-netcdf --enable-gribapi --enable-gdal --enable-f2003-extended-features
 
 make
 make check
@@ -93,10 +113,7 @@ mv $RPM_BUILD_ROOT%{_includedir}/*.mod $RPM_BUILD_ROOT%{_fmoddir}
 %else
 %{_includedir}/*
 %endif
-%if 0%{?no_vapor}
-%else
-%{_includedir}/vdf4f_c.h
-%endif
+%{?with_vapor:%{_includedir}/vdf4f_c.h}
 
 %files -n libsim-doc
 %defattr(-,root,root)
@@ -107,6 +124,10 @@ mv $RPM_BUILD_ROOT%{_includedir}/*.mod $RPM_BUILD_ROOT%{_fmoddir}
 rm -rf %{buildroot}
 
 %changelog
+* Mon May 7 2018 Daniele Branchini <dbranchini@arpae.it> - 6.2.7-1
+- enabled eccodes support
+- reversed oracle and vapor flags (disabled by default)
+
 * Mon Mar 26 2018 Davide Cesari <dcesari@arpae.it> - 6.2.6-1
 - fix bug with bufr overflow and improve UTM precision
 
