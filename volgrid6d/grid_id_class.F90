@@ -454,7 +454,7 @@ IF (PRESENT(from_grid_file_id)) THEN
 #ifdef HAVE_LIBGRIBAPI
 ELSE IF (PRESENT(grib_api_template)) THEN
   this%driver = grid_id_grib_api
-  CALL grib_new_from_template(this%gaid, grib_api_template, ier)
+  CALL grib_new_from_samples(this%gaid, grib_api_template, ier)
   IF (ier /= GRIB_SUCCESS) this%gaid = imiss
 ELSE IF (PRESENT(grib_api_id)) THEN
   this%driver = grid_id_grib_api
