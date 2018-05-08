@@ -18,7 +18,7 @@ ier=l4f_init()
 category=l4f_category_get(a_name//".main")
 
 ! connect to dsn type DBA
-connection=dbaconnection(dsn="sqlite:dballe_test.sqlite")
+connection=dbaconnection(dsn="sqlite:dballe_test.sqlite?wipe=true")
 session=dbasession(connection,wipe=.true.,write=.true.)!,anaflag="write", dataflag="write", attrflag="write")
 call write1()    ! write etherogeneous ensamble of data with attributes and constant data using macro object
 call write2()    ! write an omogeneous vector of data
