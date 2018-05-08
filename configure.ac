@@ -432,7 +432,10 @@ AM_CONDITIONAL(VERSIONINFO, test "x$enableval" = "xyes")
 AC_ARG_ENABLE(doxydoc, AC_HELP_STRING([--disable-doxydoc],
   [disable generation of doxygen documentation]),,[enableval=yes])dnl default enable
 AM_CONDITIONAL(DOXYDOC, test "x$enableval" = "xyes")
-
+if test "x$enableval" = "xyes"; then
+   AC_CHECK_PROG(HAVE_DOT, dot, YES, NO,,)
+   AC_SUBST(HAVE_DOT)
+fi
 
 if test "x$prefix" = "xNONE"; then
 AC_DEFINE_UNQUOTED(PREFIX, "$ac_default_prefix", [install prefix])
