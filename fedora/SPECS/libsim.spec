@@ -33,7 +33,7 @@ BuildRequires: eccodes-simc
 %{?with_vapor:BuildRequires: vapor-devel}
 
 BuildRequires: libdballef-devel >= 7.6 %{grib_sw}-devel ncl-devel gdal-devel libdballe-devel help2man log4c log4c-devel
-BuildRequires: doxygen graphviz
+BuildRequires: doxygen graphviz texlive-latex-bin texlive-dvips-bin
 BuildRequires: libtool cnf-devel libpng-devel fortrangis-devel netcdf-fortran-devel shapelib-devel jasper-devel proj-devel popt-devel openjpeg-devel cairo-devel
 Requires: libdballef4 >= 7.6 %{grib_sw}
 
@@ -128,6 +128,7 @@ rm -rf %{buildroot}
 * Mon May 7 2018 Daniele Branchini <dbranchini@arpae.it> - 6.2.7-1
 - enabled eccodes support
 - reversed oracle and vapor flags (disabled by default)
+- fixed #55
 
 * Mon Mar 26 2018 Davide Cesari <dcesari@arpae.it> - 6.2.6-1
 - fix bug with bufr overflow and improve UTM precision
