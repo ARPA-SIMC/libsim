@@ -1136,9 +1136,8 @@ ELSE IF (EditionNumber == 2) THEN
   CALL grib_set_dmiss(gaid,'latitudeOfThePoleOfStretching', &
    this%grid%proj%stretched%latitude_stretch_pole, -90.0D0)
   CALL grib_set_dmiss(gaid,'stretchingFactor', &
-   this%grid%proj%stretched%stretch_factor*1.0D6, 1.0D6)
+   this%grid%proj%stretched%stretch_factor, 1.0D6, 1.0D6)
 ENDIF
-
 
 ! Projection-dependent keys
 SELECT CASE (this%grid%proj%proj_type)
@@ -1340,16 +1339,21 @@ ENDIF
 
 CONTAINS
 ! utilities routines for grib_api, is there a better place?
-SUBROUTINE grib_set_dmiss(gaid, key, value, default)
+SUBROUTINE grib_set_dmiss(gaid, key, val, default, factor)
 INTEGER,INTENT(in) :: gaid
 CHARACTER(len=*),INTENT(in) :: key
-DOUBLE PRECISION,INTENT(in) :: value
+DOUBLE PRECISION,INTENT(in) :: val
 DOUBLE PRECISION,INTENT(in),OPTIONAL :: default
+DOUBLE PRECISION,INTENT(in),OPTIONAL :: factor
 
 INTEGER :: ierr
 
-IF (c_e(value)) THEN
-  CALL grib_set(gaid, key, value, ierr)
+IF (c_e(val)) THEN
+  IF (PRESENT(factor)) THEN
+    CALL grib_set(gaid, key, val*factor, ierr)
+  ELSE
+    CALL grib_set(gaid, key, val, ierr)
+  ENDIF
 ELSE IF (PRESENT(default)) THEN
   CALL grib_set(gaid, key, default, ierr)
 ENDIF
