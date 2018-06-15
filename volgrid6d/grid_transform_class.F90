@@ -90,13 +90,16 @@
 !!    the input points lying inside the output point's grid box
 !!    (grid-to-grid and sparse points-to-grid)
 !!    - sub_type='average' the function used is the average
-!!    - sub_type='stddev' the function used is the standard deviation.
+!!    - sub_type='stddev' the function used is the standard deviation
 !!    - sub_type='stddevnm1' the function used is the standard
-!!      deviation computed with n-1.
+!!      deviation computed with n-1
 !!    - sub_type='max' the function used is the maximum
 !!    - sub_type='min' the function used is the minimum
 !!    - sub_type='percentile' the function used is a requested
-!!      percentile of the input points distribution.
+!!      percentile of the input points distribution
+!!    - sub_type='frequency' the function used is the fraction of
+!!      points in the box having value included in a specified
+!!      interval.
 !!
 !!  - trans_type='polyinter' output data are the result of a function
 !!    computed over the input points lying inside a set of
@@ -217,6 +220,14 @@ TYPE stat_info
   DOUBLE PRECISION :: percentile ! percentile [0,100] of the distribution of points in the box to use as interpolated value, if missing, the average is used, if 0.or 100. the MIN() and MAX() are used as a shortcut
 END TYPE stat_info
 
+! information for point interval
+TYPE interval_info
+  REAL :: gt=rmiss ! lower limit of interval, missing for -inf
+  REAL :: lt=rmiss ! upper limit of interval, missing for +inf
+  LOGICAL :: ge=.TRUE. ! if true >= otherwise >
+  LOGICAL :: le=.TRUE. ! if true <= otherwise <
+END TYPE interval_info
+
 ! rectangle index information
 type rect_ind
   INTEGER :: ix ! index of initial point of new grid on x
@@ -267,6 +278,7 @@ TYPE transform_def
   TYPE(area_info) :: area_info ! 
   TYPE(arrayof_georef_coord_array) :: poly ! polygon information
   TYPE(stat_info) :: stat_info ! 
+  TYPE(interval_info) :: interval_info ! 
   TYPE(box_info) :: box_info ! boxregrid specification
   TYPE(vertint) :: vertint ! vertical interpolation specification
   INTEGER :: time_definition ! time definition for interpolating to sparse points
@@ -352,9 +364,73 @@ END INTERFACE
 PRIVATE
 PUBLIC init, delete, get_val, compute, c_e
 PUBLIC transform_def, grid_transform
+PUBLIC interval_info, interval_info_new, interval_info_valid
 
 CONTAINS
 
+
+FUNCTION interval_info_new(interv_gt, interv_ge, interv_lt, interv_le) RESULT(this)
+REAL,INTENT(in),OPTIONAL :: interv_gt !< greater than condition for defining interval
+REAL,INTENT(in),OPTIONAL :: interv_ge !< greater equal condition for defining interval
+REAL,INTENT(in),OPTIONAL :: interv_lt !< less than condition for defining interval
+REAL,INTENT(in),OPTIONAL :: interv_le !< less equal condition for defining interval
+
+TYPE(interval_info) :: this
+
+IF (PRESENT(interv_gt)) THEN
+  IF (c_e(interv_gt)) THEN
+    this%gt = interv_gt
+    this%ge = .FALSE.
+  ENDIF
+ENDIF
+IF (PRESENT(interv_ge)) THEN
+  IF (c_e(interv_ge)) THEN
+    this%gt = interv_ge
+    this%ge = .TRUE.
+  ENDIF
+ENDIF
+IF (PRESENT(interv_lt)) THEN
+  IF (c_e(interv_lt)) THEN
+    this%lt = interv_lt
+    this%le = .FALSE.
+  ENDIF
+ENDIF
+IF (PRESENT(interv_le)) THEN
+  IF (c_e(interv_le)) THEN
+    this%lt = interv_le
+    this%le = .TRUE.
+  ENDIF
+ENDIF
+
+END FUNCTION interval_info_new
+
+! Private method for testing whether \a val is included in \a this
+! interval taking into account all cases, zero, one or two extremes,
+! strict or non strict inclusion, empty interval, etc, while no check
+! is made for val being missing. Returns 1.0 if val is in interval and
+! 0.0 if not.
+FUNCTION interval_info_valid(this, val)
+TYPE(interval_info),INTENT(in) :: this
+REAL,INTENT(in) :: val
+
+REAL :: interval_info_valid
+
+interval_info_valid = 1.0
+
+IF (c_e(this%gt)) THEN
+  IF (val < this%gt) interval_info_valid = 0.0
+  IF (.NOT.this%ge) THEN
+    IF (val == this%gt) interval_info_valid = 0.0
+  ENDIF
+ENDIF
+IF (c_e(this%lt)) THEN
+  IF (val > this%lt) interval_info_valid = 0.0
+  IF (.NOT.this%le) THEN
+    IF (val == this%lt) interval_info_valid = 0.0
+  ENDIF
+ENDIF
+
+END FUNCTION interval_info_valid
 
 !> Constructor for a \a transform_def object, defining an abstract
 !! transformation between gridded and/or sparse point data.  The
@@ -365,6 +441,7 @@ CONTAINS
 SUBROUTINE transform_init(this, trans_type, sub_type, &
  ix, iy, fx, fy, ilon, ilat, flon, flat, &
  npx, npy, boxdx, boxdy, radius, poly, percentile, &
+ interv_gt, interv_ge, interv_lt, interv_le, &
  extrap, time_definition, &
  input_levtype, input_coordvar, output_levtype, categoryappend)
 TYPE(transform_def),INTENT(out) :: this !< transformation object
@@ -385,6 +462,10 @@ DOUBLEPRECISION,INTENT(in),OPTIONAL :: boxdy !< latitudinal/y extension of the b
 DOUBLEPRECISION,INTENT(in),OPTIONAL :: radius !< radius of stencil in grid points (also fractionary values) for stencil interpolation
 TYPE(arrayof_georef_coord_array),OPTIONAL :: poly !< array of polygons indicating areas over which to interpolate (for transformations 'polyinter' or 'metamorphosis:poly')
 DOUBLEPRECISION,INTENT(in),OPTIONAL :: percentile !< percentile [0,100.] of the distribution of points in the box to use as interpolated value for 'percentile' subtype
+REAL,INTENT(in),OPTIONAL :: interv_gt !< greater than condition for defining interval
+REAL,INTENT(in),OPTIONAL :: interv_ge !< greater equal condition for defining interval
+REAL,INTENT(in),OPTIONAL :: interv_lt !< less than condition for defining interval
+REAL,INTENT(in),OPTIONAL :: interv_le !< less equal condition for defining interval
 LOGICAL,INTENT(IN),OPTIONAL :: extrap !< activate extrapolation outside input domain (use with care!)
 INTEGER,INTENT(IN),OPTIONAL :: time_definition !< time definition for output vol7d object 0=time is reference time ; 1=time is validity time
 TYPE(vol7d_level),INTENT(IN),OPTIONAL :: input_levtype !< type of vertical level of input data to be vertically interpolated (only type of first and second surface are used, level values are ignored)
@@ -422,6 +503,8 @@ CALL optio(boxdy,this%area_info%boxdy)
 CALL optio(radius,this%area_info%radius)
 IF (PRESENT(poly)) this%poly = poly
 CALL optio(percentile,this%stat_info%percentile)
+
+this%interval_info = interval_info_new(interv_gt, interv_ge, interv_lt, interv_le)
 
 CALL optio(npx,this%box_info%npx)
 CALL optio(npy,this%box_info%npy)
@@ -533,8 +616,9 @@ ELSE IF (this%trans_type == 'inter') THEN
     RETURN
   ENDIF
 
-ELSE IF (this%trans_type == 'boxregrid' .OR. this%trans_type == 'boxinter' &
- .OR. this%trans_type == 'polyinter' .OR. this%trans_type == 'stencilinter') THEN
+ELSE IF (this%trans_type == 'boxregrid' .OR. this%trans_type == 'boxinter' .OR. &
+ this%trans_type == 'polyinter' .OR. this%trans_type == 'maskinter' .OR. &
+ this%trans_type == 'stencilinter') THEN
 
   IF (this%trans_type == 'boxregrid') THEN
     IF (c_e(this%box_info%npx) .AND. c_e(this%box_info%npy)) THEN
@@ -576,12 +660,18 @@ ELSE IF (this%trans_type == 'boxregrid' .OR. this%trans_type == 'boxinter' &
   ELSE IF (this%sub_type == 'percentile') THEN
     IF (.NOT.c_e(this%stat_info%percentile)) THEN
       CALL l4f_category_log(this%category,L4F_ERROR,TRIM(this%trans_type)// &
-       '/percentile: percentile value not provided')
+       ':percentile: percentile value not provided')
       CALL raise_fatal_error()
     ELSE IF (this%stat_info%percentile >= 100.) THEN
       this%sub_type = 'max'
     ELSE IF (this%stat_info%percentile <= 0.) THEN
       this%sub_type = 'min'
+    ENDIF
+  ELSE IF (this%sub_type == 'frequency') THEN
+    IF (.NOT.c_e(this%interval_info%gt) .AND. .NOT.c_e(this%interval_info%gt)) THEN
+      CALL l4f_category_log(this%category,L4F_ERROR,TRIM(this%trans_type)// &
+       ':frequency: lower and/or upper limit not provided')
+      CALL raise_fatal_error()
     ENDIF
   ELSE
     CALL sub_type_error()
@@ -3030,6 +3120,31 @@ ELSE IF (this%trans%trans_type == 'boxinter' &
         ENDDO
       ENDDO
     ENDDO
+
+  ELSE IF (this%trans%sub_type == 'frequency') THEN
+
+    ALLOCATE(nval(this%outnx, this%outny))
+    field_out(:,:,:) = 0.0
+    DO k = 1, innz
+      nval(:,:) = 0
+      DO j = 1, this%inny
+        DO i = 1, this%innx
+          IF (c_e(this%inter_index_x(i,j)) .AND. c_e(field_in(i,j,k))) THEN
+            field_out(this%inter_index_x(i,j),this%inter_index_y(i,j),k) = &
+             field_out(this%inter_index_x(i,j),this%inter_index_y(i,j),k) + &
+             interval_info_valid(this%trans%interval_info, field_in(i,j,k))
+            nval(this%inter_index_x(i,j),this%inter_index_y(i,j)) = &
+             nval(this%inter_index_x(i,j),this%inter_index_y(i,j)) + 1
+          ENDIF
+        ENDDO
+      ENDDO
+      WHERE (nval(:,:) /= 0)
+        field_out(:,:,k) = field_out(:,:,k)/nval(:,:)
+      ELSEWHERE
+        field_out(:,:,k) = rmiss
+      END WHERE
+    ENDDO
+    DEALLOCATE(nval)
 
   ENDIF
 

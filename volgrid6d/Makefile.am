@@ -84,6 +84,11 @@ volgrid6d_class.lo: volgrid6d_var_class.$(OBJEXT) grid_class.$(OBJEXT) grid_tran
 volgrid6d_class_compute.o: volgrid6d_class.$(OBJEXT)
 volgrid6d_class_compute.lo: volgrid6d_class.$(OBJEXT)
 
+check_PROGRAMS = grid_transform_test
+TESTS = $(check_PROGRAMS)
+
+grid_transform_test_SOURCES = grid_transform_test.f90
+grid_transform_test_LDADD = libsim_volgrid6d.la
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT) *.mod

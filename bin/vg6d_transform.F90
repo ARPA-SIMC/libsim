@@ -57,6 +57,7 @@ TYPE(volgrid6d)  :: volgrid_coord
 TYPE(arrayof_gridinfo) :: maskgrid
 REAL,ALLOCATABLE :: maskfield(:,:)
 DOUBLE PRECISION :: ilon, ilat, flon, flat, radius, percentile
+REAL :: gt, ge, lt, le
 TYPE(arrayof_real) :: maskbounds
 
 TYPE(griddim_def) :: griddim_out, griddim_cache
@@ -255,6 +256,18 @@ CALL optionparser_add(opt, ' ', 'trans-botlevel-list', trans_botlevel_list, help
  &by the value of level-type and taken from grib2 table')
 CALL optionparser_add(opt, ' ', 'percentile', percentile, 50.0D0, help= &
  'desired percentile, [0.,100.], for ''*:percentile'' transformations')
+gt=rmiss
+CALL optionparser_add(opt, ' ', 'gt', gt, help= &
+ 'lower limit (excluded) for defining an interval condition x>l, incompatible with ge')
+ge=rmiss
+CALL optionparser_add(opt, ' ', 'ge', ge, help= &
+ 'lower limit (included) for defining an interval condition x>=l, incompatible with gt')
+lt=rmiss
+CALL optionparser_add(opt, ' ', 'lt', lt, help= &
+ 'upper limit (excluded) for defining an interval condition x<u, incompatible with le')
+le=rmiss
+CALL optionparser_add(opt, ' ', 'le', le, help= &
+ 'upper limit (included) for defining an interval condition x<=u, incompatible with lt')
 
 coord_file=cmiss
 #if defined (HAVE_SHAPELIB) || defined (HAVE_LIBGRIBAPI)
@@ -618,6 +631,7 @@ IF (trans_type /= 'none') THEN ! define transform
    ix=ix, iy=iy, fx=fx, fy=fy, &
    ilon=ilon, ilat=ilat, flon=flon, flat=flat, npx=npx, npy=npy, &
    radius=radius, poly=poly, percentile=percentile, &
+   interv_gt=gt, interv_ge=ge, interv_lt=lt, interv_le=le, &
    input_levtype=ilevel, output_levtype=olevel, &
    categoryappend="transformation")
 ENDIF
