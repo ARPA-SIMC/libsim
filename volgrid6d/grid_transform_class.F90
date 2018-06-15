@@ -409,7 +409,7 @@ END FUNCTION interval_info_new
 ! strict or non strict inclusion, empty interval, etc, while no check
 ! is made for val being missing. Returns 1.0 if val is in interval and
 ! 0.0 if not.
-FUNCTION interval_info_valid(this, val)
+ELEMENTAL FUNCTION interval_info_valid(this, val)
 TYPE(interval_info),INTENT(in) :: this
 REAL,INTENT(in) :: val
 
@@ -2830,8 +2830,8 @@ ELSE IF (this%trans%trans_type == 'boxregrid') THEN
             ii = ii+1
             navg = COUNT(field_in(i:ie,j:je,k) /= rmiss)
             IF (navg > 0) THEN
-              field_out(ii,jj,k) = SUM(field_in(i:ie,j:je,k)/navg, &
-               MASK=(field_in(i:ie,j:je,k) /= rmiss))
+              field_out(ii,jj,k) = SUM(field_in(i:ie,j:je,k), &
+               MASK=(field_in(i:ie,j:je,k) /= rmiss))/navg
             ENDIF
           ENDDO
         ENDDO
@@ -2921,7 +2921,28 @@ ELSE IF (this%trans%trans_type == 'boxregrid') THEN
       ENDDO
     ENDDO
 
-ENDIF
+  ELSE IF (this%trans%sub_type == 'frequency') THEN
+
+    DO k = 1, innz
+      jj = 0
+      DO j = 1, this%inny - this%trans%box_info%npy + 1, this%trans%box_info%npy
+        je = j+this%trans%box_info%npy-1
+        jj = jj+1
+        ii = 0
+        DO i = 1, this%innx - this%trans%box_info%npx + 1, this%trans%box_info%npx
+          ie = i+this%trans%box_info%npx-1
+          ii = ii+1
+          navg = COUNT(field_in(i:ie,j:je,k) /= rmiss)
+          IF (navg > 0) THEN
+            field_out(ii,jj,k) = SUM(interval_info_valid( &
+             this%trans%interval_info, field_in(i:ie,j:je,k)), &
+             MASK=(field_in(i:ie,j:je,k) /= rmiss))/navg
+          ENDIF
+        ENDDO
+      ENDDO
+    ENDDO
+
+  ENDIF
 
 ELSE IF (this%trans%trans_type == 'inter') THEN
 
@@ -3295,6 +3316,30 @@ ELSE IF (this%trans%trans_type == 'stencilinter') THEN
     ENDDO
 !$OMP END PARALLEL
 
+  ELSE IF (this%trans%sub_type == 'frequency') THEN
+
+!$OMP PARALLEL DEFAULT(SHARED)
+!$OMP DO PRIVATE(i, j, k, i1, i2, j1, j2, n)
+    DO k = 1, innz
+      DO j = 1, this%outny
+        DO i = 1, this%outnx
+          IF (c_e(this%inter_index_x(i,j))) THEN
+            i1 = this%inter_index_x(i,j) - np
+            i2 = this%inter_index_x(i,j) + np
+            j1 = this%inter_index_y(i,j) - np
+            j2 = this%inter_index_y(i,j) + np
+            n = COUNT(field_in(i1:i2,j1:j2,k) /= rmiss .AND. this%stencil(:,:))
+            IF (n > 0) THEN
+              field_out(i,j,k) = SUM(interval_info_valid( &
+               this%trans%interval_info, field_in(i1:i2,j1:j2,k)), &
+               mask=field_in(i1:i2,j1:j2,k) /= rmiss .AND. this%stencil(:,:))/n
+            ENDIF
+          ENDIF
+        ENDDO
+      ENDDO
+    ENDDO
+!$OMP END PARALLEL
+    
   ENDIF
 
 ELSE IF (this%trans%trans_type == 'maskgen') THEN
