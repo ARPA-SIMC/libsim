@@ -2,7 +2,7 @@
 # to enable oracle and/or vapor support requiring stiff dependencies
 Summary: Fortran utility libraries
 Name: libsim
-Version: 6.2.7
+Version: 6.2.8
 Release: 1
 License: GPL2+
 Group: Applications/Meteo
@@ -125,6 +125,9 @@ mv $RPM_BUILD_ROOT%{_includedir}/*.mod $RPM_BUILD_ROOT%{_fmoddir}
 rm -rf %{buildroot}
 
 %changelog
+* Fri Jun 15 2018 Davide Cesari <dcesari@arpae.it> - 6.2.8-1
+- implement frequency sub-type, closes #54
+
 * Mon May 7 2018 Daniele Branchini <dbranchini@arpae.it> - 6.2.7-1
 - enabled eccodes support
 - reversed oracle and vapor flags (disabled by default)
