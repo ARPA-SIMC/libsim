@@ -159,13 +159,14 @@
 !!      integer values from 1 to the number of polygons provided,
 !!      computed according to the polygon in which every point lies.
 !!
-!!  - trans_type='metamorphosis' the output points and the values are
-!!    the same as the input ones, possibly a subset, but something
-!!    exterior in the data may change, e.g. the component flag of the
-!!    output grid or the underlying data structure, as from grid to
-!!    sparse points (grid-to-grid, grid-to-sparse points, sparse
+!!  - trans_type='metamorphosis' the values of the output points are
+!!    the same as the input ones, but something external in the data
+!!    may change, e.g. only a subset of input data is kept in output
+!!    or the underlying data structure changes, as from grid to sparse
+!!    points (grid-to-grid, grid-to-sparse points, sparse
 !!    points-to-sparse points)
 !!    - sub_type='all' all the input points are kept in the output
+!!      (grid-to-sparse points)
 !!    - sub_type='coordbb' the input points which lie in the provided
 !!      lon/lat bounding box are kept in the output (grid-to-sparse
 !!      points or sparse points-to-sparse points).

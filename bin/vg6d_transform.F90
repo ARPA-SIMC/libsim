@@ -149,7 +149,7 @@ CALL optionparser_add(opt, 'v', 'trans-type', trans_type, 'none', help= &
  &statistical interpolation on boxes, ''stencilinter'' for statistical interpolation &
  &on a circular stencil, ''zoom'' for zooming, &
  &''boxregrid'' for resolution reduction, ''metamorphosis'' for &
- &keeping the same grid but changing e.g. the component flag, '&
+ &selecting only a subset of the data of the original grid , '&
 #ifdef HAVE_SHAPELIB
  //'''maskgen'' for generating a mask field on polygons, ''polyinter'' for intepolating &
  &on polygons, '&
@@ -167,7 +167,7 @@ CALL optionparser_add(opt, 'z', 'sub-type', sub_type, help= &
 #ifdef HAVE_SHAPELIB
  //'for maskgen: ''poly'', '&
 #endif
- //'for metamorphosis: ''all'', ''maskvalid'', ''maskinvalid'', &
+ //'for metamorphosis: ''maskvalid'', ''maskinvalid'', &
  &''setinvalidto'', ''settoinvalid''')
 CALL optionparser_add(opt, ' ', 'extrap', extrap, help= &
  'enable extrapolation outside input grid, it works only for ''inter'' &
