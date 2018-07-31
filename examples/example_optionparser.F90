@@ -54,7 +54,7 @@ CALL optionparser_add(opt, '', 'nx', nx, 100, help= &
  'long integer option with default value')
 CALL optionparser_add(opt, 'x', 'xval', xval, 712., help= &
  'short and long real option with default value')
-xval = rmiss ! preset xval to recognize whether it has been set
+yval = rmiss ! preset yval to recognize whether it has been set
 CALL optionparser_add(opt, '', 'yval', yval, help= &
  'long real option without default value')
 CALL optionparser_add(opt, 'd', 'dval', dval, 489.0D0, help=&
@@ -62,12 +62,10 @@ CALL optionparser_add(opt, 'd', 'dval', dval, 489.0D0, help=&
  &this should be a positive number')
 CALL optionparser_add(opt, '', 'count-list', count_list, (/1,2,3/), help= &
  'integer array option, a comma-separated list of values can be provided, &
- &the default is not displayed at the moment although it may exist, &
- &in this case it is 1,2,3')
+ &the default is partially displayed, in this case it is 1,2,3')
 CALL optionparser_add(opt, '', 'value-list', value_list, help= &
  'real array option, a comma-separated list of values can be provided, &
- &the default is not displayed at the moment although it may exist, &
- &in this case it does not exist')
+ &the default in this case does not exist')
 CALL optionparser_add(opt, 'f', 'force', force, help= &
  'logical option, it cannot have a default value because it is .FALSE. by design')
 CALL optionparser_add_count(opt, 'v', 'verbose', verbose, help= &
@@ -106,12 +104,12 @@ CALL delete(opt)
 CALL l4f_log(L4F_INFO,'options report:')
 CALL l4f_log(L4F_INFO,'name: '//TRIM(name))
 CALL l4f_log(L4F_INFO,'nx: '//t2c(nx))
-IF (c_e(xval)) THEN
-  CALL l4f_log(L4F_INFO,'xval: '//t2c(xval))
+CALL l4f_log(L4F_INFO,'xval: '//t2c(xval))
+IF (c_e(yval)) THEN
+  CALL l4f_log(L4F_INFO,'yval: '//t2c(yval))
 ELSE
-  CALL l4f_log(L4F_INFO,'xval has not been specified')
+  CALL l4f_log(L4F_INFO,'yval has not been specified')
 ENDIF
-CALL l4f_log(L4F_INFO,'yval: '//t2c(yval))
 CALL l4f_log(L4F_INFO,'dval: '//t2c(dval))
 CALL l4f_log(L4F_INFO,'count-list: '//t2c(count_list%arraysize))
 DO i = 1, count_list%arraysize

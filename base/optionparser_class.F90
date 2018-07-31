@@ -494,6 +494,10 @@ CASE(opttype_l)
   CALL option_format_html_closespan()
 
 CASE(opttype_count)
+  CALL option_format_html_openspan('number')
+  CALL option_format_html_help()
+  CALL option_format_html_closespan()
+
 CASE(opttype_sep)
 END SELECT
 
@@ -503,9 +507,9 @@ CONTAINS
 SUBROUTINE option_format_html_openspan(formtype)
 CHARACTER(len=*),INTENT(in) :: formtype
 
-WRITE(*,'(A)')'<span id="span_'//TRIM(opt_id)//'">'//TRIM(opt_name)//':'
+WRITE(*,'(A)')'<span class="libsim_optbox" id="span_'//TRIM(opt_id)//'">'//TRIM(opt_name)//':'
 ! size=? maxlen=?
-WRITE(*,'(A)')'<input id="'//TRIM(opt_id)//'" type="'//formtype// &
+WRITE(*,'(A)')'<input class_"libsim_opt" id="'//TRIM(opt_id)//'" type="'//formtype// &
  '" name="'//TRIM(opt_id)//'" '
 
 END SUBROUTINE option_format_html_openspan
@@ -1248,7 +1252,7 @@ TYPE(line_split) :: help_line
 ncols = default_columns()
 
 ! print usage message
-WRITE(*,'(A)')'### Synopsis ###'
+WRITE(*,'(A)')'### Synopsis'
 
 IF (ASSOCIATED(this%usage_msg)) THEN
   help_line = line_split_new(mdquote_usage_msg(cstr_to_fchar(this%usage_msg)), ncols)
@@ -1266,7 +1270,7 @@ ENDIF
 ! print description message
 IF (ASSOCIATED(this%description_msg)) THEN
   WRITE(*,'()')
-  WRITE(*,'(A)')'### Description ###'
+  WRITE(*,'(A)')'### Description'
   help_line = line_split_new(cstr_to_fchar(this%description_msg), ncols)
   DO j = 1, line_split_get_nlines(help_line)
     WRITE(*,'(A)')TRIM(line_split_get_line(help_line,j))
@@ -1275,7 +1279,7 @@ IF (ASSOCIATED(this%description_msg)) THEN
 
 ENDIF
 
-WRITE(*,'(/,A)')'### Options ###'
+WRITE(*,'(/,A)')'### Options'
 
 DO i = 1, this%options%arraysize ! loop over options
   CALL option_format_md(this%options%array(i), ncols)
@@ -1312,7 +1316,7 @@ DO i = 1, this%options%arraysize ! loop over options
   CALL option_format_htmlform(this%options%array(i))
 ENDDO
 
-WRITE(*,'(A)')'<input TYPE="submit" VALUE="runprogram" />'
+WRITE(*,'(A)')'<input class="libsim_sub" type="submit" value="runprogram" />'
 
 END SUBROUTINE optionparser_printhelphtmlform
 
