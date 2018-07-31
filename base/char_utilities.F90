@@ -25,6 +25,7 @@
 MODULE char_utilities
 USE kinds
 USE missing_values
+USE io_units
 IMPLICIT NONE
 
 CHARACTER(len=*),PARAMETER :: LOWER_CASE = 'abcdefghijklmnopqrstuvwxyz'
@@ -180,13 +181,38 @@ INTERFACE match
   MODULE PROCEDURE string_match, string_match_v
 END INTERFACE
 
+
+!> Class to print a progress bar on the screen.
+!! This class prints a progress bar on the screen, which can be
+!! updated by the calling program. At the moment the progress can only
+!! be displayed in percent (0-100) of the min-max progress interval,
+!! with a predefined format. The progress interval also defaults to
+!! 0-100 but it can be changed by the user after instantiating the
+!! object, but before updating it.
+TYPE progress_line
+  DOUBLE PRECISION :: min=0.0D0 !< minimum value of the progress interval
+  DOUBLE PRECISION :: max=100.0D0 !< minimum value of the progress interval
+  DOUBLE PRECISION,PRIVATE :: curr=0.0D0
+  CHARACTER(len=512),PRIVATE :: form='(''|'',I3.0,''%|'',A,''|'',10X,''|'')'
+  CHARACTER(len=1),PRIVATE :: done='='
+  CHARACTER(len=1),PRIVATE :: todo='-'
+  INTEGER,PRIVATE :: barloc=8
+  INTEGER,PRIVATE :: spin=0
+  CONTAINS
+  PROCEDURE :: update => progress_line_update_d, progress_line_update_i
+  PROCEDURE :: alldone => progress_line_alldone
+END TYPE progress_line
+
+CHARACTER(len=4),PARAMETER :: progress_line_spin='-\|/'
+
 PRIVATE
 PUBLIC line_split
 PUBLIC to_char, t2c, c2i, c2r, c2d, delete, match, &
  fchar_to_cstr, fchar_to_cstr_alloc, cstr_to_fchar, UpperCase, LowerCase, &
  align_center, l_nblnk, f_nblnk, word_split, &
  line_split_new, line_split_get_nlines, line_split_get_line, &
- suffixname, default_columns, wash_char
+ suffixname, default_columns, wash_char, &
+ print_status_line, done_status_line, progress_line
 
 CONTAINS
 
@@ -1191,5 +1217,79 @@ recursive function string_match( string, pattern ) result(match)
     endif
     return
 end function string_match
+
+
+SUBROUTINE print_status_line(line)
+CHARACTER(len=*),INTENT(in) :: line
+CHARACTER(len=1),PARAMETER :: cr=CHAR(13)
+WRITE(stdout_unit,'(2A)',ADVANCE='no')cr,TRIM(line)
+FLUSH(unit=6) ! probably useless with gfortran, required with Intel fortran
+END SUBROUTINE print_status_line
+
+SUBROUTINE done_status_line()
+WRITE(stdout_unit,'()')
+END SUBROUTINE done_status_line
+
+
+!> Update a progress line with a new value.
+!! This subroutine updates the progress line object with a new double
+!! precision value \a val. Values outside the range \a this%min, \a
+!! this%max are truncated. If \a val is equal or greter maximum the
+!! progress bar is closed so that a new line can be printed. When a
+!! progress_line object reaches its maximum it can no more be updated
+!! and/or closed. Use the interface method \a update rather than this
+!! subroutine directly.
+SUBROUTINE progress_line_update_d(this, val)
+CLASS(progress_line),INTENT(inout) :: this !< progress_line object to be updated
+DOUBLE PRECISION,INTENT(in) :: val !< new value
+
+INTEGER :: vint, i
+CHARACTER(len=512) :: line
+
+IF (this%curr >= this%max) RETURN ! line is already closed, do nothing
+
+this%curr = MAX(this%min, MIN(this%max, val))
+this%spin = MOD(this%spin+1, 4)
+line = ''
+
+vint = NINT((this%curr-this%min)/(this%max-this%min)*100.D0)
+WRITE(line,this%form)vint, &
+ progress_line_spin(this%spin+1:this%spin+1)
+vint = vint/10
+
+DO i = 1, vint
+  line(this%barloc+i:this%barloc+i) = this%done
+ENDDO
+DO i = vint+1, 10
+  line(this%barloc+i:this%barloc+i) = this%todo
+ENDDO
+CALL print_status_line(line)
+IF (this%curr >= this%max) CALL done_status_line()
+
+END SUBROUTINE progress_line_update_d
+
+
+!> Update a progress line with a new value.
+!! This subroutine is equivalent to \a progress_line_update_d but it
+!! accepts an inteer value \a val.  Use the interface method \a update
+!! rather than this subroutine directly.
+SUBROUTINE progress_line_update_i(this, val)
+CLASS(progress_line),INTENT(inout) :: this !< progress_line object to be updated
+INTEGER,INTENT(in) :: val !< new value
+
+CALL progress_line_update_d(this, DBLE(val))
+
+END SUBROUTINE progress_line_update_i
+
+!> Close artificially the progress_line object.
+!! This subroutine forces the progress_line object to be closed
+!! regardless of the value reached by the progress counter. It does
+!! not need to be called if the \a update method has already been
+!! called with the maximum progress value.
+SUBROUTINE progress_line_alldone(this)
+CLASS(progress_line),INTENT(inout) :: this
+CALL progress_line_update_d(this, this%max)
+END SUBROUTINE progress_line_alldone
+
 
 END MODULE char_utilities

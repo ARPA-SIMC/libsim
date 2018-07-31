@@ -42,8 +42,8 @@ nodist_include_HEADERS = $(tmpvar2:.F90=.mod)
 
 missing_values.$(OBJEXT): kinds.$(OBJEXT)
 missing_values.lo: kinds.$(OBJEXT)
-char_utilities.$(OBJEXT): kinds.$(OBJEXT) missing_values.$(OBJEXT)
-char_utilities.lo: kinds.$(OBJEXT) missing_values.$(OBJEXT)
+char_utilities.$(OBJEXT): kinds.$(OBJEXT) missing_values.$(OBJEXT) io_units.$(OBJEXT)
+char_utilities.lo: kinds.$(OBJEXT) missing_values.$(OBJEXT) io_units.$(OBJEXT)
 
 list_integer.$(OBJEXT): list_link.$(OBJEXT) list_abstract.$(OBJEXT)
 list_integer.lo: list_link.$(OBJEXT) list_abstract.$(OBJEXT)
