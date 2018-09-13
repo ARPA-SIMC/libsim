@@ -311,6 +311,8 @@ AC_CHECK_LIB(
 	      AC_DEFINE(HAVE_LIBGRIBAPI, 1, [Enable gribapi code])
 	      GRIBAPI_LIBS="-leccodes_f90 -leccodes -ljasper"
 	      AC_SUBST(GRIBAPI_LIBS)
+	      GRIBAPI_PKGCONFIG="eccodes_f90"
+	      AC_SUBST(GRIBAPI_PKGCONFIG)
 	      grib_api_flavor=eccodes
 	     ],
 	     [AC_MSG_RESULT([eccodes library not found, trying with legacy grib_api])],
@@ -325,6 +327,8 @@ AC_CHECK_LIB(
 	      AC_DEFINE(HAVE_LIBGRIBAPI, 1, [Enable gribapi code])
 	      GRIBAPI_LIBS="-lgrib_api_f90 -lgrib_api -ljasper"
 	      AC_SUBST(GRIBAPI_LIBS)
+	      GRIBAPI_PKGCONFIG="grib_api_f90"
+	      AC_SUBST(GRIBAPI_PKGCONFIG)
 	      grib_api_flavor=grib_api
 	     ],
 	     [AC_MSG_ERROR([eccodes and grib-api library not found])],
