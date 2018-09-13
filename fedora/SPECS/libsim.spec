@@ -3,7 +3,7 @@
 Summary: Fortran utility libraries
 Name: libsim
 Version: 6.2.8
-Release: 1
+Release: 2
 License: GPL2+
 Group: Applications/Meteo
 URL: https://github.com/arpa-simc/%{name}
@@ -125,6 +125,9 @@ mv $RPM_BUILD_ROOT%{_includedir}/*.mod $RPM_BUILD_ROOT%{_fmoddir}
 rm -rf %{buildroot}
 
 %changelog
+* Thu Sep 13 2018 Daniele Branchini <dbranchini@arpae.it> - 6.2.8-2
+- fixed issue in eccodes support (see #52)
+
 * Fri Jun 15 2018 Davide Cesari <dcesari@arpae.it> - 6.2.8-1
 - implement frequency sub-type, closes #54
 
