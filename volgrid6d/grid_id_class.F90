@@ -255,6 +255,12 @@ IF (n > 1) THEN ! override with driver from filename
       CALL csv_record_getfield(driveropts, this%gdal_options%ymin)
       CALL csv_record_getfield(driveropts, this%gdal_options%xmax)
       CALL csv_record_getfield(driveropts, this%gdal_options%ymax)
+      ! set extreme values if missing, magnitude defined empirically
+      ! because of integer overflow in fortrangis
+      IF (.NOT.c_e(this%gdal_options%xmin)) this%gdal_options%xmin = -1.0D6
+      IF (.NOT.c_e(this%gdal_options%ymin)) this%gdal_options%ymin = -1.0D6
+      IF (.NOT.c_e(this%gdal_options%xmax)) this%gdal_options%xmax = 1.0D6
+      IF (.NOT.c_e(this%gdal_options%ymax)) this%gdal_options%ymax = 1.0D6
     ELSE
       CALL l4f_log(L4F_ERROR, 'gdal driver requires 4 extra arguments (bounding box)')
       CALL raise_error()

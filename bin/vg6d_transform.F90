@@ -94,7 +94,7 @@ INTEGER :: istat_proc, ostat_proc
 LOGICAL :: comp_full_steps
 TYPE(timedelta) :: c_i
 TYPE(datetime) :: c_s
-!REAL :: comp_frac_valid
+REAL :: comp_frac_valid
 
 ! from vg6d_subarea
 TYPE(gridinfo_def) :: gridinfo
@@ -125,7 +125,10 @@ opt = optionparser_new(description_msg= &
  &like wind component transformation, but memory constraints limit the number &
  &of input fields. When running in the optional ''s'' mode, the input data is &
  &processed one horizontal slice at a time with less memory footprint and less &
- &processing capabilities. The output file is specified in the form &
+ &processing capabilities. The input file is specified in the form &
+ &[input_driver[,driver_options]:]pathname where driver_options are required for &
+ &gdal driver and define a bounding box in the form xmin,ymin,xmax,ymax. &
+ &The output file is specified in the form &
  &[output_driver:[output_template:]]pathname, when output_driver is grib_api, &
  &output_template may specify a file contaning a grib message &
  &to be used as a template for the output file.', &
@@ -366,18 +369,20 @@ CALL optionparser_add(opt, ' ', 'comp-stat-proc', comp_stat_proc, '', help= &
 CALL optionparser_add(opt, ' ', 'comp-step', comp_step, '0000000001 00:00:00.000', help= &
  'length of regularization or statistical processing step in the format &
  &''YYYYMMDDDD hh:mm:ss.msc'', it can be simplified up to the form ''D hh''')
-
 CALL optionparser_add(opt, ' ', 'comp-start', comp_start, '', help= &
  'start of statistical processing interval, an empty value means &
  &take the initial time step of the available data; the format is YYYY-MM-DD HH:MM')
-!CALL optionparser_add(opt, ' ', 'comp-frac-valid', comp_frac_valid, 1., help= &
-! 'specify the fraction of input data that has to be valid in order to consider a &
-! &statistically processed value acceptable')
-
 CALL optionparser_add(opt, ' ', 'comp-full-steps', comp_full_steps, help= &
  'compute statistical processing by differences only on intervals with forecast &
  &time equal to a multiple of comp-step, otherwise all reasonable combinations &
  &of forecast times are computed')
+CALL optionparser_add(opt, ' ', 'comp-frac-valid', comp_frac_valid, 0., help= &
+ '(from 0. to 1.) specify the fraction  of input data that has to be valid in order to consider a &
+ &statistically processed value acceptable; for instantaneous data the criterion is the longest time between two &
+ &contiguous valid data within comp-step interval &
+ &following this rule: longest=comp-step/(comp-frac-valid*999 +1) thus &
+ &comp-frac-valid == 0 => longest=comp-step, &
+ &comp-frac-valid == 1 => longest=comp-step/1000)')
 
 #ifdef VAPOR
 CALL optionparser_add(opt, ' ', 'reverse-vapor-z-order', rzscan, help= &
@@ -728,7 +733,10 @@ IF (trans_mode == "p") THEN ! run in prosciutto (volume) mode
     ALLOCATE(volgrid_tmp(SIZE(volgrid_out)))
     DO i = 1, SIZE(volgrid_out)
       CALL volgrid6d_compute_stat_proc(volgrid_out(i), volgrid_tmp(i), &
-       istat_proc, ostat_proc, c_i, full_steps=comp_full_steps, start=c_s, clone=.TRUE.)
+       istat_proc, ostat_proc, c_i, full_steps=comp_full_steps, &
+       frac_valid=comp_frac_valid, &
+       max_step=timedelta_depop(c_i)/NINT(comp_frac_valid*999.+1.), &
+       start=c_s, clone=.TRUE.)
     ENDDO
     CALL delete(volgrid_out)
     volgrid_out => volgrid_tmp

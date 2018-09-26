@@ -1488,8 +1488,9 @@ IF (this%dim%nx == 0 .OR. this%dim%ny == 0) THEN
   CALL l4f_category_log(this%category, L4F_WARN, &
    'griddim_import_gdal: requested bounding box '//t2c(gdal_options%xmin)//','// &
    t2c(gdal_options%ymin)//','//t2c(gdal_options%xmax)//','//&
-   t2c(gdal_options%ymax)//' determines an empty dataset '// &
-   t2c(this%dim%nx)//'x'//t2c(this%dim%ny))
+   t2c(gdal_options%ymax))
+  CALL l4f_category_log(this%category, L4F_WARN, &
+   'determines an empty dataset '//t2c(this%dim%nx)//'x'//t2c(this%dim%ny))
 ENDIF
 
 ! get grid corners
