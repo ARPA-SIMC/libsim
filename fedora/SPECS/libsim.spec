@@ -3,7 +3,7 @@
 Summary: Fortran utility libraries
 Name: libsim
 Version: 6.2.8
-Release: 2
+Release: 3
 License: GPL2+
 Group: Applications/Meteo
 URL: https://github.com/arpa-simc/%{name}
