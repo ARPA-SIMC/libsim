@@ -437,15 +437,18 @@ B21001,Horizontal reflectivity,dB,78,201,230,255,1.0,0.0
 B22001,Direction of waves,degree true,200,140,230,255,1.0,0.0
 B22001,Direction of waves,degree true,98,140,230,255,1.0,0.0
 B22001,Direction of waves,degree true,80,140,230,255,1.0,0.0
+B22001,Direction of waves,degree true,255,0,14,10,1.0,0.0
 B22037,Tidal elevation with respect to national land datum,m,255,2,82,255,1.0,0.0
 B22062,Salinity,kg/kg->per mille?,255,2,88,255,1000.,0.0
 B22070,Significant wave height,m,255,2,102,255,1.0,0.0
 B22070,Significant wave height,m,200,140,229,255,1.0,0.0
 B22070,Significant wave height,m,98,140,229,255,1.0,0.0
 B22070,Significant wave height,m,80,140,229,255,1.0,0.0
+B22070,Significant wave height,m,255,0,3,10,1.0,0.0
 B22071,Spectral peak wave period,s,200,140,231,255,1.0,0.0
 B22071,Spectral peak wave period,s,98,140,231,255,1.0,0.0
 B22071,Spectral peak wave period,s,80,140,231,255,1.0,0.0
+B22071,Spectral peak wave period,s,255,0,34,10,1.0,0.0
 B22074,Average wave period,s,200,140,232,255,1.0,0.0
 B22074,Average wave period,s,98,140,232,255,1.0,0.0
 B22074,Average wave period,s,80,140,232,255,1.0,0.0
