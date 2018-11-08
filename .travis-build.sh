@@ -9,7 +9,7 @@ then
     builddep="yum-builddep"
     sed -i '/^tsflags=/d' /etc/yum.conf
     yum install -q -y epel-release
-    yum install -q -y @buildsys-build
+    yum install -q -y --allowerasing @buildsys-build
     yum install -q -y yum-utils
     yum install -q -y yum-plugin-copr
     yum install -q -y git
