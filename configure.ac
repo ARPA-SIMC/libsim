@@ -138,54 +138,6 @@ if test "x$dummy_log4fortran" = "xyes"; then
 fi
 AM_CONDITIONAL(LOG4C, test "x$dummy_log4fortran" != "xyes")
 
-AC_ARG_ENABLE(oraclesim, AC_HELP_STRING([--disable-oraclesim],
-  [disable oraclesim/meteodata support]),,[enableval=yes])dnl default enable
-if test "x$enableval" = "xyes"; then
-save_cppflags=$CPPFLAGS
-ora_cppflags=''
-ora_ldflags=''
-if test -n "$ORACLE_VER"; then
-  ora_cppflags="-I/usr/include/$ORACLE_VER"
-  for try in /usr/lib64/$ORACLE_VER/lib /usr/lib/$ORACLE_VER/lib; do
-  if test -d "$try"; then
-    ora_ldflags="-L$try"
-    break
-  fi
-done
-elif test -n "$ORACLE_HOME"; then
-  dnl Non e' semplice dire dove siano gli include
-  ora_cppflags="-I$ORACLE_HOME/sdk/include"
-  if test -d "$ORACLE_HOME/lib" ;then
-    ora_ldflags="-L$ORACLE_HOME/lib"
-  fi
-else
-  dnl tenta il default se qualcuno si e' preso la briga di standardizzare le
-  dnl cose. In tal caso si impostera' il -I anche se non e' corretto
-  ora_cppflags="-I/usr/include/oracle"
-  ora_ldflags=''
-fi
-ora_libs='-locci -lclntsh'
-
-CPPFLAGS="$CPPFLAGS $ora_cppflags"
-AC_CHECK_HEADER([oci.h],
- ORA_CPPFLAGS="$ora_cppflags",
- AC_MSG_ERROR([Oracle-OCI headers not found - try defining ORACLE_VER=oracle/<version>/client]))
-CPPFLAGS=$save_cppflags
-
-AC_CHECK_LIB([occi], [OCIEnvCreate],
-ORA_LDFLAGS=$ora_ldflags
-ORA_LIBS=$ora_libs
-,AC_MSG_ERROR([Oracle-OCI libraries not found - try defining ORACLE_VER=oracle/<version>/client]),
-  [$ora_ldflags $ora_libs])
-
-AC_SUBST(ORA_CPPFLAGS)
-AC_SUBST(ORA_LDFLAGS)
-AC_SUBST(ORA_LIBS)
-AC_DEFINE(HAVE_ORSIM, 1, [Enable oraclesim])
-unset save_cppflags ora_cppflags ora_ldflags ora_lib
-fi
-AM_CONDITIONAL(ORSIM, test "x$enableval" = "xyes")
-
 
 AC_LANG_PUSH(Fortran)dnl Do the following checks in Fortran
 AC_FC_SRCEXT(f90)dnl and use .f90 extension

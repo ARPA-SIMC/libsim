@@ -1,5 +1,5 @@
-# run rpmbuild with arguments --define='with_oracle 1' --define='with_vapor 1'
-# to enable oracle and/or vapor support requiring stiff dependencies
+# run rpmbuild with argument --define='with_vapor 1'
+# to enable vapor support requiring stiff dependencies
 Summary: Fortran utility libraries
 Name: libsim
 Version: 6.2.8
@@ -29,7 +29,6 @@ BuildRequires: eccodes-simc
 BuildRequires: eccodes-simc
 %endif
 
-%{?with_oracle:BuildRequires: oracle-instantclient-devel}
 %{?with_vapor:BuildRequires: vapor-devel}
 
 BuildRequires: libdballef-devel >= 7.6 %{grib_sw}-devel ncl-devel gdal-devel libdballe-devel help2man log4c log4c-devel
@@ -40,7 +39,6 @@ Requires: libdballef4 >= 7.6 %{grib_sw}
 
 %package -n libsim-devel
 
-%{?with_oracle:Requires: oracle-instantclient-devel}
 Requires: fortrangis-devel libdballef-devel >= 7.6 %{grib_sw}-devel ncl-devel gdal-devel libdballe-devel help2man log4c log4c-devel
 Summary:  libsim development files
 Group: Applications/Meteo
@@ -84,7 +82,7 @@ sh autogen.sh
 
 %build
 
-%configure FCFLAGS="%{optflags} -I%{_fmoddir}" ORACLE_VER=oracle/11.2/client %{!?with_oracle:--disable-oraclesim} --enable-f2003-features %{?with_vapor:--enable-vapor} --enable-alchimia --enable-shapelib --enable-netcdf --enable-gribapi --enable-gdal --enable-f2003-extended-features --disable-static
+%configure FCFLAGS="%{optflags} -I%{_fmoddir}" --enable-f2003-features %{?with_vapor:--enable-vapor} --enable-alchimia --enable-shapelib --enable-netcdf --enable-gribapi --enable-gdal --enable-f2003-extended-features --disable-static
 
 make
 make check

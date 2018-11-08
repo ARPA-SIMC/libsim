@@ -123,17 +123,6 @@ endif
 endif
 
 
-if ORSIM
-noinst_PROGRAMS += esempio_v7doracle esempio_v7doracle_multi
-
-esempio_v7doracle_SOURCES = esempio_v7doracle.f90
-esempio_v7doracle_LDADD = ../base/libsim_base.la ../vol7d/libsim_vol7d.la ../log4fortran/liblog4fortran.la
-
-esempio_v7doracle_multi_SOURCES = esempio_v7doracle_multi.f90
-esempio_v7doracle_multi_LDADD = ../base/libsim_base.la ../vol7d/libsim_vol7d.la ../log4fortran/liblog4fortran.la
-endif
-
-
 if GRIBAPI
 noinst_PROGRAMS += example_vg6d_1 example_vg6d_2 example_vg6d_3 example_vg6d_4 example_vg6d_5 example_vg6d_9
 
