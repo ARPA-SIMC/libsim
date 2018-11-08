@@ -20,7 +20,7 @@ PROGRAM v7doracle_pollini
 USE datetime_class
 USE file_utilities
 USE vol7d_class
-USE vol7d_oraclesim_class
+USE vol7d_dballe_class
 USE vol7d_class_compute
 USE array_utilities
 USE log4fortran
@@ -32,20 +32,20 @@ TYPE(optionparser) :: opt
 INTEGER :: optind, optstatus
 LOGICAL :: version
 ! Namelist pollini e affini
-CHARACTER(len=10) :: variabili(100)!, v7variabili(100)
-CHARACTER(len=30) :: famiglie(100), file_stazioni(100)
-INTEGER :: stazioni(100)
-CHARACTER(len=16) :: data_inizio, data_fine, data_inizio_l, data_fine_l
-CHARACTER(len=1024) :: file_rapporto, file_rapporto_l, file_naml
-NAMELIST /pollini/ variabili, famiglie, stazioni, file_stazioni, &
+INTEGER,PARAMETER :: safedim=100
+CHARACTER(len=10) :: variabili(safedim), lonlist(safedim), latlist(safedim)
+CHARACTER(len=30) :: famiglie(safedim), file_stazioni(safedim)
+INTEGER :: stazioni(safedim)
+CHARACTER(len=19) :: data_inizio, data_fine, data_inizio_l, data_fine_l
+CHARACTER(len=1024) :: input_file, file_rapporto, file_rapporto_l, file_naml
+NAMELIST /pollini/ variabili, famiglie, stazioni, lonlist, latlist, file_stazioni, &
  data_inizio, data_fine, file_rapporto
-INTEGER :: nvar, nfam, nstaz, nstazf
+INTEGER :: nvar, nfam, nstaz, nstazf, lonvar, latvar
 
-! Estrazione oracle
-TYPE(vol7d_oraclesim) :: db_v7d
+! Lettura bufr
+TYPE(vol7d_dballe) :: db_v7d
 TYPE(vol7d) :: v7d_fill
 TYPE(vol7d_network) :: network
-TYPE(datetime) :: ti, tf
 TYPE(timedelta) :: dtfill
 INTEGER, ALLOCATABLE :: famptr(:), v7dfamptr(:)
 INTEGER :: i, j, k, n
@@ -82,14 +82,15 @@ file_rapporto = ''
 
 ! define the option parser
 opt = optionparser_new(description_msg= &
- 'Program for extracting pollen data from ARPA-SIM Oracle database', &
- usage_msg='v7d_pollini [options]')
+ 'Program for preprocessing pollen data from ARPA-SIM database; &
+ &pollen data are read in bufr format', &
+ usage_msg='v7d_pollini [options] input_file')
 
 CALL optionparser_add(opt, 'i', 'start-date', data_inizio_l, '', help= &
- 'initial date for extracting data, if provided, it overrides the date &
+ 'initial date for retrieving data, if provided, it overrides the date &
  &specified in the namelist file')
 CALL optionparser_add(opt, 'f', 'end-date', data_fine_l, '', help= &
- 'final date for extracting data, if provided, it overrides the date &
+ 'final date for retrieving data, if provided, it overrides the date &
  &specified in the namelist file')
 CALL optionparser_add(opt, 'r', 'report', file_rapporto_l, '', help= &
  'name of output report file, if provided, it overrides the name &
@@ -101,16 +102,25 @@ CALL optionparser_add(opt, 'n', 'naml', file_naml, 'pollini.naml', help= &
 CALL optionparser_add_help(opt, 'h', 'help', help='show an help message and exit')
 CALL optionparser_add(opt, ' ', 'version', version, help='show version and exit')
 
-OPEN(10, file=file_naml)
-READ(10, NML=pollini)
-CLOSE(10)
-
 CALL optionparser_parse(opt, optind, optstatus)
 IF (optstatus == optionparser_err) THEN
   CALL l4f_category_log(category,L4F_ERROR,'in command-line parameters')
   CALL raise_fatal_error()
 ENDIF
 
+! check input/output files
+i = iargc() - optind
+IF (i < 0) THEN
+  CALL optionparser_printhelp(opt)
+  CALL l4f_category_log(category,L4F_ERROR,'input file missing')
+  CALL raise_fatal_error()
+ENDIF
+CALL getarg(iargc(), input_file)
+
+! Leggo namelist file
+OPEN(10, file=file_naml)
+READ(10, NML=pollini)
+CLOSE(10)
 ! Ricopro i valori di namelist dalla linea di comando
 IF (data_inizio_l /= '') data_inizio = data_inizio_l
 IF (data_fine_l /= '') data_fine = data_fine_l
@@ -146,10 +156,10 @@ IF (nstaz /= nstazf) THEN
    'Numero stazioni e numero file stazione non coincidono: '// &
    t2c(nstaz)//' '//t2c(nstazf)//'.')
 ENDIF
-IF (ANY(stazioni(1:nstaz) == 0)) THEN
-  CALL l4f_category_log(category, L4F_FATAL, &
-   'Esistono identificativi stazione non validi.')
-ENDIF
+!IF (ANY(stazioni(1:nstaz) == 0)) THEN
+!  CALL l4f_category_log(category, L4F_FATAL, &
+!   'Esistono identificativi stazione non validi.')
+!ENDIF
 IF (ANY(file_stazioni(1:nstazf) == '')) THEN
   CALL l4f_category_log(category, L4F_FATAL, &
    'Esistono nomi stazione non validi.')
@@ -168,18 +178,29 @@ famptr(:) = map_distinct(famiglie(1:nvar), back=.TRUE.)
 ! Definisco le reti da cui voglio estrarre
 CALL init(network, 'POLLINI')
 
-! Chiamo il costruttore della classe vol7d_oraclesim per il mio oggetto
-CALL init(db_v7d)
-! estraggo i dati
-CALL import(db_v7d, variabili(1:nvar), (/network/), &
- datetime_new(isodate=data_inizio), datetime_new(isodate=data_fine), &
- anavar=(/'B01192'/), timerange=vol7d_timerange_new(0,86400,86400))
+input_file='pollini.bufr'
+CALL init(db_v7d, filename=input_file, FORMAT='BUFR', file=.TRUE., &
+ time_definition=1)
+! estraggo i dati, seleziono solo i dati osservati mediati su 1 giorno
+CALL import(db_v7d, timerange=vol7d_timerange_new(0,0,86400), &
+ timei=datetime_new(isodate=data_inizio), timef=datetime_new(isodate=data_fine))
+
+! level=level, timerange=timerange, ana=ana,&
+! anavar=avl, attr=alqc, set_network=set_network_obj, &
+! coordmin=coordmin, coordmax=coordmax, &
+
+!anaonly=anaonly anavar=(/'B01192'/), timerange=vol7d_timerange_new(0,86400,86400))
 
 dtfill = timedelta_new(day=1)
 CALL vol7d_fill_time(db_v7d%vol7d, v7d_fill, dtfill, datetime_new(isodate=data_inizio), datetime_new(isodate=data_fine))
 CALL delete(db_v7d%vol7d)
-db_v7d%vol7d = v7d_fill
-! devo rimappare le variabili perche' l'estrazione oracle non garantisce l'ordine
+!db_v7d%vol7d = v7d_fill
+CALL vol7d_convr(v7d_fill, db_v7d%vol7d)
+!CALL delete(db_v7d%vol7d)
+!db_v7d%vol7d=v7dtmp
+CALL init(v7d_fill) ! detach it
+
+! devo rimappare le variabili non conosco l'ordine
 ALLOCATE(v7dfamptr(SIZE(db_v7d%vol7d%dativar%r)))
 v7dfamptr(:) = 0
 DO k = 1, nfam
@@ -192,10 +213,15 @@ DO k = 1, nfam
   ENDDO
 ENDDO
 
+CALL display(db_v7d%vol7d)
+
 ! Creo una vista su un array tridimensionale che scorre le dimensioni
 ! dell'anagrafica, del tempo e delle variabili (vol7d_ana_d, vol7d_time_d)
 CALL vol7d_get_voldatir(db_v7d%vol7d, (/vol7d_ana_d,vol7d_time_d,vol7d_var_d/), vol3dp=vol3d)
 CALL vol7d_get_volanai(db_v7d%vol7d, (/vol7d_ana_d/), vol1dp=stazid)
+
+lonvar = firsttrue(db_v7d%vol7d%anavar%c%btable == "B06001")
+latvar = firsttrue(db_v7d%vol7d%anavar%c%btable == "B05001")
 
 ! Comincio a scrivere i risultati
 CALL init(csv_write)
@@ -211,10 +237,10 @@ CALL delete(csv_write)
 
 ALLOCATE(ndstaz(SIZE(db_v7d%vol7d%ana)))
 ndstaz(:) = 0
-gm1 = timedelta_new(day=0)
+gm1 = timedelta_new(day=-1)
 ! Stampo su file la tabella in uscita
 DO j = 1, SIZE(db_v7d%vol7d%ana) ! stazione
-  n = firsttrue(stazioni == stazid(j))
+  n = ana_match(db_v7d%vol7d%volanac(j,lonvar,1),db_v7d%vol7d%volanac(j,latvar,1))
   IF (n <= 0) CYCLE ! stazione non richiesta
   OPEN(10, file=file_stazioni(n))
   WRITE(10,'(a)') TRIM(intestaz)
@@ -244,7 +270,8 @@ ENDDO
 IF (file_rapporto /= '') THEN ! richiesto il rapporto
   OPEN(10, file=file_rapporto)
   DO j = 1, SIZE(db_v7d%vol7d%ana)
-    n = firsttrue(stazioni == stazid(j))
+    n = ana_match(db_v7d%vol7d%volanac(j,lonvar,1),db_v7d%vol7d%volanac(j,latvar,1))
+!    n = firsttrue(stazioni == stazid(j))
     IF (n <= 0) CYCLE ! stazione non richiesta
 ! scrivo nome file stazione e percentuale di dati validi
     WRITE(10,'(A,1X,I4)') file_stazioni(n), &
@@ -252,7 +279,29 @@ IF (file_rapporto /= '') THEN ! richiesto il rapporto
   ENDDO
 ENDIF
 
+CALL delete(db_v7d)
 CALL l4f_category_delete(category)
 ier=l4f_fini()
+
+CONTAINS
+
+FUNCTION ana_match(clon, clat)
+CHARACTER(len=*),INTENT(in) :: clon
+CHARACTER(len=*),INTENT(in) :: clat
+INTEGER :: ana_match
+
+INTEGER :: i
+
+DO i = 1, SIZE(lonlist)
+  IF (clon == lonlist(i)) THEN
+    IF (clat == latlist(i)) THEN
+      ana_match = i
+      RETURN
+    ENDIF
+  ENDIF
+ENDDO
+ana_match = -1 ! imiss?
+
+END FUNCTION ana_match
 
 END PROGRAM v7doracle_pollini

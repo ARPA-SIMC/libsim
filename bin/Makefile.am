@@ -52,7 +52,7 @@ endif
 endif
 
 
-if ORSIM
+if DBALLE
 bin_PROGRAMS += v7d_pollini
 
 v7d_pollini_SOURCES = v7d_pollini.f90
