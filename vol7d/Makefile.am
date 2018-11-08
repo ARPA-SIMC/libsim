@@ -17,13 +17,6 @@ libsim_vol7d_la_LDFLAGS =
 # Librerie aggiuntive
 libsim_vol7d_la_LIBADD = ../log4fortran/liblog4fortran.la ../base/libsim_base.la
 
-if ORSIM
-libsim_vol7d_la_SOURCES += vol7d_oraclesim_class.f90 oraclesim.c
-AM_CPPFLAGS += $(ORA_CPPFLAGS)
-libsim_vol7d_la_LDFLAGS += $(ORA_LDFLAGS)
-libsim_vol7d_la_LIBADD += $(ORA_LIBS)
-endif
-
 if F2003_FEATURES
 libsim_vol7d_la_SOURCES += vol7d_serialize_class.F03 vol7d_serialize_csv_class.F03 \
  vol7d_serialize_csvdba_class.F03 vol7d_serialize_geojson_class.F03 
@@ -51,7 +44,6 @@ libsim_vol7d_la_LDFLAGS += -version-info @LIBSIM_VERSION_INFO@
 endif
 
 noinst_HEADERS = vol7d_class_type_templ.F90 vol7d_class_desc_templ.F90 \
-vol7d_oraclesim_class_vartable.F90 \
 vol7d_class_diff.F90 vol7d_class_diff_only.F90 \
 vol7d_dballe_class_nana.F90 vol7d_dballe_class_ndati.F90 \
 vol7d_dballe_class_dati.F90 vol7d_dballe_class_datiattr.F90 \
@@ -63,8 +55,7 @@ tmpvar = $(libsim_vol7d_la_SOURCES:.f90=.mod)
 tmpvar1 = $(tmpvar:.f03=.mod)
 tmpvar2 = $(tmpvar1:.F03=.mod)
 tmpvar3 = $(tmpvar2:vdf4f_c.cpp=)
-tmpvar4 = $(tmpvar3:oraclesim.c=)
-nodist_include_HEADERS = $(tmpvar4:.F90=.mod)
+nodist_include_HEADERS = $(tmpvar3:.F90=.mod)
 
 dist_check_SCRIPTS = 
 check_PROGRAMS = 
@@ -85,10 +76,6 @@ stat_proc_engine.$(OBJEXT): vol7d_class.$(OBJEXT)
 stat_proc_engine.lo: vol7d_class.$(OBJEXT)
 vol7d_class_compute.$(OBJEXT): vol7d_class.$(OBJEXT) stat_proc_engine.$(OBJEXT)
 vol7d_class_compute.lo: vol7d_class.$(OBJEXT) stat_proc_engine.$(OBJEXT)
-if ORSIM
-vol7d_oraclesim_class.$(OBJEXT): vol7d_class.$(OBJEXT) vol7d_oraclesim_class_vartable.F90
-vol7d_oraclesim_class.lo: vol7d_class.$(OBJEXT) vol7d_oraclesim_class_vartable.F90
-endif
 
 if DBALLE
 #vol7d_dballeold_class.$(OBJEXT): vol7d_class.$(OBJEXT) \

@@ -26,13 +26,10 @@ USE io_units
 USE vol7d_class
 USE vol7d_class_compute
 USE datetime_class
-#ifdef HAVE_ORSIM
-USE vol7d_oraclesim_class
-#endif
 #ifdef HAVE_DBALLE
 USE vol7d_dballe_class
 #endif
-#if defined HAVE_ORSIM || defined HAVE_DBALLE
+#ifdef HAVE_DBALLE
 USE db_utils
 #endif
 #ifdef HAVE_LIBGRIBAPI
@@ -103,9 +100,6 @@ TYPE(transform_def) :: trans
 #ifdef HAVE_DBALLE
 TYPE(vol7d_dballe) :: v7d_dba, v7d_dba_out
 #endif
-#ifdef HAVE_ORSIM
-TYPE(vol7d_oraclesim) :: v7d_osim
-#endif
 TYPE(vol7d_network) :: set_network_obj
 CHARACTER(len=network_name_len) :: set_network
 CHARACTER(len=512) :: dsn, user, password
@@ -158,9 +152,6 @@ opt = optionparser_new(description_msg= &
 #ifdef HAVE_DBALLE
  //', from a dbAll.e database, from a BUFR/CREX file'&
 #endif
-#ifdef HAVE_ORSIM
- //', from SIM Oracle database'&
-#endif
  //' and exports it into a native v7d file'&
 #ifdef HAVE_DBALLE
  //', into a BUFR/CREX file'&
@@ -189,9 +180,6 @@ CALL optionparser_add(opt, ' ', 'input-format', input_format, 'native', help= &
 #ifdef HAVE_DBALLE
  //', ''BUFR'' for BUFR file with generic template, ''CREX'' for CREX file&
  &, ''dba'' for dballe database'&
-#endif
-#ifdef HAVE_ORSIM
- //', ''orsim'' for SIM Oracle database'&
 #endif
  )
 coord_file=cmiss
@@ -903,41 +891,6 @@ DO ninput = optind, iargc()-1
     CALL init(v7d_dba%vol7d) ! nullify without deallocating
     CALL delete(v7d_dba) ! cleanly close the database
 
-#endif
-
-#ifdef HAVE_ORSIM
-  ELSE IF (input_format == 'orsim') THEN
-
-    if (c_e(coordmin) .or. c_e(coordmax) .or. c_e(ana)) then
-      CALL l4f_category_log(category, L4F_ERROR, &
-       '--ielat, --ielon, --felat, --felon not usable with SIM Oracle source')
-      CALL raise_fatal_error()
-    end if
-
-    IF (.NOT.ALLOCATED(nl) .OR. (.NOT.ALLOCATED(vl) .AND. .NOT.ALLOCATED(avl))) THEN
-      CALL l4f_category_log(category, L4F_ERROR, &
-       'error in command-line arguments, it is necessary to provide --network-list')
-      CALL l4f_category_log(category, L4F_ERROR, &
-       'and either --variable-list or --anavariable-list with SIM Oracle source')
-      CALL raise_fatal_error()
-    ENDIF
-    CALL parse_dba_access_info(input_file, dsn, user, password)
-    CALL init(v7d_osim, dsn=dsn, user=user, password=password, &
-     time_definition=time_definition)
-
-    IF (SIZE(vl) > 0) THEN ! data requested
-      CALL import(v7d_osim, vl, nl, timei=s_d, timef=e_d, &
-       level=level, timerange=timerange, &
-!       coordmin=coordmin, coordmax=coordmax, &
-       anavar=avl, attr=alqc, set_network=set_network_obj)
-    ELSE ! ana requested
-      CALL import(v7d_osim, nl, anavar=avl, set_network=set_network_obj &
-!       , coordmin=coordmin, coordmax=coordmax &
-       )
-    ENDIF
-    v7dtmp = v7d_osim%vol7d
-    CALL init(v7d_osim%vol7d) ! nullify without deallocating
-    CALL delete(v7d_osim) ! cleanly close the database
 #endif
 
   ELSE
