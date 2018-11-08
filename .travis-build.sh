@@ -9,7 +9,7 @@ then
     builddep="yum-builddep"
     sed -i '/^tsflags=/d' /etc/yum.conf
     yum install -q -y epel-release
-    yum install -q -y --allowerasing @buildsys-build
+    yum install -q -y @buildsys-build
     yum install -q -y yum-utils
     yum install -q -y yum-plugin-copr
     yum install -q -y git
@@ -19,7 +19,7 @@ then
     pkgcmd="dnf"
     builddep="dnf builddep"
     sed -i '/^tsflags=/d' /etc/dnf/dnf.conf
-    dnf install -q -y @buildsys-build
+    dnf install -q -y --allowerasing @buildsys-build
     dnf install -q -y 'dnf-command(builddep)'
     dnf install -q -y git
     dnf copr enable -q -y simc/stable
