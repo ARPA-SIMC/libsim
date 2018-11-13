@@ -114,6 +114,7 @@ B13003,Relative humidity,Percent,255,1,1,0,1.0,0.0
 B13003,Relative humidity,Percent,255,2,52,255,1.0,0.0
 B13003,Relative humidity,Percent,98,128,157,255,1.0,0.0
 B13011,Total precipitation,Kg/m**2,255,1,52,0,1.0,0.0
+B13011,Total precipitation,Kg/m**2,255,1,8,0,1.0,0.0
 B13011,Total precipitation,Kg/m**2,255,2,61,255,1.0,0.0
 B13011,Total precipitation,m->Kg/m**2,98,128,228,255,1000.,0.0
 B13031,Evaporation/Evapotranspiration,Kg/m**2,255,0,6,2,1.0,0.0
