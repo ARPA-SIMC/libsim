@@ -2,8 +2,8 @@
 # to enable vapor support requiring stiff dependencies
 Summary: Fortran utility libraries
 Name: libsim
-Version: 6.2.8
-Release: 3
+Version: 6.2.9
+Release: 1
 License: GPL2+
 Group: Applications/Meteo
 URL: https://github.com/arpa-simc/%{name}
@@ -122,6 +122,9 @@ mv $RPM_BUILD_ROOT%{_includedir}/*.mod $RPM_BUILD_ROOT%{_fmoddir}
 rm -rf %{buildroot}
 
 %changelog
+* Thu Nov 29 2018 Davide Cesari <dcesari@arpae.it> - 6.2.9-1
+- removed support for oracle@sim
+
 * Thu Sep 13 2018 Daniele Branchini <dbranchini@arpae.it> - 6.2.8-2
 - fixed issue in eccodes support (see #52)
 
