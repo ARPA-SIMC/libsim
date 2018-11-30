@@ -1,4 +1,9 @@
 aclocal.m4
+m4/libtool.m4
+m4/ltoptions.m4
+m4/ltsugar.m4
+m4/ltversion.m4
+m4/lt~obsolete.m4
 autom4te.cache/
 config.guess
 config.h
@@ -13,6 +18,7 @@ ltmain.sh
 missing
 libtool
 test-driver
+libsim.pc
 Makefile.in
 Makefile
 .deps
@@ -22,6 +28,8 @@ Makefile
 *.la
 *.mod
 *~
+*.log
+*.trs
 \#*\#
 bin/*.1
 bin/*.md
@@ -38,3 +46,4 @@ bin/vg6d_getpoint
 bin/vg6d_transform
 doc/Doxyfile
 doc/latex/
+doc/html/
