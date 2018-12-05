@@ -44,6 +44,7 @@ USE termo
 implicit none
 
 INTEGER :: category, ier, i, n
+LOGICAL :: first
 CHARACTER(len=12) :: coord_format
 CHARACTER(len=10), ALLOCATABLE :: vl(:), avl(:)
 !CHARACTER(len=10) :: level_type
@@ -106,13 +107,13 @@ TYPE(grid_transform) :: grid_trans
 CHARACTER(len=1) :: trans_mode
 
 !questa chiamata prende dal launcher il nome univoco
-call l4f_launcher(a_name,a_name_force="volgrid6dtransform")
+call l4f_launcher(a_name,a_name_force="vg6d_transform")
 
 !init di log4fortran
 ier=l4f_init()
 
 !imposta a_name
-category=l4f_category_get(a_name//".main")
+category=l4f_category_get(TRIM(a_name)//".main")
 
 ! define the option parser
 opt = optionparser_new(description_msg= &
@@ -767,6 +768,7 @@ ELSE ! run in salsiccia (serial) mode
   ofile = grid_file_id_new(output_file,'w')
   CALL init(griddim_cache)
 
+  first = .TRUE.
   DO WHILE (.TRUE.)
     input_grid_id = grid_id_new(ifile)
     IF (.NOT.c_e(input_grid_id)) THEN ! THEN because of a bug in gfortran?!
@@ -787,7 +789,11 @@ ELSE ! run in salsiccia (serial) mode
     IF (trans_type /= 'none') THEN ! transform
 ! common optimisation, recompute grid_trans only when grid changes
       IF (griddim_cache /= gridinfo%griddim) THEN ! do not use cached grid_trans
-        CALL delete(grid_trans)
+        IF (first) THEN
+          first = .FALSE.
+        ELSE
+          CALL delete(grid_trans)
+        ENDIF
         CALL init(grid_trans, trans, in=gridinfo%griddim, out=griddim_out, &
          categoryappend="gridtransformed")
         griddim_cache = gridinfo%griddim

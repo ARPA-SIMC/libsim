@@ -194,7 +194,7 @@ this%category=l4f_category_get(a_name)
 
 #ifdef DEBUG
 CALL l4f_category_log(this%category,L4F_DEBUG,'vol7d_dballe_init start')
-#endif        
+#endif
 
 nullify(this%data_id)
 
