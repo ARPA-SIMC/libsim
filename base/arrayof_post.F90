@@ -64,7 +64,7 @@ ARRAYOF_ORIGTYPE, INTENT(in) :: content !< object of \a TYPE ARRAYOF_ORIGTYPE to
 INTEGER :: pos
 
 this%arraysize = this%arraysize + 1
-pos = this%arraysize + 1
+pos = this%arraysize
 CALL ARRAYOF_TYPE/**/_alloc(this)
 this%array(this%arraysize) = content
 
