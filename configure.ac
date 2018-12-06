@@ -117,16 +117,10 @@ dnl for some reason, this test does not work when inserted
 dnl in the previous AC_CHECK_HEADERS
   if test "x$log4c_h" = "xyes"; then
     AC_CHECK_LIB([log4c], [log4c_init],
-      true, AC_MSG_ERROR([Package log4c broken!]))dnl true is an empty operation
-    AC_CHECK_HEADERS([f77.h],
-      AC_CHECK_LIB([cnf], [cnfCptr],
-        LOG4C_LIBS="-llog4c -lcnf"
-        AC_SUBST(LOG4C_LIBS)
-        AC_DEFINE(HAVE_LIBLOG4C, 1, [Enable log4c])
-        AC_DEFINE(HAVE_LIBCNF, 1, [Enable cnf]),
-        AC_MSG_ERROR([Package cnf broken!])),
-      AC_MSG_RESULT([Package cnf missing])
-      dummy_log4fortran=yes)
+      LOG4C_LIBS="-llog4c"
+      AC_SUBST(LOG4C_LIBS)
+      AC_DEFINE(HAVE_LIBLOG4C, 1, [Enable log4c]),
+      AC_MSG_ERROR([Package log4c broken!]))dnl true is an empty operation
   fi
 else
 dnl build a dummy log4fortran
