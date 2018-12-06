@@ -70,7 +70,7 @@ type grid_def
   private
   type(geo_proj) :: proj
   type(grid_rect) :: grid
-  integer :: category
+  integer :: category = 0
 end type grid_def
 
 
@@ -82,7 +82,7 @@ end type grid_def
 type griddim_def
   type(grid_def) :: grid !< grid and projection definition
   type(grid_dim) :: dim  !< grid dimensions definition
-  integer :: category !< category for log4fortran
+  integer :: category = 0 !< category for log4fortran
 end type griddim_def
 
 

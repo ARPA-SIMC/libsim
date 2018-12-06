@@ -70,7 +70,7 @@ character (len=255),parameter:: subcategory="dballe_class"
 type,public :: dbaconnection
   integer :: dbhandle=imiss !< dballe DB handle
   integer :: handle_err=imiss !< dballe error handler
-  integer :: category !< log4fortran
+  integer :: category=0 !< log4fortran
   contains
 # ifdef F2003_FULL_FEATURES
     final :: dbaconnection_delete
@@ -96,7 +96,7 @@ type,public ::  dbasession
   logical           :: memdb=.false. !<  use memdb
   logical           :: loadfile=.false. !<  load data in file into memdb
   type(dbaconnection) :: memconnection !< connection for memdb
-  integer :: category=imiss !< log4fortran category
+  integer :: category=0 !< log4fortran category
   integer :: count=imiss !< number of results left to query
   contains
 # ifdef F2003_FULL_FEATURES

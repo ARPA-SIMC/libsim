@@ -283,7 +283,7 @@ TYPE transform_def
   TYPE(box_info) :: box_info ! boxregrid specification
   TYPE(vertint) :: vertint ! vertical interpolation specification
   INTEGER :: time_definition ! time definition for interpolating to sparse points
-  INTEGER :: category ! category for log4fortran
+  INTEGER :: category = 0 ! category for log4fortran
 END TYPE transform_def
 
 
@@ -327,7 +327,7 @@ TYPE grid_transform
 !  type(volgrid6d) :: input_vertcoordvol ! volume which provides the input vertical coordinate if separated from the data volume itself (for vertint) cannot be here because of cross-use, should be an argument of compute
 !  type(vol7d_level), pointer :: output_vertlevlist(:) ! list of vertical levels of output data (for vertint) can be here or an argument of compute, how to do?
   TYPE(vol7d_level),POINTER :: output_level_auto(:) => NULL() ! array of auto-generated levels, stored for successive query
-  INTEGER :: category ! category for log4fortran
+  INTEGER :: category = 0 ! category for log4fortran
   LOGICAL :: valid = .FALSE. ! the transformation has been successfully initialised
 END TYPE grid_transform
 

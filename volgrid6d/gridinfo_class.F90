@@ -82,7 +82,7 @@ TYPE gridinfo_def
   TYPE(vol7d_level) :: level !< vertical level dimension descriptor
   TYPE(volgrid6d_var) :: var !< physical variable dimension descriptor
   TYPE(grid_id) :: gaid !< grid identificator, carrying information about the driver for importation/exportation from/to file
-  INTEGER :: category !< log4fortran category
+  INTEGER :: category = 0 !< log4fortran category
 END TYPE gridinfo_def
 
 INTEGER, PARAMETER :: &

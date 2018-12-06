@@ -108,7 +108,7 @@ TYPE vol7d_dballe
   !!ottimizzare le riscritture degli attributi ai dati
   integer ,pointer :: data_id(:,:,:,:,:)
   integer :: time_definition
-  integer :: category !< log4fortran
+  integer :: category = 0 !< log4fortran
   logical :: file !<
 
 END TYPE vol7d_dballe
