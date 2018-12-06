@@ -2,7 +2,7 @@
 # to enable vapor support requiring stiff dependencies
 Summary: Fortran utility libraries
 Name: libsim
-Version: 6.2.9
+Version: 6.3.0
 Release: 1
 License: GPL2+
 Group: Applications/Meteo
@@ -33,7 +33,7 @@ BuildRequires: eccodes-simc
 
 BuildRequires: libdballef-devel >= 7.6 %{grib_sw}-devel ncl-devel gdal-devel libdballe-devel help2man log4c log4c-devel
 BuildRequires: doxygen graphviz texlive-latex-bin texlive-dvips-bin
-BuildRequires: libtool cnf-devel libpng-devel fortrangis-devel netcdf-fortran-devel shapelib-devel jasper-devel proj-devel popt-devel openjpeg-devel cairo-devel
+BuildRequires: libtool libpng-devel fortrangis-devel netcdf-fortran-devel shapelib-devel jasper-devel proj-devel popt-devel openjpeg-devel cairo-devel
 Requires: libdballef4 >= 7.6 %{grib_sw}
 
 
@@ -122,6 +122,9 @@ mv $RPM_BUILD_ROOT%{_includedir}/*.mod $RPM_BUILD_ROOT%{_fmoddir}
 rm -rf %{buildroot}
 
 %changelog
+* Thu Dec 6 2018 Davide Cesari <dcesari@arpae.it> - 6.3.0-1
+- refactoring of log4c interface, remove dependency on cnf
+
 * Thu Nov 29 2018 Davide Cesari <dcesari@arpae.it> - 6.2.9-1
 - removed support for oracle@sim
 
