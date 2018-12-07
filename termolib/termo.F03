@@ -39,7 +39,8 @@ subroutine register_termo(vfn)
   call fnregister(vfn,swgwmo2swgsim_def())
   call fnregister(vfn,swgsim2swgwmo_def())
   call fnregister(vfn,rh_t_td_p2vis_def())
-  call fnregister(vfn,t_td_p_qcw2vis_def())
+  call fnregister(vfn,rho_qcw2vis_def())
+  call fnregister(vfn,tv_p2rho_def())
 
 end subroutine register_termo
 
@@ -122,7 +123,7 @@ subroutine  u_v2dd_ff(mybin,mybout,bin,bout,in,out)
   real, intent(in) :: in(:,:)
   real, intent(out) :: out(:,:)
 
-  call uvwind(in (:,index_c(mybin ,bin (1))),in (:,index_c(mybin ,bin (2))), &
+  call uvwind(in (:,index_c(mybin, bin(1))),in (:,index_c(mybin, bin(2))), &
           out(:,index_c(mybout,bout(1))),out(:,index_c(mybout,bout(2))))
 
 end subroutine u_v2dd_ff
@@ -144,7 +145,7 @@ subroutine  r_t2td(mybin,mybout,bin,bout,in,out)
   real, intent(in) :: in(:,:)
   real, intent(out) :: out(:,:)
 
-  out(:,index_c(mybout,bout(1)))= trug(in (:,index_c(mybin ,bin (1))),in (:,index_c(mybin ,bin (2))))
+  out(:,index_c(mybout,bout(1)))= trug(in(:,index_c(mybin, bin(1))), in(:,index_c(mybin, bin(2))))
           
 end subroutine r_t2td
 
@@ -311,8 +312,8 @@ subroutine  q_p_t2r(mybin,mybout,bin,bout,in,out)
   real, intent(in) :: in(:,:)
   real, intent(out) :: out(:,:)
 
-  out(:,index_c(mybout,bout(1)))= QTORELHUM(in (:,index_c(mybin ,bin (1))),&
-   in (:,index_c(mybin ,bin (2))),in (:,index_c(mybin ,bin (3)))) 
+  out(:,index_c(mybout,bout(1)))= QTORELHUM(in (:,index_c(mybin, bin(1))),&
+   in (:,index_c(mybin, bin(2))),in (:,index_c(mybin, bin(3)))) 
           
 end subroutine q_p_t2r
 
@@ -568,7 +569,7 @@ CALL init(rh_t_td_p2vis_def,"rh_t_td_p2vis", &
 END FUNCTION rh_t_td_p2vis_def
 
 
-SUBROUTINE t_td_p_qcw2vis(mybin,mybout,bin,bout,in,out)
+SUBROUTINE rho_qcw2vis(mybin,mybout,bin,bout,in,out)
 CHARACTER(len=10),INTENT(in) :: mybin(:)  !< vector table B  WMO input  in user's data
 CHARACTER(len=10),INTENT(in) :: mybout(:) !< vector table B  WMO output in user's data
 CHARACTER(len=10),INTENT(in) :: bin(:)    !< vector table B  WMO input used by function
@@ -577,15 +578,54 @@ REAL, INTENT(in) :: in(:,:)
 REAL, INTENT(out) :: out(:,:)
 
 out(:,index_c(mybout,bout(1))) = vis_lwc( &
- in(:,index_c(mybin,bin(1))), in(:,index_c(mybin,bin(2))), &
- in(:,index_c(mybin,bin(3))), in(:,index_c(mybin,bin(4))))
+ in(:,index_c(mybin,bin(1))), in(:,index_c(mybin,bin(2))))
 
-END SUBROUTINE t_td_p_qcw2vis
+END SUBROUTINE rho_qcw2vis
 
-TYPE(fnds) FUNCTION t_td_p_qcw2vis_def()
-CALL init(t_td_p_qcw2vis_def,"t_td_p_qcw2vis", &
- [CHARACTER(len=10) :: "B12101","B12103","B10004","B13192"], &
- [CHARACTER(len=10) :: "B20001"],0,func=t_td_p_qcw2vis)
-END FUNCTION t_td_p_qcw2vis_def
+TYPE(fnds) FUNCTION rho_qcw2vis_def()
+CALL init(rho_qcw2vis_def,"rho_qcw2vis", &
+ [CHARACTER(len=10) :: "B12194","B13192"], &
+ [CHARACTER(len=10) :: "B20001"],0,func=rho_qcw2vis)
+! [CHARACTER(len=10) :: "B12101","B12103","B10004","B13192"], &
+END FUNCTION rho_qcw2vis_def
+
+
+SUBROUTINE tv_p2rho(mybin,mybout,bin,bout,in,out)
+CHARACTER(len=10),INTENT(in) :: mybin(:)  !< vector table B  WMO input  in user's data
+CHARACTER(len=10),INTENT(in) :: mybout(:) !< vector table B  WMO output in user's data
+CHARACTER(len=10),INTENT(in) :: bin(:)    !< vector table B  WMO input used by function
+CHARACTER(len=10),INTENT(in) :: bout(:)   !< vector table B  WMO output used by function
+REAL, INTENT(in) :: in(:,:)
+REAL, INTENT(out) :: out(:,:)
+
+out(:,index_c(mybout,bout(1))) = airden( &
+ in(:,index_c(mybin,bin(1))), in(:,index_c(mybin,bin(2))))
+
+END SUBROUTINE tv_p2rho
+
+TYPE(fnds) FUNCTION tv_p2rho_def()
+CALL init(tv_p2rho_def,"tv_p2rho", &
+ [CHARACTER(len=10) :: "B12107","B10004"], &
+ [CHARACTER(len=10) :: "B12194"],0,func=tv_p2rho)
+END FUNCTION tv_p2rho_def
+
+SUBROUTINE t_q2tv(mybin,mybout,bin,bout,in,out)
+CHARACTER(len=10),INTENT(in) :: mybin(:)  !< vector table B  WMO input  in user's data
+CHARACTER(len=10),INTENT(in) :: mybout(:) !< vector table B  WMO output in user's data
+CHARACTER(len=10),INTENT(in) :: bin(:)    !< vector table B  WMO input used by function
+CHARACTER(len=10),INTENT(in) :: bout(:)   !< vector table B  WMO output used by function
+REAL, INTENT(in) :: in(:,:)
+REAL, INTENT(out) :: out(:,:)
+
+out(:,index_c(mybout,bout(1))) = airden( &
+ in(:,index_c(mybin,bin(1))), in(:,index_c(mybin,bin(2))))
+
+END SUBROUTINE t_q2tv
+
+TYPE(fnds) FUNCTION t_q2tv_def()
+CALL init(t_q2tv_def,"t_q2tv", &
+ [CHARACTER(len=10) :: "B12101","B13001"], &
+ [CHARACTER(len=10) :: "B12107"],0,func=t_q2tv)
+END FUNCTION t_q2tv_def
 
 END MODULE termo

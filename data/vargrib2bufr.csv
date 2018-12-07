@@ -99,6 +99,9 @@ B12101,Temperature,K,98,128,167,255,1.0,0.0
 B12103,Dew point temperature,K,255,0,6,0,1.0,0.0
 B12103,Dew point temperature,K,255,2,17,255,1.0,0.0
 B12103,Dew point temperature,K,98,128,168,255,1.0,0.0
+B12107,Virtual temperature,K,255,0,1,0,1.0,0.0
+B12107,Virtual temperature,K,255,2,12,255,1.0,0.0
+B12131,Temperature of the snow-surface,K,255,0,18,0,1.0,0.0
 B12131,Temperature of the snow-surface,K,200,201,203,255,1.0,0.0
 B12131,Temperature of the snow-surface,K,80,201,203,255,1.0,0.0
 B12131,Temperature of the snow-surface,K,78,201,203,255,1.0,0.0
@@ -108,6 +111,8 @@ B12192,Potential Temperature,K,98,128,3,255,1.0,0.0
 B12193,Pseudo Adiabatic Potential Temperature,K,255,2,14,255,1.0,0.0
 B12194,Air Density,molecole/cm**3,200,200,89,0,4.81E-20,0.0
 B12194,Air Density,molecole/cm**3,200,200,89,255,4.81E-20,0.0
+B12194,Air density,kg/m**3,255,3,10,0,1.0,0.0
+B12194,Air density,kg/m**3,255,2,89,255,1.0,0.0
 B13001,Specific humidity,Kg/Kg,255,1,0,0,1.0,0.0
 B13001,Specific humidity,Kg/Kg,255,2,51,255,1.0,0.0
 B13001,Specific humidity,Kg/Kg,98,128,133,255,1.0,0.0

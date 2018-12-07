@@ -417,6 +417,8 @@ elemental real function  TW( TD,TT,PT )
   return 
 end function TW
 
+! legacy functions for virtual temperature, replaced by tvirt
+! and alchimia machinery
 !--------------------------------------------------------------------------
 
 elemental real function TVIR(TD,T,P)
@@ -461,13 +463,10 @@ elemental real function TVIR(TD,T,P)
 end function TVIR
 
 
-!>  Calcola la Temperatura virtuale dell'aria secondo la formula: 
-!!  TVIR = (1+0.00061*Q)*T 
-!!  (K.) 
 elemental real function TVIR2(T,q)
 
-real,intent(in) :: t !< specific humidity (gr/Kg) 
-real,intent(in) :: q !< temperature (K)
+real,intent(in) :: t
+real,intent(in) :: q
 
 
 if( c_e(t) .and. c_e(q) )then 
@@ -483,6 +482,21 @@ end if
 
 return 
 end function TVIR2
+
+
+!> Compute virtual temperature from specific humidity and pressure.
+!! \a t in K, \a q in kg/kg.
+ELEMENTAL REAL FUNCTION tvirt(t, q)
+REAL,INTENT(in) :: t !< temperature (K)
+REAL,INTENT(in) :: q !< specific humidity (kg/kg)
+
+IF (c_e(t) .AND. c_e(q)) THEN
+  tvirt = (1. + epsy*q)*t
+ELSE
+  tvirt = rmiss
+ENDIF
+
+END FUNCTION tvirt
 
 
 !--------------------------------------------------------------------------
@@ -611,49 +625,43 @@ end function W
 
 !-----------------------------------------------------------------
 
-!> Compute relative humidity (1-100) from specific humidity \q,
-!! pressure \a pt and temperature \a t.
-!! \q in Kg/Kg, \a pt in hPa, \a t in K.
+!> Compute relative humidity from specific humidity, pressure and temperature.
+!! \a pt in Paand temperature \a t.
+!! \q in Kg/Kg, \a pt in Pa, \a t in K.
 !! From Baker 1983, Mon.Wea.Rev., 111, p. 328.
-elemental real function QTORELHUM(Q,PT,T) 
- 
-  real,intent(in)::q,pt,t
+ELEMENTAL REAL FUNCTION qtorelhum(q, pt, t)
+REAL,INTENT(in) :: q !< Specific humidity (kg/kg)
+REAL,INTENT(in) :: pt !< Pressure (Pa)
+REAL,INTENT(in) :: pt !< Temperature (K)
 
-  if( c_e(q) .and. c_e(pt) .and. c_e(t) )then 
+IF (c_e(q) .AND. c_e(pt) .AND. c_e(t)) THEN
+  qtorelhum = MAX(q*(pt/100. - c1*esat(t))/(eps0*esat(t))*100., 0.)
+ELSE
+  qtorelhum = rmiss
+ENDIF
 
-    QTORELHUM= q * (pt/100.-c1*ESAT(t)) / (eps0*ESAT(t))*100. 
-    if (QTORELHUM  < 0.)QTORELHUM=0.
-    
-  else
-
-    QTORELHUM=rmiss
-
-  end if
-
-  return 
-end function QTORELHUM
+END FUNCTION qtorelhum
  
 !-----------------------------------------------------------------
 
-!> Compute dew point temperature from pressure \a p and specific humidity \a q.
+!> Compute dew point temperature from pressure and specific humidity.
 !! \a p in hPa, \a q in Kg/Kg, \a td in K.
 !! From Fea, Elementi di dinamica e termodinamica dell'atmosfera, (4.11)
 ELEMENTAL REAL FUNCTION td_pq(p,q)
 IMPLICIT NONE
-! td in K, p in Pa, q in Kg/Kg
-REAL,INTENT(in) :: p, q
-REAL :: e
-REAL, PARAMETER :: rd = 287.05, rv = 461.51, &
- eps0 = rd/rv, eps1 = 1. - eps0
+! td in K, p in Pa, q in Kg/Kg ! controllare p, probabilmente Pa
+REAL,INTENT(in) :: p !< Pressure
+REAL,INTENT(in) :: q !< Specific humidity (kg/kg)
 
-!REAL, EXTERNAL :: tesat
+REAL :: e
+REAL, PARAMETER :: eps1 = 1. - eps0 ! put in phys_const?
 
 ! Compute vapour partial pressure
 IF (c_e(p) .AND. c_e(q)) THEN
   e=p*q/(eps0+eps1*q)
   td_pq=tesat(e)
 ELSE
- td_pq = rmiss
+  td_pq = rmiss
 ENDIF
 
 END FUNCTION td_pq
@@ -661,34 +669,24 @@ END FUNCTION td_pq
 
 !----------------------------------------------------------------- 
 
-!> Compute specific humidity \q in Kg/Kg from relative humidity,
-!! pressure \a pt and temperature \a t.
-!! \rh in 0-100, \a pt in hPa, \a t in K.
-elemental real function RELHUMTOQ(RH,PT,T)
- 
-! CALCOLA L'UMIDITA SPECIFICA A PARTIRE DALLA UMIDITA RELATIVA 
+!> Compute specific humidity from relative humidity,
+!! pressure and temperature.
+!! \a q in Kg/Kg, \rh in 0-100, \a pt in hPa, \a t in K.
+ELEMENTAL REAL FUNCTION relhumtoq(rh, pt, t)
+REAL,INTENT(in) :: rh !< Relative humidity (%)
+REAL,INTENT(in) :: pt !< Pressure (Pa)
+REAL,INTENT(in) :: t !< Temperature (K)
 
-  real,intent(in)::rh,pt,t
+REAL :: lesat
 
-  if (c_e(rh) .and. c_e(pt) .and. c_e(t)) then
+lesat = esat(t)
+IF (c_e(rh) .AND. c_e(pt) .AND. c_e(lesat)) THEN
+  relhumtoq = MAX(rh*0.01*(eps0*lesat)/(pt-c1*lesat), 0.)
+ELSE
+  relhumtoq = rmiss
+ENDIF
 
-    if ( t < 8 )then         !al disotto ritorna NaN
-      relhumtoq =rmiss
-      return
-    end if
-
-    RELHUMTOQ=rh*0.01*(eps0*ESAT(t))/(pt-c1*ESAT(t)) 
-    if (RELHUMTOQ  <  0.)RELHUMTOQ = 0. 
-
-  else
-
-    relhumtoq =rmiss
-
-  end if
-
-  return 
-
-end function RELHUMTOQ
+END FUNCTION relhumtoq
  
 !-----------------------------------------------------------------------
  
@@ -762,23 +760,19 @@ END FUNCTION tesat
 !-----------------------------------------------------------------
 
 
-!> compute air density from virtual temperature and pressure
-elemental real function AIRDEN(tv,p) 
-real,intent(in) :: tv  !< virtual temperature (K)
-real,intent(in) :: p   !< pressure (Pa)
+!> Compute air density from virtual temperature and pressure.
+!! \a rho in kg/m3, \a tv in K, \a p in Pa.
+ELEMENTAL REAL FUNCTION airden(tv, p)
+REAL,INTENT(in) :: tv  !< virtual temperature (K)
+REAL,INTENT(in) :: p   !< pressure (Pa)
 
-if( c_e(tv) .and. c_e(p) )then 
+IF (c_e(tv) .AND. c_e(p)) THEN
+  airden = p/(rd*tv)
+ELSE
+  airden = rmiss
+ENDIF
 
-  airden = p / (rd *tv)
-  
-else
-  
-  airden=rmiss
-  
-end if
-
-return 
-end function AIRDEN
+END FUNCTION AIRDEN
  
 
 !-----------------------------------------------------------------------------
@@ -2717,19 +2711,25 @@ END FUNCTION vis_boudala
 !> Compute visibility with the LWC method.
 !! For simplicity, standard density formula is used
 !! neglecting hydrometeors in density computation. Visibility in m.
-ELEMENTAL REAL FUNCTION vis_lwc(t, td, p, qcw)
-REAL,INTENT(in) :: t !< Temperature
-REAL,INTENT(in) :: td !< Dew point temperature
-REAL,INTENT(in) :: p !< Pressure
-REAL,INTENT(in) :: qcw !< Specific cloud liquid water content (g/g)
+!ELEMENTAL REAL FUNCTION vis_lwc(t, td, p, qcw)
+!REAL,INTENT(in) :: t !< Temperature
+!REAL,INTENT(in) :: td !< Dew point temperature
+!REAL,INTENT(in) :: p !< Pressure
+!REAL,INTENT(in) :: qcw !< Specific cloud liquid water content (g/g)
+ELEMENTAL REAL FUNCTION vis_lwc(rho, qcw)
+!REAL,INTENT(in) :: t !< Temperature
+!REAL,INTENT(in) :: td !< Dew point temperature
+!REAL,INTENT(in) :: p !< Pressure
+REAL,INTENT(in) :: Rho !< Density kg/m3
+REAL,INTENT(in) :: qcw !< Specific cloud liquid water content (kg/kg)
 
 REAL,PARAMETER :: maxvis=30000., minvis=1., cv1=1.13*1.0E3, cv2=0.51, &
  n_c=2.0E8*1.0E-6*1.0E3
 ! in cv1: 1.0E3 km=>m
 ! in n_c: 1.0E-6 m-3=>cm-3, 1.0E3 kg=>g
-REAL :: rho, lwc
+REAL :: lwc
 
-rho = airden(tvir(t, td, p), p)
+!rho = airden(tvir(t, td, p), p)
 IF (c_e(rho) .AND. c_e(qcw)) THEN
   lwc = rho*qcw ! lwc in kg/m3
   IF (lwc > 5.0E-9) THEN
