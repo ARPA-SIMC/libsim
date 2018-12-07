@@ -632,7 +632,7 @@ end function W
 ELEMENTAL REAL FUNCTION qtorelhum(q, pt, t)
 REAL,INTENT(in) :: q !< Specific humidity (kg/kg)
 REAL,INTENT(in) :: pt !< Pressure (Pa)
-REAL,INTENT(in) :: pt !< Temperature (K)
+REAL,INTENT(in) :: t !< Temperature (K)
 
 IF (c_e(q) .AND. c_e(pt) .AND. c_e(t)) THEN
   qtorelhum = MAX(q*(pt/100. - c1*esat(t))/(eps0*esat(t))*100., 0.)
