@@ -1,4 +1,4 @@
-module termo
+MODULE termo
 
 USE alchimia
 USE termolib
@@ -39,6 +39,7 @@ subroutine register_termo(vfn)
   call fnregister(vfn,swgwmo2swgsim_def())
   call fnregister(vfn,swgsim2swgwmo_def())
   call fnregister(vfn,rh_t_td_p2vis_def())
+  call fnregister(vfn,t_td_p_qcw2vis_def())
 
 end subroutine register_termo
 
@@ -567,4 +568,24 @@ CALL init(rh_t_td_p2vis_def,"rh_t_td_p2vis", &
 END FUNCTION rh_t_td_p2vis_def
 
 
-end module termo
+SUBROUTINE t_td_p_qcw2vis(mybin,mybout,bin,bout,in,out)
+CHARACTER(len=10),INTENT(in) :: mybin(:)  !< vector table B  WMO input  in user's data
+CHARACTER(len=10),INTENT(in) :: mybout(:) !< vector table B  WMO output in user's data
+CHARACTER(len=10),INTENT(in) :: bin(:)    !< vector table B  WMO input used by function
+CHARACTER(len=10),INTENT(in) :: bout(:)   !< vector table B  WMO output used by function
+REAL, INTENT(in) :: in(:,:)
+REAL, INTENT(out) :: out(:,:)
+
+out(:,index_c(mybout,bout(1))) = vis_lwc( &
+ in(:,index_c(mybin,bin(1))), in(:,index_c(mybin,bin(2))), &
+ in(:,index_c(mybin,bin(3))), in(:,index_c(mybin,bin(4))))
+
+END SUBROUTINE t_td_p_qcw2vis
+
+TYPE(fnds) FUNCTION t_td_p_qcw2vis_def()
+CALL init(t_td_p_qcw2vis_def,"t_td_p_qcw2vis", &
+ [CHARACTER(len=10) :: "B12101","B12103","B10004","B13192"], &
+ [CHARACTER(len=10) :: "B20001"],0,func=t_td_p_qcw2vis)
+END FUNCTION t_td_p_qcw2vis_def
+
+END MODULE termo

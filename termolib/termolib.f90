@@ -2714,5 +2714,35 @@ ENDIF
 END FUNCTION vis_boudala
 
 
+!> Compute visibility with the LWC method.
+!! For simplicity, standard density formula is used
+!! neglecting hydrometeors in density computation. Visibility in m.
+ELEMENTAL REAL FUNCTION vis_lwc(t, td, p, qcw)
+REAL,INTENT(in) :: t !< Temperature
+REAL,INTENT(in) :: td !< Dew point temperature
+REAL,INTENT(in) :: p !< Pressure
+REAL,INTENT(in) :: qcw !< Specific cloud liquid water content (g/g)
+
+REAL,PARAMETER :: maxvis=30000., minvis=1., cv1=1.13*1.0E3, cv2=0.51, &
+ n_c=2.0E8*1.0E-6*1.0E3
+! in cv1: 1.0E3 km=>m
+! in n_c: 1.0E-6 m-3=>cm-3, 1.0E3 kg=>g
+REAL :: rho, lwc
+
+rho = airden(tvir(t, td, p), p)
+IF (c_e(rho) .AND. c_e(qcw)) THEN
+  lwc = rho*qcw ! lwc in kg/m3
+  IF (lwc > 5.0E-9) THEN
+    vis_lwc = MAX(MIN(cv1*(lwc*n_c)**cv2, maxvis), minvis)
+  ELSE
+    vis_lwc = maxvis
+  ENDIF
+ELSE
+  vis_lwc = rmiss
+ENDIF
+
+END FUNCTION vis_lwc
+
+
 end module termolib
 
