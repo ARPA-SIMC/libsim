@@ -16,10 +16,9 @@
 ! You should have received a copy of the GNU General Public License
 ! along with this program.  If not, see <http://www.gnu.org/licenses/>.
 MODULE termolib
-
-
-use missing_values
-use phys_const
+USE missing_values
+USE phys_const
+IMPLICIT NONE
 
 !-----------------------------------------------------------------------------
 !
@@ -35,8 +34,6 @@ use phys_const
 !
 !
 !------------------------------------------------------------------------------
-
-implicit none
 
 CONTAINS
 
@@ -505,7 +502,7 @@ END FUNCTION tvirt
 !
 !--------------------------------------------------------------------------
 
-
+! legacy functions for specific humidity, replaced by q_tdp
 elemental real function USPEC(TD,PT)
 
 !  Calcola l'umidita` specifica secondo la formula:
@@ -544,6 +541,21 @@ elemental real function USPEC(TD,PT)
   return
 
 end function USPEC
+
+
+!> Compute specific humidity from dew point temperature and pressure.
+!! \a p in Pa, \a q in Kg/Kg, \a td in K.
+ELEMENTAL REAL FUNCTION q_tdp(td, p)
+REAL,INTENT(in) :: td !< Dew-point temperature  (K)
+REAL,INTENT(in) :: p !< Pressure (Pa)
+
+IF (c_e(td) .AND. c_e(p)) THEN
+  q_tdp = eps0*(esat(td)/(p/100.-(1-eps0)*esat(td)))
+ELSE
+  q_tdp = rmiss
+ENDIF
+
+END FUNCTION q_tdp
 
 !--------------------------------------------------------------------------
  
@@ -649,8 +661,7 @@ END FUNCTION qtorelhum
 !! From Fea, Elementi di dinamica e termodinamica dell'atmosfera, (4.11)
 ELEMENTAL REAL FUNCTION td_pq(p,q)
 IMPLICIT NONE
-! td in K, p in Pa, q in Kg/Kg ! controllare p, probabilmente Pa
-REAL,INTENT(in) :: p !< Pressure
+REAL,INTENT(in) :: p !< Pressure (hPa)
 REAL,INTENT(in) :: q !< Specific humidity (kg/kg)
 
 REAL :: e
@@ -688,66 +699,47 @@ ENDIF
 
 END FUNCTION relhumtoq
  
-!-----------------------------------------------------------------------
- 
-elemental real function ESAT(T)  
- 
-! CALCOLA LA PRESSIONE DI VAPORE SATURO A PARTIRE DALLA TEMPERATURA 
-! REF.: BAKER, MON.WEA.REV.,1983,111,PAG.328 E SEG. 
-! T in Kelvin, SAT(T) in hPa ()  Sostituisce la vecchia ESAT di NCAR
-!-----------------------------------------------------------------------
 
-  real,intent(in)::t
-  real::a,b
+!> Compute saturated water vapour pressure as a function of temperature.
+!! Use the Tetens formula according to Murray 1967, J.Appl.Meteor, pp
+!! 203-204 except \a t0c being 273.15 and not 273.16. The result is in
+!! hPa.
+ELEMENTAL REAL FUNCTION esat(t)
+REAL,INTENT(in) :: t !< Temperature in K
 
-!escludo le temperature minori di 8 gradi Kelvin, poichè la function
-!restituirebbe un numero infinito.
+IF (c_e(t)) THEN
+  IF (t < 8.) THEN ! avoid NaN
+    ESAT = rmiss
+  ELSE
+    IF (t > t0c) THEN ! over water
+      esat = tetens_e0_hpa*EXP(tetens_aw*(t - t0c)/(t - tetens_bw))
+    ELSE ! over ice
+      esat = tetens_e0_hpa*EXP(tetens_ai*(t - t0c)/(t - tetens_bi))
+    ENDIF
+  ENDIF
+ELSE
+  ESAT = rmiss
+ENDIF
 
-  if ( c_e(t) )then
-    if ( t < 8 )then
-      ESAT=rmiss
-      return
-    end if
+END FUNCTION esat
 
-    if(t > 273.16)then 
-      a=17.269 
-      b=35.86 
-    else 
-      a=21.874 
-      b=7.66 
-    end if
- 
-    ESAT=6.11*exp(a*(t-273.16)/(t-b)) 
-
-  else
-
-    ESAT=rmiss
-
-  end if
-
-  return 
-
-end function ESAT
-
-!< Compute temperature at which saturated vapor pressure is equal \a e.
-!! e in hPa, T in K.
+!< Compute temperature at which saturated vapour pressure is equal \a e.
+!! Use the inverse Tetens formula according to Murray 1967,
+!! J.Appl.Meteor, pp 203-204 except \a t0c being 273.15 and not
+!! 273.16. e in hPa, T in K.
 ELEMENTAL REAL FUNCTION tesat(e)
-REAL,intent(in) :: e
-!! /todo
-!! tesat on e=0. produce NaN
-!! so now there is a test to give missing value
-
+REAL,INTENT(in) :: e !< Saturated vapour pressure in hPa
 
 REAL :: ale
-REAL, PARAMETER :: es0=6.11, aw=7.567*2.3025851, bw=239.7-t0c, &
- awn=7.744*2.3025851, bwn=245.2-t0c
+!REAL, PARAMETER :: es0=6.11, aw=7.567*2.3025851, bw=239.7-t0c, &
+! awn=7.744*2.3025851, bwn=245.2-t0c
 
 IF (c_e(e) .AND. e > 0.0) THEN
-  ale=LOG(e/es0)
+  ale = LOG(e/tetens_e0_hpa)
   IF (ale > 0.) THEN
-    tesat=(aw*t0c+bw*ale)/(aw-ale)
+    tesat = (tetens_aw*t0c - tetens_bw*ale)/(tetens_aw - ale)
   ELSE
-    tesat=(awn*t0c+bwn*ale)/(awn-ale)
+    tesat = (tetens_ai*t0c - tetens_bi*ale)/(tetens_ai - ale)
   ENDIF
 ELSE
   tesat = rmiss

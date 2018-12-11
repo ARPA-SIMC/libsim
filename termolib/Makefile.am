@@ -26,6 +26,12 @@ tmpvar1 = $(tmpvar:.f03=.mod)
 tmpvar2 = $(tmpvar1:.F03=.mod)
 nodist_include_HEADERS = $(tmpvar2:.F90=.mod)
 
+check_PROGRAMS = termolib_test
+TESTS = $(check_PROGRAMS)
+
+termolib_test_SOURCES = termolib_test.f90
+termolib_test_LDADD = libsim_termolib.la
+
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT) *.mod
