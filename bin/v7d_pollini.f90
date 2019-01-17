@@ -178,18 +178,11 @@ famptr(:) = map_distinct(famiglie(1:nvar), back=.TRUE.)
 ! Definisco le reti da cui voglio estrarre
 CALL init(network, 'POLLINI')
 
-input_file='pollini.bufr'
 CALL init(db_v7d, filename=input_file, FORMAT='BUFR', file=.TRUE., &
  time_definition=1)
 ! estraggo i dati, seleziono solo i dati osservati mediati su 1 giorno
 CALL import(db_v7d, timerange=vol7d_timerange_new(0,0,86400), &
  timei=datetime_new(isodate=data_inizio), timef=datetime_new(isodate=data_fine))
-
-! level=level, timerange=timerange, ana=ana,&
-! anavar=avl, attr=alqc, set_network=set_network_obj, &
-! coordmin=coordmin, coordmax=coordmax, &
-
-!anaonly=anaonly anavar=(/'B01192'/), timerange=vol7d_timerange_new(0,86400,86400))
 
 dtfill = timedelta_new(day=1)
 CALL vol7d_fill_time(db_v7d%vol7d, v7d_fill, dtfill, datetime_new(isodate=data_inizio), datetime_new(isodate=data_fine))
@@ -272,7 +265,13 @@ IF (file_rapporto /= '') THEN ! richiesto il rapporto
   DO j = 1, SIZE(db_v7d%vol7d%ana)
     n = ana_match(db_v7d%vol7d%volanac(j,lonvar,1),db_v7d%vol7d%volanac(j,latvar,1))
 !    n = firsttrue(stazioni == stazid(j))
-    IF (n <= 0) CYCLE ! stazione non richiesta
+    IF (n <= 0) THEN
+      CALL l4f_category_log(category,L4F_WARN, &
+       'stazione non riconosciuta, coordinate (10^5deg):' &
+       //TRIM(db_v7d%vol7d%volanac(j,lonvar,1))//',' &
+       //TRIM(db_v7d%vol7d%volanac(j,latvar,1)))
+      CYCLE ! stazione non richiesta
+    ENDIF
 ! scrivo nome file stazione e percentuale di dati validi
     WRITE(10,'(A,1X,I4)') file_stazioni(n), &
      NINT(100.*ndstaz(j)/REAL(SIZE(db_v7d%vol7d%time)*nfam))
