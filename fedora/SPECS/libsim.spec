@@ -2,7 +2,7 @@
 # to enable vapor support requiring stiff dependencies
 Summary: Fortran utility libraries
 Name: libsim
-Version: 6.3.0
+Version: 6.3.1
 Release: 1
 License: GPL2+
 Group: Applications/Meteo
@@ -122,6 +122,11 @@ mv $RPM_BUILD_ROOT%{_includedir}/*.mod $RPM_BUILD_ROOT%{_fmoddir}
 rm -rf %{buildroot}
 
 %changelog
+* Wed Feb 27 2019 Daniele Branchini <dbranchini@arpae.it> - 6.3.1-1
+- improvement of tesat, implementation of termolib tests
+- add functions for air density and virtual temperature
+- add lwc method for computing visibility
+
 * Thu Dec 6 2018 Davide Cesari <dcesari@arpae.it> - 6.3.0-1
 - refactoring of log4c interface, remove dependency on cnf
 
