@@ -12,5 +12,5 @@ Version: @VERSION@
 Requires:
 Requires.private: log4c gdal libdballef @GRIBAPI_PKGCONFIG@ netcdf-fortran
 Libs: -L${libdir} -lsim_volgrid6d -lsim_vol7d -lsim_termolib -lsim_alchimia -lsim_base -llog4fortran
-Libs.private: @LOG4C_LIBS@ @VAPOR_LIBS@ @SHAPELIB_LIBS@ @NGMATH_LIBS@ @NCARG_LIBS@
+Libs.private: @VAPOR_LIBS@ @SHAPELIB_LIBS@ @NGMATH_LIBS@ @NCARG_LIBS@
 Cflags: -I${libdir}/@FC@/modules
