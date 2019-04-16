@@ -2091,7 +2091,7 @@ end SUBROUTINE volgrid6d_v7d_transform_compute
 !! is created internally and it does not require preliminary
 !! initialisation.
 SUBROUTINE volgrid6d_v7d_transform(this, volgrid6d_in, vol7d_out, v7d, &
- maskgrid, maskbounds, networkname, noconvert, categoryappend)
+ maskgrid, maskbounds, networkname, noconvert, find_index, categoryappend)
 TYPE(transform_def),INTENT(in) :: this !< object specifying the abstract transformation
 TYPE(volgrid6d),INTENT(inout) :: volgrid6d_in !< object to be transformed, it is not modified, despite the INTENT(inout)
 TYPE(vol7d),INTENT(out) :: vol7d_out !< transformed object, it does not requires initialisation
@@ -2100,6 +2100,7 @@ REAL,INTENT(in),OPTIONAL :: maskgrid(:,:) !< 2D field to be used for defining su
 REAL,INTENT(in),OPTIONAL :: maskbounds(:) !< array of boundary values for defining subareas from the values of \a maskgrid, the number of subareas is SIZE(maskbounds) - 1, if not provided a default based on extreme values of \a makgrid is used
 CHARACTER(len=*),OPTIONAL,INTENT(in) :: networkname !< set the output network name in vol7d_out (default='generic')
 LOGICAL,OPTIONAL,INTENT(in) :: noconvert !< do not try to match variable and convert values during transform
+PROCEDURE(basic_find_index),POINTER,OPTIONAL :: find_index
 CHARACTER(len=*),INTENT(in),OPTIONAL :: categoryappend !< append this suffix to log4fortran namespace category
 
 type(grid_transform) :: grid_trans
@@ -2170,7 +2171,8 @@ if (associated(volgrid6d_in%level)) nlevel=size(volgrid6d_in%level)
 if (associated(volgrid6d_in%var)) nvar=size(volgrid6d_in%var)
 
 CALL init(grid_trans, this, volgrid6d_in%griddim, v7d_locana, &
- maskgrid=maskgrid, maskbounds=maskbounds, categoryappend=categoryappend)
+ maskgrid=maskgrid, maskbounds=maskbounds, find_index=find_index, &
+ categoryappend=categoryappend)
 CALL init (vol7d_out,time_definition=time_definition)
 
 IF (c_e(grid_trans)) THEN
@@ -2221,7 +2223,7 @@ END SUBROUTINE volgrid6d_v7d_transform
 !! each element of the input \a volgrid6d array object is merged into
 !! a single \a vol7d output object.
 SUBROUTINE volgrid6dv_v7d_transform(this, volgrid6d_in, vol7d_out, v7d, &
- maskgrid, maskbounds, networkname, noconvert, categoryappend)
+ maskgrid, maskbounds, networkname, noconvert, find_index, categoryappend)
 TYPE(transform_def),INTENT(in) :: this !< object specifying the abstract transformation
 TYPE(volgrid6d),INTENT(inout) :: volgrid6d_in(:) !< object to be transformed, it is an array of volgrid6d objects, each of which will be transformed, it is not modified, despite the INTENT(inout)
 TYPE(vol7d),INTENT(out) :: vol7d_out !< transformed object, it does not require initialisation
@@ -2230,6 +2232,7 @@ REAL,INTENT(in),OPTIONAL :: maskgrid(:,:) !< 2D field to be used for defining su
 REAL,INTENT(in),OPTIONAL :: maskbounds(:) !< array of boundary values for defining subareas from the values of \a maskgrid, the number of subareas is SIZE(maskbounds) - 1, if not provided a default based on extreme values of \a makgrid is used
 CHARACTER(len=*),OPTIONAL,INTENT(in) :: networkname !< set the output network name in vol7d_out (default='generic')
 LOGICAL,OPTIONAL,INTENT(in) :: noconvert !< do not try to match variable and convert values during transform
+PROCEDURE(basic_find_index),POINTER,OPTIONAL :: find_index
 CHARACTER(len=*),INTENT(in),OPTIONAL :: categoryappend !< append this suffix to log4fortran namespace category
 
 integer :: i
@@ -2242,7 +2245,8 @@ CALL init(vol7d_out)
 DO i=1,SIZE(volgrid6d_in)
   CALL transform(this, volgrid6d_in(i), v7dtmp, v7d=v7d, &
    maskgrid=maskgrid, maskbounds=maskbounds, &
-   networkname=networkname, noconvert=noconvert, categoryappend=categoryappend)
+   networkname=networkname, noconvert=noconvert, find_index=find_index, &
+   categoryappend=categoryappend)
   CALL vol7d_append(vol7d_out, v7dtmp)
 ENDDO
 

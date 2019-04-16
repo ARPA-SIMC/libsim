@@ -329,6 +329,7 @@ TYPE grid_transform
   TYPE(vol7d_level),POINTER :: output_level_auto(:) => NULL() ! array of auto-generated levels, stored for successive query
   INTEGER :: category = 0 ! category for log4fortran
   LOGICAL :: valid = .FALSE. ! the transformation has been successfully initialised
+  PROCEDURE(basic_find_index),NOPASS,POINTER :: find_index => basic_find_index ! allow a local implementation of find_index
 END TYPE grid_transform
 
 
@@ -365,7 +366,7 @@ END INTERFACE
 PRIVATE
 PUBLIC init, delete, get_val, compute, c_e
 PUBLIC transform_def, grid_transform
-PUBLIC interval_info, interval_info_new, interval_info_valid
+PUBLIC interval_info, interval_info_new, interval_info_valid, basic_find_index
 
 CONTAINS
 
@@ -1382,12 +1383,13 @@ ELSE IF (this%trans%trans_type == 'inter') THEN
     ALLOCATE(this%inter_index_x(this%outnx,this%outny), &
      this%inter_index_y(this%outnx,this%outny))
     CALL unproj(out)
-    CALL find_index(in, this%trans%sub_type, &
-     this%innx, this%inny, xmin, xmax, ymin, ymax, &
-     out%dim%lon, out%dim%lat, this%trans%extrap, &
-     this%inter_index_x, this%inter_index_y)
 
-    IF ( this%trans%sub_type == 'bilin' ) THEN
+    IF (this%trans%sub_type == 'bilin') THEN
+      CALL this%find_index(in, .FALSE., &
+       this%innx, this%inny, xmin, xmax, ymin, ymax, &
+       out%dim%lon, out%dim%lat, this%trans%extrap, &
+       this%inter_index_x, this%inter_index_y)
+
       ALLOCATE(this%inter_x(this%innx,this%inny), &
        this%inter_y(this%innx,this%inny))
       ALLOCATE(this%inter_xp(this%outnx,this%outny), &
@@ -1398,6 +1400,12 @@ ELSE IF (this%trans%trans_type == 'inter') THEN
 ! TODO chi mi garantisce che e` stata chiamata la unproj(out)?
 ! compute coordinates of output grid in input system
       CALL proj(in,out%dim%lon,out%dim%lat,this%inter_xp,this%inter_yp)
+
+    ELSE ! near, shapiro_near
+      CALL this%find_index(in, .TRUE., &
+       this%innx, this%inny, xmin, xmax, ymin, ymax, &
+       out%dim%lon, out%dim%lat, this%trans%extrap, &
+       this%inter_index_x, this%inter_index_y)
 
     ENDIF
 
@@ -1426,7 +1434,7 @@ ELSE IF (this%trans%trans_type == 'boxinter') THEN
 ! compute coordinates of input grid in geo system
   CALL unproj(in) ! TODO costringe a dichiarare in INTENT(inout), si puo` evitare?
 ! use find_index in the opposite way, here extrap does not make sense
-  CALL find_index(out, 'near', &
+  CALL this%find_index(out, .TRUE., &
    this%outnx, this%outny, xmin, xmax, ymin, ymax, &
    in%dim%lon, in%dim%lat, .FALSE., &
    this%inter_index_x, this%inter_index_y)
@@ -1444,7 +1452,7 @@ ELSE IF (this%trans%trans_type == 'stencilinter') THEN
   ALLOCATE (this%inter_index_x(this%outnx,this%outny), &
    this%inter_index_y(this%outnx,this%outny))
   CALL unproj(out)
-  CALL find_index(in, 'near', &
+  CALL this%find_index(in, .TRUE., &
    this%innx, this%inny, xmin, xmax, ymin, ymax, &
    out%dim%lon, out%dim%lat, this%trans%extrap, &
    this%inter_index_x, this%inter_index_y)
@@ -1716,23 +1724,28 @@ END SUBROUTINE grid_transform_init
 !! initialised, if the result is \a .FALSE., it should not be used
 !! further on.
 SUBROUTINE grid_transform_grid_vol7d_init(this, trans, in, v7d_out, &
- maskgrid, maskbounds, categoryappend)
+ maskgrid, maskbounds, find_index, categoryappend)
 TYPE(grid_transform),INTENT(out) :: this !< grid_transformation object
 TYPE(transform_def),INTENT(in) :: trans !< transformation object
 TYPE(griddim_def),INTENT(inout) :: in !< griddim object to transform
 TYPE(vol7d),INTENT(inout) :: v7d_out !< vol7d object with the coordinates of the sparse points to be used as transformation target (input or output depending on type of transformation)
 REAL,INTENT(in),OPTIONAL :: maskgrid(:,:) !< 2D field to be used for defining subareas according to its values, it must have the same shape as the field to be interpolated (for transformation type 'maskinter' and 'metamorphosis:mask')
 REAL,INTENT(in),OPTIONAL :: maskbounds(:) !< array of boundary values for defining subareas from the values of \a maskgrid, the number of subareas is SIZE(maskbounds) - 1, if not provided a default based on extreme values of \a maskgrid is used
+PROCEDURE(basic_find_index),POINTER,OPTIONAL :: find_index
 CHARACTER(len=*),INTENT(in),OPTIONAL :: categoryappend !< append this suffix to log4fortran namespace category
 
 INTEGER :: ix, iy, n, nm, nr, nprev, nmaskarea, xnmin, xnmax, ynmin, ynmax, &
  time_definition
 DOUBLE PRECISION :: xmin, xmax, ymin, ymax, r2
-DOUBLE PRECISION,ALLOCATABLE :: lon(:), lat(:)
+DOUBLE PRECISION,ALLOCATABLE :: lon1(:), lat1(:), lon(:,:), lat(:,:)
 REAL,ALLOCATABLE :: lmaskbounds(:)
 TYPE(georef_coord) :: point
 
-
+IF (PRESENT(find_index)) THEN ! move in init_common?
+  IF (ASSOCIATED(find_index)) THEN
+    this%find_index => find_index
+  ENDIF
+ENDIF
 CALL grid_transform_init_common(this, trans, categoryappend)
 #ifdef DEBUG
 CALL l4f_category_log(this%category, L4F_DEBUG, "grid_transform vg6d-v7d")
@@ -1755,23 +1768,29 @@ IF (this%trans%trans_type == 'inter') THEN
 
     ALLOCATE (this%inter_index_x(this%outnx,this%outny),&
      this%inter_index_y(this%outnx,this%outny))
-    ALLOCATE(lon(this%outnx),lat(this%outnx))
+    ALLOCATE(lon(this%outnx,1),lat(this%outnx,1))
 
     CALL get_val(in, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax)
-    CALL getval(v7d_out%ana(:)%coord,lon=lon,lat=lat)
+    CALL getval(v7d_out%ana(:)%coord,lon=lon(:,1),lat=lat(:,1))
 
-    CALL find_index(in, this%trans%sub_type,&
-     this%innx, this%inny, xmin, xmax, ymin, ymax, &
-     lon, lat, this%trans%extrap, &
-     this%inter_index_x(:,1), this%inter_index_y(:,1))
+    IF (this%trans%sub_type == 'bilin') THEN
+      CALL this%find_index(in, .FALSE., &
+       this%innx, this%inny, xmin, xmax, ymin, ymax, &
+       lon, lat, this%trans%extrap, &
+       this%inter_index_x, this%inter_index_y)
 
-    IF ( this%trans%sub_type == 'bilin' ) THEN
       ALLOCATE(this%inter_x(this%innx,this%inny),this%inter_y(this%innx,this%inny))
       ALLOCATE(this%inter_xp(this%outnx,this%outny),this%inter_yp(this%outnx,this%outny))
 
       CALL griddim_gen_coord(in, this%inter_x, this%inter_y)
-      CALL proj(in, RESHAPE(lon,(/SIZE(lon),1/)),RESHAPE(lat,(/SIZE(lat),1/)),&
-       this%inter_xp,this%inter_yp)
+      CALL proj(in, lon, lat, this%inter_xp, this%inter_yp)
+
+    ELSE ! near shapiro_near
+      CALL this%find_index(in, .TRUE., &
+       this%innx, this%inny, xmin, xmax, ymin, ymax, &
+       lon, lat, this%trans%extrap, &
+       this%inter_index_x, this%inter_index_y)
+
     ENDIF
 
     DEALLOCATE(lon,lat)
@@ -1828,9 +1847,9 @@ ELSE IF (this%trans%trans_type == 'polyinter') THEN
 ! setup output point list, equal to average of polygon points
 ! warning, in case of concave areas points may coincide!
   DO n = 1, this%trans%poly%arraysize
-    CALL getval(this%trans%poly%array(n), x=lon, y=lat)
-    CALL init(v7d_out%ana(n), lon=stat_average(lon), lat=stat_average(lat))
-!    DEALLOCATE(lon, lat)
+    CALL getval(this%trans%poly%array(n), x=lon1, y=lat1)
+    CALL init(v7d_out%ana(n), lon=stat_average(lon1), lat=stat_average(lat1))
+!    DEALLOCATE(lon1, lat1)
   ENDDO
 
 #ifdef DEBUG
@@ -1852,15 +1871,15 @@ ELSE IF (this%trans%trans_type == 'stencilinter') THEN
 
   ALLOCATE (this%inter_index_x(this%outnx,this%outny),&
    this%inter_index_y(this%outnx,this%outny))
-  ALLOCATE(lon(this%outnx),lat(this%outnx))
+  ALLOCATE(lon(this%outnx,1),lat(this%outnx,1))
 
   CALL get_val(in, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax)
-  CALL getval(v7d_out%ana(:)%coord,lon=lon,lat=lat)
+  CALL getval(v7d_out%ana(:)%coord,lon=lon(:,1),lat=lat(:,1))
 
-  CALL find_index(in, 'near',&
+  CALL this%find_index(in, .TRUE., &
    this%innx, this%inny, xmin, xmax, ymin, ymax, &
    lon, lat, this%trans%extrap, &
-   this%inter_index_x(:,1), this%inter_index_y(:,1))
+   this%inter_index_x, this%inter_index_y)
 
 ! define the stencil mask
   nr = INT(this%trans%area_info%radius) ! integer radius
@@ -2227,7 +2246,7 @@ character(len=*),INTENT(in),OPTIONAL :: categoryappend !< append this suffix to 
 
 INTEGER :: nx, ny
 DOUBLE PRECISION :: xmin, xmax, ymin, ymax
-DOUBLE PRECISION,ALLOCATABLE :: lon(:),lat(:)
+DOUBLE PRECISION,ALLOCATABLE :: lon(:,:),lat(:,:)
 
 
 CALL grid_transform_init_common(this, trans, categoryappend)
@@ -2246,7 +2265,7 @@ IF (this%trans%trans_type == 'inter') THEN
     this%innx=SIZE(v7d_in%ana)
     this%inny=1
   
-    ALLOCATE(lon(this%innx),lat(this%innx))
+    ALLOCATE(lon(this%innx,1),lat(this%innx,1))
     ALLOCATE(this%inter_xp(this%innx,this%inny),this%inter_yp(this%innx,this%inny))
     ALLOCATE(this%inter_x(this%outnx,this%outny),this%inter_y(this%outnx,this%outny))
 
@@ -2254,11 +2273,9 @@ IF (this%trans%trans_type == 'inter') THEN
      xmin=xmin, xmax=xmax,&
      ymin=ymin, ymax=ymax)
 
-    CALL getval(v7d_in%ana(:)%coord,lon=lon,lat=lat)
+    CALL getval(v7d_in%ana(:)%coord,lon=lon(:,1),lat=lat(:,1))
 
-    CALL proj(out,&
-     RESHAPE(lon,(/SIZE(lon),1/)),RESHAPE(lat,(/SIZE(lat),1/)),&
-     this%inter_xp,this%inter_yp)
+    CALL proj(out, lon, lat, this%inter_xp, this%inter_yp)
 
     CALL griddim_gen_coord(out, this%inter_x, this%inter_y)
 
@@ -2284,17 +2301,17 @@ ELSE IF (this%trans%trans_type == 'boxinter') THEN
   this%trans%area_info%boxdx = this%trans%area_info%boxdx*0.5D0
   this%trans%area_info%boxdy = this%trans%area_info%boxdy*0.5D0
 ! index arrays must have the shape of input grid
-  ALLOCATE(lon(this%innx),lat(this%innx))
+  ALLOCATE(lon(this%innx,1),lat(this%innx,1))
   ALLOCATE(this%inter_index_x(this%innx,this%inny), &
    this%inter_index_y(this%innx,this%inny))
 
 ! get coordinates of input grid in geo system
-  CALL getval(v7d_in%ana(:)%coord,lon=lon,lat=lat)
+  CALL getval(v7d_in%ana(:)%coord,lon=lon(:,1),lat=lat(:,1))
 ! use find_index in the opposite way, here extrap does not make sense
-  CALL find_index(out,'near',&
+  CALL this%find_index(out, .TRUE., &
    this%outnx, this%outny, xmin, xmax, ymin, ymax, &
    lon, lat, .FALSE., &
-   this%inter_index_x(:,1), this%inter_index_y(:,1))
+   this%inter_index_x, this%inter_index_y)
 
   this%valid = .TRUE. ! warning, no check of subtype
 
@@ -3951,40 +3968,32 @@ END FUNCTION shapiro
 
 
 ! Locate index of requested point
-ELEMENTAL SUBROUTINE find_index(this, inter_type, nx, ny, xmin, xmax, ymin, ymax, &
+SUBROUTINE basic_find_index(this, near, nx, ny, xmin, xmax, ymin, ymax, &
  lon, lat, extrap, index_x, index_y)
 TYPE(griddim_def),INTENT(in) :: this ! griddim object (from grid)
-CHARACTER(len=*),INTENT(in) :: inter_type ! interpolation type (determine wich point is requested)
+logical,INTENT(in) :: near ! near or bilin interpolation (determine wich point is requested)
 INTEGER,INTENT(in) :: nx,ny ! dimension (to grid)
 DOUBLE PRECISION,INTENT(in) :: xmin, xmax, ymin, ymax ! extreme coordinate (to grid)
-DOUBLE PRECISION,INTENT(in) :: lon,lat ! target coordinate
+DOUBLE PRECISION,INTENT(in) :: lon(:,:),lat(:,:) ! target coordinate
 LOGICAL,INTENT(in) :: extrap ! extrapolate
-INTEGER,INTENT(out) :: index_x,index_y ! index of point requested
+INTEGER,INTENT(out) :: index_x(:,:),index_y(:,:) ! index of point requested
 
 INTEGER :: lnx, lny
-DOUBLE PRECISION :: x,y
+DOUBLE PRECISION :: x(SIZE(lon,1),SIZE(lon,2)),y(SIZE(lon,1),SIZE(lon,2))
 
-IF (inter_type == "near" .OR. inter_type == "shapiro_near") THEN
-
+IF (near) THEN
   CALL proj(this,lon,lat,x,y)
   index_x = NINT((x-xmin)/((xmax-xmin)/DBLE(nx-1)))+1
   index_y = NINT((y-ymin)/((ymax-ymin)/DBLE(ny-1)))+1
   lnx = nx
   lny = ny
 
-ELSE IF (inter_type == "bilin") THEN
-
+ELSE
   CALL proj(this,lon,lat,x,y)
   index_x = FLOOR((x-xmin)/((xmax-xmin)/DBLE(nx-1)))+1
   index_y = FLOOR((y-ymin)/((ymax-ymin)/DBLE(ny-1)))+1
   lnx = nx-1
   lny = ny-1
-
-ELSE
-
-  index_x=imiss
-  index_y=imiss
-  RETURN
 
 ENDIF
 
@@ -3994,13 +4003,13 @@ IF (extrap) THEN ! trim indices outside grid for extrapolation
   index_x = MIN(index_x, lnx)
   index_y = MIN(index_y, lny)
 ELSE ! nullify indices outside grid
-  IF (index_x < 1 .OR. index_x > lnx .OR. index_y < 1 .OR. index_y > lny) THEN
+  WHERE(index_x < 1 .OR. index_x > lnx .OR. index_y < 1 .OR. index_y > lny)
     index_x = imiss
     index_y = imiss
-  ENDIF
+  END WHERE
 ENDIF
 
-END SUBROUTINE find_index
+END SUBROUTINE basic_find_index
 
 
 END MODULE grid_transform_class
