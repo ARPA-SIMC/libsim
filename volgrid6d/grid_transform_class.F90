@@ -3987,14 +3987,12 @@ IF (near) THEN
   index_y = NINT((y-ymin)/((ymax-ymin)/DBLE(ny-1)))+1
   lnx = nx
   lny = ny
-
 ELSE
   CALL proj(this,lon,lat,x,y)
   index_x = FLOOR((x-xmin)/((xmax-xmin)/DBLE(nx-1)))+1
   index_y = FLOOR((y-ymin)/((ymax-ymin)/DBLE(ny-1)))+1
   lnx = nx-1
   lny = ny-1
-
 ENDIF
 
 IF (extrap) THEN ! trim indices outside grid for extrapolation
@@ -4010,6 +4008,5 @@ ELSE ! nullify indices outside grid
 ENDIF
 
 END SUBROUTINE basic_find_index
-
 
 END MODULE grid_transform_class
