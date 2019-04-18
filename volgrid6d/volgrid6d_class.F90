@@ -2269,7 +2269,8 @@ type(vol7d_network) :: network
 TYPE(conv_func), pointer :: c_func(:)
 !TODO category sarebbe da prendere da vol7d
 #ifdef DEBUG
-call l4f_category_log(volgrid6d_out%category,L4F_DEBUG,"start v7d_volgrid6d_transform_compute")
+CALL l4f_category_log(volgrid6d_out%category, L4F_DEBUG, &
+ 'start v7d_volgrid6d_transform_compute')
 #endif
 
 ntime=0
@@ -2277,12 +2278,17 @@ ntimerange=0
 nlevel=0
 nvar=0
 
-if (present(networkname))then
-  call init(network,name=networkname)
-  inetwork= index(vol7d_in%network,network)
-else
-  inetwork=1
-end if
+IF (PRESENT(networkname)) THEN
+  CALL init(network,name=networkname)
+  inetwork = INDEX(vol7d_in%network,network)
+  IF (inetwork <= 0) THEN
+    CALL l4f_category_log(volgrid6d_out%category,L4F_WARN, &
+     'network '//TRIM(networkname)//' not found, first network will be transformed')
+    inetwork = 1
+  ENDIF
+ELSE
+  inetwork = 1
+ENDIF
 
 ! no time_definition conversion implemented, output will be the same as input
 if (associated(vol7d_in%time))then

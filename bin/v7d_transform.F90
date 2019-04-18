@@ -1342,7 +1342,14 @@ ELSE IF (output_format == 'grib_api') THEN
       gaid = grid_id_new(ifile)
       IF (c_e(gaid)) THEN
 
-! use the message  as a template for defining the grid
+        IF (SIZE(v7d%network) > 1) THEN
+          CALL l4f_category_log(category, L4F_WARN, &
+           'input sparse datasert has '//t2c(SIZE(v7d%network))// &
+           ' networks, only the first will be gridded')
+          CALL l4f_category_log(category, L4F_WARN, &
+           'use --set-network= to merge all the networks before gridding')
+        ENDIF
+! use the message as a template for defining the grid
         CALL import(grid_out, gaid)
 ! interpolate sparse data over the requested grid
         CALL transform(trans, grid_out, v7d, vg6d(1), gaid_template=gaid, &
@@ -1351,7 +1358,7 @@ ELSE IF (output_format == 'grib_api') THEN
         CALL delete(vg6d(1))
 
       ELSE
-        CALL l4f_category_log(category,L4F_ERROR, &
+        CALL l4f_category_log(category, L4F_ERROR, &
          'cannot read any grib message from template file '//TRIM(output_template))
       ENDIF
       CALL delete(trans)
