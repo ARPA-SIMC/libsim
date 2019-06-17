@@ -1344,7 +1344,7 @@ ELSE IF (output_format == 'grib_api') THEN
 
         IF (SIZE(v7d%network) > 1) THEN
           CALL l4f_category_log(category, L4F_WARN, &
-           'input sparse datasert has '//t2c(SIZE(v7d%network))// &
+           'input sparse dataset has '//t2c(SIZE(v7d%network))// &
            ' networks, only the first will be gridded')
           CALL l4f_category_log(category, L4F_WARN, &
            'use --set-network= to merge all the networks before gridding')
