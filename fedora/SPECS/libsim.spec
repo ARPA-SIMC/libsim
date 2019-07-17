@@ -2,7 +2,7 @@
 # to enable vapor support requiring stiff dependencies
 Summary: Fortran utility libraries
 Name: libsim
-Version: 6.3.1
+Version: 6.4.0
 Release: 1
 License: GPL2+
 Group: Applications/Meteo
@@ -124,6 +124,10 @@ mv $RPM_BUILD_ROOT%{_includedir}/*.mod $RPM_BUILD_ROOT%{_fmoddir}
 rm -rf %{buildroot}
 
 %changelog
+* Wed Jul 17 2019 Davide Cesari <dcesari@arpae.it> - 6.4.0-1
+- new tools vg6d_getpoint_pkauf and vg6d_tcorr
+- move specific tools in libexec
+
 * Wed Feb 27 2019 Daniele Branchini <dbranchini@arpae.it> - 6.3.1-1
 - improvement of tesat, implementation of termolib tests
 - add functions for air density and virtual temperature
