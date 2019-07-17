@@ -27,9 +27,7 @@ USE gridinfo_class
 #ifdef HAVE_DBALLE
 USE vol7d_dballe_class
 #endif
-#ifdef HAVE_LIBGRIBAPI
 USE grib_api_csv
-#endif
 USE optionparser_class
 USE io_units
 USE georef_coord_class
@@ -130,9 +128,7 @@ CALL optionparser_add(opt, 'f', 'output-format', output_format, &
 #ifdef HAVE_DBALLE
  //', ''BUFR'' for BUFR with generic template, ''CREX'' for CREX format'&
 #endif
-#ifdef HAVE_LIBGRIBAPI
  //', ''grib_api_csv'' for an ASCII csv file with grib_api keys as columns'&
-#endif
  )
 #ifdef HAVE_DBALLE
 CALL optionparser_add(opt, 't', 'output-template', output_template, 'generic', help= &
@@ -143,9 +139,7 @@ CALL optionparser_add(opt, ' ', 'output-td', output_td, 1, help= &
  &presenting forecast data) and 1 for verification time (more suitable for &
  &comparing forecasts with observations)')
 
-#ifdef HAVE_LIBGRIBAPI
 CALL grib_api_csv_add_options(opt) ! add options specific to grib_api_csv output
-#endif
 
 CALL optionparser_add(opt, 'i', 'noconvert', noconvert, help= &
  'do not convert values fron grib definition to standard vol7d model data, &
@@ -314,13 +308,11 @@ IF (.NOT.ASSOCIATED(orography)) THEN
   CALL raise_fatal_error()
 ENDIF
 
-#ifdef HAVE_LIBGRIBAPI
 IF (output_format == 'grib_api_csv') THEN
   output_td = 0
   CALL l4f_category_log(category,L4F_INFO, &
    "setting output time definition to 0 for grib_api_csv output")
 ENDIF
-#endif
 
 ! trasformation object
 CALL init(trans, trans_type=trans_type, sub_type=sub_type, &
@@ -380,7 +372,6 @@ ELSE IF (output_format == 'BUFR' .OR. output_format == 'CREX') THEN
   CALL export (v7d_dba_out)
   CALL delete(v7d_dba_out)
 #endif
-#ifdef HAVE_LIBGRIBAPI
 ELSE IF (output_format == 'grib_api_csv') THEN
   IF (output_file == '-') THEN
     iun = stdout_unit
@@ -397,8 +388,6 @@ ELSE IF (output_format == 'grib_api_csv') THEN
   ENDDO
   IF (output_file /= '-') CLOSE(iun)
 
-#endif
-
 ELSE IF (output_format /= '') THEN
   CALL l4f_category_log(category, L4F_ERROR, &
    'error in command-line arguments, format '// &
@@ -407,11 +396,11 @@ ELSE IF (output_format /= '') THEN
 ENDIF
 
 IF (ASSOCIATED(volgrid)) CALL delete(volgrid)
-call l4f_category_log(category,L4F_INFO,"exported to "//trim(output_format))
-call l4f_category_log(category,L4F_INFO,"end")
+CALL l4f_category_log(category,L4F_INFO,"exported to "//TRIM(output_format))
+CALL l4f_category_log(category,L4F_INFO,"end")
 
 ! Close the logger
-call l4f_category_delete(category)
+CALL l4f_category_delete(category)
 ier=l4f_fini()
 
 CONTAINS

@@ -74,31 +74,34 @@ if ALCHIMIA
 v7d_transform_LDADD += ../alchimia/libsim_alchimia.la ../termolib/libsim_termolib.la
 endif
 
-if DBALLE
-v7d_transform_SOURCES += db_utils.F90
-endif
-v7d_transform_SOURCES += v7d_transform.F90
-
 pkglibexec_PROGRAMS += v7d_add_wmo_info
 v7d_add_wmo_info_SOURCES =
+
 if DBALLE
+v7d_transform_SOURCES += db_utils.F90
 v7d_add_wmo_info_SOURCES += db_utils.F90
 endif
+
+v7d_transform_SOURCES += v7d_transform.F90
 v7d_add_wmo_info_SOURCES += v7d_add_wmo_info.F90
 v7d_add_wmo_info_LDADD = ../base/libsim_base.la ../vol7d/libsim_vol7d.la ../log4fortran/liblog4fortran.la
 
 bin_PROGRAMS += vg6d_getpoint vg6d_transform
-pkglibexec_PROGRAMS += vg6d_getpoint_pkauf
 
 if GRIBAPI
 vg6d_getpoint_SOURCES = grib_api_csv.F90 vg6d_getpoint.F90
+pkglibexec_PROGRAMS += vg6d_getpoint_pkauf
 vg6d_getpoint_pkauf_SOURCES = grib_api_csv.F90 vg6d_getpoint_pkauf.F90
+if DBALLE
+pkglibexec_PROGRAMS += vg6d_tcorr
+vg6d_tcorr_SOURCES = vg6d_tcorr.F90
+vg6d_tcorr_LDADD = ../volgrid6d/libsim_volgrid6d.la  ../vol7d/libsim_vol7d.la ../base/libsim_base.la ../log4fortran/liblog4fortran.la
+endif
 else
 vg6d_getpoint_SOURCES = vg6d_getpoint.F90
-vg6d_getpoint_pkauf_SOURCES = vg6d_getpoint_pkauf.F90
 endif
-vg6d_getpoint_LDADD = ../volgrid6d/libsim_volgrid6d.la  ../vol7d/libsim_vol7d.la ../base/libsim_base.la ../log4fortran/liblog4fortran.la
 
+vg6d_getpoint_LDADD = ../volgrid6d/libsim_volgrid6d.la  ../vol7d/libsim_vol7d.la ../base/libsim_base.la ../log4fortran/liblog4fortran.la
 vg6d_getpoint_pkauf_LDADD = ../volgrid6d/libsim_volgrid6d.la  ../vol7d/libsim_vol7d.la ../base/libsim_base.la ../log4fortran/liblog4fortran.la
 
 vg6d_transform_SOURCES = vg6d_transform.F90
@@ -110,9 +113,6 @@ endif
 
 if GRIBAPI
 dist_bin_SCRIPTS += vg6d_subarea
-#bin_PROGRAMS += vg6d_subarea
-#vg6d_subarea_SOURCES = vg6d_subarea.F90
-#vg6d_subarea_LDADD = ../volgrid6d/libsim_volgrid6d.la ../base/libsim_base.la ../vol7d/libsim_vol7d.la ../log4fortran/liblog4fortran.la
 endif
 
 # improve
@@ -127,9 +127,6 @@ TESTS = $(check_PROGRAMS) $(dist_check_SCRIPTS)
 if HELP2MAN
 man_MANS = v7d_transform.1 v7d_add_wmo_info.1 vg6d_getpoint.1 vg6d_transform.1
 
-#if GRIBAPI
-#man_MANS += vg6d_subarea.1
-#endif
 if NCARG
 man_MANS += v7d_plot_sound.1
 endif
