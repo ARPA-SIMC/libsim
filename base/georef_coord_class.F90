@@ -146,6 +146,11 @@ INTERFACE inside
   MODULE PROCEDURE georef_coord_inside, georef_coord_inside_rectang
 END INTERFACE
 
+!> Compute the distance in m between two points
+INTERFACE dist
+  MODULE PROCEDURE georef_coord_dist
+END INTERFACE
+
 #define ARRAYOF_ORIGTYPE TYPE(georef_coord_array)
 #define ARRAYOF_TYPE arrayof_georef_coord_array
 !define ARRAYOF_ORIGEQ 0
@@ -162,7 +167,7 @@ PUBLIC georef_coord, georef_coord_miss, &
 #ifdef HAVE_SHAPELIB
  import, export, &
 #endif
- read_unit, write_unit, inside, &
+ read_unit, write_unit, inside, dist, &
  georef_coord_new, georef_coord_array_new
 
 CONTAINS
@@ -381,20 +386,20 @@ END SUBROUTINE georef_coord_vect_write_unit
 
 !> Restituisce la distanza in m tra 2 oggetti georef_coord.
 !! La distanza è calcolata approssimativamente ed è valida per piccoli angoli.
-!FUNCTION georef_coord_dist(this, that) RESULT(dist)
-!USE doubleprecision_phys_const
-!TYPE(georef_coord), INTENT (IN) :: this !< primo punto
-!TYPE(georef_coord), INTENT (IN) :: that !< secondo punto
-!DOUBLE PRECISION :: dist !< distanza in metri
-!
-!DOUBLE PRECISION :: x,y
-!! Distanza approssimata, valida per piccoli angoli
-!
-!x = (this%x-that%x)*COS(((this%y+this%y)/2.)*degrad)
-!y = (this%y-that%y)
-!dist = SQRT(x**2 + y**2)*degrad*rearth
-!
-!END FUNCTION georef_coord_dist
+FUNCTION georef_coord_dist(this, that) RESULT(dist)
+USE doubleprecision_phys_const
+TYPE(georef_coord), INTENT (IN) :: this !< primo punto
+TYPE(georef_coord), INTENT (IN) :: that !< secondo punto
+DOUBLE PRECISION :: dist !< distanza in metri
+
+DOUBLE PRECISION :: x,y
+! Distanza approssimata, valida per piccoli angoli
+
+x = (this%x-that%x)*COS(((this%y+this%y)/2.)*degrad)
+y = (this%y-that%y)
+dist = SQRT(x**2 + y**2)*degrad*rearth
+
+END FUNCTION georef_coord_dist
 
 
 !> Determines whether the point \a this lies inside a specified rectangle.
