@@ -100,6 +100,8 @@ mv $RPM_BUILD_ROOT%{_includedir}/*.mod $RPM_BUILD_ROOT%{_fmoddir}
 %{_bindir}/*
 %{_datadir}/%{name}/*
 %{_mandir}/man1
+%dir %{_libexecdir}/%{name}
+%{_libexecdir}/%{name}/*
 
 %files -n libsim-devel
 %defattr(-,root,root)
