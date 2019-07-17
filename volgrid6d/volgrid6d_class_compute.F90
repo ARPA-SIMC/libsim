@@ -717,8 +717,8 @@ INTEGER,INTENT(in) :: stat_proc_input !< type of statistical processing of data 
 INTEGER,INTENT(in) :: stat_proc !< type of statistical processing to be recomputed (from grib2 table), data in output volume \a that will have a timerange of this type
 LOGICAL , INTENT(in),OPTIONAL :: clone !< if provided and \c .TRUE. , clone the gaid's from \a this to \a that
 
-INTEGER i, j, n, i3, i4, i6
-INTEGER,POINTER :: map_tr(:), map_trc(:,:), count_trc(:,:)
+INTEGER :: j, i3, i4, i6
+INTEGER,POINTER :: map_tr(:)
 REAL,POINTER :: voldatiin(:,:), voldatiout(:,:)
 REAL,ALLOCATABLE :: int_ratio(:)
 LOGICAL :: lclone
