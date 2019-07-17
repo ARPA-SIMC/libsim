@@ -1989,7 +1989,7 @@ ENDIF
 ! Volume con solo i dati reali e tutti gli attributi
 ! l'anagrafica e` copiata interamente se necessario
 CALL vol7d_copy(this, that, &
- lanavarr=tv, lanavard=acp, lanavari=acp, lanavarb=acp, lanavarc=acp, &
+ lanavarr=tv, lanavard=acp, lanavari=acp, lanavarb=acp, lanavarc=fv, & ! was acp
  ldativarr=tv, ldativard=fv, ldativari=fv, ldativarb=fv, ldativarc=fv)
 
 ! Volume solo di dati double
@@ -2086,8 +2086,8 @@ ENDIF
 
 
 ! Volume solo di dati character
-call vol7d_copy(this, v7d_tmp, &
- lanavarr=fv, lanavard=fv, lanavari=fv, lanavarb=fv, lanavarc=acn, &
+CALL vol7d_copy(this, v7d_tmp, &
+ lanavarr=fv, lanavard=fv, lanavari=fv, lanavarb=fv, lanavarc=tv, & ! was acn
  lanaattrr=fv, lanaattrd=fv, lanaattri=fv, lanaattrb=fv, lanaattrc=fv, &
  lanavarattrr=fv, lanavarattrd=fv, lanavarattri=fv, lanavarattrb=fv, lanavarattrc=fv, &
  ldativarr=fv, ldativard=fv, ldativari=fv, ldativarb=fv, ldativarc=tv, &
@@ -2095,19 +2095,36 @@ call vol7d_copy(this, v7d_tmp, &
  ldativarattrr=fv, ldativarattrd=fv, ldativarattri=fv, ldativarattrb=fv, ldativarattrc=fv)
 
 ! converto a dati reali
-IF (ASSOCIATED(v7d_tmp%dativar%c)) THEN
+IF (ASSOCIATED(v7d_tmp%anavar%c) .OR. ASSOCIATED(v7d_tmp%dativar%c)) THEN
+
+  IF (ASSOCIATED(v7d_tmp%anavar%c)) THEN
 ! alloco i dati reali e vi trasferisco i character
-  ALLOCATE(v7d_tmp%voldatir(SIZE(v7d_tmp%voldatic, 1), SIZE(v7d_tmp%voldatic, 2), &
-  SIZE(v7d_tmp%voldatic, 3), SIZE(v7d_tmp%voldatic, 4), SIZE(v7d_tmp%voldatic, 5), &
-  SIZE(v7d_tmp%voldatic, 6)))
-  DO i = 1, SIZE(v7d_tmp%dativar%c)
-    v7d_tmp%voldatir(:,:,:,:,i,:) = &
-     realdat(v7d_tmp%voldatic(:,:,:,:,i,:), v7d_tmp%dativar%c(i))
-  ENDDO
-  DEALLOCATE(v7d_tmp%voldatic)
+    ALLOCATE(v7d_tmp%volanar(SIZE(v7d_tmp%volanac, 1), SIZE(v7d_tmp%volanac, 2), &
+     SIZE(v7d_tmp%volanac, 3)))
+    DO i = 1, SIZE(v7d_tmp%anavar%c)
+      v7d_tmp%volanar(:,i,:) = &
+       realdat(v7d_tmp%volanac(:,i,:), v7d_tmp%anavar%c(i))
+    ENDDO
+    DEALLOCATE(v7d_tmp%volanac)
 ! trasferisco le variabili
-  v7d_tmp%dativar%r => v7d_tmp%dativar%c
-  NULLIFY(v7d_tmp%dativar%c)
+    v7d_tmp%anavar%r => v7d_tmp%anavar%c
+    NULLIFY(v7d_tmp%anavar%c)
+  ENDIF
+
+  IF (ASSOCIATED(v7d_tmp%dativar%c)) THEN
+! alloco i dati reali e vi trasferisco i character
+    ALLOCATE(v7d_tmp%voldatir(SIZE(v7d_tmp%voldatic, 1), SIZE(v7d_tmp%voldatic, 2), &
+     SIZE(v7d_tmp%voldatic, 3), SIZE(v7d_tmp%voldatic, 4), SIZE(v7d_tmp%voldatic, 5), &
+     SIZE(v7d_tmp%voldatic, 6)))
+    DO i = 1, SIZE(v7d_tmp%dativar%c)
+      v7d_tmp%voldatir(:,:,:,:,i,:) = &
+       realdat(v7d_tmp%voldatic(:,:,:,:,i,:), v7d_tmp%dativar%c(i))
+    ENDDO
+    DEALLOCATE(v7d_tmp%voldatic)
+! trasferisco le variabili
+    v7d_tmp%dativar%r => v7d_tmp%dativar%c
+    NULLIFY(v7d_tmp%dativar%c)
+  ENDIF
 
 ! fondo con il volume definitivo
   CALL vol7d_merge(that, v7d_tmp)
