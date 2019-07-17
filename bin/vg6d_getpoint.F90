@@ -61,7 +61,6 @@ CHARACTER(len=80) :: output_template, trans_type, sub_type
 INTEGER :: output_td
 LOGICAL :: version, ldisplay
 LOGICAL :: c2agrid, noconvert
-PROCEDURE(basic_find_index),POINTER :: find_index
 
 !questa chiamata prende dal launcher il nome univoco
 CALL l4f_launcher(a_name,a_name_force="vg6d_getpoint")
@@ -362,12 +361,10 @@ IF (ldisplay) CALL display(volgrid)
 
 IF (c2agrid) CALL vg6d_c2a(volgrid)
 
-find_index => NULL()
-  find_index => basic_find_index
 IF (output_format /= 'grib_api_csv') THEN ! otherwise postpone
   CALL transform(trans, volgrid6d_in=volgrid, vol7d_out=v7d_out, v7d=v7d_coord, &
    maskgrid=maskfield, maskbounds=maskbounds%array, &
-   networkname=network, noconvert=noconvert, find_index=find_index, &
+   networkname=network, noconvert=noconvert, &
    categoryappend="transform")
   CALL l4f_category_log(category,L4F_INFO,"transformation completed")
 ENDIF
@@ -411,7 +408,7 @@ ELSE IF (output_format == 'grib_api_csv') THEN
   DO i = 1, SIZE(volgrid) ! transform one volume at a time
     CALL transform(trans, volgrid6d_in=volgrid(i), vol7d_out=v7d_out, v7d=v7d_coord, &
      maskgrid=maskfield, maskbounds=maskbounds%array, &
-     networkname=network, noconvert=noconvert, find_index=find_index, &
+     networkname=network, noconvert=noconvert, &
      categoryappend="transform")
     CALL grib_api_csv_export(v7d_out, volgrid(i), iun, i == 1)
   ENDDO
@@ -433,58 +430,5 @@ call l4f_category_log(category,L4F_INFO,"end")
 ! Close the logger
 call l4f_category_delete(category)
 ier=l4f_fini()
-
-CONTAINS
-
-SUBROUTINE find_index_pkaufmann(this, near, nx, ny, xmin, xmax, ymin, ymax, &
- lon, lat, extrap, index_x, index_y)
-TYPE(griddim_def),INTENT(in) :: this ! griddim object (from grid)
-logical,INTENT(in) :: near ! near or bilin interpolation (determine which point is requested)
-INTEGER,INTENT(in) :: nx,ny ! dimension (to grid)
-DOUBLE PRECISION,INTENT(in) :: xmin, xmax, ymin, ymax ! extreme coordinate (to grid)
-DOUBLE PRECISION,INTENT(in) :: lon(:,:),lat(:,:) ! target coordinate
-LOGICAL,INTENT(in) :: extrap ! extrapolate
-INTEGER,INTENT(out) :: index_x(:,:),index_y(:,:) ! index of point requested
-
-INTEGER :: lnx, lny, ni, nj, i, j
-DOUBLE PRECISION :: x(SIZE(lon,1),SIZE(lon,2)),y(SIZE(lon,1),SIZE(lon,2))
-
-!IF (near) THEN
-  CALL proj(this,lon,lat,x,y)
-  index_x = NINT((x-xmin)/((xmax-xmin)/DBLE(nx-1)))+1
-  index_y = NINT((y-ymin)/((ymax-ymin)/DBLE(ny-1)))+1
-  lnx = nx
-  lny = ny
-!ELSE
-!  CALL proj(this,lon,lat,x,y)
-!  index_x = FLOOR((x-xmin)/((xmax-xmin)/DBLE(nx-1)))+1
-!  index_y = FLOOR((y-ymin)/((ymax-ymin)/DBLE(ny-1)))+1
-!  lnx = nx-1
-!  lny = ny-1
-!ENDIF
-
-!ni = SIZE(lon,1)
-!nj = SIZE(lon,2)
-!DO j = 1, nj
-!  DO i = 1, ni
-!    IF (fr_land(i, j) > 0.5) THEN ! land
-!    ELSE ! sea
-!    ENDIF
-!  ENDDO
-!ENDDO
-
-!IF (extrap) THEN ! trim indices outside grid for extrapolation
-!  index_x = MAX(index_x, 1)
-!  index_y = MAX(index_y, 1)
-!  index_x = MIN(index_x, lnx)
-!  index_y = MIN(index_y, lny)
-!ELSE ! nullify indices outside grid
-!  WHERE(index_x < 1 .OR. index_x > lnx .OR. index_y < 1 .OR. index_y > lny)
-!    index_x = imiss
-!    index_y = imiss
-!  END WHERE
-!ENDIF
-
-END SUBROUTINE find_index_pkaufmann
 
 END PROGRAM vg6d_getpoint
