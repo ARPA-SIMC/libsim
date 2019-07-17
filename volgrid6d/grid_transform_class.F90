@@ -1216,6 +1216,7 @@ DOUBLE PRECISION :: xmin, xmax, ymin, ymax, steplon, steplat, &
 TYPE(geo_proj) :: proj_in, proj_out
 TYPE(georef_coord) :: point
 LOGICAL,ALLOCATABLE :: point_mask(:,:)
+TYPE(griddim_def) :: lin, lout
 
 
 CALL grid_transform_init_common(this, trans, categoryappend)
@@ -1248,8 +1249,9 @@ IF (this%trans%trans_type == 'zoom') THEN
   ELSE IF (this%trans%sub_type == 'coordbb') THEN
 
 ! compute coordinates of input grid in geo system
-    CALL unproj(in)
-    CALL get_val(in, nx=nx, ny=ny)
+    CALL copy(in, lin)
+    CALL unproj(lin)
+    CALL get_val(lin, nx=nx, ny=ny)
 
     ALLOCATE(point_mask(nx,ny))
     point_mask(:,:) = .FALSE.
@@ -1258,10 +1260,10 @@ IF (this%trans%trans_type == 'zoom') THEN
     DO j = 1, ny
       DO i = 1, nx
 !        IF (geo_coord_inside_rectang())
-        IF (in%dim%lon(i,j) > this%trans%rect_coo%ilon .AND. &
-         in%dim%lon(i,j) < this%trans%rect_coo%flon .AND. &
-         in%dim%lat(i,j) > this%trans%rect_coo%ilat .AND. &
-         in%dim%lat(i,j) < this%trans%rect_coo%flat) THEN ! improve!
+        IF (lin%dim%lon(i,j) > this%trans%rect_coo%ilon .AND. &
+         lin%dim%lon(i,j) < this%trans%rect_coo%flon .AND. &
+         lin%dim%lat(i,j) > this%trans%rect_coo%ilat .AND. &
+         lin%dim%lat(i,j) < this%trans%rect_coo%flat) THEN ! improve!
           point_mask(i,j) = .TRUE.
         ENDIF
       ENDDO
@@ -1301,7 +1303,7 @@ IF (this%trans%trans_type == 'zoom') THEN
       RETURN
 
     ENDIF
-
+    CALL delete(lin)
   ENDIF
 ! to do in all zoom cases
 
@@ -1324,19 +1326,16 @@ IF (this%trans%trans_type == 'zoom') THEN
   xmax=xmax+steplon*(this%trans%rect_ind%fx-nx)
   ymax=ymax+steplat*(this%trans%rect_ind%fy-ny)
 
-  CALL copy(in,out)
-! if unproj has been called for in, in%dim will contain allocated coordinates
-! which will be copied to out%dim, but they are wrong
+  CALL copy(in, out)
+! deallocate coordinates if allocated because they will change
   CALL dealloc(out%dim)
 
   out%dim%nx = this%trans%rect_ind%fx - this%trans%rect_ind%ix + 1 ! newx
   out%dim%ny = this%trans%rect_ind%fy - this%trans%rect_ind%iy + 1 ! newy
-
+  this%outnx = out%dim%nx
+  this%outny = out%dim%ny
   this%innx = nx
   this%inny = ny
-
-  this%outnx=out%dim%nx
-  this%outny=out%dim%ny
 
   CALL set_val(out, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax)
 
@@ -1355,11 +1354,13 @@ ELSE IF (this%trans%trans_type == 'boxregrid') THEN
   ymin_new = ymin + (this%trans%box_info%npy - 1)*0.5D0*steplat
 
   CALL copy(in, out)
+! deallocate coordinates if allocated because they will change
+  CALL dealloc(out%dim)
+
   out%dim%nx = nx/this%trans%box_info%npx
   out%dim%ny = ny/this%trans%box_info%npy
-
-  this%outnx=out%dim%nx
-  this%outny=out%dim%ny
+  this%outnx = out%dim%nx
+  this%outny = out%dim%ny
   steplon = steplon*this%trans%box_info%npx
   steplat = steplat*this%trans%box_info%npy
 
@@ -1382,12 +1383,13 @@ ELSE IF (this%trans%trans_type == 'inter') THEN
 
     ALLOCATE(this%inter_index_x(this%outnx,this%outny), &
      this%inter_index_y(this%outnx,this%outny))
-    CALL unproj(out)
+    CALL copy(out, lout)
+    CALL unproj(lout)
 
     IF (this%trans%sub_type == 'bilin') THEN
       CALL this%find_index(in, .FALSE., &
        this%innx, this%inny, xmin, xmax, ymin, ymax, &
-       out%dim%lon, out%dim%lat, this%trans%extrap, &
+       lout%dim%lon, lout%dim%lat, this%trans%extrap, &
        this%inter_index_x, this%inter_index_y)
 
       ALLOCATE(this%inter_x(this%innx,this%inny), &
@@ -1397,18 +1399,18 @@ ELSE IF (this%trans%trans_type == 'inter') THEN
 
 ! compute coordinates of input grid
       CALL griddim_gen_coord(in, this%inter_x, this%inter_y)
-! TODO chi mi garantisce che e` stata chiamata la unproj(out)?
 ! compute coordinates of output grid in input system
-      CALL proj(in,out%dim%lon,out%dim%lat,this%inter_xp,this%inter_yp)
+      CALL proj(in, lout%dim%lon, lout%dim%lat, this%inter_xp, this%inter_yp)
 
     ELSE ! near, shapiro_near
       CALL this%find_index(in, .TRUE., &
        this%innx, this%inny, xmin, xmax, ymin, ymax, &
-       out%dim%lon, out%dim%lat, this%trans%extrap, &
+       lout%dim%lon, lout%dim%lat, this%trans%extrap, &
        this%inter_index_x, this%inter_index_y)
 
     ENDIF
 
+    CALL delete(lout)
     this%valid = .TRUE.
   ENDIF
 
@@ -1432,13 +1434,15 @@ ELSE IF (this%trans%trans_type == 'boxinter') THEN
    this%inter_index_y(this%innx,this%inny))
 
 ! compute coordinates of input grid in geo system
-  CALL unproj(in) ! TODO costringe a dichiarare in INTENT(inout), si puo` evitare?
+  CALL copy(in, lin)
+  CALL unproj(lin)
 ! use find_index in the opposite way, here extrap does not make sense
   CALL this%find_index(out, .TRUE., &
    this%outnx, this%outny, xmin, xmax, ymin, ymax, &
-   in%dim%lon, in%dim%lat, .FALSE., &
+   lin%dim%lon, lin%dim%lat, .FALSE., &
    this%inter_index_x, this%inter_index_y)
 
+  CALL delete(lin)
   this%valid = .TRUE. ! warning, no check of subtype
 
 ELSE IF (this%trans%trans_type == 'stencilinter') THEN
@@ -1451,10 +1455,11 @@ ELSE IF (this%trans%trans_type == 'stencilinter') THEN
 
   ALLOCATE (this%inter_index_x(this%outnx,this%outny), &
    this%inter_index_y(this%outnx,this%outny))
-  CALL unproj(out)
+  CALL copy(out, lout)
+  CALL unproj(lout)
   CALL this%find_index(in, .TRUE., &
    this%innx, this%inny, xmin, xmax, ymin, ymax, &
-   out%dim%lon, out%dim%lat, this%trans%extrap, &
+   lout%dim%lon, lout%dim%lat, this%trans%extrap, &
    this%inter_index_x, this%inter_index_y)
 
 ! define the stencil mask
@@ -1495,6 +1500,7 @@ ELSE IF (this%trans%trans_type == 'stencilinter') THEN
    'stencilinter: stencil points '//t2c(COUNT(this%stencil)))
 #endif
 
+  CALL delete(lout)
   this%valid = .TRUE. ! warning, no check of subtype
 
 ELSE IF (this%trans%trans_type == 'maskgen' .OR. &
@@ -1504,7 +1510,7 @@ ELSE IF (this%trans%trans_type == 'maskgen' .OR. &
     this%recur = .TRUE. ! grid-to-grid polyinter is done in two steps!
   ENDIF
 
-  CALL copy(in,out)
+  CALL copy(in, out)
   CALL get_val(in, nx=this%innx, ny=this%inny)
   this%outnx = this%innx
   this%outny = this%inny
@@ -1516,14 +1522,14 @@ ELSE IF (this%trans%trans_type == 'maskgen' .OR. &
   this%inter_index_y(:,:) = 1
 
 ! compute coordinates of input grid in geo system
-  CALL unproj(in) ! TODO costringe a dichiarare in INTENT(inout), si puo` evitare?
+  CALL unproj(out) ! should be unproj(lin)
 
   nprev = 1
 !$OMP PARALLEL DEFAULT(SHARED)
 !$OMP DO PRIVATE(j, i, n, point) FIRSTPRIVATE(nprev)
   DO j = 1, this%inny
     inside_x: DO i = 1, this%innx
-      point = georef_coord_new(x=in%dim%lon(i,j), y=in%dim%lat(i,j))
+      point = georef_coord_new(x=out%dim%lon(i,j), y=out%dim%lat(i,j))
 
       DO n = nprev, this%trans%poly%arraysize ! optimize starting from last matched polygon
         IF (inside(point, this%trans%poly%array(n))) THEN ! stop at the first matching polygon
@@ -1549,7 +1555,7 @@ ELSE IF (this%trans%trans_type == 'maskgen' .OR. &
 
 ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
 
-  CALL copy(in,out)
+  CALL copy(in, out)
   CALL get_val(in, nx=this%innx, ny=this%inny)
   this%outnx = this%innx
   this%outny = this%inny
@@ -1727,7 +1733,7 @@ SUBROUTINE grid_transform_grid_vol7d_init(this, trans, in, v7d_out, &
  maskgrid, maskbounds, find_index, categoryappend)
 TYPE(grid_transform),INTENT(out) :: this !< grid_transformation object
 TYPE(transform_def),INTENT(in) :: trans !< transformation object
-TYPE(griddim_def),INTENT(inout) :: in !< griddim object to transform
+TYPE(griddim_def),INTENT(in) :: in !< griddim object to transform
 TYPE(vol7d),INTENT(inout) :: v7d_out !< vol7d object with the coordinates of the sparse points to be used as transformation target (input or output depending on type of transformation)
 REAL,INTENT(in),OPTIONAL :: maskgrid(:,:) !< 2D field to be used for defining subareas according to its values, it must have the same shape as the field to be interpolated (for transformation type 'maskinter' and 'metamorphosis:mask')
 REAL,INTENT(in),OPTIONAL :: maskbounds(:) !< array of boundary values for defining subareas from the values of \a maskgrid, the number of subareas is SIZE(maskbounds) - 1, if not provided a default based on extreme values of \a maskgrid is used
@@ -1740,6 +1746,8 @@ DOUBLE PRECISION :: xmin, xmax, ymin, ymax, r2
 DOUBLE PRECISION,ALLOCATABLE :: lon1(:), lat1(:), lon(:,:), lat(:,:)
 REAL,ALLOCATABLE :: lmaskbounds(:)
 TYPE(georef_coord) :: point
+TYPE(griddim_def) :: lin
+
 
 IF (PRESENT(find_index)) THEN ! move in init_common?
   IF (ASSOCIATED(find_index)) THEN
@@ -1809,14 +1817,15 @@ ELSE IF (this%trans%trans_type == 'polyinter') THEN
   this%inter_index_y(:,:) = 1
 
 ! compute coordinates of input grid in geo system
-  CALL unproj(in) ! TODO costringe a dichiarare in INTENT(inout), si puo` evitare?
+  CALL copy(in, lin)
+  CALL unproj(lin)
 
   nprev = 1
 !$OMP PARALLEL DEFAULT(SHARED)
 !$OMP DO PRIVATE(iy, ix, n, point) FIRSTPRIVATE(nprev)
   DO iy = 1, this%inny
     inside_x: DO ix = 1, this%innx
-      point = georef_coord_new(x=in%dim%lon(ix,iy), y=in%dim%lat(ix,iy))
+      point = georef_coord_new(x=lin%dim%lon(ix,iy), y=lin%dim%lat(ix,iy))
 
       DO n = nprev, this%trans%poly%arraysize ! optimize starting from last matched polygon
         IF (inside(point, this%trans%poly%array(n))) THEN ! stop at the first matching polygon
@@ -1860,6 +1869,7 @@ ELSE IF (this%trans%trans_type == 'polyinter') THEN
   ENDDO
 #endif
 
+  CALL delete(lin)
   this%valid = .TRUE. ! warning, no check of subtype
 
 ELSE IF (this%trans%trans_type == 'stencilinter') THEN
@@ -1950,7 +1960,8 @@ ELSE IF (this%trans%trans_type == 'maskinter') THEN
   CALL gen_mask_class()
 
 ! compute coordinates of input grid in geo system
-  CALL unproj(in) ! TODO costringe a dichiarare in INTENT(inout), si puo` evitare?
+  CALL copy(in, lin)
+  CALL unproj(lin)
 
 !$OMP PARALLEL DEFAULT(SHARED)
 !$OMP DO PRIVATE(iy, ix, n)
@@ -1980,19 +1991,22 @@ ELSE IF (this%trans%trans_type == 'maskinter') THEN
 ! warning, in case of concave areas points may coincide!
   DO n = 1, nmaskarea
     CALL init(v7d_out%ana(n), &
-     lon=stat_average(PACK(in%dim%lon(:,:), &
+     lon=stat_average(PACK(lin%dim%lon(:,:), &
      mask=(this%inter_index_x(:,:) == n))), &
-     lat=stat_average(PACK(in%dim%lat(:,:), &
+     lat=stat_average(PACK(lin%dim%lat(:,:), &
      mask=(this%inter_index_x(:,:) == n))))
-   ENDDO
+  ENDDO
 
+  CALL delete(lin)
   this%valid = .TRUE. ! warning, no check of subtype
 
 ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
 
 ! common to all metamorphosis subtypes
 ! compute coordinates of input grid in geo system
-  CALL unproj(in) ! TODO costringe a dichiarare in INTENT(inout), si puo` evitare?
+  CALL copy(in, lin)
+  CALL unproj(lin)
+
   CALL get_val(in, nx=this%innx, ny=this%inny)
 ! allocate index array
   ALLOCATE(this%point_index(this%innx,this%inny))
@@ -2011,7 +2025,7 @@ ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
     DO iy=1,this%inny
       DO ix=1,this%innx
         CALL init(v7d_out%ana((iy-1)*this%innx+ix), &
-         lon=in%dim%lon(ix,iy),lat=in%dim%lat(ix,iy))
+         lon=lin%dim%lon(ix,iy),lat=lin%dim%lat(ix,iy))
         n = n + 1
         this%point_index(ix,iy) = n
       ENDDO
@@ -2027,10 +2041,10 @@ ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
     DO iy = 1, this%inny
       DO ix = 1, this%innx
 !        IF (geo_coord_inside_rectang()
-        IF (in%dim%lon(ix,iy) > this%trans%rect_coo%ilon .AND. &
-         in%dim%lon(ix,iy) < this%trans%rect_coo%flon .AND. &
-         in%dim%lat(ix,iy) > this%trans%rect_coo%ilat .AND. &
-         in%dim%lat(ix,iy) < this%trans%rect_coo%flat) THEN ! improve!
+        IF (lin%dim%lon(ix,iy) > this%trans%rect_coo%ilon .AND. &
+         lin%dim%lon(ix,iy) < this%trans%rect_coo%flon .AND. &
+         lin%dim%lat(ix,iy) > this%trans%rect_coo%ilat .AND. &
+         lin%dim%lat(ix,iy) < this%trans%rect_coo%flat) THEN ! improve!
           this%outnx = this%outnx + 1
           this%point_index(ix,iy) = this%outnx
         ENDIF
@@ -2054,7 +2068,8 @@ ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
       DO ix = 1, this%innx
         IF (c_e(this%point_index(ix,iy))) THEN
           n = n + 1
-          CALL init(v7d_out%ana(n),lon=in%dim%lon(ix,iy),lat=in%dim%lat(ix,iy))
+          CALL init(v7d_out%ana(n), &
+           lon=lin%dim%lon(ix,iy), lat=lin%dim%lat(ix,iy))
         ENDIF
       ENDDO
     ENDDO
@@ -2072,7 +2087,7 @@ ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
 !$OMP DO PRIVATE(iy, ix, point, n) REDUCTION(+:this%outnx)
     DO iy = 1, this%inny
       DO ix = 1, this%innx
-        point = georef_coord_new(x=in%dim%lon(ix,iy), y=in%dim%lat(ix,iy))
+        point = georef_coord_new(x=lin%dim%lon(ix,iy), y=lin%dim%lat(ix,iy))
         DO n = 1, this%trans%poly%arraysize
           IF (inside(point, this%trans%poly%array(n))) THEN ! stop at the first matching polygon
             this%outnx = this%outnx + 1
@@ -2097,7 +2112,8 @@ ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
       DO ix = 1, this%innx
         IF (c_e(this%point_index(ix,iy))) THEN
           n = n + 1
-          CALL init(v7d_out%ana(n),lon=in%dim%lon(ix,iy),lat=in%dim%lat(ix,iy))
+          CALL init(v7d_out%ana(n), &
+           lon=lin%dim%lon(ix,iy), lat=lin%dim%lat(ix,iy))
         ENDIF
       ENDDO
     ENDDO
@@ -2175,6 +2191,7 @@ ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
     this%valid = .TRUE.
 
   ENDIF
+  CALL delete(lin)
 ENDIF
 
 CONTAINS
@@ -2269,14 +2286,9 @@ IF (this%trans%trans_type == 'inter') THEN
     ALLOCATE(this%inter_xp(this%innx,this%inny),this%inter_yp(this%innx,this%inny))
     ALLOCATE(this%inter_x(this%outnx,this%outny),this%inter_y(this%outnx,this%outny))
 
-    CALL get_val(out, &
-     xmin=xmin, xmax=xmax,&
-     ymin=ymin, ymax=ymax)
-
+    CALL get_val(out, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax)
     CALL getval(v7d_in%ana(:)%coord,lon=lon(:,1),lat=lat(:,1))
-
     CALL proj(out, lon, lat, this%inter_xp, this%inter_yp)
-
     CALL griddim_gen_coord(out, this%inter_x, this%inter_y)
 
     DEALLOCATE(lon,lat)
