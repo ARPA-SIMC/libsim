@@ -207,7 +207,8 @@ DO k = 1, nfam
 ENDDO
 
 CALL display(db_v7d%vol7d)
-
+PRINT*,'famptr',famptr
+PRINT*,'v7dptr',v7dfamptr
 ! Creo una vista su un array tridimensionale che scorre le dimensioni
 ! dell'anagrafica, del tempo e delle variabili (vol7d_ana_d, vol7d_time_d)
 CALL vol7d_get_voldatir(db_v7d%vol7d, (/vol7d_ana_d,vol7d_time_d,vol7d_var_d/), vol3dp=vol3d)
@@ -234,6 +235,7 @@ gm1 = timedelta_new(day=-1)
 ! Stampo su file la tabella in uscita
 DO j = 1, SIZE(db_v7d%vol7d%ana) ! stazione
   n = ana_match(db_v7d%vol7d%volanac(j,lonvar,1),db_v7d%vol7d%volanac(j,latvar,1))
+  PRINT*,'staz',n
   IF (n <= 0) CYCLE ! stazione non richiesta
   OPEN(10, file=file_stazioni(n))
   WRITE(10,'(a)') TRIM(intestaz)

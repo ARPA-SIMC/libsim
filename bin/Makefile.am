@@ -4,6 +4,7 @@ bin_PROGRAMS =
 dist_check_SCRIPTS = 
 check_PROGRAMS = 
 dist_bin_SCRIPTS =
+pkglibexec_PROGRAMS =
 
 if NCARG
 bin_PROGRAMS += v7d_plot_sound
@@ -53,7 +54,7 @@ endif
 
 
 if DBALLE
-bin_PROGRAMS += v7d_pollini
+pkglibexec_PROGRAMS += v7d_pollini
 
 v7d_pollini_SOURCES = v7d_pollini.f90
 v7d_pollini_LDADD = ../base/libsim_base.la ../vol7d/libsim_vol7d.la ../log4fortran/liblog4fortran.la
@@ -78,7 +79,7 @@ v7d_transform_SOURCES += db_utils.F90
 endif
 v7d_transform_SOURCES += v7d_transform.F90
 
-bin_PROGRAMS += v7d_add_wmo_info
+pkglibexec_PROGRAMS += v7d_add_wmo_info
 v7d_add_wmo_info_SOURCES =
 if DBALLE
 v7d_add_wmo_info_SOURCES += db_utils.F90
@@ -87,13 +88,18 @@ v7d_add_wmo_info_SOURCES += v7d_add_wmo_info.F90
 v7d_add_wmo_info_LDADD = ../base/libsim_base.la ../vol7d/libsim_vol7d.la ../log4fortran/liblog4fortran.la
 
 bin_PROGRAMS += vg6d_getpoint vg6d_transform
+pkglibexec_PROGRAMS += vg6d_getpoint_pkauf
 
 if GRIBAPI
 vg6d_getpoint_SOURCES = grib_api_csv.F90 vg6d_getpoint.F90
+vg6d_getpoint_pkauf_SOURCES = grib_api_csv.F90 vg6d_getpoint_pkauf.F90
 else
 vg6d_getpoint_SOURCES = vg6d_getpoint.F90
+vg6d_getpoint_pkauf_SOURCES = vg6d_getpoint_pkauf.F90
 endif
 vg6d_getpoint_LDADD = ../volgrid6d/libsim_volgrid6d.la  ../vol7d/libsim_vol7d.la ../base/libsim_base.la ../log4fortran/liblog4fortran.la
+
+vg6d_getpoint_pkauf_LDADD = ../volgrid6d/libsim_volgrid6d.la  ../vol7d/libsim_vol7d.la ../base/libsim_base.la ../log4fortran/liblog4fortran.la
 
 vg6d_transform_SOURCES = vg6d_transform.F90
 vg6d_transform_LDADD = ../volgrid6d/libsim_volgrid6d.la ../base/libsim_base.la ../vol7d/libsim_vol7d.la ../log4fortran/liblog4fortran.la
