@@ -1080,8 +1080,10 @@ DOUBLE PRECISION :: sdx, sdy, ratio, tol
 
 
 ! Generic keys
-CALL grib_get(gaid,'GRIBEditionNumber',EditionNumber)
-CALL grib_set(gaid,'typeOfGrid' ,this%grid%proj%proj_type)
+CALL grib_get(gaid,'GRIBEditionNumber', EditionNumber)
+! the following required since eccodes
+IF (EditionNumber == 2) CALL grib_set(gaid,'shapeOfTheEarth', 6)
+CALL grib_set(gaid,'typeOfGrid', this%grid%proj%proj_type)
 #ifdef DEBUG
 CALL l4f_category_log(this%category,L4F_DEBUG, &
  "griddim_export_gribapi, grid type "//this%grid%proj%proj_type)
