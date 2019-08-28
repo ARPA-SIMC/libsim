@@ -2715,7 +2715,7 @@ ELEMENTAL REAL FUNCTION vis_lwc(rho, qcw)
 REAL,INTENT(in) :: Rho !< Density kg/m3
 REAL,INTENT(in) :: qcw !< Specific cloud liquid water content (kg/kg)
 
-REAL,PARAMETER :: maxvis=30000., minvis=1., cv1=1.13*1.0E3, cv2=0.51, &
+REAL,PARAMETER :: maxvis=30000., minvis=1., cv1=1.13*1.0E3, cv2=-0.51, &
  n_c=2.0E8*1.0E-6*1.0E3
 ! in cv1: 1.0E3 km=>m
 ! in n_c: 1.0E-6 m-3=>cm-3, 1.0E3 kg=>g
