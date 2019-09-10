@@ -377,7 +377,7 @@ CALL optionparser_add(opt, ' ', 'comp-full-steps', comp_full_steps, help= &
  'compute statistical processing by differences only on intervals with forecast &
  &time equal to a multiple of comp-step, otherwise all reasonable combinations &
  &of forecast times are computed')
-CALL optionparser_add(opt, ' ', 'comp-frac-valid', comp_frac_valid, 0., help= &
+CALL optionparser_add(opt, ' ', 'comp-frac-valid', comp_frac_valid, 1., help= &
  '(from 0. to 1.) specify the fraction  of input data that has to be valid in order to consider a &
  &statistically processed value acceptable; for instantaneous data the criterion is the longest time between two &
  &contiguous valid data within comp-step interval &

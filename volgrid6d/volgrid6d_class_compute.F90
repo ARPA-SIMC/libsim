@@ -319,6 +319,11 @@ do_otimerange: DO j = 1, SIZE(that%timerange)
             ENDIF ! dtratio(n1)
           ENDDO ! ttr
 
+#ifdef DEBUG
+          CALL l4f_log(L4F_DEBUG, &
+           'compute_stat_proc_agg, ndtr/dtratio/frac_valid: '// &
+           t2c(ndtr)//'/'//t2c(dtratio(n1))//'/'//t2c(lfrac_valid))
+#endif
           IF (REAL(ndtr)/REAL(dtratio(n1)) >= lfrac_valid) THEN ! success
             IF (stat_proc == 0) THEN ! average
               WHERE(c_e(voldatiout(:,:)))
