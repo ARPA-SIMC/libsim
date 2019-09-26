@@ -87,10 +87,7 @@ END TYPE gridinfo_def
 
 INTEGER, PARAMETER :: &
  cosmo_centre(3) = (/78,80,200/), & ! emission centres using COSMO coding
- ecmwf_centre(1) = (/98/), & ! emission centres using ECMWF coding
- height_level(6) = (/102,103,106,117,160,161/), & ! 10**-3
- thermo_level(3) = (/20,107,235/), & ! 10**-1
- sigma_level(2) = (/104,111/) ! 10**-4
+ ecmwf_centre(1) = (/98/) ! emission centres using ECMWF coding
 
 !> Constructor, it creates a new instance of the object.
 INTERFACE init
@@ -1122,6 +1119,10 @@ ELSE
   scalev = l
   IF (ANY(ltype == height_level)) THEN
     scalef = 3
+  ELSE IF (ANY(ltype == thermo_level)) THEN
+    scalef = 1
+  ELSE IF (ANY(ltype == sigma_level)) THEN
+    scalef = 4
   ELSE
     scalef = 0
   ENDIF

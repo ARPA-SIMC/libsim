@@ -139,14 +139,19 @@ type(vol7d_level) :: almost_equal_levels(3)=(/&
  vol7d_level(103,imiss,imiss,imiss),&
  vol7d_level(106,imiss,imiss,imiss)/)
 
+! levels requiring conversion from internal to physical representation
+INTEGER, PARAMETER :: &
+ height_level(6) = (/102,103,106,117,160,161/), & ! 10**-3
+ thermo_level(3) = (/20,107,235/), & ! 10**-1
+ sigma_level(2) = (/104,111/) ! 10**-4
+
 TYPE level_var
   INTEGER :: level
   CHARACTER(len=10) :: btable
 END TYPE level_var
 
 ! Conversion table from GRIB2 vertical level codes to corresponding
-! BUFR B table variables, no unit conversion provided since there is
-! no need up to now
+! BUFR B table variables
 TYPE(level_var),PARAMETER :: level_var_converter(6) = (/ &
  level_var(20, 'B12101'), & ! isothermal (K)
  level_var(100, 'B10004'), & ! isobaric (Pa)

@@ -1137,7 +1137,6 @@ LOGICAL,INTENT(inout) :: mask(:)
 DOUBLE PRECISION,INTENT(out) :: coord(:)
 LOGICAL,INTENT(out) :: dolog
 
-INTEGER,PARAMETER :: height(5)=(/102,103,106,117,160/) ! improve, from gridinfo_class
 INTEGER :: k
 DOUBLE PRECISION :: fact
 
@@ -1146,8 +1145,12 @@ k = firsttrue(mask)
 IF (k <= 0) RETURN
 coord(:) = dmiss
 
-IF (ANY(lev(k)%level1 == height)) THEN ! improve with a conversion table somewhere
+IF (ANY(lev(k)%level1 == height_level)) THEN ! improve with a conversion table somewhere
   fact = 1.0D-3
+ELSE IF (ANY(lev(k)%level1 == thermo_level)) THEN
+  fact = 1.0D-1
+ELSE IF (ANY(lev(k)%level1 == sigma_level)) THEN
+  fact = 1.0D-4
 ELSE
   fact = 1.0D0
 ENDIF
