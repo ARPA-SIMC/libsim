@@ -550,7 +550,7 @@ do_otimerange: DO j = 1, SIZE(that%timerange)
               IF (stat_proc == 4) THEN
                 IF (ninp >= 2) THEN
                   IF (map_ttr(i,j)%array(1)%extra_info == 1 .AND. &
-                   map_ttr(i,j)%array(n)%extra_info == 2) THEN
+                   map_ttr(i,j)%array(ninp)%extra_info == 2) THEN
                     IF (c_e(this%voldatir(i1,map_ttr(i,j)%array(1)%it,i3, &
                      map_ttr(i,j)%array(1)%itr,i5,i6)) .AND. &
                      c_e(this%voldatir(i1,map_ttr(i,j)%array(ninp)%it,i3, &
