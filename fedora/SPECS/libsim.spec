@@ -2,7 +2,7 @@
 # to enable vapor support requiring stiff dependencies
 Summary: Fortran utility libraries
 Name: libsim
-Version: 6.4.0
+Version: 6.4.1
 Release: 1
 License: GPL2+
 Group: Applications/Meteo
@@ -23,8 +23,8 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot
 BuildRequires: eccodes-simc
 %endif
 
-# expliciting eccodes for centos7
-%if 0%{?el7}
+%if 0%{?rhel} >= 7
+# expliciting eccodes for centos 7 and 8
 %define grib_sw eccodes
 BuildRequires: eccodes-simc
 %endif
@@ -124,6 +124,10 @@ mv $RPM_BUILD_ROOT%{_includedir}/*.mod $RPM_BUILD_ROOT%{_fmoddir}
 rm -rf %{buildroot}
 
 %changelog
+* Thu Sep 26 2019 Daniele Branchini <dbranchini@arpae.it> - 6.4.1-1
+- fixed bug on statistical processing (#75)
+- adapted specfile for centos 8 builds
+
 * Wed Jul 17 2019 Davide Cesari <dcesari@arpae.it> - 6.4.0-1
 - new tools vg6d_getpoint_pkauf and vg6d_tcorr
 - move specific tools in libexec
