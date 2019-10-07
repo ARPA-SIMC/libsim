@@ -2,7 +2,7 @@
 # to enable vapor support requiring stiff dependencies
 Summary: Fortran utility libraries
 Name: libsim
-Version: 6.4.1
+Version: 6.4.2
 Release: 1
 License: GPL2+
 Group: Applications/Meteo
@@ -124,6 +124,10 @@ mv $RPM_BUILD_ROOT%{_includedir}/*.mod $RPM_BUILD_ROOT%{_fmoddir}
 rm -rf %{buildroot}
 
 %changelog
+* Mon Oct  7 2019 Daniele Branchini <dbranchini@arpae.it> - 6.4.2-1
+- fixed but in metamorphosis:mask
+- improve and extend handling of level numeric conversion in import/export and vertint
+
 * Thu Sep 26 2019 Daniele Branchini <dbranchini@arpae.it> - 6.4.1-1
 - fixed bug on statistical processing (#75)
 - adapted specfile for centos 8 builds
