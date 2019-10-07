@@ -19,10 +19,14 @@ then
     pkgcmd="dnf"
     builddep="dnf builddep"
     sed -i '/^tsflags=/d' /etc/dnf/dnf.conf
-    dnf install groupinstall -q -y "Development Tools"
+    dnf install -q -y epel-release
+    dnf install -q -y 'dnf-command(config-manager)'
+    dnf config-manager --set-enabled PowerTools
+    dnf groupinstall -q -y "Development Tools"
     dnf install -q -y 'dnf-command(builddep)'
     dnf install -q -y git
-    dnf copr enable -q -y simc/stable
+    dnf install -q -y rpmdevtools
+    dnf copr enable -y simc/stable
 elif [[ $image =~ ^fedora: ]]
 then
     pkgcmd="dnf"
