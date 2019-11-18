@@ -1965,20 +1965,18 @@ END SUBROUTINE vol7d_smart_sort
 !> Metodo per convertire i volumi di dati di un oggetto vol7d in dati
 !! reali dove possibile. L'oggetto convertito è una copia completa
 !! dell'originale che può essere quindi distrutto dopo la chiamata.
-!! I dati di anagrafica al momento non sono convertiti.
-!! Anche gli attributi di anagrafica e dati non sono toccati.
-SUBROUTINE vol7d_convr(this, that)
+!! Per i dati di anagrafica, al momento sono convertiti solo
+!! i dati CHARACTER se è passato \a anaconv=.TRUE.
+!! Gli attributi non sono toccati.
+SUBROUTINE vol7d_convr(this, that, anaconv)
 TYPE(vol7d),INTENT(IN) :: this !< oggetto origine
 TYPE(vol7d),INTENT(INOUT) :: that !< oggetto convertito
-LOGICAL :: anaconv ! dovra` diventare un parametro
+LOGICAL,OPTIONAL,INTENT(in) :: anaconv !< converti anche anagrafica
 INTEGER :: i
 LOGICAL :: fv(1)=(/.FALSE./), tv(1)=(/.TRUE./), acp(1), acn(1)
 TYPE(vol7d) :: v7d_tmp
 
-! richiede modifiche per convertirte i dati di anagrafica
-! per ora sempre disabilitato
-anaconv = .FALSE.
-IF (anaconv) THEN
+IF (optio_log(anaconv)) THEN
   acp=fv
   acn=tv
 ELSE
@@ -1989,7 +1987,7 @@ ENDIF
 ! Volume con solo i dati reali e tutti gli attributi
 ! l'anagrafica e` copiata interamente se necessario
 CALL vol7d_copy(this, that, &
- lanavarr=tv, lanavard=acp, lanavari=acp, lanavarb=acp, lanavarc=fv, & ! was acp
+ lanavarr=tv, lanavard=tv, lanavari=tv, lanavarb=tv, lanavarc=acp, &
  ldativarr=tv, ldativard=fv, ldativari=fv, ldativarb=fv, ldativarc=fv)
 
 ! Volume solo di dati double
@@ -2087,7 +2085,7 @@ ENDIF
 
 ! Volume solo di dati character
 CALL vol7d_copy(this, v7d_tmp, &
- lanavarr=fv, lanavard=fv, lanavari=fv, lanavarb=fv, lanavarc=tv, & ! was acn
+ lanavarr=fv, lanavard=fv, lanavari=fv, lanavarb=fv, lanavarc=acn, & ! was acn
  lanaattrr=fv, lanaattrd=fv, lanaattri=fv, lanaattrb=fv, lanaattrc=fv, &
  lanavarattrr=fv, lanavarattrd=fv, lanavarattri=fv, lanavarattrb=fv, lanavarattrc=fv, &
  ldativarr=fv, ldativard=fv, ldativari=fv, ldativarb=fv, ldativarc=tv, &

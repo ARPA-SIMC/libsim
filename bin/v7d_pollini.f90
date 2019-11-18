@@ -188,7 +188,7 @@ dtfill = timedelta_new(day=1)
 CALL vol7d_fill_time(db_v7d%vol7d, v7d_fill, dtfill, datetime_new(isodate=data_inizio), datetime_new(isodate=data_fine))
 CALL delete(db_v7d%vol7d)
 !db_v7d%vol7d = v7d_fill
-CALL vol7d_convr(v7d_fill, db_v7d%vol7d)
+CALL vol7d_convr(v7d_fill, db_v7d%vol7d, anaconv=.FALSE.)
 !CALL delete(db_v7d%vol7d)
 !db_v7d%vol7d=v7dtmp
 CALL init(v7d_fill) ! detach it

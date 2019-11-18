@@ -277,7 +277,7 @@ ELSE
    sub_type=trans_type(w_s(2):w_e(2)), categoryappend="transformation")
 
 ! convert to real data
-  CALL vol7d_convr(v7d_oo, v7dtmp)
+  CALL vol7d_convr(v7d_oo, v7dtmp, anaconv=.TRUE.)
   CALL delete(v7d_oo)
   v7d_oo = v7dtmp
   CALL init(v7dtmp) ! detach it

@@ -227,7 +227,7 @@ IF (c_e(coord_file)) THEN
     CALL init(v7d_ana, filename=coord_file, format=coord_format, file=.TRUE., &
      write=.FALSE., categoryappend="anagrafica")
     CALL import(v7d_ana, anaonly=.TRUE.)
-    CALL vol7d_convr(v7d_ana%vol7d, v7d_coord)
+    CALL vol7d_convr(v7d_ana%vol7d, v7d_coord, anaconv=.TRUE.)
 !    v7d_coord = v7d_ana%vol7d
 ! destroy v7d_ana without deallocating the contents passed to v7d
 !    CALL init(v7d_ana%vol7d)
