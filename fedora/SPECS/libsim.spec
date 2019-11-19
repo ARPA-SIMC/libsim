@@ -2,7 +2,7 @@
 # to enable vapor support requiring stiff dependencies
 Summary: Fortran utility libraries
 Name: libsim
-Version: 6.4.2
+Version: 6.4.3
 Release: 1
 License: GPL2+
 Group: Applications/Meteo
