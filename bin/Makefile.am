@@ -101,6 +101,10 @@ else
 vg6d_getpoint_SOURCES = vg6d_getpoint.F90
 endif
 
+bin_PROGRAMS += simc_nc2grib
+simc_nc2grib_SOURCES = simc_nc2grib.f90
+simc_nc2grib_LDADD = ../volgrid6d/libsim_volgrid6d.la  ../vol7d/libsim_vol7d.la ../base/libsim_base.la ../log4fortran/liblog4fortran.la
+
 vg6d_getpoint_LDADD = ../volgrid6d/libsim_volgrid6d.la  ../vol7d/libsim_vol7d.la ../base/libsim_base.la ../log4fortran/liblog4fortran.la
 vg6d_getpoint_pkauf_LDADD = ../volgrid6d/libsim_volgrid6d.la  ../vol7d/libsim_vol7d.la ../base/libsim_base.la ../log4fortran/liblog4fortran.la
 
