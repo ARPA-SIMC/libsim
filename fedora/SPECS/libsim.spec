@@ -3,7 +3,7 @@
 Summary: Fortran utility libraries
 Name: libsim
 Version: 6.4.3
-Release: 1
+Release: 2
 License: GPL2+
 Group: Applications/Meteo
 URL: https://github.com/arpa-simc/%{name}
@@ -31,20 +31,43 @@ BuildRequires: eccodes-simc
 
 %{?with_vapor:BuildRequires: vapor-devel}
 
-BuildRequires: libdballef-devel >= 7.6 %{grib_sw}-devel libdballe-devel help2man log4c log4c-devel
+BuildRequires: libdballef-devel >= 7.6
+BuildRequires: libdballe-devel
+BuildRequires: %{grib_sw}-devel
+BuildRequires: help2man
+BuildRequires: log4c log4c-devel
 # Gdal and ncl not available in el8
 # waiting for https://bugzilla.redhat.com/show_bug.cgi?id=1741567
 %{!?el8:Buildrequires: gdal-devel}
 %{!?el8:Buildrequires: ncl-devel}
-
-BuildRequires: doxygen graphviz texlive-latex-bin texlive-dvips-bin
-BuildRequires: gcc-c++ libtool libpng-devel fortrangis-devel netcdf-fortran-devel shapelib-devel jasper-devel proj-devel popt-devel cairo-devel
+BuildRequires: doxygen
+BuildRequires: graphviz
+BuildRequires: texlive-latex-bin
+BuildRequires: texlive-dvips-bin
+BuildRequires: texlive-iftex
+BuildRequires: texlive-metafont
+%{?fedora:BuildRequires: texlive-lwarp}
+BuildRequires: gcc-c++
+BuildRequires: libtool
+BuildRequires: libpng-devel
+BuildRequires: fortrangis-devel
+BuildRequires: netcdf-fortran-devel
+BuildRequires: shapelib-devel
+BuildRequires: jasper-devel
+BuildRequires: proj-devel
+BuildRequires: popt-devel
+BuildRequires: cairo-devel
 Requires: libdballef4 >= 7.6 %{grib_sw}
-
 
 %package -n libsim-devel
 
-Requires: fortrangis-devel libdballef-devel >= 7.6 %{grib_sw}-devel libdballe-devel help2man log4c log4c-devel
+Requires: fortrangis-devel
+Requires: libdballef-devel >= 7.6
+Requires: libdballe-devel
+Requires: %{grib_sw}-devel
+Requires: help2man
+Requires: log4c
+Requires: log4c-devel
 # Gdal and ncl not available in el8
 # waiting for https://bugzilla.redhat.com/show_bug.cgi?id=1741567
 %{!?el8:Requires: gdal-devel}
@@ -135,6 +158,9 @@ mv $RPM_BUILD_ROOT%{_includedir}/*.mod $RPM_BUILD_ROOT%{_fmoddir}
 rm -rf %{buildroot}
 
 %changelog
+* Mon Dec  9 2019 Daniele Branchini <dbranchini@arpae.it> - 6.4.3-2
+- fixed texlive dependencies
+
 * Mon Oct  7 2019 Daniele Branchini <dbranchini@arpae.it> - 6.4.2-1
 - fixed but in metamorphosis:mask
 - improve and extend handling of level numeric conversion in import/export and vertint
