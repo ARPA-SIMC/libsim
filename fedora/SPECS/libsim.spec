@@ -31,15 +31,25 @@ BuildRequires: eccodes-simc
 
 %{?with_vapor:BuildRequires: vapor-devel}
 
-BuildRequires: libdballef-devel >= 7.6 %{grib_sw}-devel ncl-devel gdal-devel libdballe-devel help2man log4c log4c-devel
+BuildRequires: libdballef-devel >= 7.6 %{grib_sw}-devel libdballe-devel help2man log4c log4c-devel
+# Gdal and ncl not available in el8
+# waiting for https://bugzilla.redhat.com/show_bug.cgi?id=1741567
+%{!?el8:Buildrequires: gdal-devel}
+%{!?el8:Buildrequires: ncl-devel}
+
 BuildRequires: doxygen graphviz texlive-latex-bin texlive-dvips-bin
-BuildRequires: gcc-c++ libtool libpng-devel fortrangis-devel netcdf-fortran-devel shapelib-devel jasper-devel proj-devel popt-devel openjpeg-devel cairo-devel
+BuildRequires: gcc-c++ libtool libpng-devel fortrangis-devel netcdf-fortran-devel shapelib-devel jasper-devel proj-devel popt-devel cairo-devel
 Requires: libdballef4 >= 7.6 %{grib_sw}
 
 
 %package -n libsim-devel
 
-Requires: fortrangis-devel libdballef-devel >= 7.6 %{grib_sw}-devel ncl-devel gdal-devel libdballe-devel help2man log4c log4c-devel
+Requires: fortrangis-devel libdballef-devel >= 7.6 %{grib_sw}-devel libdballe-devel help2man log4c log4c-devel
+# Gdal and ncl not available in el8
+# waiting for https://bugzilla.redhat.com/show_bug.cgi?id=1741567
+%{!?el8:Requires: gdal-devel}
+%{!?el8:Requires: ncl-devel}
+
 Summary:  libsim development files
 Group: Applications/Meteo
 
@@ -82,13 +92,14 @@ sh autogen.sh
 
 %build
 
-%configure FCFLAGS="%{optflags} -I%{_fmoddir}" --enable-f2003-features %{?with_vapor:--enable-vapor} --enable-alchimia --enable-shapelib --enable-netcdf --enable-gribapi --enable-gdal --enable-f2003-extended-features --disable-static
+%configure FCFLAGS="%{optflags} -I%{_fmoddir}" --enable-f2003-features %{?with_vapor:--enable-vapor} --enable-alchimia --enable-shapelib --enable-netcdf --enable-gribapi %{!?el8:--enable-gdal} %{?el8:--disable-ngmath --disable-ncarg} --enable-f2003-extended-features --disable-static
 
 make
 make check
 
 %install
-make DESTDIR=%{buildroot} install
+[ "%{buildroot}" != / ] && rm -rf %{buildroot}
+%makeinstall
 %if 0%{?fedora} >= 9 || 0%{?rhel}
 mkdir -p $RPM_BUILD_ROOT%{_fmoddir}
 mv $RPM_BUILD_ROOT%{_includedir}/*.mod $RPM_BUILD_ROOT%{_fmoddir}
