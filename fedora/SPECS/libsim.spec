@@ -3,7 +3,7 @@
 Summary: Fortran utility libraries
 Name: libsim
 Version: 6.4.3
-Release: 2
+Release: 3
 License: GPL2+
 Group: Applications/Meteo
 URL: https://github.com/arpa-simc/%{name}
@@ -36,10 +36,8 @@ BuildRequires: libdballe-devel
 BuildRequires: %{grib_sw}-devel
 BuildRequires: help2man
 BuildRequires: log4c log4c-devel
-# Gdal and ncl not available in el8
-# waiting for https://bugzilla.redhat.com/show_bug.cgi?id=1741567
-%{!?el8:Buildrequires: gdal-devel}
-%{!?el8:Buildrequires: ncl-devel}
+Buildrequires: gdal-devel
+Buildrequires: ncl-devel
 BuildRequires: doxygen
 BuildRequires: graphviz
 BuildRequires: texlive-latex-bin
@@ -68,10 +66,8 @@ Requires: %{grib_sw}-devel
 Requires: help2man
 Requires: log4c
 Requires: log4c-devel
-# Gdal and ncl not available in el8
-# waiting for https://bugzilla.redhat.com/show_bug.cgi?id=1741567
-%{!?el8:Requires: gdal-devel}
-%{!?el8:Requires: ncl-devel}
+Requires: gdal-devel
+Requires: ncl-devel
 
 Summary:  libsim development files
 Group: Applications/Meteo
@@ -115,7 +111,7 @@ sh autogen.sh
 
 %build
 
-%configure FCFLAGS="%{optflags} -I%{_fmoddir}" --enable-f2003-features %{?with_vapor:--enable-vapor} --enable-alchimia --enable-shapelib --enable-netcdf --enable-gribapi %{!?el8:--enable-gdal} %{?el8:--disable-ngmath --disable-ncarg} --enable-f2003-extended-features --disable-static
+%configure FCFLAGS="%{optflags} -I%{_fmoddir}" --enable-f2003-features %{?with_vapor:--enable-vapor} --enable-alchimia --enable-shapelib --enable-netcdf --enable-gribapi --enable-f2003-extended-features --disable-static
 
 make
 make check
@@ -158,6 +154,9 @@ mv $RPM_BUILD_ROOT%{_includedir}/*.mod $RPM_BUILD_ROOT%{_fmoddir}
 rm -rf %{buildroot}
 
 %changelog
+* Thu Jan 23 2020 Daniele Branchini <dbranchini@arpae.it> - 6.4.3-3
+- CentOS 8 build: re-enabling gdal and ncl dependencies
+
 * Mon Dec  9 2019 Daniele Branchini <dbranchini@arpae.it> - 6.4.3-2
 - fixed texlive dependencies
 
