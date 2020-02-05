@@ -926,7 +926,6 @@ INTEGER :: alternativeRowScanning, iScansNegatively, &
  jScansPositively, jPointsAreConsecutive
 INTEGER :: x1, x2, xs, y1, y2, ys
 
-
 call grib_get(gaid,'GRIBEditionNumber',EditionNumber)
 
 if (EditionNumber == 2) then
@@ -1029,6 +1028,9 @@ END SUBROUTINE grid_id_encode_data_gribapi
 
 #ifdef HAVE_LIBGDAL
 SUBROUTINE grid_id_decode_data_gdal(gdalid, field, gdal_options)
+#ifdef F2003_FULL_FEATURES
+USE ieee_arithmetic
+#endif
 TYPE(gdalrasterbandh),INTENT(in) :: gdalid ! gdal id
 REAL,INTENT(out) :: field(:,:) ! array of decoded values
 TYPE(gdal_file_id_options),INTENT(in) :: gdal_options
@@ -1124,6 +1126,17 @@ IF (SIZE(buffer) /= (SIZE(field)))THEN
   field(:,:) = rmiss
   RETURN
 ENDIF
+
+#ifdef F2003_FULL_FEATURES
+! aparently gdal datasets may contain NaN
+WHERE(ieee_is_nan(buffer))
+  buffer = rmiss
+END WHERE
+#else
+WHERE(buffer /= buffer)
+  buffer = rmiss
+END WHERE
+#endif
 
 ! set missing value if necessary
 gdalmiss = REAL(gdalgetrasternodatavalue(gdalid, ier))
