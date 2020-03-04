@@ -650,9 +650,11 @@ SUBROUTINE vol7d_dballe_delete(this, preserveidbhandle)
 TYPE(vol7d_dballe) :: this !< oggetto da cancellare
 logical,intent(in), optional :: preserveidbhandle !< do not close connection to dsn
 
+# ifndef F2003_FULL_FEATURES
 call this%handle%delete()
 
 if (.not. optio_log(preserveidbhandle)) call this%idbhandle%delete()
+# endif
 
 !!$if (associated(this%data_id)) then
 !!$  deallocate (this%data_id)

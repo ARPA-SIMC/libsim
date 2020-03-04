@@ -3811,14 +3811,18 @@ end function dbaconnection_init
 
 !> remove dballe connection
 subroutine dbaconnection_delete(handle)
+#ifdef F2003_FULL_FEATURES
+type (dbaconnection), intent(inout) :: handle
+#else
 class (dbaconnection), intent(inout) :: handle
+#endif
+
 integer :: ier
 
 if (c_e(handle%dbhandle)) then 
   ier = idba_arrivederci(handle%dbhandle)
   ier = idba_error_remove_callback(handle%handle_err)
 end if
-
 
 end subroutine dbaconnection_delete
 
@@ -4375,6 +4379,7 @@ end subroutine dbasession_set
 !!$
 !!$end subroutine dbasession_extrude
 
+# ifndef F2003_FULL_FEATURES
 !> clear a dballe session
 subroutine dbasession_delete(session)
 class (dbasession), intent(inout) :: session
@@ -4404,6 +4409,33 @@ end select
 !!$session%count=imiss
 
 end subroutine dbasession_delete
+
+#else
+
+!> clear a dballe session
+subroutine dbasession_delete(session)
+type (dbasession), intent(inout) :: session
+integer :: ier
+
+if (c_e(session%sehandle)) then 
+  ier = idba_fatto(session%sehandle)
+end if
+
+!!$session%sehandle=imiss
+!!$session%file=.false.
+!!$session%template=cmiss
+!!$session%filename=cmiss
+!!$session%mode=cmiss
+!!$session%format=cmiss
+!!$session%simplified=.true.
+!!$session%memdb=.false.
+!!$session%category=imiss
+!!$session%count=imiss
+
+end subroutine dbasession_delete
+
+#endif
+
 
 
 !> rewind a file associated to a session (needed to restart reading)
