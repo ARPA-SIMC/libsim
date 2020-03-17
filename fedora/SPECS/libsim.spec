@@ -155,6 +155,9 @@ mv $RPM_BUILD_ROOT%{_includedir}/*.mod $RPM_BUILD_ROOT%{_fmoddir}
 rm -rf %{buildroot}
 
 %changelog
+* Tue Mar 17 2020 Emanuele Di Giacomo <edigiacomo@arpae.it> - 6.4.3-4
+- Exclude dba_qcfilter command from package
+
 * Thu Jan 23 2020 Daniele Branchini <dbranchini@arpae.it> - 6.4.3-3
 - CentOS 8 build: re-enabling gdal and ncl dependencies
 
