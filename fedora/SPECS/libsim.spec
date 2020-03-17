@@ -3,7 +3,7 @@
 Summary: Fortran utility libraries
 Name: libsim
 Version: 6.4.3
-Release: 3
+Release: 4
 License: GPL2+
 Group: Applications/Meteo
 URL: https://github.com/arpa-simc/%{name}
@@ -128,6 +128,7 @@ mv $RPM_BUILD_ROOT%{_includedir}/*.mod $RPM_BUILD_ROOT%{_fmoddir}
 %defattr(-,root,root)
 %{_libdir}/*.so.*
 %{_bindir}/*
+%exclude %{_bindir}/dba_qcfilter
 %{_datadir}/%{name}/*
 %{_mandir}/man1
 %dir %{_libexecdir}/%{name}
