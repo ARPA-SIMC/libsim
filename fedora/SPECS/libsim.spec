@@ -2,8 +2,8 @@
 # to enable vapor support requiring stiff dependencies
 Summary: Fortran utility libraries
 Name: libsim
-Version: 6.4.3
-Release: 4
+Version: 6.4.4
+Release: 1
 License: GPL2+
 Group: Applications/Meteo
 URL: https://github.com/arpa-simc/%{name}
@@ -155,6 +155,9 @@ mv $RPM_BUILD_ROOT%{_includedir}/*.mod $RPM_BUILD_ROOT%{_fmoddir}
 rm -rf %{buildroot}
 
 %changelog
+* Tue May 12 2020 Daniele Branchini <dbranchini@arpae.it> - 6.4.4-1
+- Updated vargrib2bufr, fixed compiler errors for F32
+
 * Tue Mar 17 2020 Emanuele Di Giacomo <edigiacomo@arpae.it> - 6.4.3-4
 - Exclude dba_qcfilter command from package
 
