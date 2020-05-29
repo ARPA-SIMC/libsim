@@ -1076,7 +1076,7 @@ INTEGER, INTENT(inout) :: gaid ! grib_api id of the grib loaded in memory to exp
 
 INTEGER :: EditionNumber, iScansNegatively, jScansPositively, nv, pvl, zone, ierr
 DOUBLE PRECISION :: loFirst, loLast, laFirst, laLast, reflon
-DOUBLE PRECISION :: sdx, sdy, ratio, tol
+DOUBLE PRECISION :: sdx, sdy, ratio, tol, ex, ey
 
 
 ! Generic keys
@@ -1180,19 +1180,34 @@ CASE ('regular_ll', 'rotated_ll', 'stretched_ll', 'stretched_rotated_ll')
 ! tol should be tuned
   sdx = this%grid%grid%dx*ratio
   sdy = this%grid%grid%dy*ratio
-  tol = 1.0d0/ratio
-
-  IF (ABS(NINT(sdx)/sdx - 1.0d0) > tol .OR. ABS(NINT(sdy)/sdy - 1.0d0) > tol) THEN
-    CALL l4f_category_log(this%category,L4F_INFO, &
-     "griddim_export_gribapi, increments not given: inaccurate!")
+! error is computed relatively to the whole grid extension
+  ex = ABS(((sdx - NINT(sdx))/ratio*this%dim%nx)/ &
+   (this%grid%grid%xmax-this%grid%grid%xmin))
+  ey = ABS(((sdy - NINT(sdy))/ratio*this%dim%ny)/ &
+   (this%grid%grid%ymax-this%grid%grid%ymin))
+  tol = 1.0D-3
+  IF (ex > tol .OR. ey > tol) THEN
 #ifdef DEBUG
     CALL l4f_category_log(this%category,L4F_DEBUG, &
-     "griddim_export_gribapi, dlon relative error: "//&
-     TRIM(to_char(ABS(NINT(sdx)/sdx - 1.0d0)))//">"//TRIM(to_char(tol)))
+     "griddim_export_gribapi, error on x "//&
+     TRIM(to_char(ex))//"/"//t2c(tol))
     CALL l4f_category_log(this%category,L4F_DEBUG, &
-     "griddim_export_gribapi, dlat relative error: "//&
-     TRIM(to_char(ABS(NINT(sdy)/sdy - 1.0d0)))//">"//TRIM(to_char(tol)))
+     "griddim_export_gribapi, error on y "//&
+     TRIM(to_char(ey))//"/"//t2c(tol))
 #endif
+! previous frmula relative to a single grid step
+!  tol = 1.0d0/ratio
+!  IF (ABS(NINT(sdx)/sdx - 1.0d0) > tol .OR. ABS(NINT(sdy)/sdy - 1.0d0) > tol) THEN
+!#ifdef DEBUG
+!    CALL l4f_category_log(this%category,L4F_DEBUG, &
+!     "griddim_export_gribapi, dlon relative error: "//&
+!     TRIM(to_char(ABS(NINT(sdx)/sdx - 1.0d0)))//">"//TRIM(to_char(tol)))
+!    CALL l4f_category_log(this%category,L4F_DEBUG, &
+!     "griddim_export_gribapi, dlat relative error: "//&
+!     TRIM(to_char(ABS(NINT(sdy)/sdy - 1.0d0)))//">"//TRIM(to_char(tol)))
+!#endif
+    CALL l4f_category_log(this%category,L4F_INFO, &
+     "griddim_export_gribapi, increments not given: inaccurate!")
     CALL grib_set_missing(gaid,'Di')
     CALL grib_set_missing(gaid,'Dj')
     CALL grib_set(gaid,'ijDirectionIncrementGiven',0)
