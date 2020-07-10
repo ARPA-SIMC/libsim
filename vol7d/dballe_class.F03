@@ -1145,7 +1145,7 @@ subroutine dbasession_messages_open_input(session,filename,mode,format,simplifie
 class(dbasession), intent(in) :: session
 character (len=*), intent(in) :: filename !< file name to open
 character (len=*), intent(in),optional :: mode !< "r"/"w"/"a" the open mode ("r" for read, "w" for write or create, "a" for append) 
-character (len=*), intent(in),optional :: format !< the file format. It can be "BUFR" or "CREX". (default="BUFR")
+character (len=*), intent(in),optional :: format !< the file format. It can be "BUFR", "CREX" or "JSON" (default="BUFR")
 logical, intent(in),optional           :: simplified !< rappresentation when interpret message (simplified/precise)
 
 integer :: ier
@@ -1171,7 +1171,7 @@ subroutine dbasession_messages_open_output(session,filename,mode,format)
 class(dbasession), intent(in) :: session
 character (len=*), intent(in) :: filename !< file name to open
 character (len=*), intent(in),optional :: mode !< "r"/"w"/"a" the open mode ("r" for read, "w" for write or create, "a" for append) 
-character (len=*), intent(in),optional :: format !< the file format. It can be "BUFR" or "CREX". (default="BUFR")
+character (len=*), intent(in),optional :: format !< the file format. It can be "BUFR", "CREX" o "JSON" (default="BUFR")
 
 integer :: ier
 character (len=40) :: lmode, lformat
@@ -3840,7 +3840,7 @@ character (len=*), intent(in), optional :: template !< template to use for write
 logical,INTENT(in),OPTIONAL :: write !< enable write on DSN/file ( default=.false. )
 logical,INTENT(in),OPTIONAL :: wipe !<  clean DSN/file and initialize it ( default=.false. )
 character(len=*), INTENT(in),OPTIONAL :: repinfo !< optional file repinfo.csv to use with wipe ( default="" )
-character(len=*),intent(in),optional :: format !< the file format. It can be "BUFR" or "CREX". (default="BUFR")
+character(len=*),intent(in),optional :: format !< the file format. It can be "BUFR", "CREX" or "JSON". (default="BUFR")
 logical,intent(in),optional :: simplified !< rappresentation for interpreted message (simplified/precise)
 logical,intent(in),optional :: memdb     !< if true set a memdb ready for import data from file (default=true if filename present else false)
 logical,intent(in),optional :: loadfile     !< if true import from file to memdb (default=true if filename present else false)
