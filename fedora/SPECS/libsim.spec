@@ -36,8 +36,8 @@ BuildRequires: libdballe-devel
 BuildRequires: %{grib_sw}-devel
 BuildRequires: help2man
 BuildRequires: log4c log4c-devel
-Buildrequires: gdal-devel
-Buildrequires: ncl-devel
+BuildRequires: gdal-devel
+BuildRequires: ncl-devel
 BuildRequires: doxygen
 BuildRequires: graphviz
 BuildRequires: texlive-latex-bin
@@ -111,7 +111,7 @@ sh autogen.sh
 
 %build
 
-%configure FCFLAGS="%{optflags} -I%{_fmoddir}" --enable-f2003-features %{?with_vapor:--enable-vapor} --enable-alchimia --enable-shapelib --enable-netcdf --enable-gribapi --enable-f2003-extended-features --disable-static
+%configure FCFLAGS="%{optflags} -I%{_fmoddir}" --enable-f2003-features %{?with_vapor:--enable-vapor} --enable-alchimia --enable-shapelib --enable-netcdf --enable-gribapi --enable-f2003-extended-features --disable-static --enable-gdal
 
 make
 make check
