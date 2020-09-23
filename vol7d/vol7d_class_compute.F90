@@ -65,7 +65,7 @@ CONTAINS
 !!
 !!  see the description of vol7d_decompute_stat_proc()
 !!
-!!  - \a stat_proc_input = 0, 1, 2, 3, 4
+!!  - \a stat_proc_input = 0, 1, 2, 3, 4, 200
 !!    - \a stat_proc = \a stat_proc_input recompute input data on
 !!      different intervals
 !!
@@ -220,6 +220,7 @@ END SUBROUTINE vol7d_compute_stat_proc
 !!  - 3 minimum
 !!  - 4 difference
 !!  - 6 standard deviation
+!!  - 200 vectorial mean
 !!
 !! The start of processing period can be computed automatically from
 !! the input intervals as the first possible interval modulo \a step,
@@ -330,7 +331,7 @@ IF (ASSOCIATED(this%voldatir)) THEN
                 IF (ndtr > 0 .AND. frac_c >= MAX(lfrac_valid, frac_m)) THEN
                   frac_m = frac_c
                   SELECT CASE(stat_proc)
-                  CASE (0) ! average
+                  CASE (0, 200) ! average, vectorial mean
                     that%voldatir(i1,i,i3,j,i5,i6) = &
                      SUM(this%voldatir(i1,:,i3,:,i5,i6), &
                      mask=ttr_mask)/ndtr
