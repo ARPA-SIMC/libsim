@@ -2,7 +2,7 @@
 # to enable vapor support requiring stiff dependencies
 Summary: Fortran utility libraries
 Name: libsim
-Version: 6.4.5
+Version: 6.4.6
 Release: 1
 License: GPL2+
 Group: Applications/Meteo
@@ -155,6 +155,10 @@ mv $RPM_BUILD_ROOT%{_includedir}/*.mod $RPM_BUILD_ROOT%{_fmoddir}
 rm -rf %{buildroot}
 
 %changelog
+* Wed Sep 23 2020 Emanuele Di Giacomo <edigiacomo@arpae.it> - 6.4.6-1
+- enable json format for dballe, fix bug disabling formats other than BUFR
+- consider timerange 200 as timerange 0 for statistical processing
+
 * Fri Jun  5 2020 Daniele Branchini <dbranchini@arpae.it> - 6.4.5-1
 - handle ECMWF 3 hour min/max temperatures (#84)
 
