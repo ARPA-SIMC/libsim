@@ -68,6 +68,7 @@ Requires: log4c
 Requires: log4c-devel
 Requires: gdal-devel
 Requires: ncl-devel
+Requires: freetype-devel
 
 Summary:  libsim development files
 Group: Applications/Meteo
