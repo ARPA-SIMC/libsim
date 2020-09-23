@@ -55,6 +55,7 @@ BuildRequires: jasper-devel
 BuildRequires: proj-devel
 BuildRequires: popt-devel
 BuildRequires: cairo-devel
+BuildRequires: freetype-devel
 Requires: libdballef4 >= 7.6 %{grib_sw}
 
 %package -n libsim-devel
