@@ -355,8 +355,7 @@ end function TRUG
 !----------------------------------------------------------------------------
 
 
-elemental real function  TW( TD,TT,PT )
-
+ELEMENTAL REAL FUNCTION tw(td, tt, pt)
 !  Calcola la Temperatura di Bulbo Bagnato isobarica, differisce sul
 !  secondo decimale dalla temepratura di bulbo bagnato adiabatica, poichè
 !  si satura con acqua immessa alla temperatura TT (temperatura di
@@ -368,7 +367,7 @@ elemental real function  TW( TD,TT,PT )
 !  Input : 
 !  TD   real  Temperatura di rugiada                        (K.) 
 !  T    real  Temperatura dell'aria                         (K.) 
-!  PT   real  Pressione dell'aria                           (K.) 
+!  PT   real  Pressione dell'aria                           (hPa) 
 ! 
 !  Output : 
 !  TW       real  Temperatura di Bulbo Bagnato isobaria     (K.) 
@@ -376,43 +375,32 @@ elemental real function  TW( TD,TT,PT )
 !
 !----------------------------------------------------------------------------
 
-  real,intent(in)::td,tt,pt             !input
-  real::aw,ao,pi,x,aos,ti                !variabili locali di lavoro
-  integer::i
+REAL,INTENT(in) :: td, tt, pt
+REAL :: aw, ao, pi, x, aos, ti
+INTEGER::i
 
-  if( c_e(td) .and. c_e(tt) .and. c_e(pt) )then 
+IF (c_e(td) .AND. c_e(tt) .AND. c_e(pt)) THEN
+  aw = w(td, pt) 
+  ao = o(tt, pt) 
+  pi = pt 
+! con 10 cicli l'umidità specifica media tra td e tw dovrebbe tendere a
+! essere quella alla TW, se converge prima si esce dal ciclo 
+  DO i = 1, 10 
+    x = .02*(tmr(aw,pi) - tda(ao,pi)) 
+    IF (ABS(x) < 0.01) EXIT
+    pi = pi*2.**x
+  ENDDO
 
-    aw = W (td,pt) 
-    ao = O (tt,pt) 
-    pi = pt 
-!con 10 cicli l'umidità specifica media tra td e tw dovrebbe tendere a
-!essere quella alla TW, se converge prima si esce dal ciclo 
-    do    i =1,10 
-      x  =  .02*( TMR(aw,pi) - TDA(ao,pi) ) 
-      if ( abs(X) < 0.01  )then
-        ti = TDA (ao , pi)
-!trovato il punto di intersezione,calcoliamo l'adiab. satura che ci passa 
-        aos  =   OS (ti  , pi) 
-        TW   =  TSA (aos , pt) 
-        return
-      end if
-      pi = pi* ( 2.**(X)  ) 
-    end do
-     
-    ti=TDA (ao,pi) 
- 
-!trovato il punto di intersezione,calcoliamo l'adiab. satura che ci passa
-    aos  =   os (ti  , pi) 
-    TW   =  TSA (aos , pt) 
+  ti = tda(ao,pi) 
+! trovato il punto di intersezione,calcoliamo l'adiab. satura che ci passa
+  aos = os(ti, pi) 
+  tw = tsa(aos, pt) 
 
-  else
+ELSE
+  tw = rmiss 
+ENDIF
 
-     TW=rmiss 
-
-  end if
-
-  return 
-end function TW
+END FUNCTION tw
 
 ! legacy functions for virtual temperature, replaced by tvirt
 ! and alchimia machinery

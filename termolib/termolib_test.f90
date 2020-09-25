@@ -23,7 +23,7 @@ USE termolib
 IMPLICIT NONE
 
 INTEGER :: i, j, k
-REAL :: t, tc, p, q, rh, rhc, td, tdc, e
+REAL :: t, tc, p, q, rh, rhc, td, tdc, twb, e
 LOGICAL :: err
 
 err = .FALSE.
@@ -75,6 +75,20 @@ DO k = 0, 10
         err = .TRUE.
       ENDIF
     ENDIF
+  ENDDO
+ENDDO
+
+PRINT*,'Checking tw'
+DO k = 0, 10
+  p = 10**(4.+REAL(k)/10.)
+  DO i = 1, 20
+    t = 274.+2.*REAL(i)
+    DO j = 10, 100, 10
+      q = relhumtoq(REAL(j), p/100., t)
+      td = td_pq(p/100., q)
+      twb = tw(td, t, p/100.)
+! what can we check here?
+    ENDDO
   ENDDO
 ENDDO
 
