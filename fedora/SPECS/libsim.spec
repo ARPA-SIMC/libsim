@@ -2,7 +2,7 @@
 # to enable vapor support requiring stiff dependencies
 Summary: Fortran utility libraries
 Name: libsim
-Version: 6.4.6
+Version: 6.4.7
 Release: 1
 License: GPL2+
 Group: Applications/Meteo
@@ -157,6 +157,11 @@ mv $RPM_BUILD_ROOT%{_includedir}/*.mod $RPM_BUILD_ROOT%{_fmoddir}
 rm -rf %{buildroot}
 
 %changelog
+* Thu Oct 29 2020 Daniele Branchini <dbranchini@arpae.it> - 6.4.7-1
+- add web bulb temperature function
+- added variables to vargrib2bufr.csv
+- add temptative multivariate stat proc
+
 * Wed Sep 23 2020 Emanuele Di Giacomo <edigiacomo@arpae.it> - 6.4.6-1
 - enable json format for dballe, fix bug disabling formats other than BUFR
 - consider timerange 200 as timerange 0 for statistical processing
