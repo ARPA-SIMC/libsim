@@ -96,8 +96,8 @@ if DBALLE
 pkglibexec_PROGRAMS += vg6d_tcorr # vg6d_column
 vg6d_tcorr_SOURCES = vg6d_tcorr.F90
 vg6d_tcorr_LDADD = ../volgrid6d/libsim_volgrid6d.la  ../vol7d/libsim_vol7d.la ../base/libsim_base.la ../log4fortran/liblog4fortran.la
-vg6d_column_SOURCES = vg6d_column.F90
-vg6d_column_LDADD = ../volgrid6d/libsim_volgrid6d.la  ../vol7d/libsim_vol7d.la ../base/libsim_base.la ../log4fortran/liblog4fortran.la
+#vg6d_column_SOURCES = vg6d_column.F90
+#vg6d_column_LDADD = ../volgrid6d/libsim_volgrid6d.la  ../vol7d/libsim_vol7d.la ../base/libsim_base.la ../log4fortran/liblog4fortran.la
 endif
 else
 vg6d_getpoint_SOURCES = vg6d_getpoint.F90
