@@ -1,3 +1,5 @@
+#include "config.h"
+
 program dballe_test
 
 use dballe_class
@@ -30,18 +32,21 @@ call writeattronly()   ! append some attributes to station 1
 sessionto=dbasession(filename="dballe_test2.bufr",wipe=.true.,write=.true.,memdb=.false.,template="generic")
 call export2bufr()
 
+# ifndef F2003_FULL_FEATURES
 call sessionto%delete()
+#endif
 
 ! connect to dsn type BUFR file for write with memdb 
 sessionto=dbasession(filename="dballe_test2_memdb.bufr",wipe=.true.,write=.true.,memdb=.true.,template="generic")
 call export2bufr()
 
 
+# ifndef F2003_FULL_FEATURES
 !close everythings
 call sessionto%delete()
 call session%delete()
 call connection%delete()
-
+#endif
 
 !chiudo il logger
 CALL l4f_category_delete(category)

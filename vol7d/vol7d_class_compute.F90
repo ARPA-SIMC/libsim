@@ -65,7 +65,7 @@ CONTAINS
 !!
 !!  see the description of vol7d_decompute_stat_proc()
 !!
-!!  - \a stat_proc_input = 0, 1, 2, 3, 4
+!!  - \a stat_proc_input = 0, 1, 2, 3, 4, 200
 !!    - \a stat_proc = \a stat_proc_input recompute input data on
 !!      different intervals
 !!
@@ -220,6 +220,7 @@ END SUBROUTINE vol7d_compute_stat_proc
 !!  - 3 minimum
 !!  - 4 difference
 !!  - 6 standard deviation
+!!  - 200 vectorial mean
 !!
 !! The start of processing period can be computed automatically from
 !! the input intervals as the first possible interval modulo \a step,
@@ -330,7 +331,7 @@ IF (ASSOCIATED(this%voldatir)) THEN
                 IF (ndtr > 0 .AND. frac_c >= MAX(lfrac_valid, frac_m)) THEN
                   frac_m = frac_c
                   SELECT CASE(stat_proc)
-                  CASE (0) ! average
+                  CASE (0, 200) ! average, vectorial mean
                     that%voldatir(i1,i,i3,j,i5,i6) = &
                      SUM(this%voldatir(i1,:,i3,:,i5,i6), &
                      mask=ttr_mask)/ndtr
@@ -1059,6 +1060,184 @@ ENDIF
 
 END SUBROUTINE vol7d_compute_stat_proc_metamorph
 
+
+SUBROUTINE vol7d_recompute_stat_proc_agg_multiv(this, that, &
+ step, start, frac_valid, multiv_proc)
+TYPE(vol7d),INTENT(inout) :: this !< volume providing data to be recomputed, it is not modified by the method, apart from performing a \a vol7d_alloc_vol on it
+TYPE(vol7d),INTENT(out) :: that !< output volume which will contain the recomputed data
+!INTEGER,INTENT(in) :: stat_proc !< type of statistical processing to be recomputed (from grib2 table), only data having timerange of this type will be recomputed and will appear in the output volume
+TYPE(timedelta),INTENT(in) :: step !< length of the step over which the statistical processing is performed
+TYPE(datetime),INTENT(in),OPTIONAL :: start !< start of statistical processing interval
+REAL,INTENT(in),OPTIONAL :: frac_valid !< minimum fraction of valid data required for considering acceptable a recomputed value, default=1.
+!TYPE(vol7d),INTENT(inout),OPTIONAL :: other !< optional volume that, on exit, is going to contain the data that did not contribute to the statistical processing
+!INTEGER,INTENT(in),OPTIONAL :: stat_proc_input !< to be used with care, type of statistical processing of data that has to be processed (from grib2 table), only data having timerange of this type will be recomputed, the actual statistical processing performed and which will appear in the output volume, is however determined by \a stat_proc argument
+INTEGER,INTENT(in) :: multiv_proc !< index of multivariate specific operation
+
+INTEGER :: tri
+INTEGER :: i, j, n, n1, ndtr, i1, i3, i5, i6
+INTEGER :: linshape(1)
+REAL :: lfrac_valid, frac_c, frac_m
+LOGICAL,ALLOCATABLE :: ttr_mask(:,:)
+TYPE(arrayof_ttr_mapper),POINTER :: map_ttr(:,:)
+INTEGER,POINTER :: dtratio(:)
+INTEGER :: stat_proc_input, stat_proc
+
+SELECT CASE(multiv_proc)
+CASE (1) ! direction of maximum
+  stat_proc_input = 205
+  stat_proc=205
+END SELECT
+
+tri = stat_proc_input
+IF (PRESENT(frac_valid)) THEN
+  lfrac_valid = frac_valid
+ELSE
+  lfrac_valid = 1.0
+ENDIF
+
+! be safe
+CALL vol7d_alloc_vol(this)
+! initial check
+
+! cleanup the original volume
+CALL vol7d_smart_sort(this, lsort_time=.TRUE.) ! time-ordered volume needed
+CALL vol7d_reform(this, miss=.FALSE., sort=.FALSE., unique=.TRUE.)
+
+CALL init(that, time_definition=this%time_definition)
+CALL vol7d_alloc(that, nana=SIZE(this%ana), nlevel=SIZE(this%level), &
+ nnetwork=SIZE(this%network))
+IF (ASSOCIATED(this%dativar%r)) THEN
+  CALL vol7d_alloc(that, ndativarr=SIZE(this%dativar%r))
+  that%dativar%r = this%dativar%r
+ENDIF
+IF (ASSOCIATED(this%dativar%d)) THEN
+  CALL vol7d_alloc(that, ndativard=SIZE(this%dativar%d))
+  that%dativar%d = this%dativar%d
+ENDIF
+that%ana = this%ana
+that%level = this%level
+that%network = this%network
+
+! compute the output time and timerange and all the required mappings
+CALL recompute_stat_proc_agg_common(this%time, this%timerange, stat_proc, tri, &
+ step, this%time_definition, that%time, that%timerange, map_ttr, dtratio, start)
+CALL vol7d_alloc_vol(that)
+
+ALLOCATE(ttr_mask(SIZE(this%time), SIZE(this%timerange)))
+linshape = (/SIZE(ttr_mask)/)
+! finally perform computations
+IF (ASSOCIATED(this%voldatir)) THEN
+  DO j = 1, SIZE(that%timerange)
+    DO i = 1, SIZE(that%time)
+
+      DO i1 = 1, SIZE(this%ana)
+        DO i3 = 1, SIZE(this%level)
+          DO i6 = 1, SIZE(this%network)
+            DO i5 = 1, SIZE(this%dativar%r)
+
+              frac_m = 0.
+              DO n1 = SIZE(dtratio), 1, -1 ! precedence to longer periods
+                IF (dtratio(n1) <= 0) CYCLE ! safety check
+                ttr_mask = .FALSE.
+                DO n = 1, map_ttr(i,j)%arraysize
+                  IF (map_ttr(i,j)%array(n)%extra_info == dtratio(n1)) THEN
+                    IF (c_e(this%voldatir(i1,map_ttr(i,j)%array(n)%it,i3, &
+                     map_ttr(i,j)%array(n)%itr,i5,i6))) THEN
+                      ttr_mask(map_ttr(i,j)%array(n)%it, &
+                       map_ttr(i,j)%array(n)%itr) = .TRUE.
+                    ENDIF
+                  ENDIF
+                ENDDO
+
+                ndtr = COUNT(ttr_mask)
+                frac_c = REAL(ndtr)/REAL(dtratio(n1))
+
+                IF (ndtr > 0 .AND. frac_c >= MAX(lfrac_valid, frac_m)) THEN
+                  frac_m = frac_c
+                  SELECT CASE(multiv_proc)
+                  CASE (1) ! average, vectorial mean
+                    that%voldatir(i1,i,i3,j,i5,i6) = &
+                     SUM(this%voldatir(i1,:,i3,:,i5,i6), &
+                     mask=ttr_mask)/ndtr
+                  END SELECT
+                ENDIF
+
+              ENDDO ! dtratio
+            ENDDO ! var
+          ENDDO ! network
+        ENDDO ! level
+      ENDDO ! ana
+      CALL delete(map_ttr(i,j))
+    ENDDO ! otime
+  ENDDO ! otimerange
+ENDIF
+
+IF (ASSOCIATED(this%voldatid)) THEN
+  DO j = 1, SIZE(that%timerange)
+    DO i = 1, SIZE(that%time)
+
+      DO i1 = 1, SIZE(this%ana)
+        DO i3 = 1, SIZE(this%level)
+          DO i6 = 1, SIZE(this%network)
+            DO i5 = 1, SIZE(this%dativar%d)
+
+              frac_m = 0.
+              DO n1 = SIZE(dtratio), 1, -1 ! precedence to longer periods
+                IF (dtratio(n1) <= 0) CYCLE ! safety check
+                ttr_mask = .FALSE.
+                DO n = 1, map_ttr(i,j)%arraysize
+                  IF (map_ttr(i,j)%array(n)%extra_info == dtratio(n1)) THEN
+                    IF (c_e(this%voldatid(i1,map_ttr(i,j)%array(n)%it,i3, &
+                     map_ttr(i,j)%array(n)%itr,i5,i6))) THEN
+                      ttr_mask(map_ttr(i,j)%array(n)%it, &
+                       map_ttr(i,j)%array(n)%itr) = .TRUE.
+                    ENDIF
+                  ENDIF
+                ENDDO
+
+                ndtr = COUNT(ttr_mask)
+                frac_c = REAL(ndtr)/REAL(dtratio(n1))
+
+                IF (ndtr > 0 .AND. frac_c >= MAX(lfrac_valid, frac_m)) THEN
+                  frac_m = frac_c
+                  SELECT CASE(stat_proc)
+                  CASE (0) ! average
+                    that%voldatid(i1,i,i3,j,i5,i6) = &
+                     SUM(this%voldatid(i1,:,i3,:,i5,i6), &
+                     mask=ttr_mask)/ndtr
+                  CASE (1, 4) ! accumulation, difference
+                    that%voldatid(i1,i,i3,j,i5,i6) = &
+                     SUM(this%voldatid(i1,:,i3,:,i5,i6), &
+                     mask=ttr_mask)
+                  CASE (2) ! maximum
+                    that%voldatid(i1,i,i3,j,i5,i6) = &
+                     MAXVAL(this%voldatid(i1,:,i3,:,i5,i6), &
+                     mask=ttr_mask)
+                  CASE (3) ! minimum
+                    that%voldatid(i1,i,i3,j,i5,i6) = &
+                     MINVAL(this%voldatid(i1,:,i3,:,i5,i6), &
+                     mask=ttr_mask)
+                  CASE (6) ! stddev
+                    that%voldatid(i1,i,i3,j,i5,i6) = &
+                     stat_stddev( &
+                     RESHAPE(this%voldatid(i1,:,i3,:,i5,i6), shape=linshape), &
+                     mask=RESHAPE(ttr_mask, shape=linshape))
+                  END SELECT
+                ENDIF
+
+              ENDDO ! dtratio
+            ENDDO ! var
+          ENDDO ! network
+        ENDDO ! level
+      ENDDO ! ana
+      CALL delete(map_ttr(i,j))
+    ENDDO ! otime
+  ENDDO ! otimerange
+ENDIF
+
+DEALLOCATE(ttr_mask)
+
+END SUBROUTINE vol7d_recompute_stat_proc_agg_multiv
 
 !> Riempimento dei buchi temporali in un volume.
 !! Questo metodo crea, a partire da un volume originale, un nuovo

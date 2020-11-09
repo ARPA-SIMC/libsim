@@ -18,6 +18,7 @@ subroutine register_termo(vfn)
 
   call fnregister(vfn,td_t_p2ept_def())
   call fnregister(vfn,t_p2pt_def())
+  call fnregister(vfn,td_t_p2wbt_def())
   call fnregister(vfn,dd_ff2u_v_def())
   call fnregister(vfn,u_v2dd_ff_def())
   call fnregister(vfn,r_t2td_def())
@@ -64,7 +65,7 @@ subroutine  td_t_p2ept(mybin,mybout,bin,bout,in,out)
 end subroutine td_t_p2ept
 
 
-subroutine  t_p2pt(mybin,mybout,bin,bout,in,out)
+subroutine t_p2pt(mybin,mybout,bin,bout,in,out)
   CHARACTER(len=10),intent(in) :: mybin(:)  !< vector table B  WMO input  in user's data
   CHARACTER(len=10),intent(in) :: mybout(:) !< vector table B  WMO output in user's data
   CHARACTER(len=10),intent(in) :: bin(:)    !< vector table B  WMO input used by function
@@ -93,6 +94,29 @@ type(fnds) function t_p2pt_def()
        [character(len=10) :: "B12101","B10004"],&
        [character(len=10) :: "B12192"],0,func=t_p2pt)
 end function t_p2pt_def
+
+SUBROUTINE td_t_p2wbt(mybin,mybout,bin,bout,in,out)
+CHARACTER(len=10),INTENT(in) :: mybin(:)  !< vector table B  WMO input  in user's data
+CHARACTER(len=10),INTENT(in) :: mybout(:) !< vector table B  WMO output in user's data
+CHARACTER(len=10),INTENT(in) :: bin(:)    !< vector table B  WMO input used by function
+CHARACTER(len=10),INTENT(in) :: bout(:)   !< vector table B  WMO output used by function
+REAL,INTENT(in) :: in(:,:)
+REAL,INTENT(out) :: out(:,:)
+
+WHERE (c_e(in(:,index_c(mybin,bin(3)))))
+  out(:,index_c(mybout,bout(1)))=tw(in(:,index_c(mybin,bin(1))),in(:,index_c(mybin,bin(2))),in(:,index_c(mybin,bin(3)))/100.)
+ELSEWHERE
+  out(:,index_c(mybout,bout(1)))=rmiss
+END WHERE
+
+END SUBROUTINE td_t_p2wbt
+
+
+type(fnds) function td_t_p2wbt_def()
+  call init(td_t_p2wbt_def,"td_t_p2wbt",&
+       [character(len=10) :: "B12103","B12101","B10004"],&
+       [character(len=10) :: "B12102"],0,func=td_t_p2wbt)
+end function td_t_p2wbt_def
 
 
 subroutine  dd_ff2u_v(mybin,mybout,bin,bout,in,out)

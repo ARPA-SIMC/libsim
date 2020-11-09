@@ -127,18 +127,22 @@ B13031,Evaporation/Evapotranspiration,Kg/m**2,255,0,6,2,1.0,0.0
 B13031,Evaporation/Evapotranspiration,Kg/m**2,255,1,40,0,1.0,0.0
 B13033,Evaporation/Evapotranspiration,Kg/m**2,255,0,6,2,1.0,0.0
 B13033,Evaporation/Evapotranspiration,Kg/m**2,255,1,40,0,1.0,0.0
+B13192,Cloud liquid water content (local),Kg/Kg,255,1,22,0,1.0,0.0
 B13192,Cloud liquid water content (local),Kg/Kg,200,201,31,255,1.0,0.0
 B13192,Cloud liquid water content (local),Kg/Kg,80,201,31,255,1.0,0.0
 B13192,Cloud liquid water content (local),Kg/Kg,78,201,31,255,1.0,0.0
+B13193,Cloud ice content (local),Kg/Kg,255,1,82,0,1.0,0.0
 B13193,Cloud ice content (local),Kg/Kg,200,201,33,255,1.0,0.0
 B13193,Cloud ice content (local),Kg/Kg,80,201,33,255,1.0,0.0
 B13193,Cloud ice content (local),Kg/Kg,78,201,33,255,1.0,0.0
 B13194,Water equivalent of accumulated snow depth (local),Kg/m**2,255,1,60,0,1.0,0.0
 B13194,Water equivalent of accumulated snow depth (local),Kg/m**2,255,2,65,255,1.0,0.0
 B13194,Water equivalent of accumulated snow depth (local),Kg/m**2,98,128,141,255,1000.,0.0
+B13195,Precipitating liquid water (local),Kg/Kg,255,1,24,0,1.0,0.0
 B13195,Precipitating liquid water (local),Kg/Kg,200,201,35,255,1.0,0.0
 B13195,Precipitating liquid water (local),Kg/Kg,80,201,35 ,255,1.0,0.0
 B13195,Precipitating liquid water (local),Kg/Kg,78,201,35,255,1.0,0.0
+B13196,Precipitating ice (local),Kg/Kg,255,1,25,0,1.0,0.0
 B13196,Precipitating ice (local),Kg/Kg,200,201,36,255,1.0,0.0
 B13196,Precipitating ice (local),Kg/Kg,80,201,36,255,1.0,0.0
 B13196,Precipitating ice (local),Kg/Kg,78,201,36,255,1.0,0.0
@@ -425,6 +429,8 @@ B15241,Aerosol Optical Thickness (local),numeric,200,195,200,0,1.0,0.0
 B15241,Aerosol Optical Thickness (local),numeric,200,195,200,255,1.0,0.0
 B20001,Visibility,m,255,19,0,0,1.0,0.0
 B20001,Visibility,m,255,2,20,255,1.0,0.0
+B20001,Visibility,m,98,3,20,255,1.0,0.0
+B20010,Total cloud cover,Percent,255,6,1,0,1.0,0.0
 B20010,Total cloud cover,Percent,255,2,71,255,1.0,0.0
 B20010,High cloud cover,Percent,255,2,75,255,1.0,0.0
 B20010,Medium cloud cover,Percent,255,2,74,255,1.0,0.0

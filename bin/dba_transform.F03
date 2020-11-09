@@ -79,7 +79,9 @@ do while (session%messages_read_next())
 
 end do
 
+# ifndef F2003_FULL_FEATURES
 !close everythings
 call session%delete()
+#endif
 
 end program dbatransform

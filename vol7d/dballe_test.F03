@@ -1,3 +1,5 @@
+#include "config.h"
+
 program dballe_test
 
 use dballe_class
@@ -27,9 +29,12 @@ call write4()    ! write an etherogeneous ensamble of data and attributes
 call delete1()   ! delete one var from the entire DB
 call delete2()   ! delete one var only where are some defined metadati
 call delete3()   ! delete some attributes from one var only where are some defined metadati
+
+# ifndef F2003_FULL_FEATURES
 !close everythings
 call session%delete()
 call connection%delete()
+#endif
 
 ! connect to dsn type BUFR file for write
 session=dbasession(filename="dballe_test.bufr",wipe=.true.,write=.true.,memdb=.false.)
@@ -38,18 +43,23 @@ call write1()    ! write etherogeneous ensamble of data with attributes and cons
 call write2()    ! write an omogeneous vector of data
 call write3()    ! write an etherogeneous ensamble of data
 call write4()    ! write an etherogeneous ensamble of data and attributes
+
+# ifndef F2003_FULL_FEATURES
 !close everythings
 call session%delete()
-
+#endif
 
 ! connect to dsn type BUFR file for read
 sessionfrom=dbasession(filename="dballe_test.bufr",memdb=.false.)
 ! connect to dsn type BUFR file for write
 sessionto=dbasession(filename="dballe_test_copy1f.bufr",wipe=.true.,write=.true.,memdb=.false.)
 call copy1f()     ! copy data and attributes of everythings to an other file
+
+# ifndef F2003_FULL_FEATURES
 !close everythings
 call sessionto%delete()
 call sessionfrom%delete()
+#endif
 
 ! use memdb
 ! connect to dsn type DBA
@@ -59,10 +69,13 @@ call sessionfrom%messages_open_input(filename="dballe_test.bufr",mode="r",format
 ! connect to dsn type BUFR file for write
 sessionto=dbasession(filename="dballe_test_copy1fmem.bufr",wipe=.true.,write=.true.,memdb=.false.)
 call copy1fmem()     ! copy data and attributes of everythings to an other file
+
+# ifndef F2003_FULL_FEATURES
 !close everythings
 call sessionfrom%delete()
 call connectionfrom%delete()
 call sessionto%delete()
+#endif
 
 !chiudo il logger
 CALL l4f_category_delete(category)
@@ -96,7 +109,10 @@ do while (anal%element())
   call anal%next()
 end do
 
+# ifndef F2003_FULL_FEATURES
 call sessionana%delete()
+#endif
+
 status=anal%delete()
 
 end subroutine write0

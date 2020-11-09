@@ -60,7 +60,7 @@ CONTAINS
 !!
 !!    see the description of volgrid6d_decompute_stat_proc()
 !!
-!!  - \a stat_proc_input = 0, 1, 2, 3, 4
+!!  - \a stat_proc_input = 0, 1, 2, 3, 4, 200
 !!    - \a stat_proc = \a stat_proc_input recompute input data on
 !!      different intervals
 !!
@@ -202,6 +202,7 @@ END SUBROUTINE volgrid6d_compute_stat_proc
 !!  - 2 maximum
 !!  - 3 minimum
 !!  - 4 difference
+!!  - 200 vectorial mean
 !!
 !! The start of processing period can be computed automatically from
 !! the input intervals as the first possible interval modulo \a step,
@@ -295,7 +296,7 @@ do_otimerange: DO j = 1, SIZE(that%timerange)
 
               ELSE ! second or more time
                 SELECT CASE(stat_proc)
-                CASE (0, 1, 4) ! average, accumulation, difference
+                CASE (0, 200, 1, 4) ! average, vectorial mean, accumulation, difference
                   WHERE(c_e(voldatiin(:,:)) .AND. c_e(voldatiout(:,:)))
                     voldatiout(:,:) = voldatiout(:,:) + voldatiin(:,:)
                   ELSEWHERE

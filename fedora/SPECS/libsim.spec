@@ -2,7 +2,7 @@
 # to enable vapor support requiring stiff dependencies
 Summary: Fortran utility libraries
 Name: libsim
-Version: 6.4.3
+Version: 6.4.7
 Release: 1
 License: GPL2+
 Group: Applications/Meteo
@@ -31,15 +31,46 @@ BuildRequires: eccodes-simc
 
 %{?with_vapor:BuildRequires: vapor-devel}
 
-BuildRequires: libdballef-devel >= 7.6 %{grib_sw}-devel ncl-devel gdal-devel libdballe-devel help2man log4c log4c-devel
-BuildRequires: doxygen graphviz texlive-latex-bin texlive-dvips-bin
-BuildRequires: gcc-c++ libtool libpng-devel fortrangis-devel netcdf-fortran-devel shapelib-devel jasper-devel proj-devel popt-devel openjpeg-devel cairo-devel
+BuildRequires: libdballef-devel >= 7.6
+BuildRequires: libdballe-devel
+BuildRequires: %{grib_sw}-devel
+BuildRequires: help2man
+BuildRequires: log4c log4c-devel
+BuildRequires: gdal-devel
+BuildRequires: ncl-devel
+BuildRequires: doxygen
+BuildRequires: graphviz
+BuildRequires: texlive-latex-bin
+BuildRequires: texlive-dvips-bin
+BuildRequires: texlive-iftex
+BuildRequires: texlive-metafont
+%{?fedora:BuildRequires: texlive-lwarp}
+BuildRequires: gcc-c++
+BuildRequires: libtool
+BuildRequires: libpng-devel
+BuildRequires: fortrangis-devel
+BuildRequires: netcdf-fortran-devel
+BuildRequires: shapelib-devel
+BuildRequires: jasper-devel
+BuildRequires: proj-devel
+BuildRequires: popt-devel
+BuildRequires: cairo-devel
+BuildRequires: freetype-devel
 Requires: libdballef4 >= 7.6 %{grib_sw}
-
 
 %package -n libsim-devel
 
-Requires: fortrangis-devel libdballef-devel >= 7.6 %{grib_sw}-devel ncl-devel gdal-devel libdballe-devel help2man log4c log4c-devel
+Requires: fortrangis-devel
+Requires: libdballef-devel >= 7.6
+Requires: libdballe-devel
+Requires: %{grib_sw}-devel
+Requires: help2man
+Requires: log4c
+Requires: log4c-devel
+Requires: gdal-devel
+Requires: ncl-devel
+Requires: freetype-devel
+
 Summary:  libsim development files
 Group: Applications/Meteo
 
@@ -82,13 +113,14 @@ sh autogen.sh
 
 %build
 
-%configure FCFLAGS="%{optflags} -I%{_fmoddir}" --enable-f2003-features %{?with_vapor:--enable-vapor} --enable-alchimia --enable-shapelib --enable-netcdf --enable-gribapi --enable-gdal --enable-f2003-extended-features --disable-static
+%configure FCFLAGS="%{optflags} -I%{_fmoddir}" --enable-f2003-features %{?with_vapor:--enable-vapor} --enable-alchimia --enable-shapelib --enable-netcdf --enable-gribapi --enable-f2003-extended-features --disable-static --enable-gdal
 
 make
 make check
 
 %install
-make DESTDIR=%{buildroot} install
+[ "%{buildroot}" != / ] && rm -rf %{buildroot}
+%makeinstall
 %if 0%{?fedora} >= 9 || 0%{?rhel}
 mkdir -p $RPM_BUILD_ROOT%{_fmoddir}
 mv $RPM_BUILD_ROOT%{_includedir}/*.mod $RPM_BUILD_ROOT%{_fmoddir}
@@ -98,6 +130,7 @@ mv $RPM_BUILD_ROOT%{_includedir}/*.mod $RPM_BUILD_ROOT%{_fmoddir}
 %defattr(-,root,root)
 %{_libdir}/*.so.*
 %{_bindir}/*
+%exclude %{_bindir}/dba_qcfilter
 %{_datadir}/%{name}/*
 %{_mandir}/man1
 %dir %{_libexecdir}/%{name}
@@ -124,6 +157,30 @@ mv $RPM_BUILD_ROOT%{_includedir}/*.mod $RPM_BUILD_ROOT%{_fmoddir}
 rm -rf %{buildroot}
 
 %changelog
+* Thu Oct 29 2020 Daniele Branchini <dbranchini@arpae.it> - 6.4.7-1
+- add web bulb temperature function
+- added variables to vargrib2bufr.csv
+- add temptative multivariate stat proc
+
+* Wed Sep 23 2020 Emanuele Di Giacomo <edigiacomo@arpae.it> - 6.4.6-1
+- enable json format for dballe, fix bug disabling formats other than BUFR
+- consider timerange 200 as timerange 0 for statistical processing
+
+* Fri Jun  5 2020 Daniele Branchini <dbranchini@arpae.it> - 6.4.5-1
+- handle ECMWF 3 hour min/max temperatures (#84)
+
+* Tue May 12 2020 Daniele Branchini <dbranchini@arpae.it> - 6.4.4-1
+- Updated vargrib2bufr, fixed compiler errors for F32
+
+* Tue Mar 17 2020 Emanuele Di Giacomo <edigiacomo@arpae.it> - 6.4.3-4
+- Exclude dba_qcfilter command from package
+
+* Thu Jan 23 2020 Daniele Branchini <dbranchini@arpae.it> - 6.4.3-3
+- CentOS 8 build: re-enabling gdal and ncl dependencies
+
+* Mon Dec  9 2019 Daniele Branchini <dbranchini@arpae.it> - 6.4.3-2
+- fixed texlive dependencies
+
 * Mon Oct  7 2019 Daniele Branchini <dbranchini@arpae.it> - 6.4.2-1
 - fixed but in metamorphosis:mask
 - improve and extend handling of level numeric conversion in import/export and vertint
