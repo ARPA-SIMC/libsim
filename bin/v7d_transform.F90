@@ -150,11 +150,11 @@ opt = optionparser_new(description_msg= &
  'Vol7d transformation application, it imports a vol7d volume of sparse point data &
  &from a native vol7d file'&
 #ifdef HAVE_DBALLE
- //', from a dbAll.e database, from a BUFR/CREX file'&
+ //', from a dbAll.e database, from a BUFR/CREX/JSON file'&
 #endif
  //' and exports it into a native v7d file'&
 #ifdef HAVE_DBALLE
- //', into a BUFR/CREX file'&
+ //', into a BUFR/CREX/JSON file'&
 #endif
 #ifdef HAVE_LIBGRIBAPI
  //', into a GRIB file'&
@@ -179,7 +179,7 @@ CALL optionparser_add(opt, ' ', 'input-format', input_format, 'native', help= &
  'format of input, ''native'' for vol7d native binary file'&
 #ifdef HAVE_DBALLE
  //', ''BUFR'' for BUFR file with generic template, ''CREX'' for CREX file&
- &, ''dba'' for dballe database'&
+ &, ''JSON'' for dballe jsonline file, ''dba'' for dballe database'&
 #endif
  )
 coord_file=cmiss
@@ -195,7 +195,7 @@ CALL optionparser_add(opt, ' ', 'coord-format', coord_format, &
 #endif 
  & help='format of input file with coordinates, ''native'' for vol7d native binary file'&
 #ifdef HAVE_DBALLE
- //', ''BUFR'' for BUFR file, ''CREX'' for CREX file (sparse points)'&
+ //', ''BUFR'' for BUFR file, ''CREX'' for CREX file, ''JSON'' for json file (sparse points)'&
 #endif
 #ifdef HAVE_SHAPELIB
  //', ''shp'' for shapefile (sparse points or polygons)'&
@@ -214,7 +214,7 @@ CALL optionparser_add(opt, ' ', 'extreme-format', extreme_format, &
 #endif 
  & help='format of input file for extreme: ''native'' for vol7d native binary file'&
 #ifdef HAVE_DBALLE
- //', ''BUFR'' for BUFR file, ''CREX'' for CREX file (sparse points)'&
+ //', ''BUFR'' for BUFR file, ''CREX'' for CREX file, ''JSON'' for json file (sparse points)'&
 #endif
  )
 
@@ -384,7 +384,7 @@ CALL optionparser_add(opt, ' ', 'output-format', output_format, 'native', help= 
  'format of output file, in the form ''name[:template]''; ''native'' for vol7d &
  &native binary format (no template to be specified)'&
 #ifdef HAVE_DBALLE
- //'; ''BUFR'' and ''CREX'' for corresponding formats, with template as an alias like ''synop'', ''metar'', &
+ //'; ''BUFR'', ''CREX'' and ''JSON'' for corresponding formats, with template as an alias like ''synop'', ''metar'', &
  &''temp'', ''generic'', empty for ''generic'''&
 #endif
 #ifdef HAVE_LIBGRIBAPI
@@ -724,7 +724,7 @@ IF (c_e(coord_file)) THEN
     CALL import(v7d_coord, filename=coord_file)
 
 #ifdef HAVE_DBALLE
-  ELSE IF (coord_format == 'BUFR' .OR. coord_format == 'CREX') THEN
+  ELSE IF (coord_format == 'BUFR' .OR. coord_format == 'CREX' .OR. coord_format == 'JSON') THEN
     CALL init(v7d_dba, filename=coord_file, format=coord_format, file=.TRUE., &
      write=.FALSE., categoryappend="anagrafica")
     CALL import(v7d_dba) ! , anaonly=.TRUE.)
@@ -861,9 +861,9 @@ DO ninput = optind, iargc()-1
     CALL import(v7dtmp, filename=input_file)
 
 #ifdef HAVE_DBALLE
-  ELSE IF (input_format == 'BUFR' .OR. input_format == 'CREX' .OR. input_format == 'dba') THEN
+  ELSE IF (input_format == 'BUFR' .OR. input_format == 'CREX' .OR. input_format == 'JSON' .OR. input_format == 'dba') THEN
 
-    IF (input_format == 'BUFR' .OR. input_format == 'CREX') then
+    IF (input_format == 'BUFR' .OR. input_format == 'CREX' .OR. input_format == 'JSON') then
 
       IF (input_file == '-') THEN
         !CALL l4f_category_log(category, L4F_INFO, 'trying /dev/stdin as stdin unit.')
@@ -1139,7 +1139,7 @@ if (comp_qc_ndi .or. comp_qc_perc) then
       CALL raise_fatal_error()
  
 #ifdef HAVE_DBALLE
-    ELSE IF (extreme_format == 'BUFR' .OR. extreme_format == 'CREX') THEN
+    ELSE IF (extreme_format == 'BUFR' .OR. extreme_format == 'CREX' .OR. extreme_format == 'JSON') THEN
       extreme_file=get_package_filepath(extreme_file, filetype_data)
       
     ELSE IF (extreme_format == 'dba') THEN
@@ -1301,8 +1301,8 @@ ELSE IF (output_format == 'geojson') THEN
 #endif
 
 #ifdef HAVE_DBALLE
-ELSE IF (output_format == 'BUFR' .OR. output_format == 'CREX' .OR. output_format == 'dba') THEN
-  IF (output_format == 'BUFR' .OR. output_format == 'CREX') THEN
+ELSE IF (output_format == 'BUFR' .OR. output_format == 'CREX' .OR. output_format == 'JSON' .OR. output_format == 'dba') THEN
+  IF (output_format == 'BUFR' .OR. output_format == 'CREX' .OR. output_format == 'JSON') THEN
     IF (output_file == '-') THEN
       !CALL l4f_category_log(category, L4F_INFO, 'trying /dev/stdout as stdout unit.')
       !output_file='/dev/stdout'

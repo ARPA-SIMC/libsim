@@ -1360,16 +1360,17 @@ SUBROUTINE dirty_char_assignment(destc, destclen, src, srclen)
 USE kinds
 IMPLICIT NONE
 
-INTEGER(kind=int_b) :: destc(*), src(*)
+CHARACTER(len=1) :: destc(*)
+CHARACTER(len=*) :: src
 INTEGER :: destclen, srclen
 
 INTEGER :: i
 
 DO i = 1, MIN(destclen, srclen)
-  destc(i) = src(i)
+  destc(i) = src(i:i)
 ENDDO
 DO i = srclen+1, destclen
-  destc(i) = ICHAR(' ')
+  destc(i) = ' '
 ENDDO
 
 END SUBROUTINE dirty_char_assignment

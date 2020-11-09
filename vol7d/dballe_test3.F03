@@ -1,3 +1,5 @@
+#include "config.h"
+
 program dballe_test3
 
 use dballe_class
@@ -27,12 +29,12 @@ call write()    ! write etherogeneous ensamble of data with attributes using mac
 sessionto=dbasession(filename="dballe_test3.bufr",wipe=.true.,write=.true.,memdb=.false.,template="generic")
 call export2bufrwithfilter()
 
-call sessionto%delete()
-
+# ifndef F2003_FULL_FEATURES
 !close everythings
 call sessionto%delete()
 call session%delete()
 call connection%delete()
+#endif
 
 
 !chiudo il logger

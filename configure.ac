@@ -1,6 +1,6 @@
 dnl Process this file with autoconf to produce a configure script.
 
-AC_INIT(libsim, 6.4.3, [dcesari@arpae.it])
+AC_INIT(libsim, 6.4.7, [dcesari@arpae.it])
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_SRCDIR([configure.ac])
 AM_INIT_AUTOMAKE([foreign])
@@ -326,7 +326,7 @@ for try in /usr/lib64/ncarg /usr/lib/ncarg; do
 done
   AC_CHECK_LIB([ncarg], [ngpswk],
     NCARG_LDFLAGS=$ncarg_ldflags
-    NCARG_LIBS="-lncarg -lncarg_gks -lncarg_c -lX11 -lpng -lcairo"
+    NCARG_LIBS="-lncarg -lncarg_gks -lncarg_c -lX11 -lpng -lcairo -lfreetype"
     AC_SUBST(NCARG_LDFLAGS)
     AC_SUBST(NCARG_LIBS)
     AC_DEFINE(HAVE_LIBNCARG, 1, [Enable ncar graphics code])

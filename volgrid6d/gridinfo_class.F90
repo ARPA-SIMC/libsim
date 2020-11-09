@@ -2025,6 +2025,24 @@ IF (this%var%discipline == 255 .AND. &
       this%level%level2 = 255
       this%level%l2 = 0
 
+    ELSE IF (this%var%number == 26 .AND. &
+     (this%timerange%timerange == 254 .OR. this%timerange%timerange == 205)) THEN ! MX2T3
+      this%timerange%timerange = 2 ! max
+      this%timerange%p2 = 10800 ! length of period = 3 hours
+      this%var%category = 128 ! reset to table version 128
+      this%var%number=167 ! set to T2m, it could be 130 T as well
+      this%level%level1 = 103
+      this%level%l1 = 2000 ! 2m
+
+    ELSE IF (this%var%number == 27 .AND. &
+     (this%timerange%timerange == 254 .OR. this%timerange%timerange == 205)) THEN ! MN2T3
+      this%timerange%timerange = 3 ! min
+      this%timerange%p2 = 10800 ! length of period = 3 hours
+      this%var%category = 128 ! reset to table version 128
+      this%var%number=167 ! set to T2m, it could be 130 T as well
+      this%level%level1 = 103
+      this%level%l1 = 2000 ! 2m
+
     ELSE IF (this%var%number == 28 .AND. &
      (this%timerange%timerange == 254 .OR. this%timerange%timerange == 205)) THEN ! 10FG3
       this%timerange%timerange = 2 ! max

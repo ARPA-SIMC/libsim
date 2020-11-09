@@ -167,7 +167,7 @@ logical,INTENT(in),OPTIONAL :: write !< abilita la scrittura sul DSN/file ( defa
 logical,INTENT(in),OPTIONAL :: wipe !<  svuota il DSN/file e/o lo prepara per una scrittura ( default=.false. )
 character(len=*), INTENT(in),OPTIONAL :: repinfo !< eventuale file repinfo.csv usato con wipe ( default="" )
 character(len=*),intent(inout),optional :: filename !< nome dell'eventuale file da utilizzare in alternativa a dsn when file is true; se passato ="" ritorna un valore di deafult elaborato
-character(len=*),intent(in),optional :: format !< the file format when file is true. It can be "BUFR" or "CREX". (default="BUFR")
+character(len=*),intent(in),optional :: format !< the file format when file is true. It can be "BUFR", "CREX" or "JSON" (default="BUFR")
 logical,INTENT(in),OPTIONAL :: file !< switch to use file or data base ( default=.false )
 character(len=*),INTENT(in),OPTIONAL :: categoryappend !< appennde questo suffisso al namespace category di log4fortran
 integer,INTENT(in),OPTIONAL :: time_definition !< 0=time is reference time ; 1=time is validity time (default=1) 
@@ -225,7 +225,8 @@ if (optio_log(file)) then
     loadfile=.true.
   end if
 
-  this%handle=dbasession(wipe=wipe,write=quiwrite,repinfo=repinfo,filename=lfilename,template=template,&
+  this%handle=dbasession(wipe=wipe,write=quiwrite,repinfo=repinfo, &
+   filename=lfilename,format=lformat,template=template, &
    memdb=.true.,loadfile=loadfile)
 
 else
@@ -650,9 +651,11 @@ SUBROUTINE vol7d_dballe_delete(this, preserveidbhandle)
 TYPE(vol7d_dballe) :: this !< oggetto da cancellare
 logical,intent(in), optional :: preserveidbhandle !< do not close connection to dsn
 
+# ifndef F2003_FULL_FEATURES
 call this%handle%delete()
 
 if (.not. optio_log(preserveidbhandle)) call this%idbhandle%delete()
+# endif
 
 !!$if (associated(this%data_id)) then
 !!$  deallocate (this%data_id)
