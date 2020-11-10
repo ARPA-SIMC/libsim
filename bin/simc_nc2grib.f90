@@ -1,5 +1,6 @@
 PROGRAM simc_nc2grib
 !-------------------------------------------------------------------------------
+!
 ! Reads the NetCDF output of ROMS or Chimere, wirtes a subset of parameters in
 ! GRIB2 format
 !
@@ -88,7 +89,7 @@ CHARACTER (LEN=20) :: ncstring(maxvars),varname_t
 ! Miscellanea
 TYPE (optionparser) :: opt
 TYPE (datetime) :: reftime
-REAL :: fillvalue
+REAL :: fillvalue,rdum
 INTEGER :: gribid_tpl,ncid,dimid_x,dimid_y,dimid_z,dimid_t,dimid_dstrl
 INTEGER :: varid_t,dstrl_nc,varid,ndims,xt
 INTEGER :: pdtn,togp,centre,sc,sm,gpi,bpv
@@ -397,6 +398,9 @@ CALL init(griddim_out, nx=nx, ny=ny, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax,
   lad=lad, lov=lov, latin1=latin1, latin2=latin2, dx=dx, dy=dy, &
   longitude_south_pole=longitude_south_pole, latitude_south_pole=latitude_south_pole, angle_rotation=angle_rotation)
 
+!deb
+CALL display(griddim_out) 
+
 ! Get ecCodes "id" for grib2 template
 CALL codes_grib_new_from_samples(gribid_tpl, grib_template, status=ier)
 
@@ -586,11 +590,16 @@ DO kv = 1, nvar
 ! to the most rapidly varying dimension of the netCDF variable"
 
   ELSE IF (ndims == 4) THEN
-    ier = nf90_get_var(ncid, varid, values4(1:nx,1:ny,1:nz,1:nt_nc), map=(/1, nx, nx*ny, nx*ny*nz/))
-    IF (ier /= nf90_noerr) THEN
-      CALL raise_error(msg="Error getting values for var " // TRIM(ncstring(kv)), ierval=11)
-      CYCLE
-    ENDIF
+print *,nx,ny,nz,nt_nc
+print *,ncid,varid
+!    ier = nf90_get_var(ncid, varid, rdum)
+!    ier = nf90_get_var(ncid, varid, values4(1:nx,1:ny,1:nz,1:nt_nc), map=(/1, nx, nx*ny, nx*ny*nz/))
+    ier = nf90_get_var(ncid, varid, values4(1:nx,1:ny,1:nz,1:nt_nc))
+    print *,ier
+!    IF (ier /= nf90_noerr) THEN
+!      CALL raise_error(msg="Error getting values for var " // TRIM(ncstring(kv)), ierval=11)
+!      CYCLE
+!    ENDIF
 
     IF (trange_type == "an") THEN
       WHERE (values4(:,:,:,:) /= fillvalue)
@@ -620,23 +629,34 @@ DO kv = 1, nvar
     ENDIF
 
   ENDIF
-ENDDO
 
 !deb!
-do kt = 1, nt_nc
-do kl = 1, nz
-  write (*,*) kt,kl,"cdf: ",sum(values4(1:nx,1:ny,kl,kt))/real(nx*ny), &
-   100.*real(count(values4(1:nx,1:ny,kl,kt)==0))/real(nx*ny), &
-   maxval(values4(1:nx,1:ny,kl,kt)),minval(values4(1:nx,1:ny,kl,kt))
-enddo
-enddo
+IF (ndims == 4) THEN
+  do kt = 1, nt_nc
+  do kl = 1, nz
+    write (*,*) kt,kl,"cdf: (ave, pct zeri, max, min) ",sum(values4(1:nx,1:ny,kl,kt))/real(nx*ny), &
+     100.*real(count(values4(1:nx,1:ny,kl,kt)==0))/real(nx*ny), &
+     maxval(values4(1:nx,1:ny,kl,kt)),minval(values4(1:nx,1:ny,kl,kt))
+  enddo
+  enddo
+ELSE IF (ndims == 3) THEN
+  do kt = 1, nt_nc
+    write (*,*) kt,"cdf: (ave, pct zeri, max, min) ",sum(values3(1:nx,1:ny,kt))/real(nx*ny), &
+     100.*real(count(values3(1:nx,1:ny,kt)==0))/real(nx*ny), &
+     maxval(values3(1:nx,1:ny,kt)),minval(values3(1:nx,1:ny,kt))
+  enddo
+ENDIF
+!deb!
 
+ENDDO
+  
 !-------------------------------------------------------------------------------
 ! 8) Export data to GRIB2 output file
 
 CALL display(volgrid_out(1))
 write(*,*) MINVAL(volgrid_out(1)%voldati(:,:,1,1,1,1)),maxval(volgrid_out(1)%voldati(:,:,1,1,1,1))
 !deb! CALL export(volgrid_out(1:1), filename=gribfile, gaid_template=gaid_tpl, categoryappend="output_volume")
+
 CALL export(volgrid_out(:), filename=gribfile, gaid_template=gaid_tpl)
 
 ! CALL delete ...
