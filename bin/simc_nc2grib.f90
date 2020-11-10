@@ -99,6 +99,7 @@ INTEGER :: yy,mm,dd,hh,scad
 INTEGER, POINTER :: p1(:),p2(:)
 CHARACTER (LEN=512) :: ncfile,gribfile,nmlfile,chdum,chdum2,chrt,grib_template
 CHARACTER (LEN=512) :: a_name,log_name
+CHARACTER (LEN=80) :: ch80
 CHARACTER (LEN=20) :: version,model,levels,dimname_x,dimname_y,dimname_z,dimname_t
 CHARACTER (LEN=2) :: trange_type
 LOGICAL :: optversion, opttemplate
@@ -129,7 +130,7 @@ opt = optionparser_new( &
 """ncfile"" is the input file (NetCDF). ""gribfile"" is the output file (GRIB2). " // &
 """nmlfile"" is the namelist file (use option --template to create a template). " // &
 "If ""reftime"" is provided, it is the starting time of the forecast (YYYYMMDDHH), " // &
-"otherwise it is assumed that input data are analyis, and time staps are taken from ncfile")
+"otherwise it is assumed that input data are analyisis, and time staps are taken from ncfile")
 
 ! General options
 CALL optionparser_add_help(opt, 'h', 'help', help='show an help message and exit')
@@ -237,15 +238,15 @@ ENDIF
 ! 2) Read namelist
 
 ! defaults
-model = "chimere"
-levels = "surface"
-centre = 200       ! section 1
-sc = 1             ! section 1
-sm = 64            ! scanningMode, flag table 3.4
-pdtn = 0           ! code table 4.0
-togp = 0           ! template 4.0
-gpi = 1            ! template 4.0
-bpv = 24           ! template 5.0
+model = ""
+levels = ""
+centre = imiss       ! section 1
+sc = imiss           ! section 1
+sm = imiss           ! scanningMode, flag table 3.4
+pdtn = imiss         ! code table 4.0
+togp = imiss         ! template 4.0
+gpi = imiss          ! template 4.0
+bpv = imiss          ! template 5.0
 
 OPEN (21, FILE=nmlfile, STATUS="OLD", FORM="FORMATTED", IOSTAT=ios)
 IF (ios /= 0) CALL raise_fatal_error( &
@@ -303,6 +304,9 @@ DO
   ENDIF
 ENDDO
 CLOSE(21)
+
+IF (TRIM(model) == "" .OR. TRIM(levels) == "") &
+  CALL raise_fatal_error(msg="simc_nc2grib: model and level must be specified in namelist file", ierval=2)
 
 IF (TRIM(model) == "chimere") THEN
   dimname_x = "west_east"
@@ -383,7 +387,6 @@ dy = (ymax - ymin) / DBLE(ny-1)
 WRITE (*,*) "File NetCDF: nx,ny,nz,nt ",nx_nc,ny_nc,nz_nc,nt_nc
 WRITE (*,*) "Grid step: ",dx,dy
 WRITE (*,*) "Required data: nz ",nz," nvar ",nvar,": ",ncstring(1:nvar)
-WRITE (*,*) "GRIB encoding: (pdtn,centre,sc,gpi,bpv)",pdtn,centre,sc,gpi,bpv
 WRITE (*,*) "Reftime: ",TRIM(chdum)
 
 !-------------------------------------------------------------------------------
@@ -405,15 +408,15 @@ CALL display(griddim_out)
 CALL codes_grib_new_from_samples(gribid_tpl, grib_template, status=ier)
 
 ! Modify the grib template according to namelist options
-CALL codes_set (gribid_tpl, "centre", centre, status=iret(1))
-CALL codes_set (gribid_tpl, "subCentre", sc, status=iret(2))
-CALL codes_set (gribid_tpl, "scanningMode", sm, status=iret(3))
-CALL codes_set (gribid_tpl, "productDefinitionTemplateNumber", pdtn, status=iret(4))
-CALL codes_set (gribid_tpl, "typeOfGeneratingProcess", togp, status=iret(5))
-CALL codes_set (gribid_tpl, "generatingProcessIdentifier", gpi, status=iret(6))
-CALL codes_set (gribid_tpl, "bitsPerValue", bpv, status=iret(7))
-IF (ANY(iret(1:7) /= CODES_SUCCESS)) &
-  WRITE (*,*) "Warning: error setting user-defind key in grib template"
+IF (c_e(centre)) CALL codes_set (gribid_tpl, "centre", centre, status=iret(1))
+IF (c_e(sc)) CALL codes_set (gribid_tpl, "subCentre", sc, status=iret(2))
+IF (c_e(sm)) CALL codes_set (gribid_tpl, "scanningMode", sm, status=iret(3))
+IF (c_e(pdtn)) CALL codes_set (gribid_tpl, "productDefinitionTemplateNumber", pdtn, status=iret(4))
+IF (c_e(togp)) CALL codes_set (gribid_tpl, "typeOfGeneratingProcess", togp, status=iret(5))
+IF (c_e(gpi)) CALL codes_set (gribid_tpl, "generatingProcessIdentifier", gpi, status=iret(6))
+IF (c_e(bpv)) CALL codes_set (gribid_tpl, "bitsPerValue", bpv, status=iret(7))
+!IF (ANY(iret(1:7) /= CODES_SUCCESS)) &
+!  WRITE (*,*) "Warning: error setting user-defind key in grib template"
 
 ! Define the "grid_id" LibSIM object corresponding to the id of grib2 template
 gaid_tpl = grid_id_new(grib_api_id=gribid_tpl)
@@ -488,6 +491,10 @@ ELSE IF (trange_type == "fc") THEN
   DO kt = 1, nt_nc
     CALL getval (vtimes(kt) - reftime, AHOUR=scad)
     CALL init(vg6_tranges(kt), timerange=254, p1=scad*3600, p2=0)
+    IF (scad < 0) THEN
+      WRITE (ch80,'(a,i5,a,i4)') "simc_nc2grib: forecast with negative timerange: ",scad," at timestamp ",kt
+      CALL raise_fatal_error(msg=ch80, ierval=10)
+    ENDIF
   ENDDO
 
 ENDIF
@@ -675,19 +682,20 @@ OPEN (20, FILE="simc_nc2grib.nml", STATUS="REPLACE")
 WRITE (20,'(a)') "! Namelist file for simc_nc2grib"
 WRITE (20,'(a)') "! Empty lines and lines beginning with """ // CHAR(33) // """ are ignored"
 WRITE (20,'(a)')
-WRITE (20,'(a)') "! 1) General namelist"
+WRITE (20,'(a)') "! 1) General namelist, mandatory parameters"
 WRITE (20,'(a)') "! - model: ""chimere"" or ""roms"": this flag define the names of the coordinate"
 WRITE (20,'(a)') "!   dimensions, and the name and format of timestamps"
 WRITE (20,'(a)') "! - levels: ""all"" or ""surface"": this flag define which levels will be included in"
 WRITE (20,'(a)') "!   output file"
+WRITE (20,'(a)') "model=""chimere"""
+WRITE (20,'(a)') "levels=""surface"""
+WRITE (20,'(a)')
+WRITE (20,'(a)') "! 2) General namelist, optional parameters"
 WRITE (20,'(a)') "! - productDefinitionTemplateNumber: usually set to 0;"
 WRITE (20,'(a)') "!   set to 40 to encode air quality parameters following C3S conventions;"
 WRITE (20,'(a)') "!   in this case, the 4th field in section 2 of this namelist is the constituentType"
 WRITE (20,'(a)') "! - centre, subCentre, generatingProcessIdentifier, bitsPerValue: set the"
 WRITE (20,'(a)') "!   corresponding keys in sections 1, 1, 4, 5."
-WRITE (20,'(a)') 
-WRITE (20,'(a)') "model=""chimere"""
-WRITE (20,'(a)') "levels=""surface"""
 WRITE (20,'(a)') "centre=200"
 WRITE (20,'(a)') "subCentre=1"
 WRITE (20,'(a)') "scanningMode=64"
@@ -696,7 +704,7 @@ WRITE (20,'(a)') "typeOfGeneratingProcess=0"
 WRITE (20,'(a)') "generatingProcessIdentifier=1"
 WRITE (20,'(a)') "bitsPerValue=24"                                  
 WRITE (20,'(a)') ""
-WRITE (20,'(a)') "! 2) Required parameters"
+WRITE (20,'(a)') "! 3) List of output variables"
 WRITE (20,'(a)') "! one line for each required parameter:"
 WRITE (20,'(a)') "! NetCDF-string,discipline,parameterCategory,parameterNumber/constituentType"
 WRITE (20,'(a)') "O3,0,200,151"
