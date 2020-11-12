@@ -1,6 +1,6 @@
 PROGRAM simc_nc2grib
 !-------------------------------------------------------------------------------
-! Reads the NetCDF output of ROMS or Chimere, wirtes a subset of parameters in
+! Reads the NetCDF output of ROMS or Chimere, writes a subset of parameters in
 ! GRIB2 format
 !
 ! Note that in NetCDF files, the most rapidly changing dimension is last (time
@@ -26,10 +26,10 @@ PROGRAM simc_nc2grib
 ! *** gestione dati ROMS; vettori "map"
 !
 ! Possible errors to encode constant 3D fields (Eg. heights of model layers)
-! Par. 5.2: check if the reference date for ROMS NetCDF dates is actually equal
-! to roms_refdate (1968-05-23 00:00:00)
+! Par. 5.2: the reference date for ROMS NetCDF dates is actually equal
+! to roms_refdate (1968-05-23 00:00:00)? yes!
 !
-!                                      Version 1.0,0, Enrico & Lidia, 06/12/2019
+!                                      Version 1.0,0, Enrico & Lidia, 11/11/2020
 !-------------------------------------------------------------------------------
 
 USE netcdf
@@ -52,21 +52,23 @@ USE missing_values
 USE log4fortran
 
 IMPLICIT NONE
+integer, parameter :: r8 = selected_real_kind(12,300)  ! 64-bit
 
 INTEGER, PARAMETER :: dstrl = 19       ! length of date strings in Chimere output
 INTEGER, PARAMETER :: maxvars = 200    ! max number of variables in NetCDF input
 
 ! Definition of "volgrid6d" object
-TYPE(volgrid6d), POINTER :: volgrid_out(:)
+TYPE(volgrid6d), POINTER :: volgrid_out(:), volgrid_tpl(:)
 TYPE(grid_id) :: gaid_tpl                          ! module grid_id_class
 TYPE(griddim_def) :: griddim_out   
 TYPE (vol7d_level), POINTER :: vg6_levs(:)         ! module vol7d_level_class
 TYPE (vol7d_timerange), POINTER :: vg6_tranges(:)  ! module vol7d_timerange_class
 TYPE (volgrid6d_var), POINTER :: vg6_vars(:)       ! module volgrid6d_var_class
 TYPE (datetime), POINTER :: vg6_times(:)           ! module datetime_class
+TYPE(transform_def) :: trans                       ! module grid_transform_class
 
 ! Grid parameters
-INTEGER :: nx,ny,component_flag,utm_zone
+INTEGER :: nx,ny,component_flag,utm_zone,projection_center_flag=0
 DOUBLE PRECISION :: xmin,xmax,ymin,ymax,xoff,yoff
 DOUBLE PRECISION :: lov,latin1,latin2,lad,dx,dy
 DOUBLE PRECISION :: latitude_south_pole,longitude_south_pole,angle_rotation
@@ -82,8 +84,9 @@ TYPE (datetime) :: roms_refdate
 TYPE (timedelta) :: tdelta
 
 !
-INTEGER :: disc(maxvars),pc(maxvars),pn(maxvars)
+INTEGER :: disc(maxvars),pc(maxvars),pn(maxvars),typelevel(maxvars)
 CHARACTER (LEN=20) :: ncstring(maxvars),varname_t
+CHARACTER (LEN=52) :: grib_tpl="/usr/share/eccodes/samples/regular_ll_sfc_grib2.tmpl"
 
 ! Miscellanea
 TYPE (optionparser) :: opt
@@ -92,15 +95,25 @@ REAL :: fillvalue
 INTEGER :: gribid_tpl,ncid,dimid_x,dimid_y,dimid_z,dimid_t,dimid_dstrl
 INTEGER :: varid_t,dstrl_nc,varid,ndims,xt
 INTEGER :: pdtn,togp,centre,sc,sm,gpi,bpv
-INTEGER :: nextarg,optstatus,idp,kp,pp,nw,kt,kl,kv
-INTEGER :: ios,ios1,ios2,ios3,ier,iret(10),ncstat,ncstat1,ncstat2
+INTEGER :: optstatus,idp,kp,pp,nw,kt,kl,kv
+INTEGER :: ios,ios1,ios2,ios3,ios4,ier,iret,irett(10),ncstat,ncstat1,ncstat2
 INTEGER :: yy,mm,dd,hh,scad
 INTEGER, POINTER :: p1(:),p2(:)
+INTEGER:: grib_id, infile
 CHARACTER (LEN=512) :: ncfile,gribfile,nmlfile,chdum,chdum2,chrt,grib_template
 CHARACTER (LEN=512) :: a_name,log_name
 CHARACTER (LEN=20) :: version,model,levels,dimname_x,dimname_y,dimname_z,dimname_t
 CHARACTER (LEN=2) :: trange_type
+CHARACTER (LEN=80) :: ch80
 LOGICAL :: optversion, opttemplate
+
+!! disordinati Lidia
+INTEGER :: category
+INTEGER :: optind
+INTEGER :: value_i, igrib_out
+REAL    :: value_r, il, it, itr
+CHARACTER (LEN=80) :: grbparameters_s
+CHARACTER (LEN=20) :: value_s
 
 !-------------------------------------------------------------------------------
 ! 0) Constant parameters
@@ -128,7 +141,7 @@ opt = optionparser_new( &
 """ncfile"" is the input file (NetCDF). ""gribfile"" is the output file (GRIB2). " // &
 """nmlfile"" is the namelist file (use option --template to create a template). " // &
 "If ""reftime"" is provided, it is the starting time of the forecast (YYYYMMDDHH), " // &
-"otherwise it is assumed that input data are analyis, and time staps are taken from ncfile")
+"otherwise it is assumed that input data are analyis, and time steps are taken from ncfile")
 
 ! General options
 CALL optionparser_add_help(opt, 'h', 'help', help='show an help message and exit')
@@ -152,16 +165,18 @@ CALL optionparser_add(opt, ' ', 'x-max', xmax, 30.0D0, help= &
  'x coordinate of the upper right corner of target grid (degrees or meters)')
 CALL optionparser_add(opt, ' ', 'y-max', ymax, 60.0D0, help= &
  'y coordinate of the upper right corner of target grid (degrees or meters)')
-CALL optionparser_add(opt, ' ', 'component-flag', component_flag, &
- 0, help='wind component flag in target grid (0/1)')
-
-CALL optionparser_add(opt, ' ', 'utm-zone', utm_zone, 32, help= &
- '[UTM] zone number')
 CALL optionparser_add(opt, ' ', 'x-off', xoff, 0.0D0, help= &
  '[UTM] x coordinate offset (also known as false easting) in target grid')
 CALL optionparser_add(opt, ' ', 'y-off', yoff, 0.0D0, help= &
  '[UTM] y coordinate offset (also known as false northing) in target grid')
-
+! 
+ CALL optionparser_add(opt, ' ', 'component-flag', component_flag, &
+ 0, help='wind component flag in target grid (0/1)')
+!  
+utm_zone = imiss
+CALL optionparser_add(opt, ' ', 'utm-zone', utm_zone, 32, help= &
+ '[UTM] zone number')
+! 
 CALL optionparser_add(opt, ' ', 'lad', lad, 30.0D0, &
  help='[LAMB] latitudine at which dx and dy (in m) are specified')
 CALL optionparser_add(opt, ' ', 'lov', lov, 80.0D0, help= &
@@ -170,11 +185,12 @@ CALL optionparser_add(opt, ' ', 'latin1', latin1, 30.0D0, &
  help='[LAMB] first latitude at which the projection plane intesects the sphere')
 CALL optionparser_add(opt, ' ', 'latin2', latin2, 60.0D0, &
  help='[LAMB] second latitude at which the projection plane intesects the sphere')
-CALL optionparser_add(opt, ' ', 'dx', dx, 3000.0D0, &
- help='[LAMB] X direction grid step')
-CALL optionparser_add(opt, ' ', 'dy', dy, 3000.0D0, &
- help='[LAMB] Y direction grid step')
-
+!  
+! CALL optionparser_add(opt, ' ', 'dx', dx, 3000.0D0, &
+! help='[LAMB] X direction grid step')
+! CALL optionparser_add(opt, ' ', 'dy', dy, 3000.0D0, &
+!  help='[LAMB] Y direction grid step')
+! 
 CALL optionparser_add(opt, ' ', 'latitude-south-pole', latitude_south_pole, -90.0D0, &
  help='[ROT] latitude of south pole')
 CALL optionparser_add(opt, ' ', 'longitude-south-pole', longitude_south_pole, 0.0D0, &
@@ -183,7 +199,7 @@ CALL optionparser_add(opt, ' ', 'angle-rotation', angle_rotation, &
  0.0D0, help='[RTO] angle of rotation')
 
 ! Parse options; check for errors and for options that require program termination
-CALL optionparser_parse(opt, nextarg, optstatus)
+CALL optionparser_parse(opt, optind, optstatus)
 
 IF (optstatus == optionparser_help) THEN
   CALL exit(0)
@@ -197,54 +213,89 @@ ELSE IF (opttemplate) THEN
   CALL exit(0)
 ENDIF
 
-! Positional parameters
-idp = 0
+
 reftime = datetime_miss
 trange_type = "an"
-DO kp = nextarg,HUGE(0)-1
-  CALL getarg(kp,chdum)
-  IF (TRIM(chdum) == "") THEN
-    EXIT
-  ELSE
-    idp = idp + 1
-    SELECT CASE (idp)
-    CASE (1)
-      ncfile = chdum
-    CASE (2)
-      gribfile = chdum
-    CASE (3)
-      nmlfile = chdum
-    CASE (4)
-      chrt = chdum
-      reftime = datetime_new(SIMPLEDATE=chrt)
-      trange_type = "fc"
-    CASE DEFAULT
-      EXIT
-    END SELECT
+! Positional parameters
+IF (optind + 3 <= iargc()) THEN
+  CALL getarg(optind, ncfile)
+  IF (ncfile == '-') THEN
+    CALL l4f_category_log(category, L4F_INFO, 'trying /dev/stdin as stdin unit')
+    ncfile = '/dev/stdin'
   ENDIF
-ENDDO
+  
+  optind = optind+1
+  CALL getarg(optind, gribfile)
+  IF (gribfile == '-') THEN
+    CALL l4f_category_log(category, L4F_INFO, 'trying /dev/stdout as stdout unit')
+    gribfile = '/dev/stdout'
+  ENDIF
 
-IF ((trange_type == "fc" .AND. idp /= 4) .OR. (trange_type == "an" .AND. idp /= 3)) THEN
+  optind = optind+1
+  CALL getarg(optind, nmlfile)
+  
+  optind = optind+1
+  IF(optind == iargc())THEN
+    CALL getarg(optind, chrt)
+    reftime = datetime_new(SIMPLEDATE=chrt)
+    trange_type = "fc"
+  END IF
+ELSE
   CALL optionparser_printhelp(opt)
-  CALL raise_fatal_error(msg="simc_nc2grib, error in positional parameters", ierval=1)
+  CALL l4f_category_log(category, L4F_FATAL, 'input or output file missing')
+  CALL raise_fatal_error()
 ENDIF
-IF (.NOT. c_e(reftime)) THEN
-  CALL raise_fatal_error(msg="simc_nc2grib, """ //TRIM(chrt) // """ is not a valid reftime", ierval=1)
-ENDIF
+
+
 
 !-------------------------------------------------------------------------------
-! 2) Read namelist
+! 2) Create a new template with the output grid and the desired options
+
+! Define the "griddim" LibSIM object corresponding to ouput grid
+CALL init(griddim_out, nx=nx, ny=ny, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, &
+  component_flag=component_flag, proj_type=proj_type, &
+  zone=utm_zone, xoff=xoff, yoff=yoff, &
+  lad=lad, lov=lov, latin1=latin1, latin2=latin2, dx=dx, dy=dy, &
+  longitude_south_pole=longitude_south_pole, latitude_south_pole=latitude_south_pole, &
+  angle_rotation=angle_rotation, &
+  projection_center_flag=projection_center_flag)
+
+! import a template, change the grid and write it
+CALL IMPORT(volgrid_out, filename=grib_tpl, decode=.TRUE., &
+ categoryappend="input_volume")
+CALL init(trans, trans_type='inter', sub_type='near', &
+ categoryappend="transformation")
+CALL transform(trans, griddim_out, volgrid6d_in=volgrid_out, &
+ volgrid6d_out=volgrid_out, &
+  clone=.TRUE., categoryappend="transform")
+CALL export(volgrid_out, filename='tmp.tmpl', categoryappend="output_volume")
+
+
+!-------------------------------------------------------------------------------
+! 3) Read namelist and change the template accordingly
+!
 
 ! defaults
-model = "chimere"
-levels = "surface"
-centre = 200       ! section 1
-sc = 1             ! section 1
-sm = 64            ! scanningMode, flag table 3.4
-pdtn = 0           ! code table 4.0
-togp = 0           ! template 4.0
-gpi = 1            ! template 4.0
-bpv = 24           ! template 5.0
+levels = "all"
+value_i = imiss     
+
+!  
+! open the new template with eccodes and change grib parameters as in nmlfile
+! 
+CALL codes_open_file(infile, 'tmp.tmpl', 'r', iret)
+IF (iret /= CODES_SUCCESS) &
+     WRITE (*,*) "Warning: error opening just created tmp.tmpl"
+call codes_grib_new_from_file(infile, gribid_tpl)
+!   IF (iret /= CODES_SUCCESS) &
+!      WRITE (*,*) "Warning: error opening just created tmp.tmpl"
+!  
+! write it in the output file
+! 
+CALL codes_open_file(grib_id, 'grid.tmpl', 'w', iret)
+IF (iret /= CODES_SUCCESS) &
+     WRITE (*,*) "Warning: error opening just created grid.tmpl"
+call codes_clone(gribid_tpl, igrib_out)
+
 
 OPEN (21, FILE=nmlfile, STATUS="OLD", FORM="FORMATTED", IOSTAT=ios)
 IF (ios /= 0) CALL raise_fatal_error( &
@@ -261,47 +312,56 @@ DO
 
   pp = INDEX(chdum,"=")
   IF (pp /= 0) THEN
-    SELECT CASE(chdum(1:pp-1))
-    CASE ("model")
-      READ (chdum(pp+1:),*) model
-    CASE ("levels")
-      READ (chdum(pp+1:),*) levels
-
-    CASE ("centre")
-      READ (chdum(pp+1:),*) centre
-    CASE ("subCentre")
-      READ (chdum(pp+1:),*) sc
-    CASE ("scanningMode")
-      READ (chdum(pp+1:),*) sm
-    CASE ("productDefinitionTemplateNumber")
-      READ (chdum(pp+1:),*) pdtn
-    CASE ("typeOfGeneratingProcess")
-      READ (chdum(pp+1:),*) togp
-    CASE ("generatingProcessIdentifier")
-      READ (chdum(pp+1:),*) gpi
-    CASE ("bitsPerValue")
-      READ (chdum(pp+1:),*) bpv
-    CASE DEFAULT
-      CALL raise_fatal_error(msg="simc_nc2grib, unknown keyword in " // &
-        TRIM(nmlfile) // ": " // chdum(1:pp-1), ierval=2)
-    END SELECT
-
+      grbparameters_s=chdum(1:pp-1)
+! ! !       write(*,*) TRIM(grbparameters_s), TRIM(chdum(pp+1:)), TRIM(grbparameters_s) == "model"
+      IF(TRIM(grbparameters_s) == "model")THEN
+         READ (chdum(pp+1:),*) model
+      ELSEIF(TRIM(grbparameters_s) == "levels")THEN
+         READ (chdum(pp+1:),*) levels
+      ELSEIF(TRIM(grbparameters_s) == "centre"   .or. &
+        &  TRIM(grbparameters_s) == "subCentre" .or. &
+        &  TRIM(grbparameters_s) == "scanningMode" .or. &
+        &  TRIM(grbparameters_s) == "productDefinitionTemplateNumber" .or. &
+        &  TRIM(grbparameters_s) == "typeOfGeneratingProcess" .or. &
+        &  TRIM(grbparameters_s) == "generatingProcessIdentifier" .or. &
+        &  TRIM(grbparameters_s) == "bitsPerValue" .or. &
+        &  TRIM(grbparameters_s) == "jScansPositively")THEN
+         READ (chdum(pp+1:),*) value_i
+! Modify the grib template according to namelist options
+         CALL codes_set (igrib_out, TRIM(grbparameters_s), value_i, status=iret)
+         IF (iret /= CODES_SUCCESS) &
+           WRITE (*,*) "Warning: error setting "//TRIM(grbparameters_s)//", user-defind key in grib template"
+      ELSE
+        CALL raise_fatal_error(msg="simc_nc2grib, unknown keyword in " // &
+           TRIM(nmlfile) // ": " // chdum(1:pp-1), ierval=2)
+      END IF
   ELSE
     nw = word_split(chdum, word_start=p1, word_end=p2, sep=",")
-    IF (nw /= 4) CALL raise_fatal_error(msg="simc_nc2grib, error parsing line " // &
+    IF (nw /= 5) CALL raise_fatal_error(msg="simc_nc2grib, error parsing line " // &
       TRIM(chdum) // " in namelist " // TRIM(ncfile), ierval=2)
     nvar = nvar + 1
     ncstring(nvar) = chdum(p1(1):p2(1))
     READ (chdum(p1(2):p2(2)),*,IOSTAT=ios1) disc(nvar)
     READ (chdum(p1(3):p2(3)),*,IOSTAT=ios2) pc(nvar)
     READ (chdum(p1(4):p2(4)),*,IOSTAT=ios3) pn(nvar)
-    IF (ios1 /= 0 .OR. ios2 /= 0 .OR. ios3 /= 0) CALL raise_fatal_error( &
+    READ (chdum(p1(5):p2(5)),*,IOSTAT=ios4) typelevel(nvar)
+    IF (ios1 /= 0 .OR. ios2 /= 0 .OR. ios3 /= 0 .OR. ios4 /= 0) CALL raise_fatal_error( &
      msg="simc_nc2grib, error parsing line " // TRIM(chdum) // " in namelist " // &
      TRIM(nmlfile), ierval=2)
-
   ENDIF
 ENDDO
 CLOSE(21)
+
+CALL codes_close_file(infile, iret)
+   IF (iret /= CODES_SUCCESS) &
+     WRITE (*,*) "Warning: error closing tmp.tmpl"
+call codes_write(igrib_out, grib_id)
+CALL codes_release(igrib_out, iret)
+CALL codes_close_file(grib_id, iret)
+   IF (iret /= CODES_SUCCESS) &
+     WRITE (*,*) "Warning: error closing grid.tmpl"
+! updated template generated
+
 
 IF (TRIM(model) == "chimere") THEN
   dimname_x = "west_east"
@@ -310,8 +370,8 @@ IF (TRIM(model) == "chimere") THEN
   dimname_t = "Time"
   varname_t = "Times"
 ELSE IF (TRIM(model) == "roms") THEN
-  dimname_x = "eta_rho"
-  dimname_y = "xi_rho"
+  dimname_y = "eta_rho"
+  dimname_x = "xi_rho"
   dimname_z = "s_rho"
   dimname_t = "ocean_time"
   varname_t = "ocean_time"
@@ -319,8 +379,11 @@ ELSE
   CALL raise_fatal_error(msg="simc_nc2grib, error reading " // TRIM(nmlfile), ierval=2)
 ENDIF
 
+
+
+
 !-------------------------------------------------------------------------------
-! 3) Open NetCDF files, read dimensions and attributes
+! 4) Open NetCDF files, read dimensions and attributes
 
 ncstat = nf90_open(ncfile, NF90_NOWRITE, ncid)
 IF (ncstat /= 0) CALL raise_fatal_error( &
@@ -370,58 +433,29 @@ ELSE IF (trange_type == "fc") THEN
   nrtime = 1
   ntrange = nt_nc
 ENDIF
+WRITE (*,*) "File NetCDF: nx,ny,nz,nt ",nx_nc,ny_nc,nz_nc,nt_nc
 
 ALLOCATE (values2(nx,ny))
 ALLOCATE (values3(nx,ny,nt_nc))
 ALLOCATE (values4(nx,ny,nz,nt_nc))
 
 ! Log to stdout the list of input and output data
-CALL getval(reftime, isodate=chdum)
-dx = (xmax - xmin) / DBLE(nx-1)
-dy = (ymax - ymin) / DBLE(ny-1)
-WRITE (*,*) "File NetCDF: nx,ny,nz,nt ",nx_nc,ny_nc,nz_nc,nt_nc
-WRITE (*,*) "Grid step: ",dx,dy
+
+IF(model=='chimere')THEN
+  dx = (xmax - xmin) / DBLE(nx-1)
+  dy = (ymax - ymin) / DBLE(ny-1)
+  WRITE (*,*) "Grid step: ",dx,dy
+  WRITE (*,*) "GRIB encoding: (pdtn,centre,sc,gpi,bpv)",pdtn,centre,sc,gpi,bpv
+END IF  
 WRITE (*,*) "Required data: nz ",nz," nvar ",nvar,": ",ncstring(1:nvar)
-WRITE (*,*) "GRIB encoding: (pdtn,centre,sc,gpi,bpv)",pdtn,centre,sc,gpi,bpv
-WRITE (*,*) "Reftime: ",TRIM(chdum)
+IF(reftime /= datetime_miss)THEN
+  CALL getval(reftime, isodate=chdum)
+  WRITE (*,*) "Reftime: ",TRIM(chdum)
+END IF
+
 
 !-------------------------------------------------------------------------------
-! 4) Create a "volgrid6d" LibSIM object that will contain the entire data volume
-
-ALLOCATE(volgrid_out(1))
-
-! Define the "griddim" LibSIM object corresponding to ouput grid
-CALL init(griddim_out, nx=nx, ny=ny, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, &
-  component_flag=component_flag, proj_type=proj_type, &
-  zone=utm_zone, xoff=xoff, yoff=yoff, &
-  lad=lad, lov=lov, latin1=latin1, latin2=latin2, dx=dx, dy=dy, &
-  longitude_south_pole=longitude_south_pole, latitude_south_pole=latitude_south_pole, angle_rotation=angle_rotation)
-
-! Get ecCodes "id" for grib2 template
-CALL codes_grib_new_from_samples(gribid_tpl, grib_template, status=ier)
-
-! Modify the grib template according to namelist options
-CALL codes_set (gribid_tpl, "centre", centre, status=iret(1))
-CALL codes_set (gribid_tpl, "subCentre", sc, status=iret(2))
-CALL codes_set (gribid_tpl, "scanningMode", sm, status=iret(3))
-CALL codes_set (gribid_tpl, "productDefinitionTemplateNumber", pdtn, status=iret(4))
-CALL codes_set (gribid_tpl, "typeOfGeneratingProcess", togp, status=iret(5))
-CALL codes_set (gribid_tpl, "generatingProcessIdentifier", gpi, status=iret(6))
-CALL codes_set (gribid_tpl, "bitsPerValue", bpv, status=iret(7))
-IF (ANY(iret(1:7) /= CODES_SUCCESS)) &
-  WRITE (*,*) "Warning: error setting user-defind key in grib template"
-
-! Define the "grid_id" LibSIM object corresponding to the id of grib2 template
-gaid_tpl = grid_id_new(grib_api_id=gribid_tpl)
-
-! Define the "volgrid6d" LibSIM object 
-CALL init (volgrid_out(1), griddim=griddim_out, time_definition=0) 
-CALL volgrid6d_alloc(volgrid_out(1), nlevel=nz, ntime=nrtime, ntimerange=ntrange, nvar=nvar)
-CALL volgrid6d_alloc_vol(volgrid_out(1), decode=.TRUE.)
-
-!-------------------------------------------------------------------------------
-! 5) Read verification times from NetCDF data and store them in the "volgrid6d"
-!    LibSIM object
+! 5) Read verification times from NetCDF data
 
 ALLOCATE (vtimes(nt_nc))
 vtimes(:) = datetime_miss
@@ -455,18 +489,35 @@ ELSE IF (TRIM(model) == "roms") THEN
     tdelta = timedelta_new(sec=INT(vtimes_double(kt)))
     vtimes(kt) = roms_refdate + tdelta
   ENDDO
-
 ENDIF
 
-! 5.3 Check and log
+! 5.3) Check and log
 IF (ncstat1 /= NF90_NOERR .OR. ncstat2 /= NF90_NOERR .OR. ANY(vtimes == datetime_miss)) &
   CALL raise_fatal_error(msg="Error reading dates form NetCDF file", ierval=5)
 CALL getval(vtimes(1), isodate=chdum)
 CALL getval(vtimes(nt_nc), isodate=chdum2)
 WRITE (*,*) "Verification times from ",TRIM(chdum)," to ",TRIM(chdum2)
 
+  
 !-------------------------------------------------------------------------------
-! 6) Define the coordinate elements of the "volgrid6d" LibSIM object
+! 6) Create a "volgrid6d" LibSIM object that will contain the entire data volume
+
+ALLOCATE(volgrid_out(1))
+
+! Get ecCodes "id" for grib2 template
+CALL codes_open_file(infile, 'grid.tmpl', mode='r', status=ier)
+CALL codes_grib_new_from_file(infile, grib_id, status=ier)
+  
+! Define the "grid_id" LibSIM object corresponding to the id of grib2 template
+gaid_tpl = grid_id_new(grib_api_id=grib_id)
+ 
+! Define the "volgrid6d" LibSIM object 
+CALL init (volgrid_out(1), griddim=griddim_out, time_definition=0) 
+CALL volgrid6d_alloc(volgrid_out(1), nlevel=nz, ntime=nrtime, ntimerange=ntrange, nvar=nvar)
+CALL volgrid6d_alloc_vol(volgrid_out(1), decode=.TRUE.)
+ 
+!-------------------------------------------------------------------------------
+! Define the coordinate elements of the "volgrid6d" LibSIM object
 ! The "griddim" element was already defined in section 4
 
 ! 6.1) Allocate arrays
@@ -484,32 +535,29 @@ ELSE IF (trange_type == "fc") THEN
   DO kt = 1, nt_nc
     CALL getval (vtimes(kt) - reftime, AHOUR=scad)
     CALL init(vg6_tranges(kt), timerange=254, p1=scad*3600, p2=0)
+    IF (scad < 0) THEN
+      WRITE (ch80,'(a,i5,a,i4)') "simc_nc2grib: forecast with negative timerange: ",scad," at timestamp ",kt
+      CALL raise_fatal_error(msg=ch80, ierval=10)
+    ENDIF
   ENDDO
-
 ENDIF
+volgrid_out(1)%time = vg6_times
+volgrid_out(1)%timerange = vg6_tranges
 
-! 6.3) Assign levels
-DO kl = 1, nz
-  CALL init(vg6_levs(kl), level1=105, l1=kl)
-ENDDO
-  
-! 6.4) Assign variables
+ ! 6.3) Assign variables
 DO kv = 1, nvar
   CALL init(vg6_vars(kv), centre=centre , category=pc(nvar), number=pn(kv), discipline=disc(kv))
 ENDDO
 
-! 6.5) Write coordinate elements in "volgrid6d" LibSIM object
-volgrid_out(1)%time = vg6_times
-volgrid_out(1)%timerange = vg6_tranges
-volgrid_out(1)%level = vg6_levs
+! 6.4) Write coordinate elements in "volgrid6d" LibSIM object
 volgrid_out(1)%var = vg6_vars
 
 !-------------------------------------------------------------------------------
 ! 7) Read NetCDF data and store them in the "volgrid6d" LibSIM object
 
 DO kv = 1, nvar
-  
-! 7.1) Get information on the required variable
+   
+  ! 7.1) Get information on the required variable
   ier = nf90_inq_varid(ncid, ncstring(kv), varid)
   IF (ier /= nf90_noerr) THEN
     CALL raise_error(msg="Error getting varid for var " // TRIM(ncstring(kv)), ierval=10)
@@ -539,7 +587,8 @@ DO kv = 1, nvar
   WRITE (*,*) "Processing var ",TRIM(ncstring(kv))," ndims ",ndims
 
 ! 7.2.1) Single field (eg. latitude)
-  IF (ndims == 2) THEN          ! 
+  IF (ndims == 2) THEN  
+!! volgrd6d dimensions: ix,iy,il,it,itr,iv
     ier = nf90_get_var(ncid, varid, values2)
     IF (ier /= nf90_noerr) THEN
       CALL raise_error(msg="Error getting values for var " // TRIM(ncstring(kv)), ierval=11)
@@ -555,12 +604,18 @@ DO kv = 1, nvar
     
 ! 7.2.1) surface field (eg. 2m temperature)
   ELSE IF (ndims == 3) THEN
+!! volgrd6d dimensions: ix,iy,il,it,itr,iv
+    !! Assign levels
+    CALL init(vg6_levs(1), level1=typelevel(kv))
+    volgrid_out(1)%level = vg6_levs(1)
+
+    !! variabile
     ier = nf90_get_var(ncid, varid, values3)
     IF (ier /= nf90_noerr) THEN
       CALL raise_error(msg="Error getting values for var " // TRIM(ncstring(kv)), ierval=11)
       CYCLE
     ENDIF
-
+    
     IF (trange_type == "an") THEN
       WHERE (values3(:,:,:) /= fillvalue)
         volgrid_out(1)%voldati(:,:,1,:,1,kv) = values3(:,:,:)
@@ -584,8 +639,13 @@ DO kv = 1, nvar
 ! mapping vector correspond, in order, to the netCDF variable's dimensions;
 ! map(1) gives the distance between elements of the internal array corresponding
 ! to the most rapidly varying dimension of the netCDF variable"
-
   ELSE IF (ndims == 4) THEN
+    ! Assign levels
+    DO kl = 1, nz
+      CALL init(vg6_levs(kl), level1=typelevel(kv), l1=kl)
+    END DO
+    volgrid_out(1)%level = vg6_levs
+
     ier = nf90_get_var(ncid, varid, values4(1:nx,1:ny,1:nz,1:nt_nc), map=(/1, nx, nx*ny, nx*ny*nz/))
     IF (ier /= nf90_noerr) THEN
       CALL raise_error(msg="Error getting values for var " // TRIM(ncstring(kv)), ierval=11)
@@ -670,18 +730,20 @@ WRITE (20,'(a)') "model=""chimere"""
 WRITE (20,'(a)') "levels=""surface"""
 WRITE (20,'(a)') "centre=200"
 WRITE (20,'(a)') "subCentre=1"
-WRITE (20,'(a)') "scanningMode=64"
-WRITE (20,'(a)') "productDefinitionTemplateNumber=0"
-WRITE (20,'(a)') "typeOfGeneratingProcess=0"
-WRITE (20,'(a)') "generatingProcessIdentifier=1"
-WRITE (20,'(a)') "bitsPerValue=24"                                  
+WRITE (20,'(a)') "! scanningMode=64"
+WRITE (20,'(a)') "! productDefinitionTemplateNumber=0"
+WRITE (20,'(a)') "! typeOfGeneratingProcess=0"
+WRITE (20,'(a)') "! generatingProcessIdentifier=1"
+WRITE (20,'(a)') "! bitsPerValue=24"   
+WRITE (20,'(a)') "! jScansPositively=1"
 WRITE (20,'(a)') ""
 WRITE (20,'(a)') "! 2) Required parameters"
 WRITE (20,'(a)') "! one line for each required parameter:"
-WRITE (20,'(a)') "! NetCDF-string,discipline,parameterCategory,parameterNumber/constituentType"
-WRITE (20,'(a)') "O3,0,200,151"
+WRITE (20,'(a)') "! NetCDF-string,discipline,parameterCategory,parameterNumber/constituentType,typeOfFirstFixedSurface"
+WRITE (20,'(a)') "O3,0,200,151,105"
 CLOSE (20)
 
 RETURN
 
 END SUBROUTINE write_template
+
