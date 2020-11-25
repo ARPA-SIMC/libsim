@@ -8,15 +8,10 @@ module simc_netcdf
  !! Chimere
  INTEGER, PARAMETER :: dstrl = 19       ! length of date strings in Chimere output
  !! ROMS
- TYPE (datetime) :: roms_refdate 
- 
+ TYPE (datetime) :: roms_refdate
+
 contains
 
- SUBROUTINE set_roms_reftime()
-   roms_refdate = datetime_new(YEAR=1968, MONTH=5, DAY=23, HOUR=0) 
- END SUBROUTINE
- 
- 
  SUBROUTINE read_time_nc (ncid, model, it, vtime)
   USE datetime_class
   USE netcdf
@@ -31,7 +26,7 @@ contains
   TYPE (timedelta) :: tdelta
   DOUBLE PRECISION:: vtimes_double
   !
-  ! 5.1) Chimere input
+  ! Chimere input
   IF (TRIM(model)=="chimere") THEN
     varname_t = "Times"
   ! Make sure that dates strings have the usual length (dimension "DateStrLen")
@@ -46,7 +41,7 @@ contains
       CALL raise_fatal_error(msg="Error reading dates form NetCDF file", ierval=5)
     READ(vtimes_char,'(i4,3(1x,i2))') yy,mm,dd,hh
     vtime = datetime_new(YEAR=yy, MONTH=mm, DAY=dd, HOUR=hh)
-  ! 5.2) ROMS input
+  ! ROMS input
   ELSE IF (TRIM(model)=="roms") THEN
     call set_roms_reftime()
     varname_t = "ocean_time"
@@ -59,7 +54,6 @@ contains
     vtime = roms_refdate + tdelta
   ENDIF
  END SUBROUTINE read_time_nc
-
 
  SUBROUTINE set_dimension_names(model)
   implicit none
@@ -76,11 +70,179 @@ contains
      dimname_z = "s_rho"
      dimname_t = "ocean_time"
      varname_t = "ocean_time"
-   ELSE  
+   ELSE
      CALL raise_fatal_error(msg="simc_nc2grib, error setting model dimension names " // TRIM(model), ierval=2)
-   END IF 
+   END IF
  END SUBROUTINE
- 
+
+ !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+ !!  ROMS
+ !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+ SUBROUTINE set_roms_reftime()
+   roms_refdate = datetime_new(YEAR=1968, MONTH=5, DAY=23, HOUR=0)
+ END SUBROUTINE
+
+!!
+!!
+!! per il calcolo delle coordinate verticali di ROMS
+!!
+!!
+ SUBROUTINE get_nlevels_roms(romsgridnc, N)
+ use netcdf
+  implicit none
+  CHARACTER (LEN=512), intent(in) :: romsgridnc
+  integer, intent(out)  :: N
+  integer::nc_id, ncstat, dimid
+! Open NetCDF files, read dimensions and attributes
+  ncstat = nf90_open(trim(romsgridnc), NF90_NOWRITE, nc_id)
+  ncstat = nf90_inq_dimid(nc_id, 's_rho', dimid)
+  ncstat = nf90_inquire_dimension(nc_id, dimid, len=N)
+  ncstat = nf90_close(nc_id)
+ END SUBROUTINE get_nlevels_roms
+
+
+ SUBROUTINE get_infovgrid_roms(romsgridnc, nx,ny,N, Vtransform, sc_r, sc_w, Cs_r, Cs_w, h, hc)
+  use netcdf
+  implicit none
+  CHARACTER (LEN=512), intent(in) :: romsgridnc
+  integer,intent(in):: nx,ny,N
+  integer, intent(out)  :: Vtransform
+  double precision, intent(out) :: sc_r(N), sc_w(0:N), Cs_r(N), Cs_w(0:N), h(nx,ny), hc
+  integer::nc_id, ncstat, varid
+! Open NetCDF grid file, read variables for zeta
+  ncstat = nf90_open(trim(romsgridnc), NF90_NOWRITE, nc_id)
+  ncstat = nf90_inq_varid(nc_id, "Vtransform", varid)
+  ncstat = nf90_get_var(nc_id, varid, Vtransform)
+  ncstat = nf90_inq_varid(nc_id, "hc", varid)
+  ncstat = nf90_get_var(nc_id, varid, hc)
+  ncstat = nf90_inq_varid(nc_id, "h", varid)
+  ncstat = nf90_get_var(nc_id, varid, h)
+  ncstat = nf90_inq_varid(nc_id, "s_rho", varid)
+  ncstat = nf90_get_var(nc_id, varid, sc_r)
+  ncstat = nf90_inq_varid(nc_id, "s_w", varid)
+  ncstat = nf90_get_var(nc_id, varid, sc_w)
+  ncstat = nf90_inq_varid(nc_id, "Cs_r", varid)
+  ncstat = nf90_get_var(nc_id, varid, Cs_r)
+  ncstat = nf90_inq_varid(nc_id, "Cs_w", varid)
+  ncstat = nf90_get_var(nc_id, varid, Cs_w)
+  ncstat = nf90_close(nc_id)
+ END SUBROUTINE get_infovgrid_roms
+
+
+ SUBROUTINE set_depth(Vtransform, N, sc_r, sc_w, Cs_r, Cs_w, h, hc, Zt_avg1, z_r, z_w) !,Hz)
+  implicit none
+  integer, intent(in)  :: Vtransform, N
+  double precision, intent(in) :: sc_r(N), sc_w(0:N), Cs_r(N), Cs_w(0:N)
+  double precision, intent(in) :: hc
+  real, intent(in) :: Zt_avg1(:,:)
+  double precision, intent(in) :: h(:,:)
+  !!! double precision, intent(out) :: Hz(:,:,:)
+  double precision, intent(out) :: z_r(:,:,:), z_w(:,:,0:) !, Hz(:,:,:)
+  integer :: i, j, k, nx, ny
+  double precision :: cff_r, cff1_r, cff2_r, cff_w, cff1_w, cff2_w
+  double precision :: hinv, hwater, z_r0, z_w0
+  double precision :: C2_r, C2_w, hh2, vert_n1, vert_a, vert_h0, vert_s0
+  nx=size(h,1)
+  ny=size(h,2)
+
+  IF (Vtransform.eq.3) THEN
+    vert_s0 = 90./120.
+    vert_n1 = 2./3. !3./5.
+    vert_h0 = 60./(vert_s0)**(vert_n1)
+    vert_a = 1./(vert_s0-1)
+  END IF
+  IF (Vtransform.eq.1) THEN
+    DO j=1,ny
+!      DO i=1,nx
+!        z_w(i,j,0)=-h(i,j)
+!      END DO
+      DO k=1,N
+        cff_r=hc*(sc_r(k)-Cs_r(k))
+        cff_w=hc*(sc_w(k)-Cs_w(k))
+        cff1_r=Cs_r(k)
+        cff1_w=Cs_w(k)
+        DO i=1,nx
+          hwater=h(i,j)
+          hinv=1.0/hwater
+          z_w0=cff_w+cff1_w*hwater
+!!          z_w(i,j,k)=z_w0+Zt_avg1(i,j)*(1.0+z_w0*hinv)
+          z_r0=cff_r+cff1_r*hwater
+          z_r(i,j,k)=z_r0+Zt_avg1(i,j)*(1.0+z_r0*hinv)
+!!           Hz(i,j,k)=z_w(i,j,k)-z_w(i,j,k-1)
+        END DO
+      END DO
+    END DO
+  ELSE IF (Vtransform.eq.3) THEN
+    DO j=1,ny
+      DO k=1,N
+        DO i=1,nx
+          hwater=h(i,j)
+          hinv=1.0/hwater
+          hh2=(min(vert_h0,hwater))*hinv
+          IF (sc_w(k).gt.-vert_s0) THEN
+            C2_w=-hh2*(-sc_w(k))**(vert_n1)
+            C2_r=-hh2*(-sc_r(k))**(vert_n1)
+            cff_w=hc*(sc_w(k)-C2_w)
+            cff1_w=C2_w
+            cff_r=hc*(sc_r(k)-C2_r)
+            cff1_r=C2_r
+            z_w0=cff_w+cff1_w*hwater
+!!            z_w(i,j,k)=z_w0+Zt_avg1(i,j)*(1.0+z_w0*hinv)
+            z_r0=cff_r+cff1_r*hwater
+            z_r(i,j,k)=z_r0+Zt_avg1(i,j)*(1.0+z_r0*hinv)
+          ELSE
+            C2_w=-hh2*(-sc_w(k))**(vert_n1)             &
+ &               -(1-hh2)*(vert_a*(sc_w(k)+vert_s0))**2
+            C2_r=-hh2*(-sc_r(k))**(vert_n1)             &
+ &               -(1-hh2)*(vert_a*(sc_r(k)+vert_s0))**2
+            cff_w=hc*(sc_w(k)-C2_w)
+            cff1_w=C2_w
+            cff_r=hc*(sc_r(k)-C2_r)
+            cff1_r=C2_r
+            z_w0=cff_w+cff1_w*hwater
+!!            z_w(i,j,k)=z_w0+Zt_avg1(i,j)*(1.0+z_w0*hinv)
+            z_r0=cff_r+cff1_r*hwater
+            z_r(i,j,k)=z_r0+Zt_avg1(i,j)*(1.0+z_r0*hinv)
+          END IF
+!!           Hz(i,j,k)=z_w(i,j,k)-z_w(i,j,k-1)
+        END DO
+      END DO
+    END DO
+!-----------------------------------------------------------------------
+!  New formulation: Compute vertical depths (meters, negative) at
+!                   RHO- and W-points, and vertical grid thicknesses.
+!  Various stretching functions are possible.
+!
+!         z_w(x,y,s,t) = zeta(x,y,t) + [zeta(x,y,t)+ h(x,y)] * Zo_w
+!
+!                 Zo_w = [hc * s(k) + C(k) * h(x,y)] / [hc + h(x,y)]
+!
+!-----------------------------------------------------------------------
+  ELSE IF (Vtransform.eq.2) THEN
+    DO j=1,ny
+      DO i=1,nx
+        z_w(i,j,0)=-h(i,j)
+      END DO
+      DO k=1,N
+        cff_r=hc*sc_r(k)
+        cff_w=hc*sc_w(k)
+        cff1_r=Cs_r(k)
+        cff1_w=Cs_w(k)
+        DO i=1,nx
+          hwater=h(i,j)
+          hinv=1.0/(hc+hwater)
+          cff2_r=(cff_r+cff1_r*hwater)*hinv
+          cff2_w=(cff_w+cff1_w*hwater)*hinv
+          z_w(i,j,k)=Zt_avg1(i,j)+(Zt_avg1(i,j)+hwater)*cff2_w
+          z_r(i,j,k)=Zt_avg1(i,j)+(Zt_avg1(i,j)+hwater)*cff2_r
+!!           Hz(i,j,k)=z_w(i,j,k)-z_w(i,j,k-1)
+        END DO
+      END DO
+    END DO
+  END IF
+END SUBROUTINE set_depth
+
 end module
 
 
@@ -122,7 +284,6 @@ PROGRAM simc_nc2grib
 
 USE netcdf
 USE eccodes
-
 USE grid_id_class
 USE grid_class
 USE vol7d_level_class
@@ -130,7 +291,6 @@ USE vol7d_timerange_class
 USE volgrid6d_class
 USE volgrid6d_var_class
 USE grid_transform_class
-
 USE, INTRINSIC :: iso_fortran_env, ONLY : iostat_end
 ! USE char_utilities
 USE optionparser_class
@@ -140,8 +300,6 @@ USE log4fortran
 USE datetime_class
 USE simc_netcdf
 IMPLICIT NONE
-! integer, parameter :: r8 = selected_real_kind(12,300)  ! 64-bit
-
 ! INTEGER, PARAMETER :: dstrl = 19       ! length of date strings in Chimere output
 INTEGER, PARAMETER :: maxvars = 200    ! max number of variables in NetCDF input
 
@@ -161,16 +319,14 @@ DOUBLE PRECISION :: xmin,xmax,ymin,ymax,xoff,yoff
 DOUBLE PRECISION :: lov,latin1,latin2,lad,dx,dy
 DOUBLE PRECISION :: latitude_south_pole,longitude_south_pole,angle_rotation
 CHARACTER (LEN=80) :: proj_type
-INTEGER :: nx_nc,ny_nc,nz_nc,nt_nc,nrtime,ntrange,nvar,ngvar,nz,dimid,ldim
-
+INTEGER :: nx_nc,ny_nc,nz_nc,nt_nc,nrtime,ntrange,nvar,ngvar,nz
 !
 TYPE (datetime) :: valtime
-REAL, ALLOCATABLE :: values2(:,:), values3(:,:,:) , values4(:,:,:,:)
-! TYPE (datetime) :: roms_refdate
-INTEGER, ALLOCATABLE :: dimids(:)
+REAL, ALLOCATABLE :: values2(:,:), values3(:,:,:) !, values4(:,:,:,:)
+!INTEGER, ALLOCATABLE :: dimids(:)
 !
 INTEGER :: disc(maxvars),pc(maxvars),pn(maxvars),typelevel(maxvars)
-CHARACTER (LEN=20) :: ncstring(maxvars)  !!,varname_t
+CHARACTER (LEN=20) :: ncstring(maxvars)
 CHARACTER (LEN=52),parameter :: grib_tpl="/usr/share/eccodes/samples/regular_ll_sfc_grib2.tmpl"
 
 ! Miscellanea
@@ -190,14 +346,24 @@ CHARACTER (LEN=512) :: a_name,log_name
 CHARACTER (LEN=20) :: version,model,levels !!,dimname_x,dimname_y,dimname_z,dimname_t
 CHARACTER (LEN=2) :: trange_type
 CHARACTER (LEN=80) :: ch80
-LOGICAL :: optversion, opttemplatenml, unfilesolo
+LOGICAL :: optversion, opttemplatenml
 
 !! disordinati Lidia
 INTEGER :: category
 INTEGER :: optind
-INTEGER :: value_i, igrib_out, it
+INTEGER :: value_i, igrib_out, it, nzvar
 CHARACTER (LEN=80) :: grbparameters_s
 CHARACTER (LEN=23) :: data_s, datetime_s
+
+!! ROMS ZETA
+CHARACTER (LEN=512) :: romsgridnc
+integer:: N, Vtransform
+double precision,allocatable :: sc_r(:), sc_w(:), Cs_r(:), Cs_w(:), h(:,:)
+double precision:: hc
+double precision,allocatable:: z_r(:,:,:), z_w(:,:,:) !, Hz(:,:,:)
+real,allocatable:: zeta(:,:)
+
+
 
 !-------------------------------------------------------------------------------
 ! 0) Constant parameters
@@ -231,8 +397,8 @@ opt = optionparser_new( &
 ! General options
 CALL optionparser_add_help(opt, 'h', 'help', help='show an help message and exit')
 CALL optionparser_add(opt, ' ', 'version', optversion, help='show version and exit')
-CALL optionparser_add(opt, ' ', 'template_nml', opttemplatenml, &
-  help='write a template for nmlfile (simc_nc2grib.nml) and exit')
+CALL optionparser_add(opt, ' ', 'templatenml', opttemplatenml, &
+  help='WRITE a template for nmlfile (simc_nc2grib.nml) and exit')
 
 ! grid specification
 CALL optionparser_add(opt, ' ', 'type', proj_type, 'regular_ll', help= &
@@ -288,13 +454,16 @@ CALL optionparser_add(opt, ' ', 'longitude-south-pole', longitude_south_pole, 0.
 CALL optionparser_add(opt, ' ', 'angle-rotation', angle_rotation, &
  0.0D0, help='[RTO] angle of rotation')
 CALL optionparser_add(opt, ' ', 'component-flag', component_flag, &
- 0, help='wind component flag in target grid (0/1)') 
-!! read template 
+ 0, help='wind component flag in target grid (0/1)')
+!! read template
 CALL optionparser_add(opt, ' ', 'template', grib_model_tmpl, '', help= &
  "grib template to read")
-
+!!
 CALL optionparser_add(opt, ' ', 'component-flag', component_flag, &
  0, help='wind component flag in target grid (0/1)')
+!! roms zeta
+CALL optionparser_add(opt, ' ', 'romsgridnc', romsgridnc, '', &
+ help='ROMS grid file with vertical grid information')
 
 ! Parse options; check for errors and for options that require program termination
 CALL optionparser_parse(opt, optind, optstatus)
@@ -318,12 +487,8 @@ ENDIF
 reftime = datetime_miss
 trange_type = "an"
 !
-IF (optind + 3 <= iargc()) THEN
+IF (optind + 2 <= iargc()) THEN
   CALL getarg(optind, ncfile)
-  IF (ncfile=='-') THEN
-    CALL l4f_category_log(category, L4F_INFO, 'trying /dev/stdin as stdin unit')
-    ncfile = '/dev/stdin'
-  ENDIF
 
   optind = optind+1
   CALL getarg(optind, gribfile)
@@ -372,7 +537,7 @@ IF(grib_model_tmpl=='')then
     !   IF (iret /= CODES_SUCCESS) &
     !      WRITE (*,*) "Warning: error opening eccodes template grib file."
     !
-    ! write it in the output file
+    ! WRITE it in the output file
     !
     CALL codes_open_file(grib_id, 'tmp.tmpl', 'w', iret)
     IF (iret /= CODES_SUCCESS) &
@@ -381,7 +546,7 @@ IF(grib_model_tmpl=='')then
     OPEN (21, FILE=nmlfile, STATUS="OLD", FORM="FORMATTED", IOSTAT=ios)
     IF (ios /= 0) CALL raise_fatal_error( &
       msg="simc_nc2grib, file " // TRIM(nmlfile) // " not found", ierval=2)
-    
+
     DO
       value_i = imiss
       READ (21,'(a)',IOSTAT=ios) chdum2
@@ -393,7 +558,7 @@ IF(grib_model_tmpl=='')then
       pp = INDEX(chdum,"=")
       IF (pp /= 0) THEN
           grbparameters_s=chdum(1:pp-1)
-          !!! write(*,*) TRIM(grbparameters_s), TRIM(chdum(pp+1:)), TRIM(grbparameters_s)=="model"
+          !!! WRITE(*,*) TRIM(grbparameters_s), TRIM(chdum(pp+1:)), TRIM(grbparameters_s)=="model"
           IF(TRIM(grbparameters_s)=="centre"   .or. &
             &  TRIM(grbparameters_s)=="subCentre" .or. &
             &  TRIM(grbparameters_s)=="scanningMode" .or. &
@@ -409,7 +574,7 @@ IF(grib_model_tmpl=='')then
                WRITE (*,*) "Warning: error setting "//TRIM(grbparameters_s)//", user-defind key in grib template"
           ELSEIF(TRIM(grbparameters_s)=="model" .or. TRIM(grbparameters_s)=="levels")THEN
               CYCLE
-          ELSE 
+          ELSE
             CALL raise_fatal_error(msg="simc_nc2grib, unknown keyword in " // &
                TRIM(nmlfile) // ": " // chdum(1:pp-1), ierval=2)
           END IF
@@ -429,8 +594,8 @@ IF(grib_model_tmpl=='')then
     CALL codes_close_file(grib_id, iret)
        IF (iret /= CODES_SUCCESS) &
          WRITE (*,*) "Warning: error closing tmp.tmpl"
-    
-    ! import a template, change the grid and write it
+
+    ! import a template, change the grid and WRITE it
     CALL IMPORT(volgrid_tpl, filename='tmp.tmpl', decode=.TRUE., &
      categoryappend="grib_tmpl")
     CALL init(trans, trans_type='inter', sub_type='near', &
@@ -438,7 +603,7 @@ IF(grib_model_tmpl=='')then
     CALL transform(trans, griddim_out, volgrid6d_in=volgrid_tpl, &
      volgrid6d_out=volgrid_out, &
       clone=.TRUE., categoryappend="transform")
-    !! IMPORTANTE!! calcola i parametri tipo Dx e Dy  
+    !! IMPORTANTE!! calcola i parametri tipo Dx e Dy
     CALL unproj(volgrid_out(1)%griddim)
     !! set griddim_out per volgrid_out
     griddim_out=volgrid_out(1)%griddim
@@ -454,8 +619,7 @@ ELSE
       categoryappend="grib_model_tmpl")
   nx=size(volgrid_out(1)%voldati(:,1,1,1,1,1))
   ny=size(volgrid_out(1)%voldati(1,:,1,1,1,1))
-  write(*,*) nx,ny
-  !! IMPORTANTE!! calcola i parametri tipo Dx e Dy  
+  !! IMPORTANTE!! calcola i parametri tipo Dx e Dy
   CALL unproj(volgrid_out(1)%griddim)
   !! set griddim_out per volgrid_out
   griddim_out=volgrid_out(1)%griddim
@@ -484,7 +648,7 @@ DO
     msg="simc_nc2grib, error reading " // TRIM(nmlfile), ierval=2)
   IF (TRIM(chdum)=="" .OR. chdum(1:1)=="!") CYCLE
   pp = INDEX(chdum,"=")
-  
+
   IF (pp /= 0) THEN
       grbparameters_s=chdum(1:pp-1)
       IF(TRIM(grbparameters_s)=="model")THEN
@@ -493,7 +657,7 @@ DO
          READ (chdum(pp+1:),*) levels
       endif
   ELSE
-      write(*,*) TRIM(chdum)
+      !!! WRITE(*,*) TRIM(chdum)
       nw = word_split(chdum, word_start=p1, word_end=p2, sep=",")
       IF (nw /= 5) CALL raise_fatal_error(msg="simc_nc2grib, error parsing line " // &
         TRIM(chdum) // " in namelist " // TRIM(ncfile), ierval=2)
@@ -503,8 +667,7 @@ DO
       READ (chdum(p1(3):p2(3)),*,IOSTAT=ios2) pc(nvar)
       READ (chdum(p1(4):p2(4)),*,IOSTAT=ios3) pn(nvar)
       READ (chdum(p1(5):p2(5)),*,IOSTAT=ios4) typelevel(nvar)
-      write(*,*) nvar, nw, ios1,ios2,ios3, ios4
-      write(*,*) ncstring(nvar), disc(nvar),pc(nvar),pn(nvar),typelevel(nvar)
+      !!! WRITE(*,*) ncstring(nvar), disc(nvar),pc(nvar),pn(nvar),typelevel(nvar)
       IF (ios1 /= 0 .OR. ios2 /= 0 .OR. ios3 /= 0 .OR. ios4 /= 0) CALL raise_fatal_error( &
        msg="simc_nc2grib, error parsing line " // TRIM(chdum) // " in namelist " // &
        TRIM(nmlfile), ierval=2)
@@ -513,6 +676,18 @@ ENDDO
 CLOSE(21)
 IF(model=="")  CALL raise_fatal_error(msg="simc_nc2grib, " // &
    "error reading model in namelist " // TRIM(nmlfile), ierval=2)
+
+IF(model=="roms")THEN
+  do kv=1, nvar
+    IF(trim(ncstring(nvar))=="salt" .or. &
+     & trim(ncstring(nvar))=="temp" .or. &
+     & trim(ncstring(nvar))=="u_eastward" )then
+        levels="roms"
+        exit
+    END IF
+  end do
+END IF
+
 
 !!! set the dimension names correctly
 call set_dimension_names(model)
@@ -559,37 +734,34 @@ IF (ny_nc /= ny) THEN
   CALL raise_fatal_error(msg=TRIM(chdum), ierval=4)
 ENDIF
 
-IF (levels=="all") THEN
+IF (levels=="all" .or. levels=="roms") THEN
   nz = nz_nc
 ELSE
   nz = 1
 ENDIF
-
-
-
 WRITE (*,*) "File NetCDF: nx,ny,nz,nt ",nx_nc,ny_nc,nz_nc,nt_nc
 
-!! se fai tutti i tempi contemporaneamente
-unfilesolo=.false.
-if(unfilesolo)then
-    IF (trange_type=="an") THEN
-    nrtime = nt_nc
-    ntrange = 1
-    ELSE IF (trange_type=="fc") THEN
-    nrtime = 1
-    ntrange = nt_nc
-    ENDIF
-    ALLOCATE (values4(nx,ny,nz,nt_nc))
-    ngvar = nvar
+!! divido per tempo
+nrtime = 1
+ntrange = 1
+ngvar = 1
+!!
+!! nel caso di roms, mi devo ricostruire i livelli verticali
+!!
+IF(model=="roms" .and. levels=="roms")THEN
+  IF(romsgridnc=='')then
+    CALL l4f_category_log(category, L4F_FATAL, 'inline input arguments')
+    CALL raise_fatal_error(msg="romsgridnc needed to compute roms levels", ierval=1)
+  ELSE
+    WRITE(*,*) "Roms file for vertical grid information: "//trim(romsgridnc)
+  END IF
+  nzvar = ngvar+1
 ELSE
-    !! divido per tempo
-    nrtime = 1
-    ntrange = 1
-    ngvar = 1
+  nzvar = ngvar
 END IF
+
 ALLOCATE (values2(nx,ny))
 if(nz>1)then
-!   ALLOCATE (values3(nz,nx,ny))
   ALLOCATE (values3(nx,ny,nz))
 end if
 !
@@ -618,26 +790,40 @@ CALL codes_grib_new_from_file(infile, grib_id, status=ier)
 gaid_tpl = grid_id_new(grib_api_id=grib_id)
 ! Define the "volgrid6d" LibSIM object
 CALL init (volgrid_out(1), griddim=griddim_out, time_definition=0)
-CALL volgrid6d_alloc(volgrid_out(1), nlevel=nz, ntime=nrtime, ntimerange=ntrange, nvar=ngvar)
+CALL volgrid6d_alloc(volgrid_out(1), nlevel=nz, ntime=nrtime, ntimerange=ntrange, nvar=nzvar)
 CALL volgrid6d_alloc_vol(volgrid_out(1), decode=.TRUE.)
-
-write(*,*) nx,ny,nz,nrtime,ntrange,ngvar
+!!! WRITE(*,*) nx,ny,nz,nrtime,ntrange,ngvar,nzvar
 
 !-------------------------------------------------------------------------------
 ! Define the coordinate elements of the "volgrid6d" LibSIM object
 ! The "griddim" element was already defined in section 4
 
-! 6.1) Allocate arrays
-ALLOCATE (vg6_levs(nz), vg6_vars(1), vg6_tranges(ntrange), vg6_times(nrtime))
+
+! Allocate arrays
+ALLOCATE (vg6_levs(nz), vg6_vars(nzvar), vg6_tranges(ntrange), vg6_times(nrtime))
+
+IF(levels=="roms")THEN
+!! costruisci le zeta
+!! depth below sea surface
+  CALL init(vg6_vars(nzvar), centre=centre, category=4, number=195, discipline=10)
+  !! definisci l'ultima variabile
+  volgrid_out(1)%var(nzvar) = vg6_vars(nzvar)
+  call get_nlevels_roms(romsgridnc, N)
+  allocate(sc_r(N), sc_w(0:N), Cs_r(N), Cs_w(0:N), h(nx,ny), z_r(nx,ny,N), zeta(nx,ny), z_w(nx,ny,0:N))
+  call get_infovgrid_roms(romsgridnc, nx,ny, N, Vtransform, sc_r, sc_w, Cs_r, Cs_w, h, hc)
+END IF
+
+
 
 !! cycle variables
-
-if(.not.unfilesolo)then
-  DO kv = 1, nvar
+DO kv = 1, nvar
     ! 6.3) Assign variable
     CALL init(vg6_vars(1), centre=centre, category=pc(kv), number=pn(kv), discipline=disc(kv))
     ! 6.4) Write coordinate elements in "volgrid6d" LibSIM object
-    volgrid_out(1)%var = vg6_vars
+    volgrid_out(1)%var(1) = vg6_vars(1)
+
+    !!! call display(volgrid_out(1)%var(1))
+    !!! call display(volgrid_out(1)%var(2))
 
     ! 7.1) Get information on the required variable
     ier = nf90_inq_varid(ncid, ncstring(kv), varid)
@@ -645,7 +831,7 @@ if(.not.unfilesolo)then
       CALL raise_error(msg="Error getting varid for var " // TRIM(ncstring(kv)), ierval=10)
       CYCLE
     ENDIF
-    
+
     ier = nf90_inquire_variable(ncid, varid, ndims=ndims, xtype=xt)
     IF (ier /= nf90_noerr) THEN
       CALL raise_error(msg="Error getting ndims for var " // TRIM(ncstring(kv)), ierval=10)
@@ -658,24 +844,24 @@ if(.not.unfilesolo)then
       CALL raise_error(msg="Invalid tpye for var " // TRIM(ncstring(kv)), ierval=10)
       CYCLE
     ENDIF
-    if (allocated(dimids)) deallocate(dimids)
-    allocate(dimids(ndims))
-    ier = nf90_inquire_variable(ncid, varid, dimids=dimids, xtype=xt)
+! !     if (allocated(dimids)) deallocate(dimids)
+! !     allocate(dimids(ndims))
+! !     ier = nf90_inquire_variable(ncid, varid, dimids=dimids, xtype=xt)
 ! !     do it=1,ndims
 ! !       ncstat2 = nf90_inquire_dimension(ncid, dimids(it), len=ldim)
-! !       write(*,*) ldim
+! !       WRITE(*,*) ldim
 ! !     end do
-    
-   
+
+
     ier= nf90_get_att(ncid, varid, '_FillValue', fillvalue)
     IF (ier /= nf90_noerr) THEN
       WRITE (*,*) "Warning: No fillValue for var ", TRIM(ncstring(kv))
       fillvalue = rmiss
     ENDIF
-    
+
     ! 7.2) Read data and store them in "volgrid6d" LibSIM object
     WRITE (*,*) "Processing var ",TRIM(ncstring(kv))," ndims ",ndims
-    
+
     !! cycle time/timeranges
     DO it=1,nt_nc
         !-------------------------------------------------------------------------------
@@ -687,7 +873,7 @@ if(.not.unfilesolo)then
         elseif(it==nt_nc)then
           WRITE (*,*) "Verification times to ",TRIM(data_s)
         endif
-    
+
         ! 6.2) Assign times / timeranges
         IF (trange_type=="an") THEN
             vg6_times(1) = valtime
@@ -703,7 +889,7 @@ if(.not.unfilesolo)then
         ENDIF
         volgrid_out(1)%time = vg6_times
         volgrid_out(1)%timerange = vg6_tranges
-    
+
         !-------------------------------------------------------------------------------
         ! 7) Read NetCDF data and store them in the "volgrid6d" LibSIM object
         ! 7.2.1) Single field (eg. latitude)
@@ -719,8 +905,7 @@ if(.not.unfilesolo)then
             ELSEWHERE
                 volgrid_out(1)%voldati(:,:,1,1,1,1) = rmiss
             ENDWHERE
-            volgrid_out(1)%gaid(1,1,1,1) = gaid_tpl
-    
+
         ! 7.2.1) surface field (eg. 2m temperature)
         ELSE IF (ndims==3) THEN
             !! volgrd6d dimensions: ix,iy,il,it,itr,iv
@@ -738,8 +923,7 @@ if(.not.unfilesolo)then
             ELSEWHERE
                 volgrid_out(1)%voldati(:,:,1,1,1,1) = rmiss
             ENDWHERE
-            volgrid_out(1)%gaid(1,:,1,1) = gaid_tpl
-    
+
         !-------------------------------------------------------------------------------
         ! 7.2.3) 3D field (eg. PM10)
         ! Use of the "map" optional argument of nf90_get_var: "The elements of the index
@@ -752,32 +936,61 @@ if(.not.unfilesolo)then
                 CALL init(vg6_levs(kl), level1=typelevel(kv), l1=kl)
             END DO
             volgrid_out(1)%level = vg6_levs
-            
+
             ier = nf90_get_var(ncid, varid, values3, start=(/1,1,1,it/), count=(/nx,ny,nz,1/))
             IF (ier /= nf90_noerr) THEN
                 CALL raise_error(msg="Error getting values for var " // TRIM(ncstring(kv)), ierval=11)
                 CYCLE
             ENDIF
+
             WHERE (values3 /= fillvalue)
                 volgrid_out(1)%voldati(:,:,:,1,1,1) = values3
             ELSEWHERE
                 volgrid_out(1)%voldati(:,:,:,1,1,1) = rmiss
             ENDWHERE
-            volgrid_out(1)%gaid(:,:,1,1) = gaid_tpl
+
+            IF(levels=="roms")then
+              ier = nf90_inq_varid(ncid, "zeta", varid)
+              ier = nf90_get_var(ncid, varid, zeta, start=(/1,1,it/), count=(/nx,ny,1/))
+              IF (ier /= nf90_noerr) THEN
+                CALL raise_error(msg="Error getting values for var zeta (ROMS)", ierval=11)
+                CYCLE
+              ENDIF
+              call set_depth(Vtransform, N, sc_r, sc_w, Cs_r, Cs_w, h, hc, zeta, z_r, z_w)
+              !!! WRITE(*,*)  z_r(100,100,1),z_r(100,100,N), h(100,100), zeta(100,100), &
+              !!!           & z_w(100,100,0),z_w(100,100,N)
+
+              !!! to change from geiod to sea surface
+              do kl=1,N
+                z_r(:,:,kl) = z_r(:,:,kl) - zeta
+              end do
+              WHERE (z_r /= fillvalue)
+                volgrid_out(1)%voldati(:,:,:,1,1,nzvar) = z_r
+              ELSEWHERE
+                volgrid_out(1)%voldati(:,:,:,1,1,nzvar) = rmiss
+              ENDWHERE
+            end if
         ENDIF
-    
+        volgrid_out(1)%gaid = gaid_tpl
+
+        !!! WRITE(*,*)  z_r(100,100,1),z_r(100,100,N), h(100,100), zeta(100,100), &
+        !!!           & z_w(100,100,0),z_w(100,100,N)
+
+!         WRITE(*,*) size(volgrid_out(1)%gaid,1), size(volgrid_out(1)%gaid,2), &
+!         & size(volgrid_out(1)%gaid,3), size(volgrid_out(1)%gaid,4), "++++++++++++++++++++++++"
+
         !-------------------------------------------------------------------------------
         ! 8) Export data to GRIB2 output file
         datetime_s=data_s(1:4)//data_s(6:7)//data_s(9:10)//data_s(12:13)//data_s(15:16)
         gribfileout = trim(datetime_s)//'_'//trim(ncstring(kv))//'_'//trim(gribfile)
-        write(*,*)  MINVAL(volgrid_out(1)%voldati(:,:,1:nz,1:nrtime,1:ntrange,1:ngvar)), &
+        WRITE(*,*)  MINVAL(volgrid_out(1)%voldati(:,:,1:nz,1:nrtime,1:ntrange,1:ngvar)), &
                   & maxval(volgrid_out(1)%voldati(:,:,1,1,1,1)), trim(gribfileout)
 !         CALL display(volgrid_out(1))
-        
+
         CALL export(volgrid_out, filename=trim(gribfileout), categoryappend="output_volume")
     ENDDO
-  ENDDO
-END IF  
+ENDDO
+
 
 CALL delete(volgrid_out)
 ier = nf90_close(ncid)
