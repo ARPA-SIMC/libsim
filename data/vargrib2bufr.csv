@@ -466,6 +466,7 @@ B22071,Spectral peak wave period,s,255,0,34,10,1.0,0.0
 B22074,Average wave period,s,200,140,232,255,1.0,0.0
 B22074,Average wave period,s,98,140,232,255,1.0,0.0
 B22074,Average wave period,s,80,140,232,255,1.0,0.0
+B22195,Depth below sea surface,m,255,4,195,10,1.0,0.0
 B23192,Dry deposition of H2SO4 (local),mol/m**2,200,200,140,255,1.0,0.0
 B23193,Wet deposition of H2SO4 (local),mol/m**2,200,200,141,255,1.0,0.0
 B23194,Dry deposition of NH4 (local),mol/m**2,200,200,142,255,1.0,0.0
