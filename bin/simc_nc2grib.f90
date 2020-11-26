@@ -299,19 +299,22 @@ USE missing_values
 USE log4fortran
 USE datetime_class
 USE simc_netcdf
+use vol7d_var_class
 IMPLICIT NONE
 ! INTEGER, PARAMETER :: dstrl = 19       ! length of date strings in Chimere output
 INTEGER, PARAMETER :: maxvars = 200    ! max number of variables in NetCDF input
 
 ! Definition of "volgrid6d" object
-TYPE(volgrid6d), POINTER :: volgrid_out(:) , volgrid_tpl(:)
+TYPE(volgrid6d), POINTER :: volgrid_out(:), volgrid_tpl(:)
+TYPE(volgrid6d), POINTER :: volgrid_int(:)
 TYPE(grid_id) :: gaid_tpl                          ! module grid_id_class
 TYPE(griddim_def) :: griddim_out
-TYPE (vol7d_level), POINTER :: vg6_levs(:)         ! module vol7d_level_class
-TYPE (vol7d_timerange), POINTER :: vg6_tranges(:)  ! module vol7d_timerange_class
-TYPE (volgrid6d_var), POINTER :: vg6_vars(:)       ! module volgrid6d_var_class
+TYPE (vol7d_level), allocatable :: vg6_levs(:)         ! module vol7d_level_class
+TYPE (vol7d_timerange), allocatable :: vg6_tranges(:)  ! module vol7d_timerange_class
+TYPE (volgrid6d_var), allocatable :: vg6_vars(:)       ! module volgrid6d_var_class
+! ! TYPE (vol7d_var) :: vg7_var               ! module volgrid6d_var_class
 TYPE(transform_def) :: trans                       ! module grid_transform_class
-TYPE (datetime), POINTER :: vg6_times(:)           ! module datetime_class
+TYPE (datetime), allocatable :: vg6_times(:)           ! module datetime_class
 
 ! Grid parameters
 INTEGER :: nx,ny,component_flag,utm_zone,projection_center_flag=0
@@ -339,9 +342,9 @@ INTEGER :: pdtn,sc,gpi,bpv
 INTEGER :: optstatus,pp,nw,kt,kl,kv
 INTEGER :: ios,ios1,ios2,ios3,ios4,ier,iret,ncstat,ncstat1,ncstat2 !,irett(10)
 INTEGER :: scad
-INTEGER, POINTER :: p1(:),p2(:)
+INTEGER, pointer :: p1(:),p2(:)
 INTEGER:: grib_id, infile
-CHARACTER (LEN=512) :: ncfile,gribfile,gribfileout,nmlfile,chdum,chdum2,chrt,grib_template, grib_model_tmpl
+CHARACTER (LEN=512) :: ncfile,gribfile,gribfileout,nmlfile,chdum,chdum2,chrt, grib_model_tmpl
 CHARACTER (LEN=512) :: a_name,log_name
 CHARACTER (LEN=20) :: version,model,levels !!,dimname_x,dimname_y,dimname_z,dimname_t
 CHARACTER (LEN=2) :: trange_type
@@ -362,17 +365,14 @@ double precision,allocatable :: sc_r(:), sc_w(:), Cs_r(:), Cs_w(:), h(:,:)
 double precision:: hc
 double precision,allocatable:: z_r(:,:,:), z_w(:,:,:) !, Hz(:,:,:)
 real,allocatable:: zeta(:,:)
-
-
+real:: interplevels(10)
 
 !-------------------------------------------------------------------------------
 ! 0) Constant parameters
 
 CALL eh_setval(verbose=3)                ! set debug level
 version = "1.0.0"                        ! version of this program
-grib_template = "regular_ll_sfc_grib2"   ! template for grib2
-roms_refdate = datetime_new(YEAR=1968, MONTH=5, DAY=23, HOUR=0) ! "ROMS time"
-log_name = "simc_nc2grib"                 ! rott name of LibSIM logfiles
+log_name = "simc_nc2grib"                ! rott name of LibSIM logfiles
 
 ! Initialize log4fortran (to enable logging messages from LibSIM routines
 CALL l4f_launcher(a_name, a_name_force=log_name)
@@ -385,7 +385,7 @@ category=l4f_category_get(a_name//".main")
 ! define the option parser; help on positional parametersa
 opt = optionparser_new( &
  usage_msg = "Usage: simc_nc2grib [--templatenml] [--template] [--help] [--version] {grid-specifications}" // &
- " ncfile gribfile nmlfile [reftime]", &
+ "[--romsgridnc romsgridnc] ncfile gribfile nmlfile [reftime]", &
  description_msg= &
 "Reads the NetCDF output of ROMS or Chimere, writes a subset of parameters in GRIB2 format. " // &
 "Grid specifications  must be provided, with the same syntax as vg6d_transform. " // &
@@ -512,6 +512,7 @@ ELSE
   CALL raise_fatal_error()
 ENDIF
 
+interplevels = 0.0
 IF(grib_model_tmpl=='')then
     !-------------------------------------------------------------------------------
     ! 2) Create a new template with the output grid and the desired options (name=gribfile)
@@ -600,8 +601,8 @@ IF(grib_model_tmpl=='')then
      categoryappend="grib_tmpl")
     CALL init(trans, trans_type='inter', sub_type='near', &
      categoryappend="transformation")
-    CALL transform(trans, griddim_out, volgrid6d_in=volgrid_tpl, &
-     volgrid6d_out=volgrid_out, &
+    CALL transform(trans, griddim_out, volgrid6d_in=volgrid_tpl(1), &
+     volgrid6d_out=volgrid_out(1), &
       clone=.TRUE., categoryappend="transform")
     !! IMPORTANTE!! calcola i parametri tipo Dx e Dy
     CALL unproj(volgrid_out(1)%griddim)
@@ -677,6 +678,9 @@ CLOSE(21)
 IF(model=="")  CALL raise_fatal_error(msg="simc_nc2grib, " // &
    "error reading model in namelist " // TRIM(nmlfile), ierval=2)
 
+   
+ 
+   
 IF(model=="roms")THEN
   do kv=1, nvar
     IF(trim(ncstring(nvar))=="salt" .or. &
@@ -781,13 +785,14 @@ END IF
 
 
 !-------------------------------------------------------------------------------
-! 6) Create a "volgrid6d" LibSIM object that will contain the entire data volume
+! Create a "volgrid6d" LibSIM object that will contain the entire data volume
 ALLOCATE(volgrid_out(1))
 ! Get ecCodes "id" for grib2 template
 CALL codes_open_file(infile, trim(grib_model_tmpl), mode='r', status=ier)
 CALL codes_grib_new_from_file(infile, grib_id, status=ier)
 ! Define the "grid_id" LibSIM object corresponding to the id of grib2 template
 gaid_tpl = grid_id_new(grib_api_id=grib_id)
+
 ! Define the "volgrid6d" LibSIM object
 CALL init (volgrid_out(1), griddim=griddim_out, time_definition=0)
 CALL volgrid6d_alloc(volgrid_out(1), nlevel=nz, ntime=nrtime, ntimerange=ntrange, nvar=nzvar)
@@ -811,6 +816,8 @@ IF(levels=="roms")THEN
   call get_nlevels_roms(romsgridnc, N)
   allocate(sc_r(N), sc_w(0:N), Cs_r(N), Cs_w(0:N), h(nx,ny), z_r(nx,ny,N), zeta(nx,ny), z_w(nx,ny,0:N))
   call get_infovgrid_roms(romsgridnc, nx,ny, N, Vtransform, sc_r, sc_w, Cs_r, Cs_w, h, hc)
+!! debug
+call display(vg6_vars(nzvar))
 END IF
 
 
@@ -844,6 +851,7 @@ DO kv = 1, nvar
       CALL raise_error(msg="Invalid tpye for var " // TRIM(ncstring(kv)), ierval=10)
       CYCLE
     ENDIF
+! ! debug    
 ! !     if (allocated(dimids)) deallocate(dimids)
 ! !     allocate(dimids(ndims))
 ! !     ier = nf90_inquire_variable(ncid, varid, dimids=dimids, xtype=xt)
@@ -851,7 +859,6 @@ DO kv = 1, nvar
 ! !       ncstat2 = nf90_inquire_dimension(ncid, dimids(it), len=ldim)
 ! !       WRITE(*,*) ldim
 ! !     end do
-
 
     ier= nf90_get_att(ncid, varid, '_FillValue', fillvalue)
     IF (ier /= nf90_noerr) THEN
@@ -861,6 +868,7 @@ DO kv = 1, nvar
 
     ! 7.2) Read data and store them in "volgrid6d" LibSIM object
     WRITE (*,*) "Processing var ",TRIM(ncstring(kv))," ndims ",ndims
+    
 
     !! cycle time/timeranges
     DO it=1,nt_nc
@@ -873,6 +881,8 @@ DO kv = 1, nvar
         elseif(it==nt_nc)then
           WRITE (*,*) "Verification times to ",TRIM(data_s)
         endif
+        datetime_s=data_s(1:4)//data_s(6:7)//data_s(9:10)//data_s(12:13)//data_s(15:16)
+        gribfileout = trim(datetime_s)//'_'//trim(ncstring(kv))//'_'//trim(gribfile)
 
         ! 6.2) Assign times / timeranges
         IF (trange_type=="an") THEN
@@ -969,25 +979,59 @@ DO kv = 1, nvar
               ELSEWHERE
                 volgrid_out(1)%voldati(:,:,:,1,1,nzvar) = rmiss
               ENDWHERE
+! ! debug            
+write(*,*) size(volgrid_out(1)%voldati(1,1,:,1,1,:)), size(volgrid_out(1)%voldati(:,:,:,1,1,nzvar)), &
+ & minval(volgrid_out(1)%voldati(:,:,:,1,1,nzvar)), maxval(volgrid_out(1)%voldati(:,:,:,1,1,nzvar))
+              IF(.true.)THEN
+        write(*,*) "++++++++++++++++++++++++++", size(volgrid_out(1)%level)
+                fillvalue=-0.5
+                !! in millimetri
+                !! set vg6_levs to desired output levels
+                CALL init(vg6_levs(1), level1=typelevel(161), l1=1000)
+!                 CALL init(vg7_var, bcode="22195", unit="m" )!!, scalefactor=)
+! ! debug
+write(*,*) 'vertint -------------------------------------'
+                !! init vertical transformation
+                CALL init(trans, trans_type='vertint', sub_type='linear', &
+                         & output_levtype=vg6_levs(1),            &
+                         & input_levtype=volgrid_out(1)%level(1), &
+                         & categoryappend="transformation")
+!                          & input_coordvar=vg7_var,  &
+! ! debug
+write(*,*) 'vertint init ----------------------------------'
+                !! do interpolation
+                CALL transform(trans, volgrid6d_in=volgrid_out, &
+                             & volgrid6d_out=volgrid_int, &
+                             & lev_out=vg6_levs, &
+                             & clone=.TRUE., decode=.TRUE., &
+                             & categoryappend="transform")
+!                              & volgrid6d_coord_in=volgrid_tpl(1), &
+! ! debug
+write(*,*) 'vertint done ----------------------------------'
+
+                 call export(volgrid_int, filename=trim(gribfileout), & !gaid_template=gaid_tpl, &
+                   & categoryappend="output_volume")
+                 CYCLE  
+              END IF
             end if
         ENDIF
         volgrid_out(1)%gaid = gaid_tpl
 
-        !!! WRITE(*,*)  z_r(100,100,1),z_r(100,100,N), h(100,100), zeta(100,100), &
-        !!!           & z_w(100,100,0),z_w(100,100,N)
-
-!         WRITE(*,*) size(volgrid_out(1)%gaid,1), size(volgrid_out(1)%gaid,2), &
-!         & size(volgrid_out(1)%gaid,3), size(volgrid_out(1)%gaid,4), "++++++++++++++++++++++++"
+! ! debug
+! !         WRITE(*,*)  z_r(100,100,1),z_r(100,100,N), h(100,100), zeta(100,100), &
+! !                   & z_w(100,100,0),z_w(100,100,N)
+! !         WRITE(*,*) size(volgrid_out(1)%gaid,1), size(volgrid_out(1)%gaid,2), &
+! !         & size(volgrid_out(1)%gaid,3), size(volgrid_out(1)%gaid,4), "++++++++++++++++++++++++"
 
         !-------------------------------------------------------------------------------
-        ! 8) Export data to GRIB2 output file
-        datetime_s=data_s(1:4)//data_s(6:7)//data_s(9:10)//data_s(12:13)//data_s(15:16)
-        gribfileout = trim(datetime_s)//'_'//trim(ncstring(kv))//'_'//trim(gribfile)
+        ! Export data to GRIB2 output file
         WRITE(*,*)  MINVAL(volgrid_out(1)%voldati(:,:,1:nz,1:nrtime,1:ntrange,1:ngvar)), &
                   & maxval(volgrid_out(1)%voldati(:,:,1,1,1,1)), trim(gribfileout)
-!         CALL display(volgrid_out(1))
-
-        CALL export(volgrid_out, filename=trim(gribfileout), categoryappend="output_volume")
+! ! debug
+! !         CALL display(volgrid_out(1))
+! 
+        CALL export(volgrid_out, filename=trim(gribfileout), & !gaid_template=gaid_tpl, &
+                   & categoryappend="output_volume")
     ENDDO
 ENDDO
 
