@@ -456,6 +456,7 @@ B22037,Tidal elevation with respect to national land datum,m,255,2,82,255,1.0,0.
 B22037,Deviation of Sea Level from Mean,m,255,3,1,10,1.0,0.0
 B22038,Sea Surface Height Relative to Geoid,m,255,3,195,10,1.0,0.0
 B22038,Tidal elevation with respect to local chart datum,m,255,3,1,10,1.0,0.0
+B22043,Sea/water temperature,K,255,4,18,10,1.0,0.0
 B22062,Salinity,part per thousand,255,2,88,255,1000.,0.0
 B22062,Salinity,psu,255,4,21,10,1.,0.0
 B22062,Salinity,psu,80,4,21,10,1.,0.0
@@ -471,6 +472,8 @@ B22071,Spectral peak wave period,s,255,0,34,10,1.0,0.0
 B22074,Average wave period,s,200,140,232,255,1.0,0.0
 B22074,Average wave period,s,98,140,232,255,1.0,0.0
 B22074,Average wave period,s,80,140,232,255,1.0,0.0
+B22192,U-Component of Current,m/s,255,1,2,10,1.0,0.0
+B22193,V-Component of Current,m/s,255,1,3,10,1.0,0.0
 B22195,Depth below sea surface,m,255,4,195,10,1.0,0.0
 B22195,Depth below sea surface,m,80,4,195,10,1.0,0.0
 B23192,Dry deposition of H2SO4 (local),mol/m**2,200,200,140,255,1.0,0.0

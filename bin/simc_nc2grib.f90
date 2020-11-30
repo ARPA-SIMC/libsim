@@ -720,13 +720,14 @@ msg="simc_nc2grib, file " // TRIM(ncfile) // ": y dim " // TRIM(dimname_y) // " 
 call checknc( nf90_inq_dimid(ncid, dimname_y, dimid_y), category, trim(msg))
 call checknc( nf90_inquire_dimension(ncid, dimid_y, len=ny_nc), category, trim(msg))
 
-msg="simc_nc2grib, file " //TRIM(ncfile)// ": z dim " // TRIM(dimname_z) // " not found"
 ncstat = nf90_inq_dimid(ncid, trim(dimname_z), dimid_z)
 IF(ncstat==nf90_noerr)THEN
   call checknc( nf90_inquire_dimension(ncid, dimid_z, len=nz_nc), category, trim(msg))
 ELSE
-  call l4f_category_log(category,L4F_WARN, trim(msg))
+  msg="simc_nc2grib, file " //TRIM(ncfile)// ": z dim " // TRIM(dimname_z) // " not found"
+  call l4f_category_log(category,L4F_INFO, trim(msg))
   levels="msl"
+  nz_nc=1
 END IF
 
 msg="simc_nc2grib, file " // TRIM(ncfile) // ": t dim " // TRIM(dimname_t) // " not found"
@@ -794,7 +795,7 @@ IF(model=='chimere')THEN
   WRITE(msg,'(a,4i5)') "Grid step: ",dx,dy
   call l4f_category_log(category,L4F_INFO,trim(msg))
 END IF
-WRITE(msg,'(a,i5,a,i5,a,a)') "Required data: nz ",nz," nvar ",nvar,": ",ncstring(1:nvar)
+WRITE(msg,*) "Required data: nz ",nz," nvar ",nvar,": ",ncstring(1:nvar)
 call l4f_category_log(category,L4F_INFO,trim(msg))
 IF(reftime /= datetime_miss)THEN
   data_s=to_char(reftime)
@@ -820,10 +821,6 @@ CALL volgrid6d_alloc(volgrid_out(1), nlevel=nz, ntime=nrtime, ntimerange=ntrange
 CALL volgrid6d_alloc_vol(volgrid_out(1), decode=.TRUE.)
 !!! WRITE(*,*) nx,ny,nz,nrtime,ntrange,ngvar,nzvar
 
-ALLOCATE(volgrid_coord(1))
-CALL init (volgrid_coord(1), griddim=griddim_out, time_definition=0)
-CALL volgrid6d_alloc(volgrid_coord(1), nlevel=nz, ntime=nrtime, ntimerange=ntrange, nvar=1)
-CALL volgrid6d_alloc_vol(volgrid_coord(1), decode=.TRUE.)
 
 ! Get "id" for grib2 template
 ifile = grid_file_id_new(trim(grib_model_tmpl), 'r')
@@ -839,6 +836,13 @@ IF(levels=="roms")THEN
   call get_nlevels_roms(romsgridnc, N, category)
   allocate(sc_r(N), sc_w(0:N), Cs_r(N), Cs_w(0:N), h(nx,ny), z_r(nx,ny,N), zeta(nx,ny), z_w(nx,ny,0:N))
   call get_infovgrid_roms(romsgridnc, nx,ny, N, Vtransform, sc_r, sc_w, Cs_r, Cs_w, h, hc, category)
+  !!! 
+  IF(nlevels_out>0)THEN
+    ALLOCATE(volgrid_coord(1))
+    CALL init (volgrid_coord(1), griddim=griddim_out, time_definition=0)
+    CALL volgrid6d_alloc(volgrid_coord(1), nlevel=nz, ntime=nrtime, ntimerange=ntrange, nvar=1)
+    CALL volgrid6d_alloc_vol(volgrid_coord(1), decode=.TRUE.)
+  END IF  
 END IF
 
 
@@ -846,13 +850,17 @@ END IF
 !-------------------------------------------------------------------------------
 ! cycle variables
 !
-DO kv = 1, nvar
+DO kv = 1,nvar
     ! Assign variable
     CALL init(volgrid_out(1)%var(1), centre=centre, category=pc(kv), number=pn(kv), discipline=disc(kv))
 
     ! Get information on the required variable
-    msg="Error getting varid for var " // TRIM(ncstring(kv))
-    call checknc( nf90_inq_varid(ncid, ncstring(kv), varid), category, trim(msg))
+    !! msg="Error getting varid for var " // TRIM(ncstring(kv))
+    ncstat = nf90_inq_varid(ncid, ncstring(kv), varid)
+    IF(ncstat/=nf90_noerr)THEN
+      !!! write(*,*) "cycle for "// TRIM(ncstring(kv))   
+      CYCLE
+    END IF
     msg="Error getting ndims for var " // TRIM(ncstring(kv))
     call checknc( nf90_inquire_variable(ncid, varid, ndims=ndims, xtype=xt), category, trim(msg))
     IF (ndims < 2 .OR. ndims > 4) THEN
@@ -861,7 +869,7 @@ DO kv = 1, nvar
       CALL raise_error(ierval=10)
       CYCLE
     ELSE IF (xt /= NF90_FLOAT .AND. xt /= NF90_DOUBLE) THEN
-      msg="Invalid tpye for var " // TRIM(ncstring(kv))
+      msg="Invalid type for var " // TRIM(ncstring(kv))
       call l4f_category_log(category,L4F_ERROR,trim(msg))
       CALL raise_error(ierval=10)
       CYCLE
@@ -897,13 +905,13 @@ DO kv = 1, nvar
           call l4f_category_log(category,L4F_INFO,trim(msg))
         endif
         datetime_s=data_s(1:4)//data_s(6:7)//data_s(9:10)//data_s(12:13)//data_s(15:16)
-        gribfileout = trim(datetime_s)//'_'//trim(ncstring(kv))//'_'//trim(gribfile)
-        gribfilez = trim(datetime_s)//'_'//trim(ncstring(kv))//'_z_'//trim(gribfile)
 
         ! Assign times / timeranges
         IF (trange_type=="an") THEN
             volgrid_out(1)%time = valtime
             CALL init(volgrid_out(1)%timerange(1), timerange=254, p1=0, p2=0)
+          gribfileout = trim(datetime_s)//'_'//trim(ncstring(kv))//'_an_'//trim(gribfile)
+          gribfilez = trim(datetime_s)//'_'//trim(ncstring(kv))//'_z_an_'//trim(gribfile)
         ELSE IF (trange_type=="fc") THEN
             volgrid_out(1)%time = reftime
             CALL getval (valtime - reftime, AMINUTE=scad)
@@ -913,6 +921,8 @@ DO kv = 1, nvar
               call l4f_category_log(category,L4F_ERROR,trim(msg))
               CALL raise_fatal_error(msg=msg, ierval=10)
             ENDIF
+          gribfileout = trim(datetime_s)//'_'//trim(ncstring(kv))//'_fc_'//trim(gribfile)
+          gribfilez = trim(datetime_s)//'_'//trim(ncstring(kv))//'_z_fc_'//trim(gribfile)
         ENDIF
 
         !-------------------------------------------------------------------------------
@@ -956,6 +966,10 @@ DO kv = 1, nvar
             !! get values
             msg="Error getting values for var " //TRIM(ncstring(kv))
             call checknc( nf90_get_var(ncid, varid, values3, start=(/1,1,1,it/), count=(/nx,ny,nz,1/)), category, trim(msg))
+            IF("model"=="roms" .and. trim(ncstring(kv))=="temp")THEN
+              !! from Celsius to Kelvin degrees
+              values3 = values3 +273.15
+            END IF
             WHERE (values3 /= fillvalue)
                 volgrid_out(1)%voldati(:,:,:,1,1,1) = values3
             ELSEWHERE
@@ -1010,6 +1024,7 @@ DO kv = 1, nvar
                              & categoryappend="transform")
                  call export(volgrid_int, filename=trim(gribfileout), & 
                    & categoryappend="output_volume")
+                 gribfileout=gribfilez
               END IF
             end if
         ENDIF
@@ -1017,7 +1032,7 @@ DO kv = 1, nvar
         ! Export data to GRIB2 output file
         WRITE(*,*)  MINVAL(volgrid_out(1)%voldati(:,:,1:nz,1:nrtime,1:ntrange,1:ngvar)), &
                   & maxval(volgrid_out(1)%voldati(:,:,1,1,1,1)), trim(gribfileout)
-        CALL export(volgrid_out, filename=trim(gribfilez), & 
+        CALL export(volgrid_out, filename=trim(gribfileout), & 
                    & categoryappend="output_volume")
     ENDDO
 ENDDO
