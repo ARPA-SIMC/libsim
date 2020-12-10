@@ -134,6 +134,21 @@ INTERFACE to_char
   MODULE PROCEDURE to_char_level
 END INTERFACE
 
+!> Convert a level type to a physical variable
+INTERFACE vol7d_level_to_var
+  MODULE PROCEDURE vol7d_level_to_var_int, vol7d_level_to_var_lev
+END INTERFACE vol7d_level_to_var
+
+!> Return the conversion factor for multiplying the level value when converting to variable
+INTERFACE vol7d_level_to_var_factor
+  MODULE PROCEDURE vol7d_level_to_var_factor_int, vol7d_level_to_var_factor_lev
+END INTERFACE vol7d_level_to_var_factor
+
+!> Return the scale value (base 10 log of conversion factor) for multiplying the level value when converting to variable
+INTERFACE vol7d_level_to_var_log10
+  MODULE PROCEDURE vol7d_level_to_var_log10_int, vol7d_level_to_var_log10_lev
+END INTERFACE vol7d_level_to_var_log10
+
 type(vol7d_level) :: almost_equal_levels(3)=(/&
  vol7d_level(  1,imiss,imiss,imiss),&
  vol7d_level(103,imiss,imiss,imiss),&
@@ -386,14 +401,22 @@ END FUNCTION vol7d_level_c_e
 #include "array_utilities_inc.F90"
 
 
-FUNCTION vol7d_level_to_var(level) RESULT(btable)
+FUNCTION vol7d_level_to_var_lev(level) RESULT(btable)
 TYPE(vol7d_level),INTENT(in) :: level
+CHARACTER(len=10) :: btable
+
+btable = vol7d_level_to_var_int(level%level1)
+
+END FUNCTION vol7d_level_to_var_lev
+
+FUNCTION vol7d_level_to_var_int(level) RESULT(btable)
+INTEGER,INTENT(in) :: level
 CHARACTER(len=10) :: btable
 
 INTEGER :: i
 
 DO i = 1, SIZE(level_var_converter)
-  IF (level_var_converter(i)%level == level%level1) THEN
+  IF (level_var_converter(i)%level == level) THEN
     btable = level_var_converter(i)%btable
     RETURN
   ENDIF
@@ -401,7 +424,54 @@ ENDDO
 
 btable = cmiss
 
-END FUNCTION vol7d_level_to_var
+END FUNCTION vol7d_level_to_var_int
 
+
+FUNCTION vol7d_level_to_var_factor_lev(level) RESULT(factor)
+TYPE(vol7d_level),INTENT(in) :: level
+REAL :: factor
+
+factor = vol7d_level_to_var_factor_int(level%level1)
+
+END FUNCTION vol7d_level_to_var_factor_lev
+
+FUNCTION vol7d_level_to_var_factor_int(level) RESULT(factor)
+INTEGER,INTENT(in) :: level
+REAL :: factor
+
+factor = 1.
+IF (ANY(level == height_level)) THEN
+  factor = 1.E-3
+ELSE IF (ANY(level == thermo_level)) THEN
+  factor = 1.E-1
+ELSE IF (ANY(level == sigma_level)) THEN
+  factor = 1.E-4
+ENDIF
+
+END FUNCTION vol7d_level_to_var_factor_int
+
+
+FUNCTION vol7d_level_to_var_log10_lev(level) RESULT(log10)
+TYPE(vol7d_level),INTENT(in) :: level
+REAL :: log10
+
+log10 = vol7d_level_to_var_log10_int(level%level1)
+
+END FUNCTION vol7d_level_to_var_log10_lev
+
+FUNCTION vol7d_level_to_var_log10_int(level) RESULT(log10)
+INTEGER,INTENT(in) :: level
+REAL :: log10
+
+log10 = 0.
+IF (ANY(level == height_level)) THEN
+  log10 = -3.
+ELSE IF (ANY(level == thermo_level)) THEN
+  log10 = -1.
+ELSE IF (ANY(level == sigma_level)) THEN
+  log10 = -4.
+ENDIF
+
+END FUNCTION vol7d_level_to_var_log10_int
 
 END MODULE vol7d_level_class
