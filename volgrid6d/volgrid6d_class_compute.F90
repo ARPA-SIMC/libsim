@@ -25,6 +25,7 @@
 !! \ingroup volgrid6d
 MODULE volgrid6d_class_compute
 USE datetime_class
+USE volgrid6d_var_class
 USE volgrid6d_class
 USE grid_id_class
 USE stat_proc_engine
@@ -793,5 +794,102 @@ ENDDO
 
 
 END SUBROUTINE volgrid6d_compute_stat_proc_metamorph
+
+!> Method for building a volume containing the vertical coordinate as
+!! a variable.
+!! This method produces a volgrid6d volume, derived from \a this,
+!! containing a single variable, horizontally constant, on the same
+!! input levels, which describes the vertical coordinate in the form
+!! of a physical variable. The grid, time and timerange metadata are
+!! the same as for the original volume. Only a single vertical level
+!! type, the one matching the \a level argument, is converted to a
+!! variable. The \a level argument can also indicate the layer between
+!! two surfaces of the same type, in that case the variable
+!! representing the vertical coordinate will be set to the value of
+!! the midpoint between the two layers. If something goes wrong,
+!! e.g. no level matches \a level argument or the level canot be
+!! converted to a physical value, an empty volume is returned.
+SUBROUTINE volgrid6d_compute_vert_coord_var(this, level, volgrid_lev)
+TYPE(volgrid6d),INTENT(in) :: this !< volume with the vertical levels
+TYPE(vol7d_level),INTENT(in) :: level !< vertical level to be converted to variable, only the type(s) of level are used not the value(s)
+TYPE(volgrid6d),INTENT(out) :: volgrid_lev !< output level with the variable describing the vertical coordinate
+
+INTEGER :: nlev, i, ii, iii, iiii
+TYPE(grid_id) :: out_gaid
+LOGICAL,ALLOCATABLE :: levmask(:)
+TYPE(volgrid6d_var) :: lev_var
+
+CALL init(volgrid_lev) ! initialise to null
+IF (.NOT.ASSOCIATED(this%gaid)) RETURN
+! if layer, both surfaces must be of the same type
+IF (c_e(level%level2) .AND. level%level1 /= level%level2) RETURN
+
+! look for valid levels to be converted to vars
+ALLOCATE(levmask(SIZE(this%level)))
+levmask = this%level%level1 == level%level1 .AND. &
+ this%level%level2 == level%level2 .AND. c_e(level%l1)
+IF (c_e(level%level2)) levmask = levmask .AND. c_e(level%l2)
+nlev = COUNT(levmask)
+IF (nlev == 0) RETURN
+
+out_gaid = grid_id_new()
+gaidloop: DO i=1 ,SIZE(this%gaid,1)
+  DO ii=1 ,SIZE(this%gaid,2)
+    DO iii=1 ,SIZE(this%gaid,3)
+      DO iiii=1 ,SIZE(this%gaid,4)
+        IF (c_e(this%gaid(i,ii,iii,iiii))) THEN ! conserve first valid gaid
+          CALL copy(this%gaid(i,ii,iii,iiii), out_gaid)
+          EXIT gaidloop
+        ENDIF
+      ENDDO
+    ENDDO
+  ENDDO
+ENDDO gaidloop
+
+
+
+! look for variable corresponding to level
+lev_var = convert(vol7d_var_new(btable=vol7d_level_to_var(level)), &
+ grid_id_template=out_gaid)
+IF (.NOT.c_e(lev_var)) RETURN
+
+! prepare output volume
+CALL init(volgrid_lev, griddim=this%griddim, &
+ time_definition=this%time_definition) !, categoryappend=categoryappend)
+CALL volgrid6d_alloc(volgrid_lev, ntime=SIZE(this%time), nlevel=nlev, &
+ ntimerange=SIZE(this%timerange), nvar=1)
+! fill metadata
+volgrid_lev%time = this%time
+volgrid_lev%level = PACK(this%level, mask=levmask)
+volgrid_lev%timerange = this%timerange
+volgrid_lev%var(1) = lev_var
+
+CALL volgrid6d_alloc_vol(volgrid_lev, decode=.TRUE.)
+! fill data
+DO i = 1, nlev
+  IF (c_e(level%level2)) THEN
+    volgrid_lev%voldati(:,:,i,:,:,:) = REAL(volgrid_lev%level(i)%l1 + &
+     volgrid_lev%level(i)%l2)* &
+     vol7d_level_to_var_factor(volgrid_lev%level(i))/2.
+  ELSE
+    volgrid_lev%voldati(:,:,i,:,:,:) = REAL(volgrid_lev%level(i)%l1)* &
+     vol7d_level_to_var_factor(volgrid_lev%level(i))
+  ENDIF
+ENDDO
+! fill gaid for subsequent export
+IF (c_e(out_gaid)) THEN
+  DO i=1 ,SIZE(volgrid_lev%gaid,1)
+    DO ii=1 ,SIZE(volgrid_lev%gaid,2)
+      DO iii=1 ,SIZE(volgrid_lev%gaid,3)
+        DO iiii=1 ,SIZE(volgrid_lev%gaid,4)
+          CALL copy(out_gaid, volgrid_lev%gaid(i,ii,iii,iiii))
+        ENDDO
+      ENDDO
+    ENDDO
+  ENDDO
+  CALL delete(out_gaid)
+ENDIF
+
+END SUBROUTINE volgrid6d_compute_vert_coord_var
 
 END MODULE volgrid6d_class_compute

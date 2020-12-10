@@ -117,6 +117,10 @@ INTERFACE delete
   MODULE PROCEDURE volgrid6d_var_delete
 END INTERFACE
 
+INTERFACE c_e
+  MODULE PROCEDURE volgrid6d_var_c_e
+END INTERFACE
+
 
 !> Logical equality operators for objects of the classes \a
 !! volgrid6d_var and \a conv_func.
@@ -166,7 +170,7 @@ END INTERFACE
 
 PRIVATE
 PUBLIC volgrid6d_var, volgrid6d_var_miss, volgrid6d_var_new, init, delete, &
- volgrid6d_var_normalize, &
+ c_e, volgrid6d_var_normalize, &
  OPERATOR(==), OPERATOR(/=), OPERATOR(*), &
  count_distinct, pack_distinct, count_and_pack_distinct, &
  map_distinct, map_inv_distinct, &
@@ -271,6 +275,13 @@ this%description = cmiss
 this%unit = cmiss
 
 END SUBROUTINE volgrid6d_var_delete
+
+
+ELEMENTAL FUNCTION volgrid6d_var_c_e(this) RESULT(c_e)
+TYPE(volgrid6d_var),INTENT(IN) :: this
+LOGICAL :: c_e
+c_e = this /= volgrid6d_var_miss
+END FUNCTION volgrid6d_var_c_e
 
 
 ELEMENTAL FUNCTION volgrid6d_var_eq(this, that) RESULT(res)
