@@ -357,7 +357,7 @@ TYPE (optionparser) :: opt
 TYPE (datetime) :: reftime
 REAL :: fillvalue
 INTEGER :: ncid,dimid_x,dimid_y,dimid_z,dimid_t
-INTEGER :: varid,ndims,xt
+INTEGER :: varid,ndims,xt,varid2
 INTEGER :: optstatus,pp,nw,kt,kl,kv
 INTEGER :: ios,ios1,ios2,ios3,ios4,ier,ncstat
 INTEGER :: scad
@@ -384,6 +384,9 @@ double precision:: hc
 double precision,allocatable:: z_r(:,:,:), z_w(:,:,:) !, Hz(:,:,:)
 real,allocatable:: zeta(:,:)
 TYPE(arrayof_real)::interplevels
+!! DEBUG
+! ! INTEGER,allocatable::dimids(:)
+! ! integer::ldim
 !-------------------------------------------------------------------------------
 ! Constant parameters
 
@@ -882,6 +885,8 @@ DO kv = 1,nvar
 ! !       call checknc( nf90_inquire_dimension(ncid, dimids(it), len=ldim), category)
 ! !       WRITE(*,*) ldim
 ! !     end do
+! !     write(*,*) "------------"
+! ! debug    
 
     fillvalue = rmiss
     msg="Warning: No fillValue for var "//TRIM(ncstring(kv))
@@ -981,8 +986,8 @@ DO kv = 1,nvar
               !!! conmpute and write ROMS levels
               !!!
               msg="Error getting values for var zeta (ROMS)"
-              call checknc( nf90_inq_varid(ncid, "zeta", varid), category, trim(msg))
-              call checknc( nf90_get_var(ncid, varid, zeta, start=(/1,1,it/), count=(/nx,ny,1/)), category, trim(msg))
+              call checknc( nf90_inq_varid(ncid, "zeta", varid2), category, trim(msg))
+              call checknc( nf90_get_var(ncid, varid2, zeta, start=(/1,1,it/), count=(/nx,ny,1/)), category, trim(msg))
               !! compute roms levels
               call set_depth(Vtransform, N, sc_r, sc_w, Cs_r, Cs_w, h, hc, zeta, z_r, z_w)
               !!!
