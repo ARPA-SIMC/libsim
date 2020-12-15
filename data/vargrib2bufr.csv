@@ -188,6 +188,7 @@ B13230,CAPE (local),J/Kg,200,201,143,255,1.0,0.0
 B13230,CAPE (local),J/Kg,80,201,143,255,1.0,0.0
 B13230,CAPE (local),J/Kg,78,201,143,255,1.0,0.0
 B13232,Reference evapotranspiration according to Penman-Monteith (local),Kg/m**2,200,0,193,2,1.0,0.0
+B13234,Surface lifted index,K,255,7,10,0,1.0,0.0
 B14018,Downward short-wave radiation flux (surface),W/m^2,255,4,7,0,1.0,0.0
 B14018,Downward short-wave radiation flux (surface),W/m^2,200,200,115,0,1.0,0.0
 B14018,Downward short-wave radiation flux (surface),W/m^2,200,200,115,255,1.0,0.0
