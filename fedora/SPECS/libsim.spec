@@ -2,7 +2,7 @@
 # to enable vapor support requiring stiff dependencies
 Summary: Fortran utility libraries
 Name: libsim
-Version: 6.4.8
+Version: 6.4.9
 Release: 1
 License: GPL2+
 Group: Applications/Meteo
@@ -157,6 +157,12 @@ mv $RPM_BUILD_ROOT%{_includedir}/*.mod $RPM_BUILD_ROOT%{_fmoddir}
 rm -rf %{buildroot}
 
 %changelog
+* Tue Dec 15 2020 Daniele Branchini <dbranchini@arpae.it> - 6.4.9-1
+- fixed reading error in simc_nc2grib
+- add volgrid6d_compute_vert_coord_var subrotuine
+  for converting vertical coordinate to a volgrid volume
+- add surface lifted index
+
 * Wed Dec  9 2020 Daniele Branchini <dbranchini@arpae.it> - 6.4.8-1
 - added netcdf to grib utility (simc_nc2grib)
 - added sea level, salinity, tidal elevation to vargrib2bufr.csv
