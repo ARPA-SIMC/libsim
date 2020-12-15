@@ -820,17 +820,26 @@ LOGICAL,ALLOCATABLE :: levmask(:)
 TYPE(volgrid6d_var) :: lev_var
 
 CALL init(volgrid_lev) ! initialise to null
-IF (.NOT.ASSOCIATED(this%gaid)) RETURN
+IF (.NOT.ASSOCIATED(this%gaid)) THEN
+  CALL l4f_log(L4F_ERROR, 'volgrid6d_compute_vert_coord_var: input volume not allocated')
+  RETURN
+ENDIF
 ! if layer, both surfaces must be of the same type
-IF (c_e(level%level2) .AND. level%level1 /= level%level2) RETURN
+IF (c_e(level%level2) .AND. level%level1 /= level%level2) THEN
+  CALL l4f_log(L4F_ERROR, 'volgrid6d_compute_vert_coord_var: requested (mixed) layer type not valid')
+  RETURN
+ENDIF
 
 ! look for valid levels to be converted to vars
 ALLOCATE(levmask(SIZE(this%level)))
 levmask = this%level%level1 == level%level1 .AND. &
- this%level%level2 == level%level2 .AND. c_e(level%l1)
-IF (c_e(level%level2)) levmask = levmask .AND. c_e(level%l2)
+ this%level%level2 == level%level2 .AND. c_e(this%level%l1)
+IF (c_e(level%level2)) levmask = levmask .AND. c_e(this%level%l2)
 nlev = COUNT(levmask)
-IF (nlev == 0) RETURN
+IF (nlev == 0) THEN
+  CALL l4f_log(L4F_ERROR, 'volgrid6d_compute_vert_coord_var: requested level type not available')
+  RETURN
+ENDIF
 
 out_gaid = grid_id_new()
 gaidloop: DO i=1 ,SIZE(this%gaid,1)
@@ -846,12 +855,13 @@ gaidloop: DO i=1 ,SIZE(this%gaid,1)
   ENDDO
 ENDDO gaidloop
 
-
-
 ! look for variable corresponding to level
 lev_var = convert(vol7d_var_new(btable=vol7d_level_to_var(level)), &
  grid_id_template=out_gaid)
-IF (.NOT.c_e(lev_var)) RETURN
+IF (.NOT.c_e(lev_var)) THEN
+  CALL l4f_log(L4F_ERROR, 'volgrid6d_compute_vert_coord_var: no variable corresponds to requested level type')
+  RETURN
+ENDIF
 
 ! prepare output volume
 CALL init(volgrid_lev, griddim=this%griddim, &

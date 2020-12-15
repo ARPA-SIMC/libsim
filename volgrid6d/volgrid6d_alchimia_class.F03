@@ -34,7 +34,7 @@ interface make
 end interface
 
 interface alchemy
-   module procedure  alchemy_vg6d
+   MODULE PROCEDURE alchemy_vg6dv, alchemy_vg6d
 end interface
 
 private
@@ -256,7 +256,7 @@ deallocate (varv7d,varvg6d)
 end subroutine make_vg6d
 
 
-integer function alchemy_vg6d(myin,vfn,mybout,myout,copy,vfnoracle,allvarcomputed)
+integer function alchemy_vg6dv(myin,vfn,mybout,myout,copy,vfnoracle,allvarcomputed)
 
 character(len=*),intent(in) :: mybout(:)
 type(fndsv),intent(in) :: vfn
@@ -272,15 +272,39 @@ character(len=10), allocatable:: mybin(:)
 TYPE(conv_func), pointer :: c_func(:)
 TYPE(vol7d_var),allocatable :: varv7d(:)
 
-alchemy_vg6d=0
+alchemy_vg6dv=0
 
 allocate(myout(size(myin)))
 
 do i=1,size(myin)
 
-  nvar=size(myin(i)%var)
+  alchemy_vg6dv = alchemy(myin(i),vfn,mybout,myout(i),copy,vfnoracle,allvarcomputed)
+  IF (alchemy_vg6dv /= 0) RETURN
+end do
+
+end function alchemy_vg6dv
+
+integer function alchemy_vg6d(myin,vfn,mybout,myout,copy,vfnoracle,allvarcomputed)
+
+character(len=*),intent(in) :: mybout(:)
+type(fndsv),intent(in) :: vfn
+type(volgrid6d),intent(in) :: myin
+type(volgrid6d),intent(out) ::myout
+logical,intent(in),optional :: copy !< if .true. the copy functions are localy added to vfn (you can have input variable copyed to output)
+type(fndsv),intent(out),optional :: vfnoracle
+logical, optional :: allvarcomputed !< do not delete in the output the gaid of all variables used for compute
+
+integer :: j,nvar
+type(fndsv) :: myvfn,vfntmp
+character(len=10), allocatable:: mybin(:)
+TYPE(conv_func), pointer :: c_func(:)
+TYPE(vol7d_var),allocatable :: varv7d(:)
+
+alchemy_vg6d=0
+
+  nvar=size(myin%var)
   allocate(varv7d(nvar))
-  CALL vargrib2varbufr(myin(i)%var, varv7d, c_func)
+  CALL vargrib2varbufr(myin%var, varv7d, c_func)
 
   DEALLOCATE(c_func)
 
@@ -318,15 +342,10 @@ do i=1,size(myin)
   !call display(myvfn)
   call l4f_log(L4F_INFO,"alchemy_vg6d: I need "//t2c(myvfn%nout)//" more variables")
 
-  call make(myvfn,mybin,mybout,myin(i),myout(i), allvarcomputed)
+  call make(myvfn,mybin,mybout,myin,myout, allvarcomputed)
 
   call delete(myvfn)
   call delete(vfntmp)
-
-  !print *,"varvg6d"
-  !print *,varvg6d
-
-end do
 
 end function alchemy_vg6d
 
