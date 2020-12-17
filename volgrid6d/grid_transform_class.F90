@@ -157,7 +157,11 @@
 !!    (grid-to-grid)
 !!    - sub_type='poly' the output mask field contains, at each point,
 !!      integer values from 1 to the number of polygons provided,
-!!      computed according to the polygon in which every point lies.
+!!      computed according to the polygon in which every point lies
+!!    - sub_type='grid' the output mask field contains, at each point,
+!!      integer values from 1 to the number of grid cells in the
+!!      pseudo-output grid provided, depending on the index of the
+!!      cell in which every point lies.
 !!
 !!  - trans_type='metamorphosis' the values of the output points are
 !!    the same as the input ones, but something external in the data
@@ -688,6 +692,9 @@ ELSE IF (this%trans_type == 'maskgen')THEN
       CALL l4f_category_log(this%category,L4F_ERROR,"maskgen:poly poly parameter missing or empty")
       CALL raise_fatal_error()
     ENDIF
+
+  ELSE IF (this%sub_type == 'grid') THEN
+! nothing to do for now
 
   ELSE
     CALL sub_type_error()
@@ -1506,12 +1513,90 @@ ELSE IF (this%trans%trans_type == 'stencilinter') THEN
   CALL delete(lout)
   this%valid = .TRUE. ! warning, no check of subtype
 
-ELSE IF (this%trans%trans_type == 'maskgen' .OR. &
- this%trans%trans_type == 'polyinter') THEN
+ELSE IF (this%trans%trans_type == 'maskgen') THEN
 
-  IF (this%trans%trans_type == 'polyinter') THEN
-    this%recur = .TRUE. ! grid-to-grid polyinter is done in two steps!
+  IF (this%trans%sub_type == 'poly') THEN
+
+    CALL copy(in, out)
+    CALL get_val(in, nx=this%innx, ny=this%inny)
+    this%outnx = this%innx
+    this%outny = this%inny
+
+! unlike before, here index arrays must have the shape of input grid
+    ALLOCATE(this%inter_index_x(this%innx,this%inny), &
+     this%inter_index_y(this%innx,this%inny))
+    this%inter_index_x(:,:) = imiss
+    this%inter_index_y(:,:) = 1
+
+! compute coordinates of input grid in geo system
+    CALL unproj(out) ! should be unproj(lin)
+
+    nprev = 1
+!$OMP PARALLEL DEFAULT(SHARED)
+!$OMP DO PRIVATE(j, i, n, point) FIRSTPRIVATE(nprev)
+    DO j = 1, this%inny
+      inside_x: DO i = 1, this%innx
+        point = georef_coord_new(x=out%dim%lon(i,j), y=out%dim%lat(i,j))
+
+        DO n = nprev, this%trans%poly%arraysize ! optimize starting from last matched polygon
+          IF (inside(point, this%trans%poly%array(n))) THEN ! stop at the first matching polygon
+            this%inter_index_x(i,j) = n
+            nprev = n
+            CYCLE inside_x
+          ENDIF
+        ENDDO
+        DO n = nprev-1, 1, -1 ! test the other polygons
+          IF (inside(point, this%trans%poly%array(n))) THEN ! stop at the first matching polygon
+            this%inter_index_x(i,j) = n
+            nprev = n
+            CYCLE inside_x
+          ENDIF
+        ENDDO
+
+!     CALL delete(point) ! speedup
+      ENDDO inside_x
+    ENDDO
+!$OMP END PARALLEL
+
+  ELSE IF (this%trans%sub_type == 'grid') THEN
+! here out(put grid) is abused for indicating the box-generating grid
+! but the real output grid is the input grid
+    CALL copy(out, lout) ! save out for local use
+    CALL delete(out) ! needed before copy
+    CALL copy(in, out)
+    CALL get_val(in, nx=this%innx, ny=this%inny)
+    this%outnx = this%innx
+    this%outny = this%inny
+    CALL get_val(lout, nx=nx, ny=ny, &
+     xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax)
+
+! unlike before, here index arrays must have the shape of input grid
+    ALLOCATE(this%inter_index_x(this%innx,this%inny), &
+     this%inter_index_y(this%innx,this%inny))
+
+! compute coordinates of input/output grid in geo system
+    CALL unproj(out)
+
+! use find_index in the opposite way, here extrap does not make sense
+    CALL this%find_index(lout, .TRUE., &
+     nx, ny, xmin, xmax, ymin, ymax, &
+     out%dim%lon, out%dim%lat, .FALSE., &
+     this%inter_index_x, this%inter_index_y)
+! transform indices to 1-d for mask generation
+    WHERE(c_e(this%inter_index_x(:,:)))
+      this%inter_index_x(:,:) = this%inter_index_x(:,:) + &
+       (this%inter_index_y(:,:)-1)*nx
+    END WHERE
+
+    CALL delete(lout)
   ENDIF
+
+  this%valid = .TRUE.
+
+ELSE IF (this%trans%trans_type == 'polyinter') THEN
+
+! this is the only difference wrt maskgen:poly
+   this%recur = .TRUE. ! grid-to-grid polyinter is done in two steps!
 
   CALL copy(in, out)
   CALL get_val(in, nx=this%innx, ny=this%inny)
@@ -1531,26 +1616,26 @@ ELSE IF (this%trans%trans_type == 'maskgen' .OR. &
 !$OMP PARALLEL DEFAULT(SHARED)
 !$OMP DO PRIVATE(j, i, n, point) FIRSTPRIVATE(nprev)
   DO j = 1, this%inny
-    inside_x: DO i = 1, this%innx
+    inside_x_2: DO i = 1, this%innx
       point = georef_coord_new(x=out%dim%lon(i,j), y=out%dim%lat(i,j))
 
       DO n = nprev, this%trans%poly%arraysize ! optimize starting from last matched polygon
         IF (inside(point, this%trans%poly%array(n))) THEN ! stop at the first matching polygon
           this%inter_index_x(i,j) = n
           nprev = n
-          CYCLE inside_x
+          CYCLE inside_x_2
         ENDIF
       ENDDO
       DO n = nprev-1, 1, -1 ! test the other polygons
         IF (inside(point, this%trans%poly%array(n))) THEN ! stop at the first matching polygon
           this%inter_index_x(i,j) = n
           nprev = n
-          CYCLE inside_x
+          CYCLE inside_x_2
         ENDIF
       ENDDO
 
 !     CALL delete(point) ! speedup
-    ENDDO inside_x
+    ENDDO inside_x_2
   ENDDO
 !$OMP END PARALLEL
 

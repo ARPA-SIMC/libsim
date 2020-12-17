@@ -155,7 +155,7 @@ CALL optionparser_add(opt, 'v', 'trans-type', trans_type, 'none', help= &
  &''boxregrid'' for resolution reduction, ''metamorphosis'' for &
  &selecting only a subset of the data of the original grid , '&
 #ifdef HAVE_SHAPELIB
- //'''maskgen'' for generating a mask field on polygons, ''polyinter'' for intepolating &
+ //'''maskgen'' for generating a mask field, ''polyinter'' for intepolating &
  &on polygons, '&
 #endif
  //'''none'' for no transformation (input/output only)')
@@ -167,11 +167,11 @@ CALL optionparser_add(opt, 'z', 'sub-type', sub_type, help= &
  //', polyinter'&
 #endif
 //': ''average'', ''stddev'', ''stddevnm1'', ''max'', ''min'', ''percentile'', &
- &for zoom: ''index'', ''coord'', ''coordbb'', ''projcoord'', '&
+ &for zoom: ''index'', ''coord'', ''coordbb'', ''projcoord'', for maskgen: '&
 #ifdef HAVE_SHAPELIB
- //'for maskgen: ''poly'', '&
+ //'''poly'' or '&
 #endif
- //'for metamorphosis: ''maskvalid'', ''maskinvalid'', &
+ //'''grid'' (in this case target grid has to be defined), for metamorphosis: ''maskvalid'', ''maskinvalid'', &
  &''setinvalidto'', ''settoinvalid''')
 CALL optionparser_add(opt, ' ', 'extrap', extrap, help= &
  'enable extrapolation outside input grid, it works only for ''inter'' &
@@ -277,7 +277,7 @@ coord_file=cmiss
 #if defined (HAVE_SHAPELIB) || defined (HAVE_LIBGRIBAPI)
 CALL optionparser_add(opt, ' ', 'coord-file', coord_file, help= &
 #ifdef HAVE_SHAPELIB
-'file in shp format with coordinates of polygons, required for maskgen and polyinter transformation' &
+'file in shp format with coordinates of polygons, required for maskgen:poly and polyinter transformation' &
 #endif
 #if defined (HAVE_SHAPELIB) && defined (HAVE_LIBGRIBAPI)
 //' or '// &
@@ -285,7 +285,7 @@ CALL optionparser_add(opt, ' ', 'coord-file', coord_file, help= &
 #ifdef HAVE_LIBGRIBAPI
 'file in grib format providing the vertical coordinate of input data for &
 &vertical interpolation or the mask field required by some sub-types of &
-&''metamorphosis'' transformation (see --maskbound)' &
+&''metamorphosis'' transformation (see --maskbounds)' &
 #endif
 )
 #endif
