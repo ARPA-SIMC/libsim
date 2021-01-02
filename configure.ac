@@ -85,7 +85,7 @@ if test x$DPKG_ARCHITECTURE != x
 then
   FNAME=$(basename $(readlink -f $(which $FC)))
   FMODDIR=/usr/lib/`$DPKG_ARCHITECTURE -qDEB_HOST_MULTIARCH`/fortran/$FNAME
-  FCFLAGS="$FCFLAGS -I$FMODDIR"
+  FCFLAGS="$FCFLAGS -I$FMODDIR -I/usr/include"
 fi
 
 AC_ARG_ENABLE(log4c, AC_HELP_STRING([--disable-log4c],
