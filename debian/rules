@@ -6,4 +6,8 @@ RELEASE_PACKAGE=libsim
 	dh $@ --with=fortran_mod --no-parallel
 
 override_dh_auto_configure:
-	dh_auto_configure -- --disable-ngmath --disable-ncarg --enable-alchimia --enable-f2003-features --enable-f2003-extended-features
+	dh_auto_configure -- \
+	       --disable-ngmath --disable-ncarg \
+	       --enable-alchimia --enable-shapelib \
+	       --enable-netcdf --enable-gribapi --enable-gdal \
+	       --enable-f2003-features --enable-f2003-extended-features
