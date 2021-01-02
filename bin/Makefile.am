@@ -16,10 +16,10 @@ if DBALLE
 
 bin_PROGRAMS += dba_qcfilter dba_transform
 dba_qcfilter_SOURCES = dba_qcfilter.F03 
-dba_qcfilter_LDADD =  ../vol7d/libsim_vol7d.la ../log4fortran/liblog4fortran.la ../qc/libsim_qc.la ../base/libsim_base.la
+dba_qcfilter_LDADD =  ../vol7d/libsim_vol7d.la ../log4fortran/liblog4fortran.la ../qc/libsim_qc.la ../base/libsim_base.la $(LOG4C_LIBS)
 
 dba_transform_SOURCES = dba_transform.F03 
-dba_transform_LDADD =  ../vol7d/libsim_vol7d.la ../log4fortran/liblog4fortran.la ../qc/libsim_qc.la ../base/libsim_base.la
+dba_transform_LDADD =  ../vol7d/libsim_vol7d.la ../log4fortran/liblog4fortran.la ../qc/libsim_qc.la ../base/libsim_base.la $(LOG4C_LIBS)
 
 dist_check_SCRIPTS += dba_qcfilter_test.sh
 
@@ -27,10 +27,10 @@ if SHAPELIB
 bin_PROGRAMS += v7d_qccli v7d_qctem
 
 v7d_qccli_SOURCES = v7d_qccli.F90
-v7d_qccli_LDADD = ../base/libsim_base.la ../vol7d/libsim_vol7d.la ../log4fortran/liblog4fortran.la ../qc/libsim_qc.la
+v7d_qccli_LDADD = ../base/libsim_base.la ../vol7d/libsim_vol7d.la ../log4fortran/liblog4fortran.la ../qc/libsim_qc.la $(LOG4C_LIBS)
 
 v7d_qctem_SOURCES = v7d_qctem.F90
-v7d_qctem_LDADD = ../base/libsim_base.la ../vol7d/libsim_vol7d.la ../log4fortran/liblog4fortran.la ../qc/libsim_qc.la
+v7d_qctem_LDADD = ../base/libsim_base.la ../vol7d/libsim_vol7d.la ../log4fortran/liblog4fortran.la ../qc/libsim_qc.la $(LOG4C_LIBS)
 
 if NCARG
 # v7d_qcspa is now here because it requires modqcspa
@@ -50,7 +50,7 @@ if DBALLE
 pkglibexec_PROGRAMS += v7d_pollini
 
 v7d_pollini_SOURCES = v7d_pollini.f90
-v7d_pollini_LDADD = ../base/libsim_base.la ../vol7d/libsim_vol7d.la ../log4fortran/liblog4fortran.la
+v7d_pollini_LDADD = ../base/libsim_base.la ../vol7d/libsim_vol7d.la ../log4fortran/liblog4fortran.la $(LOG4C_LIBS)
 endif
 
 bin_PROGRAMS += v7d_transform
@@ -61,9 +61,11 @@ if ALCHIMIA
 v7d_transform_LDADD += ../alchimia/libsim_alchimia.la ../termolib/libsim_termolib.la
 endif
 
+v7d_transform_LDADD += $(LOG4C_LIBS)
+
 pkglibexec_PROGRAMS += v7d_add_wmo_info
 v7d_add_wmo_info_SOURCES = v7d_add_wmo_info.F90
-v7d_add_wmo_info_LDADD = ../base/libsim_base.la ../vol7d/libsim_vol7d.la ../log4fortran/liblog4fortran.la
+v7d_add_wmo_info_LDADD = ../base/libsim_base.la ../vol7d/libsim_vol7d.la ../log4fortran/liblog4fortran.la $(LOG4C_LIBS)
 
 bin_PROGRAMS += vg6d_getpoint vg6d_transform
 
@@ -75,7 +77,7 @@ if DBALLE
 pkglibexec_PROGRAMS += vg6d_tcorr
 #noinst_PROGRAMS = vg6d_column
 vg6d_tcorr_SOURCES = vg6d_tcorr.F90
-vg6d_tcorr_LDADD = ../volgrid6d/libsim_volgrid6d.la  ../vol7d/libsim_vol7d.la ../base/libsim_base.la ../log4fortran/liblog4fortran.la
+vg6d_tcorr_LDADD = ../volgrid6d/libsim_volgrid6d.la  ../vol7d/libsim_vol7d.la ../base/libsim_base.la ../log4fortran/liblog4fortran.la $(LOG4C_LIBS)
 #vg6d_column_SOURCES = vg6d_column.F90
 #vg6d_column_LDADD = ../volgrid6d/libsim_volgrid6d.la  ../vol7d/libsim_vol7d.la ../base/libsim_base.la ../log4fortran/liblog4fortran.la
 endif
@@ -86,14 +88,14 @@ endif
 if NETCDF
 bin_PROGRAMS += simc_nc2grib
 simc_nc2grib_SOURCES = simc_nc2grib.f90
-simc_nc2grib_LDADD = ../volgrid6d/libsim_volgrid6d.la  ../vol7d/libsim_vol7d.la ../base/libsim_base.la ../log4fortran/liblog4fortran.la $(NETCDF_LIBS)
+simc_nc2grib_LDADD = ../volgrid6d/libsim_volgrid6d.la  ../vol7d/libsim_vol7d.la ../base/libsim_base.la ../log4fortran/liblog4fortran.la $(LOG4C_LIBS) $(GRIBAPI_LIBS) $(NETCDF_LIBS)
 endif
 
-vg6d_getpoint_LDADD = ../volgrid6d/libsim_volgrid6d.la  ../vol7d/libsim_vol7d.la ../base/libsim_base.la ../log4fortran/liblog4fortran.la
-vg6d_getpoint_pkauf_LDADD = ../volgrid6d/libsim_volgrid6d.la  ../vol7d/libsim_vol7d.la ../base/libsim_base.la ../log4fortran/liblog4fortran.la
+vg6d_getpoint_LDADD = ../volgrid6d/libsim_volgrid6d.la  ../vol7d/libsim_vol7d.la ../base/libsim_base.la ../log4fortran/liblog4fortran.la $(LOG4C_LIBS) $(GRIBAPI_LIBS)
+vg6d_getpoint_pkauf_LDADD = ../volgrid6d/libsim_volgrid6d.la  ../vol7d/libsim_vol7d.la ../base/libsim_base.la ../log4fortran/liblog4fortran.la $(LOG4C_LIBS) $(GRIBAPI_LIBS)
 
 vg6d_transform_SOURCES = vg6d_transform.F90
-vg6d_transform_LDADD = ../volgrid6d/libsim_volgrid6d.la ../base/libsim_base.la ../vol7d/libsim_vol7d.la ../log4fortran/liblog4fortran.la
+vg6d_transform_LDADD = ../volgrid6d/libsim_volgrid6d.la ../base/libsim_base.la ../vol7d/libsim_vol7d.la ../log4fortran/liblog4fortran.la $(LOG4C_LIBS) $(GRIBAPI_LIBS)
 
 if ALCHIMIA
 vg6d_transform_LDADD += ../alchimia/libsim_alchimia.la ../termolib/libsim_termolib.la  
