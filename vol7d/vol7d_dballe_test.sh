@@ -1,12 +1,12 @@
 #!/bin/sh
 set -e
 
-function failed(){
+failed() {
     echo "cmp failed"
     exit 1
 }
 
-function cleanup(){
+cleanup() {
     rm -f vol7d_dballe_test_out.bufr 
 }
 
