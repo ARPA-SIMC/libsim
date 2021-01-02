@@ -79,6 +79,15 @@ esac
 
 AC_DEFINE_UNQUOTED(ELEMENTAL_UNLESSXLF, $ELEMENTAL_UNLESSXLF, [Disable some elemental functions on xlf])
 
+dnl Locate fortran module directory on Debian systems
+AC_PATH_PROG([DPKG_ARCHITECTURE], [dpkg-architecture])
+if test x$DPKG_ARCHITECTURE != x
+then
+  FNAME=$(basename $(readlink -f $(which $FC)))
+  FMODDIR=/usr/lib/`$DPKG_ARCHITECTURE -qDEB_HOST_MULTIARCH`/fortran/$FNAME
+  FCFLAGS="$FCFLAGS -I$FMODDIR"
+fi
+
 AC_ARG_ENABLE(log4c, AC_HELP_STRING([--disable-log4c],
   [disable use of log4c package]), , [enableval=yes])dnl default enable
 
