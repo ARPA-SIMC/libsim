@@ -30,7 +30,7 @@ check_PROGRAMS = termolib_test
 TESTS = $(check_PROGRAMS)
 
 termolib_test_SOURCES = termolib_test.f90
-termolib_test_LDADD = libsim_termolib.la
+termolib_test_LDADD = libsim_termolib.la ../base/libsim_base.la
 
 
 mostlyclean-compile:
