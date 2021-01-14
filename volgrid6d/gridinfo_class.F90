@@ -618,7 +618,7 @@ SUBROUTINE time_import_gribapi(this,gaid)
 TYPE(datetime),INTENT(out) :: this ! datetime object
 INTEGER,INTENT(in) :: gaid ! grib_api id of the grib loaded in memory to import 
 
-INTEGER :: EditionNumber, ttimeincr, p2g, p2, unit, status
+INTEGER :: EditionNumber, ttimeincr, tprocdata, p2g, p2, unit, status
 CHARACTER(len=9) :: date
 CHARACTER(len=10) :: time
 
@@ -633,6 +633,7 @@ IF (EditionNumber == 1 .OR. EditionNumber == 2) THEN
 
   IF (EditionNumber == 2) THEN
 
+    CALL grib_get(gaid,'typeOfProcessedData',tprocdata,status)
     CALL grib_get(gaid,'typeOfTimeIncrement',ttimeincr,status)
 ! if analysis-like statistically processed data is encountered, the
 ! reference time must be shifted to the end of the processing period
@@ -641,6 +642,10 @@ IF (EditionNumber == 1 .OR. EditionNumber == 2) THEN
       CALL grib_get(gaid,'indicatorOfUnitForTimeRange',unit)
       CALL g2_interval_to_second(unit, p2g, p2)
       this = this + timedelta_new(sec=p2)
+    ELSE IF (status == GRIB_SUCCESS .AND. ttimeincr == 2 .AND. tprocdata == 0) THEN ! cosmo "accumulated" analysis 
+      CALL grib_get(gaid,'lengthOfTimeRange',p2g)
+      CALL grib_get(gaid,'indicatorOfUnitForTimeRange',unit)
+      CALL g2_interval_to_second(unit, p2g, p2)
     ELSE IF ((status == GRIB_SUCCESS .AND. ttimeincr == 2) .OR. &
      status /= GRIB_SUCCESS) THEN ! usual case
 ! do nothing
@@ -817,7 +822,7 @@ TYPE(vol7d_timerange),INTENT(out) :: this ! vol7d_timerange object
 INTEGER,INTENT(in) :: gaid ! grib_api id of the grib loaded in memory to import
 
 INTEGER :: EditionNumber, tri, unit, p1g, p2g, p1, p2, statproc, &
- ttimeincr, status
+ ttimeincr, tprocdata, status
 
 call grib_get(gaid,'GRIBEditionNumber',EditionNumber)
 
@@ -842,8 +847,9 @@ ELSE IF (EditionNumber == 2) THEN
     CALL g2_interval_to_second(unit, p2g, p2)
 
 ! for forecast-like timeranges p1 has to be shifted to the end of interval
+    CALL grib_get(gaid,'typeOfProcessedData',tprocdata,status)
     CALL grib_get(gaid,'typeOfTimeIncrement',ttimeincr)
-    IF (ttimeincr == 2) p1 = p1 + p2
+    IF (ttimeincr == 2 .AND. tprocdata /= 0) p1 = p1 + p2
 
   ELSE ! point in time
     statproc = 254
