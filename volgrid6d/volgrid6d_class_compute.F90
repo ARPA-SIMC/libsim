@@ -122,7 +122,7 @@ IF (stat_proc_input == 254) THEN
    TRIM(to_char(stat_proc_input))//':'//TRIM(to_char(stat_proc)))
 
   CALL volgrid6d_compute_stat_proc_agg(this, that, stat_proc, &
-   step, start, max_step, clone)
+   step, start, full_steps, max_step, clone)
 
 ELSE IF (stat_proc == 254) THEN
   CALL l4f_category_log(this%category, L4F_ERROR, &
@@ -173,7 +173,7 @@ ELSE
      'recomputing statistically processed data by aggregation '// &
      t2c(stat_proc_input)//':'//t2c(stat_proc))
     CALL volgrid6d_recompute_stat_proc_agg(this, that, stat_proc, step, start, &
-     frac_valid, clone)
+     full_steps, frac_valid, clone)
   ENDIF
 
 ENDIF
@@ -223,12 +223,14 @@ END SUBROUTINE volgrid6d_compute_stat_proc
 !! volume will not carry all the information about the processing
 !! which has been done, in the previous case, for example, the
 !! temperatures will simply look like monthly average temperatures.
-SUBROUTINE volgrid6d_recompute_stat_proc_agg(this, that, stat_proc, step, start, frac_valid, clone)
+SUBROUTINE volgrid6d_recompute_stat_proc_agg(this, that, stat_proc, &
+ step, start, full_steps, frac_valid, clone)
 TYPE(volgrid6d),INTENT(inout) :: this !< volume providing data to be recomputed, it is not modified by the method, apart from performing a \a volgrid6d_alloc_vol on it
 TYPE(volgrid6d),INTENT(out) :: that !< output volume which will contain the recomputed data
 INTEGER,INTENT(in) :: stat_proc !< type of statistical processing to be recomputed (from grib2 table), only data having timerange of this type will be recomputed and will appear in the output volume
 TYPE(timedelta),INTENT(in) :: step !< length of the step over which the statistical processing is performed
 TYPE(datetime),INTENT(in),OPTIONAL :: start !< start of statistical processing interval
+LOGICAL,INTENT(in),OPTIONAL :: full_steps !< if \a .TRUE. and \a start is not provided, cumulate only on intervals starting at a forecast time or a reference time modulo \a step
 REAL,INTENT(in),OPTIONAL :: frac_valid !< minimum fraction of valid data required for considering acceptable a recomputed value, default=1.
 LOGICAL, INTENT(in),OPTIONAL :: clone !< if provided and \c .TRUE. , clone the gaid's from \a this to \a that
 
@@ -265,7 +267,7 @@ that%var = this%var
 
 CALL recompute_stat_proc_agg_common(this%time, this%timerange, stat_proc, tri, &
  step, this%time_definition, that%time, that%timerange, map_ttr, &
- dtratio=dtratio, start=start)
+ dtratio=dtratio, start=start, full_steps=full_steps)
 
 CALL volgrid6d_alloc_vol(that, decode=ASSOCIATED(this%voldati))
 
@@ -370,12 +372,14 @@ END SUBROUTINE volgrid6d_recompute_stat_proc_agg
 !! A maximum distance in time for input valid data can be assigned
 !! with the optional argument \a max_step, in order to filter datasets
 !! with too long "holes".
-SUBROUTINE volgrid6d_compute_stat_proc_agg(this, that, stat_proc, step, start, max_step, clone)
+SUBROUTINE volgrid6d_compute_stat_proc_agg(this, that, stat_proc, &
+ step, start, full_steps, max_step, clone)
 TYPE(volgrid6d),INTENT(inout) :: this !< volume providing data to be recomputed, it is not modified by the method, apart from performing a \a volgrid6d_alloc_vol on it
 TYPE(volgrid6d),INTENT(out) :: that !< output volume which will contain the recomputed data
 INTEGER,INTENT(in) :: stat_proc !< type of statistical processing to be recomputed (from grib2 table), only data having timerange of this type will be recomputed and will appear in the output volume
 TYPE(timedelta),INTENT(in) :: step !< length of the step over which the statistical processing is performed
 TYPE(datetime),INTENT(in),OPTIONAL :: start !< start of statistical processing interval
+LOGICAL,INTENT(in),OPTIONAL :: full_steps !< if \a .TRUE. and \a start is not provided, cumulate only on intervals starting at a forecast time or a reference time modulo \a step
 TYPE(timedelta),INTENT(in),OPTIONAL :: max_step !< maximum allowed distance in time between two contiguougs valid data within an interval, for the interval to be eligible for statistical processing
 LOGICAL , INTENT(in),OPTIONAL :: clone !< if provided and \c .TRUE. , clone the gaid's from \a this to \a that
 
@@ -410,7 +414,8 @@ that%level = this%level
 that%var = this%var
 
 CALL recompute_stat_proc_agg_common(this%time, this%timerange, stat_proc, tri, &
- step, this%time_definition, that%time, that%timerange, map_ttr, start=start)
+ step, this%time_definition, that%time, that%timerange, map_ttr, &
+ start=start, full_steps=full_steps)
 
 CALL volgrid6d_alloc_vol(that, decode=ASSOCIATED(this%voldati))
 

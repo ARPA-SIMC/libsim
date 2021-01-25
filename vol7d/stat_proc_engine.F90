@@ -315,7 +315,7 @@ END SUBROUTINE compute_stat_proc_metamorph_common
 
 ! common operations for statistical processing by aggregation
 SUBROUTINE recompute_stat_proc_agg_common(itime, itimerange, stat_proc, tri, &
- step, time_definition, otime, otimerange, map_ttr, dtratio, start)
+ step, time_definition, otime, otimerange, map_ttr, dtratio, start, full_steps)
 TYPE(datetime),INTENT(in) :: itime(:)
 TYPE(vol7d_timerange),INTENT(in) :: itimerange(:)
 INTEGER,INTENT(in) :: stat_proc
@@ -327,6 +327,7 @@ TYPE(vol7d_timerange),POINTER :: otimerange(:)
 TYPE(arrayof_ttr_mapper),POINTER :: map_ttr(:,:)
 INTEGER,POINTER,OPTIONAL :: dtratio(:)
 TYPE(datetime),INTENT(in),OPTIONAL :: start
+LOGICAL,INTENT(in),OPTIONAL :: full_steps
 
 INTEGER :: i, j, k, l, na, nf, n
 INTEGER :: steps, p1, maxp1, maxp2, minp1mp2, dstart
@@ -422,7 +423,9 @@ IF (lstart == datetime_miss) THEN ! autodetect
 ! go back to start of longest processing interval
     lstart = lstart - timedelta_new(sec=maxp2)
   ENDIF
-  lstart = lstart - (MOD(lstart, step)) ! round to step, (should be MODULO, not MOD)
+  IF (optio_log(full_steps)) THEN
+    lstart = lstart - (MOD(lstart, step)) ! round to step, (should be MODULO, not MOD)
+  ENDIF
 ENDIF
 
 #ifdef DEBUG

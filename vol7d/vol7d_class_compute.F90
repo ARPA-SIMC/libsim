@@ -111,7 +111,7 @@ INTEGER,INTENT(in) :: stat_proc_input !< type of statistical processing of data 
 INTEGER,INTENT(in) :: stat_proc !< type of statistical processing to be recomputed (from grib2 table), data in output volume \a that will have a timerange of this type
 TYPE(timedelta),INTENT(in) :: step !< length of the step over which the statistical processing is performed
 TYPE(datetime),INTENT(in),OPTIONAL :: start !< start of statistical processing interval
-LOGICAL,INTENT(in),OPTIONAL :: full_steps !< if \a .TRUE. cumulate only on intervals starting at a forecast time modulo \a step, default is to cumulate on all possible combinations of intervals
+LOGICAL,INTENT(in),OPTIONAL :: full_steps !< if \a .TRUE. cumulate only on intervals starting at a forecast time or a reference time modulo \a step, default is to cumulate on all possible combinations of intervals
 REAL,INTENT(in),OPTIONAL :: frac_valid !< minimum fraction of valid data required for considering acceptable a recomputed value, default=1.
 TYPE(timedelta),INTENT(in),OPTIONAL :: max_step !< maximum allowed distance in time between two contiguougs valid data within an interval, for the interval to be eligible for statistical processing
 LOGICAL,INTENT(in),OPTIONAL :: weighted !< if provided and \c .TRUE., the statistical process is computed, if possible, by weighting every value with a weight proportional to its validity interval
@@ -125,7 +125,7 @@ IF (stat_proc_input == 254) THEN
    TRIM(to_char(stat_proc_input))//':'//TRIM(to_char(stat_proc)))
 
   CALL vol7d_compute_stat_proc_agg(this, that, stat_proc, &
-   step, start, max_step, weighted, other)
+   step, start, full_steps, max_step, weighted, other)
 
 ELSE IF (stat_proc == 254) THEN
   CALL l4f_log(L4F_INFO, &
@@ -139,11 +139,11 @@ ELSE IF (stat_proc == 254) THEN
     CALL vol7d_decompute_stat_proc(this, that, step, other, stat_proc_input)
   ELSE
     IF (ANY(this%timerange(:)%p2 == steps/2)) THEN ! need to average
-! average twice on step interval, with a shift of step/2
+! average twice on step interval, with a shift of step/2, check full_steps
       CALL vol7d_recompute_stat_proc_agg(this, that1, stat_proc_input, &
-     step, frac_valid=1.0)
+     step, full_steps=.FALSE., frac_valid=1.0)
       CALL vol7d_recompute_stat_proc_agg(this, that2, stat_proc_input, &
-     step, start=that1%time(1)+step/2, frac_valid=1.0)
+     step, start=that1%time(1)+step/2, full_steps=.FALSE., frac_valid=1.0)
 ! merge the result
       CALL vol7d_append(that1, that2, sort=.TRUE., lanasimple=.TRUE.)
 ! and process it
@@ -163,13 +163,14 @@ ELSE IF (stat_proc_input == stat_proc .OR. &
 
   IF (PRESENT(other)) THEN
     CALL vol7d_recompute_stat_proc_agg(this, that1, stat_proc, &
-     step, start, frac_valid, other=other, stat_proc_input=stat_proc_input)
+     step, start, full_steps, frac_valid, &
+     other=other, stat_proc_input=stat_proc_input)
     CALL vol7d_recompute_stat_proc_diff(this, that2, stat_proc, &
      step, full_steps, other=other1)
     CALL vol7d_merge(other, other1, sort=.TRUE.)
   ELSE
     CALL vol7d_recompute_stat_proc_agg(this, that1, stat_proc, &
-     step, start, frac_valid, stat_proc_input=stat_proc_input)
+     step, start, full_steps, frac_valid, stat_proc_input=stat_proc_input)
     CALL vol7d_recompute_stat_proc_diff(this, that2, stat_proc, step, full_steps)
   ENDIF
 
@@ -241,12 +242,13 @@ END SUBROUTINE vol7d_compute_stat_proc
 !! which has been done, in the previous case, for example, the
 !! temperatures will simply look like monthly average temperatures.
 SUBROUTINE vol7d_recompute_stat_proc_agg(this, that, stat_proc, &
- step, start, frac_valid, other, stat_proc_input)
+ step, start, full_steps, frac_valid, other, stat_proc_input)
 TYPE(vol7d),INTENT(inout) :: this !< volume providing data to be recomputed, it is not modified by the method, apart from performing a \a vol7d_alloc_vol on it
 TYPE(vol7d),INTENT(out) :: that !< output volume which will contain the recomputed data
 INTEGER,INTENT(in) :: stat_proc !< type of statistical processing to be recomputed (from grib2 table), only data having timerange of this type will be recomputed and will appear in the output volume
 TYPE(timedelta),INTENT(in) :: step !< length of the step over which the statistical processing is performed
 TYPE(datetime),INTENT(in),OPTIONAL :: start !< start of statistical processing interval
+LOGICAL,INTENT(in),OPTIONAL :: full_steps !< if \a .TRUE. and \a start is not provided, cumulate only on intervals starting at a forecast time or a reference time modulo \a step
 REAL,INTENT(in),OPTIONAL :: frac_valid !< minimum fraction of valid data required for considering acceptable a recomputed value, default=1.
 TYPE(vol7d),INTENT(inout),OPTIONAL :: other !< optional volume that, on exit, is going to contain the data that did not contribute to the statistical processing
 INTEGER,INTENT(in),OPTIONAL :: stat_proc_input !< to be used with care, type of statistical processing of data that has to be processed (from grib2 table), only data having timerange of this type will be recomputed, the actual statistical processing performed and which will appear in the output volume, is however determined by \a stat_proc argument
@@ -296,7 +298,8 @@ that%network = this%network
 
 ! compute the output time and timerange and all the required mappings
 CALL recompute_stat_proc_agg_common(this%time, this%timerange, stat_proc, tri, &
- step, this%time_definition, that%time, that%timerange, map_ttr, dtratio, start)
+ step, this%time_definition, that%time, that%timerange, map_ttr, dtratio, &
+ start, full_steps)
 CALL vol7d_alloc_vol(that)
 
 ALLOCATE(ttr_mask(SIZE(this%time), SIZE(this%timerange)))
@@ -477,12 +480,13 @@ END SUBROUTINE vol7d_recompute_stat_proc_agg
 !! be assigned with the optional argument \a max_step, in order to
 !! filter datasets with too long "holes".
 SUBROUTINE vol7d_compute_stat_proc_agg(this, that, stat_proc, &
- step, start, max_step, weighted, other)
+ step, start, full_steps, max_step, weighted, other)
 TYPE(vol7d),INTENT(inout) :: this !< volume providing data to be computed, it is not modified by the method, apart from performing a \a vol7d_alloc_vol on it
 TYPE(vol7d),INTENT(out) :: that !< output volume which will contain the computed data
 INTEGER,INTENT(in) :: stat_proc !< type of statistical processing to be computed (from grib2 table)
 TYPE(timedelta),INTENT(in) :: step !< length of the step over which the statistical processing is performed
 TYPE(datetime),INTENT(in),OPTIONAL :: start !< start of statistical processing interval
+LOGICAL,INTENT(in),OPTIONAL :: full_steps !< if \a .TRUE. and \a start is not provided, cumulate only on intervals starting at a forecast time or a reference time modulo \a step
 TYPE(timedelta),INTENT(in),OPTIONAL :: max_step !< maximum allowed distance in time between two contiguougs valid data within an interval, for the interval to be eligible for statistical processing
 LOGICAL,INTENT(in),OPTIONAL :: weighted !< if provided and \c .TRUE., the statistical process is computed, if possible, by weighting every value with a weight proportional to its validity interval
 TYPE(vol7d),INTENT(inout),OPTIONAL :: other !< optional volume that, on exit, is going to contain the data that did not contribute to the accumulation computation
@@ -528,7 +532,8 @@ CALL vol7d_copy(this, v7dtmp, ltime=(/.FALSE./), ltimerange=(/.FALSE./))
 CALL init(that, time_definition=this%time_definition)
 ! compute the output time and timerange and all the required mappings
 CALL recompute_stat_proc_agg_common(this%time, this%timerange, stat_proc, tri, &
- step, this%time_definition, that%time, that%timerange, map_ttr, start=start)
+ step, this%time_definition, that%time, that%timerange, map_ttr, start=start, &
+ full_steps=full_steps)
 ! merge with information from original volume
 CALL vol7d_merge(that, v7dtmp)
 
@@ -1120,7 +1125,8 @@ that%network = this%network
 
 ! compute the output time and timerange and all the required mappings
 CALL recompute_stat_proc_agg_common(this%time, this%timerange, stat_proc, tri, &
- step, this%time_definition, that%time, that%timerange, map_ttr, dtratio, start)
+ step, this%time_definition, that%time, that%timerange, map_ttr, &
+ dtratio=dtratio, start=start)
 CALL vol7d_alloc_vol(that)
 
 ALLOCATE(ttr_mask(SIZE(this%time), SIZE(this%timerange)))
