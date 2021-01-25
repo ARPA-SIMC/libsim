@@ -410,7 +410,7 @@ minp1mp2 = MINVAL(itimerange(:)%p1 - itimerange(:)%p2, mask=mask_timerange)
 IF (time_definition == 0) THEN ! reference time
   lend = lend + timedelta_new(sec=maxp1)
 ENDIF
-! extend interval at the end in order to include al the data, must use
+! extend interval at the end in order to include all the data, must use
 ! < and not <= in the DO WHILE loops some lines below
 lend = lend + step
 IF (lstart == datetime_miss) THEN ! autodetect
@@ -421,8 +421,8 @@ IF (lstart == datetime_miss) THEN ! autodetect
   ELSE ! verification time
 ! go back to start of longest processing interval
     lstart = lstart - timedelta_new(sec=maxp2)
-!  lstart = lstart - (MOD(lstart, step)) ! round to step, + or - ?
   ENDIF
+  lstart = lstart - (MOD(lstart, step)) ! round to step, (should be MODULO, not MOD)
 ENDIF
 
 #ifdef DEBUG
