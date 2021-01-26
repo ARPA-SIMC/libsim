@@ -2,7 +2,7 @@
 # to enable vapor support requiring stiff dependencies
 Summary: Fortran utility libraries
 Name: libsim
-Version: 6.4.9
+Version: 6.4.10
 Release: 1
 License: GPL2+
 Group: Applications/Meteo
@@ -157,6 +157,12 @@ mv $RPM_BUILD_ROOT%{_includedir}/*.mod $RPM_BUILD_ROOT%{_fmoddir}
 rm -rf %{buildroot}
 
 %changelog
+* Tue Jan 26 2021 Daniele Branchini <dbranchini@arpae.it> - 6.4.10-1
+- fix for reading cosmo grib2 accumulated analyses
+- add maskgen:grid transformation
+- when start of comp_stat period non specified, force it to be modulo step
+- implement full_steps also for time processing by aggregation
+
 * Tue Dec 15 2020 Daniele Branchini <dbranchini@arpae.it> - 6.4.9-1
 - fixed reading error in simc_nc2grib
 - add volgrid6d_compute_vert_coord_var subrotuine
