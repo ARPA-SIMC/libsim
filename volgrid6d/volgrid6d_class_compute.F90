@@ -107,7 +107,7 @@ INTEGER,INTENT(in) :: stat_proc_input !< type of statistical processing of data 
 INTEGER,INTENT(in) :: stat_proc !< type of statistical processing to be recomputed (from grib2 table), data in output volume \a that will have a timerange of this type
 TYPE(timedelta),INTENT(in) :: step !< length of the step over which the statistical processing is performed
 TYPE(datetime),INTENT(in),OPTIONAL :: start !< start of statistical processing interval
-LOGICAL,INTENT(in),OPTIONAL :: full_steps !< if \a .TRUE. cumulate only on intervals starting at a forecast time modulo \a step, default is to cumulate on all possible combinations of intervals
+LOGICAL,INTENT(in),OPTIONAL :: full_steps !< if \a .TRUE. apply processing only on intervals starting at a forecast time or a reference time modulo \a step
 REAL,INTENT(in),OPTIONAL :: frac_valid !< minimum fraction of valid data required for considering acceptable a recomputed value, default=1.
 TYPE(timedelta),INTENT(in),OPTIONAL :: max_step ! maximum allowed distance in time between two single valid data within a dataset, for the dataset to be eligible for statistical processing
 LOGICAL,INTENT(in),OPTIONAL :: weighted !< if provided and \c .TRUE., the statistical process is computed, if possible, by weighting every value with a weight proportional to its validity interval
@@ -230,7 +230,7 @@ TYPE(volgrid6d),INTENT(out) :: that !< output volume which will contain the reco
 INTEGER,INTENT(in) :: stat_proc !< type of statistical processing to be recomputed (from grib2 table), only data having timerange of this type will be recomputed and will appear in the output volume
 TYPE(timedelta),INTENT(in) :: step !< length of the step over which the statistical processing is performed
 TYPE(datetime),INTENT(in),OPTIONAL :: start !< start of statistical processing interval
-LOGICAL,INTENT(in),OPTIONAL :: full_steps !< if \a .TRUE. and \a start is not provided, cumulate only on intervals starting at a forecast time or a reference time modulo \a step
+LOGICAL,INTENT(in),OPTIONAL :: full_steps !< if \a .TRUE. and \a start is not provided, apply processing only on intervals starting at a forecast time or a reference time modulo \a step
 REAL,INTENT(in),OPTIONAL :: frac_valid !< minimum fraction of valid data required for considering acceptable a recomputed value, default=1.
 LOGICAL, INTENT(in),OPTIONAL :: clone !< if provided and \c .TRUE. , clone the gaid's from \a this to \a that
 
@@ -379,7 +379,7 @@ TYPE(volgrid6d),INTENT(out) :: that !< output volume which will contain the reco
 INTEGER,INTENT(in) :: stat_proc !< type of statistical processing to be recomputed (from grib2 table), only data having timerange of this type will be recomputed and will appear in the output volume
 TYPE(timedelta),INTENT(in) :: step !< length of the step over which the statistical processing is performed
 TYPE(datetime),INTENT(in),OPTIONAL :: start !< start of statistical processing interval
-LOGICAL,INTENT(in),OPTIONAL :: full_steps !< if \a .TRUE. and \a start is not provided, cumulate only on intervals starting at a forecast time or a reference time modulo \a step
+LOGICAL,INTENT(in),OPTIONAL :: full_steps !< if \a .TRUE. and \a start is not provided, apply processing only on intervals starting at a forecast time or a reference time modulo \a step
 TYPE(timedelta),INTENT(in),OPTIONAL :: max_step !< maximum allowed distance in time between two contiguougs valid data within an interval, for the interval to be eligible for statistical processing
 LOGICAL , INTENT(in),OPTIONAL :: clone !< if provided and \c .TRUE. , clone the gaid's from \a this to \a that
 
@@ -718,7 +718,7 @@ END SUBROUTINE volgrid6d_recompute_stat_proc_diff
 !! statistical processing methods (parameter \a stat_proc) are:
 !!
 !!  - 0 average
-!!  - 1 cumulation
+!!  - 1 accumulation
 !!
 !! Input volume may have any value of \a this%time_definition, and
 !! that value will be conserved in the output volume.
