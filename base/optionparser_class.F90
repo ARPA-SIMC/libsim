@@ -254,7 +254,7 @@ status = optionparser_ok
 
 SELECT CASE(this%opttype)
 CASE(opttype_c)
-  CALL dirty_char_assignment(this%destc, this%destclen, optarg, LEN_TRIM(optarg))
+  CALL dirty_char_assignment(this%destc, this%destclen, TRIM(optarg))
 !  this%destc(1:this%destclen) = optarg
   IF (LEN_TRIM(optarg) > this%destclen) THEN
     CALL l4f_log(L4F_WARN, &
@@ -616,13 +616,10 @@ ENDIF
 myoption = option_new(short_opt, long_opt, cdefault, help)
 IF (.NOT.c_e(myoption)) RETURN ! error in creating option, ignore it
 
-! this is needed in order to circumvent a bug in gfortran 4.1.2
-! in future replace with following line and erase dirty_char_pointer_set
-CALL dirty_char_pointer_set(myoption%destc, dest(1:1))
-!this%destc => dest!(1:1)
+myoption%destc => dest(1:1)
 myoption%destclen = LEN(dest) ! needed to avoid exceeding the length of dest
 IF (PRESENT(default)) &
- CALL dirty_char_assignment(myoption%destc, myoption%destclen, default, LEN(default))
+ CALL dirty_char_assignment(myoption%destc, myoption%destclen, default)
 !IF (PRESENT(default)) myoption%destc(1:myoption%destclen) = default
 myoption%opttype = opttype_c
 IF (optio_log(isopt)) THEN
@@ -1346,32 +1343,23 @@ WRITE(*,'(A/A/A)')'esac','return 0','}'
 END SUBROUTINE optionparser_make_completion
 
 
-
-SUBROUTINE dirty_char_pointer_set(from, to)
-CHARACTER(len=1),POINTER :: from
-CHARACTER(len=1),TARGET :: to
-from => to
-END SUBROUTINE dirty_char_pointer_set
-
-END MODULE optionparser_class
-
-
-SUBROUTINE dirty_char_assignment(destc, destclen, src, srclen)
+SUBROUTINE dirty_char_assignment(destc, destclen, src)
 USE kinds
 IMPLICIT NONE
 
 CHARACTER(len=1) :: destc(*)
 CHARACTER(len=*) :: src
-INTEGER :: destclen, srclen
+INTEGER :: destclen
 
 INTEGER :: i
 
-DO i = 1, MIN(destclen, srclen)
+DO i = 1, MIN(destclen, LEN(src))
   destc(i) = src(i:i)
 ENDDO
-DO i = srclen+1, destclen
+DO i = LEN(src)+1, destclen
   destc(i) = ' '
 ENDDO
 
 END SUBROUTINE dirty_char_assignment
 
+END MODULE optionparser_class
