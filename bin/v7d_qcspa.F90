@@ -280,7 +280,7 @@ if (operation == "ndi") then
       output_file='/dev/stdout'
     ENDIF
     iun = getunit()
-    OPEN(iun, file=output_file, form='UNFORMATTED', access=stream_if_possible)
+    OPEN(iun, file=output_file, form='UNFORMATTED', access='STREAM')
     CALL export(v7dqcspa%clima, unit=iun)
     CLOSE(iun)
     CALL delete(v7dqcspa%clima)

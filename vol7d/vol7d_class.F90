@@ -2350,7 +2350,7 @@ if (.not. opened) then
 !     'in vol7d_write_on_file, file exists, cannot open file '//TRIM(lfilename))
 !    CALL raise_fatal_error()
 !  ENDIF
-  OPEN(unit=lunit, file=lfilename, form='UNFORMATTED', access=stream_if_possible)
+  OPEN(unit=lunit, file=lfilename, form='UNFORMATTED', access='STREAM')
   CALL l4f_log(L4F_INFO, 'opened: '//TRIM(lfilename))
 end if
 
@@ -2555,7 +2555,7 @@ IF (.NOT. opened) THEN
      'in vol7d_read_from_file, file does not exists, cannot open')
     CALL raise_fatal_error()
   ENDIF
-  OPEN(unit=lunit, file=lfilename, form='UNFORMATTED', access=stream_if_possible, &
+  OPEN(unit=lunit, file=lfilename, form='UNFORMATTED', access='STREAM', &
    status='OLD', action='READ')
   CALL l4f_log(L4F_INFO, 'opened: '//TRIM(lfilename))
 end if

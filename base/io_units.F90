@@ -42,9 +42,4 @@ INTEGER, PARAMETER :: stdin_unit = 5 !< standard input
 INTEGER, PARAMETER :: stdout_unit = 6 !< standard output
 INTEGER, PARAMETER :: stderr_unit = 0 !< standard error
 
-! Internal undocumented variable, used as a transition to Fortran 2003
-! STREAM access, which allows working in pipe, unlike SEQUENTIAL
-! access (possibly compiler dependent)
-CHARACTER(len=6), PARAMETER :: stream_if_possible='STREAM'
-
 END MODULE io_units

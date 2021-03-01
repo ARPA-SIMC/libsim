@@ -1211,7 +1211,7 @@ IF (output_format == 'native') THEN
     output_file='/dev/stdout'
   ENDIF
   iun = getunit()
-  OPEN(iun, file=output_file, form='UNFORMATTED', access=stream_if_possible)
+  OPEN(iun, file=output_file, form='UNFORMATTED', access='STREAM')
   CALL export(v7d, unit=iun)
   CLOSE(iun)
 
