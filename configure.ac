@@ -208,12 +208,6 @@ if test "x$enableval" = "xyes"; then
     AC_MSG_WARN([dballe code requested but not found])
   fi
 
-  AC_COMPILE_IFELSE(
-  [AC_LANG_PROGRAM(,[[       USE dballef]])],
-                   [AC_MSG_RESULT([dballef module found!])]
-		   AC_DEFINE(HAVE_DBALLEF_MOD, 1, [Using dballef module!]),
-                   [AC_MSG_RESULT([dballef module not found, using dballeff.h!])]
-  )
 else
   AC_MSG_RESULT([dballe code not included])
 fi

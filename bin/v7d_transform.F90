@@ -29,9 +29,6 @@ USE datetime_class
 #ifdef HAVE_DBALLE
 USE vol7d_dballe_class
 #endif
-#ifdef HAVE_DBALLE
-USE db_utils
-#endif
 #ifdef HAVE_LIBGRIBAPI
 #ifdef HAVE_LIBNETCDF
 USE vol7d_netcdf_class
@@ -98,7 +95,7 @@ TYPE(vol7d_dballe) :: v7d_dba, v7d_dba_out
 #endif
 TYPE(vol7d_network) :: set_network_obj
 CHARACTER(len=network_name_len) :: set_network
-CHARACTER(len=512) :: dsn, user, password
+CHARACTER(len=512) :: dsn
 LOGICAL :: version, ldisplay, disable_qc, comp_qc_ndi, comp_qc_perc, comp_qc_area_er,anaonly
 CHARACTER(len=512):: a_name
 INTEGER :: category
@@ -160,7 +157,7 @@ opt = optionparser_new(description_msg= &
  //', or into a configurable formatted csv file. &
  &If input-format is of file type, inputfile ''-'' indicates stdin, &
  &if input-format or output-format is of database type, inputfile/outputfile specifies &
- &database access info in the form user/password@dsn or in URI form, &
+ &database access info in URI form, &
  &possibly with embedded user and password information, &
  &if empty or ''-'', a suitable default is used when possible. &
  &If output-format is of file type, outputfile ''-'' indicates stdout.', &
@@ -829,13 +826,11 @@ DO ninput = optind, iargc()-1
       file=.TRUE.
 
     ELSE IF (input_format == 'dba') THEN
-      CALL parse_dba_access_info(input_file, dsn, user, password)
       file=.FALSE.
     ENDIF
     
     CALL init(v7d_dba, filename=input_file, FORMAT=input_format, &
-     dsn=dsn, user=user, password=password, file=file, &
-     time_definition=time_definition)
+     dsn=input_file, file=file, time_definition=time_definition)
 
     CALL import(v7d_dba, vl, nl, &
      level=level, timerange=timerange, ana=ana,&
@@ -1080,8 +1075,6 @@ end if
 if (comp_qc_ndi .or. comp_qc_perc) then
 
   dsn=cmiss
-  user=cmiss
-  password=cmiss
 
   IF (c_e(extreme_file)) THEN
                                 ! import percentile file
@@ -1099,8 +1092,8 @@ if (comp_qc_ndi .or. comp_qc_perc) then
       extreme_file=get_package_filepath(extreme_file, filetype_data)
       
     ELSE IF (extreme_format == 'dba') THEN
-      CALL parse_dba_access_info(extreme_file, dsn, user, password)
-      extreme_file=cmiss
+      dsn = extreme_file
+      extreme_file = cmiss
           
 #endif
     ELSE
@@ -1125,7 +1118,7 @@ if (comp_qc_ndi .or. comp_qc_perc) then
     
   call init(qccli,v7d,vl,extremepath=extreme_file,timei=c_s,timef=comp_e, &
 #ifdef HAVE_DBALLE
-   dsnextreme=dsn,user=user,password=password,&
+   dsnextreme=dsn,user=cmiss,password=cmiss,&
 #endif
    height2level=comp_qc_area_er,categoryappend="QC")
   
@@ -1259,14 +1252,13 @@ ELSE IF (output_format == 'BUFR' .OR. output_format == 'CREX' .OR. output_format
     file=.TRUE.
 
   ELSE IF (output_format == 'dba') THEN
-    CALL parse_dba_access_info(output_file, dsn, user, password)
     file=.FALSE.
   ENDIF
 
   IF (output_template == '') output_template = 'generic'
 ! check whether wipe=file is reasonable
   CALL init(v7d_dba_out, filename=output_file, FORMAT=output_format, &
-   dsn=dsn, user=user, password=password, file=file, WRITE=.TRUE., wipe=file, template=output_template)
+   dsn=output_file, file=file, WRITE=.TRUE., wipe=file, template=output_template)
 
   v7d_dba_out%vol7d = v7d
   CALL init(v7d) ! nullify without deallocating

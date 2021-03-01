@@ -54,14 +54,9 @@ use vol7d_network_class
 use datetime_class
 use list_abstract
 use vol7d_class, only: vol7d_cdatalen
-#ifdef HAVE_DBALLEF_MOD
 use dballef
-#endif
 IMPLICIT NONE
 
-#ifndef HAVE_DBALLEF_MOD
-include "dballeff.h"
-#endif
 private
 
 character (len=255),parameter:: subcategory="dballe_class"
@@ -3764,7 +3759,6 @@ character (len=*), intent(in), optional :: password !< password to use
 character(len=*),INTENT(in),OPTIONAL :: categoryappend !< appennde questo suffisso al namespace category di log4fortran
 integer,INTENT(in),OPTIONAL :: idbhandle !< dsn connection; if present it will be used
 
-character(len=50) :: quiuser,quipassword
 integer :: ier
 character(len=512) :: a_name,quidsn
 
@@ -3776,33 +3770,16 @@ endif
 dbaconnection_init%category=l4f_category_get(a_name)
 
 ! impostiamo la gestione dell'errore
-#ifdef HAVE_DBALLEF_MOD
 ier=idba_error_set_callback(0,C_FUNLOC(dballe_error_handler), &
  dbaconnection_init%category,dbaconnection_init%handle_err)
-#else
-ier=idba_error_set_callback(0,dballe_error_handler, &
- dbaconnection_init%category,dbaconnection_init%handle_err)
-#endif
 if (.not. c_e(optio_i(idbhandle))) then
 
   quidsn = "test"
-  quiuser = "test"
-  quipassword = ""
   IF (PRESENT(dsn)) THEN
     IF (c_e(dsn)) quidsn = dsn
   ENDIF
-  IF (PRESENT(user)) THEN
-    IF (c_e(user)) quiuser = user
-  ENDIF
-  IF (PRESENT(password)) THEN
-    IF (c_e(password)) quipassword = password
-  ENDIF
 
-#ifdef HAVE_DBALLEF_MOD
   ier=idba_presentati(dbaconnection_init%dbhandle,quidsn)
-#else
-  ier=idba_presentati(dbaconnection_init%dbhandle,quidsn,quiuser,quipassword)
-#endif
 else
   dbaconnection_init%dbhandle=optio_i(idbhandle)
 end if

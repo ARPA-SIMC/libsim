@@ -26,7 +26,6 @@ USE vol7d_var_class
 USE vol7d_class
 #ifdef HAVE_DBALLE
 USE vol7d_dballe_class
-USE db_utils
 #endif
 
 IMPLICIT NONE
@@ -46,7 +45,6 @@ LOGICAL :: vf(1)
 #ifdef HAVE_DBALLE
 TYPE(vol7d_dballe) :: v7d_dba, v7d_dba_out
 #endif
-CHARACTER(len=512) :: dsn, user, password
 LOGICAL :: version, ldisplay
 CHARACTER(len=512):: a_name
 INTEGER :: category
@@ -73,7 +71,7 @@ opt = optionparser_new(description_msg= &
 #endif
  //'. If input-format is of file type, inputfile ''-'' indicates stdin, &
  &if input-format or output-format is of database type, inputfile/outputfile specifies &
- &database access info in the form user/password@dsn, &
+ &database access info in URI form, &
  &if empty or ''-'', a suitable default is used. &
  &If output-format is of file type, outputfile ''-'' indicates stdout.', &
  usage_msg='Usage: v7d_add_wmo_info [options] inputfile1 [inputfile2...] outputfile')
@@ -200,12 +198,11 @@ DO ninput = optind, iargc()-1
       file=.TRUE.
 
     ELSE IF (input_format == 'dba') THEN
-      CALL parse_dba_access_info(input_file, dsn, user, password)
       file=.FALSE.
     ENDIF
     
     CALL init(v7d_dba, filename=input_file, FORMAT=input_format, &
-     dsn=dsn, user=user, password=password, file=file)
+     dsn=input_file, file=file)
 
     CALL import(v7d_dba) !, vl, nl, &
     
@@ -313,14 +310,13 @@ ELSE IF (output_format == 'BUFR' .OR. output_format == 'CREX' .OR. output_format
     file=.TRUE.
 
   ELSE IF (output_format == 'dba') THEN
-    CALL parse_dba_access_info(output_file, dsn, user, password)
     file=.FALSE.
   ENDIF
 
   IF (output_template == '') output_template = 'generic'
 ! check whether wipe=file is reasonable
   CALL init(v7d_dba_out, filename=output_file, FORMAT=output_format, &
-   dsn=dsn, user=user, password=password, file=file, WRITE=.TRUE., wipe=file, template=output_template)
+   dsn=output_file, file=file, WRITE=.TRUE., wipe=file, template=output_template)
 
   v7d_dba_out%vol7d = v7d
   CALL init(v7d) ! nullify without deallocating

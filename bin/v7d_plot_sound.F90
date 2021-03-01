@@ -23,7 +23,6 @@ use log4fortran
 USE vol7d_class
 #ifdef HAVE_DBALLE
 USE vol7d_dballe_class
-USE db_utils
 #endif
 USE vol7d_class_compute
 USE ncar_plot_class
@@ -43,7 +42,6 @@ character(len=100) :: nomogram, logo
 TYPE(vol7d_dballe) :: v7d_dba
 INTEGER :: time_definition
 #endif
-CHARACTER(len=32) :: dsn, user, password
 TYPE(vol7d) :: v7dtmp, v7d_profile
 type(ncar_plot) :: plot
 integer :: time,ana,timerange,network
@@ -202,12 +200,11 @@ ELSE IF (input_format == 'BUFR' .OR. input_format == 'CREX' .OR. input_format ==
     file=.TRUE.
 
   ELSE IF (input_format == 'dba') THEN
-    CALL parse_dba_access_info(input_file, dsn, user, password)
     file=.FALSE.
   ENDIF
  
   CALL init(v7d_dba, filename=input_file, FORMAT=input_format, &
-   dsn=dsn, user=user, password=password, file=file, &
+   dsn=input_file, file=file, &
    time_definition=time_definition, categoryappend="importBUFR")
 
 !call import (v7d_dba,var=(/"B12101","B12103","B11001","B11002"/),varkind=(/"d","d","d","d"/))

@@ -732,11 +732,7 @@ end SUBROUTINE dat_vect_display
 
 FUNCTION to_char_dat(this,idat,rdat,ddat,bdat,cdat)
 #ifdef HAVE_DBALLE
-#ifdef HAVE_DBALLEF_MOD
 USE dballef
-#else
-include 'dballeff.h'
-#endif
 #endif
 TYPE(vol7d_var),INTENT(in) :: this
 !> real

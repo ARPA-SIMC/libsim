@@ -227,11 +227,7 @@ END SUBROUTINE display_timerange
 
 FUNCTION to_char_timerange(this)
 #ifdef HAVE_DBALLE
-#ifdef HAVE_DBALLEF_MOD
 USE dballef
-#else
-include 'dballeff.h'
-#endif
 #endif
 TYPE(vol7d_timerange),INTENT(in) :: this
 CHARACTER(len=80) :: to_char_timerange

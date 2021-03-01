@@ -38,7 +38,6 @@ use array_utilities
 #ifdef HAVE_LIBNCARG
 USE ncar_plot_class
 #endif
-USE db_utils
 
 implicit none
 
@@ -112,7 +111,7 @@ opt = optionparser_new(description_msg= &
  &If input-format is of file type, inputfile ''-'' indicates stdin,'&
 #ifdef HAVE_DBALLE
  //'if  output-format is of database type, outputfile specifies &
- &database access info in the form user/password@dsn,' &
+ &database access info in URI form,' &
 #endif
  //'if empty or ''-'', a suitable default is used. &
 &')
@@ -295,14 +294,13 @@ if (operation == "ndi") then
       file=.TRUE.
 
     ELSE IF (output_format == 'dba') THEN
-      CALL parse_dba_access_info(output_file, dsn, user, password)
       file=.FALSE.
     ENDIF
 
     IF (output_template == '') output_template = 'generic'
                                 ! check whether wipe=file is reasonable
     CALL init(v7d_dba_out, filename=output_file, FORMAT=output_format, &
-     dsn=dsn, user=user, password=password, file=file, WRITE=.TRUE., wipe=file)
+     dsn=output_file, file=file, WRITE=.TRUE., wipe=file)
     
     v7d_dba_out%vol7d = v7dqcspa%clima
     CALL init(v7dqcspa%clima) ! nullify without deallocating
@@ -398,7 +396,7 @@ DO WHILE (time <= tf)
   call l4f_category_log(category,L4F_INFO,"elaborate from "//t2c(timeiqc)//" to "//t2c(timefqc))
 
                                 ! Chiamo il costruttore della classe vol7d_dballe per il mio oggetto in import
-  CALL init(v7ddballe,dsn=dsn,user=user,password=password,write=.true.,wipe=.false.,categoryappend="data-"//t2c(time))
+  CALL init(v7ddballe,dsn=dsn,write=.true.,wipe=.false.,categoryappend="data-"//t2c(time))
   call l4f_category_log(category,L4F_INFO,"start data import")
 
   CALL import(v7ddballe,var=var(:nvar),varkind=(/("r",i=1,nvar)/),&

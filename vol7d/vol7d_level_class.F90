@@ -254,11 +254,7 @@ END SUBROUTINE display_level
 
 FUNCTION to_char_level(this)
 #ifdef HAVE_DBALLE
-#ifdef HAVE_DBALLEF_MOD
 USE dballef
-#else
-include 'dballeff.h'
-#endif
 #endif
 TYPE(vol7d_level),INTENT(in) :: this
 CHARACTER(len=255) :: to_char_level
