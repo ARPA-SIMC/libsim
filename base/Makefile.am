@@ -81,8 +81,9 @@ simple_stat.lo: missing_values.$(OBJEXT) optional_values.$(OBJEXT) array_utiliti
 geo_transforms.$(OBJEXT): phys_const.$(OBJEXT)
 geo_transforms.lo: phys_const.$(OBJEXT)
 
-check_PROGRAMS = char_utilities_test datetime_test file_utilities_test simple_stat_test
-TESTS = $(check_PROGRAMS)
+check_PROGRAMS = char_utilities_test datetime_test file_utilities_test simple_stat_test optionparser_test
+dist_check_SCRIPTS = optionparser_test.sh
+TESTS = $(check_PROGRAMS) $(dist_check_SCRIPTS)
 
 char_utilities_test_SOURCES = char_utilities_test.f90
 char_utilities_test_LDADD = libsim_base.la 
@@ -95,6 +96,9 @@ file_utilities_test_LDADD = libsim_base.la
 
 simple_stat_test_SOURCES = simple_stat_test.f90
 simple_stat_test_LDADD = libsim_base.la
+
+optionparser_test_SOURCES = optionparser_test.f90
+optionparser_test_LDADD = libsim_base.la
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT) *.mod
