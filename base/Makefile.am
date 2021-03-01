@@ -5,7 +5,7 @@ libsim_base_la_SOURCES = for2r.f90 io_units.F90 kinds.F90 phys_const.f90 missing
  optionparser_class.F90 \
  simple_stat.f90 \
  space_utilities.F90
-if F2003_EXTENDED_FEATURES
+
  libsim_base_la_SOURCES += list_link.F03 \
  list_linkchar.F03 \
  list_abstract.F03 \
@@ -16,7 +16,6 @@ if F2003_EXTENDED_FEATURES
  list_character.F03 \
  list_byte.F03 \
  list_real.F03
-endif
 
 
 # Opzioni Fortran (-I... sono da considerarsi opzioni fortran

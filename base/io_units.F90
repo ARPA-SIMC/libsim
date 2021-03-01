@@ -45,10 +45,6 @@ INTEGER, PARAMETER :: stderr_unit = 0 !< standard error
 ! Internal undocumented variable, used as a transition to Fortran 2003
 ! STREAM access, which allows working in pipe, unlike SEQUENTIAL
 ! access (possibly compiler dependent)
-#ifdef F2003_FEATURES
 CHARACTER(len=6), PARAMETER :: stream_if_possible='STREAM'
-#else
-CHARACTER(len=10), PARAMETER :: stream_if_possible='SEQUENTIAL'
-#endif
 
 END MODULE io_units

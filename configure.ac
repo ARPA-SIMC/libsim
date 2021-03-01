@@ -32,37 +32,12 @@ AC_ARG_ENABLE(examples, AC_HELP_STRING([--enable-examples],
   [enable build of examples]), , [enableval=no])dnl default disable
 AM_CONDITIONAL(EXAMPLES, test "x$enableval" = "xyes")
 
-AC_ARG_ENABLE(f2003-features, AC_HELP_STRING([--enable-f2003-features],
-  [enable some F2003 features (gfortran 4.6)]), , [enableval=yes])dnl default enable
-if test "x$enableval" = "xyes"; then
-   AC_DEFINE(F2003_FEATURES, 1, [Enable some F2003 features (gfortran 4.6)])
-fi
-AM_CONDITIONAL(F2003_FEATURES, test "x$enableval" = "xyes")
-#save
-MY_F2003_FEATURES=$enableval
-
-AC_ARG_ENABLE(f2003-extended-features, AC_HELP_STRING([--enable-f2003-extended-features],
-  [enable extended F2003 features (gfortran 4.8)]), , [enableval=yes])dnl default disable
-if test "x$enableval" = "xyes"; then
-  AC_DEFINE(F2003_EXTENDED_FEATURES, 1, [Enable major part of F2003 features (gfortran 4.8)])
-fi
-AM_CONDITIONAL(F2003_EXTENDED_FEATURES, test "x$enableval" = "xyes")
-if test "x$MY_F2003_FEATURES" = "xno"; then
-  AC_MSG_ERROR([F2003_EXTENDED_FEATURES enabled without F2003_FEATURES])
-fi
-#save
-MY_F2003_EXTENDED_FEATURES=$enableval
-
-
 AC_ARG_ENABLE(f2003-full-features, AC_HELP_STRING([--enable-f2003-full-features],
   [enable full F2003 features (gfortran 4.9)]), , [enableval=no])dnl default disable
 if test "x$enableval" = "xyes"; then
   AC_DEFINE(F2003_FULL_FEATURES, 1, [Enable full F2003 features (gfortran 4.9)])
 fi
 AM_CONDITIONAL(F2003_FULL_FEATURES, test "x$enableval" = "xyes")
-if test "x$MY_F2003_EXTENDED_FEATURES" = "xno"; then
-  AC_MSG_ERROR([F2003_FULL_FEATURES enabled without F2003_EXTENDED_FEATURES])
-fi
 #save
 MY_F2003_FULL_FEATURES=$enableval
 

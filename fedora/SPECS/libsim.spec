@@ -113,7 +113,7 @@ sh autogen.sh
 
 %build
 
-%configure FCFLAGS="%{optflags} -I%{_fmoddir}" --enable-f2003-features %{?with_vapor:--enable-vapor} --enable-alchimia --enable-shapelib --enable-netcdf --enable-gribapi --enable-f2003-extended-features --disable-static --enable-gdal
+%configure FCFLAGS="%{optflags} -I%{_fmoddir}" %{?with_vapor:--enable-vapor} --enable-alchimia --enable-shapelib --enable-netcdf --enable-gribapi --disable-static --enable-gdal
 
 make
 make check

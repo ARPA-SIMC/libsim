@@ -43,13 +43,9 @@ USE gridinfo_class
 USE grid_transform_class
 use volgrid6d_class
 USE georef_coord_class
-#ifdef F2003_FEATURES
 USE vol7d_serialize_csv_class
 USE vol7d_serialize_csvdba_class
 USE vol7d_serialize_geojson_class
-#else
-USE vol7d_csv
-#endif
 USE modqc
 #ifdef HAVE_SHAPELIB
 USE modqccli
@@ -128,11 +124,9 @@ TYPE(griddim_def) :: grid_out
 TYPE(volgrid6d) :: vg6d(1)
 character(len=160) :: post_trans_type
 #endif
-#ifdef F2003_FEATURES
 TYPE(vol7d_serialize_csv) :: v7d_csv
 TYPE(vol7d_serialize_csvdba) :: v7d_csvdba
 TYPE(vol7d_serialize_geojson) :: v7d_geojson
-#endif
 #ifdef ALCHIMIA
 type(fndsv) :: vfn,vfnoracle
 !character(len=10), allocatable:: mybin(:)
@@ -159,9 +153,7 @@ opt = optionparser_new(description_msg= &
 #ifdef HAVE_LIBGRIBAPI
  //', into a GRIB file'&
 #endif
-#ifdef F2003_FEATURES
  //', into a configurable geojson file'&
-#endif
 #ifdef HAVE_LIBNETCDF
  //', into a netcdf file'&
 #endif
@@ -395,13 +387,10 @@ CALL optionparser_add(opt, ' ', 'output-format', output_format, 'native', help= 
 #ifdef HAVE_LIBNETCDF
  //', ''netcdf'' for netcdf file following cf convention 1.1'&
 #endif
-#ifdef F2003_FEATURES
  //'; ''geojson'' for geojson format (no template)'&
  //'; ''csvdba'' for csv format specific for dballe'&
-#endif
  //'; ''csv'' for configurable csv format (no template to be specified)')
 
-#ifdef F2003_FEATURES
 ! setup options for csv and geojson
 v7d_csv = vol7d_serialize_csv_new()
 v7d_csvdba = vol7d_serialize_csvdba_new()
@@ -409,33 +398,6 @@ v7d_geojson = vol7d_serialize_geojson_new()
 CALL v7d_csv%vol7d_serialize_optionparser(opt, 'csv')
 CALL v7d_csvdba%vol7d_serialize_optionparser(opt, 'csv')
 CALL v7d_geojson%vol7d_serialize_optionparser(opt, 'geojson')
-#else
-! options for configuring csv output
-CALL optionparser_add(opt, ' ', 'csv-volume', csv_volume, 'all', help= &
- 'vol7d volumes to be output to csv: ''all'' for all volumes, &
- &''ana'' for station volumes only or ''data'' for data volumes only')
-CALL optionparser_add(opt, ' ', 'csv-column', csv_column, &
- 'time,timerange,ana,level,network', help= &
- 'list of columns that have to appear in csv output: &
- &a comma-separated selection of ''time,timerange,level,ana,network,var,value'' &
- &in the desired order')
-CALL optionparser_add(opt, ' ', 'csv-columnorder', csv_columnorder, &
- 'time,timerange,ana,level,network', help= &
- 'order of looping on columns that have to appear in csv output: &
- &a comma-separated selection of ''time,timerange,level,ana,network,var'' &
- &in the desired order, all the identifiers must be present, except ''var'', &
- &which, if present, selects the DB-All.e format with one variable per line')
-CALL optionparser_add(opt, ' ', 'csv-variable', csv_variable, 'all', help= &
- 'list of variables that have to appear in the data columns of csv output: &
- &''all'' or a comma-separated list of B-table alphanumeric codes, e.g. &
- &''B10004,B12101'' in the desired order')
-CALL optionparser_add(opt, ' ', 'csv-header', csv_header, 2, help= &
- 'write 0 to 2 header lines at the beginning of csv output')
-CALL optionparser_add(opt, ' ', 'csv-keep-miss', csv_keep_miss, help= &
- 'keep records containing only missing values in csv output')
-CALL optionparser_add(opt, ' ', 'csv-norescale', csv_no_rescale, help= &
- 'do not rescale in output integer variables according to their scale factor')
-#endif
 
 #ifdef ALCHIMIA
 CALL optionparser_add(opt, '', 'output-variable-list', output_variable_list, '', help= &
@@ -799,16 +761,10 @@ ENDIF
 CALL delete(trans_level_list)
 CALL delete(trans_botlevel_list)
 
-#ifdef F2003_FEATURES
 ! parse csv and geojson options
 CALL v7d_csv%vol7d_serialize_parse(category)
 CALL v7d_csvdba%vol7d_serialize_parse(category)
 CALL v7d_geojson%vol7d_serialize_parse(category)
-#else
-! check csv-column
-CALL parse_v7d_column(csv_column, icsv_column, '--csv-column', .FALSE.)
-CALL parse_v7d_column(csv_columnorder, icsv_columnorder, '--csv-columnorder', .TRUE.)
-#endif
 
 ! check output format/template
 n = word_split(output_format, w_s, w_e, ':')
@@ -1260,23 +1216,16 @@ IF (output_format == 'native') THEN
   CLOSE(iun)
 
 ELSE IF (output_format == 'csv') THEN
-#ifdef F2003_FEATURES
   CALL v7d_csv%vol7d_serialize_setup(v7d)
-#endif
   IF (output_file == '-') THEN
     iun = stdout_unit
   ELSE
     iun = getunit()
     OPEN(iun, file=output_file, form='FORMATTED', access='SEQUENTIAL')
   ENDIF
-#ifdef F2003_FEATURES
   CALL v7d_csv%vol7d_serialize_export(iun)
-#else
-  CALL csv_export(v7d, iun)
-#endif
   IF (output_file /= '-') CLOSE(iun)
 
-#ifdef F2003_FEATURES
 ELSE IF (output_format == 'csvdba') THEN
   CALL v7d_csvdba%vol7d_serialize_setup(v7d)
   IF (output_file == '-') THEN
@@ -1298,7 +1247,6 @@ ELSE IF (output_format == 'geojson') THEN
   ENDIF
   CALL v7d_geojson%vol7d_serialize_export(iun)
   IF (output_file /= '-') CLOSE(iun)
-#endif
 
 #ifdef HAVE_DBALLE
 ELSE IF (output_format == 'BUFR' .OR. output_format == 'CREX' .OR. output_format == 'JSON' .OR. output_format == 'dba') THEN
@@ -1403,70 +1351,6 @@ call delete(vfnoracle)
 
 
 ier = l4f_fini()
-
-CONTAINS
-
-#ifndef F2003_FEATURES
-SUBROUTINE parse_v7d_column(ccol, icol, par_name, check_all)
-CHARACTER(len=*),INTENT(in) :: ccol
-INTEGER,INTENT(out) :: icol(:)
-CHARACTER(len=*),INTENT(in) :: par_name
-LOGICAL,INTENT(in) :: check_all
-
-INTEGER :: i, j, nc
-INTEGER,POINTER :: w_s(:), w_e(:)
-
-nc = word_split(ccol, w_s, w_e, ',')
-j = 0
-icol(:) = -1
-DO i = 1, MIN(nc, SIZE(icol))
-  SELECT CASE(ccol(w_s(i):w_e(i)))
-  CASE('time')
-    j = j + 1
-    icol(j) = vol7d_time_d
-  CASE('timerange')
-    j = j + 1
-    icol(j) = vol7d_timerange_d
-  CASE('level')
-    j = j + 1
-    icol(j) = vol7d_level_d
-  CASE('ana')
-    j = j + 1
-    icol(j) = vol7d_ana_d
-  CASE('var')
-    j = j + 1
-    icol(j) = vol7d_var_d
-  CASE('network')
-    j = j + 1
-    icol(j) = vol7d_network_d
-  CASE('value')
-    j = j + 1
-    icol(j) = 7
-  CASE default
-    CALL l4f_category_log(category,L4F_ERROR,'error in command-line arguments, column '// &
-     ccol(w_s(i):w_e(i))//' in '//TRIM(par_name)//' not valid.')
-    CALL raise_fatal_error()
-  END SELECT
-ENDDO
-nc = j
-DEALLOCATE(w_s, w_e)
-
-IF (check_all) THEN
-  IF (ALL(icol /= vol7d_time_d) .OR. ALL(icol /= vol7d_timerange_d) .OR. &
-   ALL(icol /= vol7d_level_d) .OR. ALL(icol /= vol7d_ana_d) .OR. &
-   ALL(icol /= vol7d_network_d)) THEN
-    CALL l4f_category_log(category,L4F_ERROR,'error in command-line arguments, some columns missing in '//TRIM(par_name)//' .')
-    CALL raise_fatal_error()
-  ENDIF
-  IF (ANY(icol == 7)) THEN
-    CALL l4f_category_log(category,L4F_ERROR,"column 'value' not valid in "// &
-     TRIM(par_name)//' .')
-    CALL raise_fatal_error()
-  ENDIF
-ENDIF
-
-END SUBROUTINE parse_v7d_column
-#endif
 
 END PROGRAM v7d_transform
 

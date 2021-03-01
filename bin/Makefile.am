@@ -18,7 +18,6 @@ endif
 
 if DBALLE
 
-if F2003_EXTENDED_FEATURES
 bin_PROGRAMS += dba_qcfilter dba_transform
 dba_qcfilter_SOURCES = dba_qcfilter.F03 
 dba_qcfilter_LDADD =  ../vol7d/libsim_vol7d.la ../log4fortran/liblog4fortran.la ../qc/libsim_qc.la ../base/libsim_base.la
@@ -27,8 +26,6 @@ dba_transform_SOURCES = dba_transform.F03
 dba_transform_LDADD =  ../vol7d/libsim_vol7d.la ../log4fortran/liblog4fortran.la ../qc/libsim_qc.la ../base/libsim_base.la
 
 dist_check_SCRIPTS += dba_qcfilter_test.sh
-
-endif
 
 if SHAPELIB
 bin_PROGRAMS += v7d_qccli v7d_qctem
@@ -63,11 +60,6 @@ endif
 bin_PROGRAMS += v7d_transform
 v7d_transform_SOURCES =
 
-if F2003_FEATURES
-#v7d_transform_SOURCES = v7d_transform.F90
-else
-v7d_transform_SOURCES += vol7d_csv.F90
-endif
 v7d_transform_LDADD = ../base/libsim_base.la ../vol7d/libsim_vol7d.la ../qc/libsim_qc.la ../volgrid6d/libsim_volgrid6d.la ../log4fortran/liblog4fortran.la
 
 if ALCHIMIA
@@ -138,9 +130,7 @@ if NCARG
 man_MANS += v7d_plot_sound.1
 endif
 if DBALLE
-if F2003_EXTENDED_FEATURES
 man_MANS += dba_qcfilter.1 dba_transform.1
-endif
 endif
 
 %.1: %

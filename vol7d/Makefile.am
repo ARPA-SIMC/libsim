@@ -17,22 +17,16 @@ libsim_vol7d_la_LDFLAGS =
 # Librerie aggiuntive
 libsim_vol7d_la_LIBADD = ../log4fortran/liblog4fortran.la ../base/libsim_base.la
 
-if F2003_FEATURES
 libsim_vol7d_la_SOURCES += vol7d_serialize_class.F03 vol7d_serialize_csv_class.F03 \
  vol7d_serialize_csvdba_class.F03 vol7d_serialize_geojson_class.F03 
-endif
 
 if DBALLE
 AM_FCFLAGS += -I/usr/include/dballe
 libsim_vol7d_la_LIBADD += $(DBALLE_LIBS)
-if F2003_EXTENDED_FEATURES
 libsim_vol7d_la_SOURCES += dballe_class.F03
 libsim_vol7d_la_SOURCES += vol7d_serialize_dballe_class.F03
 libsim_vol7d_la_SOURCES += vol7d_dballe_class.F03
-#libsim_vol7d_la_SOURCES += vol7d_dballeold_class.F90
 endif
-endif
-
 
 if NETCDF
 libsim_vol7d_la_SOURCES += vol7d_netcdf_class.f90
@@ -78,15 +72,6 @@ vol7d_class_compute.$(OBJEXT): vol7d_class.$(OBJEXT) stat_proc_engine.$(OBJEXT)
 vol7d_class_compute.lo: vol7d_class.$(OBJEXT) stat_proc_engine.$(OBJEXT)
 
 if DBALLE
-#vol7d_dballeold_class.$(OBJEXT): vol7d_class.$(OBJEXT) \
-#vol7d_dballe_class_nana.F90 vol7d_dballe_class_ndati.F90 \
-#vol7d_dballe_class_dati.F90 vol7d_dballe_class_datiattr.F90 \
-#vol7d_dballe_class_ana.F90 vol7d_dballe_class_anaattr.F90 vol7d_dballe_class_var_du.F90
-#vol7d_dballeold_class.lo: vol7d_class.$(OBJEXT) \
-#vol7d_dballe_class_nana.F90 vol7d_dballe_class_ndati.F90 \
-#vol7d_dballe_class_dati.F90 vol7d_dballe_class_datiattr.F90 \
-#vol7d_dballe_class_ana.F90 vol7d_dballe_class_anaattr.F90  vol7d_dballe_class_var_du.F90
-
 vol7d_dballe_class.$(OBJEXT): vol7d_class.$(OBJEXT) \
 vol7d_dballe_class_var_du.F90
 vol7d_dballe_class.lo: vol7d_class.$(OBJEXT) \
@@ -99,7 +84,6 @@ vol7d_dballe_test2_SOURCES = vol7d_dballe_test2.F90
 vol7d_dballe_test2_LDADD = libsim_vol7d.la
 dist_check_SCRIPTS += vol7d_dballe_test.sh
 
-if F2003_EXTENDED_FEATURES
 check_PROGRAMS += dballe_test 
 check_PROGRAMS += dballe_test2
 check_PROGRAMS += dballe_test3
@@ -110,7 +94,6 @@ dballe_test_LDADD = libsim_vol7d.la
 dballe_test2_LDADD = libsim_vol7d.la
 dballe_test3_LDADD = libsim_vol7d.la
 dist_check_SCRIPTS += dballe_test.sh
-endif
 endif
 
 if ALCHIMIA
@@ -132,7 +115,6 @@ vol7d_netcdf_class.$(OBJEXT): vol7d_class.$(OBJEXT)
 vol7d_netcdf_class.lo: vol7d_class.$(OBJEXT)
 endif
 
-if F2003_FEATURES
 vol7d_serialize_csv_class.$(OBJEXT): vol7d_serialize_class.$(OBJEXT)
 vol7d_serialize_csv_class.lo: vol7d_serialize_class.$(OBJEXT)
 vol7d_serialize_csvdba_class.$(OBJEXT): vol7d_serialize_class.$(OBJEXT)
@@ -142,7 +124,6 @@ vol7d_serialize_geojson_class.lo: vol7d_serialize_class.$(OBJEXT)
 if DBALLE
 vol7d_serialize_dballe_class.$(OBJEXT): vol7d_serialize_class.$(OBJEXT)
 vol7d_serialize_dballe_class.lo: vol7d_serialize_class.$(OBJEXT)
-endif
 endif
 
 
