@@ -48,6 +48,7 @@ B11005,Omega,Pa/s,98,128,135,255,1.0,0.0
 B11006,W-component of wind,m/s,255,2,9,0,1.0,0.0
 B11006,W-component of wind,m/s,255,2,40,255,1.0,0.0
 B11006,W-component of wind,m/s,200,200,41,255,1.0,0.0
+B11041,Maximum wind gust speed,m/s,255,2,22,0,1.0,0.0
 B11041,Maximum wind gust speed,m/s,200,201,187,255,1.0,0.0
 B11041,Maximum wind gust speed,m/s,80,201,187,255,1.0,0.0
 B11041,Maximum wind gust speed,m/s,78,201,187,255,1.0,0.0
@@ -228,6 +229,7 @@ B14199,Upward short-wave radiation flux (surface),W/m^2,200,200,116,255,1.0,0.0
 B14199,Upward short-wave radiation flux (surface),W/m^2,255,4,8,0,1.0,0.0
 B14200,Downward long-wave radiation flux (surface),W/m^2,255,5,3,0,1.0,0.0
 B14201,Upward long-wave radiation flux (surface),W/m^2,255,5,4,0,1.0,0.0
+B14202,UV index,numeric,255,4,51,0,1.0,0.0
 B15192,NO concentration (local),ppb,200,200,152,0,0.00000000125,0.0
 B15192,NO concentration (local),ppb,200,200,152,255,0.00000000125,0.0
 B15192,NO concentration (local),ppb,201,200,152,0,0.00000000125,0.0
