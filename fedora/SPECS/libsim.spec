@@ -2,7 +2,7 @@
 # to enable vapor support requiring stiff dependencies
 Summary: Fortran utility libraries
 Name: libsim
-Version: 6.4.10
+Version: 6.5.0
 Release: 1
 License: GPL2+
 Group: Applications/Meteo
@@ -31,8 +31,8 @@ BuildRequires: eccodes-simc
 
 %{?with_vapor:BuildRequires: vapor-devel}
 
-BuildRequires: libdballef-devel >= 7.6
-BuildRequires: libdballe-devel
+BuildRequires: pkgconfig(libdballef) >= 7.6
+BuildRequires: pkgconfig(libdballe)
 BuildRequires: %{grib_sw}-devel
 BuildRequires: help2man
 BuildRequires: log4c log4c-devel
@@ -56,7 +56,7 @@ BuildRequires: proj-devel
 BuildRequires: popt-devel
 BuildRequires: cairo-devel
 BuildRequires: freetype-devel
-Requires: libdballef4 >= 7.6 %{grib_sw}
+Requires: %{grib_sw}
 
 %package -n libsim-devel
 
@@ -157,6 +157,11 @@ mv $RPM_BUILD_ROOT%{_includedir}/*.mod $RPM_BUILD_ROOT%{_fmoddir}
 rm -rf %{buildroot}
 
 %changelog
+* Thu May 13 2021 Daniele Branchini <dbranchini@arpae.it> - 6.5.0-1
+- refactoring removing F2003_FEATURES and legacy sources
+- added UV index and grib2 wind gust entries
+- cleaned up optionparser (#83)
+
 * Tue Jan 26 2021 Daniele Branchini <dbranchini@arpae.it> - 6.4.10-1
 - fix for reading cosmo grib2 accumulated analyses
 - add maskgen:grid transformation
