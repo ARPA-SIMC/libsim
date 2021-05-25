@@ -28,6 +28,7 @@ subroutine register_termo(vfn)
   call fnregister(vfn,swb_alb2swd_def())
   call fnregister(vfn,swd_alb2swb_def())
   call fnregister(vfn,swdir_swdif2swd_def())
+  call fnregister(vfn,swb_lwb2glb_def())
   call fnregister(vfn,t_p_w2omega_def())
   call fnregister(vfn,snow_ls_conv2tot_def())
   call fnregister(vfn,rain_snow_conv2tot_def())
@@ -288,6 +289,25 @@ call init(swdir_swdif2swd_def,"swdir_swdif2swd",&
  [character(len=10) :: "B14194","B14195"],&
  [character(len=10) :: "B14018"],0,func=swdir_swdif2swd)
 end function swdir_swdif2swd_def
+
+
+subroutine swb_lwb2glb(mybin,mybout,bin,bout,in,out)
+CHARACTER(len=10),intent(in) :: mybin(:)  !< vector table B  WMO input  in user's data
+CHARACTER(len=10),intent(in) :: mybout(:) !< vector table B  WMO output in user's data
+CHARACTER(len=10),intent(in) :: bin(:)    !< vector table B  WMO input used by function
+CHARACTER(len=10),intent(in) :: bout(:)   !< vector table B  WMO output used by function
+real, intent(in) :: in(:,:)
+real, intent(out) :: out(:,:)
+
+out(:,index_c(mybout,bout(1))) = glb_swblwb(in(:,index_c(mybin,bin(1))),in(:,index_c(mybin,bin(2))))
+
+end subroutine swb_lwb2glb
+
+type(fnds) function swb_lwb2glb_def()
+call init(swb_lwb2glb_def,"swb_lwb2glb",&
+ [character(len=10) :: "B14196","B14197"],&
+ [character(len=10) :: "B14016"],0,func=swb_lwb2glb)
+end function swb_lwb2glb_def
 
 
 subroutine swgwmo2swgsim(mybin,mybout,bin,bout,in,out)

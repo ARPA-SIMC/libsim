@@ -2648,6 +2648,20 @@ end if
 end function swdown_dirdif
 
 
+!> incoming short wave radiation from direct and diffuse radiation
+elemental real function glb_swblwb(swb,lwb)
+real,intent(in) :: swb !< short wave radiation budget (W/m**2)
+real,intent(in) :: lwb !< long wave radiation budget (W/m**2)
+
+if (c_e(swb) .and. c_e(lwb)) then
+  glb_swblwb = swb + lwb
+else
+  glb_swblwb = rmiss
+end if
+
+end function glb_swblwb
+
+
 !> Omega from temperature, pressure and vertical velocity; pressure
 !! tendency term and humidity in density are neglected.
 ELEMENTAL REAL FUNCTION omega_simple(t, p, w)
