@@ -2,7 +2,7 @@
 # to enable vapor support requiring stiff dependencies
 Summary: Fortran utility libraries
 Name: libsim
-Version: 6.5.0
+Version: 6.5.1
 Release: 1
 License: GPL2+
 Group: Applications/Meteo
@@ -45,6 +45,7 @@ BuildRequires: texlive-dvips-bin
 BuildRequires: texlive-iftex
 BuildRequires: texlive-metafont
 %{?fedora:BuildRequires: texlive-lwarp}
+%{?el7:BuildRequires: lyx-fonts}
 BuildRequires: gcc-c++
 BuildRequires: libtool
 BuildRequires: libpng-devel
@@ -157,6 +158,9 @@ mv $RPM_BUILD_ROOT%{_includedir}/*.mod $RPM_BUILD_ROOT%{_fmoddir}
 rm -rf %{buildroot}
 
 %changelog
+* Tue May 25 2021 Daniele Branchini <dbranchini@arpae.it> - 6.5.1-1
+- add global (sw*lw) radiation and corresponding functions
+
 * Thu May 13 2021 Daniele Branchini <dbranchini@arpae.it> - 6.5.0-1
 - refactoring removing F2003_FEATURES and legacy sources
 - added UV index and grib2 wind gust entries
