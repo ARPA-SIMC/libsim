@@ -6,7 +6,7 @@
 
 Summary: Fortran utility libraries
 Name: libsim
-Version: 6.5.1
+Version: 6.5.2
 Release: 1
 License: GPL2+
 Group: Applications/Meteo
@@ -163,6 +163,9 @@ mv $RPM_BUILD_ROOT%{_includedir}/*.mod $RPM_BUILD_ROOT%{_fmoddir}
 rm -rf %{buildroot}
 
 %changelog
+* Wed May 26 2021 Daniele Branchini <dbranchini@arpae.it> - 6.5.2-1
+- fix computation of prevailing wind direction, exclude wind calms
+
 * Tue May 25 2021 Daniele Branchini <dbranchini@arpae.it> - 6.5.1-1
 - add global (sw*lw) radiation and corresponding functions
 
