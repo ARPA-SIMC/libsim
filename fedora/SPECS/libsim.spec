@@ -1,5 +1,9 @@
 # run rpmbuild with argument --define='with_vapor 1'
 # to enable vapor support requiring stiff dependencies
+
+# Note: define srcarchivename in CI build only.
+%{!?srcarchivename: %global srcarchivename %{name}-%{version}-%{release}}
+
 Summary: Fortran utility libraries
 Name: libsim
 Version: 6.5.1
@@ -8,7 +12,8 @@ License: GPL2+
 Group: Applications/Meteo
 URL: https://github.com/arpa-simc/%{name}
 Packager: Davide Cesari <dcesari@arpae.it>
-Source: https://github.com/arpa-simc/%{name}/archive/v%{version}-%{release}.tar.gz#/%{name}-%{version}-%{release}.tar.gz  
+Source: https://github.com/arpa-simc/%{name}/archive/v%{version}-%{release}.tar.gz#/%{srcarchivename}.tar.gz
+
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot
 
 %if 0%{?fedora} < 9
@@ -44,8 +49,8 @@ BuildRequires: texlive-latex-bin
 BuildRequires: texlive-dvips-bin
 BuildRequires: texlive-iftex
 BuildRequires: texlive-metafont
+BuildRequires: texlive-cm
 %{?fedora:BuildRequires: texlive-lwarp}
-%{?el7:BuildRequires: lyx-fonts}
 BuildRequires: gcc-c++
 BuildRequires: libtool
 BuildRequires: libpng-devel
@@ -109,7 +114,7 @@ space interpolations and time computations on georeferenced data in
 GRIB and BUFR format.
 
 %prep
-%setup -q -n %{name}-%{version}-%{release}
+%setup -q -n %{srcarchivename}
 sh autogen.sh
 
 %build
