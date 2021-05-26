@@ -615,13 +615,16 @@ do_otimerange: DO j = 1, SIZE(that%timerange)
               CASE (201) ! mode
 ! mode only for angles at the moment, with predefined histogram
                 IF (vartype == var_dir360) THEN
-! reduce to interval [-22.5,337.5]
-                  WHERE (tmpvolr(1:ndtr) > 337.5)
-                    tmpvolr(1:ndtr) = tmpvolr(1:ndtr) - 360.
+! remove undefined wind direction (=0), improve check?
+! and reduce to interval [22.5,382.5[
+                  WHERE (tmpvolr(1:ndtr) == 0.0)
+                    tmpvolr(1:ndtr) = rmiss
+                  ELSE WHERE (tmpvolr(1:ndtr) < 22.5 .AND. tmpvolr(1:ndtr) > 0.0)
+                    tmpvolr(1:ndtr) = tmpvolr(1:ndtr) + 360.
                   END WHERE
                   that%voldatir(i1,i,i3,j,i5,i6) = &
                    stat_mode_histogram(tmpvolr(1:ndtr), &
-                   8, -22.5, 337.5)
+                   8, 22.5, 382.5)
                 ENDIF
               END SELECT
             ENDDO
@@ -698,13 +701,16 @@ do_otimerange: DO j = 1, SIZE(that%timerange)
               CASE (201) ! mode
 ! mode only for angles at the moment, with predefined histogram
                 IF (vartype == var_dir360) THEN
-! reduce to interval [-22.5,337.5]
-                  WHERE (tmpvold(1:ndtr) > 337.5)
-                    tmpvold(1:ndtr) = tmpvold(1:ndtr) - 360.
+! remove undefined wind direction (=0), improve check?
+! and reduce to interval [22.5,382.5[
+                  WHERE (tmpvold(1:ndtr) == 0.0D0)
+                    tmpvold(1:ndtr) = dmiss
+                  ELSE WHERE (tmpvold(1:ndtr) < 22.5D0 .AND. tmpvold(1:ndtr) > 0.0D0)
+                    tmpvold(1:ndtr) = tmpvold(1:ndtr) + 360.0D0
                   END WHERE
                   that%voldatid(i1,i,i3,j,i5,i6) = &
                    stat_mode_histogram(tmpvold(1:ndtr), &
-                   8, -22.5D0, 337.5D0)
+                   8, 22.5D0, 382.5D0)
                 ENDIF
               END SELECT
             ENDDO
