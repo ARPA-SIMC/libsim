@@ -82,6 +82,7 @@ B11204,Obukov length (diagmet; invented),m,200,2,210,255,1.0,0.0
 B11205,Convective velocitiy scale (diagmet; invented),m/s,200,2,213,255,1.0,0.0
 B11206,Friction velocity (COSMO; invented),m/s,200,2,201,255,1.0,0.0
 B11207,Obukov length (COSMO; invented),m,200,2,200,255,1.0,0.0
+B12030,Soil Temperature,K,255,3,18,2,1.0,0.0
 B12030,Soil Temperature,K,255,2,85,255,1.0,0.0
 B12030,Soil Temperature,K,200,201,197,255,1.0,0.0
 B12030,Soil Temperature,K,80,201,197,255,1.0,0.0
