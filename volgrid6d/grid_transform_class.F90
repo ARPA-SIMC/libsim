@@ -1943,11 +1943,7 @@ ELSE IF (this%trans%trans_type == 'polyinter') THEN
 
 ! setup output point list, equal to average of polygon points
 ! warning, in case of concave areas points may coincide!
-  DO n = 1, this%trans%poly%arraysize
-    CALL getval(this%trans%poly%array(n), x=lon1, y=lat1)
-    CALL init(v7d_out%ana(n), lon=stat_average(lon1), lat=stat_average(lat1))
-!    DEALLOCATE(lon1, lat1)
-  ENDDO
+  CALL poly_to_coordinates(this%trans%poly, v7d_out)
 
 #ifdef DEBUG
   DO n = 1, this%trans%poly%arraysize
@@ -2524,11 +2520,7 @@ ELSE IF (this%trans%trans_type == 'polyinter') THEN
 
 ! setup output point list, equal to average of polygon points
 ! warning, in case of concave areas points may coincide!
-  DO n = 1, this%trans%poly%arraysize
-    CALL getval(this%trans%poly%array(n), x=lon, y=lat)
-    CALL init(v7d_out%ana(n), lon=stat_average(lon), lat=stat_average(lat))
-!    DEALLOCATE(lon, lat)
-  ENDDO
+  CALL poly_to_coordinates(this%trans%poly, v7d_out)
 
   this%valid = .TRUE. ! warning, no check of subtype
 
@@ -2662,6 +2654,25 @@ this%trans=trans
 
 END SUBROUTINE grid_transform_init_common
 
+! internal subroutine to correctly initialise the output coordinates
+! with polygon centroid coordinates
+SUBROUTINE poly_to_coordinates(poly, v7d_out)
+TYPE(arrayof_georef_coord_array),intent(in) :: poly
+TYPE(vol7d),INTENT(inout) :: v7d_out
+
+INTEGER :: n, sz
+DOUBLE PRECISION,ALLOCATABLE :: lon(:), lat(:)
+
+DO n = 1, poly%arraysize
+  CALL getval(poly%array(n), x=lon, y=lat)
+  sz = MIN(SIZE(lon), SIZE(lat))
+  IF (lon(1) == lon(sz) .AND. lat(1) == lat(sz)) THEN ! closed polygon
+    sz = sz - 1
+  ENDIF
+  CALL init(v7d_out%ana(n), lon=stat_average(lon(1:sz)), lat=stat_average(lat(1:sz)))
+ENDDO
+
+END SUBROUTINE poly_to_coordinates
 
 !> Destructor of \a grid_tranform object.
 !! It releases any memory and data associated to
