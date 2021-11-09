@@ -6,7 +6,7 @@
 
 Summary: Fortran utility libraries
 Name: libsim
-Version: 6.5.2
+Version: 6.5.3
 Release: 1
 License: GPL2+
 Group: Applications/Meteo
@@ -163,6 +163,11 @@ mv $RPM_BUILD_ROOT%{_includedir}/*.mod $RPM_BUILD_ROOT%{_fmoddir}
 rm -rf %{buildroot}
 
 %changelog
+* Tue Nov  9 2021 Daniele Branchini <dbranchini@arpae.it> - 6.5.3-1
+- implement perentile post-transformation
+- fix computation of polygon centroid when it's already closed
+- add grib2 soil temperature
+
 * Wed May 26 2021 Daniele Branchini <dbranchini@arpae.it> - 6.5.2-1
 - fix computation of prevailing wind direction, exclude wind calms
 
