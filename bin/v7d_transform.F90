@@ -242,6 +242,16 @@ CALL optionparser_add(opt, ' ', 'ana', anac, ',,,', help= &
  'if input-format is of database type, ana to be extracted &
  &in the form lon,lat,ident empty fields indicate missing data, &
  &default is all ana in database')
+
+CALL optionparser_add(opt, ' ', 'ielon', ielon, dmiss, help= &
+ 'longitude of the southwestern bounding box corner for import')
+CALL optionparser_add(opt, ' ', 'ielat', ielat, dmiss, help= &
+ 'latitude of the southwestern bounding box corner for import')
+CALL optionparser_add(opt, ' ', 'felon', felon, dmiss, help= &
+ 'longitude of the northeastern bounding box corner for import')
+CALL optionparser_add(opt, ' ', 'felat', felat, dmiss, help= &
+ 'latitude of the northeastern bounding box corner for import')
+
 CALL optionparser_add(opt, ' ', 'set-network', set_network, '', help= &
  'if input-format is of database type, collapse all the input data into a single &
  &pseudo-network with the given name, empty for keeping the original networks')
@@ -326,19 +336,6 @@ CALL optionparser_add(opt, ' ', 'trans-level-list', trans_level_list, help= &
 CALL optionparser_add(opt, ' ', 'trans-botlevel-list', trans_botlevel_list, help= &
  'list of output bottom surfaces for vertical interpolation, the unit is determined &
  &by the value of level-type and taken from grib2 table')
-CALL optionparser_add(opt, ' ', 'percentile', percentile, 50.0D0, help= &
- 'desired percentile, [0.,100.], for ''*:percentile'' transformations')
-
-#ifdef HAVE_LIBGRIBAPI
-CALL optionparser_add(opt, ' ', 'post-trans-type', post_trans_type, '', help= &
- 'transformation type (sparse points to grid) to be applied after &
- &other computations, in the form ''trans-type:subtype''; &
- &''inter'' for interpolation, with subtype ''linear''; &
- &''boxinter'' for statistical processing within output grid box, &
- &with subtype ''average'', ''stddev'', ''max'', ''min''; &
- &empty for no transformation; this option is compatible with output &
- &on gridded format only (see output-format)')
-#endif
 
 CALL optionparser_add(opt, ' ', 'ilon', ilon, 0.0D0, help= &
  'longitude of the southwestern bounding box corner for pre-transformation')
@@ -349,16 +346,20 @@ CALL optionparser_add(opt, ' ', 'flon', flon, 30.D0, help= &
 CALL optionparser_add(opt, ' ', 'flat', flat, 60.D0, help= &
  'latitude of the northeastern bounding box corner for pre-transformation')
 
+#ifdef HAVE_LIBGRIBAPI
+CALL optionparser_add(opt, ' ', 'post-trans-type', post_trans_type, '', help= &
+ 'transformation type (sparse points to grid) to be applied after &
+ &other computations, in the form ''trans-type:subtype''; &
+ &''inter'' for interpolation, with subtype ''linear''; &
+ &''boxinter'' for statistical processing within output grid box, &
+ &with subtype ''average'', ''stddev'', ''max'', ''min'', ''percentile''; &
+ &empty for no transformation; this option is compatible with output &
+ &on gridded format only (see output-format)')
+#endif
 
-CALL optionparser_add(opt, ' ', 'ielon', ielon, dmiss, help= &
- 'longitude of the southwestern bounding box corner for import')
-CALL optionparser_add(opt, ' ', 'ielat', ielat, dmiss, help= &
- 'latitude of the southwestern bounding box corner for import')
-CALL optionparser_add(opt, ' ', 'felon', felon, dmiss, help= &
- 'longitude of the northeastern bounding box corner for import')
-CALL optionparser_add(opt, ' ', 'felat', felat, dmiss, help= &
- 'latitude of the northeastern bounding box corner for import')
-
+CALL optionparser_add(opt, ' ', 'percentile', percentile, 50.0D0, help= &
+ 'desired percentile, [0.,100.], for pre- and post- ''*:percentile''&
+ & transformations')
 
 CALL optionparser_add(opt, ' ', 'comp-qc-ndi', comp_qc_ndi, help= &
  'enable compute of index (NDI) for use by Quality Control.')
@@ -1275,7 +1276,8 @@ ELSE IF (output_format == 'grib_api') THEN
 
 ! initialize transform
       CALL init(trans, trans_type=post_trans_type(w_s(1):w_e(1)), &
-       sub_type=post_trans_type(w_s(2):w_e(2)), categoryappend="transformation2")
+       sub_type=post_trans_type(w_s(2):w_e(2)), percentile=percentile, &
+       categoryappend="transform2")
 ! open grib template file and import first message, format:template is
 ! reconstructed here, improve
       ifile = grid_file_id_new(TRIM(output_format)//':'//TRIM(output_template), 'r')
