@@ -328,6 +328,7 @@ do_otimerange: DO j = 1, SIZE(that%timerange)
            'compute_stat_proc_agg, ndtr/dtratio/frac_valid: '// &
            t2c(ndtr)//'/'//t2c(dtratio(n1))//'/'//t2c(lfrac_valid))
 #endif
+          IF (ndtr > 0) THEN ! why this condition was not here before?
           IF (REAL(ndtr)/REAL(dtratio(n1)) >= lfrac_valid) THEN ! success
             IF (stat_proc == 0) THEN ! average
               WHERE(c_e(voldatiout(:,:)))
@@ -335,7 +336,25 @@ do_otimerange: DO j = 1, SIZE(that%timerange)
               END WHERE
             ENDIF
             CALL volgrid_set_vol_2d(that, i3, i, j, i6, voldatiout)
+#ifdef DEBUG
+            CALL l4f_log(L4F_DEBUG, &
+             'compute_stat_proc_agg, coding lev/t/tr/var: '// &
+             t2c(i3)//'/'//t2c(i)//'/'//t2c(j)//'/'//t2c(i6))
+#endif
+          ELSE
+! must nullify the output gaid here, otherwise an incomplete field will be output
+            IF (lclone) THEN
+              CALL delete(that%gaid(i3,i,j,i6))
+            ELSE
+              CALL init(that%gaid(i3,i,j,i6)) ! grid_id lacks a nullify method
+            ENDIF
+#ifdef DEBUG
+            CALL l4f_log(L4F_DEBUG, &
+             'compute_stat_proc_agg, skipping lev/t/tr/var: '// &
+             t2c(i3)//'/'//t2c(i)//'/'//t2c(j)//'/'//t2c(i6))
+#endif
           ENDIF
+          ENDIF ! ndtr > 0
 
         ENDDO ! level
       ENDDO ! var
