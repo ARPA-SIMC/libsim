@@ -356,8 +356,11 @@ mask_timerange(:) = itimerange(:)%timerange == tri &
  .AND. itimerange(:)%p1 /= imiss .AND. itimerange(:)%p1 >= 0
 
 IF (PRESENT(dtratio)) THEN
-  mask_timerange(:) = mask_timerange(:) .AND. itimerange(:)%p2 /= imiss &
-   .AND. itimerange(:)%p2 > 0 .AND. MOD(steps, itimerange(:)%p2) == 0
+  WHERE(itimerange(:)%p2 > 0 .AND. itimerange(:)%p2 /= imiss) ! for avoiding FPE MOD(steps, 0)
+    mask_timerange(:) = mask_timerange(:) .AND. MOD(steps, itimerange(:)%p2) == 0
+  ELSEWHERE
+    mask_timerange(:) = .FALSE.
+  END WHERE
 ELSE ! instantaneous
   mask_timerange(:) = mask_timerange(:) .AND. itimerange(:)%p2 == 0
 ENDIF
