@@ -24,6 +24,7 @@
 MODULE vol7d_var_class
 USE kinds
 USE missing_values
+USE file_utilities
 IMPLICIT NONE
 
 !> Definisce una variabile meteorologica osservata o un suo attributo.
@@ -96,6 +97,15 @@ END INTERFACE
 INTERFACE display
   MODULE PROCEDURE display_var, display_var_vect
 END INTERFACE
+
+
+TYPE vol7d_var_features
+  TYPE(vol7d_var) :: var !< the variable (only btable is relevant)
+  REAL :: posdef !< if not missing, minimum physically reasonable value for the variable
+  INTEGER :: vartype !< type of variable, one of the var_* constants
+END TYPE vol7d_var_features
+
+TYPE(vol7d_var_features),ALLOCATABLE :: var_features(:)
 
 ! constants for vol7d_vartype
 INTEGER,PARAMETER :: var_ord=0 !< unclassified variable (vol7d_vartype function)
@@ -254,12 +264,118 @@ c_e = this /= vol7d_var_miss
 END FUNCTION vol7d_var_c_e
 
 
+!> Initialise the global table of variable features.
+!! This subroutine reads the table of variable features from an
+!! external file and stores it in a global array. It has to be called
+!! once at the beginning of the program. At the moment it gives access
+!! to the information about type of variable and positive
+!! definitness. The table is based on the unique bufr-like variable
+!! table. The table is contained in the csv file `vargrib.csv`.
+!! It is not harmful to call this subroutine multiple times.
+SUBROUTINE vol7d_var_features_init()
+INTEGER :: un, i, n
+TYPE(csv_record) :: csv
+CHARACTER(len=1024) :: line
+
+IF (ALLOCATED(var_features)) RETURN
+
+un = open_package_file('varbufr.csv', filetype_data)
+n=0
+DO WHILE(.TRUE.)
+  READ(un,*,END=100)
+  n = n + 1
+ENDDO
+
+100 CONTINUE
+
+REWIND(un)
+ALLOCATE(var_features(n))
+
+DO i = 1, n
+  READ(un,'(A)',END=200)line
+  CALL init(csv, line)
+  CALL csv_record_getfield(csv, var_features(i)%var%btable)
+  CALL csv_record_getfield(csv)
+  CALL csv_record_getfield(csv)
+  CALL csv_record_getfield(csv, var_features(i)%posdef)
+  CALL csv_record_getfield(csv, var_features(i)%vartype)
+  CALL delete(csv)
+ENDDO
+
+200 CONTINUE
+CLOSE(un)
+
+END SUBROUTINE vol7d_var_features_init
+
+
+!> Deallocate the global table of variable features.
+!! This subroutine deallocates the table of variable features
+!! allocated in the `vol7d_var_features_init` subroutine.
+SUBROUTINE vol7d_var_features_delete()
+IF (ALLOCATED(var_features)) DEALLOCATE(var_features)
+END SUBROUTINE vol7d_var_features_delete
+
+
+!> Return the physical type of the variable.
+!! Returns a rough classification of the variable depending on the
+!! physical parameter it represents. The result is one of the
+!! constants vartype_* defined in the module. To be extended.
+!! In order for this to work, the subroutine \a
+!! vol7d_var_features_init has to be preliminary called.
+ELEMENTAL FUNCTION vol7d_var_features_vartype(this) RESULT(vartype)
+TYPE(vol7d_var),INTENT(in) :: this !< vol7d_var object to be tested
+INTEGER :: vartype
+
+INTEGER :: i
+
+vartype = imiss
+
+IF (ALLOCATED(var_features)) THEN
+  DO i = 1, SIZE(var_features)
+    IF (this%btable == var_features(i)%var%btable) THEN
+      vartype = var_features(i)%vartype
+      RETURN
+    ENDIF
+  ENDDO
+ENDIF
+
+END FUNCTION vol7d_var_features_vartype
+
+
+!> Apply a positive definite flag to a variable.
+!! This subroutine resets the value of a variable depending on its
+!! positive definite flag defined in the associated \a c_func object.
+!! The \a c_func object can be obtained for example by the \a convert
+!! (interfaced to vargrib2varbufr_convert) function. The value is
+!! reset to the maximum between the value itsel and and 0 (or the
+!! value set in \a c_func%posdef. These values are set from the
+!! vargrib2bufr.csv file.
+!! In order for this to work, the subroutine \a
+!! vol7d_var_features_init has to be preliminary called.
+ELEMENTAL SUBROUTINE vol7d_var_features_posdefapply(this, val)
+TYPE(vol7d_var),INTENT(in) :: this !< vol7d_var object to be reset
+REAL,INTENT(inout) :: val !< value to be reset, it is reset in place
+
+INTEGER :: i
+
+IF (ALLOCATED(var_features)) THEN
+  DO i = 1, SIZE(var_features)
+    IF (this%btable == var_features(i)%var%btable) THEN
+      IF (c_e(var_features(i)%posdef)) val = MAX(var_features(i)%posdef, val)
+      RETURN
+    ENDIF
+  ENDDO
+ENDIF
+
+END SUBROUTINE vol7d_var_features_posdefapply
+
+
 !> Return the physical type of the variable.
 !! Returns a rough classification of the variable depending on the
 !! physical parameter it represents. The result is one of the
 !! constants vartype_* defined in the module. To be extended.
 ELEMENTAL FUNCTION vol7d_vartype(this) RESULT(vartype)
-TYPE(vol7d_var),INTENT(in) :: this !< vol7d_var vector object to test
+TYPE(vol7d_var),INTENT(in) :: this !< vol7d_var object to be tested
 
 INTEGER :: vartype
 

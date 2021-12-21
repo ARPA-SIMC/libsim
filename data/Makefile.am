@@ -1,4 +1,4 @@
-dist_pkgdata_DATA = 
+dist_pkgdata_DATA = varbufr.csv
 
 if GRIBAPI
 dist_pkgdata_DATA += vargrib2bufr.csv
