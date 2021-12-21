@@ -47,3 +47,6 @@ bin/vg6d_transform
 doc/Doxyfile
 doc/latex/
 doc/html/
+*_test
+examples/example_*
+examples/esempio_*
