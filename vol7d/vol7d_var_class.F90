@@ -72,7 +72,6 @@ END INTERFACE
 !! di 1 dimensione e scalari).
 INTERFACE OPERATOR (==)
   MODULE PROCEDURE vol7d_var_eq
-!!$, vol7d_var_eqsv
 END INTERFACE
 
 !> Operatore logico di disuguaglianza tra oggetti della classe vol7d_var.
@@ -189,7 +188,7 @@ this%scalefactor = imiss
 END SUBROUTINE vol7d_var_delete
 
 
-elemental FUNCTION vol7d_var_eq(this, that) RESULT(res)
+ELEMENTAL FUNCTION vol7d_var_eq(this, that) RESULT(res)
 TYPE(vol7d_var),INTENT(IN) :: this, that
 LOGICAL :: res
 
@@ -198,20 +197,7 @@ res = this%btable == that%btable
 END FUNCTION vol7d_var_eq
 
 
-!!$FUNCTION vol7d_var_eqsv(this, that) RESULT(res)
-!!$TYPE(vol7d_var),INTENT(IN) :: this, that(:)
-!!$LOGICAL :: res(SIZE(that))
-!!$
-!!$INTEGER :: i
-!!$
-!!$DO i = 1, SIZE(that)
-!!$  res(i) = this == that(i)
-!!$ENDDO
-!!$
-!!$END FUNCTION vol7d_var_eqsv
-
-
-elemental FUNCTION vol7d_var_ne(this, that) RESULT(res)
+ELEMENTAL FUNCTION vol7d_var_ne(this, that) RESULT(res)
 TYPE(vol7d_var),INTENT(IN) :: this, that
 LOGICAL :: res
 
@@ -332,7 +318,7 @@ vartype = imiss
 
 IF (ALLOCATED(var_features)) THEN
   DO i = 1, SIZE(var_features)
-    IF (this%btable == var_features(i)%var%btable) THEN
+    IF (this == var_features(i)%var) THEN
       vartype = var_features(i)%vartype
       RETURN
     ENDIF
@@ -352,7 +338,7 @@ END FUNCTION vol7d_var_features_vartype
 !! vargrib2bufr.csv file.
 !! In order for this to work, the subroutine \a
 !! vol7d_var_features_init has to be preliminary called.
-ELEMENTAL SUBROUTINE vol7d_var_features_posdefapply(this, val)
+ELEMENTAL SUBROUTINE vol7d_var_features_posdef_apply(this, val)
 TYPE(vol7d_var),INTENT(in) :: this !< vol7d_var object to be reset
 REAL,INTENT(inout) :: val !< value to be reset, it is reset in place
 
@@ -360,14 +346,14 @@ INTEGER :: i
 
 IF (ALLOCATED(var_features)) THEN
   DO i = 1, SIZE(var_features)
-    IF (this%btable == var_features(i)%var%btable) THEN
+    IF (this == var_features(i)%var) THEN
       IF (c_e(var_features(i)%posdef)) val = MAX(var_features(i)%posdef, val)
       RETURN
     ENDIF
   ENDDO
 ENDIF
 
-END SUBROUTINE vol7d_var_features_posdefapply
+END SUBROUTINE vol7d_var_features_posdef_apply
 
 
 !> Return the physical type of the variable.

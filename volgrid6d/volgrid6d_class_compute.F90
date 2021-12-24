@@ -580,6 +580,7 @@ INTEGER,POINTER :: map_tr(:,:,:,:,:), f(:)
 REAL,POINTER :: voldatiin1(:,:), voldatiin2(:,:), voldatiout(:,:)
 LOGICAL,POINTER :: mask_timerange(:)
 LOGICAL :: lclone
+TYPE(vol7d_var),ALLOCATABLE :: varbufr(:)
 
 
 ! be safe
@@ -650,6 +651,11 @@ DO i = 1, SIZE(mask_timerange)
   ENDIF
 ENDDO
 
+! varbufr required for setting posdef, optimize with an array
+ALLOCATE(varbufr(SIZE(this%var)))
+DO i6 = 1, SIZE(this%var)
+  varbufr(i6) = convert(this%var(i6))
+ENDDO
 ! compute statistical processing
 DO l = 1, SIZE(this%time)
   DO k = 1, nitr
@@ -693,6 +699,9 @@ DO l = 1, SIZE(this%time)
                   ELSEWHERE
                     voldatiout(:,:) = rmiss
                   END WHERE
+                  IF (stat_proc == 1) THEN
+                    CALL vol7d_var_features_posdef_apply(varbufr(i6), voldatiout)
+                  ENDIF
                 ENDIF
 
                 CALL volgrid_set_vol_2d(that, i3, &

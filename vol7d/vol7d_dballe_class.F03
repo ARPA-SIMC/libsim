@@ -237,6 +237,11 @@ else
 
 endif
 
+! this init has been added here for cleaningness, this%vol7d gets
+! reinitialised afterwards in dba2v7d and this%vol7d%time_definition is
+! overwritten by this%time_definition, this duplication is required in
+! order to pass time_definition down to dba2v7d
+CALL init(this%vol7d, time_definition)
 this%time_definition = optio_i(time_definition)
 
 #ifdef DEBUG
@@ -277,7 +282,7 @@ IF (SIZE(network) == 0 )THEN
    anavarkind=anavarkind, anaattrkind=anaattrkind, anaonly=anaonly, &
    dataonly=dataonly, ana=ana)
 ELSE
-  CALL init(this%vol7d) ! necessary?
+  CALL init(this%vol7d)
   v7ddbatmp = this ! shallow copy
   DO i = 1, SIZE(network)
     CALL import(v7ddbatmp, var, network(i), coordmin, coordmax, timei, timef, &
