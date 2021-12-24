@@ -618,18 +618,18 @@ SUBROUTINE time_import_gribapi(this,gaid)
 TYPE(datetime),INTENT(out) :: this ! datetime object
 INTEGER,INTENT(in) :: gaid ! grib_api id of the grib loaded in memory to import 
 
-INTEGER :: EditionNumber, ttimeincr, tprocdata, p2g, p2, unit, status
+INTEGER :: EditionNumber, ttimeincr, tprocdata, centre, p2g, p2, unit, status
 CHARACTER(len=9) :: date
 CHARACTER(len=10) :: time
 
-call grib_get(gaid,'GRIBEditionNumber',EditionNumber)
+CALL grib_get(gaid,'GRIBEditionNumber',EditionNumber)
 
 IF (EditionNumber == 1 .OR. EditionNumber == 2) THEN
 
-  call grib_get(gaid,'dataDate',date )
-  call grib_get(gaid,'dataTime',time(:5) )
+  CALL grib_get(gaid,'dataDate',date )
+  CALL grib_get(gaid,'dataTime',time(:5) )
 
-  call init(this,simpledate=date(:8)//time(:4))
+  CALL init(this,simpledate=date(:8)//time(:4))
 
   IF (EditionNumber == 2) THEN
 
@@ -638,14 +638,22 @@ IF (EditionNumber == 1 .OR. EditionNumber == 2) THEN
 ! if analysis-like statistically processed data is encountered, the
 ! reference time must be shifted to the end of the processing period
     IF (status == GRIB_SUCCESS .AND. ttimeincr == 1) THEN
+! old libsim convention, to be removed sometime in the future
       CALL grib_get(gaid,'lengthOfTimeRange',p2g)
       CALL grib_get(gaid,'indicatorOfUnitForTimeRange',unit)
       CALL g2_interval_to_second(unit, p2g, p2)
       this = this + timedelta_new(sec=p2)
-    ELSE IF (status == GRIB_SUCCESS .AND. ttimeincr == 2 .AND. tprocdata == 0) THEN ! cosmo "accumulated" analysis 
+    ELSE IF (status == GRIB_SUCCESS .AND. ttimeincr == 2 .AND. tprocdata == 0) THEN
+! generally accepted grib2 convention, DWD exception for cosmo
+! "accumulated" analysis is such that reftime points to the end of the
+! interval, so no time shift in that case
       CALL grib_get(gaid,'lengthOfTimeRange',p2g)
       CALL grib_get(gaid,'indicatorOfUnitForTimeRange',unit)
       CALL g2_interval_to_second(unit, p2g, p2)
+      CALL grib_get(gaid,'centre',centre)
+      IF (centre /= 78) THEN
+        this = this + timedelta_new(sec=p2)
+      ENDIF
     ELSE IF ((status == GRIB_SUCCESS .AND. ttimeincr == 2) .OR. &
      status /= GRIB_SUCCESS) THEN ! usual case
 ! do nothing
@@ -670,7 +678,7 @@ TYPE(datetime),INTENT(in) :: this ! datetime object
 INTEGER,INTENT(in) :: gaid ! grib_api id of the grib loaded in memory to export
 TYPE(vol7d_timerange) :: timerange ! timerange, used for grib2 coding of statistically processed analysed data
 
-INTEGER :: EditionNumber
+INTEGER :: EditionNumber, centre
 
 CALL grib_get(gaid,'GRIBEditionNumber',EditionNumber)
 
@@ -682,8 +690,14 @@ ELSE IF (EditionNumber == 2 )THEN
 
   IF (timerange%p1 >= timerange%p2) THEN ! forecast-like
     CALL code_referencetime(this)
-  ELSE IF (timerange%p1 == 0) THEN ! analysis-like
-    CALL code_referencetime(this-timedelta_new(sec=timerange%p2))
+ ELSE IF (timerange%p1 == 0) THEN ! analysis-like
+! ready for coding with general convention
+!   CALL grib_get(gaid,'centre',centre)
+!   IF (centre /= 78) THEN ! DWD analysis exception 
+     CALL code_referencetime(this-timedelta_new(sec=timerange%p2))
+!   ELSE
+!     CALL code_referencetime(this)
+!   ENDIF
   ELSE ! bad timerange
     CALL l4f_log( L4F_ERROR, 'Timerange with 0>p1>p2 cannot be exported in grib2')
     CALL raise_error()
@@ -849,8 +863,13 @@ ELSE IF (EditionNumber == 2) THEN
 ! for forecast-like timeranges p1 has to be shifted to the end of interval
     CALL grib_get(gaid,'typeOfProcessedData',tprocdata,status)
     CALL grib_get(gaid,'typeOfTimeIncrement',ttimeincr)
-    IF (ttimeincr == 2 .AND. tprocdata /= 0) p1 = p1 + p2
-
+    IF (ttimeincr == 2 .AND. tprocdata /= 0) THEN
+      p1 = p1 + p2
+    ELSE
+      IF (p1 > 0) THEN
+        CALL l4f_log(L4F_WARN,'Found p1>0 in grib2 analysis data, strange things may happen')
+      ENDIF
+    ENDIF
   ELSE ! point in time
     statproc = 254
     p2 = 0
@@ -874,7 +893,7 @@ TYPE(vol7d_timerange),INTENT(in) :: this ! vol7d_timerange object
 INTEGER,INTENT(in) :: gaid ! grib_api id of the grib loaded in memory to export
 TYPE(datetime) :: reftime ! reference time of data, used for coding correct end of statistical processing period in grib2
 
-INTEGER :: EditionNumber, tri, currentunit, unit, p1_g1, p2_g1, p1, p2, pdtn
+INTEGER :: EditionNumber, centre, tri, currentunit, unit, p1_g1, p2_g1, p1, p2, pdtn
 
 CALL grib_get(gaid,'GRIBEditionNumber',EditionNumber)
 
@@ -915,6 +934,7 @@ ELSE IF (EditionNumber == 2) THEN
 ! Successive times processed have same start time of forecast,
 ! forecast time is incremented
       CALL grib_set(gaid,'typeOfStatisticalProcessing',this%timerange)
+! typeOfTimeIncrement to be replaced with a check that typeOfProcessedData /= 0
       CALL grib_set(gaid,'typeOfTimeIncrement',2)
       CALL timerange_v7d_to_g2(this%p2,p2,unit)
       CALL grib_set(gaid,'indicatorOfUnitForTimeRange',unit)
@@ -925,10 +945,18 @@ ELSE IF (EditionNumber == 2) THEN
       CALL timerange_v7d_to_g2(this%p2,p2,unit)
       CALL grib_set(gaid,'indicatorOfUnitOfTimeRange',unit)
       CALL grib_set(gaid,'forecastTime',0)
-      CALL code_endoftimeinterval(reftime)
+! ready for coding with general convention
+!      CALL grib_get(gaid,'centre',centre)
+!      IF (centre /= 78) THEN ! DWD analysis exception 
+        CALL code_endoftimeinterval(reftime + timedelta_new(sec=this%p2))
+!      ELSE
+!        CALL code_endoftimeinterval(reftime)
+!      ENDIF
 ! Successive times processed have same forecast time, start time of
 ! forecast is incremented
       CALL grib_set(gaid,'typeOfStatisticalProcessing',this%timerange)
+! typeOfTimeIncrement to be replaced with typeOfProcessedData
+!      CALL grib_set(gaid,'typeOfProcessedData',0)
       CALL grib_set(gaid,'typeOfTimeIncrement',1)
       CALL grib_set(gaid,'indicatorOfUnitForTimeRange',unit)
       CALL grib_set(gaid,'lengthOfTimeRange',p2)
