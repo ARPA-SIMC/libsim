@@ -1,0 +1,20 @@
+#!/bin/sh
+
+# reworked from Spanezz/wreport
+TOP_SRCDIR=$(readlink -f $(dirname $0))
+CMD=$(readlink -f "$1")
+shift
+ARGS="$@"
+
+## Set up the test environment
+export LIBSIM_DATA=$TOP_SRCDIR/data
+
+#echo "Running $CMD $ARGS"
+if $CMD $ARGS
+then
+    RES=0
+else
+    RES=$?
+    echo "Failed with result $RES"
+fi
+exit $RES

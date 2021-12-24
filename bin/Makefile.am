@@ -111,6 +111,7 @@ endif
 endif
 
 TESTS = $(check_PROGRAMS) $(dist_check_SCRIPTS)
+TESTS_ENVIRONMENT = $(top_srcdir)/testenv
 
 if HELP2MAN
 man_MANS = v7d_transform.1 v7d_add_wmo_info.1 vg6d_getpoint.1 vg6d_transform.1

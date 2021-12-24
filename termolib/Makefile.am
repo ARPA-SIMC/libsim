@@ -28,6 +28,7 @@ nodist_include_HEADERS = $(tmpvar2:.F90=.mod)
 
 check_PROGRAMS = termolib_test
 TESTS = $(check_PROGRAMS)
+TESTS_ENVIRONMENT = $(top_srcdir)/testenv
 
 termolib_test_SOURCES = termolib_test.f90
 termolib_test_LDADD = libsim_termolib.la

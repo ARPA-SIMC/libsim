@@ -55,6 +55,7 @@ dist_check_SCRIPTS =
 check_PROGRAMS = 
 EXTRA_DIST =
 TESTS = $(check_PROGRAMS) $(dist_check_SCRIPTS)
+TESTS_ENVIRONMENT = $(top_srcdir)/testenv
 
 vol7d_varvect_class.$(OBJEXT): vol7d_var_class.$(OBJEXT)
 vol7d_varvect_class.lo: vol7d_var_class.$(OBJEXT)

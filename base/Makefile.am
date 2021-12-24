@@ -84,6 +84,7 @@ geo_transforms.lo: phys_const.$(OBJEXT)
 check_PROGRAMS = char_utilities_test datetime_test file_utilities_test simple_stat_test optionparser_test
 dist_check_SCRIPTS = optionparser_test.sh
 TESTS = $(check_PROGRAMS) $(dist_check_SCRIPTS)
+TESTS_ENVIRONMENT = $(top_srcdir)/testenv
 
 char_utilities_test_SOURCES = char_utilities_test.f90
 char_utilities_test_LDADD = libsim_base.la 

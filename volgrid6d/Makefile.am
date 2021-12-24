@@ -86,6 +86,7 @@ volgrid6d_class_compute.lo: volgrid6d_class.$(OBJEXT)
 
 check_PROGRAMS = grid_transform_test
 TESTS = $(check_PROGRAMS)
+TESTS_ENVIRONMENT = $(top_srcdir)/testenv
 
 grid_transform_test_SOURCES = grid_transform_test.f90
 grid_transform_test_LDADD = libsim_volgrid6d.la
