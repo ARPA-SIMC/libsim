@@ -4,13 +4,12 @@
 TOP_SRCDIR=$(readlink -f $(dirname $0))
 CMD=$(readlink -f "$1")
 shift
-ARGS="$@"
 
 ## Set up the test environment
 export LIBSIM_DATA=$TOP_SRCDIR/data
 
-#echo "Running $CMD $ARGS"
-if $CMD $ARGS
+#echo "Running $CMD $@"
+if "$CMD" "$@"
 then
     RES=0
 else
