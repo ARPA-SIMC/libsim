@@ -558,7 +558,7 @@ DOUBLE PRECISION,INTENT(inout) :: lon ! central longitude
 DOUBLE PRECISION,INTENT(in),OPTIONAL :: lonref ! reference longitude
 
 INTEGER :: unit
-DOUBLE PRECISION :: lonsp, latsp, londelta, lov
+DOUBLE PRECISION :: lonsp, latsp, londelta, lov, lonrot
 CHARACTER(len=80) :: ptype
 
 lon = dmiss
@@ -578,10 +578,19 @@ ELSE IF (unit == geo_proj_unit_degree) THEN ! it is a spheric projection
     IF (latsp < 0.0D0) THEN
       lon = lonsp
       IF (PRESENT(lonref)) THEN
-        CALL long_reset_to_cart_closest(lov, lonref)
+        CALL long_reset_to_cart_closest(lon, lonref)
         CALL set_val(this%grid%proj, longitude_south_pole=lonref)
+! now reset rotated coordinates around zero
+        IF (c_e(this%grid%grid%xmin) .AND. c_e(this%grid%grid%xmax)) THEN
+          lonrot = 0.5D0*(this%grid%grid%xmin + this%grid%grid%xmax)
+        ENDIF
+        londelta = lonrot
+        CALL long_reset_to_cart_closest(londelta, 0.0D0)
+        londelta = londelta - lonrot
+        this%grid%grid%xmin = this%grid%grid%xmin + londelta
+        this%grid%grid%xmax = this%grid%grid%xmax + londelta
       ENDIF
-    ELSE
+    ELSE ! this part to be checked
       lon = MODULO(lonsp + 180.0D0, 360.0D0)
 !      IF (PRESENT(lonref)) THEN
 !        CALL long_reset_to_cart_closest(lov, lonref)
@@ -589,16 +598,16 @@ ELSE IF (unit == geo_proj_unit_degree) THEN ! it is a spheric projection
 !      ENDIF
     ENDIF
   CASE default ! use real grid limits
-    IF (c_e(this%grid%grid%xmin) .AND. c_e(this%grid%grid%xmin)) THEN
+    IF (c_e(this%grid%grid%xmin) .AND. c_e(this%grid%grid%xmax)) THEN
       lon = 0.5D0*(this%grid%grid%xmin + this%grid%grid%xmax)
     ENDIF
-      IF (PRESENT(lonref)) THEN
-        londelta = lon
-        CALL long_reset_to_cart_closest(londelta, lonref)
-        londelta = londelta - lon
-        this%grid%grid%xmin = this%grid%grid%xmin + londelta
-        this%grid%grid%xmax = this%grid%grid%xmax + londelta
-      ENDIF
+    IF (PRESENT(lonref)) THEN
+      londelta = lon
+      CALL long_reset_to_cart_closest(londelta, lonref)
+      londelta = londelta - lon
+      this%grid%grid%xmin = this%grid%grid%xmin + londelta
+      this%grid%grid%xmax = this%grid%grid%xmax + londelta
+    ENDIF
   END SELECT
 ENDIF
 
