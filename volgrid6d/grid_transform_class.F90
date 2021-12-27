@@ -1830,7 +1830,7 @@ CHARACTER(len=*),INTENT(in),OPTIONAL :: categoryappend !< append this suffix to 
 
 INTEGER :: ix, iy, n, nm, nr, nprev, nmaskarea, xnmin, xnmax, ynmin, ynmax, &
  time_definition
-DOUBLE PRECISION :: xmin, xmax, ymin, ymax, r2
+DOUBLE PRECISION :: xmin, xmax, ymin, ymax, r2, lonref
 DOUBLE PRECISION,ALLOCATABLE :: lon1(:), lat1(:), lon(:,:), lat(:,:)
 REAL,ALLOCATABLE :: lmaskbounds(:)
 TYPE(georef_coord) :: point
@@ -1858,7 +1858,8 @@ IF (this%trans%trans_type == 'inter') THEN
   IF (this%trans%sub_type == 'near' .OR. this%trans%sub_type == 'bilin' &
    .OR. this%trans%sub_type == 'shapiro_near') THEN
 
-    CALL get_val(in, nx=this%innx, ny=this%inny)
+    CALL copy(in, lin)
+    CALL get_val(lin, nx=this%innx, ny=this%inny)
     this%outnx = SIZE(v7d_out%ana)
     this%outny = 1
 
@@ -1866,11 +1867,14 @@ IF (this%trans%trans_type == 'inter') THEN
      this%inter_index_y(this%outnx,this%outny))
     ALLOCATE(lon(this%outnx,1),lat(this%outnx,1))
 
-    CALL get_val(in, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax)
     CALL getval(v7d_out%ana(:)%coord,lon=lon(:,1),lat=lat(:,1))
+! equalize in/out coordinates
+    lonref = 0.5D0*(MAXVAL(lon(:,1), mask=c_e(lon(:,1))) + MINVAL(lon(:,1), mask=c_e(lon(:,1))))
+    CALL griddim_set_central_lon(lin, lonref)
+    CALL get_val(lin, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax)
 
     IF (this%trans%sub_type == 'bilin') THEN
-      CALL this%find_index(in, .FALSE., &
+      CALL this%find_index(lin, .FALSE., &
        this%innx, this%inny, xmin, xmax, ymin, ymax, &
        lon, lat, this%trans%extrap, &
        this%inter_index_x, this%inter_index_y)
@@ -1878,11 +1882,11 @@ IF (this%trans%trans_type == 'inter') THEN
       ALLOCATE(this%inter_x(this%innx,this%inny),this%inter_y(this%innx,this%inny))
       ALLOCATE(this%inter_xp(this%outnx,this%outny),this%inter_yp(this%outnx,this%outny))
 
-      CALL griddim_gen_coord(in, this%inter_x, this%inter_y)
-      CALL proj(in, lon, lat, this%inter_xp, this%inter_yp)
+      CALL griddim_gen_coord(lin, this%inter_x, this%inter_y)
+      CALL proj(lin, lon, lat, this%inter_xp, this%inter_yp)
 
     ELSE ! near shapiro_near
-      CALL this%find_index(in, .TRUE., &
+      CALL this%find_index(lin, .TRUE., &
        this%innx, this%inny, xmin, xmax, ymin, ymax, &
        lon, lat, this%trans%extrap, &
        this%inter_index_x, this%inter_index_y)
@@ -1890,6 +1894,7 @@ IF (this%trans%trans_type == 'inter') THEN
     ENDIF
 
     DEALLOCATE(lon,lat)
+    CALL delete(lin)
 
     this%valid = .TRUE.
 
@@ -1907,6 +1912,23 @@ ELSE IF (this%trans%trans_type == 'polyinter') THEN
 ! compute coordinates of input grid in geo system
   CALL copy(in, lin)
   CALL unproj(lin)
+
+  this%outnx = this%trans%poly%arraysize
+  this%outny = 1
+  CALL delete(v7d_out) ! required to avoid leaks because intent(inout), dangerous
+  CALL init(v7d_out, time_definition=time_definition)
+  CALL vol7d_alloc(v7d_out, nana=this%outnx)
+
+! equalize in/out coordinates
+  ALLOCATE(lon(this%outnx,1))
+  CALL getval(v7d_out%ana(:)%coord,lon=lon(:,1))
+  lonref = 0.5D0*(MAXVAL(lon(:,1), mask=c_e(lon(:,1))) + MINVAL(lon(:,1), mask=c_e(lon(:,1))))
+  CALL griddim_set_central_lon(lin, lonref)
+  DEALLOCATE(lon)
+
+! setup output point list, equal to average of polygon points
+! warning, in case of concave areas points may coincide!
+  CALL poly_to_coordinates(this%trans%poly, v7d_out)
 
   nprev = 1
 !$OMP PARALLEL DEFAULT(SHARED)
@@ -1935,16 +1957,6 @@ ELSE IF (this%trans%trans_type == 'polyinter') THEN
   ENDDO
 !$OMP END PARALLEL
 
-  this%outnx = this%trans%poly%arraysize
-  this%outny = 1
-  CALL delete(v7d_out) ! required to avoid leaks because intent(inout), dangerous
-  CALL init(v7d_out, time_definition=time_definition)
-  CALL vol7d_alloc(v7d_out, nana=this%outnx)
-
-! setup output point list, equal to average of polygon points
-! warning, in case of concave areas points may coincide!
-  CALL poly_to_coordinates(this%trans%poly, v7d_out)
-
 #ifdef DEBUG
   DO n = 1, this%trans%poly%arraysize
     CALL l4f_category_log(this%category, L4F_DEBUG, &
@@ -1959,7 +1971,8 @@ ELSE IF (this%trans%trans_type == 'polyinter') THEN
 ELSE IF (this%trans%trans_type == 'stencilinter') THEN
   
 ! from inter:near
-  CALL get_val(in, nx=this%innx, ny=this%inny)
+  CALL copy(in, lin)
+  CALL get_val(lin, nx=this%innx, ny=this%inny)
   this%outnx = SIZE(v7d_out%ana)
   this%outny = 1
 
@@ -1967,10 +1980,14 @@ ELSE IF (this%trans%trans_type == 'stencilinter') THEN
    this%inter_index_y(this%outnx,this%outny))
   ALLOCATE(lon(this%outnx,1),lat(this%outnx,1))
 
-  CALL get_val(in, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax)
   CALL getval(v7d_out%ana(:)%coord,lon=lon(:,1),lat=lat(:,1))
+! equalize in/out coordinates
+  lonref = 0.5D0*(MAXVAL(lon(:,1), mask=c_e(lon(:,1))) + MINVAL(lon(:,1), mask=c_e(lon(:,1))))
+  CALL griddim_set_central_lon(lin, lonref)
 
-  CALL this%find_index(in, .TRUE., &
+  CALL get_val(lin, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax)
+
+  CALL this%find_index(lin, .TRUE., &
    this%innx, this%inny, xmin, xmax, ymin, ymax, &
    lon, lat, this%trans%extrap, &
    this%inter_index_x, this%inter_index_y)
@@ -2014,6 +2031,7 @@ ELSE IF (this%trans%trans_type == 'stencilinter') THEN
 #endif
 
   DEALLOCATE(lon,lat)
+  CALL delete(lin)
 
   this%valid = .TRUE. ! warning, no check of subtype
 
