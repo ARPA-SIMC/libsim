@@ -354,6 +354,14 @@ AM_CONDITIONAL(DOXYDOC, test "x$enableval" = "xyes")
 if test "x$enableval" = "xyes"; then
    AC_CHECK_PROG(HAVE_DOT, dot, YES, NO,,)
    AC_SUBST(HAVE_DOT)
+   AC_CHECK_PROG(ladv, latex, yes, no,,)
+   if test "x$ladv" = "xno"; then
+     AC_MSG_ERROR([latex required for documentation!])
+   fi
+   AC_CHECK_PROG(ladv, dvips, yes, no,,)
+   if test "x$ladv" = "xno"; then
+     AC_MSG_ERROR([dvips required for documentation!])
+   fi
 fi
 
 if test "x$prefix" = "xNONE"; then
