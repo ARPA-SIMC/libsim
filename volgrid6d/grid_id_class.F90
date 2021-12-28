@@ -979,32 +979,31 @@ ELSE
 ENDIF
 
 
-if (any(field == rmiss)) then
+IF (ANY(field == rmiss)) THEN
 
-  call grib_set(gaid,'missingValue',rmiss)
-  if (editionNumber == 1) then
+  CALL grib_set(gaid,'missingValue',rmiss)
+  IF (editionNumber == 1) THEN
 ! enable bitmap in grib1
-! grib_api 1.9.9 goes into an infinite loop with second order packing here
-    CALL grib_set(gaid,'packingType','grid_simple')
-    call grib_set(gaid,"bitmapPresent",1)
-  else
+! grib_api 1.9.9 went into an infinite loop with second order packing here
+!    CALL grib_set(gaid,'packingType','grid_simple')
+! now it's fixed, leaving second order if present
+    CALL grib_set(gaid,"bitmapPresent",1)
+  ELSE
 ! enable bitmap in grib2
-    call grib_set(gaid,"bitMapIndicator",0)
-  endif
+    CALL grib_set(gaid,"bitMapIndicator",0)
+  ENDIF
 
-else
+ELSE
 
-  if (editionNumber == 1) then
+  IF (editionNumber == 1) THEN
 ! disable bitmap in grib1
-    call grib_set(gaid,"bitmapPresent",0)
-  else
+    CALL grib_set(gaid,"bitmapPresent",0)
+  ELSE
 ! disable bitmap in grib2
-    call grib_set(gaid,"bitMapIndicator",255)
-  endif
+    CALL grib_set(gaid,"bitMapIndicator",255)
+  ENDIF
 
-end if
-
-!TODO: gestire il caso TUTTI dati mancanti
+ENDIF
 
 #ifdef DEBUG
 CALL l4f_log(L4F_DEBUG, 'grib_api, coding field in interval: '// &
@@ -1014,7 +1013,7 @@ CALL l4f_log(L4F_DEBUG, 'grib_api, coding field with number of missing: '// &
 CALL l4f_log(L4F_DEBUG, 'grib_api, sizex:'//t2c(x1)//','//t2c(x2)//','//t2c(xs))
 CALL l4f_log(L4F_DEBUG, 'grib_api, sizey:'//t2c(y1)//','//t2c(y2)//','//t2c(ys))
 #endif
-IF ( jPointsAreConsecutive == 0) THEN
+IF (jPointsAreConsecutive == 0) THEN
   CALL grib_set(gaid,'values', RESHAPE(field(x1:x2:xs,y1:y2:ys), &
    (/SIZE(field)/)))
 ELSE
