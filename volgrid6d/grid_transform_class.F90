@@ -193,10 +193,12 @@
 !!      output; the other points are filled with missing values
 !!      (grid-to-grid).
 !!    - sub_type='setinvalidto' the input points having non valid data
-!!      are set to a user-specified constant value (grid-to-grid).
+!!      are set to a user-specified constant value (grid-to-grid or
+!!      sparse points-to-sparse points).
 !!    - sub_type='settoinvalid' the input points having values
 !!      included in the requested bounds are set to an invalid value,
-!!      the others are kept unchanged (grid-to-grid).
+!!      the others are kept unchanged (grid-to-grid or sparse
+!!      points-to-sparse points).
 !!
 !! \ingroup volgrid6d
 MODULE grid_transform_class
