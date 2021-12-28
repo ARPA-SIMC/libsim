@@ -99,6 +99,7 @@ CHARACTER(len=512) :: dsn
 LOGICAL :: version, ldisplay, disable_qc, comp_qc_ndi, comp_qc_perc, comp_qc_area_er,anaonly
 CHARACTER(len=512):: a_name
 INTEGER :: category
+TYPE(arrayof_real) :: maskbounds
 
 ! for computing
 LOGICAL :: comp_filter_time, comp_keep, comp_sort, comp_fill_data, comp_full_steps
@@ -119,7 +120,7 @@ TYPE(grid_file_id) :: ifile
 TYPE(grid_id) :: gaid
 TYPE(griddim_def) :: grid_out
 TYPE(volgrid6d) :: vg6d(1)
-character(len=160) :: post_trans_type
+CHARACTER(len=160) :: post_trans_type
 #endif
 TYPE(vol7d_serialize_csv) :: v7d_csv
 TYPE(vol7d_serialize_csvdba) :: v7d_csvdba
@@ -323,6 +324,7 @@ CALL optionparser_add(opt, ' ', 'pre-trans-type', pre_trans_type, '', help= &
 #endif
  //'; ''metamorphosis'' with subtypes ''coordbb'', ''poly'' &
  &for selecting only data within a given bounding box or a set of polygons&
+ &, or with subtypes ''setinvalidto'', ''settoinvalid'' (see --maskbounds)&
  &; empty for no transformation')
 
 CALL optionparser_add(opt, ' ', 'trans-level-type', trans_level_type, help= &
@@ -345,6 +347,12 @@ CALL optionparser_add(opt, ' ', 'flon', flon, 30.D0, help= &
  'longitude of the northeastern bounding box corner for pre-transformation')
 CALL optionparser_add(opt, ' ', 'flat', flat, 60.D0, help= &
  'latitude of the northeastern bounding box corner for pre-transformation')
+
+CALL optionparser_add(opt, ' ', 'maskbounds', maskbounds, help= &
+ 'comma-separated list of boundary values for some sub-types of &
+ &''metamorphosis'' pre-transformation: &
+ &for ''setinvalidto'' it sets the constant value to be used (1 value), &
+ &for ''settoinvalid'' it defines the range of values to become invalid (2 values)')
 
 #ifdef HAVE_LIBGRIBAPI
 CALL optionparser_add(opt, ' ', 'post-trans-type', post_trans_type, '', help= &
@@ -857,6 +865,9 @@ DO ninput = optind, iargc()-1
 
 ENDDO
 
+! pack maskbounds array or allocate it to zero length for further
+! correct behavior
+CALL packarray(maskbounds)
 
 CALL delete(opt) ! check whether I can already get rid of this stuff now
 
@@ -940,7 +951,8 @@ IF (pre_trans_type /= '') THEN
      input_levtype=ilevel, output_levtype=olevel, &
      sub_type=pre_trans_type(w_s(2):w_e(2)), categoryappend="transformation1")
     CALL transform(trans, vol7d_in=v7d, vol7d_out=v7d_comp1, v7d=v7d_coord, &
-     lev_out=olevel_list, vol7d_coord_in=v7d_coord, categoryappend="transform1")
+     maskbounds=maskbounds%array, lev_out=olevel_list, &
+     vol7d_coord_in=v7d_coord, categoryappend="transform1")
     CALL delete(trans)
   ELSE ! syntax is wrong
     CALL init(v7d_comp1)

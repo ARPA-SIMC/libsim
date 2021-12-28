@@ -2527,12 +2527,13 @@ END SUBROUTINE v7d_v7d_transform_compute
 !! is created internally and it does not require preliminary
 !! initialisation. The success of the transformation can be checked
 !! with the \a c_e method: c_e(vol7d_out).
-SUBROUTINE v7d_v7d_transform(this, vol7d_in, vol7d_out, v7d, lev_out, vol7d_coord_in, &
- categoryappend)
+SUBROUTINE v7d_v7d_transform(this, vol7d_in, vol7d_out, v7d, maskbounds, &
+ lev_out, vol7d_coord_in, categoryappend)
 TYPE(transform_def),INTENT(in) :: this !< object specifying the abstract transformation
 TYPE(vol7d),INTENT(inout) :: vol7d_in !< object to be transformed, it is not modified, despite the INTENT(inout)
 TYPE(vol7d),INTENT(out) :: vol7d_out !< transformed object, it does not require initialisation
 TYPE(vol7d),INTENT(in),OPTIONAL :: v7d !< object containing a list of points over which transformation has to be done (required by some transformation types)
+REAL,INTENT(in),OPTIONAL :: maskbounds(:) !< array of boundary values for defining a subset of valid points where the values of \a maskgrid are within the first and last value of \a maskbounds (for transformation type 'metamorphosis:maskfill')
 TYPE(vol7d_level),INTENT(in),OPTIONAL,TARGET :: lev_out(:) !< vol7d_level object defining target vertical grid, for vertical interpolations
 TYPE(vol7d),INTENT(in),OPTIONAL :: vol7d_coord_in !< object providing time constant input vertical coordinate for some kind of vertical interpolations
 CHARACTER(len=*),INTENT(in),OPTIONAL :: categoryappend !< append this suffix to log4fortran namespace category
@@ -2706,7 +2707,7 @@ IF (trans_type == 'vertint') THEN
 
 ELSE
 
-  CALL init(grid_trans, this, vol7d_in, v7d_locana, &
+  CALL init(grid_trans, this, vol7d_in, v7d_locana, maskbounds=maskbounds, &
    categoryappend=categoryappend)
 ! if this init is successful, I am sure that v7d_locana%ana is associated
 

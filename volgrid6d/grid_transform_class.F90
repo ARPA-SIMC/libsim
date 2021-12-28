@@ -2484,11 +2484,12 @@ END SUBROUTINE grid_transform_vol7d_grid_init
 !! successfully initialised, if the result is \a .FALSE., it should
 !! not be used further on.
 SUBROUTINE grid_transform_vol7d_vol7d_init(this, trans, v7d_in, v7d_out, &
- categoryappend)
+ maskbounds, categoryappend)
 TYPE(grid_transform),INTENT(out) :: this !< grid_transformation object
 TYPE(transform_def),INTENT(in) :: trans !< transformation object
 TYPE(vol7d),INTENT(in) :: v7d_in !< vol7d object with the coordinates of the sparse point to be used as input (only information about coordinates is used)
 TYPE(vol7d),INTENT(inout) :: v7d_out !< vol7d object with the coordinates of the sparse points to be used as transformation target (input or output depending on type of transformation, when output, it must have been initialised anyway)
+REAL,INTENT(in),OPTIONAL :: maskbounds(:) !< array of boundary values for defining a subset of valid points where the values of \a maskgrid are within the first and last value of \a maskbounds (for transformation type 'metamorphosis:maskvalid/settoinvalid' and others)
 CHARACTER(len=*),INTENT(in),OPTIONAL :: categoryappend !< append this suffix to log4fortran namespace category
 
 INTEGER :: i, n
@@ -2568,13 +2569,7 @@ ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
 
   IF (this%trans%sub_type == 'all' ) THEN
 
-    this%outnx = SIZE(v7d_in%ana)
-    this%outny = 1
-    this%point_index(:,1) = (/(i,i=1,this%innx)/)
-    CALL vol7d_alloc(v7d_out, nana=SIZE(v7d_in%ana))
-    v7d_out%ana = v7d_in%ana
-
-    this%valid = .TRUE.
+    CALL metamorphosis_all_setup()
 
   ELSE IF (this%trans%sub_type == 'coordbb' ) THEN
 
@@ -2657,8 +2652,72 @@ ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
 
     this%valid = .TRUE.
 
+  ELSE IF (this%trans%sub_type == 'setinvalidto' ) THEN
+
+    IF (.NOT.PRESENT(maskbounds)) THEN
+      CALL l4f_category_log(this%category,L4F_ERROR, &
+       'grid_transform_init maskbounds missing for metamorphosis:'// &
+       TRIM(this%trans%sub_type)//' transformation')
+      RETURN
+    ELSE IF (SIZE(maskbounds) < 1) THEN
+      CALL l4f_category_log(this%category,L4F_ERROR, &
+       'grid_transform_init maskbounds empty for metamorphosis:'// &
+       TRIM(this%trans%sub_type)//' transformation')
+      RETURN
+    ELSE
+      this%val1 = maskbounds(1)
+#ifdef DEBUG
+      CALL l4f_category_log(this%category, L4F_DEBUG, &
+       "grid_transform_init setting invalid data to "//t2c(this%val1))
+#endif
+    ENDIF
+
+    CALL metamorphosis_all_setup()
+
+  ELSE IF (this%trans%sub_type == 'settoinvalid' ) THEN
+
+    IF (.NOT.PRESENT(maskbounds)) THEN
+      CALL l4f_category_log(this%category,L4F_ERROR, &
+       'grid_transform_init maskbounds missing for metamorphosis:'// &
+       TRIM(this%trans%sub_type)//' transformation')
+      CALL raise_error()
+      RETURN
+    ELSE IF (SIZE(maskbounds) < 2) THEN
+      CALL l4f_category_log(this%category,L4F_ERROR, &
+       'grid_transform_init maskbounds must have at least 2 elements for metamorphosis:'// &
+       TRIM(this%trans%sub_type)//' transformation')
+      CALL raise_error()
+      RETURN
+    ELSE
+      this%val1 = maskbounds(1)
+      this%val2 = maskbounds(SIZE(maskbounds))
+#ifdef DEBUG
+      CALL l4f_category_log(this%category, L4F_DEBUG, &
+       "grid_transform_init setting to invalid interval ]"//t2c(this%val1)//','// &
+       t2c(this%val2)//']')
+#endif
+    ENDIF
+
+    CALL metamorphosis_all_setup()
+
   ENDIF
 ENDIF
+
+CONTAINS
+
+! common code to metamorphosis transformations conserving the number
+! of points
+SUBROUTINE metamorphosis_all_setup()
+
+this%outnx = SIZE(v7d_in%ana)
+this%outny = 1
+this%point_index(:,1) = (/(i,i=1,this%innx)/)
+CALL vol7d_alloc(v7d_out, nana=SIZE(v7d_in%ana))
+v7d_out%ana = v7d_in%ana
+
+this%valid = .TRUE.
+
+END SUBROUTINE metamorphosis_all_setup
 
 END SUBROUTINE grid_transform_vol7d_vol7d_init
 
