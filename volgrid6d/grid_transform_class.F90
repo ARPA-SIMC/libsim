@@ -2364,8 +2364,9 @@ TYPE(griddim_def),INTENT(in) :: out !< griddim object defining target grid
 character(len=*),INTENT(in),OPTIONAL :: categoryappend !< append this suffix to log4fortran namespace category
 
 INTEGER :: nx, ny
-DOUBLE PRECISION :: xmin, xmax, ymin, ymax
+DOUBLE PRECISION :: xmin, xmax, ymin, ymax, lonref
 DOUBLE PRECISION,ALLOCATABLE :: lon(:,:),lat(:,:)
+TYPE(griddim_def) :: lout
 
 
 CALL grid_transform_init_common(this, trans, categoryappend)
@@ -2377,23 +2378,28 @@ IF (this%trans%trans_type == 'inter') THEN
 
   IF ( this%trans%sub_type == 'linear' ) THEN
     
-    CALL get_val(out, nx=nx, ny=ny)
-    this%outnx=nx
-    this%outny=ny
-  
     this%innx=SIZE(v7d_in%ana)
     this%inny=1
-  
     ALLOCATE(lon(this%innx,1),lat(this%innx,1))
     ALLOCATE(this%inter_xp(this%innx,this%inny),this%inter_yp(this%innx,this%inny))
+    CALL getval(v7d_in%ana(:)%coord,lon=lon(:,1),lat=lat(:,1))
+
+    CALL copy (out, lout)
+! equalize in/out coordinates
+    lonref = 0.5D0*(MAXVAL(lon(:,1), mask=c_e(lon(:,1))) + MINVAL(lon(:,1), mask=c_e(lon(:,1))))
+    CALL griddim_set_central_lon(lout, lonref)
+
+    CALL get_val(lout, nx=nx, ny=ny)
+    this%outnx=nx
+    this%outny=ny
     ALLOCATE(this%inter_x(this%outnx,this%outny),this%inter_y(this%outnx,this%outny))
 
-    CALL get_val(out, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax)
-    CALL getval(v7d_in%ana(:)%coord,lon=lon(:,1),lat=lat(:,1))
-    CALL proj(out, lon, lat, this%inter_xp, this%inter_yp)
-    CALL griddim_gen_coord(out, this%inter_x, this%inter_y)
+    CALL get_val(lout, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax)
+    CALL proj(lout, lon, lat, this%inter_xp, this%inter_yp)
+    CALL griddim_gen_coord(lout, this%inter_x, this%inter_y)
 
     DEALLOCATE(lon,lat)
+    CALL delete(lout)
 
     this%valid = .TRUE.
 
@@ -2403,7 +2409,19 @@ ELSE IF (this%trans%trans_type == 'boxinter') THEN
 
   this%innx=SIZE(v7d_in%ana)
   this%inny=1
-  CALL get_val(out, nx=this%outnx, ny=this%outny, &
+! index arrays must have the shape of input grid
+  ALLOCATE(lon(this%innx,1),lat(this%innx,1))
+  ALLOCATE(this%inter_index_x(this%innx,this%inny), &
+   this%inter_index_y(this%innx,this%inny))
+! get coordinates of input grid in geo system
+  CALL getval(v7d_in%ana(:)%coord,lon=lon(:,1),lat=lat(:,1))
+
+  CALL copy (out, lout)
+! equalize in/out coordinates
+  lonref = 0.5D0*(MAXVAL(lon(:,1), mask=c_e(lon(:,1))) + MINVAL(lon(:,1), mask=c_e(lon(:,1))))
+  CALL griddim_set_central_lon(lout, lonref)
+
+  CALL get_val(lout, nx=this%outnx, ny=this%outny, &
    xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax)
 ! TODO now box size is ignored
 ! if box size not provided, use the actual grid step
@@ -2414,18 +2432,15 @@ ELSE IF (this%trans%trans_type == 'boxinter') THEN
 ! half size is actually needed
   this%trans%area_info%boxdx = this%trans%area_info%boxdx*0.5D0
   this%trans%area_info%boxdy = this%trans%area_info%boxdy*0.5D0
-! index arrays must have the shape of input grid
-  ALLOCATE(lon(this%innx,1),lat(this%innx,1))
-  ALLOCATE(this%inter_index_x(this%innx,this%inny), &
-   this%inter_index_y(this%innx,this%inny))
 
-! get coordinates of input grid in geo system
-  CALL getval(v7d_in%ana(:)%coord,lon=lon(:,1),lat=lat(:,1))
 ! use find_index in the opposite way, here extrap does not make sense
-  CALL this%find_index(out, .TRUE., &
+  CALL this%find_index(lout, .TRUE., &
    this%outnx, this%outny, xmin, xmax, ymin, ymax, &
    lon, lat, .FALSE., &
    this%inter_index_x, this%inter_index_y)
+
+  DEALLOCATE(lon,lat)
+  CALL delete(lout)
 
   this%valid = .TRUE. ! warning, no check of subtype
 
