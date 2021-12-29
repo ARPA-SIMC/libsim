@@ -330,7 +330,8 @@ TYPE(datetime),INTENT(in),OPTIONAL :: start
 LOGICAL,INTENT(in),OPTIONAL :: full_steps
 
 INTEGER :: i, j, k, l, na, nf, n
-INTEGER :: steps, p1, maxp1, maxp2, minp1mp2, dstart
+INTEGER :: steps, p1, maxp1, maxp2, minp1mp2, dstart, msteps
+INTEGER(kind=int_ll) :: stepms, mstepms
 LOGICAL :: lforecast
 TYPE(datetime) :: lstart, lend, pstart1, pstart2, pend1, pend2, reftime1, reftime2, tmptime
 TYPE(arrayof_datetime) :: a_otime
@@ -414,8 +415,9 @@ minp1mp2 = MINVAL(itimerange(:)%p1 - itimerange(:)%p2, mask=mask_timerange)
 IF (time_definition == 0) THEN ! reference time
   lend = lend + timedelta_new(sec=maxp1)
 ENDIF
-! extend interval at the end in order to include all the data, must use
-! < and not <= in the DO WHILE loops some lines below
+! extend interval at the end in order to include all the data in case
+! frac_valid<1; must use < and not <= in the DO WHILE loops some lines
+! below in order to exclude the last full interval which would be empty
 lend = lend + step
 IF (lstart == datetime_miss) THEN ! autodetect
   lstart = itime(1)
@@ -454,12 +456,37 @@ IF (lforecast) THEN ! forecast mode
     ENDDO
 
   ELSE ! verification time
+
+! verification time in forecast mode is the ugliest case, because we
+! don't know a priori how many different (thus incompatible) reference
+! times we have, so some assumption of regularity has to be made. For
+! this reason msteps, the minimum step between two times, is
+! computed. We choose to compute it as a difference between itime
+! elements, it could be also computed as difference of itimerange%p1
+! elements. But what if it is not modulo steps?
+    mstepms = steps*1000_int_ll
+    DO i = 2, SIZE(itime)
+      CALL getval(itime(i)-itime(i-1), amsec=stepms)
+      IF (stepms > 0_int_ll .AND. stepms < mstepms) THEN
+        msteps = stepms/1000_int_ll
+        IF (MOD(steps, msteps) == 0) mstepms = stepms
+      ENDIF
+    ENDDO
+    msteps = mstepms/1000_int_ll
+
     tmptime = lstart + step
     DO WHILE(tmptime < lend) ! < since lend has been extended
       CALL insert_unique(a_otime, tmptime)
       tmptime = tmptime + step
     ENDDO
-    DO p1 = steps, maxp1, steps
+
+! in next loop, we used initially steps instead of msteps (see comment
+! above), this gave much less combinations of time/timeranges with
+! possible empty output; we start from msteps instead of steps in
+! order to include partial initial intervals in case frac_valid<1;
+! however, as a gemeral rule, for aggregation of forecasts it's better
+! to use reference time
+    DO p1 = msteps, maxp1, msteps
       CALL insert_unique(a_otimerange, vol7d_timerange_new(stat_proc, p1, steps))
     ENDDO
 
