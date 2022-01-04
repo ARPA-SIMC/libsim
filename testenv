@@ -2,11 +2,13 @@
 
 # reworked from Spanezz/wreport
 TOP_SRCDIR=$(readlink -f $(dirname $0))
-CMD=$(readlink -f "$1")
+#CMD=$(readlink -f "$1")
+CMD=$1
 shift
 
 ## Set up the test environment
 export LIBSIM_DATA=$TOP_SRCDIR/data
+PATH=$TOP_SRCDIR/bin:$PATH
 
 #echo "Running $CMD $@"
 if "$CMD" "$@"
