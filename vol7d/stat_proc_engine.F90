@@ -159,7 +159,7 @@ CALL getval(step, asec=steps)
 
 deltas = 0
 IF (PRESENT(start)) THEN
-  IF (SIZE(itime) > 1 .AND. c_e(start)) THEN ! security check
+  IF (SIZE(itime) > 0 .AND. c_e(start)) THEN ! security check
     CALL getval(start-itime(1), asec=deltas)
   ENDIF
 ENDIF
