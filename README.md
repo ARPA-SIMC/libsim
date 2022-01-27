@@ -50,8 +50,15 @@ framework for compiling the main libsim dependencies and libsim
 itself, as well as an universal binary package suitable to be
 installed on a generic state-of-the-art x86_64 Linux system.
 
+Versioning
+----------
 
-## Documentation
+From version 7.0.0, libsim follows [semver 2.0](https://semver.org/) for API
+and ABI changes. The library version (`-version-info`) follows the [libtools
+conventions](https://www.gnu.org/software/libtool/manual/html_node/Updating-version-info.html).
+
+Documentation
+-------------
 
 The documentation for all command-line tools can be found in their
 manpage.  All command-line tools also have extensive command-line help
