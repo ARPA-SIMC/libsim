@@ -6,7 +6,7 @@
 
 Summary: Fortran utility libraries
 Name: libsim
-Version: 6.5.3
+Version: 7.0.0
 Release: 1
 License: GPL2+
 Group: Applications/Meteo
@@ -163,6 +163,18 @@ mv $RPM_BUILD_ROOT%{_includedir}/*.mod $RPM_BUILD_ROOT%{_fmoddir}
 rm -rf %{buildroot}
 
 %changelog
+* Thu Jan 27 2022 Daniele Branchini <dbranchini@arpae.it> - 7.0.0-1
+- major change in .so versioning
+- updated sea variables in vargrib2bufr.csv and improved doc
+- convert all station data to real in vol7d_convr if requested (#69)
+- more aggressive algorithm for the aggregation of forecasts with time_definition=1 (verification time) (#43)
+- add checks for latex and dvips (#57)
+- avoid paroblem with second order grib packaging (#66)
+- equalize grid coordinates for some sparse point to grid transformations and vice versa
+- improve managing of periodicity in in/out grids
+- implement full interpretaion of the various "accumulated analyses" grib2 conventions
+- Various minor bug fixes
+
 * Tue Nov  9 2021 Daniele Branchini <dbranchini@arpae.it> - 6.5.3-1
 - implement perentile post-transformation
 - fix computation of polygon centroid when it's already closed
