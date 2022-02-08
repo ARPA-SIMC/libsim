@@ -53,14 +53,11 @@ BuildRequires: texlive-cm
 %{?fedora:BuildRequires: texlive-lwarp}
 BuildRequires: gcc-c++
 BuildRequires: libtool
-BuildRequires: libpng-devel
 BuildRequires: fortrangis-devel
 BuildRequires: netcdf-fortran-devel
 BuildRequires: shapelib-devel
-BuildRequires: jasper-devel
 BuildRequires: proj-devel
 BuildRequires: popt-devel
-BuildRequires: cairo-devel
 BuildRequires: freetype-devel
 Requires: %{grib_sw}
 
