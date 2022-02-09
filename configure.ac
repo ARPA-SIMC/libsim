@@ -224,14 +224,14 @@ AC_CHECK_LIB(
 	     [
 	      AC_MSG_RESULT([eccodes code included])
 	      AC_DEFINE(HAVE_LIBGRIBAPI, 1, [Enable gribapi code])
-	      GRIBAPI_LIBS="-leccodes_f90 -leccodes -ljasper"
+	      GRIBAPI_LIBS="-leccodes_f90 -leccodes"
 	      AC_SUBST(GRIBAPI_LIBS)
 	      GRIBAPI_PKGCONFIG="eccodes_f90"
 	      AC_SUBST(GRIBAPI_PKGCONFIG)
 	      grib_api_flavor=eccodes
 	     ],
 	     [AC_MSG_RESULT([eccodes library not found, trying with legacy grib_api])],
-	     [-leccodes -ljasper]
+	     [-leccodes]
 	    )
 if test "x$grib_api_flavor" = "x"; then
 AC_CHECK_LIB(
@@ -240,14 +240,14 @@ AC_CHECK_LIB(
 	     [
 	      AC_MSG_RESULT([gribapi code included])
 	      AC_DEFINE(HAVE_LIBGRIBAPI, 1, [Enable gribapi code])
-	      GRIBAPI_LIBS="-lgrib_api_f90 -lgrib_api -ljasper"
+	      GRIBAPI_LIBS="-lgrib_api_f90 -lgrib_api"
 	      AC_SUBST(GRIBAPI_LIBS)
 	      GRIBAPI_PKGCONFIG="grib_api_f90"
 	      AC_SUBST(GRIBAPI_PKGCONFIG)
 	      grib_api_flavor=grib_api
 	     ],
 	     [AC_MSG_ERROR([eccodes and grib-api library not found])],
-	     [-lgrib_api -ljasper]
+	     [-lgrib_api]
 	    )
 fi
 else
@@ -295,7 +295,7 @@ for try in /usr/lib64/ncarg /usr/lib/ncarg; do
 done
   AC_CHECK_LIB([ncarg], [ngpswk],
     NCARG_LDFLAGS=$ncarg_ldflags
-    NCARG_LIBS="-lncarg -lncarg_gks -lncarg_c -lX11 -lpng -lcairo -lfreetype"
+    NCARG_LIBS="-lncarg -lncarg_gks -lncarg_c -lX11 -lcairo -lfreetype"
     AC_SUBST(NCARG_LDFLAGS)
     AC_SUBST(NCARG_LIBS)
     AC_DEFINE(HAVE_LIBNCARG, 1, [Enable ncar graphics code])
