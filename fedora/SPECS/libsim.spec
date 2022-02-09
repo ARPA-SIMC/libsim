@@ -43,6 +43,10 @@ BuildRequires: help2man
 BuildRequires: log4c log4c-devel
 BuildRequires: gdal-devel
 BuildRequires: ncl-devel
+%if 0%{?rhel} == 7
+# ncl-devel needs cairo-devel but the dependency is missing in CentOS 7
+BuildRequires: cairo-devel
+%endif
 BuildRequires: doxygen
 BuildRequires: graphviz
 BuildRequires: texlive-latex-bin
