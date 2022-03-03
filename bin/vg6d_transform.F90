@@ -92,7 +92,7 @@ type(fndsv) :: vfn, vfnoracle
 CHARACTER(len=13) :: comp_stat_proc
 CHARACTER(len=23) :: comp_step, comp_start
 INTEGER :: istat_proc, ostat_proc
-LOGICAL :: comp_full_steps
+LOGICAL :: comp_full_steps, comp_var_from_lev
 TYPE(timedelta) :: c_i
 TYPE(datetime) :: c_s
 REAL :: comp_frac_valid
@@ -249,6 +249,7 @@ CALL optionparser_add(opt, 'g', 'npy', npy, 4, help= &
 
 CALL optionparser_add(opt, ' ', 'trans-level-type', trans_level_type, help= &
  'type of input and output level for vertical interpolation &
+ &or for --comp-var-from-lev operation &
  &in the form intop,inbot,outtop,outbot, from grib2 table; inbot and outbot &
  &can either be empty (single surface) &
  &or equal to the corresponding top value (layer between 2 surfaces)')
@@ -326,6 +327,12 @@ CALL optionparser_add(opt, ' ', 'display', ldisplay, help= &
 
 CALL optionparser_add_sep(opt, 'The following options are valid only in ''p'' mode &
  &(see --trans-mode)')
+
+CALL optionparser_add(opt, '', 'comp-var-from-lev', comp_var_from_lev, help= &
+ 'compute a volume containing a single, horizontally constant, variable &
+ &describing each vertical level contained, if this makes sense, &
+ &tipically used for pressure, the level type to be converted to variable &
+ &has to be specified as the first level in the --trans-level-type option')
 
 #ifdef ALCHIMIA
 CALL optionparser_add(opt, '', 'output-variable-list', output_variable_list, '', help= &
@@ -688,6 +695,17 @@ IF (trans_mode == "p") THEN ! run in prosciutto (volume) mode
     CALL l4f_category_log(category,L4F_DEBUG,'clone in to out')
     volgrid_out => volgrid
 
+  ENDIF
+
+  IF (comp_var_from_lev) THEN
+    CALL l4f_category_log(category,L4F_DEBUG,'computing variable from level')
+    ALLOCATE(volgrid_tmp(SIZE(volgrid_out)))
+    DO i = 1, SIZE(volgrid_out)
+      CALL volgrid6d_compute_vert_coord_var(volgrid_out(i), ilevel, volgrid_tmp(i))
+    ENDDO
+    CALL delete(volgrid_out)
+    volgrid_out => volgrid_tmp
+    NULLIFY(volgrid_tmp)
   ENDIF
 
   if (round .and. ASSOCIATED(volgrid_out)) then

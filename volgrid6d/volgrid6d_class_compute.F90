@@ -845,7 +845,7 @@ END SUBROUTINE volgrid6d_compute_stat_proc_metamorph
 SUBROUTINE volgrid6d_compute_vert_coord_var(this, level, volgrid_lev)
 TYPE(volgrid6d),INTENT(in) :: this !< volume with the vertical levels
 TYPE(vol7d_level),INTENT(in) :: level !< vertical level to be converted to variable, only the type(s) of level are used not the value(s)
-TYPE(volgrid6d),INTENT(out) :: volgrid_lev !< output level with the variable describing the vertical coordinate
+TYPE(volgrid6d),INTENT(out) :: volgrid_lev !< output volume with the variable describing the vertical coordinate
 
 INTEGER :: nlev, i, ii, iii, iiii
 TYPE(grid_id) :: out_gaid
