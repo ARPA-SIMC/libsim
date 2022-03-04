@@ -11,3 +11,5 @@ override_dh_auto_configure:
 	       --enable-alchimia --enable-shapelib \
 	       --enable-netcdf --enable-gribapi --enable-gdal \
 	       --enable-f2003-features --enable-f2003-extended-features
+
+override_dh_auto_test:
