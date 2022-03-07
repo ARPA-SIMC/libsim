@@ -1,7 +1,7 @@
 #!/bin/sh
 set -e
 
-function failed(){
+failed() {
 echo "cmp failled"
 exit 1
 }
