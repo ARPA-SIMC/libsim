@@ -80,9 +80,9 @@ vol7d_dballe_class_var_du.F90
 
 check_PROGRAMS += vol7d_dballe_test  vol7d_dballe_test2
 vol7d_dballe_test_SOURCES = vol7d_dballe_test.F90
-vol7d_dballe_test_LDADD = libsim_vol7d.la
+vol7d_dballe_test_LDADD = libsim_vol7d.la ../log4fortran/liblog4fortran.la $(LOG4C_LIBS)
 vol7d_dballe_test2_SOURCES = vol7d_dballe_test2.F90
-vol7d_dballe_test2_LDADD = libsim_vol7d.la
+vol7d_dballe_test2_LDADD = libsim_vol7d.la ../log4fortran/liblog4fortran.la $(LOG4C_LIBS)
 dist_check_SCRIPTS += vol7d_dballe_test.sh
 
 check_PROGRAMS += dballe_test 
@@ -91,9 +91,9 @@ check_PROGRAMS += dballe_test3
 dballe_test_SOURCES = dballe_test.F03
 dballe_test2_SOURCES = dballe_test2.F03
 dballe_test3_SOURCES = dballe_test3.F03
-dballe_test_LDADD = libsim_vol7d.la
-dballe_test2_LDADD = libsim_vol7d.la
-dballe_test3_LDADD = libsim_vol7d.la
+dballe_test_LDADD = libsim_vol7d.la ../log4fortran/liblog4fortran.la ../base/libsim_base.la $(LOG4C_LIBS)
+dballe_test2_LDADD = libsim_vol7d.la ../log4fortran/liblog4fortran.la ../base/libsim_base.la $(LOG4C_LIBS)
+dballe_test3_LDADD = libsim_vol7d.la ../log4fortran/liblog4fortran.la ../base/libsim_base.la $(LOG4C_LIBS)
 dist_check_SCRIPTS += dballe_test.sh
 endif
 
