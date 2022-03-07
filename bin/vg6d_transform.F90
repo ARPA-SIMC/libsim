@@ -330,7 +330,7 @@ CALL optionparser_add_sep(opt, 'The following options are valid only in ''p'' mo
 
 CALL optionparser_add(opt, '', 'comp-var-from-lev', comp_var_from_lev, help= &
  'compute a volume containing a single, horizontally constant, variable &
- &describing each vertical level contained, if this makes sense, &
+ &describing each vertical level in the volume, if this makes sense, &
  &tipically used for pressure, the level type to be converted to variable &
  &has to be specified as the first level in the --trans-level-type option')
 
