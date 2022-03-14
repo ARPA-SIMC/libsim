@@ -37,9 +37,9 @@ CHARACTER(len=10) :: variabili(safedim), lonlist(safedim), latlist(safedim)
 CHARACTER(len=30) :: famiglie(safedim), file_stazioni(safedim)
 INTEGER :: stazioni(safedim)
 CHARACTER(len=19) :: data_inizio, data_fine, data_inizio_l, data_fine_l
-CHARACTER(len=1024) :: input_file, file_rapporto, file_rapporto_l, file_naml
+CHARACTER(len=1024) :: input_file, file_rapporto, file_rapporto_l, file_naml, form_in
 NAMELIST /pollini/ variabili, famiglie, stazioni, lonlist, latlist, file_stazioni, &
- data_inizio, data_fine, file_rapporto
+ data_inizio, data_fine, form_in, file_rapporto
 INTEGER :: nvar, nfam, nstaz, nstazf, lonvar, latvar
 
 ! Lettura bufr
@@ -77,6 +77,7 @@ stazioni = 0
 file_stazioni = ''
 data_inizio = ''
 data_fine = ''
+form_in = 'BUFR'
 file_rapporto = ''
 ! Controllo le opzioni a linea di comando
 
@@ -178,7 +179,7 @@ famptr(:) = map_distinct(famiglie(1:nvar), back=.TRUE.)
 ! Definisco le reti da cui voglio estrarre
 CALL init(network, 'POLLINI')
 
-CALL init(db_v7d, filename=input_file, FORMAT='BUFR', file=.TRUE., &
+CALL init(db_v7d, filename=input_file, FORMAT=TRIM(form_in), file=.TRUE., &
  time_definition=1)
 ! estraggo i dati, seleziono solo i dati osservati mediati su 1 giorno
 CALL import(db_v7d, timerange=vol7d_timerange_new(0,0,86400), &
