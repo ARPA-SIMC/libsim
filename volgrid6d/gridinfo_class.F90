@@ -945,13 +945,7 @@ ELSE IF (EditionNumber == 2) THEN
       CALL timerange_v7d_to_g2(this%p2,p2,unit)
       CALL grib_set(gaid,'indicatorOfUnitOfTimeRange',unit)
       CALL grib_set(gaid,'forecastTime',0)
-! ready for coding with general convention
-!      CALL grib_get(gaid,'centre',centre)
-!      IF (centre /= 78) THEN ! DWD analysis exception 
-        CALL code_endoftimeinterval(reftime + timedelta_new(sec=this%p2))
-!      ELSE
-!        CALL code_endoftimeinterval(reftime)
-!      ENDIF
+      CALL code_endoftimeinterval(reftime)
 ! Successive times processed have same forecast time, start time of
 ! forecast is incremented
       CALL grib_set(gaid,'typeOfStatisticalProcessing',this%timerange)
