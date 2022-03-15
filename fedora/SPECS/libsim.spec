@@ -6,7 +6,7 @@
 
 Summary: Fortran utility libraries
 Name: libsim
-Version: 7.0.1
+Version: 7.0.2
 Release: 1
 License: GPL2+
 Group: Applications/Meteo
@@ -164,6 +164,11 @@ mv $RPM_BUILD_ROOT%{_includedir}/*.mod $RPM_BUILD_ROOT%{_fmoddir}
 rm -rf %{buildroot}
 
 %changelog
+* Tue Mar 15 2022 Daniele Branchini <dbranchini@arpae.it> - 7.0.2-1
+- specify input format in v7d_pollini by namelist, default remains BUFR
+- revert wrong modification on analysis-like end of processing period
+- miscellaneous improvements to autotools files
+
 * Thu Mar  3 2022 Daniele Branchini <dbranchini@arpae.it> - 7.0.1-1
 - add `--comp-var-from-lev` option to vg6d_transform
 - remove indirect dependencies from spec and from configure.ac (#90)
