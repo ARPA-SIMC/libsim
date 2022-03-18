@@ -76,7 +76,7 @@ diff ${tmpfile}_p.csv ${tmpfile}_s.csv
 rm -f ${tmpfile}_*.*
 echo "vg6d_transform with bilin test passed"
 
-# challenging statistical processy by aggregation of forecasts test
+# challenging statistical processing by aggregation of forecasts test
 
 cat > ${tmpfile}_tmaxfc.json <<EOF
 {"version":"0.1","network":"generic","ident":null,"lon":1198608,"lat":4505800,"date":"2021-12-29T00:00:00Z","data":[{"vars":{"B01194":{"v":"generic"},"B04001":{"v":2021},"B04002":{"v":12},"B04003":{"v":29},"B04004":{"v":0},"B04005":{"v":0},"B04006":{"v":0},"B05001":{"v":45.05800},"B06001":{"v":11.98608}}},{"timerange":[254,0,0],"level":[103,2000,null,null],"vars":{"B12101":{"v":278.23}}}]}
@@ -191,7 +191,7 @@ v7d_transform --input-format=JSON --output-format=JSON \
     --comp-stat-proc=2:2 --comp-step='1 00' --comp-start="2021-12-28 18:00" \
     --comp-frac-valid=0 --time-definition=0 ${tmpfile}_tmaxfc.json ${tmpfile}_tmax0.json
 
-# test with time_definition 0 (vertime)
+# test with time_definition 1 (vertime)
 v7d_transform --input-format=JSON --output-format=JSON \
     --comp-stat-proc=2:2 --comp-step='1 00' --comp-start="2021-12-28 18:00" \
     --comp-frac-valid=0 --time-definition=1 ${tmpfile}_tmaxfc.json ${tmpfile}_tmax1.json
@@ -200,5 +200,5 @@ diff ${tmpfile}_tmax0.json ${tmpfile}_result.json
 diff ${tmpfile}_tmax1.json ${tmpfile}_result.json
 rm -f ${tmpfile}_tmaxfc.json ${tmpfile}_tmax0.json ${tmpfile}_tmax1.json ${tmpfile}_result.json
 
-echo "challenging statistical processy by aggregation of forecasts test passed"
+echo "challenging statistical processing by aggregation of forecasts test passed"
 
