@@ -7,7 +7,7 @@
 Summary: Fortran utility libraries
 Name: libsim
 Version: 7.0.2
-Release: 1
+Release: 2
 License: GPL2+
 Group: Applications/Meteo
 URL: https://github.com/arpa-simc/%{name}
@@ -164,6 +164,9 @@ mv $RPM_BUILD_ROOT%{_includedir}/*.mod $RPM_BUILD_ROOT%{_fmoddir}
 rm -rf %{buildroot}
 
 %changelog
+* Wed Apr  6 2022 Daniele Branchini <dbranchini@arpae.it> - 7.0.2-2
+- Added wet bulb temperature in vargrib2bufr
+
 * Tue Mar 15 2022 Daniele Branchini <dbranchini@arpae.it> - 7.0.2-1
 - specify input format in v7d_pollini by namelist, default remains BUFR
 - revert wrong modification on analysis-like end of processing period
