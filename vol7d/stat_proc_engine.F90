@@ -253,13 +253,20 @@ DO dirtyrep = 1, 2
   ENDDO
 ENDDO
 
+! experimental, to allow copy of good timeranges if there is no otime
+IF (COUNT(mask_timerange) > 0 .AND. a_otime%arraysize == 0) THEN
+  DO i = 1, SIZE(itime)
+    j = append_unique(a_otime, itime(i))
+  ENDDO
+  CALL packarray(a_otime)
+ENDIF
+
 otime => a_otime%array
 otimerange => a_otimerange%array
 ! delete local objects keeping the contents
 CALL delete(a_otime, nodealloc=.TRUE.)
 CALL delete(a_otimerange, nodealloc=.TRUE.)
 
-mask_timerange(:) = mask_timerange(:) .AND. itimerange(:)%p2 == steps
 
 #ifdef DEBUG
 CALL l4f_log(L4F_DEBUG, &

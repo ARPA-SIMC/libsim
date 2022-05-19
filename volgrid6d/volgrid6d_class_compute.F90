@@ -618,7 +618,7 @@ DO i = 1, SIZE(mask_timerange)
   IF (mask_timerange(i)) THEN
     k = firsttrue(that%timerange(:) == this%timerange(i))
 #ifdef DEBUG
-    CALL l4f_category_log(this%category, L4F_INFO, &
+    CALL l4f_category_log(this%category, L4F_DEBUG, &
      'volgrid6d_recompute_stat_proc_diff, good timerange: '//t2c(i)// &
      '->'//t2c(k))
 #endif
