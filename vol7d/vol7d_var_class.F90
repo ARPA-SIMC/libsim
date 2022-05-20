@@ -36,21 +36,23 @@ IMPLICIT NONE
 !! accessibili e scrivibili, ma è comunque consigliato assegnarli tramite
 !! il costruttore ::init.
 TYPE vol7d_var
-  CHARACTER(len=10) :: btable !< codice della variabile secondo la tabella B del WMO.
-  CHARACTER(len=65) :: description !< descrizione testuale della variabile (opzionale)
-  CHARACTER(len=24) :: unit !< descrizione testuale dell'unità di misura (opzionale)
-  integer :: scalefactor !< numero di decimali nella rappresentazione intera o character (opzionale)
+  CHARACTER(len=10) :: btable=cmiss !< codice della variabile secondo la tabella B del WMO.
+  CHARACTER(len=65) :: description=cmiss !< descrizione testuale della variabile (opzionale)
+  CHARACTER(len=24) :: unit=cmiss !< descrizione testuale dell'unità di misura (opzionale)
+  INTEGER :: scalefactor=imiss !< numero di decimali nella rappresentazione intera o character (opzionale)
 
-  INTEGER :: r !< indice della variabile nel volume degli attributi reali
-  INTEGER :: d !< indice della variabile nel volume degli attributi double precision
-  INTEGER :: i !< indice della variabile nel volume degli attributi integer
-  INTEGER :: b !< indice della variabile nel volume degli attributi byte
-  INTEGER :: c !< indice della variabile nel volume degli attributi character
+  INTEGER :: r=imiss !< indice della variabile nel volume degli attributi reali
+  INTEGER :: d=imiss !< indice della variabile nel volume degli attributi double precision
+  INTEGER :: i=imiss !< indice della variabile nel volume degli attributi integer
+  INTEGER :: b=imiss !< indice della variabile nel volume degli attributi byte
+  INTEGER :: c=imiss !< indice della variabile nel volume degli attributi character
+  INTEGER :: gribhint(4)=imiss !< hint for conversion from/to grib when btable is not found
 END TYPE  vol7d_var
 
 !> Valore mancante per vol7d_var.
 TYPE(vol7d_var),PARAMETER :: vol7d_var_miss= &
- vol7d_var(cmiss,cmiss,cmiss,imiss,imiss,imiss,imiss,imiss,imiss)
+ vol7d_var(cmiss,cmiss,cmiss,imiss,imiss,imiss,imiss,imiss,imiss, &
+ (/imiss,imiss,imiss,imiss/))
 
 !> Costruttore per la classe vol7d_var.
 !! Deve essere richiamato 
@@ -171,7 +173,7 @@ INTEGER,INTENT(in),OPTIONAL :: scalefactor !< decimali nella rappresentazione in
 
 TYPE(vol7d_var) :: this
 
-CALL init(this,btable, description, unit, scalefactor)
+CALL init(this, btable, description, unit, scalefactor)
 
 END FUNCTION vol7d_var_new
 

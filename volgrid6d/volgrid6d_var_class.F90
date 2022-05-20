@@ -401,6 +401,10 @@ ENDDO
 convert = vol7d_var_miss
 IF (PRESENT(c_func)) c_func = conv_func_miss
 
+! set hint for backwards conversion
+convert%gribhint(:) = (/vargrib%centre, vargrib%category, vargrib%number, &
+ vargrib%discipline/)
+
 CALL l4f_log(L4F_WARN, 'vargrib2varbufr: variable '// &
  TRIM(to_char(vargrib%centre))//':'//TRIM(to_char(vargrib%category))//':'// &
  TRIM(to_char(vargrib%number))//':'//TRIM(to_char(vargrib%discipline))// &
@@ -509,6 +513,14 @@ ENDDO
 ! not found
 convert = volgrid6d_var_miss
 IF (PRESENT(c_func)) c_func = conv_func_miss
+
+! if hint available use it as a fallback
+IF (ANY(varbufr%gribhint /= imiss)) THEN
+  convert%centre = varbufr%gribhint(1)
+  convert%category = varbufr%gribhint(2)
+  convert%number = varbufr%gribhint(3)
+  convert%discipline = varbufr%gribhint(4)
+ENDIF
 
 CALL l4f_log(L4F_WARN, 'varbufr2vargrib: variable '// &
  trim(varbufr%btable)//" : "//trim(varbufr%description)//" : "//trim(varbufr%unit)// &
