@@ -148,7 +148,7 @@ TYPE(datetime),INTENT(in),OPTIONAL :: start
 
 INTEGER :: i, j, k, l, dirtyrep
 INTEGER :: steps, deltas
-LOGICAL :: useful
+LOGICAL :: lfull_steps, useful
 TYPE(datetime) :: pstart1, pstart2, pend1, pend2, reftime1, reftime2, tmptime
 TYPE(vol7d_timerange) :: tmptimerange
 TYPE(arrayof_datetime) :: a_otime
@@ -164,6 +164,8 @@ IF (PRESENT(start)) THEN
   ENDIF
 ENDIF
   
+lfull_steps = optio_log(full_steps)
+
 ! create a mask of suitable timeranges
 ALLOCATE(mask_timerange(SIZE(itimerange)))
 mask_timerange(:) = itimerange(:)%timerange == stat_proc &
@@ -171,9 +173,19 @@ mask_timerange(:) = itimerange(:)%timerange == stat_proc &
  .AND. itimerange(:)%p1 >= 0 &
  .AND. itimerange(:)%p2 > 0
 
-IF (optio_log(full_steps) .AND. steps /= 0) THEN ! keep only timeranges defining intervals ending at integer steps, check better steps /= 0
-  mask_timerange(:) = mask_timerange(:) .AND. (MOD(itimerange(:)%p2-deltas, steps) == 0)
+IF (lfull_steps .AND. steps /= 0) THEN ! keep only timeranges defining intervals ending at integer forecast steps or analysis timeranges
+  mask_timerange(:) = mask_timerange(:) .AND. &
+  (itimerange(:)%p1 == 0 .OR. &
+  (MOD(itimerange(:)%p1, steps) == 0) .OR. MOD(itimerange(:)%p1 - itimerange(:)%p2, steps) == 0)! to be complicated )...
 ENDIF
+
+! now we have to evaluate time/timerage pairs which do not need processing
+
+
+!IF (lfull_steps .AND. steps /= 0) THEN ! keep only timeranges defining intervals ending at integer steps, check better steps /= 0
+!  mask_timerange(:) = mask_timerange(:) .AND. (MOD(itimerange(:)%p1-deltas, steps) == 0)
+!! was %p2-deltas!
+!ENDIF
 nitr = COUNT(mask_timerange)
 ALLOCATE(f(nitr))
 j = 1
@@ -219,26 +231,50 @@ DO dirtyrep = 1, 2
             IF (pstart2 == pstart1 .AND. pend2 > pend1) THEN ! =-|
               CALL time_timerange_set_period(tmptime, tmptimerange, &
                time_definition, pend1, pend2, reftime2)
-              useful = .TRUE.
+              IF (lfull_steps) THEN
+                IF (MOD(reftime2, step) == timedelta_0) THEN
+                  useful = .TRUE.
+                ENDIF
+              ELSE
+                useful = .TRUE.
+              ENDIF
 
             ELSE IF (pstart2 < pstart1 .AND. pend2 == pend1) THEN ! -=|
               CALL time_timerange_set_period(tmptime, tmptimerange, &
                time_definition, pstart2, pstart1, pstart1)
-              useful = .TRUE.
+              IF (lfull_steps) THEN
+                IF (MOD(pstart1, step) == timedelta_0) THEN
+                  useful = .TRUE.
+                ENDIF
+              ELSE
+                useful = .TRUE.
+              ENDIF
             ENDIF
 
           ELSE IF (reftime2 == reftime1) THEN ! forecast, same reftime
             IF (pstart2 == pstart1 .AND. pend2 > pend1) THEN ! |=-
               CALL time_timerange_set_period(tmptime, tmptimerange, &
                time_definition, pend1, pend2, reftime2)
-              useful = .TRUE.
+              IF (lfull_steps) THEN
+                IF (MOD(pend2-reftime2, step) == timedelta_0) THEN
+                  useful = .TRUE.
+                ENDIF
+              ELSE
+                useful = .TRUE.
+              ENDIF
 
             ELSE IF (pstart2 < pstart1 .AND. pend2 == pend1) THEN ! |-=
               CALL time_timerange_set_period(tmptime, tmptimerange, &
                time_definition, pstart2, pstart1, reftime2)
-              useful = .TRUE.
-            ENDIF
+              IF (lfull_steps) THEN
+                IF (MOD(pstart1-reftime2, step) == timedelta_0) THEN
+                  useful = .TRUE.
+                ENDIF
+              ELSE
+                useful = .TRUE.
+              ENDIF
 
+            ENDIF
           ENDIF
           useful = useful .AND. tmptime /= datetime_miss .AND. &
            tmptimerange /= vol7d_timerange_miss .AND. tmptimerange%p2 == steps
@@ -435,7 +471,7 @@ IF (lstart == datetime_miss) THEN ! autodetect
 ! go back to start of longest processing interval
     lstart = lstart - timedelta_new(sec=maxp2)
   ENDIF
-  IF (optio_log(full_steps)) THEN
+  IF (optio_log(full_steps) .AND. .NOT.lforecast) THEN
     lstart = lstart - (MOD(lstart, step)) ! round to step, (should be MODULO, not MOD)
   ENDIF
 ENDIF
