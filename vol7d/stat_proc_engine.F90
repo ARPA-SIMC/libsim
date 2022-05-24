@@ -175,11 +175,11 @@ mask_timerange(:) = itimerange(:)%timerange == stat_proc &
 
 IF (lfull_steps .AND. steps /= 0) THEN ! keep only timeranges defining intervals ending at integer forecast steps or analysis timeranges
   mask_timerange(:) = mask_timerange(:) .AND. &
-  (itimerange(:)%p1 == 0 .OR. &
-  (MOD(itimerange(:)%p1, steps) == 0) .OR. MOD(itimerange(:)%p1 - itimerange(:)%p2, steps) == 0)! to be complicated )...
+  (itimerange(:)%p1 == 0 .OR. & ! all analyses
+  MOD(itimerange(:)%p1, steps) == 0 .OR. & ! end time is mod step
+  MOD(itimerange(:)%p1 - itimerange(:)%p2, steps) == 0) ! start time is mod step
 ENDIF
-
-! now we have to evaluate time/timerage pairs which do not need processing
+! mask_timerange includes all candidate timeranges
 
 
 !IF (lfull_steps .AND. steps /= 0) THEN ! keep only timeranges defining intervals ending at integer steps, check better steps /= 0
@@ -195,6 +195,40 @@ DO i = 1, nitr
   ENDDO
   f(i) = j
   j = j + 1
+ENDDO
+
+! now we have to evaluate time/timerage pairs which do not need processing
+ALLOCATE(keep_tr(nitr,SIZE(itime)))
+keep_tr(:,:) = .FALSE.
+DO l = 1, SIZE(itime)
+  DO k = 1, nitr
+    IF (itimerange(f(k))%p2 == steps) THEN
+      CALL time_timerange_get_period(itime(l), itimerange(f(k)), &
+       time_definition, pstart2, pend2, reftime2)
+      IF (reftime2 == pend2) THEN ! analysis
+        IF (lfull_steps) THEN
+          IF (MOD(reftime2, step) == timedelta_0) THEN
+            keep_tr(k,l) = .TRUE.
+          ENDIF
+        ELSE
+          keep_tr(k,l) = .TRUE.
+        ENDIF
+      ELSE ! forecast
+        IF (lfull_steps) THEN
+          IF (MOD(itimerange(f(k))%p1, steps) == 0) THEN
+            keep_tr(k,l) = .TRUE.
+          ENDIF
+        ELSE
+          keep_tr(k,l) = .TRUE.
+        ENDIF
+      ENDIF
+      IF (keep_tr(k,l)) THEN
+        CALL time_timerange_set_period(tmptime, tmptimerange, &
+         time_definition, pstart2, pend2, reftime2)
+        ! keep_tr musthave another dimension and contain the indices of time and timerange
+      ENDIF
+    ENDIF
+  ENDDO
 ENDDO
 
 ALLOCATE(map_tr(nitr, SIZE(itime), nitr, SIZE(itime), 2))
