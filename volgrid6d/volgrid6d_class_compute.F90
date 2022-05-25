@@ -616,7 +616,7 @@ ENDIF
 
 ! copy the timeranges already satisfying the requested step, if any
 DO i4 = 1, SIZE(this%time)
-  DO i = 1, SIZE(this%timerange)
+  DO i = 1, nitr ! SIZE(this%timerange)
     IF (c_e(keep_tr(i, i4, 2))) THEN
       l = keep_tr(i, i4, 1)
       k = f(keep_tr(i, i4, 2))
