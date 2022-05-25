@@ -131,17 +131,17 @@ END FUNCTION ttr_mapper_le
 
 ! common operations for statistical processing by differences
 SUBROUTINE recompute_stat_proc_diff_common(itime, itimerange, stat_proc, step, &
- nitr, otime, otimerange, map_tr, f, mask_timerange, time_definition, full_steps, &
+ otime, otimerange, map_tr, f, keep_tr, time_definition, full_steps, &
  start)
 TYPE(datetime),INTENT(in) :: itime(:)
 TYPE(vol7d_timerange),INTENT(in) :: itimerange(:)
 INTEGER,INTENT(in) :: stat_proc
 TYPE(timedelta),INTENT(in) :: step
-INTEGER,INTENT(out) :: nitr
 TYPE(datetime),POINTER :: otime(:)
 TYPE(vol7d_timerange),POINTER :: otimerange(:)
-INTEGER,POINTER :: map_tr(:,:,:,:,:), f(:)
-LOGICAL,POINTER :: mask_timerange(:)
+INTEGER,ALLOCATABLE,INTENT(out) :: map_tr(:,:,:,:,:), f(:), keep_tr(:,:,:)
+INTEGER :: nitr
+LOGICAL,ALLOCATABLE :: mask_timerange(:)
 INTEGER,INTENT(in) :: time_definition
 LOGICAL,INTENT(in),OPTIONAL :: full_steps
 TYPE(datetime),INTENT(in),OPTIONAL :: start
@@ -163,7 +163,7 @@ IF (PRESENT(start)) THEN
     CALL getval(start-itime(1), asec=deltas)
   ENDIF
 ENDIF
-  
+
 lfull_steps = optio_log(full_steps)
 
 ! create a mask of suitable timeranges
@@ -181,11 +181,6 @@ IF (lfull_steps .AND. steps /= 0) THEN ! keep only timeranges defining intervals
 ENDIF
 ! mask_timerange includes all candidate timeranges
 
-
-!IF (lfull_steps .AND. steps /= 0) THEN ! keep only timeranges defining intervals ending at integer steps, check better steps /= 0
-!  mask_timerange(:) = mask_timerange(:) .AND. (MOD(itimerange(:)%p1-deltas, steps) == 0)
-!! was %p2-deltas!
-!ENDIF
 nitr = COUNT(mask_timerange)
 ALLOCATE(f(nitr))
 j = 1
@@ -198,48 +193,11 @@ DO i = 1, nitr
 ENDDO
 
 ! now we have to evaluate time/timerage pairs which do not need processing
-ALLOCATE(keep_tr(nitr,SIZE(itime)))
-keep_tr(:,:) = .FALSE.
-DO l = 1, SIZE(itime)
-  DO k = 1, nitr
-    IF (itimerange(f(k))%p2 == steps) THEN
-      CALL time_timerange_get_period(itime(l), itimerange(f(k)), &
-       time_definition, pstart2, pend2, reftime2)
-      IF (reftime2 == pend2) THEN ! analysis
-        IF (lfull_steps) THEN
-          IF (MOD(reftime2, step) == timedelta_0) THEN
-            keep_tr(k,l) = .TRUE.
-          ENDIF
-        ELSE
-          keep_tr(k,l) = .TRUE.
-        ENDIF
-      ELSE ! forecast
-        IF (lfull_steps) THEN
-          IF (MOD(itimerange(f(k))%p1, steps) == 0) THEN
-            keep_tr(k,l) = .TRUE.
-          ENDIF
-        ELSE
-          keep_tr(k,l) = .TRUE.
-        ENDIF
-      ENDIF
-      IF (keep_tr(k,l)) THEN
-        CALL time_timerange_set_period(tmptime, tmptimerange, &
-         time_definition, pstart2, pend2, reftime2)
-        ! keep_tr musthave another dimension and contain the indices of time and timerange
-      ENDIF
-    ENDIF
-  ENDDO
-ENDDO
+ALLOCATE(keep_tr(nitr, SIZE(itime), 2))
+CALL compute_keep_tr()
 
 ALLOCATE(map_tr(nitr, SIZE(itime), nitr, SIZE(itime), 2))
 map_tr(:,:,:,:,:) = imiss
-
-mask_timerange(:) = mask_timerange(:) .AND. itimerange(:)%p2 == steps
-DO i = 1, SIZE(mask_timerange)
-  IF (mask_timerange(i)) THEN
-    j = append_unique(a_otimerange, itimerange(i))
-  ENDIF
-ENDDO
 
 ! scan through all possible combinations of time and timerange
 DO dirtyrep = 1, 2
@@ -323,20 +281,14 @@ DO dirtyrep = 1, 2
   ENDDO
 ENDDO
 
-! experimental, to allow copy of good timeranges if there is no otime
-IF (COUNT(mask_timerange) > 0 .AND. a_otime%arraysize == 0) THEN
-  DO i = 1, SIZE(itime)
-    j = append_unique(a_otime, itime(i))
-  ENDDO
-  CALL packarray(a_otime)
-ENDIF
+! we have to repeat the computation with sorted arrays
+CALL compute_keep_tr()
 
 otime => a_otime%array
 otimerange => a_otimerange%array
 ! delete local objects keeping the contents
 CALL delete(a_otime, nodealloc=.TRUE.)
 CALL delete(a_otimerange, nodealloc=.TRUE.)
-
 
 #ifdef DEBUG
 CALL l4f_log(L4F_DEBUG, &
@@ -350,12 +302,52 @@ CALL l4f_log(L4F_DEBUG, &
 CALL l4f_log(L4F_DEBUG, &
  'recompute_stat_proc_diff, nitr: '//t2c(nitr))
 CALL l4f_log(L4F_DEBUG, &
- 'recompute_stat_proc_diff, good timeranges: '//t2c(COUNT(mask_timerange)))
+ 'recompute_stat_proc_diff, good timeranges: '//t2c(COUNT(c_e(keep_tr))/2))
 CALL l4f_log(L4F_DEBUG, &
  'recompute_stat_proc_diff, output times: '//t2c(SIZE(otime)))
 CALL l4f_log(L4F_DEBUG, &
  'recompute_stat_proc_diff, output timeranges: '//t2c(SIZE(otimerange)))
 #endif
+
+CONTAINS
+
+SUBROUTINE compute_keep_tr()
+
+keep_tr(:,:,:) = imiss
+DO l = 1, SIZE(itime)
+  DO k = 1, nitr
+    IF (itimerange(f(k))%p2 == steps) THEN
+      CALL time_timerange_get_period(itime(l), itimerange(f(k)), &
+       time_definition, pstart2, pend2, reftime2)
+      useful = .FALSE.
+      IF (reftime2 == pend2) THEN ! analysis
+        IF (lfull_steps) THEN
+          IF (MOD(reftime2, step) == timedelta_0) THEN
+            useful = .TRUE.
+          ENDIF
+        ELSE
+          useful = .TRUE.
+        ENDIF
+      ELSE ! forecast
+        IF (lfull_steps) THEN
+          IF (MOD(itimerange(f(k))%p1, steps) == 0) THEN
+            useful = .TRUE.
+          ENDIF
+        ELSE
+          useful = .TRUE.
+        ENDIF
+      ENDIF
+      IF (useful) THEN
+!        CALL time_timerange_set_period(tmptime, tmptimerange, &
+!         time_definition, pstart2, pend2, reftime2)
+        keep_tr(k,l,1) = append_unique(a_otime, itime(l))
+        keep_tr(k,l,2) = append_unique(a_otimerange, itimerange(f(k)))
+      ENDIF
+    ENDIF
+  ENDDO
+ENDDO
+
+END SUBROUTINE compute_keep_tr
 
 END SUBROUTINE recompute_stat_proc_diff_common
 
@@ -366,7 +358,6 @@ SUBROUTINE compute_stat_proc_metamorph_common(istat_proc, itimerange, ostat_proc
 INTEGER,INTENT(in) :: istat_proc
 TYPE(vol7d_timerange),INTENT(in) :: itimerange(:)
 INTEGER,INTENT(in) :: ostat_proc
-!TYPE(timedelta),INTENT(in) :: step
 TYPE(vol7d_timerange),POINTER :: otimerange(:)
 INTEGER,POINTER :: map_tr(:)
 

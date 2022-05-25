@@ -576,9 +576,9 @@ LOGICAL,INTENT(in),OPTIONAL :: full_steps !< if provided and \a .TRUE., process 
 TYPE(datetime),INTENT(in),OPTIONAL :: start !< if provided, together with \a full_steps, processes data on intervals starting at \a start +- an integer amount of \a step intervals
 LOGICAL,INTENT(in),OPTIONAL :: clone !< if provided and \c .TRUE. , clone the gaid's from \a this to \a that
 INTEGER :: i3, i4, i6, i, j, k, l, nitr, steps
-INTEGER,POINTER :: map_tr(:,:,:,:,:), f(:)
+INTEGER,ALLOCATABLE :: map_tr(:,:,:,:,:), f(:), keep_tr(:,:,:)
 REAL,POINTER :: voldatiin1(:,:), voldatiin2(:,:), voldatiout(:,:)
-LOGICAL,POINTER :: mask_timerange(:)
+!LOGICAL,POINTER :: mask_timerange(:)
 LOGICAL :: lclone
 TYPE(vol7d_var),ALLOCATABLE :: varbufr(:)
 
@@ -601,8 +601,9 @@ CALL getval(step, asec=steps)
 ! compute the statistical processing relations, output time and
 ! timerange are defined here
 CALL recompute_stat_proc_diff_common(this%time, this%timerange, stat_proc, step, &
- nitr, that%time, that%timerange, map_tr, f, mask_timerange, &
+ that%time, that%timerange, map_tr, f, keep_tr, &
  this%time_definition, full_steps, start)
+nitr = SIZE(f)
 
 ! complete the definition of the output volume
 CALL volgrid6d_alloc_vol(that, decode=ASSOCIATED(this%voldati))
@@ -614,41 +615,35 @@ IF (.NOT.ASSOCIATED(that%voldati)) THEN
 ENDIF
 
 ! copy the timeranges already satisfying the requested step, if any
-DO i = 1, SIZE(mask_timerange)
-  IF (mask_timerange(i)) THEN
-    k = firsttrue(that%timerange(:) == this%timerange(i))
+DO i4 = 1, SIZE(this%time)
+  DO i = 1, SIZE(this%timerange)
+    IF (c_e(keep_tr(i, i4, 2))) THEN
+      l = keep_tr(i, i4, 1)
+      k = f(keep_tr(i, i4, 2))
 #ifdef DEBUG
-    CALL l4f_category_log(this%category, L4F_DEBUG, &
-     'volgrid6d_recompute_stat_proc_diff, good timerange: '//t2c(i)// &
-     '->'//t2c(k))
+      CALL l4f_category_log(this%category, L4F_DEBUG, &
+       'volgrid6d_recompute_stat_proc_diff, good timerange: '//t2c(i)// &
+       '->'//t2c(k))
 #endif
-    IF (k > 0) THEN
-
       DO i6 = 1, SIZE(this%var)
-        DO i4 = 1, SIZE(this%time)
-          l = firsttrue(that%time(:) == this%time(i4))
-          IF (l > 0) THEN
-            DO i3 = 1, SIZE(this%level)
-              IF (c_e(this%gaid(i3,i4,i,i6))) THEN
-                IF (lclone) THEN
-                  CALL copy(this%gaid(i3,i4,i,i6), that%gaid(i3,l,k,i6))
-                ELSE
-                  that%gaid(i3,l,k,i6) = this%gaid(i3,i4,i,i6)
-                ENDIF
-                IF (ASSOCIATED(that%voldati)) THEN
-                  that%voldati(:,:,i3,l,k,i6) = this%voldati(:,:,i3,i4,i,i6)
-                ELSE
-                  CALL volgrid_get_vol_2d(this, i3, i4, i, i6, voldatiout)
-                  CALL volgrid_set_vol_2d(that, i3, l, k, i6, voldatiout)
-                ENDIF
-              ENDIF
-            ENDDO
+        DO i3 = 1, SIZE(this%level)
+          IF (c_e(this%gaid(i3,i4,i,i6))) THEN
+            IF (lclone) THEN
+              CALL copy(this%gaid(i3,i4,i,i6), that%gaid(i3,l,k,i6))
+            ELSE
+              that%gaid(i3,l,k,i6) = this%gaid(i3,i4,i,i6)
+            ENDIF
+            IF (ASSOCIATED(that%voldati)) THEN
+              that%voldati(:,:,i3,l,k,i6) = this%voldati(:,:,i3,i4,i,i6)
+            ELSE
+              CALL volgrid_get_vol_2d(this, i3, i4, i, i6, voldatiout)
+              CALL volgrid_set_vol_2d(that, i3, l, k, i6, voldatiout)
+            ENDIF
           ENDIF
         ENDDO
       ENDDO
-
     ENDIF
-  ENDIF
+  ENDDO
 ENDDO
 
 ! varbufr required for setting posdef, optimize with an array

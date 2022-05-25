@@ -826,8 +826,8 @@ LOGICAL,INTENT(in),OPTIONAL :: full_steps !< if provided and \a .TRUE., process 
 TYPE(vol7d),INTENT(out),OPTIONAL :: other !< optional volume that, on exit, is going to contain the data that did not contribute to the statistical processing
 
 INTEGER :: i1, i3, i5, i6, i, j, k, l, nitr, steps
-INTEGER,POINTER :: map_tr(:,:,:,:,:), f(:)
-LOGICAL,POINTER :: mask_timerange(:)
+INTEGER,ALLOCATABLE :: map_tr(:,:,:,:,:), f(:), keep_tr(:,:,:)
+LOGICAL,ALLOCATABLE :: mask_timerange(:)
 LOGICAL,ALLOCATABLE :: mask_time(:)
 TYPE(vol7d) :: v7dtmp
 
@@ -843,16 +843,20 @@ CALL getval(step, asec=steps)
 ! compute the statistical processing relations, output time and
 ! timerange are defined here
 CALL recompute_stat_proc_diff_common(this%time, this%timerange, stat_proc, step, &
- nitr, that%time, that%timerange, map_tr, f, mask_timerange, &
+ that%time, that%timerange, map_tr, f, keep_tr, &
  this%time_definition, full_steps)
+nitr = SIZE(f)
 
 ! complete the definition of the empty output template
 CALL vol7d_alloc(that, nana=0, nlevel=0, nnetwork=0)
 CALL vol7d_alloc_vol(that)
 ! shouldn't we exit here with an empty volume if stat_proc/=0,1 ?
-ALLOCATE(mask_time(SIZE(this%time)))
+ALLOCATE(mask_time(SIZE(this%time)), mask_timerange(SIZE(this%timerange)))
 DO l = 1, SIZE(this%time)
   mask_time(l) = ANY(this%time(l) == that%time(:))
+ENDDO
+DO l = 1, SIZE(this%timerange)
+  mask_timerange(l) = ANY(this%timerange(l) == that%timerange(:))
 ENDDO
 ! create template for the output volume, keep all ana, level, network
 ! and variables; copy only the timeranges already satisfying the
@@ -862,7 +866,6 @@ CALL vol7d_copy(this, v7dtmp, miss=.FALSE., sort=.FALSE., unique=.FALSE., &
  ltimerange=mask_timerange(:), ltime=mask_time(:))
 ! merge output created so far with template
 CALL vol7d_merge(that, v7dtmp, lanasimple=.TRUE., llevelsimple=.TRUE.)
-DEALLOCATE(mask_time)
 
 ! compute statistical processing
 IF (ASSOCIATED(this%voldatir)) THEN
@@ -949,7 +952,6 @@ ENDIF
 ! but the order may be scrambled in the call to vol7d_merge above
 CALL vol7d_smart_sort(that, lsort_time=.TRUE., lsort_timerange=.TRUE.)
 
-DEALLOCATE(map_tr, f, mask_timerange)
 CALL makeother(.TRUE.)
 
 CONTAINS
