@@ -1958,6 +1958,129 @@ IF (to_be_sorted) CALL vol7d_reform(this, &
 
 END SUBROUTINE vol7d_smart_sort
 
+!> Filter the contents of a volume keeping only desired data.
+!! This subroutine filters a vol7d object by keeping only a subset of
+!! the data contained.  It can keep only times within a specified
+!! interval, only station networks contained in a list and only
+!! specified station or data variables. If a filter parameter is not
+!! provided, no filtering will take place according to that criterion.
+!! The volume is reallocated keeping only the desired data.
+SUBROUTINE vol7d_filter(this, avl, vl, nl, s_d, e_d)
+TYPE(vol7d),INTENT(inout) :: this !< volume to be filtered
+CHARACTER(len=*),INTENT(in),OPTIONAL :: avl(:) !< list of station variables to be kept, if not provided or of zero length, all variables are kept
+CHARACTER(len=*),INTENT(in),OPTIONAL :: vl(:) !< list of data variables to be kept, if not provided or of zero length, all variables are kept
+TYPE(vol7d_network),OPTIONAL :: nl(:) !< list of station networks to be kept, if not provided or of zero length, all networks are kept
+TYPE(datetime),INTENT(in),OPTIONAL :: s_d !< initial time interval for time filtering, if not provided or equal to missing data no lower limit is imposed
+TYPE(datetime),INTENT(in),OPTIONAL :: e_d !< final time interval for time filtering, if not provided or equal to missing data no upper limit is imposed
+
+INTEGER :: i
+
+IF (PRESENT(avl)) THEN
+  IF (SIZE(avl) > 0) THEN
+
+    IF (ASSOCIATED(this%anavar%r)) THEN
+      DO i = 1, SIZE(this%anavar%r)
+        IF (ALL(this%anavar%r(i)%btable /= avl)) this%anavar%r(i) = vol7d_var_miss
+      ENDDO
+    ENDIF
+
+    IF (ASSOCIATED(this%anavar%i)) THEN
+      DO i = 1, SIZE(this%anavar%i)
+        IF (ALL(this%anavar%i(i)%btable /= avl)) this%anavar%i(i) = vol7d_var_miss
+      ENDDO
+    ENDIF
+
+    IF (ASSOCIATED(this%anavar%b)) THEN
+      DO i = 1, SIZE(this%anavar%b)
+        IF (ALL(this%anavar%b(i)%btable /= avl)) this%anavar%b(i) = vol7d_var_miss
+      ENDDO
+    ENDIF
+
+    IF (ASSOCIATED(this%anavar%d)) THEN
+      DO i = 1, SIZE(this%anavar%d)
+        IF (ALL(this%anavar%d(i)%btable /= avl)) this%anavar%d(i) = vol7d_var_miss
+      ENDDO
+    ENDIF
+
+    IF (ASSOCIATED(this%anavar%c)) THEN
+      DO i = 1, SIZE(this%anavar%c)
+        IF (ALL(this%anavar%c(i)%btable /= avl)) this%anavar%c(i) = vol7d_var_miss
+      ENDDO
+    ENDIF
+
+  ENDIF
+ENDIF
+
+
+IF (PRESENT(vl)) THEN
+  IF (size(vl) > 0) THEN
+    IF (ASSOCIATED(this%dativar%r)) THEN
+      DO i = 1, SIZE(this%dativar%r)
+        IF (ALL(this%dativar%r(i)%btable /= vl)) this%dativar%r(i) = vol7d_var_miss
+      ENDDO
+    ENDIF
+
+    IF (ASSOCIATED(this%dativar%i)) THEN
+      DO i = 1, SIZE(this%dativar%i)
+        IF (ALL(this%dativar%i(i)%btable /= vl)) this%dativar%i(i) = vol7d_var_miss
+      ENDDO
+    ENDIF
+
+    IF (ASSOCIATED(this%dativar%b)) THEN
+      DO i = 1, SIZE(this%dativar%b)
+        IF (ALL(this%dativar%b(i)%btable /= vl)) this%dativar%b(i) = vol7d_var_miss
+      ENDDO
+    ENDIF
+
+    IF (ASSOCIATED(this%dativar%d)) THEN
+      DO i = 1, SIZE(this%dativar%d)
+        IF (ALL(this%dativar%d(i)%btable /= vl)) this%dativar%d(i) = vol7d_var_miss
+      ENDDO
+    ENDIF
+
+    IF (ASSOCIATED(this%dativar%c)) THEN
+      DO i = 1, SIZE(this%dativar%c)
+        IF (ALL(this%dativar%c(i)%btable /= vl)) this%dativar%c(i) = vol7d_var_miss
+      ENDDO
+    ENDIF
+
+    IF (ASSOCIATED(this%dativar%c)) THEN
+      DO i = 1, SIZE(this%dativar%c)
+        IF (ALL(this%dativar%c(i)%btable /= vl)) this%dativar%c(i) = vol7d_var_miss
+      ENDDO
+    ENDIF
+
+  ENDIF
+ENDIF
+
+IF (PRESENT(nl)) THEN
+  IF (SIZE(nl) > 0) THEN
+    DO i = 1, SIZE(this%network)
+      IF (ALL(this%network(i) /= nl)) this%network(i) = vol7d_network_miss
+    ENDDO
+  ENDIF
+ENDIF
+
+IF (PRESENT(s_d)) THEN
+  IF (c_e(s_d)) THEN
+    WHERE (this%time < s_d)
+      this%time = datetime_miss
+    END WHERE
+  ENDIF
+ENDIF
+
+IF (PRESENT(e_d)) THEN
+  IF (c_e(e_d)) THEN
+    WHERE (this%time > e_d)
+      this%time = datetime_miss
+    END WHERE
+  ENDIF
+ENDIF
+
+CALL vol7d_reform(this, miss=.TRUE.)
+
+END SUBROUTINE vol7d_filter
+
 
 !> Metodo per convertire i volumi di dati di un oggetto vol7d in dati
 !! reali dove possibile. L'oggetto convertito è una copia completa

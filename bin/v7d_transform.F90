@@ -210,20 +210,20 @@ CALL optionparser_add(opt, ' ', 'extreme-format', extreme_format, &
 
 ! input database options
 CALL optionparser_add(opt, 's', 'start-date', start_date, '', help= &
- 'if input-format is of database type, initial date for extracting data&
- &; with format iso YYYY-MM-DD hh:mm:ss.msc  where characters on the right are optional')
+ 'initial date for retrieveing data from input source&
+ &; with format iso YYYY-MM-DD hh:mm:ss.msc where characters on the right are optional')
 CALL optionparser_add(opt, 'e', 'end-date', end_date, '', help= &
- 'if input-format is of database type, final date for extracting data&
- &; with format iso YYYY-MM-DD hh:mm:ss.msc  where characters on the right are optional')
+ 'final date for retrieveing data from input source&
+ &; with format iso YYYY-MM-DD hh:mm:ss.msc where characters on the right are optional')
 CALL optionparser_add(opt, 'n', 'network-list', network_list, '', help= &
- 'if input-format is of database type, list of station networks to be extracted &
+ 'list of station networks to be retrieved from input source &
  &in the form of a comma-separated list of alphanumeric network identifiers')
 CALL optionparser_add(opt, 'v', 'variable-list', variable_list, cmiss, help= &
- 'if input-format is of database type, list of data variables to be extracted &
+ 'list of data variables to be retrieved from input source &
  &in the form of a comma-separated list of B-table alphanumeric codes, &
  &e.g. ''B13011,B12101''; if omitted means all')
 CALL optionparser_add(opt, ' ', 'anavariable-list', anavariable_list, cmiss, help= &
- 'if input-format is of database type, list of station variables to be extracted &
+ 'list of station variables to be retrieved from input source &
  &in the form of a comma-separated list of B-table alphanumeric codes, &
  &e.g. ''B01192,B01193,B07001''; if omitted means all')
 CALL optionparser_add(opt, ' ', 'attribute-list', attribute_list, cmiss, help= &
@@ -232,15 +232,15 @@ CALL optionparser_add(opt, ' ', 'attribute-list', attribute_list, cmiss, help= &
  &e.g. ''B33196,B33197''; for no attribute set attribute-list to empty string '''' &
  &; if attribute-list is not provided all present attributes in input will be imported')
 CALL optionparser_add(opt, ' ', 'level', levelc, ',,,', help= &
- 'if input-format is of database type, vertical level to be extracted &
+ 'if input-format is of database type, vertical level to be retrieved &
  &in the form level1,l1,level2,l2 empty fields indicate missing data, &
 &default is all levels in database')
 CALL optionparser_add(opt, ' ', 'timerange', timerangec, ',,', help= &
- 'if input-format is of database type, timerange to be extracted &
+ 'if input-format is of database type, timerange to be retrieved &
  &in the form timerange,p1,p2 empty fields indicate missing data, &
  &default is all timeranges in database')
 CALL optionparser_add(opt, ' ', 'ana', anac, ',,,', help= &
- 'if input-format is of database type, ana to be extracted &
+ 'if input-format is of database type, ana to be retrieved &
  &in the form lon,lat,ident empty fields indicate missing data, &
  &default is all ana in database')
 
@@ -809,10 +809,10 @@ DO ninput = optind, iargc()-1
       CALL raise_fatal_error()
     ENDIF
 
-    IF (c_e(level) .OR. c_e(timerange) .OR. SIZE(avl) > 0 .OR. SIZE(al) > 0 &
-     .OR. c_e(set_network_obj) .OR. c_e(s_d) .OR. c_e(e_d) .OR. c_e(ana)) THEN
+    IF (c_e(level) .OR. c_e(timerange) &
+     .OR. c_e(set_network_obj) .OR. c_e(ana)) THEN
       CALL l4f_category_log(category, L4F_ERROR, &
-       'selection options like date, level timerange or others not usable with native source')
+       'selection options like level timerange or network not usable with native source')
       CALL raise_fatal_error()
     ENDIF
 
@@ -821,6 +821,11 @@ DO ninput = optind, iargc()-1
       input_file='/dev/stdin'
     ENDIF
     CALL import(v7dtmp, filename=input_file)
+
+    IF (SIZE(avl) > 0 .OR. SIZE(vl) > 0 .OR. SIZE(nl) > 0 &
+     .OR. c_e(s_d) .OR. c_e(e_d)) THEN
+      CALL vol7d_filter(v7dtmp, avl, vl, nl, s_d, e_d)
+    ENDIF
 
 #ifdef HAVE_DBALLE
   ELSE IF (input_format == 'BUFR' .OR. input_format == 'CREX' .OR. input_format == 'JSON' .OR. input_format == 'dba') THEN
