@@ -108,6 +108,7 @@ if GRIBAPI
 if SHAPELIB
 dist_check_SCRIPTS += getpoint_transform_test.sh
 endif
+dist_check_SCRIPTS += stat_proc_test.sh
 endif
 
 TESTS = $(check_PROGRAMS) $(dist_check_SCRIPTS)
