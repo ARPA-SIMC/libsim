@@ -76,7 +76,7 @@ opt = optionparser_new(description_msg= &
  'Grib to sparse points transformation application. It reads grib edition 1 and 2, &
  &interpolates data over specified points and exports data into a native v7d file'&
 #ifdef HAVE_DBALLE
- //', or into a BUFR/CREX file'&
+ //', or into a BUFR/CREX/JSON file'&
 #endif
  //'.', usage_msg='Usage: vg6d_getpoint [options] inputfile outputfile')
 
@@ -123,7 +123,7 @@ CALL optionparser_add(opt, ' ', 'coord-format', coord_format, &
 #endif 
 & help='format of input file with coordinates, ''native'' for vol7d native binary file '&
 #ifdef HAVE_DBALLE
- //', ''BUFR'' for BUFR file, ''CREX'' for CREX file (sparse points)'&
+ //', ''BUFR'' for BUFR file, ''CREX'' for CREX file, ''JSON'' for json file (sparse points)'&
 #endif
 #ifdef HAVE_SHAPELIB
  //', ''shp'' for shapefile (sparse points or polygons)'&
@@ -167,7 +167,7 @@ CALL optionparser_add(opt, 'f', 'output-format', output_format, &
 #endif 
 & help='format of output file, ''native'' for vol7d native binary format'&
 #ifdef HAVE_DBALLE
- //', ''BUFR'' for BUFR with generic template, ''CREX'' for CREX format'&
+ //', ''BUFR'', ''CREX'' and ''JSON'' for corresponding formats, with generic template'&
 #endif
 #ifdef HAVE_LIBGRIBAPI
  //', ''grib_api_csv'' for an ASCII csv file with grib_api keys as columns'&
@@ -175,7 +175,7 @@ CALL optionparser_add(opt, 'f', 'output-format', output_format, &
  )
 #ifdef HAVE_DBALLE
 CALL optionparser_add(opt, 't', 'output-template', output_template, 'generic', help= &
- 'output template for BUFR/CREX, as alias like ''synop'', ''metar'', ''temp'', ''generic''')
+ 'output template for BUFR/CREX/JSON, as alias like ''synop'', ''metar'', ''temp'', ''generic''')
 #endif
 CALL optionparser_add(opt, ' ', 'output-td', output_td, 1, help= &
  'time definition for output vol7d volume, 0 for reference time (more suitable for &
@@ -259,7 +259,7 @@ IF (c_e(coord_file)) THEN
     CALL import(v7d_coord, filename=coord_file)
 
 #ifdef HAVE_DBALLE
-  ELSE IF (coord_format == 'BUFR' .OR. coord_format == 'CREX') THEN
+  ELSE IF (coord_format == 'BUFR' .OR. coord_format == 'CREX' .OR. coord_format == 'JSON') THEN
     CALL l4f_category_log(category,L4F_DEBUG,'execute import coord v7d')
     CALL init(v7d_ana, filename=coord_file, format=coord_format, file=.TRUE., &
      write=.FALSE., categoryappend="anagrafica")
@@ -384,7 +384,7 @@ IF (output_format == 'native') THEN
   CALL delete(v7d_out)
 
 #ifdef HAVE_DBALLE
-ELSE IF (output_format == 'BUFR' .OR. output_format == 'CREX') THEN
+ELSE IF (output_format == 'BUFR' .OR. output_format == 'CREX' .OR. output_format == 'JSON') THEN
   IF (output_file == '-') THEN
     CALL l4f_category_log(category, L4F_INFO, 'trying /dev/stdout as stdout unit.')
     output_file='/dev/stdout'
