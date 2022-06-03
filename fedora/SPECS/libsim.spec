@@ -6,8 +6,8 @@
 
 Summary: Fortran utility libraries
 Name: libsim
-Version: 7.0.2
-Release: 2
+Version: 7.1.0
+Release: 1
 License: GPL2+
 Group: Applications/Meteo
 URL: https://github.com/arpa-simc/%{name}
@@ -164,6 +164,13 @@ mv $RPM_BUILD_ROOT%{_includedir}/*.mod $RPM_BUILD_ROOT%{_fmoddir}
 rm -rf %{buildroot}
 
 %changelog
+* Fri Jun  3 2022 Daniele Branchini <dbranchini@arpae.it> - 7.1.0-1
+- Added json format for sparse point data
+- Refactored statistical processing of intervals (#98)
+- Added a comprehensive stat_proc_test
+- Added grib2 entries for variuos precipitation fractions
+- Implement a filter on some metadata for generic vol7d volumes, now also native format can be filtered in input in v7d_transform
+
 * Wed Apr  6 2022 Daniele Branchini <dbranchini@arpae.it> - 7.0.2-2
 - Added wet bulb temperature in vargrib2bufr
 
