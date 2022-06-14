@@ -616,27 +616,27 @@ ENDIF
 
 ! copy the timeranges already satisfying the requested step, if any
 DO i4 = 1, SIZE(this%time)
-  DO i = 1, nitr ! SIZE(this%timerange)
+  DO i = 1, nitr
     IF (c_e(keep_tr(i, i4, 2))) THEN
       l = keep_tr(i, i4, 1)
-      k = f(keep_tr(i, i4, 2))
+      k = keep_tr(i, i4, 2)
 #ifdef DEBUG
       CALL l4f_category_log(this%category, L4F_DEBUG, &
-       'volgrid6d_recompute_stat_proc_diff, good timerange: '//t2c(i)// &
+       'volgrid6d_recompute_stat_proc_diff, good timerange: '//t2c(f(i))// &
        '->'//t2c(k))
 #endif
       DO i6 = 1, SIZE(this%var)
         DO i3 = 1, SIZE(this%level)
-          IF (c_e(this%gaid(i3,i4,i,i6))) THEN
+          IF (c_e(this%gaid(i3,i4,f(i),i6))) THEN
             IF (lclone) THEN
-              CALL copy(this%gaid(i3,i4,i,i6), that%gaid(i3,l,k,i6))
+              CALL copy(this%gaid(i3,i4,f(i),i6), that%gaid(i3,l,k,i6))
             ELSE
-              that%gaid(i3,l,k,i6) = this%gaid(i3,i4,i,i6)
+              that%gaid(i3,l,k,i6) = this%gaid(i3,i4,f(i),i6)
             ENDIF
             IF (ASSOCIATED(that%voldati)) THEN
-              that%voldati(:,:,i3,l,k,i6) = this%voldati(:,:,i3,i4,i,i6)
+              that%voldati(:,:,i3,l,k,i6) = this%voldati(:,:,i3,i4,f(i),i6)
             ELSE
-              CALL volgrid_get_vol_2d(this, i3, i4, i, i6, voldatiout)
+              CALL volgrid_get_vol_2d(this, i3, i4, f(i), i6, voldatiout)
               CALL volgrid_set_vol_2d(that, i3, l, k, i6, voldatiout)
             ENDIF
           ENDIF
