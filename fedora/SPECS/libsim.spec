@@ -6,7 +6,7 @@
 
 Summary: Fortran utility libraries
 Name: libsim
-Version: 7.1.0
+Version: 7.1.1
 Release: 1
 License: GPL2+
 Group: Applications/Meteo
@@ -164,6 +164,9 @@ mv $RPM_BUILD_ROOT%{_includedir}/*.mod $RPM_BUILD_ROOT%{_fmoddir}
 rm -rf %{buildroot}
 
 %changelog
+* Wed Jun 15 2022 Daniele Branchini <dbranchini@arpae.it> - 7.1.1-1
+- fix bugs in cumulation by differences for gridded fields (#99)
+
 * Fri Jun  3 2022 Daniele Branchini <dbranchini@arpae.it> - 7.1.0-1
 - Added json format for sparse point data
 - Refactored statistical processing of intervals (#98)
