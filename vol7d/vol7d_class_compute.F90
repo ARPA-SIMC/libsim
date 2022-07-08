@@ -156,7 +156,8 @@ ELSE IF (stat_proc == 254) THEN
   ENDIF
 
 ELSE IF (stat_proc_input == stat_proc .OR. &
- (stat_proc == 2 .OR. stat_proc == 3)) THEN ! min and max can be computed from any input
+ (stat_proc == 0 .OR. stat_proc == 2 .OR. stat_proc == 3)) THEN
+! avg, min and max can be computed from any input, with care
   CALL l4f_log(L4F_INFO, &
    'recomputing statistically processed data by aggregation and difference '//&
    TRIM(to_char(stat_proc_input))//':'//TRIM(to_char(stat_proc)))
