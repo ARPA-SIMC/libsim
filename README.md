@@ -1,6 +1,6 @@
 [![Build Status](https://simc.arpae.it/moncic-ci/libsim/centos7.png)](https://simc.arpae.it/moncic-ci/libsim/)
 [![Build Status](https://simc.arpae.it/moncic-ci/libsim/centos8.png)](https://simc.arpae.it/moncic-ci/libsim/)
-[![Build Status](https://simc.arpae.it/moncic-ci/libsim/fedora34.png)](https://simc.arpae.it/moncic-ci/libsim/)
+[![Build Status](https://simc.arpae.it/moncic-ci/libsim/fedora36.png)](https://simc.arpae.it/moncic-ci/libsim/)
 [![Build Status](https://copr.fedorainfracloud.org/coprs/simc/stable/package/libsim/status_image/last_build.png)](https://copr.fedorainfracloud.org/coprs/simc/stable/package/libsim/)
 
 # LIBSIM
