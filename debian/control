@@ -4,8 +4,8 @@ Priority: extra
 Maintainer: Daniele Branchini <dbranchini@arpa.emr.it>
 Build-Depends:
   debhelper (>= 12), dh-fortran-mod (>= 0.11), pkg-config,
-  autotools-dev, libemos, fortran-compiler, libfortrangis-dev,
-  libeccodes-dev, libdballef-dev, libcnf-dev
+  autotools-dev, fortran-compiler, libfortrangis-dev,
+  libeccodes-dev, libdballef-dev
 Standards-Version: 3.7.2
 Rules-Requires-Root: no
 Homepage: https://github.com/ARPA-SIMC/libsim
