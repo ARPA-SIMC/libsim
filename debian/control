@@ -6,7 +6,8 @@ Build-Depends:
   debhelper (>= 12), dh-fortran-mod (>= 0.11), pkg-config,
   autotools-dev, fortran-compiler, libfortrangis-dev,
   libeccodes-dev, libdballef-dev, liblog4c-dev, libshp-dev,
-  libnetcdff-dev, libgdal-dev, texlive, texlive-binaries
+  libnetcdff-dev, libgdal-dev, texlive, texlive-binaries,
+  doxygen
 Standards-Version: 3.7.2
 Rules-Requires-Root: no
 Homepage: https://github.com/ARPA-SIMC/libsim
