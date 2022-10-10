@@ -67,11 +67,13 @@ category=l4f_category_get(TRIM(a_name)//".main")
 ! define the option parser
 opt = optionparser_new(description_msg= &
  'Grib to sparse points transformation application. It reads grib edition 1 and 2, &
- &interpolates data over specified points and exports data into a native v7d file'&
+ &interpolates data over specified points using the &
+ &"optimally nearest point" algorithm (by P. Kaufmann) &
+ &and exports data into a native v7d file'&
 #ifdef HAVE_DBALLE
- //', or into a BUFR/CREX file'&
+ //', or into a BUFR/CREX/JSON file'&
 #endif
- //'.', usage_msg='Usage: vg6d_getpoint [options] inputfile outputfile')
+ //'.', usage_msg='Usage: vg6d_getpoint_pkauf [options] inputfile outputfile')
 
 ! define command-line options
 ! options for transformation
@@ -108,7 +110,7 @@ CALL optionparser_add(opt, ' ', 'coord-format', coord_format, &
 #endif 
 & help='format of input file with coordinates, ''native'' for vol7d native binary file '&
 #ifdef HAVE_DBALLE
- //', ''BUFR'' for BUFR file, ''CREX'' for CREX file (sparse points)'&
+ //', ''BUFR'' for BUFR file, ''CREX'' for CREX file, ''JSON'' for json file (sparse points)'&
 #endif
  )
 
@@ -126,7 +128,7 @@ CALL optionparser_add(opt, 'f', 'output-format', output_format, &
 #endif 
 & help='format of output file, ''native'' for vol7d native binary format'&
 #ifdef HAVE_DBALLE
- //', ''BUFR'' for BUFR with generic template, ''CREX'' for CREX format'&
+ //', ''BUFR'', ''CREX'' and ''JSON'' for corresponding formats, with generic template'&
 #endif
  //', ''grib_api_csv'' for an ASCII csv file with grib_api keys as columns'&
  )
@@ -222,7 +224,7 @@ IF (c_e(coord_file)) THEN
     CALL import(v7d_coord, filename=coord_file)
 
 #ifdef HAVE_DBALLE
-  ELSE IF (coord_format == 'BUFR' .OR. coord_format == 'CREX') THEN
+  ELSE IF (coord_format == 'BUFR' .OR. coord_format == 'CREX' .OR. coord_format == 'JSON') THEN
     CALL l4f_category_log(category,L4F_DEBUG,'execute import coord v7d')
     CALL init(v7d_ana, filename=coord_file, format=coord_format, file=.TRUE., &
      write=.FALSE., categoryappend="anagrafica")
@@ -360,7 +362,7 @@ IF (output_format == 'native') THEN
   CALL delete(v7d_out)
 
 #ifdef HAVE_DBALLE
-ELSE IF (output_format == 'BUFR' .OR. output_format == 'CREX') THEN
+ELSE IF (output_format == 'BUFR' .OR. output_format == 'CREX' .OR. output_format == 'JSON') THEN
   IF (output_file == '-') THEN
     CALL l4f_category_log(category, L4F_INFO, 'trying /dev/stdout as stdout unit.')
     output_file='/dev/stdout'
@@ -406,7 +408,7 @@ ier=l4f_fini()
 CONTAINS
 
 ! Subroutine find_index modified for computing the nearest point
-! according th the Pirmin Kaufmann distance method
+! according to the Pirmin Kaufmann distance method
 ! https://drive.google.com/a/arpae.it/file/d/0B098fbLuj7EzZWU2YkZOd25nWUZaV0pRLUwxeEg0VXJCZnlr
 SUBROUTINE find_index_pkaufmann(this, near, nx, ny, xmin, xmax, ymin, ymax, &
  lon, lat, extrap, index_x, index_y)
