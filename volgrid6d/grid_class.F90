@@ -917,9 +917,8 @@ CASE ('polar_stereographic', 'lambert', 'albers')
    "griddim_import_gribapi, central meridian reset "//TRIM(to_char(this%grid%proj%lov)))
 #endif
 
-
   CALL proj(this, loFirst, laFirst, x1, y1)
-  IF (iScansNegatively  == 0) THEN
+  IF (iScansNegatively == 0) THEN
     this%grid%grid%xmin = x1
     this%grid%grid%xmax = x1 + this%grid%grid%dx*DBLE(this%dim%nx - 1)
   ELSE
@@ -936,6 +935,50 @@ CASE ('polar_stereographic', 'lambert', 'albers')
 ! keep these values for personal pleasure
   this%grid%proj%polar%lon1 = loFirst
   this%grid%proj%polar%lat1 = laFirst
+
+! Keys for equatorial projections
+CASE ('mercator')
+
+  CALL grib_get(gaid,'DxInMetres', this%grid%grid%dx)
+  CALL grib_get(gaid,'DyInMetres', this%grid%grid%dy)
+  CALL grib_get(gaid,'LaDInDegrees',this%grid%proj%polar%lad)
+  this%grid%proj%lov = 0.0D0 ! not in grib
+
+  CALL grib_get(gaid,'longitudeOfFirstGridPointInDegrees',loFirst)
+  CALL grib_get(gaid,'latitudeOfFirstGridPointInDegrees',laFirst)
+
+  CALL proj(this, loFirst, laFirst, x1, y1)
+  IF (iScansNegatively == 0) THEN
+    this%grid%grid%xmin = x1
+    this%grid%grid%xmax = x1 + this%grid%grid%dx*DBLE(this%dim%nx - 1)
+  ELSE
+    this%grid%grid%xmax = x1
+    this%grid%grid%xmin = x1 - this%grid%grid%dx*DBLE(this%dim%nx - 1)
+  ENDIF
+  IF (jScansPositively == 0) THEN
+    this%grid%grid%ymax = y1
+    this%grid%grid%ymin = y1 - this%grid%grid%dy*DBLE(this%dim%ny - 1)
+  ELSE
+    this%grid%grid%ymin = y1
+    this%grid%grid%ymax = y1 + this%grid%grid%dy*DBLE(this%dim%ny - 1)
+  ENDIF
+
+#ifdef DEBUG
+  CALL unproj(this, x1, y1, loFirst, laFirst)
+  CALL l4f_category_log(this%category,L4F_DEBUG, &
+   "griddim_import_gribapi, unprojected first point "//t2c(lofirst)//" "// &
+   t2c(lafirst))
+
+  CALL grib_get(gaid,'longitudeOfLastGridPointInDegrees',loLast)
+  CALL grib_get(gaid,'latitudeOfLastGridPointInDegrees',laLast)
+  CALL proj(this, loLast, laLast, x1, y1)
+  CALL l4f_category_log(this%category,L4F_DEBUG, &
+   "griddim_import_gribapi, extremes from grib "//t2c(x1)//" "//t2c(y1))
+  CALL l4f_category_log(this%category,L4F_DEBUG, &
+   "griddim_import_gribapi, extremes from proj "//t2c(this%grid%grid%xmin)// &
+   " "//t2c(this%grid%grid%ymin)//" "//t2c(this%grid%grid%xmax)//" "// &
+   t2c(this%grid%grid%ymax))
+#endif
 
 CASE ('UTM')
 

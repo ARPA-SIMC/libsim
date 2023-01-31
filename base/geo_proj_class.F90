@@ -641,6 +641,12 @@ IF (this%proj_type == 'lambert' .OR. this%proj_type == 'polar_stereographic') TH
   ENDIF
 ENDIF
 
+IF (this%proj_type == 'mercator') THEN
+  IF (c_e(this%polar%lad)) THEN
+    PRINT*,"isometric latitude",this%polar%lad
+  ENDIF
+ENDIF
+
 IF (this%ellips%f == 0.0D0) THEN
   PRINT*,"Spherical Earth:"
   PRINT*,"Radius (m)",this%ellips%a
@@ -682,6 +688,9 @@ CASE("polar_stereographic")
   CALL proj_polar_stereographic(lon, lat, x, y, this%lov, &
    this%polar%lad, this%polar%projection_center_flag)
   
+CASE("mercator")
+  CALL proj_mercator(lon, lat, x, y, this%lov, this%polar%lad)
+  
 CASE("UTM")
   CALL proj_utm(lon, lat, x, y, this%lov, this%xoff, this%yoff, this%ellips)
 
@@ -721,6 +730,9 @@ CASE("polar_stereographic")
   CALL unproj_polar_stereographic(x, y, lon, lat, this%lov, &
    this%polar%lad, this%polar%projection_center_flag)
   
+CASE("mercator")
+  CALL unproj_mercator(x, y, lon, lat, this%lov, this%polar%lad)
+
 CASE("UTM")
   CALL unproj_utm(x, y, lon, lat, this%lov, this%xoff, this%yoff, this%ellips)
 
@@ -1032,6 +1044,38 @@ lon = lov + raddeg*ATAN2(x*SIN(c), &
  (ro*COS(pollat)*COS(c)-y*SIN(pollat)*SIN(c)))
 
 END SUBROUTINE unproj_polar_stereographic
+
+
+!http://mathworld.wolfram.com/StereographicProjection.html
+ELEMENTAL SUBROUTINE proj_mercator(lon, lat, x, y, lov, lad)
+DOUBLE PRECISION,INTENT(in)  :: lon,lat
+DOUBLE PRECISION,INTENT(out) :: x,y
+DOUBLE PRECISION,INTENT(in) :: lov
+DOUBLE PRECISION,INTENT(in)  :: lad
+
+DOUBLE PRECISION :: scx, scy
+
+scy = COS(degrad*lad)*rearth
+scx = scy*degrad
+x = (lon-lov)*scx
+y = LOG(TAN(0.25D0*pi + 0.5D0*lat*degrad))*scy
+
+END SUBROUTINE proj_mercator
+
+ELEMENTAL SUBROUTINE unproj_mercator(x, y, lon, lat, lov, lad)
+DOUBLE PRECISION,INTENT(in)  :: x,y
+DOUBLE PRECISION,INTENT(out) :: lon,lat
+DOUBLE PRECISION,INTENT(in) :: lov
+DOUBLE PRECISION,INTENT(in)  :: lad
+
+DOUBLE PRECISION :: scx, scy
+
+scy = COS(degrad*lad)*rearth
+scx = scy*degrad
+lon = x/scx + lov
+lat = 2.0D0*ATAN(EXP(y/scy))*raddeg-90.0D0
+
+END SUBROUTINE unproj_mercator
 
 
 ELEMENTAL SUBROUTINE proj_utm(lon, lat, x, y, lov, false_e, false_n, ellips)
