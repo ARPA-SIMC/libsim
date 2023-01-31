@@ -6,7 +6,7 @@
 
 Summary: Fortran utility libraries
 Name: libsim
-Version: 7.1.2
+Version: 7.1.3
 Release: 1
 License: GPL2+
 Group: Applications/Meteo
@@ -164,6 +164,11 @@ mv $RPM_BUILD_ROOT%{_includedir}/*.mod $RPM_BUILD_ROOT%{_fmoddir}
 rm -rf %{buildroot}
 
 %changelog
+* Tue Jan 31 2023 Daniele Branchini <dbranchini@arpae.it> - 7.1.3-1
+- Implemented different styles of grib2 analysis output
+- Implemented grib spherical Mercator projection
+- Added JSON format in vg6d_getpoint_pkauf
+
 * Mon Sep  5 2022 Daniele Branchini <dbranchini@arpae.it> - 7.1.2-1
 - Allow averaging from any stat-proc for sparse data only
 
