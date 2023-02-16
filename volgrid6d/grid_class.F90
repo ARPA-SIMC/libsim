@@ -761,7 +761,7 @@ USE grib_api
 TYPE(griddim_def),INTENT(inout) :: this ! griddim object
 INTEGER, INTENT(in) :: gaid ! grib_api id of the grib loaded in memory to import
 
-DOUBLE PRECISION :: loFirst, loLast, laFirst, laLast, x1, y1
+DOUBLE PRECISION :: loFirst, loLast, laFirst, laLast, x1, y1, orient
 INTEGER :: EditionNumber, iScansNegatively, jScansPositively, zone, datum, &
  reflon, ierr
 
@@ -961,6 +961,15 @@ CASE ('mercator')
   ELSE
     this%grid%grid%ymin = y1
     this%grid%grid%ymax = y1 + this%grid%grid%dy*DBLE(this%dim%ny - 1)
+  ENDIF
+
+  IF (EditionNUmber == 2) THEN
+    CALL grib_get(gaid,'orientationOfTheGridInDegrees',orient)
+    IF (orient /= 0.0D0) THEN
+      CALL l4f_category_log(this%category,L4F_ERROR, &
+       "griddim_import_gribapi, Mercator grid orientation != 0 not supported")
+      CALL raise_error()
+    ENDIF
   ENDIF
 
 #ifdef DEBUG
@@ -1303,22 +1312,8 @@ CASE ('polar_stereographic', 'lambert', 'albers')
   ENDIF
 
 ! compute lon and lat of first point from projected extremes
-  IF (iScansNegatively  == 0) THEN
-    IF (jScansPositively == 0) THEN
-      CALL unproj(this, this%grid%grid%xmin, this%grid%grid%ymax, loFirst, laFirst)
-    ELSE
-      CALL unproj(this, this%grid%grid%xmin, this%grid%grid%ymin, loFirst, laFirst)
-    ENDIF
-  ELSE
-    IF (jScansPositively == 0) THEN
-      CALL unproj(this, this%grid%grid%xmax, this%grid%grid%ymax, loFirst, laFirst)
-    ELSE
-      CALL unproj(this, this%grid%grid%xmax, this%grid%grid%ymin, loFirst, laFirst)
-    ENDIF
-  ENDIF
-! use the values kept for personal pleasure ?
-!  loFirst = this%grid%proj%polar%lon1
-!  laFirst = this%grid%proj%polar%lat1
+  CALL get_unproj_first(this, iScansNegatively, jScansPositively, &
+   loFirst, laFirst)
 ! reset lon in standard grib 2 definition [0,360]
   IF (EditionNumber == 1) THEN
     CALL long_reset_m180_360(loFirst)
@@ -1327,6 +1322,33 @@ CASE ('polar_stereographic', 'lambert', 'albers')
   ENDIF
   CALL grib_set(gaid,'longitudeOfFirstGridPointInDegrees',loFirst)
   CALL grib_set(gaid,'latitudeOfFirstGridPointInDegrees',laFirst)
+
+! Keys for equatorial projections
+CASE ('mercator')
+
+! increments are required
+  CALL grib_set(gaid,'DxInMetres', this%grid%grid%dx)
+  CALL grib_set(gaid,'DyInMetres', this%grid%grid%dy)
+  CALL grib_set(gaid,'ijDirectionIncrementGiven',1)
+
+! line of view, aka central meridian, not in grib
+!  CALL grib_set(gaid,'LoVInDegrees',this%grid%proj%lov)
+! latitude at which dx and dy are valid
+  CALL grib_set(gaid,'LaDInDegrees',this%grid%proj%polar%lad)
+
+! compute lon and lat of first and last points from projected extremes
+  CALL get_unproj_first(this, iScansNegatively, jScansPositively, &
+   loFirst, laFirst)
+  CALL grib_set(gaid,'longitudeOfFirstGridPointInDegrees',loFirst)
+  CALL grib_set(gaid,'latitudeOfFirstGridPointInDegrees',laFirst)
+  CALL get_unproj_last(this, iScansNegatively, jScansPositively, &
+   loLast, laLast)
+  CALL grib_set(gaid,'longitudeOfLastGridPointInDegrees',loLast)
+  CALL grib_set(gaid,'latitudeOfLastGridPointInDegrees',laLast)
+ 
+  IF (EditionNUmber == 2) THEN
+    CALL grib_set(gaid,'orientationOfTheGridInDegrees',0.)
+  ENDIF
 
 CASE ('UTM')
 
@@ -1514,6 +1536,56 @@ ELSE
 ENDIF
 
 END SUBROUTINE griddim_export_ellipsoid
+
+SUBROUTINE get_unproj_first(this, iScansNegatively, jScansPositively, &
+ loFirst, laFirst)
+TYPE(griddim_def),INTENT(in) :: this ! griddim object
+INTEGER,INTENT(in) :: iScansNegatively, jScansPositively
+DOUBLE PRECISION,INTENT(out) :: loFirst, laFirst
+
+! compute lon and lat of first point from projected extremes
+IF (iScansNegatively == 0) THEN
+  IF (jScansPositively == 0) THEN
+    CALL unproj(this, this%grid%grid%xmin, this%grid%grid%ymax, loFirst, laFirst)
+  ELSE
+    CALL unproj(this, this%grid%grid%xmin, this%grid%grid%ymin, loFirst, laFirst)
+  ENDIF
+ELSE
+  IF (jScansPositively == 0) THEN
+    CALL unproj(this, this%grid%grid%xmax, this%grid%grid%ymax, loFirst, laFirst)
+  ELSE
+    CALL unproj(this, this%grid%grid%xmax, this%grid%grid%ymin, loFirst, laFirst)
+  ENDIF
+ENDIF
+! use the values kept for personal pleasure ?
+!  loFirst = this%grid%proj%polar%lon1
+!  laFirst = this%grid%proj%polar%lat1
+END SUBROUTINE get_unproj_first
+
+SUBROUTINE get_unproj_last(this, iScansNegatively, jScansPositively, &
+ loLast, laLast)
+TYPE(griddim_def),INTENT(in) :: this ! griddim object
+INTEGER,INTENT(in) :: iScansNegatively, jScansPositively
+DOUBLE PRECISION,INTENT(out) :: loLast, laLast
+
+! compute lon and lat of last point from projected extremes
+IF (iScansNegatively == 0) THEN
+  IF (jScansPositively == 0) THEN
+    CALL unproj(this, this%grid%grid%xmax, this%grid%grid%ymin, loLast, laLast)
+  ELSE
+    CALL unproj(this, this%grid%grid%xmax, this%grid%grid%ymax, loLast, laLast)
+  ENDIF
+ELSE
+  IF (jScansPositively == 0) THEN
+    CALL unproj(this, this%grid%grid%xmin, this%grid%grid%ymin, loLast, laLast)
+  ELSE
+    CALL unproj(this, this%grid%grid%xmin, this%grid%grid%ymax, loLast, laLast)
+  ENDIF
+ENDIF
+! use the values kept for personal pleasure ?
+!  loLast = this%grid%proj%polar%lon?
+!  laLast = this%grid%proj%polar%lat?
+END SUBROUTINE get_unproj_last
 
 END SUBROUTINE griddim_export_gribapi
 #endif
