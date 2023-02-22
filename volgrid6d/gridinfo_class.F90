@@ -1145,7 +1145,7 @@ IF (lt == imiss) THEN
   ltype = 255
   scalev = 0
   scalef = 0
-ELSE IF (lt <= 10 .OR. (lt >= 162 .AND. lt <= 166)) THEN
+ELSE IF (lt <= 10 .OR. lt == 101 .OR. (lt >= 162 .AND. lt <= 184)) THEN
   ltype = lt
   scalev = 0
   scalef = 0

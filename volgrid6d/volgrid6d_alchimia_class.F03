@@ -113,7 +113,7 @@ allocate(varvg6d(nvar),source=volgrid6d_var_miss)
 allocate (varv7d(nvar),source=vol7d_var_miss)
 
 ! now I copy the needed input variables from input volume to output 
-do ivar=1, nvar
+DO ivar=1, nvar
   ivarin  = index_c(mybin,newbout(ivar))
   ivarout = ivar
 
@@ -125,33 +125,28 @@ do ivar=1, nvar
   varvg6d(ivarout)=vg6din%var(ivarin)
   call init(gaid_template)
 
-  do ilevel=1,nlevel
-    do itime=1,ntime
-      do itimerange=1,ntimerange
-        if ( .not. ASSOCIATED(vg6din%voldati)) then
-!          call display(vg6din%gaid(ilevel,itime,itimerange,ivar),namespace="parameter")
-          CALL grid_id_decode_data(vg6din%gaid(ilevel,itime,itimerange,ivarin),&
-           vg6dout%voldati(:,:,ilevel,itime,itimerange,ivarout))
-        else
-          vg6dout%voldati(:,:,ilevel,itime,itimerange,ivarout)=vg6din%voldati(:,:,ilevel,itime,itimerange,ivarin)
-        end if
+  DO ilevel=1,nlevel
+    DO itime=1,ntime
+      DO itimerange=1,ntimerange
+        IF (c_e(vg6din%gaid(ilevel,itime,itimerange,ivarin))) THEN
+          IF (.NOT. ASSOCIATED(vg6din%voldati)) THEN
+            CALL grid_id_decode_data(vg6din%gaid(ilevel,itime,itimerange,ivarin),&
+             vg6dout%voldati(:,:,ilevel,itime,itimerange,ivarout))
+          ELSE
+            vg6dout%voldati(:,:,ilevel,itime,itimerange,ivarout) = &
+             vg6din%voldati(:,:,ilevel,itime,itimerange,ivarin)
+          ENDIF
 
-        call copy (vg6din%gaid(ilevel,itime,itimerange,ivarin), vg6dout%gaid(ilevel,itime,itimerange,ivarout))
+          CALL copy (vg6din%gaid(ilevel,itime,itimerange,ivarin), &
+           vg6dout%gaid(ilevel,itime,itimerange,ivarout))
 ! save the first valid gaid for helping successive variable conversion
-        IF (.NOT.c_e(gaid_template) .AND. &
-         c_e(vg6din%gaid(ilevel,itime,itimerange,ivarin))) &
-         gaid_template = vg6din%gaid(ilevel,itime,itimerange,ivarin)
-
-!        print *,&
-!         minval(vg6dout%voldati(:,:,ilevel,itime,itimerange,ivarout),&
-!         c_e(vg6dout%voldati(:,:,ilevel,itime,itimerange,ivarout))),&
-!         maxval(vg6dout%voldati(:,:,ilevel,itime,itimerange,ivarout),&
-!         c_e(vg6dout%voldati(:,:,ilevel,itime,itimerange,ivarout)))
-
-      end do
-    end do
-  end do
-end do
+          IF (.NOT.c_e(gaid_template)) &
+           gaid_template = vg6din%gaid(ilevel,itime,itimerange,ivarin)
+        ENDIF
+      ENDDO
+    ENDDO
+  ENDDO
+ENDDO
 
 CALL vargrib2varbufr(varvg6d(:nvarin), varv7d(:nvarin), c_funcgb)
 
