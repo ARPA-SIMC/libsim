@@ -6,7 +6,7 @@
 
 Summary: Fortran utility libraries
 Name: libsim
-Version: 7.1.3
+Version: 7.1.4
 Release: 1
 License: GPL2+
 Group: Applications/Meteo
@@ -164,6 +164,10 @@ mv $RPM_BUILD_ROOT%{_includedir}/*.mod $RPM_BUILD_ROOT%{_fmoddir}
 rm -rf %{buildroot}
 
 %changelog
+* Thu Feb 23 2023 Daniele Branchini <dbranchini@arpae.it> - 7.1.4-1
+- Fixed minor bugs in processing of levels and computation of derived variables
+- Implemented coding of Mercator grid anche check for edition independence
+
 * Tue Jan 31 2023 Daniele Branchini <dbranchini@arpae.it> - 7.1.3-1
 - Implemented different styles of grib2 analysis output
 - Implemented grib spherical Mercator projection
