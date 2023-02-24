@@ -518,7 +518,7 @@ END SUBROUTINE volgrid_set_vol_2d
 !! This method works both with volumes having allocated and
 !! non-allocated this%voldati array, and it updates the requested
 !! slice.  In case \a this%voldati is already allocated, this is a
-!! no-operation while in the other case this method encodes the filed
+!! no-operation while in the other case this method encodes the field
 !! provided into the grid_id object on file or in memory. Since this
 !! method may be called many times by a program, it is optimized for
 !! speed and it does not make any check about the matching size of the

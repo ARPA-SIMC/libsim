@@ -773,6 +773,14 @@ call l4f_category_log(this%category,L4F_DEBUG, &
 #endif
 CALL grib_get(gaid,'GRIBEditionNumber',EditionNumber)
 
+IF (this%grid%proj%proj_type == 'unstructured_grid') THEN
+  CALL grib_get(gaid,'numberOfDataPoints', this%dim%nx)
+  this%dim%ny = 1
+  this%grid%grid%component_flag = 0
+  CALL griddim_import_ellipsoid(this, gaid)
+  RETURN
+ENDIF
+
 ! Keys valid for (almost?) all cases, Ni and Nj are universal aliases
 CALL grib_get(gaid, 'Ni', this%dim%nx)
 CALL grib_get(gaid, 'Nj', this%dim%ny)
@@ -1150,6 +1158,14 @@ CALL l4f_category_log(this%category,L4F_DEBUG, &
  "griddim_export_gribapi, grid type "//this%grid%proj%proj_type)
 #endif
 
+IF (this%grid%proj%proj_type == 'unstructured_grid') THEN
+  CALL grib_set(gaid,'numberOfDataPoints', this%dim%nx)
+! reenable when possible
+!  CALL griddim_export_ellipsoid(this, gaid)
+  RETURN
+ENDIF
+
+
 ! Edition dependent setup
 IF (EditionNumber == 1) THEN
   ratio = 1.d3
@@ -1471,19 +1487,20 @@ SUBROUTINE griddim_export_ellipsoid(this, gaid)
 TYPE(griddim_def),INTENT(in) :: this
 INTEGER,INTENT(in) :: gaid
 
-INTEGER :: ellips_type
+INTEGER :: ellips_type, ierr
 DOUBLE PRECISION :: r1, r2, f
 
 CALL get_val(this, ellips_smaj_axis=r1, ellips_flatt=f, ellips_type=ellips_type)
 
 IF (EditionNumber == 2) THEN
 
-  CALL grib_set_missing(gaid, 'scaleFactorOfRadiusOfSphericalEarth')
-  CALL grib_set_missing(gaid, 'scaledValueOfRadiusOfSphericalEarth')
-  CALL grib_set_missing(gaid, 'scaleFactorOfEarthMajorAxis')
-  CALL grib_set_missing(gaid, 'scaledValueOfEarthMajorAxis')
-  CALL grib_set_missing(gaid, 'scaleFactorOfEarthMinorAxis')
-  CALL grib_set_missing(gaid, 'scaledValueOfEarthMinorAxis')
+! why does it produce a message even with ierr?
+  CALL grib_set_missing(gaid, 'scaleFactorOfRadiusOfSphericalEarth', ierr)
+  CALL grib_set_missing(gaid, 'scaledValueOfRadiusOfSphericalEarth', ierr)
+  CALL grib_set_missing(gaid, 'scaleFactorOfEarthMajorAxis', ierr)
+  CALL grib_set_missing(gaid, 'scaledValueOfEarthMajorAxis', ierr)
+  CALL grib_set_missing(gaid, 'scaleFactorOfEarthMinorAxis', ierr)
+  CALL grib_set_missing(gaid, 'scaledValueOfEarthMinorAxis', ierr)
 
   SELECT CASE(ellips_type)
   CASE(ellips_grs80) ! iag-grs80
