@@ -141,7 +141,7 @@ DO ivar=1, nvar
              vg6din%voldati(:,:,ilevel,itime,itimerange,ivarin)
           ENDIF
 
-          CALL copy (vg6din%gaid(ilevel,itime,itimerange,ivarin), &
+          CALL copy(vg6din%gaid(ilevel,itime,itimerange,ivarin), &
            vg6dout%gaid(ilevel,itime,itimerange,ivarout))
 ! save the first valid gaid for helping successive variable conversion
           IF (.NOT.c_e(gaid_template)) &
@@ -210,13 +210,15 @@ do ilevel=1,nlevel
             if (ivarin == 0) ivarin=firsttrue(c_e(vg6dout%gaid(ilevel,itime,itimerange,:))) ! if not found is enought from one present variables
             ivarout = index_c(newbout,mayvfn%fnds(i)%bout(ivar))
 
-            if (ivarin > 0 .and. ivarout > 0 )then
-
-              !print *, "DDD search",newbout(ivarout)
-              !print *, "DDD index",index_c(mybout,newbout(ivarout))
-              !if ( index_c(mybout,newbout(ivarout)) > 0)then
-
-                call copy (vg6dout%gaid(ilevel,itime,itimerange,ivarin), vg6dout%gaid(ilevel,itime,itimerange,ivarout))
+            IF (ivarin > 0 .AND. ivarout > 0) THEN
+!print *, "DDD search",newbout(ivarout)
+!print *, "DDD index",index_c(mybout,newbout(ivarout))
+!if ( index_c(mybout,newbout(ivarout)) > 0)then
+! the following identity happened and generated invalid grib id error
+! is it a reasonable case or a bug?
+              IF (ivarin /= ivarout) &
+               CALL copy(vg6dout%gaid(ilevel,itime,itimerange,ivarin), &
+               vg6dout%gaid(ilevel,itime,itimerange,ivarout))
 
 #ifdef HAVE_LIBGRIBAPI
                 if (c_e(grid_id_get_gaid(vg6dout%gaid(ilevel,itime,itimerange,ivarout)))) then
