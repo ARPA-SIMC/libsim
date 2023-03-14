@@ -6,7 +6,7 @@
 
 Summary: Fortran utility libraries
 Name: libsim
-Version: 7.1.5
+Version: 7.1.6
 Release: 1
 License: GPL2+
 Group: Applications/Meteo
@@ -164,6 +164,9 @@ mv $RPM_BUILD_ROOT%{_includedir}/*.mod $RPM_BUILD_ROOT%{_fmoddir}
 rm -rf %{buildroot}
 
 %changelog
+* Tue Mar 14 2023 Davide Cesari <dcesari@arpae.it> - 7.1.6-1
+- bug fix
+
 * Thu Mar 2 2023 Davide Cesari <dcesari@arpae.it> - 7.1.5-1
 - fix another minor bug in derived variables
 - initial basic handling of unstructured grids
