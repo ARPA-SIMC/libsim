@@ -958,12 +958,13 @@ CALL grib_get(gaid,'jPointsAreConsecutive',jPointsAreConsecutive,ierr)
 IF (ierr /= GRIB_SUCCESS) jPointsAreConsecutive=0
 
 ! these grib_sets are alredy done in gridinfo_export, but it seems
-! that it is necessary to repeat them here
+! that it is necessary to repeat them here, they can fail with
+! unstructured grids, thus ierr
 #ifdef DEBUG
 CALL l4f_log(L4F_DEBUG, 'grib_api, Ni,Nj:'//t2c(SIZE(field,1))//','//t2c(SIZE(field,2)))
 #endif
-CALL grib_set(gaid,'Ni',SIZE(field,1))
-CALL grib_set(gaid,'Nj',SIZE(field,2))
+CALL grib_set(gaid,'Ni',SIZE(field,1), ierr)
+CALL grib_set(gaid,'Nj',SIZE(field,2), ierr)
 
 ! Transfer data field changing scanning mode from 64
 IF (iScansNegatively  == 0) THEN
