@@ -437,7 +437,6 @@ INTEGER :: gaid
 call l4f_category_log(this%category,L4F_DEBUG,"export to gaid" )
 #endif
 
-! attenzione: exportando da volgrid griddim è già esportato
 ! griddim is exported separately in grid_class
 CALL export(this%griddim, this%gaid)
 
