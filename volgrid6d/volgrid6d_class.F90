@@ -518,7 +518,7 @@ END SUBROUTINE volgrid_set_vol_2d
 !! This method works both with volumes having allocated and
 !! non-allocated this%voldati array, and it updates the requested
 !! slice.  In case \a this%voldati is already allocated, this is a
-!! no-operation while in the other case this method encodes the filed
+!! no-operation while in the other case this method encodes the field
 !! provided into the grid_id object on file or in memory. Since this
 !! method may be called many times by a program, it is optimized for
 !! speed and it does not make any check about the matching size of the
@@ -1596,7 +1596,6 @@ SUBROUTINE volgrid6d_transform(this, griddim, volgrid6d_in, volgrid6d_out, &
  lev_out, volgrid6d_coord_in, maskgrid, maskbounds, clone, decode, categoryappend)
 TYPE(transform_def),INTENT(in) :: this !< object specifying the abstract transformation
 TYPE(griddim_def),INTENT(in),OPTIONAL :: griddim !< griddim specifying the output grid (required by most transformation types)
-! TODO ripristinare intent(in) dopo le opportune modifiche in grid_class.F90
 TYPE(volgrid6d),INTENT(inout) :: volgrid6d_in !< object to be transformed, it is not modified, despite the INTENT(inout)
 TYPE(volgrid6d),INTENT(out) :: volgrid6d_out !< transformed object, it does not require initialisation
 TYPE(vol7d_level),INTENT(in),OPTIONAL,TARGET :: lev_out(:) !< vol7d_level object defining target vertical grid, for vertical interpolations
@@ -1898,7 +1897,6 @@ SUBROUTINE volgrid6dv_transform(this, griddim, volgrid6d_in, volgrid6d_out, &
  lev_out, volgrid6d_coord_in, maskgrid, maskbounds, clone, decode, categoryappend)
 TYPE(transform_def),INTENT(in) :: this !< object specifying the abstract transformation
 TYPE(griddim_def),INTENT(in),OPTIONAL :: griddim !< griddim specifying the output grid (required by most transformation types)
-! TODO ripristinare intent(in) dopo le opportune modifiche in grid_class.F90
 TYPE(volgrid6d),INTENT(inout) :: volgrid6d_in(:) !< object to be transformed, it is an array of volgrid6d objects, each of which will be transformed, it is not modified, despite the INTENT(inout)
 TYPE(volgrid6d),POINTER :: volgrid6d_out(:) !< transformed object, it is a non associated pointer to an array of volgrid6d objects which will be allocated by the method
 TYPE(vol7d_level),INTENT(in),OPTIONAL :: lev_out(:) !< vol7d_level object defining target vertical grid

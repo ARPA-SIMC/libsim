@@ -119,6 +119,9 @@ CALL optionparser_add(opt, ' ', 'coord-file-grid', coord_file_grid, help= &
  &it must be on the same grid and format as input data')
 coord_file_grid=cmiss
 
+CALL optionparser_add(opt, 'n', 'network', network, 'generic', help= &
+ 'string identifying network for output data')
+
 ! options for defining output
 CALL optionparser_add(opt, 'f', 'output-format', output_format, &
 #ifdef HAVE_DBALLE

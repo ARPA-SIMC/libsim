@@ -273,11 +273,15 @@ ENDIF
 #endif
 
 CALL grid_rect_steps(this, nx, ny, dx, dy)
-
-x(:,:) = RESHAPE((/ ((this%xmin+(dx*DBLE(i)), i=0,nx-1), j=0,ny-1) /),&
- (/nx,ny/))
-y(:,:) = RESHAPE((/ ((this%ymin+(dy*DBLE(j)), i=0,nx-1), j=0,ny-1) /),&
- (/nx,ny/))
+IF (c_e(dx) .AND. c_e(dy)) THEN
+  x(:,:) = RESHAPE((/ ((this%xmin+(dx*DBLE(i)), i=0,nx-1), j=0,ny-1) /),&
+   (/nx,ny/))
+  y(:,:) = RESHAPE((/ ((this%ymin+(dy*DBLE(j)), i=0,nx-1), j=0,ny-1) /),&
+   (/nx,ny/))
+ELSE
+  x(:,:) = dmiss
+  y(:,:) = dmiss
+ENDIF
 
 END SUBROUTINE grid_rect_coordinates
 

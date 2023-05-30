@@ -437,7 +437,6 @@ INTEGER :: gaid
 call l4f_category_log(this%category,L4F_DEBUG,"export to gaid" )
 #endif
 
-! attenzione: exportando da volgrid griddim è già esportato
 ! griddim is exported separately in grid_class
 CALL export(this%griddim, this%gaid)
 
@@ -679,6 +678,8 @@ INTEGER,INTENT(in) :: gaid ! grib_api id of the grib loaded in memory to export
 TYPE(vol7d_timerange) :: timerange ! timerange, used for grib2 coding of statistically processed analysed data
 
 INTEGER :: EditionNumber, centre
+CHARACTER(len=8) :: env_var
+LOGICAL :: g2cosmo_behavior
 
 CALL grib_get(gaid,'GRIBEditionNumber',EditionNumber)
 
@@ -690,14 +691,16 @@ ELSE IF (EditionNumber == 2 )THEN
 
   IF (timerange%p1 >= timerange%p2) THEN ! forecast-like
     CALL code_referencetime(this)
- ELSE IF (timerange%p1 == 0) THEN ! analysis-like
+  ELSE IF (timerange%p1 == 0) THEN ! analysis-like
 ! ready for coding with general convention
-!   CALL grib_get(gaid,'centre',centre)
-!   IF (centre /= 78) THEN ! DWD analysis exception 
-     CALL code_referencetime(this-timedelta_new(sec=timerange%p2))
-!   ELSE
-!     CALL code_referencetime(this)
-!   ENDIF
+    CALL getenv('LIBSIM_G2COSMO_BEHAVIOR', env_var)
+    g2cosmo_behavior = LEN_TRIM(env_var) > 0
+    CALL grib_get(gaid,'centre',centre)
+    IF (g2cosmo_behavior .AND. centre == 78) THEN ! DWD analysis exception 
+      CALL code_referencetime(this)
+    ELSE ! cosmo or old simc convention
+      CALL code_referencetime(this-timedelta_new(sec=timerange%p2))
+    ENDIF
   ELSE ! bad timerange
     CALL l4f_log( L4F_ERROR, 'Timerange with 0>p1>p2 cannot be exported in grib2')
     CALL raise_error()
@@ -894,6 +897,8 @@ INTEGER,INTENT(in) :: gaid ! grib_api id of the grib loaded in memory to export
 TYPE(datetime) :: reftime ! reference time of data, used for coding correct end of statistical processing period in grib2
 
 INTEGER :: EditionNumber, centre, tri, currentunit, unit, p1_g1, p2_g1, p1, p2, pdtn
+CHARACTER(len=8) :: env_var
+LOGICAL :: g2cosmo_behavior
 
 CALL grib_get(gaid,'GRIBEditionNumber',EditionNumber)
 
@@ -950,8 +955,13 @@ ELSE IF (EditionNumber == 2) THEN
 ! forecast is incremented
       CALL grib_set(gaid,'typeOfStatisticalProcessing',this%timerange)
 ! typeOfTimeIncrement to be replaced with typeOfProcessedData
-!      CALL grib_set(gaid,'typeOfProcessedData',0)
-      CALL grib_set(gaid,'typeOfTimeIncrement',1)
+      CALL getenv('LIBSIM_G2COSMO_BEHAVIOR', env_var)
+      g2cosmo_behavior = LEN_TRIM(env_var) > 0
+      IF (g2cosmo_behavior) THEN
+        CALL grib_set(gaid,'typeOfProcessedData',0)
+      ELSE
+        CALL grib_set(gaid,'typeOfTimeIncrement',1)
+      ENDIF
       CALL grib_set(gaid,'indicatorOfUnitForTimeRange',unit)
       CALL grib_set(gaid,'lengthOfTimeRange',p2)
 
@@ -1134,7 +1144,7 @@ IF (lt == imiss) THEN
   ltype = 255
   scalev = 0
   scalef = 0
-ELSE IF (lt <= 10 .OR. (lt >= 162 .AND. lt <= 166)) THEN
+ELSE IF (lt <= 10 .OR. lt == 101 .OR. (lt >= 162 .AND. lt <= 184)) THEN
   ltype = lt
   scalev = 0
   scalef = 0

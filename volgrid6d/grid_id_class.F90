@@ -817,21 +817,21 @@ INTEGER :: alternativeRowScanning, &
  iScansNegatively, jScansPositively, jPointsAreConsecutive
 INTEGER :: numberOfValues,numberOfPoints
 REAL :: vector(SIZE(field))
-INTEGER :: x1, x2, xs, y1, y2, ys, ord(2)
+INTEGER :: x1, x2, xs, y1, y2, ys, ord(2), ierr
 
 
 call grib_get(gaid,'GRIBEditionNumber',EditionNumber)
 
 if (EditionNumber == 2) then
 
-  call grib_get(gaid,'alternativeRowScanning',alternativeRowScanning)
-  if (alternativeRowScanning /= 0)then
-    call l4f_log(L4F_ERROR, "grib_api alternativeRowScanning not supported: " &
+  CALL grib_get(gaid,'alternativeRowScanning',alternativeRowScanning,ierr)
+  IF (ierr == GRIB_SUCCESS .AND. alternativeRowScanning /= 0) THEN
+    CALL l4f_log(L4F_ERROR, "grib_api alternativeRowScanning not supported: " &
      //t2c(alternativeRowScanning))
-    call raise_error()
+    CALL raise_error()
     field(:,:) = rmiss
     RETURN
-  end if
+  ENDIF
 
 else if (EditionNumber /= 1) then
 
@@ -843,9 +843,12 @@ else if (EditionNumber /= 1) then
 
 end if
 
-call grib_get(gaid,'iScansNegatively',iScansNegatively)
-call grib_get(gaid,'jScansPositively',jScansPositively)
-call grib_get(gaid,'jPointsAreConsecutive',jPointsAreConsecutive)
+CALL grib_get(gaid,'iScansNegatively',iScansNegatively,ierr)
+IF (ierr /= GRIB_SUCCESS) iScansNegatively=0
+CALL grib_get(gaid,'jScansPositively',jScansPositively,ierr)
+IF (ierr /= GRIB_SUCCESS) jScansPositively=1
+CALL grib_get(gaid,'jPointsAreConsecutive',jPointsAreConsecutive,ierr)
+IF (ierr /= GRIB_SUCCESS) jPointsAreConsecutive=0
 
 call grib_get(gaid,'numberOfPoints',numberOfPoints)
 call grib_get(gaid,'numberOfValues',numberOfValues)
@@ -924,19 +927,19 @@ REAL,intent(in) :: field(:,:) ! data array to be encoded
 INTEGER :: EditionNumber
 INTEGER :: alternativeRowScanning, iScansNegatively, &
  jScansPositively, jPointsAreConsecutive
-INTEGER :: x1, x2, xs, y1, y2, ys
+INTEGER :: x1, x2, xs, y1, y2, ys, ierr
 
 call grib_get(gaid,'GRIBEditionNumber',EditionNumber)
 
 if (EditionNumber == 2) then
 
-  call grib_get(gaid,'alternativeRowScanning',alternativeRowScanning)
-  if (alternativeRowScanning /= 0)then
-    call l4f_log(L4F_ERROR, "grib_api alternativeRowScanning not supported: " &
+  CALL grib_get(gaid,'alternativeRowScanning',alternativeRowScanning,ierr)
+  IF (ierr == GRIB_SUCCESS .AND. alternativeRowScanning /= 0)THEN
+    CALL l4f_log(L4F_ERROR, "grib_api alternativeRowScanning not supported: " &
      //TRIM(to_char(alternativeRowScanning)))
-    call raise_error()
+    CALL raise_error()
     RETURN
-  end if
+  ENDIF
 
 else if( EditionNumber /= 1) then
 
@@ -947,16 +950,21 @@ else if( EditionNumber /= 1) then
 
 end if
 
-call grib_get(gaid,'iScansNegatively',iScansNegatively)
-call grib_get(gaid,'jScansPositively',jScansPositively)
-call grib_get(gaid,'jPointsAreConsecutive',jPointsAreConsecutive)
+CALL grib_get(gaid,'iScansNegatively',iScansNegatively,ierr)
+IF (ierr /= GRIB_SUCCESS) iScansNegatively=0
+CALL grib_get(gaid,'jScansPositively',jScansPositively,ierr)
+IF (ierr /= GRIB_SUCCESS) jScansPositively=1
+CALL grib_get(gaid,'jPointsAreConsecutive',jPointsAreConsecutive,ierr)
+IF (ierr /= GRIB_SUCCESS) jPointsAreConsecutive=0
 
-! queste sono gia` fatte in export_gridinfo, si potrebbero evitare?!
+! these grib_sets are alredy done in gridinfo_export, but it seems
+! that it is necessary to repeat them here, they can fail with
+! unstructured grids, thus ierr
 #ifdef DEBUG
 CALL l4f_log(L4F_DEBUG, 'grib_api, Ni,Nj:'//t2c(SIZE(field,1))//','//t2c(SIZE(field,2)))
 #endif
-call grib_set(gaid,'Ni',SIZE(field,1))
-call grib_set(gaid,'Nj',SIZE(field,2))
+CALL grib_set(gaid,'Ni',SIZE(field,1), ierr)
+CALL grib_set(gaid,'Nj',SIZE(field,2), ierr)
 
 ! Transfer data field changing scanning mode from 64
 IF (iScansNegatively  == 0) THEN
