@@ -1,3 +1,9 @@
+libsim (7.1.6-3) unstable; urgency=medium
+
+  * Exclude /usr/bin/dba_qcfilter to avoid conflicts with dba-qcfilter
+
+ -- Emanuele Di Giacomo <edigiacomo@arpae.it>  Tue, 20 Jun 2023 15:36:34 +0200
+
 libsim (7.1.6-2) unstable; urgency=medium
 
   * Rebuild against dballef 9.5-2 to support BUFR
