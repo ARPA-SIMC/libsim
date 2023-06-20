@@ -36,7 +36,7 @@ contains
 
 !> Print the double precision list
 subroutine displayDoubleprecision(this)
-class(doubleprecisionList) :: this
+class(doubleprecisionList),intent(inout) :: this
 
 call this%rewind()
 do while(this%element())

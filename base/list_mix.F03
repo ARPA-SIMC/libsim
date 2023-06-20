@@ -34,7 +34,7 @@ contains
 
 !> Print the list
 subroutine displaymix(this)
-class(mixList) :: this
+class(mixList),intent(inout) :: this
 class(*), pointer :: curr
 logical :: found
 
@@ -72,7 +72,7 @@ end subroutine displaymix
 
 !> get class(*) pointed by iterator
 function currentmix(this)
-class(mixlist) :: this
+class(mixlist),intent(inout) :: this
 class(*), pointer :: Currentmix
 Currentmix => this%currentpoli()
 end function Currentmix

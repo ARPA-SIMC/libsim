@@ -626,7 +626,7 @@ contains
 
 !> print a summary of object contents
 subroutine displaydbametaanddata(this)
-class(dbametaanddataList) :: this
+class(dbametaanddataList),intent(inout) :: this
 type(dbametaanddata) :: element
 
 call this%rewind()
@@ -640,7 +640,7 @@ end subroutine displaydbametaanddata
 
 !> Get dbametaanddata pointed by iterator
 type(dbametaanddata) function currentdbametaanddata(this)
-class(dbametaanddataList) :: this
+class(dbametaanddataList),intent(inout) :: this
 class(*), pointer :: v
 
 v => this%currentpoli()
@@ -960,7 +960,7 @@ end subroutine dbaana_extrude
 
 !> print a summary of object content
 subroutine displaydbaana(this)
-class(dbaanaList) :: this
+class(dbaanaList),intent(inout) :: this
 type(dbaana) :: element
 
 call this%rewind()
@@ -2588,7 +2588,7 @@ end subroutine dbametaanddatal_extrude
 
 !> print a summary of object content
 subroutine displaydbametaanddatai(this)
-class(dbametaanddataiList) :: this
+class(dbametaanddataiList),intent(inout) :: this
 type(dbametaanddatai) :: element
 
 call this%rewind()
@@ -2667,7 +2667,7 @@ end function toarray_dbametaanddatai
 
 !> print a summary of object content
 subroutine displaydbametaanddatar(this)
-class(dbametaanddatarList) :: this
+class(dbametaanddatarList),intent(inout) :: this
 type(dbametaanddatar) :: element
 
 call this%rewind()
@@ -2748,7 +2748,7 @@ end function toarray_dbametaanddatar
 
 !> print a summary of object content
 subroutine displaydbametaanddatad(this)
-class(dbametaanddatadList) :: this
+class(dbametaanddatadList),intent(inout) :: this
 type(dbametaanddatad) :: element
 
 call this%rewind()
@@ -2826,7 +2826,7 @@ end function toarray_dbametaanddatad
 
 !> print a summary of object content
 subroutine displaydbametaanddatab(this)
-class(dbametaanddatabList) :: this
+class(dbametaanddatabList),intent(inout) :: this
 type(dbametaanddatab) :: element
 
 call this%rewind()
@@ -2905,7 +2905,7 @@ end function toarray_dbametaanddatab
 
 !> print a summary of object content
 subroutine displaydbametaanddatac(this)
-class(dbametaanddatacList) :: this
+class(dbametaanddatacList),intent(inout) :: this
 type(dbametaanddatac) :: element
 
 call this%rewind()

@@ -78,7 +78,7 @@ contains
 
 !> Print the list
 subroutine display(this)
-class(List) :: this
+class(List),intent(inout) :: this
 
 call this%rewind()
 do while(this%element())
@@ -91,7 +91,7 @@ end subroutine display
 
 !> count values in list
 integer function countelements(this)
-class(list) :: this
+class(list),intent(inout)  :: this
 
 if (.not.c_e(this%currentindex())) call this%rewind()
 countelements=this%currentindex()
@@ -108,8 +108,8 @@ end function countelements
 
 !> add class(*) to end of list
 subroutine append(this, value)
-class(list) :: this
-class(*) :: value
+class(list),intent(inout) :: this
+class(*),intent(in) :: value
 class(link), pointer :: newLink
 
 newLink => link(value)
@@ -132,7 +132,7 @@ end subroutine append
 
 !> add class(*) to beginning of list
 subroutine prepend(this, value)
-class(list) :: this
+class(list),intent(inout) :: this
 class(*) :: value
 class(link), pointer :: newLink
 
@@ -154,7 +154,7 @@ end subroutine prepend
 
 !> add class(*) to position in list
 logical function insert(this, value, index)
-class(list) :: this
+class(list),intent(inout) :: this
 class(*) :: value
 integer,optional :: index
 class(link), pointer :: newLink,nextlink
@@ -196,13 +196,13 @@ end function insert
 
 !> get index of currLink
 integer function currentindex(this)
-class(list) :: this
+class(list),intent(in) :: this
 currentindex=this%index
 end function currentindex
 
 !> reset list iterator to start
 subroutine rewind(this)
-class(list) :: this
+class(list),intent(inout) :: this
 this%currLink => this%firstLink
 if (.not. associated(this%firstLink)) then
   this%index=imiss
@@ -213,7 +213,7 @@ end subroutine rewind
 
 !> reset list iterator to end
 subroutine forward(this)
-class(list) :: this
+class(list),intent(inout) :: this
 this%currLink => this%lastLink
 if (.not. associated(this%lastLink)) then
   ! index is unknow here
@@ -224,7 +224,7 @@ end subroutine forward
 
 !> increment list iterator
 subroutine next(this)
-class(list) :: this
+class(list),intent(inout) :: this
 
 if (this%element()) then
   this%currLink => this%currLink%nextLink()
@@ -239,7 +239,7 @@ end subroutine next
 
 !> increment list iterator
 subroutine prev(this)
-class(list) :: this
+class(list),intent(inout) :: this
 
 if (this%element()) then
   this%currLink => this%currLink%prevLink()
@@ -256,7 +256,7 @@ end subroutine prev
 
 !> get value from currLink
 function currentpoli(this)
-class(list) :: this
+class(list),intent(in) :: this
 class(*), pointer :: Currentpoli
 Currentpoli => this%currLink%getValue()
 end function Currentpoli
@@ -264,7 +264,7 @@ end function Currentpoli
 
 !>return .true. if current element is associated
 logical function element(this)
-class(list) :: this
+class(list),intent(in) :: this
 
 element = associated(this%currLink)
 end function element
@@ -272,7 +272,7 @@ end function element
 !> set list iterator to index
 !! return .false. if failed
 logical function seek(this, index)
-class(list) :: this
+class(list),intent(inout) :: this
 integer :: index
 
 if (index == this%index) then
@@ -300,7 +300,7 @@ end function seek
 !> delete values from list
 !! return .true. if succes
 logical function delete(this, index)
-class(list) :: this
+class(list),intent(inout) :: this
 integer,optional :: index
 class(link),pointer :: itemtodelete
 

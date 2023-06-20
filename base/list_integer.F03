@@ -38,7 +38,7 @@ contains
 
 !> Print the integer list
 subroutine displayInteger(this)
-class(integerList) :: this
+class(integerList),intent(inout) :: this
 
 call this%rewind()
 do while(this%element())

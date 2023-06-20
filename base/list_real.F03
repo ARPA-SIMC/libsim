@@ -36,7 +36,7 @@ contains
 
 !> Print the real list
 subroutine displayReal(this)
-class(realList) :: this
+class(realList),intent(inout) :: this
 
 call this%rewind()
 do while(this%element())
