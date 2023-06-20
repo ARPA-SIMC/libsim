@@ -13,3 +13,6 @@ override_dh_auto_configure:
 	       --enable-f2003-features --enable-f2003-extended-features
 
 override_dh_auto_test:
+
+override_dh_install:
+	dh_install --exclude dba_qcfilter
