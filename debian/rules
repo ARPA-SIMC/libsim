@@ -14,6 +14,7 @@ override_dh_auto_configure:
 
 override_dh_auto_test:
 
+# Remove dba_qcfilter (provided by dba-qcfilter package)
 override_dh_auto_install:
 	dh_auto_install
-	rm -f debian/libsim/usr/bin/dba_qcfilter
+	rm debian/libsim/usr/bin/dba_qcfilter
