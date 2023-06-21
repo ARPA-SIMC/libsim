@@ -137,7 +137,6 @@ mv $RPM_BUILD_ROOT%{_includedir}/*.mod $RPM_BUILD_ROOT%{_fmoddir}
 %defattr(-,root,root)
 %{_libdir}/*.so.*
 %{_bindir}/*
-%exclude %{_bindir}/dba_qcfilter
 %{_datadir}/%{name}/*
 %{_mandir}/man1
 %dir %{_libexecdir}/%{name}

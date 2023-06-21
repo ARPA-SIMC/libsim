@@ -1,6 +1,7 @@
 AM_FCFLAGS = -I../base -I../volgrid6d -I../vol7d -I../qc -I../termolib -I../log4fortran  -I../graphics -I../alchimia
 #EXTRA_DIST = log4crc
 bin_PROGRAMS =
+noinst_PROGRAMS =
 dist_check_SCRIPTS = 
 check_PROGRAMS = 
 dist_bin_SCRIPTS =
@@ -14,8 +15,9 @@ endif
 
 if DBALLE
 
-bin_PROGRAMS += dba_qcfilter dba_transform
-dba_qcfilter_SOURCES = dba_qcfilter.F03 
+noinst_PROGRAMS += dba_qcfilter
+bin_PROGRAMS += dba_transform
+dba_qcfilter_SOURCES = dba_qcfilter.F03
 dba_qcfilter_LDADD =  ../vol7d/libsim_vol7d.la ../log4fortran/liblog4fortran.la ../qc/libsim_qc.la ../base/libsim_base.la $(LOG4C_LIBS)
 
 dba_transform_SOURCES = dba_transform.F03 
@@ -75,7 +77,7 @@ pkglibexec_PROGRAMS += vg6d_getpoint_pkauf
 vg6d_getpoint_pkauf_SOURCES = grib_api_csv.F90 vg6d_getpoint_pkauf.F90
 if DBALLE
 pkglibexec_PROGRAMS += vg6d_tcorr
-#noinst_PROGRAMS = vg6d_column
+#noinst_PROGRAMS += vg6d_column
 vg6d_tcorr_SOURCES = vg6d_tcorr.F90
 vg6d_tcorr_LDADD = ../volgrid6d/libsim_volgrid6d.la  ../vol7d/libsim_vol7d.la ../base/libsim_base.la ../log4fortran/liblog4fortran.la $(LOG4C_LIBS)
 #vg6d_column_SOURCES = vg6d_column.F90
@@ -123,7 +125,7 @@ if NCARG
 man_MANS += v7d_plot_sound.1
 endif
 if DBALLE
-man_MANS += dba_qcfilter.1 dba_transform.1
+man_MANS += dba_transform.1
 endif
 
 %.1: %
