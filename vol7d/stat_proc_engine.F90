@@ -147,9 +147,9 @@ LOGICAL,INTENT(in),OPTIONAL :: full_steps
 TYPE(datetime),INTENT(in),OPTIONAL :: start
 
 INTEGER :: i, j, k, l, dirtyrep
-INTEGER :: steps, deltas
+INTEGER :: steps
 LOGICAL :: lfull_steps, useful
-TYPE(datetime) :: pstart1, pstart2, pend1, pend2, reftime1, reftime2, tmptime
+TYPE(datetime) :: lstart, pstart1, pstart2, pend1, pend2, reftime1, reftime2, tmptime
 TYPE(vol7d_timerange) :: tmptimerange
 TYPE(arrayof_datetime) :: a_otime
 TYPE(arrayof_vol7d_timerange) :: a_otimerange
@@ -157,13 +157,8 @@ TYPE(arrayof_vol7d_timerange) :: a_otimerange
 ! compute length of cumulation step in seconds
 CALL getval(step, asec=steps)
 
-deltas = 0
-IF (PRESENT(start)) THEN
-  IF (SIZE(itime) > 0 .AND. c_e(start)) THEN ! security check
-    CALL getval(start-itime(1), asec=deltas)
-  ENDIF
-ENDIF
-
+lstart = datetime_miss
+IF (PRESENT(start)) lstart = start
 lfull_steps = optio_log(full_steps)
 
 ! create a mask of suitable timeranges
@@ -321,7 +316,11 @@ DO l = 1, SIZE(itime)
        time_definition, pstart2, pend2, reftime2)
       useful = .FALSE.
       IF (reftime2 == pend2) THEN ! analysis
-        IF (lfull_steps) THEN
+        IF (c_e(lstart)) THEN ! in analysis mode start wins over full_steps
+          IF (MOD(reftime2-lstart, step) == timedelta_0) THEN
+            useful = .TRUE.
+          ENDIF
+        ELSE IF (lfull_steps) THEN
           IF (MOD(reftime2, step) == timedelta_0) THEN
             useful = .TRUE.
           ENDIF
@@ -496,6 +495,9 @@ IF (lstart == datetime_miss) THEN ! autodetect
 ! go back to start of longest processing interval
     lstart = lstart - timedelta_new(sec=maxp2)
   ENDIF
+! full_steps is effective only in analysis mode and when start is not
+! specified (start by itself in analysis mode implies full_steps with
+! respect to start instead of absolute full steps)
   IF (optio_log(full_steps) .AND. .NOT.lforecast) THEN
     lstart = lstart - (MOD(lstart, step)) ! round to step, (should be MODULO, not MOD)
   ENDIF
