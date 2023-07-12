@@ -156,6 +156,7 @@ IF (ier /= 0 .OR. icheck /= verbose) THEN
   CALL exit(1)
 ENDIF
 
+CALL delete(csv_reader)
 CALL delete(count_list)
 CALL delete(value_list)
 

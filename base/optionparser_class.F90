@@ -52,7 +52,7 @@ TYPE option
   LOGICAL,POINTER :: destl=>NULL()
   TYPE(arrayof_logical),POINTER :: destlarr=>NULL()
   INTEGER,POINTER :: destcount=>NULL()
-  INTEGER(kind=int_b),POINTER :: help_msg(:)=>NULL()
+  INTEGER(kind=int_b),ALLOCATABLE :: help_msg(:)
 END TYPE option
 
 #define ARRAYOF_ORIGTYPE TYPE(option)
@@ -217,7 +217,7 @@ ENDIF
 this%short_opt = short_opt
 this%long_opt = long_opt
 IF (PRESENT(help)) THEN
-  CALL fchar_to_cstr_alloc(TRIM(help)//TRIM(default), this%help_msg)
+  this%help_msg = fchar_to_cstr(TRIM(help)//TRIM(default)) ! f2003 automatic alloc
 ENDIF
 this%has_default = (LEN_TRIM(default) > 0)
 
@@ -229,7 +229,7 @@ END FUNCTION option_new
 SUBROUTINE option_delete(this)
 TYPE(option),INTENT(inout) :: this ! object to destroy
 
-IF (ASSOCIATED(this%help_msg)) DEALLOCATE(this%help_msg)
+IF (ALLOCATED(this%help_msg)) DEALLOCATE(this%help_msg)
 NULLIFY(this%destc)
 NULLIFY(this%desti)
 NULLIFY(this%destr)
@@ -378,7 +378,7 @@ TYPE(line_split) :: help_line
 
 
 IF (this%opttype == opttype_sep) THEN ! special treatment for separator type
-  IF (ASSOCIATED(this%help_msg)) THEN
+  IF (ALLOCATED(this%help_msg)) THEN
 ! help2man is quite picky about the treatment of arbitrary lines
 ! within options, the only universal way seems to be unindented lines
 ! with an empty line before and after
@@ -394,7 +394,7 @@ ELSE ! ordinary option
 ! print option brief representation
   WRITE(*,'(A)')TRIM(option_format_opt(this))
 ! print option help
-  IF (ASSOCIATED(this%help_msg)) THEN
+  IF (ALLOCATED(this%help_msg)) THEN
     help_line = line_split_new(cstr_to_fchar(this%help_msg), ncols-indent)
     DO j = 1, line_split_get_nlines(help_line)
       WRITE(*,'(T10,A)')TRIM(line_split_get_line(help_line,j))
@@ -416,7 +416,7 @@ INTEGER, PARAMETER :: indent = 2
 TYPE(line_split) :: help_line
 
 IF (this%opttype == opttype_sep) THEN ! special treatment for separator type
-  IF (ASSOCIATED(this%help_msg)) THEN
+  IF (ALLOCATED(this%help_msg)) THEN
     help_line = line_split_new(cstr_to_fchar(this%help_msg), ncols)
     WRITE(*,'()')
     DO j = 1, line_split_get_nlines(help_line)
@@ -429,7 +429,7 @@ ELSE ! ordinary option
 ! print option brief representation
   WRITE(*,'(''`'',A,''`'')')TRIM(option_format_opt(this))
 ! print option help
-  IF (ASSOCIATED(this%help_msg)) THEN
+  IF (ALLOCATED(this%help_msg)) THEN
     help_line = line_split_new(cstr_to_fchar(this%help_msg), ncols-indent)
     DO j = 1, line_split_get_nlines(help_line)
       WRITE(*,'(''> '',A)')TRIM(line_split_get_line(help_line,j))
@@ -525,7 +525,7 @@ INTEGER :: j
 TYPE(line_split) :: help_line
 CHARACTER(len=20) :: form
 
-IF (ASSOCIATED(this%help_msg)) THEN
+IF (ALLOCATED(this%help_msg)) THEN
   WRITE(*,'(A,$)')' title="'
 
   help_line = line_split_new(cstr_to_fchar(this%help_msg), 80)
