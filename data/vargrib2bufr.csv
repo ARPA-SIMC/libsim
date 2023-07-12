@@ -225,10 +225,14 @@ B14194,Instantaneous direct solar radiation DWD (local),W/m^2,200,201,22,255,1.0
 B14194,Instantaneous direct solar radiation DWD (local),W/m^2,80,201,22,255,1.0,0.0
 B14194,Instantaneous direct solar radiation DWD (local),W/m^2,78,201,22,255,1.0,0.0
 B14194,Instantaneous direct solar radiation (local),W/m^2,255,4,13,0,1.0,0.0
+B14194,Instantaneous direct solar radiation DWD (local),W/m^2,78,4,198,0,1.0,0.0
+B14194,Instantaneous direct solar radiation DWD (local),W/m^2,80,4,198,0,1.0,0.0
 B14195,Instantaneous diffuse solar radiation DWD (local),W/m^2,200,201,23,255,1.0,0.0
 B14195,Instantaneous diffuse solar radiation DWD (local),W/m^2,80,201,23,255,1.0,0.0
 B14195,Instantaneous diffuse solar radiation DWD (local),W/m^2,78,201,23,255,1.0,0.0
 B14195,Instantaneous diffuse solar radiation (local),W/m^2,255,4,14,0,1.0,0.0
+B14195,Instantaneous diffuse solar radiation DWD (local),W/m^2,78,4,199,0,1.0,0.0
+B14195,Instantaneous diffuse solar radiation DWD (local),W/m^2,80,4,199,0,1.0,0.0
 B14196,Net long-wave radiation flux (surface),W/m^2,200,200,111,0,1.0,0.0
 B14196,Net long-wave radiation flux (surface),W/m^2,200,200,111,255,1.0,0.0
 B14196,Net long-wave radiation flux (surface),W/m^2,255,2,112,255,1.0,0.0
