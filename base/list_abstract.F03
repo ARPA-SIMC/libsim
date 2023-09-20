@@ -145,10 +145,10 @@ if (.not. associated(this%firstLink)) then
   this%index=1
 else
   call newLink%setnextLink(this%firstLink)
-  call this%firstLink%setNextLink(newLink)
+  call this%firstLink%setPrevLink(newLink)
 
   this%firstLink => newLink
-  this%index=this%index+1
+  this%index=1
 end if
 end subroutine prepend
 
@@ -156,19 +156,19 @@ end subroutine prepend
 logical function insert(this, value, index)
 class(list),intent(inout) :: this
 class(*) :: value
-integer,optional :: index
+integer :: index ! removed optional because of inconsistent behavior
 class(link), pointer :: newLink,nextlink
 
 newLink => link(value)
 
-if (present(index)) then
+!if (present(index)) then
   insert = this%seek(index)
   if (.not. insert) return
-else
-  insert=.true.
-end if
+!else
+!  insert=.true.
+!end if
 
-if (.not. associated(this%currLink)) then
+if (.not. this%element()) then
                                 !insert the first one
   this%firstLink => newLink
   this%lastLink  => newLink
@@ -181,11 +181,11 @@ else
                                 !break the chain and insert
   nextlink=>this%currlink%nextlink()
   call this%currLink%setNextLink(newLink)
-  call nextLink%setprevLink(newLink)
-                                !verify if it's first or last
-  if (.not. this%element())then
-    this%firstLink => newLink
-    this%lastLink => newLink
+                                !verify if it's last
+  if (associated(nextlink))then
+   call nextLink%setprevLink(newLink)
+  else
+   this%lastLink => newLink
   end if
   this%index=this%index+1
 end if
