@@ -258,7 +258,9 @@ end subroutine prev
 function currentpoli(this)
 class(list),intent(in) :: this
 class(*), pointer :: Currentpoli
-Currentpoli => this%currLink%getValue()
+class(*), pointer :: l_p
+l_p => this%currLink%getValue()
+Currentpoli => l_p
 end function Currentpoli
 
 
