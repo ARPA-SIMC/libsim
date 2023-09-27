@@ -13,8 +13,3 @@ override_dh_auto_configure:
 	       --enable-f2003-features --enable-f2003-extended-features
 
 override_dh_auto_test:
-
-# Remove dba_qcfilter (provided by dba-qcfilter package)
-override_dh_auto_install:
-	dh_auto_install
-	rm debian/libsim/usr/bin/dba_qcfilter
