@@ -454,6 +454,13 @@ END WHERE
 DO j = 1, nj
   DO i = 1, ni
     IF (c_e(index_x(i,j))) THEN ! point is inside domain
+#ifdef DEBUG
+      CALL l4f_log(L4F_DEBUG, "nearest point info: "// &
+       t2c(lon(i,j))//','//t2c(lat(i,j))//','// &
+       t2c(index_x(i,j))//','//t2c(index_y(i,j))//','// &
+       t2c(fr_land(index_x(i,j),index_y(i,j)))//','// &
+       t2c(orography(index_x(i,j),index_y(i,j))))
+#endif
 ! integer limits of maximum rectangular search area
       xf = MAX(1, NINT(gx(i,j)-1.5001D0))
       xl = MIN(nx, NINT(gx(i,j)+1.5001D0))
@@ -498,6 +505,14 @@ DO j = 1, nj
           ENDIF
         ENDDO
       ENDDO
+#ifdef DEBUG
+      CALL l4f_log(L4F_DEBUG, "PK-method point info: "// &
+       t2c(lon(i,j))//','//t2c(lat(i,j))//','// &
+       t2c(index_x(i,j))//','//t2c(index_y(i,j))//','// &
+       t2c(fr_land(index_x(i,j),index_y(i,j)))//','// &
+       t2c(orography(index_x(i,j),index_y(i,j)))//','// &
+       t2c(v7d_coord%volanar(i,hindex,1)))
+#endif
     ENDIF
 
   ENDDO
