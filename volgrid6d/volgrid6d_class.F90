@@ -3419,7 +3419,7 @@ end if
 !preserve p1 for forecast time
 if (optio_log(nostatproc)) then
   roundtimerange(:)%timerange=254
-  roundtimerange(:)%p2=imiss
+  roundtimerange(:)%p2=0
 end if
 
 
