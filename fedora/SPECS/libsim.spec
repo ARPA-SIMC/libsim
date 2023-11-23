@@ -6,7 +6,7 @@
 
 Summary: Fortran utility libraries
 Name: libsim
-Version: 7.1.7
+Version: 7.1.8
 Release: 1
 License: GPL2+
 Group: Applications/Meteo
@@ -163,6 +163,9 @@ mv $RPM_BUILD_ROOT%{_includedir}/*.mod $RPM_BUILD_ROOT%{_fmoddir}
 rm -rf %{buildroot}
 
 %changelog
+* Thu Nov 23 2023 Daniele Branchini <dbranchini@arpae.it> - 7.1.8-1
+- Set correct timerange when rounding
+
 * Mon Sep 25 2023 Daniele Branchini <dbranchini@arpae.it> - 7.1.7-1
 - Workaround for gfortran 13
 - Code modernization and cleanup
