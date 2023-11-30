@@ -192,6 +192,10 @@
 !!      having non valid data in a 2-D mask field, are kept in the
 !!      output; the other points are filled with missing values
 !!      (grid-to-grid).
+!!    - sub_type='lemaskinvalid', 'ltmaskinvalid', 'gemaskinvalid', 'gtmaskinvalid'
+!!      the input points having values <=, <, >=, > than values of a 2-D mask field
+!!      respectively, are filled with missing values, the other points are
+!!      kept as they are (grid-to-grid).
 !!    - sub_type='setinvalidto' the input points having non valid data
 !!      are set to a user-specified constant value (grid-to-grid or
 !!      sparse points-to-sparse points).
@@ -325,6 +329,7 @@ TYPE grid_transform
   LOGICAL,POINTER :: point_mask(:,:) => NULL()
   LOGICAL,POINTER :: stencil(:,:) => NULL()
   REAL,ALLOCATABLE :: coord_3d_in(:,:,:)
+  REAL,ALLOCATABLE :: val_mask(:,:)
   REAL :: val1 = rmiss
   REAL :: val2 = rmiss
   LOGICAL :: recur = .FALSE.
@@ -748,7 +753,9 @@ ELSE IF (this%trans_type == 'metamorphosis') THEN
 
   ELSE IF (this%sub_type == 'mask' .OR. this%sub_type == 'maskvalid' .OR. &
    this%sub_type == 'maskinvalid' .OR. this%sub_type == 'setinvalidto' .OR. &
-   this%sub_type == 'settoinvalid') THEN
+   this%sub_type == 'settoinvalid' .OR. this%sub_type == 'lemaskinvalid' .OR. &
+   this%sub_type == 'ltmaskinvalid' .OR. this%sub_type == 'gemaskinvalid' .OR. &
+   this%sub_type == 'gtmaskinvalid') THEN
 ! nothing to do here
   ELSE
     CALL sub_type_error()
@@ -1688,6 +1695,15 @@ ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
       this%point_mask(:,:) = .NOT.c_e(maskgrid(:,:))
     ENDIF
 
+    this%valid = .TRUE.
+
+  ELSE IF (this%trans%sub_type == 'lemaskinvalid' .OR. &
+   this%trans%sub_type == 'ltmaskinvalid' .OR. &
+   this%trans%sub_type == 'gemaskinvalid' .OR. &
+   this%trans%sub_type == 'gtmaskinvalid') THEN
+! here i can only store field for computing mask runtime
+
+    this%val_mask = maskgrid
     this%valid = .TRUE.
 
   ELSE IF (this%trans%sub_type == 'setinvalidto') THEN
@@ -3593,6 +3609,46 @@ ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
     DO k = 1, innz
       WHERE (this%point_mask(:,:))
         field_out(:,:,k) = field_in(:,:,k)
+      END WHERE
+    ENDDO
+
+  ELSE IF (this%trans%sub_type == 'lemaskinvalid') THEN
+
+    DO k = 1, innz
+      WHERE (c_e(field_in(:,:,k)) .AND. field_in(:,:,k) > this%val_mask(:,:))
+        field_out(:,:,k) = field_in(:,:,k)
+      ELSEWHERE
+        field_out(:,:,k) = rmiss
+      END WHERE
+    ENDDO
+
+  ELSE IF (this%trans%sub_type == 'ltmaskinvalid') THEN
+
+    DO k = 1, innz
+      WHERE (c_e(field_in(:,:,k)) .AND. field_in(:,:,k) >= this%val_mask(:,:))
+        field_out(:,:,k) = field_in(:,:,k)
+      ELSEWHERE
+        field_out(:,:,k) = rmiss
+      END WHERE
+    ENDDO
+
+  ELSE IF (this%trans%sub_type == 'gemaskinvalid') THEN
+
+        DO k = 1, innz
+      WHERE (c_e(field_in(:,:,k)) .AND. field_in(:,:,k) < this%val_mask(:,:))
+        field_out(:,:,k) = field_in(:,:,k)
+      ELSEWHERE
+        field_out(:,:,k) = rmiss
+      END WHERE
+    ENDDO
+
+  ELSE IF (this%trans%sub_type == 'gtmaskinvalid') THEN
+
+    DO k = 1, innz
+      WHERE (c_e(field_in(:,:,k)) .AND. field_in(:,:,k) <= this%val_mask(:,:))
+        field_out(:,:,k) = field_in(:,:,k)
+      ELSEWHERE
+        field_out(:,:,k) = rmiss
       END WHERE
     ENDDO
 
