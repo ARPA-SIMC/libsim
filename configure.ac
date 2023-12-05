@@ -1,6 +1,6 @@
 dnl Process this file with autoconf to produce a configure script.
 
-AC_INIT(libsim, 7.1.8, [dcesari@arpae.it])
+AC_INIT([libsim],[7.1.8],[dcesari@arpae.it])
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_SRCDIR([configure.ac])
 AM_INIT_AUTOMAKE([foreign])
@@ -28,11 +28,11 @@ fi
 AC_DEFINE_UNQUOTED(SIZEOF_PTR_C, $sizeof_ptr_c,
  [Fortran KIND defining an INTEGER containing a C pointer])
 
-AC_ARG_ENABLE(examples, AC_HELP_STRING([--enable-examples],
+AC_ARG_ENABLE(examples, AS_HELP_STRING([--enable-examples],
   [enable build of examples]), , [enableval=no])dnl default disable
 AM_CONDITIONAL(EXAMPLES, test "x$enableval" = "xyes")
 
-AC_ARG_ENABLE(f2003-full-features, AC_HELP_STRING([--enable-f2003-full-features],
+AC_ARG_ENABLE(f2003-full-features, AS_HELP_STRING([--enable-f2003-full-features],
   [enable full F2003 features (gfortran 4.9)]), , [enableval=no])dnl default disable
 if test "x$enableval" = "xyes"; then
   AC_DEFINE(F2003_FULL_FEATURES, 1, [Enable full F2003 features (gfortran 4.9)])
@@ -48,7 +48,7 @@ AC_PROG_FC([gfortran pgf90 ifort g95 xlf90 f90])
 F77=$FC
 AC_FC_WRAPPERS()dnl Determine how to call C from Fortran
 
-AC_ARG_ENABLE(debug-mode, AC_HELP_STRING([--enable-debug-mode],
+AC_ARG_ENABLE(debug-mode, AS_HELP_STRING([--enable-debug-mode],
   [enable debug mode]), , [enableval=no])dnl default disable
 if test "x$enableval" = "xyes"; then
 case "$FC" in
@@ -88,7 +88,7 @@ then
   FCFLAGS="$FCFLAGS -I$FMODDIR -I/usr/include"
 fi
 
-AC_ARG_ENABLE(log4c, AC_HELP_STRING([--disable-log4c],
+AC_ARG_ENABLE(log4c, AS_HELP_STRING([--disable-log4c],
   [disable use of log4c package]), , [enableval=yes])dnl default enable
 
 if test "x$enableval" = "xyes"; then
@@ -133,7 +133,7 @@ AC_COMPILE_IFELSE(
 
 AC_LANG_POP(Fortran)dnl Do the following checks in C
 
-AC_ARG_ENABLE(vapor, AC_HELP_STRING([--enable-vapor],
+AC_ARG_ENABLE(vapor, AS_HELP_STRING([--enable-vapor],
   [enable vapor support]),,[enableval=no])dnl default disable
 if test "x$enableval" = "xyes"; then
   if test "x$f2003_iso_c" = "xno"; then
@@ -150,7 +150,7 @@ else
 fi
 AM_CONDITIONAL(VAPOR, test "x$enableval" = "xyes")
 
-AC_ARG_ENABLE(alchimia, AC_HELP_STRING([--enable-alchimia],
+AC_ARG_ENABLE(alchimia, AS_HELP_STRING([--enable-alchimia],
   [enable derived variables]),,[enableval=no])dnl default disable
 if test "x$enableval" = "xyes"; then
   if test "x$f2003_iso_c" = "xno"; then
@@ -166,7 +166,7 @@ AM_CONDITIONAL(ALCHIMIA, test "x$enableval" = "xyes")
 
 AC_LANG_PUSH(Fortran)dnl Do the following checks in Fortran
 
-AC_ARG_ENABLE(shapelib, AC_HELP_STRING([--disable-shapelib],
+AC_ARG_ENABLE(shapelib, AS_HELP_STRING([--disable-shapelib],
   [disable shapelib support]),,[enableval=yes])dnl default enable
 if test "x$enableval" = "xyes"; then
   AC_COMPILE_IFELSE(
@@ -182,7 +182,7 @@ else
 fi
 AM_CONDITIONAL(SHAPELIB, test "x$enableval" = "xyes")
 
-AC_ARG_ENABLE(gdal, AC_HELP_STRING([--enable-gdal],
+AC_ARG_ENABLE(gdal, AS_HELP_STRING([--enable-gdal],
   [enable gdal support]),,[enableval=no])dnl default disable
 if test "x$enableval" = "xyes"; then
   AC_COMPILE_IFELSE(
@@ -199,7 +199,7 @@ fi
 AM_CONDITIONAL(GDAL, test "x$enableval" = "xyes")
 
 
-AC_ARG_ENABLE(dballe, AC_HELP_STRING([--disable-dballe],
+AC_ARG_ENABLE(dballe, AS_HELP_STRING([--disable-dballe],
   [disable dballe support]),,[enableval=yes])dnl default enable
 if test "x$enableval" = "xyes"; then
 
@@ -223,7 +223,7 @@ fi
 AM_CONDITIONAL(DBALLE, test "x$enableval" = "xyes")
 
 
-AC_ARG_ENABLE(gribapi, AC_HELP_STRING([--disable-gribapi],
+AC_ARG_ENABLE(gribapi, AS_HELP_STRING([--disable-gribapi],
   [disable gribapi support]),,[enableval=yes])dnl default enable
 if test "x$enableval" = "xyes"; then
 grib_api_flavor=
@@ -277,7 +277,7 @@ fi
 AM_CONDITIONAL(GRIBAPI, test "x$enableval" = "xyes")
 
 
-AC_ARG_ENABLE(ngmath, AC_HELP_STRING([--disable-ngmath],
+AC_ARG_ENABLE(ngmath, AS_HELP_STRING([--disable-ngmath],
   [disable ngmath ncarg interpolation support]),,[enableval=yes])dnl default enable
 if test "x$enableval" = "xyes"; then
 dnl search libdir
@@ -303,7 +303,7 @@ fi
 AM_CONDITIONAL(NGMATH, test "x$enableval" = "xyes")
 
 
-AC_ARG_ENABLE(ncarg, AC_HELP_STRING([--disable-ncarg],
+AC_ARG_ENABLE(ncarg, AS_HELP_STRING([--disable-ncarg],
   [disable ncar graphics]),,[enableval=yes])dnl default enable
 if test "x$enableval" = "xyes"; then
 dnl search libdir
@@ -330,7 +330,7 @@ AM_CONDITIONAL(NCARG, test "x$enableval" = "xyes")
 
 
 #we here test for f77; will be better develop a test for f90
-AC_ARG_ENABLE(netcdf, AC_HELP_STRING([--disable-netcdf],
+AC_ARG_ENABLE(netcdf, AS_HELP_STRING([--disable-netcdf],
   [disable netcdf support]),,[enableval=yes])dnl default enable
 if test "x$enableval" = "xyes"; then
   AC_CHECK_LIB([netcdff], [nf_inq_libvers],
@@ -365,11 +365,11 @@ fi
 
 AC_LANG_POP()dnl back to C
 
-AC_ARG_ENABLE(versioninfo, AC_HELP_STRING([--disable-versioninfo],
+AC_ARG_ENABLE(versioninfo, AS_HELP_STRING([--disable-versioninfo],
   [disable version information in shared libraries]),,[enableval=yes])dnl default disable
 AM_CONDITIONAL(VERSIONINFO, test "x$enableval" = "xyes")
 
-AC_ARG_ENABLE(doxydoc, AC_HELP_STRING([--disable-doxydoc],
+AC_ARG_ENABLE(doxydoc, AS_HELP_STRING([--disable-doxydoc],
   [disable generation of doxygen documentation]),,[enableval=yes])dnl default enable
 AM_CONDITIONAL(DOXYDOC, test "x$enableval" = "xyes")
 if test "x$enableval" = "xyes"; then
@@ -394,7 +394,7 @@ fi
 AC_CHECK_PROG(help2man, help2man, yes, no,,)
 AM_CONDITIONAL(HELP2MAN, test "x$help2man" = "xyes")
 
-AC_PROG_LIBTOOL
+LT_INIT
 
 pkgdocdir='${datadir}/doc/${PACKAGE}'
 AC_SUBST(pkgdocdir)
