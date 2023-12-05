@@ -6,7 +6,7 @@
 
 Summary: Fortran utility libraries
 Name: libsim
-Version: 7.1.8
+Version: 7.1.9
 Release: 1
 License: GPL2+
 Group: Applications/Meteo
@@ -163,6 +163,11 @@ mv $RPM_BUILD_ROOT%{_includedir}/*.mod $RPM_BUILD_ROOT%{_fmoddir}
 rm -rf %{buildroot}
 
 %changelog
+* Tue Dec  5 2023 Daniele Branchini <dbranchini@arpae.it> - 7.1.9-1
+- Added theta-e for grib2 (#109)
+- Flatten network in volumes used as interpolation list to avoid losing points
+- Add 4 new transformations lemaskvalid, ltmaskvalid, etc for ICON zero deg isotherm height
+
 * Thu Nov 23 2023 Daniele Branchini <dbranchini@arpae.it> - 7.1.8-1
 - Set correct timerange when rounding
 
