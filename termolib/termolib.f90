@@ -309,48 +309,42 @@ end function TE
 
 !------------------------------------------------------------------------------
 
-elemental real function TRUG(UMID,T)
-
-!  Calcola la temperatura di rugiada  secondo la stessa formula 
-!  usata per il calcolo dell'umidita` relativa, risolta per 
-!  la temperatura di rugiada. 
-! 
-!  Uso :  x = TRUG (UMID,T) 
-! 
-!  Input : 
-!  UMID       real  Umidita` relativa                        (%) 
-!  T          real  Temperatura dell'aria                    (K.) 
-! 
-!  Output : 
-!  TRUG       real  Temperatura di ruguada                   (K.) 
-!  TRUG =     rmiss  Se non e' possibile calcolarla 
+ELEMENTAL REAL FUNCTION trug(umid,t)
+!  Calcola la temperatura di rugiada  secondo la stessa formula
+!  usata per il calcolo dell'umidita` relativa, risolta per
+!  la temperatura di rugiada.
+!
+!  Uso :  x = TRUG (UMID,T)
+!
+!  Input :
+!  UMID       real  Umidita` relativa                        (%)
+!  T          real  Temperatura dell'aria                    (K.)
+!
+!  Output :
+!  TRUG       real  Temperatura di rugiada                   (K.)
+!  TRUG =     rmiss  Se non e' possibile calcolarla
 !-----------------------------------------------------------------------------
+REAL,INTENT(in) :: umid, t
+REAL :: es, e, le
 
-  real,intent(in) :: umid,t               !input
+IF (c_e(umid) .AND. c_e(t)) THEN
+  es = esat(t)                           ! >>> Calcolo la P.v.s
+  IF (c_e(es)) THEN
+    e = umid/100.*es                         ! >>> Calcolo la P.v.
+    IF (e > 0.) THEN
+      le = LOG(e/tetens_e0_hpa)
+      trug = t0c + (t0c-tetens_bw)*le/(tetens_aw - le) ! >>> Calcolo la T.d.
+    ELSE
+      trug = tetens_bw
+    ENDIF
+  ELSE
+    trug = tetens_bw
+  ENDIF
+ELSE
+  trug = rmiss
+ENDIF
 
-  real,parameter  :: D=237.3,C=17.2693882
-  real,parameter  :: psva=6.1078        !Hpa pressione di saturazione del vapore acqueo
-  real::es,e                            !variabili di lavoro
-
-  if( c_e(umid) .and. c_e(t) )then
-
-    if (umid < 0.1)then
-      trug=0.
-    else
-      es=ESAT(t)                           ! >>> Calcolo la P.v.s 
-      e=umid/100.*es                       ! >>> Calcolo la P.v. 
-      TRUG=(D*log(E/psva))/(C-log(E/psva)) ! >>> Calcolo la T.d. 
-      TRUG=TRUG+t0c                        ! >>> Calcolo la T.d. in Kelvin 
-    end if
-
-  else
-
-     TRUG=rmiss 
-
-  end if
-
-  return 
-end function TRUG
+END FUNCTION trug
  
 !----------------------------------------------------------------------------
 

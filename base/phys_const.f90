@@ -56,7 +56,7 @@ REAL,PARAMETER :: tetens_aw = 17.2694 !< a coefficient over water
 REAL,PARAMETER :: tetens_bw = 35.86 !< b coefficient over water (K)
 REAL,PARAMETER :: tetens_ai = 21.8746 !< a coefficient over ice
 REAL,PARAMETER :: tetens_bi = 7.66 !< b coefficient over ice (K)
-REAL,PARAMETER :: tetens_e0_hpa = 6.078 !< saturated water vapour pressute at 0C in hPa
+REAL,PARAMETER :: tetens_e0_hpa = 6.1078 !< saturated water vapour pressure at 0C in hPa
 
 END MODULE phys_const
 
@@ -102,7 +102,7 @@ DOUBLEPRECISION,PARAMETER :: tetens_aw = 17.2694D0 !< a coefficient over water
 DOUBLEPRECISION,PARAMETER :: tetens_bw = 35.86D0 !< b coefficient over water (K)
 DOUBLEPRECISION,PARAMETER :: tetens_ai = 21.8746D0 !< a coefficient over ice
 DOUBLEPRECISION,PARAMETER :: tetens_bi = 7.66D0 !< b coefficient over ice (K)
-DOUBLEPRECISION,parameter :: tetens_e0_hpa = 6.078D0 !< saturated water vapour pressute at 0C in hPa
+DOUBLEPRECISION,parameter :: tetens_e0_hpa = 6.1078D0 !< saturated water vapour pressure at 0C in hPa
 
 END MODULE doubleprecision_phys_const
 

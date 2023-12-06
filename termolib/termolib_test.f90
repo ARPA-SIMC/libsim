@@ -78,6 +78,27 @@ DO k = 0, 10
   ENDDO
 ENDDO
 
+! big errors especially at t<0C
+!PRINT*,'Checking td2'
+!DO k = 0, 10
+!  p = 10**(4.+REAL(k)/10.)
+!  DO i = 1, 60
+!    t = 200.+2.*REAL(i)
+!    DO j = 1, 100
+!      rh = j
+!      td = trug(rh, t)
+!      q = relhumtoq(rh, p/100., t)
+!      tdc = td_pq(p/100.,q)
+!      IF (c_e(td) .AND. c_e(tdc)) THEN
+!        IF (ABS(td-tdc) > 0.2 .AND. q > 0) THEN
+!          PRINT*,'td2 err',ABS(td-tdc),'at',p,t,rh,q,td,tdc
+!          err = .TRUE.
+!        ENDIF
+!      ENDIF
+!    ENDDO
+!  ENDDO
+!ENDDO
+
 PRINT*,'Checking tw'
 DO k = 0, 10
   p = 10**(4.+REAL(k)/10.)
