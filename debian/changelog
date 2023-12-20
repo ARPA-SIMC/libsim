@@ -1,3 +1,16 @@
+libsim (7.1.9-1) unstable; urgency=medium
+
+  * Added theta-e for grib2 (#109)
+  * Flatten network in volumes used as interpolation list to avoid losing points
+  * Add 4 new transformations lemaskvalid, ltmaskvalid, etc for ICON zero deg isotherm height
+  * Set correct timerange when rounding
+  * Workaround for gfortran 13
+  * Code modernization and cleanup
+  * Added grib2 entries for solar radiation
+  * Do not package dba_qcfilter (#105)
+
+ -- Emanuele Di Giacomo <edigiacomo@arpae.it>  Wed, 20 Dec 2023 11:32:35 +0200
+
 libsim (7.1.6-7) unstable; urgency=medium
 
   * Exclude /usr/bin/dba_qcfilter again
