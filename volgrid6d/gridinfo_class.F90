@@ -1819,7 +1819,7 @@ ELSE IF (this%timerange%timerange == 257) THEN ! COSMO-nudging
     IF (this%var%discipline == 255 .AND. &
      ANY(this%var%centre == cosmo_centre)) THEN ! grib1 & COSMO
 
-      IF (this%var%category == 2) THEN ! table 2
+      IF (this%var%category >= 1 .AND. this%var%category <= 3) THEN ! WMO table 2
 
         if (this%var%number == 11) then ! T
           this%timerange%timerange=0 ! average
@@ -2093,7 +2093,8 @@ IF (this%var%discipline == 255 .AND. &
   ENDIF ! table 128
 ENDIF ! grib1 & ECMWF
 
-IF (this%var%discipline == 255 .AND. this%var%category == 2) THEN ! grib1 table 2
+IF (this%var%discipline == 255 .AND. &
+ this%var%category >= 1 .AND. this%var%category <= 3) THEN ! grib1 WMO table 2
 
 ! set cloud cover to bufr style
   IF (this%var%number == 73) THEN ! low cloud cover

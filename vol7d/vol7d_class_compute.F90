@@ -167,12 +167,13 @@ ELSE IF (stat_proc_input == stat_proc .OR. &
      step, start, full_steps, frac_valid, &
      other=other, stat_proc_input=stat_proc_input)
     CALL vol7d_recompute_stat_proc_diff(this, that2, stat_proc, &
-     step, full_steps, other=other1)
+     step, full_steps, start, other=other1)
     CALL vol7d_merge(other, other1, sort=.TRUE.)
   ELSE
     CALL vol7d_recompute_stat_proc_agg(this, that1, stat_proc, &
      step, start, full_steps, frac_valid, stat_proc_input=stat_proc_input)
-    CALL vol7d_recompute_stat_proc_diff(this, that2, stat_proc, step, full_steps)
+    CALL vol7d_recompute_stat_proc_diff(this, that2, stat_proc, step, full_steps, &
+     start)
   ENDIF
 
   CALL vol7d_merge(that1, that2, sort=.TRUE.)
@@ -818,12 +819,13 @@ END SUBROUTINE vol7d_decompute_stat_proc
 !!
 !! Input volume may have any value of \a this%time_definition, and
 !! that value will be conserved in the output volume.
-SUBROUTINE vol7d_recompute_stat_proc_diff(this, that, stat_proc, step, full_steps, other)
+SUBROUTINE vol7d_recompute_stat_proc_diff(this, that, stat_proc, step, full_steps, start, other)
 TYPE(vol7d),INTENT(inout) :: this !< volume providing data to be recomputed, it is not modified by the method, apart from performing a \a vol7d_alloc_vol on it
 TYPE(vol7d),INTENT(out) :: that !< output volume which will contain the recomputed data
 INTEGER,INTENT(in) :: stat_proc !< type of statistical processing to be recomputed (from grib2 table), only data having timerange of this type will be recomputed and will appear in the output volume
 TYPE(timedelta),INTENT(in) :: step !< length of the step over which the statistical processing is performed
 LOGICAL,INTENT(in),OPTIONAL :: full_steps !< if provided and \a .TRUE., process only data having processing interval (p2) equal to a multiplier of \a step
+TYPE(datetime),INTENT(in),OPTIONAL :: start !< start of statistical processing interval
 TYPE(vol7d),INTENT(out),OPTIONAL :: other !< optional volume that, on exit, is going to contain the data that did not contribute to the statistical processing
 
 INTEGER :: i1, i3, i5, i6, i, j, k, l, nitr, steps
@@ -845,7 +847,7 @@ CALL getval(step, asec=steps)
 ! timerange are defined here
 CALL recompute_stat_proc_diff_common(this%time, this%timerange, stat_proc, step, &
  that%time, that%timerange, map_tr, f, keep_tr, &
- this%time_definition, full_steps)
+ this%time_definition, full_steps, start)
 nitr = SIZE(f)
 
 ! complete the definition of the empty output template

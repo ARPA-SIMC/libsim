@@ -695,7 +695,7 @@ IF (c_e(coord_file)) THEN
   ELSE IF (coord_format == 'BUFR' .OR. coord_format == 'CREX' .OR. coord_format == 'JSON') THEN
     CALL init(v7d_dba, filename=coord_file, format=coord_format, file=.TRUE., &
      write=.FALSE., categoryappend="anagrafica")
-    CALL import(v7d_dba) ! , anaonly=.TRUE.)
+    CALL import(v7d_dba, set_network=vol7d_network_new('ana')) ! , anaonly=.TRUE.)
     v7d_coord = v7d_dba%vol7d
 ! destroy v7d_ana without deallocating the contents passed to v7d
     CALL init(v7d_dba%vol7d)

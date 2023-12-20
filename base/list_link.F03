@@ -53,7 +53,7 @@ this%prev => prev
 end subroutine setPrevLink
 
 function getValue(this)
-class(link) :: this
+class(link),intent(in) :: this
 class(*), pointer :: getValue
 getValue => this%value
 end function getValue
@@ -61,7 +61,7 @@ end function getValue
 !> Constructor
 function constructor(value)
 type(link),pointer :: constructor
-class(*) :: value !< value for list
+class(*),intent(in) :: value !< value for list
 allocate(constructor)
 constructor%prev => null()
 constructor%next => null()

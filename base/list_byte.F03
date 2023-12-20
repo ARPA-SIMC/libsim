@@ -37,7 +37,7 @@ contains
 
 !> Print the byte list
 subroutine displayByte(this)
-class(byteList) :: this
+class(byteList),intent(inout) :: this
 
 call this%rewind()
 do while(this%element())

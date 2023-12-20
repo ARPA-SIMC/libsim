@@ -290,8 +290,10 @@ LOGICAL :: res
 
 IF (this%discipline == that%discipline) THEN
 
-  IF (this%discipline == 255) THEN ! grib1
-    res = this%category == that%category .AND. &
+  IF (this%discipline == 255) THEN ! grib1, WMO tables are all equivalent
+    res = ((this%category == that%category) .OR. &
+    (this%category >= 1 .AND. this%category <=3 .AND. &
+     that%category >= 1 .AND. that%category <=3)) .AND. &
      this%number == that%number
 
     IF ((this%category >= 128 .AND. this%category <= 254) .OR. &
