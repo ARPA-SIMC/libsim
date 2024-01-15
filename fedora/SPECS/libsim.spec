@@ -6,7 +6,7 @@
 
 Summary: Fortran utility libraries
 Name: libsim
-Version: 7.1.9
+Version: 7.1.10
 Release: 1
 License: GPL2+
 Group: Applications/Meteo
@@ -16,29 +16,12 @@ Source: https://github.com/arpa-simc/%{name}/archive/v%{version}-%{release}.tar.
 
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot
 
-%if 0%{?fedora} < 9
-%define _fmoddir %{_libdir}/gfortran/modules
-%endif
-
-%if 0%{?fedora} <= 24
-# grib_api is used only on older fedoras
-%define grib_sw grib_api
-%else
-%define grib_sw eccodes
-BuildRequires: eccodes-simc
-%endif
-
-%if 0%{?rhel} >= 7
-# expliciting eccodes for centos 7 and 8
-%define grib_sw eccodes
-BuildRequires: eccodes-simc
-%endif
-
 %{?with_vapor:BuildRequires: vapor-devel}
 
 BuildRequires: pkgconfig(libdballef) >= 7.6
 BuildRequires: pkgconfig(libdballe)
-BuildRequires: %{grib_sw}-devel
+BuildRequires: eccodes-devel
+BuildRequires: eccodes-simc
 BuildRequires: help2man
 BuildRequires: log4c log4c-devel
 BuildRequires: gdal-devel
@@ -63,14 +46,14 @@ BuildRequires: shapelib-devel
 BuildRequires: proj-devel
 BuildRequires: popt-devel
 BuildRequires: freetype-devel
-Requires: %{grib_sw}
+Requires: eccodes
 
 %package -n libsim-devel
 
 Requires: fortrangis-devel
 Requires: libdballef-devel >= 7.6
 Requires: libdballe-devel
-Requires: %{grib_sw}-devel
+Requires: eccodes-devel
 Requires: help2man
 Requires: log4c
 Requires: log4c-devel
@@ -128,10 +111,8 @@ make check
 %install
 [ "%{buildroot}" != / ] && rm -rf %{buildroot}
 %makeinstall
-%if 0%{?fedora} >= 9 || 0%{?rhel}
 mkdir -p $RPM_BUILD_ROOT%{_fmoddir}
 mv $RPM_BUILD_ROOT%{_includedir}/*.mod $RPM_BUILD_ROOT%{_fmoddir}
-%endif
 
 %files
 %defattr(-,root,root)
@@ -147,11 +128,7 @@ mv $RPM_BUILD_ROOT%{_includedir}/*.mod $RPM_BUILD_ROOT%{_fmoddir}
 %exclude %{_libdir}/*.la
 %{_libdir}/*.so
 %{_libdir}/pkgconfig/%{name}.pc
-%if 0%{?fedora} >= 9 || 0%{?rhel}
 %{_fmoddir}/*.mod
-%else
-%{_includedir}/*
-%endif
 %{?with_vapor:%{_includedir}/vdf4f_c.h}
 
 %files -n libsim-doc
@@ -163,6 +140,11 @@ mv $RPM_BUILD_ROOT%{_includedir}/*.mod $RPM_BUILD_ROOT%{_fmoddir}
 rm -rf %{buildroot}
 
 %changelog
+* Mon Jan 15 2024 Daniele Branchini <dbranchini@arpae.it> - 7.1.10-1
+- Added grib2 cloud cover
+- Fixed value of saturated water vapour pressure at 0C and improve computation of Td
+- Dropped support for fedora <=24
+
 * Tue Dec  5 2023 Daniele Branchini <dbranchini@arpae.it> - 7.1.9-1
 - Added theta-e for grib2 (#109)
 - Flatten network in volumes used as interpolation list to avoid losing points
