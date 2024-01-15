@@ -451,6 +451,7 @@ B15241,Aerosol Optical Thickness (local),numeric,200,195,200,255,1.0,0.0
 B20001,Visibility,m,255,19,0,0,1.0,0.0
 B20001,Visibility,m,255,2,20,255,1.0,0.0
 B20001,Visibility,m,98,3,20,255,1.0,0.0
+B20010,Total cloud cover,Percent,255,6,22,0,1.0,0.0
 B20010,Total cloud cover,Percent,255,6,1,0,1.0,0.0
 B20010,Total cloud cover,Percent,255,2,71,255,1.0,0.0
 B20010,High cloud cover,Percent,255,2,75,255,1.0,0.0
