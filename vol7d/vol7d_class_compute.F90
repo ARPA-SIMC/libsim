@@ -176,7 +176,7 @@ ELSE IF (stat_proc_input == stat_proc .OR. &
      start)
   ENDIF
 
-  CALL vol7d_merge(that1, that2, sort=.TRUE.)
+  CALL vol7d_merge(that1, that2, sort=.TRUE., bestdata=.TRUE.)
   CALL delete(that2)
   that = that1
 ELSE ! IF (stat_proc_input /= stat_proc) THEN
