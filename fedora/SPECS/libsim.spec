@@ -6,7 +6,7 @@
 
 Summary: Fortran utility libraries
 Name: libsim
-Version: 7.1.10
+Version: 7.1.11
 Release: 1
 License: GPL2+
 Group: Applications/Meteo
@@ -140,6 +140,9 @@ mv $RPM_BUILD_ROOT%{_includedir}/*.mod $RPM_BUILD_ROOT%{_fmoddir}
 rm -rf %{buildroot}
 
 %changelog
+* Wed Feb 21 2024 Daniele Branchini <dbranchini@arpae.it> - 7.1.11-1
+- Intelligently merge volumes after stat_proc in order not to loose precious data
+
 * Mon Jan 15 2024 Daniele Branchini <dbranchini@arpae.it> - 7.1.10-1
 - Added grib2 cloud cover
 - Fixed value of saturated water vapour pressure at 0C and improve computation of Td
