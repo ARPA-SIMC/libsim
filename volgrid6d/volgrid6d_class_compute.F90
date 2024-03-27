@@ -129,7 +129,44 @@ ELSE IF (stat_proc == 254) THEN
    'statistical processing to instantaneous data not implemented for gridded fields')
   CALL raise_error()
 
-ELSE IF (stat_proc_input /= stat_proc) THEN
+ELSE IF (stat_proc_input == stat_proc .OR. &
+ (stat_proc == 0 .OR. stat_proc == 2 .OR. stat_proc == 3)) THEN
+! avg, min and max can be computed from any input, with care
+
+  IF (COUNT(this%timerange(:)%timerange == stat_proc_input) == 0) THEN
+    CALL l4f_category_log(this%category, L4F_WARN, &
+     'no timeranges of the desired statistical processing type '//t2c(stat_proc)//' available')
+! return an empty volume, without signaling error
+    CALL init(that)
+    CALL volgrid6d_alloc_vol(that)
+
+  ELSE
+! euristically determine whether aggregation or difference is more suitable
+    dtmax = MAXVAL(this%timerange(:)%p2, &
+     mask=(this%timerange(:)%timerange == stat_proc))
+    CALL getval(step, asec=dtstep)
+
+#ifdef DEBUG
+    CALL l4f_category_log(this%category, L4F_DEBUG, &
+     'stat_proc='//t2c(stat_proc)//' dtmax='//t2c(dtmax)//' dtstep='//t2c(dtstep))
+#endif
+
+    IF (dtstep < dtmax) THEN
+      CALL l4f_category_log(this%category, L4F_INFO, &
+     'recomputing statistically processed data by difference '// &
+     t2c(stat_proc_input)//':'//t2c(stat_proc))
+      CALL volgrid6d_recompute_stat_proc_diff(this, that, stat_proc, step, &
+       full_steps, start, clone)
+    ELSE
+      CALL l4f_category_log(this%category, L4F_INFO, &
+       'recomputing statistically processed data by aggregation '// &
+       t2c(stat_proc_input)//':'//t2c(stat_proc))
+      CALL volgrid6d_recompute_stat_proc_agg(this, that, stat_proc, step, start, &
+       full_steps, frac_valid, clone, stat_proc_input)
+    ENDIF
+  ENDIF
+
+ELSE ! IF (stat_proc_input /= stat_proc) THEN
   IF ((stat_proc_input == 0 .AND. stat_proc == 1) .OR. &
    (stat_proc_input == 1 .AND. stat_proc == 0)) THEN
     CALL l4f_category_log(this%category, L4F_INFO, &
@@ -142,38 +179,6 @@ ELSE IF (stat_proc_input /= stat_proc) THEN
    'statistical processing '//t2c(stat_proc_input)//':'//t2c(stat_proc)// &
    ' not implemented or does not make sense')
     CALL raise_error()
-  ENDIF
-
-ELSE IF (COUNT(this%timerange(:)%timerange == stat_proc) == 0) THEN
-  CALL l4f_category_log(this%category, L4F_WARN, &
-   'no timeranges of the desired statistical processing type '//t2c(stat_proc)//' available')
-! return an empty volume, without signaling error
-  CALL init(that)
-  CALL volgrid6d_alloc_vol(that)
-
-ELSE
-! euristically determine whether aggregation or difference is more suitable
-  dtmax = MAXVAL(this%timerange(:)%p2, &
-   mask=(this%timerange(:)%timerange == stat_proc))
-  CALL getval(step, asec=dtstep)
-
-#ifdef DEBUG
-  CALL l4f_category_log(this%category, L4F_DEBUG, &
-   'stat_proc='//t2c(stat_proc)//' dtmax='//t2c(dtmax)//' dtstep='//t2c(dtstep))
-#endif
-
-  IF (dtstep < dtmax) THEN
-    CALL l4f_category_log(this%category, L4F_INFO, &
-     'recomputing statistically processed data by difference '// &
-     t2c(stat_proc_input)//':'//t2c(stat_proc))
-    CALL volgrid6d_recompute_stat_proc_diff(this, that, stat_proc, step, &
-     full_steps, start, clone)
-  ELSE
-    CALL l4f_category_log(this%category, L4F_INFO, &
-     'recomputing statistically processed data by aggregation '// &
-     t2c(stat_proc_input)//':'//t2c(stat_proc))
-    CALL volgrid6d_recompute_stat_proc_agg(this, that, stat_proc, step, start, &
-     full_steps, frac_valid, clone)
   ENDIF
 
 ENDIF
@@ -224,7 +229,7 @@ END SUBROUTINE volgrid6d_compute_stat_proc
 !! which has been done, in the previous case, for example, the
 !! temperatures will simply look like monthly average temperatures.
 SUBROUTINE volgrid6d_recompute_stat_proc_agg(this, that, stat_proc, &
- step, start, full_steps, frac_valid, clone)
+ step, start, full_steps, frac_valid, clone, stat_proc_input)
 TYPE(volgrid6d),INTENT(inout) :: this !< volume providing data to be recomputed, it is not modified by the method, apart from performing a \a volgrid6d_alloc_vol on it
 TYPE(volgrid6d),INTENT(out) :: that !< output volume which will contain the recomputed data
 INTEGER,INTENT(in) :: stat_proc !< type of statistical processing to be recomputed (from grib2 table), only data having timerange of this type will be recomputed and will appear in the output volume
@@ -233,6 +238,7 @@ TYPE(datetime),INTENT(in),OPTIONAL :: start !< start of statistical processing i
 LOGICAL,INTENT(in),OPTIONAL :: full_steps !< if \a .TRUE. and \a start is not provided, apply processing only on intervals starting at a forecast time or a reference time modulo \a step
 REAL,INTENT(in),OPTIONAL :: frac_valid !< minimum fraction of valid data required for considering acceptable a recomputed value, default=1.
 LOGICAL, INTENT(in),OPTIONAL :: clone !< if provided and \c .TRUE. , clone the gaid's from \a this to \a that
+INTEGER,INTENT(in),OPTIONAL :: stat_proc_input !< to be used with care, type of statistical processing of data that has to be processed (from grib2 table), only data having timerange of this type will be recomputed, the actual statistical processing performed and which will appear in the output volume, is however determined by \a stat_proc argument
 
 INTEGER :: tri
 INTEGER i, j, n, n1, ndtr, i3, i6
@@ -244,7 +250,11 @@ REAL,POINTER :: voldatiin(:,:), voldatiout(:,:)
 
 
 NULLIFY(voldatiin, voldatiout)
-tri = stat_proc
+IF (PRESENT(stat_proc_input)) THEN
+  tri = stat_proc_input
+ELSE
+  tri = stat_proc
+ENDIF
 IF (PRESENT(frac_valid)) THEN
   lfrac_valid = frac_valid
 ELSE
