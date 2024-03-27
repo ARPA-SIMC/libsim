@@ -15,15 +15,10 @@ endif
 
 if DBALLE
 
-noinst_PROGRAMS += dba_qcfilter
 bin_PROGRAMS += dba_transform
-dba_qcfilter_SOURCES = dba_qcfilter.F03
-dba_qcfilter_LDADD =  ../vol7d/libsim_vol7d.la ../log4fortran/liblog4fortran.la ../qc/libsim_qc.la ../base/libsim_base.la $(LOG4C_LIBS)
 
 dba_transform_SOURCES = dba_transform.F03 
 dba_transform_LDADD =  ../vol7d/libsim_vol7d.la ../log4fortran/liblog4fortran.la ../qc/libsim_qc.la ../base/libsim_base.la $(LOG4C_LIBS)
-
-dist_check_SCRIPTS += dba_qcfilter_test.sh
 
 if SHAPELIB
 bin_PROGRAMS += v7d_qccli v7d_qctem
