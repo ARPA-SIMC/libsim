@@ -151,7 +151,7 @@ ELSE IF (stat_proc_input == stat_proc .OR. &
      'stat_proc='//t2c(stat_proc)//' dtmax='//t2c(dtmax)//' dtstep='//t2c(dtstep))
 #endif
 
-    IF (dtstep < dtmax) THEN
+    IF (dtstep <= dtmax) THEN
       CALL l4f_category_log(this%category, L4F_INFO, &
      'recomputing statistically processed data by difference '// &
      t2c(stat_proc_input)//':'//t2c(stat_proc))
