@@ -118,17 +118,6 @@ else
 fi
 AM_CONDITIONAL(VAPOR, test "x$enableval" = "xyes")
 
-AC_ARG_ENABLE(alchimia, AS_HELP_STRING([--enable-alchimia],
-  [enable derived variables]),,[enableval=no])dnl default disable
-if test "x$enableval" = "xyes"; then
-  AC_MSG_RESULT([alchimia code included])
-  AC_DEFINE(ALCHIMIA, 1, [Enable alchimia code])
-else
-  AC_MSG_RESULT([alchimia code not included])
-fi
-AM_CONDITIONAL(ALCHIMIA, test "x$enableval" = "xyes")
-
-
 AC_LANG_PUSH(Fortran)dnl Do the following checks in Fortran
 
 AC_ARG_ENABLE(shapelib, AS_HELP_STRING([--disable-shapelib],
