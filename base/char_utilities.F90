@@ -315,7 +315,7 @@ END FUNCTION trim_byte_to_char_miss
 ! Version with character argument, please use the generic \a to_char
 ! rather than this function directly. It is almost useless, just
 ! provided for completeness.
-ELEMENTAL_UNLESSXLF FUNCTION char_to_char(in) RESULT(char)
+ELEMENTAL FUNCTION char_to_char(in) RESULT(char)
 CHARACTER(len=*),INTENT(in) :: in ! value to be represented as CHARACTER
 CHARACTER(len=LEN(in)) :: char
 
@@ -324,7 +324,7 @@ char = in
 END FUNCTION char_to_char
 
 
-ELEMENTAL_UNLESSXLF FUNCTION char_to_char_miss(in, miss) RESULT(char)
+ELEMENTAL FUNCTION char_to_char_miss(in, miss) RESULT(char)
 CHARACTER(len=*),INTENT(in) :: in ! value to be represented as CHARACTER
 CHARACTER(len=*),INTENT(in) :: miss ! replacement for missing value
 CHARACTER(len=MAX(LEN(in),LEN(miss))) :: char
@@ -655,7 +655,7 @@ END FUNCTION LowerCase
 !! number of leading/trailing blanks is added or removed at the
 !! beginning and/or at the end in order to keep the length of the
 !! resulting string equal to the input length.
-ELEMENTAL_UNLESSXLF FUNCTION align_center(input_string) RESULT(aligned)
+ELEMENTAL FUNCTION align_center(input_string) RESULT(aligned)
 CHARACTER(len=*), INTENT(in) :: input_string !< string to be aligned
 
 CHARACTER(len=LEN(input_string)) :: aligned
@@ -965,7 +965,7 @@ END FUNCTION Suffixname
 !! keeping only "good" characters (argument \a goodchar).  If neither
 !! \a badchar nor \a goodchar are provided, it keeps only alphabetic
 !! ASCII characters.
-ELEMENTAL_UNLESSXLF FUNCTION wash_char(in, goodchar, badchar) RESULT(char)
+ELEMENTAL FUNCTION wash_char(in, goodchar, badchar) RESULT(char)
 CHARACTER(len=*),INTENT(in) :: in !< string to be cleaned
 CHARACTER(len=*),INTENT(in),OPTIONAL :: badchar !< optional set of "bad" characters
 CHARACTER(len=*),INTENT(in),OPTIONAL :: goodchar !< optional set of "good" characters

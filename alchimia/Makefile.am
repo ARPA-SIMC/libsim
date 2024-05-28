@@ -1,6 +1,3 @@
-
-if ALCHIMIA
-
 lib_LTLIBRARIES = libsim_alchimia.la
 
 include_HEADERS =
@@ -29,8 +26,6 @@ nodist_include_HEADERS = $(tmpvar3:.F90=.mod)
 
 if VERSIONINFO
 libsim_alchimia_la_LDFLAGS += -version-info @LIBSIM_VERSION_INFO@
-endif
-
 endif
 
 mostlyclean-compile:

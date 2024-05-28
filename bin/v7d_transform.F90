@@ -47,11 +47,9 @@ USE modqc
 #ifdef HAVE_SHAPELIB
 USE modqccli
 #endif
-#ifdef ALCHIMIA
 USE alchimia
 use vol7d_alchimia_class
 USE termo
-#endif
 
 IMPLICIT NONE
 
@@ -125,10 +123,8 @@ CHARACTER(len=160) :: post_trans_type
 TYPE(vol7d_serialize_csv) :: v7d_csv
 TYPE(vol7d_serialize_csvdba) :: v7d_csvdba
 TYPE(vol7d_serialize_geojson) :: v7d_geojson
-#ifdef ALCHIMIA
 type(fndsv) :: vfn,vfnoracle
 !character(len=10), allocatable:: mybin(:)
-#endif
 
 !questa chiamata prende dal launcher il nome univoco
 CALL l4f_launcher(a_name,a_name_force="v7d_transform")
@@ -405,12 +401,10 @@ CALL v7d_csv%vol7d_serialize_optionparser(opt, 'csv')
 CALL v7d_csvdba%vol7d_serialize_optionparser(opt, 'csv')
 CALL v7d_geojson%vol7d_serialize_optionparser(opt, 'geojson')
 
-#ifdef ALCHIMIA
 CALL optionparser_add(opt, '', 'output-variable-list', output_variable_list, '', help= &
  'list of data variables you require in output; if they are not in input they will be computed if possible. &
  &The output_variable_list is expressed in the form of a comma-separated list of B-table alphanumeric codes, &
  &e.g. ''B13011,B12101''')
-#endif
 
 CALL optionparser_add(opt, ' ', 'rounding', round, help= &
  'simplifies volume, merging similar levels and timeranges')
@@ -550,7 +544,6 @@ ELSE ! argument not provided => all attributes
   alqc(1) = cmiss ! 1 element missing means all attributes
 ENDIF
 
-#ifdef ALCHIMIA
 ! generate variable lists
 IF (LEN_TRIM(output_variable_list) > 0) THEN
   n = word_split(output_variable_list, w_s, w_e, ',')
@@ -560,7 +553,6 @@ IF (LEN_TRIM(output_variable_list) > 0) THEN
   ENDDO
   DEALLOCATE(w_s, w_e)
 ENDIF
-#endif
 
 ! time-related arguments
 IF (start_date /= '') THEN
@@ -1062,7 +1054,6 @@ IF (comp_sort) THEN
 ENDIF
 
 
-#ifdef ALCHIMIA
 if (output_variable_list /= " ") then
 
   CALL register_termo(vfn)
@@ -1086,7 +1077,6 @@ if (output_variable_list /= " ") then
     CALL raise_fatal_error()
   ENDIF
 end if
-#endif
 
 
 #ifdef HAVE_SHAPELIB
@@ -1355,11 +1345,8 @@ ENDIF
 ! finalization done once here
 CALL delete(v7d)
 
-#ifdef ALCHIMIA
 call delete(vfn)
 call delete(vfnoracle)
-#endif
-
 
 ier = l4f_fini()
 

@@ -61,24 +61,6 @@ esac
 AC_DEFINE(DEBUG, 1, [Enable debugging mode])
 fi
 
-ELEMENTAL_UNLESSXLF=ELEMENTAL
-dnl options to be added compulsorily for particular compilers
-dnl -fbackslash required in char_utilities.f90 for '\\'
-case "$FC" in
-  *xlf*)
-# -qextname: external names with underscore
-# -WF,-C!: remove C comments from preprocessed (Fortran) code
-  FCFLAGS="$FCFLAGS -qextname -WF,-C!"
-#  FCFLAGS="$FCFLAGS -qextname -F "'$(abs_top_builddir)/portability/xlf.cfg'
-  ELEMENTAL_UNLESSXLF="PURE"
-;;
-  *gfortran*)
-  FCFLAGS="$FCFLAGS -fbackslash"
-;;
-esac
-
-AC_DEFINE_UNQUOTED(ELEMENTAL_UNLESSXLF, $ELEMENTAL_UNLESSXLF, [Disable some elemental functions on xlf])
-
 dnl Locate fortran module directory on Debian systems
 AC_PATH_PROG([DPKG_ARCHITECTURE], [dpkg-architecture])
 if test x$DPKG_ARCHITECTURE != x
@@ -120,25 +102,11 @@ AM_CONDITIONAL(LOG4C, test "x$dummy_log4fortran" != "xyes")
 AC_LANG_PUSH(Fortran)dnl Do the following checks in Fortran
 AC_FC_SRCEXT(f90)dnl and use .f90 extension
 
-
-dnl check for Fortran 2003 ISO_C_BINDING intrinsic module
-AC_COMPILE_IFELSE(
-[AC_LANG_PROGRAM(,[[       USE, INTRINSIC :: iso_c_binding]])],
-                          [AC_MSG_RESULT([Fortran 2003 C bindings found!])]
-                          f2003_iso_c=yes,
-                          [AC_MSG_ERROR([Fortran 2003 C bindings not found!])]
-                          f2003_iso_c=no
-)
-
-
 AC_LANG_POP(Fortran)dnl Do the following checks in C
 
 AC_ARG_ENABLE(vapor, AS_HELP_STRING([--enable-vapor],
   [enable vapor support]),,[enableval=no])dnl default disable
 if test "x$enableval" = "xyes"; then
-  if test "x$f2003_iso_c" = "xno"; then
-    AC_MSG_ERROR([VAPOR support requires a fortran compiler with iso_c_binding])
-  fi
   AC_MSG_RESULT([vapor code included])
   AC_DEFINE(VAPOR, 1, [Enable vapor code])
   VAPOR_CPPFLAGS="-I/usr/include/vapor"
@@ -153,9 +121,6 @@ AM_CONDITIONAL(VAPOR, test "x$enableval" = "xyes")
 AC_ARG_ENABLE(alchimia, AS_HELP_STRING([--enable-alchimia],
   [enable derived variables]),,[enableval=no])dnl default disable
 if test "x$enableval" = "xyes"; then
-  if test "x$f2003_iso_c" = "xno"; then
-    AC_MSG_ERROR([ALCHIMIA support requires a fortran compiler with 2003 features])
-  fi
   AC_MSG_RESULT([alchimia code included])
   AC_DEFINE(ALCHIMIA, 1, [Enable alchimia code])
 else
@@ -203,9 +168,6 @@ AC_ARG_ENABLE(dballe, AS_HELP_STRING([--disable-dballe],
   [disable dballe support]),,[enableval=yes])dnl default enable
 if test "x$enableval" = "xyes"; then
 
-  if test "x$MY_F2003_EXTENDED_FEATURES" = "xno"; then
-     AC_MSG_ERROR([dballe enabled without F2003_EXTENDED_FEATURES])
-  fi
   PKG_CHECK_EXISTS([libdballef >= 6.0], [enableval=yes], [enableval=no])
   if test "x$enableval" = "xyes"; then
     AC_MSG_RESULT([dballe code requested and found])

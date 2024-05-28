@@ -97,11 +97,9 @@ dballe_test3_LDADD = libsim_vol7d.la ../log4fortran/liblog4fortran.la ../base/li
 dist_check_SCRIPTS += dballe_test.sh
 endif
 
-if ALCHIMIA
 libsim_vol7d_la_SOURCES += vol7d_alchimia_class.F03
 AM_FCFLAGS += -I../alchimia
 libsim_vol7d_la_LIBADD += ../alchimia/libsim_alchimia.la
-endif
 
 EXTRA_DIST += \
   dballe_test.bufr dballe_test_ana.bufr\

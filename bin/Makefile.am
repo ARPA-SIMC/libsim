@@ -54,9 +54,7 @@ bin_PROGRAMS += v7d_transform
 v7d_transform_SOURCES = v7d_transform.F90
 v7d_transform_LDADD = ../base/libsim_base.la ../vol7d/libsim_vol7d.la ../qc/libsim_qc.la ../volgrid6d/libsim_volgrid6d.la ../log4fortran/liblog4fortran.la
 
-if ALCHIMIA
 v7d_transform_LDADD += ../alchimia/libsim_alchimia.la ../termolib/libsim_termolib.la
-endif
 
 v7d_transform_LDADD += $(LOG4C_LIBS)
 
@@ -94,9 +92,7 @@ vg6d_getpoint_pkauf_LDADD = ../volgrid6d/libsim_volgrid6d.la  ../vol7d/libsim_vo
 vg6d_transform_SOURCES = vg6d_transform.F90
 vg6d_transform_LDADD = ../volgrid6d/libsim_volgrid6d.la ../base/libsim_base.la ../vol7d/libsim_vol7d.la ../log4fortran/liblog4fortran.la $(LOG4C_LIBS) $(GRIBAPI_LIBS)
 
-if ALCHIMIA
 vg6d_transform_LDADD += ../alchimia/libsim_alchimia.la ../termolib/libsim_termolib.la  
-endif
 
 if GRIBAPI
 dist_bin_SCRIPTS += vg6d_subarea

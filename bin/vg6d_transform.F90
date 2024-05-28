@@ -34,12 +34,10 @@ use optionparser_class
 USE datetime_class
 USE georef_coord_class
 USE vol7d_level_class
-#ifdef ALCHIMIA
 USE alchimia
 use volgrid6d_alchimia_class
 use vol7d_alchimia_class
 USE termo
-#endif
 
 implicit none
 
@@ -84,9 +82,7 @@ LOGICAL :: rzscan,reusevdf
 INTEGER,POINTER :: w_s(:), w_e(:)
 TYPE(grid_file_id) :: file_grid
 TYPE(grid_id) :: gaid_grid
-#ifdef ALCHIMIA
 type(fndsv) :: vfn, vfnoracle
-#endif
 
 ! for computing
 CHARACTER(len=13) :: comp_stat_proc
@@ -334,12 +330,10 @@ CALL optionparser_add(opt, '', 'comp-var-from-lev', comp_var_from_lev, help= &
  &tipically used for pressure, the level type to be converted to variable &
  &has to be specified as the first level in the --trans-level-type option')
 
-#ifdef ALCHIMIA
 CALL optionparser_add(opt, '', 'output-variable-list', output_variable_list, '', help= &
  'list of data variables required in output; if they are not in input they will be computed if possible. &
  &The output_variable_list is expressed in the form of a comma-separated list of B-table alphanumeric codes, &
  &e.g. ''B13011,B12101''')
-#endif
 
 CALL optionparser_add(opt, ' ', 'rounding', round, help= &
  'simplify volume, merging similar levels and timeranges')
@@ -716,7 +710,6 @@ IF (trans_mode == "p") THEN ! run in prosciutto (volume) mode
     NULLIFY(volgrid_tmp)
   end if
 
-#ifdef ALCHIMIA
   if (ASSOCIATED(volgrid_out) .and. output_variable_list /= " ") then
 
     CALL l4f_category_log(category,L4F_DEBUG,'execute alchemy')
@@ -745,7 +738,6 @@ IF (trans_mode == "p") THEN ! run in prosciutto (volume) mode
     CALL l4f_category_log(category,L4F_INFO,"alchemy completed")
 
   end if
-#endif
 
   IF (c_e(istat_proc) .AND. c_e(ostat_proc) .AND. ASSOCIATED(volgrid_out)) THEN ! stat_proc
     CALL l4f_category_log(category,L4F_INFO,"computing stat_proc")
@@ -774,11 +766,8 @@ IF (trans_mode == "p") THEN ! run in prosciutto (volume) mode
 
   IF (ASSOCIATED(volgrid_out)) CALL delete(volgrid_out)
 
-#ifdef ALCHIMIA
   CALL delete(vfn)
   CALL delete(vfnoracle)
-#endif
-
 
 ELSE ! run in salsiccia (serial) mode
 

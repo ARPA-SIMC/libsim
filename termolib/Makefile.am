@@ -4,15 +4,11 @@ libsim_termolib_la_SOURCES =  termolib.f90
 AM_FCFLAGS = -I../base
 libsim_termolib_la_LIBADD = ../base/libsim_base.la
 
-if ALCHIMIA
-
 libsim_termolib_la_SOURCES +=  termo.F03
 # Opzioni Fortran (-I... sono da considerarsi opzioni fortran
 # e non del preprocessore perche' servono per USE e non per #include)
 AM_FCFLAGS += -I../alchimia
 libsim_termolib_la_LIBADD += ../alchimia/libsim_alchimia.la
-
-endif
 
 
 if VERSIONINFO
