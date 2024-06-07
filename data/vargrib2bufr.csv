@@ -202,6 +202,7 @@ B13230,CAPE (local),J/Kg,80,201,143,255,1.0,0.0
 B13230,CAPE (local),J/Kg,78,201,143,255,1.0,0.0
 B13232,Reference evapotranspiration according to Penman-Monteith (local),Kg/m**2,200,0,193,2,1.0,0.0
 B13234,Surface lifted index,K,255,7,10,0,1.0,0.0
+B14016,Net radiation,W/m^2,255,4,3,0,1.0,0.0
 B14016,Net radiation,W/m^2,255,2,117,255,1.0,0.0
 B14016,Net radiation,W/m^2,98,128,149,255,1.0,0.0
 B14016,Net radiation,W/m^2,98,128,149,192,1.0,0.0
@@ -236,17 +237,17 @@ B14195,Instantaneous diffuse solar radiation DWD (local),W/m^2,78,201,23,255,1.0
 B14195,Instantaneous diffuse solar radiation (local),W/m^2,255,4,14,0,1.0,0.0
 B14195,Instantaneous diffuse solar radiation DWD (local),W/m^2,78,4,199,0,1.0,0.0
 B14195,Instantaneous diffuse solar radiation DWD (local),W/m^2,80,4,199,0,1.0,0.0
+B14196,Net long-wave radiation flux (surface),W/m^2,255,5,5,0,1.0,0.0
 B14196,Net long-wave radiation flux (surface),W/m^2,200,200,111,0,1.0,0.0
 B14196,Net long-wave radiation flux (surface),W/m^2,200,200,111,255,1.0,0.0
 B14196,Net long-wave radiation flux (surface),W/m^2,255,2,112,255,1.0,0.0
-B14197,Net long-wave radiation flux (surface),W/m^2,255,5,5,0,1.0,0.0
+B14197,Net short-wave radiation flux (surface),W/m^2,255,4,9,0,1.0,0.0
 B14197,Net short-wave radiation flux (surface),W/m^2,200,200,110,0,1.0,0.0
 B14197,Net short-wave radiation flux (surface),W/m^2,200,200,110,255,1.0,0.0
 B14197,Net short-wave radiation flux (surface),W/m^2,255,2,111,255,1.0,0.0
-B14197,Net short-wave radiation flux (surface),W/m^2,255,4,9,0,1.0,0.0
+B14199,Upward short-wave radiation flux (surface),W/m^2,255,4,8,0,1.0,0.0
 B14199,Upward short-wave radiation flux (surface),W/m^2,200,200,116,0,1.0,0.0
 B14199,Upward short-wave radiation flux (surface),W/m^2,200,200,116,255,1.0,0.0
-B14199,Upward short-wave radiation flux (surface),W/m^2,255,4,8,0,1.0,0.0
 B14200,Downward long-wave radiation flux (surface),W/m^2,255,5,3,0,1.0,0.0
 B14201,Upward long-wave radiation flux (surface),W/m^2,255,5,4,0,1.0,0.0
 B14202,UV index,numeric,255,4,51,0,1.0,0.0
