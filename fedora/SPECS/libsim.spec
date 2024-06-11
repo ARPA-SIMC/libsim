@@ -6,7 +6,7 @@
 
 Summary: Fortran utility libraries
 Name: libsim
-Version: 7.1.11
+Version: 7.2.0
 Release: 1
 License: GPL2+
 Group: Applications/Meteo
@@ -140,6 +140,14 @@ mv $RPM_BUILD_ROOT%{_includedir}/*.mod $RPM_BUILD_ROOT%{_fmoddir}
 rm -rf %{buildroot}
 
 %changelog
+* Tue Jun 11 2024 Daniele Branchini <dbranchini@arpae.it> - 7.2.0-1
+- add computation of total solid precipitation (B13237)
+- use difference rather than aggregation method when there are already data on the desired interval
+- added/fixed grib2 entries (#112)
+- allow stat_proc to be different for input and output also for gridded data in aggregation method
+- removed alchimia option (always enabled)
+- remove dba_qcfilter from Makefile (#81)
+
 * Wed Feb 21 2024 Daniele Branchini <dbranchini@arpae.it> - 7.1.11-1
 - Intelligently merge volumes after stat_proc in order not to loose precious data
 
