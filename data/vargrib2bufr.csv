@@ -202,6 +202,8 @@ B13230,CAPE (local),J/Kg,80,201,143,255,1.0,0.0
 B13230,CAPE (local),J/Kg,78,201,143,255,1.0,0.0
 B13232,Reference evapotranspiration according to Penman-Monteith (local),Kg/m**2,200,0,193,2,1.0,0.0
 B13234,Surface lifted index,K,255,7,10,0,1.0,0.0
+B13236,Graupel,Kg/m**2,255,1,75,0,1.0,0.0
+B13237,Total solid precipitation,Kg/m**2,255,1,128,0,1.0,0.0
 B14016,Net radiation,W/m^2,255,4,3,0,1.0,0.0
 B14016,Net radiation,W/m^2,255,2,117,255,1.0,0.0
 B14016,Net radiation,W/m^2,98,128,149,255,1.0,0.0
