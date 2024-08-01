@@ -38,7 +38,7 @@ TYPE(optionparser) :: opt
 INTEGER :: optind, optstatus
 CHARACTER(len=12) :: coord_format, output_format
 CHARACTER(len=512) :: a_name, coord_file, coord_file_grid, input_file, output_file
-INTEGER :: category, ier, i, iun, iargc, hindex
+INTEGER :: category, ier, i, iun, iargc, hindex, lev
 CHARACTER(len=network_name_len) :: network
 TYPE(volgrid6d),POINTER :: volgrid(:), volgrid_coord(:)
 TYPE(transform_def) :: trans
@@ -285,10 +285,10 @@ IF (.NOT.ASSOCIATED(volgrid_coord)) THEN
   CALL raise_fatal_error()
 ENDIF
 ! check volume
-IF (SIZE(volgrid_coord) > 1 .OR. SIZE(volgrid_coord(1)%level) /= 1 .OR. &
+IF (SIZE(volgrid_coord) > 1 .OR. &
  SIZE(volgrid_coord(1)%time) /= 1 .OR. SIZE(volgrid_coord(1)%timerange) /= 1) THEN
   CALL l4f_category_log(category, L4F_ERROR, &
-   'error coord-file-grid must have strictly 1 grid, 1 level, 1 time and 1 timerange')
+   'error coord-file-grid must have strictly 1 grid, 1 time and 1 timerange')
   CALL raise_fatal_error()
 ENDIF
 
@@ -300,10 +300,14 @@ orography => NULL()
 DO i = 1, SIZE(volgrid_coord(1)%var)
   varbufr = convert(volgrid_coord(1)%var(i))
   IF (varbufr%btable == 'B29192') THEN
-    fr_land => volgrid_coord(1)%voldati(:,:,1,1,1,i)
+! take into account different possible levels
+    lev = firsttrue(c_e(volgrid_coord(1)%gaid(:,1,1,i)))
+    IF (lev > 0) fr_land => volgrid_coord(1)%voldati(:,:,lev,1,1,i)
   ENDIF
   IF (varbufr%btable == 'B10007') THEN
-    orography => volgrid_coord(1)%voldati(:,:,1,1,1,i)
+! take into account different possible levels
+    lev = firsttrue(c_e(volgrid_coord(1)%gaid(:,1,1,i)))
+    IF (lev > 0) orography => volgrid_coord(1)%voldati(:,:,1,1,1,i)
   ENDIF
 ENDDO
 
