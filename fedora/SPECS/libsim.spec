@@ -6,7 +6,7 @@
 
 Summary: Fortran utility libraries
 Name: libsim
-Version: 7.2.0
+Version: 7.2.1
 Release: 1
 License: GPL2+
 Group: Applications/Meteo
@@ -140,6 +140,11 @@ mv $RPM_BUILD_ROOT%{_includedir}/*.mod $RPM_BUILD_ROOT%{_fmoddir}
 rm -rf %{buildroot}
 
 %changelog
+* Thu Sep  5 2024 Daniele Branchini <dbranchini@arpae.it> - 7.2.1-1
+- avoid error with typeOfTimeIncrement 255
+- add intersearch interpolation (with real nearest point)
+- take into account Icon vertical level setup for surface orography field
+
 * Tue Jun 11 2024 Daniele Branchini <dbranchini@arpae.it> - 7.2.0-1
 - add computation of total solid precipitation (B13237)
 - use difference rather than aggregation method when there are already data on the desired interval
