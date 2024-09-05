@@ -619,7 +619,7 @@ IF (this%trans_type == 'zoom') THEN
     RETURN
   END IF
 
-ELSE IF (this%trans_type == 'inter') THEN
+ELSE IF (this%trans_type == 'inter' .OR. this%trans_type == 'intersearch') THEN
 
   IF (this%sub_type == 'near' .OR. this%sub_type == 'bilin' .OR. &
    this%sub_type == 'linear' .OR. this%sub_type == 'shapiro_near') THEN
@@ -1389,7 +1389,7 @@ ELSE IF (this%trans%trans_type == 'boxregrid') THEN
 
   this%valid = .TRUE. ! warning, no check of subtype
 
-ELSE IF (this%trans%trans_type == 'inter') THEN
+ELSE IF (this%trans%trans_type == 'inter' .OR. this%trans%trans_type == 'intersearch') THEN
 
   CALL outgrid_setup() ! common setup for grid-generating methods
 
@@ -1427,6 +1427,17 @@ ELSE IF (this%trans%trans_type == 'inter') THEN
        lout%dim%lon, lout%dim%lat, this%trans%extrap, &
        this%inter_index_x, this%inter_index_y)
 
+      IF (this%trans%trans_type == 'intersearch') THEN ! replicate code above
+        ALLOCATE(this%inter_x(this%innx,this%inny), &
+         this%inter_y(this%innx,this%inny))
+        ALLOCATE(this%inter_xp(this%outnx,this%outny), &
+         this%inter_yp(this%outnx,this%outny))
+
+! compute coordinates of input grid
+        CALL griddim_gen_coord(in, this%inter_x, this%inter_y)
+! compute coordinates of output grid in input system
+        CALL proj(in, lout%dim%lon, lout%dim%lat, this%inter_xp, this%inter_yp)
+      ENDIF
     ENDIF
 
     CALL delete(lout)
@@ -1909,6 +1920,13 @@ IF (this%trans%trans_type == 'inter') THEN
        lon, lat, this%trans%extrap, &
        this%inter_index_x, this%inter_index_y)
 
+      IF (this%trans%trans_type == 'intersearch') THEN ! replicate code above
+        ALLOCATE(this%inter_x(this%innx,this%inny),this%inter_y(this%innx,this%inny))
+        ALLOCATE(this%inter_xp(this%outnx,this%outny),this%inter_yp(this%outnx,this%outny))
+
+        CALL griddim_gen_coord(lin, this%inter_x, this%inter_y)
+        CALL proj(lin, lon, lat, this%inter_xp, this%inter_yp)
+      ENDIF
     ENDIF
 
     DEALLOCATE(lon,lat)
@@ -2901,11 +2919,11 @@ REAL,INTENT(out) :: field_out(:,:,:) !< output array
 TYPE(vol7d_var),INTENT(in),OPTIONAL :: var !< physical variable to be interpolated, if provided, some ad-hoc algorithms may be used where possible
 REAL,INTENT(in),OPTIONAL,TARGET :: coord_3d_in(:,:,:) !< input vertical coordinate for vertical interpolation, if not provided by other means
 
-INTEGER :: i, j, k, ii, jj, ie, je, n, navg, kk, kkcache, kkup, kkdown, &
+INTEGER :: i, j, k, l, m, ii, jj, ie, je, n, navg, kk, kkcache, kkup, kkdown, &
  kfound, kfoundin, inused, i1, i2, j1, j2, np, ns
 INTEGER,ALLOCATABLE :: nval(:,:)
 REAL :: z1,z2,z3,z4,z(4)
-DOUBLE PRECISION  :: x1,x3,y1,y3,xp,yp
+DOUBLE PRECISION  :: x1,x3,y1,y3,xp,yp, disttmp, dist
 INTEGER :: innx, inny, innz, outnx, outny, outnz, vartype
 REAL,ALLOCATABLE :: coord_in(:)
 LOGICAL,ALLOCATABLE :: mask_in(:)
@@ -2939,7 +2957,7 @@ IF (this%recur) THEN ! if recursive transformation, recur here and exit
     likethis%outnx = this%trans%poly%arraysize
     likethis%outny = 1
     ALLOCATE(field_tmp(this%trans%poly%arraysize,1,SIZE(field_out,3)))
-    CALL grid_transform_compute(likethis, field_in, field_tmp, var)
+    CALL grid_transform_compute(likethis, field_in, field_tmp, var, coord_3d_in)
 
     DO k = 1, SIZE(field_out,3)
       DO j = 1, this%inny
@@ -3188,8 +3206,8 @@ ELSE IF (this%trans%trans_type == 'inter') THEN
   IF (this%trans%sub_type == 'near') THEN
 
     DO k = 1, innz
-      DO j = 1, this%outny 
-        DO i = 1, this%outnx 
+      DO j = 1, this%outny
+        DO i = 1, this%outnx
 
           IF (c_e(this%inter_index_x(i,j))) field_out(i,j,k) = &
            field_in(this%inter_index_x(i,j),this%inter_index_y(i,j),k)
@@ -3201,8 +3219,8 @@ ELSE IF (this%trans%trans_type == 'inter') THEN
   ELSE IF (this%trans%sub_type == 'bilin') THEN
 
     DO k = 1, innz
-      DO j = 1, this%outny 
-        DO i = 1, this%outnx 
+      DO j = 1, this%outny
+        DO i = 1, this%outnx
 
           IF (c_e(this%inter_index_x(i,j))) THEN
 
@@ -3252,7 +3270,7 @@ ELSE IF (this%trans%trans_type == 'inter') THEN
               z(2) = rmiss
             END IF
             IF(this%inter_index_y(i,j)-1>0)THEN
-              z(4)=field_in(this%inter_index_x(i,j)  ,this%inter_index_y(i,j)-1,k)
+              z(4)=field_in(this%inter_index_x(i,j), this%inter_index_y(i,j)-1,k)
             ELSE
               z(4) = rmiss
             END IF
@@ -3265,6 +3283,35 @@ ELSE IF (this%trans%trans_type == 'inter') THEN
     ENDDO
 
   ENDIF
+ELSE IF (this%trans%trans_type == 'intersearch') THEN
+
+  likethis = this
+  likethis%trans%trans_type = 'inter' ! fake type and make a recursive call to compute base field
+  CALL grid_transform_compute(likethis, field_in, field_out, var, coord_3d_in)
+
+    DO k = 1, innz
+      IF ((.NOT.ALL(c_e(field_out(:,:,k)))) .AND. (ANY(c_e(field_in(:,:,k))))) THEN ! must fill some values
+        DO j = 1, this%outny
+          DO i = 1, this%outnx
+            IF (.NOT.c_e(field_out(i,j,k))) THEN
+              dist = HUGE(dist)
+              DO m = 1, this%inny
+                DO l = 1, this%innx
+                  IF (c_e(field_in(l,m,k))) THEN
+                    disttmp = (this%inter_xp(l,m) - this%inter_x(i,j))**2 + (this%inter_yp(l,m) - this%inter_y(i,j))**2
+                    IF (disttmp < dist) THEN
+                      dist = disttmp
+                      field_out(i,j,k) = field_in(l,m,k)
+                    ENDIF
+                  ENDIF
+                ENDDO
+              ENDDO
+            ENDIF
+          ENDDO
+        ENDDO
+      ENDIF
+    ENDDO
+
 ELSE IF (this%trans%trans_type == 'boxinter' &
  .OR. this%trans%trans_type == 'polyinter' &
  .OR. this%trans%trans_type == 'maskinter') THEN
