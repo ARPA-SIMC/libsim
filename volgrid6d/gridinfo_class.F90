@@ -634,6 +634,7 @@ IF (EditionNumber == 1 .OR. EditionNumber == 2) THEN
 
     CALL grib_get(gaid,'typeOfProcessedData',tprocdata,status)
     CALL grib_get(gaid,'typeOfTimeIncrement',ttimeincr,status)
+    IF (ttimeincr == 255) ttimeincr = 2 ! fix some MeteosWiss data
 ! if analysis-like statistically processed data is encountered, the
 ! reference time must be shifted to the end of the processing period
     IF (status == GRIB_SUCCESS .AND. ttimeincr == 1) THEN
@@ -663,11 +664,11 @@ IF (EditionNumber == 1 .OR. EditionNumber == 2) THEN
     ENDIF
   ENDIF
 
-else
+ELSE
   CALL l4f_log(L4F_ERROR,'GribEditionNumber '//t2c(EditionNumber)//' not supported')
   CALL raise_error()
 
-end if
+ENDIF
 
 END SUBROUTINE time_import_gribapi
 
