@@ -3292,14 +3292,13 @@ ELSE IF (this%trans%trans_type == 'intersearch') THEN
   CALL getenv('LIBSIM_DISABLEOPTSEARCH', env_var)
   optsearch = LEN_TRIM(env_var) == 0
 
-
-    DO k = 1, innz
-      IF ((.NOT.ALL(c_e(field_out(:,:,k)))) .AND. (ANY(c_e(field_in(:,:,k))))) THEN ! must fill some values
-        DO j = 1, this%outny
-          DO i = 1, this%outnx
-            IF (.NOT.c_e(field_out(i,j,k))) THEN
-              dist = HUGE(dist)
-              IF (optsearch) THEN ! optimized, error-prone algorithm
+  DO k = 1, innz
+    IF ((.NOT.ALL(c_e(field_out(:,:,k)))) .AND. (ANY(c_e(field_in(:,:,k))))) THEN ! must fill some values
+      DO j = 1, this%outny
+        DO i = 1, this%outnx
+          IF (.NOT.c_e(field_out(i,j,k))) THEN
+            dist = HUGE(dist)
+            IF (optsearch) THEN ! optimized, error-prone algorithm
               ix = this%inter_index_x(i,j)
               iy = this%inter_index_y(i,j)
               DO s = 0, MAX(this%innx, this%inny)
@@ -3307,7 +3306,7 @@ ELSE IF (this%trans%trans_type == 'intersearch') THEN
                 DO l = iy-s, iy+s, MAX(2*s, 1) ! y loop on upper and lower frames
                   IF (l < 1 .OR. l > this%inny) CYCLE
                   DO m = MAX(1, ix-s), MIN(this%innx, ix+s) ! x loop on upper and lower frames
-                    disttmp = (this%inter_xp(l,m) - this%inter_x(i,j))**2 + (this%inter_yp(l,m) - this%inter_y(i,j))**2
+                    disttmp = (this%inter_xp(i,j) - this%inter_x(l,m))**2 + (this%inter_yp(i,j) - this%inter_y(l,m))**2
                     IF (c_e(field_in(l,m,k))) THEN
                       IF (disttmp < dist) THEN
                         dist = disttmp
@@ -3319,8 +3318,8 @@ ELSE IF (this%trans%trans_type == 'intersearch') THEN
                 ENDDO
                 DO l = MAX(1, iy-s+1), MIN(this%inny, iy+s-1) ! y loop on left and right frames (avoid corners)
                   DO m = ix-s, ix+s, 2*s ! x loop on left and right frames (exchange loops?)
-                  IF (m < 1 .OR. m > this%innx) CYCLE
-                    disttmp = (this%inter_xp(l,m) - this%inter_x(i,j))**2 + (this%inter_yp(l,m) - this%inter_y(i,j))**2
+                    IF (m < 1 .OR. m > this%innx) CYCLE
+                    disttmp = (this%inter_xp(i,j) - this%inter_x(l,m))**2 + (this%inter_yp(i,j) - this%inter_y(l,m))**2
                     IF (c_e(field_in(l,m,k))) THEN
                       IF (disttmp < dist) THEN
                         dist = disttmp
@@ -3332,11 +3331,11 @@ ELSE IF (this%trans%trans_type == 'intersearch') THEN
                 ENDDO
                 IF (s > 0 .AND. farenough) EXIT ! nearest point found, do not trust the same point, in case of bilin it could be not the nearest
               ENDDO
-              ELSE ! linear, simple, slow algorithm
+            ELSE ! linear, simple, slow algorithm
               DO m = 1, this%inny
                 DO l = 1, this%innx
                   IF (c_e(field_in(l,m,k))) THEN
-                    disttmp = (this%inter_xp(l,m) - this%inter_x(i,j))**2 + (this%inter_yp(l,m) - this%inter_y(i,j))**2
+                    disttmp = (this%inter_xp(i,j) - this%inter_x(l,m))**2 + (this%inter_yp(i,j) - this%inter_y(l,m))**2
                     IF (disttmp < dist) THEN
                       dist = disttmp
                       field_out(i,j,k) = field_in(l,m,k)
@@ -3344,12 +3343,12 @@ ELSE IF (this%trans%trans_type == 'intersearch') THEN
                   ENDIF
                 ENDDO
               ENDDO
-              ENDIF
             ENDIF
-          ENDDO
+          ENDIF
         ENDDO
-      ENDIF
-    ENDDO
+      ENDDO
+    ENDIF
+  ENDDO
 
 ELSE IF (this%trans%trans_type == 'boxinter' &
  .OR. this%trans%trans_type == 'polyinter' &
@@ -4318,7 +4317,7 @@ END FUNCTION shapiro
 SUBROUTINE basic_find_index(this, near, nx, ny, xmin, xmax, ymin, ymax, &
  lon, lat, extrap, index_x, index_y)
 TYPE(griddim_def),INTENT(in) :: this ! griddim object (from grid)
-logical,INTENT(in) :: near ! near or bilin interpolation (determine wich point is requested)
+LOGICAL,INTENT(in) :: near ! near or bilin interpolation (determine wich point is requested)
 INTEGER,INTENT(in) :: nx,ny ! dimension (to grid)
 DOUBLE PRECISION,INTENT(in) :: xmin, xmax, ymin, ymax ! extreme coordinate (to grid)
 DOUBLE PRECISION,INTENT(in) :: lon(:,:),lat(:,:) ! target coordinate
