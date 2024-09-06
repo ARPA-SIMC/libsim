@@ -2919,8 +2919,8 @@ REAL,INTENT(out) :: field_out(:,:,:) !< output array
 TYPE(vol7d_var),INTENT(in),OPTIONAL :: var !< physical variable to be interpolated, if provided, some ad-hoc algorithms may be used where possible
 REAL,INTENT(in),OPTIONAL,TARGET :: coord_3d_in(:,:,:) !< input vertical coordinate for vertical interpolation, if not provided by other means
 
-INTEGER :: i, j, k, l, m, ii, jj, ie, je, n, navg, kk, kkcache, kkup, kkdown, &
- kfound, kfoundin, inused, i1, i2, j1, j2, np, ns
+INTEGER :: i, j, k, l, m, s, ii, jj, ie, je, n, navg, kk, kkcache, kkup, kkdown, &
+ kfound, kfoundin, inused, i1, i2, j1, j2, np, ns, ix, iy
 INTEGER,ALLOCATABLE :: nval(:,:)
 REAL :: z1,z2,z3,z4,z(4)
 DOUBLE PRECISION  :: x1,x3,y1,y3,xp,yp, disttmp, dist
@@ -2930,7 +2930,8 @@ LOGICAL,ALLOCATABLE :: mask_in(:)
 REAL,ALLOCATABLE :: val_in(:), field_tmp(:,:,:)
 REAL,POINTER :: coord_3d_in_act(:,:,:)
 TYPE(grid_transform) :: likethis
-LOGICAL :: alloc_coord_3d_in_act, nm1
+LOGICAL :: alloc_coord_3d_in_act, nm1, optsearch, farenough
+CHARACTER(len=4) :: env_var
 
 
 #ifdef DEBUG
@@ -3288,6 +3289,9 @@ ELSE IF (this%trans%trans_type == 'intersearch') THEN
   likethis = this
   likethis%trans%trans_type = 'inter' ! fake type and make a recursive call to compute base field
   CALL grid_transform_compute(likethis, field_in, field_out, var, coord_3d_in)
+  CALL getenv('LIBSIM_DISABLEOPTSEARCH', env_var)
+  optsearch = LEN_TRIM(env_var) == 0
+
 
     DO k = 1, innz
       IF ((.NOT.ALL(c_e(field_out(:,:,k)))) .AND. (ANY(c_e(field_in(:,:,k))))) THEN ! must fill some values
@@ -3295,6 +3299,40 @@ ELSE IF (this%trans%trans_type == 'intersearch') THEN
           DO i = 1, this%outnx
             IF (.NOT.c_e(field_out(i,j,k))) THEN
               dist = HUGE(dist)
+              IF (optsearch) THEN ! optimized, error-prone algorithm
+              ix = this%inter_index_x(i,j)
+              iy = this%inter_index_y(i,j)
+              DO s = 0, MAX(this%innx, this%inny)
+                farenough = .TRUE.
+                DO l = iy-s, iy+s, MAX(2*s, 1) ! y loop on upper and lower frames
+                  IF (l < 1 .OR. l > this%inny) CYCLE
+                  DO m = MAX(1, ix-s), MIN(this%innx, ix+s) ! x loop on upper and lower frames
+                    disttmp = (this%inter_xp(l,m) - this%inter_x(i,j))**2 + (this%inter_yp(l,m) - this%inter_y(i,j))**2
+                    IF (c_e(field_in(l,m,k))) THEN
+                      IF (disttmp < dist) THEN
+                        dist = disttmp
+                        field_out(i,j,k) = field_in(l,m,k)
+                      ENDIF
+                    ENDIF
+                    IF (disttmp < dist) farenough = .FALSE.
+                  ENDDO
+                ENDDO
+                DO l = MAX(1, iy-s+1), MIN(this%inny, iy+s-1) ! y loop on left and right frames (avoid corners)
+                  DO m = ix-s, ix+s, 2*s ! x loop on left and right frames (exchange loops?)
+                  IF (m < 1 .OR. m > this%innx) CYCLE
+                    disttmp = (this%inter_xp(l,m) - this%inter_x(i,j))**2 + (this%inter_yp(l,m) - this%inter_y(i,j))**2
+                    IF (c_e(field_in(l,m,k))) THEN
+                      IF (disttmp < dist) THEN
+                        dist = disttmp
+                        field_out(i,j,k) = field_in(l,m,k)
+                      ENDIF
+                    ENDIF
+                    IF (disttmp < dist) farenough = .FALSE.
+                  ENDDO
+                ENDDO
+                IF (s > 0 .AND. farenough) EXIT ! nearest point found, do not trust the same point, in case of bilin it could be not the nearest
+              ENDDO
+              ELSE ! linear, simple, slow algorithm
               DO m = 1, this%inny
                 DO l = 1, this%innx
                   IF (c_e(field_in(l,m,k))) THEN
@@ -3306,6 +3344,7 @@ ELSE IF (this%trans%trans_type == 'intersearch') THEN
                   ENDIF
                 ENDDO
               ENDDO
+              ENDIF
             ENDIF
           ENDDO
         ENDDO
