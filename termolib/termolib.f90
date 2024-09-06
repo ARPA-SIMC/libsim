@@ -667,7 +667,7 @@ END FUNCTION td_pq
 !! \a q in Kg/Kg, \rh in 0-100, \a pt in hPa, \a t in K.
 ELEMENTAL REAL FUNCTION relhumtoq(rh, pt, t)
 REAL,INTENT(in) :: rh !< Relative humidity (%)
-REAL,INTENT(in) :: pt !< Pressure (Pa)
+REAL,INTENT(in) :: pt !< Pressure (hPa)
 REAL,INTENT(in) :: t !< Temperature (K)
 
 REAL :: lesat
