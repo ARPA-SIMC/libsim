@@ -3303,9 +3303,9 @@ ELSE IF (this%trans%trans_type == 'intersearch') THEN
               iy = this%inter_index_y(i,j)
               DO s = 0, MAX(this%innx, this%inny)
                 farenough = .TRUE.
-                DO l = iy-s, iy+s, MAX(2*s, 1) ! y loop on upper and lower frames
-                  IF (l < 1 .OR. l > this%inny) CYCLE
-                  DO m = MAX(1, ix-s), MIN(this%innx, ix+s) ! x loop on upper and lower frames
+                DO m = iy-s, iy+s, MAX(2*s, 1) ! y loop on upper and lower frames
+                  IF (m < 1 .OR. m > this%inny) CYCLE
+                  DO l = MAX(1, ix-s), MIN(this%innx, ix+s) ! x loop on upper and lower frames
                     disttmp = (this%inter_xp(i,j) - this%inter_x(l,m))**2 + (this%inter_yp(i,j) - this%inter_y(l,m))**2
                     IF (c_e(field_in(l,m,k))) THEN
                       IF (disttmp < dist) THEN
@@ -3316,9 +3316,9 @@ ELSE IF (this%trans%trans_type == 'intersearch') THEN
                     IF (disttmp < dist) farenough = .FALSE.
                   ENDDO
                 ENDDO
-                DO l = MAX(1, iy-s+1), MIN(this%inny, iy+s-1) ! y loop on left and right frames (avoid corners)
-                  DO m = ix-s, ix+s, 2*s ! x loop on left and right frames (exchange loops?)
-                    IF (m < 1 .OR. m > this%innx) CYCLE
+                DO m = MAX(1, iy-s+1), MIN(this%inny, iy+s-1) ! y loop on left and right frames (avoid corners)
+                  DO l = ix-s, ix+s, 2*s ! x loop on left and right frames (exchange loops?)
+                    IF (l < 1 .OR. l > this%innx) CYCLE
                     disttmp = (this%inter_xp(i,j) - this%inter_x(l,m))**2 + (this%inter_yp(i,j) - this%inter_y(l,m))**2
                     IF (c_e(field_in(l,m,k))) THEN
                       IF (disttmp < dist) THEN
