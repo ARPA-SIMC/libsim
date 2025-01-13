@@ -113,10 +113,16 @@ TESTS = $(check_PROGRAMS) $(dist_check_SCRIPTS)
 TESTS_ENVIRONMENT = $(top_srcdir)/testenv
 
 if HELP2MAN
-man_MANS = v7d_transform.1 v7d_add_wmo_info.1 vg6d_getpoint.1 vg6d_transform.1
+man_MANS = v7d_transform.1 vg6d_getpoint.1 vg6d_transform.1
 
 if NCARG
 man_MANS += v7d_plot_sound.1
+endif
+if GRIBAPI
+man_MANS += vg6d_getpoint_pkauf.1 create_projgrib.1
+if DBALLE
+man_MANS += vg6d_tcorr.1
+endif
 endif
 if DBALLE
 man_MANS += dba_transform.1
