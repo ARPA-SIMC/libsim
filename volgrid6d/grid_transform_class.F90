@@ -85,6 +85,14 @@
 !!    - sub_type='shapiro_near' the interpolated value is that of sub_type=near
 !!      after smoothing the input field with a shapiro filter of order 2.
 !!
+!!  - trans_type='intersearch' (grid-to-grid, grid-to-sparse point)
+!!    interpolates the input data on a new set of specified points, it
+!!    supports sub_type values 'near', 'bilin' and 'shapiro_near' with
+!!    the same meaning as trans_type='inter' but, when interpolation
+!!    is not possible because of missing values in input, it sets the
+!!    output value to the value of the nearest valid point in the
+!!    input grid.
+!!
 !!  - trans_type='boxinter' computes data on a new grid in which the
 !!    value at every point is the result of a function computed over
 !!    the input points lying inside the output point's grid box
@@ -2924,7 +2932,7 @@ INTEGER :: i, j, k, l, m, s, ii, jj, ie, je, n, navg, kk, kkcache, kkup, kkdown,
 INTEGER,ALLOCATABLE :: nval(:,:)
 REAL :: z1,z2,z3,z4,z(4)
 DOUBLE PRECISION  :: x1,x3,y1,y3,xp,yp, disttmp, dist
-INTEGER :: innx, inny, innz, outnx, outny, outnz, vartype
+INTEGER :: innx, inny, innz, outnx, outny, outnz, vartype, nearcount
 REAL,ALLOCATABLE :: coord_in(:)
 LOGICAL,ALLOCATABLE :: mask_in(:)
 REAL,ALLOCATABLE :: val_in(:), field_tmp(:,:,:)
@@ -3298,6 +3306,7 @@ ELSE IF (this%trans%trans_type == 'intersearch') THEN
         DO i = 1, this%outnx
           IF (.NOT.c_e(field_out(i,j,k))) THEN
             dist = HUGE(dist)
+            nearcount = 0
             IF (optsearch) THEN ! optimized, error-prone algorithm
               ix = this%inter_index_x(i,j)
               iy = this%inter_index_y(i,j)
@@ -3311,6 +3320,10 @@ ELSE IF (this%trans%trans_type == 'intersearch') THEN
                       IF (disttmp < dist) THEN
                         dist = disttmp
                         field_out(i,j,k) = field_in(l,m,k)
+                        nearcount = 1
+                      ELSE IF (disttmp == dist) THEN
+                        field_out(i,j,k) = field_out(i,j,k) + field_in(l,m,k)
+                        nearcount = nearcount + 1
                       ENDIF
                     ENDIF
                     IF (disttmp < dist) farenough = .FALSE.
@@ -3324,6 +3337,10 @@ ELSE IF (this%trans%trans_type == 'intersearch') THEN
                       IF (disttmp < dist) THEN
                         dist = disttmp
                         field_out(i,j,k) = field_in(l,m,k)
+                        nearcount = 1
+                      ELSE IF (disttmp == dist) THEN
+                        field_out(i,j,k) = field_out(i,j,k) + field_in(l,m,k)
+                        nearcount = nearcount + 1
                       ENDIF
                     ENDIF
                     IF (disttmp < dist) farenough = .FALSE.
@@ -3339,11 +3356,17 @@ ELSE IF (this%trans%trans_type == 'intersearch') THEN
                     IF (disttmp < dist) THEN
                       dist = disttmp
                       field_out(i,j,k) = field_in(l,m,k)
+                      nearcount = 1
+                    ELSE IF (disttmp == dist) THEN
+                      field_out(i,j,k) = field_out(i,j,k) + field_in(l,m,k)
+                      nearcount = nearcount + 1
                     ENDIF
                   ENDIF
                 ENDDO
               ENDDO
             ENDIF
+! average points with same minimum distance
+            IF (nearcount > 1) field_out(i,j,k) = field_out(i,j,k)/nearcount
           ENDIF
         ENDDO
       ENDDO
