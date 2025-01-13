@@ -33,18 +33,18 @@ category=l4f_category_get(TRIM(a_name)//".main")
 
 ! define the option parser
 opt = optionparser_new(description_msg= &
- 'Create a grib with a specified grid and geographic projection &
+ 'Create a grib message with a specified grid and geographic projection &
  &from a template. All the parameters for defining a grid and a &
  &geographic projection in libsim are available. Not all of them have &
  &to be specified, since different parameters are required for different &
- &(groups of) grid', &
+ &(groups of) projections', &
  usage_msg='Usage: prodsim_create_projgrib [options] gribtemplate outputfile')
 
 ! define command-line options
 CALL optionparser_add(opt, ' ', 'type', proj_type, 'regular_ll', help= &
- 'type of projection desired, possible vaues: regular_ll, rotated_ll, &
+ 'type of projection desired, possible values: regular_ll, rotated_ll, &
  &stretched_ll, stretched_rotated_ll, &
- &lambert, polar_stereographic, UTM')
+ &lambert, polar_stereographic, mercator, UTM')
 CALL optionparser_add(opt, ' ', 'nx', nx, 31, help= &
  'number of nodes along x axis on target grid')
 CALL optionparser_add(opt, ' ', 'ny', ny, 31, help= &
@@ -70,12 +70,12 @@ CALL optionparser_add(opt, ' ', 'utm-zone', utm_zone, help= &
  'zone number for UTM projections')
 latitude_south_pole = dmiss
 CALL optionparser_add(opt, ' ', 'latitude-south-pole', latitude_south_pole, &
- help='latitude of south pole for rotated grid')
+ help='latitude of south pole for rotated projection')
 longitude_south_pole = dmiss
 CALL optionparser_add(opt, ' ', 'longitude-south-pole', longitude_south_pole, &
- help='longitude of south pole for rotated grid')
+ help='longitude of south pole for rotated projection')
 CALL optionparser_add(opt, ' ', 'angle-rotation', angle_rotation, &
- 0.0D0, help='angle of rotation for rotated grid')
+ 0.0D0, help='angle of rotation for rotated projection')
 CALL optionparser_add(opt, ' ', 'component-flag', component_flag, &
  0, help='wind component flag in target grid (0/1)')
 latin1 = dmiss
@@ -104,7 +104,7 @@ ELSE IF (optstatus == optionparser_err) THEN
   CALL raise_fatal_error()
 ENDIF
 IF (version) THEN
-  WRITE(*,'(A,1X,A)')'prodsim_create_projgrib',VERSION
+  WRITE(*,'(A,1X,A)')'create_projgrib',VERSION
   CALL exit(0)
 ENDIF
 projection_center_flag = 64*(1-pole)
