@@ -1,4 +1,4 @@
- rpmbuild with argument --define='with_vapor 1'
+# rpmbuild with argument --define='with_vapor 1'
 # to enable vapor support requiring stiff dependencies
 
 # Note: define srcarchivename in CI build only.
@@ -6,7 +6,7 @@
 
 Summary: Fortran utility libraries
 Name: libsim
-Version: 7.2.2
+Version: 7.2.3
 Release: 1
 License: GPL2+
 Group: Applications/Meteo
@@ -140,7 +140,7 @@ mv $RPM_BUILD_ROOT%{_includedir}/*.mod $RPM_BUILD_ROOT%{_fmoddir}
 rm -rf %{buildroot}
 
 %changelog
-* Mon Jan 13 2025 Davide Cesari <dcesari@arpae.it> - 7.2.2-1
+* Mon Jan 13 2025 Davide Cesari <dcesari@arpae.it> - 7.2.3-1
 - add compute_projgrib utility
 - improve intersearch interpolation
 
