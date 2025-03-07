@@ -153,6 +153,7 @@ TYPE(datetime) :: lstart, pstart1, pstart2, pend1, pend2, reftime1, reftime2, tm
 TYPE(vol7d_timerange) :: tmptimerange
 TYPE(arrayof_datetime) :: a_otime
 TYPE(arrayof_vol7d_timerange) :: a_otimerange
+TYPE(timedelta) :: start_delta
 
 ! compute length of cumulation step in seconds
 CALL getval(step, asec=steps)
@@ -239,11 +240,19 @@ DO dirtyrep = 1, 2
             ENDIF
 
           ELSE IF (reftime2 == reftime1) THEN ! forecast, same reftime
+            IF (c_e(lstart)) THEN
+! lstart shifts the interval for computing modulo step, it is not
+! really an absolute start but a phase shifter
+              start_delta = lstart-reftime2
+            ELSE
+              start_delta = timedelta_0
+            ENDIF
+
             IF (pstart2 == pstart1 .AND. pend2 > pend1) THEN ! |=-
               CALL time_timerange_set_period(tmptime, tmptimerange, &
                time_definition, pend1, pend2, reftime2)
               IF (lfull_steps) THEN
-                IF (MOD(pend2-reftime2, step) == timedelta_0) THEN
+                IF (MOD(pend2-reftime2-start_delta, step) == timedelta_0) THEN
                   useful = .TRUE.
                 ENDIF
               ELSE
@@ -254,7 +263,7 @@ DO dirtyrep = 1, 2
               CALL time_timerange_set_period(tmptime, tmptimerange, &
                time_definition, pstart2, pstart1, reftime2)
               IF (lfull_steps) THEN
-                IF (MOD(pstart1-reftime2, step) == timedelta_0) THEN
+                IF (MOD(pstart1-reftime2-start_delta, step) == timedelta_0) THEN
                   useful = .TRUE.
                 ENDIF
               ELSE
@@ -262,6 +271,10 @@ DO dirtyrep = 1, 2
               ENDIF
 
             ENDIF
+! draft of the second part, to be checked and completed, also in keep_tr
+!            IF (c_e(lstart)) THEN ! this should do the real work of start
+!              IF (lstart > pstart2) useful = .FALSE. ! is it true pstart2<=pstart1?
+!            ENDIF
           ENDIF
           useful = useful .AND. tmptime /= datetime_miss .AND. &
            tmptimerange /= vol7d_timerange_miss .AND. tmptimerange%p2 == steps
@@ -307,6 +320,7 @@ CALL l4f_log(L4F_DEBUG, &
 CONTAINS
 
 SUBROUTINE compute_keep_tr()
+INTEGER :: start_deltas
 
 keep_tr(:,:,:) = imiss
 DO l = 1, SIZE(itime)
@@ -329,7 +343,14 @@ DO l = 1, SIZE(itime)
         ENDIF
       ELSE ! forecast
         IF (lfull_steps) THEN
-          IF (MOD(itimerange(f(k))%p1, steps) == 0) THEN
+          IF (c_e(lstart)) THEN
+!            start_delta = MOD(timedelta_getamsec(lstart-reftime2)/1000,86400)
+            start_deltas = timedelta_getamsec(lstart-reftime2)/1000
+          ELSE
+            start_deltas = 0
+          ENDIF
+ !         IF (MOD(itimerange(f(k))%p1, steps) == start_delta) THEN
+          IF (MOD(itimerange(f(k))%p1 - start_deltas, steps) == 0) THEN
             useful = .TRUE.
           ENDIF
         ELSE
