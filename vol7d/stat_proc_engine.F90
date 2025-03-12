@@ -240,12 +240,14 @@ DO dirtyrep = 1, 2
             ENDIF
 
           ELSE IF (reftime2 == reftime1) THEN ! forecast, same reftime
-            IF (c_e(lstart)) THEN
-! lstart shifts the interval for computing modulo step, it is not
-! really an absolute start but a phase shifter
-              start_delta = lstart-reftime2
-            ELSE
-              start_delta = timedelta_0
+            IF (lfull_steps) THEN
+              IF (c_e(lstart)) THEN
+! lstart shifts the interval for computing modulo step, this does not
+! remove data before lstart but just shifts the phase
+                start_delta = lstart-reftime2
+              ELSE
+                start_delta = timedelta_0
+              ENDIF
             ENDIF
 
             IF (pstart2 == pstart1 .AND. pend2 > pend1) THEN ! |=-
@@ -258,6 +260,10 @@ DO dirtyrep = 1, 2
               ELSE
                 useful = .TRUE.
               ENDIF
+! keep only data after lstart
+              IF (c_e(lstart)) THEN
+                IF (lstart > pend1) useful = .FALSE.
+              ENDIF
 
             ELSE IF (pstart2 < pstart1 .AND. pend2 == pend1) THEN ! |-=
               CALL time_timerange_set_period(tmptime, tmptimerange, &
@@ -269,12 +275,12 @@ DO dirtyrep = 1, 2
               ELSE
                 useful = .TRUE.
               ENDIF
+! keep only data after lstart
+              IF (c_e(lstart)) THEN
+                IF (lstart > pstart2) useful = .FALSE.
+              ENDIF
 
             ENDIF
-! draft of the second part, to be checked and completed, also in keep_tr
-!            IF (c_e(lstart)) THEN ! this should do the real work of start
-!              IF (lstart > pstart2) useful = .FALSE. ! pstart1 not checked since we consider only a half triangle of the ((i,j),(k,l)) matrix
-!            ENDIF
           ENDIF
           useful = useful .AND. tmptime /= datetime_miss .AND. &
            tmptimerange /= vol7d_timerange_miss .AND. tmptimerange%p2 == steps
@@ -329,8 +335,9 @@ DO l = 1, SIZE(itime)
       CALL time_timerange_get_period(itime(l), itimerange(f(k)), &
        time_definition, pstart2, pend2, reftime2)
       useful = .FALSE.
+! keep only data after lstart
       IF (c_e(lstart)) THEN
-        IF (pstart2 <  lstart) CYCLE itrloop ! too early
+        IF (lstart > pstart2) CYCLE itrloop
       ENDIF
       IF (reftime2 == pend2) THEN ! analysis
         IF (c_e(lstart)) THEN ! in analysis mode start wins over full_steps
@@ -346,8 +353,9 @@ DO l = 1, SIZE(itime)
         ENDIF
       ELSE ! forecast
         IF (lfull_steps) THEN
+! same as above for start_delta, but in seconds and not in timerange/timedelta units
           IF (c_e(lstart)) THEN
-            start_deltas = timedelta_getamsec(lstart-reftime2)/1000
+            start_deltas = timedelta_getamsec(lstart-reftime2)/1000_int_ll
           ELSE
             start_deltas = 0
           ENDIF
