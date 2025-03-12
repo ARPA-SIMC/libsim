@@ -273,7 +273,7 @@ DO dirtyrep = 1, 2
             ENDIF
 ! draft of the second part, to be checked and completed, also in keep_tr
 !            IF (c_e(lstart)) THEN ! this should do the real work of start
-!              IF (lstart > pstart2) useful = .FALSE. ! is it true pstart2<=pstart1?
+!              IF (lstart > pstart2) useful = .FALSE. ! pstart1 not checked since we consider only a half triangle of the ((i,j),(k,l)) matrix
 !            ENDIF
           ENDIF
           useful = useful .AND. tmptime /= datetime_miss .AND. &
@@ -324,11 +324,14 @@ INTEGER :: start_deltas
 
 keep_tr(:,:,:) = imiss
 DO l = 1, SIZE(itime)
-  DO k = 1, nitr
+  itrloop: DO k = 1, nitr
     IF (itimerange(f(k))%p2 == steps) THEN
       CALL time_timerange_get_period(itime(l), itimerange(f(k)), &
        time_definition, pstart2, pend2, reftime2)
       useful = .FALSE.
+      IF (c_e(lstart)) THEN
+        IF (pstart2 <  lstart) CYCLE itrloop ! too early
+      ENDIF
       IF (reftime2 == pend2) THEN ! analysis
         IF (c_e(lstart)) THEN ! in analysis mode start wins over full_steps
           IF (MOD(reftime2-lstart, step) == timedelta_0) THEN
@@ -344,12 +347,10 @@ DO l = 1, SIZE(itime)
       ELSE ! forecast
         IF (lfull_steps) THEN
           IF (c_e(lstart)) THEN
-!            start_delta = MOD(timedelta_getamsec(lstart-reftime2)/1000,86400)
             start_deltas = timedelta_getamsec(lstart-reftime2)/1000
           ELSE
             start_deltas = 0
           ENDIF
- !         IF (MOD(itimerange(f(k))%p1, steps) == start_delta) THEN
           IF (MOD(itimerange(f(k))%p1 - start_deltas, steps) == 0) THEN
             useful = .TRUE.
           ENDIF
@@ -364,7 +365,7 @@ DO l = 1, SIZE(itime)
         keep_tr(k,l,2) = append_unique(a_otimerange, itimerange(f(k)))
       ENDIF
     ENDIF
-  ENDDO
+  ENDDO itrloop
 ENDDO
 
 END SUBROUTINE compute_keep_tr
