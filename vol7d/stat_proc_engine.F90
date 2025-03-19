@@ -525,9 +525,9 @@ IF (lstart == datetime_miss) THEN ! autodetect
 ! go back to start of longest processing interval
     lstart = lstart - timedelta_new(sec=maxp2)
   ENDIF
-! full_steps is effective only in analysis mode and when start is not
-! specified (start by itself in analysis mode implies full_steps with
-! respect to start instead of absolute full steps)
+! apply full_steps in analysis mode and when start is not specified
+! (start by itself in analysis mode implies full_steps with respect to
+! start instead of absolute full steps), todo in forecast mode
   IF (optio_log(full_steps) .AND. .NOT.lforecast) THEN
     lstart = lstart - (MOD(lstart, step)) ! round to step, (should be MODULO, not MOD)
   ENDIF
