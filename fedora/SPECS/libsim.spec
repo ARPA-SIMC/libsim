@@ -6,7 +6,7 @@
 
 Summary: Fortran utility libraries
 Name: libsim
-Version: 7.2.3
+Version: 7.2.4
 Release: 1
 License: GPL2+
 Group: Applications/Meteo
