@@ -1872,7 +1872,7 @@ DOUBLE PRECISION,ALLOCATABLE :: lon1(:), lat1(:), lon(:,:), lat(:,:)
 REAL,ALLOCATABLE :: lmaskbounds(:)
 TYPE(georef_coord) :: point
 TYPE(griddim_def) :: lin
-
+!$ INTEGER :: outnx
 
 IF (PRESENT(find_index)) THEN ! move in init_common?
   IF (ASSOCIATED(find_index)) THEN
@@ -2225,18 +2225,20 @@ ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
   ELSE IF (this%trans%sub_type == 'poly' ) THEN
 
 ! count and mark points falling into requested polygon
-    this%outnx = 0
+!    this%outnx = 0
     this%outny = 1
+    outnx = 0
 
 ! this OMP block has to be checked
 !$OMP PARALLEL DEFAULT(SHARED)
-!$OMP DO PRIVATE(iy, ix, point, n) REDUCTION(+:this%outnx)
+!$OMP DO PRIVATE(iy, ix, point, n), REDUCTION(+:outnx)
     DO iy = 1, this%inny
       DO ix = 1, this%innx
         point = georef_coord_new(x=lin%dim%lon(ix,iy), y=lin%dim%lat(ix,iy))
         DO n = 1, this%trans%poly%arraysize
           IF (inside(point, this%trans%poly%array(n))) THEN ! stop at the first matching polygon
-            this%outnx = this%outnx + 1
+!            this%outnx = this%outnx + 1
+            outnx = outnx + 1
             this%point_index(ix,iy) = n
             EXIT
           ENDIF
@@ -2245,7 +2247,7 @@ ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
       ENDDO
     ENDDO
 !$OMP END PARALLEL
-
+    this%outnx = outnx
     IF (this%outnx <= 0) THEN
       CALL l4f_category_log(this%category,L4F_WARN, &
        "metamorphosis:poly: no points inside polygons")
@@ -2288,19 +2290,21 @@ ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
 ! generate the subarea boundaries according to maskgrid and maskbounds
     CALL gen_mask_class()
 
-    this%outnx = 0
+!    this%outnx = 0
     this%outny = 1
+    outnx = 0
 
 ! this OMP block has to be checked
 !$OMP PARALLEL DEFAULT(SHARED)
-!$OMP DO PRIVATE(iy, ix) REDUCTION(+:this%outnx)
+!$OMP DO PRIVATE(iy, ix), REDUCTION(+:outnx)
     DO iy = 1, this%inny
       DO ix = 1, this%innx
         IF (c_e(maskgrid(ix,iy))) THEN
           IF (maskgrid(ix,iy) <= lmaskbounds(nmaskarea+1)) THEN
             DO n = nmaskarea, 1, -1
               IF (maskgrid(ix,iy) > lmaskbounds(n)) THEN
-                this%outnx = this%outnx + 1
+!                this%outnx = this%outnx + 1
+                outnx = outnx + 1
                 this%point_index(ix,iy) = n
                 EXIT
               ENDIF
@@ -2310,6 +2314,7 @@ ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
       ENDDO
     ENDDO
 !$OMP END PARALLEL
+    this%outnx = outnx
 
     IF (this%outnx <= 0) THEN
       CALL l4f_category_log(this%category,L4F_WARN, &

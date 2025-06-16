@@ -385,12 +385,15 @@ CALL l4f_category_log(category,L4F_DEBUG,"import from file")
 input_file = grid_file_id_new(filename, 'r')
 
 ngrid = 0
+!$OMP PARALLEL DEFAULT(SHARED)
+!$OMP MASTER
 DO WHILE(.TRUE.)
   input_grid = grid_id_new(input_file)
   IF (.NOT. c_e(input_grid)) EXIT
 
   CALL l4f_category_log(category,L4F_INFO,"import gridinfo")
   ngrid = ngrid + 1
+!$OMP TASK FIRSTPRIVATE(input_grid, ngrid), PRIVATE(gridinfol)
   IF (PRESENT(categoryappend)) THEN
     CALL init(gridinfol, gaid=input_grid, &
      categoryappend=TRIM(categoryappend)//"-msg"//TRIM(to_char(ngrid)))
@@ -399,9 +402,14 @@ DO WHILE(.TRUE.)
      categoryappend="msg"//TRIM(to_char(ngrid)))
   ENDIF
   CALL import(gridinfol)
+!$OMP CRITICAL
   CALL insert(this, gridinfol)
 ! gridinfol is intentionally not destroyed, since now it lives into this
+!$OMP END CRITICAL
+!$OMP END TASK
 ENDDO
+!$OMP END MASTER
+!$OMP END PARALLEL
 
 CALL packarray(this)
 
