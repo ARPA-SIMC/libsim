@@ -477,10 +477,16 @@ ELSE
   IF (.NOT.ASSOCIATED(voldati)) THEN
     ALLOCATE(voldati(this%griddim%dim%nx,this%griddim%dim%ny,SIZE(this%level)))
   ENDIF
+!$OMP PARALLEL DEFAULT(SHARED)
+!$OMP MASTER
   DO ilevel = 1, SIZE(this%level)
+!$OMP TASK FIRSTPRIVATE(ilevel)
     CALL grid_id_decode_data(this%gaid(ilevel,itime,itimerange,ivar), &
      voldati(:,:,ilevel))
+!$OMP END TASK
   ENDDO
+!$OMP END MASTER
+!$OMP END PARALLEL
 ENDIF
 
 END SUBROUTINE volgrid_get_vol_3d
@@ -537,10 +543,16 @@ INTEGER :: ilevel
 IF (ASSOCIATED(this%voldati)) THEN
   RETURN
 ELSE
+!$OMP PARALLEL DEFAULT(SHARED)
+!$OMP MASTER
   DO ilevel = 1, SIZE(this%level)
+!$OMP TASK FIRSTPRIVATE(ilevel)
     CALL grid_id_encode_data(this%gaid(ilevel,itime,itimerange,ivar), &
      voldati(:,:,ilevel))
+!$OMP END TASK
   ENDDO
+!$OMP END MASTER
+!$OMP END PARALLEL
 ENDIF
 
 END SUBROUTINE volgrid_set_vol_3d

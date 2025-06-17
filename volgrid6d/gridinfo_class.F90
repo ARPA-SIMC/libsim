@@ -504,10 +504,18 @@ IF (c_e(valid_grid_id)) THEN ! a valid grid_id has been found
 ! open file
   output_file = grid_file_id_new(filename, 'w', from_grid_id=valid_grid_id)
   IF (c_e(output_file)) THEN
+!$OMP PARALLEL DEFAULT(SHARED)
+!$OMP MASTER
     DO i = 1, this%arraysize
+!$OMP TASK FIRSTPRIVATE(i)
       CALL export(this%array(i)) ! export information to gaid
+!$OMP CRITICAL
       CALL export(this%array(i)%gaid, output_file) ! export gaid to file
+!$OMP END CRITICAL
+!$OMP END TASK
     ENDDO
+!$OMP END MASTER
+!$OMP END PARALLEL
 ! close file
     CALL delete(output_file)
   ELSE
