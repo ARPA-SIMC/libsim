@@ -176,7 +176,7 @@ if (c_e(ntime) .and. c_e(ntimerange) .and. c_e(nlevel) .and. c_e(nvar)) then
       end do
     end if
 
-    if (this%time_definition == 1) then
+    if (this%time_definition == 1 .OR. this%time_definition == 2) then
       ntimera=ntime
       allocate(tsdescriptions(ntimera))
 

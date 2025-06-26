@@ -548,8 +548,8 @@ ENDIF
 
 call optio(time_definition,this%time_definition)
 if (c_e(this%time_definition) .and. &
- (this%time_definition < 0 .OR. this%time_definition > 1))THEN
-  call l4f_category_log(this%category,L4F_ERROR,"Error in time_definition: "//to_char(this%time_definition))
+ (this%time_definition < 0 .OR. this%time_definition > 2))THEN
+  call l4f_category_log(this%category,L4F_ERROR,"Error time_definition invalid: "//to_char(this%time_definition))
   call raise_fatal_error()
 end if
 
