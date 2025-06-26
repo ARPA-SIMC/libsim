@@ -6,7 +6,7 @@
 
 Summary: Fortran utility libraries
 Name: libsim
-Version: 7.2.4
+Version: 7.2.5
 Release: 1
 License: GPL2+
 Group: Applications/Meteo
@@ -140,6 +140,13 @@ mv $RPM_BUILD_ROOT%{_includedir}/*.mod $RPM_BUILD_ROOT%{_fmoddir}
 rm -rf %{buildroot}
 
 %changelog
+* Thu Jun 26 2025 Davide Cesari <dcesari@arpae.it> - 7.2.5-1
+- extend OpenMP parallelisation
+- introduce time_definition=2 for converting to analysis
+
+* Thu Mar 20 2025 Davide Cesari <dcesari@arpae.it> - 7.2.4-1
+- extend use of comp_start also to forecasts
+
 * Mon Jan 13 2025 Davide Cesari <dcesari@arpae.it> - 7.2.3-1
 - add compute_projgrib utility
 - improve intersearch interpolation
