@@ -799,7 +799,7 @@ IF (time_definition == 0) THEN ! time == reference time
   reftime = time
   pend = time + p1
   pstart = pend - p2
-ELSE IF (time_definition == 1) THEN ! time == verification time
+ELSE IF (time_definition == 1 .OR. time_definition == 2) THEN ! time == verification time
   pend = time
   pstart = time - p2
   reftime = time - p1
@@ -843,7 +843,7 @@ IF (time_definition == 0) THEN ! time == reference time
   reftime = time
   pend = time + p1
   pstart = pend - step
-ELSE IF (time_definition == 1) THEN ! time == verification time
+ELSE IF (time_definition == 1 .OR. time_definition == 2) THEN ! time == verification time
   pend = time
   pstart = time - step
   reftime = time - p1
@@ -875,7 +875,7 @@ IF (time_definition == 0) THEN ! time == reference time
   time = reftime
   p1 = pend - reftime
   p2 = pend - pstart
-ELSE IF (time_definition == 1) THEN ! time == verification time
+ELSE IF (time_definition == 1 .OR. time_definition == 2) THEN ! time == verification time
   time = pend
   p1 = pend - reftime
   p2 = pend - pstart
