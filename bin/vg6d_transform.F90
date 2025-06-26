@@ -351,8 +351,9 @@ CALL optionparser_add(opt, ' ', 'set-component-flag', set_component_flag, help= 
 
 CALL optionparser_add(opt, ' ', 'time-definition', time_definition, 0, help= &
  'time definition for imported volume, 0 for reference time (more suitable for &
- &presenting forecast data) and 1 for verification time (more suitable for &
- &comparing forecasts with observations)')
+ &presenting forecast data), 1 for verification time (more suitable for &
+ &comparing forecasts with observations), 2 as 1 but forecast range is set to 0 &
+ &(analysis/observation)')
 
 CALL optionparser_add(opt, ' ', 'dup-mode', dup_mode, 0, help= &
  'behavior in case of duplicated input metadata: 0=overwrite fields, &

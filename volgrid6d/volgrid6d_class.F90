@@ -832,6 +832,7 @@ INTEGER :: itime0, itimerange0, itime1, itimerange1, itime, itimerange, &
  ilevel, ivar, ldup_mode
 LOGICAL :: dup
 TYPE(datetime) :: correctedtime
+TYPE(vol7d_timerange) :: correctedtimerange
 REAL,ALLOCATABLE :: tmpgrid(:,:)
 
 IF (PRESENT(dup_mode)) THEN
@@ -883,7 +884,7 @@ IF (optio_log(isanavar)) THEN ! assign to all times and timeranges
   itimerange1 = SIZE(this%timerange)
 ELSE ! usual case
   correctedtime = gridinfo%time
-  IF (this%time_definition == 1) correctedtime = correctedtime + &
+  IF (this%time_definition == 1 .OR. this%time_definition == 2) correctedtime = correctedtime + &
    timedelta_new(sec=gridinfo%timerange%p1)
   itime0 = index(this%time, correctedtime)
   IF (itime0 == 0 .AND. optio_log(force)) THEN
@@ -898,7 +899,9 @@ ELSE ! usual case
   ENDIF
   itime1 = itime0
 
-  itimerange0 = index(this%timerange,gridinfo%timerange)
+  correctedtimerange = gridinfo%timerange
+  IF (this%time_definition == 2) correctedtimerange%p1 = 0
+  itimerange0 = index(this%timerange, correctedtimerange)
   IF (itimerange0 == 0 .AND. optio_log(force)) THEN
     itimerange0 = index(this%timerange, vol7d_timerange_miss)
     IF (itimerange0 /= 0) this%timerange(itimerange0) = gridinfo%timerange
@@ -1023,7 +1026,7 @@ IF (.NOT.usetemplate) THEN
   ENDIF
 ENDIF
 
-IF (this%time_definition == 1) THEN
+IF (this%time_definition == 1 .OR. this%time_definition == 2) THEN
   correctedtime = this%time(itime) - &
    timedelta_new(sec=this%timerange(itimerange)%p1)
 ELSE
@@ -1077,12 +1080,13 @@ CHARACTER(len=*),INTENT(IN),OPTIONAL :: anavar(:) !< list of variables (B-table 
 CHARACTER(len=*),INTENT(in),OPTIONAL :: categoryappend !< append this suffix to log4fortran namespace category
 
 INTEGER :: i, j, stallo
-INTEGER :: ngrid, ntime, ntimerange, nlevel, nvar
+INTEGER :: ngrid, ntime, ntimerange, nlevel, nvar, ltime_definition
 INTEGER :: category
 CHARACTER(len=512) :: a_name
 TYPE(datetime),ALLOCATABLE :: correctedtime(:)
 LOGICAL,ALLOCATABLE :: isanavar(:)
 TYPE(vol7d_var) :: lvar
+TYPE(vol7d_timerange),ALLOCATABLE :: correctedtimerange(:)
 
 ! category temporanea (altrimenti non possiamo loggare)
 if (present(categoryappend))then
@@ -1096,6 +1100,12 @@ category=l4f_category_get(a_name)
 call l4f_category_log(category,L4F_DEBUG,"start import_from_gridinfovv")
 #endif
 
+IF (PRESENT(time_definition)) THEN
+  ltime_definition = MAX(MIN(time_definition, 2), 0)
+ELSE
+  ltime_definition = 0
+ENDIF
+
 ngrid=count_distinct(gridinfov%array(1:gridinfov%arraysize)%griddim,back=.true.)
 CALL l4f_category_log(category,L4F_INFO, t2c(ngrid)// &
  ' different grid definition(s) found in input data')
@@ -1107,9 +1117,9 @@ IF (stallo /= 0)THEN
 ENDIF
 DO i = 1, ngrid
   IF (PRESENT(categoryappend))THEN
-    CALL init(this(i), time_definition=time_definition, categoryappend=TRIM(categoryappend)//"-vol"//t2c(i))
+    CALL init(this(i), time_definition=ltime_definition, categoryappend=TRIM(categoryappend)//"-vol"//t2c(i))
   ELSE
-    CALL init(this(i), time_definition=time_definition, categoryappend="vol"//t2c(i))
+    CALL init(this(i), time_definition=ltime_definition, categoryappend="vol"//t2c(i))
   ENDIF
 ENDDO
 
@@ -1133,16 +1143,18 @@ IF (PRESENT(anavar)) THEN
    t2c(gridinfov%arraysize)//' constant-data messages found in input data')
 ENDIF
 
-! create time corrected for time_definition
-ALLOCATE(correctedtime(gridinfov%arraysize))
-correctedtime(:) = gridinfov%array(1:gridinfov%arraysize)%time
-IF (PRESENT(time_definition)) THEN
-  IF (time_definition == 1) THEN
-    DO i = 1, gridinfov%arraysize
-      correctedtime(i) = correctedtime(i) + &
-       timedelta_new(sec=gridinfov%array(i)%timerange%p1)
-    ENDDO
-  ENDIF
+IF (ltime_definition == 1 .OR. ltime_definition == 2) THEN ! verification time
+  ALLOCATE(correctedtime(gridinfov%arraysize))
+  correctedtime(:) = gridinfov%array(1:gridinfov%arraysize)%time
+  DO i = 1, gridinfov%arraysize
+    correctedtime(i) = correctedtime(i) + &
+     timedelta_new(sec=gridinfov%array(i)%timerange%p1)
+  ENDDO
+ENDIF
+IF (ltime_definition == 2) THEN ! set all to analysis
+  ALLOCATE(correctedtimerange(gridinfov%arraysize))
+  correctedtimerange(:) = gridinfov%array(1:gridinfov%arraysize)%timerange
+  correctedtimerange(:)%p1 = 0
 ENDIF
 
 DO i = 1, ngrid
@@ -1156,12 +1168,24 @@ DO i = 1, ngrid
       CALL raise_fatal_error()
     ENDIF
   ENDIF
-  ntime = count_distinct(correctedtime, &
-   mask=(this(i)%griddim == gridinfov%array(1:gridinfov%arraysize)%griddim) &
-   .AND. .NOT.isanavar(:), back=.TRUE.)
-  ntimerange = count_distinct(gridinfov%array(1:gridinfov%arraysize)%timerange, &
-   mask=(this(i)%griddim == gridinfov%array(1:gridinfov%arraysize)%griddim) &
-   .AND. .NOT.isanavar(:), back=.TRUE.)
+  IF (ltime_definition == 1 .OR. ltime_definition == 2) THEN ! verification time
+    ntime = count_distinct(correctedtime, &
+     mask=(this(i)%griddim == gridinfov%array(1:gridinfov%arraysize)%griddim) &
+     .AND. .NOT.isanavar(:), back=.TRUE.)
+  ELSE
+    ntime = count_distinct(gridinfov%array(1:gridinfov%arraysize)%time, &
+     mask=(this(i)%griddim == gridinfov%array(1:gridinfov%arraysize)%griddim) &
+     .AND. .NOT.isanavar(:), back=.TRUE.)
+  ENDIF
+  IF (ltime_definition == 2) THEN ! set all to analysis
+    ntimerange = count_distinct(correctedtimerange, &
+     mask=(this(i)%griddim == gridinfov%array(1:gridinfov%arraysize)%griddim) &
+     .AND. .NOT.isanavar(:), back=.TRUE.)
+  ELSE
+    ntimerange = count_distinct(gridinfov%array(1:gridinfov%arraysize)%timerange, &
+     mask=(this(i)%griddim == gridinfov%array(1:gridinfov%arraysize)%griddim) &
+     .AND. .NOT.isanavar(:), back=.TRUE.)
+  ENDIF
   nlevel = count_distinct(gridinfov%array(1:gridinfov%arraysize)%level, &
    mask=(this(i)%griddim == gridinfov%array(1:gridinfov%arraysize)%griddim), &
    back=.TRUE.)
@@ -1176,15 +1200,26 @@ DO i = 1, ngrid
   CALL volgrid6d_alloc(this(i),this(i)%griddim%dim,ntime=ntime, &
    ntimerange=ntimerange,nlevel=nlevel,nvar=nvar)
 
-  this(i)%time = pack_distinct(correctedtime, ntime, &
-   mask=(this(i)%griddim == gridinfov%array(1:gridinfov%arraysize)%griddim) &
-   .AND. .NOT.isanavar(:), back=.TRUE.)
+  IF (ltime_definition == 1 .OR. ltime_definition == 2) THEN ! verification time
+    this(i)%time = pack_distinct(correctedtime, ntime, &
+     mask=(this(i)%griddim == gridinfov%array(1:gridinfov%arraysize)%griddim) &
+     .AND. .NOT.isanavar(:), back=.TRUE.)
+  ELSE
+    this(i)%time = pack_distinct(gridinfov%array(1:gridinfov%arraysize)%time, ntime, &
+     mask=(this(i)%griddim == gridinfov%array(1:gridinfov%arraysize)%griddim) &
+     .AND. .NOT.isanavar(:), back=.TRUE.)
+  ENDIF
   CALL sort(this(i)%time)
 
-  this(i)%timerange = pack_distinct(gridinfov%array( &
-   1:gridinfov%arraysize)%timerange, ntimerange, &
-   mask=(this(i)%griddim == gridinfov%array(1:gridinfov%arraysize)%griddim) &
-   .AND. .NOT.isanavar(:), back=.TRUE.)
+  IF (ltime_definition == 2) THEN ! set all to analysis
+    this(i)%timerange = pack_distinct(correctedtimerange, ntimerange, &
+     mask=(this(i)%griddim == gridinfov%array(1:gridinfov%arraysize)%griddim) &
+     .AND. .NOT.isanavar(:), back=.TRUE.)
+  ELSE
+    this(i)%timerange = pack_distinct(gridinfov%array(1:gridinfov%arraysize)%timerange, &
+     ntimerange, mask=(this(i)%griddim == gridinfov%array(1:gridinfov%arraysize)%griddim) &
+     .AND. .NOT.isanavar(:), back=.TRUE.)
+  ENDIF
   CALL sort(this(i)%timerange)
 
   this(i)%level=pack_distinct(gridinfov%array(1:gridinfov%arraysize)%level, &
@@ -1203,7 +1238,8 @@ DO i = 1, ngrid
 
 ENDDO
 
-DEALLOCATE(correctedtime)
+IF (ltime_definition == 1 .OR. ltime_definition == 2) DEALLOCATE(correctedtime)
+IF (ltime_definition == 2) DEALLOCATE(correctedtimerange)
 
 DO i = 1, gridinfov%arraysize
 
