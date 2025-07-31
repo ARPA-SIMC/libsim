@@ -735,6 +735,12 @@ if (ltime_definition == 0) then
   end do
 end if
 
+if (ltime_definition == 2) then
+  do i =1,size(metaanddatav)
+    metaanddatav(i)%metadata%timerange%vol7d_timerange%p1 = 0
+  end do
+end if
+
 
 IF (PRESENT(set_network)) THEN
   if (c_e(set_network)) then

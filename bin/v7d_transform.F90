@@ -413,8 +413,8 @@ CALL optionparser_add(opt, ' ', 'time-definition', time_definition, 1, help= &
  'time definition for imported volume, if supported by the import method, &
  &0 for reference time (more suitable for &
  &presenting forecast data) and 1 for verification time (more suitable for &
- &comparing forecasts with observations)')
-
+ &comparing forecasts with observations, 2 as 1 but forecast range is set to 0 &
+ &(analysis/observation)')
 
 ! help options
 CALL optionparser_add_help(opt, 'h', 'help', help='show an help message and exit')

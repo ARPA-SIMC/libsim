@@ -322,7 +322,7 @@ CONTAINS
 !! uno stato indefinito.
 SUBROUTINE vol7d_init(this,time_definition)
 TYPE(vol7d),intent(out) :: this !< oggetto da inizializzare
-integer,INTENT(IN),OPTIONAL :: time_definition !< 0=time is reference time ; 1=time is validity time (default=1)
+INTEGER,INTENT(IN),OPTIONAL :: time_definition !< 0=time is reference time; 1=time is validity time; 2=time is validity time, forecast range forced to 0 (default=1)
 
 CALL init(this%anavar)
 CALL init(this%anaattr)
@@ -343,7 +343,7 @@ NULLIFY(this%volanac, this%volanaattrc, this%voldatic, this%voldatiattrc)
 if(present(time_definition)) then
   this%time_definition=time_definition
 else
-    this%time_definition=1  !default to validity time
+  this%time_definition=1  !default to validity time
 end if
 
 END SUBROUTINE vol7d_init
@@ -510,8 +510,10 @@ if (this%time_definition == 0) then
   print*,"TIME DEFINITION: time is reference time"
 else if (this%time_definition == 1) then
   print*,"TIME DEFINITION: time is validity time"
+else if (this%time_definition == 2) then
+  PRINT*,"TIME DEFINITION: time is validity time, forecast range forced to 0"
 else
-  print*,"Time definition have a wrong walue:", this%time_definition
+  print*,"Time definition has a wrong walue:", this%time_definition
 end if
 
 IF (ASSOCIATED(this%network))then
