@@ -47,6 +47,7 @@ TYPE vol7d_var
   INTEGER :: b=imiss !< indice della variabile nel volume degli attributi byte
   INTEGER :: c=imiss !< indice della variabile nel volume degli attributi character
   INTEGER :: gribhint(4)=imiss !< hint for conversion from/to grib when btable is not found
+  INTEGER :: feat_ind=imiss !< cached index to corresponding entry in feature table
 END TYPE  vol7d_var
 
 !> Valore mancante per vol7d_var.
@@ -116,6 +117,7 @@ INTEGER,PARAMETER :: var_ucomp=3 !< u component of a vector field (vol7d_vartype
 INTEGER,PARAMETER :: var_vcomp=4 !< v component of a vector field (vol7d_vartype function)
 INTEGER,PARAMETER :: var_wcomp=5 !< w component of a vector field (vol7d_vartype function)
 
+PRIVATE vol7d_var_features_init
 
 CONTAINS
 
@@ -252,6 +254,24 @@ c_e = this /= vol7d_var_miss
 END FUNCTION vol7d_var_c_e
 
 
+SUBROUTINE vol7d_var_features_set(this)
+TYPE(vol7d_var),INTENT(inout) :: this
+INTEGER :: i
+
+CALL vol7d_var_features_init()
+
+IF (ALLOCATED(var_features)) THEN
+  DO i = 1, SIZE(var_features)
+    IF (this == var_features(i)%var) THEN
+      this%feat_ind = i
+      EXIT
+    ENDIF
+  ENDDO
+ENDIF
+
+END SUBROUTINE vol7d_var_features_set
+
+
 !> Initialise the global table of variable features.
 !! This subroutine reads the table of variable features from an
 !! external file and stores it in a global array. It has to be called
@@ -309,22 +329,15 @@ END SUBROUTINE vol7d_var_features_delete
 !! physical parameter it represents. The result is one of the
 !! constants vartype_* defined in the module. To be extended.
 !! In order for this to work, the subroutine \a
-!! vol7d_var_features_init has to be preliminary called.
+!! vol7d_var_features_set has to be preliminary called.
 ELEMENTAL FUNCTION vol7d_var_features_vartype(this) RESULT(vartype)
 TYPE(vol7d_var),INTENT(in) :: this !< vol7d_var object to be tested
 INTEGER :: vartype
 
-INTEGER :: i
-
-vartype = imiss
-
-IF (ALLOCATED(var_features)) THEN
-  DO i = 1, SIZE(var_features)
-    IF (this == var_features(i)%var) THEN
-      vartype = var_features(i)%vartype
-      RETURN
-    ENDIF
-  ENDDO
+IF (c_e(this%feat_ind)) THEN
+  vartype = var_features(this%feat_ind)%vartype
+ELSE
+  vartype = imiss
 ENDIF
 
 END FUNCTION vol7d_var_features_vartype
@@ -335,24 +348,21 @@ END FUNCTION vol7d_var_features_vartype
 !! positive definite flag defined in the associated \a c_func object.
 !! The \a c_func object can be obtained for example by the \a convert
 !! (interfaced to vargrib2varbufr_convert) function. The value is
-!! reset to the maximum between the value itsel and and 0 (or the
+!! reset to the maximum between the value itself and and 0 (or the
 !! value set in \a c_func%posdef. These values are set from the
-!! vargrib2bufr.csv file.
+!! varbufr.csv file.
 !! In order for this to work, the subroutine \a
-!! vol7d_var_features_init has to be preliminary called.
+!! vol7d_var_features_set has to be preliminary called.
 ELEMENTAL SUBROUTINE vol7d_var_features_posdef_apply(this, val)
 TYPE(vol7d_var),INTENT(in) :: this !< vol7d_var object to be reset
 REAL,INTENT(inout) :: val !< value to be reset, it is reset in place
 
-INTEGER :: i
-
-IF (ALLOCATED(var_features)) THEN
-  DO i = 1, SIZE(var_features)
-    IF (this == var_features(i)%var) THEN
-      IF (c_e(var_features(i)%posdef)) val = MAX(var_features(i)%posdef, val)
-      RETURN
+IF (c_e(this%feat_ind)) THEN
+  IF (c_e(var_features(this%feat_ind)%posdef)) THEN
+    IF (c_e(val)) THEN
+      val = MAX(var_features(this%feat_ind)%posdef, val)
     ENDIF
-  ENDDO
+  ENDIF
 ENDIF
 
 END SUBROUTINE vol7d_var_features_posdef_apply

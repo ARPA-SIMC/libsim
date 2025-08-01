@@ -657,10 +657,13 @@ DO i4 = 1, SIZE(this%time)
 ENDDO
 
 ! varbufr required for setting posdef, optimize with an array
-ALLOCATE(varbufr(SIZE(this%var)))
-DO i6 = 1, SIZE(this%var)
-  varbufr(i6) = convert(this%var(i6))
-ENDDO
+IF (stat_proc == 1) THEN
+  ALLOCATE(varbufr(SIZE(this%var)))
+  DO i6 = 1, SIZE(this%var)
+    varbufr(i6) = convert(this%var(i6))
+    CALL vol7d_var_features_set(varbufr(i6))
+  ENDDO
+ENDIF
 ! compute statistical processing
 DO l = 1, SIZE(this%time)
   DO k = 1, nitr

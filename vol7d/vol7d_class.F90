@@ -330,7 +330,6 @@ CALL init(this%anavarattr)
 CALL init(this%dativar)
 CALL init(this%datiattr)
 CALL init(this%dativarattr)
-CALL vol7d_var_features_init() ! initialise var features table once
 
 NULLIFY(this%ana, this%time, this%level, this%timerange, this%network)
 

@@ -195,8 +195,6 @@ if (present(griddim))then
   call copy (griddim,this%griddim)
 end if
 
-CALL vol7d_var_features_init() ! initialise var features table once
-
 if(present(time_definition)) then
   this%time_definition = time_definition
 else
