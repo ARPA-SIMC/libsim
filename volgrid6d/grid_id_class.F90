@@ -810,13 +810,17 @@ END SUBROUTINE grid_id_encode_data
 #ifdef HAVE_LIBGRIBAPI
 SUBROUTINE grid_id_decode_data_gribapi(gaid, field)
 INTEGER,INTENT(in) :: gaid ! grib_api id
-REAL,INTENT(out) :: field(:,:) ! array of decoded values
+REAL,INTENT(out),TARGET,CONTIGUOUS :: field(:,:) ! array of decoded values
 
 INTEGER :: EditionNumber
 INTEGER :: alternativeRowScanning, &
  iScansNegatively, jScansPositively, jPointsAreConsecutive
-INTEGER :: numberOfValues,numberOfPoints
+#ifdef DEBUG
+INTEGER :: numberOfValues
+#endif
+INTEGER :: numberOfPoints
 REAL :: vector(SIZE(field))
+REAL,POINTER :: fieldp(:)
 INTEGER :: x1, x2, xs, y1, y2, ys, ord(2), ierr
 
 
@@ -851,7 +855,6 @@ CALL grib_get(gaid,'jPointsAreConsecutive',jPointsAreConsecutive,ierr)
 IF (ierr /= GRIB_SUCCESS) jPointsAreConsecutive=0
 
 call grib_get(gaid,'numberOfPoints',numberOfPoints)
-call grib_get(gaid,'numberOfValues',numberOfValues)
 
 IF (numberOfPoints /= SIZE(field)) THEN
   CALL l4f_log(L4F_ERROR, 'grid_id_decode_data_gribapi numberOfPoints and grid size different')
@@ -865,21 +868,29 @@ ENDIF
 
 ! get data values
 #ifdef DEBUG
+call grib_get(gaid,'numberOfValues',numberOfValues)
 call l4f_log(L4F_INFO,'grib_api number of values: '//to_char(numberOfValues))
 call l4f_log(L4F_INFO,'grib_api number of points: '//to_char(numberOfPoints))
 #endif
 
 CALL grib_set(gaid,'missingValue',rmiss)
+
+IF (iScansNegatively == 0 .AND. jScansPositively == 0 .AND. jPointsAreConsecutive == 0) THEN
+
+  fieldp(1:SIZE(field)) => field
+  CALL grib_get(gaid,'values',fieldp)
+
+ELSE
+
 CALL grib_get(gaid,'values',vector)
 ! suspect bug in grib_api, when all field is missing it is set to zero
-IF (numberOfValues == 0) vector = rmiss
+! IF (numberOfValues == 0) vector = rmiss
 
 #ifdef DEBUG
 CALL l4f_log(L4F_DEBUG, 'grib_api, decoded field in interval: '// &
  t2c(MINVAL(vector,mask=c_e(vector)))//' '//t2c(MAXVAL(vector,mask=c_e(vector))))
 CALL l4f_log(L4F_DEBUG, 'grib_api, decoded field with number of missing: '// &
  t2c(COUNT(.NOT.c_e(vector))))
-#endif
 
 IF (numberOfValues /= COUNT(c_e(vector))) THEN
   CALL l4f_log(L4F_WARN, 'grid_id_decode_data_gribapi numberOfValues and valid data count different')
@@ -887,9 +898,10 @@ IF (numberOfValues /= COUNT(c_e(vector))) THEN
    //t2c(numberOfValues)//', valid data: '//t2c(COUNT(c_e(vector))))
 !  CALL raise_warning()
 ENDIF
+#endif
 
 ! Transfer data field changing scanning mode to 64
-IF (iScansNegatively  == 0) THEN
+IF (iScansNegatively == 0) THEN
   x1 = 1
   x2 = SIZE(field,1)
   xs = 1
@@ -908,7 +920,7 @@ ELSE
   ys = 1
 ENDIF
 
-IF ( jPointsAreConsecutive == 0) THEN
+IF (jPointsAreConsecutive == 0) THEN
   ord = (/1,2/)
 ELSE
   ord = (/2,1/)
@@ -916,6 +928,8 @@ ENDIF
 
 field(x1:x2:xs,y1:y2:ys) = RESHAPE(vector, &
  (/SIZE(field,1),SIZE(field,2)/), ORDER=ord)
+
+ENDIF
 
 END SUBROUTINE grid_id_decode_data_gribapi
 
