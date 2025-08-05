@@ -73,6 +73,12 @@ END INTERFACE
 #include "arrayof_pre.F90"
 ! from arrayof
 
+TYPE,PRIVATE :: ttr_decoder
+  TYPE(datetime) :: pstart=datetime_miss
+  TYPE(datetime) :: pend=datetime_miss
+  TYPE(datetime) :: reftime=datetime_miss
+  LOGICAL :: isana=.FALSE.
+END TYPE ttr_decoder
 
 CONTAINS
 
@@ -149,11 +155,12 @@ TYPE(datetime),INTENT(in),OPTIONAL :: start
 INTEGER :: i, j, k, l, dirtyrep
 INTEGER :: steps
 LOGICAL :: lfull_steps, useful
-TYPE(datetime) :: lstart, pstart1, pstart2, pend1, pend2, reftime1, reftime2, tmptime
+TYPE(datetime) :: lstart, tmptime ! pstart1, pstart2, pend1, pend2, reftime1, reftime2
 TYPE(vol7d_timerange) :: tmptimerange
 TYPE(arrayof_datetime) :: a_otime
 TYPE(arrayof_vol7d_timerange) :: a_otimerange
 TYPE(timedelta) :: start_delta
+TYPE(ttr_decoder),ALLOCATABLE :: ttr_d(:,:)
 
 ! compute length of cumulation step in seconds
 CALL getval(step, asec=steps)
@@ -188,12 +195,22 @@ DO i = 1, nitr
   j = j + 1
 ENDDO
 
+ALLOCATE(map_tr(nitr, SIZE(itime), nitr, SIZE(itime), 2))
+map_tr(:,:,:,:,:) = imiss
+
+! precompute ttr
+ALLOCATE(ttr_d(nitr,SIZE(itime)))
+DO l = 1, SIZE(itime)
+  DO k = 1, nitr
+    CALL ttr_decoder_decode(itime(l), itimerange(f(k)), &
+     time_definition, ttr_d(k,l))
+    IF (ttr_d(k,l)%reftime == ttr_d(k,l)%pend) ttr_d(k,l)%isana = .TRUE.
+  ENDDO
+ENDDO
+
 ! now we have to evaluate time/timerage pairs which do not need processing
 ALLOCATE(keep_tr(nitr, SIZE(itime), 2))
 CALL compute_keep_tr()
-
-ALLOCATE(map_tr(nitr, SIZE(itime), nitr, SIZE(itime), 2))
-map_tr(:,:,:,:,:) = imiss
 
 ! scan through all possible combinations of time and timerange
 DO dirtyrep = 1, 2
@@ -205,33 +222,34 @@ DO dirtyrep = 1, 2
   ENDIF
   DO l = 1, SIZE(itime)
     DO k = 1, nitr
-      CALL time_timerange_get_period(itime(l), itimerange(f(k)), &
-       time_definition, pstart2, pend2, reftime2)
+!      CALL time_timerange_get_period(itime(l), itimerange(f(k)), &
+!       time_definition, pstart2, pend2, reftime2)
 
       DO j = 1, SIZE(itime)
         DO i = 1, nitr
           useful = .FALSE.
-          CALL time_timerange_get_period(itime(j), itimerange(f(i)), &
-           time_definition, pstart1, pend1, reftime1)
-          tmptimerange = vol7d_timerange_new(timerange=stat_proc)
+!          CALL time_timerange_get_period(itime(j), itimerange(f(i)), &
+!           time_definition, pstart1, pend1, reftime1)
+!          tmptimerange = vol7d_timerange_new(timerange=stat_proc)
 
-          IF (reftime2 == pend2 .AND. reftime1 == pend1) THEN ! analysis
-            IF (pstart2 == pstart1 .AND. pend2 > pend1) THEN ! =-|
+!          IF (ttr_d(k,l)%reftime == ttr_d(k,l)%pend .AND. ttr_d(i,j)%reftime == ttr_d(i,j)%pend) THEN ! analysis
+          IF (ttr_d(k,l)%isana .AND. ttr_d(i,j)%isana) THEN ! analysis
+            IF (ttr_d(k,l)%pstart == ttr_d(i,j)%pstart .AND. ttr_d(k,l)%pend > ttr_d(i,j)%pend) THEN ! =-|
               CALL time_timerange_set_period(tmptime, tmptimerange, &
-               time_definition, pend1, pend2, reftime2)
+               time_definition, stat_proc, ttr_d(i,j)%pend, ttr_d(k,l)%pend, ttr_d(k,l)%reftime)
               IF (lfull_steps) THEN
-                IF (MOD(reftime2, step) == timedelta_0) THEN
+                IF (MOD(ttr_d(k,l)%reftime, step) == timedelta_0) THEN
                   useful = .TRUE.
                 ENDIF
               ELSE
                 useful = .TRUE.
               ENDIF
 
-            ELSE IF (pstart2 < pstart1 .AND. pend2 == pend1) THEN ! -=|
+            ELSE IF (ttr_d(k,l)%pstart < ttr_d(i,j)%pstart .AND. ttr_d(k,l)%pend == ttr_d(i,j)%pend) THEN ! -=|
               CALL time_timerange_set_period(tmptime, tmptimerange, &
-               time_definition, pstart2, pstart1, pstart1)
+               time_definition, stat_proc, ttr_d(k,l)%pstart, ttr_d(i,j)%pstart, ttr_d(i,j)%pstart)
               IF (lfull_steps) THEN
-                IF (MOD(pstart1, step) == timedelta_0) THEN
+                IF (MOD(ttr_d(i,j)%pstart, step) == timedelta_0) THEN
                   useful = .TRUE.
                 ENDIF
               ELSE
@@ -239,22 +257,22 @@ DO dirtyrep = 1, 2
               ENDIF
             ENDIF
 
-          ELSE IF (reftime2 == reftime1) THEN ! forecast, same reftime
+          ELSE IF (ttr_d(k,l)%reftime == ttr_d(i,j)%reftime) THEN ! forecast, same reftime
             IF (lfull_steps) THEN
               IF (c_e(lstart)) THEN
 ! lstart shifts the interval for computing modulo step, this does not
 ! remove data before lstart but just shifts the phase
-                start_delta = lstart-reftime2
+                start_delta = lstart-ttr_d(k,l)%reftime
               ELSE
                 start_delta = timedelta_0
               ENDIF
             ENDIF
 
-            IF (pstart2 == pstart1 .AND. pend2 > pend1) THEN ! |=-
+            IF (ttr_d(k,l)%pstart == ttr_d(i,j)%pstart .AND. ttr_d(k,l)%pend > ttr_d(i,j)%pend) THEN ! |=-
               CALL time_timerange_set_period(tmptime, tmptimerange, &
-               time_definition, pend1, pend2, reftime2)
+               time_definition, stat_proc, ttr_d(i,j)%pend, ttr_d(k,l)%pend, ttr_d(k,l)%reftime)
               IF (lfull_steps) THEN
-                IF (MOD(pend2-reftime2-start_delta, step) == timedelta_0) THEN
+                IF (MOD(ttr_d(k,l)%pend-ttr_d(k,l)%reftime-start_delta, step) == timedelta_0) THEN
                   useful = .TRUE.
                 ENDIF
               ELSE
@@ -262,14 +280,14 @@ DO dirtyrep = 1, 2
               ENDIF
 ! keep only data after lstart
               IF (c_e(lstart)) THEN
-                IF (lstart > pend1) useful = .FALSE.
+                IF (lstart > ttr_d(i,j)%pend) useful = .FALSE.
               ENDIF
 
-            ELSE IF (pstart2 < pstart1 .AND. pend2 == pend1) THEN ! |-=
+            ELSE IF (ttr_d(k,l)%pstart < ttr_d(i,j)%pstart .AND. ttr_d(k,l)%pend == ttr_d(i,j)%pend) THEN ! |-=
               CALL time_timerange_set_period(tmptime, tmptimerange, &
-               time_definition, pstart2, pstart1, reftime2)
+               time_definition, stat_proc, ttr_d(k,l)%pstart, ttr_d(i,j)%pstart, ttr_d(k,l)%reftime)
               IF (lfull_steps) THEN
-                IF (MOD(pstart1-reftime2-start_delta, step) == timedelta_0) THEN
+                IF (MOD(ttr_d(i,j)%pstart-ttr_d(k,l)%reftime-start_delta, step) == timedelta_0) THEN
                   useful = .TRUE.
                 ENDIF
               ELSE
@@ -277,7 +295,7 @@ DO dirtyrep = 1, 2
               ENDIF
 ! keep only data after lstart
               IF (c_e(lstart)) THEN
-                IF (lstart > pstart2) useful = .FALSE.
+                IF (lstart > ttr_d(k,l)%pstart) useful = .FALSE.
               ENDIF
 
             ENDIF
@@ -332,20 +350,20 @@ keep_tr(:,:,:) = imiss
 DO l = 1, SIZE(itime)
   itrloop: DO k = 1, nitr
     IF (itimerange(f(k))%p2 == steps) THEN
-      CALL time_timerange_get_period(itime(l), itimerange(f(k)), &
-       time_definition, pstart2, pend2, reftime2)
+!      CALL time_timerange_get_period(itime(l), itimerange(f(k)), &
+!       time_definition, pstart2, pend2, reftime2)
       useful = .FALSE.
 ! keep only data after lstart
       IF (c_e(lstart)) THEN
-        IF (lstart > pstart2) CYCLE itrloop
+        IF (lstart > ttr_d(k,l)%pstart) CYCLE itrloop
       ENDIF
-      IF (reftime2 == pend2) THEN ! analysis
+      IF (ttr_d(k,l)%reftime == ttr_d(k,l)%pend) THEN ! analysis
         IF (c_e(lstart)) THEN ! in analysis mode start wins over full_steps
-          IF (MOD(reftime2-lstart, step) == timedelta_0) THEN
+          IF (MOD(ttr_d(k,l)%reftime-lstart, step) == timedelta_0) THEN
             useful = .TRUE.
           ENDIF
         ELSE IF (lfull_steps) THEN
-          IF (MOD(reftime2, step) == timedelta_0) THEN
+          IF (MOD(ttr_d(k,l)%reftime, step) == timedelta_0) THEN
             useful = .TRUE.
           ENDIF
         ELSE
@@ -355,7 +373,7 @@ DO l = 1, SIZE(itime)
         IF (lfull_steps) THEN
 ! same as above for start_delta, but in seconds and not in timerange/timedelta units
           IF (c_e(lstart)) THEN
-            start_deltas = timedelta_getamsec(lstart-reftime2)/1000_int_ll
+            start_deltas = timedelta_getamsec(lstart-ttr_d(k,l)%reftime)/1000_int_ll
           ELSE
             start_deltas = 0
           ENDIF
@@ -368,7 +386,7 @@ DO l = 1, SIZE(itime)
       ENDIF
       IF (useful) THEN
 !        CALL time_timerange_set_period(tmptime, tmptimerange, &
-!         time_definition, pstart2, pend2, reftime2)
+!         time_definition, stat_proc, pstart2, pend2, reftime2)
         keep_tr(k,l,1) = append_unique(a_otime, itime(l))
         keep_tr(k,l,2) = append_unique(a_otimerange, itimerange(f(k)))
       ENDIF
@@ -813,6 +831,46 @@ END SUBROUTINE time_timerange_get_period
 
 
 ! get start of period, end of period and reference time from time,
+! timerange, according to time_definition.
+SUBROUTINE ttr_decoder_decode(time, timerange, time_definition, decoded)
+TYPE(datetime),INTENT(in) :: time
+TYPE(vol7d_timerange),INTENT(in) :: timerange
+INTEGER,INTENT(in) :: time_definition
+TYPE(ttr_decoder),INTENT(out) :: decoded
+
+TYPE(timedelta) :: p1, p2
+
+
+p1 = timedelta_new(sec=timerange%p1) ! end of period
+p2 = timedelta_new(sec=timerange%p2) ! length of period
+
+IF (time == datetime_miss .OR. .NOT.c_e(timerange%p1) .OR. .NOT.c_e(timerange%p2) .OR. &
+! (timerange%p1 > 0 .AND. timerange%p1 < timerange%p2) .OR. &
+ timerange%p1 < 0 .OR. timerange%p2 < 0) THEN ! is this too pedantic and slow?
+  decoded%pstart = datetime_miss
+  decoded%pend = datetime_miss
+  decoded%reftime = datetime_miss
+  RETURN
+ENDIF
+
+IF (time_definition == 0) THEN ! time == reference time
+  decoded%reftime = time
+  decoded%pend = time + p1
+  decoded%pstart = decoded%pend - p2
+ELSE IF (time_definition == 1 .OR. time_definition == 2) THEN ! time == verification time
+  decoded%pend = time
+  decoded%pstart = time - p2
+  decoded%reftime = time - p1
+ELSE
+  decoded%pstart = datetime_miss
+  decoded%pend = datetime_miss
+  decoded%reftime = datetime_miss
+ENDIF
+
+END SUBROUTINE ttr_decoder_decode
+
+
+! get start of period, end of period and reference time from time,
 ! timerange, according to time_definition. step is taken separately
 ! from timerange and can be "popular"
 SUBROUTINE time_timerange_get_period_pop(time, timerange, step, time_definition, &
@@ -856,16 +914,58 @@ ENDIF
 END SUBROUTINE time_timerange_get_period_pop
 
 
+! get start of period, end of period and reference time from time,
+! timerange, according to time_definition. step is taken separately
+! from timerange and can be "popular"
+SUBROUTINE ttr_decoder_decode_pop(time, timerange, step, time_definition, decoded)
+TYPE(datetime),INTENT(in) :: time
+TYPE(vol7d_timerange),INTENT(in) :: timerange
+TYPE(timedelta),INTENT(in) :: step
+INTEGER,INTENT(in) :: time_definition
+TYPE(ttr_decoder),INTENT(out) :: decoded
+
+TYPE(timedelta) :: p1
+
+
+p1 = timedelta_new(sec=timerange%p1) ! end of period
+
+IF (time == datetime_miss .OR. .NOT.c_e(timerange%p1) .OR. .NOT.c_e(timerange%p2) .OR. &
+! (timerange%p1 > 0 .AND. timerange%p1 < timerange%p2) .OR. &
+ timerange%p1 < 0 .OR. timerange%p2 < 0) THEN ! is this too pedantic and slow?
+  decoded%pstart = datetime_miss
+  decoded%pend = datetime_miss
+  decoded%reftime = datetime_miss
+  RETURN
+ENDIF
+
+IF (time_definition == 0) THEN ! time == reference time
+  decoded%reftime = time
+  decoded%pend = time + p1
+  decoded%pstart = decoded%pend - step
+ELSE IF (time_definition == 1 .OR. time_definition == 2) THEN ! time == verification time
+  decoded%pend = time
+  decoded%pstart = time - step
+  decoded%reftime = time - p1
+ELSE
+  decoded%pstart = datetime_miss
+  decoded%pend = datetime_miss
+  decoded%reftime = datetime_miss
+ENDIF
+
+END SUBROUTINE ttr_decoder_decode_pop
+
+
 ! set time, timerange%p1, timerange%p2 according to pstart, pend,
 ! reftime and time_definition.
 SUBROUTINE time_timerange_set_period(time, timerange, time_definition, &
- pstart, pend, reftime)
+ stat_proc, pstart, pend, reftime)
 TYPE(datetime),INTENT(out) :: time
-TYPE(vol7d_timerange),INTENT(inout) :: timerange
+TYPE(vol7d_timerange),INTENT(out) :: timerange
 INTEGER,INTENT(in) :: time_definition
-TYPE(datetime),INTENT(in) :: reftime
+INTEGER,INTENT(in) :: stat_proc
 TYPE(datetime),INTENT(in) :: pstart
 TYPE(datetime),INTENT(in) :: pend
+TYPE(datetime),INTENT(in) :: reftime
 
 TYPE(timedelta) :: p1, p2
 INTEGER(kind=int_ll) :: dmsec
@@ -883,6 +983,7 @@ ELSE
   time = datetime_miss
 ENDIF
 
+timerange%timerange = stat_proc
 IF (time /= datetime_miss) THEN
   CALL getval(p1, amsec=dmsec) ! end of period
   timerange%p1 = int(dmsec/1000_int_ll)
