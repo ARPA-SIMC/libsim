@@ -31,7 +31,8 @@ USE volgrid6d_var_class
 USE datetime_class
 IMPLICIT NONE
 
-integer :: category,ier
+integer :: ier
+type(l4f_handle) :: category
 character(len=512):: a_name
 TYPE(arrayof_gridinfo) :: gridinfo
 
@@ -56,7 +57,7 @@ call l4f_launcher(a_name,a_name_force="demo9")
 ier=l4f_init()
 
 ! set a_name
-category=l4f_category_get(TRIM(a_name)//".main")
+category=l4f_category_get_handle(TRIM(a_name)//".main")
 
 call l4f_category_log(category,L4F_INFO,"start")
 

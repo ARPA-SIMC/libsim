@@ -60,7 +60,8 @@ REAL(kind=fp_geo) :: lat,lon
 integer :: scadenze(ntimerange) = (/900,1800,3600/)
 real :: dato
 integer :: iunit=1
-integer :: category,ier
+integer :: ier
+type(l4f_handle) :: category
 character(len=512):: a_name
 !questa chiamata prende dal launcher il nome univoco
 call l4f_launcher(a_name,a_name_force="qc_convert")
@@ -69,7 +70,7 @@ call l4f_launcher(a_name,a_name_force="qc_convert")
 ier=l4f_init()
 
 !imposta a_name
-category=l4f_category_get(a_name//".main")
+category=l4f_category_get_handle(a_name//".main")
 
 call l4f_category_log(category,L4F_INFO,"inizio")
 

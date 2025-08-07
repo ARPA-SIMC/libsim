@@ -26,7 +26,8 @@ use log4fortran
 
 IMPLICIT NONE
 
-integer :: category,ier
+integer :: ier
+type(l4f_handle) :: category
 character(len=512):: a_name
 
 integer :: nana, ntime ,nlevel, ntimerange, ndativarr, nnetwork ,nanavarc
@@ -46,7 +47,7 @@ real :: prec,temp
 call l4f_launcher(a_name,a_name_force="demo")
 
 !imposta a_name
-category=l4f_category_get(a_name)
+category=l4f_category_get_handle(a_name)
 
 
 !init di log4fortran

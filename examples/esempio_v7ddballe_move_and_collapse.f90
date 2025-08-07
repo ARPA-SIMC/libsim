@@ -34,7 +34,8 @@ integer :: inddativar,inddatiattr,inddativarattr
 CHARACTER(len=80) :: filein="../data/in.bufr",fileout="../data/out.bufr"
 
 character(len=512):: a_name
-integer :: category,ier
+integer :: ier
+type(l4f_handle) :: category
 
 !questa chiamata prende dal launcher il nome univoco
 call l4f_launcher(a_name,a_name_force="ensascii")
@@ -43,7 +44,7 @@ call l4f_launcher(a_name,a_name_force="ensascii")
 ier=l4f_init()
 
 !imposta a_name
-category=l4f_category_get(trim(a_name)//".main")
+category=l4f_category_get_handle(trim(a_name)//".main")
 call l4f_category_log(category,L4F_INFO,"start")
 
 
