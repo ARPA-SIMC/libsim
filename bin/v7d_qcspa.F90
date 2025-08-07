@@ -41,7 +41,8 @@ USE ncar_plot_class
 
 implicit none
 
-integer :: category,io,ier,i,iun,n,ind
+integer :: io,ier,i,iun,n,ind
+TYPE(l4f_handle) :: category
 character(len=512):: a_name,output_format, output_template
 
                                 !tipi derivati.
@@ -101,7 +102,7 @@ ier=l4f_init()
 call l4f_launcher(a_name,a_name_force="v7d_qcspa")
 
 ! set a_name
-category=l4f_category_get(a_name//".main")
+category=l4f_category_get_handle(a_name//".main")
 
 
 ! define the option parser

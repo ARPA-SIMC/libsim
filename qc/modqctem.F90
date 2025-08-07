@@ -98,7 +98,7 @@ type :: qctemtype
   type (vol7d),pointer :: v7d => null() !< Volume dati da controllare
   integer,pointer :: data_id_in(:,:,:,:,:) => null()  !< Indici dati del DB in input
   integer,pointer :: data_id_out(:,:,:,:,:) => null() !< Indici dati del DB in output
-  integer :: category !< log4fortran
+  type(l4f_handle) :: category !< log4fortran
   type (qcclitype) :: qccli !< qccli part for normalization
   type (vol7d) :: clima !< Clima spaziale di tutte le variabili da controllare
   character(len=20):: operation !< Operation to execute ("gradient"/"run")
@@ -176,7 +176,7 @@ character(len=9) ::netname(2)=(/"qctemgndi","qctemsndi"/)
 
 
 call l4f_launcher(a_name,a_name_append=trim(subcategorytem)//"."//trim(categoryappend))
-qctem%category=l4f_category_get(a_name)
+qctem%category=l4f_category_get_handle(a_name)
 
 nullify ( qctem%data_id_in )
 nullify ( qctem%data_id_out )

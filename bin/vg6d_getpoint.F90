@@ -39,7 +39,8 @@ TYPE(optionparser) :: opt
 INTEGER :: optind, optstatus
 CHARACTER(len=12) :: coord_format, output_format
 CHARACTER(len=512) :: a_name, coord_file, input_file, output_file
-INTEGER :: category, ier, i, iun, iargc
+INTEGER :: ier, i, iun, iargc
+TYPE(l4f_handle) :: category
 CHARACTER(len=network_name_len) :: network
 TYPE(volgrid6d),POINTER :: volgrid(:)
 TYPE(arrayof_gridinfo) :: maskgrid
@@ -69,7 +70,7 @@ CALL l4f_launcher(a_name,a_name_force="vg6d_getpoint")
 ier=l4f_init()
 
 !imposta a_name
-category=l4f_category_get(TRIM(a_name)//".main")
+category=l4f_category_get_handle(TRIM(a_name)//".main")
 
 ! define the option parser
 opt = optionparser_new(description_msg= &

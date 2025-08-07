@@ -17,6 +17,7 @@
 ! along with this program.  If not, see <http://www.gnu.org/licenses/>.
 MODULE vol7d_serialize_geojson_class
 USE,INTRINSIC :: iso_c_binding
+USE log4fortran
 USE vol7d_class
 USE vol7d_serialize_class
 USE optionparser_class
@@ -73,7 +74,7 @@ END SUBROUTINE vol7d_serialize_optionparser
 
 SUBROUTINE vol7d_serialize_parse(this, category)
 CLASS(vol7d_serialize_geojson),INTENT(inout) :: this !< object having undorgone the vol7d_serialize_optionparser method
-INTEGER,INTENT(in),OPTIONAL :: category !< log4fortran category for logging error messages
+TYPE(l4f_handle),INTENT(in),OPTIONAL :: category !< log4fortran category for logging error messages
 
 ! check own parameters
 IF (this%variant /= 'simple' .AND. this%variant /= 'rich') THEN

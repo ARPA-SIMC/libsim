@@ -96,7 +96,7 @@ CHARACTER(len=network_name_len) :: set_network
 CHARACTER(len=512) :: dsn
 LOGICAL :: version, ldisplay, disable_qc, comp_qc_ndi, comp_qc_perc, comp_qc_area_er,anaonly
 CHARACTER(len=512):: a_name
-INTEGER :: category
+TYPE(l4f_handle) :: category
 TYPE(arrayof_real) :: maskbounds
 
 ! for computing
@@ -131,7 +131,7 @@ CALL l4f_launcher(a_name,a_name_force="v7d_transform")
 !init di log4fortran
 ier = l4f_init()
 !imposta a_name
-category = l4f_category_get(TRIM(a_name)//".main")
+category = l4f_category_get_handle(TRIM(a_name)//".main")
 
 ! define the option parser
 opt = optionparser_new(description_msg= &

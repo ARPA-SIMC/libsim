@@ -81,8 +81,8 @@ type volgrid6d
   TYPE(volgrid6d_var),pointer :: var(:) !< physical variable dimension descriptor
   TYPE(grid_id),POINTER :: gaid(:,:,:,:) !< array of grid identifiers, carrying information about the driver for import/export from/to file, indices are: (level,time,timerange,var)
   REAL,POINTER :: voldati(:,:,:,:,:,:) !< array of data, indices are: (x,y,level,time,timerange,var)
-  integer :: time_definition !< time definition; 0=time is reference time ; 1=time is validity time
-  integer :: category = 0 !< log4fortran category
+  INTEGER :: time_definition !< time definition; 0=time is reference time ; 1=time is validity time
+  TYPE(l4f_handle) :: category !< log4fortran category
 end type volgrid6d
 
 !> Constructor, it creates a new instance of the object.
@@ -183,7 +183,7 @@ if (present(categoryappend))then
 else
    call l4f_launcher(a_name,a_name_append=trim(subcategory))
 endif
-this%category=l4f_category_get(a_name)
+this%category=l4f_category_get_handle(a_name)
 
 #ifdef DEBUG
 call l4f_category_log(this%category,L4F_DEBUG,"init")
@@ -1079,7 +1079,7 @@ CHARACTER(len=*),INTENT(in),OPTIONAL :: categoryappend !< append this suffix to 
 
 INTEGER :: i, j, stallo
 INTEGER :: ngrid, ntime, ntimerange, nlevel, nvar, ltime_definition
-INTEGER :: category
+TYPE(l4f_handle) :: category
 CHARACTER(len=512) :: a_name
 TYPE(datetime),ALLOCATABLE :: correctedtime(:)
 LOGICAL,ALLOCATABLE :: isanavar(:)
@@ -1092,7 +1092,7 @@ if (present(categoryappend))then
 else
   call l4f_launcher(a_name,a_name_append=trim(subcategory))
 endif
-category=l4f_category_get(a_name)
+category=l4f_category_get_handle(a_name)
 
 #ifdef DEBUG
 call l4f_category_log(category,L4F_DEBUG,"start import_from_gridinfovv")
@@ -1356,7 +1356,7 @@ CHARACTER(len=*),INTENT(IN),OPTIONAL :: anavar(:) !< list of variables (B-table 
 character(len=*),INTENT(in),OPTIONAL :: categoryappend !< append this suffix to log4fortran namespace category
 
 TYPE(arrayof_gridinfo) :: gridinfo
-INTEGER :: category
+TYPE(l4f_handle) :: category
 CHARACTER(len=512) :: a_name
 
 NULLIFY(this)
@@ -1367,7 +1367,7 @@ IF (PRESENT(categoryappend))THEN
 ELSE
   CALL l4f_launcher(a_name,a_name_append=TRIM(subcategory))
 ENDIF
-category=l4f_category_get(a_name)
+category=l4f_category_get_handle(a_name)
 
 CALL import(gridinfo, filename=filename, categoryappend=categoryappend)
   
@@ -1404,7 +1404,7 @@ TYPE(grid_id),INTENT(in),OPTIONAL :: gaid_template !< template for the output fi
 character(len=*),INTENT(in),OPTIONAL :: categoryappend !< append this suffix to log4fortran namespace category
 
 TYPE(arrayof_gridinfo) :: gridinfo
-INTEGER :: category
+TYPE(l4f_handle) :: category
 CHARACTER(len=512) :: a_name
 
 IF (PRESENT(categoryappend)) THEN
@@ -1412,7 +1412,7 @@ IF (PRESENT(categoryappend)) THEN
 ELSE
   CALL l4f_launcher(a_name,a_name_append=TRIM(subcategory))
 ENDIF
-category=l4f_category_get(a_name)
+category=l4f_category_get_handle(a_name)
 
 #ifdef DEBUG
 CALL l4f_category_log(category,L4F_DEBUG,"start export to file")

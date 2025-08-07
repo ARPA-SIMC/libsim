@@ -33,7 +33,8 @@ use vol7d_dballe_class
 #endif
 implicit none
 
-integer :: category,io,ier,i
+integer :: io,ier,i
+TYPE(l4f_handle) :: category
 character(len=512):: a_name
 
                                 !tipi derivati.
@@ -62,7 +63,7 @@ ier=l4f_init()
 call l4f_launcher(a_name,a_name_force="v7d_qccli")
 
 ! set a_name
-category=l4f_category_get(a_name//".main")
+category=l4f_category_get_handle(a_name//".main")
 
 !------------------------------------------------------------------------
 ! read the namelist to define DSN
