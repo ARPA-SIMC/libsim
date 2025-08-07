@@ -26,10 +26,11 @@ IMPLICIT NONE
 
 TYPE(vol7d_dballe) :: v7d_dba
 TYPE(vol7d) :: v7d
- TYPE(vol7d_network):: network
+TYPE(vol7d_network):: network
 
-integer :: category,ier
-character(len=512):: a_name,filename="vol7d_dballe_test2.bufr",filenameout="vol7d_dballe_test2_out.bufr"
+INTEGER :: ier
+TYPE(l4f_handle) :: category
+CHARACTER(len=512):: a_name,filename="vol7d_dballe_test2.bufr",filenameout="vol7d_dballe_test2_out.bufr"
 
 !questa chiamata prende dal launcher il nome univoco
 call l4f_launcher(a_name)
@@ -37,7 +38,7 @@ call l4f_launcher(a_name)
 ier=l4f_init()
 
 !imposta a_name
-category=l4f_category_get(a_name//".main")
+category=l4f_category_get_handle(a_name//".main")
 
 call l4f_category_log(category,L4F_INFO,"inizio")
 

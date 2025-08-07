@@ -219,7 +219,7 @@ END SUBROUTINE vol7d_serialize_optionparser
 !! set directly rather than through command-line.
 SUBROUTINE vol7d_serialize_parse(this, category)
 CLASS(vol7d_serialize),INTENT(inout) :: this !< object having undorgone the vol7d_serialize_optionparser method
-INTEGER,INTENT(in),OPTIONAL :: category !< log4fortran category for logging error messages
+TYPE(l4f_handle),INTENT(in),OPTIONAL :: category !< log4fortran category for logging error messages
 
 CALL parse_v7d_column(this%column, this%icolumn, '--'//TRIM(this%ext)//'-column', &
  .FALSE., category)
@@ -238,7 +238,7 @@ CHARACTER(len=*),INTENT(in) :: ccol
 INTEGER,INTENT(out) :: icol(:)
 CHARACTER(len=*),INTENT(in) :: par_name
 LOGICAL,INTENT(in) :: check_all
-INTEGER,INTENT(in),OPTIONAL :: category
+TYPE(l4f_handle),INTENT(in),OPTIONAL :: category
 
 INTEGER :: i, j, nc
 INTEGER,POINTER :: w_s(:), w_e(:)

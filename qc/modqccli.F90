@@ -139,7 +139,7 @@ type :: qcclitype
   integer,pointer :: data_id_in(:,:,:,:,:) !< Indici dati del DB in input
   integer,pointer :: data_id_out(:,:,:,:,:) !< Indici dati del DB in output
   integer, pointer :: in_macroa(:) !< Macroarea di appartenenza delle stazioni
-  integer :: category !< log4fortran
+  type(l4f_handle) :: category !< log4fortran
   logical :: height2level   !< use conventional level starting from station height
 
 end type qcclitype
@@ -223,7 +223,7 @@ TYPE(arrayof_georef_coord_array) :: macroa !< serie di coordinate che definiscon
 
 
 call l4f_launcher(a_name,a_name_append=trim(subcategory)//"."//trim(categoryappend))
-qccli%category=l4f_category_get(a_name)
+qccli%category=l4f_category_get_handle(a_name)
 
 qccli%height2level=optio_log(height2level)
 

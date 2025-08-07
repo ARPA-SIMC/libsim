@@ -223,6 +223,7 @@ USE optional_values
 USE array_utilities
 USE georef_coord_class
 USE simple_stat
+USE log4fortran
 IMPLICIT NONE
 
 CHARACTER(len=255),PARAMETER:: subcategory="grid_transform_class"
@@ -301,7 +302,7 @@ TYPE transform_def
   TYPE(box_info) :: box_info ! boxregrid specification
   TYPE(vertint) :: vertint ! vertical interpolation specification
   INTEGER :: time_definition ! time definition for interpolating to sparse points
-  INTEGER :: category = 0 ! category for log4fortran
+  TYPE(l4f_handle) :: category ! category for log4fortran
 END TYPE transform_def
 
 
@@ -346,7 +347,7 @@ TYPE grid_transform
 !  type(volgrid6d) :: input_vertcoordvol ! volume which provides the input vertical coordinate if separated from the data volume itself (for vertint) cannot be here because of cross-use, should be an argument of compute
 !  type(vol7d_level), pointer :: output_vertlevlist(:) ! list of vertical levels of output data (for vertint) can be here or an argument of compute, how to do?
   TYPE(vol7d_level),POINTER :: output_level_auto(:) => NULL() ! array of auto-generated levels, stored for successive query
-  INTEGER :: category = 0 ! category for log4fortran
+  TYPE(l4f_handle) :: category ! category for log4fortran
   LOGICAL :: valid = .FALSE. ! the transformation has been successfully initialised
   PROCEDURE(basic_find_index),NOPASS,POINTER :: find_index => basic_find_index ! allow a local implementation of find_index
 END TYPE grid_transform
@@ -502,7 +503,7 @@ IF (PRESENT(categoryappend)) THEN
 ELSE
   CALL l4f_launcher(a_name,a_name_append=TRIM(subcategory))
 ENDIF
-this%category=l4f_category_get(a_name)
+this%category=l4f_category_get_handle(a_name)
 
 this%trans_type = trans_type
 this%sub_type = sub_type
@@ -2797,7 +2798,7 @@ IF (PRESENT(categoryappend)) THEN
 ELSE
   CALL l4f_launcher(a_name,a_name_append=TRIM(subcategory))
 ENDIF
-this%category=l4f_category_get(a_name)
+this%category=l4f_category_get_handle(a_name)
 
 #ifdef DEBUG
 CALL l4f_category_log(this%category,L4F_DEBUG,"start init_grid_transform")

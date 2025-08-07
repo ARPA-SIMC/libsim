@@ -82,7 +82,7 @@ TYPE gridinfo_def
   TYPE(vol7d_level) :: level !< vertical level dimension descriptor
   TYPE(volgrid6d_var) :: var !< physical variable dimension descriptor
   TYPE(grid_id) :: gaid !< grid identificator, carrying information about the driver for importation/exportation from/to file
-  INTEGER :: category = 0 !< log4fortran category
+  TYPE(l4f_handle) :: category !< log4fortran category
 END TYPE gridinfo_def
 
 INTEGER, PARAMETER :: &
@@ -174,7 +174,7 @@ if (present(categoryappend))then
 else
    call l4f_launcher(a_name,a_name_append=trim(subcategory))
 end if
-this%category=l4f_category_get(a_name)
+this%category=l4f_category_get_handle(a_name)
 
 #ifdef DEBUG
 call l4f_category_log(this%category,L4F_DEBUG,"start init gridinfo")
@@ -365,7 +365,8 @@ CHARACTER(len=*),INTENT(in) :: filename !< name of file to open and import, in t
 CHARACTER(len=*),INTENT(in),OPTIONAL :: categoryappend !< append this suffix to log4fortran namespace category
 
 type(gridinfo_def) :: gridinfol
-INTEGER :: ngrid, category
+INTEGER :: ngrid
+TYPE(l4f_handle) :: category
 CHARACTER(len=512) :: a_name
 TYPE(grid_file_id) :: input_file
 TYPE(grid_id) :: input_grid
@@ -376,7 +377,7 @@ IF (PRESENT(categoryappend)) THEN
 ELSE
   CALL l4f_launcher(a_name,a_name_append=TRIM(subcategory))
 ENDIF
-category=l4f_category_get(a_name)
+category=l4f_category_get_handle(a_name)
 
 #ifdef DEBUG
 CALL l4f_category_log(category,L4F_DEBUG,"import from file")
@@ -474,7 +475,8 @@ TYPE(arrayof_gridinfo) :: this !< array of gridinfo objects which will be writte
 CHARACTER(len=*),INTENT(in) :: filename !< name of file to open and import, in the form [driver:]pathname
 CHARACTER(len=*),INTENT(in),OPTIONAL :: categoryappend !< append this suffix to log4fortran namespace category
 
-INTEGER :: i, category
+INTEGER :: i
+TYPE(l4f_handle) :: category
 CHARACTER(len=512) :: a_name
 TYPE(grid_file_id) :: output_file
 TYPE(grid_id) :: valid_grid_id
@@ -485,7 +487,7 @@ IF (PRESENT(categoryappend)) THEN
 ELSE
   CALL l4f_launcher(a_name,a_name_append=TRIM(subcategory))
 ENDIF
-category=l4f_category_get(a_name)
+category=l4f_category_get_handle(a_name)
 
 #ifdef DEBUG
 CALL l4f_category_log(category,L4F_DEBUG, &

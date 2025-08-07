@@ -99,13 +99,13 @@ type(datetime) :: timeref
 character (len=23) :: isodate
 
 
-integer :: category
+type(l4f_handle) :: category
 character(len=512):: a_name
 
 character(len=65):: varchar(3)
 
 call l4f_launcher(a_name,a_name_append=subcategory)
-category=l4f_category_get(a_name)
+category=l4f_category_get_handle(a_name)
 
 
 if (ncconventions == "CF-1.1") then
@@ -629,12 +629,12 @@ integer :: i
 
 type(datetime) :: timeref 
 
-integer :: category
+type(l4f_handle) :: category
 character(len=512):: a_name
 
 
 call l4f_launcher(a_name,a_name_append=subcategory)
-category=l4f_category_get(a_name)
+category=l4f_category_get_handle(a_name)
 
 
 if (ncconventions /= "CF-1.1") then

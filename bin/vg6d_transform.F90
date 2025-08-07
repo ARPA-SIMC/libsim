@@ -41,7 +41,8 @@ USE termo
 
 implicit none
 
-INTEGER :: category, ier, i, n
+INTEGER :: ier, i, n
+TYPE(l4f_handle) :: category
 LOGICAL :: first
 CHARACTER(len=12) :: coord_format
 CHARACTER(len=10), ALLOCATABLE :: vl(:), avl(:)
@@ -109,7 +110,7 @@ call l4f_launcher(a_name,a_name_force="vg6d_transform")
 ier=l4f_init()
 
 !imposta a_name
-category=l4f_category_get(TRIM(a_name)//".main")
+category=l4f_category_get_handle(TRIM(a_name)//".main")
 
 ! define the option parser
 opt = optionparser_new(description_msg= &

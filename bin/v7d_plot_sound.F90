@@ -32,7 +32,8 @@ USE err_handling
 implicit none
 
 type(optionparser) :: opt
-INTEGER :: iargc, optind, optstatus, category, ier
+INTEGER :: iargc, optind, optstatus, ier
+TYPE(l4f_handle) :: category
 logical :: version
 integer :: wstype,ic
 CHARACTER(len=8) :: input_format
@@ -60,7 +61,7 @@ call l4f_launcher(a_name,a_name_force="readtemp")
 ier=l4f_init()
 
 !imposta a_name
-category=l4f_category_get(a_name//".main")
+category=l4f_category_get_handle(a_name//".main")
 
 ! define the option parser
 opt = optionparser_new(description_msg= &

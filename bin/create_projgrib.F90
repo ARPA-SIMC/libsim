@@ -8,7 +8,8 @@ USE volgrid6d_class
 USE grid_transform_class
 IMPLICIT NONE
 
-INTEGER :: category, ier
+INTEGER :: ier
+TYPE(l4f_handle) :: category
 CHARACTER(len=512) :: a_name, input_file, output_file
 TYPE(optionparser) :: opt
 INTEGER :: optind, optstatus
@@ -29,7 +30,7 @@ TYPE(transform_def) :: trans
 
 CALL l4f_launcher(a_name, a_name_force="create_projgrib")
 ier = l4f_init()
-category=l4f_category_get(TRIM(a_name)//".main")
+category=l4f_category_get_handle(TRIM(a_name)//".main")
 
 ! define the option parser
 opt = optionparser_new(description_msg= &

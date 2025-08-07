@@ -1,6 +1,7 @@
 module simc_netcdf
  USE datetime_class
  USE err_handling
+ USE log4fortran
  implicit none
  integer,parameter:: centre=80
  integer,parameter:: subCentre=255
@@ -17,12 +18,12 @@ contains
  !=========================
  subroutine checknc(status,category,message)
   use grid_id_class
-  USE log4fortran
   USE netcdf
   USE err_handling
-  implicit none
-  integer, intent(in) :: status,category
-  character(len=*),optional :: message    
+  IMPLICIT NONE
+  INTEGER,INTENT(in) :: status
+  TYPE(l4f_handle),INTENT(in) :: category
+  CHARACTER(len=*),OPTIONAL :: message    
   
   if (status /= nf90_noerr) then
     call l4f_category_log(category,L4F_ERROR,&
@@ -36,7 +37,8 @@ contains
   USE netcdf
   USE err_handling
   implicit none
-  integer,intent(in):: ncid, it, category
+  INTEGER,INTENT(in) :: ncid, it
+  TYPE(l4f_handle),INTENT(in) :: category
   CHARACTER(len=20),intent(in) :: model
   TYPE (datetime),intent(out) :: vtime
   CHARACTER (LEN=dstrl) :: vtimes_char
@@ -111,7 +113,7 @@ contains
   implicit none
   CHARACTER (LEN=512), intent(in) :: romsgridnc
   CHARACTER (LEN=512) :: msg
-  integer, intent(in) :: category
+  TYPE(l4f_handle),INTENT(in) :: category
   integer, intent(out)  :: N
   integer::nc_id, dimid
 ! Open NetCDF files, read dimensions and attributes
@@ -127,7 +129,8 @@ contains
   use netcdf
   implicit none
   CHARACTER (LEN=512), intent(in) :: romsgridnc
-  integer,intent(in):: nx,ny,N, category
+  integer,intent(in):: nx,ny,N
+  TYPE(l4f_handle),INTENT(in) :: category
   integer, intent(out)  :: Vtransform
   double precision, intent(out) :: sc_r(N), sc_w(0:N), Cs_r(N), Cs_w(0:N), h(nx,ny), hc
   CHARACTER (LEN=512) :: msg
@@ -369,7 +372,7 @@ CHARACTER (LEN=2) :: trange_type
 LOGICAL :: optversion, opttemplatenml
 
 !! disordinati Lidia
-INTEGER :: category
+TYPE(l4f_handle) :: category
 INTEGER :: optind
 INTEGER :: value_i, it, nzvar
 CHARACTER (LEN=80) :: grbparameters_s
@@ -397,7 +400,7 @@ log_name = "simc_nc2grib"                ! rott name of LibSIM logfiles
 ! Initialize log4fortran (to enable logging messages from LibSIM routines
 CALL l4f_launcher(a_name, a_name_force=log_name)
 ier = l4f_init()
-category=l4f_category_get(a_name//".main")
+category=l4f_category_get_handle(a_name//".main")
 
 !-------------------------------------------------------------------------------
 ! Parsing command line arguments

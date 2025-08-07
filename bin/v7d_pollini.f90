@@ -61,14 +61,15 @@ INTEGER, ALLOCATABLE :: ndstaz(:)
 REAL :: conc
 
 ! Log4fortran
-INTEGER :: category, ier
+INTEGER :: ier
+TYPE(l4f_handle) :: category
 CHARACTER(len=512):: a_name
 
 !questa chiamata prende dal launcher il nome univoco
 CALL l4f_launcher(a_name)
 !init di log4fortran
 ier = l4f_init()
-category = l4f_category_get(a_name)
+category = l4f_category_get_handle(a_name)
 
 ! Imposto i default
 variabili = ''
