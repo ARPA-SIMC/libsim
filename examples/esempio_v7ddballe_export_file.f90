@@ -26,7 +26,8 @@ use log4fortran
 
 IMPLICIT NONE
 
-integer :: category,ier
+integer :: ier
+type(l4f_handle) :: category
 character(len=512):: a_name
 
 integer :: nana, ntime ,nlevel, ntimerange, ndativarr, nnetwork ,nanavarc
@@ -50,7 +51,7 @@ call l4f_launcher(a_name,a_name_force="demo",a_name_append="main")
 ier=l4f_init()
 
 !imposta a_name
-category=l4f_category_get(a_name//".main")
+category=l4f_category_get_handle(a_name//".main")
 
 
 call l4f_category_log(category,L4F_INFO,"demo scrittura BUFR da vol7d")

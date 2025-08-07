@@ -25,7 +25,8 @@ use grid_transform_class
 use char_utilities
 implicit none
 
-integer :: category,ier,gaid_template
+integer :: ier,gaid_template
+type(l4f_handle) :: category
 integer :: i,j
 character(len=512):: a_name
 type (volgrid6d),pointer  :: volgrid(:),volgrid_out(:)
@@ -38,7 +39,7 @@ call l4f_launcher(a_name,a_name_force="demo5")
 ier=l4f_init()
 
 !imposta a_name
-category=l4f_category_get(a_name//".main")
+category=l4f_category_get_handle(a_name//".main")
 
 call l4f_category_log(category,L4F_INFO,"inizio")
 

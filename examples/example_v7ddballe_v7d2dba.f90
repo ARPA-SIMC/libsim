@@ -30,7 +30,8 @@ namelist  /odbc/database,user,password
 TYPE(vol7d) :: v7d
 TYPE(vol7d_dballe) ::v7d_exp
 
-integer :: category,ier
+integer :: ier
+type(l4f_handle) :: category
 character(len=512):: a_name
 
 !questa chiamata prende dal launcher il nome univoco

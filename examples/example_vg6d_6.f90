@@ -26,7 +26,8 @@ USE vol7d_class
 
 implicit none
 
-integer :: category,ier,i,nana
+integer :: ier,i,nana
+type(l4f_handle) :: category
 character(len=512):: a_name,filename="out.bufr"
 type (volgrid6d),pointer  :: volgrid(:),volgrid_out(:)
 type(transform_def) :: trans
@@ -42,7 +43,7 @@ call l4f_launcher(a_name,a_name_force="demo6")
 ier=l4f_init()
 
 !imposta a_name
-category=l4f_category_get(a_name//".main")
+category=l4f_category_get_handle(a_name//".main")
 
 call l4f_category_log(category,L4F_INFO,"inizio")
 

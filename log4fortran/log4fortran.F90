@@ -462,6 +462,12 @@ INTEGER(kind=c_int),INTENT(in) :: a_category !< category
 INTEGER(kind=c_int),INTENT(in) :: a_priority !< priority level
 CHARACTER(len=*),INTENT(in) :: a_format !< message to emit
 
+CALL l4f_category_log_c(l4f_global_ptr%array(a_category), L4F_WARN, &
+ 'You are using the legacy log4fortran interface!'//CHAR(0))
+CALL l4f_category_log_c(l4f_global_ptr%array(a_category), L4F_WARN, &
+ 'Please, upgrade your code by defining category as `TYPE(l4f_handle)`'//CHAR(0))
+CALL l4f_category_log_c(l4f_global_ptr%array(a_category), L4F_WARN, &
+ 'and replacing `l4f_category_get` with `l4f_category_get_handle`'//CHAR(0))
 CALL l4f_category_log_c(l4f_global_ptr%array(a_category), a_priority, TRIM(a_format)//CHAR(0))
 
 END SUBROUTINE l4f_category_log_legacy
