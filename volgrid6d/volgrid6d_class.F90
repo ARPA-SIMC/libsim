@@ -459,17 +459,20 @@ END SUBROUTINE volgrid_get_vol_2d
 !! pointer and the array or about the allocation status of \a this, so
 !! it should be called only when everything has been checked to be in
 !! good shape.
-SUBROUTINE volgrid_get_vol_3d(this, itime, itimerange, ivar, voldati)
+SUBROUTINE volgrid_get_vol_3d(this, itime, itimerange, ivar, voldati, zlist)
 TYPE(volgrid6d),INTENT(in) :: this !< object from which the slice has to be retrieved
 INTEGER,INTENT(in) :: itime !< index of time level of the slice
 INTEGER,INTENT(in) :: itimerange !< index of timerange of the slice
 INTEGER,INTENT(in) :: ivar !< index of physical variable of the slice
 REAL,POINTER :: voldati(:,:,:) !< pointer to the data, if \a this%voldati is already allocated, it will just point to the requested slice, otherwise it will be allocated if and only if it is nullified on entry
+LOGICAL,OPTIONAL,INTENT(out) :: zlist(:) !< list of vertical level present in the data
 
 INTEGER :: ilevel
+LOGICAL :: done
 
 IF (ASSOCIATED(this%voldati)) THEN
   voldati => this%voldati(:,:,:,itime,itimerange,ivar)
+  IF (PRESENT(zlist)) zlist(:) = .TRUE. ! TODO improve!
   RETURN
 ELSE
   IF (.NOT.ASSOCIATED(voldati)) THEN
@@ -478,9 +481,10 @@ ELSE
 !$OMP PARALLEL DEFAULT(SHARED)
 !$OMP MASTER
   DO ilevel = 1, SIZE(this%level)
-!$OMP TASK FIRSTPRIVATE(ilevel)
+!$OMP TASK FIRSTPRIVATE(ilevel),PRIVATE(done)
     CALL grid_id_decode_data(this%gaid(ilevel,itime,itimerange,ivar), &
-     voldati(:,:,ilevel))
+     voldati(:,:,ilevel),done)
+    IF (PRESENT(zlist)) zlist(ilevel) = done
 !$OMP END TASK
   ENDDO
 !$OMP END MASTER
