@@ -754,27 +754,31 @@ END FUNCTION grid_id_get_gdal_options
 !> Decode and return the data array from a grid_id object.
 !! The output array \a field must have a size matching the size of the
 !! encoded data.
-SUBROUTINE grid_id_decode_data(this, field)
+SUBROUTINE grid_id_decode_data(this, field, done)
 TYPE(grid_id),INTENT(in) :: this
 REAL,INTENT(out) :: field(:,:)
+LOGICAL,OPTIONAL,INTENT(out) :: done
 
-LOGICAL :: done
+LOGICAL :: ldone
 
-done = .FALSE.
+ldone = .FALSE.
 #ifdef HAVE_LIBGRIBAPI
 IF (c_e(this%gaid)) THEN
   CALL grid_id_decode_data_gribapi(this%gaid, field)
-  done = .TRUE.
+  ldone = .TRUE.
 ENDIF
 #endif
 #ifdef HAVE_LIBGDAL
 ! subarea?
 IF (gdalassociated(this%gdalid)) THEN
   CALL grid_id_decode_data_gdal(this%gdalid, field, this%file_id%gdal_options)
-  done = .TRUE.
+  ldone = .TRUE.
 ENDIF
 #endif
-IF (.NOT.done) field(:,:) = rmiss
+IF (.NOT.ldone) THEN
+  field(:,:) = rmiss
+  IF (PRESENT(done)) done = ldone
+ENDIF
 
 END SUBROUTINE grid_id_decode_data
 
