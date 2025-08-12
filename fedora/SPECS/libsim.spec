@@ -14,6 +14,8 @@ URL: https://github.com/arpa-simc/%{name}
 Packager: Davide Cesari <dcesari@arpae.it>
 Source: https://github.com/arpa-simc/%{name}/archive/v%{version}-%{release}.tar.gz#/%{srcarchivename}.tar.gz
 
+%define apiversion 7
+
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot
 
 %{?with_vapor:BuildRequires: vapor-devel}
@@ -48,6 +50,10 @@ BuildRequires: popt-devel
 BuildRequires: freetype-devel
 Requires: eccodes
 
+%package -n libsim%{apiversion}-compat
+Summary:  libsim compatibility libraries
+Group: Applications/Meteo
+
 %package -n libsim-devel
 
 Requires: fortrangis-devel
@@ -67,6 +73,14 @@ Group: Applications/Meteo
 %package -n libsim-doc
 Summary:  libsim documentation
 Group: Applications/Meteo
+
+
+%description -n libsim%{apiversion}-compat
+Libsim is a collection of Fortran libraries and command-line tools.
+
+This package provides compatibility libraries for running applications
+compiled with version %{apiversion} of libsim while having a newer
+version installed.
 
 %description -n libsim-devel
 Libsim is a collection of Fortran libraries and command-line tools.
@@ -122,6 +136,10 @@ mv $RPM_BUILD_ROOT%{_includedir}/*.mod $RPM_BUILD_ROOT%{_fmoddir}
 %{_mandir}/man1
 %dir %{_libexecdir}/%{name}
 %{_libexecdir}/%{name}/*
+
+%files -n libsim%{apiversion}-compat
+%defattr(-,root,root)
+%{_libdir}/*.so.*
 
 %files -n libsim-devel
 %defattr(-,root,root)
