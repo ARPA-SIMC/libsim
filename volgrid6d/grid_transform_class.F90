@@ -2938,12 +2938,13 @@ END FUNCTION grid_transform_c_e
 !! assigned to the target 1-d array after the subroutine call by means
 !! of the \a RESHAPE() intrinsic function.
 RECURSIVE SUBROUTINE grid_transform_compute(this, field_in, field_out, var, &
- coord_3d_in)
+ coord_3d_in, zlist)
 TYPE(grid_transform),INTENT(in),TARGET :: this !< grid_transformation object
 REAL,INTENT(in) :: field_in(:,:,:) !< input array
 REAL,INTENT(out) :: field_out(:,:,:) !< output array
 TYPE(vol7d_var),INTENT(in),OPTIONAL :: var !< physical variable to be interpolated, if provided, some ad-hoc algorithms may be used where possible
 REAL,INTENT(in),OPTIONAL,TARGET :: coord_3d_in(:,:,:) !< input vertical coordinate for vertical interpolation, if not provided by other means
+LOGICAL,INTENT(in),OPTIONAL :: zlist(:) !< list of levels actually present in input volume, if provided, levels marked as \a .FALSE. will not be interpolated regardless of their content (optimisation to avoid interpolating missing data)
 
 INTEGER :: i, j, k, l, m, s, ii, jj, ie, je, n, navg, kk, kkcache, kkup, kkdown, &
  kfound, kfoundin, inused, i1, i2, j1, j2, np, ns, ix, iy
@@ -2958,7 +2959,7 @@ REAL,POINTER :: coord_3d_in_act(:,:,:)
 TYPE(grid_transform) :: likethis
 LOGICAL :: alloc_coord_3d_in_act, nm1, optsearch, farenough
 CHARACTER(len=4) :: env_var
-
+LOGICAL,ALLOCATABLE :: lzlist(:)
 
 #ifdef DEBUG
 CALL l4f_category_log(this%category,L4F_DEBUG,"start grid_transform_compute")
@@ -2984,7 +2985,7 @@ IF (this%recur) THEN ! if recursive transformation, recur here and exit
     likethis%outnx = this%trans%poly%arraysize
     likethis%outny = 1
     ALLOCATE(field_tmp(this%trans%poly%arraysize,1,SIZE(field_out,3)))
-    CALL grid_transform_compute(likethis, field_in, field_tmp, var, coord_3d_in)
+    CALL grid_transform_compute(likethis, field_in, field_tmp, var, coord_3d_in, zlist)
 
     DO k = 1, SIZE(field_out,3)
       DO j = 1, this%inny
@@ -3008,6 +3009,12 @@ ENDIF
 
 innx = SIZE(field_in,1); inny = SIZE(field_in,2); innz = SIZE(field_in,3)
 outnx = SIZE(field_out,1); outny = SIZE(field_out,2); outnz = SIZE(field_out,3)
+ALLOCATE(lzlist(innz))
+IF (PRESENT(zlist)) THEN
+  lzlist(:) = zlist(:)
+ELSE
+  lzlist(:) = .TRUE.
+ENDIF
 
 ! check size of field_in, field_out
 IF (this%trans%trans_type == 'vertint') THEN ! vertical interpolation
@@ -3085,6 +3092,7 @@ ELSE IF (this%trans%trans_type == 'boxregrid') THEN
   IF (this%trans%sub_type == 'average') THEN
     IF (vartype == var_dir360) THEN
       DO k = 1, innz
+        IF (.NOT.lzlist(k)) CYCLE
         jj = 0
         DO j = 1, this%inny - this%trans%box_info%npy + 1, this%trans%box_info%npy
           je = j+this%trans%box_info%npy-1
@@ -3104,6 +3112,7 @@ ELSE IF (this%trans%trans_type == 'boxregrid') THEN
 
     ELSE
       DO k = 1, innz
+        IF (.NOT.lzlist(k)) CYCLE
         jj = 0
         DO j = 1, this%inny - this%trans%box_info%npy + 1, this%trans%box_info%npy
           je = j+this%trans%box_info%npy-1
@@ -3134,6 +3143,7 @@ ELSE IF (this%trans%trans_type == 'boxregrid') THEN
 
     navg = this%trans%box_info%npx*this%trans%box_info%npy
     DO k = 1, innz
+      IF (.NOT.lzlist(k)) CYCLE
       jj = 0
       DO j = 1, this%inny - this%trans%box_info%npy + 1, this%trans%box_info%npy
         je = j+this%trans%box_info%npy-1
@@ -3150,6 +3160,7 @@ ELSE IF (this%trans%trans_type == 'boxregrid') THEN
 
   ELSE IF (this%trans%sub_type == 'max') THEN
     DO k = 1, innz
+      IF (.NOT.lzlist(k)) CYCLE
       jj = 0
       DO j = 1, this%inny - this%trans%box_info%npy + 1, this%trans%box_info%npy
         je = j+this%trans%box_info%npy-1
@@ -3169,6 +3180,7 @@ ELSE IF (this%trans%trans_type == 'boxregrid') THEN
 
   ELSE IF (this%trans%sub_type == 'min') THEN
     DO k = 1, innz
+      IF (.NOT.lzlist(k)) CYCLE
       jj = 0
       DO j = 1, this%inny - this%trans%box_info%npy + 1, this%trans%box_info%npy
         je = j+this%trans%box_info%npy-1
@@ -3190,6 +3202,7 @@ ELSE IF (this%trans%trans_type == 'boxregrid') THEN
 
     navg = this%trans%box_info%npx*this%trans%box_info%npy
     DO k = 1, innz
+      IF (.NOT.lzlist(k)) CYCLE
       jj = 0
       DO j = 1, this%inny - this%trans%box_info%npy + 1, this%trans%box_info%npy
         je = j+this%trans%box_info%npy-1
@@ -3208,6 +3221,7 @@ ELSE IF (this%trans%trans_type == 'boxregrid') THEN
   ELSE IF (this%trans%sub_type == 'frequency') THEN
 
     DO k = 1, innz
+      IF (.NOT.lzlist(k)) CYCLE
       jj = 0
       DO j = 1, this%inny - this%trans%box_info%npy + 1, this%trans%box_info%npy
         je = j+this%trans%box_info%npy-1
@@ -3233,6 +3247,7 @@ ELSE IF (this%trans%trans_type == 'inter') THEN
   IF (this%trans%sub_type == 'near') THEN
 
     DO k = 1, innz
+      IF (.NOT.lzlist(k)) CYCLE
       DO j = 1, this%outny
         DO i = 1, this%outnx
 
@@ -3246,6 +3261,7 @@ ELSE IF (this%trans%trans_type == 'inter') THEN
   ELSE IF (this%trans%sub_type == 'bilin') THEN
 
     DO k = 1, innz
+      IF (.NOT.lzlist(k)) CYCLE
       DO j = 1, this%outny
         DO i = 1, this%outnx
 
@@ -3276,6 +3292,7 @@ ELSE IF (this%trans%trans_type == 'inter') THEN
     ENDDO
   ELSE IF (this%trans%sub_type == 'shapiro_near') THEN
     DO k = 1, innz
+      IF (.NOT.lzlist(k)) CYCLE
       DO j = 1, this%outny
         DO i = 1, this%outnx
 
@@ -3314,11 +3331,12 @@ ELSE IF (this%trans%trans_type == 'intersearch') THEN
 
   likethis = this
   likethis%trans%trans_type = 'inter' ! fake type and make a recursive call to compute base field
-  CALL grid_transform_compute(likethis, field_in, field_out, var, coord_3d_in)
+  CALL grid_transform_compute(likethis, field_in, field_out, var, coord_3d_in, zlist)
   CALL getenv('LIBSIM_DISABLEOPTSEARCH', env_var)
   optsearch = LEN_TRIM(env_var) == 0
 
   DO k = 1, innz
+    IF (.NOT.lzlist(k)) CYCLE
     IF ((.NOT.ALL(c_e(field_out(:,:,k)))) .AND. (ANY(c_e(field_in(:,:,k))))) THEN ! must fill some values
       DO j = 1, this%outny
         DO i = 1, this%outnx
@@ -3399,6 +3417,7 @@ ELSE IF (this%trans%trans_type == 'boxinter' &
 
     IF (vartype == var_dir360) THEN
       DO k = 1, innz
+        IF (.NOT.lzlist(k)) CYCLE
         DO j = 1, this%outny
           DO i = 1, this%outnx
             field_out(i,j,k) = find_prevailing_direction(field_in(:,:,k), &
@@ -3412,6 +3431,7 @@ ELSE IF (this%trans%trans_type == 'boxinter' &
       ALLOCATE(nval(this%outnx, this%outny))
       field_out(:,:,:) = 0.0
       DO k = 1, innz
+        IF (.NOT.lzlist(k)) CYCLE
         nval(:,:) = 0
         DO j = 1, this%inny
           DO i = 1, this%innx
@@ -3442,6 +3462,7 @@ ELSE IF (this%trans%trans_type == 'boxinter' &
       nm1 = .TRUE.
     ENDIF
     DO k = 1, innz
+      IF (.NOT.lzlist(k)) CYCLE
       DO j = 1, this%outny
         DO i = 1, this%outnx
 ! da paura
@@ -3456,6 +3477,7 @@ ELSE IF (this%trans%trans_type == 'boxinter' &
   ELSE IF (this%trans%sub_type == 'max') THEN
 
     DO k = 1, innz
+      IF (.NOT.lzlist(k)) CYCLE
       DO j = 1, this%inny
         DO i = 1, this%innx
           IF (c_e(this%inter_index_x(i,j)) .AND. c_e(field_in(i,j,k))) THEN
@@ -3476,6 +3498,7 @@ ELSE IF (this%trans%trans_type == 'boxinter' &
   ELSE IF (this%trans%sub_type == 'min') THEN
 
     DO k = 1, innz
+      IF (.NOT.lzlist(k)) CYCLE
       DO j = 1, this%inny
         DO i = 1, this%innx
           IF (c_e(this%inter_index_x(i,j)) .AND. c_e(field_in(i,j,k))) THEN
@@ -3495,6 +3518,7 @@ ELSE IF (this%trans%trans_type == 'boxinter' &
   ELSE IF (this%trans%sub_type == 'percentile') THEN
 
     DO k = 1, innz
+      IF (.NOT.lzlist(k)) CYCLE
       DO j = 1, this%outny
         DO i = 1, this%outnx
 ! da paura
@@ -3510,8 +3534,9 @@ ELSE IF (this%trans%trans_type == 'boxinter' &
   ELSE IF (this%trans%sub_type == 'frequency') THEN
 
     ALLOCATE(nval(this%outnx, this%outny))
-    field_out(:,:,:) = 0.0
     DO k = 1, innz
+      IF (.NOT.lzlist(k)) CYCLE
+      field_out(:,:,k) = 0.0
       nval(:,:) = 0
       DO j = 1, this%inny
         DO i = 1, this%innx
@@ -3542,6 +3567,7 @@ ELSE IF (this%trans%trans_type == 'stencilinter') THEN
 
     IF (vartype == var_dir360) THEN
       DO k = 1, innz
+        IF (.NOT.lzlist(k)) CYCLE
         DO j = 1, this%outny
           DO i = 1, this%outnx
             IF (c_e(this%inter_index_x(i,j))) THEN
@@ -3562,6 +3588,7 @@ ELSE IF (this%trans%trans_type == 'stencilinter') THEN
 !$OMP PARALLEL DEFAULT(SHARED)
 !$OMP DO PRIVATE(i, j, k, i1, i2, j1, j2, n)
       DO k = 1, innz
+        IF (.NOT.lzlist(k)) CYCLE
         DO j = 1, this%outny
           DO i = 1, this%outnx
             IF (c_e(this%inter_index_x(i,j))) THEN
@@ -3593,6 +3620,7 @@ ELSE IF (this%trans%trans_type == 'stencilinter') THEN
 !$OMP PARALLEL DEFAULT(SHARED)
 !$OMP DO PRIVATE(i, j, k, i1, i2, j1, j2)
     DO k = 1, innz
+      IF (.NOT.lzlist(k)) CYCLE
       DO j = 1, this%outny
         DO i = 1, this%outnx
           IF (c_e(this%inter_index_x(i,j))) THEN
@@ -3616,6 +3644,7 @@ ELSE IF (this%trans%trans_type == 'stencilinter') THEN
 !$OMP PARALLEL DEFAULT(SHARED)
 !$OMP DO PRIVATE(i, j, k, i1, i2, j1, j2, n)
     DO k = 1, innz
+      IF (.NOT.lzlist(k)) CYCLE
       DO j = 1, this%outny
         DO i = 1, this%outnx
           IF (c_e(this%inter_index_x(i,j))) THEN
@@ -3639,6 +3668,7 @@ ELSE IF (this%trans%trans_type == 'stencilinter') THEN
 !$OMP PARALLEL DEFAULT(SHARED)
 !$OMP DO PRIVATE(i, j, k, i1, i2, j1, j2, n)
     DO k = 1, innz
+      IF (.NOT.lzlist(k)) CYCLE
       DO j = 1, this%outny
         DO i = 1, this%outnx
           IF (c_e(this%inter_index_x(i,j))) THEN
@@ -3662,6 +3692,7 @@ ELSE IF (this%trans%trans_type == 'stencilinter') THEN
 !$OMP PARALLEL DEFAULT(SHARED)
 !$OMP DO PRIVATE(i, j, k, i1, i2, j1, j2)
     DO k = 1, innz
+      IF (.NOT.lzlist(k)) CYCLE
       DO j = 1, this%outny
         DO i = 1, this%outnx
           IF (c_e(this%inter_index_x(i,j))) THEN
@@ -3686,6 +3717,7 @@ ELSE IF (this%trans%trans_type == 'stencilinter') THEN
 !$OMP PARALLEL DEFAULT(SHARED)
 !$OMP DO PRIVATE(i, j, k, i1, i2, j1, j2, n)
     DO k = 1, innz
+      IF (.NOT.lzlist(k)) CYCLE
       DO j = 1, this%outny
         DO i = 1, this%outnx
           IF (c_e(this%inter_index_x(i,j))) THEN
@@ -3725,6 +3757,7 @@ ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
    .OR. this%trans%sub_type == 'mask') THEN
 
     DO k = 1, innz
+      IF (.NOT.lzlist(k)) CYCLE
 ! this is to sparse-points only, so field_out(:,1,k) is acceptable
       field_out(:,1,k) = PACK(field_in(:,:,k), c_e(this%point_index(:,:)))
     ENDDO
@@ -3733,6 +3766,7 @@ ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
    this%trans%sub_type == 'maskinvalid') THEN
 
     DO k = 1, innz
+      IF (.NOT.lzlist(k)) CYCLE
       WHERE (this%point_mask(:,:))
         field_out(:,:,k) = field_in(:,:,k)
       END WHERE
@@ -3741,6 +3775,7 @@ ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
   ELSE IF (this%trans%sub_type == 'lemaskinvalid') THEN
 
     DO k = 1, innz
+      IF (.NOT.lzlist(k)) CYCLE
       WHERE (c_e(field_in(:,:,k)) .AND. field_in(:,:,k) > this%val_mask(:,:))
         field_out(:,:,k) = field_in(:,:,k)
       ELSEWHERE
@@ -3751,6 +3786,7 @@ ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
   ELSE IF (this%trans%sub_type == 'ltmaskinvalid') THEN
 
     DO k = 1, innz
+      IF (.NOT.lzlist(k)) CYCLE
       WHERE (c_e(field_in(:,:,k)) .AND. field_in(:,:,k) >= this%val_mask(:,:))
         field_out(:,:,k) = field_in(:,:,k)
       ELSEWHERE
@@ -3760,7 +3796,8 @@ ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
 
   ELSE IF (this%trans%sub_type == 'gemaskinvalid') THEN
 
-        DO k = 1, innz
+    DO k = 1, innz
+      IF (.NOT.lzlist(k)) CYCLE
       WHERE (c_e(field_in(:,:,k)) .AND. field_in(:,:,k) < this%val_mask(:,:))
         field_out(:,:,k) = field_in(:,:,k)
       ELSEWHERE
@@ -3771,6 +3808,7 @@ ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
   ELSE IF (this%trans%sub_type == 'gtmaskinvalid') THEN
 
     DO k = 1, innz
+      IF (.NOT.lzlist(k)) CYCLE
       WHERE (c_e(field_in(:,:,k)) .AND. field_in(:,:,k) <= this%val_mask(:,:))
         field_out(:,:,k) = field_in(:,:,k)
       ELSEWHERE
@@ -3781,6 +3819,7 @@ ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
   ELSE IF (this%trans%sub_type == 'setinvalidto') THEN
 
     DO k = 1, innz
+      IF (.NOT.lzlist(k)) CYCLE ! should i skip levels here?
       WHERE (c_e(field_in(:,:,k)))
         field_out(:,:,k) = field_in(:,:,k)
       ELSE WHERE

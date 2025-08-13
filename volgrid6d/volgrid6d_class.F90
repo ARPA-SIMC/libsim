@@ -465,7 +465,7 @@ INTEGER,INTENT(in) :: itime !< index of time level of the slice
 INTEGER,INTENT(in) :: itimerange !< index of timerange of the slice
 INTEGER,INTENT(in) :: ivar !< index of physical variable of the slice
 REAL,POINTER :: voldati(:,:,:) !< pointer to the data, if \a this%voldati is already allocated, it will just point to the requested slice, otherwise it will be allocated if and only if it is nullified on entry
-LOGICAL,OPTIONAL,INTENT(out) :: zlist(:) !< list of vertical level present in the data
+LOGICAL,OPTIONAL,INTENT(out),ALLOCATABLE :: zlist(:) !< list of vertical level present in the data
 
 INTEGER :: ilevel
 LOGICAL :: done
@@ -477,6 +477,9 @@ IF (ASSOCIATED(this%voldati)) THEN
 ELSE
   IF (.NOT.ASSOCIATED(voldati)) THEN
     ALLOCATE(voldati(this%griddim%dim%nx,this%griddim%dim%ny,SIZE(this%level)))
+  ENDIF
+  IF (PRESENT(zlist)) THEN
+    ALLOCATE(zlist(SIZE(this%level)))
   ENDIF
 !$OMP PARALLEL DEFAULT(SHARED)
 !$OMP MASTER
@@ -1476,6 +1479,7 @@ INTEGER :: ntime, ntimerange, inlevel, onlevel, nvar, &
  itime, itimerange, ilevel, ivar, levshift, levused, lvar_coord_vol, spos
 REAL,POINTER :: voldatiin(:,:,:), voldatiout(:,:,:), coord_3d_in(:,:,:)
 TYPE(vol7d_level) :: output_levtype
+LOGICAL,ALLOCATABLE :: zlist(:)
 
 
 #ifdef DEBUG
@@ -1606,15 +1610,15 @@ DO ivar=1,nvar
         ENDIF
       ENDIF
       CALL volgrid_get_vol_3d(volgrid6d_in, itime, itimerange, ivar, &
-       voldatiin)
+       voldatiin, zlist)
       IF (ASSOCIATED(volgrid6d_out%voldati)) & ! improve!!!!
        CALL volgrid_get_vol_3d(volgrid6d_out, itime, itimerange, ivar, &
        voldatiout)
-      IF (c_e(lvar_coord_vol)) THEN
-        CALL compute(this, voldatiin, voldatiout, convert(volgrid6d_in%var(ivar)), &
-         coord_3d_in(:,:,levshift+1:levshift+levused)) ! subset coord_3d_in
+      IF (c_e(lvar_coord_vol)) THEN ! this is a vertint case, zlist is useless
+        CALL compute(this, voldatiin, voldatiout, var=convert(volgrid6d_in%var(ivar)), &
+         coord_3d_in=coord_3d_in(:,:,levshift+1:levshift+levused)) ! subset coord_3d_in
       ELSE
-        CALL compute(this, voldatiin, voldatiout, convert(volgrid6d_in%var(ivar)))
+        CALL compute(this, voldatiin, voldatiout, var=convert(volgrid6d_in%var(ivar)), zlist=zlist)
       ENDIF
       CALL volgrid_set_vol_3d(volgrid6d_out, itime, itimerange, ivar, &
        voldatiout)
