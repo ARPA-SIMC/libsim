@@ -472,7 +472,7 @@ LOGICAL :: done
 
 IF (ASSOCIATED(this%voldati)) THEN
   voldati => this%voldati(:,:,:,itime,itimerange,ivar)
-  IF (PRESENT(zlist)) zlist(:) = .TRUE. ! TODO improve!
+  IF (PRESENT(zlist)) zlist(:) = c_e(this%gaid(:,itime,itimerange,ivar))
   RETURN
 ELSE
   IF (.NOT.ASSOCIATED(voldati)) THEN

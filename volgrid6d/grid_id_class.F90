@@ -777,8 +777,8 @@ ENDIF
 #endif
 IF (.NOT.ldone) THEN
   field(:,:) = rmiss
-  IF (PRESENT(done)) done = ldone
 ENDIF
+IF (PRESENT(done)) done = ldone
 
 END SUBROUTINE grid_id_decode_data
 
