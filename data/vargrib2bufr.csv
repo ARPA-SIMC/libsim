@@ -56,7 +56,7 @@ B11041,Maximum wind gust speed,m/s,98,128,123,255,1.0,0.0
 B11041,Maximum wind gust speed,m/s,98,228,28,255,1.0,0.0
 B11192,W-component of wind-terrain following (local),m/s,200,200,40,255,1.0,0.0
 B11193,Stability class (local),numeric,200,2,202,255,1.0,0.0
-B11193,Stability class (local),numeric,200,200,100,0,1.0,0.0
+B11193,Stability class (local),numeric,80,7,202,0,1.0,0.0
 B11193,Stability class (local),numeric,200,200,100,255,1.0,0.0
 B11194,Friction velocity (calmet; invented),m/s,200,200,101,0,1.0,0.0
 B11194,Friction velocity (calmet; invented),m/s,200,200,101,255,1.0,0.0
@@ -73,15 +73,21 @@ B11198,SQRT(2*TKE) (local),m/s,,19,11,0,1.0,0.0
 B11199,Surface roughness (local),m,200,200,123,255,1.0,0.0
 B11199,Surface roughness (local),m,200,200,123,0,1.0,0.0
 B11199,Surface roughness in COSMO output (local),m,255,2,83,255,1.0,0.0
+B11199,Surface roughness in ICON output (local),m,255,0,1,2,1.0,0.0
 B11200,U-component of momentum flux (local),N/m**2,255,2,124,255,1.0,0.0
 B11201,V-component of momentum flux (local),N/m**2,255,2,125,255,1.0,0.0
 B11202,Friction velocity (diagmet; invented),m/s,200,2,211,255,1.0,0.0
-B11202,Friction velocity (diagmet; invented),m/s,255,2,30,0,1.0,0.0
+B11202,Friction velocity (diagmet; invented),m/s,80,7,211,0,1.0,0.0
 B11203,Mixing height (diagmet; invented),m,200,2,212,255,1.0,0.0
+B11203,Mixing height (diagmet; invented),m,80,7,212,0,1.0,0.0
 B11204,Obukov length (diagmet; invented),m,200,2,210,255,1.0,0.0
+B11204,Obukov length (diagmet; invented),m,80,7,210,0,1.0,0.0
 B11205,Convective velocitiy scale (diagmet; invented),m/s,200,2,213,255,1.0,0.0
+B11205,Convective velocitiy scale (diagmet; invented),m/s,80,7,213,0,1.0,0.0
 B11206,Friction velocity (COSMO; invented),m/s,200,2,201,255,1.0,0.0
+B11206,Friction velocity (COSMO; invented),m/s,80,7,201,0,1.0,0.0
 B11207,Obukov length (COSMO; invented),m,200,2,200,255,1.0,0.0
+B11207,Obukov length (COSMO; invented),m,80,7,200,0,1.0,0.0
 B12030,Soil Temperature,K,255,3,18,2,1.0,0.0
 B12030,Soil Temperature,K,255,2,85,255,1.0,0.0
 B12030,Soil Temperature,K,200,201,197,255,1.0,0.0
@@ -204,6 +210,7 @@ B13232,Reference evapotranspiration according to Penman-Monteith (local),Kg/m**2
 B13234,Surface lifted index,K,255,7,10,0,1.0,0.0
 B13236,Graupel,Kg/m**2,255,1,75,0,1.0,0.0
 B13237,Total solid precipitation,Kg/m**2,255,1,128,0,1.0,0.0
+B13240,Cloud garupel content (local),Kg/Kg,255,1,32,0,1.0,0.0
 B14016,Net radiation,W/m^2,255,4,3,0,1.0,0.0
 B14016,Net radiation,W/m^2,255,2,117,255,1.0,0.0
 B14016,Net radiation,W/m^2,98,128,149,255,1.0,0.0
