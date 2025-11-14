@@ -764,7 +764,7 @@ ELSE IF (this%trans_type == 'metamorphosis') THEN
    this%sub_type == 'maskinvalid' .OR. this%sub_type == 'setinvalidto' .OR. &
    this%sub_type == 'settoinvalid' .OR. this%sub_type == 'lemaskinvalid' .OR. &
    this%sub_type == 'ltmaskinvalid' .OR. this%sub_type == 'gemaskinvalid' .OR. &
-   this%sub_type == 'gtmaskinvalid') THEN
+   this%sub_type == 'gtmaskinvalid' .OR. this%sub_type == 'index') THEN
 ! nothing to do here
   ELSE
     CALL sub_type_error()
@@ -2159,8 +2159,10 @@ ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
   ALLOCATE(this%point_index(this%innx,this%inny))
   this%point_index(:,:) = imiss
 ! setup output coordinates
-  CALL delete(v7d_out) ! required to avoid leaks because intent(inout), dangerous
-  CALL init(v7d_out, time_definition=time_definition)
+  IF (this%trans%sub_type /= 'index') THEN ! improve!
+    CALL delete(v7d_out) ! required to avoid leaks because intent(inout), dangerous
+    CALL init(v7d_out, time_definition=time_definition)
+  ENDIF
 
   IF (this%trans%sub_type == 'all' ) THEN
 
@@ -2354,6 +2356,28 @@ ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
 
     this%valid = .TRUE.
 
+  ELSE IF (this%trans%sub_type == 'index') THEN
+    this%outnx = SIZE(v7d_out%ana)
+    this%outny = 1
+
+! collect points having requested index
+! check that v7d_out has just 1 variable B01192 (index)
+    IF (ANY(c_e(lin%dim%lon))) THEN ! here we set also coordinates, find a more efficient way to check
+      DO n = 1, SIZE(v7d_out%ana)
+        iy = (v7d_out%volanai(n,1,1) - 1)/this%innx + 1
+        ix = v7d_out%volanai(n,1,1) - (iy-1)*this%innx
+        this%point_index(ix,iy) = v7d_out%volanai(n,1,1)
+        CALL init(v7d_out%ana(n), &
+         lon=lin%dim%lon(ix,iy), lat=lin%dim%lat(ix,iy)) ! (re)set coordinates from truth
+      ENDDO
+    ELSE ! here we trust coordinates from input
+      DO n = 1, SIZE(v7d_out%ana)
+        iy = (v7d_out%volanai(n,1,1) - 1)/this%innx + 1
+        ix = v7d_out%volanai(n,1,1) - (iy-1)*this%innx
+        this%point_index(ix,iy) = v7d_out%volanai(n,1,1)
+      ENDDO
+    ENDIF
+    this%valid = .TRUE.
   ENDIF
   CALL delete(lin)
 ENDIF
@@ -3754,7 +3778,7 @@ ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
     field_out(:,:,:) = RESHAPE(field_in(:,:,:), (/this%outnx,this%outny,innz/))
 
   ELSE IF (this%trans%sub_type == 'coordbb' .OR. this%trans%sub_type == 'poly' &
-   .OR. this%trans%sub_type == 'mask') THEN
+   .OR. this%trans%sub_type == 'mask' .OR. this%trans%sub_type == 'index') THEN
 
     DO k = 1, innz
       IF (.NOT.lzlist(k)) CYCLE
@@ -3767,8 +3791,8 @@ ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
 
     DO k = 1, innz
       IF (.NOT.lzlist(k)) CYCLE
-      WHERE (this%point_mask(:,:))
-        field_out(:,:,k) = field_in(:,:,k)
+      WHERE (this%point_mask(:,:)) ! this is almost the same as the previous syntax
+        field_out(:,:,k) = field_in(:,:,k) ! check which is more efficient
       END WHERE
     ENDDO
 

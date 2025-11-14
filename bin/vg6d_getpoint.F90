@@ -54,6 +54,7 @@ TYPE(vol7d_dballe) :: v7d_ana, v7d_dba_out
 TYPE(arrayof_georef_coord_array) :: poly
 !DOUBLE PRECISION :: lon, lat
 TYPE(arrayof_doubleprecision) :: lon, lat
+TYPE(arrayof_integer) :: index_list
 DOUBLE PRECISION,ALLOCATABLE :: lon_array(:), lat_array(:)
 INTEGER :: polytopo
 DOUBLE PRECISION :: ilon, ilat, flon, flat, radius, percentile
@@ -133,6 +134,9 @@ CALL optionparser_add(opt, ' ', 'coord-format', coord_format, &
  //', ''grib_api'' for GRIB file (mask)'&
 #endif
  )
+CALL optionparser_add(opt, ' ', 'index-list', index_list, help= &
+ 'comma-separated list of point indices for metamorphosis:index transformation, &
+ &for unsupported projections it must be accompanied by --lon, --lat or --coord-file')
 CALL optionparser_add(opt, 'a', 'ilon', ilon, 0.0D0, help= &
  'longitude of the southwestern bounding box corner')
 CALL optionparser_add(opt, 'b', 'ilat', ilat, 30.D0, help= &
@@ -282,12 +286,17 @@ IF (c_e(coord_file)) THEN
     ENDIF
     CALL getval(poly%array(1), topo=polytopo)
     IF (polytopo == georef_coord_array_point) THEN ! topology suitable for sparse points
-      CALL vol7d_alloc(v7d_coord, nana=poly%arraysize)
-      CALL vol7d_alloc_vol(v7d_coord)
+      CALL vol7d_alloc(v7d_coord, nana=MAX(poly%arraysize,index_list%arraysize), nnetwork=1)
+      IF (index_list%arraysize > 0) THEN ! add point list to v7d_coord
+        CALL vol7d_alloc(v7d_coord, nanavari=1) ! anavar B01192 required for point_index
+        CALL init(v7d_coord%anavar%i(1), 'B01192')
+      ENDIF
+      CALL vol7d_alloc_vol(v7d_coord, ini=.TRUE.)
       DO i = 1, poly%arraysize
-        CALL getval(poly%array(i), x=lon_array,y=lat_array) ! improve!!!!
+        CALL getval(poly%array(i), x=lon_array, y=lat_array) ! improve!!!!
         CALL init(v7d_coord%ana(i), lon=lon_array(1), lat=lat_array(1))
       ENDDO
+      CALL init(v7d_coord%network(1), 'generic')
       CALL delete(poly)
       CALL l4f_category_log(category,L4F_INFO, &
        'shapefile '//TRIM(coord_file)//' interpreted as sparse point list')
@@ -324,13 +333,24 @@ IF (c_e(coord_file)) THEN
   CALL l4f_category_log(category,L4F_DEBUG,'end import coord')
 ENDIF
 
-IF (.NOT.c_e(v7d_coord)) THEN ! fallback, initialise v7d_coord from single point
-  CALL vol7d_alloc(v7d_coord, nana=MIN(lon%arraysize, lat%arraysize))
-  CALL vol7d_alloc_vol(v7d_coord)
+IF (.NOT.c_e(v7d_coord)) THEN ! fallback, initialise v7d_coord from point list
+  CALL vol7d_alloc(v7d_coord, nana=MAX(MIN(lon%arraysize, lat%arraysize), index_list%arraysize), nnetwork=1)
+  IF (index_list%arraysize > 0) THEN ! add point list to v7d_coord
+    CALL vol7d_alloc(v7d_coord, nanavari=1) ! anavar B01192 required for point_index
+    CALL init(v7d_coord%anavar%i(1), 'B01192')
+  ENDIF
+  CALL vol7d_alloc_vol(v7d_coord, ini=.TRUE.)
   DO i = 1, MIN(lon%arraysize, lat%arraysize)
     CALL init(v7d_coord%ana(i), lat=lat%array(i), lon=lon%array(i))
   ENDDO
+  CALL init(v7d_coord%network(1), 'generic')
 ENDIF
+! this is risky, but if index_list%arraysize > 0 everything should be allocated
+IF (index_list%arraysize > 0) THEN ! add point list to v7d_coord
+  v7d_coord%volanai(:,1,1) = index_list%array(1:index_list%arraysize)
+ENDIF
+
+
 ! useless after this point
 CALL delete(lon)
 CALL delete(lat)
