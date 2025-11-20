@@ -1,3 +1,7 @@
+B05001,Latitude,degree,78,191,1,0,1.0,0.0
+B05001,Latitude,degree,80,191,1,0,1.0,0.0
+B06001,Longitude,degree,78,191,2,0,1.0,0.0
+B06001,Longitude,degree,80,191,2,0,1.0,0.0
 B10004,Pressure,Pa,255,3,0,0,1.0,0.0
 B10004,Pressure,Pa,255,2,1,255,1.0,0.0
 B10004,Pressure,Pa,98,128,134,255,1.0,0.0
