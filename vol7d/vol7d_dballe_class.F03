@@ -108,7 +108,7 @@ TYPE vol7d_dballe
   !!ottimizzare le riscritture degli attributi ai dati
   integer ,pointer :: data_id(:,:,:,:,:)
   integer :: time_definition
-  integer :: category = 0 !< log4fortran
+  type(l4f_handle) :: category !< log4fortran
   logical :: file !<
 
 END TYPE vol7d_dballe
@@ -190,7 +190,7 @@ if (present(categoryappend))then
 else
   call l4f_launcher(a_name,a_name_append=trim(subcategory))
 endif
-this%category=l4f_category_get(a_name)
+this%category=l4f_category_get_handle(a_name)
 
 #ifdef DEBUG
 CALL l4f_category_log(this%category,L4F_DEBUG,'vol7d_dballe_init start')

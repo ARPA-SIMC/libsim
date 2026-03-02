@@ -19,14 +19,15 @@ type(dbafilter) :: filter
 logical :: status,version,display
 character(len=9) :: ident
 CHARACTER(len=512):: a_name,input_file,output_file 
-INTEGER :: category,ier
+TYPE(l4f_handle) :: category
+INTEGER :: ier
 
 !questa chiamata prende dal launcher il nome univoco
 CALL l4f_launcher(a_name,a_name_force="dba_transform")
 !init di log4fortran
 ier = l4f_init()
 !imposta a_name
-category = l4f_category_get(a_name//".main")
+category = l4f_category_get_handle(a_name//".main")
 
 opt = optionparser_new(description_msg= &
  'Filter data')

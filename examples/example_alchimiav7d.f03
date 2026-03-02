@@ -14,8 +14,9 @@ character(len=10), allocatable:: mybout(:)
 type(vol7d_dballe) :: myin,myout
 character(len=255) :: filenamein,filenameout
 
-integer :: category,ier
-character(len=512):: a_name
+TYPE(l4f_handle) :: category
+INTEGER :: ier
+CHARACTER(len=512):: a_name
 
 !questa chiamata prende dal launcher il nome univoco
 call l4f_launcher(a_name)
@@ -24,7 +25,7 @@ call l4f_launcher(a_name)
 ier=l4f_init()
 
 !imposta a_name
-category=l4f_category_get(a_name)
+category=l4f_category_get_handle(a_name)
 
 call l4f_category_log(category,L4F_INFO,"Start")
 
