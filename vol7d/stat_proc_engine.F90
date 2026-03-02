@@ -244,6 +244,10 @@ DO dirtyrep = 1, 2
               ELSE
                 useful = .TRUE.
               ENDIF
+! keep only data after lstart
+              IF (c_e(lstart)) THEN
+                IF (lstart > ttr_d(i,j)%pend) useful = .FALSE.
+              ENDIF
 
             ELSE IF (ttr_d(k,l)%pstart < ttr_d(i,j)%pstart .AND. ttr_d(k,l)%pend == ttr_d(i,j)%pend) THEN ! -=|
               CALL time_timerange_set_period(tmptime, tmptimerange, &
@@ -254,6 +258,10 @@ DO dirtyrep = 1, 2
                 ENDIF
               ELSE
                 useful = .TRUE.
+              ENDIF
+! keep only data after lstart
+              IF (c_e(lstart)) THEN
+                IF (lstart > ttr_d(k,l)%pstart) useful = .FALSE.
               ENDIF
             ENDIF
 
