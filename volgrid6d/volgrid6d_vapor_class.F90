@@ -136,7 +136,7 @@ if (c_e(ntime) .and. c_e(ntimerange) .and. c_e(nlevel) .and. c_e(nvar)) then
 
         call l4f_category_log(this%category,L4F_INFO,"normalize is activated, so the volume data are changed in output")
         DO ivar = 1, nvar
-          this%voldati(:,:,:,:,:,ivar) = convert(c_func(ivar),this%voldati(:,:,:,:,:,ivar))
+          CALL compute(c_func(ivar), this%voldati(:,:,:,:,:,ivar))
         ENDDO
         DEALLOCATE(c_func)
 

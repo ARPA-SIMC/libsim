@@ -164,8 +164,7 @@ END INTERFACE
 !> Apply the conversion function \a this to \a values.
 !! subroutine version
 INTERFACE convert
-  MODULE PROCEDURE varbufr2vargrib_convert, vargrib2varbufr_convert, &
-   conv_func_convert
+  MODULE PROCEDURE varbufr2vargrib_convert, vargrib2varbufr_convert
 END INTERFACE
 
 PRIVATE
@@ -725,24 +724,6 @@ ELSE
 ENDIF
 
 END SUBROUTINE conv_func_compute
-
-
-!> Return a copy of \a values converted by applying the conversion
-!! function \a this.  The numerical conversion (only linear at the
-!! moment) defined by the \a conv_func object \a this is applied to
-!! the \a values argument and the converted result is returned;
-!! missing values remain missing; if the conversion function is
-!! undefined (\a conv_func_miss) the values are unchanged. The method
-!! is \c ELEMENTAL, thus \a values can be also an array of any shape.
-ELEMENTAL FUNCTION conv_func_convert(this, values) RESULT(convert)
-TYPE(conv_func),intent(in) :: this !< object defining the conversion function
-REAL,INTENT(in) :: values !< input value to be converted
-REAL :: convert
-
-convert = values
-CALL compute(this, convert)
-
-END FUNCTION conv_func_convert
 
 
 !> Locate variables which are horizontal components of a vector field.
