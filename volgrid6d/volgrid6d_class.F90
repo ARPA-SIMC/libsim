@@ -1533,7 +1533,10 @@ spos = imiss
 IF (c_e(lvar_coord_vol)) THEN
   CALL get_val(this%trans, output_levtype=output_levtype)
   IF (output_levtype%level1 == 103 .OR. output_levtype%level1 == 108) THEN
+! here, unlike below, level (1,101) is not accepted because this is
+! likely for pressure difference with surface 108, not 103
     spos = firsttrue(volgrid6d_in%level(:) == vol7d_level_new(1))
+
     IF (spos == 0) THEN
       CALL l4f_category_log(volgrid6d_in%category, L4F_ERROR, &
        'output level '//t2c(output_levtype%level1)// &
@@ -1801,7 +1804,8 @@ IF (trans_type == 'vertint') THEN
 ! special case
         IF (output_levtype%level1 == 103 .OR. &
          output_levtype%level1 == 108) THEN ! surface coordinate needed
-          spos = firsttrue(volgrid6d_coord_in%level(:) == vol7d_level_new(1))
+          spos = firsttrue(volgrid6d_coord_in%level(:) == vol7d_level_new(level1=1) .OR. &
+           volgrid6d_coord_in%level(:) == vol7d_level_new(level1=1, level2=101))
           IF (spos == 0) THEN
             CALL l4f_category_log(volgrid6d_in%category, L4F_ERROR, &
              'output level '//t2c(output_levtype%level1)// &
