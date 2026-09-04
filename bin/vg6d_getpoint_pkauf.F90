@@ -32,6 +32,7 @@ IMPLICIT NONE
 REAL,POINTER :: fr_land(:,:), orography(:,:)
 TYPE(vol7d) :: v7d_coord
 INTEGER :: hindex
+
 CONTAINS
 
 ! Subroutine find_index modified for computing the nearest point
@@ -158,7 +159,6 @@ USE vol7d_dballe_class
 USE grib_api_csv
 USE optionparser_class
 USE io_units
-!USE georef_coord_class
 USE find_index_pkaufmann_mo
 
 IMPLICIT NONE
@@ -181,6 +181,7 @@ INTEGER :: output_td
 LOGICAL :: version, ldisplay
 LOGICAL :: noconvert
 TYPE(vol7d_var) :: varbufr
+PROCEDURE(basic_find_index),POINTER :: find_index
 
 !questa chiamata prende dal launcher il nome univoco
 CALL l4f_launcher(a_name,a_name_force="vg6d_getpoint")
@@ -483,9 +484,10 @@ ENDIF
 
 IF (ldisplay) CALL display(volgrid)
 
+find_index => find_index_pkaufmann
 IF (output_format /= 'grib_api_csv') THEN ! otherwise postpone
   CALL transform(trans, volgrid6d_in=volgrid, vol7d_out=v7d_out, v7d=v7d_coord, &
-   networkname=network, noconvert=noconvert, find_index=find_index_pkaufmann, &
+   networkname=network, noconvert=noconvert, find_index=find_index, &
    categoryappend="transform")
   CALL l4f_category_log(category,L4F_INFO,"transformation completed")
 ENDIF
@@ -527,7 +529,7 @@ ELSE IF (output_format == 'grib_api_csv') THEN
 
   DO i = 1, SIZE(volgrid) ! transform one volume at a time
     CALL transform(trans, volgrid6d_in=volgrid(i), vol7d_out=v7d_out, v7d=v7d_coord, &
-     networkname=network, noconvert=noconvert, find_index=find_index_pkaufmann, &
+     networkname=network, noconvert=noconvert, find_index=find_index, &
      categoryappend="transform")
     CALL grib_api_csv_export(v7d_out, volgrid(i), iun, i == 1)
   ENDDO
