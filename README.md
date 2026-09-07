@@ -102,7 +102,7 @@ The authors of libsim are:
 Davide Cesari <dcesari@arpae.it>  
 Paolo Patruno <ppatruno@arpae.it>  
 
-libsim is Copyright (C) 2010-2023  ARPAE-SIMC <urpsim@arpae.it>
+libsim is Copyright (C) 2010-2026  ARPAE-SIMC <urpsim@arpae.it>
 
 Libsim is licensed under the terms of the GNU General Public License version
 2 or successive.  Please see the file COPYING for details.

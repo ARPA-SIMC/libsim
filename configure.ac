@@ -1,12 +1,12 @@
 dnl Process this file with autoconf to produce a configure script.
 
-AC_INIT([libsim],[7.2.7],[dcesari@arpae.it])
+AC_INIT([libsim],[8.0.0],[dcesari@arpae.it])
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_SRCDIR([configure.ac])
 AM_INIT_AUTOMAKE([foreign])
 AC_CONFIG_MACRO_DIR([m4])
 
-LIBSIM_VERSION_INFO="12:0:0"
+LIBSIM_VERSION_INFO="13:0:0"
 AC_SUBST(LIBSIM_VERSION_INFO)
 
 AC_LANG([C])

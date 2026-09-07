@@ -6,7 +6,7 @@
 
 Summary: Fortran utility libraries
 Name: libsim
-Version: 7.2.7
+Version: 8.0.0
 Release: 1
 License: GPL2+
 Group: Applications/Meteo
@@ -14,7 +14,7 @@ URL: https://github.com/arpa-simc/%{name}
 Packager: Davide Cesari <dcesari@arpae.it>
 Source: https://github.com/arpa-simc/%{name}/archive/v%{version}-%{release}.tar.gz#/%{srcarchivename}.tar.gz
 
-%define apiversion 7
+%define apiversion 8
 
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot
 
@@ -28,10 +28,6 @@ BuildRequires: help2man
 BuildRequires: log4c log4c-devel
 BuildRequires: gdal-devel
 BuildRequires: ncl-devel
-%if 0%{?rhel} == 7
-# ncl-devel needs cairo-devel but the dependency is missing in CentOS 7
-BuildRequires: cairo-devel
-%endif
 BuildRequires: doxygen
 BuildRequires: graphviz
 BuildRequires: texlive-latex-bin
@@ -158,6 +154,23 @@ mv $RPM_BUILD_ROOT%{_includedir}/*.mod $RPM_BUILD_ROOT%{_fmoddir}
 rm -rf %{buildroot}
 
 %changelog
+* Mon Sep 07 2026 Daniele Branchini  <dbranchini@arpae.it> - 8.0.0-1
+- major change in .so versioning
+- Avoid repeated variable searches in posdef_apply subroutine (ABI change)
+- New log4fortran interface, dismissed legacy interface (ABI change)
+- Avoid executable stack (#117)
+- Various optimisations in the quadratic part of the code
+- Allow height of surface coded as in Icon for vertical interpolation to level type 103
+- Eliminate redundant convert method, use compute instead
+- Take into account start (--comp-start) also for accumulation of analyses by difference
+- Add grib2 lon/lat variables
+- Modifications for adding index getpoint transformation, to be tested on unstructured grids
+- `vargrib2bufr.csv`: added lines for Icon grib2 output (graupel, z0, turbulence)
+- implement optimization by selective interpolation of vertical levels
+- complete detection of present levels
+- add first base for selective interpolation of vertical levels
+- optimisation avoiding copy when grib message is in Cartesian order
+
 * Thu Jun 26 2025 Davide Cesari <dcesari@arpae.it> - 7.2.6-1
 - extend OpenMP parallelisation
 - introduce time_definition=2 for converting to analysis
