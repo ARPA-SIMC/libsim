@@ -1,3 +1,23 @@
+libsim (8.0.0-1) unstable; urgency=medium
+
+  * major change in .so versioning
+  * Avoid repeated variable searches in posdef_apply subroutine (ABI change)
+  * New log4fortran interface, dismissed legacy interface (ABI change)
+  * Avoid executable stack (#117)
+  * Various optimisations in the quadratic part of the code
+  * Allow height of surface coded as in Icon for vertical interpolation to level type 103
+  * Eliminate redundant convert method, use compute instead
+  * Take into account start (--comp-start) also for accumulation of analyses by difference
+  * Add grib2 lon/lat variables
+  * Modifications for adding index getpoint transformation, to be tested on unstructured grids
+  * `vargrib2bufr.csv`: added lines for Icon grib2 output (graupel, z0, turbulence)
+  * implement optimization by selective interpolation of vertical levels
+  * complete detection of present levels
+  * add first base for selective interpolation of vertical levels
+  * optimisation avoiding copy when grib message is in Cartesian order
+
+ -- Emanuele Di Giacomo <edigiacomo@arpae.it>  Mon,  5 Oct 2026 16:57:00 +0200
+
 libsim (7.1.9-1) unstable; urgency=medium
 
   * Added theta-e for grib2 (#109)
