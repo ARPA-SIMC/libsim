@@ -1,4 +1,4 @@
-# run rpmbuild with argument --define='with_vapor 1'
+# rpmbuild with argument --define='with_vapor 1'
 # to enable vapor support requiring stiff dependencies
 
 # Note: define srcarchivename in CI build only.
@@ -6,7 +6,7 @@
 
 Summary: Fortran utility libraries
 Name: libsim
-Version: 7.1.9
+Version: 8.0.0
 Release: 1
 License: GPL2+
 Group: Applications/Meteo
@@ -14,39 +14,20 @@ URL: https://github.com/arpa-simc/%{name}
 Packager: Davide Cesari <dcesari@arpae.it>
 Source: https://github.com/arpa-simc/%{name}/archive/v%{version}-%{release}.tar.gz#/%{srcarchivename}.tar.gz
 
+%define apiversion 8
+
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot
-
-%if 0%{?fedora} < 9
-%define _fmoddir %{_libdir}/gfortran/modules
-%endif
-
-%if 0%{?fedora} <= 24
-# grib_api is used only on older fedoras
-%define grib_sw grib_api
-%else
-%define grib_sw eccodes
-BuildRequires: eccodes-simc
-%endif
-
-%if 0%{?rhel} >= 7
-# expliciting eccodes for centos 7 and 8
-%define grib_sw eccodes
-BuildRequires: eccodes-simc
-%endif
 
 %{?with_vapor:BuildRequires: vapor-devel}
 
 BuildRequires: pkgconfig(libdballef) >= 7.6
 BuildRequires: pkgconfig(libdballe)
-BuildRequires: %{grib_sw}-devel
+BuildRequires: eccodes-devel
+BuildRequires: eccodes-simc
 BuildRequires: help2man
 BuildRequires: log4c log4c-devel
 BuildRequires: gdal-devel
 BuildRequires: ncl-devel
-%if 0%{?rhel} == 7
-# ncl-devel needs cairo-devel but the dependency is missing in CentOS 7
-BuildRequires: cairo-devel
-%endif
 BuildRequires: doxygen
 BuildRequires: graphviz
 BuildRequires: texlive-latex-bin
@@ -63,14 +44,18 @@ BuildRequires: shapelib-devel
 BuildRequires: proj-devel
 BuildRequires: popt-devel
 BuildRequires: freetype-devel
-Requires: %{grib_sw}
+Requires: eccodes
+
+%package -n libsim%{apiversion}-compat
+Summary:  libsim compatibility libraries
+Group: Applications/Meteo
 
 %package -n libsim-devel
 
 Requires: fortrangis-devel
 Requires: libdballef-devel >= 7.6
 Requires: libdballe-devel
-Requires: %{grib_sw}-devel
+Requires: eccodes-devel
 Requires: help2man
 Requires: log4c
 Requires: log4c-devel
@@ -84,6 +69,14 @@ Group: Applications/Meteo
 %package -n libsim-doc
 Summary:  libsim documentation
 Group: Applications/Meteo
+
+
+%description -n libsim%{apiversion}-compat
+Libsim is a collection of Fortran libraries and command-line tools.
+
+This package provides compatibility libraries for running applications
+compiled with version %{apiversion} of libsim while having a newer
+version installed.
 
 %description -n libsim-devel
 Libsim is a collection of Fortran libraries and command-line tools.
@@ -128,10 +121,8 @@ make check
 %install
 [ "%{buildroot}" != / ] && rm -rf %{buildroot}
 %makeinstall
-%if 0%{?fedora} >= 9 || 0%{?rhel}
 mkdir -p $RPM_BUILD_ROOT%{_fmoddir}
 mv $RPM_BUILD_ROOT%{_includedir}/*.mod $RPM_BUILD_ROOT%{_fmoddir}
-%endif
 
 %files
 %defattr(-,root,root)
@@ -142,16 +133,16 @@ mv $RPM_BUILD_ROOT%{_includedir}/*.mod $RPM_BUILD_ROOT%{_fmoddir}
 %dir %{_libexecdir}/%{name}
 %{_libexecdir}/%{name}/*
 
+%files -n libsim%{apiversion}-compat
+%defattr(-,root,root)
+%{_libdir}/*.so.*
+
 %files -n libsim-devel
 %defattr(-,root,root)
 %exclude %{_libdir}/*.la
 %{_libdir}/*.so
 %{_libdir}/pkgconfig/%{name}.pc
-%if 0%{?fedora} >= 9 || 0%{?rhel}
 %{_fmoddir}/*.mod
-%else
-%{_includedir}/*
-%endif
 %{?with_vapor:%{_includedir}/vdf4f_c.h}
 
 %files -n libsim-doc
@@ -163,6 +154,55 @@ mv $RPM_BUILD_ROOT%{_includedir}/*.mod $RPM_BUILD_ROOT%{_fmoddir}
 rm -rf %{buildroot}
 
 %changelog
+* Mon Sep 07 2026 Daniele Branchini  <dbranchini@arpae.it> - 8.0.0-1
+- major change in .so versioning
+- Avoid repeated variable searches in posdef_apply subroutine (ABI change)
+- New log4fortran interface, dismissed legacy interface (ABI change)
+- Avoid executable stack (#117)
+- Various optimisations in the quadratic part of the code
+- Allow height of surface coded as in Icon for vertical interpolation to level type 103
+- Eliminate redundant convert method, use compute instead
+- Take into account start (--comp-start) also for accumulation of analyses by difference
+- Add grib2 lon/lat variables
+- Modifications for adding index getpoint transformation, to be tested on unstructured grids
+- `vargrib2bufr.csv`: added lines for Icon grib2 output (graupel, z0, turbulence)
+- implement optimization by selective interpolation of vertical levels
+- complete detection of present levels
+- add first base for selective interpolation of vertical levels
+- optimisation avoiding copy when grib message is in Cartesian order
+
+* Thu Jun 26 2025 Davide Cesari <dcesari@arpae.it> - 7.2.6-1
+- extend OpenMP parallelisation
+- introduce time_definition=2 for converting to analysis
+
+* Thu Mar 20 2025 Davide Cesari <dcesari@arpae.it> - 7.2.4-1
+- extend use of comp_start also to forecasts
+
+* Mon Jan 13 2025 Davide Cesari <dcesari@arpae.it> - 7.2.3-1
+- add compute_projgrib utility
+- improve intersearch interpolation
+
+* Thu Sep  5 2024 Daniele Branchini <dbranchini@arpae.it> - 7.2.1-1
+- avoid error with typeOfTimeIncrement 255
+- add intersearch interpolation (with real nearest point)
+- take into account Icon vertical level setup for surface orography field
+
+* Tue Jun 11 2024 Daniele Branchini <dbranchini@arpae.it> - 7.2.0-1
+- add computation of total solid precipitation (B13237)
+- use difference rather than aggregation method when there are already data on the desired interval
+- added/fixed grib2 entries (#112)
+- allow stat_proc to be different for input and output also for gridded data in aggregation method
+- removed alchimia option (always enabled)
+- remove dba_qcfilter from Makefile (#81)
+
+* Wed Feb 21 2024 Daniele Branchini <dbranchini@arpae.it> - 7.1.11-1
+- Intelligently merge volumes after stat_proc in order not to loose precious data
+
+* Mon Jan 15 2024 Daniele Branchini <dbranchini@arpae.it> - 7.1.10-1
+- Added grib2 cloud cover
+- Fixed value of saturated water vapour pressure at 0C and improve computation of Td
+- Dropped support for fedora <=24
+
 * Tue Dec  5 2023 Daniele Branchini <dbranchini@arpae.it> - 7.1.9-1
 - Added theta-e for grib2 (#109)
 - Flatten network in volumes used as interpolation list to avoid losing points

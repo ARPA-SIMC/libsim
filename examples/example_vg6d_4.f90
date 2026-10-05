@@ -27,7 +27,8 @@ use char_utilities
 
 implicit none
 
-integer :: category,ier
+integer :: ier
+type(l4f_handle) :: category
 character(len=512):: a_name,infile='../data/in.grb',outfile='out.grb'
 type (gridinfo_def) :: gridinfo
 type(grid_file_id) :: ifile,ofile
@@ -52,7 +53,7 @@ call l4f_launcher(a_name,a_name_force="demo4")
 ier=l4f_init()
 
 !imposta a_name
-category=l4f_category_get(a_name//".main")
+category=l4f_category_get_handle(a_name//".main")
 
 call l4f_category_log(category,L4F_INFO,"transforming from file:"//trim(infile))
 call l4f_category_log(category,L4F_INFO,"transforming to   file:"//trim(outfile))

@@ -117,7 +117,7 @@ type :: qcspatype
   type (vol7d),pointer :: v7d => null() !< Volume dati da controllare
   integer,pointer :: data_id_in(:,:,:,:,:) => null()  !< Indici dati del DB in input
   integer,pointer :: data_id_out(:,:,:,:,:) => null() !< Indici dati del DB in output
-  integer :: category !< log4fortran
+  type(l4f_handle) :: category !< log4fortran
   integer :: ndp !< number of points
   type(xy),pointer :: co(:) => null()
   type (triangles) :: tri !< triangles
@@ -195,7 +195,7 @@ character(len=512) :: filepathspa
 character(len=512) :: a_name
 
 call l4f_launcher(a_name,a_name_append=trim(subcategoryspa)//"."//trim(categoryappend))
-qcspa%category=l4f_category_get(a_name)
+qcspa%category=l4f_category_get_handle(a_name)
 
 call delete(qcspa%tri)
 

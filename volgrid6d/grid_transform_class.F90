@@ -85,6 +85,14 @@
 !!    - sub_type='shapiro_near' the interpolated value is that of sub_type=near
 !!      after smoothing the input field with a shapiro filter of order 2.
 !!
+!!  - trans_type='intersearch' (grid-to-grid, grid-to-sparse point)
+!!    interpolates the input data on a new set of specified points, it
+!!    supports sub_type values 'near', 'bilin' and 'shapiro_near' with
+!!    the same meaning as trans_type='inter' but, when interpolation
+!!    is not possible because of missing values in input, it sets the
+!!    output value to the value of the nearest valid point in the
+!!    input grid.
+!!
 !!  - trans_type='boxinter' computes data on a new grid in which the
 !!    value at every point is the result of a function computed over
 !!    the input points lying inside the output point's grid box
@@ -215,6 +223,7 @@ USE optional_values
 USE array_utilities
 USE georef_coord_class
 USE simple_stat
+USE log4fortran
 IMPLICIT NONE
 
 CHARACTER(len=255),PARAMETER:: subcategory="grid_transform_class"
@@ -293,7 +302,7 @@ TYPE transform_def
   TYPE(box_info) :: box_info ! boxregrid specification
   TYPE(vertint) :: vertint ! vertical interpolation specification
   INTEGER :: time_definition ! time definition for interpolating to sparse points
-  INTEGER :: category = 0 ! category for log4fortran
+  TYPE(l4f_handle) :: category ! category for log4fortran
 END TYPE transform_def
 
 
@@ -338,7 +347,7 @@ TYPE grid_transform
 !  type(volgrid6d) :: input_vertcoordvol ! volume which provides the input vertical coordinate if separated from the data volume itself (for vertint) cannot be here because of cross-use, should be an argument of compute
 !  type(vol7d_level), pointer :: output_vertlevlist(:) ! list of vertical levels of output data (for vertint) can be here or an argument of compute, how to do?
   TYPE(vol7d_level),POINTER :: output_level_auto(:) => NULL() ! array of auto-generated levels, stored for successive query
-  INTEGER :: category = 0 ! category for log4fortran
+  TYPE(l4f_handle) :: category ! category for log4fortran
   LOGICAL :: valid = .FALSE. ! the transformation has been successfully initialised
   PROCEDURE(basic_find_index),NOPASS,POINTER :: find_index => basic_find_index ! allow a local implementation of find_index
 END TYPE grid_transform
@@ -494,7 +503,7 @@ IF (PRESENT(categoryappend)) THEN
 ELSE
   CALL l4f_launcher(a_name,a_name_append=TRIM(subcategory))
 ENDIF
-this%category=l4f_category_get(a_name)
+this%category=l4f_category_get_handle(a_name)
 
 this%trans_type = trans_type
 this%sub_type = sub_type
@@ -540,8 +549,8 @@ ENDIF
 
 call optio(time_definition,this%time_definition)
 if (c_e(this%time_definition) .and. &
- (this%time_definition < 0 .OR. this%time_definition > 1))THEN
-  call l4f_category_log(this%category,L4F_ERROR,"Error in time_definition: "//to_char(this%time_definition))
+ (this%time_definition < 0 .OR. this%time_definition > 2))THEN
+  call l4f_category_log(this%category,L4F_ERROR,"Error time_definition invalid: "//to_char(this%time_definition))
   call raise_fatal_error()
 end if
 
@@ -619,7 +628,7 @@ IF (this%trans_type == 'zoom') THEN
     RETURN
   END IF
 
-ELSE IF (this%trans_type == 'inter') THEN
+ELSE IF (this%trans_type == 'inter' .OR. this%trans_type == 'intersearch') THEN
 
   IF (this%sub_type == 'near' .OR. this%sub_type == 'bilin' .OR. &
    this%sub_type == 'linear' .OR. this%sub_type == 'shapiro_near') THEN
@@ -755,7 +764,7 @@ ELSE IF (this%trans_type == 'metamorphosis') THEN
    this%sub_type == 'maskinvalid' .OR. this%sub_type == 'setinvalidto' .OR. &
    this%sub_type == 'settoinvalid' .OR. this%sub_type == 'lemaskinvalid' .OR. &
    this%sub_type == 'ltmaskinvalid' .OR. this%sub_type == 'gemaskinvalid' .OR. &
-   this%sub_type == 'gtmaskinvalid') THEN
+   this%sub_type == 'gtmaskinvalid' .OR. this%sub_type == 'index') THEN
 ! nothing to do here
   ELSE
     CALL sub_type_error()
@@ -1389,7 +1398,7 @@ ELSE IF (this%trans%trans_type == 'boxregrid') THEN
 
   this%valid = .TRUE. ! warning, no check of subtype
 
-ELSE IF (this%trans%trans_type == 'inter') THEN
+ELSE IF (this%trans%trans_type == 'inter' .OR. this%trans%trans_type == 'intersearch') THEN
 
   CALL outgrid_setup() ! common setup for grid-generating methods
 
@@ -1427,6 +1436,17 @@ ELSE IF (this%trans%trans_type == 'inter') THEN
        lout%dim%lon, lout%dim%lat, this%trans%extrap, &
        this%inter_index_x, this%inter_index_y)
 
+      IF (this%trans%trans_type == 'intersearch') THEN ! replicate code above
+        ALLOCATE(this%inter_x(this%innx,this%inny), &
+         this%inter_y(this%innx,this%inny))
+        ALLOCATE(this%inter_xp(this%outnx,this%outny), &
+         this%inter_yp(this%outnx,this%outny))
+
+! compute coordinates of input grid
+        CALL griddim_gen_coord(in, this%inter_x, this%inter_y)
+! compute coordinates of output grid in input system
+        CALL proj(in, lout%dim%lon, lout%dim%lat, this%inter_xp, this%inter_yp)
+      ENDIF
     ENDIF
 
     CALL delete(lout)
@@ -1853,7 +1873,7 @@ DOUBLE PRECISION,ALLOCATABLE :: lon1(:), lat1(:), lon(:,:), lat(:,:)
 REAL,ALLOCATABLE :: lmaskbounds(:)
 TYPE(georef_coord) :: point
 TYPE(griddim_def) :: lin
-
+!$ INTEGER :: outnx
 
 IF (PRESENT(find_index)) THEN ! move in init_common?
   IF (ASSOCIATED(find_index)) THEN
@@ -1909,6 +1929,13 @@ IF (this%trans%trans_type == 'inter') THEN
        lon, lat, this%trans%extrap, &
        this%inter_index_x, this%inter_index_y)
 
+      IF (this%trans%trans_type == 'intersearch') THEN ! replicate code above
+        ALLOCATE(this%inter_x(this%innx,this%inny),this%inter_y(this%innx,this%inny))
+        ALLOCATE(this%inter_xp(this%outnx,this%outny),this%inter_yp(this%outnx,this%outny))
+
+        CALL griddim_gen_coord(lin, this%inter_x, this%inter_y)
+        CALL proj(lin, lon, lat, this%inter_xp, this%inter_yp)
+      ENDIF
     ENDIF
 
     DEALLOCATE(lon,lat)
@@ -2132,8 +2159,10 @@ ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
   ALLOCATE(this%point_index(this%innx,this%inny))
   this%point_index(:,:) = imiss
 ! setup output coordinates
-  CALL delete(v7d_out) ! required to avoid leaks because intent(inout), dangerous
-  CALL init(v7d_out, time_definition=time_definition)
+  IF (this%trans%sub_type /= 'index') THEN ! improve!
+    CALL delete(v7d_out) ! required to avoid leaks because intent(inout), dangerous
+    CALL init(v7d_out, time_definition=time_definition)
+  ENDIF
 
   IF (this%trans%sub_type == 'all' ) THEN
 
@@ -2199,18 +2228,26 @@ ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
   ELSE IF (this%trans%sub_type == 'poly' ) THEN
 
 ! count and mark points falling into requested polygon
+#ifdef _OPENMP
+    outnx = 0
+#else
     this%outnx = 0
+#endif
     this%outny = 1
 
 ! this OMP block has to be checked
 !$OMP PARALLEL DEFAULT(SHARED)
-!$OMP DO PRIVATE(iy, ix, point, n) REDUCTION(+:this%outnx)
+!$OMP DO PRIVATE(iy, ix, point, n), REDUCTION(+:outnx)
     DO iy = 1, this%inny
       DO ix = 1, this%innx
         point = georef_coord_new(x=lin%dim%lon(ix,iy), y=lin%dim%lat(ix,iy))
         DO n = 1, this%trans%poly%arraysize
           IF (inside(point, this%trans%poly%array(n))) THEN ! stop at the first matching polygon
-            this%outnx = this%outnx + 1
+#ifdef _OPENMP
+                outnx = outnx + 1
+#else
+                this%outnx = this%outnx + 1
+#endif
             this%point_index(ix,iy) = n
             EXIT
           ENDIF
@@ -2219,7 +2256,7 @@ ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
       ENDDO
     ENDDO
 !$OMP END PARALLEL
-
+!$    this%outnx = outnx
     IF (this%outnx <= 0) THEN
       CALL l4f_category_log(this%category,L4F_WARN, &
        "metamorphosis:poly: no points inside polygons")
@@ -2262,19 +2299,27 @@ ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
 ! generate the subarea boundaries according to maskgrid and maskbounds
     CALL gen_mask_class()
 
+#ifdef _OPENMP
+    outnx = 0
+#else
     this%outnx = 0
+#endif
     this%outny = 1
 
 ! this OMP block has to be checked
 !$OMP PARALLEL DEFAULT(SHARED)
-!$OMP DO PRIVATE(iy, ix) REDUCTION(+:this%outnx)
+!$OMP DO PRIVATE(iy, ix), REDUCTION(+:outnx)
     DO iy = 1, this%inny
       DO ix = 1, this%innx
         IF (c_e(maskgrid(ix,iy))) THEN
           IF (maskgrid(ix,iy) <= lmaskbounds(nmaskarea+1)) THEN
             DO n = nmaskarea, 1, -1
               IF (maskgrid(ix,iy) > lmaskbounds(n)) THEN
+#ifdef _OPENMP
+                outnx = outnx + 1
+#else
                 this%outnx = this%outnx + 1
+#endif
                 this%point_index(ix,iy) = n
                 EXIT
               ENDIF
@@ -2284,6 +2329,7 @@ ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
       ENDDO
     ENDDO
 !$OMP END PARALLEL
+!$    this%outnx = outnx
 
     IF (this%outnx <= 0) THEN
       CALL l4f_category_log(this%category,L4F_WARN, &
@@ -2310,6 +2356,28 @@ ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
 
     this%valid = .TRUE.
 
+  ELSE IF (this%trans%sub_type == 'index') THEN
+    this%outnx = SIZE(v7d_out%ana)
+    this%outny = 1
+
+! collect points having requested index
+! check that v7d_out has just 1 variable B01192 (index)
+    IF (ANY(c_e(lin%dim%lon))) THEN ! here we set also coordinates, find a more efficient way to check
+      DO n = 1, SIZE(v7d_out%ana)
+        iy = (v7d_out%volanai(n,1,1) - 1)/this%innx + 1
+        ix = v7d_out%volanai(n,1,1) - (iy-1)*this%innx
+        this%point_index(ix,iy) = v7d_out%volanai(n,1,1)
+        CALL init(v7d_out%ana(n), &
+         lon=lin%dim%lon(ix,iy), lat=lin%dim%lat(ix,iy)) ! (re)set coordinates from truth
+      ENDDO
+    ELSE ! here we trust coordinates from input
+      DO n = 1, SIZE(v7d_out%ana)
+        iy = (v7d_out%volanai(n,1,1) - 1)/this%innx + 1
+        ix = v7d_out%volanai(n,1,1) - (iy-1)*this%innx
+        this%point_index(ix,iy) = v7d_out%volanai(n,1,1)
+      ENDDO
+    ENDIF
+    this%valid = .TRUE.
   ENDIF
   CALL delete(lin)
 ENDIF
@@ -2754,7 +2822,7 @@ IF (PRESENT(categoryappend)) THEN
 ELSE
   CALL l4f_launcher(a_name,a_name_append=TRIM(subcategory))
 ENDIF
-this%category=l4f_category_get(a_name)
+this%category=l4f_category_get_handle(a_name)
 
 #ifdef DEBUG
 CALL l4f_category_log(this%category,L4F_DEBUG,"start init_grid_transform")
@@ -2894,26 +2962,28 @@ END FUNCTION grid_transform_c_e
 !! assigned to the target 1-d array after the subroutine call by means
 !! of the \a RESHAPE() intrinsic function.
 RECURSIVE SUBROUTINE grid_transform_compute(this, field_in, field_out, var, &
- coord_3d_in)
+ coord_3d_in, zlist)
 TYPE(grid_transform),INTENT(in),TARGET :: this !< grid_transformation object
 REAL,INTENT(in) :: field_in(:,:,:) !< input array
 REAL,INTENT(out) :: field_out(:,:,:) !< output array
 TYPE(vol7d_var),INTENT(in),OPTIONAL :: var !< physical variable to be interpolated, if provided, some ad-hoc algorithms may be used where possible
 REAL,INTENT(in),OPTIONAL,TARGET :: coord_3d_in(:,:,:) !< input vertical coordinate for vertical interpolation, if not provided by other means
+LOGICAL,INTENT(in),OPTIONAL :: zlist(:) !< list of levels actually present in input volume, if provided, levels marked as \a .FALSE. will not be interpolated regardless of their content (optimisation to avoid interpolating missing data)
 
-INTEGER :: i, j, k, ii, jj, ie, je, n, navg, kk, kkcache, kkup, kkdown, &
- kfound, kfoundin, inused, i1, i2, j1, j2, np, ns
+INTEGER :: i, j, k, l, m, s, ii, jj, ie, je, n, navg, kk, kkcache, kkup, kkdown, &
+ kfound, kfoundin, inused, i1, i2, j1, j2, np, ns, ix, iy
 INTEGER,ALLOCATABLE :: nval(:,:)
 REAL :: z1,z2,z3,z4,z(4)
-DOUBLE PRECISION  :: x1,x3,y1,y3,xp,yp
-INTEGER :: innx, inny, innz, outnx, outny, outnz, vartype
+DOUBLE PRECISION  :: x1,x3,y1,y3,xp,yp, disttmp, dist
+INTEGER :: innx, inny, innz, outnx, outny, outnz, vartype, nearcount
 REAL,ALLOCATABLE :: coord_in(:)
 LOGICAL,ALLOCATABLE :: mask_in(:)
 REAL,ALLOCATABLE :: val_in(:), field_tmp(:,:,:)
 REAL,POINTER :: coord_3d_in_act(:,:,:)
 TYPE(grid_transform) :: likethis
-LOGICAL :: alloc_coord_3d_in_act, nm1
-
+LOGICAL :: alloc_coord_3d_in_act, nm1, optsearch, farenough
+CHARACTER(len=4) :: env_var
+LOGICAL,ALLOCATABLE :: lzlist(:)
 
 #ifdef DEBUG
 CALL l4f_category_log(this%category,L4F_DEBUG,"start grid_transform_compute")
@@ -2939,7 +3009,7 @@ IF (this%recur) THEN ! if recursive transformation, recur here and exit
     likethis%outnx = this%trans%poly%arraysize
     likethis%outny = 1
     ALLOCATE(field_tmp(this%trans%poly%arraysize,1,SIZE(field_out,3)))
-    CALL grid_transform_compute(likethis, field_in, field_tmp, var)
+    CALL grid_transform_compute(likethis, field_in, field_tmp, var, coord_3d_in, zlist)
 
     DO k = 1, SIZE(field_out,3)
       DO j = 1, this%inny
@@ -2963,6 +3033,12 @@ ENDIF
 
 innx = SIZE(field_in,1); inny = SIZE(field_in,2); innz = SIZE(field_in,3)
 outnx = SIZE(field_out,1); outny = SIZE(field_out,2); outnz = SIZE(field_out,3)
+ALLOCATE(lzlist(innz))
+IF (PRESENT(zlist)) THEN
+  lzlist(:) = zlist(:)
+ELSE
+  lzlist(:) = .TRUE.
+ENDIF
 
 ! check size of field_in, field_out
 IF (this%trans%trans_type == 'vertint') THEN ! vertical interpolation
@@ -3040,6 +3116,7 @@ ELSE IF (this%trans%trans_type == 'boxregrid') THEN
   IF (this%trans%sub_type == 'average') THEN
     IF (vartype == var_dir360) THEN
       DO k = 1, innz
+        IF (.NOT.lzlist(k)) CYCLE
         jj = 0
         DO j = 1, this%inny - this%trans%box_info%npy + 1, this%trans%box_info%npy
           je = j+this%trans%box_info%npy-1
@@ -3059,6 +3136,7 @@ ELSE IF (this%trans%trans_type == 'boxregrid') THEN
 
     ELSE
       DO k = 1, innz
+        IF (.NOT.lzlist(k)) CYCLE
         jj = 0
         DO j = 1, this%inny - this%trans%box_info%npy + 1, this%trans%box_info%npy
           je = j+this%trans%box_info%npy-1
@@ -3089,6 +3167,7 @@ ELSE IF (this%trans%trans_type == 'boxregrid') THEN
 
     navg = this%trans%box_info%npx*this%trans%box_info%npy
     DO k = 1, innz
+      IF (.NOT.lzlist(k)) CYCLE
       jj = 0
       DO j = 1, this%inny - this%trans%box_info%npy + 1, this%trans%box_info%npy
         je = j+this%trans%box_info%npy-1
@@ -3105,6 +3184,7 @@ ELSE IF (this%trans%trans_type == 'boxregrid') THEN
 
   ELSE IF (this%trans%sub_type == 'max') THEN
     DO k = 1, innz
+      IF (.NOT.lzlist(k)) CYCLE
       jj = 0
       DO j = 1, this%inny - this%trans%box_info%npy + 1, this%trans%box_info%npy
         je = j+this%trans%box_info%npy-1
@@ -3124,6 +3204,7 @@ ELSE IF (this%trans%trans_type == 'boxregrid') THEN
 
   ELSE IF (this%trans%sub_type == 'min') THEN
     DO k = 1, innz
+      IF (.NOT.lzlist(k)) CYCLE
       jj = 0
       DO j = 1, this%inny - this%trans%box_info%npy + 1, this%trans%box_info%npy
         je = j+this%trans%box_info%npy-1
@@ -3145,6 +3226,7 @@ ELSE IF (this%trans%trans_type == 'boxregrid') THEN
 
     navg = this%trans%box_info%npx*this%trans%box_info%npy
     DO k = 1, innz
+      IF (.NOT.lzlist(k)) CYCLE
       jj = 0
       DO j = 1, this%inny - this%trans%box_info%npy + 1, this%trans%box_info%npy
         je = j+this%trans%box_info%npy-1
@@ -3163,6 +3245,7 @@ ELSE IF (this%trans%trans_type == 'boxregrid') THEN
   ELSE IF (this%trans%sub_type == 'frequency') THEN
 
     DO k = 1, innz
+      IF (.NOT.lzlist(k)) CYCLE
       jj = 0
       DO j = 1, this%inny - this%trans%box_info%npy + 1, this%trans%box_info%npy
         je = j+this%trans%box_info%npy-1
@@ -3188,8 +3271,9 @@ ELSE IF (this%trans%trans_type == 'inter') THEN
   IF (this%trans%sub_type == 'near') THEN
 
     DO k = 1, innz
-      DO j = 1, this%outny 
-        DO i = 1, this%outnx 
+      IF (.NOT.lzlist(k)) CYCLE
+      DO j = 1, this%outny
+        DO i = 1, this%outnx
 
           IF (c_e(this%inter_index_x(i,j))) field_out(i,j,k) = &
            field_in(this%inter_index_x(i,j),this%inter_index_y(i,j),k)
@@ -3201,8 +3285,9 @@ ELSE IF (this%trans%trans_type == 'inter') THEN
   ELSE IF (this%trans%sub_type == 'bilin') THEN
 
     DO k = 1, innz
-      DO j = 1, this%outny 
-        DO i = 1, this%outnx 
+      IF (.NOT.lzlist(k)) CYCLE
+      DO j = 1, this%outny
+        DO i = 1, this%outnx
 
           IF (c_e(this%inter_index_x(i,j))) THEN
 
@@ -3231,6 +3316,7 @@ ELSE IF (this%trans%trans_type == 'inter') THEN
     ENDDO
   ELSE IF (this%trans%sub_type == 'shapiro_near') THEN
     DO k = 1, innz
+      IF (.NOT.lzlist(k)) CYCLE
       DO j = 1, this%outny
         DO i = 1, this%outnx
 
@@ -3252,7 +3338,7 @@ ELSE IF (this%trans%trans_type == 'inter') THEN
               z(2) = rmiss
             END IF
             IF(this%inter_index_y(i,j)-1>0)THEN
-              z(4)=field_in(this%inter_index_x(i,j)  ,this%inter_index_y(i,j)-1,k)
+              z(4)=field_in(this%inter_index_x(i,j), this%inter_index_y(i,j)-1,k)
             ELSE
               z(4) = rmiss
             END IF
@@ -3265,6 +3351,88 @@ ELSE IF (this%trans%trans_type == 'inter') THEN
     ENDDO
 
   ENDIF
+ELSE IF (this%trans%trans_type == 'intersearch') THEN
+
+  likethis = this
+  likethis%trans%trans_type = 'inter' ! fake type and make a recursive call to compute base field
+  CALL grid_transform_compute(likethis, field_in, field_out, var, coord_3d_in, zlist)
+  CALL getenv('LIBSIM_DISABLEOPTSEARCH', env_var)
+  optsearch = LEN_TRIM(env_var) == 0
+
+  DO k = 1, innz
+    IF (.NOT.lzlist(k)) CYCLE
+    IF ((.NOT.ALL(c_e(field_out(:,:,k)))) .AND. (ANY(c_e(field_in(:,:,k))))) THEN ! must fill some values
+      DO j = 1, this%outny
+        DO i = 1, this%outnx
+          IF (.NOT.c_e(field_out(i,j,k))) THEN
+            dist = HUGE(dist)
+            nearcount = 0
+            IF (optsearch) THEN ! optimized, error-prone algorithm
+              ix = this%inter_index_x(i,j)
+              iy = this%inter_index_y(i,j)
+              DO s = 0, MAX(this%innx, this%inny)
+                farenough = .TRUE.
+                DO m = iy-s, iy+s, MAX(2*s, 1) ! y loop on upper and lower frames
+                  IF (m < 1 .OR. m > this%inny) CYCLE
+                  DO l = MAX(1, ix-s), MIN(this%innx, ix+s) ! x loop on upper and lower frames
+                    disttmp = (this%inter_xp(i,j) - this%inter_x(l,m))**2 + (this%inter_yp(i,j) - this%inter_y(l,m))**2
+                    IF (c_e(field_in(l,m,k))) THEN
+                      IF (disttmp < dist) THEN
+                        dist = disttmp
+                        field_out(i,j,k) = field_in(l,m,k)
+                        nearcount = 1
+                      ELSE IF (disttmp == dist) THEN
+                        field_out(i,j,k) = field_out(i,j,k) + field_in(l,m,k)
+                        nearcount = nearcount + 1
+                      ENDIF
+                    ENDIF
+                    IF (disttmp < dist) farenough = .FALSE.
+                  ENDDO
+                ENDDO
+                DO m = MAX(1, iy-s+1), MIN(this%inny, iy+s-1) ! y loop on left and right frames (avoid corners)
+                  DO l = ix-s, ix+s, 2*s ! x loop on left and right frames (exchange loops?)
+                    IF (l < 1 .OR. l > this%innx) CYCLE
+                    disttmp = (this%inter_xp(i,j) - this%inter_x(l,m))**2 + (this%inter_yp(i,j) - this%inter_y(l,m))**2
+                    IF (c_e(field_in(l,m,k))) THEN
+                      IF (disttmp < dist) THEN
+                        dist = disttmp
+                        field_out(i,j,k) = field_in(l,m,k)
+                        nearcount = 1
+                      ELSE IF (disttmp == dist) THEN
+                        field_out(i,j,k) = field_out(i,j,k) + field_in(l,m,k)
+                        nearcount = nearcount + 1
+                      ENDIF
+                    ENDIF
+                    IF (disttmp < dist) farenough = .FALSE.
+                  ENDDO
+                ENDDO
+                IF (s > 0 .AND. farenough) EXIT ! nearest point found, do not trust the same point, in case of bilin it could be not the nearest
+              ENDDO
+            ELSE ! linear, simple, slow algorithm
+              DO m = 1, this%inny
+                DO l = 1, this%innx
+                  IF (c_e(field_in(l,m,k))) THEN
+                    disttmp = (this%inter_xp(i,j) - this%inter_x(l,m))**2 + (this%inter_yp(i,j) - this%inter_y(l,m))**2
+                    IF (disttmp < dist) THEN
+                      dist = disttmp
+                      field_out(i,j,k) = field_in(l,m,k)
+                      nearcount = 1
+                    ELSE IF (disttmp == dist) THEN
+                      field_out(i,j,k) = field_out(i,j,k) + field_in(l,m,k)
+                      nearcount = nearcount + 1
+                    ENDIF
+                  ENDIF
+                ENDDO
+              ENDDO
+            ENDIF
+! average points with same minimum distance
+            IF (nearcount > 1) field_out(i,j,k) = field_out(i,j,k)/nearcount
+          ENDIF
+        ENDDO
+      ENDDO
+    ENDIF
+  ENDDO
+
 ELSE IF (this%trans%trans_type == 'boxinter' &
  .OR. this%trans%trans_type == 'polyinter' &
  .OR. this%trans%trans_type == 'maskinter') THEN
@@ -3273,6 +3441,7 @@ ELSE IF (this%trans%trans_type == 'boxinter' &
 
     IF (vartype == var_dir360) THEN
       DO k = 1, innz
+        IF (.NOT.lzlist(k)) CYCLE
         DO j = 1, this%outny
           DO i = 1, this%outnx
             field_out(i,j,k) = find_prevailing_direction(field_in(:,:,k), &
@@ -3286,6 +3455,7 @@ ELSE IF (this%trans%trans_type == 'boxinter' &
       ALLOCATE(nval(this%outnx, this%outny))
       field_out(:,:,:) = 0.0
       DO k = 1, innz
+        IF (.NOT.lzlist(k)) CYCLE
         nval(:,:) = 0
         DO j = 1, this%inny
           DO i = 1, this%innx
@@ -3316,6 +3486,7 @@ ELSE IF (this%trans%trans_type == 'boxinter' &
       nm1 = .TRUE.
     ENDIF
     DO k = 1, innz
+      IF (.NOT.lzlist(k)) CYCLE
       DO j = 1, this%outny
         DO i = 1, this%outnx
 ! da paura
@@ -3330,6 +3501,7 @@ ELSE IF (this%trans%trans_type == 'boxinter' &
   ELSE IF (this%trans%sub_type == 'max') THEN
 
     DO k = 1, innz
+      IF (.NOT.lzlist(k)) CYCLE
       DO j = 1, this%inny
         DO i = 1, this%innx
           IF (c_e(this%inter_index_x(i,j)) .AND. c_e(field_in(i,j,k))) THEN
@@ -3350,6 +3522,7 @@ ELSE IF (this%trans%trans_type == 'boxinter' &
   ELSE IF (this%trans%sub_type == 'min') THEN
 
     DO k = 1, innz
+      IF (.NOT.lzlist(k)) CYCLE
       DO j = 1, this%inny
         DO i = 1, this%innx
           IF (c_e(this%inter_index_x(i,j)) .AND. c_e(field_in(i,j,k))) THEN
@@ -3369,6 +3542,7 @@ ELSE IF (this%trans%trans_type == 'boxinter' &
   ELSE IF (this%trans%sub_type == 'percentile') THEN
 
     DO k = 1, innz
+      IF (.NOT.lzlist(k)) CYCLE
       DO j = 1, this%outny
         DO i = 1, this%outnx
 ! da paura
@@ -3384,8 +3558,9 @@ ELSE IF (this%trans%trans_type == 'boxinter' &
   ELSE IF (this%trans%sub_type == 'frequency') THEN
 
     ALLOCATE(nval(this%outnx, this%outny))
-    field_out(:,:,:) = 0.0
     DO k = 1, innz
+      IF (.NOT.lzlist(k)) CYCLE
+      field_out(:,:,k) = 0.0
       nval(:,:) = 0
       DO j = 1, this%inny
         DO i = 1, this%innx
@@ -3416,6 +3591,7 @@ ELSE IF (this%trans%trans_type == 'stencilinter') THEN
 
     IF (vartype == var_dir360) THEN
       DO k = 1, innz
+        IF (.NOT.lzlist(k)) CYCLE
         DO j = 1, this%outny
           DO i = 1, this%outnx
             IF (c_e(this%inter_index_x(i,j))) THEN
@@ -3436,6 +3612,7 @@ ELSE IF (this%trans%trans_type == 'stencilinter') THEN
 !$OMP PARALLEL DEFAULT(SHARED)
 !$OMP DO PRIVATE(i, j, k, i1, i2, j1, j2, n)
       DO k = 1, innz
+        IF (.NOT.lzlist(k)) CYCLE
         DO j = 1, this%outny
           DO i = 1, this%outnx
             IF (c_e(this%inter_index_x(i,j))) THEN
@@ -3467,6 +3644,7 @@ ELSE IF (this%trans%trans_type == 'stencilinter') THEN
 !$OMP PARALLEL DEFAULT(SHARED)
 !$OMP DO PRIVATE(i, j, k, i1, i2, j1, j2)
     DO k = 1, innz
+      IF (.NOT.lzlist(k)) CYCLE
       DO j = 1, this%outny
         DO i = 1, this%outnx
           IF (c_e(this%inter_index_x(i,j))) THEN
@@ -3490,6 +3668,7 @@ ELSE IF (this%trans%trans_type == 'stencilinter') THEN
 !$OMP PARALLEL DEFAULT(SHARED)
 !$OMP DO PRIVATE(i, j, k, i1, i2, j1, j2, n)
     DO k = 1, innz
+      IF (.NOT.lzlist(k)) CYCLE
       DO j = 1, this%outny
         DO i = 1, this%outnx
           IF (c_e(this%inter_index_x(i,j))) THEN
@@ -3513,6 +3692,7 @@ ELSE IF (this%trans%trans_type == 'stencilinter') THEN
 !$OMP PARALLEL DEFAULT(SHARED)
 !$OMP DO PRIVATE(i, j, k, i1, i2, j1, j2, n)
     DO k = 1, innz
+      IF (.NOT.lzlist(k)) CYCLE
       DO j = 1, this%outny
         DO i = 1, this%outnx
           IF (c_e(this%inter_index_x(i,j))) THEN
@@ -3536,6 +3716,7 @@ ELSE IF (this%trans%trans_type == 'stencilinter') THEN
 !$OMP PARALLEL DEFAULT(SHARED)
 !$OMP DO PRIVATE(i, j, k, i1, i2, j1, j2)
     DO k = 1, innz
+      IF (.NOT.lzlist(k)) CYCLE
       DO j = 1, this%outny
         DO i = 1, this%outnx
           IF (c_e(this%inter_index_x(i,j))) THEN
@@ -3560,6 +3741,7 @@ ELSE IF (this%trans%trans_type == 'stencilinter') THEN
 !$OMP PARALLEL DEFAULT(SHARED)
 !$OMP DO PRIVATE(i, j, k, i1, i2, j1, j2, n)
     DO k = 1, innz
+      IF (.NOT.lzlist(k)) CYCLE
       DO j = 1, this%outny
         DO i = 1, this%outnx
           IF (c_e(this%inter_index_x(i,j))) THEN
@@ -3596,9 +3778,10 @@ ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
     field_out(:,:,:) = RESHAPE(field_in(:,:,:), (/this%outnx,this%outny,innz/))
 
   ELSE IF (this%trans%sub_type == 'coordbb' .OR. this%trans%sub_type == 'poly' &
-   .OR. this%trans%sub_type == 'mask') THEN
+   .OR. this%trans%sub_type == 'mask' .OR. this%trans%sub_type == 'index') THEN
 
     DO k = 1, innz
+      IF (.NOT.lzlist(k)) CYCLE
 ! this is to sparse-points only, so field_out(:,1,k) is acceptable
       field_out(:,1,k) = PACK(field_in(:,:,k), c_e(this%point_index(:,:)))
     ENDDO
@@ -3607,14 +3790,16 @@ ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
    this%trans%sub_type == 'maskinvalid') THEN
 
     DO k = 1, innz
-      WHERE (this%point_mask(:,:))
-        field_out(:,:,k) = field_in(:,:,k)
+      IF (.NOT.lzlist(k)) CYCLE
+      WHERE (this%point_mask(:,:)) ! this is almost the same as the previous syntax
+        field_out(:,:,k) = field_in(:,:,k) ! check which is more efficient
       END WHERE
     ENDDO
 
   ELSE IF (this%trans%sub_type == 'lemaskinvalid') THEN
 
     DO k = 1, innz
+      IF (.NOT.lzlist(k)) CYCLE
       WHERE (c_e(field_in(:,:,k)) .AND. field_in(:,:,k) > this%val_mask(:,:))
         field_out(:,:,k) = field_in(:,:,k)
       ELSEWHERE
@@ -3625,6 +3810,7 @@ ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
   ELSE IF (this%trans%sub_type == 'ltmaskinvalid') THEN
 
     DO k = 1, innz
+      IF (.NOT.lzlist(k)) CYCLE
       WHERE (c_e(field_in(:,:,k)) .AND. field_in(:,:,k) >= this%val_mask(:,:))
         field_out(:,:,k) = field_in(:,:,k)
       ELSEWHERE
@@ -3634,7 +3820,8 @@ ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
 
   ELSE IF (this%trans%sub_type == 'gemaskinvalid') THEN
 
-        DO k = 1, innz
+    DO k = 1, innz
+      IF (.NOT.lzlist(k)) CYCLE
       WHERE (c_e(field_in(:,:,k)) .AND. field_in(:,:,k) < this%val_mask(:,:))
         field_out(:,:,k) = field_in(:,:,k)
       ELSEWHERE
@@ -3645,6 +3832,7 @@ ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
   ELSE IF (this%trans%sub_type == 'gtmaskinvalid') THEN
 
     DO k = 1, innz
+      IF (.NOT.lzlist(k)) CYCLE
       WHERE (c_e(field_in(:,:,k)) .AND. field_in(:,:,k) <= this%val_mask(:,:))
         field_out(:,:,k) = field_in(:,:,k)
       ELSEWHERE
@@ -3655,6 +3843,7 @@ ELSE IF (this%trans%trans_type == 'metamorphosis') THEN
   ELSE IF (this%trans%sub_type == 'setinvalidto') THEN
 
     DO k = 1, innz
+      IF (.NOT.lzlist(k)) CYCLE ! should i skip levels here?
       WHERE (c_e(field_in(:,:,k)))
         field_out(:,:,k) = field_in(:,:,k)
       ELSE WHERE
@@ -4232,7 +4421,7 @@ END FUNCTION shapiro
 SUBROUTINE basic_find_index(this, near, nx, ny, xmin, xmax, ymin, ymax, &
  lon, lat, extrap, index_x, index_y)
 TYPE(griddim_def),INTENT(in) :: this ! griddim object (from grid)
-logical,INTENT(in) :: near ! near or bilin interpolation (determine wich point is requested)
+LOGICAL,INTENT(in) :: near ! near or bilin interpolation (determine wich point is requested)
 INTEGER,INTENT(in) :: nx,ny ! dimension (to grid)
 DOUBLE PRECISION,INTENT(in) :: xmin, xmax, ymin, ymax ! extreme coordinate (to grid)
 DOUBLE PRECISION,INTENT(in) :: lon(:,:),lat(:,:) ! target coordinate

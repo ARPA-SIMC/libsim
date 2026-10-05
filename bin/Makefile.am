@@ -15,15 +15,10 @@ endif
 
 if DBALLE
 
-noinst_PROGRAMS += dba_qcfilter
 bin_PROGRAMS += dba_transform
-dba_qcfilter_SOURCES = dba_qcfilter.F03
-dba_qcfilter_LDADD =  ../vol7d/libsim_vol7d.la ../log4fortran/liblog4fortran.la ../qc/libsim_qc.la ../base/libsim_base.la $(LOG4C_LIBS)
 
 dba_transform_SOURCES = dba_transform.F03 
 dba_transform_LDADD =  ../vol7d/libsim_vol7d.la ../log4fortran/liblog4fortran.la ../qc/libsim_qc.la ../base/libsim_base.la $(LOG4C_LIBS)
-
-dist_check_SCRIPTS += dba_qcfilter_test.sh
 
 if SHAPELIB
 bin_PROGRAMS += v7d_qccli v7d_qctem
@@ -59,9 +54,7 @@ bin_PROGRAMS += v7d_transform
 v7d_transform_SOURCES = v7d_transform.F90
 v7d_transform_LDADD = ../base/libsim_base.la ../vol7d/libsim_vol7d.la ../qc/libsim_qc.la ../volgrid6d/libsim_volgrid6d.la ../log4fortran/liblog4fortran.la
 
-if ALCHIMIA
 v7d_transform_LDADD += ../alchimia/libsim_alchimia.la ../termolib/libsim_termolib.la
-endif
 
 v7d_transform_LDADD += $(LOG4C_LIBS)
 
@@ -73,8 +66,9 @@ bin_PROGRAMS += vg6d_getpoint vg6d_transform
 
 if GRIBAPI
 vg6d_getpoint_SOURCES = grib_api_csv.F90 vg6d_getpoint.F90
-pkglibexec_PROGRAMS += vg6d_getpoint_pkauf
+pkglibexec_PROGRAMS += vg6d_getpoint_pkauf create_projgrib
 vg6d_getpoint_pkauf_SOURCES = grib_api_csv.F90 vg6d_getpoint_pkauf.F90
+create_projgrib_SOURCES = create_projgrib.F90
 if DBALLE
 pkglibexec_PROGRAMS += vg6d_tcorr
 #noinst_PROGRAMS += vg6d_column
@@ -96,12 +90,12 @@ endif
 vg6d_getpoint_LDADD = ../volgrid6d/libsim_volgrid6d.la  ../vol7d/libsim_vol7d.la ../base/libsim_base.la ../log4fortran/liblog4fortran.la $(LOG4C_LIBS) $(GRIBAPI_LIBS)
 vg6d_getpoint_pkauf_LDADD = ../volgrid6d/libsim_volgrid6d.la  ../vol7d/libsim_vol7d.la ../base/libsim_base.la ../log4fortran/liblog4fortran.la $(LOG4C_LIBS) $(GRIBAPI_LIBS)
 
+create_projgrib_LDADD = ../volgrid6d/libsim_volgrid6d.la  ../vol7d/libsim_vol7d.la ../base/libsim_base.la ../log4fortran/liblog4fortran.la $(LOG4C_LIBS) $(GRIBAPI_LIBS)
+
 vg6d_transform_SOURCES = vg6d_transform.F90
 vg6d_transform_LDADD = ../volgrid6d/libsim_volgrid6d.la ../base/libsim_base.la ../vol7d/libsim_vol7d.la ../log4fortran/liblog4fortran.la $(LOG4C_LIBS) $(GRIBAPI_LIBS)
 
-if ALCHIMIA
 vg6d_transform_LDADD += ../alchimia/libsim_alchimia.la ../termolib/libsim_termolib.la  
-endif
 
 if GRIBAPI
 dist_bin_SCRIPTS += vg6d_subarea
@@ -112,17 +106,23 @@ if GRIBAPI
 if SHAPELIB
 dist_check_SCRIPTS += getpoint_transform_test.sh
 endif
-dist_check_SCRIPTS += stat_proc_test.sh
+dist_check_SCRIPTS += stat_proc_test.sh stat_proc_test_g2.sh
 endif
 
 TESTS = $(check_PROGRAMS) $(dist_check_SCRIPTS)
 TESTS_ENVIRONMENT = $(top_srcdir)/testenv
 
 if HELP2MAN
-man_MANS = v7d_transform.1 v7d_add_wmo_info.1 vg6d_getpoint.1 vg6d_transform.1
+man_MANS = v7d_transform.1 vg6d_getpoint.1 vg6d_transform.1
 
 if NCARG
 man_MANS += v7d_plot_sound.1
+endif
+if GRIBAPI
+man_MANS += vg6d_getpoint_pkauf.1 create_projgrib.1
+if DBALLE
+man_MANS += vg6d_tcorr.1
+endif
 endif
 if DBALLE
 man_MANS += dba_transform.1

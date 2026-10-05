@@ -1,8 +1,8 @@
 #include "config.h"
-
-use space_utilities
-use log4fortran
-use char_utilities
+PROGRAM example_space_utilities
+USE space_utilities
+USE log4fortran
+USE char_utilities
 #ifdef HAVE_LIBNCARG
 USE ncar_plot_class
 #endif
@@ -16,7 +16,8 @@ integer,parameter :: ndp=10000
 type(xy), DIMENSION(ndp) :: co 
 integer ::  status
 character(len=512):: a_name
-INTEGER :: category, ier
+INTEGER ::  ier
+TYPE(l4f_handle) :: category
 type(triangles) :: tri
 
 #ifdef HAVE_LIBNCARG
@@ -30,7 +31,7 @@ call l4f_launcher(a_name,a_name_force="example_space")
 ier=l4f_init()
 
 !imposta a_name
-category=l4f_category_get(a_name//".main")
+category=l4f_category_get_handle(TRIM(a_name)//".main")
 
 call l4f_category_log(category,L4F_INFO,"start")
 

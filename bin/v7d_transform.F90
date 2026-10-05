@@ -47,11 +47,9 @@ USE modqc
 #ifdef HAVE_SHAPELIB
 USE modqccli
 #endif
-#ifdef ALCHIMIA
 USE alchimia
 use vol7d_alchimia_class
 USE termo
-#endif
 
 IMPLICIT NONE
 
@@ -98,7 +96,7 @@ CHARACTER(len=network_name_len) :: set_network
 CHARACTER(len=512) :: dsn
 LOGICAL :: version, ldisplay, disable_qc, comp_qc_ndi, comp_qc_perc, comp_qc_area_er,anaonly
 CHARACTER(len=512):: a_name
-INTEGER :: category
+TYPE(l4f_handle) :: category
 TYPE(arrayof_real) :: maskbounds
 
 ! for computing
@@ -125,17 +123,15 @@ CHARACTER(len=160) :: post_trans_type
 TYPE(vol7d_serialize_csv) :: v7d_csv
 TYPE(vol7d_serialize_csvdba) :: v7d_csvdba
 TYPE(vol7d_serialize_geojson) :: v7d_geojson
-#ifdef ALCHIMIA
 type(fndsv) :: vfn,vfnoracle
 !character(len=10), allocatable:: mybin(:)
-#endif
 
 !questa chiamata prende dal launcher il nome univoco
 CALL l4f_launcher(a_name,a_name_force="v7d_transform")
 !init di log4fortran
 ier = l4f_init()
 !imposta a_name
-category = l4f_category_get(TRIM(a_name)//".main")
+category = l4f_category_get_handle(TRIM(a_name)//".main")
 
 ! define the option parser
 opt = optionparser_new(description_msg= &
@@ -405,12 +401,10 @@ CALL v7d_csv%vol7d_serialize_optionparser(opt, 'csv')
 CALL v7d_csvdba%vol7d_serialize_optionparser(opt, 'csv')
 CALL v7d_geojson%vol7d_serialize_optionparser(opt, 'geojson')
 
-#ifdef ALCHIMIA
 CALL optionparser_add(opt, '', 'output-variable-list', output_variable_list, '', help= &
  'list of data variables you require in output; if they are not in input they will be computed if possible. &
  &The output_variable_list is expressed in the form of a comma-separated list of B-table alphanumeric codes, &
  &e.g. ''B13011,B12101''')
-#endif
 
 CALL optionparser_add(opt, ' ', 'rounding', round, help= &
  'simplifies volume, merging similar levels and timeranges')
@@ -419,8 +413,8 @@ CALL optionparser_add(opt, ' ', 'time-definition', time_definition, 1, help= &
  'time definition for imported volume, if supported by the import method, &
  &0 for reference time (more suitable for &
  &presenting forecast data) and 1 for verification time (more suitable for &
- &comparing forecasts with observations)')
-
+ &comparing forecasts with observations, 2 as 1 but forecast range is set to 0 &
+ &(analysis/observation)')
 
 ! help options
 CALL optionparser_add_help(opt, 'h', 'help', help='show an help message and exit')
@@ -550,7 +544,6 @@ ELSE ! argument not provided => all attributes
   alqc(1) = cmiss ! 1 element missing means all attributes
 ENDIF
 
-#ifdef ALCHIMIA
 ! generate variable lists
 IF (LEN_TRIM(output_variable_list) > 0) THEN
   n = word_split(output_variable_list, w_s, w_e, ',')
@@ -560,7 +553,6 @@ IF (LEN_TRIM(output_variable_list) > 0) THEN
   ENDDO
   DEALLOCATE(w_s, w_e)
 ENDIF
-#endif
 
 ! time-related arguments
 IF (start_date /= '') THEN
@@ -1062,7 +1054,6 @@ IF (comp_sort) THEN
 ENDIF
 
 
-#ifdef ALCHIMIA
 if (output_variable_list /= " ") then
 
   CALL register_termo(vfn)
@@ -1086,7 +1077,6 @@ if (output_variable_list /= " ") then
     CALL raise_fatal_error()
   ENDIF
 end if
-#endif
 
 
 #ifdef HAVE_SHAPELIB
@@ -1355,11 +1345,8 @@ ENDIF
 ! finalization done once here
 CALL delete(v7d)
 
-#ifdef ALCHIMIA
 call delete(vfn)
 call delete(vfnoracle)
-#endif
-
 
 ier = l4f_fini()
 

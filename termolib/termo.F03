@@ -33,7 +33,8 @@ subroutine register_termo(vfn)
   call fnregister(vfn,snow_ls_conv2tot_def())
   call fnregister(vfn,rain_snow_conv2tot_def())
   call fnregister(vfn,rain_snow_ls_conv2tot_def())
-  call fnregister(vfn,z_fi_def())
+  call fnregister(vfn,snow_ls_conv_gr2tot_def())
+  CALL fnregister(vfn,z_fi_def())
   call fnregister(vfn,fi_z_def())
   call fnregister(vfn,z_h_def())
   call fnregister(vfn,h_z_def())
@@ -171,7 +172,7 @@ subroutine  r_t2td(mybin,mybout,bin,bout,in,out)
   real, intent(out) :: out(:,:)
 
   out(:,index_c(mybout,bout(1)))= trug(in(:,index_c(mybin, bin(1))), in(:,index_c(mybin, bin(2))))
-          
+
 end subroutine r_t2td
 
 type(fnds) function r_t2td_def()
@@ -199,7 +200,7 @@ subroutine  r_p_t2q(mybin,mybout,bin,bout,in,out)
   elsewhere
     out(:,index_c(mybout,bout(1)))=rmiss
   endwhere
-          
+
 end subroutine r_p_t2q
 
 type(fnds) function r_p_t2q_def()
@@ -357,8 +358,8 @@ subroutine  q_p_t2r(mybin,mybout,bin,bout,in,out)
   real, intent(out) :: out(:,:)
 
   out(:,index_c(mybout,bout(1)))= QTORELHUM(in (:,index_c(mybin, bin(1))),&
-   in (:,index_c(mybin, bin(2))),in (:,index_c(mybin, bin(3)))) 
-          
+   in (:,index_c(mybin, bin(2))),in (:,index_c(mybin, bin(3))))
+
 end subroutine q_p_t2r
 
 type(fnds) function q_p_t2r_def()
@@ -378,7 +379,7 @@ subroutine  t_td2r(mybin,mybout,bin,bout,in,out)
 
   out(:,index_c(mybout,bout(1))) = fr(in (:,index_c(mybin ,bin (1))),&
    in (:,index_c(mybin ,bin (2))))
-          
+
 end subroutine t_td2r
 
 type(fnds) function t_td2r_def()
@@ -398,7 +399,7 @@ subroutine t_p_w2omega(mybin,mybout,bin,bout,in,out)
 
   out(:,index_c(mybout,bout(1))) = omega_simple(in(:,index_c(mybin,bin(1))), &
    in(:,index_c(mybin,bin(2))), in(:,index_c(mybin,bin(3))))
-          
+
 end subroutine t_p_w2omega
 
 type(fnds) function t_p_w2omega_def()
@@ -427,7 +428,7 @@ end function t_p_w2omega_def
 !!$
 !!$FR (T,TD )
 !!$
-!!$W(TD,PT) 
+!!$W(TD,PT)
 !!$
 !!$td_pq(p,q)
 !!$
@@ -437,7 +438,7 @@ end function t_p_w2omega_def
 !!$
 !!$ALCL(TD,TT,PT)
 !!$
-!!$ALCLM(aw,ao,pt)  
+!!$ALCLM(aw,ao,pt)
 !!$
 !!$TMR(W,P)
 !!$
@@ -457,7 +458,7 @@ subroutine snow_ls_conv2tot(mybin,mybout,bin,bout,in,out)
 
   out(:,index_c(mybout,bout(1))) = in(:,index_c(mybin,bin(1))) + &
    in(:,index_c(mybin,bin(2)))
-          
+
 end subroutine snow_ls_conv2tot
 
 type(fnds) function snow_ls_conv2tot_def()
@@ -477,7 +478,7 @@ subroutine rain_snow_conv2tot(mybin,mybout,bin,bout,in,out)
 
   out(:,index_c(mybout,bout(1))) = in(:,index_c(mybin,bin(1))) + &
    in(:,index_c(mybin,bin(2)))
-          
+
 end subroutine rain_snow_conv2tot
 
 type(fnds) function rain_snow_conv2tot_def()
@@ -498,7 +499,7 @@ subroutine rain_snow_ls_conv2tot(mybin,mybout,bin,bout,in,out)
   out(:,index_c(mybout,bout(1))) = in(:,index_c(mybin,bin(1))) + &
    in(:,index_c(mybin,bin(2))) + in(:,index_c(mybin,bin(3))) + &
    in(:,index_c(mybin,bin(4)))
-          
+
 end subroutine rain_snow_ls_conv2tot
 
 type(fnds) function rain_snow_ls_conv2tot_def()
@@ -506,6 +507,26 @@ type(fnds) function rain_snow_ls_conv2tot_def()
    [character(len=10) :: "B13200","B13201","B13202","B13203"], &
    [character(len=10) :: "B13011"],0,func=rain_snow_ls_conv2tot)
 end function rain_snow_ls_conv2tot_def
+
+
+subroutine snow_ls_conv_gr2tot(mybin,mybout,bin,bout,in,out)
+  CHARACTER(len=10),intent(in) :: mybin(:)  !< vector table B  WMO input  in user's data
+  CHARACTER(len=10),intent(in) :: mybout(:) !< vector table B  WMO output in user's data
+  CHARACTER(len=10),intent(in) :: bin(:)    !< vector table B  WMO input used by function
+  CHARACTER(len=10),intent(in) :: bout(:)   !< vector table B  WMO output used by function
+  real, intent(in) :: in(:,:)
+  real, intent(out) :: out(:,:)
+
+  out(:,index_c(mybout,bout(1))) = in(:,index_c(mybin,bin(1))) + &
+   in(:,index_c(mybin,bin(2))) + in(:,index_c(mybin,bin(3)))
+
+end subroutine snow_ls_conv_gr2tot
+
+type(fnds) function snow_ls_conv_gr2tot_def()
+  call init(snow_ls_conv_gr2tot_def,"snow_ls_conv_gr2tot", &
+   [CHARACTER(len=10) :: "B13201","B13203","B13236"], &
+   [character(len=10) :: "B13237"],0,func=snow_ls_conv_gr2tot)
+end function snow_ls_conv_gr2tot_def
 
 
 SUBROUTINE z_fi(mybin,mybout,bin,bout,in,out)
@@ -521,7 +542,7 @@ WHERE (c_e(in(:,index_c(mybin,bin(1)))))
 ELSEWHERE
   out(:,index_c(mybout,bout(1))) = rmiss
 END WHERE
-          
+
 END SUBROUTINE z_fi
 
 TYPE(fnds) FUNCTION z_fi_def()
@@ -544,7 +565,7 @@ WHERE (c_e(in(:,index_c(mybin,bin(1)))))
 ELSEWHERE
   out(:,index_c(mybout,bout(1))) = rmiss
 END WHERE
-          
+
 END SUBROUTINE fi_z
 
 TYPE(fnds) FUNCTION fi_z_def()
@@ -563,7 +584,7 @@ REAL, INTENT(in) :: in(:,:)
 REAL, INTENT(out) :: out(:,:)
 
 out(:,index_c(mybout,bout(1))) = in(:,index_c(mybin,bin(1)))
-          
+
 END SUBROUTINE z_h
 
 TYPE(fnds) FUNCTION z_h_def()
@@ -582,7 +603,7 @@ REAL, INTENT(in) :: in(:,:)
 REAL, INTENT(out) :: out(:,:)
 
 out(:,index_c(mybout,bout(1))) = in(:,index_c(mybin,bin(1)))
-          
+
 END SUBROUTINE h_z
 
 TYPE(fnds) FUNCTION h_z_def()

@@ -24,7 +24,8 @@ integer (kind=int_b):: flag0,flag1,flag2,flag3
 TYPE(optionparser) :: opt
 INTEGER :: optind, optstatus
 CHARACTER(len=512):: a_name,input_file,output_file 
-INTEGER :: category,ier
+TYPE(l4f_handle) :: category
+INTEGER :: ier
 type(dbadcv) :: starvars
 
 
@@ -33,7 +34,7 @@ CALL l4f_launcher(a_name,a_name_force="dba_qcfilter")
 !init di log4fortran
 ier = l4f_init()
 !imposta a_name
-category = l4f_category_get(a_name//".main")
+category = l4f_category_get_handle(a_name//".main")
 
 opt = optionparser_new(description_msg= &
  'Filter data using Quality Control information. &

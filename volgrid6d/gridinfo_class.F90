@@ -82,7 +82,7 @@ TYPE gridinfo_def
   TYPE(vol7d_level) :: level !< vertical level dimension descriptor
   TYPE(volgrid6d_var) :: var !< physical variable dimension descriptor
   TYPE(grid_id) :: gaid !< grid identificator, carrying information about the driver for importation/exportation from/to file
-  INTEGER :: category = 0 !< log4fortran category
+  TYPE(l4f_handle) :: category !< log4fortran category
 END TYPE gridinfo_def
 
 INTEGER, PARAMETER :: &
@@ -174,7 +174,7 @@ if (present(categoryappend))then
 else
    call l4f_launcher(a_name,a_name_append=trim(subcategory))
 end if
-this%category=l4f_category_get(a_name)
+this%category=l4f_category_get_handle(a_name)
 
 #ifdef DEBUG
 call l4f_category_log(this%category,L4F_DEBUG,"start init gridinfo")
@@ -365,7 +365,8 @@ CHARACTER(len=*),INTENT(in) :: filename !< name of file to open and import, in t
 CHARACTER(len=*),INTENT(in),OPTIONAL :: categoryappend !< append this suffix to log4fortran namespace category
 
 type(gridinfo_def) :: gridinfol
-INTEGER :: ngrid, category
+INTEGER :: ngrid
+TYPE(l4f_handle) :: category
 CHARACTER(len=512) :: a_name
 TYPE(grid_file_id) :: input_file
 TYPE(grid_id) :: input_grid
@@ -376,7 +377,7 @@ IF (PRESENT(categoryappend)) THEN
 ELSE
   CALL l4f_launcher(a_name,a_name_append=TRIM(subcategory))
 ENDIF
-category=l4f_category_get(a_name)
+category=l4f_category_get_handle(a_name)
 
 #ifdef DEBUG
 CALL l4f_category_log(category,L4F_DEBUG,"import from file")
@@ -385,12 +386,15 @@ CALL l4f_category_log(category,L4F_DEBUG,"import from file")
 input_file = grid_file_id_new(filename, 'r')
 
 ngrid = 0
+!$OMP PARALLEL DEFAULT(SHARED)
+!$OMP MASTER
 DO WHILE(.TRUE.)
   input_grid = grid_id_new(input_file)
   IF (.NOT. c_e(input_grid)) EXIT
 
   CALL l4f_category_log(category,L4F_INFO,"import gridinfo")
   ngrid = ngrid + 1
+!$OMP TASK FIRSTPRIVATE(input_grid, ngrid), PRIVATE(gridinfol)
   IF (PRESENT(categoryappend)) THEN
     CALL init(gridinfol, gaid=input_grid, &
      categoryappend=TRIM(categoryappend)//"-msg"//TRIM(to_char(ngrid)))
@@ -399,9 +403,14 @@ DO WHILE(.TRUE.)
      categoryappend="msg"//TRIM(to_char(ngrid)))
   ENDIF
   CALL import(gridinfol)
+!$OMP CRITICAL
   CALL insert(this, gridinfol)
 ! gridinfol is intentionally not destroyed, since now it lives into this
+!$OMP END CRITICAL
+!$OMP END TASK
 ENDDO
+!$OMP END MASTER
+!$OMP END PARALLEL
 
 CALL packarray(this)
 
@@ -466,7 +475,8 @@ TYPE(arrayof_gridinfo) :: this !< array of gridinfo objects which will be writte
 CHARACTER(len=*),INTENT(in) :: filename !< name of file to open and import, in the form [driver:]pathname
 CHARACTER(len=*),INTENT(in),OPTIONAL :: categoryappend !< append this suffix to log4fortran namespace category
 
-INTEGER :: i, category
+INTEGER :: i
+TYPE(l4f_handle) :: category
 CHARACTER(len=512) :: a_name
 TYPE(grid_file_id) :: output_file
 TYPE(grid_id) :: valid_grid_id
@@ -477,7 +487,7 @@ IF (PRESENT(categoryappend)) THEN
 ELSE
   CALL l4f_launcher(a_name,a_name_append=TRIM(subcategory))
 ENDIF
-category=l4f_category_get(a_name)
+category=l4f_category_get_handle(a_name)
 
 #ifdef DEBUG
 CALL l4f_category_log(category,L4F_DEBUG, &
@@ -496,10 +506,18 @@ IF (c_e(valid_grid_id)) THEN ! a valid grid_id has been found
 ! open file
   output_file = grid_file_id_new(filename, 'w', from_grid_id=valid_grid_id)
   IF (c_e(output_file)) THEN
+!$OMP PARALLEL DEFAULT(SHARED)
+!$OMP MASTER
     DO i = 1, this%arraysize
+!$OMP TASK FIRSTPRIVATE(i)
       CALL export(this%array(i)) ! export information to gaid
+!$OMP CRITICAL
       CALL export(this%array(i)%gaid, output_file) ! export gaid to file
+!$OMP END CRITICAL
+!$OMP END TASK
     ENDDO
+!$OMP END MASTER
+!$OMP END PARALLEL
 ! close file
     CALL delete(output_file)
   ELSE
@@ -634,6 +652,7 @@ IF (EditionNumber == 1 .OR. EditionNumber == 2) THEN
 
     CALL grib_get(gaid,'typeOfProcessedData',tprocdata,status)
     CALL grib_get(gaid,'typeOfTimeIncrement',ttimeincr,status)
+    IF (ttimeincr == 255) ttimeincr = 2 ! fix some MeteosWiss data
 ! if analysis-like statistically processed data is encountered, the
 ! reference time must be shifted to the end of the processing period
     IF (status == GRIB_SUCCESS .AND. ttimeincr == 1) THEN
@@ -663,11 +682,11 @@ IF (EditionNumber == 1 .OR. EditionNumber == 2) THEN
     ENDIF
   ENDIF
 
-else
+ELSE
   CALL l4f_log(L4F_ERROR,'GribEditionNumber '//t2c(EditionNumber)//' not supported')
   CALL raise_error()
 
-end if
+ENDIF
 
 END SUBROUTINE time_import_gribapi
 

@@ -66,12 +66,12 @@ character (len=255),parameter:: subcategory="grid_class"
 !! The object is opaque, thus all its members have to be set and
 !! accessed through the constructor and the ::get_val and ::set_val
 !! methods.
-type grid_def
-  private
-  type(geo_proj) :: proj
-  type(grid_rect) :: grid
-  integer :: category = 0
-end type grid_def
+TYPE grid_def
+  PRIVATE
+  TYPE(geo_proj) :: proj
+  TYPE(grid_rect) :: grid
+  TYPE(l4f_handle) :: category
+END TYPE grid_def
 
 
 !> This object completely describes a grid on a geographic projection.
@@ -79,11 +79,11 @@ end type grid_def
 !! grid is separated from the definition of the grid dimensions \a dim
 !! in order to make members of \a grid \a PRIVATE while maintaining
 !! free access to the members of \a dim.
-type griddim_def
-  type(grid_def) :: grid !< grid and projection definition
-  type(grid_dim) :: dim  !< grid dimensions definition
-  integer :: category = 0 !< category for log4fortran
-end type griddim_def
+TYPE griddim_def
+  TYPE(grid_def) :: grid !< grid and projection definition
+  TYPE(grid_dim) :: dim  !< grid dimensions definition
+  TYPE(l4f_handle) :: category !< category for log4fortran
+END TYPE griddim_def
 
 
 !> Logical equality operators for objects of the classes \a grid_def,
@@ -242,7 +242,7 @@ IF (PRESENT(categoryappend)) THEN
 ELSE
   CALL l4f_launcher(a_name,a_name_append=TRIM(subcategory))
 ENDIF
-this%category=l4f_category_get(a_name)
+this%category=l4f_category_get_handle(a_name)
 
 ! geographical projection
 this%grid%proj = geo_proj_new( &
@@ -300,7 +300,7 @@ IF (PRESENT(categoryappend)) THEN
 ELSE
   CALL l4f_launcher(a_name,a_name_append=TRIM(subcategory))
 ENDIF
-that%category=l4f_category_get(a_name)
+that%category=l4f_category_get_handle(a_name)
 
 END SUBROUTINE griddim_copy
 

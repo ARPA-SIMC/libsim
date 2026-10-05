@@ -15,9 +15,138 @@
 
 ! You should have received a copy of the GNU General Public License
 ! along with this program.  If not, see <http://www.gnu.org/licenses/>.
+MODULE find_index_pkaufmann_mo
+USE log4fortran
+USE vol7d_class
+USE grid_class
+USE georef_coord_class
+USE missing_values
+USE char_utilities
+IMPLICIT NONE
+
+! this function has been moved from an internal procedure to a module
+! procedure in order not to generate an "executable stack", forbidden
+! since f44, discussed here:
+! https://stackoverflow.com/questions/73435637/how-can-i-fix-usr-bin-ld-warning-trap-o-missing-note-gnu-stack-section-imp
+
+REAL,POINTER :: fr_land(:,:), orography(:,:)
+TYPE(vol7d) :: v7d_coord
+INTEGER :: hindex
+
+CONTAINS
+
+! Subroutine find_index modified for computing the nearest point
+! according to the Pirmin Kaufmann distance method
+! https://drive.google.com/a/arpae.it/file/d/0B098fbLuj7EzZWU2YkZOd25nWUZaV0pRLUwxeEg0VXJCZnlr
+SUBROUTINE find_index_pkaufmann(this, near, nx, ny, xmin, xmax, ymin, ymax, &
+ lon, lat, extrap, index_x, index_y)
+
+TYPE(griddim_def),INTENT(in) :: this ! griddim object (from grid)
+logical,INTENT(in) :: near ! near or bilin interpolation (determine which point is requested)
+INTEGER,INTENT(in) :: nx, ny ! dimension of input grid
+DOUBLE PRECISION,INTENT(in) :: xmin, xmax, ymin, ymax ! extreme coordinate of input grid
+DOUBLE PRECISION,INTENT(in) :: lon(:,:),lat(:,:) ! target coordinates (2nd dim =1 here)
+LOGICAL,INTENT(in) :: extrap ! extrapolate
+INTEGER,INTENT(out) :: index_x(:,:),index_y(:,:) ! index of point requested, shape like lon, lat
+
+INTEGER :: lnx, lny, ni, nj, i, j, xf, xl, yf, yl, ii, jj
+DOUBLE PRECISION :: x(SIZE(lon,1),SIZE(lon,2)),y(SIZE(lon,1),SIZE(lon,2)), &
+ gx(SIZE(lon,1),SIZE(lon,2)), gy(SIZE(lon,1),SIZE(lon,2)), hd, r, findist, tmpdist
+DOUBLE PRECISION,PARAMETER :: &
+ rl=1.415D0, & ! radius in grid point units for land points
+ rw=2.0D0, & ! radius in grid point units for sea points
+ fve=500.D0 ! vertical emphasis factor
+LOGICAL :: allsea
+TYPE(griddim_def) :: lgrid
+
+! explicit sizes
+ni = SIZE(lon, 1)
+nj = SIZE(lon, 2)
+CALL proj(this, lon, lat, x, y)
+CALL copy(this, lgrid)
+CALL unproj(lgrid) ! necessary? yes!
+! real grid coordinates
+gx = (x-xmin)/((xmax-xmin)/DBLE(nx-1)) + 1
+gy = (y-ymin)/((ymax-ymin)/DBLE(ny-1)) + 1
+! integer grid coordinates (nearest point)
+index_x = NINT((x-xmin)/((xmax-xmin)/DBLE(nx-1)))+1
+index_y = NINT((y-ymin)/((ymax-ymin)/DBLE(ny-1)))+1
+! avoid extrapolation
+WHERE(index_x < 1 .OR. index_x > nx .OR. index_y < 1 .OR. index_y > ny)
+  index_x = imiss
+  index_y = imiss
+END WHERE
+
+DO j = 1, nj
+  DO i = 1, ni
+    IF (c_e(index_x(i,j))) THEN ! point is inside domain
+      CALL l4f_log(L4F_INFO, "nearest point info: "// &
+       t2c(lon(i,j))//','//t2c(lat(i,j))//','// &
+       t2c(index_x(i,j))//','//t2c(index_y(i,j))//','// &
+       t2c(fr_land(index_x(i,j),index_y(i,j)))//','// &
+       t2c(orography(index_x(i,j),index_y(i,j))))
+! integer limits of maximum rectangular search area
+      xf = MAX(1, NINT(gx(i,j)-1.5001D0))
+      xl = MIN(nx, NINT(gx(i,j)+1.5001D0))
+      yf = MAX(1, NINT(gy(i,j)-1.5001D0))
+      yl = MIN(ny, NINT(gy(i,j)+1.5001D0))
+      IF (fr_land(index_x(i,j),index_y(i,j)) > 0.5) THEN ! land
+        r = rl
+      ELSE ! water
+        r = rw
+      ENDIF
+
+! here we could optimize defining a local mask of points
+! if all points are of sea type the algorithm is different
+      allsea = .TRUE.
+      allsea_loop: DO jj = yf, yl
+        DO ii = xf, xl
+          hd = SQRT((DBLE(ii)-gx(i,j))**2+(DBLE(jj)-gy(i,j))**2)
+          IF (hd <= r) THEN ! within means < or <= ?
+            IF (fr_land(ii,jj) > 0.5) THEN
+              allsea = .FALSE.
+              EXIT allsea_loop
+            ENDIF
+          ENDIF
+        ENDDO
+      ENDDO allsea_loop
+
+      findist = dmiss
+      DO jj = yf, yl
+        DO ii = xf, xl
+          hd = SQRT((DBLE(ii)-gx(i,j))**2+(DBLE(jj)-gy(i,j))**2)
+          IF (hd <= r) THEN ! within means < or <= ?
+            IF (fr_land(ii,jj) > 0.5 .OR. allsea) THEN
+              tmpdist = dist(georef_coord_new(lon(i,j), lat(i,j)), &
+               georef_coord_new(lgrid%dim%lon(ii,jj), lgrid%dim%lat(ii,jj))) + &
+               ABS(v7d_coord%volanar(i,hindex,1) - orography(ii,jj))*fve
+              IF (.NOT.c_e(findist) .OR. tmpdist < findist) THEN ! up to now best point
+                index_x(i,j) = ii
+                index_y(i,j) = jj
+                findist = tmpdist
+              ENDIF
+            ENDIF
+          ENDIF
+        ENDDO
+      ENDDO
+      CALL l4f_log(L4F_INFO, "PK-method point info: "// &
+       t2c(lon(i,j))//','//t2c(lat(i,j))//','// &
+       t2c(index_x(i,j))//','//t2c(index_y(i,j))//','// &
+       t2c(fr_land(index_x(i,j),index_y(i,j)))//','// &
+       t2c(orography(index_x(i,j),index_y(i,j)))//','// &
+       t2c(v7d_coord%volanar(i,hindex,1)))
+    ENDIF
+
+  ENDDO
+ENDDO
+END SUBROUTINE find_index_pkaufmann
+
+END MODULE find_index_pkaufmann_mo
+
+
 PROGRAM vg6d_getpoint_pkauf
 #include "config.h"
-use log4fortran
+USE log4fortran
 USE vol7d_class
 USE volgrid6d_var_class
 USE volgrid6d_class
@@ -30,7 +159,7 @@ USE vol7d_dballe_class
 USE grib_api_csv
 USE optionparser_class
 USE io_units
-USE georef_coord_class
+USE find_index_pkaufmann_mo
 
 IMPLICIT NONE
 
@@ -38,11 +167,11 @@ TYPE(optionparser) :: opt
 INTEGER :: optind, optstatus
 CHARACTER(len=12) :: coord_format, output_format
 CHARACTER(len=512) :: a_name, coord_file, coord_file_grid, input_file, output_file
-INTEGER :: category, ier, i, iun, iargc, hindex
+INTEGER :: ier, i, iun, iargc, lev
+TYPE(l4f_handle) :: category
 CHARACTER(len=network_name_len) :: network
 TYPE(volgrid6d),POINTER :: volgrid(:), volgrid_coord(:)
 TYPE(transform_def) :: trans
-TYPE(vol7d) :: v7d_coord
 TYPE(vol7d) :: v7d_out
 #ifdef HAVE_DBALLE
 TYPE(vol7d_dballe) :: v7d_ana, v7d_dba_out
@@ -51,7 +180,6 @@ CHARACTER(len=80) :: output_template, trans_type, sub_type
 INTEGER :: output_td
 LOGICAL :: version, ldisplay
 LOGICAL :: noconvert
-REAL,POINTER :: fr_land(:,:), orography(:,:)
 TYPE(vol7d_var) :: varbufr
 PROCEDURE(basic_find_index),POINTER :: find_index
 
@@ -62,7 +190,7 @@ CALL l4f_launcher(a_name,a_name_force="vg6d_getpoint")
 ier=l4f_init()
 
 !imposta a_name
-category=l4f_category_get(TRIM(a_name)//".main")
+category=l4f_category_get_handle(TRIM(a_name)//".main")
 
 ! define the option parser
 opt = optionparser_new(description_msg= &
@@ -271,6 +399,11 @@ IF (hindex < 1) THEN
    'error station height not found in file '//TRIM(coord_file))
   CALL raise_fatal_error()
 ENDIF
+IF (.NOT.ALL(c_e(v7d_coord%volanar(:,hindex,1)))) THEN
+  CALL l4f_category_log(category, L4F_ERROR, &
+   'error, some station orography data are missing, cannot continue')
+  CALL raise_fatal_error()
+ENDIF
 
 CALL IMPORT(volgrid_coord, filename=coord_file_grid, decode=.TRUE., &
  categoryappend="coord_file_grid")
@@ -280,10 +413,10 @@ IF (.NOT.ASSOCIATED(volgrid_coord)) THEN
   CALL raise_fatal_error()
 ENDIF
 ! check volume
-IF (SIZE(volgrid_coord) > 1 .OR. SIZE(volgrid_coord(1)%level) /= 1 .OR. &
+IF (SIZE(volgrid_coord) > 1 .OR. &
  SIZE(volgrid_coord(1)%time) /= 1 .OR. SIZE(volgrid_coord(1)%timerange) /= 1) THEN
   CALL l4f_category_log(category, L4F_ERROR, &
-   'error coord-file-grid must have strictly 1 grid, 1 level, 1 time and 1 timerange')
+   'error coord-file-grid must have strictly 1 grid, 1 time and 1 timerange')
   CALL raise_fatal_error()
 ENDIF
 
@@ -295,21 +428,30 @@ orography => NULL()
 DO i = 1, SIZE(volgrid_coord(1)%var)
   varbufr = convert(volgrid_coord(1)%var(i))
   IF (varbufr%btable == 'B29192') THEN
-    fr_land => volgrid_coord(1)%voldati(:,:,1,1,1,i)
+! take into account different possible levels
+    lev = firsttrue(c_e(volgrid_coord(1)%gaid(:,1,1,i)))
+    IF (lev > 0) fr_land => volgrid_coord(1)%voldati(:,:,lev,1,1,i)
   ENDIF
   IF (varbufr%btable == 'B10007') THEN
-    orography => volgrid_coord(1)%voldati(:,:,1,1,1,i)
+! take into account different possible levels
+    lev = firsttrue(c_e(volgrid_coord(1)%gaid(:,1,1,i)))
+    IF (lev > 0) orography => volgrid_coord(1)%voldati(:,:,1,1,1,i)
   ENDIF
 ENDDO
 
 IF (.NOT.ASSOCIATED(fr_land)) THEN
   CALL l4f_category_log(category, L4F_ERROR, &
-   'error fraction of land not found in file '//TRIM(coord_file_grid))
+   'error, model fraction of land not found in file '//TRIM(coord_file_grid))
   CALL raise_fatal_error()
 ENDIF
 IF (.NOT.ASSOCIATED(orography)) THEN
   CALL l4f_category_log(category, L4F_ERROR, &
-   'error orography not found in file '//TRIM(coord_file_grid))
+   'error, model orography not found in file '//TRIM(coord_file_grid))
+  CALL raise_fatal_error()
+ENDIF
+IF (.NOT.ALL(c_e(fr_land)) .OR. .NOT.ALL(c_e(orography))) THEN
+  CALL l4f_category_log(category, L4F_ERROR, &
+   'error, model fraction of land or orography fields have missing data, cannot continue')
   CALL raise_fatal_error()
 ENDIF
 
@@ -408,115 +550,6 @@ CALL l4f_category_log(category,L4F_INFO,"end")
 CALL l4f_category_delete(category)
 ier=l4f_fini()
 
-CONTAINS
-
-! Subroutine find_index modified for computing the nearest point
-! according to the Pirmin Kaufmann distance method
-! https://drive.google.com/a/arpae.it/file/d/0B098fbLuj7EzZWU2YkZOd25nWUZaV0pRLUwxeEg0VXJCZnlr
-SUBROUTINE find_index_pkaufmann(this, near, nx, ny, xmin, xmax, ymin, ymax, &
- lon, lat, extrap, index_x, index_y)
-TYPE(griddim_def),INTENT(in) :: this ! griddim object (from grid)
-logical,INTENT(in) :: near ! near or bilin interpolation (determine which point is requested)
-INTEGER,INTENT(in) :: nx, ny ! dimension of input grid
-DOUBLE PRECISION,INTENT(in) :: xmin, xmax, ymin, ymax ! extreme coordinate of input grid
-DOUBLE PRECISION,INTENT(in) :: lon(:,:),lat(:,:) ! target coordinates (2nd dim =1 here)
-LOGICAL,INTENT(in) :: extrap ! extrapolate
-INTEGER,INTENT(out) :: index_x(:,:),index_y(:,:) ! index of point requested, shape like lon, lat
-
-INTEGER :: lnx, lny, ni, nj, i, j, xf, xl, yf, yl, ii, jj
-DOUBLE PRECISION :: x(SIZE(lon,1),SIZE(lon,2)),y(SIZE(lon,1),SIZE(lon,2)), &
- gx(SIZE(lon,1),SIZE(lon,2)), gy(SIZE(lon,1),SIZE(lon,2)), hd, r, findist, tmpdist
-DOUBLE PRECISION,PARAMETER :: &
- rl=1.415D0, & ! radius in grid point units for land points
- rw=2.0D0, & ! radius in grid point units for sea points
- fve=500.D0 ! vertical emphasis factor
-LOGICAL :: allsea
-TYPE(griddim_def) :: lgrid
-
-! explicit sizes
-ni = SIZE(lon, 1)
-nj = SIZE(lon, 2)
-CALL proj(this, lon, lat, x, y)
-CALL copy(this, lgrid)
-CALL unproj(lgrid) ! necessary? yes!
-! real grid coordinates
-gx = (x-xmin)/((xmax-xmin)/DBLE(nx-1)) + 1
-gy = (y-ymin)/((ymax-ymin)/DBLE(ny-1)) + 1
-! integer grid coordinates (nearest point)
-index_x = NINT((x-xmin)/((xmax-xmin)/DBLE(nx-1)))+1
-index_y = NINT((y-ymin)/((ymax-ymin)/DBLE(ny-1)))+1
-! avoid extrapolation
-WHERE(index_x < 1 .OR. index_x > nx .OR. index_y < 1 .OR. index_y > ny)
-  index_x = imiss
-  index_y = imiss
-END WHERE
-
-DO j = 1, nj
-  DO i = 1, ni
-    IF (c_e(index_x(i,j))) THEN ! point is inside domain
-#ifdef DEBUG
-      CALL l4f_log(L4F_DEBUG, "nearest point info: "// &
-       t2c(lon(i,j))//','//t2c(lat(i,j))//','// &
-       t2c(index_x(i,j))//','//t2c(index_y(i,j))//','// &
-       t2c(fr_land(index_x(i,j),index_y(i,j)))//','// &
-       t2c(orography(index_x(i,j),index_y(i,j))))
-#endif
-! integer limits of maximum rectangular search area
-      xf = MAX(1, NINT(gx(i,j)-1.5001D0))
-      xl = MIN(nx, NINT(gx(i,j)+1.5001D0))
-      yf = MAX(1, NINT(gy(i,j)-1.5001D0))
-      yl = MIN(ny, NINT(gy(i,j)+1.5001D0))
-      IF (fr_land(index_x(i,j),index_y(i,j)) > 0.5) THEN ! land
-        r = rl
-      ELSE ! water
-        r = rw
-      ENDIF
-
-! here we could optimize defining a local mask of points
-! if all points are of sea type the algorithm is different
-      allsea = .TRUE.
-      allsea_loop: DO jj = yf, yl
-        DO ii = xf, xl
-          hd = SQRT((DBLE(ii)-gx(i,j))**2+(DBLE(jj)-gy(i,j))**2)
-          IF (hd <= r) THEN ! within means < or <= ?
-            IF (fr_land(ii,jj) > 0.5) THEN
-              allsea = .FALSE.
-              EXIT allsea_loop
-            ENDIF
-          ENDIF
-        ENDDO
-      ENDDO allsea_loop
-
-      findist = dmiss
-      DO jj = yf, yl
-        DO ii = xf, xl
-          hd = SQRT((DBLE(ii)-gx(i,j))**2+(DBLE(jj)-gy(i,j))**2)
-          IF (hd <= r) THEN ! within means < or <= ?
-            IF (fr_land(ii,jj) > 0.5 .OR. allsea) THEN
-              tmpdist = dist(georef_coord_new(lon(i,j), lat(i,j)), &
-               georef_coord_new(lgrid%dim%lon(ii,jj), lgrid%dim%lat(ii,jj))) + &
-               ABS(v7d_coord%volanar(i,hindex,1) - orography(ii,jj))*fve
-              IF (.NOT.c_e(findist) .OR. tmpdist < findist) THEN ! up to now best point
-                index_x(i,j) = ii
-                index_y(i,j) = jj
-                findist = tmpdist
-              ENDIF
-            ENDIF
-          ENDIF
-        ENDDO
-      ENDDO
-#ifdef DEBUG
-      CALL l4f_log(L4F_DEBUG, "PK-method point info: "// &
-       t2c(lon(i,j))//','//t2c(lat(i,j))//','// &
-       t2c(index_x(i,j))//','//t2c(index_y(i,j))//','// &
-       t2c(fr_land(index_x(i,j),index_y(i,j)))//','// &
-       t2c(orography(index_x(i,j),index_y(i,j)))//','// &
-       t2c(v7d_coord%volanar(i,hindex,1)))
-#endif
-    ENDIF
-
-  ENDDO
-ENDDO
-END SUBROUTINE find_index_pkaufmann
-
+!CONTAINS
 END PROGRAM vg6d_getpoint_pkauf
+

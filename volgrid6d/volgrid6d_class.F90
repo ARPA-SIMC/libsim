@@ -81,8 +81,8 @@ type volgrid6d
   TYPE(volgrid6d_var),pointer :: var(:) !< physical variable dimension descriptor
   TYPE(grid_id),POINTER :: gaid(:,:,:,:) !< array of grid identifiers, carrying information about the driver for import/export from/to file, indices are: (level,time,timerange,var)
   REAL,POINTER :: voldati(:,:,:,:,:,:) !< array of data, indices are: (x,y,level,time,timerange,var)
-  integer :: time_definition !< time definition; 0=time is reference time ; 1=time is validity time
-  integer :: category = 0 !< log4fortran category
+  INTEGER :: time_definition !< time definition; 0=time is reference time ; 1=time is validity time
+  TYPE(l4f_handle) :: category !< log4fortran category
 end type volgrid6d
 
 !> Constructor, it creates a new instance of the object.
@@ -183,7 +183,7 @@ if (present(categoryappend))then
 else
    call l4f_launcher(a_name,a_name_append=trim(subcategory))
 endif
-this%category=l4f_category_get(a_name)
+this%category=l4f_category_get_handle(a_name)
 
 #ifdef DEBUG
 call l4f_category_log(this%category,L4F_DEBUG,"init")
@@ -194,8 +194,6 @@ call init(this%griddim)
 if (present(griddim))then
   call copy (griddim,this%griddim)
 end if
-
-CALL vol7d_var_features_init() ! initialise var features table once
 
 if(present(time_definition)) then
   this%time_definition = time_definition
@@ -461,26 +459,39 @@ END SUBROUTINE volgrid_get_vol_2d
 !! pointer and the array or about the allocation status of \a this, so
 !! it should be called only when everything has been checked to be in
 !! good shape.
-SUBROUTINE volgrid_get_vol_3d(this, itime, itimerange, ivar, voldati)
+SUBROUTINE volgrid_get_vol_3d(this, itime, itimerange, ivar, voldati, zlist)
 TYPE(volgrid6d),INTENT(in) :: this !< object from which the slice has to be retrieved
 INTEGER,INTENT(in) :: itime !< index of time level of the slice
 INTEGER,INTENT(in) :: itimerange !< index of timerange of the slice
 INTEGER,INTENT(in) :: ivar !< index of physical variable of the slice
 REAL,POINTER :: voldati(:,:,:) !< pointer to the data, if \a this%voldati is already allocated, it will just point to the requested slice, otherwise it will be allocated if and only if it is nullified on entry
+LOGICAL,OPTIONAL,INTENT(out),ALLOCATABLE :: zlist(:) !< list of vertical level present in the data
 
 INTEGER :: ilevel
+LOGICAL :: done
 
 IF (ASSOCIATED(this%voldati)) THEN
   voldati => this%voldati(:,:,:,itime,itimerange,ivar)
+  IF (PRESENT(zlist)) zlist(:) = c_e(this%gaid(:,itime,itimerange,ivar))
   RETURN
 ELSE
   IF (.NOT.ASSOCIATED(voldati)) THEN
     ALLOCATE(voldati(this%griddim%dim%nx,this%griddim%dim%ny,SIZE(this%level)))
   ENDIF
+  IF (PRESENT(zlist)) THEN
+    ALLOCATE(zlist(SIZE(this%level)))
+  ENDIF
+!$OMP PARALLEL DEFAULT(SHARED)
+!$OMP MASTER
   DO ilevel = 1, SIZE(this%level)
+!$OMP TASK FIRSTPRIVATE(ilevel),PRIVATE(done)
     CALL grid_id_decode_data(this%gaid(ilevel,itime,itimerange,ivar), &
-     voldati(:,:,ilevel))
+     voldati(:,:,ilevel),done)
+    IF (PRESENT(zlist)) zlist(ilevel) = done
+!$OMP END TASK
   ENDDO
+!$OMP END MASTER
+!$OMP END PARALLEL
 ENDIF
 
 END SUBROUTINE volgrid_get_vol_3d
@@ -537,10 +548,16 @@ INTEGER :: ilevel
 IF (ASSOCIATED(this%voldati)) THEN
   RETURN
 ELSE
+!$OMP PARALLEL DEFAULT(SHARED)
+!$OMP MASTER
   DO ilevel = 1, SIZE(this%level)
+!$OMP TASK FIRSTPRIVATE(ilevel)
     CALL grid_id_encode_data(this%gaid(ilevel,itime,itimerange,ivar), &
      voldati(:,:,ilevel))
+!$OMP END TASK
   ENDDO
+!$OMP END MASTER
+!$OMP END PARALLEL
 ENDIF
 
 END SUBROUTINE volgrid_set_vol_3d
@@ -820,6 +837,7 @@ INTEGER :: itime0, itimerange0, itime1, itimerange1, itime, itimerange, &
  ilevel, ivar, ldup_mode
 LOGICAL :: dup
 TYPE(datetime) :: correctedtime
+TYPE(vol7d_timerange) :: correctedtimerange
 REAL,ALLOCATABLE :: tmpgrid(:,:)
 
 IF (PRESENT(dup_mode)) THEN
@@ -871,7 +889,7 @@ IF (optio_log(isanavar)) THEN ! assign to all times and timeranges
   itimerange1 = SIZE(this%timerange)
 ELSE ! usual case
   correctedtime = gridinfo%time
-  IF (this%time_definition == 1) correctedtime = correctedtime + &
+  IF (this%time_definition == 1 .OR. this%time_definition == 2) correctedtime = correctedtime + &
    timedelta_new(sec=gridinfo%timerange%p1)
   itime0 = index(this%time, correctedtime)
   IF (itime0 == 0 .AND. optio_log(force)) THEN
@@ -886,7 +904,9 @@ ELSE ! usual case
   ENDIF
   itime1 = itime0
 
-  itimerange0 = index(this%timerange,gridinfo%timerange)
+  correctedtimerange = gridinfo%timerange
+  IF (this%time_definition == 2) correctedtimerange%p1 = 0
+  itimerange0 = index(this%timerange, correctedtimerange)
   IF (itimerange0 == 0 .AND. optio_log(force)) THEN
     itimerange0 = index(this%timerange, vol7d_timerange_miss)
     IF (itimerange0 /= 0) this%timerange(itimerange0) = gridinfo%timerange
@@ -1011,7 +1031,7 @@ IF (.NOT.usetemplate) THEN
   ENDIF
 ENDIF
 
-IF (this%time_definition == 1) THEN
+IF (this%time_definition == 1 .OR. this%time_definition == 2) THEN
   correctedtime = this%time(itime) - &
    timedelta_new(sec=this%timerange(itimerange)%p1)
 ELSE
@@ -1065,12 +1085,13 @@ CHARACTER(len=*),INTENT(IN),OPTIONAL :: anavar(:) !< list of variables (B-table 
 CHARACTER(len=*),INTENT(in),OPTIONAL :: categoryappend !< append this suffix to log4fortran namespace category
 
 INTEGER :: i, j, stallo
-INTEGER :: ngrid, ntime, ntimerange, nlevel, nvar
-INTEGER :: category
+INTEGER :: ngrid, ntime, ntimerange, nlevel, nvar, ltime_definition
+TYPE(l4f_handle) :: category
 CHARACTER(len=512) :: a_name
 TYPE(datetime),ALLOCATABLE :: correctedtime(:)
 LOGICAL,ALLOCATABLE :: isanavar(:)
 TYPE(vol7d_var) :: lvar
+TYPE(vol7d_timerange),ALLOCATABLE :: correctedtimerange(:)
 
 ! category temporanea (altrimenti non possiamo loggare)
 if (present(categoryappend))then
@@ -1078,11 +1099,17 @@ if (present(categoryappend))then
 else
   call l4f_launcher(a_name,a_name_append=trim(subcategory))
 endif
-category=l4f_category_get(a_name)
+category=l4f_category_get_handle(a_name)
 
 #ifdef DEBUG
 call l4f_category_log(category,L4F_DEBUG,"start import_from_gridinfovv")
 #endif
+
+IF (PRESENT(time_definition)) THEN
+  ltime_definition = MAX(MIN(time_definition, 2), 0)
+ELSE
+  ltime_definition = 0
+ENDIF
 
 ngrid=count_distinct(gridinfov%array(1:gridinfov%arraysize)%griddim,back=.true.)
 CALL l4f_category_log(category,L4F_INFO, t2c(ngrid)// &
@@ -1095,9 +1122,9 @@ IF (stallo /= 0)THEN
 ENDIF
 DO i = 1, ngrid
   IF (PRESENT(categoryappend))THEN
-    CALL init(this(i), time_definition=time_definition, categoryappend=TRIM(categoryappend)//"-vol"//t2c(i))
+    CALL init(this(i), time_definition=ltime_definition, categoryappend=TRIM(categoryappend)//"-vol"//t2c(i))
   ELSE
-    CALL init(this(i), time_definition=time_definition, categoryappend="vol"//t2c(i))
+    CALL init(this(i), time_definition=ltime_definition, categoryappend="vol"//t2c(i))
   ENDIF
 ENDDO
 
@@ -1121,16 +1148,18 @@ IF (PRESENT(anavar)) THEN
    t2c(gridinfov%arraysize)//' constant-data messages found in input data')
 ENDIF
 
-! create time corrected for time_definition
-ALLOCATE(correctedtime(gridinfov%arraysize))
-correctedtime(:) = gridinfov%array(1:gridinfov%arraysize)%time
-IF (PRESENT(time_definition)) THEN
-  IF (time_definition == 1) THEN
-    DO i = 1, gridinfov%arraysize
-      correctedtime(i) = correctedtime(i) + &
-       timedelta_new(sec=gridinfov%array(i)%timerange%p1)
-    ENDDO
-  ENDIF
+IF (ltime_definition == 1 .OR. ltime_definition == 2) THEN ! verification time
+  ALLOCATE(correctedtime(gridinfov%arraysize))
+  correctedtime(:) = gridinfov%array(1:gridinfov%arraysize)%time
+  DO i = 1, gridinfov%arraysize
+    correctedtime(i) = correctedtime(i) + &
+     timedelta_new(sec=gridinfov%array(i)%timerange%p1)
+  ENDDO
+ENDIF
+IF (ltime_definition == 2) THEN ! set all to analysis
+  ALLOCATE(correctedtimerange(gridinfov%arraysize))
+  correctedtimerange(:) = gridinfov%array(1:gridinfov%arraysize)%timerange
+  correctedtimerange(:)%p1 = 0
 ENDIF
 
 DO i = 1, ngrid
@@ -1144,12 +1173,24 @@ DO i = 1, ngrid
       CALL raise_fatal_error()
     ENDIF
   ENDIF
-  ntime = count_distinct(correctedtime, &
-   mask=(this(i)%griddim == gridinfov%array(1:gridinfov%arraysize)%griddim) &
-   .AND. .NOT.isanavar(:), back=.TRUE.)
-  ntimerange = count_distinct(gridinfov%array(1:gridinfov%arraysize)%timerange, &
-   mask=(this(i)%griddim == gridinfov%array(1:gridinfov%arraysize)%griddim) &
-   .AND. .NOT.isanavar(:), back=.TRUE.)
+  IF (ltime_definition == 1 .OR. ltime_definition == 2) THEN ! verification time
+    ntime = count_distinct(correctedtime, &
+     mask=(this(i)%griddim == gridinfov%array(1:gridinfov%arraysize)%griddim) &
+     .AND. .NOT.isanavar(:), back=.TRUE.)
+  ELSE
+    ntime = count_distinct(gridinfov%array(1:gridinfov%arraysize)%time, &
+     mask=(this(i)%griddim == gridinfov%array(1:gridinfov%arraysize)%griddim) &
+     .AND. .NOT.isanavar(:), back=.TRUE.)
+  ENDIF
+  IF (ltime_definition == 2) THEN ! set all to analysis
+    ntimerange = count_distinct(correctedtimerange, &
+     mask=(this(i)%griddim == gridinfov%array(1:gridinfov%arraysize)%griddim) &
+     .AND. .NOT.isanavar(:), back=.TRUE.)
+  ELSE
+    ntimerange = count_distinct(gridinfov%array(1:gridinfov%arraysize)%timerange, &
+     mask=(this(i)%griddim == gridinfov%array(1:gridinfov%arraysize)%griddim) &
+     .AND. .NOT.isanavar(:), back=.TRUE.)
+  ENDIF
   nlevel = count_distinct(gridinfov%array(1:gridinfov%arraysize)%level, &
    mask=(this(i)%griddim == gridinfov%array(1:gridinfov%arraysize)%griddim), &
    back=.TRUE.)
@@ -1164,15 +1205,26 @@ DO i = 1, ngrid
   CALL volgrid6d_alloc(this(i),this(i)%griddim%dim,ntime=ntime, &
    ntimerange=ntimerange,nlevel=nlevel,nvar=nvar)
 
-  this(i)%time = pack_distinct(correctedtime, ntime, &
-   mask=(this(i)%griddim == gridinfov%array(1:gridinfov%arraysize)%griddim) &
-   .AND. .NOT.isanavar(:), back=.TRUE.)
+  IF (ltime_definition == 1 .OR. ltime_definition == 2) THEN ! verification time
+    this(i)%time = pack_distinct(correctedtime, ntime, &
+     mask=(this(i)%griddim == gridinfov%array(1:gridinfov%arraysize)%griddim) &
+     .AND. .NOT.isanavar(:), back=.TRUE.)
+  ELSE
+    this(i)%time = pack_distinct(gridinfov%array(1:gridinfov%arraysize)%time, ntime, &
+     mask=(this(i)%griddim == gridinfov%array(1:gridinfov%arraysize)%griddim) &
+     .AND. .NOT.isanavar(:), back=.TRUE.)
+  ENDIF
   CALL sort(this(i)%time)
 
-  this(i)%timerange = pack_distinct(gridinfov%array( &
-   1:gridinfov%arraysize)%timerange, ntimerange, &
-   mask=(this(i)%griddim == gridinfov%array(1:gridinfov%arraysize)%griddim) &
-   .AND. .NOT.isanavar(:), back=.TRUE.)
+  IF (ltime_definition == 2) THEN ! set all to analysis
+    this(i)%timerange = pack_distinct(correctedtimerange, ntimerange, &
+     mask=(this(i)%griddim == gridinfov%array(1:gridinfov%arraysize)%griddim) &
+     .AND. .NOT.isanavar(:), back=.TRUE.)
+  ELSE
+    this(i)%timerange = pack_distinct(gridinfov%array(1:gridinfov%arraysize)%timerange, &
+     ntimerange, mask=(this(i)%griddim == gridinfov%array(1:gridinfov%arraysize)%griddim) &
+     .AND. .NOT.isanavar(:), back=.TRUE.)
+  ENDIF
   CALL sort(this(i)%timerange)
 
   this(i)%level=pack_distinct(gridinfov%array(1:gridinfov%arraysize)%level, &
@@ -1191,7 +1243,8 @@ DO i = 1, ngrid
 
 ENDDO
 
-DEALLOCATE(correctedtime)
+IF (ltime_definition == 1 .OR. ltime_definition == 2) DEALLOCATE(correctedtime)
+IF (ltime_definition == 2) DEALLOCATE(correctedtimerange)
 
 DO i = 1, gridinfov%arraysize
 
@@ -1310,7 +1363,7 @@ CHARACTER(len=*),INTENT(IN),OPTIONAL :: anavar(:) !< list of variables (B-table 
 character(len=*),INTENT(in),OPTIONAL :: categoryappend !< append this suffix to log4fortran namespace category
 
 TYPE(arrayof_gridinfo) :: gridinfo
-INTEGER :: category
+TYPE(l4f_handle) :: category
 CHARACTER(len=512) :: a_name
 
 NULLIFY(this)
@@ -1321,7 +1374,7 @@ IF (PRESENT(categoryappend))THEN
 ELSE
   CALL l4f_launcher(a_name,a_name_append=TRIM(subcategory))
 ENDIF
-category=l4f_category_get(a_name)
+category=l4f_category_get_handle(a_name)
 
 CALL import(gridinfo, filename=filename, categoryappend=categoryappend)
   
@@ -1358,7 +1411,7 @@ TYPE(grid_id),INTENT(in),OPTIONAL :: gaid_template !< template for the output fi
 character(len=*),INTENT(in),OPTIONAL :: categoryappend !< append this suffix to log4fortran namespace category
 
 TYPE(arrayof_gridinfo) :: gridinfo
-INTEGER :: category
+TYPE(l4f_handle) :: category
 CHARACTER(len=512) :: a_name
 
 IF (PRESENT(categoryappend)) THEN
@@ -1366,7 +1419,7 @@ IF (PRESENT(categoryappend)) THEN
 ELSE
   CALL l4f_launcher(a_name,a_name_append=TRIM(subcategory))
 ENDIF
-category=l4f_category_get(a_name)
+category=l4f_category_get_handle(a_name)
 
 #ifdef DEBUG
 CALL l4f_category_log(category,L4F_DEBUG,"start export to file")
@@ -1426,6 +1479,7 @@ INTEGER :: ntime, ntimerange, inlevel, onlevel, nvar, &
  itime, itimerange, ilevel, ivar, levshift, levused, lvar_coord_vol, spos
 REAL,POINTER :: voldatiin(:,:,:), voldatiout(:,:,:), coord_3d_in(:,:,:)
 TYPE(vol7d_level) :: output_levtype
+LOGICAL,ALLOCATABLE :: zlist(:)
 
 
 #ifdef DEBUG
@@ -1479,6 +1533,8 @@ spos = imiss
 IF (c_e(lvar_coord_vol)) THEN
   CALL get_val(this%trans, output_levtype=output_levtype)
   IF (output_levtype%level1 == 103 .OR. output_levtype%level1 == 108) THEN
+! here, unlike below, level (1,101) is not accepted because this is
+! likely for pressure difference with surface 108, not 103
     spos = firsttrue(volgrid6d_in%level(:) == vol7d_level_new(1))
     IF (spos == 0) THEN
       CALL l4f_category_log(volgrid6d_in%category, L4F_ERROR, &
@@ -1556,15 +1612,15 @@ DO ivar=1,nvar
         ENDIF
       ENDIF
       CALL volgrid_get_vol_3d(volgrid6d_in, itime, itimerange, ivar, &
-       voldatiin)
+       voldatiin, zlist)
       IF (ASSOCIATED(volgrid6d_out%voldati)) & ! improve!!!!
        CALL volgrid_get_vol_3d(volgrid6d_out, itime, itimerange, ivar, &
        voldatiout)
-      IF (c_e(lvar_coord_vol)) THEN
-        CALL compute(this, voldatiin, voldatiout, convert(volgrid6d_in%var(ivar)), &
-         coord_3d_in(:,:,levshift+1:levshift+levused)) ! subset coord_3d_in
+      IF (c_e(lvar_coord_vol)) THEN ! this is a vertint case, zlist is useless
+        CALL compute(this, voldatiin, voldatiout, var=convert(volgrid6d_in%var(ivar)), &
+         coord_3d_in=coord_3d_in(:,:,levshift+1:levshift+levused)) ! subset coord_3d_in
       ELSE
-        CALL compute(this, voldatiin, voldatiout, convert(volgrid6d_in%var(ivar)))
+        CALL compute(this, voldatiin, voldatiout, var=convert(volgrid6d_in%var(ivar)), zlist=zlist)
       ENDIF
       CALL volgrid_set_vol_3d(volgrid6d_out, itime, itimerange, ivar, &
        voldatiout)
@@ -1747,7 +1803,9 @@ IF (trans_type == 'vertint') THEN
 ! special case
         IF (output_levtype%level1 == 103 .OR. &
          output_levtype%level1 == 108) THEN ! surface coordinate needed
-          spos = firsttrue(volgrid6d_coord_in%level(:) == vol7d_level_new(1))
+! allow coding of orography level as in Icon
+          spos = firsttrue(volgrid6d_coord_in%level(:) == vol7d_level_new(level1=1) .OR. &
+           volgrid6d_coord_in%level(:) == vol7d_level_new(level1=1, level2=101))
           IF (spos == 0) THEN
             CALL l4f_category_log(volgrid6d_in%category, L4F_ERROR, &
              'output level '//t2c(output_levtype%level1)// &

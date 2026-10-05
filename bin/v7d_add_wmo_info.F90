@@ -47,7 +47,7 @@ TYPE(vol7d_dballe) :: v7d_dba, v7d_dba_out
 #endif
 LOGICAL :: version, ldisplay
 CHARACTER(len=512):: a_name
-INTEGER :: category
+TYPE(l4f_handle) :: category
 
 
 !questa chiamata prende dal launcher il nome univoco
@@ -55,7 +55,7 @@ CALL l4f_launcher(a_name,a_name_force="v7d_add_wmo_info")
 !init di log4fortran
 ier = l4f_init()
 !imposta a_name
-category = l4f_category_get(a_name//".main")
+category = l4f_category_get_handle(a_name//".main")
 
 ! define the option parser
 opt = optionparser_new(description_msg= &

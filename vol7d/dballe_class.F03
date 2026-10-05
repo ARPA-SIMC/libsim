@@ -65,7 +65,7 @@ character (len=255),parameter:: subcategory="dballe_class"
 type,public :: dbaconnection
   integer :: dbhandle=imiss !< dballe DB handle
   integer :: handle_err=imiss !< dballe error handler
-  integer :: category=0 !< log4fortran
+  integer :: category=0 !< log4fortran to become type(l4f_handle)
   contains
 # ifdef F2003_FULL_FEATURES
     final :: dbaconnection_delete
@@ -91,7 +91,7 @@ type,public ::  dbasession
   logical           :: memdb=.false. !<  use memdb
   logical           :: loadfile=.false. !<  load data in file into memdb
   type(dbaconnection) :: memconnection !< connection for memdb
-  integer :: category=0 !< log4fortran category
+  type(l4f_handle) :: category !< log4fortran category
   integer :: count=imiss !< number of results left to query
   contains
 # ifdef F2003_FULL_FEATURES
@@ -3767,7 +3767,7 @@ if (present(categoryappend))then
 else
   call l4f_launcher(a_name,a_name_append=trim(subcategory))
 endif
-dbaconnection_init%category=l4f_category_get(a_name)
+dbaconnection_init%category=l4f_category_get(a_name) ! l4f_category_get_handle
 
 ! impostiamo la gestione dell'errore
 ier=idba_error_set_callback(0,C_FUNLOC(dballe_error_handler), &
@@ -3844,7 +3844,7 @@ if (present(categoryappend))then
 else
   call l4f_launcher(a_name,a_name_append=trim(subcategory))
 endif
-dbasession_init%category=l4f_category_get(a_name)
+dbasession_init%category=l4f_category_get_handle(a_name)
 
 
 lwrite=.false.
@@ -4436,7 +4436,8 @@ end subroutine dbasession_filerewind
 
 
 FUNCTION dballe_error_handler(category)
-INTEGER :: category, code, l4f_level
+INTEGER :: category ! to be changed to TYPE(l4f_handle)
+INTEGER :: code, l4f_level
 INTEGER :: dballe_error_handler
 
 CHARACTER(len=1000) :: message, buf

@@ -34,16 +34,15 @@ use optionparser_class
 USE datetime_class
 USE georef_coord_class
 USE vol7d_level_class
-#ifdef ALCHIMIA
 USE alchimia
 use volgrid6d_alchimia_class
 use vol7d_alchimia_class
 USE termo
-#endif
 
 implicit none
 
-INTEGER :: category, ier, i, n
+INTEGER :: ier, i, n
+TYPE(l4f_handle) :: category
 LOGICAL :: first
 CHARACTER(len=12) :: coord_format
 CHARACTER(len=10), ALLOCATABLE :: vl(:), avl(:)
@@ -84,9 +83,7 @@ LOGICAL :: rzscan,reusevdf
 INTEGER,POINTER :: w_s(:), w_e(:)
 TYPE(grid_file_id) :: file_grid
 TYPE(grid_id) :: gaid_grid
-#ifdef ALCHIMIA
 type(fndsv) :: vfn, vfnoracle
-#endif
 
 ! for computing
 CHARACTER(len=13) :: comp_stat_proc
@@ -113,7 +110,7 @@ call l4f_launcher(a_name,a_name_force="vg6d_transform")
 ier=l4f_init()
 
 !imposta a_name
-category=l4f_category_get(TRIM(a_name)//".main")
+category=l4f_category_get_handle(TRIM(a_name)//".main")
 
 ! define the option parser
 opt = optionparser_new(description_msg= &
@@ -334,12 +331,10 @@ CALL optionparser_add(opt, '', 'comp-var-from-lev', comp_var_from_lev, help= &
  &tipically used for pressure, the level type to be converted to variable &
  &has to be specified as the first level in the --trans-level-type option')
 
-#ifdef ALCHIMIA
 CALL optionparser_add(opt, '', 'output-variable-list', output_variable_list, '', help= &
  'list of data variables required in output; if they are not in input they will be computed if possible. &
  &The output_variable_list is expressed in the form of a comma-separated list of B-table alphanumeric codes, &
  &e.g. ''B13011,B12101''')
-#endif
 
 CALL optionparser_add(opt, ' ', 'rounding', round, help= &
  'simplify volume, merging similar levels and timeranges')
@@ -357,8 +352,9 @@ CALL optionparser_add(opt, ' ', 'set-component-flag', set_component_flag, help= 
 
 CALL optionparser_add(opt, ' ', 'time-definition', time_definition, 0, help= &
  'time definition for imported volume, 0 for reference time (more suitable for &
- &presenting forecast data) and 1 for verification time (more suitable for &
- &comparing forecasts with observations)')
+ &presenting forecast data), 1 for verification time (more suitable for &
+ &comparing forecasts with observations), 2 as 1 but forecast range is set to 0 &
+ &(analysis/observation)')
 
 CALL optionparser_add(opt, ' ', 'dup-mode', dup_mode, 0, help= &
  'behavior in case of duplicated input metadata: 0=overwrite fields, &
@@ -716,7 +712,6 @@ IF (trans_mode == "p") THEN ! run in prosciutto (volume) mode
     NULLIFY(volgrid_tmp)
   end if
 
-#ifdef ALCHIMIA
   if (ASSOCIATED(volgrid_out) .and. output_variable_list /= " ") then
 
     CALL l4f_category_log(category,L4F_DEBUG,'execute alchemy')
@@ -745,7 +740,6 @@ IF (trans_mode == "p") THEN ! run in prosciutto (volume) mode
     CALL l4f_category_log(category,L4F_INFO,"alchemy completed")
 
   end if
-#endif
 
   IF (c_e(istat_proc) .AND. c_e(ostat_proc) .AND. ASSOCIATED(volgrid_out)) THEN ! stat_proc
     CALL l4f_category_log(category,L4F_INFO,"computing stat_proc")
@@ -774,11 +768,8 @@ IF (trans_mode == "p") THEN ! run in prosciutto (volume) mode
 
   IF (ASSOCIATED(volgrid_out)) CALL delete(volgrid_out)
 
-#ifdef ALCHIMIA
   CALL delete(vfn)
   CALL delete(vfnoracle)
-#endif
-
 
 ELSE ! run in salsiccia (serial) mode
 

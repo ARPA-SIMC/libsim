@@ -1,3 +1,7 @@
+B05001,Latitude,degree,78,191,1,0,1.0,0.0
+B05001,Latitude,degree,80,191,1,0,1.0,0.0
+B06001,Longitude,degree,78,191,2,0,1.0,0.0
+B06001,Longitude,degree,80,191,2,0,1.0,0.0
 B10004,Pressure,Pa,255,3,0,0,1.0,0.0
 B10004,Pressure,Pa,255,2,1,255,1.0,0.0
 B10004,Pressure,Pa,98,128,134,255,1.0,0.0
@@ -56,7 +60,7 @@ B11041,Maximum wind gust speed,m/s,98,128,123,255,1.0,0.0
 B11041,Maximum wind gust speed,m/s,98,228,28,255,1.0,0.0
 B11192,W-component of wind-terrain following (local),m/s,200,200,40,255,1.0,0.0
 B11193,Stability class (local),numeric,200,2,202,255,1.0,0.0
-B11193,Stability class (local),numeric,200,200,100,0,1.0,0.0
+B11193,Stability class (local),numeric,80,7,202,0,1.0,0.0
 B11193,Stability class (local),numeric,200,200,100,255,1.0,0.0
 B11194,Friction velocity (calmet; invented),m/s,200,200,101,0,1.0,0.0
 B11194,Friction velocity (calmet; invented),m/s,200,200,101,255,1.0,0.0
@@ -73,15 +77,21 @@ B11198,SQRT(2*TKE) (local),m/s,,19,11,0,1.0,0.0
 B11199,Surface roughness (local),m,200,200,123,255,1.0,0.0
 B11199,Surface roughness (local),m,200,200,123,0,1.0,0.0
 B11199,Surface roughness in COSMO output (local),m,255,2,83,255,1.0,0.0
+B11199,Surface roughness in ICON output (local),m,255,0,1,2,1.0,0.0
 B11200,U-component of momentum flux (local),N/m**2,255,2,124,255,1.0,0.0
 B11201,V-component of momentum flux (local),N/m**2,255,2,125,255,1.0,0.0
 B11202,Friction velocity (diagmet; invented),m/s,200,2,211,255,1.0,0.0
-B11202,Friction velocity (diagmet; invented),m/s,255,2,30,0,1.0,0.0
+B11202,Friction velocity (diagmet; invented),m/s,80,7,211,0,1.0,0.0
 B11203,Mixing height (diagmet; invented),m,200,2,212,255,1.0,0.0
+B11203,Mixing height (diagmet; invented),m,80,7,212,0,1.0,0.0
 B11204,Obukov length (diagmet; invented),m,200,2,210,255,1.0,0.0
+B11204,Obukov length (diagmet; invented),m,80,7,210,0,1.0,0.0
 B11205,Convective velocitiy scale (diagmet; invented),m/s,200,2,213,255,1.0,0.0
+B11205,Convective velocitiy scale (diagmet; invented),m/s,80,7,213,0,1.0,0.0
 B11206,Friction velocity (COSMO; invented),m/s,200,2,201,255,1.0,0.0
+B11206,Friction velocity (COSMO; invented),m/s,80,7,201,0,1.0,0.0
 B11207,Obukov length (COSMO; invented),m,200,2,200,255,1.0,0.0
+B11207,Obukov length (COSMO; invented),m,80,7,200,0,1.0,0.0
 B12030,Soil Temperature,K,255,3,18,2,1.0,0.0
 B12030,Soil Temperature,K,255,2,85,255,1.0,0.0
 B12030,Soil Temperature,K,200,201,197,255,1.0,0.0
@@ -178,6 +188,7 @@ B13205,Snowfall (grid-scale+convective; local),Kg/m**2,255,1,53,0,1.0,0.0
 B13205,Snowfall (grid-scale+convective; local),Kg/m**2,80,2,153,255,1.0,0.0
 B13205,Snowfall (grid-scale+convective; local),Kg/m**2,200,2,153,255,1.0,0.0
 B13205,Snowfall (grid-scale+convective; local),m->Kg/m**2,98,128,144,255,1000.0,0.0
+B13206,Soil water content (local),kg/m**2,255,3,20,2,1.0,0.0
 B13206,Soil water content (local),kg/m**2,255,2,86,255,1.0,0.0
 B13206,Soil water content (local),kg/m**2,200,201,198,255,1.0,0.0
 B13206,Soil water content (local),kg/m**2,80,201,198,255,1.0,0.0
@@ -201,6 +212,10 @@ B13230,CAPE (local),J/Kg,80,201,143,255,1.0,0.0
 B13230,CAPE (local),J/Kg,78,201,143,255,1.0,0.0
 B13232,Reference evapotranspiration according to Penman-Monteith (local),Kg/m**2,200,0,193,2,1.0,0.0
 B13234,Surface lifted index,K,255,7,10,0,1.0,0.0
+B13236,Graupel,Kg/m**2,255,1,75,0,1.0,0.0
+B13237,Total solid precipitation,Kg/m**2,255,1,128,0,1.0,0.0
+B13240,Cloud garupel content (local),Kg/Kg,255,1,32,0,1.0,0.0
+B14016,Net radiation,W/m^2,255,4,3,0,1.0,0.0
 B14016,Net radiation,W/m^2,255,2,117,255,1.0,0.0
 B14016,Net radiation,W/m^2,98,128,149,255,1.0,0.0
 B14016,Net radiation,W/m^2,98,128,149,192,1.0,0.0
@@ -208,6 +223,7 @@ B14018,Downward short-wave radiation flux (surface),W/m^2,255,4,7,0,1.0,0.0
 B14018,Downward short-wave radiation flux (surface),W/m^2,200,200,115,0,1.0,0.0
 B14018,Downward short-wave radiation flux (surface),W/m^2,200,200,115,255,1.0,0.0
 B14018,Downward short-wave radiation flux (surface),W/m^2,98,128,169,255,1.0,0.0
+B14019,Surface Albedo,Percent,255,19,1,0,1.0,0.0
 B14019,Surface Albedo,Percent,255,2,84,255,1.0,0.0
 B14019,Surface Albedo,Fraction,200,200,124,255,100.,0.0
 B14019,Surface Albedo,Fraction,200,200,124,0,100.,0.0
@@ -234,17 +250,17 @@ B14195,Instantaneous diffuse solar radiation DWD (local),W/m^2,78,201,23,255,1.0
 B14195,Instantaneous diffuse solar radiation (local),W/m^2,255,4,14,0,1.0,0.0
 B14195,Instantaneous diffuse solar radiation DWD (local),W/m^2,78,4,199,0,1.0,0.0
 B14195,Instantaneous diffuse solar radiation DWD (local),W/m^2,80,4,199,0,1.0,0.0
+B14196,Net long-wave radiation flux (surface),W/m^2,255,5,5,0,1.0,0.0
 B14196,Net long-wave radiation flux (surface),W/m^2,200,200,111,0,1.0,0.0
 B14196,Net long-wave radiation flux (surface),W/m^2,200,200,111,255,1.0,0.0
 B14196,Net long-wave radiation flux (surface),W/m^2,255,2,112,255,1.0,0.0
-B14197,Net long-wave radiation flux (surface),W/m^2,255,5,5,0,1.0,0.0
+B14197,Net short-wave radiation flux (surface),W/m^2,255,4,9,0,1.0,0.0
 B14197,Net short-wave radiation flux (surface),W/m^2,200,200,110,0,1.0,0.0
 B14197,Net short-wave radiation flux (surface),W/m^2,200,200,110,255,1.0,0.0
 B14197,Net short-wave radiation flux (surface),W/m^2,255,2,111,255,1.0,0.0
-B14197,Net short-wave radiation flux (surface),W/m^2,255,4,9,0,1.0,0.0
+B14199,Upward short-wave radiation flux (surface),W/m^2,255,4,8,0,1.0,0.0
 B14199,Upward short-wave radiation flux (surface),W/m^2,200,200,116,0,1.0,0.0
 B14199,Upward short-wave radiation flux (surface),W/m^2,200,200,116,255,1.0,0.0
-B14199,Upward short-wave radiation flux (surface),W/m^2,255,4,8,0,1.0,0.0
 B14200,Downward long-wave radiation flux (surface),W/m^2,255,5,3,0,1.0,0.0
 B14201,Upward long-wave radiation flux (surface),W/m^2,255,5,4,0,1.0,0.0
 B14202,UV index,numeric,255,4,51,0,1.0,0.0
@@ -451,6 +467,7 @@ B15241,Aerosol Optical Thickness (local),numeric,200,195,200,255,1.0,0.0
 B20001,Visibility,m,255,19,0,0,1.0,0.0
 B20001,Visibility,m,255,2,20,255,1.0,0.0
 B20001,Visibility,m,98,3,20,255,1.0,0.0
+B20010,Total cloud cover,Percent,255,6,22,0,1.0,0.0
 B20010,Total cloud cover,Percent,255,6,1,0,1.0,0.0
 B20010,Total cloud cover,Percent,255,2,71,255,1.0,0.0
 B20010,High cloud cover,Percent,255,2,75,255,1.0,0.0

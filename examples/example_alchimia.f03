@@ -11,7 +11,8 @@ integer, parameter :: ndat=100
 type(fndsv) :: vfn,myvfn
 character(len=10), allocatable:: mybin(:),mybout(:)
 real,allocatable :: myin(:,:),myout(:,:)
-integer :: category,ier
+TYPE(l4f_handle) :: category
+INTEGER :: ier
 CHARACTER(len=512):: a_name
 
 !questa chiamata prende dal launcher il nome univoco
@@ -21,7 +22,7 @@ call l4f_launcher(a_name,a_name_force="volgrid6dtransform")
 ier=l4f_init()
 
 !imposta a_name
-category=l4f_category_get(a_name//".main")
+category=l4f_category_get_handle(a_name//".main")
 
 
 call register_pentolone(vfn)

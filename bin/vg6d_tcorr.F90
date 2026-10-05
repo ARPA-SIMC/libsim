@@ -15,7 +15,8 @@ USE vol7d_dballe_class
 USE grid_transform_class
 IMPLICIT NONE
 
-INTEGER :: category, ier, i, j, k, l, gridsize, tindex, hindex
+INTEGER :: ier, i, j, k, l, gridsize, tindex, hindex
+TYPE(l4f_handle) :: category
 CHARACTER(len=512) :: a_name, input_orography, output_orography, &
  input_file, output_file
 CHARACTER(len=12) :: tcorr_method, output_orography_format
@@ -35,7 +36,7 @@ TYPE(transform_def) :: trans
 CALL l4f_launcher(a_name,a_name_force='prodsim_vg6d_tcorr')
 ier=l4f_init()
 ! set a_name
-category=l4f_category_get(TRIM(a_name)//'.main')
+category=l4f_category_get_handle(TRIM(a_name)//'.main')
 
 ! define the option parser
 opt = optionparser_new(description_msg= &

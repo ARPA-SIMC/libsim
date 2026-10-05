@@ -24,7 +24,8 @@ use grid_id_class
 
 implicit none
 
-integer :: category,ier
+integer :: ier
+type(l4f_handle) :: category
 character(len=512):: a_name
 type(arrayof_gridinfo) :: gridinfo
 
@@ -36,7 +37,7 @@ INTEGER :: ngrib
 call l4f_launcher(a_name,a_name_force="demo2")
 
 !imposta a_name
-category=l4f_category_get(a_name//".main")
+category=l4f_category_get_handle(a_name//".main")
 
 !init di log4fortran
 ier=l4f_init()

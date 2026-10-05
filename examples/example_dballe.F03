@@ -25,16 +25,16 @@ type (dbametaanddatav) :: metaanddatav
 type (dbadataattrv) :: dataattrv
 type (dbametaanddata) :: metaandata
 
-
-integer :: category,ier
-character(len=512):: a_name
+TYPE(l4f_handle) :: category
+INTEGER :: ier
+CHARACTER(len=512):: a_name
 
 !questa chiamata prende dal launcher il nome univoco
 call l4f_launcher(a_name,a_name_force="example",a_name_append="main")
 !init di log4fortran
 ier=l4f_init()
 !imposta a_name
-category=l4f_category_get(a_name//".main")
+category=l4f_category_get_handle(a_name//".main")
 
 call l4f_category_log(category,L4F_INFO,"example_dballe")
 

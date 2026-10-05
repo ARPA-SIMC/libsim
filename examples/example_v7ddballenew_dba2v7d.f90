@@ -31,7 +31,8 @@ type(dbametaanddata),allocatable :: metaanddatav(:)
 type(dbametaanddatalist) :: metaanddatal
 type(dbadcv) :: attrv
 
-integer :: category,ier,i
+integer :: ier,i
+type(l4f_handle) :: category
 character(len=512):: a_name,filename="/tmp/example.bufr",filenameout="/tmp/exampleout.bufr"
 !"../data/example_temp.bufr"
 
@@ -41,7 +42,7 @@ call l4f_launcher(a_name)
 ier=l4f_init()
 
 !imposta a_name
-category=l4f_category_get(a_name//".main")
+category=l4f_category_get_handle(a_name//".main")
 
 call l4f_category_log(category,L4F_INFO,"inizio")
 

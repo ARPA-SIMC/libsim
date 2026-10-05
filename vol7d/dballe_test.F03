@@ -9,7 +9,8 @@ implicit none
 
 type(dbasession) :: session, sessionfrom,sessionto
 type(dbaconnection) :: connection ,connectionfrom
-integer :: ier, category
+TYPE(l4f_handle) :: category
+INTEGER :: ier
 CHARACTER(len=512) :: a_name
 
 !questa chiamata prende dal launcher il nome univoco
@@ -17,7 +18,7 @@ call l4f_launcher(a_name,a_name_force="dballe_test")
 !init di log4fortran
 ier=l4f_init()
 !imposta a_name
-category=l4f_category_get(a_name//".main")
+category=l4f_category_get_handle(TRIM(a_name)//".main")
 
 ! connect to dsn type DBA
 connection=dbaconnection(dsn="sqlite:dballe_test.sqlite?wipe=true")
