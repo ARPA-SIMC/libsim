@@ -1343,11 +1343,22 @@ IF (this%trans%trans_type == 'zoom') THEN
   this%inioy = min(max(this%trans%rect_ind%iy,1),ny) ! ioy
   this%infox = max(min(this%trans%rect_ind%fx,nx),1) ! fox
   this%infoy = max(min(this%trans%rect_ind%fy,ny),1) ! foy
-! new indices
-  this%outinx = min(max(2-this%trans%rect_ind%ix,1),nx) ! inx
-  this%outiny = min(max(2-this%trans%rect_ind%iy,1),ny) ! iny
-  this%outfnx = min(this%trans%rect_ind%fx,nx)-this%trans%rect_ind%ix+1 ! fnx
-  this%outfny = min(this%trans%rect_ind%fy,ny)-this%trans%rect_ind%iy+1 ! fny
+
+  IF (this%trans%rect_ind%ix > nx .OR. this%trans%rect_ind%fx < 1) THEN
+    this%outinx = imiss
+    this%outfnx = imiss
+  ELSE
+    this%outinx = MAX(2-this%trans%rect_ind%ix,1)
+    this%outfnx = MIN(this%trans%rect_ind%fx,nx)-this%trans%rect_ind%ix+1
+  ENDIF
+
+  IF (this%trans%rect_ind%iy > ny .OR. this%trans%rect_ind%fy < 1) THEN
+    this%outiny = imiss
+    this%outfny = imiss
+  ELSE
+    this%outiny = MAX(2-this%trans%rect_ind%iy,1)
+    this%outfny = MIN(this%trans%rect_ind%fy,ny)-this%trans%rect_ind%iy+1
+  ENDIF
 
   xmin=xmin+steplon*(this%trans%rect_ind%ix-1)
   ymin=ymin+steplat*(this%trans%rect_ind%iy-1)
@@ -3106,10 +3117,12 @@ call l4f_category_log(this%category,L4F_DEBUG, &
 
 IF (this%trans%trans_type == 'zoom') THEN
 
-  field_out(this%outinx:this%outfnx, &
-   this%outiny:this%outfny,:) = &
-   field_in(this%iniox:this%infox, &
-   this%inioy:this%infoy,:)
+  IF (c_e(this%outinx) .AND. c_e(this%outiny)) THEN
+    field_out(this%outinx:this%outfnx, &
+     this%outiny:this%outfny,:) = &
+     field_in(this%iniox:this%infox, &
+     this%inioy:this%infoy,:)
+  ENDIF
 
 ELSE IF (this%trans%trans_type == 'boxregrid') THEN
 
