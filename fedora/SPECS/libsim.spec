@@ -1,13 +1,15 @@
 # rpmbuild with argument --define='with_vapor 1'
 # to enable vapor support requiring stiff dependencies
 
+%global releaseno 1
+
 # Note: define srcarchivename in CI build only.
 %{!?srcarchivename: %global srcarchivename %{name}-%{version}-%{release}}
 
 Summary: Fortran utility libraries
 Name: libsim
-Version: 8.0.0
-Release: 1
+Version: 8.0.1
+Release: %{releaseno}
 License: GPL2+
 Group: Applications/Meteo
 URL: https://github.com/arpa-simc/%{name}
@@ -154,6 +156,9 @@ mv $RPM_BUILD_ROOT%{_includedir}/*.mod $RPM_BUILD_ROOT%{_fmoddir}
 rm -rf %{buildroot}
 
 %changelog
+* Tue Nov 03 2026 Daniele Branchini  <dbranchini@arpae.it> - 8.0.1-1
+- Fix segfault with zoom outside area
+
 * Mon Sep 07 2026 Daniele Branchini  <dbranchini@arpae.it> - 8.0.0-1
 - major change in .so versioning
 - Avoid repeated variable searches in posdef_apply subroutine (ABI change)
