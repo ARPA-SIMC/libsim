@@ -8,7 +8,7 @@
 
 Summary: Fortran utility libraries
 Name: libsim
-Version: 8.0.1
+Version: 8.0.2
 Release: %{releaseno}
 License: GPL2+
 Group: Applications/Meteo
@@ -156,6 +156,9 @@ mv $RPM_BUILD_ROOT%{_includedir}/*.mod $RPM_BUILD_ROOT%{_fmoddir}
 rm -rf %{buildroot}
 
 %changelog
+* Wed Nov 11 2026 Davide Cesari  <dcesari@arpae.it> - 8.0.2-1
+- Fix bug in wind direction interpolation
+
 * Tue Nov 03 2026 Daniele Branchini  <dbranchini@arpae.it> - 8.0.1-1
 - Fix segfault with zoom outside area
 
