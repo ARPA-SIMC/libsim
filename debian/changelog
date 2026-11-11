@@ -1,3 +1,9 @@
+libsim (8.0.2-1) unstable; urgency=medium
+
+  * Fix bug in wind direction interpolation
+
+ -- Emanuele Di Giacomo <edigiacomo@arpae.it>  Wed, 11 Nov 2026 13:25:00 +0100
+
 libsim (8.0.1-1) unstable; urgency=medium
 
   * Fix segfault with zoom outside area
