@@ -4183,7 +4183,6 @@ REAL :: prev
 
 REAL :: m
 INTEGER :: nh, nl
-!REAL,PARAMETER :: res = 1.0
 
 m = (l + h)/2.
 IF ((h - l) <= res) THEN
@@ -4199,9 +4198,9 @@ ELSE
   nh = COUNT(v1 >= m .AND. v1 < h)
 ENDIF
 IF (nh > nl) THEN
-  prev = find_prevailing_direction(v1, m, h, res)
+  prev = find_prevailing_direction(v1, m, h, res, mask)
 ELSE IF (nl > nh) THEN
-  prev = find_prevailing_direction(v1, l, m, res)
+  prev = find_prevailing_direction(v1, l, m, res, mask)
 ELSE IF (nl == 0 .AND. nh == 0) THEN
   prev = rmiss
 ELSE
